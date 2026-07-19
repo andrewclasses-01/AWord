@@ -15,9 +15,11 @@ import { el, copyText } from "./utils.js";
 import { icons } from "./icons.js";
 import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
-  createAssignment, listResults, listScores, assignmentLink,
+  createAssignment, updateAssignment, trashAssignment, listResults, listScores,
+  listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
+import { listFolders, pathTo } from "./store.js";
 
 // ---- tiny shared helpers ---------------------------------------------------
 function escapeText(s) {
@@ -141,6 +143,20 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     const cbAgain = mk("Start again", true);
     body.append(opts);
 
+    // --- where it will be filed in Results (worked out from the title)
+    const filed = el("div", "aw-as-note", "");
+    body.append(filed);
+    let folders = [], allAssignments = [];
+    Promise.all([listFolders("results"), listAllAssignments()])
+      .then(([f, a]) => { folders = f; allAssignments = a; showFiling(); })
+      .catch(() => { /* offline: it just files at the top of Results */ });
+    const showFiling = async () => {
+      const folderId = classFolderFor(titleInput.value, folders);
+      const where = folderId ? (await pathTo(folderId)).map(f => f.name).join(" / ") : "Results";
+      filed.innerHTML = `Filed in Results under <b>${escapeText(where)}</b>`;
+    };
+    titleInput.oninput = () => { showFiling(); err.textContent = ""; };
+
     const err = el("div", "aw-as-err", "");
     body.append(err);
     modal.append(body);
@@ -148,6 +164,11 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     const actions = el("div", "aw-as-actions");
     const back = button("BACK", "", close);
     const start = button("START", "aw-as-primary", async () => {
+      const folderId = classFolderFor(titleInput.value, folders);
+      if (assignmentNameTaken(allAssignments, { folderId, title: titleInput.value })) {
+        err.textContent = "An assignment with this name is already filed there. Please change the name.";
+        return;
+      }
       start.disabled = back.disabled = true;
       start.textContent = "Creating...";
       err.textContent = "";
@@ -156,6 +177,7 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
         const assignment = await createAssignment(act, {
           title: titleInput.value,
           deadline,
+          folderId,
           endOptions: {
             leaderboard: cbLeader.checked,
             showAnswers: cbAnswers.checked,
@@ -227,6 +249,143 @@ export function openAssignmentShare(assignment) {
 }
 
 // =============================================================
+// 2b. EDIT an assignment that is already out there
+// Reachable from BOTH the Results card and the strip under the act, because
+// there is only ONE assignment document behind them.
+// =============================================================
+export function openAssignmentEdit(assignment, { onSaved } = {}) {
+  openModal("", (modal, close) => {
+    modal.append(headRow("Edit assignment", close));
+    const body = el("div", "aw-as-body");
+
+    body.append(el("label", "aw-as-label", "Assignment title"));
+    const titleInput = el("input", "aw-as-input");
+    titleInput.type = "text"; titleInput.maxLength = 80;
+    titleInput.value = assignment.title || "";
+    body.append(titleInput);
+
+    body.append(el("label", "aw-as-label", "Deadline"));
+    const dl = el("div", "aw-as-deadline");
+    const dlInput = el("input", "aw-as-input aw-as-date");
+    dlInput.type = "datetime-local";
+    const noDl = el("label", "aw-as-check");
+    const noDlBox = el("input"); noDlBox.type = "checkbox";
+    noDlBox.checked = !assignment.deadline;
+    dlInput.disabled = noDlBox.checked;
+    if (assignment.deadline) dlInput.value = toLocalInput(assignment.deadline);
+    noDlBox.onchange = () => {
+      dlInput.disabled = noDlBox.checked;
+      if (!noDlBox.checked && !dlInput.value) dlInput.value = toLocalInput(Date.now() + 7 * 24 * 3600 * 1000);
+    };
+    noDl.append(noDlBox, document.createTextNode("No deadline"));
+    dl.append(noDl, dlInput);
+    body.append(dl);
+
+    body.append(el("label", "aw-as-label", "At the end of the game, students can"));
+    const opts = el("div", "aw-as-optrow");
+    const end = assignment.endOptions || {};
+    const mk = (label, checked) => {
+      const wrap = el("label", "aw-as-check");
+      const c = el("input"); c.type = "checkbox"; c.checked = checked;
+      wrap.append(c, document.createTextNode(label));
+      opts.append(wrap);
+      return c;
+    };
+    const cbLeader = mk("See the leaderboard", end.leaderboard !== false);
+    const cbAnswers = mk("Show answers", end.showAnswers !== false);
+    const cbAgain = mk("Start again", end.startAgain !== false);
+    body.append(opts);
+
+    body.append(el("label", "aw-as-label", "Status"));
+    const closedWrap = el("label", "aw-as-check");
+    const cbClosed = el("input"); cbClosed.type = "checkbox"; cbClosed.checked = !!assignment.closed;
+    closedWrap.append(cbClosed, document.createTextNode("Closed — students can open the link but not play"));
+    body.append(closedWrap);
+    body.append(el("div", "aw-as-note", "Closing keeps every score you have already collected."));
+
+    const err = el("div", "aw-as-err", "");
+    body.append(err);
+    modal.append(body);
+
+    const actions = el("div", "aw-as-actions");
+    const back = button("BACK", "", close);
+    const save = button("SAVE", "aw-as-primary", async () => {
+      const title = titleInput.value.trim();
+      if (!title) { err.textContent = "Please give the assignment a name."; return; }
+      save.disabled = back.disabled = true;
+      save.textContent = "Saving...";
+      err.textContent = "";
+      try {
+        const all = await listAllAssignments();
+        if (assignmentNameTaken(all, { folderId: assignment.folderId ?? null, title, exceptCode: assignment.code })) {
+          throw new Error("An assignment with this name is already in the same folder.");
+        }
+        const patch = {
+          title,
+          deadline: noDlBox.checked || !dlInput.value ? null : new Date(dlInput.value).getTime(),
+          endOptions: { leaderboard: cbLeader.checked, showAnswers: cbAnswers.checked, startAgain: cbAgain.checked },
+          closed: cbClosed.checked
+        };
+        await updateAssignment(assignment.code, patch);
+        Object.assign(assignment, patch);      // keep the open popups in step
+        close();
+        flash("Assignment updated");
+        onSaved?.(assignment);
+      } catch (e) {
+        save.disabled = back.disabled = false;
+        save.textContent = "SAVE";
+        err.textContent = e.message || "Could not save.";
+      }
+    });
+    actions.append(back, save);
+    modal.append(actions);
+  });
+}
+
+// Send an assignment to the Results recycle bin, after asking.
+export function confirmTrashAssignment(assignment, { onDone } = {}) {
+  openModal("", (modal, close) => {
+    modal.append(headRow("Delete assignment", close));
+    const body = el("div", "aw-as-body");
+    body.append(el("div", "aw-as-note",
+      `“${escapeText(assignment.title || assignment.code)}” moves to the Results recycle bin. ` +
+      `The student link stops working, but every score is kept — you can restore it at any time.`));
+    const err = el("div", "aw-as-err", "");
+    body.append(err);
+    modal.append(body);
+    const actions = el("div", "aw-as-actions");
+    const cancel = button("CANCEL", "", close);
+    const del = button("DELETE", "aw-as-primary", async () => {
+      del.disabled = cancel.disabled = true;
+      del.textContent = "Deleting...";
+      try {
+        await trashAssignment(assignment.code);
+        close();
+        flash("Moved to the recycle bin");
+        onDone?.();
+      } catch (e) {
+        del.disabled = cancel.disabled = false;
+        del.textContent = "DELETE";
+        err.textContent = e.message || "Could not delete.";
+      }
+    });
+    actions.append(cancel, del);
+    modal.append(actions);
+  });
+}
+
+// Shared little actions so the Results cards and the strips behave identically.
+export async function copyAssignmentLink(assignment) {
+  flash(await copyText(assignmentLink(assignment.code)) ? "Link copied" : assignmentLink(assignment.code));
+}
+export async function copyAssignmentQr(assignment) {
+  const url = assignmentLink(assignment.code);
+  try { await copyQrImage(url, 700); flash("QR image copied"); }
+  catch (e) { downloadQrPng(url, `QR ${assignment.code}.png`); flash("QR saved to your Downloads"); }
+}
+export { openAssignmentShare as openAssignmentShareAgain };
+
+// =============================================================
 // 3. The long strip under the stage — one per assignment
 // =============================================================
 export function assignmentBar(assignment, onOpen) {
@@ -243,21 +402,29 @@ export function assignmentBar(assignment, onOpen) {
 // =============================================================
 // 4. DETAIL — the big report popup
 // =============================================================
-export function openAssignmentDetail(assignment) {
+export function openAssignmentDetail(assignment, { onChanged } = {}) {
   openModal("wide", (modal, close) => {
     const url = assignmentLink(assignment.code);
 
     // ---- top strip: what this assignment is, plus the share buttons
     const top = el("div", "aw-as-top");
     const info = el("div", "aw-as-info");
-    info.append(el("div", "aw-as-title", escapeText(assignment.title || assignment.code)));
-    const bits = [
-      (assignment.activityType || "").toUpperCase(),
-      "Given " + fmtDate(assignment.createdAt),
-      assignment.deadline ? "Due " + fmtDate(assignment.deadline) : "No deadline"
-    ];
-    info.append(el("div", "aw-as-meta", escapeText(bits.join("  ·  "))));
+    const titleEl = el("div", "aw-as-title", "");
+    const metaEl = el("div", "aw-as-meta", "");
+    info.append(titleEl, metaEl);
+    drawHead();
     top.append(info);
+
+    function drawHead() {
+      titleEl.innerHTML = escapeText(assignment.title || assignment.code) +
+        (assignment.closed ? ' <span class="aw-as-closed">CLOSED</span>' : "");
+      const bits = [
+        (assignment.activityType || "").toUpperCase(),
+        "Given " + fmtDate(assignment.createdAt),
+        assignment.deadline ? "Due " + fmtDate(assignment.deadline) : "No deadline"
+      ];
+      metaEl.textContent = bits.join("  ·  ");
+    }
 
     const tools = el("div", "aw-as-toptools");
     tools.append(
@@ -266,7 +433,13 @@ export function openAssignmentDetail(assignment) {
       button("Copy QR", "", async () => {
         try { await copyQrImage(url, 700); flash("QR image copied"); }
         catch (e) { downloadQrPng(url, `QR ${assignment.code}.png`); flash("QR saved to your Downloads"); }
-      })
+      }),
+      button("Edit", "", () => openAssignmentEdit(assignment, {
+        onSaved: () => { drawHead(); onChanged?.(); }
+      })),
+      button("Delete", "aw-as-danger", () => confirmTrashAssignment(assignment, {
+        onDone: () => { close(); onChanged?.(); }
+      }))
     );
     const x = el("button", "aw-as-x", icons.close);
     x.type = "button"; x.title = "Close"; x.onclick = close;

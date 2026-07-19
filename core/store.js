@@ -147,6 +147,42 @@ export async function getByNum(num) {
   return hits.find(x => !x.trashed) || hits[0] || null;
 }
 
+// ---- NO TWO THINGS MAY SHARE A NAME (v0.9.0) -------------------------------
+// The teacher's rule: sub-folders inside one folder must have different names,
+// and acts inside one folder must have different names. (Assignments follow the
+// same rule inside a Results folder — enforced in core/assignments.js.)
+// Folders and acts do NOT clash with each other; only like with like.
+export function sameName(a, b) {
+  return String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+}
+
+function duplicateNameError(name) {
+  const err = new Error(`“${name}” already exists here. Please choose another name.`);
+  err.code = "aw/duplicate-name";
+  return err;
+}
+
+// Is `name` already used by a sibling of the same kind? `exceptId` skips the
+// item being renamed/moved (so re-saving with its own name is fine).
+function nameTaken(map, { root, parentId, kind, name, exceptId }) {
+  return Object.values(map).some(n =>
+    n.root === root && n.kind === kind && !n.trashed &&
+    (n.parentId ?? null) === (parentId ?? null) &&
+    n.id !== exceptId && sameName(itemName(n), name));
+}
+
+// "Unit 3" -> "Unit 3 (2)" -> "Unit 3 (3)"... used by Duplicate, which should
+// never stop the teacher with an error.
+function freeName(map, spec) {
+  if (!nameTaken(map, spec)) return spec.name;
+  const base = String(spec.name).replace(/\s*\(\d+\)$/, "");
+  for (let i = 2; i < 500; i++) {
+    const candidate = `${base} (${i})`;
+    if (!nameTaken(map, { ...spec, name: candidate })) return candidate;
+  }
+  return `${base} (${Date.now()})`;
+}
+
 // ---- helpers (unchanged logic) ---------------------------------------------
 export function itemName(node) {
   if (!node) return "";
@@ -221,10 +257,12 @@ export async function listTrash(root) {
 // ---- writes ----
 export async function createFolder(root, parentId, name) {
   const map = await readAll();
+  const wanted = (name || "New folder").trim() || "New folder";
+  if (nameTaken(map, { root, parentId, kind: "folder", name: wanted })) throw duplicateNameError(wanted);
   const id = newId("fld");
   map[id] = { id, kind: "folder", root, parentId: parentId ?? null,
     num: nextNum(map),
-    name: (name || "New folder").trim() || "New folder",
+    name: wanted,
     trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null,
     createdAt: now(), updatedAt: now() };
   await persist([map[id]]);
@@ -239,6 +277,16 @@ export async function saveActivity(activity, opts = {}) {
   let id = payload.id;
   const existing = id ? map[id] : null;
   if (!id) id = newId("act");
+
+  // two acts in one folder may not share a title
+  const where = {
+    root: existing?.root || opts.root || "activities",
+    parentId: existing ? (existing.parentId ?? null) : (opts.parentId ?? null),
+    kind: "act",
+    name: payload.title || "Untitled",
+    exceptId: id
+  };
+  if (nameTaken(map, where)) throw duplicateNameError(where.name);
 
   const node = {
     ...(existing || {}),
@@ -297,6 +345,9 @@ export async function renameItem(id, newName) {
   const n = map[id]; if (!n) return null;
   const name = (newName || "").trim();
   if (name) {
+    if (nameTaken(map, { root: n.root, parentId: n.parentId ?? null, kind: n.kind, name, exceptId: n.id })) {
+      throw duplicateNameError(name);
+    }
     if (n.kind === "folder") n.name = name; else n.title = name;
     n.updatedAt = now();
     await persist([n]);
@@ -311,6 +362,10 @@ export async function moveItem(id, newParentId) {
   // guard: can't drop a folder into itself or its own subtree
   if (n.kind === "folder" && newParentId != null) {
     if (newParentId === id || isDescendant(map, newParentId, id)) return n;
+  }
+  // the destination may already hold something of the same kind and name
+  if (nameTaken(map, { root: n.root, parentId: newParentId, kind: n.kind, name: itemName(n), exceptId: n.id })) {
+    throw duplicateNameError(itemName(n));
   }
   n.parentId = newParentId;
   n.updatedAt = now();
@@ -347,7 +402,12 @@ export async function duplicateItem(id) {
     return copy;
   }
 
-  const top = cloneSubtree(src, src.parentId ?? null, itemName(src) + " (copy)");
+  // A copy must not collide with a name already in use — Duplicate should just
+  // work, so it counts up ("Unit 3 (2)", "Unit 3 (3)"...) instead of erroring.
+  const copyName = freeName(map, {
+    root: src.root, parentId: src.parentId ?? null, kind: src.kind, name: itemName(src)
+  });
+  const top = cloneSubtree(src, src.parentId ?? null, copyName);
   await persist(made);
   return top;
 }
@@ -378,6 +438,11 @@ export async function restoreItem(id) {
     // restore to original parent if it still exists and is live, else to root
     const p = top.restoreParentId ? map[top.restoreParentId] : null;
     top.parentId = (p && !p.trashed) ? top.restoreParentId : null;
+    // Something may have taken the name while this was in the bin. Restoring
+    // must never fail on the teacher, so the restored copy counts up instead.
+    const spec = { root: top.root, parentId: top.parentId, kind: top.kind, name: itemName(top), exceptId: top.id };
+    const free = freeName(map, spec);
+    if (!sameName(free, itemName(top))) { if (top.kind === "folder") top.name = free; else top.title = free; }
   }
   bundle.forEach(node => { node.restoreParentId = null; node.updatedAt = now(); });
   await persist(bundle);

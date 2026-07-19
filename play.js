@@ -37,6 +37,16 @@ async function start() {
   if (!assignment || !assignment.activity) {
     return showMessage("Assignment not found", "This link may be old. Ask your teacher for a new one.");
   }
+  // The teacher can close an assignment, or move it to the recycle bin. Either
+  // way the link still opens — it just explains itself instead of playing.
+  if (assignment.trashed) {
+    return showMessage("This assignment is no longer available",
+      "Your teacher has removed it. Ask them for the new link.");
+  }
+  if (assignment.closed) {
+    return showMessage("This assignment is closed",
+      "Your teacher is no longer accepting answers for it.");
+  }
   showNameScreen(assignment);
 }
 

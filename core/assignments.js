@@ -61,7 +61,8 @@ function snapshotOf(act) {
 // ---- teacher side ----------------------------------------------------------
 
 // Create a new assignment for `act`. Returns the stored assignment.
-export async function createAssignment(act, { title, deadline = null, endOptions = {} } = {}) {
+// `folderId` = a folder of the RESULTS root to file it under (null = top level).
+export async function createAssignment(act, { title, deadline = null, endOptions = {}, folderId = null } = {}) {
   const user = await currentUser();
   if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
   const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
@@ -88,6 +89,12 @@ export async function createAssignment(act, { title, deadline = null, endOptions
       showAnswers: endOptions.showAnswers !== false,
       startAgain: endOptions.startAgain !== false
     },
+    // Where it sits in the RESULTS tree. There is no second copy anywhere: the
+    // strip under the act and the card in Results both read THIS document.
+    folderId: folderId ?? null,
+    closed: false,                       // true = link still opens, but says "closed"
+    trashed: false,                      // true = in the Results recycle bin
+    trashedAt: null,
     ownerUid: user.uid,
     createdAt: now()
   });
@@ -95,13 +102,95 @@ export async function createAssignment(act, { title, deadline = null, endOptions
   return data;
 }
 
-// Every assignment made from this act, newest first.
-export async function listAssignmentsForAct(activityId) {
+// Every assignment made from this act, newest first (bin excluded by default).
+export async function listAssignmentsForAct(activityId, { includeTrashed = false } = {}) {
   if (!activityId) return [];
   const [d, { collection, query, where, getDocs }] = await Promise.all([db(), fs()]);
   // Sorted in JS on purpose: an orderBy here would need a composite index.
   const snap = await getDocs(query(collection(d, "assignments"), where("activityId", "==", activityId)));
-  return snap.docs.map(s => s.data()).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return snap.docs.map(s => s.data())
+    .filter(a => includeTrashed || !a.trashed)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+// Everything the teacher has ever given out. The Results pages work from this
+// one list, so nothing can drift out of step with the strips under the acts.
+export async function listAllAssignments({ includeTrashed = false } = {}) {
+  const user = await currentUser();
+  if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
+  const [d, { collection, query, where, getDocs }] = await Promise.all([db(), fs()]);
+  const snap = await getDocs(query(collection(d, "assignments"), where("ownerUid", "==", user.uid)));
+  return snap.docs.map(s => s.data())
+    .filter(a => includeTrashed || !a.trashed)
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+
+// Change a few fields (title / deadline / endOptions / folderId / closed).
+export async function updateAssignment(code, patch) {
+  const [d, { doc, updateDoc }] = await Promise.all([db(), fs()]);
+  await updateDoc(doc(d, "assignments", String(code)), clean(patch));
+}
+
+// Delete = send to the Results recycle bin. While it is in the bin the student
+// link stops working (play.js checks `trashed`), but every score is still there,
+// so an accidental delete costs nothing.
+export async function trashAssignment(code) {
+  await updateAssignment(code, { trashed: true, trashedAt: now() });
+}
+
+export async function restoreAssignment(code) {
+  await updateAssignment(code, { trashed: false, trashedAt: null });
+}
+
+// Empty-the-bin: really remove the assignment, its public scores and the
+// detailed results. (Deleting `results` needs the teacher-only delete rule
+// published on 20/7/2026 — see docs/08-FIREBASE-SETUP.md.)
+export async function deleteAssignmentForever(code) {
+  const [d, sdk] = await Promise.all([db(), fs()]);
+  const { doc, collection, query, where, getDocs, deleteDoc, writeBatch } = sdk;
+
+  const removeAll = async docs => {
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = writeBatch(d);
+      docs.slice(i, i + 400).forEach(s => batch.delete(s.ref));
+      await batch.commit();
+    }
+  };
+
+  const scores = await getDocs(collection(d, "assignments", String(code), "scores"));
+  await removeAll(scores.docs);
+  const results = await getDocs(query(collection(d, "results"), where("assignmentId", "==", String(code))));
+  await removeAll(results.docs);
+  await deleteDoc(doc(d, "assignments", String(code)));
+}
+
+// ---- filing a new assignment under its CLASS folder ------------------------
+// The teacher names lessons like "A1A_9.6_WORDS DS-S2.I1.W2 / ENG1", so the
+// first word (up to the first "_" or space) is the class: A1A. If a folder of
+// exactly that name exists in Results, the assignment goes there by itself.
+export function classTokenOf(title) {
+  return String(title || "").trim().split(/[\s_]+/)[0] || "";
+}
+
+// `folders` = the live folders of the results root (from store.listFolders).
+// Returns a folder id, or null for the top level of Results.
+export function classFolderFor(title, folders) {
+  const token = classTokenOf(title).toLowerCase();
+  if (!token) return null;
+  const hits = folders.filter(f => String(f.name || "").trim().toLowerCase() === token);
+  if (!hits.length) return null;
+  // If the same class name exists at two depths, prefer the shallowest one.
+  const depthOf = f => { let d = 0, n = f; const byId = new Map(folders.map(x => [x.id, x]));
+    while (n && n.parentId) { d++; n = byId.get(n.parentId); } return d; };
+  return hits.sort((a, b) => depthOf(a) - depthOf(b))[0].id;
+}
+
+// Two assignments in one Results folder may not share a name (the teacher's
+// rule, same as folders and acts in core/store.js).
+export function assignmentNameTaken(all, { folderId, title, exceptCode }) {
+  const wanted = String(title || "").trim().toLowerCase();
+  return all.some(a => !a.trashed && (a.folderId ?? null) === (folderId ?? null) &&
+    a.code !== exceptCode && String(a.title || "").trim().toLowerCase() === wanted);
 }
 
 // Full submissions (teacher only — the rules refuse this for everyone else).

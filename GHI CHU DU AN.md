@@ -21,6 +21,51 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.0 — 20/7/2026 — RESULTS = CHÍNH BÀI GIAO (một bản duy nhất) + CẤM TRÙNG TÊN
+Thầy chốt: **"Xoá hay sửa ở Results thì cũng xoá và sửa trong act, chúng đồng bộ là 1."**
+
+1. **KHÔNG có bản sao nào**: mục Results **đọc thẳng** danh sách bài giao (`assignments/{code}`), thư mục
+   trong Results chỉ để xếp cho gọn (`folderId` nằm trên chính doc bài giao). Nên thẻ ở Results và
+   thanh dài dưới act là **cùng một tài liệu** — sửa/xoá chỗ nào cũng ăn cả hai, không thể lệch.
+2. **TỰ XẾP VÀO THƯ MỤC LỚP**: lấy phần đầu tên bài giao trước `_` hoặc khoảng trắng
+   (vd `A1A_9.6_WORDS ...` → **A1A**) rồi tìm thư mục TRÙNG TÊN trong Results (không phân biệt hoa
+   thường, tìm cả thư mục con, ưu tiên nông nhất). Không thấy → để ngoài cùng Results. Hộp thoại
+   Set assignment hiện sẵn dòng **"Filed in Results under A1A"** để thầy biết trước khi bấm START.
+3. **CẤM TRÙNG TÊN** (3 chỗ thầy nêu): thư mục con cùng mẹ · act cùng thư mục · bài giao cùng thư mục.
+   Chặn ở `createFolder/renameItem/moveItem/saveActivity` (ném `err.code = "aw/duplicate-name"`, hộp
+   thoại hiện lỗi đỏ và KHÔNG đóng). Riêng **Duplicate** và **Restore** tự đếm lên "(2)", "(3)"... để
+   không bao giờ chặn tay thầy.
+4. **SỬA BÀI GIAO** (`openAssignmentEdit`): đổi tên · đổi hạn nộp · bật/tắt 3 ô cuối game · **đóng bài**.
+   Vào được từ menu ⁝ ở Results HOẶC nút Edit trong pop-up báo cáo. Bài đóng: HS mở link thấy
+   "This assignment is closed", điểm cũ vẫn xem được.
+5. **XOÁ = THÙNG RÁC**: `trashed` trên doc bài giao → biến khỏi Results + khỏi dưới act, **link HS
+   ngừng nhận bài**, điểm giữ nguyên, Restore lấy lại được. **Delete forever** trong thùng rác xoá
+   thật: doc + toàn bộ `scores` + toàn bộ `results` (đã test: còn 0/0).
+6. **XOÁ ACT CÓ BÀI GIAO** → hộp thoại hỏi tại chỗ: *Cancel · Delete activity only · Delete both*
+   (mỗi bài giao giữ bản sao game riêng nên xoá act không bắt buộc làm hỏng bài HS đang làm).
+7. **Kéo-thả bài giao** vào thư mục Results / lên breadcrumb; menu ⁝ có Move; trùng tên khi thả thì
+   báo lỗi chứ không im lặng.
+8. **TRANG HS NAY SẠCH THẬT**: engine chuyển sang **nạp trì hoãn** `assignment-ui.js` và `store.js`
+   (chỉ nạp trên đường của thầy) → `play.html` không tải một dòng code nào có thể chạm tới thư viện
+   (đã đo `performance.getEntriesByType('resource')`: KHÔNG có store.js, KHÔNG có assignment-ui.js).
+9. **LUẬT FIREBASE cập nhật lần 2 (đã Publish)**: `results` nay cho **thầy XOÁ** (`allow read, delete:
+   if isTeacher()`) để "Delete forever" dọn sạch được; HS vẫn chỉ được TẠO, không ai sửa.
+10. **ĐÃ TEST THẬT** (localhost, tài khoản thật của thầy):
+   | Kiểm tra | Kết quả |
+   |---|---|
+   | Results hiện bài giao, không có bản sao | ✔ |
+   | Tạo thư mục A1A/A2B, bài `A1A_20.7_...` **tự vào A1A** | ✔ (huy hiệu đếm "1") |
+   | Nhận diện lớp: hoa/thường, không có lớp, lớp không tồn tại | ✔ 4/4 |
+   | Trùng tên: thư mục / act / bài giao cùng chỗ | ✔ chặn; khác thư mục thì cho |
+   | Đổi tên + đóng bài ở Results → thanh dưới act đổi theo | ✔ |
+   | HS mở link bài đã đóng | ✔ báo "closed", không chơi được |
+   | Xoá → thùng rác → Restore | ✔ |
+   | Delete forever | ✔ xoá cả bài giao + scores + results |
+   | Xoá act có 2 bài giao → hộp thoại 3 nút | ✔ (bấm Cancel, act còn nguyên) |
+   | Move bài giao sang thư mục khác | ✔ |
+   | play.html KHÔNG nạp store.js / assignment-ui.js | ✔ |
+
+
 ### v0.8.0 — 20/7/2026 — ASSIGNMENT + THU ĐIỂM HỌC SINH + LINK SỐ + BỘ SINH QR (đã test thật)
 Chặng lớn: thầy giao bài được cho học sinh bằng **link + QR**, HS chơi **không cần đăng nhập**, điểm
 tự chảy về cho thầy xem chi tiết từng câu.

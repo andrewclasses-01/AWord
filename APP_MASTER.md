@@ -3,7 +3,7 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/7/2026 — v0.8.0 (ASSIGNMENT + THU ĐIỂM + LINK SỐ + QR — đã test thật).**
+> Cập nhật lần cuối: **20/7/2026 — v0.9.0 (RESULTS = chính bài giao, một bản duy nhất — đã test thật).**
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
@@ -47,10 +47,17 @@
    - ✅ **`core/qr.js`** — bộ sinh QR TỰ VIẾT, không phụ thuộc mạng, **copy sang app khác dùng ngay**
      (myBoard/myActivity/mySpeaking...): `qrSvg()` · `qrPngDataUrl()` · `copyQrImage()` · `downloadQrPng()`.
 
-   **➡️ VIỆC KẾ TIẾP (thầy chưa chốt):** (a) quản lý assignment cũ — đổi tên / xoá / đóng bài (thầy nói
-   "để sau"); (b) gom kết quả về gốc **Results** ở trang chủ (hiện chỉ xem trong màn act); (c) chuyển
-   **Settings + leaderboard offline** từ localStorage lên cloud; (d) renderer Crossword cho Print;
-   (e) chốt Quiz + viết "recipe" rồi build 4 game còn lại.
+   - ✅ **RESULTS = CHÍNH BÀI GIAO** (v0.9.0): Results **không lưu bản sao** — nó đọc thẳng
+     `assignments/{code}`, nên thẻ ở Results và thanh dưới act là **cùng một thứ** (sửa/xoá chỗ nào
+     cũng ăn cả hai). Bài giao **tự vào thư mục lớp** theo phần đầu tên (`A1A_9.6_...` → thư mục
+     **A1A**, thầy tự tạo thư mục lớp). Sửa được **tên · hạn nộp · 3 ô cuối game · đóng bài**; xoá vào
+     **thùng rác** (link HS ngừng chạy, điểm còn nguyên, Restore được), Delete forever xoá sạch cả
+     điểm. Xoá act có bài giao thì **hỏi tại chỗ**. **CẤM TRÙNG TÊN**: thư mục con cùng mẹ · act cùng
+     thư mục · bài giao cùng thư mục (Duplicate/Restore tự đếm "(2)").
+
+   **➡️ VIỆC KẾ TIẾP (thầy chưa chốt):** (a) chuyển
+   **Settings + leaderboard offline** từ localStorage lên cloud; (b) renderer Crossword cho Print;
+   (c) chốt Quiz + viết "recipe" rồi build 4 game còn lại.
 
    **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")**; chưa rõ thì hỏi bằng AskUserQuestion.
 
@@ -346,7 +353,9 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
 
 ```
 users/{uid}/items/{id}          thư viện RIÊNG của thầy (folder + act, có thêm `num` = số link)
-assignments/{code}              bài giao — ĐỌC CÔNG KHAI, chứa BẢN SAO act; chỉ thầy tạo/sửa/xoá
+assignments/{code}              bài giao — ĐỌC CÔNG KHAI, chứa BẢN SAO act; chỉ thầy tạo/sửa/xoá.
+                                (v0.9.0) thêm: folderId (thư mục trong Results) · closed · trashed.
+                                ĐÂY LÀ BẢN DUY NHẤT — Results và thanh dưới act đều đọc nó.
 assignments/{code}/scores/{id}  bảng xếp hạng CÔNG KHAI: chỉ name/score/total/timeMs/createdAt
 results/{id}                    bài làm chi tiết — CHỈ THẦY ĐỌC, không ai sửa/xoá
 ```

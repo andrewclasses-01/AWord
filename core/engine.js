@@ -22,14 +22,16 @@ import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
-import { saveActivity } from "./store.js";
+// store.js (the teacher's library) is imported LAZILY for the same reason as
+// assignment-ui.js: the student page must not even load code that can reach it.
 import { TEMPLATES } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
 import { makeNumberStepper } from "./numberstepper.js";
 import { openPrintPopup } from "./print.js";
-import { openAssignmentSetup, openAssignmentDetail, assignmentBar } from "./assignment-ui.js";
-import { listAssignmentsForAct } from "./assignments.js";
+// NOTE: assignment-ui.js reaches into the teacher's library (core/store.js), so
+// it is imported LAZILY and only on teacher paths — that keeps the student page
+// (play.html) free of any code that can touch the library.
 
 // The full list of games (for the Template panel). Only entries whose `type`
 // matches a template already built (registered) are clickable; the rest show
@@ -112,12 +114,20 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     // new content; Cancel -> replay the original untouched.
     cleanupAll();
     tpl.edit(root, activity, {
-      onSave: async updated => { const saved = await saveActivity(updated); startGame(root, saved, { onExit }); },
+      onSave: async updated => {
+        const { saveActivity } = await import("./store.js");
+        const saved = await saveActivity(updated);
+        startGame(root, saved, { onExit });
+      },
       onCancel: () => startGame(root, activity, { onExit })
     });
   };
   // Set assignment -> the setup form; a new assignment appears as a strip below.
-  assignBtn.onclick = () => { sound.click(); openAssignmentSetup(activity, { onCreated: loadAssignmentBars }); };
+  assignBtn.onclick = async () => {
+    sound.click();
+    const ui = await import("./assignment-ui.js");
+    ui.openAssignmentSetup(activity, { onCreated: loadAssignmentBars });
+  };
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).
   printBtn.onclick = () => { sound.click(); openPrintPopup(activity); };
@@ -136,9 +146,15 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   }
   async function loadAssignmentBars() {
     try {
+      const [{ listAssignmentsForAct }, ui] = await Promise.all([
+        import("./assignments.js"), import("./assignment-ui.js")
+      ]);
       const list = await listAssignmentsForAct(activity.id);
       barsWrap.innerHTML = "";
-      list.forEach(a => barsWrap.append(assignmentBar(a, openAssignmentDetail)));
+      // Deleting or renaming from the report must be reflected here at once —
+      // the strip and the Results card are the SAME assignment document.
+      list.forEach(a => barsWrap.append(
+        ui.assignmentBar(a, x => ui.openAssignmentDetail(x, { onChanged: loadAssignmentBars }))));
     } catch (e) {
       barsWrap.innerHTML = "";   // offline / not signed in: just show nothing
     }
@@ -357,7 +373,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist these options for THIS act only (per-act override of the
       // Settings defaults). Safe no-op if the act isn't in the store yet.
-      if (activity.id) saveActivity(activity);
+      if (activity.id) import("./store.js").then(m => m.saveActivity(activity));
       toast("Options applied");
       closeToolPanel(true);
     };

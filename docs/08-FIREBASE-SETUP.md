@@ -175,14 +175,16 @@ service cloud.firestore {
 
     // KẾT QUẢ học sinh nộp: chỉ được TẠO MỚI, không ai sửa/xoá được điểm
     match /results/{resultId} {
-      allow read: if isTeacher();
+      // (v0.9.0) thầy XOÁ được — "Delete forever" trong thùng rác Results dùng
+      // quyền này để dọn sạch cả điểm của bài giao đã bỏ.
+      allow read, delete: if isTeacher();
       allow create: if request.resource.data.keys().hasOnly(
                         ['assignmentId','studentName','score','total','timeMs','review','createdAt'])
                     && request.resource.data.studentName is string
                     && request.resource.data.studentName.size() <= 40
                     && request.resource.data.score is int
                     && request.resource.data.total is int;
-      allow update, delete: if false;
+      allow update: if false;
     }
   }
 }

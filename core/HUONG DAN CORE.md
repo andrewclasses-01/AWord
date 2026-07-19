@@ -33,6 +33,19 @@ người sửa engine thì phải nhớ:
 Có `session` thì engine **không dựng** cụm công cụ của thầy (Options/Template/Style/Edit/Assignment/
 Print/Home) và bỏ "Change template" — đây là hàng rào để HS không lọt vào công cụ soạn bài.
 
+## ⚠️ v0.9.0 — HAI LUẬT MỚI KHI SỬA CORE
+
+**(1) KHÔNG được trùng tên** (thầy chốt): thư mục con trong cùng một thư mục · act trong cùng một
+thư mục · bài giao trong cùng một thư mục Results. `core/store.js` ném `err.code === "aw/duplicate-name"`
+— chỗ gọi phải BẮT và hiện lỗi cho thầy sửa, đừng để hộp thoại đóng im lặng. Hành động máy tự làm
+(Duplicate, Restore) thì đếm lên "(2)" thay vì báo lỗi.
+
+**(2) Trang học sinh không được nạp code chạm tới thư viện.** `core/engine.js` nạp **trì hoãn**
+(`await import(...)`) cả `assignment-ui.js` lẫn `store.js`, chỉ trên đường của thầy. Nếu bạn thêm
+`import` tĩnh của store/assignment-ui vào engine (hoặc vào file engine kéo theo), `play.html` sẽ tải
+chúng và lời hứa đó vỡ. Kiểm nhanh: mở play.html rồi chạy
+`performance.getEntriesByType('resource').map(r => r.name)` — không được thấy `store.js`.
+
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,

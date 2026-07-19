@@ -32,6 +32,14 @@ import {
   resetCache, pendingImportCount, importLocalLibrary, markMigrated, wasMigrated
 } from "./core/store.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
+import {
+  listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
+  restoreAssignment, deleteAssignmentForever, assignmentNameTaken
+} from "./core/assignments.js";
+import {
+  openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
+  copyAssignmentLink, copyAssignmentQr
+} from "./core/assignment-ui.js";
 import "./templates/quiz/quiz.js";   // registers the quiz template (+ its editor)
 
 const app = document.getElementById("app");
@@ -320,10 +328,15 @@ async function renderInside() {
   else if (state.view === "search") items = await searchItems(state.root, state.query);
   else items = await listChildren(state.root, state.folderId);
 
-  if (!items.length) {
+  // RESULTS shows the assignments themselves — there is no copy of them in the
+  // library, so what you see here IS the strip under the act (v0.9.0).
+  const assignments = state.root === "results" ? await assignmentsForView() : [];
+
+  if (!items.length && !assignments.length) {
     body.append(el("div", "aw-fm-empty",
       state.view === "trash" ? "Recycle bin is empty."
       : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
+      : state.root === "results" ? "No assignments here yet. Give one out from an activity."
       : "This folder is empty."));
     return;
   }
@@ -332,11 +345,38 @@ async function renderInside() {
   for (const node of items) {
     let card;
     if (state.view === "trash") card = trashCard(node);
-    else if (node.kind === "folder") card = folderCard(node, await folderCounts(node.id));
+    else if (node.kind === "folder") card = folderCard(node, await folderCounts(node.id), assignmentCountIn(node.id));
     else card = actCard(node);
     list.append(card);
   }
+  assignments.forEach(a => list.append(state.view === "trash" ? trashAssignmentCard(a) : assignmentCard(a)));
   body.append(list);
+}
+
+// ---------------- assignments inside Results ----------------
+// One fetch per render, cached for the counting helpers below.
+let assignmentCache = [];
+
+async function assignmentsForView() {
+  try {
+    assignmentCache = await listAllAssignments({ includeTrashed: true });
+  } catch (e) {
+    assignmentCache = [];
+    return [];
+  }
+  const byName = (a, b) => String(a.title || "").toLowerCase().localeCompare(String(b.title || "").toLowerCase());
+  if (state.view === "trash") return assignmentCache.filter(a => a.trashed).sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0));
+  if (state.view === "search") {
+    const q = state.query.trim().toLowerCase();
+    return assignmentCache.filter(a => !a.trashed && String(a.title || "").toLowerCase().includes(q)).sort(byName);
+  }
+  return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === (state.folderId ?? null)).sort(byName);
+}
+
+// How many assignments sit anywhere inside this Results folder (for the badge).
+function assignmentCountIn(folderId) {
+  if (state.root !== "results") return 0;
+  return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === folderId).length;
 }
 
 async function breadcrumb() {
@@ -416,7 +456,53 @@ function toolbar() {
 //   • both subfolders AND acts    -> [direct subfolders] | [total acts], 2 colors
 //   • no acts at all              -> nothing
 // Also a drag-drop target.
-function folderCard(node, counts) {
+// A card for one assignment inside Results. Clicking opens the same report the
+// strip under the act opens — same document, same everything.
+function assignmentCard(a) {
+  const card = el("div", "aw-card aw-card-asg");
+  card.onclick = () => openAssignmentDetail(a, { onChanged: render });
+
+  const preview = el("div", "aw-fp");
+  const ic = el("div", "aw-fp-icon aw-fp-asg", icons.assignment);
+  preview.append(ic);
+  if (a.closed) preview.append(el("div", "aw-asg-flag", "CLOSED"));
+  else if (a.deadline && Date.now() > a.deadline) preview.append(el("div", "aw-asg-flag aw-asg-flag-due", "PAST DUE"));
+  card.append(preview);
+
+  const foot = el("div", "aw-card-foot");
+  const info = el("div", "aw-card-info");
+  info.append(el("div", "aw-card-name", escapeText(a.title || a.code)),
+              el("span", "aw-card-type", "ASSIGNMENT"));
+  foot.append(info, menuButton(a, assignmentMenuItems));
+  card.append(foot);
+
+  makeAssignmentDraggable(card, a);   // drag into a Results folder / breadcrumb
+  return card;
+}
+
+function trashAssignmentCard(a) {
+  const card = el("div", "aw-card aw-card-trash");
+  card.append(el("div", "aw-folder-icon", icons.assignment));
+  const foot = el("div", "aw-card-foot aw-card-foot-trash");
+  foot.append(el("div", "aw-card-name", escapeText(a.title || a.code)));
+  const acts = el("div", "aw-trash-actions");
+  const restore = el("button", "aw-btn", "Restore"); restore.type = "button";
+  restore.onclick = async () => { await restoreAssignment(a.code); toastMsg("Assignment restored"); render(); };
+  const del = el("button", "aw-btn aw-lib-del", "Delete forever"); del.type = "button";
+  del.onclick = async () => {
+    if (!window.confirm(`Permanently delete “${a.title || a.code}” AND every score collected for it? This cannot be undone.`)) return;
+    del.disabled = restore.disabled = true; del.textContent = "Deleting...";
+    try { await deleteAssignmentForever(a.code); toastMsg("Assignment deleted"); }
+    catch (e) { toastMsg(e.message || "Could not delete"); }
+    render();
+  };
+  acts.append(restore, del);
+  foot.append(acts);
+  card.append(foot);
+  return card;
+}
+
+function folderCard(node, counts, assignmentCount = 0) {
   const card = el("div", "aw-card aw-card-folder");
   card.onclick = () => enterFolder(node.root, node.id);
 
@@ -425,7 +511,8 @@ function folderCard(node, counts) {
   ic.style.color = node.color || FOLDER_DEFAULT_COLOR;
   preview.append(ic);
 
-  const { folders = 0, acts = 0 } = counts || {};
+  // In Results the number that matters is how many assignments are inside.
+  const { folders = 0, acts = assignmentCount } = state.root === "results" ? { folders: 0 } : (counts || {});
   if (acts > 0) {
     const badge = el("div", "aw-fp-count");
     if (folders > 0) {
@@ -505,6 +592,23 @@ function makeDraggable(card, node) {
 }
 // `target` (optional) = the node this element represents, so we never drop an
 // item onto itself. `getParentId()` returns the destination folder id (or null).
+// Assignments are dragged the same way; they carry an "asg:" prefix because
+// they live in a different collection from the library items.
+function makeAssignmentDraggable(card, a) {
+  card.draggable = true;
+  card.addEventListener("dragstart", e => {
+    draggingId = "asg:" + a.code;
+    e.dataTransfer.effectAllowed = "move";
+    try { e.dataTransfer.setData("text/plain", a.code); } catch { /* ignore */ }
+    card.classList.add("is-dragging");
+  });
+  card.addEventListener("dragend", () => {
+    draggingId = null;
+    card.classList.remove("is-dragging");
+    document.querySelectorAll(".is-dropok").forEach(x => x.classList.remove("is-dropok"));
+  });
+}
+
 function makeDropTarget(elm, getParentId, target) {
   elm.addEventListener("dragover", e => {
     if (draggingId == null || (target && draggingId === target.id)) return;
@@ -518,8 +622,64 @@ function makeDropTarget(elm, getParentId, target) {
     elm.classList.remove("is-dropok");
     const id = draggingId; draggingId = null;
     if (id == null || (target && id === target.id)) return;
-    await moveItem(id, getParentId());   // moveItem guards against folder-into-own-subtree
+    try {
+      if (String(id).startsWith("asg:")) await moveAssignmentTo(String(id).slice(4), getParentId());
+      else await moveItem(id, getParentId());   // guards against folder-into-own-subtree
+    } catch (err) {
+      toastMsg(err.message || "Could not move that here.");
+    }
     render();
+  });
+}
+
+// Move one assignment into a Results folder (null = top level), refusing a
+// name that is already used there.
+async function moveAssignmentTo(code, folderId) {
+  const all = await listAllAssignments({ includeTrashed: true });
+  const a = all.find(x => x.code === code);
+  if (!a) return;
+  if (assignmentNameTaken(all, { folderId, title: a.title, exceptCode: code })) {
+    throw new Error(`“${a.title}” already exists in that folder.`);
+  }
+  await updateAssignment(code, { folderId: folderId ?? null });
+}
+
+// ⁝ Move for an assignment — the same folder-tree picker the library uses.
+async function moveAssignmentFlow(a) {
+  const folders = await listFolders("results");
+  openModal("Move to", (body, close) => {
+    const tree = el("div", "aw-move-tree");
+    let chosen = null;                       // null = top level of Results
+    tree.append(pickRow(ROOT_LABEL.results, 0, null));
+    renderChildren(null, 1);
+    body.append(tree);
+
+    const err = el("div", "aw-ed-error", "");
+    err.style.display = "none";
+    body.append(err);
+
+    const actions = el("div", "aw-modal-actions");
+    const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
+    const ok = el("button", "aw-btn aw-btn-primary", "Move here"); ok.type = "button";
+    ok.onclick = async () => {
+      try { await moveAssignmentTo(a.code, chosen); close(); render(); }
+      catch (e) { err.style.display = ""; err.textContent = e.message; }
+    };
+    actions.append(cancel, ok);
+    body.append(actions);
+
+    function renderChildren(parentId, depth) {
+      folders.filter(f => (f.parentId ?? null) === (parentId ?? null))
+        .sort((x, y) => itemName(x).localeCompare(itemName(y)))
+        .forEach(f => { tree.append(pickRow(itemName(f), depth, f.id)); renderChildren(f.id, depth + 1); });
+    }
+    function pickRow(label, depth, id) {
+      const row = el("button", "aw-move-row");
+      row.type = "button"; row.style.paddingLeft = (10 + depth * 18) + "px";
+      row.append(el("span", "aw-move-ic", FOLDER_SVG), el("span", null, escapeText(label)));
+      row.onclick = () => { chosen = id; tree.querySelectorAll(".aw-move-row").forEach(r => r.classList.remove("is-sel")); row.classList.add("is-sel"); };
+      return row;
+    }
   });
 }
 
@@ -556,6 +716,16 @@ function folderMenuItems(node) {
     ["Move", () => moveFlow(node)],
     ["Duplicate", () => duplicateFlow(node)],
     ["Delete", () => deleteFlow(node), true]
+  ];
+}
+function assignmentMenuItems(a) {
+  return [
+    ["Open report", () => openAssignmentDetail(a, { onChanged: render })],
+    ["Copy student link", () => copyAssignmentLink(a)],
+    ["Copy QR image", () => copyAssignmentQr(a)],
+    ["Edit", () => openAssignmentEdit(a, { onSaved: render })],
+    ["Move", () => moveAssignmentFlow(a)],
+    ["Delete", () => confirmTrashAssignment(a, { onDone: render }), true]
   ];
 }
 function actMenuItems(node) {
@@ -666,8 +836,46 @@ function colorFlow(node) {
     body.append(actions);
   });
 }
-async function duplicateFlow(node) { await duplicateItem(node.id); render(); }
-async function deleteFlow(node) { await trashItem(node.id); render(); }
+async function duplicateFlow(node) {
+  // duplicateItem counts the name up ("... (2)") rather than refusing.
+  try { await duplicateItem(node.id); } catch (e) { toastMsg(e.message || "Could not duplicate."); }
+  render();
+}
+async function deleteFlow(node) {
+  // An act may have assignments already out with students. Deleting the act
+  // does NOT have to take them down (each holds its own copy of the game), so
+  // ask rather than decide for the teacher.
+  if (node.kind === "act") {
+    let given = [];
+    try { given = await listAssignmentsForAct(node.id); } catch (e) { /* offline: just delete the act */ }
+    if (given.length) return deleteActWithAssignments(node, given);
+  }
+  await trashItem(node.id);
+  render();
+}
+
+function deleteActWithAssignments(node, given) {
+  openModal("Delete activity", (body, close) => {
+    body.append(el("div", "aw-modal-text",
+      `<b>${escapeText(itemName(node))}</b> has <b>${given.length}</b> assignment${given.length === 1 ? "" : "s"} ` +
+      `given to students. Each assignment keeps its own copy of the game, so it can keep working ` +
+      `and you keep the scores.`));
+    const actions = el("div", "aw-modal-actions");
+    const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
+    const keep = el("button", "aw-btn", "Delete activity only"); keep.type = "button";
+    keep.onclick = async () => { close(); await trashItem(node.id); toastMsg("Activity deleted, assignments kept"); render(); };
+    const both = el("button", "aw-btn aw-btn-primary", "Delete both"); both.type = "button";
+    both.onclick = async () => {
+      close();
+      await trashItem(node.id);
+      for (const a of given) { try { await trashAssignment(a.code); } catch (e) { /* keep going */ } }
+      toastMsg("Activity and its assignments moved to the recycle bins");
+      render();
+    };
+    actions.append(cancel, keep, both);
+    body.append(actions);
+  });
+}
 async function openInNewTab(node) {
   window.open(await linkFor(node), "_blank");
 }
@@ -693,10 +901,17 @@ async function moveFlow(node) {
     renderChildren(null, 1);
     body.append(tree);
 
+    const moveErr = el("div", "aw-ed-error", "");
+    moveErr.style.display = "none";
+    body.append(moveErr);
+
     const actions = el("div", "aw-modal-actions");
     const cancel = el("button", "aw-btn", "Cancel"); cancel.onclick = close;
     const ok = el("button", "aw-btn aw-btn-primary", "Move here"); ok.type = "button";
-    ok.onclick = async () => { await moveItem(node.id, chosen); close(); render(); };
+    ok.onclick = async () => {
+      try { await moveItem(node.id, chosen); close(); render(); }
+      catch (e) { moveErr.style.display = ""; moveErr.textContent = e.message || "Could not move it there."; }
+    };
     actions.append(cancel, ok);
     body.append(actions);
 
@@ -761,15 +976,33 @@ function openModal(title, buildBody, onClose) {
     onClose?.();
   }
 }
+// `onOk` may be async and may THROW — a duplicate name, for example. The dialog
+// then stays open and shows the reason instead of silently doing nothing.
 function openTextModal(title, placeholder, value, onOk) {
   openModal(title, (body, close) => {
     const inp = el("input", "aw-ed-input"); inp.placeholder = placeholder; inp.value = value || "";
     body.append(inp);
+    const err = el("div", "aw-ed-error", "");
+    err.style.display = "none";
+    body.append(err);
     const actions = el("div", "aw-modal-actions");
     const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
     const ok = el("button", "aw-btn aw-btn-primary", "OK"); ok.type = "button";
-    ok.onclick = () => { close(); onOk(inp.value); };
-    inp.onkeydown = e => { if (e.key === "Enter") { close(); onOk(inp.value); } if (e.key === "Escape") close(); };
+    const submit = async () => {
+      ok.disabled = true;
+      err.style.display = "none";
+      try {
+        await onOk(inp.value);
+        close();
+      } catch (e) {
+        ok.disabled = false;
+        err.style.display = "";
+        err.textContent = e.message || "That did not work.";
+        inp.focus(); inp.select();
+      }
+    };
+    ok.onclick = submit;
+    inp.onkeydown = e => { if (e.key === "Enter") submit(); if (e.key === "Escape") close(); };
     actions.append(cancel, ok);
     body.append(actions);
     setTimeout(() => { inp.focus(); inp.select(); }, 0);
