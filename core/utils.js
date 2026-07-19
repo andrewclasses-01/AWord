@@ -42,3 +42,29 @@ export function fmtSecsParts(ms) {
   const tenth = Math.floor((s - whole) * 10);
   return { big: `${whole}.`, small: `${tenth}s` };
 }
+
+// Chép chữ vào clipboard, trả về true nếu chép được.
+//
+// BẪY (gặp thật 20/7/2026): navigator.clipboard.writeText() KHÔNG báo lỗi khi
+// cửa sổ không được focus — nó treo lời hứa VÔ HẠN, nên chỗ gọi "await" mãi
+// không chạy tiếp và người dùng không thấy thông báo nào. Vì vậy phải đặt hạn
+// giờ, hết giờ thì quay về cách cũ (textarea + execCommand).
+export async function copyText(text) {
+  const viaClipboard = async () => {
+    if (!navigator.clipboard || !window.isSecureContext) return false;
+    const timeout = new Promise(resolve => setTimeout(() => resolve("timeout"), 1200));
+    const result = await Promise.race([navigator.clipboard.writeText(text).then(() => "ok"), timeout]);
+    return result === "ok";
+  };
+  try { if (await viaClipboard()) return true; } catch (e) { /* fall back below */ }
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed"; ta.style.top = "0"; ta.style.opacity = "0";
+    document.body.append(ta);
+    ta.focus(); ta.select();
+    const ok = document.execCommand("copy");
+    ta.remove();
+    return ok;
+  } catch (e) { return false; }
+}

@@ -115,6 +115,38 @@ async function persistDelete(ids) {
   }
 }
 
+// ---- SHORT NUMBERS for shareable links (v0.8.0) ----------------------------
+// Every folder and act also carries a small counting number (`num`: 1, 2, 3...)
+// so links can read ?f=12&a=57 instead of a long internal id. The number lives
+// in Firestore next to the item, so every computer signed into the teacher's
+// account resolves the same link to the same item.
+function nextNum(map) {
+  let max = 0;
+  for (const n of Object.values(map)) if (typeof n.num === "number" && n.num > max) max = n.num;
+  return max + 1;
+}
+
+// One-time backfill: hand numbers to items created before v0.8.0, oldest first
+// so the numbering matches the order the teacher made them in.
+export async function ensureNumbers() {
+  const map = await readAll();
+  const missing = Object.values(map).filter(n => typeof n.num !== "number");
+  if (!missing.length) return 0;
+  let next = nextNum(map);
+  missing.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  missing.forEach(n => { n.num = next++; });
+  await persist(missing);
+  return missing.length;
+}
+
+// Resolve a link number back to an item. Live items win over trashed ones.
+export async function getByNum(num) {
+  const n = Number(num);
+  if (!Number.isFinite(n)) return null;
+  const hits = Object.values(await readAll()).filter(x => x.num === n);
+  return hits.find(x => !x.trashed) || hits[0] || null;
+}
+
 // ---- helpers (unchanged logic) ---------------------------------------------
 export function itemName(node) {
   if (!node) return "";
@@ -191,6 +223,7 @@ export async function createFolder(root, parentId, name) {
   const map = await readAll();
   const id = newId("fld");
   map[id] = { id, kind: "folder", root, parentId: parentId ?? null,
+    num: nextNum(map),
     name: (name || "New folder").trim() || "New folder",
     trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null,
     createdAt: now(), updatedAt: now() };
@@ -212,6 +245,8 @@ export async function saveActivity(activity, opts = {}) {
     ...payload,
     id,
     kind: "act",
+    // keep the act's link number for its whole life; only a brand-new act gets one
+    num: existing?.num ?? (typeof payload.num === "number" ? payload.num : nextNum(map)),
     root: existing?.root || opts.root || "activities",
     parentId: existing ? (existing.parentId ?? null) : (opts.parentId ?? null),
     trashed: existing?.trashed || false,
@@ -296,6 +331,7 @@ export async function duplicateItem(id) {
     const c = { ...JSON.parse(JSON.stringify(node)), id: copyId, parentId,
       trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null,
       createdAt: now(), updatedAt: now() };
+    c.num = nextNum(map);   // a copy is a NEW item, so it needs its own link number
     if (nameOverride != null) { if (c.kind === "folder") c.name = nameOverride; else c.title = nameOverride; }
     map[copyId] = c;
     made.push(c);
@@ -408,6 +444,8 @@ export async function importLocalLibrary() {
       createdAt: n.createdAt || now(), updatedAt: now()
     }));
   add.forEach(n => { map[n.id] = n; });
+  // old offline items predate link numbers — give them one as they arrive
+  add.forEach(n => { if (typeof n.num !== "number") n.num = nextNum(map); });
   await persist(add);
   return add.length;
 }

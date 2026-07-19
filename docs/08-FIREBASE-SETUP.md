@@ -155,6 +155,22 @@ service cloud.firestore {
     match /assignments/{code} {
       allow read: if true;
       allow create, update, delete: if isTeacher();
+
+      // (v0.8.0) BẢNG XẾP HẠNG CÔNG KHAI: chỉ tên + điểm + thời gian. HS thêm được
+      // lượt của mình và xem được thứ hạng cả lớp, nhưng KHÔNG sửa/xoá được, và
+      // KHÔNG thấy bài làm của bạn (bài làm nằm ở /results, chỉ thầy đọc).
+      match /scores/{scoreId} {
+        allow read: if true;
+        allow create: if request.resource.data.keys().hasOnly(
+                          ['name','score','total','timeMs','createdAt'])
+                      && request.resource.data.name is string
+                      && request.resource.data.name.size() <= 40
+                      && request.resource.data.score is int
+                      && request.resource.data.total is int
+                      && request.resource.data.timeMs is int
+                      && request.resource.data.createdAt is int;
+        allow update, delete: if isTeacher();
+      }
     }
 
     // KẾT QUẢ học sinh nộp: chỉ được TẠO MỚI, không ai sửa/xoá được điểm
@@ -212,6 +228,9 @@ assignments/{code}            ← bài giao cho HS. CÔNG KHAI đọc.
                                  Chứa BẢN SAO act tại thời điểm giao (snapshot) nên
                                  thư viện của thầy KHÔNG bị lộ, và sửa act sau này
                                  không làm sai lệch bài HS đang làm dở.
+
+assignments/{code}/scores/{id} ← (v0.8.0) bảng xếp hạng CÔNG KHAI: name, score, total, timeMs,
+                                 createdAt. Đây là thứ DUY NHẤT học sinh đọc được của nhau.
 
 results/{resultId}            ← mỗi lượt HS nộp 1 doc: assignmentId, studentName,
                                  score, total, timeMs, review, createdAt

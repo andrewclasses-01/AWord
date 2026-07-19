@@ -3,7 +3,7 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/7/2026 — v0.7.4 (CHỐT CHẶNG, bàn giao cho phiên mới).**
+> Cập nhật lần cuối: **20/7/2026 — v0.8.0 (ASSIGNMENT + THU ĐIỂM + LINK SỐ + QR — đã test thật).**
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
@@ -32,22 +32,25 @@
    - ⚠️**Popup đăng nhập Google KHÔNG tự động hoá được** (Google chặn) — khi test bằng trình duyệt tự
      động phải nhờ thầy bấm chọn tài khoản 1 lần.
 
-4. **TRẠNG THÁI CHỐT (20/7/2026) — ĐÃ XONG TRỌN 3 VIỆC LỚN:**
-   - ✅ **Khối 1 — Quiz + thư viện kiểu Drive** (v0.5.0→v0.6.9): editor (dán thẳng bảng Excel), thư mục
-     con/màu/kéo-thả/thùng rác/tìm kiếm, header + Settings, bố cục thẻ theo ảnh mẫu thầy.
-   - ✅ **Khối 2 — PRINT** (v0.7.1): bấm Print → popup chọn ĐỊNH DẠNG (Anagram/Crossword/Quiz/Unjumble,
-     chỉ hiện cái khả dụng theo type + số câu) → worksheet A4 thang xám theo ảnh mẫu. Hệ dùng chung
-     `core/print.js`. **Crossword mới là nút "soon", CHƯA có renderer.** Chưa in thử giấy/PDF thật.
-   - ✅ **LÊN MẠNG + FIREBASE** (v0.7.2→v0.7.4): repo public + GitHub Pages; project Firebase
-     `aword-70dae`; **thư viện chạy trên Firestore** `users/{uid}/items`, **bắt đăng nhập Google**
-     (chỉ `namdaptrai01@gmail.com`); đã test thật đầu-cuối trên web live + kiểm tra bảo mật (người lạ
-     không đọc/ghi được gì).
+4. **TRẠNG THÁI CHỐT (20/7/2026, v0.8.0) — ĐÃ XONG 5 VIỆC LỚN:**
+   - ✅ **Khối 1 — Quiz + thư viện kiểu Drive** (v0.5.0→v0.6.9).
+   - ✅ **Khối 2 — PRINT** (v0.7.1). *Crossword vẫn là nút "soon", chưa có renderer.*
+   - ✅ **LÊN MẠNG + FIREBASE** (v0.7.2→v0.7.4): thư viện chạy trên Firestore, bắt đăng nhập Google.
+   - ✅ **Khối 3 — ASSIGNMENT** (v0.8.0): giao bài bằng **link + QR**, HS chơi ở `play.html`
+     **không cần đăng nhập** (nhập tên → chơi → tự nộp), chơi lại thoải mái, quá hạn vẫn chơi và
+     được đánh dấu **LATE**.
+   - ✅ **Khối 4 — THU ĐIỂM** (v0.8.0): pop-up báo cáo cho thầy (Summary · Leaderboard lượt-tốt-nhất ·
+     Detail sổ ra từng câu ✓/✗ + đáp án đúng, mọi cột sắp xếp 2 chiều) + bảng xếp hạng lớp cho HS
+     xem cuối bài. Đã test thật đầu-cuối + thử tấn công từ phía HS (xem `GHI CHU DU AN.md` v0.8.0).
+   - ✅ **LINK SỐ** (v0.8.0): mỗi folder/act có số riêng → `?r=activities` · `?f=12` · `?f=12&a=57` ·
+     `?a=57`; thanh địa chỉ tự đổi, Back/Forward chạy, menu ⁝ có **Copy link**. Link cũ vẫn mở được.
+   - ✅ **`core/qr.js`** — bộ sinh QR TỰ VIẾT, không phụ thuộc mạng, **copy sang app khác dùng ngay**
+     (myBoard/myActivity/mySpeaking...): `qrSvg()` · `qrPngDataUrl()` · `copyQrImage()` · `downloadQrPng()`.
 
-   **➡️ VIỆC KẾ TIẾP = Khối 3 — ASSIGNMENT (link + QR cho học sinh).** Đây là mắt xích còn thiếu để
-   thầy giao bài: hiện link `?play=` vẫn đòi đăng nhập nên **CHƯA gửi cho HS được**. Cần làm:
-   tạo doc `assignments/{code}` chứa **BẢN SAO** act (đọc công khai — luật Firestore đã cho phép sẵn) +
-   trang chơi cho HS **không cần đăng nhập** (nhập tên → chơi → nộp) + sinh link & mã QR.
-   Sau đó là Khối 4 — thu điểm/leaderboard online (`results/{id}`, luật đã sẵn sàng). Xem ROADMAP mục 7.
+   **➡️ VIỆC KẾ TIẾP (thầy chưa chốt):** (a) quản lý assignment cũ — đổi tên / xoá / đóng bài (thầy nói
+   "để sau"); (b) gom kết quả về gốc **Results** ở trang chủ (hiện chỉ xem trong màn act); (c) chuyển
+   **Settings + leaderboard offline** từ localStorage lên cloud; (d) renderer Crossword cho Print;
+   (e) chốt Quiz + viết "recipe" rồi build 4 game còn lại.
 
    **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")**; chưa rõ thì hỏi bằng AskUserQuestion.
 
@@ -182,6 +185,9 @@ D:\APP AND DATA\PROJECT\AWord\
 ├─ APP_MASTER.md              ← file này (đọc đầu tiên)
 ├─ GHI CHU DU AN.md           ← nhật ký version (mỗi đợt sửa PHẢI ghi + tăng version)
 ├─ devserver.py               ← server chạy thử (gửi Cache-Control:no-store — mục 9)
+├─ play.html + play.js        ← TRANG HỌC SINH (v0.8.0): mở link ?g=<mã bài giao> → nhập tên → chơi →
+│                               Game Complete TỰ NỘP. KHÔNG đăng nhập, KHÔNG nạp store.js (thư viện
+│                               của thầy không thể chạm tới từ đây)
 ├─ index.html + main.js + manifest.js  ← TRANG CHỦ kiểu DRIVE (main.js: 2 gốc Activities/Results, thư
 │                             mục con, thùng rác, Move, Search, grid/list, ⁝ menu, mở-tab-mới ?play/?folder;
 │                             manifest.js = danh sách template đã chốt, hiện main.js không dùng tới)
@@ -195,6 +201,13 @@ D:\APP AND DATA\PROJECT\AWord\
 │  ├─ registry.js / layout.js / scoring.js / leaderboard.js / confetti.js / sound.js / utils.js
 │  ├─ print.js               ← (v0.7.1) Print DÙNG CHUNG: popup chọn định dạng (Anagram/Crossword/Quiz/
 │  │                             Unjumble) + luật khả dụng + render worksheet A4 (đọc template.toPrintItems)
+│  ├─ qr.js                  ← (v0.8.0) BỘ SINH QR TỰ VIẾT, 0 phụ thuộc — COPY SANG APP KHÁC DÙNG ĐƯỢC
+│  │                             NGAY: qrSvg / qrPngDataUrl / qrCanvas / copyQrImage / downloadQrPng.
+│  │                             Kiểm chứng bằng core/qr-test.html (so bản chuẩn + máy quét thật)
+│  ├─ assignments.js         ← (v0.8.0) TẦNG DỮ LIỆU bài giao: createAssignment / listAssignmentsForAct /
+│  │                             getAssignment / submitResult / listScores / listResults + gộp tên
+│  ├─ assignment-ui.js       ← (v0.8.0) GIAO DIỆN bài giao: pop-up Setup · Share (link+QR) · thanh dài
+│  │                             dưới khung chơi · pop-up báo cáo (Summary/Leaderboard/Detail)
 │  ├─ firebase.js            ← (v0.7.3) KẾT NỐI Firebase: config project `aword-70dae` + nạp SDK LAZY qua
 │  │                             CDN 12.9.0 (zero-build) + auth()/db()/fs()/signIn()/signOutNow()/
 │  │                             onUser()/currentUser()/isTeacher(). Config CÔNG KHAI là bình thường.
@@ -329,7 +342,29 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
 - `07-ARCHITECTURE.md` — Vite/Firebase/security rules (⚠️ cấu trúc file trong đó LỖI THỜI so với mục 4,
   chỉ tham khảo phần Firebase/backend).
 
+## 8b. Dữ liệu trên Firestore (v0.8.0)
+
+```
+users/{uid}/items/{id}          thư viện RIÊNG của thầy (folder + act, có thêm `num` = số link)
+assignments/{code}              bài giao — ĐỌC CÔNG KHAI, chứa BẢN SAO act; chỉ thầy tạo/sửa/xoá
+assignments/{code}/scores/{id}  bảng xếp hạng CÔNG KHAI: chỉ name/score/total/timeMs/createdAt
+results/{id}                    bài làm chi tiết — CHỈ THẦY ĐỌC, không ai sửa/xoá
+```
+⚠️ **Bộ khoá của `results` bị LUẬT KHOÁ CỨNG** (`assignmentId, studentName, score, total, timeMs,
+review, createdAt`). Thêm field mới mà không sửa luật trên console thì MỌI lượt nộp sẽ hỏng.
+
 ## 9. Bẫy & lưu ý kỹ thuật (tóm tắt — ĐẦY ĐỦ trong `core/HUONG DAN CORE.md`)
+
+- ⚠️ **`navigator.clipboard.writeText()` TREO VÔ HẠN khi cửa sổ không được focus** (không ném lỗi) —
+  `await` không bao giờ chạy tiếp, người dùng không thấy phản hồi. Dùng `copyText()` trong
+  `core/utils.js` (đã có hạn giờ + phương án dự phòng), ĐỪNG gọi thẳng clipboard API.
+- ⚠️ **Đừng bắt lỗi rồi trả mảng rỗng** cho phần đọc dữ liệu hiển thị: "chưa ai chơi" và "đọc hỏng"
+  trông y hệt nhau trên màn hình. Hỏng thì phải BÁO (bài học từ pop-up báo cáo v0.8.0).
+- ⚠️ **QR: thông tin định dạng (format info) rất dễ đặt XOAY ngang-dọc** — mã vẫn "trông như QR" nhưng
+  không máy nào quét được. Sửa QR xong PHẢI chạy `core/qr-test.html` (có máy quét thật) trước khi tin.
+- ⚠️ **Ảnh chụp màn hình của công cụ preview/Chrome hay LỖI KẾT HỢP với `backdrop-filter`** → pop-up
+  trông như trong suốt/chồng chữ dù DOM hoàn toàn đúng. Kiểm bằng `document.elementFromPoint` trước
+  khi tin là lỗi thật.
 
 - ⚠️ **GITHUB PAGES CẬP NHẬT FILE KHÔNG ĐỒNG THỜI** (gặp thật 19/7): sau `git push`, có thể `main.js`
   đã là bản mới trong khi `core/store.js` còn bản cũ → app chạy LẪN 2 phiên bản, sinh dữ liệu rác khó

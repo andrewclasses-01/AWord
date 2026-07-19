@@ -8,21 +8,25 @@
 //   grid/list view], a breadcrumb, then the sub-folders and acts.
 //     * "New game" shows only inside Activities.
 //
-//   Folder ⁝ menu:  Open in new tab · Rename · Move · Duplicate · Delete
-//   Act ⁝ menu:     Open in new tab · Edit content · Rename · Duplicate · Move · Delete
+//   Folder ⁝ menu:  Open in new tab · Copy link · Rename · Move · Duplicate · Delete
+//   Act ⁝ menu:     Open in new tab · Copy link · Edit content · Rename · ...
 //   Delete -> Recycle bin (per root). Permanent delete happens in the bin.
 //
-//   Open in new tab uses ?play=<id> (an act) or ?folder=<root>~<id> (a folder).
+//   LINKS (v0.8.0): every folder/act carries a short NUMBER, so its address is
+//   ?r=activities · ?f=12 · ?f=12&a=57 · ?a=57. The address bar follows wherever
+//   the teacher is (Back/Forward work), and the same link opens the same item on
+//   any computer signed into the teacher's account. Old ?play=/?folder= links
+//   still open, and are quietly upgraded to the short form.
 // =============================================================
 
 import { startGame } from "./core/engine.js";
-import { el } from "./core/utils.js";
+import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { getTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
 import {
-  ROOTS, itemName, getItem, listChildren, pathTo, listFolders, searchItems, listTrash,
+  ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
   setFolderColor, folderCounts,
   resetCache, pendingImportCount, importLocalLibrary, markMigrated, wasMigrated
@@ -69,22 +73,91 @@ async function init() {
   try {
     await maybeOfferMigration();
     await maybeSeed();
+    await ensureNumbers();      // one-time: give older items their link numbers
   } catch (e) {
     renderLogin("Could not load your library: " + e.message);
     return;
   }
 
-  const p = new URLSearchParams(location.search);
-  if (p.get("play")) {
-    const node = await getItem(p.get("play"));
-    if (node && node.kind === "act") { startGame(app, node, { onExit: goTop }); return; }
-  }
-  if (p.get("folder")) {
-    const [root, fid] = p.get("folder").split("~");
-    if (ROOTS.includes(root)) { state.view = "folder"; state.root = root; state.folderId = fid || null; render(); return; }
-  }
-  render();
+  window.addEventListener("popstate", () => routeFromLocation());
+  await routeFromLocation();
 }
+
+// ---------------- shareable links & the address bar (v0.8.0) ----------------
+// Folders and acts are addressed by their SHORT NUMBER, so a link can be copied
+// between the teacher's computers (same Google account) and land in the same
+// place:  ?r=activities  ·  ?f=12  ·  ?f=12&a=57  ·  ?a=57 (act outside folders)
+// The old ?play=<id> / ?folder=<root>~<id> links still work.
+function baseUrl() { return location.origin + location.pathname; }
+
+async function linkFor(node) {
+  const p = new URLSearchParams();
+  if (node.kind === "folder") {
+    p.set("f", node.num);
+  } else {
+    if (node.parentId) {
+      const parent = await getItem(node.parentId);
+      if (parent && typeof parent.num === "number") p.set("f", parent.num);
+    }
+    p.set("a", node.num);
+  }
+  return `${baseUrl()}?${p.toString()}`;
+}
+
+function setUrl(url, replace) {
+  if (url === location.href) return;
+  history[replace ? "replaceState" : "pushState"]({}, "", url);
+}
+
+// Read the address bar and show whatever it points at (also used by Back/Forward).
+// `fromUrl: true` stops the navigation helpers from pushing the address again —
+// we are following the address bar, not driving it.
+async function routeFromLocation() {
+  const p = new URLSearchParams(location.search);
+  const opts = { fromUrl: true };
+
+  const actKey = p.get("a") || p.get("play");
+  if (actKey) {
+    const node = p.get("a") ? await getByNum(p.get("a")) : await getItem(p.get("play"));
+    if (node && node.kind === "act") {
+      state.view = "play";
+      if (!p.get("a")) setUrl(await linkFor(node), true);   // upgrade an old link in place
+      startGame(app, node, { onExit: goTop });
+      return;
+    }
+  }
+  if (p.get("f")) {
+    const node = await getByNum(p.get("f"));
+    if (node && node.kind === "folder") return enterFolder(node.root, node.id, opts);
+  }
+  if (p.get("r") && ROOTS.includes(p.get("r"))) return openRoot(p.get("r"), opts);
+  if (p.get("folder")) {                                    // legacy link
+    const [root, fid] = p.get("folder").split("~");
+    if (ROOTS.includes(root)) {
+      const node = fid ? await getItem(fid) : null;
+      setUrl(node ? await linkFor(node) : `${baseUrl()}?r=${root}`, true);
+      return enterFolder(root, fid || null, opts);
+    }
+  }
+  goTop(opts);
+}
+
+// Point the address bar at wherever the library currently is.
+async function syncUrl(replace) {
+  if (state.view === "top") return setUrl(baseUrl(), replace);
+  if (state.folderId) {
+    const node = await getItem(state.folderId);
+    if (node) return setUrl(await linkFor(node), replace);
+  }
+  if (state.root) setUrl(`${baseUrl()}?r=${state.root}`, replace);
+}
+
+async function copyLinkFlow(node) {
+  const url = await linkFor(node);
+  const ok = await copyText(url);
+  toastMsg(ok ? "Link copied" : url);
+}
+
 
 // ---------------- sign-in screen ----------------
 function renderLogin(errorMsg) {
@@ -197,7 +270,11 @@ async function render() {
   if (state.view === "top") return renderTop();
   return renderInside();
 }
-function goTop() { state.view = "top"; state.root = null; state.folderId = null; state.query = ""; render(); }
+function goTop(opts = {}) {
+  state.view = "top"; state.root = null; state.folderId = null; state.query = "";
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
 
 // ---------------- top level: two fixed roots ----------------
 function renderTop() {
@@ -217,7 +294,11 @@ function renderTop() {
   wrap.append(footer());
   app.append(wrap);
 }
-function openRoot(root) { state.view = "folder"; state.root = root; state.folderId = null; state.query = ""; render(); }
+function openRoot(root, opts = {}) {
+  state.view = "folder"; state.root = root; state.folderId = null; state.query = "";
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
 
 // ---------------- inside a root (folder / search / trash) ----------------
 async function renderInside() {
@@ -469,6 +550,7 @@ function menuButton(node, itemsFn) {
 function folderMenuItems(node) {
   return [
     ["Open in new tab", () => openInNewTab(node)],
+    ["Copy link", () => copyLinkFlow(node)],
     ["Rename", () => renameFlow(node)],
     ["Color", () => colorFlow(node)],
     ["Move", () => moveFlow(node)],
@@ -479,6 +561,7 @@ function folderMenuItems(node) {
 function actMenuItems(node) {
   return [
     ["Open in new tab", () => openInNewTab(node)],
+    ["Copy link", () => copyLinkFlow(node)],
     ["Edit content", () => editAct(node.id)],
     ["Rename", () => renameFlow(node)],
     ["Duplicate", () => duplicateFlow(node)],
@@ -491,6 +574,8 @@ function actMenuItems(node) {
 async function playAct(id) {
   const node = await getItem(id);
   if (!node) return render();
+  state.view = "play";
+  setUrl(await linkFor(node));               // the address bar now points at this act
   startGame(app, node, { onExit: goTop });   // the in-game Home button returns here
 }
 // Edit content -> open the editor for THIS act's type (each template registers
@@ -583,14 +668,15 @@ function colorFlow(node) {
 }
 async function duplicateFlow(node) { await duplicateItem(node.id); render(); }
 async function deleteFlow(node) { await trashItem(node.id); render(); }
-function openInNewTab(node) {
-  const base = location.origin + location.pathname;
-  const url = node.kind === "act" ? `${base}?play=${encodeURIComponent(node.id)}`
-                                   : `${base}?folder=${encodeURIComponent(node.root)}~${encodeURIComponent(node.id)}`;
-  window.open(url, "_blank");
+async function openInNewTab(node) {
+  window.open(await linkFor(node), "_blank");
 }
 
-function enterFolder(root, folderId) { state.view = "folder"; state.root = root; state.folderId = folderId ?? null; state.query = ""; render(); }
+function enterFolder(root, folderId, opts = {}) {
+  state.view = "folder"; state.root = root; state.folderId = folderId ?? null; state.query = "";
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
 
 // ---------------- Move dialog (folder tree, same root) ----------------
 async function moveFlow(node) {

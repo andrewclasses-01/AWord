@@ -28,6 +28,8 @@ import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
 import { makeNumberStepper } from "./numberstepper.js";
 import { openPrintPopup } from "./print.js";
+import { openAssignmentSetup, openAssignmentDetail, assignmentBar } from "./assignment-ui.js";
+import { listAssignmentsForAct } from "./assignments.js";
 
 // The full list of games (for the Template panel). Only entries whose `type`
 // matches a template already built (registered) are clickable; the rest show
@@ -43,7 +45,15 @@ const THEME_SWATCH = {
   beach:     "linear-gradient(135deg, #fdf8ec 50%, #17a3b8 50%)"
 };
 
-export function startGame(root, activity, { onExit } = {}) {
+// `session` (optional) turns the page into STUDENT MODE — used by play.html:
+//   session.endOptions   { leaderboard, showAnswers, startAgain } — what the
+//                        teacher ticked when setting the assignment
+//   session.playerName   the name the student typed
+//   session.submit(r)    hand in one play  -> Promise
+//   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
+// With a session the teacher-only tools (Options/Template/Style, Edit, Set
+// assignment, Print, Home) are not built at all, so a student cannot reach them.
+export function startGame(root, activity, { onExit, session = null } = {}) {
   root.innerHTML = "";
 
   const tpl = getTemplate(activity.type);
@@ -106,12 +116,33 @@ export function startGame(root, activity, { onExit } = {}) {
       onCancel: () => startGame(root, activity, { onExit })
     });
   };
-  assignBtn.onclick = () => { sound.click(); toast("Set assignment — coming soon"); };
+  // Set assignment -> the setup form; a new assignment appears as a strip below.
+  assignBtn.onclick = () => { sound.click(); openAssignmentSetup(activity, { onCreated: loadAssignmentBars }); };
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).
   printBtn.onclick = () => { sound.click(); openPrintPopup(activity); };
 
   below.append(belowLeft, belowCenter, belowRight);
+
+  // Students never see the teacher's toolbar.
+  if (session) { belowCenter.remove(); belowRight.remove(); }
+
+  // ----- The assignment strips, a little below the stage -----
+  // One per assignment made from this act; clicking one opens its report.
+  const barsWrap = el("div", "aw-as-bars");
+  if (!session && activity.id) {
+    page.append(barsWrap);
+    loadAssignmentBars();
+  }
+  async function loadAssignmentBars() {
+    try {
+      const list = await listAssignmentsForAct(activity.id);
+      barsWrap.innerHTML = "";
+      list.forEach(a => barsWrap.append(assignmentBar(a, openAssignmentDetail)));
+    } catch (e) {
+      barsWrap.innerHTML = "";   // offline / not signed in: just show nothing
+    }
+  }
 
   function toolBtn(svg, title, small) {
     const b = el("button", "aw-toolbtn" + (small ? " aw-toolbtn-sm" : ""), svg);
@@ -394,9 +425,10 @@ export function startGame(root, activity, { onExit } = {}) {
     menuEl.append(
       menuItem("Submit answers", () => { closeMenu(); submitHandler?.(); }),
       menuItem("Start again", restart),
-      menuItem("Resume", closeMenu),
-      menuItem("Change template", () => { closeMenu(); toast("Template switching — coming soon"); })
+      menuItem("Resume", closeMenu)
     );
+    // "Change template" is a teacher tool — students never see it.
+    if (!session) menuEl.append(menuItem("Change template", () => { closeMenu(); toast("Template switching — coming soon"); }));
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
@@ -411,7 +443,7 @@ export function startGame(root, activity, { onExit } = {}) {
     return b;
   }
 
-  function restart() { cleanupAll(); startGame(root, activity, { onExit }); }
+  function restart() { cleanupAll(); startGame(root, activity, { onExit, session }); }
   function cleanupAll() { stopTimer(); closeMenu(); closeToolPanel(false); cleanup(); }
 
   // ----- Small toast message -----
@@ -444,6 +476,15 @@ export function startGame(root, activity, { onExit } = {}) {
       // Don't add to the leaderboard if the player answered NO question.
       const answered = raw.answered != null ? raw.answered : reviewData.filter(r => r.answered).length;
       let entryId = null;
+      if (session) {
+        // Student mode: every finished game is handed in, straight away.
+        // The upload runs alongside the celebration so nobody waits on a spinner.
+        submission = session.submit({
+          score: result.correct, total: result.total, timeMs, review: reviewData
+        }).catch(e => { console.warn("AWord: submit failed", e); submitFailed = true; return null; });
+        celebrate(result, null);
+        return;
+      }
       if (answered > 0) {
         // stored (incl. review) so it can sync later and students can compete.
         entryId = addEntry(activity.id, {
@@ -479,6 +520,8 @@ export function startGame(root, activity, { onExit } = {}) {
   // ----- Dark modal panels -----
   let backdrop = null;
   let reviewData = [];   // this play's per-question review (for "Show answers")
+  let submission = null; // student mode: the promise of THIS play being handed in
+  let submitFailed = false;
   function openBackdrop() {
     if (!backdrop) { backdrop = el("div", "aw-backdrop"); inner.append(backdrop); }
     backdrop.innerHTML = "";
@@ -498,23 +541,75 @@ export function startGame(root, activity, { onExit } = {}) {
     );
     panel.append(stats);
 
-    const rank = getRank(activity.id, entryId);
-    if (rank) panel.append(el("div", "aw-panel-rank", `YOU'RE ${ordinal(rank)} ON THE LEADERBOARD`));
+    if (!session) {
+      const rank = getRank(activity.id, entryId);
+      if (rank) panel.append(el("div", "aw-panel-rank", `YOU'RE ${ordinal(rank)} ON THE LEADERBOARD`));
+    }
 
     const items = el("div", "aw-panel-items");
-    items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
-    if (reviewData.length && activity.options?.showAnswers !== false) {
-      items.append(panelItem("Show answers", () => showReview(result, entryId)));
+    if (session) {
+      // Student mode: only what the teacher ticked when setting the assignment.
+      const end = session.endOptions || {};
+      panel.append(el("div", "aw-panel-rank",
+        submitFailed ? "COULD NOT SEND YOUR RESULT — CHECK YOUR INTERNET"
+                     : `SENT TO YOUR TEACHER — ${escapeText(session.playerName || "")}`));
+      if (end.leaderboard !== false) items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
+      if (end.showAnswers !== false && reviewData.length) {
+        items.append(panelItem("Show answers", () => showReview(result, entryId)));
+      }
+      if (end.startAgain !== false) items.append(panelItem("Start again", restart));
+    } else {
+      items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
+      if (reviewData.length && activity.options?.showAnswers !== false) {
+        items.append(panelItem("Show answers", () => showReview(result, entryId)));
+      }
+      items.append(
+        panelItem("Start again", restart),
+        panelItem("Play a different template", () => toast("Template switching — coming soon"))
+      );
     }
-    items.append(
-      panelItem("Start again", restart),
-      panelItem("Play a different template", () => toast("Template switching — coming soon"))
-    );
     panel.append(items);
     bd.append(panel);
   }
 
+  // Student mode: the CLASS ranking for this assignment, read live from the
+  // public scores of the assignment (names + scores only — never anyone's answers).
+  function showOnlineLeaderboard(result) {
+    const bd = openBackdrop();
+    const panel = el("div", "aw-panel aw-panel-wide");
+    panel.append(el("div", "aw-panel-head", "ANDREW CLASSES"));
+    const table = el("div", "aw-lb-table");
+    table.append(el("div", "aw-lb-row", "Loading..."));
+    panel.append(table);
+
+    const items = el("div", "aw-panel-items aw-panel-items-row");
+    items.append(panelItem("Back", () => showSummary(result, null)));
+    panel.append(items);
+    bd.append(panel);
+
+    // wait for THIS play to land first, so the student sees their own row
+    Promise.resolve(submission)
+      .then(() => session.entries())
+      .then(entries => {
+        table.innerHTML = "";
+        if (!entries.length) { table.append(el("div", "aw-lb-row", "No scores yet")); return; }
+        entries.slice(0, 10).forEach((e, i) => {
+          const row = el("div", "aw-lb-row" + (e.mine ? " is-you" : ""));
+          const tp = fmtSecsParts(e.timeMs);
+          row.append(
+            el("span", "aw-lb-rank", ordinal(i + 1).toLowerCase()),
+            el("span", "aw-lb-name", escapeText(e.name)),
+            el("span", "aw-lb-score", `${e.score}/${e.total}`),
+            el("span", "aw-lb-time", `${tp.big}${tp.small}`)
+          );
+          table.append(row);
+        });
+      })
+      .catch(() => { table.innerHTML = ""; table.append(el("div", "aw-lb-row", "Could not load the leaderboard")); });
+  }
+
   function showLeaderboard(result, entryId) {
+    if (session) return showOnlineLeaderboard(result);
     const bd = openBackdrop();
     const panel = el("div", "aw-panel aw-panel-wide");
     panel.append(el("div", "aw-panel-head", "ANDREW CLASSES"));

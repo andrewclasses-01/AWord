@@ -1131,3 +1131,141 @@ body {
 .aw-move-row:hover { background: #eef3f9; }
 .aw-move-row.is-sel { background: #e3edff; color: #1e56c9; }
 .aw-move-ic { width: 20px; height: 20px; color: #f5b13b; flex: 0 0 auto; }
+
+/* =====================================================================
+   ASSIGNMENTS (v0.8.0) — setup / share / report popups + the strips shown
+   under the stage. Everything here is prefixed .aw-as- so it can never
+   collide with the in-game frame classes (see APP_MASTER mục 9).
+   The backdrop dims AND blurs the page behind; only OPACITY is animated
+   (rule 12: never animate transform on a centred element).
+   ===================================================================== */
+.aw-as-dim {
+  position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(12,20,32,.55); backdrop-filter: blur(6px);
+  opacity: 0; transition: opacity .18s ease;
+  font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-as-dim.is-on { opacity: 1; }
+.aw-as-modal {
+  background: #fff; border-radius: 20px; width: min(520px, 100%); max-height: 88vh; overflow: auto;
+  box-shadow: 0 24px 60px rgba(10,18,30,.4); padding: 20px 22px 18px;
+}
+.aw-as-wide { width: min(1080px, 100%); }
+
+.aw-as-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.aw-as-title { flex: 1 1 auto; min-width: 0; font-size: 1.3rem; font-weight: 800; color: #23303e; }
+.aw-as-sub { font-size: 1rem; font-weight: 700; color: #4a5a6e; margin-bottom: 10px; }
+.aw-as-x {
+  flex: 0 0 auto; width: 34px; height: 34px; border: 0; border-radius: 10px; cursor: pointer;
+  background: #eef3f9; color: #55657a; display: grid; place-items: center;
+}
+.aw-as-x:hover { background: #e2eaf4; color: #23303e; }
+.aw-as-x svg { width: 18px; height: 18px; }
+
+.aw-as-body { display: flex; flex-direction: column; gap: 8px; }
+.aw-as-label { font-size: .82rem; font-weight: 800; color: #55657a; margin-top: 8px; }
+.aw-as-input {
+  font-family: inherit; font-size: .98rem; font-weight: 600; color: #23303e;
+  padding: .6rem .7rem; border: 1px solid #d8e2ee; border-radius: 11px; background: #fff; width: 100%;
+}
+.aw-as-input:focus { outline: 2px solid #bcd6fb; border-color: #bcd6fb; }
+.aw-as-input:disabled { background: #f3f6fa; color: #9fadbe; }
+.aw-as-deadline { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.aw-as-date { flex: 1 1 220px; }
+.aw-as-check { display: inline-flex; align-items: center; gap: 7px; font-size: .92rem; font-weight: 600; color: #2a3a4d; cursor: pointer; }
+.aw-as-check input { width: 17px; height: 17px; accent-color: #2f7bff; cursor: pointer; }
+.aw-as-optrow { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.aw-as-note { font-size: .82rem; color: #7a8aa0; line-height: 1.5; }
+.aw-as-err { font-size: .88rem; font-weight: 700; color: #d33; min-height: 1em; }
+.aw-as-loading { padding: 26px 0; text-align: center; color: #7a8aa0; font-weight: 700; }
+
+.aw-as-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.aw-as-btn {
+  border: 0; border-radius: 11px; padding: .55rem 1.15rem; cursor: pointer; white-space: nowrap;
+  font-family: inherit; font-size: .95rem; font-weight: 800; background: #e6edf6; color: #23303e;
+  transition: transform .08s ease, filter .15s ease;
+}
+.aw-as-btn:hover { filter: brightness(.97); }
+.aw-as-btn:active { transform: scale(.97); }
+.aw-as-btn:disabled { opacity: .6; cursor: default; }
+.aw-as-primary { background: #2f7bff; color: #fff; }
+
+/* share popup */
+.aw-as-linkrow { display: flex; gap: 8px; align-items: center; }
+.aw-as-linkrow .aw-as-input { flex: 1 1 auto; }
+.aw-as-qrwrap { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.aw-as-qr { width: 168px; height: 168px; padding: 8px; background: #fff; border: 1px solid #e7edf5; border-radius: 12px; }
+.aw-as-qrbtns { display: flex; flex-direction: column; gap: 8px; }
+
+/* the long strips under the stage */
+.aw-as-bars { display: flex; flex-direction: column; gap: 8px; margin: 14px auto 0; width: min(100%, 1100px); }
+.aw-as-bar {
+  display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer; text-align: left;
+  background: #fff; border: 1px solid #e2eaf4; border-radius: 14px; padding: 11px 16px;
+  font-family: "Baloo 2", system-ui, sans-serif; box-shadow: 0 2px 8px rgba(20,30,45,.05);
+  transition: border-color .15s ease, box-shadow .15s ease, transform .08s ease;
+}
+.aw-as-bar:hover { border-color: #bcd6fb; box-shadow: 0 6px 18px rgba(47,123,255,.12); }
+.aw-as-bar:active { transform: scale(.995); }
+.aw-as-bar-ic { flex: 0 0 auto; width: 22px; height: 22px; color: #2f7bff; }
+.aw-as-bar-ic svg { width: 100%; height: 100%; }
+.aw-as-bar-name { flex: 1 1 auto; min-width: 0; font-size: 1rem; font-weight: 800; color: #23303e;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw-as-bar-meta { flex: 0 0 auto; font-size: .82rem; font-weight: 600; color: #8b9bb0; }
+
+/* report popup */
+.aw-as-top { display: flex; align-items: flex-start; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid #eef2f7; }
+.aw-as-info { flex: 1 1 auto; min-width: 0; }
+.aw-as-meta { font-size: .84rem; font-weight: 600; color: #7a8aa0; margin-top: 3px; }
+.aw-as-toptools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.aw-as-report { gap: 0; }
+.aw-as-block { margin-top: 20px; }
+.aw-as-blockhead { font-size: 1.05rem; font-weight: 800; color: #23303e; margin-bottom: 10px; }
+.aw-as-stats { display: flex; gap: 26px; flex-wrap: wrap; }
+.aw-as-stat { background: #f5f8fc; border-radius: 14px; padding: 12px 22px; min-width: 108px; text-align: center; }
+.aw-as-statv { font-size: 1.7rem; font-weight: 800; color: #2f7bff; line-height: 1.1; }
+.aw-as-statl { font-size: .8rem; font-weight: 700; color: #7a8aa0; }
+
+.aw-as-table { display: flex; flex-direction: column; border: 1px solid #e7edf5; border-radius: 12px; overflow: hidden; }
+.aw-as-tr { display: grid; align-items: center; border-top: 1px solid #eef2f7; }
+.aw-as-tr:first-child { border-top: 0; }
+.aw-as-tr.is-head { background: #f5f8fc; font-weight: 800; color: #55657a; font-size: .82rem; text-transform: uppercase; letter-spacing: .02em; }
+.aw-as-td { padding: .6rem .8rem; font-size: .94rem; font-weight: 600; color: #2a3a4d; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; }
+.aw-as-lb .aw-as-tr { grid-template-columns: 70px 1fr 110px 110px; }
+.aw-as-detail .aw-as-tr { grid-template-columns: 1.4fr 1.1fr 90px 90px 90px; }
+.aw-as-qa .aw-as-tr { grid-template-columns: 46px 1.6fr 1.1fr 78px 1.1fr; }
+.aw-as-clickable { cursor: pointer; }
+.aw-as-clickable:hover { background: #f7fafd; }
+.aw-as-tr.is-open { background: #eef4ff; }
+.aw-as-sortable { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; }
+.aw-as-sortable:hover { color: #2f7bff; }
+.aw-as-arrow { font-size: .7rem; color: #2f7bff; }
+.aw-as-caret { display: inline-block; width: 14px; color: #9fb0c4; font-size: .8rem; }
+.aw-as-late {
+  margin-left: 8px; font-size: .68rem; font-weight: 800; letter-spacing: .04em;
+  background: #ffe8e8; color: #d33; padding: 2px 6px; border-radius: 6px;
+}
+.aw-as-answers { background: #f7fafd; padding: 10px 14px 14px; }
+.aw-as-answers .aw-as-table { background: #fff; }
+.aw-as-mark svg { width: 17px; height: 17px; }
+.aw-as-mark.is-right { color: #22a06b; }
+.aw-as-mark.is-wrong { color: #d33; }
+
+/* floating confirmation used by the assignment popups */
+.aw-as-flash {
+  position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%);
+  background: #23303e; color: #fff; font-family: "Baloo 2", system-ui, sans-serif; font-weight: 700;
+  font-size: .95rem; padding: .7rem 1.2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(20,30,45,.35);
+  opacity: 0; pointer-events: none; z-index: 600; transition: opacity .2s ease;
+}
+.aw-as-flash.is-on { opacity: 1; }
+
+/* ---------- Student page (play.html) ---------- */
+.aw-stu-form { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.aw-stu-name { flex: 1 1 220px; max-width: 300px; text-align: center; font-size: 1.05rem; }
+.aw-stu-go { padding: .6rem 1.8rem; font-size: 1rem; }
+.aw-stu-late {
+  margin-top: 16px; font-size: .86rem; font-weight: 700; color: #b45309;
+  background: #fff5e6; border-radius: 10px; padding: .6rem .8rem; line-height: 1.45;
+}

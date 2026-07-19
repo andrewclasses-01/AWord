@@ -21,6 +21,78 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.8.0 — 20/7/2026 — ASSIGNMENT + THU ĐIỂM HỌC SINH + LINK SỐ + BỘ SINH QR (đã test thật)
+Chặng lớn: thầy giao bài được cho học sinh bằng **link + QR**, HS chơi **không cần đăng nhập**, điểm
+tự chảy về cho thầy xem chi tiết từng câu.
+
+**1. `core/qr.js` — BỘ SINH QR TỰ VIẾT (dùng lại được cho app khác)**
+- Thuần JS, không phụ thuộc mạng/thư viện ngoài: byte mode, mức chống lỗi M, tự chọn cỡ 1..15
+  (tới 412 ký tự). Xuất `qrSvg()` (nét căng mọi cỡ), `qrPngDataUrl()`, `copyQrImage()`, `downloadQrPng()`.
+- **Cách kiểm chứng**: `core/qr-test.html` so từng ô với bộ mã chuẩn + gửi ảnh cho MÁY QUÉT thật đọc lại.
+  Kết quả: **13/13 chuỗi đọc đúng**, mọi cỡ mã (kể cả cỡ nhiều khối dữ liệu).
+- **LỖI TỰ PHÁT HIỆN KHI TEST**: chỗ đặt "thông tin định dạng" (format info) bị XOAY ngang-dọc → mã
+  nhìn vẫn giống QR nhưng KHÔNG máy nào quét được. Đọc chéo bản chuẩn mới lòi ra (bẫy đáng nhớ).
+
+**2. LINK SỐ + thanh địa chỉ tự đổi + Copy link**
+- Mỗi folder/act có thêm `num` (1, 2, 3...) lưu trên Firestore → link gọn: `?r=activities` · `?f=12` ·
+  `?f=12&a=57` · `?a=57`. `ensureNumbers()` tự đánh số 1 lần cho dữ liệu cũ (theo thứ tự tạo).
+- Thanh địa chỉ đi theo chỗ đang đứng (pushState) + **Back/Forward của trình duyệt dùng được**
+  (`routeFromLocation`). Link cũ `?play=`/`?folder=` vẫn mở, và được nâng cấp im lặng sang dạng số.
+- Menu ⁝ của folder & act thêm **Copy link**.
+
+**3. ASSIGNMENT (`core/assignments.js` + `core/assignment-ui.js`)**
+- Nút **Set assignment** → pop-up SETUP: Assignment title · Deadline (ô tích "No deadline") · 3 ô tích
+  cuối game (Leaderboard / Show answers / Start again) · nút BACK + START.
+- START → ghi `assignments/{mã 6 ký tự}` chứa **BẢN SAO** act (thư viện thầy không lộ; sửa act sau
+  không phá bài HS đang làm) → pop-up SHARE: link + QR + Copy link / Copy QR image / Download QR.
+- Dưới khung chơi hiện **thanh dài** cho mỗi assignment; bấm → pop-up CHI TIẾT (nền tối + mờ):
+  dãy thông tin + Refresh/Copy link/Copy QR · **Summary** (số HS, số lượt, số lượt muộn) ·
+  **Leaderboard** (mỗi tên lấy lượt tốt nhất) · **Detail** (Student/Submitted/Correct/Incorrect/Time,
+  mọi cột bấm xoay xuôi-ngược, bấm dòng sổ ra từng câu: câu hỏi · HS trả lời · ✓/✗ · đáp án đúng).
+- Mã assignment là NGẪU NHIÊN (không phải số đếm) để HS không mò được sang bài lớp khác.
+
+**4. TRANG HỌC SINH `play.html` + `play.js`**
+- Trang RIÊNG, **không nạp `core/store.js`** → từ đây không có đường nào chạm tới thư viện của thầy.
+- Nhập tên → chơi → Game Complete **tự nộp**; menu cuối bài chỉ hiện đúng ô thầy đã tích.
+- Chơi lại thoải mái, mỗi lượt là 1 bản ghi. Sau deadline vẫn chơi được, có báo trước là sẽ tính muộn.
+- Tên gõ lệch hoa-thường/thừa dấu cách được **gộp về một em** (`nameKey`), hiển thị bản viết đẹp nhất.
+
+**5. ENGINE — chế độ học sinh (`startGame(..., { session })`)**
+- Có `session` thì KHÔNG dựng cụm công cụ của thầy (Options/Template/Style/Edit/Assignment/Print/Home)
+  và bỏ "Change template" trong menu ☰ → HS không có đường vào.
+- `session.submit()` nộp bài; `session.entries()` cấp bảng xếp hạng lớp (đọc kho điểm công khai).
+
+**6. LUẬT FIREBASE MỚI (đã Publish 20/7 bằng Claude in Chrome)**
+- Thêm `assignments/{code}/scores/{id}`: **đọc công khai**, chỉ chứa tên + điểm + thời gian, ai cũng
+  thêm được lượt của mình nhưng KHÔNG sửa/xoá được. Đây là nguồn cho bảng xếp hạng HS xem cuối bài.
+- `results/{id}` (bài làm chi tiết) giữ nguyên: **chỉ thầy đọc**, không ai sửa/xoá.
+- **Đã thử tấn công thật từ phía HS**: đọc results → BỊ CHẶN · đọc thư viện thầy → BỊ CHẶN · sửa điểm
+  người khác → BỊ CHẶN · đọc bảng xếp hạng → CHO PHÉP. Đúng như thiết kế.
+
+**7. HAI LỖI TỰ PHÁT HIỆN KHI TEST (đã sửa)**
+- **Báo cáo hiện "chưa ai chơi" trong khi thật ra là ĐỌC HỎNG**: `loadReport` bắt lỗi rồi trả mảng rỗng
+  → thầy tưởng lớp chưa làm bài. Sửa: dùng `Promise.allSettled`, hỏng CẢ HAI thì báo lỗi rõ + thêm
+  nút **Refresh**.
+- **`navigator.clipboard.writeText()` TREO VÔ HẠN khi cửa sổ không được focus** (không ném lỗi!) →
+  bấm Copy link mà không thấy phản hồi gì. Sửa: gom `copyText()` vào `core/utils.js`, đặt hạn giờ
+  1,2 giây rồi quay về cách cũ (textarea + execCommand).
+
+**8. ĐÃ TEST THẬT ĐẦU-CUỐI** (đăng nhập tài khoản thật của thầy, thầy tự bấm chọn account 1 lần):
+| Kiểm tra | Kết quả |
+|---|---|
+| Đánh số link cho dữ liệu cũ + `?a=1` mở đúng act | ✔ |
+| Thanh địa chỉ tự đổi + Back/Forward | ✔ |
+| Copy link trong menu ⁝ | ✔ |
+| Tạo assignment → link + QR | ✔ |
+| HS mở link, nhập tên, chơi, tự nộp | ✔ |
+| Bảng xếp hạng HS xem cuối bài | ✔ |
+| Gộp tên "trang anh" = "Trang  Anh" → 1 em, lấy lượt tốt nhất | ✔ |
+| Báo cáo của thầy: Summary + Leaderboard + Detail sổ từng câu | ✔ |
+| Sắp xếp cột 2 chiều | ✔ |
+| Deadline: HS vẫn chơi + nhãn LATE + đếm "Late plays" | ✔ |
+| Bảo mật 4 phép thử từ phía HS | ✔ |
+
+
 ### v0.7.4 — 19/7/2026 — THƯ VIỆN LÊN MÂY: store.js → Firestore + BẮT ĐĂNG NHẬP (đã test thật)
 Thầy chốt: **"Bắt đăng nhập mới vào được"**. Thư viện của thầy giờ nằm trên Firestore, đi theo thầy
 mọi máy.

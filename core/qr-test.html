@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>QR self-test — AWord</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 24px; background: #0f172a; color: #e2e8f0; }
+  h1 { font-size: 1.1rem; }
+  .row { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+  .box { background: #1e293b; padding: 14px; border-radius: 12px; }
+  .box .qr { width: 220px; height: 220px; background: #fff; border-radius: 6px; }
+  input { width: min(560px, 90vw); padding: 8px; border-radius: 8px; border: 1px solid #475569;
+          background: #0f172a; color: #e2e8f0; }
+  button { padding: 8px 14px; border-radius: 8px; border: 0; background: #3b82f6; color: #fff;
+           cursor: pointer; font-weight: 600; }
+  pre { background: #020617; padding: 12px; border-radius: 8px; white-space: pre-wrap; }
+  .ok { color: #4ade80; } .bad { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>QR generator self-test (core/qr.js)</h1>
+<p><input id="txt" value="https://andrewclasses-01.github.io/AWord/play.html?g=k3f9dq" />
+   <button id="go">Draw</button>
+   <button id="cmp">Compare with a reference encoder (needs internet)</button></p>
+
+<div class="row">
+  <div class="box"><div class="qr" id="mine"></div><div id="meta"></div></div>
+  <div class="box"><img class="qr" id="ref" alt="reference" /><div>reference</div></div>
+</div>
+
+<pre id="log">Ready.</pre>
+
+<script type="module">
+import { qrSvg, qrMatrix } from "./qr.js";
+
+const log = document.getElementById("log");
+const say = (msg, cls) => { log.innerHTML += `\n<span class="${cls || ""}">${msg}</span>`; };
+
+function draw() {
+  const text = document.getElementById("txt").value;
+  const t0 = performance.now();
+  const m = qrMatrix(text);
+  document.getElementById("mine").innerHTML = qrSvg(text);
+  document.getElementById("meta").textContent =
+    `version ${m.version} · ${m.size}x${m.size} · ${(performance.now() - t0).toFixed(1)} ms`;
+  return m;
+}
+
+// Compare our modules against an independent encoder's PNG, cell by cell.
+async function compare() {
+  const text = document.getElementById("txt").value;
+  const mine = draw();
+  const px = mine.size * 8;   // 8 device px per module, no quiet zone
+  const url = `https://api.qrserver.com/v1/create-qr-code/?size=${px}x${px}&qzone=0&ecc=M&format=png&data=${encodeURIComponent(text)}`;
+  const img = document.getElementById("ref");
+  say(`Fetching reference (${mine.size} modules)...`);
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = url; });
+
+  const c = document.createElement("canvas");
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext("2d").drawImage(img, 0, 0);
+  const data = c.getContext("2d").getImageData(0, 0, c.width, c.height).data;
+  const cell = c.width / mine.size;
+  if (Math.abs(cell - Math.round(cell)) > 0.01) { say("Reference size mismatch — skip", "bad"); return; }
+
+  let diff = 0;
+  for (let r = 0; r < mine.size; r++) {
+    for (let col = 0; col < mine.size; col++) {
+      const x = Math.floor((col + 0.5) * cell), y = Math.floor((r + 0.5) * cell);
+      const i = (y * c.width + x) * 4;
+      const refDark = data[i] < 128 ? 1 : 0;
+      if (refDark !== mine.modules[r][col]) diff++;
+    }
+  }
+  const total = mine.size * mine.size;
+  if (diff === 0) say(`IDENTICAL to the reference encoder (${total} modules all match)`, "ok");
+  else say(`${diff}/${total} modules differ`, "bad");
+}
+
+document.getElementById("go").onclick = () => { draw(); say("drawn"); };
+document.getElementById("cmp").onclick = () => compare().catch(e => say("error: " + e.message, "bad"));
+
+// A few lengths, to be sure version selection + block interleaving hold up.
+try {
+  for (const t of ["hi", "https://andrewclasses-01.github.io/AWord/play.html?g=k3f9dq",
+                   "x".repeat(120), "y".repeat(300)]) {
+    const m = qrMatrix(t);
+    say(`ok: ${t.length} chars -> version ${m.version} (${m.size}x${m.size})`, "ok");
+  }
+} catch (e) { say("encoder threw: " + e.message, "bad"); }
+draw();
+</script>
+</body>
+</html>
