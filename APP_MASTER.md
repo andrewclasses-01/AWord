@@ -21,28 +21,35 @@
 1. Đọc hết `APP_MASTER.md` (file này) → nắm trạng thái + quy tắc.
 2. Đọc `core/HUONG DAN CORE.md` → hợp đồng engine↔template + DANH SÁCH BẪY kỹ thuật (bắt buộc trước
    khi động vào code core hoặc viết game mới).
-3. Chạy thử: `python devserver.py 5510` tại thư mục dự án (KHÔNG dùng `python -m http.server` — xem
-   mục 9). Mở `http://localhost:5510/` = **TRANG CHỦ kiểu Google Drive**: 2 thư mục gốc cố định
-   **Activities / Results**, có thư mục con + thùng rác + Move + Editor. Trang test Quiz riêng:
-   `http://localhost:5510/templates/quiz/test.html`.
-4. **Chặng đang làm (thầy chốt 19/7): Khối 2 — PRINT**, rồi tới Firebase (đồng bộ + lưu trữ) → chức
-   năng tạo Assignment (thứ tự thầy chốt tối 19/7 — Print trước, Firebase trước Assignment). Tiến độ
-   Khối 1 (Quiz + trang chủ): ✅Editor+Kho lưu (v0.5.0) · ✅Trang chủ kiểu Drive (v0.6.0) · ✅Thương hiệu
-   + nút Home trong game (v0.6.1) · ✅Dán Excel bảng (chọn cột/hàng) + bulk actions (v0.6.2) · ✅Header
-   dùng chung (logo+Settings+Activities/Results) + Settings options mặc định + đổi thuật ngữ "act" +
-   New Activity picker + editor Quiz gọn — Title/2 cột đáp án A-F/Duplicate/max 120 (v0.6.3) · ✅Icon
-   Settings đẹp + logo không méo + DÁN EXCEL kiểu MỚI thẳng vào ô câu hỏi (v0.6.4) · ✅Folder: màu
-   (8 màu) + preview icon to + kéo-thả (act/folder ↔ folder/breadcrumb) + logo cân + footer mọi trang
-   (v0.6.5) · ✅Folder: SỐ ĐẾM (act/sub) + icon 108px + ⁝ vị trí + footer sát đáy (v0.6.6) · ✅Bố cục foot
-   MẪU theo ảnh thầy (tên trên/type dưới/⁝ dưới-phải) + tên 38 ký tự + Settings=MENU nhiều dòng (v0.6.7)
-   · ✅⁝ GHIM đúng 1 vị trí mọi thẻ — sửa bẫy grid-stretch (v0.6.8) · ✅Bỏ kẻ ngang + chữ foot cân xứng
-   với ⁝ (v0.6.9). **✅ Khối 2 — PRINT (v0.7.1, 19/7):** bấm Print → **popup chọn ĐỊNH DẠNG** (Anagram/
-   Crossword/Quiz/Unjumble, chỉ hiện cái khả dụng theo type+số câu; Crossword là "soon" chưa build) →
-   worksheet 2 cột theo ẢNH MẪU của thầy, mặc định A4 + thang xám (đen trắng). Hệ Print DÙNG CHUNG ở
-   `core/print.js`. CHƯA in thử giấy/PDF thật; CHƯA có nút Print từ trang chủ (chỉ trong màn game).
-   **➡️ VIỆC KẾ TIẾP (thầy chốt)**: nối **FIREBASE** (đồng bộ + lưu trữ; thầy tạo project + em hướng dẫn
-   từng bước) → rồi **chức năng tạo ASSIGNMENT** (link+QR, thu điểm HS nhiều máy). Xem ROADMAP mục 7.
-   **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")** — đặc biệt Firebase vì cần thầy tự tạo project.
+3. **Cách chạy thử — LƯU Ý: từ v0.7.4 app BẮT ĐĂNG NHẬP Google mới vào được thư viện.**
+   - Bản LIVE (dùng thật): **https://andrewclasses-01.github.io/AWord/** — deploy = `git push`, chờ ~1
+     phút. ⚠️Sau khi push phải `curl` kiểm chứng file mới đã live rồi mới test (Pages cập nhật các file
+     KHÔNG đồng thời — xem BẪY mục 9).
+   - Ở máy: `python devserver.py 5510` (KHÔNG dùng `python -m http.server` — mục 9) →
+     `http://localhost:5510/` (localhost ĐÃ nằm trong authorized domains của Firebase nên đăng nhập được).
+   - **Test KHÔNG cần đăng nhập**: trang test template chạy dữ liệu mẫu, không đụng store →
+     `http://localhost:5510/templates/quiz/test.html`. Dùng trang này khi build/sửa game.
+   - ⚠️**Popup đăng nhập Google KHÔNG tự động hoá được** (Google chặn) — khi test bằng trình duyệt tự
+     động phải nhờ thầy bấm chọn tài khoản 1 lần.
+
+4. **TRẠNG THÁI CHỐT (20/7/2026) — ĐÃ XONG TRỌN 3 VIỆC LỚN:**
+   - ✅ **Khối 1 — Quiz + thư viện kiểu Drive** (v0.5.0→v0.6.9): editor (dán thẳng bảng Excel), thư mục
+     con/màu/kéo-thả/thùng rác/tìm kiếm, header + Settings, bố cục thẻ theo ảnh mẫu thầy.
+   - ✅ **Khối 2 — PRINT** (v0.7.1): bấm Print → popup chọn ĐỊNH DẠNG (Anagram/Crossword/Quiz/Unjumble,
+     chỉ hiện cái khả dụng theo type + số câu) → worksheet A4 thang xám theo ảnh mẫu. Hệ dùng chung
+     `core/print.js`. **Crossword mới là nút "soon", CHƯA có renderer.** Chưa in thử giấy/PDF thật.
+   - ✅ **LÊN MẠNG + FIREBASE** (v0.7.2→v0.7.4): repo public + GitHub Pages; project Firebase
+     `aword-70dae`; **thư viện chạy trên Firestore** `users/{uid}/items`, **bắt đăng nhập Google**
+     (chỉ `namdaptrai01@gmail.com`); đã test thật đầu-cuối trên web live + kiểm tra bảo mật (người lạ
+     không đọc/ghi được gì).
+
+   **➡️ VIỆC KẾ TIẾP = Khối 3 — ASSIGNMENT (link + QR cho học sinh).** Đây là mắt xích còn thiếu để
+   thầy giao bài: hiện link `?play=` vẫn đòi đăng nhập nên **CHƯA gửi cho HS được**. Cần làm:
+   tạo doc `assignments/{code}` chứa **BẢN SAO** act (đọc công khai — luật Firestore đã cho phép sẵn) +
+   trang chơi cho HS **không cần đăng nhập** (nhập tên → chơi → nộp) + sinh link & mã QR.
+   Sau đó là Khối 4 — thu điểm/leaderboard online (`results/{id}`, luật đã sẵn sàng). Xem ROADMAP mục 7.
+
+   **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")**; chưa rõ thì hỏi bằng AskUserQuestion.
 
 ## 1. AWord là gì
 
@@ -188,6 +195,9 @@ D:\APP AND DATA\PROJECT\AWord\
 │  ├─ registry.js / layout.js / scoring.js / leaderboard.js / confetti.js / sound.js / utils.js
 │  ├─ print.js               ← (v0.7.1) Print DÙNG CHUNG: popup chọn định dạng (Anagram/Crossword/Quiz/
 │  │                             Unjumble) + luật khả dụng + render worksheet A4 (đọc template.toPrintItems)
+│  ├─ firebase.js            ← (v0.7.3) KẾT NỐI Firebase: config project `aword-70dae` + nạp SDK LAZY qua
+│  │                             CDN 12.9.0 (zero-build) + auth()/db()/fs()/signIn()/signOutNow()/
+│  │                             onUser()/currentUser()/isTeacher(). Config CÔNG KHAI là bình thường.
 │  ├─ catalog.js              ← (v0.6.3) 1 NGUỒN DUY NHẤT liệt kê loại act (Quiz built + 4 coming soon);
 │  │                             main.js (picker) + engine.js (panel Template) dùng chung
 │  ├─ settings.js             ← (v0.6.3) Settings: Options mặc định theo loại act (key `aword-settings`) +
@@ -283,8 +293,13 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    Còn thiếu: **build renderer Crossword** (đang "soon"); in thử thật trên giấy/PDF để xác nhận bố cục
    A4 + header/footer lặp trang; nút Print từ trang chủ (hiện chỉ trong màn game); (tuỳ chọn) trang đáp
    án cho thầy.
-3. **Khối 3 — Assignment phần chơi** (nút Set assignment đang stub): tạo **link + mã QR** để HS mở chơi
-   trên máy các em (game gói trong link tự-chứa HOẶC đọc từ Firebase). Phần chơi làm offline được.
+3. **➡️ Khối 3 — ASSIGNMENT (VIỆC KẾ TIẾP, nút "Set assignment" đang stub)**: hạ tầng đã sẵn sàng —
+   luật Firestore cho `assignments/{code}` **đọc công khai** + chỉ thầy tạo. Cần làm:
+   (a) khi thầy giao bài → ghi doc `assignments/{code}` chứa **BẢN SAO act** (snapshot) để thư viện
+   riêng tư KHÔNG bị lộ và sửa act sau không phá bài HS đang làm dở;
+   (b) **trang chơi cho HS KHÔNG cần đăng nhập** (nhập tên → chơi → nộp) — hiện `?play=` vẫn đọc thư
+   viện nên đòi đăng nhập, **chưa gửi HS được**;
+   (c) sinh **link + mã QR** để dán lên Google Sites/Zalo.
 4. ✅ **Nối FIREBASE — XONG (v0.7.3 hạ tầng + v0.7.4 code, 19/7)**: thầy chốt *repo PUBLIC · chỉ thầy
    đăng nhập Google mới sửa · BẮT đăng nhập mới vào được*. Console dựng xong (project `aword-70dae`,
    Firestore Singapore, Google Sign-in, authorized domain, luật publish, web app);
@@ -295,8 +310,10 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    (thư viện RIÊNG TƯ ✅đang dùng) · `assignments/{code}` (bản SAO act, công khai đọc để HS chơi —
    thư viện không lộ; ⏳làm ở Khối 3) · `results/{id}` (HS chỉ được tạo; ⏳Khối 4).
    **CÒN LẠI**: Settings + leaderboard vẫn ở localStorage (chưa đồng bộ nhiều máy).
-5. **Khối 4 — Thu điểm HS nhiều máy** (BẮT BUỘC Firebase): gom kết quả tất cả HS về 1 chỗ cho thầy
-   xem/xếp hạng; leaderboard online (entry đã lưu sẵn cả `review` — đồng bộ dễ). Dashboard kết quả.
+5. **Khối 4 — Thu điểm HS nhiều máy**: luật `results/{id}` ĐÃ publish sẵn (HS chỉ được TẠO, không ai
+   sửa/xoá điểm; chỉ thầy đọc). Cần: HS nộp kết quả sau khi chơi → gom về gốc **Results** cho thầy
+   xem/xếp hạng; leaderboard online (entry đã lưu sẵn cả `review` nên đồng bộ dễ); dashboard kết quả.
+   ⚠️ Lúc đó nhớ chuyển **leaderboard + Settings** từ localStorage lên cloud (hiện vẫn lưu theo máy).
 6. **Chốt Quiz + viết "recipe/công thức mẫu"** khi thầy hài lòng → khuôn cho 4 game còn lại.
 7. **Build 4 template còn lại**: Anagram → Find the match → Type the answer → Open the box.
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
@@ -314,7 +331,23 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
 
 ## 9. Bẫy & lưu ý kỹ thuật (tóm tắt — ĐẦY ĐỦ trong `core/HUONG DAN CORE.md`)
 
-- **Máy chưa cài Node/npm** → offline chạy Python; cài Node khi vào pha Firebase/Vite.
+- ⚠️ **GITHUB PAGES CẬP NHẬT FILE KHÔNG ĐỒNG THỜI** (gặp thật 19/7): sau `git push`, có thể `main.js`
+  đã là bản mới trong khi `core/store.js` còn bản cũ → app chạy LẪN 2 phiên bản, sinh dữ liệu rác khó
+  hiểu. **Sau mỗi push, `curl` kiểm chứng NỘI DUNG file vừa sửa đã live** rồi mới test:
+  `curl -s <url>/core/store.js | grep -c "chuỗi-chỉ-có-ở-bản-mới"`.
+- ⚠️ **App BẮT ĐĂNG NHẬP từ v0.7.4** → mọi hàm `core/store.js` chỉ chạy khi đã đăng nhập, gọi lúc chưa
+  đăng nhập ném lỗi `err.code === "aw/signed-out"` (bắt lỗi, đừng để crash). Muốn test game mà không
+  đăng nhập thì dùng `templates/<ten>/test.html` (chạy dữ liệu mẫu, không đụng store).
+- ⚠️ **Popup đăng nhập Google KHÔNG tự động hoá được** — Google cố tình chặn (tốt cho bảo mật). Khi
+  test bằng trình duyệt tự động, phải nhờ thầy bấm chọn tài khoản 1 lần.
+- ⚠️ **Firestore TỪ CHỐI `undefined`** → `store.js` có `clean()` lọc trước khi ghi; ghi thẳng Firestore
+  ở chỗ khác cũng phải lọc. Batch tối đa 500 write (store.js chunk 400).
+- ⚠️ **Tự động hoá Firebase console** (nếu cần làm lại): ô soạn luật là **CodeMirror**, gõ tay bị
+  auto-đóng-ngoặc làm hỏng code → dán bằng
+  `document.querySelectorAll('.CodeMirror')[0].CodeMirror.setValue(text)` (instance 0 = `.main-editor`).
+  Tiện ích Chrome **chặn đọc chuỗi giống khoá** qua JS → đọc `firebaseConfig` bằng `computer zoom`.
+- **Máy chưa cài Node/npm** → offline chạy Python; **Firebase KHÔNG cần Node** (SDK nạp qua CDN
+  ES-module, pin `12.9.0` trong `core/firebase.js`) nên dự án vẫn zero-build.
 - **DÙNG `devserver.py`, KHÔNG `python -m http.server` trần** — http.server không gửi header chống
   cache → sửa file .js rồi tải lại cùng tab có thể vẫn chạy bản cache CŨ (tưởng "fix không tác dụng").
   Nghi cache cũ → mở TAB MỚI, hoặc `fetch(url+"?bust="+Math.random())` so nội dung.
