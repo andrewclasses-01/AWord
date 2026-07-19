@@ -3,7 +3,7 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: 19/7/2026 — **v0.7.4**.
+> Cập nhật lần cuối: **20/7/2026 — v0.7.4 (CHỐT CHẶNG, bàn giao cho phiên mới).**
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
