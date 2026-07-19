@@ -3,14 +3,16 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: 19/7/2026 — **v0.7.3**.
+> Cập nhật lần cuối: 19/7/2026 — **v0.7.4**.
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
-> 🔥 **FIREBASE ĐÃ DỰNG XONG**: project **`aword-70dae`** (account `namdaptrai01@gmail.com`, gói
-> Spark miễn phí) — Firestore Singapore + đăng nhập Google + luật bảo vệ đã publish + `core/firebase.js`.
-> Đã test thật: người lạ không đọc/ghi được thư viện. Chi tiết: `docs/08-FIREBASE-SETUP.md`.
-> ⏳ CÒN LẠI: đổi ruột `store.js` sang Firestore + nút đăng nhập + đưa dữ liệu cũ lên mạng.
+> 🔥 **FIREBASE XONG + THƯ VIỆN ĐÃ LÊN MÂY (v0.7.4)**: project **`aword-70dae`** (account
+> `namdaptrai01@gmail.com`, gói Spark miễn phí) — Firestore Singapore + đăng nhập Google + luật bảo vệ.
+> **Web BẮT ĐĂNG NHẬP** mới vào được; thư viện nằm ở `users/{uid}/items` nên đi theo thầy mọi máy.
+> Đã test thật đầu-cuối trên web live (tạo/sửa/xoá/thùng rác/tìm/chơi/in + ép đọc lại từ mạng).
+> Chi tiết: `docs/08-FIREBASE-SETUP.md`. ⏳ CÒN: Settings/leaderboard vẫn local; `?play=` cần đăng nhập
+> (sẽ chuyển sang `assignments/{code}` công khai khi làm Assignment).
 
 ---
 
@@ -283,15 +285,16 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    án cho thầy.
 3. **Khối 3 — Assignment phần chơi** (nút Set assignment đang stub): tạo **link + mã QR** để HS mở chơi
    trên máy các em (game gói trong link tự-chứa HOẶC đọc từ Firebase). Phần chơi làm offline được.
-4. **Nối FIREBASE — ✅ HẠ TẦNG XONG (v0.7.3, 19/7), ⏳ CÒN PHẦN CODE**: thầy chốt *repo PUBLIC + chỉ
-   thầy đăng nhập Google mới sửa được*. **Console đã dựng xong hết** (project `aword-70dae`, Firestore
-   Singapore, Google Sign-in, authorized domain, luật đã publish, web app) + **`core/firebase.js`** nạp
-   SDK lazy qua CDN 12.9.0 → giữ zero-build, KHÔNG cần Node/Vite. Chi tiết + giá trị thật:
-   `docs/08-FIREBASE-SETUP.md`. Mô hình dữ liệu đã chốt: `users/{uid}/items/{id}` (thư viện RIÊNG TƯ) ·
-   `assignments/{code}` (bản SAO act, công khai đọc để HS chơi — thư viện không lộ) · `results/{id}`
-   (HS chỉ được tạo, không sửa/xoá). **VIỆC CÒN LẠI**: (a) đổi ruột `store.js` localStorage→Firestore
-   (nơi gọi KHÔNG đổi vì đã async sẵn), (b) nút đăng nhập Google trên header, (c) chuyển dữ liệu cũ
-   trong máy lên mạng. Đây là thay đổi LỚN vào code đang chạy tốt → chờ thầy chốt.
+4. ✅ **Nối FIREBASE — XONG (v0.7.3 hạ tầng + v0.7.4 code, 19/7)**: thầy chốt *repo PUBLIC · chỉ thầy
+   đăng nhập Google mới sửa · BẮT đăng nhập mới vào được*. Console dựng xong (project `aword-70dae`,
+   Firestore Singapore, Google Sign-in, authorized domain, luật publish, web app);
+   **`core/firebase.js`** nạp SDK lazy qua CDN 12.9.0 → giữ zero-build, KHÔNG cần Node/Vite;
+   **`core/store.js` đã chạy trên Firestore** (`users/{uid}/items/{id}`) — **API xuất ra giữ nguyên nên
+   không chỗ gọi nào phải sửa**; màn đăng nhập + chip tài khoản + chuyển dữ liệu cũ lên mây.
+   Chi tiết + giá trị thật: `docs/08-FIREBASE-SETUP.md`. Mô hình dữ liệu: `users/{uid}/items/{id}`
+   (thư viện RIÊNG TƯ ✅đang dùng) · `assignments/{code}` (bản SAO act, công khai đọc để HS chơi —
+   thư viện không lộ; ⏳làm ở Khối 3) · `results/{id}` (HS chỉ được tạo; ⏳Khối 4).
+   **CÒN LẠI**: Settings + leaderboard vẫn ở localStorage (chưa đồng bộ nhiều máy).
 5. **Khối 4 — Thu điểm HS nhiều máy** (BẮT BUỘC Firebase): gom kết quả tất cả HS về 1 chỗ cho thầy
    xem/xếp hạng; leaderboard online (entry đã lưu sẵn cả `review` — đồng bộ dễ). Dashboard kết quả.
 6. **Chốt Quiz + viết "recipe/công thức mẫu"** khi thầy hài lòng → khuôn cho 4 game còn lại.

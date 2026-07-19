@@ -3,6 +3,21 @@
 > Đọc file này TRƯỚC khi build bất kỳ template nào. Đây là "hợp đồng" giữa **core** (lõi dùng chung)
 > và **template** (từng game riêng, vd Quiz, Anagram...).
 
+## ⚠️ ONLINE từ v0.7.4 — thư viện nằm trên Firestore, phải ĐĂNG NHẬP
+
+`core/store.js` không còn lưu vào máy nữa: thư viện của thầy ở **`users/{uid}/items/{id}`** trên
+Firestore (project `aword-70dae`). Điều này ảnh hưởng tới mọi người build sau:
+
+- **Mọi hàm của store.js chỉ chạy khi ĐÃ đăng nhập.** Gọi lúc chưa đăng nhập sẽ ném lỗi có
+  `err.code === "aw/signed-out"` — hãy bắt và mời đăng nhập, đừng để crash.
+- **API xuất ra KHÔNG đổi** so với bản localStorage (vẫn async y hệt) → code cũ gọi store không phải
+  sửa. Giữ nguyên nguyên tắc này khi thêm hàm mới: **luôn async**.
+- **Firestore từ chối `undefined`** — store.js có `clean()` lọc trước khi ghi. Nếu bạn ghi thẳng
+  Firestore ở chỗ khác, nhớ lọc tương tự.
+- `core/firebase.js` nạp SDK **lazy qua CDN** (pin `12.9.0`) để giữ zero-build — xuất
+  `auth()/db()/fs()/signIn()/signOutNow()/onUser()/currentUser()/isTeacher()`.
+- Hướng dẫn + luật bảo vệ Firestore: `docs/08-FIREBASE-SETUP.md`.
+
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,

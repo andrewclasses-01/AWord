@@ -21,6 +21,53 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.7.4 — 19/7/2026 — THƯ VIỆN LÊN MÂY: store.js → Firestore + BẮT ĐĂNG NHẬP (đã test thật)
+Thầy chốt: **"Bắt đăng nhập mới vào được"**. Thư viện của thầy giờ nằm trên Firestore, đi theo thầy
+mọi máy.
+
+1. **`core/store.js` ĐỔI RUỘT localStorage → Firestore** (`users/{uid}/items/{id}`). **Danh sách hàm
+   xuất ra GIỮ NGUYÊN 100%** → `main.js`, `quiz-editor.js`, `engine.js` **KHÔNG phải sửa 1 dòng nào**
+   ở chỗ gọi. Đây chính là lý do v0.5.0 viết store.js kiểu async ngay từ đầu — đã trả công.
+   - Cách chạy: đọc TOÀN BỘ item của thầy 1 lần vào `cache` trong bộ nhớ (thư viện chỉ vài trăm doc
+     nhỏ) → mọi logic cây giữ nguyên như cũ; ghi thì cập nhật cache + đẩy **chỉ doc thay đổi** bằng
+     `writeBatch` (chunk 400, dưới trần 500 của Firestore).
+   - `clean()` bỏ mọi field `undefined` — **Firestore từ chối `undefined`** (bẫy).
+   - `resetCache()` gọi khi đăng nhập/đăng xuất để không lẫn dữ liệu 2 tài khoản.
+2. **Cổng đăng nhập** (`main.js`): chưa đăng nhập thì KHÔNG render gì ngoài màn "Sign in with Google"
+   (đã kiểm: `libraryLeaked: false`). Header có **chip tài khoản** (ảnh Google, tooltip = email) →
+   menu **Sign out**. `signIn()` tự đăng xuất + báo lỗi rõ nếu lỡ đăng nhập nhầm account khác.
+3. **Chuyển dữ liệu cũ lên mây**: hộp thoại mời copy thư viện localStorage cũ của máy đó lên cloud;
+   `importLocalLibrary()` **bỏ qua id đã có** nên chạy 2 lần cũng không tạo bản trùng.
+4. **3 LỖI TỰ PHÁT HIỆN KHI BUILD/TEST (đã sửa)**:
+   - `openModal(title, buildBody)` **không báo khi bị đóng** → hàm `await` hộp thoại sẽ **treo vĩnh
+     viễn** nếu thầy bấm ra ngoài. Thêm tham số thứ 3 `onClose` + chặn close() gọi 2 lần.
+   - `toastMsg` không thêm class **`.is-on`** → CSS `.aw-lib-toast` mặc định `opacity:0` nên thông báo
+     **vô hình**. (BẪY: class đã tồn tại sẵn trong app.css từ trước.)
+   - `openMenu` nhận item dạng **mảng `[label, fn, danger]`** chứ không phải object → bản đầu em viết
+     object sẽ crash khi bấm. Đã sửa.
+5. **Hỏi thầy trước khi tích "I accept the Firebase terms"** và trước khi đăng nhập bằng tài khoản
+   Google của thầy — không tự ký/tự cấp quyền thay thầy.
+6. **ĐÃ TEST THẬT TRÊN WEB LIVE** (đăng nhập bằng account thật của thầy, thầy tự bấm chọn account vì
+   Google chặn tự động hoá bước đó):
+   | Kiểm tra | Kết quả |
+   |---|---|
+   | Chưa đăng nhập | chỉ thấy màn login, thư viện KHÔNG lộ ✔ |
+   | Đăng nhập Google | vào thư viện, chip tài khoản đúng email ✔ |
+   | Tạo folder / act / đếm / đổi tên | ✔ |
+   | **resetCache rồi đọc lại** (ép đọc mạng) | dữ liệu quay về đúng → **thật sự nằm trên cloud** ✔ |
+   | Thùng rác → khôi phục | ✔ |
+   | Tìm kiếm | ✔ |
+   | Sửa act → lưu → đọc lại | tiêu đề mới đúng, **6 câu hỏi lồng nhau còn nguyên**, vị trí giữ nguyên ✔ |
+   | Chơi game từ dữ liệu cloud | ✔ |
+   | Popup Print | Anagram/Crossword/Quiz ✔ |
+   | Dọn đồ test | 0 sót — Firestore console chỉ còn đúng 1 doc `act_sample_quiz` ✔ |
+7. **UX sửa sau khi test**: hộp thoại migration từng hỏi copy thứ **đã có sẵn** trên cloud (máy thầy
+   có `aword-lib` chứa đúng `act_sample_quiz` do lúc đầu trình duyệt lấy nhầm store.js cũ từ cache —
+   **đúng cái bẫy cache của GitHub Pages**: các file KHÔNG cập nhật đồng thời, có thể main.js mới mà
+   store.js còn cũ). Thêm `pendingImportCount()` so id với cloud → không còn hỏi thừa.
+- **CÒN LẠI**: Settings + leaderboard vẫn ở localStorage (chưa đồng bộ); `?play=` hiện vẫn đọc thư
+  viện (cần đăng nhập) — khi làm **Assignment** sẽ chuyển sang `assignments/{code}` công khai cho HS.
+
 ### v0.7.3 — 19/7/2026 — FIREBASE đã dựng xong + nối lớp kết nối (làm tự động qua Claude in Chrome)
 Thầy bảo "mở claude in chrome để tự động giúp tôi việc xử lý trên firebase" → em làm TRỌN bằng
 trình duyệt thật, thầy không phải bấm gì (trừ 1 lần xác nhận điều khoản).
