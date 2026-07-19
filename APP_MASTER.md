@@ -7,12 +7,13 @@
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
-> 🔥 **FIREBASE XONG + THƯ VIỆN ĐÃ LÊN MÂY (v0.7.4)**: project **`aword-70dae`** (account
-> `namdaptrai01@gmail.com`, gói Spark miễn phí) — Firestore Singapore + đăng nhập Google + luật bảo vệ.
-> **Web BẮT ĐĂNG NHẬP** mới vào được; thư viện nằm ở `users/{uid}/items` nên đi theo thầy mọi máy.
-> Đã test thật đầu-cuối trên web live (tạo/sửa/xoá/thùng rác/tìm/chơi/in + ép đọc lại từ mạng).
-> Chi tiết: `docs/08-FIREBASE-SETUP.md`. ⏳ CÒN: Settings/leaderboard vẫn local; `?play=` cần đăng nhập
-> (sẽ chuyển sang `assignments/{code}` công khai khi làm Assignment).
+> 🔥 **FIREBASE + THƯ VIỆN TRÊN MÂY**: project **`aword-70dae`** (account `namdaptrai01@gmail.com`,
+> gói Spark miễn phí) — Firestore Singapore + đăng nhập Google. **Thầy phải đăng nhập** mới vào được
+> thư viện (`users/{uid}/items`); **học sinh KHÔNG cần đăng nhập** (trang riêng `play.html?g=<mã>`).
+> Luật bảo vệ đã Publish 3 lần (19/7 nền, 20/7 thêm bảng xếp hạng công khai + cho thầy xoá điểm +
+> cho HS ghi cờ báo-bài-mới) — nội dung đầy đủ trong `docs/08-FIREBASE-SETUP.md`.
+> ⏳ CÒN LOCAL (chưa lên mây): **Settings** + **leaderboard offline** của act (không phải leaderboard
+> của bài giao — cái đó đã online).
 
 ---
 
@@ -32,7 +33,7 @@
    - ⚠️**Popup đăng nhập Google KHÔNG tự động hoá được** (Google chặn) — khi test bằng trình duyệt tự
      động phải nhờ thầy bấm chọn tài khoản 1 lần.
 
-4. **TRẠNG THÁI CHỐT (20/7/2026, v0.8.0) — ĐÃ XONG 5 VIỆC LỚN:**
+4. **TRẠNG THÁI CHỐT (20/7/2026, v0.9.2) — ĐÃ XONG TRỌN 4 KHỐI + 2 ĐỢT TINH CHỈNH:**
    - ✅ **Khối 1 — Quiz + thư viện kiểu Drive** (v0.5.0→v0.6.9).
    - ✅ **Khối 2 — PRINT** (v0.7.1). *Crossword vẫn là nút "soon", chưa có renderer.*
    - ✅ **LÊN MẠNG + FIREBASE** (v0.7.2→v0.7.4): thư viện chạy trên Firestore, bắt đăng nhập Google.
@@ -62,9 +63,34 @@
      thư mục Results / act trong Activities / cuối thanh assignment (tắt khi thầy mở xem) · thanh
      assignment **hạ xuống + vạch kẻ ngăn cách** để không lỡ tay lúc chơi.
 
-   **➡️ VIỆC KẾ TIẾP (thầy chưa chốt):** (a) chuyển
-   **Settings + leaderboard offline** từ localStorage lên cloud; (b) renderer Crossword cho Print;
-   (c) chốt Quiz + viết "recipe" rồi build 4 game còn lại.
+   - ✅ **v0.9.2**: gỡ hẳn hộp thoại "Bring your saved work online?" (nó hỏi lại mỗi lần mở app; việc
+     chuyển thư viện lên mây đã xong 19/7). `importLocalLibrary()` vẫn còn trong store.js để gọi tay.
+
+## 0b. ⭐ BÀN GIAO (chốt cuối phiên 20/7/2026 — phiên mới đọc mục này rồi làm tiếp)
+
+**Kho code**: đã commit + push HẾT lên `main`, cây làm việc sạch. 4 commit của phiên này:
+`v0.8.0` (Assignment + thu điểm + link số + QR) → `v0.9.0` (Results = chính bài giao + cấm trùng tên)
+→ `v0.9.1` (7 tinh chỉnh) → `v0.9.2` (gỡ hộp thoại cũ). Web live đã kiểm chứng bằng `curl` từng file.
+
+**Luật Firestore đang chạy** (bản mới nhất nằm nguyên văn trong `docs/08-FIREBASE-SETUP.md` — nếu sửa
+luật thì phải cập nhật file đó cho khớp):
+- `users/{uid}/items` riêng tư thầy · `assignments/{code}` đọc công khai, thầy tạo/xoá
+- `assignments/{code}/scores` đọc công khai (chỉ tên + điểm + thời gian) — nguồn bảng xếp hạng HS
+- `results/{id}` chỉ thầy đọc + **thầy xoá được** (cho "Delete forever")
+- HS được ghi ĐÚNG 2 field `lastSubmitAt`/`submitCount` trên doc bài giao (để hiện chấm đỏ)
+
+**Dữ liệu TEST còn trên Firebase** (thầy nói *"tôi sẽ xử lý sau"*, ĐỪNG tự xoá):
+- Bài giao `j9nsa2` — "TEST assignment (xoa sau) - 20/07", nằm ngoài cùng Results, có ~5 lượt chơi giả
+  (Trang Anh / Minh Khoa / Bao Chau / Duc Anh).
+- 2 thư mục rỗng **A1A**, **A2B** trong Results (tạo lúc test tính năng tự-xếp-lớp).
+- 1 act thật "LSA2-S1.T1.P1-2-3 / ENG2" trong Activities (6 câu) — act mẫu của thầy.
+
+**Việc kế tiếp — CHƯA CHỐT, phải hỏi thầy trước:**
+(a) chuyển **Settings + leaderboard offline của act** từ localStorage lên cloud;
+(b) **renderer Crossword** cho Print + in thử giấy thật;
+(c) **chốt Quiz** + viết "recipe/công thức mẫu" rồi build 4 game còn lại
+    (Anagram → Find the match → Type the answer → Open the box);
+(d) (nếu thầy cần) nút Print từ trang chủ · trang đáp án cho thầy · "Change template" thật.
 
    **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")**; chưa rõ thì hỏi bằng AskUserQuestion.
 
@@ -199,7 +225,7 @@ D:\APP AND DATA\PROJECT\AWord\
 ├─ APP_MASTER.md              ← file này (đọc đầu tiên)
 ├─ GHI CHU DU AN.md           ← nhật ký version (mỗi đợt sửa PHẢI ghi + tăng version)
 ├─ devserver.py               ← server chạy thử (gửi Cache-Control:no-store — mục 9)
-├─ play.html + play.js        ← TRANG HỌC SINH (v0.8.0): mở link ?g=<mã bài giao> → nhập tên → chơi →
+├─ play.html + play.js        ← TRANG HỌC SINH (v0.8.0, chặn thêm bài đóng/đã xoá ở v0.9.0): mở link ?g=<mã bài giao> → nhập tên → chơi →
 │                               Game Complete TỰ NỘP. KHÔNG đăng nhập, KHÔNG nạp store.js (thư viện
 │                               của thầy không thể chạm tới từ đây)
 ├─ index.html + main.js + manifest.js  ← TRANG CHỦ kiểu DRIVE (main.js: 2 gốc Activities/Results, thư
