@@ -24,8 +24,10 @@ import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./c
 import {
   ROOTS, itemName, getItem, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
-  setFolderColor, folderCounts
+  setFolderColor, folderCounts,
+  resetCache, localLibrarySize, importLocalLibrary, markMigrated, wasMigrated
 } from "./core/store.js";
+import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import "./templates/quiz/quiz.js";   // registers the quiz template (+ its editor)
 
 const app = document.getElementById("app");
@@ -43,13 +45,35 @@ const state = {
   root: null,           // "activities" | "results"
   folderId: null,       // current folder (null = root of the tree)
   mode: localStorage.getItem("aword-view") || "grid",   // "grid" | "list"
-  query: ""
+  query: "",
+  user: null            // the signed-in teacher (null = signed out)
 };
+
+let skipMigrationThisSession = false;
 
 init();
 
+// The library lives in the cloud and is private, so nothing renders until the
+// teacher is signed in (the teacher chose "require sign-in", 19/7/2026).
 async function init() {
-  await maybeSeed();
+  let user = null;
+  try {
+    user = await currentUser();
+  } catch (e) {
+    renderLogin("Could not reach Firebase. Check your internet connection.");
+    return;
+  }
+  if (!user) { renderLogin(); return; }
+  state.user = user;
+
+  try {
+    await maybeOfferMigration();
+    await maybeSeed();
+  } catch (e) {
+    renderLogin("Could not load your library: " + e.message);
+    return;
+  }
+
   const p = new URLSearchParams(location.search);
   if (p.get("play")) {
     const node = await getItem(p.get("play"));
@@ -60,6 +84,98 @@ async function init() {
     if (ROOTS.includes(root)) { state.view = "folder"; state.root = root; state.folderId = fid || null; render(); return; }
   }
   render();
+}
+
+// ---------------- sign-in screen ----------------
+function renderLogin(errorMsg) {
+  app.innerHTML = "";
+  const wrap = el("div", "aw-lib");
+  const bar = el("div", "aw-appbar");
+  bar.append(logo(false));
+  wrap.append(bar);
+
+  const card = el("div", "aw-login");
+  card.append(el("div", "aw-login-title", "Your games, on any computer"));
+  card.append(el("div", "aw-login-sub",
+    "Sign in to open your library of folders and activities."));
+
+  const btn = el("button", "aw-login-btn");
+  btn.type = "button";
+  btn.append(el("span", "aw-login-g", GOOGLE_G), el("span", null, "Sign in with Google"));
+  btn.onclick = async () => {
+    btn.disabled = true;
+    err.textContent = "";
+    try {
+      await signIn();
+      resetCache();
+      await init();
+    } catch (e) {
+      btn.disabled = false;
+      if (e.code === "auth/popup-closed-by-user" || e.code === "auth/cancelled-popup-request") return;
+      err.textContent = e.code === "aw/not-teacher" ? e.message : (e.message || "Sign-in failed.");
+    }
+  };
+  card.append(btn);
+
+  const err = el("div", "aw-login-err", errorMsg ? escapeHtml(errorMsg) : "");
+  card.append(err);
+  card.append(el("div", "aw-login-note", `Only ${escapeHtml(TEACHER_EMAIL)} can open this library.`));
+
+  wrap.append(card);
+  wrap.append(footer());
+  app.append(wrap);
+  requestAnimationFrame(() => sizeBrand(wrap));
+}
+
+const GOOGLE_G = `<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
+
+// Offer to lift a library that was saved in THIS browser before we went online.
+async function maybeOfferMigration() {
+  if (skipMigrationThisSession || wasMigrated()) return;
+  const n = localLibrarySize();
+  if (n === 0) return;
+  await new Promise(resolve => {
+    openModal("Bring your saved work online?", (body, close) => {
+      body.append(el("div", "aw-modal-text",
+        `This computer has <b>${n}</b> item${n === 1 ? "" : "s"} saved from before AWord went online. ` +
+        `Copy them into your cloud library so they show up on every computer?`));
+      const actions = el("div", "aw-modal-actions");
+      const later = el("button", "aw-btn", "Not now");
+      later.type = "button";
+      later.onclick = () => { skipMigrationThisSession = true; close(); resolve(); };
+      const go = el("button", "aw-btn aw-btn-primary", "Copy them up");
+      go.type = "button";
+      go.onclick = async () => {
+        go.disabled = true; later.disabled = true; go.textContent = "Copying...";
+        try {
+          const added = await importLocalLibrary();
+          markMigrated();
+          close();
+          toastMsg(`${added} item${added === 1 ? "" : "s"} copied to your cloud library.`);
+        } catch (e) {
+          go.disabled = false; later.disabled = false; go.textContent = "Copy them up";
+          body.append(el("div", "aw-ed-error", escapeHtml(e.message || "Copy failed.")));
+          return;
+        }
+        resolve();
+      };
+      actions.append(later, go);
+      body.append(actions);
+    }, () => { skipMigrationThisSession = true; resolve(); });
+  });
+}
+
+// Small floating confirmation used by the library pages.
+// `.aw-lib-toast` starts at opacity 0 — it only shows once `.is-on` is added.
+function toastMsg(msg) {
+  const t = el("div", "aw-lib-toast", escapeHtml(msg));
+  document.body.append(t);
+  requestAnimationFrame(() => t.classList.add("is-on"));
+  setTimeout(() => { t.classList.remove("is-on"); setTimeout(() => t.remove(), 250); }, 3000);
+}
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 async function maybeSeed() {
@@ -537,7 +653,10 @@ function openMenu(anchor, items) {
 function onMenuOutside(e) { if (openMenuEl && !openMenuEl.contains(e.target)) closeMenu(); }
 function closeMenu() { if (openMenuEl) { openMenuEl.remove(); openMenuEl = null; document.removeEventListener("pointerdown", onMenuOutside); } }
 
-function openModal(title, buildBody) {
+// `onClose` (optional) fires whenever the modal goes away — including when the
+// user dismisses it by clicking the backdrop. Callers that await a modal MUST
+// use it, otherwise a backdrop click leaves them waiting forever.
+function openModal(title, buildBody, onClose) {
   const overlay = el("div", "aw-modal-overlay");
   const modal = el("div", "aw-modal");
   modal.append(el("div", "aw-modal-title", escapeText(title)));
@@ -548,7 +667,11 @@ function openModal(title, buildBody) {
   document.body.append(overlay);
   buildBody(body, close);
   return { close };
-  function close() { overlay.remove(); }
+  function close() {
+    if (!overlay.isConnected) return;   // guard: close() may be called twice
+    overlay.remove();
+    onClose?.();
+  }
 }
 function openTextModal(title, placeholder, value, onOk) {
   openModal(title, (body, close) => {
@@ -582,6 +705,7 @@ function topbar(showNav) {
   gear.type = "button"; gear.title = "Settings"; gear.setAttribute("aria-label", "Settings");
   gear.onclick = openSettingsFlow;
   right.append(gear);
+  if (state.user) right.append(accountBtn());
   bar.append(right);
 
   // make "in ANDREW CLASSES" exactly as wide as the "AWord" logo (by spacing
@@ -598,6 +722,36 @@ function footer() {
   f.append(el("div", "aw-foot-line aw-foot-copy",
     "Copyright © 2018 - 2026 ANDREW CLASSES by Pham Xuan Ninh. All Rights Reserved."));
   return f;
+}
+
+// Signed-in account chip: the teacher's Google photo (or initial), opening a
+// small menu with Sign out.
+function accountBtn() {
+  const b = el("button", "aw-appbtn aw-account-btn");
+  b.type = "button";
+  b.title = state.user.email || "Account";
+  b.setAttribute("aria-label", "Account");
+  if (state.user.photoURL) {
+    const img = el("img", "aw-account-img");
+    img.src = state.user.photoURL;
+    img.alt = "";
+    img.referrerPolicy = "no-referrer";   // Google blocks hot-linking with a referrer
+    b.append(img);
+  } else {
+    b.append(el("span", "aw-account-ini", escapeHtml((state.user.email || "?")[0].toUpperCase())));
+  }
+  // openMenu takes [label, fn, danger] tuples. The account email is already the
+  // button's tooltip, so the menu only needs the one real action.
+  b.onclick = () => openMenu(b, [["Sign out", doSignOut]]);
+  return b;
+}
+
+async function doSignOut() {
+  try { await signOutNow(); } catch { /* ignore */ }
+  resetCache();
+  state.user = null;
+  state.view = "top"; state.root = null; state.folderId = null; state.query = "";
+  renderLogin();
 }
 
 function navBtn(label, root) {

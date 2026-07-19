@@ -1,15 +1,23 @@
 // =============================================================
 // STORE — the library: a Google-Drive-style tree of FOLDERS and ACTS,
-// split into two FIXED roots: "activities" (games) and "results" (kept for
-// student results — populated later, in the Firebase phase). Plus a per-root
-// RECYCLE BIN (trash).
+// split into two FIXED roots: "activities" (games) and "results". Plus a
+// per-root RECYCLE BIN (trash).
 //
-// Still an ABSTRACTION LAYER: everything is ASYNC (Promise) so we can swap the
-// insides for Firebase/Firestore later WITHOUT touching the callers.
+// BACKED BY FIRESTORE (v0.7.4) — the teacher's library lives at
+//     users/{uid}/items/{itemId}
+// so it follows them to any computer. It is PRIVATE: the published security
+// rules only let the one teacher account read/write it (docs/08-FIREBASE-SETUP.md).
 //
-// One flat map is stored in localStorage (key "aword-lib"): { [id]: node }.
-// The tree is DERIVED from each node's (root, parentId). Nodes:
+// The public API here did NOT change when we moved off localStorage — every
+// function was already async, which is exactly why the swap touched no callers
+// (main.js / the editors / engine.js are untouched).
 //
+// HOW IT WORKS: all of the teacher's items are read ONCE into an in-memory
+// `cache` (a library is at most a few hundred small docs), so every tree
+// operation below stays the same plain-object logic as before. Writes update
+// the cache AND push only the changed docs to Firestore in a batch.
+//
+// Node shapes (unchanged):
 //   folder: { id, kind:'folder', root, parentId, name, trashed, trashedAt,
 //             trashRootId, restoreParentId, createdAt, updatedAt }
 //   act:    { id, kind:'act', root:'activities', parentId, trashed, trashedAt,
@@ -24,37 +32,90 @@
 // whole bundle.
 // =============================================================
 
-const KEY = "aword-lib";
-const OLD_KEY = "aword-activities";   // Khối-1 flat format (migrated once)
+import { db, fs, currentUser } from "./firebase.js";
+
 export const ROOTS = ["activities", "results"];
+
+// localStorage keys of the OLD offline library — kept only so the one-time
+// "upload my old library" migration can still find it. Nothing writes them now.
+const LOCAL_KEY = "aword-lib";
+const LOCAL_OLD_KEY = "aword-activities";
 
 function now() { return Date.now(); }
 function newId(prefix) {
   return (prefix || "id") + "_" + now().toString(36) + "_" + Math.random().toString(36).slice(2, 7);
 }
 
-// ---- raw read/write + one-time migration from the Khối-1 flat store ----
-function readAll() {
-  let map = null;
-  try { map = JSON.parse(localStorage.getItem(KEY)); } catch { map = null; }
-  if (map && typeof map === "object") return map;
+// ---- Firestore plumbing ----------------------------------------------------
+let cache = null;       // { [id]: node }
+let cacheUid = null;    // which account the cache belongs to
 
-  // migrate old flat activities (if any) into activities-root acts
-  map = {};
-  try {
-    const old = JSON.parse(localStorage.getItem(OLD_KEY) || "{}");
-    Object.values(old).forEach(a => {
-      if (!a || !a.id) return;
-      map[a.id] = { ...a, kind: "act", root: "activities", parentId: null,
-        trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null };
-    });
-  } catch { /* ignore */ }
-  writeAll(map);
-  return map;
+// Drop the cache (called on sign-in / sign-out so accounts never mix).
+export function resetCache() { cache = null; cacheUid = null; }
+
+async function requireUid() {
+  const user = await currentUser();
+  if (!user) {
+    const err = new Error("Please sign in to use your AWord library.");
+    err.code = "aw/signed-out";
+    throw err;
+  }
+  return user.uid;
 }
-function writeAll(map) { localStorage.setItem(KEY, JSON.stringify(map)); }
 
-// ---- helpers ----
+function itemsPath(uid) { return `users/${uid}/items`; }
+
+// Firestore rejects `undefined`, so drop those keys before writing.
+function clean(value) {
+  if (Array.isArray(value)) return value.map(clean);
+  if (value && typeof value === "object") {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      if (v !== undefined) out[k] = clean(v);
+    }
+    return out;
+  }
+  return value;
+}
+
+async function readAll() {
+  const uid = await requireUid();
+  if (cache && cacheUid === uid) return cache;
+  const [d, { collection, getDocs }] = await Promise.all([db(), fs()]);
+  const snap = await getDocs(collection(d, itemsPath(uid)));
+  const map = {};
+  snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
+  cache = map; cacheUid = uid;
+  return cache;
+}
+
+// Upsert the given nodes (they are already in `cache`). Batched, chunked well
+// under Firestore's 500-writes-per-batch limit.
+async function persist(nodes) {
+  if (!nodes.length) return;
+  const uid = await requireUid();
+  const [d, sdk] = await Promise.all([db(), fs()]);
+  const { doc, writeBatch } = sdk;
+  for (let i = 0; i < nodes.length; i += 400) {
+    const batch = writeBatch(d);
+    nodes.slice(i, i + 400).forEach(n => batch.set(doc(d, itemsPath(uid), n.id), clean(n)));
+    await batch.commit();
+  }
+}
+
+async function persistDelete(ids) {
+  if (!ids.length) return;
+  const uid = await requireUid();
+  const [d, sdk] = await Promise.all([db(), fs()]);
+  const { doc, writeBatch } = sdk;
+  for (let i = 0; i < ids.length; i += 400) {
+    const batch = writeBatch(d);
+    ids.slice(i, i + 400).forEach(id => batch.delete(doc(d, itemsPath(uid), id)));
+    await batch.commit();
+  }
+}
+
+// ---- helpers (unchanged logic) ---------------------------------------------
 export function itemName(node) {
   if (!node) return "";
   return node.kind === "folder" ? (node.name || "Untitled folder") : (node.title || "Untitled");
@@ -82,11 +143,11 @@ function isDescendant(map, id, maybeAncestorId) {
 }
 
 // ---- reads ----
-export async function getItem(id) { return readAll()[id] || null; }
+export async function getItem(id) { return (await readAll())[id] || null; }
 
 // Live (non-trashed) children directly under (root, parentId). Folders first.
 export async function listChildren(root, parentId = null) {
-  const map = readAll();
+  const map = await readAll();
   return Object.values(map)
     .filter(n => n.root === root && !n.trashed && (n.parentId ?? null) === (parentId ?? null))
     .sort(byName);
@@ -94,7 +155,7 @@ export async function listChildren(root, parentId = null) {
 
 // The breadcrumb chain from the root down to `folderId` (inclusive). [] at root.
 export async function pathTo(folderId) {
-  const map = readAll();
+  const map = await readAll();
   const chain = [];
   let n = folderId ? map[folderId] : null;
   while (n) { chain.unshift(n); n = n.parentId ? map[n.parentId] : null; }
@@ -103,41 +164,44 @@ export async function pathTo(folderId) {
 
 // All live folders of a root (for the Move dialog tree).
 export async function listFolders(root) {
-  return Object.values(readAll()).filter(n => n.root === root && n.kind === "folder" && !n.trashed);
+  const map = await readAll();
+  return Object.values(map).filter(n => n.root === root && n.kind === "folder" && !n.trashed);
 }
 
 // Search live items in a root by name (any depth).
 export async function searchItems(root, query) {
   const q = (query || "").trim().toLowerCase();
   if (!q) return [];
-  return Object.values(readAll())
+  const map = await readAll();
+  return Object.values(map)
     .filter(n => n.root === root && !n.trashed && itemName(n).toLowerCase().includes(q))
     .sort(byName);
 }
 
 // Top-level trashed items (the ones actually deleted) for a root.
 export async function listTrash(root) {
-  return Object.values(readAll())
+  const map = await readAll();
+  return Object.values(map)
     .filter(n => n.root === root && n.trashed && n.trashRootId === n.id)
     .sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0));
 }
 
 // ---- writes ----
 export async function createFolder(root, parentId, name) {
-  const map = readAll();
+  const map = await readAll();
   const id = newId("fld");
   map[id] = { id, kind: "folder", root, parentId: parentId ?? null,
     name: (name || "New folder").trim() || "New folder",
     trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null,
     createdAt: now(), updatedAt: now() };
-  writeAll(map);
+  await persist([map[id]]);
   return map[id];
 }
 
 // Upsert an ACT. On update, the existing node's location (root/parentId) and
 // trash state are PRESERVED — only the activity payload changes.
 export async function saveActivity(activity, opts = {}) {
-  const map = readAll();
+  const map = await readAll();
   const payload = JSON.parse(JSON.stringify(activity));
   let id = payload.id;
   const existing = id ? map[id] : null;
@@ -158,17 +222,17 @@ export async function saveActivity(activity, opts = {}) {
     updatedAt: now()
   };
   map[id] = node;
-  writeAll(map);
+  await persist([node]);
   return node;
 }
 // Back-compat alias used by Khối 1 callers.
-export async function getActivity(id) { return readAll()[id] || null; }
+export async function getActivity(id) { return (await readAll())[id] || null; }
 
 // Counts shown on a folder card:
 //   folders = number of DIRECT child folders (immediate only)
 //   acts    = TOTAL activities anywhere inside (recursive, all depths)
 export async function folderCounts(id) {
-  const map = readAll();
+  const map = await readAll();
   const childrenOf = pid => Object.values(map).filter(n => !n.trashed && (n.parentId ?? null) === (pid ?? null));
   const folders = childrenOf(id).filter(n => n.kind === "folder").length;
   let acts = 0;
@@ -185,28 +249,28 @@ export async function folderCounts(id) {
 
 // Set (or clear, with null) the icon color of a FOLDER.
 export async function setFolderColor(id, color) {
-  const map = readAll();
+  const map = await readAll();
   const n = map[id]; if (!n || n.kind !== "folder") return null;
   n.color = color || null;
   n.updatedAt = now();
-  writeAll(map);
+  await persist([n]);
   return n;
 }
 
 export async function renameItem(id, newName) {
-  const map = readAll();
+  const map = await readAll();
   const n = map[id]; if (!n) return null;
   const name = (newName || "").trim();
   if (name) {
     if (n.kind === "folder") n.name = name; else n.title = name;
     n.updatedAt = now();
-    writeAll(map);
+    await persist([n]);
   }
   return n;
 }
 
 export async function moveItem(id, newParentId) {
-  const map = readAll();
+  const map = await readAll();
   const n = map[id]; if (!n) return null;
   newParentId = newParentId ?? null;
   // guard: can't drop a folder into itself or its own subtree
@@ -215,13 +279,14 @@ export async function moveItem(id, newParentId) {
   }
   n.parentId = newParentId;
   n.updatedAt = now();
-  writeAll(map);
+  await persist([n]);
   return n;
 }
 
 export async function duplicateItem(id) {
-  const map = readAll();
+  const map = await readAll();
   const src = map[id]; if (!src) return null;
+  const made = [];
 
   // clone one node under `parentId`. Safe against cloning-the-clones: a clone's
   // parentId is always a NEW id, so filtering originals by their original id
@@ -233,6 +298,7 @@ export async function duplicateItem(id) {
       createdAt: now(), updatedAt: now() };
     if (nameOverride != null) { if (c.kind === "folder") c.name = nameOverride; else c.title = nameOverride; }
     map[copyId] = c;
+    made.push(c);
     return c;
   }
   function cloneSubtree(orig, parentId, nameOverride) {
@@ -246,12 +312,12 @@ export async function duplicateItem(id) {
   }
 
   const top = cloneSubtree(src, src.parentId ?? null, itemName(src) + " (copy)");
-  writeAll(map);
+  await persist(made);
   return top;
 }
 
 export async function trashItem(id) {
-  const map = readAll();
+  const map = await readAll();
   const n = map[id]; if (!n) return;
   const bundle = [n, ...(n.kind === "folder" ? descendantsOf(map, id) : [])];
   bundle.forEach(node => {
@@ -260,11 +326,11 @@ export async function trashItem(id) {
     node.trashRootId = id;
     if (node.restoreParentId == null) node.restoreParentId = node.parentId ?? null;
   });
-  writeAll(map);
+  await persist(bundle);
 }
 
 export async function restoreItem(id) {
-  const map = readAll();
+  const map = await readAll();
   const bundle = Object.values(map).filter(n => n.trashRootId === id);
   bundle.forEach(node => {
     node.trashed = false;
@@ -278,11 +344,64 @@ export async function restoreItem(id) {
     top.parentId = (p && !p.trashed) ? top.restoreParentId : null;
   }
   bundle.forEach(node => { node.restoreParentId = null; node.updatedAt = now(); });
-  writeAll(map);
+  await persist(bundle);
 }
 
 export async function deleteForever(id) {
-  const map = readAll();
-  Object.values(map).filter(n => n.id === id || n.trashRootId === id).forEach(n => delete map[n.id]);
-  writeAll(map);
+  const map = await readAll();
+  const gone = Object.values(map).filter(n => n.id === id || n.trashRootId === id);
+  gone.forEach(n => delete map[n.id]);
+  await persistDelete(gone.map(n => n.id));
 }
+
+// =============================================================
+// ONE-TIME MIGRATION — lift a library that was saved in THIS browser
+// (the pre-Firebase localStorage store) up into the teacher's cloud library.
+// =============================================================
+
+// How many items are sitting in this browser's old offline library?
+// Returns 0 when there is nothing to migrate.
+export function localLibrarySize() {
+  return Object.keys(readLocalMap()).length;
+}
+
+function readLocalMap() {
+  let map = null;
+  try { map = JSON.parse(localStorage.getItem(LOCAL_KEY)); } catch { map = null; }
+  if (map && typeof map === "object") return map;
+  // even older flat format (Khối 1)
+  const out = {};
+  try {
+    const old = JSON.parse(localStorage.getItem(LOCAL_OLD_KEY) || "{}");
+    Object.values(old).forEach(a => {
+      if (!a || !a.id) return;
+      out[a.id] = { ...a, kind: "act", root: "activities", parentId: null,
+        trashed: false, trashedAt: null, trashRootId: null, restoreParentId: null };
+    });
+  } catch { /* ignore */ }
+  return out;
+}
+
+// Copy this browser's old library into the cloud. Existing cloud items with the
+// same id are NOT overwritten (import is additive and safe to run twice).
+// Returns the number of items added.
+export async function importLocalLibrary() {
+  const map = await readAll();
+  const local = readLocalMap();
+  const add = Object.values(local)
+    .filter(n => n && n.id && !map[n.id])
+    .map(n => ({
+      ...n,
+      trashed: !!n.trashed, trashedAt: n.trashedAt ?? null,
+      trashRootId: n.trashRootId ?? null, restoreParentId: n.restoreParentId ?? null,
+      createdAt: n.createdAt || now(), updatedAt: now()
+    }));
+  add.forEach(n => { map[n.id] = n; });
+  await persist(add);
+  return add.length;
+}
+
+// Mark this browser's old library as already lifted, so we stop offering it.
+const MIGRATED_FLAG = "aword-migrated-to-cloud";
+export function markMigrated() { try { localStorage.setItem(MIGRATED_FLAG, "1"); } catch { /* ignore */ } }
+export function wasMigrated() { try { return localStorage.getItem(MIGRATED_FLAG) === "1"; } catch { return false; } }
