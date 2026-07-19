@@ -1,0 +1,33 @@
+/* =============================================================
+   THEME "Beach" — light sandy / ocean look (a Wordwall theme name
+   we saw in the research, see docs/00-OVERVIEW.md).
+   ============================================================= */
+
+.theme-beach {
+  --aw-page-bg:   #dff3f6;   /* pale sky/sea */
+  --aw-stage-bg:  #fdf8ec;   /* warm sand */
+  --aw-stage-border: #cdeaea;
+  --aw-card:      #fdf8ec;
+  --aw-text:      #1f3a3e;   /* deep teal ink */
+  --aw-muted:     #6d8f92;
+  --aw-accent:    #17a3b8;   /* ocean teal */
+  --aw-shadow:    0 10px 30px rgba(23, 88, 99, .14);
+  --aw-radius:    16px;
+
+  --aw-tile-0:   #33a0e6;  --aw-tile-0d: #2176b8;
+  --aw-tile-1:   #e23c3c;  --aw-tile-1d: #b32a2a;
+  --aw-tile-2:   #f39a1e;  --aw-tile-2d: #cc7c12;
+  --aw-tile-3:   #33a24a;  --aw-tile-3d: #237a37;
+
+  --aw-ok:   #17a37e;  --aw-ok-d: #0f7d61;
+  --aw-no:   #e2593c;  --aw-no-d: #b8422a;
+
+  /* Tile shape + question text style (themeable — see classroom.css). */
+  --aw-tile-radius: 1.6cqw;
+  --aw-tile-border-width: 0;
+  --aw-tile-border-color: transparent;
+  --aw-tile-shadow: 0 0.6cqw 0 var(--tile-dark-eff);
+  --aw-question-stroke-width: 0;
+  --aw-question-stroke-color: transparent;
+  --aw-question-fill: var(--aw-text);
+}

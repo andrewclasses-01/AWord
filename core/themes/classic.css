@@ -1,0 +1,35 @@
+/* =============================================================
+   THEME "Classic" — bảng màu + phông chữ (biến CSS).
+   Muốn thêm giao diện khác: copy file này, đổi biến, đặt .theme-<tên>.
+   ============================================================= */
+
+.theme-classic {
+  --aw-page-bg:   #eaf2fb;   /* nền ngoài trang */
+  --aw-stage-bg:  #ffffff;   /* nền khung game (trắng như Wordwall) */
+  --aw-stage-border: #e2ebf4;
+  --aw-card:      #ffffff;
+  --aw-text:      #23303e;   /* chữ chính (đậm gần đen) */
+  --aw-muted:     #6b7a90;
+  --aw-accent:    #2f7bff;
+  --aw-shadow:    0 10px 30px rgba(31, 42, 68, .12);
+  --aw-radius:    16px;
+
+  /* 4 màu ô đáp án + gờ tối phía dưới (tạo nút nổi 3D) */
+  --aw-tile-0:   #33a0e6;  --aw-tile-0d: #2176b8;   /* xanh dương */
+  --aw-tile-1:   #e23c3c;  --aw-tile-1d: #b32a2a;   /* đỏ */
+  --aw-tile-2:   #f39a1e;  --aw-tile-2d: #cc7c12;   /* cam */
+  --aw-tile-3:   #33a24a;  --aw-tile-3d: #237a37;   /* xanh lá */
+
+  --aw-ok:   #33a24a;  --aw-ok-d: #237a37;
+  --aw-no:   #e23c3c;  --aw-no-d: #b32a2a;
+
+  /* Tile shape + question text style (themeable — see classroom.css for the
+     "cartoon chalkboard" look). Classic keeps the current plain look. */
+  --aw-tile-radius: 1.6cqw;
+  --aw-tile-border-width: 0;
+  --aw-tile-border-color: transparent;
+  --aw-tile-shadow: 0 0.6cqw 0 var(--tile-dark-eff);
+  --aw-question-stroke-width: 0;
+  --aw-question-stroke-color: transparent;
+  --aw-question-fill: var(--aw-text);
+}

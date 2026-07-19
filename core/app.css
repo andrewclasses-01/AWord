@@ -1,0 +1,1100 @@
+/* =============================================================
+   AWord — SHARED UI (Wordwall style, 100% English product).
+
+   SCALING MODEL (important): the 16:9 .aw-stage is a CSS container
+   (container-type:size). Every size INSIDE the stage is expressed in
+   `cqw` (1cqw = 1% of the stage width). Because the stage is always
+   16:9, everything scales uniformly with the stage — so fullscreen just
+   ZOOMS the whole thing (same proportions), and small/large panes match.
+   Design base ≈ 1000px wide (so a value of N px ≈ (N/10)cqw).
+   ============================================================= */
+
+/* ---- Rounded font (Wordwall-like), bundled for offline use ---- */
+@font-face { font-family: "Baloo 2"; font-weight: 400; src: url("assets/fonts/baloo-2-400.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Baloo 2"; font-weight: 600; src: url("assets/fonts/baloo-2-600.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Baloo 2"; font-weight: 700; src: url("assets/fonts/baloo-2-700.woff2") format("woff2"); font-display: swap; }
+@font-face { font-family: "Baloo 2"; font-weight: 800; src: url("assets/fonts/baloo-2-800.woff2") format("woff2"); font-display: swap; }
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Baloo 2", "Segoe UI", system-ui, Arial, sans-serif;
+  background: #eaf2fb;
+  color: #23303e;
+  min-height: 100vh;
+}
+
+/* ---------- Page + 16:9 stage ---------- */
+.aw-page { max-width: 1000px; margin: 0 auto; padding: 16px 16px 40px; }
+
+.aw-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  container-type: size;         /* internal sizes use cqw and scale with the stage */
+  container-name: stage;
+  background: var(--aw-stage-bg);
+  border: 1px solid var(--aw-stage-border);
+  border-radius: 2cqw;
+  box-shadow: var(--aw-shadow);
+  overflow: hidden;
+}
+.aw-stage-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: 1.6cqw 2.2cqw;
+  gap: 0.4cqw;
+}
+
+/* ---------- Fullscreen: letterbox the 16:9 stage (ratio kept, just zoom) ---------- */
+.aw-page:fullscreen {
+  width: 100vw; height: 100vh; max-width: none; padding: 0;
+  background: #0b0b0d;
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-page:fullscreen .aw-stage {
+  width: min(100vw, calc(100vh * 16 / 9));
+  border-radius: 0; border: none;
+}
+.aw-page:fullscreen .aw-below { display: none; }
+
+/* ---------- Top bar: timer (left) · score (right) ---------- */
+.aw-topbar {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.aw-top-timer { font-weight: 700; color: var(--aw-muted); font-size: 2.2cqw; }
+.aw-top-score {
+  display: inline-flex; align-items: center; gap: 0.6cqw;
+  font-weight: 800; color: var(--aw-text); font-size: 2.2cqw;
+}
+.aw-top-score svg { width: 1em; height: 1em; color: var(--aw-ok); }
+
+/* ---------- Play area (templates render inside) ---------- */
+.aw-playarea {
+  flex: 1 1 auto; min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ---------- Feedback marks — available to EVERY template ---------- */
+.aw-mark-fly {
+  position: absolute; left: 50%; top: 50%;
+  width: 52%; aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none; z-index: 6;
+  filter: drop-shadow(0 0.3cqw 0.6cqw rgba(0,0,0,.3));
+  animation: aw-fly .85s ease-out forwards;
+}
+.aw-mark-fly svg { width: 100%; height: 100%; }
+.aw-mark-fly.is-cross { animation: aw-fly-cross 1.9s ease-out forwards; }
+
+.aw-tile-badge {
+  position: absolute; left: 50%; bottom: 0.4cqw;
+  width: 2.4cqw; aspect-ratio: 1;
+  transform: translateX(-50%);
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.25));
+  /* aw-pop-cx keeps the translateX(-50%) centering (see keyframe note) */
+  animation: aw-pop-cx .2s ease;
+}
+.aw-tile-badge svg { width: 100%; height: 100%; }
+
+/* ---------- Bottom bar: menu · nav · sound+fullscreen ---------- */
+/* 3 columns so the middle nav ("x of N" + arrows) is truly CENTERED in the frame,
+   regardless of the left (menu) / right (sound+fullscreen) group widths. */
+.aw-bottombar {
+  flex: 0 0 auto;
+  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 0.8cqw;
+}
+.aw-bottombar > :nth-child(1) { justify-self: start; }
+.aw-bottombar > :nth-child(2) { justify-self: center; }
+.aw-bottombar > :nth-child(3) { justify-self: end; }
+.aw-iconbtn, .aw-navbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: transparent; color: var(--aw-muted);
+  cursor: pointer; border-radius: 1cqw; padding: 0.6cqw;
+  transition: background .15s ease, color .15s ease, opacity .15s ease;
+}
+.aw-iconbtn { width: 4cqw; height: 4cqw; }
+.aw-iconbtn svg { width: 2.4cqw; height: 2.4cqw; }
+.aw-iconbtn:hover { background: #eef3f9; color: var(--aw-text); }
+.aw-iconbtn.is-off { color: #c0392b; }
+
+.aw-nav { display: flex; align-items: center; gap: 1.4cqw; }
+.aw-nav-label { font-weight: 700; color: var(--aw-muted); font-size: 1.8cqw; min-width: 6.4cqw; text-align: center; }
+.aw-navbtn { width: 4cqw; height: 4cqw; }
+.aw-navbtn svg { width: 2.6cqw; height: 2.6cqw; }
+.aw-navbtn:hover:not(:disabled) { background: #eef3f9; color: var(--aw-text); }
+.aw-navbtn:disabled { opacity: .28; cursor: default; }
+.aw-navbtn.is-finish { color: var(--aw-ok); }
+.aw-navbtn.is-finish:not(:disabled) { animation: aw-glow 1.1s ease-in-out infinite; }
+
+.aw-tools { display: flex; gap: 0.4cqw; }
+
+/* ---------- Popup menu ---------- */
+.aw-menu {
+  position: absolute; left: 1.4cqw; bottom: 5.8cqw; z-index: 8;
+  background: #fff; border-radius: 1.2cqw; box-shadow: 0 1cqw 3cqw rgba(31,42,68,.22);
+  padding: 0.6cqw; min-width: 19cqw;
+}
+.aw-menu-item {
+  display: block; width: 100%; text-align: left; border: none; background: none;
+  padding: 1cqw 1.4cqw; border-radius: 0.8cqw; font-family: inherit; font-weight: 600;
+  font-size: 1.5cqw; color: var(--aw-text); cursor: pointer;
+}
+.aw-menu-item:hover { background: #f0f4f9; }
+
+/* ---------- Toast ---------- */
+.aw-toast {
+  position: absolute; left: 50%; bottom: 6.4cqw; transform: translateX(-50%);
+  background: rgba(35,48,62,.92); color: #fff;
+  padding: 0.8cqw 1.8cqw; border-radius: 999px;
+  font-weight: 600; font-size: 1.4cqw; z-index: 9;
+  /* aw-pop-cx keeps the translateX(-50%) centering (see keyframe note) */
+  animation: aw-pop-cx .2s ease; white-space: nowrap;
+}
+
+/* ---------- READY screen (type · big title · PLAY · instruction) ---------- */
+.aw-play-overlay {
+  position: absolute; inset: 0; z-index: 12;
+  background: #17181c;
+  display: flex; flex-direction: column; align-items: center;
+  padding: 2.4cqw;
+}
+.aw-ready-type {
+  flex: 0 0 auto;
+  font-size: 1.7cqw; font-weight: 700; letter-spacing: 0.35cqw;
+  color: #8b93a1; text-transform: uppercase;
+}
+.aw-ready-center {
+  margin: auto 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2.2cqw; text-align: center; width: 100%;
+}
+.aw-ready-title {
+  font-size: 4.8cqw; font-weight: 800; color: #fff;
+  text-transform: uppercase; line-height: 1.08; max-width: 90%;
+}
+/* game (template) name under the play button — bigger & bolder than the old instruction */
+.aw-ready-game {
+  font-size: 3cqw; font-weight: 800; color: #e7ebf0;
+  letter-spacing: 0.15cqw; text-transform: uppercase;
+}
+
+.aw-bigplay {
+  border: none; background: transparent; cursor: pointer;
+  color: #35b1f0;
+  width: 13cqw; aspect-ratio: 1; padding: 0;
+  transition: transform .12s ease, filter .15s ease;
+}
+.aw-bigplay svg { width: 100%; height: 100%; filter: drop-shadow(0 0.6cqw 1.8cqw rgba(53,177,240,.35)); }
+.aw-bigplay:hover { transform: scale(1.09); filter: brightness(1.1); }
+.aw-bigplay:active { transform: scale(.96); }
+
+/* ---------- "Game complete" celebration ---------- */
+.aw-celebrate {
+  position: absolute; inset: 0; z-index: 11; pointer-events: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-gc-text {
+  font-size: 9cqw; font-weight: 800; color: #fff;
+  -webkit-text-stroke: 0.3cqw #23303e; paint-order: stroke fill;
+  animation: aw-gc-pop .55s cubic-bezier(.2,1.4,.4,1) both; white-space: nowrap;
+}
+.aw-confetti { position: absolute; width: 1cqw; height: 1.7cqw; border-radius: 0.2cqw; pointer-events: none; }
+
+/* ---------- Dark modal (summary / leaderboard) ---------- */
+.aw-backdrop {
+  position: absolute; inset: 0; z-index: 13;
+  background: rgba(74,76,80,.78);
+  display: flex; align-items: center; justify-content: center;
+  animation: aw-fadein .25s ease;
+}
+.aw-panel {
+  background: #151517; border: 0.2cqw solid #55575c; border-radius: 1.2cqw;
+  padding: 1.4cqw 2.8cqw 1.6cqw;
+  min-width: 40cqw; max-width: 90%; max-height: 92%; overflow: auto;
+  text-align: center; color: #fff; box-shadow: 0 2cqw 5cqw rgba(0,0,0,.45);
+  animation: aw-gc-pop .35s cubic-bezier(.2,1.3,.4,1) both;
+}
+.aw-panel-wide { min-width: 28cqw; max-width: 62%; }
+.aw-panel-head {
+  font-size: 1.5cqw; font-weight: 700; letter-spacing: 0.28cqw; color: #cfd2d6;
+  padding-bottom: 1cqw; margin-bottom: 1.2cqw; border-bottom: 1px solid #3a3a3d;
+}
+.aw-sum-stats { display: flex; justify-content: center; gap: 7cqw; margin: 0.6cqw 0 1.2cqw; }
+.aw-sum-label { color: #35b1f0; font-weight: 700; font-size: 2.2cqw; }
+.aw-sum-value { font-weight: 800; font-size: 4.4cqw; line-height: 1.1; }
+.aw-sum-value span { font-size: .5em; font-weight: 700; color: #d0d3d6; }
+.aw-panel-rank {
+  font-size: 1.3cqw; font-weight: 700; letter-spacing: 0.18cqw; color: #cfd2d6;
+  padding-bottom: 1.2cqw; margin-bottom: 0.6cqw; border-bottom: 1px solid #3a3a3d;
+}
+.aw-panel-items { display: flex; flex-direction: column; }
+.aw-panel-items-row { flex-direction: row; justify-content: center; gap: 2cqw; flex-wrap: wrap; }
+.aw-panel-item {
+  border: none; background: none; cursor: pointer;
+  font-family: inherit; font-weight: 700; font-size: 2.4cqw;
+  color: #fff; padding: 0.9cqw 0.6cqw; border-radius: 0.8cqw;
+  transition: color .12s ease, background .12s ease;
+}
+.aw-panel-item:hover { color: #35b1f0; background: rgba(255,255,255,.04); }
+
+/* ---------- Leaderboard table ---------- */
+.aw-lb-table { margin: 0.4cqw 0 1cqw; }
+.aw-lb-row {
+  display: grid; grid-template-columns: 4cqw 1fr 4.8cqw 5.2cqw;
+  align-items: center; gap: 0.7cqw; padding: 0.6cqw 0.8cqw;
+  border-radius: 0.8cqw; font-size: 1.7cqw;
+}
+.aw-lb-row:nth-child(odd) { background: rgba(255,255,255,.04); }
+.aw-lb-row.is-you { background: rgba(53,177,240,.16); outline: 1px solid rgba(53,177,240,.5); }
+.aw-lb-rank { color: #9aa0a8; font-weight: 700; text-align: left; }
+.aw-lb-name { text-align: left; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw-lb-score { font-weight: 800; }
+.aw-lb-time { color: #d0d3d6; font-weight: 600; text-align: right; }
+.aw-lb-name-input {
+  width: 100%; background: transparent; border: none; border-bottom: 0.15cqw dashed #35b1f0;
+  color: #fff; font-family: inherit; font-weight: 600; font-size: inherit; outline: none; padding: 0 0.2cqw;
+}
+
+/* ---------- SHOW ANSWERS — full 16:9 review ---------- */
+.aw-review {
+  position: absolute; inset: 0; z-index: 14; background: #fff;
+  display: flex; flex-direction: column; padding: 2cqw 2.4cqw;
+  animation: aw-fadein .2s ease;
+}
+.aw-rv-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2cqw; }
+.aw-rv-title { font-size: 2.4cqw; font-weight: 800; letter-spacing: 0.2cqw; color: #23303e; }
+.aw-rv-close { width: 4cqw; height: 4cqw; border: none; background: transparent; color: #6b7a90; cursor: pointer; border-radius: 1cqw; display: inline-flex; align-items: center; justify-content: center; }
+.aw-rv-close svg { width: 2.6cqw; height: 2.6cqw; }
+.aw-rv-close:hover { background: #eef3f9; color: #23303e; }
+.aw-rv-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: safe center; gap: 0.8cqw; overflow-y: auto; }
+/* rows auto-height (grow when a long question wraps); answer columns are half-width */
+.aw-rv-row { min-height: 7cqw; display: grid; grid-template-columns: 6.8fr 1fr 1fr; gap: 0.8cqw; }
+.aw-rv-cell { border-radius: 1cqw; display: flex; align-items: center; padding: 0.6cqw 1cqw; overflow: hidden; }
+.aw-rv-span { grid-column: 2 / span 2; }   /* correct answer -> one box across both answer columns */
+.aw-rv-q { background: #eef2f7; color: #23303e; font-weight: 700; }
+.aw-rv-a { color: #fff; font-weight: 700; justify-content: center; text-align: center; }
+.aw-rv-a.is-correct { background: #2ec27e; }
+.aw-rv-a.is-wrong { background: #3d4852; }
+.aw-rv-a.is-none { background: #eef1f5; color: #9aa5b1; font-weight: 600; }
+.aw-rv-fit { --fit: 1; display: inline-flex; align-items: center; gap: 0.5cqw; max-width: 100%; }
+.aw-rv-mark { flex: 0 0 auto; width: calc(2.2cqw * var(--fit)); height: calc(2.2cqw * var(--fit)); display: inline-flex; }
+.aw-rv-mark svg { width: 100%; height: 100%; }
+.aw-rv-txt { font-size: calc(1.9cqw * var(--fit)); line-height: 1.14; overflow-wrap: anywhere; }
+/* questions: ONE fixed size for every row; block so long text wraps to new lines */
+.aw-rv-q .aw-rv-fit { display: block; flex: 1 1 auto; text-align: left; }
+.aw-rv-q .aw-rv-txt { font-size: 2.3cqw; }
+
+/* ---------- Below the stage (outside the 16:9 zoom): TITLE (left) ·
+   Options/Template/Style cluster (center) · Edit/Assignment/Print (right) ---------- */
+.aw-below {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+/* min-width:0 lets both flexible tracks shrink to an EQUAL share even when the
+   title text is long — otherwise its min-content width skews the grid and the
+   center cluster drifts off-center (a long title "wins" more space than the
+   short icon group on the right, which has almost no min-content). */
+.aw-below-left, .aw-below-right { min-width: 0; }
+.aw-below-left { justify-self: start; text-align: left; }
+.aw-below-title {
+  font-size: 24px; font-weight: 800; color: #23303e;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-below-desc { color: #6b7a90; margin-top: 4px; font-size: 15px; font-weight: 500; }
+.aw-activity-type {
+  display: inline-block; background: #eaf2fb; color: #2f7bff; font-weight: 700;
+  font-size: 12px; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; margin-bottom: 8px;
+}
+
+.aw-below-center { justify-self: center; position: relative; z-index: 41; display: flex; gap: 10px; }
+.aw-below-right { justify-self: end; display: flex; gap: 8px; }
+
+/* Square rounded icon buttons — shared by both the center cluster and the
+   right-side utility icons. */
+.aw-toolbtn {
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  border: 1.5px solid #e2e9f2;
+  background: #fff;
+  color: #57667a;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(31,42,68,.07);
+  transition: box-shadow .15s ease, color .15s ease, border-color .15s ease, transform .08s ease;
+}
+.aw-toolbtn svg { width: 22px; height: 22px; }
+.aw-toolbtn:hover { color: #2f7bff; border-color: #bcd6fb; }
+.aw-toolbtn:active { transform: scale(.94); }
+/* "glow" when its panel is open */
+.aw-toolbtn.is-active {
+  color: #2f7bff; border-color: #2f7bff;
+  box-shadow: 0 0 0 5px rgba(47,123,255,.20), 0 0 22px 2px rgba(47,123,255,.45);
+}
+.aw-toolbtn-sm { width: 38px; height: 38px; border-radius: 11px; }
+.aw-toolbtn-sm svg { width: 18px; height: 18px; }
+
+/* ---------- Popover system: dim the whole screen, panel centered under the cluster ---------- */
+.aw-tool-dim {
+  position: fixed; inset: 0; z-index: 40;
+  background: rgba(18,23,32,.5);
+  backdrop-filter: blur(2px);
+  animation: aw-fadein .15s ease;
+}
+.aw-tool-panel {
+  position: absolute; top: calc(100% + 12px); left: 50%; transform: translateX(-50%);
+  z-index: 42;
+  background: #fff; border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15,20,30,.35);
+  padding: 18px 22px 20px;
+  width: max-content; min-width: 260px; max-width: min(88vw, 420px);
+  text-align: left;
+  /* PURE OPACITY fade — must never animate `transform`, since this element's
+     own transform:translateX(-50%) is what keeps it centered. A keyframe that
+     also touches transform (like the generic aw-pop) would override that for
+     the animation's duration, making the panel visibly jump from off-center
+     to centered once the animation ends. */
+  animation: aw-fadein .16s ease;
+}
+.aw-tool-panel-head {
+  font-size: 12.5px; font-weight: 800; letter-spacing: .06em; color: #8b93a1;
+  text-transform: uppercase; margin-bottom: 12px;
+}
+
+/* Options panel controls */
+.aw-opt-group { margin-bottom: 14px; }
+.aw-opt-group:last-child { margin-bottom: 0; }
+.aw-opt-label {
+  font-size: 11.5px; font-weight: 800; letter-spacing: .05em; color: #8b93a1;
+  text-transform: uppercase; margin-bottom: 7px;
+}
+.aw-opt-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.aw-opt-choice {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 600; color: #23303e; cursor: pointer;
+}
+.aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
+.aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; }
+.aw-opt-hint { font-size: 12px; color: #8b93a1; margin-top: 10px; font-style: italic; }
+
+/* Number stepper — small ▲/number/▼ control, drag the number up/down to change it */
+.aw-stepper { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; }
+.aw-stepper-btn {
+  border: none; background: #eef2f7; color: #57667a;
+  width: 24px; height: 16px; border-radius: 5px; font-size: 9px; line-height: 1;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.aw-stepper-btn:hover { background: #dce6f2; color: #2f7bff; }
+.aw-stepper-val {
+  width: 40px; text-align: center; font-weight: 800; font-size: 16px; color: #23303e;
+  padding: 3px 0; border-radius: 7px; cursor: ns-resize;
+  background: #f5f8fc; border: 1.4px solid #e2e9f2; touch-action: none;
+}
+.aw-stepper-val.is-dragging { background: #eaf2fb; border-color: #2f7bff; color: #2f7bff; }
+
+/* Apply button — centered, below all Options groups. Changes only save when
+   pressed; clicking outside the panel without pressing it discards them. */
+.aw-opt-apply-wrap { display: flex; justify-content: center; margin-top: 16px; }
+.aw-opt-apply { padding: 9px 34px; font-size: 15px; }
+
+/* Template panel */
+.aw-tpl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.aw-tpl-item {
+  border: 1.6px solid #e2e9f2; border-radius: 12px; padding: 12px 8px;
+  text-align: center; font-weight: 700; font-size: 13px; color: #57667a;
+  background: #fff; cursor: pointer; transition: border-color .12s ease, color .12s ease;
+}
+.aw-tpl-item:hover:not(.is-current):not(.is-soon) { border-color: #2f7bff; color: #2f7bff; }
+.aw-tpl-item.is-current { border-color: #2f7bff; color: #2f7bff; background: #eef5ff; cursor: default; }
+.aw-tpl-item.is-soon { opacity: .5; cursor: not-allowed; }
+
+/* Style (theme) panel */
+.aw-style-grid { display: flex; gap: 14px; }
+.aw-style-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border: none; background: none; font: inherit; cursor: pointer; padding: 0;
+}
+.aw-style-swatch {
+  width: 52px; height: 52px; border-radius: 13px; border: 2.5px solid transparent;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
+  transition: border-color .12s ease, transform .1s ease;
+}
+.aw-style-item:hover .aw-style-swatch { transform: scale(1.06); }
+.aw-style-item.is-active .aw-style-swatch { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.22); }
+.aw-style-name { font-size: 12px; font-weight: 700; color: #4a5568; }
+
+/* ---------- Home (splash inside the stage) ---------- */
+.aw-splash { margin: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 1cqw; }
+.aw-logo { font-size: 5.6cqw; font-weight: 800; letter-spacing: -0.1cqw; color: #2f7bff; }
+.aw-logo span { color: #23303e; }
+.aw-tagline { color: #6b7a90; font-size: 1.8cqw; margin-bottom: 0.8cqw; font-weight: 500; }
+
+/* ---------- Buttons ---------- */
+.aw-btn {
+  border: none; border-radius: 1.2cqw; padding: 1.2cqw 2.4cqw;
+  font-family: inherit; font-size: 1.6cqw; font-weight: 700; cursor: pointer;
+  background: #e6edf6; color: #23303e; transition: transform .08s ease, filter .15s ease;
+}
+.aw-btn:hover { filter: brightness(.97); }
+.aw-btn:active { transform: scale(.97); }
+.aw-btn-primary { background: #2f7bff; color: #fff; }
+.aw-btn-big { font-size: 2cqw; padding: 1.4cqw 4.4cqw; }
+
+/* ---------- Shared animations ---------- */
+@keyframes aw-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
+/* Pop-in that PRESERVES horizontal centering — for any element positioned with
+   `left:50%; transform:translateX(-50%)`. A generic pop that ends at
+   `transform: none` (like aw-pop) would drop the -50% and make the element
+   appear off-center then snap back. Bake the -50% into every keyframe instead. */
+@keyframes aw-pop-cx {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(.9); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0)   scale(1); }
+}
+@keyframes aw-glow { 0%,100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+@keyframes aw-fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes aw-gc-pop { 0% { opacity: 0; transform: scale(.3); } 60% { opacity: 1; transform: scale(1.08); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes aw-fly {
+  0%   { opacity: 0; transform: translate(-50%, -40%) scale(.4); }
+  20%  { opacity: 1; transform: translate(-50%, -60%) scale(1.05); }
+  100% { opacity: 0; transform: translate(-50%, -170%) scale(1.15); }
+}
+@keyframes aw-fly-cross {
+  0%   { opacity: 0; transform: translate(-50%, -35%) scale(.4); }
+  14%  { opacity: 1; transform: translate(-50%, -55%) scale(1.06); }
+  30%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  55%  { opacity: 1; transform: translate(-50%, -56%) scale(1.02); }
+  78%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -85%) scale(1.05); }
+}
+
+/* =============================================================
+   HOME LIBRARY + EDITOR  (v0.5.0)
+   These screens live OUTSIDE the 16:9 stage, so they use rem/px
+   (NOT cqw — cqw only makes sense inside .aw-stage). We also pin the
+   button/logo sizes here, because the shared .aw-btn/.aw-logo are sized
+   in cqw for use inside the stage.
+   ============================================================= */
+
+/* ---------- Home: the teacher's game library ---------- */
+.aw-lib {
+  max-width: 1040px; margin: 0 auto; padding: 28px 20px 10px;
+  min-height: 100vh; display: flex; flex-direction: column;
+  font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-lib-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 22px;
+}
+.aw-lib .aw-logo { font-size: 2rem; letter-spacing: -0.5px; }
+.aw-lib .aw-tagline { font-size: .95rem; margin: 2px 0 0; }
+.aw-lib .aw-btn {
+  font-size: .95rem; padding: .6rem 1.15rem; border-radius: 11px;
+}
+.aw-lib-create { font-size: 1rem !important; padding: .7rem 1.4rem !important; }
+
+.aw-lib-empty {
+  margin-top: 40px; text-align: center; color: #6b7a90;
+  font-size: 1.05rem; font-weight: 600;
+}
+.aw-lib-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 16px;
+}
+.aw-lib-card {
+  background: #fff; border: 1px solid #e6edf6; border-radius: 16px;
+  padding: 16px 16px 14px; display: flex; flex-direction: column; gap: 6px;
+  box-shadow: 0 2px 8px rgba(35,48,62,.05);
+}
+.aw-lib-badge {
+  align-self: flex-start; text-transform: uppercase; font-size: .68rem;
+  font-weight: 800; letter-spacing: .5px; color: #2f7bff;
+  background: #eaf1ff; padding: 3px 9px; border-radius: 999px;
+}
+.aw-lib-cardtitle {
+  font-size: 1.15rem; font-weight: 700; color: #23303e; line-height: 1.2;
+  word-break: break-word;
+}
+.aw-lib-cardmeta { font-size: .85rem; color: #7a8aa0; font-weight: 600; }
+.aw-lib-cardactions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.aw-lib-del { background: #fdeaea; color: #d33; }
+.aw-lib-del:hover { filter: brightness(.97); }
+
+/* ---------- Editor ---------- */
+.aw-ed {
+  max-width: 780px; margin: 0 auto; min-height: 100vh;
+  display: flex; flex-direction: column;
+  font-family: "Baloo 2", system-ui, sans-serif; color: #23303e;
+}
+.aw-ed-head {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; background: rgba(255,255,255,.92);
+  backdrop-filter: blur(6px); border-bottom: 1px solid #e6edf6;
+}
+.aw-ed-headleft { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.aw-ed-heading { font-size: 1.35rem; font-weight: 800; }
+.aw-ed-typebadge {
+  flex: 0 0 auto; font-size: .82rem; font-weight: 800; letter-spacing: 1px; color: #fff;
+  background: #2f7bff; padding: 5px 12px; border-radius: 20px; text-transform: uppercase;
+}
+.aw-ed-headactions { display: flex; gap: 8px; flex: 0 0 auto; }
+.aw-ed .aw-btn { font-size: .95rem; padding: .55rem 1.2rem; border-radius: 11px; }
+
+.aw-ed-error {
+  margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px;
+  background: #fdeaea; color: #c0392b; font-weight: 700; font-size: .95rem;
+}
+.aw-ed-body { padding: 18px 20px 80px; overflow-y: auto; }
+
+.aw-ed-meta { display: flex; flex-direction: column; gap: 14px; }
+.aw-ed-field { display: flex; flex-direction: column; gap: 5px; }
+.aw-ed-label { font-size: .82rem; font-weight: 700; color: #55657a; }
+.aw-ed-input {
+  font-family: inherit; font-size: 1rem; color: #23303e;
+  padding: .6rem .75rem; border: 1.5px solid #d7e0ec; border-radius: 10px;
+  background: #fff; width: 100%; box-sizing: border-box; outline: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-ed-input:focus { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-ed-select { cursor: pointer; }
+
+.aw-ed-sectionhead {
+  margin: 24px 0 10px; font-size: 1.1rem; font-weight: 800; color: #23303e;
+}
+
+/* Options card */
+.aw-ed-optcard {
+  background: #f7fafd; border: 1px solid #e6edf6; border-radius: 14px;
+  padding: 14px 16px 16px; margin-top: 6px;
+}
+.aw-ed-optcard .aw-ed-sectionhead { margin: 0 0 12px; font-size: 1rem; }
+.aw-ed-optgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.aw-ed-optrow { display: flex; align-items: center; gap: 10px; }
+.aw-ed-time { display: inline-flex; align-items: center; gap: 4px; }
+.aw-ed-checks { display: flex; flex-wrap: wrap; gap: 14px 22px; margin-top: 14px; }
+.aw-ed-check { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; font-size: .95rem; cursor: pointer; }
+.aw-ed-check input { width: 17px; height: 17px; accent-color: #2f7bff; cursor: pointer; }
+
+/* Questions */
+.aw-ed-questions { display: flex; flex-direction: column; gap: 14px; }
+.aw-ed-qcard {
+  background: #fff; border: 1px solid #e2e9f2; border-radius: 14px; padding: 14px 16px 16px;
+  box-shadow: 0 2px 8px rgba(35,48,62,.04);
+}
+.aw-ed-qtop { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.aw-ed-qnum { font-size: .9rem; font-weight: 800; color: #2f7bff; text-transform: uppercase; letter-spacing: .5px; }
+.aw-ed-qactions { display: flex; gap: 8px; flex: 0 0 auto; }
+.aw-ed-qactions .aw-ed-del { flex: 0 0 96px; text-align: center; }
+.aw-ed-dup { color: #2f7bff !important; }
+.aw-ed-dup:hover:not(:disabled) { background: #eaf1ff !important; }
+.aw-ed-qtext { font-weight: 600; }
+.aw-ed-ahint { font-size: .78rem; color: #8a97a8; margin: 10px 0 6px; }
+
+/* answers: two per row (A B / C D / E F) */
+.aw-ed-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.aw-ed-arow { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.aw-ed-arow input[type=radio] { width: 20px; height: 20px; accent-color: #17a34a; cursor: pointer; flex: 0 0 auto; }
+/* the answer box: bold letter INSIDE, then a borderless text field */
+.aw-ed-abox {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: stretch;
+  border: 1.5px solid #d7e0ec; border-radius: 10px; background: #fff; overflow: hidden;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-ed-abox:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-ed-aletter {
+  flex: 0 0 auto; display: flex; align-items: center; justify-content: center; min-width: 30px;
+  font-weight: 800; font-size: 1.02rem; color: #23303e; text-transform: uppercase;
+  background: #f2f6fb; border-right: 1.5px solid #e4ebf4;
+}
+.aw-ed-atext {
+  flex: 1 1 auto; min-width: 0; border: none; outline: none; background: none; font-family: inherit;
+  font-size: 1rem; font-weight: 500; color: #23303e; padding: .55rem .7rem;
+}
+.aw-ed-arow.is-correct .aw-ed-abox { border-color: #17a34a; background: #f2fbf5; }
+.aw-ed-arow.is-correct .aw-ed-aletter { background: #e3f6ea; border-right-color: #cbead6; color: #147a37; }
+
+.aw-ed-del {
+  border: 1.5px solid #e2e9f2; background: #fff; color: #d33; font-family: inherit;
+  font-size: .85rem; font-weight: 700; padding: .4rem .7rem; border-radius: 9px; cursor: pointer;
+}
+.aw-ed-del:hover:not(:disabled) { background: #fdeaea; }
+.aw-ed-del:disabled { opacity: .35; cursor: default; }
+.aw-ed-del-a { flex: 0 0 auto; width: 34px; text-align: center; font-size: 1.15rem; line-height: 1; padding: .35rem 0; }
+
+.aw-ed-adda, .aw-ed-addq {
+  align-self: flex-start; border: 1.5px dashed #b9cbe4; background: #fff; color: #2f7bff;
+  font-family: inherit; font-size: .9rem; font-weight: 700; padding: .5rem 1rem; border-radius: 10px; cursor: pointer;
+  margin-top: 10px;
+}
+.aw-ed-adda:hover:not(:disabled), .aw-ed-addq:hover:not(:disabled) { background: #eaf1ff; }
+.aw-ed-adda:disabled, .aw-ed-addq:disabled { opacity: .4; cursor: default; }
+.aw-ed-addq { align-self: stretch; text-align: center; padding: .7rem; font-size: .95rem; }
+.aw-ed-qcount { font-size: .8rem; font-weight: 700; color: #8a97a8; text-align: center; margin-top: 8px; }
+
+/* Bulk actions bar + paste-from-Excel modal (v0.6.2) */
+.aw-ed-error.is-info { background: #e8f7ee; color: #177a41; }
+.aw-ed-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 12px; }
+.aw-ed .aw-ed-bulk .aw-btn { font-size: .85rem; padding: .45rem .85rem; border-radius: 9px; }
+.aw-ed-bulkgroup { display: inline-flex; align-items: center; gap: 6px; }
+.aw-ed-bulklabel { font-size: .82rem; font-weight: 700; color: #55657a; }
+.aw-ed-lettersel { width: auto; padding: .35rem .5rem; font-size: .9rem; font-weight: 700; }
+.aw-ed-bulkdanger { color: #d33; }
+.aw-ed-bulkdanger:hover { background: #fdeaea; }
+.aw-ed-tip {
+  font-size: .82rem; color: #5b6b80; background: #eef4fc; border: 1px solid #dbe7f7;
+  border-radius: 10px; padding: 8px 12px; margin: 0 0 12px; line-height: 1.35;
+}
+
+.aw-ed-pastemodal { width: min(880px, 96vw); }
+.aw-ed-pastehint { font-size: .88rem; color: #55657a; }
+.aw-ed-pastebox { min-height: 96px; resize: vertical; font-size: .9rem; }
+.aw-ed-pv { overflow: auto; max-height: 38vh; border: 1px solid #e6edf6; border-radius: 12px; }
+.aw-ed-pvt { border-collapse: collapse; width: 100%; font-size: .88rem; font-family: inherit; }
+.aw-ed-pvt th, .aw-ed-pvt td {
+  border-bottom: 1px solid #eef2f7; padding: 6px 10px; text-align: left;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.aw-ed-pvt th { position: sticky; top: 0; background: #f7fafd; z-index: 1; }
+.aw-ed-pvt th select {
+  font-family: inherit; font-size: .82rem; font-weight: 700; color: #2f7bff;
+  border: 1.5px solid #d7e0ec; border-radius: 8px; padding: .25rem .4rem; background: #fff; cursor: pointer;
+}
+.aw-ed-pvt tr.is-off td { color: #b6c2d1; }
+.aw-ed-pvt td.is-off { color: #b6c2d1; }
+.aw-ed-pvt input[type=checkbox] { width: 16px; height: 16px; accent-color: #2f7bff; cursor: pointer; }
+.aw-ed-pverr { font-size: .88rem; font-weight: 700; color: #c0392b; }
+.aw-ed-pverr.is-warn { color: #b8860b; }
+
+/* =============================================================
+   FILE-MANAGER HOME (v0.6.0) — two fixed roots (Activities, Results),
+   folders + acts, toolbar, breadcrumb, ⁝ menus, Move dialog, recycle bin.
+   Outside the 16:9 stage -> rem/px (not cqw).
+   ============================================================= */
+/* Brand cluster: AWord (large) + "in ANDREW CLASSES" tucked right beneath.
+   Clickable everywhere -> top-level home. */
+.aw-brand {
+  display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  background: none; border: none; cursor: pointer; font-family: inherit; text-align: left;
+  padding: 6px 10px; border-radius: 14px; transition: background .15s ease;
+}
+.aw-brand:hover { background: rgba(47,123,255,.07); }
+.aw-brand-logo { font-size: 4.15rem; font-weight: 800; letter-spacing: -1.5px; color: #2f7bff; line-height: .9; }
+.aw-brand-logo span { color: #23303e; }
+/* tagline keeps each glyph's natural shape; letter-spacing is set by JS
+   (sizeBrand) so its total width equals the logo width exactly. */
+.aw-brand-sub { font-size: .98rem; font-weight: 600; color: #9aa7b6; letter-spacing: 0; white-space: nowrap; }
+.aw-brand-sub b { color: #23303e; font-weight: 800; }
+.aw-brand.is-sm { padding: 4px 8px; gap: 1px; }
+.aw-brand.is-sm .aw-brand-logo { font-size: 2.4rem; letter-spacing: -1px; }
+.aw-brand.is-sm .aw-brand-sub { font-size: .74rem; }
+.aw-lib-head-inside { margin-bottom: 6px; }
+
+/* ---------- Library/editor header: brand (left) + button cluster (right) ----
+   NOTE: named .aw-appbar (NOT .aw-topbar — that's the in-game timer/score bar). */
+.aw-appbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 18px;
+}
+.aw-appbar-right { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+/* .aw-appbtn* are LIBRARY/EDITOR header buttons — distinct from the in-game
+   .aw-iconbtn / .aw-navbtn controls (which the engine owns). */
+.aw-appbtn {
+  width: 46px; height: 46px; border-radius: 13px; border: 1.5px solid #e0e8f2; background: #fff;
+  color: #4a5b70; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+  transition: background .14s ease, border-color .14s ease, color .14s ease, transform .1s ease;
+}
+.aw-appbtn svg { width: 24px; height: 24px; }
+.aw-appbtn:hover { background: #eef4fc; border-color: #cddcf0; color: #2f7bff; }
+.aw-settings-btn:hover svg { transform: rotate(35deg); transition: transform .3s ease; }
+.aw-appnav {
+  display: inline-flex; align-items: center; gap: 7px; height: 46px; padding: 0 15px;
+  border-radius: 13px; border: 1.5px solid #e0e8f2; background: #fff; color: #33455c;
+  font-family: inherit; font-size: .95rem; font-weight: 700; cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.aw-appnav-ic { width: 20px; height: 20px; color: #f5b13b; display: inline-flex; }
+.aw-appnav:hover { background: #eef4fc; border-color: #cddcf0; }
+.aw-appnav.is-on { background: #2f7bff; border-color: #2f7bff; color: #fff; }
+.aw-appnav.is-on .aw-appnav-ic { color: #ffe0a3; }
+
+/* ---------- New-activity type picker ---------- */
+.aw-pick-hint { font-size: .92rem; color: #55657a; margin-bottom: 4px; }
+.aw-pick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.aw-pick-card {
+  position: relative; text-align: left; border: 1.5px solid #e2e9f2; background: #fff;
+  border-radius: 14px; padding: 14px 15px; cursor: pointer; font-family: inherit;
+  transition: transform .1s ease, box-shadow .15s ease, border-color .14s ease;
+}
+.aw-pick-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(35,48,62,.1); border-color: #bcd2f2; }
+.aw-pick-name { font-size: 1.05rem; font-weight: 800; color: #23303e; }
+.aw-pick-blurb { font-size: .82rem; color: #67768a; margin-top: 3px; line-height: 1.25; }
+.aw-pick-card.is-soon { opacity: .62; cursor: default; }
+.aw-pick-card.is-soon:hover { transform: none; box-shadow: none; border-color: #e2e9f2; }
+.aw-pick-soon {
+  position: absolute; top: 10px; right: 10px; font-size: .62rem; font-weight: 800; letter-spacing: .5px;
+  text-transform: uppercase; color: #97a6ba; background: #f1f5fa; padding: 3px 7px; border-radius: 20px;
+}
+
+/* ---------- Settings dialog ---------- */
+.aw-set-section { font-size: 1.05rem; font-weight: 800; color: #23303e; }
+.aw-set-hint { font-size: .84rem; color: #67768a; line-height: 1.3; margin: 4px 0 6px; }
+.aw-modal-title .aw-set-back {
+  border: none; background: none; cursor: pointer; font-family: inherit; color: #2f7bff;
+  font-size: 1.5rem; line-height: 1; padding: 0 8px 0 0; margin-right: 2px; vertical-align: middle;
+}
+.aw-modal-title .aw-set-back:hover { color: #1e56c9; }
+.aw-set-menu { display: flex; flex-direction: column; gap: 8px; }
+.aw-set-row {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  border: 1.5px solid #e6edf6; background: #fff; border-radius: 12px; padding: 12px 14px;
+  font-family: inherit; cursor: pointer; transition: background .12s ease, border-color .12s ease;
+}
+.aw-set-row:hover:not(.is-disabled) { background: #eff5fd; border-color: #cddcf0; }
+.aw-set-row.is-disabled { opacity: .55; cursor: default; }
+.aw-set-rowtext { flex: 1 1 auto; min-width: 0; }
+.aw-set-rowtitle { font-size: 1rem; font-weight: 800; color: #23303e; }
+.aw-set-rowsub { font-size: .8rem; color: #7a8aa0; margin-top: 2px; }
+.aw-set-chev { flex: 0 0 auto; color: #9fb0c4; font-size: 1.4rem; line-height: 1; }
+.aw-optform { display: flex; flex-direction: column; gap: 14px; }
+.aw-optform-field { display: flex; flex-direction: column; gap: 5px; }
+.aw-optform-label { font-size: .82rem; font-weight: 700; color: #55657a; }
+.aw-optform-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aw-optform-checks { display: flex; flex-direction: column; gap: 10px; }
+
+/* ---------- Library toast ---------- */
+.aw-lib-toast {
+  position: fixed; left: 50%; bottom: 30px; transform: translateX(-50%) translateY(12px);
+  background: #23303e; color: #fff; font-family: "Baloo 2", system-ui, sans-serif; font-weight: 700;
+  font-size: .95rem; padding: .7rem 1.2rem; border-radius: 12px; box-shadow: 0 10px 30px rgba(20,30,45,.3);
+  opacity: 0; pointer-events: none; z-index: 400; transition: opacity .2s ease, transform .2s ease;
+}
+.aw-lib-toast.is-on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* top level: the two big root folders */
+.aw-roots { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 24px; }
+.aw-root-card {
+  flex: 1 1 260px; min-width: 220px; background: #fff; border: 1px solid #e6edf6;
+  border-radius: 20px; padding: 34px 26px; display: flex; align-items: center; gap: 20px;
+  cursor: pointer; font-family: inherit; text-align: left;
+  box-shadow: 0 3px 12px rgba(35,48,62,.06); transition: transform .1s ease, box-shadow .15s ease;
+}
+.aw-root-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(35,48,62,.1); }
+.aw-root-icon { width: 62px; height: 62px; color: #f5b13b; flex: 0 0 auto; }
+.aw-root-name { font-size: 1.6rem; font-weight: 800; color: #23303e; }
+
+/* breadcrumb */
+.aw-fm-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; font-weight: 600; }
+.aw-crumb {
+  border: none; background: none; font-family: inherit; font-size: .95rem; font-weight: 700;
+  color: #2f7bff; cursor: pointer; padding: 2px 4px; border-radius: 6px;
+}
+.aw-crumb:hover { background: #eaf1ff; }
+.aw-crumb.is-current { color: #23303e; cursor: default; }
+.aw-crumb.is-current:hover { background: none; }
+.aw-crumb-sep { color: #9fb0c4; }
+
+/* toolbar */
+.aw-fm-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 16px;
+}
+.aw-fm-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aw-lib .aw-fm-newbtn { font-size: .9rem; padding: .5rem 1rem; }
+.aw-fm-newbtn.is-on { background: #2f7bff; color: #fff; }
+.aw-fm-search { display: flex; align-items: center; border: 1.5px solid #d7e0ec; border-radius: 10px; overflow: hidden; background: #fff; }
+.aw-fm-searchinput { border: none; outline: none; font-family: inherit; font-size: .9rem; padding: .5rem .7rem; width: 170px; background: none; }
+.aw-fm-searchbtn { border: none; background: #f2f6fb; color: #57667a; cursor: pointer; padding: .5rem .7rem; display: inline-flex; align-items: center; }
+.aw-fm-searchbtn svg { width: 18px; height: 18px; }
+.aw-fm-searchbtn:hover { background: #e6eef8; color: #2f7bff; }
+.aw-fm-viewtoggle { display: inline-flex; border: 1.5px solid #d7e0ec; border-radius: 10px; overflow: hidden; }
+.aw-fm-vbtn { border: none; background: #fff; color: #8494a8; cursor: pointer; padding: .45rem .6rem; display: inline-flex; align-items: center; }
+.aw-fm-vbtn.is-on { background: #2f7bff; color: #fff; }
+
+/* body + layouts */
+.aw-fm-body { min-height: 200px; }
+.aw-fm-empty { text-align: center; color: #7a8aa0; font-weight: 600; padding: 48px 0; }
+.aw-fm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+.aw-fm-list { display: flex; flex-direction: column; gap: 8px; }
+
+/* generic card */
+.aw-card {
+  position: relative; background: #fff; border: 1px solid #e6edf6; border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(35,48,62,.05); overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .1s ease, box-shadow .15s ease;
+}
+.aw-card:hover { box-shadow: 0 6px 16px rgba(35,48,62,.1); }
+.aw-card-folder { cursor: pointer; }
+.aw-card-folder:hover { transform: translateY(-2px); }
+.aw-folder-icon { width: 56px; height: 56px; color: #f5b13b; margin: 20px auto 6px; }
+/* foot: pinned to the BOTTOM of the card (cards in a grid row stretch to the
+   same height — without margin-top:auto the foot floats at different heights
+   and the ⁝ button lands in different spots per card). Content bottom-aligned. */
+.aw-card-foot { display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px; margin-top: auto; }
+.aw-card-info { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+
+/* folder preview: a big folder icon in a tinted panel (mirrors the act preview) */
+.aw-fp {
+  position: relative; height: 118px; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #fbf6ec, #f6efe0); overflow: hidden;
+}
+.aw-fp-icon { width: 108px; height: 108px; color: #f5b13b; filter: drop-shadow(0 3px 5px rgba(120,90,20,.18)); }
+.aw-card-folder .aw-card-name { flex: 1 1 auto; min-width: 0; }
+
+/* count(s) shown over the folder body — raised a little above centre.
+   acts = blue (shown first), folders = amber-orange (shown second). */
+.aw-fp-count {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(255,255,255,.94); border-radius: 11px; padding: 3px 11px;
+  box-shadow: 0 2px 6px rgba(60,45,15,.22); font-weight: 800; line-height: 1;
+}
+.aw-fp-n { font-size: 1.15rem; }
+.aw-fp-n-acts { color: #2f7bff; }
+.aw-fp-n-folders { color: #f0902a; }
+.aw-fp-div { width: 2px; height: 15px; background: #cfd8e3; border-radius: 1px; }
+
+/* list view: shrink the count a touch */
+.aw-fm-list .aw-fp-count { top: 50%; padding: 2px 7px; gap: 4px; }
+.aw-fm-list .aw-fp-n { font-size: .82rem; }
+.aw-fm-list .aw-fp-div { height: 11px; }
+.aw-card-name { font-size: 1.04rem; font-weight: 800; color: #23303e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Grid view: the name shows over up to 2 lines (≈38 chars) before it ellipsises.
+   When it needs the 2nd line it grows UPWARD (foot content is bottom-aligned). */
+.aw-fm-grid .aw-card-name {
+  white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  font-size: .9rem; line-height: 1.16; overflow: hidden;
+}
+.aw-card-folder .aw-card-name { flex: 1 1 auto; }
+/* template line sits just BELOW the name (bottom line of the foot) */
+.aw-card-type { display: inline-block; margin-top: 3px; font-size: .82rem; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: #2f7bff; }
+.aw-card-menu {
+  align-self: flex-end;   /* bottom-right corner of the foot */
+  flex: 0 0 auto; border: none; background: none; color: #8494a8; cursor: pointer;
+  width: 30px; height: 30px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;
+}
+/* Grid view: nudge the ⁝ into the lowest-right corner (a bit further right and
+   down) so its dots sit ON the same line as the type / folder-name text. The
+   same offsets apply to every card — identical spot regardless of name length. */
+.aw-fm-grid .aw-card-menu { margin-right: -7px; margin-bottom: -7px; }
+/* Text starts as far from the LEFT edge as the ⁝ dots sit from the RIGHT edge
+   (dot column centre ≈ 21px in) — so the foot reads visually symmetrical. */
+.aw-fm-grid .aw-card-foot { padding-left: 21px; }
+.aw-card-menu:hover { background: #eef3f9; color: #33455c; }
+
+/* act preview */
+.aw-cp {
+  position: relative; height: 118px; background: linear-gradient(135deg, #eef4fc, #e2ecfa);
+  padding: 12px 12px 10px; display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+}
+.aw-cp-q { font-size: .82rem; font-weight: 700; color: #2a3a4d; line-height: 1.15;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.aw-cp-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: auto; }
+.aw-cp-chip { font-size: .66rem; font-weight: 700; color: #fff; padding: 5px 6px; border-radius: 7px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.aw-cp-empty { margin: auto; color: #8aa; font-weight: 600; font-size: .85rem; }
+.aw-cp-play {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+  background: rgba(47,123,255,.92); color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25); transition: transform .1s ease, background .15s ease;
+}
+.aw-cp-play svg { width: 22px; height: 22px; }
+.aw-cp-play:hover { background: #2f7bff; transform: translate(-50%, -50%) scale(1.08); }
+
+/* trash cards */
+.aw-card-foot-trash { flex-direction: column; align-items: stretch; gap: 8px; }
+.aw-trash-actions { display: flex; gap: 8px; }
+.aw-trash-actions .aw-btn { font-size: .82rem; padding: .4rem .7rem; flex: 1 1 auto; }
+
+/* LIST view: cards become rows */
+.aw-fm-list .aw-card { flex-direction: row; align-items: center; overflow: visible; }
+.aw-fm-list .aw-folder-icon { width: 30px; height: 30px; margin: 0 4px 0 12px; }
+.aw-fm-list .aw-fp { width: 76px; height: 52px; flex: 0 0 auto; }
+.aw-fm-list .aw-fp-icon { width: 36px; height: 36px; }
+.aw-fm-list .aw-cp { width: 92px; height: 58px; flex: 0 0 auto; padding: 6px; }
+.aw-fm-list .aw-cp-q { font-size: .6rem; -webkit-line-clamp: 2; }
+.aw-fm-list .aw-cp-answers { display: none; }
+.aw-fm-list .aw-cp-play { width: 30px; height: 30px; }
+.aw-fm-list .aw-cp-play svg { width: 13px; height: 13px; }
+.aw-fm-list .aw-card-foot { flex: 1 1 auto; border-top: none; }
+.aw-fm-list .aw-card-foot-trash { flex-direction: row; align-items: center; }
+.aw-fm-list .aw-trash-actions { flex: 0 0 auto; }
+
+/* ⁝ context menu */
+.aw-ctx {
+  position: fixed; z-index: 200; min-width: 180px; background: #fff; border: 1px solid #e2e9f2;
+  border-radius: 12px; box-shadow: 0 10px 30px rgba(20,30,45,.18); padding: 6px; animation: aw-fadein .12s ease;
+}
+.aw-ctx-item {
+  display: block; width: 100%; text-align: left; border: none; background: none; font-family: inherit;
+  font-size: .92rem; font-weight: 600; color: #2a3a4d; padding: .55rem .7rem; border-radius: 8px; cursor: pointer;
+}
+.aw-ctx-item:hover { background: #eef3f9; }
+.aw-ctx-item.is-danger { color: #d33; }
+.aw-ctx-item.is-danger:hover { background: #fdeaea; }
+
+/* drag & drop (move into folders / breadcrumb) */
+.aw-card.is-dragging { opacity: .45; }
+.aw-card-folder.is-dropok {
+  outline: 2.5px dashed #2f7bff; outline-offset: -2px; box-shadow: 0 8px 20px rgba(47,123,255,.22);
+}
+.aw-crumb.is-dropok {
+  background: #dce9ff; outline: 2px dashed #2f7bff; outline-offset: 1px; border-radius: 7px; color: #1e56c9;
+}
+
+/* folder-color picker */
+.aw-colorgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 4px 2px; }
+.aw-swatch {
+  width: 100%; aspect-ratio: 1 / 1; border-radius: 12px; border: 2px solid transparent; cursor: pointer;
+  box-shadow: inset 0 -3px 6px rgba(0,0,0,.12); transition: transform .1s ease;
+}
+.aw-swatch:hover { transform: scale(1.08); }
+.aw-swatch.is-sel { border-color: #23303e; box-shadow: 0 0 0 3px rgba(35,48,62,.15), inset 0 -3px 6px rgba(0,0,0,.12); }
+
+/* footer — pushed to the very bottom of every library/editor page */
+.aw-foot {
+  margin-top: auto; padding: 16px 12px 8px; text-align: center;
+  border-top: 1px solid #e9eef5; color: #8a97a8; font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-foot-line { font-size: .85rem; font-weight: 600; line-height: 1.5; }
+.aw-foot-copy { font-size: .78rem; color: #9fadbe; }
+
+/* modal (rename, new folder, move) */
+.aw-modal-overlay {
+  position: fixed; inset: 0; z-index: 300; background: rgba(20,30,45,.4);
+  display: flex; align-items: center; justify-content: center; padding: 20px; animation: aw-fadein .12s ease;
+}
+.aw-modal {
+  background: #fff; border-radius: 18px; width: min(440px, 100%); max-height: 80vh; overflow: auto;
+  padding: 22px 22px 20px; box-shadow: 0 20px 50px rgba(20,30,45,.3); font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-modal-title { font-size: 1.25rem; font-weight: 800; color: #23303e; margin-bottom: 14px; }
+.aw-modal-body { display: flex; flex-direction: column; gap: 14px; }
+.aw-modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.aw-modal .aw-btn { font-size: .95rem; padding: .55rem 1.2rem; border-radius: 11px; }
+
+/* =====================================================================
+   PRINT — format picker popup (on SCREEN) + the printed worksheets.
+   Flow (core/print.js): click Print -> popup to choose a FORMAT
+   (Anagram/Crossword/Quiz/Unjumble, only the eligible ones show) ->
+   a `.aw-print-sheet` is appended as a SIBLING of #app and window.print()
+   runs. The sheet is hidden on screen and only shown inside @media print
+   (with #app hidden). Pure grayscale so it prints fine in black & white.
+   Generic across templates — the shape (clue + answer/options) lives in
+   core, same precedent as the Show-answers review screen (.aw-rv-* above).
+   ===================================================================== */
+
+/* ---- format picker popup (screen) ---- */
+.aw-print-pop-overlay {
+  position: fixed; inset: 0; z-index: 400; background: rgba(20,30,45,.42);
+  display: flex; align-items: center; justify-content: center; padding: 20px; animation: aw-fadein .12s ease;
+}
+.aw-print-pop {
+  background: #fff; border-radius: 18px; padding: 22px 24px 18px; max-width: min(540px, 100%);
+  box-shadow: 0 20px 50px rgba(20,30,45,.3); font-family: "Baloo 2", system-ui, sans-serif;
+}
+.aw-print-pop-head { font-size: 1.2rem; font-weight: 800; color: #23303e; text-align: center; margin-bottom: 16px; }
+.aw-print-pop-row { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.aw-print-pop-btn {
+  position: relative; width: 106px; height: 106px; border: 2px solid #e6ecf4; background: #f7fafd;
+  border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 9px;
+  cursor: pointer; font-family: inherit; color: #2a3a4d; transition: transform .1s ease, border-color .12s ease, background .12s ease;
+}
+.aw-print-pop-btn:hover { transform: translateY(-2px); border-color: #60a5fa; background: #eff6ff; }
+.aw-print-pop-icon { display: flex; }
+.aw-print-pop-icon svg { width: 40px; height: 40px; }
+.aw-print-pop-label { font-size: .92rem; font-weight: 700; }
+.aw-print-pop-btn.is-soon { opacity: .6; }
+.aw-print-pop-btn.is-soon:hover { transform: none; border-color: #e6ecf4; background: #f7fafd; cursor: default; }
+.aw-print-pop-soon {
+  position: absolute; top: 7px; right: 8px; font-size: .58rem; font-weight: 800; letter-spacing: .05em;
+  color: #a86b00; background: #ffe8c2; border-radius: 6px; padding: 1px 5px; text-transform: uppercase;
+}
+.aw-print-pop-note { margin-top: 16px; text-align: center; font-size: .8rem; color: #8a97a8; }
+.aw-print-pop-empty { text-align: center; font-size: .95rem; color: #6b7787; padding: 6px 4px 2px; }
+
+/* ---- printed worksheet (hidden on screen; shown only in @media print) ---- */
+.aw-print-sheet { display: none; }
+
+@media print {
+  html, body { background: #fff !important; }
+  #app { display: none !important; }
+  @page { size: A4; margin: 24mm 14mm 18mm; }   /* A4 default; top/bottom bands hold the running head/foot */
+
+  .aw-print-sheet {
+    display: block !important; color: #1c2733;
+    font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+
+  /* running header/footer — position:fixed repeats them on every printed page */
+  .aw-print-runhead {
+    position: fixed; top: 9mm; left: 14mm; right: 14mm;
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+    padding-bottom: 7px; border-bottom: 3px solid #a7adb4;
+  }
+  .aw-print-runhead::after { content: ""; position: absolute; left: 0; right: 0; bottom: -5px; border-bottom: 1px solid #d7dbe0; }
+  .aw-print-htitle { font-weight: 800; font-size: 17px; letter-spacing: .01em; }
+  .aw-print-hname { font-size: 12.5px; color: #3a4653; white-space: nowrap; }
+  .aw-print-hline { display: inline-block; width: 150px; border-bottom: 1px solid #333; vertical-align: -2px; }
+
+  .aw-print-runfoot {
+    position: fixed; bottom: 7mm; left: 14mm; right: 14mm;
+    display: flex; align-items: center; padding-top: 8px; border-top: 1px solid #cfd4da;
+  }
+  .aw-print-logo { font-weight: 800; font-size: 17px; color: #566472; line-height: 1; }
+  .aw-print-logo span {
+    display: block; font-size: 7.5px; font-weight: 700; letter-spacing: .14em;
+    color: #9aa4af; margin-top: 2px;
+  }
+
+  /* two-column body; the browser flows items down col 1, then col 2, then next page */
+  .aw-print-body { column-count: 2; column-gap: 11mm; column-rule: 1.3px dashed #c9ced5; }
+  .aw-print-item { break-inside: avoid; page-break-inside: avoid; margin: 0 0 6.5mm; }
+
+  .aw-pf-clue { display: flex; align-items: flex-start; gap: 5px; font-size: 13px; line-height: 1.3; }
+  .aw-pf-num { font-weight: 700; min-width: 20px; }
+  .aw-pf-bulb { flex: none; }
+  .aw-pf-bulb svg { width: 15px; height: 15px; color: #7d8894; vertical-align: -2px; margin-top: 1px; }
+  .aw-pf-cluetext { flex: 1; }
+
+  /* ANAGRAM */
+  .aw-pf-scramble { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0 5px 20px; }
+  .aw-pf-sbox {
+    min-width: 20px; height: 22px; padding: 0 3px; border-radius: 5px; background: #eef1f4;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; letter-spacing: .04em; color: #4a5560;
+  }
+  .aw-pf-blanks { display: flex; flex-wrap: wrap; gap: 5px; margin-left: 20px; }
+  .aw-pf-blank { width: 26px; height: 30px; border: 1.4px solid #9aa3ac; border-radius: 6px; }
+
+  /* QUIZ */
+  .aw-pf-options { display: grid; grid-template-columns: 1fr 1fr; gap: 5px 16px; margin: 7px 0 0 20px; }
+  .aw-pf-opt { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+  .aw-pf-letter { font-weight: 700; }
+  .aw-pf-check { flex: none; width: 16px; height: 16px; border: 1.4px solid #8a939c; border-radius: 4px; }
+  .aw-pf-opttext { letter-spacing: .01em; }
+
+  /* UNJUMBLE */
+  .aw-pf-jumble { font-size: 13px; line-height: 1.5; }
+  .aw-pf-jumble .aw-pf-num { display: inline; margin-right: 8px; }
+  .aw-pf-word { display: inline-block; margin: 0 14px 2px 0; }
+  .aw-pf-writeline { height: 0; border-bottom: 1px solid #b9c0c8; margin: 9px 0 2px; }
+}
+
+/* move dialog tree */
+.aw-move-tree { max-height: 46vh; overflow: auto; border: 1px solid #eef2f7; border-radius: 12px; padding: 6px; }
+.aw-move-row {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; border: none; background: none;
+  font-family: inherit; font-size: .92rem; font-weight: 600; color: #2a3a4d; padding: .45rem 8px; border-radius: 8px; cursor: pointer;
+}
+.aw-move-row:hover { background: #eef3f9; }
+.aw-move-row.is-sel { background: #e3edff; color: #1e56c9; }
+.aw-move-ic { width: 20px; height: 20px; color: #f5b13b; flex: 0 0 auto; }

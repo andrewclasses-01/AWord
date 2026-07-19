@@ -1,0 +1,95 @@
+/* =============================================================
+   QUIZ template — styles that belong ONLY to this template.
+   Class prefix: .aw-quiz-*  (every template prefixes its classes
+   with .aw-<type>- to avoid clashes).
+
+   Sizes use `cqw` (1% of the 16:9 stage width) so everything scales
+   uniformly with the stage (fullscreen = same proportions, just zoom).
+   Font sizes are also multiplied by var(--fit,1): core/fit.js sets --fit
+   on the card so long text auto-shrinks to fit the stage height.
+   ============================================================= */
+
+/* Quiz card: question near the TOP, answers pushed to the LOWER area. */
+.aw-quiz-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: 3.2cqw;            /* gap below the answers row */
+  animation: aw-fadein .25s ease;    /* simple fade between questions */
+}
+.aw-quiz-question {
+  font-size: calc(5.2cqw * var(--fit));
+  font-weight: 600;
+  /* theme-driven: plain dark text by default; Classroom sets a white fill +
+     black comic-style outline (via -webkit-text-stroke) to read over its
+     chalkboard background — see core/themes/classroom.css */
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  text-align: center;
+  line-height: 1.12;
+  margin: 0 auto;
+  max-width: 96%;
+  flex: 0 0 auto;
+}
+
+/* Answers in the lower part (margin-top:auto). Flex-wrap + justify-center gives
+   the per-count layouts, and a short last row auto-centers. --per-row (set per
+   question) fixes how many tiles fill one row. */
+.aw-quiz-answers {
+  --gap: calc(1.7cqw * var(--fit));
+  margin-top: auto;
+  width: 100%;
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-content: center;
+  gap: var(--gap);
+}
+.aw-quiz-tile {
+  position: relative;
+  flex: 0 1 calc((100% - (var(--per-row, 4) - 1) * var(--gap)) / var(--per-row, 4));
+  max-width: 30%;
+  min-width: 0;
+  /* Tile colour: --tile / --tile-dark are set INLINE per game (random palette,
+     see quiz.js). A theme may FORCE one uniform colour via --aw-tile-fixed
+     (e.g. Basic = all dark navy). --tile-eff / --tile-dark-eff resolve to the
+     forced colour if set, else the per-tile random one. */
+  --tile-eff: var(--aw-tile-fixed, var(--tile));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
+  /* Tile shape is theme-driven (Basic = thin blue border + flat soft shadow;
+     Classic/etc = 3D coloured lip). */
+  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  background: var(--tile-eff);
+  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
+  color: #fff; font-family: inherit; font-weight: 700; text-transform: uppercase;
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  padding: calc(3.4cqw * var(--fit)) calc(1.2cqw * var(--fit));
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
+}
+.aw-tile-text {
+  display: block;
+  font-size: calc(2.9cqw * var(--fit));
+  line-height: 1.06;
+  overflow-wrap: anywhere;
+}
+/* optional "Letters on answers" badge (Options panel) — top-left of the tile */
+.aw-quiz-letter {
+  position: absolute; top: 0.5cqw; left: 0.7cqw;
+  font-size: calc(1.3cqw * var(--fit));
+  font-weight: 800; color: rgba(255,255,255,.8);
+  text-shadow: 0 1px 2px rgba(0,0,0,.2);
+}
+
+.aw-quiz-tile:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-quiz-tile:active:not(:disabled) { transform: translateY(0.4cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 var(--tile-dark-eff)); }
+.aw-quiz-tile:disabled { cursor: default; }   /* the correct tile keeps its full color */
+
+/* wrong tiles fade to a very faint ghost after answering */
+.aw-quiz-tile.is-dimmed { opacity: .15; }
+
+/* empty / malformed activity */
+.aw-quiz-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}

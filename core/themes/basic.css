@@ -1,0 +1,43 @@
+/* =============================================================
+   THEME "Basic" — clean minimal look (matches the teacher's
+   reference: all answer tiles the SAME dark-navy with a blue
+   border + white text, dark-navy question, light background,
+   flat (no 3D lip), soft shadow).
+
+   Note: `--aw-tile-fixed` forces EVERY tile to one colour (overrides
+   the random per-game palette) — the defining feature of this theme.
+   ============================================================= */
+
+.theme-basic {
+  --aw-page-bg:   #eef3fb;
+  --aw-stage-bg:  #ffffff;
+  --aw-stage-border: #dbe4f2;
+  --aw-card:      #ffffff;
+  --aw-text:      #16224d;   /* dark navy ink (question + chrome) */
+  --aw-muted:     #6b7a97;
+  --aw-accent:    #3f6ccb;
+  --aw-shadow:    0 10px 30px rgba(22, 34, 77, .10);
+  --aw-radius:    14px;
+
+  /* palette still defined (harmless) but overridden by --aw-tile-fixed below */
+  --aw-tile-0:   #33a0e6;  --aw-tile-0d: #2176b8;
+  --aw-tile-1:   #e23c3c;  --aw-tile-1d: #b32a2a;
+  --aw-tile-2:   #f39a1e;  --aw-tile-2d: #cc7c12;
+  --aw-tile-3:   #33a24a;  --aw-tile-3d: #237a37;
+
+  --aw-ok:   #2ea86a;  --aw-ok-d: #1f8452;
+  --aw-no:   #e2593c;  --aw-no-d: #b8422a;
+
+  /* every tile: uniform dark navy, blue border, flat + soft drop shadow */
+  --aw-tile-fixed:      #17255a;
+  --aw-tile-fixed-dark: #101b44;
+  --aw-tile-radius: 1.2cqw;
+  --aw-tile-border-width: 0.28cqw;
+  --aw-tile-border-color: #4a72cf;
+  --aw-tile-shadow:        0 0.45cqw 1.1cqw rgba(20, 30, 60, .16);
+  --aw-tile-shadow-active: 0 0.2cqw 0.5cqw rgba(20, 30, 60, .16);
+
+  --aw-question-stroke-width: 0;
+  --aw-question-stroke-color: transparent;
+  --aw-question-fill: var(--aw-text);
+}

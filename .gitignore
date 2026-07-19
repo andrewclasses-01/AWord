@@ -1,0 +1,15 @@
+# OS / editor junk
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Python cache (devserver.py)
+__pycache__/
+*.pyc
+
+# Local-only notes / scratch
+scratch/
+*.local.*
