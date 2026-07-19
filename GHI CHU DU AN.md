@@ -21,6 +21,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.7.2 — 19/7/2026 — LÊN MẠNG: GitHub + GitHub Pages (web chạy thật từ mọi nơi)
+Thầy chốt: **repo CÔNG KHAI** · **chỉ thầy đăng nhập Google mới sửa được** · **deploy trước, Firebase ngay sau**.
+
+1. **Rà an toàn trước khi đẩy công khai**: quét toàn bộ project — KHÔNG có mật khẩu/API key/token,
+   KHÔNG có dữ liệu học sinh (dữ liệu nằm ở localStorage từng máy, không vào repo). Tổng 646K/63 file.
+2. **Kiểm tra đường dẫn**: xác nhận KHÔNG có đường dẫn tuyệt đối (`src="/..."`, `from "/..."`) — nếu có
+   sẽ hỏng khi web nằm trong thư mục con `/AWord/`. Asset (font/mp3/theme) resolve qua `import.meta.url`
+   nên chạy đúng. ⚠️ BẪY cho các phiên sau: **luôn dùng đường dẫn tương đối**.
+3. **git init** (branch `main`) + `.gitignore` + **`.nojekyll`** (bắt buộc — không có thì GitHub Pages
+   chạy Jekyll và có thể bỏ qua file/thư mục bắt đầu bằng `_`) + `README.md` (tiếng Anh, mô tả dự án +
+   cách chạy). Commit đầu 63 file.
+4. **Repo PUBLIC** `github.com/andrewclasses-01/AWord` (cùng tài khoản mySpeaking, gh CLI đã đăng nhập
+   sẵn) → push `main`.
+5. **Bật GitHub Pages** (branch `main`, thư mục gốc) qua `gh api`. Chờ ~25 giây build xong.
+6. **ĐÃ TEST TRÊN WEB THẬT** https://andrewclasses-01.github.io/AWord/ : trang chủ thư viện hiện đúng
+   (2 gốc Activities/Results, logo, footer); mọi file 200 OK; vào game bấm PLAY chạy, trả lời đúng lên
+   điểm, **font Baloo 2 tải đúng**, popup Print hiện đúng 3 định dạng; **0 lỗi console**.
+7. **Firebase**: viết `docs/08-FIREBASE-SETUP.md` — hướng dẫn thầy tự tạo project 7 bước (bấm tay, có
+   ghi rõ chọn **asia-southeast1 Singapore**, bật Firestore + Google Sign-in, **thêm authorized domain
+   `andrewclasses-01.github.io`** kẻo đăng nhập lỗi), kèm **luật bảo vệ Firestore viết sẵn** (chỉ email
+   thầy được sửa; HS chỉ tạo result, không sửa/xoá; thư viện riêng tư).
+   **Mô hình dữ liệu chốt**: `users/{uid}/items/{id}` (thư viện riêng) · `assignments/{code}` (BẢN SAO
+   act, công khai đọc → thư viện KHÔNG lộ + sửa act sau không phá bài HS đang làm) · `results/{id}`.
+   **ĐANG CHỜ thầy**: gửi `firebaseConfig` + xác nhận email Google dùng trong luật.
+- Lưu ý: `firebaseConfig` **không phải bí mật** (Google thiết kế để công khai) — an toàn nằm ở luật
+  Firestore, nên dán vào repo public là bình thường.
+
 ### v0.7.1 — 19/7/2026 — PRINT làm lại theo mẫu thầy: popup chọn ĐỊNH DẠNG + bố cục worksheet
 Thầy gửi 3 ảnh mẫu (Anagram / Unjumble / Quiz worksheet có thương hiệu AWord) làm chuẩn thiết kế, và
 yêu cầu Print thành **nhiều ĐỊNH DẠNG chọn qua popup**. Làm lại toàn bộ hệ Print (bỏ bản v0.7.0):

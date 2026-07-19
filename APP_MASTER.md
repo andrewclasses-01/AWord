@@ -3,7 +3,10 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: 19/7/2026 — **v0.7.1**.
+> Cập nhật lần cuối: 19/7/2026 — **v0.7.2**.
+>
+> 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
+> Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
 
 ---
 
@@ -146,6 +149,11 @@ trang test rỗng (hiện "not built yet"). Session mới nhận việc là làm
 
 ## 3. Cách chạy (máy này CHƯA cài Node)
 
+- **BẢN LIVE trên mạng**: https://andrewclasses-01.github.io/AWord/ — đẩy code lên là tự cập nhật:
+  `git add -A && git commit -m "..." && git push` (repo `andrewclasses-01/AWord`, branch `main`,
+  Pages phục vụ thẳng thư mục gốc; có `.nojekyll` để GitHub KHÔNG xử lý Jekyll). Sau khi push chờ
+  ~1 phút Pages build xong. Mọi đường dẫn trong code phải TƯƠNG ĐỐI (web nằm trong thư mục con
+  `/AWord/` — dùng `/abc.js` sẽ hỏng); asset resolve qua `import.meta.url`.
 - Bản hiện tại **zero-build** (mở là chạy, ES modules thuần).
 - Server chung: cấu hình preview tên **`aword`** trong `D:\OTHERS\CLAUDE\.claude\launch.json` → chạy
   **`python devserver.py 5510`** (KHÔNG `python -m http.server` — xem mục 9). Chạy tay: PowerShell tại
@@ -271,15 +279,22 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    án cho thầy.
 3. **Khối 3 — Assignment phần chơi** (nút Set assignment đang stub): tạo **link + mã QR** để HS mở chơi
    trên máy các em (game gói trong link tự-chứa HOẶC đọc từ Firebase). Phần chơi làm offline được.
-4. **Nối FIREBASE (thầy CHỌN HƯỚNG ONLINE — HƯỚNG DẪN THẦY TẠO PROJECT TỪNG BƯỚC)**: KHÔNG bắt buộc
-   Node/Vite — dùng Firebase Web SDK qua CDN ES-module (giữ zero-build). Đổi ruột `store.js` sang
-   Firestore (nơi gọi không đổi). Auth Google. docs/06+07 (phần backend).
+4. **Nối FIREBASE — ĐANG LÀM (19/7)**: thầy đã chốt *repo PUBLIC + chỉ thầy đăng nhập Google mới
+   sửa được*. Hướng dẫn thầy tạo project: **`docs/08-FIREBASE-SETUP.md`** (7 bước bấm tay + luật bảo
+   vệ Firestore đã viết sẵn). KHÔNG cần Node/Vite — dùng Firebase Web SDK qua CDN ES-module (giữ
+   zero-build). Đổi ruột `store.js` sang Firestore (nơi gọi KHÔNG đổi vì đã async sẵn).
+   Mô hình dữ liệu đã chốt: `users/{uid}/items/{id}` (thư viện RIÊNG TƯ của thầy) ·
+   `assignments/{code}` (bản SAO act, công khai đọc để HS chơi — thư viện không bị lộ) ·
+   `results/{id}` (HS chỉ được tạo, không sửa/xoá). **ĐANG CHỜ**: thầy gửi `firebaseConfig` + xác
+   nhận email Google dùng trong luật.
 5. **Khối 4 — Thu điểm HS nhiều máy** (BẮT BUỘC Firebase): gom kết quả tất cả HS về 1 chỗ cho thầy
    xem/xếp hạng; leaderboard online (entry đã lưu sẵn cả `review` — đồng bộ dễ). Dashboard kết quả.
 6. **Chốt Quiz + viết "recipe/công thức mẫu"** khi thầy hài lòng → khuôn cho 4 game còn lại.
 7. **Build 4 template còn lại**: Anagram → Find the match → Type the answer → Open the box.
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
-9. Đẩy GitHub (repo chưa tạo, chưa git init).
+9. ✅ **Đẩy GitHub + Pages (v0.7.2, 19/7)**: repo PUBLIC `andrewclasses-01/AWord`, Pages branch `main`
+   thư mục gốc, live tại https://andrewclasses-01.github.io/AWord/ (đã test thật: chơi Quiz + popup
+   Print + font đều OK, 0 lỗi console).
 
 ## 8. Tài liệu docs/ (nghiên cứu Wordwall — tài khoản Pro andrewclasses)
 
