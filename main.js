@@ -25,7 +25,7 @@ import {
   ROOTS, itemName, getItem, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
   setFolderColor, folderCounts,
-  resetCache, localLibrarySize, importLocalLibrary, markMigrated, wasMigrated
+  resetCache, pendingImportCount, importLocalLibrary, markMigrated, wasMigrated
 } from "./core/store.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import "./templates/quiz/quiz.js";   // registers the quiz template (+ its editor)
@@ -132,8 +132,10 @@ const GOOGLE_G = `<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#E
 // Offer to lift a library that was saved in THIS browser before we went online.
 async function maybeOfferMigration() {
   if (skipMigrationThisSession || wasMigrated()) return;
-  const n = localLibrarySize();
-  if (n === 0) return;
+  // Only prompt for items the cloud does NOT already have — otherwise the
+  // teacher gets asked to "copy up" work that is demonstrably already there.
+  const n = await pendingImportCount();
+  if (n === 0) { markMigrated(); return; }
   await new Promise(resolve => {
     openModal("Bring your saved work online?", (body, close) => {
       body.append(el("div", "aw-modal-text",

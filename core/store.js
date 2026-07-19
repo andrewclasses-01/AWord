@@ -365,6 +365,17 @@ export function localLibrarySize() {
   return Object.keys(readLocalMap()).length;
 }
 
+// How many of those are actually NEW to the cloud library? Items keep their id
+// when they move up, so anything already in the cloud (e.g. the sample quiz,
+// which has a fixed id) is not worth offering. Use this — not
+// localLibrarySize() — to decide whether to prompt the teacher at all.
+export async function pendingImportCount() {
+  const localIds = Object.keys(readLocalMap());
+  if (localIds.length === 0) return 0;
+  const map = await readAll();
+  return localIds.filter(id => !map[id]).length;
+}
+
 function readLocalMap() {
   let map = null;
   try { map = JSON.parse(localStorage.getItem(LOCAL_KEY)); } catch { map = null; }
