@@ -29,7 +29,7 @@ import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
   setFolderColor, folderCounts,
-  resetCache, pendingImportCount, importLocalLibrary, markMigrated, wasMigrated
+  resetCache
 } from "./core/store.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import {
@@ -61,8 +61,6 @@ const state = {
   user: null            // the signed-in teacher (null = signed out)
 };
 
-let skipMigrationThisSession = false;
-
 init();
 
 // The library lives in the cloud and is private, so nothing renders until the
@@ -79,7 +77,6 @@ async function init() {
   state.user = user;
 
   try {
-    await maybeOfferMigration();
     await maybeSeed();
     await ensureNumbers();      // one-time: give older items their link numbers
   } catch (e) {
@@ -210,43 +207,11 @@ function renderLogin(errorMsg) {
 
 const GOOGLE_G = `<svg viewBox="0 0 48 48" width="20" height="20"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
 
-// Offer to lift a library that was saved in THIS browser before we went online.
-async function maybeOfferMigration() {
-  if (skipMigrationThisSession || wasMigrated()) return;
-  // Only prompt for items the cloud does NOT already have — otherwise the
-  // teacher gets asked to "copy up" work that is demonstrably already there.
-  const n = await pendingImportCount();
-  if (n === 0) { markMigrated(); return; }
-  await new Promise(resolve => {
-    openModal("Bring your saved work online?", (body, close) => {
-      body.append(el("div", "aw-modal-text",
-        `This computer has <b>${n}</b> item${n === 1 ? "" : "s"} saved from before AWord went online. ` +
-        `Copy them into your cloud library so they show up on every computer?`));
-      const actions = el("div", "aw-modal-actions");
-      const later = el("button", "aw-btn", "Not now");
-      later.type = "button";
-      later.onclick = () => { skipMigrationThisSession = true; close(); resolve(); };
-      const go = el("button", "aw-btn aw-btn-primary", "Copy them up");
-      go.type = "button";
-      go.onclick = async () => {
-        go.disabled = true; later.disabled = true; go.textContent = "Copying...";
-        try {
-          const added = await importLocalLibrary();
-          markMigrated();
-          close();
-          toastMsg(`${added} item${added === 1 ? "" : "s"} copied to your cloud library.`);
-        } catch (e) {
-          go.disabled = false; later.disabled = false; go.textContent = "Copy them up";
-          body.append(el("div", "aw-ed-error", escapeHtml(e.message || "Copy failed.")));
-          return;
-        }
-        resolve();
-      };
-      actions.append(later, go);
-      body.append(actions);
-    }, () => { skipMigrationThisSession = true; resolve(); });
-  });
-}
+// (v0.9.2) The one-off "bring your old offline library online" prompt has been
+// REMOVED. The move happened on 19/7/2026 and nothing writes to localStorage any
+// more, so the question could only ever nag about leftovers. Anything still in a
+// browser's old storage stays there untouched; core/store.js keeps
+// importLocalLibrary() so it can be run by hand from the console if ever needed.
 
 // Small floating confirmation used by the library pages.
 // `.aw-lib-toast` starts at opacity 0 — it only shows once `.is-on` is added.

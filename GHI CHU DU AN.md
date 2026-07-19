@@ -21,6 +21,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.2 — 20/7/2026 — GỠ HỘP THOẠI "Bring your saved work online?"
+Thầy phản ánh hộp thoại này **hiện lại mỗi lần mở app**. Nguyên nhân: nút "Not now" chỉ đặt biến
+`skipMigrationThisSession` trong bộ nhớ trang, tải lại trang là quên → hỏi tiếp; `markMigrated()` chỉ
+được gọi khi bấm "Copy them up". Thứ nó đòi chuyển chỉ là **1 thư mục cũ tên "TEST IN"** còn sót trong
+localStorage của máy từ trước ngày lên mây.
+
+Thầy chốt **bỏ hẳn**: việc chuyển thư viện lên mây đã xong 19/7 và nay không còn gì ghi vào
+localStorage nữa, nên hộp thoại chỉ còn khả năng làm phiền. Đã gỡ `maybeOfferMigration()` khỏi
+`main.js` (kèm biến cờ + 4 import không dùng nữa). **`importLocalLibrary()` vẫn còn trong store.js**
+để nếu ngày nào cần thì gọi tay từ console. Dữ liệu cũ trong trình duyệt KHÔNG bị xoá, chỉ là app
+không hỏi nữa.
+
+
 ### v0.9.1 — 20/7/2026 — 7 TINH CHỈNH THEO GÓP Ý CỦA THẦY (đã test thật)
 1. **Fullscreen bấm được ngay ở màn READY** (chưa Start cũng phóng to được): nút mang thêm class
    `.aw-fs-always` (z-index 14) để nổi TRÊN lớp phủ READY (`.aw-play-overlay` z-index 12), và đổi
