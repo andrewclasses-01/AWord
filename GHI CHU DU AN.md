@@ -21,6 +21,48 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.7.3 — 19/7/2026 — FIREBASE đã dựng xong + nối lớp kết nối (làm tự động qua Claude in Chrome)
+Thầy bảo "mở claude in chrome để tự động giúp tôi việc xử lý trên firebase" → em làm TRỌN bằng
+trình duyệt thật, thầy không phải bấm gì (trừ 1 lần xác nhận điều khoản).
+
+1. **Xác minh tài khoản trước khi tạo**: Firebase console đang đăng nhập `namdaptrai01@gmail.com` —
+   ĐÚNG account thầy chốt (khớp email trong luật bảo vệ). Kiểm tra bước này TRƯỚC khi tạo gì.
+2. **Tạo project**: tên `AWord`, ID **`aword-70dae`**, số 399279049436, gói **Spark miễn phí**.
+   - **TẮT "Join the Google Developer Program"** (mặc định BẬT — đăng ký thừa, thầy không cần).
+   - **TẮT Google Analytics** (không cần + tránh theo dõi hành vi học sinh).
+   - ⚠️ Ô **"I accept the Firebase terms"** = thoả thuận pháp lý → em **HỎI THẦY** rồi mới tích
+     (quy tắc: không tự ký thay thầy). Thầy đồng ý.
+3. **Firestore**: Standard edition · Database ID `(default)` · **Location asia-southeast1
+   (Singapore)** — gần VN nhất, ⚠️**KHÔNG đổi lại được** · **Start in production mode** (khoá kín;
+   test mode sẽ mở toang 30 ngày — tránh).
+4. **Authentication**: bật **Google** sign-in; public-facing name đổi `project-399279049436` →
+   **`AWord`** (tên thầy/HS thấy khi đăng nhập); support email `namdaptrai01@gmail.com`.
+5. **Authorized domains**: thêm **`andrewclasses-01.github.io`** (⚠️ThIẾU bước này = đăng nhập lỗi).
+   `localhost` đã có sẵn nên test ở máy vẫn chạy.
+6. **Luật bảo vệ Firestore**: đã **Publish**. ⚠️**BẪY**: ô soạn luật là **CodeMirror**, gõ tay bị
+   auto-đóng-ngoặc + auto-indent làm hỏng code → **dán bằng JS**:
+   `document.querySelectorAll('.CodeMirror')[0].CodeMirror.setValue(text)` (instance 0 = parent
+   `.main-editor`; instance 1,2 là pane diff). setValue có bắn event nên nút Publish tự sáng.
+7. **Web app** `AWord Web` (KHÔNG tích Firebase Hosting — đã có GitHub Pages) → lấy `firebaseConfig`.
+   ⚠️**BẪY**: tiện ích Chrome **chặn đọc chuỗi giống khoá** qua javascript_tool/DOM
+   (`[BLOCKED: Cookie/query string data]`) → phải **`computer zoom`** vào vùng code để đọc bằng mắt.
+8. **`core/firebase.js` (MỚI)**: config + nạp SDK **LAZY** qua CDN `gstatic.com/firebasejs/**12.9.0**`
+   (đã dò: 12.9.0 là bản mới nhất còn sống, 13.x chưa có) → giữ **zero-build, không cần Node**.
+   Xuất `auth()/db()/fs()/signIn()/signOutNow()/onUser()/currentUser()/isTeacher()`; `signIn()` tự
+   đăng xuất + báo lỗi rõ nếu đăng nhập nhầm account khác.
+   `firebaseConfig` **KHÔNG phải bí mật** (Google thiết kế công khai) → để trong repo public là chuẩn.
+9. **ĐÃ TEST BẢO MẬT THẬT trên web live** (chạy trong trình duyệt, chưa đăng nhập = đóng vai người lạ):
+   | Thử | Kết quả |
+   |---|---|
+   | Người lạ GHI vào `users/*/items` | 🔒 permission-denied ✔ |
+   | Người lạ ĐỌC `users/*/items` | 🔒 permission-denied ✔ |
+   | HS chưa đăng nhập ĐỌC `assignments/*` | ✅ cho phép (cần để chơi) ✔ |
+   | Người lạ TẠO `assignments/*` | 🔒 permission-denied ✔ |
+   Module nạp OK, projectId đúng, 0 lỗi. **Mô hình bảo mật chạy đúng như thiết kế.**
+- **CÒN LẠI (chưa làm)**: đổi ruột `core/store.js` localStorage → Firestore + nút đăng nhập Google
+  trên header + chuyển dữ liệu cũ trong máy lên mạng. Đây là thay đổi LỚN vào code đang chạy tốt →
+  chờ thầy chốt trước khi build.
+
 ### v0.7.2 — 19/7/2026 — LÊN MẠNG: GitHub + GitHub Pages (web chạy thật từ mọi nơi)
 Thầy chốt: **repo CÔNG KHAI** · **chỉ thầy đăng nhập Google mới sửa được** · **deploy trước, Firebase ngay sau**.
 

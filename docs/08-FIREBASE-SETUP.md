@@ -1,4 +1,28 @@
-# 08 — HƯỚNG DẪN THẦY TẠO FIREBASE (làm 1 lần duy nhất)
+# 08 — FIREBASE (✅ ĐÃ LÀM XONG 19/7/2026)
+
+> ## ✅ TRẠNG THÁI: XONG — thầy KHÔNG phải làm gì nữa
+>
+> Toàn bộ 6 bước dưới đây **đã được làm tự động qua Claude in Chrome** ngày 19/7/2026, trên tài
+> khoản `namdaptrai01@gmail.com`. Giữ lại phần hướng dẫn bên dưới để tra cứu / làm lại nếu cần.
+>
+> | Mục | Giá trị thật |
+> |---|---|
+> | Project name | **AWord** |
+> | Project ID | **aword-70dae** |
+> | Project number | 399279049436 |
+> | Gói | **Spark (miễn phí $0)** |
+> | Firestore | Bật, **asia-southeast1 (Singapore)**, production mode |
+> | Đăng nhập | **Google** bật, public name `AWord`, support email `namdaptrai01@gmail.com` |
+> | Authorized domains | `localhost`, `andrewclasses-01.github.io`, + 2 domain mặc định |
+> | Luật bảo vệ | **Đã Publish** (bản 19/7 22:05) |
+> | Web app | `AWord Web` — config đã nằm trong `core/firebase.js` |
+> | Google Analytics | TẮT (không cần, tránh theo dõi học sinh) |
+>
+> **ĐÃ KIỂM TRA THẬT trên web live** (https://andrewclasses-01.github.io/AWord/): người lạ
+> KHÔNG đọc/ghi được thư viện · KHÔNG tạo được bài giao giả · học sinh ĐỌC được bài giao để chơi.
+> Xem nhật ký `GHI CHU DU AN.md` v0.7.3.
+
+---
 
 > **Dành cho Teacher Andrew** — viết theo kiểu bấm-theo-từng-bước, không cần biết lập trình.
 > Mục đích: để dữ liệu (thư mục, act, kết quả, assignment, bảng xếp hạng) **nằm trên mạng**,
