@@ -17,6 +17,7 @@ import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
   createAssignment, updateAssignment, trashAssignment, listResults, listScores,
   listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
+  hasNewResults, markAssignmentSeen,
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
 import { listFolders, pathTo } from "./store.js";
@@ -395,6 +396,12 @@ export function assignmentBar(assignment, onOpen) {
   bar.append(el("span", "aw-as-bar-name", escapeText(assignment.title || assignment.code)));
   const meta = el("span", "aw-as-bar-meta", escapeText(fmtDate(assignment.createdAt)));
   bar.append(meta);
+  // a dot right after the date = students have handed in since you last looked
+  if (hasNewResults(assignment)) {
+    const dot = el("span", "aw-newdot aw-newdot-bar");
+    dot.title = "New results";
+    bar.append(dot);
+  }
   bar.onclick = () => onOpen(assignment);
   return bar;
 }
@@ -402,7 +409,17 @@ export function assignmentBar(assignment, onOpen) {
 // =============================================================
 // 4. DETAIL — the big report popup
 // =============================================================
-export function openAssignmentDetail(assignment, { onChanged } = {}) {
+// `inAct: true` means the teacher is already looking at the activity this
+// assignment came from — then "Open activity" simply closes the popup instead
+// of opening a second copy of the same thing.
+export function openAssignmentDetail(assignment, { onChanged, inAct = false } = {}) {
+  // Opening the report IS seeing it: the red dot goes away from here on.
+  const hadNews = hasNewResults(assignment);
+  if (hadNews) {
+    assignment.lastSeenAt = Date.now();
+    markAssignmentSeen(assignment.code).then(() => onChanged?.());
+  }
+
   openModal("wide", (modal, close) => {
     const url = assignmentLink(assignment.code);
 
@@ -433,6 +450,14 @@ export function openAssignmentDetail(assignment, { onChanged } = {}) {
       button("Copy QR", "", async () => {
         try { await copyQrImage(url, 700); flash("QR image copied"); }
         catch (e) { downloadQrPng(url, `QR ${assignment.code}.png`); flash("QR saved to your Downloads"); }
+      }),
+      button("Open activity", "", () => {
+        if (inAct) return close();              // already there — just get out of the way
+        const num = assignment.activityNum;
+        const dir = location.pathname.replace(/[^/]*$/, "");
+        const target = num != null ? `?a=${encodeURIComponent(num)}`
+                                   : `?play=${encodeURIComponent(assignment.activityId || "")}`;
+        window.open(`${location.origin}${dir}${target}`, "_blank");
       }),
       button("Edit", "", () => openAssignmentEdit(assignment, {
         onSaved: () => { drawHead(); onChanged?.(); }
@@ -537,18 +562,21 @@ function leaderboardBlock(rows) {
   const table = el("div", "aw-as-table aw-as-lb");
   table.append(row(["Rank", "Name", "Score", "Time"], true));
   [...best.values()].sort(rankCompare).forEach((r, i) => {
+    // full marks -> the whole row is green; nothing right -> the whole row is red
+    const mark = r.total > 0 && r.score === r.total ? " is-perfect"
+               : r.score === 0 ? " is-zero" : "";
     table.append(row([
       String(i + 1),
       prettiestName(names.get(r.key) || [r.name]),
       `${r.score}/${r.total}`,
       fmtDuration(r.timeMs)
-    ]));
+    ], false, mark));
   });
   wrap.append(table);
   return wrap;
 
-  function row(cells, head) {
-    const tr = el("div", "aw-as-tr" + (head ? " is-head" : ""));
+  function row(cells, head, extra = "") {
+    const tr = el("div", "aw-as-tr" + (head ? " is-head" : "") + extra);
     cells.forEach(c => tr.append(el("div", "aw-as-td", escapeText(c))));
     return tr;
   }
@@ -556,8 +584,8 @@ function leaderboardBlock(rows) {
 
 // Every attempt, sortable, and each row opens to show the answers given.
 function detailBlock(assignment, rows) {
-  const wrap = el("div", "aw-as-block");
-  wrap.append(el("div", "aw-as-blockhead", "Detail"));
+  const wrap = el("div", "aw-as-block aw-as-block-details");
+  wrap.append(el("div", "aw-as-blockhead", "Details"));
   if (!rows.length) return wrap;
 
   const COLS = [
@@ -615,13 +643,39 @@ function detailBlock(assignment, rows) {
       detail.append(answersTable(r));
       table.append(detail);
 
+      // Opening one student puts the popup in FOCUS MODE: that row and the
+      // answers below it stay bright, everything else dims away so the teacher
+      // reads one child's work without the rest of the page competing.
       tr.onclick = () => {
         const open = detail.style.display !== "none";
-        detail.style.display = open ? "none" : "block";
-        tr.classList.toggle("is-open", !open);
-        tr.querySelector(".aw-as-caret").textContent = open ? "▸" : "▾";
+        closeAllRows();
+        if (!open) {
+          detail.style.display = "block";
+          tr.classList.add("is-open");
+          tr.querySelector(".aw-as-caret").textContent = "▾";
+          setFocusMode(true, [tr, detail]);
+        }
       };
     });
+
+    function closeAllRows() {
+      table.querySelectorAll(".aw-as-answers").forEach(d => (d.style.display = "none"));
+      table.querySelectorAll(".aw-as-tr.is-open").forEach(r => {
+        r.classList.remove("is-open");
+        const c = r.querySelector(".aw-as-caret");
+        if (c) c.textContent = "▸";
+      });
+      setFocusMode(false);
+    }
+
+    // Dim everything except the pieces passed in.
+    function setFocusMode(on, keep = []) {
+      const modal = wrap.closest(".aw-as-modal");
+      if (!modal) return;
+      modal.classList.toggle("is-focus", on);
+      modal.querySelectorAll(".aw-as-lit").forEach(x => x.classList.remove("aw-as-lit"));
+      if (on) keep.forEach(x => x.classList.add("aw-as-lit"));
+    }
   }
 }
 

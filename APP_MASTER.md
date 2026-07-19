@@ -3,7 +3,7 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/7/2026 — v0.9.0 (RESULTS = chính bài giao, một bản duy nhất — đã test thật).**
+> Cập nhật lần cuối: **20/7/2026 — v0.9.1 (7 tinh chỉnh: chấm đỏ báo bài mới, fullscreen ở READY... — đã test thật).**
 >
 > 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
@@ -54,6 +54,13 @@
      **thùng rác** (link HS ngừng chạy, điểm còn nguyên, Restore được), Delete forever xoá sạch cả
      điểm. Xoá act có bài giao thì **hỏi tại chỗ**. **CẤM TRÙNG TÊN**: thư mục con cùng mẹ · act cùng
      thư mục · bài giao cùng thư mục (Duplicate/Restore tự đếm "(2)").
+
+   - ✅ **7 TINH CHỈNH (v0.9.1)**: fullscreen bấm được ngay ở màn READY · nút **Open activity** trong
+     báo cáo (trong act thì đóng pop-up, ở Results thì mở act tab mới) · leaderboard **xanh lá** cho
+     điểm tuyệt đối, **đỏ** cho 0 điểm · "Detail"→**"Details"** · **chế độ tập trung** (bấm 1 HS thì
+     chỉ hàng đó + bảng chi tiết sáng, phần khác mờ) · **CHẤM ĐỎ báo có bài nộp mới** ở thẻ bài giao /
+     thư mục Results / act trong Activities / cuối thanh assignment (tắt khi thầy mở xem) · thanh
+     assignment **hạ xuống + vạch kẻ ngăn cách** để không lỡ tay lúc chơi.
 
    **➡️ VIỆC KẾ TIẾP (thầy chưa chốt):** (a) chuyển
    **Settings + leaderboard offline** từ localStorage lên cloud; (b) renderer Crossword cho Print;
@@ -355,6 +362,8 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
 users/{uid}/items/{id}          thư viện RIÊNG của thầy (folder + act, có thêm `num` = số link)
 assignments/{code}              bài giao — ĐỌC CÔNG KHAI, chứa BẢN SAO act; chỉ thầy tạo/sửa/xoá.
                                 (v0.9.0) thêm: folderId (thư mục trong Results) · closed · trashed.
+                                (v0.9.1) thêm: lastSubmitAt/submitCount (HS ghi được, CHỈ 2 field này)
+                                + lastSeenAt (thầy ghi khi mở báo cáo) -> chấm đỏ "có bài nộp mới".
                                 ĐÂY LÀ BẢN DUY NHẤT — Results và thanh dưới act đều đọc nó.
 assignments/{code}/scores/{id}  bảng xếp hạng CÔNG KHAI: chỉ name/score/total/timeMs/createdAt
 results/{id}                    bài làm chi tiết — CHỈ THẦY ĐỌC, không ai sửa/xoá

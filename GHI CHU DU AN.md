@@ -21,6 +21,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.1 — 20/7/2026 — 7 TINH CHỈNH THEO GÓP Ý CỦA THẦY (đã test thật)
+1. **Fullscreen bấm được ngay ở màn READY** (chưa Start cũng phóng to được): nút mang thêm class
+   `.aw-fs-always` (z-index 14) để nổi TRÊN lớp phủ READY (`.aw-play-overlay` z-index 12), và đổi
+   sang màu sáng khi lớp phủ còn đó (`:has()`).
+2. **Nút "Open activity"** trong pop-up báo cáo: đang ở TRONG act thì chỉ **đóng pop-up**
+   (`inAct: true` do engine truyền); ở **Results** thì **mở act ở tab mới** (`?a=<num>`, dự phòng
+   `?play=<id>`).
+3. **Leaderboard tô màu cả hàng**: điểm tuyệt đối → **xanh lá** (`.is-perfect`), 0 điểm → **đỏ**
+   (`.is-zero`); STT/tên/score/time cùng màu.
+4. **"Detail" → "Details"**.
+5. **CHẾ ĐỘ TẬP TRUNG**: bấm 1 học sinh trong Details thì **chỉ hàng tên đó + bảng chi tiết là sáng**,
+   mọi phần khác của pop-up mờ đi (opacity .22 + blur 1.2px). Mở em khác thì tự đóng em cũ.
+   ⚠️BẪY: bảng chi tiết nằm TRONG `.aw-as-detail` nên bị chính luật làm-mờ ăn theo → phải dùng dấu
+   `>` (con trực tiếp) chứ không dùng dấu cách (mọi cấp).
+6. **CHẤM ĐỎ BÁO CÓ BÀI NỘP MỚI**: HS nộp → ghi `lastSubmitAt` + `submitCount` lên chính doc bài giao
+   (luật Firestore mở đúng 2 field này cho người chưa đăng nhập, không đụng được gì khác); thầy mở
+   báo cáo → ghi `lastSeenAt`. Chấm đỏ hiện ở: **thẻ bài giao** và **thư mục** trong Results (dồn từ
+   trong ra, mọi cấp), **act** trong Activities (nếu bài giao của nó có bài mới), và **cuối thanh
+   assignment** ngay sau ngày giờ. Góc trên-phải, cách mép 10px, viền trắng 2.5px cho nổi.
+   *Vì sao không đếm bằng cách đọc điểm*: sẽ tốn 1 truy vấn cho MỖI bài giao mỗi lần mở trang.
+7. **Thanh assignment hạ xuống 58px + vạch kẻ mảnh** ngăn khu act với khu assignment (`.aw-as-bars`
+   margin-top 58 + padding-top 22 + border-top; `:empty` thì bỏ hết để không có vạch thừa).
+
+**ĐÃ TEST THẬT** (localhost, tài khoản thầy): fullscreen bấm được lúc READY ✔ · vạch + khoảng cách
+120px tới khung ✔ · chấm đỏ ở thẻ/act/thanh (10px/10px) ✔ · HS chưa đăng nhập ghi được cờ báo-mới ✔ ·
+xem xong chấm đỏ tự tắt ✔ · Open activity: trong act thì đóng, ở Results mở `?a=1` tab mới ✔ ·
+leaderboard xanh 6/6 + đỏ 0/6 ✔ · Details ✔ · chế độ tập trung (0.22 vs 1) ✔.
+
+
 ### v0.9.0 — 20/7/2026 — RESULTS = CHÍNH BÀI GIAO (một bản duy nhất) + CẤM TRÙNG TÊN
 Thầy chốt: **"Xoá hay sửa ở Results thì cũng xoá và sửa trong act, chúng đồng bộ là 1."**
 

@@ -154,7 +154,17 @@ service cloud.firestore {
     // BÀI GIAO cho học sinh: ai có link cũng ĐỌC được (để chơi), chỉ thầy tạo/sửa
     match /assignments/{code} {
       allow read: if true;
-      allow create, update, delete: if isTeacher();
+      allow create, delete: if isTeacher();
+
+      // (v0.9.1) Thầy sửa được mọi thứ. HS khi nộp bài chỉ được đụng ĐÚNG 2 field
+      // báo-có-bài-mới — nhờ vậy trang của thầy hiện CHẤM ĐỎ mà không phải đọc
+      // toàn bộ điểm. Xấu nhất là ai đó làm hiện 1 chấm đỏ giả; không sửa được
+      // dữ liệu thật.
+      allow update: if isTeacher()
+        || (request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['lastSubmitAt','submitCount'])
+            && request.resource.data.lastSubmitAt is int
+            && request.resource.data.submitCount is int);
 
       // (v0.8.0) BẢNG XẾP HẠNG CÔNG KHAI: chỉ tên + điểm + thời gian. HS thêm được
       // lượt của mình và xem được thứ hạng cả lớp, nhưng KHÔNG sửa/xoá được, và

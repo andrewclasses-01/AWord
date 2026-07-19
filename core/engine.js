@@ -81,7 +81,10 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   const rightTools = el("div", "aw-tools");
   const soundBtn = iconBtn("aw-iconbtn", sound.isMuted() ? icons.soundOff : icons.soundOn, "Sound");
   soundBtn.classList.toggle("is-off", sound.isMuted());
-  const fsBtn = iconBtn("aw-iconbtn", icons.fullscreen, "Fullscreen");
+  // Fullscreen must work BEFORE the game starts too (the teacher usually goes
+  // fullscreen while the PLAY screen is still up), so this one button sits
+  // above the READY overlay instead of behind it.
+  const fsBtn = iconBtn("aw-iconbtn aw-fs-always", icons.fullscreen, "Fullscreen");
   rightTools.append(soundBtn, fsBtn);
   bottombar.append(menuBtn, navWrap, rightTools);
 
@@ -154,7 +157,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       // Deleting or renaming from the report must be reflected here at once —
       // the strip and the Results card are the SAME assignment document.
       list.forEach(a => barsWrap.append(
-        ui.assignmentBar(a, x => ui.openAssignmentDetail(x, { onChanged: loadAssignmentBars }))));
+        ui.assignmentBar(a, x => ui.openAssignmentDetail(x, { onChanged: loadAssignmentBars, inAct: true }))));
     } catch (e) {
       barsWrap.innerHTML = "";   // offline / not signed in: just show nothing
     }

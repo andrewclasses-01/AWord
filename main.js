@@ -34,7 +34,7 @@ import {
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import {
   listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
-  restoreAssignment, deleteAssignmentForever, assignmentNameTaken
+  restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults
 } from "./core/assignments.js";
 import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
@@ -330,7 +330,7 @@ async function renderInside() {
 
   // RESULTS shows the assignments themselves — there is no copy of them in the
   // library, so what you see here IS the strip under the act (v0.9.0).
-  const assignments = state.root === "results" ? await assignmentsForView() : [];
+  const assignments = state.root === "results" ? await assignmentsForView() : await loadAssignmentsForDots();
 
   if (!items.length && !assignments.length) {
     body.append(el("div", "aw-fm-empty",
@@ -341,16 +341,55 @@ async function renderInside() {
     return;
   }
 
+  // needed to roll the "new results" dot up from an assignment to its folders
+  const resultFolders = state.root === "results" ? await listFolders("results") : [];
+
   const list = el("div", state.mode === "grid" ? "aw-fm-grid" : "aw-fm-list");
   for (const node of items) {
     let card;
     if (state.view === "trash") card = trashCard(node);
-    else if (node.kind === "folder") card = folderCard(node, await folderCounts(node.id), assignmentCountIn(node.id));
-    else card = actCard(node);
+    else if (node.kind === "folder") {
+      card = folderCard(node, await folderCounts(node.id), assignmentCountIn(node.id),
+                        state.root === "results" && folderHasNews(node.id, resultFolders));
+    } else card = actCard(node);
     list.append(card);
   }
-  assignments.forEach(a => list.append(state.view === "trash" ? trashAssignmentCard(a) : assignmentCard(a)));
+  if (state.root === "results") {
+    assignments.forEach(a => list.append(state.view === "trash" ? trashAssignmentCard(a) : assignmentCard(a)));
+  }
   body.append(list);
+}
+
+// In ACTIVITIES we do not show assignments, but we still want the "new results"
+// dot on the acts that have some, so the list is fetched (one query) anyway.
+async function loadAssignmentsForDots() {
+  try { assignmentCache = await listAllAssignments({ includeTrashed: true }); }
+  catch (e) { assignmentCache = []; }
+  return [];
+}
+
+// A small red dot in the top-right corner of a card, like a phone notification.
+function newDot(title) {
+  const dot = el("span", "aw-newdot");
+  dot.title = title || "New results";
+  return dot;
+}
+
+// Does anything inside this folder (at any depth) have new results?
+function folderHasNews(folderId, allFolders) {
+  const inside = new Set([folderId]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    allFolders.forEach(f => {
+      if (!inside.has(f.id) && inside.has(f.parentId ?? null)) { inside.add(f.id); grew = true; }
+    });
+  }
+  return assignmentCache.some(a => !a.trashed && inside.has(a.folderId ?? null) && hasNewResults(a));
+}
+
+function actHasNews(actId) {
+  return assignmentCache.some(a => !a.trashed && a.activityId === actId && hasNewResults(a));
 }
 
 // ---------------- assignments inside Results ----------------
@@ -468,6 +507,7 @@ function assignmentCard(a) {
   if (a.closed) preview.append(el("div", "aw-asg-flag", "CLOSED"));
   else if (a.deadline && Date.now() > a.deadline) preview.append(el("div", "aw-asg-flag aw-asg-flag-due", "PAST DUE"));
   card.append(preview);
+  if (hasNewResults(a)) card.append(newDot("New results"));
 
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");
@@ -502,7 +542,7 @@ function trashAssignmentCard(a) {
   return card;
 }
 
-function folderCard(node, counts, assignmentCount = 0) {
+function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   const card = el("div", "aw-card aw-card-folder");
   card.onclick = () => enterFolder(node.root, node.id);
 
@@ -527,6 +567,7 @@ function folderCard(node, counts, assignmentCount = 0) {
     preview.append(badge);
   }
   card.append(preview);
+  if (hasNews) card.append(newDot("New results inside"));
 
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");
@@ -562,6 +603,8 @@ function actCard(node) {
   playBtn.onclick = e => { e.stopPropagation(); playAct(node.id); };
   preview.append(playBtn);
   card.append(preview);
+  // an act wears the dot when one of ITS assignments has new results
+  if (actHasNews(node.id)) card.append(newDot("New results in an assignment"));
 
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");

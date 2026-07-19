@@ -185,6 +185,18 @@ export function classFolderFor(title, folders) {
   return hits.sort((a, b) => depthOf(a) - depthOf(b))[0].id;
 }
 
+// ---- "new results" dots ----------------------------------------------------
+// An assignment has something new when a student has handed in since the last
+// time the teacher opened its report.
+export function hasNewResults(a) {
+  return !!a && (a.lastSubmitAt || 0) > (a.lastSeenAt || 0);
+}
+
+// Called when the report is opened — that IS "the teacher has seen it".
+export async function markAssignmentSeen(code) {
+  try { await updateAssignment(code, { lastSeenAt: now() }); } catch (e) { /* a dot is not worth an error */ }
+}
+
 // Two assignments in one Results folder may not share a name (the teacher's
 // rule, same as folders and acts in core/store.js).
 export function assignmentNameTaken(all, { folderId, title, exceptCode }) {
@@ -232,6 +244,19 @@ export async function submitResult({ code, studentName, score, total, timeMs, re
   };
 
   const scoreRef = await addDoc(collection(d, "assignments", String(code), "scores"), base);
+
+  // Stamp the assignment itself so the teacher's pages can show a "new results"
+  // dot without reading every score. The rules let ANYONE write these two fields
+  // and nothing else, which is why a student may do it (worst case someone fakes
+  // a dot — see docs/08-FIREBASE-SETUP.md).
+  try {
+    const { doc, updateDoc, increment } = await fs();
+    await updateDoc(doc(d, "assignments", String(code)), {
+      lastSubmitAt: createdAt, submitCount: increment(1)
+    });
+  } catch (e) {
+    console.warn("AWord: could not flag the new result:", e.message);
+  }
 
   try {
     // EXACTLY the keys the security rules allow — see the note at the top.

@@ -157,6 +157,13 @@ body {
 }
 
 /* ---------- READY screen (type · big title · PLAY · instruction) ---------- */
+/* The READY screen covers the stage — but the fullscreen button is lifted
+   above it so the teacher can go fullscreen before pressing PLAY (v0.9.1). */
+.aw-fs-always { position: relative; z-index: 14; }
+.aw-play-overlay ~ * .aw-fs-always,
+.aw-page:has(.aw-play-overlay) .aw-fs-always { color: #f4f7fb; }
+.aw-page:has(.aw-play-overlay) .aw-fs-always:hover { background: rgba(255,255,255,.14); color: #fff; }
+
 .aw-play-overlay {
   position: absolute; inset: 0; z-index: 12;
   background: #17181c;
@@ -1198,7 +1205,14 @@ body {
 .aw-as-qrbtns { display: flex; flex-direction: column; gap: 8px; }
 
 /* the long strips under the stage */
-.aw-as-bars { display: flex; flex-direction: column; gap: 8px; margin: 14px auto 0; width: min(100%, 1100px); }
+/* The assignment strips sit WELL below the stage, behind a hairline, so nobody
+   brushes one mid-game (v0.9.1). */
+.aw-as-bars {
+  display: flex; flex-direction: column; gap: 8px;
+  margin: 58px auto 0; padding-top: 22px; width: min(100%, 1100px);
+  border-top: 1px solid #dde6f1;
+}
+.aw-as-bars:empty { border-top: 0; margin-top: 0; padding-top: 0; }
 .aw-as-bar {
   display: flex; align-items: center; gap: 12px; width: 100%; cursor: pointer; text-align: left;
   background: #fff; border: 1px solid #e2eaf4; border-radius: 14px; padding: 11px 16px;
@@ -1288,3 +1302,32 @@ body {
 .aw-as-danger:hover { background: #fbdada; }
 .aw-card-asg .aw-fp { background: linear-gradient(135deg, #eef4ff, #e3ecfb); }
 .aw-card-asg .aw-fp-icon { width: 76px; height: 76px; filter: drop-shadow(0 3px 5px rgba(20,60,140,.16)); }
+
+/* ---------- "New results" dot (v0.9.1) ----------
+   A small notification dot in the top-right corner of a card, and a matching
+   one at the end of an assignment strip. */
+.aw-newdot {
+  position: absolute; top: 9px; right: 9px; width: 11px; height: 11px; border-radius: 50%;
+  background: #ef4444; box-shadow: 0 0 0 2.5px #fff, 0 1px 3px rgba(200,40,40,.45);
+  pointer-events: none;
+}
+.aw-card { position: relative; }
+.aw-newdot-bar {
+  position: static; margin-left: 10px; flex: 0 0 auto;
+  box-shadow: 0 0 0 2.5px #fff, 0 1px 3px rgba(200,40,40,.45);
+}
+
+/* ---------- Leaderboard: perfect score green, nothing right red ---------- */
+.aw-as-lb .aw-as-tr.is-perfect .aw-as-td { color: #16a34a; font-weight: 800; }
+.aw-as-lb .aw-as-tr.is-zero .aw-as-td { color: #dc2626; font-weight: 800; }
+
+/* ---------- FOCUS MODE: one student's answers, everything else out of the way ---------- */
+.aw-as-modal.is-focus .aw-as-top,
+.aw-as-modal.is-focus .aw-as-block:not(.aw-as-block-details),
+.aw-as-modal.is-focus .aw-as-block-details .aw-as-blockhead,
+.aw-as-modal.is-focus .aw-as-detail > .aw-as-tr:not(.aw-as-lit),
+.aw-as-modal.is-focus .aw-as-detail > .aw-as-answers:not(.aw-as-lit) {
+  opacity: .22; filter: blur(1.2px); transition: opacity .18s ease, filter .18s ease;
+}
+.aw-as-modal.is-focus .aw-as-lit { opacity: 1; filter: none; }
+.aw-as-modal.is-focus .aw-as-detail > .aw-as-tr.is-head { opacity: .5; filter: none; }
