@@ -47,6 +47,14 @@ async function start() {
     return showMessage("This assignment is closed",
       "Your teacher is no longer accepting answers for it.");
   }
+  // A name handed over by myLesson (`play.html?g=<code>&n=<name>`). The student
+  // signed in there already, so asking again would only invite typos — and typos
+  // are exactly what wrecks a leaderboard. Links without `n` behave as before.
+  const handed = (new URLSearchParams(location.search).get("n") || "").trim().replace(/\s+/g, " ");
+  if (handed.length >= 2) {
+    try { localStorage.setItem(REMEMBER_KEY, handed); } catch (e) { /* private mode: fine */ }
+    return play(assignment, handed.slice(0, 40));
+  }
   showNameScreen(assignment);
 }
 

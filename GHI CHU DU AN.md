@@ -21,6 +21,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.3 — 23/7/2026 — NHẬN SẴN TÊN HỌC SINH TỪ myLesson (`play.html?g=…&n=…`)
+
+**Bối cảnh:** dự án **myLesson** (app máy tính + web bài tập, dựng 23/7/2026) nhúng game AWord vào
+trang bài của học sinh. Học sinh đã đăng nhập bên myLesson rồi (lớp + tên), nên hỏi tên lần nữa chỉ
+tổ sinh tên gõ sai — đúng thứ phá bảng xếp hạng và báo cáo của thầy ("Chang Ang" thay "Trang Anh").
+
+**Làm gì:** `play.js` đọc thêm tham số `n` trong link. Có tên hợp lệ (≥2 ký tự) thì **bỏ qua màn
+"Enter your name"**, vào chơi luôn với đúng tên đó, đồng thời nhớ vào `aword-student-name` như cũ.
+
+**Không đổi gì khác:** link cũ chỉ có `?g=<mã>` chạy y hệt trước — vẫn hiện màn nhập tên.
+
+**Làm được nhờ:** myLesson (`andrewclasses-01.github.io/myLesson/`) và AWord
+(`andrewclasses-01.github.io/AWord/`) **cùng một nhà** trên GitHub Pages.
+⚠️ Chuyển một trong hai sang tài khoản GitHub khác là mất tính năng này.
+
+**Đã test thật** (localhost:5510, bài giao `j9nsa2`): mở `play.html?g=j9nsa2&n=CHẤN PHONG` →
+vào thẳng màn READY của game, không hỏi tên; `localStorage.aword-student-name = "CHẤN PHONG"`.
+
 ### v0.9.2 — 20/7/2026 — GỠ HỘP THOẠI "Bring your saved work online?"
 Thầy phản ánh hộp thoại này **hiện lại mỗi lần mở app**. Nguyên nhân: nút "Not now" chỉ đặt biến
 `skipMigrationThisSession` trong bộ nhớ trang, tải lại trang là quên → hỏi tiếp; `markMigrated()` chỉ
