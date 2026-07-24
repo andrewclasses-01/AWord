@@ -3,11 +3,11 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/7/2026 tối — 4 game Anagram/Find the match/Type the answer/Open the box đã
-> BUILD XONG + TEST QUA TRÌNH DUYỆT THẬT, đang 🟢 CHỜ THẦY DUYỆT (xem mục 2 + `templates/CONG THUC
-> MAU.md`). App chính (trang chủ/thư viện/assignment) vẫn đang ở v0.9.5 (assignment cũ tự dọn vào thư
-> mục DONE — nối tiếp v0.9.4: Class trong Set assignment · báo cáo assignment gọn hơn · in worksheet
-> chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
+> Cập nhật lần cuối: **25/7/2026 khuya — Anagram đã qua 4 vòng sửa theo góp ý thầy (2 chế độ Letters
+> with bonus / On submit, xem mục 0b), ĐÃ COMMIT GIT (2 commit LOCAL, chưa push). Find the match/Type
+> the answer/Open the box vẫn ở bản v1 24/7 (chưa ai chỉnh thêm), cũng đã commit cùng đợt. Cả 4 game
+> đang 🟢 CHỜ THẦY DUYỆT, CHƯA gộp vào trang chủ (`core/catalog.js` vẫn `built:false`). App chính (trang
+> chủ/thư viện/assignment) vẫn đang ở v0.9.5. ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -85,33 +85,41 @@
      thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
      (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
-## 0b. ⭐ BÀN GIAO (chốt cuối phiên 24/7/2026 — phiên mới đọc mục này rồi làm tiếp)
+## 0b. ⭐ BÀN GIAO (chốt cuối phiên 25/7/2026 khuya — phiên mới đọc mục này rồi làm tiếp)
 
-**MỚI NHẤT (24/7/2026 tối) — 4 game còn lại đã build xong, CHƯA commit git:**
-- Thầy chốt "Chốt Quiz + build 4 game còn lại" → đã viết `templates/CONG THUC MAU.md` (đúc kết từ
-  Quiz) rồi build đủ Anagram, Find the match, Type the answer, Open the box theo đúng khuôn đó.
-- Cả 4 đã **test qua `test.html` bằng trình duyệt thật** (không phải chỉ đọc code) — chơi hết 1 lượt,
-  đúng/sai, Show answers, đổi theme, một số option riêng (lives của Find the match, boxesAutoClose của
-  Open the box) — 0 lỗi console. Chi tiết từng game: `GHI CHU <TEN>.md` trong thư mục template đó.
-  Trạng thái mỗi game: 🟢 CHỜ THẦY DUYỆT (chưa ✅ ĐÃ CHỐT).
-- **CHƯA đụng `core/`** (kể cả `core/catalog.js` — vẫn `built:false` cho cả 4) và **CHƯA gộp vào
-  `index.html`/`main.js`/`manifest.js`** — đúng quy trình, chờ thầy xem chạy thật rồi duyệt.
-- **CHƯA `git add`/`git commit`** gì trong phiên này (chỉ sửa file, chưa commit) — phiên sau/khi thầy
-  yêu cầu thì commit cùng lúc với các việc khác đang dở (v0.9.4/v0.9.5 bên dưới), đừng trộn 2 việc
-  không liên quan vào 1 commit nếu thầy muốn tách.
-- **Việc kế tiếp cho 4 game**: mở từng `test.html` cho thầy xem chạy thật (`http://localhost:5510/
-  templates/<ten>/test.html` sau khi chạy `python devserver.py 5510`, hoặc dùng cổng khác nếu 5510 đang
-  bận bởi phiên khác), thầy góp ý/duyệt từng game → chuyển `built:true` trong `core/catalog.js` (sửa
-  core/ nên do 1 session tổng làm sau khi đã duyệt) → gộp vào trang chủ.
-- ⚠️ **24/7/2026 tối — THẦY BÁO SẼ TỰ TEST + SỬA CHI TIẾT TỪNG ACT SAU, ở SESSION MỚI.** Nghĩa là:
-  - Đây là bản ĐẦU (v1 hoạt động được, đã tự test qua trình duyệt) chứ **CHƯA phải bản thầy đã tự tay
-    chơi thử và duyệt** — đừng coi 🟢 CHỜ THẦY DUYỆT ở 4 game là ✅ ĐÃ CHỐT dù chưa nghe thầy nói gì thêm.
-  - Session mới khi nhận việc: **hỏi thầy đã test tới đâu / muốn sửa gì trước** (đừng tự đoán rồi sửa
-    tràn lan) — có thể thầy chỉ muốn sửa 1-2 chi tiết nhỏ trong 1 game cụ thể, không phải viết lại.
-  - Nếu thầy đưa yêu cầu sửa cho 1 game cụ thể → sửa ĐÚNG file trong `templates/<ten>/` đó, test lại
-    qua `test.html`, rồi cập nhật nhật ký trong `GHI CHU <TEN>.md` của chính game đó (đừng quên tăng
-    ngày + mô tả thay đổi, theo đúng quy tắc mục 6.6 "mỗi đợt sửa: ghi nhật ký + tăng version").
-  - Chưa nghe thầy nói "chốt"/"ok" cho game nào thì **đừng tự chuyển `built:true`** hay gộp vào trang chủ.
+**MỚI NHẤT (25/7/2026 khuya) — Anagram qua 4 vòng sửa theo góp ý thầy, ĐÃ COMMIT GIT:**
+- Thầy đã tự chơi bản Anagram v1 (từ 24/7) và góp ý CHI TIẾT qua 4 vòng liên tiếp trong CÙNG 1 phiên
+  (không phải phiên viết bản v1). Đã sửa xong cả 4 vòng, test kỹ qua trình duyệt thật (Playwright-style:
+  click thật, đo `getComputedStyle`, đo bằng `MutationObserver`) sau MỖI vòng — không chỉ đọc code.
+  **Đọc `templates/anagram/GHI CHU ANAGRAM.md` mục nhật ký (4 đợt ngày 25/7) để biết chi tiết từng sửa.**
+- **Tóm tắt Anagram hiện tại** (2 chế độ chọn ở Options → "Anagram mode", ĐỔI MODE = TỰ RESTART):
+  - **Letters with bonus**: bấm đúng thứ tự chữ cái → bay vào ô kết quả + xanh dương ngay; sai → dấu ✗
+    nhỏ ngay tại chỗ + buzz. Xong không sai lần nào → PERFECT bay vào điểm, điểm gấp đôi (Pulse Counter);
+    có sai → dấu ✓ (cùng cỡ dấu ✗ to) bay vào điểm, điểm thường.
+  - **On submit**: đặt chữ tự do (kéo đổi chỗ / bấm trả về đều bay mượt), Submit → soát từng ô lần lượt
+    (✓/✗ nhỏ xanh lá/đỏ + âm ting/buzz) → dấu to cả từ (đúng bay vào điểm giống bonus; sai hiện đáp án
+    đúng màu xanh lá, viết hoa theo option, KHÔNG có chữ "Correct:", vị trí nút Submit không bao giờ xê
+    dịch dù có hiện đáp án hay không).
+  - **KHÔNG còn nháy màn hình ở bất kỳ đâu** (đã đo `MutationObserver`: 0 lần vẽ lại thẻ suốt 1 từ, kể
+    cả lúc PERFECT/dấu to/bấm Submit) — mọi thao tác giữa chừng 1 từ chỉ vá đúng ô liên quan.
+  - Không còn bàn phím (chỉ chuột/chạm); cỡ chữ trong ô đã tăng gần tối đa; dấu ✓/✗ nhỏ đã hạ thấp.
+- **Có đụng core (đã báo thầy, ghi rõ lý do trong GHI CHU ANAGRAM.md + CONG THUC MAU.md mục 5)**:
+  `core/engine.js` (hook `buildExtraOptions`/`optionsNeedRestart` cho Options panel, KHÔNG đổi Quiz) +
+  `core/sound.js` (thêm `tick()`/`buzz()`, chỉnh `tick()` sáng hơn cho giống "ting").
+- **ĐÃ COMMIT (2 commit LOCAL, CHƯA push GitHub)**: 1 commit cho Anagram+core (`3e81202`), 1 commit
+  riêng cho bản v1 của Find the match/Type the answer/Open the box từ 24/7 (`b2e12b4`, KHÔNG ai đụng gì
+  thêm từ hôm đó — vẫn y nguyên trạng thái 🟢 CHỜ THẦY DUYỆT, CHƯA test thêm).
+- **CHƯA đụng `core/catalog.js`** (`built:false` cho cả 4 game) và **CHƯA gộp vào
+  `index.html`/`main.js`/`manifest.js`** — đúng quy trình, chờ thầy duyệt xong mới chuyển `built:true`.
+- **Việc kế tiếp**: thầy chơi tiếp Anagram (đã nói "tạm được rồi" cuối phiên 25/7 — CHƯA hẳn là
+  "chốt"/"ok", session mới nên hỏi thầy đã ok chưa hay còn muốn sửa gì) → nếu ok thì chuyển sang xem 3
+  game còn lại (Find the match/Type the answer/Open the box, thầy CHƯA xem/góp ý gì cho 3 game này) →
+  cuối cùng mới chuyển `built:true` + gộp vào trang chủ.
+- Session mới khi nhận việc: **hỏi thầy đã test tới đâu / muốn sửa gì trước** (đừng tự đoán rồi sửa
+  tràn lan). Nếu sửa Anagram thêm → sửa trong `templates/anagram/`, test lại qua `test.html`
+  (`http://localhost:5510/templates/anagram/test.html`), cập nhật nhật ký + trạng thái trong
+  `GHI CHU ANAGRAM.md`, rồi **hỏi thầy có muốn commit đợt sửa mới không** (đừng tự ý commit nếu thầy
+  không nói, nhưng NẾU thầy nói "lưu lại"/"save" như cuối phiên 25/7 thì commit ngay, không cần hỏi lại).
 
 **Việc CŨ (assignment/print), vẫn còn dở, kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
 sửa tiếp nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu).
