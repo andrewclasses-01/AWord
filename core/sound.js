@@ -76,6 +76,15 @@ export const sound = {
   click() {
     tone({ freq: 900, freqEnd: 1250, dur: 70, type: "sine", gain: 0.08 });
   },
+  // short bright "ting" for a single correct pick/reveal (lighter than correct())
+  tick() {
+    tone({ freq: 1760, dur: 130, type: "sine", gain: 0.14 });
+  },
+  // short low double "duh-duh" buzz for a single wrong pick/reveal
+  buzz() {
+    tone({ freq: 190, dur: 110, type: "square", gain: 0.09 });
+    tone({ freq: 160, dur: 140, type: "square", gain: 0.09, delay: 120 });
+  },
   isMuted() { return muted; },
   toggle()  { muted = !muted; return muted; }
 };

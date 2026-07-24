@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
-## TRẠNG THÁI: 🔴 CHƯA BUILD
+## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (25/7/2026 khuya — sửa 4 điểm góp ý vòng 4, xem nhật ký cuối file)
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -16,7 +16,233 @@
 Hiện câu gợi ý (clue) + các chữ cái bị xáo của đáp án — người chơi kéo/bấm chữ cái về đúng vị trí để giải từ. Giải xong sang từ tiếp. Tham khảo phản hồi ✓/✗ + fade chuyển câu giống Quiz (`../quiz/quiz.js` là mẫu chuẩn).
 
 ## Nhật ký
-(trống — ghi từng đợt làm việc vào đây, mới nhất lên trên)
+
+### 24/7/2026 — build xong theo `../CONG THUC MAU.md`
+- `anagram.js`/`anagram.css`/`sample-anagram.js` tạo mới, đăng ký `type:"anagram"`.
+- **Cách chơi đã chọn** (đơn giản hoá so với Wordwall thật để MVP chắc chắn, không kéo-thả): clue trên
+  cùng (hoặc "Unscramble the word" nếu không có clue) → hàng Ô TRỐNG (dashed) = độ dài từ đích, khoảng
+  trắng của cụm nhiều từ giữ nguyên làm khe hở không cần điền → dưới là khay chữ cái đã xáo (bấm/gõ để
+  đặt vào ô trống TRÁI NHẤT còn thiếu; bấm lại vào ô đã điền = trả chữ về khay, sắp xếp lại thoải mái
+  trước khi điền hết). **Điền HẾT ô mới chấm điểm ngay** (giống Quiz — chọn 1 lần, không "Submit" riêng
+  cho từng từ); đúng → ✓ bay + badge xanh; sai → ✗ bay + badge + dòng "Correct: <từ>" mờ dưới ô, rồi
+  khoá lại (không sửa được nữa), người chơi bấm ▷ sang từ tiếp.
+- Gõ phím chữ cái = đặt viên chữ khớp đầu tiên còn trống trong khay; Backspace = gỡ ô điền cuối cùng;
+  ←/→ chuyển từ (giống Quiz).
+- `toPrintItems`: `{clue, answer: word}` cho `core/print.js` (Anagram/Quiz đã hỗ trợ mọi template).
+- Options áp dụng: `timer`, `shuffleQuestions`, `changeCase` (upper/lower/none — đổi CHỮ HIỂN THỊ, so
+  sánh đúng/sai luôn không phân biệt hoa/thường). `showAnswers`/`lettersOnAnswers` không áp dụng (đúng
+  giới hạn đã ghi trong CONG THUC MAU.md mục 5).
+- **Test qua `test.html` (browser thật, không mô phỏng)**: chơi hết 6 từ mẫu (đúng "dolphin", sai cố ý
+  "elephant" → xem đúng dòng "Correct: elephant"), Submit answers giữa chừng → panel Score 1/6 đúng →
+  Show answers hiện đúng cả 3 dạng (đúng gộp xanh / sai tối+đáp án đúng bên cạnh / No answer+đáp án) →
+  Start again → chơi lại → đổi theme Basic (tile ép màu navy đồng nhất qua `--aw-tile-fixed`, không vỡ
+  layout). 0 lỗi console suốt quá trình.
+- Chưa làm: kéo-thả chữ cái thật (Wordwall gốc hỗ trợ cả "Rearrange letters" tại chỗ) — dùng mô hình
+  bấm/gõ vì chắc chắn + hoạt động tốt trên cảm ứng, đơn giản hơn cho MVP. Nếu thầy muốn kéo-thả thật,
+  cần bàn thêm (không phải bug, là lựa chọn thiết kế).
+
+### 24/7/2026 khuya — viết lại toàn bộ theo góp ý chi tiết của thầy (đã test qua trình duyệt thật)
+Thầy chơi thử bản đầu rồi cho góp ý rất chi tiết → viết lại gần như toàn bộ cách chơi + giao diện.
+
+**Đổi tên khái niệm** (theo đúng cách thầy gọi): "dãy chữ gốc"/"ô chữ gốc" = hàng chữ cái xáo trộn
+(trước gọi "tray"), "dãy kết quả"/"ô kết quả" = hàng hình dạng từ đích (trước gọi "slots"). Class CSS
+đổi theo: `.aw-anagram-origin`/`.aw-anagram-otile` và `.aw-anagram-result`/`.aw-anagram-rtile`.
+
+**2 chế độ chơi mới, chọn trong Options → "Anagram mode"** (option mới `anagramMode: "bonus"|"submit"`):
+- **Letters with bonus** (mặc định): bấm ĐÚNG chữ cái tiếp theo (theo thứ tự) — chữ bay mượt vào ô kết
+  quả + đổi xanh dương (FLIP-clone animation, `flyLetter()`); bấm sai chữ → dấu ✗ nhỏ nổi ngay TRÊN ô
+  chữ gốc vừa bấm + âm "tùng tùng" (`sound.buzz()`, mới thêm ở core/sound.js), không di chuyển. Xong cả
+  từ mà KHÔNG sai lần nào → chữ "PERFECT" bay nhanh từ giữa khung vào đúng vị trí điểm số (top-right),
+  điểm = **gấp đôi** số chữ cái; nếu có ít nhất 1 lần bấm sai → chỉ nổi dấu ✓ to, điểm = đúng bằng số
+  chữ cái (không nhân đôi). Đã đo thật: từ "kangaroo" (8 chữ, có 1 lần sai) → +8 điểm; từ "polar bear"
+  (9 chữ, không sai lần nào) → +18 điểm (tổng 8+18=26, đã xác nhận trên số điểm hiển thị thật).
+- **On submit**: thêm nút **SUBMIT** dưới hàng chữ gốc. Bấm CHỮ BẤT KỲ (không cần đúng thứ tự) → bay
+  vào ô kết quả trống tiếp theo (bấm lại ô kết quả đã điền → trả về hàng gốc, sắp xếp lại thoải mái).
+  Bấm Submit → từng ô kết quả lần lượt hiện ✓/✗ theo đúng vị trí (cách nhau 260ms, kèm âm thanh riêng
+  từng ô: đúng=`sound.tick()`, sai=`sound.buzz()`, cả 2 mới thêm) → cuối cùng nổi dấu to (✓ to nếu cả
+  từ đúng, được 1 điểm; ✗ to nếu có ô sai, 0 điểm) + dòng "Correct: <từ>" hiện ra nếu sai. Đã test cả
+  2 nhánh đúng/sai qua trình duyệt thật (từ "elephant" xếp sai → ✗ to + "Correct: elephant" + điểm vẫn
+  0; từ "penguin" xếp đúng → ✓ to + điểm +1).
+
+**Option mới khác**: `allCaps` (bật = luôn viết hoa ô chữ, tắt = giữ nguyên hoa/thường lúc soạn — thay
+hẳn `changeCase` cũ, vẫn đọc `changeCase==="upper"` để không vỡ dữ liệu act cũ) · `allowSkip` (bật =
+Next cho bỏ qua từ chưa xong, mặc định BẬT để giữ đúng hành vi tự do đi-lại của bản cũ; tắt = Next bị
+khoá tới khi xong từ — đã đo thật: tắt allowSkip thì nút Next bị disable ngay khi từ chưa xong, bấm
+xong mới mở lại).
+
+**Giao diện**: ô chữ TĂNG CỠ — công thức `computeTileSize()` tính theo đúng số chữ cái của TỪNG từ để
+hàng chữ gốc luôn chiếm ~90% bề ngang khung (kẹp trong khoảng 3.4–9.5cqw để từ quá ngắn/quá dài không vỡ
+layout — đây là điểm CÓ CHỈNH so với đúng nghĩa đen "ít nhất 90%" thầy yêu cầu, xin thầy xem lại nếu
+thấy từ ngắn (2-3 chữ) tile chưa đủ to). Ô chữ gốc LUÔN xám + chữ trắng (không đổi theo Style/theme, cố
+định bằng `--aw-ana-origin-bg` cục bộ trong anagram.css, không đụng theme chung). Ô kết quả LUÔN xanh
+dương khi điền (`--aw-ana-result-bg`). Hai hàng gộp trong 1 khối `.aw-anagram-group`, cách nhau 1cqw
+(rất sát), đẩy lên cao hơn đáy khung một chút (`margin: auto 0 6.5cqw` thay vì tray cũ dính sát đáy).
+
+**Bỏ HẲN bàn phím** (thầy chốt sau khi xem bản đầu): không còn `←/→` chuyển từ bằng phím nữa — CHỈ
+chuột/chạm (bấm nút ‹ › ở thanh dưới khung). Đã gỡ toàn bộ `onKey`/`keydown` listener khỏi anagram.js,
+đã bấm phím mũi tên thử trên trình duyệt thật để xác nhận không còn tác dụng.
+
+**Score/Total ở chế độ "Letters with bonus"**: theo đúng ý thầy ("chỉ cần số điểm tổng số chữ cái,
+không cần quan tâm số câu") — `total` gửi cho panel tổng kết ở chế độ NÀY đổi thành **tổng số chữ cái
+của CẢ HOẠT ĐỘNG** (không phải số câu nữa, số câu vẫn giữ nguyên riêng cho nav "x of N"). Đã đo thật:
+6 từ mẫu (elephant8+giraffe7+dolphin7+penguin7+kangaroo8+polarbear9=46 chữ) → panel hiện đúng "Score
+16/46" sau khi chỉ hoàn thành 1 từ (kangaroo, hoàn hảo = 16 điểm). Chế độ "On submit" KHÔNG đổi (total
+vẫn = số câu, vì mỗi câu đúng 1 điểm, không có khái niệm chữ cái).
+
+**Cỡ ô tối đa 9.5cqw cho từ ngắn**: thầy xác nhận ổn, giữ nguyên như đã build.
+
+~~(mục cũ về Score/Total nói "total luôn = số từ" — ĐÃ THAY bởi mục "Score/Total ở chế độ Letters with
+bonus" phía trên: total ở chế độ bonus đổi thành tổng chữ cái, theo yêu cầu thầy 25/7.)~~
+
+**⚠️ CÓ ĐỤNG CORE (ngoại lệ luật số 1, đã báo thầy trong hội thoại vì tính năng không thể làm nếu không
+sửa)**:
+- `core/engine.js` `buildOptionsPanel()`: thêm 1 "cửa mở rộng" — nếu template có hàm
+  `buildExtraOptions({panel, draft, mkCheck, mkRadioChoice})` thì engine gọi nó để cho phép template
+  tự thêm nhóm Options riêng (Anagram dùng để thêm "Anagram mode"/"All caps"/"Allow skip"). KHÔNG đổi
+  hành vi các template khác (Quiz không có hàm này nên không bị ảnh hưởng). Cũng thêm hàm dùng chung
+  `mkRadioChoice()` cạnh `mkCheck()` sẵn có.
+- `core/sound.js`: thêm `sound.tick()` (tiếng "tách" nhẹ, dùng cho mỗi lần chọn đúng/mỗi ô đúng lúc
+  soát bài) và `sound.buzz()` (tiếng "tùng tùng" trầm, dùng cho mỗi lần chọn sai/mỗi ô sai lúc soát
+  bài) — KHÔNG đổi `sound.correct()`/`sound.wrong()` cũ, chỉ thêm 2 hàm mới, template khác không bị
+  ảnh hưởng.
+
+**Đã test qua trình duyệt thật (KHÔNG chỉ đọc code)**: cả 2 chế độ chơi hết nhiều từ (đúng/sai xen kẽ,
+kể cả từ 2 tiếng "polar bear"), Options đổi mode/allCaps/allowSkip + Apply + Start again đều ăn, đổi
+Style (Basic) không vỡ layout, Show answers hiện đúng dữ liệu, 0 lỗi console suốt quá trình.
+
+**3 câu hỏi trên đã được thầy trả lời** (xem 3 mục ngay trên: cỡ tile OK giữ nguyên, Score/Total đổi
+sang tính theo chữ cái, bỏ hẳn bàn phím) — đã sửa code khớp theo, test lại qua trình duyệt thật xong.
 
 ## ĐỀ XUẤT SỬA CORE (nếu có)
-(trống — KHÔNG tự sửa core/; ghi đề xuất vào đây để session tổng xử lý)
+(Không còn mục treo — 3 thay đổi core ở dưới đã LÀM rồi, không phải đề xuất chờ xử lý.)
+
+### 25/7/2026 — sửa 11 điểm góp ý vòng 2 (đã test qua trình duyệt thật, không chỉ đọc code)
+
+**A. Chung + Letters with bonus**
+1. **Hết nháy màn hình mỗi lần bấm** — lỗi do mỗi lần 1 chữ bay xong, code gọi `render()` xoá-vẽ-lại
+   TOÀN BỘ card (kể cả câu hỏi), làm animation `aw-fadein` chạy lại → cả màn nháy. Sửa: các thao tác
+   GIỮA CHỪNG 1 từ (1 chữ bay tới, kéo đổi chỗ, trả về gốc) giờ CHỈ vá trực tiếp đúng 2 ô liên quan
+   (`patchTileUsed`/`patchResultFilled`/`patchResultSlotDisplay`...), KHÔNG gọi lại `render()` nữa.
+   `render()` đầy đủ chỉ còn chạy 1 lần/từ (lúc bắt đầu từ mới hoặc lúc từ đó xong) — đã đo bằng
+   MutationObserver: bấm hết 8 chữ 1 từ "elephant", card gốc chỉ bị thay thế đúng **1 lần** (lúc xong),
+   không phải 8 lần như trước.
+2. **Chữ PERFECT + 3.** dấu ✓ thường (giảm cỡ) dùng CHUNG 1 cơ chế mới `flyScoreGain()`: hiện tại chỗ
+   ~550ms (giữ nguyên vị trí) → bay ~550ms về phía số điểm (mờ dần biểu tượng/PERFECT, hiện dần "+N")
+   → khi "tới nơi" mới thật sự cộng điểm và số điểm tự đếm lên bằng hiệu ứng Pulse (`pulseScoreTo()`
+   dùng `requestAnimationFrame`, số nhảy từ giá trị cũ lên giá trị mới trong 420ms + phóng to nhẹ rồi
+   thu lại). PERFECT to gấp 1.5 lần cỡ cũ; dấu ✓ thường + dấu ✓/✗ to (cả 2 chế độ) còn 2/3 cỡ cũ (CSS
+   `.aw-anagram-group .aw-mark-fly{width:34.7%}` — đã đo `getComputedStyle` ra đúng tỉ lệ 0.347).
+   Đã đo điểm thật: từ "elephant" (8 chữ) không sai lần nào → +16 (đúng 8×2 PERFECT); từ "penguin"
+   (7 chữ) có 1 lần bấm sai → +7 (đúng 7×1, không nhân đôi).
+4. **Đổi mode = tự restart**: thêm hook `optionsNeedRestart(before, after)` — engine.js gọi ngay sau khi
+   Apply, nếu template báo `true` thì tự `restart()` luôn (không cần thầy bấm "Start again" tay). Anagram
+   trả `true` khi `anagramMode` đổi. Đã bấm thật: chọn "On submit" → Apply → game về thẳng màn READY.
+
+**B. On submit**
+1. **Kéo đổi chỗ 2 ô đã điền** (trước Submit): mỗi ô kết quả đã điền giờ nhận Pointer Events
+   (mouse+chạm dùng chung) — kéo thật (di chuyển > 6px) thả lên ô khác = ĐỔI CHỖ 2 chữ; bấm không kéo
+   (không di chuyển) = trả chữ về hàng gốc như cũ. Đã đo bằng PointerEvent giả lập: đổi P↔O đúng vị trí.
+2. Dấu ✓/✗ to dùng CHUNG class với bonus mode nên tự động nhỏ theo (xem A.2/A.3).
+3. **Nút Submit nâng cao + dòng đáp án đúng**: thêm `.aw-anagram-reveal` LUÔN có mặt (kể cả lúc chưa
+   sai lần nào) với `min-height` cố định — nhờ vậy nút Submit KHÔNG bao giờ nhảy vị trí dù dòng đáp án
+   có chữ hay không. Sai thì hiện thẳng TỪ ĐÚNG (không còn "Correct:"), màu xanh lá, viết hoa theo đúng
+   option `allCaps` (đã đo: bật allCaps → hiện "POLAR BEAR"/"PENGUIN").
+4. Submit ĐÚNG cả từ giờ cũng gọi `flyScoreGain("check", 1, ...)` — bay + Pulse Counter y hệt bonus mode
+   (đã đo: điểm 0→1 khi submit đúng "dolphin").
+5. **Mỗi chữ bấm vào (submit mode) đều có âm** — thêm `ui.sound.click()` trong `submitPick()` (trước đây
+   không có âm nào khi đặt chữ ở chế độ này).
+6. Soát bài (staggered reveal) đổi sang dấu ✓/✗ NHỎ MÀU (xanh lá/đỏ) tự vẽ riêng (`SMALL_CHECK_GREEN`/
+   `SMALL_CROSS_RED`, khác hẳn dấu to trắng-viền-đen `icons.markCheck/markCross` vẫn dùng cho dấu to) +
+   đổi âm ô đúng thành "ting" (chỉnh lại `sound.tick()` ở core/sound.js cho cao/sáng hơn, đúng nghĩa
+   "ting"), ô sai vẫn `sound.buzz()`.
+7. **Giữ màu gốc khi bay, chỉ đổi màu lúc Submit**: bỏ hẳn việc tô xanh dương ngay khi đặt chữ (chế độ
+   submit) — ô kết quả giờ ở màu xám (`.is-filled` không có `.is-blue`) cho tới khi bấm Submit; lúc đó
+   mới tô theo TỪNG VỊ TRÍ: đúng → `.is-blue` (xanh dương), sai → `.is-wrongbg` (xám nhạt hơn, biến CSS
+   riêng `--aw-ana-wrong-bg`). ⚠️ Bắt được 1 lỗi thật lúc test: `render()` cuối (sau khi chấm xong) ban
+   đầu QUÊN gán lại 2 class này (chỉ bonus mode có), làm màu/badge bị XOÁ MẤT ngay sau khi vừa tô —
+   đã sửa `render()` tính `isRight` cho TỪNG ô khi `st.graded` rồi gắn đúng class + vẽ lại badge. Đã đo
+   thật bằng cách đọc `className` từng ô sau khi Submit sai: đúng vị trí duy nhất (chữ "R" của
+   "polar bear") ra `is-blue`, 8 ô còn lại ra `is-wrongbg`, mỗi ô đúng 1 badge — khớp 100% với đáp án.
+
+Còn 1 lỗi khác bắt được khi test (không nằm trong 11 điểm thầy nêu, TỰ PHÁT HIỆN khi đo): sau khi 1 từ
+xong ở chế độ bonus, biến khoá `busy` bị bỏ quên không trả về `false` trong nhánh "từ đã xong" →
+nút Next bị khoá VĨNH VIỄN sau từ đầu tiên. Đã sửa (`busy = false` chạy trước khi rẽ nhánh
+finalize/tiếp tục), đã bấm Next thật để xác nhận qua được từ tiếp theo.
+
+**Core tiếp tục bị đụng (cộng dồn với đợt trước)**:
+- `core/engine.js`: thêm hook `optionsNeedRestart` trong nút Apply (chỉ gọi nếu template có khai báo
+  hàm này — Quiz không có nên không đổi hành vi).
+- `core/sound.js`: chỉnh tần số `sound.tick()` cho giống "ting" hơn (không thêm hàm mới đợt này).
+
+### 25/7/2026 (tiếp) — sửa 7 điểm góp ý vòng 3 (đã test qua trình duyệt thật)
+
+1. **Hết nháy CẢ HÀNG chữ gốc mỗi lần bấm** — lỗi do `setOriginLocked()` gán `disabled` cho MỌI ô
+   chưa dùng trong lúc 1 chữ đang bay (để chặn bấm chồng), và CSS cũ tô mờ (`opacity:.5`) MỌI ô
+   `:disabled:not(.is-used)` → cả hàng cùng mờ đi rồi sáng lại. Bỏ hẳn `opacity:.5` khỏi rule đó
+   (`anagram.css`), chỉ giữ `cursor:default`. Đã xem lại bằng screenshot đúng lúc 1 chữ đang bay: các
+   ô còn lại giữ nguyên độ đậm bình thường.
+2. **Hết nháy chỗ ô vừa bay đi** — lỗi thật: `patchTileUsed()` có dòng `tileEl.style.visibility = ""`
+   (xoá `visibility:hidden` đã đặt lúc bắt đầu bay) NGAY LÚC gắn class `.is-used` (opacity chuyển
+   1→0 trong 0.2s do CSS transition) → ô vừa ẩn bằng visibility bỗng "hiện lại rồi mới mờ dần" trong
+   200ms = đúng hiện tượng nháy thầy thấy. Xoá hẳn dòng reset đó — ô giữ `visibility:hidden` VĨNH
+   VIỄN (không cần hiện lại nữa vì đã dùng luôn), không còn xung đột với transition opacity.
+3. **Submit hiện ĐÚNG/SAI lần lượt từng chữ** (trước đó hiện HẾT cùng lúc dù code stagger đã viết) —
+   lỗi thật: `render()` gọi NGAY khi bấm Submit (`st.graded=true` rồi `render()`) vô tình đã tô màu
+   ĐÚNG/SAI cho TẤT CẢ ô luôn vì điều kiện tô màu khi đó đang xét `st.graded` (đã true) — vòng lặp
+   stagger sau đó chỉ "tô lại y hệt" nên không ai thấy hiệu ứng lần lượt. Sửa: tách riêng cờ mới
+   `st.revealed` (chỉ true SAU KHI stagger xong) — điều kiện tô màu trong `render()` đổi sang xét
+   `st.revealed` thay vì `st.graded`. Đã đo bằng cách đếm số dấu ✓/✗ xuất hiện mỗi 150ms sau khi bấm
+   Submit (từ "dolphin", 7 chữ): 1 dấu lúc 155ms → 2 lúc 307ms → 3 lúc 604ms → ... → đủ 7 lúc 1652ms —
+   đúng kiểu tăng dần, không phải nhảy thẳng lên 7.
+4. **Hạ thấp dấu ✓/✗ nhỏ trong ô** — thêm `bottom: -0.8cqw` đè lên mặc định `bottom:0.4cqw` của core,
+   dấu giờ treo thấp hơn dưới đáy ô thay vì đè lên gần giữa chữ.
+5. **Tăng cỡ chữ trong ô gần tối đa** (ô giữ nguyên cỡ) — cả 2 loại ô (`aw-anagram-rtile`/`otile`) tăng
+   hệ số nhân từ 0.46-0.5 lên 0.64 (so với cạnh ô).
+6. **Nút Submit cố định vị trí dù câu hỏi 1 hay 2 dòng** — bắt được lỗi thật khi đo: hàm `measure()`
+   cho autoFit dùng `offsetHeight` (KHÔNG tính margin), bỏ sót margin-dưới của khối 2 hàng chữ
+   (6.5cqw), margin-trên dòng đáp án (0.9cqw), margin-trên nút Submit (1.4cqw) và padding-dưới thẻ
+   (2.4cqw) → khi câu hỏi dài 2 dòng, autoFit co KHÔNG ĐỦ, nút Submit bị đẩy TRÀN RA NGOÀI khung (đã
+   đo: âm 19px so với đáy khung!). Sửa: `measure()` cộng thêm 4 khoảng margin/padding đó (đọc bằng
+   `getComputedStyle`). Đã đo lại: khoảng cách từ Submit tới đáy khung giờ giống hệt nhau (23.17px)
+   dù câu hỏi 1 dòng ("A smart sea animal...") hay 2 dòng ("An animal from Australia...").
+7. **Cả 2 chế độ dùng chung âm "ting" khi bấm chữ ở hàng gốc** — đổi `submitPick()` từ `ui.sound.click()`
+   sang `ui.sound.tick()` (giống hệt bonus mode); `unplace()`/kéo-đổi-chỗ vẫn giữ `click()` riêng (không
+   phải hành động "bấm chữ từ hàng gốc").
+
+**Core**: KHÔNG đụng thêm gì ở đợt này (chỉ sửa trong `templates/anagram/*`).
+
+### 25/7/2026 khuya (tiếp) — sửa 4 điểm góp ý vòng 4 (đã test qua trình duyệt thật bằng MutationObserver + đo pixel)
+
+1. **HẾT HẲN nháy màn hình mọi lúc** (kể cả lúc PERFECT/dấu to/bấm Submit — vòng 3 mới chỉ hết nháy MỖI
+   LẦN BẤM 1 CHỮ, còn 3 thời điểm này thầy vẫn thấy nháy): lý do y hệt — `finalizeBonusWord()` và
+   `doSubmit()` vẫn còn gọi `render()` ở 3 chỗ (lúc từ hoàn thành ở bonus, lúc bấm Submit, lúc soát bài
+   xong) dù MỌI thay đổi hiển thị ở các thời điểm đó ĐÃ được vá trực tiếp từ trước (ô đã tô màu, đã khoá,
+   dòng đáp án là chỗ DUY NHẤT thật sự cần cập nhật). Bỏ hẳn cả 3 lần gọi `render()` này, thay bằng
+   `updateNav()`/`updateSubmitButtonState()`/gán thẳng `revealSlotEl.textContent` (biến mới, giữ tham
+   chiếu dòng đáp án như đã làm với `submitBtnEl`). Đã đo bằng `MutationObserver` đếm số lần thẻ
+   `.aw-anagram-card` bị thay thế suốt TRỌN 1 từ (kể cả lúc hoàn thành/Submit/soát bài xong): **0 lần**
+   ở cả 2 chế độ (trước đó ít nhất 1 lần/từ).
+2. **Kéo đổi chỗ 2 chữ ở hàng kết quả (On submit) giờ bay mượt** — trước chỉ đổi text tức thì (snap).
+   Thêm hàm dùng chung `flyTileClone()` (giống `flyLetter()` nhưng không đổi màu vì trước Submit màu
+   luôn xám trung tính): cả 2 ô tạm trống, 2 bản sao chữ bay đổi chỗ cho nhau (~340ms), xong mới điền
+   chữ thật vào 2 ô. Đã đo bằng PointerEvent giả lập: đổi chỗ P↔O đúng vị trí sau khi bay, không còn
+   thẻ nào bị vẽ lại.
+3. **Bấm (không kéo) 1 chữ ở hàng kết quả giờ bay mượt về đúng ô gốc** thay vì biến mất/hiện lại tức thì
+   — dùng lại `flyTileClone()`: ô kết quả trống ngay (như đã "buông" chữ), bản sao bay về đúng vị trí
+   ô gốc, ô gốc chỉ HIỆN LẠI đúng lúc bản sao "tới nơi". ⚠️ Bắt được 2 lỗi thật lúc test việc này:
+   - Ô gốc bị bay về nhưng **không bao giờ hiện lại được** vì `patchOriginRestored()` không xoá
+     `visibility:hidden` (đặt từ lúc bay ĐI, và vòng sửa nháy-màn-hình trước đó cố tình không xoá nó
+     nữa cho trường hợp DÙNG VĨNH VIỄN — nhưng unplace() là trường hợp DÙNG LẠI ĐƯỢC, cần xoá). Đã thêm
+     `tileEl.style.visibility = ""` đúng chỗ này (không đụng chỗ dùng vĩnh viễn).
+   - Ô gốc phục hồi xong vẫn bị **khoá (disabled) mãi mãi**, bấm không phản ứng: do đọc biến `busy`
+     NGAY TRƯỚC KHI nó được set về `false` (thứ tự code sai) → gán nhầm `disabled=true` vĩnh viễn. Đã
+     sửa `patchOriginRestored()` luôn gán thẳng `disabled=false` (đúng ý định gọi hàm này — mọi chỗ gọi
+     đều đang phục hồi 1 ô để DÙNG LẠI NGAY). Đã đo thật: phục hồi chữ "O" xong, `disabled=false`,
+     `visibility="visible"`, bấm lại đặt được vào ô — hoạt động trở lại bình thường.
+4. **Dấu ✓ to (On submit, từ đúng) bằng cỡ dấu ✗ to** — trước tính nhầm hệ số (`0.0367` thay vì
+   `0.347`, lệch nhau đúng 10 lần — lỗi gõ số từ vòng 2). Sửa hệ số của nhánh "check" trong
+   `flyScoreGain()` thành `0.347` (khớp CSS `width:34.7%` của dấu ✗ to trên CÙNG `.aw-anagram-group`).
+   Đã đo trực tiếp lúc dấu đang hiện: tỉ lệ `fontSize / bề-ngang-group` = 0.347 — khớp CHÍNH XÁC với
+   tỉ lệ đo được của dấu ✗ to (cũng 0.347).
+
+**Core**: KHÔNG đụng thêm gì ở đợt này (chỉ sửa trong `templates/anagram/*`).

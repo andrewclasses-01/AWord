@@ -1,0 +1,224 @@
+/* =============================================================
+   ANAGRAM template — styles that belong ONLY to this template.
+   Class prefix: .aw-anagram-*
+
+   Layout: clue near the TOP (like Quiz's question). Below it, ONE group
+   holding both rows close together, raised a bit off the very bottom:
+     .aw-anagram-result  ("dãy kết quả")  — the target word shape, ABOVE
+     .aw-anagram-origin  ("dãy chữ gốc")  — the scrambled letter tiles, BELOW
+   Tile size is set per-item from JS via --aw-ana-tile (cqw number) so the
+   origin row always occupies ~90% of the stage width regardless of word
+   length. Sizes use cqw * var(--fit,1) so autoFit can shrink long
+   clues/words uniformly with the 16:9 stage.
+
+   --aw-ana-origin-bg / --aw-ana-result-bg / --aw-ana-wrong-bg are FIXED
+   colors (not theme vars) — Teacher Andrew wants a specific, Style-
+   independent palette: grey = not yet judged, blue = confirmed correct,
+   muted grey = confirmed wrong. The flying-tile clone (JS) hardcodes the
+   SAME hex values — keep them in sync if these ever change.
+   ============================================================= */
+
+.aw-anagram-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: 2.4cqw;
+  animation: aw-fadein .25s ease;
+}
+
+.aw-anagram-clue {
+  font-size: calc(4.4cqw * var(--fit));
+  font-weight: 600;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  text-align: center;
+  line-height: 1.15;
+  margin: 0 auto;
+  max-width: 92%;
+  flex: 0 0 auto;
+}
+.aw-anagram-clue-generic { opacity: .75; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+
+/* Both rows live here, pushed up a bit off the bottom (not glued to it) and
+   kept tight against each other. */
+.aw-anagram-group {
+  --aw-ana-origin-bg: #6b7785;
+  --aw-ana-result-bg: #2f6fed;
+  --aw-ana-wrong-bg: #9aa3ac;
+  position: relative;
+  margin: auto 0 6.5cqw;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(1cqw * var(--fit));
+}
+
+/* the big check/cross (.aw-mark-fly is core/app.css, generic to every
+   template) — Anagram wants it noticeably smaller: 2/3 of the default. */
+.aw-anagram-group .aw-mark-fly { width: 34.7%; }
+
+/* ---------- Result row ("dãy kết quả") — target word shape ---------- */
+.aw-anagram-result {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-items: center;
+  gap: calc(0.8cqw * var(--fit));
+}
+.aw-anagram-rtile {
+  position: relative;
+  width: calc(var(--aw-ana-tile, 6cqw) * var(--fit));
+  height: calc(var(--aw-ana-tile, 6cqw) * var(--fit));
+  border-radius: var(--aw-tile-radius, 1cqw);
+  border: 0.22cqw dashed var(--aw-muted);
+  opacity: .5;
+  display: flex; align-items: center; justify-content: center;
+  font-size: calc(var(--aw-ana-tile, 6cqw) * 0.64 * var(--fit));
+  font-weight: 800;
+  color: var(--aw-text);
+}
+/* filled but not yet judged (submit mode, pre-Submit) = same neutral grey
+   as the origin row; bonus mode always adds .is-blue right away. */
+.aw-anagram-rtile.is-filled {
+  opacity: 1;
+  border-style: solid;
+  border-color: transparent;
+  background: var(--aw-ana-origin-bg);
+  color: #fff;
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 rgba(0,0,0,.18));
+}
+.aw-anagram-rtile.is-filled.is-blue { background: var(--aw-ana-result-bg); }
+.aw-anagram-rtile.is-filled.is-wrongbg { background: var(--aw-ana-wrong-bg); }
+.aw-anagram-rspace { width: calc(var(--aw-ana-tile, 6cqw) * 0.45 * var(--fit)); flex: 0 0 auto; }
+
+/* "on submit" pre-Submit tiles can be tapped (send back) or dragged
+   (swap) — a visible grab cursor hints that. */
+.aw-anagram-result.is-interactive .aw-anagram-rtile.is-filled { cursor: grab; touch-action: none; }
+.aw-anagram-rtile.is-dragging {
+  cursor: grabbing; z-index: 15;
+  box-shadow: 0 0.9cqw 1.6cqw rgba(0,0,0,.35);
+}
+
+/* small correct/wrong badge, bottom-center of the ONE result tile it lands
+   on — pulled DOWN a bit further than core's default (0.4cqw) so it hangs
+   lower off the tile's bottom edge instead of overlapping the letter. */
+.aw-anagram-rtile .aw-tile-badge { width: 1.9cqw; bottom: -0.8cqw; }
+
+/* correct-answer reveal — ALWAYS reserves its height (min-height) so the
+   Submit button below it never shifts, whether or not it has text; only
+   shows content after a WRONG submit: the plain word (no "Correct:"
+   prefix), green, caps following the same option as the tiles. */
+.aw-anagram-reveal {
+  min-height: calc(2.6cqw * var(--fit));
+  margin: 0.9cqw auto 0; text-align: center;
+  font-size: calc(2.1cqw * var(--fit));
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: var(--aw-ok, #1f9d55);
+}
+
+/* ---------- Origin row ("dãy chữ gốc") — scrambled letter tiles ---------- */
+.aw-anagram-origin {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; align-content: center;
+  gap: calc(0.8cqw * var(--fit));
+}
+.aw-anagram-otile {
+  position: relative;
+  width: calc(var(--aw-ana-tile, 5.4cqw) * var(--fit));
+  height: calc(var(--aw-ana-tile, 5.4cqw) * var(--fit));
+  border-radius: var(--aw-tile-radius, 1cqw);
+  border: none;
+  background: var(--aw-ana-origin-bg, #6b7785);
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 rgba(0,0,0,.2));
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(var(--aw-ana-tile, 5.4cqw) * 0.64 * var(--fit));
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, opacity .2s ease;
+}
+.aw-anagram-otile:hover:not(:disabled) { filter: brightness(1.08); }
+.aw-anagram-otile:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-anagram-otile.is-used { opacity: 0; pointer-events: none; }
+/* NOTE: no opacity change here on purpose — this covers the whole row being
+   transiently disabled while ONE tile flies (setOriginLocked in anagram.js).
+   Dimming here used to make the WHOLE row flash together; only the tapped
+   tile itself should visibly react (it does, via flyLetter hiding it). */
+.aw-anagram-otile:disabled:not(.is-used) { cursor: default; }
+
+/* small cross that flashes ON the tile itself when the wrong letter is tapped */
+.aw-anagram-pickbadge {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 60%; height: 60%; margin: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
+  animation: aw-pop-cx-scale .2s ease;
+}
+.aw-anagram-pickbadge svg { width: 100%; height: 100%; }
+@keyframes aw-pop-cx-scale {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- SUBMIT button ("on submit" mode) ---------- */
+.aw-anagram-submit {
+  margin: 1.4cqw auto 0;
+  display: block;
+  padding: calc(1cqw * var(--fit)) calc(3.2cqw * var(--fit));
+  border: none; border-radius: 999px;
+  background: var(--aw-ok, #1f9d55);
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(1.9cqw * var(--fit));
+  letter-spacing: .04em; text-transform: uppercase;
+  box-shadow: 0 0.5cqw 0 rgba(0,0,0,.2);
+  cursor: pointer;
+  transition: transform .06s ease, opacity .15s ease;
+}
+.aw-anagram-submit:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: 0 0.15cqw 0 rgba(0,0,0,.2); }
+.aw-anagram-submit:disabled { opacity: .4; cursor: default; }
+
+/* ---------- Flying tile clone (fixed-position, JS-sized) ---------- */
+.aw-anagram-flytile {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  color: #fff; font-family: inherit; font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0,0,0,.2);
+  box-shadow: 0 4px 0 rgba(0,0,0,.2);
+  z-index: 50; pointer-events: none;
+}
+
+/* ---------- "fly to score" wrapper (fixed-position, JS-sized/positioned) -----
+   Holds TWO stacked children — an icon ("PERFECT" text or the check SVG)
+   and a "+N" number — that cross-fade into each other mid-flight (JS drives
+   both the wrapper's transform and each child's opacity). ---------- */
+.aw-anagram-flygain {
+  position: fixed;
+  width: 1em; height: 1em;
+  pointer-events: none; z-index: 60;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
+}
+.aw-anagram-flygain .afg-icon,
+.aw-anagram-flygain .afg-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  white-space: nowrap;
+}
+.aw-anagram-flygain .afg-icon svg { width: 1em; height: 1em; }
+.aw-anagram-flygain .afg-icon { font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #ffd23f;
+  -webkit-text-stroke: 0.06em #7a4a00; paint-order: stroke fill; }
+.aw-anagram-flygain .afg-num { font-weight: 800; color: #ffd23f; -webkit-text-stroke: 0.06em #7a4a00; paint-order: stroke fill; }
+
+/* score badge "pulse" while it's counting up to a fresh total (JS drives
+   the number; this only supplies the bounce). core/app.css owns
+   .aw-top-score itself — this rule just adds a modifier class to it. */
+.aw-top-score.aw-score-pulse { animation: aw-ana-score-pulse .42s ease-out; transform-origin: center; }
+@keyframes aw-ana-score-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.aw-anagram-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}

@@ -361,6 +361,14 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     gLet.append(rowLet);
     panel.append(gLet);
 
+    // TEMPLATE-SPECIFIC EXTRA OPTIONS (optional hook) — a template can append its
+    // own groups here (e.g. Anagram's mode/skip/all-caps). `draft` is the SAME
+    // object Apply writes back into activity.options, so template controls just
+    // mutate fields on it directly; `mkCheck`/`mkRadioChoice` keep the same look.
+    if (typeof tpl.buildExtraOptions === "function") {
+      tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice });
+    }
+
     panel.append(el("div", "aw-opt-hint",
       playOverlay.isConnected ? "Timer & shuffle apply when you press Play." : "Timer & shuffle apply next time you press Start again."));
 
@@ -371,12 +379,20 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     applyBtn.type = "button";
     applyBtn.onclick = () => {
       sound.click();
+      const beforeOptions = { ...(activity.options || {}) };
       if (!activity.options) activity.options = {};
       Object.assign(activity.options, draft);
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist these options for THIS act only (per-act override of the
       // Settings defaults). Safe no-op if the act isn't in the store yet.
       if (activity.id) import("./store.js").then(m => m.saveActivity(activity));
+      // Optional hook: a template can say "this particular change makes the
+      // CURRENT play meaningless" (e.g. Anagram's scoring mode) — if so,
+      // restart immediately instead of leaving the old play running under
+      // options it was never designed for.
+      const needsRestart = typeof tpl.optionsNeedRestart === "function" &&
+        tpl.optionsNeedRestart(beforeOptions, activity.options);
+      if (needsRestart) { closeToolPanel(false); restart(); return; }
       toast("Options applied");
       closeToolPanel(true);
     };
@@ -388,6 +404,16 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       const c = el("input"); c.type = "checkbox"; c.checked = checked;
       c.onchange = () => onChange(c.checked);
       wrap.append(c, document.createTextNode(label));
+      return wrap;
+    }
+
+    // shared radio-choice builder handed to templates via buildExtraOptions
+    function mkRadioChoice(name, value, label, checked, onChange) {
+      const wrap = el("label", "aw-opt-choice");
+      const r = el("input"); r.type = "radio"; r.name = name; r.value = value;
+      r.checked = checked;
+      r.onchange = () => onChange(value);
+      wrap.append(r, document.createTextNode(label));
       return wrap;
     }
   }
