@@ -1,0 +1,85 @@
+/* =============================================================
+   OPEN THE BOX template — styles that belong ONLY to this template.
+   Class prefix: .aw-otb-*
+
+   OPEN-ENDED game (scorable:false, see open-the-box.js): a grid of numbered
+   boxes fills the whole stage (no "prompt on top / answers below" split
+   like the scored templates, since there's no single running question).
+   Each box flips (CSS 3D transform on its OWN inner element, NOT used for
+   grid positioning, so this is unrelated to the transform+animation trap
+   documented in HUONG DAN CORE — see CONG THUC MAU.md mục 3.5) to reveal
+   its content. Sizes use cqw * var(--fit,1) as everywhere else.
+   ============================================================= */
+
+.aw-otb-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding: 1cqw 0 2.4cqw;
+  animation: aw-fadein .25s ease;
+}
+
+.aw-otb-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, auto-fill), minmax(13cqw, 1fr));
+  grid-auto-rows: minmax(13cqw, 1fr);
+  align-content: center; justify-content: center;
+  gap: calc(1.3cqw * var(--fit));
+  perspective: 120cqw;
+}
+
+.aw-otb-box {
+  cursor: pointer;
+  background: transparent;
+  border: 0; padding: 0;
+  font-family: inherit;
+}
+.aw-otb-box-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  transition: transform .5s cubic-bezier(.22,.9,.3,1);
+  transform-style: preserve-3d;
+}
+.aw-otb-box.is-open .aw-otb-box-inner { transform: rotateY(180deg); }
+
+.aw-otb-face {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--aw-tile-radius, 1.3cqw);
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  backface-visibility: hidden;
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  padding: calc(1cqw * var(--fit));
+  overflow: hidden;
+}
+.aw-otb-face-front {
+  background: var(--aw-tile-fixed, #3b82f6);
+  color: #fff;
+  font-weight: 800;
+  font-size: calc(3.2cqw * var(--fit));
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+}
+.aw-otb-face-back {
+  background: #fff;
+  color: var(--aw-text);
+  transform: rotateY(180deg);
+  font-weight: 600;
+  font-size: calc(1.5cqw * var(--fit));
+  line-height: 1.25;
+  text-align: center;
+  flex-direction: column;
+  gap: calc(0.6cqw * var(--fit));
+  border-color: var(--aw-tile-fixed, #3b82f6);
+  border-width: 0.18cqw;
+  border-style: solid;
+}
+.aw-otb-back-q { font-weight: 700; }
+.aw-otb-back-a { display: flex; align-items: center; gap: 0.4cqw; font-weight: 600; }
+.aw-otb-back-a.is-correct { color: #059669; }
+
+.aw-otb-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}

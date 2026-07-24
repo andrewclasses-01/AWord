@@ -3,9 +3,11 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/7/2026 — v0.9.5 (assignment cũ tự dọn vào thư mục DONE trong thư mục lớp khi
-> tạo assignment mới sang ngày khác — nối tiếp v0.9.4: Class trong Set assignment · báo cáo assignment
-> gọn hơn · in worksheet chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
+> Cập nhật lần cuối: **24/7/2026 tối — 4 game Anagram/Find the match/Type the answer/Open the box đã
+> BUILD XONG + TEST QUA TRÌNH DUYỆT THẬT, đang 🟢 CHỜ THẦY DUYỆT (xem mục 2 + `templates/CONG THUC
+> MAU.md`). App chính (trang chủ/thư viện/assignment) vẫn đang ở v0.9.5 (assignment cũ tự dọn vào thư
+> mục DONE — nối tiếp v0.9.4: Class trong Set assignment · báo cáo assignment gọn hơn · in worksheet
+> chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -85,7 +87,33 @@
 
 ## 0b. ⭐ BÀN GIAO (chốt cuối phiên 24/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**Kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
+**MỚI NHẤT (24/7/2026 tối) — 4 game còn lại đã build xong, CHƯA commit git:**
+- Thầy chốt "Chốt Quiz + build 4 game còn lại" → đã viết `templates/CONG THUC MAU.md` (đúc kết từ
+  Quiz) rồi build đủ Anagram, Find the match, Type the answer, Open the box theo đúng khuôn đó.
+- Cả 4 đã **test qua `test.html` bằng trình duyệt thật** (không phải chỉ đọc code) — chơi hết 1 lượt,
+  đúng/sai, Show answers, đổi theme, một số option riêng (lives của Find the match, boxesAutoClose của
+  Open the box) — 0 lỗi console. Chi tiết từng game: `GHI CHU <TEN>.md` trong thư mục template đó.
+  Trạng thái mỗi game: 🟢 CHỜ THẦY DUYỆT (chưa ✅ ĐÃ CHỐT).
+- **CHƯA đụng `core/`** (kể cả `core/catalog.js` — vẫn `built:false` cho cả 4) và **CHƯA gộp vào
+  `index.html`/`main.js`/`manifest.js`** — đúng quy trình, chờ thầy xem chạy thật rồi duyệt.
+- **CHƯA `git add`/`git commit`** gì trong phiên này (chỉ sửa file, chưa commit) — phiên sau/khi thầy
+  yêu cầu thì commit cùng lúc với các việc khác đang dở (v0.9.4/v0.9.5 bên dưới), đừng trộn 2 việc
+  không liên quan vào 1 commit nếu thầy muốn tách.
+- **Việc kế tiếp cho 4 game**: mở từng `test.html` cho thầy xem chạy thật (`http://localhost:5510/
+  templates/<ten>/test.html` sau khi chạy `python devserver.py 5510`, hoặc dùng cổng khác nếu 5510 đang
+  bận bởi phiên khác), thầy góp ý/duyệt từng game → chuyển `built:true` trong `core/catalog.js` (sửa
+  core/ nên do 1 session tổng làm sau khi đã duyệt) → gộp vào trang chủ.
+- ⚠️ **24/7/2026 tối — THẦY BÁO SẼ TỰ TEST + SỬA CHI TIẾT TỪNG ACT SAU, ở SESSION MỚI.** Nghĩa là:
+  - Đây là bản ĐẦU (v1 hoạt động được, đã tự test qua trình duyệt) chứ **CHƯA phải bản thầy đã tự tay
+    chơi thử và duyệt** — đừng coi 🟢 CHỜ THẦY DUYỆT ở 4 game là ✅ ĐÃ CHỐT dù chưa nghe thầy nói gì thêm.
+  - Session mới khi nhận việc: **hỏi thầy đã test tới đâu / muốn sửa gì trước** (đừng tự đoán rồi sửa
+    tràn lan) — có thể thầy chỉ muốn sửa 1-2 chi tiết nhỏ trong 1 game cụ thể, không phải viết lại.
+  - Nếu thầy đưa yêu cầu sửa cho 1 game cụ thể → sửa ĐÚNG file trong `templates/<ten>/` đó, test lại
+    qua `test.html`, rồi cập nhật nhật ký trong `GHI CHU <TEN>.md` của chính game đó (đừng quên tăng
+    ngày + mô tả thay đổi, theo đúng quy tắc mục 6.6 "mỗi đợt sửa: ghi nhật ký + tăng version").
+  - Chưa nghe thầy nói "chốt"/"ok" cho game nào thì **đừng tự chuyển `built:true`** hay gộp vào trang chủ.
+
+**Việc CŨ (assignment/print), vẫn còn dở, kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
 sửa tiếp nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu).
 Web live (`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản **v0.9.3** (không có việc của v0.9.4/
 v0.9.5 ở trên). `git log` sẽ thấy các commit đó nằm SAU v0.9.3 nhưng chưa lên `origin/main`.
@@ -192,11 +220,11 @@ Options/Template/Style + Edit/Assignment/Print. **(v0.6.1)** cụm phải thêm 
 ### Thương hiệu (v0.6.1): cụm **AWord + "in ANDREW CLASSES"** (`main.js` `logo()`, `.aw-brand*`) là 1
 nút — bấm ở BẤT KỲ đâu đều về trang chủ top-level (2 gốc). Logo to hơn, tagline sát dưới.
 
-### Quiz — 🟢 GẦN HOÀN THIỆN, thầy đã test OK nhiều vòng, CHƯA chính thức "chốt"
-Quiz là **GAME MẪU VÀNG** — làm thật kỹ để rút phong cách/kinh nghiệm/lỗi-cần-tránh cho 4 game còn
-lại. Thầy vừa test OK (17/7) và kết thúc phiên. **Bước còn thiếu**: thầy chưa nói "chốt Quiz", nên
-CHƯA viết bộ "recipe/công thức mẫu" tổng kết (việc pending — xem ROADMAP). Phiên sau nên hỏi thầy:
-chốt Quiz + viết recipe rồi qua Anagram, hay còn chỉnh Quiz.
+### Quiz — ✅ ĐÃ CHỐT (24/7/2026) — GAME MẪU VÀNG
+Thầy test OK nhiều vòng (17/7) rồi chốt "Chốt Quiz + build 4 game còn lại" (24/7). Công thức đã rút ra
+thành `templates/CONG THUC MAU.md` (khung `mount()`, 11 quy tắc bắt buộc, `toPrintItems`, checklist) —
+đọc file đó thay vì đọc lại toàn bộ `quiz.js` khi build Anagram/Find the match/Type the answer/Open the
+box.
 
 Quiz hiện có (chi tiết từng bước: `GHI CHU DU AN.md`):
 - **Màn READY** (nền tối): trên cùng "ANDREW CLASSES", giữa TÊN LESSON to viết hoa, nút PLAY khổng
@@ -228,9 +256,20 @@ Quiz hiện có (chi tiết từng bước: `GHI CHU DU AN.md`):
   - **Style**: đổi theme TRỰC TIẾP (không restart). **4 theme**: Classic (mặc định) · Basic (ô đáp án
     CÙNG màu navy, tối giản) · Classroom (kem/gỗ ấm) · Beach (cát/biển).
 
-### 4 game khác — 🔴 CHƯA BUILD
-Anagram / Find the match / Type the answer / Open the box — đã có khung thư mục + file hướng dẫn +
-trang test rỗng (hiện "not built yet"). Session mới nhận việc là làm được ngay.
+### 4 game khác — 🟢 ĐÃ BUILD XONG (24/7/2026), CHỜ THẦY DUYỆT
+Anagram / Find the match / Type the answer / Open the box — cả 4 đã có đủ 3 file
+(`<ten>.js`/`.css`/`sample-<ten>.js`), đăng ký đúng `type` khớp `core/catalog.js`, **đã test qua
+`test.html` bằng trình duyệt thật** (chơi hết 1 lượt, đúng/sai, Show answers, đổi theme, 0 lỗi console
+mỗi game). Trạng thái từng game + nhật ký chi tiết: `GHI CHU <TEN>.md` trong từng thư mục
+`templates/<ten>/`. **CHƯA thêm vào `core/catalog.js` (`built:true`) hay gộp vào trang chủ** — theo
+đúng quy trình, chỉ làm sau khi thầy xem chạy thật và duyệt từng game (xem `templates/HUONG DAN
+TEMPLATE.md` mục "Khi nào một template được gộp vào trang cuối").
+- **Anagram**: bấm/gõ chữ cái đặt vào ô trống (không kéo-thả thật — lựa chọn MVP chắc tay hơn trên cảm ứng).
+- **Find the match**: bàn cờ 1 prompt + lưới definition còn lại, chạm đúng thì ô biến mất.
+- **Type the answer**: gõ đáp án vào ô, chấm bỏ qua hoa/thường + dấu (bật được chấm chặt qua Options).
+- **Open the box**: lưới hộp lật mở nội dung, **KHÔNG điểm/leaderboard** (game mở, đúng như Wordwall gốc).
+
+Công thức dùng chung cho cả 4: `templates/CONG THUC MAU.md`.
 
 ### Chưa có: editor giáo viên, Firebase/online, đẩy GitHub.
 
@@ -398,8 +437,11 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    sửa/xoá điểm; chỉ thầy đọc). Cần: HS nộp kết quả sau khi chơi → gom về gốc **Results** cho thầy
    xem/xếp hạng; leaderboard online (entry đã lưu sẵn cả `review` nên đồng bộ dễ); dashboard kết quả.
    ⚠️ Lúc đó nhớ chuyển **leaderboard + Settings** từ localStorage lên cloud (hiện vẫn lưu theo máy).
-6. **Chốt Quiz + viết "recipe/công thức mẫu"** khi thầy hài lòng → khuôn cho 4 game còn lại.
-7. **Build 4 template còn lại**: Anagram → Find the match → Type the answer → Open the box.
+6. ✅ **Chốt Quiz + viết "recipe/công thức mẫu"** (24/7/2026) → `templates/CONG THUC MAU.md`.
+7. ✅ **Build 4 template còn lại** (24/7/2026): Anagram, Find the match, Type the answer, Open the box —
+   cả 4 đã build + test qua `test.html`, đang **🟢 CHỜ THẦY DUYỆT** (xem mục 2). **➡️ VIỆC KẾ TIẾP**:
+   thầy xem từng game chạy thật rồi quyết định game nào đủ tốt để chuyển `built:true` trong
+   `core/catalog.js` và gộp vào trang chủ.
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
 9. ✅ **Đẩy GitHub + Pages (v0.7.2, 19/7)**: repo PUBLIC `andrewclasses-01/AWord`, Pages branch `main`
    thư mục gốc, live tại https://andrewclasses-01.github.io/AWord/ (đã test thật: chơi Quiz + popup

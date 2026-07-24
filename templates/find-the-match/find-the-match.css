@@ -1,0 +1,86 @@
+/* =============================================================
+   FIND THE MATCH template — styles that belong ONLY to this template.
+   Class prefix: .aw-ftm-*
+
+   Unlike Quiz/Anagram (one item at a time), this game shows a PERSISTENT
+   board: 1 prompt on top + a grid of ALL remaining choices below. Matched
+   tiles fade out and are removed (grid reflows), the prompt swaps to the
+   next unsolved pair. Sizes use cqw * var(--fit,1) for the same reason as
+   every other template (uniform scaling inside the 16:9 stage).
+   ============================================================= */
+
+.aw-ftm-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: 2.4cqw;
+}
+
+.aw-ftm-lives {
+  flex: 0 0 auto;
+  display: flex; gap: 0.6cqw;
+  font-size: calc(2.4cqw * var(--fit));
+  color: #ef4444;
+  margin-bottom: 0.6cqw;
+}
+.aw-ftm-lives span.is-lost { opacity: .2; }
+
+.aw-ftm-prompt {
+  flex: 0 0 auto;
+  font-size: calc(4.6cqw * var(--fit));
+  font-weight: 700;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  text-align: center;
+  line-height: 1.15;
+  margin: 0 auto 2.6cqw;
+  max-width: 94%;
+  transition: opacity .12s ease;
+}
+
+.aw-ftm-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15.5cqw, 1fr));
+  align-content: center;
+  gap: calc(1.1cqw * var(--fit));
+  overflow: hidden;
+}
+.aw-ftm-tile {
+  position: relative;
+  border-radius: var(--aw-tile-radius, 1.3cqw);
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  background: var(--aw-tile-fixed, #3b82f6);
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  color: #fff; font-family: inherit; font-weight: 600;
+  font-size: calc(1.7cqw * var(--fit));
+  line-height: 1.15;
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  padding: calc(1.6cqw * var(--fit)) calc(1cqw * var(--fit));
+  min-height: calc(5.6cqw * var(--fit));
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, opacity .3s ease, filter .15s ease;
+}
+.aw-ftm-tile:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-ftm-tile:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-ftm-tile:disabled { cursor: default; }
+
+/* correct match: fade + shrink out, then removed from the DOM */
+.aw-ftm-tile.is-solved { opacity: 0; transform: scale(.82); pointer-events: none; }
+
+/* wrong tap: brief shake, tile itself never changes colour */
+.aw-ftm-tile.is-shake { animation: aw-ftm-shake .35s ease; }
+@keyframes aw-ftm-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-0.6cqw); }
+  40% { transform: translateX(0.6cqw); }
+  60% { transform: translateX(-0.4cqw); }
+  80% { transform: translateX(0.4cqw); }
+}
+
+.aw-ftm-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}

@@ -25,7 +25,9 @@ ai giẫm chân ai:
 3. Đọc tài liệu nghiên cứu tương ứng trong `../docs/0X-<TEN>.md` (đã nghiên cứu kỹ từ Wordwall thật:
    cách chơi, options, cấu trúc dữ liệu JSON đề xuất).
 4. **Xem `templates/quiz/` làm mẫu chuẩn** (game đầu tiên đã hoàn chỉnh, thầy đã duyệt) — cấu trúc
-   3 file `<ten>.js` / `<ten>.css` / `sample-<ten>.js` nên theo đúng khuôn này.
+   3 file `<ten>.js` / `<ten>.css` / `sample-<ten>.js` nên theo đúng khuôn này. Đọc
+   `../templates/CONG THUC MAU.md` (đúc kết từ Quiz) để KHÔNG phải đọc lại toàn bộ `quiz.js` mỗi lần —
+   khung `mount()`, 11 quy tắc bắt buộc, `toPrintItems`, giới hạn Options, checklist trước khi báo xong.
 5. Tạo 3 file trong CHÍNH thư mục của bạn (không tạo ở nơi khác):
    - `<ten-template>.js` — module game, `registerTemplate({type, scorable, name, mount})`.
    - `<ten-template>.css` — style riêng, MỌI class phải có tiền tố `.aw-<ten-viet-tat>-`

@@ -1,0 +1,91 @@
+/* =============================================================
+   TYPE THE ANSWER template — styles that belong ONLY to this template.
+   Class prefix: .aw-tta-*
+
+   Layout mirrors Quiz: prompt near the TOP, the typing area pushed to the
+   lower area (margin-top:auto). Sizes use cqw * var(--fit,1).
+   ============================================================= */
+
+.aw-tta-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: 3.2cqw;
+  animation: aw-fadein .25s ease;
+}
+
+.aw-tta-prompt {
+  font-size: calc(5cqw * var(--fit));
+  font-weight: 600;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  text-align: center;
+  line-height: 1.15;
+  margin: 0 auto;
+  max-width: 92%;
+  flex: 0 0 auto;
+}
+
+.aw-tta-answer-area {
+  margin-top: auto;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  gap: calc(1.4cqw * var(--fit));
+}
+
+.aw-tta-row {
+  position: relative;
+  display: flex;
+  gap: calc(1.2cqw * var(--fit));
+  width: min(70%, 60cqw);
+}
+.aw-tta-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: inherit;
+  font-size: calc(2.6cqw * var(--fit));
+  font-weight: 600;
+  color: var(--aw-text);
+  text-align: center;
+  padding: calc(1.6cqw * var(--fit)) calc(1cqw * var(--fit));
+  border-radius: var(--aw-tile-radius, 1cqw);
+  border: 0.22cqw solid var(--aw-muted);
+  background: #fff;
+}
+.aw-tta-input:focus { outline: none; border-color: var(--aw-accent, #3b82f6); }
+.aw-tta-input:disabled { opacity: .85; }
+.aw-tta-input.is-correct { border-color: #10b981; }
+.aw-tta-input.is-wrong { border-color: #ef4444; }
+
+.aw-tta-submit {
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: calc(2cqw * var(--fit));
+  color: #fff;
+  background: var(--aw-tile-fixed, #3b82f6);
+  border: 0;
+  border-radius: var(--aw-tile-radius, 1cqw);
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  padding: 0 calc(2.2cqw * var(--fit));
+  cursor: pointer;
+}
+.aw-tta-submit:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-tta-submit:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-tta-submit:disabled { opacity: .4; cursor: default; }
+
+.aw-tta-row .aw-tile-badge { top: -1.4cqw; right: -1.4cqw; }
+
+.aw-tta-reveal {
+  text-align: center;
+  font-size: calc(1.7cqw * var(--fit));
+  font-weight: 700;
+  color: var(--aw-muted);
+}
+.aw-tta-reveal b { color: var(--aw-text); }
+
+.aw-tta-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}
