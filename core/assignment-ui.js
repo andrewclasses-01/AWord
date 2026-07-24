@@ -39,6 +39,23 @@ function fmtDuration(ms) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+// "24.7" — day.month, no year, no leading zeros (used in the suggested title).
+function fmtDateShort(ms) {
+  const d = new Date(ms);
+  return `${d.getDate()}.${d.getMonth() + 1}`;
+}
+
+// Swap out just the CLASS token at the very start of a title, keeping
+// whatever comes after it untouched — so editing the Class field updates
+// the title live without disturbing anything the teacher typed by hand.
+// classTokenOf() in assignments.js reads titles the same way (first run of
+// non-space/underscore characters), so the two stay in agreement.
+function replaceClassToken(title, newClass) {
+  const m = String(title || "").match(/^([^\s_]*)([\s_]*)([\s\S]*)$/);
+  if (!m) return newClass;
+  return newClass + m[2] + m[3];
+}
+
 // A <input type="datetime-local"> wants "YYYY-MM-DDTHH:MM" in LOCAL time —
 // toISOString() would shift it by the timezone, so build the string by hand.
 function toLocalInput(ms) {
@@ -93,6 +110,15 @@ function button(label, cls, onClick) {
   return b;
 }
 
+// A round icon-only button (toolbar of the report popup) — same idea as the
+// close (x) button, just with any icon and a tooltip for its label.
+function iconButton(icon, title, onClick) {
+  const b = el("button", "aw-as-iconbtn", icon);
+  b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+  b.onclick = onClick;
+  return b;
+}
+
 // =============================================================
 // 1. SET ASSIGNMENT — the setup form
 // =============================================================
@@ -100,14 +126,33 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
   openModal("", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
+    const err = el("div", "aw-as-err", "");
 
-    // --- title
+    // --- class (required — this is what files the assignment under a class
+    // folder in Results, and it doubles as the first word of the title)
+    body.append(el("label", "aw-as-label", "Class"));
+    const classInput = el("input", "aw-as-input");
+    classInput.type = "text";
+    classInput.maxLength = 20;
+    classInput.placeholder = "e.g. A1A";
+    body.append(classInput);
+
+    // --- title — starts as "<Class> — <today, d.m> — <act title>"; typing in
+    // the Class field above keeps just that leading word in step, live.
     body.append(el("label", "aw-as-label", "Assignment title"));
     const titleInput = el("input", "aw-as-input");
     titleInput.type = "text";
     titleInput.maxLength = 80;
-    titleInput.value = `${act.title || "Untitled"} — ${fmtDate(Date.now()).slice(0, 10)}`;
+    titleInput.value = `${classInput.value} — ${fmtDateShort(Date.now())} — ${act.title || "Untitled"}`;
     body.append(titleInput);
+
+    let classTouched = false;
+    classInput.oninput = () => {
+      classTouched = true;
+      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
+      err.textContent = "";
+      showFiling();
+    };
 
     // --- deadline
     body.append(el("label", "aw-as-label", "Deadline"));
@@ -139,8 +184,8 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
       opts.append(wrap);
       return c;
     };
-    const cbLeader = mk("See the leaderboard", true);
-    const cbAnswers = mk("Show answers", true);
+    const cbLeader = mk("Leaderboard", true);
+    const cbAnswers = mk("Show answers", false);
     const cbAgain = mk("Start again", true);
     body.append(opts);
 
@@ -151,6 +196,16 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     Promise.all([listFolders("results"), listAllAssignments()])
       .then(([f, a]) => { folders = f; allAssignments = a; showFiling(); })
       .catch(() => { /* offline: it just files at the top of Results */ });
+    // Best-effort guess for the Class field: the name of the folder this act
+    // already sits in (Activities), when the teacher hasn't typed one yet.
+    if (act.parentId) {
+      pathTo(act.parentId).then(chain => {
+        if (classTouched || classInput.value || !chain.length) return;
+        classInput.value = chain[chain.length - 1].name || "";
+        titleInput.value = replaceClassToken(titleInput.value, classInput.value);
+        showFiling();
+      }).catch(() => { /* no guess, teacher types it */ });
+    }
     const showFiling = async () => {
       const folderId = classFolderFor(titleInput.value, folders);
       const where = folderId ? (await pathTo(folderId)).map(f => f.name).join(" / ") : "Results";
@@ -158,13 +213,17 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     };
     titleInput.oninput = () => { showFiling(); err.textContent = ""; };
 
-    const err = el("div", "aw-as-err", "");
     body.append(err);
     modal.append(body);
 
     const actions = el("div", "aw-as-actions");
     const back = button("BACK", "", close);
     const start = button("START", "aw-as-primary", async () => {
+      if (!classInput.value.trim()) {
+        err.textContent = "Please enter the class.";
+        classInput.focus();
+        return;
+      }
       const folderId = classFolderFor(titleInput.value, folders);
       if (assignmentNameTaken(allAssignments, { folderId, title: titleInput.value })) {
         err.textContent = "An assignment with this name is already filed there. Please change the name.";
@@ -196,7 +255,7 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     });
     actions.append(back, start);
     modal.append(actions);
-    setTimeout(() => { titleInput.focus(); titleInput.select(); }, 30);
+    setTimeout(() => classInput.focus(), 30);
   });
 }
 
@@ -292,7 +351,7 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
       opts.append(wrap);
       return c;
     };
-    const cbLeader = mk("See the leaderboard", end.leaderboard !== false);
+    const cbLeader = mk("Leaderboard", end.leaderboard !== false);
     const cbAnswers = mk("Show answers", end.showAnswers !== false);
     const cbAgain = mk("Start again", end.startAgain !== false);
     body.append(opts);
@@ -443,15 +502,18 @@ export function openAssignmentDetail(assignment, { onChanged, inAct = false } = 
       metaEl.textContent = bits.join("  ·  ");
     }
 
+    // Delete is deliberately NOT here — from the report the only way to remove
+    // an assignment is the ⁝ menu on its card in Results (main.js), so a stray
+    // click in the report never destroys it by accident.
     const tools = el("div", "aw-as-toptools");
     tools.append(
-      button("Refresh", "", () => refresh()),
-      button("Copy link", "", async () => flash(await copyText(url) ? "Link copied" : url)),
-      button("Copy QR", "", async () => {
+      iconButton(icons.refresh, "Refresh", () => refresh()),
+      iconButton(icons.link, "Copy link", async () => flash(await copyText(url) ? "Link copied" : url)),
+      iconButton(icons.qr, "Copy QR", async () => {
         try { await copyQrImage(url, 700); flash("QR image copied"); }
         catch (e) { downloadQrPng(url, `QR ${assignment.code}.png`); flash("QR saved to your Downloads"); }
       }),
-      button("Open activity", "", () => {
+      iconButton(icons.openExternal, "Open activity", () => {
         if (inAct) return close();              // already there — just get out of the way
         const num = assignment.activityNum;
         const dir = location.pathname.replace(/[^/]*$/, "");
@@ -459,11 +521,8 @@ export function openAssignmentDetail(assignment, { onChanged, inAct = false } = 
                                    : `?play=${encodeURIComponent(assignment.activityId || "")}`;
         window.open(`${location.origin}${dir}${target}`, "_blank");
       }),
-      button("Edit", "", () => openAssignmentEdit(assignment, {
+      iconButton(icons.edit, "Edit", () => openAssignmentEdit(assignment, {
         onSaved: () => { drawHead(); onChanged?.(); }
-      })),
-      button("Delete", "aw-as-danger", () => confirmTrashAssignment(assignment, {
-        onDone: () => { close(); onChanged?.(); }
       }))
     );
     const x = el("button", "aw-as-x", icons.close);
@@ -533,13 +592,23 @@ function summaryBlock(assignment, rows) {
   wrap.append(el("div", "aw-as-blockhead", "Summary"));
   const students = new Set(rows.map(r => r.key)).size;
   const stats = el("div", "aw-as-stats");
+  // small label ON TOP, big number below — same tile for every stat here.
   const stat = (label, value) => {
     const s = el("div", "aw-as-stat");
-    s.append(el("div", "aw-as-statv", String(value)), el("div", "aw-as-statl", label));
+    s.append(el("div", "aw-as-statl", label), el("div", "aw-as-statv", String(value)));
     return s;
   };
   stats.append(stat("Students", students), stat("Plays", rows.length));
   if (assignment.deadline) stats.append(stat("Late plays", rows.filter(r => r.late).length));
+  if (rows.length) {
+    const topScore = Math.max(...rows.map(r => r.score));
+    const topRows = rows.filter(r => r.score === topScore);
+    stats.append(stat("Top Score", `${topScore}/${topRows[0].total}`));
+
+    // Fastest among those who got the top score — that IS "top speed".
+    const fastest = topRows.reduce((best, r) => (!best || r.timeMs < best.timeMs) ? r : best, null);
+    stats.append(stat(`Top Speed - ${escapeText(fastest.name)}`, fmtDuration(fastest.timeMs)));
+  }
   wrap.append(stats);
   if (!rows.length) wrap.append(el("div", "aw-as-note", "No student has played this assignment yet."));
   return wrap;
@@ -625,7 +694,9 @@ function detailBlock(assignment, rows) {
     });
 
     sorted.forEach(r => {
-      const tr = el("div", "aw-as-tr aw-as-clickable");
+      // full marks -> the whole row reads in green, same idea as the leaderboard
+      const perfect = r.total > 0 && r.score === r.total;
+      const tr = el("div", "aw-as-tr aw-as-clickable" + (perfect ? " is-perfect" : ""));
       const nameCell = el("div", "aw-as-td");
       nameCell.append(el("span", "aw-as-caret", "▸"), el("span", null, escapeText(r.name)));
       if (r.late) nameCell.append(el("span", "aw-as-late", "LATE"));
@@ -638,8 +709,9 @@ function detailBlock(assignment, rows) {
       );
       table.append(tr);
 
+      // Collapsed by default; opening animates height+opacity smoothly instead
+      // of an instant display:none/block jump cut.
       const detail = el("div", "aw-as-answers");
-      detail.style.display = "none";
       detail.append(answersTable(r));
       table.append(detail);
 
@@ -647,19 +719,20 @@ function detailBlock(assignment, rows) {
       // answers below it stay bright, everything else dims away so the teacher
       // reads one child's work without the rest of the page competing.
       tr.onclick = () => {
-        const open = detail.style.display !== "none";
+        const open = tr.classList.contains("is-open");
         closeAllRows();
         if (!open) {
-          detail.style.display = "block";
           tr.classList.add("is-open");
           tr.querySelector(".aw-as-caret").textContent = "▾";
+          detail.style.maxHeight = detail.scrollHeight + "px";
+          detail.classList.add("is-open");
           setFocusMode(true, [tr, detail]);
         }
       };
     });
 
     function closeAllRows() {
-      table.querySelectorAll(".aw-as-answers").forEach(d => (d.style.display = "none"));
+      table.querySelectorAll(".aw-as-answers").forEach(d => { d.style.maxHeight = "0px"; d.classList.remove("is-open"); });
       table.querySelectorAll(".aw-as-tr.is-open").forEach(r => {
         r.classList.remove("is-open");
         const c = r.querySelector(".aw-as-caret");

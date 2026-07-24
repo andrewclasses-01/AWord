@@ -127,18 +127,73 @@ function runPrint(activity, format) {
 }
 
 // ---------- shared page chrome ----------
+// The running TITLE + "Name/Date" + logo + page number are ALL native CSS
+// "@page margin box" content (@top-left/@top-right/@bottom-left/@bottom-right
+// — Chrome 131+), never position:fixed HTML. A fixed element's offsets are
+// measured from the wrong reference box once @page has a non-zero margin, so
+// mm values that look right on screen land somewhere else on paper — that's
+// what pushed the header into the body content, and then left the logo
+// "khá lệch" versus the title/page-count despite matching mm values (both
+// caught 24/7/2026). Margin boxes have neither failure: @top-left/@bottom-left always
+// share the page's left margin edge with each other, and @bottom-left/
+// @bottom-right always share the same row — so the logo lines up with the
+// title and the page count for free, no mm-guessing needed. They are also the
+// only way to get a REAL page number: counter(page)/counter(pages) only
+// resolve inside a margin box's `content`.
+//
+// The logo's two type sizes ("AWord" big+bold, "in ANDREW CLASSES" tiny+
+// spaced) can't live in one CSS `content` string, so it's a small drawn SVG
+// used as the box's image content instead — still a margin box, just an image
+// one rather than a text one.
 function buildSheet(activity, body, format) {
   const sheet = el("div", "aw-print-sheet aw-print-" + format);
-
-  const head = el("div", "aw-print-runhead");
-  head.append(el("div", "aw-print-htitle", escapeHtml(activity.title || "Worksheet")));
-  head.append(el("div", "aw-print-hname", 'Name / Date: <span class="aw-print-hline"></span>'));
-
-  const foot = el("div", "aw-print-runfoot");
-  foot.append(el("div", "aw-print-logo", 'AWord<span>in ANDREW CLASSES</span>'));
-
-  sheet.append(head, foot, body);
+  sheet.append(pageChromeStyle(activity.title || "Worksheet"), body);
   return sheet;
+}
+
+function pageChromeStyle(title) {
+  const style = document.createElement("style");
+  const font = `font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;`;
+  style.textContent = `
+    @page {
+      size: A4;
+      margin: 16mm 12mm 14mm;
+      @top-left {
+        content: ${cssString(title)};
+        ${font} font-weight: 800; font-size: 12.5pt; color: #1c2733;
+      }
+      @top-right {
+        content: "Name / Date: ________________________";
+        ${font} font-size: 9.5pt; color: #3a4653;
+      }
+      @bottom-left {
+        content: ${logoImageUrl()};
+      }
+      @bottom-right {
+        content: counter(page) "/" counter(pages);
+        ${font} font-weight: 700; font-size: 10pt; color: #8a97a8;
+      }
+    }
+  `;
+  return style;
+}
+
+// The AWord logo as a small vector image (data URI) — "AWord" big+bold above
+// "in ANDREW CLASSES" tiny+spaced, exactly the on-screen lockup, just drawn
+// once instead of styled with two font sizes (which a margin box can't do).
+function logoImageUrl() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="132" height="26" viewBox="0 0 132 26">` +
+    `<text x="0" y="15" font-family="Segoe UI, Arial, sans-serif" font-weight="800" font-size="15" fill="#566472">AWord</text>` +
+    `<text x="0" y="24" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="6.5" letter-spacing="1" fill="#9aa4af">in ANDREW CLASSES</text>` +
+    `</svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
+// A CSS *string* literal — different escaping from escapeHtml() above (no
+// entities; just backslash/quote per the CSS spec), and margin-box content
+// can't hold a real newline, so any line break in a title is flattened.
+function cssString(s) {
+  return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/[\r\n]+/g, " ") + '"';
 }
 
 function clueLine(i, it, withBulb) {

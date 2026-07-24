@@ -1066,33 +1066,14 @@ body {
 @media print {
   html, body { background: #fff !important; }
   #app { display: none !important; }
-  @page { size: A4; margin: 24mm 14mm 18mm; }   /* A4 default; top/bottom bands hold the running head/foot */
+  /* @page (size/margin + the running head/foot as margin-box content) is
+     injected per print run by core/print.js — pageChromeStyle() — because the
+     header line needs the activity's own title baked into `content`. */
 
   .aw-print-sheet {
     display: block !important; color: #1c2733;
     font-family: "Baloo 2", "Segoe UI", Arial, sans-serif;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
-  }
-
-  /* running header/footer — position:fixed repeats them on every printed page */
-  .aw-print-runhead {
-    position: fixed; top: 9mm; left: 14mm; right: 14mm;
-    display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
-    padding-bottom: 7px; border-bottom: 3px solid #a7adb4;
-  }
-  .aw-print-runhead::after { content: ""; position: absolute; left: 0; right: 0; bottom: -5px; border-bottom: 1px solid #d7dbe0; }
-  .aw-print-htitle { font-weight: 800; font-size: 17px; letter-spacing: .01em; }
-  .aw-print-hname { font-size: 12.5px; color: #3a4653; white-space: nowrap; }
-  .aw-print-hline { display: inline-block; width: 150px; border-bottom: 1px solid #333; vertical-align: -2px; }
-
-  .aw-print-runfoot {
-    position: fixed; bottom: 7mm; left: 14mm; right: 14mm;
-    display: flex; align-items: center; padding-top: 8px; border-top: 1px solid #cfd4da;
-  }
-  .aw-print-logo { font-weight: 800; font-size: 17px; color: #566472; line-height: 1; }
-  .aw-print-logo span {
-    display: block; font-size: 7.5px; font-weight: 700; letter-spacing: .14em;
-    color: #9aa4af; margin-top: 2px;
   }
 
   /* two-column body; the browser flows items down col 1, then col 2, then next page */
@@ -1232,13 +1213,21 @@ body {
 .aw-as-info { flex: 1 1 auto; min-width: 0; }
 .aw-as-meta { font-size: .84rem; font-weight: 600; color: #7a8aa0; margin-top: 3px; }
 .aw-as-toptools { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.aw-as-iconbtn {
+  flex: 0 0 auto; width: 38px; height: 38px; border: 0; border-radius: 11px; cursor: pointer;
+  background: #eef3f9; color: #4a5a6e; display: grid; place-items: center;
+  transition: background .15s ease, color .15s ease, transform .08s ease;
+}
+.aw-as-iconbtn svg { width: 19px; height: 19px; }
+.aw-as-iconbtn:hover { background: #e2eaf4; color: #2f7bff; }
+.aw-as-iconbtn:active { transform: scale(.92); }
 .aw-as-report { gap: 0; }
 .aw-as-block { margin-top: 20px; }
 .aw-as-blockhead { font-size: 1.05rem; font-weight: 800; color: #23303e; margin-bottom: 10px; }
-.aw-as-stats { display: flex; gap: 26px; flex-wrap: wrap; }
+.aw-as-stats { display: flex; justify-content: center; gap: 26px; flex-wrap: wrap; }
 .aw-as-stat { background: #f5f8fc; border-radius: 14px; padding: 12px 22px; min-width: 108px; text-align: center; }
 .aw-as-statv { font-size: 1.7rem; font-weight: 800; color: #2f7bff; line-height: 1.1; }
-.aw-as-statl { font-size: .8rem; font-weight: 700; color: #7a8aa0; }
+.aw-as-statl { font-size: .8rem; font-weight: 700; color: #7a8aa0; margin-bottom: 3px; }
 
 .aw-as-table { display: flex; flex-direction: column; border: 1px solid #e7edf5; border-radius: 12px; overflow: hidden; }
 .aw-as-tr { display: grid; align-items: center; border-top: 1px solid #eef2f7; }
@@ -1246,13 +1235,16 @@ body {
 .aw-as-tr.is-head { background: #f5f8fc; font-weight: 800; color: #55657a; font-size: .82rem; text-transform: uppercase; letter-spacing: .02em; }
 .aw-as-td { padding: .6rem .8rem; font-size: .94rem; font-weight: 600; color: #2a3a4d; min-width: 0;
   overflow: hidden; text-overflow: ellipsis; }
+.aw-as-lb { width: 60%; margin: 0 auto; }
 .aw-as-lb .aw-as-tr { grid-template-columns: 70px 1fr 110px 110px; }
+.aw-as-lb .aw-as-td { text-align: center; }
 .aw-as-detail .aw-as-tr { grid-template-columns: 1.4fr 1.1fr 90px 90px 90px; }
+.aw-as-detail .aw-as-td { text-align: center; }
 .aw-as-qa .aw-as-tr { grid-template-columns: 46px 1.6fr 1.1fr 78px 1.1fr; }
 .aw-as-clickable { cursor: pointer; }
 .aw-as-clickable:hover { background: #f7fafd; }
 .aw-as-tr.is-open { background: #eef4ff; }
-.aw-as-sortable { cursor: pointer; user-select: none; display: flex; align-items: center; gap: 5px; }
+.aw-as-sortable { cursor: pointer; user-select: none; display: flex; align-items: center; justify-content: center; gap: 5px; }
 .aw-as-sortable:hover { color: #2f7bff; }
 .aw-as-arrow { font-size: .7rem; color: #2f7bff; }
 .aw-as-caret { display: inline-block; width: 14px; color: #9fb0c4; font-size: .8rem; }
@@ -1260,7 +1252,13 @@ body {
   margin-left: 8px; font-size: .68rem; font-weight: 800; letter-spacing: .04em;
   background: #ffe8e8; color: #d33; padding: 2px 6px; border-radius: 6px;
 }
-.aw-as-answers { background: #f7fafd; padding: 10px 14px 14px; }
+/* Collapsed by default; JS sets an exact max-height (its scrollHeight) to open,
+   so the reveal is smooth however many questions a play has. */
+.aw-as-answers {
+  background: #f7fafd; padding: 10px 14px 14px; max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height .32s cubic-bezier(.22,.9,.3,1), opacity .22s ease;
+}
+.aw-as-answers.is-open { opacity: 1; }
 .aw-as-answers .aw-as-table { background: #fff; }
 .aw-as-mark svg { width: 17px; height: 17px; }
 .aw-as-mark.is-right { color: #22a06b; }
@@ -1298,8 +1296,6 @@ body {
   font-size: .62em; font-weight: 800; letter-spacing: .05em; vertical-align: middle;
   background: #e6edf6; color: #55657a; padding: 3px 7px; border-radius: 7px; margin-left: 8px;
 }
-.aw-as-danger { background: #fdeaea; color: #d33; }
-.aw-as-danger:hover { background: #fbdada; }
 .aw-card-asg .aw-fp { background: linear-gradient(135deg, #eef4ff, #e3ecfb); }
 .aw-card-asg .aw-fp-icon { width: 76px; height: 76px; filter: drop-shadow(0 3px 5px rgba(20,60,140,.16)); }
 
@@ -1320,6 +1316,8 @@ body {
 /* ---------- Leaderboard: perfect score green, nothing right red ---------- */
 .aw-as-lb .aw-as-tr.is-perfect .aw-as-td { color: #16a34a; font-weight: 800; }
 .aw-as-lb .aw-as-tr.is-zero .aw-as-td { color: #dc2626; font-weight: 800; }
+/* ---------- Details: same green for a full-marks play ---------- */
+.aw-as-detail .aw-as-tr.is-perfect .aw-as-td { color: #16a34a; font-weight: 800; }
 
 /* ---------- FOCUS MODE: one student's answers, everything else out of the way ---------- */
 .aw-as-modal.is-focus .aw-as-top,

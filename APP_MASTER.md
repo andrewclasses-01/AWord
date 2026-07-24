@@ -3,7 +3,8 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/7/2026 — v0.9.3 (nhận sẵn tên học sinh từ myLesson: `play.html?g=…&n=…`).**
+> Cập nhật lần cuối: **24/7/2026 — v0.9.4 (Class trong Set assignment · báo cáo assignment gọn hơn ·
+> in worksheet chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -11,7 +12,8 @@
 > ⚠️ **Đừng chuyển repo sang tài khoản GitHub khác** — chuyển là mất tính năng này.
 > myLesson: `E:\LAP TRINH APP\myLesson` (app) · `D:\APP AND DATA\myLesson Web` (web).
 >
-> 🌐 **WEB ĐÃ LIVE: https://andrewclasses-01.github.io/AWord/**
+> 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — ⚠️ đang chạy bản **v0.9.3 cũ**, CHƯA
+> có 3 việc của v0.9.4 (Class/report gọn/in chuẩn) vì thầy chủ định giữ ở local để sửa tiếp trước khi đẩy.
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
 > 🔥 **FIREBASE + THƯ VIỆN TRÊN MÂY**: project **`aword-70dae`** (account `namdaptrai01@gmail.com`,
 > gói Spark miễn phí) — Firestore Singapore + đăng nhập Google. **Thầy phải đăng nhập** mới vào được
@@ -71,12 +73,21 @@
 
    - ✅ **v0.9.2**: gỡ hẳn hộp thoại "Bring your saved work online?" (nó hỏi lại mỗi lần mở app; việc
      chuyển thư viện lên mây đã xong 19/7). `importLocalLibrary()` vẫn còn trong store.js để gọi tay.
+   - ✅ **v0.9.3**: nhận sẵn tên học sinh từ myLesson (`play.html?g=…&n=…`), xem mục "🔗" đầu file.
+   - ✅ **v0.9.4 (24/7/2026, ⚠️ LOCAL, CHƯA PUSH)**: ô **Class** trong Set assignment (đồng bộ live vào
+     Assignment title, bắt buộc) · pop-up báo cáo assignment **gọn hơn** (bỏ Delete — chỉ xoá qua menu
+     ⁝ ở Results, 5 nút hoá icon, Summary thêm Top Score/Top Speed, Leaderboard+Details căn giữa +
+     Details có animation mượt + tô xanh hàng điểm tối đa) · **in worksheet sửa tận gốc**: bỏ
+     `position:fixed` (nguồn gây lệch) chuyển hẳn sang CSS `@page` margin box chuẩn, có **số trang
+     thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
+     (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
-## 0b. ⭐ BÀN GIAO (chốt cuối phiên 20/7/2026 — phiên mới đọc mục này rồi làm tiếp)
+## 0b. ⭐ BÀN GIAO (chốt cuối phiên 24/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**Kho code**: đã commit + push HẾT lên `main`, cây làm việc sạch. 4 commit của phiên này:
-`v0.8.0` (Assignment + thu điểm + link số + QR) → `v0.9.0` (Results = chính bài giao + cấm trùng tên)
-→ `v0.9.1` (7 tinh chỉnh) → `v0.9.2` (gỡ hộp thoại cũ). Web live đã kiểm chứng bằng `curl` từng file.
+**Kho code**: ⚠️ **v0.9.4 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để sửa tiếp
+nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu). Web live
+(`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản **v0.9.3** (không có 3 việc của v0.9.4 ở trên).
+`git log` sẽ thấy commit v0.9.4 nằm SAU v0.9.3 nhưng chưa lên `origin/main`.
 
 **Luật Firestore đang chạy** (bản mới nhất nằm nguyên văn trong `docs/08-FIREBASE-SETUP.md` — nếu sửa
 luật thì phải cập nhật file đó cho khớp):
@@ -85,18 +96,26 @@ luật thì phải cập nhật file đó cho khớp):
 - `results/{id}` chỉ thầy đọc + **thầy xoá được** (cho "Delete forever")
 - HS được ghi ĐÚNG 2 field `lastSubmitAt`/`submitCount` trên doc bài giao (để hiện chấm đỏ)
 
-**Dữ liệu TEST còn trên Firebase** (thầy nói *"tôi sẽ xử lý sau"*, ĐỪNG tự xoá):
+**Dữ liệu TEST còn trên Firebase** (thầy nói *"tôi sẽ xử lý sau"*, ĐỪNG tự xoá — vẫn còn nguyên từ
+20/7, chưa ai đụng tới):
 - Bài giao `j9nsa2` — "TEST assignment (xoa sau) - 20/07", nằm ngoài cùng Results, có ~5 lượt chơi giả
   (Trang Anh / Minh Khoa / Bao Chau / Duc Anh).
 - 2 thư mục rỗng **A1A**, **A2B** trong Results (tạo lúc test tính năng tự-xếp-lớp).
 - 1 act thật "LSA2-S1.T1.P1-2-3 / ENG2" trong Activities (6 câu) — act mẫu của thầy.
 
+**In worksheet (v0.9.4) đã thầy tự in giấy thật và xác nhận đẹp** — nhưng nếu phiên sau còn chỉnh gì ở
+`core/print.js`, nhớ: session build KHÔNG in giấy/PDF thật được (không có máy in ảo), chỉ kiểm chứng
+được CSS `@page` hợp lệ + hình SVG vẽ đúng qua trình duyệt — mọi lần sửa margin/logo/số trang đều cần
+**nhờ thầy in thử 1 tờ** để xác nhận, đừng tự cho là xong chỉ vì CSS parse không lỗi.
+
 **Việc kế tiếp — CHƯA CHỐT, phải hỏi thầy trước:**
 (a) chuyển **Settings + leaderboard offline của act** từ localStorage lên cloud;
-(b) **renderer Crossword** cho Print + in thử giấy thật;
+(b) **renderer Crossword** cho Print (worksheet A4 giờ đã chuẩn, còn thiếu riêng phần vẽ ô chữ);
 (c) **chốt Quiz** + viết "recipe/công thức mẫu" rồi build 4 game còn lại
     (Anagram → Find the match → Type the answer → Open the box);
-(d) (nếu thầy cần) nút Print từ trang chủ · trang đáp án cho thầy · "Change template" thật.
+(d) (nếu thầy cần) nút Print từ trang chủ · trang đáp án cho thầy · "Change template" thật;
+(e) thầy nói **còn sửa rất nhiều thứ nữa ở local** trước khi cần lên mạng — hỏi thầy muốn làm gì tiếp
+    thay vì tự đoán, và **đừng `git push`** cho tới khi thầy yêu cầu rõ.
 
    **HỎI THẦY trước khi bắt tay việc lớn (chờ "ok build")**; chưa rõ thì hỏi bằng AskUserQuestion.
 

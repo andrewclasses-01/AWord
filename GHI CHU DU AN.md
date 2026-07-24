@@ -21,6 +21,56 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.4 — 24/7/2026 — CLASS + BÁO CÁO ASSIGNMENT ĐẸP HƠN + IN CHUẨN A4
+⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — thầy còn sửa nhiều thứ nữa trước khi đẩy lên mạng lần tới.
+Chỉ có commit local; web live (`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản v0.9.3 cũ.
+
+**1. Pop-up "Set assignment" (`core/assignment-ui.js`) — thêm ô Class:**
+- Ô **Class** mới, bắt buộc, nằm trên ô Assignment title. Gõ vào ô Class thì CHỈ phần tên lớp ở đầu
+  Assignment title tự đổi theo (`replaceClassToken()` — chỉ thay từ đầu tiên, giữ nguyên phần thầy tự
+  gõ thêm phía sau), không đụng gì khác. Gợi ý sẵn tên lớp nếu act đang nằm trong 1 thư mục lớp ở
+  Activities (không bắt buộc dùng).
+- Tiêu đề gợi ý mặc định đổi thành đúng mẫu thầy chốt: `A1A — 24.7 — LSA2-S1.T1.P1-2-3 / ENG2`
+  (lớp — ngày.tháng không năm — tên act), qua hàm `fmtDateShort()`.
+- 3 tuỳ chọn cuối game đổi mặc định: **Leaderboard** (đổi tên từ "See the leaderboard") = bật ·
+  **Show answers** = tắt · **Start again** = bật.
+- Bỏ trống Class → chặn tạo, báo lỗi "Please enter the class." (không đụng `assignments.js`/luật
+  Firestore, mọi lọc thư mục/cấm trùng tên vẫn đọc từ tiêu đề như cũ).
+
+**2. Pop-up báo cáo assignment (`openAssignmentDetail`) — dọn lại theo góp ý thầy:**
+- **Bỏ nút Delete khỏi pop-up** — xoá giờ CHỈ làm được qua menu ⁝ ở thẻ trong Results (main.js đã có
+  sẵn `assignmentMenuItems` với Delete riêng, không đổi gì ở main.js).
+- 5 nút Refresh/Copy link/Copy QR/Open activity/Edit → đổi thành **icon tròn** (`iconButton()` +
+  `.aw-as-iconbtn`), có tooltip. Thêm 4 icon mới trong `core/icons.js`: `refresh`/`link`/`qr`/`openExternal`.
+- **Summary** thêm đủ Students/Plays/**Top Score**/**Top Speed - Tên** (người điểm cao nhất + nhanh
+  nhất trong số đó), nhãn nhỏ chuyển lên TRÊN số lớn (đổi thứ tự trong `stat()`), khối căn giữa
+  (`justify-content:center` trên `.aw-as-stats`).
+- **Leaderboard**: thu hẹp còn 60% bề ngang + căn giữa (`.aw-as-lb{width:60%;margin:0 auto}`), mọi cột
+  `text-align:center`.
+- **Details**: mọi cột căn giữa; mở chi tiết 1 học sinh chuyển từ `display:none/block` (giật cục) sang
+  animation mượt bằng `max-height` đo từ `scrollHeight` thật + transition; hàng điểm tối đa (full marks)
+  tô chữ xanh lá giống leaderboard (`.aw-as-detail .aw-as-tr.is-perfect`).
+- Đã test bằng dữ liệu giả (không cần đăng nhập Google — móc test tạm gắn rồi gỡ sạch ngay sau khi đo).
+
+**3. In worksheet (`core/print.js`) — SỬA TẬN GỐC lỗi header đè nội dung + thêm số trang thật:**
+- **Nguyên nhân**: cách cũ dùng `position:fixed` cho header/footer lặp lại mỗi trang, nhưng Chrome đo
+  `top`/`left`/`bottom` đó SAI gốc quy chiếu khi `@page` có margin khác 0 → header/logo lệch so với tính
+  toán bằng mm (đã tra cứu xác nhận đây là lỗi đã biết của Chrome, không phải lỗi logic).
+- **Sửa**: bỏ hẳn `position:fixed`, chuyển 100% sang CSS chuẩn **`@page` margin box**
+  (`@top-left`/`@top-right`/`@bottom-left`/`@bottom-right` — Chrome 131+ đã hỗ trợ đủ 16 margin box).
+  Margin box không bao giờ lệch (luôn nằm đúng trong lề của nó), và @top-left/@bottom-left luôn thẳng
+  mép trái với nhau, @bottom-left/@bottom-right luôn cùng hàng — nên logo tự thẳng hàng với tiêu đề +
+  số trang, khỏi đoán số mm.
+- Tiêu đề act → `@top-left`; "Name / Date: ___" → `@top-right`; **logo AWord** (2 cỡ chữ, không nhét
+  vừa 1 chuỗi CSS `content`) → vẽ thành **ảnh SVG nhỏ** (`logoImageUrl()`) gắn vào `@bottom-left`; **số
+  trang thật** dạng **"X/Y"** (`counter(page) "/" counter(pages)`) → `@bottom-right` — tính năng cách cũ
+  không làm được (chỉ margin box mới đọc được `counter(page)`/`counter(pages)`).
+- Lề trang giảm từ `24mm/14mm/18mm` xuống `16mm/12mm/14mm` (mỏng hơn theo yêu cầu thầy).
+- Gỡ hết CSS/HTML cũ của `.aw-print-runhead/-runfoot/-htitle/-hname/-hline/-logo` (không còn ai gọi).
+- Đã test: CSS `@page` sinh ra được trình duyệt phân tích hợp lệ (kể cả tiêu đề có dấu `"`/`\`/tiếng
+  Việt), ảnh SVG logo vẽ đúng — nhưng **CHƯA in giấy/PDF thật được** (máy dùng để build không có máy in
+  ảo) → thầy đã tự in thử và xác nhận đẹp, thẳng hàng.
+
 ### v0.9.3 — 23/7/2026 — NHẬN SẴN TÊN HỌC SINH TỪ myLesson (`play.html?g=…&n=…`)
 
 **Bối cảnh:** dự án **myLesson** (app máy tính + web bài tập, dựng 23/7/2026) nhúng game AWord vào

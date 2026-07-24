@@ -37,6 +37,12 @@ export const icons = {
   folder: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`,
 
+  // ----- Assignment report toolbar (v0.9.4) -----
+  refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14.5-4.5M20 12a8 8 0 0 1-14.5 4.5"/><path d="M18.5 3.8v4h-4M5.5 20.2v-4h4"/></svg>`,
+  link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l3-3a3.6 3.6 0 0 0-5.1-5.1l-1.4 1.4"/><path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-3 3a3.6 3.6 0 0 0 5.1 5.1l1.4-1.4"/></svg>`,
+  qr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.3" y="3.3" width="6.6" height="6.6" rx="1.2"/><rect x="14.1" y="3.3" width="6.6" height="6.6" rx="1.2"/><rect x="3.3" y="14.1" width="6.6" height="6.6" rx="1.2"/><rect x="14.3" y="14.3" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="18.4" y="14.3" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="14.3" y="18.4" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="18.4" y="18.4" width="2.6" height="2.6" fill="currentColor" stroke="none"/></svg>`,
+  openExternal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M18 13.5V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19V7.6A1.6 1.6 0 0 1 5.6 6H11"/></svg>`,
+
   // Giant rounded PLAY triangle (start-game overlay)
   playBig: `<svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M8.2 5.6c0-1.4 1.5-2.2 2.7-1.5l9.4 5.8c1.1.7 1.1 2.3 0 3l-9.4 5.8c-1.2.7-2.7-.1-2.7-1.5V5.6z"/>
