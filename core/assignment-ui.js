@@ -17,10 +17,10 @@ import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
   createAssignment, updateAssignment, trashAssignment, listResults, listScores,
   listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
-  hasNewResults, markAssignmentSeen,
+  assignmentsToArchive, hasNewResults, markAssignmentSeen,
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
-import { listFolders, pathTo } from "./store.js";
+import { listFolders, pathTo, createFolder } from "./store.js";
 
 // ---- tiny shared helpers ---------------------------------------------------
 function escapeText(s) {
@@ -64,6 +64,23 @@ function toLocalInput(ms) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+
+// After a new assignment lands in a class folder, tuck any sibling made on an
+// earlier day into that class's "DONE" subfolder (finding it by name, or
+// creating it, only once it is actually needed). Best-effort: a failure here
+// must never stop the assignment the teacher just created from opening.
+async function archiveOlderSiblings(folderId, assignment) {
+  if (!folderId) return;   // no class folder chosen -> nothing to file away
+  const siblings = (await listAllAssignments())
+    .filter(a => (a.folderId ?? null) === folderId && a.code !== assignment.code);
+  const stale = assignmentsToArchive(siblings, assignment.createdAt);
+  if (!stale.length) return;
+  const folders = await listFolders("results");
+  let done = folders.find(f => f.parentId === folderId &&
+    String(f.name || "").trim().toLowerCase() === "done");
+  if (!done) done = await createFolder("results", folderId, "DONE");
+  await Promise.all(stale.map(a => updateAssignment(a.code, { folderId: done.id })));
+}
 
 function flash(msg) {
   const t = el("div", "aw-as-flash", escapeText(msg));
@@ -244,6 +261,8 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
             startAgain: cbAgain.checked
           }
         });
+        try { await archiveOlderSiblings(folderId, assignment); }
+        catch (e) { console.warn("AWord: could not move older assignments into DONE:", e.message); }
         close();
         openAssignmentShare(assignment);
         onCreated?.(assignment);

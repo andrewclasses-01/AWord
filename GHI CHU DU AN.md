@@ -21,6 +21,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### v0.9.5 — 24/7/2026 — ASSIGNMENT CŨ TỰ DỌN VÀO "DONE" KHI SANG NGÀY MỚI
+⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** (nối tiếp v0.9.4, lý do như cũ — xem mục 0b APP_MASTER.md).
+
+**Yêu cầu của thầy**: khi tạo assignment mới cho 1 lớp, nếu ngày tạo KHÁC (mới hơn) ngày của các
+assignment cũ đang nằm ngay trong thư mục lớp đó, thì TOÀN BỘ các assignment cũ đó tự động chuyển vào
+thư mục con **DONE** (nằm trong thư mục lớp). Assignment cùng ngày, hoặc lỡ có ngày sau assignment mới
+(hiếm khi xảy ra), thì KHÔNG bị chuyển.
+
+- `core/assignments.js`: thêm `assignmentsToArchive(siblings, newCreatedAt)` — hàm thuần lọc theo NGÀY
+  DƯƠNG LỊCH thật (0h-24h theo giờ máy, không phải "24 giờ gần nhất"), so `dayStart()` của từng assignment với
+  `dayStart()` của assignment vừa tạo; trả về những cái có ngày SỚM HƠN (nghiêm ngặt `<`, không phải
+  `!=`) — nên đúng theo ví dụ thầy chốt: assignment mới 12/5 thì gom 11/5 vào DONE, còn 12/5 cũ hay 13/5
+  (nếu có) đứng yên.
+- `core/assignment-ui.js`: thêm `archiveOlderSiblings(folderId, assignment)`, gọi NGAY sau khi
+  `createAssignment()` xong ở nút START. Chỉ chạy khi assignment mới có `folderId` (đã nằm trong 1 thư
+  mục lớp cụ thể — Yêu cầu 1 của thầy giữ nguyên hành vi cũ: KHÔNG tự tạo thư mục lớp, thầy vẫn tự tạo
+  trước). Tìm thư mục con tên "DONE" (không phân biệt hoa/thường) ngay trong thư mục lớp; chưa có thì
+  tạo mới bằng `store.createFolder()`. Rồi chuyển từng assignment cũ bằng `updateAssignment(code,
+  {folderId: doneId})` — đúng cơ chế đã có sẵn từ v0.9.0 (Results đọc thẳng `folderId` của assignment,
+  không có bản sao, nên đổi `folderId` là "di chuyển" thật).
+- Việc này chạy NGẦM (best-effort): nếu lỗi mạng/quyền, chỉ `console.warn`, KHÔNG chặn thầy nhận link+QR
+  vừa tạo (giữ đúng luật cũ ở v0.8.0: đừng để lỗi phụ làm hỏng luồng chính).
+- Đã kiểm bằng script Node độc lập (hàm lọc theo ngày là hàm thuần, test được ngoài trình duyệt): ví dụ
+  đúng thầy đưa (11/5 → bị gom, 12/5 & 13/5 → đứng yên) chạy đúng. **CHƯA test được đầu-cuối thật** (tạo
+  2 assignment 2 ngày khác nhau rồi xem DONE tự hiện) vì cần đăng nhập Google — máy build không tự động
+  hoá được bước đăng nhập (xem BẪY mục 9) — nhờ thầy test khi rảnh.
+
 ### v0.9.4 — 24/7/2026 — CLASS + BÁO CÁO ASSIGNMENT ĐẸP HƠN + IN CHUẨN A4
 ⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — thầy còn sửa nhiều thứ nữa trước khi đẩy lên mạng lần tới.
 Chỉ có commit local; web live (`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản v0.9.3 cũ.

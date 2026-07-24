@@ -3,8 +3,9 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/7/2026 — v0.9.4 (Class trong Set assignment · báo cáo assignment gọn hơn ·
-> in worksheet chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
+> Cập nhật lần cuối: **24/7/2026 — v0.9.5 (assignment cũ tự dọn vào thư mục DONE trong thư mục lớp khi
+> tạo assignment mới sang ngày khác — nối tiếp v0.9.4: Class trong Set assignment · báo cáo assignment
+> gọn hơn · in worksheet chuẩn A4 có số trang thật). ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -84,10 +85,15 @@
 
 ## 0b. ⭐ BÀN GIAO (chốt cuối phiên 24/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**Kho code**: ⚠️ **v0.9.4 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để sửa tiếp
-nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu). Web live
-(`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản **v0.9.3** (không có 3 việc của v0.9.4 ở trên).
-`git log` sẽ thấy commit v0.9.4 nằm SAU v0.9.3 nhưng chưa lên `origin/main`.
+**Kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
+sửa tiếp nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu).
+Web live (`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản **v0.9.3** (không có việc của v0.9.4/
+v0.9.5 ở trên). `git log` sẽ thấy các commit đó nằm SAU v0.9.3 nhưng chưa lên `origin/main`.
+
+**v0.9.5 CHƯA được thầy test thật** (cần đăng nhập Google, máy build không tự động hoá được bước đó —
+xem GHI CHU DU AN.md v0.9.5). Cách test: tạo 1 assignment cho 1 lớp đã có sẵn thư mục trong Results, đợi
+qua ngày hôm sau (hoặc sửa giờ máy) rồi tạo assignment thứ 2 cho cùng lớp → assignment đầu phải tự
+chuyển vào thư mục con "DONE" trong thư mục lớp.
 
 **Luật Firestore đang chạy** (bản mới nhất nằm nguyên văn trong `docs/08-FIREBASE-SETUP.md` — nếu sửa
 luật thì phải cập nhật file đó cho khớp):

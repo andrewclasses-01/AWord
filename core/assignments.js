@@ -205,6 +205,23 @@ export function assignmentNameTaken(all, { folderId, title, exceptCode }) {
     a.code !== exceptCode && String(a.title || "").trim().toLowerCase() === wanted);
 }
 
+// ---- filing OLDER assignments of a class into DONE when a new day starts --
+// Called right after a new assignment is created in a class folder: any
+// SIBLING assignment (same folder) made on an EARLIER calendar day than the
+// new one gets tucked into a "DONE" subfolder, so the class folder only shows
+// the current day's work. Same-day siblings, or ones somehow dated LATER than
+// the new assignment, are left exactly where they are (the teacher's rule).
+function dayStart(ms) {
+  const d = new Date(ms);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function assignmentsToArchive(siblings, newCreatedAt) {
+  const cutoff = dayStart(newCreatedAt);
+  return siblings.filter(a => dayStart(a.createdAt) < cutoff);
+}
+
 // Full submissions (teacher only — the rules refuse this for everyone else).
 export async function listResults(code) {
   const [d, { collection, query, where, getDocs }] = await Promise.all([db(), fs()]);
