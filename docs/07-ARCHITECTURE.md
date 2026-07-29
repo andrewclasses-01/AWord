@@ -247,11 +247,11 @@ service cloud.firestore {
 ## 12. Quyết định (đã chốt 16/7/2026)
 1. **Build tool: Vite** ✅ (dev server + bundle Firebase + hot-reload; build ra `dist` deploy Pages).
 2. **Firebase project**: Claude sẽ **viết hướng dẫn tạo từng bước** khi tới P0 (tạo project mới cho AWord + bật Firestore/Auth Google + lấy config). ✅
-3. **Vị trí code**: ngay trong `D:\APP AND DATA\PROJECT\AWord` (cùng chỗ docs).
+3. **Vị trí code**: ngay trong `D:\APP AND DATA\AWord` (cùng chỗ docs).
 4. Còn để mở (chốt khi tới P0): tên repo GitHub + tài khoản + public/private.
 
 ## 13. P0 sẽ làm gì (khi thầy nói "ok build")
-- `npm create vite` trong `D:\APP AND DATA\PROJECT\AWord` (chọn vanilla + ES modules).
+- `npm create vite` trong `D:\APP AND DATA\AWord` (chọn vanilla + ES modules).
 - Dựng khung thư mục `src/` theo mục 3, tạo `registry.js` + `engine.js` rỗng.
 - 3 trang: `index.html` (teacher), `play.html` (student), `dashboard.html`.
 - Viết `docs/08-FIREBASE-SETUP.md` — hướng dẫn thầy tạo Firebase project.

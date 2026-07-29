@@ -9,7 +9,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Máy chưa cài Node. Bản hiện tại **chạy-ngay không cần build** bằng Python.
 - Dùng **`python devserver.py 5510`** (KHÔNG `python -m http.server` trần — thiếu header chống cache,
   xem APP_MASTER mục 9). Công cụ preview cấu hình tên `aword` (trong `D:\OTHERS\CLAUDE\.claude\launch.json`)
-  đã trỏ sang script này. Chạy tay: PowerShell tại `D:\APP AND DATA\PROJECT\AWord` → `python devserver.py`.
+  đã trỏ sang script này. Chạy tay: PowerShell tại `D:\APP AND DATA\AWord` → `python devserver.py`.
 - **Trang chủ (trình quản lý kiểu Drive)**: `http://localhost:5510/`
 - **Trang test riêng từng template**: `http://localhost:5510/templates/<ten-template>/test.html`
 
@@ -20,6 +20,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ---
 
 ## Lịch sử phiên bản
+
+### 29/7/2026 — DỜI DỰ ÁN: `PROJECT\AWord` → `D:\APP AND DATA\AWord` (không đổi version)
+
+**Thầy yêu cầu:** đưa AWord ra nằm chung hàng với các app khác trên `D:\APP AND DATA`, bỏ lớp bọc
+`PROJECT\` (thư mục đó chỉ chứa mỗi AWord nên đã xoá luôn sau khi dời — nó rỗng).
+
+**Đã dời:** `D:\APP AND DATA\PROJECT\AWord\` → **`D:\APP AND DATA\AWord\`**
+— **343 file / 2,3 MB** (kể cả `.git`), đối chiếu số file + dung lượng TRƯỚC/SAU **khớp chính xác**.
+Kho git đi theo nguyên vẹn: `origin` vẫn là `https://github.com/andrewclasses-01/AWord.git`,
+commit cuối `eb25578`, vẫn **ahead 5** so với GitHub (đúng như trước khi dời).
+
+**Đã sửa các chỗ trỏ đường dẫn cũ:**
+1. `D:\OTHERS\CLAUDE\.claude\launch.json` — cấu hình preview tên `aword` (cổng 5510) nay trỏ
+   `D:\APP AND DATA\AWord\devserver.py`. **Đây là chỗ dễ quên nhất** vì nằm ngoài dự án.
+2. `APP_MASTER.md` (mục 4 — cây thư mục), `docs/07-ARCHITECTURE.md` (2 chỗ), và mục
+   "Cách chạy thử trên máy" ở đầu file này.
+
+**Kiểm chứng (chạy thật):** khởi động `devserver.py` ở vị trí mới qua cấu hình `aword` →
+- Trang chủ `http://localhost:5510/` hiện đúng ("AWord in ANDREW CLASSES", nút Sign in with Google),
+  **0 lỗi console**.
+- Trang test template `templates/anagram/test.html` → **20/20 tệp `core/*` và font tải 200 OK**,
+  **0 lỗi console** ⇒ mọi đường dẫn tương đối vẫn đúng sau khi dời.
+
+⚠️ **KHÔNG đẩy lên GitHub trong đợt này.** Kho vẫn đang giữ **5 commit chưa push** (v0.9.4 + v0.9.5);
+đẩy lên là bản LIVE `andrewclasses-01.github.io/AWord/` nhảy từ v0.9.3 lên v0.9.5 — việc đó phải do
+thầy quyết. Lần dời này chỉ commit tại chỗ.
 
 ### v0.9.5 — 24/7/2026 — ASSIGNMENT CŨ TỰ DỌN VÀO "DONE" KHI SANG NGÀY MỚI
 ⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** (nối tiếp v0.9.4, lý do như cũ — xem mục 0b APP_MASTER.md).
