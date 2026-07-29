@@ -7,8 +7,10 @@
 > sau khi đổi TOÀN BỘ âm thanh sang file mp3 thật — Wordwall Classic theme, xem `templates/anagram/GHI
 > CHU ANAGRAM.md` mục 29/7). `core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` +
 > `main.js` (import tĩnh) + CSS trong `index.html` — Anagram giờ **chơi được thật từ trang chủ LOCAL**.
-> ⚠️ **CHƯA có content editor riêng** cho Anagram (không có `tpl.edit`) — "+ New activity → Anagram" mới
-> chỉ hiện toast "coming soon", CHƯA tạo được Anagram MỚI từ UI (xem chi tiết trong GHI CHU ANAGRAM.md).
+> ✅ **Content editor riêng cũng đã xong cùng đợt** — `templates/anagram/anagram-editor.js`
+> (`openAnagramEditor`, khuôn mẫu y hệt `quiz-editor.js`) → "+ New activity → Anagram" và "Edit content"
+> giờ dùng THẬT (title + danh sách word/clue, dán Excel, Duplicate/Remove) — xem chi tiết trong
+> `templates/anagram/GHI CHU ANAGRAM.md` mục 29/7 (tiếp).
 > Có đụng `core/engine.js` (hook tuỳ chọn `tpl.sounds`, KHÔNG ảnh hưởng Quiz — xem mục 5).
 > Find the match/Type the answer/Open the box vẫn ở bản v1 24/7, vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp vào
 > trang chủ (`built:false`). App chính (trang chủ/thư viện/assignment) vẫn đang ở v0.9.5.
@@ -277,8 +279,9 @@ Anagram / Find the match / Type the answer / Open the box — cả 4 đã có đ
 mỗi game). Trạng thái từng game + nhật ký chi tiết: `GHI CHU <TEN>.md` trong từng thư mục
 `templates/<ten>/`. **Anagram đã thêm vào `core/catalog.js` (`built:true`) + gộp vào trang chủ
 (29/7/2026)** — theo đúng quy trình (xem `templates/HUONG DAN TEMPLATE.md` mục "Khi nào một template
-được gộp vào trang cuối"), nhưng **chưa có content editor riêng** (xem GHI CHU ANAGRAM.md). 3 game còn
-lại vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chờ thầy xem & duyệt từng game.
+được gộp vào trang cuối"), **kèm content editor riêng** (`anagram-editor.js`, xem GHI CHU ANAGRAM.md). 3
+game còn lại vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chờ thầy xem & duyệt từng game — và
+CHƯA có content editor riêng (chỉ Quiz + Anagram có editor hiện tại).
 - **Anagram**: bấm/gõ chữ cái đặt vào ô trống (không kéo-thả thật — lựa chọn MVP chắc tay hơn trên cảm ứng).
 - **Find the match**: bàn cờ 1 prompt + lưới definition còn lại, chạm đúng thì ô biến mất.
 - **Type the answer**: gõ đáp án vào ô, chấm bỏ qua hoa/thường + dấu (bật được chấm chặt qua Options).
@@ -286,7 +289,7 @@ lại vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chờ th�
 
 Công thức dùng chung cho cả 4: `templates/CONG THUC MAU.md`.
 
-### Chưa có: editor giáo viên, Firebase/online, đẩy GitHub.
+### Chưa có: content editor riêng cho Find the match/Type the answer/Open the box (chỉ Quiz + Anagram có).
 
 ## 3. Cách chạy (máy này CHƯA cài Node)
 
@@ -457,7 +460,7 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    cả 4 đã build + test qua `test.html`. **Anagram ✅ ĐÃ CHỐT + gộp vào trang chủ (29/7/2026)**, 3 game
    còn lại vẫn **🟢 CHỜ THẦY DUYỆT** (xem mục 2). **➡️ VIỆC KẾ TIẾP**: thầy xem từng game còn lại chạy
    thật rồi quyết định game nào đủ tốt để chuyển `built:true` trong `core/catalog.js` và gộp vào trang
-   chủ; riêng Anagram còn thiếu content editor riêng để tạo bài MỚI từ UI trang chủ.
+   chủ (kèm content editor riêng, theo khuôn `anagram-editor.js`/`quiz-editor.js`).
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
 9. ✅ **Đẩy GitHub + Pages (v0.7.2, 19/7)**: repo PUBLIC `andrewclasses-01/AWord`, Pages branch `main`
    thư mục gốc, live tại https://andrewclasses-01.github.io/AWord/ (đã test thật: chơi Quiz + popup

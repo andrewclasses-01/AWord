@@ -43,6 +43,13 @@ export const icons = {
   qr: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3.3" y="3.3" width="6.6" height="6.6" rx="1.2"/><rect x="14.1" y="3.3" width="6.6" height="6.6" rx="1.2"/><rect x="3.3" y="14.1" width="6.6" height="6.6" rx="1.2"/><rect x="14.3" y="14.3" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="18.4" y="14.3" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="14.3" y="18.4" width="2.6" height="2.6" fill="currentColor" stroke="none"/><rect x="18.4" y="18.4" width="2.6" height="2.6" fill="currentColor" stroke="none"/></svg>`,
   openExternal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6"/><path d="M20 4l-8.5 8.5"/><path d="M18 13.5V19a1.6 1.6 0 0 1-1.6 1.6H5.6A1.6 1.6 0 0 1 4 19V7.6A1.6 1.6 0 0 1 5.6 6H11"/></svg>`,
 
+  // ----- Content-editor row toolbar icons (per-row buttons in a word/question list) -----
+  mic: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21M9 21h6"/></svg>`,
+  image: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.6"/><path d="M20.3 15.5l-5-5-4.3 4.3-2.3-2.3-5.2 5.2"/></svg>`,
+  dragHandle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M12 4v16M8 8l4-4 4 4M8 16l4 4 4-4"/></svg>`,
+  duplicate: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3.5" y="3.5" width="13" height="13" rx="2"/><path d="M9.5 20.5H18a2.5 2.5 0 0 0 2.5-2.5V9.5" stroke-linecap="round"/></svg>`,
+  trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7h15"/><path d="M9.5 7V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3V7"/><path d="M6.5 7l.7 12.2c.05.9.8 1.6 1.7 1.6h6.2c.9 0 1.65-.7 1.7-1.6L18.5 7"/><path d="M10.3 11v6M13.7 11v6"/></svg>`,
+
   // Giant rounded PLAY triangle (start-game overlay)
   playBig: `<svg viewBox="0 0 24 24" fill="currentColor">
     <path d="M8.2 5.6c0-1.4 1.5-2.2 2.7-1.5l9.4 5.8c1.1.7 1.1 2.3 0 3l-9.4 5.8c-1.2.7-2.7-.1-2.7-1.5V5.6z"/>

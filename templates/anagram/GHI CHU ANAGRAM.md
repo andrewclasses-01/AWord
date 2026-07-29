@@ -3,7 +3,9 @@
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT — GẮN VÀO TRANG CHỦ (29/7/2026, thầy duyệt "tương đối rồi")
 
 `core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` + `main.js` (`import "./templates/anagram/anagram.js"`) + CSS trong `index.html`. Anagram giờ **chơi được** từ trang chủ thật (act có sẵn trong thư viện / bài giao).
-⚠️ **CHƯA có content editor riêng** (không có `tpl.edit`, khác Quiz) — bấm "+ New activity" → Anagram trong picker sẽ hiện toast "editor coming soon", CHƯA tạo được Anagram MỚI từ trang chủ. Việc tạo nội dung Anagram thật (soạn từ + clue) vẫn cần: sửa tay `content.items` qua console/JSON, hoặc chờ session sau xây editor riêng (roadmap "editor giáo viên" ở APP_MASTER.md mục 7 vẫn chưa làm cho Anagram).
+✅ **Content editor riêng đã xong (29/7/2026 tiếp)** — `templates/anagram/anagram-editor.js` (`openAnagramEditor`,
+đăng ký qua `edit: openAnagramEditor` trong `anagram.js`) → "+ New activity → Anagram" và "Edit content" của
+act có sẵn giờ dùng THẬT, không còn toast "coming soon". Xem nhật ký 29/7 mục "Content editor" bên dưới.
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -287,3 +289,94 @@ chung cho mọi template.
    đúng/sai/đúng-hết-từ-bonus/Submit-từng-ô/Submit-cả-từ/Game-complete). Riêng "còn 5 giây cuối" CHƯA
    test trực tiếp bằng đồng hồ thật (tốn thời gian chờ) — chỉ soát lại code, cùng khuôn mẫu với hook
    `play` đã test đạt, tự tin đúng nhưng thầy nên tự xác nhận khi chỉnh Timer = Count down và chơi thật.
+
+### 29/7/2026 (tiếp) — Content editor riêng cho Anagram, gắn nốt vào trang chủ
+
+Thầy duyệt phần âm thanh "tương đối rồi", yêu cầu lưu lại + gắn vào trang chủ. Sau khi gắn xong mới lộ ra
+1 lỗ hổng: Anagram CHƯA có màn soạn nội dung (không có `tpl.edit`) nên "+ New activity → Anagram" chỉ
+hiện toast "coming soon", chưa tạo được bài mới từ UI. Việc này giờ đã xong:
+
+1. **File mới**: `templates/anagram/anagram-editor.js` (`openAnagramEditor`) — theo ĐÚNG khuôn mẫu
+   `templates/quiz/quiz-editor.js` (cùng chữ ký `(container, activity, {onSave, onCancel, header,
+   footer})`, cùng SCOPE đơn giản hoá: chỉ sửa Activity Title + danh sách từ; theme luôn Classic; Options
+   (timer/mode/allCaps...) vẫn ở Settings/panel Options trong game, KHÔNG sửa ở đây).
+2. **Tái dùng 100% class `.aw-ed-*` sẵn có trong `core/app.css`** (hệ CSS soạn nội dung DÙNG CHUNG mọi
+   template, Quiz đã chứng minh) — **không thêm 1 dòng CSS nào**, không đụng `core/`.
+3. **Mỗi hàng = Word (bắt buộc) + Clue (tuỳ chọn, để trống thì lúc chơi tự hiện "Unscramble the word")**
+   — khác Quiz (không có khái niệm "đáp án đúng" cần tick). Có: + Add word / Duplicate / Remove / Delete
+   all words / đếm "N / 100 words" (giới hạn 100 theo đúng spec Wordwall gốc ở `docs/01-ANAGRAM.md`).
+4. **Dán Excel** (`onWordPaste`, giống hệt cơ chế `onQuestionPaste` của Quiz): dán 1 vùng bảng đa dòng vào
+   ô Word → cột 1 = word, cột 2 = clue, điền từ hàng đang bấm xuống, cắt ở 100 dòng.
+5. Đăng ký: `anagram.js` thêm `edit: openAnagramEditor` (import trực tiếp, giống `quiz.js` làm với
+   `edit: openQuizEditor`). **Không đụng `core/`, không đụng `main.js`/`index.html`** (route "+ New
+   activity"/"Edit content" đã có sẵn từ hồi build Quiz, tự nhận `tpl.edit` qua registry — không cần sửa
+   gì thêm ở main.js).
+6. **Test bằng trang harness tạm** `_test-editor.html` (tự viết, gọi thẳng `openAnagramEditor` với
+   `onSave`/`onCancel` giả để không cần đăng nhập Google) — **đã XOÁ sau khi test xong**, không phải file
+   thật của dự án. Đã test qua trình duyệt thật:
+   - Save khi chưa nhập Title → đúng lỗi "Please enter an activity title."
+   - Dán Excel 3 dòng (word+clue) vào ô Word 1 → đúng 3 thẻ, đúng nội dung từng ô, banner xanh báo đúng
+     số dòng đã dán.
+   - Save hợp lệ → `onSave` nhận đúng object `{type:"anagram", schemaVersion, title, instruction,
+     theme:"classic", options:{}, content:{items:[{word,clue}, ...]}}` — khớp CHÍNH XÁC cấu trúc
+     `anagram.js`'s `mount()`/`toPrintItems()` đang đọc, chơi được ngay không cần chuyển đổi gì thêm.
+   - Mở với dữ liệu có sẵn (`sample-anagram.js`) → đúng heading "Edit content" (thay vì "New activity"),
+     6 từ mẫu hiện đúng cả word lẫn clue.
+   - Duplicate/Remove hoạt động đúng (nhân bản đúng vị trí kế tiếp, xoá đúng thẻ, không ảnh hưởng thẻ khác).
+   - 0 lỗi console suốt quá trình.
+7. **Core**: KHÔNG đụng gì thêm ở đợt này (chỉ thêm file mới trong `templates/anagram/`).
+
+### 29/7/2026 (tiếp) — Đổi bố cục Editor sang dạng BẢNG giống Wordwall thật (theo ảnh thầy gửi)
+
+Thầy gửi ảnh chụp màn "Edit Content" thật của Wordwall (bảng Word|Clue, nút Swap Columns, mỗi hàng có
+số thứ tự + 2 ô kề nhau + icon mic/ảnh/kéo-thả/nhân bản/xoá) và yêu cầu bố cục Anagram-editor giống vậy.
+Đã làm lại HOÀN TOÀN phần hiển thị từng hàng (giữ nguyên phần khung trang — header/Title/tip/bulk bar
+vẫn dùng chung `.aw-ed-*` của core như cũ):
+
+1. **Bảng Word | Clue thật**: tiêu đề cột + nút **Swap Columns** (đổi giá trị Word↔Clue mọi hàng cùng
+   lúc — dùng khi thầy dán nhầm thứ tự 2 cột). Mỗi hàng: số thứ tự · 1 khung liền có vạch dọc chia ô
+   Word/ô Clue (giống ảnh) · cụm icon bên phải: 🎤 voice / 🖼️ ảnh (CHƯA làm — bấm vào chỉ hiện banner
+   "coming soon", thầy nói để bàn sau) / ⇕ kéo-thả đổi vị trí / ⧉ nhân bản / 🗑️ xoá.
+2. **5 icon MỚI thêm vào `core/icons.js`** (dùng chung, không thuộc riêng Anagram): `mic`, `image`,
+   `dragHandle`, `duplicate`, `trash` — chỉ THÊM, không sửa/xoá icon nào có sẵn, không ảnh hưởng Quiz
+   (đã test lại `templates/quiz/test.html` sau khi sửa, 0 lỗi).
+3. **Kéo-thả đổi vị trí dùng ĐÚNG kiểu HTML5 Drag & Drop mà `main.js` đã dùng** cho việc kéo act/folder
+   vào thư mục (draggable + dragstart/dragover/drop, class `is-dragging`/`is-dropok` kiểu) — không bịa
+   cơ chế mới, giữ nhất quán codebase. Chỉ icon ⇕ mới `draggable=true` (không phải cả hàng), nên bấm/gõ
+   chữ trong ô Word/Clue không bị ảnh hưởng. Thả nửa TRÊN 1 hàng = chèn TRƯỚC hàng đó, nửa DƯỚI = chèn
+   SAU (có viền xanh báo trước khi thả).
+4. **Dán Excel giờ nhận từ CẢ 2 ô** (Word hoặc Clue đều được, không cần nhớ đúng ô) — cột 1 luôn là Word,
+   cột 2 luôn là Clue, giữ nguyên quy tắc điền từ hàng đang dán trở xuống như bản trước.
+5. **CSS mới**: `templates/anagram/anagram.css` thêm khối `.aw-anagram-ed-*` (bảng/hàng/ô/icon) — CSS
+   RIÊNG của Anagram (không đụng `core/app.css`), dùng px/rem bình thường (trang Editor nằm NGOÀI khung
+   16:9 nên không dùng cqw, khác các class chơi game `.aw-anagram-*` khác trong cùng file).
+6. **Đã test qua trình duyệt thật** (lại dùng trang harness tạm `_test-editor.html`, xoá sau khi xong):
+   - Dán Excel 2 dòng vào Ô CLUE (không phải ô Word) → vẫn đúng cột 1→word, cột 2→clue, đúng từ hàng
+     đang dán trở xuống, giữ nguyên các hàng trước.
+   - Swap Columns → mọi hàng đổi đúng giá trị Word↔Clue, bấm lại swap về đúng như cũ.
+   - Kéo-thả (giả lập DragEvent thật, không phải click thường) hàng 1 xuống dưới hàng 3 (thả nửa dưới)
+     → đúng thứ tự mới; kéo lại lên đầu (thả nửa trên hàng đầu) → đúng về lại thứ tự ban đầu.
+   - Save → dữ liệu ra đúng cấu trúc `content.items[].{word,clue}` như trước, giữ nguyên `id`/`options`
+     khi sửa bài có sẵn.
+   - 0 lỗi console suốt quá trình; `templates/quiz/test.html` vẫn chạy bình thường sau khi thêm icon mới.
+7. **Core**: có thêm 5 icon SVG vào `core/icons.js` (mục 2 ở trên) — CHỈ THÊM, không sửa file khác trong
+   `core/`.
+
+### 29/7/2026 (tiếp) — 2 điều chỉnh nhỏ theo góp ý thầy
+
+1. **Options Apply LUÔN Restart** — trước chỉ tự restart khi đổi `anagramMode` (bonus↔submit), đổi mục
+   khác (timer/shuffle/allCaps/letters/allowSkip...) chỉ hiện toast "Options applied" và giữ nguyên ván
+   đang chơi. Thầy muốn MỌI thay đổi Options đều restart ngay. Sửa `optionsNeedRestart()` trong
+   `anagram.js` trả về `true` luôn (không còn so sánh `anagramMode` nữa) — 1 dòng, không đụng
+   `core/engine.js` (hook đã có sẵn từ trước, chỉ đổi cách Anagram trả lời hook đó). Đã test: đổi lại 1
+   mục KHÔNG liên quan mode (Allow skip) → Apply → về thẳng màn Ready ngay, không còn toast giữ nguyên
+   ván cũ.
+2. **Hạ thấp dấu ✓/✗ nhỏ ở chế độ On Submit cho khỏi đè chữ** — bắt được lỗi thật khi đo: rule cũ
+   `.aw-anagram-rtile .aw-tile-badge { width:1.9cqw; bottom:-0.8cqw }` chỉ set `width`, để `height` tự
+   suy ra từ `aspect-ratio:1` của core — nhưng đo bằng `getBoundingClientRect()` phát hiện height thực tế
+   bị giãn ra **83px** (gần bằng CẢ chiều cao ô 81.6px) thay vì vuông theo width 18.34px, đẩy dấu ✓ hiện
+   lên giữa ô (đè vào chữ) dù `bottom` đã âm. Nguyên nhân: `top` đang để `auto`, không đủ ràng buộc để
+   trình duyệt tôn trọng `aspect-ratio` khi chỉ có `bottom` cố định trong ô cha đang canh giữa bằng flex.
+   Sửa: **set `height` tường minh** bằng `width` (bỏ phụ thuộc `aspect-ratio` mập mờ) + tăng `bottom`
+   xuống `-1.6cqw` (gấp đôi, hạ thấp thêm). Đã đo lại + chụp màn hình thật (chơi hết từ "dolphin" ở chế
+   độ On submit): dấu ✓ nằm hẳn dưới từng ô chữ, không còn đè chữ nào.

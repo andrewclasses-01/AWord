@@ -99,9 +99,16 @@
 }
 
 /* small correct/wrong badge, bottom-center of the ONE result tile it lands
-   on — pulled DOWN a bit further than core's default (0.4cqw) so it hangs
-   lower off the tile's bottom edge instead of overlapping the letter. */
-.aw-anagram-rtile .aw-tile-badge { width: 1.9cqw; bottom: -0.8cqw; }
+   on — pulled DOWN further than core's default (0.4cqw) so it hangs lower
+   off the tile's bottom edge instead of overlapping the letter. `height`
+   MUST be set explicitly (not left to core's `aspect-ratio:1`) — with only
+   `bottom` pinned and no `top`, this tile's flex-centered layout resolves
+   the badge's auto height to roughly the WHOLE tile's height instead of a
+   square matching its width, which pushed the visible checkmark back up
+   into the letter despite the negative `bottom` offset (measured: badge
+   box top landed ~2px under the tile's top). An explicit `height` removes
+   that ambiguity outright. */
+.aw-anagram-rtile .aw-tile-badge { width: 1.9cqw; height: 1.9cqw; bottom: -1.6cqw; }
 
 /* correct-answer reveal — ALWAYS reserves its height (min-height) so the
    Submit button below it never shifts, whether or not it has text; only
@@ -222,3 +229,58 @@
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* =============================================================
+   CONTENT EDITOR (anagram-editor.js) — Word/Clue table, Wordwall-style.
+   Lives OUTSIDE the 16:9 stage (the editor page, not the game), so plain
+   px/rem here — NOT cqw. Reuses core/app.css's .aw-ed-* page chrome
+   (header/title field/tip/bulk bar/count); only the per-row layout below
+   is Anagram-specific (Quiz's row is a different shape: question + 2x3
+   answer grid, this is a single word+clue table row instead).
+   ============================================================= */
+.aw-anagram-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.aw-anagram-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 152px; }
+.aw-anagram-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }
+
+.aw-anagram-ed-row { display: flex; align-items: stretch; gap: 8px; }
+.aw-anagram-ed-row.is-dragging { opacity: .4; }
+.aw-anagram-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
+.aw-anagram-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
+
+.aw-anagram-ed-num {
+  flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #8a97a8; font-size: .9rem;
+}
+.aw-anagram-ed-box {
+  flex: 1; min-width: 0; display: flex;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-anagram-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-anagram-ed-word, .aw-anagram-ed-clue {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e;
+}
+.aw-anagram-ed-word { font-weight: 600; }
+.aw-anagram-ed-clue { border-left: 1.5px solid #e2e9f2; }
+
+.aw-anagram-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-anagram-ed-iconbtn {
+  width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-anagram-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-anagram-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-anagram-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-anagram-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-anagram-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+.aw-anagram-ed-gap { flex: 0 0 6px; }
+
+.aw-anagram-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px;
+  background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer;
+}
+.aw-anagram-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-anagram-ed-addrow:disabled { opacity: .4; cursor: default; }

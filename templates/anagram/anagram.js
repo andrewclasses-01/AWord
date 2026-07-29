@@ -48,6 +48,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { anagramSound } from "./anagram-sound.js";
+import { openAnagramEditor } from "./anagram-editor.js";
 
 // Tile clone colors for the flying-letter animation — MUST stay in sync
 // with the --aw-ana-origin-bg / --aw-ana-result-bg / --aw-ana-wrong-bg
@@ -117,6 +118,10 @@ const anagramTemplate = {
       .map(it => ({ clue: it.clue || "", answer: it.word }));
   },
 
+  // Content editor for this game (opened by the home page and the in-game
+  // Edit button). Each template supplies its own editor the same way.
+  edit: openAnagramEditor,
+
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
   buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
     const gMode = el("div", "aw-opt-group");
@@ -141,12 +146,13 @@ const anagramTemplate = {
     panel.append(gMore);
   },
 
-  // Engine calls this right after Apply mutates activity.options — bonus vs
-  // submit score so differently (per-letter+double vs 1-per-word) that
-  // letting the CURRENT play continue under the old mode's state would be
-  // nonsensical, so a mode change forces an immediate restart.
-  optionsNeedRestart(before, after) {
-    return (before.anagramMode || "bonus") !== (after.anagramMode || "bonus");
+  // Engine calls this right after Apply mutates activity.options. Per the
+  // teacher's request, ANY Options change restarts the act immediately
+  // (not just an anagramMode switch) — Anagram's timer/shuffle/allCaps/
+  // letters etc. all read fresh at mount(), so leaving the old play running
+  // under options it wasn't built for looked stale/inconsistent.
+  optionsNeedRestart() {
+    return true;
   },
 
   // Engine-level lifecycle sounds (Play pressed / Start again / 5s-left /
