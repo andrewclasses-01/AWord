@@ -9,7 +9,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 - Máy chưa cài Node. Bản hiện tại **chạy-ngay không cần build** bằng Python.
 - Dùng **`python devserver.py 5510`** (KHÔNG `python -m http.server` trần — thiếu header chống cache,
   xem APP_MASTER mục 9). Công cụ preview cấu hình tên `aword` (trong `D:\OTHERS\CLAUDE\.claude\launch.json`)
-  đã trỏ sang script này. Chạy tay: PowerShell tại `D:\APP AND DATA\AWord` → `python devserver.py`.
+  đã trỏ sang script này. Chạy tay: PowerShell tại `E:\LAP TRINH APP\AWord` → `python devserver.py`.
 - **Trang chủ (trình quản lý kiểu Drive)**: `http://localhost:5510/`
 - **Trang test riêng từng template**: `http://localhost:5510/templates/<ten-template>/test.html`
 
@@ -21,31 +21,47 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
-### 29/7/2026 — DỜI DỰ ÁN: `PROJECT\AWord` → `D:\APP AND DATA\AWord` (không đổi version)
+### 29/7/2026 — DỜI DỰ ÁN 2 CHẶNG: `PROJECT\AWord` → `D:\APP AND DATA\AWord` → `E:\LAP TRINH APP\AWord`
 
-**Thầy yêu cầu:** đưa AWord ra nằm chung hàng với các app khác trên `D:\APP AND DATA`, bỏ lớp bọc
-`PROJECT\` (thư mục đó chỉ chứa mỗi AWord nên đã xoá luôn sau khi dời — nó rỗng).
+Cùng ngày nhưng **hai lần dời, hai quyết định khác nhau của thầy** — ghi lại cả hai để sau này khỏi
+tưởng là một.
 
-**Đã dời:** `D:\APP AND DATA\PROJECT\AWord\` → **`D:\APP AND DATA\AWord\`**
-— **343 file / 2,3 MB** (kể cả `.git`), đối chiếu số file + dung lượng TRƯỚC/SAU **khớp chính xác**.
-Kho git đi theo nguyên vẹn: `origin` vẫn là `https://github.com/andrewclasses-01/AWord.git`,
-commit cuối `eb25578`, vẫn **ahead 5** so với GitHub (đúng như trước khi dời).
+#### Chặng 1 — ra khỏi lớp bọc `PROJECT\`
+Thầy muốn AWord nằm chung hàng với các app khác trên `D:\APP AND DATA`, bỏ thư mục bọc `PROJECT\`
+(nó chỉ chứa mỗi AWord nên sau khi dời đã rỗng → xoá luôn).
+`D:\APP AND DATA\PROJECT\AWord\` → `D:\APP AND DATA\AWord\` — **343 file / 2,3 MB** (kể cả `.git`),
+đối chiếu TRƯỚC/SAU khớp chính xác. Kho git nguyên vẹn, vẫn **ahead 5** so với GitHub.
 
-**Đã sửa các chỗ trỏ đường dẫn cũ:**
+#### Chặng 2 — sang ổ E, theo đúng luật "ổ E = code, ổ D = dữ liệu"
+Thầy hỏi có nên đưa AWord sang ổ E không. **Nên** — AWord là code và đã có trên GitHub, mà `.git`
+của nó lại đang nằm trong vùng Google Drive đồng bộ, đúng cái mô hình đã làm hỏng kho myStudent
+27/7 (Drive nhân đôi ref thành `master (1)`). Nhưng **phải đẩy lên GitHub TRƯỚC** vì lúc đó còn 6
+commit chưa push — Drive đang là tấm lưới an toàn duy nhất cho phần việc đó; dời sang E trước là
+rút lưới khi bản sao trên mạng còn thiếu.
+
+**Thứ tự đã làm:** push GitHub (`5de9553..829f78f`) → rồi mới dời sang `E:\LAP TRINH APP\AWord`.
+
+⚠️ **BẪY GẶP KHI DỜI GIỮA 2 Ổ ĐĨA:** `Move-Item` từ D sang E là **chép rồi xoá**, và bước xoá
+**thất bại giữa chừng** ở `.git\hooks` (`You do not have sufficient access rights` — Drive giữ khoá).
+Kết quả: 31 file đã sang E, 318 file còn ở D — **dự án bị chẻ đôi**. Cách gỡ: đếm thấy 31+318 = 349
+= đúng tổng ban đầu (không mất gì) → dùng `robocopy /E` gộp nốt phần còn lại sang E → kiểm đủ 349
+file/2,38 MB → chạy `git fsck` xác nhận kho sạch + `rev-parse` khớp GitHub → **rồi mới** xoá bản trên D.
+**Bài học: dời giữa 2 ổ thì đừng tin `Move-Item`; dùng `robocopy` rồi xoá tay sau khi đã kiểm chứng.**
+
+**Đã sửa các chỗ trỏ đường dẫn (cả 2 chặng):**
 1. `D:\OTHERS\CLAUDE\.claude\launch.json` — cấu hình preview tên `aword` (cổng 5510) nay trỏ
-   `D:\APP AND DATA\AWord\devserver.py`. **Đây là chỗ dễ quên nhất** vì nằm ngoài dự án.
-2. `APP_MASTER.md` (mục 4 — cây thư mục), `docs/07-ARCHITECTURE.md` (2 chỗ), và mục
-   "Cách chạy thử trên máy" ở đầu file này.
+   `E:\LAP TRINH APP\AWord\devserver.py`. **Đây là chỗ dễ quên nhất** vì nằm ngoài dự án: mọi đường
+   dẫn TRONG dự án là tương đối nên dời cả cụm không gãy, riêng file ngoài buộc phải ghi địa chỉ
+   tuyệt đối. Đã thử: giữ địa chỉ cũ thì python báo `can't open file ... No such file or directory`.
+2. `APP_MASTER.md` (mục 4 — cây thư mục), `docs/07-ARCHITECTURE.md` (2 chỗ), mục "Cách chạy thử
+   trên máy" ở đầu file này.
+3. Trí nhớ của Claude: `aword-project.md` + `MEMORY.md`.
 
-**Kiểm chứng (chạy thật):** khởi động `devserver.py` ở vị trí mới qua cấu hình `aword` →
+**Kiểm chứng (chạy thật, làm ở chặng 1 — cấu trúc thư mục con không đổi ở chặng 2):**
 - Trang chủ `http://localhost:5510/` hiện đúng ("AWord in ANDREW CLASSES", nút Sign in with Google),
   **0 lỗi console**.
-- Trang test template `templates/anagram/test.html` → **20/20 tệp `core/*` và font tải 200 OK**,
-  **0 lỗi console** ⇒ mọi đường dẫn tương đối vẫn đúng sau khi dời.
-
-⚠️ **KHÔNG đẩy lên GitHub trong đợt này.** Kho vẫn đang giữ **5 commit chưa push** (v0.9.4 + v0.9.5);
-đẩy lên là bản LIVE `andrewclasses-01.github.io/AWord/` nhảy từ v0.9.3 lên v0.9.5 — việc đó phải do
-thầy quyết. Lần dời này chỉ commit tại chỗ.
+- Trang test `templates/anagram/test.html` → **20/20 tệp `core/*` và font tải 200 OK**, 0 lỗi console
+  ⇒ mọi đường dẫn tương đối vẫn đúng sau khi dời.
 
 ### v0.9.5 — 24/7/2026 — ASSIGNMENT CŨ TỰ DỌN VÀO "DONE" KHI SANG NGÀY MỚI
 ⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** (nối tiếp v0.9.4, lý do như cũ — xem mục 0b APP_MASTER.md).

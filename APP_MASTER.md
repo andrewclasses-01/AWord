@@ -299,7 +299,7 @@ Công thức dùng chung cho cả 4: `templates/CONG THUC MAU.md`.
 ## 4. Cấu trúc thư mục
 
 ```
-D:\APP AND DATA\AWord\
+E:\LAP TRINH APP\AWord\
 ├─ APP_MASTER.md              ← file này (đọc đầu tiên)
 ├─ GHI CHU DU AN.md           ← nhật ký version (mỗi đợt sửa PHẢI ghi + tăng version)
 ├─ devserver.py               ← server chạy thử (gửi Cache-Control:no-store — mục 9)
