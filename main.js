@@ -40,7 +40,8 @@ import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
   copyAssignmentLink, copyAssignmentQr
 } from "./core/assignment-ui.js";
-import "./templates/quiz/quiz.js";   // registers the quiz template (+ its editor)
+import "./templates/quiz/quiz.js";      // registers the quiz template (+ its editor)
+import "./templates/anagram/anagram.js"; // registers the anagram template (no editor yet)
 
 const app = document.getElementById("app");
 

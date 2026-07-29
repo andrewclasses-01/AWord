@@ -7,8 +7,8 @@
 export const TEMPLATES = [
   { type: "quiz",            label: "Quiz",            built: true,
     blurb: "Multiple-choice questions. Tap the correct answer." },
-  { type: "anagram",         label: "Anagram",         built: false,
-    blurb: "Drag the letters into the right order." },
+  { type: "anagram",         label: "Anagram",         built: true,
+    blurb: "Tap the letters into the right order." },
   { type: "find_the_match",  label: "Find the match",  built: false,
     blurb: "Tap matching pairs to make them disappear." },
   { type: "type_the_answer", label: "Type the answer", built: false,

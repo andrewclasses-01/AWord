@@ -47,6 +47,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { anagramSound } from "./anagram-sound.js";
 
 // Tile clone colors for the flying-letter animation — MUST stay in sync
 // with the --aw-ana-origin-bg / --aw-ana-result-bg / --aw-ana-wrong-bg
@@ -146,6 +147,17 @@ const anagramTemplate = {
   // nonsensical, so a mode change forces an immediate restart.
   optionsNeedRestart(before, after) {
     return (before.anagramMode || "bonus") !== (after.anagramMode || "bonus");
+  },
+
+  // Engine-level lifecycle sounds (Play pressed / Start again / 5s-left /
+  // Game complete) — OPTIONAL per-template override, see core/engine.js.
+  // Undefined for any other template = its default synthesized tone plays
+  // unchanged, so this touches Anagram only.
+  sounds: {
+    play: anagramSound.play,
+    restart: anagramSound.restart,
+    timeWarning: anagramSound.timeWarning,
+    complete: anagramSound.complete
   },
 
   mount(root, activity, ui) {
@@ -308,11 +320,11 @@ const anagramTemplate = {
       const picked = it.letters[tileId];
       if (picked.toLowerCase() !== expected.toLowerCase()) {
         st.hadMistake = true;
-        ui.sound.buzz();
+        anagramSound.wrongPick();
         showWrongPickBadge(tileEl);
         return;
       }
-      ui.sound.tick();
+      anagramSound.place();
       st.used[tileId] = true;
       busy = true;
       setOriginLocked(true);
@@ -344,7 +356,7 @@ const anagramTemplate = {
       // the flash bug). Only updateNav() is a real change at this instant.
       updateNav();
       flyScoreGain(perfect ? "perfect" : "check", earned, () => { st.points = earned; return scoreNow(); });
-      ui.sound.correct();
+      anagramSound.wordCompleteBonus();
       if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
     }
 
@@ -355,7 +367,7 @@ const anagramTemplate = {
       const slotIdx = st.placed.findIndex(p => p === null);
       if (slotIdx === -1) return;
       const it = items[index];
-      ui.sound.tick();   // same "ting" as bonus mode's correct pick — both modes tap the origin row alike
+      anagramSound.place();   // same "drop" as bonus mode's correct pick — both modes tap the origin row alike
       busy = true;
       setOriginLocked(true);
       const destEl = root.querySelector(`.aw-anagram-rtile[data-pos="${slotIdx}"]`);
@@ -381,7 +393,7 @@ const anagramTemplate = {
       const resultEl = root.querySelector(`.aw-anagram-rtile[data-pos="${pos}"]`);
       const originEl = root.querySelector(`.aw-anagram-otile[data-tile="${tileId}"]`);
       const shownChar = displayChar(it.letters[tileId], allCaps);
-      ui.sound.click();
+      anagramSound.pickup();
       st.placed[pos] = null;
       st.used[tileId] = false;
       updateSubmitButtonState();
@@ -411,7 +423,7 @@ const anagramTemplate = {
       const tmp = st.placed[posA];
       st.placed[posA] = st.placed[posB];
       st.placed[posB] = tmp;
-      ui.sound.click();
+      anagramSound.pickup();
       updateSubmitButtonState();
       if (!elA || !elB) { patchResultSlotDisplay(posA); patchResultSlotDisplay(posB); return; }
       const rectA = elA.getBoundingClientRect();
@@ -533,7 +545,7 @@ const anagramTemplate = {
           if (!slotEl) return;
           slotEl.classList.add(isRight ? "is-blue" : "is-wrongbg");
           slotEl.append(el("span", "aw-tile-badge", isRight ? SMALL_CHECK_GREEN : SMALL_CROSS_RED));
-          (isRight ? ui.sound.tick : ui.sound.buzz)();
+          (isRight ? anagramSound.submitTileCorrect : anagramSound.wrongPick)();
         }, pos * STAGGER_MS);
       }
 
@@ -549,7 +561,7 @@ const anagramTemplate = {
         if (revealSlotEl) revealSlotEl.textContent = allCorrect ? "" : (allCaps ? it.word.toUpperCase() : it.word);
         if (allCorrect) {
           flyScoreGain("check", 1, () => { st.points = 1; return scoreNow(); });
-          ui.sound.correct();
+          anagramSound.submitWordCorrect();
         } else {
           showBigMark(false);
           ui.sound.wrong();

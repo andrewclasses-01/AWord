@@ -186,7 +186,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
 
   bigPlay.onclick = () => {
     bigPlay.disabled = true;
-    sound.start();                              // startup chime
+    (tpl.sounds?.play || sound.start)();        // startup chime (template may override)
     playOverlay.style.pointerEvents = "none";   // never block the game, even if the fade stalls
     let removed = false;
     const removeOverlay = () => { if (removed) return; removed = true; playOverlay.remove(); };
@@ -200,12 +200,14 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   // Modes (set via the Options panel): "none" | "countUp" | "countDown".
   // Count down auto-submits the game when it reaches 0.
   let timerId = null, startedAt = 0, cleanup = () => {};
+  let timeWarned = false;   // fires the "5 seconds left" hook (below) once per play
   function timerMode() { return activity.options?.timer ?? "countUp"; }
   function timerTotal() { return activity.options?.timerTotalSeconds ?? 120; }
   timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
 
   function begin() {
     startedAt = performance.now();
+    timeWarned = false;
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (timerMode() !== "none") {
       // show the correct value immediately (don't wait for the first 500ms tick)
@@ -215,6 +217,9 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
         if (timerMode() === "countDown") {
           const remaining = Math.max(0, timerTotal() - elapsed);
           timerEl.textContent = formatTime(remaining);
+          // Optional per-template hook — no default sound, so templates that
+          // don't opt in (e.g. Quiz) behave exactly as before.
+          if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; tpl.sounds?.timeWarning?.(); }
           if (remaining <= 0) { stopTimer(); submitHandler?.(); }
         } else {
           timerEl.textContent = formatTime(elapsed);
@@ -282,6 +287,9 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     toolPanelEl = el("div", "aw-tool-panel");
     buildContent(toolPanelEl);
     belowCenter.append(toolPanelEl);
+    // Cap the panel's height to the stage's own height (never taller than
+    // the 16:9 frame it floats above) and let it scroll internally past that.
+    toolPanelEl.style.maxHeight = stage.getBoundingClientRect().height + "px";
     btn.classList.add("is-active");
     activeToolBtn = btn;
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
@@ -488,7 +496,11 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     return b;
   }
 
-  function restart() { cleanupAll(); startGame(root, activity, { onExit, session }); }
+  function restart() {
+    tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click
+    cleanupAll();
+    startGame(root, activity, { onExit, session });
+  }
   function cleanupAll() { stopTimer(); closeMenu(); closeToolPanel(false); cleanup(); }
 
   // ----- Small toast message -----
@@ -555,7 +567,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     cover.append(text);
     inner.append(cover);
     confettiBurst(cover);
-    sound.fanfare();
+    (tpl.sounds?.complete || sound.fanfare)();
     setTimeout(() => {
       text.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
       setTimeout(() => { cover.remove(); showSummary(result, entryId); }, 300);

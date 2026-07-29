@@ -13,12 +13,12 @@ export const FINISHED_TEMPLATES = [
     label: "Quiz",
     load: () => import("./templates/quiz/quiz.js"),
     sample: () => import("./templates/quiz/sample-quiz.js")
+  },
+  {
+    type: "anagram",
+    label: "Anagram",
+    load: () => import("./templates/anagram/anagram.js"),
+    sample: () => import("./templates/anagram/sample-anagram.js")
   }
-  // Add the next one here once it's approved, e.g.:
-  // {
-  //   type: "anagram",
-  //   label: "Anagram",
-  //   load: () => import("./templates/anagram/anagram.js"),
-  //   sample: () => import("./templates/anagram/sample-anagram.js")
-  // }
+  // Add the next one here once it's approved.
 ];

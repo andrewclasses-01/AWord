@@ -1,6 +1,9 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (25/7/2026 khuya — sửa 4 điểm góp ý vòng 4, xem nhật ký cuối file)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT — GẮN VÀO TRANG CHỦ (29/7/2026, thầy duyệt "tương đối rồi")
+
+`core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` + `main.js` (`import "./templates/anagram/anagram.js"`) + CSS trong `index.html`. Anagram giờ **chơi được** từ trang chủ thật (act có sẵn trong thư viện / bài giao).
+⚠️ **CHƯA có content editor riêng** (không có `tpl.edit`, khác Quiz) — bấm "+ New activity" → Anagram trong picker sẽ hiện toast "editor coming soon", CHƯA tạo được Anagram MỚI từ trang chủ. Việc tạo nội dung Anagram thật (soạn từ + clue) vẫn cần: sửa tay `content.items` qua console/JSON, hoặc chờ session sau xây editor riêng (roadmap "editor giáo viên" ở APP_MASTER.md mục 7 vẫn chưa làm cho Anagram).
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -246,3 +249,41 @@ finalize/tiếp tục), đã bấm Next thật để xác nhận qua được t�
    tỉ lệ đo được của dấu ✗ to (cũng 0.347).
 
 **Core**: KHÔNG đụng thêm gì ở đợt này (chỉ sửa trong `templates/anagram/*`).
+
+### 29/7/2026 — thay TOÀN BỘ âm thanh Anagram bằng file mp3 thật (Wordwall Classic theme), theo mô tả
+sự kiện chi tiết của thầy. Trước đó mọi âm là tổng hợp (Web Audio oscillator) từ `core/sound.js` dùng
+chung cho mọi template.
+
+1. **Nguồn file**: thầy tự chơi thử Anagram thật trên wordwall.net (Classic theme), Claude bắt 28 file
+   mp3 hiệu ứng của theme đó từ file JSON tài nguyên theme (`assets-38.json`), tải về
+   `D:\APP AND DATA\SOURCE\Sound effect\`. 17/28 file được dùng cho Anagram, copy vào
+   `templates/anagram/sounds/` (thư mục riêng của template, không đụng `core/assets/`).
+   ⚠️ Đây là file gốc của Wordwall (sản phẩm trả phí) — chỉ dùng tham khảo/tạm thời, về lâu dài nên thay
+   bằng âm tự làm hoặc nguồn CC0 nếu AWord phát hành chính thức, để tránh vướng bản quyền.
+2. **File mới**: `templates/anagram/anagram-sound.js` — module âm thanh RIÊNG của Anagram (không đụng
+   `core/sound.js`). Có `playFile()` (tôn trọng nút mute chung qua `core/sound.js`'s `isMuted()`) và
+   `makePool()` (chọn ngẫu nhiên 1/3 file, không lặp lại file vừa phát ngay trước đó — tránh nghe robotic
+   khi bấm nhanh liên tiếp).
+3. **Sơ đồ sự kiện → file** (đúng theo yêu cầu của thầy):
+   - Bấm chữ đúng (cả 2 chế độ, hàng gốc) → random `blocktiledrop1/2/3`
+   - Bấm chữ sai (bonus mode tap trực tiếp; submit mode soát từng ô sai) → random `blockchipfail1/2/3`
+   - Đổi vị trí chữ đã đặt (submit mode: bấm trả về / kéo đổi chỗ) → random `blocktilepickup1/2/3`
+   - Đúng hết 1 từ (bonus mode, dù PERFECT hay có lỗi) → `blockchipmajor`
+   - Submit: từng ô đúng lúc soát → `blockchipminorfast`; cả từ đúng → random `blockchipminor1/2/3`
+   - Bấm Play → `blockgamesuccessful`; Restart (Start again / đổi mode) → `blockgamerestart`; Game
+     complete → `blockgamesuccessful` (giống Play, đúng theo yêu cầu); còn 5 giây cuối (chế độ đếm
+     ngược) → `blockgametimeout`
+   - Submit sai cả từ: GIỮ NGUYÊN `ui.sound.wrong()` (âm "oh my god" cũ) — thầy không yêu cầu đổi.
+4. **Có đụng core** (`core/engine.js`) — thêm hook **tuỳ chọn** `tpl.sounds = {play, restart,
+   timeWarning, complete}` mà 1 template có thể tự khai báo, để override 4 thời điểm vòng đời do ENGINE
+   điều khiển (bấm Play, Restart, còn 5s, Game complete — Anagram cần các thời điểm này nhưng chúng nằm
+   trong `engine.js`, không phải trong `anagram.js`). Template KHÔNG khai báo `sounds` (vd Quiz) thì
+   hành vi giữ NGUYÊN 100% như cũ (`tpl.sounds?.xxx` là `undefined`, engine tự dùng âm mặc định) — Quiz
+   (đã ✅ CHỐT) không bị ảnh hưởng gì. Chi tiết 4 điểm sửa: `bigPlay.onclick`, `restart()`, vòng lặp
+   timer (`remaining<=5` mới), `celebrate()`.
+5. **Đã test qua trình duyệt thật** (không đọc code suông): chơi cả 2 chế độ, bắt đúng file mp3 phát ra
+   ở TỪNG sự kiện (network request cho lần đầu, sau đó hook `HTMLMediaElement.prototype.play` vì trình
+   duyệt không tải lại file đã cache) — khớp đúng bảng ở mục 3 cho 8/9 sự kiện chơi thật (Play/Restart/
+   đúng/sai/đúng-hết-từ-bonus/Submit-từng-ô/Submit-cả-từ/Game-complete). Riêng "còn 5 giây cuối" CHƯA
+   test trực tiếp bằng đồng hồ thật (tốn thời gian chờ) — chỉ soát lại code, cùng khuôn mẫu với hook
+   `play` đã test đạt, tự tin đúng nhưng thầy nên tự xác nhận khi chỉnh Timer = Count down và chơi thật.

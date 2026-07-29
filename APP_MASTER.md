@@ -3,11 +3,17 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/7/2026 khuya — Anagram đã qua 4 vòng sửa theo góp ý thầy (2 chế độ Letters
-> with bonus / On submit, xem mục 0b), ĐÃ COMMIT GIT (2 commit LOCAL, chưa push). Find the match/Type
-> the answer/Open the box vẫn ở bản v1 24/7 (chưa ai chỉnh thêm), cũng đã commit cùng đợt. Cả 4 game
-> đang 🟢 CHỜ THẦY DUYỆT, CHƯA gộp vào trang chủ (`core/catalog.js` vẫn `built:false`). App chính (trang
-> chủ/thư viện/assignment) vẫn đang ở v0.9.5. ⚠️ CHỐT Ở LOCAL, CHƯA PUSH GITHUB — xem mục 0b.**
+> Cập nhật lần cuối: **29/7/2026 — Anagram ✅ ĐÃ CHỐT, GẮN VÀO TRANG CHỦ** (thầy duyệt "tương đối rồi"
+> sau khi đổi TOÀN BỘ âm thanh sang file mp3 thật — Wordwall Classic theme, xem `templates/anagram/GHI
+> CHU ANAGRAM.md` mục 29/7). `core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` +
+> `main.js` (import tĩnh) + CSS trong `index.html` — Anagram giờ **chơi được thật từ trang chủ LOCAL**.
+> ⚠️ **CHƯA có content editor riêng** cho Anagram (không có `tpl.edit`) — "+ New activity → Anagram" mới
+> chỉ hiện toast "coming soon", CHƯA tạo được Anagram MỚI từ UI (xem chi tiết trong GHI CHU ANAGRAM.md).
+> Có đụng `core/engine.js` (hook tuỳ chọn `tpl.sounds`, KHÔNG ảnh hưởng Quiz — xem mục 5).
+> Find the match/Type the answer/Open the box vẫn ở bản v1 24/7, vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp vào
+> trang chủ (`built:false`). App chính (trang chủ/thư viện/assignment) vẫn đang ở v0.9.5.
+> ⚠️ Đợt này CHỈ COMMIT LOCAL (git), **CHƯA push GitHub** — web live vẫn y nguyên bản cũ cho tới khi
+> thầy yêu cầu đẩy lên. Repo đã lên GitHub từ đợt dời sang ổ E (29/7), Pages chỉ hiện bản đã push.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -264,14 +270,15 @@ Quiz hiện có (chi tiết từng bước: `GHI CHU DU AN.md`):
   - **Style**: đổi theme TRỰC TIẾP (không restart). **4 theme**: Classic (mặc định) · Basic (ô đáp án
     CÙNG màu navy, tối giản) · Classroom (kem/gỗ ấm) · Beach (cát/biển).
 
-### 4 game khác — 🟢 ĐÃ BUILD XONG (24/7/2026), CHỜ THẦY DUYỆT
+### 4 game khác — Anagram ✅ ĐÃ CHỐT (29/7/2026), 3 game còn lại 🟢 CHỜ THẦY DUYỆT
 Anagram / Find the match / Type the answer / Open the box — cả 4 đã có đủ 3 file
 (`<ten>.js`/`.css`/`sample-<ten>.js`), đăng ký đúng `type` khớp `core/catalog.js`, **đã test qua
 `test.html` bằng trình duyệt thật** (chơi hết 1 lượt, đúng/sai, Show answers, đổi theme, 0 lỗi console
 mỗi game). Trạng thái từng game + nhật ký chi tiết: `GHI CHU <TEN>.md` trong từng thư mục
-`templates/<ten>/`. **CHƯA thêm vào `core/catalog.js` (`built:true`) hay gộp vào trang chủ** — theo
-đúng quy trình, chỉ làm sau khi thầy xem chạy thật và duyệt từng game (xem `templates/HUONG DAN
-TEMPLATE.md` mục "Khi nào một template được gộp vào trang cuối").
+`templates/<ten>/`. **Anagram đã thêm vào `core/catalog.js` (`built:true`) + gộp vào trang chủ
+(29/7/2026)** — theo đúng quy trình (xem `templates/HUONG DAN TEMPLATE.md` mục "Khi nào một template
+được gộp vào trang cuối"), nhưng **chưa có content editor riêng** (xem GHI CHU ANAGRAM.md). 3 game còn
+lại vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chờ thầy xem & duyệt từng game.
 - **Anagram**: bấm/gõ chữ cái đặt vào ô trống (không kéo-thả thật — lựa chọn MVP chắc tay hơn trên cảm ứng).
 - **Find the match**: bàn cờ 1 prompt + lưới definition còn lại, chạm đúng thì ô biến mất.
 - **Type the answer**: gõ đáp án vào ô, chấm bỏ qua hoa/thường + dấu (bật được chấm chặt qua Options).
@@ -447,9 +454,10 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    ⚠️ Lúc đó nhớ chuyển **leaderboard + Settings** từ localStorage lên cloud (hiện vẫn lưu theo máy).
 6. ✅ **Chốt Quiz + viết "recipe/công thức mẫu"** (24/7/2026) → `templates/CONG THUC MAU.md`.
 7. ✅ **Build 4 template còn lại** (24/7/2026): Anagram, Find the match, Type the answer, Open the box —
-   cả 4 đã build + test qua `test.html`, đang **🟢 CHỜ THẦY DUYỆT** (xem mục 2). **➡️ VIỆC KẾ TIẾP**:
-   thầy xem từng game chạy thật rồi quyết định game nào đủ tốt để chuyển `built:true` trong
-   `core/catalog.js` và gộp vào trang chủ.
+   cả 4 đã build + test qua `test.html`. **Anagram ✅ ĐÃ CHỐT + gộp vào trang chủ (29/7/2026)**, 3 game
+   còn lại vẫn **🟢 CHỜ THẦY DUYỆT** (xem mục 2). **➡️ VIỆC KẾ TIẾP**: thầy xem từng game còn lại chạy
+   thật rồi quyết định game nào đủ tốt để chuyển `built:true` trong `core/catalog.js` và gộp vào trang
+   chủ; riêng Anagram còn thiếu content editor riêng để tạo bài MỚI từ UI trang chủ.
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
 9. ✅ **Đẩy GitHub + Pages (v0.7.2, 19/7)**: repo PUBLIC `andrewclasses-01/AWord`, Pages branch `main`
    thư mục gốc, live tại https://andrewclasses-01.github.io/AWord/ (đã test thật: chơi Quiz + popup
