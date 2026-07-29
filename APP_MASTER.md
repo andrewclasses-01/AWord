@@ -3,19 +3,16 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **29/7/2026 — Anagram ✅ ĐÃ CHỐT, GẮN VÀO TRANG CHỦ** (thầy duyệt "tương đối rồi"
-> sau khi đổi TOÀN BỘ âm thanh sang file mp3 thật — Wordwall Classic theme, xem `templates/anagram/GHI
-> CHU ANAGRAM.md` mục 29/7). `core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` +
-> `main.js` (import tĩnh) + CSS trong `index.html` — Anagram giờ **chơi được thật từ trang chủ LOCAL**.
-> ✅ **Content editor riêng cũng đã xong cùng đợt** — `templates/anagram/anagram-editor.js`
-> (`openAnagramEditor`, khuôn mẫu y hệt `quiz-editor.js`) → "+ New activity → Anagram" và "Edit content"
-> giờ dùng THẬT (title + danh sách word/clue, dán Excel, Duplicate/Remove) — xem chi tiết trong
-> `templates/anagram/GHI CHU ANAGRAM.md` mục 29/7 (tiếp).
-> Có đụng `core/engine.js` (hook tuỳ chọn `tpl.sounds`, KHÔNG ảnh hưởng Quiz — xem mục 5).
-> Find the match/Type the answer/Open the box vẫn ở bản v1 24/7, vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp vào
-> trang chủ (`built:false`). App chính (trang chủ/thư viện/assignment) vẫn đang ở v0.9.5.
-> ⚠️ Đợt này CHỈ COMMIT LOCAL (git), **CHƯA push GitHub** — web live vẫn y nguyên bản cũ cho tới khi
-> thầy yêu cầu đẩy lên. Repo đã lên GitHub từ đợt dời sang ổ E (29/7), Pages chỉ hiện bản đã push.**
+> Cập nhật lần cuối: **29/7/2026 — Anagram ✅ ĐÃ CHỐT ("tương đối rồi") + GẮN VÀO TRANG CHỦ, kèm content
+> editor riêng.** Đọc **mục 0b ngay dưới đây** để biết đầy đủ — đây chỉ là tóm tắt 1 dòng mỗi việc:
+> âm thanh đổi hết sang mp3 thật (Wordwall Classic theme) · `built:true` + gộp `manifest.js`/`main.js`/
+> `index.html` · editor riêng `anagram-editor.js` kiểu bảng Word/Clue giống Wordwall thật (kéo-thả đổi
+> vị trí, dán Excel, Swap Columns) · Options Apply giờ LUÔN restart · sửa dấu ✓ nhỏ đè chữ ở On Submit.
+> Có đụng `core/` (engine.js hook `tpl.sounds`/`tpl.sounds` restart-always, icons.js +5 icon, app.css
+> popup position) — **đều verify KHÔNG ảnh hưởng Quiz**. 2 commit LOCAL, **CHƯA push GitHub**.
+> Find the match/Type the answer/Open the box vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`)
+> — ⚠️ **open-the-box đang có việc DỞ DANG ở 1 session khác song song** (uncommitted khi phiên này kết
+> thúc) — xem cảnh báo trong mục 0b, ĐỪNG đụng/ghi đè. App chính vẫn ở v0.9.5.
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -93,41 +90,79 @@
      thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
      (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
-## 0b. ⭐ BÀN GIAO (chốt cuối phiên 25/7/2026 khuya — phiên mới đọc mục này rồi làm tiếp)
+## 0b. ⭐ BÀN GIAO (chốt cuối phiên 29/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**MỚI NHẤT (25/7/2026 khuya) — Anagram qua 4 vòng sửa theo góp ý thầy, ĐÃ COMMIT GIT:**
-- Thầy đã tự chơi bản Anagram v1 (từ 24/7) và góp ý CHI TIẾT qua 4 vòng liên tiếp trong CÙNG 1 phiên
-  (không phải phiên viết bản v1). Đã sửa xong cả 4 vòng, test kỹ qua trình duyệt thật (Playwright-style:
-  click thật, đo `getComputedStyle`, đo bằng `MutationObserver`) sau MỖI vòng — không chỉ đọc code.
-  **Đọc `templates/anagram/GHI CHU ANAGRAM.md` mục nhật ký (4 đợt ngày 25/7) để biết chi tiết từng sửa.**
-- **Tóm tắt Anagram hiện tại** (2 chế độ chọn ở Options → "Anagram mode", ĐỔI MODE = TỰ RESTART):
-  - **Letters with bonus**: bấm đúng thứ tự chữ cái → bay vào ô kết quả + xanh dương ngay; sai → dấu ✗
-    nhỏ ngay tại chỗ + buzz. Xong không sai lần nào → PERFECT bay vào điểm, điểm gấp đôi (Pulse Counter);
-    có sai → dấu ✓ (cùng cỡ dấu ✗ to) bay vào điểm, điểm thường.
-  - **On submit**: đặt chữ tự do (kéo đổi chỗ / bấm trả về đều bay mượt), Submit → soát từng ô lần lượt
-    (✓/✗ nhỏ xanh lá/đỏ + âm ting/buzz) → dấu to cả từ (đúng bay vào điểm giống bonus; sai hiện đáp án
-    đúng màu xanh lá, viết hoa theo option, KHÔNG có chữ "Correct:", vị trí nút Submit không bao giờ xê
-    dịch dù có hiện đáp án hay không).
-  - **KHÔNG còn nháy màn hình ở bất kỳ đâu** (đã đo `MutationObserver`: 0 lần vẽ lại thẻ suốt 1 từ, kể
-    cả lúc PERFECT/dấu to/bấm Submit) — mọi thao tác giữa chừng 1 từ chỉ vá đúng ô liên quan.
-  - Không còn bàn phím (chỉ chuột/chạm); cỡ chữ trong ô đã tăng gần tối đa; dấu ✓/✗ nhỏ đã hạ thấp.
-- **Có đụng core (đã báo thầy, ghi rõ lý do trong GHI CHU ANAGRAM.md + CONG THUC MAU.md mục 5)**:
-  `core/engine.js` (hook `buildExtraOptions`/`optionsNeedRestart` cho Options panel, KHÔNG đổi Quiz) +
-  `core/sound.js` (thêm `tick()`/`buzz()`, chỉnh `tick()` sáng hơn cho giống "ting").
-- **ĐÃ COMMIT (2 commit LOCAL, CHƯA push GitHub)**: 1 commit cho Anagram+core (`3e81202`), 1 commit
-  riêng cho bản v1 của Find the match/Type the answer/Open the box từ 24/7 (`b2e12b4`, KHÔNG ai đụng gì
-  thêm từ hôm đó — vẫn y nguyên trạng thái 🟢 CHỜ THẦY DUYỆT, CHƯA test thêm).
-- **CHƯA đụng `core/catalog.js`** (`built:false` cho cả 4 game) và **CHƯA gộp vào
-  `index.html`/`main.js`/`manifest.js`** — đúng quy trình, chờ thầy duyệt xong mới chuyển `built:true`.
-- **Việc kế tiếp**: thầy chơi tiếp Anagram (đã nói "tạm được rồi" cuối phiên 25/7 — CHƯA hẳn là
-  "chốt"/"ok", session mới nên hỏi thầy đã ok chưa hay còn muốn sửa gì) → nếu ok thì chuyển sang xem 3
-  game còn lại (Find the match/Type the answer/Open the box, thầy CHƯA xem/góp ý gì cho 3 game này) →
-  cuối cùng mới chuyển `built:true` + gộp vào trang chủ.
-- Session mới khi nhận việc: **hỏi thầy đã test tới đâu / muốn sửa gì trước** (đừng tự đoán rồi sửa
-  tràn lan). Nếu sửa Anagram thêm → sửa trong `templates/anagram/`, test lại qua `test.html`
-  (`http://localhost:5510/templates/anagram/test.html`), cập nhật nhật ký + trạng thái trong
-  `GHI CHU ANAGRAM.md`, rồi **hỏi thầy có muốn commit đợt sửa mới không** (đừng tự ý commit nếu thầy
-  không nói, nhưng NẾU thầy nói "lưu lại"/"save" như cuối phiên 25/7 thì commit ngay, không cần hỏi lại).
+**Anagram giờ ✅ ĐÃ CHỐT VÀ SỐNG Ở TRANG CHỦ THẬT** (thầy duyệt "tương đối rồi" — không phải lời khen
+tuyệt đối, thầy vẫn có thể muốn chỉnh thêm, đừng coi là "xong hẳn không đụng nữa"). Tóm tắt việc đã làm
+trong phiên 29/7 (theo đúng thứ tự thầy yêu cầu — đọc `templates/anagram/GHI CHU ANAGRAM.md` để biết
+chi tiết/lý do từng sửa, phần dưới đây chỉ tóm ý):
+
+1. **Popup Options/Template/Style đổi lên TRÊN cụm nút** (trước ở dưới) + không cao quá khung game +
+   sửa nút Apply bị to bất thường (đụng `core/app.css`+`core/engine.js`, ẢNH HƯỞNG MỌI TEMPLATE — đây
+   là sửa lỗi UI chung, không phải tính năng riêng Anagram).
+2. **Âm thanh Anagram đổi TOÀN BỘ sang file mp3 thật** (bộ Wordwall Classic theme, thầy tự chơi thử
+   wordwall.net rồi Claude bắt file về `templates/anagram/sounds/`) — module riêng
+   `templates/anagram/anagram-sound.js`, ánh xạ đúng theo bảng sự kiện thầy mô tả (đặt/sai chữ, đúng
+   hết từ, Submit từng ô/cả từ, Play/Restart/Game complete/còn 5s). Core có thêm hook TUỲ CHỌN
+   `tpl.sounds = {play,restart,timeWarning,complete}` trong `engine.js` — template không khai báo (vd
+   Quiz) thì hành vi giữ NGUYÊN 100%.
+3. **Gắn vào trang chủ**: `core/catalog.js` → `built:true`, đăng ký `manifest.js` + `main.js` (import
+   tĩnh `"./templates/anagram/anagram.js"`) + CSS trong `index.html`. Anagram giờ chơi được thật từ
+   trang chủ LOCAL (`http://localhost:5510/`, cần đăng nhập Google).
+4. **Content editor riêng** — `templates/anagram/anagram-editor.js` (`openAnagramEditor`, đăng ký
+   `edit:` trong `anagram.js`), theo khuôn `quiz-editor.js`. Sau đó thầy gửi ảnh chụp màn Edit Content
+   THẬT của Wordwall, yêu cầu đổi bố cục giống — đã làm lại thành **bảng Word | Clue** (nút Swap
+   Columns, mỗi hàng: số thứ tự + 1 khung Word/Clue liền + icon 🎤 voice/🖼️ ảnh [CHƯA làm, chỉ hiện
+   "coming soon", thầy nói để bàn sau]/⇕ kéo-thả đổi vị trí/⧉ nhân bản/🗑️ xoá). Kéo-thả dùng ĐÚNG kiểu
+   HTML5 Drag&Drop mà `main.js` đã dùng cho kéo act/folder — không bịa cơ chế mới. Core có thêm 5 icon
+   MỚI trong `core/icons.js` (`mic`,`image`,`dragHandle`,`duplicate`,`trash` — chỉ thêm, không sửa gì).
+5. **2 điều chỉnh nhỏ cuối phiên**: Options Apply giờ **LUÔN restart act** (trước chỉ restart khi đổi
+   mode bonus/submit — `optionsNeedRestart()` trong `anagram.js` giờ trả `true` không điều kiện); sửa
+   dấu ✓/✗ nhỏ ở chế độ On Submit **đè lên chữ** (bug CSS thật: `height` bị giãn ~bằng cả ô do phụ thuộc
+   `aspect-ratio` mập mờ khi chỉ ràng buộc `bottom` — đã set `height` tường minh + hạ `bottom` thêm).
+
+**Có đụng `core/`** (mọi lần đều verify Quiz KHÔNG bị ảnh hưởng — mở lại `templates/quiz/test.html`
+kiểm tra 0 lỗi console sau mỗi lần sửa core):
+- `core/app.css` — vị trí popup Options/Template/Style + nút Apply (mục 1).
+- `core/engine.js` — hook `tpl.sounds` (play/restart/timeWarning/complete), panel-height cap (mục 1+2).
+- `core/icons.js` — thêm 5 icon (mục 4), CHỈ THÊM không sửa/xoá icon cũ.
+
+**Git**: 2 commit LOCAL trong phiên này (`6b57fad` âm thanh+popup+gộp trang chủ, `0f3c9e9` editor+2
+điều chỉnh nhỏ) — **CHƯA push GitHub**, đừng tự ý push khi chưa được thầy yêu cầu rõ.
+
+**⚠️ CẢNH BÁO — session khác đang làm open-the-box song song**: lúc phiên này kết thúc,
+`templates/open-the-box/` có sửa đổi CHƯA COMMIT (`open-the-box.js/.css`, `sample-open-the-box.js`,
+`GHI CHU OPEN-THE-BOX.md`) + file mới `otb-sound.js` + thư mục `sounds/` — đây là việc của MỘT SESSION
+KHÁC đang chạy song song (thầy có nói sẽ mở song song ở đầu các phiên Anagram). ĐỪNG động vào, đừng
+`git add`/`git stash`/`git checkout` các file đó, đừng tưởng là rác của phiên này. Nếu phiên mới cần
+`git status` sạch mà thấy các file này vẫn còn — nghĩa là session kia CHƯA XONG hoặc CHƯA lưu, không
+phải lỗi của phiên bạn.
+⚠️ **Session đó CŨNG đang sửa dở `core/engine.js`** (thêm tham số tuỳ chọn `raw.title` cho `ui.finish()`
+→ đổi chữ "Game complete"/panel head theo `endTitle`, mặc định vẫn "Game complete" nên KHÔNG ảnh hưởng
+template nào chưa truyền `title` — Open the box chắc dùng cho trạng thái "Game over" khi hết giờ, game
+không điểm/leaderboard). Đây LÀ core, hai session cùng ngày cùng đụng `core/engine.js` — không đè lên
+nhau (khác vùng code) nhưng nếu bạn cũng cần sửa `engine.js`, đọc kỹ diff hiện tại trước
+(`git diff core/engine.js`) để không mất việc của session kia, và đừng commit thay họ.
+
+**Việc còn thiếu của Anagram** (thầy chưa yêu cầu, chỉ ghi lại để nhớ):
+- 🎤/🖼️ voice + image trong editor — thầy nói "để bàn sau", CHƯA làm gì cả (chỉ có nút placeholder).
+- "Còn 5 giây cuối" (`blockgametimeout.mp3`) — mới soát code + suy luận từ hook `play` đã test đạt,
+  **CHƯA tự tay bấm đồng hồ đếm ngược thật để nghe** (tốn thời gian chờ lúc build) — nên tự test khi
+  rảnh: Options → Timer → Count down → thời gian ngắn → chơi tới lúc còn 5s.
+- Settings mặc định của Anagram (Timer/mode/allCaps...) — trang Settings ở trang chủ ĐÃ tự hoạt động
+  cho Anagram nhờ kiến trúc dùng chung (không cần sửa gì thêm), nhưng CHƯA có ai tự tay xác nhận qua UI
+  thật (cần đăng nhập).
+
+**Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
+(a) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
+(b) Xem xét 3 game còn lại (Find the match/Type the answer/Open the box — Open the box đang có người
+    làm ở session khác, xem cảnh báo ở trên) rồi build content editor riêng cho từng game khi được duyệt
+    (theo khuôn `anagram-editor.js`/`quiz-editor.js`).
+(c) Có muốn đẩy code lên GitHub (push) đợt này chưa, hay vẫn giữ local để sửa tiếp?
+(d) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
+
+**Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
+không nói (nhưng nói "lưu lại"/"save" thì commit ngay không cần hỏi lại), KHÔNG tự `git push`.
 
 **Việc CŨ (assignment/print), vẫn còn dở, kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
 sửa tiếp nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu).
