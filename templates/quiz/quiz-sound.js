@@ -1,8 +1,9 @@
 // =============================================================
-// ANAGRAM SOUNDS — real mp3 sound effects for this template only (not
+// QUIZ SOUNDS — real mp3 sound effects for this template only (not
 // core/sound.js's synthesized tones). Files live in ./sounds/, resolved
 // relative to THIS file (import.meta.url) so they work from any page depth
-// or host subpath — same pattern as core/sound.js's wrong() file.
+// or host subpath — same pattern as core/sound.js's wrong() file and
+// templates/anagram/anagram-sound.js.
 // Respects the shared mute toggle via core/sound.js's isMuted().
 // =============================================================
 
@@ -27,8 +28,7 @@ function playFile(name) {
 }
 
 // One random file from a same-purpose pool of 3 — never the same one twice
-// in a row, so rapid repeats (e.g. tapping several correct letters fast)
-// don't sound identical/robotic.
+// in a row, so answering several questions in a row doesn't sound robotic.
 function makePool(names) {
   let last = -1;
   return function play() {
@@ -39,13 +39,9 @@ function makePool(names) {
   };
 }
 
-export const anagramSound = {
-  place: makePool(["blocktiledrop1", "blocktiledrop2", "blocktiledrop3"]),
-  wrongPick: makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"]),
-  pickup: makePool(["blocktilepickup1", "blocktilepickup2", "blocktilepickup3"]),
-  submitWordCorrect: makePool(["blockchipminor1", "blockchipminor2", "blockchipminor3"]),
-  wordCompleteBonus: () => playFile("blockchipmajor"),
-  submitTileCorrect: () => playFile("blockchipminorfast"),
+export const quizSound = {
+  correct: makePool(["blockchipminor1", "blockchipminor2", "blockchipminor3"]),
+  wrong: makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"]),
   play: () => playFile("blockgameintro1"),
   restart: () => playFile("blockgamerestart"),
   timeWarning: () => playFile("blockgametimeout"),

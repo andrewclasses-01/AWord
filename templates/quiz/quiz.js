@@ -19,6 +19,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { openQuizEditor } from "./quiz-editor.js";
+import { quizSound } from "./quiz-sound.js";
 
 // Modern answer-tile palette (8 well-separated colors), each with a darker
 // shade for the 3D shadow lip. Per GAME START we shuffle this and assign a
@@ -55,6 +56,17 @@ const quizTemplate = {
         answer: (q.answers.find(a => a.correct) || q.answers[0] || {}).text || "",
         options: q.answers.filter(a => a && a.text != null).map(a => ({ text: a.text, correct: !!a.correct }))
       }));
+  },
+
+  // Engine-level lifecycle sounds (Play pressed / Start again / 5s-left /
+  // Game complete) — OPTIONAL per-template override, see core/engine.js.
+  // Undefined for any other template = its default synthesized tone plays
+  // unchanged, so this touches Quiz only.
+  sounds: {
+    play: quizSound.play,
+    restart: quizSound.restart,
+    timeWarning: quizSound.timeWarning,
+    complete: quizSound.complete
   },
 
   mount(root, activity, ui) {
@@ -179,7 +191,7 @@ const quizTemplate = {
 
       [...row.children].forEach((t, k) => addBadges(t, q.answers[k], k, st));
 
-      if (st.correct) ui.sound.correct(); else ui.sound.wrong();
+      if (st.correct) quizSound.correct(); else quizSound.wrong();
       ui.setScore(scoreNow());
       updateNav();
 
