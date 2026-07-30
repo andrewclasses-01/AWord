@@ -72,7 +72,8 @@ padding-right), `open-the-box.js` (`layoutGrid` bỏ hẳn tính `grid-row/colum
 `zoomCardFrom/To`→`zoomElFrom/To` tổng quát; `renderQuestion`/`closeCardThen` chỉ nhắm zoom vào ô câu
 hỏi).
 
-**CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+**ĐÃ COMMIT + PUSH GITHUB** (commit `a2db784`, 30/7/2026, gộp chung đợt 8+9+10 — thầy nói "lưu, commit
++ git push").
 
 ### 30/7/2026 (đợt 9) — thanh giờ full-width, đồng hồ chạy LIÊN TỤC (kể cả ở màn lưới), zoom chậm gấp đôi, đáp án trượt phải
 Thầy tự chơi đợt 8 xong, gửi 9 điều chỉnh liền — không có điểm nào chưa rõ (mô tả chi tiết đủ để code
@@ -142,7 +143,7 @@ className thuần `aw-topbar`, không dính gì thay đổi ở Open the box. 0 
 `layoutGrid` thêm căn giữa hàng cuối, hằng số zoom/entrance mới), `open-the-box.css` (keyframe đáp án
 đổi hướng, thêm `.is-closing`/`.is-warning`, `.aw-otb-q-topbar` rộng 100%).
 
-**CHƯA COMMIT** — vẫn đang tiếp tục hoàn thiện trên local theo đúng dặn dò của thầy.
+**ĐÃ COMMIT + PUSH GITHUB** — xem đợt 10 phía trên, cả 3 đợt (8+9+10) đi chung 1 commit `a2db784`.
 
 **CHỜ TEST TOMKO**: (a) cảm giác zoom + trượt đáp án trên màn lớn có mượt như mong đợi; (b) nghe tiếng
 tích gấp đôi 5 giây cuối có rõ ràng không quá dồn dập; (c) đồng hồ chạy xuyên suốt lúc đang ở màn lưới
@@ -188,7 +189,7 @@ box lẫn hồi quy Quiz/Anagram).
 (viết lại), `open-the-box.css`, `otb-sound.js` (viết lại), `sounds/*.mp3` (thay hết 16 file),
 `open-the-box-editor.js` (mới), `sample-open-the-box.js` (đổi hẳn sang 9 câu Questions mode).
 
-**CHƯA COMMIT** — thầy dặn hoàn thiện xong trên local rồi mới đẩy GitHub sau.
+**ĐÃ COMMIT + PUSH GITHUB** — xem đợt 10 phía trên, cả 3 đợt (8+9+10) đi chung 1 commit `a2db784`.
 
 **CHỜ TEST TOMKO**: (a) cảm giác zoom lúc START trên màn lớn; (b) nghe đủ 16 âm thanh đúng lúc, đặc
 biệt cặp GameOver/TimesUp theo đúng nghĩa thầy chốt (ngược tên file gốc); (c) thanh giờ+điểm có thật

@@ -36,7 +36,7 @@ bẫy khi đổi: cỡ ô đôi khi bị giới hạn bởi chiều cao chứ kh
 nhét THÊM ô vào 1 hàng (ép test `cols=4` với 9 ô ra thật 6+3 thay vì 4+4+1!) — sửa bằng cách CHỐT đúng
 bề rộng khung theo `cols*cell+gaps` thay vì để nó giãn hết cỡ. Test lại đủ: đo pixel xác nhận căn giữa
 chính xác (lệch 0.5px, sai số làm tròn), chạy hết ván 9/9 tự động ra đúng "GAME COMPLETE", hồi quy
-Quiz/Anagram không đổi gì, 0 lỗi console. **CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+Quiz/Anagram không đổi gì, 0 lỗi console. **ĐÃ COMMIT + PUSH GITHUB** cùng đợt 8+9 — xem mục đầu file.
 
 ### 30/7/2026 — Open the box: thanh giờ full-width + đồng hồ chạy LIÊN TỤC, zoom chậm gấp đôi, đáp án trượt phải
 
@@ -55,7 +55,7 @@ trúc lại hẳn đồng hồ**: từ "mỗi câu 1 bộ đếm riêng, dừng 
 liên tục từ ô đầu tiên cho tới hết ván** — đúng thì thanh giờ "đầy ngược trở lại" rồi chạy tiếp; sai thì
 cứ chạy tiếp KỂ CẢ khi đang đứng ở màn lưới chọn ô kế — hết giờ ngay tại đó thì thua luôn, không cần mở
 thêm ô nào. Test bằng `javascript_tool` xác nhận đúng cả 9 mục + hồi quy Quiz/Anagram không đổi gì, 0
-lỗi console. **CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+lỗi console. **ĐÃ COMMIT + PUSH GITHUB** cùng đợt 10 — xem mục đầu file.
 
 ### 30/7/2026 — Open the box: bỏ chế độ Simple, xây content editor, đổi bộ âm thanh, hiệu ứng zoom + gộp thanh giờ/điểm
 
@@ -112,8 +112,9 @@ diff kỹ — 2 chỗ mỗi file), `templates/open-the-box/open-the-box.js` (vi�
 open-the-box-editor.js` (mới), `templates/open-the-box/sample-open-the-box.js` (đổi hẳn sang dữ liệu
 Questions mode — 9 câu từ vựng/ngữ pháp thay cho 9 câu speaking prompts cũ, vì Simple mode không còn).
 
-**CHƯA COMMIT** — thầy dặn build xong hoàn thiện trên local rồi mới đẩy lên trang live sau (đúng quy
-tắc "không tự commit nếu thầy không nói 'lưu lại'/'save'"). Vẫn `built:false`, chưa gộp trang chủ.
+**ĐÃ COMMIT + PUSH GITHUB** (commit `a2db784`, gộp chung với đợt 9+10 — thầy nói "lưu, commit + git
+push" sau khi test xong cả 3 đợt). Vẫn `built:false`, chưa gộp trang chủ (đúng quy trình, chờ thầy
+duyệt xong).
 
 **CHỜ TEST TOMKO** (màn cảm ứng thật): (a) cảm giác zoom lúc bấm START có đủ mượt/rõ trên màn lớn
 không; (b) nghe đủ 16 âm thanh đúng lúc, đặc biệt cặp GameOver/TimesUp theo đúng nghĩa thầy chốt

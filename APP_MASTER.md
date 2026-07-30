@@ -11,8 +11,8 @@
 > sang độ rộng CỐ ĐỊNH `1.6cqw` thay vì `auto`), và **tách hẳn 2 hiệu ứng zoom** — chỉ ô câu hỏi zoom
 > từ vị trí Ô SỐ, các ô đáp án KHÔNG zoom mà chỉ trượt ngang từ mép phải MÀN HÌNH (85cqw). Đợt 8-9 (bỏ
 > Simple mode, editor, đổi âm thanh, đồng hồ chạy liên tục...) vẫn giữ nguyên, xem
-> `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 8-10 cho chi tiết đầy đủ. **CHƯA COMMIT** (thầy
-> dặn hoàn thiện xong trên local rồi mới đẩy GitHub sau).
+> `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 8-10 cho chi tiết đầy đủ. **ĐÃ COMMIT + PUSH
+> GITHUB** (commit `a2db784`, 30/7/2026 — thầy nói "lưu, commit + git push").
 > Find the match/Type the answer vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`). Open the
 > box cũng vậy — vẫn `built:false`, chưa gộp trang chủ, chờ thầy duyệt như 2 game kia.
 >
@@ -131,9 +131,16 @@ gốc của chính bộ âm thanh, thầy chốt vậy có chủ đích. Đợt 
   lưới lúc bấm START kéo dài đúng 2.46s khớp `intro.mp3` thật (đo bằng ffmpeg); hàng cuối thiếu ô tự
   căn giữa; bộ âm thanh 16 file gốc Wordwall thầy tải riêng (đợt 8, KHÔNG còn mượn Anagram như trước —
   `otb-sound.js` + `sounds/`, bản riêng không cross-import).
-- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-9 (30/7/2026, việc trong mục này)
-  CHƯA COMMIT** — thầy dặn hoàn thiện xong hết trên local rồi mới đẩy GitHub đợt sau, đúng quy tắc
-  "không tự commit nếu thầy không nói 'lưu lại'/'save'". `built:false` nên chưa ai thấy trên trang chủ.
+- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-10 (30/7/2026, việc trong mục này)
+  ĐÃ COMMIT + PUSH GITHUB** (commit `a2db784` — thầy nói "lưu, commit + git push", đã kiểm bằng `curl`
+  file mới `open-the-box-editor.js` live thật). `built:false` nên chưa ai thấy trên trang chủ dù đã lên
+  mạng — chỉ khi thầy duyệt xong mới gộp `built:true`.
+  - **Lưu ý khi commit đợt này**: cùng lúc có 1 phiên khác đang làm dở Type the answer, đụng chung
+    `core/engine.js`/`core/icons.js` (thêm `hasKeyboardToggle`/`hideLettersOption`/icon bàn phím). Đã
+    tách cẩn thận — TẠM sửa `core/engine.js` bỏ đúng 3 đoạn của phiên kia, commit sạch phần Open the
+    box, rồi ghép lại y nguyên phần của phiên kia (không commit, không đụng `core/icons.js` +
+    `templates/type-the-answer/*` của họ). Bài học cho lần sau: nếu 2 phiên cùng sửa 1 file `core/`,
+    PHẢI đối chiếu `git diff` theo từng đoạn trước khi `git add`, không add cả file.
 - **CHƯA làm / có thể hỏi thêm nếu thầy cần**: màn Show answers không phản ánh được lịch sử NẾU 1 Ô SỐ
   bị sai nhiều lần trước khi cuối cùng đúng (chỉ nhớ lần sai gần nhất) — chấp nhận được, đã ghi rõ lý do
   trong code; **CHƯA gộp `built:true` vào trang chủ** (đúng quy trình, chờ thầy duyệt xong).
