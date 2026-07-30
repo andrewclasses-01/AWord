@@ -44,6 +44,7 @@ import "./templates/quiz/quiz.js";               // registers the quiz template 
 import "./templates/anagram/anagram.js";         // registers the anagram template (+ its editor)
 import "./templates/open-the-box/open-the-box.js";           // registers open the box (+ its editor)
 import "./templates/type-the-answer/type-the-answer.js";     // registers type the answer (+ its editor)
+import "./templates/find-the-match/find-the-match.js";       // registers find the match (+ its editor)
 
 const app = document.getElementById("app");
 

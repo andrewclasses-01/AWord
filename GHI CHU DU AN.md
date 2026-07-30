@@ -21,6 +21,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 16: Find the match GỘP TRANG CHỦ — `built:true` + import vào `main.js`. Không còn "coming soon".
+
+Thầy nói "gộp lên trang chủ và kết thúc session này". `core/catalog.js` đổi `built:false→true` + sửa
+blurb khớp cơ chế mới; `main.js` thêm 1 dòng import (đúng khuôn Quiz/Anagram/Open the box/Type the
+answer). Đã kiểm: panel Template trong game hiện Find the match ngang 4 game kia; main.js load không
+lỗi console; mọi asset (.js/.mp3) của Find the match tải 200 OK. **CHƯA tự đăng nhập Google thử "+New
+activity" trên trang chủ thật** (máy build không tự động hoá đăng nhập được, giống các đợt merge Open
+the box/Type the answer trước) — thầy tự thử tạo 1 act thật khi rảnh. Đã commit + push GitHub.
+
+Tất cả 5 template chính (Quiz/Anagram/Find the match/Type the answer/Open the box) giờ ĐỀU
+`built:true`, sống trên trang chủ. Việc kế tiếp: theo `APP_MASTER.md` mục 7 (chưa đọc lại trong phiên
+này vì file đó đang có 1 phiên khác chỉnh sửa song song, xem ghi chú ở đợt 15/16 phía dưới) — 1 phiên
+mới nên đọc lại `APP_MASTER.md` mới nhất trước khi nhận việc tiếp theo.
+
 ### 31/7/2026 — Đợt 15: Find the match — bấm sai cũng trượt câu (sửa lại giả định sai đợt 14) + đếm ngược 3-2-1 (Count up) + ting đếm giờ (Count down). CHƯA gộp trang chủ.
 
 Thầy sửa lại 1 giả định của đợt 14 + thêm 2 yêu cầu về đồng hồ. Chi tiết đầy đủ (kèm 1 giới hạn kỹ

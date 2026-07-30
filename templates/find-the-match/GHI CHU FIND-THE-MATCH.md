@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (31/7/2026, đợt 2 — bấm sai cũng trượt câu + đếm ngược 3-2-1 + ting đếm giờ, xem nhật ký dưới)
+## TRẠNG THÁI: ✅ ĐÃ GỘP TRANG CHỦ (31/7/2026 — `built:true` + `main.js` import, thầy nói "gộp lên trang chủ")
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -16,6 +16,19 @@
 Dữ liệu là các cặp {keyword ↔ definition}. Màn hình hiện 1 prompt + nhiều lựa chọn; chạm lựa chọn khớp thì cặp đó bị loại; lặp đến hết. Có lives + speed (đáp án trôi). Tham khảo Quiz (`../quiz/quiz.js`) làm mẫu chuẩn.
 
 ## Nhật ký
+
+### 31/7/2026, đợt 3 — GỘP TRANG CHỦ (thầy nói "gộp lên trang chủ và kết thúc session")
+`core/catalog.js`: `find_the_match` đổi `built:false` → `true` + sửa lại blurb cho khớp cơ chế mới
+("Read the definition, tap the matching word"). `main.js`: thêm dòng
+`import "./templates/find-the-match/find-the-match.js";` (đúng vị trí/định dạng như Quiz/Anagram/Open
+the box/Type the answer). Đã kiểm: panel "Template" trong game giờ hiện Find the match ngang hàng 4
+game kia (không còn "coming soon"); `main.js` load không lỗi console, mọi file `.js`/`.mp3` của Find the
+match tải 200 OK khi `main.js` chạy. **CHƯA tự đăng nhập Google để thử "+New activity"/"Edit content"
+trên trang chủ thật** — trang chủ yêu cầu tài khoản Google (`ninhxuanpham1994@gmail.com`), máy build
+không tự động hoá bước đăng nhập được (giống các đợt merge trước của Open the box/Type the answer) —
+thầy tự đăng nhập thử tạo 1 act Find the match thật trên trang chủ khi rảnh. Mọi ghi chú "CHƯA import/
+CHƯA đổi built:true" ở các mục nhật ký bên dưới nay đã LỖI THỜI — coi trạng thái ở đầu file này là mới
+nhất. Đã commit + push GitHub cùng đợt.
 
 ### 24/7/2026 — build xong theo `../CONG THUC MAU.md`
 - `find-the-match.js`/`.css`/`sample-find-the-match.js` tạo mới, `type: "find_the_match"` (khớp
