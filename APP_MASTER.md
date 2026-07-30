@@ -3,16 +3,13 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **29/7/2026 — Anagram ✅ ĐÃ CHỐT ("tương đối rồi") + GẮN VÀO TRANG CHỦ, kèm content
-> editor riêng.** Đọc **mục 0b ngay dưới đây** để biết đầy đủ — đây chỉ là tóm tắt 1 dòng mỗi việc:
-> âm thanh đổi hết sang mp3 thật (Wordwall Classic theme) · `built:true` + gộp `manifest.js`/`main.js`/
-> `index.html` · editor riêng `anagram-editor.js` kiểu bảng Word/Clue giống Wordwall thật (kéo-thả đổi
-> vị trí, dán Excel, Swap Columns) · Options Apply giờ LUÔN restart · sửa dấu ✓ nhỏ đè chữ ở On Submit.
-> Có đụng `core/` (engine.js hook `tpl.sounds`/`tpl.sounds` restart-always, icons.js +5 icon, app.css
-> popup position) — **đều verify KHÔNG ảnh hưởng Quiz**. 2 commit LOCAL, **CHƯA push GitHub**.
-> Find the match/Type the answer/Open the box vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`)
-> — ⚠️ **open-the-box đang có việc DỞ DANG ở 1 session khác song song** (uncommitted khi phiên này kết
-> thúc) — xem cảnh báo trong mục 0b, ĐỪNG đụng/ghi đè. App chính vẫn ở v0.9.5.
+> Cập nhật lần cuối: **29/7/2026 tối — Open the box's Questions mode (quiz-in-a-box + đồng hồ sống còn)
+> xây xong TOÀN BỘ qua 7 đợt sửa liên tiếp trong CÙNG 1 phiên với thầy, giờ dùng CHUNG hệ thống kết thúc
+> ván với Quiz/Anagram** (Leaderboard/Show answers/Start again/Play a different template — xem mục 0b).
+> Đây là phiên CHẠY SONG SONG với phiên Anagram (đã chốt + push xong, xem lịch sử git) — không đụng
+> nhau (khác vùng code), cả 2 đều có sửa `core/engine.js` nhưng KHÔNG xung đột.
+> Find the match/Type the answer vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`). App chính
+> (trang chủ/thư viện/assignment) vẫn ở v0.9.5. ⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — xem mục 0b.
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -92,74 +89,49 @@
 
 ## 0b. ⭐ BÀN GIAO (chốt cuối phiên 29/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**Anagram giờ ✅ ĐÃ CHỐT VÀ SỐNG Ở TRANG CHỦ THẬT** (thầy duyệt "tương đối rồi" — không phải lời khen
-tuyệt đối, thầy vẫn có thể muốn chỉnh thêm, đừng coi là "xong hẳn không đụng nữa"). Tóm tắt việc đã làm
-trong phiên 29/7 (theo đúng thứ tự thầy yêu cầu — đọc `templates/anagram/GHI CHU ANAGRAM.md` để biết
-chi tiết/lý do từng sửa, phần dưới đây chỉ tóm ý):
+**Anagram ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ, ĐÃ COMMIT** (3 commit: `6b57fad`/`0f3c9e9`/`ac2b731`, xong từ
+sớm hơn trong ngày — chi tiết: `templates/anagram/GHI CHU ANAGRAM.md`). Tóm tắt: âm thanh mp3 thật,
+`built:true` + gộp trang chủ, content editor bảng Word|Clue kéo-thả, Options Apply luôn restart. Core
+đụng: `app.css` (vị trí popup) + `engine.js` (hook `tpl.sounds`) + `icons.js` (+5 icon) — đều chỉ THÊM,
+không phá gì cũ. Việc còn thiếu (thầy chưa yêu cầu): 🎤/🖼️ voice+image trong editor ("để bàn sau"),
+chưa tự tay nghe thật âm thanh "còn 5 giây cuối".
 
-1. **Popup Options/Template/Style đổi lên TRÊN cụm nút** (trước ở dưới) + không cao quá khung game +
-   sửa nút Apply bị to bất thường (đụng `core/app.css`+`core/engine.js`, ẢNH HƯỞNG MỌI TEMPLATE — đây
-   là sửa lỗi UI chung, không phải tính năng riêng Anagram).
-2. **Âm thanh Anagram đổi TOÀN BỘ sang file mp3 thật** (bộ Wordwall Classic theme, thầy tự chơi thử
-   wordwall.net rồi Claude bắt file về `templates/anagram/sounds/`) — module riêng
-   `templates/anagram/anagram-sound.js`, ánh xạ đúng theo bảng sự kiện thầy mô tả (đặt/sai chữ, đúng
-   hết từ, Submit từng ô/cả từ, Play/Restart/Game complete/còn 5s). Core có thêm hook TUỲ CHỌN
-   `tpl.sounds = {play,restart,timeWarning,complete}` trong `engine.js` — template không khai báo (vd
-   Quiz) thì hành vi giữ NGUYÊN 100%.
-3. **Gắn vào trang chủ**: `core/catalog.js` → `built:true`, đăng ký `manifest.js` + `main.js` (import
-   tĩnh `"./templates/anagram/anagram.js"`) + CSS trong `index.html`. Anagram giờ chơi được thật từ
-   trang chủ LOCAL (`http://localhost:5510/`, cần đăng nhập Google).
-4. **Content editor riêng** — `templates/anagram/anagram-editor.js` (`openAnagramEditor`, đăng ký
-   `edit:` trong `anagram.js`), theo khuôn `quiz-editor.js`. Sau đó thầy gửi ảnh chụp màn Edit Content
-   THẬT của Wordwall, yêu cầu đổi bố cục giống — đã làm lại thành **bảng Word | Clue** (nút Swap
-   Columns, mỗi hàng: số thứ tự + 1 khung Word/Clue liền + icon 🎤 voice/🖼️ ảnh [CHƯA làm, chỉ hiện
-   "coming soon", thầy nói để bàn sau]/⇕ kéo-thả đổi vị trí/⧉ nhân bản/🗑️ xoá). Kéo-thả dùng ĐÚNG kiểu
-   HTML5 Drag&Drop mà `main.js` đã dùng cho kéo act/folder — không bịa cơ chế mới. Core có thêm 5 icon
-   MỚI trong `core/icons.js` (`mic`,`image`,`dragHandle`,`duplicate`,`trash` — chỉ thêm, không sửa gì).
-5. **2 điều chỉnh nhỏ cuối phiên**: Options Apply giờ **LUÔN restart act** (trước chỉ restart khi đổi
-   mode bonus/submit — `optionsNeedRestart()` trong `anagram.js` giờ trả `true` không điều kiện); sửa
-   dấu ✓/✗ nhỏ ở chế độ On Submit **đè lên chữ** (bug CSS thật: `height` bị giãn ~bằng cả ô do phụ thuộc
-   `aspect-ratio` mập mờ khi chỉ ràng buộc `bottom` — đã set `height` tường minh + hạ `bottom` thêm).
-
-**Có đụng `core/`** (mọi lần đều verify Quiz KHÔNG bị ảnh hưởng — mở lại `templates/quiz/test.html`
-kiểm tra 0 lỗi console sau mỗi lần sửa core):
-- `core/app.css` — vị trí popup Options/Template/Style + nút Apply (mục 1).
-- `core/engine.js` — hook `tpl.sounds` (play/restart/timeWarning/complete), panel-height cap (mục 1+2).
-- `core/icons.js` — thêm 5 icon (mục 4), CHỈ THÊM không sửa/xoá icon cũ.
-
-**Git**: 2 commit LOCAL trong phiên này (`6b57fad` âm thanh+popup+gộp trang chủ, `0f3c9e9` editor+2
-điều chỉnh nhỏ) — **CHƯA push GitHub**, đừng tự ý push khi chưa được thầy yêu cầu rõ.
-
-**⚠️ CẢNH BÁO — session khác đang làm open-the-box song song**: lúc phiên này kết thúc,
-`templates/open-the-box/` có sửa đổi CHƯA COMMIT (`open-the-box.js/.css`, `sample-open-the-box.js`,
-`GHI CHU OPEN-THE-BOX.md`) + file mới `otb-sound.js` + thư mục `sounds/` — đây là việc của MỘT SESSION
-KHÁC đang chạy song song (thầy có nói sẽ mở song song ở đầu các phiên Anagram). ĐỪNG động vào, đừng
-`git add`/`git stash`/`git checkout` các file đó, đừng tưởng là rác của phiên này. Nếu phiên mới cần
-`git status` sạch mà thấy các file này vẫn còn — nghĩa là session kia CHƯA XONG hoặc CHƯA lưu, không
-phải lỗi của phiên bạn.
-⚠️ **Session đó CŨNG đang sửa dở `core/engine.js`** (thêm tham số tuỳ chọn `raw.title` cho `ui.finish()`
-→ đổi chữ "Game complete"/panel head theo `endTitle`, mặc định vẫn "Game complete" nên KHÔNG ảnh hưởng
-template nào chưa truyền `title` — Open the box chắc dùng cho trạng thái "Game over" khi hết giờ, game
-không điểm/leaderboard). Đây LÀ core, hai session cùng ngày cùng đụng `core/engine.js` — không đè lên
-nhau (khác vùng code) nhưng nếu bạn cũng cần sửa `engine.js`, đọc kỹ diff hiện tại trước
-(`git diff core/engine.js`) để không mất việc của session kia, và đừng commit thay họ.
-
-**Việc còn thiếu của Anagram** (thầy chưa yêu cầu, chỉ ghi lại để nhớ):
-- 🎤/🖼️ voice + image trong editor — thầy nói "để bàn sau", CHƯA làm gì cả (chỉ có nút placeholder).
-- "Còn 5 giây cuối" (`blockgametimeout.mp3`) — mới soát code + suy luận từ hook `play` đã test đạt,
-  **CHƯA tự tay bấm đồng hồ đếm ngược thật để nghe** (tốn thời gian chờ lúc build) — nên tự test khi
-  rảnh: Options → Timer → Count down → thời gian ngắn → chơi tới lúc còn 5s.
-- Settings mặc định của Anagram (Timer/mode/allCaps...) — trang Settings ở trang chủ ĐÃ tự hoạt động
-  cho Anagram nhờ kiến trúc dùng chung (không cần sửa gì thêm), nhưng CHƯA có ai tự tay xác nhận qua UI
-  thật (cần đăng nhập).
+**Open the box's Questions mode — XÂY MỚI HOÀN TOÀN qua 7 đợt sửa liên tiếp CÙNG 1 phiên với thầy, 🟢
+CHỜ THẦY DUYỆT** (đọc `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` — nhật ký đợt 1-7 rất chi tiết,
+đây chỉ tóm chặng cuối cùng, quan trọng nhất):
+- **Cơ chế mới**: bấm 1 **Ô SỐ** (ô đóng trong lưới) → zoom mượt thành **Ô CÂU HỎI** (câu hỏi trái + 4
+  đáp án lưới 2×2 phải, kiểu Quiz) + 1 đồng hồ đếm lùi DÙNG CHUNG cho cả ván (khác Quiz — không phải
+  mỗi câu 1 đồng hồ riêng). Đúng → Ô SỐ khoá mở vĩnh viễn (tích xanh) + đồng hồ reset đầy. Sai → Ô SỐ
+  khoá đóng, xám + khoá (không chọn lại được tới khi có 1 Ô SỐ khác đúng) + đồng hồ KHÔNG reset, chạy
+  tiếp. Hết giờ → rung+nổ lưới → "Game over". Mở hết toàn bộ đúng trước khi hết giờ → "Game complete".
+- **Cả 2 trường hợp kết thúc giờ DÙNG CHUNG hệ thống `ui.finish()` với Quiz/Anagram** (đợt 7, thay đổi
+  kiến trúc lớn nhất) — có ngay Leaderboard/Show answers/Start again/Play a different template +
+  Score/Time, KHÔNG phải tự viết lại. `core/engine.js` được thêm ĐÚNG 1 khả năng nhỏ để làm việc này:
+  `ui.finish({..., title})` — tham số `title` TUỲ CHỌN đổi chữ "Game complete" mặc định thành
+  "Game over" (hay bất kỳ chữ gì); **không truyền thì mọi template khác chạy y nguyên 100%** (đã diff
+  xác nhận chỉ 4 dòng thay đổi, cực nhỏ). Đây LÀ file `core/` — nhưng KHÁC hẳn vùng code Anagram sửa
+  (celebrate/showSummary vs tool-panel), không đè lên nhau.
+- Ngoài ra còn: bố cục Ô CÂU HỎI theo đúng ảnh Wordwall thật (trái/phải, không giống Quiz gốc); nút
+  âm thanh/fullscreen về đúng góc phải (bẫy CSS Grid auto-placement khi ẩn 1 item); zoom mở/đóng chậm
+  và mượt (đã bắt + sửa 1 bẫy animation thật: thiếu ép-vẽ-lại khiến animation nhảy cứng); đồng hồ + ô
+  câu hỏi/đáp án cao hơn (đã bắt + sửa 1 bẫy `autoFit` thật: co chữ sai do min-height mặc định + slack
+  quá lớn); âm thanh mp3 thật copy từ Anagram (`otb-sound.js` + `sounds/` — bản riêng, không cross-import).
+- **CHƯA COMMIT** (thầy chưa nói "lưu lại"/"save" trong phiên này) — file thay đổi: `core/engine.js`
+  (+10/-2 dòng), `templates/open-the-box/open-the-box.js/.css`, `GHI CHU OPEN-THE-BOX.md` (sửa), cùng
+  2 file/thư mục MỚI `templates/open-the-box/otb-sound.js` + `templates/open-the-box/sounds/` (12 mp3).
+  Chạy `git status`/`git diff` để xem lại trước khi quyết định commit.
+- **CHƯA làm / có thể hỏi thêm nếu thầy cần**: màn Show answers không phản ánh được lịch sử NẾU 1 Ô SỐ
+  bị sai nhiều lần trước khi cuối cùng đúng (chỉ nhớ lần sai gần nhất) — chấp nhận được, đã ghi rõ lý do
+  trong code; **CHƯA gộp `built:true` vào trang chủ** (đúng quy trình, chờ thầy duyệt xong).
 
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
-(a) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
-(b) Xem xét 3 game còn lại (Find the match/Type the answer/Open the box — Open the box đang có người
-    làm ở session khác, xem cảnh báo ở trên) rồi build content editor riêng cho từng game khi được duyệt
-    (theo khuôn `anagram-editor.js`/`quiz-editor.js`).
-(c) Có muốn đẩy code lên GitHub (push) đợt này chưa, hay vẫn giữ local để sửa tiếp?
-(d) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
+(a) Thầy tự chơi thử Open the box's Questions mode (dữ liệu mẫu hiện đang tạm để Questions mode — xem
+    cảnh báo cuối `GHI CHU OPEN-THE-BOX.md`, nhớ trả về Simple mode sau khi thầy xác nhận xong) — có ok
+    chưa hay còn muốn chỉnh gì?
+(b) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
+(c) Xem xét Find the match/Type the answer rồi build content editor riêng khi được duyệt.
+(d) Có muốn đẩy code lên GitHub (push) đợt này chưa, hay vẫn giữ local để sửa tiếp?
+(e) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
 
 **Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
 không nói (nhưng nói "lưu lại"/"save" thì commit ngay không cần hỏi lại), KHÔNG tự `git push`.

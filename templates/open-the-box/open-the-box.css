@@ -11,6 +11,20 @@
    its content. Sizes use cqw * var(--fit,1) as everywhere else.
    ============================================================= */
 
+/* This game is "tap any box", not a linear sequence — the shared bottom
+   Prev/Next/"X of N" nav bar core/engine.js always renders doesn't apply
+   here, so hide it. A plain CSS rule (not a core edit): only THIS
+   template's stylesheet is loaded while Open the box is playing, so this
+   has no effect on any other template. */
+.aw-nav { display: none; }
+/* core/app.css's bottombar is a 3-column grid (menu | nav | sound+fullscreen)
+   auto-placed in DOM order. display:none removes .aw-nav from that
+   auto-placement entirely, so the sound/fullscreen group slides into the
+   now-first-available MIDDLE column instead of staying in the right column
+   — pin it back to column 3 explicitly so it stays in the corner like every
+   other template. */
+.aw-bottombar > .aw-tools { grid-column: 3; }
+
 .aw-otb-card {
   --fit: 1;
   width: 100%; height: 100%;
@@ -23,14 +37,20 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(var(--cols, auto-fill), minmax(13cqw, 1fr));
-  grid-auto-rows: minmax(13cqw, 1fr);
-  align-content: center; justify-content: center;
+  /* --cols/--cell are computed in JS (bestFit) so every box is a perfect
+     SQUARE and the whole grid stays centred no matter how many boxes there
+     are (few boxes -> bigger squares, many boxes -> smaller squares) —
+     plain CSS grid/auto-fill can't solve this 2D packing on its own. */
+  grid-template-columns: repeat(var(--cols, 3), var(--cell, 13cqw));
+  grid-auto-rows: var(--cell, 13cqw);
+  justify-content: center;
+  align-content: center;
   gap: calc(1.3cqw * var(--fit));
   perspective: 120cqw;
 }
 
 .aw-otb-box {
+  width: 100%; height: 100%;
   cursor: pointer;
   background: transparent;
   border: 0; padding: 0;
@@ -48,20 +68,28 @@
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   border-radius: var(--aw-tile-radius, 1.3cqw);
-  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   backface-visibility: hidden;
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
   padding: calc(1cqw * var(--fit));
   overflow: hidden;
 }
 .aw-otb-face-front {
-  background: var(--aw-tile-fixed, #3b82f6);
+  /* --otb-c/--otb-d are set per-box in JS (colorBoxes), cycling quiz.js's
+     own 8-colour PALETTE by COLUMN index — a FILLED tile + darker bottom
+     "lip" shadow, same look as the Quiz answer tiles (teacher's 2nd
+     reference photo). --aw-tile-fixed/-dark still win when a theme sets
+     them (Basic theme -> every box the same navy), same fallback chain
+     quiz.js already uses for its own per-tile colour. */
+  --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--otb-d, #2563eb));
+  background: var(--tile-eff);
   color: #fff;
   font-weight: 800;
-  font-size: calc(3.2cqw * var(--fit));
+  font-size: var(--num-size, calc(3.2cqw * var(--fit)));
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
 }
 .aw-otb-face-back {
+  --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
   background: #fff;
   color: var(--aw-text);
   transform: rotateY(180deg);
@@ -71,7 +99,7 @@
   text-align: center;
   flex-direction: column;
   gap: calc(0.6cqw * var(--fit));
-  border-color: var(--aw-tile-fixed, #3b82f6);
+  border-color: var(--tile-eff);
   border-width: 0.18cqw;
   border-style: solid;
 }
@@ -79,7 +107,148 @@
 .aw-otb-back-a { display: flex; align-items: center; gap: 0.4cqw; font-weight: 600; }
 .aw-otb-back-a.is-correct { color: #059669; }
 
+/* Questions mode: a solved box stays flipped open forever — green tick kept
+   LOW so it never sits on top of the question text (teacher's request). */
+.aw-otb-solved-tick {
+  position: absolute; left: 50%; bottom: calc(0.8cqw * var(--fit)); transform: translateX(-50%);
+  width: calc(2.1cqw * var(--fit)); height: calc(2.1cqw * var(--fit)); color: #22c55e;
+}
+.aw-otb-solved-tick svg { width: 100%; height: 100%; }
+/* a WRONG box also stays flipped open (same tick position, now a padlock) —
+   the whole back face goes grey/"black and white" via filter, cheaper and
+   more robust than re-deriving grey versions of every theme's colours. */
+.aw-otb-lock-tick { color: #6b7280; }
+.aw-otb-box.is-locked .aw-otb-face-back { filter: grayscale(1) brightness(.97); }
+
+.aw-otb-box:disabled { cursor: default; }
+
 .aw-otb-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
+}
+
+/* =============================================================
+   QUESTIONS MODE — Quiz-style question+answers screen shown when a box
+   is tapped, plus the shared countdown bar. Deliberately its OWN classes
+   (not quiz.css's .aw-quiz-*) since only THIS template's CSS is loaded
+   when Open the box is playing — see CONG THUC MAU §3 rule 7.
+   ============================================================= */
+.aw-otb-qcard {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  /* minimal top padding: the clock+bar row below sits as close as possible
+     to core/engine.js's own topbar (the "✓ N" score, just above this card)
+     so the two read as ONE row instead of two stacked rows. */
+  padding: 0.2cqw 1.6cqw 1.6cqw;
+  animation: aw-fadein .2s ease;
+}
+
+/* top row: digit clock + draining bar — SAME row, like the reference photo
+   (own clock, not engine's — engine's built-in one only supports a single
+   whole-game countdown, not this reset-on-correct / carry-over-on-wrong
+   rule, and its text is engine-internal so a template can't drive it).
+   Small margin-below so the freed-up space goes to the question/answer
+   tiles instead (.aw-otb-q-body is flex:1 1 auto — it grows to fill
+   whatever height this row and its margin DON'T use). */
+.aw-otb-q-topbar {
+  display: flex; align-items: center; gap: calc(1.4cqw * var(--fit));
+  flex: 0 0 auto; margin-bottom: calc(0.9cqw * var(--fit));
+}
+.aw-otb-q-clock {
+  flex: 0 0 auto; min-width: calc(4cqw * var(--fit));
+  font-size: calc(2.4cqw * var(--fit)); font-weight: 700; color: var(--aw-text);
+}
+.aw-otb-timerbar {
+  flex: 1 1 auto;
+  height: calc(1.1cqw * var(--fit)); border-radius: 999px;
+  background: rgba(0, 0, 0, .12); overflow: hidden;
+}
+.aw-otb-timerbar-fill {
+  height: 100%; width: 100%; border-radius: inherit;
+  background: #2b2f36;
+}
+
+/* LEFT/RIGHT split: question as its own tile on the left, answers in a
+   2-column grid on the right — matches the teacher's reference photo
+   (different from Quiz's own stacked question-on-top layout). */
+.aw-otb-q-body {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; gap: calc(2.2cqw * var(--fit));
+}
+.aw-otb-q-question {
+  flex: 1 1 42%; min-height: 0;
+  /* min-height:0 stops the browser's default flex-item auto-grow: without
+     it this tile always reports scrollHeight===clientHeight (it just grows
+     to fit its text instead of overflowing), which made autoFit's measure()
+     think EVERY question overflowed and always shrink to the minimum size —
+     a real bug found by inspecting getComputedStyle(--fit) directly. */
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  border-radius: var(--aw-tile-radius, 1.6cqw);
+  background: var(--aw-tile-fixed, #3b82f6);
+  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  color: #fff; font-weight: 700;
+  font-size: calc(3cqw * var(--fit));
+  line-height: 1.15;
+  padding: calc(2cqw * var(--fit));
+}
+
+.aw-otb-q-answers {
+  flex: 1 1 58%; min-height: 0;
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  grid-auto-rows: 1fr;
+  gap: calc(1.6cqw * var(--fit));
+}
+.aw-otb-qtile {
+  position: relative; min-height: 0; /* same reason as .aw-otb-q-question above */
+  --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--otb-d, #2563eb));
+  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  background: var(--tile-eff);
+  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
+  color: #fff; font-family: inherit; font-weight: 700; text-align: center;
+  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  padding: calc(1.6cqw * var(--fit));
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
+  /* staggered "pop in" entrance (delay set per-tile in JS) — a fresh mount
+     animation, unrelated to the hover/active transitions above */
+  animation: aw-otb-qtile-in .32s cubic-bezier(.22,.9,.3,1) both;
+}
+@keyframes aw-otb-qtile-in {
+  from { opacity: 0; transform: scale(.8) translateY(4%); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+/* an odd answer count -> last tile spans both columns (no lone half-empty row) */
+.aw-otb-qtile-wide { grid-column: 1 / -1; }
+.aw-otb-q-text { display: block; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: anywhere; }
+.aw-otb-q-letter {
+  position: absolute; top: calc(0.8cqw * var(--fit)); left: calc(1cqw * var(--fit));
+  font-size: calc(1.8cqw * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);
+}
+.aw-otb-qtile:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-otb-qtile:active:not(:disabled) { transform: translateY(0.4cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 var(--tile-dark-eff)); }
+.aw-otb-qtile:disabled { cursor: default; }
+.aw-otb-qtile.is-dimmed { opacity: .15; }
+
+/* GAME OVER — shake the whole grid, then each box "explodes" (its own
+   transform, unrelated to any translate-based centering, so animating
+   transform here is safe — see CONG THUC MAU §3 rule 5). */
+@keyframes aw-otb-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(-3%, 2%) rotate(-2deg); }
+  40% { transform: translate(3%, -2%) rotate(2deg); }
+  60% { transform: translate(-3%, -2%) rotate(-1deg); }
+  80% { transform: translate(3%, 2%) rotate(1deg); }
+}
+.aw-otb-box.aw-otb-shake { animation: aw-otb-shake .12s linear 4; }
+.aw-otb-box.aw-otb-explode {
+  animation: aw-otb-explode .5s ease-in forwards;
+  animation-delay: var(--otb-explode-delay, 0ms);
+}
+@keyframes aw-otb-explode {
+  0% { opacity: 1; transform: scale(1) rotate(0); }
+  100% { opacity: 0; transform: scale(1.7) rotate(25deg); }
 }

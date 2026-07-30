@@ -526,6 +526,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     toast,
     finish(raw) {
       stopTimer();
+      endTitle = raw.title || "Game complete";
       const timeMs = Math.round(performance.now() - startedAt);
       const result = computeResult(raw, timeMs / 1000);
       result.timeMs = timeMs;
@@ -563,7 +564,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   function celebrate(result, entryId) {
     navWrap.style.visibility = "hidden";
     const cover = el("div", "aw-celebrate");
-    const text = el("div", "aw-gc-text", "Game complete");
+    const text = el("div", "aw-gc-text", endTitle);
     cover.append(text);
     inner.append(cover);
     confettiBurst(cover);
@@ -579,6 +580,13 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   let reviewData = [];   // this play's per-question review (for "Show answers")
   let submission = null; // student mode: the promise of THIS play being handed in
   let submitFailed = false;
+  // Optional per-finish title (e.g. Open the box's Questions mode passes
+  // "Game over" on a timeout loss) — defaults to "Game complete" so every
+  // other template's ui.finish() is unaffected. Kept in this shared
+  // variable (not a function param) so navigating Leaderboard/Show answers
+  // and back to Summary keeps showing the SAME title from the original
+  // finish() call.
+  let endTitle = "Game complete";
   function openBackdrop() {
     if (!backdrop) { backdrop = el("div", "aw-backdrop"); inner.append(backdrop); }
     backdrop.innerHTML = "";
@@ -588,7 +596,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   function showSummary(result, entryId) {
     const bd = openBackdrop();
     const panel = el("div", "aw-panel");
-    panel.append(el("div", "aw-panel-head", "GAME COMPLETE"));
+    panel.append(el("div", "aw-panel-head", endTitle.toUpperCase()));
 
     const stats = el("div", "aw-sum-stats");
     const t = fmtSecsParts(result.timeMs);
