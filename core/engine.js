@@ -39,6 +39,25 @@ import { openPrintPopup } from "./print.js";
 // Shared list of act types (single source of truth: core/catalog.js).
 const ALL_TEMPLATES = TEMPLATES;
 
+// ----- Fullscreen helpers (vendor-prefixed for older browsers, e.g. the TOMKO
+// interactive panel) — the unprefixed API alone left that board only filling a
+// corner, so we probe every spelling. We fullscreen the STABLE app container
+// (root), not the rebuilt .aw-page, so "Start again" keeps fullscreen. -----
+function fsElement() {
+  return document.fullscreenElement || document.webkitFullscreenElement ||
+         document.mozFullScreenElement || document.msFullscreenElement || null;
+}
+function requestFs(elem) {
+  const fn = elem.requestFullscreen || elem.webkitRequestFullscreen ||
+             elem.mozRequestFullScreen || elem.msRequestFullscreen;
+  if (fn) try { fn.call(elem); } catch (_) {}
+}
+function exitFs() {
+  const fn = document.exitFullscreen || document.webkitExitFullscreen ||
+             document.mozCancelFullScreen || document.msExitFullscreen;
+  if (fn) try { fn.call(document); } catch (_) {}
+}
+
 // Preview colors for the Style panel swatches (kept in sync with core/themes/*.css).
 const THEME_SWATCH = {
   classic:   "linear-gradient(135deg, #ffffff 50%, #2f7bff 50%)",
@@ -129,12 +148,16 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   const printBtn = toolBtn(icons.print, "Print", true);
   const homeBtn = toolBtn(icons.home, "Home", true);
   belowRight.append(editBtn, assignBtn, printBtn, homeBtn);
-  homeBtn.onclick = () => { sound.click(); cleanupAll(); onExit?.(); };
+  // Leaving the game (Home / Edit) drops fullscreen so the library or editor
+  // shows windowed as before — only "Start again" keeps fullscreen now that the
+  // fullscreen target is the stable root (see the fullscreen helpers up top).
+  homeBtn.onclick = () => { sound.click(); if (fsElement()) exitFs(); cleanupAll(); onExit?.(); };
   editBtn.onclick = () => {
     sound.click();
     if (!tpl.edit) { toast("Edit — coming soon"); return; }
     // Leave the game, open this game's editor. Save -> store + replay with the
     // new content; Cancel -> replay the original untouched.
+    if (fsElement()) exitFs();
     cleanupAll();
     tpl.edit(root, activity, {
       onSave: async updated => {
@@ -190,6 +213,12 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   }
 
   root.append(page);
+
+  // Kill the browser's right-click menu inside the game frame — the teacher
+  // plays on a touch panel and a stray long-press / right-click popping up
+  // "Reload / Save image / Inspect" over the board is only ever in the way.
+  // Scoped to `page`, so the library pages keep their normal context menu.
+  page.addEventListener("contextmenu", e => e.preventDefault());
 
   // ----- READY screen (template type · big title · PLAY · instruction) -----
   const playOverlay = el("div", "aw-play-overlay");
@@ -256,11 +285,13 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     soundBtn.innerHTML = m ? icons.soundOff : icons.soundOn;
     soundBtn.classList.toggle("is-off", m);
   };
-  // Fullscreen the PAGE (a letterbox wrapper) so the 16:9 stage keeps its
-  // ratio and just zooms — CSS handles the centering + black bars.
+  // Fullscreen the ROOT container (not `page`) so the 16:9 stage keeps its
+  // ratio and just zooms — CSS handles the centering + black bars. Using the
+  // stable root means "Start again" (which rebuilds `page`) no longer drops us
+  // out of fullscreen.
   fsBtn.onclick = () => {
-    if (!document.fullscreenElement) page.requestFullscreen?.();
-    else document.exitFullscreen?.();
+    if (!fsElement()) requestFs(root);
+    else exitFs();
   };
 
   // =============================================================

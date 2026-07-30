@@ -53,6 +53,20 @@ dùng dấu cách (mọi cấp) — nếu không, chính nội dung BÊN TRONG v
 mờ theo (đã dính ở bảng chi tiết trong pop-up báo cáo). Cách nhanh để kiểm: `getComputedStyle` phần tử
 bên trong vùng sáng, phải ra `opacity: 1`.
 
+## ⚠️ FULLSCREEN (đợt 12, 30/7/2026) — nhắm vào `root`, KHÔNG phải `page`
+
+`fsBtn` request fullscreen trên **`root` (`#app`)**, không phải `.aw-page`. Lý do: `restart()` gọi
+`startGame` → `root.innerHTML = ""` xoá `page` cũ; nếu fullscreen nằm trên `page` thì restart tự rớt
+fullscreen. Nhắm vào `root` (không bao giờ bị xoá) thì restart giữ nguyên fullscreen. Hệ quả: lối RỜI
+game (Home/Edit) phải TỰ gọi `exitFs()` để về cửa sổ (trước đây thoát nhờ `page` bị xoá). CSS letterbox
+key theo tổ tiên fullscreen: `:fullscreen .aw-page` / `:fullscreen .aw-stage`.
+
+**Tiền tố vendor**: mỗi tiền tố (`:fullscreen` / `:-webkit-full-screen` / `:-moz-full-screen` /
+`:-ms-fullscreen`) phải là 1 RULE RIÊNG — KHÔNG gộp chung danh sách selector, vì trình duyệt vứt CẢ
+rule nếu gặp 1 selector lạ (Chrome vứt luôn rule chuẩn nếu chung với `:-moz-full-screen`). JS dùng
+helper `fsElement()`/`requestFs()`/`exitFs()` dò đủ tiền tố (panel TOMKO cũ thiếu API không tiền tố →
+từng chỉ full 1 góc màn 4K).
+
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,

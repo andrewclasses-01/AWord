@@ -47,17 +47,59 @@ body {
   gap: 0.4cqw;
 }
 
-/* ---------- Fullscreen: letterbox the 16:9 stage (ratio kept, just zoom) ---------- */
-.aw-page:fullscreen {
-  width: 100vw; height: 100vh; max-width: none; padding: 0;
-  background: #0b0b0d;
+/* ---------- Fullscreen: letterbox the 16:9 stage (ratio kept, just zoom) ----------
+   We now fullscreen the STABLE app container (root), not the .aw-page — so a
+   "Start again" (which rebuilds .aw-page) keeps fullscreen instead of dropping
+   out. The rules therefore key on the fullscreen ANCESTOR + the .aw-page inside.
+   Every vendor spelling gets its OWN rule: a browser throws away an entire
+   comma-separated selector list if it doesn't understand one pseudo-class, so
+   grouping :fullscreen with :-webkit-full-screen would break BOTH. The extra
+   prefixes are what make the TOMKO panel fill the whole screen (unprefixed only
+   left it filling a corner there). */
+:fullscreen { background: #0b0b0d; }
+:-webkit-full-screen { background: #0b0b0d; }
+:-moz-full-screen { background: #0b0b0d; }
+:-ms-fullscreen { background: #0b0b0d; }
+
+:fullscreen .aw-page {
+  width: 100vw; height: 100vh; max-width: none; margin: 0; padding: 0;
   display: flex; align-items: center; justify-content: center;
 }
-.aw-page:fullscreen .aw-stage {
-  width: min(100vw, calc(100vh * 16 / 9));
-  border-radius: 0; border: none;
+:-webkit-full-screen .aw-page {
+  width: 100vw; height: 100vh; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
 }
-.aw-page:fullscreen .aw-below { display: none; }
+:-moz-full-screen .aw-page {
+  width: 100vw; height: 100vh; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+:-ms-fullscreen .aw-page {
+  width: 100vw; height: 100vh; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+
+:fullscreen .aw-stage {
+  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+}
+:-webkit-full-screen .aw-stage {
+  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+}
+:-moz-full-screen .aw-stage {
+  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+}
+:-ms-fullscreen .aw-stage {
+  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+}
+
+:fullscreen .aw-below { display: none; }
+:-webkit-full-screen .aw-below { display: none; }
+:-moz-full-screen .aw-below { display: none; }
+:-ms-fullscreen .aw-below { display: none; }
+
+:fullscreen .aw-as-bars { display: none; }
+:-webkit-full-screen .aw-as-bars { display: none; }
+:-moz-full-screen .aw-as-bars { display: none; }
+:-ms-fullscreen .aw-as-bars { display: none; }
 
 /* ---------- Top bar: timer (left) · score (right) ---------- */
 .aw-topbar {

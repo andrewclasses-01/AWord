@@ -21,6 +21,56 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 30/7/2026 — Đợt 12: 4 chỉnh sửa theo yêu cầu thầy (Quiz hết ép hoa · chặn chuột phải · fullscreen giữ khi restart · fullscreen full màn TOMKO). ⚠️ CÓ SỬA `core/` — thầy yêu cầu trực tiếp.
+
+Thầy nêu 4 việc. Cả 4 đều đụng `core/` (engine.js/app.css) + 1 file quiz — được phép vì thầy yêu cầu
+rõ (ngoại lệ của Luật số 1 trong `core/HUONG DAN CORE.md`).
+
+**1. Quiz ép HOA mọi đáp án → bỏ.** `templates/quiz/quiz.css` `.aw-quiz-tile` có
+`text-transform: uppercase` ép hoa toàn bộ chữ trong ô đáp án. Bỏ đúng khai báo đó → đáp án hiện đúng
+như thầy gõ (VD "banana" ra "banana", không thành "BANANA"). ALL CAPS chỉ còn ở Anagram (option riêng
+của game đó, không đụng). Đã đo `getComputedStyle(.aw-quiz-tile).textTransform === "none"`.
+
+**2. Chặn hoàn toàn chuột phải trong khung act.** `core/engine.js`: sau `root.append(page)` thêm
+`page.addEventListener("contextmenu", e => e.preventDefault())`. Chỉ chặn trong `.aw-page` (khung
+game) — trang thư viện vẫn có menu chuột phải bình thường. Vì `page` dựng lại mỗi lần `startGame` nên
+listener luôn mới, không cần gỡ tay. Đã kiểm: bắn sự kiện `contextmenu` vào `.aw-page` →
+`defaultPrevented === true`.
+
+**3. Restart bị rớt fullscreen → sửa gốc.** Nguyên nhân: fullscreen trước đây request trên `page`,
+mà `restart()` gọi `startGame` → `root.innerHTML = ""` xoá `page` cũ → trình duyệt tự thoát fullscreen,
+rồi `page` mới dựng lên không ai request lại. **Sửa: đổi phần tử fullscreen từ `page` sang `root`
+(`#app`)** — root KHÔNG bao giờ bị xoá khỏi DOM (chỉ bị thay ruột), nên fullscreen tự giữ nguyên qua
+restart, không cần request lại (tránh hẳn cái race "thoát rồi vào lại trong cùng 1 nhịp click"). Hệ
+quả phải xử lý kèm: giờ RỜI game (Home / Edit) sẽ KHÔNG tự thoát fullscreen nữa (trước đây thoát nhờ
+`page` bị xoá) → thêm `if (fsElement()) exitFs()` vào đúng 2 nút Home + Edit để về đúng hành vi cũ
+(thư viện/editor hiện ở chế độ cửa sổ). "Change template"/"Play a different template" chỉ là toast
+"coming soon" nên không đụng. `restart()` cố tình KHÔNG thoát → đó chính là mục đích.
+
+**4. TOMKO (màn 4K 16:9) bấm fullscreen chỉ full 1 góc → thêm tiền tố vendor.** CSS cũ chỉ có
+`.aw-page:fullscreen` (không tiền tố). Trên panel TOMKO (trình duyệt cũ hơn máy chính) pseudo-class
+`:fullscreen` không khớp → `.aw-page` giữ nguyên `max-width:1000px` → chỉ chiếm 1 góc trên-trái dù nền
+đã đen. **Sửa: viết lại khối CSS fullscreen, mỗi tiền tố 1 RULE RIÊNG** (`:fullscreen`,
+`:-webkit-full-screen`, `:-moz-full-screen`, `:-ms-fullscreen`) — TUYỆT ĐỐI không gộp chung 1 danh
+sách selector, vì trình duyệt vứt CẢ rule nếu gặp 1 selector nó không hiểu (đã suýt mắc: nếu gộp,
+Chrome coi `:-moz-full-screen` là lỗi → vứt luôn `.aw-page` rule → hỏng máy chính đang chạy tốt). Đo
+thật trong Chrome: 5 nhóm × 4 tiền tố khai báo → Chrome GIỮ đúng 2 rule/nhóm (`:fullscreen` +
+`:-webkit-full-screen`) và TỰ BỎ 2 rule `-moz/-ms` mà KHÔNG ảnh hưởng 2 rule kia (`fsRuleCount:10`) —
+đúng bằng chứng cho thấy tách rời là bắt buộc. JS cũng thêm helper dò đủ tiền tố:
+`fsElement()`/`requestFs()`/`exitFs()` (webkit/moz/ms) thay cho `document.fullscreenElement`/
+`requestFullscreen`/`exitFullscreen` trần — phòng TOMKO không có API không tiền tố. Cũng đổi hẳn phần
+tử fullscreen sang `root` (gộp với việc 3), CSS key theo tổ tiên fullscreen: `:fullscreen .aw-page` /
+`:fullscreen .aw-stage` (letterbox math y hệt bản cũ đang chạy đúng: stage rộng
+`min(100vw, 100vh*16/9)`), thêm ẩn `.aw-as-bars` (thanh assignment) lúc fullscreen cho gọn.
+
+**Kiểm chứng đã làm** (localhost, trình duyệt thật, `test.html` Quiz): 0 lỗi console; đáp án Quiz hết
+hoa; chuột phải bị chặn trong `.aw-page`; CSS fullscreen parse đúng (Chrome giữ 2/4 tiền tố mỗi nhóm,
+không rớt rule chuẩn); engine load không lỗi cú pháp; root = `#app` đúng ở cả main.js/play.js/test.js.
+**CHƯA tự kiểm được HIỆU ỨNG FULLSCREEN THẬT** — preview pane không cấp fullscreen (cần user gesture +
+pane hiển thị). **Nhờ thầy xác nhận trên màn thật**: (a) máy chính bấm fullscreen vẫn full đúng như
+trước (đảm bảo không hồi quy); (b) restart khi đang fullscreen thì VẪN fullscreen; (c) TOMKO bấm
+fullscreen giờ full toàn màn 4K chưa; (d) Home/Edit thoát fullscreen về cửa sổ.
+
 ### 30/7/2026 — Đợt 11b: sửa 1 BUG THẬT bắt được ngay sau khi thầy tự tay thử trên bản live
 
 Thầy gửi ảnh chụp trang live: modal "New activity" vẫn hiện Open the box/Type the answer "Coming soon"

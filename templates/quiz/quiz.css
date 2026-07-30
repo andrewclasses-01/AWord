@@ -61,7 +61,7 @@
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   background: var(--tile-eff);
   box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
-  color: #fff; font-family: inherit; font-weight: 700; text-transform: uppercase;
+  color: #fff; font-family: inherit; font-weight: 700;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
   padding: calc(3.4cqw * var(--fit)) calc(1.2cqw * var(--fit));
   cursor: pointer;
