@@ -31,6 +31,142 @@ Engine hiện tại LUÔN chạy vòng finish → celebration → leaderboard (t
 
 ## Nhật ký
 
+### 31/7/2026 (đợt 13) — SỬA BUG THẬT: hiệu ứng trượt ra của đáp án hoàn toàn không chạy (animation chặn transition)
+Thầy báo: sau khi chọn đáp án, các ô đáp án KHÔNG thấy trượt ra mà chỉ biến mất tại chỗ. Đây là **bug
+thật, không phải cần chỉnh thêm** — đã có từ trước (rất có thể từ đợt 9, khi hiệu ứng trượt ra lần đầu
+được thêm), chỉ là chưa ai đo trực tiếp giữa chừng animation để bắt được, đợt 12 lỡ giữ nguyên bug này khi
+đổi tốc độ.
+
+**Nguyên nhân thật**: `.aw-otb-qtile` (mọi ô đáp án) có sẵn 1 `animation` (hiệu ứng trượt VÀO,
+`aw-otb-qtile-in`, `fill-mode: both`) áp dụng VĨNH VIỄN ngay từ lúc ô được tạo ra — animation này "giữ"
+giá trị cuối (`transform`/`opacity`) MÃI MÃI sau khi chạy xong (do `both`), không bao giờ thật sự "buông"
+2 thuộc tính đó. Theo đúng luật CSS: **1 `animation` đang giữ 1 thuộc tính LUÔN thắng bất kỳ `transition`
+nào cũng nhắm vào đúng thuộc tính đó** — nên rule `.is-closing` (hiệu ứng trượt RA, viết bằng `transition`
+từ đợt 9 tới nay) **chưa bao giờ thực sự chạy được**, dù CSS parse hoàn toàn hợp lệ, không lỗi console.
+Ô đáp án cứ đứng yên (bị animation trượt-vào ghim tại chỗ) cho tới khi `render()` xoá cả khung câu hỏi —
+nhìn y hệt "biến mất tại chỗ" đúng như thầy mô tả.
+
+**Cách sửa**: đổi hẳn hiệu ứng trượt RA từ `transition` sang 1 `@keyframes` MỚI (`aw-otb-qtile-out`) +
+1 `animation` riêng cho `.is-closing` — giờ là animation-đấu-animation (rule có độ ưu tiên cao hơn của
+`.is-closing` thắng, thay hẳn animation trượt-vào bằng animation trượt-ra một cách sạch sẽ, không xung
+đột gì) thay vì animation-đấu-transition (luôn thua). Khung hình `from` của animation mới khớp CHÍNH XÁC
+điểm dừng của animation trượt vào (opacity 1, translateX(0)) nên đổi qua không bị giật/nhảy. Độ trễ so le
+từng ô (`animationDelay` gán 1 lần trong JS) vẫn giữ nguyên tác dụng cho CẢ 2 chiều vì style inline luôn
+thắng rule class dù đổi tên animation.
+
+**Test bằng `javascript_tool`** (đo `getComputedStyle` LIÊN TỤC mỗi ~90ms suốt quá trình thoát, không chỉ
+đo điểm đầu/cuối như các lần trước — bài học rút ra: đo 2 đầu không đủ để bắt lỗi "đứng yên rồi biến
+mất" kiểu này): xác nhận `translateX` tăng dần mượt 2→27→93→220→386→527→626→695→743px cùng lúc `opacity`
+giảm dần 0.997→0.967→0.887→0.732→0.530→0.359→0.237→0.153→0.095 — animation trượt ra giờ chạy thật, mượt,
+liên tục. 0 lỗi console.
+
+**Ghi chú thêm cho phiên sau**: cùng nguyên nhân gốc (animation `both` ghim vĩnh viễn `transform`) rất có
+thể cũng đang âm thầm chặn `transition: transform .06s ease` mà `.aw-otb-qtile` khai báo cho hiệu ứng bấm
+(`:active { transform: translateY(0.4cqw); }`) — CHƯA kiểm chứng việc này (thầy không báo, không phải
+phạm vi lần sửa này), ghi lại phòng khi thầy để ý thấy nút bấm không có phản hồi lún xuống.
+
+**File đổi đợt này**: `open-the-box.css` (thêm `@keyframes aw-otb-qtile-out`, đổi `.is-closing` từ
+`transition` sang `animation`), `open-the-box.js` (bỏ dòng `transitionDelay` không còn dùng tới, sửa
+comment).
+
+**CHƯA COMMIT** — chờ thầy xác nhận đã ưng trước khi lưu/đẩy lên GitHub.
+
+### 31/7/2026 (đợt 12) — ô sai chuyển đỏ trắng, ĐẢO NGƯỢC lại thứ tự zoom/trượt của đợt 11 (quay về đồng thời, khớp thời lượng), sửa lỗi lỡ nhịp tick 5 giây cuối
+Thầy tự chơi bản đợt 11 xong, báo tiếp 4 điểm — trong đó có 2 điểm (mục 2, 3 dưới) là **ĐẢO NGƯỢC**
+quyết định vừa làm ở đợt 11 (đợt 11 làm cho zoom xong mới trượt/trượt xong mới zoom — thầy thử xong lại
+muốn quay về chạy ĐỒNG THỜI như cũ, chỉ cần khớp thời lượng cho đều mắt hơn):
+
+1. **Ô bị khoá (chọn sai) chuyển hẳn sang nền ĐỎ đặc, chữ trắng, khoá trắng**: trước đó (đợt 6) ô sai
+   hiện kiểu "trắng đen" bằng `filter: grayscale(1)`. Bỏ hẳn filter đó, đổi `background`/`border-color`
+   của mặt sau ô thành `#ef4444` (đỏ), chữ câu hỏi + icon khoá đổi sang trắng (`#fff`).
+2. **ĐẢO NGƯỢC lại đợt 11 mục 2 — zoom ô câu hỏi và trượt vào của đáp án chạy ĐỒNG THỜI, khớp thời
+   lượng**: đợt 11 làm cho đáp án CHỜ ô câu hỏi zoom xong mới trượt vào (tuần tự). Thầy thử xong muốn
+   quay lại chạy cùng lúc như trước đợt 11, nhưng lần này bắt 2 khoảng thời gian animation **bằng nhau
+   tuyệt đối**: xoá hẳn class `.is-pending` + tham số `onDone` mới thêm ở đợt 11 (không cần nữa), đổi
+   thời lượng CSS của hiệu ứng trượt vào (`aw-otb-qtile-in`) từ `.38s` lên **`1.2s`** — khớp CHÍNH XÁC
+   hằng số `ZOOM_TRANSFORM_MS` (thời lượng zoom ô câu hỏi) trong `open-the-box.js`.
+3. **ĐẢO NGƯỢC lại đợt 11 mục 3 — đáp án trượt ra và ô câu hỏi zoom ra cũng chạy ĐỒNG THỜI, khớp thời
+   lượng**: tương tự mục 2 nhưng cho lúc đóng. Xoá hẳn logic "chờ đáp án trượt ra xong hẳn" mới thêm ở
+   đợt 11 (`closeCardThen`/`answer()` trở lại y hệt bản đợt 10: thêm `.is-closing` và gọi `zoomElTo` NGAY
+   trong cùng 1 lượt, không còn `setTimeout` chờ); đổi thời lượng CSS của hiệu ứng trượt ra (`.is-closing`)
+   từ `.6s` lên **`1.2s`** — khớp `ZOOM_TRANSFORM_MS` y hệt mục 2. Xoá hằng số `TILE_EXIT_MS` (không còn
+   cần tính thời gian chờ động nữa).
+4. **Sửa lỗi lỡ nhịp tiếng tick ở mốc 5 giây cuối**: bắt được nguyên nhân thật — code cũ có 1 biến cờ
+   `halfMode` để chuyển từ tích đơn (1 lần/giây) sang tích đôi (2 lần/giây); đúng lúc cờ này bật lên
+   (mốc 5 giây), nó tự khởi tạo giá trị so sánh MỚI bằng CHÍNH giá trị `remaining` đang được so sánh
+   trong CÙNG 1 lượt — nên phép so sánh luôn ra "bằng nhau", tiếng tick đúng lúc 5 giây không bao giờ
+   phát ra (lỡ mất 1 nhịp trước khi tích đôi bắt đầu). Sửa: bỏ hẳn cờ `halfMode`, gộp thành 1 công thức
+   DUY NHẤT tính "khe tick" (giây nguyên khi còn >5s, nửa giây khi ≤5s) rồi so sánh 1 chỗ — không còn
+   khởi tạo trùng giá trị đang so sánh nữa nên hết lỡ nhịp.
+
+**Test bằng `javascript_tool`** (browser thật, `test.html`, chặn/ghi log hàm `otbSound.clockTick` để đo
+đúng mốc thời gian mỗi tiếng tick thay vì đoán bằng tai): đo được chuỗi tick tại giây 14,13,...,6,5 cách
+đều 1000ms (không lỡ nhịp ở mốc 5), rồi NGAY 497ms/503ms sau là 2 tick đôi đầu tiên — đúng như mong đợi,
+không còn khoảng trống. Chọn sai 1 ô xác nhận ô hiện đúng nền đỏ (`rgb(239,68,68)`) + chữ/khoá trắng
+(`rgb(255,255,255)`) qua ảnh chụp lẫn `getComputedStyle`. Đo `transform` của ô câu hỏi VÀ ô đáp án ngay
+sau khi mở hộp xác nhận cả 2 cùng biến đổi từ thời điểm 0 (đồng thời, không còn chờ nhau) ở cả lúc mở lẫn
+lúc đóng. 0 lỗi console suốt quá trình. Hồi quy: Quiz/Anagram không đụng gì (core chỉ `core/app.css`
+`.has-inline`, đã scoped riêng Open the box).
+
+**File đổi đợt này**: `open-the-box.css` (nền/màu ô khoá đổi hẳn sang đỏ-trắng thay filter xám; xoá rule
+`.is-pending`; đổi thời lượng `aw-otb-qtile-in`/`.is-closing` về `1.2s` khớp zoom), `open-the-box.js`
+(xoá hằng `TILE_EXIT_MS`; `renderQuestion`/`closeCardThen`/`answer`/`zoomElFrom` revert về chạy đồng thời;
+viết lại `runCountdown` bỏ cờ `halfMode`, dùng công thức "tick slot" thống nhất). *(Lưu ý đánh số: đợt
+này + đợt 11 trước đó dùng số đợt RIÊNG của file này — khác với số "đợt 13/14" ghi trong
+`APP_MASTER.md`, vốn đếm chung cho toàn dự án AWord chứ không chỉ Open the box.)*
+
+**CHƯA COMMIT** — chờ thầy xác nhận đã ưng trước khi lưu/đẩy lên GitHub.
+
+### 31/7/2026 (đợt 11) — 4 tinh chỉnh sau khi thầy tự chơi bản đã gộp trang chủ: canh đều 2 mép, thứ tự zoom/trượt, đồng hồ dừng chờ ô kế
+Thầy tự chơi bản live xong, báo 4 điểm cần chỉnh — không có điểm nào chưa rõ, code thẳng không cần hỏi
+thêm lần này:
+
+1. **Canh đều 2 mép**: mép trái đồng hồ tới mép trái khung app = mép phải điểm số tới mép phải khung
+   app. Trước đó (đợt 10) cột đồng hồ được cố định `1.6cqw` để mép đồng hồ THẲNG mép ô câu hỏi (mục
+   tiêu khác, thầy từng yêu cầu) — mục tiêu đó nay **bị thay bằng mục tiêu mới này** (đổi cột về `0` thay
+   vì `1.6cqw` trong `core/app.css` `.aw-topbar.has-inline`). Đo bằng `javascript_tool`
+   (`getBoundingClientRect()` so với khung `.aw-stage`): 2 khoảng cách ra đúng bằng nhau
+   **22.25px cả 2 bên**.
+2. **Ô câu hỏi zoom xong xuôi rồi đáp án mới trượt vào**: trước đó (đợt 9-10) cả 2 hiệu ứng chạy CÙNG
+   LÚC. Thêm class `.is-pending` (giữ nguyên ô đáp án ở đúng vị trí "chưa xuất hiện" — mờ hẳn + đẩy ra
+   ngoài mép phải, không animation) cho tới khi `zoomElFrom()` (hiệu ứng zoom ô câu hỏi) báo xong qua
+   callback `onDone` mới thêm — lúc đó gỡ `.is-pending`, ô đáp án bắt đầu trượt vào lại từ đầu (khớp y
+   hệt trạng thái hình ảnh lúc đang chờ nên không giật/nhấp nháy). Đo bằng `javascript_tool`: ô câu hỏi
+   zoom xong (`transform` về `none`) đúng lúc `.is-pending` được gỡ, ở mốc **~848ms** sau khi bấm ô số.
+3. **Khi biến mất: đáp án trượt ra XONG HẲN (kể cả độ trễ so le từng ô) rồi ô câu hỏi mới zoom ra**: đây
+   là sửa 1 lỗi thật — trước đó thời gian chờ trước khi zoom ô câu hỏi là hằng số cố định
+   (`TILE_EXIT_MS`, không tính thêm độ trễ so le mỗi ô), nên với >1 đáp án, ô câu hỏi đã bắt đầu zoom ra
+   TRƯỚC KHI vài ô đáp án cuối trượt ra xong. Sửa: tính thời gian chờ ĐỘNG = độ trễ so le của ô cuối
+   cùng + `TILE_EXIT_MS` (áp dụng ở cả 2 nơi gọi `closeCardThen()` — sau khi chọn đáp án VÀ khi hết giờ
+   giữa lúc đang mở câu hỏi, trước đó chỉ nơi đầu có chờ, nơi hết giờ chạy đồng thời luôn). Cũng làm
+   **chậm hẳn tốc độ trượt ra** (300ms → 600ms, thầy yêu cầu "chậm hơn hiện tại"). Đo bằng
+   `javascript_tool`: bấm đáp án đúng → đúng 947ms sau mới bắt đầu trượt ra (khớp hiệu ứng tích xanh bay
+   lên trước) → về lưới ở mốc 2517ms — khớp chính xác phép tính 947 + (135ms so le ô cuối + 600ms trượt)
+   + 840ms zoom ra ≈ 2522ms.
+4. **Trả lời đúng: đồng hồ reset về đầy rồi DỪNG hẳn, chỉ chạy tiếp khi bấm ô câu hỏi kế tiếp**: đợt 9
+   từng làm đồng hồ tự chạy tiếp NGAY sau khi đầy lại (kể cả lúc đang đứng ở lưới suy nghĩ ô nào bấm
+   tiếp) — thầy nay yêu cầu đổi khác: đứng yên ở lưới thì không mất giờ, giờ chỉ trôi khi đang thực sự
+   mở 1 câu hỏi. Thêm cờ `pausedForNextBox`: `resetSharedTimer()` (gọi khi trả lời đúng) không tự gọi
+   lại `runCountdown()` nữa, chỉ bật cờ; `openBox()` là nơi DUY NHẤT gỡ cờ + gọi `runCountdown()` lại.
+   Sai vẫn giữ nguyên hành vi cũ (đồng hồ chạy liên tục, không dừng) — thầy chỉ yêu cầu đổi cho trường
+   hợp ĐÚNG. Đo bằng `javascript_tool`: sau khi trả lời đúng, đồng hồ đứng yên "0:15" suốt 2 giây đứng ở
+   lưới; bấm ô kế tiếp thì bắt đầu giảm ("0:14") ngay trong vòng 1 giây sau.
+
+**Test bằng `javascript_tool`** (browser thật, `test.html`, đo `getBoundingClientRect`/`getComputedStyle`
+theo mốc thời gian thay vì chỉ nhìn ảnh chụp — animation quá nhanh để bắt đúng bằng mắt): cả 4 điểm đều
+đo được số liệu khớp chính xác mô tả ở trên. Hồi quy: chơi lại 1 câu sai → khoá xám vẫn đúng, đồng hồ vẫn
+chạy tiếp không dừng (không bị đổi theo nhầm cờ mới); Quiz/Anagram không đụng gì (mọi thay đổi core chỉ ở
+`.has-inline`, đã scoped riêng Open the box từ đợt 8). 0 lỗi console suốt quá trình.
+
+**File đổi đợt này**: `core/app.css` (`.aw-topbar.has-inline` cột 1 đổi `1.6cqw`→`0`), `open-the-box.css`
+(comment cập nhật theo mục 1, thêm rule `.is-pending`, đổi tốc độ `.is-closing` `.3s`→`.6s`),
+`open-the-box.js` (header đổi mô tả timer, hằng số `TILE_STAGGER_MS` mới + `TILE_EXIT_MS` 300→600,
+`zoomElFrom` thêm callback `onDone`, `renderQuestion`/`answer`/`closeCardThen`/`resetSharedTimer`/
+`openBox` viết lại theo 4 mục trên).
+
+**CHƯA COMMIT** — chờ thầy xác nhận đã ưng trước khi lưu/đẩy lên GitHub (đúng quy tắc "hỏi trước khi
+commit" của dự án).
+
 ### 30/7/2026 (đợt 10) — đồng hồ thẳng mép ô câu hỏi, tách zoom ô số/trượt đáp án, sửa lỗi thật của việc căn giữa hàng cuối
 Thầy test đợt 9 xong, báo 3 điểm cần chỉnh — 1 trong số đó (căn giữa hàng cuối) hoá ra là **bug thật**
 của đợt 9, không phải chỉnh thêm:

@@ -132,10 +132,14 @@
 }
 .aw-otb-solved-tick svg { width: 100%; height: 100%; }
 /* a WRONG box also stays flipped open (same tick position, now a padlock) —
-   the whole back face goes grey/"black and white" via filter, cheaper and
-   more robust than re-deriving grey versions of every theme's colours. */
-.aw-otb-lock-tick { color: #6b7280; }
-.aw-otb-box.is-locked .aw-otb-face-back { filter: grayscale(1) brightness(.97); }
+   solid RED fill + white text/icon (teacher's request, 31/7/2026 đợt 12 —
+   supersedes the earlier đợt 6 grey/"black and white" filter look). */
+.aw-otb-lock-tick { color: #fff; }
+.aw-otb-box.is-locked .aw-otb-face-back {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
 
 .aw-otb-box:disabled { cursor: default; }
 
@@ -186,12 +190,16 @@
    rule, and its text is engine-internal so a template can't drive it.
    Full width: core/app.css's `.aw-topbar-mid` is now the grid's 1fr middle
    column (teacher's request: "dài gần hết chiều ngang khung app"), starting
-   at a FIXED 1.6cqw from the topbar's left edge — exactly `.aw-otb-qcard`'s
-   own padding below, so the clock's left edge lines up PIXEL-EXACT with the
-   question tile's left edge (30/7/2026 đợt 10). `padding-right` leaves a
-   small gap before the score on the right without touching that left edge
-   (core/app.css's `column-gap:0` on the grid means this is the ONLY source
-   of right-side breathing room — see the comment there). */
+   at column 1's fixed `0` width — i.e. flush with the topbar's own left
+   edge, so the clock's outer-left edge sits exactly `.aw-stage-inner`'s own
+   padding away from the FRAME's left edge, matching the score's outer-right
+   edge distance from the frame's right edge (teacher's request, 31/7/2026
+   đợt 11 — supersedes đợt 10's earlier goal of aligning the clock with the
+   question tile's own left edge, see the comment on `.has-inline` in
+   core/app.css). `padding-right` leaves a small gap before the score on the
+   right without touching that left edge (core/app.css's `column-gap:0` on
+   the grid means this is the ONLY source of right-side breathing room —
+   see the comment there). */
 .aw-otb-q-topbar {
   /* NOT a descendant of .aw-otb-qcard any more (see comment above), so it
      can't inherit that card's --fit custom property — fall back to 1
@@ -264,34 +272,65 @@
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
   /* staggered "slide in from the STAGE's right edge" entrance (delay set
-     per-tile in JS). `cqw` is stage-width-relative regardless of nesting
-     depth (the stage is the nearest `container-type:size` ancestor), so
-     `85cqw` reliably starts every tile off past the actual right edge of the
-     game frame no matter where in the answers grid it rests (teacher's
-     request, đợt 10: "trượt ra/vào từ mép phải MÀN HÌNH", not just a small
-     nudge within the tile's own width like the earlier đợt 9 version).
-     Pure translateX — no scale — so this reads as fully DECOUPLED from the
-     question tile's own zoom (which is the only thing that still zooms,
-     see zoomElFrom/zoomElTo in open-the-box.js). Unrelated to the
-     hover/active transitions above. */
-  animation: aw-otb-qtile-in .38s cubic-bezier(.22,.9,.3,1) both;
+     per-tile in JS), running AT THE SAME TIME as the question tile's own
+     zoom-in — NOT sequenced after it (teacher's request, 31/7/2026 đợt 12:
+     "đồng thời" — đợt 11 had briefly made the answers wait for the zoom to
+     finish first; the teacher tried that and asked to go back to
+     simultaneous, just with the two animations' DURATIONS made equal).
+     `1.2s` here matches `ZOOM_TRANSFORM_MS` in open-the-box.js exactly —
+     keep the two in sync if either changes. `cqw` is stage-width-relative
+     regardless of nesting depth (the stage is the nearest
+     `container-type:size` ancestor), so `85cqw` reliably starts every tile
+     off past the actual right edge of the game frame no matter where in the
+     answers grid it rests (teacher's request, đợt 10: "trượt ra/vào từ mép
+     phải MÀN HÌNH", not just a small nudge within the tile's own width like
+     the earlier đợt 9 version). Pure translateX — no scale — so this reads
+     as fully DECOUPLED from the question tile's own zoom (which is the only
+     thing that still zooms, see zoomElFrom/zoomElTo in open-the-box.js).
+     Unrelated to the hover/active transitions above. */
+  animation: aw-otb-qtile-in 1.2s cubic-bezier(.22,.9,.3,1) both;
 }
 @keyframes aw-otb-qtile-in {
   from { opacity: 0; transform: translateX(85cqw); }
   to   { opacity: 1; transform: translateX(0); }
 }
 /* Once an answer is picked, the tiles slide back OUT toward the stage's
-   right edge (teacher's request) — entirely independent of the question
-   tile's own zoom-back, which runs at the same time. Class toggled in JS
-   (answer()/closeCardThen()), `transition-delay` set per-tile alongside the
-   entrance's `animation-delay` for a matching staggered cascade. Higher
-   specificity than the base `.aw-otb-qtile` transition rule above, so this
-   wins for the (longer) exit duration without touching the hover/press
-   transitions used the rest of the time. */
+   right edge AT THE SAME TIME as the question tile zooms back (teacher's
+   request, đợt 12 — đợt 11 had made the answers finish exiting completely
+   BEFORE the question zoom started; same reversal as the entrance above).
+   `1.2s` again matches `ZOOM_TRANSFORM_MS` in open-the-box.js so the two
+   "spans" are exactly equal, as the teacher asked ("2 khoảng animation hoàn
+   toàn bằng nhau").
+
+   THIS MUST BE A KEYFRAME `animation`, NOT a `transition` (real bug fixed
+   31/7/2026, đợt 13 — the teacher watched at normal speed and reported the
+   tiles "just disappear in place", no visible slide at all). Root cause:
+   the base `.aw-otb-qtile` rule above ALREADY has a permanent
+   `animation: aw-otb-qtile-in ... both` targeting these SAME two properties
+   (transform/opacity) — with `fill-mode: both/forwards` that animation
+   never actually "releases" the property once it finishes, it keeps holding
+   its end value indefinitely. Per the CSS spec, a running (or still-held)
+   ANIMATION on a property always wins over a `transition` targeting that
+   same property on the same element — so the old `transition: transform
+   1.2s ..., opacity 1.2s ease;` version of this rule was SILENTLY INERT the
+   entire time; the tiles never actually transitioned, they just sat pinned
+   by the entrance animation's held end-state until `render()` deleted them
+   from the DOM. Switching this rule to its OWN keyframe `animation` (which
+   the class's higher specificity fully swaps in for the entrance one) sidesteps
+   the conflict entirely — it's animation-vs-animation now, a completely
+   normal, well-supported swap. The `from` keyframe below matches EXACTLY
+   where the entrance animation left the tile (opacity 1, translateX(0)), so
+   there's no jump when the swap happens. Each tile's inline
+   `animationDelay` (set once in renderQuestion(), see open-the-box.js) is
+   HIGHER PRIORITY than this class rule's shorthand regardless — it keeps
+   applying to whichever keyframe is currently named, so the SAME per-tile
+   stagger drives both the entrance and this exit without being reset here. */
+@keyframes aw-otb-qtile-out {
+  from { opacity: 1; transform: translateX(0); }
+  to   { opacity: 0; transform: translateX(85cqw); }
+}
 .aw-otb-q-answers.is-closing .aw-otb-qtile {
-  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
-  transform: translateX(85cqw);
-  opacity: 0;
+  animation: aw-otb-qtile-out 1.2s cubic-bezier(.4,0,.2,1) both;
 }
 /* an odd answer count -> last tile spans both columns (no lone half-empty row) */
 .aw-otb-qtile-wide { grid-column: 1 / -1; }

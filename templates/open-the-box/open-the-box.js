@@ -7,18 +7,22 @@
 // REQUIRED to have at least 2 answers with one marked correct (see
 // `MIN_ANSWERS` below and `open-the-box-editor.js`).
 //
-// TIMER MODEL (rewritten 30/7/2026, đợt 9 — teacher's call): ONE shared
-// countdown, started the first time ANY box is opened, that runs
-// CONTINUOUSLY from then on — through question screens AND while sitting
-// at the grid choosing the next box, never pausing. A correct answer
-// RESETS it back to full (with a visible "refill" animation). A wrong
-// answer does NOT reset it — it just keeps draining, even while the grid
-// is showing. If it reaches 0 at ANY point (mid-question or sitting at the
-// grid), the round ends immediately ("Game over"). Finishing every box
-// before that happens ends the round as a win ("Game complete"). Both
-// call `ui.finish()`, giving Open the box the SAME ending flow as
-// Quiz/Anagram: Leaderboard / Show answers / Start again / Play a
-// different template, Score + Time.
+// TIMER MODEL (rewritten 30/7/2026, đợt 9; amended 31/7/2026, đợt 11 —
+// teacher's call): ONE shared countdown, started the first time ANY box is
+// opened. A WRONG answer does NOT reset it — it just keeps draining
+// continuously, through question screens AND while sitting at the grid
+// choosing the next box, never pausing. A CORRECT answer resets the bar
+// back to full (visible "refill" animation) and then PAUSES it there — it
+// does NOT resume counting down until the player opens the NEXT box (đợt 11
+// change: "đồng hồ reset và chỉ bắt đầu tiếp tục tính khi bấm chọn ô câu hỏi
+// tiếp theo" — đợt 9 had it resume immediately instead, even while still
+// sitting at the grid deciding). If it reaches 0 at any point while actually
+// running (mid-question, or sitting at the grid after a wrong answer), the
+// round ends immediately ("Game over"). Finishing every box before that
+// happens ends the round as a win ("Game complete"). Both call
+// `ui.finish()`, giving Open the box the SAME ending flow as Quiz/Anagram:
+// Leaderboard / Show answers / Start again / Play a different template,
+// Score + Time.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -48,10 +52,16 @@ const ENTRANCE_BOX_MS_FIRST = 900;
 const ENTRANCE_RETURN_TOTAL_MS = 550;
 const ENTRANCE_BOX_MS_RETURN = 320;
 
-// Answer-tile slide-out (teacher's request, đợt 9): once an answer is
-// picked, the tiles slide away toward the right edge before the whole card
-// zooms back to its box.
-const TILE_EXIT_MS = 300;
+// Per-tile stagger (ms) shared by BOTH the answer tiles' entrance slide-in
+// and their exit slide-out, so the two cascades feel symmetric. The tiles'
+// own slide durations live in open-the-box.css (`aw-otb-qtile-in` AND
+// `aw-otb-qtile-out` keyframes — both real ANIMATIONS, not transitions; see
+// the long comment on `.is-closing` there for why a transition silently
+// doesn't work here) — both set to `1.2s`, matching ZOOM_TRANSFORM_MS below
+// EXACTLY (teacher's request, đợt 12: "2 khoảng animation hoàn toàn bằng
+// nhau" — the tiles run AT THE SAME TIME as the question card's zoom, not
+// before/after it; keep all three in sync if any of them changes).
+const TILE_STAGGER_MS = 45;
 
 // Correct-answer timer "refill" (teacher's request, đợt 9): the bar visibly
 // fills back up to full over this long before the fresh full-length
@@ -239,7 +249,10 @@ function mountQuestions(root, activity, ui) {
   // ----- Shared continuous countdown (see file header) -----
   let sharedClockEl = null, sharedFillEl = null;
   let timerStarted = false;
-  let tickInterval = null, endTimeout = null, refillTimeout = null;
+  // Set by resetSharedTimer() after a CORRECT answer (đợt 11): the bar sits
+  // full but the countdown does NOT resume until openBox() runs again.
+  let pausedForNextBox = false;
+  let tickInterval = null, endTimeout = null;
 
   function ensureTimerUI() {
     if (sharedFillEl || !ui.topbarMid) return;
@@ -275,25 +288,28 @@ function mountQuestions(root, activity, ui) {
       sharedFillEl.style.transition = `width ${totalDur}s linear, background-color .4s ease`;
       sharedFillEl.style.width = "0%";
     }
-    let lastTick = Math.ceil(totalDur);
-    let halfMode = false;
+    // A single unified "tick slot", in SECONDS: whole-second steps while
+    // more than WARNING_SECONDS remain, half-second steps once inside the
+    // final WARNING_SECONDS — continuous across that seam, so there's no
+    // separate "mode" flag whose own init value can collide with the very
+    // check it's about to run (đợt 12 fix — the old halfMode flag computed
+    // its OWN starting `lastTick` from the SAME `remaining` it then
+    // immediately re-compared against on that same tick, so the two were
+    // always equal right at the transition and the beat that should have
+    // landed exactly at the 5-second mark silently never fired — heard as a
+    // skipped beat before the double-speed tick kicked in). Now there's one
+    // formula and one comparison, so the beat AT the 5s mark fires normally
+    // (still single-rate), and the very next beat half a second later is the
+    // first double-rate one — no gap, no double-fire, teacher's request.
+    let lastSlot = Math.ceil(totalDur);
     if (tickInterval) clearInterval(tickInterval);
     tickInterval = setInterval(() => {
       const remaining = Math.max(0, totalDur - (performance.now() - startAt) / 1000);
-      const remainingCeil = Math.ceil(remaining);
       timeLeft = remaining;
-      if (sharedClockEl) sharedClockEl.textContent = formatTime(remainingCeil);
-      if (remaining <= WARNING_SECONDS && !halfMode) {
-        halfMode = true;
-        lastTick = Math.ceil(remaining * 2);
-        sharedFillEl?.classList.add("is-warning");
-      }
-      if (!halfMode) {
-        if (remainingCeil < lastTick) { lastTick = remainingCeil; if (remainingCeil > 0) otbSound.clockTick(); }
-      } else {
-        const half = Math.ceil(remaining * 2);   // half-second slots -> double tick frequency
-        if (half < lastTick) { lastTick = half; if (remaining > 0) otbSound.clockTick(); }
-      }
+      if (sharedClockEl) sharedClockEl.textContent = formatTime(Math.ceil(remaining));
+      sharedFillEl?.classList.toggle("is-warning", remaining <= WARNING_SECONDS);
+      const slot = remaining > WARNING_SECONDS ? Math.ceil(remaining) : Math.ceil(remaining * 2) / 2;
+      if (slot < lastSlot) { lastSlot = slot; if (remaining > 0) otbSound.clockTick(); }
       if (remaining <= 0) { clearInterval(tickInterval); tickInterval = null; }
     }, 250);
     if (endTimeout) clearTimeout(endTimeout);
@@ -302,11 +318,12 @@ function mountQuestions(root, activity, ui) {
 
   // Correct answer: the bar visibly fills BACK UP from its current width to
   // full over REFILL_MS (teacher's "hiệu ứng thanh đồng hồ đầy ngược trở
-  // lại"), THEN the fresh full-length countdown resumes.
+  // lại"), THEN stays there PAUSED — it does NOT resume counting down on its
+  // own any more (đợt 11 change, see the file header). openBox() is what
+  // resumes it, the next time the player taps a box.
   function resetSharedTimer() {
     if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
     if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
-    if (refillTimeout) { clearTimeout(refillTimeout); refillTimeout = null; }
     timeLeft = questionSeconds;
     if (sharedClockEl) sharedClockEl.textContent = formatTime(questionSeconds);
     if (sharedFillEl) {
@@ -318,13 +335,12 @@ function mountQuestions(root, activity, ui) {
       sharedFillEl.style.transition = `width ${REFILL_MS}ms ease`;
       sharedFillEl.style.width = "100%";
     }
-    refillTimeout = setTimeout(() => { refillTimeout = null; runCountdown(questionSeconds); }, REFILL_MS);
+    pausedForNextBox = true;
   }
 
   function stopSharedTimer() {
     if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
     if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
-    if (refillTimeout) { clearTimeout(refillTimeout); refillTimeout = null; }
   }
 
   render();
@@ -363,8 +379,9 @@ function mountQuestions(root, activity, ui) {
         if (correctAns) back.append(el("div", "aw-otb-back-a is-correct", "&#10003; " + escapeHtml(correctAns.text)));
         back.append(el("span", "aw-otb-solved-tick", ICON_CHECK_GREEN));
       } else if (locked) {
-        // wrong pick: shows the question in grey ("black and white") + a
-        // padlock badge in the SAME spot the green tick uses on a solved box
+        // wrong pick: shows the question on a solid RED tile (see
+        // open-the-box.css, đợt 12) + a padlock badge in the SAME spot the
+        // green tick uses on a solved box
         back.append(el("div", "aw-otb-back-q", escapeHtml(it.question)));
         back.append(el("span", "aw-otb-solved-tick aw-otb-lock-tick", ICON_LOCK));
       }
@@ -386,7 +403,16 @@ function mountQuestions(root, activity, ui) {
     const boxEl = root.querySelectorAll(".aw-otb-box")[i];
     if (boxEl) lastBoxRect = relRect(boxEl, root);
     otbSound.openBox();
-    startSharedTimerIfNeeded();   // no-op after the first box of the play-through
+    if (!timerStarted) {
+      startSharedTimerIfNeeded();   // the very first box of the play-through
+    } else if (pausedForNextBox) {
+      // a previous correct answer reset the bar and paused it (see
+      // resetSharedTimer) — opening THIS box is what resumes the countdown
+      // (teacher's request, đợt 11). timeLeft is already the full
+      // questionSeconds from that reset.
+      pausedForNextBox = false;
+      runCountdown(timeLeft);
+    }
     activeIndex = i;
     render();
   }
@@ -396,8 +422,11 @@ function mountQuestions(root, activity, ui) {
   // answers (teacher's request, đợt 10) — THEN run `afterFn` (which renders
   // the grid again). Also kicks off the answers' own slide-out (harmless if
   // answer() already started it earlier — see .is-closing there); this is
-  // what covers the gameOver() call site, which never pre-triggers it. If
-  // there's no card on screen at all (time ran out while sitting at the
+  // what covers the gameOver() call site, which never pre-triggers it. Runs
+  // AT THE SAME TIME as the question's zoom-back, not before it (teacher's
+  // request, đợt 12 — đợt 11 had briefly made the answers finish exiting
+  // first; see the CSS comment on `.is-closing` for why that got reverted).
+  // If there's no card on screen at all (time ran out while sitting at the
   // grid — see file header), just runs `afterFn` straight away.
   function closeCardThen(afterFn) {
     const qTile = root.querySelector(".aw-otb-q-question");
@@ -430,10 +459,12 @@ function mountQuestions(root, activity, ui) {
     it.answers.forEach((ans, k) => {
       const tile = el("button", "aw-otb-qtile");
       tile.type = "button";
-      // staggered "slide in from the right" entrance; same stagger basis
-      // reused as the exit's transition-delay (see .is-closing in answer()).
-      tile.style.animationDelay = (k * 45) + "ms";
-      tile.style.transitionDelay = (k * 45) + "ms";
+      // staggered "slide in from the right" entrance. This SAME inline
+      // animation-delay (set once, here) also drives the exit — .is-closing
+      // swaps in a different keyframe (see open-the-box.css, đợt 13) but the
+      // inline animation-delay stays put and keeps applying to it, since
+      // inline styles always outrank a class rule's shorthand.
+      tile.style.animationDelay = (k * TILE_STAGGER_MS) + "ms";
       const col = PALETTE[k % PALETTE.length];
       tile.style.setProperty("--otb-c", col.c);
       tile.style.setProperty("--otb-d", col.d);
@@ -455,11 +486,12 @@ function mountQuestions(root, activity, ui) {
     // Zoom ONLY the question tile in FROM the tapped box's exact on-screen
     // position (captured in openBox()) so it visually "grows" out of that
     // box — the answer tiles do NOT zoom at all (teacher's request, đợt 10),
-    // they slide in from the stage's right edge instead, entirely on their
-    // own via the `aw-otb-qtile-in` keyframe (open-the-box.css). Safe to
-    // animate `transform` on the tile here: it isn't itself positioned via
-    // transform (see CONG THUC MAU §3.5) — this is a one-off entrance
-    // effect, not static layout.
+    // they slide in from the stage's right edge instead, AT THE SAME TIME,
+    // entirely on their own via the `aw-otb-qtile-in` keyframe
+    // (open-the-box.css, duration kept equal to ZOOM_TRANSFORM_MS — teacher's
+    // request, đợt 12). Safe to animate `transform` on the tile here: it
+    // isn't itself positioned via transform (see CONG THUC MAU §3.5) — this
+    // is a one-off entrance effect, not static layout.
     if (lastBoxRect) zoomElFrom(qTile, lastBoxRect);
   }
 
@@ -494,20 +526,17 @@ function mountQuestions(root, activity, ui) {
 
     setTimeout(() => {
       if (ended) return;   // the shared countdown may have already ended the round while this was waiting
-      row.classList.add("is-closing");   // answer tiles slide back out toward the right edge
-      setTimeout(() => {
-        closeCardThen(() => {
-          activeIndex = null;
-          render();
-          if (!correct) otbSound.tileEliminate();
-          if (boxState.every(s => s === "correct")) {
-            ended = true;
-            stopSharedTimer();
-            otbSound.timesUp();
-            finishRound("Game complete");
-          }
-        });
-      }, TILE_EXIT_MS);
+      closeCardThen(() => {
+        activeIndex = null;
+        render();
+        if (!correct) otbSound.tileEliminate();
+        if (boxState.every(s => s === "correct")) {
+          ended = true;
+          stopSharedTimer();
+          otbSound.timesUp();
+          finishRound("Game complete");
+        }
+      });
     }, correct ? 900 : 1400);
   }
 

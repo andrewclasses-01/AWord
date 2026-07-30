@@ -117,19 +117,24 @@ body {
    share this row with the score, instead of a separate row below it. Only
    applies when `.has-inline` is present — every other template's `.aw-topbar`
    keeps the exact same 2-child flex row it always had (see core/engine.js).
-   Column 1 is a FIXED `1.6cqw` (not `auto`) — that's the exact padding
-   `.aw-otb-qcard` uses in open-the-box.css, so the middle column's LEFT edge
-   lands exactly under the question tile's own left edge (Open the box's
-   request, 30/7/2026 đợt 10: "mép đồng hồ thẳng mép ô câu hỏi"). Column 1's
-   own content (the engine's own timer, ALWAYS hidden for Open the box since
-   it never sets a whole-game timer) is invisible either way, so forcing its
-   track to this exact size has no visible effect on it. `column-gap:0` so
-   nothing pads that left edge back out — the small gap before the score on
-   the right is `.aw-topbar-mid`'s own `padding-right` instead (see
-   open-the-box.css), which doesn't touch the left edge at all. */
+   Column 1 is a FIXED `0` (not `auto`) — the teacher's request (31/7/2026,
+   đợt 11) is that the CLOCK's outer-left edge sit exactly as far from the
+   FRAME's left edge as the SCORE's outer-right edge sits from the frame's
+   right edge (both then equal `.aw-stage-inner`'s own 2.2cqw padding).
+   Column 1's own content (the engine's own timer, ALWAYS hidden for Open the
+   box since it never sets a whole-game timer) is invisible either way, so
+   collapsing its track to 0 has no visible effect on it — it just overflows
+   its own (zero-width, invisible) box, which grid tracks allow without
+   affecting sibling columns. This SUPERSEDES đợt 10's earlier `1.6cqw`
+   column, which instead aligned the clock's left edge with the question
+   tile's own left edge — the teacher's new frame-edge symmetry request wins
+   over that older goal. `column-gap:0` so nothing pads that left edge back
+   out — the small gap before the score on the right is `.aw-topbar-mid`'s
+   own `padding-right` instead (see open-the-box.css), which doesn't touch
+   the left edge at all. */
 .aw-topbar.has-inline {
   display: grid;
-  grid-template-columns: 1.6cqw 1fr auto;
+  grid-template-columns: 0 1fr auto;
   column-gap: 0;
   align-items: center;
 }
