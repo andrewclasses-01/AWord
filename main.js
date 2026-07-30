@@ -596,7 +596,7 @@ function actCard(node) {
   const foot = el("div", "aw-card-foot");
   const info = el("div", "aw-card-info");
   // name on TOP, template type BELOW it (matches the agreed card layout)
-  info.append(el("div", "aw-card-name", escapeText(itemName(node))), el("span", "aw-card-type", escapeText(node.type || "quiz")));
+  info.append(el("div", "aw-card-name", escapeText(itemName(node))), el("span", "aw-card-type", escapeText(templateLabel(node.type))));
   foot.append(info, menuButton(node, actMenuItems));
   card.append(foot);
 

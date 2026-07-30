@@ -21,6 +21,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 30/7/2026 — Đợt 11b: sửa 1 BUG THẬT bắt được ngay sau khi thầy tự tay thử trên bản live
+
+Thầy gửi ảnh chụp trang live: modal "New activity" vẫn hiện Open the box/Type the answer "Coming soon"
+— **hoá ra là cache trình duyệt của thầy**, không phải lỗi server: mở tab MỚI (`tabs_create` +
+`javascript_tool` import thẳng `core/catalog.js?bust=<timestamp>` từ `andrewclasses-01.github.io`) xác
+nhận catalog live đã đúng `built:true` cả 2. Bài học lặp lại đúng BẪY mục 9 (GitHub Pages/trình duyệt
+cache file .js) — chỉ cần thầy bấm tải lại cứng (Ctrl+Shift+R) hoặc mở tab mới.
+
+**Nhưng ảnh chụp cũng lộ 1 lỗi thật khác, không liên quan cache**: 1 act cũ tên "VOCABULARY REVIEW —
+Open the box" (thầy đã tạo được từ trước, có lẽ lúc còn test cục bộ) hiện nhãn loại game là
+**`OPEN_THE_BOX`** (chữ hoa + gạch dưới) thay vì "Open the box" như card Anagram/Quiz bên cạnh hiện
+đúng "ANAGRAM"/"QUIZ". Soát `main.js` thấy dòng vẽ nhãn này dùng thẳng `node.type` (chuỗi kỹ thuật,
+vd `"open_the_box"`) thay vì gọi `templateLabel(node.type)` (hàm đã có sẵn, trả về nhãn đẹp "Open the
+box") — lỗi NẰM SẴN từ trước (không phải do đợt gộp hôm nay gây ra), chỉ là VÔ HÌNH bấy lâu vì Quiz/
+Anagram là type 1-từ nên viết hoa `"quiz"`/`"anagram"` tình cờ đúng luôn với nhãn hiển thị; type nhiều
+từ như `open_the_box`/`type_the_answer` mới lộ ra khác biệt. Sửa 1 dòng (`main.js`, hàm `actCard`):
+đổi `escapeText(node.type || "quiz")` → `escapeText(templateLabel(node.type))`. Đã kiểm bằng
+`javascript_tool` gọi thẳng `templateLabel()` cho cả 5 type (`quiz/anagram/open_the_box/
+type_the_answer/`type không tồn tại`) ra đúng nhãn đẹp cho 4 type thật + fallback an toàn cho type lạ;
+trang chủ tải lại 0 lỗi console. **ĐÃ COMMIT + PUSH GITHUB** (cùng yêu cầu "push" của thầy từ đợt 11).
+
 ### 30/7/2026 — GỘP Open the box + Type the answer VÀO TRANG CHỦ, PUSH GITHUB (đợt 11, "đưa lên live")
 
 Thầy yêu cầu thẳng "đưa Open the box và Type the answer lên live" để dùng trên máy khác, bỏ qua bước
