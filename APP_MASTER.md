@@ -3,13 +3,18 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **29/7/2026 tối — Open the box's Questions mode (quiz-in-a-box + đồng hồ sống còn)
-> xây xong TOÀN BỘ qua 7 đợt sửa liên tiếp trong CÙNG 1 phiên với thầy, giờ dùng CHUNG hệ thống kết thúc
-> ván với Quiz/Anagram** (Leaderboard/Show answers/Start again/Play a different template — xem mục 0b).
-> Đây là phiên CHẠY SONG SONG với phiên Anagram (đã chốt + push xong, xem lịch sử git) — không đụng
-> nhau (khác vùng code), cả 2 đều có sửa `core/engine.js` nhưng KHÔNG xung đột.
-> Find the match/Type the answer vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`). App chính
-> (trang chủ/thư viện/assignment) vẫn ở v0.9.5. ⚠️ **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — xem mục 0b.
+> Cập nhật lần cuối: **30/7/2026 (đợt 10) — Open the box: sửa 1 BUG THẬT của đợt 9** (hàng cuối "đã căn
+> giữa" nhưng CSS Grid không thể đặt ô lẻ đúng tâm — chỉ chia được TRỌN cột, không chia nửa; đổi hẳn
+> `.aw-otb-grid` từ CSS Grid sang **Flexbox `flex-wrap`+`justify-content:center`**, canh giữa từng hàng
+> liên tục, đo pixel xác nhận lệch tâm chỉ còn 0.5px sai số làm tròn), **đồng hồ dịch hẳn sang trái,
+> mép trái THẲNG mép trái ô câu hỏi tuyệt đối** (cột đầu của `.has-inline` trong `core/app.css` đổi
+> sang độ rộng CỐ ĐỊNH `1.6cqw` thay vì `auto`), và **tách hẳn 2 hiệu ứng zoom** — chỉ ô câu hỏi zoom
+> từ vị trí Ô SỐ, các ô đáp án KHÔNG zoom mà chỉ trượt ngang từ mép phải MÀN HÌNH (85cqw). Đợt 8-9 (bỏ
+> Simple mode, editor, đổi âm thanh, đồng hồ chạy liên tục...) vẫn giữ nguyên, xem
+> `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 8-10 cho chi tiết đầy đủ. **CHƯA COMMIT** (thầy
+> dặn hoàn thiện xong trên local rồi mới đẩy GitHub sau).
+> Find the match/Type the answer vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`). Open the
+> box cũng vậy — vẫn `built:false`, chưa gộp trang chủ, chờ thầy duyệt như 2 game kia.
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -17,8 +22,10 @@
 > ⚠️ **Đừng chuyển repo sang tài khoản GitHub khác** — chuyển là mất tính năng này.
 > myLesson: `E:\LAP TRINH APP\myLesson` (app) · `D:\APP AND DATA\myLesson Web` (web).
 >
-> 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — ⚠️ đang chạy bản **v0.9.3 cũ**, CHƯA
-> có 3 việc của v0.9.4 (Class/report gọn/in chuẩn) vì thầy chủ định giữ ở local để sửa tiếp trước khi đẩy.
+> 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — **30/7/2026: đã cập nhật đầy đủ** tới
+> commit `a87fe8a` (đã kiểm bằng `curl`), gồm cả v0.9.4/v0.9.5 và **Anagram** (`built:true`, đã lên
+> trang chủ). Trước đó phần này từng ghi nhầm "vẫn v0.9.3 cũ" — thông tin đó SAI/lỗi thời, đã sửa lại
+> cho khớp git log/curl thật (bài học: đừng tin dòng ghi chú cũ, luôn `curl` kiểm chứng lại nếu nghi ngờ).
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
 > 🔥 **FIREBASE + THƯ VIỆN TRÊN MÂY**: project **`aword-70dae`** (account `namdaptrai01@gmail.com`,
 > gói Spark miễn phí) — Firestore Singapore + đăng nhập Google. **Thầy phải đăng nhập** mới vào được
@@ -96,50 +103,58 @@ sớm hơn trong ngày — chi tiết: `templates/anagram/GHI CHU ANAGRAM.md`). 
 không phá gì cũ. Việc còn thiếu (thầy chưa yêu cầu): 🎤/🖼️ voice+image trong editor ("để bàn sau"),
 chưa tự tay nghe thật âm thanh "còn 5 giây cuối".
 
-**Open the box's Questions mode — XÂY MỚI HOÀN TOÀN qua 7 đợt sửa liên tiếp CÙNG 1 phiên với thầy, 🟢
-CHỜ THẦY DUYỆT** (đọc `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` — nhật ký đợt 1-7 rất chi tiết,
-đây chỉ tóm chặng cuối cùng, quan trọng nhất):
-- **Cơ chế mới**: bấm 1 **Ô SỐ** (ô đóng trong lưới) → zoom mượt thành **Ô CÂU HỎI** (câu hỏi trái + 4
-  đáp án lưới 2×2 phải, kiểu Quiz) + 1 đồng hồ đếm lùi DÙNG CHUNG cho cả ván (khác Quiz — không phải
-  mỗi câu 1 đồng hồ riêng). Đúng → Ô SỐ khoá mở vĩnh viễn (tích xanh) + đồng hồ reset đầy. Sai → Ô SỐ
-  khoá đóng, xám + khoá (không chọn lại được tới khi có 1 Ô SỐ khác đúng) + đồng hồ KHÔNG reset, chạy
-  tiếp. Hết giờ → rung+nổ lưới → "Game over". Mở hết toàn bộ đúng trước khi hết giờ → "Game complete".
-- **Cả 2 trường hợp kết thúc giờ DÙNG CHUNG hệ thống `ui.finish()` với Quiz/Anagram** (đợt 7, thay đổi
-  kiến trúc lớn nhất) — có ngay Leaderboard/Show answers/Start again/Play a different template +
-  Score/Time, KHÔNG phải tự viết lại. `core/engine.js` được thêm ĐÚNG 1 khả năng nhỏ để làm việc này:
-  `ui.finish({..., title})` — tham số `title` TUỲ CHỌN đổi chữ "Game complete" mặc định thành
-  "Game over" (hay bất kỳ chữ gì); **không truyền thì mọi template khác chạy y nguyên 100%** (đã diff
-  xác nhận chỉ 4 dòng thay đổi, cực nhỏ). Đây LÀ file `core/` — nhưng KHÁC hẳn vùng code Anagram sửa
-  (celebrate/showSummary vs tool-panel), không đè lên nhau.
-- Ngoài ra còn: bố cục Ô CÂU HỎI theo đúng ảnh Wordwall thật (trái/phải, không giống Quiz gốc); nút
-  âm thanh/fullscreen về đúng góc phải (bẫy CSS Grid auto-placement khi ẩn 1 item); zoom mở/đóng chậm
-  và mượt (đã bắt + sửa 1 bẫy animation thật: thiếu ép-vẽ-lại khiến animation nhảy cứng); đồng hồ + ô
-  câu hỏi/đáp án cao hơn (đã bắt + sửa 1 bẫy `autoFit` thật: co chữ sai do min-height mặc định + slack
-  quá lớn); âm thanh mp3 thật copy từ Anagram (`otb-sound.js` + `sounds/` — bản riêng, không cross-import).
-- **CHƯA COMMIT** (thầy chưa nói "lưu lại"/"save" trong phiên này) — file thay đổi: `core/engine.js`
-  (+10/-2 dòng), `templates/open-the-box/open-the-box.js/.css`, `GHI CHU OPEN-THE-BOX.md` (sửa), cùng
-  2 file/thư mục MỚI `templates/open-the-box/otb-sound.js` + `templates/open-the-box/sounds/` (12 mp3).
-  Chạy `git status`/`git diff` để xem lại trước khi quyết định commit.
+**Open the box — nay chỉ CÒN chế độ Questions (đợt 8-9, 30/7/2026), 🟢 CHỜ THẦY DUYỆT** (đọc
+`templates/open-the-box/GHI CHU OPEN-THE-BOX.md` — nhật ký đợt 1-9 rất chi tiết, đây chỉ tóm chặng
+cuối cùng, quan trọng nhất). **Chế độ "Simple" (lật hộp xem chữ, không điểm) đã bị XOÁ HẲN** — thầy
+chốt chỉ giữ Questions, mỗi câu bắt buộc ≥2 đáp án + 1 đáp án đúng (chặn cả ở content editor mới lẫn
+lúc chơi). Có **content editor riêng** từ đợt 8 (`open-the-box-editor.js`, gần như copy `quiz-editor.js`
+vì cùng hình dạng dữ liệu) — Open the box giờ có editor giống Quiz/Anagram, không còn phải sửa tay
+`sample-open-the-box.js`. Bộ âm thanh cũng đổi hẳn sang 15 file gốc Wordwall thầy tải riêng (không còn
+mượn Anagram) — xem GHI CHU OPEN-THE-BOX.md đợt 8 về lưu ý tên gọi gameOver/timesUp NGƯỢC với tài liệu
+gốc của chính bộ âm thanh, thầy chốt vậy có chủ đích. Đợt 9 kiến trúc lại hẳn đồng hồ (xem bullet dưới)
++ thêm loạt hiệu ứng zoom/trượt theo yêu cầu thầy.
+- **Cơ chế (đợt 9, kiến trúc lại đồng hồ)**: bấm 1 **Ô SỐ** (ô đóng trong lưới) → zoom mượt (nay
+  CHẬM GẤP ĐÔI so với đợt 5/6) thành **Ô CÂU HỎI** (câu hỏi trái + đáp án lưới phải, trượt vào từ cạnh
+  phải, kiểu Quiz) + **1 bộ đếm DUY NHẤT chạy LIÊN TỤC** từ lúc mở Ô SỐ đầu tiên tới hết ván — KHÔNG
+  còn dừng khi về màn lưới nữa (khác hẳn thiết kế đợt 3-8: giờ hết giờ có thể xảy ra ngay CẢ LÚC đang
+  đứng ở lưới chọn ô kế, không cần đang mở câu hỏi). Đúng → Ô SỐ khoá mở vĩnh viễn (tích xanh) + thanh
+  giờ "đầy ngược trở lại" (hoạt hình fill-up 500ms) rồi chạy tiếp từ đầy. Sai → Ô SỐ khoá đóng, xám +
+  khoá, đáp án trượt ngược ra phải + đồng hồ KHÔNG reset, cứ chạy tiếp xuyên suốt (kể cả ở màn lưới).
+  Còn ≤5s → thanh chuyển đỏ dần + tích gấp đôi tần suất. Hết giờ (bất kỳ lúc nào) → rung+nổ lưới →
+  "Game over". Mở hết toàn bộ đúng trước khi hết giờ → "Game complete".
+- **Cả 2 trường hợp kết thúc DÙNG CHUNG hệ thống `ui.finish()` với Quiz/Anagram** (đợt 7) — có ngay
+  Leaderboard/Show answers/Start again/Play a different template + Score/Time, KHÔNG phải tự viết lại.
+  `core/engine.js` có thêm `ui.finish({..., title})` (đợt 7, TUỲ CHỌN, không ảnh hưởng template khác)
+  + cờ `tpl.inlineTimerBar`/`ui.topbarMid` (đợt 8-9, TUỲ CHỌN tương tự) — cả 2 lần sửa `core/` đều đã
+  diff kỹ + test lại Quiz/Anagram xác nhận không đổi gì cho các template không khai cờ.
+- Ngoài ra còn: bố cục Ô CÂU HỎI theo đúng ảnh Wordwall thật (trái/phải, không giống Quiz gốc); zoom
+  lưới lúc bấm START kéo dài đúng 2.46s khớp `intro.mp3` thật (đo bằng ffmpeg); hàng cuối thiếu ô tự
+  căn giữa; bộ âm thanh 16 file gốc Wordwall thầy tải riêng (đợt 8, KHÔNG còn mượn Anagram như trước —
+  `otb-sound.js` + `sounds/`, bản riêng không cross-import).
+- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-9 (30/7/2026, việc trong mục này)
+  CHƯA COMMIT** — thầy dặn hoàn thiện xong hết trên local rồi mới đẩy GitHub đợt sau, đúng quy tắc
+  "không tự commit nếu thầy không nói 'lưu lại'/'save'". `built:false` nên chưa ai thấy trên trang chủ.
 - **CHƯA làm / có thể hỏi thêm nếu thầy cần**: màn Show answers không phản ánh được lịch sử NẾU 1 Ô SỐ
   bị sai nhiều lần trước khi cuối cùng đúng (chỉ nhớ lần sai gần nhất) — chấp nhận được, đã ghi rõ lý do
   trong code; **CHƯA gộp `built:true` vào trang chủ** (đúng quy trình, chờ thầy duyệt xong).
 
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
-(a) Thầy tự chơi thử Open the box's Questions mode (dữ liệu mẫu hiện đang tạm để Questions mode — xem
-    cảnh báo cuối `GHI CHU OPEN-THE-BOX.md`, nhớ trả về Simple mode sau khi thầy xác nhận xong) — có ok
-    chưa hay còn muốn chỉnh gì?
+(a) Thầy tự chơi thử Open the box (dữ liệu mẫu đợt 8 đã đổi hẳn sang 9 câu từ vựng/ngữ pháp dạng
+    Questions — không còn cảnh báo "tạm để mode X" như các đợt trước, vì Simple mode đã xoá hẳn) — có
+    ok chưa hay còn muốn chỉnh gì? Đặc biệt cần thầy xác nhận trên TOMKO: zoom lúc START, 16 âm thanh
+    mới (nhất là cặp GameOver/TimesUp), và thanh giờ+điểm có thật "cùng hàng" trên màn 86" không.
 (b) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
 (c) Xem xét Find the match/Type the answer rồi build content editor riêng khi được duyệt.
-(d) Có muốn đẩy code lên GitHub (push) đợt này chưa, hay vẫn giữ local để sửa tiếp?
+(d) ✅ Đã đẩy code lên GitHub (30/7/2026, commit `a87fe8a`) — thầy chọn "push" khi được hỏi.
 (e) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
 
 **Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
 không nói (nhưng nói "lưu lại"/"save" thì commit ngay không cần hỏi lại), KHÔNG tự `git push`.
 
-**Việc CŨ (assignment/print), vẫn còn dở, kho code**: ⚠️ **v0.9.4 và v0.9.5 CHỈ commit LOCAL, CHƯA push GitHub** — thầy chủ định giữ ở local để
-sửa tiếp nhiều thứ nữa trước khi đẩy lên mạng lần tới (đừng tự ý `git push` khi chưa được thầy yêu cầu).
-Web live (`andrewclasses-01.github.io/AWord`) vẫn đang chạy bản **v0.9.3** (không có việc của v0.9.4/
-v0.9.5 ở trên). `git log` sẽ thấy các commit đó nằm SAU v0.9.3 nhưng chưa lên `origin/main`.
+**Việc CŨ (assignment/print), vẫn còn dở, kho code**: ✅ **v0.9.4 và v0.9.5 ĐÃ push GitHub** (nằm trong
+đợt đẩy 30/7/2026, cùng lúc với Anagram + Open the box) — đoạn "chỉ commit local, web live vẫn v0.9.3"
+từng ghi ở đây trước đó là THÔNG TIN CŨ/SAI, đã sửa lại cho khớp `git log`/`curl` thật. Vẫn giữ quy tắc
+**hỏi thầy trước khi `git push`** cho các đợt sửa SAU này — chỉ đợt 30/7 đã được thầy đồng ý rõ.
 
 **v0.9.5 CHƯA được thầy test thật** (cần đăng nhập Google, máy build không tự động hoá được bước đó —
 xem GHI CHU DU AN.md v0.9.5). Cách test: tạo 1 assignment cho 1 lớp đã có sẵn thư mục trong Results, đợi

@@ -62,10 +62,18 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
 
   // ----- Top bar (timer left · score right) -----
-  const topbar = el("div", "aw-topbar");
+  // `tpl.inlineTimerBar` (opt-in, currently only Open the box) adds a THIRD
+  // slot in the middle of this row (`ui.topbarMid`) so a template's own
+  // per-round timer bar can sit on the SAME line as the score instead of a
+  // separate row below it. Templates that don't set the flag get the exact
+  // same 2-child flex row as before — nothing else about `.aw-topbar` changes
+  // for them.
+  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : ""));
   const timerEl = el("span", "aw-top-timer", "0:00");
   const scoreEl = el("span", "aw-top-score", `${icons.check} 0`);
-  topbar.append(timerEl, scoreEl);
+  const topbarMid = tpl.inlineTimerBar ? el("div", "aw-topbar-mid") : null;
+  if (topbarMid) topbar.append(timerEl, topbarMid, scoreEl);
+  else topbar.append(timerEl, scoreEl);
 
   // ----- Play area -----
   const playArea = el("div", "aw-playarea");
@@ -513,6 +521,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   // ----- API handed to the template -----
   const ui = {
     playArea,
+    topbarMid,   // null unless tpl.inlineTimerBar is true — see topbar setup above
     setScore(n) { scoreEl.innerHTML = `${icons.check} ${n}`; },
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null }) {
       navLabel.textContent = `${index} of ${total}`;

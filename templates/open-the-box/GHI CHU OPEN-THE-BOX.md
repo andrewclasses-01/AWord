@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (24/7/2026)
+## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (30/7/2026)
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -19,6 +19,180 @@ Lưới hộp đánh số (đóng). Chạm hộp → mở, hiện nội dung (pr
 Engine hiện tại LUÔN chạy vòng finish → celebration → leaderboard (thiết kế cho game scorable). Template này KHÔNG có điểm — khi build cần kiểm tra engine đối xử `scorable:false` thế nào; nếu engine cần thêm nhánh open-ended (bỏ celebration/leaderboard, nút kết thúc riêng), **KHÔNG tự sửa core/** — ghi đề xuất chi tiết vào mục dưới để session tổng xử lý.
 
 ## Nhật ký
+
+### 30/7/2026 (đợt 10) — đồng hồ thẳng mép ô câu hỏi, tách zoom ô số/trượt đáp án, sửa lỗi thật của việc căn giữa hàng cuối
+Thầy test đợt 9 xong, báo 3 điểm cần chỉnh — 1 trong số đó (căn giữa hàng cuối) hoá ra là **bug thật**
+của đợt 9, không phải chỉnh thêm:
+
+1. **Đồng hồ + thanh giờ dịch hẳn sang trái, mép trái đồng hồ THẲNG mép trái ô câu hỏi**: đợt 9 dùng cột
+   `auto` cho ô đồng hồ ẩn của engine (`.aw-topbar`), khiến `ui.topbarMid` bắt đầu ở một vị trí KHÔNG
+   xác định trước (tuỳ độ rộng chữ "0:00" ẩn). Đổi `core/app.css` sang cột **CỐ ĐỊNH `1.6cqw`** — đúng
+   bằng padding của `.aw-otb-qcard` — nên mép trái của `ui.topbarMid` (và đồng hồ bên trong) rơi ĐÚNG
+   vào mép trái ô câu hỏi, đo bằng `getBoundingClientRect()` ra lệch **0px**. Khoảng cách bên phải trước
+   khi chạm điểm số chuyển từ `column-gap` chung (ảnh hưởng cả 2 bên) sang `padding-right` riêng của
+   `.aw-otb-q-topbar` (chỉ ảnh hưởng bên phải, không phá mép trái vừa canh xong).
+2. **Tách hẳn 2 hiệu ứng**: trước đây CẢ khối câu hỏi+đáp án zoom chung 1 khối (`.aw-otb-qcard`). Nay
+   CHỈ ô câu hỏi (`.aw-otb-q-question`) zoom từ vị trí Ô SỐ ra/vào (đổi `zoomCardFrom/To` thành
+   `zoomElFrom/To` nhận tham số phần tử bất kỳ); các ô đáp án KHÔNG zoom nữa — chỉ trượt bằng
+   `translateX` thuần, khoảng cách tăng lên **85cqw** (tính theo bề rộng KHUNG GAME thật, không phải
+   theo ô) để chắc chắn trượt từ ngoài mép phải màn hình vào, đúng ý "mép phải MÀN HÌNH" chứ không phải
+   chỉ lệch nhẹ trong lòng ô như đợt 9. Đã đo `getComputedStyle(...).transform` giữa lúc đang zoom: ô
+   câu hỏi ra ma trận có hệ số scale ≠ 1 (đang phóng to), ô đáp án ra ma trận scale=1 (chỉ dịch ngang) —
+   xác nhận đúng tách biệt.
+3. **BUG THẬT của đợt 9 — hàng cuối "căn giữa" nhưng không thấy centered**: đọc lại kỹ CSS Grid spec
+   phát hiện 2 lớp vấn đề chồng nhau:
+   - Lớp 1 (đã tưởng đã sửa nhưng chưa đủ): chỉ gán `grid-column` cho hàng cuối mà không gán `grid-row`
+     — theo đúng spec, phần tử có cột tường minh nhưng hàng tự động được xếp TRƯỚC các phần tử hoàn
+     toàn tự động trong thuật toán auto-placement, có thể nhảy lên hàng SỚM hơn dự tính. Test lại xác
+     nhận gán tường minh CẢ `grid-row` lẫn `grid-column` cho MỌI ô thì đúng hàng, nhưng...
+   - Lớp 2 (nguyên nhân THẬT sự của "không thấy giữa"): với số ô lẻ (vd 1 ô còn lại trong lưới 4 cột),
+     vị trí "giữa nhất" mà CSS Grid nguyên cột cho phép vẫn lệch hẳn khỏi tâm thật (đo: ô nằm ở 37.5%
+     thay vì đúng 50% bề ngang) — vì không thể chia 1 cột nguyên làm đôi. **Giải pháp đúng**: bỏ hẳn CSS
+     Grid, đổi `.aw-otb-grid` sang **Flexbox `flex-wrap:wrap` + `justify-content:center`** — flexbox
+     canh giữa TỪNG HÀNG ĐƯỢC XUỐNG DÒNG một cách LIÊN TỤC (không theo bước cột), nên hàng nào cũng
+     giữa tuyệt đối, không cần tính `centerOffset` gì trong JS nữa.
+   - **Bẫy phát sinh khi đổi sang Flexbox (bắt được lúc test, không phải đoán)**: cỡ ô (`--cell`) đôi
+     khi bị giới hạn bởi CHIỀU CAO (không đủ hàng cho vừa) chứ không phải chiều rộng — khi đó ô NHỎ hơn
+     mức "vừa đúng N ô/hàng" cần, khiến khung rộng hết cỡ thẻ chứa được NHIỀU HƠN N ô/hàng (đo trực
+     tiếp: ép `cols:4` với 9 ô, kỳ vọng 4+4+1 nhưng ra thật 6+3!). Sửa bằng cách CHỐT khung
+     `.aw-otb-grid` đúng bằng `cols*cell+gaps` (không để nó giãn hết bề ngang thẻ cha), CĂN GIỮA khung
+     đó trong `.aw-otb-card` bằng `align-self:center`. Đo lại xác nhận đúng 4+4+1 và ô lẻ hàng cuối lệch
+     tâm khung đúng **0.5px** (sai số làm tròn, coi như 0).
+
+**Test bằng `javascript_tool`** (browser thật): đo `getBoundingClientRect()` xác nhận mép trái đồng hồ
+= mép trái ô câu hỏi tuyệt đối; đo `transform` giữa lúc zoom xác nhận ô câu hỏi có scale, ô đáp án chỉ
+có translate; ép `options.columns=4` với 9 ô qua console (`import()` lại module mẫu, sửa thẳng
+`activity.options` rồi Start again) → xác nhận đúng 4+4+1 hàng, tâm ô lẻ hàng cuối trùng tâm khung sai
+số 0.5px; chạy hết ván 9/9 đúng tự động → "GAME COMPLETE", 0 lỗi console. Hồi quy Quiz: `.aw-topbar`
+vẫn `display:flex`, className thuần, không đổi gì.
+
+**File đổi đợt này**: `core/app.css` (`.has-inline` cột 1 cố định `1.6cqw`), `open-the-box.css`
+(`.aw-otb-grid` đổi Grid→Flexbox, keyframe đáp án đổi khoảng cách 85cqw, `.aw-otb-q-topbar` thêm
+padding-right), `open-the-box.js` (`layoutGrid` bỏ hẳn tính `grid-row/column`, chốt width khung;
+`zoomCardFrom/To`→`zoomElFrom/To` tổng quát; `renderQuestion`/`closeCardThen` chỉ nhắm zoom vào ô câu
+hỏi).
+
+**CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+
+### 30/7/2026 (đợt 9) — thanh giờ full-width, đồng hồ chạy LIÊN TỤC (kể cả ở màn lưới), zoom chậm gấp đôi, đáp án trượt phải
+Thầy tự chơi đợt 8 xong, gửi 9 điều chỉnh liền — không có điểm nào chưa rõ (mô tả chi tiết đủ để code
+thẳng, không cần AskUserQuestion đợt này):
+
+1. **Thanh giờ full-width + đối xứng + đỏ dần + tích gấp đôi**: `core/app.css` đổi `grid-template-
+   columns` của `.aw-topbar.has-inline` từ `1fr auto 1fr` sang **`auto 1fr auto`** (cột giữa giờ ăn hết
+   khoảng trống còn lại thay vì auto-theo-nội-dung) + `.aw-topbar-mid{width:100%}`. Đồng hồ số nằm ở
+   MÉP TRÁI của khối giữa (đối xứng với điểm ở mép phải khối phải), thanh giờ `flex:1 1 auto` lấp hết
+   khoảng còn lại — tự nhiên "chạy từ sát điểm số về đến đồng hồ" vì thanh vốn co từ phải sang trái khi
+   cạn (mặc định của CSS width transition, không cần đổi gì thêm). Còn ≤5 giây: thêm class `.is-warning`
+   (nền đỏ `#dc2626`, có trong chuỗi `transition` cùng `width` nên đổi màu MƯỢT chứ không giật) + tích
+   chuyển sang **nửa giây/lần** (theo dõi "khe nửa giây" riêng khi vào vùng cảnh báo, x2 tần suất đúng
+   yêu cầu).
+2. **Zoom lưới lúc START = 2.46s đúng độ dài nhạc**: đo `intro.mp3` thật bằng `ffmpeg -i` (không có
+   ffprobe trên máy, dùng ffmpeg đọc dòng "Duration" trong stderr) ra đúng **2.46 giây**. Mỗi ô tự zoom
+   trong 900ms, độ trễ so le tính theo công thức `(i/(N-1)) * (2460-900)` để ô CUỐI CÙNG luôn kết thúc
+   đúng lúc nhạc dứt — công thức tự co giãn theo số ô (9 ô hay 100 ô đều khớp nhạc).
+3. **Bỏ âm "xột xoạt" thừa lúc START**: tìm ra nguyên nhân — mount() gọi `shuffle()` xáo câu hỏi VÀ
+   phát luôn `otbSound.shuffle()` cùng lúc với tiếng Intro (cả hai cùng kích hoạt bởi 1 cú bấm PLAY) →
+   nghe như 2 tiếng chồng nhau. Bỏ hẳn lệnh gọi âm thanh đó (vẫn xáo câu hỏi bình thường, chỉ bỏ tiếng).
+   Test xác nhận qua `read_network_requests`: bấm PLAY giờ chỉ tải đúng `intro.mp3` + `tileappear.mp3`
+   (không còn `shuffle.mp3`).
+4. **Căn giữa hàng cuối thiếu ô**: `layoutGrid()` tính `offset = floor((cols - soLuongHangCuoi) / 2)`
+   rồi gán `grid-column` TƯỜNG MINH cho từng ô hàng cuối (`Math.floor` chia đều phần trống 2 bên; nếu
+   phần trống là số lẻ thì bên phải dư 1 cột — không thể chia đôi 1 cột nguyên, đây là giới hạn toán học
+   của lưới rời rạc chứ không phải lỗi). Các hàng đầy phía trên giữ nguyên `grid-column` rỗng (auto-flow
+   mặc định).
+5. **Zoom Ô SỐ→Ô CÂU HỎI chậm gấp đôi**: `ZOOM_TRANSFORM_MS` 600→**1200ms**, `ZOOM_OPACITY_MS` 420→
+   **840ms** (giữ đúng tỷ lệ cũ, cả 2 chiều mở/đóng vẫn dùng chung hằng số như các đợt trước — khớp luôn
+   với mục 6 bên dưới).
+6. **Đồng bộ zoom in/out lúc đóng**: hiệu ứng "pop lưới" (mục 2) giờ áp dụng ở **MỌI lần** `renderGrid()`
+   chứ không chỉ lần đầu — quay về lưới sau khi trả lời cũng thấy các ô zoom vào, không chỉ "phựt" hiện
+   ra. Lần đầu (sau START) vẫn dùng bộ hằng số CHẬM khớp nhạc (mục 2); các lần sau dùng bộ NHANH riêng
+   (~550ms tổng, 320ms/ô) để không làm chậm nhịp chơi — tiếng "Ô xuất hiện" (tileAppear) CHỈ phát lần
+   đầu, không lặp lại mỗi câu (tránh ồn).
+7. **Đáp án trượt từ phải vào/ra**: đổi hẳn keyframe `aw-otb-qtile-in` từ phóng-to-mờ-dần sang
+   `translateX(30%)→0`. Thêm class `.is-closing` (gán qua JS ngay sau khoảng chờ xem dấu ✓/✗ cũ) làm
+   toàn bộ ô đáp án trượt ngược ra phải + mờ dần (300ms) TRƯỚC KHI thẻ câu hỏi mới bắt đầu zoom về ô —
+   dùng `transition-delay` so le same-key với `animation-delay` lúc vào để cả 2 chiều cùng nhịp.
+8. **Đúng → thanh giờ "đầy ngược trở lại"**: viết `resetSharedTimer()` — thay vì nhảy thẳng về 100%,
+   GHIM độ rộng HIỆN TẠI (đo bằng `getComputedStyle`) làm điểm xuất phát, bật transition 500ms rồi mới
+   đặt đích 100% (đúng kỹ thuật ép-vẽ-lại `void el.offsetWidth` đã dùng cho zoomCardFrom/To) — thanh
+   thật sự "đầy dần lên" thấy được, không giật. Chữ số đồng hồ reset về đủ giây NGAY (không hoạt hình
+   riêng, chỉ thanh mới có hiệu ứng).
+9. **KIẾN TRÚC LẠI toàn bộ đồng hồ — 1 bộ đếm DUY NHẤT chạy liên tục**: đây là thay đổi lớn nhất đợt
+   này. Trước đây `startTimer()`/`stopTimer()` gắn liền với từng lần mở Ô CÂU HỎI (dừng khi về lưới).
+   Nay tách thành `startSharedTimerIfNeeded()` (chỉ chạy 1 lần — lúc mở Ô SỐ đầu tiên cả ván) +
+   `runCountdown()` (tự chạy tới 0 bất kể đang xem lưới hay đang mở câu hỏi) + `resetSharedTimer()` (chỉ
+   gọi khi ĐÚNG). Sai → KHÔNG gọi gì cả, bộ đếm cứ thế chạy tiếp xuyên suốt kể cả lúc đang nhìn lưới chọn
+   ô tiếp theo — hết giờ lúc đó thì `gameOver()` bắn thẳng từ trạng thái lưới (đã có sẵn `closeCardThen`
+   tự bỏ qua bước zoom nếu không có thẻ nào đang mở, không cần sửa thêm). `ui.topbarMid` (đồng hồ+thanh)
+   dựng ĐÚNG 1 LẦN rồi để yên xuyên suốt (không còn bị xoá/tạo lại mỗi lần đổi màn lưới↔câu hỏi).
+
+**Test bằng `javascript_tool`** (browser thật, canh giờ theo đúng hằng số mới): mở ô → xác nhận
+`--otb-appear-delay` ô cuối = 1560ms + 900ms = đúng 2460ms; PLAY chỉ tải `intro.mp3`+`tileappear.mp3`
+(không còn shuffle); chọn SAI → đợi hết chuỗi hold+trượt+zoom → xác nhận đồng hồ **vẫn hiện + vẫn đếm**
+ở màn lưới (`0:11` khi kiểm) → đợi tiếp cho cạn hẳn **NGAY TẠI MÀN LƯỚI, chưa mở ô nào khác** → đúng
+"GAME OVER" (xác nhận đúng yêu cầu "Game Over ngay nếu không kịp"); chọn ĐÚNG → xác nhận thanh giờ nhảy
+đích 100% + chữ số về đúng giờ đầy; đợi vào vùng ≤5s → xác nhận class `is-warning` + màu nền đúng
+`rgb(220,38,38)`; giữa lúc trả lời sai → xác nhận `.is-closing` được gán đúng lúc (ngay sau hold
+1400ms). Hồi quy: Quiz + Anagram — `.aw-topbar` vẫn `display:flex; justify-content:space-between`,
+className thuần `aw-topbar`, không dính gì thay đổi ở Open the box. 0 lỗi console suốt toàn bộ.
+
+**File đổi đợt này**: `core/app.css` (đổi `grid-template-columns` của `.has-inline`, 1 chỗ, đã diff),
+`open-the-box.js` (viết lại phần lớn — bỏ `startTimer/stopTimer` cũ, thêm bộ đếm chia sẻ mới,
+`layoutGrid` thêm căn giữa hàng cuối, hằng số zoom/entrance mới), `open-the-box.css` (keyframe đáp án
+đổi hướng, thêm `.is-closing`/`.is-warning`, `.aw-otb-q-topbar` rộng 100%).
+
+**CHƯA COMMIT** — vẫn đang tiếp tục hoàn thiện trên local theo đúng dặn dò của thầy.
+
+**CHỜ TEST TOMKO**: (a) cảm giác zoom + trượt đáp án trên màn lớn có mượt như mong đợi; (b) nghe tiếng
+tích gấp đôi 5 giây cuối có rõ ràng không quá dồn dập; (c) đồng hồ chạy xuyên suốt lúc đang ở màn lưới
+có gây bất ngờ/khó chịu không (thua ngay khi đang phân vân chọn ô tiếp — đúng yêu cầu nhưng nên xác
+nhận cảm giác chơi thật có ổn không).
+
+### 30/7/2026 (đợt 8) — bỏ chế độ Simple, xây content editor, đổi bộ âm thanh, zoom lúc START + gộp thanh giờ/điểm
+Thầy chốt 5 việc lớn qua AskUserQuestion (đã hỏi + chờ "ok build" đúng quy trình):
+
+1. **Bỏ hẳn chế độ Simple** — chỉ còn Questions. `mountSimple()` + option `boxesAutoClose` xoá khỏi
+   `open-the-box.js`. Câu hỏi giờ bắt buộc ≥2 đáp án + 1 đáp án đúng, chặn ở CẢ editor (validate trước
+   Save) LẪN runtime (lọc phòng thủ, phòng dữ liệu cũ/sửa tay).
+2. **`open-the-box-editor.js` (mới)** — gần như copy nguyên `quiz-editor.js` (hình dạng dữ liệu giống
+   hệt Quiz), đổi field `items` thay `questions`, nhãn "Box N", giới hạn 2–100 hộp theo đúng luật
+   Wordwall thật (`../../docs/04-OPEN-THE-BOX.md`). Wire qua `otbTemplate.edit` — không cần sửa
+   `main.js`/`core/engine.js` cho việc này (hợp đồng `tpl.edit` đã có sẵn).
+3. **Đổi hẳn bộ âm thanh** sang 15 file gốc Wordwall thầy tải riêng (không còn mượn Anagram). ⚠️ **tên
+   gameOver/timesUp thầy chốt NGƯỢC với tài liệu gốc của chính bộ âm thanh** (file GHI CHU.md trong bộ
+   âm thanh: TimesUp = tiếng "keng" lúc hết giờ, GameCompleted = tiếng thắng) — thầy muốn **GameOver =
+   thua vì hết giờ, TimesUp = thắng (mở hết hộp)**, đã build ĐÚNG theo lời thầy, file gốc
+   "GameCompleted" vì vậy KHÔNG dùng tới (ghi rõ ở đây phòng thầy muốn đổi lại sau). Thêm ClockTick
+   (tích mỗi giây), Shuffle, TileAppear (lúc lưới hiện ra đầu ván), TileEliminate (lúc 1 hộp bị khoá).
+   Tiện sửa luôn 1 lỗi nhỏ từ đợt 7: hook `sounds.complete` (chạy ở MỌI `ui.finish()`, kể cả thua) từng
+   lỡ gán tiếng thắng — bỏ hẳn hook đó để khỏi phát 2 tiếng chồng nhau lúc thua.
+4. **Zoom lúc bấm START**: lưới hộp hiện ra nhỏ hơn (scale .72) rồi zoom về cỡ chuẩn, so le nhẹ theo
+   ô, CHỈ ở lần render đầu mỗi ván (không lặp lại khi quay về lưới giữa ván). An toàn với bẫy
+   transform+animation vì `.aw-otb-box` định vị bằng CSS Grid, không phải `transform`.
+5. **Gộp thanh giờ + điểm cùng hàng** — việc DUY NHẤT đụng `core/` đợt này, thầy đồng ý qua
+   AskUserQuestion với điều kiện chỉ ảnh hưởng Open the box. Thêm cờ `tpl.inlineTimerBar` (opt-in):
+   `core/engine.js`/`core/app.css` chỉ thêm khe `ui.topbarMid` (CSS Grid `1fr auto 1fr` trong
+   `.aw-topbar`) KHI template khai cờ — không khai thì `.aw-topbar` y hệt flex 2-con cũ. Đã test lại
+   Quiz + Anagram xác nhận `topbar.className === "aw-topbar"` (không dính `.has-inline`), 0 lỗi
+   console. Đồng hồ+thanh giờ của `open-the-box.js` dời từ trong `.aw-otb-qcard` sang `ui.topbarMid`.
+
+**Test bằng `javascript_tool`** (browser thật): chơi đúng hết 9/9 → "GAME COMPLETE" (đúng gọi
+`timesUp`); để hết giờ → "GAME OVER" (đúng gọi `gameOver`); chọn sai → hộp khoá đúng (đúng gọi
+`tileEliminate`); Show answers đủ 9 dòng; bảng kết thúc đủ 4 mục. Editor: badge "OPEN THE BOX", 9 thẻ,
+nút xoá đáp án tự khoá đúng lúc còn 2, Save chặn đúng khi xoá trắng câu hỏi, Cancel không đụng dữ liệu
+gốc. `read_network_requests` xác nhận đủ 16 file mp3 tải 200 OK, không 404. 0 lỗi console (Open the
+box lẫn hồi quy Quiz/Anagram).
+
+**File đổi đợt này**: `core/engine.js` + `core/app.css` (2 chỗ mỗi file, đã diff kỹ), `open-the-box.js`
+(viết lại), `open-the-box.css`, `otb-sound.js` (viết lại), `sounds/*.mp3` (thay hết 16 file),
+`open-the-box-editor.js` (mới), `sample-open-the-box.js` (đổi hẳn sang 9 câu Questions mode).
+
+**CHƯA COMMIT** — thầy dặn hoàn thiện xong trên local rồi mới đẩy GitHub sau.
+
+**CHỜ TEST TOMKO**: (a) cảm giác zoom lúc START trên màn lớn; (b) nghe đủ 16 âm thanh đúng lúc, đặc
+biệt cặp GameOver/TimesUp theo đúng nghĩa thầy chốt (ngược tên file gốc); (c) thanh giờ+điểm có thật
+sự "cùng hàng" trên màn 86" hay cần chỉnh độ rộng `42cqw` của `.aw-otb-q-topbar`.
 
 ### 29/7/2026 (đợt 7) — bảng kết thúc chuyển sang dùng CHUNG hệ thống ui.finish() với Quiz/Anagram
 Thầy chốt hướng "sửa core/ ngay" (đã hỏi qua AskUserQuestion vì lúc đó có 1 phiên khác đang sửa

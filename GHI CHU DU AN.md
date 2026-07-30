@@ -21,6 +21,115 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 30/7/2026 — Open the box: đồng hồ thẳng mép ô câu hỏi, tách zoom ô số/trượt đáp án, sửa lỗi thật của việc căn giữa hàng cuối
+
+3 việc, xem chi tiết đầy đủ ở `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 10: (1) đồng hồ dịch
+hẳn sang trái, mép trái đồng hồ THẲNG mép trái ô câu hỏi (đo `getBoundingClientRect` lệch 0px) — sửa
+bằng cách cho cột đầu của `.has-inline` trong `core/app.css` một độ rộng CỐ ĐỊNH `1.6cqw` (đúng bằng
+padding của ô câu hỏi) thay vì `auto` không đoán trước được; (2) tách hẳn 2 hiệu ứng — chỉ ô câu hỏi
+zoom từ vị trí Ô SỐ, các ô đáp án KHÔNG zoom mà chỉ trượt ngang từ mép phải MÀN HÌNH (85cqw, đo bằng
+khung game thật chứ không phải trong lòng ô); (3) **bug thật** của đợt 9: hàng cuối "đã căn giữa" nhưng
+không thấy giữa — hoá ra CSS Grid chỉ có thể đặt ô lẻ vào TRỌN 1 cột, không chia được nửa cột, nên lệch
+tâm thật (đo ra 37.5% thay vì 50%). Đổi hẳn `.aw-otb-grid` từ CSS Grid sang **Flexbox
+`flex-wrap:wrap`+`justify-content:center`** — canh giữa mỗi hàng LIÊN TỤC, không theo bước cột. Gặp 1
+bẫy khi đổi: cỡ ô đôi khi bị giới hạn bởi chiều cao chứ không phải chiều rộng, khiến khung rộng dư chỗ
+nhét THÊM ô vào 1 hàng (ép test `cols=4` với 9 ô ra thật 6+3 thay vì 4+4+1!) — sửa bằng cách CHỐT đúng
+bề rộng khung theo `cols*cell+gaps` thay vì để nó giãn hết cỡ. Test lại đủ: đo pixel xác nhận căn giữa
+chính xác (lệch 0.5px, sai số làm tròn), chạy hết ván 9/9 tự động ra đúng "GAME COMPLETE", hồi quy
+Quiz/Anagram không đổi gì, 0 lỗi console. **CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+
+### 30/7/2026 — Open the box: thanh giờ full-width + đồng hồ chạy LIÊN TỤC, zoom chậm gấp đôi, đáp án trượt phải
+
+9 điều chỉnh tiếp theo sau đợt xây editor (xem chi tiết đầy đủ trong
+`templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 9 — file này chỉ tóm tắt): (1) thanh giờ nay chạy
+gần hết chiều ngang khung, đồng hồ số đối xứng với điểm ở 2 đầu, chuyển đỏ dần + tích gấp đôi khi còn
+≤5s (`core/app.css` đổi `grid-template-columns` của `.has-inline` từ `1fr auto 1fr` sang `auto 1fr
+auto` — lần sửa `core/` thứ 2 cho Open the box, vẫn chỉ ảnh hưởng riêng nó); (2) lưới ô zoom lúc bấm
+START nay kéo dài đúng **2.46 giây** — đo thật bằng `ffmpeg -i intro.mp3` (không có ffprobe trên máy)
+để khớp chính xác độ dài nhạc; (3) bỏ 1 tiếng "xột xoạt" thừa phát chồng lên tiếng Intro lúc bấm START
+— hoá ra là tiếng xáo câu hỏi (`shuffle.mp3`) vô tình phát cùng lúc, đã bỏ tiếng đó (vẫn xáo câu bình
+thường); (4) hàng cuối thiếu ô giờ tự căn giữa; (5) tốc độ zoom Ô SỐ↔Ô CÂU HỎI chậm gấp đôi (600→1200ms);
+(6) hiệu ứng "pop lưới" giờ chạy ở MỌI lần quay về màn lưới (không chỉ lần đầu) để đồng bộ cảm giác
+zoom in/out; (7) đáp án trượt vào từ cạnh phải, trượt ngược ra phải khi đã chọn xong; (8)+(9) **kiến
+trúc lại hẳn đồng hồ**: từ "mỗi câu 1 bộ đếm riêng, dừng khi về lưới" sang **1 bộ đếm DUY NHẤT chạy
+liên tục từ ô đầu tiên cho tới hết ván** — đúng thì thanh giờ "đầy ngược trở lại" rồi chạy tiếp; sai thì
+cứ chạy tiếp KỂ CẢ khi đang đứng ở màn lưới chọn ô kế — hết giờ ngay tại đó thì thua luôn, không cần mở
+thêm ô nào. Test bằng `javascript_tool` xác nhận đúng cả 9 mục + hồi quy Quiz/Anagram không đổi gì, 0
+lỗi console. **CHƯA COMMIT** — vẫn tiếp tục hoàn thiện trên local.
+
+### 30/7/2026 — Open the box: bỏ chế độ Simple, xây content editor, đổi bộ âm thanh, hiệu ứng zoom + gộp thanh giờ/điểm
+
+Thầy chốt 5 việc cho Open the box qua AskUserQuestion trước khi build (đã hỏi + chờ "ok build" đúng
+quy trình):
+
+1. **Bỏ hẳn chế độ "Simple"** (lật hộp xem chữ, không điểm) — chỉ còn "Questions" (đố vui trong hộp).
+   `mountSimple()` cùng option `boxesAutoClose` bị xoá khỏi `open-the-box.js`. Mỗi câu hỏi giờ **bắt
+   buộc có đáp án + tối thiểu 2 đáp án + 1 đáp án đúng** — chặn cả 2 lớp: `open-the-box-editor.js`
+   (validate trước khi Save) VÀ `open-the-box.js` (lọc phòng thủ lúc chơi, phòng dữ liệu cũ/sửa tay).
+2. **Xây `open-the-box-editor.js`** (màn soạn nội dung đầy đủ đầu tiên cho template này) — gần như
+   COPY NGUYÊN `templates/quiz/quiz-editor.js` vì hình dạng dữ liệu giống hệt Quiz
+   (`{question, answers:[{text,correct}]}`), chỉ đổi field `content.questions`→`content.items`, nhãn
+   "Question N"→"Box N", giới hạn số hộp theo đúng luật Wordwall thật (`docs/04-OPEN-THE-BOX.md`: min
+   2 – max 100 hộp, thay vì giới hạn câu hỏi của Quiz). Wire qua `otbTemplate.edit` (đúng hợp đồng
+   `tpl.edit` có sẵn trong `core/engine.js`/`main.js` — không cần sửa gì thêm ở đó).
+3. **Đổi toàn bộ bộ âm thanh** sang bộ 15 file gốc Wordwall thầy tải riêng
+   (`D:\APP AND DATA\Source\Sound effect\OPEN THE BOX`, copy vào `templates/open-the-box/sounds/`,
+   xoá bộ mượn tạm từ Anagram trước đó). **Lưu ý đặt tên gameOver/timesUp — thầy chốt NGƯỢC với tài
+   liệu gốc của chính bộ âm thanh** (file `GHI CHU.md` trong bộ âm thanh ghi TimesUp = tiếng "keng"
+   lúc đồng hồ về 0, GameCompleted mới là tiếng thắng): thầy yêu cầu **GameOver phát khi THUA vì hết
+   giờ, TimesUp phát khi THẮNG (mở hết hộp)** — đã build ĐÚNG theo lời thầy, file "05 GameCompleted"
+   gốc vì vậy **không dùng tới**. Thêm: ClockTick tích mỗi giây lúc đồng hồ câu hỏi đang chạy, Shuffle
+   lúc xáo thứ tự hộp, TileAppear lúc lưới hộp xuất hiện đầu ván, TileEliminate lúc 1 hộp bị khoá do
+   trả lời sai. Sửa luôn 1 lỗi nhỏ có sẵn từ đợt trước: `sounds.complete` (hook chạy ở MỌI lần
+   `ui.finish()`, kể cả thua) từng gán nhầm tiếng "thắng" — bỏ hẳn hook đó, để tiếng thắng/thua tự
+   template gọi đúng lúc như trên, tránh phát 2 tiếng chồng nhau khi thua.
+4. **Hiệu ứng zoom lúc bấm START**: lưới hộp xuất hiện nhỏ hơn (scale .72) rồi zoom dần về cỡ chuẩn,
+   so le nhẹ theo thứ tự ô (CSS `@keyframes aw-otb-box-in`, class `.is-entrance` chỉ gắn ở lần render
+   ĐẦU TIÊN của mỗi ván — không lặp lại khi quay về lưới sau khi trả lời 1 câu). An toàn với bẫy
+   transform+animation (`.aw-otb-box` định vị bằng CSS Grid, không phải `transform`, nên animate
+   `transform: scale()` ở đây không dính bẫy "popup nhảy vị trí").
+5. **Gộp thanh giờ + điểm cùng 1 hàng** — việc DUY NHẤT cần sửa `core/` đợt này, thầy đã đồng ý qua
+   AskUserQuestion với điều kiện **chỉ ảnh hưởng Open the box**. Thêm cờ opt-in `tpl.inlineTimerBar`:
+   `core/engine.js` chỉ thêm 1 khe `ui.topbarMid` (giữa `.aw-topbar`, 3 cột CSS Grid `1fr auto 1fr`)
+   KHI template khai cờ này; không khai thì `.aw-topbar` giữ nguyên y hệt flex 2-con cũ (đã test lại
+   Quiz + Anagram xác nhận `topbar.className === "aw-topbar"`, không có `.aw-topbar-mid`, 0 lỗi
+   console). `open-the-box.js` chuyển việc dựng đồng hồ+thanh giờ từ bên trong `.aw-otb-qcard` sang
+   `ui.topbarMid`, xoá padding-top vá tạm của đợt 6 (không cần nữa vì không còn 2 hàng chồng nhau).
+
+**Test bằng `javascript_tool`** (browser thật, không phải bench giả): chơi hết 9 câu ĐÚNG hết →
+"GAME COMPLETE" 9/9 (đúng gọi `timesUp`); để hết giờ giữa chừng → "GAME OVER" (đúng gọi `gameOver`);
+chọn 1 đáp án SAI → hộp khoá + khoá icon hiện đúng (đúng gọi `tileEliminate`); Show answers hiện đủ 9
+dòng; bảng kết thúc đủ 4 mục Leaderboard/Show answers/Start again/Play a different template. Editor:
+mở đúng badge "OPEN THE BOX", đủ 9 thẻ, nút Remove đáp án tự khoá đúng lúc còn 2 đáp án, Save chặn
+đúng khi xoá trắng câu hỏi ("Box 1 has no question text."), Cancel không đụng dữ liệu gốc (mở lại vẫn
+9 câu y nguyên). `read_network_requests` xác nhận cả 16 file mp3 tải 200 OK, không file nào 404. 0
+lỗi console suốt toàn bộ quá trình test cả 2 template (Open the box) lẫn hồi quy (Quiz, Anagram).
+
+**File thay đổi đợt này**: `core/engine.js` + `core/app.css` (cờ `inlineTimerBar`/`ui.topbarMid`, đã
+diff kỹ — 2 chỗ mỗi file), `templates/open-the-box/open-the-box.js` (viết lại, bỏ mountSimple),
+`templates/open-the-box/open-the-box.css`, `templates/open-the-box/otb-sound.js` (viết lại toàn bộ),
+`templates/open-the-box/sounds/*.mp3` (thay hết, 16 file), `templates/open-the-box/
+open-the-box-editor.js` (mới), `templates/open-the-box/sample-open-the-box.js` (đổi hẳn sang dữ liệu
+Questions mode — 9 câu từ vựng/ngữ pháp thay cho 9 câu speaking prompts cũ, vì Simple mode không còn).
+
+**CHƯA COMMIT** — thầy dặn build xong hoàn thiện trên local rồi mới đẩy lên trang live sau (đúng quy
+tắc "không tự commit nếu thầy không nói 'lưu lại'/'save'"). Vẫn `built:false`, chưa gộp trang chủ.
+
+**CHỜ TEST TOMKO** (màn cảm ứng thật): (a) cảm giác zoom lúc bấm START có đủ mượt/rõ trên màn lớn
+không; (b) nghe đủ 16 âm thanh đúng lúc, đặc biệt cặp GameOver/TimesUp theo đúng nghĩa thầy chốt
+(ngược với tên file gốc); (c) thanh giờ + điểm nhìn có thật sự "cùng 1 hàng" trên màn 86" hay cần
+chỉnh độ rộng `42cqw` của `.aw-otb-q-topbar`.
+
+### 30/7/2026 — Đẩy "Open the box" lên GitHub + sửa tài liệu bàn giao ghi sai
+
+Thầy chọn đẩy code lên mạng. Kiểm tra thấy `origin/main` chỉ còn thiếu đúng 1 commit (`a87fe8a` —
+Open the box's Questions mode); mọi thứ khác (v0.9.4, v0.9.5, Anagram) **đã có sẵn trên GitHub từ
+trước rồi**, dù `APP_MASTER.md` ghi "web live vẫn v0.9.3" — thông tin đó SAI/lỗi thời (đã kiểm bằng
+`curl` thấy `core/catalog.js` live có `anagram built:true`). Đã push commit còn thiếu, `curl` kiểm
+chứng `templates/open-the-box/otb-sound.js` live (200 OK). Vì Open the box vẫn `built:false` (chưa
+gộp trang chủ, chờ thầy duyệt) nên đợt push này **không đổi gì học sinh/thầy thấy trên web**, chỉ
+đồng bộ code nền. Đã sửa lại `APP_MASTER.md` (mục đầu file + mục 0b) cho khớp thực tế git/curl.
+
 ### 29/7/2026 — DỜI DỰ ÁN 2 CHẶNG: `PROJECT\AWord` → `D:\APP AND DATA\AWord` → `E:\LAP TRINH APP\AWord`
 
 Cùng ngày nhưng **hai lần dời, hai quyết định khác nhau của thầy** — ghi lại cả hai để sau này khỏi

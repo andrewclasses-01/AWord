@@ -71,6 +71,28 @@ body {
 }
 .aw-top-score svg { width: 1em; height: 1em; color: var(--aw-ok); }
 
+/* Opt-in (tpl.inlineTimerBar): a 3rd column so a template's own timer bar can
+   share this row with the score, instead of a separate row below it. Only
+   applies when `.has-inline` is present — every other template's `.aw-topbar`
+   keeps the exact same 2-child flex row it always had (see core/engine.js).
+   Column 1 is a FIXED `1.6cqw` (not `auto`) — that's the exact padding
+   `.aw-otb-qcard` uses in open-the-box.css, so the middle column's LEFT edge
+   lands exactly under the question tile's own left edge (Open the box's
+   request, 30/7/2026 đợt 10: "mép đồng hồ thẳng mép ô câu hỏi"). Column 1's
+   own content (the engine's own timer, ALWAYS hidden for Open the box since
+   it never sets a whole-game timer) is invisible either way, so forcing its
+   track to this exact size has no visible effect on it. `column-gap:0` so
+   nothing pads that left edge back out — the small gap before the score on
+   the right is `.aw-topbar-mid`'s own `padding-right` instead (see
+   open-the-box.css), which doesn't touch the left edge at all. */
+.aw-topbar.has-inline {
+  display: grid;
+  grid-template-columns: 1.6cqw 1fr auto;
+  column-gap: 0;
+  align-items: center;
+}
+.aw-topbar-mid { width: 100%; }
+
 /* ---------- Play area (templates render inside) ---------- */
 .aw-playarea {
   flex: 1 1 auto; min-height: 0;
@@ -132,6 +154,10 @@ body {
 .aw-navbtn.is-finish:not(:disabled) { animation: aw-glow 1.1s ease-in-out infinite; }
 
 .aw-tools { display: flex; gap: 0.4cqw; }
+/* Menu's wrapper (keeps `.aw-bottombar`'s 3-column grid intact even when a
+   template adds its own icon button next to Menu, e.g. Type the answer's
+   keyboard toggle — see `.aw-bottombar-extra` in that template's own CSS). */
+.aw-bottombar-left { display: flex; align-items: center; gap: 0.4cqw; }
 
 /* ---------- Popup menu ---------- */
 .aw-menu {

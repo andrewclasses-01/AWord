@@ -2,10 +2,10 @@
    OPEN THE BOX template — styles that belong ONLY to this template.
    Class prefix: .aw-otb-*
 
-   OPEN-ENDED game (scorable:false, see open-the-box.js): a grid of numbered
-   boxes fills the whole stage (no "prompt on top / answers below" split
-   like the scored templates, since there's no single running question).
-   Each box flips (CSS 3D transform on its OWN inner element, NOT used for
+   A grid of numbered boxes fills the whole stage (no "prompt on top /
+   answers below" split like most scored templates, since there's no single
+   running question until a box is tapped). Each box flips (CSS 3D transform
+   on its OWN inner element, NOT used for
    grid positioning, so this is unrelated to the transform+animation trap
    documented in HUONG DAN CORE — see CONG THUC MAU.md mục 3.5) to reveal
    its content. Sizes use cqw * var(--fit,1) as everywhere else.
@@ -36,13 +36,29 @@
 .aw-otb-grid {
   flex: 1 1 auto;
   min-height: 0;
-  display: grid;
-  /* --cols/--cell are computed in JS (bestFit) so every box is a perfect
-     SQUARE and the whole grid stays centred no matter how many boxes there
-     are (few boxes -> bigger squares, many boxes -> smaller squares) —
-     plain CSS grid/auto-fill can't solve this 2D packing on its own. */
-  grid-template-columns: repeat(var(--cols, 3), var(--cell, 13cqw));
-  grid-auto-rows: var(--cell, 13cqw);
+  /* FLEXBOX wrap, not CSS Grid (changed 30/7/2026, đợt 10) — this is what
+     actually gives a TRUE centred last row for free. CSS Grid ties every
+     row to the SAME fixed column count, so a partial last row can only ever
+     sit in WHOLE grid-column slots — for an odd leftover (e.g. 1 box in a
+     4-column grid) the closest achievable slot is still visibly off-centre
+     (37.5% instead of 50%), no integer column choice fixes that. Flexbox's
+     `justify-content:center` centres EACH WRAPPED LINE independently and
+     continuously (not in column-sized steps), so every row — full or
+     partial — ends up pixel-centred automatically, no per-row math needed
+     in JS at all (layoutGrid() no longer sets grid-row/grid-column). --cols/
+     --cell are still computed in JS (bestFit) so every box is a perfect
+     SQUARE and stays as large as possible (few boxes -> bigger squares,
+     many boxes -> smaller squares).
+     `align-self:center` + JS setting an EXACT `width` (cols*cell+gaps, see
+     layoutGrid()): a bare flex-wrap container stretched to the card's FULL
+     width would let MORE than `cols` boxes fit on a line whenever the cell
+     size ends up height-constrained (found live: a 4-column request
+     actually wrapped 6-per-row, because 6 boxes at that smaller size still
+     fit the card's full width) — pinning the container to the EXACT width
+     `cols` boxes need is what forces the intended row breaks; the container
+     itself still sits centred in the card either way. */
+  align-self: center;
+  display: flex; flex-wrap: wrap;
   justify-content: center;
   align-content: center;
   gap: calc(1.3cqw * var(--fit));
@@ -50,7 +66,8 @@
 }
 
 .aw-otb-box {
-  width: 100%; height: 100%;
+  flex: 0 0 auto;
+  width: var(--cell, 13cqw); height: var(--cell, 13cqw);
   cursor: pointer;
   background: transparent;
   border: 0; padding: 0;
@@ -122,6 +139,24 @@
 
 .aw-otb-box:disabled { cursor: default; }
 
+/* Entrance "pop in" (30/7/2026, teacher's request) — plays on EVERY grid
+   render, first one (right after Play) timed to intro.mp3's real length via
+   --otb-appear-dur/--otb-appear-delay (set in JS, see ENTRANCE_* constants
+   in open-the-box.js), later ones (returning to the grid after a question)
+   much quicker — "đồng bộ zoom in/out" so the grid never just pops back
+   instantly. Grid items are positioned by CSS Grid, not by `transform` —
+   animating each box's own `transform` here is unrelated to the
+   translate-centering trap documented in HUONG DAN CORE §"popup hiện 1 nơi
+   rồi nhảy". */
+.aw-otb-grid.is-entrance .aw-otb-box {
+  animation: aw-otb-box-in var(--otb-appear-dur, .5s) cubic-bezier(.22,.9,.3,1) both;
+  animation-delay: var(--otb-appear-delay, 0ms);
+}
+@keyframes aw-otb-box-in {
+  from { opacity: 0; transform: scale(.72); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
 .aw-otb-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
@@ -137,37 +172,52 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  /* minimal top padding: the clock+bar row below sits as close as possible
-     to core/engine.js's own topbar (the "✓ N" score, just above this card)
-     so the two read as ONE row instead of two stacked rows. */
-  padding: 0.2cqw 1.6cqw 1.6cqw;
+  padding: 1.6cqw;
   animation: aw-fadein .2s ease;
 }
 
-/* top row: digit clock + draining bar — SAME row, like the reference photo
-   (own clock, not engine's — engine's built-in one only supports a single
+/* Digit clock + draining bar — live in ui.topbarMid (the engine's shared
+   top row, opted in via `inlineTimerBar: true`), NOT inside .aw-otb-qcard,
+   so they share the SAME row as the "✓ N" score AND stay on screen whether
+   the grid or a question is showing (30/7/2026 — the countdown itself is
+   now a single continuous timer, see the file header in open-the-box.js).
+   Own clock, not engine's built-in one — that one only supports a single
    whole-game countdown, not this reset-on-correct / carry-over-on-wrong
-   rule, and its text is engine-internal so a template can't drive it).
-   Small margin-below so the freed-up space goes to the question/answer
-   tiles instead (.aw-otb-q-body is flex:1 1 auto — it grows to fill
-   whatever height this row and its margin DON'T use). */
+   rule, and its text is engine-internal so a template can't drive it.
+   Full width: core/app.css's `.aw-topbar-mid` is now the grid's 1fr middle
+   column (teacher's request: "dài gần hết chiều ngang khung app"), starting
+   at a FIXED 1.6cqw from the topbar's left edge — exactly `.aw-otb-qcard`'s
+   own padding below, so the clock's left edge lines up PIXEL-EXACT with the
+   question tile's left edge (30/7/2026 đợt 10). `padding-right` leaves a
+   small gap before the score on the right without touching that left edge
+   (core/app.css's `column-gap:0` on the grid means this is the ONLY source
+   of right-side breathing room — see the comment there). */
 .aw-otb-q-topbar {
-  display: flex; align-items: center; gap: calc(1.4cqw * var(--fit));
-  flex: 0 0 auto; margin-bottom: calc(0.9cqw * var(--fit));
+  /* NOT a descendant of .aw-otb-qcard any more (see comment above), so it
+     can't inherit that card's --fit custom property — fall back to 1
+     explicitly instead of relying on inheritance that no longer reaches here. */
+  width: 100%;
+  padding-right: 1.4cqw;
+  box-sizing: border-box;
+  display: flex; align-items: center; gap: calc(1.4cqw * var(--fit, 1));
 }
 .aw-otb-q-clock {
-  flex: 0 0 auto; min-width: calc(4cqw * var(--fit));
-  font-size: calc(2.4cqw * var(--fit)); font-weight: 700; color: var(--aw-text);
+  flex: 0 0 auto; min-width: calc(4cqw * var(--fit, 1));
+  font-size: calc(2.4cqw * var(--fit, 1)); font-weight: 700; color: var(--aw-text);
 }
 .aw-otb-timerbar {
   flex: 1 1 auto;
-  height: calc(1.1cqw * var(--fit)); border-radius: 999px;
+  height: calc(1.1cqw * var(--fit, 1)); border-radius: 999px;
   background: rgba(0, 0, 0, .12); overflow: hidden;
 }
 .aw-otb-timerbar-fill {
   height: 100%; width: 100%; border-radius: inherit;
   background: #2b2f36;
+  /* colour itself transitions smoothly (see the width+background-color
+     transition set together in JS) — teacher's request: last 5s "chuyển
+     dần sang màu đỏ" instead of snapping straight to red. */
 }
+.aw-otb-timerbar-fill.is-warning { background: #dc2626; }
 
 /* LEFT/RIGHT split: question as its own tile on the left, answers in a
    2-column grid on the right — matches the teacher's reference photo
@@ -213,13 +263,35 @@
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
-  /* staggered "pop in" entrance (delay set per-tile in JS) — a fresh mount
-     animation, unrelated to the hover/active transitions above */
-  animation: aw-otb-qtile-in .32s cubic-bezier(.22,.9,.3,1) both;
+  /* staggered "slide in from the STAGE's right edge" entrance (delay set
+     per-tile in JS). `cqw` is stage-width-relative regardless of nesting
+     depth (the stage is the nearest `container-type:size` ancestor), so
+     `85cqw` reliably starts every tile off past the actual right edge of the
+     game frame no matter where in the answers grid it rests (teacher's
+     request, đợt 10: "trượt ra/vào từ mép phải MÀN HÌNH", not just a small
+     nudge within the tile's own width like the earlier đợt 9 version).
+     Pure translateX — no scale — so this reads as fully DECOUPLED from the
+     question tile's own zoom (which is the only thing that still zooms,
+     see zoomElFrom/zoomElTo in open-the-box.js). Unrelated to the
+     hover/active transitions above. */
+  animation: aw-otb-qtile-in .38s cubic-bezier(.22,.9,.3,1) both;
 }
 @keyframes aw-otb-qtile-in {
-  from { opacity: 0; transform: scale(.8) translateY(4%); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; transform: translateX(85cqw); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Once an answer is picked, the tiles slide back OUT toward the stage's
+   right edge (teacher's request) — entirely independent of the question
+   tile's own zoom-back, which runs at the same time. Class toggled in JS
+   (answer()/closeCardThen()), `transition-delay` set per-tile alongside the
+   entrance's `animation-delay` for a matching staggered cascade. Higher
+   specificity than the base `.aw-otb-qtile` transition rule above, so this
+   wins for the (longer) exit duration without touching the hover/press
+   transitions used the rest of the time. */
+.aw-otb-q-answers.is-closing .aw-otb-qtile {
+  transition: transform .3s cubic-bezier(.4,0,.2,1), opacity .3s ease;
+  transform: translateX(85cqw);
+  opacity: 0;
 }
 /* an odd answer count -> last tile spans both columns (no lone half-empty row) */
 .aw-otb-qtile-wide { grid-column: 1 / -1; }

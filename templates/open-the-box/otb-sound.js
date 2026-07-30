@@ -1,8 +1,17 @@
 // =============================================================
-// OPEN THE BOX (Questions mode) SOUNDS — real mp3 effects, SAME files as
-// templates/anagram/sounds (copied here, not cross-imported, so this
-// template stays self-contained) — the teacher asked for sound effects
-// "similar to Anagram". Same pool/mute pattern as anagram-sound.js.
+// OPEN THE BOX SOUNDS — real mp3 effects sourced directly from Wordwall's
+// own "Open the box" theme (see D:\APP AND DATA\Source\Sound effect\OPEN
+// THE BOX\GHI CHU.md for where each file came from), own copy under
+// ./sounds/ (not cross-imported — every template stays self-contained).
+// Same pool/mute pattern as anagram-sound.js.
+//
+// NOTE on gameOver/timesUp naming (Teacher Andrew's explicit call, 30/7/2026):
+// Wordwall's own file itself documents "07 TimesUp" as the clock-hits-0
+// *ding*, separate from "06 GameOver" (the lose screen). The teacher asked
+// for a DIFFERENT split instead: gameOver = lose (ran out of time before
+// finishing), timesUp = the WIN sound (finished every box in time). Built
+// exactly as instructed — the original "05 GameCompleted" file is left
+// unused as a result (see GHI CHU OPEN-THE-BOX.md).
 // =============================================================
 
 import { sound as coreSound } from "../../core/sound.js";
@@ -36,10 +45,15 @@ function makePool(names) {
 }
 
 export const otbSound = {
-  openBox: makePool(["blocktilepickup1", "blocktilepickup2", "blocktilepickup3"]),
-  correct: makePool(["blockchipminor1", "blockchipminor2", "blockchipminor3"]),
-  wrong: makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"]),
-  timeout: () => playFile("blockgametimeout"),
-  restart: () => playFile("blockgamerestart"),
-  allSolved: () => playFile("blockgamesuccessful")
+  intro: () => playFile("intro"),                                            // 01 — right when PLAY is pressed, before the grid appears
+  openBox: makePool(["openbox-01", "openbox-02", "openbox-03"]),             // 02 — tapping a box open
+  correct: makePool(["correct-01", "correct-02", "correct-03"]),             // 03 — correct answer
+  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]),         // 04 — wrong answer
+  gameOver: () => playFile("gameover"),                                      // 06 — lose: time ran out before every box was solved
+  timesUp: () => playFile("timesup"),                                        // 07 — win: every box solved before time ran out
+  restart: () => playFile("restart"),                                        // 08 — "Start again"
+  clockTick: () => playFile("clocktick"),                                    // 12 — once per second while the countdown runs
+  shuffle: () => playFile("shuffle"),                                        // 13 — box/question order shuffled at the start of a play
+  tileAppear: () => playFile("tileappear"),                                  // 14 — grid zooming in right after Play
+  tileEliminate: () => playFile("tileeliminate")                             // 15 — a box locks (wrong answer) back on the grid
 };

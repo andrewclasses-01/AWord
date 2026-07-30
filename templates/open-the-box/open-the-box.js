@@ -1,25 +1,24 @@
 // =============================================================
 // TEMPLATE: OPEN THE BOX — Wordwall style, English UI.
-//  • Two content modes, each with its OWN interaction model:
-//      - "simple": tap a box -> it flips and reveals a prompt. Open-ended,
-//        no score, no timer, no ending. NEVER calls ui.finish().
-//      - "questions": tap a box (Ô SỐ) -> it zooms into a full Quiz-style
-//        question+answers screen (Ô CÂU HỎI), with a SHARED countdown
-//        ("Question time" in Options) that only ticks while a question is
-//        on screen. Correct -> Ô SỐ locks open (permanently solved) + timer
-//        resets to full. Wrong -> Ô SỐ locks closed, greyed out with a
-//        padlock (can't retry until another Ô SỐ is answered correctly) +
-//        timer keeps draining from where it was. Ends when EITHER the timer
-//        hits 0 (shake + explode the grid, title "Game over") OR every box
-//        is solved (title "Game complete") — both call `ui.finish()`, which
-//        gives Open the box the SAME ending flow as Quiz/Anagram for free:
-//        Leaderboard / Show answers / Start again / Play a different
-//        template, Score + Time. `core/engine.js` got ONE small addition to
-//        support this: `ui.finish({..., title})` — an optional title
-//        ("Game over" here) that overrides the panel's default
-//        "Game complete" text; every other template that doesn't pass it
-//        is 100% unaffected.
-//  • options.boxesAutoClose only applies to "simple" mode.
+//
+// ONE mode only (30/7/2026, teacher's call — the old open-ended "Simple"
+// mode has been removed): tap a box (Ô SỐ) -> it zooms into a full
+// Quiz-style question+answers screen (Ô CÂU HỎI). Every question is
+// REQUIRED to have at least 2 answers with one marked correct (see
+// `MIN_ANSWERS` below and `open-the-box-editor.js`).
+//
+// TIMER MODEL (rewritten 30/7/2026, đợt 9 — teacher's call): ONE shared
+// countdown, started the first time ANY box is opened, that runs
+// CONTINUOUSLY from then on — through question screens AND while sitting
+// at the grid choosing the next box, never pausing. A correct answer
+// RESETS it back to full (with a visible "refill" animation). A wrong
+// answer does NOT reset it — it just keeps draining, even while the grid
+// is showing. If it reaches 0 at ANY point (mid-question or sitting at the
+// grid), the round ends immediately ("Game over"). Finishing every box
+// before that happens ends the round as a win ("Game complete"). Both
+// call `ui.finish()`, giving Open the box the SAME ending flow as
+// Quiz/Anagram: Leaderboard / Show answers / Start again / Play a
+// different template, Score + Time.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -28,19 +27,47 @@ import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { otbSound } from "./otb-sound.js";
+import { openOtbEditor } from "./open-the-box-editor.js";
+
+const MIN_ANSWERS = 2;
 
 // Zoom animation timing (Ô SỐ <-> Ô CÂU HỎI) — both directions share the
-// same speed, per the teacher ("chậm hơn nữa" / "chậm và mượt" for both).
-const ZOOM_TRANSFORM_MS = 600;
-const ZOOM_OPACITY_MS = 420;
+// same speed. Doubled (30/7/2026, đợt 9, teacher's call: "chậm hơn gấp đôi
+// và mượt") from the đợt 5/6 values of 600/420.
+const ZOOM_TRANSFORM_MS = 1200;
+const ZOOM_OPACITY_MS = 840;
 const ZOOM_FALLBACK_MS = ZOOM_TRANSFORM_MS + 80;
 
-// A plain GREEN check (Questions-mode "solved" badge) and a grey padlock
-// (Questions-mode "locked" badge) — NOT core/icons.js's markCheck/markCross,
-// which are hard-coded white-on-dark-outline (made for flying up over a
-// COLOURED tile), so their CSS `color` can't be recoloured. These two sit on
-// a plain white/grey card background instead, so a simple currentColor
-// stroke/fill works and CAN be recoloured from CSS.
+// Grid "pop in" entrance (teacher's request). Right after Play, the WHOLE
+// staggered sequence is timed to match ./sounds/intro.mp3's real length
+// (measured with ffmpeg: 2.46s) so the last box settles right as the music
+// ends. Every LATER return to the grid (after answering a question) plays
+// the same pop, just much quicker — it shouldn't slow gameplay down.
+const ENTRANCE_MUSIC_MS = 2460;
+const ENTRANCE_BOX_MS_FIRST = 900;
+const ENTRANCE_RETURN_TOTAL_MS = 550;
+const ENTRANCE_BOX_MS_RETURN = 320;
+
+// Answer-tile slide-out (teacher's request, đợt 9): once an answer is
+// picked, the tiles slide away toward the right edge before the whole card
+// zooms back to its box.
+const TILE_EXIT_MS = 300;
+
+// Correct-answer timer "refill" (teacher's request, đợt 9): the bar visibly
+// fills back up to full over this long before the fresh full-length
+// countdown resumes.
+const REFILL_MS = 500;
+
+// Last 5 seconds: the bar turns red and the tick sound doubles in frequency
+// (every 0.5s instead of every 1s) — teacher's request, đợt 9.
+const WARNING_SECONDS = 5;
+
+// A plain GREEN check (solved-box badge) and a grey padlock (locked-box
+// badge) — NOT core/icons.js's markCheck/markCross, which are hard-coded
+// white-on-dark-outline (made for flying up over a COLOURED tile), so their
+// CSS `color` can't be recoloured. These two sit on a plain white/grey card
+// background instead, so a simple currentColor stroke/fill works and CAN be
+// recoloured from CSS.
 const ICON_CHECK_GREEN = `<svg viewBox="0 0 24 24" fill="none">
   <path d="M4.5 12.5l5 5L19.5 6.5" stroke="currentColor" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
@@ -52,7 +79,7 @@ const ICON_LOCK = `<svg viewBox="0 0 24 24" fill="none">
 // Same 8-colour palette as quiz.js's answer-tile PALETTE (filled tile + a
 // darker bottom-shadow "lip" — matches the Quiz answer tiles look, per the
 // teacher's reference photo). Cycles by COLUMN index for the box grid, and
-// by ANSWER position for the Questions-mode answer tiles (same as Quiz).
+// by ANSWER position for the answer tiles (same as Quiz).
 const PALETTE = [
   { c: "#3b82f6", d: "#2563eb" }, // blue
   { c: "#06b6d4", d: "#0e93ad" }, // cyan
@@ -79,12 +106,22 @@ function bestFit(w, h, gap, n) {
   return { cols, size: Math.max(size, 0) };
 }
 
-// Shared by both modes: size + colour the box grid. `explicitCols` comes
-// from options.columns (teacher override); null lets bestFit() decide.
+// Size + colour the box grid. `explicitCols` comes from options.columns
+// (teacher override); null lets bestFit() decide. `.aw-otb-grid` is a
+// FLEXBOX wrap (not CSS Grid, changed 30/7/2026 đợt 10 — see the comment on
+// `.aw-otb-grid` in open-the-box.css for why) — `justify-content:center`
+// there centres every wrapped row automatically, including a partial last
+// row, so this function only needs to size the boxes; no per-row placement
+// math needed here any more.
 function layoutGrid(root, total, explicitCols) {
   const grid = root.querySelector(".aw-otb-grid");
   if (!grid) return;
-  const w = grid.clientWidth, h = grid.clientHeight;
+  // WIDTH comes from the PARENT (.aw-otb-card), not grid.clientWidth: once
+  // the fix below runs, the grid's own width is deliberately pinned to an
+  // exact value, so re-measuring from itself on the next call would just
+  // read back its own last result instead of "how much space is actually
+  // available". Height is unaffected (the grid still flex-grows to fill it).
+  const w = grid.parentElement.clientWidth, h = grid.clientHeight;
   if (w <= 0 || h <= 0) return;
   const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
   const cols = explicitCols || bestFit(w, h, gap, total).cols;
@@ -92,12 +129,20 @@ function layoutGrid(root, total, explicitCols) {
   const size = Math.max(0, Math.min((w - gap * (cols - 1)) / cols, (h - gap * (rows - 1)) / rows));
   grid.style.setProperty("--cols", cols);
   grid.style.setProperty("--cell", size + "px");
+  // Pin the container's own width to EXACTLY what `cols` boxes need — see
+  // the long comment on `.aw-otb-grid` in open-the-box.css for why this is
+  // required for flex-wrap to actually break rows at `cols` items instead
+  // of packing in extras whenever `size` ends up smaller than a pure
+  // width/cols division would give (happens whenever HEIGHT is the binding
+  // constraint, e.g. a wide-but-short stage with few rows of many boxes).
+  grid.style.width = (cols * size + Math.max(0, cols - 1) * gap) + "px";
   // Number size tracks the ACTUAL box size (not the stage width like a plain
   // cqw value would) so it stays as large as possible while still fitting a
-  // 2-digit number, whether there are 4 boxes or 50.
+  // 2-digit number, whether there are 4 boxes or 100.
   grid.style.setProperty("--num-size", (size * 0.46) + "px");
+
   grid.querySelectorAll(".aw-otb-box").forEach((box, i) => {
-    const p = PALETTE[(i % cols) % PALETTE.length];
+    const p = PALETTE[(i % cols) % PALETTE.length];   // colour cycles by LOGICAL column (still meaningful purely as a colour-variety grouping, independent of the flex layout mechanism)
     box.style.setProperty("--otb-c", p.c);
     box.style.setProperty("--otb-d", p.d);
   });
@@ -105,43 +150,38 @@ function layoutGrid(root, total, explicitCols) {
 
 const otbTemplate = {
   type: "open_the_box",
-  // Simple mode is still open-ended/unscored; Questions mode now IS scored
-  // and calls ui.finish(). Nothing in the app currently reads this flag
-  // (grep confirms no consumer), so leaving it false is inert either way —
-  // kept false since it's still accurate for the template's default mode.
-  scorable: false,
+  scorable: true,   // every play is scored now that Simple mode is gone
   name: "Open the box",
 
-  // Sound effects "similar to Anagram" (teacher's request) for Questions
-  // mode's round-end/restart moments — reuses real mp3s copied from
-  // templates/anagram/sounds (own copy, not cross-imported — see otb-sound.js).
-  // Undefined for "play"/"timeWarning" -> engine's default sounds still play.
+  // Opt-in: put THIS template's per-question timer bar on the SAME row as
+  // the engine's score display (ui.topbarMid) instead of a row below it —
+  // see core/engine.js / core/app.css ".has-inline" (30/7/2026, teacher's
+  // call, scoped so no other template's topbar layout changes).
+  inlineTimerBar: true,
+
+  // Only the Intro chime plays on Play (30/7/2026, đợt 9 — the teacher
+  // heard 2 sounds at once and asked for just the one; the earlier
+  // shuffle-on-mount sound has been removed, see mountQuestions()).
   sounds: {
-    restart: otbSound.restart,
-    complete: otbSound.allSolved
+    play: otbSound.intro,
+    restart: otbSound.restart
   },
+
+  // The teacher builds/edits content here (mirrors quiz-editor.js/anagram-editor.js).
+  edit: openOtbEditor,
 
   toPrintItems(activity) {
-    const c = activity.content || {};
-    if (c.mode === "questions") {
-      return (c.items || [])
-        .filter(it => it && it.question)
-        .map(it => ({
-          clue: it.question,
-          answer: (it.answers || []).find(a => a.correct)?.text || (it.answers || [])[0]?.text || ""
-        }));
-    }
-    return (c.items || [])
-      .filter(it => it && it.text)
-      .map(it => ({ clue: "", answer: it.text }));
+    return (activity.content?.items || [])
+      .filter(it => it && it.question)
+      .map(it => ({
+        clue: it.question,
+        answer: (it.answers || []).find(a => a.correct)?.text || (it.answers || [])[0]?.text || ""
+      }));
   },
 
-  // "Question time" — only meaningful in Questions mode, harmless to show
-  // otherwise (same convention as other templates ignoring unrelated
-  // options, e.g. Anagram ignoring lettersOnAnswers — see CONG THUC MAU §5).
   buildExtraOptions({ panel, draft }) {
     const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Question time (Questions mode only)"));
+    g.append(el("div", "aw-opt-label", "Question time"));
     const row = el("div", "aw-opt-row");
     const secs = el("span", "aw-opt-time");
     const stepper = makeNumberStepper(
@@ -156,89 +196,19 @@ const otbTemplate = {
   },
 
   mount(root, activity, ui) {
-    const mode = activity.content?.mode === "questions" ? "questions" : "simple";
-    return mode === "questions" ? mountQuestions(root, activity, ui) : mountSimple(root, activity, ui);
+    return mountQuestions(root, activity, ui);
   }
 };
 
 // =============================================================
-// SIMPLE MODE — tap a box, it flips and shows a prompt. No score, no end.
-// =============================================================
-function mountSimple(root, activity, ui) {
-  const opt = activity.options || {};
-  let items = [...(activity.content?.items || [])].filter(it => it && it.text);
-  if (opt.shuffleQuestions) items = shuffle(items);
-
-  const total = items.length;
-  if (total === 0) {
-    root.innerHTML = "";
-    root.append(el("div", "aw-otb-empty", "This activity has no boxes yet."));
-    return () => {};
-  }
-
-  const explicitCols = typeof opt.columns === "number" && opt.columns > 0 ? opt.columns : null;
-  const openNow = items.map(() => false);   // currently flipped open
-  const everOpened = new Set();
-
-  render();
-  const ro = new ResizeObserver(() => layoutGrid(root, total, explicitCols));
-  ro.observe(root);
-
-  function render() {
-    root.innerHTML = "";
-    const card = el("div", "aw-otb-card");
-    const grid = el("div", "aw-otb-grid");
-
-    items.forEach((it, i) => {
-      const box = el("button", "aw-otb-box" + (openNow[i] ? " is-open" : ""));
-      box.type = "button";
-      const inner = el("div", "aw-otb-box-inner");
-      const front = el("div", "aw-otb-face aw-otb-face-front", String(i + 1));
-      const back = el("div", "aw-otb-face aw-otb-face-back", "");
-      back.append(el("div", "", escapeHtml(it.text)));
-      inner.append(front, back);
-      box.append(inner);
-      box.onclick = () => toggle(i);
-      grid.append(box);
-    });
-
-    card.append(grid);
-    root.append(card);
-    layoutGrid(root, total, explicitCols);
-    updateProgress();
-  }
-
-  function toggle(i) {
-    if (opt.boxesAutoClose) {
-      openNow.forEach((v, k) => { if (k !== i) openNow[k] = false; });
-    }
-    openNow[i] = !openNow[i];
-    if (openNow[i]) everOpened.add(i);
-    const box = root.querySelectorAll(".aw-otb-box")[i];
-    if (opt.boxesAutoClose) {
-      render(); // other boxes may have just closed too -> simplest correct redraw
-    } else if (box) {
-      box.classList.toggle("is-open", openNow[i]);
-      updateProgress();
-    }
-  }
-
-  function updateProgress() {
-    ui.setScore(everOpened.size);
-    ui.setNav({ index: everOpened.size, total, onPrev: null, onNext: null });
-  }
-
-  return function cleanup() { ro.disconnect(); };
-}
-
-// =============================================================
-// QUESTIONS MODE — tap a box -> Quiz-style answer screen + shared
-// countdown. See file header for the full rule set (from the teacher).
+// tap a box -> Quiz-style answer screen. See the file header for the timer
+// model (a single continuous shared countdown) and the full rule set.
 // =============================================================
 function mountQuestions(root, activity, ui) {
   const opt = activity.options || {};
   let items = [...(activity.content?.items || [])]
-    .filter(it => it && it.question && Array.isArray(it.answers) && it.answers.length > 0);
+    .filter(it => it && it.question && Array.isArray(it.answers)
+      && it.answers.length >= MIN_ANSWERS && it.answers.some(a => a && a.correct));
   if (opt.shuffleQuestions) items = shuffle(items);
   items = items.map(it => ({
     question: it.question,
@@ -259,12 +229,103 @@ function mountQuestions(root, activity, ui) {
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
   let score = 0;
-  let timeLeft = questionSeconds;    // carries over across boxes; resets only on a correct answer
+  let timeLeft = questionSeconds;
   let activeIndex = null;            // box index currently showing its question, else null
   let ended = false;                 // game over OR every box solved
   let fitter = null;
-  let questionTimeout = null, clockInterval = null, questionStart = 0, questionDuration = 0;
   let lastBoxRect = null;    // rect of the tapped box, for the open/close zoom animation
+  let hasPlayedEntrance = false;   // the LONG music-synced grid pop only plays once per play-through
+
+  // ----- Shared continuous countdown (see file header) -----
+  let sharedClockEl = null, sharedFillEl = null;
+  let timerStarted = false;
+  let tickInterval = null, endTimeout = null, refillTimeout = null;
+
+  function ensureTimerUI() {
+    if (sharedFillEl || !ui.topbarMid) return;
+    ui.topbarMid.innerHTML = "";
+    const topbarRow = el("div", "aw-otb-q-topbar");
+    sharedClockEl = el("div", "aw-otb-q-clock", formatTime(Math.ceil(timeLeft)));
+    const bar = el("div", "aw-otb-timerbar");
+    sharedFillEl = el("div", "aw-otb-timerbar-fill");
+    bar.append(sharedFillEl);
+    topbarRow.append(sharedClockEl, bar);
+    ui.topbarMid.append(topbarRow);
+  }
+
+  function startSharedTimerIfNeeded() {
+    if (timerStarted) return;
+    timerStarted = true;
+    ensureTimerUI();
+    runCountdown(timeLeft);
+  }
+
+  // Drains `durationSec` -> 0 in real time, continuously updating the clock
+  // digits + bar width + tick sound, REGARDLESS of whether a question card
+  // is on screen or the grid is showing (teacher's request, đợt 9). Ends the
+  // round via gameOver() the instant it hits 0, wherever the player is.
+  function runCountdown(durationSec) {
+    const startAt = performance.now();
+    const totalDur = Math.max(durationSec, 0.05);
+    if (sharedFillEl) {
+      sharedFillEl.classList.remove("is-warning");
+      sharedFillEl.style.transition = "none";
+      sharedFillEl.style.width = "100%";
+      void sharedFillEl.offsetWidth; // force reflow so the transition below actually animates
+      sharedFillEl.style.transition = `width ${totalDur}s linear, background-color .4s ease`;
+      sharedFillEl.style.width = "0%";
+    }
+    let lastTick = Math.ceil(totalDur);
+    let halfMode = false;
+    if (tickInterval) clearInterval(tickInterval);
+    tickInterval = setInterval(() => {
+      const remaining = Math.max(0, totalDur - (performance.now() - startAt) / 1000);
+      const remainingCeil = Math.ceil(remaining);
+      timeLeft = remaining;
+      if (sharedClockEl) sharedClockEl.textContent = formatTime(remainingCeil);
+      if (remaining <= WARNING_SECONDS && !halfMode) {
+        halfMode = true;
+        lastTick = Math.ceil(remaining * 2);
+        sharedFillEl?.classList.add("is-warning");
+      }
+      if (!halfMode) {
+        if (remainingCeil < lastTick) { lastTick = remainingCeil; if (remainingCeil > 0) otbSound.clockTick(); }
+      } else {
+        const half = Math.ceil(remaining * 2);   // half-second slots -> double tick frequency
+        if (half < lastTick) { lastTick = half; if (remaining > 0) otbSound.clockTick(); }
+      }
+      if (remaining <= 0) { clearInterval(tickInterval); tickInterval = null; }
+    }, 250);
+    if (endTimeout) clearTimeout(endTimeout);
+    endTimeout = setTimeout(() => { endTimeout = null; gameOver(); }, totalDur * 1000);
+  }
+
+  // Correct answer: the bar visibly fills BACK UP from its current width to
+  // full over REFILL_MS (teacher's "hiệu ứng thanh đồng hồ đầy ngược trở
+  // lại"), THEN the fresh full-length countdown resumes.
+  function resetSharedTimer() {
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+    if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
+    if (refillTimeout) { clearTimeout(refillTimeout); refillTimeout = null; }
+    timeLeft = questionSeconds;
+    if (sharedClockEl) sharedClockEl.textContent = formatTime(questionSeconds);
+    if (sharedFillEl) {
+      const current = getComputedStyle(sharedFillEl).width;
+      sharedFillEl.classList.remove("is-warning");
+      sharedFillEl.style.transition = "none";
+      sharedFillEl.style.width = current;   // pin the current drained width as the animation's start point
+      void sharedFillEl.offsetWidth;
+      sharedFillEl.style.transition = `width ${REFILL_MS}ms ease`;
+      sharedFillEl.style.width = "100%";
+    }
+    refillTimeout = setTimeout(() => { refillTimeout = null; runCountdown(questionSeconds); }, REFILL_MS);
+  }
+
+  function stopSharedTimer() {
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+    if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
+    if (refillTimeout) { clearTimeout(refillTimeout); refillTimeout = null; }
+  }
 
   render();
   const ro = new ResizeObserver(() => { if (activeIndex === null) layoutGrid(root, total, explicitCols); });
@@ -278,7 +339,11 @@ function mountQuestions(root, activity, ui) {
 
   function renderGrid() {
     const card = el("div", "aw-otb-card");
-    const grid = el("div", "aw-otb-grid");
+    const isFirst = !hasPlayedEntrance;
+    const grid = el("div", "aw-otb-grid is-entrance");
+    const totalMs = isFirst ? ENTRANCE_MUSIC_MS : ENTRANCE_RETURN_TOTAL_MS;
+    const boxMs = isFirst ? ENTRANCE_BOX_MS_FIRST : ENTRANCE_BOX_MS_RETURN;
+    const staggerTotal = Math.max(0, totalMs - boxMs);
 
     items.forEach((it, i) => {
       const solved = boxState[i] === "correct";
@@ -286,6 +351,9 @@ function mountQuestions(root, activity, ui) {
       const box = el("button", "aw-otb-box" + ((solved || locked) ? " is-open" : "") + (locked ? " is-locked" : ""));
       box.type = "button";
       box.disabled = boxState[i] !== "unplayed" || ended;
+      const delay = total > 1 ? (i / (total - 1)) * staggerTotal : 0;
+      box.style.setProperty("--otb-appear-delay", Math.round(delay) + "ms");
+      box.style.setProperty("--otb-appear-dur", boxMs + "ms");
       const inner = el("div", "aw-otb-box-inner");
       const front = el("div", "aw-otb-face aw-otb-face-front", String(i + 1));
       const back = el("div", "aw-otb-face aw-otb-face-back", "");
@@ -310,6 +378,7 @@ function mountQuestions(root, activity, ui) {
     root.append(card);
     layoutGrid(root, total, explicitCols);
     updateProgress();
+    if (isFirst) { otbSound.tileAppear(); hasPlayedEntrance = true; }
   }
 
   function openBox(i) {
@@ -317,17 +386,24 @@ function mountQuestions(root, activity, ui) {
     const boxEl = root.querySelectorAll(".aw-otb-box")[i];
     if (boxEl) lastBoxRect = relRect(boxEl, root);
     otbSound.openBox();
+    startSharedTimerIfNeeded();   // no-op after the first box of the play-through
     activeIndex = i;
     render();
   }
 
   // Shared by answer() (after picking) and gameOver() (on timeout): zoom the
-  // Ô CÂU HỎI back down to where its Ô SỐ was, THEN run `afterFn` (which
-  // renders the grid again) — so returning to the grid is always animated,
-  // not just on timeout.
+  // QUESTION TILE back down to where its Ô SỐ was — ONLY the tile, not the
+  // answers (teacher's request, đợt 10) — THEN run `afterFn` (which renders
+  // the grid again). Also kicks off the answers' own slide-out (harmless if
+  // answer() already started it earlier — see .is-closing there); this is
+  // what covers the gameOver() call site, which never pre-triggers it. If
+  // there's no card on screen at all (time ran out while sitting at the
+  // grid — see file header), just runs `afterFn` straight away.
   function closeCardThen(afterFn) {
-    const qcard = root.querySelector(".aw-otb-qcard");
-    if (qcard && lastBoxRect) zoomCardTo(qcard, lastBoxRect, afterFn);
+    const qTile = root.querySelector(".aw-otb-q-question");
+    const answersRow = root.querySelector(".aw-otb-q-answers");
+    if (answersRow) answersRow.classList.add("is-closing");
+    if (qTile && lastBoxRect) zoomElTo(qTile, lastBoxRect, afterFn);
     else afterFn();
   }
 
@@ -336,21 +412,14 @@ function mountQuestions(root, activity, ui) {
     return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height };
   }
 
-  // Layout: clock + draining bar across the TOP, then a LEFT/RIGHT split
-  // below — question as its own big tile on the left, answers in a 2-column
-  // grid on the right (matches the teacher's Wordwall reference photo,
-  // which is NOT the same stacked question-on-top layout Quiz itself uses).
+  // Question as its own big tile on the left, answers in a 2-column grid on
+  // the right (matches the teacher's Wordwall reference photo). The clock +
+  // bar are NOT rebuilt here any more — they live in ui.topbarMid and keep
+  // running independently of whether this screen or the grid is showing
+  // (see the shared-timer functions above).
   function renderQuestion(i) {
     const it = items[i];
     const card = el("div", "aw-otb-qcard");
-
-    const topbar = el("div", "aw-otb-q-topbar");
-    const clock = el("div", "aw-otb-q-clock", formatTime(Math.ceil(timeLeft)));
-    const bar = el("div", "aw-otb-timerbar");
-    const fill = el("div", "aw-otb-timerbar-fill");
-    bar.append(fill);
-    topbar.append(clock, bar);
-    card.append(topbar);
 
     const body = el("div", "aw-otb-q-body");
     const qTile = el("div", "aw-otb-q-question", escapeHtml(it.question));
@@ -361,7 +430,10 @@ function mountQuestions(root, activity, ui) {
     it.answers.forEach((ans, k) => {
       const tile = el("button", "aw-otb-qtile");
       tile.type = "button";
-      tile.style.animationDelay = (k * 55) + "ms";   // staggered "pop in" entrance
+      // staggered "slide in from the right" entrance; same stagger basis
+      // reused as the exit's transition-delay (see .is-closing in answer()).
+      tile.style.animationDelay = (k * 45) + "ms";
+      tile.style.transitionDelay = (k * 45) + "ms";
       const col = PALETTE[k % PALETTE.length];
       tile.style.setProperty("--otb-c", col.c);
       tile.style.setProperty("--otb-d", col.d);
@@ -375,62 +447,26 @@ function mountQuestions(root, activity, ui) {
     card.append(body);
     root.append(card);
 
-    // slack only needs to cover the card's own bottom padding + the answer
-    // tiles' shadow "lip" now (topbar/margins are already counted inside
-    // measure() itself) — 0.045 was sized for the OLD, taller top padding;
-    // left that big after the "raise the bar" pass, it exceeded the actual
-    // leftover space and made autoFit think even a short question overflowed
-    // (found by reading getComputedStyle(card,'--fit') directly: it was
-    // always 0.4, the minimum, regardless of text length).
     fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
       slack: root.clientWidth * 0.02,
-      measure: () => topbar.offsetHeight + Math.max(qTile.scrollHeight, row.scrollHeight)
+      measure: () => Math.max(qTile.scrollHeight, row.scrollHeight)
     });
 
-    // Zoom the whole card in FROM the tapped box's exact on-screen position
-    // (captured in openBox()) so it visually "grows" out of that box, rather
-    // than just popping into existence. Safe to animate `transform` here:
-    // .aw-otb-qcard isn't itself positioned via transform (see rule 12/CONG
-    // THUC MAU §3.5) — this is a one-off entrance effect, not static layout.
-    if (lastBoxRect) zoomCardFrom(card, lastBoxRect);
-
-    startTimer(fill, clock);
-  }
-
-  // The countdown bar is a single CSS transition (smooth, no rAF loop needed).
-  // Its END is detected with setTimeout (NOT transitionend/onfinish) so a
-  // backgrounded tab still ends the question correctly — same defensive
-  // pattern CONG THUC MAU already uses for element.animate() elsewhere. The
-  // digit clock is cosmetic only (a setInterval just re-renders its text);
-  // the setTimeout above is what actually decides when time is up.
-  function startTimer(fillEl, clockEl) {
-    questionStart = performance.now();
-    questionDuration = Math.max(timeLeft, 0.05);
-    fillEl.style.transition = "none";
-    fillEl.style.width = "100%";
-    void fillEl.offsetWidth; // force reflow so the transition below actually animates
-    fillEl.style.transition = `width ${questionDuration}s linear`;
-    fillEl.style.width = "0%";
-    clockInterval = setInterval(() => {
-      const remaining = Math.max(0, questionDuration - (performance.now() - questionStart) / 1000);
-      clockEl.textContent = formatTime(Math.ceil(remaining));
-      if (remaining <= 0) { clearInterval(clockInterval); clockInterval = null; }
-    }, 250);
-    questionTimeout = setTimeout(() => { questionTimeout = null; gameOver(); }, questionDuration * 1000);
-  }
-
-  function stopTimer(remainingSec) {
-    if (questionTimeout) { clearTimeout(questionTimeout); questionTimeout = null; }
-    if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
-    timeLeft = Math.max(0, remainingSec);
+    // Zoom ONLY the question tile in FROM the tapped box's exact on-screen
+    // position (captured in openBox()) so it visually "grows" out of that
+    // box — the answer tiles do NOT zoom at all (teacher's request, đợt 10),
+    // they slide in from the stage's right edge instead, entirely on their
+    // own via the `aw-otb-qtile-in` keyframe (open-the-box.css). Safe to
+    // animate `transform` on the tile here: it isn't itself positioned via
+    // transform (see CONG THUC MAU §3.5) — this is a one-off entrance
+    // effect, not static layout.
+    if (lastBoxRect) zoomElFrom(qTile, lastBoxRect);
   }
 
   function answer(i, k, tile, row) {
     if (activeIndex !== i || ended) return;
     const it = items[i];
     const correct = !!it.answers[k].correct;
-    const elapsedSec = (performance.now() - questionStart) / 1000;
-    const remainingSec = Math.max(0, questionDuration - elapsedSec);
 
     [...row.children].forEach(t => t.disabled = true);
     const fly = el("span", "aw-mark-fly" + (correct ? "" : " is-cross"), correct ? icons.markCheck : icons.markCross);
@@ -439,8 +475,12 @@ function mountQuestions(root, activity, ui) {
     if (!correct) tile.classList.add("is-dimmed");
     tile.append(el("span", "aw-tile-badge", correct ? icons.markCheck : icons.markCross));
 
-    if (correct) { otbSound.correct(); score++; } else { otbSound.wrong(); }
-    stopTimer(correct ? questionSeconds : remainingSec);
+    if (correct) {
+      otbSound.correct(); score++;
+      resetSharedTimer();   // bar refills + fresh full countdown (see file header)
+    } else {
+      otbSound.wrong();     // timer is untouched — it just keeps draining, even at the grid
+    }
 
     if (correct) {
       boxState[i] = "correct";
@@ -453,12 +493,21 @@ function mountQuestions(root, activity, ui) {
     updateProgress();
 
     setTimeout(() => {
-      if (timeLeft <= 0) { gameOver(); return; }
-      closeCardThen(() => {
-        activeIndex = null;
-        render();
-        if (boxState.every(s => s === "correct")) { ended = true; otbSound.allSolved(); finishRound("Game complete"); }
-      });
+      if (ended) return;   // the shared countdown may have already ended the round while this was waiting
+      row.classList.add("is-closing");   // answer tiles slide back out toward the right edge
+      setTimeout(() => {
+        closeCardThen(() => {
+          activeIndex = null;
+          render();
+          if (!correct) otbSound.tileEliminate();
+          if (boxState.every(s => s === "correct")) {
+            ended = true;
+            stopSharedTimer();
+            otbSound.timesUp();
+            finishRound("Game complete");
+          }
+        });
+      }, TILE_EXIT_MS);
     }, correct ? 900 : 1400);
   }
 
@@ -467,59 +516,63 @@ function mountQuestions(root, activity, ui) {
     ui.setNav({ index: score, total, onPrev: null, onNext: null });
   }
 
-  // Card-shrink transform, same math as zoomCardFrom but reversed (current
-  // size/position -> the target box's rect), used when time runs out so the
-  // question screen visibly "returns" to the grid before it shakes.
-  function zoomCardTo(card, targetRect, onDone) {
-    const cardRect = card.getBoundingClientRect();
+  // Shrink transform, same math as zoomElFrom but reversed (current
+  // size/position -> the target box's rect). ONLY ever called on the
+  // QUESTION TILE now (teacher's request, đợt 10: "chỉ ô số zoom in-out với
+  // ô câu hỏi" — the answer tiles get their own, unrelated slide instead,
+  // see .is-closing in open-the-box.css / answer() below).
+  function zoomElTo(el2, targetRect, onDone) {
+    const elRect = el2.getBoundingClientRect();
     const rootRect = root.getBoundingClientRect();
-    const scaleX = targetRect.w / cardRect.width, scaleY = targetRect.h / cardRect.height;
-    const dx = (rootRect.left + targetRect.x + targetRect.w / 2) - (cardRect.left + cardRect.width / 2);
-    const dy = (rootRect.top + targetRect.y + targetRect.h / 2) - (cardRect.top + cardRect.height / 2);
-    card.style.transformOrigin = "center center";
+    const scaleX = targetRect.w / elRect.width, scaleY = targetRect.h / elRect.height;
+    const dx = (rootRect.left + targetRect.x + targetRect.w / 2) - (elRect.left + elRect.width / 2);
+    const dy = (rootRect.top + targetRect.y + targetRect.h / 2) - (elRect.top + elRect.height / 2);
+    el2.style.transformOrigin = "center center";
     // explicit starting point + a forced reflow BEFORE enabling the
-    // transition, same as zoomCardFrom — without this the browser can
+    // transition, same as zoomElFrom — without this the browser can
     // collapse the "no transition yet" and "new value" style writes into
     // one recalculation and just jump straight to the end state instead
     // of animating (this is what was happening before this fix).
-    card.style.transition = "none";
-    card.style.transform = "translate(0px, 0px) scale(1, 1)";
-    card.style.opacity = "1";
-    void card.offsetWidth;
-    card.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
-    card.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
-    card.style.opacity = "0.15";
+    el2.style.transition = "none";
+    el2.style.transform = "translate(0px, 0px) scale(1, 1)";
+    el2.style.opacity = "1";
+    void el2.offsetWidth;
+    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
+    el2.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+    el2.style.opacity = "0.15";
     let done = false;
     const run = () => { if (done) return; done = true; onDone(); };
-    card.addEventListener("transitionend", run, { once: true });
+    el2.addEventListener("transitionend", run, { once: true });
     setTimeout(run, ZOOM_FALLBACK_MS);
   }
 
-  function zoomCardFrom(card, originRect) {
-    const cardRect = card.getBoundingClientRect();
+  function zoomElFrom(el2, originRect) {
+    const elRect = el2.getBoundingClientRect();
     const rootRect = root.getBoundingClientRect();
-    const scaleX = originRect.w / cardRect.width, scaleY = originRect.h / cardRect.height;
-    const dx = (rootRect.left + originRect.x + originRect.w / 2) - (cardRect.left + cardRect.width / 2);
-    const dy = (rootRect.top + originRect.y + originRect.h / 2) - (cardRect.top + cardRect.height / 2);
-    card.style.transformOrigin = "center center";
-    card.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
-    card.style.opacity = "0.5";
-    void card.offsetWidth; // force reflow so the browser commits the shrunk starting state first
-    card.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
-    card.style.transform = "translate(0px, 0px) scale(1, 1)";
-    card.style.opacity = "1";
+    const scaleX = originRect.w / elRect.width, scaleY = originRect.h / elRect.height;
+    const dx = (rootRect.left + originRect.x + originRect.w / 2) - (elRect.left + elRect.width / 2);
+    const dy = (rootRect.top + originRect.y + originRect.h / 2) - (elRect.top + elRect.height / 2);
+    el2.style.transformOrigin = "center center";
+    el2.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
+    el2.style.opacity = "0.5";
+    void el2.offsetWidth; // force reflow so the browser commits the shrunk starting state first
+    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
+    el2.style.transform = "translate(0px, 0px) scale(1, 1)";
+    el2.style.opacity = "1";
     let done = false;
-    const clear = () => { if (done) return; done = true; card.style.transition = ""; card.style.transform = ""; };
-    card.addEventListener("transitionend", clear, { once: true });
+    const clear = () => { if (done) return; done = true; el2.style.transition = ""; el2.style.transform = ""; };
+    el2.addEventListener("transitionend", clear, { once: true });
     setTimeout(clear, ZOOM_FALLBACK_MS);
   }
 
+  // Fired by the shared countdown hitting 0 — can happen mid-question OR
+  // while just sitting at the grid (see file header). closeCardThen() itself
+  // already handles "no card on screen" (skips straight to afterFn()).
   function gameOver() {
     if (ended) return;
     ended = true;
-    if (questionTimeout) { clearTimeout(questionTimeout); questionTimeout = null; }
-    if (clockInterval) { clearInterval(clockInterval); clockInterval = null; }
-    otbSound.timeout();
+    stopSharedTimer();
+    otbSound.gameOver();
     closeCardThen(finishGameOver);
   }
 
@@ -541,7 +594,7 @@ function mountQuestions(root, activity, ui) {
   // Hands off to engine.js's OWN ending flow — same Score/Time/rank +
   // Leaderboard/Show answers/Start again/Play a different template as
   // Quiz/Anagram get from ui.finish(). `title` is the one bit Open the box
-  // needed core/engine.js to support (see file header).
+  // needed core/engine.js to support (see GHI CHU OPEN-THE-BOX.md).
   function finishRound(title) {
     const perQuestion = items.map((it, i) => ({ q: i, correct: boxState[i] === "correct" }));
     const review = items.map((it, i) => {
@@ -566,8 +619,8 @@ function mountQuestions(root, activity, ui) {
   return function cleanup() {
     ro.disconnect();
     if (fitter) fitter.destroy();
-    if (questionTimeout) clearTimeout(questionTimeout);
-    if (clockInterval) clearInterval(clockInterval);
+    stopSharedTimer();
+    if (ui.topbarMid) ui.topbarMid.innerHTML = "";
   };
 }
 
