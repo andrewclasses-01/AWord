@@ -2,11 +2,16 @@
    FIND THE MATCH template — styles that belong ONLY to this template.
    Class prefix: .aw-ftm-*
 
-   Unlike Quiz/Anagram (one item at a time), this game shows a PERSISTENT
-   board: 1 prompt on top + a grid of ALL remaining choices below. Matched
-   tiles fade out and are removed (grid reflows), the prompt swaps to the
-   next unsolved pair. Sizes use cqw * var(--fit,1) for the same reason as
-   every other template (uniform scaling inside the 16:9 stage).
+   "Conveyor belt" board (31/7/2026 rewrite): the DEFINITION prompt glides
+   left-edge -> centre -> right-edge inside a fixed, overflow:hidden TRACK
+   (find-the-match.js drives the motion via element.animate({transform:
+   translateX}); the track has no base positioning transform of its own,
+   so this is safe under CONG THUC MAU.md rule 3.5). Below a dashed
+   divider, a grid of ALL remaining KEYWORD tiles, ALWAYS laid out in 5
+   fixed rows (columns computed from the pair count) — each tile gets an
+   explicit grid-row/grid-column in JS so removing one never reflows the
+   others. Sizes use cqw * var(--fit,1) for the same reason as every other
+   template (uniform scaling inside the 16:9 stage).
    ============================================================= */
 
 .aw-ftm-card {
@@ -25,25 +30,49 @@
 }
 .aw-ftm-lives span.is-lost { opacity: .2; }
 
-.aw-ftm-prompt {
+.aw-ftm-track {
+  position: relative;
+  overflow: hidden;
   flex: 0 0 auto;
-  font-size: calc(4.6cqw * var(--fit));
+  width: 100%;
+  height: calc(9.5cqw * var(--fit));
+  margin-bottom: 1.2cqw;
+}
+.aw-ftm-prompt {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-size: calc(3.6cqw * var(--fit));
   font-weight: 700;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
-  text-align: center;
-  line-height: 1.15;
-  margin: 0 auto 2.6cqw;
-  max-width: 94%;
-  transition: opacity .12s ease;
+  line-height: 1.2;
+  padding: 0 4cqw;
+  will-change: transform;
+}
+/* the "3-2-1" prep countdown (count-up mode only) — much bigger than a
+   normal question, plain no-stroke number so it reads instantly. */
+.aw-ftm-prompt.is-countdown {
+  font-size: calc(9cqw * var(--fit));
+  font-weight: 800;
+  -webkit-text-stroke: 0;
+  color: var(--aw-question-fill, var(--aw-text));
+}
+
+.aw-ftm-divider {
+  flex: 0 0 auto;
+  height: 0;
+  margin: 0 1cqw calc(1.8cqw * var(--fit));
+  border-top: 0.22cqw dashed var(--aw-muted, #b9c3d1);
+  opacity: .6;
 }
 
 .aw-ftm-grid {
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(15.5cqw, 1fr));
+  justify-content: center;
   align-content: center;
   gap: calc(1.1cqw * var(--fit));
   overflow: hidden;
@@ -52,14 +81,17 @@
   position: relative;
   border-radius: var(--aw-tile-radius, 1.3cqw);
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
-  background: var(--aw-tile-fixed, #3b82f6);
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
-  color: #fff; font-family: inherit; font-weight: 600;
-  font-size: calc(1.7cqw * var(--fit));
+  /* --aw-tile-fixed forces one flat colour (some themes, e.g. Basic); with
+     it unset the per-pair --ftm-c/--ftm-d (set inline in JS) show through —
+     same fallback chain as Quiz/Open the box's PALETTE. */
+  background: var(--aw-tile-fixed, var(--ftm-c, #3b82f6));
+  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, var(--ftm-d, #2563eb)));
+  color: #fff; font-family: inherit; font-weight: 700;
+  font-size: calc(1.85cqw * var(--fit));
   line-height: 1.15;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  padding: calc(1.6cqw * var(--fit)) calc(1cqw * var(--fit));
-  min-height: calc(5.6cqw * var(--fit));
+  padding: calc(1.2cqw * var(--fit)) calc(0.8cqw * var(--fit));
+  min-height: calc(4.2cqw * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, opacity .3s ease, filter .15s ease;
 }
@@ -67,20 +99,85 @@
 .aw-ftm-tile:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
 .aw-ftm-tile:disabled { cursor: default; }
 
-/* correct match: fade + shrink out, then removed from the DOM */
+/* correct match (removeCorrects:true) / skipped-on-timeout: fade + shrink
+   out, then removed from the DOM. */
 .aw-ftm-tile.is-solved { opacity: 0; transform: scale(.82); pointer-events: none; }
 
-/* wrong tap: brief shake, tile itself never changes colour */
-.aw-ftm-tile.is-shake { animation: aw-ftm-shake .35s ease; }
-@keyframes aw-ftm-shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-0.6cqw); }
-  40% { transform: translateX(0.6cqw); }
-  60% { transform: translateX(-0.4cqw); }
-  80% { transform: translateX(0.4cqw); }
-}
+/* correct match, removeCorrects:false — tile stays, dimmed a touch, with a
+   small permanent checkmark badge (.aw-tile-badge, shared class) appended
+   in find-the-match.js. */
+.aw-ftm-tile.is-locked { opacity: .68; filter: grayscale(.15); }
 
 .aw-ftm-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* Teacher's spec: there's no "previous question" to go back to (the prompt
+   only ever moves forward), so the shared prev/next arrows are hidden for
+   THIS template only — the "x of y" label next to them stays. Scoped via
+   :has() so core/engine.js's nav bar markup (shared by every template)
+   needs no change; only matches while a .aw-ftm-card is actually mounted. */
+.aw-playarea:has(> .aw-ftm-card) ~ .aw-bottombar .aw-navbtn { display: none; }
+
+/* =============================================================
+   OPTIONS PANEL — Speed slider (lives OUTSIDE the 16:9 stage, so plain
+   rem/px here — NOT cqw, same as the editor section below).
+   ============================================================= */
+.aw-ftm-speedrow { display: flex; align-items: center; gap: 10px; }
+.aw-ftm-speedslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
+.aw-ftm-speedval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
+
+/* =============================================================
+   EDITOR ("Edit content") — Keyword | Definition table, close copy of
+   Anagram's Word|Clue table (templates/anagram/anagram-editor.js /
+   anagram.css). Lives OUTSIDE the 16:9 stage (the editor page, not the
+   game), so plain px/rem here — NOT cqw. Reuses core/app.css's .aw-ed-*
+   page chrome (header/title field/tip/bulk bar/count); only the per-row
+   layout below is Find-the-match-specific.
+   ============================================================= */
+.aw-ftm-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.aw-ftm-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 118px; }
+.aw-ftm-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }
+
+.aw-ftm-ed-row { display: flex; align-items: stretch; gap: 8px; }
+.aw-ftm-ed-row.is-dragging { opacity: .4; }
+.aw-ftm-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
+.aw-ftm-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
+
+.aw-ftm-ed-num {
+  flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #8a97a8; font-size: .9rem;
+}
+.aw-ftm-ed-box {
+  flex: 1; min-width: 0; display: flex;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-ftm-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-ftm-ed-keyword, .aw-ftm-ed-definition {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e;
+}
+.aw-ftm-ed-keyword { font-weight: 600; }
+.aw-ftm-ed-definition { border-left: 1.5px solid #e2e9f2; }
+
+.aw-ftm-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-ftm-ed-iconbtn {
+  width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-ftm-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-ftm-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-ftm-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-ftm-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-ftm-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+
+.aw-ftm-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px;
+  background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer;
+}
+.aw-ftm-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-ftm-ed-addrow:disabled { opacity: .4; cursor: default; }

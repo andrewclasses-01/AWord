@@ -9,13 +9,16 @@ export const activity = {
   schemaVersion: 1,
   type: "find_the_match",
   title: "FOOD GROUPS — Find the match",
-  instruction: "Tap the definition that matches the word shown.",
+  instruction: "Read the definition, then tap the matching word.",
   theme: "classic",
   options: {
     timer: "countUp",
     shuffleQuestions: true,
     lives: null,
-    showAnswers: true
+    showAnswers: true,
+    speed: 0,
+    repeatUntilCorrect: false,
+    removeCorrects: true
   },
   content: {
     pairs: [

@@ -21,6 +21,84 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 15: Find the match — bấm sai cũng trượt câu (sửa lại giả định sai đợt 14) + đếm ngược 3-2-1 (Count up) + ting đếm giờ (Count down). CHƯA gộp trang chủ.
+
+Thầy sửa lại 1 giả định của đợt 14 + thêm 2 yêu cầu về đồng hồ. Chi tiết đầy đủ (kèm 1 giới hạn kỹ
+thuật CHƯA giải quyết được, cần thầy quyết định): `templates/find-the-match/GHI CHU FIND-THE-MATCH.md`.
+
+- **Bấm SAI giờ cũng làm câu hỏi trượt đi** (đợt 14 em đoán sai là "bấm sai không ảnh hưởng câu hỏi" —
+  thầy xác nhận sai, đã sửa lại đúng). Bấm sai → dấu ✗ bay lên đúng ô vừa bấm rồi biến mất (bỏ hẳn hiệu
+  ứng rung `.is-shake` cũ) + câu hỏi trượt tiếp ra phải như lúc bấm đúng. Cặp đó: "Show once" → xoá ô
+  đáp án đúng luôn; "Repeat until correct" → xếp lại **vị trí NGẪU NHIÊN** trong hàng đợi (không phải
+  luôn xếp cuối). Đã kiểm bằng `javascript_tool` đo DOM thật (không đoán qua ảnh chụp): đúng cả 2 chế độ.
+- **Đếm ngược "3-2-1"** trước câu hỏi đầu tiên — CHỈ khi Timer = Count up: số to giữa khu câu hỏi, mỗi
+  giây đổi số + 1 tiếng "ting" (dùng lại `clocktick.mp3`), xong mới phát "Go" và câu hỏi thật mới trượt
+  vào. Đã đo timing bằng `javascript_tool`, đúng 3-2-1 mỗi giây rồi mới vào câu hỏi.
+  - **Giới hạn CHƯA giải quyết**: thầy muốn "3 giây chuẩn bị không tính vào đồng hồ", nhưng đồng hồ
+    hiển thị + thời gian ghi bảng xếp hạng cuối ván là do `core/engine.js` tự quản lý, bắt đầu đếm NGAY
+    lúc mount() chạy — không có cách nào template tự hoãn mà không sửa core. Đã ghi "ĐỀ XUẤT SỬA CORE"
+    (thêm cờ `tpl.deferTimerStart` + hàm `ui.startClock()`, kiểu bổ sung CHỈ THÊM không đổi template
+    khác) — CHƯA tự làm, chờ thầy "ok" mới đụng `core/engine.js`. Hệ quả hiện tại: đồng hồ/thời gian
+    cuối ván của Find the match sẽ cao hơn thời gian chơi thật đúng 3 giây.
+- **Ting đếm giờ cho Count down**: 1 tiếng/giây từ lúc còn 10s, gấp đôi nhịp (2 tiếng/giây) từ lúc còn
+  5s — tính bằng đồng hồ riêng của template (đọc `options.timerTotalSeconds`), không cần sửa core.
+  Count up thì hết ting sau 3 giây chuẩn bị (không ting xuyên suốt ván nữa như đợt 14 làm nhầm).
+- CHƯA tự nghe thật các file âm thanh (chỉ kiểm lịch trình `setTimeout` qua code, không nghe được qua
+  công cụ test).
+
+### 31/7/2026 — Đợt 14: Find the match — cơ chế "băng chuyền" trượt liên tục + âm thanh Wordwall thật + lưới 5 hàng cố định vị trí + speed slider + ẩn nav + đường kẻ đứt. CHƯA gộp trang chủ.
+
+Thầy gửi tiếp 5 điều chỉnh cụ thể sau đợt 13. Chi tiết đầy đủ + giả định tự quyết (có 1 điểm chưa chắc
+chắn 100%, đã ghi rõ): `templates/find-the-match/GHI CHU FIND-THE-MATCH.md`, đây chỉ tóm tắt.
+
+- **Lưới CỐ ĐỊNH 5 hàng, căn giữa màn hình, không dồn lại khi xoá ô** — mỗi ô Keyword được gán
+  `grid-row`/`grid-column` cố định 1 lần lúc mount (cols = ceil(tổng/5)), xoá 1 ô chỉ để trống chỗ đó.
+- **Câu hỏi trượt kiểu "băng chuyền"**: trái → giữa → phải, chậm và liên tục (`element.animate`), bấm
+  đúng cũng làm câu hỏi trượt tiếp ra phải (không snap tức thì) — câu mới chỉ vào sau khi câu cũ trượt
+  HẲN ra khỏi màn. Bấm SAI không ảnh hưởng chuyển động của câu hỏi (chỉ rung ô + trừ mạng) — quyết định
+  tự đưa ra vì brief không nói rõ, thầy nên xác nhận lại.
+- **Âm thanh thật** từ `D:\APP AND DATA\AWord-data\Source\Sound effect\FIND THE MATCH` — module mới
+  `ftm-sound.js` + `templates/find-the-match/sounds/*.mp3`: Intro/Go/ConveyorAppear/Centred/Leave/
+  Correct/Incorrect/GameCompleted/GameOver/TimesUp/Restart/ClockTick. 3 âm còn lại (Menu/Leaderboard/
+  RevealAnswers) CHƯA gắn được — thiếu hook ở `core/engine.js`, đã ghi "ĐỀ XUẤT SỬA CORE" trong GHI CHU
+  riêng, chưa tự sửa.
+- **Speed đổi từ dropdown sang thanh trượt** (`<input type="range">`). **Ẩn hẳn nút prev/next** (chỉ
+  còn "x of y") bằng CSS `:has()` riêng cho Find the match, không đụng `core/engine.js`, không ảnh
+  hưởng game khác. Thêm **đường kẻ đứt** ngăn khu câu hỏi/khu đáp án.
+- Test qua `test.html`: xoá ô giữa lưới → các ô khác không xê dịch; Speed=3 chạy hết 8 câu tự trượt
+  đúng, Game Complete 0/8 đúng lúc (dùng `javascript_tool` đo `transform` để xác nhận không bị kẹt —
+  ban đầu tưởng lỗi, hoá ra chỉ là 400ms chờ trước màn kết thúc); tắt Remove corrects → ô ở lại có ✓ nhỏ
+  (ghi chú thẩm mỹ: dấu ✓ hơi đè chữ khi từ ngắn). 12 file âm thanh load 200 OK, không lỗi console.
+  CHƯA tự nghe thật 12 file âm thanh, CHƯA tự kiểm "Repeat until correct" quay vòng thật.
+
+### 31/7/2026 — Đợt 13: Find the match viết lại theo brief thầy (đảo vai trò prompt/tile · Speed · Repeat · Remove corrects · content editor mới). CHƯA gộp trang chủ.
+
+Thầy gửi ảnh tham khảo Wordwall thật + mô tả tốc độ/chế độ lặp lại. Chi tiết đầy đủ:
+`templates/find-the-match/GHI CHU FIND-THE-MATCH.md`, đây chỉ tóm tắt.
+
+- **Đảo ngược prompt/tile so với bản MVP 24/7**: bản cũ để Keyword (1 chữ) làm câu hỏi trên cùng +
+  lưới Definition bên dưới — SAI so với Wordwall thật. Viết lại: **Definition (câu hỏi dài) chạy ở
+  trên, Keyword (chữ ngắn) là các ô màu trong lưới** — đúng ảnh thầy gửi. Dữ liệu `{keyword,
+  definition}` không đổi cấu trúc.
+- **3 Option mới** (qua cơ chế `buildExtraOptions` có sẵn từ đợt Anagram, KHÔNG đụng `core/`):
+  **Speed** (0-10: 0 = đợi vô hạn như cũ, 1-10 = tự trượt sang câu kế sau 1 khoảng dừng, dừng ngắn +
+  trượt nhanh dần theo tốc độ); **Unanswered questions** ("Show each question once" mặc định = hết
+  giờ bỏ luôn, hay "Repeat questions until correct" = hết giờ xếp lại cuối hàng đợi hỏi lại sau);
+  **Remove corrects** (mặc định bật = ô biến mất khi đúng như cũ, tắt = ô ở lại có dấu ✓ nhỏ).
+  Màu ô Keyword dùng lại đúng bộ 8 màu Open the box/Quiz.
+  - `templates/find-the-match/find-the-match.js` viết lại gần như toàn bộ; `find-the-match.css`
+    thêm biến `--ftm-c`/`--ftm-d` (cùng cơ chế fallback `--aw-tile-fixed` như Open the box).
+- **Content editor mới** (`find-the-match-editor.js`, copy khuôn `anagram-editor.js`): bảng
+  Keyword | Definition, kéo-thả, dán Excel, **tối đa 40 cặp** (thầy nâng từ 30 trong tài liệu nghiên
+  cứu gốc lúc brief), tối thiểu 3.
+- Test qua `test.html`: Speed=0 chơi hết 8/8 đúng/sai/Show answers đúng; Speed=4 tự trượt đúng nhịp,
+  bỏ-qua-xoá-ô đúng, Game Complete 0/8 khi để trôi hết; đổi theme Basic ép đúng 1 màu, không vỡ
+  layout; editor thêm dòng/Cancel hoạt động đúng. 0 lỗi console.
+- **CHƯA tự kiểm**: "Repeat questions until correct" thật, `removeCorrects:false`, lives + Speed cùng
+  lúc, fullscreen, kéo-thả trong editor, dán Excel thật — để lại cho thầy hoặc phiên sau.
+- **CHƯA import vào `main.js`, CHƯA đổi `built:false` → `true`** — theo đúng quy trình (giống Open
+  the box/Type the answer: 2 việc này chỉ làm cùng lúc khi thầy duyệt gộp trang chủ).
+
 ### 30/7/2026 — Đợt 12: 4 chỉnh sửa theo yêu cầu thầy (Quiz hết ép hoa · chặn chuột phải · fullscreen giữ khi restart · fullscreen full màn TOMKO). ⚠️ CÓ SỬA `core/` — thầy yêu cầu trực tiếp.
 
 Thầy nêu 4 việc. Cả 4 đều đụng `core/` (engine.js/app.css) + 1 file quiz — được phép vì thầy yêu cầu
