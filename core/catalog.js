@@ -11,9 +11,9 @@ export const TEMPLATES = [
     blurb: "Tap the letters into the right order." },
   { type: "find_the_match",  label: "Find the match",  built: false,
     blurb: "Tap matching pairs to make them disappear." },
-  { type: "type_the_answer", label: "Type the answer", built: false,
+  { type: "type_the_answer", label: "Type the answer", built: true,
     blurb: "Type the answer to each question." },
-  { type: "open_the_box",    label: "Open the box",    built: false,
+  { type: "open_the_box",    label: "Open the box",    built: true,
     blurb: "Tap each box to reveal what's inside." }
 ];
 

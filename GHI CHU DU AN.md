@@ -21,6 +21,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 30/7/2026 — GỘP Open the box + Type the answer VÀO TRANG CHỦ, PUSH GITHUB (đợt 11, "đưa lên live")
+
+Thầy yêu cầu thẳng "đưa Open the box và Type the answer lên live" để dùng trên máy khác, bỏ qua bước
+chờ tự chơi thử ở local trước như quy trình cũ (mục 0b APP_MASTER.md từng ghi "chờ thầy duyệt xong
+mới gộp"). Đây là lệnh rõ ràng của thầy nên làm luôn bước gộp trang cuối (việc mà `HUONG DAN
+TEMPLATE.md` quy định chỉ 1 session phụ trách tổng mới làm):
+
+1. **`core/catalog.js`**: `open_the_box` và `type_the_answer` đổi `built: false` → `true` (Find the
+   match GIỮ NGUYÊN `false` — thầy chỉ yêu cầu 2 game này).
+2. **`index.html`**: thêm `<link>` cho `open-the-box.css` + `type-the-answer.css`.
+3. **`manifest.js`**: thêm 2 entry theo đúng khuôn Quiz/Anagram (dù `main.js` hiện không đọc file này
+   trực tiếp — vẫn cập nhật cho khớp mô tả đầu file "danh sách template đã chốt").
+4. **`main.js`**: thêm `import "./templates/open-the-box/open-the-box.js"` +
+   `import "./templates/type-the-answer/type-the-answer.js"` (đăng ký template qua side-effect của
+   `registerTemplate`, giống Quiz/Anagram).
+5. **Bắt được 1 lỗi thật lúc soát code trước khi gộp**: hàm vẽ thẻ act trên trang chủ (`actCard`) chỉ
+   đọc `node.content?.questions` (đúng hình Quiz) để lấy 1 câu hỏi + đáp án làm ảnh xem trước. Nhưng
+   Open the box/Anagram/Type the answer đều lưu dữ liệu ở `content.items` (không phải `.questions`) và
+   Type the answer còn khác tên field hẳn (`prompt`/`acceptedAnswers` thay vì `question`/`answers`) —
+   nên nếu gộp nguyên xi, thẻ của **cả 3 game này** (kể cả Anagram đã chốt từ 29/7!) sẽ hiện "No
+   questions yet" dù có đủ nội dung. Sửa bằng 1 hàm dùng chung mới `previewPick(node)` đọc được cả 4
+   hình dữ liệu (`content.questions[]` kiểu Quiz-answers / `content.items[]` kiểu Quiz-answers (Open
+   the box) / `content.items[]` kiểu `{word,clue}` (Anagram) / `content.items[]` kiểu
+   `{prompt,acceptedAnswers}` (Type the answer)) — tiện sửa chung 1 lần vì đằng nào cũng phải đụng hàm
+   này.
+6. **Kiểm chứng đã làm** (không đăng nhập Google được nên không tự bấm hết luồng thư viện):
+   - Trang chủ tải: 0 lỗi console, cả 2 module mới + editor + `otb-sound.js` tải 200 OK
+     (`read_network_requests`).
+   - Chạy thử `previewPick()` ngay trong trình duyệt (`javascript_tool`) với dữ liệu mẫu thật của cả 4
+     game (`sample-quiz.js`/`sample-anagram.js`/`sample-open-the-box.js`/`sample-type-the-answer.js`)
+     → cả 4 ra đúng câu hỏi + đáp án, không cái nào rỗng.
+   - `core/catalog.js` sau khi sửa: import lại trong trình duyệt xác nhận đúng
+     `quiz:true, anagram:true, find_the_match:false, type_the_answer:true, open_the_box:true`.
+   - Đọc lại 2 hàm `normalize()` trong `open-the-box-editor.js`/`type-the-answer-editor.js` xác nhận
+     chúng tự bọc `content: {questions:[]}` (hình `createBlankAct()` ở `main.js` tạo khi bấm "+ New
+     activity") về đúng `content.items` với item rỗng hợp lệ — nên tạo act MỚI của 2 loại này từ
+     trang chủ sẽ không vỡ, dù chưa tự bấm thật được vì cần đăng nhập.
+   - `templates/open-the-box/test.html` + `templates/type-the-answer/test.html`: tải lại, 0 lỗi
+     console, màn READY hiện đúng — không hồi quy so với trước khi gộp.
+   - **CHƯA tự kiểm được** (cần đăng nhập Google, Google chặn tự động hoá popup — bẫy đã biết): "+ New
+     activity" hết hiện "Coming soon" cho 2 game này, tạo act thật, thẻ preview hiện đúng câu hỏi thật,
+     kéo-thả/Move/Duplicate/Set assignment cho 2 loại act mới. Thầy tự thử trên bản live.
+7. **`core/` KHÔNG bị đụng** — mọi thứ engine cần (cờ `inlineTimerBar`, `hasKeyboardToggle`,
+   `buildExtraOptions`...) đã có sẵn từ các đợt build trước; `core/engine.js` đọc `ALL_TEMPLATES` thẳng
+   từ `catalog.js` nên chỉ cần sửa đúng 1 chỗ (`catalog.js`) là panel "Template" trong game cũng tự
+   cập nhật theo, không phải sửa thêm ở `engine.js`.
+8. Cập nhật trạng thái 🟢→✅ trong `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` +
+   `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`. **Find the match vẫn 🟢, KHÔNG đụng.**
+9. **ĐÃ COMMIT + PUSH GITHUB** theo đúng yêu cầu rõ ràng của thầy ("push để dùng được trên này") — xem
+   commit ngay sau đợt này trong lịch sử git; đã `curl` kiểm chứng nội dung file live khớp bản vừa đẩy.
+
 ### 30/7/2026 — Type the answer: content editor + viết lại toàn bộ màn chơi theo góp ý chi tiết của thầy
 
 Chi tiết đầy đủ: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`. Tóm tắt:

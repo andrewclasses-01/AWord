@@ -1,6 +1,12 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (24/7/2026)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT, ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
+
+Gộp cùng đợt với Open the box (thầy yêu cầu "đưa lên live" để dùng trên máy khác) — chi tiết đầy đủ
+của việc gộp (catalog.js/index.html/manifest.js/main.js + sửa hàm preview thẻ act đọc `content.items`)
+xem `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` cùng ngày, không lặp lại ở đây. Đã commit + push
+GitHub. **CHƯA tự bấm được** luồng đăng nhập Google + tạo/kéo-thả act thật trên trang chủ (Google chặn
+tự động hoá) — thầy tự xem khi vào bản live.
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).

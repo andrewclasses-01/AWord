@@ -1,6 +1,17 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT (30/7/2026)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT, ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
+
+Thầy yêu cầu thẳng "đưa lên live" (30/7/2026, không qua bước tự chơi thử ở local trước — thầy cần
+dùng ngay trên máy khác) → gộp vào trang chủ luôn: `core/catalog.js` đổi `built:true`,
+`index.html` thêm `<link>` CSS, `manifest.js` thêm entry, `main.js` thêm `import` đăng ký template +
+sửa hàm xem trước thẻ act (`actCard`/`previewPick`) để đọc đúng `content.items` (trước đó hàm này chỉ
+đọc `content.questions` kiểu Quiz nên thẻ Open the box/Type the answer/**cả Anagram** sẽ hiện "No
+questions yet" — tiện sửa chung 1 lần cho cả 3). Đã kiểm: trang chủ tải 0 lỗi console, mọi module mới
+(`open-the-box.js`, `open-the-box-editor.js`, `otb-sound.js`) tải 200 OK; test lại `test.html` riêng
+không hồi quy; chạy thử hàm `previewPick` với dữ liệu mẫu thật cho cả 4 loại game ra đúng câu hỏi +
+đáp án. **CHƯA tự bấm được** luồng đăng nhập Google + "+ New activity" + kéo-thả thẻ thật trên trang
+chủ (Google chặn tự động hoá đăng nhập) — thầy tự xem khi vào bản live. Đã **commit + push GitHub**.
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).

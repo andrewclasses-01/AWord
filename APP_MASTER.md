@@ -3,21 +3,15 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **30/7/2026 (đợt 10) — Open the box: sửa 1 BUG THẬT của đợt 9** (hàng cuối "đã căn
-> giữa" nhưng CSS Grid không thể đặt ô lẻ đúng tâm — chỉ chia được TRỌN cột, không chia nửa; đổi hẳn
-> `.aw-otb-grid` từ CSS Grid sang **Flexbox `flex-wrap`+`justify-content:center`**, canh giữa từng hàng
-> liên tục, đo pixel xác nhận lệch tâm chỉ còn 0.5px sai số làm tròn), **đồng hồ dịch hẳn sang trái,
-> mép trái THẲNG mép trái ô câu hỏi tuyệt đối** (cột đầu của `.has-inline` trong `core/app.css` đổi
-> sang độ rộng CỐ ĐỊNH `1.6cqw` thay vì `auto`), và **tách hẳn 2 hiệu ứng zoom** — chỉ ô câu hỏi zoom
-> từ vị trí Ô SỐ, các ô đáp án KHÔNG zoom mà chỉ trượt ngang từ mép phải MÀN HÌNH (85cqw). Đợt 8-9 (bỏ
-> Simple mode, editor, đổi âm thanh, đồng hồ chạy liên tục...) vẫn giữ nguyên, xem
-> `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 8-10 cho chi tiết đầy đủ. **ĐÃ COMMIT + PUSH
-> GITHUB** (commit `a2db784`, 30/7/2026 — thầy nói "lưu, commit + git push").
-> **Cùng ngày, phiên khác đã viết lại toàn bộ Type the answer** (content editor bảng Câu hỏi|Câu trả lời
-> + màn chơi mới: bàn phím ảo QWERTY, tích/x bay về điểm, Minus points, Show answer when wrong trượt
-> mượt — xem mục 0b) — **ĐÃ COMMIT + PUSH GITHUB** (thầy nói "ok, commit + push"), vẫn `built:false`,
-> CHƯA gộp trang chủ. Find the match vẫn 🟢 CHỜ THẦY DUYỆT y như cũ, chưa ai động thêm. Open the box
-> cũng `built:false`, chưa gộp trang chủ, chờ thầy duyệt như 2 game kia.
+> Cập nhật lần cuối: **30/7/2026 (đợt 11) — Open the box + Type the answer ĐÃ GỘP TRANG CHỦ, ĐÃ PUSH
+> GITHUB.** Thầy yêu cầu thẳng "đưa lên live để dùng máy khác" — bỏ qua bước chờ tự chơi thử ở local,
+> gộp luôn: `core/catalog.js` cả 2 đổi `built:true`, `index.html`/`manifest.js`/`main.js` thêm
+> link/entry/import theo đúng khuôn Quiz/Anagram. Nhân tiện bắt được 1 lỗi thật: thẻ act ở trang chủ chỉ
+> đọc được `content.questions` (hình Quiz) nên Open the box/Type the answer/**cả Anagram** sẽ hiện "No
+> questions yet" — đã sửa 1 hàm dùng chung `previewPick()` đọc đúng cả 4 hình dữ liệu. Xem
+> `GHI CHU DU AN.md` đợt 11 cho chi tiết đầy đủ + danh sách đã kiểm chứng (chưa tự bấm được luồng đăng
+> nhập Google + thư viện thật, thầy tự xem trên bản live). **Find the match vẫn 🟢 CHỜ THẦY DUYỆT,
+> KHÔNG đụng** — thầy chỉ yêu cầu 2 game kia.
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -25,10 +19,10 @@
 > ⚠️ **Đừng chuyển repo sang tài khoản GitHub khác** — chuyển là mất tính năng này.
 > myLesson: `E:\LAP TRINH APP\myLesson` (app) · `D:\APP AND DATA\myLesson Web` (web).
 >
-> 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — **30/7/2026: đã cập nhật đầy đủ** tới
-> commit `a87fe8a` (đã kiểm bằng `curl`), gồm cả v0.9.4/v0.9.5 và **Anagram** (`built:true`, đã lên
-> trang chủ). Trước đó phần này từng ghi nhầm "vẫn v0.9.3 cũ" — thông tin đó SAI/lỗi thời, đã sửa lại
-> cho khớp git log/curl thật (bài học: đừng tin dòng ghi chú cũ, luôn `curl` kiểm chứng lại nếu nghi ngờ).
+> 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — **30/7/2026 (đợt 11): đã đẩy thêm Open
+> the box + Type the answer (`built:true`, đã lên trang chủ)** cùng với v0.9.4/v0.9.5/Anagram trước đó
+> — commit + `curl` kiểm chứng ghi trong `GHI CHU DU AN.md` đợt 11. Bài học vẫn giữ: đừng tin dòng ghi
+> chú cũ, luôn `curl` kiểm chứng lại nếu nghi ngờ.
 > Repo: `github.com/andrewclasses-01/AWord` (PUBLIC, branch `main`, Pages từ thư mục gốc).
 > 🔥 **FIREBASE + THƯ VIỆN TRÊN MÂY**: project **`aword-70dae`** (account `namdaptrai01@gmail.com`,
 > gói Spark miễn phí) — Firestore Singapore + đăng nhập Google. **Thầy phải đăng nhập** mới vào được
@@ -134,10 +128,9 @@ gốc của chính bộ âm thanh, thầy chốt vậy có chủ đích. Đợt 
   lưới lúc bấm START kéo dài đúng 2.46s khớp `intro.mp3` thật (đo bằng ffmpeg); hàng cuối thiếu ô tự
   căn giữa; bộ âm thanh 16 file gốc Wordwall thầy tải riêng (đợt 8, KHÔNG còn mượn Anagram như trước —
   `otb-sound.js` + `sounds/`, bản riêng không cross-import).
-- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-10 (30/7/2026, việc trong mục này)
-  ĐÃ COMMIT + PUSH GITHUB** (commit `a2db784` — thầy nói "lưu, commit + git push", đã kiểm bằng `curl`
-  file mới `open-the-box-editor.js` live thật). `built:false` nên chưa ai thấy trên trang chủ dù đã lên
-  mạng — chỉ khi thầy duyệt xong mới gộp `built:true`.
+- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-10 (30/7/2026)** ĐÃ COMMIT + PUSH
+  GITHUB (commit `a2db784`). **Đợt 11 (cùng ngày, thầy yêu cầu "đưa lên live")**: `built:true` + đã
+  GỘP TRANG CHỦ + push — xem `GHI CHU DU AN.md` đợt 11. Không còn `built:false` nữa.
   - **Lưu ý khi commit đợt này**: cùng lúc có 1 phiên khác đang làm dở Type the answer, đụng chung
     `core/engine.js`/`core/icons.js` (thêm `hasKeyboardToggle`/`hideLettersOption`/icon bàn phím). Đã
     tách cẩn thận — TẠM sửa `core/engine.js` bỏ đúng 3 đoạn của phiên kia, commit sạch phần Open the
@@ -172,18 +165,17 @@ cùng lúc, đã tách/ghép cẩn thận (xem lưu ý trong mục Open the box)
 - **CHƯA tự mắt xác nhận được**: hiệu ứng khối ô nhập trượt mượt khi hiện đáp án đúng — môi trường xem
   trước phiên build này không render được (`document.hidden:true`, bẫy mục 9), đã xác nhận đúng qua DOM/
   CSS rule nhưng **thầy nên tự mở xem hiệu ứng trượt có mượt không**.
-- **VẪN `built:false`, CHƯA gộp trang chủ** — chờ thầy tự chơi thử rồi duyệt.
+- **`built:true`, ĐÃ GỘP TRANG CHỦ (đợt 11, 30/7/2026)** — thầy yêu cầu đưa lên live, không còn chờ.
 
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
-(a) Thầy tự chơi thử Open the box (dữ liệu mẫu đợt 8 đã đổi hẳn sang 9 câu từ vựng/ngữ pháp dạng
-    Questions — không còn cảnh báo "tạm để mode X" như các đợt trước, vì Simple mode đã xoá hẳn) — có
-    ok chưa hay còn muốn chỉnh gì? Đặc biệt cần thầy xác nhận trên TOMKO: zoom lúc START, 16 âm thanh
-    mới (nhất là cặp GameOver/TimesUp), và thanh giờ+điểm có thật "cùng hàng" trên màn 86" không.
+(a) **Open the box + Type the answer đã lên live (đợt 11)** theo yêu cầu trực tiếp của thầy — nhưng
+    checklist tự chơi thử ở trên (zoom lúc START, 16 âm thanh, thanh giờ+điểm "cùng hàng" trên TOMKO;
+    hiệu ứng trượt xuống của Type the answer) **vẫn còn giá trị**, thầy nên tự xem trên bản live khi
+    rảnh — chỉ là không còn là ĐIỀU KIỆN để lên trang chủ nữa (đã lên rồi).
 (b) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
-(c) Thầy tự chơi thử Type the answer (link/nút Edit + màn chơi mới, xem mục ngay trên) — đặc biệt xác
-    nhận hiệu ứng trượt xuống khi hiện đáp án đúng có mượt không (phiên build chưa tự xem được ảnh thật).
-    Find the match vẫn còn nguyên như cũ, chưa ai động tới thêm.
-(d) ✅ Đã đẩy code lên GitHub (30/7/2026, commit `a87fe8a`) — thầy chọn "push" khi được hỏi.
+(c) Find the match vẫn còn nguyên như cũ (🟢 chờ duyệt), chưa ai động tới thêm, chưa lên live.
+(d) ✅ Đã đẩy code lên GitHub nhiều đợt (30/7/2026) — mới nhất là đợt 11 (Open the box + Type the
+    answer lên live).
 (e) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
 
 **Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
@@ -332,24 +324,23 @@ Quiz hiện có (chi tiết từng bước: `GHI CHU DU AN.md`):
   - **Style**: đổi theme TRỰC TIẾP (không restart). **4 theme**: Classic (mặc định) · Basic (ô đáp án
     CÙNG màu navy, tối giản) · Classroom (kem/gỗ ấm) · Beach (cát/biển).
 
-### 4 game khác — Anagram ✅ ĐÃ CHỐT (29/7/2026), 3 game còn lại 🟢 CHỜ THẦY DUYỆT
+### 4 game khác — Anagram/Open the box/Type the answer ✅ ĐÃ CHỐT + lên trang chủ, Find the match 🟢 CHỜ THẦY DUYỆT
 Anagram / Find the match / Type the answer / Open the box — cả 4 đã có đủ 3 file
 (`<ten>.js`/`.css`/`sample-<ten>.js`), đăng ký đúng `type` khớp `core/catalog.js`, **đã test qua
 `test.html` bằng trình duyệt thật** (chơi hết 1 lượt, đúng/sai, Show answers, đổi theme, 0 lỗi console
 mỗi game). Trạng thái từng game + nhật ký chi tiết: `GHI CHU <TEN>.md` trong từng thư mục
-`templates/<ten>/`. **Anagram đã thêm vào `core/catalog.js` (`built:true`) + gộp vào trang chủ
-(29/7/2026)** — theo đúng quy trình (xem `templates/HUONG DAN TEMPLATE.md` mục "Khi nào một template
-được gộp vào trang cuối"), **kèm content editor riêng** (`anagram-editor.js`, xem GHI CHU ANAGRAM.md). 3
-game còn lại vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chờ thầy xem & duyệt từng game — và
-CHƯA có content editor riêng (chỉ Quiz + Anagram có editor hiện tại).
+`templates/<ten>/`. **Anagram (29/7/2026), Open the box + Type the answer (30/7/2026, đợt 11)** đã
+thêm vào `core/catalog.js` (`built:true`) + gộp vào trang chủ — theo đúng quy trình (xem
+`templates/HUONG DAN TEMPLATE.md` mục "Khi nào một template được gộp vào trang cuối"), **cả 3 đều có
+content editor riêng** (`anagram-editor.js`/`open-the-box-editor.js`/`type-the-answer-editor.js`).
+**Find the match** vẫn **CHƯA** thêm vào `core/catalog.js`/gộp trang chủ, chưa có content editor riêng,
+chờ thầy xem & duyệt.
 - **Anagram**: bấm/gõ chữ cái đặt vào ô trống (không kéo-thả thật — lựa chọn MVP chắc tay hơn trên cảm ứng).
 - **Find the match**: bàn cờ 1 prompt + lưới definition còn lại, chạm đúng thì ô biến mất.
-- **Type the answer**: gõ đáp án vào ô, chấm bỏ qua hoa/thường + dấu (bật được chấm chặt qua Options).
-- **Open the box**: lưới hộp lật mở nội dung, **KHÔNG điểm/leaderboard** (game mở, đúng như Wordwall gốc).
+- **Type the answer**: gõ đáp án vào ô, chấm bỏ qua hoa/thường + dấu (không phân biệt), bàn phím ảo QWERTY.
+- **Open the box**: lưới hộp lật mở nội dung, có điểm/leaderboard (Simple mode không điểm đã bị xoá).
 
 Công thức dùng chung cho cả 4: `templates/CONG THUC MAU.md`.
-
-### Chưa có: content editor riêng cho Find the match/Type the answer/Open the box (chỉ Quiz + Anagram có).
 
 ## 3. Cách chạy (máy này CHƯA cài Node)
 
@@ -517,10 +508,10 @@ Build lần lượt từng tính năng, xong cho thầy xem chạy thật:
    ⚠️ Lúc đó nhớ chuyển **leaderboard + Settings** từ localStorage lên cloud (hiện vẫn lưu theo máy).
 6. ✅ **Chốt Quiz + viết "recipe/công thức mẫu"** (24/7/2026) → `templates/CONG THUC MAU.md`.
 7. ✅ **Build 4 template còn lại** (24/7/2026): Anagram, Find the match, Type the answer, Open the box —
-   cả 4 đã build + test qua `test.html`. **Anagram ✅ ĐÃ CHỐT + gộp vào trang chủ (29/7/2026)**, 3 game
-   còn lại vẫn **🟢 CHỜ THẦY DUYỆT** (xem mục 2). **➡️ VIỆC KẾ TIẾP**: thầy xem từng game còn lại chạy
-   thật rồi quyết định game nào đủ tốt để chuyển `built:true` trong `core/catalog.js` và gộp vào trang
-   chủ (kèm content editor riêng, theo khuôn `anagram-editor.js`/`quiz-editor.js`).
+   cả 4 đã build + test qua `test.html`. **Anagram (29/7/2026), Open the box + Type the answer
+   (30/7/2026, đợt 11) ✅ ĐÃ CHỐT + gộp vào trang chủ** (xem mục 2). **Find the match** vẫn
+   **🟢 CHỜ THẦY DUYỆT**, chưa gộp. **➡️ VIỆC KẾ TIẾP**: thầy xem Find the match chạy thật rồi quyết
+   định có gộp `built:true` nốt không (kèm content editor riêng, theo khuôn `open-the-box-editor.js`).
 8. **Change template thật** (nút Template/menu "coming soon"): đổi game trên cùng bộ dữ liệu.
 9. ✅ **Đẩy GitHub + Pages (v0.7.2, 19/7)**: repo PUBLIC `andrewclasses-01/AWord`, Pages branch `main`
    thư mục gốc, live tại https://andrewclasses-01.github.io/AWord/ (đã test thật: chơi Quiz + popup

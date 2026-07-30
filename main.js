@@ -40,8 +40,10 @@ import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
   copyAssignmentLink, copyAssignmentQr
 } from "./core/assignment-ui.js";
-import "./templates/quiz/quiz.js";      // registers the quiz template (+ its editor)
-import "./templates/anagram/anagram.js"; // registers the anagram template (no editor yet)
+import "./templates/quiz/quiz.js";               // registers the quiz template (+ its editor)
+import "./templates/anagram/anagram.js";         // registers the anagram template (+ its editor)
+import "./templates/open-the-box/open-the-box.js";           // registers open the box (+ its editor)
+import "./templates/type-the-answer/type-the-answer.js";     // registers type the answer (+ its editor)
 
 const app = document.getElementById("app");
 
@@ -546,17 +548,36 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   return card;
 }
 
+// Pick one random item from an act's content and normalise it to
+// {question, answers[]} for the card preview, regardless of which shape the
+// owning template uses (Quiz/Open the box: {question,answers:[{text}]} under
+// content.questions or content.items; Anagram: {word,clue} under
+// content.items; Type the answer: {prompt,acceptedAnswers:[...]} under
+// content.items). Returns null when there's nothing to show.
+function previewPick(node) {
+  const c = node.content || {};
+  const list = c.questions || c.items || [];
+  if (!list.length) return null;
+  const it = list[Math.floor(Math.random() * list.length)];
+  const question = it.question || it.prompt || it.clue || "";
+  if (!question) return null;
+  let answers = [];
+  if (Array.isArray(it.answers)) answers = it.answers.map(a => a.text || "").filter(Boolean);
+  else if (Array.isArray(it.acceptedAnswers)) answers = it.acceptedAnswers.filter(Boolean);
+  else if (it.word) answers = [it.word];
+  return { question, answers };
+}
+
 function actCard(node) {
   const card = el("div", "aw-card aw-card-act");
 
   const preview = el("div", "aw-cp");
-  const qs = node.content?.questions || [];
-  const q = qs.length ? qs[Math.floor(Math.random() * qs.length)] : null;
-  if (q) {
-    preview.append(el("div", "aw-cp-q", escapeText(q.question || "")));
+  const pick = previewPick(node);
+  if (pick) {
+    preview.append(el("div", "aw-cp-q", escapeText(pick.question)));
     const chips = el("div", "aw-cp-answers");
-    (q.answers || []).slice(0, 4).forEach((a, i) => {
-      const chip = el("div", "aw-cp-chip", escapeText(a.text || ""));
+    pick.answers.slice(0, 4).forEach((text, i) => {
+      const chip = el("div", "aw-cp-chip", escapeText(text));
       chip.style.background = PREVIEW_COLORS[i % PREVIEW_COLORS.length];
       chips.append(chip);
     });
