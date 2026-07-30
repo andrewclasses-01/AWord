@@ -3,21 +3,29 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **30/7/2026 (đợt 11) — Open the box + Type the answer ĐÃ GỘP TRANG CHỦ, ĐÃ PUSH
-> GITHUB.** Thầy yêu cầu thẳng "đưa lên live để dùng máy khác" — bỏ qua bước chờ tự chơi thử ở local,
-> gộp luôn: `core/catalog.js` cả 2 đổi `built:true`, `index.html`/`manifest.js`/`main.js` thêm
-> link/entry/import theo đúng khuôn Quiz/Anagram. Nhân tiện bắt được 1 lỗi thật: thẻ act ở trang chủ chỉ
-> đọc được `content.questions` (hình Quiz) nên Open the box/Type the answer/**cả Anagram** sẽ hiện "No
-> questions yet" — đã sửa 1 hàm dùng chung `previewPick()` đọc đúng cả 4 hình dữ liệu. Xem
-> `GHI CHU DU AN.md` đợt 11 cho chi tiết đầy đủ + danh sách đã kiểm chứng (chưa tự bấm được luồng đăng
-> nhập Google + thư viện thật, thầy tự xem trên bản live). **Find the match vẫn 🟢 CHỜ THẦY DUYỆT,
-> KHÔNG đụng** — thầy chỉ yêu cầu 2 game kia.
+> Cập nhật lần cuối: **30/7/2026 (đợt 12) — 4 CHỈNH THEO YÊU CẦU THẦY, ĐÃ PUSH + LIVE.** (1) Quiz thôi
+> ép HOA đáp án (bỏ `text-transform:uppercase` ở `.aw-quiz-tile`; ALL CAPS chỉ còn ở Anagram); (2) chặn
+> chuột phải trong khung game (`page.addEventListener("contextmenu")`); (3) restart GIỮ fullscreen —
+> đổi phần tử fullscreen từ `page` (bị xoá khi restart) sang **`root`/`#app`** (Home/Edit thì chủ động
+> `exitFs()`); (4) TOMKO 4K fullscreen full màn — thêm biến thể CSS/JS có tiền tố `-webkit-/-moz-/-ms-`
+> (mỗi tiền tố 1 rule RIÊNG, không gộp kẻo Chrome vứt cả rule). Chi tiết: `GHI CHU DU AN.md` đợt 12.
+> ⚠️ Fullscreen thật CHƯA tự kiểm được (preview không cấp) — cần thầy xác nhận trên màn thật/TOMKO.
+> **Đợt 11 trước đó**: Open the box + Type the answer đã gộp trang chủ (`built:true`) + sửa `previewPick()`
+> (thẻ act đọc đúng cả 4 hình dữ liệu). **Find the match vẫn 🟢 CHỜ THẦY DUYỆT, KHÔNG đụng.**
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
 > sang game, các em khỏi gõ tên → hết tên viết sai trong bảng xếp hạng.
 > ⚠️ **Đừng chuyển repo sang tài khoản GitHub khác** — chuyển là mất tính năng này.
 > myLesson: `E:\LAP TRINH APP\myLesson` (app) · `D:\APP AND DATA\myLesson Web` (web).
+>
+> 🔗 **AWord CŨNG được app myActivity nhúng (v1.6.0/1.6.1, 30/7/2026)** để chơi trên màn TOMKO (bảng
+> đơn/đôi). myActivity TỰ NHẬN DẠNG URL AWord rồi **bơm CSS lấp khung + fullscreen** — CSS đó nhắm
+> vào các class **`.aw-page` / `.aw-stage` / `.aw-below`** và dựa vào **nút fullscreen nhắm `#app`
+> (root)** (đợt 12). ⚠️ **ĐỪNG đổi tên/bỏ 3 class này hay đổi target fullscreen khỏi `#app`** — đổi là
+> vỡ phần nhúng myActivity (file `E:\LAP TRINH APP\myActivity\src\renderer\js\wordwall.js`, hằng
+> `AWORD_CSS` + `isAword`/`isAwordAct`). myActivity mở act qua link `?a=<num>` (SPA pushState) và
+> mirror sang bảng đôi theo đó.
 >
 > 🌐 **WEB LIVE: https://andrewclasses-01.github.io/AWord/** — **30/7/2026 (đợt 11): đã đẩy thêm Open
 > the box + Type the answer (`built:true`, đã lên trang chủ)** cùng với v0.9.4/v0.9.5/Anagram trước đó
