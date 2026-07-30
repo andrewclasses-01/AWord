@@ -42,5 +42,148 @@ Hiện prompt/câu hỏi → học sinh GÕ đáp án. Chấm bằng so khớp c
   Cũng chưa làm **KEYBOARD LANGUAGE** (bàn phím ảo ký tự đặc biệt, docs mục 3) — bàn phím thật của máy/
   điện thoại HS đã đủ dùng cho tiếng Anh.
 
+### 30/7/2026 — Content editor riêng (`type-the-answer-editor.js`)
+
+Thầy yêu cầu tiếp tục xây Type the answer, việc đầu tiên: content editor (chưa có, giống Anagram trước
+khi có `anagram-editor.js`) — "+ New activity"/"Edit content" trước đây chỉ hiện toast "coming soon".
+
+1. **File mới**: `type-the-answer-editor.js` (`openTypeTheAnswerEditor`), theo ĐÚNG khuôn
+   `templates/quiz/quiz-editor.js` (cùng chữ ký `(container, activity, {onSave, onCancel, header, footer})`,
+   cùng scope đơn giản: chỉ Activity Title + danh sách câu hỏi; theme luôn Classic; mode luôn `"qa"`
+   (Spelling test KHÔNG làm ở đây — vẫn để ngỏ như đã ghi ở trên).
+2. **Mỗi hàng** = Question (bắt buộc) + **Answer** (đáp án chính, bắt buộc) + **"+ Add alternate answer"**
+   (thêm đáp án chấp nhận khác, tối đa 5 alt, mỗi cái có ô riêng + nút × xoá) — khớp đúng mô hình
+   `content.items[].{prompt, acceptedAnswers[]}` mà `type-the-answer.js` đang đọc, không cần chuyển đổi gì
+   thêm. Có Add question (tối đa **30 câu**, đúng giới hạn Wordwall gốc ở docs/03), Duplicate/Remove.
+3. **Dán Excel** (`onQuestionPaste`, giống Quiz/Anagram): cột 1 → Question, cột 2 → Answer chính, cột 3+ →
+   alternate answers (tối đa 5), dán được từ CẢ ô Question lẫn ô Answer/Alt., điền từ hàng đang dán xuống.
+4. **Tái dùng gần 100% class `.aw-ed-*` sẵn có** trong `core/app.css` (như Quiz/Anagram) — chỉ thêm
+   khối nhỏ `.aw-tta-ed-*` (hàng đáp án + nhãn ANSWER/ALT.) vào `type-the-answer.css` của chính template
+   này, KHÔNG đụng `core/`.
+5. Đăng ký: `type-the-answer.js` thêm `edit: openTypeTheAnswerEditor` (import trực tiếp).
+6. **Đã test qua trình duyệt thật** (`test.html` → nút Edit trong khung game, KHÔNG cần harness riêng vì
+   nút Edit gọi thẳng `tpl.edit()` bất kể `catalog.js` đang để `built:false`):
+   - Mở editor hiện đúng 6 câu mẫu, thêm/xoá alternate answer hoạt động đúng.
+   - Duplicate/Remove câu hỏi đúng vị trí, không ảnh hưởng câu khác.
+   - Dán Excel giả lập (`ClipboardEvent` 2 dòng, 3 cột) vào ô Question → đúng 2 câu mới, cột 3 thành
+     alternate answer, banner xanh báo đúng "Pasted 2 question(s) from Excel."
+   - Save khi xoá trống Title → đúng lỗi "Please enter an activity title."
+   - Save hợp lệ → gọi `onSave`, bắt lỗi gọn "Could not save — please try again." (đúng vì `test.html`
+     không đăng nhập Google nên `store.js` từ chối — giới hạn đã biết, không phải bug editor).
+   - Cancel → quay lại y nguyên bản gốc (title/nội dung không bị ảnh hưởng bởi chỉnh sửa dở).
+   - Chơi lại game sau khi thêm `edit` field vẫn bình thường (0 lỗi console suốt quá trình).
+   - **Chưa test Save thành công thật** (cần thầy tự đăng nhập Google — máy build không tự động hoá
+     được bước đó, xem mục 9 APP_MASTER.md).
+7. **Core**: KHÔNG đụng gì (chỉ thêm file mới + vài dòng CSS trong `templates/type-the-answer/`).
+8. **Chưa làm/còn để ngỏ**: 🎤/🖼️ voice+image trong editor (như Anagram, "để bàn sau"); bố cục dạng BẢNG
+   giống ảnh Wordwall thật (Anagram đã đổi sang bảng Word|Clue — Type the answer vẫn ở dạng card đơn giản,
+   có thể đổi theo nếu thầy muốn giống Anagram).
+
+### 30/7/2026 (tiếp) — đổi bố cục Editor theo ảnh thầy gửi (Câu hỏi trái | Câu trả lời phải)
+
+Thầy gửi ảnh chụp Google Sheets (2 cột: Question | Answer, nhiều dòng liền nhau cho 1 câu hỏi — dòng nào
+cột Question để trống nghĩa là câu trả lời THÊM cho câu hỏi ngay phía trên) và yêu cầu sửa lại:
+
+1. **Bố cục 2 cột**: ô Câu hỏi bên TRÁI (cao bằng cả cụm câu trả lời, giống ô "gộp" trong ảnh — dùng
+   `<textarea>` + CSS Grid `align-items:stretch` để tự giãn theo chiều cao cột phải) — cột PHẢI xếp
+   chồng từng ô Câu trả lời. Bỏ 2 nhãn "ANSWER"/"ALT." cũ (ảnh thầy không phân biệt, chỉ là 1 danh sách
+   câu trả lời được chấp nhận, thứ tự trên-xuống, dòng đầu vẫn là đáp án chính dùng cho "Correct: …"/Print).
+2. **"+ Add alternative answer" dời xuống NGAY DƯỚI ô câu trả lời cuối** (trong cùng cột phải, không còn
+   là hàng riêng ngoài khối câu hỏi) — đã đo DOM xác nhận đúng là phần tử con cuối cùng của cột câu trả lời.
+3. **Dán Excel đổi thuật toán hoàn toàn** theo đúng cấu trúc ảnh: cột TRÁI = câu hỏi, cột PHẢI = 1 câu trả
+   lời/dòng; dòng có cột TRÁI RỖNG → câu trả lời đó được CỘNG THÊM vào câu hỏi ngay phía trên (không phải
+   coi mỗi dòng là 1 câu hỏi riêng nữa). Dán được từ CẢ ô Câu hỏi lẫn bất kỳ ô Câu trả lời nào trong khối
+   (đều fill từ đúng vị trí câu hỏi đó trở xuống, giống quy ước Quiz/Anagram).
+4. **Tối đa 50 câu hỏi** (thầy yêu cầu, tăng từ 30).
+5. **Đã test qua trình duyệt thật** (`test.html` → Edit, dùng `javascript_tool` đo DOM vì `computer`
+   screenshot bị lỗi hiển thị pane phiên này — đã xác nhận số liệu/cấu trúc DOM trực tiếp thay vì đọc ảnh):
+   - Bố cục: ô câu hỏi nằm bên trái + cao bằng đúng chiều cao cụm câu trả lời bên phải (câu có 2 đáp án
+     "gray/grey" → khối cao 160px, câu có 1 đáp án → 106px, ô câu hỏi luôn khớp chiều cao khối).
+   - Dán ĐÚNG ví dụ trong ảnh thầy gửi (2 câu hỏi, 5+3 đáp án) → ra đúng
+     `{prompt:"What is one of the seasons?", acceptedAnswers:["Spring","Winter","Autumn","Fall","Summer"]}`
+     và `{prompt:"How do you feel?", acceptedAnswers:["Hungry","Sad","Happy"]}` — khớp 100% ảnh gốc.
+   - "+ Add alternative answer" bấm ra ô mới đúng vị trí NGAY DƯỚI câu trả lời cuối (đã đo `children` của
+     cột câu trả lời: 5 hàng câu trả lời rồi mới tới nút, không lẫn lộn).
+   - Đếm "2 / 50 questions" đúng giới hạn mới. 0 lỗi console suốt quá trình.
+6. **Core**: KHÔNG đụng gì (chỉ sửa `type-the-answer-editor.js` + vài dòng CSS `.aw-tta-ed-*` trong
+   `type-the-answer.css`, cả hai đều trong thư mục riêng của template).
+
+### 30/7/2026 (tiếp) — Viết lại màn CHƠI theo góp ý chi tiết của thầy (⚠️ có đụng core)
+
+Thầy góp ý chi tiết 7 điểm cho màn chơi (bố cục ô nhập/nút Submit, tích xanh/x đỏ bay về điểm, chế độ
+Minus, bỏ Letters on answers, không phân biệt hoa/thường, Show answer when wrong hiện xanh lá + trượt
+xuống, thêm bàn phím ảo). Đã hỏi thầy 1 câu trước khi code (vị trí nút bàn phím) vì có đụng core.
+
+**1. Bố cục lại**: ô "Type your answer" cao hơn hẳn (chữ to hơn), rộng **80%** khung, nằm ngay dưới câu
+hỏi; nút **Submit Answer** (đổi tên, mỏng hơn, rộng ~46%) nằm NGAY DƯỚI ô nhập (trước đây 2 thứ nằm
+cùng hàng). Tự hiểu "gần sát câu hỏi" = kéo khối input+submit lên gần câu hỏi (bỏ `margin-top:auto` đẩy
+xuống đáy khung như bản cũ) để nhường chỗ cho bàn phím phía dưới — thầy xem thử nếu ý muốn khác.
+
+**2. Tích xanh/X đỏ bay về điểm**: đúng → tích xanh (`icons.check`, màu `#10b981` qua CSS `color`, KHÁC
+`icons.markCheck` trắng-viền-đen mà Quiz/Anagram dùng cho dấu to) hiện ngay ngoài mép phải ô nhập, bay
+vào số điểm + Pulse Counter (kỹ thuật y hệt `flyScoreGain`/`pulseScoreTo` của Anagram, viết lại bản đơn
+giản riêng cho Type the answer, không dùng chung code). Sai → x đỏ (`icons.cross`) cùng chỗ:
+- **Có tích "Minus points for wrong answers"**: bay về điểm và **trừ** (không xuống dưới 0).
+- **Không tích**: mờ dần biến mất tại chỗ, điểm giữ nguyên.
+- Đã đo thật qua trình duyệt: đúng → điểm 0→1 (Pulse); tắt Minus, sai → điểm giữ nguyên; bật Minus, sai
+  → điểm 1→0 đúng.
+- **Điểm hiển thị SỐNG (topbar) tách khỏi điểm TỔNG KẾT cuối ván**: panel "Score X/Y" cuối ván vẫn là số
+  câu đúng thật/tổng số câu (không đổi theo Minus) — Minus chỉ ảnh hưởng con số đang chạy lúc chơi, KHÔNG
+  đổi cách xếp hạng/leaderboard. Quyết định phạm vi này thầy chưa yêu cầu rõ, nói lại nếu muốn điểm cuối
+  ván cũng trừ theo Minus.
+
+**3. Bỏ "Letters on answers"** khỏi Options (không áp dụng cho game này).
+
+**4. Không phân biệt hoa/thường**: bỏ hẳn `strictCase`/`strictAccent` (chưa từng có UI bật tắt, giờ xoá
+luôn khỏi code + sample data cho gọn) — `normalize()` luôn bỏ dấu + về chữ thường.
+
+**5. "Show answer when wrong"** giờ là Option thật (trước chỉ set qua data, không có UI): bật → sai thì
+hiện đáp án đúng màu xanh lá NGAY TRÊN ô nhập, khối ô nhập+Submit **trượt xuống mượt** nhường chỗ — dùng
+kỹ thuật CSS `grid-template-rows: 0fr → 1fr` (không đụng `transform`, đúng luật mục 3.5 CONG THUC MAU.md)
+để khối bên dưới tự trôi xuống theo layout, không "giật" theo cách 1 lần đổi được DOM. **Bẫy thật đã bắt
+được lúc test**: lúc đầu bọc việc mở khối trong `requestAnimationFrame` (tưởng cần né kiểu "tạo xong đổi
+ngay" như các fly-tile khác) — nhưng ô này đã tồn tại từ `render()` trước đó (không phải mới tạo), nên
+KHÔNG cần rAF; mà trong đúng môi trường xem trước phiên này `requestAnimationFrame` không bao giờ bắn
+(đã đo trực tiếp: `rafFired:false` trong khi `setTimeout` vẫn chạy bình thường) → khối KHÔNG BAO GIỜ mở.
+Đã sửa bỏ hẳn rAF, gọi thẳng `classList.add("is-open")` (ô cũ đã có sẵn từ trước, không cần đợi 1 khung
+hình để trình duyệt "thấy" trạng thái đóng trước).
+- ⚠️ **1 chỗ CHƯA tự mắt xác nhận được**: bản thân hiệu ứng trượt mượt (CSS transition) — môi trường xem
+  trước phiên này báo `document.hidden:true`/"page is not compositing frames" (bẫy đã ghi trong
+  APP_MASTER.md mục 9), nên dù đã xác nhận đúng class `is-open` được gắn + rule CSS đúng tồn tại trong
+  stylesheet, `getComputedStyle` trả `grid-template-rows: 0px` hoài (không tính lại được vì tab không
+  render) — không đo được ảnh chuyển động thật. Đây là kỹ thuật CSS chuẩn, được hỗ trợ tốt trên Chrome,
+  tự tin đúng nhưng **thầy nên tự mở link xem hiệu ứng trượt xuống có mượt như ý không**.
+- **Cũng thêm `setTimeout` dự phòng cho `pulseScoreTo`** (mục 2) vì lý do y hệt: `requestAnimationFrame`
+  không bắn trong tab ẩn nên vòng đếm điểm chạy bằng rAF sẽ treo mãi — thêm `setTimeout` ép gán giá trị
+  cuối cùng sau khi hết thời lượng dự kiến, giống mọi `element.animate()` khác trong app đã có sẵn quy
+  tắc này. **Đây có thể là bẫy tiềm ẩn ở Anagram nữa** (nó cũng chỉ dùng rAF thuần cho `pulseScoreTo`) —
+  con không tự sửa Anagram (khác phạm vi phiên này), chỉ ghi lại đây để thầy cân nhắc báo phiên Anagram
+  sau nếu gặp trường hợp điểm không lên trong tab bị ẩn/nền.
+
+**6. Bàn phím ảo QWERTY**: giữa khung (60% rộng) + khu SỐ bên trái (1-9, 0) + khu DẤU CÂU bên phải
+(`, . ' - ? !`) + Space + Backspace (⌫). Bấm phím chèn đúng vị trí con trỏ trong ô nhập (không phải luôn
+chèn cuối), giữ focus ô nhập (`tabIndex=-1` + chặn `mousedown` để không cướp focus). **Nút ẩn/hiện đặt
+cạnh nút Menu** (thầy chọn khi được hỏi) — dùng cửa mở rộng mới `ui.kbdSlot`/`tpl.hasKeyboardToggle` của
+engine. **Mặc định HIỆN mỗi khi mở act** (bấm Play/Start again), giữ trạng thái ẩn/hiện khi chuyển qua
+lại giữa các câu hỏi trong CÙNG 1 ván. Đã test: bấm ẩn → bàn phím biến mất + đổi tên nút "Show keyboard";
+chuyển câu → vẫn ẩn (đúng); Start again → tự hiện lại (đúng mặc định).
+
+**Đã test qua trình duyệt thật** (gõ chữ bằng CHÍNH bàn phím ảo mới xây, không phải gõ tay): trả lời
+đúng/sai nhiều câu, chế độ Minus bật/tắt, Options hiện đúng 2 mục mới + KHÔNG còn Letters on answers,
+hoa/thường không phân biệt (gõ "GREY" vẫn đúng), Submit answers giữa chừng → Score 1/6 đúng (không bị
+ảnh hưởng bởi Minus), Show answers hiện đủ 3 dạng, Start again reset điểm + bàn phím về mặc định. 0 lỗi
+console suốt quá trình.
+
+**Core bị đụng (đã báo thầy trước khi code, chỉ 2 điểm, đều CHỈ THÊM không đổi hành vi game khác)**:
+- `core/engine.js`: (a) thêm cờ `tpl.hideLettersOption` — bỏ qua nhóm "Letters on answers" nếu template
+  khai báo cờ này (Quiz/Anagram/... không khai báo nên không đổi gì); (b) thêm cờ `tpl.hasKeyboardToggle`
+  → tạo `ui.kbdSlot` (1 `<span>` rỗng) đặt cạnh nút Menu, template tự vẽ nút riêng vào đó. **Bọc `menuBtn`
+  trong 1 `<div class="aw-bottombar-left">`** để giữ đúng CSS `.aw-bottombar` (grid 3 cột dùng
+  `:nth-child(1/2/3)` để căn nav ở giữa) — nếu chèn thẳng nút thứ 4 vào hàng sẽ phá vỡ chỉ số cột này.
+- `core/app.css`: thêm rule `.aw-bottombar-left` (flex, giống `.aw-tools`) — không sửa rule nào có sẵn.
+- `core/icons.js`: thêm icon `keyboard` (chỉ thêm, theo đúng khuôn các icon mic/image/dragHandle... mà
+  Anagram đã thêm trước đây).
+- Đã test lại `templates/quiz/test.html` sau khi sửa core — vẫn chạy bình thường, 0 lỗi.
+
 ## ĐỀ XUẤT SỬA CORE (nếu có)
-(trống — KHÔNG tự sửa core/)
+(trống — 2 thay đổi core ở trên đã LÀM rồi, không phải đề xuất chờ xử lý.)

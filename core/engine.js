@@ -94,7 +94,19 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   // above the READY overlay instead of behind it.
   const fsBtn = iconBtn("aw-iconbtn aw-fs-always", icons.fullscreen, "Fullscreen");
   rightTools.append(soundBtn, fsBtn);
-  bottombar.append(menuBtn, navWrap, rightTools);
+  // Menu sits in a small wrapper (not appended bare) so `.aw-bottombar`'s grid
+  // still gets exactly 3 children (its CSS targets :nth-child(1/2/3) to keep
+  // the middle nav truly centered) even when the optional slot below is added.
+  const leftGroup = el("div", "aw-bottombar-left");
+  leftGroup.append(menuBtn);
+  // Optional opt-in slot right next to Menu — a template can put its own icon
+  // button here (currently only Type the answer's on-screen-keyboard toggle).
+  // `null` unless the template asks for it, so every other template's bottom
+  // bar ends up with the exact same DOM/behavior as before (just one extra
+  // wrapper level around Menu that no CSS depended on being bare).
+  const kbdSlot = tpl.hasKeyboardToggle ? el("span", "aw-bottombar-extra") : null;
+  if (kbdSlot) leftGroup.append(kbdSlot);
+  bottombar.append(leftGroup, navWrap, rightTools);
 
   inner.append(topbar, playArea, bottombar);
 
@@ -361,21 +373,25 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     gEnd.append(rowEnd);
     panel.append(gEnd);
 
-    // LETTERS ON ANSWERS
-    const gLet = el("div", "aw-opt-group");
-    gLet.append(el("div", "aw-opt-label", "Letters on answers"));
-    const rowLet = el("div", "aw-opt-row");
-    const mkRadioLet = (value, label) => {
-      const wrap = el("label", "aw-opt-choice");
-      const r = el("input"); r.type = "radio"; r.name = "aw-letters"; r.value = value;
-      r.checked = (draft.lettersOnAnswers ?? "none") === value;
-      r.onchange = () => { draft.lettersOnAnswers = value; };
-      wrap.append(r, document.createTextNode(label));
-      return wrap;
-    };
-    rowLet.append(mkRadioLet("abc", "A, B, C"), mkRadioLet("none", "None"));
-    gLet.append(rowLet);
-    panel.append(gLet);
+    // LETTERS ON ANSWERS — a template can opt out entirely (e.g. Type the
+    // answer has no letter-lettered answer boxes, so the option is meaningless
+    // for it). Every other template keeps this group exactly as before.
+    if (!tpl.hideLettersOption) {
+      const gLet = el("div", "aw-opt-group");
+      gLet.append(el("div", "aw-opt-label", "Letters on answers"));
+      const rowLet = el("div", "aw-opt-row");
+      const mkRadioLet = (value, label) => {
+        const wrap = el("label", "aw-opt-choice");
+        const r = el("input"); r.type = "radio"; r.name = "aw-letters"; r.value = value;
+        r.checked = (draft.lettersOnAnswers ?? "none") === value;
+        r.onchange = () => { draft.lettersOnAnswers = value; };
+        wrap.append(r, document.createTextNode(label));
+        return wrap;
+      };
+      rowLet.append(mkRadioLet("abc", "A, B, C"), mkRadioLet("none", "None"));
+      gLet.append(rowLet);
+      panel.append(gLet);
+    }
 
     // TEMPLATE-SPECIFIC EXTRA OPTIONS (optional hook) — a template can append its
     // own groups here (e.g. Anagram's mode/skip/all-caps). `draft` is the SAME
@@ -522,6 +538,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   const ui = {
     playArea,
     topbarMid,   // null unless tpl.inlineTimerBar is true — see topbar setup above
+    kbdSlot,     // null unless tpl.hasKeyboardToggle is true — see bottombar setup above
     setScore(n) { scoreEl.innerHTML = `${icons.check} ${n}`; },
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null }) {
       navLabel.textContent = `${index} of ${total}`;

@@ -13,8 +13,11 @@
 > Simple mode, editor, đổi âm thanh, đồng hồ chạy liên tục...) vẫn giữ nguyên, xem
 > `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 8-10 cho chi tiết đầy đủ. **ĐÃ COMMIT + PUSH
 > GITHUB** (commit `a2db784`, 30/7/2026 — thầy nói "lưu, commit + git push").
-> Find the match/Type the answer vẫn 🟢 CHỜ THẦY DUYỆT, CHƯA gộp trang chủ (`built:false`). Open the
-> box cũng vậy — vẫn `built:false`, chưa gộp trang chủ, chờ thầy duyệt như 2 game kia.
+> **Cùng ngày, phiên khác đã viết lại toàn bộ Type the answer** (content editor bảng Câu hỏi|Câu trả lời
+> + màn chơi mới: bàn phím ảo QWERTY, tích/x bay về điểm, Minus points, Show answer when wrong trượt
+> mượt — xem mục 0b) — **ĐÃ COMMIT + PUSH GITHUB** (thầy nói "ok, commit + push"), vẫn `built:false`,
+> CHƯA gộp trang chủ. Find the match vẫn 🟢 CHỜ THẦY DUYỆT y như cũ, chưa ai động thêm. Open the box
+> cũng `built:false`, chưa gộp trang chủ, chờ thầy duyệt như 2 game kia.
 >
 > 🔗 **AWord nay được dự án myLesson nhúng vào trang bài của học sinh.** Hai web ở **CÙNG tài khoản
 > GitHub** (`andrewclasses-01.github.io/AWord/` và `…/myLesson/`) nên myLesson truyền được tên em
@@ -145,13 +148,41 @@ gốc của chính bộ âm thanh, thầy chốt vậy có chủ đích. Đợt 
   bị sai nhiều lần trước khi cuối cùng đúng (chỉ nhớ lần sai gần nhất) — chấp nhận được, đã ghi rõ lý do
   trong code; **CHƯA gộp `built:true` vào trang chủ** (đúng quy trình, chờ thầy duyệt xong).
 
+**Type the answer — content editor + viết lại toàn bộ màn chơi (30/7/2026, CÙNG NGÀY, phiên khác), 🟢
+CHỜ THẦY DUYỆT** (đọc `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` — chi tiết đầy đủ, đây chỉ
+tóm tắt). Đây là phiên chạy SONG SONG với phiên Open the box ở trên — cả 2 đều sửa `core/engine.js`
+cùng lúc, đã tách/ghép cẩn thận (xem lưu ý trong mục Open the box), KHÔNG xung đột.
+- **Content editor mới** (`type-the-answer-editor.js`): bảng Câu hỏi trái | Câu trả lời phải (1 câu hỏi
+  nhiều câu trả lời), dán Excel tự nhận diện đúng cấu trúc ảnh thầy gửi, tối đa 50 câu.
+- **Màn chơi viết lại theo 7 góp ý chi tiết**: ô nhập cao/rộng 80% + Submit Answer mỏng nằm ngay dưới;
+  tích xanh/x đỏ bay ra ngoài ô nhập về phía điểm (đúng luôn cộng, sai chỉ trừ khi bật Option mới
+  **"Minus points for wrong answers"**); "Show answer when wrong" thành Option thật (hiện đáp án đúng
+  xanh lá TRÊN ô nhập, khối trượt mượt xuống nhường chỗ); bỏ "Letters on answers"; hết phân biệt hoa/
+  thường; **bàn phím ảo QWERTY mới** (giữa 60% + số trái + dấu câu phải, nút ẩn/hiện cạnh Menu, mặc định
+  hiện).
+- **Core bị đụng (đã hỏi thầy trước, 2 điểm, CHỈ THÊM)**: `tpl.hideLettersOption` (ẩn nhóm Letters on
+  answers) + `tpl.hasKeyboardToggle`/`ui.kbdSlot` (chỗ trống cạnh Menu, bọc `menuBtn` trong
+  `.aw-bottombar-left` để giữ đúng grid 3-cột) trong `core/engine.js`; icon `keyboard` mới trong
+  `core/icons.js`. Đã test lại Quiz sau khi sửa — không đổi gì, 0 lỗi.
+- Bắt 2 lỗi thật lúc test (gõ bằng chính bàn phím ảo mới xây, không phải gõ tay): điểm không cộng vì
+  `requestAnimationFrame` không chạy trong tab ẩn (thêm `setTimeout` dự phòng) — **có thể là bẫy tiềm ẩn
+  ở `pulseScoreTo` của Anagram nữa** (chưa kiểm tra, phiên Anagram nên để ý nếu gặp điểm không lên khi
+  tab bị ẩn/nền); và bỏ nhầm 1 chỗ `requestAnimationFrame` không cần thiết cho hiệu ứng mở khối câu trả
+  lời (ô đã có sẵn từ trước, không phải mới tạo).
+- **CHƯA tự mắt xác nhận được**: hiệu ứng khối ô nhập trượt mượt khi hiện đáp án đúng — môi trường xem
+  trước phiên build này không render được (`document.hidden:true`, bẫy mục 9), đã xác nhận đúng qua DOM/
+  CSS rule nhưng **thầy nên tự mở xem hiệu ứng trượt có mượt không**.
+- **VẪN `built:false`, CHƯA gộp trang chủ** — chờ thầy tự chơi thử rồi duyệt.
+
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
 (a) Thầy tự chơi thử Open the box (dữ liệu mẫu đợt 8 đã đổi hẳn sang 9 câu từ vựng/ngữ pháp dạng
     Questions — không còn cảnh báo "tạm để mode X" như các đợt trước, vì Simple mode đã xoá hẳn) — có
     ok chưa hay còn muốn chỉnh gì? Đặc biệt cần thầy xác nhận trên TOMKO: zoom lúc START, 16 âm thanh
     mới (nhất là cặp GameOver/TimesUp), và thanh giờ+điểm có thật "cùng hàng" trên màn 86" không.
 (b) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
-(c) Xem xét Find the match/Type the answer rồi build content editor riêng khi được duyệt.
+(c) Thầy tự chơi thử Type the answer (link/nút Edit + màn chơi mới, xem mục ngay trên) — đặc biệt xác
+    nhận hiệu ứng trượt xuống khi hiện đáp án đúng có mượt không (phiên build chưa tự xem được ảnh thật).
+    Find the match vẫn còn nguyên như cũ, chưa ai động tới thêm.
 (d) ✅ Đã đẩy code lên GitHub (30/7/2026, commit `a87fe8a`) — thầy chọn "push" khi được hỏi.
 (e) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
 

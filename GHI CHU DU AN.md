@@ -21,6 +21,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 30/7/2026 — Type the answer: content editor + viết lại toàn bộ màn chơi theo góp ý chi tiết của thầy
+
+Chi tiết đầy đủ: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`. Tóm tắt:
+
+1. **Content editor mới** (`type-the-answer-editor.js`) — bảng **Câu hỏi bên trái | Câu trả lời bên
+   phải** (1 câu hỏi có thể nhiều câu trả lời), dán Excel tự nhận diện đúng cấu trúc ảnh thầy gửi (dòng
+   câu hỏi trống = câu trả lời thêm cho câu hỏi phía trên), tối đa 50 câu.
+2. **Bố cục màn chơi**: ô "Type your answer" cao hơn + rộng 80% khung, nút **Submit Answer** (mỏng hơn)
+   nằm ngay dưới ô nhập.
+3. **Tích xanh/X đỏ bay về điểm** ngoài mép phải ô nhập: đúng luôn cộng điểm; sai chỉ trừ điểm khi bật
+   Option mới **"Minus points for wrong answers"**, tắt thì chỉ mờ dần không đổi điểm.
+4. **"Show answer when wrong"** thành Option thật — bật thì câu sai hiện đáp án đúng xanh lá NGAY TRÊN ô
+   nhập, khối ô nhập+Submit trượt mượt xuống nhường chỗ (CSS `grid-template-rows` 0fr→1fr, không dùng
+   transform).
+5. Bỏ "Letters on answers" khỏi Options (không áp dụng). Chấm luôn không phân biệt hoa/thường.
+6. **Bàn phím ảo QWERTY** mới: giữa khung (60% rộng) + số bên trái + dấu câu bên phải, nút ẩn/hiện cạnh
+   Menu, mặc định hiện mỗi khi mở act.
+7. **Core bị đụng (đã hỏi thầy trước, chỉ 2 điểm, đều CHỈ THÊM)**: `core/engine.js` thêm cờ
+   `tpl.hideLettersOption` (ẩn nhóm Letters on answers) + `tpl.hasKeyboardToggle`/`ui.kbdSlot` (chỗ trống
+   cạnh Menu cho nút riêng của template) — bọc `menuBtn` trong `.aw-bottombar-left` để giữ đúng grid
+   3-cột của `.aw-bottombar`; `core/icons.js` thêm icon `keyboard`. Đã test lại Quiz sau khi sửa core —
+   không đổi gì, 0 lỗi.
+8. Bắt 2 lỗi thật lúc test qua trình duyệt (gõ bằng chính bàn phím ảo mới xây): điểm không cộng vì
+   `requestAnimationFrame` không chạy trong tab ẩn/không render (đã thêm `setTimeout` dự phòng cho vòng
+   đếm điểm); hiệu ứng mở khối câu trả lời đúng bọc nhầm trong `requestAnimationFrame` không cần thiết
+   (ô đã tồn tại từ trước, không phải mới tạo) — bỏ rAF, gọi thẳng.
+9. **Type the answer VẪN `built:false`, CHƯA gộp trang chủ** — chờ thầy tự chơi thử rồi duyệt.
+
 ### 30/7/2026 — Open the box: đồng hồ thẳng mép ô câu hỏi, tách zoom ô số/trượt đáp án, sửa lỗi thật của việc căn giữa hàng cuối
 
 3 việc, xem chi tiết đầy đủ ở `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt 10: (1) đồng hồ dịch

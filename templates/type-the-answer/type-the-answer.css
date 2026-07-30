@@ -2,20 +2,23 @@
    TYPE THE ANSWER template — styles that belong ONLY to this template.
    Class prefix: .aw-tta-*
 
-   Layout mirrors Quiz: prompt near the TOP, the typing area pushed to the
-   lower area (margin-top:auto). Sizes use cqw * var(--fit,1).
+   Layout (30/7/2026 redesign): prompt on top, then a big input close under
+   it, a thin "Submit Answer" button right below the input, then an
+   on-screen QWERTY keyboard filling the rest of the frame. Sizes use
+   cqw * var(--fit,1) so the whole block shrinks together if it overflows.
    ============================================================= */
 
 .aw-tta-card {
   --fit: 1;
   width: 100%; height: 100%;
-  display: flex; flex-direction: column;
-  padding-bottom: 3.2cqw;
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center;
+  padding: 1.6cqw 0 2.4cqw;
   animation: aw-fadein .25s ease;
 }
 
 .aw-tta-prompt {
-  font-size: calc(5cqw * var(--fit));
+  font-size: calc(4.6cqw * var(--fit));
   font-weight: 600;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
@@ -28,27 +31,42 @@
 }
 
 .aw-tta-answer-area {
-  margin-top: auto;
+  margin-top: calc(1.8cqw * var(--fit));
   width: 100%;
   display: flex; flex-direction: column; align-items: center;
-  gap: calc(1.4cqw * var(--fit));
+  gap: calc(0.9cqw * var(--fit));
+  flex: 0 0 auto;
 }
 
-.aw-tta-row {
-  position: relative;
-  display: flex;
-  gap: calc(1.2cqw * var(--fit));
-  width: min(70%, 60cqw);
+/* "Correct answer" reveal, ABOVE the input — grid-rows 0fr->1fr is a smooth,
+   pure-CSS way to animate height (from nothing to its natural content size)
+   without ever touching `transform`, so the input+submit block below it
+   glides down by normal layout reflow (no "jump then correct" glitch). */
+.aw-tta-revealwrap {
+  width: 80%;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .32s cubic-bezier(.22,.9,.3,1);
 }
+.aw-tta-revealwrap.is-open { grid-template-rows: 1fr; }
+.aw-tta-reveal-inner { overflow: hidden; min-height: 0; }
+.aw-tta-reveal-text {
+  text-align: center;
+  font-weight: 700;
+  color: #10b981;
+  font-size: calc(2.2cqw * var(--fit));
+  padding-bottom: calc(0.8cqw * var(--fit));
+}
+
+.aw-tta-inputrow { width: 80%; }
 .aw-tta-input {
-  flex: 1 1 auto;
-  min-width: 0;
+  width: 100%;
   font-family: inherit;
-  font-size: calc(2.6cqw * var(--fit));
+  font-size: calc(3.2cqw * var(--fit));
   font-weight: 600;
   color: var(--aw-text);
   text-align: center;
-  padding: calc(1.6cqw * var(--fit)) calc(1cqw * var(--fit));
+  padding: calc(2.2cqw * var(--fit)) calc(1cqw * var(--fit));
   border-radius: var(--aw-tile-radius, 1cqw);
   border: 0.22cqw solid var(--aw-muted);
   background: #fff;
@@ -59,33 +77,93 @@
 .aw-tta-input.is-wrong { border-color: #ef4444; }
 
 .aw-tta-submit {
-  flex: 0 0 auto;
+  width: 46%;
   font-family: inherit;
   font-weight: 700;
-  font-size: calc(2cqw * var(--fit));
+  font-size: calc(1.7cqw * var(--fit));
   color: #fff;
   background: var(--aw-tile-fixed, #3b82f6);
   border: 0;
   border-radius: var(--aw-tile-radius, 1cqw);
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, #2563eb));
-  padding: 0 calc(2.2cqw * var(--fit));
+  box-shadow: var(--aw-tile-shadow, 0 0.4cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  padding: calc(0.9cqw * var(--fit)) 0;
   cursor: pointer;
 }
 .aw-tta-submit:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-tta-submit:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-tta-submit:active:not(:disabled) { transform: translateY(0.25cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
 .aw-tta-submit:disabled { opacity: .4; cursor: default; }
-
-.aw-tta-row .aw-tile-badge { top: -1.4cqw; right: -1.4cqw; }
-
-.aw-tta-reveal {
-  text-align: center;
-  font-size: calc(1.7cqw * var(--fit));
-  font-weight: 700;
-  color: var(--aw-muted);
-}
-.aw-tta-reveal b { color: var(--aw-text); }
 
 .aw-tta-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* ---------- fly-mark: green check / red cross, outside the input (right
+   side) — appended to document.body (like Anagram's flygain), so it must be
+   sized/positioned entirely from JS (px), never cqw (no container-query
+   ancestor once it's outside the stage). ---------- */
+.aw-tta-flymark {
+  position: fixed;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none; z-index: 60;
+  color: #10b981;
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.25));
+}
+.aw-tta-flymark svg { width: 100%; height: 100%; }
+.aw-tta-flymark.is-cross { color: #ef4444; }
+
+/* score badge "pulse" while it's counting up/down to a fresh total (JS drives
+   the number; this only supplies the bounce). core/app.css owns
+   .aw-top-score itself — this rule just adds a modifier class to it. */
+.aw-top-score.aw-score-pulse { animation: aw-tta-score-pulse .42s ease-out; transform-origin: center; }
+@keyframes aw-tta-score-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  100% { transform: scale(1); }
+}
+
+/* =============================================================
+   ON-SCREEN KEYBOARD — QWERTY in the middle (60% width), numbers on the
+   left, punctuation on the right. Toggled via the icon button engine.js
+   places next to Menu (see `hasKeyboardToggle`/`ui.kbdSlot`).
+   ============================================================= */
+.aw-tta-kbd {
+  width: 100%;
+  display: flex; align-items: flex-start; justify-content: center;
+  gap: calc(1.4cqw * var(--fit));
+  margin-top: calc(2cqw * var(--fit));
+  flex: 0 0 auto;
+}
+.aw-tta-kbd.is-hidden { display: none; }
+
+.aw-tta-kbd-main { flex: 0 0 60%; display: flex; flex-direction: column; gap: calc(0.6cqw * var(--fit)); }
+.aw-tta-kbd-row { display: flex; gap: calc(0.5cqw * var(--fit)); }
+.aw-tta-kbd-row:nth-child(2) { padding-left: 3%; }
+.aw-tta-kbd-row:nth-child(3) { padding-left: 6%; }
+
+.aw-tta-kbd-side {
+  flex: 0 0 15%;
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: calc(0.5cqw * var(--fit));
+  align-content: flex-start;
+}
+
+.aw-tta-key {
+  flex: 1;
+  width: 100%;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: calc(1.5cqw * var(--fit));
+  color: var(--aw-text);
+  background: #fff;
+  border: 0;
+  border-radius: calc(var(--aw-tile-radius, 1cqw) * 0.6);
+  box-shadow: var(--aw-tile-shadow, 0 0.3cqw 0 rgba(0,0,0,.15));
+  padding: calc(0.9cqw * var(--fit)) 0;
+  cursor: pointer;
+  user-select: none;
+}
+.aw-tta-key:hover { filter: brightness(1.04); }
+.aw-tta-key:active { transform: translateY(0.2cqw); box-shadow: 0 0.1cqw 0 rgba(0,0,0,.2); }
+.aw-tta-key.is-wide { flex: 1.7; }
+.aw-tta-kbd-space { width: 100%; }
