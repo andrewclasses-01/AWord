@@ -120,95 +120,73 @@
      thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
      (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
-## 0b. ⭐ BÀN GIAO (chốt cuối phiên 29/7/2026 — phiên mới đọc mục này rồi làm tiếp)
+## 0b. ⭐ BÀN GIAO (chốt cuối phiên 31/7/2026 — phiên mới đọc mục này rồi làm tiếp)
 
-**Anagram ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ, ĐÃ COMMIT** (3 commit: `6b57fad`/`0f3c9e9`/`ac2b731`, xong từ
-sớm hơn trong ngày — chi tiết: `templates/anagram/GHI CHU ANAGRAM.md`). Tóm tắt: âm thanh mp3 thật,
-`built:true` + gộp trang chủ, content editor bảng Word|Clue kéo-thả, Options Apply luôn restart. Core
-đụng: `app.css` (vị trí popup) + `engine.js` (hook `tpl.sounds`) + `icons.js` (+5 icon) — đều chỉ THÊM,
-không phá gì cũ. Việc còn thiếu (thầy chưa yêu cầu): 🎤/🖼️ voice+image trong editor ("để bàn sau"),
-chưa tự tay nghe thật âm thanh "còn 5 giây cuối".
+**Anagram ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** — không đổi gì thêm từ bản ghi trước, vẫn xem
+`templates/anagram/GHI CHU ANAGRAM.md`. Việc còn thiếu (thầy chưa yêu cầu): 🎤/🖼️ voice+image trong
+editor ("để bàn sau").
 
-**Open the box — nay chỉ CÒN chế độ Questions (đợt 8-9, 30/7/2026), 🟢 CHỜ THẦY DUYỆT** (đọc
-`templates/open-the-box/GHI CHU OPEN-THE-BOX.md` — nhật ký đợt 1-9 rất chi tiết, đây chỉ tóm chặng
-cuối cùng, quan trọng nhất). **Chế độ "Simple" (lật hộp xem chữ, không điểm) đã bị XOÁ HẲN** — thầy
-chốt chỉ giữ Questions, mỗi câu bắt buộc ≥2 đáp án + 1 đáp án đúng (chặn cả ở content editor mới lẫn
-lúc chơi). Có **content editor riêng** từ đợt 8 (`open-the-box-editor.js`, gần như copy `quiz-editor.js`
-vì cùng hình dạng dữ liệu) — Open the box giờ có editor giống Quiz/Anagram, không còn phải sửa tay
-`sample-open-the-box.js`. Bộ âm thanh cũng đổi hẳn sang 15 file gốc Wordwall thầy tải riêng (không còn
-mượn Anagram) — xem GHI CHU OPEN-THE-BOX.md đợt 8 về lưu ý tên gọi gameOver/timesUp NGƯỢC với tài liệu
-gốc của chính bộ âm thanh, thầy chốt vậy có chủ đích. Đợt 9 kiến trúc lại hẳn đồng hồ (xem bullet dưới)
-+ thêm loạt hiệu ứng zoom/trượt theo yêu cầu thầy.
-- **Cơ chế (đợt 9, kiến trúc lại đồng hồ)**: bấm 1 **Ô SỐ** (ô đóng trong lưới) → zoom mượt (nay
-  CHẬM GẤP ĐÔI so với đợt 5/6) thành **Ô CÂU HỎI** (câu hỏi trái + đáp án lưới phải, trượt vào từ cạnh
-  phải, kiểu Quiz) + **1 bộ đếm DUY NHẤT chạy LIÊN TỤC** từ lúc mở Ô SỐ đầu tiên tới hết ván — KHÔNG
-  còn dừng khi về màn lưới nữa (khác hẳn thiết kế đợt 3-8: giờ hết giờ có thể xảy ra ngay CẢ LÚC đang
-  đứng ở lưới chọn ô kế, không cần đang mở câu hỏi). Đúng → Ô SỐ khoá mở vĩnh viễn (tích xanh) + thanh
-  giờ "đầy ngược trở lại" (hoạt hình fill-up 500ms) rồi chạy tiếp từ đầy. Sai → Ô SỐ khoá đóng, xám +
-  khoá, đáp án trượt ngược ra phải + đồng hồ KHÔNG reset, cứ chạy tiếp xuyên suốt (kể cả ở màn lưới).
-  Còn ≤5s → thanh chuyển đỏ dần + tích gấp đôi tần suất. Hết giờ (bất kỳ lúc nào) → rung+nổ lưới →
-  "Game over". Mở hết toàn bộ đúng trước khi hết giờ → "Game complete".
-- **Cả 2 trường hợp kết thúc DÙNG CHUNG hệ thống `ui.finish()` với Quiz/Anagram** (đợt 7) — có ngay
-  Leaderboard/Show answers/Start again/Play a different template + Score/Time, KHÔNG phải tự viết lại.
-  `core/engine.js` có thêm `ui.finish({..., title})` (đợt 7, TUỲ CHỌN, không ảnh hưởng template khác)
-  + cờ `tpl.inlineTimerBar`/`ui.topbarMid` (đợt 8-9, TUỲ CHỌN tương tự) — cả 2 lần sửa `core/` đều đã
-  diff kỹ + test lại Quiz/Anagram xác nhận không đổi gì cho các template không khai cờ.
-- Ngoài ra còn: bố cục Ô CÂU HỎI theo đúng ảnh Wordwall thật (trái/phải, không giống Quiz gốc); zoom
-  lưới lúc bấm START kéo dài đúng 2.46s khớp `intro.mp3` thật (đo bằng ffmpeg); hàng cuối thiếu ô tự
-  căn giữa; bộ âm thanh 16 file gốc Wordwall thầy tải riêng (đợt 8, KHÔNG còn mượn Anagram như trước —
-  `otb-sound.js` + `sounds/`, bản riêng không cross-import).
-- Commit `a87fe8a` (đợt 1-7) **đã push GitHub** từ trước. **Đợt 8-10 (30/7/2026)** ĐÃ COMMIT + PUSH
-  GITHUB (commit `a2db784`). **Đợt 11 (cùng ngày, thầy yêu cầu "đưa lên live")**: `built:true` + đã
-  GỘP TRANG CHỦ + push — xem `GHI CHU DU AN.md` đợt 11. Không còn `built:false` nữa.
-  - **Lưu ý khi commit đợt này**: cùng lúc có 1 phiên khác đang làm dở Type the answer, đụng chung
-    `core/engine.js`/`core/icons.js` (thêm `hasKeyboardToggle`/`hideLettersOption`/icon bàn phím). Đã
-    tách cẩn thận — TẠM sửa `core/engine.js` bỏ đúng 3 đoạn của phiên kia, commit sạch phần Open the
-    box, rồi ghép lại y nguyên phần của phiên kia (không commit, không đụng `core/icons.js` +
-    `templates/type-the-answer/*` của họ). Bài học cho lần sau: nếu 2 phiên cùng sửa 1 file `core/`,
-    PHẢI đối chiếu `git diff` theo từng đoạn trước khi `git add`, không add cả file.
-- **CHƯA làm / có thể hỏi thêm nếu thầy cần**: màn Show answers không phản ánh được lịch sử NẾU 1 Ô SỐ
-  bị sai nhiều lần trước khi cuối cùng đúng (chỉ nhớ lần sai gần nhất) — chấp nhận được, đã ghi rõ lý do
-  trong code; **CHƯA gộp `built:true` vào trang chủ** (đúng quy trình, chờ thầy duyệt xong).
+**Open the box ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ, ĐÃ COMMIT + PUSH** (commit mới nhất `fc553bd`, 31/7/2026 —
+đã `curl` kiểm chứng file live khớp đúng). Đọc `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` đợt
+11-13 cho chi tiết đầy đủ phiên này, đây chỉ tóm tắt việc VỪA XONG (đợt 11-13 file đó = đợt 13-15 trong
+số đếm chung của APP_MASTER — 2 file dùng 2 hệ đếm KHÁC NHAU, xem chú thích ở dòng "Cập nhật lần cuối"
+đầu file):
+- **4 tinh chỉnh giao diện/đồng hồ theo yêu cầu thầy** (đợt 11-12 file riêng): canh mép trái đồng hồ =
+  mép phải điểm số (đè lên mục tiêu "thẳng mép ô câu hỏi" cũ); ô trả lời SAI đổi hẳn sang nền ĐỎ đặc +
+  chữ/khoá trắng (bỏ kiểu xám cũ); trả lời ĐÚNG thì đồng hồ đầy lại rồi DỪNG hẳn, chỉ chạy tiếp khi bấm
+  ô câu hỏi TIẾP THEO (khác đợt 9 cho chạy tiếp ngay); sửa lỗi lỡ 1 nhịp tiếng tick ở đúng mốc chuyển từ
+  tích đơn sang tích đôi (5 giây cuối). Có 1 lần ĐẢO NGƯỢC ý giữa chừng: thử "zoom xong mới trượt / trượt
+  xong mới zoom" (tuần tự) rồi thầy đổi ý quay lại "chạy đồng thời, khớp thời lượng `1.2s`" — bài học:
+  đừng ngạc nhiên nếu thầy thử 1 hướng rồi đảo lại, cứ làm theo yêu cầu mới nhất.
+- **⭐ SỬA 1 BUG THẬT quan trọng (đợt 13 file riêng)**: thầy báo hiệu ứng trượt RA của ô đáp án hoàn toàn
+  không thấy chạy (chỉ "biến mất tại chỗ"). Nguyên nhân là 1 **bài học CSS đáng nhớ cho MỌI template
+  khác trong dự án**: `.aw-otb-qtile` có 1 `animation` (hiệu ứng trượt VÀO, `fill-mode:both`) áp dụng
+  VĨNH VIỄN lên `transform`/`opacity` — theo đúng luật CSS, **1 `animation` đang giữ 1 thuộc tính LUÔN
+  thắng bất kỳ `transition` nào cũng nhắm thuộc tính đó**, nên hiệu ứng trượt ra (viết bằng `transition`)
+  từ đợt 9 tới nay CHƯA BAO GIỜ thực sự chạy, dù CSS hợp lệ và 0 lỗi console. Chỉ lộ ra khi thầy quan sát
+  kỹ ở tốc độ thường — đo 2 đầu animation (lúc trước vẫn hay làm) KHÔNG bắt được lỗi này, phải đo LIÊN
+  TỤC giữa chừng bằng `javascript_tool` mới thấy. Sửa bằng cách đổi hiệu ứng trượt ra thành 1
+  `@keyframes` riêng (animation-đấu-animation thắng sạch, không xung đột). **Nếu phiên sau thấy 1 hiệu
+  ứng nào đó "code đúng, không lỗi console, nhưng không thấy chạy" ở BẤT KỲ template nào khác — nghi ngay
+  khả năng có `animation` permanent (`fill-mode:both/forwards`) đang chặn 1 `transition` cùng thuộc
+  tính**, đây rất có thể không phải trường hợp cá biệt.
+  - Ghi chú thêm chưa kiểm chứng: rất có thể `.aw-otb-qtile:active { transform: translateY(...) }` (hiệu
+    ứng bấm lún) cũng bị chặn bởi CHÍNH nguyên nhân này — thầy chưa báo nên chưa đụng, để ý nếu thầy nói
+    nút bấm không có phản hồi lún xuống.
+- **File đổi**: `APP_MASTER.md`, `core/app.css` (chỉ 1 chỗ: cột `.has-inline`, đã diff sạch, không đụng
+  gì của phiên Find the match chạy song song), `templates/open-the-box/*`.
+- **Đã kiểm bằng `curl` bản live**: `open-the-box.js`/`.css` có `aw-otb-qtile-out`; `core/app.css` có
+  `grid-template-columns: 0 1fr auto`; `APP_MASTER.md` có "đợt 15" — tất cả khớp, bản live đã cập nhật.
 
-**Type the answer — content editor + viết lại toàn bộ màn chơi (30/7/2026, CÙNG NGÀY, phiên khác), 🟢
-CHỜ THẦY DUYỆT** (đọc `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` — chi tiết đầy đủ, đây chỉ
-tóm tắt). Đây là phiên chạy SONG SONG với phiên Open the box ở trên — cả 2 đều sửa `core/engine.js`
-cùng lúc, đã tách/ghép cẩn thận (xem lưu ý trong mục Open the box), KHÔNG xung đột.
-- **Content editor mới** (`type-the-answer-editor.js`): bảng Câu hỏi trái | Câu trả lời phải (1 câu hỏi
-  nhiều câu trả lời), dán Excel tự nhận diện đúng cấu trúc ảnh thầy gửi, tối đa 50 câu.
-- **Màn chơi viết lại theo 7 góp ý chi tiết**: ô nhập cao/rộng 80% + Submit Answer mỏng nằm ngay dưới;
-  tích xanh/x đỏ bay ra ngoài ô nhập về phía điểm (đúng luôn cộng, sai chỉ trừ khi bật Option mới
-  **"Minus points for wrong answers"**); "Show answer when wrong" thành Option thật (hiện đáp án đúng
-  xanh lá TRÊN ô nhập, khối trượt mượt xuống nhường chỗ); bỏ "Letters on answers"; hết phân biệt hoa/
-  thường; **bàn phím ảo QWERTY mới** (giữa 60% + số trái + dấu câu phải, nút ẩn/hiện cạnh Menu, mặc định
-  hiện).
-- **Core bị đụng (đã hỏi thầy trước, 2 điểm, CHỈ THÊM)**: `tpl.hideLettersOption` (ẩn nhóm Letters on
-  answers) + `tpl.hasKeyboardToggle`/`ui.kbdSlot` (chỗ trống cạnh Menu, bọc `menuBtn` trong
-  `.aw-bottombar-left` để giữ đúng grid 3-cột) trong `core/engine.js`; icon `keyboard` mới trong
-  `core/icons.js`. Đã test lại Quiz sau khi sửa — không đổi gì, 0 lỗi.
-- Bắt 2 lỗi thật lúc test (gõ bằng chính bàn phím ảo mới xây, không phải gõ tay): điểm không cộng vì
-  `requestAnimationFrame` không chạy trong tab ẩn (thêm `setTimeout` dự phòng) — **có thể là bẫy tiềm ẩn
-  ở `pulseScoreTo` của Anagram nữa** (chưa kiểm tra, phiên Anagram nên để ý nếu gặp điểm không lên khi
-  tab bị ẩn/nền); và bỏ nhầm 1 chỗ `requestAnimationFrame` không cần thiết cho hiệu ứng mở khối câu trả
-  lời (ô đã có sẵn từ trước, không phải mới tạo).
-- **CHƯA tự mắt xác nhận được**: hiệu ứng khối ô nhập trượt mượt khi hiện đáp án đúng — môi trường xem
-  trước phiên build này không render được (`document.hidden:true`, bẫy mục 9), đã xác nhận đúng qua DOM/
-  CSS rule nhưng **thầy nên tự mở xem hiệu ứng trượt có mượt không**.
-- **`built:true`, ĐÃ GỘP TRANG CHỦ (đợt 11, 30/7/2026)** — thầy yêu cầu đưa lên live, không còn chờ.
+**Type the answer ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** — không có gì mới, xem
+`templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` cho lịch sử.
+
+**Find the match — 🟡 ĐANG BUILD bởi 1 PHIÊN KHÁC chạy SONG SONG cùng lúc với phiên này, ⚠️ CÒN
+UNCOMMITTED** (kiểm bằng `git status` lúc chốt phiên này: `GHI CHU DU AN.md` + toàn bộ
+`templates/find-the-match/*` đang sửa dở, CHƯA commit). Đọc `GHI CHU DU AN.md` đợt 13-14 và
+`templates/find-the-match/GHI CHU FIND-THE-MATCH.md` để biết chi tiết (viết lại theo brief thầy: đảo vai
+trò prompt/tile, Speed slider, Repeat, Remove corrects, content editor mới, cơ chế "băng chuyền" trượt
+liên tục, âm thanh thật, lưới 5 hàng cố định). **CHƯA gộp trang chủ** (`built:false`). Phiên này KHÔNG
+đụng vào các file đó — commit `fc553bd` của phiên này CHỈ gồm đúng 5 file Open the box liên quan (đã
+`git add` từng file theo tên, không `git add -A`). **Phiên sau**: nếu tiếp tục Find the match, nhớ đó là
+việc CHƯA XONG của 1 phiên khác — đọc kỹ trạng thái trước khi sửa tiếp hoặc commit, đừng tự ý gộp chung
+với việc khác.
 
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
-(a) **Open the box + Type the answer đã lên live (đợt 11)** theo yêu cầu trực tiếp của thầy — nhưng
-    checklist tự chơi thử ở trên (zoom lúc START, 16 âm thanh, thanh giờ+điểm "cùng hàng" trên TOMKO;
-    hiệu ứng trượt xuống của Type the answer) **vẫn còn giá trị**, thầy nên tự xem trên bản live khi
-    rảnh — chỉ là không còn là ĐIỀU KIỆN để lên trang chủ nữa (đã lên rồi).
-(b) Anagram còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
-(c) Find the match vẫn còn nguyên như cũ (🟢 chờ duyệt), chưa ai động tới thêm, chưa lên live.
-(d) ✅ Đã đẩy code lên GitHub nhiều đợt (30/7/2026) — mới nhất là đợt 11 (Open the box + Type the
-    answer lên live).
-(e) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
+(a) Open the box: thầy vừa xác nhận hiệu ứng trượt ra đã mượt — có thể coi như XONG, chờ thầy báo còn gì
+    khác không.
+(b) Find the match: đang dở bởi phiên khác, CHƯA commit — nếu nhận task này, đọc kỹ 2 file GHI CHU nêu
+    trên trước, có 1 điểm phiên đó tự quyết chưa chắc chắn 100% (hành vi câu hỏi khi bấm SAI) cần hỏi lại
+    thầy.
+(c) Anagram/Type the answer: còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
+(d) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
 
 **Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
-không nói (nhưng nói "lưu lại"/"save" thì commit ngay không cần hỏi lại), KHÔNG tự `git push`.
+không nói (nhưng nói "lưu lại"/"save"/"commit" thì làm ngay không cần hỏi lại), **`git push` cũng vậy —
+nếu thầy nói rõ "commit và push" thì làm cả 2 luôn, không cần hỏi lại từng bước**. Khi có phiên khác
+đang chạy song song, LUÔN `git status`/`git diff` trước khi `git add` — chỉ add đúng file mình sửa,
+KHÔNG `git add -A`, để khỏi lỡ tay commit việc CHƯA XONG của phiên kia (xem tình huống Find the match ở
+trên).
 
 **Việc CŨ (assignment/print), vẫn còn dở, kho code**: ✅ **v0.9.4 và v0.9.5 ĐÃ push GitHub** (nằm trong
 đợt đẩy 30/7/2026, cùng lúc với Anagram + Open the box) — đoạn "chỉ commit local, web live vẫn v0.9.3"
