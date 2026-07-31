@@ -21,6 +21,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 20: CROSSWORD (game thứ 6) — build + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
+
+*(Làm bởi 1 phiên riêng, song song với Find the match / Balloon pop / Whack a mole của các phiên khác.
+Chỉ commit đúng thư mục `templates/crossword/` + `docs/09-CROSSWORD.md` + 2 file nhật ký này — KHÔNG
+`git add -A`, KHÔNG đụng việc chưa commit của phiên khác.)*
+
+Dựng lại act Crossword của thầy (`wordwall.net/resource/116864402/crossword`, style **Classic** = mặc
+định AWord). Nghiên cứu đầy đủ: `docs/09-CROSSWORD.md`. Ghi chú template + hạn chế + đề xuất sửa core:
+`templates/crossword/GHI CHU CROSSWORD.md`.
+
+1. **Nghiên cứu act thật** (Claude in Chrome): đọc file cấu hình theme Classic trên CDN
+   (`audios.json`/`palette.json`/`crossword layout`/`content model`) + **CHƠI THẬT** để map chính xác
+   âm thanh ↔ sự kiện (đo độ dài file khớp lúc phát). Crossword Classic dùng **13 mp3 / 9 hiệu ứng**:
+   intro · correct×3 · incorrect×3 · gamecompleted · timesup · restart · menu · leaderboard · reveal.
+   KHÔNG có âm gõ từng chữ / clocktick / tileflip / gameover.
+2. **Lưu nguồn** (ổ D): 13 mp3 vào `AWord-data\Source\Sound effect\CROSSWORD` (thư mục đánh số +
+   GHI CHU.md) · 6 file đồ họa tham khảo vào `Source\Graphic\CROSSWORD` · copy âm sang
+   `templates/crossword/sounds/`.
+3. **Template mới** `templates/crossword/`: `crossword.js` (**tự sinh lưới ô chữ interlock** greedy từ
+   danh sách {answer,clue}; chọn từ/đổi hướng; nhập bằng bàn phím vật lý + **bàn phím ảo QWERTY ẩn mặc
+   định** [`hasKeyboardToggle`+`ui.kbdSlot`, như Type the answer] cho cảm ứng TOMKO; chấm từng từ; đúng =
+   ô accent + điểm + âm, sai = âm + lộ đáp án nếu bật "Show answer when wrong") · `.css` (`.aw-cw-*`,
+   theme-driven, cqw; cell px tính bằng JS `resizeGrid`) · `sample-crossword.js` (20 từ thật) ·
+   `crossword-editor.js` (2 cột Answer|Clue + dán Excel) · `crossword-sound.js` (mp3 THẬT) ·
+   `test.html`/`test.js` · `GHI CHU CROSSWORD.md`. Khớp hợp đồng engine: `sounds{play,restart,
+   timeWarning,complete}` + `edit` + `toPrintItems` + `hideLettersOption` + `buildExtraOptions`
+   (showAnswerWhenWrong).
+4. **Tự test** qua `templates/crossword/test.html` (preview `aword-verify` port 5512 vì 5510 bị phiên
+   khác chiếm), trình duyệt thật, **0 lỗi console**: sinh lưới 19/20 từ (1 từ không chèn được thì bỏ khỏi
+   lưới); chọn/gõ/chấm ĐÚNG (ô xanh + điểm) và SAI (âm + lộ đáp án, không điểm); Submit → panel GAME
+   COMPLETE (Score/Time) → Show answers 19 hàng; bật/tắt bàn phím ảo (lưới co vừa khít, không tràn); đổi
+   theme Classic↔Beach (màu ô/chữ/gợi ý đổi theo accent, không vỡ).
+
+**CHƯA gộp trang chủ / CHƯA thêm `core/catalog.js` built:true** — chờ thầy duyệt (giống Find the match).
+**ĐỀ XUẤT SỬA CORE**: thêm cờ `tpl.hideRandomOption` (ẩn nhóm Shuffle của Options cho crossword).
+**Hạn chế đã biết**: lưới nhiều từ + bàn phím ảo bật trên màn thấp = ô nhỏ (hướng nâng cấp sau: phóng
+to/cuộn theo từ đang chọn khi bật bàn phím ảo).
+
 ### 31/7/2026 — Đợt 19: TYPE THE ANSWER — bàn phím ảo kiểu điện thoại (caps / numbers) + nút trợ giúp "Andrew help". ĐÃ COMMIT + PUSH.
 
 Thầy chơi thử bàn phím và góp ý 2 vòng. **Chỉ đụng 2 file template** `templates/type-the-answer/type-the-answer.js`

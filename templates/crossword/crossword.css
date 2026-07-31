@@ -1,0 +1,210 @@
+/* =============================================================
+   CROSSWORD — template-only styles. Every class is prefixed .aw-cw- so it
+   never collides with the engine's frame classes (.aw-topbar/.aw-iconbtn/
+   .aw-navbtn). Colours come from the theme (var(--aw-*)); nothing hard-coded
+   that the Style panel should control.
+   Sizing: text/keys use cqw so fullscreen keeps the ratio; the grid CELL size
+   is a px value computed in JS (crossword.js resizeGrid) to fit the space that
+   is left between the clue bar and the keyboard.
+   ============================================================= */
+
+.aw-cw-wrap {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1cqw;
+  min-height: 0;
+}
+
+/* ----- clue bar (top): current number/direction + clue text ----- */
+.aw-cw-cluebar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.4cqw;
+  padding: 0.6cqw 1.4cqw 0;
+  min-height: 7cqw;          /* room for ~2 lines so the clue stays readable */
+}
+.aw-cw-clue-num {
+  flex: 0 0 auto;
+  font-weight: 800;
+  color: var(--aw-accent);
+  font-size: 2.9cqw;
+  line-height: 1.1;
+  white-space: nowrap;
+  padding-top: 0.15cqw;
+}
+.aw-cw-clue-text {
+  flex: 1 1 auto;
+  color: var(--aw-text);
+  font-weight: 700;
+  line-height: 1.14;
+  font-size: calc(3.1cqw * var(--fit, 1));
+  overflow: hidden;
+}
+
+/* ----- grid area (middle): centre the auto-sized grid ----- */
+.aw-cw-gridwrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.aw-cw-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols), var(--cell, 40px));
+  grid-template-rows: repeat(var(--rows), var(--cell, 40px));
+  gap: 0;
+}
+
+/* one square */
+.aw-cw-cell {
+  position: relative;
+  width: var(--cell, 40px);
+  height: var(--cell, 40px);
+  box-sizing: border-box;
+}
+.aw-cw-cell.is-blank { visibility: hidden; }   /* not part of any word */
+.aw-cw-cell:not(.is-blank) {
+  background: var(--aw-card, #fff);
+  border: 1px solid #c7d2e0;
+  border-radius: calc(var(--cell, 40px) * 0.10);
+  cursor: pointer;
+  transition: background .12s ease, box-shadow .12s ease;
+}
+
+/* the current word + the caret cell */
+.aw-cw-cell.is-inword:not(.is-blank) { background: color-mix(in srgb, var(--aw-accent) 16%, #fff); }
+.aw-cw-cell.is-cursor:not(.is-blank) {
+  background: color-mix(in srgb, var(--aw-accent) 30%, #fff);
+  box-shadow: inset 0 0 0 2px var(--aw-accent);
+  z-index: 2;
+}
+
+/* solved (correct) = accent fill, white letter — matches Wordwall Classic */
+.aw-cw-cell.is-solved:not(.is-blank) {
+  background: var(--aw-accent);
+  border-color: var(--aw-accent);
+  cursor: default;
+}
+.aw-cw-cell.is-solved .aw-cw-letter { color: #fff; }
+
+/* revealed after a wrong answer (Show answer when wrong) = muted fill */
+.aw-cw-cell.is-revealed:not(.is-blank) {
+  background: var(--aw-muted, #6b7a90);
+  border-color: var(--aw-muted, #6b7a90);
+  cursor: default;
+}
+.aw-cw-cell.is-revealed .aw-cw-letter { color: #fff; }
+
+/* brief red flash when a word is wrong and answers aren't revealed */
+.aw-cw-cell.is-flash-wrong:not(.is-blank) {
+  background: color-mix(in srgb, var(--aw-no, #e23c3c) 35%, #fff);
+  border-color: var(--aw-no, #e23c3c);
+}
+
+.aw-cw-cellnum {
+  position: absolute;
+  top: 1px; left: 2px;
+  font-size: calc(var(--cell, 40px) * 0.26);
+  line-height: 1;
+  font-weight: 700;
+  color: var(--aw-muted, #6b7a90);
+  pointer-events: none;
+}
+.aw-cw-cell.is-solved .aw-cw-cellnum,
+.aw-cw-cell.is-revealed .aw-cw-cellnum { color: rgba(255,255,255,.85); }
+
+.aw-cw-letter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: calc(var(--cell, 40px) * 0.56);
+  color: var(--aw-text);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+/* ----- on-screen keyboard (letters + backspace) ----- */
+.aw-cw-kbd {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7cqw;
+  padding: 0.3cqw 0 0.2cqw;
+}
+.aw-cw-kbd.is-hidden { display: none; }
+.aw-cw-kbd-row { display: flex; gap: 0.7cqw; justify-content: center; }
+.aw-cw-key {
+  min-width: 5.6cqw;
+  height: 5.4cqw;
+  padding: 0 0.9cqw;
+  border: none;
+  border-radius: 1cqw;
+  background: #eef3f9;
+  color: var(--aw-text);
+  font-weight: 700;
+  font-size: 2.5cqw;
+  cursor: pointer;
+  box-shadow: 0 0.35cqw 0 #cfdae7;
+  transition: transform .05s ease, background .1s ease;
+  user-select: none;
+}
+.aw-cw-key:active { transform: translateY(0.3cqw); box-shadow: 0 0 0 #cfdae7; }
+.aw-cw-key-back { background: #fde3e3; color: var(--aw-no, #d23a3a); box-shadow: 0 0.35cqw 0 #f3c2c2; }
+
+.aw-cw-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--aw-muted, #6b7a90);
+  font-size: 3cqw;
+  font-weight: 700;
+}
+
+/* =============================================================
+   EDITOR rows (crossword-editor.js) — 2 columns Answer | Clue. Uses the shared
+   .aw-ed-* look; these rules just lay out the row. NOT inside the 16:9 stage,
+   so plain px/rem here (not cqw).
+   ============================================================= */
+.aw-cw-ed-hdr,
+.aw-cw-ed-row {
+  display: grid;
+  grid-template-columns: 34px 220px 1fr auto;
+  gap: 10px;
+  align-items: start;
+}
+.aw-cw-ed-hdr {
+  padding: 4px 4px 2px;
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--aw-muted, #6b7a90);
+  align-items: center;
+}
+.aw-cw-ed-row {
+  padding: 6px 4px;
+  border-top: 1px solid #eef2f7;
+}
+.aw-cw-ed-num {
+  text-align: center;
+  font-weight: 700;
+  color: var(--aw-muted, #6b7a90);
+  padding-top: 10px;
+}
+.aw-cw-ed-ans { text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
+.aw-cw-ed-clue { resize: vertical; min-height: 40px; }
+.aw-cw-ed-act { display: flex; gap: 6px; align-items: center; padding-top: 4px; }
+
+@media (max-width: 640px) {
+  .aw-cw-ed-hdr { display: none; }
+  .aw-cw-ed-row { grid-template-columns: 24px 1fr; grid-auto-rows: min-content; }
+  .aw-cw-ed-clue { grid-column: 1 / -1; }
+  .aw-cw-ed-act { grid-column: 1 / -1; }
+}

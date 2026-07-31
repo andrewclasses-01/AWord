@@ -172,6 +172,17 @@ liên tục, âm thanh thật, lưới 5 hàng cố định). **CHƯA gộp tran
 việc CHƯA XONG của 1 phiên khác — đọc kỹ trạng thái trước khi sửa tiếp hoặc commit, đừng tự ý gộp chung
 với việc khác.
 
+**Crossword (game thứ 6) — 🟢 ĐÃ BUILD + TỰ TEST, CHỜ THẦY DUYỆT, ĐÃ COMMIT + PUSH** (do 1 phiên riêng,
+31/7/2026, song song các phiên khác). Dựng lại act Classic của thầy (`wordwall.net/resource/116864402`).
+Có đủ bộ file trong `templates/crossword/` (tự sinh lưới ô chữ interlock + bàn phím vật lý/ảo + mp3 THẬT
+Classic), nghiên cứu ở `docs/09-CROSSWORD.md`, ghi chú + hạn chế + đề xuất sửa core ở
+`templates/crossword/GHI CHU CROSSWORD.md`, nhật ký ở `GHI CHU DU AN.md` đợt 20. **CHƯA gộp trang chủ /
+CHƯA thêm `core/catalog.js` built:true** (chờ duyệt). Chơi thử: `templates/crossword/test.html`.
+**ĐỀ XUẤT SỬA CORE**: thêm cờ `tpl.hideRandomOption` (ẩn nhóm Shuffle của Options cho crossword — lưới cố
+định). Việc cải tiến tiếp (khi thầy muốn): (1) khi bật bàn phím ảo thì phóng to/cuộn theo từ đang chọn
+thay vì thu cả lưới (lưới nhiều từ trên màn thấp bị nhỏ); (2) content editor thêm 🎤/🖼️; (3) gộp trang chủ
+khi thầy chốt.
+
 **Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
 (a) Open the box: thầy vừa xác nhận hiệu ứng trượt ra đã mượt — có thể coi như XONG, chờ thầy báo còn gì
     khác không.
