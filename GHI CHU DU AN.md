@@ -21,6 +21,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 23: SPEAKING CARDS (game thứ 7, "mở" đầu tiên) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
+
+*(Chỉ commit `templates/speaking-cards/` + file nhật ký này. KHÔNG `git add -A`. **CHƯA** thêm vào
+`core/catalog.js`/`index.html`/`manifest.js`/`ALL_TEMPLATES` — chờ thầy chốt rồi mới gộp trang chủ.
+Session sau cải tiến: đọc `templates/speaking-cards/GHI CHU SPEAKING-CARDS.md` — có mục "Chưa làm" +
+3 "ĐỀ XUẤT SỬA CORE".)*
+
+Dựng act Speaking cards của thầy (`wordwall.net/resource/116796629/speaking-cards`), visual style
+**Board Games** (= look **"Classic"** trong AWord — thầy chốt qua AskUserQuestion: **deal places 1–10**,
+**thẻ có ảnh + chữ**). Ghi chú template: `templates/speaking-cards/GHI CHU SPEAKING-CARDS.md`.
+
+1. **Nghiên cứu** (Claude in Chrome): rút bài ngẫu nhiên từ bộ bài xáo, KHÔNG chấm điểm/leaderboard
+   (open-ended). Data `content.cards=[{text,image?}]`. Options: Timer · Number of deal places (1–10) ·
+   Shuffle item order. Menu: Start again/Resume. Âm thanh gói **"playingcards"** (15 mp3 đã có sẵn ở
+   `AWord-data\Source\Sound effect\SPEAKING CARDS`, tải 30/7): intro/shuffle/tileAppear/tileFlip/restart/
+   timesUp/menu/menuSubtle → chép vào `sounds/`.
+2. **Game ĐẦU TIÊN `scorable:false`**. Đồ họa tự vẽ inline SVG (bàn cờ nỉ xanh + lưng bài vàng hoa văn +
+   đạo cụ cờ đam/domino/xúc xắc), không chép ảnh gốc. Bộ file: `speaking-cards.js/.css`, `-sound.js`,
+   `-editor.js`, `sample-*.js`, `sounds/`, `test.html/.js`.
+3. **Bẫy đã xử lý**: (a) lật bài `fill:forwards` giữ `scaleX(0)` khi tab ẩn → bước kết thúc HỦY animation
+   + xoá inline transform (theo HUONG DAN CORE §animate); (b) ẩn chip điểm ✓ + nav ◀▶ (vô nghĩa) bằng JS
+   trong mount, KHÔNG sửa core; (c) tỉa Options thừa của Quiz (`hideLettersOption:true` + tỉa DOM panel
+   "End of game"/"Shuffle answer order", đổi tên → "Shuffle item order"). 3 ĐỀ XUẤT SỬA CORE ghi trong
+   GHI CHU template (cờ `openEnded` ẩn score/nav/Submit; cờ ẩn nhóm Options; API khai báo deal-places).
+4. **Editor**: soạn thẻ chữ + ẢNH (upload → thu nhỏ ≤480px thành data URL), kéo sắp xếp, dán cột từ Excel.
+5. **Tự test OK** (test.html, console sạch): deal/flip/undo/shuffle/hết-bài/dealPlaces 1·3·6/countdown→
+   "Time's up"/thẻ-ảnh/Options-sạch/editor/đổi-theme. Chưa test Save thật (cần đăng nhập Firebase).
+
 ### 1/8/2026 — Đợt 22: BALLOON POP (game thứ 6) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
 
 *(Chỉ commit `templates/balloon-pop/` + file nhật ký này. KHÔNG `git add -A`. **CHƯA** thêm vào

@@ -1,0 +1,297 @@
+/* =============================================================
+   SPEAKING CARDS — BOARD GAMES look (the AWord "Classic" for this game).
+   All classes are prefixed .aw-sc- so they never collide with the engine
+   (.aw-topbar/.aw-nav/.aw-iconbtn) or other templates. Sizes use cqw/cqh so
+   the scene scales cleanly with the 16:9 stage (incl. fullscreen).
+   ============================================================= */
+
+.aw-sc-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* deep blue board-game felt + a soft dotted texture + gentle vignette */
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.05) 0 1.1cqw, transparent 1.1cqw) 0 0 / 4cqw 4cqw,
+    radial-gradient(120% 90% at 50% 0%, #2f74ab 0%, #1f5b8f 55%, #164567 100%);
+  font-family: var(--aw-font, "Baloo 2", system-ui, sans-serif);
+}
+
+/* --- scattered board-game props (behind the cards) --- */
+.aw-sc-props { position: absolute; inset: 0; pointer-events: none; }
+.aw-sc-prop { position: absolute; opacity: .5; filter: drop-shadow(0 .6cqw 1cqw rgba(0,0,0,.25)); }
+.aw-sc-prop svg { width: 100%; height: 100%; display: block; }
+.aw-sc-prop-checkers { top: 3cqw; right: 3cqw; width: 15cqw; height: 15cqw; transform: rotate(8deg); }
+.aw-sc-prop-domino   { bottom: 14cqw; right: 4cqw; width: 6cqw; height: 11cqw; transform: rotate(-14deg); }
+.aw-sc-prop-dice     { bottom: 15cqw; left: 20cqw; width: 7cqw; height: 7cqw; transform: rotate(10deg); }
+
+/* --- table: deck on the left, deal places filling the rest --- */
+.aw-sc-table {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  gap: 3cqw;
+  padding: 3cqw 4cqw 1cqw 4cqw;
+}
+
+/* --- deck --- */
+.aw-sc-deckwrap {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4cqw;
+}
+.aw-sc-deck {
+  position: relative;
+  width: 16cqw;
+  aspect-ratio: 5 / 7;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  transition: transform .12s ease;
+}
+.aw-sc-deck:hover:not(:disabled) { transform: translateY(-.8cqw); }
+.aw-sc-deck:disabled { cursor: default; }
+.aw-sc-deck.is-empty { opacity: .35; }
+.aw-sc-deckcard {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.6cqw;
+  background: #f6f2e8;
+  box-shadow: 0 .8cqw 1.6cqw rgba(0,0,0,.3);
+  overflow: hidden;
+}
+.aw-sc-deckcard-3 { transform: translate(1cqw, 1.1cqw) rotate(3deg); }
+.aw-sc-deckcard-2 { transform: translate(.5cqw, .55cqw) rotate(1.5deg); }
+.aw-sc-deckcard-1 { transform: none; }
+.aw-sc-deckcount {
+  color: #ffedc2;
+  font-weight: 700;
+  font-size: 2.2cqw;
+  letter-spacing: .04em;
+  text-shadow: 0 .2cqw .4cqw rgba(0,0,0,.35);
+}
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-1 { animation: aw-sc-shuffle .5s ease; }
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-2 { animation: aw-sc-shuffle .5s ease .05s; }
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-3 { animation: aw-sc-shuffle .5s ease .1s; }
+@keyframes aw-sc-shuffle {
+  0%   { transform: translate(0,0) rotate(0deg); }
+  35%  { transform: translate(4cqw,-1cqw) rotate(9deg); }
+  70%  { transform: translate(-2cqw,.6cqw) rotate(-6deg); }
+  100% { transform: translate(0,0) rotate(0deg); }
+}
+
+/* --- deal places (grid) --- */
+.aw-sc-places {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 3), 1fr);
+  align-content: center;
+  justify-items: center;
+  align-items: center;
+  gap: 1.6cqw;
+}
+.aw-sc-place {
+  position: relative;
+  width: 100%;
+  max-width: 26cqw;
+  aspect-ratio: 5 / 7;
+  border-radius: 1.6cqw;
+  /* empty slot = dashed outline, like Wordwall */
+  border: .35cqw dashed rgba(255,255,255,.45);
+  box-sizing: border-box;
+}
+.aw-sc-place.has-card { border-color: transparent; }
+
+/* --- a card sitting on a place --- */
+.aw-sc-card {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.6cqw;
+  background: #ffffff;
+  box-shadow: 0 1cqw 2.4cqw rgba(0,0,0,.32);
+  overflow: hidden;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+/* the ornate gold art fills a back-facing card / the front's corner orns */
+.aw-sc-cardart { position: absolute; inset: 0; width: 100%; height: 100%; }
+.aw-sc-frontorn { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+.aw-sc-cardbody {
+  position: absolute;
+  inset: 8%;
+  display: flex;
+  flex-direction: column;
+  gap: 3%;
+  align-items: center;
+  justify-content: center;
+}
+.aw-sc-cardimg {
+  flex: 0 0 auto;
+  width: 62%;
+  aspect-ratio: 1 / 1;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+.aw-sc-cardbody.has-img .aw-sc-cardimg { width: 56%; }
+.aw-sc-cardtextwrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.aw-sc-cardtext {
+  text-align: center;
+  font-weight: 700;
+  line-height: 1.16;
+  color: #23303e;
+  font-size: calc(3.4cqw * var(--fit, 1));
+  word-break: break-word;
+}
+
+/* --- controls (Shuffle · Undo · Deal) --- */
+.aw-sc-controls {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: 1.6cqw;
+  padding: 0 0 2.4cqw;
+}
+.aw-sc-ctrl {
+  min-width: 16cqw;
+  padding: 1.2cqw 3cqw;
+  border: 0;
+  border-radius: 2cqw;
+  background: rgba(11, 30, 48, .72);
+  color: #f2f6fb;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 2.4cqw;
+  letter-spacing: .02em;
+  cursor: pointer;
+  box-shadow: 0 .5cqw 1.2cqw rgba(0,0,0,.28);
+  transition: transform .1s ease, background .15s ease, opacity .15s ease;
+}
+.aw-sc-ctrl:hover:not(:disabled) { transform: translateY(-.4cqw); background: rgba(11, 30, 48, .9); }
+.aw-sc-ctrl:active:not(:disabled) { transform: translateY(0); }
+.aw-sc-ctrl:disabled { opacity: .4; cursor: default; }
+.aw-sc-ctrl-primary {
+  background: linear-gradient(#f0b73f, #d79a2b);
+  color: #4a3210;
+  box-shadow: 0 .6cqw 0 #b9791a, 0 1cqw 1.8cqw rgba(0,0,0,.3);
+}
+.aw-sc-ctrl-primary:hover:not(:disabled) { background: linear-gradient(#f5c257, #e0a534); }
+
+/* --- "Time's up" banner --- */
+.aw-sc-banner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(11, 30, 48, .55);
+  color: #fff;
+  font-weight: 800;
+  font-size: 8cqw;
+  text-shadow: 0 .6cqw 1.4cqw rgba(0,0,0,.5);
+  z-index: 5;
+}
+
+/* --- empty state --- */
+.aw-sc-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--aw-muted, #6b7a90);
+  font-size: 3cqw;
+  font-weight: 600;
+}
+
+/* --- Options: Number of deal places row --- */
+.aw-sc-opt-deal { align-items: center; }
+
+/* =============================================================
+   EDITOR (.aw-sc-ed-*) — card rows with text + optional image.
+   The shared editor chrome (.aw-ed-*) comes from core/app.css.
+   ============================================================= */
+.aw-sc-ed-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid var(--aw-stage-border, #e2ebf4);
+  border-radius: 12px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+.aw-sc-ed-row.is-dragging { opacity: .5; }
+.aw-sc-ed-row.is-dropbefore { box-shadow: 0 -3px 0 var(--aw-accent, #2f7bff); }
+.aw-sc-ed-row.is-dropafter { box-shadow: 0 3px 0 var(--aw-accent, #2f7bff); }
+.aw-sc-ed-num { flex: 0 0 auto; width: 26px; padding-top: 8px; color: var(--aw-muted, #6b7a90); font-weight: 700; text-align: right; }
+.aw-sc-ed-box { flex: 1 1 auto; min-width: 0; display: flex; align-items: flex-start; gap: 12px; }
+.aw-sc-ed-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  resize: vertical;
+  padding: 10px 12px;
+  border: 1px solid var(--aw-stage-border, #d7e2ee);
+  border-radius: 10px;
+  font: inherit;
+  color: var(--aw-text, #23303e);
+  background: #fbfdff;
+}
+.aw-sc-ed-text:focus { outline: none; border-color: var(--aw-accent, #2f7bff); }
+.aw-sc-ed-thumbwrap { flex: 0 0 auto; }
+.aw-sc-ed-thumb {
+  position: relative;
+  width: 64px; height: 64px;
+  border-radius: 10px;
+  background-size: cover; background-position: center;
+  border: 1px solid var(--aw-stage-border, #d7e2ee);
+}
+.aw-sc-ed-thumbx {
+  position: absolute; top: -8px; right: -8px;
+  width: 20px; height: 20px; line-height: 18px; text-align: center;
+  border: 0; border-radius: 50%;
+  background: #e23c3c; color: #fff; font-weight: 800; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0,0,0,.3);
+}
+.aw-sc-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; padding-top: 4px; }
+.aw-sc-ed-gap { width: 6px; }
+.aw-sc-ed-iconbtn {
+  width: 34px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 8px;
+  background: transparent; color: var(--aw-muted, #6b7a90); cursor: pointer;
+}
+.aw-sc-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-sc-ed-iconbtn:hover:not(:disabled) { background: #eef4fb; color: var(--aw-text, #23303e); }
+.aw-sc-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-sc-ed-iconbtn.is-on { color: var(--aw-accent, #2f7bff); }
+.aw-sc-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdecec; color: #e23c3c; }
+.aw-sc-ed-iconbtn.is-drag { cursor: grab; }
+.aw-sc-ed-addrow {
+  width: 100%;
+  padding: 10px;
+  border: 1px dashed var(--aw-stage-border, #cdd9e6);
+  border-radius: 10px;
+  background: #f6faff; color: var(--aw-accent, #2f7bff);
+  font: inherit; font-weight: 700; cursor: pointer;
+  margin-top: 4px;
+}
+.aw-sc-ed-addrow:hover:not(:disabled) { background: #eaf3ff; }
+.aw-sc-ed-addrow:disabled { opacity: .4; cursor: default; }
