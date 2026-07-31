@@ -21,6 +21,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 26: GAMESHOW QUIZ (game thứ 10) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. (Có sửa CORE, tương thích ngược.)
+
+Dựng lại act Classic của thầy `wordwall.net/resource/116864527` — style **TV game show** (= "Classic"
+của Gameshow, thầy chốt; theme nội bộ Wordwall `gameshow`, template id 69, type 11). Trắc nghiệm có **áp
+lực thời gian + ĐIỂM theo tốc độ + Lives + VÒNG BONUS mỗi N câu + 4 LIFELINES**. Thầy chốt build **FULL**
+(đủ bonus + lifelines) + tính điểm **kiểu points**.
+
+**Cách chơi**: Play → intro 2 cánh cửa "QUIZ SHOW" trượt tách + nhạc nền → mỗi câu "Get ready!" → câu hỏi
++ 2–6 ô đáp án A/B/C/D (viền bóng đèn vàng, nền tia sáng). Đồng hồ đếm ngược TỪNG CÂU (hàng trên, giữa) +
+✓ đúng (phải) + bảng điểm PTS (trái) + ♥ Lives (phải, nếu giới hạn). Đúng → ✓ + điểm theo tốc độ · Sai →
+✗ (mất 1 Live nếu giới hạn) · Hết giờ → bỏ qua. Sau mỗi N câu (mặc định 3) → **BONUS ROUND** 5 lá bài úp,
+chọn 1 → +điểm (50–250). **Lifelines** (mỗi thứ 1 lần/ván): 50:50 · ×2 · +TIME · REVEAL. Kết thúc → bảng
+tổng kết + leaderboard **xếp theo ĐIỂM** + Show answers. Dữ liệu = Y HỆT QUIZ.
+
+- **File mới**: `templates/gameshow/` (gameshow.js/.css, gs-sound.js, gameshow-editor.js [bọc khuôn
+  quiz-editor, ép timer none], sample-gameshow.js, test.html/test.js, GHI CHU GAMESHOW.md, img/ 11 ảnh,
+  sounds/ 47 mp3) + `docs/10-GAMESHOW.md`.
+- **Assets THẬT** của Wordwall (theme gameshow) đã tải + convention ở `AWord-data/Source/{Sound effect,
+  Graphic}/GAMESHOW/` (có GHI CHU.md). Art CỐ ĐỊNH (không theo 4 theme chung); viền bóng đèn marquee dựng
+  bằng CSS (`.aw-gs-board::before`, 4 radial-gradient).
+- **⭐ SỬA CORE (tương thích ngược — đã kiểm Quiz chạy 0 lỗi sau khi sửa):**
+  1. `core/scoring.js`: `computeResult` nhận `raw.score` (mặc định = số câu đúng) + `raw.scoreText`
+     (mặc định null); `rankCompare` xếp theo `score`.
+  2. `core/leaderboard.js`: `addEntry` nhận + lưu `scoreText` (mặc định null).
+  3. `core/engine.js`: `finish` truyền `score`+`scoreText`; bảng tổng kết & leaderboard hiện `scoreText`
+     nếu có (không thì vẫn "đúng/tổng"). Thêm cờ `tpl.hideTimerOption` (ẩn nhóm Timer toàn-ván — song đôi
+     `hideLettersOption`). Cập nhật `core/HUONG DAN CORE.md`.
+- Template khai báo `hideTimerOption/hideLettersOption/inlineTimerBar`, tự dựng: intro cửa, get ready,
+  đếm ngược từng câu (setInterval, KHÔNG rAF), điểm theo `timeFrac()`, vòng bonus (lá bài lật 3D),
+  lifelines, Lives; gọi `ui.finish({score:points, scoreText, title})`.
+- **BẪY đã sửa khi build**: ban đầu đặt lá bài bonus cùng class `.aw-gs-card` với ô câu hỏi → CSS lá bài
+  (`width:13cqw; opacity:0`) ĐÈ ô câu hỏi làm nó co còn 125px + tàng hình. Đổi lá bài → `.aw-gs-bcard`.
+  (Bài học: grep class mới trong CHÍNH file CSS của template, không chỉ trong core.)
+- **Đã tự test**: đúng (132/370 điểm theo tốc độ) · sai (✗) · bonus (+250) · 50:50 (bỏ 2 sai) · ×2 (×2 =
+  370) · REVEAL (nháy, nút mờ, giữ "đã dùng" xuyên câu) · Submit → tổng kết ĐIỂM 382 + leaderboard 382 +
+  Show answers đầy đủ. **CHƯA gộp `core/catalog.js`/trang chủ** (chờ thầy duyệt).
+- **CHỜ TEST TOMKO**: (a) âm thanh + nhạc nền trên màn thật; (b) +TIME & Lives-giới-hạn→Game over (code
+  có, chưa chạy tới khi test vì để Unlimited); (c) fullscreen màn lớn.
+Rollback: xoá `templates/gameshow/`; core chỉ THÊM (không xoá) → `git revert` commit này nếu cần.
+
 ### 1/8/2026 — Đợt 25: MAZE CHASE (game thứ 9) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH (chưa lên trang chủ).
 
 Dựng lại act Classic của thầy `wordwall.net/resource/116866716` — style **Space** (= "Classic" của Maze

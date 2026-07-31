@@ -360,30 +360,35 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
 
     panel.append(el("div", "aw-tool-panel-head", "Options"));
 
-    // TIMER
-    const gTimer = el("div", "aw-opt-group");
-    gTimer.append(el("div", "aw-opt-label", "Timer"));
-    const timerRow = el("div", "aw-opt-row");
-    const mkRadio = (value, label) => {
-      const wrap = el("label", "aw-opt-choice");
-      const r = el("input"); r.type = "radio"; r.name = "aw-timer"; r.value = value;
-      r.checked = (draft.timer ?? "countUp") === value;
-      r.onchange = () => { draft.timer = value; timeFields.style.display = value === "countDown" ? "inline-flex" : "none"; };
-      wrap.append(r, document.createTextNode(label));
-      return wrap;
-    };
-    timerRow.append(mkRadio("none", "None"), mkRadio("countUp", "Count up"), mkRadio("countDown", "Count down"));
-    gTimer.append(timerRow);
+    // TIMER — a template can hide this whole group (tpl.hideTimerOption) when it
+    // runs its OWN timer (e.g. Gameshow's per-QUESTION countdown, which the shared
+    // whole-game timer would fight). Mirror of tpl.hideLettersOption below; every
+    // other template keeps this group exactly as before.
+    if (!tpl.hideTimerOption) {
+      const gTimer = el("div", "aw-opt-group");
+      gTimer.append(el("div", "aw-opt-label", "Timer"));
+      const timerRow = el("div", "aw-opt-row");
+      const mkRadio = (value, label) => {
+        const wrap = el("label", "aw-opt-choice");
+        const r = el("input"); r.type = "radio"; r.name = "aw-timer"; r.value = value;
+        r.checked = (draft.timer ?? "countUp") === value;
+        r.onchange = () => { draft.timer = value; timeFields.style.display = value === "countDown" ? "inline-flex" : "none"; };
+        wrap.append(r, document.createTextNode(label));
+        return wrap;
+      };
+      timerRow.append(mkRadio("none", "None"), mkRadio("countUp", "Count up"), mkRadio("countDown", "Count down"));
+      gTimer.append(timerRow);
 
-    // countdown minutes/seconds — swipe-to-adjust steppers (drag the number up/down)
-    const timeFields = el("span", "aw-opt-time");
-    const total = draft.timerTotalSeconds ?? 120;
-    const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { draft.timerTotalSeconds = v * 60 + ss.get(); });
-    const ss = makeNumberStepper(total % 60, 0, 59, v => { draft.timerTotalSeconds = mm.get() * 60 + v; });
-    timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
-    timeFields.style.display = (draft.timer ?? "countUp") === "countDown" ? "inline-flex" : "none";
-    timerRow.append(timeFields);
-    panel.append(gTimer);
+      // countdown minutes/seconds — swipe-to-adjust steppers (drag the number up/down)
+      const timeFields = el("span", "aw-opt-time");
+      const total = draft.timerTotalSeconds ?? 120;
+      const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { draft.timerTotalSeconds = v * 60 + ss.get(); });
+      const ss = makeNumberStepper(total % 60, 0, 59, v => { draft.timerTotalSeconds = mm.get() * 60 + v; });
+      timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
+      timeFields.style.display = (draft.timer ?? "countUp") === "countDown" ? "inline-flex" : "none";
+      timerRow.append(timeFields);
+      panel.append(gTimer);
+    }
 
     // RANDOM
     const gRandom = el("div", "aw-opt-group");
@@ -595,7 +600,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
         // Student mode: every finished game is handed in, straight away.
         // The upload runs alongside the celebration so nobody waits on a spinner.
         submission = session.submit({
-          score: result.correct, total: result.total, timeMs, review: reviewData
+          score: result.score, total: result.total, timeMs, review: reviewData
         }).catch(e => { console.warn("AWord: submit failed", e); submitFailed = true; return null; });
         celebrate(result, null);
         return;
@@ -603,7 +608,8 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       if (answered > 0) {
         // stored (incl. review) so it can sync later and students can compete.
         entryId = addEntry(activity.id, {
-          name: "Player", score: result.correct, total: result.total, timeMs, review: raw.review || null
+          name: "Player", score: result.score, total: result.total, timeMs,
+          scoreText: result.scoreText, review: raw.review || null
         });
       }
       celebrate(result, entryId);
@@ -658,7 +664,11 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     const stats = el("div", "aw-sum-stats");
     const t = fmtSecsParts(result.timeMs);
     stats.append(
-      statBlock("Score", `${result.correct}`, `/${result.total}`),
+      // Points-mode templates (Gameshow) pass a pre-formatted scoreText and show
+      // it alone; everyone else keeps the classic "correct/total" form.
+      result.scoreText != null
+        ? statBlock("Score", result.scoreText, "")
+        : statBlock("Score", `${result.correct}`, `/${result.total}`),
       statBlock("Time", t.big, t.small)
     );
     panel.append(stats);
@@ -721,7 +731,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
           row.append(
             el("span", "aw-lb-rank", ordinal(i + 1).toLowerCase()),
             el("span", "aw-lb-name", escapeText(e.name)),
-            el("span", "aw-lb-score", `${e.score}/${e.total}`),
+            el("span", "aw-lb-score", e.scoreText != null ? e.scoreText : `${e.score}/${e.total}`),
             el("span", "aw-lb-time", `${tp.big}${tp.small}`)
           );
           table.append(row);
@@ -764,7 +774,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       }
       const tp = fmtSecsParts(e.timeMs);
       row.append(
-        el("span", "aw-lb-score", `${e.score}/${e.total}`),
+        el("span", "aw-lb-score", e.scoreText != null ? e.scoreText : `${e.score}/${e.total}`),
         el("span", "aw-lb-time", `${tp.big}${tp.small}`)
       );
       table.append(row);

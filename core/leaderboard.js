@@ -19,10 +19,12 @@ function save(activityId, entries) {
 // `review` (optional) = per-question detail for the "Show answers" screen; stored
 // with the entry so it can later sync (Firebase) and be shown for any student,
 // letting a class compete and see each other's results.
-export function addEntry(activityId, { name, score, total, timeMs, review = null }) {
+export function addEntry(activityId, { name, score, total, timeMs, review = null, scoreText = null }) {
   const entries = load(activityId);
+  // `scoreText` (optional) = a pre-formatted score string (e.g. Gameshow's points
+  // "1250"); when present the leaderboard shows it verbatim instead of "score/total".
   const entry = { id: `e${Date.now()}${Math.floor(Math.random() * 1000)}`,
-                  name, score, total, timeMs, review, at: Date.now() };
+                  name, score, total, timeMs, scoreText, review, at: Date.now() };
   entries.push(entry);
   save(activityId, entries);
   return entry.id;

@@ -147,6 +147,26 @@ Engine tự động lo (KHÔNG cần template làm): nút PLAY khổng lồ che 
 nút phóng to, menu (☰), pháo giấy khi hoàn thành, bảng tổng kết, bảng xếp hạng, khung 16:9, tên
 game + hướng dẫn hiển thị dưới khung.
 
+### Điểm tuỳ biến (points) — `ui.finish({score, scoreText})` (thêm ở Gameshow, 1/8/2026)
+
+Mặc định điểm để xếp hạng = **số câu đúng** (`result.correct`) và bảng tổng kết/leaderboard hiện
+"đúng/tổng". Nếu game của bạn tính điểm KHÁC (vd Gameshow: điểm theo tốc độ + thưởng bonus), truyền
+thêm trong `ui.finish`:
+- `score` (số): điểm số dùng để XẾP HẠNG (leaderboard đã sort theo `score` rồi thời gian).
+- `scoreText` (chuỗi, vd `"1250"`): khi có, bảng tổng kết + hàng leaderboard hiện NGUYÊN chuỗi này
+  thay cho "đúng/tổng".
+Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đúng). Cài đặt ở `core/scoring.js`
+(`computeResult`/`rankCompare`), `core/leaderboard.js` (`addEntry` lưu `scoreText`), `core/engine.js`
+(hiển thị). **Tương thích ngược tuyệt đối** — mọi game cũ không đổi.
+
+### Cờ template ẩn nhóm Options không hợp lệ
+
+- `tpl.hideLettersOption:true` — ẩn nhóm "Letters on answers" (game không có ô đáp án chữ cái).
+- `tpl.hideTimerOption:true` — ẩn nhóm "Timer" (toàn ván) khi game TỰ QUẢN đồng hồ (vd Gameshow đếm
+  ngược TỪNG CÂU; nếu để engine chạy đồng hồ toàn ván sẽ đá nhau). Nhớ đặt `options.timer="none"` cho
+  game đó (sample + editor) để engine không dựng đồng hồ toàn ván. Có thể mượn `ui.topbarMid` (bật
+  `tpl.inlineTimerBar:true`) để vẽ thanh đếm ngược riêng của game trên cùng hàng với điểm.
+
 ### PRINT — hệ thống in DÙNG CHUNG ở `core/print.js` (v0.7.1)
 
 Print KHÔNG còn viết riêng cho từng template. Nút **Print** ngoài khung gọi `openPrintPopup(activity)`

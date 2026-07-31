@@ -15,15 +15,23 @@ export function computeResult(raw, timeSeconds) {
     correct,
     incorrect,
     total,
-    score: correct,          // điểm cơ bản = số câu đúng
+    // Điểm dùng để XẾP HẠNG. Mặc định = số câu đúng (Quiz và mọi game khác), NHƯNG
+    // một template có thể tự truyền điểm riêng qua raw.score (vd Gameshow: điểm theo
+    // tốc độ + thưởng bonus) để leaderboard xếp & hiển thị theo điểm đó. Tương thích
+    // ngược tuyệt đối: không truyền raw.score thì kết quả y như trước.
+    score: raw.score ?? correct,
+    // (Tuỳ chọn) chuỗi điểm đã định dạng sẵn (vd "1250") — khi có, bảng tổng kết &
+    // leaderboard hiện NGUYÊN chuỗi này thay cho dạng "đúng/tổng".
+    scoreText: raw.scoreText ?? null,
     timeSeconds,
     perQuestion,
     submittedAt: Date.now()
   };
 }
 
-// So sánh 2 kết quả để xếp hạng: đúng nhiều hơn -> hạng cao; hòa thì nhanh hơn -> hạng cao.
+// So sánh 2 kết quả để xếp hạng: điểm cao hơn -> hạng cao; hòa thì nhanh hơn -> hạng cao.
+// (score mặc định = số câu đúng nên với các game cũ hành vi hoàn toàn không đổi.)
 export function rankCompare(a, b) {
-  if (b.correct !== a.correct) return b.correct - a.correct;
+  if (b.score !== a.score) return b.score - a.score;
   return a.timeSeconds - b.timeSeconds;
 }
