@@ -21,6 +21,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 18: OPEN THE BOX — làm lại hiệu ứng chuyển ô số ⇄ ô câu hỏi + bỏ tiếng thừa. ĐÃ COMMIT + PUSH.
+
+Thầy chơi thử và góp ý 3 vòng (tương ứng **đợt 14→15→16 RIÊNG trong** `templates/open-the-box/GHI CHU
+OPEN-THE-BOX.md` — số đợt của template đó đếm riêng, khác số Đợt toàn cục ở file này). Tóm tắt:
+
+1. **Hiệu ứng chuyển ô số ⇄ ô câu hỏi viết lại** (đợt 14): trước đây bấm ô là `render()` XÓA TRẮNG lưới
+   ngay → các ô số khác "biến mất tức thì". Nay lưới + màn câu hỏi **cùng nằm DOM, chồng tuyệt đối** (class
+   `.aw-otb-anim` trên root) nên: MỞ = ô được bấm phóng to từ đúng vị trí ô số + các ô khác **mờ dần** +
+   đáp án trượt vào, cả 3 cùng ~1.2s; ĐÓNG = ngược lại hoàn toàn. Tách hàm `buildBoxGrid`/`buildQuestion`/
+   `setupFit`, thêm `animateOpen`, viết lại `closeCardThen`. **Bẫy đã vá**: `zoomElTo` từng chốt theo
+   `transitionend` của opacity (840ms) làm màn đóng bị CẮT NGANG → đổi chốt theo `transform` (1200ms).
+2. **Chiều đóng: ô số hiện lại MUỘN hơn** (đợt 15): thêm `CLOSE_BOX_FADE_DELAY_MS=400` (giữ ẩn 400ms đầu
+   rồi mới mờ hiện, vẫn kết thúc đúng lúc gỡ màn câu hỏi — không snap). Chiều mở không đổi.
+3. **Bỏ tiếng THỪA khi trả lời SAI** (đợt 16): sai từng phát 2 tiếng (`wrong()` + `tileEliminate()`) → bỏ
+   `tileEliminate()`, chỉ giữ `wrong()` phát ngay lúc bấm.
+
+Không đụng `core/` — mọi CSS đều prefix `.aw-otb-*` (chỉ nạp khi chơi Open the box). Test browser thật
+qua `test.html` bằng `javascript_tool` (đo `getComputedStyle`/chặn `Audio.play` liên tục): cả 2 chiều
+chạy đồng thời đúng số đo, trả lời đúng→tích xanh, hết giờ→GAME OVER, sai chỉ còn 1 tiếng; 0 lỗi console.
+
+**ĐÃ COMMIT + PUSH GitHub** — commit `222dafa` (3 file: `open-the-box.js/.css` + `GHI CHU OPEN-THE-BOX.md`).
+
+> ⚠️ **CHO PHIÊN MỚI**: lúc commit lô này, cây làm việc CÒN các file **CHƯA commit của một phiên khác
+> đang chạy SONG SONG**: `APP_MASTER.md` + `templates/type-the-answer/*` (js/css/GHI CHU). Tôi CỐ Ý
+> không đụng để phiên đó tự lo — **đừng commit nhầm** các file này. `.claude/` là cấu hình phiên cục bộ,
+> cũng bỏ qua. Việc kế tiếp cho Open the box (nếu có): xem đuôi `GHI CHU OPEN-THE-BOX.md` + `APP_MASTER.md`
+> mục 7 (đọc bản mới nhất SAU khi phiên song song commit xong).
+
 ### 31/7/2026 — Đợt 17: TEMPLATE MỚI **TRUE FALSE** (True or false) — build + gộp trang chủ (`built:true`), chờ thầy duyệt.
 
 Template thứ 6. Thầy yêu cầu: "phong cách + màu sắc của các template AWord khác, cách chơi giống act
