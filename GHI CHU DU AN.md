@@ -21,6 +21,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 24: FLYING FRUIT (game thứ 8) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. CHƯA COMMIT.
+
+Dựng lại act Classic của thầy `wordwall.net/resource/116864498` — style **Jungle** (= "Classic" của
+Flying Fruit). Cơ chế: câu hỏi (định nghĩa) ở đỉnh, các đáp án (`word`) bay ngang trên QUẢ
+(kivano/mango/papaya) theo cung ném, chạm quả ĐÚNG → nổ tung nước (sprite 8 khung) + tia + ✓ + điểm +
+sang câu; chạm SAI → ✗ + mất 1 TIM; hết mạng = Game over. Đáp án sai = **random `word` của câu khác**
+(editor kiểu Anagram, thầy chốt). Mô hình dữ liệu `content.items=[{word,clue}]` y hệt Anagram.
+Options: Timer/**Lives**/**Speed**/**Retry**/Shuffle/Show answers.
+- File mới: `templates/flying-fruit/` (flying-fruit.js/.css, ff-sound.js, flying-fruit-editor.js,
+  sample-flying-fruit.js, test.html/test.js, GHI CHU FLYING-FRUIT.md, img/ 15 ảnh, sounds/ 18 mp3).
+- Assets thật của Wordwall (jungle) đã tải + lưu convention ở `AWord-data/Source/{Sound effect,Graphic}/
+  FLYING FRUIT/` (có GHI CHU.md). Art CỐ ĐỊNH, không đổi theo theme (như whack-a-mole). Theme jungle
+  KHÔNG có âm "Go"/"ClockTick".
+- Kỹ thuật: `inlineTimerBar` để vẽ TIM ở `ui.topbarMid`; spawn/gỡ quả bằng setTimeout (không rAF);
+  quả bay = animate `left` + `translateY` con + xoay cháu (tránh bẫy transform+animation); nổ = strip
+  8 khung translateX steps(8). KHÔNG sửa `core/`.
+- CHƯA gộp trang chủ (`core/catalog.js`/`index.html`/`ALL_TEMPLATES` chưa đụng) — chờ thầy duyệt.
+  Chi tiết + đề xuất: `templates/flying-fruit/GHI CHU FLYING-FRUIT.md`.
+
 ### 1/8/2026 — Đợt 23: SPEAKING CARDS (game thứ 7, "mở" đầu tiên) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
 
 *(Chỉ commit `templates/speaking-cards/` + file nhật ký này. KHÔNG `git add -A`. **CHƯA** thêm vào

@@ -1,0 +1,264 @@
+/* =============================================================
+   TEMPLATE: FLYING FRUIT  (prefix .aw-ff-)
+   Jungle art ripped from Wordwall's own theme (teacher's call) — this game
+   keeps a FIXED jungle-night look, it does NOT recolour per theme like the
+   other templates. All in-frame sizes in cqw so the 16:9 stage scales cleanly
+   at fullscreen.
+   ============================================================= */
+
+.aw-ff-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #1a2b1f url("./img/bg.jpg") center/cover no-repeat;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.aw-ff-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3cqw; color: #eaf5e6; text-align: center; padding: 6cqw;
+}
+
+/* ---------- scene decorations (night jungle) ---------- */
+.aw-ff-palms {
+  position: absolute; left: 0; bottom: -1%;
+  width: 100%; z-index: 2;
+  pointer-events: none;
+}
+.aw-ff-toucan {
+  position: absolute; right: 1.5%; top: 3%;
+  width: 12cqw; z-index: 1; pointer-events: none;
+  transform-origin: 60% 100%;
+}
+.aw-ff-butterfly {
+  position: absolute; left: 3%; top: 40%;
+  width: 7cqw; z-index: 3; pointer-events: none;
+}
+.aw-ff-frog {
+  position: absolute; right: 7%; bottom: 3%;
+  width: 12cqw; z-index: 3; pointer-events: none;
+}
+.aw-ff-frogthroat {
+  position: absolute; right: 7%; bottom: 3%;
+  width: 12cqw; z-index: 3; pointer-events: none;
+  opacity: 0;
+}
+.aw-ff-toucan.is-pulse { animation: aw-ff-bob .7s ease-in-out; }
+.aw-ff-butterfly.is-pulse { animation: aw-ff-flutter .7s ease-in-out; }
+.aw-ff-frogthroat.is-pulse { animation: aw-ff-throat .7s ease-in-out; }
+@keyframes aw-ff-bob { 0%,100%{ transform: rotate(0); } 30%{ transform: rotate(-6deg); } 60%{ transform: rotate(4deg); } }
+@keyframes aw-ff-flutter { 0%,100%{ transform: translateX(0) rotate(0); } 50%{ transform: translateX(2cqw) rotate(8deg); } }
+@keyframes aw-ff-throat { 0%,100%{ opacity: 0; } 40%,60%{ opacity: 1; } }
+
+/* ---------- clue banner (the question, top of the frame) ---------- */
+.aw-ff-cluewrap {
+  position: absolute;
+  left: 50%; top: 2.5%;
+  transform: translateX(-50%);
+  width: 92%;
+  z-index: 6;
+  text-align: center;
+  pointer-events: none;
+  --fit: 1;
+}
+.aw-ff-clue {
+  font-size: calc(4.4cqw * var(--fit));
+  font-weight: 800;
+  line-height: 1.08;
+  color: #fffdf5;
+  text-shadow: 0 0.25cqw 0.5cqw rgba(0,0,0,.65), 0 0 0.2cqw rgba(0,0,0,.5);
+  letter-spacing: .01em;
+}
+
+/* ---------- fruit lane ---------- */
+.aw-ff-lane {
+  position: absolute; inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* horizontal mover (animates `left` — NOT transform — so the arc/rotate on the
+   children stay conflict-free; see core "popup jumps" trap) */
+.aw-ff-fly {
+  position: absolute;
+  left: 0; top: 40%;
+  width: 0; height: 0;
+  animation: aw-ff-cross var(--dur, 2600ms) linear forwards;
+}
+@keyframes aw-ff-cross {
+  from { left: var(--x0, -16%); }
+  to   { left: var(--x1, 116%); }
+}
+/* vertical arc (translateY parabola — a thrown fruit) */
+.aw-ff-arc {
+  position: absolute; left: 0; top: 0;
+  animation: aw-ff-arc var(--dur, 2600ms) ease-in-out forwards;
+}
+@keyframes aw-ff-arc {
+  0%   { transform: translateY(6cqw); }
+  45%  { transform: translateY(calc(-1 * var(--peak, 12cqw))); }
+  100% { transform: translateY(10cqw); }
+}
+/* the fruit itself — centred on the anchor with negative margins (no transform
+   centring, so the wobble rotate can't clash), gentle rotate wobble */
+.aw-ff-fruit {
+  position: absolute; left: 0; top: 0;
+  width: 16cqw; height: 12cqw;
+  margin-left: -8cqw; margin-top: -6cqw;
+  pointer-events: auto;
+  cursor: pointer;
+  animation: aw-ff-wobble var(--dur, 2600ms) ease-in-out;
+  filter: drop-shadow(0 0.6cqw 0.6cqw rgba(0,0,0,.4));
+}
+@keyframes aw-ff-wobble {
+  0%   { transform: rotate(calc(-1 * var(--spin, 6deg))); }
+  50%  { transform: rotate(var(--spin, 6deg)); }
+  100% { transform: rotate(calc(-1 * var(--spin, 6deg))); }
+}
+.aw-ff-fruit-img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: contain;
+  -webkit-user-drag: none; user-drag: none;
+  pointer-events: none;
+}
+.aw-ff-word {
+  position: absolute; inset: 12% 8% 18%;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-weight: 800;
+  line-height: 1;
+  color: #1e3e16;
+  -webkit-text-stroke: 0.18cqw #fcf0e0;
+  paint-order: stroke fill;
+  text-transform: uppercase;
+  pointer-events: none;
+  overflow-wrap: anywhere;
+}
+.aw-ff-fruit.is-wrong { animation: aw-ff-shake .32s ease; }
+@keyframes aw-ff-shake {
+  0%,100% { transform: rotate(0) translateX(0); }
+  25% { transform: rotate(-4deg) translateX(-0.8cqw); }
+  75% { transform: rotate(4deg) translateX(0.8cqw); opacity: .55; }
+  100% { opacity: 0; }
+}
+
+/* ---------- explosion (8-frame juice-splat sprite) ---------- */
+.aw-ff-boom {
+  position: absolute;
+  width: 20cqw; aspect-ratio: 417 / 491;
+  transform: translate(-50%, -50%);   /* static centring (not animated) */
+  overflow: hidden;
+  z-index: 8;
+  pointer-events: none;
+}
+.aw-ff-boom-strip {
+  position: absolute; left: 0; top: 0;
+  height: 100%; width: 800%;          /* 8 frames wide */
+  animation: aw-ff-boomrun .56s steps(8) forwards;
+}
+@keyframes aw-ff-boomrun { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+/* ---------- white spark on a correct hit ---------- */
+.aw-ff-spark {
+  position: absolute;
+  width: 16cqw; z-index: 9;
+  pointer-events: none;
+  animation: aw-ff-sparkpop .46s ease-out forwards;
+}
+@keyframes aw-ff-sparkpop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(-10deg); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1.05) rotate(4deg); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.35) rotate(10deg); }
+}
+
+/* ---------- floating tick / cross mark ---------- */
+.aw-ff-flymark {
+  position: absolute;
+  width: 9cqw; z-index: 10;
+  pointer-events: none;
+  animation: aw-ff-markfly .78s ease-out forwards;
+  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0,0,0,.35));
+}
+@keyframes aw-ff-markfly {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.4); }
+  25%  { opacity: 1; transform: translate(-50%,-90%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-150%) scale(1); }
+}
+
+/* ---------- lives (hearts) in ui.topbarMid (inlineTimerBar) ---------- */
+.aw-ff-hearts {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5cqw; width: 100%;
+}
+.aw-ff-heart {
+  font-size: 2.7cqw; line-height: 1;
+  color: #ff5b6e;
+  text-shadow: 0 0.12cqw 0.2cqw rgba(0,0,0,.4);
+  transition: color .2s ease, opacity .2s ease, transform .2s ease;
+}
+.aw-ff-heart.is-lost { color: rgba(255,255,255,.28); transform: scale(.82); }
+
+/* ---------- Options panel extras (sliders) ---------- */
+.aw-ff-optrow { display: flex; align-items: center; gap: 10px; }
+.aw-ff-slider { flex: 1; accent-color: #60a5fa; }
+.aw-ff-optval {
+  min-width: 26px; text-align: center; font-weight: 800;
+  color: var(--aw-text, #223);
+}
+
+/* =============================================================
+   EDITOR (full page, NOT inside the 16:9 stage — plain px units).
+   Reuses core .aw-ed-* chrome; these are flying-fruit-only additions,
+   styled after Wordwall's real "Edit Content" table (like Anagram's).
+   ============================================================= */
+.aw-ff-ed-headrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 6px; }
+.aw-ff-ed-headcols { display: flex; gap: 10px; padding-left: 34px; }
+.aw-ff-ed-headcol { font-size: 12px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #8a97a6; }
+.aw-ff-ed-headcol:first-child { min-width: 170px; }
+
+.aw-ff-ed-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+  background: #fff; border: 1px solid #e3e9f0; border-radius: 12px;
+}
+.aw-ff-ed-row.is-dragging { opacity: .5; }
+.aw-ff-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #3b82f6; }
+.aw-ff-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #3b82f6; }
+.aw-ff-ed-num { font-weight: 800; color: #9aa7b6; min-width: 26px; padding-top: 9px; text-align: right; }
+.aw-ff-ed-box { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aw-ff-ed-word {
+  width: 170px; flex: 0 0 170px;
+  padding: 9px 12px; font-size: 15px; font-weight: 700;
+  border: 1px solid #cfd8e3; border-radius: 9px; outline: none;
+  text-transform: uppercase;
+}
+.aw-ff-ed-clue {
+  flex: 1; min-width: 220px;
+  padding: 9px 12px; font-size: 15px;
+  border: 1px solid #cfd8e3; border-radius: 9px; outline: none;
+}
+.aw-ff-ed-word:focus, .aw-ff-ed-clue:focus { border-color: #3b82f6; }
+.aw-ff-ed-icons { display: flex; gap: 4px; padding-top: 3px; }
+.aw-ff-ed-gap { flex: 1; }
+.aw-ff-ed-iconbtn {
+  appearance: none; border: 1px solid #dbe2ea; background: #fff; cursor: pointer;
+  width: 34px; height: 34px; border-radius: 8px; color: #6b7787;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-ff-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-ff-ed-iconbtn:hover { background: #f2f5f9; }
+.aw-ff-ed-iconbtn.is-drag { cursor: grab; }
+.aw-ff-ed-iconbtn.is-danger:hover { background: #fdecec; color: #dc2626; border-color: #f4b8b8; }
+.aw-ff-ed-iconbtn:disabled { opacity: .4; cursor: default; }
+.aw-ff-ed-addrow {
+  appearance: none; cursor: pointer; width: 100%;
+  padding: 11px; margin-top: 4px;
+  border: 1.5px dashed #c4d0dd; border-radius: 10px;
+  background: #f7fafc; color: #4a5a6a; font-weight: 700; font-size: 15px;
+}
+.aw-ff-ed-addrow:hover { border-color: #3b82f6; color: #3b82f6; }
+.aw-ff-ed-addrow:disabled { opacity: .45; cursor: default; }
