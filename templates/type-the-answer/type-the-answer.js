@@ -27,13 +27,15 @@ function normalize(str) {
   return s.toLowerCase();                                                     // always ignore case
 }
 
-const KBD_ROWS = [
-  ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-  ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  ["z", "x", "c", "v", "b", "n", "m"]
-];
-const KBD_NUMS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-const KBD_PUNCT = [",", ".", "'", "-", "?", "!"];
+// Letters layout (phone-keyboard style, per Teacher Andrew's reference image).
+const KBD_L1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"];
+const KBD_L2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
+const KBD_L3 = ["z", "x", "c", "v", "b", "n", "m"];
+// Numbers / symbols layout (shown when the `numbers` key is on) — kept aligned
+// column-for-column with the letters rows above (10 / 9 / 7 keys).
+const KBD_N1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+const KBD_N2 = ["-", "/", ":", ";", "(", ")", "$", "&", "@"];
+const KBD_N3 = ["!", "+", "=", "*", "%", "#", "_"];
 
 const ttaTemplate = {
   type: "type_the_answer",
@@ -86,6 +88,10 @@ const ttaTemplate = {
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let keyboardVisible = true;         // ON by default every time the act is opened
     let keyboardEl = null;              // current keyboard node (rebuilt each render())
+    let capsOn = false;                 // caps key: uppercase the typed letters (cosmetic — grading ignores case)
+    let numbersMode = false;            // numbers key: swap letters for a numbers/symbols layout
+    let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
+    let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
     // ----- keyboard show/hide button, next to Menu (engine's opt-in slot) -----
@@ -98,6 +104,7 @@ const ttaTemplate = {
       kbdBtn.onclick = () => {
         keyboardVisible = !keyboardVisible;
         if (keyboardEl) keyboardEl.classList.toggle("is-hidden", !keyboardVisible);
+        syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
         updateKbdBtn();
         fitter?.refit();
       };
@@ -108,6 +115,12 @@ const ttaTemplate = {
       kbdBtn.title = keyboardVisible ? "Hide keyboard" : "Show keyboard";
       kbdBtn.setAttribute("aria-label", kbdBtn.title);
       kbdBtn.classList.toggle("is-off", !keyboardVisible);
+    }
+    // Show the outside "Submit Answer" button only when the on-screen keyboard
+    // is hidden — while the keyboard shows, its own blue Submit key is used.
+    function syncSubmitVisibility() {
+      const extSubmit = root.querySelector(".aw-tta-submit");
+      if (extSubmit) extSubmit.style.display = keyboardVisible ? "none" : "";
     }
 
     ui.onSubmit(finish);
@@ -156,16 +169,27 @@ const ttaTemplate = {
 
       card.append(area);
 
-      const kbd = buildKeyboard(() => root.querySelector(".aw-tta-input"));
+      const kbd = buildKeyboard(() => root.querySelector(".aw-tta-input"), st.graded);
       if (!keyboardVisible) kbd.classList.add("is-hidden");
       card.append(kbd);
       keyboardEl = kbd;
 
       root.append(card);
 
+      // The Submit lives INSIDE the keyboard (a blue key next to Space) when the
+      // keyboard is showing; the outside "Submit Answer" button only appears
+      // when the keyboard is hidden (typing on a real keyboard still needs a
+      // button to tap). Do this AFTER the card is in the DOM (root.querySelector
+      // must be able to find the button).
+      syncSubmitVisibility();
+
+      // NOTE: measure the CURRENT keyboard via `keyboardEl` (the live variable),
+      // NOT the `kbd` captured here — rebuildKeyboard() swaps in a fresh node on
+      // caps/numbers/Andrew, and the old `kbd` would then be detached (height 0),
+      // making autoFit think everything fits and skip the shrink (content clips).
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.08,
-        measure: () => promptEl.offsetHeight + area.offsetHeight + (keyboardVisible ? kbd.offsetHeight : 0)
+        measure: () => promptEl.offsetHeight + area.offsetHeight + (keyboardVisible && keyboardEl ? keyboardEl.offsetHeight : 0)
       });
 
       updateNav();
@@ -204,6 +228,16 @@ const ttaTemplate = {
         const doRefit = () => { if (refitDone) return; refitDone = true; fitter?.refit(); };
         revealWrap.addEventListener("transitionend", doRefit, { once: true });
         setTimeout(doRefit, 400);   // fallback — a hidden/backgrounded tab can skip transitionend
+      }
+
+      // If "Andrew help" was glowing on this question, spend it now: the key
+      // dims for the rest of the game (CSS transition on the existing node, so
+      // it fades smoothly rather than snapping via a rebuild).
+      if (andrewGlowing) {
+        andrewGlowing = false;
+        const andrewKey = root.querySelector(".aw-tta-key-andrew");
+        if (andrewKey) { andrewKey.classList.remove("is-glowing"); andrewKey.classList.add("is-used"); }
+        revealWrap?.classList.remove("is-andrew");   // the hint reveal turns into the normal green one
       }
 
       if (st.correct) ui.sound.correct(); else ui.sound.wrong();
@@ -312,38 +346,86 @@ const ttaTemplate = {
       setTimeout(finishPulse, PULSE_MS + 150);
     }
 
-    // ----- on-screen QWERTY keyboard: QWERTY in the middle, numbers on the
-    // left, punctuation on the right — `getInput()` fetches the CURRENT input
-    // element fresh (it's rebuilt on every render()). -----
-    function buildKeyboard(getInput) {
+    // ----- on-screen keyboard (phone style): 4 rows. Letters mode by default;
+    // the `numbers` key swaps the middle for a numbers/symbols layout. Left
+    // column holds the function keys (caps / numbers / Andrew); the bottom row
+    // is Andrew + Space + Submit. `getInput()` fetches the CURRENT input element
+    // fresh (it's rebuilt on every render()). -----
+    function buildKeyboard(getInput, graded) {
       const wrap = el("div", "aw-tta-kbd");
-
-      const nums = el("div", "aw-tta-kbd-side aw-tta-kbd-nums");
-      KBD_NUMS.forEach(ch => nums.append(makeKey(ch, () => insertChar(getInput(), ch))));
-
       const main = el("div", "aw-tta-kbd-main");
-      KBD_ROWS.forEach((letters, ri) => {
-        const rowEl = el("div", "aw-tta-kbd-row");
-        letters.forEach(ch => rowEl.append(makeKey(ch.toUpperCase(), () => insertChar(getInput(), ch))));
-        if (ri === 0) {
-          const bk = makeKey("⌫", () => backspace(getInput()));
-          bk.classList.add("is-wide");
-          rowEl.append(bk);
-        }
-        main.append(rowEl);
-      });
-      const spaceRow = el("div", "aw-tta-kbd-row");
+      const row = () => el("div", "aw-tta-kbd-row");
+
+      if (!numbersMode) {
+        // ----- LETTERS MODE -----
+        const r1 = row();
+        r1.append(makeCharKey("'", getInput));
+        KBD_L1.forEach(ch => r1.append(makeLetterKey(ch, getInput)));
+        r1.append(makeBackspaceKey(getInput));
+        main.append(r1);
+
+        const r2 = row();
+        r2.append(makeCapsKey());
+        KBD_L2.forEach(ch => r2.append(makeLetterKey(ch, getInput)));
+        r2.append(makeCharKey("?", getInput));
+        main.append(r2);
+
+        const r3 = row();
+        r3.append(makeNumbersKey());
+        KBD_L3.forEach(ch => r3.append(makeLetterKey(ch, getInput)));
+        r3.append(makeCharKey(".", getInput));
+        r3.append(makeCharKey(",", getInput));
+        main.append(r3);
+      } else {
+        // ----- NUMBERS / SYMBOLS MODE -----
+        const r1 = row();
+        r1.append(makeCharKey("'", getInput));
+        KBD_N1.forEach(ch => r1.append(makeCharKey(ch, getInput)));
+        r1.append(makeBackspaceKey(getInput));
+        main.append(r1);
+
+        const r2 = row();
+        r2.append(makeCapsKey());   // caps has no effect here, shown disabled
+        KBD_N2.forEach(ch => r2.append(makeCharKey(ch, getInput)));
+        r2.append(makeCharKey("\"", getInput));
+        main.append(r2);
+
+        const r3 = row();
+        r3.append(makeNumbersKey());
+        KBD_N3.forEach(ch => r3.append(makeCharKey(ch, getInput)));
+        r3.append(makeCharKey(".", getInput));
+        r3.append(makeCharKey(",", getInput));
+        main.append(r3);
+      }
+
+      // Bottom row (both modes): Andrew help + a big Space bar + a blue Submit
+      // key. Submit grades the answer, exactly like the outside button.
+      const r4 = el("div", "aw-tta-kbd-row aw-tta-kbd-spacerow");
+      r4.append(makeAndrewKey(graded));
       const spaceKey = makeKey("Space", () => insertChar(getInput(), " "));
       spaceKey.classList.add("aw-tta-kbd-space");
-      spaceRow.append(spaceKey);
-      main.append(spaceRow);
+      const submitKey = makeKey("Submit", () => submitAnswer(getInput().value));
+      submitKey.classList.add("aw-tta-kbd-submit");
+      submitKey.disabled = !!graded;
+      r4.append(spaceKey, submitKey);
+      main.append(r4);
 
-      const punct = el("div", "aw-tta-kbd-side aw-tta-kbd-punct");
-      KBD_PUNCT.forEach(ch => punct.append(makeKey(ch, () => insertChar(getInput(), ch))));
-
-      wrap.append(nums, main, punct);
+      wrap.append(main);
       return wrap;
     }
+
+    // Rebuild just the keyboard node in place (used when caps / numbers / Andrew
+    // change) — keeps the text input, its value and caret untouched.
+    function rebuildKeyboard() {
+      if (!keyboardEl) return;
+      const st = state[index];
+      const fresh = buildKeyboard(() => root.querySelector(".aw-tta-input"), st.graded);
+      if (!keyboardVisible) fresh.classList.add("is-hidden");
+      keyboardEl.replaceWith(fresh);
+      keyboardEl = fresh;
+      fitter?.refit();
+    }
+
     function makeKey(label, onClick) {
       const b = el("button", "aw-tta-key", escapeHtml(label));
       b.type = "button";
@@ -351,6 +433,75 @@ const ttaTemplate = {
       b.onmousedown = e => e.preventDefault();   // keep the input's caret/focus on click
       b.onclick = onClick;
       return b;
+    }
+    // A plain character key (punctuation / number / symbol) — inserts as-is.
+    function makeCharKey(ch, getInput) {
+      return makeKey(ch, () => insertChar(getInput(), ch));
+    }
+    // A letter key — glyph always uppercase (like the image); inserts uppercase
+    // only while caps is on (grading ignores case either way).
+    function makeLetterKey(ch, getInput) {
+      return makeKey(ch.toUpperCase(), () => insertChar(getInput(), capsOn ? ch.toUpperCase() : ch));
+    }
+    function makeBackspaceKey(getInput) {
+      const b = makeKey("⌫", () => backspace(getInput()));
+      b.classList.add("aw-tta-key-back");   // red
+      return b;
+    }
+    // Function key with a small "lit dot" indicator + a text label.
+    function makeFnKey(labelText, extraClass, onClick, disabled) {
+      const b = el("button", "aw-tta-key aw-tta-key-fn " + extraClass);
+      b.type = "button";
+      b.tabIndex = -1;
+      b.onmousedown = e => e.preventDefault();
+      b.append(el("span", "aw-tta-key-dot"), el("span", "aw-tta-key-fnlabel", labelText));
+      if (disabled) b.disabled = true;
+      else if (onClick) b.onclick = onClick;
+      return b;
+    }
+    function makeCapsKey() {
+      // In numbers mode caps does nothing — show it disabled/inactive.
+      const cls = "aw-tta-key-caps" + (capsOn && !numbersMode ? " is-active" : "");
+      return makeFnKey("caps", cls,
+        () => { capsOn = !capsOn; rebuildKeyboard(); }, numbersMode);
+    }
+    function makeNumbersKey() {
+      const cls = "aw-tta-key-numbers" + (numbersMode ? " is-active" : "");
+      return makeFnKey("numbers", cls,
+        () => { numbersMode = !numbersMode; rebuildKeyboard(); }, false);
+    }
+    function makeAndrewKey(graded) {
+      let cls = "aw-tta-key-andrew ";
+      if (!andrewUsed) cls += "is-ready";           // lit dot = still available this game
+      else if (andrewGlowing) cls += "is-glowing";  // bright + halo, until this question is submitted
+      else cls += "is-used";                        // dimmed = help spent for the whole game
+      const canUse = !andrewUsed && !graded;         // can't help a question that's already answered
+      return makeFnKey("Andrew", cls, canUse ? useAndrew : null, !canUse);
+    }
+
+    // "Andrew help" — reveal the correct answer for the CURRENT question so the
+    // student can copy it, and light the Andrew key up (bright + halo). Consumes
+    // the one game-wide use immediately; it dims for good once this question is
+    // submitted (or the student navigates away).
+    function useAndrew() {
+      const st = state[index];
+      if (andrewUsed || st.graded) return;
+      andrewUsed = true;
+      andrewGlowing = true;
+      const it = items[index];
+      const revealWrap = root.querySelector(".aw-tta-revealwrap");
+      const revealText = root.querySelector(".aw-tta-reveal-text");
+      if (revealWrap && revealText) {
+        revealText.textContent = it.acceptedAnswers[0];
+        revealWrap.classList.add("is-open", "is-andrew");
+        let refitDone = false;
+        const doRefit = () => { if (refitDone) return; refitDone = true; fitter?.refit(); };
+        revealWrap.addEventListener("transitionend", doRefit, { once: true });
+        setTimeout(doRefit, 400);
+      }
+      rebuildKeyboard();   // Andrew key now renders is-glowing
+      const inp = root.querySelector(".aw-tta-input");
+      if (inp && !inp.disabled) inp.focus();
     }
     function insertChar(input, ch) {
       if (!input || input.disabled) return;
@@ -396,8 +547,10 @@ const ttaTemplate = {
       anim.onfinish = run;
       setTimeout(run, 220);
     }
-    function goPrev() { if (index > 0) fadeSwap(() => { index--; render(); }); }
-    function goNext() { if (index < total - 1) fadeSwap(() => { index++; render(); }); }
+    // Leaving a question spends any still-glowing Andrew help (it was used, so
+    // it must show dimmed everywhere else).
+    function goPrev() { if (index > 0) fadeSwap(() => { andrewGlowing = false; index--; render(); }); }
+    function goNext() { if (index < total - 1) fadeSwap(() => { andrewGlowing = false; index++; render(); }); }
 
     function finish() {
       if (finished) return;

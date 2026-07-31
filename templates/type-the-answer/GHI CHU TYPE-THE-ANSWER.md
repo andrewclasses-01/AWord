@@ -191,5 +191,65 @@ console suốt quá trình.
   Anagram đã thêm trước đây).
 - Đã test lại `templates/quiz/test.html` sau khi sửa core — vẫn chạy bình thường, 0 lỗi.
 
+### 31/7/2026 — Bàn phím TÔNG TỐI + phím Submit trong bàn phím (⚠️ LOCAL, CHƯA PUSH, chờ thầy duyệt)
+
+Thầy gửi ảnh bàn phím tối kiểu điện thoại và yêu cầu đổi giao diện bàn phím ảo. CHỈ đụng 2 file của
+template (`type-the-answer.js` + `.css`), KHÔNG đụng core.
+
+1. **Đổi màu bàn phím sang tông tối, phím vuông** (`type-the-answer.css`): cả cụm bàn phím có nền tối
+   `#2b2b2e` bo góc; phím nền xám `#48484b`, chữ trắng `#f4f4f5`, bo góc nhỏ (`0.7cqw`), có "gờ" tối
+   `#202022` phía dưới cho ra dáng phím vật lý giống ảnh. Giữ nguyên số bên trái + ký tự bên phải, và
+   phím ⌫ vẫn ở CUỐI HÀNG TRÊN CÙNG (thầy chốt khi được hỏi — không dời xuống hàng 3 như ảnh).
+2. **Thêm phím Submit XANH trong bàn phím** (`type-the-answer.js` `buildKeyboard`): hàng dưới cùng giờ là
+   Space (rộng) + **Submit** ngay bên phải, cùng phong cách phím khác nhưng màu xanh (`--aw-tile-fixed`).
+   Bấm nó chấm điểm y hệt nút "Submit Answer" cũ (`submitAnswer(getInput().value)`); disable khi câu đã chấm.
+3. **Ẩn/hiện nút "Submit Answer" ngoài theo bàn phím** (`syncSubmitVisibility()`): bàn phím ĐANG HIỆN →
+   nút ngoài `display:none` (dùng phím Submit trong bàn phím); ẩn bàn phím → nút ngoài hiện lại (gõ bằng
+   bàn phím thật vẫn cần nút bấm). Gọi trong `render()` (SAU khi `root.append(card)` — bẫy đã bắt: gọi
+   trước lúc card chưa vào DOM thì `root.querySelector` không thấy nút → không ẩn được) và trong
+   `kbdBtn.onclick`.
+4. **Đã test qua trình duyệt thật** (`test.html`, chụp ảnh + đo DOM): nền/màu phím đúng
+   (kbd `rgb(43,43,46)`, phím `rgb(72,72,75)`, chữ trắng, Submit `rgb(59,130,246)`); gõ "green" bằng bàn
+   phím ảo → bấm phím Submit trong bàn phím → ô xanh is-correct + điểm lên 1; bật bàn phím thì nút ngoài
+   ẩn (`display:none`), ẩn bàn phím thì nút ngoài hiện lại ("Submit Answer"). 0 lỗi console.
+5. **Chưa push** — chờ thầy tự chơi duyệt. Nếu ưng: commit + push (nhớ `curl` kiểm chứng theo mục 9
+   APP_MASTER). Điểm có thể tinh chỉnh thêm nếu thầy muốn phím vuông hơn nữa (hiện phím hơi bè ngang).
+
+### 31/7/2026 (tiếp) — Bàn phím kiểu điện thoại: caps / numbers / nút "Andrew help" (⚠️ LOCAL, CHƯA PUSH)
+
+Thầy gửi ảnh bàn phím mới (4 hàng, phím chức năng) + đặc tả nút trợ giúp "Andrew". Đã hỏi 3 câu chốt
+phạm vi trước khi build (1 lần/cả ván · chép đúng vẫn tính điểm · nhãn luôn là "Andrew"). CHỈ đụng 2 file
+template, KHÔNG đụng core.
+
+**Bố cục mới (thay hẳn bàn phím cũ có cột số/ký tự 2 bên):** 4 hàng full-width —
+`' q…p ⌫(đỏ)` / `caps a…l ?` / `numbers z…m . ,` / `Andrew  Space  Submit(xanh)`.
+
+1. **caps** (`makeCapsKey`): bật/tắt nhập chữ HOA (glyph phím luôn HOA như ảnh; chỉ đổi CASE ký tự chèn
+   vào ô — chấm điểm vẫn bỏ qua hoa/thường nên caps thuần trang trí). Bật → **chấm sáng tròn** góc phải
+   phím + nền nâng sáng xanh-xám. Trong chế độ numbers thì caps **disabled** (mờ).
+2. **numbers** (`makeNumbersKey`): đổi cả 3 hàng chữ sang **layout số/ký tự** (`KBD_N1/N2/N3`: hàng số
+   1-0, rồi `- / : ; ( ) $ & @ "`, rồi `! + = * % # _ . ,`). Đang bật → chấm sáng + nền nâng. Bấm lại về
+   chữ. Các phím này chèn ký tự nguyên trạng (`makeCharKey`, đã kiểm `&`/`"` không bị escape sai vì
+   `el()` dùng `innerHTML` + `escapeHtml`).
+3. **Andrew help** (`makeAndrewKey`/`useAndrew`): biến `andrewUsed` (1 lần cho **cả ván**) + `andrewGlowing`
+   (từ lúc bấm tới lúc submit câu đó). Chưa dùng → **chấm sáng tròn** (còn lượt). Bấm → hiện đáp án đúng
+   ở khối reveal, màu **hổ phách** kèm nhãn "Andrew ➜ …" (class `.is-andrew`), đồng thời phím Andrew
+   **sáng vàng + hào quang nhấp nháy** (`@keyframes aw-tta-andrew-halo`). HS chép đáp án gõ vào → Submit
+   (chép đúng **vẫn cộng điểm** như thường; sai vẫn sai). Ngay sau submit → phím Andrew **tối lại**
+   (`is-used`, transition mượt) và **khóa cả ván** (câu sau vẫn is-used, mất chấm sáng). Rời câu chưa
+   submit cũng coi như đã tiêu lượt (`goPrev/goNext` set `andrewGlowing=false`).
+4. **Giữ nguyên đợt trước**: phím Submit xanh trong bàn phím + ẩn/hiện nút "Submit Answer" ngoài theo bàn phím.
+5. **BẪY THẬT đã bắt + sửa (quan trọng)**: `rebuildKeyboard()` thay node bàn phím khi bấm caps/numbers/
+   Andrew, nhưng hàm `measure` của `autoFit` (tạo trong `render()`) lại **đóng kín (closure) biến `kbd`
+   node CŨ** → sau khi thay, node cũ rời DOM (`offsetHeight=0`) → autoFit tưởng vừa khung → KHÔNG thu nhỏ
+   → khi bấm Andrew (reveal mở, bàn phím 4 hàng) thì **tràn: dòng đầu câu hỏi bị cắt trên + hàng Submit bị
+   cắt dưới**. Sửa: `measure` đo `keyboardEl` (biến sống, cập nhật mỗi lần rebuild) thay vì `kbd`. Đo lại →
+   khớp khung hoàn hảo.
+6. **Đã test thật qua trình duyệt** (chụp ảnh + đo DOM): layout khớp ảnh; caps bật→"G", tắt→"r"; numbers
+   ra đúng số/ký tự ("Gr5@"); Andrew: chấm sáng→bấm→hiện "Andrew ➜ went" + phím vàng rực→gõ "went"→Submit
+   → ô xanh is-correct + điểm 0→1 + Andrew `is-used` tối + khóa; sang câu 2 Andrew vẫn is-used/disabled/
+   mất chấm. Fit khớp khung (không còn cắt). 0 lỗi console suốt quá trình.
+7. **Chưa push** — chờ thầy chơi duyệt. File đụng: `type-the-answer.js` + `type-the-answer.css` (template).
+
 ## ĐỀ XUẤT SỬA CORE (nếu có)
 (trống — 2 thay đổi core ở trên đã LÀM rồi, không phải đề xuất chờ xử lý.)

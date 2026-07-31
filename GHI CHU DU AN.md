@@ -21,6 +21,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 19: TYPE THE ANSWER — bàn phím ảo kiểu điện thoại (caps / numbers) + nút trợ giúp "Andrew help". ĐÃ COMMIT + PUSH.
+
+Thầy chơi thử bàn phím và góp ý 2 vòng. **Chỉ đụng 2 file template** `templates/type-the-answer/type-the-answer.js`
++ `.css` — KHÔNG đụng core. Chi tiết đầy đủ + BẪY: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`
+(2 mục cuối ngày 31/7). Tóm tắt:
+
+1. **Vòng 1 — bàn phím tông tối, phím vuông** (theo ảnh thầy gửi): nền `#2b2b2e`, phím xám `#48484b` chữ
+   trắng, bo góc nhỏ + gờ tối. Thêm **phím Submit XANH ngay trong bàn phím** (hàng dưới, bên phải Space);
+   khi bàn phím HIỆN thì ẩn nút "Submit Answer" ngoài, ẩn bàn phím thì nút ngoài hiện lại (`syncSubmitVisibility`).
+
+2. **Vòng 2 — bố cục 4 hàng kiểu điện thoại + 3 phím chức năng**:
+   `' q…p ⌫(đỏ)` / `caps a…l ?` / `numbers z…m . ,` / `Andrew  Space  Submit`.
+   - **caps**: nhập chữ HOA + chấm sáng tròn khi bật (thuần trang trí — chấm điểm vẫn bỏ qua hoa/thường).
+   - **numbers**: đổi 3 hàng chữ sang layout số/ký tự cơ bản, chấm sáng khi bật, caps mờ đi.
+   - **Andrew help** (dùng **1 lần cho CẢ VÁN**): chưa dùng = chấm sáng; bấm → hiện đáp án đúng (khối reveal
+     màu hổ phách "Andrew ➜ …") + phím sáng vàng rực + hào quang nhấp nháy; HS chép đáp án → Submit
+     (chép đúng **vẫn cộng điểm**, sai vẫn sai); ngay sau Submit → Andrew tối lại + khóa hết ván.
+
+3. **BẪY THẬT đã bắt + sửa**: `rebuildKeyboard()` thay node bàn phím (caps/numbers/Andrew) nhưng `measure`
+   của `autoFit` đóng kín biến `kbd` node CŨ (rời DOM → cao 0) → autoFit không thu nhỏ → bấm Andrew (reveal
+   mở, 4 hàng) thì tràn khung (cắt câu hỏi + nút Submit). Sửa: `measure` đo `keyboardEl` (biến sống).
+
+4. **Đã test thật qua trình duyệt** (chụp ảnh + đo DOM): layout khớp ảnh; caps/numbers/Andrew đủ chu trình;
+   fit khớp khung sau khi sửa; 0 lỗi console. **Commit sạch chỉ 3 file type-the-answer** — cố ý KHÔNG add
+   `APP_MASTER.md` (đang có phiên khác viết lại mục 0b BÀN GIAO song song) và `.claude/` (config dev cục bộ).
+
 ### 31/7/2026 — Đợt 18: OPEN THE BOX — làm lại hiệu ứng chuyển ô số ⇄ ô câu hỏi + bỏ tiếng thừa. ĐÃ COMMIT + PUSH.
 
 Thầy chơi thử và góp ý 3 vòng (tương ứng **đợt 14→15→16 RIÊNG trong** `templates/open-the-box/GHI CHU

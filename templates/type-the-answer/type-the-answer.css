@@ -57,6 +57,14 @@
   font-size: calc(2.2cqw * var(--fit));
   padding-bottom: calc(0.8cqw * var(--fit));
 }
+/* When the reveal was opened by "Andrew help" (a hint before submitting), it
+   shows amber instead of the wrong-answer green, and carries a little label. */
+.aw-tta-revealwrap.is-andrew .aw-tta-reveal-text { color: #f59e0b; }
+.aw-tta-revealwrap.is-andrew .aw-tta-reveal-text::before {
+  content: "Andrew ➜ ";
+  font-weight: 800;
+  color: #f59e0b;
+}
 
 .aw-tta-inputrow { width: 80%; }
 .aw-tta-input {
@@ -123,47 +131,131 @@
 }
 
 /* =============================================================
-   ON-SCREEN KEYBOARD — QWERTY in the middle (60% width), numbers on the
-   left, punctuation on the right. Toggled via the icon button engine.js
-   places next to Menu (see `hasKeyboardToggle`/`ui.kbdSlot`).
+   ON-SCREEN KEYBOARD — dark tone, square keys, phone-style layout (31/7/2026
+   redesign per Teacher Andrew's reference image). Four full-width rows:
+     1: '  q…p  ⌫(red)
+     2: caps  a…l  ?
+     3: numbers  z…m  .  ,
+     4: Andrew  Space  Submit(blue)
+   `numbers` swaps rows 1–3 for a numbers/symbols layout. `caps`, `numbers` and
+   `Andrew` are function keys with a small "lit dot" state indicator.
+   Toggled via the icon button engine.js places next to Menu.
    ============================================================= */
 .aw-tta-kbd {
   width: 100%;
-  display: flex; align-items: flex-start; justify-content: center;
-  gap: calc(1.4cqw * var(--fit));
-  margin-top: calc(2cqw * var(--fit));
+  display: flex; justify-content: center;
+  margin-top: calc(1.6cqw * var(--fit));
+  padding: calc(1.2cqw * var(--fit));
+  background: #2b2b2e;
+  border-radius: calc(1.4cqw * var(--fit));
+  box-shadow: 0 0.5cqw 1.4cqw rgba(0,0,0,.25);
   flex: 0 0 auto;
 }
 .aw-tta-kbd.is-hidden { display: none; }
 
-.aw-tta-kbd-main { flex: 0 0 60%; display: flex; flex-direction: column; gap: calc(0.6cqw * var(--fit)); }
-.aw-tta-kbd-row { display: flex; gap: calc(0.5cqw * var(--fit)); }
-.aw-tta-kbd-row:nth-child(2) { padding-left: 3%; }
-.aw-tta-kbd-row:nth-child(3) { padding-left: 6%; }
+.aw-tta-kbd-main { width: 100%; display: flex; flex-direction: column; gap: calc(0.7cqw * var(--fit)); }
+.aw-tta-kbd-row { display: flex; gap: calc(0.6cqw * var(--fit)); }
 
-.aw-tta-kbd-side {
-  flex: 0 0 15%;
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: calc(0.5cqw * var(--fit));
-  align-content: flex-start;
-}
-
+/* dark, square keys — light text on medium-grey caps, small radius, a thin
+   darker "lip" underneath so they read as physical keys like the image. */
 .aw-tta-key {
   flex: 1;
-  width: 100%;
+  min-width: 0;
   font-family: inherit;
-  font-weight: 700;
-  font-size: calc(1.5cqw * var(--fit));
-  color: var(--aw-text);
-  background: #fff;
+  font-weight: 600;
+  font-size: calc(1.6cqw * var(--fit));
+  color: #f4f4f5;
+  background: #48484b;
   border: 0;
-  border-radius: calc(var(--aw-tile-radius, 1cqw) * 0.6);
-  box-shadow: var(--aw-tile-shadow, 0 0.3cqw 0 rgba(0,0,0,.15));
-  padding: calc(0.9cqw * var(--fit)) 0;
+  border-radius: calc(0.7cqw * var(--fit));
+  box-shadow: 0 0.28cqw 0 #202022;
+  padding: calc(1.1cqw * var(--fit)) 0;
   cursor: pointer;
   user-select: none;
+  transition: filter .08s ease;
 }
-.aw-tta-key:hover { filter: brightness(1.04); }
-.aw-tta-key:active { transform: translateY(0.2cqw); box-shadow: 0 0.1cqw 0 rgba(0,0,0,.2); }
-.aw-tta-key.is-wide { flex: 1.7; }
-.aw-tta-kbd-space { width: 100%; }
+.aw-tta-key:hover { filter: brightness(1.14); }
+.aw-tta-key:active { transform: translateY(0.24cqw); box-shadow: 0 0.06cqw 0 #202022; }
+.aw-tta-key:disabled { cursor: default; }
+
+/* red backspace, top-right of row 1 */
+.aw-tta-key-back {
+  flex: 1.5;
+  background: #b91c1c;
+  box-shadow: 0 0.28cqw 0 #7f1212;
+  font-size: calc(1.9cqw * var(--fit));
+}
+.aw-tta-key-back:active { box-shadow: 0 0.06cqw 0 #7f1212; }
+
+/* ---- function keys (caps / numbers / Andrew): wider, smaller label, a lit
+   dot indicator centred near the top that only shows in the relevant state. */
+.aw-tta-key-fn {
+  position: relative;
+  flex: 1.8;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: calc(0.7cqw * var(--fit)) calc(0.9cqw * var(--fit));
+}
+.aw-tta-key-fnlabel { font-size: calc(1.25cqw * var(--fit)); font-weight: 700; }
+.aw-tta-key-dot {
+  display: none;
+  position: absolute; top: calc(1cqw * var(--fit)); right: calc(0.9cqw * var(--fit));
+  width: calc(0.95cqw * var(--fit)); height: calc(0.95cqw * var(--fit));
+  border-radius: 50%;
+  background: #ffd54a;
+  box-shadow: 0 0 calc(0.5cqw * var(--fit)) #ffd54a, 0 0 calc(1.1cqw * var(--fit)) #ffb300;
+  animation: aw-tta-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes aw-tta-dot-pulse {
+  0%, 100% { opacity: .55; transform: scale(.85); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+/* dot shows: caps ON, numbers ON, or Andrew still AVAILABLE */
+.aw-tta-key-caps.is-active .aw-tta-key-dot,
+.aw-tta-key-numbers.is-active .aw-tta-key-dot,
+.aw-tta-key-andrew.is-ready .aw-tta-key-dot { display: block; }
+/* an active caps/numbers key also lifts to a lighter blue-grey */
+.aw-tta-key-caps.is-active, .aw-tta-key-numbers.is-active { background: #5a6b86; }
+/* dim ONLY the caps key when it's inert (numbers mode) and the Andrew key when
+   it's still "ready" but the current question is already answered — never dim
+   the glowing state, which sets `disabled` too but must stay bright. */
+.aw-tta-key-caps:disabled { opacity: .5; }
+.aw-tta-key-andrew.is-ready:disabled { opacity: .55; }
+
+/* ---- Andrew help key states ----
+   ready: normal look + lit dot.  glowing: bright gold, sparkling halo (just
+   pressed, answer revealed, until submit).  used: dimmed for the rest of the
+   game so it's clearly spent. */
+.aw-tta-key-andrew.is-ready .aw-tta-key-fnlabel { color: #ffe08a; }
+.aw-tta-key-andrew.is-glowing {
+  color: #3a2a00;
+  background: linear-gradient(180deg, #ffe89a, #ffc531);
+  box-shadow: 0 0.28cqw 0 #b8860b;
+  animation: aw-tta-andrew-halo 1s ease-in-out infinite;
+}
+.aw-tta-key-andrew.is-glowing .aw-tta-key-fnlabel {
+  color: #4a3400; font-weight: 800;
+  text-shadow: 0 0 calc(0.6cqw * var(--fit)) #fff8d0;
+}
+@keyframes aw-tta-andrew-halo {
+  0%, 100% { box-shadow: 0 0.28cqw 0 #b8860b, 0 0 calc(0.6cqw * var(--fit)) #ffd54a, 0 0 calc(1.6cqw * var(--fit)) rgba(255,193,7,.55); }
+  50%      { box-shadow: 0 0.28cqw 0 #b8860b, 0 0 calc(1.4cqw * var(--fit)) #ffe07a, 0 0 calc(3.2cqw * var(--fit)) rgba(255,193,7,.85); }
+}
+.aw-tta-key-andrew.is-used {
+  background: #333335;
+  box-shadow: 0 0.28cqw 0 #1b1b1d;
+  transition: background .5s ease, color .5s ease, opacity .5s ease;
+}
+.aw-tta-key-andrew.is-used .aw-tta-key-fnlabel { color: #6a6a6d; }
+
+/* bottom row: Andrew + wide Space + blue Submit key (same shape, blue like the
+   old outside button). The outside "Submit Answer" button is hidden while the
+   keyboard shows; it returns when the keyboard is toggled off. */
+.aw-tta-kbd-space { flex: 6; }
+.aw-tta-kbd-submit {
+  flex: 2.2;
+  color: #fff;
+  background: var(--aw-tile-fixed, #3b82f6);
+  box-shadow: 0 0.28cqw 0 var(--aw-tile-fixed-dark, #2563eb);
+}
+.aw-tta-kbd-submit:active { box-shadow: 0 0.06cqw 0 var(--aw-tile-fixed-dark, #2563eb); }
+.aw-tta-kbd-submit:disabled { opacity: .4; }
