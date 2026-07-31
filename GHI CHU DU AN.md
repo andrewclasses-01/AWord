@@ -21,6 +21,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 25: MAZE CHASE (game thứ 9) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH (chưa lên trang chủ).
+
+Dựng lại act Classic của thầy `wordwall.net/resource/116866716` — style **Space** (= "Classic" của Maze
+chase, thầy chốt). Cơ chế kiểu Pac-Man: câu hỏi ở đỉnh, các đáp án nằm trên các BỆ (pad) rải khắp MÊ
+CUNG vũ trụ; lái chú robot phi hành gia (phím mũi tên/WASD + D-pad cảm ứng + vuốt) tới bệ ĐÚNG trong khi
+NÉ các robot địch đuổi theo. Tới bệ đúng → ✓ xanh + điểm + sang câu; tới bệ SAI → ✗ đỏ + bệ biến mất +
+mất 1 TIM; bị địch chạm → mất 1 TIM + văng về điểm xuất phát (có khiên tạm); hết mạng = Game over. Mô
+hình dữ liệu `content.questions=[{question,answers:[{text,correct}]}]` y hệt Quiz.
+Options: Timer (Count up mặc định) / Shuffle / Show answers + riêng **Lives** + **Difficulty (1–10** =
+số/tốc độ địch) qua `buildExtraOptions`.
+- File mới: `templates/maze-chase/` (maze-chase.js/.css, mc-sound.js, maze-chase-editor.js [bọc quiz-editor
+  giữ type], sample-maze-chase.js, test.html/test.js, GHI CHU MAZE-CHASE.md, img/ 24 ảnh, sounds/ 29 mp3).
+- Assets THẬT của Wordwall (theme Space) đã tải + lưu convention ở `AWord-data/Source/{Sound effect,Graphic}/
+  MAZE CHASE/` (có GHI CHU.md). Art CỐ ĐỊNH, không đổi theo theme (như whack-a-mole/flying-fruit).
+- Kỹ thuật: mê cung sinh ngẫu nhiên (DFS + braid thành mê cung có vòng) mỗi câu, vẽ bằng chính ảnh ô hành
+  lang của Wordwall (map openings→piece); di chuyển ô-sang-ô bằng **setInterval** (KHÔNG rAF — luật lõi),
+  mượt nhờ CSS transition `left/top`; địch đuổi bằng BFS + chút ngẫu nhiên (interval riêng); sprite 4×7
+  đổi khung/hàng theo hướng; ân hạn 1.9s đầu câu + giãn địch khi hồi sinh để công bằng. Chữ pad/câu co
+  bằng `fitOnce` (cả rộng+cao) vì mọi thứ dùng `cqw`. KHÔNG sửa `core/`.
+- Ánh xạ âm CHÍNH XÁC từ `themejson/space/audios.json` (Type names: MazeChaseAnswerRight/PlayerFootsteps/
+  EnemyAttack…). 5 âm kết-thúc generic (TimesUp/GameCompleted/GameOver/Restart/Leaderboard) KHÔNG nạp
+  được (game lazy-load, nút Play trong canvas WebGL không script được) → dùng fanfare sẵn của engine +
+  âm maze thay thế (clocktick cho cảnh báo 5s, playerappear cho restart). Ghi rõ trong GHI CHU.
+- Tự test trình duyệt thật (devserver 5514): READY→maze render đúng→di chuyển→địch đuổi→tới bệ đúng ghi
+  điểm (driver tự động né địch đạt 3/8 rồi hết mạng)→Game over tổng kết + leaderboard→Show answers (câu
+  sai hiện ✗ + đáp án đúng). 0 lỗi console.
+- CHƯA gộp trang chủ (`core/catalog.js`/`index.html` chưa đụng) — chờ thầy duyệt. ĐÃ commit + push
+  (chỉ add đúng file Maze chase + 2 file docs của mình; Flying Fruit đợt 24 đã commit trước ở `84ea7ba`).
+
 ### 1/8/2026 — Đợt 24: FLYING FRUIT (game thứ 8) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. CHƯA COMMIT.
 
 Dựng lại act Classic của thầy `wordwall.net/resource/116864498` — style **Jungle** (= "Classic" của

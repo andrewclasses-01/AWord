@@ -1,0 +1,135 @@
+/* =============================================================
+   MAZE CHASE — fixed SPACE look (this IS the template's "Classic").
+   All classes prefixed .aw-mc-. Sizing in cqw so fullscreen keeps ratio.
+   Art is Wordwall's own Space theme (self-contained under ./img).
+   ============================================================= */
+
+.aw-mc-stage {
+  position: absolute; inset: 0; overflow: hidden;
+  font-family: "Baloo 2", system-ui, sans-serif;
+  background: radial-gradient(120% 90% at 70% 0%, #4a1673 0%, #2b0767 45%, #180a3a 100%);
+  --mc-cols: 15; --mc-rows: 7;
+  color: #fff; user-select: none; touch-action: none;
+}
+
+/* ---- background nebula + drifting planets ---- */
+.aw-mc-bg { position: absolute; inset: 0; overflow: hidden; }
+.aw-mc-bg::before {
+  content: ""; position: absolute; inset: 0;
+  background: url("./img/bg.webp") center/cover no-repeat;
+  opacity: .55;
+}
+.aw-mc-planet { position: absolute; pointer-events: none; will-change: transform; }
+.aw-mc-sun    { width: 26cqw; top: -9cqw; right: -4cqw; opacity: .9;
+                animation: aw-mc-float 13s ease-in-out infinite; }
+.aw-mc-planet-big   { width: 17cqw; bottom: -5cqw; left: 4cqw; opacity: .8;
+                      animation: aw-mc-float 17s ease-in-out infinite reverse; }
+.aw-mc-planet-green { width: 6cqw; top: 20cqw; left: 3cqw; opacity: .85;
+                      animation: aw-mc-float 11s ease-in-out infinite; }
+@keyframes aw-mc-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-1.4cqw); } }
+
+/* ---- top HUD: question + lives ---- */
+.aw-mc-hud {
+  position: absolute; top: 1.4cqw; left: 2cqw; right: 2cqw; height: 12cqw;
+  display: flex; align-items: center; gap: 1.6cqw; z-index: 5;
+}
+.aw-mc-question {
+  flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center;
+  min-height: 8.6cqw; padding: 1cqw 2.4cqw;
+  background: linear-gradient(#3a1e75, #271256);
+  border: .3cqw solid #7b5bd6; border-radius: 3cqw;
+  box-shadow: 0 .8cqw 0 rgba(0,0,0,.35), inset 0 0 2cqw rgba(126,90,214,.5);
+}
+.aw-mc-qtext {
+  --fit: 1; font-weight: 800; text-align: center; line-height: 1.15;
+  font-size: calc(3.6cqw * var(--fit));
+  text-shadow: 0 .25cqw 0 rgba(0,0,0,.35);
+}
+.aw-mc-lives { display: flex; gap: .5cqw; flex-shrink: 0; }
+.aw-mc-heart {
+  font-size: 5cqw; line-height: 1; color: #ff5a7a;
+  text-shadow: 0 .3cqw 0 #8a1230, 0 0 1.2cqw rgba(255,90,122,.6);
+}
+.aw-mc-heart.is-empty { color: #4a3a6a; text-shadow: none; opacity: .55; }
+
+/* ---- maze field ---- */
+.aw-mc-field {
+  position: absolute; top: 14.5cqw; left: 2cqw; right: 2cqw; bottom: 2cqw;
+  z-index: 3;
+}
+.aw-mc-grid, .aw-mc-answers, .aw-mc-actors { position: absolute; inset: 0; }
+.aw-mc-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 15), 1fr);
+  grid-template-rows: repeat(var(--rows, 7), 1fr);
+}
+.aw-mc-cell {
+  background-repeat: no-repeat; background-position: center;
+  background-size: 101% 101%;   /* hairline overlap hides seams */
+}
+
+/* items positioned by grid cell (--c / --r), glide via left/top transition */
+.aw-mc-pad, .aw-mc-player, .aw-mc-enemy {
+  position: absolute;
+  left: calc((var(--c, 0) + .5) * (100% / var(--mc-cols)));
+  top:  calc((var(--r, 0) + .5) * (100% / var(--mc-rows)));
+  transform: translate(-50%, -50%);
+}
+
+/* ---- answer pads ---- */
+.aw-mc-pad {
+  width: 8.6cqw; height: 5.7cqw;
+  background: url("./img/floor-neutral.png") center/100% 100% no-repeat;
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity .25s ease;
+}
+.aw-mc-pad-txt {
+  --fit: 1; width: 86%; text-align: center; line-height: 1.25; white-space: nowrap;
+  font-weight: 800; color: #fff; font-size: calc(2cqw * var(--fit));
+  text-shadow: 0 .2cqw .3cqw rgba(0,0,0,.7); overflow: hidden;
+}
+.aw-mc-pad-mark {
+  position: absolute; font-size: 4.4cqw; font-weight: 900; opacity: 0;
+}
+.aw-mc-pad.is-correct .aw-mc-pad-txt, .aw-mc-pad.is-wrong .aw-mc-pad-txt { opacity: 0; }
+.aw-mc-pad.is-correct .aw-mc-pad-mark { color: #eafff0; opacity: 1;
+  text-shadow: 0 0 1.4cqw #33ff77; animation: aw-mc-pop .35s cubic-bezier(.22,.9,.3,1); }
+.aw-mc-pad.is-wrong .aw-mc-pad-mark { color: #fff; opacity: 1;
+  text-shadow: 0 0 1.4cqw #ff4a4a; animation: aw-mc-pop .35s cubic-bezier(.22,.9,.3,1); }
+@keyframes aw-mc-pop { from { transform: scale(.3); } to { transform: scale(1); } }
+
+/* ---- sprites (spritesheet 4 cols x 7 rows) ---- */
+.aw-mc-player, .aw-mc-enemy {
+  width: 8cqw; height: 8cqw; background-repeat: no-repeat;
+  background-size: 400% 700%;
+  background-position: calc(var(--f, 0) / 3 * 100%) calc(var(--row, 0) / 6 * 100%);
+  transition: left .16s linear, top .16s linear;
+  z-index: 4; filter: drop-shadow(0 .5cqw .4cqw rgba(0,0,0,.5));
+}
+.aw-mc-player { background-image: url("./img/player.png"); z-index: 6; }
+.aw-mc-player.is-hit { animation: aw-mc-blink .18s steps(1) infinite; }
+@keyframes aw-mc-blink { 50% { opacity: .25; } }
+
+.aw-mc-enemy {
+  transition: left .2s linear, top .2s linear;
+  background-position: calc(var(--f, 0) / 3 * 100%) 0%;   /* row 0 */
+}
+.aw-mc-enemy.is-red   { background-image: url("./img/enemy-red.png"); }
+.aw-mc-enemy.is-green { background-image: url("./img/enemy-green.png"); }
+.aw-mc-enemy.is-flip  { transform: translate(-50%, -50%) scaleX(-1); }
+
+/* ---- on-screen D-pad (touch / TOMKO) ---- */
+.aw-mc-dpad {
+  position: absolute; right: 2.4cqw; bottom: 2.4cqw; z-index: 8;
+  display: grid; grid-template-columns: repeat(3, 7cqw); grid-template-rows: repeat(3, 7cqw);
+  gap: .4cqw; opacity: .9;
+}
+.aw-mc-dbtn {
+  border: none; border-radius: 1.6cqw; color: #fff; font-size: 3.4cqw; cursor: pointer;
+  background: linear-gradient(#5a3db0, #3d2680);
+  box-shadow: 0 .6cqw 0 #241452; display: flex; align-items: center; justify-content: center;
+  -webkit-tap-highlight-color: transparent; touch-action: none;
+}
+.aw-mc-dbtn:active { transform: translateY(.4cqw); box-shadow: 0 .2cqw 0 #241452; }
+.aw-mc-dbtn.is-u { grid-area: 1 / 2; } .aw-mc-dbtn.is-l { grid-area: 2 / 1; }
+.aw-mc-dbtn.is-d { grid-area: 3 / 2; } .aw-mc-dbtn.is-r { grid-area: 2 / 3; }
