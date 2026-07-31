@@ -67,6 +67,18 @@ Time, leaderboard) · Show answers hiện đúng review từng câu · panel Opt
 ## Việc để lại (chờ thầy)
 - 🎤/🖼️ voice+image cho từng đáp án (Wordwall có layout flyingfruit-soundimage/textimage) — MVP hiện
   text-only, để bàn sau (giống Anagram/Crossword).
-- Gộp trang chủ (`core/catalog.js` built:true + content editor dispatch + thêm vào `ALL_TEMPLATES` của
-  engine) khi thầy chốt.
-- Nhạc nền jungle (đã có file) nếu thầy muốn bật.
+- Nhạc nền jungle (đã có `sounds/music.mp3`) nếu thầy muốn bật.
+
+### ➡️ GỘP TRANG CHỦ — checklist chính xác cho session sau (khi thầy chốt)
+Làm ĐÚNG 4 chỗ này (đối chiếu cách `anagram` đã làm), rồi `curl` kiểm chứng bản live:
+1. **`core/catalog.js`** (~dòng 10): thêm 1 mục
+   `{ type: "flying_fruit", label: "Flying fruit", built: true, ... }` (chép khuôn mục `anagram`).
+2. **`main.js`** (~dòng 44): thêm `import "./templates/flying-fruit/flying-fruit.js";`
+   — dòng import này đăng ký cả template LẪN content editor (`edit: openFlyingFruitEditor`).
+3. **`manifest.js`**: thêm mục `{ type:"flying_fruit", load: ()=>import("./templates/flying-fruit/flying-fruit.js"),
+   sample: ()=>import("./templates/flying-fruit/sample-flying-fruit.js") }`.
+4. **`index.html`**: thêm `<link rel="stylesheet" href="templates/flying-fruit/flying-fruit.css" />`.
+- Kiểm thêm `ALL_TEMPLATES` trong `core/engine.js` (panel Template) — nếu có danh sách hard-code thì thêm
+  `flying_fruit` để hiện "current" thay vì "coming soon".
+- Sau khi push: `curl` bản live kiểm `catalog.js` + `index.html` đã có flying-fruit (Pages cập nhật file
+  KHÔNG đồng thời — xem APP_MASTER mục 9).
