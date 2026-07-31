@@ -21,6 +21,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 22: BALLOON POP (game thứ 6) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
+
+*(Chỉ commit `templates/balloon-pop/` + file nhật ký này. KHÔNG `git add -A`. **CHƯA** thêm vào
+`core/catalog.js`/`index.html`/`manifest.js` — chờ thầy chốt rồi mới gộp trang chủ.)*
+
+Dựng act Balloon Pop của thầy (`wordwall.net/resource/116864480/baloon-pop`), style **Wild West**
+(= **"Classic"** trong AWord — thầy chốt qua AskUserQuestion: **bản đầy đủ giống Wordwall**, điều khiển
+**bấm/chạm để pop**). Ghi chú template: `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
+
+1. **Lấy nguồn** (Claude in Chrome): **27 mp3** → `AWord-data\Source\Sound effect\BALOON POP` (22 thư mục
+   trạng thái đánh số + GHI CHU). Cách lấy: đọc `themejson/western2/audios.json` trên CDN + đối chiếu file
+   game THỰC preload/tải (Performance API). Balloon Pop **KHÔNG dùng** clocktick/chip/nhạc nền — nhịp "đồng
+   hồ" là tiếng **tàu chạy** (TrainChug/TrainTime); báo đúng/sai bằng cargo **land/break**.
+2. **Cơ chế** (đọc Edit Content): toa tàu hiện 1 ĐỊNH NGHĨA · khinh khí cầu trôi mang KEYWORD · pop blimp
+   khớp → keyword rơi thành thùng cargo lên tàu (đúng: tàu chạy tiếp; sai: vỡ). Dữ liệu
+   `content.items=[{keyword,definition}]` (min5/max100, Swap Columns, có ảnh). Options: Timer/Speed/Levels/
+   Bonuses(ExtraTime/Points/x2)/Show answers.
+3. **Template** `templates/balloon-pop/` (self-contained `sounds/`): **1 vòng lặp rAF** duy nhất (blimp +
+   đồng hồ + cargo, theo delta clamp 100ms → tab ẩn thì TẠM DỪNG cả game, không hết giờ lúc ẩn). Đồng hồ
+   RIÊNG + thanh tiến độ ở `topbarMid` (`inlineTimerBar:true`). `ui.finish({title,review,...})` như
+   open-the-box. **Đồ họa vẽ 100% CSS/SVG** (sa mạc parallax + tàu hơi nước đỏ + khinh khí cầu bạc + biển
+   gỗ + máy bay) — KHÔNG chép ảnh Wordwall (khác whack-a-mole vốn tải ảnh gốc; chọn CSS/SVG để tránh bản
+   quyền). Sizing `cqw`; blimp định vị `left%/top%` của scene (tránh bẫy transform-%); crate `animate()` có
+   `setTimeout` dự phòng; fx bake `translate(-50%)` vào keyframe (§3.5). Class tiền tố `.aw-bp-`. KHÔNG sửa core.
+4. **Editor** `balloon-pop-editor.js` (mẫu anagram-editor): bảng Keyword | Matching definition + Swap
+   Columns + dán Excel 2 cột + kéo sắp xếp; nút ảnh để placeholder ("coming soon").
+5. **Test** (`test.html`): pane ẩn thì rAF treo nên test LOGIC bằng patch rAF thành bộ bước-khung + remount
+   → xác nhận spawn/trôi/đồng hồ, **pop đúng (+điểm+lên level+tàu chạy)**, **pop sai (vỡ, không điểm)**,
+   **hết giờ → panel TIME'S UP** (Score/Leaderboard/Show answers/Start again), Show answers đúng — **0 lỗi
+   console**. Chơi LIVE (pane hiện): cảnh + tàu + blimp + máy bay render đẹp, sát Wordwall.
+6. **Còn để đợt sau** (mục POLISH trong GHI CHU template): giãn lane blimp khỏi chồng · ẩn ô đồng hồ engine
+   trái "0:00" thừa (ĐỀ XUẤT SỬA CORE) · thêm ảnh keyword/definition · nảy cargo · hiệu ứng bonus rõ hơn.
+
 ### 1/8/2026 — Đợt 21: WHACK-A-MOLE (game thứ 7) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
 
 *(Chỉ commit `templates/whack-a-mole/` + 2 file nhật ký này. KHÔNG `git add -A` — `templates/balloon-pop/`

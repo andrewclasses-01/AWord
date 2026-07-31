@@ -1,0 +1,287 @@
+/* =============================================================
+   BALLOON POP — Wild West ("Classic") look. All sizes in cqw so the
+   16:9 stage scales cleanly in fullscreen (CONG THUC MAU §3.1). Every
+   class is prefixed .aw-bp-. Floating fx that are centred with
+   transform:translate(-50%,..) bake that offset into their keyframes
+   (CONG THUC MAU §3.5 / HUONG DAN CORE "popup nhảy vị trí").
+   ============================================================= */
+
+.aw-bp-empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; color: #4a5568; font-size: 3cqw; font-weight: 700;
+}
+
+/* ---------- scene + parallax background ---------- */
+.aw-bp-scene {
+  position: absolute; inset: 0; overflow: hidden;
+  border-radius: inherit;
+  font-family: "Baloo 2", system-ui, sans-serif;
+  user-select: none; -webkit-user-select: none;
+}
+.aw-bp-sky {
+  position: absolute; inset: 0;
+  background: linear-gradient(#cfe0f2 0%, #d7dced 42%, #ecdcc0 74%, #f0d9ad 100%);
+}
+.aw-bp-mountains {
+  position: absolute; left: 0; right: 0; bottom: 12%; height: 46%;
+  opacity: .85;
+}
+.aw-bp-mountains svg { width: 100%; height: 100%; display: block; }
+.aw-bp-cloud {
+  position: absolute; width: 16cqw; height: 6cqw; border-radius: 50%;
+  background: radial-gradient(circle at 40% 40%, #ffffff, #ffffff 60%, rgba(255,255,255,.7));
+  filter: blur(.3cqw); opacity: .85;
+}
+.aw-bp-cloud::before, .aw-bp-cloud::after {
+  content: ""; position: absolute; background: inherit; border-radius: 50%;
+}
+.aw-bp-cloud::before { width: 60%; height: 90%; left: 8%; top: 30%; }
+.aw-bp-cloud::after { width: 55%; height: 80%; right: 6%; top: 35%; }
+.aw-bp-cloud-a { left: 12%; top: 12%; animation: aw-bp-cloud 46s linear infinite; }
+.aw-bp-cloud-b { left: 60%; top: 22%; transform: scale(.8); animation: aw-bp-cloud 62s linear infinite; }
+@keyframes aw-bp-cloud { from { margin-left: 6cqw; } to { margin-left: -22cqw; } }
+
+.aw-bp-ground {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 20%;
+  background: linear-gradient(#e7c98d 0%, #dcb877 60%, #cfa763 100%);
+  box-shadow: inset 0 .6cqw 0 rgba(255,255,255,.25);
+}
+.aw-bp-rail {
+  position: absolute; left: 0; right: 0; bottom: 6.5%; height: 1.6cqw;
+  background:
+    repeating-linear-gradient(90deg, #6b4a2f 0 2.4cqw, transparent 2.4cqw 5cqw) center/auto 100% no-repeat,
+    linear-gradient(#8a6a45, #6b4a2f);
+  border-top: .3cqw solid #4a3220; border-bottom: .3cqw solid #4a3220;
+}
+.aw-bp-cactus {
+  position: absolute; bottom: 8%; width: 4cqw; height: 9cqw;
+  background: #6f9a4d; border-radius: 2cqw;
+  box-shadow: inset -0.6cqw 0 0 rgba(0,0,0,.12);
+}
+.aw-bp-cactus::before, .aw-bp-cactus::after {
+  content: ""; position: absolute; width: 1.9cqw; height: 4cqw;
+  background: #6f9a4d; border-radius: 1cqw;
+}
+.aw-bp-cactus::before { left: -1.6cqw; top: 2cqw; border-bottom-left-radius: 0; box-shadow: -0.3cqw 0 0 rgba(0,0,0,.1); }
+.aw-bp-cactus::after { right: -1.6cqw; top: 3.2cqw; }
+.aw-bp-cactus-a { left: 8%; }
+.aw-bp-cactus-b { right: 6%; transform: scale(1.25); }
+
+/* ---------- blimps (the "balloons") ---------- */
+.aw-bp-blimps { position: absolute; inset: 0; }
+.aw-bp-blimp {
+  position: absolute; left: 0; top: 0;
+  width: 19cqw; height: 11.4cqw; padding: 0; border: 0; background: none;
+  cursor: pointer; transition: filter .12s;
+  filter: drop-shadow(0 .6cqw .6cqw rgba(0,0,0,.18));
+}
+.aw-bp-blimp svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.aw-bp-blimp:hover { filter: drop-shadow(0 .6cqw .8cqw rgba(0,0,0,.28)) brightness(1.05); }
+.aw-bp-blimp.is-bonus { width: 9cqw; height: 11cqw; }
+.aw-bp-blimp.is-popped { animation: aw-bp-pop .26s ease forwards; pointer-events: none; }
+@keyframes aw-bp-pop { from { opacity: 1; } to { opacity: 0; filter: brightness(1.6); } }
+
+.aw-bp-banner {
+  position: absolute; left: 8%; right: 12%; top: 30%; height: 40%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.aw-bp-banner-text {
+  --bp-banner-fit: 1;
+  font-size: calc(3.4cqw * var(--bp-banner-fit));
+  font-weight: 800; letter-spacing: .02em;
+  color: #24303f; text-transform: uppercase; white-space: nowrap;
+  text-shadow: 0 .12cqw 0 rgba(255,255,255,.5);
+}
+
+/* ---------- train (engine + definition car) ---------- */
+.aw-bp-train {
+  position: absolute; left: 50%; bottom: 7.5%;
+  transform: translateX(-50%);
+  display: flex; align-items: flex-end; gap: 0.6cqw;
+  z-index: 3;
+}
+.aw-bp-cart { position: relative; }
+.aw-bp-cart-card {
+  --fit: 1;
+  width: 38cqw; min-height: 15cqw; max-height: 20cqw;
+  box-sizing: border-box;
+  padding: 1.6cqw 2cqw;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  background: linear-gradient(#c34c3b, #9a3327);
+  border: .5cqw solid #6e241b; border-radius: 1.2cqw;
+  box-shadow: inset 0 .5cqw 0 rgba(255,255,255,.18), 0 .8cqw 1cqw rgba(0,0,0,.25);
+}
+.aw-bp-cart-card::after {
+  content: ""; position: absolute; left: 6%; right: 6%; bottom: -1.2cqw; height: 1.4cqw;
+  background: #d9a441; border-radius: 0 0 1cqw 1cqw;
+}
+.aw-bp-cart-text {
+  font-size: calc(2.5cqw * var(--fit));
+  line-height: 1.15; font-weight: 700; color: #fff5e6;
+  text-shadow: 0 .18cqw .18cqw rgba(0,0,0,.35);
+}
+.aw-bp-engine { width: 26cqw; height: 17cqw; }
+.aw-bp-engine svg { width: 100%; height: 100%; display: block; }
+
+.aw-bp-levelsign {
+  position: absolute; left: 4%; bottom: 24%;
+  padding: 1.2cqw 2cqw 2.2cqw;
+  font-size: 2.6cqw; font-weight: 800; color: #402a18;
+  background: repeating-linear-gradient(90deg, #a97c4e 0 2.6cqw, #9c7044 2.6cqw 5.2cqw);
+  border: .45cqw solid #6b4a2f; border-radius: .6cqw;
+  box-shadow: 0 .8cqw 0 #5a3d24, 0 1cqw 1cqw rgba(0,0,0,.25);
+  text-shadow: 0 .15cqw 0 rgba(255,255,255,.25);
+  z-index: 2;
+}
+
+/* ---------- fx layer (splash / crate / marks) ---------- */
+.aw-bp-fx { position: absolute; inset: 0; pointer-events: none; z-index: 5; }
+
+.aw-bp-crate {
+  position: absolute; left: 0; top: 0;
+  min-width: 8cqw; padding: 1cqw 1.4cqw;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(#8a5a34, #6b4a2f);
+  border: .4cqw solid #4a3220; border-radius: .8cqw;
+  box-shadow: inset 0 .3cqw 0 rgba(255,255,255,.15);
+}
+.aw-bp-crate span {
+  font-size: 2.4cqw; font-weight: 800; color: #f6e4c8; text-transform: uppercase;
+  white-space: nowrap;
+}
+.aw-bp-crate.is-landed { animation: aw-bp-land .5s ease forwards; }
+.aw-bp-crate.is-broken { animation: aw-bp-break .5s ease forwards; }
+/* both keyframes KEEP translate(-50%,-50%) so the crate doesn't jump (§3.5) */
+@keyframes aw-bp-land {
+  0% { transform: translate(-50%, -50%) scale(1); }
+  40% { transform: translate(-50%, -60%) scale(1.08); }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+@keyframes aw-bp-break {
+  0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-50%, -30%) scale(.6) rotate(24deg); opacity: 0; }
+}
+
+.aw-bp-splash {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 5cqw; font-weight: 900; color: #e23b2e; letter-spacing: .03em;
+  text-shadow: 0 .3cqw 0 #fff, 0 .5cqw .5cqw rgba(0,0,0,.25);
+  animation: aw-bp-splash .6s ease forwards;
+}
+@keyframes aw-bp-splash {
+  0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+  30% { transform: translate(-50%, -55%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -85%) scale(1); opacity: 0; }
+}
+
+.aw-bp-float {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 3.2cqw; font-weight: 900; color: #1c8f3a;
+  text-shadow: 0 .25cqw 0 #fff;
+  animation: aw-bp-float .9s ease forwards;
+}
+@keyframes aw-bp-float {
+  0% { transform: translate(-50%, -40%) scale(.6); opacity: 0; }
+  25% { transform: translate(-50%, -60%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -140%) scale(1); opacity: 0; }
+}
+
+.aw-bp-mark {
+  position: absolute; transform: translate(-50%, -50%);
+  font-size: 6cqw; font-weight: 900;
+  animation: aw-bp-markfly 0.95s ease forwards;
+}
+.aw-bp-mark.is-ok { color: #1fbb4d; text-shadow: 0 .3cqw 0 #fff; }
+.aw-bp-mark.is-no { color: #e23b2e; text-shadow: 0 .3cqw 0 #fff; }
+@keyframes aw-bp-markfly {
+  0% { transform: translate(-50%, -30%) scale(.4); opacity: 0; }
+  30% { transform: translate(-50%, -80%) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, -160%) scale(1); opacity: 0; }
+}
+
+.aw-bp-plane {
+  position: absolute; right: -14cqw; top: 8%; width: 14cqw; height: 5cqw;
+  filter: drop-shadow(0 .5cqw .5cqw rgba(0,0,0,.2));
+}
+.aw-bp-plane svg { width: 100%; height: 100%; }
+
+/* screen shake on a wrong drop */
+.aw-bp-scene.is-shake { animation: aw-bp-shake .36s ease; }
+@keyframes aw-bp-shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-1cqw); }
+  40% { transform: translateX(1cqw); }
+  60% { transform: translateX(-0.6cqw); }
+  80% { transform: translateX(0.6cqw); }
+}
+
+/* ---------- topbar: countdown clock + level progress ---------- */
+.aw-bp-topbar { display: flex; align-items: center; gap: 1.2cqw; width: 100%; }
+.aw-bp-clock {
+  font-family: "Baloo 2", system-ui, sans-serif;
+  font-size: 2.6cqw; font-weight: 800; color: var(--aw-text, #24303f);
+  min-width: 6cqw; text-align: center;
+}
+.aw-bp-clock.is-warning { color: #e23b2e; animation: aw-bp-clockpulse 1s ease-in-out infinite; }
+@keyframes aw-bp-clockpulse { 0%,100% { opacity: 1; } 50% { opacity: .55; } }
+.aw-bp-progbar {
+  flex: 1; height: 1.4cqw; border-radius: 1cqw;
+  background: rgba(0,0,0,.14); overflow: hidden;
+}
+.aw-bp-progbar-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #d9a441, #f0c24a);
+  border-radius: 1cqw; transition: width .5s ease;
+}
+
+/* =============================================================
+   EDITOR (.aw-bp-ed-*) — Keyword | Matching definition table, mirrors
+   Wordwall's "Edit Content". Uses the shared .aw-ed-* page chrome; only the
+   row layout is template-specific. Sizes here are px/rem (a normal form
+   page, not the cqw game stage).
+   ============================================================= */
+.aw-bp-ed-headrow {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 12px; margin: 6px 0 10px;
+}
+.aw-bp-ed-headcols {
+  display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; flex: 1;
+}
+.aw-bp-ed-headtitle { font-weight: 700; color: #2d3748; font-size: .95rem; }
+.aw-bp-ed-headsub { color: #8a94a6; font-size: .78rem; }
+
+.aw-bp-ed-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 8px; border-radius: 12px;
+}
+.aw-bp-ed-row.is-dragging { opacity: .5; }
+.aw-bp-ed-row.is-dropbefore { box-shadow: inset 0 3px 0 #60a5fa; }
+.aw-bp-ed-row.is-dropafter { box-shadow: inset 0 -3px 0 #60a5fa; }
+.aw-bp-ed-num { width: 26px; text-align: right; color: #8a94a6; font-weight: 700; flex: none; }
+.aw-bp-ed-box { display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; flex: 1; min-width: 0; }
+.aw-bp-ed-keyword, .aw-bp-ed-def {
+  width: 100%; box-sizing: border-box;
+  padding: 9px 12px; border: 1.5px solid #d7dbe3; border-radius: 10px;
+  font-size: .95rem; font-family: inherit; background: #fff;
+}
+.aw-bp-ed-keyword:focus, .aw-bp-ed-def:focus { outline: none; border-color: #60a5fa; }
+.aw-bp-ed-icons { display: flex; align-items: center; gap: 4px; flex: none; }
+.aw-bp-ed-gap { width: 6px; }
+.aw-bp-ed-iconbtn {
+  width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: none; border-radius: 8px; cursor: pointer; color: #6b7280;
+}
+.aw-bp-ed-iconbtn:hover { background: #eef1f6; color: #374151; }
+.aw-bp-ed-iconbtn.is-drag { cursor: grab; }
+.aw-bp-ed-iconbtn.is-danger:hover { background: #fdecec; color: #dc2626; }
+.aw-bp-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-bp-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-bp-ed-addrow {
+  margin: 8px 0 4px; padding: 9px 14px; border: 1.5px dashed #c3c9d4;
+  background: none; border-radius: 10px; color: #4b5563; font-weight: 600;
+  font-family: inherit; cursor: pointer; width: 100%;
+}
+.aw-bp-ed-addrow:hover:not(:disabled) { border-color: #60a5fa; color: #2563eb; }
+.aw-bp-ed-addrow:disabled { opacity: .4; cursor: default; }
