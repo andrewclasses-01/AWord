@@ -31,6 +31,18 @@ export const FINISHED_TEMPLATES = [
     label: "Type the answer",
     load: () => import("./templates/type-the-answer/type-the-answer.js"),
     sample: () => import("./templates/type-the-answer/sample-type-the-answer.js")
+  },
+  {
+    type: "find_the_match",
+    label: "Find the match",
+    load: () => import("./templates/find-the-match/find-the-match.js"),
+    sample: () => import("./templates/find-the-match/sample-find-the-match.js")
+  },
+  {
+    type: "true_false",
+    label: "True or false",
+    load: () => import("./templates/true-false/true-false.js"),
+    sample: () => import("./templates/true-false/sample-true-false.js")
   }
   // Add the next one here once it's approved.
 ];

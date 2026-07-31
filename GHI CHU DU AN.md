@@ -21,6 +21,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 31/7/2026 — Đợt 17: TEMPLATE MỚI **TRUE FALSE** (True or false) — build + gộp trang chủ (`built:true`), chờ thầy duyệt.
+
+Template thứ 6. Thầy yêu cầu: "phong cách + màu sắc của các template AWord khác, cách chơi giống act
+Wordwall https://wordwall.net/resource/116827457/true-false" (act nội bộ Wordwall gọi là **"boolean"**,
+cùng họ game "băng chuyền" với Find the match). Trước khi build đã chuẩn bị bộ âm thanh gốc (chơi act,
+soi `themejson/classic/audios.json` + Performance API để bắt đúng 22 file .ogg game preload, tải về +
+đổi .mp3 ffmpeg, xếp 15 thư mục ở `D:\APP AND DATA\AWord-data\Source\Sound effect\TRUE FALSE`).
+
+Cách chơi: câu (statement) trượt vào giữa như băng chuyền (dùng lại engine chuyển động của Find the
+match), bấm **True/False**. Đúng → +điểm + ✓; sai → ✗ + mất 1 tim. Có **Speed slider** (0 = chờ trả
+lời), **mạng 5 tim + Game Over** (thầy chốt: kèm nút bật/tắt trong Options), **Unanswered questions**
+(show once / repeat). Bàn phím T/← = True, F/→ = False. Mũi tên prev/next ẩn qua `:has(> .aw-tf-card)`.
+
+**Màu nút theo THEME** (thầy chốt): True = `var(--aw-ok)`, False = `var(--aw-no)` — 2 biến này mọi
+theme đã có sẵn nên KHÔNG hard-code, KHÔNG sửa `core/themes/*`. Classic xanh-lá/đỏ, Classroom xanh-ấm/
+đỏ-gạch, Beach xanh-biển/đỏ-san-hô (đã đo `getComputedStyle`).
+
+Bộ file trong `templates/true-false/`: `true-false.js/.css`, `tf-sound.js` + `sounds/` (bộ classic2
+giống Find the match), `true-false-editor.js` (bảng Statement | True/False, dán Excel 2 cột, max 40),
+`sample-true-false.js` (chủ đề Plant life cycle, 8 câu), `test.html/.js`. Chi tiết đầy đủ + checklist
+đã kiểm: `templates/true-false/GHI CHU TRUE-FALSE.md`.
+
+Khai báo 4 nơi: `core/catalog.js` (`built:true`), `main.js` (import), `index.html` (link CSS),
+`manifest.js` (entry). **Nhân tiện vá 2 thiếu sót của Find the match phiên trước**: FTM chưa có trong
+`index.html` (thiếu link `find-the-match.css` → FTM không có style trên trang chủ) và chưa có trong
+`manifest.js` — đã thêm cả hai.
+
+Đã test browser thật qua `test.html` (0 lỗi console; đúng/sai/mất-tim; Game Complete + Show answers;
+màu 3 theme). **CHƯA test play.html** (giống mọi template ngoài quiz — play.js chỉ import quiz, hạn chế
+chung đã biết). **CHƯA commit/push** — chờ thầy duyệt (chưa nói "commit"/"push").
+
 ### 31/7/2026 — Đợt 16: Find the match GỘP TRANG CHỦ — `built:true` + import vào `main.js`. Không còn "coming soon".
 
 Thầy nói "gộp lên trang chủ và kết thúc session này". `core/catalog.js` đổi `built:false→true` + sửa

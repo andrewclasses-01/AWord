@@ -14,7 +14,9 @@ export const TEMPLATES = [
   { type: "type_the_answer", label: "Type the answer", built: true,
     blurb: "Type the answer to each question." },
   { type: "open_the_box",    label: "Open the box",    built: true,
-    blurb: "Tap each box to reveal what's inside." }
+    blurb: "Tap each box to reveal what's inside." },
+  { type: "true_false",      label: "True or false",   built: true,
+    blurb: "Read the statement, then tap True or False." }
 ];
 
 export function templateLabel(type) {

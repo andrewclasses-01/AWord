@@ -45,6 +45,7 @@ import "./templates/anagram/anagram.js";         // registers the anagram templa
 import "./templates/open-the-box/open-the-box.js";           // registers open the box (+ its editor)
 import "./templates/type-the-answer/type-the-answer.js";     // registers type the answer (+ its editor)
 import "./templates/find-the-match/find-the-match.js";       // registers find the match (+ its editor)
+import "./templates/true-false/true-false.js";               // registers true or false (+ its editor)
 
 const app = document.getElementById("app");
 

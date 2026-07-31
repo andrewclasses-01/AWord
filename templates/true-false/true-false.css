@@ -1,0 +1,194 @@
+/* =============================================================
+   TRUE FALSE template — styles that belong ONLY to this template.
+   Class prefix: .aw-tf-*
+
+   "Conveyor belt" board (same motion engine as Find the match): the
+   STATEMENT prompt glides left-edge -> centre -> right-edge inside a fixed,
+   overflow:hidden TRACK (true-false.js drives it via element.animate({
+   transform: translateX}); the track has no base positioning transform of
+   its own, so this is safe under CONG THUC MAU.md rule 3.5). Below a dashed
+   divider sit two big fixed buttons: TRUE / FALSE.
+
+   Button COLOURS come from the theme's own --aw-ok / --aw-no (+ their -d
+   dark-edge variants) so each theme gets its matching tone — Classic =
+   green / red, Classroom = warm green / brick, Beach = sea-green / coral
+   (teacher's spec, 31/7/2026). Sizes use cqw * var(--fit,1) for uniform
+   scaling inside the 16:9 stage, same as every other template.
+   ============================================================= */
+
+.aw-tf-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: 2.4cqw;
+}
+
+.aw-tf-lives {
+  flex: 0 0 auto;
+  display: flex; gap: 0.6cqw;
+  font-size: calc(2.4cqw * var(--fit));
+  color: #ef4444;
+  margin-bottom: 0.6cqw;
+}
+.aw-tf-lives span.is-lost { opacity: .2; }
+
+.aw-tf-track {
+  position: relative;
+  overflow: hidden;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  margin-bottom: 1.2cqw;
+}
+.aw-tf-prompt {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center;
+  font-size: calc(3.8cqw * var(--fit));
+  font-weight: 700;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  line-height: 1.2;
+  padding: 0 5cqw;
+  will-change: transform;
+}
+/* the "3-2-1" prep countdown (count-up mode only) — much bigger, plain
+   no-stroke number so it reads instantly. */
+.aw-tf-prompt.is-countdown {
+  font-size: calc(9cqw * var(--fit));
+  font-weight: 800;
+  -webkit-text-stroke: 0;
+  color: var(--aw-question-fill, var(--aw-text));
+}
+
+.aw-tf-divider {
+  flex: 0 0 auto;
+  height: 0;
+  margin: 0 1cqw calc(1.8cqw * var(--fit));
+  border-top: 0.22cqw dashed var(--aw-muted, #b9c3d1);
+  opacity: .6;
+}
+
+.aw-tf-buttons {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  gap: calc(3cqw * var(--fit));
+  padding: 0 2cqw;
+}
+.aw-tf-btn {
+  position: relative;
+  flex: 1 1 0;
+  max-width: calc(34cqw * var(--fit));
+  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(4cqw * var(--fit));
+  letter-spacing: .02em;
+  text-shadow: 0 0.12cqw 0.3cqw rgba(0, 0, 0, .22);
+  padding: calc(2.6cqw * var(--fit)) calc(1cqw * var(--fit));
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
+}
+/* TRUE = the theme's "ok/correct" colour, FALSE = the theme's "no/incorrect"
+   colour. --aw-tile-fixed (some flat themes) still wins if a theme sets it,
+   keeping True/False consistent with that theme's tiles. */
+.aw-tf-btn.is-true {
+  background: var(--aw-tile-fixed, var(--aw-ok, #33a24a));
+  box-shadow: var(--aw-tile-shadow, 0 0.7cqw 0 var(--aw-tile-fixed-dark, var(--aw-ok-d, #237a37)));
+}
+.aw-tf-btn.is-false {
+  background: var(--aw-tile-fixed, var(--aw-no, #e23c3c));
+  box-shadow: var(--aw-tile-shadow, 0 0.7cqw 0 var(--aw-tile-fixed-dark, var(--aw-no-d, #b32a2a)));
+}
+.aw-tf-btn:hover:not(:disabled) { filter: brightness(1.06); }
+.aw-tf-btn:active:not(:disabled) {
+  transform: translateY(0.35cqw);
+  box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 rgba(0, 0, 0, .22));
+}
+.aw-tf-btn:disabled { cursor: default; }
+
+.aw-tf-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: 2.2cqw; font-weight: 600;
+}
+
+/* Teacher's spec (shared with Find the match): the statement only ever moves
+   forward, so the shared prev/next arrows are hidden for THIS template — the
+   "x of y" label next to them stays. Scoped via :has() so core/engine.js's
+   nav bar markup needs no change; only matches while a .aw-tf-card is mounted. */
+.aw-playarea:has(> .aw-tf-card) ~ .aw-bottombar .aw-navbtn { display: none; }
+
+/* =============================================================
+   OPTIONS PANEL — Speed slider (lives OUTSIDE the 16:9 stage, so plain
+   rem/px here — NOT cqw, same as Find the match's panel).
+   ============================================================= */
+.aw-tf-speedrow { display: flex; align-items: center; gap: 10px; }
+.aw-tf-speedslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
+.aw-tf-speedval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
+
+/* =============================================================
+   EDITOR ("Edit content") — Statement | True/False table. Lives OUTSIDE the
+   16:9 stage (the editor page, not the game), so plain px/rem — NOT cqw.
+   Reuses core/app.css's .aw-ed-* page chrome; only the per-row layout below
+   is True-false specific. Mirrors Find the match's .aw-ftm-ed-* table.
+   ============================================================= */
+.aw-tf-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.aw-tf-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 118px; }
+.aw-tf-ed-headcol { font-size: .82rem; font-weight: 700; color: #55657a; }
+.aw-tf-ed-headcol.is-statement { flex: 1; }
+.aw-tf-ed-headcol.is-answer { flex: 0 0 168px; }
+
+.aw-tf-ed-row { display: flex; align-items: stretch; gap: 8px; }
+.aw-tf-ed-row.is-dragging { opacity: .4; }
+.aw-tf-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
+.aw-tf-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
+
+.aw-tf-ed-num {
+  flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #8a97a8; font-size: .9rem;
+}
+.aw-tf-ed-box {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-tf-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-tf-ed-statement {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e; font-weight: 600;
+}
+
+/* The True / False choice for each row — a 2-segment pill toggle. */
+.aw-tf-ed-answer {
+  flex: 0 0 168px; display: flex; gap: 6px; align-items: center;
+  padding: 5px 8px; border-left: 1.5px solid #e2e9f2;
+}
+.aw-tf-ed-seg {
+  flex: 1; border: 1.5px solid #dbe3ee; border-radius: 8px; background: #f6f9fd;
+  color: #7a8698; font-weight: 700; font-size: .85rem; padding: .4rem 0; cursor: pointer;
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+.aw-tf-ed-seg.is-on.is-true { background: #e7f6ec; border-color: #33a24a; color: #237a37; }
+.aw-tf-ed-seg.is-on.is-false { background: #fdeaea; border-color: #e23c3c; color: #b32a2a; }
+
+.aw-tf-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-tf-ed-iconbtn {
+  width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-tf-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-tf-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-tf-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-tf-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-tf-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+
+.aw-tf-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px;
+  background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer;
+}
+.aw-tf-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-tf-ed-addrow:disabled { opacity: .4; cursor: default; }
