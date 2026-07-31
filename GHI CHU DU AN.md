@@ -21,6 +21,45 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 21: WHACK-A-MOLE (game thứ 7) — build ĐẦY ĐỦ + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
+
+*(Chỉ commit `templates/whack-a-mole/` + 2 file nhật ký này. KHÔNG `git add -A` — `templates/balloon-pop/`
+là việc CHƯA commit của phiên khác, KHÔNG đụng. **CHƯA** thêm vào manifest/index/trang gồm — chờ thầy
+chốt + test TOMKO.)*
+
+Dựng act Whack-a-mole của thầy (`wordwall.net/resource/116864290/whack-a-mole`), style **Wild West**
+(theme "western"). Thầy chốt: **2 chế độ** (True/False + Quiz), **bản đầy đủ** (thùng gỗ + level +
+đếm điểm), **đồ họa Wild West**. Ghi chú template: `templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md`.
+
+1. **Lấy nguồn** (ổ D, Claude in Chrome): 31 mp3 → `AWord-data\Source\Sound effect\WHACK A MOLE`
+   (20 thư mục sự kiện + GHI CHU) · 31 ảnh → `Source\Graphic\WHACK A MOLE` (5 nhóm). Cách lấy: đọc
+   `themejson/western2/audios.json` + `scenes/whack.json` trên CDN, đối chiếu file game THỰC SỰ preload
+   (Performance API). Phát hiện: whack **KHÔNG dùng nhạc nền**; núi/mesa nằm MỜ sẵn trong `bg2`
+   (ImageQuality 0.08), **xương rồng là lớp trang trí riêng** (`balloon/cactus*`) — đã lấy thêm để dựng cảnh.
+2. **Template** `templates/whack-a-mole/` (self-contained `img/` + `sounds/`): game thời gian thực bằng
+   `setTimeout` (KHÔNG rAF; mỗi mole có setTimeout tuyệt đối tự lặn). Đồng hồ RIÊNG ở `topbarMid`
+   (`inlineTimerBar`, giống Open the box) để thùng "time" cộng giây được. 2 chế độ: True/False
+   (`content.statements`) + Quiz (`content.questions`, đập đúng → xoay biển sang câu kế). Đầy đủ: combo,
+   thùng time/loot/power/dizzy, power-up glow, hoạt cảnh đếm điểm cuối → `ui.finish` (Score/Time +
+   Show answers + Leaderboard). Engine KHÔNG cần sửa (dùng `inlineTimerBar`/`buildExtraOptions`/
+   `optionsNeedRestart`/`sounds.*`).
+3. **Editor đầy đủ** 2 chế độ: toggle True/False | Quiz, soạn câu/đáp án, dán Excel, kéo sắp xếp,
+   validate; giữ CẢ 2 mảng content, Save ghi `options.mode`.
+4. **Đã test** (`test.html` qua browser preview, **0 lỗi console**): 2 chế độ; đập đúng/sai → điểm +
+   tia lửa + combo; thùng "time" ngoi lên; Quiz xoay biển sang câu kế; hết giờ (ván 4s) → tally →
+   bảng "TIME'S UP" Score 2/2 Time 5.4s + menu đủ; editor render + chuyển mode + Save ra dữ liệu đúng.
+
+**BẪY đã sửa (trong lúc build):** (a) **TDZ** — `let clockEl/fillEl` khai báo SAU chỗ gọi
+`ensureTimerUI()` → truy cập biến `let` trong vùng chết → mount NÉM LỖI im lặng sau khi vẽ sign (có
+scene+biển nhưng không đồng hồ/chuột). Sửa: dời khai báo lên khối state. (b) **Hố cao 0px** — hố chứa
+toàn con `position:absolute` nên cao 0 → `molewrap height:96%` sụp → chuột bị cắt sạch. Sửa: set
+`hole.style.height = s*1.35cqw`.
+
+**CHỜ TEST TOMKO:** (a) cảm giác đập bằng cảm ứng màn 86"; (b) nhịp spawn + tốc độ (option Speed);
+(c) âm thanh; (d) cỡ chuột/cactus + độ đầy của nền. Sau khi thầy chốt → thêm `manifest.js` + `index.html`
+(link css) + `ALL_TEMPLATES` → đưa lên LIVE.
+Rollback = `git reset --hard 43df2db` (về đợt 20 Crossword).
+
 ### 31/7/2026 — Đợt 20: CROSSWORD (game thứ 6) — build + tự test, CHỜ THẦY DUYỆT. ĐÃ COMMIT + PUSH.
 
 *(Làm bởi 1 phiên riêng, song song với Find the match / Balloon pop / Whack a mole của các phiên khác.

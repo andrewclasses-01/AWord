@@ -1,0 +1,330 @@
+/* =============================================================
+   TEMPLATE: WHACK-A-MOLE  (prefix .aw-wam-)
+   Wild West art ripped from Wordwall's own theme (teacher's call) — this game
+   keeps a FIXED desert look, it does NOT recolour per theme like the other
+   templates. All sizes in cqw so the 16:9 stage scales cleanly at fullscreen.
+   ============================================================= */
+
+.aw-wam-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #cfe4ef url("./img/bg2.webp") center/cover no-repeat;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.aw-wam-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3cqw; color: #5a4632; text-align: center; padding: 6cqw;
+}
+
+/* ---------- desert decoration (cacti) ---------- */
+.aw-wam-decor {
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 0.6cqw 0.5cqw rgba(0,0,0,.16));
+}
+
+/* ---------- SIGN (post + wooden board) ---------- */
+.aw-wam-sign {
+  position: absolute;
+  left: 50%; top: 1.5%;
+  transform: translateX(-50%);
+  width: 40cqw;
+  z-index: 6;
+  pointer-events: none;
+}
+.aw-wam-post {
+  position: absolute;
+  left: 50%; top: 7cqw;
+  transform: translateX(-50%);
+  width: 3.2cqw; height: 22cqw;
+  background: url("./img/post.webp") center/100% 100% no-repeat;
+  z-index: 1;
+}
+.aw-wam-board {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 474 / 190;
+  background: url("./img/thicksignplank.webp") center/100% 100% no-repeat;
+  z-index: 2;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 2.2cqw 7cqw 3cqw;
+  box-sizing: border-box;
+  filter: drop-shadow(0 0.5cqw 0.6cqw rgba(0,0,0,.28));
+}
+.aw-wam-sign-lead {
+  font-size: 2.05cqw;
+  font-weight: 800;
+  color: #4a3320;
+  letter-spacing: .02em;
+  line-height: 1.05;
+  text-align: center;
+}
+.aw-wam-sign-target {
+  font-size: 5.4cqw;
+  font-weight: 900;
+  color: #3a2412;
+  line-height: 1;
+  text-transform: uppercase;
+  transform-origin: center;
+}
+/* quiz mode: the whole board shows one question (auto-shrunk to fit) */
+.aw-wam-sign-question {
+  font-size: 2.6cqw;
+  font-weight: 800;
+  color: #3a2412;
+  line-height: 1.12;
+  text-align: center;
+}
+/* the sign "rotating" to a new question/target */
+.aw-wam-board.is-rotating { animation: aw-wam-signflip .5s ease both; }
+@keyframes aw-wam-signflip {
+  0%   { transform: perspective(60cqw) rotateX(0deg); }
+  45%  { transform: perspective(60cqw) rotateX(88deg); }
+  55%  { transform: perspective(60cqw) rotateX(-88deg); }
+  100% { transform: perspective(60cqw) rotateX(0deg); }
+}
+
+/* ---------- HOLES ---------- */
+.aw-wam-hole {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  /* width set inline per-hole (cqw); height follows from children */
+}
+.aw-wam-mound {
+  position: absolute;
+  left: 50%; bottom: -8%;
+  transform: translateX(-50%);
+  width: 104%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .92;
+}
+.aw-wam-holeback {
+  position: absolute;
+  left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.aw-wam-molewrap {
+  position: absolute;
+  left: 50%; bottom: 9%;
+  transform: translateX(-50%);
+  width: 92%;
+  height: 104%;
+  overflow: hidden;            /* clips the mole so it rises OUT of the ground */
+  z-index: 2;
+}
+.aw-wam-mole {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 100%;
+  transform: translate(-50%, 108%);   /* hidden below ground */
+  transition: transform .26s cubic-bezier(.22,.9,.3,1);
+  cursor: pointer;
+}
+.aw-wam-hole.is-up .aw-wam-mole { transform: translate(-50%, -2%); }
+.aw-wam-hole.is-hit .aw-wam-mole { transform: translate(-50%, 8%) scaleY(.92); }
+.aw-wam-holefront {
+  position: absolute;
+  left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: 104%;
+  z-index: 3;
+  pointer-events: none;
+}
+.aw-wam-hole img { display: block; width: 100%; -webkit-user-drag: none; user-drag: none; }
+.aw-wam-molewrap .aw-wam-mole { pointer-events: auto; }
+
+/* the whole hole is only clickable while a mole is up */
+.aw-wam-hole { pointer-events: none; }
+.aw-wam-hole.is-up .aw-wam-molewrap,
+.aw-wam-hole.is-crate .aw-wam-molewrap { pointer-events: auto; }
+
+/* ---------- SPEECH BUBBLE (mole's content) ---------- */
+.aw-wam-bubble {
+  position: absolute;
+  left: 50%; bottom: 92%;
+  transform: translateX(-50%) scale(.6);
+  transform-origin: 50% 120%;
+  width: 150%;
+  min-height: 8cqw;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity .2s ease, transform .22s cubic-bezier(.22,.9,.3,1);
+  pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  padding: 1.7cqw 2cqw 3.2cqw;
+  box-sizing: border-box;
+  background: url("./img/bubblea.webp") center/100% 100% no-repeat;
+}
+.aw-wam-hole.is-up .aw-wam-bubble,
+.aw-wam-hole.is-crate .aw-wam-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
+.aw-wam-bubble-b { background-image: url("./img/bubbleb.webp"); }
+.aw-wam-bubble-text {
+  font-size: 1.9cqw;
+  font-weight: 700;
+  color: #3a2a16;
+  line-height: 1.08;
+  text-align: center;
+}
+
+/* ---------- CRATES ---------- */
+.aw-wam-crate-img {
+  position: absolute;
+  left: 50%; bottom: 0;
+  width: 96%;
+  transform: translate(-50%, 104%);
+  transition: transform .26s cubic-bezier(.22,.9,.3,1);
+  cursor: pointer;
+}
+.aw-wam-hole.is-crate .aw-wam-crate-img { transform: translate(-50%, 4%); }
+.aw-wam-hole.is-crate.is-hit .aw-wam-crate-img { transform: translate(-50%, 12%) scale(.92); }
+
+/* ---------- WHACK SPARK ---------- */
+.aw-wam-zap {
+  position: absolute;
+  left: 50%; top: 34%;
+  width: 60%;
+  transform: translate(-50%, -50%) scale(.3);
+  z-index: 7;
+  pointer-events: none;
+  opacity: 0;
+}
+.aw-wam-zap.is-on { animation: aw-wam-zap .42s ease-out forwards; }
+@keyframes aw-wam-zap {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3) rotate(-12deg); }
+  30%  { opacity: 1; transform: translate(-50%,-50%) scale(1.1) rotate(4deg); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.35) rotate(10deg); }
+}
+
+/* ---------- floating +points / combo text ---------- */
+.aw-wam-float {
+  position: absolute;
+  z-index: 8;
+  font-weight: 900;
+  color: #fff;
+  -webkit-text-stroke: 0.35cqw #7a3d12;
+  paint-order: stroke fill;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+}
+.aw-wam-float.is-plus { font-size: 3.2cqw; }
+.aw-wam-float.is-combo { font-size: 2.8cqw; color: #ffe27a; }
+.aw-wam-float.is-minus { font-size: 3cqw; color: #ffd0d0; -webkit-text-stroke-color: #7a1212; }
+.aw-wam-float.is-fly { animation: aw-wam-floatfly .8s ease-out forwards; }
+@keyframes aw-wam-floatfly {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.5); }
+  25%  { opacity: 1; transform: translate(-50%,-90%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%,-160%) scale(1); }
+}
+
+/* ---------- power-up glow (whole scene) ---------- */
+.aw-wam-scene.is-power::after {
+  content: "";
+  position: absolute; inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  box-shadow: inset 0 0 12cqw 4cqw rgba(255, 210, 90, .45);
+  animation: aw-wam-powerpulse 1s ease-in-out infinite;
+}
+@keyframes aw-wam-powerpulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+
+/* ---------- own countdown clock + bar (engine ui.topbarMid, inlineTimerBar) ---------- */
+.aw-wam-topbar { display: flex; align-items: center; gap: 1cqw; width: 100%; }
+.aw-wam-clock {
+  font-weight: 800; font-size: 2.4cqw; color: var(--aw-text, #fff);
+  min-width: 5.2cqw; text-align: center;
+}
+.aw-wam-timerbar {
+  position: relative; flex: 1; height: 1.5cqw; border-radius: 1cqw;
+  background: rgba(0,0,0,.28); overflow: hidden;
+}
+.aw-wam-timerbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 1cqw;
+  background: linear-gradient(90deg, #6cd06a, #3fae5a);
+}
+.aw-wam-timerbar-fill.is-warning { background: linear-gradient(90deg, #ff7a5c, #e0453f); }
+
+/* ---------- end-of-game score tally overlay ---------- */
+.aw-wam-tally {
+  position: absolute; left: 50%; top: 42%;
+  transform: translate(-50%, -50%) scale(.6);
+  z-index: 12;
+  font-weight: 900; font-size: 9cqw; color: #fff;
+  -webkit-text-stroke: 0.7cqw #7a3d12; paint-order: stroke fill;
+  opacity: 0;
+}
+.aw-wam-tally.is-on { animation: aw-wam-tallypop .4s ease-out forwards; }
+@keyframes aw-wam-tallypop {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
+  100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+}
+
+/* =============================================================
+   EDITOR (full page, NOT inside the 16:9 stage — plain px units).
+   Reuses core .aw-ed-* chrome; these are whack-only additions.
+   ============================================================= */
+.aw-wam-ed-modeseg { display: inline-flex; gap: 0; border-radius: 10px; overflow: hidden; border: 1px solid #cfd8e3; }
+.aw-wam-ed-modebtn {
+  appearance: none; border: none; cursor: pointer;
+  padding: 9px 20px; font-size: 15px; font-weight: 700;
+  background: #f2f5f9; color: #5a6676;
+}
+.aw-wam-ed-modebtn + .aw-wam-ed-modebtn { border-left: 1px solid #cfd8e3; }
+.aw-wam-ed-modebtn.is-on { background: #3b82f6; color: #fff; }
+
+.aw-wam-ed-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; margin-bottom: 8px;
+  background: #fff; border: 1px solid #e3e9f0; border-radius: 12px;
+}
+.aw-wam-ed-row.is-dragging { opacity: .5; }
+.aw-wam-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #3b82f6; }
+.aw-wam-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #3b82f6; }
+.aw-wam-ed-num { font-weight: 800; color: #9aa7b6; min-width: 26px; padding-top: 9px; text-align: right; }
+.aw-wam-ed-box { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.aw-wam-ed-statement {
+  flex: 1; min-width: 220px;
+  padding: 9px 12px; font-size: 15px;
+  border: 1px solid #cfd8e3; border-radius: 9px; outline: none;
+}
+.aw-wam-ed-statement:focus { border-color: #3b82f6; }
+.aw-wam-ed-answer { display: inline-flex; border-radius: 9px; overflow: hidden; border: 1px solid #cfd8e3; }
+.aw-wam-ed-seg {
+  appearance: none; border: none; cursor: pointer;
+  padding: 8px 16px; font-size: 14px; font-weight: 700;
+  background: #f2f5f9; color: #6b7787;
+}
+.aw-wam-ed-seg + .aw-wam-ed-seg { border-left: 1px solid #cfd8e3; }
+.aw-wam-ed-seg.is-true.is-on { background: #16a34a; color: #fff; }
+.aw-wam-ed-seg.is-false.is-on { background: #dc2626; color: #fff; }
+.aw-wam-ed-icons { display: flex; gap: 4px; padding-top: 3px; }
+.aw-wam-ed-iconbtn {
+  appearance: none; border: 1px solid #dbe2ea; background: #fff; cursor: pointer;
+  width: 34px; height: 34px; border-radius: 8px; color: #6b7787;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-wam-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-wam-ed-iconbtn:hover { background: #f2f5f9; }
+.aw-wam-ed-iconbtn.is-drag { cursor: grab; }
+.aw-wam-ed-iconbtn.is-danger:hover { background: #fdecec; color: #dc2626; border-color: #f4b8b8; }
+.aw-wam-ed-iconbtn:disabled { opacity: .4; cursor: default; }
+.aw-wam-ed-addrow {
+  appearance: none; cursor: pointer; width: 100%;
+  padding: 11px; margin-top: 4px;
+  border: 1.5px dashed #c4d0dd; border-radius: 10px;
+  background: #f7fafc; color: #4a5a6a; font-weight: 700; font-size: 15px;
+}
+.aw-wam-ed-addrow:hover { border-color: #3b82f6; color: #3b82f6; }
+.aw-wam-ed-addrow:disabled { opacity: .45; cursor: default; }
