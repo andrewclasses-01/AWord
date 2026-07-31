@@ -31,6 +31,103 @@ Engine hiện tại LUÔN chạy vòng finish → celebration → leaderboard (t
 
 ## Nhật ký
 
+### 31/7/2026 (đợt 16) — Bỏ tiếng THỪA khi trả lời SAI (2 tiếng → 1)
+
+Thầy báo: bấm sai 1 đáp án hiện phát **2 âm thanh** cho cùng 1 sự kiện — thừa 1. Rà lại: khi sai có
+`otbSound.wrong()` (tiếng "incorrect", phát NGAY lúc bấm) rồi lại `otbSound.tileEliminate()` (tiếng
+"tileeliminate", phát SAU khi đóng lúc ô bị khóa về lưới). Hai tiếng cho cùng một hành động sai.
+
+**Sửa**: bỏ dòng `if (!correct) otbSound.tileEliminate();` trong callback đóng của `answer()`. Giữ
+`otbSound.wrong()` (tiếng thứ nhất, phát ngay). File `tileeliminate.mp3` nay không dùng tới (giữ lại
+trong `sounds/` phòng sau này cần).
+
+**Test bằng `javascript_tool`** (chặn `HTMLMediaElement.prototype.play` ghi lại mp3 thực sự phát): sau
+khi bấm SAI chỉ còn `incorrect-02` (+ vài `clocktick` của đồng hồ, không liên quan) — KHÔNG còn
+`tileeliminate`; ô vẫn khóa đúng (`is-locked`). 0 lỗi console.
+
+**File đổi**: `open-the-box.js` (bỏ 1 dòng gọi `tileEliminate` trong `answer()`).
+
+**CHƯA COMMIT** — cùng lô với đợt 14+15, chờ thầy duyệt xong mới lưu/đẩy GitHub.
+
+### 31/7/2026 (đợt 15) — Chiều ĐÓNG: cho các ô số hiện lại MUỘN hơn (trễ 400ms) thay vì ngay từ đầu
+
+Thầy chơi bản đợt 14: chiều MỞ (ô số → ô câu hỏi) đã ưng; chiều ĐÓNG thì "các ô số khác hiện ra hơi
+sớm" — muốn chúng hiện muộn hơn một chút.
+
+**Sửa**: thêm hằng `CLOSE_BOX_FADE_DELAY_MS = 400` (chỉ áp cho chiều ĐÓNG). Hiệu ứng mờ-hiện của ô số
+(`is-appearing-fade`) nay có `--otb-fade-delay` = 400ms (giữ ẩn qua `both`/backwards-fill trong lúc trễ),
+và JS RÚT thời lượng fade xuống còn `ZOOM_TRANSFORM_MS − 400` để nó vẫn KẾT THÚC đúng lúc màn câu hỏi bị
+gỡ (1.2s) → không bị snap. Chiều MỞ (fade-out) KHÔNG đổi (không trễ) — thầy đã ưng.
+
+**Test bằng `javascript_tool`** (đo mỗi ~110ms, mốc 0 = lúc bắt đầu đóng): ô số giữ `opacity 0` suốt
+~340ms đầu rồi mới mờ hiện `.20 → .50 → .74 → .87 → .95 → .99` ở ~700ms còn lại (kết thúc ~1.2s, không
+snap); ô câu hỏi VẪN co liên tục từ đầu `.995 → .479` (đúng kích cỡ ô số). 0 lỗi console.
+
+**File đổi**: `open-the-box.js` (hằng `CLOSE_BOX_FADE_DELAY_MS`, đặt `--otb-fade-delay` + rút `--otb-fade-ms`
+trong `closeCardThen`), `open-the-box.css` (thêm `var(--otb-fade-delay)` vào animation `is-appearing-fade`).
+
+**CHƯA COMMIT** — cùng lô với đợt 14, chờ thầy duyệt xong cả 2 mới lưu/đẩy GitHub.
+
+### 31/7/2026 (đợt 14) — HIỆU ỨNG CHUYỂN Ô SỐ ⇄ Ô CÂU HỎI viết lại: 2 lớp CHỒNG NHAU, các ô số MỜ DẦN đồng thời với zoom (không còn "biến mất tức thì")
+
+Thầy chưa ưng hiệu ứng chuyển giữa **ô số** (lưới) và **ô câu hỏi**. Yêu cầu rõ 2 chiều:
+1. **Mở** (ô số → ô câu hỏi): ô được bấm zoom PHÓNG TO từ đúng vị trí/kích cỡ ô số gốc thành ô câu hỏi;
+   **đồng thời** các ô số khác **ẩn dần (fade)**; các ô đáp án trượt vào. **Cả 3 cùng thời lượng.**
+2. **Đóng** (ô câu hỏi → ô số): ô câu hỏi zoom NGƯỢC về đúng vị trí ô gốc; **đồng thời** các ô số khác
+   **hiện lại (fade)** và các ô đáp án trượt ra. **Ngược lại hoàn toàn quá trình 1.**
+
+**Nguyên nhân bản cũ không đạt**: `render()` XÓA TRẮNG `root` (`innerHTML=""`) NGAY khi bấm ô → toàn bộ
+lưới biến mất tức thì trước khi màn câu hỏi vẽ ra; lúc đóng thì lưới chỉ hiện lại SAU khi zoom xong
+(tuần tự, qua callback), lại "pop" bằng scale chứ không fade. Lưới và màn câu hỏi **chưa bao giờ cùng
+tồn tại** nên không thể cho ô mờ dần ĐỒNG THỜI với zoom.
+
+**Cách sửa (kiến trúc):** trong lúc chuyển, cho lưới và màn câu hỏi **CÙNG nằm trong DOM**, định vị
+**tuyệt đối chồng lên nhau** (class `.aw-otb-anim` trên `root` → 2 card con `position:absolute; inset:0`,
+card đang zoom `z-index:2` nằm trên). Tách hàm để làm được điều này:
+- `buildBoxGrid()` / `buildQuestion()` — chỉ DỰNG DOM, không gắn/không layout/không zoom/không phát âm.
+- `animateOpen(i)` (MỞ): dựng màn câu hỏi CHỒNG lên lưới đang có → gỡ `is-entrance`, thêm `is-exiting`
+  cho lưới (keyframe `aw-otb-box-fade-out`, thời lượng `--otb-fade-ms = ZOOM_TRANSFORM_MS`); **ẩn NGAY**
+  ô được bấm (`opacity:0`) để ô câu hỏi mọc lên từ đúng chỗ đó, tránh chồng số + câu hỏi; zoom ô câu hỏi
+  từ rect ô gốc (`zoomElFrom`); đáp án tự trượt vào (keyframe `aw-otb-qtile-in`, đã 1.2s từ đợt 12).
+  Xong (`ZOOM_FALLBACK_MS`) mới GỠ lưới cũ.
+- `closeCardThen(afterFn)` (ĐÓNG): dựng lưới MỚI (đúng trạng thái solved/locked mới nhất) đặt DƯỚI màn
+  câu hỏi, thêm `is-appearing-fade` (keyframe `aw-otb-box-fade-in`) → ô mờ HIỆN lại; đồng thời `.is-closing`
+  cho đáp án trượt ra + `zoomElTo` co ô câu hỏi về ô gốc. Xong mới GỠ màn câu hỏi. `afterFn` giờ KHÔNG
+  `render()` nữa (lưới đã sẵn) — chỉ lo âm thanh + kiểm tra thắng.
+- `finishGameOver()` chỉ `render()` lại nếu lưới CHƯA có (ca hết giờ lúc đang ở lưới).
+- Token `animToken` + `clearPending()`: nếu một lượt chuyển mới bắt đầu (bấm nhanh / hết giờ giữa chừng)
+  thì callback "xong" của lượt cũ tự bỏ, tránh kẹt 2 lớp DOM.
+
+**BẪY THẬT ĐÃ GẶP VÀ SỬA (quan trọng)**: `zoomElTo` (lúc đóng) chốt "xong" theo `transitionend` của
+**BẤT KỲ** thuộc tính nào end trước — mà `opacity` (840ms) end TRƯỚC `transform` (1200ms), nên cả màn
+đóng bị **CẮT NGANG ở 840ms**: ô câu hỏi mới co tới scale ~0.54, các ô số mới mờ hiện tới ~0.88 thì
+**snap** thẳng về cuối. Bản cũ KHÔNG lộ vì đóng xong là `render()` vẽ lưới đè lên (không thấy ô câu hỏi
+co dở); nay 2 lớp chồng nên cú giật hiện rõ. **Sửa**: `zoomElTo` chỉ chốt khi `transitionend` của ĐÚNG
+`transform` (1200ms) → cả co ô câu hỏi LẪN fade-in ô số (cùng 1.2s) chạy trọn vẹn rồi mới gỡ card.
+(Bài học lặp lại: đo animation phải đo LIÊN TỤC nhiều mốc — bắt được cú cắt 840ms nhờ lấy mẫu mỗi ~120ms.)
+
+**Test bằng `javascript_tool`** (browser thật, `test.html`, lấy mẫu `getComputedStyle` mỗi ~120-130ms
+suốt cả 2 chiều):
+- **MỞ**: lưới + màn câu hỏi CÙNG tồn tại t=5→1208ms; ô được bấm `opacity=0` ngay; ô KHÁC mờ dần đều
+  `1 → .887 → .654 → .424 → .259 → .148 → .075 → .031 → 0`; ô câu hỏi phóng `scale .476 → 1`; đáp án
+  trượt vào `tx 518 → 0` — cả 3 ĐỒNG THỜI ~1.2s; t≈1341 gỡ lưới, còn màn câu hỏi.
+- **ĐÓNG**: 2 lớp cùng tồn tại t≈1455→2546; ô số mờ HIỆN `.017 → .148 → .369 → .576 → .729 → .835 →
+  .908 → .956 → .984 → 1` (mượt, KHÔNG snap); ô câu hỏi co `1 → .477` (đúng bằng kích cỡ ô số — khớp
+  chính xác điểm xuất phát .476 lúc mở); đáp án trượt RA `tx 0 → 517`; xong gỡ màn câu hỏi, ô đã bấm hiện
+  đúng trạng thái đã trả lời.
+- Hồi quy: trả lời ĐÚNG → ô hiện **tích xanh** (solved), về lưới sạch, +điểm; hết giờ → panel **GAME
+  OVER** đúng (đường `gameOver → closeCardThen → finishGameOver → shake/nổ → finish` còn nguyên). 0 lỗi
+  console suốt toàn bộ. Không đụng `core/` — mọi thay đổi CSS đều prefix `.aw-otb-*`, chỉ nạp khi chơi
+  Open the box nên Quiz/Anagram không ảnh hưởng.
+
+**File đổi đợt này**: `open-the-box.js` (tách `buildBoxGrid`/`applyPopEntrance`/`buildQuestion`/`setupFit`;
+`animateOpen` mới; `closeCardThen`/`finishGameOver`/callback trong `answer()` viết lại; `zoomElTo` chốt
+theo `transform`; thêm `animToken`/`pendingSettle`/`clearPending`), `open-the-box.css` (thêm khối
+`.aw-otb-anim*` + keyframe `aw-otb-box-fade-out`/`-in`).
+
+**CHƯA COMMIT** — chờ thầy chơi thử ở `http://localhost:5510/templates/open-the-box/test.html` và xác
+nhận ưng trước khi lưu/đẩy GitHub (đúng quy tắc "hỏi trước khi commit" của dự án).
+
 ### 31/7/2026 (đợt 13) — SỬA BUG THẬT: hiệu ứng trượt ra của đáp án hoàn toàn không chạy (animation chặn transition)
 Thầy báo: sau khi chọn đáp án, các ô đáp án KHÔNG thấy trượt ra mà chỉ biến mất tại chỗ. Đây là **bug
 thật, không phải cần chỉnh thêm** — đã có từ trước (rất có thể từ đợt 9, khi hiệu ứng trượt ra lần đầu

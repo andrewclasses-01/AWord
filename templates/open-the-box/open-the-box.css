@@ -161,6 +161,55 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
+/* =============================================================
+   CROSS-FADE between the number grid and a question (đợt 14, teacher's
+   request: "hiệu ứng chuyển ô số <-> ô câu hỏi"). During a transition the
+   grid card and the question card are BOTH in the DOM, absolutely stacked in
+   the same area, so the boxes can fade WHILE the question tile zooms — see
+   animateOpen()/closeCardThen() in open-the-box.js. Outside a transition the
+   `.aw-otb-anim` class is absent so these rules don't apply and each card is
+   a normal, single, flow-filling child again.
+   ============================================================= */
+.aw-otb-anim { position: relative; }
+.aw-otb-anim > .aw-otb-card,
+.aw-otb-anim > .aw-otb-qcard { position: absolute; inset: 0; }
+/* the zooming card sits ON TOP; the other one underneath. animation:none
+   suppresses each card's own aw-fadein so it doesn't double up with (or
+   flash over) the box fade / tile zoom we're driving instead. These classes
+   are left on the surviving card afterwards — harmless once root loses
+   `.aw-otb-anim` (z-index is inert on a static box, and that card never
+   needs its one-shot fade-in again). */
+.aw-otb-anim-top { z-index: 2; }
+.aw-otb-anim-under { z-index: 1; }
+.aw-otb-anim-top, .aw-otb-anim-under { animation: none !important; }
+
+/* OPEN: the OTHER number boxes fade out (the tapped one is hidden in JS — its
+   question tile grows on top from that exact spot instead). --otb-fade-ms is
+   set in JS to ZOOM_TRANSFORM_MS so this span equals the tile zoom AND the
+   answer tiles' slide-in (teacher: all three the same length). Must be a real
+   ANIMATION, not a transition: the boxes' entrance animation holds opacity
+   with fill-mode `both`, and a held animation always beats a transition on
+   the same property (same trap documented on `.is-closing` below) — JS
+   removes `.is-entrance` first so this one takes over cleanly. */
+.aw-otb-grid.is-exiting .aw-otb-box {
+  animation: aw-otb-box-fade-out var(--otb-fade-ms, 1200ms) ease forwards;
+}
+@keyframes aw-otb-box-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* CLOSE: the number boxes fade back IN while the question tile shrinks back
+   onto its box — the exact reverse of OPEN (teacher's request). Same span via
+   --otb-fade-ms. `both` so the boxes sit at opacity 0 from the very first
+   frame (before the animation's 0% is reached) — no flash of fully-opaque
+   boxes before the fade starts. */
+.aw-otb-grid.is-appearing-fade .aw-otb-box {
+  /* --otb-fade-delay (đợt 15) holds the fade-in back a bit so the boxes come
+     in LATER on the close; `both` keeps them at opacity 0 through the delay
+     (backwards fill). JS shortens --otb-fade-ms by the same delay so the fade
+     still ends exactly when the question card is removed. */
+  animation: aw-otb-box-fade-in var(--otb-fade-ms, 1200ms) ease var(--otb-fade-delay, 0ms) both;
+}
+@keyframes aw-otb-box-fade-in { from { opacity: 0; } to { opacity: 1; } }
+
 .aw-otb-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
