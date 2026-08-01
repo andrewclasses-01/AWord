@@ -46,6 +46,14 @@ import "./templates/open-the-box/open-the-box.js";           // registers open t
 import "./templates/type-the-answer/type-the-answer.js";     // registers type the answer (+ its editor)
 import "./templates/find-the-match/find-the-match.js";       // registers find the match (+ its editor)
 import "./templates/true-false/true-false.js";               // registers true or false (+ its editor)
+import "./templates/gameshow/gameshow.js";                   // registers gameshow quiz (+ its editor)
+import "./templates/maze-chase/maze-chase.js";               // registers maze chase (+ its editor)
+import "./templates/whack-a-mole/whack-a-mole.js";           // registers whack-a-mole (+ its editor)
+import "./templates/flying-fruit/flying-fruit.js";           // registers flying fruit (+ its editor)
+import "./templates/balloon-pop/balloon-pop.js";             // registers balloon pop (+ its editor)
+import "./templates/crossword/crossword.js";                 // registers crossword (+ its editor)
+import "./templates/unjumble/unjumble.js";                   // registers unjumble (+ its editor)
+import "./templates/speaking-cards/speaking-cards.js";       // registers speaking cards (+ its lazy editor)
 
 const app = document.getElementById("app");
 
@@ -552,21 +560,34 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
 
 // Pick one random item from an act's content and normalise it to
 // {question, answers[]} for the card preview, regardless of which shape the
-// owning template uses (Quiz/Open the box: {question,answers:[{text}]} under
-// content.questions or content.items; Anagram: {word,clue} under
-// content.items; Type the answer: {prompt,acceptedAnswers:[...]} under
-// content.items). Returns null when there's nothing to show.
+// owning template uses. Every shape in the library today:
+//   Quiz / Open the box / Gameshow / Maze chase : content.questions|items
+//                                                 {question, answers:[{text}]}
+//   Anagram / Flying fruit : content.items       {word, clue}
+//   Type the answer        : content.items       {prompt, acceptedAnswers[]}
+//   True-false / Whack-a-mole : content.statements {text, answer:boolean}
+//   Find the match         : content.pairs       {keyword, definition}
+//   Crossword              : content.words       {answer, clue}
+//   Balloon pop            : content.items       {keyword, definition}
+//   Unjumble               : content.items       {sentence, clue}
+//   Speaking cards         : content.cards       {text, image?}
+// Returns null when there's nothing to show.
 function previewPick(node) {
   const c = node.content || {};
-  const list = c.questions || c.items || [];
+  const list = c.questions || c.items || c.words || c.statements || c.cards || c.pairs || [];
   if (!list.length) return null;
   const it = list[Math.floor(Math.random() * list.length)];
-  const question = it.question || it.prompt || it.clue || "";
+  const question = it.question || it.prompt || it.clue || it.definition ||
+                   it.sentence || it.text || it.word || "";
   if (!question) return null;
   let answers = [];
   if (Array.isArray(it.answers)) answers = it.answers.map(a => a.text || "").filter(Boolean);
   else if (Array.isArray(it.acceptedAnswers)) answers = it.acceptedAnswers.filter(Boolean);
-  else if (it.word) answers = [it.word];
+  else if (typeof it.answer === "boolean") answers = [it.answer ? "True" : "False"];
+  else if (typeof it.answer === "string" && it.answer) answers = [it.answer];
+  else if (it.keyword) answers = [it.keyword];
+  else if (it.word && it.word !== question) answers = [it.word];
+  else if (it.sentence && it.sentence !== question) answers = [it.sentence];
   return { question, answers };
 }
 

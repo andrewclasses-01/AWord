@@ -21,6 +21,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 32: GỘP 8 TEMPLATE CÒN LẠI LÊN TRANG CHỦ — trang chủ từ 6 → **14 loại act**. Đã tự test (0 lỗi console). CHƯA COMMIT (chờ thầy chơi thử rồi mới push).
+
+Thầy hỏi trang chủ tạo được bao nhiêu loại act (6), rồi bảo **"đưa toàn bộ lên trang chủ"** — tức là DUYỆT
+luôn 8 template đã build xong nhưng còn nằm trong kho, chỉ chơi được qua `test.html` riêng.
+
+**8 template được gộp lần này** (kèm `type` đăng ký trong registry):
+`gameshow` (Gameshow quiz) · `maze_chase` (Maze chase) · `whack_a_mole` (Whack-a-mole) ·
+`flying_fruit` (Flying fruit) · `balloon_pop` (Balloon pop) · `crossword` (Crossword) ·
+`unjumble` (Unjumble) · `speaking_cards` (Speaking cards).
+
+**4 file sửa để "lên trang chủ"** (đúng checklist mà các GHI CHU template đã dặn sẵn):
+1. `core/catalog.js` — thêm 8 dòng `{type, label, built:true, blurb}`. Đây là 1 NGUỒN DUY NHẤT: vừa
+   nuôi picker "New activity" ở trang chủ, vừa nuôi panel **Template** trong game (`engine.js` dùng
+   `ALL_TEMPLATES = TEMPLATES`) → sửa 1 chỗ là cả 2 nơi hiện đủ 14 loại.
+2. `main.js` — thêm 8 dòng `import "./templates/<ten>/<ten>.js"` (mỗi module tự `registerTemplate()`).
+3. `index.html` — thêm 8 dòng `<link rel="stylesheet">` cho CSS từng template.
+4. `manifest.js` — thêm 8 mục (giữ đồng bộ theo quy ước, dù `main.js` hiện không đọc file này).
+
+**Sửa thêm `previewPick()` trong `main.js`** (ảnh thu nhỏ trên thẻ act ở trang chủ). Hàm cũ chỉ đọc
+`content.questions|items` với các khoá `question/prompt/clue` + `answers/acceptedAnswers/word`, nên **5 loại
+mới sẽ hiện "No questions yet"** — và **True or false (đã live từ trước) cũng đang bị**, không ai để ý.
+Nay hàm nhận đủ mọi hình dạng dữ liệu trong thư viện:
+`content.questions | items | words | statements | cards | pairs`, khoá câu hỏi thêm
+`definition/sentence/text/word`, khoá đáp án thêm `answer` (boolean → "True"/"False"; string → chính nó),
+`keyword`, `sentence`. Có chặn tự-trùng (`it.word !== question`) để Anagram/Flying fruit không lấy
+đúng 1 chuỗi làm cả câu hỏi lẫn đáp án. Act rỗng vẫn trả `null` (giữ nguyên đường "No questions yet").
+
+**KHÔNG đụng `core/` (ngoài catalog.js) — 0 dòng sửa trong engine/app.css.**
+
+**Kiểm tra AN TOÀN trước khi gộp** (vì `index.html` nạp CSS của MỌI template ở phạm vi TOÀN CỤC):
+- Quét selector đầu dòng của 14 file CSS → **không file nào có selector trần** (đều mang tiền tố riêng
+  `.aw-bp- / .aw-cw- / .aw-ff- / .aw-gs- / .aw-mc- / .aw-sc- / .aw-unj- / .aw-wam-`…) → không rò rỉ style.
+- **0 khối `:root`** trong cả 14 CSS → không có biến toàn cục giẫm chân nhau.
+- Quét trùng tên `@keyframes` giữa 14 CSS + `core/app.css` → **0 trùng** (nếu trùng, file nạp sau sẽ
+  âm thầm đè animation của game khác — bẫy đáng sợ nhất khi gộp CSS toàn cục).
+- Đọc `normalize()` của cả 8 editor: đều tự dựng đúng cấu trúc riêng từ act trắng `content:{questions:[]}`
+  mà `createBlankAct()` truyền vào → nút "New activity" không vỡ với loại nào.
+
+**Đã tự test (trình duyệt thật, cổng 5510, console SẠCH, server không lỗi):**
+- Network: **8 module template mới + editor + file sound đều 200 OK**; `document.styleSheets` đếm đủ
+  **16 sheet** (2 core + 14 template).
+- Nạp `core/registry.js` + `core/catalog.js` từ trong trang: **registry có đủ 14 type**, **catalog 14 mục
+  `built:true`**, `missing=[]`, **cả 14 đều có hàm `edit`** (không loại nào rơi vào "editor coming soon").
+- **Mở thử EDITOR cả 14 loại** bằng act trắng đúng như `createBlankAct()` → 14/14 dựng xong, badge đúng tên
+  (QUIZ … SPEAKING CARDS), có ô nhập.
+- **Mount thử GAME cả 14 loại** bằng `startGame()` với act mẫu → 14/14 dựng `.aw-stage` + topbar,
+  **0 lỗi runtime** (bắt cả `error` lẫn `unhandledrejection`).
+- **previewPick**: lấy CHÍNH hàm trong `main.js` đã ship ra chạy với 14 act mẫu → **14/14 ra câu hỏi +
+  đáp án đúng** (trước khi sửa: `find_the_match` và các loại mới trả `null`), act rỗng vẫn `null`.
+- *Chưa test được bằng mắt màn trang chủ thật*: trang chủ chặn sau đăng nhập Google, popup này không tự
+  động hoá được (bẫy đã ghi ở mục 0/APP_MASTER). Phần kiểm tra trên đã đi thẳng vào chính dữ liệu mà
+  picker đọc (`TEMPLATES`) nên rủi ro còn lại rất thấp.
+
+**⚠️ VIỆC KẾ TIẾP ĐÁNG LÀM NHẤT — trang học sinh `play.html` vẫn CHỈ chơi được Quiz.** `play.js` mới
+`import "./templates/quiz/quiz.js"`, nên giao assignment loại khác cho HS sẽ lỗi "Chưa có game loại ... trong
+registry". Đây là tồn đọng CŨ (đúng cho cả 5 loại đã live từ trước), nay lộ rõ hơn vì có tới 13 loại ngoài
+Quiz. Hai hướng: (a) thêm 13 dòng import tĩnh y như `main.js` — 5 phút, nhưng HS phải tải cả 14 game;
+(b) **nạp template ĐỘNG theo `activity.type`** (sửa core, dùng chung cho cả `main.js`) — đúng bài hơn,
+HS chỉ tải đúng game được giao. Đề xuất chọn (b), hỏi thầy trước khi làm.
+
 ### 1/8/2026 — Đợt 31: FIND THE MATCH — 4 loạt tinh chỉnh thầy yêu cầu (đã test trình duyệt thật, 0 lỗi console). THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG đụng CORE.
 
 Find the match đã sống ở trang chủ từ 31/7 (`built:true`). Thầy chơi bản live rồi gửi 4 loạt yêu cầu, mỗi việc

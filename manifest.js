@@ -43,6 +43,54 @@ export const FINISHED_TEMPLATES = [
     label: "True or false",
     load: () => import("./templates/true-false/true-false.js"),
     sample: () => import("./templates/true-false/sample-true-false.js")
+  },
+  {
+    type: "gameshow",
+    label: "Gameshow quiz",
+    load: () => import("./templates/gameshow/gameshow.js"),
+    sample: () => import("./templates/gameshow/sample-gameshow.js")
+  },
+  {
+    type: "maze_chase",
+    label: "Maze chase",
+    load: () => import("./templates/maze-chase/maze-chase.js"),
+    sample: () => import("./templates/maze-chase/sample-maze-chase.js")
+  },
+  {
+    type: "whack_a_mole",
+    label: "Whack-a-mole",
+    load: () => import("./templates/whack-a-mole/whack-a-mole.js"),
+    sample: () => import("./templates/whack-a-mole/sample-whack-a-mole.js")
+  },
+  {
+    type: "flying_fruit",
+    label: "Flying fruit",
+    load: () => import("./templates/flying-fruit/flying-fruit.js"),
+    sample: () => import("./templates/flying-fruit/sample-flying-fruit.js")
+  },
+  {
+    type: "balloon_pop",
+    label: "Balloon pop",
+    load: () => import("./templates/balloon-pop/balloon-pop.js"),
+    sample: () => import("./templates/balloon-pop/sample-balloon-pop.js")
+  },
+  {
+    type: "crossword",
+    label: "Crossword",
+    load: () => import("./templates/crossword/crossword.js"),
+    sample: () => import("./templates/crossword/sample-crossword.js")
+  },
+  {
+    type: "unjumble",
+    label: "Unjumble",
+    load: () => import("./templates/unjumble/unjumble.js"),
+    sample: () => import("./templates/unjumble/sample-unjumble.js")
+  },
+  {
+    type: "speaking_cards",
+    label: "Speaking cards",
+    load: () => import("./templates/speaking-cards/speaking-cards.js"),
+    sample: () => import("./templates/speaking-cards/sample-speaking-cards.js")
   }
   // Add the next one here once it's approved.
 ];
