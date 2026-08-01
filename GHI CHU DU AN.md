@@ -21,6 +21,28 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 31: FIND THE MATCH — 4 loạt tinh chỉnh thầy yêu cầu (đã test trình duyệt thật, 0 lỗi console). THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG đụng CORE.
+
+Find the match đã sống ở trang chủ từ 31/7 (`built:true`). Thầy chơi bản live rồi gửi 4 loạt yêu cầu, mỗi việc
+đã đo DOM thật để xác nhận. **Chi tiết TỪNG loạt: `templates/find-the-match/GHI CHU FIND-THE-MATCH.md` (mục
+1/8/2026 — Đợt 31).** Tóm tắt:
+- **Đồng hồ**: 3 giây đếm "3-2-1" KHÔNG còn tính vào đồng hồ (dùng hook core sẵn có `tpl.manualTimerStart` +
+  `ui.startTimer()`, giống TRUE FALSE — không phải sửa core như đề xuất cũ).
+- **Bố cục**: hạ + căn giữa khối đáp án đúng tâm vùng (đo lệch 0px).
+- **Đáp án cố định tuyệt đối**: ô đã giải chỉ mờ đi, KHÔNG xóa khỏi DOM → lưới không bao giờ dồn/nhảy.
+- **Bấm sai**: ô vừa bấm đứng yên (chỉ hiện ✗), câu hỏi chuyển sang câu kế; Repeat until correct = xếp lại
+  vị trí ngẫu nhiên.
+- **Số mạng như TRUE FALSE**: tim ở top bar cạnh điểm (`hasLivesSlot`), slider Lives 0–10 (0=Unlimited),
+  pop tim khi sai, hết tim → game over.
+- **Bấm đúng**: câu hỏi bay về ô điểm + 11 ngôi sao + điểm nảy (phỏng theo TRUE FALSE).
+- **Khóa chọn**: sau mỗi lần bấm, khóa tới khi câu mới vào ≥50% (`gateTimer`, giống TRUE FALSE).
+- **GAME OVER**: hết tim hiện "GAME OVER" (celebration + bảng menu) thay vì "GAME COMPLETE".
+- **Câu dài tự co font**: `fitPrompt()` + biến `--pfit` cho prompt vừa khung (autoFit cũ chỉ đo lưới); clone
+  bay dùng đúng cỡ đã co.
+
+**File đổi (chỉ 3, KHÔNG đụng core):** `templates/find-the-match/find-the-match.js` / `.css` /
+`sample-find-the-match.js` (mẫu bật sẵn `lives:5`). `git status` trước commit xác nhận đúng 3 file + các GHI CHU.
+
 ### 1/8/2026 — Đợt 30: TYPE THE ANSWER — chuỗi rất nhiều vòng tinh chỉnh thầy yêu cầu (bàn phím, âm thanh, options, bố cục, điểm số). THẦY ĐÃ DUYỆT → COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in/additive, đã kiểm Quiz + 4 template khác 0 lỗi.)
 
 Thầy chơi bản Type the answer (đã live catalog từ 30/7) rồi yêu cầu tinh chỉnh sâu qua NHIỀU vòng "ok build"

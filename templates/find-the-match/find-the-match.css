@@ -25,14 +25,8 @@
   padding-bottom: 0.2cqw;
 }
 
-.aw-ftm-lives {
-  flex: 0 0 auto;
-  display: flex; gap: 0.6cqw;
-  font-size: calc(2.4cqw * var(--fit));
-  color: #ef4444;
-  margin-bottom: 0.6cqw;
-}
-.aw-ftm-lives span.is-lost { opacity: .2; }
+/* Lives now render as hearts in the TOP BAR (ui.livesSlot, .aw-top-heart —
+   shared core class), like True/false. No in-card lives row any more. */
 
 .aw-ftm-track {
   position: relative;
@@ -46,7 +40,10 @@
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   text-align: center;
-  font-size: calc(3.6cqw * var(--fit));
+  /* --pfit is a PER-PROMPT shrink factor set by fitPrompt() in the JS so a very
+     long definition scales down to fit the fixed-height track instead of being
+     clipped; --fit is the whole-stage scale shared with the tiles. */
+  font-size: calc(3.6cqw * var(--fit) * var(--pfit, 1));
   font-weight: 700;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
@@ -128,9 +125,29 @@
    OPTIONS PANEL — Speed slider (lives OUTSIDE the 16:9 stage, so plain
    rem/px here — NOT cqw, same as the editor section below).
    ============================================================= */
-.aw-ftm-speedrow { display: flex; align-items: center; gap: 10px; }
-.aw-ftm-speedslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
-.aw-ftm-speedval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
+/* =============================================================
+   CORRECT-ANSWER FLY EFFECT — a clone of the prompt flies to the score,
+   bursting into stars (same as True/false). Appended to the fullscreen host
+   (or <body>), OUTSIDE the 16:9 stage, so viewport px units — cqw would not
+   resolve here. position:fixed + a 0,0 origin lets find-the-match.js drive
+   them purely with translate(px,px).
+   ============================================================= */
+.aw-ftm-flyclone {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-weight: 700; line-height: 1.2; padding: 0 1vw;
+  will-change: transform, opacity;
+}
+.aw-ftm-star {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  font-size: clamp(14px, 2.2vw, 30px); color: #ffcf3f;
+  text-shadow: 0 0 6px rgba(255, 200, 60, .8);
+  will-change: transform, opacity;
+}
+
+.aw-ftm-speedrow, .aw-ftm-livesrow { display: flex; align-items: center; gap: 10px; }
+.aw-ftm-speedslider, .aw-ftm-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
+.aw-ftm-speedval, .aw-ftm-livesval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
 
 /* =============================================================
    EDITOR ("Edit content") — Keyword | Definition table, close copy of

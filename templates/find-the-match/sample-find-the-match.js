@@ -14,7 +14,7 @@ export const activity = {
   options: {
     timer: "countUp",
     shuffleQuestions: true,
-    lives: null,
+    lives: 5,
     showAnswers: true,
     speed: 0,
     repeatUntilCorrect: false,

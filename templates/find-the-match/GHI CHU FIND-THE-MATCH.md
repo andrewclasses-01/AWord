@@ -1,6 +1,57 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ ĐÃ GỘP TRANG CHỦ (31/7/2026 — `built:true` + `main.js` import, thầy nói "gộp lên trang chủ")
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ + ĐÃ TINH CHỈNH THEO THẦY (1/8/2026, Đợt 31 — commit + push + live). `built:true` từ 31/7.
+
+## Nhật ký
+
+### 1/8/2026 — Đợt 31: 4 loạt tinh chỉnh thầy yêu cầu (đã test trình duyệt thật, 0 lỗi console) — COMMIT + PUSH + LIVE
+Thầy chơi bản live rồi gửi 4 loạt yêu cầu. Tất cả đã đo DOM thật (không đoán qua ảnh) để xác nhận. Tóm tắt:
+
+**Loạt 1 (4 việc):**
+1. **3 giây đếm "3-2-1" KHÔNG tính vào đồng hồ chính** — dùng hook có sẵn của core `tpl.manualTimerStart:true`
+   + gọi `ui.startTimer()` sau khi 3-2-1 xong (count-up) / ngay lập tức (count-down/none). `startedAt` của
+   engine reset đúng lúc đồng hồ chạy thật nên thời gian ghi bảng xếp hạng cũng loại 3 giây. (Giống hệt cách
+   TRUE FALSE làm — đề xuất sửa core cũ ở cuối file này nay KHÔNG cần nữa vì core đã có sẵn hook.)
+2. **Hạ thấp + căn giữa khối đáp án** — giảm `padding-bottom` của `.aw-ftm-card` xuống `0.2cqw`; đo được tâm
+   khối = tâm vùng giữa đường kẻ ↔ thanh "x of y" (lệch 0px; trước lệch 10px cao).
+3. **Đáp án CỐ ĐỊNH tuyệt đối, không đổi vị trí** — `removeTile()` KHÔNG còn `tile.remove()` khỏi DOM nữa,
+   chỉ thêm class `is-solved` (mờ opacity:0 nhưng GIỮ ô trong lưới) → ô đã giải để lại chỗ trống, các ô khác
+   không bao giờ dồn/nhảy. `dropOrRequeue()` chế độ Show-once cũng bỏ removeTile.
+4. Bấm sai KHÔNG làm mất/xê dịch gì (loạt 2 chỉnh tiếp — xem dưới).
+
+**Loạt 2 (2 việc):**
+1. **Bấm SAI: ô vừa bấm ĐỨNG YÊN (dấu ✗ bay lên rồi mờ), NHƯNG câu hỏi CHUYỂN sang câu kế** — nhánh bấm sai
+   gọi lại `dropOrRequeue(target)` + `exitPromptThenCall()`. Show-once = bỏ cặp đó (ô đáp án đúng của nó vẫn
+   ở lại lưới thành ô nhiễu, KHÔNG xóa); **Repeat until correct = xếp lại VỊ TRÍ NGẪU NHIÊN** (`requeueRandom`).
+2. **Số mạng như TRUE FALSE** — thêm `tpl.hasLivesSlot:true`; tim hiện ở TOP BAR cạnh điểm (`ui.livesSlot`,
+   class chung `.aw-top-heart`), bỏ hàng tim cũ trong card (`.aw-ftm-lives` đã xóa). `normLives()` +
+   `DEFAULT_LIVES=5`/`MAX_LIVES=10`; slider "Lives" 0–10 (0=Unlimited) trong Options; `loseLife()` pop tim
+   trái nhất; 1–5 tim rời, 6–10 gộp "N♥"; hết tim → game over.
+
+**Loạt 3 (3 việc):**
+1. **Bấm ĐÚNG: câu hỏi bay về ô điểm + 11 ngôi sao** — `flyPromptToScore()` + `spawnStars()` (phỏng theo
+   `flyStatementToScore` của TRUE FALSE), class `.aw-ftm-flyclone`/`.aw-ftm-star` (position:fixed, px, gắn vào
+   fullscreen host/body). Điểm nảy (pulse) rồi +1 giữa lúc bay. Thay cho việc trượt câu ra phải khi đúng.
+2. **Khóa chọn tới khi câu mới vào ≥50%** — `lockTiles()`/`unlockTiles()` + `gateTimer` mở ở `ENTER_MS*0.5`;
+   khóa ngay khi bấm (đầu `choose`) và khóa sẵn trong `renderShell` (chặn bấm lúc đếm 3-2-1). unlock chỉ mở
+   ô CHƯA giải/khóa.
+3. **Hết tim → "GAME OVER"** thay vì "GAME COMPLETE" (cả chữ celebration lẫn bảng menu) — `finish("gameover")`
+   truyền `title:"Game over"` vào `ui.finish()` (engine dùng `endTitle` cho cả 2 nơi). Xong hết bài / hết giờ
+   vẫn "GAME COMPLETE".
+
+**Loạt 4 (1 việc):**
+- **Câu hỏi quá dài bị cắt → tự co font cho vừa** — `fitPrompt()` đặt biến `--pfit` (font prompt =
+  `3.6cqw * --fit * --pfit`), lặp giảm 0.07 tới khi hết tràn (đáy 0.45). autoFit cũ chỉ đo lưới đáp án nên
+  không bắt được prompt tràn — nay xử lý riêng. Clone bay đọc `cs.fontSize` (đã co) → bay đi từ ĐÚNG cỡ đang
+  hiện. Đo thật: câu dài tràn 44px → co `--pfit=0.65` (34.8→22.6px) → tràn 0px; câu ngắn giữ `--pfit=1`.
+
+**File đổi:** `find-the-match.js`, `find-the-match.css`, `sample-find-the-match.js` (mẫu bật sẵn `lives:5`).
+KHÔNG đụng `core/`. Đã `git status` xác nhận chỉ 3 file này + các file GHI CHU thay đổi trước khi commit.
+
+### Việc còn ngỏ (chưa thầy yêu cầu)
+- 3 âm thanh Menu/Leaderboard/RevealAnswers vẫn chưa gắn (core chưa có hook — xem "ĐỀ XUẤT SỬA CORE" cuối file).
+- Chưa tự nghe thật các file mp3 (chỉ kiểm network 200 OK).
+- "Repeat until correct" quay vòng: logic `requeueRandom` cũ, chưa chạy thử nhiều vòng liên tục trên trình duyệt.
 
 ## Việc cần làm (cho session nhận template này)
 1. Đọc `../HUONG DAN TEMPLATE.md` (quy trình + luật chống xung đột) và `../../core/HUONG DAN CORE.md` (API engine).
@@ -15,7 +66,7 @@
 ## Mô tả game (tóm tắt từ spec)
 Dữ liệu là các cặp {keyword ↔ definition}. Màn hình hiện 1 prompt + nhiều lựa chọn; chạm lựa chọn khớp thì cặp đó bị loại; lặp đến hết. Có lives + speed (đáp án trôi). Tham khảo Quiz (`../quiz/quiz.js`) làm mẫu chuẩn.
 
-## Nhật ký
+## Nhật ký — các đợt TRƯỚC (31/7)
 
 ### 31/7/2026, đợt 3 — GỘP TRANG CHỦ (thầy nói "gộp lên trang chủ và kết thúc session")
 `core/catalog.js`: `find_the_match` đổi `built:false` → `true` + sửa lại blurb cho khớp cơ chế mới

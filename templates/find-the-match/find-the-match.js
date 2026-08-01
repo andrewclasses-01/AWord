@@ -8,12 +8,11 @@
 //    of the stage, arrives at the centre, then (if Speed > 0) keeps
 //    drifting slowly to the right edge — the whole journey is ONE
 //    continuous slow glide, not a quick fade. Speed 0 = arrives at centre
-//    and just waits there (no drift) until answered. ANY tap — correct OR
-//    wrong — makes the current prompt continue on to the right edge from
-//    wherever it currently is (a glide, not a snap); the next prompt only
-//    starts entering once the current one is FULLY off-screen (31/7/2026,
-//    2nd round: a wrong tap now dismisses the prompt too, changed from the
-//    1st round's "wrong tap doesn't touch it" guess).
+//    and just waits there (no drift) until answered. A CORRECT tap makes the
+//    prompt lift off and FLY into the score (bursting into little stars, like
+//    True/false); a WRONG tap makes it glide on to the right edge from wherever
+//    it is. Either way the answer TILES stay fixed and the tapped tile is never
+//    removed; tiles are locked until the next prompt is ~50% in (1/8/2026).
 //  • A pair that wasn't matched (wrong tap OR the glide reached the right
 //    edge unanswered) follows `options.repeatUntilCorrect`: false = marked
 //    skipped, tile removed; true = re-queued at a RANDOM position (not
@@ -58,6 +57,17 @@ const PALETTE = [
 const ROWS = 5;
 const ENTER_MS = 900;   // left edge -> centre, always this pace regardless of Speed
 const EXIT_MS = 550;    // wherever it is -> fully off the right edge, once a tile is tapped
+const DEFAULT_LIVES = 5;
+const MAX_LIVES = 10;
+
+// Options store lives as: 0 = unlimited (slider's left end), 1..10 = that many
+// hearts, null = unlimited (legacy), undefined = default 5 — same shape as
+// True/false so Settings/Options behave consistently across templates.
+function normLives(v) {
+  if (v === 0 || v === null) return null;                 // unlimited
+  if (typeof v === "number") return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
+  return DEFAULT_LIVES;                                   // undefined -> default 5
+}
 
 // Speed 0-10 -> how long the CENTRE-to-right-edge drift takes. 0 = no
 // drift at all (frozen at centre, "wait for answer"). Chosen for feel —
@@ -73,6 +83,7 @@ const ftmTemplate = {
   type: "find_the_match",
   scorable: true,
   name: "Find the match",
+  hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
   manualTimerStart: true,   // the visible clock starts only after our 3-2-1 prep (count-up), so the prep isn't counted
 
   toPrintItems(activity) {
@@ -91,6 +102,26 @@ const ftmTemplate = {
 
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
   buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
+    // LIVES — a slider 0..10 (0 = Unlimited), hearts shown next to the score
+    // (same as True/false — teacher's request, 1/8).
+    const gLives = el("div", "aw-opt-group");
+    gLives.append(el("div", "aw-opt-label", "Lives"));
+    const rowLives = el("div", "aw-opt-row aw-ftm-livesrow");
+    const curLives = (draft.lives === 0 || draft.lives === null) ? 0
+      : (Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(1, draft.lives)) : DEFAULT_LIVES);
+    const livesVal = el("span", "aw-ftm-livesval", curLives === 0 ? "Unlimited" : String(curLives));
+    const livesInput = el("input", "aw-ftm-livesslider");
+    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
+    livesInput.value = String(curLives);
+    livesInput.oninput = () => {
+      const v = parseInt(livesInput.value, 10);
+      draft.lives = v;   // 0 stored = unlimited
+      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
+    };
+    rowLives.append(livesInput, livesVal);
+    gLives.append(rowLives);
+    panel.append(gLives);
+
     // SPEED — a real slider (teacher's explicit request), not a dropdown.
     const gSpeed = el("div", "aw-opt-group");
     gSpeed.append(el("div", "aw-opt-label", "Speed"));
@@ -168,12 +199,14 @@ const ftmTemplate = {
 
     const state = pairs.map(() => ({ solved: false, skipped: false }));
     let finished = false;
-    let livesLeft = typeof opt.lives === "number" ? opt.lives : null;
+    let livesLeft = normLives(opt.lives);
     let fitter = null;
     let promptAnim = null;    // the currently-running Animation on .aw-ftm-prompt (enter or crawl)
     let fallbackTimer = null; // setTimeout backup for whichever animation is running (rule: .animate() needs one)
     let prepTimer = null;     // the 3-2-1 prep sequence (count-up mode only)
+    let gateTimer = null;     // unlocks the tiles once a new prompt is ~50% in (like True/false)
     const tickTimers = [];    // discrete count-down "ting" timeouts (count-down mode only)
+    const pendingMarks = [];  // setTimeouts for fly marks / heart-pop cleanup
 
     ui.onSubmit(() => finish("timesup"), () => state.filter(s => s.solved || s.skipped).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
@@ -240,14 +273,6 @@ const ftmTemplate = {
       root.innerHTML = "";
       const card = el("div", "aw-ftm-card");
 
-      if (livesLeft != null) {
-        const lives = el("div", "aw-ftm-lives");
-        for (let i = 0; i < opt.lives; i++) {
-          lives.append(el("span", i < livesLeft ? "" : "is-lost", "&#9829;"));
-        }
-        card.append(lives);
-      }
-
       const track = el("div", "aw-ftm-track");
       track.append(el("div", "aw-ftm-prompt"));
       card.append(track);
@@ -279,9 +304,79 @@ const ftmTemplate = {
 
       ui.setScore(scoreNow());
       updateNav();
+      renderLives();
+      lockTiles();   // stay locked until the first prompt is ~50% in (startCycle re-arms the unlock)
+    }
+
+    // Hearts live in the top bar (ui.livesSlot), just left of the score — same
+    // as True/false. 1..5 lives show that many separate hearts; 6..10 show a
+    // compact "N♥"; unlimited shows nothing. A lost life pops the LEFTMOST heart.
+    function renderLives() {
+      const slot = ui.livesSlot;
+      if (!slot) return;
+      slot.innerHTML = "";
+      if (livesLeft == null) return;                 // unlimited
+      if (livesLeft <= 5) {
+        for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
+      } else {
+        slot.append(el("span", "aw-top-heartcount", String(livesLeft)));
+        slot.append(el("span", "aw-top-heart", "&#9829;"));
+      }
+    }
+
+    // Drops one life, popping the leftmost heart (when 1..5 are shown
+    // individually) then re-rendering. Returns true if that was the last life.
+    function loseLife() {
+      if (livesLeft == null) return false;           // unlimited -> can't lose
+      const slot = ui.livesSlot;
+      const gone = (livesLeft <= 5 && slot) ? slot.firstChild : null;   // leftmost heart
+      livesLeft = Math.max(0, livesLeft - 1);
+      if (gone) {
+        let done = false;
+        const finishPop = () => { if (done) return; done = true; renderLives(); };
+        try {
+          const a = gone.animate(
+            [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.7)", opacity: 0 }],
+            { duration: 320, easing: "ease-in", fill: "forwards" });
+          a.onfinish = finishPop;
+        } catch (e) { finishPop(); }
+        pendingMarks.push(setTimeout(finishPop, 360));
+      } else {
+        renderLives();
+      }
+      return livesLeft <= 0;
     }
 
     function offscreenPx() { return Math.round((root.clientWidth || 1) * 1.15); }
+
+    // Long definitions can overflow the fixed-height, overflow:hidden track (the
+    // whole-stage autoFit only watches the answer grid, not the prompt). Shrink
+    // THIS prompt's font via --pfit until it fits both ways, so nothing is
+    // clipped. The fly-to-score clone reads the resulting computed size, so it
+    // lifts off from exactly the size shown here.
+    function fitPrompt(promptEl) {
+      const track = promptEl.parentElement;   // .aw-ftm-track
+      if (!track) return;
+      promptEl.style.setProperty("--pfit", "1");
+      let scale = 1, guard = 0;
+      while (guard++ < 14 &&
+             (promptEl.scrollHeight > track.clientHeight + 1 || promptEl.scrollWidth > track.clientWidth + 1) &&
+             scale > 0.45) {
+        scale -= 0.07;
+        promptEl.style.setProperty("--pfit", scale.toFixed(3));
+      }
+    }
+
+    // Tiles are LOCKED while a prompt is entering, and only unlock once it's
+    // ~50% across — so you can't answer two prompts back-to-back "blind"
+    // (teacher 1/8, same gate as True/false). Solved / locked tiles stay
+    // disabled regardless.
+    function lockTiles() { root.querySelectorAll(".aw-ftm-tile").forEach(t => { t.disabled = true; }); }
+    function unlockTiles() {
+      root.querySelectorAll(".aw-ftm-tile").forEach(t => {
+        if (!t.classList.contains("is-solved") && !t.classList.contains("is-locked")) t.disabled = false;
+      });
+    }
 
     // Starts (or restarts) the current queue-front's journey from the LEFT
     // edge. Only called once the PREVIOUS prompt is fully gone.
@@ -290,7 +385,9 @@ const ftmTemplate = {
       if (!queue.length) { armFallback(() => finish("complete"), 400); return; }
       const promptEl = root.querySelector(".aw-ftm-prompt");
       if (!promptEl) return;
+      promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
       promptEl.textContent = escapeHtml(pairs[queue[0]].definition);
+      fitPrompt(promptEl);                       // shrink long definitions so nothing is clipped
       const off = offscreenPx();
       promptEl.style.transform = `translateX(${-off}px)`;
       void promptEl.offsetWidth; // reflow so the browser commits the start position before animating from it
@@ -300,6 +397,10 @@ const ftmTemplate = {
         { duration: ENTER_MS, easing: "ease-out", fill: "forwards" }
       );
       promptAnim = enter;
+      // Lock the tiles now, unlock at ~50% of the slide-in (teacher 1/8).
+      lockTiles();
+      if (gateTimer) clearTimeout(gateTimer);
+      gateTimer = setTimeout(() => { if (!finished && queue.length) unlockTiles(); }, Math.round(ENTER_MS * 0.5));
       let done = false;
       const onEntered = () => {
         if (done) return; done = true;
@@ -410,9 +511,90 @@ const ftmTemplate = {
       armFallback(run, EXIT_MS + 100);
     }
 
+    // A CORRECT answer: the whole prompt lifts off toward the score, bursting
+    // into little stars that stream into it; the score then ticks up with a
+    // pulse. THEN `cb` runs (start next / finish). Overlay nodes are appended to
+    // the fullscreen host (or <body>) so they show over the stage and in
+    // fullscreen; they use px/viewport coords (NOT cqw, which wouldn't resolve
+    // outside the stage). Mirrors True/false's flyStatementToScore.
+    function flyPromptToScore(promptEl, cb) {
+      const scoreEl = ui.scoreEl || document.querySelector(".aw-top-score");
+      const host = document.fullscreenElement || document.body;
+      let called = false;
+      const done = () => { if (called) return; called = true; if (!finished) cb(); };
+      if (!promptEl || !scoreEl) { done(); return; }
+
+      const from = promptEl.getBoundingClientRect();
+      const to = scoreEl.getBoundingClientRect();
+      const cs = getComputedStyle(promptEl);
+
+      const clone = el("div", "aw-ftm-flyclone");
+      clone.textContent = promptEl.textContent;
+      clone.style.left = from.left + "px";
+      clone.style.top = from.top + "px";
+      clone.style.width = from.width + "px";
+      clone.style.height = from.height + "px";
+      clone.style.font = cs.font;
+      clone.style.fontSize = cs.fontSize;   // carry the fitted (possibly shrunk) size exactly
+      clone.style.color = cs.color;
+      host.appendChild(clone);
+      promptEl.style.visibility = "hidden";
+
+      const dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+      const dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+      try {
+        clone.animate([
+          { transform: "translate(0,0) scale(1)", opacity: 1 },
+          { transform: `translate(${dx * 0.55}px, ${dy * 0.55}px) scale(0.5)`, opacity: 0.7, offset: 0.55 },
+          { transform: `translate(${dx}px, ${dy}px) scale(0.08)`, opacity: 0 }
+        ], { duration: 620, easing: "cubic-bezier(.5,0,.3,1)", fill: "forwards" }).onfinish = () => clone.remove();
+      } catch (e) { /* ignore */ }
+      pendingMarks.push(setTimeout(() => clone.remove(), 950));
+
+      spawnStars(from, to, host);
+
+      // score ticks up mid-flight, with a little pulse
+      pendingMarks.push(setTimeout(() => {
+        if (finished) return;
+        ui.setScore(scoreNow());
+        updateNav();
+        try {
+          scoreEl.animate([{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }],
+            { duration: 340, easing: "ease-out" });
+        } catch (e) { /* ignore */ }
+      }, 380));
+
+      pendingMarks.push(setTimeout(done, 640));
+    }
+
+    function spawnStars(from, to, host) {
+      const cx = from.left + from.width / 2, cy = from.top + from.height / 2;
+      const tx = to.left + to.width / 2, ty = to.top + to.height / 2;
+      const N = 11;
+      for (let i = 0; i < N; i++) {
+        const s = el("span", "aw-ftm-star", "&#9733;");
+        host.appendChild(s);
+        const jx = cx + (Math.random() - 0.5) * from.width * 0.9;
+        const jy = cy + (Math.random() - 0.5) * from.height * 0.9;
+        const delay = i * 26;
+        try {
+          s.animate([
+            { transform: `translate(${jx}px, ${jy}px) scale(.2)`, opacity: 0 },
+            { transform: `translate(${jx}px, ${jy}px) scale(1)`, opacity: 1, offset: .18 },
+            { transform: `translate(${tx}px, ${ty}px) scale(.35)`, opacity: 0 }
+          ], { duration: 680, delay, easing: "cubic-bezier(.4,.1,.3,1)", fill: "forwards" }).onfinish = () => s.remove();
+        } catch (e) { s.remove(); }
+        pendingMarks.push(setTimeout(() => s.remove(), 950 + delay));
+      }
+    }
+
     function choose(idx, tile) {
       if (finished || !queue.length) return;
       const target = queue[0];
+      // Lock all tiles right away so the NEXT prompt can't be answered "blind"
+      // while this one is still flying off / sliding out — startCycle re-arms
+      // the 50%-in unlock for the incoming prompt (teacher 1/8, like True/false).
+      lockTiles();
       if (idx === target) {
         queue.shift();
         state[target].solved = true;
@@ -420,7 +602,7 @@ const ftmTemplate = {
 
         const fly = el("span", "aw-mark-fly", icons.markCheck);
         tile.append(fly);
-        setTimeout(() => fly.remove(), 900);
+        pendingMarks.push(setTimeout(() => fly.remove(), 900));
         if (removeCorrects) {
           removeTile(tile);
         } else {
@@ -429,28 +611,32 @@ const ftmTemplate = {
           tile.append(el("span", "aw-tile-badge", icons.markCheck));
         }
 
-        ui.setScore(scoreNow());
-        updateNav();
-        exitPromptThenCall(() => { if (!queue.length) finish("complete"); else startCycle(); });
+        // The current PROMPT lifts off toward the score, bursting into little
+        // stars (same effect as True/false, teacher 1/8) — flyPromptToScore
+        // ticks the score up mid-flight with a pulse, then continues.
+        const promptEl = root.querySelector(".aw-ftm-prompt");
+        haltPromptAnim();
+        flyPromptToScore(promptEl, () => { if (!queue.length) finish("complete"); else startCycle(); });
       } else {
-        // Wrong tap (teacher's spec 1/8): a big ✗ flies up on the TAPPED tile
-        // then fades — but NOTHING on the board moves or disappears. The tapped
-        // tile stays exactly where it is (it may still be the right answer for a
-        // later prompt), and the CURRENT prompt stays put too, so the student
-        // simply tries again until they find the match. (This reverses the
-        // earlier "a wrong tap slides the prompt away" behaviour.) The only
-        // cost is a life, if lives are enabled — running out ends the game.
+        // Wrong tap (teacher's spec, 1/8): the TAPPED tile stays exactly where
+        // it is — a ✗ flies up then fades, but the tile never moves or vanishes
+        // (it may be the right answer for a LATER prompt; answers are fixed).
+        // The current PROMPT, however, moves on to the next one: its pair is
+        // dropped (Show once) or re-queued at a RANDOM later spot (Repeat until
+        // correct), and the prompt glides off to the right just like a correct
+        // tap. Lose a life if lives are enabled — running out ends the game.
         ftmSound.wrong();
         const fly = el("span", "aw-mark-fly is-cross", icons.markCross);
         tile.append(fly);
-        setTimeout(() => fly.remove(), 900);
+        pendingMarks.push(setTimeout(() => fly.remove(), 900));
 
-        if (livesLeft != null) {
-          livesLeft--;
-          const livesEl = root.querySelector(".aw-ftm-lives");
-          if (livesEl) [...livesEl.children].forEach((s, i) => s.classList.toggle("is-lost", i >= livesLeft));
-          if (livesLeft <= 0) exitPromptThenCall(() => finish("gameover"));
-        }
+        const outOfLives = loseLife();
+        dropOrRequeue(target);
+        exitPromptThenCall(() => {
+          if (outOfLives) finish("gameover");
+          else if (!queue.length) finish("complete");
+          else startCycle();
+        });
       }
     }
 
@@ -492,7 +678,10 @@ const ftmTemplate = {
           correctText: p.keyword
         };
       });
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered: correct });
+      // Out of lives shows "GAME OVER" (celebration cover + menu panel both
+      // read this title); everything else keeps the default "Game complete".
+      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered: correct,
+        title: reason === "gameover" ? "Game over" : undefined });
     }
 
     return function cleanup() {
@@ -500,8 +689,12 @@ const ftmTemplate = {
       if (fitter) fitter.destroy();
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (prepTimer) clearTimeout(prepTimer);
+      if (gateTimer) clearTimeout(gateTimer);
       tickTimers.forEach(clearTimeout);
+      pendingMarks.forEach(clearTimeout);
       haltPromptAnim();
+      if (ui.livesSlot) ui.livesSlot.innerHTML = "";
+      document.querySelectorAll(".aw-ftm-flyclone, .aw-ftm-star").forEach(n => n.remove());
     };
   }
 };
