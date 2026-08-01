@@ -46,6 +46,7 @@ const SMALL_CHECK_GREEN = `<svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12
 const SMALL_CROSS_RED = `<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#d8434c" stroke-width="3.6" stroke-linecap="round"/></svg>`;
 
 const STAGGER_MS = 240;     // ms — gap between each position's reveal in "submit" mode
+const INTRO_MS = 2500;      // ms — the whiteboard "push-in" intro before play (Classic only)
 
 // Shared "hold, then fly to the score, morph into +points, pulse-count it in"
 // timings (same feel as Anagram's PERFECT bonus).
@@ -84,6 +85,11 @@ const unjumbleTemplate = {
   type: "unjumble",
   scorable: true,
   name: "Unjumble",
+
+  // Defer the clock so it stays at 0:00 during the whiteboard intro (Classic).
+  // begin() mounts without starting the timer; mount() calls ui.startTimer()
+  // once the intro finishes (or immediately on non-Classic styles).
+  manualTimerStart: true,
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -169,10 +175,26 @@ const unjumbleTemplate = {
     let boardEl = null;
     let submitBtnEl = null;
     let revealEl = null;
+    let introEl = null;
     const activeFlyNodes = new Set();
+
+    // The whiteboard photo is the WHOLE-stage background for the Classic
+    // ("Whiteboard") style. We tag the stage from here (no core change) and let
+    // CSS gate it on `.theme-classic`; the tag is removed in cleanup. Switching
+    // Style live to another look then drops the photo automatically via CSS.
+    const stageEl = root.closest(".aw-stage");
+    if (stageEl) stageEl.classList.add("aw-unj-active");
+    const isClassic = (activity.theme || "classic") === "classic";
 
     ui.onSubmit(finish, () => state.filter(st => doneCheck(st)).length);   // block "Submit answers" at 0 answered
     render();
+
+    // Intro: on Classic, a gentle "push-in" of the whiteboard (the engine has
+    // already started the intro music at Play) before the clock starts. On the
+    // other Styles there's no photo, so we skip straight in. Either way the
+    // clock only starts here (manualTimerStart defers it in the engine).
+    if (isClassic && stageEl) runIntro(() => ui.startTimer());
+    else ui.startTimer();
 
     function doneCheck(s) { return mode === "submit" ? s.graded === true : s.correct === true; }
     function scoreNow() { return state.reduce((sum, s) => sum + (s.points || 0), 0); }
@@ -188,8 +210,9 @@ const unjumbleTemplate = {
       const card = el("div", "aw-unj-card");
       card.append(doodleLayer());
 
+      // Only the teacher's own clue is shown; the generic "Put the words in the
+      // right order" line was removed at the teacher's request (Đợt 35).
       if (it.clue) card.append(el("div", "aw-unj-clue", escapeHtml(it.clue)));
-      else card.append(el("div", "aw-unj-clue aw-unj-clue-generic", "Put the words in the right order"));
 
       boardEl = el("div", "aw-unj-board" + (align === "center" ? " is-centered" : ""));
       card.append(boardEl);
@@ -208,14 +231,14 @@ const unjumbleTemplate = {
       renderBoard();
       updateSubmitState();
 
-      const clueEl = card.querySelector(".aw-unj-clue");
+      const clueEl = card.querySelector(".aw-unj-clue");   // null when there's no clue
       const boardMarginBottom = parseFloat(getComputedStyle(boardEl).marginBottom) || 0;
       const revealMarginTop = revealEl ? parseFloat(getComputedStyle(revealEl).marginTop) || 0 : 0;
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
       const cardPaddingBottom = parseFloat(getComputedStyle(card).paddingBottom) || 0;
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.05,
-        measure: () => clueEl.offsetHeight + boardEl.offsetHeight + boardMarginBottom +
+        measure: () => (clueEl ? clueEl.offsetHeight : 0) + boardEl.offsetHeight + boardMarginBottom +
           (revealEl ? revealEl.offsetHeight + revealMarginTop : 0) +
           (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + cardPaddingBottom
       });
@@ -250,12 +273,13 @@ const unjumbleTemplate = {
     }
 
     // ---------- drag to reorder (pointer events: mouse + touch) ----------
-    // Insert-with-reflow: the dragged word is lifted as a floating clone, a
-    // placeholder shows where it will land, and the other words part to make
-    // room — dropping splices it into the placeholder's slot.
+    // The dragged word lifts as a floating clone; a blinking text-cursor CARET
+    // shows the nearest gap where it will land. The OTHER words DON'T move while
+    // dragging (no reflow) — they only shuffle into the new order on DROP. The
+    // source word stays in place, dimmed, until then. (Teacher's request, Đợt 35.)
     function attachDrag(tile) {
       tile.style.touchAction = "none";
-      let dragging = false, clone = null, ph = null, offX = 0, offY = 0;
+      let dragging = false, clone = null, caret = null, offX = 0, offY = 0;
 
       tile.addEventListener("pointerdown", e => {
         const st = state[index];
@@ -282,11 +306,12 @@ const unjumbleTemplate = {
         clone.style.color = cs.color;
         document.body.append(clone);
         activeFlyNodes.add(clone);
-        ph = el("span", "aw-unj-ph");
-        ph.style.width = r.width + "px";
-        ph.style.height = r.height + "px";
-        tile.style.display = "none";
-        boardEl.insertBefore(ph, tile);
+        // the source word stays put (no reflow) — just dimmed to show it's lifted
+        tile.classList.add("is-dragsrc");
+        // the caret marks where the word will drop; positioned inside the board
+        caret = el("span", "aw-unj-caret");
+        boardEl.append(caret);
+        positionCaret(e.clientX, e.clientY, caret);
         try { tile.setPointerCapture(e.pointerId); } catch { /* ignore */ }
         unjumbleSound.pickup();
       });
@@ -295,7 +320,7 @@ const unjumbleTemplate = {
         if (!dragging) return;
         clone.style.left = (e.clientX - offX) + "px";
         clone.style.top = (e.clientY - offY) + "px";
-        positionPlaceholder(e.clientX, e.clientY, ph);
+        positionCaret(e.clientX, e.clientY, caret);
       });
 
       const end = e => {
@@ -303,19 +328,23 @@ const unjumbleTemplate = {
         dragging = false;
         try { tile.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
         if (clone) { clone.remove(); activeFlyNodes.delete(clone); clone = null; }
-        const newIndex = placeholderIndex(ph);
-        if (ph) { ph.remove(); ph = null; }
-        tile.style.display = "";
+        const newIndex = caretDropIndex(caret, tile);
+        if (caret) { caret.remove(); caret = null; }
+        tile.classList.remove("is-dragsrc");
         commitReorder(Number(tile.dataset.word), newIndex);
       };
       tile.addEventListener("pointerup", end);
       tile.addEventListener("pointercancel", end);
     }
 
-    // Move the placeholder to the gap nearest the pointer (row-aware via
-    // closest tile centre; insert before it if the pointer is to its left).
-    function positionPlaceholder(x, y, ph) {
-      const tiles = [...boardEl.querySelectorAll(".aw-unj-wtile")].filter(t => t.style.display !== "none");
+    // Place the caret at the gap nearest the pointer (row-aware via closest tile
+    // centre; before it if the pointer is to its left, else after). Stores the
+    // resulting FULL-array insertion index on the caret for the drop. Nothing
+    // else in the board moves while dragging.
+    function positionCaret(x, y, caret) {
+      const tiles = [...boardEl.querySelectorAll(".aw-unj-wtile")];
+      if (!tiles.length) return;
+      const brect = boardEl.getBoundingClientRect();
       let best = null, bestD = Infinity, before = true;
       for (const t of tiles) {
         const r = t.getBoundingClientRect();
@@ -323,20 +352,21 @@ const unjumbleTemplate = {
         const d = (cx - x) * (cx - x) + (cy - y) * (cy - y);
         if (d < bestD) { bestD = d; best = t; before = x < cx; }
       }
-      if (!best) { boardEl.append(ph); return; }
-      if (before) boardEl.insertBefore(ph, best);
-      else boardEl.insertBefore(ph, best.nextSibling);
+      const r = best.getBoundingClientRect();
+      const slot = Number(best.dataset.slot);
+      const h = r.height * 0.72;   // a touch shorter than the row, so it reads as a text cursor
+      caret.style.left = ((before ? r.left : r.right) - brect.left) + "px";
+      caret.style.top = (r.top - brect.top + (r.height - h) / 2) + "px";
+      caret.style.height = h + "px";
+      caret.dataset.insert = String(before ? slot : slot + 1);   // index in the FULL order[]
     }
 
-    // Index the placeholder would occupy in the order[] array WITHOUT the
-    // dragged word (= count of visible tiles before it).
-    function placeholderIndex(ph) {
-      let idx = 0;
-      for (const child of boardEl.children) {
-        if (child === ph) break;
-        if (child.classList.contains("aw-unj-wtile") && child.style.display !== "none") idx++;
-      }
-      return idx;
+    // Convert the caret's full-array insertion index into the index
+    // commitReorder wants (the array AFTER the dragged word is spliced out).
+    function caretDropIndex(caret, tile) {
+      const from = Number(tile.dataset.slot);
+      const full = caret ? Number(caret.dataset.insert ?? from) : from;
+      return full > from ? full - 1 : full;
     }
 
     function commitReorder(wordId, newIndex) {
@@ -582,9 +612,38 @@ const unjumbleTemplate = {
       return layer;
     }
 
+    // Whiteboard "push-in": the photo starts a touch enlarged and eases back to
+    // frame while fading out to reveal the (identical) board underneath — so it
+    // reads as one seamless zoom. Tap anywhere to skip. Runs on Classic only.
+    function runIntro(done) {
+      introEl = el("div", "aw-unj-intro");
+      introEl.setAttribute("aria-hidden", "true");
+      stageEl.append(introEl);
+      activeFlyNodes.add(introEl);
+      let finishedIntro = false;
+      const finishIntro = () => {
+        if (finishedIntro) return;
+        finishedIntro = true;
+        introEl.removeEventListener("pointerdown", finishIntro);
+        introEl.remove();
+        activeFlyNodes.delete(introEl);
+        introEl = null;
+        done();
+      };
+      introEl.addEventListener("pointerdown", finishIntro);
+      const anim = introEl.animate([
+        { transform: "scale(1.12)", opacity: 1, offset: 0 },
+        { transform: "scale(1.02)", opacity: 1, offset: 0.7 },
+        { transform: "scale(1)", opacity: 0, offset: 1 }
+      ], { duration: INTRO_MS, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+      anim.onfinish = finishIntro;
+      setTimeout(finishIntro, INTRO_MS + 200);   // fallback for a stalled/hidden tab
+    }
+
     return function cleanup() {
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
+      if (stageEl) stageEl.classList.remove("aw-unj-active");
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
     };

@@ -40,6 +40,37 @@
   animation: aw-fadein .25s ease;
 }
 
+/* ---------- Classic = the whiteboard PHOTO as the whole-stage background ----------
+   The photo (dark frame + corner doodles + "ANDREW WHITE CLASSES BOARD"
+   branding + AW logo all baked in) fills the ENTIRE 16:9 stage, so the score,
+   timer and buttons all sit ON the board. Applied only while an Unjumble act is
+   mounted (unjumble.js tags the stage `.aw-unj-active`, removed on cleanup) AND
+   only on the Classic style — the other Styles keep their tinted card look. */
+.aw-stage.aw-unj-active.theme-classic {
+  background-image: url("./img/whiteboard.png");
+  background-size: cover;             /* teacher's choice: crop to fill, keep it crisp */
+  background-position: center;
+  background-repeat: no-repeat;
+}
+/* On Classic the photo IS the frame, so the card drops its own frame / board
+   fill / doodles and just holds the words transparently over the photo. */
+.aw-unj-active.theme-classic .aw-unj-card {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+.aw-unj-active.theme-classic .aw-unj-doodles { display: none; }
+
+/* the whiteboard "push-in" intro overlay (Classic only) — JS animates the zoom
+   + fade; it sits above the engine's Play overlay (z 12) and FS button (z 14). */
+.aw-unj-intro {
+  position: absolute; inset: 0; z-index: 15;
+  background-image: url("./img/whiteboard.png");
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  transform-origin: center; cursor: pointer;
+}
+
 /* ---------- corner marker doodles (Classic only) ---------- */
 .aw-unj-doodles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .aw-unj-doodle { position: absolute; opacity: .42; }
@@ -119,13 +150,23 @@
 }
 .aw-unj-badge svg { width: 100%; height: 100%; }
 
-/* the gap that opens where a dragged word will land */
-.aw-unj-ph {
-  display: inline-block; vertical-align: top;
-  margin: 0 0.3cqw; border-radius: 1.2cqw;
-  background: rgba(111, 152, 243, .16);
-  border: 0.22cqw dashed rgba(111, 152, 243, .6);
+/* text-cursor CARET shown at the drop gap while dragging — the other words
+   stay put (no reflow), so this thin blinking bar is the only thing that moves.
+   Height/position are set in JS; it's centered on the gap via translateX(-50%). */
+.aw-unj-caret {
+  position: absolute; top: 0; left: 0;
+  width: 0.5cqw; min-width: 2px;
+  border-radius: 0.3cqw;
+  background: var(--frame, #2b2f33);
+  transform: translateX(-50%);
+  pointer-events: none; z-index: 4;
+  animation: aw-unj-caret-blink .9s steps(1, end) infinite;
 }
+@keyframes aw-unj-caret-blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: .12; } }
+
+/* the lifted word's original spot stays in place, just dimmed (no reflow) */
+.aw-unj-wtile.is-dragsrc { opacity: .3; }
+.aw-unj-wtile.is-dragsrc:hover { background: transparent; }
 
 /* the lifted word following the pointer (fixed clone, sized/styled in JS) */
 .aw-unj-drag {

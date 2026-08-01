@@ -3,6 +3,31 @@
 **Trạng thái: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
+
+## ⭐ Đợt 35 (1/8/2026, v0.9.9) — 4 chỉnh theo yêu cầu thầy · 🟢 CHỜ THẦY DUYỆT, CHƯA COMMIT · KHÔNG SỬA CORE
+> ⚠️ Số đợt: "Đợt 34/v0.9.8" đã bị 1 phiên song song dùng cho **Gameshow** (cùng ngày), nên Unjumble lấy **Đợt 35/v0.9.9**.
+Thầy chốt qua AskUserQuestion: nền **chỉ Classic**, đặt ảnh **cover (cắt cho nét)**, intro **đẩy nhẹ ~2.5s**.
+1. **Intro zoom + nhạc**: bấm Play → engine phát sẵn `intro.mp3` → lớp phủ `.aw-unj-intro` (chính ảnh
+   whiteboard) **đẩy nhẹ** (scale 1.12→1.0 + mờ dần) trong `INTRO_MS=2500`, chạm để bỏ qua, rồi mới vào
+   game. Đồng hồ **đứng 0:00 suốt intro** nhờ bật cờ engine `manualTimerStart` (opt-in, KHÔNG sửa core);
+   `mount` gọi `ui.startTimer()` khi intro xong (Style khác Classic thì gọi ngay, không intro).
+2. **Ảnh làm nền CẢ khung**: `whiteboardgrouped2.png` → copy vào `templates/unjumble/img/whiteboard.png`
+   (5,3 MB), đặt làm nền `.aw-stage.aw-unj-active.theme-classic` (`background-size:cover`). `mount` gắn class
+   `aw-unj-active` vào stage qua `root.closest('.aw-stage')` (gỡ ở cleanup) — KHÔNG đổi/bỏ class
+   `.aw-page/.aw-stage/.aw-below`, an toàn phần nhúng myActivity. Card thành **trong suốt** (bỏ khung đen +
+   nền board + doodle SVG) vì ảnh đã có sẵn khung + doodle + chữ "ANDREW WHITE CLASSES BOARD". Điểm/giờ/nút
+   nằm đè lên ảnh. Các Style khác (Basic/Classroom/Beach) **giữ nguyên** card tint cũ (CSS gate `.theme-classic`).
+3. **Kéo chữ = con trỏ text, chữ đứng yên**: bỏ cơ chế placeholder chèn-dồn realtime (`.aw-unj-ph` gỡ).
+   Nay kéo → hiện **thanh nháy dọc** `.aw-unj-caret` ở khe gần nhất (row-aware theo tâm ô), **các chữ KHÔNG
+   dời** (chữ nguồn chỉ mờ `.is-dragsrc`), **thả mới chèn** (`positionCaret` lưu chỉ số chèn full-array vào
+   `caret.dataset.insert`; `caretDropIndex` quy về chỉ số sau khi tách từ kéo cho `commitReorder`).
+4. **Bỏ dòng "Put the words in the right order"**: `render()` chỉ thêm `.aw-unj-clue` khi item CÓ clue
+   riêng của thầy (bỏ nhánh generic); `measure()` guard `clueEl` null.
+Tự test trình duyệt thật (0 lỗi console): intro scale 1.12→1.0+fade, biến mất ~2.5s, đồng hồ giữ 0:00; kéo →
+caret hiện + chữ đứng yên (đo `orderDuringMove === before`) + thả đổi đúng thứ tự + dọn sạch caret/clone;
+generic clue mất; đổi Style→Basic bỏ ảnh whiteboard, về Classic có lại.
+⚠️ Ảnh 5,3 MB (nền tải 1 lần) — nếu muốn nhẹ hơn sau này có thể nén/resize.
+⏳ CHỜ TEST TOMKO: cảm giác caret + kéo trên màn cảm ứng; intro trên 4K; phần bị cover cắt ở mép trên/dưới.
 > Sửa tiếp game này thì chỉ đụng `templates/unjumble/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
