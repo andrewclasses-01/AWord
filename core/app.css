@@ -126,6 +126,23 @@ body {
 }
 .aw-top-score svg { width: 1em; height: 1em; color: var(--aw-ok); }
 
+/* Opt-in (tpl.hasLivesSlot): hearts sit just LEFT of the score, same row. The
+   right-group keeps the score hard against the frame's right edge. Used by
+   True/false; other templates never create these nodes. Empty = collapsed so
+   the score alone still lines up exactly where it always did. */
+.aw-top-right { display: inline-flex; align-items: center; gap: 1.4cqw; }
+.aw-top-lives {
+  display: inline-flex; align-items: center; gap: 0.45cqw;
+  color: #ef4444; font-size: 2.2cqw; line-height: 1; font-weight: 800;
+}
+.aw-top-lives:empty { display: none; }
+/* The ♥ glyph's ink sits a hair above its line box, so it reads a couple px
+   higher than the score digits; nudge it down to line up (teacher, 1/8/2026). */
+.aw-top-heart { display: inline-block; transform: translateY(0.09em); }
+.aw-top-heartcount { font-weight: 800; letter-spacing: .01em; }
+/* the leftmost heart popping out when a life is lost */
+.aw-top-heart.is-losing { will-change: transform, opacity; }
+
 /* Opt-in (tpl.inlineTimerBar): a 3rd column so a template's own timer bar can
    share this row with the score, instead of a separate row below it. Only
    applies when `.has-inline` is present — every other template's `.aw-topbar`
@@ -480,6 +497,9 @@ body {
 }
 .aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
 .aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; }
+/* "Count down" + its m/s time fields kept together on one line so the fields
+   sit to the RIGHT of the button instead of wrapping onto the next row. */
+.aw-opt-cd { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
 .aw-opt-hint { font-size: 12px; color: #8b93a1; margin-top: 10px; font-style: italic; }
 
 /* Number stepper — small ▲/number/▼ control, drag the number up/down to change it */

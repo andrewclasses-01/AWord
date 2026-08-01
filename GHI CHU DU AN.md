@@ -21,6 +21,52 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 29: TRUE FALSE — 2 vòng tinh chỉnh (8 mục + 3 mục) thầy yêu cầu. THẦY ĐÃ DUYỆT → ĐÃ COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in, tương thích ngược.)
+
+Thầy chơi bản True/false (đã live catalog từ trước) rồi yêu cầu tinh chỉnh; sau 2 vòng "ok build" +
+test → DUYỆT. Đã **commit + push main + GitHub Pages tự deploy** (Pages serve từ ROOT, có `.nojekyll`).
+Chi tiết đầy đủ: `templates/true-false/GHI CHU TRUE-FALSE.md`.
+
+**Vòng 1 (8 mục, thầy chốt "luôn trộn ngẫu nhiên" + "đồng ý sửa lõi an toàn" qua AskUserQuestion):**
+1. **Lives = thanh kéo 0–10** trong Options (0 = Unlimited). `normLives`: 0/null=vô hạn, undefined=5, max 10.
+2. **Tim dời lên THANH TRÊN, ngay trái số điểm** (qua hook lõi mới `ui.livesSlot`). Mất mạng → tim NGOÀI
+   CÙNG BÊN TRÁI bung ra biến mất hẳn.
+3. **≤5 mạng = tim rời; ≥6 = dạng gọn "N♥"** (số + 1 tim).
+4. **Nút True/False còn 80%** (font 4→3.2cqw, padding/max-width ×0.8).
+5. **Khoảng cách kẻ→nút = nút→"x of y"** — đo lúc chạy (`balanceSpacing`, tự cân lại khi resize/fullscreen).
+6. **Editor đổi thành 2 CỘT** (cột câu TRUE / cột câu FALSE, bỏ toggle từng dòng) — giữ NGUYÊN contract
+   `content.statements {text,answer}` nên act cũ vẫn chơi được; dán Excel tự phân cột; ≥1 câu mỗi cột.
+7. **Câu căn giữa** khoảng từ mép trên tới dòng kẻ (nhờ tim đã dời ra ngoài).
+8. **Đếm 3-2-1 xong đồng hồ MỚI chạy** (hook lõi mới `manualTimerStart` + `ui.startTimer()`); đúng =
+   câu bay hóa **sao nhỏ** bay vào số điểm; giảm tốc trượt câu (ENTER_MS 900→1300). Game **luôn trộn**.
+
+**Vòng 2 (3 mục):**
+1. **Chống bấm quá gần nhau:** 2 nút True/False KHÓA ngay khi vừa trả lời, giữ khóa suốt lúc câu bay/trượt
+   ra, chỉ MỞ khi câu mới vào **~50%** (`gateTimer`=`ENTER_MS*0.5`; `lockButtons`/`unlockButtons`). Nút
+   cũng khóa sẵn lúc đếm 3-2-1 (không lỡ trả lời câu đầu).
+2. **Hạ glyph ♥ `translateY(0.09em)`** (~2px) cho cân với số điểm (chỉ dời hình tim, không dời số dạng gọn).
+3. **Bỏ âm `tfSound.timesUp()` (~6-7s)** khi Submit/hết giờ — màn kết quả đã có nhạc tổng kết riêng.
+
+**⭐ 2 HOOK LÕI MỚI (core/engine.js) — TÙY CHỌN, MẶC ĐỊNH TẮT, DÙNG LẠI được cho template sau:**
+- `tpl.hasLivesSlot` → engine tạo `ui.livesSlot` (span trái số điểm, bọc `.aw-top-right`) + phơi
+  `ui.scoreEl`. CSS lõi mới `core/app.css`: `.aw-top-right / .aw-top-lives / .aw-top-heart /
+  .aw-top-heartcount` (rỗng thì `:empty` tự ẩn).
+- `tpl.manualTimerStart` → engine KHÔNG tự chạy đồng hồ ở `begin()`; template gọi `ui.startTimer()` khi
+  sẵn sàng (reset `startedAt` để loại thời gian đếm 3-2-1). Chống gọi 2 lần bằng `timerStarted`.
+- Cùng kiểu an toàn với `inlineTimerBar`/`hideTimerOption` sẵn có. Các game khác (Quiz, FTM...) chạy y như cũ.
+
+**File đụng:** `templates/true-false/{true-false.js, true-false.css, true-false-editor.js, GHI CHU
+TRUE-FALSE.md}` + `core/engine.js` + `core/app.css`.
+
+**Đã tự test (browser thật, cổng 5512, 0 lỗi console):** đếm 3-2-1 đồng hồ đứng 0:00; 5 tim cạnh điểm, sai
+→ tim trái mất; đúng → 11 sao + câu bay + điểm; slider 8→"8♥", 8→7→6♥→5 tim rời, 0→Unlimited ẩn tim; nút
+30.9px (80%); kẻ→nút = nút→số trang = 32.3px; editor 2 cột nạp/gộp/chặn đúng; khóa nút chống bấm mù; spy
+audio xác nhận không phát `timesup.mp3`; chơi hết 8/8 → GAME COMPLETE + Show answers.
+
+**⚠️ Lưu ý phiên sau (build tiếp):** True/false CHƯA chạy ở `play.html` (trang HS) — giống mọi template
+ngoài quiz, `play.js` mới import tĩnh `quiz.js`; muốn giao bài cho HS cần thêm import + **nạp template động
+theo `activity.type`** (ĐỀ XUẤT SỬA CORE chung cho MỌI template). Đây là việc lớn đáng làm kế tiếp.
+
 ### 1/8/2026 — Đợt 28: OPEN THE BOX — 5 cải tiến thầy yêu cầu + sửa 2 lỗi phát sinh. THẦY ĐÃ DUYỆT → ĐÃ COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in, tương thích ngược.)
 
 Thầy chơi bản Open the box (đã live từ Đợt trước) và yêu cầu 5 cải tiến; sau 2 vòng phản hồi thầy DUYỆT.

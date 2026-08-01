@@ -23,14 +23,11 @@
   padding-bottom: 2.4cqw;
 }
 
-.aw-tf-lives {
-  flex: 0 0 auto;
-  display: flex; gap: 0.6cqw;
-  font-size: calc(2.4cqw * var(--fit));
-  color: #ef4444;
-  margin-bottom: 0.6cqw;
-}
-.aw-tf-lives span.is-lost { opacity: .2; }
+/* Lives no longer live inside the card — they render in the top bar next to
+   the score (core: .aw-top-lives, filled by true-false.js). With them gone,
+   the track now reaches the top of the card, so the statement sits centred in
+   the whole space between the frame's top and the dashed divider (teacher's
+   spec, item 7, 1/8/2026). */
 
 .aw-tf-track {
   position: relative;
@@ -74,20 +71,22 @@
   flex: 0 0 auto;
   display: flex;
   justify-content: center;
-  gap: calc(3cqw * var(--fit));
+  /* Buttons scaled to 80% of their original size (teacher, item 4, 1/8/2026):
+     gap 3->2.4, max-width 34->27.2, font 4->3.2, padding 2.6->2.08 / 1->0.8cqw. */
+  gap: calc(2.4cqw * var(--fit));
   padding: 0 2cqw;
 }
 .aw-tf-btn {
   position: relative;
   flex: 1 1 0;
-  max-width: calc(34cqw * var(--fit));
+  max-width: calc(27.2cqw * var(--fit));
   border-radius: var(--aw-tile-radius, 1.6cqw);
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   color: #fff; font-family: inherit; font-weight: 800;
-  font-size: calc(4cqw * var(--fit));
+  font-size: calc(3.2cqw * var(--fit));
   letter-spacing: .02em;
   text-shadow: 0 0.12cqw 0.3cqw rgba(0, 0, 0, .22);
-  padding: calc(2.6cqw * var(--fit)) calc(1cqw * var(--fit));
+  padding: calc(2.08cqw * var(--fit)) calc(0.8cqw * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
 }
@@ -127,23 +126,48 @@
 .aw-tf-speedrow { display: flex; align-items: center; gap: 10px; }
 .aw-tf-speedslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
 .aw-tf-speedval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
+/* Lives slider 0..10 (0 = Unlimited), same look as the Speed slider. */
+.aw-tf-livesrow { display: flex; align-items: center; gap: 10px; }
+.aw-tf-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; }
+.aw-tf-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
 
 /* =============================================================
-   EDITOR ("Edit content") — Statement | True/False table. Lives OUTSIDE the
-   16:9 stage (the editor page, not the game), so plain px/rem — NOT cqw.
-   Reuses core/app.css's .aw-ed-* page chrome; only the per-row layout below
-   is True-false specific. Mirrors Find the match's .aw-ftm-ed-* table.
+   CORRECT-ANSWER FLY EFFECT (item 9, teacher 1/8) — a clone of the statement
+   flies to the score, bursting into stars. These nodes are appended to the
+   fullscreen host (or <body>), OUTSIDE the 16:9 stage container, so they use
+   viewport px units — cqw would not resolve here. position:fixed + a 0,0
+   origin lets true-false.js drive them purely with translate(px,px).
    ============================================================= */
-.aw-tf-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-.aw-tf-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 118px; }
-.aw-tf-ed-headcol { font-size: .82rem; font-weight: 700; color: #55657a; }
-.aw-tf-ed-headcol.is-statement { flex: 1; }
-.aw-tf-ed-headcol.is-answer { flex: 0 0 168px; }
+.aw-tf-flyclone {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-weight: 700; line-height: 1.2; padding: 0 1vw;
+  will-change: transform, opacity;
+}
+.aw-tf-star {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  font-size: clamp(14px, 2.2vw, 30px); color: #ffcf3f;
+  text-shadow: 0 0 6px rgba(255, 200, 60, .8);
+  will-change: transform, opacity;
+}
+
+/* =============================================================
+   EDITOR ("Edit content") — TWO COLUMNS: TRUE statements on the left, FALSE on
+   the right (teacher's spec, 1/8/2026). Lives OUTSIDE the 16:9 stage (the
+   editor page, not the game), so plain px/rem — NOT cqw. Reuses core/app.css's
+   .aw-ed-* page chrome; the two-column layout below is True-false specific.
+   ============================================================= */
+.aw-tf-ed-cols { display: flex; gap: 18px; align-items: flex-start; }
+.aw-tf-ed-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.aw-tf-ed-coltitle {
+  font-size: .9rem; font-weight: 800; letter-spacing: .01em;
+  padding: 6px 10px; border-radius: 9px;
+}
+.aw-tf-ed-coltitle.is-true  { background: #e7f6ec; color: #237a37; }
+.aw-tf-ed-coltitle.is-false { background: #fdeaea; color: #b32a2a; }
+.aw-tf-ed-list { display: flex; flex-direction: column; gap: 8px; }
 
 .aw-tf-ed-row { display: flex; align-items: stretch; gap: 8px; }
-.aw-tf-ed-row.is-dragging { opacity: .4; }
-.aw-tf-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
-.aw-tf-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
 
 .aw-tf-ed-num {
   flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
@@ -160,19 +184,6 @@
   padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e; font-weight: 600;
 }
 
-/* The True / False choice for each row — a 2-segment pill toggle. */
-.aw-tf-ed-answer {
-  flex: 0 0 168px; display: flex; gap: 6px; align-items: center;
-  padding: 5px 8px; border-left: 1.5px solid #e2e9f2;
-}
-.aw-tf-ed-seg {
-  flex: 1; border: 1.5px solid #dbe3ee; border-radius: 8px; background: #f6f9fd;
-  color: #7a8698; font-weight: 700; font-size: .85rem; padding: .4rem 0; cursor: pointer;
-  transition: background .12s ease, color .12s ease, border-color .12s ease;
-}
-.aw-tf-ed-seg.is-on.is-true { background: #e7f6ec; border-color: #33a24a; color: #237a37; }
-.aw-tf-ed-seg.is-on.is-false { background: #fdeaea; border-color: #e23c3c; color: #b32a2a; }
-
 .aw-tf-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
 .aw-tf-ed-iconbtn {
   width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
@@ -183,7 +194,6 @@
 .aw-tf-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
 .aw-tf-ed-iconbtn:disabled { opacity: .35; cursor: default; }
 .aw-tf-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
-.aw-tf-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
 
 .aw-tf-ed-addrow {
   display: flex; align-items: center; justify-content: center; gap: 6px;

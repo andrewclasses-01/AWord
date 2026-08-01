@@ -91,8 +91,19 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   const timerEl = el("span", "aw-top-timer", "0:00");
   const scoreEl = el("span", "aw-top-score", `${icons.check} 0`);
   const topbarMid = tpl.inlineTimerBar ? el("div", "aw-topbar-mid") : null;
+  // Opt-in (tpl.hasLivesSlot): a small slot that sits immediately to the LEFT
+  // of the score, on the SAME row — True/false uses it for its hearts. The
+  // slot + score are wrapped in a right-aligned group so the score still sits
+  // hard against the frame's right edge; templates that don't opt in keep the
+  // exact same 2-child flex row as before. (A template never sets BOTH this and
+  // inlineTimerBar, so the topbarMid branch takes precedence harmlessly.)
+  const livesSlot = tpl.hasLivesSlot ? el("span", "aw-top-lives") : null;
   if (topbarMid) topbar.append(timerEl, topbarMid, scoreEl);
-  else topbar.append(timerEl, scoreEl);
+  else if (livesSlot) {
+    const topRight = el("div", "aw-top-right");
+    topRight.append(livesSlot, scoreEl);
+    topbar.append(timerEl, topRight);
+  } else topbar.append(timerEl, scoreEl);
 
   // ----- Play area -----
   const playArea = el("div", "aw-playarea");
@@ -254,7 +265,18 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   function timerTotal() { return activity.options?.timerTotalSeconds ?? 120; }
   timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
 
-  function begin() {
+  // The clock's ticking is split out of begin() so a template can DEFER it.
+  // Opt-in via `tpl.manualTimerStart`: begin() then mounts WITHOUT starting the
+  // clock, and the template calls `ui.startTimer()` itself once it's ready
+  // (e.g. True/false starts it only after its 3-2-1 prep countdown, so the
+  // visible clock stays at 0:00 during the countdown). `startedAt` is reset the
+  // moment the clock actually starts, so the measured play time excludes the
+  // prep. Guarded so it can only start once per play. Templates that don't opt
+  // in behave exactly as before (begin() starts the clock immediately).
+  let timerStarted = false;
+  function startTimerNow() {
+    if (timerStarted) return;
+    timerStarted = true;
     startedAt = performance.now();
     timeWarned = false;
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
@@ -275,6 +297,12 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
         }
       }, 500);
     }
+  }
+
+  function begin() {
+    startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
+    timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
+    if (!tpl.manualTimerStart) startTimerNow();
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
   }
   const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; };
@@ -376,17 +404,19 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
         wrap.append(r, document.createTextNode(label));
         return wrap;
       };
-      timerRow.append(mkRadio("none", "None"), mkRadio("countUp", "Count up"), mkRadio("countDown", "Count down"));
-      gTimer.append(timerRow);
-
-      // countdown minutes/seconds — swipe-to-adjust steppers (drag the number up/down)
+      // countdown minutes/seconds — press-and-hold or swipe-to-adjust steppers.
       const timeFields = el("span", "aw-opt-time");
       const total = draft.timerTotalSeconds ?? 120;
       const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { draft.timerTotalSeconds = v * 60 + ss.get(); });
       const ss = makeNumberStepper(total % 60, 0, 59, v => { draft.timerTotalSeconds = mm.get() * 60 + v; });
       timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
       timeFields.style.display = (draft.timer ?? "countUp") === "countDown" ? "inline-flex" : "none";
-      timerRow.append(timeFields);
+      // Keep "Count down" + its time fields together on one line (a no-wrap group)
+      // so the fields sit to the RIGHT of the button instead of wrapping below.
+      const cdGroup = el("span", "aw-opt-cd");
+      cdGroup.append(mkRadio("countDown", "Count down"), timeFields);
+      timerRow.append(mkRadio("none", "None"), mkRadio("countUp", "Count up"), cdGroup);
+      gTimer.append(timerRow);
       panel.append(gTimer);
     }
 
@@ -395,19 +425,31 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     gRandom.append(el("div", "aw-opt-label", "Random"));
     const rowRandom = el("div", "aw-opt-row");
     rowRandom.append(
-      mkCheck(draft.shuffleQuestions !== false, "Shuffle question order", v => draft.shuffleQuestions = v),
-      mkCheck(draft.shuffleAnswers !== false, "Shuffle answer order", v => draft.shuffleAnswers = v)
+      mkCheck(draft.shuffleQuestions !== false, "Shuffle question order", v => draft.shuffleQuestions = v)
     );
+    // "Shuffle answer order" is meaningless for templates with no answer choices
+    // (e.g. Type the answer — the student types, there are no options to shuffle),
+    // so those opt out via tpl.hideShuffleAnswers. Mirror of tpl.hideLettersOption
+    // above; every other template keeps this checkbox exactly as before.
+    if (!tpl.hideShuffleAnswers) {
+      rowRandom.append(
+        mkCheck(draft.shuffleAnswers !== false, "Shuffle answer order", v => draft.shuffleAnswers = v)
+      );
+    }
     gRandom.append(rowRandom);
     panel.append(gRandom);
 
-    // END OF GAME
-    const gEnd = el("div", "aw-opt-group");
-    gEnd.append(el("div", "aw-opt-label", "End of game"));
-    const rowEnd = el("div", "aw-opt-row");
-    rowEnd.append(mkCheck(draft.showAnswers !== false, "Show answers", v => draft.showAnswers = v));
-    gEnd.append(rowEnd);
-    panel.append(gEnd);
+    // AUTO SWITCH — advance to the next question automatically once the current
+    // one has an answer. OFF by default; a template acts on it by reading
+    // activity.options.autoSwitch (Type the answer does). Shown for every
+    // template (teacher's call, 1/8/2026).
+    const gAuto = el("div", "aw-opt-group");
+    gAuto.append(el("div", "aw-opt-label", "Auto switch"));
+    const rowAuto = el("div", "aw-opt-row");
+    rowAuto.append(mkCheck(draft.autoSwitch === true, "Move to the next question automatically",
+      v => draft.autoSwitch = v));
+    gAuto.append(rowAuto);
+    panel.append(gAuto);
 
     // LETTERS ON ANSWERS — a template can opt out entirely (e.g. Type the
     // answer has no letter-lettered answer boxes, so the option is meaningless
@@ -437,8 +479,17 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice });
     }
 
+    // END OF GAME — kept LAST (after the template's own extra options), per the
+    // teacher's request (1/8/2026): "Show answers" sits at the very bottom.
+    const gEnd = el("div", "aw-opt-group");
+    gEnd.append(el("div", "aw-opt-label", "End of game"));
+    const rowEnd = el("div", "aw-opt-row");
+    rowEnd.append(mkCheck(draft.showAnswers !== false, "Show answers", v => draft.showAnswers = v));
+    gEnd.append(rowEnd);
+    panel.append(gEnd);
+
     panel.append(el("div", "aw-opt-hint",
-      playOverlay.isConnected ? "Timer & shuffle apply when you press Play." : "Timer & shuffle apply next time you press Start again."));
+      playOverlay.isConnected ? "Options apply when you press Play." : "Applying restarts the game with the new options."));
 
     // APPLY — only now does the draft get written into activity.options.
     // Clicking outside without pressing this discards every change above.
@@ -447,20 +498,18 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     applyBtn.type = "button";
     applyBtn.onclick = () => {
       sound.click();
-      const beforeOptions = { ...(activity.options || {}) };
       if (!activity.options) activity.options = {};
       Object.assign(activity.options, draft);
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist these options for THIS act only (per-act override of the
       // Settings defaults). Safe no-op if the act isn't in the store yet.
       if (activity.id) import("./store.js").then(m => m.saveActivity(activity));
-      // Optional hook: a template can say "this particular change makes the
-      // CURRENT play meaningless" (e.g. Anagram's scoring mode) — if so,
-      // restart immediately instead of leaving the old play running under
-      // options it was never designed for.
-      const needsRestart = typeof tpl.optionsNeedRestart === "function" &&
-        tpl.optionsNeedRestart(beforeOptions, activity.options);
-      if (needsRestart) { closeToolPanel(false); restart(); return; }
+      // Applying ANY option restarts the current game so it always runs under
+      // the new settings (teacher's call, 1/8/2026 — every template). If the
+      // game hasn't started yet (Play overlay still up), there's nothing to
+      // restart — just apply and close; the options take effect on Play.
+      const playing = !playOverlay.isConnected;
+      if (playing) { closeToolPanel(false); restart(); return; }
       toast("Options applied");
       closeToolPanel(true);
     };
@@ -527,6 +576,11 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
 
   // ----- Menu (Submit answers · Start again · Resume · Change template) -----
   let submitHandler = null;
+  // Optional getter a template registers via ui.onSubmit(fn, countFn): how many
+  // questions have an answer so far. When it reports 0, "Submit answers" is a
+  // no-op (you can't hand in a game with nothing answered). Templates that don't
+  // register one keep the old behavior — the guard simply doesn't apply.
+  let answeredCounter = null;
   let menuEl = null;
   menuBtn.onclick = () => (menuEl ? closeMenu() : openMenu());
 
@@ -536,7 +590,11 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   function openMenu() {
     menuEl = el("div", "aw-menu");
     menuEl.append(
-      menuItem("Submit answers", () => { closeMenu(); submitHandler?.(); }),
+      menuItem("Submit answers", () => {
+        closeMenu();
+        if (answeredCounter && answeredCounter() === 0) { toast("Answer at least one question first."); return; }
+        submitHandler?.();
+      }),
       menuItem("Start again", restart),
       menuItem("Resume", closeMenu)
     );
@@ -575,6 +633,9 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     playArea,
     topbarMid,   // null unless tpl.inlineTimerBar is true — see topbar setup above
     kbdSlot,     // null unless tpl.hasKeyboardToggle is true — see bottombar setup above
+    livesSlot,   // null unless tpl.hasLivesSlot is true — a span left of the score (True/false hearts)
+    scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
+    startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
     setScore(n) { scoreEl.innerHTML = `${icons.check} ${n}`; },
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null }) {
       navLabel.textContent = `${index} of ${total}`;
@@ -583,7 +644,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
       navNext.classList.toggle("is-finish", !!nextLabel);
     },
-    onSubmit(fn) { submitHandler = fn; },
+    onSubmit(fn, countFn) { submitHandler = fn; answeredCounter = typeof countFn === "function" ? countFn : null; },
     sound,
     toast,
     finish(raw) {

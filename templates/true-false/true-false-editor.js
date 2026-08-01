@@ -3,17 +3,22 @@
 // activity. Same contract as templates/quiz/quiz-editor.js:
 //   openTfEditor(container, activity, { onSave, onCancel, header, footer })
 // Reuses the SHARED editor page chrome from core/app.css (.aw-ed-* header/
-// title field/tip/bulk bar/count). The per-row layout (Statement | True/False
-// table, icon buttons, drag-to-reorder) is True-false-specific CSS in
-// true-false.css (.aw-tf-ed-*), a close copy of Find the match's Keyword|
-// Definition table — but the second column is a True/False pill toggle
-// instead of a text field.
+// title field/tip/bulk bar/count).
+//
+// LAYOUT (teacher's spec, 1/8/2026): TWO COLUMNS instead of a per-row
+// True/False toggle — the left column holds the statements that are TRUE, the
+// right column holds the statements that are FALSE. On save both columns are
+// merged into the same `content.statements = [{text, answer}]` shape the game
+// already reads, so activities made with the old editor still load and play.
+// Because the game now ALWAYS shuffles, the two columns carry no play order and
+// there's no reorder handle to worry about — just add / duplicate / delete.
 //
 // SCOPE (same simplification as the other templates, per Teacher Andrew):
-// this page edits ONLY the title + the statement list. Theme is always
+// this page edits ONLY the title + the two statement lists. Theme is always
 // Classic; default options (speed/lives/repeat/...) live in Settings; per-act
-// options are tweaked from the in-game Options panel. Limit: max 40
-// statements (min 3 kept so a game is worth playing).
+// options are tweaked from the in-game Options panel. Limits: max 40
+// statements total, min 3 (and at least one on each side, so the game is
+// actually True-OR-false).
 // =============================================================
 
 import { el } from "../../core/utils.js";
@@ -22,18 +27,17 @@ import { icons } from "../../core/icons.js";
 const MIN_ITEMS = 3;
 const MAX_ITEMS = 40;
 
-// How a pasted Excel cell in the answer column is read as True/False.
+// How a pasted Excel cell in an answer column is read as True/False.
 function parseAnswer(cell) {
   const t = String(cell || "").trim().toLowerCase();
   if (["true", "t", "1", "yes", "y", "correct", "right", "đúng", "dung"].includes(t)) return true;
   if (["false", "f", "0", "no", "n", "wrong", "incorrect", "sai"].includes(t)) return false;
-  return null;   // unrecognised -> leave as-is (default True)
+  return null;   // unrecognised
 }
 
 export function openTfEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
-  const data = normalize(activity);
-  let draggingIndex = null;
+  const data = normalize(activity);   // data.trueTexts[] , data.falseTexts[] (arrays of strings)
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -71,124 +75,82 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
   meta.append(field("Activity Title", titleInput));
   body.append(meta);
 
-  // ===== STATEMENTS =====
+  // ===== STATEMENTS (two columns) =====
   body.append(el("div", "aw-ed-sectionhead", "Statements"));
   body.append(buildBulkBar());
   body.append(el("div", "aw-ed-tip",
-    "Write a statement, then mark whether it is True or False. " +
-    "Tip: in Excel, copy a block of cells (the Statement in the first column, and True or False in the second), " +
-    "then click a Statement box and paste (Ctrl+V) to fill the whole list at once. Drag the ⇕ handle to reorder."));
+    "Put each statement in the correct column: TRUE statements on the left, FALSE statements on the right. " +
+    "Tip: in Excel you can copy a block of statements (one per row) and paste (Ctrl+V) into a column to fill it. " +
+    "If your Excel block has a second column saying True/False, paste it into either column and each statement " +
+    "will be sorted into the right side automatically."));
 
-  const headRow = el("div", "aw-tf-ed-headrow");
-  const headCols = el("div", "aw-tf-ed-headcols");
-  headCols.append(
-    el("span", "aw-tf-ed-headcol is-statement", "Statement"),
-    el("span", "aw-tf-ed-headcol is-answer", "Answer")
-  );
-  headRow.append(headCols);
-  body.append(headRow);
-
-  const iWrap = el("div", "aw-ed-questions");
-  body.append(iWrap);
-  renderItems();
+  const cols = el("div", "aw-tf-ed-cols");
+  const trueCol = el("div", "aw-tf-ed-col is-true");
+  const falseCol = el("div", "aw-tf-ed-col is-false");
+  cols.append(trueCol, falseCol);
+  body.append(cols);
+  renderCols();
 
   if (footer) page.append(footer);
 
   container.append(page);
   titleInput.focus();
 
-  // ---------- statement-list rendering ----------
-  function renderItems() {
-    iWrap.innerHTML = "";
-    data.content.statements.forEach((it, ii) => iWrap.append(itemRow(it, ii)));
-    const addI = el("button", "aw-tf-ed-addrow", "+ Add a new statement");
-    addI.type = "button";
-    addI.disabled = data.content.statements.length >= MAX_ITEMS;
-    addI.onclick = () => {
-      if (data.content.statements.length < MAX_ITEMS) { data.content.statements.push(blankItem()); renderItems(); }
+  function totalCount() { return data.trueTexts.length + data.falseTexts.length; }
+
+  // ---------- column rendering ----------
+  function renderCols() {
+    renderOneCol(trueCol, true);
+    renderOneCol(falseCol, false);
+  }
+
+  function renderOneCol(colEl, isTrue) {
+    const list = isTrue ? data.trueTexts : data.falseTexts;
+    colEl.innerHTML = "";
+    colEl.append(el("div", "aw-tf-ed-coltitle " + (isTrue ? "is-true" : "is-false"),
+      isTrue ? "&#10003; TRUE statements" : "&#10007; FALSE statements"));
+
+    const listWrap = el("div", "aw-tf-ed-list");
+    list.forEach((text, ii) => listWrap.append(colRow(list, text, ii, isTrue)));
+    colEl.append(listWrap);
+
+    const addBtn = el("button", "aw-tf-ed-addrow", isTrue ? "+ Add a TRUE statement" : "+ Add a FALSE statement");
+    addBtn.type = "button";
+    addBtn.disabled = totalCount() >= MAX_ITEMS;
+    addBtn.onclick = () => {
+      if (totalCount() >= MAX_ITEMS) return;
+      list.push("");
+      renderOneCol(colEl, isTrue);
     };
-    iWrap.append(addI);
-    const count = el("div", "aw-ed-qcount", `${data.content.statements.length} / ${MAX_ITEMS} statements`);
-    iWrap.append(count);
+    colEl.append(addBtn);
   }
 
-  // Paste a copied Excel RANGE: first column -> statement text, second column
-  // -> True/False. Fills from THIS row downward, same convention as the other
-  // editors' paste.
-  function onRowPaste(e, ii) {
-    const text = (e.clipboardData || window.clipboardData)?.getData("text/plain") || "";
-    if (!/[\t\n]/.test(text)) return;    // a single cell -> let the normal paste happen
-    e.preventDefault();
-
-    const rows = text.replace(/\r/g, "").split("\n");
-    while (rows.length && rows[rows.length - 1].trim() === "") rows.pop();
-
-    const parsed = [];
-    rows.forEach(line => {
-      const cells = line.split("\t").map(c => c.trim());
-      const textCell = cells[0] || "";
-      if (textCell === "") return;
-      const ans = parseAnswer(cells[1]);
-      parsed.push({ text: textCell, answer: ans == null ? true : ans });
-    });
-    if (!parsed.length) return;
-
-    let next = data.content.statements.slice(0, ii).concat(parsed);
-    let dropped = 0;
-    if (next.length > MAX_ITEMS) { dropped = next.length - MAX_ITEMS; next = next.slice(0, MAX_ITEMS); }
-    data.content.statements = next;
-    renderItems();
-    const filled = parsed.length - dropped;
-    showInfo(`Pasted ${filled} statement(s) from Excel${dropped ? ` (${dropped} skipped — ${MAX_ITEMS} max)` : ""}.`);
-  }
-
-  function itemRow(it, ii) {
+  function colRow(list, text, ii, isTrue) {
     const row = el("div", "aw-tf-ed-row");
-
     row.append(el("div", "aw-tf-ed-num", String(ii + 1) + "."));
 
     const box = el("div", "aw-tf-ed-box");
-    const stInput = el("input", "aw-tf-ed-statement");
-    stInput.value = it.text;
-    stInput.placeholder = "Type a statement";
-    stInput.oninput = () => { it.text = stInput.value; clearError(); };
-    stInput.addEventListener("paste", e => onRowPaste(e, ii));
-    box.append(stInput);
-
-    // True / False pill toggle
-    const ans = el("div", "aw-tf-ed-answer");
-    const segTrue = el("button", "aw-tf-ed-seg is-true", "True");
-    const segFalse = el("button", "aw-tf-ed-seg is-false", "False");
-    segTrue.type = "button"; segFalse.type = "button";
-    const paint = () => {
-      segTrue.classList.toggle("is-on", it.answer === true);
-      segFalse.classList.toggle("is-on", it.answer === false);
-    };
-    segTrue.onclick = () => { it.answer = true; paint(); clearError(); };
-    segFalse.onclick = () => { it.answer = false; paint(); clearError(); };
-    paint();
-    ans.append(segTrue, segFalse);
-    box.append(ans);
+    const inp = el("input", "aw-tf-ed-statement");
+    inp.value = text;
+    inp.placeholder = isTrue ? "A statement that is TRUE" : "A statement that is FALSE";
+    inp.oninput = () => { list[ii] = inp.value; clearError(); };
+    inp.addEventListener("paste", e => onColPaste(e, list, ii, isTrue));
+    box.append(inp);
     row.append(box);
 
     const iconsWrap = el("div", "aw-tf-ed-icons");
-    const dragBtn = iconBtn(icons.dragHandle, "Drag to reorder", "is-drag");
     const dupBtn = iconBtn(icons.duplicate, "Duplicate");
-    dupBtn.disabled = data.content.statements.length >= MAX_ITEMS;
+    dupBtn.disabled = totalCount() >= MAX_ITEMS;
     dupBtn.onclick = () => {
-      if (data.content.statements.length >= MAX_ITEMS) return;
-      const copy = JSON.parse(JSON.stringify(it));
-      data.content.statements.splice(ii + 1, 0, copy);
-      renderItems();
+      if (totalCount() >= MAX_ITEMS) return;
+      list.splice(ii + 1, 0, list[ii]);
+      renderCols();
     };
     const delBtn = iconBtn(icons.trash, "Remove", "is-danger");
-    delBtn.disabled = data.content.statements.length <= 1;
-    delBtn.onclick = () => { data.content.statements.splice(ii, 1); renderItems(); };
-    iconsWrap.append(dragBtn, dupBtn, delBtn);
+    delBtn.disabled = totalCount() <= 1;
+    delBtn.onclick = () => { list.splice(ii, 1); renderCols(); };
+    iconsWrap.append(dupBtn, delBtn);
     row.append(iconsWrap);
-
-    wireRowDrag(dragBtn, row, () => data.content.statements.indexOf(it));
-    wireRowDropTarget(row, () => data.content.statements.indexOf(it));
 
     return row;
   }
@@ -201,61 +163,78 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
     return b;
   }
 
-  // ---------- drag-to-reorder (native HTML5 DnD, same idiom as Find the match) ----------
-  function wireRowDrag(handle, row, getIndex) {
-    handle.draggable = true;
-    handle.addEventListener("dragstart", e => {
-      draggingIndex = getIndex();
-      e.dataTransfer.effectAllowed = "move";
-      try { e.dataTransfer.setData("text/plain", String(draggingIndex)); } catch { /* ignore */ }
-      try { e.dataTransfer.setDragImage(row, 24, 24); } catch { /* ignore */ }
-      row.classList.add("is-dragging");
-    });
-    handle.addEventListener("dragend", () => {
-      draggingIndex = null;
-      row.classList.remove("is-dragging");
-      iWrap.querySelectorAll(".aw-tf-ed-row").forEach(r => r.classList.remove("is-dropbefore", "is-dropafter"));
-    });
+  // Drop anything over MAX by trimming the FALSE column first, then TRUE.
+  function enforceMax() {
+    let over = totalCount() - MAX_ITEMS;
+    if (over <= 0) return 0;
+    const dropped = over;
+    while (over > 0 && data.falseTexts.length) { data.falseTexts.pop(); over--; }
+    while (over > 0 && data.trueTexts.length) { data.trueTexts.pop(); over--; }
+    return dropped;
   }
-  function wireRowDropTarget(row, getIndex) {
-    row.addEventListener("dragover", e => {
-      if (draggingIndex == null) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      const rect = row.getBoundingClientRect();
-      const before = (e.clientY - rect.top) < rect.height / 2;
-      row.classList.toggle("is-dropbefore", before);
-      row.classList.toggle("is-dropafter", !before);
-    });
-    row.addEventListener("dragleave", () => row.classList.remove("is-dropbefore", "is-dropafter"));
-    row.addEventListener("drop", e => {
-      e.preventDefault();
-      const before = row.classList.contains("is-dropbefore");
-      row.classList.remove("is-dropbefore", "is-dropafter");
-      const from = draggingIndex;
-      draggingIndex = null;
-      if (from == null) return;
-      let to = getIndex() + (before ? 0 : 1);
-      if (to === from || to === from + 1) return;
-      const [item] = data.content.statements.splice(from, 1);
-      data.content.statements.splice(to > from ? to - 1 : to, 0, item);
-      renderItems();
-    });
+
+  // Paste a copied Excel RANGE. Two shapes are understood:
+  //  • statement + a True/False column -> each row is routed to the correct
+  //    side (works no matter which column you paste into);
+  //  • a single column of statements -> fills THIS column from this row down.
+  function onColPaste(e, list, ii, isTrue) {
+    const text = (e.clipboardData || window.clipboardData)?.getData("text/plain") || "";
+    if (!/[\t\n]/.test(text)) return;    // a single cell -> let the normal paste happen
+    e.preventDefault();
+
+    const rows = text.replace(/\r/g, "").split("\n");
+    while (rows.length && rows[rows.length - 1].trim() === "") rows.pop();
+
+    const hasTF = rows.some(l => parseAnswer(l.split("\t")[1]) !== null);
+    let added = 0;
+
+    if (hasTF) {
+      rows.forEach(line => {
+        const cells = line.split("\t").map(c => c.trim());
+        const t = cells[0];
+        if (!t) return;
+        const ans = parseAnswer(cells[1]);
+        if (ans === false) data.falseTexts.push(t);
+        else data.trueTexts.push(t);   // true or unrecognised -> True side
+        added++;
+      });
+    } else {
+      const parsed = rows.map(l => l.split("\t")[0].trim()).filter(Boolean);
+      const next = list.slice(0, ii).concat(parsed);
+      if (isTrue) data.trueTexts = next; else data.falseTexts = next;
+      added = parsed.length;
+    }
+
+    const dropped = enforceMax();
+    renderCols();
+    showInfo(`Pasted ${added - dropped} statement(s) from Excel${dropped ? ` (${dropped} skipped — ${MAX_ITEMS} max)` : ""}.`);
   }
 
   // ---------- save / cancel ----------
   cancelBtn.onclick = () => onCancel?.();
 
   saveBtn.onclick = async () => {
-    const clean = JSON.parse(JSON.stringify(data));
-    clean.title = clean.title.trim();
-    clean.instruction = (clean.instruction || "").trim();
-    clean.theme = "classic";
-    clean.content.statements = clean.content.statements
-      .map(it => ({ text: (it.text || "").trim(), answer: it.answer === true }))
-      .filter(it => it.text !== "");
+    const trueTexts = data.trueTexts.map(t => (t || "").trim()).filter(Boolean);
+    const falseTexts = data.falseTexts.map(t => (t || "").trim()).filter(Boolean);
 
-    const err = validate(clean);
+    const clean = {
+      id: activity && activity.id ? activity.id : undefined,
+      type: "true_false",
+      schemaVersion: 1,
+      title: (data.title || "").trim(),
+      instruction: (data.instruction || "").trim(),
+      theme: "classic",
+      options: data.options || {},
+      content: {
+        statements: [
+          ...trueTexts.map(text => ({ text, answer: true })),
+          ...falseTexts.map(text => ({ text, answer: false }))
+        ]
+      }
+    };
+    if (clean.id === undefined) delete clean.id;
+
+    const err = validate(clean, trueTexts.length, falseTexts.length);
     if (err) { showError(err); return; }
 
     saveBtn.disabled = true;
@@ -293,8 +272,9 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
     clearBtn.type = "button";
     clearBtn.onclick = () => {
       if (!confirm("Delete ALL statements?")) return;
-      data.content.statements = [blankItem(), blankItem(), blankItem()];
-      renderItems();
+      data.trueTexts = ["", ""];
+      data.falseTexts = ["", ""];
+      renderCols();
       showInfo("All statements deleted.");
     };
     bar.append(clearBtn);
@@ -310,29 +290,32 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
 }
 
 // ===== data helpers =====
+// Split the stored {text, answer} statements back into two string lists. New
+// activities start with two blank rows on each side.
 function normalize(activity) {
   const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
-  a.type = "true_false";
-  a.schemaVersion = a.schemaVersion || 1;
-  a.title = a.title || "";
-  a.instruction = a.instruction || "";
-  a.theme = "classic";
-  a.options = a.options || {};
-  a.content = a.content || {};
-  let statements = Array.isArray(a.content.statements) ? a.content.statements : [];
-  if (statements.length < MIN_ITEMS) {
-    while (statements.length < MIN_ITEMS) statements.push(blankItem());
-  }
-  a.content.statements = statements.map(it => ({ text: it.text || "", answer: it.answer === true }));
-  return a;
-}
-function blankItem() { return { text: "", answer: true }; }
+  const title = a.title || "";
+  const instruction = a.instruction || "";
+  const options = a.options || {};
+  const statements = Array.isArray(a.content?.statements) ? a.content.statements : [];
 
-function validate(d) {
+  const trueTexts = [];
+  const falseTexts = [];
+  statements.forEach(s => {
+    if (!s || typeof s.text !== "string") return;
+    (s.answer === true ? trueTexts : falseTexts).push(s.text);
+  });
+  while (trueTexts.length < 2) trueTexts.push("");
+  while (falseTexts.length < 2) falseTexts.push("");
+
+  return { title, instruction, options, trueTexts, falseTexts };
+}
+
+function validate(d, trueCount, falseCount) {
   if (!d.title) return "Please enter an activity title.";
-  if (d.content.statements.length < MIN_ITEMS) return `Add at least ${MIN_ITEMS} statements.`;
-  for (let i = 0; i < d.content.statements.length; i++) {
-    if (!d.content.statements[i].text) return `Statement ${i + 1} is empty.`;
-  }
+  const total = d.content.statements.length;
+  if (total < MIN_ITEMS) return `Add at least ${MIN_ITEMS} statements in total.`;
+  if (trueCount < 1) return "Add at least one TRUE statement (left column).";
+  if (falseCount < 1) return "Add at least one FALSE statement (right column).";
   return null;
 }
