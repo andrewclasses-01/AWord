@@ -14,8 +14,7 @@
   gap: 0.8cqw;
   padding: 0.4cqw 0.2cqw 0;
   overflow: hidden;
-  background:
-    radial-gradient(120% 90% at 50% 0%, #123a63 0%, #0a2247 45%, #06132b 100%);
+  background: transparent;   /* the full-bleed .aw-gs-screen / studio shows through */
   font-family: inherit;
 }
 /* decorations behind everything */
@@ -84,14 +83,11 @@
   position: relative; z-index: 2;
   flex: 1 1 auto; min-height: 0;
   margin: 0 1.2cqw;
-  border-radius: 2cqw;
-  padding: 2.6cqw;
-  background: #0a2a55 url(./img/starburst.webp) center/cover no-repeat;
-  box-shadow: 0 1cqw 3cqw rgba(0,0,0,.45), inset 0 0 0 0.5cqw #d60363;
-  overflow: hidden;
+  padding: 1.4cqw 1cqw;
+  overflow: visible;   /* question sits directly on the full-bleed starburst screen */
 }
 /* yellow marquee bulbs around the four edges (pure CSS, scales cleanly) */
-.aw-gs-marquee::before, .aw-gs-board::before {
+.aw-gs-marquee::before {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   --bs: 1.5cqw; --sp: 2.7cqw;
   background-image:
@@ -259,3 +255,130 @@
 @keyframes aw-gs-plus { 0% { opacity: 0; transform: translateX(-50%) translateY(1cqw); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateX(-50%) translateY(-4cqw); } }
 @keyframes aw-gs-pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; } }
 @keyframes aw-gs-cheat { 0%,100% { box-shadow: 0 0.6cqw 0 #061a38, 0 0 1cqw rgba(0,230,118,.4); border-color: #fff222; } 50% { box-shadow: 0 0.6cqw 0 #04532a, 0 0 2.4cqw rgba(0,230,118,.9); border-color: #00e676; } }
+
+/* =============================================================
+   FULL-BLEED STUDIO BACKGROUND
+   (bg covers the WHOLE game incl. the top/bottom bars; pink border
+   around the whole frame). Added on `.aw-stage` while mounted, removed
+   in cleanup(). No core file is touched.
+   ============================================================= */
+
+/* light-blue harlequin "studio" — the base seen during intro & Get ready */
+.aw-stage.aw-gs-full {
+  position: relative; overflow: hidden;
+  background-color: #8ad3ef;
+  background-image:
+    linear-gradient(135deg, rgba(255,255,255,.22) 25%, transparent 25%),
+    linear-gradient(225deg, rgba(4,64,110,.16)  25%, transparent 25%),
+    linear-gradient(45deg,  rgba(255,255,255,.22) 25%, transparent 25%),
+    linear-gradient(315deg, rgba(4,64,110,.16)  25%, transparent 25%);
+  background-size: 6.5cqw 6.5cqw;
+  background-position: 0 0;
+}
+/* the engine chrome floats ABOVE the studio/screen and reads white on blue */
+.aw-stage-inner.aw-gs-inner { position: relative; z-index: 2; }
+.aw-gs-full .aw-topbar,
+.aw-gs-full .aw-playarea,
+.aw-gs-full .aw-bottombar { background: transparent; }
+.aw-gs-full .aw-top-timer,
+.aw-gs-full .aw-top-score,
+.aw-gs-full .aw-navlabel { color: #fff; text-shadow: 0 0.2cqw 0.5cqw rgba(0,0,0,.5); }
+.aw-gs-full .aw-iconbtn,
+.aw-gs-full .aw-navbtn { color: #eaf6ff; }
+.aw-gs-full .aw-iconbtn:hover,
+.aw-gs-full .aw-navbtn:hover:not(:disabled) { background: rgba(255,255,255,.18); color: #fff; }
+
+/* studio decorations (spotlights + audience) — behind the starburst screen */
+.aw-gs-decor { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+/* the blue-starburst question backdrop — fades in during a question, pink
+   border hugging the whole stage edge */
+.aw-gs-screen {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: #0a2f5e url(./img/starburst.webp) center/cover no-repeat;
+  box-shadow: inset 0 0 0 0.8cqw #d60363;
+  opacity: 0; transition: opacity .45s ease;
+}
+.aw-gs-screen.is-on { opacity: 1; }
+
+/* =============================================================
+   MARQUEE TV FRAME — intro sign + per-question Get ready
+   The frame image has a TRANSPARENT inner hole; the screen content sits
+   behind it and shows through (hole ≈ L12% R12.5% T13.5% B39%).
+   ============================================================= */
+.aw-gs-intro, .aw-gs-frame {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-gs-intro { z-index: 3; }   /* full takeover (covers the chrome) */
+.aw-gs-frame { z-index: 1; }   /* below the chrome, so nav/score float on top */
+/* the sized square body holding the screen + the frame image on top. Square
+   image ~84% of the stage WIDTH → overflows the short stage vertically; the
+   overlay clips it so the floor strip runs off the bottom, like the original. */
+.aw-gs-sign, .aw-gs-frame-body {
+  position: relative; width: 84cqw; aspect-ratio: 1 / 1; flex: 0 0 auto;
+  margin-top: -4cqw;
+  animation: aw-gs-signin .7s cubic-bezier(.2,1.35,.35,1) both;
+}
+.aw-gs-frame-img {
+  position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: url(./img/screenframe.webp) center/contain no-repeat;
+  filter: drop-shadow(0 1cqw 1.6cqw rgba(0,0,0,.35));
+}
+.aw-gs-scr {
+  position: absolute; left: 12%; right: 12.5%; top: 13.5%; bottom: 39%; z-index: 1;
+  border-radius: 0.6cqw; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+}
+
+/* --- intro screen: dark studio panel with the ANDREW CLASSES / QUIZ SHOW title --- */
+.aw-gs-scr-intro {
+  background:
+    radial-gradient(120% 120% at 50% 30%, #12466f 0%, #0b2b47 60%, #08203a 100%);
+  flex-direction: column; gap: 0.6cqw;
+}
+.aw-gs-sign-top {
+  background: #10233a; color: #fff; font-weight: 800;
+  font-size: 2.1cqw; letter-spacing: .06em;
+  padding: 0.3cqw 1.2cqw; border-radius: 0.7cqw; transform: rotate(-3deg);
+  box-shadow: 0 0.3cqw 0 rgba(0,0,0,.35);
+}
+.aw-gs-sign-big { display: flex; flex-direction: column; align-items: center; line-height: .92; transform: rotate(-3deg); }
+.aw-gs-sign-line {
+  font-size: 8.4cqw; font-weight: 900; color: #fff; letter-spacing: .01em;
+  -webkit-text-stroke: 0.6cqw #d60363; paint-order: stroke fill;
+  text-shadow: 0 0.55cqw 0 #a01048, 0 0.9cqw 1.2cqw rgba(0,0,0,.4);
+}
+
+/* --- Get ready screen: blue starburst + yellow dashed box --- */
+.aw-gs-scr-gr { background: #0a2f5e url(./img/starburst.webp) center/cover no-repeat; }
+.aw-gs-gr-box {
+  padding: 2.2cqw 3.4cqw; border-radius: 0.8cqw;
+  border: 0.55cqw dashed #fff222;
+  outline: 0.2cqw solid rgba(0,0,0,.35); outline-offset: -0.9cqw;
+  background: rgba(6,20,42,.4);
+  display: flex; flex-direction: column; align-items: center; gap: 0.6cqw;
+}
+.aw-gs-scr-gr .aw-gs-gr-q { font-size: 2.4cqw; }
+.aw-gs-scr-gr .aw-gs-gr-txt { font-size: 5.4cqw; animation: none; }
+
+/* --- APPLAUSE sign (CSS, red LED) shown during the intro --- */
+.aw-gs-applause {
+  position: absolute; top: 1cqw; left: 50%; transform: translateX(-50%); z-index: 7;
+  padding: 0.5cqw 1.8cqw; border-radius: 0.9cqw;
+  background: #17171d; color: #ff4646; font-weight: 900;
+  font-size: 2.2cqw; letter-spacing: .24em;
+  box-shadow: 0 0.3cqw 0.9cqw rgba(0,0,0,.45), inset 0 0 1.4cqw rgba(255,40,40,.35);
+  text-shadow: 0 0 1.4cqw rgba(255,60,60,.95);
+  animation: aw-gs-applause 1.3s steps(1,end) infinite;
+}
+
+/* --- open transition: the TV zooms toward you & fades, revealing the game --- */
+.aw-gs-intro.is-open .aw-gs-sign,
+.aw-gs-frame.is-open .aw-gs-frame-body {
+  animation: aw-gs-open .5s cubic-bezier(.5,0,.85,.3) forwards;
+}
+
+@keyframes aw-gs-signin { 0% { transform: scale(.4); opacity: 0; } 65% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+@keyframes aw-gs-open   { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
+@keyframes aw-gs-applause { 0%,64% { opacity: 1; } 65%,100% { opacity: .4; } }

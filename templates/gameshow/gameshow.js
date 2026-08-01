@@ -137,10 +137,29 @@ const gameshowTemplate = {
 
     // ----- scene -----
     root.innerHTML = "";
+
+    // Full-bleed background across the WHOLE 16:9 stage (behind the engine's top
+    // & bottom bars too). Three layers are added on `.aw-stage` itself:
+    //   • a light-blue "harlequin studio" base (painted by .aw-gs-full)
+    //   • .aw-gs-decor — spotlights + audience silhouettes (the studio)
+    //   • .aw-gs-screen — the blue-starburst question backdrop with a pink edge
+    //     border, faded IN during a question and OUT during the "Get ready" frame
+    // Everything here is template-scoped and undone in cleanup() — no core file
+    // is touched. `stageEl`/`innerEl` come from walking up out of the play area.
+    const stageEl = root.closest(".aw-stage");
+    const innerEl = root.closest(".aw-stage-inner");
+    if (stageEl) stageEl.classList.add("aw-gs-full");
+    if (innerEl) innerEl.classList.add("aw-gs-inner");
+
+    const decor = el("div", "aw-gs-decor");
+    decor.append(Object.assign(el("img", "aw-gs-light aw-gs-light-l"), { src: imgUrl("stagelight-left.webp"), alt: "" }));
+    decor.append(Object.assign(el("img", "aw-gs-light aw-gs-light-r"), { src: imgUrl("stagelight-right.webp"), alt: "" }));
+    decor.append(Object.assign(el("img", "aw-gs-audience"), { src: imgUrl("audience.webp"), alt: "" }));
+
+    const screen = el("div", "aw-gs-screen");   // blue-starburst question backdrop (toggled .is-on)
+    if (stageEl) { stageEl.prepend(screen); stageEl.prepend(decor); }
+
     const stage = el("div", "aw-gs-stage");
-    stage.append(Object.assign(el("img", "aw-gs-audience"), { src: imgUrl("audience.webp"), alt: "" }));
-    stage.append(Object.assign(el("img", "aw-gs-light aw-gs-light-l"), { src: imgUrl("stagelight-left.webp"), alt: "" }));
-    stage.append(Object.assign(el("img", "aw-gs-light aw-gs-light-r"), { src: imgUrl("stagelight-right.webp"), alt: "" }));
 
     // HUD (points left · lives right)
     const hud = el("div", "aw-gs-hud");
@@ -202,40 +221,57 @@ const gameshowTemplate = {
 
     renderLives();
     renderLifelines();
-    introDoors(() => nextGetReady());
+    introShow(() => nextGetReady());
 
-    // ============================================================= INTRO
-    function introDoors(done) {
-      const doors = el("div", "aw-gs-doors");
-      const dl = Object.assign(el("div", "aw-gs-door aw-gs-door-l"), {});
-      const dr = Object.assign(el("div", "aw-gs-door aw-gs-door-r"), {});
-      dl.style.backgroundImage = `url(${imgUrl("introdoor-left.webp")})`;
-      dr.style.backgroundImage = `url(${imgUrl("introdoor-right.webp")})`;
-      doors.append(dl, dr);
-      stage.append(doors);
-      gsSound.openDoor();
+    // ============================================================= INTRO (≈6s — matches intro.mp3)
+    // Big "ANDREW CLASSES / QUIZ SHOW" marquee sign bounces onto the harlequin
+    // studio (spotlights + APPLAUSE + audience from .aw-gs-decor), holds while its
+    // bulbs twinkle, then the TV "opens" (zooms toward you) into Question 1.
+    function introShow(done) {
       gsSound.musicStart();
-      // slide apart
-      later(() => { dl.classList.add("is-open"); dr.classList.add("is-open"); }, 380);
-      let gone = false;
-      const remove = () => { if (gone) return; gone = true; doors.remove(); done(); };
-      later(remove, 1500);
+      stage.style.visibility = "hidden";   // hide the play-area HUD/lifelines behind the sign
+      const ov = el("div", "aw-gs-intro");
+      ov.append(el("div", "aw-gs-applause", "APPLAUSE"));
+      const sign = el("div", "aw-gs-sign");
+      const scr = el("div", "aw-gs-scr aw-gs-scr-intro");
+      const big = el("div", "aw-gs-sign-big");
+      big.append(el("span", "aw-gs-sign-line", "QUIZ"), el("span", "aw-gs-sign-line", "SHOW"));
+      scr.append(el("div", "aw-gs-sign-top", "ANDREW CLASSES"), big);
+      sign.append(scr, el("div", "aw-gs-frame-img"));
+      ov.append(sign);
+      (stageEl || stage).append(ov);   // stage-level so the sign is big like the original
+      later(() => { gsSound.openDoor(); ov.classList.add("is-open"); }, 5200);
+      later(() => { ov.remove(); done(); }, 6000);
     }
 
-    // ============================================================= GET READY
+    // ============================================================= GET READY (before EVERY question)
+    // The green marquee TV frame drops onto the studio; its screen shows the blue
+    // starburst + a yellow dashed box "Question N / Get ready!". After a beat the
+    // frame "opens" (zooms away) and the full-bleed question screen fades in.
     function nextGetReady() {
       if (finished) return;
-      const gr = el("div", "aw-gs-getready");
-      gr.append(el("div", "aw-gs-gr-q", `Question ${index + 1}`),
-                el("div", "aw-gs-gr-txt", "Get ready!"));
-      play.innerHTML = ""; play.append(gr);
+      screen.classList.remove("is-on");            // studio (harlequin) shows behind the frame
+      stage.style.visibility = "hidden";           // hide HUD/lifelines during Get ready
+      play.innerHTML = "";
+      const frame = el("div", "aw-gs-frame");
+      const body = el("div", "aw-gs-frame-body");
+      const scr = el("div", "aw-gs-scr aw-gs-scr-gr");
+      const box = el("div", "aw-gs-gr-box");
+      box.append(el("div", "aw-gs-gr-q", `Question ${index + 1}`),
+                 el("div", "aw-gs-gr-txt", "Get ready!"));
+      scr.append(box);
+      body.append(scr, el("div", "aw-gs-frame-img"));
+      frame.append(body);
+      (stageEl || stage).append(frame);   // stage-level so it spans the whole studio
       gsSound.getReady();
-      later(showQuestion, 1150);
+      later(() => { frame.classList.add("is-open"); screen.classList.add("is-on"); }, 1200);
+      later(() => { frame.remove(); showQuestion(); }, 1650);
     }
 
     // ============================================================= QUESTION
     function showQuestion() {
       if (finished) return;
+      stage.style.visibility = "visible";          // bring the HUD/lifelines back for play
       if (fitter) { fitter.destroy(); fitter = null; }
       const q = questions[index];
       const st = state[index];
@@ -542,6 +578,13 @@ const gameshowTemplate = {
       pending.forEach(clearTimeout); pending.clear();
       gsSound.musicStop();
       if (fitter) fitter.destroy();
+      // undo the full-bleed background so other templates / re-mounts start clean
+      if (stageEl) {
+        stageEl.classList.remove("aw-gs-full");
+        stageEl.querySelectorAll(".aw-gs-intro, .aw-gs-frame").forEach(e => e.remove());
+      }
+      if (innerEl) innerEl.classList.remove("aw-gs-inner");
+      decor.remove(); screen.remove();
     };
   }
 };

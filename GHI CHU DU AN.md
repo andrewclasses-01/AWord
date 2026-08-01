@@ -52,6 +52,47 @@ hoá được). Muốn test logic mà khỏi đăng nhập: dùng `templates/<te
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 35 (v0.9.9): UNJUMBLE — INTRO ZOOM + NHẠC · NỀN ẢNH WHITEBOARD PHỦ TOÀN KHUNG · KÉO CHỮ = CON TRỎ TEXT (CHỮ ĐỨNG YÊN) · BỎ DÒNG HƯỚNG DẪN. Tự test trình duyệt thật (0 lỗi console). 🟢 CHỜ THẦY DUYỆT — CHƯA COMMIT. Chỉ sửa `templates/unjumble/*` + thêm ảnh, **KHÔNG đụng core**.
+
+> ⚠️ Cùng ngày, 1 phiên Claude song song làm Gameshow lấy "Đợt 34/v0.9.8" (mục ngay dưới), nên Unjumble lấy **Đợt 35/v0.9.9**. Hai bộ file tách rời (`templates/unjumble/*` ↔ `templates/gameshow/*`), không đụng nhau.
+
+Thầy chốt qua AskUserQuestion (nền **chỉ Classic** · đặt ảnh **cover/cắt nét** · intro **đẩy nhẹ ~2.5s**) rồi "ok build":
+
+1. **Intro zoom + nhạc**: bấm Play → engine phát sẵn `intro.mp3` → lớp `.aw-unj-intro` (chính ảnh whiteboard) đẩy nhẹ (scale 1.12→1.0 + mờ dần, `INTRO_MS=2500`), chạm để bỏ qua, rồi vào game. Đồng hồ **đứng 0:00 suốt intro** nhờ bật cờ engine `manualTimerStart` (opt-in, **không sửa core**); `mount` gọi `ui.startTimer()` khi intro xong (Style khác Classic → gọi ngay, không intro).
+
+2. **Ảnh nền phủ CẢ khung** (điểm/giờ/nút nằm trên bảng): `whiteboardgrouped2.png` → `templates/unjumble/img/whiteboard.png` (5,3 MB), nền `.aw-stage.aw-unj-active.theme-classic` (`background-size:cover`). `mount` gắn `aw-unj-active` vào stage qua `root.closest('.aw-stage')` (gỡ ở cleanup) — không đổi/bỏ class `.aw-page/.aw-stage/.aw-below` (an toàn nhúng myActivity). Card **trong suốt** (bỏ khung đen + nền board + doodle SVG — ảnh đã có sẵn khung + doodle + chữ "ANDREW WHITE CLASSES BOARD"). Style khác giữ card tint cũ (CSS gate `.theme-classic`).
+
+3. **Kéo chữ = con trỏ text, chữ đứng yên**: bỏ placeholder chèn-dồn realtime (`.aw-unj-ph` gỡ). Kéo → thanh nháy dọc `.aw-unj-caret` ở khe gần nhất (row-aware theo tâm ô), **các chữ KHÔNG dời** (chữ nguồn chỉ mờ `.is-dragsrc`), **thả mới chèn** (`positionCaret` lưu chỉ số chèn full-array vào `caret.dataset.insert`, `caretDropIndex` quy về chỉ số sau khi tách từ kéo cho `commitReorder`).
+
+4. **Bỏ dòng "Put the words in the right order"**: `render()` chỉ thêm `.aw-unj-clue` khi item CÓ clue riêng; `measure()` guard `clueEl` null.
+
+Tự test (JS bắn pointer giả + đo): intro scale 1.12→1.0+fade biến mất ~2,5s, đồng hồ giữ 0:00; kéo → caret hiện + `orderDuringMove===before` (chữ đứng yên) + thả đổi đúng thứ tự + dọn sạch caret/clone; generic clue mất; đổi Style→Basic bỏ ảnh, về Classic có lại; 0 lỗi console. ⚠️ Ảnh 5,3 MB (nén sau nếu cần). Chi tiết: `templates/unjumble/GHI CHU UNJUMBLE.md` Đợt 35.
+
+### 1/8/2026 — Đợt 34 (v0.9.8): GAMESHOW — DỰNG LẠI INTRO + GET READY + NỀN PHỦ TOÀN KHUNG (theo ảnh act gốc thầy gửi). Tự test trình duyệt thật (0 lỗi console). ✅ THẦY DUYỆT → ĐÃ COMMIT + PUSH (chỉ stage 4 file gameshow + 2 file ghi chú; KHÔNG đụng file của phiên Unjumble song song). Chỉ sửa trong template gameshow, **KHÔNG đụng core**.
+
+Thầy so sánh với act gốc Wordwall (gửi ảnh) và yêu cầu 3 việc, gộp build 1 lần (đã "ok build"):
+
+1. **Intro mới ~6 giây (khớp `intro.mp3` = 6,04s).** Trước đây intro chỉ là 2 cánh cửa trượt ra trong 1,5s. Nay: khung TV marquee gốc (`img/screenframe.webp`, copy từ `Source/Graphic/GAMESHOW/Khung san khau`) nảy vào giữa nền xanh hình thoi (spotlight + APPLAUSE đỏ CSS + khán giả), chữ **"ANDREW CLASSES / QUIZ SHOW"** trắng viền hồng lọt qua "lỗ trong suốt" của khung, giữ ~5,2s rồi "mở ra" (phóng to + mờ) → câu 1.
+
+2. **"Get ready" kiểu mới, chạy TRƯỚC MỖI câu.** Khung TV xanh viền đèn hiện giữa nền hình thoi; màn trong = nền tia sáng xanh + **ô viền vàng đứt nét** bao "Question N / Get ready!"; sau ~1,2s khung mở ra → câu hỏi + đáp án. Trong lúc get ready **ẩn nội dung vùng chơi** (`stage.style.visibility`) để HUD/lifelines không đè lên ô.
+
+3. **Nền phủ TOÀN khung game** (kể cả thanh điểm/đồng hồ trên + menu/nav dưới). Thêm class `aw-gs-full` lên `.aw-stage` + 2 lớp `.aw-gs-decor` (spotlight+khán giả) và `.aw-gs-screen` (tia sáng xanh + **viền hồng** ôm mép, bật/tắt theo trạng thái). Chrome engine cho trong suốt + chữ/nút đổi trắng. **Đảo ngược hoàn toàn trong `cleanup()`** (gỡ class + 2 lớp) → không ảnh hưởng template khác.
+
+Đo "lỗ trong suốt" của khung bằng Python/PIL: left ~12% · right ~12,5% · top ~13,5% · bottom ~39% → đặt `.aw-gs-scr`. Kích thước khung = `width:84cqw` (theo bề ngang sân khấu), tràn dọc bị `overflow:hidden` cắt cho chân đế chạy xuống mép như gốc.
+
+**Quyết định của thầy (qua AskUserQuestion):** chữ = "ANDREW CLASSES QUIZ SHOW"; nền hình thoi áp cả màn chơi; KHÔNG cho bỏ qua intro (chạy trọn 6s).
+
+**File sửa:** `templates/gameshow/gameshow.js` (scene + introShow + nextGetReady + showQuestion + cleanup), `gameshow.css` (bỏ nền/viền cũ của board + khối CSS full-bleed/khung/ô vàng/chrome trắng), thêm `img/screenframe.webp`. Backup bản cũ ở `templates/gameshow/_backup/`.
+
+**Đã tự test (1280×720, `test.html`):** intro ✓, câu hỏi (nền phủ kín + viền hồng + chrome trắng) ✓, get ready (DOM xác nhận vùng chơi ẩn, "Get ready!" hiện đúng, không đè) ✓, bonus round ✓, 0 lỗi console. ⚠️ Chưa test `play.html` (HS) và bảng TOMKO.
+
+**➡️ BÀN GIAO CHO SESSION MỚI (build tiếp Gameshow):**
+- **Tiếp nhận:** `git pull` → đọc `templates/gameshow/GHI CHU GAMESHOW.md` (khối ⭐ Đợt 34 ở đầu) + mục này.
+- **Chạy thử:** `python devserver.py 5510` (hoặc preview tên `aword`) → `http://localhost:5510/templates/gameshow/test.html` → bấm Play. Khung xem nên đặt **desktop 1280×720** (khung hẹp thì mọi thứ nhỏ, khó soi). Get ready chỉ hiện ~1,2s nên chụp tay khó — kiểm bằng JS sample DOM (đã dùng: bắt `.aw-gs-frame` rồi đọc `stage.style.visibility`).
+- **Các NÚM tinh chỉnh nhanh (đều trong `gameshow.css`):** vị trí/cỡ màn trong khung = `.aw-gs-scr` (L12/R12.5/T13.5/B39% — khớp "lỗ trong suốt" ảnh); cỡ khung = `.aw-gs-sign,.aw-gs-frame-body` (`width:84cqw` + `margin-top:-4cqw`); ô get ready = `.aw-gs-gr-box`; cỡ chữ QUIZ SHOW = `.aw-gs-sign-line`; độ đậm spotlight/khán giả = `.aw-gs-decor .aw-gs-light/.aw-gs-audience`; nhịp intro = 2 mốc `later()` trong `introShow` (5200 mở, 6000 xong).
+- **Ý tinh chỉnh thầy có thể muốn (chưa làm):** căn lại vị trí/cỡ ô get ready cho cân giữa màn khung; giảm độ nổi của khán giả/spotlight; APPLAUSE hiện cả lúc chơi hay chỉ intro; cỡ chữ QUIZ SHOW; có PTS box lúc chơi hay bỏ (gốc không có).
+- ⛔ **BẪY:** khung intro/get ready đặt ở CẤP `stageEl` (`.aw-stage`), KHÔNG trong play area (kẻo nhỏ + dính đỉnh). Nội dung màn phải khớp "lỗ trong suốt" nếu đổi ảnh khung. Nhớ `cleanup()` phải gỡ hết (class + 2 lớp) — đừng để sót sang template khác.
+
 ### 1/8/2026 — Đợt 33 (v0.9.7): NẠP TEMPLATE THEO YÊU CẦU — trang HS `play.html` chơi được CẢ 14 loại; thêm template từ nay chỉ sửa 1 FILE. ⭐ CÓ SỬA CORE. Đã tự test (0 lỗi console).
 
 Ngay sau Đợt 32 thầy chốt (qua AskUserQuestion) làm hướng **"nạp động theo `activity.type`"** thay vì

@@ -1,5 +1,20 @@
 # GHI CHU — GAMESHOW QUIZ (game thứ 10)
 
+> **⭐ Đợt 34 (1/8/2026, v0.9.8) — DỰNG LẠI INTRO + GET READY + NỀN PHỦ TOÀN KHUNG cho giống act gốc.
+> ✅ THẦY DUYỆT → ĐÃ COMMIT + PUSH. Chỉ sửa `templates/gameshow/*`, KHÔNG đụng core.**
+> - **Intro ~6s** (khớp `intro.mp3`): khung TV marquee gốc `img/screenframe.webp` nảy vào giữa nền
+>   xanh hình thoi (spotlight + APPLAUSE CSS + khán giả), chữ "ANDREW CLASSES / QUIZ SHOW" lọt qua "lỗ
+>   trong suốt" của khung (đo bằng PIL: L12% R12,5% T13,5% B39%), rồi "mở ra" → câu 1. (Bỏ kiểu 2 cánh
+>   cửa trượt 1,5s cũ; CSS `.aw-gs-doors/.aw-gs-door` còn đó nhưng không dùng.)
+> - **Get ready mỗi câu**: khung TV + màn tia sáng xanh + **ô viền vàng đứt nét** "Question N / Get
+>   ready!"; get ready thì ẩn nội dung vùng chơi (`stage.style.visibility`) để HUD/lifelines không đè.
+> - **Nền phủ toàn khung**: class `aw-gs-full` trên `.aw-stage` + lớp `.aw-gs-decor` (spotlight+khán
+>   giả) và `.aw-gs-screen` (tia sáng xanh + viền hồng, bật khi có câu hỏi). Chrome engine trong suốt +
+>   chữ trắng. **Gỡ sạch trong `cleanup()`** (đảo ngược, không ảnh hưởng template khác).
+> - ⛔ BẪY: khung intro/get ready đặt ở CẤP SÂN KHẤU (`stageEl`), KHÔNG trong play area (kẻo bị nhỏ +
+>   dính đỉnh). Nội dung màn trong khung phải khớp "lỗ trong suốt" — sửa số % ở `.aw-gs-scr` nếu đổi ảnh.
+> - Backup bản trước Đợt 34: `templates/gameshow/_backup/`.
+
 **TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
 tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
 GitHub Pages đã deploy.

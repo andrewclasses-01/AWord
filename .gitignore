@@ -16,3 +16,6 @@ scratch/
 
 # Local dev tooling (preview launch config)
 .claude/
+
+# Local backups before edits
+_backup/
