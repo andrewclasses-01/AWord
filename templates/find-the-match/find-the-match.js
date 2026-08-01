@@ -73,6 +73,7 @@ const ftmTemplate = {
   type: "find_the_match",
   scorable: true,
   name: "Find the match",
+  manualTimerStart: true,   // the visible clock starts only after our 3-2-1 prep (count-up), so the prep isn't counted
 
   toPrintItems(activity) {
     return (activity.content?.pairs || [])
@@ -173,15 +174,15 @@ const ftmTemplate = {
     let fallbackTimer = null; // setTimeout backup for whichever animation is running (rule: .animate() needs one)
     let prepTimer = null;     // the 3-2-1 prep sequence (count-up mode only)
     const tickTimers = [];    // discrete count-down "ting" timeouts (count-down mode only)
-    const pendingRemovals = [];
 
-    ui.onSubmit(() => finish("timesup"));
+    ui.onSubmit(() => finish("timesup"), () => state.filter(s => s.solved || s.skipped).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
     renderShell();
 
     if (timerMode === "countUp") {
-      runPrepCountdown();
+      runPrepCountdown();          // starts the clock (ui.startTimer) only after the 3-2-1
     } else {
+      ui.startTimer();             // count-down / none: clock starts right away
       if (timerMode !== "none") ftmSound.go();
       if (timerMode === "countDown") armCountdownTicks();
       startCycle();
@@ -200,7 +201,7 @@ const ftmTemplate = {
     // this — see the header comment + GHI CHU for the proposed core add.
     function runPrepCountdown() {
       const promptEl = root.querySelector(".aw-ftm-prompt");
-      if (!promptEl) { ftmSound.go(); startCycle(); return; }
+      if (!promptEl) { ui.startTimer(); ftmSound.go(); startCycle(); return; }
       promptEl.classList.add("is-countdown");
       let n = 3;
       const tick = () => {
@@ -212,6 +213,7 @@ const ftmTemplate = {
         prepTimer = setTimeout(() => {
           promptEl.classList.remove("is-countdown");
           promptEl.textContent = "";
+          ui.startTimer();     // the visible clock begins only NOW — the 3-2-1 prep isn't counted
           ftmSound.go();
           startCycle();
         }, 1000);
@@ -364,7 +366,8 @@ const ftmTemplate = {
       } else {
         queue.shift();
         state[idx].skipped = true;
-        removeTile(root.querySelector(`.aw-ftm-tile[data-idx="${idx}"]`));
+        // Tile is NOT removed (teacher's spec 1/8: answers stay fixed) — it
+        // simply lingers as an unmatched distractor for the rest of the game.
       }
     }
 
@@ -376,9 +379,11 @@ const ftmTemplate = {
 
     function removeTile(tile) {
       if (!tile) return;
+      // Teacher's spec (1/8): tiles must NEVER change position. A matched tile
+      // fades out (opacity:0 via .is-solved) but STAYS in the DOM — its grid
+      // cell is kept reserved so no other tile ever reflows.
       tile.classList.add("is-solved");
       tile.disabled = true;
-      pendingRemovals.push(setTimeout(() => tile.remove(), 320));
     }
 
     // Slides the prompt from wherever it currently is to fully off the
@@ -428,30 +433,24 @@ const ftmTemplate = {
         updateNav();
         exitPromptThenCall(() => { if (!queue.length) finish("complete"); else startCycle(); });
       } else {
-        // Wrong tap: a big ✗ flies up on the TAPPED tile then fades (the
-        // tile itself is NOT removed/locked — it may still be the right
-        // answer for a LATER prompt). Lose a life if enabled. The CURRENT
-        // prompt's pair is done for this round either way (dropOrRequeue),
-        // and the prompt glides off to the right same as a correct tap.
+        // Wrong tap (teacher's spec 1/8): a big ✗ flies up on the TAPPED tile
+        // then fades — but NOTHING on the board moves or disappears. The tapped
+        // tile stays exactly where it is (it may still be the right answer for a
+        // later prompt), and the CURRENT prompt stays put too, so the student
+        // simply tries again until they find the match. (This reverses the
+        // earlier "a wrong tap slides the prompt away" behaviour.) The only
+        // cost is a life, if lives are enabled — running out ends the game.
         ftmSound.wrong();
         const fly = el("span", "aw-mark-fly is-cross", icons.markCross);
         tile.append(fly);
         setTimeout(() => fly.remove(), 900);
 
-        let outOfLives = false;
         if (livesLeft != null) {
           livesLeft--;
           const livesEl = root.querySelector(".aw-ftm-lives");
           if (livesEl) [...livesEl.children].forEach((s, i) => s.classList.toggle("is-lost", i >= livesLeft));
-          if (livesLeft <= 0) outOfLives = true;
+          if (livesLeft <= 0) exitPromptThenCall(() => finish("gameover"));
         }
-
-        dropOrRequeue(target);
-        exitPromptThenCall(() => {
-          if (outOfLives) finish("gameover");
-          else if (!queue.length) finish("complete");
-          else startCycle();
-        });
       }
     }
 
@@ -503,7 +502,6 @@ const ftmTemplate = {
       if (prepTimer) clearTimeout(prepTimer);
       tickTimers.forEach(clearTimeout);
       haltPromptAnim();
-      pendingRemovals.forEach(clearTimeout);
     };
   }
 };

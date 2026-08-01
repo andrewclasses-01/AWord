@@ -76,6 +76,14 @@ export const sound = {
   click() {
     tone({ freq: 900, freqEnd: 1250, dur: 70, type: "sine", gain: 0.08 });
   },
+  // short dry "tock" for an on-screen-keyboard key press — iPhone-typing style.
+  // Two very short components (a crisp high tick over a tiny low body) with a
+  // fast decay so rapid typing stays clean. Respects the global mute like the
+  // rest of this module. (Added for Type the answer, 1/8/2026.)
+  keyClick() {
+    tone({ freq: 1450, freqEnd: 950, dur: 22, type: "square",   gain: 0.05 });
+    tone({ freq: 320,  freqEnd: 180, dur: 30, type: "triangle", gain: 0.05 });
+  },
   // short bright "ting" for a single correct pick/reveal (lighter than correct())
   tick() {
     tone({ freq: 1760, dur: 130, type: "sine", gain: 0.14 });

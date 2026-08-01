@@ -251,5 +251,334 @@ template, KHÔNG đụng core.
    mất chấm. Fit khớp khung (không còn cắt). 0 lỗi console suốt quá trình.
 7. **Chưa push** — chờ thầy chơi duyệt. File đụng: `type-the-answer.js` + `type-the-answer.css` (template).
 
+### 1/8/2026 — 7 cải tiến bàn phím (⚠️ LOCAL, CHƯA PUSH, chờ thầy duyệt)
+
+Thầy chốt "ok build" cho 7 yêu cầu về bàn phím. CHỈ đụng 2 file template
+(`type-the-answer.js` + `type-the-answer.css`), **KHÔNG đụng core**.
+
+**Thay đổi cấu trúc lớn (điểm 2 + 7) — refactor màn chơi:**
+- Trước đây `render()` dựng lại TOÀN BỘ card (kể cả bàn phím) mỗi câu, và card
+  `justify-content:center` nên mở reveal làm mọi thứ (kể cả bàn phím) dịch chuyển.
+- Nay tách **`.aw-tta-stage`** (câu hỏi + reveal + ô nhập + Submit — vùng co giãn,
+  dựng lại mỗi câu) đặt TRÊN **bàn phím dựng 1 lần, neo đáy, KHÔNG scale theo `--fit`**.
+  Bàn phím = phần tử cố định; stage `flex:1` nuốt hết chỗ còn lại → reveal mở thì
+  lớn lên TRONG stage (đẩy câu hỏi lên), thiếu nữa thì autoFit giảm `--fit` (chỉ
+  co stage) → **bàn phím không bao giờ di chuyển**. Đã đo: mở Andrew, bàn phím
+  top=293/bottom=490 y hệt trước và sau (điểm 2 ✓).
+- Chuyển câu: `fadeSwap` giờ CHỈ fade `.aw-tta-stage`, không đụng node bàn phím →
+  bàn phím giữ nguyên. Đã đo: gắn `dataset.marker` vào node bàn phím, bấm Next →
+  marker CÒN NGUYÊN (cùng 1 node, không dựng lại) + vị trí không đổi (điểm 7 ✓).
+  `syncKeyboardState()` cập nhật Submit/caps/numbers/Andrew TẠI CHỖ (không rebuild).
+
+**Các điểm còn lại:**
+1. **Bàn phím hạ thấp** + gap tới hàng chức năng còn 1/2: card `padding-bottom`
+   2.4cqw→1.2cqw, bàn phím neo đáy. ✓
+3. **Chiều ngang bàn phím còn 70%**: `.aw-tta-kbd { width:70% }` (canh giữa). Đo
+   width 646px trên stage ~920px ≈ 70% ✓.
+4. **Caps tự tắt sau 1 chữ**: `makeLetterKey` gõ xong nếu caps đang bật thì gọi
+   `setCaps(false)` — cập nhật class TẠI CHỖ (không rebuild, không nháy) vì glyph
+   phím luôn HOA sẵn, chỉ đổi case ký tự chèn + chấm sáng. Đo: caps ON→gõ "A"→
+   caps tự off, input="A" ✓.
+5. **Andrew nháy chậm**: halo `1s`→`2.6s`; dot-pulse `1.6s`→`2.6s` (dot-pulse giờ
+   chỉ còn áp cho chấm Andrew "ready" vì chấm caps/numbers đã thành trắng đứng yên).
+   Đo `animationDuration:2.6s` ✓.
+6. **Chấm caps/numbers khi bật = trắng đứng yên**: thêm rule dot `background:#fff` +
+   `animation:none` + `opacity:1`. Đo: caps/numbers ON → dotBg `rgb(255,255,255)`,
+   animationName `none` ✓.
+
+**Bỏ `var(--fit)` khỏi mọi kích thước bàn phím** (trước đây nhân `--fit`): đây là
+điều kiện để bàn phím giữ đúng 1 kích thước/vị trí khi autoFit co chữ. Chỉ stage
+(câu hỏi/ô nhập/Submit ngoài) còn scale theo `--fit`.
+
+**Đã test thật qua trình duyệt** (`test.html`, đo DOM + chụp ảnh): 7/7 điểm đạt;
+chấm đúng "seven"→ô is-correct + tích bay → điểm 0→1; caps/numbers/Andrew đúng
+trạng thái; **0 lỗi console** suốt quá trình.
+
+**Chưa push** — chờ thầy tự chơi duyệt. Nếu ưng: commit + push (kèm cả 2 đợt 31/7
+đang treo local, nhớ `curl` kiểm chứng theo mục 9 APP_MASTER). File đụng:
+`type-the-answer.js` + `type-the-answer.css` (đều trong thư mục template).
+
+### 1/8/2026 (tiếp) — 3 tinh chỉnh bàn phím: Andrew trắng, chữ cái bằng nhau, caps -15% (⚠️ LOCAL)
+
+Thầy chốt "ok build" cho 3 yêu cầu tiếp. CHỈ đụng `type-the-answer.js` + `.css`, KHÔNG đụng core.
+
+1. **Nút Andrew (ready) chuyển tông trắng** như caps/numbers: nhãn `#ffe08a`→`#f4f4f5`;
+   chấm tròn "ready" `#ffd54a`→**trắng** (đổi luôn màu cơ sở `.aw-tta-key-dot` vì giờ
+   chỉ Andrew-ready còn dùng chấm nhấp nháy — caps/numbers đã là chấm trắng đứng yên).
+   Tốc độ nháy chấm giảm còn 1/2: `aw-tta-dot-pulse` 2.6s→**5.2s**. (Halo vàng lúc Andrew
+   ĐANG glowing giữ nguyên 2.6s — đó là highlight "đang trợ giúp", thầy không yêu cầu đổi.)
+   Đo: labelColor rgb(244,244,245), dotBg rgb(255,255,255), animDuration 5.2s ✓.
+
+2. **Mọi phím chữ cái BẰNG NHAU tuyệt đối (ngang + cao)**: thêm class `.aw-tta-key-letter`
+   (JS gắn trong `makeLetterKey`) với `flex: 0 0 var(--tta-kw)` (5cqw cố định) → 26 chữ
+   không còn co giãn, tất cả cùng 1 bề ngang. Chiều cao: nguyên nhân lệch là phím ⌫ font
+   1.6cqw làm HÀNG 1 cao hơn (Q cao 43.3px vs A/Z 39.3px) → hạ font ⌫ về **1.35cqw** (bằng
+   chữ cái) → mọi hàng cùng cao. Đo sau sửa: **cả 26 phím đúng 48.3px × 39.3px** (1 giá trị
+   duy nhất cho cả width lẫn height) ✓. Các phím KHÔNG phải chữ cái (' ? . , ⌫ Space Submit)
+   vẫn flex-grow để lấp đầy hàng — đây là các phím "co giãn" nuốt phần dư nên chữ cái giữ đều.
+
+3. **caps hẹp đi 15% + kéo hàng A-L theo + `?` giãn bù**: caps/numbers/andrew nay có bề ngang
+   CỐ ĐỊNH riêng (ghi đè `flex:1.8` của `.aw-tta-key-fn`): `--tta-caps-w: 8.83cqw`
+   (=10.39cqw cũ × 0.85), `--tta-numbers-w: 11.3cqw` (≈cũ), `--tta-andrew-w: 12.7cqw` (≈cũ).
+   Vì caps cố định hẹp hơn và các chữ A-L cố định nằm ngay sau nó, chúng **dịch trái theo caps**;
+   `?` cuối hàng 2 là phím grow duy nhất nên **giãn ra bù** đúng phần trống. Đo: caps 100.6px→
+   **85.3px (giảm 15.2%)**, numbers giữ 109px ✓.
+
+**Đã test thật qua trình duyệt** (`test.html`, đo DOM + ảnh): 3/3 đạt; không hồi quy — caps tự
+tắt sau 1 chữ vẫn đúng, numbers mode chuyển qua lại OK (26 phím chữ ↔ chế độ số), bàn phím vẫn
+cố định vị trí, **0 lỗi console**. Bố cục nhìn giống bàn phím điện thoại thật hơn.
+
+**Chưa push** — chờ thầy chơi duyệt (gộp chung mọi đợt local đang treo khi push). File đụng:
+`type-the-answer.js` + `type-the-answer.css`.
+
+### 1/8/2026 (tiếp) — 8+3 việc: điểm X/30, ô nhập, âm thanh thật, slider Minus... (⚠️ LOCAL)
+
+Thầy chốt "ok build" cho 8 yêu cầu + bổ sung 3. Đụng 2 file template + **2 file core (nhỏ, chỉ THÊM)**
++ 1 file sound mới + copy mp3. Có hỏi thầy 1 câu (tiếng gõ phím) → thầy chọn **tự tổng hợp**.
+
+**Âm thanh (điểm bổ sung 1 + yêu cầu 6):**
+- Tạo `type-the-answer-sound.js` + copy bộ mp3 THẬT của Wordwall TTA (Classic) vào `./sounds/`
+  (từ `D:\APP AND DATA\AWord-data\Source\Sound effect\TYPE THE ANSWER`). Theo pattern chuẩn
+  (giống tf-sound.js/balloon-pop-sound.js). Nối: `sounds.play=intro`, `restart`, `complete=gamecompleted`;
+  đúng→`correct` (pool 3), sai→`wrong` (pool incorrect 3), chuyển câu→`tileFlip` (pool 4).
+- Bộ TTA **KHÔNG có file tiếng gõ phím** → thêm `sound.keyClick()` vào **core/sound.js** (tổng hợp
+  "tock" kiểu iPhone, tôn trọng mute). Mọi phím bàn phím ảo gọi `ui.sound.keyClick()`. Đã đo network:
+  intro-01.mp3 (Play) + correct-01.mp3 (đúng) nạp OK.
+
+**Yêu cầu 1 — điểm ✓X/30:** template tự ghi `.aw-top-score` = `✓ điểm/tổng` (`showScore`/`pulseScoreTo`).
+Tử số = điểm ĐANG CHẠY (bị Minus trừ), mẫu = tổng câu. Lề trái↔phải đã cân sẵn (topbar space-between
+trong padding 2.2cqw đối xứng). Đo: "0/6"→"1/6". KHÔNG đụng core.
+
+**Yêu cầu 2 — ô nhập thấp 40%:** padding dọc + line-height giảm; đo chiều cao 1 dòng **84px→47px (−44%)**.
+
+**Yêu cầu 3 — đáp án dài 2 dòng:** đổi `<input>`→`<textarea>` + `autoGrow` (cao theo nội dung), Enter vẫn
+chấm (chặn newline); autoFit thu chữ nếu vẫn tràn. Đo: 1 dòng 47px → chuỗi dài 83px (×1.77 ≈ 2 dòng).
+
+**Yêu cầu 4 — Andrew chỉ hiện kết quả:** bỏ `::before "Andrew ➜"`. Đo: reveal="cold", ::before=none.
+
+**Yêu cầu 5 — câu hỏi cao lên + ô đáp án giữa khoảng trống:** stage `justify-content:flex-start` (câu hỏi
+neo trên) + thêm `.aw-tta-answer-slot` (flex:1, canh giữa) bọc khối đáp án → luôn giữa khoảng câu hỏi↔bàn
+phím, cả khi mở đáp án đúng. (curArea vẫn trỏ AREA nội dung để autoFit đo đúng, không đo slot flex:1.)
+
+**Yêu cầu 6 — tiếng gõ phím:** xem phần Âm thanh (keyClick tổng hợp).
+
+**Yêu cầu 7 — slider Minus 1–5:** `buildExtraOptions` thêm slider "Points off per wrong" (1–5), **khóa khi
+bỏ tích Minus** (mkCheck callback gọi setSliderEnabled). Sai (khi Minus bật) → dấu **"−N" đỏ bay vào điểm**
+và trừ N (kẹp ≥0). Đo: tick Minus→slider mở khóa, kéo=3, sai→"−3" bay (is-penalty), điểm 1→0.
+
+**Yêu cầu 8 — bỏ "Shuffle answer order":** thêm cờ `tpl.hideShuffleAnswers` trong **core/engine.js**
+(bọc dòng đó). TTA khai cờ → mất; Quiz KHÔNG khai → vẫn còn (đã test lại Quiz: còn cả 2, 0 lỗi).
+
+**Bổ sung 2 — chấm sáng cố định size, chỉ đổi độ sáng:** keyframe `aw-tta-dot-pulse` bỏ `transform:scale`,
+chỉ còn opacity. Chấm caps/numbers/Andrew cùng 0.8cqw cố định.
+
+**Bổ sung 3 — bấm caps/numbers chỉ hiện chấm, không đổi gì khác:** bỏ rule đổi nền `#5a6b86`. Đo: nền
+caps bật=tắt=rgb(72,72,75) (y hệt phím thường), chỉ chấm hiện (solid, animation none).
+
+**Test thật qua trình duyệt** (test.html, đo DOM + ảnh + network): 11/11 đạt; **0 lỗi console**; hồi quy
+Quiz OK (còn đủ 2 shuffle, 0 lỗi). **Chưa push** — chờ thầy chơi duyệt (gộp mọi đợt local khi push).
+File đụng: `type-the-answer.js`, `type-the-answer.css`, **core/sound.js**, **core/engine.js**,
+`type-the-answer-sound.js` (mới) + `sounds/*.mp3` (mới).
+
+### 1/8/2026 (tiếp) — 9 việc: options timer/order/restart, bố cục cố định, bàn phím animation (⚠️ LOCAL)
+
+Thầy chốt "ok build" + xác nhận **#9 (Apply→restart) áp cho MỌI template**. Đụng 2 file template +
+**3 file core** (numberstepper.js, engine.js, app.css) — đều báo trước.
+
+**CORE (ảnh hưởng mọi game):**
+- **#1a** ô thời gian countdown nằm CẠNH nút "Count down" (không xuống dòng): gom vào cụm
+  `.aw-opt-cd` (inline-flex nowrap) trong `engine.js` + rule `.aw-opt-cd` app.css. Trước bị
+  `.aw-opt-row{flex-wrap}` đẩy xuống dòng.
+- **#1b** number stepper **nhấn-giữ-lặp** (`numberstepper.js`): pointerdown→bước ngay + sau 320ms
+  lặp mỗi 55ms, có tăng tốc nhẹ (×2 sau 10 nhịp, ×3 sau 22). Giữ nguyên bấm/kéo cũ + keydown a11y.
+  Đo: giữ 700ms → 00→07 rồi thả dừng.
+- **#2** "End of game (Show answers)" xuống CUỐI options (sau extra options) — `engine.js`. Đo Quiz:
+  thứ tự Timer/Random/Letters/**End of game**; TTA: Timer/Random/Type the answer/**End of game**.
+- **#9** Apply BẤT KỲ option nào → **tự restart** (mọi template): `engine.js` Apply luôn gọi
+  `restart()` khi đang chơi (bỏ hook `optionsNeedRestart`). Restart = về màn Play (giống "Start
+  again"/Anagram cũ). Đã test Quiz không hồi quy (còn Shuffle answer + Letters, 0 lỗi).
+
+**TEMPLATE TTA — refactor bố cục lớn (`type-the-answer.js` viết lại + `.css`):**
+- **Kiến trúc mới:** shell dựng 1 lần: `.aw-tta-qarea` (cao CỐ ĐỊNH ~2 hàng) + `.aw-tta-answer-slot`
+  (flex:1 canh giữa) chứa khối đáp án + bàn phím (luôn giữ chỗ). `loadQuestion()` cập nhật DOM TẠI
+  CHỖ; chỉ CHỮ CÂU HỎI crossfade khi chuyển câu. Bỏ `autoFit`, dùng `fitOnce` × 2: `--qfit` (thu chữ
+  câu hỏi cho vừa vùng 2 hàng), `--fit` (thu khối đáp án nếu tràn slot). Bàn phím KHÔNG dùng var nào
+  → không đổi size/vị trí.
+- **#5** nút Submit hết nháy khi chuyển câu: khối đáp án nay PERSISTENT (không dựng lại) → Submit không
+  bị fade. Chỉ câu hỏi fade.
+- **#6** cụm đáp án CỐ ĐỊNH vị trí: đo blockTop = **225 cho cả 6 câu** (1 hàng & 2 hàng như nhau; câu
+  dài tự thu chữ qfit 0.95). Ẩn/hiện bàn phím: blockTop = **212 ở cả 3 trạng thái** (nút Submit ngoài
+  nay dùng `visibility` giữ chỗ, không `display:none`, nên khối không đổi cao).
+- **#7** bật/tắt bàn phím có animation: `.is-hidden` = opacity 0 + `translateY(14%) scale(.98)` +
+  transition (KHÔNG `display:none` → giữ chỗ, khối không nhích). Đo: display vẫn flex khi ẩn, có
+  transition opacity/transform.
+- **#3** con trỏ nhập ngắn 30%: `line-height` ô nhập 1.15→**0.8** (con trỏ = chiều cao dòng). Dòng 2
+  hơi sát (đã báo thầy, chấp nhận).
+- **#4** Next/Back dùng `ui.sound.keyClick()` (giống bấm chữ), bỏ tileFlip.
+- **#8** bỏ ✓ ở câu cuối: `updateNav` câu cuối `onNext:null` (Next disabled, không ✓). Auto-finish khi
+  mọi câu đã chấm (đo: trả lời hết 6 → "GAME COMPLETE" tự hiện). Hoặc Menu→Submit answers.
+
+**Test thật** (test.html + Quiz, đo DOM + ảnh): 9/9 đạt; **0 lỗi console**; Quiz không hồi quy.
+**Chưa push** — chờ thầy chơi duyệt (gộp mọi đợt local khi push). File đụng: `type-the-answer.js`,
+`type-the-answer.css`, **core/numberstepper.js**, **core/engine.js**, **core/app.css**.
+
+### 1/8/2026 (tiếp) — 10 việc: Submit rỗng, cỡ ô nhập (BUG fitBlock), lọc tiếng Anh, điểm âm, Auto switch, chặn submit-0 (⚠️ LOCAL)
+
+Thầy "ok build". Đụng 2 file template TTA + **core (engine.js, app.css)** + **9 file template khác** (chỉ thêm
+1 dòng countFn cho #9). Lưu ý: phiên khác đang thêm `livesSlot` (true-false hearts) vào engine.js — thay
+đổi của mình coexist, đã grep xác nhận còn nguyên.
+
+- **#2 (quan trọng) — BUG gốc làm chữ bé:** `fitBlock` cũ dùng `fitOnce` (xét CẢ chiều rộng); khối đáp
+  án rộng 100% → luôn bị coi "tràn ngang" → `--fit` tụt đáy **0.5** → chữ 15px + Submit 8px. Sửa `fitBlock`
+  chỉ xét CHIỀU CAO (vòng lặp riêng) → `--fit`≈0.905, chữ **28px**, Submit **15px**. Đồng thời revert
+  line-height 0.8→1.15 + padding về bản trước (caret về như cũ, theo thầy).
+- **#1** Submit (ngoài + trong bàn phím) khóa khi ô rỗng: `syncSubmitEnabled()` (gọi ở input/insert/
+  backspace/loadQuestion/rebuild). `submitAnswer` chặn chuỗi rỗng. Đo: rỗng→disabled, gõ→enabled.
+- **#3** chỉ nhận tiếng Anh: `filterEnglish()` bỏ ký tự ngoài `\x20-\x7E` mỗi lần input + compositionend
+  (bàn phím tiếng Việt máy). Đo: "Tiếng Việt hello đúng rồi"→"Ting Vit hello ng ri".
+- **#4** bỏ tiếng phím khi Submit: `makeKey(...,silent)`; phím Submit silent (chỉ còn tiếng đúng/sai).
+- **#5** dấu X bám hàng ô nhập: dấu là con tuyệt-đối của `.aw-tta-inputrow` (không lệch khi reveal đẩy ô).
+  Đo: markInInputRow=true, cùng tâm dọc ô nhập.
+- **#6 (CORE)** Auto switch: checkbox global ở engine (mặc định TẮT, `draft.autoSwitch`); TTA tự next sau
+  khi chấm (`opt.autoSwitch` + chưa phải câu cuối). Đo: mặc định false; bật→sai câu 1→tự sang câu 2.
+- **#7** dấu X/✓ TO+DÀY hơn (size max(34,h·0.72); CSS `stroke-width:3.6` đơn vị user, KHÔNG px kẻo mỏng đi)
+  + **RUNG** (scale/rotate keyframe) rồi mới bay về điểm (re-parent sang body).
+- **#8** điểm ÂM: bỏ kẹp `Math.max(0,...)`; `scoreHTML` hiện `abs` màu ĐỎ (`.aw-tta-neg`) khi âm, KHÔNG dấu
+  −. Đo: sai với minus 3 khi điểm 0 → hiện "3" đỏ (=−3), auto-switch sang câu sau.
+- **#9 (CORE) — chặn submit khi 0 câu (MỌI template, AN TOÀN):** ⚠️ ban đầu định chặn trong `ui.finish`
+  nhưng phát hiện các template latch `finished=true` TRƯỚC khi gọi ui.finish → sẽ **KẸT**. Đổi sang chặn ở
+  **cấp Menu**: `ui.onSubmit(fn, countFn)` — template đưa getter đếm câu đã trả lời; Menu "Submit answers"
+  chặn (+toast) nếu `countFn()===0`, KHÔNG gọi finish (nên không latch → không kẹt). Template không đưa
+  countFn → y như cũ (không hồi quy). Đã thêm countFn cho 9 template: quiz `chosen!==null`, true-false
+  `answered`, anagram/unjumble `doneCheck`, find-the-match `solved||skipped`, maze-chase `correct||wrong`,
+  crossword `wordState.done`, gameshow `chosen!==null`, TTA `graded`. Arcade (whack-a-mole/flying-fruit/
+  speaking-cards) KHÔNG đưa (không map "câu"). Đo: TTA+Quiz chặn+**KHÔNG kẹt**+trả lời rồi submit thì
+  hoàn thành; anagram/crossword/gameshow chặn không lỗi; whack-a-mole không bị chặn nhầm, 0 lỗi.
+- **#10** chữ Andrew hiện ra VÀNG + LẤP LÁNH: reveal is-andrew dùng gradient vàng (background-clip:text,
+  text-fill transparent) + `@keyframes aw-tta-andrew-shimmer` quét sáng + drop-shadow. Đo: animationName
+  đúng, gradient, text-fill transparent.
+
+**Test thật** (TTA + Quiz + anagram + crossword + gameshow + whack-a-mole, đo DOM): 10/10 đạt, #9 an toàn
+mọi template, **0 lỗi console**. **Chưa push**. File đụng: `type-the-answer.js`+`.css`, **core/engine.js**
+(Auto switch + onSubmit countFn + Menu guard, KHÔNG còn guard trong ui.finish), **core/app.css** (không đổi
+đợt này — bỏ qua), + 8 template khác (mỗi file +1 dòng countFn): quiz, true-false, anagram, find-the-match,
+maze-chase, crossword, unjumble, gameshow.
+
+### 1/8/2026 (tiếp) — Đảo logic fit: ô đáp án CỐ ĐỊNH cỡ, câu hỏi nhường chỗ (⚠️ LOCAL)
+
+Thầy "ok build". CHỈ đụng `type-the-answer.js` + `.css` (KHÔNG đụng core).
+
+- **Bỏ placeholder** "Type your answer..." → `input.placeholder = ""` (chỉ còn con trỏ). Đo: placeholder rỗng.
+- **Font + ô đáp án +10%**: input 3.2→**3.52cqw**, padding 0.55→0.62cqw. Đo: 28px→**34px**.
+- **⭐ ĐẢO LOGIC FIT** (thay `fitBlock`+`fitPrompt` bằng **`fitLayout`**): khối đáp án nay **CỐ ĐỊNH cỡ**
+  (input/reveal/Andrew đều 3.52cqw, KHÔNG dùng `--fit` để co → `--fit` luôn=1, là "sàn" không nhỏ hơn).
+  `qArea` bỏ chiều cao cố định 11cqw → **content-sized**. Khi khối cần thêm dòng (dòng 2 ô nhập / reveal /
+  Andrew), `fitLayout` **thu chữ CÂU HỎI** (`--qfit`) → qArea ngắn lại → slot cao lên → khối vừa. Tức câu
+  hỏi bị đẩy lên + thu nhỏ, còn ô đáp án giữ nguyên cỡ.
+  - **reveal (đáp án đúng) = input**: 2.2cqw → **3.52cqw** (đo bằng nhau: 34px = 34px).
+  - **Andrew = input**: đo 34px = 34px.
+  - Đo "không bao giờ bé hơn": gõ đáp án 2 dòng → input GIỮ 34px (không đổi), `--qfit` 1→0.998 (câu hỏi
+    nhường đúng mức cần). Câu dài "mixing blue and yellow" → --qfit 0.9; mở reveal → 0.881.
+- Bỏ import `fitOnce` (không dùng nữa).
+
+**Test thật** (test.html, đo DOM): 3/3 đạt, **0 lỗi console**. **Chưa push**. File đụng: `type-the-answer.js`
++ `type-the-answer.css`.
+
+### 1/8/2026 (tiếp) — Căn giữa ô đáp án/reveal + màu & cân đối điểm số (⚠️ LOCAL)
+
+Thầy "ok build". CHỈ đụng `type-the-answer.js` + `.css` (KHÔNG đụng core).
+
+**Căn giữa "phần tử tham chiếu" giữa câu hỏi ↔ bàn phím:**
+- Phần tử tham chiếu = **reveal (đáp án đúng)/Andrew hint khi đang hiện, else ô nhập**.
+- `centerBlock()`: dời cả khối (`translateY`) sao cho tâm phần tử tham chiếu = trung điểm giữa
+  **mép dưới câu hỏi (promptEl.bottom)** và **mép trên bàn phím thật (keyboardEl.top)** — khi bàn phím
+  ẩn cộng bù 14% (do translateY ẩn). `fitLayout` đảm bảo `2·max(trên,dưới của khối quanh tham chiếu) ≤ slot`
+  (thu chữ câu hỏi --qfit nếu cần) để khối căn giữa KHÔNG tràn.
+- ⛔ **BẪY**: ban đầu thêm `transition: transform` cho khối → **pane phiên này KHÔNG composite frames**
+  (ảnh cũng lỗi cùng lý do) làm transition đóng băng ở giá trị đầu (transform=none) → tưởng code sai.
+  Thực ra toán đúng. **Bỏ transition, căn tức thì** (cũng tránh khối trượt mỗi lần chuyển câu). Đo thật:
+  không reveal → gapTop=gapBottom=59 (diff 0); reveal sai "seven" → 75=75; Andrew "gray" → 73=73.
+
+**Màu + cân đối điểm số** (`scoreHTML`): số tử tách 3 span (num/sep/total), dùng flex-gap của
+`.aw-top-score` nên **num↔/ == /↔total** (đo 6px=6px). Số tử **XANH LÁ khi ≥0, ĐỎ khi âm** (không dấu −);
+**gạch chéo + tổng luôn màu chữ đậm (đen)**. Đo: dương rgb(16,185,129); âm rgb(239,68,68); sep/total
+rgb(35,48,62). ✓ Bỏ class cũ `.aw-tta-neg`, thêm `.aw-tta-score-num/-pos/-neg/-sep/-total`.
+
+**Test thật** (đo DOM; pane không chụp ảnh được phiên này): tất cả đạt, **0 lỗi console**. **Chưa push**.
+File đụng: `type-the-answer.js` + `type-the-answer.css`.
+
+### 1/8/2026 (tiếp) — FIX câu hỏi bị thu nhỏ bất thường khi có reveal/Andrew (⚠️ LOCAL)
+
+Thầy báo lỗi: câu hỏi nhỏ bất thường khi sai/bấm Andrew (ảnh: câu hỏi ~17px, reveal ~34px). CHỈ đụng
+`type-the-answer.js` + `.css`.
+
+**Nguyên nhân (đo ra):** để căn giữa reveal, `fitLayout` cần `2·(khoảng-dưới-tâm-reveal) ≤ vùng`. Khoảng
+dưới gồm cả **nút Submit ẩn `visibility:hidden` vẫn chiếm 44px** + `fitLayout` dùng `slot.clientHeight`
+(thiếu ~9px margin bàn phím) → cần 274px nhưng chỉ có ~186px → câu hỏi ép xuống **qfit 0.4 (min), 17.8px**.
+
+**Sửa:**
+1. Nút Submit ngoài khi bàn phím hiện: `display:none` (KHÔNG `visibility:hidden`) → không chiếm 44px vô
+   hình. Reference-centering vẫn giữ ô nhập/reveal đúng chỗ khi bật/tắt bàn phím nên không cần "giữ chỗ".
+2. `fitLayout`/`centerBlock` tính **vùng thật** = `keyboardTopLayout() − promptEl.bottom` (mép bàn phím
+   thật ↔ mép dưới câu hỏi), thay cho `slot.clientHeight`. Thêm helper `keyboardTopLayout()` (bù 14% khi
+   bàn phím ẩn). Bật/tắt bàn phím nay gọi `fitLayout()` (vì display Submit đổi).
+
+**Đo sau sửa:** fresh 40px (qfit 1); có reveal sai → **36.5px (qfit 0.905)**, Andrew → **38.2px** — hết
+crush; reveal/Andrew vẫn căn giữa (56=56, 55=55). 0 lỗi console. **Chưa push**.
+
+### 1/8/2026 (tiếp) — FIX TRIỆT ĐỂ: khối đáp án đè bàn phím + lệch tâm sau reveal (⚠️ LOCAL)
+
+Thầy gửi 2 ảnh máy thật: khối đáp án ĐÈ lên bàn phím + reveal KHÔNG cân (trên ~75px, dưới ~53px) sau khi
+sai/bấm Andrew. Máy build KHÔNG tái hiện được (pane không composite → transition nhảy thẳng trạng thái
+cuối → mọi phép đo đều "đẹp"). CHỈ đụng `type-the-answer.js`.
+
+**Nguyên nhân:** reveal mở bằng transition grid-rows 0.32s; lần refit DUY NHẤT (cờ `refitDone` once) có
+thể chạy khi reveal đang mở dở (transitionend bắn sớm/bubble) → shift/qfit tính trên số đo sai → khối nằm
+thấp đè phím, và cờ chặn không cho sửa lại nữa.
+
+**Sửa 3 lớp (hàm `scheduleRevealRefit` dùng chung submitAnswer + useAndrew):**
+1. `fitLayout()` gọi NGAY khi add is-open (bố cục gần đúng từ sớm).
+2. Refit ở transitionend/400ms (như cũ, có cờ early).
+3. **Refit CUỐI vô điều kiện ở 750ms** — transition chắc chắn xong, số đo đúng, không bị cờ chặn.
+4. **Chốt chặn cứng trong `centerBlock`**: kẹp shift trong [minShift, maxShift] (PAD 3px) — dù số đo sai ở
+   đâu, khối KHÔNG BAO GIỜ đè bàn phím / che câu hỏi; khối to hơn vùng → bám mép trên bàn phím.
+
+**Đo sau sửa (chờ qua mốc 750ms):** sai → reveal "green" cân 56/58, block bottom 267 < kbd top 270 (không
+đè), câu hỏi 34.7px; Andrew "seven" cân 53/57, không đè, câu hỏi 38.2px; câu thường cân 51/51. **Mô phỏng
+đúng trạng thái lỗi** (ép translateY(60px) đè phím 27px) → lượt tính lại kéo về hết đè + cân. 0 lỗi console.
+**Chưa push**.
+
+### 1/8/2026 (tiếp) — Đổi cách căn: căn giữa CẢ CỤM theo ảnh chuẩn của thầy (⚠️ LOCAL)
+
+Thầy gửi ảnh lỗi + **ảnh chuẩn mong muốn**. So sánh ra khác biệt bản chất: code đang căn giữa RIÊNG chữ
+xanh/hint (đúng theo spec chữ nghĩa đợt trước) → cụm ô nhập bên dưới bị dồn sát bàn phím. Ảnh chuẩn cho
+thấy ý thật: **căn giữa CẢ CỤM** (mép trên = reveal khi mở, else ô nhập; mép dưới = Submit ngoài khi bàn
+phím ẩn, else ô nhập) — gap trên cụm = gap dưới cụm. CHỈ đụng `type-the-answer.js`.
+
+- Thay `refElement()` bằng **`blockEdges()`** (mép nhìn thấy của cụm); `neededHeight` = cao cụm;
+  `centerBlock` căn tâm cụm vào tâm vùng (câu hỏi ↔ bàn phím), clamp PAD 3px giữ nguyên (không bao giờ
+  đè phím). Giữ nguyên `scheduleRevealRefit` 3 lớp (fit ngay / 400ms / 750ms chốt).
+- **Đo sau sửa:** câu thường 28=28; sai (reveal "green") gap câu-hỏi→reveal-top = gap input-bottom→kbd
+  = **3=3** (pane build nhỏ nên vùng chật — màn thật gap thoáng như ảnh chuẩn; câu hỏi GIỮ 40px không thu);
+  Andrew "went" 27=27; mô phỏng trạng thái lỗi (ép đè phím 60px) → tự kéo về 27=27 không đè. 0 lỗi console.
+  **Chưa push**.
+
+### 1/8/2026 (tiếp) — Chữ Andrew trùng nút + hết frame tràn bàn phím giữa transition (⚠️ LOCAL)
+
+Thầy yêu cầu 2 chỉnh nhẹ. CHỈ đụng `type-the-answer.js` + `.css`.
+
+1. **Chữ Andrew trùng khớp nút Andrew**: bỏ shimmer quét 2s cũ; chữ dùng ĐÚNG gradient của nút
+   (`180deg #ffe89a→#ffc531`) + keyframe `aw-tta-andrew-textglow` **2.6s ease-in-out** mirror đúng
+   cường độ halo của nút (0.6/1.6cqw ↔ 1.4/3.2cqw, cùng #ffd54a/#ffe07a/amber). Đo: gradient
+   GIỐNG HỆT (rgb 255,232,154→255,197,49), duration 2.6s=2.6s, easing ease-in-out=ease-in-out.
+2. **Hết 1–2 frame chữ tràn xuống bàn phím** (câu hỏi dài, lúc reveal đang trượt mở): nguyên nhân —
+   cụm cao dần trong 0.32s transition nhưng căn giữ chỉ chạy ở mốc rời rạc 0/400/750ms → giữa các mốc
+   có frame cụm dài quá mà chưa được kéo lại. Sửa: `scheduleRevealRefit` thêm vòng **rAF căn lại
+   (`centerBlock` có clamp) MỖI FRAME suốt 800ms** — mọi khung hình đều được kẹp trong vùng, rẻ (1
+   transform/frame). (Pane build không composite nên rAF không chạy ở đây — trên máy thật chạy bình
+   thường; các mốc 0/400/750 vẫn bảo đảm trạng thái cuối ở mọi môi trường.)
+
+Đo: Andrew "cold" 27=27, sai "gray" 26=26, không đè, 0 lỗi console. **Chưa push**.
+
 ## ĐỀ XUẤT SỬA CORE (nếu có)
-(trống — 2 thay đổi core ở trên đã LÀM rồi, không phải đề xuất chờ xử lý.)
+(trống — mọi thay đổi core ở trên đã LÀM rồi, không phải đề xuất chờ xử lý.)

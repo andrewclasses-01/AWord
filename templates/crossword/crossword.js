@@ -260,7 +260,7 @@ const crosswordTemplate = {
       kbdBtn.classList.toggle("is-off", !keyboardVisible);
     }
 
-    ui.onSubmit(finish);
+    ui.onSubmit(finish, () => wordState.filter(s => s.done).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
 
     // ----- build the static shell once (grid + clue bar + keyboard) -----

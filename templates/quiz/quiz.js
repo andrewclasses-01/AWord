@@ -100,7 +100,7 @@ const quizTemplate = {
     let fitter = null;      // autoFit controller for the current card
     let autoTimer = null;   // pending "auto game complete" timer
 
-    ui.onSubmit(finish);
+    ui.onSubmit(finish, () => state.filter(s => s.chosen !== null).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
     render();
 

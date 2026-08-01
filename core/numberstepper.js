@@ -26,8 +26,34 @@ export function makeNumberStepper(value, min, max, onChange) {
   const downBtn = el("button", "aw-stepper-btn", "▼");
   downBtn.type = "button"; downBtn.setAttribute("aria-label", "Decrease");
 
-  upBtn.onclick = () => apply(current + 1, true);
-  downBtn.onclick = () => apply(current - 1, true);
+  // Press-and-hold to run the number up/down smoothly and continuously (tap =
+  // one step). A short delay before the repeat kicks in keeps single taps clean,
+  // then it accelerates a little so long holds cover the range quickly.
+  function holdRepeat(btn, dir) {
+    let delayT = null, repT = null, tick = 0;
+    const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; tick = 0; };
+    btn.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      try { btn.setPointerCapture(ev.pointerId); } catch {}
+      apply(current + dir, true);                        // immediate first step
+      delayT = setTimeout(() => {
+        repT = setInterval(() => {
+          tick++;
+          const step = tick > 22 ? 3 : tick > 10 ? 2 : 1;   // gentle acceleration
+          apply(current + dir * step, true);
+        }, 55);
+      }, 320);
+    });
+    btn.addEventListener("pointerup", stop);
+    btn.addEventListener("pointerleave", stop);
+    btn.addEventListener("pointercancel", stop);
+    // keyboard accessibility (pointer events don't fire for Enter/Space)
+    btn.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); apply(current + dir, true); }
+    });
+  }
+  holdRepeat(upBtn, +1);
+  holdRepeat(downBtn, -1);
 
   // vertical swipe/drag directly on the number
   const PX_PER_STEP = 10;   // px of vertical drag per +/-1

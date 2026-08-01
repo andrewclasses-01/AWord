@@ -195,7 +195,7 @@ const gameshowTemplate = {
     const pending = new Set();
     function later(fn, ms) { const id = setTimeout(() => { pending.delete(id); fn(); }, ms); pending.add(id); return id; }
 
-    ui.onSubmit(() => finishGame(true, true));
+    ui.onSubmit(() => finishGame(true, true), () => state.filter(s => s.chosen !== null).length);   // block "Submit answers" at 0 answered
     ui.setScore(0);
     ui.setNav({ index: 1, total, onPrev: null, onNext: null });
     window.addEventListener("keydown", onKey);

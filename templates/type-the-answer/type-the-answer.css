@@ -10,15 +10,29 @@
 
 .aw-tta-card {
   --fit: 1;
+  --qfit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column; align-items: center;
-  justify-content: center;
-  padding: 1.6cqw 0 2.4cqw;
+  padding: 1.2cqw 0 1.2cqw;
   animation: aw-fadein .25s ease;
 }
 
+/* FIXED-height question area (≈2 lines of the base font). It never changes
+   height, so nothing below it moves when the question is 1 vs 2 vs 3 lines — a
+   longer question shrinks its OWN font (--qfit, fitOnce) to fit here instead. */
+/* The question area is sized to the QUESTION itself (no fixed height). The
+   answer block below keeps a fixed size, so when it needs a 2nd line the block
+   grows and this area gives way — the question shrinks its font (--qfit) to fit
+   the reduced space. */
+.aw-tta-qarea {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+
 .aw-tta-prompt {
-  font-size: calc(4.6cqw * var(--fit));
+  font-size: calc(4.6cqw * var(--qfit));   /* --qfit only — question fits its own box */
   font-weight: 600;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
@@ -27,15 +41,28 @@
   line-height: 1.15;
   margin: 0 auto;
   max-width: 92%;
-  flex: 0 0 auto;
+}
+
+/* fills the space between the (fixed) question area and the (fixed-space)
+   keyboard, and centres the answer block in it. Because both neighbours are
+   fixed, this gap is constant -> the block's position never moves, whether the
+   keyboard is shown or hidden and whatever the question length. */
+.aw-tta-answer-slot {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
 
 .aw-tta-answer-area {
-  margin-top: calc(1.8cqw * var(--fit));
   width: 100%;
   display: flex; flex-direction: column; align-items: center;
   gap: calc(0.9cqw * var(--fit));
   flex: 0 0 auto;
+  /* JS slides this (translateY) so the reference element — the input, or the
+     reveal/Andrew hint when shown — is centred between question and keyboard.
+     No CSS transition here: it must land at the exact spot immediately (a
+     transition also froze under a non-compositing/background tab). */
 }
 
 /* "Correct answer" reveal, ABOVE the input — grid-rows 0fr->1fr is a smooth,
@@ -54,30 +81,50 @@
   text-align: center;
   font-weight: 700;
   color: #10b981;
-  font-size: calc(2.2cqw * var(--fit));
-  padding-bottom: calc(0.8cqw * var(--fit));
+  font-size: calc(3.52cqw * var(--fit));   /* EXACTLY the input text size */
+  line-height: 1.15;
+  padding-bottom: calc(0.6cqw * var(--fit));
 }
-/* When the reveal was opened by "Andrew help" (a hint before submitting), it
-   shows amber instead of the wrong-answer green, and carries a little label. */
-.aw-tta-revealwrap.is-andrew .aw-tta-reveal-text { color: #f59e0b; }
-.aw-tta-revealwrap.is-andrew .aw-tta-reveal-text::before {
-  content: "Andrew ➜ ";
-  font-weight: 800;
-  color: #f59e0b;
+/* When the reveal was opened by "Andrew help" (a hint before submitting), the
+   answer matches the glowing Andrew KEY exactly: the same top-to-bottom gold
+   gradient (#ffe89a -> #ffc531) and a pulsing glow with the SAME rhythm and
+   intensities as the key's halo (2.6s ease-in-out, 0.6/1.6cqw -> 1.4/3.2cqw,
+   same #ffd54a/#ffe07a/amber colours). Just the answer, no "Andrew ➜" prefix. */
+.aw-tta-revealwrap.is-andrew .aw-tta-reveal-text {
+  color: #ffc531;   /* fallback for the clipped-gradient text */
+  background: linear-gradient(180deg, #ffe89a, #ffc531);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aw-tta-andrew-textglow 2.6s ease-in-out infinite;
+}
+@keyframes aw-tta-andrew-textglow {
+  0%, 100% { filter: drop-shadow(0 0 0.6cqw #ffd54a) drop-shadow(0 0 1.6cqw rgba(255, 193, 7, .55)); }
+  50%      { filter: drop-shadow(0 0 1.4cqw #ffe07a) drop-shadow(0 0 3.2cqw rgba(255, 193, 7, .85)); }
 }
 
 .aw-tta-inputrow { width: 80%; }
+/* A <textarea> so long answers wrap onto a 2nd line (its height is auto-grown
+   in JS to fit the content). Single-line height cut ~40% (vertical padding
+   2.2cqw -> 1.15cqw) per the teacher; box-sizing:border-box so scrollHeight
+   math stays right. */
 .aw-tta-input {
+  display: block;
+  box-sizing: border-box;
   width: 100%;
   font-family: inherit;
-  font-size: calc(3.2cqw * var(--fit));
+  font-size: calc(3.52cqw * var(--fit));   /* +10% (teacher, 1/8) — this is the FIXED size floor */
   font-weight: 600;
+  line-height: 1.15;
   color: var(--aw-text);
   text-align: center;
-  padding: calc(2.2cqw * var(--fit)) calc(1cqw * var(--fit));
+  padding: calc(0.62cqw * var(--fit)) calc(1cqw * var(--fit));
   border-radius: var(--aw-tile-radius, 1cqw);
   border: 0.22cqw solid var(--aw-muted);
   background: #fff;
+  resize: none;
+  overflow: hidden;            /* no scrollbar — autoGrow keeps it tall enough */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;     /* a very long single word still wraps */
 }
 .aw-tta-input:focus { outline: none; border-color: var(--aw-accent, #3b82f6); }
 .aw-tta-input:disabled { opacity: .85; }
@@ -111,14 +158,25 @@
    sized/positioned entirely from JS (px), never cqw (no container-query
    ancestor once it's outside the stage). ---------- */
 .aw-tta-flymark {
-  position: fixed;
   display: flex; align-items: center; justify-content: center;
   pointer-events: none; z-index: 60;
   color: #10b981;
-  filter: drop-shadow(0 2px 6px rgba(0,0,0,.25));
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.3));
 }
-.aw-tta-flymark svg { width: 100%; height: 100%; }
+/* thicker ✓ / ✗ strokes (bolder mark, per the teacher) — overrides the icon's
+   own stroke-width="2.6" (unitless = viewBox user units, so 3.6 is thicker). */
+.aw-tta-flymark svg { width: 100%; height: 100%; stroke-width: 3.6; }
 .aw-tta-flymark.is-cross { color: #ef4444; }
+/* a "−N" penalty (Minus mode) flies to the score instead of a plain cross —
+   bold red text; its px font-size is set in JS to match the mark box. */
+.aw-tta-flymark.is-penalty { font-weight: 900; color: #ef4444; line-height: 1; }
+
+/* score colouring: numerator GREEN when ≥0, RED when negative (no minus sign);
+   slash + total always the normal dark text colour. */
+.aw-top-score .aw-tta-score-num.aw-tta-score-pos { color: #10b981; }
+.aw-top-score .aw-tta-score-num.aw-tta-score-neg { color: #ef4444; }
+.aw-top-score .aw-tta-score-sep,
+.aw-top-score .aw-tta-score-total { color: var(--aw-text); }
 
 /* score badge "pulse" while it's counting up/down to a fresh total (JS drives
    the number; this only supplies the bounce). core/app.css owns
@@ -141,20 +199,40 @@
    `Andrew` are function keys with a small "lit dot" state indicator.
    Toggled via the icon button engine.js places next to Menu.
    ============================================================= */
+/* Sizes here are DELIBERATELY free of var(--fit): the keyboard must stay a
+   single fixed size and position. When the reveal opens and autoFit lowers
+   --fit, only the stage (question/input) shrinks — the keyboard does not, so
+   it never moves. Total width is 70% of the frame (per Teacher Andrew). */
 .aw-tta-kbd {
-  width: 100%;
+  width: 70%;
+  /* Fixed widths for the rigid keys (letters + the caps/numbers/Andrew function
+     keys). Everything else (' ? . , ⌫ Space Submit) flex-grows to fill each row.
+     Because letters no longer flex, all 26 are exactly the same size. */
+  --tta-kw: 5cqw;          /* every letter key — one identical width */
+  --tta-caps-w: 8.83cqw;   /* caps: 15% narrower than before (was ~10.39cqw) */
+  --tta-numbers-w: 11.3cqw;
+  --tta-andrew-w: 12.7cqw;
   display: flex; justify-content: center;
-  margin-top: calc(1.6cqw * var(--fit));
-  padding: calc(1.2cqw * var(--fit));
+  margin: 0.9cqw auto 0;
+  padding: 1cqw;
   background: #2b2b2e;
-  border-radius: calc(1.4cqw * var(--fit));
+  border-radius: 1.2cqw;
   box-shadow: 0 0.5cqw 1.4cqw rgba(0,0,0,.25);
   flex: 0 0 auto;
+  transform-origin: bottom center;
+  transition: opacity .28s ease, transform .3s cubic-bezier(.22,.9,.3,1);
 }
-.aw-tta-kbd.is-hidden { display: none; }
+/* Hidden = fade + slide DOWN, but it KEEPS its layout space (not display:none),
+   so the answer block above does not move — and the show/hide is a smooth
+   animation instead of a snap. */
+.aw-tta-kbd.is-hidden {
+  opacity: 0;
+  transform: translateY(14%) scale(.98);
+  pointer-events: none;
+}
 
-.aw-tta-kbd-main { width: 100%; display: flex; flex-direction: column; gap: calc(0.7cqw * var(--fit)); }
-.aw-tta-kbd-row { display: flex; gap: calc(0.6cqw * var(--fit)); }
+.aw-tta-kbd-main { width: 100%; display: flex; flex-direction: column; gap: 0.55cqw; }
+.aw-tta-kbd-row { display: flex; gap: 0.5cqw; }
 
 /* dark, square keys — light text on medium-grey caps, small radius, a thin
    darker "lip" underneath so they read as physical keys like the image. */
@@ -163,27 +241,33 @@
   min-width: 0;
   font-family: inherit;
   font-weight: 600;
-  font-size: calc(1.6cqw * var(--fit));
+  font-size: 1.35cqw;
   color: #f4f4f5;
   background: #48484b;
   border: 0;
-  border-radius: calc(0.7cqw * var(--fit));
-  box-shadow: 0 0.28cqw 0 #202022;
-  padding: calc(1.1cqw * var(--fit)) 0;
+  border-radius: 0.6cqw;
+  box-shadow: 0 0.24cqw 0 #202022;
+  padding: 0.95cqw 0;
   cursor: pointer;
   user-select: none;
   transition: filter .08s ease;
 }
 .aw-tta-key:hover { filter: brightness(1.14); }
-.aw-tta-key:active { transform: translateY(0.24cqw); box-shadow: 0 0.06cqw 0 #202022; }
+.aw-tta-key:active { transform: translateY(0.2cqw); box-shadow: 0 0.06cqw 0 #202022; }
 .aw-tta-key:disabled { cursor: default; }
 
-/* red backspace, top-right of row 1 */
+/* every letter is one fixed width (no flexing) -> all letters identical. Same
+   font as the other keys, so with the backspace font matched below every row is
+   the same height too. */
+.aw-tta-key-letter { flex: 0 0 var(--tta-kw); }
+
+/* red backspace, top-right of row 1 — font matches the letters so row 1 is NOT
+   taller than the other rows (keeps every letter's height identical). */
 .aw-tta-key-back {
   flex: 1.5;
   background: #b91c1c;
-  box-shadow: 0 0.28cqw 0 #7f1212;
-  font-size: calc(1.9cqw * var(--fit));
+  box-shadow: 0 0.24cqw 0 #7f1212;
+  font-size: 1.35cqw;
 }
 .aw-tta-key-back:active { box-shadow: 0 0.06cqw 0 #7f1212; }
 
@@ -193,28 +277,41 @@
   position: relative;
   flex: 1.8;
   display: flex; align-items: flex-end; justify-content: flex-start;
-  padding: calc(0.7cqw * var(--fit)) calc(0.9cqw * var(--fit));
+  padding: 0.6cqw 0.75cqw;
 }
-.aw-tta-key-fnlabel { font-size: calc(1.25cqw * var(--fit)); font-weight: 700; }
+/* function keys get their OWN fixed widths (override the generic 1.8 above).
+   caps is 15% narrower than before, so row 2's letters sit further left and the
+   grow-key at the row's end (?) stretches to fill the freed space. */
+.aw-tta-key-caps    { flex: 0 0 var(--tta-caps-w); }
+.aw-tta-key-numbers { flex: 0 0 var(--tta-numbers-w); }
+.aw-tta-key-andrew  { flex: 0 0 var(--tta-andrew-w); }
+.aw-tta-key-fnlabel { font-size: 1.05cqw; font-weight: 700; }
 .aw-tta-key-dot {
   display: none;
-  position: absolute; top: calc(1cqw * var(--fit)); right: calc(0.9cqw * var(--fit));
-  width: calc(0.95cqw * var(--fit)); height: calc(0.95cqw * var(--fit));
+  position: absolute; top: 0.85cqw; right: 0.75cqw;
+  width: 0.8cqw; height: 0.8cqw;
   border-radius: 50%;
-  background: #ffd54a;
-  box-shadow: 0 0 calc(0.5cqw * var(--fit)) #ffd54a, 0 0 calc(1.1cqw * var(--fit)) #ffb300;
-  animation: aw-tta-dot-pulse 1.6s ease-in-out infinite;
+  background: #fff;   /* white light (Andrew "ready" dot) */
+  box-shadow: 0 0 0.6cqw rgba(255,255,255,.95), 0 0 1.2cqw rgba(255,255,255,.55);
+  animation: aw-tta-dot-pulse 5.2s ease-in-out infinite;   /* half the previous blink speed */
 }
+/* the dot stays ONE fixed size — only its brightness (opacity) pulses. */
 @keyframes aw-tta-dot-pulse {
-  0%, 100% { opacity: .55; transform: scale(.85); }
-  50%      { opacity: 1;   transform: scale(1.15); }
+  0%, 100% { opacity: .4; }
+  50%      { opacity: 1; }
 }
 /* dot shows: caps ON, numbers ON, or Andrew still AVAILABLE */
 .aw-tta-key-caps.is-active .aw-tta-key-dot,
 .aw-tta-key-numbers.is-active .aw-tta-key-dot,
 .aw-tta-key-andrew.is-ready .aw-tta-key-dot { display: block; }
-/* an active caps/numbers key also lifts to a lighter blue-grey */
-.aw-tta-key-caps.is-active, .aw-tta-key-numbers.is-active { background: #5a6b86; }
+/* caps / numbers, once ON: the ONLY change is the lit dot appearing (solid
+   white, no blink) — the key's own background and label colour stay exactly the
+   same as when off (teacher's call, 1/8/2026). */
+.aw-tta-key-caps.is-active .aw-tta-key-dot,
+.aw-tta-key-numbers.is-active .aw-tta-key-dot {
+  animation: none;
+  opacity: 1;
+}
 /* dim ONLY the caps key when it's inert (numbers mode) and the Andrew key when
    it's still "ready" but the current question is already answered — never dim
    the glowing state, which sets `disabled` too but must stay bright. */
@@ -225,24 +322,24 @@
    ready: normal look + lit dot.  glowing: bright gold, sparkling halo (just
    pressed, answer revealed, until submit).  used: dimmed for the rest of the
    game so it's clearly spent. */
-.aw-tta-key-andrew.is-ready .aw-tta-key-fnlabel { color: #ffe08a; }
+.aw-tta-key-andrew.is-ready .aw-tta-key-fnlabel { color: #f4f4f5; }   /* white, like caps/numbers */
 .aw-tta-key-andrew.is-glowing {
   color: #3a2a00;
   background: linear-gradient(180deg, #ffe89a, #ffc531);
-  box-shadow: 0 0.28cqw 0 #b8860b;
-  animation: aw-tta-andrew-halo 1s ease-in-out infinite;
+  box-shadow: 0 0.24cqw 0 #b8860b;
+  animation: aw-tta-andrew-halo 2.6s ease-in-out infinite;   /* slow, gentle glow */
 }
 .aw-tta-key-andrew.is-glowing .aw-tta-key-fnlabel {
   color: #4a3400; font-weight: 800;
-  text-shadow: 0 0 calc(0.6cqw * var(--fit)) #fff8d0;
+  text-shadow: 0 0 0.6cqw #fff8d0;
 }
 @keyframes aw-tta-andrew-halo {
-  0%, 100% { box-shadow: 0 0.28cqw 0 #b8860b, 0 0 calc(0.6cqw * var(--fit)) #ffd54a, 0 0 calc(1.6cqw * var(--fit)) rgba(255,193,7,.55); }
-  50%      { box-shadow: 0 0.28cqw 0 #b8860b, 0 0 calc(1.4cqw * var(--fit)) #ffe07a, 0 0 calc(3.2cqw * var(--fit)) rgba(255,193,7,.85); }
+  0%, 100% { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 0.6cqw #ffd54a, 0 0 1.6cqw rgba(255,193,7,.55); }
+  50%      { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 1.4cqw #ffe07a, 0 0 3.2cqw rgba(255,193,7,.85); }
 }
 .aw-tta-key-andrew.is-used {
   background: #333335;
-  box-shadow: 0 0.28cqw 0 #1b1b1d;
+  box-shadow: 0 0.24cqw 0 #1b1b1d;
   transition: background .5s ease, color .5s ease, opacity .5s ease;
 }
 .aw-tta-key-andrew.is-used .aw-tta-key-fnlabel { color: #6a6a6d; }
@@ -255,7 +352,26 @@
   flex: 2.2;
   color: #fff;
   background: var(--aw-tile-fixed, #3b82f6);
-  box-shadow: 0 0.28cqw 0 var(--aw-tile-fixed-dark, #2563eb);
+  box-shadow: 0 0.24cqw 0 var(--aw-tile-fixed-dark, #2563eb);
 }
 .aw-tta-kbd-submit:active { box-shadow: 0 0.06cqw 0 var(--aw-tile-fixed-dark, #2563eb); }
 .aw-tta-kbd-submit:disabled { opacity: .4; }
+
+/* =============================================================
+   OPTIONS PANEL — "Points off per wrong" slider (1..5) under the Minus check.
+   The Options panel lives OUTSIDE the container-query stage, so use px/rem here
+   (cqw would not resolve). Disabled (greyed) unless "Minus points" is ticked.
+   ============================================================= */
+.aw-tta-opt-minus {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-size: 14px; color: var(--aw-text);
+}
+.aw-tta-opt-minus.is-disabled { opacity: .45; }
+.aw-tta-opt-minus-cap { font-weight: 600; }
+.aw-tta-opt-slider { flex: 0 0 160px; max-width: 55%; accent-color: var(--aw-accent, #3b82f6); cursor: pointer; }
+.aw-tta-opt-minus.is-disabled .aw-tta-opt-slider { cursor: default; }
+.aw-tta-opt-minus-val {
+  min-width: 2.2em; text-align: center;
+  font-weight: 800; color: #ef4444;
+}

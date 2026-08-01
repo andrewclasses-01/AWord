@@ -277,7 +277,7 @@ const mazeChaseTemplate = {
     const GRACE_MS = 1900;         // no enemy damage for a moment after (re)spawn
     let graceUntil = 0, enemySpots = [];
 
-    ui.onSubmit(finish);
+    ui.onSubmit(finish, () => state.filter(s => s.correct || s.wrong.length > 0).length);   // block "Submit answers" at 0 answered
     ui.setScore(0);
     window.addEventListener("keydown", onKey);
     // swipe on the field

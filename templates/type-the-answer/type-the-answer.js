@@ -1,25 +1,28 @@
 // =============================================================
 // TEMPLATE: TYPE THE ANSWER — Wordwall style, English UI.
-//  • One prompt at a time (same pagination model as Quiz): question near
-//    the top, a big text input close under it, a smaller "Submit Answer"
-//    button right below the input, and an on-screen QWERTY keyboard filling
-//    the rest of the frame (30/7/2026 redesign, per Teacher Andrew).
-//  • Matching ignores case (always) and accents (always) — no "strict" toggle.
-//    Any of item.acceptedAnswers[] counts as correct.
-//  • Correct -> a green check appears just outside the input (right side) and
-//    flies to the score, incrementing it. Wrong -> a red cross appears the
-//    same way; it flies to the score and DECREMENTS it only when
-//    options.minusPoints is on, otherwise it just fades in place and the
-//    score is untouched. Wrong also shows the correct answer in green ABOVE
-//    the input (options.showAnswerWhenWrong) — the whole input+submit block
-//    glides smoothly down to make room (CSS grid-rows trick, not transform).
+//  • One prompt at a time. The whole play area is built ONCE and reused:
+//      - a FIXED-height question area at the top (2 lines tall; a longer
+//        question shrinks its own font to fit — never pushes anything down),
+//      - the answer block (reveal + input + Submit) centred in the space below,
+//        at a POSITION THAT NEVER MOVES (question length / 1-2-3 lines / keyboard
+//        shown-or-hidden all leave it put),
+//      - the on-screen keyboard pinned at the bottom, always occupying its space
+//        so hiding it (a smooth fade+slide) doesn't shift the block.
+//  • Only the QUESTION text crossfades on navigation; the answer block updates
+//    in place, so the Submit button never flickers.
+//  • Matching ignores case + accents. Any of item.acceptedAnswers[] is correct.
+//  • Correct -> green check flies to the score (+1). Wrong -> when Minus is on, a
+//    red "−N" (Options slider 1..5) flies and subtracts N; else a red cross fades
+//    in place. Wrong also reveals the correct answer (options.showAnswerWhenWrong).
+//  • No "finish/✓" button on the last question — the game completes automatically
+//    once every question has an answer (or via Menu -> Submit answers).
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { autoFit } from "../../core/fit.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
+import { ttaSound } from "./type-the-answer-sound.js";
 
 function normalize(str) {
   let s = String(str ?? "").trim().replace(/\s+/g, " ");
@@ -31,8 +34,7 @@ function normalize(str) {
 const KBD_L1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"];
 const KBD_L2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
 const KBD_L3 = ["z", "x", "c", "v", "b", "n", "m"];
-// Numbers / symbols layout (shown when the `numbers` key is on) — kept aligned
-// column-for-column with the letters rows above (10 / 9 / 7 keys).
+// Numbers / symbols layout (shown when the `numbers` key is on).
 const KBD_N1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
 const KBD_N2 = ["-", "/", ":", ";", "(", ")", "$", "&", "@"];
 const KBD_N3 = ["!", "+", "=", "*", "%", "#", "_"];
@@ -42,8 +44,17 @@ const ttaTemplate = {
   scorable: true,
   name: "Type the answer",
   edit: openTypeTheAnswerEditor,
-  hideLettersOption: true,   // no lettered answer boxes here — hide that Options group entirely
-  hasKeyboardToggle: true,   // ask engine.js for a slot next to Menu for our keyboard show/hide button
+  hideLettersOption: true,     // no lettered answer boxes here — hide that Options group entirely
+  hideShuffleAnswers: true,    // no answer choices to shuffle — hide "Shuffle answer order"
+  hasKeyboardToggle: true,     // ask engine.js for a slot next to Menu for our keyboard show/hide button
+  // Real Wordwall "Type the answer" (Classic) mp3 pack — the engine plays these
+  // at Play / Start again / game complete. Per-key typing "tock" is separate
+  // (synthesized ui.sound.keyClick()); correct/wrong are called inline.
+  sounds: {
+    play: ttaSound.intro,
+    restart: ttaSound.restart,
+    complete: ttaSound.complete
+  },
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -56,14 +67,30 @@ const ttaTemplate = {
     const g = el("div", "aw-opt-group");
     g.append(el("div", "aw-opt-label", "Type the answer"));
     const row = el("div", "aw-opt-row");
+
+    // Slider (1..5): how many points a wrong answer deducts. Only meaningful
+    // when "Minus points" is on, so it is disabled while that box is unticked.
+    if (draft.minusAmount == null) draft.minusAmount = 1;
+    const sliderWrap = el("div", "aw-tta-opt-minus");
+    sliderWrap.append(el("span", "aw-tta-opt-minus-cap", "Points off per wrong"));
+    const slider = el("input", "aw-tta-opt-slider");
+    slider.type = "range"; slider.min = "1"; slider.max = "5"; slider.step = "1";
+    slider.value = String(draft.minusAmount || 1);
+    const sliderVal = el("span", "aw-tta-opt-minus-val", `−${slider.value}`);
+    slider.oninput = () => { draft.minusAmount = +slider.value; sliderVal.textContent = `−${slider.value}`; };
+    sliderWrap.append(slider, sliderVal);
+    const setSliderEnabled = on => { slider.disabled = !on; sliderWrap.classList.toggle("is-disabled", !on); };
+
     row.append(
       mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
         v => draft.showAnswerWhenWrong = v),
       mkCheck(draft.minusPoints === true, "Minus points for wrong answers",
-        v => draft.minusPoints = v)
+        v => { draft.minusPoints = v; setSliderEnabled(v); })
     );
     g.append(row);
+    g.append(sliderWrap);
     panel.append(g);
+    setSliderEnabled(draft.minusPoints === true);
   },
 
   mount(root, activity, ui) {
@@ -83,16 +110,66 @@ const ttaTemplate = {
     const state = items.map(() => ({ typed: null, graded: false, correct: null }));
     let index = 0;
     let finished = false;
-    let fitter = null;
     let autoTimer = null;
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let keyboardVisible = true;         // ON by default every time the act is opened
-    let keyboardEl = null;              // current keyboard node (rebuilt each render())
-    let capsOn = false;                 // caps key: uppercase the typed letters (cosmetic — grading ignores case)
+    let capsOn = false;                 // caps key: uppercase the typed letters (auto-off after one letter)
     let numbersMode = false;            // numbers key: swap letters for a numbers/symbols layout
     let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
+
+    // ===== persistent shell — built ONCE, updated in place per question =====
+    const card = el("div", "aw-tta-card");
+
+    // fixed-height question area (2 lines); a longer question shrinks --qfit.
+    const qArea = el("div", "aw-tta-qarea");
+    const promptEl = el("div", "aw-tta-prompt");
+    qArea.append(promptEl);
+
+    // answer block, centred in the slot below the question (fixed position).
+    const slot = el("div", "aw-tta-answer-slot");
+    const answerBlock = el("div", "aw-tta-answer-area");
+
+    const revealWrap = el("div", "aw-tta-revealwrap");
+    const revealInner = el("div", "aw-tta-reveal-inner");
+    const revealText = el("div", "aw-tta-reveal-text");
+    revealInner.append(revealText);
+    revealWrap.append(revealInner);
+    answerBlock.append(revealWrap);
+
+    const row = el("div", "aw-tta-inputrow");
+    const input = el("textarea", "aw-tta-input");
+    input.rows = 1;
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.placeholder = "";   // no placeholder text — just the blinking caret
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); submitAnswer(input.value); }   // never insert a newline
+    });
+    input.addEventListener("input", () => {
+      filterEnglish();      // English only — drop any non-ASCII (Vietnamese etc.)
+      autoGrow(input);
+      fitLayout();
+      syncSubmitEnabled();  // Submit off while the box is empty
+    });
+    // Also strip on the OS keyboard's compose end (Vietnamese Telex/VNI etc.).
+    input.addEventListener("compositionend", () => { filterEnglish(); syncSubmitEnabled(); });
+    row.append(input);
+    answerBlock.append(row);
+
+    const submitBtn = el("button", "aw-tta-submit", "Submit Answer");
+    submitBtn.type = "button";
+    submitBtn.onclick = () => submitAnswer(input.value);
+    answerBlock.append(submitBtn);
+
+    slot.append(answerBlock);
+
+    let keyboardEl = buildKeyboard();
+    if (!keyboardVisible) keyboardEl.classList.add("is-hidden");
+
+    card.append(qArea, slot, keyboardEl);
+    const curInput = input;   // single persistent textarea (for autoGrow)
 
     // ----- keyboard show/hide button, next to Menu (engine's opt-in slot) -----
     let kbdBtn = null;
@@ -103,10 +180,10 @@ const ttaTemplate = {
       updateKbdBtn();
       kbdBtn.onclick = () => {
         keyboardVisible = !keyboardVisible;
-        if (keyboardEl) keyboardEl.classList.toggle("is-hidden", !keyboardVisible);
+        keyboardEl.classList.toggle("is-hidden", !keyboardVisible);   // animates (CSS transition)
         syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
         updateKbdBtn();
-        fitter?.refit();
+        fitLayout();   // block height (outside Submit) + keyboard-top changed -> re-fit & re-centre
       };
       ui.kbdSlot.append(kbdBtn);
     }
@@ -116,83 +193,191 @@ const ttaTemplate = {
       kbdBtn.setAttribute("aria-label", kbdBtn.title);
       kbdBtn.classList.toggle("is-off", !keyboardVisible);
     }
-    // Show the outside "Submit Answer" button only when the on-screen keyboard
-    // is hidden — while the keyboard shows, its own blue Submit key is used.
+    // The outside "Submit Answer" button is only shown when the keyboard is
+    // hidden (the keyboard has its own Submit key otherwise). It is REMOVED from
+    // layout (display:none) when hidden — not just made invisible — so it doesn't
+    // reserve ~44px below the answer, which used to force the question to shrink
+    // for nothing. The reference-centering keeps the input/reveal in place across
+    // the toggle regardless, so the block position stays stable.
     function syncSubmitVisibility() {
-      const extSubmit = root.querySelector(".aw-tta-submit");
-      if (extSubmit) extSubmit.style.display = keyboardVisible ? "none" : "";
+      submitBtn.style.display = keyboardVisible ? "none" : "";
     }
 
-    ui.onSubmit(finish);
-    render();
+    ui.onSubmit(finish, () => state.filter(s => s.graded).length);   // block "Submit answers" at 0 answered
+    root.append(card);
+    loadQuestion(0, false);
+    showScore(livePoints);
 
-    function render() {
-      if (fitter) { fitter.destroy(); fitter = null; }
-      root.innerHTML = "";
+    // Fit on first layout, when the web font is ready, and on resize.
+    let rafFit = 0;
+    const onResize = () => { cancelAnimationFrame(rafFit); rafFit = requestAnimationFrame(fitLayout); };
+    window.addEventListener("resize", onResize);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitLayout).catch(() => {});
+
+    // The VISIBLE extent of the answer cluster — what must sit centred between
+    // the question and the keyboard (per the teacher's reference screenshot,
+    // 1/8/2026: the WHOLE cluster is centred, not just the reveal): from the top
+    // of the reveal (when open) or the input, down to the bottom of the outside
+    // Submit (when the keyboard is hidden) or the input.
+    function blockEdges() {
+      const iR = input.getBoundingClientRect();
+      const top = revealWrap.classList.contains("is-open")
+        ? revealWrap.getBoundingClientRect().top : iR.top;
+      const bottom = keyboardVisible ? iR.bottom : submitBtn.getBoundingClientRect().bottom;
+      return { top, bottom };
+    }
+    // The keyboard's layout TOP edge. When hidden it's slid down 14% (translateY),
+    // so add that back to get where it actually sits in the layout.
+    function keyboardTopLayout() {
+      const kR = keyboardEl.getBoundingClientRect();
+      return kR.top + (keyboardEl.classList.contains("is-hidden") ? -kR.height * 0.14 : 0);
+    }
+    // The vertical space available to hold the answer, centred: from the QUESTION's
+    // bottom edge to the KEYBOARD's top edge.
+    function regionHeight() {
+      return keyboardTopLayout() - promptEl.getBoundingClientRect().bottom;
+    }
+    // Height the region must have to hold the centred cluster: simply the
+    // cluster's visible height. Invariant under the block's translate.
+    function neededHeight() {
+      const e = blockEdges();
+      return e.bottom - e.top;
+    }
+    // The ANSWER BLOCK keeps a FIXED size (input / reveal / Andrew hint are all
+    // one size and never shrink). Only when the block genuinely can't be centred
+    // in the available region does the QUESTION give way: shrinking --qfit makes
+    // the (content-sized) question area shorter, growing the region.
+    function fitLayout() {
+      autoGrow(curInput);
+      card.style.setProperty("--qfit", "1");
+      if (neededHeight() > regionHeight() - 2) {
+        let lo = 0.4, hi = 1, best = 0.4;
+        for (let i = 0; i < 14; i++) {
+          const mid = (lo + hi) / 2;
+          card.style.setProperty("--qfit", mid.toFixed(3));   // smaller question -> taller region
+          if (neededHeight() <= regionHeight() - 2) { best = mid; lo = mid; } else { hi = mid; }
+        }
+        card.style.setProperty("--qfit", best.toFixed(3));
+      }
+      centerBlock();
+    }
+    // Re-fit around the reveal's opening transition (0.32s). The reveal's height
+    // is mid-animation for a while, so any single early measurement can be wrong
+    // — which used to leave the block overlapping the keyboard and the reveal
+    // off-centre (the one refit fired early via a bubbled transitionend and the
+    // once-flag blocked the correction). Fit NOW for a close first guess, again
+    // on transitionend/400ms, and one FINAL unconditional pass at 750ms when the
+    // transition is certainly finished.
+    function scheduleRevealRefit() {
+      fitLayout();
+      let early = false;
+      const earlyRefit = () => { if (early) return; early = true; fitLayout(); };
+      revealWrap.addEventListener("transitionend", earlyRefit, { once: true });
+      setTimeout(earlyRefit, 400);   // hidden/backgrounded tabs can skip transitionend
+      setTimeout(fitLayout, 750);    // final settle — always runs, transition done
+      // Re-centre EVERY FRAME while the reveal's height transition runs — the
+      // cluster grows downward mid-transition, and with only the discrete passes
+      // above, 1–2 frames could spill onto the keyboard before snapping back
+      // (teacher saw it on long 2–3-line questions). centerBlock is cheap (one
+      // clamped transform), so tracking each frame keeps every frame clean.
+      const t0 = performance.now();
+      const track = () => {
+        centerBlock();
+        if (performance.now() - t0 < 800) requestAnimationFrame(track);
+      };
+      requestAnimationFrame(track);
+    }
+    // Slide the block so the CLUSTER's centre (reveal top → input/Submit bottom)
+    // lands exactly midway between the question's bottom edge and the keyboard's
+    // top edge — gap above the cluster == gap below it, matching the teacher's
+    // reference screenshot. HARD LIMIT: whatever the measurements say (e.g. taken
+    // mid-transition while the reveal is still opening), the cluster must NEVER
+    // overlap the keyboard or the question — the shift is clamped inside the
+    // region. If the cluster is genuinely taller than the region (question
+    // already at min size), it hugs the keyboard's top edge rather than covering
+    // the keys.
+    function centerBlock() {
+      answerBlock.style.transform = "none";
+      const qBottom = promptEl.getBoundingClientRect().bottom;
+      const kbdTop = keyboardTopLayout();
+      const e = blockEdges();
+      let shift = (qBottom + kbdTop) / 2 - (e.top + e.bottom) / 2;
+      const PAD = 3;
+      const maxShift = (kbdTop - PAD) - e.bottom;   // furthest DOWN without touching the keyboard
+      const minShift = (qBottom + PAD) - e.top;     // furthest UP without covering the question
+      if (shift > maxShift) shift = maxShift;
+      if (shift < Math.min(minShift, maxShift)) shift = Math.min(minShift, maxShift);
+      answerBlock.style.transform = `translateY(${shift.toFixed(1)}px)`;
+    }
+    function autoGrow(ta) {
+      if (!ta) return;
+      ta.style.height = "auto";
+      ta.style.height = ta.scrollHeight + "px";
+    }
+    // Keep ONLY basic ASCII (English letters/digits/space/punctuation). Anything
+    // else — Vietnamese accented letters, đ, etc., however they were typed — is
+    // dropped, so the box never accepts Vietnamese even with a VN keyboard on.
+    function filterEnglish() {
+      const before = input.value;
+      const cleaned = before.replace(/[^\x20-\x7E]/g, "");
+      if (cleaned !== before) {
+        const delta = before.length - cleaned.length;
+        const caret = Math.max(0, (input.selectionStart ?? cleaned.length) - delta);
+        input.value = cleaned;
+        input.setSelectionRange(caret, caret);
+      }
+    }
+    // The Submit controls (outside button + the keyboard's blue Submit key) are
+    // disabled while the box is empty or the question is already graded.
+    function syncSubmitEnabled() {
+      const st = state[index];
+      const disabled = st.graded || !input.value.trim();
+      submitBtn.disabled = disabled;
+      const kbSubmit = keyboardEl && keyboardEl.querySelector(".aw-tta-kbd-submit");
+      if (kbSubmit) kbSubmit.disabled = disabled;
+    }
+
+    // ===== load a question into the persistent DOM (no rebuild) =====
+    // The answer block + keyboard update INSTANTLY in place (so Submit never
+    // flickers); only the question text crossfades when navigating.
+    function loadQuestion(i, withFade) {
+      index = i;
       const it = items[index];
       const st = state[index];
 
-      const card = el("div", "aw-tta-card");
-      const promptEl = el("div", "aw-tta-prompt", escapeHtml(it.prompt));
-      card.append(promptEl);
-
-      const area = el("div", "aw-tta-answer-area");
-
-      const alreadyWrongShown = st.graded && !st.correct && opt.showAnswerWhenWrong !== false;
-      const revealWrap = el("div", "aw-tta-revealwrap" + (alreadyWrongShown ? " is-open" : ""));
-      const revealInner = el("div", "aw-tta-reveal-inner");
-      revealInner.append(el("div", "aw-tta-reveal-text", alreadyWrongShown ? escapeHtml(it.acceptedAnswers[0]) : ""));
-      revealWrap.append(revealInner);
-      area.append(revealWrap);
-
-      const row = el("div", "aw-tta-inputrow");
-      const input = el("input", "aw-tta-input");
-      input.type = "text";
-      input.autocomplete = "off";
-      input.spellcheck = false;
-      input.placeholder = "Type your answer...";
+      // --- answer block, in place ---
       input.value = st.typed || "";
-      if (st.graded) {
-        input.disabled = true;
-        input.classList.add(st.correct ? "is-correct" : "is-wrong");
-      } else {
-        input.addEventListener("keydown", e => { if (e.key === "Enter") submitAnswer(input.value); });
-      }
-      row.append(input);
-      area.append(row);
-
-      const submitBtn = el("button", "aw-tta-submit", "Submit Answer");
-      submitBtn.type = "button";
-      submitBtn.disabled = st.graded;
-      submitBtn.onclick = () => submitAnswer(input.value);
-      area.append(submitBtn);
-
-      card.append(area);
-
-      const kbd = buildKeyboard(() => root.querySelector(".aw-tta-input"), st.graded);
-      if (!keyboardVisible) kbd.classList.add("is-hidden");
-      card.append(kbd);
-      keyboardEl = kbd;
-
-      root.append(card);
-
-      // The Submit lives INSIDE the keyboard (a blue key next to Space) when the
-      // keyboard is showing; the outside "Submit Answer" button only appears
-      // when the keyboard is hidden (typing on a real keyboard still needs a
-      // button to tap). Do this AFTER the card is in the DOM (root.querySelector
-      // must be able to find the button).
+      input.disabled = st.graded;
+      input.classList.remove("is-correct", "is-wrong");
+      if (st.graded) input.classList.add(st.correct ? "is-correct" : "is-wrong");
+      const wrongShown = st.graded && !st.correct && opt.showAnswerWhenWrong !== false;
+      revealText.textContent = wrongShown ? it.acceptedAnswers[0] : "";
+      revealWrap.classList.toggle("is-open", wrongShown);
+      revealWrap.classList.remove("is-andrew");
+      autoGrow(input);
       syncSubmitVisibility();
-
-      // NOTE: measure the CURRENT keyboard via `keyboardEl` (the live variable),
-      // NOT the `kbd` captured here — rebuildKeyboard() swaps in a fresh node on
-      // caps/numbers/Andrew, and the old `kbd` would then be detached (height 0),
-      // making autoFit think everything fits and skip the shrink (content clips).
-      fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
-        slack: root.clientWidth * 0.08,
-        measure: () => promptEl.offsetHeight + area.offsetHeight + (keyboardVisible && keyboardEl ? keyboardEl.offsetHeight : 0)
-      });
-
+      syncKeyboardState();
+      syncSubmitEnabled();   // Submit off if this question's box is empty
       updateNav();
+      fitLayout();
+
+      // --- question text ---
+      const setPrompt = () => { promptEl.innerHTML = escapeHtml(it.prompt); fitLayout(); };
+      if (withFade) {
+        const out = promptEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease" });
+        const swap = () => {
+          promptEl.style.opacity = "0";
+          setPrompt();
+          const inn = promptEl.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease" });
+          inn.onfinish = () => { promptEl.style.opacity = ""; };
+          setTimeout(() => { promptEl.style.opacity = ""; }, 220);
+        };
+        out.onfinish = swap;
+        setTimeout(() => { if (promptEl.textContent !== it.prompt) swap(); }, 200);   // hidden-tab fallback
+      } else {
+        setPrompt();
+      }
+
       if (!st.graded) input.focus();
     }
 
@@ -200,126 +385,145 @@ const ttaTemplate = {
       const it = items[index];
       const st = state[index];
       if (st.graded || finished) return;
+      if (!String(typed).trim()) return;   // can't submit an empty box
       st.typed = typed;
       st.graded = true;
       st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
 
-      // Patch the EXISTING DOM in place (don't call render()) so the reveal's
-      // CSS transition actually plays — a full rebuild would create the
-      // revealed state already "open", and nothing animates on first paint.
-      const card = root.querySelector(".aw-tta-card");
-      const inputEl = card.querySelector(".aw-tta-input");
-      const submitBtn = card.querySelector(".aw-tta-submit");
-      const revealWrap = card.querySelector(".aw-tta-revealwrap");
-      const revealText = card.querySelector(".aw-tta-reveal-text");
-
-      inputEl.disabled = true;
-      inputEl.classList.add(st.correct ? "is-correct" : "is-wrong");
-      submitBtn.disabled = true;
+      input.disabled = true;
+      input.classList.add(st.correct ? "is-correct" : "is-wrong");
+      syncSubmitEnabled();   // graded -> Submit off (outside + keyboard)
 
       if (!st.correct && opt.showAnswerWhenWrong !== false) {
-        // revealWrap already exists (painted closed from this question's own
-        // render() call, not created just now), so no rAF double-buffering
-        // trick is needed here — adding the class straight away still lets
-        // the browser see a real "closed -> open" state change to transition.
         revealText.textContent = it.acceptedAnswers[0];
         revealWrap.classList.add("is-open");
-        let refitDone = false;
-        const doRefit = () => { if (refitDone) return; refitDone = true; fitter?.refit(); };
-        revealWrap.addEventListener("transitionend", doRefit, { once: true });
-        setTimeout(doRefit, 400);   // fallback — a hidden/backgrounded tab can skip transitionend
+        scheduleRevealRefit();
       }
 
-      // If "Andrew help" was glowing on this question, spend it now: the key
-      // dims for the rest of the game (CSS transition on the existing node, so
-      // it fades smoothly rather than snapping via a rebuild).
       if (andrewGlowing) {
         andrewGlowing = false;
-        const andrewKey = root.querySelector(".aw-tta-key-andrew");
-        if (andrewKey) { andrewKey.classList.remove("is-glowing"); andrewKey.classList.add("is-used"); }
-        revealWrap?.classList.remove("is-andrew");   // the hint reveal turns into the normal green one
+        const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
+        if (andrewKey) {
+          andrewKey.classList.remove("is-glowing", "is-ready");
+          andrewKey.classList.add("is-used");
+          andrewKey.disabled = true;
+        }
+        revealWrap.classList.remove("is-andrew");   // the hint reveal turns into the normal green one
       }
 
-      if (st.correct) ui.sound.correct(); else ui.sound.wrong();
-      flyMark(st.correct, inputEl);
+      if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
+      flyMark(st.correct, input);
 
+      // Auto-complete once EVERY question is answered; otherwise, if "Auto switch"
+      // is on, move to the next question automatically.
       if (state.every(s => s.graded)) {
         autoTimer = setTimeout(finish, st.correct ? 1000 : 1500);
+      } else if (opt.autoSwitch) {
+        autoTimer = setTimeout(() => { if (!finished && index < total - 1) goNext(); }, st.correct ? 1000 : 1400);
       }
     }
 
-    // Big check/cross appears just OUTSIDE the input (right side). Correct
-    // always flies to the score and adds a point. Wrong flies and SUBTRACTS a
-    // point only when options.minusPoints is on; otherwise it just fades in
-    // place and the score is left untouched.
+    // The mark (big, thick ✓ / ✗ / "−N") is born ON the input's row (an absolute
+    // child of the input row, so it always stays aligned with the box even after
+    // the reveal opens), SHAKES a little, THEN flies to the score. Correct -> +1;
+    // wrong with Minus -> −N flies and subtracts (the score may go negative);
+    // wrong without Minus -> a cross that just fades in place.
     function flyMark(correct, inputEl) {
       if (!inputEl) return;
       const scoreEl = document.querySelector(".aw-top-score");
-      const startRect = inputEl.getBoundingClientRect();
-      const cx = startRect.right + 14;
-      const cy = startRect.top + startRect.height / 2;
-      const size = Math.max(28, startRect.height * 0.55);
+      const size = Math.max(34, inputEl.getBoundingClientRect().height * 0.72);   // bigger than before
 
-      const wrap = el("div", "aw-tta-flymark" + (correct ? "" : " is-cross"), correct ? icons.check : icons.cross);
-      wrap.style.width = size + "px";
-      wrap.style.height = size + "px";
-      wrap.style.left = cx + "px";
-      wrap.style.top = cy + "px";
-      document.body.append(wrap);
-      activeFlyNodes.add(wrap);
+      const penalty = Math.max(1, Math.min(5, opt.minusAmount || 1));
+      const wrongMinus = !correct && opt.minusPoints === true;
+      const mark = el("div", "aw-tta-flymark" + (correct ? "" : " is-cross") + (wrongMinus ? " is-penalty" : ""),
+        correct ? icons.check : (wrongMinus ? `−${penalty}` : icons.cross));
+      mark.style.width = size + "px";
+      mark.style.height = size + "px";
+      if (wrongMinus) mark.style.fontSize = Math.round(size * 0.86) + "px";
+      // sit just outside the RIGHT edge of the input row, vertically centred on it
+      row.style.position = "relative";
+      mark.style.position = "absolute";
+      mark.style.right = `-${Math.round(size + 6)}px`;
+      mark.style.top = "50%";
+      mark.style.marginTop = `-${Math.round(size / 2)}px`;
+      row.append(mark);
+      activeFlyNodes.add(mark);
 
-      const shouldFly = correct || opt.minusPoints === true;
       let done = false;
+      const cleanupMark = () => { if (done) return; done = true; mark.remove(); activeFlyNodes.delete(mark); };
+      const shouldFly = correct || opt.minusPoints === true;
 
-      if (!shouldFly || !scoreEl) {
-        const anim = wrap.animate([
-          { opacity: 1, transform: "translateY(-50%) scale(1)", offset: 0 },
-          { opacity: 1, transform: "translateY(-50%) scale(1)", offset: 0.55 },
-          { opacity: 0, transform: "translateY(-50%) scale(.85)", offset: 1 }
-        ], { duration: 900, easing: "ease", fill: "forwards" });
-        const complete = () => { if (done) return; done = true; wrap.remove(); activeFlyNodes.delete(wrap); };
-        anim.onfinish = complete;
-        setTimeout(complete, 1000);
-        return;
-      }
+      // 1) a little shake in place (grows, wobbles) — draws the eye before it flies.
+      const shake = mark.animate([
+        { transform: "scale(.6) rotate(0deg)", opacity: 0, offset: 0 },
+        { transform: "scale(1.18) rotate(0deg)", opacity: 1, offset: 0.28 },
+        { transform: "scale(1.05) rotate(-9deg)", offset: 0.5 },
+        { transform: "scale(1.1) rotate(8deg)", offset: 0.7 },
+        { transform: "scale(1.05) rotate(-4deg)", offset: 0.85 },
+        { transform: "scale(1) rotate(0deg)", offset: 1 }
+      ], { duration: 430, easing: "ease-in-out", fill: "forwards" });
 
-      const endRect = scoreEl.getBoundingClientRect();
-      const dx = (endRect.left + endRect.width / 2) - cx;
-      const dy = (endRect.top + endRect.height / 2) - cy;
-      const HOLD = 380, FLIGHT = 480, total = HOLD + FLIGHT;
-      const holdFrac = HOLD / total;
-
-      const anim = wrap.animate([
-        { transform: "translateY(-50%) scale(1)", offset: 0 },
-        { transform: "translateY(-50%) scale(1.15)", offset: holdFrac },
-        { transform: `translate(${dx}px, calc(-50% + ${dy}px)) scale(.4)`, offset: 1 }
-      ], { duration: total, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
-      wrap.animate([
-        { opacity: 1, offset: 0 },
-        { opacity: 1, offset: Math.min(1, (HOLD + FLIGHT * 0.6) / total) },
-        { opacity: 0, offset: 1 }
-      ], { duration: total, easing: "linear", fill: "forwards" });
-
-      const complete = () => {
-        if (done) return; done = true;
-        wrap.remove(); activeFlyNodes.delete(wrap);
-        livePoints = correct ? livePoints + 1 : Math.max(0, livePoints - 1);
-        pulseScoreTo(livePoints);
+      const afterShake = () => {
+        if (!shouldFly || !scoreEl) {
+          // fade in place (wrong, no Minus)
+          const fade = mark.animate([{ opacity: 1 }, { opacity: 1, offset: 0.5 }, { opacity: 0 }],
+            { duration: 620, easing: "ease", fill: "forwards" });
+          fade.onfinish = cleanupMark;
+          setTimeout(cleanupMark, 700);
+          return;
+        }
+        // 2) re-parent to <body> at its current spot and fly to the score.
+        const rect = mark.getBoundingClientRect();
+        document.body.append(mark);
+        mark.style.position = "fixed";
+        mark.style.left = rect.left + "px";
+        mark.style.top = rect.top + "px";
+        mark.style.right = "";
+        mark.style.marginTop = "";
+        const end = scoreEl.getBoundingClientRect();
+        const dx = (end.left + end.width / 2) - (rect.left + rect.width / 2);
+        const dy = (end.top + end.height / 2) - (rect.top + rect.height / 2);
+        const dur = 480;
+        const fly = mark.animate([
+          { transform: "translate(0,0) scale(1)", opacity: 1, offset: 0 },
+          { transform: `translate(${dx}px, ${dy}px) scale(.4)`, opacity: 0, offset: 1 }
+        ], { duration: dur, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
+        const land = () => {
+          if (done) return;
+          cleanupMark();
+          const oldPts = livePoints;
+          livePoints = correct ? livePoints + 1 : livePoints - penalty;   // may go negative
+          pulseScoreTo(oldPts, livePoints);
+        };
+        fly.onfinish = land;
+        setTimeout(land, dur + 150);
       };
-      anim.onfinish = complete;
-      setTimeout(complete, total + 150);
+      shake.onfinish = afterShake;
+      setTimeout(() => { if (!done && mark.isConnected && mark.parentElement === row) afterShake(); }, 500);
     }
 
-    // Animates `.aw-top-score` from whatever it currently shows up to
-    // `newValue`, with a little bounce (same technique as Anagram's
-    // flyScoreGain/pulseScoreTo) — reaches directly into engine.js's element
-    // since ui.setScore() itself has no animated form.
-    function pulseScoreTo(newValue) {
+    // Score reads "correct/max" (e.g. ✓ 1/6). The running number is GREEN when
+    // ≥0 and RED when negative (no minus sign — red itself means below zero); the
+    // slash and the TOTAL are always the normal dark text colour. Numerator,
+    // slash and total are separate flex items, so `.aw-top-score`'s own `gap`
+    // spaces them evenly (numerator↔slash == slash↔total).
+    function scoreHTML(v) {
+      const cls = v < 0 ? "aw-tta-score-neg" : "aw-tta-score-pos";
+      return `${icons.check}`
+        + `<span class="aw-tta-score-num ${cls}">${Math.abs(v)}</span>`
+        + `<span class="aw-tta-score-sep">/</span>`
+        + `<span class="aw-tta-score-total">${total}</span>`;
+    }
+    function showScore(n) {
+      const scoreEl = document.querySelector(".aw-top-score");
+      if (scoreEl) scoreEl.innerHTML = scoreHTML(n);
+    }
+
+    // Animate `.aw-top-score` from oldValue to newValue with a small bounce.
+    function pulseScoreTo(oldValue, newValue) {
       const scoreEl = document.querySelector(".aw-top-score");
       if (!scoreEl) return;
-      const match = /(-?\d+)/.exec(scoreEl.textContent || "");
-      const oldValue = match ? parseInt(match[1], 10) : 0;
-      if (oldValue === newValue) { scoreEl.innerHTML = `${icons.check} ${newValue}`; return; }
+      if (oldValue === newValue) { showScore(newValue); return; }
       scoreEl.classList.remove("aw-score-pulse"); void scoreEl.offsetWidth;
       scoreEl.classList.add("aw-score-pulse");
       const start = performance.now();
@@ -327,7 +531,7 @@ const ttaTemplate = {
       let done = false;
       const finishPulse = () => {
         if (done) return; done = true;
-        scoreEl.innerHTML = `${icons.check} ${newValue}`;
+        showScore(newValue);
         setTimeout(() => scoreEl.classList.remove("aw-score-pulse"), 200);
       };
       const step = now => {
@@ -335,62 +539,55 @@ const ttaTemplate = {
         const t = Math.min(1, (now - start) / PULSE_MS);
         const eased = 1 - Math.pow(1 - t, 3);
         const val = Math.round(oldValue + (newValue - oldValue) * eased);
-        scoreEl.innerHTML = `${icons.check} ${val}`;
+        scoreEl.innerHTML = scoreHTML(val);
         if (t < 1) requestAnimationFrame(step);
         else finishPulse();
       };
       requestAnimationFrame(step);
-      // Fallback in case rAF never fires (e.g. a hidden/backgrounded tab) —
-      // same reasoning as the setTimeout backstop every element.animate() in
-      // this app already has (see APP_MASTER.md bẫy list).
-      setTimeout(finishPulse, PULSE_MS + 150);
+      setTimeout(finishPulse, PULSE_MS + 150);   // fallback if rAF never fires
     }
 
     // ----- on-screen keyboard (phone style): 4 rows. Letters mode by default;
-    // the `numbers` key swaps the middle for a numbers/symbols layout. Left
-    // column holds the function keys (caps / numbers / Andrew); the bottom row
-    // is Andrew + Space + Submit. `getInput()` fetches the CURRENT input element
-    // fresh (it's rebuilt on every render()). -----
-    function buildKeyboard(getInput, graded) {
+    // the `numbers` key swaps the middle for a numbers/symbols layout. -----
+    function buildKeyboard() {
+      const getInput = () => input;   // single persistent textarea
       const wrap = el("div", "aw-tta-kbd");
       const main = el("div", "aw-tta-kbd-main");
-      const row = () => el("div", "aw-tta-kbd-row");
+      const mkRow = () => el("div", "aw-tta-kbd-row");
 
       if (!numbersMode) {
-        // ----- LETTERS MODE -----
-        const r1 = row();
+        const r1 = mkRow();
         r1.append(makeCharKey("'", getInput));
         KBD_L1.forEach(ch => r1.append(makeLetterKey(ch, getInput)));
         r1.append(makeBackspaceKey(getInput));
         main.append(r1);
 
-        const r2 = row();
+        const r2 = mkRow();
         r2.append(makeCapsKey());
         KBD_L2.forEach(ch => r2.append(makeLetterKey(ch, getInput)));
         r2.append(makeCharKey("?", getInput));
         main.append(r2);
 
-        const r3 = row();
+        const r3 = mkRow();
         r3.append(makeNumbersKey());
         KBD_L3.forEach(ch => r3.append(makeLetterKey(ch, getInput)));
         r3.append(makeCharKey(".", getInput));
         r3.append(makeCharKey(",", getInput));
         main.append(r3);
       } else {
-        // ----- NUMBERS / SYMBOLS MODE -----
-        const r1 = row();
+        const r1 = mkRow();
         r1.append(makeCharKey("'", getInput));
         KBD_N1.forEach(ch => r1.append(makeCharKey(ch, getInput)));
         r1.append(makeBackspaceKey(getInput));
         main.append(r1);
 
-        const r2 = row();
+        const r2 = mkRow();
         r2.append(makeCapsKey());   // caps has no effect here, shown disabled
         KBD_N2.forEach(ch => r2.append(makeCharKey(ch, getInput)));
         r2.append(makeCharKey("\"", getInput));
         main.append(r2);
 
-        const r3 = row();
+        const r3 = mkRow();
         r3.append(makeNumbersKey());
         KBD_N3.forEach(ch => r3.append(makeCharKey(ch, getInput)));
         r3.append(makeCharKey(".", getInput));
@@ -398,15 +595,13 @@ const ttaTemplate = {
         main.append(r3);
       }
 
-      // Bottom row (both modes): Andrew help + a big Space bar + a blue Submit
-      // key. Submit grades the answer, exactly like the outside button.
       const r4 = el("div", "aw-tta-kbd-row aw-tta-kbd-spacerow");
-      r4.append(makeAndrewKey(graded));
+      r4.append(makeAndrewKey());
       const spaceKey = makeKey("Space", () => insertChar(getInput(), " "));
       spaceKey.classList.add("aw-tta-kbd-space");
-      const submitKey = makeKey("Submit", () => submitAnswer(getInput().value));
+      const submitKey = makeKey("Submit", () => submitAnswer(getInput().value), true);   // silent (no key tock)
       submitKey.classList.add("aw-tta-kbd-submit");
-      submitKey.disabled = !!graded;
+      submitKey.disabled = state[index].graded;
       r4.append(spaceKey, submitKey);
       main.append(r4);
 
@@ -414,41 +609,71 @@ const ttaTemplate = {
       return wrap;
     }
 
-    // Rebuild just the keyboard node in place (used when caps / numbers / Andrew
-    // change) — keeps the text input, its value and caret untouched.
+    // Rebuild only when numbers mode toggles (the keys change); caps / Andrew are
+    // updated in place. Navigation never rebuilds it.
     function rebuildKeyboard() {
-      if (!keyboardEl) return;
-      const st = state[index];
-      const fresh = buildKeyboard(() => root.querySelector(".aw-tta-input"), st.graded);
+      const fresh = buildKeyboard();
       if (!keyboardVisible) fresh.classList.add("is-hidden");
       keyboardEl.replaceWith(fresh);
       keyboardEl = fresh;
-      fitter?.refit();
+      syncKeyboardState();
+      syncSubmitEnabled();
+      fitLayout();
     }
 
-    function makeKey(label, onClick) {
+    // Keep the persistent keyboard's per-question / stateful bits in step without
+    // rebuilding (so it never flickers).
+    function syncKeyboardState() {
+      const st = state[index];
+      // (the keyboard's Submit key enabled-state is owned by syncSubmitEnabled,
+      // which also accounts for the box being empty — don't set it here.)
+
+      const capsKey = keyboardEl.querySelector(".aw-tta-key-caps");
+      if (capsKey) {
+        capsKey.classList.toggle("is-active", capsOn && !numbersMode);
+        capsKey.disabled = numbersMode;
+      }
+      const numbersKey = keyboardEl.querySelector(".aw-tta-key-numbers");
+      if (numbersKey) numbersKey.classList.toggle("is-active", numbersMode);
+
+      const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
+      if (andrewKey) {
+        andrewKey.classList.remove("is-ready", "is-glowing", "is-used");
+        if (!andrewUsed) { andrewKey.classList.add("is-ready"); andrewKey.disabled = st.graded; }
+        else if (andrewGlowing) { andrewKey.classList.add("is-glowing"); andrewKey.disabled = true; }
+        else { andrewKey.classList.add("is-used"); andrewKey.disabled = true; }
+      }
+    }
+
+    function makeKey(label, onClick, silent) {
       const b = el("button", "aw-tta-key", escapeHtml(label));
       b.type = "button";
       b.tabIndex = -1;                 // don't steal focus from the text input
       b.onmousedown = e => e.preventDefault();   // keep the input's caret/focus on click
-      b.onclick = onClick;
+      // every key press gives an iPhone-style "tock" (synthesized, respects mute)
+      // — EXCEPT Submit (silent), whose correct/wrong sound plays instead.
+      b.onclick = e => { if (!silent) ui.sound.keyClick?.(); onClick?.(e); };
       return b;
     }
-    // A plain character key (punctuation / number / symbol) — inserts as-is.
     function makeCharKey(ch, getInput) {
       return makeKey(ch, () => insertChar(getInput(), ch));
     }
-    // A letter key — glyph always uppercase (like the image); inserts uppercase
-    // only while caps is on (grading ignores case either way).
+    // Glyph always uppercase (like the image); inserts uppercase only while caps
+    // is on. Caps AUTO-OFF after one letter (phone-shift style).
     function makeLetterKey(ch, getInput) {
-      return makeKey(ch.toUpperCase(), () => insertChar(getInput(), capsOn ? ch.toUpperCase() : ch));
+      const b = makeKey(ch.toUpperCase(), () => {
+        const upper = capsOn && !numbersMode;
+        insertChar(getInput(), upper ? ch.toUpperCase() : ch);
+        if (upper) setCaps(false);
+      });
+      b.classList.add("aw-tta-key-letter");
+      return b;
     }
     function makeBackspaceKey(getInput) {
       const b = makeKey("⌫", () => backspace(getInput()));
       b.classList.add("aw-tta-key-back");   // red
       return b;
     }
-    // Function key with a small "lit dot" indicator + a text label.
     function makeFnKey(labelText, extraClass, onClick, disabled) {
       const b = el("button", "aw-tta-key aw-tta-key-fn " + extraClass);
       b.type = "button";
@@ -456,104 +681,105 @@ const ttaTemplate = {
       b.onmousedown = e => e.preventDefault();
       b.append(el("span", "aw-tta-key-dot"), el("span", "aw-tta-key-fnlabel", labelText));
       if (disabled) b.disabled = true;
-      else if (onClick) b.onclick = onClick;
+      else if (onClick) b.onclick = e => { ui.sound.keyClick?.(); onClick(e); };
       return b;
     }
     function makeCapsKey() {
-      // In numbers mode caps does nothing — show it disabled/inactive.
       const cls = "aw-tta-key-caps" + (capsOn && !numbersMode ? " is-active" : "");
-      return makeFnKey("caps", cls,
-        () => { capsOn = !capsOn; rebuildKeyboard(); }, numbersMode);
+      return makeFnKey("caps", cls, () => setCaps(!capsOn), numbersMode);
     }
     function makeNumbersKey() {
       const cls = "aw-tta-key-numbers" + (numbersMode ? " is-active" : "");
       return makeFnKey("numbers", cls,
-        () => { numbersMode = !numbersMode; rebuildKeyboard(); }, false);
+        () => { numbersMode = !numbersMode; if (numbersMode) capsOn = false; rebuildKeyboard(); }, false);
     }
-    function makeAndrewKey(graded) {
+    function makeAndrewKey() {
+      const st = state[index];
       let cls = "aw-tta-key-andrew ";
-      if (!andrewUsed) cls += "is-ready";           // lit dot = still available this game
-      else if (andrewGlowing) cls += "is-glowing";  // bright + halo, until this question is submitted
-      else cls += "is-used";                        // dimmed = help spent for the whole game
-      const canUse = !andrewUsed && !graded;         // can't help a question that's already answered
+      if (!andrewUsed) cls += "is-ready";
+      else if (andrewGlowing) cls += "is-glowing";
+      else cls += "is-used";
+      const canUse = !andrewUsed && !st.graded;
       return makeFnKey("Andrew", cls, canUse ? useAndrew : null, !canUse);
     }
 
-    // "Andrew help" — reveal the correct answer for the CURRENT question so the
-    // student can copy it, and light the Andrew key up (bright + halo). Consumes
-    // the one game-wide use immediately; it dims for good once this question is
-    // submitted (or the student navigates away).
+    // Flip caps in place (letter glyphs are always uppercase anyway; only the lit
+    // dot + inserted-case change), so auto-release after a letter never flickers.
+    function setCaps(on) {
+      capsOn = on;
+      const capsKey = keyboardEl && keyboardEl.querySelector(".aw-tta-key-caps");
+      if (capsKey) capsKey.classList.toggle("is-active", capsOn && !numbersMode);
+    }
+
+    // "Andrew help" — reveal the correct answer so the student can copy it, and
+    // light the Andrew key up. Consumes the one game-wide use immediately.
     function useAndrew() {
       const st = state[index];
       if (andrewUsed || st.graded) return;
       andrewUsed = true;
       andrewGlowing = true;
       const it = items[index];
-      const revealWrap = root.querySelector(".aw-tta-revealwrap");
-      const revealText = root.querySelector(".aw-tta-reveal-text");
-      if (revealWrap && revealText) {
-        revealText.textContent = it.acceptedAnswers[0];
-        revealWrap.classList.add("is-open", "is-andrew");
-        let refitDone = false;
-        const doRefit = () => { if (refitDone) return; refitDone = true; fitter?.refit(); };
-        revealWrap.addEventListener("transitionend", doRefit, { once: true });
-        setTimeout(doRefit, 400);
+      revealText.textContent = it.acceptedAnswers[0];
+      revealWrap.classList.add("is-open", "is-andrew");
+      scheduleRevealRefit();
+      const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
+      if (andrewKey) {
+        andrewKey.classList.remove("is-ready");
+        andrewKey.classList.add("is-glowing");
+        andrewKey.disabled = true;
       }
-      rebuildKeyboard();   // Andrew key now renders is-glowing
-      const inp = root.querySelector(".aw-tta-input");
-      if (inp && !inp.disabled) inp.focus();
+      if (!input.disabled) input.focus();
     }
-    function insertChar(input, ch) {
-      if (!input || input.disabled) return;
-      const start = input.selectionStart ?? input.value.length;
-      const end = input.selectionEnd ?? input.value.length;
-      input.value = input.value.slice(0, start) + ch + input.value.slice(end);
+    function insertChar(inp, ch) {
+      if (!inp || inp.disabled) return;
+      const start = inp.selectionStart ?? inp.value.length;
+      const end = inp.selectionEnd ?? inp.value.length;
+      inp.value = inp.value.slice(0, start) + ch + inp.value.slice(end);
       const pos = start + ch.length;
-      input.setSelectionRange(pos, pos);
-      input.focus();
+      inp.setSelectionRange(pos, pos);
+      autoGrow(inp);
+      syncSubmitEnabled();
+      inp.focus();
     }
-    function backspace(input) {
-      if (!input || input.disabled) return;
-      const start = input.selectionStart ?? input.value.length;
-      const end = input.selectionEnd ?? input.value.length;
+    function backspace(inp) {
+      if (!inp || inp.disabled) return;
+      const start = inp.selectionStart ?? inp.value.length;
+      const end = inp.selectionEnd ?? inp.value.length;
       if (start === end) {
         if (start === 0) return;
-        input.value = input.value.slice(0, start - 1) + input.value.slice(end);
-        input.setSelectionRange(start - 1, start - 1);
+        inp.value = inp.value.slice(0, start - 1) + inp.value.slice(end);
+        inp.setSelectionRange(start - 1, start - 1);
       } else {
-        input.value = input.value.slice(0, start) + input.value.slice(end);
-        input.setSelectionRange(start, start);
+        inp.value = inp.value.slice(0, start) + inp.value.slice(end);
+        inp.setSelectionRange(start, start);
       }
-      input.focus();
+      autoGrow(inp);
+      syncSubmitEnabled();
+      inp.focus();
     }
 
     function updateNav() {
       const isLast = index === total - 1;
+      // No "finish/✓" button on the last question — the game auto-completes once
+      // every question is answered (or via Menu -> Submit answers).
       ui.setNav({
         index: index + 1,
         total,
         onPrev: index > 0 ? goPrev : null,
-        onNext: isLast ? finish : goNext,
-        nextLabel: isLast ? icons.check : null
+        onNext: isLast ? null : goNext,
+        nextLabel: null
       });
     }
 
-    function fadeSwap(change) {
-      const card = root.querySelector(".aw-tta-card");
-      if (!card) { change(); return; }
-      let done = false;
-      const run = () => { if (done) return; done = true; change(); };
-      const anim = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
-      anim.onfinish = run;
-      setTimeout(run, 220);
-    }
-    // Leaving a question spends any still-glowing Andrew help (it was used, so
-    // it must show dimmed everywhere else).
-    function goPrev() { if (index > 0) fadeSwap(() => { andrewGlowing = false; index--; render(); }); }
-    function goNext() { if (index < total - 1) fadeSwap(() => { andrewGlowing = false; index++; render(); }); }
+    // Navigation uses the SAME "tock" as the letter keys (teacher's call). Only
+    // the question text crossfades; the answer block stays put (no flicker).
+    function goPrev() { if (index > 0) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index - 1, true); } }
+    function goNext() { if (index < total - 1) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
 
     function finish() {
       if (finished) return;
+      const answeredNow = state.filter(s => s.graded).length;
+      if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
       finished = true;
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;
@@ -572,7 +798,8 @@ const ttaTemplate = {
     }
 
     return function cleanup() {
-      if (fitter) fitter.destroy();
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(rafFit);
       if (autoTimer) clearTimeout(autoTimer);
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();

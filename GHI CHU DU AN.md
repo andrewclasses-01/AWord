@@ -21,6 +21,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 30: TYPE THE ANSWER — chuỗi rất nhiều vòng tinh chỉnh thầy yêu cầu (bàn phím, âm thanh, options, bố cục, điểm số). THẦY ĐÃ DUYỆT → COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in/additive, đã kiểm Quiz + 4 template khác 0 lỗi.)
+
+Thầy chơi bản Type the answer (đã live catalog từ 30/7) rồi yêu cầu tinh chỉnh sâu qua NHIỀU vòng "ok build"
++ test trình duyệt thật. **Nhật ký chi tiết TỪNG vòng: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`**
+(mục 1/8/2026). Tóm tắt các nhóm việc + phần đụng CORE:
+
+**Bàn phím ảo:** hạ thấp + cố định 1 vị trí (không co theo `--fit`), rộng 70%, phím chữ cái bằng nhau tuyệt
+đối (fixed width + hạ font ⌫), caps hẹp 15% + tự tắt sau 1 chữ, chấm sáng cố định size chỉ đổi độ sáng
+(caps/numbers = trắng đứng yên; Andrew = trắng nháy chậm), animation bật/tắt mượt, phím Submit im (không
+tiếng gõ), **tiếng "cạch" gõ phím kiểu iPhone**.
+
+**Âm thanh:** dùng bộ mp3 THẬT của Wordwall TTA (`templates/type-the-answer/sounds/` + `type-the-answer-sound.js`);
+correct/wrong/intro/chuyển-câu/complete từ pack; tiếng gõ phím tổng hợp.
+
+**Bố cục màn chơi (nhiều vòng):** ô đáp án dạng `<textarea>` tự xuống 2 dòng, CỠ CỐ ĐỊNH (không nhỏ hơn),
+reveal đáp án đúng = hint Andrew = cỡ ô nhập; câu hỏi mới là thứ NHƯỜNG CHỖ (thu `--qfit`) khi thiếu; căn
+giữa CẢ CỤM (reveal/ô nhập + Submit) đúng giữa khoảng câu-hỏi↔bàn-phím (căn LẠI MỖI FRAME khi reveal trượt
+mở + chốt chặn không bao giờ đè bàn phím); chỉ nhận tiếng Anh (lọc non-ASCII, chặn cả bàn phím tiếng Việt);
+bỏ placeholder; dấu ✓/✗ to+dày, rung rồi bay về điểm, bám hàng ô nhập; chữ Andrew trùng khớp màu+nhịp nút Andrew.
+
+**Điểm số:** hiện `✓ X/tổng`; số tử XANH khi ≥0, ĐỎ khi âm (không dấu −, cho phép âm khi Minus); gạch chéo +
+tổng màu đen; num↔/ == /↔total (cân đối); tích xanh/X đỏ bay + Pulse.
+
+**⚠️ SỬA CORE (additive/opt-in — đã test lại Quiz + Anagram/Crossword/Gameshow/Whack-a-mole 0 lỗi):**
+- `core/engine.js`: (a) **Auto switch** — checkbox global trong Options (mặc định TẮT, `draft.autoSwitch`);
+  (b) **chặn "Submit answers" khi 0 câu** — `ui.onSubmit(fn, countFn)` + guard ở Menu (template đưa getter
+  đếm câu đã trả lời; không đưa → như cũ, không kẹt) → đã thêm countFn cho 8 template
+  (quiz/anagram/crossword/gameshow/maze-chase/unjumble/find-the-match/type-the-answer);
+  (c) ô thời gian countdown nằm CẠNH nút "Count down" (cụm `.aw-opt-cd` nowrap); (d) "End of game
+  (Show answers)" xuống CUỐI options; (e) **Apply bất kỳ option → tự restart game** (mọi template);
+  (f) cờ `hideShuffleAnswers` (TTA ẩn "Shuffle answer order"). *(engine.js đã được commit chung ở Đợt 29
+  do dùng chung cây làm việc với phiên True-false; các thay đổi này đã có trong HEAD.)*
+- `core/sound.js`: thêm `keyClick()` (tiếng gõ phím tổng hợp, tôn trọng mute).
+- `core/numberstepper.js`: **nhấn-giữ ▲/▼ chạy số liên tục** (có tăng tốc) — dùng cho ô thời gian countdown.
+- `core/app.css`: rule `.aw-opt-cd`.
+
+**Ghi chú song song:** đợt này cây làm việc dùng CHUNG với 1 phiên khác (True-false hearts + Find-the-match
+"đáp án không đổi vị trí" + `manualTimerStart`/`ui.startTimer`). Các thay đổi đó là CỐ Ý và đã hoàn chỉnh,
+được commit chung trong đợt này (find-the-match.js/.css).
+
 ### 1/8/2026 — Đợt 29: TRUE FALSE — 2 vòng tinh chỉnh (8 mục + 3 mục) thầy yêu cầu. THẦY ĐÃ DUYỆT → ĐÃ COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in, tương thích ngược.)
 
 Thầy chơi bản True/false (đã live catalog từ trước) rồi yêu cầu tinh chỉnh; sau 2 vòng "ok build" +

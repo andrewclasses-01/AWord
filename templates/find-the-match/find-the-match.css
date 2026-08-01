@@ -18,7 +18,11 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding-bottom: 2.4cqw;
+  /* Small bottom pad so the answer grid (flex:1, align-content:center) sits
+     centred in the space between the dashed divider and the "x of y" bar
+     below the stage — tuned against the divider's own top gap so the block
+     is vertically centred, not high (teacher's spec 1/8). */
+  padding-bottom: 0.2cqw;
 }
 
 .aw-ftm-lives {

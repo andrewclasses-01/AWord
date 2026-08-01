@@ -171,7 +171,7 @@ const unjumbleTemplate = {
     let revealEl = null;
     const activeFlyNodes = new Set();
 
-    ui.onSubmit(finish);
+    ui.onSubmit(finish, () => state.filter(st => doneCheck(st)).length);   // block "Submit answers" at 0 answered
     render();
 
     function doneCheck(s) { return mode === "submit" ? s.graded === true : s.correct === true; }

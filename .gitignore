@@ -13,3 +13,6 @@ __pycache__/
 # Local-only notes / scratch
 scratch/
 *.local.*
+
+# Local dev tooling (preview launch config)
+.claude/

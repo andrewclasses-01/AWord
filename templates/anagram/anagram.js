@@ -205,7 +205,7 @@ const anagramTemplate = {
     let revealSlotEl = null;   // current word's answer-reveal line (submit mode) — ditto
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
-    ui.onSubmit(finish);
+    ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
     render();
 
     function doneCheck(s) { return mode === "bonus" ? s.correct === true : s.graded === true; }
