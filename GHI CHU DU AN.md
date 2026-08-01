@@ -21,6 +21,60 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 33 (v0.9.7): NẠP TEMPLATE THEO YÊU CẦU — trang HS `play.html` chơi được CẢ 14 loại; thêm template từ nay chỉ sửa 1 FILE. ⭐ CÓ SỬA CORE. Đã tự test (0 lỗi console).
+
+Ngay sau Đợt 32 thầy chốt (qua AskUserQuestion) làm hướng **"nạp động theo `activity.type`"** thay vì
+thêm 13 dòng import tĩnh vào `play.js`.
+
+**Vấn đề thật:** `play.html`/`play.js` (trang học sinh) chỉ khai mỗi Quiz — `import "./templates/quiz/
+quiz.js"` + 1 link `quiz.css`. Giao assignment loại khác cho HS là gãy `Chưa có game loại "..." trong
+registry`. Gốc rễ: **mỗi trang phải tự chép lại danh sách template** (import JS trong .js + link CSS
+trong .html), tức 1 template phải khai ở 4-5 chỗ → sót là chuyện sớm muộn, và đã sót thật suốt thời
+gian dài mà không ai thấy vì trên lớp thầy chỉ chiếu act từ trang chủ.
+
+**Cách sửa — dồn về 1 nguồn rồi nạp lúc cần:**
+- **`core/catalog.js` (SỬA CORE)** — mỗi mục nay khai luôn CÁCH TỰ NẠP: `css` (đường dẫn tính từ TRANG,
+  hợp lệ cho cả `index.html` lẫn `play.html` vì cùng ở gốc), `load()` → `import()` module template,
+  `sample()` → act mẫu. Thêm hàm `templateEntry(type)`.
+- **`core/registry.js` (SỬA CORE, THÊM MỚI, không đổi hành vi cũ)** — thêm `ensureTemplate(type)`:
+  chèn `<link>` CSS **và ĐỢI CSS áp xong** rồi `await entry.load()`; module tự `registerTemplate()`.
+  Nhớ lời hứa trong `pending` nên gọi song song vẫn chỉ nạp 1 lần; loại lạ thì reject; nếu module quên
+  `registerTemplate()` thì báo lỗi rõ ngay thay vì để engine gãy sau. Thêm `hasTemplate(type)`.
+  `getTemplate()` giữ nguyên đồng bộ (engine/print vẫn dùng như cũ).
+  *Chi tiết chống-treo:* `loadCss` không bao giờ reject và có chặn 4 giây — mạng lớp chậm thì thà chơi
+  trước CSS vào sau, còn hơn treo màn hình HS.
+- **`main.js`** — **xóa cả 14 dòng import template**; `playAct` / `editAct` / `createBlankAct` (nay
+  `async`) đều `await ensureTemplate(...)` trong try/catch, hỏng thì toast "could not load" /
+  "editor coming soon".
+- **`play.js`** — bỏ import quiz, thêm `await ensureTemplate(activity.type)` trong `play()`. Đặt TRƯỚC
+  khi xóa màn hình và hiện "Loading..." nên mạng chậm không ra trang trắng; hỏng thì hiện "This game
+  could not be opened".
+- **`index.html` + `play.html`** — **xóa toàn bộ link CSS template** (chỉ còn `app.css` + `classic.css`).
+- **`manifest.js`** — không còn là danh sách chép tay nữa, rút xuống 3 dòng SUY RA từ catalog
+  (`TEMPLATES.filter(built)`), nên vĩnh viễn không lệch pha được.
+
+**Kết quả cho người dùng:** HS mở 1 assignment giờ tải **đúng 1 game** (trước: trang chủ tải cả 14).
+Đo thật lúc mở trang: registry **0 template**, chỉ **2 stylesheet lõi**; sau khi vào 3 game thì đúng
+3 module + 3 CSS được thêm.
+
+**Kết quả cho người build:** **thêm template = thêm ĐÚNG 1 MỤC trong `core/catalog.js`.** Không đụng
+`index.html`, `play.html`, `main.js`, `play.js`, `manifest.js` nữa. Đã cập nhật lại hướng dẫn ở
+`templates/HUONG DAN TEMPLATE.md` (mục "Khi nào một template được gộp"), `core/HUONG DAN CORE.md`
+(mục MỚI "Nạp template theo yêu cầu"), `APP_MASTER.md` (bản đồ thư mục + quy tắc số 10).
+
+**Đã tự test (trình duyệt thật, cổng 5510, console SẠCH cả 2 trang):**
+- `index.html` lúc mở: **0 template, 2 stylesheet** (trước đây 14 + 16) — nạp lười đúng như thiết kế.
+- Chạy hết 14 loại qua `ensureTemplate`: **14/14** nạp xong; **gọi SONG SONG 2 lần cùng lúc** trả về
+  đúng 1 đối tượng và chèn **đúng 1 link CSS** (không nhân đôi); mount game bằng `startGame()` ra
+  `.aw-stage` 14/14; mở editor từ act trắng 14/14 đúng badge; **0 lỗi runtime**.
+- Loại không có thật → reject đúng thông báo, không làm sập trang.
+- **`play.html`**: mở lên đúng như HS thấy (0 template, 2 CSS lõi), rồi đi ĐÚNG đường mà `play()` đi cho
+  3 loại **ngoài Quiz** (crossword · speaking_cards · whack_a_mole) → cả 3 dựng game bình thường; trước
+  đợt này cả 3 đều ném lỗi registry. Sau đó registry có đúng 3 loại + 3 CSS, không dư.
+
+**Chưa test được:** màn trang chủ thật + 1 assignment THẬT cho HS (đều sau đăng nhập Google, popup không
+tự động hoá được). Thầy nên chạy thử 1 vòng: giao 1 bài loại mới (vd Crossword) rồi mở link HS.
+
 ### 1/8/2026 — Đợt 32: GỘP 8 TEMPLATE CÒN LẠI LÊN TRANG CHỦ — trang chủ từ 6 → **14 loại act**. Đã tự test (0 lỗi console). CHƯA COMMIT (chờ thầy chơi thử rồi mới push).
 
 Thầy hỏi trang chủ tạo được bao nhiêu loại act (6), rồi bảo **"đưa toàn bộ lên trang chủ"** — tức là DUYỆT

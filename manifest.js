@@ -1,96 +1,17 @@
 // =============================================================
-// MANIFEST — the list of FINISHED templates shown on the final
-// gathering page (index.html / main.js).
+// MANIFEST — kept only for older code/notes that still import it.
 //
-// When a template is "chốt" (approved), add ONE line here.
-// Do NOT list templates that are still under construction —
-// keep building those only through their own test.html.
+// ⚠️ KHÔNG thêm template ở đây nữa. Từ v0.9.7 mọi thứ về 1 chỗ duy nhất:
+// `core/catalog.js` (type · label · blurb · built · css · load · sample).
+// File này chỉ còn là 1 CÁI NHÌN suy ra từ danh sách đó, nên không bao giờ
+// lệch pha được nữa.
+//
+// Thêm template mới = thêm 1 mục trong `core/catalog.js`. Hết.
+// (Không phải sửa index.html, play.html, main.js hay file này.)
 // =============================================================
 
-export const FINISHED_TEMPLATES = [
-  {
-    type: "quiz",
-    label: "Quiz",
-    load: () => import("./templates/quiz/quiz.js"),
-    sample: () => import("./templates/quiz/sample-quiz.js")
-  },
-  {
-    type: "anagram",
-    label: "Anagram",
-    load: () => import("./templates/anagram/anagram.js"),
-    sample: () => import("./templates/anagram/sample-anagram.js")
-  },
-  {
-    type: "open_the_box",
-    label: "Open the box",
-    load: () => import("./templates/open-the-box/open-the-box.js"),
-    sample: () => import("./templates/open-the-box/sample-open-the-box.js")
-  },
-  {
-    type: "type_the_answer",
-    label: "Type the answer",
-    load: () => import("./templates/type-the-answer/type-the-answer.js"),
-    sample: () => import("./templates/type-the-answer/sample-type-the-answer.js")
-  },
-  {
-    type: "find_the_match",
-    label: "Find the match",
-    load: () => import("./templates/find-the-match/find-the-match.js"),
-    sample: () => import("./templates/find-the-match/sample-find-the-match.js")
-  },
-  {
-    type: "true_false",
-    label: "True or false",
-    load: () => import("./templates/true-false/true-false.js"),
-    sample: () => import("./templates/true-false/sample-true-false.js")
-  },
-  {
-    type: "gameshow",
-    label: "Gameshow quiz",
-    load: () => import("./templates/gameshow/gameshow.js"),
-    sample: () => import("./templates/gameshow/sample-gameshow.js")
-  },
-  {
-    type: "maze_chase",
-    label: "Maze chase",
-    load: () => import("./templates/maze-chase/maze-chase.js"),
-    sample: () => import("./templates/maze-chase/sample-maze-chase.js")
-  },
-  {
-    type: "whack_a_mole",
-    label: "Whack-a-mole",
-    load: () => import("./templates/whack-a-mole/whack-a-mole.js"),
-    sample: () => import("./templates/whack-a-mole/sample-whack-a-mole.js")
-  },
-  {
-    type: "flying_fruit",
-    label: "Flying fruit",
-    load: () => import("./templates/flying-fruit/flying-fruit.js"),
-    sample: () => import("./templates/flying-fruit/sample-flying-fruit.js")
-  },
-  {
-    type: "balloon_pop",
-    label: "Balloon pop",
-    load: () => import("./templates/balloon-pop/balloon-pop.js"),
-    sample: () => import("./templates/balloon-pop/sample-balloon-pop.js")
-  },
-  {
-    type: "crossword",
-    label: "Crossword",
-    load: () => import("./templates/crossword/crossword.js"),
-    sample: () => import("./templates/crossword/sample-crossword.js")
-  },
-  {
-    type: "unjumble",
-    label: "Unjumble",
-    load: () => import("./templates/unjumble/unjumble.js"),
-    sample: () => import("./templates/unjumble/sample-unjumble.js")
-  },
-  {
-    type: "speaking_cards",
-    label: "Speaking cards",
-    load: () => import("./templates/speaking-cards/speaking-cards.js"),
-    sample: () => import("./templates/speaking-cards/sample-speaking-cards.js")
-  }
-  // Add the next one here once it's approved.
-];
+import { TEMPLATES } from "./core/catalog.js";
+
+export const FINISHED_TEMPLATES = TEMPLATES
+  .filter(t => t.built)
+  .map(({ type, label, load, sample }) => ({ type, label, load, sample }));

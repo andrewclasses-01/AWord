@@ -16,7 +16,10 @@ import { el } from "./core/utils.js";
 import {
   getAssignment, submitResult, listScores, isLate, nameKey, prettiestName, rankCompare
 } from "./core/assignments.js";
-import "./templates/quiz/quiz.js";   // registers the quiz template
+import { ensureTemplate } from "./core/registry.js";
+// No template is imported here on purpose. ensureTemplate() fetches the ONE
+// game this assignment uses, right before it starts — so a student on a phone
+// downloads one game, not the whole catalogue.
 
 const app = document.getElementById("app");
 const REMEMBER_KEY = "aword-student-name";
@@ -135,11 +138,22 @@ function showNameScreen(assignment) {
 }
 
 // ---------------- the game ----------------
-function play(assignment, studentName) {
-  app.innerHTML = "";
+async function play(assignment, studentName) {
   // A fresh copy each time so a replay never inherits the previous play's state.
   const activity = JSON.parse(JSON.stringify(assignment.activity));
 
+  // Fetch this one game before wiping the screen, so a slow classroom
+  // connection shows "Loading..." instead of a blank page. Every act type in
+  // core/catalog.js works here — the student page is no longer quiz-only.
+  showMessage("Loading...", "");
+  try {
+    await ensureTemplate(activity.type);
+  } catch (e) {
+    return showMessage("This game could not be opened",
+      "Check your connection and open the link again.");
+  }
+
+  app.innerHTML = "";
   startGame(app, activity, {
     session: {
       playerName: studentName,

@@ -47,7 +47,7 @@ ai giẫm chân ai:
 - 🟡 **ĐANG BUILD** — đang viết dở trong phiên làm việc.
 - 🟢 **CHỜ THẦY DUYỆT** — đã chơi thử được, đang chờ Teacher Andrew xem và góp ý.
 - ✅ **ĐÃ CHỐT** — Teacher Andrew đã duyệt xong. Chỉ khi ở trạng thái này mới được thêm vào
-  `../manifest.js` để xuất hiện trên trang gom cuối (`index.html`).
+  `../core/catalog.js` để xuất hiện trên trang gom cuối (xem mục cuối file).
 
 ## Chạy thử (mỗi template độc lập)
 
@@ -68,11 +68,26 @@ trang test chỉ nạp core + đúng 1 template.
 
 ## Khi nào một template được gộp vào trang cuối
 
-Trang cuối (`index.html` + `main.js` + `manifest.js` ở gốc dự án) là nơi **gom các template đã
-CHỐT** lại thành 1 web hoàn chỉnh. Việc này CHỈ làm khi:
-1. Template đã ở trạng thái ✅ ĐÃ CHỐT (Teacher Andrew duyệt).
-2. Thêm 1 dòng vào `../manifest.js` (theo mẫu comment sẵn trong file).
-3. Thêm 1 dòng `<link rel="stylesheet" href="templates/<ten>/<ten>.css">` vào `index.html` gốc.
+Trang cuối (`index.html` + `main.js` ở gốc dự án) là nơi **gom các template đã CHỐT** lại thành 1 web
+hoàn chỉnh. Việc này CHỈ làm khi template đã ở trạng thái ✅ ĐÃ CHỐT (Teacher Andrew duyệt).
 
-Không ai tự ý sửa `index.html`/`main.js`/`manifest.js` ở gốc khi đang build dở 1 template — việc gộp
-trang cuối nên do 1 session phụ trách tổng thực hiện, tránh 2 session cùng sửa 1 file gây xung đột.
+**Từ v0.9.7, gộp = THÊM ĐÚNG 1 MỤC vào `../core/catalog.js`:**
+
+```js
+{ type: "<ten_type>",  label: "<Tên hiện ra>",  built: true,
+  blurb: "1 câu tả cho picker New activity.",
+  css:    "templates/<ten>/<ten>.css",
+  load:   () => import("../templates/<ten>/<ten>.js"),
+  sample: () => import("../templates/<ten>/sample-<ten>.js") },
+```
+
+**Hết. KHÔNG đụng `index.html`, `play.html`, `main.js`, `play.js` hay `manifest.js` nữa** — mấy file
+đó không còn liệt kê template. `ensureTemplate()` trong `core/registry.js` đọc mục trên rồi tự chèn CSS
++ import module (module tự `registerTemplate()`) ngay lúc act được chơi/sửa lần đầu. Một mục là act hiện
+đủ ở: picker "New activity" · panel Template trong game · **trang học sinh `play.html`** · Settings.
+
+Lý do đổi: trước đây phải sửa 4 file rất dễ sót — và đã sót thật, `play.html` quên mất mọi template
+ngoài Quiz nên HS không chơi được bài giao loại khác suốt một thời gian dài.
+
+Vẫn giữ nguyên luật phối hợp: **đang build dở thì đừng đụng `core/catalog.js`** (nó là file chung, 2
+session cùng sửa sẽ xung đột) — việc gộp nên do 1 session phụ trách tổng làm.

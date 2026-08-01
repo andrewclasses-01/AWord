@@ -22,7 +22,7 @@
 import { startGame } from "./core/engine.js";
 import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
-import { getTemplate } from "./core/registry.js";
+import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
 import {
@@ -40,20 +40,9 @@ import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
   copyAssignmentLink, copyAssignmentQr
 } from "./core/assignment-ui.js";
-import "./templates/quiz/quiz.js";               // registers the quiz template (+ its editor)
-import "./templates/anagram/anagram.js";         // registers the anagram template (+ its editor)
-import "./templates/open-the-box/open-the-box.js";           // registers open the box (+ its editor)
-import "./templates/type-the-answer/type-the-answer.js";     // registers type the answer (+ its editor)
-import "./templates/find-the-match/find-the-match.js";       // registers find the match (+ its editor)
-import "./templates/true-false/true-false.js";               // registers true or false (+ its editor)
-import "./templates/gameshow/gameshow.js";                   // registers gameshow quiz (+ its editor)
-import "./templates/maze-chase/maze-chase.js";               // registers maze chase (+ its editor)
-import "./templates/whack-a-mole/whack-a-mole.js";           // registers whack-a-mole (+ its editor)
-import "./templates/flying-fruit/flying-fruit.js";           // registers flying fruit (+ its editor)
-import "./templates/balloon-pop/balloon-pop.js";             // registers balloon pop (+ its editor)
-import "./templates/crossword/crossword.js";                 // registers crossword (+ its editor)
-import "./templates/unjumble/unjumble.js";                   // registers unjumble (+ its editor)
-import "./templates/speaking-cards/speaking-cards.js";       // registers speaking cards (+ its lazy editor)
+// NOTE: no template is imported here. Each game (and its stylesheet) is fetched
+// the first time it is actually played or edited — see ensureTemplate() in
+// core/registry.js, which reads the one list in core/catalog.js.
 
 const app = document.getElementById("app");
 
@@ -797,6 +786,10 @@ function actMenuItems(node) {
 async function playAct(id) {
   const node = await getItem(id);
   if (!node) return render();
+  // The game (and its stylesheet) is fetched the moment it is first needed —
+  // see ensureTemplate() in core/registry.js.
+  try { await ensureTemplate(node.type); }
+  catch (e) { toast(`${templateLabel(node.type)} — could not load`); return; }
   state.view = "play";
   setUrl(await linkFor(node));               // the address bar now points at this act
   startGame(app, node, { onExit: goTop });   // the in-game Home button returns here
@@ -806,7 +799,8 @@ async function playAct(id) {
 async function editAct(id) {
   const node = await getItem(id);
   if (!node) return render();
-  const tpl = getTemplate(node.type);
+  let tpl = null;
+  try { tpl = await ensureTemplate(node.type); } catch (e) { tpl = null; }
   if (!tpl || !tpl.edit) { toast(`${templateLabel(node.type)} — editor coming soon`); return; }
   tpl.edit(app, node, {
     header: topbar(true),
@@ -844,8 +838,9 @@ function newActivityFlow() {
   });
 }
 
-function createBlankAct(type) {
-  const tpl = getTemplate(type);
+async function createBlankAct(type) {
+  let tpl = null;
+  try { tpl = await ensureTemplate(type); } catch (e) { tpl = null; }
   if (!tpl || !tpl.edit) { toast(`${templateLabel(type)} — editor coming soon`); return; }
   const blank = {
     type, schemaVersion: 1, title: "", instruction: "", theme: "classic",

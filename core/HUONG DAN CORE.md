@@ -88,7 +88,9 @@ core/
 ├─ app.css          ← giao diện DÙNG CHUNG: khung 16:9, thanh trên/dưới, menu, panel tối,
 │                       leaderboard, PLAY overlay, hiệu ứng ✓/✗, nút bấm, animation dùng chung
 ├─ engine.js         ← điều phối vòng đời game (xem mục "API engine ↔ template" bên dưới)
-├─ registry.js        ← sổ đăng ký template: registerTemplate(tpl) / getTemplate(type)
+├─ registry.js        ← sổ đăng ký template: registerTemplate(tpl) / getTemplate(type) /
+│                        hasTemplate(type) / ensureTemplate(type) — xem mục "Nạp template theo yêu cầu"
+├─ catalog.js         ← 1 NGUỒN DUY NHẤT liệt kê loại act + cách tự nạp (css/load/sample)
 ├─ layout.js          ← buildStage(themeName): dựng khung 16:9 + vùng chữ dưới khung
 ├─ scoring.js         ← computeResult(raw, seconds), rankCompare(a,b)
 ├─ leaderboard.js     ← lưu kết quả trên máy (localStorage), theo activityId
@@ -109,6 +111,31 @@ core/
 │                        + chữ trắng viền đen kiểu "hoạt hình bảng phấn")
 └─ assets/            ← font (Baloo 2) + âm thanh (oh-my-god-meme.mp3), dùng chung, offline
 ```
+
+## Nạp template theo yêu cầu — `ensureTemplate(type)` (v0.9.7)
+
+Trang KHÔNG `import` sẵn template nữa. Trước khi chơi hoặc sửa một act, gọi:
+
+```js
+import { ensureTemplate } from "./core/registry.js";
+
+await ensureTemplate(activity.type);   // chèn CSS + import module (module tự registerTemplate)
+startGame(app, activity, { ... });     // engine dùng getTemplate() đồng bộ, lúc này đã chắc chắn có
+```
+
+- Nguồn dữ liệu là `core/catalog.js`: mỗi loại khai `css` (đường dẫn tính từ TRANG, vì `index.html`
+  và `play.html` đều nằm ở gốc) + `load()` + `sample()`.
+- Hàm **đợi CSS áp xong** rồi mới trả về — nếu không, game sẽ hiện 1 nháy chưa có style. Có chặn
+  4 giây: mạng lớp chậm thì thà chơi trước, CSS vào sau, còn hơn treo màn hình.
+- Mỗi loại chỉ nạp 1 lần; gọi song song nhiều lần vẫn an toàn (nhớ lời hứa trong `pending`).
+- Loại không có trong catalog → **reject**, gọi bên ngoài phải try/catch (main.js hiện toast
+  "could not load" / "editor coming soon").
+- `getTemplate()` vẫn ĐỒNG BỘ và vẫn ném lỗi nếu chưa nạp — engine/print dùng nó là đúng, vì lúc đó
+  trang đã `await ensureTemplate` rồi.
+
+Lý do đổi: trước đây mỗi trang phải tự khai danh sách template (import JS + link CSS trong HTML).
+`play.html` chỉ khai mỗi Quiz nên **HS không chơi được bài giao thuộc 13 loại còn lại** — lỗi âm thầm
+suốt một thời gian dài. Nay chỉ còn 1 danh sách, và HS mở 1 bài chỉ tải đúng 1 game.
 
 ## API engine ↔ template (bắt buộc mọi template tuân theo)
 
