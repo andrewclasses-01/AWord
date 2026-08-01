@@ -21,6 +21,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 28: OPEN THE BOX — 5 cải tiến thầy yêu cầu + sửa 2 lỗi phát sinh. THẦY ĐÃ DUYỆT → ĐÃ COMMIT + PUSH + LIVE. (Có sửa CORE, opt-in, tương thích ngược.)
+
+Thầy chơi bản Open the box (đã live từ Đợt trước) và yêu cầu 5 cải tiến; sau 2 vòng phản hồi thầy DUYỆT.
+Đã **commit `da11950` + push main + GitHub Pages tự deploy**. (Đánh số "đợt 17/18/19" trong
+`templates/open-the-box/GHI CHU OPEN-THE-BOX.md` là đếm RIÊNG của template đó — khác Đợt 28 toàn dự án này.)
+
+**5 cải tiến (thầy chốt qua AskUserQuestion + "ok build"):**
+1. **Chữ ô câu hỏi/đáp án to hơn** — chuyển sang **cỡ ĐỘC LẬP TỪNG Ô** (kiểu Wordwall): từ ngắn phóng to
+   tới 1.5×, từ dài chỉ nhỏ riêng ô đó (có lề, không chạm mép, không bẻ giữa từ), chữ nhiều từ wrap theo
+   khoảng trắng. (Chỉ `templates/open-the-box/*`.)
+2. **Editor tối đa 120 câu** (trước 100). + `docs/04-OPEN-THE-BOX.md`.
+3. **Pop-up xác nhận** cho "Mark correct in all" + "Unmark all correct" (Delete all đã có sẵn).
+4. **Khóa chọn text trong khung chơi** — CORE `core/app.css` `.aw-stage{user-select:none}` áp cho MỌI
+   game (thầy chọn phạm vi này), chừa `input/textarea/[contenteditable]` để Type the answer vẫn gõ được.
+5. **Show answers không cắt ngang từ** — CORE: `.aw-rv-txt` `overflow-wrap:normal`; kèm sửa **lỗi thật
+   trong `core/fit.js fitOnce`** (không trừ padding khi đo → cắt cụt ký tự cuối). Thêm tùy chọn
+   **`contentBox` (mặc định TẮT)**, chỉ bật ở lời gọi Show answers trong `core/engine.js` (min 0.2) →
+   maze-chase & caller khác byte-for-byte y nguyên.
+
+**2 lỗi phát sinh đã sửa trong cùng lô** (bắt được nhờ thầy chơi thử + đo `javascript_tool`): (a) bản
+đầu để chữ phóng 2.4× gây quá to + bẻ giữa từ → hạ 1.5× + width-aware; (b) từ dài chạm mép → chuyển hẳn
+sang cỡ độc lập từng ô (span câu hỏi tách riêng `.aw-otb-q-qtext`, `width:100%` để wrap, `minmax(0,1fr)`
++ `min-width:0` chặn ô nở theo từ).
+
+- **File đổi (đã commit)**: `core/app.css`, `core/engine.js` (CHỈ hunk `contentBox` — hunk
+  `hideShuffleAnswers` của phiên Type-the-answer ĐỂ NGUYÊN chưa commit), `core/fit.js`,
+  `docs/04-OPEN-THE-BOX.md`, `templates/open-the-box/` (open-the-box.js/.css, editor, GHI CHU). 8 file,
+  +265/−18.
+- **Đã tự test** (trình duyệt thật, đo đạc, không đoán): cỡ độc lập từng ô (Meteorologist 1.35 vs còn lại
+  1.5), Show answers 9 hàng có thanh cuộn 0 cắt chữ (chạy fitOnce THẬT đã vá), editor "9/120 boxes",
+  confirm bật đúng + Cancel không đổi, `.aw-stage` user-select none + input vẫn text; hồi quy Quiz +
+  Type the answer 0 lỗi console.
+- Chi tiết đầy đủ: `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` (đợt 17/18/19).
+
 ### 1/8/2026 — Đợt 27: UNJUMBLE (game thứ 11) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. KHÔNG sửa core.
 
 Dựng lại act Classic của thầy `wordwall.net/resource/116872783/unjumble` — style **Whiteboard** (thầy chốt
