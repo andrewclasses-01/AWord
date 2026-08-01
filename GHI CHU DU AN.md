@@ -19,6 +19,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## ⭐ VIỆC ĐANG CHỜ (cập nhật 1/8/2026, sau Đợt 33 — MÁY/PHIÊN MỚI ĐỌC MỤC NÀY)
+
+> File này xếp MỚI NHẤT LÊN TRÊN, nên mục "việc đang chờ" để ở đây (đầu file) cho dễ thấy.
+> Bàn giao đầy đủ hơn (kèm khuôn code + cách test không cần đăng nhập): `APP_MASTER.md` **mục 0a**.
+
+**Đứng ở đâu**: cả **14 loại act** đã chốt, sống ở trang chủ, đã push + live; **trang HS `play.html`
+chơi được cả 14 loại** (trước chỉ Quiz). Thầy đã tự test bản live và xác nhận (1/8/2026).
+
+**⚠️ 2 thói quen cũ nay đã SAI:**
+1. **Gộp/thêm template = sửa ĐÚNG 1 file `core/catalog.js`.** Từ v0.9.7 `index.html`/`play.html`/
+   `main.js`/`play.js`/`manifest.js` KHÔNG còn liệt kê template — `ensureTemplate()` tự nạp. Ghi chú cũ
+   nào bảo "thêm import vào main.js + link CSS vào index.html + entry manifest.js" là LỖI THỜI.
+2. **`manifest.js` không còn là danh sách chép tay**, chỉ là view suy ra từ catalog — đừng thêm gì vào.
+
+**Việc kế tiếp — HỎI THẦY TRƯỚC, đừng tự làm** (xếp theo mức đáng làm; thầy chưa chốt cái nào):
+- **(A) Balloon pop polish** — template DUY NHẤT đã lên trang chủ mà còn tồn đọng: blimp chồng lane ở
+  khung hẹp; **hiện 2 đồng hồ** cùng lúc. Chi tiết: `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
+- **(B) Dọn 3 ĐỀ XUẤT SỬA CORE còn treo** (template đang tự lách bằng JS/tỉa DOM): Speaking cards xin cờ
+  `openEnded`/`hideScore` + cờ ẩn nhóm Options; Crossword xin `tpl.hideRandomOption`; Balloon pop xin
+  ẩn `timerEl` khi `inlineTimerBar:true` + `timer:"none"`.
+- **(C) Còn ngỏ từng game**: 🎤/🖼️ voice+image trong editor Anagram/Crossword; Find the match thiếu 3 âm
+  Menu/Leaderboard/RevealAnswers (core chưa có hook); Crossword bật bàn phím ảo nên phóng to theo từ
+  đang chọn thay vì thu cả lưới.
+- **(D) Chưa ai kiểm**: fullscreen thật trên bảng TOMKO; nghe thật các bộ mp3.
+
+**Khúc không tự test được**: trang chủ + assignment thật đều sau popup đăng nhập Google (không tự động
+hoá được). Muốn test logic mà khỏi đăng nhập: dùng `templates/<ten>/test.html`, hoặc `import()` thẳng
+`core/registry.js` + `core/catalog.js` từ console (cách Đợt 32/33 đã dùng để quét cả 14 loại).
+
+---
+
 ## Lịch sử phiên bản
 
 ### 1/8/2026 — Đợt 33 (v0.9.7): NẠP TEMPLATE THEO YÊU CẦU — trang HS `play.html` chơi được CẢ 14 loại; thêm template từ nay chỉ sửa 1 FILE. ⭐ CÓ SỬA CORE. Đã tự test (0 lỗi console).
@@ -72,8 +103,16 @@ gian dài mà không ai thấy vì trên lớp thầy chỉ chiếu act từ tra
   3 loại **ngoài Quiz** (crossword · speaking_cards · whack_a_mole) → cả 3 dựng game bình thường; trước
   đợt này cả 3 đều ném lỗi registry. Sau đó registry có đúng 3 loại + 3 CSS, không dư.
 
-**Chưa test được:** màn trang chủ thật + 1 assignment THẬT cho HS (đều sau đăng nhập Google, popup không
-tự động hoá được). Thầy nên chạy thử 1 vòng: giao 1 bài loại mới (vd Crossword) rồi mở link HS.
+**Kiểm chứng luôn trên BẢN LIVE sau khi push** (không chỉ localhost): chờ Pages deploy xong rồi mở
+`https://andrewclasses-01.github.io/AWord/play.html` → đúng 0 template + 2 CSS lõi lúc mở, rồi
+crossword · unjumble · balloon pop đều dựng game bình thường, console sạch. (Bài học cũ vẫn đúng:
+Pages KHÔNG cập nhật tức thì — phải `curl`/mở thật để xác nhận, đừng tin là đã live ngay sau push.)
+
+**Không tự test được:** 1 assignment THẬT cho HS từ đầu tới cuối (nằm sau đăng nhập Google).
+**➜ THẦY ĐÃ TỰ TEST VÀ XÁC NHẬN (1/8/2026) — không báo lỗi.**
+
+**➜ ĐÃ COMMIT `7045f09` + PUSH main + LIVE.** 11 file: `core/catalog.js` · `core/registry.js` ·
+`main.js` · `play.js` · `index.html` · `play.html` · `manifest.js` + 4 file hồ sơ/hướng dẫn.
 
 ### 1/8/2026 — Đợt 32: GỘP 8 TEMPLATE CÒN LẠI LÊN TRANG CHỦ — trang chủ từ 6 → **14 loại act**. Đã tự test (0 lỗi console). CHƯA COMMIT (chờ thầy chơi thử rồi mới push).
 
@@ -124,9 +163,13 @@ Nay hàm nhận đủ mọi hình dạng dữ liệu trong thư viện:
   **0 lỗi runtime** (bắt cả `error` lẫn `unhandledrejection`).
 - **previewPick**: lấy CHÍNH hàm trong `main.js` đã ship ra chạy với 14 act mẫu → **14/14 ra câu hỏi +
   đáp án đúng** (trước khi sửa: `find_the_match` và các loại mới trả `null`), act rỗng vẫn `null`.
-- *Chưa test được bằng mắt màn trang chủ thật*: trang chủ chặn sau đăng nhập Google, popup này không tự
-  động hoá được (bẫy đã ghi ở mục 0/APP_MASTER). Phần kiểm tra trên đã đi thẳng vào chính dữ liệu mà
+- *Không tự soi được bằng mắt màn trang chủ thật*: trang chủ chặn sau đăng nhập Google, popup này không
+  tự động hoá được (bẫy đã ghi ở mục 0/APP_MASTER). Phần kiểm tra trên đã đi thẳng vào chính dữ liệu mà
   picker đọc (`TEMPLATES`) nên rủi ro còn lại rất thấp.
+
+**➜ ĐÃ COMMIT `7aea668` + PUSH main, GitHub Pages deploy xong. THẦY TỰ TEST BẢN LIVE VÀ XÁC NHẬN
+(1/8/2026) — không báo lỗi.** 6 file: `main.js` · `index.html` · `manifest.js` · `core/catalog.js` +
+2 file hồ sơ.
 
 **⚠️ VIỆC KẾ TIẾP ĐÁNG LÀM NHẤT — trang học sinh `play.html` vẫn CHỈ chơi được Quiz.** `play.js` mới
 `import "./templates/quiz/quiz.js"`, nên giao assignment loại khác cho HS sẽ lỗi "Chưa có game loại ... trong
@@ -2165,3 +2208,8 @@ polish/tính năng muốn thêm. Khi chốt sẽ viết "recipe" đầy đủ + 
 - Ngôn ngữ trao đổi với thầy: **dễ hiểu, tránh thuật ngữ** (thầy không chuyên lập trình).
 - Mỗi mốc: ghi vào file này + tăng version.
 - Tài liệu tham khảo Wordwall + kiến trúc: thư mục `docs/`.
+
+---
+
+**➡️ VIỆC ĐANG CHỜ nằm ở ĐẦU file này** (mục "⭐ VIỆC ĐANG CHỜ"), không phải ở đây — vì file xếp mới
+nhất lên trên. Bàn giao đầy đủ: `APP_MASTER.md` mục 0a.

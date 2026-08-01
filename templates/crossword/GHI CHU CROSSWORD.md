@@ -1,7 +1,10 @@
 # GHI CHU — CROSSWORD
 
-**TRẠNG THÁI: 🟢 ĐÃ BUILD + TỰ TEST QUA test.html — CHỜ THẦY DUYỆT** (chưa gộp trang chủ,
-chưa thêm vào `core/catalog.js`, giống cách Find the match đang chờ duyệt).
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy.
+> Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
 Tạo ngày 31/7/2026. Dựng lại từ act mẫu Wordwall của thầy (style **Classic**):
 https://wordwall.net/resource/116864402/crossword — nghiên cứu đầy đủ trong `docs/09-CROSSWORD.md`.

@@ -1,8 +1,10 @@
 # GHI CHÚ — MAZE CHASE (game thứ 9)
 
-**TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** — đã build đầy đủ + tự test trên trình duyệt thật (devserver, 0 lỗi
-console). ĐÃ COMMIT + PUSH (1/8/2026). CHƯA thêm vào `core/catalog.js`/trang chủ (chờ thầy duyệt). Chơi
-thử: `test.html`.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy. Chơi thử riêng vẫn được: `test.html`.
+> Sửa tiếp game này thì chỉ đụng `templates/maze-chase/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
 Dựng lại act Classic của thầy: <https://wordwall.net/resource/116866716/maze-chase> — Visual style
 **Space** (theme nội bộ Wordwall tên `space`, template id `49`). Thầy chốt: **style Space này = "Classic"

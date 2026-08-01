@@ -1,8 +1,10 @@
 # GHI CHU — UNJUMBLE (game thứ 11)
 
-**Trạng thái: 🟢 ĐÃ BUILD + TỰ TEST (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT.**
-Chưa gộp trang chủ (`core/catalog.js`/`manifest.js`/`main.js`/`index.html` CHƯA đụng) — chờ thầy chốt.
-Chơi thử: `templates/unjumble/test.html` (qua `python devserver.py 5510`).
+**Trạng thái: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy. Chơi thử riêng vẫn được: `templates/unjumble/test.html`.
+> Sửa tiếp game này thì chỉ đụng `templates/unjumble/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
 Dựng lại act Classic của thầy: **https://wordwall.net/resource/116872783/unjumble**, style **Whiteboard**
 (thầy chốt Whiteboard = "Classic" cho AWord). Nghiên cứu đầy đủ: `docs/11-UNJUMBLE.md`.

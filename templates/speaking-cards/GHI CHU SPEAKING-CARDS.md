@@ -1,6 +1,10 @@
 # GHI CHU — SPEAKING CARDS
 
-**TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** (chơi thử OK trên test.html nhiều vòng, 1/8/2026)
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy.
+> Mục "Khi thầy DUYỆT mới làm" ở CUỐI file đã LÀM XONG rồi, nhưng cách làm nay khác: từ v0.9.7 gộp
+> template = thêm ĐÚNG 1 mục trong `core/catalog.js`, KHÔNG đụng `manifest.js`/`index.html`/`main.js`.
 
 Game "mở" (open-ended) đầu tiên của AWord: rút bài ngẫu nhiên để HS luyện NÓI. **Không chấm điểm,
 không thắng/thua, không leaderboard** (`scorable: false`). Look "Board Games" của Wordwall = look

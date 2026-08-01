@@ -1,7 +1,11 @@
 # GHI CHU — BALLOON POP
 
-**TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** (đợt 1, 1/8/2026 — bản đầy đủ theo Wordwall, thầy đã "ok build").
-Chưa thêm vào `core/catalog.js` / `index.html` / `manifest.js` (chỉ gộp trang chủ sau khi thầy chốt).
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy. **Lưu ý: mục "Điểm cần POLISH" cuối file vẫn CHƯA làm** (blimp chồng lane, hiện
+2 đồng hồ) — thầy chưa yêu cầu, hỏi trước khi tự sửa.
+> Sửa tiếp game này thì chỉ đụng `templates/balloon-pop/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
 ## Game này là gì
 Bản dựng lại act **Wordwall "Balloon pop"** (resource 116864480) theo **style Wild West** — style này

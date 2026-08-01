@@ -1,6 +1,10 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT — game + editor ĐẦY ĐỦ, đã test. Chưa lên trang gom (chờ thầy chốt).
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy.
+> Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
 Game whack-a-mole kiểu Wordwall, **đồ họa + âm thanh Wild West** lấy trực tiếp từ act mẫu Wordwall
 (https://wordwall.net/resource/116864290/whack-a-mole). Tự chứa hoàn toàn trong thư mục này

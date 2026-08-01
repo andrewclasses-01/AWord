@@ -181,7 +181,62 @@
      thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
      (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
-## 0b. ⭐ BÀN GIAO (chốt cuối phiên 31/7/2026 — phiên mới đọc mục này rồi làm tiếp)
+## 0a. ⭐⭐ BÀN GIAO MỚI NHẤT (chốt 1/8/2026 sau Đợt 33 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> Mục "0b" bên dưới là bàn giao CŨ của phiên 31/7 — giữ lại vì có nhiều bài học kỹ thuật còn giá trị,
+> nhưng **phần trạng thái game trong đó đã lỗi thời** (nó còn ghi Crossword/Flying fruit/Unjumble "chờ
+> duyệt"). Trạng thái đúng là mục này.
+
+### Đứng ở đâu rồi
+**Cả 14 loại act đã ✅ CHỐT, sống ở trang chủ, đã push + live** — Quiz · Anagram · Find the match ·
+Type the answer · Open the box · True or false · Gameshow quiz · Maze chase · Whack-a-mole ·
+Flying fruit · Balloon pop · Crossword · Unjumble · Speaking cards. Mỗi loại có content editor riêng.
+Thầy đã tự chạy thử bản live và xác nhận (1/8/2026).
+
+**Trang học sinh `play.html` nay chơi được CẢ 14 loại** (trước chỉ Quiz — xem Đợt 33).
+
+### ⚠️ 2 THÓI QUEN CŨ NAY ĐÃ SAI — đọc kỹ kẻo làm hỏng
+1. **Gộp template = sửa ĐÚNG 1 FILE `core/catalog.js`.** Từ v0.9.7 (Đợt 33) `index.html`, `play.html`,
+   `main.js`, `play.js`, `manifest.js` **không còn liệt kê template nào** — `ensureTemplate()` trong
+   `core/registry.js` tự chèn CSS + import module lúc act được chơi/sửa. Mọi ghi chú cũ bảo "thêm import
+   vào main.js + link CSS vào index.html + entry manifest.js" là **LỖI THỜI**, làm theo sẽ nạp thừa và
+   phá mục đích (HS chỉ nên tải đúng 1 game).
+2. **`manifest.js` không còn là danh sách chép tay** — nó chỉ là view suy ra từ catalog. Đừng thêm gì
+   vào đó.
+
+Khuôn 1 mục catalog (xem thêm `templates/HUONG DAN TEMPLATE.md`):
+```js
+{ type: "<ten_type>", label: "<Tên hiện ra>", built: true,
+  blurb: "1 câu tả cho picker New activity.",
+  css:    "templates/<ten>/<ten>.css",
+  load:   () => import("../templates/<ten>/<ten>.js"),
+  sample: () => import("../templates/<ten>/sample-<ten>.js") },
+```
+
+### Việc kế tiếp — HỎI THẦY TRƯỚC, đừng tự đoán
+Xếp theo mức đáng làm (đánh giá của phiên Đợt 33, thầy chưa chốt cái nào):
+
+- **(A) Balloon pop — polish**: đây là template DUY NHẤT lên trang chủ mà còn mục "Điểm cần POLISH" chưa
+  làm: blimp có thể chồng lane ở khung hẹp; **hiện 2 đồng hồ** (đồng hồ riêng ở `topbarMid` + ô đồng hồ
+  engine bên trái hiện "0:00" vì `options.timer:"none"`). Kèm 1 **ĐỀ XUẤT SỬA CORE** đã ghi sẵn: khi
+  template có `inlineTimerBar:true` VÀ `options.timer==="none"` thì engine nên ẩn `timerEl`. Chi tiết:
+  `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
+- **(B) Dọn 3 ĐỀ XUẤT SỬA CORE còn treo** (đều do template tự lách, ghi trong GHI CHU của chúng):
+  Speaking cards xin cờ `openEnded`/`hideScore` (ẩn chip điểm + nav + "Submit answers" cho game
+  `scorable:false`) và cờ ẩn nhóm Options thay vì tỉa DOM bằng tay; Crossword xin
+  `tpl.hideRandomOption` (lưới cố định, nhóm Shuffle vô nghĩa); Balloon pop xin ẩn `timerEl` như (A).
+- **(C) Việc còn ngỏ của từng game** (thầy chưa yêu cầu, đừng tự làm): 🎤/🖼️ voice+image trong editor
+  của Anagram/Crossword; Find the match thiếu 3 âm Menu/Leaderboard/RevealAnswers (core chưa có hook);
+  Crossword bật bàn phím ảo thì nên phóng to theo từ đang chọn thay vì thu cả lưới.
+- **(D) Chưa ai test**: fullscreen thật trên bảng TOMKO; nghe thật các bộ mp3.
+
+### Khúc KHÔNG tự test được — phải nhờ thầy
+Trang chủ và assignment thật đều nằm sau **popup đăng nhập Google, không tự động hoá được**. Phiên mới
+muốn kiểm tra logic mà không cần đăng nhập thì dùng `templates/<ten>/test.html`, hoặc `import()` thẳng
+`core/registry.js` + `core/catalog.js` từ console trang đang mở (cách Đợt 32/33 đã dùng để test cả 14
+loại: `ensureTemplate` → `startGame` vào 1 div rời → đếm `.aw-stage`).
+
+## 0b. BÀN GIAO CŨ (phiên 31/7/2026 — trạng thái game đã lỗi thời, giữ lại vì các bài học kỹ thuật)
 
 **Anagram ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** — không đổi gì thêm từ bản ghi trước, vẫn xem
 `templates/anagram/GHI CHU ANAGRAM.md`. Việc còn thiếu (thầy chưa yêu cầu): 🎤/🖼️ voice+image trong
@@ -266,14 +321,11 @@ chuột+cảm ứng — thầy chốt giống hệt Wordwall, KHÔNG tap như An
 41 âm THẬT + 4 đồ họa theme Whiteboard lưu ở `AWord-data/Source/{Sound effect,Graphic}/UNJUMBLE/`.
 **CHƯA gộp `core/catalog.js`/trang chủ** (chờ duyệt). Chơi thử: `templates/unjumble/test.html`.
 
-**Việc kế tiếp — hỏi thầy trước khi làm, đừng tự đoán**:
-(a) Open the box: thầy vừa xác nhận hiệu ứng trượt ra đã mượt — có thể coi như XONG, chờ thầy báo còn gì
-    khác không.
-(b) Find the match: đang dở bởi phiên khác, CHƯA commit — nếu nhận task này, đọc kỹ 2 file GHI CHU nêu
-    trên trước, có 1 điểm phiên đó tự quyết chưa chắc chắn 100% (hành vi câu hỏi khi bấm SAI) cần hỏi lại
-    thầy.
-(c) Anagram/Type the answer: còn muốn chỉnh gì nữa không, hay coi như xong hẳn?
-(d) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn.
+~~**Việc kế tiếp**~~ *(đoạn dưới đã XONG hoặc lỗi thời — xem mục 0a ở trên cho danh sách việc hiện tại)*:
+(a) Open the box: thầy đã xác nhận hiệu ứng trượt ra mượt — coi như XONG.
+(b) Find the match: ĐÃ commit + push + tinh chỉnh xong 4 loạt (Đợt 31).
+(c) Anagram/Type the answer: đã chốt, thầy chưa yêu cầu thêm.
+(d) 🎤/🖼️ voice+image cho Anagram khi thầy sẵn sàng bàn — vẫn còn ngỏ, xem mục 0a (C).
 
 **Quy tắc vẫn giữ nguyên từ trước**: hỏi thầy trước việc lớn (chờ "ok build"), KHÔNG tự commit nếu thầy
 không nói (nhưng nói "lưu lại"/"save"/"commit" thì làm ngay không cần hỏi lại), **`git push` cũng vậy —

@@ -1,7 +1,10 @@
 # GHI CHU — FLYING FRUIT (game thứ 8)
 
-**Trạng thái: 🟢 ĐÃ BUILD + TỰ TEST (trình duyệt thật), CHỜ THẦY DUYỆT.** Chưa gộp trang chủ
-(`core/catalog.js` chưa có, `built` chưa bật) — theo đúng quy trình, chờ thầy xem chạy thật rồi quyết.
+**Trạng thái: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
+tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
+GitHub Pages đã deploy.
+> Sửa tiếp game này thì chỉ đụng `templates/flying-fruit/*`; **đừng thêm import/link CSS ở
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 Dựng lại act Classic của thầy: `wordwall.net/resource/116864498` — style **Jungle** (= "Classic" của
 Flying Fruit trong AWord). Ngày build: 1/8/2026.
 
