@@ -1,0 +1,257 @@
+/* =============================================================
+   UNJUMBLE template — styles that belong ONLY to this template.
+   Class prefix: .aw-unj-*
+
+   Look = Wordwall "Whiteboard" (the "Classic" style Teacher Andrew chose):
+   an off-white board inside a dark frame, faint marker doodles in the
+   corners, and the words written as GREY handwriting "ink" (#6f7680) sitting
+   on light ruled lines — no coloured tile boxes. A word turns GREEN when it
+   is in its correct place; RED (submit mode, after Submit) when wrong.
+
+   Colours come from the Whiteboard theme palette (Palette.json):
+     neutral ink  #777777   ·  board  #f5f5f5
+     correct green #00c77e/#2bc58a  ·  wrong red #ea304c/#e54860
+   The other AWord Styles (Basic/Classroom/Beach) re-tint the board via the
+   CSS vars on .aw-unj-card and hide the doodles.
+
+   Sizing uses cqw * var(--fit,1) so autoFit shrinks long sentences uniformly
+   with the 16:9 stage — same rules as every other AWord template.
+   ============================================================= */
+
+.aw-unj-card {
+  --fit: 1;
+  --board-bg: #f6f6f3;
+  --frame: #2b2f33;
+  --ink: #6f7680;
+  --ink-correct: #1faa6b;
+  --ink-wrong: #d8434c;
+  --rule: rgba(60, 66, 74, .16);
+  --accent: #6f98f3;
+  position: relative;
+  width: 100%; height: 100%;
+  box-sizing: border-box;
+  display: flex; flex-direction: column;
+  padding: 3cqw 4cqw;
+  background: var(--board-bg);
+  border: 1.5cqw solid var(--frame);
+  border-radius: 1.8cqw;
+  box-shadow: inset 0 0 0 0.35cqw rgba(255, 255, 255, .55), inset 0 0 6cqw rgba(0, 0, 0, .05);
+  overflow: hidden;
+  animation: aw-fadein .25s ease;
+}
+
+/* ---------- corner marker doodles (Classic only) ---------- */
+.aw-unj-doodles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
+.aw-unj-doodle { position: absolute; opacity: .42; }
+.aw-unj-doodle-a { top: 2.6cqw; left: 2.6cqw; width: 6cqw; }           /* lightning */
+.aw-unj-doodle-b { top: 2.6cqw; right: 3cqw; width: 6.4cqw; }         /* star */
+.aw-unj-doodle-c { bottom: 2.4cqw; right: 2.8cqw; width: 8cqw; }      /* stick figure */
+.aw-unj-doodle-d { bottom: 2.6cqw; left: 2.8cqw; width: 9cqw; }       /* little house */
+/* other Styles drop the whiteboard doodles */
+.theme-basic .aw-unj-doodles,
+.theme-classroom .aw-unj-doodles,
+.theme-beach .aw-unj-doodles { display: none; }
+
+/* ---------- clue (instructional — the app font, not handwriting) ---------- */
+.aw-unj-clue {
+  position: relative; z-index: 1;
+  font-size: calc(4cqw * var(--fit));
+  font-weight: 700;
+  color: #3a4048;
+  text-align: center;
+  line-height: 1.15;
+  margin: 0 auto 1cqw;
+  max-width: 92%;
+  flex: 0 0 auto;
+}
+.aw-unj-clue-generic {
+  opacity: .55; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  font-size: calc(2.9cqw * var(--fit));
+}
+
+/* ---------- the words board (handwriting on ruled lines) ---------- */
+.aw-unj-board {
+  --unj-row: calc(10.5cqw * var(--fit));
+  --ink-size: calc(5.4cqw * var(--fit));
+  position: relative; z-index: 1;
+  width: 100%;
+  margin: auto 0 3cqw;
+  text-align: left;
+  line-height: var(--unj-row);
+  background-image: repeating-linear-gradient(to bottom,
+    transparent 0,
+    transparent calc(var(--unj-row) - 0.26cqw),
+    var(--rule) calc(var(--unj-row) - 0.26cqw),
+    var(--rule) var(--unj-row));
+}
+.aw-unj-board.is-centered { text-align: center; }
+
+.aw-unj-wtile {
+  display: inline-block; vertical-align: top;
+  position: relative;
+  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", "Baloo 2", cursive;
+  font-style: italic; font-weight: 600;
+  font-size: var(--ink-size);
+  line-height: var(--unj-row);
+  color: var(--ink);
+  padding: 0 calc(1.1cqw * var(--fit));
+  margin: 0 0.3cqw;
+  border-radius: 1.2cqw;
+  white-space: nowrap;
+  cursor: grab;
+  user-select: none; -webkit-user-select: none;
+  touch-action: none;
+  transition: color .15s ease, background .12s ease, transform .06s ease;
+}
+.aw-unj-wtile:hover:not(.is-locked) { background: rgba(0, 0, 0, .05); }
+.aw-unj-wtile:active:not(.is-locked) { transform: translateY(0.2cqw); }
+.aw-unj-wtile.is-correct { color: var(--ink-correct); }
+.aw-unj-wtile.is-wrong { color: var(--ink-wrong); }
+.aw-unj-wtile.is-locked { cursor: default; }
+.aw-unj-wtile.is-locked:hover { background: transparent; }
+
+/* small green tick / red cross that lands on a marked word */
+.aw-unj-badge {
+  display: inline-block; vertical-align: middle;
+  width: calc(2.8cqw * var(--fit)); height: calc(2.8cqw * var(--fit));
+  margin-left: 0.3cqw;
+  filter: drop-shadow(0 0.1cqw 0.2cqw rgba(0, 0, 0, .18));
+}
+.aw-unj-badge svg { width: 100%; height: 100%; }
+
+/* the gap that opens where a dragged word will land */
+.aw-unj-ph {
+  display: inline-block; vertical-align: top;
+  margin: 0 0.3cqw; border-radius: 1.2cqw;
+  background: rgba(111, 152, 243, .16);
+  border: 0.22cqw dashed rgba(111, 152, 243, .6);
+}
+
+/* the lifted word following the pointer (fixed clone, sized/styled in JS) */
+.aw-unj-drag {
+  z-index: 60; pointer-events: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: 1.4cqw;
+  box-shadow: 0 1.2cqw 2.4cqw rgba(0, 0, 0, .22);
+  transform: scale(1.05) rotate(-1.5deg);
+}
+
+/* ---------- correct-sentence reveal (submit mode, wrong answer) ---------- */
+.aw-unj-reveal {
+  position: relative; z-index: 1;
+  min-height: calc(3cqw * var(--fit));
+  margin: 0.8cqw auto 0; text-align: center;
+  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", "Baloo 2", cursive;
+  font-style: italic; font-weight: 700;
+  font-size: calc(3cqw * var(--fit));
+  color: var(--ink-correct);
+}
+
+/* ---------- SUBMIT button (submit mode) ---------- */
+.aw-unj-submit {
+  position: relative; z-index: 1;
+  margin: 1.4cqw auto 0; display: block;
+  padding: calc(1cqw * var(--fit)) calc(3.2cqw * var(--fit));
+  border: none; border-radius: 999px;
+  background: var(--ink-correct);
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(1.9cqw * var(--fit));
+  letter-spacing: .04em; text-transform: uppercase;
+  box-shadow: 0 0.5cqw 0 rgba(0, 0, 0, .18);
+  cursor: pointer;
+  transition: transform .06s ease, opacity .15s ease;
+}
+.aw-unj-submit:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: 0 0.15cqw 0 rgba(0, 0, 0, .18); }
+.aw-unj-submit:disabled { opacity: .4; cursor: default; }
+
+/* big check/cross (core .aw-mark-fly) — a touch smaller here */
+.aw-unj-board .aw-mark-fly { width: 26%; }
+
+/* "fly to score" wrapper (fixed, JS-positioned) — same as Anagram's */
+.aw-unj-flygain {
+  position: fixed; width: 1em; height: 1em;
+  pointer-events: none; z-index: 60;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0, 0, 0, .3));
+}
+.aw-unj-flygain .afg-icon,
+.aw-unj-flygain .afg-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; white-space: nowrap;
+}
+.aw-unj-flygain .afg-icon svg { width: 1em; height: 1em; }
+.aw-unj-flygain .afg-icon,
+.aw-unj-flygain .afg-num {
+  font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #ffd23f;
+  -webkit-text-stroke: 0.06em #7a4a00; paint-order: stroke fill;
+}
+
+.aw-top-score.aw-score-pulse { animation: aw-unj-score-pulse .42s ease-out; transform-origin: center; }
+@keyframes aw-unj-score-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.aw-unj-empty {
+  margin: auto; text-align: center; color: var(--aw-muted, #8a97a8);
+  font-size: 2.2cqw; font-weight: 600;
+}
+
+/* ---------- other Styles re-tint the board ---------- */
+.theme-basic .aw-unj-card { --board-bg: #eef1f5; --frame: #33405a; --ink: #46506a; --rule: rgba(51, 64, 90, .14); --accent: #4f6fb0; }
+.theme-classroom .aw-unj-card { --board-bg: #fbf3e0; --frame: #6b4f2a; --ink: #5a4a2a; --rule: rgba(107, 79, 42, .2); --accent: #b07a3a; }
+.theme-beach .aw-unj-card { --board-bg: #ecf6fb; --frame: #2b7ea3; --ink: #33697c; --rule: rgba(43, 126, 163, .18); --accent: #2b8fb8; }
+
+/* =============================================================
+   CONTENT EDITOR (unjumble-editor.js) — Sentence/Clue table, same shape as
+   the Anagram editor. Lives OUTSIDE the 16:9 stage (editor page), so plain
+   px/rem here. Reuses core/app.css's .aw-ed-* page chrome.
+   ============================================================= */
+.aw-unj-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.aw-unj-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 152px; }
+.aw-unj-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }
+.aw-unj-ed-headcol.is-clue { flex: 0 0 34%; }
+
+.aw-unj-ed-row { display: flex; align-items: stretch; gap: 8px; }
+.aw-unj-ed-row.is-dragging { opacity: .4; }
+.aw-unj-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
+.aw-unj-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
+
+.aw-unj-ed-num {
+  flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #8a97a8; font-size: .9rem;
+}
+.aw-unj-ed-box {
+  flex: 1; min-width: 0; display: flex;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-unj-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47, 123, 255, .15); }
+.aw-unj-ed-sentence { flex: 1; min-width: 0; }
+.aw-unj-ed-clue { flex: 0 0 34%; min-width: 0; border-left: 1.5px solid #e2e9f2; }
+.aw-unj-ed-sentence, .aw-unj-ed-clue {
+  border-top: none; border-right: none; border-bottom: none; outline: none; background: transparent;
+  padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e;
+}
+.aw-unj-ed-sentence { border-left: none; font-weight: 600; }
+
+.aw-unj-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-unj-ed-iconbtn {
+  width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-unj-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-unj-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-unj-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-unj-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-unj-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+.aw-unj-ed-gap { flex: 0 0 6px; }
+
+.aw-unj-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px;
+  background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer;
+}
+.aw-unj-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-unj-ed-addrow:disabled { opacity: .4; cursor: default; }

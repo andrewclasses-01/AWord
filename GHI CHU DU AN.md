@@ -21,6 +21,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Lịch sử phiên bản
 
+### 1/8/2026 — Đợt 27: UNJUMBLE (game thứ 11) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. KHÔNG sửa core.
+
+Dựng lại act Classic của thầy `wordwall.net/resource/116872783/unjumble` — style **Whiteboard** (thầy chốt
+= "Classic" của Unjumble). Sắp xếp các **TỪ** bị xáo trộn thành câu đúng (giống Anagram nhưng đơn vị là TỪ).
+
+**Thầy chốt (AskUserQuestion):** (1) **kéo-thả THẬT** giống hệt Wordwall (insert + reflow), không dùng tap;
+(2) đủ **3 chế độ chấm**; (3) dựng **đúng look Whiteboard** (bảng trắng + khung + doodle góc) làm Classic,
+vẫn cho đổi Basic/Classroom/Beach.
+
+**Cách chơi**: thầy gõ nguyên câu đúng → game tách thành từ + xáo (derangement, bắt đầu 0 điểm) → HS kéo-thả
+từ (pointer, chuột+cảm ứng) sắp lại; từ đúng chỗ → xanh. Chữ bút xám #6f7680 nghiêng viết tay trên dòng kẻ,
+nền #f6f6f3 trong khung đen + 4 doodle SVG (không branding Wordwall). Dấu câu dính từ cuối.
+**3 mode**: Every word (1đ/từ) · **Every word + bonus** (giải sạch → "PERFECT" ×2, mặc định) · On submit
+(bấm Submit → chấm xanh/đỏ stagger + hiện câu đúng). + Alignment Left/Centered.
+
+**Thu thập từ Wordwall (Claude in Chrome + đọc theme JSON):** 41 âm THẬT theme Whiteboard + 4 đồ họa +
+Palette/Audios/Layout — lưu ở `D:\APP AND DATA\AWord-data\Source\{Sound effect,Graphic}\UNJUMBLE\`
+(kèm `00 - GHI CHU NGUON.txt` map sự kiện→âm lấy thẳng từ Audios.json của theme). Template chép 37 mp3 thực dùng.
+
+- **File mới**: `templates/unjumble/` (unjumble.js/.css, unjumble-editor.js [Sentence|Clue], unjumble-sound.js,
+  sample-unjumble.js, sounds/ 37 mp3, test.html/test.js, GHI CHU UNJUMBLE.md) + `docs/11-UNJUMBLE.md`.
+- **Nhân bản Anagram**: khung mount/ui, flyScoreGain/pulseScoreTo/fadeSwap/finish, editor, hệ sound. Phần
+  MỚI: `prepareItem` tách từ + derangement; kéo-thả pointer insert+reflow (placeholder + clone bám con trỏ);
+  3 mode chấm; look Whiteboard.
+- **Đã test** (trình duyệt thật, 0 lỗi console, mô phỏng pointer): tách "week." đúng · derangement → 0 điểm ·
+  kéo đổi thứ tự + dọn sạch clone/ph · everyword "I like tea."=3đ · bonus perfect 6 từ=**12đ** + "PERFECT" ·
+  submit câu sai=5 đỏ + reveal câu đúng · align center · clue tùy chỉnh · **Game complete** OK.
+- **CHƯA gộp trang chủ** (`core/catalog.js`/`manifest.js`/`main.js`/`index.html` chưa đụng) — chờ thầy duyệt.
+- **CHỜ TEST TOMKO**: cảm giác kéo-thả màn cảm ứng 86" · âm thanh loa lớp · fullscreen 4K · câu dài wrap nhiều dòng.
+- Chi tiết: `templates/unjumble/GHI CHU UNJUMBLE.md`. Rollback = xóa thư mục `templates/unjumble/` (chưa đụng file chung nào).
+
 ### 1/8/2026 — Đợt 26: GAMESHOW QUIZ (game thứ 10) — build ĐẦY ĐỦ + tự test (trình duyệt thật, 0 lỗi console), CHỜ THẦY DUYỆT. (Có sửa CORE, tương thích ngược.)
 
 Dựng lại act Classic của thầy `wordwall.net/resource/116864527` — style **TV game show** (= "Classic"
