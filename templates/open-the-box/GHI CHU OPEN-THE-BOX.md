@@ -1,6 +1,15 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ ĐÃ CHỐT, ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 1/8/2026 (đợt 19)
+
+> **CẬP NHẬT 1/8/2026:** TẤT CẢ các đợt **11 → 19** (mọi dòng "CHƯA COMMIT" bên dưới nay ĐÃ CŨ) đã được
+> thầy **DUYỆT** và **commit + push + live** — commit **`da11950`** (nhật ký dự án `5dc2283`). Xem
+> `GHI CHU DU AN.md` "Đợt 28". Nhánh `main` đang sạch/đồng bộ. Phiên sau **tiếp tục build được ngay**.
+> ⚠️ Working tree còn thay đổi CHƯA COMMIT của **phiên khác (template Type the answer)**: `core/sound.js`,
+> `core/engine.js` (hunk `hideShuffleAnswers`), cả thư mục `templates/type-the-answer/` — **ĐỪNG commit
+> nhầm** phần đó; nó thuộc việc dở của phiên kia.
+
+## (Lịch sử) TRẠNG THÁI ban đầu: ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
 
 Thầy yêu cầu thẳng "đưa lên live" (30/7/2026, không qua bước tự chơi thử ở local trước — thầy cần
 dùng ngay trên máy khác) → gộp vào trang chủ luôn: `core/catalog.js` đổi `built:true`,
