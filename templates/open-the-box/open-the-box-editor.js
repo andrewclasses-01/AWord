@@ -27,7 +27,7 @@ import { el } from "../../core/utils.js";
 const MIN_ANSWERS = 2;
 const MAX_ANSWERS = 6;
 const MIN_ITEMS = 2;      // Wordwall's own "Open the box" rule: min 2 boxes
-const MAX_ITEMS = 100;    // ...max 100 boxes
+const MAX_ITEMS = 120;    // teacher's request (1/8/2026): raised from Wordwall's 100 to 120 boxes
 
 export function openOtbEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
@@ -284,6 +284,9 @@ export function openOtbEditor(container, activity, { onSave, onCancel, header, f
     markBtn.onclick = () => {
       const ai = parseInt(letterSel.value, 10);
       const letter = String.fromCharCode(65 + ai);
+      // teacher's request (1/8/2026): confirm this bulk change — it overwrites
+      // the correct answer in EVERY box at once.
+      if (!confirm(`Mark answer ${letter} as the correct answer in ALL boxes? This overwrites the current correct answer in every box.`)) return;
       let skipped = 0;
       data.content.items.forEach(it => {
         if (ai < it.answers.length) it.answers.forEach((a, k) => a.correct = (k === ai));
@@ -299,6 +302,9 @@ export function openOtbEditor(container, activity, { onSave, onCancel, header, f
     const unmarkBtn = el("button", "aw-btn", "Unmark all correct");
     unmarkBtn.type = "button";
     unmarkBtn.onclick = () => {
+      // teacher's request (1/8/2026): confirm — this clears the correct mark
+      // in every box, so all of them must be re-ticked before saving.
+      if (!confirm("Remove the correct-answer mark from ALL boxes? You'll need to tick the correct answer in each box again before saving.")) return;
       data.content.items.forEach(it => it.answers.forEach(a => a.correct = false));
       renderItems();
       showInfo("All correct marks removed — tick the circle in each box before saving.");

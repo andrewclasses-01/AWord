@@ -25,8 +25,22 @@
 // where adding a listener per cell would be wasteful. Shrinks the content's
 // font (via `apply`) until it fits `box`. Uses scrollHeight, so `content`
 // must NOT be height-stretched (a plain inline/block child of a sized box is fine).
-export function fitOnce(box, content, apply, { min = 0.3, max = 1, steps = 12, slack = 1 } = {}) {
-  const over = () => content.scrollHeight > box.clientHeight - slack || content.scrollWidth > box.clientWidth - slack;
+export function fitOnce(box, content, apply, { min = 0.3, max = 1, steps = 12, slack = 1, contentBox = false } = {}) {
+  // contentBox (opt-in, added 1/8/2026): measure against the box's CONTENT
+  // area, i.e. subtract its padding. clientWidth/clientHeight INCLUDE padding,
+  // but `content` lives inside the padding box, so without this a fit that
+  // "just fits" can actually be up to (2 x padding) too wide and then get
+  // clipped by an `overflow:hidden` ancestor — exactly what was truncating the
+  // last letters of long single-word answers in the Show-answers review once
+  // they stopped wrapping (overflow-wrap:normal). Left OFF by default so
+  // existing callers (e.g. maze-chase) are byte-for-byte unchanged.
+  let padX = 0, padY = 0;
+  if (contentBox) {
+    const cs = getComputedStyle(box);
+    padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+    padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  }
+  const over = () => content.scrollHeight > box.clientHeight - padY - slack || content.scrollWidth > box.clientWidth - padX - slack;
   apply(max);
   if (!over()) return max;
   let lo = min, hi = max, best = min;

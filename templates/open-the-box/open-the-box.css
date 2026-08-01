@@ -284,7 +284,12 @@
   display: flex; gap: calc(2.2cqw * var(--fit));
 }
 .aw-otb-q-question {
-  flex: 1 1 42%; min-height: 0;
+  flex: 1 1 42%; min-height: 0; min-width: 0;
+  /* min-width:0 (1/8/2026): without it a flex item's default min-width:auto
+     lets an unbreakable long word STRETCH this tile past its 42% share (and
+     off the card) instead of overflowing — which would hide the overflow from
+     setupFit's width check. Pinning min-width:0 keeps the tile its intended
+     size so an over-wide word registers as overflow and triggers a shrink. */
   /* min-height:0 stops the browser's default flex-item auto-grow: without
      it this tile always reports scrollHeight===clientHeight (it just grows
      to fit its text instead of overflowing), which made autoFit's measure()
@@ -295,19 +300,34 @@
   background: var(--aw-tile-fixed, #3b82f6);
   box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--aw-tile-fixed-dark, #2563eb));
   color: #fff; font-weight: 700;
+  padding: calc(2cqw * var(--fit));
+}
+/* the question TEXT carries its own --fit (set per-tile by setupFit, 1/8/2026)
+   so it sizes independently of the answer tiles; the tile above is just the
+   fit "box" and keeps --fit:1 for its stable padding. */
+.aw-otb-q-qtext {
+  /* width:100% (1/8/2026): as a flex item this span would otherwise shrink to
+     its content and stay on ONE long line (making the fit shrink the font to
+     fit that line's width). Full width makes multi-word questions WRAP at
+     spaces and fill the tile's height instead, like before it had its own span. */
+  width: 100%;
   font-size: calc(3cqw * var(--fit));
   line-height: 1.15;
-  padding: calc(2cqw * var(--fit));
 }
 
 .aw-otb-q-answers {
-  flex: 1 1 58%; min-height: 0;
-  display: grid; grid-template-columns: repeat(2, 1fr);
+  flex: 1 1 58%; min-height: 0; min-width: 0;
+  /* minmax(0,1fr) not plain 1fr (1/8/2026): a bare 1fr track = minmax(auto,1fr)
+     whose `auto` min-content can grow to a long unbreakable word's full width,
+     blowing the 2-column symmetry out past the card. minmax(0,…) caps each
+     column at its half share so an over-wide word overflows its fixed tile
+     (which setupFit's width check then catches and shrinks) instead. */
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 1fr;
   gap: calc(1.6cqw * var(--fit));
 }
 .aw-otb-qtile {
-  position: relative; min-height: 0; /* same reason as .aw-otb-q-question above */
+  position: relative; min-height: 0; min-width: 0; /* min-width:0 same reason as .aw-otb-q-question; also stops a grid item's default min-width:auto from stretching past its minmax(0,1fr) column for a long word */
   --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
   --tile-dark-eff: var(--aw-tile-fixed-dark, var(--otb-d, #2563eb));
   border-radius: var(--aw-tile-radius, 1.6cqw);
@@ -383,7 +403,11 @@
 }
 /* an odd answer count -> last tile spans both columns (no lone half-empty row) */
 .aw-otb-qtile-wide { grid-column: 1 / -1; }
-.aw-otb-q-text { display: block; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: anywhere; }
+/* overflow-wrap:normal (1/8/2026): never break a word mid-way. An over-wide
+   single word instead overflows, which setupFit() detects (scrollWidth >
+   clientWidth) and resolves by shrinking --fit until the word fits on one
+   line — so the text is as large as possible with whole, unbroken words. */
+.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: normal; word-break: normal; }
 .aw-otb-q-letter {
   position: absolute; top: calc(0.8cqw * var(--fit)); left: calc(1cqw * var(--fit));
   font-size: calc(1.8cqw * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);

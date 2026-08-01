@@ -17,7 +17,7 @@ Hai chế độ (radio):
 - **Simple boxes** — mỗi hộp = **1 ô nội dung** (text + 🎤 audio + 🖼️ ảnh). Chỉ để lộ nội dung.
 - **Boxes with questions** — mỗi hộp = **Question + Answers (a, b...)**, đáp án **Optional**, có toggle đúng/sai (giống Quiz). Có thể chỉ có câu hỏi (không đáp án).
 
-Giới hạn: **min 2 – max 100 hộp**. Nút **Done**.
+Giới hạn: **min 2 – max 120 hộp** (AWord nâng từ mốc 100 gốc của Wordwall — Teacher Andrew yêu cầu 1/8/2026). Nút **Done**.
 
 ### Mô hình JSON gợi ý cho AWord
 ```json

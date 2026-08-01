@@ -831,7 +831,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     // its now-narrower box.
     rv.querySelectorAll(".aw-rv-a").forEach(box => {
       const span = box.querySelector(".aw-rv-fit");
-      fitOnce(box, span, s => span.style.setProperty("--fit", s), { max: 1, min: 0.35, slack: 2 });
+      fitOnce(box, span, s => span.style.setProperty("--fit", s), { max: 1, min: 0.2, slack: 2, contentBox: true });
     });
   }
 

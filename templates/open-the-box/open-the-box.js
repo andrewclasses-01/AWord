@@ -28,12 +28,21 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { autoFit } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { otbSound } from "./otb-sound.js";
 import { openOtbEditor } from "./open-the-box-editor.js";
 
 const MIN_ANSWERS = 2;
+
+// Question screen text sizing (teacher's request, 1/8/2026; evolved across the
+// day: 2.4 was too big + broke words -> 1.5 width-aware shared fit -> now a
+// PER-TILE fit). Each tile fits its OWN text between FIT_MIN and FIT_MAX, so a
+// short word grows to ~50% bigger than base while a long word (e.g.
+// "Meteorologist") shrinks ONLY its own tile until it sits inside the padding
+// with a margin — never cartoonishly big, never touching the edge, never
+// broken mid-word. See setupFit().
+const FIT_MAX = 1.5;
+const FIT_MIN = 0.4;
 
 // Zoom animation timing (Ô SỐ <-> Ô CÂU HỎI) — both directions share the
 // same speed. Doubled (30/7/2026, đợt 9, teacher's call: "chậm hơn gấp đôi
@@ -583,7 +592,10 @@ function mountQuestions(root, activity, ui) {
     const card = el("div", "aw-otb-qcard");
 
     const body = el("div", "aw-otb-q-body");
-    const qTile = el("div", "aw-otb-q-question", escapeHtml(it.question));
+    const qTile = el("div", "aw-otb-q-question");
+    // inner text span so setupFit can size the question independently of its
+    // tile (the tile is the fit "box", this span is the "content").
+    qTile.append(el("div", "aw-otb-q-qtext", escapeHtml(it.question)));
     body.append(qTile);
 
     const row = el("div", "aw-otb-q-answers");
@@ -611,12 +623,57 @@ function mountQuestions(root, activity, ui) {
     return { card, qTile, answersRow: row };
   }
 
+  // PER-TILE independent text sizing (teacher's request, 1/8/2026): the
+  // question tile and EACH answer tile fit their OWN text to their OWN box, so
+  // one long word (e.g. "Meteorologist") shrinks only THAT tile instead of
+  // dragging every tile down or touching its own edge. Each uses the core
+  // fitOnce with contentBox:true, so the text is sized to sit INSIDE the
+  // tile's padding (a natural margin) — never clipped, never touching the
+  // edge, and never broken mid-word (overflow-wrap is normal in
+  // open-the-box.css). A short word grows up to FIT_MAX; a long one shrinks to
+  // as low as FIT_MIN. `card` is unused now (each element carries its own
+  // --fit; the card keeps --fit:1 from CSS for the stable layout gaps/padding).
   function setupFit(card, qTile, answersRow) {
     if (fitter) { fitter.destroy(); fitter = null; }
-    fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
-      slack: root.clientWidth * 0.02,
-      measure: () => Math.max(qTile.scrollHeight, answersRow.scrollHeight)
-    });
+    // Grow/shrink one text span to fit its own tile. HEIGHT: the wrapped text
+    // must fit the tile's content height (this is what a multi-word question or
+    // answer grows into). WIDTH: the span is full-width and words never break
+    // (overflow-wrap:normal), so the ONLY thing that can stick out sideways is
+    // a single word wider than the span — detected as the span overflowing
+    // ITSELF (scrollWidth > its own clientWidth). Comparing to the span's own
+    // width (not the padded box minus slack) is what avoids the false "always
+    // overflowing" a full-width block gives against the box width. The word
+    // ends up inside the tile's padding, i.e. with a natural margin.
+    const fitOne = (box, textEl) => {
+      if (!box || !textEl) return;
+      const cs = getComputedStyle(box);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      const apply = s => textEl.style.setProperty("--fit", s);
+      const over = () => textEl.scrollHeight > box.clientHeight - padY - 2
+                      || textEl.scrollWidth > textEl.clientWidth + 1;
+      apply(FIT_MAX);
+      if (over()) {
+        let lo = FIT_MIN, hi = FIT_MAX, best = FIT_MIN;
+        for (let i = 0; i < 16; i++) {
+          const mid = (lo + hi) / 2;
+          apply(mid);
+          if (over()) hi = mid; else { best = mid; lo = mid; }
+        }
+        apply(best);
+      }
+    };
+    const runAll = () => {
+      fitOne(qTile, qTile.querySelector(".aw-otb-q-qtext"));
+      answersRow.querySelectorAll(".aw-otb-qtile").forEach(tile => fitOne(tile, tile.querySelector(".aw-otb-q-text")));
+    };
+    runAll();
+    // re-fit once the web font loads (its metrics differ from the fallback) and
+    // whenever the 16:9 stage is resized.
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(runAll).catch(() => {});
+    let raf = 0;
+    const onResize = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(runAll); };
+    window.addEventListener("resize", onResize);
+    fitter = { refit: runAll, destroy() { window.removeEventListener("resize", onResize); cancelAnimationFrame(raf); } };
   }
 
   // Plain (non-animated) question render — used only via render()'s defensive

@@ -31,6 +31,135 @@ Engine hiện tại LUÔN chạy vòng finish → celebration → leaderboard (t
 
 ## Nhật ký
 
+### 1/8/2026 (đợt 19) — Chữ in-game: chuyển từ 1 cỡ CHUNG sang cỡ ĐỘC LẬP TỪNG Ô (từ dài chỉ nhỏ riêng ô đó, có lề, không chạm mép)
+
+Thầy chơi bản đợt 18: chữ đã ổn nhưng **1 từ quá dài ("Meteorologist") chạm sát mép ô**. Yêu cầu: "giảm
+size linh hoạt" cho riêng trường hợp đó. Nguyên nhân: đợt 18 dùng **1 `--fit` CHUNG** cho cả màn (chọn
+cỡ lớn nhất mà MỌI ô vừa) → từ dài nhất quyết định, và nó vừa-khít-tràn-mép chứ không có lề.
+
+**Sửa — cỡ chữ ĐỘC LẬP TỪNG Ô** (đúng kiểu Wordwall thật):
+- Mỗi ô đáp án + ô câu hỏi tự co/giãn chữ CỦA RIÊNG NÓ trong [FIT_MIN 0.4, FIT_MAX 1.5] → từ ngắn to
+  1.5×, từ dài chỉ nhỏ riêng ô đó (vd Meteorologist 1.35, các ô khác vẫn 1.5).
+- Chữ câu hỏi bọc trong span riêng `.aw-otb-q-qtext` (trước nằm trực tiếp trong tile) để co độc lập; cả
+  span câu hỏi lẫn `.aw-otb-q-text` thêm **`width:100%`** để chữ NHIỀU TỪ **wrap theo khoảng trắng**
+  (nhiều dòng) thay vì nằm 1 hàng dài rồi thu nhỏ.
+- Viết **hàm fit riêng** (không dùng `fitOnce` cho in-game): đo CAO so với ô, đo NGANG bằng **tự-tràn của
+  chính span** (`scrollWidth > clientWidth` của span) — vì span full-width nên chỉ có 1 từ đơn quá rộng
+  mới thò ra; cách này TRÁNH lỗi "luôn báo tràn" nếu so span full-width với bề rộng ô. (Đã thử dùng
+  `fitOnce` contentBox nhưng chính vì span=100% nên nó luôn báo tràn → co về min; bỏ.) Từ dài dừng lại
+  **vừa trong vùng chứa (trong padding ô)** nên có lề tự nhiên ~1.6cqw, hết chạm mép. Bỏ `import fitOnce`
+  khỏi open-the-box.js (chỉ còn engine dùng cho Show answers).
+- CSS phụ trợ đợt 18 vẫn giữ (`minmax(0,1fr)` + các `min-width:0`) để 1 từ unbreakable không kéo giãn ô.
+
+**Test bằng `javascript_tool`** (browser thật, ép nội dung + dữ liệu thật):
+- Ép Biologist / **Meteorologist** / "To make people feel more relaxed" / Yes vào 4 ô: fit lần lượt
+  **1.50 / 1.35 / 1.44 / 1.50** (ĐỘC LẬP, `perTileFitsDiffer:true`); Meteorologist 1 hàng KHÔNG bể,
+  "To make..." **wrap 3 dòng**, câu hỏi dài **wrap 4 dòng** ở 1.5 — mọi ô fitsHeight, 0 tự-tràn.
+- Dữ liệu thật (câu "Which word means very tired?" + Excited/Curious/Anxious/Exhausted): câu hỏi wrap 3
+  dòng 1.5, 4 đáp án 1.5, 0 tràn.
+- 0 lỗi console. (Show answers của đợt 18 không đụng — vẫn dùng fitOnce contentBox.)
+
+**File đổi đợt này**: `open-the-box.js` (bỏ import fitOnce; `setupFit` viết lại thành fit riêng TỪNG Ô;
+`buildQuestion` bọc span `.aw-otb-q-qtext`; comment FIT_MAX/MIN cập nhật), `open-the-box.css` (tách
+font-size câu hỏi sang `.aw-otb-q-qtext` + `width:100%`; `.aw-otb-q-text` thêm `width:100%`).
+
+**CHƯA COMMIT** — chờ thầy chơi thử. Cùng lô với đợt 11–18.
+
+### 1/8/2026 (đợt 18) — SỬA 2 LỖI PHÁT SINH TỪ ĐỢT 17: chữ in-game quá to + bẻ giữa từ; Show answers khuyết chữ
+
+Thầy chơi bản đợt 17, gửi ảnh: (A) trong game chữ **quá to gây mất cân đối** và **xuống dòng GIỮA từ**
+("Meteor/ologist", "Biologi/st"...); (B) màn **Show answers khuyết chữ** ("Meteorologis", "Enormou",
+"Astronome" — cụt ký tự cuối). Cả 2 đều do đợt 17 gây ra. Đã **đo thật bằng `javascript_tool`** để tìm
+đúng nguyên nhân gốc trước khi sửa.
+
+**Nguyên nhân A (in-game):** `FIT_MAX=2.4` phóng chữ quá lớn; autoFit lõi CHỈ đo chiều cao (giả định từ
+dài tự wrap), nên chữ to tới mức 1 từ không đủ chỗ 1 hàng → `overflow-wrap:anywhere` bẻ ngang giữa từ,
+autoFit tưởng "vừa" vì cao vẫn lọt.
+
+**Nguyên nhân B (Show answers):** LỖI THẬT TRONG CORE `fitOnce` (co chữ 1 lần) — nó so `scrollWidth >
+box.clientWidth`, mà `clientWidth` **gồm cả padding ~19px**; vùng chữ thật chỉ ~82px. Chữ 99px "qua"
+được phép so 101px nên fitOnce dừng ở fit=1.0, rồi bị `.aw-rv-cell{overflow:hidden}` cắt cụt ~1-2 ký tự
+cuối. Trước đây `overflow-wrap:anywhere` cho từ tự wrap nên né được lỗi tiềm ẩn này; đợt 17 đổi sang
+`normal` làm nó lộ ra. (Đo tái hiện: 9 hàng có thanh cuộn → mọi từ dài đều `clips:true`.)
+
+**Cách sửa:**
+- **Core `fitOnce`** (`core/fit.js`): thêm tùy chọn **`contentBox`** (mặc định **TẮT** để KHÔNG đụng
+  maze-chase & mọi caller khác) — khi bật thì trừ padding lúc đo (đo đúng vùng chứa thật). Bật
+  `contentBox:true` ở **duy nhất** lời gọi màn Show answers trong `core/engine.js`, kèm hạ `min` 0.35→0.2
+  để từ dài trong cột hẹp co đủ nằm trọn 1 hàng. → hết khuyết chữ cho Show answers của MỌI game.
+- **In-game** (`open-the-box.js`): hạ **`FIT_MAX` 2.4 → 1.5** (chữ vẫn to hơn ~50% cỡ gốc, không còn
+  "khổng lồ mất cân đối"); viết lại `setupFit` thành **WIDTH-AWARE** — chọn `--fit` lớn nhất trong
+  [0.4, 1.5] mà VỪA CẢ chiều cao LẪN không có ô nào bị tràn ngang (đo tràn ở **cấp ô `.aw-otb-qtile`**,
+  không phải ở span chữ — vì span là flex item tự nở theo min-content của từ nên giấu mất tràn). Bỏ
+  `import autoFit`.
+- **`open-the-box.css`**: `.aw-otb-q-text` `overflow-wrap:anywhere → normal` (không bẻ giữa từ);
+  `.aw-otb-q-answers` `grid-template-columns: repeat(2, minmax(0,1fr))` + `min-width:0`; `.aw-otb-q-question`
+  và `.aw-otb-qtile` thêm `min-width:0` — chặn 1 từ dài "unbreakable" kéo giãn ô phá vỡ lưới 2 cột (khi
+  đó tràn mới hiện đúng ở cấp ô để width-aware fit bắt được và co lại).
+
+**Test bằng `javascript_tool`** (browser thật, gộp thao tác 1 lệnh, dùng cả bản import `core/fit.js` đã
+vá thật):
+- In-game ca thực tế (Meteorologist/Astronomer/Geologist/Biologist): `--fit`=**1.5**, **mọi từ 1 hàng,
+  0 bẻ ngang**, từ vừa khít ô (tile overflow 0-1px), question tile 0 tràn. (Con số card overflow 805px
+  chỉ là đáp án đang TRƯỢT VÀO từ 85cqw lúc đo giữa animation — không phải lỗi.)
+- In-game ca bệnh lý (từ 34 ký tự): width-aware fit tự co `--fit`→**0.667** (không kẹt ở 1.5), từ vẫn
+  KHÔNG bẻ ngang — lưới an toàn hoạt động.
+- Show answers (chạy **fitOnce THẬT đã vá** `{min:0.2, contentBox:true}` trên 9 hàng có thanh cuộn):
+  **anyClipped=false, anyMidWordWrap=false**, "Meteorologist" trọn vẹn 1 hàng.
+- Hồi quy: Open the box + Quiz tải **0 lỗi console**; `fitOnce` mặc định `contentBox:false` nên
+  maze-chase và các caller khác byte-for-byte y nguyên.
+
+**File đổi đợt này**: `core/fit.js` (tùy chọn `contentBox`), `core/engine.js` (bật `contentBox:true` +
+`min:0.2` cho review), `open-the-box.js` (FIT_MAX 1.5 + FIT_MIN + `setupFit` width-aware + bỏ import
+autoFit), `open-the-box.css` (`.aw-otb-q-text` overflow-wrap normal; `minmax(0,1fr)` + nhiều `min-width:0`).
+
+**CHƯA COMMIT** — chờ thầy chơi thử xác nhận ưng. Cùng lô với đợt 11–17.
+
+### 1/8/2026 (đợt 17) — 5 cải tiến: chữ to tối đa, 120 câu, xác nhận 2 nút bulk, khóa chọn text (core), Show answers không cắt ngang từ (core)
+
+Thầy chốt 5 việc qua AskUserQuestion (đã hỏi phạm vi 2 mục đụng core + chờ "ok build" đúng quy trình):
+
+1. **Chữ ô câu hỏi + đáp án PHÓNG TO tối đa khi còn chỗ** (chỉ Open the box). Trước đây `autoFit` chặn
+   ở `max:1` — chữ KHÔNG BAO GIỜ to hơn cỡ gốc (câu hỏi 3cqw, đáp án 2.6cqw), chỉ biết co nhỏ. Nay
+   thêm hằng `FIT_MAX = 2.4` truyền vào `setupFit` → chữ ngắn được phóng to tới ~2.4 lần khi vừa khung,
+   chữ dài vẫn tự co < 1 như cũ. autoFit chỉ đo CHIỀU CAO nên chữ to làm text wrap tăng cao → tự giới
+   hạn, không tràn; `overflow-wrap:anywhere` sẵn có trên `.aw-otb-q-text` lo phần bề ngang.
+2. **Editor tối đa 120 câu** (chỉ Open the box). `MAX_ITEMS` 100 → **120**. Sửa luôn `docs/04-OPEN-THE-BOX.md`
+   ("min 2 – max 120"). Các thông báo paste Excel tự đọc `MAX_ITEMS` nên không cần đụng.
+3. **Pop-up xác nhận cho "Mark correct in all" + "Unmark all correct"** (chỉ Open the box). "Delete all
+   boxes" đã có `confirm()` từ trước; nay thêm `confirm()` cho 2 nút còn lại (cùng kiểu native confirm mà
+   MỌI editor khác đang dùng — nhất quán). Bấm Cancel → không đổi gì.
+4. **Khóa chọn text trong khung chơi — CORE, áp cho MỌI game** (thầy chọn "tất cả game" qua
+   AskUserQuestion). `core/app.css`: `.aw-stage { user-select:none }` + rule chừa
+   `.aw-stage input/textarea/[contenteditable=true] { user-select:text }` để ô gõ chữ của **Type the
+   answer** vẫn gõ/chọn được. Mục đích: chặn bôi xanh / tay cầm chọn text vô ý khi chơi trên bảng TOMKO.
+5. **Show answers KHÔNG cắt ngang giữa từ — CORE, áp cho MỌI game** (thầy chọn "đồng ý sửa chung").
+   `core/app.css` `.aw-rv-txt`: `overflow-wrap:anywhere` → **`normal`** (+ `word-break:normal`) → từ đơn
+   luôn nằm trọn 1 hàng, chỉ xuống dòng ở khoảng trắng. `.aw-rv-cell` có sẵn `overflow:hidden` nên 1 từ
+   cực dài (hiếm) bị cắt gọn thay vì tràn; đáp án dùng `fitOnce` (đo cả rộng lẫn cao) nên tự co vừa,
+   không mất chữ — chỉ câu hỏi (cỡ cố định) mới có thể cắt từ siêu dài, chấp nhận được.
+
+**Test bằng `javascript_tool`** (browser thật, `test.html`, gộp thao tác vào 1 lệnh để tránh đồng hồ 15s
+hết giữa chừng):
+- Mục 1: mở hộp câu ngắn → `--fit` = **1.71–2.35** (chữ to gấp ~1.7–2.4 lần: câu hỏi 5.13cqw, đáp án
+  4.44cqw so với trần cũ 3/2.6cqw); đo `scrollWidth/scrollHeight` xác nhận **không tràn** bề ngang lẫn
+  chiều cao, card vừa khít khung.
+- Mục 2: màn Edit hiện đúng **"9 / 120 boxes"**.
+- Mục 3: chặn `window.confirm` ghi log → đúng **3 lần gọi** (Mark×1, Unmark×2), nội dung đúng; Cancel →
+  dấu đúng của 9 hộp **y nguyên**; OK (Unmark) → xóa sạch dấu đúng.
+- Mục 4: `getComputedStyle('.aw-stage').userSelect === 'none'`; ô input của Type the answer trong khung =
+  `'text'` (vẫn gõ/chọn được).
+- Mục 5: dựng thử `.aw-review > .aw-rv-txt`, đo `overflowWrap === 'normal'`, `wordBreak === 'normal'`.
+- Hồi quy: Quiz + Type the answer tải **0 lỗi console**; core mới áp đúng cho cả 2 (userSelect none,
+  rvOverflowWrap normal) — đúng ý "áp chung mọi game" thầy đã duyệt.
+
+**File đổi đợt này**: `open-the-box.js` (hằng `FIT_MAX` + truyền `max` vào `setupFit`),
+`open-the-box-editor.js` (`MAX_ITEMS` 120 + `confirm()` cho Mark/Unmark), `core/app.css` (`.aw-stage`
+user-select + rule chừa input; `.aw-rv-txt` overflow-wrap normal), `docs/04-OPEN-THE-BOX.md` (max 120).
+
+**CHƯA COMMIT** — chờ thầy chơi thử ở `http://localhost:5510/templates/open-the-box/test.html` và xác
+nhận ưng trước khi lưu/đẩy GitHub. Đợt này đi cùng lô với các đợt 11–16 (đều đang chờ duyệt).
+
 ### 31/7/2026 (đợt 16) — Bỏ tiếng THỪA khi trả lời SAI (2 tiếng → 1)
 
 Thầy báo: bấm sai 1 đáp án hiện phát **2 âm thanh** cho cùng 1 sự kiện — thừa 1. Rà lại: khi sai có
