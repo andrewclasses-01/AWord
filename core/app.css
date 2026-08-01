@@ -1444,3 +1444,141 @@ body {
 }
 .aw-as-modal.is-focus .aw-as-lit { opacity: 1; filter: none; }
 .aw-as-modal.is-focus .aw-as-detail > .aw-as-tr.is-head { opacity: .5; filter: none; }
+
+/* =====================================================================
+   STANDARD ON-SCREEN KEYBOARD (core/keyboard.js) — dark tone, square keys,
+   phone-style layout, extracted from Type the answer (31/7–1/8/2026) so
+   every template that needs typed input uses the SAME keyboard. Fixed
+   look regardless of theme (Classic/Beach/...) — deliberately free of
+   `var(--fit)`/theme colours, per Teacher Andrew (1/8/2026): a single
+   consistent keyboard across the whole app. Four full-width rows:
+     1: '  q…p  ⌫(red)
+     2: caps  a…l  ?
+     3: numbers  z…m  .  ,
+     4: [extra key?]  Space  [Submit?]
+   `numbers` swaps rows 1–3 for a numbers/symbols layout. `caps`/`numbers`
+   are function keys with a small "lit dot" state indicator. A template's
+   own "extra key" (e.g. Type the answer's "Andrew help") gets the generic
+   `.aw-kbd-key-extra` structure + is-ready/is-glowing/is-used state classes
+   here, but keeps its OWN colours in its OWN template CSS via the
+   `extraKey.className` it passes to `createKeyboard()`.
+   ===================================================================== */
+.aw-kbd {
+  width: 70%;
+  /* Fixed widths for the rigid keys (letters + the caps/numbers function
+     keys). Everything else (' ? . , ⌫ Space Submit) flex-grows to fill each
+     row. Because letters no longer flex, all 26 are exactly the same size. */
+  --kbd-kw: 5cqw;          /* every letter key — one identical width */
+  --kbd-caps-w: 8.83cqw;
+  --kbd-numbers-w: 11.3cqw;
+  display: flex; justify-content: center;
+  margin: 0.9cqw auto 0;
+  padding: 1cqw;
+  background: #2b2b2e;
+  border-radius: 1.2cqw;
+  box-shadow: 0 0.5cqw 1.4cqw rgba(0,0,0,.25);
+  flex: 0 0 auto;
+  transform-origin: bottom center;
+  transition: opacity .28s ease, transform .3s cubic-bezier(.22,.9,.3,1);
+}
+/* Hidden = fade + slide DOWN, but it KEEPS its layout space (not display:none),
+   so whatever sits above it does not move — the show/hide is a smooth
+   animation instead of a snap. */
+.aw-kbd.is-hidden {
+  opacity: 0;
+  transform: translateY(14%) scale(.98);
+  pointer-events: none;
+}
+
+.aw-kbd-main { width: 100%; display: flex; flex-direction: column; gap: 0.55cqw; }
+.aw-kbd-row { display: flex; gap: 0.5cqw; }
+
+/* dark, square keys — light text on medium-grey caps, small radius, a thin
+   darker "lip" underneath so they read as physical keys. */
+.aw-kbd-key {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 1.35cqw;
+  color: #f4f4f5;
+  background: #48484b;
+  border: 0;
+  border-radius: 0.6cqw;
+  box-shadow: 0 0.24cqw 0 #202022;
+  padding: 0.95cqw 0;
+  cursor: pointer;
+  user-select: none;
+  transition: filter .08s ease;
+}
+.aw-kbd-key:hover { filter: brightness(1.14); }
+.aw-kbd-key:active { transform: translateY(0.2cqw); box-shadow: 0 0.06cqw 0 #202022; }
+.aw-kbd-key:disabled { cursor: default; }
+
+/* every letter is one fixed width (no flexing) -> all letters identical. Same
+   font as the other keys, so with the backspace font matched below every row
+   is the same height too. */
+.aw-kbd-key-letter { flex: 0 0 var(--kbd-kw); }
+
+/* red backspace, top-right of row 1 — font matches the letters so row 1 is
+   NOT taller than the other rows (keeps every letter's height identical). */
+.aw-kbd-key-back {
+  flex: 1.5;
+  background: #b91c1c;
+  box-shadow: 0 0.24cqw 0 #7f1212;
+  font-size: 1.35cqw;
+}
+.aw-kbd-key-back:active { box-shadow: 0 0.06cqw 0 #7f1212; }
+
+/* ---- function keys (caps / numbers / a template's extra key): wider,
+   smaller label, a lit dot indicator centred near the top that only shows in
+   the relevant state. */
+.aw-kbd-key-fn {
+  position: relative;
+  flex: 1.8;
+  display: flex; align-items: flex-end; justify-content: flex-start;
+  padding: 0.6cqw 0.75cqw;
+}
+.aw-kbd-key-caps    { flex: 0 0 var(--kbd-caps-w); }
+.aw-kbd-key-numbers { flex: 0 0 var(--kbd-numbers-w); }
+.aw-kbd-key-fnlabel { font-size: 1.05cqw; font-weight: 700; }
+.aw-kbd-key-dot {
+  display: none;
+  position: absolute; top: 0.85cqw; right: 0.75cqw;
+  width: 0.8cqw; height: 0.8cqw;
+  border-radius: 50%;
+  background: #fff;   /* white light */
+  box-shadow: 0 0 0.6cqw rgba(255,255,255,.95), 0 0 1.2cqw rgba(255,255,255,.55);
+  animation: aw-kbd-dot-pulse 5.2s ease-in-out infinite;
+}
+/* the dot stays ONE fixed size — only its brightness (opacity) pulses. */
+@keyframes aw-kbd-dot-pulse {
+  0%, 100% { opacity: .4; }
+  50%      { opacity: 1; }
+}
+/* dot shows: caps ON, numbers ON, or a "ready" extra key */
+.aw-kbd-key-caps.is-active .aw-kbd-key-dot,
+.aw-kbd-key-numbers.is-active .aw-kbd-key-dot,
+.aw-kbd-key-extra.is-ready .aw-kbd-key-dot { display: block; }
+/* caps / numbers, once ON: the ONLY change is the lit dot appearing (solid
+   white, no blink) — the key's own background and label colour stay exactly
+   the same as when off. */
+.aw-kbd-key-caps.is-active .aw-kbd-key-dot,
+.aw-kbd-key-numbers.is-active .aw-kbd-key-dot {
+  animation: none;
+  opacity: 1;
+}
+/* dim the caps key when it's inert (numbers mode). A template's extra key
+   handles its own "ready but disabled" dimming in its own CSS. */
+.aw-kbd-key-caps:disabled { opacity: .5; }
+
+/* bottom row: [extra key?] + wide Space + blue Submit key. */
+.aw-kbd-space { flex: 6; }
+.aw-kbd-submit {
+  flex: 2.2;
+  color: #fff;
+  background: var(--aw-tile-fixed, #3b82f6);
+  box-shadow: 0 0.24cqw 0 var(--aw-tile-fixed-dark, #2563eb);
+}
+.aw-kbd-submit:active { box-shadow: 0 0.06cqw 0 var(--aw-tile-fixed-dark, #2563eb); }
+.aw-kbd-submit:disabled { opacity: .4; }

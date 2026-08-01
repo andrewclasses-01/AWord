@@ -70,7 +70,7 @@ từng chỉ full 1 góc màn 4K).
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,
-`leaderboard.js`, `confetti.js`, `sound.js`, `icons.js`, `utils.js`, `themes/`, `assets/`) là
+`leaderboard.js`, `confetti.js`, `sound.js`, `icons.js`, `utils.js`, `keyboard.js`, `themes/`, `assets/`) là
 **dùng CHUNG cho mọi template**. Nhiều session có thể đang build nhiều game cùng lúc — nếu một
 session sửa core, các session khác đang test template của họ sẽ vỡ ngay lập tức mà không biết vì sao.
 
@@ -103,6 +103,11 @@ core/
 │                        luật khả dụng + render worksheet ra giấy (đọc template.toPrintItems)
 ├─ fit.js             ← autoFit() (co chữ theo dõi resize) + fitOnce() (co chữ 1 lần, cho ô nhỏ)
 ├─ numberstepper.js   ← makeNumberStepper() — ô số vuốt lên/xuống + nút ▲▼ (dùng trong panel Options)
+├─ keyboard.js        ← createKeyboard({sound,onChar,onBackspace,submit?,extraKey?}) — BÀN PHÍM ẢO
+│                        CHUẨN dùng chung cho mọi template cần gõ chữ (tông tối cố định, 4 hàng kiểu
+│                        điện thoại: '/chữ/⌫, caps/chữ/?, numbers/chữ/.,, [extra?]/Space/[Submit?]).
+│                        Tách ra từ Type the answer (1/8/2026); Crossword dùng lại y hệt. `submit` và
+│                        `extraKey` là TÙY CHỌN — template không cần thì bỏ qua (Crossword không dùng).
 ├─ utils.js           ← shuffle, formatTime, el(), ordinal(), fmtSecsParts()
 ├─ themes/            ← classic.css, classroom.css, beach.css + manifest.js (danh sách + lazy-load).
 │                        Mỗi theme định nghĩa cả biến hình dạng ô + chữ: --aw-tile-radius,

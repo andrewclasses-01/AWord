@@ -189,147 +189,29 @@
 }
 
 /* =============================================================
-   ON-SCREEN KEYBOARD — dark tone, square keys, phone-style layout (31/7/2026
-   redesign per Teacher Andrew's reference image). Four full-width rows:
-     1: '  q…p  ⌫(red)
-     2: caps  a…l  ?
-     3: numbers  z…m  .  ,
-     4: Andrew  Space  Submit(blue)
-   `numbers` swaps rows 1–3 for a numbers/symbols layout. `caps`, `numbers` and
-   `Andrew` are function keys with a small "lit dot" state indicator.
-   Toggled via the icon button engine.js places next to Menu.
+   ON-SCREEN KEYBOARD — the letters/caps/numbers/backspace/space/Submit parts
+   now come from the STANDARD keyboard (core/keyboard.js, class prefix
+   .aw-kbd-*), shared by every template that needs typed input. This template
+   only owns its 5th key ("Andrew help", bottom-left) — its colours/animation,
+   keyed off the class this template passes as `extraKey.className`
+   ("aw-tta-key-andrew") plus the generic is-ready/is-glowing/is-used state
+   classes core/keyboard.js applies. The dot/label structure itself
+   (`.aw-kbd-key-dot`/`.aw-kbd-key-fnlabel`) is core's.
    ============================================================= */
-/* Sizes here are DELIBERATELY free of var(--fit): the keyboard must stay a
-   single fixed size and position. When the reveal opens and autoFit lowers
-   --fit, only the stage (question/input) shrinks — the keyboard does not, so
-   it never moves. Total width is 70% of the frame (per Teacher Andrew). */
-.aw-tta-kbd {
-  width: 70%;
-  /* Fixed widths for the rigid keys (letters + the caps/numbers/Andrew function
-     keys). Everything else (' ? . , ⌫ Space Submit) flex-grows to fill each row.
-     Because letters no longer flex, all 26 are exactly the same size. */
-  --tta-kw: 5cqw;          /* every letter key — one identical width */
-  --tta-caps-w: 8.83cqw;   /* caps: 15% narrower than before (was ~10.39cqw) */
-  --tta-numbers-w: 11.3cqw;
-  --tta-andrew-w: 12.7cqw;
-  display: flex; justify-content: center;
-  margin: 0.9cqw auto 0;
-  padding: 1cqw;
-  background: #2b2b2e;
-  border-radius: 1.2cqw;
-  box-shadow: 0 0.5cqw 1.4cqw rgba(0,0,0,.25);
-  flex: 0 0 auto;
-  transform-origin: bottom center;
-  transition: opacity .28s ease, transform .3s cubic-bezier(.22,.9,.3,1);
-}
-/* Hidden = fade + slide DOWN, but it KEEPS its layout space (not display:none),
-   so the answer block above does not move — and the show/hide is a smooth
-   animation instead of a snap. */
-.aw-tta-kbd.is-hidden {
-  opacity: 0;
-  transform: translateY(14%) scale(.98);
-  pointer-events: none;
-}
+.aw-tta-key-andrew { flex: 0 0 12.7cqw; }
 
-.aw-tta-kbd-main { width: 100%; display: flex; flex-direction: column; gap: 0.55cqw; }
-.aw-tta-kbd-row { display: flex; gap: 0.5cqw; }
-
-/* dark, square keys — light text on medium-grey caps, small radius, a thin
-   darker "lip" underneath so they read as physical keys like the image. */
-.aw-tta-key {
-  flex: 1;
-  min-width: 0;
-  font-family: inherit;
-  font-weight: 600;
-  font-size: 1.35cqw;
-  color: #f4f4f5;
-  background: #48484b;
-  border: 0;
-  border-radius: 0.6cqw;
-  box-shadow: 0 0.24cqw 0 #202022;
-  padding: 0.95cqw 0;
-  cursor: pointer;
-  user-select: none;
-  transition: filter .08s ease;
-}
-.aw-tta-key:hover { filter: brightness(1.14); }
-.aw-tta-key:active { transform: translateY(0.2cqw); box-shadow: 0 0.06cqw 0 #202022; }
-.aw-tta-key:disabled { cursor: default; }
-
-/* every letter is one fixed width (no flexing) -> all letters identical. Same
-   font as the other keys, so with the backspace font matched below every row is
-   the same height too. */
-.aw-tta-key-letter { flex: 0 0 var(--tta-kw); }
-
-/* red backspace, top-right of row 1 — font matches the letters so row 1 is NOT
-   taller than the other rows (keeps every letter's height identical). */
-.aw-tta-key-back {
-  flex: 1.5;
-  background: #b91c1c;
-  box-shadow: 0 0.24cqw 0 #7f1212;
-  font-size: 1.35cqw;
-}
-.aw-tta-key-back:active { box-shadow: 0 0.06cqw 0 #7f1212; }
-
-/* ---- function keys (caps / numbers / Andrew): wider, smaller label, a lit
-   dot indicator centred near the top that only shows in the relevant state. */
-.aw-tta-key-fn {
-  position: relative;
-  flex: 1.8;
-  display: flex; align-items: flex-end; justify-content: flex-start;
-  padding: 0.6cqw 0.75cqw;
-}
-/* function keys get their OWN fixed widths (override the generic 1.8 above).
-   caps is 15% narrower than before, so row 2's letters sit further left and the
-   grow-key at the row's end (?) stretches to fill the freed space. */
-.aw-tta-key-caps    { flex: 0 0 var(--tta-caps-w); }
-.aw-tta-key-numbers { flex: 0 0 var(--tta-numbers-w); }
-.aw-tta-key-andrew  { flex: 0 0 var(--tta-andrew-w); }
-.aw-tta-key-fnlabel { font-size: 1.05cqw; font-weight: 700; }
-.aw-tta-key-dot {
-  display: none;
-  position: absolute; top: 0.85cqw; right: 0.75cqw;
-  width: 0.8cqw; height: 0.8cqw;
-  border-radius: 50%;
-  background: #fff;   /* white light (Andrew "ready" dot) */
-  box-shadow: 0 0 0.6cqw rgba(255,255,255,.95), 0 0 1.2cqw rgba(255,255,255,.55);
-  animation: aw-tta-dot-pulse 5.2s ease-in-out infinite;   /* half the previous blink speed */
-}
-/* the dot stays ONE fixed size — only its brightness (opacity) pulses. */
-@keyframes aw-tta-dot-pulse {
-  0%, 100% { opacity: .4; }
-  50%      { opacity: 1; }
-}
-/* dot shows: caps ON, numbers ON, or Andrew still AVAILABLE */
-.aw-tta-key-caps.is-active .aw-tta-key-dot,
-.aw-tta-key-numbers.is-active .aw-tta-key-dot,
-.aw-tta-key-andrew.is-ready .aw-tta-key-dot { display: block; }
-/* caps / numbers, once ON: the ONLY change is the lit dot appearing (solid
-   white, no blink) — the key's own background and label colour stay exactly the
-   same as when off (teacher's call, 1/8/2026). */
-.aw-tta-key-caps.is-active .aw-tta-key-dot,
-.aw-tta-key-numbers.is-active .aw-tta-key-dot {
-  animation: none;
-  opacity: 1;
-}
-/* dim ONLY the caps key when it's inert (numbers mode) and the Andrew key when
-   it's still "ready" but the current question is already answered — never dim
-   the glowing state, which sets `disabled` too but must stay bright. */
-.aw-tta-key-caps:disabled { opacity: .5; }
+/* ready: normal look + lit dot (core).  glowing: bright gold, sparkling halo
+   (just pressed, answer revealed, until submit).  used: dimmed for the rest
+   of the game so it's clearly spent. */
 .aw-tta-key-andrew.is-ready:disabled { opacity: .55; }
-
-/* ---- Andrew help key states ----
-   ready: normal look + lit dot.  glowing: bright gold, sparkling halo (just
-   pressed, answer revealed, until submit).  used: dimmed for the rest of the
-   game so it's clearly spent. */
-.aw-tta-key-andrew.is-ready .aw-tta-key-fnlabel { color: #f4f4f5; }   /* white, like caps/numbers */
+.aw-tta-key-andrew.is-ready .aw-kbd-key-fnlabel { color: #f4f4f5; }   /* white, like caps/numbers */
 .aw-tta-key-andrew.is-glowing {
   color: #3a2a00;
   background: linear-gradient(180deg, #ffe89a, #ffc531);
   box-shadow: 0 0.24cqw 0 #b8860b;
   animation: aw-tta-andrew-halo 2.6s ease-in-out infinite;   /* slow, gentle glow */
 }
-.aw-tta-key-andrew.is-glowing .aw-tta-key-fnlabel {
+.aw-tta-key-andrew.is-glowing .aw-kbd-key-fnlabel {
   color: #4a3400; font-weight: 800;
   text-shadow: 0 0 0.6cqw #fff8d0;
 }
@@ -342,20 +224,7 @@
   box-shadow: 0 0.24cqw 0 #1b1b1d;
   transition: background .5s ease, color .5s ease, opacity .5s ease;
 }
-.aw-tta-key-andrew.is-used .aw-tta-key-fnlabel { color: #6a6a6d; }
-
-/* bottom row: Andrew + wide Space + blue Submit key (same shape, blue like the
-   old outside button). The outside "Submit Answer" button is hidden while the
-   keyboard shows; it returns when the keyboard is toggled off. */
-.aw-tta-kbd-space { flex: 6; }
-.aw-tta-kbd-submit {
-  flex: 2.2;
-  color: #fff;
-  background: var(--aw-tile-fixed, #3b82f6);
-  box-shadow: 0 0.24cqw 0 var(--aw-tile-fixed-dark, #2563eb);
-}
-.aw-tta-kbd-submit:active { box-shadow: 0 0.06cqw 0 var(--aw-tile-fixed-dark, #2563eb); }
-.aw-tta-kbd-submit:disabled { opacity: .4; }
+.aw-tta-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
 
 /* =============================================================
    OPTIONS PANEL — "Points off per wrong" slider (1..5) under the Minus check.

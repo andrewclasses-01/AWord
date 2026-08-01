@@ -582,3 +582,41 @@ Thầy yêu cầu 2 chỉnh nhẹ. CHỈ đụng `type-the-answer.js` + `.css`.
 
 ## ĐỀ XUẤT SỬA CORE (nếu có)
 (trống — mọi thay đổi core ở trên đã LÀM rồi, không phải đề xuất chờ xử lý.)
+
+### 1/8/2026 (tiếp) — Tách bàn phím ảo ra `core/keyboard.js` làm BÀN PHÍM CHUẨN cho toàn hệ thống (⚠️ ĐỤNG CORE, thầy đã "ok build")
+
+Thầy yêu cầu lấy Y HỆT bàn phím của Type the answer (4 hàng, tông tối, caps/numbers/backspace/space/
+Submit-trong-bàn-phím) làm bàn phím DÙNG CHUNG cho mọi act, rồi áp luôn cho Crossword.
+
+- **File mới**: `core/keyboard.js` — `createKeyboard({sound, onChar, onBackspace, submit?, extraKey?})`
+  trả về `{el, setHidden(bool), isHidden(), refresh()}`. Bê nguyên layout/màu/animation gốc, chỉ đổi
+  tiền tố class `.aw-tta-kbd*`/`.aw-tta-key*` → `.aw-kbd*` (CSS chuyển sang `core/app.css`, cuối file).
+  `submit`/`extraKey` là TÙY CHỌN — game không cần thì bỏ qua (không hiện phím đó).
+- **`type-the-answer.js`**: xoá hẳn `buildKeyboard/rebuildKeyboard/syncKeyboardState/makeKey/
+  makeCharKey/makeLetterKey/makeBackspaceKey/makeFnKey/makeCapsKey/makeNumbersKey/makeAndrewKey/
+  setCaps` (nay nằm trong core) + 2 biến `capsOn/numbersMode` (core tự quản). Gọi
+  `createKeyboard({sound: ui.sound, onChar, onBackspace, submit:{onClick,isDisabled}, extraKey:{label:
+  "Andrew", className:"aw-tta-key-andrew", getState, isDisabled, onClick: useAndrew}})`. "Andrew help"
+  VẪN LÀ CỦA RIÊNG TTA — chỉ là phím "extra" thứ 5 mà core chừa chỗ, màu vàng/hào quang vẫn ở
+  `type-the-answer.css` (khớp `.aw-tta-key-andrew` + các lớp trạng thái is-ready/is-glowing/is-used mà
+  core tự gắn). Mọi chỗ từng gọi `keyboardEl.querySelector(...)` để tự tay đổi class nay gọi
+  `kbd.refresh()` (core tự đọc lại `submit.isDisabled()`/`extraKey.getState()`).
+- **`crossword.js`**: bỏ hẳn `KBD_ROWS`/`buildKeyboard/letterKey/key` (3 hàng chữ cũ), dùng
+  `createKeyboard({sound: ui.sound, onChar, onBackspace})` — KHÔNG có `submit` (crossword tự chấm ngay
+  khi gõ đủ chữ, không cần nút Submit) và KHÔNG có `extraKey` (không có "Andrew help" ở đây).
+  `onChar` CHỈ nhận chữ cái (`/^[a-zA-Z]$/`), bỏ qua Space/số/dấu câu — các phím đó vẫn HIỆN trên bàn
+  phím (để đồng bộ nhìn với mọi game khác) nhưng bấm không làm gì (giống hệt bàn phím thật, phím
+  `onKey` vốn cũng chỉ nhận `[a-zA-Z]`).
+- **Tông màu**: bàn phím LUÔN tối (không đổi theo theme) — thầy chốt khi được hỏi, để đồng bộ toàn hệ
+  thống thay vì đổi theo Classic/Beach như bản Crossword cũ.
+- **Đã test qua trình duyệt** (`test.html` của cả 2 template, đo DOM qua `javascript_tool` vì pane
+  phiên này không composite frames được — xem mục tương tự ở các đợt trước):
+  - TTA: gõ "green" bằng bàn phím ảo mới → is-correct + điểm lên; bấm Andrew → reveal vàng "Andrew ready"
+    → glowing → submit → "used" + khoá cả ván; caps/numbers vẫn hoạt động, Submit trong bàn phím vẫn
+    khoá khi ô rỗng/đã chấm. 0 lỗi console.
+  - Crossword: gõ "CARRY" bằng bàn phím ảo (giả lập `.click()` qua DOM vì click chuột thật bị lỗi toạ
+    độ (0,0) trong pane phiên này) → ô tự điền + điểm lên + tự chuyển từ kế tiếp; gõ sai đủ 7 ký tự →
+    tự lộ đáp án đúng ("CORRECT") + không cộng điểm + chuyển từ kế tiếp. Bàn phím hiện tông tối đúng
+    như TTA. 0 lỗi console.
+- File đụng: **core/keyboard.js** (mới), **core/app.css** (thêm CSS `.aw-kbd-*`, cuối file),
+  **core/HUONG DAN CORE.md** (thêm mục lục), `type-the-answer.js`+`.css`, `crossword.js`+`.css`.

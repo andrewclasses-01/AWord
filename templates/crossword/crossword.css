@@ -43,6 +43,29 @@
   overflow: hidden;
 }
 
+/* gold answer at the end of the clue bar while "Andrew help" glows — the same
+   gold gradient + pulsing glow as the Andrew key itself (mirrors Type the
+   answer's is-andrew reveal; keyframes duplicated under the .aw-cw- prefix
+   because this page does not load that template's CSS). */
+.aw-cw-clue-answer {
+  display: none;
+  flex: 0 0 auto;
+  font-weight: 800;
+  font-size: 2.9cqw;
+  line-height: 1.1;
+  padding-top: 0.15cqw;
+  color: #ffc531;   /* fallback for the clipped-gradient text */
+  background: linear-gradient(180deg, #ffe89a, #ffc531);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aw-cw-andrew-textglow 2.6s ease-in-out infinite;
+}
+.aw-cw-clue-answer.is-on { display: block; }
+@keyframes aw-cw-andrew-textglow {
+  0%, 100% { filter: drop-shadow(0 0 0.6cqw #ffd54a) drop-shadow(0 0 1.6cqw rgba(255, 193, 7, .55)); }
+  50%      { filter: drop-shadow(0 0 1.4cqw #ffe07a) drop-shadow(0 0 3.2cqw rgba(255, 193, 7, .85)); }
+}
+
 /* ----- grid area (middle): centre the auto-sized grid ----- */
 .aw-cw-gridwrap {
   flex: 1 1 auto;
@@ -130,34 +153,35 @@
   pointer-events: none;
 }
 
-/* ----- on-screen keyboard (letters + backspace) ----- */
-.aw-cw-kbd {
-  flex: 0 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.7cqw;
-  padding: 0.3cqw 0 0.2cqw;
+/* On-screen keyboard: the STANDARD keyboard (core/keyboard.js, .aw-kbd-*),
+   same one used by every template that needs typed input. This template only
+   styles its own 5th key ("Andrew help") — the same gold ready/glowing/used
+   states as Type the answer, duplicated under the .aw-cw- prefix (this page
+   does not load that template's CSS). Structure classes (.aw-kbd-key-fnlabel/
+   -dot, is-ready/is-glowing/is-used) come from core. */
+.aw-cw-key-andrew { flex: 0 0 12.7cqw; }
+.aw-cw-key-andrew.is-ready:disabled { opacity: .55; }
+.aw-cw-key-andrew.is-ready .aw-kbd-key-fnlabel { color: #f4f4f5; }   /* white, like caps/numbers */
+.aw-cw-key-andrew.is-glowing {
+  color: #3a2a00;
+  background: linear-gradient(180deg, #ffe89a, #ffc531);
+  box-shadow: 0 0.24cqw 0 #b8860b;
+  animation: aw-cw-andrew-halo 2.6s ease-in-out infinite;   /* slow, gentle glow */
 }
-.aw-cw-kbd.is-hidden { display: none; }
-.aw-cw-kbd-row { display: flex; gap: 0.7cqw; justify-content: center; }
-.aw-cw-key {
-  min-width: 5.6cqw;
-  height: 5.4cqw;
-  padding: 0 0.9cqw;
-  border: none;
-  border-radius: 1cqw;
-  background: #eef3f9;
-  color: var(--aw-text);
-  font-weight: 700;
-  font-size: 2.5cqw;
-  cursor: pointer;
-  box-shadow: 0 0.35cqw 0 #cfdae7;
-  transition: transform .05s ease, background .1s ease;
-  user-select: none;
+.aw-cw-key-andrew.is-glowing .aw-kbd-key-fnlabel {
+  color: #4a3400; font-weight: 800;
+  text-shadow: 0 0 0.6cqw #fff8d0;
 }
-.aw-cw-key:active { transform: translateY(0.3cqw); box-shadow: 0 0 0 #cfdae7; }
-.aw-cw-key-back { background: #fde3e3; color: var(--aw-no, #d23a3a); box-shadow: 0 0.35cqw 0 #f3c2c2; }
+@keyframes aw-cw-andrew-halo {
+  0%, 100% { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 0.6cqw #ffd54a, 0 0 1.6cqw rgba(255,193,7,.55); }
+  50%      { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 1.4cqw #ffe07a, 0 0 3.2cqw rgba(255,193,7,.85); }
+}
+.aw-cw-key-andrew.is-used {
+  background: #333335;
+  box-shadow: 0 0.24cqw 0 #1b1b1d;
+  transition: background .5s ease, color .5s ease, opacity .5s ease;
+}
+.aw-cw-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
 
 .aw-cw-empty {
   display: flex;

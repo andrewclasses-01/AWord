@@ -6,7 +6,14 @@
 //  • Tap a word (or its clue) -> the word highlights, the clue shows big above
 //    the grid, the cursor lands on the first empty cell. Type letters (physical
 //    keyboard OR the on-screen keyboard). Typing a letter fills the current cell
-//    and advances; when every cell of the word is filled the word is graded.
+//    and advances. Filling every cell does NOT auto-grade (teacher's call,
+//    1/8/2026): the student confirms with the keyboard's Submit key (or Enter
+//    on a physical keyboard) — Submit stays disabled until the word is full.
+//  • "Andrew help" (5th key of the standard keyboard, ONE use per game): shows
+//    the current word's answer in gold on the clue bar; the student still types
+//    it in themselves (copying it correctly still scores, same as Type the
+//    answer). Leaving the word or grading it ends the glow; the key then goes
+//    dark ("used") for the rest of the game.
 //  • Correct  -> the word's cells turn the accent colour (white letters), a
 //                point is scored, the "correct" sound plays.
 //    Wrong    -> the "wrong" sound plays; if options.showAnswerWhenWrong is on,
@@ -24,6 +31,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { createKeyboard } from "../../core/keyboard.js";
 import { openCrosswordEditor } from "./crossword-editor.js";
 import { crosswordSound } from "./crossword-sound.js";
 
@@ -32,14 +40,6 @@ import { crosswordSound } from "./crossword-sound.js";
 function gridKey(str) {
   return String(str ?? "").toUpperCase().replace(/[^A-Z]/g, "");
 }
-
-// A2-friendly QWERTY layout for the on-screen keyboard (letters only — a
-// crossword never needs numbers/symbols).
-const KBD_ROWS = [
-  ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-  ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-  ["Z", "X", "C", "V", "B", "N", "M"]
-];
 
 // -------------------------------------------------------------------
 // CROSSWORD BUILDER — place words on a grid so they interlock at shared
@@ -236,6 +236,8 @@ const crosswordTemplate = {
     let clueFitter = null;
     let autoTimer = null;
     let ro = null;                  // ResizeObserver for cell sizing
+    let andrewUsed = false;         // "Andrew help" — ONE use for the WHOLE game
+    let andrewGlowing = false;      // from the press until this word is graded / left
 
     // ----- keyboard show/hide button next to Menu (engine's opt-in slot) -----
     let kbdBtn = null;
@@ -246,8 +248,7 @@ const crosswordTemplate = {
       updateKbdBtn();
       kbdBtn.onclick = () => {
         keyboardVisible = !keyboardVisible;
-        const kbd = root.querySelector(".aw-cw-kbd");
-        if (kbd) kbd.classList.toggle("is-hidden", !keyboardVisible);
+        kbd.setHidden(!keyboardVisible);
         updateKbdBtn();
         resizeGrid();
       };
@@ -270,7 +271,9 @@ const crosswordTemplate = {
     const clueBar = el("div", "aw-cw-cluebar");
     const clueNum = el("span", "aw-cw-clue-num", "");
     const clueText = el("span", "aw-cw-clue-text", "");
-    clueBar.append(clueNum, clueText);
+    // gold answer shown at the end of the clue bar while "Andrew help" glows
+    const clueAns = el("span", "aw-cw-clue-answer", "");
+    clueBar.append(clueNum, clueText, clueAns);
     wrap.append(clueBar);
 
     const gridWrap = el("div", "aw-cw-gridwrap");
@@ -295,9 +298,31 @@ const crosswordTemplate = {
     gridWrap.append(gridEl);
     wrap.append(gridWrap);
 
-    const kbd = buildKeyboard();
-    if (!keyboardVisible) kbd.classList.add("is-hidden");
-    wrap.append(kbd);
+    // The STANDARD on-screen keyboard (core/keyboard.js) — the FULL standard
+    // set, identical to Type the answer (teacher's call, 1/8/2026): letters,
+    // caps, numbers, backspace, Space, the blue Submit key AND the "Andrew
+    // help" key. A crossword cell only ever wants a single A-Z letter, so
+    // onChar silently drops anything else (Space/numbers/punctuation) — those
+    // keys stay on screen for a CONSISTENT keyboard across the app, they just
+    // do nothing here (same as the physical handler, which only takes [a-zA-Z]).
+    const kbd = createKeyboard({
+      sound: ui.sound,
+      onChar: ch => { if (/^[a-zA-Z]$/.test(ch)) typeLetter(ch.toUpperCase()); },
+      onBackspace: () => { backspace(); kbd.refresh(); },
+      submit: {
+        onClick: submitCurrentWord,
+        isDisabled: () => finished || wordState[curWord].done || !wordFilled(clues[curWord])
+      },
+      extraKey: {
+        label: "Andrew",
+        className: "aw-cw-key-andrew",
+        getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
+        isDisabled: () => andrewUsed || finished || wordState[curWord].done,
+        onClick: useAndrew
+      }
+    });
+    if (!keyboardVisible) kbd.setHidden(true);
+    wrap.append(kbd.el);
 
     root.append(wrap);
 
@@ -337,7 +362,9 @@ const crosswordTemplate = {
     // selection + rendering of highlights
     // -------------------------------------------------------------------
     function selectWord(i, resetCell) {
-      curWord = ((i % total) + total) % total;
+      const target = ((i % total) + total) % total;
+      if (target !== curWord) consumeAndrewGlow();   // leaving the word spends the hint
+      curWord = target;
       if (resetCell) {
         // land on the first still-empty cell of the word (or the first cell)
         const w = clues[curWord];
@@ -347,6 +374,7 @@ const crosswordTemplate = {
       paint();
       updateClueBar();
       updateNav();
+      kbd.refresh();   // Submit/Andrew follow the newly selected word
     }
 
     function onCellClick(r, c) {
@@ -362,12 +390,14 @@ const crosswordTemplate = {
         target = through[0];
       }
       const ti = clues.indexOf(target);
+      if (ti !== curWord) consumeAndrewGlow();   // leaving the word spends the hint
       curWord = ti;
       curCell = target.cells.findIndex(([cr, cc]) => cr === r && cc === c);
       if (curCell < 0) curCell = 0;
       paint();
       updateClueBar();
       updateNav();
+      kbd.refresh();   // Submit/Andrew follow the newly selected word
     }
 
     function paint() {
@@ -434,8 +464,42 @@ const crosswordTemplate = {
       userGrid.set(rc, ch);
       setLetter(rc, ch);
       advanceCursor();
-      // grade once every cell of the word has a letter
-      if (w.cells.every(([rr, cc]) => userGrid.get(rr + "," + cc))) gradeWord();
+      // NO auto-grade on the last letter (teacher's call, 1/8/2026): the student
+      // confirms with the Submit key / Enter. Just light Submit up when full.
+      kbd.refresh();
+    }
+
+    // Submit is only possible when the current word is completely filled in.
+    function wordFilled(w) {
+      return w.cells.every(([r, c]) => userGrid.get(r + "," + c));
+    }
+    // The keyboard's Submit key (or Enter on a physical keyboard) — the
+    // student's explicit "lock my answer in" for the current word.
+    function submitCurrentWord() {
+      if (finished || wordState[curWord].done) return;
+      if (!wordFilled(clues[curWord])) return;
+      gradeWord();
+    }
+
+    // "Andrew help" — show the current word's answer in gold on the clue bar so
+    // the student can copy it in (typing it correctly still scores, exactly like
+    // Type the answer). Consumes the one game-wide use immediately; the glow
+    // ends when this word is graded or the student moves to another word.
+    function useAndrew() {
+      if (andrewUsed || finished || wordState[curWord].done) return;
+      andrewUsed = true;
+      andrewGlowing = true;
+      const w = clues[curWord];
+      clueAns.textContent = w.answer || w.key;
+      clueAns.classList.add("is-on");
+      kbd.refresh();   // Andrew key -> "glowing"
+    }
+    function consumeAndrewGlow() {
+      if (!andrewGlowing) return;
+      andrewGlowing = false;
+      clueAns.classList.remove("is-on");
+      clueAns.textContent = "";
+      kbd.refresh();   // Andrew key -> "used" (dark, locked for the game)
     }
 
     function advanceCursor() {
@@ -475,6 +539,7 @@ const crosswordTemplate = {
       const w = clues[curWord];
       const stt = wordState[curWord];
       if (stt.done) return;
+      consumeAndrewGlow();   // grading this word ends the hint glow (key goes dark)
       const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "").join("");
       const ok = typed === w.key;
       if (ok) {
@@ -510,6 +575,7 @@ const crosswordTemplate = {
           paint();
         }
       }
+      kbd.refresh();   // Submit re-disables (word done, or cleared for retry)
     }
 
     function afterGrade(wasCorrect) {
@@ -538,34 +604,6 @@ const crosswordTemplate = {
     function scoreNow() { return wordState.filter(s => s.correct).length; }
 
     // -------------------------------------------------------------------
-    // on-screen keyboard (letters + backspace) — same touch-first idea as
-    // Type the answer, trimmed to what a crossword needs.
-    // -------------------------------------------------------------------
-    function buildKeyboard() {
-      const k = el("div", "aw-cw-kbd");
-      KBD_ROWS.forEach((rowChars, ri) => {
-        const row = el("div", "aw-cw-kbd-row");
-        rowChars.forEach(ch => row.append(letterKey(ch)));
-        if (ri === KBD_ROWS.length - 1) {
-          const back = key("⌫", () => backspace());
-          back.classList.add("aw-cw-key-back");
-          row.append(back);
-        }
-        k.append(row);
-      });
-      return k;
-    }
-    function letterKey(ch) { return key(ch, () => typeLetter(ch)); }
-    function key(label, onClick) {
-      const b = el("button", "aw-cw-key", label);
-      b.type = "button";
-      b.tabIndex = -1;
-      b.onmousedown = e => e.preventDefault();   // never steal focus / cause scroll
-      b.onclick = onClick;
-      return b;
-    }
-
-    // -------------------------------------------------------------------
     // physical keyboard
     // -------------------------------------------------------------------
     function onKey(e) {
@@ -575,8 +613,9 @@ const crosswordTemplate = {
       if (k === "ArrowRight") { e.preventDefault(); return moveCursor(0, 1); }
       if (k === "ArrowUp") { e.preventDefault(); return moveCursor(-1, 0); }
       if (k === "ArrowDown") { e.preventDefault(); return moveCursor(1, 0); }
-      if (k === "Backspace") { e.preventDefault(); return backspace(); }
+      if (k === "Backspace") { e.preventDefault(); backspace(); kbd.refresh(); return; }
       if (k === "Tab") { e.preventDefault(); return selectWord(curWord + (e.shiftKey ? -1 : 1), true); }
+      if (k === "Enter") { e.preventDefault(); return submitCurrentWord(); }   // = the Submit key
       if (/^[a-zA-Z]$/.test(k)) { e.preventDefault(); typeLetter(k.toUpperCase()); }
     }
 
@@ -596,9 +635,11 @@ const crosswordTemplate = {
       // perpendicular: is there a crossing word through this cell?
       const cross = clues.find(x => x !== w && x.cells.some(([cr, cc]) => cr === r && cc === c));
       if (cross) {
+        consumeAndrewGlow();   // leaving the word spends the hint
         curWord = clues.indexOf(cross);
         curCell = cross.cells.findIndex(([cr, cc]) => cr === r && cc === c);
         paint(); updateClueBar(); updateNav();
+        kbd.refresh();   // Submit/Andrew follow the newly selected word
       }
     }
 
@@ -606,6 +647,8 @@ const crosswordTemplate = {
     function finish() {
       if (finished) return;
       finished = true;
+      consumeAndrewGlow();
+      kbd.refresh();   // lock Submit/Andrew behind the results overlay
       const review = clues.map((w, i) => {
         const s = wordState[i];
         const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("");

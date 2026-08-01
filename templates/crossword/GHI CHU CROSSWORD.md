@@ -22,7 +22,9 @@ https://wordwall.net/resource/116864402/crossword — nghiên cứu đầy đủ
 - Màn Ready → Play. Lưới tự sinh từ các answer (chèn nhau ở chữ chung).
 - Bấm 1 ô/1 từ → từ đó sáng lên, **gợi ý hiện to ở thanh trên**, con trỏ vào ô trống đầu tiên.
   Bấm lại vào ô giao nhau → **đổi hướng** ngang/dọc.
-- Gõ chữ (bàn phím vật lý HOẶC bàn phím ảo) → điền ô + tự nhảy ô. Khi đủ chữ cả từ → **tự chấm**:
+- Gõ chữ (bàn phím vật lý HOẶC bàn phím ảo) → điền ô + tự nhảy ô. ~~Khi đủ chữ cả từ → tự chấm~~
+  **(ĐỔI 1/8/2026)**: đủ chữ KHÔNG tự chấm — bấm phím **Submit** trên bàn phím ảo (hoặc **Enter**
+  bàn phím thật) để chốt đáp án, khi đó mới chấm:
   - Đúng → ô chuyển **màu accent + chữ trắng**, +1 điểm, âm "correct", tự sang từ chưa giải kế tiếp.
   - Sai → âm "wrong". Nếu bật **Show answer when wrong** → tự điền đáp án đúng + khóa từ (tính là đã
     trả lời, KHÔNG cộng điểm). Nếu tắt → nháy đỏ rồi xóa chữ để gõ lại.
@@ -68,6 +70,44 @@ bằng cách CHƠI THẬT act Wordwall + đo độ dài file (chi tiết trong G
 ## ĐỀ XUẤT SỬA CORE (chờ phụ trách tổng)
 - Thêm cờ `tpl.hideRandomOption` trong `core/engine.js` (ẩn nhóm "Random" của Options panel) — dùng cho
   Crossword. Không tự sửa core theo luật số 1.
+
+## 1/8/2026 — Đổi sang BÀN PHÍM CHUẨN dùng chung (`core/keyboard.js`)
+
+Thầy yêu cầu lấy y hệt bàn phím của Type the answer (4 hàng, tông tối cố định, caps/numbers/backspace/
+space) làm bàn phím CHUẨN cho toàn hệ thống, áp dụng luôn cho Crossword. Xem chi tiết đầy đủ (thiết kế
+module, quyết định của thầy) ở `GHI CHU TYPE-THE-ANSWER.md` mục "ĐỀ XUẤT SỬA CORE" (đợt 1/8/2026).
+
+- Bỏ hẳn bàn phím 3 hàng cũ (`KBD_ROWS`/`buildKeyboard/letterKey/key`, CSS `.aw-cw-kbd*`/`.aw-cw-key*`).
+- Dùng `createKeyboard({sound: ui.sound, onChar, onBackspace})` — KHÔNG có `submit` (crossword tự chấm
+  ngay khi đủ chữ, không cần nút Submit) và KHÔNG có `extraKey` ("Andrew help" là riêng của Type the
+  answer). `onChar` chỉ nhận chữ cái A-Z, bỏ qua Space/số/dấu câu (các phím đó vẫn HIỆN cho đồng bộ
+  nhìn với mọi game khác nhưng bấm không làm gì — giống bàn phím thật, `onKey` vốn cũng chỉ nhận
+  `[a-zA-Z]`).
+- **Đổi tông màu**: bàn phím nay LUÔN tối (không đổi theo theme Classic/Beach như trước) — thầy chốt
+  để đồng bộ toàn hệ thống.
+- Test qua `test.html` (gõ "CARRY" bằng bàn phím ảo giả lập qua DOM vì pane phiên này bị lỗi toạ độ
+  chuột (0,0), không composite frames): ô tự điền + điểm lên + chuyển từ kế tiếp; gõ sai → tự lộ đáp án
+  đúng + chuyển từ kế tiếp. 0 lỗi console.
+
+### 1/8/2026 (tiếp) — Bàn phím ĐỦ BỘ như bản chuẩn: thêm phím Andrew + Submit, ĐỔI LUẬT CHẤM
+
+Thầy gửi 2 ảnh so sánh (bàn phím crossword thiếu nút vs bàn phím chuẩn) và chốt qua AskUserQuestion:
+- **Phím Andrew** (1 lần/ván): hiện đáp án TỪ ĐANG CHỌN màu vàng ở CUỐI THANH GỢI Ý (span mới
+  `.aw-cw-clue-answer`, gradient + glow y hệt TTA, keyframes nhân bản tên `aw-cw-andrew-*` vì trang
+  crossword không nạp CSS của TTA); HS tự gõ lại — chép đúng VẪN được điểm (y hệt TTA). Trạng thái
+  ready → glowing → used do core gắn; glow TẮT khi từ đó được chấm HOẶC HS rời sang từ khác
+  (`consumeAndrewGlow()` gọi ở selectWord/onCellClick/moveCursor-đổi-từ/gradeWord/finish).
+- **Phím Submit** (xanh) = **ĐỔI LUẬT CHẤM CẢ GAME**: gõ đủ chữ KHÔNG tự nhận nữa (bỏ auto-grade
+  trong `typeLetter`); Submit sáng lên khi từ điền đủ (`wordFilled()`), bấm mới chấm
+  (`submitCurrentWord()` → `gradeWord()`). Bàn phím thật: phím **Enter = Submit** (thêm vào `onKey`);
+  Enter khi từ chưa đủ chữ → không làm gì. Sau chấm/xoá chữ/chuyển từ đều `kbd.refresh()` để
+  Submit/Andrew đúng trạng thái theo từ đang chọn.
+- **Đã test qua trình duyệt thật** (server riêng 5511, đo DOM): 4 hàng đủ `' q…p ⌫ / caps… ? /
+  numbers… . , / Andrew Space Submit`; gõ đủ "CARRY" → KHÔNG tự chấm (0 ô xanh) + Submit sáng → bấm
+  Submit → 5 ô xanh + điểm 0→1 + Submit khoá lại; Andrew → glowing + "CORRECT" vàng trên thanh gợi ý
+  → điền + Submit → glow tắt + phím tối "is-used" + khoá cả ván; từ điền SAI + Submit → lộ đáp án
+  (6 ô xám) + không cộng điểm + tự sang từ kế; Enter vật lý = Submit (từ chưa đủ → không làm gì, đủ →
+  chấm); 0 lỗi console. File đụng: `crossword.js` + `crossword.css` (KHÔNG đụng core).
 
 ## Đã tự test (qua test.html, trình duyệt thật, 0 lỗi console)
 - Sinh lưới interlock 20 từ (19 đặt được, 1 không chèn được thì bỏ khỏi lưới) — OK.

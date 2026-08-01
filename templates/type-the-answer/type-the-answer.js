@@ -21,6 +21,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+import { createKeyboard } from "../../core/keyboard.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
 
@@ -29,15 +30,6 @@ function normalize(str) {
   s = s.normalize("NFD").replace(new RegExp("[\\u0300-\\u036f]", "g"), "");   // always ignore accents
   return s.toLowerCase();                                                     // always ignore case
 }
-
-// Letters layout (phone-keyboard style, per Teacher Andrew's reference image).
-const KBD_L1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"];
-const KBD_L2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
-const KBD_L3 = ["z", "x", "c", "v", "b", "n", "m"];
-// Numbers / symbols layout (shown when the `numbers` key is on).
-const KBD_N1 = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
-const KBD_N2 = ["-", "/", ":", ";", "(", ")", "$", "&", "@"];
-const KBD_N3 = ["!", "+", "=", "*", "%", "#", "_"];
 
 const ttaTemplate = {
   type: "type_the_answer",
@@ -113,8 +105,6 @@ const ttaTemplate = {
     let autoTimer = null;
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let keyboardVisible = true;         // ON by default every time the act is opened
-    let capsOn = false;                 // caps key: uppercase the typed letters (auto-off after one letter)
-    let numbersMode = false;            // numbers key: swap letters for a numbers/symbols layout
     let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
@@ -165,10 +155,26 @@ const ttaTemplate = {
 
     slot.append(answerBlock);
 
-    let keyboardEl = buildKeyboard();
-    if (!keyboardVisible) keyboardEl.classList.add("is-hidden");
+    // ----- the STANDARD on-screen keyboard (core/keyboard.js) -----
+    const kbd = createKeyboard({
+      sound: ui.sound,
+      onChar: ch => insertChar(input, ch),
+      onBackspace: () => backspace(input),
+      submit: {
+        onClick: () => submitAnswer(input.value),
+        isDisabled: () => state[index].graded || !input.value.trim()
+      },
+      extraKey: {
+        label: "Andrew",
+        className: "aw-tta-key-andrew",
+        getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
+        isDisabled: () => andrewUsed || state[index].graded,
+        onClick: useAndrew
+      }
+    });
+    if (!keyboardVisible) kbd.setHidden(true);
 
-    card.append(qArea, slot, keyboardEl);
+    card.append(qArea, slot, kbd.el);
     const curInput = input;   // single persistent textarea (for autoGrow)
 
     // ----- keyboard show/hide button, next to Menu (engine's opt-in slot) -----
@@ -180,7 +186,7 @@ const ttaTemplate = {
       updateKbdBtn();
       kbdBtn.onclick = () => {
         keyboardVisible = !keyboardVisible;
-        keyboardEl.classList.toggle("is-hidden", !keyboardVisible);   // animates (CSS transition)
+        kbd.setHidden(!keyboardVisible);   // animates (CSS transition)
         syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
         updateKbdBtn();
         fitLayout();   // block height (outside Submit) + keyboard-top changed -> re-fit & re-centre
@@ -229,8 +235,8 @@ const ttaTemplate = {
     // The keyboard's layout TOP edge. When hidden it's slid down 14% (translateY),
     // so add that back to get where it actually sits in the layout.
     function keyboardTopLayout() {
-      const kR = keyboardEl.getBoundingClientRect();
-      return kR.top + (keyboardEl.classList.contains("is-hidden") ? -kR.height * 0.14 : 0);
+      const kR = kbd.el.getBoundingClientRect();
+      return kR.top + (kbd.isHidden() ? -kR.height * 0.14 : 0);
     }
     // The vertical space available to hold the answer, centred: from the QUESTION's
     // bottom edge to the KEYBOARD's top edge.
@@ -331,10 +337,8 @@ const ttaTemplate = {
     // disabled while the box is empty or the question is already graded.
     function syncSubmitEnabled() {
       const st = state[index];
-      const disabled = st.graded || !input.value.trim();
-      submitBtn.disabled = disabled;
-      const kbSubmit = keyboardEl && keyboardEl.querySelector(".aw-tta-kbd-submit");
-      if (kbSubmit) kbSubmit.disabled = disabled;
+      submitBtn.disabled = st.graded || !input.value.trim();
+      kbd.refresh();   // re-syncs the keyboard's own Submit key + the Andrew key
     }
 
     // ===== load a question into the persistent DOM (no rebuild) =====
@@ -356,8 +360,7 @@ const ttaTemplate = {
       revealWrap.classList.remove("is-andrew");
       autoGrow(input);
       syncSubmitVisibility();
-      syncKeyboardState();
-      syncSubmitEnabled();   // Submit off if this question's box is empty
+      syncSubmitEnabled();   // Submit off if this question's box is empty (also refreshes the keyboard)
       updateNav();
       fitLayout();
 
@@ -402,13 +405,8 @@ const ttaTemplate = {
 
       if (andrewGlowing) {
         andrewGlowing = false;
-        const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
-        if (andrewKey) {
-          andrewKey.classList.remove("is-glowing", "is-ready");
-          andrewKey.classList.add("is-used");
-          andrewKey.disabled = true;
-        }
         revealWrap.classList.remove("is-andrew");   // the hint reveal turns into the normal green one
+        kbd.refresh();   // Andrew key -> "used" now that glowing has ended
       }
 
       if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
@@ -547,170 +545,6 @@ const ttaTemplate = {
       setTimeout(finishPulse, PULSE_MS + 150);   // fallback if rAF never fires
     }
 
-    // ----- on-screen keyboard (phone style): 4 rows. Letters mode by default;
-    // the `numbers` key swaps the middle for a numbers/symbols layout. -----
-    function buildKeyboard() {
-      const getInput = () => input;   // single persistent textarea
-      const wrap = el("div", "aw-tta-kbd");
-      const main = el("div", "aw-tta-kbd-main");
-      const mkRow = () => el("div", "aw-tta-kbd-row");
-
-      if (!numbersMode) {
-        const r1 = mkRow();
-        r1.append(makeCharKey("'", getInput));
-        KBD_L1.forEach(ch => r1.append(makeLetterKey(ch, getInput)));
-        r1.append(makeBackspaceKey(getInput));
-        main.append(r1);
-
-        const r2 = mkRow();
-        r2.append(makeCapsKey());
-        KBD_L2.forEach(ch => r2.append(makeLetterKey(ch, getInput)));
-        r2.append(makeCharKey("?", getInput));
-        main.append(r2);
-
-        const r3 = mkRow();
-        r3.append(makeNumbersKey());
-        KBD_L3.forEach(ch => r3.append(makeLetterKey(ch, getInput)));
-        r3.append(makeCharKey(".", getInput));
-        r3.append(makeCharKey(",", getInput));
-        main.append(r3);
-      } else {
-        const r1 = mkRow();
-        r1.append(makeCharKey("'", getInput));
-        KBD_N1.forEach(ch => r1.append(makeCharKey(ch, getInput)));
-        r1.append(makeBackspaceKey(getInput));
-        main.append(r1);
-
-        const r2 = mkRow();
-        r2.append(makeCapsKey());   // caps has no effect here, shown disabled
-        KBD_N2.forEach(ch => r2.append(makeCharKey(ch, getInput)));
-        r2.append(makeCharKey("\"", getInput));
-        main.append(r2);
-
-        const r3 = mkRow();
-        r3.append(makeNumbersKey());
-        KBD_N3.forEach(ch => r3.append(makeCharKey(ch, getInput)));
-        r3.append(makeCharKey(".", getInput));
-        r3.append(makeCharKey(",", getInput));
-        main.append(r3);
-      }
-
-      const r4 = el("div", "aw-tta-kbd-row aw-tta-kbd-spacerow");
-      r4.append(makeAndrewKey());
-      const spaceKey = makeKey("Space", () => insertChar(getInput(), " "));
-      spaceKey.classList.add("aw-tta-kbd-space");
-      const submitKey = makeKey("Submit", () => submitAnswer(getInput().value), true);   // silent (no key tock)
-      submitKey.classList.add("aw-tta-kbd-submit");
-      submitKey.disabled = state[index].graded;
-      r4.append(spaceKey, submitKey);
-      main.append(r4);
-
-      wrap.append(main);
-      return wrap;
-    }
-
-    // Rebuild only when numbers mode toggles (the keys change); caps / Andrew are
-    // updated in place. Navigation never rebuilds it.
-    function rebuildKeyboard() {
-      const fresh = buildKeyboard();
-      if (!keyboardVisible) fresh.classList.add("is-hidden");
-      keyboardEl.replaceWith(fresh);
-      keyboardEl = fresh;
-      syncKeyboardState();
-      syncSubmitEnabled();
-      fitLayout();
-    }
-
-    // Keep the persistent keyboard's per-question / stateful bits in step without
-    // rebuilding (so it never flickers).
-    function syncKeyboardState() {
-      const st = state[index];
-      // (the keyboard's Submit key enabled-state is owned by syncSubmitEnabled,
-      // which also accounts for the box being empty — don't set it here.)
-
-      const capsKey = keyboardEl.querySelector(".aw-tta-key-caps");
-      if (capsKey) {
-        capsKey.classList.toggle("is-active", capsOn && !numbersMode);
-        capsKey.disabled = numbersMode;
-      }
-      const numbersKey = keyboardEl.querySelector(".aw-tta-key-numbers");
-      if (numbersKey) numbersKey.classList.toggle("is-active", numbersMode);
-
-      const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
-      if (andrewKey) {
-        andrewKey.classList.remove("is-ready", "is-glowing", "is-used");
-        if (!andrewUsed) { andrewKey.classList.add("is-ready"); andrewKey.disabled = st.graded; }
-        else if (andrewGlowing) { andrewKey.classList.add("is-glowing"); andrewKey.disabled = true; }
-        else { andrewKey.classList.add("is-used"); andrewKey.disabled = true; }
-      }
-    }
-
-    function makeKey(label, onClick, silent) {
-      const b = el("button", "aw-tta-key", escapeHtml(label));
-      b.type = "button";
-      b.tabIndex = -1;                 // don't steal focus from the text input
-      b.onmousedown = e => e.preventDefault();   // keep the input's caret/focus on click
-      // every key press gives an iPhone-style "tock" (synthesized, respects mute)
-      // — EXCEPT Submit (silent), whose correct/wrong sound plays instead.
-      b.onclick = e => { if (!silent) ui.sound.keyClick?.(); onClick?.(e); };
-      return b;
-    }
-    function makeCharKey(ch, getInput) {
-      return makeKey(ch, () => insertChar(getInput(), ch));
-    }
-    // Glyph always uppercase (like the image); inserts uppercase only while caps
-    // is on. Caps AUTO-OFF after one letter (phone-shift style).
-    function makeLetterKey(ch, getInput) {
-      const b = makeKey(ch.toUpperCase(), () => {
-        const upper = capsOn && !numbersMode;
-        insertChar(getInput(), upper ? ch.toUpperCase() : ch);
-        if (upper) setCaps(false);
-      });
-      b.classList.add("aw-tta-key-letter");
-      return b;
-    }
-    function makeBackspaceKey(getInput) {
-      const b = makeKey("⌫", () => backspace(getInput()));
-      b.classList.add("aw-tta-key-back");   // red
-      return b;
-    }
-    function makeFnKey(labelText, extraClass, onClick, disabled) {
-      const b = el("button", "aw-tta-key aw-tta-key-fn " + extraClass);
-      b.type = "button";
-      b.tabIndex = -1;
-      b.onmousedown = e => e.preventDefault();
-      b.append(el("span", "aw-tta-key-dot"), el("span", "aw-tta-key-fnlabel", labelText));
-      if (disabled) b.disabled = true;
-      else if (onClick) b.onclick = e => { ui.sound.keyClick?.(); onClick(e); };
-      return b;
-    }
-    function makeCapsKey() {
-      const cls = "aw-tta-key-caps" + (capsOn && !numbersMode ? " is-active" : "");
-      return makeFnKey("caps", cls, () => setCaps(!capsOn), numbersMode);
-    }
-    function makeNumbersKey() {
-      const cls = "aw-tta-key-numbers" + (numbersMode ? " is-active" : "");
-      return makeFnKey("numbers", cls,
-        () => { numbersMode = !numbersMode; if (numbersMode) capsOn = false; rebuildKeyboard(); }, false);
-    }
-    function makeAndrewKey() {
-      const st = state[index];
-      let cls = "aw-tta-key-andrew ";
-      if (!andrewUsed) cls += "is-ready";
-      else if (andrewGlowing) cls += "is-glowing";
-      else cls += "is-used";
-      const canUse = !andrewUsed && !st.graded;
-      return makeFnKey("Andrew", cls, canUse ? useAndrew : null, !canUse);
-    }
-
-    // Flip caps in place (letter glyphs are always uppercase anyway; only the lit
-    // dot + inserted-case change), so auto-release after a letter never flickers.
-    function setCaps(on) {
-      capsOn = on;
-      const capsKey = keyboardEl && keyboardEl.querySelector(".aw-tta-key-caps");
-      if (capsKey) capsKey.classList.toggle("is-active", capsOn && !numbersMode);
-    }
-
     // "Andrew help" — reveal the correct answer so the student can copy it, and
     // light the Andrew key up. Consumes the one game-wide use immediately.
     function useAndrew() {
@@ -722,12 +556,7 @@ const ttaTemplate = {
       revealText.textContent = it.acceptedAnswers[0];
       revealWrap.classList.add("is-open", "is-andrew");
       scheduleRevealRefit();
-      const andrewKey = keyboardEl.querySelector(".aw-tta-key-andrew");
-      if (andrewKey) {
-        andrewKey.classList.remove("is-ready");
-        andrewKey.classList.add("is-glowing");
-        andrewKey.disabled = true;
-      }
+      kbd.refresh();   // Andrew key -> "glowing"
       if (!input.disabled) input.focus();
     }
     function insertChar(inp, ch) {
