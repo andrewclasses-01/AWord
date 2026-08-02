@@ -3,28 +3,47 @@
 //  • Content = a list of { answer, clue } pairs. The interlocking GRID is
 //    generated automatically from the answers (crossword builder below), just
 //    like Wordwall — the teacher only types answer + clue.
-//  • Tap a word (or its clue) -> the word highlights, the clue shows big above
-//    the grid, the cursor lands on the first empty cell. Type letters (physical
-//    keyboard OR the on-screen keyboard). Typing a letter fills the current cell
-//    and advances. Filling every cell does NOT auto-grade (teacher's call,
-//    1/8/2026): the student confirms with the keyboard's Submit key (or Enter
-//    on a physical keyboard) — Submit stays disabled until the word is full.
-//  • "Andrew help" (5th key of the standard keyboard, ONE use per game): shows
-//    the current word's answer in gold on the clue bar; the student still types
-//    it in themselves (copying it correctly still scores, same as Type the
-//    answer). Leaving the word or grading it ends the glow; the key then goes
-//    dark ("used") for the rest of the game.
-//  • Correct  -> the word's cells turn the accent colour (white letters), a
-//                point is scored, the "correct" sound plays.
-//    Wrong    -> the "wrong" sound plays; if options.showAnswerWhenWrong is on,
-//                the correct letters are revealed and the word locks (answered,
-//                not scored). If off, the wrong letters flash red then clear so
-//                the student can try again.
-//  • Auto-finishes when every word is solved (or revealed). Menu "Submit
-//    answers" / a count-down timer can end it early; unanswered = incorrect.
-//  • Options: Timer (engine), Show answers (engine review), and this template's
-//    own "Show answer when wrong". No Shuffle / Letters-on-answers (a crossword
-//    grid is fixed) — the Letters group is hidden via hideLettersOption.
+//
+//  • TWO SCREENS (2/8/2026 redesign, teacher's terminology):
+//      "the board"  = the whole crossword, keyboard HIDDEN.
+//      "a row/col"  = one Across word (row) or Down word (col) popped out BIG,
+//                     keyboard SHOWN.
+//    The keyboard is ABSOLUTELY pinned to one fixed centred spot at the bottom
+//    (fixed size), so it NEVER moves or resizes whatever you pick.
+//      - Across word -> a big horizontal strip centred between the clue and the
+//        keyboard.
+//      - Down word   -> a big vertical strip to the RIGHT of the keyboard (above
+//        the sound button in the bar below).
+//    Whatever cell you tap, the cursor starts at the FIRST cell and you type the
+//    whole word left-to-right.
+//
+//  • FLOW: pick a word on the board -> it pops out + keyboard appears -> type ->
+//    Submit (keyboard's Submit key, or Enter). After EVERY answer the view
+//    always zooms back to the board and hides the keyboard; you pick the next
+//    word by hand. There is NO Next/Prev navigation (those buttons are hidden).
+//
+//  • "Change the crossword" option (default ON): while a word is open you can
+//    tap the CLUE to bail back to the board and choose another. When OFF you are
+//    locked to the word until you answer it (right or wrong).
+//
+//  • "Andrew help" (keyboard's 5th key, ONE use per game, only while a word is
+//    open): the answer letters appear inside the cells in glowing GOLD (same
+//    sparkle as the key) as a hint — you still type them yourself. The key goes
+//    dark once used.
+//
+//  • Crossing letters already filled by a solved word show WHITE with a faint
+//    dark outline (a "given"); once you type past them they turn normal black.
+//
+//  • Grading (each answer then returns to the board):
+//      Correct                       -> cells go accent + white, +1, "correct".
+//      Wrong, Show-answer-when-wrong ON  -> the correct letters show for 3.5s,
+//                                           then it returns to the board.
+//      Wrong, Show-answer-when-wrong OFF -> the cells get a grey ✕, then board.
+//
+//  • Options: Timer (engine), Show answers (engine review), plus this template's
+//    "Show answer when wrong" and "Change the crossword". No Shuffle / Letters
+//    (a crossword grid is fixed) — the Letters group is hidden via
+//    hideLettersOption.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -46,44 +65,34 @@ function gridKey(str) {
 // letters. Greedy: longest word first at the origin, then each next word takes
 // its best-scoring valid crossing; a word that can't cross anything is dropped
 // (kept out of the grid but still listed as a clue with "No answer" possible).
-// Deterministic-ish given the same list (only the light tie-break shuffles).
 // -------------------------------------------------------------------
 function buildCrossword(words) {
-  // words: [{ answer(raw), clue }]  ->  usable: [{ key, clue, answer }]
   const usable = words
     .map(w => ({ key: gridKey(w.answer), clue: w.clue || "", answer: w.answer || "" }))
     .filter(w => w.key.length >= 2);
 
-  // De-dup identical grid words (keep the first clue).
   const seen = new Set();
   const list = [];
   for (const w of usable) { if (!seen.has(w.key)) { seen.add(w.key); list.push(w); } }
-  // Longest first — long words give more crossing chances for the rest.
   list.sort((a, b) => b.key.length - a.key.length);
 
-  const cells = new Map();              // "r,c" -> letter
-  const placed = [];                    // { key, clue, answer, row, col, dir }
+  const cells = new Map();
+  const placed = [];
   const at = (r, c) => cells.get(r + "," + c);
 
-  // Can `key` sit at (row,col) going dir ('A' across | 'D' down)?
-  // Returns the number of crossings (>=0) or -1 if it doesn't fit.
   function fitScore(key, row, col, dir) {
     const dr = dir === "D" ? 1 : 0, dc = dir === "A" ? 1 : 0;
     let crossings = 0;
-    // the cell just before the start and just after the end must be empty,
-    // otherwise this word would extend/merge into an existing one.
     if (at(row - dr, col - dc) != null) return -1;
     if (at(row + dr * key.length, col + dc * key.length) != null) return -1;
     for (let i = 0; i < key.length; i++) {
       const r = row + dr * i, c = col + dc * i;
       const cur = at(r, c);
       if (cur != null) {
-        if (cur !== key[i]) return -1;   // conflicting letter
+        if (cur !== key[i]) return -1;
         crossings++;
-        continue;                        // a real crossing — perpendicular neighbours are allowed
+        continue;
       }
-      // empty cell: its perpendicular neighbours must be empty too (no two
-      // parallel words running side by side by accident).
       if (dir === "A") {
         if (at(r - 1, c) != null || at(r + 1, c) != null) return -1;
       } else {
@@ -102,7 +111,7 @@ function buildCrossword(words) {
   const skipped = [];
   list.forEach((w, wi) => {
     if (wi === 0) { stamp(w, 0, 0, "A"); return; }
-    let best = null;   // { row, col, dir, score }
+    let best = null;
     for (const p of placed) {
       const pdr = p.dir === "D" ? 1 : 0, pdc = p.dir === "A" ? 1 : 0;
       for (let j = 0; j < p.key.length; j++) {
@@ -110,7 +119,6 @@ function buildCrossword(words) {
         const letter = p.key[j];
         for (let i = 0; i < w.key.length; i++) {
           if (w.key[i] !== letter) continue;
-          // cross perpendicular to p, lining up letter i of w onto (pr,pc)
           const dir = p.dir === "A" ? "D" : "A";
           const row = dir === "D" ? pr - i : pr;
           const col = dir === "A" ? pc - i : pc;
@@ -120,12 +128,11 @@ function buildCrossword(words) {
       }
     }
     if (best) stamp(w, best.row, best.col, best.dir);
-    else skipped.push(w);   // couldn't interlock — leave it out of the grid
+    else skipped.push(w);
   });
 
   if (!placed.length) return { grid: null, clues: [], rows: 0, cols: 0, skipped };
 
-  // Normalise coordinates to a 0-based bounding box.
   let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity;
   for (const key of cells.keys()) {
     const [r, c] = key.split(",").map(Number);
@@ -134,7 +141,6 @@ function buildCrossword(words) {
   }
   const rows = maxR - minR + 1, cols = maxC - minC + 1;
 
-  // grid[r][c] = { sol } for playable cells, null for blank.
   const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => null));
   for (const [k, letter] of cells) {
     const [r, c] = k.split(",").map(Number);
@@ -142,8 +148,6 @@ function buildCrossword(words) {
   }
   placed.forEach(p => { p.row -= minR; p.col -= minC; });
 
-  // Number the START cells (row-major). A cell starts an Across word if it has
-  // no left neighbour but a right one; starts a Down word if no top but a bottom.
   let n = 0;
   const numAt = new Map();
   for (let r = 0; r < rows; r++) {
@@ -155,7 +159,6 @@ function buildCrossword(words) {
     }
   }
 
-  // Build the ordered clue list: each placed word -> its cells + number.
   const clues = placed.map(p => {
     const dr = p.dir === "D" ? 1 : 0, dc = p.dir === "A" ? 1 : 0;
     const cellsOf = [];
@@ -167,7 +170,6 @@ function buildCrossword(words) {
       cells: cellsOf
     };
   });
-  // Sort clues for navigation: by number, Across before Down.
   clues.sort((a, b) => a.number - b.number || (a.dir === b.dir ? 0 : a.dir === "A" ? -1 : 1));
 
   return { grid, clues, rows, cols, skipped };
@@ -179,7 +181,6 @@ const crosswordTemplate = {
   name: "Crossword",
   edit: openCrosswordEditor,
   hideLettersOption: true,     // a crossword has no lettered answer boxes
-  hasKeyboardToggle: true,     // engine gives us a slot next to Menu for the keyboard show/hide button
 
   sounds: {
     play: crosswordSound.play,
@@ -188,26 +189,49 @@ const crosswordTemplate = {
     complete: crosswordSound.complete
   },
 
-  // Print worksheet: one row per word -> clue + answer (core/print.js).
   toPrintItems(activity) {
     return (activity.content?.words || [])
       .filter(w => w && gridKey(w.answer).length >= 2)
       .map(w => ({ clue: w.clue || "", answer: w.answer || "" }));
   },
 
-  // "Show answer when wrong" — this template's one extra option.
+  // This template's own extra options.
   buildExtraOptions({ panel, draft, el, mkCheck }) {
     const g = el("div", "aw-opt-group");
     g.append(el("div", "aw-opt-label", "Crossword"));
-    const row = el("div", "aw-opt-row");
-    row.append(mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
+    const r1 = el("div", "aw-opt-row");
+    r1.append(mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
       v => draft.showAnswerWhenWrong = v));
-    g.append(row);
+    g.append(r1);
+    const r2 = el("div", "aw-opt-row");
+    r2.append(mkCheck(draft.changeCrossword !== false, "Change the crossword",
+      v => draft.changeCrossword = v));
+    g.append(r2);
+
+    // "Points off when wrong" (0..5). 0 = no penalty (drag it to 0 to turn
+    // Minus mode off) — no separate checkbox.
+    if (draft.minusAmount == null) draft.minusAmount = 0;
+    const sliderWrap = el("div", "aw-cw-opt-minus");
+    sliderWrap.append(el("span", "aw-cw-opt-minus-cap", "Points off when wrong"));
+    const slider = el("input", "aw-cw-opt-slider");
+    slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
+    slider.value = String(draft.minusAmount || 0);
+    const fmt = v => (+v > 0 ? `−${v}` : "0");
+    const sliderVal = el("span", "aw-cw-opt-minus-val", fmt(slider.value));
+    slider.oninput = () => { draft.minusAmount = +slider.value; sliderVal.textContent = fmt(slider.value); };
+    sliderWrap.append(slider, sliderVal);
+    g.append(sliderWrap);
+
     panel.append(g);
   },
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
+    const canExit = opt.changeCrossword !== false;   // tap the clue to bail out
+    // "Points off when wrong": 0..5. 0 = no penalty (Minus mode off) — the slider
+    // dragged to 0 IS the off switch, so there is no separate checkbox.
+    const penalty = Math.max(0, Math.min(5, opt.minusAmount || 0));
+    const minusOn = penalty > 0;
     const words = [...(activity.content?.words || [])];
 
     const built = buildCrossword(words);
@@ -220,67 +244,63 @@ const crosswordTemplate = {
     }
 
     const { grid, clues, rows, cols } = built;
-    // user letters keyed "r,c"; a solved/revealed word locks its cells.
-    const userGrid = new Map();
-    const cellStatus = new Map();   // "r,c" -> "solved" | "revealed" (locked cells)
-    // per-word state
-    const wordState = clues.map(() => ({ done: false, correct: false, revealed: false }));
+    const userGrid = new Map();      // "r,c" -> letter typed by the student
+    const cellStatus = new Map();    // "r,c" -> "solved" | "revealed" | "wrong"
+    const wordState = clues.map(() => ({ done: false, correct: false, revealed: false, wrong: false }));
 
-    let curWord = 0;                // index into clues
-    let curCell = 0;                // index into clues[curWord].cells
+    let curWord = -1;                // -1 = on the board (nothing picked)
+    let curCell = 0;
     let finished = false;
-    // Keyboard OFF by default — like Wordwall, the full grid is shown and a real
-    // keyboard is used; the toggle (next to Menu) brings up an on-screen keyboard
-    // for touch panels (the grid then shares the height with it).
-    let keyboardVisible = false;
+    let livePoints = 0;              // shown score: +1 per correct, −penalty per wrong (Minus mode); may go negative
     let clueFitter = null;
-    let autoTimer = null;
-    let ro = null;                  // ResizeObserver for cell sizing
-    let andrewUsed = false;         // "Andrew help" — ONE use for the WHOLE game
-    let andrewGlowing = false;      // from the press until this word is graded / left
+    let ro = null;
+    const timers = [];               // pending setTimeouts for the current word's end sequence
+    const pushTimer = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+    const clearTimers = () => { timers.forEach(clearTimeout); timers.length = 0; };
+    let andrewUsed = false;          // ONE use for the WHOLE game
+    let andrewGlowing = false;       // from the press until this word ends
 
-    // ----- keyboard show/hide button next to Menu (engine's opt-in slot) -----
-    let kbdBtn = null;
-    if (ui.kbdSlot) {
-      ui.kbdSlot.innerHTML = "";
-      kbdBtn = el("button", "aw-iconbtn", icons.keyboard);
-      kbdBtn.type = "button";
-      updateKbdBtn();
-      kbdBtn.onclick = () => {
-        keyboardVisible = !keyboardVisible;
-        kbd.setHidden(!keyboardVisible);
-        updateKbdBtn();
-        resizeGrid();
-      };
-      ui.kbdSlot.append(kbdBtn);
-    }
-    function updateKbdBtn() {
-      if (!kbdBtn) return;
-      kbdBtn.title = keyboardVisible ? "Hide keyboard" : "Show keyboard";
-      kbdBtn.setAttribute("aria-label", kbdBtn.title);
-      kbdBtn.classList.toggle("is-off", !keyboardVisible);
+    const bigCells = new Map();      // index-in-current-word -> big overlay cell
+
+    // Hide the engine's Prev/Next nav — a crossword can't be navigated (2/8).
+    // Use visibility (NOT display:none): the bottom bar is a 3-column grid
+    // (left | nav | tools), so removing the nav from layout would slide the
+    // sound/fullscreen tools inward. visibility keeps the nav's grid cell, so
+    // the tools stay in the right corner.
+    const navWrap = root.parentElement && root.parentElement.querySelector(".aw-nav");
+    if (navWrap) navWrap.style.visibility = "hidden";
+
+    // Slogan on the SAME row as the clock + score (centred, small, grey, spaced
+    // uppercase). Absolutely centred over the top bar so it never depends on the
+    // clock/score widths.
+    const topbar = root.parentElement && root.parentElement.querySelector(".aw-topbar");
+    let sloganEl = null;
+    if (topbar) {
+      topbar.style.position = "relative";
+      sloganEl = el("div", "aw-cw-slogan", "CROSSWORD IN ANDREW CLASSES");
+      topbar.append(sloganEl);
     }
 
-    ui.onSubmit(finish, () => wordState.filter(s => s.done).length);   // block "Submit answers" at 0 answered
+    ui.onSubmit(finish, () => wordState.filter(s => s.done).length);
     window.addEventListener("keydown", onKey);
 
-    // ----- build the static shell once (grid + clue bar + keyboard) -----
+    // ----- static shell: clue bar + grid + keyboard + active strip -----
     root.innerHTML = "";
     const wrap = el("div", "aw-cw-wrap");
 
     const clueBar = el("div", "aw-cw-cluebar");
-    const clueNum = el("span", "aw-cw-clue-num", "");
     const clueText = el("span", "aw-cw-clue-text", "");
-    // gold answer shown at the end of the clue bar while "Andrew help" glows
-    const clueAns = el("span", "aw-cw-clue-answer", "");
-    clueBar.append(clueNum, clueText, clueAns);
+    clueBar.append(clueText);
+    clueBar.onclick = () => {
+      if (curWord >= 0 && !finished && canExit) { ui.sound?.click?.(); returnToBoard(); }
+    };
     wrap.append(clueBar);
 
     const gridWrap = el("div", "aw-cw-gridwrap");
     const gridEl = el("div", "aw-cw-grid");
     gridEl.style.setProperty("--cols", cols);
     gridEl.style.setProperty("--rows", rows);
-    const cellEls = new Map();      // "r,c" -> element
+    const cellEls = new Map();
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         const g = grid[r][c];
@@ -298,59 +318,75 @@ const crosswordTemplate = {
     gridWrap.append(gridEl);
     wrap.append(gridWrap);
 
-    // The STANDARD on-screen keyboard (core/keyboard.js) — the FULL standard
-    // set, identical to Type the answer (teacher's call, 1/8/2026): letters,
-    // caps, numbers, backspace, Space, the blue Submit key AND the "Andrew
-    // help" key. A crossword cell only ever wants a single A-Z letter, so
-    // onChar silently drops anything else (Space/numbers/punctuation) — those
-    // keys stay on screen for a CONSISTENT keyboard across the app, they just
-    // do nothing here (same as the physical handler, which only takes [a-zA-Z]).
+    // The standard keyboard, in an ABSOLUTE full-width host pinned to the bottom.
+    // The host is out of the layout flow, so the keyboard's fixed (cqw) size and
+    // centred position NEVER change with the clue length, grid size or the word
+    // that's open. It fades/hides on the board and reappears for a word.
+    const kbdHost = el("div", "aw-cw-kbdhost");
     const kbd = createKeyboard({
       sound: ui.sound,
       onChar: ch => { if (/^[a-zA-Z]$/.test(ch)) typeLetter(ch.toUpperCase()); },
       onBackspace: () => { backspace(); kbd.refresh(); },
       submit: {
         onClick: submitCurrentWord,
-        isDisabled: () => finished || wordState[curWord].done || !wordFilled(clues[curWord])
+        isDisabled: () => finished || curWord < 0 || wordState[curWord].done || !wordFilled(clues[curWord])
       },
       extraKey: {
         label: "Andrew",
         className: "aw-cw-key-andrew",
         getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
-        isDisabled: () => andrewUsed || finished || wordState[curWord].done,
+        // NB: must NOT be disabled at build time (curWord is -1 then), or the
+        // core keyboard never wires the click. useAndrew() guards the board.
+        isDisabled: () => andrewUsed || finished || (curWord >= 0 && wordState[curWord].done),
         onClick: useAndrew
       }
     });
-    if (!keyboardVisible) kbd.setHidden(true);
-    wrap.append(kbd.el);
+    kbd.setHidden(true);
+    kbdHost.append(kbd.el);
+    wrap.append(kbdHost);
+
+    const activeEl = el("div", "aw-cw-active");
+    activeEl.style.display = "none";
+    wrap.append(activeEl);
 
     root.append(wrap);
 
-    // keep the grid sized to whatever space is left between clue bar & keyboard.
-    // Observe the gridWrap itself (its box is flex-driven and stable no matter
-    // how big the grid inside it gets — overflow is hidden — so there is no
-    // resize loop), and settle the first measurement across two frames so the
-    // flex column has finished distributing height before we read it.
-    resizeGrid();
-    requestAnimationFrame(() => requestAnimationFrame(resizeGrid));
-    // a couple of settle passes: the 16:9 stage + flex column can finish
-    // distributing height a frame or two after mount, and the first read can
-    // otherwise catch a too-tall gridWrap (grid then overflows by a row).
-    const settleTimers = [setTimeout(resizeGrid, 60), setTimeout(resizeGrid, 200)];
-    if (window.ResizeObserver) { ro = new ResizeObserver(resizeGrid); ro.observe(gridWrap); }
-    window.addEventListener("resize", resizeGrid);
+    relayout();
+    requestAnimationFrame(() => requestAnimationFrame(relayout));
+    const settleTimers = [setTimeout(relayout, 60), setTimeout(relayout, 200)];
+    if (window.ResizeObserver) { ro = new ResizeObserver(relayout); ro.observe(gridWrap); }
+    window.addEventListener("resize", relayout);
 
-    selectWord(0, true);
-    ui.setScore(0);
+    // start on the board.
+    activate();
+    showScore();
 
     // -------------------------------------------------------------------
-    // sizing: cell = min(space by width, space by height), computed in px so it
-    // fits BOTH the available width and height (fullscreen fires resize -> refit).
-    // -------------------------------------------------------------------
+    function relayout() { resizeGrid(); if (curWord >= 0) positionActive(); }
+
+    // Score: the running points, GREEN when ≥0 and RED when negative (no minus
+    // sign — red itself means below zero); the slash + total stay normal. Same
+    // look as Type the answer (its CSS isn't loaded here, hence the .aw-cw-
+    // prefixed classes styled in crossword.css).
+    function showScore() {
+      if (!ui.scoreEl) return;
+      const cls = livePoints < 0 ? "aw-cw-score-neg" : "aw-cw-score-pos";
+      ui.scoreEl.innerHTML = `${icons.check}`
+        + `<span class="aw-cw-score-num ${cls}">${Math.abs(livePoints)}</span>`
+        + `<span class="aw-cw-score-sep">/</span>`
+        + `<span class="aw-cw-score-total">${total}</span>`;
+      ui.scoreEl.classList.remove("aw-cw-score-pulse");
+      void ui.scoreEl.offsetWidth;
+      ui.scoreEl.classList.add("aw-cw-score-pulse");
+    }
+
+    // The board fills the whole area between the clue and the bottom edge (the
+    // keyboard is an absolute overlay, so it does NOT steal grid space) — the
+    // crossword shows centred at maximum size with nothing clipped.
     function resizeGrid() {
       const box = gridWrap.getBoundingClientRect();
       if (!box.width || !box.height) return;
-      const pad = 8;
+      const pad = 10;
       const cell = Math.max(11, Math.floor(Math.min(
         (box.width - pad) / cols,
         (box.height - pad) / rows
@@ -358,289 +394,403 @@ const crosswordTemplate = {
       gridEl.style.setProperty("--cell", cell + "px");
     }
 
-    // -------------------------------------------------------------------
-    // selection + rendering of highlights
-    // -------------------------------------------------------------------
-    function selectWord(i, resetCell) {
-      const target = ((i % total) + total) % total;
-      if (target !== curWord) consumeAndrewGlow();   // leaving the word spends the hint
-      curWord = target;
-      if (resetCell) {
-        // land on the first still-empty cell of the word (or the first cell)
-        const w = clues[curWord];
-        let idx = w.cells.findIndex(([r, c]) => !userGrid.get(r + "," + c) && !cellStatus.get(r + "," + c));
-        curCell = idx === -1 ? 0 : idx;
+    function positionActive() {
+      if (curWord < 0) return;
+      const W = wrap.clientWidth;
+      if (!W) return;
+      // Measure with offset* (relative to the wrap) instead of
+      // getBoundingClientRect: offsets ignore CSS transforms, so the keyboard's
+      // hide/show SLIDE never throws the maths off — the strip lands in its
+      // final spot on frame one, mid-animation reads included.
+      // topBound = the actual BOTTOM of the question text (not the fixed clue
+      // box), so the strip stays balanced whether the question is 1 or 2 lines.
+      const topBound = clueBar.offsetTop + clueText.offsetTop + clueText.offsetHeight;
+      const kbdTop = kbdHost.offsetTop + kbd.el.offsetTop;
+      const kbdBottom = kbdTop + kbd.el.offsetHeight;
+      const kbdRight = kbdHost.offsetLeft + kbd.el.offsetLeft + kbd.el.offsetWidth;
+      const w = clues[curWord];
+      const L = w.cells.length;
+      const GAP = Math.max(2, Math.round(W * 0.006));
+      const isDown = w.dir === "D";
+      let cell, left, top, width, height;
+
+      if (!isDown) {
+        const bandTop = topBound;
+        const bandH = Math.max(40, kbdTop - bandTop);
+        const availW = W * 0.92;
+        cell = Math.min((availW - (L - 1) * GAP) / L, bandH * 0.68, W * 0.16);
+        cell = Math.max(24, cell);
+        left = 0; width = W; top = bandTop; height = bandH;
+      } else {
+        const regionTop = topBound;
+        const regionH = Math.max(60, kbdBottom - regionTop);
+        const gapRight = Math.max(60, W - kbdRight);
+        cell = Math.min(gapRight * 0.72, (regionH - (L - 1) * GAP) / L, W * 0.14);
+        cell = Math.max(22, cell);
+        left = kbdRight; width = gapRight; top = regionTop; height = regionH;
       }
-      paint();
+
+      activeEl.style.left = Math.round(left) + "px";
+      activeEl.style.top = Math.round(top) + "px";
+      activeEl.style.width = Math.round(width) + "px";
+      activeEl.style.height = Math.round(height) + "px";
+      activeEl.style.setProperty("--bigcell", Math.floor(cell) + "px");
+      activeEl.style.setProperty("--biggap", GAP + "px");
+    }
+
+    // -------------------------------------------------------------------
+    // board <-> word
+    // -------------------------------------------------------------------
+    function activate() {
+      if (curWord < 0) {
+        gridEl.classList.remove("is-dimmed");
+        activeEl.style.display = "none";
+        activeEl.classList.remove("is-pop");
+        bigCells.clear();
+        kbd.setHidden(true);
+        clueBar.classList.remove("is-active");   // empty on the board (slogan is up top now)
+        clueText.style.removeProperty("--fit");
+        clueText.textContent = "";
+        clueText.classList.remove("is-exit");
+        paintGrid();
+        return;
+      }
+      gridEl.classList.add("is-dimmed");
+      clueBar.classList.add("is-active");
+      clueText.classList.toggle("is-exit", canExit);
+      paintGrid();
       updateClueBar();
-      updateNav();
-      kbd.refresh();   // Submit/Andrew follow the newly selected word
+      // Size + place the strip BEFORE it becomes visible (positionActive reads
+      // offset* geometry, which ignores the keyboard's slide transform, so the
+      // result is right on the very first frame — no oversize flash, no drift).
+      positionActive();
+      renderActive();
+      activeEl.style.display = "flex";
+      // clean scale-in from the correct size (re-trigger by reflow each time)
+      activeEl.classList.remove("is-pop");
+      void activeEl.offsetWidth;
+      activeEl.classList.add("is-pop");
+      kbd.setHidden(false);
+      kbd.refresh();
+    }
+
+    function selectWord(i) {
+      curWord = ((i % total) + total) % total;
+      curCell = 0;   // typing always begins at the FIRST cell of the word
+      activate();
+    }
+
+    function returnToBoard() {
+      clearTimers();
+      consumeAndrewGlow();
+      curWord = -1;
+      activate();
     }
 
     function onCellClick(r, c) {
-      // which placed words pass through this cell?
+      if (curWord >= 0 || finished) return;   // only pick from the board
       const through = clues.filter(w => w.cells.some(([cr, cc]) => cr === r && cc === c));
       if (!through.length) return;
-      const curIsHere = through.some(w => clues[curWord] && w === clues[curWord]);
-      let target;
-      if (curIsHere && through.length > 1) {
-        // toggle to the OTHER direction through this cell
-        target = through.find(w => w !== clues[curWord]) || through[0];
-      } else {
-        target = through[0];
-      }
-      const ti = clues.indexOf(target);
-      if (ti !== curWord) consumeAndrewGlow();   // leaving the word spends the hint
-      curWord = ti;
-      curCell = target.cells.findIndex(([cr, cc]) => cr === r && cc === c);
-      if (curCell < 0) curCell = 0;
-      paint();
-      updateClueBar();
-      updateNav();
-      kbd.refresh();   // Submit/Andrew follow the newly selected word
+      // pick an UNANSWERED word through this cell (a done word can't be reopened)
+      const pick = through.find(w => !wordState[clues.indexOf(w)].done);
+      if (!pick) return;
+      selectWord(clues.indexOf(pick));
     }
 
-    function paint() {
-      const w = clues[curWord];
-      const inWord = new Set(w.cells.map(([r, c]) => r + "," + c));
-      const [cr, cc] = w.cells[curCell] || w.cells[0];
+    function paintGrid() {
+      const inWord = curWord >= 0
+        ? new Set(clues[curWord].cells.map(([r, c]) => r + "," + c))
+        : new Set();
       cellEls.forEach((cell, rc) => {
         cell.classList.toggle("is-inword", inWord.has(rc));
-        cell.classList.toggle("is-cursor", rc === (cr + "," + cc));
+        const st = cellStatus.get(rc);
+        cell.classList.toggle("is-solved", st === "solved");
+        cell.classList.toggle("is-revealed", st === "revealed");
+        cell.classList.toggle("is-wrong", st === "wrong");
+        const s = cell.querySelector(".aw-cw-letter");
+        if (s) s.textContent = (st === "wrong") ? "" : (userGrid.get(rc) || "");
       });
     }
 
-    function setLetter(rc, ch) {
-      const cell = cellEls.get(rc);
-      if (!cell) return;
-      const span = cell.querySelector(".aw-cw-letter");
-      if (span) span.textContent = ch || "";
+    // -------------------------------------------------------------------
+    // the BIG active-word strip
+    // -------------------------------------------------------------------
+    function renderActive() {
+      const w = clues[curWord];
+      activeEl.className = "aw-cw-active " + (w.dir === "D" ? "is-down" : "is-across");
+      activeEl.innerHTML = "";
+      bigCells.clear();
+      w.cells.forEach((_, i) => {
+        const cell = el("div", "aw-cw-bigcell");
+        cell.append(el("span", "aw-cw-biglet", ""));
+        activeEl.append(cell);
+        bigCells.set(i, cell);
+      });
+      refreshActiveCells();
     }
 
-    function refreshWordCells(w, statusClass) {
-      w.cells.forEach(([r, c]) => {
+    // Re-apply every big cell's letter + look from the current state.
+    function refreshActiveCells() {
+      if (curWord < 0) return;
+      const w = clues[curWord];
+      const st = wordState[curWord];
+      w.cells.forEach(([r, c], i) => {
         const rc = r + "," + c;
-        const cell = cellEls.get(rc);
+        const cell = bigCells.get(i);
         if (!cell) return;
-        cell.classList.remove("is-solved", "is-revealed", "is-flash-wrong");
-        const st = statusClass || cellStatus.get(rc);
-        if (st === "solved") cell.classList.add("is-solved");
-        else if (st === "revealed") cell.classList.add("is-revealed");
+        cell.className = "aw-cw-bigcell";
+        const letEl = cell.querySelector(".aw-cw-biglet");
+        let text = "";
+        const cs = cellStatus.get(rc);
+
+        if (st.done) {
+          // graded end-state (shown briefly before the board comes back)
+          if (st.correct) { cell.classList.add("is-solved"); text = userGrid.get(rc) || w.key[i]; }
+          else if (st.revealed) { cell.classList.add("is-revealed"); text = w.key[i]; }
+          else if (st.wrong) { cell.classList.add("is-wrong"); text = ""; }
+        } else if (cs === "solved") {
+          // a crossing "given" from a CORRECT word -> blue letter
+          text = userGrid.get(rc) || w.key[i];
+          cell.classList.add("is-given", "is-given-ok");
+        } else if (cs === "revealed") {
+          // a crossing "given" from a WRONG answer that was revealed -> grey letter
+          text = userGrid.get(rc) || w.key[i];
+          cell.classList.add("is-given", "is-given-bad");
+        } else if (andrewGlowing && !userGrid.get(rc)) {
+          // Andrew hint: the answer letter, glowing gold (still type it yourself)
+          text = w.key[i];
+          cell.classList.add("is-hint");
+        } else {
+          text = userGrid.get(rc) || "";
+        }
+        if (!st.done && i === curCell) cell.classList.add("is-cursor");
+        letEl.textContent = text;
       });
     }
 
     function updateClueBar() {
       const w = clues[curWord];
-      clueNum.textContent = `${w.number} ${w.dir === "A" ? "Across" : "Down"}`;
       clueText.textContent = w.clue || "(no clue)";
       if (clueFitter) { clueFitter.destroy(); clueFitter = null; }
       clueFitter = autoFit(clueBar, clueText, s => clueText.style.setProperty("--fit", s),
-        { slack: clueBar.clientWidth * 0.04, measure: () => clueText.scrollHeight });
-    }
-
-    function updateNav() {
-      ui.setNav({
-        index: curWord + 1,
-        total,
-        onPrev: () => selectWord(curWord - 1, true),
-        onNext: () => selectWord(curWord + 1, true)
-      });
+        { min: 0.55, slack: 4, measure: () => clueText.scrollHeight });
     }
 
     // -------------------------------------------------------------------
     // typing
     // -------------------------------------------------------------------
+    function setGridLetter(rc, ch) {
+      const cell = cellEls.get(rc);
+      if (cell) { const s = cell.querySelector(".aw-cw-letter"); if (s) s.textContent = ch || ""; }
+    }
+
     function typeLetter(ch) {
-      if (finished) return;
+      if (finished || curWord < 0) return;
       const w = clues[curWord];
-      if (wordState[curWord].done) return;    // locked word
+      if (wordState[curWord].done) return;
       const [r, c] = w.cells[curCell] || w.cells[0];
       const rc = r + "," + c;
-      if (cellStatus.get(rc) === "solved" || cellStatus.get(rc) === "revealed") {
-        // this shared cell is already locked by a crossing word — skip over it
-        advanceCursor();
+      const cs = cellStatus.get(rc);
+      if (cs === "solved" || cs === "revealed") {
+        // a locked "given" from another word — you must type the SAME letter to
+        // move on. A different key is REJECTED: the cell shakes and the cursor
+        // stays, so you can't fill the rest until you match it.
+        const have = userGrid.get(rc) || "";
+        if (ch === have) { advanceCursor(); refreshActiveCells(); }
+        else { shakeCell(curCell); }   // no rebuild — that would clear the shake
+        kbd.refresh();
         return;
       }
       userGrid.set(rc, ch);
-      setLetter(rc, ch);
+      setGridLetter(rc, ch);
       advanceCursor();
-      // NO auto-grade on the last letter (teacher's call, 1/8/2026): the student
-      // confirms with the Submit key / Enter. Just light Submit up when full.
+      refreshActiveCells();
       kbd.refresh();
     }
 
-    // Submit is only possible when the current word is completely filled in.
-    function wordFilled(w) {
-      return w.cells.every(([r, c]) => userGrid.get(r + "," + c));
-    }
-    // The keyboard's Submit key (or Enter on a physical keyboard) — the
-    // student's explicit "lock my answer in" for the current word.
-    function submitCurrentWord() {
-      if (finished || wordState[curWord].done) return;
-      if (!wordFilled(clues[curWord])) return;
-      gradeWord();
-    }
-
-    // "Andrew help" — show the current word's answer in gold on the clue bar so
-    // the student can copy it in (typing it correctly still scores, exactly like
-    // Type the answer). Consumes the one game-wide use immediately; the glow
-    // ends when this word is graded or the student moves to another word.
-    function useAndrew() {
-      if (andrewUsed || finished || wordState[curWord].done) return;
-      andrewUsed = true;
-      andrewGlowing = true;
-      const w = clues[curWord];
-      clueAns.textContent = w.answer || w.key;
-      clueAns.classList.add("is-on");
-      kbd.refresh();   // Andrew key -> "glowing"
-    }
-    function consumeAndrewGlow() {
-      if (!andrewGlowing) return;
-      andrewGlowing = false;
-      clueAns.classList.remove("is-on");
-      clueAns.textContent = "";
-      kbd.refresh();   // Andrew key -> "used" (dark, locked for the game)
+    // wobble a big cell to say "not accepted" (wrong letter on a given cell).
+    function shakeCell(i) {
+      const cell = bigCells.get(i);
+      if (!cell) return;
+      cell.classList.remove("is-shake");
+      void cell.offsetWidth;
+      cell.classList.add("is-shake");
+      setTimeout(() => cell.classList.remove("is-shake"), 420);
     }
 
     function advanceCursor() {
       const w = clues[curWord];
-      // move to the next cell of the word that isn't locked, if any
-      for (let k = curCell + 1; k < w.cells.length; k++) {
-        curCell = k;
-        paint();
-        return;
-      }
-      curCell = Math.min(curCell, w.cells.length - 1);
-      paint();
+      if (curCell < w.cells.length - 1) curCell++;
     }
 
     function backspace() {
-      if (finished) return;
+      if (finished || curWord < 0 || wordState[curWord].done) return;
       const w = clues[curWord];
-      if (wordState[curWord].done) return;
+      // clear the current cell if it holds an editable letter…
       let [r, c] = w.cells[curCell] || w.cells[0];
       let rc = r + "," + c;
       if (userGrid.get(rc) && cellStatus.get(rc) == null) {
-        userGrid.delete(rc); setLetter(rc, "");
-        return;
+        userGrid.delete(rc); setGridLetter(rc, ""); refreshActiveCells(); return;
       }
-      // else step back to the previous editable cell and clear it
+      // …otherwise step back to the previous editable cell and clear it
       for (let k = curCell - 1; k >= 0; k--) {
         [r, c] = w.cells[k]; rc = r + "," + c;
         curCell = k;
-        if (cellStatus.get(rc) == null) { userGrid.delete(rc); setLetter(rc, ""); }
-        paint();
-        return;
+        if (cellStatus.get(rc) == null && userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); }
+        break;
       }
-      paint();
+      refreshActiveCells();
     }
 
+    function wordFilled(w) {
+      return w.cells.every(([r, c]) => userGrid.get(r + "," + c));
+    }
+
+    function submitCurrentWord() {
+      if (finished || curWord < 0 || wordState[curWord].done) return;
+      if (!wordFilled(clues[curWord])) return;
+      gradeWord();
+    }
+
+    // -------------------------------------------------------------------
+    // Andrew help — gold hint letters inside the cells (still typed by hand)
+    // -------------------------------------------------------------------
+    function useAndrew() {
+      if (andrewUsed || finished || curWord < 0 || wordState[curWord].done) return;
+      andrewUsed = true;
+      andrewGlowing = true;
+      refreshActiveCells();   // gold hint letters appear in the empty cells
+      kbd.refresh();          // Andrew key -> glowing
+    }
+    function consumeAndrewGlow() {
+      if (!andrewGlowing) return;
+      andrewGlowing = false;
+      if (curWord >= 0) refreshActiveCells();
+      kbd.refresh();          // Andrew key -> used (dark)
+    }
+
+    // -------------------------------------------------------------------
+    // grading — every answer then returns to the board
+    // -------------------------------------------------------------------
     function gradeWord() {
       const w = clues[curWord];
-      const stt = wordState[curWord];
-      if (stt.done) return;
-      consumeAndrewGlow();   // grading this word ends the hint glow (key goes dark)
+      const st = wordState[curWord];
+      if (st.done) return;
+      consumeAndrewGlow();
       const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "").join("");
       const ok = typed === w.key;
+
       if (ok) {
-        stt.done = true; stt.correct = true;
+        st.done = true; st.correct = true;
         w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
-        refreshWordCells(w, "solved");
         crosswordSound.correct();
-        ui.setScore(scoreNow());
-        afterGrade(true);
+        refreshActiveCells(); paintGrid(); kbd.refresh();
+        // score goes up AS the gold stars launch (not after they land)
+        livePoints += 1; showScore();
+        flyStars("gain");
+        endWord(2500);
       } else {
         crosswordSound.wrong();
+        // Minus mode only: score drops AS the red stars launch. No effect (and no
+        // score change) when Minus is off.
+        if (minusOn) { livePoints -= penalty; showScore(); flyStars("lose"); }
         if (opt.showAnswerWhenWrong !== false) {
-          // reveal correct letters, lock the word (answered, not scored)
-          stt.done = true; stt.revealed = true;
-          w.cells.forEach(([r, c], i) => {
-            const rc = r + "," + c;
-            userGrid.set(rc, w.key[i]);
-            setLetter(rc, w.key[i]);
-            if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "revealed");
-          });
-          refreshWordCells(w);
-          afterGrade(false);
+          // Phase A: a red ✕ over each cell the student got WRONG (givens keep
+          // their look) — shown FIRST, ...
+          st.done = true; st.revealed = true;
+          showWrongMarks(w);
+          kbd.refresh();
+          // ...then Phase B (after ~1s): the correct letters are revealed.
+          pushTimer(() => {
+            w.cells.forEach(([r, c], i) => {
+              const rc = r + "," + c;
+              userGrid.set(rc, w.key[i]); setGridLetter(rc, w.key[i]);
+              if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "revealed");
+            });
+            refreshActiveCells(); paintGrid();
+          }, 1000);
         } else {
-          // flash red, then clear this word's own (non-locked) letters to retry
-          flashWrong(w);
+          // grey ✕ on this word's own cells, then back to the board
+          st.done = true; st.wrong = true;
           w.cells.forEach(([r, c]) => {
             const rc = r + "," + c;
-            if (cellStatus.get(rc) == null) { userGrid.delete(rc); setLetter(rc, ""); }
+            if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "wrong");
           });
-          // move cursor back to the first editable cell
-          const idx = w.cells.findIndex(([r, c]) => cellStatus.get(r + "," + c) == null);
-          curCell = idx === -1 ? 0 : idx;
-          paint();
+          refreshActiveCells(); paintGrid(); kbd.refresh();
         }
+        endWord(2500);
       }
-      kbd.refresh();   // Submit re-disables (word done, or cleared for retry)
     }
 
-    function afterGrade(wasCorrect) {
-      // jump to the next unsolved word, if any; otherwise finish shortly.
-      if (wordState.every(s => s.done)) {
-        autoTimer = setTimeout(finish, wasCorrect ? 900 : 1200);
-        return;
-      }
-      let next = -1;
-      for (let k = 1; k <= total; k++) {
-        const j = (curWord + k) % total;
-        if (!wordState[j].done) { next = j; break; }
-      }
-      if (next !== -1) setTimeout(() => selectWord(next, true), wasCorrect ? 350 : 500);
-    }
-
-    function flashWrong(w) {
-      w.cells.forEach(([r, c]) => {
-        const cell = cellEls.get(r + "," + c);
-        if (!cell) return;
-        cell.classList.add("is-flash-wrong");
-        setTimeout(() => cell.classList.remove("is-flash-wrong"), 600);
+    // Phase A of a wrong answer (Show-answer ON): put a red ✕ on the big cells
+    // the student typed wrong (a correct crossing "given" is left as it is).
+    function showWrongMarks(w) {
+      w.cells.forEach(([r, c], i) => {
+        const rc = r + "," + c;
+        const bc = bigCells.get(i);
+        if (!bc) return;
+        const wrong = (userGrid.get(rc) || "") !== w.key[i] && cellStatus.get(rc) !== "solved";
+        if (wrong) bc.className = "aw-cw-bigcell is-xmark";
       });
+    }
+
+    // Little stars burst around the current strip and fly into the score (pure
+    // visual — the number already changed). Gold for a gain, red for a loss.
+    // Appended to <body> (fixed px); a timeout tidies them up.
+    function flyStars(kind) {
+      const scoreEl = ui.scoreEl;
+      const aRect = activeEl.getBoundingClientRect();
+      if (!scoreEl || !aRect.width) return;
+      const sRect = scoreEl.getBoundingClientRect();
+      const tx = sRect.left + sRect.width / 2;
+      const ty = sRect.top + sRect.height / 2;
+      const color = kind === "lose" ? "#ef4444" : "#ffc531";
+      const N = 12;
+      const stars = [];
+      let maxEnd = 0;
+      for (let i = 0; i < N; i++) {
+        const star = el("div", "aw-cw-star", "★");
+        star.style.color = color;
+        const sx = aRect.left + (0.12 + 0.76 * (i % 6) / 5) * aRect.width + (Math.random() - 0.5) * 24;
+        const sy = aRect.top + Math.random() * aRect.height;
+        star.style.left = sx + "px";
+        star.style.top = sy + "px";
+        star.style.fontSize = (11 + Math.random() * 12) + "px";
+        document.body.append(star);
+        stars.push(star);
+        const delay = 30 + i * 24;
+        const dur = 520 + Math.random() * 220;
+        maxEnd = Math.max(maxEnd, delay + dur);
+        star.animate([
+          { transform: "translate(-50%,-50%) scale(.4) rotate(0deg)", opacity: 0 },
+          { transform: "translate(-50%,-50%) scale(1) rotate(25deg)", opacity: 1, offset: 0.22 },
+          { transform: `translate(calc(-50% + ${tx - sx}px), calc(-50% + ${ty - sy}px)) scale(.5) rotate(180deg)`, opacity: 0 }
+        ], { duration: dur, delay, easing: "cubic-bezier(.4,.5,.35,1)", fill: "forwards" });
+      }
+      setTimeout(() => stars.forEach(s => s.remove()), maxEnd + 150);
+    }
+
+    // After the brief end-state, finish the game if every word is done, else
+    // zoom back to the board (keyboard hides) so the next word is picked by hand.
+    function endWord(ms) {
+      pushTimer(() => {
+        if (wordState.every(s => s.done)) finish();
+        else returnToBoard();
+      }, ms);
     }
 
     function scoreNow() { return wordState.filter(s => s.correct).length; }
 
     // -------------------------------------------------------------------
-    // physical keyboard
+    // physical keyboard (typing + Enter=Submit; no arrows/tab navigation)
     // -------------------------------------------------------------------
     function onKey(e) {
-      if (finished) return;
+      if (finished || curWord < 0) return;
       const k = e.key;
-      if (k === "ArrowLeft") { e.preventDefault(); return moveCursor(0, -1); }
-      if (k === "ArrowRight") { e.preventDefault(); return moveCursor(0, 1); }
-      if (k === "ArrowUp") { e.preventDefault(); return moveCursor(-1, 0); }
-      if (k === "ArrowDown") { e.preventDefault(); return moveCursor(1, 0); }
       if (k === "Backspace") { e.preventDefault(); backspace(); kbd.refresh(); return; }
-      if (k === "Tab") { e.preventDefault(); return selectWord(curWord + (e.shiftKey ? -1 : 1), true); }
-      if (k === "Enter") { e.preventDefault(); return submitCurrentWord(); }   // = the Submit key
+      if (k === "Enter") { e.preventDefault(); return submitCurrentWord(); }
+      if (k === "Escape") { if (canExit) { e.preventDefault(); returnToBoard(); } return; }
       if (/^[a-zA-Z]$/.test(k)) { e.preventDefault(); typeLetter(k.toUpperCase()); }
-    }
-
-    // Arrow keys: within the current word step the cursor; perpendicular arrows
-    // hop to a crossing word if one exists at the current cell.
-    function moveCursor(dr, dc) {
-      const w = clues[curWord];
-      const [r, c] = w.cells[curCell] || w.cells[0];
-      const wantAcross = dc !== 0;
-      const wordIsAcross = w.dir === "A";
-      if (wantAcross === wordIsAcross) {
-        // moving along the current word
-        const nc = curCell + (dc || dr > 0 ? 1 : -1) * ((wantAcross ? dc : dr) > 0 ? 1 : -1);
-        if (nc >= 0 && nc < w.cells.length) { curCell = nc; paint(); }
-        return;
-      }
-      // perpendicular: is there a crossing word through this cell?
-      const cross = clues.find(x => x !== w && x.cells.some(([cr, cc]) => cr === r && cc === c));
-      if (cross) {
-        consumeAndrewGlow();   // leaving the word spends the hint
-        curWord = clues.indexOf(cross);
-        curCell = cross.cells.findIndex(([cr, cc]) => cr === r && cc === c);
-        paint(); updateClueBar(); updateNav();
-        kbd.refresh();   // Submit/Andrew follow the newly selected word
-      }
     }
 
     // -------------------------------------------------------------------
@@ -648,12 +798,15 @@ const crosswordTemplate = {
       if (finished) return;
       finished = true;
       consumeAndrewGlow();
-      kbd.refresh();   // lock Submit/Andrew behind the results overlay
+      clearTimers();
+      curWord = -1;
+      kbd.setHidden(true);
+      kbd.refresh();
       const review = clues.map((w, i) => {
         const s = wordState[i];
         const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("");
         return {
-          question: `${w.number} ${w.dir === "A" ? "Across" : "Down"} — ${w.clue}`,
+          question: w.clue,
           answered: s.done,
           yourText: s.done ? typed : null,
           yourCorrect: s.correct === true,
@@ -668,10 +821,14 @@ const crosswordTemplate = {
 
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", resizeGrid);
+      window.removeEventListener("resize", relayout);
+      if (navWrap) navWrap.style.visibility = "";
+      if (sloganEl) sloganEl.remove();
+      if (topbar) topbar.style.position = "";
+      document.querySelectorAll(".aw-cw-star").forEach(s => s.remove());
       if (ro) ro.disconnect();
       if (clueFitter) clueFitter.destroy();
-      if (autoTimer) clearTimeout(autoTimer);
+      clearTimers();
       settleTimers.forEach(clearTimeout);
     };
   }

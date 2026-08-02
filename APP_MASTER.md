@@ -3,7 +3,8 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **1/8/2026 (Đợt 34, v0.9.8) — GAMESHOW: dựng lại INTRO 6s + GET READY mỗi câu + NỀN PHỦ TOÀN KHUNG (theo act gốc). ✅ THẦY DUYỆT → ĐÃ COMMIT + PUSH. KHÔNG đụng core. Chi tiết: `GHI CHU DU AN.md` Đợt 34. (Cùng ngày có phiên song song làm Unjumble = Đợt 35/v0.9.9, file tách rời.)**
+> Cập nhật lần cuối: **2/8/2026 (Đợt 36, v0.9.10) — CROSSWORD TÁI THIẾT KẾ LỚN (nhiều loạt yêu cầu của thầy): 2 màn "bảng ↔ hàng/cột", bàn phím cố định tuyệt đối, bảng dùng hết màn + mọi ô bấm được, slogan lên thanh đồng hồ/điểm, câu hỏi to 1–2 dòng tự cân + dải ô căn giữa, ô given xanh/xám + rung khi gõ sai, Andrew chữ vàng trong ô, sao bay vàng/đỏ về điểm (điểm đổi ngay khi sao bay), Minus = slider 0..5, sai(Show-answer BẬT) hiện ✕ đỏ trước rồi mới lộ đáp án, editor nút icon + clue tự nới. ĐÃ COMMIT + PUSH. KHÔNG đụng core. Chi tiết đầy đủ + BẪY: `templates/crossword/GHI CHU CROSSWORD.md` mục 2/8/2026; tóm tắt: `GHI CHU DU AN.md` Đợt 36. ⚠️ Commit CHỈ add file crossword + 3 docs (trong cây có thay đổi CHƯA XONG của phiên khác — engine.js / HUONG DAN CORE.md / unjumble — cố ý KHÔNG đụng).**
+> Trước đó: **1/8/2026 (Đợt 34, v0.9.8) — GAMESHOW: dựng lại INTRO 6s + GET READY mỗi câu + NỀN PHỦ TOÀN KHUNG (theo act gốc). ✅ THẦY DUYỆT → ĐÃ COMMIT + PUSH. KHÔNG đụng core. Chi tiết: `GHI CHU DU AN.md` Đợt 34. (Cùng ngày có phiên song song làm Unjumble = Đợt 35/v0.9.9, file tách rời.)**
 > Trước đó (Đợt 33, v0.9.7): NẠP TEMPLATE THEO YÊU CẦU. ⭐ CÓ SỬA CORE.
 > Trang HS `play.html` trước nay CHỈ chơi được Quiz (nó tự khai danh sách template riêng và quên 13 loại
 > kia) → giao bài loại khác cho HS là gãy `Chưa có game loại "..."`. Nay bỏ hẳn kiểu mỗi trang tự chép

@@ -52,6 +52,31 @@ hoá được). Muốn test logic mà khỏi đăng nhập: dùng `templates/<te
 
 ## Lịch sử phiên bản
 
+### 2/8/2026 — Đợt 36 (v0.9.10): CROSSWORD — TÁI THIẾT KẾ LỚN (nhiều loạt yêu cầu của thầy). ĐÃ COMMIT + PUSH. Chỉ đụng `templates/crossword/*`, **KHÔNG đụng core**. Tự test trình duyệt thật đủ mọi mục (0 lỗi console).
+
+Thầy chơi bản Crossword đã chốt rồi gửi ~5 loạt yêu cầu, làm mới gần như toàn bộ cách chơi. Tóm tắt (chi
+tiết + BẪY đầy đủ trong `templates/crossword/GHI CHU CROSSWORD.md` mục "2/8/2026 — TÁI THIẾT KẾ LỚN"):
+
+- **2 màn hình rõ ràng**: "bảng" (toàn lưới, ẩn bàn phím) ↔ "hàng/cột" (1 từ bung to + bàn phím). Trả lời
+  xong MỖI câu luôn về bảng (2,5s), tự chọn câu kế. Bỏ Next/Back.
+- **Bàn phím cố định tuyệt đối** (host absolute ghim đáy-giữa; ẩn không chặn ô). **Bảng dùng hết màn** (ô
+  to nhất, không khuyết). **Mọi ô đều bấm được** (sửa clue-bar + bàn-phím-ẩn che ô).
+- **Slogan "CROSSWORD IN ANDREW CLASSES"** chèn lên thanh đồng hồ/điểm (xám, mảnh, HOA, giãn chữ).
+- **Câu hỏi** to (4.1cqw), nằm cao, 1–2 dòng tự cân; dải ô **hàng** căn giữa câu-hỏi↔bàn-phím, **cột** căn
+  giữa mép-phải-bàn-phím↔mép-phải-khung. Zoom mượt (đặt size trước + scale-in), đo bằng `offset*` để không
+  giật vì transform trượt bàn phím. Nền câu hỏi trong suốt + quầng chữ (ô sau vẫn nhìn mờ).
+- **Ô given**: xanh nếu từ câu đúng, xám nếu từ câu sai-lộ-đáp-án; gõ sai lên given → rung + chặn.
+- **Andrew**: chữ vàng lấp lánh trong ô (thay vì trên thanh gợi ý).
+- **Chấm điểm**: đúng → +1; sai(Show-answer BẬT) → ✕ đỏ TRƯỚC rồi mới lộ chữ đúng; sai(TẮT) → ✕ xám.
+  **Sao bay** vàng/đỏ về ô điểm, **điểm đổi NGAY khi sao bắt đầu bay**. **Minus** nay là slider
+  "Points off when wrong" 0..5 (0 = tắt, bỏ checkbox); điểm âm hiện đỏ dạng "N/total".
+- **Editor**: Duplicate/Remove thành ICON; ô clue tự nới cao hiển thị hết chữ.
+- Option **"Change the crossword"** (bấm câu hỏi thoát về bảng; tắt = khoá phải trả lời).
+
+⚠️ **Lúc commit có thay đổi CHƯA XONG của phiên khác lẫn trong cây làm việc** (`core/engine.js`,
+`core/HUONG DAN CORE.md`, `templates/unjumble/*`) — đã **add từng file crossword + 3 docs** theo tên,
+KHÔNG `git add -A`, để không lỡ commit việc của phiên kia.
+
 ### 1/8/2026 — Đợt 35 (v0.9.9): UNJUMBLE — INTRO ZOOM + NHẠC · NỀN ẢNH WHITEBOARD PHỦ TOÀN KHUNG · KÉO CHỮ = CON TRỎ TEXT (CHỮ ĐỨNG YÊN) · BỎ DÒNG HƯỚNG DẪN. Tự test trình duyệt thật (0 lỗi console). 🟢 CHỜ THẦY DUYỆT — CHƯA COMMIT. Chỉ sửa `templates/unjumble/*` + thêm ảnh, **KHÔNG đụng core**.
 
 > ⚠️ Cùng ngày, 1 phiên Claude song song làm Gameshow lấy "Đợt 34/v0.9.8" (mục ngay dưới), nên Unjumble lấy **Đợt 35/v0.9.9**. Hai bộ file tách rời (`templates/unjumble/*` ↔ `templates/gameshow/*`), không đụng nhau.

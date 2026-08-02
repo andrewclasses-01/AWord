@@ -1,10 +1,79 @@
 # GHI CHU — CROSSWORD
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
-tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
-GitHub Pages đã deploy.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE, rồi 🔧 TÁI THIẾT KẾ LỚN (2/8/2026, Đợt 36 / v0.9.10) theo nhiều loạt
+yêu cầu của thầy — ĐÃ COMMIT + PUSH.** Chỉ đụng `templates/crossword/*` (crossword.js / .css /
+crossword-editor.js), **KHÔNG đụng core** (nav + slogan chèn bằng DOM vào `.aw-topbar`/`.aw-nav` của
+engine rồi hoàn tác ở cleanup). Tự test trình duyệt thật đủ mọi mục (đo DOM, 0 lỗi console). ⚠️ Hiệu ứng
+trượt/bay bị ĐÓNG BĂNG trong pane không-composite của Claude — đo bằng cách ép `transition:none` +
+`setTimeout` fallback; trên Chrome thật chạy mượt.
+
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
+
+## 2/8/2026 — TÁI THIẾT KẾ LỚN (Đợt 36 / v0.9.10) — thiết kế HIỆN HÀNH, đọc mục này trước
+
+Thầy đặt tên: **"bảng crossword"** = toàn lưới, ẩn bàn phím · **"hàng"** = 1 từ ngang bung to + bàn phím ·
+**"cột"** = 1 từ dọc bung to + bàn phím.
+
+**Bố cục / màn hình**
+- **Bàn phím CỐ ĐỊNH TUYỆT ĐỐI**: đặt trong host `.aw-cw-kbdhost` **position:absolute** ghim đáy-giữa
+  (ngoài dòng chảy) → cỡ (cqw) + vị trí KHÔNG đổi dù chọn hàng/cột nào. `.aw-kbd:not(.is-hidden)` mới
+  nhận chuột (bàn phím ẩn KHÔNG chặn ô lưới bên dưới — nếu để `.aw-kbd` auto trơn sẽ chặn hàng đáy).
+- **Bảng dùng hết màn**: `.aw-cw-gridwrap` absolute top:1cqw/bottom:0.5cqw → lưới to nhất, căn giữa, KHÔNG
+  khuyết ô. `resizeGrid` = min(rộng/cols, cao/rows).
+- **Slogan "CROSSWORD IN ANDREW CLASSES"**: chèn 1 `div.aw-cw-slogan` vào `.aw-topbar` (absolute căn
+  giữa; xám #9aa3af, font system-ui **weight 300**, letter-spacing 0.32em, HOA, ~1.7cqw). Ở bảng, ô clue
+  để RỖNG.
+- **Câu hỏi (clue)**: `.aw-cw-cluebar` absolute top, **height CỐ ĐỊNH 11cqw** (KHÔNG auto — auto làm
+  autoFit tưởng luôn tràn → co hết cỡ), **align-items:flex-start** (câu hỏi nằm CAO). Chữ 4.1cqw × --fit;
+  autoFit **slack=4** (bẫy: bản cũ để `slack: clientWidth*0.04` ≈ 35px khiến chữ bị co còn ~17–28px). 1
+  dòng nếu ngắn, 2 dòng nếu dài, dài quá mới co. Nền TRONG SUỐT + **text-shadow quầng** (ô sau vẫn nhìn
+  mờ, không đè trắng). `pointer-events:none` trừ khi `.is-active` (mở hàng/cột → bấm clue để thoát).
+- **positionActive đo bằng `offset*`** (bỏ qua transform trượt bàn phím) → dải ô đúng vị trí NGAY frame
+  đầu, không giật. `topBound` = **đáy CHỮ thật** (`clueBar.offsetTop + clueText.offsetTop +
+  clueText.offsetHeight`) nên hàng luôn căn giữa câu-hỏi↔bàn-phím dù 1 hay 2 dòng.
+  - **Hàng**: dải NGANG, căn giữa dải `[đáy chữ, đỉnh bàn phím]` (đo được trên/dưới ~ bằng nhau).
+  - **Cột**: dải DỌC ở `[mép phải bàn phím, mép phải khung]`, trên nút loa (đo trái/phải ~ bằng nhau).
+- **Vào mượt**: set size TRƯỚC khi `display:flex` + class `.is-pop` (scale .9→1) → không phóng to quá rồi co.
+
+**Luồng chơi**
+- Chọn từ ở bảng → bung to + hiện bàn phím. **Trả lời xong MỖI câu → luôn về bảng (2,5s) + ẩn bàn phím,
+  tự chọn câu kế**. KHÔNG next/prev, KHÔNG tự nhảy câu.
+- **Ẩn Next/Back** = `navWrap.style.visibility="hidden"` (KHÔNG `display:none` — thanh dưới là lưới 3 cột
+  trái|nav|phải, bỏ hẳn nav sẽ dồn nút loa/fullscreen vào giữa). *(Bài học chung mọi template.)*
+- Option **"Change the crossword"** (mặc định BẬT): mở hàng/cột rồi bấm câu hỏi để thoát; TẮT = khoá,
+  buộc trả lời. `onCellClick` chỉ chạy ở bảng, chọn từ CHƯA xong đi qua ô.
+- Con trỏ luôn bắt đầu **ô đầu (index 0)**, gõ cả từ trái→phải.
+
+**Ô có sẵn (given từ câu chéo)**
+- Từ câu ĐÚNG → **chữ xanh** (`.is-given-ok`, var(--aw-accent)); từ câu SAI đã lộ đáp án → **chữ xám**
+  (`.is-given-bad`). Gõ **sai** chữ lên ô given → ô **rung** (`.is-shake`) + chặn con trỏ; gõ **đúng** chữ
+  đó → đi tiếp.
+
+**Andrew** (1 lần/ván, chỉ khi mở hàng/cột): hiện chữ đáp án **vàng lấp lánh** trong ô (`.is-hint`), HS
+tự gõ; nút tối khi dùng xong. ⚠️ `isDisabled` của Andrew **KHÔNG được chứa `curWord<0`** — lúc dựng bàn
+phím curWord=-1, nếu disabled thì core `keyboard.js` KHÔNG gắn onclick (mất luôn nút).
+
+**Chấm điểm (mỗi câu 2,5s rồi về bảng)**
+- Đúng → ô accent, **+1 điểm NGAY khi sao vàng bắt đầu bay** (điểm đổi trước, sao chỉ là hiệu ứng).
+- Sai + **Show-answer BẬT** → **✕ đỏ trên các ô sai TRƯỚC** (`showWrongMarks`, `.is-xmark`), ~1s sau mới
+  **lộ chữ đúng** (`.is-revealed` nền xám). Ô given đúng giữ nguyên.
+- Sai + **Show-answer TẮT** → **✕ xám** (`.is-wrong`).
+- **Minus**: slider **"Points off when wrong" 0..5** (0 = tắt, KHÔNG còn checkbox). Sai + minus>0 →
+  **-điểm NGAY khi sao đỏ bắt đầu bay**. Tắt minus thì không có sao/không đổi điểm khi sai.
+- Điểm `livePoints` hiện **"N/total"**: số XANH khi ≥0, ĐỎ khi <0 (không dấu trừ), có nảy — ghi thẳng vào
+  `ui.scoreEl` (class `.aw-cw-score-*`, vì trang này không nạp CSS của Type-the-answer).
+- **`flyStars(kind)`**: 12 sao bung quanh dải → bay về điểm; vàng (gain) / đỏ (lose). Gắn vào `<body>` (px
+  cố định), tự dọn; cleanup cũng xoá `.aw-cw-star`.
+- **Timers**: `pushTimer/clearTimers` quản chuỗi kết thúc (pha ✕→chữ đúng + về bảng); xoá ở
+  returnToBoard/finish/cleanup.
+
+**Editor**: nút **Duplicate/Remove = ICON** (`icons.duplicate`/`icons.trash`, Remove đỏ khi hover, class
+`.aw-cw-ed-iconbtn`); ô **clue tự nới cao** (`autoGrow`, `resize:none; overflow:hidden`) hiển thị hết chữ
+ngay từ đầu.
+
+**Còn treo (khi thầy muốn)**: `tpl.hideRandomOption` (ẩn nhóm Shuffle vô nghĩa) vẫn chưa làm — cần sửa
+core; 🎤/🖼️ voice+image cho từng clue trong editor.
 
 Tạo ngày 31/7/2026. Dựng lại từ act mẫu Wordwall của thầy (style **Classic**):
 https://wordwall.net/resource/116864402/crossword — nghiên cứu đầy đủ trong `docs/09-CROSSWORD.md`.

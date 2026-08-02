@@ -8,68 +8,81 @@
    is left between the clue bar and the keyboard.
    ============================================================= */
 
+/* The wrap is a positioning context only; the clue, board and keyboard are all
+   absolutely placed so the keyboard's spot is TRULY fixed and the board can use
+   the full height. */
 .aw-cw-wrap {
+  position: relative;
+  flex: 1 1 auto;      /* fill the flex-row .aw-playarea (children are absolute) */
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1cqw;
+  min-width: 0;
   min-height: 0;
 }
 
-/* ----- clue bar (top): current number/direction + clue text ----- */
-.aw-cw-cluebar {
-  flex: 0 0 auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 1.4cqw;
-  padding: 0.6cqw 1.4cqw 0;
-  min-height: 7cqw;          /* room for ~2 lines so the clue stays readable */
-}
-.aw-cw-clue-num {
-  flex: 0 0 auto;
-  font-weight: 800;
-  color: var(--aw-accent);
-  font-size: 2.9cqw;
-  line-height: 1.1;
+/* ----- slogan on the clock/score row: small, thin, spaced uppercase, grey ----- */
+.aw-cw-slogan {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 1.7cqw;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
+  text-transform: uppercase;
   white-space: nowrap;
-  padding-top: 0.15cqw;
-}
-.aw-cw-clue-text {
-  flex: 1 1 auto;
-  color: var(--aw-text);
-  font-weight: 700;
-  line-height: 1.14;
-  font-size: calc(3.1cqw * var(--fit, 1));
-  overflow: hidden;
+  color: #9aa3af;               /* grey — visible but not loud */
+  pointer-events: none;
+  user-select: none;
 }
 
-/* gold answer at the end of the clue bar while "Andrew help" glows — the same
-   gold gradient + pulsing glow as the Andrew key itself (mirrors Type the
-   answer's is-andrew reveal; keyframes duplicated under the .aw-cw- prefix
-   because this page does not load that template's CSS). */
-.aw-cw-clue-answer {
-  display: none;
-  flex: 0 0 auto;
-  font-weight: 800;
-  font-size: 2.9cqw;
-  line-height: 1.1;
-  padding-top: 0.15cqw;
-  color: #ffc531;   /* fallback for the clipped-gradient text */
-  background: linear-gradient(180deg, #ffe89a, #ffc531);
-  -webkit-background-clip: text; background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: aw-cw-andrew-textglow 2.6s ease-in-out infinite;
+/* ----- clue bar: pinned near the top (question sits high), height grows with
+   the text up to ~2 lines. The grid runs full height behind it, so on the board
+   (empty clue) the crossword uses the whole space AND its top cells stay
+   clickable (pointer-events off until a word is open). ----- */
+.aw-cw-cluebar {
+  position: absolute;
+  top: 1cqw; left: 0; right: 0;
+  height: 11cqw;              /* FIXED room for ~2 lines; autoFit shrinks longer ones */
+  display: flex;
+  align-items: flex-start;    /* question sits HIGH (raised); strip centres to the text below */
+  justify-content: center;
+  padding: 0.3cqw 4cqw 0;
+  text-align: center;
+  overflow: hidden;
+  z-index: 4;
+  pointer-events: none;
 }
-.aw-cw-clue-answer.is-on { display: block; }
+.aw-cw-cluebar.is-active { pointer-events: auto; }   /* a word is open: tap the clue to exit */
+.aw-cw-clue-text {
+  color: var(--aw-text);
+  font-weight: 800;
+  line-height: 1.12;
+  /* big-ish — prefer 1 line, wrap to 2, then autoFit (--fit) shrinks longer ones */
+  font-size: calc(4.1cqw * var(--fit, 1));
+  overflow-wrap: anywhere;
+  /* a soft halo so the question reads over the dimmed grid WITHOUT hiding the
+     cells behind it (they stay faintly visible). */
+  text-shadow:
+    0 0 0.5cqw var(--aw-stage-bg, #fff), 0 0 0.5cqw var(--aw-stage-bg, #fff),
+    0 0 1cqw var(--aw-stage-bg, #fff),   0 0 1.6cqw var(--aw-stage-bg, #fff);
+}
+/* while a word is open AND "Change the crossword" is on, the clue is a way out */
+.aw-cw-clue-text.is-exit { cursor: pointer; }
+.aw-cw-clue-text.is-exit:hover { color: var(--aw-accent); }
+
 @keyframes aw-cw-andrew-textglow {
   0%, 100% { filter: drop-shadow(0 0 0.6cqw #ffd54a) drop-shadow(0 0 1.6cqw rgba(255, 193, 7, .55)); }
   50%      { filter: drop-shadow(0 0 1.4cqw #ffe07a) drop-shadow(0 0 3.2cqw rgba(255, 193, 7, .85)); }
 }
 
-/* ----- grid area (middle): centre the auto-sized grid ----- */
+/* ----- the board: fills from below the clue to the very bottom (the keyboard
+   is an absolute overlay, so it does NOT reduce this area) -> the crossword
+   shows centred at maximum size with nothing clipped. ----- */
 .aw-cw-gridwrap {
-  flex: 1 1 auto;
-  min-height: 0;
+  position: absolute;
+  top: 1cqw; left: 0; right: 0; bottom: 0.5cqw;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +93,10 @@
   grid-template-columns: repeat(var(--cols), var(--cell, 40px));
   grid-template-rows: repeat(var(--rows), var(--cell, 40px));
   gap: 0;
+  transition: opacity .2s ease;
 }
+/* while a word is picked, everything except that word dims (still visible) */
+.aw-cw-grid.is-dimmed .aw-cw-cell:not(.is-inword):not(.is-blank) { opacity: .26; }
 
 /* one square */
 .aw-cw-cell {
@@ -122,10 +138,21 @@
 }
 .aw-cw-cell.is-revealed .aw-cw-letter { color: #fff; }
 
-/* brief red flash when a word is wrong and answers aren't revealed */
-.aw-cw-cell.is-flash-wrong:not(.is-blank) {
-  background: color-mix(in srgb, var(--aw-no, #e23c3c) 35%, #fff);
-  border-color: var(--aw-no, #e23c3c);
+/* wrong (Show-answer-when-wrong OFF) = light grey fill + a grey ✕, no letter */
+.aw-cw-cell.is-wrong:not(.is-blank) {
+  background: #eceff3;
+  border-color: #c3ccd8;
+  cursor: default;
+}
+.aw-cw-cell.is-wrong .aw-cw-letter { visibility: hidden; }
+.aw-cw-cell.is-wrong::after {
+  content: "✕";
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #9aa3af;
+  font-weight: 800;
+  font-size: calc(var(--cell, 40px) * 0.6);
+  pointer-events: none;
 }
 
 .aw-cw-cellnum {
@@ -151,6 +178,159 @@
   color: var(--aw-text);
   text-transform: uppercase;
   pointer-events: none;
+}
+
+/* ----- keyboard host: an ABSOLUTE, full-width row pinned to the bottom. Being
+   out of the layout flow, the keyboard's fixed (cqw) size + centred position
+   NEVER change with the clue, the grid, or which word is open. The 70%-wide
+   keyboard centres itself inside it (core .aw-kbd margin: … auto). Only the
+   keyboard itself takes pointer events, so taps beside it fall to the board. */
+.aw-cw-kbdhost {
+  position: absolute;
+  left: 0; right: 0; bottom: 1cqw;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+}
+/* only the SHOWN keyboard catches clicks — when hidden (on the board) it must
+   NOT block the grid cells beneath it. */
+.aw-cw-kbdhost .aw-kbd:not(.is-hidden) { pointer-events: auto; }
+.aw-cw-kbdhost .aw-kbd { margin-top: 0; }
+
+/* ----- the BIG "active word" strip — absolutely placed/sized by JS
+   (positionActive). Across = a horizontal strip centred between the clue and
+   the keyboard; Down = a vertical strip in the space to the right of the
+   keyboard. The dimmed grid behind stays tappable (pointer-events:none here) so
+   another word can be picked. ----- */
+.aw-cw-active {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--biggap, 6px);
+  pointer-events: none;
+  z-index: 5;
+}
+.aw-cw-active.is-across { flex-direction: row; }
+.aw-cw-active.is-down   { flex-direction: column; }
+
+/* clean scale-in when a word is opened — the strip is already at its final size
+   (positionActive runs first), so this is a pure entrance, never a "resize". */
+.aw-cw-active.is-pop { animation: aw-cw-pop .2s cubic-bezier(.22, .9, .3, 1); }
+@keyframes aw-cw-pop {
+  from { transform: scale(.9); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+
+/* stars that burst from a graded strip and fly to the score (JS-animated).
+   Appended to <body>, so fixed px (no cqw ancestor). */
+.aw-cw-star {
+  position: fixed;
+  z-index: 70;
+  pointer-events: none;
+  line-height: 1;
+  transform: translate(-50%, -50%);
+  text-shadow: 0 0 4px rgba(0, 0, 0, .18);
+  will-change: transform, opacity;
+}
+
+.aw-cw-bigcell {
+  position: relative;
+  width: var(--bigcell, 60px);
+  height: var(--bigcell, 60px);
+  box-sizing: border-box;
+  background: var(--aw-card, #fff);
+  border: 0.18cqw solid #c7d2e0;
+  border-radius: calc(var(--bigcell, 60px) * 0.12);
+  box-shadow: 0 0.5cqw 1.2cqw rgba(0, 0, 0, .18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .12s ease, box-shadow .12s ease, transform .12s ease;
+}
+.aw-cw-bigcell.is-cursor {
+  box-shadow: 0 0.5cqw 1.2cqw rgba(0, 0, 0, .18), inset 0 0 0 0.32cqw var(--aw-accent);
+  transform: translateY(-2%);
+}
+.aw-cw-bigcell.is-solved {
+  background: var(--aw-accent);
+  border-color: var(--aw-accent);
+}
+.aw-cw-bigcell.is-solved .aw-cw-biglet { color: #fff; }
+.aw-cw-bigcell.is-revealed {
+  background: var(--aw-muted, #6b7a90);
+  border-color: var(--aw-muted, #6b7a90);
+}
+.aw-cw-bigcell.is-revealed .aw-cw-biglet { color: #fff; }
+
+/* a crossing "given" letter (already filled by another word): BLUE if it came
+   from a correctly-solved word, GREY if it was revealed after a wrong answer. */
+.aw-cw-bigcell.is-given-ok  .aw-cw-biglet { color: var(--aw-accent); }
+.aw-cw-bigcell.is-given-bad .aw-cw-biglet { color: #98a2b3; }
+
+/* wobble when a wrong letter is typed onto a given cell (rejected). */
+.aw-cw-bigcell.is-shake { animation: aw-cw-shake .4s ease; }
+@keyframes aw-cw-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-11%); }
+  30% { transform: translateX(9%); }
+  45% { transform: translateX(-7%); }
+  60% { transform: translateX(5%); }
+  75% { transform: translateX(-3%); }
+}
+
+/* Andrew hint: the answer letter, glowing gold with the same sparkle rhythm as
+   the Andrew key (still typed in by hand). */
+.aw-cw-bigcell.is-hint .aw-cw-biglet {
+  color: #ffc531;   /* fallback for the clipped-gradient text */
+  background: linear-gradient(180deg, #ffe89a, #ffc531);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: aw-cw-andrew-textglow 2.6s ease-in-out infinite;
+}
+
+/* wrong (Show-answer-when-wrong OFF): grey fill + a grey ✕, no letter */
+.aw-cw-bigcell.is-wrong {
+  background: #eceff3;
+  border-color: #c3ccd8;
+}
+.aw-cw-bigcell.is-wrong .aw-cw-biglet { visibility: hidden; }
+.aw-cw-bigcell.is-wrong::after {
+  content: "✕";
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #9aa3af;
+  font-weight: 800;
+  font-size: calc(var(--bigcell, 60px) * 0.62);
+}
+
+/* Phase A of a wrong answer (Show-answer ON): a RED ✕ over each wrong cell,
+   shown before the correct letters are revealed. */
+.aw-cw-bigcell.is-xmark {
+  background: #fdecec;
+  border-color: #f2b8b8;
+}
+.aw-cw-bigcell.is-xmark .aw-cw-biglet { visibility: hidden; }
+.aw-cw-bigcell.is-xmark::after {
+  content: "✕";
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #ef4444;
+  font-weight: 900;
+  font-size: calc(var(--bigcell, 60px) * 0.64);
+  animation: aw-cw-xpop .22s cubic-bezier(.3, 1.4, .5, 1);
+}
+@keyframes aw-cw-xpop {
+  from { transform: scale(.4); opacity: 0; }
+  to   { transform: scale(1);  opacity: 1; }
+}
+.aw-cw-biglet {
+  font-weight: 800;
+  font-size: calc(var(--bigcell, 60px) * 0.56);
+  line-height: 1;
+  color: var(--aw-text);
+  text-transform: uppercase;
 }
 
 /* On-screen keyboard: the STANDARD keyboard (core/keyboard.js, .aw-kbd-*),
@@ -193,6 +373,33 @@
   font-weight: 700;
 }
 
+/* ----- Minus-mode score colouring in the top bar (mirrors Type the answer):
+   numerator GREEN when ≥0, RED when negative (no minus sign); slash + total stay
+   normal. A small bounce plays on each change. ----- */
+.aw-top-score .aw-cw-score-num.aw-cw-score-pos { color: #10b981; }
+.aw-top-score .aw-cw-score-num.aw-cw-score-neg { color: #ef4444; }
+.aw-top-score .aw-cw-score-sep,
+.aw-top-score .aw-cw-score-total { color: var(--aw-text); }
+.aw-top-score.aw-cw-score-pulse { animation: aw-cw-score-pulse .4s ease-out; transform-origin: center; }
+@keyframes aw-cw-score-pulse {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+/* ----- "Points off when wrong" slider in the Options panel (OUTSIDE the 16:9
+   stage, so plain px here). 0 = no penalty; there is no separate checkbox. ----- */
+.aw-cw-opt-minus {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-size: 14px; color: var(--aw-text);
+}
+.aw-cw-opt-minus.is-disabled { opacity: .45; }
+.aw-cw-opt-minus-cap { font-weight: 600; }
+.aw-cw-opt-slider { flex: 0 0 160px; max-width: 55%; accent-color: var(--aw-accent, #3b82f6); cursor: pointer; }
+.aw-cw-opt-minus.is-disabled .aw-cw-opt-slider { cursor: default; }
+.aw-cw-opt-minus-val { min-width: 2.2em; text-align: center; font-weight: 800; color: #ef4444; }
+
 /* =============================================================
    EDITOR rows (crossword-editor.js) — 2 columns Answer | Clue. Uses the shared
    .aw-ed-* look; these rules just lay out the row. NOT inside the 16:9 stage,
@@ -223,8 +430,24 @@
   padding-top: 10px;
 }
 .aw-cw-ed-ans { text-transform: uppercase; font-weight: 700; letter-spacing: .5px; }
-.aw-cw-ed-clue { resize: vertical; min-height: 40px; }
-.aw-cw-ed-act { display: flex; gap: 6px; align-items: center; padding-top: 4px; }
+/* clue auto-grows in JS to show its whole text from the start — no manual
+   resize handle, no inner scrollbar. */
+.aw-cw-ed-clue { resize: none; overflow: hidden; min-height: 42px; line-height: 1.35; }
+.aw-cw-ed-act { display: flex; gap: 6px; align-items: center; padding-top: 5px; }
+
+/* Duplicate / Remove as icon buttons (square, subtle; Remove turns red on hover) */
+.aw-cw-ed-iconbtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; padding: 0;
+  border: 1px solid #dfe5ee; border-radius: 9px;
+  background: #fff; color: var(--aw-muted, #6b7a90);
+  cursor: pointer;
+  transition: background .14s ease, color .14s ease, border-color .14s ease, opacity .14s ease;
+}
+.aw-cw-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-cw-ed-iconbtn:hover:not(:disabled) { background: #f2f6fb; color: var(--aw-text); border-color: #c7d2e0; }
+.aw-cw-ed-iconbtn-danger:hover:not(:disabled) { background: #fdecec; color: #e23c3c; border-color: #f2b8b8; }
+.aw-cw-ed-iconbtn:disabled { opacity: .38; cursor: default; }
 
 @media (max-width: 640px) {
   .aw-cw-ed-hdr { display: none; }

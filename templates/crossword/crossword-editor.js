@@ -17,8 +17,12 @@
 // =============================================================
 
 import { el } from "../../core/utils.js";
+import { icons } from "../../core/icons.js";
 
 const MAX_WORDS = 100;   // generous cap; Wordwall's crossword takes many words
+
+// Grow a <textarea> to fit its content (so a clue shows in full from the start).
+function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }
 
 export function openCrosswordEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
@@ -112,21 +116,25 @@ export function openCrosswordEditor(container, activity, { onSave, onCancel, hea
     clue.rows = 1;
     clue.value = w.clue;
     clue.placeholder = "Clue for this word…";
-    clue.oninput = () => { w.clue = clue.value; clearError(); };
+    clue.oninput = () => { w.clue = clue.value; autoGrow(clue); clearError(); };
     clue.addEventListener("paste", e => onBlockPaste(e, i));
     row.append(clue);
+    // size it to its content now (deferred so it measures after layout)
+    requestAnimationFrame(() => autoGrow(clue));
 
     const act = el("div", "aw-cw-ed-act");
-    const dup = el("button", "aw-ed-del aw-ed-dup", "Duplicate");
+    const dup = el("button", "aw-cw-ed-iconbtn", icons.duplicate);
     dup.type = "button";
+    dup.title = "Duplicate"; dup.setAttribute("aria-label", "Duplicate");
     dup.disabled = data.content.words.length >= MAX_WORDS;
     dup.onclick = () => {
       if (data.content.words.length >= MAX_WORDS) return;
       data.content.words.splice(i + 1, 0, JSON.parse(JSON.stringify(w)));
       renderWords();
     };
-    const del = el("button", "aw-ed-del", "Remove");
+    const del = el("button", "aw-cw-ed-iconbtn aw-cw-ed-iconbtn-danger", icons.trash);
     del.type = "button";
+    del.title = "Remove"; del.setAttribute("aria-label", "Remove");
     del.disabled = data.content.words.length <= 1;
     del.onclick = () => { data.content.words.splice(i, 1); renderWords(); };
     act.append(dup, del);
