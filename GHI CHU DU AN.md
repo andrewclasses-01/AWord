@@ -5,6 +5,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 45 (3/8/2026, v0.9.19) — WHACK-A-MOLE: nâng cấp LỚN (7 loạt tinh chỉnh theo yêu cầu thầy) ✅ DUYỆT → COMMIT + PUSH + LIVE
+Tự test trình duyệt thật, 0 lỗi console. KHÔNG đụng core (chỉ 5 file whack-a-mole + 2 docs). Đầy đủ + BẪY:
+`templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md` (mục "⭐ ĐỢT 45"). Tóm tắt các loạt:
+
+1. **Đồ họa ẢNH THẬT thay SVG tự vẽ:** phát hiện `mound01/02/03.webp` là **CẢ PHÔNG ĐỒI** (đồi+núi mesa+
+   xương rồng+cỏ), không phải ụ đất. Dùng `mound02` làm đồi chính; hố chỉ còn `holeback+holefront`;
+   `mound01` blur làm 2 đồi tiền cảnh; cactus THẬT 2 bên. + **Intro zoom** (lùi xa thấy núi → zoom về chơi).
+2. **Editor 2 chế độ chuẩn:** True/False → **2 CỘT** (như true-false), Quiz giữ nguyên; **khóa đổi mode**
+   khi đã có dữ liệu; bỏ ép `timer:"none"` khi save.
+3. **Timer đồng bộ engine** (`options.timer` countUp/countDown + `timerTotalSeconds`, `manualTimerStart`),
+   bỏ `gameSeconds`; countUp bỏ bar; **bar đổi cam ≤30s / đỏ ≤10s**; bar dài cố định đến sát tim.
+4. **Options mới:** Switch correct/incorrect · thanh trừ điểm 0–5 · **Lives 0–10** (tim ở topbar, mất từ
+   trái) · **3 tick bonus riêng** (Extra time/Loot/Power Up) · gỡ "Auto switch" + nút Timer "None".
+5. **Luật mục tiêu:** đập hết câu đúng → countUp = COMPLETE, countDown = làm mới vòng chơi tiếp đến hết giờ;
+   câu đập đúng không hiện lại, câu lỡ quay lại; quiz 1 pass = xong (countUp) / lặp (countDown).
+6. **Cảm giác chơi:** đập SAI = **phạt đông cứng 4s** (mole sai ở lại, mole khác thụt, ngưng spawn) ·
+   **dấu ✓/✗ nét trần** · **bubble vẽ CSS** ôm sát chữ (hết tràn) sát chuột · biển vào giữa cột.
+7. **Tinh chỉnh vặt:** hố nâng cao + giãn rộng (3-4-3) không đè cactus/đồi · hàng thời gian–tim–điểm cân
+   đối cùng hàng · gỡ số điểm to (tally) khỏi đè "TIME'S UP" cuối game.
+
+Backup bản cũ đã xóa sau khi commit. (Đợt 44 nhắc "whack-a-mole đang dở của phiên khác" — chính là đợt này.)
+
+---
+
 ## Đợt 44 (2/8/2026, v0.9.18) — SPEAKING CARDS: 6 loạt tinh chỉnh theo yêu cầu thầy ✅ DUYỆT → COMMIT + PUSH + LIVE
 Tự test trình duyệt thật, 0 lỗi console. KHÔNG đụng core (chỉ file speaking-cards + 2 docs; whack-a-mole
 đang dở của phiên khác nên KHÔNG commit). Backup bản cũ ở

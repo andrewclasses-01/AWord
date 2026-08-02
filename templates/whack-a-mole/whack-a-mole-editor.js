@@ -4,25 +4,33 @@
 //   openWamEditor(container, activity, { onSave, onCancel, header, footer })
 //
 // Whack-a-mole has TWO content modes, chosen by a segmented toggle at the top:
-//   • True / False — a list of statements, each marked True or False
-//                    (like templates/true-false).
-//   • Quiz         — a list of questions, each with answer options and one
+//   • True / False — TWO columns (TRUE statements | FALSE statements), exactly
+//                    like templates/true-false. The column a row lives in IS its
+//                    answer; the game always shuffles, so there's no reordering.
+//   • Quiz         — a list of question cards, each with answer options and one
 //                    marked correct (like templates/quiz).
-// Both lists live in the working model at once, so switching the toggle never
-// loses what you typed; Save keeps both arrays and records `options.mode`.
+// Both datasets live in the working model at once, so switching the toggle never
+// loses what you typed; Save merges the columns into content.statements and keeps
+// content.questions, recording options.mode.
 //
-// Reuses the SHARED editor chrome + quiz-style question cards from
-// core/app.css (.aw-ed-*). The True/False row layout is a few whack-specific
-// classes in whack-a-mole.css (.aw-wam-ed-*). Excel paste works in both modes.
-// Speed / game-time / crates are NOT here — they live in the in-game Options
-// panel (buildExtraOptions), same split as every other template.
+// MODE LOCK: the mode can only be changed while the current mode has NO real
+// content (new activity, or after "Delete all"). Once statements/questions carry
+// text, the other mode button is disabled — the teacher must clear first. This
+// stops accidental data loss / shape mismatch.
+//
+// Reuses the SHARED editor chrome from core/app.css (.aw-ed-*). The 2-column
+// True/False look uses .aw-wam-tf-* classes defined in whack-a-mole.css (a copy
+// of true-false's column layout — true-false.css isn't loaded for this game).
+// Quiz cards reuse quiz's .aw-ed-* classes. Excel paste works in both.
+// Speed / lives / penalty / bonuses / timer are NOT here — they live in the
+// in-game Options panel (buildExtraOptions), same split as every other template.
 // =============================================================
 
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 
-const MIN_STATEMENTS = 3;
-const MAX_STATEMENTS = 40;
+const MIN_ITEMS = 3;
+const MAX_ITEMS = 40;
 const MIN_ANSWERS = 2;
 const MAX_ANSWERS = 4;
 const MAX_QUESTIONS = 60;
@@ -38,7 +46,6 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
   const isNew = !(activity && activity.id);
   const data = normalize(activity);
   let mode = data.options.mode === "quiz" ? "quiz" : "trueFalse";
-  let draggingIndex = null;
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -72,136 +79,173 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
   titleInput.placeholder = "e.g. Plant life cycle — Whack-a-mole";
   titleInput.oninput = () => { data.title = titleInput.value; clearError(); };
   meta.append(field("Activity Title", titleInput));
-  body.append(meta);
 
-  // ===== MODE toggle =====
+  // ===== MODE toggle (locked once the current mode has content) =====
   const modeField = el("div", "aw-ed-field");
   modeField.append(el("label", "aw-ed-label", "Game mode"));
   const seg = el("div", "aw-wam-ed-modeseg");
   const segTf = el("button", "aw-wam-ed-modebtn", "True / False");
   const segQz = el("button", "aw-wam-ed-modebtn", "Quiz");
   segTf.type = "button"; segQz.type = "button";
-  const paintMode = () => {
-    segTf.classList.toggle("is-on", mode === "trueFalse");
-    segQz.classList.toggle("is-on", mode === "quiz");
-  };
-  segTf.onclick = () => { mode = "trueFalse"; paintMode(); renderSection(); clearError(); };
-  segQz.onclick = () => { mode = "quiz"; paintMode(); renderSection(); clearError(); };
-  paintMode();
+  segTf.onclick = () => switchMode("trueFalse");
+  segQz.onclick = () => switchMode("quiz");
   seg.append(segTf, segQz);
   modeField.append(seg);
+  const lockHint = el("div", "aw-wam-ed-lockhint",
+    "Mode is locked while there's content. Use “Delete all” below to clear it first, then you can switch.");
+  lockHint.style.display = "none";
+  modeField.append(lockHint);
   meta.append(modeField);
+  body.append(meta);
 
   // ===== CONTENT SECTION (swaps with mode) =====
   const section = el("div", "aw-wam-ed-section");
   body.append(section);
   renderSection();
+  paintMode();
 
   if (footer) page.append(footer);
   container.append(page);
   titleInput.focus();
 
+  // ---------- mode handling ----------
+  function switchMode(next) {
+    if (next === mode) return;
+    if (currentHasContent()) return;         // locked
+    mode = next;
+    renderSection();
+    paintMode();
+    clearError();
+  }
+  function paintMode() {
+    segTf.classList.toggle("is-on", mode === "trueFalse");
+    segQz.classList.toggle("is-on", mode === "quiz");
+    updateModeLock();
+  }
+  function hasTfContent() { return data.trueTexts.concat(data.falseTexts).some(t => (t || "").trim() !== ""); }
+  function hasQuizContent() {
+    return data.content.questions.some(q => (q.question || "").trim() !== "" || (q.answers || []).some(a => (a.text || "").trim() !== ""));
+  }
+  function currentHasContent() { return mode === "trueFalse" ? hasTfContent() : hasQuizContent(); }
+  function updateModeLock() {
+    const locked = currentHasContent();
+    segTf.disabled = locked && mode !== "trueFalse";
+    segQz.disabled = locked && mode !== "quiz";
+    lockHint.style.display = locked ? "block" : "none";
+  }
+
   // ---------- section router ----------
   function renderSection() {
     section.innerHTML = "";
-    if (mode === "trueFalse") renderStatements(); else renderQuestions();
+    if (mode === "trueFalse") renderCols(); else renderQuestions();
   }
 
   // =========================================================
-  // TRUE / FALSE — statement list
+  // TRUE / FALSE — two columns (TRUE | FALSE)
   // =========================================================
-  function renderStatements() {
+  function renderCols() {
     section.append(el("div", "aw-ed-sectionhead", "Statements"));
     const bar = el("div", "aw-ed-bulk");
     const clearBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete all statements");
     clearBtn.type = "button";
     clearBtn.onclick = () => {
       if (!confirm("Delete ALL statements?")) return;
-      data.content.statements = [blankStatement(), blankStatement(), blankStatement()];
-      renderStatements(); showInfo("All statements deleted.");
+      data.trueTexts = ["", ""];
+      data.falseTexts = ["", ""];
+      renderCols(); updateModeLock(); showInfo("All statements deleted — you can switch mode now if you want.");
     };
     bar.append(clearBtn);
     section.append(bar);
     section.append(el("div", "aw-ed-tip",
-      "The sign tells players to hit the TRUE moles. Write a statement, then mark it True or False. " +
-      "Tip: copy a block from Excel (statement in column 1, True/False in column 2), click a statement box and paste."));
+      "The sign tells players which moles to hit. Put TRUE statements in the left column, FALSE ones in the right. " +
+      "Tip: copy a block from Excel (statement in column 1, True/False in column 2), click a box and paste — each row lands on the correct side."));
 
-    const wrap = el("div", "aw-ed-questions");
-    section.append(wrap);
-    drawStatements(wrap);
+    const cols = el("div", "aw-wam-tf-cols");
+    const trueCol = el("div", "aw-wam-tf-col is-true");
+    const falseCol = el("div", "aw-wam-tf-col is-false");
+    cols.append(trueCol, falseCol);
+    section.append(cols);
+
+    renderOneCol(trueCol, true);
+    renderOneCol(falseCol, false);
   }
 
-  function drawStatements(wrap) {
-    wrap.innerHTML = "";
-    data.content.statements.forEach((it, ii) => wrap.append(statementRow(it, ii, wrap)));
-    const add = el("button", "aw-tf-ed-addrow aw-wam-ed-addrow", "+ Add a new statement");
-    add.type = "button";
-    add.disabled = data.content.statements.length >= MAX_STATEMENTS;
-    add.onclick = () => { if (data.content.statements.length < MAX_STATEMENTS) { data.content.statements.push(blankStatement()); drawStatements(wrap); } };
-    wrap.append(add);
-    wrap.append(el("div", "aw-ed-qcount", `${data.content.statements.length} / ${MAX_STATEMENTS} statements`));
+  function renderOneCol(colEl, isTrue) {
+    const list = isTrue ? data.trueTexts : data.falseTexts;
+    colEl.innerHTML = "";
+    colEl.append(el("div", "aw-wam-tf-coltitle " + (isTrue ? "is-true" : "is-false"),
+      isTrue ? "&#10003; TRUE statements" : "&#10007; FALSE statements"));
+
+    const listWrap = el("div", "aw-wam-tf-list");
+    list.forEach((text, ii) => listWrap.append(colRow(list, text, ii, isTrue)));
+    colEl.append(listWrap);
+
+    const addBtn = el("button", "aw-wam-tf-addrow", isTrue ? "+ Add a TRUE statement" : "+ Add a FALSE statement");
+    addBtn.type = "button";
+    addBtn.disabled = totalCount() >= MAX_ITEMS;
+    addBtn.onclick = () => { if (totalCount() < MAX_ITEMS) { list.push(""); renderOneCol(colEl, isTrue); } };
+    colEl.append(addBtn);
   }
 
-  function statementRow(it, ii, wrap) {
-    const row = el("div", "aw-wam-ed-row");
-    row.append(el("div", "aw-wam-ed-num", (ii + 1) + "."));
+  function colRow(list, text, ii, isTrue) {
+    const row = el("div", "aw-wam-tf-row");
+    row.append(el("div", "aw-wam-tf-num", String(ii + 1) + "."));
 
-    const box = el("div", "aw-wam-ed-box");
-    const stInput = el("input", "aw-wam-ed-statement");
-    stInput.value = it.text;
-    stInput.placeholder = "Type a statement";
-    stInput.oninput = () => { it.text = stInput.value; clearError(); };
-    stInput.addEventListener("paste", e => onStatementPaste(e, ii, wrap));
-    box.append(stInput);
-
-    const ans = el("div", "aw-wam-ed-answer");
-    const bTrue = el("button", "aw-wam-ed-seg is-true", "True");
-    const bFalse = el("button", "aw-wam-ed-seg is-false", "False");
-    bTrue.type = "button"; bFalse.type = "button";
-    const paint = () => { bTrue.classList.toggle("is-on", it.answer === true); bFalse.classList.toggle("is-on", it.answer === false); };
-    bTrue.onclick = () => { it.answer = true; paint(); clearError(); };
-    bFalse.onclick = () => { it.answer = false; paint(); clearError(); };
-    paint();
-    ans.append(bTrue, bFalse);
-    box.append(ans);
+    const box = el("div", "aw-wam-tf-box");
+    const inp = el("input", "aw-wam-tf-statement");
+    inp.value = text;
+    inp.placeholder = isTrue ? "A statement that is TRUE" : "A statement that is FALSE";
+    inp.oninput = () => { list[ii] = inp.value; clearError(); updateModeLock(); };
+    inp.addEventListener("paste", e => onColPaste(e, list, ii, isTrue));
+    box.append(inp);
     row.append(box);
 
-    const iconsWrap = el("div", "aw-wam-ed-icons");
-    const dragBtn = smallIcon(icons.dragHandle, "Drag to reorder", "is-drag");
-    const dupBtn = smallIcon(icons.duplicate, "Duplicate");
-    dupBtn.disabled = data.content.statements.length >= MAX_STATEMENTS;
-    dupBtn.onclick = () => { if (data.content.statements.length < MAX_STATEMENTS) { data.content.statements.splice(ii + 1, 0, JSON.parse(JSON.stringify(it))); drawStatements(wrap); } };
-    const delBtn = smallIcon(icons.trash, "Remove", "is-danger");
-    delBtn.disabled = data.content.statements.length <= 1;
-    delBtn.onclick = () => { data.content.statements.splice(ii, 1); drawStatements(wrap); };
-    iconsWrap.append(dragBtn, dupBtn, delBtn);
+    const iconsWrap = el("div", "aw-wam-tf-icons");
+    const dupBtn = iconBtn(icons.duplicate, "Duplicate");
+    dupBtn.disabled = totalCount() >= MAX_ITEMS;
+    dupBtn.onclick = () => { if (totalCount() < MAX_ITEMS) { list.splice(ii + 1, 0, list[ii]); renderCols(); updateModeLock(); } };
+    const delBtn = iconBtn(icons.trash, "Remove", "is-danger");
+    delBtn.disabled = totalCount() <= 1;
+    delBtn.onclick = () => { list.splice(ii, 1); renderCols(); updateModeLock(); };
+    iconsWrap.append(dupBtn, delBtn);
     row.append(iconsWrap);
-
-    wireDrag(dragBtn, row, () => data.content.statements.indexOf(it));
-    wireDrop(row, () => data.content.statements.indexOf(it), data.content.statements, () => drawStatements(wrap));
     return row;
   }
 
-  function onStatementPaste(e, ii, wrap) {
+  function totalCount() { return data.trueTexts.length + data.falseTexts.length; }
+  function enforceMax() {
+    let dropped = 0;
+    while (totalCount() > MAX_ITEMS) { (data.falseTexts.length ? data.falseTexts : data.trueTexts).pop(); dropped++; }
+    return dropped;
+  }
+
+  function onColPaste(e, list, ii, isTrue) {
     const text = (e.clipboardData || window.clipboardData)?.getData("text/plain") || "";
-    if (!/[\t\n]/.test(text)) return;
+    if (!/[\t\n]/.test(text)) return;    // single cell -> normal paste
     e.preventDefault();
     const rows = text.replace(/\r/g, "").split("\n");
     while (rows.length && rows[rows.length - 1].trim() === "") rows.pop();
-    const parsed = [];
-    rows.forEach(line => {
-      const cells = line.split("\t").map(c => c.trim());
-      if (!cells[0]) return;
-      const a = parseAnswer(cells[1]);
-      parsed.push({ text: cells[0], answer: a == null ? true : a });
-    });
-    if (!parsed.length) return;
-    let next = data.content.statements.slice(0, ii).concat(parsed);
-    let dropped = 0;
-    if (next.length > MAX_STATEMENTS) { dropped = next.length - MAX_STATEMENTS; next = next.slice(0, MAX_STATEMENTS); }
-    data.content.statements = next;
-    drawStatements(wrap);
-    showInfo(`Pasted ${parsed.length - dropped} statement(s)${dropped ? ` (${dropped} skipped — ${MAX_STATEMENTS} max)` : ""}.`);
+
+    const hasTF = rows.some(l => parseAnswer(l.split("\t")[1]) !== null);
+    let added = 0;
+    if (hasTF) {
+      rows.forEach(line => {
+        const cells = line.split("\t").map(c => c.trim());
+        const t = cells[0];
+        if (!t) return;
+        const ans = parseAnswer(cells[1]);
+        if (ans === false) data.falseTexts.push(t); else data.trueTexts.push(t);
+        added++;
+      });
+    } else {
+      const parsed = rows.map(l => l.split("\t")[0].trim()).filter(Boolean);
+      const next = list.slice(0, ii).concat(parsed);
+      if (isTrue) data.trueTexts = next; else data.falseTexts = next;
+      added = parsed.length;
+    }
+    const dropped = enforceMax();
+    renderCols(); updateModeLock();
+    showInfo(`Pasted ${added - dropped} statement(s) from Excel${dropped ? ` (${dropped} skipped — ${MAX_ITEMS} max)` : ""}.`);
   }
 
   // =========================================================
@@ -215,7 +259,7 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     clearBtn.onclick = () => {
       if (!confirm("Delete ALL questions?")) return;
       data.content.questions = [blankQuestion()];
-      renderQuestions(); showInfo("All questions deleted.");
+      renderQuestions(); updateModeLock(); showInfo("All questions deleted — you can switch mode now if you want.");
     };
     bar.append(clearBtn);
     section.append(bar);
@@ -234,7 +278,7 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     const addQ = el("button", "aw-ed-addq", "+ Add question");
     addQ.type = "button";
     addQ.disabled = data.content.questions.length >= MAX_QUESTIONS;
-    addQ.onclick = () => { if (data.content.questions.length < MAX_QUESTIONS) { data.content.questions.push(blankQuestion()); drawQuestions(wrap); } };
+    addQ.onclick = () => { if (data.content.questions.length < MAX_QUESTIONS) { data.content.questions.push(blankQuestion()); drawQuestions(wrap); updateModeLock(); } };
     wrap.append(addQ);
     wrap.append(el("div", "aw-ed-qcount", `${data.content.questions.length} / ${MAX_QUESTIONS} questions`));
   }
@@ -251,7 +295,7 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     const delQ = el("button", "aw-ed-del", "Remove");
     delQ.type = "button";
     delQ.disabled = data.content.questions.length <= 1;
-    delQ.onclick = () => { data.content.questions.splice(qi, 1); drawQuestions(wrap); };
+    delQ.onclick = () => { data.content.questions.splice(qi, 1); drawQuestions(wrap); updateModeLock(); };
     topActions.append(dupQ, delQ);
     top.append(topActions);
     card.append(top);
@@ -259,7 +303,7 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     const qInput = el("input", "aw-ed-input aw-ed-qtext");
     qInput.value = q.question;
     qInput.placeholder = "Type the question…";
-    qInput.oninput = () => { q.question = qInput.value; clearError(); };
+    qInput.oninput = () => { q.question = qInput.value; clearError(); updateModeLock(); };
     qInput.addEventListener("paste", e => onQuestionPaste(e, qi, wrap));
     card.append(qInput);
 
@@ -287,7 +331,7 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     box.append(el("span", "aw-ed-aletter", String.fromCharCode(65 + ai)));
     const txt = el("input", "aw-ed-atext");
     txt.value = ans.text; txt.placeholder = `Answer ${String.fromCharCode(65 + ai)}`;
-    txt.oninput = () => { ans.text = txt.value; clearError(); };
+    txt.oninput = () => { ans.text = txt.value; clearError(); updateModeLock(); };
     box.append(txt);
     const del = el("button", "aw-ed-del aw-ed-del-a", "×");
     del.type = "button"; del.title = "Remove this answer";
@@ -317,68 +361,42 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     let dropped = 0;
     if (next.length > MAX_QUESTIONS) { dropped = next.length - MAX_QUESTIONS; next = next.slice(0, MAX_QUESTIONS); }
     data.content.questions = next;
-    drawQuestions(wrap);
+    drawQuestions(wrap); updateModeLock();
     showInfo(`Pasted ${parsed.length - dropped} question(s)${dropped ? ` (${dropped} skipped)` : ""}. Now mark the correct answer in each.`);
-  }
-
-  // ---------- drag-to-reorder (shared) ----------
-  function wireDrag(handle, row, getIndex) {
-    handle.draggable = true;
-    handle.addEventListener("dragstart", e => {
-      draggingIndex = getIndex();
-      e.dataTransfer.effectAllowed = "move";
-      try { e.dataTransfer.setData("text/plain", String(draggingIndex)); } catch { /* ignore */ }
-      try { e.dataTransfer.setDragImage(row, 24, 24); } catch { /* ignore */ }
-      row.classList.add("is-dragging");
-    });
-    handle.addEventListener("dragend", () => {
-      draggingIndex = null; row.classList.remove("is-dragging");
-      section.querySelectorAll(".aw-wam-ed-row").forEach(r => r.classList.remove("is-dropbefore", "is-dropafter"));
-    });
-  }
-  function wireDrop(row, getIndex, arr, redraw) {
-    row.addEventListener("dragover", e => {
-      if (draggingIndex == null) return;
-      e.preventDefault(); e.dataTransfer.dropEffect = "move";
-      const rect = row.getBoundingClientRect();
-      const before = (e.clientY - rect.top) < rect.height / 2;
-      row.classList.toggle("is-dropbefore", before);
-      row.classList.toggle("is-dropafter", !before);
-    });
-    row.addEventListener("dragleave", () => row.classList.remove("is-dropbefore", "is-dropafter"));
-    row.addEventListener("drop", e => {
-      e.preventDefault();
-      const before = row.classList.contains("is-dropbefore");
-      row.classList.remove("is-dropbefore", "is-dropafter");
-      const from = draggingIndex; draggingIndex = null;
-      if (from == null) return;
-      let to = getIndex() + (before ? 0 : 1);
-      if (to === from || to === from + 1) return;
-      const [item] = arr.splice(from, 1);
-      arr.splice(to > from ? to - 1 : to, 0, item);
-      redraw();
-    });
   }
 
   // ---------- save / cancel ----------
   cancelBtn.onclick = () => onCancel?.();
   saveBtn.onclick = async () => {
-    const clean = JSON.parse(JSON.stringify(data));
-    clean.title = (clean.title || "").trim();
-    clean.instruction = (clean.instruction || "").trim();
-    clean.theme = "classic";
-    clean.options = clean.options || {};
-    clean.options.mode = mode;
-    clean.options.timer = "none";
-    clean.content.statements = (clean.content.statements || [])
-      .map(it => ({ text: (it.text || "").trim(), answer: it.answer === true }))
-      .filter(it => it.text !== "");
-    clean.content.questions = (clean.content.questions || []).map(q => ({
-      question: (q.question || "").trim(),
-      answers: (q.answers || []).filter(a => (a.text || "").trim() !== "").map(a => ({ text: a.text.trim(), correct: !!a.correct }))
-    })).filter(q => !(q.question === "" && q.answers.length === 0));
+    const trueTexts = data.trueTexts.map(t => (t || "").trim()).filter(Boolean);
+    const falseTexts = data.falseTexts.map(t => (t || "").trim()).filter(Boolean);
 
-    const err = validate(clean, mode);
+    const clean = JSON.parse(JSON.stringify({
+      id: activity && activity.id ? activity.id : undefined,
+      type: "whack_a_mole",
+      schemaVersion: 1,
+      title: (data.title || "").trim(),
+      instruction: (data.instruction || "").trim(),
+      theme: "classic",
+      options: data.options || {}
+    }));
+    if (clean.id === undefined) delete clean.id;
+    clean.options.mode = mode;
+    // NOTE: we no longer force options.timer here — the teacher's Timer choice
+    // (Count up / Count down) in the in-game Options panel is respected.
+
+    clean.content = {
+      statements: [
+        ...trueTexts.map(text => ({ text, answer: true })),
+        ...falseTexts.map(text => ({ text, answer: false }))
+      ],
+      questions: (data.content.questions || []).map(q => ({
+        question: (q.question || "").trim(),
+        answers: (q.answers || []).filter(a => (a.text || "").trim() !== "").map(a => ({ text: a.text.trim(), correct: !!a.correct }))
+      })).filter(q => !(q.question === "" && q.answers.length === 0))
+    };
+
+    const err = validate(clean, mode, trueTexts.length, falseTexts.length);
     if (err) { showError(err); return; }
 
     saveBtn.disabled = true;
@@ -392,8 +410,8 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
   function showInfo(msg) { errBar.classList.add("is-info"); errBar.textContent = msg; errBar.style.display = "block"; body.scrollTop = 0; }
   function clearError() { if (errBar.style.display !== "none") errBar.style.display = "none"; }
 
-  function smallIcon(svg, title, extraClass) {
-    const b = el("button", "aw-wam-ed-iconbtn" + (extraClass ? " " + extraClass : ""), svg);
+  function iconBtn(svg, title, extraClass) {
+    const b = el("button", "aw-wam-tf-iconbtn" + (extraClass ? " " + extraClass : ""), svg);
     b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
     return b;
   }
@@ -416,9 +434,18 @@ function normalize(activity) {
   if (a.options.mode !== "quiz") a.options.mode = a.options.mode || "trueFalse";
   a.content = a.content || {};
 
-  let statements = Array.isArray(a.content.statements) ? a.content.statements : [];
-  if (statements.length < MIN_STATEMENTS) while (statements.length < MIN_STATEMENTS) statements.push(blankStatement());
-  a.content.statements = statements.map(it => ({ text: it.text || "", answer: it.answer === true }));
+  // split stored statements into the two editing columns
+  const stmts = Array.isArray(a.content.statements) ? a.content.statements : [];
+  a.trueTexts = stmts.filter(s => s && s.answer === true).map(s => s.text || "");
+  a.falseTexts = stmts.filter(s => s && s.answer !== true).map(s => s.text || "");
+  const isNew = !(activity && activity.id);
+  if (isNew) {
+    while (a.trueTexts.length < 2) a.trueTexts.push("");
+    while (a.falseTexts.length < 2) a.falseTexts.push("");
+  } else {
+    if (!a.trueTexts.length) a.trueTexts.push("");
+    if (!a.falseTexts.length) a.falseTexts.push("");
+  }
 
   let qs = Array.isArray(a.content.questions) ? a.content.questions : [];
   if (qs.length === 0) qs = [blankQuestion()];
@@ -430,15 +457,16 @@ function normalize(activity) {
   });
   return a;
 }
-function blankStatement() { return { text: "", answer: true }; }
 function blankQuestion() { return { question: "", answers: blankAnswers() }; }
 function blankAnswers() { return [{ text: "", correct: true }, { text: "", correct: false }]; }
 
-function validate(d, mode) {
+function validate(d, mode, trueCount, falseCount) {
   if (!d.title) return "Please enter an activity title.";
   if (mode === "trueFalse") {
-    if (d.content.statements.length < MIN_STATEMENTS) return `Add at least ${MIN_STATEMENTS} statements.`;
-    if (!d.content.statements.some(s => s.answer === true)) return "At least one statement must be True (the sign tells players to hit True moles).";
+    const total = d.content.statements.length;
+    if (total < MIN_ITEMS) return `Add at least ${MIN_ITEMS} statements in total.`;
+    if (trueCount < 1) return "Add at least one TRUE statement (left column).";
+    if (falseCount < 1) return "Add at least one FALSE statement (right column).";
   } else {
     if (!d.content.questions.length) return "Add at least one question.";
     for (let i = 0; i < d.content.questions.length; i++) {

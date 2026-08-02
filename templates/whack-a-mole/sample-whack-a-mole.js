@@ -21,13 +21,16 @@ export const activity = {
   instruction: "Whack the moles that match the sign before they duck back down.",
   theme: "classic",
   options: {
-    timer: "none",          // whack-a-mole runs its OWN countdown (see inlineTimerBar), like Open the box
-    mode: "trueFalse",      // "trueFalse" | "quiz"
-    target: true,           // trueFalse: which value the sign tells you to hit
-    gameSeconds: 60,        // length of one play (our own countdown)
-    speed: 5,               // 1..10 — how fast/often moles pop up
-    shuffleQuestions: true,
-    crates: true,           // bonus crates (time / loot / power / dizzy)
+    mode: "trueFalse",         // "trueFalse" | "quiz" (chosen in the editor, locked once there's content)
+    timer: "countDown",        // "countDown" (bar) | "countUp" (no bar; ends when all needed answers are hit)
+    timerTotalSeconds: 60,     // count-down length; also the "None"-free timer the engine drives us from
+    switchAnswers: false,      // true -> sign says FALSE, hit the FALSE moles
+    speed: 5,                  // 1..10 — how fast/often moles pop up
+    lives: 0,                  // 0 = Unlimited; 1..10 = hearts (game over at 0)
+    minusAmount: 1,            // points off per wrong hit (0 = off)
+    bonusTime: true,           // bonus crates — each toggles independently
+    bonusLoot: true,
+    bonusPower: true,
     showAnswers: true
   },
   content: {

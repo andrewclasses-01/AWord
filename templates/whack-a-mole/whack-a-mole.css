@@ -8,11 +8,83 @@
 .aw-wam-scene {
   position: absolute;
   inset: 0;
+  z-index: 0;                    /* own stacking context: our z6 holes stay BELOW the floated chrome (z5) */
   overflow: hidden;
-  background: #cfe4ef url("./img/bg2.webp") center/cover no-repeat;
+  background: #c2d9e6;            /* sky fallback behind the drawn scene */
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
+}
+
+/* ---------- WORLD (everything zooms as one unit for the intro) ---------- */
+.aw-wam-world {
+  position: absolute;
+  inset: 0;
+  transform-origin: 50% 72%;                 /* anchor low so the pull-back reveals SKY, not the hill's base edge */
+  transform: scale(1);                       /* settled = normal play framing */
+  transition: transform 2.2s cubic-bezier(.34,.02,.2,1);
+  will-change: transform;
+}
+/* start of the intro: pulled back so the far mesas read big, then it zooms in */
+.aw-wam-world.is-intro { transform: scale(.86); }
+
+/* ---------- BACKGROUND (CSS sky + inline SVG land, self-contained) ----------
+   Oversized (inset:-24%) so the pulled-back intro never reveals a bare edge. */
+.aw-wam-bg {
+  position: absolute;
+  inset: -24%;
+  z-index: 0;
+  pointer-events: none;
+  /* real Wordwall sky (clouds baked in); gradient shows if the image is missing */
+  background: linear-gradient(#c2d9e6 0%, #dfe9ea 46%, #eeeadf 66%) center/cover no-repeat,
+              #c2d9e6;
+  background-image: url("./img/bg2.webp");
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+/* the hill = the real painted image (hill + mesas + prickly-pear + grass).
+   Wide + bottom-anchored so its grassy base spans the whole floor and the holes
+   land on the sandy dome. */
+.aw-wam-hill {
+  position: absolute;
+  left: 50%;
+  bottom: -3%;
+  transform: translateX(-50%);
+  width: 138%;
+  z-index: 1;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+/* blurred foreground hills (bottom corners) — real hill image, CSS-blurred,
+   above the holes. Placed in the corners so they never cover a hole. */
+.aw-wam-fghills {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.aw-wam-fghill {
+  position: absolute;
+  bottom: -17%;              /* soft blurred hills rising into the two bottom corners */
+  width: 54%;
+  filter: blur(3px);
+  opacity: .97;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+.aw-wam-fghill-l { left: -35%; transform: scaleX(-1); }   /* pushed further out so the holes never sit ON the hill */
+.aw-wam-fghill-r { right: -35%; }
+/* a couple of clouds drift very slowly for a touch of life */
+.aw-wam-bg .aw-wam-cloud { animation: aw-wam-clouddrift 60s linear infinite; }
+.aw-wam-bg .aw-wam-cloud2 { animation: aw-wam-clouddrift 84s linear infinite; }
+@keyframes aw-wam-clouddrift {
+  from { transform: translateX(-3%); }
+  50%  { transform: translateX(3%); }
+  to   { transform: translateX(-3%); }
 }
 
 .aw-wam-empty {
@@ -24,42 +96,48 @@
 /* ---------- desert decoration (cacti) ---------- */
 .aw-wam-decor {
   position: absolute;
-  z-index: 1;
+  z-index: 2;                 /* above the hill (1), below the holes (3) */
   pointer-events: none;
   filter: drop-shadow(0 0.6cqw 0.5cqw rgba(0,0,0,.16));
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
-/* ---------- SIGN (post + wooden board) ---------- */
+/* ---------- SIGN (post + wooden board) — smaller, sits on the hill crest;
+   below the moles/bubbles (z-index) so it never covers a mole's speech ---------- */
 .aw-wam-sign {
   position: absolute;
-  left: 50%; top: 1.5%;
+  left: 50%; top: 6%;                        /* sits below the overlaid timer bar, high on the crest */
   transform: translateX(-50%);
-  width: 40cqw;
-  z-index: 6;
+  width: 35cqw;                              /* wider... */
+  z-index: 3;
   pointer-events: none;
 }
+/* the post runs the full height of the sign; the board hangs at its MIDDLE, so
+   the post shows both above and below it (like the reference photo) */
 .aw-wam-post {
   position: absolute;
-  left: 50%; top: 7cqw;
+  left: 50%; top: 0;
   transform: translateX(-50%);
-  width: 3.2cqw; height: 22cqw;
+  width: 2.2cqw; height: 18cqw;
   background: url("./img/post.webp") center/100% 100% no-repeat;
   z-index: 1;
 }
 .aw-wam-board {
   position: relative;
   width: 100%;
-  aspect-ratio: 474 / 190;
+  margin-top: 3.6cqw;                        /* drop the board down onto the middle of the post */
+  aspect-ratio: 474 / 150;                   /* ...and shorter than the original 474/190 */
   background: url("./img/thicksignplank.webp") center/100% 100% no-repeat;
   z-index: 2;
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  padding: 2.2cqw 7cqw 3cqw;
+  padding: 1.4cqw 7cqw 2cqw;
   box-sizing: border-box;
   filter: drop-shadow(0 0.5cqw 0.6cqw rgba(0,0,0,.28));
 }
 .aw-wam-sign-lead {
-  font-size: 2.05cqw;
+  font-size: 1.7cqw;
   font-weight: 800;
   color: #4a3320;
   letter-spacing: .02em;
@@ -67,7 +145,7 @@
   text-align: center;
 }
 .aw-wam-sign-target {
-  font-size: 5.4cqw;
+  font-size: 4.3cqw;
   font-weight: 900;
   color: #3a2412;
   line-height: 1;
@@ -76,7 +154,7 @@
 }
 /* quiz mode: the whole board shows one question (auto-shrunk to fit) */
 .aw-wam-sign-question {
-  font-size: 2.6cqw;
+  font-size: 2.2cqw;
   font-weight: 800;
   color: #3a2412;
   line-height: 1.12;
@@ -95,16 +173,8 @@
 .aw-wam-hole {
   position: absolute;
   transform: translate(-50%, -50%);
+  z-index: 6;                 /* moles + bubbles are the TOP layer (above the sign at z3) */
   /* width set inline per-hole (cqw); height follows from children */
-}
-.aw-wam-mound {
-  position: absolute;
-  left: 50%; bottom: -8%;
-  transform: translateX(-50%);
-  width: 104%;
-  z-index: 0;
-  pointer-events: none;
-  opacity: .92;
 }
 .aw-wam-holeback {
   position: absolute;
@@ -149,31 +219,53 @@
 .aw-wam-hole.is-up .aw-wam-molewrap,
 .aw-wam-hole.is-crate .aw-wam-molewrap { pointer-events: auto; }
 
-/* ---------- SPEECH BUBBLE (mole's content) ---------- */
+/* ---------- SPEECH BUBBLE (mole's content) — sits just above the mole ----------
+   Drawn in CSS (cream body + brown outline + a little tail) instead of a stretched
+   image, so it ALWAYS grows to wrap the text — nothing ever spills out. The tail
+   sits below the body pointing down at the mole (left for the default, right for
+   the -b variant). */
 .aw-wam-bubble {
   position: absolute;
-  left: 50%; bottom: 92%;
+  left: 50%; bottom: 62%;                    /* just above the mole's head */
   transform: translateX(-50%) scale(.6);
-  transform-origin: 50% 120%;
-  width: 150%;
-  min-height: 8cqw;
+  transform-origin: 50% 130%;
+  width: max-content;                        /* hug the text (NOT clamped by the narrow hole)... */
+  max-width: 21cqw;                          /* ...but wrap long statements */
   z-index: 5;
   opacity: 0;
   transition: opacity .2s ease, transform .22s cubic-bezier(.22,.9,.3,1);
   pointer-events: none;
-  display: flex; align-items: center; justify-content: center;
-  padding: 1.7cqw 2cqw 3.2cqw;
+  text-align: center;
+  padding: 0.85cqw 1.2cqw;                   /* small gap between the text and the bubble edge */
   box-sizing: border-box;
-  background: url("./img/bubblea.webp") center/100% 100% no-repeat;
+  background: linear-gradient(#f7edc8, #ead9a6);
+  border: 0.34cqw solid #7c5f36;
+  border-radius: 1.8cqw;
+  box-shadow: 0 0.4cqw 0.7cqw rgba(0,0,0,.16);
 }
-.aw-wam-hole.is-up .aw-wam-bubble,
-.aw-wam-hole.is-crate .aw-wam-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
-.aw-wam-bubble-b { background-image: url("./img/bubbleb.webp"); }
+/* tail: a brown-outlined triangle (::before) with a cream fill (::after) on top */
+.aw-wam-bubble::before, .aw-wam-bubble::after {
+  content: ""; position: absolute; top: 100%; width: 0; height: 0;
+}
+.aw-wam-bubble::before {
+  left: 30%;
+  border-left: 1.7cqw solid transparent; border-right: 1cqw solid transparent;
+  border-top: 2cqw solid #7c5f36;
+}
+.aw-wam-bubble::after {
+  left: 31%; margin-top: -0.5cqw;
+  border-left: 1.35cqw solid transparent; border-right: 0.8cqw solid transparent;
+  border-top: 1.7cqw solid #ead9a6;
+}
+.aw-wam-bubble-b::before { left: auto; right: 30%; border-left: 1cqw solid transparent; border-right: 1.7cqw solid transparent; }
+.aw-wam-bubble-b::after  { left: auto; right: 31%; border-left: 0.8cqw solid transparent; border-right: 1.35cqw solid transparent; }
+/* only moles carry a speech bubble — crates (time/loot/power) show none */
+.aw-wam-hole.is-up .aw-wam-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
 .aw-wam-bubble-text {
-  font-size: 1.9cqw;
+  font-size: 1.72cqw;
   font-weight: 700;
   color: #3a2a16;
-  line-height: 1.08;
+  line-height: 1.12;
   text-align: center;
 }
 
@@ -228,6 +320,27 @@
   100% { opacity: 0; transform: translate(-50%,-160%) scale(1); }
 }
 
+/* ---------- correct ✓ / wrong ✗ badge over a whacked mole ---------- */
+.aw-wam-mark {
+  position: absolute;
+  z-index: 9;                 /* above the moles */
+  width: 9cqw; height: 9cqw;
+  transform: translate(-50%, -50%) scale(.3);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  pointer-events: none;       /* just the tick / cross — no circle, no fill behind it */
+}
+.aw-wam-mark svg { width: 100%; height: 100%; filter: drop-shadow(0 0.25cqw 0.35cqw rgba(0,0,0,.35)); }
+.aw-wam-mark.is-ok { color: #2fd15a; }
+.aw-wam-mark.is-no { color: #ff4d43; }
+.aw-wam-mark.is-on { animation: aw-wam-markpop .7s cubic-bezier(.2,1.3,.4,1) forwards; }
+@keyframes aw-wam-markpop {
+  0%   { opacity: 0; transform: translate(-50%,-50%) scale(.3); }
+  25%  { opacity: 1; transform: translate(-50%,-50%) scale(1.1); }
+  70%  { opacity: 1; transform: translate(-50%,-62%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-84%) scale(.95); }
+}
+
 /* ---------- power-up glow (whole scene) ---------- */
 .aw-wam-scene.is-power::after {
   content: "";
@@ -240,13 +353,15 @@
 @keyframes aw-wam-powerpulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
 
 /* ---------- own countdown clock + bar (engine ui.topbarMid, inlineTimerBar) ---------- */
-.aw-wam-topbar { display: flex; align-items: center; gap: 1cqw; width: 100%; }
+/* the bar fills the left; the hearts (if any) sit at the right end, close to the
+   score. A small padding-right keeps a tidy gap before the score column. */
+.aw-wam-topbar { display: flex; align-items: center; gap: 0.5cqw; width: 100%; padding-right: 1.6cqw; box-sizing: border-box; }
 .aw-wam-clock {
   font-weight: 800; font-size: 2.4cqw; color: var(--aw-text, #fff);
   min-width: 5.2cqw; text-align: center;
 }
 .aw-wam-timerbar {
-  position: relative; flex: 1; height: 1.5cqw; border-radius: 1cqw;
+  position: relative; flex: 1 1 auto; height: 1.5cqw; border-radius: 1cqw;   /* stretches from the clock up to the hearts */
   background: rgba(0,0,0,.28); overflow: hidden;
 }
 .aw-wam-timerbar-fill {
@@ -254,7 +369,31 @@
   border-radius: 1cqw;
   background: linear-gradient(90deg, #6cd06a, #3fae5a);
 }
-.aw-wam-timerbar-fill.is-warning { background: linear-gradient(90deg, #ff7a5c, #e0453f); }
+.aw-wam-timerbar-fill.is-orange { background: linear-gradient(90deg, #ffb24d, #ff8c1a); }
+.aw-wam-timerbar-fill.is-red    { background: linear-gradient(90deg, #ff7a5c, #e0453f); }
+.aw-wam-topbar-spacer { flex: 1; }        /* count-up: pushes the hearts to the right */
+
+/* ---------- lives hearts (our own, in the topbar row — sit next to the score) ---------- */
+.aw-wam-hearts {
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 0.5cqw;
+  /* the topbar's own 0.5cqw flex-gap already spaces us from the bar = one heart-gap */
+  color: #ff5464; font-size: 2.2cqw; line-height: 1; font-weight: 800; flex: 0 0 auto;
+}
+.aw-wam-hearts:empty { display: none; }
+/* slot width ≈ glyph so the gaps read evenly; a hair of downward nudge to line up with the digits/score */
+.aw-wam-heart { display: inline-block; width: 2.3cqw; text-align: center; transform: translateY(0.09em); filter: drop-shadow(0 0.12cqw 0.18cqw rgba(0,0,0,.28)); }
+.aw-wam-heartcount { font-weight: 800; letter-spacing: .01em; }
+
+/* ---------- options-panel sliders (popup below the stage — plain px units) ---------- */
+.aw-wam-sliderrow { display: flex; align-items: center; gap: 10px; }
+.aw-wam-slider { flex: 1 1 auto; max-width: 220px; }
+.aw-wam-slider.is-speed { accent-color: #2f7bff; }
+.aw-wam-slider.is-lives { accent-color: #ef4444; }
+.aw-wam-slider.is-pen   { accent-color: #e0774a; }
+.aw-wam-sliderval { min-width: 86px; font-weight: 700; font-size: .85rem; }
+.aw-wam-sliderval.is-speed { color: #2f7bff; }
+.aw-wam-sliderval.is-lives { color: #ef4444; }
+.aw-wam-sliderval.is-pen   { color: #e0774a; }
 
 /* ---------- end-of-game score tally overlay ---------- */
 .aw-wam-tally {
@@ -283,48 +422,34 @@
 }
 .aw-wam-ed-modebtn + .aw-wam-ed-modebtn { border-left: 1px solid #cfd8e3; }
 .aw-wam-ed-modebtn.is-on { background: #3b82f6; color: #fff; }
+.aw-wam-ed-modebtn:disabled { opacity: .45; cursor: not-allowed; }
+.aw-wam-ed-lockhint {
+  margin-top: 7px; font-size: 13px; color: #8a6d3b;
+  background: #fdf6e3; border: 1px solid #f0e3bf; border-radius: 9px; padding: 7px 11px;
+}
 
-.aw-wam-ed-row {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 12px; margin-bottom: 8px;
-  background: #fff; border: 1px solid #e3e9f0; border-radius: 12px;
+/* ---------- True/False editor: two columns (TRUE | FALSE) ---------- */
+.aw-wam-tf-cols { display: flex; gap: 18px; align-items: flex-start; }
+.aw-wam-tf-col { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.aw-wam-tf-coltitle { font-size: .9rem; font-weight: 800; letter-spacing: .01em; padding: 6px 10px; border-radius: 9px; }
+.aw-wam-tf-coltitle.is-true  { background: #e7f6ec; color: #237a37; }
+.aw-wam-tf-coltitle.is-false { background: #fdeaea; color: #b32a2a; }
+.aw-wam-tf-list { display: flex; flex-direction: column; gap: 8px; }
+.aw-wam-tf-row { display: flex; align-items: stretch; gap: 8px; }
+.aw-wam-tf-num { flex: 0 0 26px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #8a97a8; font-size: .9rem; }
+.aw-wam-tf-box {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
 }
-.aw-wam-ed-row.is-dragging { opacity: .5; }
-.aw-wam-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #3b82f6; }
-.aw-wam-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #3b82f6; }
-.aw-wam-ed-num { font-weight: 800; color: #9aa7b6; min-width: 26px; padding-top: 9px; text-align: right; }
-.aw-wam-ed-box { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.aw-wam-ed-statement {
-  flex: 1; min-width: 220px;
-  padding: 9px 12px; font-size: 15px;
-  border: 1px solid #cfd8e3; border-radius: 9px; outline: none;
-}
-.aw-wam-ed-statement:focus { border-color: #3b82f6; }
-.aw-wam-ed-answer { display: inline-flex; border-radius: 9px; overflow: hidden; border: 1px solid #cfd8e3; }
-.aw-wam-ed-seg {
-  appearance: none; border: none; cursor: pointer;
-  padding: 8px 16px; font-size: 14px; font-weight: 700;
-  background: #f2f5f9; color: #6b7787;
-}
-.aw-wam-ed-seg + .aw-wam-ed-seg { border-left: 1px solid #cfd8e3; }
-.aw-wam-ed-seg.is-true.is-on { background: #16a34a; color: #fff; }
-.aw-wam-ed-seg.is-false.is-on { background: #dc2626; color: #fff; }
-.aw-wam-ed-icons { display: flex; gap: 4px; padding-top: 3px; }
-.aw-wam-ed-iconbtn {
-  appearance: none; border: 1px solid #dbe2ea; background: #fff; cursor: pointer;
-  width: 34px; height: 34px; border-radius: 8px; color: #6b7787;
-  display: inline-flex; align-items: center; justify-content: center;
-}
-.aw-wam-ed-iconbtn svg { width: 18px; height: 18px; }
-.aw-wam-ed-iconbtn:hover { background: #f2f5f9; }
-.aw-wam-ed-iconbtn.is-drag { cursor: grab; }
-.aw-wam-ed-iconbtn.is-danger:hover { background: #fdecec; color: #dc2626; border-color: #f4b8b8; }
-.aw-wam-ed-iconbtn:disabled { opacity: .4; cursor: default; }
-.aw-wam-ed-addrow {
-  appearance: none; cursor: pointer; width: 100%;
-  padding: 11px; margin-top: 4px;
-  border: 1.5px dashed #c4d0dd; border-radius: 10px;
-  background: #f7fafc; color: #4a5a6a; font-weight: 700; font-size: 15px;
-}
-.aw-wam-ed-addrow:hover { border-color: #3b82f6; color: #3b82f6; }
-.aw-wam-ed-addrow:disabled { opacity: .45; cursor: default; }
+.aw-wam-tf-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-wam-tf-statement { flex: 1; min-width: 0; border: none; outline: none; background: transparent; padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e; font-weight: 600; }
+.aw-wam-tf-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-wam-tf-iconbtn { width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px; background: transparent; color: #9aa6b5; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.aw-wam-tf-iconbtn svg { width: 18px; height: 18px; }
+.aw-wam-tf-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-wam-tf-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-wam-tf-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-wam-tf-addrow { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px; background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer; }
+.aw-wam-tf-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-wam-tf-addrow:disabled { opacity: .4; cursor: default; }

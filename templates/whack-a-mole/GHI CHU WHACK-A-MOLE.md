@@ -1,72 +1,77 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (1/8/2026, Đợt 32; thầy duyệt gộp cả 8 template
-tồn kho một lượt, rồi tự test và xác nhận). Đã `built:true` trong `core/catalog.js`, commit + push,
-GitHub Pages đã deploy.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (3/8/2026, **Đợt 45, v0.9.19** — nâng cấp LỚN
+7 đợt tinh chỉnh theo yêu cầu thầy; thầy duyệt → commit + push + live). `built:true` trong
+`core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
-> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
+> `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`. **KHÔNG đụng core.**
 
-Game whack-a-mole kiểu Wordwall, **đồ họa + âm thanh Wild West** lấy trực tiếp từ act mẫu Wordwall
-(https://wordwall.net/resource/116864290/whack-a-mole). Tự chứa hoàn toàn trong thư mục này
-(`./img`, `./sounds`). Thầy chốt: **2 chế độ (True/False + Quiz)**, **bản đầy đủ** (thùng gỗ + level +
-đếm điểm), art Wild West (game giữ cảnh miền Tây CỐ ĐỊNH, không đổi theo theme).
+Game whack-a-mole kiểu Wordwall, **đồ họa + âm thanh Wild West** THẬT lấy từ act mẫu Wordwall
+(https://wordwall.net/resource/116864290/whack-a-mole). Tự chứa hoàn toàn (`./img`, `./sounds`).
+**2 chế độ (True/False + Quiz)**, art Wild West CỐ ĐỊNH (không đổi theo theme).
 
-## File
-- `whack-a-mole.js` — module game (registerTemplate). Real-time bằng setTimeout (KHÔNG rAF cho việc
-  bắt buộc; mọi mole có setTimeout tuyệt đối tự lặn/giải phóng).
-- `whack-a-mole.css` — style, tiền tố `.aw-wam-`. Sizing bằng `cqw`.
-- `sample-whack-a-mole.js` — dữ liệu mẫu, CHỨA CẢ 2 shape (statements + questions).
-- `wam-sound.js` — 29 mp3 (pool + mute theo core/sound.js).
-- `whack-a-mole-editor.js` — ĐẦY ĐỦ: nút chuyển chế độ (True/False | Quiz) + soạn statements /
-  questions+answers, dán Excel, kéo sắp xếp, validate. Giữ CẢ 2 mảng content, Save ghi `options.mode`.
-- `img/` 31 ảnh (thêm cactus/cactus2/cactus3/brokencargo), `sounds/` 29 mp3, `test.html`/`test.js`.
+## ⭐ ĐỢT 45 (v0.9.19) — NÂNG CẤP LỚN (7 đợt tinh chỉnh, đã test trình duyệt thật 0 lỗi)
 
-## Dữ liệu (options.mode chọn chế độ)
-- **trueFalse**: `content.statements[{text, answer:bool}]`. Biển cố định "Hit moles that are: TRUE"
-  (`options.target`). Đập chuột có `answer === target`.
-- **quiz**: `content.questions[{question, answers:[{text,correct}]}]`. Biển hiện 1 câu hỏi = 1 "màn";
-  chuột mang các đáp án của câu đó; đập đáp án ĐÚNG → xoay biển sang câu kế (LevelComplete → xoay →
-  NextLevel). Hết câu thì vòng lại (xáo trộn).
-- `options`: `timer:"none"` (engine tắt đồng hồ — game chạy đồng hồ RIÊNG ở `topbarMid` qua
-  `inlineTimerBar`, giống Open the box, để thùng "time" cộng được giây), `gameSeconds` (mặc định 60),
-  `speed` 1..10, `crates` on/off, `target`, `shuffleQuestions`.
+### Đồ họa / cảnh (dùng ẢNH THẬT của Wordwall, KHÔNG vẽ SVG)
+- **Phát hiện chốt:** `mound01/02/03.webp` KHÔNG phải ụ đất — chúng là **CẢ PHÔNG ĐỒI** (đồi + núi mesa +
+  xương rồng + cỏ, mỗi ảnh 1 biến thể). Bản build cũ nhét sai `mound` vào TỪNG hố → hỏng. Nay:
+  - `HILL_IMG = "mound02.webp"` = đồi chính (núi mesa hồng + tai thỏ baked sẵn), `.aw-wam-hill` wide.
+  - Hố = CHỈ `holeback` + `holefront` (bỏ mound khỏi hố).
+  - `FRONT_HILL_IMG = "mound01.webp"` = 2 đồi mờ tiền cảnh 2 góc dưới (CSS `blur(3px)`), đẩy ra
+    `left/right:-35%` để KHÔNG đè hố. Sky = `bg2.webp`.
+- **Cactus THẬT** (`.aw-wam-decor`): `cactus.webp` (saguaro phải, to+hạ thấp `right:-11% bottom:8%
+  width:18cqw` — gốc tuck sau đồi phải), `cactus2.webp` (trái, to+cao `left:-10% bottom:12% width:17cqw`).
+  Cả 2 đẩy 1 phần RA NGOÀI khung để hố hàng 2 (x14/x86) không bị đè.
+- **Intro zoom** (`.aw-wam-world` transform, `is-intro` scale .86 → 1, origin 50% 72%): vào game lùi xa
+  thấy núi → zoom về khung chơi ~2,2s rồi mới startClock + spawn.
+- **Biển** (`.aw-wam-sign`): nhỏ + rộng-ngang-thấp-dọc (aspect 474/150), **cột chạy suốt, board `margin-top`
+  tụt xuống GIỮA cột** (post ló trên+dưới). Ở dưới thanh giờ (top 6%). z-index 3 (DƯỚI hố/bubble z6).
+- **Bubble = VẼ CSS** (cream + viền nâu + đuôi ::before/::after), `width:max-content` + `max-width:21cqw`
+  → ÔM SÁT chữ, KHÔNG BAO GIỜ tràn (đo 0/220 lượt). `-b` = đuôi phải. Sát chuột (bottom 62%).
+- **Dấu ✓/✗** (`.aw-wam-mark`): nét trần (SVG stroke + viền trắng), KHÔNG nền tròn. Xanh đúng / đỏ sai.
 
-## Cách chơi (đã build)
-- Cảnh: nền `bg2` + biển (post + thicksignplank) + lưới **10 hố 3-4-3** (mỗi hố: mound + holeback +
-  molewrap[cắt] chứa mole + holefront). Chuột 3 loại × ready/tapped/dizzy, chọn ngẫu nhiên.
-- Spawn theo `speed` (gap + số chuột đồng thời). Chuột ngoi lên (transition transform), cầm bong bóng
-  nội dung; không đập kịp → lặn (disappear, mất combo).
-- Đập đúng → tia `whackzaps` + correct + điểm (combo ≥3 → thưởng + combo sound). Đập sai → wrong +
-  trừ 1 điểm + reset combo. Quiz: đập đúng → xoay biển.
-- **Thùng gỗ** (nếu bật, ~16%/lượt): time (+5s), loot (+5đ), power (x2 điểm 6s + glow), dizzy (bẫy −2đ).
-- Đồng hồ đếm ngược (bar + tick 10s cuối, đỏ 5s cuối). Hết giờ → hoạt cảnh đếm điểm
-  (pointscounting→counted) → `ui.finish` → celebrate + bảng tổng kết + Show answers + Leaderboard.
+### Logic / luật chơi
+- **Timer đọc từ engine** (`options.timer` = `countUp`|`countDown`, `options.timerTotalSeconds`), KHÔNG còn
+  `gameSeconds` cố định. `manualTimerStart:true` + KHÔNG gọi `ui.startTimer()` → engine timer KHÔNG chạy
+  (ẩn `.aw-top-timer` bằng `visibility:hidden`, đừng `display:none` kẻo vỡ grid `has-inline`). Mình tự vẽ
+  bar riêng ở `topbarMid`. **Bar đổi màu: cam ≤30s, đỏ ≤10s.** Bar dài cố định từ đồng hồ đến sát tim #5,
+  khe bar↔tim = khe giữa 2 tim (tim rộng cố định `startLives*2.8-0.5` cqw, `justify-content:flex-end`).
+- **Mục tiêu (objective):** trueFalse: các câu đúng (TRUE, hoặc FALSE nếu switch) = "cần đập". Đập đúng =
+  xóa vĩnh viễn (không hiện lại); lỡ (lặn) = quay lại pool; câu sai = mồi nhử spawn vô hạn.
+  - **countUp:** dọn hết câu cần → COMPLETE. **countDown:** dọn hết → LÀM MỚI VÒNG, chơi tiếp đến hết giờ
+    (KHÔNG complete sớm). Quiz tương tự: countUp hết câu → complete; countDown → lặp lại.
+- **Đập sai = phạt "đông cứng" 4s** (`PENALTY_FREEZE_MS`, cờ `frozen`): mole sai ở lại (dizzy), MỌI mole
+  khác thụt, `spawnTick` ngưng cho tới hết 4s.
+- **Lives** (`options.lives` 0–10, 0=Unlimited): tim vẽ ở `topbarMid` (KHÔNG dùng `hasLivesSlot` vì đã có
+  `inlineTimerBar` chiếm chỗ), MẤT TỪ TRÁI (pop `firstChild`, phần còn lại luôn sát điểm). Hết tim → Game over.
+- **Penalty** (`options.minusAmount` 0–5, 0=off): đập sai trừ điểm.
+- **Bonus 3 tick riêng:** `bonusTime` (chỉ countDown) / `bonusLoot` / `bonusPower`. Bỏ crate "dizzy".
+- **Switch** (`options.switchAnswers`): biển → "FALSE", đập FALSE mới được điểm.
+- **Tally cuối game:** gỡ số điểm to ngay khi `ui.finish()` mở dialog (khỏi đè "TIME'S UP"/điểm).
 
-## Đã test (localhost:5510/templates/whack-a-mole/test.html, browser preview)
-- True/False: đồng hồ 0:59→0:56 giảm đúng nhịp, bar 98%→93%; chuột ngoi kèm câu; đập → điểm 0→4, có tia.
-- Quiz: biển "What does a seed need...?" → đập đáp án đúng → xoay sang "What is a young plant...?", điểm +1.
-- Thùng "time" (đồng hồ vàng) ngoi lên OK.
-- Kết thúc (ván 4s): tally → celebrate → bảng "TIME'S UP" Score 2/2, Time 5.4s + menu đủ 4 mục.
-- Console 0 lỗi. (Bug đã sửa trong lúc build: TDZ `clockEl/fillEl` khai báo sau chỗ gọi; hố cao 0px
-  do toàn con absolute → cho `height = s*1.35cqw`.)
+### Options panel (`buildExtraOptions`, dùng `mkCheck`)
+Answers(Switch) · Speed(1–10) · Lives(0–10) · Points off per wrong(0–5) · Bonus crates(3 tick). **Gỡ DOM**
+nhóm "Auto switch" + nút Timer "None" (chỉ còn Count up / Count down; none→countDown). KHÔNG có radio mode
+ở đây (mode chọn trong editor).
 
-## Đã bổ sung sau khi build lõi
-- **Cactus backdrop**: bộ tile "whack" chỉ có bg2 (nền mờ). Từ `scenes/whack.json` của theme western
-  thấy cảnh gốc phủ thêm cactus/cactus2/cactus3 (thư mục `balloon/`) — đã tải về + đặt 2 bên cảnh
-  (`.aw-wam-decor` trong JS/CSS) cho ra chất Wild West. Núi/mesa vốn nằm MỜ trong bg2 (ImageQuality 0.08).
-- **Editor đầy đủ** (2 chế độ) — đã test render + chuyển mode + Save ra dữ liệu đúng.
+### Editor (`whack-a-mole-editor.js`)
+- **True/False = 2 CỘT** (TRUE | FALSE, class `.aw-wam-tf-*` copy từ true-false vào whack-a-mole.css vì
+  true-false.css KHÔNG nạp khi chơi game này). Quiz = card giống quiz.
+- **Khóa đổi mode** khi đã có dữ liệu (`updateModeLock`): nút mode kia disabled + nhắc "Delete all to switch".
+- Save gộp 2 cột → `content.statements`, KHÔNG ép `timer:"none"` nữa (giữ lựa chọn Timer của thầy).
 
-## VIỆC CÒN LẠI (chờ thầy CHỐT rồi làm cả cụm)
-1. **Chờ thầy duyệt hình/cảm giác** (đặc biệt TOMKO): cỡ chuột/gò, nhịp spawn, cảm giác đập.
-2. Thêm vào trang gom: `../../manifest.js` + `../../index.html` (link css) + `ALL_TEMPLATES` engine.
-3. Bump version package.json + ghi GHI CHU DU AN gốc + commit/push origin main.
+## Dữ liệu / options (xem `sample-whack-a-mole.js`)
+- **trueFalse**: `content.statements[{text, answer:bool}]`. **quiz**: `content.questions[{question,
+  answers:[{text,correct}]}]`. `options.mode` chọn chế độ.
+- `options`: `mode`, `timer`(countUp/countDown), `timerTotalSeconds`, `switchAnswers`, `speed`,
+  `lives`(0=∞), `minusAmount`, `bonusTime/Loot/Power`, `shuffleQuestions`, `showAnswers`.
 
-## ĐỀ XUẤT SỬA CORE (chưa tự sửa)
-- (Chưa cần.) Engine đã đủ: `inlineTimerBar`, countDown auto-submit, `sounds.*`, `buildExtraOptions`,
-  `optionsNeedRestart`. Đồng hồ tự chạy nên không đụng timer engine.
+## BẪY (đã gặp trong đợt này)
+- `.aw-top-timer` ẩn bằng `visibility:hidden` — `display:none` phá grid `has-inline` (topbarMid dồn về cột 0).
+- `width:fit-content` cho bubble bị **hố bó** (offset parent = hố ~13cqw) → chữ hẹp; PHẢI `max-content`.
+- `mound0x.webp` là PHÔNG ĐỒI, không phải ụ đất — đừng nhét vào từng hố.
+- Đồi mờ tiền cảnh + cactus có z-index > hố cũ → phải tính vị trí (đẩy ra ngoài / xuống) để không đè hố z6.
 
 ## LƯU Ý / ĐÁNH ĐỔI
-- **Nền đơn giản hơn Wordwall**: bộ ảnh "whack" chỉ có `bg2` (gradient trơn) — dàn xương rồng/núi đá
-  hoành tráng của Wordwall là lớp trang trí RIÊNG của theme (không nằm trong tile whack), nên mình
-  không lấy. Nếu thầy muốn nền giàu hơn: lấy thêm ảnh theme western hoặc tự vẽ cactus/mesa.
 - Game KHÔNG đổi màu theo theme (art Wild West cố định — thầy chốt).
+- Chưa test trang HS `play.html` (nạp template động) cho bản mới — engine giống nhau nên khả năng OK.
