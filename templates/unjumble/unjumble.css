@@ -40,20 +40,22 @@
   animation: aw-fadein .25s ease;
 }
 
-/* ---------- Classic = the whiteboard PHOTO as the whole-stage background ----------
-   The photo (dark frame + corner doodles + "ANDREW WHITE CLASSES BOARD"
-   branding + AW logo all baked in) fills the ENTIRE 16:9 stage, so the score,
-   timer and buttons all sit ON the board. Applied only while an Unjumble act is
-   mounted (unjumble.js tags the stage `.aw-unj-active`, removed on cleanup) AND
-   only on the Classic style — the other Styles keep their tinted card look. */
+/* ---------- Classic = a clean, modern CSS backdrop across the whole stage ----------
+   No heavy photo any more (the old whiteboard.png was 5.3 MB): a soft light
+   gradient with two faint colour blooms, plus a barely-there handwritten
+   "Andrew Classes" watermark tucked into the corner. Applied only while an
+   Unjumble act is mounted (unjumble.js tags the stage `.aw-unj-active`, removed
+   on cleanup) AND only on the Classic style — the other Styles keep their
+   tinted card look. */
 .aw-stage.aw-unj-active.theme-classic {
-  background-image: url("./img/whiteboard.png");
-  background-size: cover;             /* teacher's choice: crop to fill, keep it crisp */
-  background-position: center;
-  background-repeat: no-repeat;
+  --unj-bg:
+    radial-gradient(130% 100% at 84% 6%, rgba(96, 165, 250, .16), transparent 55%),
+    radial-gradient(120% 100% at 10% 98%, rgba(45, 200, 150, .13), transparent 52%),
+    linear-gradient(140deg, #fbfcfe 0%, #eef2f8 55%, #e6ecf6 100%);
+  background: var(--unj-bg);
 }
-/* On Classic the photo IS the frame, so the card drops its own frame / board
-   fill / doodles and just holds the words transparently over the photo. */
+/* On Classic the stage IS the backdrop, so the card is transparent and just
+   holds the word chips; its frame / board fill / doodles / ruled lines drop. */
 .aw-unj-active.theme-classic .aw-unj-card {
   background: transparent;
   border: none;
@@ -61,15 +63,65 @@
   box-shadow: none;
 }
 .aw-unj-active.theme-classic .aw-unj-doodles { display: none; }
+.aw-unj-active.theme-classic .aw-unj-board { background-image: none; }   /* drop the ruled lines — cleaner, modern */
 
-/* the whiteboard "push-in" intro overlay (Classic only) — JS animates the zoom
-   + fade; it sits above the engine's Play overlay (z 12) and FS button (z 14). */
+/* Persistent slogan on the clock/score row (same look as Crossword): small, thin,
+   spaced grey uppercase, absolutely centred over the top bar. Replaces the old
+   background watermark (teacher, Đợt 40). Fades in from the intro hand-off. */
+.aw-unj-slogan {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300; font-size: 1.7cqw; letter-spacing: 0.32em; text-indent: 0.32em;
+  text-transform: uppercase; white-space: nowrap; color: #9aa3af;
+  pointer-events: none; user-select: none;
+  transition: opacity .3s ease;
+}
+
+/* Classic words are plain grey ink — NO chip/box (teacher, Đợt 36). Colour alone
+   (green for the correct leading run) carries the meaning; the base rule's faint
+   hover tint is the only affordance. When lifted, the clone grows + tilts (below). */
+
+/* the "zoom in from far" intro overlay (Classic only) — TEXT ONLY, no background
+   or border (teacher, Đợt 38) so it never covers the clock/score/buttons. A title
+   cluster (UNJUMBLE / in ANDREW CLASSES) is scaled small→full by JS. Sits above the
+   engine's Play overlay (z 12) and FS button (z 14). */
 .aw-unj-intro {
   position: absolute; inset: 0; z-index: 15;
-  background-image: url("./img/whiteboard.png");
-  background-size: cover; background-position: center; background-repeat: no-repeat;
+  background: none;
+  display: flex; align-items: center; justify-content: center;
   transform-origin: center; cursor: pointer;
 }
+.aw-unj-intro-text {
+  display: flex; flex-direction: column; align-items: center; gap: 0.4cqw;
+  text-align: center; transform-origin: center;
+  font-family: "Segoe Script", "Bradley Hand", "Brush Script MT", "Comic Sans MS", cursive;
+  font-style: italic;
+  text-shadow: 0 0.4cqw 1.4cqw rgba(30, 50, 90, .22);
+}
+.aw-unj-intro-l1, .aw-unj-intro-l2 { display: flex; align-items: baseline; justify-content: center; gap: 1.6cqw; line-height: 1; }
+.aw-unj-introw { display: inline-block; will-change: transform, opacity; }
+/* smaller than before so the whole cluster fits on screen (teacher, Đợt 41) */
+.aw-unj-intro-title { font-weight: 800; font-size: 12cqw; line-height: .95; color: #2b3a55; }
+.aw-unj-intro-sub { font-weight: 700; font-size: 4.2cqw; line-height: 1; color: #33456a; opacity: .92; letter-spacing: .02em; }
+
+/* stars that stream from a correct submitted sentence into the score (fixed, on body) */
+.aw-unj-flystar { position: fixed; z-index: 60; pointer-events: none; filter: drop-shadow(0 1px 2px rgba(0,0,0,.2)); }
+.aw-unj-flystar svg { width: 100%; height: 100%; display: block; }
+
+/* "N moves for bonus" — GREEN, at the BOTTOM of the card where Submit sits (bonus
+   mode). A card flex child, so it's hidden with the words during the intro (Đợt 40). */
+.aw-unj-moves {
+  flex: 0 0 auto; z-index: 1;
+  margin: 1.2cqw auto 0; text-align: center;
+  font-weight: 800; font-size: calc(2.8cqw * var(--fit, 1)); line-height: 1;
+  color: #1faa6b; letter-spacing: .01em; white-space: nowrap;   /* green (teacher, Đợt 40) */
+}
+.aw-unj-moves:empty { display: none; }
+
+/* Points-off slider in Options (outside the 16:9 stage → plain px/rem) */
+.aw-unj-penrow { display: flex; align-items: center; gap: 10px; }
+.aw-unj-penslider { flex: 1; }
+.aw-unj-penval { min-width: 1.3em; text-align: center; font-weight: 800; color: #e0850f; }
 
 /* ---------- corner marker doodles (Classic only) ---------- */
 .aw-unj-doodles { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
@@ -83,16 +135,18 @@
 .theme-classroom .aw-unj-doodles,
 .theme-beach .aw-unj-doodles { display: none; }
 
-/* ---------- clue (instructional — the app font, not handwriting) ---------- */
+/* ---------- clue — ONE line at the TOP of the card, under the slogan (Đợt 40).
+   JS (fitOneLine) shrinks the font if a long clue would overflow the width. ---------- */
 .aw-unj-clue {
   position: relative; z-index: 1;
-  font-size: calc(4cqw * var(--fit));
-  font-weight: 700;
-  color: #3a4048;
+  font-size: calc(3.6cqw * var(--fit));
+  font-weight: 400; font-style: italic;   /* regular italic — thinner + slanted (teacher, Đợt 42) */
+  color: #1799c9;                          /* modern ocean blue */
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.1;
   margin: 0 auto 1cqw;
-  max-width: 92%;
+  max-width: 96%;
+  white-space: nowrap;
   flex: 0 0 auto;
 }
 .aw-unj-clue-generic {
@@ -102,11 +156,11 @@
 
 /* ---------- the words board (handwriting on ruled lines) ---------- */
 .aw-unj-board {
-  --unj-row: calc(10.5cqw * var(--fit));
+  --unj-row: calc(8.4cqw * var(--fit));   /* rows a bit closer together (teacher, Đợt 38) */
   --ink-size: calc(5.4cqw * var(--fit));
   position: relative; z-index: 1;
   width: 100%;
-  margin: auto 0 3cqw;
+  margin: auto 0;                 /* centre the word block vertically in the card (teacher, Đợt 36) */
   text-align: left;
   line-height: var(--unj-row);
   background-image: repeating-linear-gradient(to bottom,
@@ -120,8 +174,8 @@
 .aw-unj-wtile {
   display: inline-block; vertical-align: top;
   position: relative;
-  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", "Baloo 2", cursive;
-  font-style: italic; font-weight: 600;
+  font-family: inherit;   /* shared AWord font (Baloo 2) */
+  font-weight: 700;
   font-size: var(--ink-size);
   line-height: var(--unj-row);
   color: var(--ink);
@@ -141,15 +195,6 @@
 .aw-unj-wtile.is-locked { cursor: default; }
 .aw-unj-wtile.is-locked:hover { background: transparent; }
 
-/* small green tick / red cross that lands on a marked word */
-.aw-unj-badge {
-  display: inline-block; vertical-align: middle;
-  width: calc(2.8cqw * var(--fit)); height: calc(2.8cqw * var(--fit));
-  margin-left: 0.3cqw;
-  filter: drop-shadow(0 0.1cqw 0.2cqw rgba(0, 0, 0, .18));
-}
-.aw-unj-badge svg { width: 100%; height: 100%; }
-
 /* text-cursor CARET shown at the drop gap while dragging — the other words
    stay put (no reflow), so this thin blinking bar is the only thing that moves.
    Height/position are set in JS; it's centered on the gap via translateX(-50%). */
@@ -168,22 +213,35 @@
 .aw-unj-wtile.is-dragsrc { opacity: .3; }
 .aw-unj-wtile.is-dragsrc:hover { background: transparent; }
 
-/* the lifted word following the pointer (fixed clone, sized/styled in JS) */
+/* the lifted word following the pointer (fixed clone, sized/styled in JS) — JUST
+   the text (no box/chip, teacher Đợt 36): it grows and tilts so you can tell it's
+   the one being carried; a soft shadow keeps it legible over the gradient. */
 .aw-unj-drag {
   z-index: 60; pointer-events: none;
   display: inline-flex; align-items: center; justify-content: center;
-  background: #fff; border-radius: 1.4cqw;
-  box-shadow: 0 1.2cqw 2.4cqw rgba(0, 0, 0, .22);
-  transform: scale(1.05) rotate(-1.5deg);
+  background: transparent; border-radius: 0; box-shadow: none;
+  transform: scale(1.14) rotate(-4deg);
+  text-shadow: 0 0.4cqw 1cqw rgba(20, 35, 60, .28);
 }
 
-/* ---------- correct-sentence reveal (submit mode, wrong answer) ---------- */
+/* little gold stars bursting from a word marked correct in submit mode (JS-animated) */
+.aw-unj-star {
+  position: absolute; left: 50%; top: 50%;
+  width: 2.6cqw; height: 2.6cqw; pointer-events: none; z-index: 6;
+  filter: drop-shadow(0 0.1cqw 0.2cqw rgba(0, 0, 0, .2));
+}
+.aw-unj-star svg { width: 100%; height: 100%; display: block; }
+
+/* ---------- correct-sentence reveal (submit mode, wrong answer) ----------
+   FIXED height (reserved whether empty or filled) so showing the correct answer
+   never nudges the wrong sentence upward (teacher, Đợt 42). One line, no wrap. */
 .aw-unj-reveal {
   position: relative; z-index: 1;
-  min-height: calc(3cqw * var(--fit));
+  height: calc(4.2cqw * var(--fit)); flex: 0 0 auto;
   margin: 0.8cqw auto 0; text-align: center;
-  font-family: "Segoe Print", "Bradley Hand", "Comic Sans MS", "Baloo 2", cursive;
-  font-style: italic; font-weight: 700;
+  white-space: nowrap; overflow: hidden;
+  font-family: inherit;   /* shared AWord font (Baloo 2) */
+  font-weight: 700;
   font-size: calc(3cqw * var(--fit));
   color: var(--ink-correct);
 }
@@ -225,6 +283,13 @@
   font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #ffd23f;
   -webkit-text-stroke: 0.06em #7a4a00; paint-order: stroke fill;
 }
+/* a negative gain (submit penalty) flies in red instead of gold */
+.aw-unj-flygain .afg-num.is-neg { color: #ff6a6a; -webkit-text-stroke-color: #7a0000; }
+
+/* the score turns RED while it's negative (teacher, Đợt 40) */
+.aw-top-score.aw-unj-neg, .aw-top-score.aw-unj-neg svg { color: #e23b45; }
+/* the "/ max" suffix on the score — muted, like other templates (teacher, Đợt 42) */
+.aw-top-score .aw-unj-smax { color: var(--aw-muted, #8a97a8); font-weight: 700; margin-left: 0.2cqw; }
 
 .aw-top-score.aw-score-pulse { animation: aw-unj-score-pulse .42s ease-out; transform-origin: center; }
 @keyframes aw-unj-score-pulse {
@@ -237,6 +302,28 @@
   margin: auto; text-align: center; color: var(--aw-muted, #8a97a8);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* ---------- STACKED "Show answers" (engine renders when tpl.reviewStyle==="stacked")
+   — full-width readable sentences instead of the squashed 3-column grid (Đợt 40).
+   A wrong item shows the player's line (red, ✗) then the correct line (green, ✓). */
+.aw-review .aw-rv-slist {
+  display: flex; flex-direction: column; gap: 1.4cqw;
+  width: 84%; margin: 0 auto; padding: 0.5cqw 0 2cqw;
+  overflow-y: auto; align-self: center;
+}
+.aw-rv-sitem {
+  background: #fff; border-radius: 1.6cqw;
+  box-shadow: 0 0.4cqw 1.4cqw rgba(20, 30, 45, .10);
+  padding: 1.2cqw 1.8cqw;
+  display: flex; flex-direction: column; gap: 0.5cqw;
+}
+.aw-rv-sline { display: flex; align-items: center; gap: 1.4cqw; }
+.aw-rv-snum { flex: 0 0 auto; width: 3cqw; text-align: center; font-weight: 800; color: #8a97a8; font-size: 2cqw; }
+.aw-rv-stext { flex: 1; min-width: 0; text-align: center; font-style: italic; font-weight: 700; font-size: 2.5cqw; line-height: 1.25; }
+.aw-rv-smark { flex: 0 0 auto; width: 2.8cqw; height: 2.8cqw; display: inline-flex; }
+.aw-rv-smark svg { width: 100%; height: 100%; }
+.aw-rv-sline.is-ok .aw-rv-stext, .aw-rv-sline.is-ok .aw-rv-smark { color: #1faa6b; }
+.aw-rv-sline.is-bad .aw-rv-stext, .aw-rv-sline.is-bad .aw-rv-smark { color: #e23b45; }
 
 /* ---------- other Styles re-tint the board ---------- */
 .theme-basic .aw-unj-card { --board-bg: #eef1f5; --frame: #33405a; --ink: #46506a; --rule: rgba(51, 64, 90, .14); --accent: #4f6fb0; }

@@ -52,6 +52,18 @@ hoá được). Muốn test logic mà khỏi đăng nhập: dùng `templates/<te
 
 ## Lịch sử phiên bản
 
+### 2/8/2026 — UNJUMBLE: 7 loạt tinh chỉnh liên tiếp theo thầy (unjumble-local **Đợt 36→42, v0.9.10→v0.9.16**). ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Tự test trình duyệt thật mọi mục (0 lỗi console).
+> ⚠️ Số "Đợt 36→42" ở ĐÂY là đếm RIÊNG của template Unjumble (nối tiếp Đợt 35/v0.9.9 của nó) — KHÁC "Đợt 36" của Crossword ngay dưới (hai phiên song song trùng số). Chi tiết đầy đủ từng loạt: `templates/unjumble/GHI CHU UNJUMBLE.md`.
+- **Nền + thương hiệu**: bỏ ảnh whiteboard 5,3 MB → nền CSS gradient hiện đại; sau đó bỏ luôn watermark, thêm **slogan "UNJUMBLE IN ANDREW CLASSES"** trên thanh đồng hồ/điểm (kiểu Crossword); **intro** viết lại: chữ nghiêng nhẹ + zoom bé→to, giữ lâu, rồi TỪNG TỪ bay đáp CHÍNH XÁC vào từ tương ứng của slogan (đo dx=dy≈0), khớp nhạc intro 3,3s.
+- **Font + bố cục**: chữ dùng font chung **Baloo 2**; khối chữ căn giữa dọc; hàng gần nhau hơn; chuyển câu next/back **crossfade** hết nháy nền; **clue** thành 1 hàng dưới slogan (xanh nước biển, regular italic).
+- **Kéo-thả**: bỏ khung chip (chỉ chữ), kéo thì chữ to+nghiêng; **con trỏ nháy (caret)** viết lại cho chuẩn+ổn định (đầu/cuối câu), thả chữ **bay mượt** về vị trí; chỉ tô xanh đoạn ĐẦU đúng liền nhau; xong câu tất cả xanh + nảy ăn mừng.
+- **Chấm điểm THEO CÂU** (không theo từ): Words with bonus = 1 (giải) + 1 (bonus, đạt khi ≤ số lượt tối thiểu) → tối đa 2/câu; On submit đúng = 1/câu, sai = −"Points off" (slider 0–5). Điểm hiện **"N / max"**; điểm âm **màu đỏ**. ✓ và **BONUS** (từ dòng "moves for bonus") bay về điểm; submit đúng = **sao vàng** bay, sai = **sao đỏ** bay (bỏ ✗).
+- **Options mới**: 2 chế độ (Words with bonus / On submit), Alignment, **Show answer when wrong**, **Points off when wrong** (0–5), **Lives** (thanh trượt ∞/1–10 như True/false — mất mạng khi submit sai, hết mạng → "Game over"). Bỏ ✓ ở nút Next câu cuối (nút vẫn còn, bị vô hiệu hóa).
+- **Dấu câu**: **?/!** cuối câu = ô CỐ ĐỊNH khóa ở cuối (không kéo, không thả sau nó); **. và ,** luôn dính từ trước.
+- **Submit**: câu đúng nổ sao quanh chữ; câu sai hiện câu đúng mà KHÔNG đẩy câu sai lên (reveal cao cố định).
+- ⭐ **CÓ SỬA CORE (opt-in, tương thích ngược)**: `tpl.reviewStyle:"stacked"` — màn **Show answers** dạng danh sách xếp chồng full-width (câu DÀI đọc rõ), câu sai hiện bài-làm (đỏ ✗) + đáp-án-đúng (xanh ✓). Template khác không đặt cờ → giữ lưới 3 cột cũ. Ghi ở `core/HUONG DAN CORE.md`.
+- File đổi: `templates/unjumble/{unjumble.js, unjumble.css, GHI CHU UNJUMBLE.md}` + xóa `templates/unjumble/img/whiteboard.png` + `core/engine.js` (nhánh stacked opt-in) + `core/HUONG DAN CORE.md`.
+
 ### 2/8/2026 — Đợt 36 (v0.9.10): CROSSWORD — TÁI THIẾT KẾ LỚN (nhiều loạt yêu cầu của thầy). ĐÃ COMMIT + PUSH. Chỉ đụng `templates/crossword/*`, **KHÔNG đụng core**. Tự test trình duyệt thật đủ mọi mục (0 lỗi console).
 
 Thầy chơi bản Crossword đã chốt rồi gửi ~5 loạt yêu cầu, làm mới gần như toàn bộ cách chơi. Tóm tắt (chi

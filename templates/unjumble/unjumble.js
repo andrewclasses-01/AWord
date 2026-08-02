@@ -7,21 +7,22 @@
 //    words into place (real drag-and-drop with insert + reflow, like the
 //    Wordwall original — pointer events so it works with mouse AND touch on
 //    the TOMKO board).
-//  • Words are grey handwriting "ink" (#777) sitting on ruled whiteboard
-//    lines — no coloured tile boxes. A word turns GREEN when it reaches its
-//    correct place, RED (only in "On submit" mode, after Submit) when wrong.
+//  • Words use the shared AWord font (Baloo 2) as light draggable chips. A word
+//    turns GREEN when it reaches its correct place, RED (only in "On submit"
+//    mode, after Submit) when wrong. Colour alone carries the meaning — there
+//    are no small per-word tick/cross badges (teacher's request).
 //
-//  • Three MARKING modes, chosen in Options (switching restarts the act,
+//  • Two MARKING modes, chosen in Options (switching restarts the act,
 //    see optionsNeedRestart()):
-//      "everyword" = Every word — each word is marked live as it lands in its
-//                    correct slot (green); 1 point per correct word.
-//      "bonus"     = Every word + bonus for perfect — same live marking, but
-//                    solving the sentence WITHOUT ever leaving a moved word in
-//                    a wrong slot pops "PERFECT" and doubles that sentence's
-//                    points. (default)
-//      "submit"    = On submit — reorder freely, then a SUBMIT button marks
-//                    every position green/red in turn and reveals the correct
-//                    sentence if any word is wrong; 1 point per correct word.
+//      "bonus"  = Words with bonus (default) — each sentence has a MINIMUM
+//                 number of drag-moves needed to solve it (minMoves = n - LIS
+//                 of the scramble). Solve it in exactly that many moves → a
+//                 "PERFECT" pops and the sentence scores 2 points. Solve it in
+//                 MORE moves → a big ✓ shows and it scores 1 point. Words still
+//                 turn green live as they land home.
+//      "submit" = On submit — reorder freely, then a SUBMIT button marks every
+//                 position green/red in turn and reveals the correct sentence
+//                 if any word is wrong; 1 point per correct word.
 //
 //  • Options: timer (engine), shuffleQuestions (engine), show answers
 //    (engine), plus this template's Marking mode + text Alignment (left /
@@ -39,14 +40,14 @@ import { autoFit } from "../../core/fit.js";
 import { unjumbleSound } from "./unjumble-sound.js";
 import { openUnjumbleEditor } from "./unjumble-editor.js";
 
-// Small colored check/cross that lands on a word after marking — meaning
-// carried through COLOUR (green tick = right, red cross = wrong), matching
-// the Wordwall Whiteboard theme's correcttick.png / incorrectcross.png.
-const SMALL_CHECK_GREEN = `<svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 6.5" stroke="#1faa6b" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const SMALL_CROSS_RED = `<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#d8434c" stroke-width="3.6" stroke-linecap="round"/></svg>`;
-
 const STAGGER_MS = 240;     // ms — gap between each position's reveal in "submit" mode
-const INTRO_MS = 2500;      // ms — the whiteboard "push-in" intro before play (Classic only)
+const INTRO_MS = 3272;      // ms — matches intro.mp3 (~3.27s): full "zoom in from far" intro
+const DROP_FLY_MS = 190;    // ms — a dropped word glides smoothly to its caret slot
+
+// Little sparkle stars that stream to the score — gold on a correct sentence,
+// red on a wrong one (submit mode).
+const STAR_SVG = `<svg viewBox="0 0 24 24" fill="#ffd23f" stroke="#e8920c" stroke-width="1"><path d="M12 2l2.6 6.3L21 9l-5 4.3L17.6 20 12 16.4 6.4 20 8 13.3 3 9l6.4-.7z"/></svg>`;
+const STAR_RED_SVG = `<svg viewBox="0 0 24 24" fill="#ef4b57" stroke="#a5111c" stroke-width="1"><path d="M12 2l2.6 6.3L21 9l-5 4.3L17.6 20 12 16.4 6.4 20 8 13.3 3 9l6.4-.7z"/></svg>`;
 
 // Shared "hold, then fly to the score, morph into +points, pulse-count it in"
 // timings (same feel as Anagram's PERFECT bonus).
@@ -60,7 +61,14 @@ const FLYGAIN_TOTAL_MS = FLYGAIN_HOLD_MS + FLYGAIN_FLIGHT_MS;
 // { words, order } where order[displaySlot] = wordIndex, scrambled so it
 // differs from the solved order.
 function prepareItem(sentence) {
-  const words = String(sentence ?? "").trim().split(/\s+/).filter(Boolean);
+  let s = String(sentence ?? "").trim();
+  // Trailing "?" / "!" becomes a FIXED end token: pre-placed, never scrambled,
+  // never draggable (teacher, Đợt 41). "." and "," stay attached to their word.
+  let fixed = null;
+  const m = /[?!]+$/.exec(s);
+  if (m) { fixed = m[0]; s = s.slice(0, s.length - fixed.length).trim(); }
+  const words = s.split(/\s+/).filter(Boolean);
+  if (!words.length && fixed) { words.push(fixed); fixed = null; }   // degenerate "?!" only
   const n = words.length;
   let order = words.map((_, i) => i);
   // Prefer a DERANGEMENT (no word left in its correct slot) so the puzzle
@@ -75,16 +83,28 @@ function prepareItem(sentence) {
   }
   order = best;
   if (n > 1 && homeCount(order) === n) order = shuffle(order);   // guard: never leave it fully solved
-  return { words, order };
+  return { words, order, fixed };
 }
 
-function sentenceText(it) { return it.words.join(" "); }
+function sentenceText(it) { return it.words.join(" ") + (it.fixed || ""); }
 function itemSentence(it) { return it.sentence ?? it.text ?? it.word ?? ""; }
+
+// Lives: 0 / null = unlimited; 1..10 = that many hearts. undefined -> unlimited
+// (off by default for Unjumble; the teacher turns it on with the slider).
+function normLives(v) {
+  if (v == null || v === 0) return null;
+  return Math.min(10, Math.max(1, Math.round(v)));
+}
 
 const unjumbleTemplate = {
   type: "unjumble",
   scorable: true,
   name: "Unjumble",
+  hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
+
+  // Show answers as a readable STACKED list (full-width sentences) instead of the
+  // 3-column layout, which squashed long sentences to nothing (teacher, Đợt 40).
+  reviewStyle: "stacked",
 
   // Defer the clock so it stays at 0:00 during the whiteboard intro (Classic).
   // begin() mounts without starting the timer; mount() calls ui.startTimer()
@@ -99,15 +119,13 @@ const unjumbleTemplate = {
 
   edit: openUnjumbleEditor,
 
-  buildExtraOptions({ panel, draft, mkRadioChoice }) {
+  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
     const gMode = el("div", "aw-opt-group");
     gMode.append(el("div", "aw-opt-label", "Marking"));
     const rowMode = el("div", "aw-opt-row");
-    const mode = draft.unjumbleMode === "everyword" ? "everyword"
-      : draft.unjumbleMode === "submit" ? "submit" : "bonus";
+    const mode = draft.unjumbleMode === "submit" ? "submit" : "bonus";
     rowMode.append(
-      mkRadioChoice("aw-unj-mode", "everyword", "Every word", mode === "everyword", v => draft.unjumbleMode = v),
-      mkRadioChoice("aw-unj-mode", "bonus", "Every word + bonus", mode === "bonus", v => draft.unjumbleMode = v),
+      mkRadioChoice("aw-unj-mode", "bonus", "Words with bonus", mode === "bonus", v => draft.unjumbleMode = v),
       mkRadioChoice("aw-unj-mode", "submit", "On submit", mode === "submit", v => draft.unjumbleMode = v)
     );
     gMode.append(rowMode);
@@ -123,6 +141,38 @@ const unjumbleTemplate = {
     );
     gAlign.append(rowAlign);
     panel.append(gAlign);
+
+    // On-submit mode: whether a wrong submission reveals the correct sentence.
+    const gReveal = el("div", "aw-opt-group");
+    gReveal.append(mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
+      v => draft.showAnswerWhenWrong = v));
+    panel.append(gReveal);
+
+    // On-submit mode: how many points a WRONG sentence costs (0–5).
+    const gPen = el("div", "aw-opt-group");
+    gPen.append(el("div", "aw-opt-label", "Points off when wrong"));
+    const cur = Math.max(0, Math.min(5, draft.pointsOff == null ? 1 : draft.pointsOff));
+    const rowPen = el("div", "aw-unj-penrow");
+    const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
+    slider.value = String(cur); slider.className = "aw-unj-penslider";
+    const val = el("span", "aw-unj-penval", String(cur));
+    slider.oninput = () => { draft.pointsOff = Number(slider.value); val.textContent = slider.value; };
+    rowPen.append(slider, val);
+    gPen.append(rowPen);
+    panel.append(gPen);
+
+    // Lives (0 = unlimited, 1..10 hearts) — like True/false.
+    const gLives = el("div", "aw-opt-group");
+    gLives.append(el("div", "aw-opt-label", "Lives"));
+    const curL = (draft.lives == null || draft.lives === 0) ? 0 : Math.min(10, Math.max(1, Math.round(draft.lives)));
+    const rowL = el("div", "aw-unj-penrow");
+    const sliderL = el("input"); sliderL.type = "range"; sliderL.min = "0"; sliderL.max = "10"; sliderL.step = "1";
+    sliderL.value = String(curL); sliderL.className = "aw-unj-penslider";
+    const valL = el("span", "aw-unj-penval", curL === 0 ? "∞" : String(curL));
+    sliderL.oninput = () => { const v = Number(sliderL.value); draft.lives = v; valL.textContent = v === 0 ? "∞" : String(v); };
+    rowL.append(sliderL, valL);
+    gLives.append(rowL);
+    panel.append(gLives);
   },
 
   // Any Options change restarts the act (the 3 marking models are not
@@ -139,10 +189,13 @@ const unjumbleTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const mode = opt.unjumbleMode === "everyword" ? "everyword"
-      : opt.unjumbleMode === "submit" ? "submit" : "bonus";
+    const mode = opt.unjumbleMode === "submit" ? "submit" : "bonus";
     const align = opt.align === "center" ? "center" : "left";
     const allowSkip = opt.allowSkip !== false;
+    const showAnswerWhenWrong = opt.showAnswerWhenWrong !== false;   // submit mode reveal (default on)
+    const pointsOff = Math.max(0, Math.min(5, opt.pointsOff == null ? 1 : opt.pointsOff));   // submit wrong penalty
+    const startLives = normLives(opt.lives);   // null = unlimited
+    let livesLeft = startLives;
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && String(itemSentence(it)).trim());
@@ -158,14 +211,22 @@ const unjumbleTemplate = {
 
     const state = items.map(() => ({
       order: null,          // set from item's scrambled order in render()
-      hadMistake: false,
+      moveCount: 0,         // bonus: how many reordering drags the player has made
+      minMoves: 0,          // bonus: fewest drags that can solve this scramble
       graded: false,        // board locked (solved in live modes / submitted)
       correct: null,        // whole sentence correct (bool once decided)
       points: 0,
       marks: null           // submit: per-slot "correct"|"wrong" after reveal
     }));
-    // seed each state's working order from the prepared item once
-    state.forEach((st, i) => { st.order = [...items[i].order]; });
+    // seed each state's working order + minimum-moves target from the prepared item once
+    state.forEach((st, i) => {
+      st.order = [...items[i].order];
+      // Minimum number of "lift one word, drop it anywhere" moves to sort the
+      // scramble = n − (longest already-in-order run) = n − LIS. Words left in a
+      // longest increasing subsequence never need to move; every other word costs
+      // exactly one drag.
+      st.minMoves = items[i].words.length - lisLength(items[i].order);
+    });
 
     let index = 0;
     let finished = false;
@@ -185,66 +246,180 @@ const unjumbleTemplate = {
     const stageEl = root.closest(".aw-stage");
     if (stageEl) stageEl.classList.add("aw-unj-active");
     const isClassic = (activity.theme || "classic") === "classic";
+    root.style.position = "relative";   // lets the next/back crossfade overlap two cards (no flash)
 
+    // Slogan on the clock/score row (like Crossword): the clue + moves counter
+    // sit inside the card instead (see below).
+    const topbarEl = stageEl ? stageEl.querySelector(".aw-topbar") : null;
+    if (topbarEl) topbarEl.style.position = "relative";
+    let introActive = false;
+    let sloganEl = null;
+    if (topbarEl) {
+      sloganEl = el("div", "aw-unj-slogan");
+      // per-WORD spans so the intro title can fly each word onto its match.
+      ["UNJUMBLE", "IN", "ANDREW", "CLASSES"].forEach((w, i) => {
+        if (i) sloganEl.append(document.createTextNode(" "));
+        sloganEl.append(el("span", "aw-unj-slogw", w));
+      });
+      // Hidden while the intro plays; the intro title flies up and hands off to it
+      // (runIntro reveals it). With no intro, it's visible straight away.
+      sloganEl.style.opacity = (isClassic && stageEl) ? "0" : "1";
+      topbarEl.append(sloganEl);
+    }
+    // The clue (top of the card, under the slogan) and the "N moves for bonus"
+    // counter (bottom of the card, where Submit sits, coloured green) now live
+    // INSIDE the card, so they're hidden with the words during the intro and
+    // appear only when the words do (teacher, Đợt 40). render() (re)creates them;
+    // movesEl is tracked here so updateBonusMoves can refresh it live.
+    let movesEl = null;
+    function updateBonusMoves() {
+      if (!movesEl) return;
+      const st = state[index];
+      const remaining = st.minMoves - st.moveCount;
+      movesEl.textContent = (mode === "bonus" && !st.graded && remaining > 0)
+        ? `${remaining} move${remaining === 1 ? "" : "s"} for bonus` : "";
+    }
+    // Show the score as "N / max" like the other templates (teacher, Đợt 42), red
+    // when negative. maxScore counts by SENTENCE: bonus = 2 per sentence, submit = 1.
+    const maxScore = mode === "submit" ? total : 2 * total;
+    function showScore(val) {
+      const sc = document.querySelector(".aw-top-score");
+      if (!sc) return;
+      sc.innerHTML = `${icons.check} ${val} <span class="aw-unj-smax">/ ${maxScore}</span>`;
+      sc.classList.toggle("aw-unj-neg", val < 0);
+    }
+
+    // ---- Lives: hearts in the top bar, left of the score (like True/false) ----
+    function renderLives() {
+      const slot = ui.livesSlot;
+      if (!slot) return;
+      slot.innerHTML = "";
+      if (livesLeft == null) return;                     // unlimited -> no hearts
+      if (livesLeft <= 5) {
+        for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
+      } else {
+        slot.append(el("span", "aw-top-heartcount", String(livesLeft)));
+        slot.append(el("span", "aw-top-heart", "&#9829;"));
+      }
+    }
+    function loseLife() {
+      if (livesLeft == null) return false;               // unlimited -> can't lose
+      const slot = ui.livesSlot;
+      const gone = (livesLeft <= 5 && slot) ? slot.firstChild : null;   // leftmost heart pops
+      livesLeft = Math.max(0, livesLeft - 1);
+      if (gone) {
+        let done = false;
+        const fin = () => { if (done) return; done = true; renderLives(); };
+        try {
+          const a = gone.animate([{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.7)", opacity: 0 }],
+            { duration: 320, easing: "ease-in", fill: "forwards" });
+          a.onfinish = fin;
+        } catch { fin(); }
+        setTimeout(fin, 360);
+      } else renderLives();
+      return livesLeft <= 0;                             // true = that was the last life
+    }
+    // Shrink a one-line element's font until it fits `card`'s width (used for the clue).
+    function fitOneLine(elm, card) {
+      elm.style.fontSize = "";
+      const maxW = card.clientWidth * 0.9;
+      const w = elm.scrollWidth;
+      if (w > maxW) {
+        const base = parseFloat(getComputedStyle(elm).fontSize) || 16;
+        elm.style.fontSize = Math.max(8, base * maxW / w) + "px";
+      }
+    }
+
+    introActive = isClassic && !!stageEl;   // the "moves for bonus" line stays hidden until the intro ends
     ui.onSubmit(finish, () => state.filter(st => doneCheck(st)).length);   // block "Submit answers" at 0 answered
     render();
+    renderLives();
 
-    // Intro: on Classic, a gentle "push-in" of the whiteboard (the engine has
-    // already started the intro music at Play) before the clock starts. On the
-    // other Styles there's no photo, so we skip straight in. Either way the
-    // clock only starts here (manualTimerStart defers it in the engine).
-    if (isClassic && stageEl) runIntro(() => ui.startTimer());
+    // Intro (Classic): the title zooms in over ~3.3s (intro.mp3), then the clock
+    // starts. Other Styles skip straight in. The clock only starts here
+    // (manualTimerStart defers it in the engine).
+    if (introActive) runIntro(() => ui.startTimer());
     else ui.startTimer();
 
     function doneCheck(s) { return mode === "submit" ? s.graded === true : s.correct === true; }
     function scoreNow() { return state.reduce((sum, s) => sum + (s.points || 0), 0); }
 
     // ---------- full render (real boundaries only) ----------
-    function render() {
+    // `transition === "cross"` keeps the outgoing card on screen and crossfades to
+    // the new one so next/back never flashes the bare background (teacher, Đợt 36).
+    function render(transition) {
+      const oldCard = transition ? root.querySelector(".aw-unj-card") : null;
       if (fitter) { fitter.destroy(); fitter = null; }
-      root.innerHTML = "";
+      if (!oldCard) root.innerHTML = "";
       submitBtnEl = null; revealEl = null;
       const it = items[index];
       const st = state[index];
+      st._green = greenPrefix(st.order);   // sync the "correct-run" marker for this sentence
 
       const card = el("div", "aw-unj-card");
       card.append(doodleLayer());
 
-      // Only the teacher's own clue is shown; the generic "Put the words in the
-      // right order" line was removed at the teacher's request (Đợt 35).
-      if (it.clue) card.append(el("div", "aw-unj-clue", escapeHtml(it.clue)));
+      // clue at the TOP of the card, under the slogan (teacher, Đợt 40)
+      let clueLineEl = null;
+      if (it.clue) { clueLineEl = el("div", "aw-unj-clue", escapeHtml(it.clue)); card.append(clueLineEl); }
 
       boardEl = el("div", "aw-unj-board" + (align === "center" ? " is-centered" : ""));
       card.append(boardEl);
 
+      movesEl = null;
       if (mode === "submit") {
         revealEl = el("div", "aw-unj-reveal");
-        revealEl.textContent = st.correct === false ? sentenceText(it) : "";
+        revealEl.textContent = (st.correct === false && showAnswerWhenWrong) ? sentenceText(it) : "";
         card.append(revealEl);
         submitBtnEl = el("button", "aw-unj-submit", "Submit");
         submitBtnEl.type = "button";
         submitBtnEl.onclick = doSubmit;
         card.append(submitBtnEl);
+      } else {
+        // "N moves for bonus" sits at the BOTTOM of the card, where Submit would be.
+        movesEl = el("div", "aw-unj-moves"); card.append(movesEl);
       }
 
       root.append(card);
+      if (oldCard) crossfadeCards(oldCard, card);
       renderBoard();
       updateSubmitState();
+      updateBonusMoves();
+      if (clueLineEl) fitOneLine(clueLineEl, card);
 
-      const clueEl = card.querySelector(".aw-unj-clue");   // null when there's no clue
+      const clueH = clueLineEl ? clueLineEl.offsetHeight + (parseFloat(getComputedStyle(clueLineEl).marginBottom) || 0) : 0;
       const boardMarginBottom = parseFloat(getComputedStyle(boardEl).marginBottom) || 0;
       const revealMarginTop = revealEl ? parseFloat(getComputedStyle(revealEl).marginTop) || 0 : 0;
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
-      const cardPaddingBottom = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+      const movesH = movesEl ? movesEl.offsetHeight + (parseFloat(getComputedStyle(movesEl).marginTop) || 0) : 0;
+      const cardPad = (parseFloat(getComputedStyle(card).paddingTop) || 0) + (parseFloat(getComputedStyle(card).paddingBottom) || 0);
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.05,
-        measure: () => (clueEl ? clueEl.offsetHeight : 0) + boardEl.offsetHeight + boardMarginBottom +
+        measure: () => clueH + boardEl.offsetHeight + boardMarginBottom +
           (revealEl ? revealEl.offsetHeight + revealMarginTop : 0) +
-          (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + cardPaddingBottom
+          (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + movesH + cardPad
       });
 
-      ui.setScore(scoreNow());
+      showScore(scoreNow());
       updateNav();
+    }
+
+    // Overlap the outgoing + incoming cards and fade the old one out while the new
+    // one fades in (its CSS aw-fadein) — a seamless crossfade with no frame where
+    // the background shows through bare (that bare frame was the "flicker").
+    function crossfadeCards(oldCard, newCard) {
+      for (const c of [oldCard, newCard]) { c.style.position = "absolute"; c.style.inset = "0"; }
+      oldCard.style.zIndex = "1"; oldCard.style.pointerEvents = "none";
+      newCard.style.zIndex = "2";
+      const anim = oldCard.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: "ease", fill: "forwards" });
+      let done = false;
+      const clean = () => {
+        if (done) return; done = true;
+        if (oldCard.parentNode) oldCard.remove();
+        for (const p of ["position", "inset", "zIndex", "pointerEvents"]) newCard.style[p] = "";
+      };
+      anim.onfinish = clean;
+      setTimeout(clean, 280);
     }
 
     // Re-draw ONLY the word tiles from the current order (avoids replaying the
@@ -253,6 +428,11 @@ const unjumbleTemplate = {
       const it = items[index], st = state[index];
       boardEl.innerHTML = "";
       const locked = st.graded || busy;
+      // Bonus mode: only the LEADING run of correctly-placed words (from the start
+      // of the sentence) is green — a word in its right spot but sitting after a
+      // wrong one stays grey (teacher, Đợt 36). On a full solve prefix === n → all
+      // green. Submit mode colours per-slot from the marks after Submit.
+      const green = mode === "submit" ? 0 : greenPrefix(st.order);
       st.order.forEach((wordId, slot) => {
         const tile = el("span", "aw-unj-wtile");
         tile.dataset.slot = String(slot);
@@ -260,16 +440,25 @@ const unjumbleTemplate = {
         tile.textContent = it.words[wordId];
         if (mode === "submit") {
           const m = st.marks ? st.marks[slot] : null;
-          if (m === "correct") { tile.classList.add("is-correct"); tile.append(markBadge(true)); }
-          else if (m === "wrong") { tile.classList.add("is-wrong"); tile.append(markBadge(false)); }
-        } else if (wordId === slot) {
+          if (m === "correct") tile.classList.add("is-correct");
+          else if (m === "wrong") tile.classList.add("is-wrong");
+        } else if (slot < green) {
           tile.classList.add("is-correct");
-          if (st.correct) tile.append(markBadge(true));
         }
         if (locked) tile.classList.add("is-locked");
         else attachDrag(tile);
         boardEl.append(tile);
       });
+      // FIXED trailing "?"/"!" — always the last tile, pre-placed, locked, never a
+      // drop target (teacher, Đợt 41). Turns green with the rest once solved.
+      if (it.fixed) {
+        const fx = el("span", "aw-unj-wtile is-locked is-fixed");
+        fx.dataset.fixed = "1";
+        fx.textContent = it.fixed;
+        const solved = mode === "submit" ? (st.correct === true) : (green >= st.order.length);
+        if (solved) fx.classList.add("is-correct");
+        boardEl.append(fx);
+      }
     }
 
     // ---------- drag to reorder (pointer events: mouse + touch) ----------
@@ -311,7 +500,7 @@ const unjumbleTemplate = {
         // the caret marks where the word will drop; positioned inside the board
         caret = el("span", "aw-unj-caret");
         boardEl.append(caret);
-        positionCaret(e.clientX, e.clientY, caret);
+        positionCaret(e.clientX, e.clientY, caret, tile);
         try { tile.setPointerCapture(e.pointerId); } catch { /* ignore */ }
         unjumbleSound.pickup();
       });
@@ -320,53 +509,108 @@ const unjumbleTemplate = {
         if (!dragging) return;
         clone.style.left = (e.clientX - offX) + "px";
         clone.style.top = (e.clientY - offY) + "px";
-        positionCaret(e.clientX, e.clientY, caret);
+        positionCaret(e.clientX, e.clientY, caret, tile);
       });
 
       const end = e => {
         if (!dragging) return;
         dragging = false;
         try { tile.releasePointerCapture(e.pointerId); } catch { /* ignore */ }
-        if (clone) { clone.remove(); activeFlyNodes.delete(clone); clone = null; }
-        const newIndex = caretDropIndex(caret, tile);
+        const newIndex = caretDropIndex(caret);
         if (caret) { caret.remove(); caret = null; }
         tile.classList.remove("is-dragsrc");
-        commitReorder(Number(tile.dataset.word), newIndex);
+        const wordId = Number(tile.dataset.word);
+        commitReorder(wordId, newIndex);        // update data + re-render the board
+        if (state[index].graded) {              // sentence solved → celebration takes over, no glide
+          if (clone) { clone.remove(); activeFlyNodes.delete(clone); clone = null; }
+        } else {
+          flyCloneToLanded(clone, wordId);      // glide the lifted word to where it landed
+          clone = null;                         // ownership handed to the flight
+        }
       };
       tile.addEventListener("pointerup", end);
       tile.addEventListener("pointercancel", end);
     }
 
-    // Place the caret at the gap nearest the pointer (row-aware via closest tile
-    // centre; before it if the pointer is to its left, else after). Stores the
-    // resulting FULL-array insertion index on the caret for the drop. Nothing
-    // else in the board moves while dragging.
-    function positionCaret(x, y, caret) {
-      const tiles = [...boardEl.querySelectorAll(".aw-unj-wtile")];
-      if (!tiles.length) return;
+    // Place the caret at the drop gap NEAREST the pointer, and store the exact
+    // insertion index for the drop. Rewritten for accuracy + stability (Đợt 36):
+    //   • the dragged word is EXCLUDED, so the gaps are computed among the words
+    //     that will actually stay — the caret's index is then already the spliced
+    //     insertion index (no fragile "full-index minus one" conversion, which was
+    //     the source of the flaky first/last behaviour).
+    //   • row is chosen by nearest vertical centre with a generous tolerance
+    //     (half a row), so sub-pixel wobble can't make it flip rows.
+    //   • the pointer is clamped past the ends, so the very first and very last
+    //     gaps are easy to hit even when the finger overshoots the text.
+    // `caret.dataset.insert` = index in the array AFTER the dragged word is removed.
+    function positionCaret(x, y, caret, srcTile) {
+      const rest = [...boardEl.querySelectorAll(".aw-unj-wtile")]
+        .filter(t => t !== srcTile && !t.dataset.fixed)   // never drop after the fixed ?/! token
+        .map((t, i) => ({ idx: i, r: t.getBoundingClientRect() }));
       const brect = boardEl.getBoundingClientRect();
-      let best = null, bestD = Infinity, before = true;
-      for (const t of tiles) {
-        const r = t.getBoundingClientRect();
-        const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-        const d = (cx - x) * (cx - x) + (cy - y) * (cy - y);
-        if (d < bestD) { bestD = d; best = t; before = x < cx; }
+      if (!rest.length) {   // 1-word sentence: nothing to reorder around
+        caret.dataset.insert = "0";
+        caret.style.left = "0px"; caret.style.top = "0px";
+        caret.style.height = (boardEl.clientHeight * 0.6) + "px";
+        return;
       }
-      const r = best.getBoundingClientRect();
-      const slot = Number(best.dataset.slot);
-      const h = r.height * 0.72;   // a touch shorter than the row, so it reads as a text cursor
-      caret.style.left = ((before ? r.left : r.right) - brect.left) + "px";
-      caret.style.top = (r.top - brect.top + (r.height - h) / 2) + "px";
+      // (1) nearest row (tolerant grouping so it never jitters between rows)
+      let rowTop = rest[0].r.top, bestDy = Infinity;
+      for (const { r } of rest) {
+        const dy = Math.abs((r.top + r.height / 2) - y);
+        if (dy < bestDy) { bestDy = dy; rowTop = r.top; }
+      }
+      const rowH = rest[0].r.height;
+      const row = rest.filter(o => Math.abs(o.r.top - rowTop) < rowH * 0.6).sort((a, b) => a.r.left - b.r.left);
+      const rowY = row[0].r.top;
+
+      // (2) candidate gaps on that row → insertion index among the remaining words
+      const gaps = [{ x: row[0].r.left, insert: row[0].idx }];
+      for (let i = 1; i < row.length; i++) {
+        gaps.push({ x: (row[i - 1].r.right + row[i].r.left) / 2, insert: row[i].idx });
+      }
+      gaps.push({ x: row[row.length - 1].r.right, insert: row[row.length - 1].idx + 1 });
+
+      let best = gaps[0], bestDx = Infinity;
+      for (const g of gaps) {
+        const dx = Math.abs(g.x - x);
+        if (dx < bestDx) { bestDx = dx; best = g; }
+      }
+
+      const h = rowH * 0.72;   // a touch shorter than the row, so it reads as a text cursor
+      caret.style.left = (best.x - brect.left) + "px";
+      caret.style.top = (rowY - brect.top + (rowH - h) / 2) + "px";
       caret.style.height = h + "px";
-      caret.dataset.insert = String(before ? slot : slot + 1);   // index in the FULL order[]
+      caret.dataset.insert = String(best.insert);   // index in the spliced array
     }
 
-    // Convert the caret's full-array insertion index into the index
-    // commitReorder wants (the array AFTER the dragged word is spliced out).
-    function caretDropIndex(caret, tile) {
-      const from = Number(tile.dataset.slot);
-      const full = caret ? Number(caret.dataset.insert ?? from) : from;
-      return full > from ? full - 1 : full;
+    // The caret already stores the spliced insertion index (see positionCaret).
+    function caretDropIndex(caret) {
+      return caret ? Number(caret.dataset.insert || 0) : 0;
+    }
+
+    // Glide the lifted clone from where it was released to the slot the word landed
+    // in, then hand off to the real tile — so a drop settles smoothly instead of
+    // snapping (teacher, Đợt 36). The real tile is hidden during the short flight.
+    function flyCloneToLanded(clone, wordId) {
+      if (!clone) return;
+      const target = boardEl.querySelector(`.aw-unj-wtile[data-word="${wordId}"]`);
+      if (!target) { clone.remove(); activeFlyNodes.delete(clone); return; }
+      const cr = clone.getBoundingClientRect();
+      const tr = target.getBoundingClientRect();
+      target.style.visibility = "hidden";
+      const anim = clone.animate([
+        { left: cr.left + "px", top: cr.top + "px", width: cr.width + "px", height: cr.height + "px", transform: "scale(1.14) rotate(-4deg)" },
+        { left: tr.left + "px", top: tr.top + "px", width: tr.width + "px", height: tr.height + "px", transform: "scale(1) rotate(0deg)" }
+      ], { duration: DROP_FLY_MS, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+      let done = false;
+      const land = () => {
+        if (done) return; done = true;
+        clone.remove(); activeFlyNodes.delete(clone);
+        if (target) target.style.visibility = "";
+      };
+      anim.onfinish = land;
+      setTimeout(land, DROP_FLY_MS + 80);
     }
 
     function commitReorder(wordId, newIndex) {
@@ -380,44 +624,49 @@ const unjumbleTemplate = {
       st.order = arr;
       unjumbleSound.drop();
       renderBoard();
-      if (changed) afterDrop(wordId);
+      if (changed) { st.moveCount++; afterDrop(wordId); }
+      updateBonusMoves();
       updateSubmitState();
     }
 
-    // ---------- marking (live modes) ----------
-    function afterDrop(wordId) {
+    // ---------- marking (bonus mode) ----------
+    // Words turn green live as they land home (renderBoard handles the colour),
+    // but points are only awarded once the WHOLE sentence is solved — 2 for a
+    // perfect (minimum-move) solve, 1 otherwise.
+    function afterDrop() {
       if (mode === "submit") return;
       const st = state[index], it = items[index];
       const n = it.words.length;
-      let cc = 0;
-      for (let i = 0; i < n; i++) if (st.order[i] === i) cc++;
-      const slot = st.order.indexOf(wordId);
-      const home = st.order[slot] === slot;
-      if (home) unjumbleSound.correct();
-      if (!home && mode === "bonus") st.hadMistake = true;
-      const prev = st.points;
-      st.points = cc;
-      if (cc > prev) pulseScoreTo(scoreNow());
-      else ui.setScore(scoreNow());
-      if (cc === n) finalizeLiveWord();
+      const green = greenPrefix(st.order);
+      if (green > (st._green || 0)) unjumbleSound.correct();   // the leading correct run just grew
+      st._green = green;
+      if (green === n) finalizeLiveWord();                     // whole sentence solved
     }
 
     function finalizeLiveWord() {
-      const st = state[index], it = items[index];
-      const n = it.words.length;
-      const perfect = mode === "bonus" && !st.hadMistake;
+      const st = state[index];
+      // PERFECT = solved using no more than the fewest possible drags.
+      const perfect = st.moveCount <= st.minMoves;
+      // capture the "moves for bonus" spot BEFORE updateBonusMoves clears it, so the
+      // BONUS chip can fly from exactly where that line was (teacher, Đợt 41).
+      const movesRect = (movesEl && movesEl.textContent) ? movesEl.getBoundingClientRect() : null;
       st.correct = true;
       st.graded = true;
-      renderBoard();      // lock the board + stamp the green ticks
+      st.points = 0;       // banked by the flights below (1 for the sentence, +1 for a bonus)
+      renderBoard();       // lock the board — the whole sentence is now green (prefix === n)
+      updateBonusMoves();  // hide the "moves for bonus" line
       updateNav();
+      celebrateBounce();   // all words do a little wave-bounce (teacher, Đợt 36)
+      // The ✓ for a correct sentence flies into the score (+1) (teacher, Đợt 39).
+      flyToScore(boardEl, icons.markCheck, 1, () => { st.points = 1; return scoreNow(); });
       if (perfect) {
         unjumbleSound.perfect();
-        flyScoreGain("perfect", n, () => { st.points = n * 2; return scoreNow(); });
-      } else {
-        showBigMark(true);
+        // the "moves for bonus" spot launches a "BONUS" chip into the score (+1 more).
+        setTimeout(() => flyToScore(movesRect || boardEl, "BONUS", 1,
+          () => { st.points = 2; return scoreNow(); }), 420);
       }
       if (state.every(doneCheck)) {
-        autoTimer = setTimeout(finish, perfect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 300 : 1100);
+        autoTimer = setTimeout(finish, perfect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 700 : FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 300);
       }
     }
 
@@ -441,20 +690,30 @@ const unjumbleTemplate = {
           const t = tiles[slot];
           if (!t) return;
           t.classList.add(isRight ? "is-correct" : "is-wrong");
-          t.append(markBadge(isRight));
           (isRight ? unjumbleSound.fastCorrect : unjumbleSound.fastWrong)();
         }, slot * STAGGER_MS);
       }
       setTimeout(() => {
         st.correct = allCorrect;
-        st.points = cc;
+        st.points = 0;   // banked by the effect below
         busy = false;
         updateSubmitState();
         updateNav();
-        if (revealEl) revealEl.textContent = allCorrect ? "" : sentenceText(it);
-        if (cc > 0) pulseScoreTo(scoreNow()); else ui.setScore(scoreNow());
-        showBigMark(allCorrect);
-        if (state.every(doneCheck)) autoTimer = setTimeout(finish, allCorrect ? 900 : 1600);
+        if (revealEl) revealEl.textContent = (!allCorrect && showAnswerWhenWrong) ? sentenceText(it) : "";
+        // Score by SENTENCE (correct = 1; wrong costs pointsOff, 0–5). Both correct AND
+        // wrong now shower stars that stream to the score — GOLD +1 on correct, RED
+        // −pointsOff on wrong (no big ✗, teacher Đợt 42). A wrong sentence also costs a
+        // life; running out ends the game.
+        let outOfLives = false;
+        if (allCorrect) {
+          celebrateBounce();
+          flyStarsToScore(boardEl, () => { st.points = 1; return scoreNow(); });
+        } else {
+          outOfLives = loseLife();
+          flyStarsToScore(boardEl, () => { st.points = -pointsOff; return scoreNow(); }, true);
+        }
+        if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
+        else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
       }, n * STAGGER_MS + 300);
     }
 
@@ -464,20 +723,57 @@ const unjumbleTemplate = {
       submitBtnEl.disabled = st.graded || busy;
     }
 
-    // ---------- shared score effects (same feel as Anagram) ----------
-    function showBigMark(isCorrect) {
-      if (!boardEl) return;
-      const fly = el("span", "aw-mark-fly" + (isCorrect ? "" : " is-cross"),
-        isCorrect ? icons.markCheck : icons.markCross);
-      boardEl.append(fly);
-      setTimeout(() => fly.remove(), isCorrect ? 900 : 1800);
+    // A shower of little stars pops up around the whole sentence and streams into
+    // the score, then the point lands — GOLD on a correct submit, RED on a wrong
+    // one (teacher, Đợt 41/42).
+    function flyStarsToScore(sourceEl, applyAndGetNewTotal, red) {
+      const scoreEl = document.querySelector(".aw-top-score");
+      if (!sourceEl || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
+      const gr = sourceEl.getBoundingClientRect();
+      const er = scoreEl.getBoundingClientRect();
+      const ex = er.left + er.width / 2, ey = er.top + er.height / 2;
+      const size = Math.max(14, gr.height * 0.16);
+      const N = 12;
+      for (let i = 0; i < N; i++) {
+        const s = el("span", "aw-unj-flystar");
+        s.innerHTML = red ? STAR_RED_SVG : STAR_SVG;
+        s.style.width = s.style.height = size + "px";
+        const sx = gr.left + gr.width * (0.08 + 0.84 * ((i * 0.3819) % 1));
+        const sy = gr.top + gr.height * (0.15 + 0.7 * ((i * 0.6180) % 1));
+        s.style.left = sx + "px"; s.style.top = sy + "px";
+        document.body.append(s);
+        activeFlyNodes.add(s);
+        s.animate([
+          { transform: "translate(-50%,-50%) scale(.3) rotate(0deg)", opacity: 0, offset: 0 },
+          { transform: "translate(-50%,-50%) scale(1) rotate(40deg)", opacity: 1, offset: .25 },
+          { transform: `translate(calc(-50% + ${ex - sx}px), calc(-50% + ${ey - sy}px)) scale(.35) rotate(160deg)`, opacity: 0, offset: 1 }
+        ], { duration: 750 + i * 25, delay: i * 20, easing: "cubic-bezier(.4,.2,.25,1)", fill: "forwards" });
+        setTimeout(() => { s.remove(); activeFlyNodes.delete(s); }, 820 + i * 45);
+      }
+      setTimeout(() => pulseScoreTo(applyAndGetNewTotal()), 760);
     }
 
-    function flyScoreGain(kind, points, applyAndGetNewTotal) {
-      const g = boardEl;
+    // A left-to-right wave of little hops across the solved sentence's words.
+    function celebrateBounce() {
+      if (!boardEl) return;
+      const tiles = [...boardEl.querySelectorAll(".aw-unj-wtile")];
+      tiles.forEach((t, i) => {
+        t.animate(
+          [{ transform: "translateY(0)" }, { transform: "translateY(-16%)" }, { transform: "translateY(0)" }],
+          { duration: 460, delay: i * 55, easing: "cubic-bezier(.34,1.56,.64,1)" }
+        );
+      });
+    }
+
+    // Fly an icon/label out of `startEl`, hold, then sail into the score while
+    // morphing to "+points" and pulse-counting the new total in. Used for the ✓
+    // that a solved sentence earns, and (on a bonus) a second "BONUS" flight.
+    // `start` may be an element OR a plain rect {left,top,width,height} (e.g. the
+    // captured "moves for bonus" spot, since that element is cleared before we fly).
+    function flyToScore(start, iconHtml, points, applyAndGetNewTotal) {
       const scoreEl = document.querySelector(".aw-top-score");
-      if (!g || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
-      const startRect = g.getBoundingClientRect();
+      if (!start || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
+      const startRect = start.getBoundingClientRect ? start.getBoundingClientRect() : start;
       const endRect = scoreEl.getBoundingClientRect();
       const cx = startRect.left + startRect.width / 2;
       const cy = startRect.top + startRect.height / 2;
@@ -489,8 +785,8 @@ const unjumbleTemplate = {
       wrap.style.top = cy + "px";
       wrap.style.fontSize = Math.max(24, startRect.width * 0.06) + "px";
 
-      const iconSpan = el("span", "afg-icon", kind === "perfect" ? "PERFECT" : icons.markCheck);
-      const numSpan = el("span", "afg-num", "+" + points);
+      const iconSpan = el("span", "afg-icon", iconHtml);
+      const numSpan = el("span", "afg-num" + (points < 0 ? " is-neg" : ""), (points >= 0 ? "+" : "") + points);
       wrap.append(iconSpan, numSpan);
       document.body.append(wrap);
       activeFlyNodes.add(wrap);
@@ -529,7 +825,7 @@ const unjumbleTemplate = {
       if (!scoreEl) return;
       const match = /(-?\d+)/.exec(scoreEl.textContent || "");
       const oldValue = match ? parseInt(match[1], 10) : 0;
-      if (oldValue === newValue) { ui.setScore(newValue); return; }
+      if (oldValue === newValue) { showScore(newValue); return; }
       scoreEl.classList.remove("aw-score-pulse"); void scoreEl.offsetWidth;
       scoreEl.classList.add("aw-score-pulse");
       const start = performance.now();
@@ -537,10 +833,10 @@ const unjumbleTemplate = {
         const t = Math.min(1, (now - start) / FLYGAIN_PULSE_MS);
         const eased = 1 - Math.pow(1 - t, 3);
         const val = Math.round(oldValue + (newValue - oldValue) * eased);
-        scoreEl.innerHTML = `${icons.check} ${val}`;
+        showScore(val);
         if (t < 1) requestAnimationFrame(step);
         else {
-          scoreEl.innerHTML = `${icons.check} ${newValue}`;
+          showScore(newValue);
           setTimeout(() => scoreEl.classList.remove("aw-score-pulse"), 200);
         }
       };
@@ -556,33 +852,26 @@ const unjumbleTemplate = {
         index: index + 1,
         total,
         onPrev: index > 0 ? goPrev : null,
-        onNext: canAdvance ? (isLast ? finish : goNext) : null,
-        nextLabel: isLast ? icons.check : null
+        // Last question: keep the Next button but DISABLE it (no ✓ icon either) —
+        // the game hands in via "Submit answers" / auto-finish (teacher, Đợt 38).
+        onNext: (!isLast && canAdvance) ? goNext : null,
+        nextLabel: null
       });
     }
-    function fadeSwap(change) {
-      const card = root.querySelector(".aw-unj-card");
-      if (!card) { change(); return; }
-      let done = false;
-      const run = () => { if (done) return; done = true; change(); };
-      const anim = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
-      anim.onfinish = run;
-      setTimeout(run, 220);
-    }
-    function goPrev() { if (busy) return; if (index > 0) fadeSwap(() => { index--; render(); }); }
-    function goNext() { if (busy) return; if (index < total - 1) fadeSwap(() => { index++; render(); }); }
+    // Next/back crossfade to the new card (render handles the overlap) so the
+    // background never flashes bare between questions (teacher, Đợt 36).
+    function goPrev() { if (busy) return; if (index > 0) { index--; render("cross"); } }
+    function goNext() { if (busy) return; if (index < total - 1) { index++; render("cross"); } }
 
-    function finish() {
+    function finish(reason) {
       if (finished) return;
       finished = true;
-      const totalWords = items.reduce((s, it) => s + it.words.length, 0);
       const totalPoints = state.reduce((s, st) => s + (st.points || 0), 0);
-      const correctSentences = state.filter(st => st.correct === true).length;
       const perQuestion = state.map((st, i) => ({ q: i, correct: st.correct === true }));
       const review = items.map((it, i) => {
         const st = state[i];
         const started = st.order.some((id, slot) => id !== slot);
-        const yourWords = st.order.map(id => it.words[id]).join(" ");
+        const yourWords = st.order.map(id => it.words[id]).join(" ") + (it.fixed || "");
         return {
           question: it.clue || "Put the words in the right order",
           answered: doneCheck(st),
@@ -592,11 +881,12 @@ const unjumbleTemplate = {
         };
       });
       const answered = state.filter(st => doneCheck(st)).length;
-      ui.finish({ correct: totalPoints, incorrect: total - correctSentences, total: totalWords, perQuestion, review, answered });
-    }
-
-    function markBadge(isCorrect) {
-      return el("span", "aw-unj-badge", isCorrect ? SMALL_CHECK_GREEN : SMALL_CROSS_RED);
+      // maxScore (mount-scope) counts by SENTENCE: bonus = 2/sentence, submit = 1.
+      ui.finish({
+        correct: totalPoints, incorrect: maxScore - totalPoints, total: maxScore,
+        score: totalPoints, perQuestion, review, answered,
+        title: reason === "gameover" ? "Game over" : undefined   // ran out of lives
+      });
     }
 
     // Decorative marker doodles in the whiteboard corners (Classic look only —
@@ -612,15 +902,35 @@ const unjumbleTemplate = {
       return layer;
     }
 
-    // Whiteboard "push-in": the photo starts a touch enlarged and eases back to
-    // frame while fading out to reveal the (identical) board underneath — so it
-    // reads as one seamless zoom. Tap anywhere to skip. Runs on Classic only.
+    // Intro (Classic): a title cluster (UNJUMBLE / in ANDREW CLASSES) zooms in from
+    // far, HOLDS big for most of intro.mp3, then FAST each word shrinks + flies onto
+    // its match in the top-bar slogan (UNJUMBLE→UNJUMBLE, in→IN, ANDREW→ANDREW,
+    // CLASSES→CLASSES) as the slogan fades in (teacher, Đợt 41). No background/border,
+    // words hidden meanwhile. Tap to skip. Classic only.
     function runIntro(done) {
+      const ZOOM_MS = 460;                      // grow in (tilted)
+      const STRAIGHTEN_MS = 160;                // un-tilt just before flying (so words land straight)
+      const FLY_MS = 460;                       // fast shrink + fly
+      const TILT = -4;                          // slight artistic tilt during zoom + hold
+      const FLY_AT = Math.max(ZOOM_MS + 200, INTRO_MS - STRAIGHTEN_MS - FLY_MS);   // long hold in between
       introEl = el("div", "aw-unj-intro");
       introEl.setAttribute("aria-hidden", "true");
+      const introText = el("div", "aw-unj-intro-text");
+      const wUNJ = el("span", "aw-unj-introw aw-unj-intro-title", "UNJUMBLE");
+      const line1 = el("div", "aw-unj-intro-l1"); line1.append(wUNJ);
+      const line2 = el("div", "aw-unj-intro-l2");
+      const wIN = el("span", "aw-unj-introw aw-unj-intro-sub", "in");
+      const wAND = el("span", "aw-unj-introw aw-unj-intro-sub", "ANDREW");
+      const wCL = el("span", "aw-unj-introw aw-unj-intro-sub", "CLASSES");
+      line2.append(wIN, document.createTextNode(" "), wAND, document.createTextNode(" "), wCL);
+      introText.append(line1, line2);
+      introEl.append(introText);
       stageEl.append(introEl);
       activeFlyNodes.add(introEl);
-      let finishedIntro = false;
+      const card = root.querySelector(".aw-unj-card");
+      if (card) card.style.visibility = "hidden";
+
+      let finishedIntro = false, flewWords = false;
       const finishIntro = () => {
         if (finishedIntro) return;
         finishedIntro = true;
@@ -628,22 +938,61 @@ const unjumbleTemplate = {
         introEl.remove();
         activeFlyNodes.delete(introEl);
         introEl = null;
+        if (card) card.style.visibility = "";
+        introActive = false;
+        if (sloganEl) sloganEl.style.opacity = "1";   // slogan takes over up top
+        updateBonusMoves();
         done();
       };
       introEl.addEventListener("pointerdown", finishIntro);
-      const anim = introEl.animate([
-        { transform: "scale(1.12)", opacity: 1, offset: 0 },
-        { transform: "scale(1.02)", opacity: 1, offset: 0.7 },
-        { transform: "scale(1)", opacity: 0, offset: 1 }
-      ], { duration: INTRO_MS, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
-      anim.onfinish = finishIntro;
-      setTimeout(finishIntro, INTRO_MS + 200);   // fallback for a stalled/hidden tab
+
+      // phase 1 — the tilted cluster grows from far (zoom) and holds big
+      introText.animate([
+        { transform: `scale(0.42) rotate(${TILT}deg)`, opacity: 0, offset: 0 },
+        { transform: `scale(1) rotate(${TILT}deg)`, opacity: 1, offset: ZOOM_MS / FLY_AT },
+        { transform: `scale(1) rotate(${TILT}deg)`, opacity: 1, offset: 1 }
+      ], { duration: FLY_AT, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+
+      // phase 1b — straighten (un-tilt) so the per-word flight lands precisely
+      const straighten = () => {
+        introText.animate([
+          { transform: `scale(1) rotate(${TILT}deg)` },
+          { transform: "scale(1) rotate(0deg)" }
+        ], { duration: STRAIGHTEN_MS, easing: "ease-out", fill: "forwards" });
+      };
+
+      // phase 2 — each word shrinks + flies onto its slogan word; slogan fades in
+      const flyWords = () => {
+        if (flewWords) return; flewWords = true;
+        const slogw = sloganEl ? [...sloganEl.querySelectorAll(".aw-unj-slogw")] : [];
+        [[wUNJ, slogw[0]], [wIN, slogw[1]], [wAND, slogw[2]], [wCL, slogw[3]]].forEach(([w, target]) => {
+          if (!w) return;
+          const wr = w.getBoundingClientRect();
+          let dx = 0, dy = -stageEl.getBoundingClientRect().height * 0.42, sc = 0.14;
+          if (target) {
+            const tr = target.getBoundingClientRect();
+            dx = (tr.left + tr.width / 2) - (wr.left + wr.width / 2);
+            dy = (tr.top + tr.height / 2) - (wr.top + wr.height / 2);
+            sc = tr.height / wr.height;
+          }
+          w.animate([
+            { transform: "translate(0,0) scale(1)", opacity: 1 },
+            { transform: `translate(${dx}px, ${dy}px) scale(${sc})`, opacity: 0.15 }
+          ], { duration: FLY_MS, easing: "cubic-bezier(.5,0,.15,1)", fill: "forwards" });
+        });
+        if (sloganEl) sloganEl.animate([{ opacity: 0 }, { opacity: 1 }],
+          { duration: FLY_MS, delay: FLY_MS * 0.35, easing: "ease-out", fill: "forwards" });
+      };
+      setTimeout(straighten, FLY_AT);
+      setTimeout(flyWords, FLY_AT + STRAIGHTEN_MS);
+      setTimeout(finishIntro, FLY_AT + STRAIGHTEN_MS + FLY_MS + 80);
     }
 
     return function cleanup() {
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
       if (stageEl) stageEl.classList.remove("aw-unj-active");
+      if (sloganEl) sloganEl.remove();
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
     };
@@ -653,6 +1002,27 @@ const unjumbleTemplate = {
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Length of the leading run of already-correctly-placed words (order[i] === i for
+// i = 0,1,…). Everything up to the first out-of-place word is "green"; the rest
+// stays grey even if a later word happens to sit in its own slot (teacher, Đợt 36).
+function greenPrefix(order) {
+  let p = 0;
+  while (p < order.length && order[p] === p) p++;
+  return p;
+}
+
+// Length of the longest strictly-increasing subsequence (patience sorting, O(n log n)).
+// Used to derive the minimum number of drag-moves to sort a scramble: n − LIS.
+function lisLength(arr) {
+  const tails = [];
+  for (const x of arr) {
+    let lo = 0, hi = tails.length;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (tails[mid] < x) lo = mid + 1; else hi = mid; }
+    tails[lo] = x;
+  }
+  return tails.length;
 }
 
 registerTemplate(unjumbleTemplate);

@@ -869,6 +869,38 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     head.append(closeBtn);
     rv.append(head);
 
+    // Opt-in STACKED layout (tpl.reviewStyle === "stacked"): each item is one or
+    // two FULL-WIDTH lines (number · sentence · ✓/✗), so long sentences stay big
+    // and readable instead of being squashed into the 3-column grid. A wrong item
+    // shows the player's line (✗) then the correct line (✓). Styling lives in the
+    // template's own CSS (.aw-rv-slist/.aw-rv-sitem/.aw-rv-sline). Backward-compatible:
+    // any template without the flag keeps the original 3-column review below.
+    if (tpl.reviewStyle === "stacked") {
+      const sline = (num, text, mark, cls) => {
+        const line = el("div", "aw-rv-sline " + cls);
+        line.append(
+          el("span", "aw-rv-snum", num == null ? "" : String(num)),
+          el("span", "aw-rv-stext", escapeText(text || "")),
+          el("span", "aw-rv-smark", mark || "")
+        );
+        return line;
+      };
+      const slist = el("div", "aw-rv-slist");
+      reviewData.forEach((r, i) => {
+        const item = el("div", "aw-rv-sitem");
+        if (r.answered && r.yourCorrect) {
+          item.append(sline(i + 1, r.correctText, icons.check, "is-ok"));
+        } else {
+          item.append(sline(i + 1, r.answered ? r.yourText : "No answer", icons.cross, "is-bad"));
+          item.append(sline(null, r.correctText, icons.check, "is-ok"));
+        }
+        slist.append(item);
+      });
+      rv.append(slist);
+      inner.append(rv);
+      return;
+    }
+
     const list = el("div", "aw-rv-list");
     reviewData.forEach((r, i) => {
       const rowEl = el("div", "aw-rv-row");

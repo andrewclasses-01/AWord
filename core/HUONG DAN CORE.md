@@ -193,6 +193,11 @@ Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đ�
 
 ### Cờ template ẩn nhóm Options không hợp lệ
 
+- `tpl.reviewStyle:"stacked"` — (thêm 2/8/2026 cho Unjumble) đổi màn **Show answers** từ lưới 3 cột
+  (câu hỏi | bài làm | đáp án) sang **danh sách xếp chồng**: mỗi câu 1–2 dòng FULL-WIDTH (số · câu · ✓/✗),
+  câu sai hiện dòng bài-làm (đỏ ✗) rồi dòng đáp-án-đúng (xanh ✓). Dùng cho game câu DÀI (câu 3 cột bị co
+  nhỏ tí xíu). Tương thích ngược tuyệt đối: template không đặt cờ giữ nguyên lưới 3 cột cũ. CSS của kiểu
+  này nằm ở template (`.aw-rv-slist/.aw-rv-sitem/.aw-rv-sline`, xem `templates/unjumble/unjumble.css`).
 - `tpl.hideLettersOption:true` — ẩn nhóm "Letters on answers" (game không có ô đáp án chữ cái).
 - `tpl.hideTimerOption:true` — ẩn nhóm "Timer" (toàn ván) khi game TỰ QUẢN đồng hồ (vd Gameshow đếm
   ngược TỪNG CÂU; nếu để engine chạy đồng hồ toàn ván sẽ đá nhau). Nhớ đặt `options.timer="none"` cho
