@@ -1,16 +1,48 @@
 # GHI CHU — CROSSWORD
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE, rồi 🔧 TÁI THIẾT KẾ LỚN (2/8/2026, Đợt 36 / v0.9.10) theo nhiều loạt
-yêu cầu của thầy — ĐÃ COMMIT + PUSH.** Chỉ đụng `templates/crossword/*` (crossword.js / .css /
-crossword-editor.js), **KHÔNG đụng core** (nav + slogan chèn bằng DOM vào `.aw-topbar`/`.aw-nav` của
-engine rồi hoàn tác ở cleanup). Tự test trình duyệt thật đủ mọi mục (đo DOM, 0 lỗi console). ⚠️ Hiệu ứng
-trượt/bay bị ĐÓNG BĂNG trong pane không-composite của Claude — đo bằng cách ép `transition:none` +
-`setTimeout` fallback; trên Chrome thật chạy mượt.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE. TÁI THIẾT KẾ LỚN (Đợt 36/v0.9.10), rồi 🔧 3 LOẠT TINH CHỈNH REVEAL +
+ÂM THANH (2/8/2026, Đợt 43 / v0.9.17) theo yêu cầu thầy — ĐÃ COMMIT + PUSH + LIVE.** Chỉ đụng
+`templates/crossword/*` (crossword.js / .css / crossword-sound.js / crossword-editor.js), **KHÔNG đụng
+core** (nav + slogan chèn bằng DOM vào `.aw-topbar`/`.aw-nav` của engine rồi hoàn tác ở cleanup). Tự test
+trình duyệt thật đủ mọi mục (đo DOM/timeline, 0 lỗi console). ⚠️ Hiệu ứng trượt/bay bị ĐÓNG BĂNG trong
+pane không-composite của Claude — đo bằng cách ghi timeline class qua `setInterval` (không nhìn được thì
+đo số liệu); trên Chrome thật chạy mượt.
 
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
-## 2/8/2026 — TÁI THIẾT KẾ LỚN (Đợt 36 / v0.9.10) — thiết kế HIỆN HÀNH, đọc mục này trước
+## 2/8/2026 — 3 LOẠT TINH CHỈNH REVEAL + ÂM THANH (Đợt 43 / v0.9.17) — đọc mục này TRƯỚC mục tái thiết kế
+
+**Reveal khi chấm (thay cho kiểu cũ hiện đồng loạt + nền đỏ):**
+- **Chấm SAI (Show-answer BẬT) chạy TUẦN TỰ từng ô** (~190ms/ô, `revealWrongSequence`): ô gõ ĐÚNG → xanh
+  (`is-solved is-cellpop`) + âm **ting**; ô gõ SAI → **✕ nhỏ (0.42 ô, mảnh, mờ .74) KHÔNG che chữ** (bỏ
+  hẳn nền/viền/chữ đỏ — `.is-xmark` giờ chỉ overlay `::after`, biglet giữ màu mặc định) + âm **tặc**.
+  Xong ✕ cuối → chữ đúng **lật** (`is-flip`, rotateX) → cả hàng/cột về **xám đồng nhất** (`flipRevealWord`,
+  cả ô xanh cũng thành xám). Bỏ tiếng "wrong" cả-câu ở nhánh này (per-cell thay thế); nhánh Show-answer
+  TẮT vẫn giữ `wrong()` + trừ điểm ngay.
+- **Chấm ĐÚNG cũng TUẦN TỰ** (`revealCorrectSequence`, ~165ms/ô): mỗi ô xanh + ting lần lượt, **ting ô CUỐI
+  xong (+240ms) MỚI** cộng điểm + bay sao (trước cộng ngay). `endWord` giãn theo `lastTing`.
+- **Thứ tự nhánh SAI + TRỪ ĐIỂM (minus>0)**: **đủ hết ✕ → sao đỏ bay + trừ điểm (lastMark+260) → sao rời
+  ô (700ms) → mới lật** (`flipAt = lastMark+260+700`). Không minus thì lật ngay sau ✕ (lastMark+260). Đã đo
+  timeline thật: X 1→7 (t83–1201) → sao+điểm (t1441) → lật xám (t2161).
+
+**Âm thanh — tất cả SYNTH WebAudio trong `crossword-sound.js`** (AudioContext riêng, tôn trọng `isMuted`
+của core, KHÔNG đụng core, không cần file mp3 mới):
+- `ting` chuông cao ngắn (ô đúng) · `tac` blíp lỗi ngắn (ô sai) · `magic` chuỗi nốt lung linh (Andrew).
+- `starGain` tông ĐI LÊN (sao vàng cộng điểm) · `starLose` tông ĐI XUỐNG (sao đỏ trừ điểm) — gắn trong
+  `flyStars(kind)`. · `reject` "thụp" trầm (gõ chữ sai vào ô given, gắn trong `shakeCell` cùng hiệu ứng lắc).
+- Andrew: khi bấm phát `magic()` 1 lần; chữ vàng vẫn hiện **lần lượt** (`is-hintin` + `--hd` 120ms/chữ).
+
+**Start again ĐỔI BỐ CỤC** (`buildCrossword`): trộn (Fisher–Yates) danh sách TRƯỚC khi sort theo độ dài
+(sort ổn định → từ dài vẫn neo lưới, nhưng thứ tự các từ CÙNG độ dài ngẫu nhiên) + **tie-break ngẫu
+nhiên** khi 2 điểm giao nhau bằng nhau. Mỗi ván lưới xê dịch (đo 3 ván: 18×14 · 16×19 · 14×21), số từ xếp
+ổn định 17–18/20 (greedy có thể rơt 1–2 từ khác nhau mỗi ván — thầy đã chấp nhận "đổi nhẹ").
+
+⭐ BẪY đã tránh: `.is-xmark .aw-cw-biglet` phải `visibility:visible` (không thì mất chữ); reveal tuần tự
+dùng `pushTimer` để `returnToBoard`/cleanup dọn sạch; đặt `flyStars` phát âm bên trong nên mọi nơi gọi đều
+có tiếng; `blip` bọc try/catch (trình duyệt chặn audio không vỡ game).
+
+## 2/8/2026 — TÁI THIẾT KẾ LỚN (Đợt 36 / v0.9.10) — thiết kế nền, đọc SAU mục trên
 
 Thầy đặt tên: **"bảng crossword"** = toàn lưới, ẩn bàn phím · **"hàng"** = 1 từ ngang bung to + bàn phím ·
 **"cột"** = 1 từ dọc bung to + bàn phím.

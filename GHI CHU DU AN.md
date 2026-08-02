@@ -52,6 +52,14 @@ hoá được). Muốn test logic mà khỏi đăng nhập: dùng `templates/<te
 
 ## Lịch sử phiên bản
 
+### 2/8/2026 — Đợt 43 (v0.9.17): CROSSWORD — 3 loạt tinh chỉnh reveal + âm thanh (yêu cầu thầy). ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Chỉ đụng `templates/crossword/*` (`crossword.js`/`.css`/`crossword-sound.js`), **KHÔNG đụng core**. Tự test trình duyệt thật (đo timeline, 0 lỗi console).
+> Nối tiếp Đợt 36/v0.9.10 (tái thiết kế lớn Crossword). Version nhảy lên v0.9.17 để KHÔNG trùng nhánh Unjumble song song đã tới v0.9.16. Chi tiết đầy đủ + BẪY: `templates/crossword/GHI CHU CROSSWORD.md` mục "3 LOẠT TINH CHỈNH".
+- **Reveal khi chấm chạy TUẦN TỰ từng ô** (thay kiểu đồng loạt cũ): SAI (Show-answer BẬT) → ô đúng xanh + **ting**, ô sai **✕ nhỏ KHÔNG che chữ** (bỏ hẳn nền/chữ đỏ) + **tặc**; xong ✕ cuối → chữ đúng **lật** về xám đồng nhất. ĐÚNG cũng tuần tự (xanh + ting), **ting ô cuối xong mới bay sao + cộng điểm**.
+- **Thứ tự nhánh SAI + trừ điểm**: đủ hết ✕ → **sao đỏ bay + trừ điểm** → sao rời ô → **mới lật** chữ đúng (đo timeline: X 1→7 t83–1201 → sao/điểm t1441 → lật t2161).
+- **6 âm SYNTH WebAudio** trong `crossword-sound.js` (AudioContext riêng, tôn trọng mute, không file mới): `ting`/`tac`/`magic` (Andrew) + `starGain` (vàng, tông lên) / `starLose` (đỏ, tông xuống) trong `flyStars` + `reject` ("thụp" gõ sai ô given, trong `shakeCell`).
+- **Start again ĐỔI BỐ CỤC**: `buildCrossword` trộn danh sách trước khi sort theo độ dài + tie-break ngẫu nhiên → mỗi ván lưới xê dịch (đo 3 ván: 18×14/16×19/14×21), số từ xếp ổn định 17–18/20.
+- File đổi: `templates/crossword/{crossword.js, crossword.css, crossword-sound.js, GHI CHU CROSSWORD.md}`.
+
 ### 2/8/2026 — UNJUMBLE: 7 loạt tinh chỉnh liên tiếp theo thầy (unjumble-local **Đợt 36→42, v0.9.10→v0.9.16**). ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Tự test trình duyệt thật mọi mục (0 lỗi console).
 > ⚠️ Số "Đợt 36→42" ở ĐÂY là đếm RIÊNG của template Unjumble (nối tiếp Đợt 35/v0.9.9 của nó) — KHÁC "Đợt 36" của Crossword ngay dưới (hai phiên song song trùng số). Chi tiết đầy đủ từng loạt: `templates/unjumble/GHI CHU UNJUMBLE.md`.
 - **Nền + thương hiệu**: bỏ ảnh whiteboard 5,3 MB → nền CSS gradient hiện đại; sau đó bỏ luôn watermark, thêm **slogan "UNJUMBLE IN ANDREW CLASSES"** trên thanh đồng hồ/điểm (kiểu Crossword); **intro** viết lại: chữ nghiêng nhẹ + zoom bé→to, giữ lâu, rồi TỪNG TỪ bay đáp CHÍNH XÁC vào từ tương ứng của slogan (đo dx=dy≈0), khớp nhạc intro 3,3s.

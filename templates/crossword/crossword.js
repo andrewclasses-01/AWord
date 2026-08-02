@@ -74,6 +74,14 @@ function buildCrossword(words) {
   const seen = new Set();
   const list = [];
   for (const w of usable) { if (!seen.has(w.key)) { seen.add(w.key); list.push(w); } }
+  // "Change a bit on every Start again": shuffle first, THEN a stable sort by
+  // length keeps the longest words anchoring the grid but randomises the order
+  // of equal-length words — so the interlock (row/column positions) shifts a
+  // little each new game instead of being identical every time.
+  for (let i = list.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [list[i], list[j]] = [list[j], list[i]];
+  }
   list.sort((a, b) => b.key.length - a.key.length);
 
   const cells = new Map();
@@ -123,7 +131,10 @@ function buildCrossword(words) {
           const row = dir === "D" ? pr - i : pr;
           const col = dir === "A" ? pc - i : pc;
           const score = fitScore(w.key, row, col, dir);
-          if (score > 0 && (!best || score > best.score)) best = { row, col, dir, score };
+          // random tie-break: among equally-good crossings, pick either one so
+          // the layout varies between games.
+          if (score > 0 && (!best || score > best.score || (score === best.score && Math.random() < 0.5)))
+            best = { row, col, dir, score };
         }
       }
     }
@@ -612,6 +623,7 @@ const crosswordTemplate = {
     function shakeCell(i) {
       const cell = bigCells.get(i);
       if (!cell) return;
+      crosswordSound.reject();   // a dull "thunk" to go with the wobble
       cell.classList.remove("is-shake");
       void cell.offsetWidth;
       cell.classList.add("is-shake");
@@ -659,8 +671,21 @@ const crosswordTemplate = {
       if (andrewUsed || finished || curWord < 0 || wordState[curWord].done) return;
       andrewUsed = true;
       andrewGlowing = true;
-      refreshActiveCells();   // gold hint letters appear in the empty cells
+      refreshActiveCells();   // gold hint letters take their final (glowing) state
       kbd.refresh();          // Andrew key -> glowing
+      crosswordSound.magic(); // a sparkly chime as the gold letters appear
+      // …but reveal them ONE AT A TIME: stagger a smooth fade-in per empty cell.
+      const w = clues[curWord];
+      let beat = 0;
+      w.cells.forEach(([r, c], i) => {
+        const rc = r + "," + c;
+        if (userGrid.get(rc)) return;          // already filled — no hint here
+        const cell = bigCells.get(i);
+        if (!cell || !cell.classList.contains("is-hint")) return;
+        cell.style.setProperty("--hd", (beat * 120) + "ms");
+        cell.classList.add("is-hintin");
+        beat++;
+      });
     }
     function consumeAndrewGlow() {
       if (!andrewGlowing) return;
@@ -683,34 +708,40 @@ const crosswordTemplate = {
       if (ok) {
         st.done = true; st.correct = true;
         w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
-        crosswordSound.correct();
-        refreshActiveCells(); paintGrid(); kbd.refresh();
-        // score goes up AS the gold stars launch (not after they land)
-        livePoints += 1; showScore();
-        flyStars("gain");
-        endWord(2500);
+        // Each cell lights green with a ting, ONE AT A TIME; only after the LAST
+        // ting do the gold stars launch and the score tick up.
+        const lastTing = revealCorrectSequence(w);
+        paintGrid(); kbd.refresh();
+        pushTimer(() => { livePoints += 1; showScore(); flyStars("gain"); }, lastTing + 240);
+        endWord(lastTing + 240 + 900);
       } else {
-        crosswordSound.wrong();
-        // Minus mode only: score drops AS the red stars launch. No effect (and no
-        // score change) when Minus is off.
-        if (minusOn) { livePoints -= penalty; showScore(); flyStars("lose"); }
+        let holdMs = 2500;
         if (opt.showAnswerWhenWrong !== false) {
-          // Phase A: a red ✕ over each cell the student got WRONG (givens keep
-          // their look) — shown FIRST, ...
           st.done = true; st.revealed = true;
-          showWrongMarks(w);
+          // Phase A: walk the word cell-by-cell — a letter the student got RIGHT
+          // turns green with a ting, a WRONG one gets a small red ✕ (its wrong
+          // letter still showing through).
+          const lastMark = revealWrongSequence(w);
           kbd.refresh();
-          // ...then Phase B (after ~1s): the correct letters are revealed.
-          pushTimer(() => {
-            w.cells.forEach(([r, c], i) => {
-              const rc = r + "," + c;
-              userGrid.set(rc, w.key[i]); setGridLetter(rc, w.key[i]);
-              if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "revealed");
-            });
-            refreshActiveCells(); paintGrid();
-          }, 1000);
+          const AFTER_X = 260;   // a beat after the LAST ✕ lands
+          const STAR_FLY = 700;  // time for the red stars to leave the cells
+          const FLIP = 520, HOLD = 700;
+          // Minus mode: only ONCE every ✕ is on screen do the red stars fly and
+          // the score drop; the correct answer then flips in AFTER the stars have
+          // left the cells (never on top of them).
+          let flipAt = lastMark + AFTER_X;
+          if (minusOn) {
+            pushTimer(() => { livePoints -= penalty; showScore(); flyStars("lose"); }, lastMark + AFTER_X);
+            flipAt = lastMark + AFTER_X + STAR_FLY;
+          }
+          // Phase B: the correct answer flips in; the strip settles to uniform grey.
+          pushTimer(() => flipRevealWord(w), flipAt);
+          holdMs = flipAt + FLIP + HOLD;
         } else {
-          // grey ✕ on this word's own cells, then back to the board
+          // grey ✕ on this word's own cells, then back to the board. No per-cell
+          // walk here, so keep the single word-level "wrong" sound + immediate minus.
+          if (minusOn) { livePoints -= penalty; showScore(); flyStars("lose"); }
+          crosswordSound.wrong();
           st.done = true; st.wrong = true;
           w.cells.forEach(([r, c]) => {
             const rc = r + "," + c;
@@ -718,20 +749,73 @@ const crosswordTemplate = {
           });
           refreshActiveCells(); paintGrid(); kbd.refresh();
         }
-        endWord(2500);
+        endWord(holdMs);
       }
     }
 
-    // Phase A of a wrong answer (Show-answer ON): put a red ✕ on the big cells
-    // the student typed wrong (a correct crossing "given" is left as it is).
-    function showWrongMarks(w) {
+    // Phase A of a wrong answer (Show-answer ON): reveal the strip cell-by-cell.
+    // A cell the student got RIGHT turns green with a ting; a WRONG cell gets a
+    // small red ✕ with its wrong letter still visible underneath. A crossing
+    // "given" is skipped (left as it is). Returns the delay (ms) at which the
+    // LAST mark lands, so the caller can time Phase B + the return to the board.
+    function revealWrongSequence(w) {
+      const STEP = 190;
+      let beat = 0, lastMark = 0;
       w.cells.forEach(([r, c], i) => {
         const rc = r + "," + c;
+        const cs = cellStatus.get(rc);
         const bc = bigCells.get(i);
         if (!bc) return;
-        const wrong = (userGrid.get(rc) || "") !== w.key[i] && cellStatus.get(rc) !== "solved";
-        if (wrong) bc.className = "aw-cw-bigcell is-xmark";
+        if (cs === "solved" || cs === "revealed") return;   // a crossing given
+        const correct = (userGrid.get(rc) || "") === w.key[i];
+        const delay = beat * STEP; beat++; lastMark = delay;
+        pushTimer(() => {
+          if (correct) {
+            bc.className = "aw-cw-bigcell is-solved is-cellpop";
+            crosswordSound.ting();
+          } else {
+            bc.className = "aw-cw-bigcell is-xmark";
+            crosswordSound.tac();
+          }
+        }, delay);
       });
+      return lastMark;
+    }
+
+    // A CORRECT word: light every cell green with a ting, one at a time (left to
+    // right). Returns the delay (ms) of the LAST ting so the caller can launch
+    // the stars + score only once the whole word has chimed.
+    function revealCorrectSequence(w) {
+      const STEP = 165;
+      let last = 0;
+      w.cells.forEach(([r, c], i) => {
+        const bc = bigCells.get(i);
+        if (!bc) return;
+        const delay = i * STEP; last = delay;
+        pushTimer(() => {
+          bc.className = "aw-cw-bigcell is-solved is-cellpop";
+          crosswordSound.ting();
+        }, delay);
+      });
+      return last;
+    }
+
+    // Phase B: the correct answer flips in over this word's OWN cells and the
+    // whole strip settles to one uniform grey ("revealed"). A correct crossing
+    // given keeps its blue look. The board is repainted to match.
+    function flipRevealWord(w) {
+      w.cells.forEach(([r, c], i) => {
+        const rc = r + "," + c;
+        userGrid.set(rc, w.key[i]); setGridLetter(rc, w.key[i]);
+        const wasSolved = cellStatus.get(rc) === "solved";
+        if (!wasSolved) cellStatus.set(rc, "revealed");
+        const bc = bigCells.get(i);
+        if (!bc || wasSolved) return;   // leave a correct crossing given as-is
+        const letEl = bc.querySelector(".aw-cw-biglet");
+        if (letEl) letEl.textContent = w.key[i];
+        bc.className = "aw-cw-bigcell is-revealed is-flip";
+      });
+      paintGrid();
     }
 
     // Little stars burst around the current strip and fly into the score (pure
@@ -741,6 +825,8 @@ const crosswordTemplate = {
       const scoreEl = ui.scoreEl;
       const aRect = activeEl.getBoundingClientRect();
       if (!scoreEl || !aRect.width) return;
+      // a little chime as the stars launch: rising for a gain, falling for a loss.
+      if (kind === "lose") crosswordSound.starLose(); else crosswordSound.starGain();
       const sRect = scoreEl.getBoundingClientRect();
       const tx = sRect.left + sRect.width / 2;
       const ty = sRect.top + sRect.height / 2;

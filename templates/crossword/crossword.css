@@ -289,6 +289,16 @@
   -webkit-text-fill-color: transparent;
   animation: aw-cw-andrew-textglow 2.6s ease-in-out infinite;
 }
+/* Andrew reveal: each gold letter fades+scales in on its own delay (--hd) so
+   they light up ONE AT A TIME, then keep the steady glow. */
+.aw-cw-bigcell.is-hintin .aw-cw-biglet {
+  animation: aw-cw-hintin .34s cubic-bezier(.3, 1.4, .5, 1) var(--hd, 0ms) both,
+             aw-cw-andrew-textglow 2.6s ease-in-out infinite;
+}
+@keyframes aw-cw-hintin {
+  from { opacity: 0; transform: scale(.35); }
+  to   { opacity: 1; transform: scale(1); }
+}
 
 /* wrong (Show-answer-when-wrong OFF): grey fill + a grey ✕, no letter */
 .aw-cw-bigcell.is-wrong {
@@ -307,23 +317,38 @@
 
 /* Phase A of a wrong answer (Show-answer ON): a RED ✕ over each wrong cell,
    shown before the correct letters are revealed. */
-.aw-cw-bigcell.is-xmark {
-  background: #fdecec;
-  border-color: #f2b8b8;
-}
-.aw-cw-bigcell.is-xmark .aw-cw-biglet { visibility: hidden; }
+/* Wrong cell keeps EXACTLY the same cell + letter look as before submit — the
+   only change is a small ✕ overlaid on top (no red fill, no red letter). */
+.aw-cw-bigcell.is-xmark .aw-cw-biglet { visibility: visible; }
 .aw-cw-bigcell.is-xmark::after {
   content: "✕";
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  color: #ef4444;
-  font-weight: 900;
-  font-size: calc(var(--bigcell, 60px) * 0.64);
+  color: rgba(239, 68, 68, .74);
+  font-weight: 700;
+  font-size: calc(var(--bigcell, 60px) * 0.42);
+  pointer-events: none;
   animation: aw-cw-xpop .22s cubic-bezier(.3, 1.4, .5, 1);
 }
 @keyframes aw-cw-xpop {
   from { transform: scale(.4); opacity: 0; }
   to   { transform: scale(1);  opacity: 1; }
+}
+
+/* a cell the student got RIGHT inside a wrong word: turns green (is-solved) with
+   a quick pop as the ting plays. */
+.aw-cw-bigcell.is-cellpop { animation: aw-cw-cellpop .3s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes aw-cw-cellpop {
+  from { transform: scale(.72); }
+  to   { transform: scale(1); }
+}
+
+/* Phase B: the correct answer FLIPS in and the strip settles to uniform grey. */
+.aw-cw-bigcell.is-flip { animation: aw-cw-flip .52s ease; }
+@keyframes aw-cw-flip {
+  0%   { transform: rotateX(0deg); }
+  50%  { transform: rotateX(90deg); }
+  100% { transform: rotateX(0deg); }
 }
 .aw-cw-biglet {
   font-weight: 800;
