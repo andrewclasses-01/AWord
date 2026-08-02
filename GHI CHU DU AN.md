@@ -5,6 +5,53 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 44 (2/8/2026, v0.9.18) — SPEAKING CARDS: 6 loạt tinh chỉnh theo yêu cầu thầy ✅ DUYỆT → COMMIT + PUSH + LIVE
+Tự test trình duyệt thật, 0 lỗi console. KHÔNG đụng core (chỉ file speaking-cards + 2 docs; whack-a-mole
+đang dở của phiên khác nên KHÔNG commit). Backup bản cũ ở
+`D:\APP AND DATA\AWord-data\Backup\speaking-cards-v0.9.17\`. Chi tiết đầy đủ + BẪY:
+`templates/speaking-cards/GHI CHU SPEAKING-CARDS.md` (mục 2/8/2026 đầu file). Tóm tắt:
+1. **Intro lia camera**: scene thành khung ngắm trên "thế giới" 2 panel (bàn cờ vua+vây vẽ SVG | khu chơi),
+   bấm PLAY → lia phải đúng thời lượng tiếng intro (~4,7s) rồi mới cho Deal.
+2. **Menu/Sound/Fullscreen vào 2 góc dưới nền xanh** (giống act thật) — nút riêng forward tới nút gốc đang
+   ẩn của engine (không sửa core).
+3. **Cân đối lại** bộ bài + khu chia vào giữa (hết lệch trái).
+4. **Lá bài NGANG (7:5)** + vẽ lại mặt lưng/mặt trước hoa văn theo ảnh mẫu.
+5. **Shuffle**: hiệu ứng riffle kéo dài đúng bằng tiếng shuffle (~4,65s, lặp ~9 vòng).
+6. **Không cắt đôi từ**: bỏ `word-break`, chuyển fit sang `fitOnce(contentBox)` co cả rộng lẫn cao.
+7. **Phiên âm 2 hàng**: `TROUSER` trên, `/ˈtraʊzə/` dưới (nhỏ + xám).
+   \+ **Vá Options**: nhóm "End of game/Show answers" (core đẩy xuống cuối) nay được tỉa đúng (chạy 2 nhịp).
+
+**Loạt 2 (cùng ngày, thầy chơi thử rồi yêu cầu thêm — vẫn v0.9.18, CHƯA COMMIT):**
+8. **Number of deal places → SLIDER** 1..10 (thay stepper).
+9. **Quân cờ vẽ đẹp/giống thật hơn**: bộ Staunton SVG có gradient khối + shine/shade + bóng (thay blob cũ).
+10. **1 ô chia: bộ bài + place TO và BẰNG NHAU** (42cqw); nhiều ô: kích cỡ thích ứng lấp tối đa không gian,
+    nhiều hàng không tràn (`computeLayout` set `--deck-w/--card-w/--cols`).
+11. **Chữ trong lá TO TỐI ĐA** (fitOnce `max` 1→3.6) nhưng 1 từ vẫn không tách 2 dòng.
+
+**Loạt 3 (cùng ngày — thầy yêu cầu DÙNG ĐỒ HỌA GỐC của act, vẫn v0.9.18, CHƯA COMMIT):**
+12. Mở act gốc bằng Claude in Chrome, tải graphic THẬT của theme (background.jpg + card art) về
+    `AWord-data/Source/Graphic/SPEAKING CARDS`, copy vào `templates/speaking-cards/assets/`.
+13. **Thay hình vẽ SVG bằng ẢNH NỀN THẬT**: bỏ quân cờ/bàn cờ SVG + kiến trúc 2-panel; scene = `.aw-sc-bg`
+    (ảnh nền rộng pan) + `.aw-sc-play` (fade vào sau pan). Intro lia camera trên chính ảnh gốc (bàn cờ →
+    felt chia bài trái, có viền vàng như act thật). Đẹp/tự nhiên hơn hẳn SVG.
+    **Bản quyền — đã xử lý**: thầy đưa ảnh nền RIÊNG (background2.jpg, cùng cỡ) → ghi đè `assets/background.jpg`;
+    GỠ card art Wordwall khỏi repo. Nền công khai nay là ảnh của thầy.
+
+**Loạt 4 (cùng ngày — 4 tinh chỉnh, vẫn v0.9.18, CHƯA COMMIT):**
+14. Shuffle còn **1/2 thời gian** (âm thanh + hiệu ứng; iter 9→4, `stopSound` cắt clip giữa chừng).
+15. Câu dài trong lá: **to hết cỡ + xuống nhiều dòng + căn giữa** (bỏ fitOnce, viết bộ co riêng — bẫy
+    `width:100%` khiến fitOnce co về min).
+16. **Bộ bài canh giữa deal place** (nhãn "N left" absolute, deck không bị đẩy lên).
+17. Ô chữ trong **editor tự mở hết cỡ** để xem trọn text (bỏ tay kéo, auto-grow theo scrollHeight).
+
+**Loạt 5 (cùng ngày — 2 tinh chỉnh, vẫn v0.9.18, CHƯA COMMIT):**
+18. **Bỏ hẳn chức năng Add image** (nút + thumbnail + helper + field `image` trong data + CSS + sample).
+19. Thêm **slogan "SPEAKING CARDS IN ANDREW CLASSES"** (look Crossword) — ghim trên-giữa scene (scene phủ
+    topbar nên đặt trong scene, z-index 3 + text-shadow cho đọc rõ trên ảnh). Tinh chỉnh: slogan **fade hiện
+    dần trong 30% cuối intro** (ẩn 70% đầu) + **giảm size còn 80%** (1.36cqw).
+
+---
+
 ## Cách chạy thử trên máy
 - Máy chưa cài Node. Bản hiện tại **chạy-ngay không cần build** bằng Python.
 - Dùng **`python devserver.py 5510`** (KHÔNG `python -m http.server` trần — thiếu header chống cache,

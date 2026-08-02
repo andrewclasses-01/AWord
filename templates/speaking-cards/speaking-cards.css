@@ -3,52 +3,94 @@
    All classes are prefixed .aw-sc- so they never collide with the engine
    (.aw-topbar/.aw-nav/.aw-iconbtn) or other templates. Sizes use cqw/cqh so
    the scene scales cleanly with the 16:9 stage (incl. fullscreen).
+
+   The scene shows the ORIGINAL act's board-games table photo (./assets/
+   background.jpg). On PLAY a "camera" (.aw-sc-bg) pans across it from the boards
+   to the card felt, then the deck/controls (.aw-sc-play) fade in; see
+   speaking-cards.js runIntro().
    ============================================================= */
 
 .aw-sc-scene {
   position: absolute;
   inset: 0;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
-  /* deep blue board-game felt + a soft dotted texture + gentle vignette */
-  background:
-    radial-gradient(circle at 50% 40%, rgba(255,255,255,.05) 0 1.1cqw, transparent 1.1cqw) 0 0 / 4cqw 4cqw,
-    radial-gradient(120% 90% at 50% 0%, #2f74ab 0%, #1f5b8f 55%, #164567 100%);
+  background: #16406a;   /* felt-blue fallback behind the photo */
   font-family: var(--aw-font, "Baloo 2", system-ui, sans-serif);
 }
 
-/* --- scattered board-game props (behind the cards) --- */
-.aw-sc-props { position: absolute; inset: 0; pointer-events: none; }
-.aw-sc-prop { position: absolute; opacity: .5; filter: drop-shadow(0 .6cqw 1cqw rgba(0,0,0,.25)); }
-.aw-sc-prop svg { width: 100%; height: 100%; display: block; }
-.aw-sc-prop-checkers { top: 3cqw; right: 3cqw; width: 15cqw; height: 15cqw; transform: rotate(8deg); }
-.aw-sc-prop-domino   { bottom: 14cqw; right: 4cqw; width: 6cqw; height: 11cqw; transform: rotate(-14deg); }
-.aw-sc-prop-dice     { bottom: 15cqw; left: 20cqw; width: 7cqw; height: 7cqw; transform: rotate(10deg); }
+/* --- the background photo the "camera" pans across --- */
+/* height fills the scene; aspect-ratio derives the (wider) width from the photo
+   so it stays undistorted and responsive. At rest (translateX 0) it shows the
+   LEFT of the photo (the card felt + gold corner frame). */
+.aw-sc-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  aspect-ratio: 7386 / 2217;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transform: translateX(0);
+  will-change: transform;
+}
 
-/* --- table: deck on the left, deal places filling the rest --- */
+/* --- the play layer (deck + deal places + controls), fades in after the pan --- */
+.aw-sc-play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: opacity .55s ease;
+}
+.aw-sc-play.is-in { opacity: 1; }
+
+/* --- slogan (same look as Crossword): small, thin, spaced uppercase, grey —
+   pinned top-centre over the scene (a soft shadow keeps it legible on the photo) --- */
+.aw-sc-slogan {
+  position: absolute;
+  left: 50%; top: 2.4cqw;
+  transform: translateX(-50%);
+  z-index: 3;                   /* above the bg + play layer, below the banner */
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 1.36cqw;           /* 80% of the previous 1.7cqw (teacher, 2/8/2026) */
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #cfd6de;               /* light grey — reads on the blue felt */
+  text-shadow: 0 .15cqw .5cqw rgba(0,0,0,.55);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* --- table: deck + deal places, centred as a group --- */
 .aw-sc-table {
   position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: center;
-  gap: 3cqw;
+  justify-content: center;
+  gap: 4cqw;
   padding: 3cqw 4cqw 1cqw 4cqw;
 }
 
-/* --- deck --- */
+/* --- deck (landscape) --- */
 .aw-sc-deckwrap {
   flex: 0 0 auto;
+  position: relative;          /* the count floats below (absolute) so the DECK
+                                  itself centres against the deal place */
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1.4cqw;
+  justify-content: center;
 }
 .aw-sc-deck {
   position: relative;
-  width: 16cqw;
-  aspect-ratio: 5 / 7;
+  width: calc(var(--deck-w, 22) * 1cqw);   /* JS computeLayout sets --deck-w */
+  aspect-ratio: 7 / 5;
   border: 0;
   padding: 0;
   background: transparent;
@@ -70,39 +112,46 @@
 .aw-sc-deckcard-2 { transform: translate(.5cqw, .55cqw) rotate(1.5deg); }
 .aw-sc-deckcard-1 { transform: none; }
 .aw-sc-deckcount {
+  position: absolute;
+  top: 100%;                   /* just under the deck; doesn't shift the deck up */
+  left: 0; right: 0;
+  margin-top: 1cqw;
+  text-align: center;
   color: #ffedc2;
   font-weight: 700;
   font-size: 2.2cqw;
   letter-spacing: .04em;
   text-shadow: 0 .2cqw .4cqw rgba(0,0,0,.35);
 }
-.aw-sc-deck.is-shuffling .aw-sc-deckcard-1 { animation: aw-sc-shuffle .5s ease; }
-.aw-sc-deck.is-shuffling .aw-sc-deckcard-2 { animation: aw-sc-shuffle .5s ease .05s; }
-.aw-sc-deck.is-shuffling .aw-sc-deckcard-3 { animation: aw-sc-shuffle .5s ease .1s; }
+/* Shuffle riffle — the JS sets --sc-shuffle-iter so the loop lasts exactly as
+   long as the shuffle SOUND (a single 0.52s cycle is repeated N times). */
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-1 { animation: aw-sc-shuffle .52s ease 0s   var(--sc-shuffle-iter, 1); }
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-2 { animation: aw-sc-shuffle .52s ease .06s var(--sc-shuffle-iter, 1); }
+.aw-sc-deck.is-shuffling .aw-sc-deckcard-3 { animation: aw-sc-shuffle .52s ease .12s var(--sc-shuffle-iter, 1); }
 @keyframes aw-sc-shuffle {
   0%   { transform: translate(0,0) rotate(0deg); }
-  35%  { transform: translate(4cqw,-1cqw) rotate(9deg); }
-  70%  { transform: translate(-2cqw,.6cqw) rotate(-6deg); }
+  35%  { transform: translate(5cqw,-1cqw) rotate(9deg); }
+  70%  { transform: translate(-2.5cqw,.6cqw) rotate(-6deg); }
   100% { transform: translate(0,0) rotate(0deg); }
 }
 
-/* --- deal places (grid) --- */
+/* --- deal places (grid); JS computeLayout sets --cols + --card-w to fill space --- */
 .aw-sc-places {
-  flex: 1;
-  min-width: 0;
-  height: 100%;
+  flex: 0 1 auto;
   display: grid;
-  grid-template-columns: repeat(var(--cols, 3), 1fr);
+  grid-template-columns: repeat(var(--cols, 1), 1fr);
   align-content: center;
   justify-items: center;
   align-items: center;
-  gap: 1.6cqw;
+  gap: 2cqw;
+  width: calc(var(--cols, 1) * var(--card-w, 28) * 1cqw + (var(--cols, 1) - 1) * 2cqw);
+  max-height: 100%;
 }
 .aw-sc-place {
   position: relative;
   width: 100%;
-  max-width: 26cqw;
-  aspect-ratio: 5 / 7;
+  max-width: calc(var(--card-w, 28) * 1cqw);
+  aspect-ratio: 7 / 5;
   border-radius: 1.6cqw;
   /* empty slot = dashed outline, like Wordwall */
   border: .35cqw dashed rgba(255,255,255,.45);
@@ -110,7 +159,7 @@
 }
 .aw-sc-place.has-card { border-color: transparent; }
 
-/* --- a card sitting on a place --- */
+/* --- a card sitting on a place (landscape) --- */
 .aw-sc-card {
   position: absolute;
   inset: 0;
@@ -127,22 +176,13 @@
 
 .aw-sc-cardbody {
   position: absolute;
-  inset: 8%;
+  inset: 9% 8%;
   display: flex;
   flex-direction: column;
   gap: 3%;
   align-items: center;
   justify-content: center;
 }
-.aw-sc-cardimg {
-  flex: 0 0 auto;
-  width: 62%;
-  aspect-ratio: 1 / 1;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-}
-.aw-sc-cardbody.has-img .aw-sc-cardimg { width: 56%; }
 .aw-sc-cardtextwrap {
   flex: 1 1 auto;
   min-height: 0;
@@ -153,12 +193,27 @@
   overflow: hidden;
 }
 .aw-sc-cardtext {
+  width: 100%;                 /* fill the wrap so long prompts WRAP to many lines */
   text-align: center;
   font-weight: 700;
-  line-height: 1.16;
+  line-height: 1.14;
   color: #23303e;
-  font-size: calc(3.4cqw * var(--fit, 1));
-  word-break: break-word;
+  /* base × --fit (fitOnce grows --fit so the wrapped block fills the card) */
+  font-size: calc(3cqw * var(--fit, 1));
+  /* a word is NEVER split across two lines — wrap only at spaces, shrink to fit */
+  word-break: normal;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+/* phonetic entry: WORD on top, /transcription/ under it (smaller, muted) */
+.aw-sc-cardtext .aw-sc-word { display: block; }
+.aw-sc-cardtext .aw-sc-cardipa {
+  display: block;
+  font-size: .66em;
+  font-weight: 600;
+  color: #8a97a6;
+  margin-top: .18em;
+  letter-spacing: .02em;
 }
 
 /* --- controls (Shuffle · Undo · Deal) --- */
@@ -167,10 +222,10 @@
   display: flex;
   justify-content: center;
   gap: 1.6cqw;
-  padding: 0 0 2.4cqw;
+  padding: 0 0 3cqw;
 }
 .aw-sc-ctrl {
-  min-width: 16cqw;
+  min-width: 15cqw;
   padding: 1.2cqw 3cqw;
   border: 0;
   border-radius: 2cqw;
@@ -193,6 +248,31 @@
   box-shadow: 0 .6cqw 0 #b9791a, 0 1cqw 1.8cqw rgba(0,0,0,.3);
 }
 .aw-sc-ctrl-primary:hover:not(:disabled) { background: linear-gradient(#f5c257, #e0a534); }
+
+/* --- our own bottom bar (Menu left · Sound + Fullscreen right), matching the
+   real act. Buttons forward to the engine's hidden buttons (see JS). --- */
+.aw-sc-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 1.6cqw;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2.6cqw;
+  pointer-events: none;          /* the empty middle never blocks the controls */
+  z-index: 4;
+}
+.aw-sc-bar-left, .aw-sc-bar-right { display: flex; gap: 1.2cqw; pointer-events: auto; }
+.aw-sc-barbtn {
+  width: 6cqw; height: 6cqw;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 1.4cqw;
+  background: rgba(11, 30, 48, .55);
+  color: #eaf2fb;
+  cursor: pointer;
+  transition: background .15s ease, transform .1s ease;
+}
+.aw-sc-barbtn svg { width: 58%; height: 58%; }
+.aw-sc-barbtn:hover { background: rgba(11, 30, 48, .82); transform: translateY(-.3cqw); }
+.aw-sc-barbtn.is-off { color: #ff9b9b; }
 
 /* --- "Time's up" banner --- */
 .aw-sc-banner {
@@ -221,8 +301,10 @@
   font-weight: 600;
 }
 
-/* --- Options: Number of deal places row --- */
-.aw-sc-opt-deal { align-items: center; }
+/* --- Options: Number of deal places slider (1..10) --- */
+.aw-sc-dealrow { display: flex; align-items: center; gap: 10px; }
+.aw-sc-dealslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
+.aw-sc-dealval { min-width: 24px; font-weight: 700; color: #2f7bff; font-size: .9rem; text-align: center; }
 
 /* =============================================================
    EDITOR (.aw-sc-ed-*) — card rows with text + optional image.
@@ -246,7 +328,9 @@
 .aw-sc-ed-text {
   flex: 1 1 auto;
   min-width: 0;
-  resize: vertical;
+  resize: none;            /* no drag handle — the box auto-grows to show all text */
+  overflow: hidden;
+  min-height: 42px;
   padding: 10px 12px;
   border: 1px solid var(--aw-stage-border, #d7e2ee);
   border-radius: 10px;
@@ -255,21 +339,6 @@
   background: #fbfdff;
 }
 .aw-sc-ed-text:focus { outline: none; border-color: var(--aw-accent, #2f7bff); }
-.aw-sc-ed-thumbwrap { flex: 0 0 auto; }
-.aw-sc-ed-thumb {
-  position: relative;
-  width: 64px; height: 64px;
-  border-radius: 10px;
-  background-size: cover; background-position: center;
-  border: 1px solid var(--aw-stage-border, #d7e2ee);
-}
-.aw-sc-ed-thumbx {
-  position: absolute; top: -8px; right: -8px;
-  width: 20px; height: 20px; line-height: 18px; text-align: center;
-  border: 0; border-radius: 50%;
-  background: #e23c3c; color: #fff; font-weight: 800; cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0,0,0,.3);
-}
 .aw-sc-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 4px; padding-top: 4px; }
 .aw-sc-ed-gap { width: 6px; }
 .aw-sc-ed-iconbtn {

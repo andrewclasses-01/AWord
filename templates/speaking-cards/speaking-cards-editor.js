@@ -2,14 +2,12 @@
 // SPEAKING CARDS EDITOR — the form a teacher uses to create/edit a Speaking
 // cards activity. Same contract as balloon-pop-editor.js / quiz-editor.js:
 //   openSpeakingCardsEditor(container, activity, { onSave, onCancel, header, footer })
-// Reuses the SHARED editor chrome (.aw-ed-*); the per-row layout (card text +
-// optional image) is styled with .aw-sc-ed-* in speaking-cards.css.
+// Reuses the SHARED editor chrome (.aw-ed-*); the per-row layout (card text) is
+// styled with .aw-sc-ed-* in speaking-cards.css.
 //
-// Data model: content.cards = [{ text, image? }]  (min 1 / max 100).
-// image is a data: URL (uploaded pictures are downscaled to keep the saved
-// activity small enough for Firestore). Theme is always Classic (Board Games);
-// per-round options (timer / deal places / shuffle) live in the in-game
-// Options panel, not here.
+// Data model: content.cards = [{ text }]  (min 1 / max 100). Theme is always
+// Classic (Board Games); per-round options (timer / deal places / shuffle) live
+// in the in-game Options panel, not here.
 // =============================================================
 
 import { el } from "../../core/utils.js";
@@ -17,7 +15,6 @@ import { icons } from "../../core/icons.js";
 
 const MAX_ITEMS = 100;
 const MIN_ITEMS = 1;
-const IMG_MAX_DIM = 480;   // downscale uploaded pictures to this max side
 
 export function openSpeakingCardsEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
@@ -61,7 +58,7 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
   body.append(el("div", "aw-ed-sectionhead", "Cards"));
   body.append(buildBulkBar());
   body.append(el("div", "aw-ed-tip",
-    "Each card shows one prompt for a student to talk about. Add a picture with the image button if you like. " +
+    "Each card shows one prompt for a student to talk about. " +
     "Tip: copy a column of prompts from Excel, click a card box and paste (Ctrl+V) to fill the whole list at once. " +
     "Drag the ⇕ handle to reorder. At least " + MIN_ITEMS + " card is needed."));
 
@@ -93,7 +90,7 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
     e.preventDefault();
     const rows = text.replace(/\r/g, "").split("\n").map(s => s.replace(/\t/g, " ").trim());
     while (rows.length && rows[rows.length - 1] === "") rows.pop();
-    const parsed = rows.filter(s => s !== "").map(s => ({ text: s, image: "" }));
+    const parsed = rows.filter(s => s !== "").map(s => ({ text: s }));
     if (!parsed.length) return;
     let next = data.content.cards.slice(0, ii).concat(parsed);
     let dropped = 0;
@@ -109,25 +106,18 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
 
     const box = el("div", "aw-sc-ed-box");
     const txtInput = el("textarea", "aw-sc-ed-text");
-    txtInput.rows = 2;
+    txtInput.rows = 1;
     txtInput.value = it.text;
     txtInput.placeholder = "What should the student talk about?";
-    txtInput.oninput = () => { it.text = txtInput.value; clearError(); };
-    txtInput.addEventListener("paste", e => onRowPaste(e, ii));
+    // Auto-grow so the whole prompt is always visible (no manual resize handle).
+    const grow = () => { txtInput.style.height = "auto"; txtInput.style.height = txtInput.scrollHeight + "px"; };
+    txtInput.oninput = () => { it.text = txtInput.value; grow(); clearError(); };
+    txtInput.addEventListener("paste", e => { onRowPaste(e, ii); requestAnimationFrame(grow); });
+    requestAnimationFrame(grow);   // fit to the existing text when the row first renders
     box.append(txtInput);
-
-    // image thumb (only when set)
-    const thumbWrap = el("div", "aw-sc-ed-thumbwrap");
-    if (it.image) thumbWrap.append(buildThumb(it, ii));
-    box.append(thumbWrap);
     row.append(box);
 
     const iconsWrap = el("div", "aw-sc-ed-icons");
-    const imgBtn = iconBtn(icons.image, it.image ? "Change image" : "Add image");
-    if (it.image) imgBtn.classList.add("is-on");
-    imgBtn.onclick = () => pickImage(it, ii);
-    iconsWrap.append(imgBtn, el("span", "aw-sc-ed-gap"));
-
     const dragBtn = iconBtn(icons.dragHandle, "Drag to reorder", "is-drag");
     const dupBtn = iconBtn(icons.duplicate, "Duplicate");
     dupBtn.disabled = data.content.cards.length >= MAX_ITEMS;
@@ -145,33 +135,6 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
     wireRowDrag(dragBtn, row, () => data.content.cards.indexOf(it));
     wireRowDropTarget(row, () => data.content.cards.indexOf(it));
     return row;
-  }
-
-  function buildThumb(it, ii) {
-    const thumb = el("div", "aw-sc-ed-thumb");
-    thumb.style.backgroundImage = `url("${String(it.image).replace(/["\\]/g, "")}")`;
-    const rm = el("button", "aw-sc-ed-thumbx", "×");
-    rm.type = "button"; rm.title = "Remove image";
-    rm.onclick = () => { it.image = ""; renderItems(); };
-    thumb.append(rm);
-    return thumb;
-  }
-
-  function pickImage(it, ii) {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = async () => {
-      const file = input.files && input.files[0];
-      if (!file) return;
-      try {
-        it.image = await fileToDataUrl(file, IMG_MAX_DIM);
-        renderItems();
-      } catch (e) {
-        showError("Could not read that image — try a different file.");
-      }
-    };
-    input.click();
   }
 
   function iconBtn(svg, title, extraClass) {
@@ -230,8 +193,8 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
     clean.instruction = (clean.instruction || "").trim();
     clean.theme = "classic";
     clean.content.cards = clean.content.cards
-      .map(it => ({ text: (it.text || "").trim(), image: it.image || "" }))
-      .filter(it => it.text !== "" || it.image !== "");
+      .map(it => ({ text: (it.text || "").trim() }))
+      .filter(it => it.text !== "");
     const err = validate(clean);
     if (err) { showError(err); return; }
     saveBtn.disabled = true;
@@ -270,33 +233,6 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
   }
 }
 
-// ===== image helper: read + downscale to a data URL =====
-function fileToDataUrl(file, maxDim) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("read failed"));
-    reader.onload = () => {
-      const img = new Image();
-      img.onerror = () => reject(new Error("decode failed"));
-      img.onload = () => {
-        let { width, height } = img;
-        const scale = Math.min(1, maxDim / Math.max(width, height));
-        width = Math.round(width * scale); height = Math.round(height * scale);
-        try {
-          const canvas = document.createElement("canvas");
-          canvas.width = width; canvas.height = height;
-          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-          // PNG keeps transparency; everything else -> JPEG (smaller).
-          const isPng = /image\/png/i.test(file.type);
-          resolve(canvas.toDataURL(isPng ? "image/png" : "image/jpeg", 0.82));
-        } catch (e) { resolve(reader.result); }   // canvas tainted? fall back to raw
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
 // ===== data helpers =====
 function normalize(activity) {
   const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
@@ -309,10 +245,10 @@ function normalize(activity) {
   a.content = a.content || {};
   let cards = Array.isArray(a.content.cards) ? a.content.cards : [];
   if (cards.length === 0) cards = [blankItem()];
-  a.content.cards = cards.map(it => ({ text: it.text || "", image: it.image || "" }));
+  a.content.cards = cards.map(it => ({ text: it.text || "" }));
   return a;
 }
-function blankItem() { return { text: "", image: "" }; }
+function blankItem() { return { text: "" }; }
 
 function validate(d) {
   if (!d.title) return "Please enter an activity title.";

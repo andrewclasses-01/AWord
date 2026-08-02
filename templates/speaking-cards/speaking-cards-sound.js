@@ -34,6 +34,24 @@ function playFile(name, volume = 1) {
   } catch { /* ignore if the browser blocks audio */ }
 }
 
+// Stop a sound early (e.g. cut the long shuffle clip at its halfway point so it
+// matches the shortened riffle animation).
+export function stopSound(name) {
+  try { const a = cache.get(name); if (a) { a.pause(); a.currentTime = 0; } } catch { /* ignore */ }
+}
+
+// The true length of a sound file, in ms — so a VISUAL effect can be made to
+// last exactly as long as its sound (the intro camera pan runs for the intro
+// sound; the deck's shuffle riffle repeats until the shuffle sound ends).
+// Returns `fallbackMs` until the file's metadata has loaded (preload="auto" +
+// the warm-up at the bottom of this file means it usually already has).
+export function soundDurationMs(name, fallbackMs = 0) {
+  try {
+    const d = audioFor(name).duration;
+    return (isFinite(d) && d > 0) ? Math.round(d * 1000) : fallbackMs;
+  } catch { return fallbackMs; }
+}
+
 // One random file from a same-purpose pool — never the same one twice in a
 // row so dealing several cards quickly doesn't sound robotic.
 function makePool(names, volume = 1) {
@@ -57,3 +75,8 @@ export const scSound = {
   menu:       () => playFile("menu-01"),                                        // 07 — open menu / bottom-bar button
   menuSubtle: () => playFile("menusubtle-01")                                   // 08 — minor menu action (Undo)
 };
+
+// Warm up the two files we time visuals against, so their `.duration` is ready
+// the moment we need it (soundDurationMs) instead of on the first play.
+audioFor("intro-01");
+audioFor("shuffle-01");

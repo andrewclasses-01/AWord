@@ -4,78 +4,106 @@
 // "Classic" look for this game (teacher's call, 1/8/2026).
 //
 // HOW IT PLAYS (captured from the real Wordwall act 116796629):
-//   A face-down DECK of ornate playing cards sits on the left over a blue
-//   board-game table. Press the deck (or the Deal button) -> the top card
-//   flies onto a deal place and FLIPS open to reveal a speaking prompt for a
-//   student to talk about. Shuffle re-shuffles the deck, Undo takes back the
-//   last deal. "Number of deal places" (1..10) lays out several cards at once.
-//   It is OPEN-ENDED: no right/wrong, no score, no leaderboard. An optional
-//   countdown can be set; when it hits 0 the round simply ends ("Time's up").
+//   A face-down DECK of ornate playing cards sits over a blue board-game table.
+//   Press the deck (or the Deal button) -> the top card flies onto a deal place
+//   and FLIPS open to reveal a speaking prompt for a student to talk about.
+//   Shuffle re-shuffles the deck, Undo takes back the last deal. "Number of
+//   deal places" (1..10) lays out several cards at once. It is OPEN-ENDED: no
+//   right/wrong, no score, no leaderboard. An optional countdown can be set;
+//   when it hits 0 the round simply ends ("Time's up").
+//
+// INTRO (added by teacher request, 2/8/2026): pressing PLAY starts a little
+// cinematic — the "camera" opens on a board-games table (chess + go, drawn in
+// SVG) then PANS right to reveal the deck + deal area. The pan lasts exactly as
+// long as the intro sound; only when it ends can cards be dealt. See runIntro().
+//
+// Cards are LANDSCAPE (7:5) with an ornate gold Board-Games face (teacher
+// request 2/8/2026, matching the real act). The deck + deal area are centred so
+// the table isn't left-heavy.
 //
 // This template is `scorable: false` — it never calls ui.finish(), so the
-// engine's Game-complete / summary / leaderboard flow is never triggered.
-// The engine still builds a score chip + prev/next nav that mean nothing here,
-// so mount() hides them (see hideScoreAndNav). The only per-round options that
-// apply are Timer, Shuffle item order and Number of deal places — see
-// buildExtraOptions (which also prunes the Quiz-only controls from the panel).
+// engine's Game-complete / summary / leaderboard flow is never triggered. It
+// also hides the engine chrome that is meaningless here (score chip, prev/next
+// nav, the whole bottom bar) and puts its OWN Menu / Sound / Fullscreen buttons
+// in the scene's bottom corners (matching the real act) — these just FORWARD to
+// the engine's real (hidden) buttons, so the engine stays the single source of
+// truth and core is never edited. See hideEngineChrome + buildSceneBar.
 //
 // All art is self-contained inline SVG (no external images), same as
-// balloon-pop.js. element.animate() calls that must settle (the deal fly + the
-// flip) carry a setTimeout fallback + done-guard per HUONG DAN CORE / CONG
-// THUC MAU §3.4.
+// balloon-pop.js. element.animate() calls that must settle (the deal fly, the
+// flip, the intro pan) carry a setTimeout fallback + done-guard per HUONG DAN
+// CORE / CONG THUC MAU §3.4.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
-import { autoFit } from "../../core/fit.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
-import { scSound } from "./speaking-cards-sound.js";
+import { icons } from "../../core/icons.js";
+import { sound as coreSound } from "../../core/sound.js";
+import { scSound, soundDurationMs, stopSound } from "./speaking-cards-sound.js";
 
 // How many deal places fit per row for a given count (kept tidy by hand).
 const COLS_FOR = { 1:1, 2:2, 3:3, 4:2, 5:3, 6:3, 7:4, 8:4, 9:3, 10:5 };
 
-// ---------- inline art (self-contained) ----------
-// The ornate gold BACK of a card (fills the white card body). Corner "plus"
-// ornaments + a dotted board-game track + a central diamond with a disc,
-// echoing the Board Games deck on Wordwall.
-const CARD_BACK_SVG = `<svg class="aw-sc-cardart" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
-  <rect x="10" y="10" width="180" height="260" rx="14" fill="#e9b949"/>
-  <rect x="20" y="20" width="160" height="240" rx="10" fill="#d79a2b"/>
-  <rect x="30" y="30" width="140" height="220" rx="8" fill="none" stroke="#b9791a" stroke-width="3" stroke-dasharray="4 5"/>
-  <g fill="#f3d789">
-    <path d="M100 74 L150 140 L100 206 L50 140 Z"/>
-  </g>
-  <circle cx="100" cy="140" r="26" fill="#e9b949" stroke="#b9791a" stroke-width="3"/>
-  ${cornerPlus(30, 30)}${cornerPlus(170, 30)}${cornerPlus(30, 250)}${cornerPlus(170, 250)}
-</svg>`;
-
-function cornerPlus(cx, cy) {
-  return `<g fill="#b9791a"><rect x="${cx-9}" y="${cy-2.5}" width="18" height="5" rx="2"/><rect x="${cx-2.5}" y="${cy-9}" width="5" height="18" rx="2"/></g>`;
+// Work out the deck + card sizes (in cqw = % of the 16:9 stage width) so the
+// table uses the maximum space for the given deal-place count. Numbers are the
+// CSS vars --deck-w / --card-w / --cols (see the .aw-sc-deck / .aw-sc-places CSS).
+//   • 1 place  -> deck and card the SAME (large) size, side by side.
+//   • >1 place -> a compact deck + a grid of cards sized to fill what's left,
+//     capped by BOTH the remaining width and the table height (so rows never
+//     overflow). Teacher's spec 2/8/2026.
+function computeLayout(n) {
+  const cols = COLS_FOR[n] || 3;
+  const rows = Math.ceil(n / cols);
+  const gap = 2, tableGap = 4, padX = 4;
+  const tableW = 100 - padX * 2;      // ~92cqw usable width
+  const tableH = 40;                  // ~cqw available height for the table row
+  let deckW = n === 1 ? 42 : 16;
+  const placesW = tableW - deckW - tableGap;
+  const byW = (placesW - (cols - 1) * gap) / cols;
+  const byH = ((tableH - (rows - 1) * gap) / rows) * (7 / 5);
+  let cardW = Math.min(byW, byH);
+  if (n === 1) { cardW = Math.min(cardW, 42); deckW = cardW; }   // deck == card
+  cardW = Math.max(7, cardW);
+  return { cols, deckW: Math.round(deckW * 10) / 10, cardW: Math.round(cardW * 10) / 10 };
 }
 
-// Four small gold corner ornaments that sit ON TOP of the white FRONT of a
-// card (the content bubble sits inside them).
-const CARD_FRONT_ORN = `<svg class="aw-sc-frontorn" viewBox="0 0 200 280" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
-  ${cornerPlus(26, 26)}${cornerPlus(174, 26)}${cornerPlus(26, 254)}${cornerPlus(174, 254)}
+// ---------- inline art: the ornate LANDSCAPE cards (self-contained) ----------
+// A small "fleuron" corner ornament — a plus made of 5 dots, echoing the
+// Board Games deck on Wordwall.
+function fleuron(cx, cy, fill = "#b9791a", arm = 9) {
+  return `<g fill="${fill}">` +
+    `<circle cx="${cx}" cy="${cy}" r="3.4"/>` +
+    `<circle cx="${cx-arm}" cy="${cy}" r="2.4"/><circle cx="${cx+arm}" cy="${cy}" r="2.4"/>` +
+    `<circle cx="${cx}" cy="${cy-arm}" r="2.4"/><circle cx="${cx}" cy="${cy+arm}" r="2.4"/>` +
+    `</g>`;
+}
+
+// The ornate gold BACK of a card (fills the white card body), 7:5 landscape.
+const CARD_BACK_SVG = `<svg class="aw-sc-cardart" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
+  <rect x="8" y="8" width="264" height="184" rx="16" fill="#e9b949"/>
+  <rect x="16" y="16" width="248" height="168" rx="12" fill="#d79a2b"/>
+  <rect x="26" y="26" width="228" height="148" rx="9" fill="none" stroke="#b9791a" stroke-width="3" stroke-dasharray="4 5"/>
+  <path d="M140 52 L214 100 L140 148 L66 100 Z" fill="#f3d789"/>
+  <circle cx="140" cy="100" r="24" fill="#e9b949" stroke="#b9791a" stroke-width="3"/>
+  ${fleuron(38, 38)}${fleuron(242, 38)}${fleuron(38, 162)}${fleuron(242, 162)}
 </svg>`;
 
-// Board-game props scattered on the table (behind the cards). Kept subtle.
-const PROP_CHECKERS = `<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  ${(() => { let s=""; for (let r=0;r<8;r++) for (let c=0;c<8;c++){ if((r+c)%2===0) s+=`<rect x="${c*15}" y="${r*15}" width="15" height="15" fill="#3a6ea5"/>`; } return s; })()}
-  <circle cx="22" cy="97" r="8" fill="#e23c3c"/><circle cx="52" cy="97" r="8" fill="#e23c3c"/>
-  <circle cx="67" cy="22" r="8" fill="#1f2a44"/><circle cx="97" cy="52" r="8" fill="#1f2a44"/>
+// The white FRONT of a card: a soft gold cartouche frame + four corner
+// fleurons; the prompt bubble sits inside them.
+const CARD_FRONT_ORN = `<svg class="aw-sc-frontorn" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" preserveAspectRatio="none">
+  <rect x="16" y="14" width="248" height="172" rx="16" fill="none" stroke="#e6c667" stroke-width="2.4"/>
+  ${fleuron(32, 30, "#d9a83a", 8)}${fleuron(248, 30, "#d9a83a", 8)}${fleuron(32, 170, "#d9a83a", 8)}${fleuron(248, 170, "#d9a83a", 8)}
 </svg>`;
-const PROP_DOMINO = `<svg viewBox="0 0 60 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="4" y="4" width="52" height="102" rx="8" fill="#f6f1e3" stroke="#cbb994" stroke-width="3"/>
-  <line x1="8" y1="55" x2="52" y2="55" stroke="#cbb994" stroke-width="3"/>
-  <g fill="#2b2b2b"><circle cx="20" cy="22" r="4"/><circle cx="40" cy="22" r="4"/><circle cx="20" cy="40" r="4"/><circle cx="40" cy="40" r="4"/>
-  <circle cx="30" cy="80" r="4"/></g>
-</svg>`;
-const PROP_DICE = `<svg viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <rect x="10" y="10" width="60" height="60" rx="12" fill="#fbfbfb" stroke="#d4d4d4" stroke-width="3"/>
-  <g fill="#e23c3c"><circle cx="27" cy="27" r="6"/><circle cx="53" cy="53" r="6"/></g>
-  <g fill="#2b2b2b"><circle cx="53" cy="27" r="6"/><circle cx="27" cy="53" r="6"/><circle cx="40" cy="40" r="6"/></g>
-</svg>`;
+
+// ---------- background: the REAL Wordwall "Board Games" table photo ----------
+// The intro/background is the original act's own graphic (playingcards theme
+// background.jpg, saved under ./assets/ — sourced from the act the teacher uses,
+// see D:\APP AND DATA\AWord-data\Source\Graphic\SPEAKING CARDS). It is a WIDE
+// panorama (~3.33:1): chess/scrabble/backgammon on the right, an empty felt with
+// a gold corner frame on the left where the cards are dealt. The intro "camera"
+// pans across it from the boards to the card felt; see runIntro().
+const BG_URL = new URL("./assets/background.jpg", import.meta.url).href;
+const BG_RATIO = 7386 / 2217;   // native px ratio of background.jpg (~3.332)
 
 const speakingCardsTemplate = {
   type: "speaking_cards",
@@ -83,23 +111,23 @@ const speakingCardsTemplate = {
   name: "Speaking cards",
   hideLettersOption: true,   // no lettered answers here — engine skips that Options group
 
-
-
-  // Engine hooks it auto-calls: restart sound on "Start again", a warning as
-  // the countdown runs low.
+  // Engine hooks it auto-calls: `play` on the PLAY button (the intro sound — the
+  // camera pan is timed to it), restart on "Start again", a warning as the
+  // countdown runs low.
   sounds: {
+    play: scSound.intro,
     restart: scSound.restart,
     timeWarning: scSound.timesUp
   },
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const cards = (activity.content?.cards || []).filter(c => c && (String(c.text || "").trim() !== "" || c.image));
+    const cards = (activity.content?.cards || []).filter(c => c && String(c.text || "").trim() !== "");
     const dealPlaces = Math.max(1, Math.min(10, Number(opt.dealPlaces) || 1));
 
-    // The engine builds a score chip + prev/next nav that are meaningless for
-    // an open-ended game — hide them (they live outside `root`, up in the stage).
-    const restoreChrome = hideScoreAndNav(root);
+    // Hide the engine chrome that means nothing for an open-ended game (score
+    // chip, prev/next nav, the whole bottom bar) — restored on cleanup.
+    const restoreChrome = hideEngineChrome(root);
 
     if (cards.length === 0) {
       root.innerHTML = "";
@@ -118,17 +146,19 @@ const speakingCardsTemplate = {
     let rr = 0;                                // round-robin: which place gets the next deal
     let roundOver = false;
     let busy = false;                          // guards against double-deal mid-animation
+    let panning = true;                        // true during the intro camera pan (no dealing yet)
+    let shuffleTimer = null;
 
-    // ----- scene -----
+    // ----- scene = a camera viewport over the real board-games table photo -----
+    // `bg` is the wide background image the "camera" pans across; `play` is the
+    // deck/cards/controls overlay that fades in once the pan settles.
     root.innerHTML = "";
     const scene = el("div", "aw-sc-scene");
+    const bg = el("div", "aw-sc-bg");
+    bg.style.backgroundImage = `url("${BG_URL}")`;
+    scene.append(bg);
 
-    const propsLayer = el("div", "aw-sc-props");
-    propsLayer.innerHTML =
-      `<span class="aw-sc-prop aw-sc-prop-checkers">${PROP_CHECKERS}</span>` +
-      `<span class="aw-sc-prop aw-sc-prop-domino">${PROP_DOMINO}</span>` +
-      `<span class="aw-sc-prop aw-sc-prop-dice">${PROP_DICE}</span>`;
-    scene.append(propsLayer);
+    const play = el("div", "aw-sc-play");   // holds the table + controls (fades in after the pan)
 
     const table = el("div", "aw-sc-table");
     const deckWrap = el("div", "aw-sc-deckwrap");
@@ -142,8 +172,13 @@ const speakingCardsTemplate = {
     const deckCount = el("span", "aw-sc-deckcount", "");
     deckWrap.append(deck, deckCount);
 
+    // Size the deck + cards to fill the space for this deal-place count.
+    const layout = computeLayout(dealPlaces);
+    table.style.setProperty("--cols", layout.cols);
+    table.style.setProperty("--card-w", layout.cardW);
+    table.style.setProperty("--deck-w", layout.deckW);
+
     const places = el("div", "aw-sc-places");
-    places.style.setProperty("--cols", COLS_FOR[dealPlaces] || 3);
     for (let i = 0; i < dealPlaces; i++) {
       const place = el("div", "aw-sc-place");
       place.dataset.slot = String(i);
@@ -151,7 +186,7 @@ const speakingCardsTemplate = {
     }
 
     table.append(deckWrap, places);
-    scene.append(table);
+    play.append(table);
 
     // ----- controls (Shuffle · Undo · Deal), like Wordwall's in-scene bar -----
     const controls = el("div", "aw-sc-controls");
@@ -159,11 +194,24 @@ const speakingCardsTemplate = {
     const undoBtn = ctrlBtn("Undo");
     const dealBtn = ctrlBtn("Deal", "aw-sc-ctrl-primary");
     controls.append(shuffleBtn, undoBtn, dealBtn);
-    scene.append(controls);
+    play.append(controls);
+
+    scene.append(play);
+
+    // ----- our own Menu / Sound / Fullscreen buttons in the scene corners -----
+    const sceneBar = buildSceneBar(root);
+    scene.append(sceneBar.el);
 
     const banner = el("div", "aw-sc-banner");    // "Time's up" overlay (hidden until needed)
     banner.style.display = "none";
     scene.append(banner);
+
+    // Slogan (same look as Crossword): small, thin, spaced grey caps — pinned
+    // top-centre over the scene (the engine top bar is covered by the photo here).
+    // Hidden at first; it fades in over the LAST 30% of the intro pan (see runIntro).
+    const slogan = el("div", "aw-sc-slogan", "SPEAKING CARDS IN ANDREW CLASSES");
+    slogan.style.opacity = "0";
+    scene.append(slogan);
 
     root.append(scene);
 
@@ -175,13 +223,49 @@ const speakingCardsTemplate = {
     ui.onSubmit(endRound);                        // countdown hitting 0 (or menu "Submit") ends the round
     window.addEventListener("keydown", onKey);
 
-    scSound.intro();
     renderStatic();
     updateControls();
+    const stopIntro = runIntro();                 // pan the camera; unlocks dealing when done
+
+    // ---------- the intro camera pan ----------
+    // The "camera" opens on the boards (right of the photo) and glides across the
+    // table to the card felt (left, where the deck sits), over exactly the intro
+    // sound's length; then the deck/controls fade in and dealing unlocks. Guarded
+    // so a hidden tab can't strand the pan (the bg just rests on the play felt).
+    function runIntro() {
+      const sceneW = scene.clientWidth || 1;
+      const bgW = bg.clientWidth || sceneW;      // width comes from CSS aspect-ratio
+      const startX = Math.min(0, -(bgW - sceneW));  // shift left to show the RIGHT (boards)
+      bg.style.transform = `translateX(${startX}px)`;
+
+      const ms = Math.max(1200, soundDurationMs("intro-01", 2600) - 150);
+      let done = false;
+      const finish = () => {
+        if (done) return; done = true;
+        try { anim?.cancel(); } catch { /* ignore */ }
+        try { sloganAnim?.cancel(); } catch { /* ignore */ }
+        bg.style.transform = "translateX(0px)";   // rest on the LEFT card felt
+        slogan.style.opacity = "1";               // slogan ends fully visible
+        play.classList.add("is-in");              // fade the deck + controls in
+        panning = false;
+        updateControls();
+      };
+      const anim = bg.animate(
+        [{ transform: `translateX(${startX}px)` }, { transform: "translateX(0px)" }],
+        { duration: ms, easing: "cubic-bezier(.5,.02,.35,1)", fill: "forwards" });
+      // Slogan stays hidden for the first 70% of the pan, then fades in over the
+      // last 30% (offset .7 → 1) so it appears only as the card felt settles.
+      const sloganAnim = slogan.animate(
+        [{ opacity: 0, offset: 0 }, { opacity: 0, offset: 0.7 }, { opacity: 1, offset: 1 }],
+        { duration: ms, easing: "linear", fill: "forwards" });
+      anim.onfinish = finish;
+      const t = setTimeout(finish, ms + 120);
+      return () => { clearTimeout(t); finish(); };
+    }
 
     // ---------- actions ----------
     function deal() {
-      if (busy || roundOver) return;
+      if (busy || roundOver || panning) return;
       if (pile.length === 0) { ui.toast("Deck's empty — press Shuffle."); return; }
       busy = true;
       const slot = rr;
@@ -196,7 +280,7 @@ const speakingCardsTemplate = {
     }
 
     function undo() {
-      if (busy || roundOver || history.length === 0) return;
+      if (busy || roundOver || panning || history.length === 0) return;
       const { slot, prev, card } = history.pop();
       pile.unshift(card);
       if (prev != null) { discard.pop(); slots[slot] = prev; }
@@ -207,17 +291,34 @@ const speakingCardsTemplate = {
       updateControls();
     }
 
+    // Shuffle: gather the discard back in, reshuffle, and riffle the deck for as
+    // long as the shuffle SOUND lasts (teacher request — the sound is long, so a
+    // fixed 0.5s riffle looked wrong). Dealing is locked while it riffles.
     function doShuffle() {
-      if (busy) return;
+      if (busy || panning) return;
+      if (pile.length + discard.length === 0) return;
       pile = shuffle(pile.concat(discard));
       discard = [];
       history = [];
       scSound.shuffle();
+      // Keep only HALF the time for the shuffle (sound + riffle) — the full clip
+      // felt too long (teacher, 2/8/2026). Cut the audio at the midpoint too.
+      const ms = Math.max(400, Math.round(soundDurationMs("shuffle-01", 1600) / 2));
+      const iter = Math.max(1, Math.round(ms / 520));
+      deck.style.setProperty("--sc-shuffle-iter", iter);
       deck.classList.remove("is-shuffling");
-      // reflow so the animation restarts even on consecutive shuffles
-      void deck.offsetWidth;
+      void deck.offsetWidth;                       // reflow so it restarts on consecutive shuffles
       deck.classList.add("is-shuffling");
+      busy = true;
+      updateDeckCount();
       updateControls();
+      clearTimeout(shuffleTimer);
+      shuffleTimer = setTimeout(() => {
+        deck.classList.remove("is-shuffling");
+        stopSound("shuffle-01");                    // cut the long clip at its halfway point
+        busy = false;
+        updateControls();
+      }, ms);
     }
 
     function endRound() {
@@ -232,6 +333,7 @@ const speakingCardsTemplate = {
     }
 
     function onKey(e) {
+      if (panning) return;
       if (e.key === "Enter" || e.key === " " || e.key === "d" || e.key === "D") { e.preventDefault(); deal(); }
       else if (e.key === "s" || e.key === "S") { e.preventDefault(); doShuffle(); }
       else if (e.key === "u" || e.key === "U" || e.key === "Backspace") { e.preventDefault(); undo(); }
@@ -328,33 +430,64 @@ const speakingCardsTemplate = {
       setTimeout(finishFlip, 190);
     }
 
-    // Build the white FRONT of a card: optional image on top, prompt text below.
+    // Build the white FRONT of a card: the prompt text, centred. A phonetic entry
+    // ("TROUSER /ˈtraʊzə/") is split so the WORD sits on its own line and the
+    // /transcription/ sits under it (smaller, muted). See splitPhonetic.
     function buildFront(card) {
       const cardEl = el("div", "aw-sc-card");
       cardEl.innerHTML = CARD_FRONT_ORN;
       const body = el("div", "aw-sc-cardbody");
-      if (card.image) {
-        const img = el("div", "aw-sc-cardimg");
-        img.style.backgroundImage = `url("${cssUrl(card.image)}")`;
-        body.append(img);
-        body.classList.add("has-img");
-      }
       const txtWrap = el("div", "aw-sc-cardtextwrap");
-      const txt = el("div", "aw-sc-cardtext", escapeHtml(card.text || ""));
+      const txt = el("div", "aw-sc-cardtext");
+      const ph = splitPhonetic(card.text);
+      if (ph) {
+        txt.innerHTML =
+          `<span class="aw-sc-word">${escapeHtml(ph.word)}</span>` +
+          `<span class="aw-sc-cardipa">${escapeHtml(ph.ipa)}</span>`;
+      } else {
+        txt.textContent = card.text || "";   // textContent → wraps at spaces, never mid-word
+      }
       txtWrap.append(txt);
       body.append(txtWrap);
       cardEl.append(body);
       return cardEl;
     }
 
-    // One autoFit controller per PLACE (stored on the place node) so replacing a
-    // card destroys its predecessor's resize listener instead of leaking it.
+    // One fit controller per PLACE (stored on the place node) so replacing a card
+    // destroys its predecessor's resize listener instead of leaking it.
+    //
+    // The text block is width:100% so a long prompt WRAPS to several lines. We
+    // grow the font (binary search on --fit) until the wrapped block just fills
+    // the card HEIGHT — as large as possible. A separate WIDTH guard only trips
+    // when a single un-wrappable word pokes past the box (scrollWidth exceeds the
+    // box), so long words shrink to stay whole but sentences still maximise. (We
+    // can't use core fitOnce here: its width test subtracts slack, which a
+    // width:100% element always fails, collapsing every card to the min size.)
     function fitCard(place, cardEl) {
       destroyFitter(place);
       const wrap = cardEl.querySelector(".aw-sc-cardtextwrap");
       const txt = cardEl.querySelector(".aw-sc-cardtext");
       if (!wrap || !txt) return;
-      place._fitter = autoFit(wrap, txt, s => txt.style.setProperty("--fit", s), { min: .4, max: 1, slack: 4 });
+      const apply = s => txt.style.setProperty("--fit", s);
+      const over = () => (txt.scrollHeight > wrap.clientHeight - 2) || (txt.scrollWidth > wrap.clientWidth + 1);
+      const run = () => {
+        const min = .25, max = 5;
+        apply(max);
+        if (!over()) return;                 // even the biggest fits — keep it
+        let lo = min, hi = max, best = min;
+        for (let i = 0; i < 18; i++) {
+          const mid = (lo + hi) / 2;
+          apply(mid);
+          if (over()) hi = mid; else { best = mid; lo = mid; }
+        }
+        apply(best);
+      };
+      run();
+      if (document.fonts?.ready) document.fonts.ready.then(run).catch(() => {});
+      let raf = 0;
+      const onResize = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); };
+      window.addEventListener("resize", onResize);
+      place._fitter = { destroy() { window.removeEventListener("resize", onResize); cancelAnimationFrame(raf); } };
     }
     function destroyFitter(place) { if (place._fitter) { try { place._fitter.destroy(); } catch { /* ignore */ } place._fitter = null; } }
     function clearFitters() { places.querySelectorAll(".aw-sc-place").forEach(destroyFitter); }
@@ -365,10 +498,11 @@ const speakingCardsTemplate = {
     }
 
     function updateControls() {
-      dealBtn.disabled = roundOver || pile.length === 0;
-      deck.disabled = roundOver || pile.length === 0;
-      undoBtn.disabled = roundOver || history.length === 0 || busy;
-      shuffleBtn.disabled = roundOver || busy || (pile.length + discard.length === 0);
+      const lock = roundOver || panning;
+      dealBtn.disabled = lock || busy || pile.length === 0;
+      deck.disabled = lock || busy || pile.length === 0;
+      undoBtn.disabled = lock || busy || history.length === 0;
+      shuffleBtn.disabled = lock || busy || (pile.length + discard.length === 0);
     }
 
     function ctrlBtn(label, extra) {
@@ -379,6 +513,9 @@ const speakingCardsTemplate = {
 
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
+      clearTimeout(shuffleTimer);
+      stopIntro();
+      sceneBar.destroy();
       clearFitters();
       restoreChrome();
     };
@@ -386,28 +523,42 @@ const speakingCardsTemplate = {
 
   // ---- Options panel: prune the Quiz-only controls, add Number of deal places ----
   buildExtraOptions({ panel, draft, el: makeEl }) {
-    try {
-      panel.querySelectorAll(".aw-opt-group").forEach(g => {
-        const label = g.querySelector(".aw-opt-label")?.textContent?.trim();
-        if (label === "End of game") { g.remove(); return; }   // "Show answers" — no answers here
-        if (label === "Random") {
-          g.querySelectorAll(".aw-opt-choice").forEach(ch => {
-            const t = ch.textContent.trim().toLowerCase();
-            if (t.includes("answer")) ch.remove();               // drop "Shuffle answer order"
-            else if (t.includes("question")) {                   // rename to "Shuffle item order"
-              ch.childNodes.forEach(n => { if (n.nodeType === 3 && /question/i.test(n.textContent)) n.textContent = "Shuffle item order"; });
-            }
-          });
-        }
-      });
-    } catch { /* pruning is cosmetic — never let it break the panel */ }
+    // Trim the controls that mean nothing for an open-ended game: the whole
+    // "End of game" group ("Show answers") and "Shuffle answer order"; rename
+    // "Shuffle question order" -> "Shuffle item order".
+    // NOTE: the engine appends "End of game" LAST — after this hook runs — so a
+    // single pass here would miss it. Run once now (catches the Random group)
+    // and again after the panel is fully assembled (catches End of game).
+    const prune = () => {
+      try {
+        panel.querySelectorAll(".aw-opt-group").forEach(g => {
+          const label = g.querySelector(".aw-opt-label")?.textContent?.trim();
+          if (label === "End of game") { g.remove(); return; }   // "Show answers" — no answers here
+          if (label === "Random") {
+            g.querySelectorAll(".aw-opt-choice").forEach(ch => {
+              const t = ch.textContent.trim().toLowerCase();
+              if (t.includes("answer")) ch.remove();               // drop "Shuffle answer order"
+              else if (t.includes("question")) {                   // rename to "Shuffle item order"
+                ch.childNodes.forEach(n => { if (n.nodeType === 3 && /question/i.test(n.textContent)) n.textContent = "Shuffle item order"; });
+              }
+            });
+          }
+        });
+      } catch { /* pruning is cosmetic — never let it break the panel */ }
+    };
+    prune();
+    requestAnimationFrame(prune);
 
+    // Number of deal places — a real 1..10 slider (matches True/false's controls).
     const g = makeEl("div", "aw-opt-group");
     g.append(makeEl("div", "aw-opt-label", "Number of deal places"));
-    const row = makeEl("div", "aw-opt-row aw-sc-opt-deal");
-    const stepper = makeNumberStepper(Math.max(1, Math.min(10, Number(draft.dealPlaces) || 1)), 1, 10,
-      v => { draft.dealPlaces = v; });
-    row.append(stepper.el);
+    const row = makeEl("div", "aw-opt-row aw-sc-dealrow");
+    const cur = Math.max(1, Math.min(10, Number(draft.dealPlaces) || 1));
+    const slider = makeEl("input", "aw-sc-dealslider");
+    slider.type = "range"; slider.min = "1"; slider.max = "10"; slider.step = "1"; slider.value = String(cur);
+    const val = makeEl("span", "aw-sc-dealval", String(cur));
+    slider.oninput = () => { const v = parseInt(slider.value, 10); draft.dealPlaces = v; val.textContent = String(v); };
+    row.append(slider, val);
     g.append(row);
     panel.append(g);
   },
@@ -431,25 +582,70 @@ const speakingCardsTemplate = {
   }
 };
 
-// The engine builds a score chip + prev/next nav that are meaningless for an
-// open-ended game. Hide them while this template is mounted; restore on cleanup
-// (harmless either way, since leaving the game rebuilds the whole stage).
-function hideScoreAndNav(root) {
-  const stage = root.closest(".aw-stage");
-  const score = stage?.querySelector(".aw-top-score");
-  const nav = stage?.querySelector(".aw-nav");
-  const prevScore = score?.style.visibility;
-  const prevNav = nav?.style.visibility;
-  if (score) score.style.visibility = "hidden";
-  if (nav) nav.style.visibility = "hidden";
-  return function restore() {
-    if (score) score.style.visibility = prevScore || "";
-    if (nav) nav.style.visibility = prevNav || "";
-  };
+// A phonetic entry is a word (or short phrase) followed by an IPA transcription
+// wrapped in slashes, e.g. "TROUSER /ˈtraʊzə/". Only matched when the /.../ is at
+// the very end and the word part is short — a normal sentence is left untouched.
+function splitPhonetic(text) {
+  const s = String(text || "").trim();
+  const m = s.match(/^([\s\S]*\S)\s*(\/[^/]+\/)\s*$/);
+  if (m && m[1].trim() && m[1].trim().length <= 40) return { word: m[1].trim(), ipa: m[2].trim() };
+  return null;
 }
 
-// Escape a URL for safe use inside a CSS url("...") — kill quotes/parens/newlines.
-function cssUrl(u) { return String(u).replace(/["'()\\\n\r]/g, ""); }
+// The engine builds a score chip, prev/next nav and a bottom bar that are
+// meaningless for an open-ended game. Hide them while this template is mounted;
+// restore on cleanup (harmless either way, since leaving the game rebuilds the
+// whole stage). We DON'T remove them — the scene's own corner buttons forward
+// clicks to the real (hidden) Menu / Sound / Fullscreen buttons.
+function hideEngineChrome(root) {
+  const stage = root.closest(".aw-stage");
+  const targets = [
+    stage?.querySelector(".aw-top-score"),
+    stage?.querySelector(".aw-nav"),
+    stage?.querySelector(".aw-bottombar")
+  ].filter(Boolean);
+  const prev = targets.map(t => t.style.visibility);
+  targets.forEach(t => { t.style.visibility = "hidden"; });
+  return function restore() { targets.forEach((t, i) => { t.style.visibility = prev[i] || ""; }); };
+}
+
+// Build the in-scene bottom bar (Menu left · Sound + Fullscreen right), matching
+// the real act. Each button FORWARDS to the engine's hidden button, so all the
+// real logic (menu popup, mute state, fullscreen) stays in core — untouched.
+function buildSceneBar(root) {
+  const stage = root.closest(".aw-stage");
+  const engMenu  = stage?.querySelector(".aw-bottombar-left .aw-iconbtn");
+  const engSound = stage?.querySelector(".aw-tools .aw-iconbtn:not(.aw-fs-always)");
+  const engFs    = stage?.querySelector(".aw-tools .aw-fs-always");
+
+  const bar = el("div", "aw-sc-bar");
+  const menuBtn = sbBtn(icons.menu, "Menu");
+  const soundBtn = sbBtn(coreSound.isMuted() ? icons.soundOff : icons.soundOn, "Sound");
+  soundBtn.classList.toggle("is-off", coreSound.isMuted());
+  const fsBtn = sbBtn(icons.fullscreen, "Fullscreen");
+
+  const left = el("div", "aw-sc-bar-left");
+  const right = el("div", "aw-sc-bar-right");
+  left.append(menuBtn);
+  right.append(soundBtn, fsBtn);
+  bar.append(left, right);
+
+  menuBtn.onclick = () => { scSound.menu(); engMenu?.click(); };
+  fsBtn.onclick = () => engFs?.click();
+  soundBtn.onclick = () => {
+    engSound?.click();                                  // let the engine flip + persist the mute state
+    const m = coreSound.isMuted();
+    soundBtn.innerHTML = m ? icons.soundOff : icons.soundOn;
+    soundBtn.classList.toggle("is-off", m);
+  };
+
+  function sbBtn(svg, title) {
+    const b = el("button", "aw-sc-barbtn", svg);
+    b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+    return b;
+  }
+  return { el: bar, destroy() { /* buttons live inside the scene, removed with it */ } };
+}
 
 // Escape user text before it goes into innerHTML (el()'s 3rd arg is innerHTML).
 function escapeHtml(s) {
