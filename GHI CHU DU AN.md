@@ -5,6 +5,48 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 56 (3/8/2026, v0.9.31) — TYPE THE ANSWER: bỏ checkbox Minus points, thêm Lives, sửa 3 lỗi nav/auto-advance ⭐ CÓ SỬA CORE (1 chỗ nhỏ) — ✅ THẦY DUYỆT → COMMIT + PUSH
+
+**Chỉ đụng Type the answer + 1 fix core nhỏ, không đụng game khác.** Thầy gửi 5 yêu cầu 1 lượt qua chat
+(không kèm ảnh). Đã tự test qua trình duyệt thật (devserver + DOM/JS giả lập PointerEvent/KeyboardEvent
+thật, không đoán qua ảnh), 0 lỗi console.
+
+1. **Bỏ checkbox "Minus points for wrong answers"** — chỉ còn 1 thanh trượt `minusAmount` **0..5** (trước
+   1..5 + checkbox bật/tắt riêng). 0 = tắt trừ điểm (hiện "Off"). Mặc định đổi 1→0 nhưng hành vi KHÔNG đổi
+   (trước mặc định checkbox tắt = không trừ; nay slider mặc định 0 = không trừ — zero-diff cho act cũ).
+2. **Thêm Lives** — thanh trượt mới **0..10** (0 = Unlimited), bê nguyên khuôn từ `true-false.js`
+   (`hasLivesSlot`, `ui.livesSlot`, tim bay biến mất khi mất mạng). `normLives()`: undefined/null/0 →
+   unlimited (KHÁC True/false — TF mặc định 5 mạng khi chưa set, TTA thì không được vì mọi act cũ đã lưu
+   sẵn không có field `lives`, mặc định 5 sẽ khiến act cũ tự nhiên có nguy cơ Game Over không ai yêu cầu).
+   Hết mạng → `finish("gameover")` ngay (không chờ hết câu hỏi), âm thanh riêng `gameover-01.mp3` (đã có
+   sẵn trong `sounds/`, trước ghi "archived" — nay dùng thật).
+3. **⭐ SỬA 3 LỖI NAV/AUTO-ADVANCE CÙNG 1 GỐC** ("next đôi khi không hoạt động dù Allow skip bật", "tắt
+   Allow skip thì submit xong không tự next", "nav/số trang đôi khi biến mất"): `submitAnswer()` cũ sau khi
+   chấm điểm KHÔNG gọi lại `updateNav()` (Next chỉ được đồng bộ lúc `loadQuestion()`) — khi Allow skip tắt,
+   Next bị khoá lúc chưa trả lời và **vẫn khoá sau khi trả lời xong** cho tới khi có điều hướng khác tình
+   cờ mở lại. Nặng hơn: hẹn giờ tự-next/tự-kết-thúc sau khi chấm (`autoTimer`) KHÔNG BAO GIỜ bị huỷ khi học
+   sinh tự bấm Prev/Next — hẹn giờ cũ vẫn treo, tới giờ tự bắn kéo giật học sinh sang câu khác, hoặc tự kết
+   thúc ván (ẩn nav) ngay khi đang xem lại câu trước. Sửa: `submitAnswer()` gọi `updateNav()` ngay sau khi
+   chấm; `goPrev()`/`goNext()` huỷ hẹn giờ cũ (`clearAutoTimer()`) trước khi đổi câu; và theo đúng yêu cầu,
+   **auto-advance nay LUÔN chạy sau khi trả lời xong 1 câu**, không còn phụ thuộc checkbox "Auto switch"
+   chung lẫn Allow skip — Allow skip giờ chỉ còn quyết định Next có bấm THỦ CÔNG được TRƯỚC khi trả lời hay
+   không; Back vẫn luôn xem lại được (huỷ hẹn giờ ngay khi bấm Back). **CÓ SỬA CORE**: thêm cờ
+   `tpl.hideAutoSwitch` (`core/engine.js`, đúng khuôn `hideTimerOption`/`hideLettersOption` sẵn có) để ẩn
+   hẳn checkbox "Auto switch" chung với riêng TTA (nay vô nghĩa, tránh gây hiểu lầm) — không ảnh hưởng
+   template khác.
+
+**Test thật**: mô phỏng đúng race-condition (submit + bấm Prev cùng lúc, không qua round-trip mạng) → về
+câu trước xem lại, đợi 2s vẫn không bị hẹn giờ cũ kéo giật sang câu khác. Allow skip tắt: sai câu → mất
+1 tim + điểm đỏ đúng số trừ + tự auto-advance không cần bấm gì. Allow skip bật: Next bấm được ngay từ câu
+chưa trả lời, nhảy liên tiếp không lỗi; trả lời đúng vẫn auto-advance dù Allow skip đang bật. Hết mạng →
+dừng ván ngay dù chưa làm hết câu hỏi. Chi tiết đầy đủ: `templates/type-the-answer/GHI CHU
+TYPE-THE-ANSWER.md` Đợt 55.
+
+**File đổi**: `templates/type-the-answer/type-the-answer.js` + `.css` + `sample-type-the-answer.js`,
+`core/engine.js` (cờ `hideAutoSwitch`). Console sạch 0 lỗi suốt test.
+
+---
+
 ## Đợt 55 (3/8/2026, v0.9.29) — ANAGRAM: 8 ĐIỂM SỬA/YÊU CẦU THẦY GỬI 1 LƯỢT ⭐ CÓ SỬA CORE (2 chỗ nhỏ) — ✅ THẦY DUYỆT → COMMIT + PUSH
 
 **Chỉ đụng Anagram + 2 fix core nhỏ, không đụng game khác.** Thầy chơi bản live rồi gửi 8 điểm 1 lượt.

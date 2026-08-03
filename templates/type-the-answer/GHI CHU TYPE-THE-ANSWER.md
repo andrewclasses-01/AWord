@@ -1,5 +1,68 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 55 (3/8/2026) — Bỏ checkbox Minus points, thêm Lives, sửa 3 lỗi nav/auto-advance (⚠️ LOCAL)
+
+Thầy yêu cầu 5 việc qua chat (không kèm ảnh). CHỈ đụng `type-the-answer.js` + `.css` +
+`sample-type-the-answer.js`, và **1 chỗ ở core/engine.js** (thêm cờ ẩn tuỳ chọn kiểu
+`hideTimerOption`/`hideLettersOption` đã có sẵn — cùng khuôn, không phá template khác).
+
+**1. Bỏ checkbox "Minus points for wrong answers"** — nay CHỈ còn 1 thanh trượt
+`draft.minusAmount` **0..5** (trước là 1..5 + checkbox riêng bật/tắt). 0 = tắt trừ điểm (hiện
+"Off" thay vì "−0"); mặc định đổi từ `1` (kèm checkbox tắt) → `0` để KHÔNG đổi hành vi các
+activity cũ (trước đây mặc định checkbox tắt = không trừ, nay slider mặc định 0 = không trừ,
+y hệt). Xoá `setSliderEnabled`/`.is-disabled` (không còn checkbox để disable theo). `flyMark()`:
+`penalty = clamp(opt.minusAmount, 0, 5)`, `wrongMinus = !correct && penalty>0` (thay
+`opt.minusPoints===true`). Xoá field `minusPoints` khỏi sample.
+
+**2. Thêm Lives** — thanh trượt mới **0..10** (0 = Unlimited), bê nguyên khuôn từ True/false
+(`hasLivesSlot`, `ui.livesSlot`, hàm `renderLives()`/`loseLife()` — copy gần như nguyên xi từ
+`true-false.js`, chỉ đổi tên biến cho khớp). `normLives()`: **undefined/null/0 → unlimited**
+(khác True/false — TF mặc định 5 mạng khi undefined, nhưng TTA thì KHÔNG được vì mọi activity
+cũ đã lưu sẵn không có field `lives`, nếu mặc định 5 thì activity cũ tự nhiên có nguy cơ
+Game Over mà không ai yêu cầu — 1 bẫy suýt mắc, phát hiện lúc đọc lại `normLives` của TF).
+Sai câu → `loseLife()` (rớt 1 tim, hoạt ảnh tim bay biến mất) → hết tim → `finish("gameover")`
+ngay (không chờ hết toàn bộ câu hỏi), dùng sound `ttaSound.gameOver()` (file `gameover-01.mp3`
+đã có sẵn trong sounds/ từ trước, ghi "archived" — nay dùng thật). `sounds.complete` ở top-level
+đổi thành no-op, `finish(reason)` tự chọn `ttaSound.complete()`/`ttaSound.gameOver()` (giống
+đúng khuôn `true-false.js`).
+
+**3+4+5. Sửa 3 lỗi nav/auto-advance — CÙNG 1 NGUYÊN NHÂN GỐC** (đọc kỹ code trước khi sửa, không
+đoán mò): `submitAnswer()` cũ sau khi chấm điểm **KHÔNG gọi lại `updateNav()`** — nút Next chỉ
+được bật/tắt lúc `loadQuestion()`, nên khi Allow skip TẮT, Next bị khoá lúc câu chưa chấm và
+**vẫn khoá luôn sau khi chấm xong** cho tới khi có điều hướng khác (Prev/Next) tình cờ gọi lại
+`updateNav()` — đúng triệu chứng "next không hoạt động dù đã submit". Nặng hơn: `autoTimer`
+(hẹn giờ auto-next/auto-finish sau khi chấm) **không bao giờ bị huỷ** khi học sinh tự bấm
+Prev/Next điều hướng thủ công — hẹn giờ CŨ vẫn treo, tới giờ tự bắn `goNext()`/`finish()` dù học
+sinh đã rời sang câu khác từ lâu → **kéo giật học sinh tới câu không mong muốn** (lỗi 4) hoặc
+**tự kết thúc ván đấu ẩn thanh nav** khi đang xem lại câu trước (lỗi 3, do `finish()`→
+`celebrate()` set `navWrap.style.visibility="hidden"`). Sửa:
+  - `submitAnswer()` gọi `updateNav()` NGAY sau khi chấm (Next bật đúng lúc, không chờ điều hướng khác).
+  - `goPrev()`/`goNext()` gọi `clearAutoTimer()` (hàm mới) TRƯỚC khi đổi câu — huỷ hẹn giờ cũ.
+  - Theo đúng yêu cầu (lỗi 5): **auto-advance nay LUÔN chạy sau khi chấm xong 1 câu, KHÔNG còn
+    phụ thuộc checkbox "Auto switch" chung** (`opt.autoSwitch`) **lẫn Allow skip** — Allow skip
+    giờ CHỈ còn quyết định Next có bấm được THỦ CÔNG hay không TRƯỚC khi trả lời; sau khi trả lời,
+    game luôn tự chuyển câu (Back vẫn luôn xem lại được, vì `clearAutoTimer()` huỷ ngay khi bấm
+    Back — không còn bị hẹn giờ cũ kéo đi giữa chừng). Vì checkbox "Auto switch" chung (core)
+    nay vô nghĩa với riêng template này, thêm cờ `tpl.hideAutoSwitch` vào core/engine.js (đúng
+    khuôn `hideTimerOption`) và bật cho TTA — ẩn hẳn checkbox thay vì để "chết" gây hiểu lầm.
+
+**Test thật qua trình duyệt** (`test.html`, đo DOM qua `javascript_tool` — pane phiên này không
+chụp ảnh được, xem lý do ở các đợt trước): Options panel xác nhận hết checkbox Minus points +
+hết nhóm Auto switch, còn slider Points-off ("Off" ở 0) + nhóm Lives ("Unlimited" ở 0). Set
+Lives=2 + Points off=2, Allow skip TẮT: sai câu 1 ("test") → mất 1 tim (♥ còn 1), điểm hiện đỏ
+"2" (đúng `aw-tta-score-neg`, = 0−2), auto-advance sang câu 2 (không cần bấm gì) — xác nhận lỗi
+5 đã hết. Làm đúng câu 2 ("gray") rồi submit+bấm Prev NGAY TRONG CÙNG 1 lượt JS (không qua
+round-trip mạng, mô phỏng đúng race điều kiện) → về câu 1 xem lại reveal "seven"; đợi 2s — VẪN ở
+câu 1 (hẹn giờ auto-next cũ của câu 2 đã bị huỷ, không kéo giật sang câu 3) — xác nhận lỗi 3+4
+đã hết. Next bấm được ngay tại câu 1 (đã chấm) dù Allow skip tắt — xác nhận lỗi 4 (nhánh
+Allow-skip-tắt) đã hết. Bấm Next thủ công qua câu 2 rồi câu 3, làm sai câu 3 → hết tim → 0 tim
+→ ~1.5s sau tự "GAME COMPLETE" (dừng ở 3/6 câu, không cần làm hết 6 câu) — xác nhận Lives hoạt
+động đúng. Test riêng Allow skip BẬT: Next bật ngay từ câu 1 chưa trả lời, bấm Next liên tiếp 3
+lần nhảy qua câu 2/3/4 không lỗi; làm đúng câu 4 → auto-advance sang câu 5 dù Allow skip đang
+BẬT (đúng lỗi 5, không chỉ áp dụng khi Allow skip tắt). **0 lỗi console** suốt toàn bộ test.
+File đụng: `type-the-answer.js`, `type-the-answer.css`, `sample-type-the-answer.js`,
+`core/engine.js` (thêm cờ `hideAutoSwitch`, không đổi hành vi mọi template khác). **Chưa push.**
+
 ## Đợt 54 (3/8/2026, v0.9.28) — Allow skip + chặn bàn phím ảo HĐH
 - **Allow skip:** đã có điểm trừ riêng (`minusPoints`/`minusAmount`) nên đặt `hidePointsOff:true` (ẩn option chung).
   Thêm checkbox **"Allow skip"** (buildExtraOptions, mặc định KHÔNG tích): `canAdvance()` = `allowSkip || state[index].graded`;

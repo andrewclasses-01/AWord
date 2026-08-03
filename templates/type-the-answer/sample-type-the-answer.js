@@ -15,7 +15,6 @@ export const activity = {
     timer: "countUp",
     shuffleQuestions: true,
     showAnswerWhenWrong: true,
-    minusPoints: false,
     allowSkip: false,
     showAnswers: true
   },

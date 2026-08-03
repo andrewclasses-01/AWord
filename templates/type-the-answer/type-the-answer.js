@@ -11,11 +11,19 @@
 //  • Only the QUESTION text crossfades on navigation; the answer block updates
 //    in place, so the Submit button never flickers.
 //  • Matching ignores case + accents. Any of item.acceptedAnswers[] is correct.
-//  • Correct -> green check flies to the score (+1). Wrong -> when Minus is on, a
-//    red "−N" (Options slider 1..5) flies and subtracts N; else a red cross fades
-//    in place. Wrong also reveals the correct answer (options.showAnswerWhenWrong).
-//  • No "finish/✓" button on the last question — the game completes automatically
-//    once every question has an answer (or via Menu -> Submit answers).
+//  • Correct -> green check flies to the score (+1). Wrong -> the "Points off per
+//    wrong" slider (Options, 0..5) decides: >0 flies a red "−N" and subtracts N;
+//    0 (default) just fades a red cross in place. Wrong also reveals the correct
+//    answer (options.showAnswerWhenWrong).
+//  • Lives (Options, 0..10, 0 = Unlimited): a wrong answer also costs a heart
+//    (ui.livesSlot, top bar) when lives are on; hitting 0 ends the game right
+//    away ("gameover"), same pattern as True/false.
+//  • Every graded question auto-advances to the next one shortly after (Allow
+//    skip only controls whether Next is manually clickable BEFORE answering —
+//    once answered, the game moves on either way); Back always stays available
+//    to review a previous question. No "finish/✓" button on the last question —
+//    the game completes automatically once every question has an answer (or via
+//    Menu -> Submit answers).
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -31,6 +39,16 @@ function normalize(str) {
   return s.toLowerCase();                                                     // always ignore case
 }
 
+const MAX_LIVES = 10;
+// Lives are opt-in (3/8/2026): 0, null or undefined -> unlimited. Every activity
+// saved before this feature has no `lives` field at all, so undefined must mean
+// unlimited (not a default life count) or old content would suddenly risk a
+// Game Over nobody asked for.
+function normLives(v) {
+  if (v == null || v === 0) return null;
+  return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
+}
+
 const ttaTemplate = {
   type: "type_the_answer",
   scorable: true,
@@ -40,13 +58,15 @@ const ttaTemplate = {
   hideLettersOption: true,     // no lettered answer boxes here — hide that Options group entirely
   hideShuffleAnswers: true,    // no answer choices to shuffle — hide "Shuffle answer order"
   hasKeyboardToggle: true,     // ask engine.js for a slot next to Menu for our keyboard show/hide button
+  hasLivesSlot: true,          // hearts render in the top bar, left of the score (same slot as True/false)
+  hideAutoSwitch: true,        // always auto-advances a graded question itself now — the checkbox would be dead
   // Real Wordwall "Type the answer" (Classic) mp3 pack — the engine plays these
   // at Play / Start again / game complete. Per-key typing "tock" is separate
   // (synthesized ui.sound.keyClick()); correct/wrong are called inline.
   sounds: {
     play: ttaSound.intro,
     restart: ttaSound.restart,
-    complete: ttaSound.complete
+    complete: () => {}   // silenced: finish() itself picks Completed or GameOver (out of lives)
   },
 
   toPrintItems(activity) {
@@ -61,32 +81,54 @@ const ttaTemplate = {
     g.append(el("div", "aw-opt-label", "Type the answer"));
     const row = el("div", "aw-opt-row");
 
-    // Slider (1..5): how many points a wrong answer deducts. Only meaningful
-    // when "Minus points" is on, so it is disabled while that box is unticked.
-    if (draft.minusAmount == null) draft.minusAmount = 1;
+    // Slider (0..5): how many points a wrong answer deducts. 0 = off — the
+    // slider alone decides now, no separate "Minus points" checkbox (teacher,
+    // 3/8/2026: fewer controls to keep in sync).
+    if (draft.minusAmount == null) draft.minusAmount = 0;
     const sliderWrap = el("div", "aw-tta-opt-minus");
     sliderWrap.append(el("span", "aw-tta-opt-minus-cap", "Points off per wrong"));
     const slider = el("input", "aw-tta-opt-slider");
-    slider.type = "range"; slider.min = "1"; slider.max = "5"; slider.step = "1";
-    slider.value = String(draft.minusAmount || 1);
-    const sliderVal = el("span", "aw-tta-opt-minus-val", `−${slider.value}`);
-    slider.oninput = () => { draft.minusAmount = +slider.value; sliderVal.textContent = `−${slider.value}`; };
+    slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
+    slider.value = String(draft.minusAmount);
+    const sliderVal = el("span", "aw-tta-opt-minus-val", slider.value === "0" ? "Off" : `−${slider.value}`);
+    slider.oninput = () => {
+      draft.minusAmount = +slider.value;
+      sliderVal.textContent = slider.value === "0" ? "Off" : `−${slider.value}`;
+    };
     sliderWrap.append(slider, sliderVal);
-    const setSliderEnabled = on => { slider.disabled = !on; sliderWrap.classList.toggle("is-disabled", !on); };
 
     row.append(
       mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
         v => draft.showAnswerWhenWrong = v),
-      mkCheck(draft.minusPoints === true, "Minus points for wrong answers",
-        v => { draft.minusPoints = v; setSliderEnabled(v); }),
-      // Default OFF -> the student must answer the current question before Next advances.
+      // Default OFF -> Next stays disabled (until answered) instead of letting the
+      // student jump ahead without answering. Once answered, the game auto-advances
+      // regardless of this box (see submitAnswer) — this only gates the MANUAL skip.
       mkCheck(draft.allowSkip === true, "Allow skip (move on without answering)",
         v => draft.allowSkip = v)
     );
     g.append(row);
     g.append(sliderWrap);
     panel.append(g);
-    setSliderEnabled(draft.minusPoints === true);
+
+    // Lives — a slider 0..10 (0 = Unlimited). New, 3/8/2026: a wrong answer costs
+    // a heart (top bar, left of the score); hitting 0 ends the game right away.
+    // Same control/rendering pattern as True/false's hearts (ui.livesSlot).
+    const gLives = el("div", "aw-opt-group");
+    gLives.append(el("div", "aw-opt-label", "Lives"));
+    const rowLives = el("div", "aw-opt-row aw-tta-livesrow");
+    const curLives = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
+    const livesVal = el("span", "aw-tta-livesval", curLives === 0 ? "Unlimited" : String(curLives));
+    const livesInput = el("input", "aw-tta-livesslider");
+    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
+    livesInput.value = String(curLives);
+    livesInput.oninput = () => {
+      const v = parseInt(livesInput.value, 10);
+      draft.lives = v;   // 0 stored = unlimited
+      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
+    };
+    rowLives.append(livesInput, livesVal);
+    gLives.append(rowLives);
+    panel.append(gLives);
   },
 
   mount(root, activity, ui) {
@@ -109,6 +151,7 @@ const ttaTemplate = {
     let finished = false;
     let autoTimer = null;
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
+    let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
     let keyboardVisible = true;         // ON by default every time the act is opened
     let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
@@ -225,6 +268,7 @@ const ttaTemplate = {
     root.append(card);
     loadQuestion(0, false);
     showScore(livePoints);
+    renderLives();
 
     // Fit on first layout, when the web font is ready, and on resize.
     let rafFit = 0;
@@ -408,6 +452,9 @@ const ttaTemplate = {
       input.disabled = true;
       input.classList.add(st.correct ? "is-correct" : "is-wrong");
       syncSubmitEnabled();   // graded -> Submit off (outside + keyboard)
+      updateNav();   // re-sync Next NOW (with Allow skip off, Next was disabled until this
+                      // question was graded — without this it stayed stuck disabled until
+                      // some unrelated Prev/Next call happened to refresh it)
 
       if (!st.correct && opt.showAnswerWhenWrong !== false) {
         revealText.textContent = it.acceptedAnswers[0];
@@ -423,15 +470,26 @@ const ttaTemplate = {
 
       if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
       flyMark(st.correct, input);
+      const outOfLives = st.correct ? false : loseLife();
 
-      // Auto-complete once EVERY question is answered; otherwise, if "Auto switch"
-      // is on, move to the next question automatically.
-      if (state.every(s => s.graded)) {
-        autoTimer = setTimeout(finish, st.correct ? 1000 : 1500);
-      } else if (opt.autoSwitch) {
-        autoTimer = setTimeout(() => { if (!finished && index < total - 1) goNext(); }, st.correct ? 1000 : 1400);
+      // Every graded question moves the game on shortly after, regardless of
+      // Allow skip (that option only gates the MANUAL Next before answering) —
+      // teacher's spec, 3/8/2026. Any timer left over from a PREVIOUS question is
+      // cleared first: two stacked timers used to be able to fire out of order
+      // (a stale one calling finish()/goNext() after the student had already
+      // navigated elsewhere) — that was the source of the nav bar sometimes going
+      // invisible mid-review and Next sometimes appearing to do nothing.
+      clearAutoTimer();
+      const delay = st.correct ? 1000 : (outOfLives ? 1500 : 1400);
+      if (outOfLives) {
+        autoTimer = setTimeout(() => finish("gameover"), delay);
+      } else if (state.every(s => s.graded)) {
+        autoTimer = setTimeout(() => finish("complete"), delay);
+      } else if (index < total - 1) {
+        autoTimer = setTimeout(() => { if (!finished) goNext(); }, delay);
       }
     }
+    function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
 
     // The mark (big, thick ✓ / ✗ / "−N") is born ON the input's row (an absolute
     // child of the input row, so it always stays aligned with the box even after
@@ -443,8 +501,8 @@ const ttaTemplate = {
       const scoreEl = document.querySelector(".aw-top-score");
       const size = Math.max(34, inputEl.getBoundingClientRect().height * 0.72);   // bigger than before
 
-      const penalty = Math.max(1, Math.min(5, opt.minusAmount || 1));
-      const wrongMinus = !correct && opt.minusPoints === true;
+      const penalty = Math.max(0, Math.min(5, Number(opt.minusAmount) || 0));
+      const wrongMinus = !correct && penalty > 0;
       const mark = el("div", "aw-tta-flymark" + (correct ? "" : " is-cross") + (wrongMinus ? " is-penalty" : ""),
         correct ? icons.check : (wrongMinus ? `−${penalty}` : icons.cross));
       mark.style.width = size + "px";
@@ -461,7 +519,7 @@ const ttaTemplate = {
 
       let done = false;
       const cleanupMark = () => { if (done) return; done = true; mark.remove(); activeFlyNodes.delete(mark); };
-      const shouldFly = correct || opt.minusPoints === true;
+      const shouldFly = correct || wrongMinus;
 
       // 1) a little shake in place (grows, wobbles) — draws the eye before it flies.
       const shake = mark.animate([
@@ -510,6 +568,44 @@ const ttaTemplate = {
       };
       shake.onfinish = afterShake;
       setTimeout(() => { if (!done && mark.isConnected && mark.parentElement === row) afterShake(); }, 500);
+    }
+
+    // ===== LIVES (opt-in via Options; ui.livesSlot is a span left of the score,
+    // reserved by tpl.hasLivesSlot) — same rendering pattern as True/false. =====
+    function renderLives() {
+      const slot = ui.livesSlot;
+      if (!slot) return;
+      slot.innerHTML = "";
+      if (livesLeft == null) return;                 // unlimited -> no hearts shown
+      if (livesLeft <= 5) {
+        for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
+      } else {
+        slot.append(el("span", "aw-top-heartcount", String(livesLeft)));
+        slot.append(el("span", "aw-top-heart", "&#9829;"));
+      }
+    }
+    // Costs one life on a wrong answer; pops the LEFTMOST heart out, then
+    // re-renders. Returns true once that was the last life (the game ends
+    // immediately — see submitAnswer/finish("gameover")).
+    function loseLife() {
+      if (livesLeft == null) return false;            // unlimited -> can't lose
+      const slot = ui.livesSlot;
+      const gone = (livesLeft <= 5 && slot) ? slot.firstChild : null;
+      livesLeft = Math.max(0, livesLeft - 1);
+      if (gone) {
+        let done = false;
+        const finishPop = () => { if (done) return; done = true; renderLives(); };
+        try {
+          const a = gone.animate(
+            [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.7)", opacity: 0 }],
+            { duration: 320, easing: "ease-in", fill: "forwards" });
+          a.onfinish = finishPop;
+        } catch (e) { finishPop(); }
+        setTimeout(finishPop, 360);
+      } else {
+        renderLives();
+      }
+      return livesLeft <= 0;
     }
 
     // Score reads "correct/max" (e.g. ✓ 1/6). The running number is GREEN when
@@ -617,14 +713,20 @@ const ttaTemplate = {
 
     // Navigation uses the SAME "tock" as the letter keys (teacher's call). Only
     // the question text crossfades; the answer block stays put (no flicker).
-    function goPrev() { if (index > 0) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index - 1, true); } }
-    function goNext() { if (!canAdvance()) return; if (index < total - 1) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
+    // Manual navigation always cancels any pending auto-advance/auto-finish left
+    // over from the question just graded — otherwise that stale timer could fire
+    // later (after the student has already moved elsewhere), yanking them forward
+    // or ending the game while they're mid-review. See submitAnswer.
+    function goPrev() { if (index > 0) { clearAutoTimer(); ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index - 1, true); } }
+    function goNext() { if (!canAdvance()) return; if (index < total - 1) { clearAutoTimer(); ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
 
-    function finish() {
+    function finish(reason = "complete") {
       if (finished) return;
       const answeredNow = state.filter(s => s.graded).length;
       if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
       finished = true;
+      clearAutoTimer();
+      if (reason === "gameover") ttaSound.gameOver(); else ttaSound.complete();
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;
       const review = items.map((it, i) => {
@@ -644,9 +746,10 @@ const ttaTemplate = {
     return function cleanup() {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
-      if (autoTimer) clearTimeout(autoTimer);
+      clearAutoTimer();
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
+      if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };
   }
 };
