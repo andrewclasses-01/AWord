@@ -1,8 +1,52 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ + ĐÃ TINH CHỈNH THEO THẦY (1/8/2026, Đợt 31 — commit + push + live). `built:true` từ 31/7.
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 3/8/2026 — PHÂN TRANG (≤35 ô/trang + pager) + FIT CHỮ trong ô (không tràn, luôn giữa): đã tự test browser thật 0 lỗi (8 & 40 cặp, auto-advance, score 40), KHÔNG đụng core → CHỜ THẦY CHƠI THỬ + COMMIT. Xem chặng đầu "Nhật ký".
 
 ## Nhật ký
+
+### 3/8/2026 — PHÂN TRANG lưới ô (≤35 ô/trang) + FIT CHỮ trong ô (không tràn, luôn giữa)
+Thầy báo 2 việc: (1) khi quá nhiều ô, chữ quá to so với ô → tràn ra ngoài; muốn tối đa **35 ô/trang**,
+trên 35 thì sang trang tiếp (thêm nút next-back-số trang), đồng thời chữ luôn vừa & nằm giữa ô. (2) Đổi
+thanh Points off thành đỏ. **Chỉ đụng `find-the-match.js` + `find-the-match.css`, KHÔNG đụng core.**
+
+**(1a) Fit chữ trong ô — "không bao giờ tràn, luôn ở tâm ô":**
+- Ô (`.aw-ftm-tile`) nay `display:flex; align-items:center; justify-content:center; text-align:center` +
+  `overflow:hidden` + **chiều cao CỐ ĐỊNH** `calc(6.2cqw*var(--fit))` (bỏ `min-height`). Chiều cao cố định
+  làm việc tràn ĐO ĐƯỢC để co lại; overflow:hidden bảo đảm không có gì lòi ra ngoài ô.
+- Thêm biến co RIÊNG mỗi ô `--tfit`: font ô = `calc(1.85cqw*var(--fit)*var(--tfit,1))`. Hàm `fitTiles()`
+  duyệt từng ô, giảm `--tfit` 0.08/lần (đáy 0.4) tới khi hết tràn cả bề ngang lẫn cao. Cộng thêm
+  `overflow-wrap:anywhere; word-break:break-word` để từ dài xuống dòng thay vì lòi.
+- **BẪY quan trọng đã gặp khi test:** gọi `fitTiles` qua `requestAnimationFrame` KHÔNG chạy khi pane test bị
+  ẩn (rAF bị đóng băng lúc trang không compositing — cùng họ bẫy throttle của myActivity). → Sửa: gọi
+  `fitTiles()` **ĐỒNG BỘ ngay sau khi autoFit đặt xong `--fit`** (không chờ rAF) + gọi lại trên
+  `document.fonts.ready` (đồng bộ, khi web-font đổi metric). `scheduleTileFit()` (rAF, gộp) chỉ còn lo lần
+  re-fit khi RESIZE. Đo thật: từ 45 ký tự "Pneumono..." tràn 4px → co `--tfit=0.84` → tràn 0px; 20/20 ô 0 tràn.
+
+**(1b) Phân trang (page-as-round):**
+- `MAX_TILES_PER_PAGE=35`. `PAGE_COUNT=ceil(total/35)`, chia ĐỀU (`perPage=ceil(total/PAGE_COUNT)`, vd 40→20+20
+  chứ không 35+5). `choiceOrder` (đã xáo) chunk thành `pages[]`; mỗi trang có `pageQueues[p]` riêng.
+- **Mỗi trang là 1 VÒNG độc lập:** câu hỏi (prompt) của trang chỉ là các cặp có ô trên trang đó → **đáp án
+  LUÔN nằm trên trang đang xem** (giữ đúng trải nghiệm cũ "đáp án luôn thấy trên màn"). Hết cặp của trang →
+  `startCycle()` tự tìm trang kế còn cặp (`nextNonEmptyPage`, cuốn vòng) rồi render + chơi tiếp; hết sạch mọi
+  trang → `finish("complete")`.
+- **Pager `‹ Page X / Y ›`** (chỉ hiện khi >1 trang) đặt dưới lưới, trong stage (cqw). `goPage()` cho lật tay:
+  dừng prompt hiện tại, đổi trang, chơi tiếp trang đó. prev tắt ở trang 1, next tắt ở trang cuối.
+- `cols` tính theo TRANG LỚN NHẤT để mọi trang canh giống nhau. Lưới vẫn 5 hàng cố định, ô rời trang leaves-hole.
+- **renderShell nay chạy MỖI lần đổi trang** (không chỉ mount) → thêm `fitter.destroy()` + huỷ `tileFitRaf`
+  đầu hàm để không rò rỉ listener resize/rAF. Render đúng trạng thái ô: đã giải+removeCorrects → để hố;
+  đã giải+giữ → ô mờ + dấu ✓; cặp bị bỏ (skipped) → ô nhiễu vẫn bấm được.
+- `queue` giờ = tham chiếu tới `pageQueues[curPage]`, đổi trang thì trỏ lại — nên các hàm cũ
+  (choose/onTimeUp/requeueRandom/dropOrRequeue/armCrawl) hầu như giữ nguyên. 2 callback trong `choose` đổi từ
+  `if(!queue.length) finish("complete")` → `startCycle()` (để nó tự advance/finish theo trang).
+
+**(2) Points off đỏ:** nằm ở slider CHUNG của core (`.aw-opt-slider` trong `engine.js`), find-the-match KHÔNG có
+riêng. `core/app.css` đã có sẵn thay đổi `accent-color:#ef4444` + nhãn đỏ trong **1 lô đang sửa dở CHƯA COMMIT
+của phiên khác** (kèm engine.js `hideAutoSwitch`/fix nav, anagram, type-the-answer) → bản LIVE còn xanh vì lô
+đó chưa push. KHÔNG đụng để khỏi giẫm lên việc của phiên kia — báo thầy quyết commit.
+
+**Test (browser thật qua test.html, đo DOM):** 8 cặp → 1 trang, không pager, 0 tràn. 40 cặp → Page 1/2 & 2/2
+(20+20, 0 overlap), pager prev/next đúng, 0 tràn cả 2 trang, auto-advance trang 1→2, chơi trọn → **score 40 +
+summary**, console 0 lỗi. **CHƯA:** nghe mp3; lật tay tới trang đã giải xong (để idle, hiếm gặp vì auto-advance).
 
 ### 3/8/2026 — Thêm option "Points off" (trừ điểm khi bấm sai)
 Thêm `options.pointsOff` (0..5, mặc định 0 = tắt): mỗi lần bấm SAI trừ `pointsOff` vào điểm sống qua biến

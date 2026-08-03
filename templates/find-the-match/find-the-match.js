@@ -1,9 +1,15 @@
 // =============================================================
 // TEMPLATE: FIND THE MATCH — Wordwall style, English UI.
-//  • Grid: ALWAYS laid out in 5 fixed ROWS (columns = ceil(total/5)),
-//    centred on screen. Each keyword tile gets an EXPLICIT grid-row/
-//    grid-column assigned once at mount — removing a solved tile leaves a
-//    hole, the other tiles never reflow (teacher's explicit spec, 31/7/2026).
+//  • Grid: 5 fixed ROWS, centred on screen. Each keyword tile gets an EXPLICIT
+//    grid-row/grid-column by its position within the page — matching a tile
+//    leaves a hole, the others never reflow (teacher's spec, 31/7/2026).
+//  • PAGINATION (teacher 3/8/2026): more than 35 tiles splits the board into
+//    pages (divided evenly), each a self-contained round whose prompts only
+//    reference that page's tiles (so the answer is always on screen). Pages
+//    auto-advance as cleared; a ‹ Page X/Y › pager also flips manually.
+//  • TEXT FIT (teacher 3/8/2026): every tile flex-centres its keyword and, via
+//    a per-tile --tfit shrink (fitTiles), scales the font down until the word
+//    fits inside the tile both ways — it never spills outside its box.
 //  • Prompt ("conveyor belt"): the DEFINITION slides in from the left edge
 //    of the stage, arrives at the centre, then (if Speed > 0) keeps
 //    drifting slowly to the right edge — the whole journey is ONE
@@ -55,6 +61,7 @@ const PALETTE = [
 ];
 
 const ROWS = 5;
+const MAX_TILES_PER_PAGE = 35;   // more than this and the board splits into pages (teacher 3/8/2026)
 const ENTER_MS = 900;   // left edge -> centre, always this pace regardless of Speed
 const EXIT_MS = 550;    // wherever it is -> fully off the right edge, once a tile is tapped
 const DEFAULT_LIVES = 5;
@@ -183,28 +190,41 @@ const ftmTemplate = {
     }
 
     // `order` = the fixed sequence used for scoring/review (never mutated).
-    // `queue` = the LIVE working sequence — front = current prompt.
     let order = pairs.map((_, i) => i);
     if (opt.shuffleQuestions) order = shuffle(order);
-    const queue = [...order];
-    const choiceOrder = shuffle(pairs.map((_, i) => i));
 
-    // Fixed 5-row layout, computed ONCE from `total` so a tile's cell never
-    // changes even as siblings around it get removed (teacher's spec).
-    const cols = Math.max(1, Math.ceil(total / ROWS));
+    // PAGINATION (teacher 3/8/2026): a big set is split across PAGES of at most
+    // MAX_TILES_PER_PAGE keyword tiles, divided as evenly as possible (e.g. 40 ->
+    // 20+20, not 35+5). Each page is a SELF-CONTAINED round — its prompts are
+    // only the pairs whose keyword tile sits on that page, so the matching word
+    // is ALWAYS visible on the current page. Pages auto-advance as they're
+    // cleared; a ‹ Page X/Y › pager also lets you move manually. `choiceOrder`
+    // (shuffled) is the tile layout order; chunking it forms the pages.
+    const choiceOrder = shuffle(pairs.map((_, i) => i));
+    const PAGE_COUNT = Math.max(1, Math.ceil(total / MAX_TILES_PER_PAGE));
+    const perPage = Math.ceil(total / PAGE_COUNT);
+    const pages = [];
+    for (let p = 0; p < PAGE_COUNT; p++) pages.push(choiceOrder.slice(p * perPage, (p + 1) * perPage));
+    // Per-page prompt queues — front = current prompt for that page; shuffled
+    // within the page (when shuffleQuestions is on) for variety.
+    const pageQueues = pages.map(arr => (opt.shuffleQuestions ? shuffle([...arr]) : [...arr]));
+
+    // Grid geometry sized to the LARGEST page so every page lines up identically
+    // (5 fixed rows, columns from the tile count). A tile's cell never changes as
+    // siblings around it are matched — removing one leaves a hole (teacher's spec).
+    const maxPageSize = Math.max(...pages.map(a => a.length));
+    const cols = Math.max(1, Math.ceil(maxPageSize / ROWS));
     const colW = Math.min(15, 90 / cols);
-    const slot = {};      // pairIdx -> {row, col} (1-based, CSS grid-line numbers)
-    const tileColor = {};
-    choiceOrder.forEach((idx, i) => {
-      slot[idx] = { row: Math.floor(i / cols) + 1, col: (i % cols) + 1 };
-      tileColor[idx] = PALETTE[i % PALETTE.length];
-    });
 
     const state = pairs.map(() => ({ solved: false, skipped: false }));
     let finished = false;
+    let curPage = 0;                 // page currently on screen / being played
+    let queue = pageQueues[curPage]; // LIVE working sequence for the current page — front = current prompt
     let penalty = 0;          // total points docked by wrong taps (pointsOff); stays 0 when the feature is off
     let livesLeft = normLives(opt.lives);
     let fitter = null;
+    let pagerEl = null;       // the ‹ Page X/Y › bar (only when PAGE_COUNT > 1)
+    let tileFitRaf = 0;       // rAF handle coalescing per-tile font fitting after --fit settles
     let promptAnim = null;    // the currently-running Animation on .aw-ftm-prompt (enter or crawl)
     let fallbackTimer = null; // setTimeout backup for whichever animation is running (rule: .animate() needs one)
     let prepTimer = null;     // the 3-2-1 prep sequence (count-up mode only)
@@ -277,6 +297,11 @@ const ftmTemplate = {
     }
 
     function renderShell() {
+      // renderShell now runs once per page (mount + every page change), so tear
+      // down the PREVIOUS page's autoFit (its resize listener) / pending tile fit
+      // before building the new one — otherwise they'd pile up.
+      if (fitter) { fitter.destroy(); fitter = null; }
+      if (tileFitRaf) { cancelAnimationFrame(tileFitRaf); tileFitRaf = 0; }
       root.innerHTML = "";
       const card = el("div", "aw-ftm-card");
 
@@ -289,30 +314,115 @@ const ftmTemplate = {
       const grid = el("div", "aw-ftm-grid");
       grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}cqw)`;
       grid.style.gridTemplateRows = `repeat(${ROWS}, min-content)`;
-      choiceOrder.forEach(idx => {
-        if (state[idx].solved || state[idx].skipped) return;
+      // Only THIS page's tiles. Cell = position within the page (explicit
+      // grid-row/column) so matched tiles leave a fixed hole, never reflowing.
+      pages[curPage].forEach((idx, i) => {
+        const st = state[idx];
+        // A matched-and-removed tile (removeCorrects) leaves an empty cell.
+        if (st.solved && removeCorrects) return;
         const tile = el("button", "aw-ftm-tile", escapeHtml(pairs[idx].keyword));
         tile.dataset.idx = String(idx);
-        tile.style.gridRow = String(slot[idx].row);
-        tile.style.gridColumn = String(slot[idx].col);
-        const col = tileColor[idx];
+        tile.style.gridRow = String(Math.floor(i / cols) + 1);
+        tile.style.gridColumn = String((i % cols) + 1);
+        const col = PALETTE[i % PALETTE.length];
         tile.style.setProperty("--ftm-c", col.c);
         tile.style.setProperty("--ftm-d", col.d);
-        tile.onclick = () => choose(idx, tile);
+        if (st.solved) {
+          // matched but kept (removeCorrects:false) — dimmed + permanent check.
+          tile.classList.add("is-locked");
+          tile.disabled = true;
+          tile.append(el("span", "aw-tile-badge", icons.markCheck));
+        } else {
+          // unmatched (incl. a skipped pair's keyword, which lingers as a
+          // distractor) — clickable.
+          tile.onclick = () => choose(idx, tile);
+        }
         grid.append(tile);
       });
       card.append(grid);
+
+      // Pager ‹ Page X / Y › — only when the set spans more than one page.
+      if (PAGE_COUNT > 1) {
+        const pager = el("div", "aw-ftm-pager");
+        const prevBtn = el("button", "aw-ftm-pagebtn", icons.prev);
+        const label = el("span", "aw-ftm-pagelabel", `Page ${curPage + 1} / ${PAGE_COUNT}`);
+        const nextBtn = el("button", "aw-ftm-pagebtn", icons.next);
+        prevBtn.type = "button"; nextBtn.type = "button";
+        prevBtn.disabled = curPage === 0;
+        nextBtn.disabled = curPage === PAGE_COUNT - 1;
+        prevBtn.onclick = () => goPage(curPage - 1);
+        nextBtn.onclick = () => goPage(curPage + 1);
+        pager.append(prevBtn, label, nextBtn);
+        card.append(pager);
+        pagerEl = pager;
+      } else {
+        pagerEl = null;
+      }
+
       root.append(card);
 
-      fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
+      fitter = autoFit(root, card, s => { card.style.setProperty("--fit", s); scheduleTileFit(); }, {
         slack: root.clientWidth * 0.03,
-        measure: () => track.offsetHeight + grid.scrollHeight
+        measure: () => track.offsetHeight + grid.scrollHeight + (pagerEl ? pagerEl.offsetHeight : 0)
       });
+      // Fit the tiles NOW, synchronously (once --fit is set) — don't wait on the
+      // rAF path, which is frozen while the tab isn't compositing. Re-fit once
+      // the web font swaps in (its metrics differ) and, via scheduleTileFit, on
+      // every later resize.
+      fitTiles();
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (!finished) fitTiles(); }).catch(() => {});
 
       ui.setScore(scoreNow());
       updateNav();
       renderLives();
       lockTiles();   // stay locked until the first prompt is ~50% in (startCycle re-arms the unlock)
+    }
+
+    // Per-tile text fit: after the whole-stage --fit settles, shrink each tile's
+    // font (via its own --tfit) until the keyword fits INSIDE the tile both ways,
+    // so a long word never spills outside its box and always stays centred
+    // (teacher 3/8/2026). Coalesced through one rAF so the burst of --fit writes
+    // during autoFit's binary search only triggers a single pass.
+    function scheduleTileFit() {
+      if (tileFitRaf) cancelAnimationFrame(tileFitRaf);
+      tileFitRaf = requestAnimationFrame(() => { tileFitRaf = 0; fitTiles(); });
+    }
+    function fitTiles() {
+      root.querySelectorAll(".aw-ftm-tile").forEach(t => {
+        t.style.setProperty("--tfit", "1");
+        let scale = 1, guard = 0;
+        while (guard++ < 12 &&
+               (t.scrollWidth > t.clientWidth + 1 || t.scrollHeight > t.clientHeight + 1) &&
+               scale > 0.4) {
+          scale -= 0.08;
+          t.style.setProperty("--tfit", scale.toFixed(3));
+        }
+      });
+    }
+
+    // The next page (wrapping) that still has unsolved prompts, or -1 if the
+    // whole activity is done.
+    function nextNonEmptyPage(from) {
+      for (let k = 1; k <= PAGE_COUNT; k++) {
+        const p = (from + k) % PAGE_COUNT;
+        if (pageQueues[p].length) return p;
+      }
+      return -1;
+    }
+
+    // Manual page flip from the pager. Halts the current prompt, shows the target
+    // page and, if it still has prompts, starts its cycle. Flipping to a fully
+    // cleared page just shows its (dimmed) tiles — normal play auto-advances, so
+    // this only happens when the student deliberately flips back.
+    function goPage(p) {
+      if (finished || p < 0 || p >= PAGE_COUNT || p === curPage) return;
+      haltPromptAnim();
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
+      curPage = p;
+      queue = pageQueues[curPage];
+      renderShell();
+      if (queue.length) startCycle();
     }
 
     // Hearts live in the top bar (ui.livesSlot), just left of the score — same
@@ -389,7 +499,15 @@ const ftmTemplate = {
     // edge. Only called once the PREVIOUS prompt is fully gone.
     function startCycle() {
       if (finished) return;
-      if (!queue.length) { armFallback(() => finish("complete"), 400); return; }
+      // Current page cleared? Move to the next page that still has prompts (and
+      // re-render for it), or finish once every page is done (teacher 3/8/2026).
+      if (!queue.length) {
+        const np = nextNonEmptyPage(curPage);
+        if (np < 0) { armFallback(() => finish("complete"), 400); return; }
+        curPage = np;
+        queue = pageQueues[curPage];
+        renderShell();
+      }
       const promptEl = root.querySelector(".aw-ftm-prompt");
       if (!promptEl) return;
       promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
@@ -623,7 +741,9 @@ const ftmTemplate = {
         // ticks the score up mid-flight with a pulse, then continues.
         const promptEl = root.querySelector(".aw-ftm-prompt");
         haltPromptAnim();
-        flyPromptToScore(promptEl, () => { if (!queue.length) finish("complete"); else startCycle(); });
+        // startCycle() auto-advances to the next page (or finishes) when this
+        // page's queue is now empty — see its top-of-function guard.
+        flyPromptToScore(promptEl, () => startCycle());
       } else {
         // Wrong tap (teacher's spec, 1/8): the TAPPED tile stays exactly where
         // it is — a ✗ flies up then fades, but the tile never moves or vanishes
@@ -649,8 +769,7 @@ const ftmTemplate = {
         dropOrRequeue(target);
         exitPromptThenCall(() => {
           if (outOfLives) finish("gameover");
-          else if (!queue.length) finish("complete");
-          else startCycle();
+          else startCycle();   // auto-advances to the next page or finishes when the page is cleared
         });
       }
     }
@@ -706,6 +825,7 @@ const ftmTemplate = {
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
       if (fitter) fitter.destroy();
+      if (tileFitRaf) cancelAnimationFrame(tileFitRaf);
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (prepTimer) clearTimeout(prepTimer);
       if (gateTimer) clearTimeout(gateTimer);

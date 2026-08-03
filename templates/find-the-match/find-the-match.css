@@ -80,6 +80,14 @@
 }
 .aw-ftm-tile {
   position: relative;
+  /* Flex-centre the keyword and clip anything that would spill: combined with
+     the per-tile --tfit shrink (fitTiles in JS) the text is ALWAYS centred and
+     never overflows the tile, however long the word or many the tiles (teacher
+     3/8/2026). A FIXED height (not min-height) gives every tile the same box and
+     makes vertical overflow measurable so fitTiles can shrink to it. */
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  overflow: hidden;
+  height: calc(6.2cqw * var(--fit));
   border-radius: var(--aw-tile-radius, 1.3cqw);
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   /* --aw-tile-fixed forces one flat colour (some themes, e.g. Basic); with
@@ -88,11 +96,12 @@
   background: var(--aw-tile-fixed, var(--ftm-c, #3b82f6));
   box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, var(--ftm-d, #2563eb)));
   color: #fff; font-family: inherit; font-weight: 700;
-  font-size: calc(1.85cqw * var(--fit));
-  line-height: 1.15;
+  /* --tfit = per-tile shrink factor (fitTiles); --fit = whole-stage scale. */
+  font-size: calc(1.85cqw * var(--fit) * var(--tfit, 1));
+  line-height: 1.1;
+  overflow-wrap: anywhere; word-break: break-word;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  padding: calc(1.2cqw * var(--fit)) calc(0.8cqw * var(--fit));
-  min-height: calc(4.2cqw * var(--fit));
+  padding: calc(0.5cqw * var(--fit)) calc(0.7cqw * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, opacity .3s ease, filter .15s ease;
 }
@@ -112,6 +121,30 @@
 .aw-ftm-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
+}
+
+/* PAGER (only when the set spans >1 page) — ‹ Page X / Y ›, sits under the grid
+   inside the stage, so cqw units scale with --fit like everything else. */
+.aw-ftm-pager {
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  gap: calc(1.4cqw * var(--fit));
+  margin-top: calc(1cqw * var(--fit));
+}
+.aw-ftm-pagebtn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: calc(3.4cqw * var(--fit)); height: calc(3.4cqw * var(--fit));
+  border: none; border-radius: 50%;
+  background: var(--aw-muted, #64748b); color: #fff; cursor: pointer;
+  transition: filter .12s ease, opacity .12s ease;
+}
+.aw-ftm-pagebtn svg { width: 58%; height: 58%; }
+.aw-ftm-pagebtn:hover:not(:disabled) { filter: brightness(1.12); }
+.aw-ftm-pagebtn:disabled { opacity: .3; cursor: default; }
+.aw-ftm-pagelabel {
+  font-weight: 800; font-size: calc(1.9cqw * var(--fit));
+  color: var(--aw-question-fill, var(--aw-text));
+  min-width: calc(12cqw * var(--fit)); text-align: center;
 }
 
 /* Teacher's spec: there's no "previous question" to go back to (the prompt
