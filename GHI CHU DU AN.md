@@ -5,6 +5,61 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 48 (3/8/2026, v0.9.22) — NÚT IMPORT: tạo hàng loạt act từ "gói JSON" (nền tảng taoactaw, Phần A) — 🟢 CHỜ THẦY ĐĂNG NHẬP TEST → COMMIT
+
+**Bối cảnh:** thầy muốn tính năng "taoactaw" — đọc file .xlsm bài học (giống skill `taoact` cho Wordwall) rồi tạo act
+trong thư viện AWord. Chốt cách làm (2 vòng hỏi): **(1) xây nút Import NGAY TRONG app AWord** (bền, không phụ thuộc
+tự động hoá trình duyệt, dùng lại mãi) — đây là **Phần A** đợt này; **(2) mỗi bộ dữ liệu chỉ tạo ÍT act gốc**, thầy
+dùng Change Template (Đợt 47) đổi game tại lớp. Phần B (skill đọc Excel → gói JSON) làm sau.
+
+**Đã nghiên cứu 2 họ file mẫu của thầy** (ghi để Phần B dùng):
+- File **listening** `LSA2-S1.T4.P4-5.xlsm`: `Quiz1`/`Quiz2` CÓ dữ liệu (nghe hiểu), `Reading Acts` RỖNG; tên sheet chữ thường.
+- File **reading** `DS-S2.I1.W3 ... SEEDS TURN INTO TREES.xlsm`: `READINGACT1`/`READINGACT2` CÓ dữ liệu, `QUIZ1/2` RỖNG; tên sheet HOA.
+  Mỗi READINGACT có **4 vùng cố định**: TRUE/FALSE (dòng 2–16, cột B=đúng/C=sai) · FILLING (19–38, B=đáp án/C=câu có `___`) ·
+  READING QUIZ (41–70, B=câu hỏi, C=đáp án A LUÔN đúng, D–F=nhiễu) · QUESTION/ANSWER (72+, **BỎ** — câu mở).
+  → **Logic `read_ra` của taoact đọc thẳng file reading, khớp 100%**. WORDTABLE (cột D/E,H/I,L/M,P/Q,S) cũng khớp taoact.
+- ⚠️ Bài học cho Phần B: parser phải **dò tên sheet không phân biệt hoa/thường** + **bỏ sheet rỗng** (tự nhận file là reading hay listening).
+
+**Bản đồ Excel → act gốc AWord** (FILLING→Find the match theo thầy chốt): vocab ENG1/ENG2/VI1/VI2 → **Find the match**;
+IPA → **Speaking cards**; TRUE/FALSE (đúng→answer:true, sai→answer:false) → **True or false**; FILLING → **Find the match**
+(keyword=đáp án, definition=câu có chỗ trống); READING QUIZ → **Quiz**. v1→tên `<source> / …`, v2→`<source> HW / …`.
+
+**Việc đã làm (Phần A):**
+1. **`core/store.js`** (sửa core, additive): thêm **`importBundle(bundle, {parentId})`**. `bundle = {folder?, activities:[{type,title,theme?,instruction?,options?,content}]}`.
+   Nếu có `folder` → tạo/**tái dùng** subfolder cùng tên dưới (activities, parentId) rồi `saveActivity` từng act vào đó; không có folder → vào thẳng parentId.
+   Act **trùng tên bị BỎ QUA** (bắt `aw/duplicate-name`) → chạy Import lại AN TOÀN, không nhân đôi. Trả `{folderId, folderName, created, skipped, errors}`.
+2. **`main.js`**: import `importBundle`; thêm nút **Import** trên thanh công cụ (chỉ trong Activities, không ở thùng rác, cạnh New folder);
+   `importFlow()` = hộp thoại (dùng `openModal`): textarea dán JSON + chọn file .json (FileReader) + nút Import → parse → `importBundle({parentId: state.folderId})`
+   → hiện báo cáo "Created N … in "folder", skipped M" + `render()` làm mới thư viện. Lỗi JSON/đăng nhập hiện tại chỗ.
+
+**Hợp đồng "gói act" JSON** (Phần B sẽ sinh ra đúng dạng này):
+```json
+{ "folder": "DS-S2.I1.W3",
+  "activities": [ { "type":"find_the_match", "title":"DS-S2.I1.W3 / ENG1", "theme":"classic",
+                    "options":{…}, "content":{ "pairs":[{ "keyword":"SAPLING", "definition":"A very young tree…" }, …] } }, … ] }
+```
+
+**Kiểm chứng (dev server 5510, KHÔNG cần login):**
+- Prototype mapping (Python) đọc file reading → bundle **11 act** đúng thiết kế (4 Find the match vocab · IPA Speaking cards · TF×2 · FILLING×2 Find the match · QUIZ×2). Số item khớp: vocab 100, TF 30 (15 đúng+15 sai), FILLING 20, QUIZ 30.
+- Harness gốc-web nạp bundle → mỗi act `ensureTemplate`+`startGame` bằng engine THẬT → **11/11 mount, 0 lỗi console**.
+- Nạp `index.html`: `main.js`+`store.js` parse & chạy sạch (0 lỗi) → cú pháp OK. (2 file harness/bundle tạm ĐÃ XOÁ.)
+- `git status`: đúng 2 file (`core/store.js`, `main.js`).
+
+**CHƯA test được (cần thầy):** bấm nút Import thật → lưu Firestore, vì trang thư viện sau **popup đăng nhập Google không tự động hoá được**.
+
+**Phần A:** thầy đã test nút Import (gói "IMPORT TEST" 2 act) — **CHẠY OK** (3/8/2026). Chờ **commit + push** cùng đợt.
+
+**Phần B — skill `taoactaw` ĐÃ XONG (3/8/2026):** skill self-contained (kiểu taoact) đọc .xlsm → sinh gói JSON đúng hợp đồng
+`importBundle`, ghi ra `D:\OTHERS\CLAUDE\aword_bundle.json`; thầy Import vào AWord. **Tự nhận diện** reading (READINGACT1/2)
+hay listening (Quiz1/2), **bỏ sheet rỗng**, tên sheet không phân biệt hoa/thường. Bản đồ: ENG1/ENG2/VI1/VI2→Find the match ·
+IPA→Speaking cards · Quiz1/2 & READING QUIZ→Quiz · TRUE/FALSE→True or false · FILLING→**Find the match** (thầy chốt) ·
+READINGACT1=v1 (`/ …`), READINGACT2=v2 (`HW / …`). Kiểm chứng: chạy ĐÚNG code nhúng trong SKILL.md trên cả 2 file thật
+→ reading 11 act, listening 7 act; 18/18 act mount engine 0 lỗi (harness). Skill nằm ở thư mục skills phiên này +
+đã đóng gói `taoactaw.skill` gửi thầy bấm "Save skill" để cài vĩnh viễn. **VIỆC ĐANG CHỜ:** thầy chạy thử skill trên 1 lesson
+thật + Import → duyệt → coi như trọn taoactaw. (Nếu AWord đổi schema options thì cập nhật 4 preset `OPT_*` trong skill.)
+
+---
+
 ## Đợt 47 (3/8/2026, v0.9.21) — ĐỔI TEMPLATE GIỮA LÚC CHƠI ("Change template") ⭐ CÓ SỬA CORE ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
 **Yêu cầu của thầy:** đang chơi 1 bộ (vd Anagram) thì bấm 1 nút để **đổi sang game khác chơi tiếp CHÍNH

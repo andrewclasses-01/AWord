@@ -28,7 +28,7 @@ import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./c
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
-  setFolderColor, folderCounts,
+  setFolderColor, folderCounts, importBundle,
   resetCache
 } from "./core/store.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
@@ -430,6 +430,11 @@ function toolbar() {
     const newFolder = el("button", "aw-btn aw-fm-newbtn", "+ New folder");
     newFolder.type = "button"; newFolder.onclick = newFolderFlow;
     left.append(newFolder);
+  }
+  if (state.view !== "trash" && state.root === "activities") {
+    const imp = el("button", "aw-btn aw-fm-newbtn", "Import");
+    imp.type = "button"; imp.onclick = importFlow;
+    left.append(imp);
   }
   const bin = el("button", "aw-btn aw-fm-newbtn" + (state.view === "trash" ? " is-on" : ""),
     state.view === "trash" ? "← Back" : "Recycle bin");
@@ -867,6 +872,72 @@ async function createBlankAct(type) {
 function newFolderFlow() {
   openTextModal("New folder", "Folder name", "", async name => {
     if (name.trim()) { await createFolder(state.root, state.folderId, name.trim()); render(); }
+  });
+}
+
+// "Import" -> paste or load a JSON "bundle" ({folder?, activities:[...]}) made by
+// a generator (e.g. the taoactaw skill reading a lesson .xlsm) and bulk-create
+// the acts. They land in the current folder, or in the bundle's named subfolder
+// inside it. Acts whose title already exists are skipped, so re-import is safe.
+function importFlow() {
+  openModal("Import activities", (body, close) => {
+    body.append(el("div", "aw-pick-hint",
+      "Paste an activity bundle (JSON) or choose a .json file. Acts already in the folder are skipped."));
+
+    const ta = el("textarea", "aw-import-text");
+    ta.placeholder = '{ "folder": "DS-S2.I1.W3", "activities": [ … ] }';
+    ta.spellcheck = false;
+    ta.style.cssText = "width:100%;min-height:170px;box-sizing:border-box;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:13px;";
+    body.append(ta);
+
+    const file = el("input"); file.type = "file"; file.accept = ".json,application/json";
+    file.style.cssText = "display:block;margin-top:8px;";
+    file.onchange = () => {
+      const f = file.files && file.files[0];
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => { ta.value = String(r.result || ""); };
+      r.readAsText(f);
+    };
+    body.append(file);
+
+    const err = el("div", "aw-ed-error", ""); err.style.display = "none";
+    body.append(err);
+    const report = el("div", "aw-import-report", ""); report.style.display = "none";
+    report.style.cssText = "margin-top:8px;font-size:14px;line-height:1.5;";
+    body.append(report);
+
+    const actions = el("div", "aw-modal-actions");
+    const cancel = el("button", "aw-btn", "Close"); cancel.type = "button"; cancel.onclick = close;
+    const ok = el("button", "aw-btn aw-btn-primary", "Import"); ok.type = "button";
+    ok.onclick = async () => {
+      err.style.display = "none"; report.style.display = "none";
+      let bundle;
+      try { bundle = JSON.parse(ta.value); }
+      catch (e) { err.style.display = ""; err.textContent = "That is not valid JSON."; return; }
+      if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
+        err.style.display = ""; err.textContent = 'The bundle needs a non-empty "activities" list.'; return;
+      }
+      ok.disabled = true; ok.textContent = "Importing…";
+      try {
+        const res = await importBundle(bundle, { parentId: state.folderId });
+        report.style.display = "";
+        report.innerHTML = "";
+        report.append(el("div", "", `Created ${res.created} ${res.created === 1 ? "activity" : "activities"}` +
+          (res.folderName ? ` in “${escapeText(res.folderName)}”` : "") +
+          (res.skipped ? `, skipped ${res.skipped} (already there)` : "") + "."));
+        (res.errors || []).slice(0, 8).forEach(m => report.append(el("div", "aw-ed-error", escapeText(m))));
+        ok.textContent = "Import"; ok.disabled = false;
+        cancel.textContent = "Done";
+        render();   // refresh the library behind the modal so the new folder/acts appear
+      } catch (e) {
+        ok.disabled = false; ok.textContent = "Import";
+        err.style.display = "";
+        err.textContent = e?.code === "aw/signed-out" ? "Please sign in first." : (e?.message || "Import failed.");
+      }
+    };
+    actions.append(cancel, ok);
+    body.append(actions);
   });
 }
 function renameFlow(node) {

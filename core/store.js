@@ -311,6 +311,56 @@ export async function saveActivity(activity, opts = {}) {
 // Back-compat alias used by Khối 1 callers.
 export async function getActivity(id) { return (await readAll())[id] || null; }
 
+// ---- BULK IMPORT ----
+// Create many acts at once from a "bundle" produced by a generator (e.g. the
+// taoactaw skill reading a lesson .xlsm). Shape:
+//   { folder?: "Folder name", activities: [ {type,title,theme?,instruction?,options?,content}, ... ] }
+// If `folder` is given, a subfolder of that name is created (or REUSED if it
+// already exists) under (activities root, opts.parentId) and the acts go inside;
+// otherwise the acts go straight into opts.parentId. Acts whose title already
+// exists in the target folder are SKIPPED (so re-running an import is safe and
+// never makes duplicates). Returns { folderId, folderName, created, skipped, errors }.
+export async function importBundle(bundle, opts = {}) {
+  const root = "activities";
+  const activities = Array.isArray(bundle?.activities) ? bundle.activities : [];
+  let parentId = opts.parentId ?? null;
+  let folderName = null;
+
+  const wanted = (bundle?.folder || "").toString().trim();
+  if (wanted) {
+    const map = await readAll();
+    const existing = Object.values(map).find(n =>
+      n.kind === "folder" && !n.trashed && n.root === root &&
+      (n.parentId ?? null) === (parentId ?? null) && sameName(n.name, wanted));
+    if (existing) { parentId = existing.id; folderName = existing.name; }
+    else { const f = await createFolder(root, parentId, wanted); parentId = f.id; folderName = f.name; }
+  }
+
+  const result = { folderId: parentId, folderName, created: 0, skipped: 0, errors: [] };
+  for (const raw of activities) {
+    if (!raw || typeof raw.type !== "string" || !raw.content || typeof raw.content !== "object") {
+      result.skipped++; result.errors.push("An entry with no type/content was skipped."); continue;
+    }
+    const activity = {
+      schemaVersion: 1,
+      type: raw.type,
+      title: (raw.title || "Untitled").toString(),
+      instruction: raw.instruction || "",
+      theme: raw.theme || "classic",
+      options: (raw.options && typeof raw.options === "object") ? raw.options : {},
+      content: raw.content
+    };
+    try {
+      await saveActivity(activity, { root, parentId });
+      result.created++;
+    } catch (e) {
+      if (e && e.code === "aw/duplicate-name") result.skipped++;
+      else result.errors.push(`${activity.title}: ${e?.message || e}`);
+    }
+  }
+  return result;
+}
+
 // Counts shown on a folder card:
 //   folders = number of DIRECT child folders (immediate only)
 //   acts    = TOTAL activities anywhere inside (recursive, all depths)
