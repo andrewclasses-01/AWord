@@ -16,6 +16,14 @@
   touch-action: manipulation;
 }
 
+/* Whack-a-mole never steps through questions with the arrows, so hide the
+   engine's Previous / Next buttons. SCOPED to a live whack-a-mole stage (the
+   scene is a direct child of .aw-playarea) — template CSS stays in the document
+   after "Change template", so a bare `.aw-nav{display:none}` would go on hiding
+   the arrows in the game we switch to. Hiding only `.aw-navbtn` (never the
+   `.aw-nav` wrapper) keeps the bottom bar's 3-column grid intact. */
+.aw-playarea:has(> .aw-wam-scene) ~ .aw-bottombar .aw-navbtn { display: none; }
+
 /* ---------- WORLD (everything zooms as one unit for the intro) ---------- */
 .aw-wam-world {
   position: absolute;
@@ -203,6 +211,33 @@
 }
 .aw-wam-hole.is-up .aw-wam-mole { transform: translate(-50%, -2%); }
 .aw-wam-hole.is-hit .aw-wam-mole { transform: translate(-50%, 8%) scaleY(.92); }
+/* WRONG HIT -> the dizzy mole staggers in place for the whole freeze penalty
+   before it finally ducks. This is an ANIMATION (not a transition) because the
+   .is-hit rule above already pins `transform`, and per CSS an animation holding
+   a property always beats a transition on it (the Open-the-box trap). So every
+   keyframe has to carry the .is-hit offset itself: translate(-50%, 8%) scaleY(.92). */
+.aw-wam-hole.is-dizzy .aw-wam-mole {
+  transform-origin: 50% 92%;            /* swings about its base, like a groggy stagger */
+  animation: aw-wam-dizzyshake .46s ease-in-out infinite;
+}
+@keyframes aw-wam-dizzyshake {
+  0%   { transform: translate(-50%, 8%) scaleY(.92) rotate(0deg); }
+  15%  { transform: translate(-52.5%, 8%) scaleY(.92) rotate(-7deg); }
+  35%  { transform: translate(-47.5%, 7.4%) scaleY(.92) rotate(6.5deg); }
+  55%  { transform: translate(-52%, 8.2%) scaleY(.92) rotate(-5deg); }
+  75%  { transform: translate(-48.5%, 7.6%) scaleY(.92) rotate(4deg); }
+  100% { transform: translate(-50%, 8%) scaleY(.92) rotate(0deg); }
+}
+/* the speech bubble wobbles along with its mole (same beat, gentler) */
+.aw-wam-hole.is-dizzy .aw-wam-bubble { animation: aw-wam-dizzybubble .46s ease-in-out infinite; }
+@keyframes aw-wam-dizzybubble {
+  0%   { transform: translateX(-50%) scale(1) rotate(0deg); }
+  15%  { transform: translateX(-52%) scale(1) rotate(-3.5deg); }
+  35%  { transform: translateX(-48%) scale(1) rotate(3deg); }
+  55%  { transform: translateX(-51.5%) scale(1) rotate(-2.5deg); }
+  75%  { transform: translateX(-49%) scale(1) rotate(2deg); }
+  100% { transform: translateX(-50%) scale(1) rotate(0deg); }
+}
 .aw-wam-holefront {
   position: absolute;
   left: 50%; bottom: 0;

@@ -554,14 +554,14 @@ const wamTemplate = {
       if (h.status === "empty" || h.status === "ducking") return;
       clearTimer(h.duckT); h.duckT = null;
       h.status = "ducking";
-      h.hole.classList.remove("is-up", "is-crate");
+      h.hole.classList.remove("is-up", "is-crate", "is-dizzy");
       if (wasMole && !h.isCrate) { wamSound.disappear(); combo = 0; }
       h.freeT = later(() => freeHole(h), 300);
     }
     function freeHole(h) {
       clearTimer(h.freeT); h.freeT = null;
       h.status = "empty"; h.item = null; h.isCrate = false; h.isCorrect = false;
-      h.hole.classList.remove("is-up", "is-hit", "is-crate");
+      h.hole.classList.remove("is-up", "is-hit", "is-crate", "is-dizzy");
       h.bubbleText.textContent = "";
     }
 
@@ -619,8 +619,12 @@ const wamTemplate = {
           frozen = true;
           floatText(h, "WAIT…", "is-minus");
           holes.forEach(o => { if (o !== h && (o.status === "up" || o.status === "rising")) duck(o, false); });
+          // ...and the mole itself staggers about, dizzy, for the whole penalty —
+          // it only ducks once the freeze is over. Starts with the dizzy sprite
+          // (swapped 150ms after the hit) so the wobble matches the picture.
+          later(() => { if (h.status === "hit") h.hole.classList.add("is-dizzy"); }, 150);
           h.freeT = later(() => {
-            h.hole.classList.remove("is-up");
+            h.hole.classList.remove("is-dizzy", "is-up");
             later(() => freeHole(h), 300);
             frozen = false;
           }, PENALTY_FREEZE_MS);
@@ -700,7 +704,7 @@ const wamTemplate = {
       if (spawnTimer) clearTimer(spawnTimer);
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
       timers.forEach(t => clearTimeout(t)); timers.clear();
-      holes.forEach(h => { h.hole.classList.remove("is-up", "is-crate"); });
+      holes.forEach(h => { h.hole.classList.remove("is-up", "is-crate", "is-dizzy"); });
 
       // brief score tally, then hand off to the engine's celebration/summary
       const tally = el("div", "aw-wam-tally", "0");

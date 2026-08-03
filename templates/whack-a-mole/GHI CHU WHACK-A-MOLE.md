@@ -1,10 +1,52 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (3/8/2026, **Đợt 45, v0.9.19** — nâng cấp LỚN
-7 đợt tinh chỉnh theo yêu cầu thầy; thầy duyệt → commit + push + live). `built:true` trong
-`core/catalog.js` từ Đợt 32.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (4/8/2026, **Đợt 57, v0.9.32** — 2 tinh chỉnh
+thầy yêu cầu; thầy duyệt → commit + push + live). `built:true` trong `core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`. **KHÔNG đụng core.**
+
+## ⭐ ĐỢT 57 (4/8/2026, v0.9.32) — MOLE RUNG LẮC KHI ĐẬP SAI + ẨN NÚT NEXT/BACK
+
+Thầy gửi 2 yêu cầu 1 lượt. Chỉ đụng **2 file** `whack-a-mole.js` + `whack-a-mole.css`. **KHÔNG đụng core**,
+không đụng game khác. Đã tự test trên trình duyệt thật (devserver + `javascript_tool`), **0 lỗi console**.
+
+### 1. Đập SAI → mole rung lắc suốt 4s phạt rồi mới thụt xuống
+Trước đây trong 4s "đông cứng" (`PENALTY_FREEZE_MS`) mole sai chỉ đứng im mặt choáng rồi thụt — thầy muốn
+nó **rung rung lắc lắc** cho sinh động, hết 4s mới chui xuống.
+
+- **JS** (`onWhack`, nhánh sai, chỉ khi CÒN mạng): sau **150ms** (đúng lúc sprite đổi `tapped` → `dizzy`)
+  thêm class **`is-dizzy`** vào hố; khi hết `PENALTY_FREEZE_MS` thì `remove("is-dizzy","is-up")` → mole
+  thụt như cũ. Dọn `is-dizzy` ở **cả 3 chỗ** `duck()` · `freeHole()` · `endGame()` để không bao giờ kẹt rung.
+  Nhánh **hết mạng KHÔNG rung** (game over sau 600ms, rung thành thừa).
+- **CSS**: `.aw-wam-hole.is-dizzy .aw-wam-mole` chạy `@keyframes aw-wam-dizzyshake` (0,46s, `infinite`),
+  `transform-origin: 50% 92%` → lắc quanh **gốc chân** như người say, xoay **±6,5°** + lắc ngang
+  (−47,5% ↔ −52,5%). Bong bóng chữ lắc **cùng nhịp nhưng nhẹ hơn** (`aw-wam-dizzybubble`, ±3,5°) cho ăn khớp.
+
+> ⚠️ **BẪY (giống hệt bẫy Open-the-box)**: PHẢI viết bằng `@keyframes`, KHÔNG dùng `transition`. Rule
+> `.aw-wam-hole.is-hit .aw-wam-mole` đã **ghim sẵn `transform`**, mà theo luật CSS một `animation` đang giữ
+> một thuộc tính LUÔN thắng `transition` nhắm cùng thuộc tính đó. Hệ quả: **mỗi keyframe phải tự mang lại
+> offset của `.is-hit`** — `translate(-50%, 8%) scaleY(.92)` — nếu quên, mole sẽ nhảy về vị trí gốc lúc rung.
+
+### 2. Ẩn nút Next / Back (không cần cho game này)
+Thêm **đúng 1 dòng** CSS:
+```css
+.aw-playarea:has(> .aw-wam-scene) ~ .aw-bottombar .aw-navbtn { display: none; }
+```
+- **Cố ý KHÔNG dùng `.aw-nav { display:none }` trần như open-the-box.css**: từ v0.9.7 CSS template được
+  `ensureTemplate()` chèn vào document và **Ở LẠI VĨNH VIỄN**; sau khi "Change template" (Đợt 47) sang game
+  khác, rule trần đó vẫn ẩn mũi tên của game mới. Selector scoped theo `.aw-wam-scene` (con TRỰC TIẾP của
+  `.aw-playarea`) nên hết whack-a-mole là hết tác dụng. Khuôn này copy từ true-false / find-the-match.
+- **Chỉ ẩn `.aw-navbtn`, KHÔNG ẩn wrapper `.aw-nav`**: `.aw-bottombar` là lưới 3 cột, bỏ hẳn phần tử giữa
+  sẽ làm 2 cụm còn lại dồn sai chỗ (bẫy đã ghi ở open-the-box).
+
+### Cách tự kiểm (pane trình duyệt bị ẩn → **animation bị đóng băng**, không đo trực tiếp được)
+Bẫy throttle: cửa sổ không hiển thị thì Chromium ngưng compositing, `getComputedStyle` lấy mẫu theo thời
+gian ra **y hệt nhau** trông như animation chết. Cách đo đúng: lấy `el.getAnimations()[0]` rồi **tự đặt
+`anim.currentTime`** từng mốc và đọc `transform` — `getComputedStyle` ép style recalc nên ra giá trị thật.
+Kết quả đo: mole `rotate` 0° → −6,4° → +6° → −4,6° → +3,7° → 0° kèm lắc ngang; bong bóng ±3,5° cùng nhịp;
+class đúng vòng đời (`is-up is-hit is-dizzy` tới ~3,9s, tới 4,0s còn `is-hit` + mole đã thụt); nút mũi tên
+`display:flex` ở màn READY (chưa có scene) → `display:none` khi vào game (chứng minh scoping chạy đúng);
+lưới thanh dưới vẫn `423px / 61,8px / 423px`.
 
 Game whack-a-mole kiểu Wordwall, **đồ họa + âm thanh Wild West** THẬT lấy từ act mẫu Wordwall
 (https://wordwall.net/resource/116864290/whack-a-mole). Tự chứa hoàn toàn (`./img`, `./sounds`).

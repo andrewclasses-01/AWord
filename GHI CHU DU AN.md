@@ -5,6 +5,47 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 57 (4/8/2026, v0.9.32) — WHACK-A-MOLE: mole rung lắc khi đập sai + ẩn nút Next/Back — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG ĐỤNG CORE.
+
+**Chỉ đụng 2 file `templates/whack-a-mole/whack-a-mole.js` + `.css`** (+ ghi chú). Không đụng core, không
+đụng game khác. Thầy gửi 2 yêu cầu 1 lượt. Đã tự test trình duyệt thật (devserver + `javascript_tool`),
+0 lỗi console.
+
+1. **Đập SAI → mole rung lắc suốt 4s phạt rồi mới thụt xuống.** Trước đây trong 4s "đông cứng"
+   (`PENALTY_FREEZE_MS`) mole sai chỉ đứng im mặt choáng. Nay: sau 150ms (đúng lúc sprite đổi `tapped` →
+   `dizzy`) hố được thêm class **`is-dizzy`** → mole lắc quanh **gốc chân** (`transform-origin: 50% 92%`),
+   xoay **±6,5°** + lắc ngang, nhịp 0,46s lặp; **bong bóng chữ lắc cùng nhịp nhẹ hơn ±3,5°**. Hết 4s bỏ
+   class → thụt như cũ. Dọn `is-dizzy` ở cả `duck()` · `freeHole()` · `endGame()` để không kẹt rung. Nhánh
+   **hết mạng không rung** (game over sau 600ms).
+   > ⚠️ **BẪY (y hệt bẫy Open-the-box)**: phải viết bằng `@keyframes`, KHÔNG `transition` — rule
+   > `.is-hit .aw-wam-mole` đã ghim sẵn `transform`, mà animation giữ một thuộc tính LUÔN thắng transition
+   > nhắm cùng thuộc tính đó. Nên **mỗi keyframe phải tự mang lại offset `.is-hit`**
+   > (`translate(-50%, 8%) scaleY(.92)`), quên là mole nhảy về vị trí gốc lúc rung.
+
+2. **Ẩn nút Next/Back** (game này không duyệt câu bằng mũi tên) — đúng 1 dòng CSS:
+   `.aw-playarea:has(> .aw-wam-scene) ~ .aw-bottombar .aw-navbtn { display: none; }`.
+   **Cố ý KHÔNG dùng `.aw-nav{display:none}` trần như `open-the-box.css`**: từ v0.9.7 CSS template được
+   `ensureTemplate()` chèn vào document và **ở lại vĩnh viễn**, nên sau khi "Change template" (Đợt 47) sang
+   game khác, rule trần đó vẫn ẩn mũi tên của game mới. Selector scoped theo `.aw-wam-scene` (con trực tiếp
+   của `.aw-playarea`) thì hết whack-a-mole là hết tác dụng — khuôn copy từ true-false / find-the-match.
+   Và **chỉ ẩn `.aw-navbtn`, không ẩn wrapper `.aw-nav`** vì `.aw-bottombar` là lưới 3 cột, bỏ hẳn phần tử
+   giữa sẽ làm 2 cụm còn lại dồn sai chỗ.
+
+**Cách đo khi pane trình duyệt bị ẩn** (bài học dùng lại được cho mọi template): cửa sổ không hiển thị thì
+Chromium ngưng compositing → lấy mẫu `getComputedStyle` theo thời gian ra **y hệt nhau**, trông như animation
+chết dù nó chạy tốt. Đo đúng: `el.getAnimations()[0]` rồi **tự đặt `anim.currentTime`** từng mốc và đọc
+`transform` (`getComputedStyle` ép style recalc → giá trị thật). Kết quả: mole `rotate` 0° → −6,4° → +6° →
+−4,6° → +3,7° → 0°; bong bóng ±3,5° cùng nhịp; class đúng vòng đời (tới ~3,9s còn `is-up is-hit is-dizzy`,
+tới 4,0s còn `is-hit` + mole đã thụt); mũi tên `display:flex` ở màn READY → `display:none` khi vào game
+(chứng minh scoping đúng); lưới thanh dưới vẫn `423px / 61,8px / 423px`.
+
+**File đổi**: `templates/whack-a-mole/whack-a-mole.js` + `.css` + `GHI CHU WHACK-A-MOLE.md`. ⚠️ Cây làm việc
+lúc commit còn thay đổi CHƯA XONG của 2 phiên song song (find-the-match, open-the-box) — đã **chỉ add file
+whack-a-mole + 2 docs chung**, cố ý không đụng của họ. Chi tiết đầy đủ: `templates/whack-a-mole/GHI CHU
+WHACK-A-MOLE.md` (mục ⭐ ĐỢT 57).
+
+---
+
 ## Đợt 56 (3/8/2026, v0.9.31) — TYPE THE ANSWER: bỏ checkbox Minus points, thêm Lives, sửa 3 lỗi nav/auto-advance ⭐ CÓ SỬA CORE (1 chỗ nhỏ) — ✅ THẦY DUYỆT → COMMIT + PUSH
 
 **Chỉ đụng Type the answer + 1 fix core nhỏ, không đụng game khác.** Thầy gửi 5 yêu cầu 1 lượt qua chat
