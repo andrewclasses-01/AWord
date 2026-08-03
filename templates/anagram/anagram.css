@@ -192,6 +192,13 @@
   text-shadow: 0 1px 2px rgba(0,0,0,.2);
   box-shadow: 0 4px 0 rgba(0,0,0,.2);
   z-index: 50; pointer-events: none;
+  /* Promotes this clone to its own compositor layer proactively, so the
+     rounded-corner clip is already established on the FIRST painted frame —
+     without this, the transform animation starting right after insertion can
+     race the layer promotion and flash one raw square-cornered frame
+     (teacher-reported, 3/8/2026; paired with the `void clone.offsetWidth`
+     forced reflow in anagram.js). */
+  will-change: transform;
 }
 
 /* ---------- "fly to score" wrapper (fixed-position, JS-sized/positioned) -----
@@ -229,6 +236,12 @@
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* ---------- Lives slider (Options panel) — v0.9.29, same look as
+   true-false.css's aw-tf-lives* (red = "this costs you something"). ---------- */
+.aw-anagram-livesrow { display: flex; align-items: center; gap: 10px; }
+.aw-anagram-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; }
+.aw-anagram-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
 
 /* =============================================================
    CONTENT EDITOR (anagram-editor.js) — Word/Clue table, Wordwall-style.

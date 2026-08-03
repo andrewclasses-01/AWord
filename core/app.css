@@ -507,9 +507,11 @@ body {
 }
 .aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
 /* Shared numeric slider for central options (e.g. "Points off"). Template-local
-   sliders keep their own prefixed classes; this is only for engine-built groups. */
-.aw-opt-slider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; cursor: pointer; }
-.aw-opt-slidval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #57667a; }
+   sliders keep their own prefixed classes; this is only for engine-built groups.
+   Red (teacher, 3/8/2026) — it's specifically a wrong-answer deduction, same red
+   as the per-template Lives sliders (e.g. true-false.css's #ef4444). */
+.aw-opt-slider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; cursor: pointer; }
+.aw-opt-slidval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #ef4444; }
 .aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; }
 /* "Count down" + its m/s time fields kept together on one line so the fields
    sit to the RIGHT of the button instead of wrapping onto the next row. */

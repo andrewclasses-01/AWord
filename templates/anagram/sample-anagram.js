@@ -18,6 +18,7 @@ export const activity = {
     allCaps: true,
     allowSkip: true,
     pointsOff: 0,
+    lives: 0,
     showAnswers: true
   },
   content: {

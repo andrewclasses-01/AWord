@@ -5,6 +5,54 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 55 (3/8/2026, v0.9.29) — ANAGRAM: 8 ĐIỂM SỬA/YÊU CẦU THẦY GỬI 1 LƯỢT ⭐ CÓ SỬA CORE (2 chỗ nhỏ) — ✅ THẦY DUYỆT → COMMIT + PUSH
+
+**Chỉ đụng Anagram + 2 fix core nhỏ, không đụng game khác.** Thầy chơi bản live rồi gửi 8 điểm 1 lượt.
+Đã tự test qua trình duyệt thật (devserver + DOM/PointerEvent giả lập thật, không đoán qua ảnh).
+
+1. **Chống flash góc vuông khi chữ bay** — clone bay (`.aw-anagram-flytile`, dùng chung
+   `flyLetter`/`flyTileClone`) được `document.body.append()` rồi `.animate()` NGAY, có thể lộ 1 khung hình
+   chưa bo góc trước khi trình duyệt thăng cấp layer GPU. Thêm `will-change: transform` (CSS) +
+   `void clone.offsetWidth` (ép 1 lần vẽ đồng bộ trước `.animate()`, cả 2 hàm). Lỗi cấp khung hình
+   (compositor), không đo được bằng `getComputedStyle` (đã poll mỗi 20ms suốt chuyến bay, `border-radius`
+   luôn ra "12px" — đúng giá trị KHAI BÁO, không phải khung hình THỰC TẾ) — áp dụng cách sửa chuẩn cho lớp
+   lỗi này, **thầy tự xác nhận lại bằng mắt**.
+2. **⭐ SỬA BUG THẬT Ở CORE** (`core/engine.js`, ảnh hưởng MỌI template): `celebrate()` set
+   `navWrap.style.visibility="hidden"` lúc ăn mừng nhưng KHÔNG BAO GIỜ trả lại — vì overlay ăn mừng không
+   có nền đặc (chỉ pháo giấy + chữ), trong ~2s đó thanh dưới (Menu/Sound/Fullscreen) vẫn lộ nhưng nút
+   ‹›+"x of N" biến mất — đúng hiện tượng "đôi khi mất nút Back-Next và số trang". Thêm dòng phục hồi
+   `navWrap.style.visibility=""` khi đóng overlay ăn mừng. Đã test: xong ván → Summary → check
+   `.aw-nav.style.visibility` ra đúng `""` → Start again → nav hiện lại bình thường ngay từ đầu.
+3. **Số điểm bay vào ô điểm quá to** — `flyScoreGain()` co về `scale(0.4)` CỐ ĐỊNH bất kể `baseSize` (tỉ
+   lệ theo bề ngang khung, có thể rất lớn) → vẫn to hơn nhiều so với chữ điểm thật dù đã co. Sửa: đọc
+   `getComputedStyle(scoreEl).fontSize` làm ĐÍCH, tính `endScale = cỡ đích / baseSize` thay `0.4` cố định.
+4. **& 6. Chữ bé lại khi kéo-đổi-chỗ HOẶC bấm-trả-về-gốc** — `flyTileClone()` (dùng bởi `unplace()` +
+   `swapResultPositions()`) THIẾU `font-size` (khác `flyLetter()` đã có từ trước) → clone rơi về cỡ chữ mặc
+   định kế thừa từ trang. Thêm tham số `fontSize`, 2 nơi gọi đọc `getComputedStyle(ô thật).fontSize` TRƯỚC
+   khi xoá/di chuyển rồi truyền vào. Đã đo bằng PointerEvent giả lập (kéo đổi P↔O, bấm trả 1 ô về gốc): cỡ
+   chữ clone ra ĐÚNG 1 giá trị duy nhất suốt chuyến bay, khớp hệt cỡ ô thật.
+5. **Bấm nhanh liên tục bị delay** — mỗi lần bấm đúng 1 chữ khoá TOÀN BỘ thao tác tiếp theo tới khi hiệu
+   ứng bay ~340ms xong mới mở khoá. Sửa: tách trạng thái game (đã đặt chữ nào, `nextPos`, khoá) khỏi HOẠT
+   ẢNH — trạng thái cập nhật NGAY lúc bấm (đồng bộ), chỉ ô VỪA BẤM tự khoá, ô khác vẫn bấm được trong khi
+   chữ trước còn bay. Áp dụng `bonusPick`/`submitPick`; bỏ hẳn `setOriginLocked()` (không còn ai gọi). Đã
+   test: bấm liền 7 chữ đúng "DOLPHIN" trong CÙNG 1 lệnh JS (không đợi nhau) → cả 7 vào đúng vị trí.
+7. **⭐ CÓ SỬA CORE** (`core/app.css`): đổi màu thanh "Points off (wrong answer)" (`.aw-opt-slider`/
+   `.aw-opt-slidval`) sang đỏ `#ef4444` — đã kiểm 2 class này CHỈ dùng riêng cho control Points off chung
+   (không template nào khác dùng lại), an toàn đổi cho MỌI game. Đã đo `accent-color` xác nhận đúng đỏ.
+8. **Thêm Lives cho Anagram** (slider Options 0–10, 0 = vô số mạng) — theo ĐÚNG khuôn `true-false.js`
+   (`hasLivesSlot`, tim ở `ui.livesSlot`). Khác 1 điểm CÓ CHỦ Ý: true-false coi "chưa set" = mặc định 5
+   mạng, Anagram coi "chưa set" = VÔ SỐ MẠNG (act cũ phải chơi y hệt trước, zero-diff). Mất 1 mạng ĐÚNG
+   cùng thời điểm với `pointsOff` (bonus: từ giải có lỗi; submit: từ nộp sai). Hết mạng →
+   `finish({gameover:true})` → title "Game over" (dùng cơ chế `title` sẵn có ở engine, không cần sửa core
+   thêm). Seed `lives:0` vào sample. Đã test trọn luồng: Lives=2 → sai 2 từ liền → tim 2→1→0 → "GAME OVER"
+   → Start again → tim hồi phục, nav hoạt động bình thường.
+
+**File đổi**: `templates/anagram/anagram.js` + `.css` + `sample-anagram.js`, `core/engine.js` (mục 2),
+`core/app.css` (mục 7). Console sạch 0 lỗi suốt test (bonus + submit mode, kéo-thả PointerEvent giả lập,
+Options Apply, restart, game over). Chi tiết đầy đủ: `templates/anagram/GHI CHU ANAGRAM.md` Đợt 55.
+
+---
+
 ## Đợt 54 (3/8/2026, v0.9.28) — ĐIỂM TRỪ MỌI TEMPLATE + ALLOW SKIP + CẦU ĐỒNG BỘ myActivity ⭐ CÓ SỬA CORE — 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi)
 
 **Yêu cầu thầy (2 việc AWord, đi kèm 2 việc myActivity ở kho riêng):**

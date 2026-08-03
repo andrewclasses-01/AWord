@@ -1,5 +1,88 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 55 (3/8/2026, v0.9.29) — 8 lỗi/yêu cầu thầy gửi 1 lượt: hiệu ứng bay, tốc độ bấm, Lives, màu Points off
+Thầy chơi bản live rồi gửi 8 điểm 1 lượt. Đã tự test qua trình duyệt thật (devserver + DOM/PointerEvent
+giả lập thật, không đoán qua ảnh) cho từng điểm — chi tiết dưới đây theo đúng số thứ tự thầy nêu.
+
+**(1) Góc vuông lóe lên 1-2 khung hình lúc bấm/lúc bay tới nơi** — nghi phạm: clone bay
+(`.aw-anagram-flytile`, dùng chung cho `flyLetter`/`flyTileClone`) được `document.body.append()` rồi gọi
+`.animate()` NGAY LẬP TỨC — trình duyệt có thể chưa kịp "thăng cấp" phần tử lên layer GPU riêng (cần cho
+bo góc + clip khi có transform animation) trước khi vẽ khung hình ĐẦU TIÊN, lộ ra 1 khung chưa bo góc rồi
+mới "giật" về đúng. Sửa 2 chỗ: thêm `will-change: transform` vào `.aw-anagram-flytile` (ép trình duyệt
+thăng cấp layer NGAY khi phần tử được tạo, không đợi animation bắt đầu mới quyết định) + thêm
+`void clone.offsetWidth` (ép 1 lần vẽ đồng bộ "ở yên" TRƯỚC khi `.animate()` chạy) trong cả `flyLetter`
+lẫn `flyTileClone`. ⚠️ Đây là lỗi cấp khung hình (compositor), `getComputedStyle` không đo được (đã thử đo
+bằng poll mỗi 20ms suốt cả chuyến bay — `border-radius` luôn báo "12px" không đổi, vì đây là giá trị CSS
+khai báo chứ không phải khung hình thực tế vẽ ra màn) — đã áp dụng cách sửa chuẩn cho lớp lỗi này (ép
+layer sớm + ép vẽ 1 khung trước khi animate), thầy tự xác nhận lại bằng mắt trên máy thật giúp anh.
+
+**(2) Đôi khi mất nút Back-Next và số trang** — **⭐ LỖI THẬT Ở CORE (`core/engine.js`)**, tìm ra + sửa
+được. `celebrate()` (chạy khi 1 ván xong, hiện pháo giấy + chữ "Game complete") có dòng
+`navWrap.style.visibility = "hidden"` để ẩn thanh điều hướng lúc ăn mừng — nhưng KHÔNG BAO GIỜ được trả
+lại `""`! Vì overlay ăn mừng (`.aw-celebrate`) không có nền đặc (chỉ có pháo giấy + chữ, `pointer-events:
+none`), nên trong ~1.9-2.2 giây đó, thanh dưới (Menu/Sound/Fullscreen vẫn còn) LỘ RA nhưng nút ‹›+"x of N"
+biến mất — đúng y hệt hiện tượng thầy tả. Sau đó khi bảng Summary (nền đặc mờ) hiện lên thì nav bị che nên
+không lộ ra nữa, nhưng cờ vẫn treo "hidden" mãi cho ván CHƠI HIỆN TẠI. Sửa: thêm `navWrap.style.visibility
+= ""` ngay tại thời điểm đóng overlay ăn mừng (trước khi mở Summary) — **fix này áp dụng cho MỌI template**
+(bug core, không riêng Anagram). Đã test trên trình duyệt thật: xong ván → thua hết mạng → Summary hiện
+"GAME OVER" → check `document.querySelector('.aw-nav').style.visibility` ra đúng `""` (không còn kẹt
+"hidden") → Start again → nav "1 of 6" hiển thị lại bình thường ngay từ đầu.
+
+**(3) Số điểm bay vào ô điểm quá to, cần nhỏ dần** — `flyScoreGain()` trước đây co về `scale(0.4)` CỐ ĐỊNH
+bất kể kích cỡ ban đầu (`baseSize` tỉ lệ theo bề ngang khung, có thể rất lớn ở màn rộng) → dù co 0.4 lần
+vẫn to hơn nhiều so với chữ số điểm thật. Sửa: đọc `getComputedStyle(scoreEl).fontSize` (cỡ chữ THẬT của
+ô điểm) làm đích, tính `endScale = cỡ đích / baseSize` rồi dùng số này thay cho `0.4` cố định ở khung hình
+cuối — quá trình bay đã sẵn co dần liên tục theo cả chặng bay (không đổi), chỉ sửa ĐÍCH ĐẾN cho khớp thật.
+
+**(4) & (6) Chữ trong ô bị bé lại khi kéo-tráo-đổi HOẶC khi bấm trả ô về gốc** — 1 BUG THẬT: hàm dùng
+chung `flyTileClone()` (dùng bởi `unplace()` = bấm trả về gốc, và `swapResultPositions()` = kéo đổi chỗ)
+KHÔNG hề gán `font-size` cho clone — khác hẳn `flyLetter()` (đã gán đúng từ trước) — nên clone rơi về cỡ
+chữ MẶC ĐỊNH kế thừa từ trang (nhỏ hơn nhiều cỡ ô thật) trong suốt chuyến bay, đúng y hiện tượng "chữ bé
+lại". Sửa: `flyTileClone()` nhận thêm tham số `fontSize`, cả 2 nơi gọi (`unplace`, `swapResultPositions`)
+đọc `getComputedStyle(ô thật).fontSize` TRƯỚC khi xoá/di chuyển rồi truyền vào. Đã đo bằng PointerEvent
+giả lập thật (kéo đổi chỗ P↔O, rồi bấm trả 1 ô về gốc): poll cỡ chữ clone mỗi 15ms suốt chuyến bay ra
+ĐÚNG 1 giá trị duy nhất "51.089px" khớp hệt cỡ ô — không còn dao động/thu nhỏ.
+
+**(5) Bấm nhanh liên tục bị delay** — nguyên nhân: mỗi lần bấm ĐÚNG 1 chữ, code khoá TOÀN BỘ thao tác tiếp
+theo (`busy=true` + khoá cả hàng gốc) tới khi hiệu ứng bay ~340ms của CHỮ ĐÓ xong mới mở khoá — bấm 3 chữ
+liền tay vẫn phải đợi tuần tự từng 340ms một, cảm giác trễ. Sửa: tách RIÊNG trạng thái game (đã đặt đúng
+chữ nào/ô nào, `nextPos`, khoá) khỏi HOẠT ẢNH — trạng thái cập nhật NGAY LÚC bấm (đồng bộ), chỉ ô VỪA BẤM
+tự khoá lại, các ô khác vẫn bấm được bình thường trong khi chữ trước còn đang bay — nhiều chuyến bay chồng
+lên nhau mượt mà thay vì xếp hàng chờ. Áp dụng cho cả 2 chế độ (`bonusPick`/`submitPick`); bỏ hẳn hàm
+`setOriginLocked()` (không còn ai gọi) và bỏ `|| busy` khỏi công thức khoá ô gốc trong `render()`. **Đã
+test bằng 1 lượt bấm liền 7 chữ đúng thứ tự "DOLPHIN" gửi trong CÙNG 1 lệnh JS (không đợi nhau)** → cả 7
+chữ vào đúng vị trí, từ hoàn thành — xác nhận không còn bị chặn/rớt khi bấm dồn dập. `busy` vẫn giữ nguyên
+để khoá các thao tác NẶNG hơn không liên quan tới bấm chữ mới (Submit / kéo-đổi-chỗ / bấm-trả-về).
+
+**(7) Đổi màu thanh "Points off (wrong answer)" sang ĐỎ** — **CÓ SỬA CORE** (`core/app.css`): đã kiểm
+`.aw-opt-slider`/`.aw-opt-slidval` CHỈ dùng riêng cho control "Points off" chung (không template nào khác
+dùng lại 2 class này — Lives/Speed của true-false dùng class riêng `aw-tf-*`), nên đổi an toàn, áp dụng
+cho MỌI template có Points off. Đổi `accent-color`/màu số từ xanh dương/xám sang đỏ `#ef4444` (khớp đúng
+màu Lives của true-false — cùng ý nghĩa "cái này trừ của em"). Đã đo `getComputedStyle` xác nhận
+`accent-color: rgb(239, 68, 68)` trên cả thanh Points off lẫn thanh Lives mới của Anagram.
+
+**(8) Thêm thanh Lives (0-10, 0 = vô số mạng)** — theo ĐÚNG khuôn `true-false.js` đã có (`hasLivesSlot`,
+tim ở `ui.livesSlot` trong topbar, slider Options 0..10). Khác 1 điểm CÓ CHỦ Ý: true-false coi "chưa set"
+= mặc định 5 mạng, còn Anagram coi "chưa set" = VÔ SỐ MẠNG (Anagram trước nay chưa từng có khái niệm Lives
+nên các act cũ phải chơi y hệt trước — zero-diff; nếu bắt chước true-false thì mọi act Anagram cũ tự nhiên
+có 5 mạng mà thầy không hề bật). Mất 1 mạng ở ĐÚNG cùng thời điểm với `pointsOff` (không phải mỗi lần bấm
+sai): bonus mode = từ giải xong mà CÓ lỗi (`finalizeBonusWord`, `!perfect`); submit mode = từ nộp SAI
+(`doSubmit`, `!allCorrect`). Hết mạng → `finish({gameover:true})` → `ui.finish({..., title:"Game over"})`
+→ Summary hiện "GAME OVER" (dùng đúng cơ chế `title` sẵn có ở `core/engine.js`, Open the box đã dùng
+trước, không cần sửa core). CSS riêng `.aw-anagram-lives*` (đỏ, khuôn y `aw-tf-lives*`). Seed
+`lives: 0` vào sample. **Đã test trọn luồng**: đặt Lives=2 → Apply → cố tình sai 1 lần rồi giải đúng 2 từ
+liền (mỗi từ có 1 lỗi) → tim 2→1→0 đúng từng nấc → "GAME OVER" hiện đúng → Start again → tim về lại 2, nav
+hoạt động bình thường.
+
+**File đổi**: `templates/anagram/anagram.js` (mục 1,3,4,5,6,8), `templates/anagram/anagram.css` (mục 1,8),
+`templates/anagram/sample-anagram.js` (thêm `lives:0`), `core/engine.js` (mục 2 — nav visibility),
+`core/app.css` (mục 7 — màu Points off). **CÓ SỬA CORE 2 chỗ** (mục 2 + mục 7), cả 2 đều là sửa lỗi/đổi
+màu nhỏ, đã test không ảnh hưởng template khác (Points off class kiểm tra độc quyền; nav fix là dọn 1 side
+effect chưa từng được set lại, áp dụng chung tất cả game). Console sạch 0 lỗi suốt toàn bộ quá trình test
+(bonus mode + submit mode + kéo-thả PointerEvent giả lập + Options Apply + restart + game over).
+**Việc kế: thầy tự chơi lại bản thật (đặc biệt nhìn kỹ mục 1 — góc vuông lóe lên — vì đây là lỗi cấp khung
+hình không đo được bằng script, cần mắt thật xác nhận) → nói "lưu lại"/"commit" nếu ổn.**
+
 ## Đợt 54 (3/8/2026, v0.9.28) — Điểm trừ khi sai (option chung `pointsOff`)
 Đọc `options.pointsOff` (0–5). Trừ **1 lần mỗi TỪ có lỗi**: bonus mode từ giải xong mà `hadMistake`
 (`finalizeBonusWord`), submit mode từ sai (`doSubmit`, `!allCorrect`). Gộp qua biến `penalty` trừ trong

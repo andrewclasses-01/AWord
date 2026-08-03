@@ -74,6 +74,18 @@ const FLYGAIN_FLIGHT_MS = 550;
 const FLYGAIN_PULSE_MS = 420;
 const FLYGAIN_TOTAL_MS = FLYGAIN_HOLD_MS + FLYGAIN_FLIGHT_MS;
 
+// Lives (v0.9.29, teacher 3/8/2026) — a slider 0..10 in Options, same convention
+// as true-false.js/find-the-match.js: 0 (or missing) = unlimited, 1..10 = that
+// many hearts. UNLIKE true-false (whose "undefined" defaults to 5 lives),
+// Anagram's "undefined" means UNLIMITED — this is a brand-new option on a
+// template that never had a lives concept before, so an activity saved before
+// this feature existed must keep playing exactly as before (zero-diff).
+const MAX_LIVES = 10;
+function normLives(v) {
+  if (v == null || v === 0) return null;                    // unlimited (incl. "never set")
+  return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
+}
+
 function displayChar(ch, allCaps) { return allCaps ? ch.toUpperCase() : ch; }
 
 // Tile size (in cqw) so the WHOLE origin row occupies ~90% of the stage
@@ -111,6 +123,7 @@ const anagramTemplate = {
   type: "anagram",
   scorable: true,
   name: "Anagram",
+  hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -134,6 +147,26 @@ const anagramTemplate = {
     );
     gMode.append(rowMode);
     panel.append(gMode);
+
+    // LIVES — a slider 0..10 (0 = Unlimited), same shape/convention as
+    // true-false.js's Lives control (teacher, 3/8/2026).
+    const gLives = el("div", "aw-opt-group");
+    gLives.append(el("div", "aw-opt-label", "Lives"));
+    const rowLives = el("div", "aw-opt-row aw-anagram-livesrow");
+    const curLives = (draft.lives === 0 || draft.lives == null) ? 0
+      : Math.min(MAX_LIVES, Math.max(1, Math.round(draft.lives)));
+    const livesVal = el("span", "aw-anagram-livesval", curLives === 0 ? "Unlimited" : String(curLives));
+    const livesInput = el("input", "aw-anagram-livesslider");
+    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
+    livesInput.value = String(curLives);
+    livesInput.oninput = () => {
+      const v = parseInt(livesInput.value, 10);
+      draft.lives = v;   // 0 stored = unlimited
+      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
+    };
+    rowLives.append(livesInput, livesVal);
+    gLives.append(rowLives);
+    panel.append(gLives);
 
     const gMore = el("div", "aw-opt-group");
     gMore.append(el("div", "aw-opt-label", "Anagram options"));
@@ -172,6 +205,7 @@ const anagramTemplate = {
     const allCaps = opt.allCaps != null ? !!opt.allCaps : opt.changeCase === "upper";
     const allowSkip = opt.allowSkip !== false;
     const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct once per WORD with a mistake (0 = off)
+    const startLives = normLives(opt.lives);   // null = unlimited
 
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
     if (opt.shuffleQuestions) items = shuffle(items);
@@ -200,6 +234,7 @@ const anagramTemplate = {
     let index = 0;
     let finished = false;
     let penalty = 0;           // total points-off across words answered wrong (stays 0 when the option is off)
+    let livesLeft = startLives;   // null = unlimited (can't lose)
     let busy = false;          // true while a fly/reveal animation must not be interrupted
     let fitter = null;
     let autoTimer = null;
@@ -208,6 +243,7 @@ const anagramTemplate = {
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
+    renderLives();
     render();
 
     function doneCheck(s) { return mode === "bonus" ? s.correct === true : s.graded === true; }
@@ -217,6 +253,47 @@ const anagramTemplate = {
         ? state.reduce((sum, s) => sum + (s.points || 0), 0)
         : state.filter(s => s.correct === true).length;
       return base - penalty;   // points-off (may drive the total negative -> shown red)
+    }
+
+    // Hearts live in the top bar (ui.livesSlot), just left of the score — same
+    // look/behaviour as true-false.js's Lives. 1..5 lives show that many
+    // separate hearts; 6..10 show a compact "N♥"; unlimited shows nothing.
+    function renderLives() {
+      const slot = ui.livesSlot;
+      if (!slot) return;
+      slot.innerHTML = "";
+      if (livesLeft == null) return;                 // unlimited
+      if (livesLeft <= 5) {
+        for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
+      } else {
+        slot.append(el("span", "aw-top-heartcount", String(livesLeft)));
+        slot.append(el("span", "aw-top-heart", "&#9829;"));
+      }
+    }
+
+    // Costs one life; pops the LEFTMOST heart out (when hearts are shown
+    // individually) then re-renders. Returns true if that was the last life —
+    // called at the SAME granularity as the pointsOff penalty (once per WORD
+    // that had a mistake / was submitted wrong), not per keypress.
+    function loseLife() {
+      if (livesLeft == null) return false;           // unlimited -> can't lose
+      const slot = ui.livesSlot;
+      const gone = (livesLeft <= 5 && slot) ? slot.firstChild : null;   // leftmost heart
+      livesLeft = Math.max(0, livesLeft - 1);
+      if (gone) {
+        let done = false;
+        const finishPop = () => { if (done) return; done = true; renderLives(); };
+        try {
+          const a = gone.animate(
+            [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.7)", opacity: 0 }],
+            { duration: 320, easing: "ease-in", fill: "forwards" });
+          a.onfinish = finishPop;
+        } catch (e) { finishPop(); }
+        setTimeout(finishPop, 360);
+      } else {
+        renderLives();
+      }
+      return livesLeft <= 0;
     }
 
     function render() {
@@ -268,7 +345,7 @@ const anagramTemplate = {
         tile.type = "button";
         tile.dataset.tile = String(tileId);
         tile.textContent = displayChar(it.letters[tileId], allCaps);
-        const locked = used || busy || wordDone;
+        const locked = used || wordDone;
         tile.disabled = locked;
         tile.onclick = () => onTileClick(tileId, tile);
         originRow.append(tile);
@@ -318,7 +395,11 @@ const anagramTemplate = {
 
     // ----- interaction: bonus mode -----
     function onTileClick(tileId, tileEl) {
-      if (busy || finished) return;
+      // NOTE (v0.9.29, teacher 3/8/2026): no longer gated by `busy` — that used
+      // to block EVERY tile tap for the full ~340ms of the PREVIOUS letter's
+      // flight, which felt laggy when tapping fast. `busy` still guards the
+      // heavier result-row actions (Submit / drag-swap / send-back) below.
+      if (finished) return;
       if (mode === "bonus") bonusPick(tileId, tileEl); else submitPick(tileId, tileEl);
     }
 
@@ -335,20 +416,24 @@ const anagramTemplate = {
         return;
       }
       anagramSound.place();
-      st.used[tileId] = true;
-      busy = true;
-      setOriginLocked(true);
+      // State advances THE INSTANT a correct tap is validated — not when its fly
+      // animation finishes — so a second/third... correct tap registers right
+      // away too, its flight simply overlapping the previous one's. Only the
+      // TAPPED tile itself locks (immediately, below); every other tile stays
+      // tappable throughout, which is what makes fast consecutive taps feel
+      // instant instead of gated behind each ~340ms flight (teacher, 3/8/2026).
       const destPos = st.nextPos;
+      st.used[tileId] = true;
+      st.placed[destPos] = tileId;
+      st.nextPos++;
+      tileEl.disabled = true;
+      const wordDone = st.nextPos === it.letters.length;
       const destEl = root.querySelector(`.aw-anagram-rtile[data-pos="${destPos}"]`);
       const shownChar = displayChar(picked, allCaps);
       flyLetter(tileEl, destEl, shownChar, RESULT_BG, () => {
-        st.placed[destPos] = tileId;
-        st.nextPos++;
         patchTileUsed(tileEl);
         patchResultFilled(destEl, shownChar, "is-blue");
-        busy = false;
-        if (st.nextPos === it.letters.length) finalizeBonusWord();
-        else setOriginLocked(false);
+        if (wordDone) finalizeBonusWord();
       });
     }
 
@@ -358,6 +443,7 @@ const anagramTemplate = {
       const n = it.letters.length;
       const perfect = !st.hadMistake;
       if (!perfect) penalty += pointsOff;   // one points-off for a word solved with any mistake
+      const outOfLives = !perfect && loseLife();   // a life is lost on a word solved WITH a mistake
       const earned = n * (perfect ? 2 : 1);
       st.correct = true;               // word is DONE — points deferred, see below
       // No render() here: every origin tile is already .is-used and every
@@ -368,7 +454,8 @@ const anagramTemplate = {
       updateNav();
       flyScoreGain(perfect ? "perfect" : "check", earned, () => { st.points = earned; return scoreNow(); });
       anagramSound.wordCompleteBonus();
-      if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
+      if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
+      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
     }
 
     // ----- interaction: submit mode -----
@@ -379,19 +466,20 @@ const anagramTemplate = {
       if (slotIdx === -1) return;
       const it = items[index];
       anagramSound.place();   // same "drop" as bonus mode's correct pick — both modes tap the origin row alike
-      busy = true;
-      setOriginLocked(true);
+      // Same decoupling as bonusPick: the slot is claimed and the tile locked
+      // RIGHT NOW (not in the fly's onDone) so a fast second tap reads the
+      // updated `placed` array and can't double-claim the same empty slot, and
+      // so taps never wait on each other's flight to finish.
+      st.used[tileId] = true;
+      st.placed[slotIdx] = tileId;
+      tileEl.disabled = true;
+      updateSubmitButtonState();
       const destEl = root.querySelector(`.aw-anagram-rtile[data-pos="${slotIdx}"]`);
       const shownChar = displayChar(it.letters[tileId], allCaps);
       // stays ORIGIN-colored during the flight (only Submit reveals right/wrong colors)
       flyLetter(tileEl, destEl, shownChar, ORIGIN_BG, () => {
-        st.used[tileId] = true;
-        st.placed[slotIdx] = tileId;
-        busy = false;
         patchTileUsed(tileEl);
         patchResultFilled(destEl, shownChar, null);
-        updateSubmitButtonState();
-        setOriginLocked(false);
       });
     }
 
@@ -415,9 +503,10 @@ const anagramTemplate = {
       // clone actually ARRIVES there.
       const fromRect = resultEl.getBoundingClientRect();
       const toRect = originEl.getBoundingClientRect();
+      const fontSize = getComputedStyle(resultEl).fontSize;
       patchResultSlotDisplay(pos);
       busy = true;
-      flyTileClone(fromRect, toRect, shownChar, ORIGIN_BG, () => {
+      flyTileClone(fromRect, toRect, shownChar, ORIGIN_BG, fontSize, () => {
         patchOriginRestored(tileId);
         busy = false;
         updateSubmitButtonState();
@@ -439,6 +528,7 @@ const anagramTemplate = {
       if (!elA || !elB) { patchResultSlotDisplay(posA); patchResultSlotDisplay(posB); return; }
       const rectA = elA.getBoundingClientRect();
       const rectB = elB.getBoundingClientRect();
+      const fontSize = getComputedStyle(elA).fontSize;   // A and B are same-size tiles in the same group
       // Blank both tiles now, fly each letter to the OTHER tile's spot, then
       // commit the final text once both clones land — a real swap-in-flight
       // instead of the two tiles instantly trading text.
@@ -456,21 +546,32 @@ const anagramTemplate = {
       };
       // settle() must fire EXACTLY `pending` times — only call it as a
       // flyTileClone completion, never synchronously for an empty side.
-      if (charA) flyTileClone(rectA, rectB, charA, ORIGIN_BG, settle);
-      if (charB) flyTileClone(rectB, rectA, charB, ORIGIN_BG, settle);
+      if (charA) flyTileClone(rectA, rectB, charA, ORIGIN_BG, fontSize, settle);
+      if (charB) flyTileClone(rectB, rectA, charB, ORIGIN_BG, fontSize, settle);
     }
 
     // Shared position-only fly (no color morph — everything pre-Submit
     // stays the neutral origin grey) used by unplace()/swapResultPositions().
-    function flyTileClone(fromRect, toRect, char, bg, onDone) {
+    // `fontSize` MUST be passed in (read from the real tile before it's
+    // touched) — this clone used to fall back to the page's inherited
+    // font-size instead of the tile's actual size, which is why a swapped or
+    // returned letter visibly shrank mid-flight (teacher-reported, 3/8/2026).
+    function flyTileClone(fromRect, toRect, char, bg, fontSize, onDone) {
       const clone = el("div", "aw-anagram-flytile", escapeHtml(char));
       clone.style.position = "fixed";
       clone.style.left = fromRect.left + "px";
       clone.style.top = fromRect.top + "px";
       clone.style.width = fromRect.width + "px";
       clone.style.height = fromRect.height + "px";
+      clone.style.fontSize = fontSize;
       clone.style.background = bg;
       document.body.append(clone);
+      // Forces a synchronous style/layout flush BEFORE the transform animation
+      // starts, so the browser paints one legitimate "at rest" frame (already
+      // rounded, already sized) first — without this, transform-driven
+      // compositor-layer promotion can race the very first paint and flash a
+      // raw square-cornered frame for 1-2 frames (teacher-reported, 3/8/2026).
+      void clone.offsetWidth;
       activeFlyNodes.add(clone);
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
@@ -563,6 +664,7 @@ const anagramTemplate = {
       setTimeout(() => {
         st.correct = allCorrect;
         if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }  // one points-off for a wrong word
+        const outOfLives = !allCorrect && loseLife();   // a life is lost on a wrong word
         st.revealed = true;   // only matters if this word is re-rendered later (e.g. navigated back to)
         busy = false;
         updateSubmitButtonState();
@@ -578,7 +680,9 @@ const anagramTemplate = {
           showBigMark(false);
           ui.sound.wrong();
         }
-        if (state.every(doneCheck)) {
+        if (outOfLives) {
+          autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
+        } else if (state.every(doneCheck)) {
           autoTimer = setTimeout(finish, allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
         }
       }, n * STAGGER_MS + 300);
@@ -586,9 +690,6 @@ const anagramTemplate = {
 
     // ----- incremental DOM patches (avoid a full render() mid-word — that
     // used to flash the whole clue+both rows on every single tap) -----
-    function setOriginLocked(locked) {
-      root.querySelectorAll(".aw-anagram-otile:not(.is-used)").forEach(t => { t.disabled = locked; });
-    }
     function patchTileUsed(tileEl) {
       // Deliberately do NOT reset style.visibility back to "" here — the tile
       // was set to visibility:hidden the instant it started flying (see
@@ -686,6 +787,14 @@ const anagramTemplate = {
         : Math.max(28, startRect.width * 0.347);   // check — same size as the big X mark
       wrap.style.fontSize = baseSize + "px";
 
+      // How far to shrink by the time it ARRIVES: the actual score badge's own
+      // font-size, not a flat guess. Fixes the mark still looking oversized
+      // right as it lands (teacher-reported, 3/8/2026) — before this, the end
+      // keyframe was a flat scale(0.4) regardless of baseSize, which could
+      // still be much bigger than the tiny score digits for a wide stage.
+      const scoreFontPx = parseFloat(getComputedStyle(scoreEl).fontSize) || baseSize * 0.4;
+      const endScale = Math.max(0.12, Math.min(1, scoreFontPx / baseSize));
+
       const iconSpan = el("span", "afg-icon", kind === "perfect" ? "PERFECT" : icons.markCheck);
       const numSpan = el("span", "afg-num", "+" + points);
       wrap.append(iconSpan, numSpan);
@@ -699,7 +808,7 @@ const anagramTemplate = {
       const wrapAnim = wrap.animate([
         { transform: "translate(-50%,-50%) scale(1)", offset: 0 },
         { transform: "translate(-50%,-50%) scale(1.1)", offset: holdFrac },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(0.4)`, offset: 1 }
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, offset: 1 }
       ], { duration: total, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
 
       iconSpan.animate([
@@ -767,6 +876,10 @@ const anagramTemplate = {
       clone.style.fontSize = fontSize;
       clone.style.background = toColor;
       document.body.append(clone);
+      // See the identical comment in flyTileClone() — forces one legitimate
+      // "at rest" paint before the transform animation starts, avoiding a
+      // square-cornered flash during compositor-layer promotion.
+      void clone.offsetWidth;
       activeFlyNodes.add(clone);
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
@@ -810,7 +923,7 @@ const anagramTemplate = {
     function goPrev() { if (busy) return; if (index > 0) fadeSwap(() => { index--; render(); }); }
     function goNext() { if (busy) return; if (index < total - 1) fadeSwap(() => { index++; render(); }); }
 
-    function finish() {
+    function finish(opts) {
       if (finished) return;
       finished = true;
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
@@ -841,7 +954,10 @@ const anagramTemplate = {
       });
       const answered = state.filter(s => doneCheck(s)).length;
       correct -= penalty;   // reflect points-off in the ranked/summary score (no-op when the option is off)
-      ui.finish({ correct, incorrect: total - correctWords, total: finishTotal, perQuestion, review, answered });
+      ui.finish({
+        correct, incorrect: total - correctWords, total: finishTotal, perQuestion, review, answered,
+        title: opts?.gameover ? "Game over" : undefined
+      });
     }
 
     return function cleanup() {
@@ -849,6 +965,7 @@ const anagramTemplate = {
       if (autoTimer) clearTimeout(autoTimer);
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
+      if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };
   }
 };

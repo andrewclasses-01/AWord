@@ -481,15 +481,19 @@ export function startGame(root, activity, { onExit, session = null, base = null 
 
     // AUTO SWITCH — advance to the next question automatically once the current
     // one has an answer. OFF by default; a template acts on it by reading
-    // activity.options.autoSwitch (Type the answer does). Shown for every
-    // template (teacher's call, 1/8/2026).
-    const gAuto = el("div", "aw-opt-group");
-    gAuto.append(el("div", "aw-opt-label", "Auto switch"));
-    const rowAuto = el("div", "aw-opt-row");
-    rowAuto.append(mkCheck(draft.autoSwitch === true, "Move to the next question automatically",
-      v => draft.autoSwitch = v));
-    gAuto.append(rowAuto);
-    panel.append(gAuto);
+    // activity.options.autoSwitch. Shown for every template (teacher's call,
+    // 1/8/2026) EXCEPT ones that opt out via tpl.hideAutoSwitch — Type the answer
+    // now always auto-advances a graded question on its own (3/8/2026 spec), so
+    // this checkbox would no longer do anything there and only confuse things.
+    if (!tpl.hideAutoSwitch) {
+      const gAuto = el("div", "aw-opt-group");
+      gAuto.append(el("div", "aw-opt-label", "Auto switch"));
+      const rowAuto = el("div", "aw-opt-row");
+      rowAuto.append(mkCheck(draft.autoSwitch === true, "Move to the next question automatically",
+        v => draft.autoSwitch = v));
+      gAuto.append(rowAuto);
+      panel.append(gAuto);
+    }
 
     // LETTERS ON ANSWERS — a template can opt out entirely (e.g. Type the
     // answer has no letter-lettered answer boxes, so the option is meaningless
@@ -835,6 +839,14 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // GAME COMPLETE — celebration, then the dark panels
   // =============================================================
   function celebrate(result, entryId) {
+    // Nav (prev/next + "x of N") is hidden only for THIS brief fanfare window —
+    // it's meaningless once the game is over. BUG FIXED (3/8/2026): this used to
+    // never get restored, so the nav stayed invisible (while Menu/Sound/Fullscreen
+    // kept showing) for the ~1.9-2.2s the confetti overlay is up (it has no opaque
+    // background, so the bottom bar is still visible underneath) — read by the
+    // teacher as "the back-next buttons and page number sometimes go missing".
+    // Once the opaque Summary backdrop takes over it covers the whole bar anyway,
+    // so restoring it right here (before showSummary) is the correct, permanent fix.
     navWrap.style.visibility = "hidden";
     const cover = el("div", "aw-celebrate");
     const text = el("div", "aw-gc-text", endTitle);
@@ -844,7 +856,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     (tpl.sounds?.complete || sound.fanfare)();
     setTimeout(() => {
       text.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
-      setTimeout(() => { cover.remove(); showSummary(result, entryId); }, 300);
+      setTimeout(() => { cover.remove(); navWrap.style.visibility = ""; showSummary(result, entryId); }, 300);
     }, 1900);
   }
 
