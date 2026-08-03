@@ -127,6 +127,15 @@ async function routeFromLocation() {
   if (actKey) {
     const node = p.get("a") ? await getByNum(p.get("a")) : await getItem(p.get("play"));
     if (node && node.kind === "act") {
+      // A deep-linked act (?a= / ?play=) lands here on a FRESH page, so its
+      // template is not in the registry yet — load it first, exactly like
+      // playAct() does. Đợt 33 (v0.9.7) added ensureTemplate() everywhere a
+      // game starts but MISSED this deep-link route, so any non-Quiz act opened
+      // by URL threw `Chưa có game loại "..." trong registry` and rendered
+      // blank. (This is how myActivity's dual board mirrors an act into the
+      // right pane, which is why only the right half went white.)
+      try { await ensureTemplate(node.type); }
+      catch (e) { toast(`${templateLabel(node.type)} — could not load`); return goTop(opts); }
       state.view = "play";
       if (!p.get("a")) setUrl(await linkFor(node), true);   // upgrade an old link in place
       startGame(app, node, { onExit: goTop });

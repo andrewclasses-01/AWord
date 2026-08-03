@@ -5,6 +5,35 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 46 (3/8/2026, v0.9.20) — FIX deep-link act TRẮNG TRANG: `routeFromLocation` thiếu `ensureTemplate` (hồi quy Đợt 33) ✅ DUYỆT → COMMIT + PUSH + LIVE
+
+**Bối cảnh (thầy báo qua app myActivity):** ở bảng ĐÔI của myActivity, mở 1 act AWord thì pane TRÁI
+hiện act bình thường, pane PHẢI **trắng tinh**. myActivity mirror act sang pane phải bằng cách
+`loadURL` thẳng URL act (deep-link `?a=<num>`) vào một trang **mới tinh**.
+
+**Gốc rễ (bug của AWord, không phải myActivity):** Đợt 33 (v0.9.7) chuyển sang nạp template **lười**
+`ensureTemplate(type)` và đã thêm `await` vào `playAct`/`editAct`/`createBlankAct` + `play.js`,
+**NHƯNG BỎ SÓT đúng đường deep-link `routeFromLocation()` trong `main.js`**. Khi mở act qua URL trên
+trang mới, template CHƯA đăng ký trong registry → `startGame()` gọi `getTemplate()` (đồng bộ) →
+ném `Chưa có game loại "..." trong registry` → trang trắng. Chỉ loại **Quiz** thoát nạn ở vài đường
+cũ; mọi loại khác (vd `type_the_answer`) đều gãy. Trên bảng đôi, pane TRÁI sống chỉ vì thầy đã duyệt
+thư viện trước đó nên template đã nằm trong Map; pane PHẢI là trang mới nên gãy.
+
+**Ảnh hưởng RỘNG hơn myActivity:** mọi link deep-link tới act khác Quiz mở trên **tab/trang mới**
+(bookmark, link chia sẻ `?f=..&a=..`) đều trắng — nay được vá chung.
+
+**Sửa (1 chỗ, `main.js` `routeFromLocation`):** thêm `try { await ensureTemplate(node.type); }
+catch { toast(...); return goTop(opts); }` NGAY TRƯỚC `startGame` — y hệt khuôn `playAct`. `ensureTemplate`
+đã import sẵn (Đợt 33); idempotent nên back/forward về act không tốn thêm. KHÔNG đụng `core/`.
+
+**Kiểm chứng (harness Electron, partition thật `persist:main`, act live `?f=248&a=27` loại type_the_answer):**
+- Tái hiện: pane mới tinh → `hasStage:false`, `registeredBefore:false` → trắng (đúng bug).
+- Cơ chế fix: sau `ensureTemplate('type_the_answer')` → `getTemplate()` (chính lệnh `startGame` gọi)
+  trả về template `type:"type_the_answer"`; ép render lại (nạp template rồi bắn `popstate`) → `.aw-below`
+  xuất hiện = act render thật. `node --check main.js` sạch.
+
+---
+
 ## Đợt 45 (3/8/2026, v0.9.19) — WHACK-A-MOLE: nâng cấp LỚN (7 loạt tinh chỉnh theo yêu cầu thầy) ✅ DUYỆT → COMMIT + PUSH + LIVE
 Tự test trình duyệt thật, 0 lỗi console. KHÔNG đụng core (chỉ 5 file whack-a-mole + 2 docs). Đầy đủ + BẪY:
 `templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md` (mục "⭐ ĐỢT 45"). Tóm tắt các loạt:
