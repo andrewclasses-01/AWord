@@ -5,6 +5,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 60 (4/8/2026, v0.9.35) — FIND THE MATCH: PHÂN TRANG (≤35 ô/trang) + FIT CHỮ TRONG Ô — ✅ THẦY DUYỆT → COMMIT (94fd6bc) + PUSH + LIVE. KHÔNG ĐỤNG CORE.
+
+**Chỉ đụng 2 file `templates/find-the-match/find-the-match.js` + `.css` (+ GHI CHU của template).** KHÔNG đụng
+core, KHÔNG đụng game khác. ⚠️ Cây làm việc lúc làm có nhiều phiên SONG SONG chốt cùng ngày (Anagram Đợt 55,
+Type-the-answer Đợt 56, Whack-a-mole 57, Open the box 58, và Quiz Đợt 59 của phiên kia đang làm) — commit này
+chỉ add đúng 2 file find-the-match + doc. Số Đợt nhảy 58→60 vì Đợt 59 do phiên song song giữ.
+
+**Bối cảnh:** thầy chơi bản live, báo 2 việc: (1) khi quá nhiều ô, chữ QUÁ TO so với ô → **tràn ra ngoài**;
+muốn tối đa **35 ô/trang**, trên 35 thì sang trang tiếp (thêm nút next-back-số trang) + chữ luôn vừa & nằm
+GIỮA ô. (2) Đổi thanh Points off thành đỏ.
+
+**(1a) Fit chữ trong ô — "không bao giờ tràn, luôn ở tâm":**
+- Ô `.aw-ftm-tile` nay `display:flex; align-items/justify-content:center; text-align:center` + `overflow:hidden`
+  + **chiều cao CỐ ĐỊNH** `calc(6.2cqw*var(--fit))` (bỏ `min-height`). Chiều cao cố định làm việc tràn ĐO
+  ĐƯỢC để co; overflow:hidden bảo đảm không lòi ra ngoài.
+- Biến co RIÊNG mỗi ô `--tfit`: font ô = `calc(1.85cqw*var(--fit)*var(--tfit,1))`. Hàm `fitTiles()` duyệt từng
+  ô, giảm `--tfit` 0.08/lần (đáy 0.4) tới khi hết tràn cả ngang lẫn cao. Thêm `overflow-wrap:anywhere;
+  word-break:break-word` để từ dài xuống dòng.
+- **BẪY (đã gặp khi test, ghi lại để dùng sau):** gọi `fitTiles` qua `requestAnimationFrame` **KHÔNG chạy khi
+  pane test bị ẩn** — rAF đóng băng lúc trang không compositing (cùng họ bẫy throttle của myActivity/whack).
+  Bằng chứng: đo lần đầu 1 ô `--tfit` rỗng (chưa được set) + tràn 4px; chạy TAY đúng vòng lặp đó → 0 tràn.
+  → Sửa: gọi `fitTiles()` **ĐỒNG BỘ** ngay sau khi autoFit đặt xong `--fit` (không chờ rAF) + gọi lại trên
+  `document.fonts.ready` (đồng bộ, khi web-font đổi metric). `scheduleTileFit()` (rAF, gộp) chỉ còn lo re-fit
+  khi RESIZE. Đo lại: 20/20 ô 0 tràn, từ 45 ký tự "Pneumono…" co `--tfit=0.84`.
+
+**(1b) Phân trang (page-as-round):**
+- `MAX_TILES_PER_PAGE=35`. `PAGE_COUNT=ceil(total/35)`, chia ĐỀU (`perPage=ceil(total/PAGE_COUNT)`, 40→20+20
+  chứ không 35+5). `choiceOrder` (đã xáo) chunk thành `pages[]`; mỗi trang có `pageQueues[p]` riêng. `cols`
+  tính theo TRANG LỚN NHẤT để mọi trang canh giống nhau.
+- **Mỗi trang là 1 VÒNG độc lập:** prompt của trang chỉ là cặp có ô trên trang đó → **đáp án LUÔN nằm trên
+  trang đang xem** (giữ đúng trải nghiệm cũ). Hết cặp của trang → `startCycle()` tự tìm trang kế còn cặp
+  (`nextNonEmptyPage`, cuốn vòng) → render + chơi tiếp; hết sạch mọi trang → `finish("complete")`. 2 callback
+  trong `choose` đổi từ `if(!queue.length) finish` → `startCycle()` (để nó tự advance/finish).
+- **Pager `‹ Page X/Y ›`** (chỉ khi >1 trang, dưới lưới, trong stage): `goPage()` lật tay — dừng prompt hiện
+  tại, đổi trang, chơi tiếp; prev tắt trang 1, next tắt trang cuối.
+- `queue` giờ = tham chiếu tới `pageQueues[curPage]` (đổi trang thì trỏ lại) nên hàm cũ giữ gần nguyên.
+  `renderShell` nay chạy MỖI lần đổi trang → thêm `fitter.destroy()` + huỷ `tileFitRaf` đầu hàm chống rò rỉ
+  listener resize/rAF. Render đúng trạng thái ô: giải+removeCorrects → để hố; giải+giữ → mờ + dấu ✓; skipped →
+  ô nhiễu vẫn bấm được.
+
+**(2) Points off đỏ:** đây là slider CHUNG của core (`.aw-opt-slider`), find-the-match KHÔNG có riêng. Phiên
+SONG SONG (Anagram Đợt 55, commit `a109f7b`) ĐÃ đổi `core/app.css` `.aw-opt-slider`+`.aw-opt-slidval` sang đỏ
+`#ef4444` và ĐÃ commit + push. Bản LIVE còn xanh chỉ vì GitHub Pages chưa propagate — không cần làm gì thêm.
+
+**Test (browser thật qua test.html, đo DOM bằng `javascript_tool`):** 8 cặp → 1 trang, không pager, 0 tràn,
+2 cột. 40 cặp → Page 1/2 & 2/2 (20+20, 0 overlap), pager prev/next đúng, 0 tràn CẢ 2 trang, auto-advance
+trang 1→2, chơi trọn 2 trang → **score 40 + summary**, console 0 lỗi. **CHƯA:** nghe thật mp3; lật tay tới
+trang đã giải xong (để idle — hiếm gặp vì auto-advance).
+
+---
+
 ## Đợt 58 (4/8/2026, v0.9.33) — OPEN THE BOX: 5 CẢI TIẾN UX (thầy gửi 1 lượt) — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG ĐỤNG CORE.
 
 **Chỉ đụng 2 file `templates/open-the-box/open-the-box.js` + `.css` (+ 2 docs).** KHÔNG đụng core, KHÔNG đụng
