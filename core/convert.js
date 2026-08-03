@@ -158,17 +158,22 @@ export async function convertActivity(activity, targetType) {
   const { kind, records } = toRecords(activity);
   const content = buildContent(targetType, kind, records);
 
-  // Lấy options + instruction mặc định của game đích từ file sample của nó,
-  // để chắc chắn hợp lệ với template đó (điểm bắt đầu lại, theo ý thầy).
+  // Options: nếu act này TỪNG được đổi sang đúng template đích và thầy đã Apply
+  // chỉnh options, dùng LẠI bộ options đã nhớ (activity.templateOptions[type]).
+  // Nếu chưa, lấy mặc định từ file sample của game đích. Instruction luôn lấy
+  // từ sample cho hợp lệ.
+  const remembered = activity.templateOptions && activity.templateOptions[targetType];
   let options = {}, instruction = "";
   try {
     const mod = await templateEntry(targetType).sample();
     const s = mod.activity || {};
-    options = { ...(s.options || {}) };
+    options = remembered ? { ...remembered } : { ...(s.options || {}) };
     instruction = s.instruction || "";
-  } catch (_) { /* sample lỗi thì vẫn chơi được với options rỗng */ }
+  } catch (_) {
+    if (remembered) options = { ...remembered };   // sample lỗi vẫn giữ options đã nhớ
+  }
 
-  if (targetType === "whack_a_mole") options.mode = (kind === "tf") ? "trueFalse" : "quiz";
+  if (targetType === "whack_a_mole" && !options.mode) options.mode = (kind === "tf") ? "trueFalse" : "quiz";
 
   return {
     id: "conv_" + targetType + "_" + Math.floor(Math.random() * 1e9),

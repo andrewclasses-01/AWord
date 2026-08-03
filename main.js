@@ -28,7 +28,7 @@ import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./c
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
-  setFolderColor, folderCounts, importBundle,
+  emptyTrash, setFolderColor, folderCounts, importBundle,
   resetCache
 } from "./core/store.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
@@ -432,15 +432,21 @@ function toolbar() {
     left.append(newFolder);
   }
   if (state.view !== "trash" && state.root === "activities") {
-    const imp = el("button", "aw-btn aw-fm-newbtn", "Import");
-    imp.type = "button"; imp.onclick = importFlow;
+    const imp = el("button", "aw-btn aw-fm-iconbtn", IMP_UPLOAD_SVG);
+    imp.type = "button"; imp.title = "Import from a lesson file"; imp.setAttribute("aria-label", "Import");
+    imp.onclick = importFlow;
     left.append(imp);
   }
-  const bin = el("button", "aw-btn aw-fm-newbtn" + (state.view === "trash" ? " is-on" : ""),
-    state.view === "trash" ? "← Back" : "Recycle bin");
-  bin.type = "button";
-  bin.onclick = () => { if (state.view === "trash") enterFolder(state.root, null); else { state.view = "trash"; render(); } };
+  const inTrash = state.view === "trash";
+  const bin = el("button", "aw-btn aw-fm-iconbtn" + (inTrash ? " is-on" : ""), inTrash ? icons.prev : icons.trash);
+  bin.type = "button"; bin.title = inTrash ? "Back" : "Recycle bin"; bin.setAttribute("aria-label", bin.title);
+  bin.onclick = () => { if (inTrash) enterFolder(state.root, null); else { state.view = "trash"; render(); } };
   left.append(bin);
+  if (inTrash) {
+    const empty = el("button", "aw-btn aw-lib-del", "Empty bin");
+    empty.type = "button"; empty.onclick = emptyBinFlow;
+    left.append(empty);
+  }
   bar.append(left);
 
   const right = el("div", "aw-fm-tools");
@@ -875,6 +881,37 @@ function newFolderFlow() {
   });
 }
 
+// "Empty bin" -> permanently delete EVERYTHING in the current root's recycle
+// bin after a clear confirmation (bulk, irreversible — same finality as the
+// per-item "Delete forever"). Only offered while viewing the bin.
+async function emptyBinFlow() {
+  let items;
+  try { items = await listTrash(state.root); }
+  catch (e) { toast(e && e.code === "aw/signed-out" ? "Please sign in first." : "Could not open the recycle bin."); return; }
+  if (!items.length) { toast("Recycle bin is already empty."); return; }
+  openModal("Empty recycle bin", (body, close) => {
+    body.append(el("div", "aw-modal-text",
+      `Permanently delete all <b>${items.length}</b> item${items.length === 1 ? "" : "s"} in the recycle bin? This cannot be undone.`));
+    const actions = el("div", "aw-modal-actions");
+    const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
+    const del = el("button", "aw-btn aw-lib-del", "Delete all"); del.type = "button";
+    del.onclick = async () => {
+      del.disabled = true; del.textContent = "Deleting…";
+      try {
+        const n = await emptyTrash(state.root);
+        close();
+        render();
+        toast(`Deleted ${n} item${n === 1 ? "" : "s"} from the recycle bin.`);
+      } catch (e) {
+        del.disabled = false; del.textContent = "Delete all";
+        body.append(el("div", "aw-ed-error", e && e.code === "aw/signed-out" ? "Please sign in first." : (e && e.message ? e.message : "Could not empty the bin.")));
+      }
+    };
+    actions.append(cancel, del);
+    body.append(actions);
+  });
+}
+
 // ---------- Import dialog ----------
 // Drop or browse a lesson SPREADSHEET (.xlsm/.xlsx/.xls) — the app reads it in
 // the browser (same mapping as the taoactaw skill), lists the acts it found, and
@@ -955,7 +992,7 @@ function importFlow() {
         const row = el("label", "aw-imp-row");
         const cb = el("input"); cb.type = "checkbox"; cb.checked = true;
         const c = a.content || {};
-        const n = (c.pairs || c.cards || c.statements || c.questions || []).length;
+        const n = (c.pairs || c.cards || c.statements || c.questions || c.items || []).length;
         row.append(cb,
           el("span", "aw-imp-ricon", IMP_ACT_ICON[a.type] || IMP_DOC_SVG),
           el("span", "aw-imp-rtitle", escapeText(a.title)),
@@ -967,9 +1004,12 @@ function importFlow() {
 
       const folder = el("div", "aw-imp-folder");
       const fLabel = el("label");
-      const fCb = el("input"); fCb.type = "checkbox";
+      // Default ON: a fresh lesson usually wants its own folder (prefilled with
+      // the source code). Untick to drop the acts straight into the current one.
+      const fCb = el("input"); fCb.type = "checkbox"; fCb.checked = true;
       fLabel.append(fCb, document.createTextNode("Make a new folder"));
-      const fName = el("input", "aw-ed-input"); fName.value = sourceName; fName.placeholder = "Folder name"; fName.style.display = "none";
+      const fName = el("input", "aw-ed-input"); fName.value = sourceName; fName.placeholder = "Folder name";
+      fName.style.display = fCb.checked ? "" : "none";
       fCb.onchange = () => { fName.style.display = fCb.checked ? "" : "none"; if (fCb.checked) setTimeout(() => fName.focus(), 0); };
       folder.append(fLabel, fName);
 
@@ -997,13 +1037,20 @@ function importFlow() {
         err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
         try {
           const res = await importBundle({ folder: makeNew ? folderName : null, activities: chosen }, { parentId: state.folderId });
-          report.style.display = ""; report.innerHTML = "";
-          report.append(el("div", "aw-imp-done", `✓ Created ${res.created} ${res.created === 1 ? "activity" : "activities"}` +
-            (res.folderName ? ` in “${escapeText(res.folderName)}”` : " here") +
-            (res.skipped ? `, skipped ${res.skipped} (already there)` : "") + "."));
-          (res.errors || []).slice(0, 8).forEach(m => report.append(el("div", "aw-ed-error", escapeText(m))));
-          cancel.textContent = "Done"; ok.textContent = "Import"; ok.disabled = false;
-          render();
+          if (res.errors && res.errors.length) {
+            // Some acts failed — keep the dialog open so the problem isn't missed.
+            report.style.display = ""; report.innerHTML = "";
+            report.append(el("div", "aw-imp-done", `✓ Created ${res.created}${res.skipped ? `, skipped ${res.skipped}` : ""}.`));
+            res.errors.slice(0, 8).forEach(m => report.append(el("div", "aw-ed-error", escapeText(m))));
+            cancel.textContent = "Done"; ok.textContent = "Import"; ok.disabled = false;
+            render();
+            return;
+          }
+          // Done — auto-close. If a new folder was made, open it; else refresh here.
+          close();
+          if (makeNew && res.folderId) enterFolder(state.root, res.folderId);
+          else render();
+          if (res.skipped) toast(`Imported ${res.created}, skipped ${res.skipped} already there`);
         } catch (e) {
           ok.disabled = false; ok.textContent = `Import ${chosen.length}`;
           showErr(e && e.code === "aw/signed-out" ? "Please sign in first." : (e && e.message ? e.message : "Import failed."));

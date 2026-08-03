@@ -173,6 +173,21 @@ crossword cần 2..40 câu.
 > `convert.js` (và, nếu là "kind" mới, khai target list). Không thêm thì game vẫn chạy bình thường, chỉ
 > là không hiện trong danh sách đổi.
 
+### Lưu options + act GỐC (`base`/`originAct`) — v0.9.27
+
+`startGame(root, activity, { base })` nhận thêm `base` = **act GỐC** trong thư viện đứng sau lượt chơi.
+`originAct = base || activity`. `restart` và `doSwitchTemplate` LUÔN truyền `base: originAct`, nên qua bao
+nhiêu lần Đổi template thì `originAct` vẫn là act thật ban đầu (act tạm `conv_` KHÔNG bao giờ thành base).
+
+- **Đổi template convert TỪ `originAct`** (không từ act tạm hiện tại). Đổi **về đúng `originAct.type`** →
+  chơi thẳng `originAct` (khôi phục act thật + options riêng), không tạo bản sao.
+- **Apply options** (buildOptionsPanel, chỉ khi `!session`): act chính → `saveActivity(originAct)`; act tạm
+  (`activity._converted`) → ghi `originAct.templateOptions[activity.type] = {...options}` rồi
+  `saveActivity(originAct)`. **TUYỆT ĐỐI không `saveActivity` act có id bắt đầu `"conv_"`** (kẻo rác thư viện).
+- **`convertActivity`** ưu tiên `activity.templateOptions[targetType]` (options đã nhớ) trước sample defaults.
+  → Nhờ vậy đổi 1 act sang template tạm, chỉnh options, lần sau chọn lại template đó của act đó vẫn giữ options.
+- `templateOptions` là 1 field thường trên act (Firestore-safe qua `clean()`); lưu kèm khi `saveActivity`.
+
 ## API engine ↔ template (bắt buộc mọi template tuân theo)
 
 Mỗi template là 1 file JS, tự đăng ký khi được import:

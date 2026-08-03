@@ -976,6 +976,9 @@ body {
 .aw-fm-viewtoggle { display: inline-flex; border: 1.5px solid #d7e0ec; border-radius: 10px; overflow: hidden; }
 .aw-fm-vbtn { border: none; background: #fff; color: #8494a8; cursor: pointer; padding: .45rem .6rem; display: inline-flex; align-items: center; }
 .aw-fm-vbtn.is-on { background: #2f7bff; color: #fff; }
+.aw-lib .aw-fm-iconbtn { display: inline-flex; align-items: center; justify-content: center; padding: .5rem .62rem; border-radius: 10px; }
+.aw-fm-iconbtn svg { width: 19px; height: 19px; }
+.aw-fm-iconbtn.is-on { background: #2f7bff; color: #fff; }
 
 /* body + layouts */
 .aw-fm-body { min-height: 200px; }

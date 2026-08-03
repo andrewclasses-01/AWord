@@ -5,6 +5,86 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 53 (3/8/2026, v0.9.27) — LƯU OPTIONS HẲN + NHỚ OPTIONS THEO TEMPLATE TẠM ⭐ CÓ SỬA CORE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**Yêu cầu thầy:** (1) Apply option cho 1 act → **lưu hẳn**. (2) Khi chọn 1 act + 1 **template tạm thời** (Change
+Template) rồi chỉnh options cho template tạm đó → **lần sau chọn lại đúng template tạm đó của act đó, options vẫn giữ**.
+
+**Phát hiện + FIX bug tiềm ẩn:** engine ĐÃ lưu options act chính (`saveActivity(activity)` khi có `id`). NHƯNG act tạm
+Change Template có `id="conv_..."` → Apply options trên nó đang **lưu NHẦM thành 1 act mới "conv_" vào thư viện**. Nay chặn.
+
+**Việc đã làm (`core/engine.js` + `core/convert.js` — CÓ SỬA CORE):**
+1. **Engine mang theo act GỐC (`originAct`)**: `startGame(root, activity, {base})` — `originAct = base || activity`.
+   `restart` + `doSwitchTemplate` truyền `base: originAct` nên qua bao lần đổi template, originAct vẫn là act thật ban đầu.
+2. **Đổi template convert TỪ originAct** (không từ act tạm hiện tại). Đổi **về đúng type gốc** → khôi phục thẳng
+   act gốc thật (id + options riêng), không tạo bản sao.
+3. **Apply options lưu đúng chỗ** (chỉ khi KHÔNG session): act chính → `saveActivity(originAct)`; act tạm
+   (`_converted`) → ghi `originAct.templateOptions[type] = {...options}` rồi `saveActivity(originAct)`. **Không bao giờ
+   lưu act `conv_`**.
+4. **`convert.js convertActivity`**: nếu `activity.templateOptions[targetType]` có → dùng LẠI bộ options đã nhớ; chưa
+   có → mặc định từ sample. (whack_a_mole giữ `mode` nếu options đã có.)
+
+**Kiểm chứng (harness, KHÔNG login):**
+- `convertActivity`: origin có `templateOptions.quiz={lives:3,timer:countDown,MARKER}` → convert→quiz dùng ĐÚNG bộ nhớ
+  (không phải sample); convert→balloon_pop (không có nhớ) → dùng mặc định. ✅
+- **Round-trip UI thật**: mount Anagram → Template→Quiz → Play → Options: "Shuffle question order" mặc định BẬT → tắt +
+  Apply → Template→Anagram (về gốc) → Template→Quiz lại → Options: "Shuffle question order" **vẫn TẮT** (đã nhớ). **PASS**.
+- Change Template vẫn chạy; Options Apply trên act tạm 0 crash (saveActivity thất bại lặng khi chưa login, nhớ in-memory
+  vẫn set). 0 lỗi console. File test tạm đã xoá.
+
+**CHƯA test được (cần login):** lưu Firestore + giữ options qua **reload trang** (`saveActivity` cần đăng nhập; logic
+review: `originAct.templateOptions` nằm trong act, `saveActivity(originAct)` lưu kèm; convert đọc lại khi mở act sau).
+
+**VIỆC ĐANG CHỜ:** thầy đăng nhập → chơi 1 act, Apply option, reload → option giữ; đổi template tạm, chỉnh option,
+đổi đi rồi quay lại → option giữ → **commit + push**.
+
+---
+
+## Đợt 52 (3/8/2026, v0.9.26) — EMPTY RECYCLE BIN (xoá hẳn toàn bộ thùng rác, có xác nhận) — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**Yêu cầu thầy:** thêm "Empty Recycle Bin" — xoá hẳn TẤT CẢ act trong thùng rác; bấm → pop-up xác nhận → đồng ý thì xoá sạch.
+
+**Việc đã làm (`core/store.js` + `main.js`, KHÔNG đụng core khác):**
+1. **`store.emptyTrash(root)`**: xoá vĩnh viễn MỌI node `trashed` trong 1 root (cả bundle root lẫn cây con), 1 lô
+   `persistDelete`. Trả về số **mục** trong thùng (node có `trashRootId===id`) đã xoá. Cùng độ "dứt khoát" như
+   Delete forever từng cái, chỉ khác là hàng loạt.
+2. **`main.js`**: khi ở màn thùng rác, thanh công cụ thêm nút **"Empty bin"** (đỏ, class `.aw-lib-del`). Bấm →
+   `emptyBinFlow`: đọc `listTrash` (rỗng → toast "already empty"); nếu có → **modal xác nhận** ("Permanently delete
+   all N items… This cannot be undone", nút **Cancel** + **Delete all** đỏ) → `emptyTrash` → đóng modal + `render()`
+   + toast "Deleted N items". Lỗi (chưa login…) hiện trong modal, không đóng.
+
+**Kiểm chứng (không login):** tạm dựng toolbar ở chế độ trash → hiện đúng nút **Back (icon)** + **"Empty bin" (đỏ
+`aw-lib-del`)**, 0 lỗi. main.js parse sạch. Modal + `emptyTrash` chạy thật cần login (logic review: mirror
+Delete forever; modal dùng khuôn `openModal`+`aw-modal-text`+`aw-lib-del` sẵn có). Đã gỡ debug tạm.
+
+**VIỆC ĐANG CHỜ:** thầy đăng nhập → xoá vài act vào thùng rác → vào Recycle bin → **Empty bin** → xác nhận → sạch → **commit + push**.
+
+---
+
+## Đợt 51 (3/8/2026, v0.9.25) — TINH CHỈNH UX IMPORT (icon toolbar · make-folder mặc định · auto-close) — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**3 yêu cầu thầy + 1 fix tiện tay** (`main.js` + `core/app.css`, KHÔNG đụng core khác):
+1. **Nút Import + Recycle bin → ICON** (bỏ chữ). Import dùng icon upload (`IMP_UPLOAD_SVG`), Recycle bin dùng
+   `icons.trash` (vào thùng rác đổi thành `icons.prev` = mũi tên back). Class mới `.aw-fm-iconbtn` (vuông, bo tròn,
+   `is-on` xanh khi ở thùng rác); giữ `title`/`aria-label` để rê chuột thấy tên. New activity/New folder vẫn để chữ.
+2. **"Make a new folder" MẶC ĐỊNH TÍCH** khi vừa nạp file (ô tên hiện sẵn = mã bài `<source>`). Bỏ tích thì act vào
+   thẳng thư mục hiện tại.
+3. **Auto-close sau Import**: import xong (không lỗi) → **tự đóng pop-up**. Nếu KHÔNG make-new → chỉ refresh thư mục
+   hiện tại (xong). Nếu CÓ make-new → sau khi đóng, **mở luôn thư mục mới** (`enterFolder(root, res.folderId)`).
+   Có lỗi/act hỏng → GIỮ pop-up mở + hiện lỗi (không đóng); skip trùng tên thì báo bằng toast.
+4. **Fix hiển thị**: dòng preview act **anagram** trước hiện "· 0" vì đếm thiếu khoá `items` (anagram/flying/unjumble
+   dùng `content.items`, không phải `pairs`) → thêm `c.items` vào công thức đếm. Nay hiện "Anagram · 100".
+
+**Kiểm chứng (tạm expose importFlow/toolbar, KHÔNG login):** nạp file reading → 12 dòng, **"Make a new folder" tích
+sẵn**, ô tên = "DS-S2.I1.W3", meta "Anagram · 100" (đã fix); `toolbar()` dựng 0 lỗi, **Recycle bin = nút icon**
+(`aw-fm-iconbtn`+svg+title). 0 lỗi console. Auto-close + mở folder mới cần login để chạy `importBundle` (logic review:
+`close()` + `enterFolder(res.folderId)`; `importBundle` trả `folderId` = folder mới khi make-new). Đã gỡ debug + file test.
+
+**VIỆC ĐANG CHỜ:** thầy đăng nhập → thấy 2 nút icon; Import 1 file → make-new tích sẵn → Import → pop-up tự đóng và
+nhảy vào thư mục mới → **commit + push**.
+
+---
+
 ## Đợt 50 (3/8/2026, v0.9.24) — ĐỔI TEMPLATE MẶC ĐỊNH KHI IMPORT + CẤU TRÚC THƯ MỤC ACT/HOMEWORK — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
 **Yêu cầu thầy (đổi bản đồ act khi tạo từ file):**

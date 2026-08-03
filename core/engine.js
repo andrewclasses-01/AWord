@@ -75,8 +75,14 @@ const THEME_SWATCH = {
 //   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
 // With a session the teacher-only tools (Options/Template/Style, Edit, Set
 // assignment, Print, Home) are not built at all, so a student cannot reach them.
-export function startGame(root, activity, { onExit, session = null } = {}) {
+export function startGame(root, activity, { onExit, session = null, base = null } = {}) {
   root.innerHTML = "";
+
+  // The ORIGINAL library act behind this play. For a normal play it's `activity`
+  // itself; for a "Change template" play it's the act we converted FROM. Applied
+  // options are persisted onto THIS act (never onto the throwaway converted copy),
+  // and a converted act's options are remembered in originAct.templateOptions[type].
+  const originAct = base || activity;
 
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
@@ -502,9 +508,23 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       if (!activity.options) activity.options = {};
       Object.assign(activity.options, draft);
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
-      // Persist these options for THIS act only (per-act override of the
-      // Settings defaults). Safe no-op if the act isn't in the store yet.
-      if (activity.id) import("./store.js").then(m => m.saveActivity(activity));
+      // Persist the applied options PERMANENTLY (teacher only — students never
+      // reach this panel). For the original act, save its options straight onto
+      // it. For a temporary "Change template" act, remember the options per
+      // (original act, template type) in originAct.templateOptions[type] so that
+      // picking that template for this act again later restores them — and NEVER
+      // save a throwaway "conv_" act into the library.
+      if (!session) {
+        const isConv = !!activity._converted;
+        if (isConv) {
+          if (!originAct.templateOptions) originAct.templateOptions = {};
+          originAct.templateOptions[activity.type] = { ...activity.options };
+        }
+        const target = isConv ? originAct : activity;
+        if (target.id && !String(target.id).startsWith("conv_")) {
+          import("./store.js").then(m => m.saveActivity(target)).catch(() => {});
+        }
+      }
       // Applying ANY option restarts the current game so it always runs under
       // the new settings (teacher's call, 1/8/2026 — every template). If the
       // game hasn't started yet (Play overlay still up), there's nothing to
@@ -631,7 +651,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   function restart() {
     tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click
     cleanupAll();
-    startGame(root, activity, { onExit, session });
+    startGame(root, activity, { onExit, session, base: originAct });
   }
   function cleanupAll() { stopTimer(); closeMenu(); closeToolPanel(false); cleanup(); }
 
@@ -649,10 +669,18 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
   // (the fullscreen target is the stable root, exactly like "Start again").
   async function doSwitchTemplate(targetType) {
     try {
+      // Switching back to the original type restores the REAL library act (its
+      // own id + saved options), not a throwaway converted copy. Always convert
+      // FROM the origin so options are remembered per (origin act, template).
+      if (targetType === originAct.type) {
+        cleanupAll();
+        startGame(root, originAct, { onExit, session, base: originAct });
+        return;
+      }
       await ensureTemplate(targetType);
-      const converted = await convertActivity(activity, targetType);
+      const converted = await convertActivity(originAct, targetType);
       cleanupAll();
-      startGame(root, converted, { onExit, session });
+      startGame(root, converted, { onExit, session, base: originAct });
     } catch (e) {
       console.warn("AWord: template switch failed", e);
       toast("Could not switch template");

@@ -526,6 +526,20 @@ export async function deleteForever(id) {
   await persistDelete(gone.map(n => n.id));
 }
 
+// Permanently delete EVERYTHING in a root's recycle bin (every trashed node —
+// bin entries and their descendants). Returns how many bin ENTRIES (the items
+// the teacher sees in the bin) were removed. Same finality as Delete forever,
+// just in bulk.
+export async function emptyTrash(root) {
+  const map = await readAll();
+  const gone = Object.values(map).filter(n => n.root === root && n.trashed);
+  if (!gone.length) return 0;
+  const entries = gone.filter(n => n.trashRootId === n.id).length;
+  gone.forEach(n => delete map[n.id]);
+  await persistDelete(gone.map(n => n.id));
+  return entries;
+}
+
 // =============================================================
 // ONE-TIME MIGRATION — lift a library that was saved in THIS browser
 // (the pre-Firebase localStorage store) up into the teacher's cloud library.
