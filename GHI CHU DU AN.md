@@ -5,6 +5,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 47 (3/8/2026, v0.9.21) — ĐỔI TEMPLATE GIỮA LÚC CHƠI ("Change template") ⭐ CÓ SỬA CORE ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**Yêu cầu của thầy:** đang chơi 1 bộ (vd Anagram) thì bấm 1 nút để **đổi sang game khác chơi tiếp CHÍNH
+bộ dữ liệu đó**, khỏi quay về thư viện nhập lại — giữ lớp hào hứng ("cùng một bộ từ, đổi kiểu chơi").
+
+**Quyết định đã chốt với thầy (2 vòng hỏi):**
+- **Phạm vi = "nhóm hợp dữ liệu tốt"** (không bật các chiều gượng). Riêng chiều *từ vựng → trắc nghiệm*
+  (lấy đề/định nghĩa làm câu hỏi, trộn thêm từ khác làm đáp án nhiễu) NẰM TRONG nhóm sạch — đúng ý thầy.
+- **Chỉ CHƠI TẠM, giữ nguyên act gốc**: đổi thì dựng 1 act mới tạm (id `conv_...`, cờ `_converted`),
+  KHÔNG lưu thư viện, KHÔNG đụng Firebase. Điểm bắt đầu lại, **GIỮ theme đang chọn**.
+- **3 chỗ bấm** (đều đã có khung stub "coming soon" từ trước, nay nối thật): nút **Template** dưới khung ·
+  mục **Change template** trong menu ☰ · dòng **Play a different template** ở màn kết thúc.
+
+**Việc đã làm:**
+1. **File lõi MỚI `core/convert.js`** — bộ phiên dịch dữ liệu. Rút mọi act về "record" chuẩn theo 4 *kind*:
+   `qa` {term, clue, altAnswers[], distractors[]} · `tf` {text, truth} · `sentence` {sentence, clue} ·
+   `card` {text}. Xuất 3 hàm: `toRecords(activity)`, `switchTargets(activity)` (trả về đúng danh sách
+   game đổi-được), `convertActivity(activity, target)` (async — dựng act mới; options+instruction lấy
+   từ **file sample của game đích** để chắc hợp lệ). MC đích tự sinh đáp án nhiễu từ các `term` khác
+   trong bộ (bù vào distractors gốc nếu nguồn vốn là trắc nghiệm).
+2. **`core/engine.js`** (sửa core, thầy có mặt duyệt): import `ensureTemplate` + `switchTargets/convertActivity`;
+   viết lại `buildTemplatePanel` (game hợp dữ liệu = bấm được, còn lại `is-soon` mờ + toast "doesn't fit");
+   thêm `doSwitchTemplate(target)` (`await ensureTemplate` → convert → `cleanupAll` → `startGame` act tạm,
+   giữ fullscreen vì target là `root`); thêm `openSwitchPicker(onBack)` = picker nền tối TRONG khung (hoạt
+   động cả khi fullscreen, khác thanh dưới khung); nối menu ☰ + màn kết thúc vào picker.
+3. **`core/app.css`** — thêm `.aw-switch-list` (lưới 2 cột cho picker; `.aw-panel` sẵn tự cuộn).
+
+**Bản đồ đổi (nhóm sạch) — đã tự kiểm 116/116 chiều mount 0 lỗi:**
+- Nhóm QA (10 game: anagram · flying_fruit · crossword · find_the_match · balloon_pop · quiz · gameshow ·
+  maze_chase · open_the_box · type_the_answer): đổi qua lại cho nhau **+ speaking_cards** (≈11 đích mỗi game).
+- `true_false` ↔ `whack_a_mole` (+ speaking_cards). `unjumble` → {speaking_cards, type_the_answer}.
+- `speaking_cards` → ∅ (không có đáp án nên không đổi sang game chấm điểm).
+- **Guard**: nhóm QA nếu **thiếu clue** (vd Anagram withClues:false, <60% có clue) thì loại các đích cần đề
+  (crossword/find_the_match/balloon_pop/quiz/…); crossword cần 2..40 câu. `whack_a_mole` nguồn: mode
+  `quiz`→QA, còn lại→TF.
+
+**Kiểm chứng (dev server localhost:5510 + 2 trang harness tạm ĐÃ XOÁ, chạy ở gốc web để đúng đường CSS/module):**
+- `_convtest.html`: duyệt mọi sample nguồn × mọi đích `switchTargets` → convert + `startGame` bằng engine
+  THẬT vào div rời → **PASS=116, FAIL=0**, `.aw-stage` mọi lần, **0 lỗi console**, số câu khớp bộ nguồn.
+- `_convvisual.html`: mở Anagram → panel Template hiện 11 game bấm được, chỉ **True/false + Unjumble** mờ
+  (đúng); bấm **Find the match** → panel tắt, remount, READY giữ tên bài "ANIMALS — UNSCRAMBLE" + game
+  "FIND THE MATCH"; Play → ô đáp án đúng bộ động vật (giraffe/dolphin/kangaroo/polar bear/penguin/elephant).
+- Menu ☰ (nguồn Quiz) → "Change template" mở picker nền tối "CHANGE TEMPLATE" đúng 11 đích + nút Back;
+  bấm **Anagram** → Play → gợi ý "Which word is a fruit?" + chữ xáo "N A A A B N" = **banana** (đáp án đúng).
+- `git status`: đúng 3 file (`core/convert.js` mới, `core/engine.js`, `core/app.css`) — KHÔNG đụng 14 template,
+  KHÔNG đổi class `.aw-page/.aw-stage/.aw-below` hay target fullscreen `#app` (không vỡ nhúng myActivity/myLesson).
+
+**Quyết định kỹ thuật đáng nhớ:**
+- Học sinh KHÔNG thấy đổi template: cụm dưới khung bị gỡ khi có `session` (engine ~dòng 195), menu "Change
+  template" đã gác `if(!session)`, và "Play a different template" chỉ ở nhánh non-session của summary.
+- Picker dùng **nền tối trong khung** (không dùng thanh dưới khung) để bấm được cả khi fullscreen.
+- `convert.js` chỉ import `catalog.js` + `utils.js` (KHÔNG chạm store) nên engine import tĩnh nó vẫn AN TOÀN
+  với luật "trang HS không nạp code thư viện".
+
+**VIỆC ĐANG CHỜ (đợt này):** ĐÃ commit + push + live (thầy duyệt 3/8/2026). Có thể bàn thêm sau: (a) nút "Lưu thành act mới" sau khi đổi;
+(b) bật thêm chiều "gượng" (mọi game → Đúng/Sai) nếu thầy muốn; (c) khi thêm template thứ 15 nhớ khai thêm
+nhánh trong `toRecords`/`buildContent` của `convert.js`.
+
+---
+
 ## Đợt 46 (3/8/2026, v0.9.20) — FIX deep-link act TRẮNG TRANG: `routeFromLocation` thiếu `ensureTemplate` (hồi quy Đợt 33) ✅ DUYỆT → COMMIT + PUSH + LIVE
 
 **Bối cảnh (thầy báo qua app myActivity):** ở bảng ĐÔI của myActivity, mở 1 act AWord thì pane TRÁI

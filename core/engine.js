@@ -14,7 +14,8 @@
 // Results (incl. per-question review) are saved to the local leaderboard.
 // =============================================================
 
-import { getTemplate } from "./registry.js";
+import { getTemplate, ensureTemplate } from "./registry.js";
+import { switchTargets, convertActivity } from "./convert.js";
 import { computeResult } from "./scoring.js";
 import { buildStage } from "./layout.js";
 import { formatTime, el, ordinal, fmtSecsParts } from "./utils.js";
@@ -535,15 +536,24 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     }
   }
 
-  // ----- TEMPLATE panel: switch games (only built templates are clickable) -----
+  // ----- TEMPLATE panel: switch games KEEPING the current content -----
+  // Only games whose data shape can hold this act's content are clickable
+  // ("compatible group", teacher's call 3/8/2026); the rest are dimmed.
+  // Clicking one converts the content and plays it straight away — the
+  // original act in the library is never touched (see doSwitchTemplate).
   function buildTemplatePanel(panel) {
     panel.append(el("div", "aw-tool-panel-head", "Template"));
     const grid = el("div", "aw-tpl-grid");
+    const canSwitch = new Set(switchTargets(activity).map(t => t.type));
     ALL_TEMPLATES.forEach(t => {
       const isCurrent = t.type === activity.type;
-      const item = el("div", "aw-tpl-item" + (isCurrent ? " is-current" : " is-soon"), escapeText(t.label));
-      if (!isCurrent) {
-        item.onclick = () => { sound.click(); toast(`${t.label} — coming soon`); };
+      const enabled = !isCurrent && canSwitch.has(t.type);
+      const cls = isCurrent ? " is-current" : (enabled ? "" : " is-soon");
+      const item = el("div", "aw-tpl-item" + cls, escapeText(t.label));
+      if (enabled) {
+        item.onclick = () => { closeToolPanel(false); doSwitchTemplate(t.type); };
+      } else if (!isCurrent) {
+        item.onclick = () => { sound.click(); toast(`${t.label} — doesn't fit this content`); };
       }
       grid.append(item);
     });
@@ -599,7 +609,11 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       menuItem("Resume", closeMenu)
     );
     // "Change template" is a teacher tool — students never see it.
-    if (!session) menuEl.append(menuItem("Change template", () => { closeMenu(); toast("Template switching — coming soon"); }));
+    if (!session) menuEl.append(menuItem("Change template", () => {
+      closeMenu();
+      // Back = drop the picker and resume the running game.
+      openSwitchPicker(() => { backdrop?.remove(); backdrop = null; });
+    }));
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
@@ -626,6 +640,44 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
     const t = el("div", "aw-toast", escapeText(msg));
     inner.append(t);
     setTimeout(() => t.remove(), 2200);
+  }
+
+  // ----- CHANGE TEMPLATE: play THIS content as a different game -----
+  // Loads the target template on demand, converts the content into its shape,
+  // then re-enters startGame with a fresh EPHEMERAL activity (id "conv_...").
+  // The library act is untouched; the current theme is kept; fullscreen too
+  // (the fullscreen target is the stable root, exactly like "Start again").
+  async function doSwitchTemplate(targetType) {
+    try {
+      await ensureTemplate(targetType);
+      const converted = await convertActivity(activity, targetType);
+      cleanupAll();
+      startGame(root, converted, { onExit, session });
+    } catch (e) {
+      console.warn("AWord: template switch failed", e);
+      toast("Could not switch template");
+    }
+  }
+
+  // In-stage picker (works in fullscreen, unlike the below-stage tool row):
+  // a dark backdrop listing the compatible games. `onBack` returns to wherever
+  // it was opened from — the running game (menu) or the summary (game over).
+  function openSwitchPicker(onBack) {
+    const bd = openBackdrop();
+    const panel = el("div", "aw-panel aw-panel-wide");
+    panel.append(el("div", "aw-panel-head", "CHANGE TEMPLATE"));
+    const targets = switchTargets(activity);
+    if (!targets.length) {
+      panel.append(el("div", "aw-panel-rank", "THIS CONTENT CAN'T BE PLAYED AS ANOTHER GAME"));
+    } else {
+      const list = el("div", "aw-panel-items aw-switch-list");
+      targets.forEach(t => list.append(panelItem(t.label, () => doSwitchTemplate(t.type))));
+      panel.append(list);
+    }
+    const foot = el("div", "aw-panel-items aw-panel-items-row");
+    foot.append(panelItem("Back", onBack));
+    panel.append(foot);
+    bd.append(panel);
   }
 
   // ----- API handed to the template -----
@@ -758,7 +810,7 @@ export function startGame(root, activity, { onExit, session = null } = {}) {
       }
       items.append(
         panelItem("Start again", restart),
-        panelItem("Play a different template", () => toast("Template switching — coming soon"))
+        panelItem("Play a different template", () => openSwitchPicker(() => showSummary(result, entryId)))
       );
     }
     panel.append(items);

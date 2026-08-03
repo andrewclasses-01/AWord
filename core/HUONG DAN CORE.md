@@ -142,6 +142,37 @@ Lý do đổi: trước đây mỗi trang phải tự khai danh sách template (
 `play.html` chỉ khai mỗi Quiz nên **HS không chơi được bài giao thuộc 13 loại còn lại** — lỗi âm thầm
 suốt một thời gian dài. Nay chỉ còn 1 danh sách, và HS mở 1 bài chỉ tải đúng 1 game.
 
+## Đổi template giữa lúc chơi — `core/convert.js` (v0.9.21)
+
+Thầy có thể đang chơi 1 act rồi **đổi sang loại game khác chơi tiếp CHÍNH bộ nội dung đó** (nút
+**Template** dưới khung · **Change template** trong menu ☰ · **Play a different template** ở màn kết
+thúc). Việc này KHÔNG lưu gì: engine dựng 1 act TẠM (id `conv_...`, cờ `_converted`) rồi `startGame`
+lại — act gốc trong thư viện nguyên vẹn.
+
+`core/convert.js` là bộ phiên dịch dữ liệu (chỉ import `catalog.js` + `utils.js`, **KHÔNG chạm store**
+nên engine import tĩnh vẫn an toàn với luật "trang HS không nạp code thư viện"). Xuất 3 hàm:
+
+- `toRecords(activity)` → `{ kind, records }`. Rút act về "record" chuẩn theo 4 *kind*:
+  `qa` `{term, clue, altAnswers[], distractors[]}` · `tf` `{text, truth}` · `sentence` `{sentence, clue}` ·
+  `card` `{text}`.
+- `switchTargets(activity)` → `[{type,label}]`: các loại đổi-được từ act hiện tại (đã bỏ chính nó, chỉ
+  game `built`). Engine dùng nó để bật/mờ mục trong panel Template và dựng picker.
+- `convertActivity(activity, targetType)` → **async**, trả về act mới. options+instruction lấy từ **file
+  sample của game đích** (chắc hợp lệ); giữ `theme` của act nguồn; MC đích tự sinh đáp án nhiễu từ các
+  `term` khác trong bộ.
+
+**Phạm vi "nhóm hợp dữ liệu tốt" (thầy chốt 3/8/2026):** nhóm QA (anagram · flying_fruit · crossword ·
+find_the_match · balloon_pop · quiz · gameshow · maze_chase · open_the_box · type_the_answer, và
+whack_a_mole *mode quiz*) đổi qua lại cho nhau **+ speaking_cards**; `true_false` ↔ `whack_a_mole`
+(*mode trueFalse*) + speaking_cards; `unjumble` → {speaking_cards, type_the_answer}; `speaking_cards`
+không đổi được (thiếu đáp án). Guard: đích cần đề (`NEED_CLUE`) bị loại nếu bộ nguồn <60% có clue;
+crossword cần 2..40 câu.
+
+> ⭐ **THÊM TEMPLATE THỨ 15** thì ngoài `core/catalog.js` (1 dòng để chơi/sửa được), nếu muốn nó tham
+> gia đổi template thì thêm **1 nhánh trong `toRecords()` + 1 nhánh trong `buildContent()`** của
+> `convert.js` (và, nếu là "kind" mới, khai target list). Không thêm thì game vẫn chạy bình thường, chỉ
+> là không hiện trong danh sách đổi.
+
 ## API engine ↔ template (bắt buộc mọi template tuân theo)
 
 Mỗi template là 1 file JS, tự đăng ký khi được import:

@@ -352,6 +352,11 @@ body {
 }
 .aw-panel-item:hover { color: #35b1f0; background: rgba(255,255,255,.04); }
 
+/* Change-template picker: the compatible games as a compact 2-column grid
+   (the enclosing .aw-panel already scrolls past its max-height if needed). */
+.aw-switch-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5cqw; margin: 0.6cqw 0; }
+.aw-switch-list .aw-panel-item { border: 1px solid rgba(255,255,255,.16); text-align: center; }
+
 /* ---------- Leaderboard table ---------- */
 .aw-lb-table { margin: 0.4cqw 0 1cqw; }
 .aw-lb-row {
