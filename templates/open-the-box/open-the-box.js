@@ -168,11 +168,63 @@ function layoutGrid(root, total, explicitCols) {
   // cqw value would) so it stays as large as possible while still fitting a
   // 2-digit number, whether there are 4 boxes or 100.
   grid.style.setProperty("--num-size", (size * 0.46) + "px");
+  // Point 3 (4/8/2026): the solved/locked box back-face text (question +
+  // answer) is ALSO sized off the real cell — a stage-relative cqw stayed the
+  // same as boxes shrank and overflowed. This is the MAX; fitBackFaces() then
+  // shrinks per box so long questions fit fully inside.
+  grid.style.setProperty("--back-size", (size * 0.12) + "px");
 
   grid.querySelectorAll(".aw-otb-box").forEach((box, i) => {
     const p = PALETTE[(i % cols) % PALETTE.length];   // colour cycles by LOGICAL column (still meaningful purely as a colour-variety grouping, independent of the flex layout mechanism)
     box.style.setProperty("--otb-c", p.c);
     box.style.setProperty("--otb-d", p.d);
+  });
+}
+
+// Point 3 (4/8/2026): shrink each OPENED box's back-face text (question +
+// correct answer) until it fits fully inside that box. --back-size (set in
+// layoutGrid) already scales with the cell; this per-box --back-fit multiplier
+// then guarantees even a long question shows in full instead of being clipped
+// by the face's overflow:hidden. Only runs on flipped boxes (few, and only
+// after a box is answered / on resize), so cost stays tiny. Measures FLOW
+// content height (q + gap + a) against the padded face minus room reserved for
+// the tick/lock badge, and each text line's own overflow for a long word.
+function fitBackFaces(root) {
+  root.querySelectorAll(".aw-otb-box.is-open .aw-otb-face-back").forEach(face => {
+    const q = face.querySelector(".aw-otb-back-q");
+    const a = face.querySelector(".aw-otb-back-a");
+    if (!q && !a) return;
+    const badge = face.querySelector(".aw-otb-solved-tick");
+    const cs = getComputedStyle(face);
+    const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+    const apply = s => face.style.setProperty("--back-fit", s);
+    const contentH = () => {
+      const gap = parseFloat(getComputedStyle(face).rowGap) || 0;
+      return (q ? q.offsetHeight : 0) + (a ? a.offsetHeight : 0) + (q && a ? gap : 0);
+    };
+    // leave room under the text for the badge so the last line never sits on it
+    const reserve = () => (badge ? badge.offsetHeight + 2 : 0);
+    const overW = () => (q && q.scrollWidth > q.clientWidth + 1) || (a && a.scrollWidth > a.clientWidth + 1);
+    const overH = () => contentH() > (face.clientHeight - padY - reserve());
+    const over = () => overH() || overW();
+    apply(1);
+    if (!over()) return;
+    let lo = 0.2, hi = 1, best = 0.2;
+    for (let i = 0; i < 14; i++) {
+      const mid = (lo + hi) / 2;
+      apply(mid);
+      if (over()) hi = mid; else { best = mid; lo = mid; }
+    }
+    apply(best);
+    // width guarantee for a single unbreakable long word (same idea as the
+    // in-question fitOne): drop past the floor until it sits on one line.
+    let f = best;
+    const HARD_MIN = 0.1;
+    for (let i = 0; i < 8 && overW() && f > HARD_MIN; i++) {
+      const el = (q && q.scrollWidth > q.clientWidth + 1) ? q : a;
+      f = Math.max(HARD_MIN, f * (el.clientWidth / Math.max(el.scrollWidth, 1)) * 0.95);
+      apply(f);
+    }
   });
 }
 
@@ -268,6 +320,11 @@ function mountQuestions(root, activity, ui) {
   let fitter = null;
   let lastBoxRect = null;    // rect of the tapped box, for the open/close zoom animation
   let hasPlayedEntrance = false;   // the LONG music-synced grid pop only plays once per play-through
+  // Point 4 (4/8/2026): answer tiles ignore taps until 80% of their slide-in
+  // has played, so the player can't mis-tap a still-arriving tile before
+  // reading it. Set false while the tiles slide in, flipped true by gateTimer.
+  let answersUnlocked = false;
+  let gateTimer = null;
 
   // ----- Cross-fade transition bookkeeping (đợt 14) -----
   // The grid and the question card briefly OVERLAP (absolutely positioned via
@@ -378,7 +435,7 @@ function mountQuestions(root, activity, ui) {
   }
 
   render();
-  const ro = new ResizeObserver(() => { if (activeIndex === null) layoutGrid(root, total, explicitCols); });
+  const ro = new ResizeObserver(() => { if (activeIndex === null) { layoutGrid(root, total, explicitCols); fitBackFaces(root); } });
   ro.observe(root);
 
   function render() {
@@ -448,6 +505,7 @@ function mountQuestions(root, activity, ui) {
     const { card, grid } = buildBoxGrid();
     root.append(card);
     layoutGrid(root, total, explicitCols);
+    fitBackFaces(root);   // point 3: size any already-solved boxes' back text
     applyPopEntrance(grid);
     updateProgress();
   }
@@ -559,6 +617,8 @@ function mountQuestions(root, activity, ui) {
     gridCard.classList.add("aw-otb-anim-under");
     root.insertBefore(gridCard, qcard);
     layoutGrid(root, total, explicitCols);
+    fitBackFaces(root);   // point 3: fit the just-answered box's back text
+
     // delayed, shorter fade-in so the boxes appear LATER but still land at
     // full opacity right as the question card is removed (ZOOM_TRANSFORM_MS)
     grid.style.setProperty("--otb-fade-delay", CLOSE_BOX_FADE_DELAY_MS + "ms");
@@ -625,6 +685,21 @@ function mountQuestions(root, activity, ui) {
     if (it.answers.length % 2 === 1) row.lastElementChild.classList.add("aw-otb-qtile-wide");
     body.append(row);
     card.append(body);
+
+    // Point 4: gate taps until 80% of the answers' slide-in has played. The
+    // last tile lands at ZOOM_TRANSFORM_MS + its stagger; 80% of that whole
+    // span is when picking unlocks (CSS `.is-gated` makes the row inert until
+    // then; answer() double-checks answersUnlocked).
+    const slideSpan = ZOOM_TRANSFORM_MS + Math.max(0, it.answers.length - 1) * TILE_STAGGER_MS;
+    answersUnlocked = false;
+    row.classList.add("is-gated");
+    if (gateTimer) clearTimeout(gateTimer);
+    gateTimer = setTimeout(() => {
+      gateTimer = null;
+      answersUnlocked = true;
+      row.classList.remove("is-gated");
+    }, Math.round(slideSpan * 0.8));
+
     return { card, qTile, answersRow: row };
   }
 
@@ -654,8 +729,8 @@ function mountQuestions(root, activity, ui) {
       const cs = getComputedStyle(box);
       const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
       const apply = s => textEl.style.setProperty("--fit", s);
-      const over = () => textEl.scrollHeight > box.clientHeight - padY - 2
-                      || textEl.scrollWidth > textEl.clientWidth + 1;
+      const overW = () => textEl.scrollWidth > textEl.clientWidth + 1;
+      const over = () => textEl.scrollHeight > box.clientHeight - padY - 2 || overW();
       apply(FIT_MAX);
       if (over()) {
         let lo = FIT_MIN, hi = FIT_MAX, best = FIT_MIN;
@@ -665,6 +740,20 @@ function mountQuestions(root, activity, ui) {
           if (over()) hi = mid; else { best = mid; lo = mid; }
         }
         apply(best);
+        // Point 5 (4/8/2026): a single unbreakable word longer than the tile
+        // (e.g. a 40+ character term) can still be wider than the box even at
+        // FIT_MIN — the binary search stops at the floor and the word OVERFLOWS
+        // the tile edge (words never wrap, overflow-wrap:normal). Since text
+        // width scales ~linearly with font-size, shrink past the floor by the
+        // exact clientWidth/scrollWidth ratio until the whole word sits on one
+        // line inside the tile. Guarantees "no word ever splits or spills",
+        // just smaller — the teacher's rule. HARD_MIN keeps it from vanishing.
+        let f = best;
+        const HARD_MIN = 0.12;
+        for (let i = 0; i < 8 && overW() && f > HARD_MIN; i++) {
+          f = Math.max(HARD_MIN, f * (textEl.clientWidth / Math.max(textEl.scrollWidth, 1)) * 0.96);
+          apply(f);
+        }
       }
     };
     const runAll = () => {
@@ -696,7 +785,7 @@ function mountQuestions(root, activity, ui) {
   }
 
   function answer(i, k, tile, row) {
-    if (activeIndex !== i || ended) return;
+    if (activeIndex !== i || ended || !answersUnlocked) return;   // point 4: ignore taps until the read-gate opens
     const it = items[i];
     const correct = !!it.answers[k].correct;
 
@@ -761,6 +850,14 @@ function mountQuestions(root, activity, ui) {
     const dx = (rootRect.left + targetRect.x + targetRect.w / 2) - (elRect.left + elRect.width / 2);
     const dy = (rootRect.top + targetRect.y + targetRect.h / 2) - (elRect.top + elRect.height / 2);
     el2.style.transformOrigin = "center center";
+    // Point 2 (4/8/2026): round the corners PROGRESSIVELY on the way down so the
+    // question tile lands looking exactly like the rounded number box, instead
+    // of a near-square (its own radius, once scaled down by scaleX/scaleY,
+    // shrinks to almost nothing). To end at the box's real corner radius we set
+    // the tile's radius to boxRadius/scale per axis, so scale*radius == boxRadius
+    // at the finish; the transition interpolates from the tile's natural radius.
+    const br = (scaleX > 0 && scaleY > 0) ? readBoxRadius(root) : 0;
+    const natRadius = getComputedStyle(el2).borderRadius;
     // explicit starting point + a forced reflow BEFORE enabling the
     // transition, same as zoomElFrom — without this the browser can
     // collapse the "no transition yet" and "new value" style writes into
@@ -769,10 +866,13 @@ function mountQuestions(root, activity, ui) {
     el2.style.transition = "none";
     el2.style.transform = "translate(0px, 0px) scale(1, 1)";
     el2.style.opacity = "1";
+    if (br > 0) el2.style.borderRadius = natRadius;
     void el2.offsetWidth;
-    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
+    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1), opacity ${ZOOM_OPACITY_MS}ms ease`
+      + (br > 0 ? `, border-radius ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1)` : "");
     el2.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
     el2.style.opacity = "0.15";
+    if (br > 0) el2.style.borderRadius = `${(br / scaleX).toFixed(2)}px / ${(br / scaleY).toFixed(2)}px`;
     let done = false;
     const run = () => { if (done) return; done = true; onDone(); };
     // Fire on the TRANSFORM transition specifically (đợt 14). The opacity
@@ -794,14 +894,23 @@ function mountQuestions(root, activity, ui) {
     const dx = (rootRect.left + originRect.x + originRect.w / 2) - (elRect.left + elRect.width / 2);
     const dy = (rootRect.top + originRect.y + originRect.h / 2) - (elRect.top + elRect.height / 2);
     el2.style.transformOrigin = "center center";
+    // Point 2 (4/8/2026), mirror of zoomElTo: START with the corners matching
+    // the box (boxRadius/scale per axis, so scale*radius == boxRadius) and
+    // un-round toward the tile's natural radius as it grows — the reverse of
+    // the fly-back, so open and close look symmetric.
+    const br = (scaleX > 0 && scaleY > 0) ? readBoxRadius(root) : 0;
+    const natRadius = getComputedStyle(el2).borderRadius;   // capture the natural (CSS) radius BEFORE overriding it inline
     el2.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
     el2.style.opacity = "0.5";
+    if (br > 0) el2.style.borderRadius = `${(br / scaleX).toFixed(2)}px / ${(br / scaleY).toFixed(2)}px`;
     void el2.offsetWidth; // force reflow so the browser commits the shrunk starting state first
-    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1), opacity ${ZOOM_OPACITY_MS}ms ease`;
+    el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1), opacity ${ZOOM_OPACITY_MS}ms ease`
+      + (br > 0 ? `, border-radius ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1)` : "");
     el2.style.transform = "translate(0px, 0px) scale(1, 1)";
     el2.style.opacity = "1";
+    if (br > 0) el2.style.borderRadius = natRadius; // animate toward the natural (CSS) radius
     let done = false;
-    const clear = () => { if (done) return; done = true; el2.style.transition = ""; el2.style.transform = ""; };
+    const clear = () => { if (done) return; done = true; el2.style.transition = ""; el2.style.transform = ""; el2.style.borderRadius = ""; };
     el2.addEventListener("transitionend", clear, { once: true });
     setTimeout(clear, ZOOM_FALLBACK_MS);
   }
@@ -871,6 +980,7 @@ function mountQuestions(root, activity, ui) {
   return function cleanup() {
     ro.disconnect();
     clearPending();
+    if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
     if (fitter) fitter.destroy();
     stopSharedTimer();
     if (ui.topbarMid) ui.topbarMid.innerHTML = "";
@@ -880,6 +990,20 @@ function mountQuestions(root, activity, ui) {
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// Point 2 helper (4/8/2026): the number box's real corner radius in px, read
+// from a front face currently in the grid (theme-agnostic — picks up whatever
+// --aw-tile-radius resolves to). Returns 0 if no grid is present (e.g. the
+// plain renderQuestion fallback with no boxes on screen), which makes the zoom
+// functions simply skip the corner-rounding step.
+function readBoxRadius(root) {
+  const face = root.querySelector(".aw-otb-face-front");
+  if (face) {
+    const r = parseFloat(getComputedStyle(face).borderTopLeftRadius);
+    if (r > 0) return r;
+  }
+  return 0;
 }
 
 registerTemplate(otbTemplate);

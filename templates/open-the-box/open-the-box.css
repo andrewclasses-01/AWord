@@ -72,6 +72,16 @@
   background: transparent;
   border: 0; padding: 0;
   font-family: inherit;
+  /* Point 1 (touch flash fix, 4/8/2026): a <button> on a touchscreen (TOMKO)
+     flashes Chrome's DEFAULT tap-highlight — rgba(0,0,0,0.18) — for a frame or
+     two on press, and Blink draws that highlight as a RECTANGLE over the border
+     box, IGNORING border-radius. On these rounded tiles that read as an ugly
+     square "nền vuông 4 góc" blink at the moment of the tap. Killing the tap
+     highlight (and the long-press callout) removes it; the tile's own :active
+     style is the intended press feedback instead. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none;
 }
 .aw-otb-box-inner {
   position: relative;
@@ -111,17 +121,26 @@
   color: var(--aw-text);
   transform: rotateY(180deg);
   font-weight: 600;
-  font-size: calc(1.5cqw * var(--fit));
-  line-height: 1.25;
+  /* Point 3 (fit back-face text to the box, 4/8/2026): the solved/locked box
+     shows its question (+ correct answer) here. The old fixed 1.5cqw is
+     stage-relative, so with many boxes the cells shrink but the text didn't —
+     it overflowed and got clipped by the face's overflow:hidden. --back-size is
+     now set per-layout in JS proportional to the ACTUAL cell size (so it tracks
+     the box at every count), and --back-fit is a per-box shrink from
+     fitBackFaces() that guarantees even a long question fits fully inside. */
+  font-size: calc(var(--back-size, 1.5cqw) * var(--back-fit, 1));
+  line-height: 1.2;
   text-align: center;
   flex-direction: column;
-  gap: calc(0.6cqw * var(--fit));
+  gap: calc(0.5cqw * var(--back-fit, 1));
   border-color: var(--tile-eff);
   border-width: 0.18cqw;
   border-style: solid;
 }
-.aw-otb-back-q { font-weight: 700; }
-.aw-otb-back-a { display: flex; align-items: center; gap: 0.4cqw; font-weight: 600; }
+/* full width + no mid-word break so multi-word text wraps to fill the box and
+   fitBackFaces() sizes it down until the whole thing shows (point 3 + 5). */
+.aw-otb-back-q { font-weight: 700; width: 100%; overflow-wrap: normal; word-break: keep-all; }
+.aw-otb-back-a { display: flex; align-items: center; justify-content: center; gap: 0.4cqw; font-weight: 600; max-width: 100%; overflow-wrap: normal; word-break: keep-all; }
 .aw-otb-back-a.is-correct { color: #059669; }
 
 /* Questions mode: a solved box stays flipped open forever — green tick kept
@@ -313,6 +332,12 @@
   width: 100%;
   font-size: calc(3cqw * var(--fit));
   line-height: 1.15;
+  /* Point 5 (never split a word, 4/8/2026): make this EXPLICIT here too (the
+     answer text already had it; the question span only inherited it). A long
+     single word must OVERFLOW (which setupFit then shrinks to fit) — it must
+     never break mid-word onto a second line. keep-all reinforces normal so no
+     UA/theme default can reintroduce a break. */
+  overflow-wrap: normal; word-break: keep-all;
 }
 
 .aw-otb-q-answers {
@@ -339,6 +364,12 @@
   padding: calc(1.6cqw * var(--fit));
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
+  /* Point 1 (touch flash fix, 4/8/2026): kill Chrome's default rectangular
+     tap-highlight so a press on this rounded answer tile doesn't blink a square
+     overlay on the touchscreen — see the same note on .aw-otb-box. */
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none;
   transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
   /* staggered "slide in from the STAGE's right edge" entrance (delay set
      per-tile in JS), running AT THE SAME TIME as the question tile's own
@@ -407,7 +438,7 @@
    single word instead overflows, which setupFit() detects (scrollWidth >
    clientWidth) and resolves by shrinking --fit until the word fits on one
    line — so the text is as large as possible with whole, unbroken words. */
-.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: normal; word-break: normal; }
+.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: normal; word-break: keep-all; }
 .aw-otb-q-letter {
   position: absolute; top: calc(0.8cqw * var(--fit)); left: calc(1cqw * var(--fit));
   font-size: calc(1.8cqw * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);
@@ -416,6 +447,12 @@
 .aw-otb-qtile:active:not(:disabled) { transform: translateY(0.4cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 var(--tile-dark-eff)); }
 .aw-otb-qtile:disabled { cursor: default; }
 .aw-otb-qtile.is-dimmed { opacity: .15; }
+/* Point 4 (read-before-tap gate, 4/8/2026): the answer tiles slide in over
+   ZOOM_TRANSFORM_MS; the player must not be able to pick before they've had
+   time to see them. While gated the whole answers row is non-interactive (no
+   click, no hover, no tap flash) — JS lifts this at 80% of the slide-in and
+   answer() has a matching guard as a backstop. */
+.aw-otb-q-answers.is-gated { pointer-events: none; }
 
 /* GAME OVER — shake the whole grid, then each box "explodes" (its own
    transform, unrelated to any translate-based centering, so animating

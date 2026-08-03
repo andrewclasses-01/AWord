@@ -1,6 +1,58 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 1/8/2026 (đợt 19)
+## TRẠNG THÁI: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE — cập nhật 4/8/2026 (đợt 21, v0.9.33) — 5 CẢI TIẾN UX (đã tự test trình duyệt thật, 0 lỗi console, KHÔNG đụng core)
+
+## Đợt 21 (4/8/2026) — 5 cải tiến UX theo yêu cầu thầy
+
+> Chỉ sửa 2 file template: `open-the-box.js` + `open-the-box.css`. **KHÔNG đụng core.** Tự kiểm bằng
+> `javascript_tool` trên trình duyệt thật (test.html + dữ liệu bịa ép ca biên). Điểm 2 là hiệu ứng thị
+> giác — đã xác minh không lỗi + inline style set/clear đúng, nhưng **hình ảnh mượt cần thầy xem trên
+> màn thật** (preview không cấp compositing để tự quay).
+
+**1) Sửa lỗi NHÁY VUÔNG khi chạm ô (điểm 1).** Khi chạm ô số / ô đáp án trên màn cảm ứng, nháy 1-2 frame
+một "nền vuông 4 góc" dù ô bo tròn. Nguyên nhân: `-webkit-tap-highlight-color` **mặc định của Chrome =
+`rgba(0,0,0,0.18)`** (không set ở đâu cả), và Blink vẽ lớp phủ chạm này thành HÌNH CHỮ NHẬT theo border-box,
+BỎ QUA border-radius. Sửa: đặt `-webkit-tap-highlight-color: transparent` (+ `-webkit-touch-callout:none`,
+`user-select:none`) trên `.aw-otb-box` và `.aw-otb-qtile`. Xác minh: `webkitTapHighlightColor` = `rgba(0,0,0,0)`
+trên cả hai. Phản hồi khi bấm vẫn có nhờ `:active` sẵn có.
+
+**2) BO GÓC DẦN khi ô câu hỏi bay về ô số (điểm 2).** Trước đây `zoomElTo` chỉ scale transform → bán kính
+bo tròn của tile bị scale nhỏ theo → đáp xuống trông gần VUÔNG so với ô số bo tròn. Sửa: animate luôn
+`border-radius` trong `zoomElTo` (và `zoomElFrom` để 2 chiều đối xứng). Đích = `boxRadius/scaleX` ngang &
+`boxRadius/scaleY` dọc (cú pháp elip `Rx / Ry`), để sau khi scale thì `scale*radius == boxRadius` → khớp
+đúng độ bo của ô số. `readBoxRadius()` đọc px thật từ `.aw-otb-face-front` (theme-agnostic). Dọn inline
+`borderRadius=""` khi xong. Nếu không có grid (nhánh renderQuestion dự phòng) → `br=0` → bỏ qua an toàn.
+Xác minh: mở xong tile đã CLEAR inline radius, 0 lỗi.
+
+**3) CHỮ BACK-FACE co theo cỡ ô khi NHIỀU ô (điểm 3).** Ô đã giải/khoá lật hiện câu hỏi (+đáp án) ở
+`1.5cqw` CỐ ĐỊNH (stage-relative) → nhiều ô nhỏ thì chữ tràn, bị `overflow:hidden` cắt. Sửa: (a) `layoutGrid`
+đặt `--back-size = size*0.12` px (theo cỡ ô THẬT, giống `--num-size`); (b) hàm MỚI `fitBackFaces(root)` co
+`--back-fit` từng ô đang mở tới khi nội dung (đo CHIỀU CAO FLOW `q+gap+a` so với face trừ padding trừ chỗ
+chừa cho huy hiệu tick/khoá, + tràn NGANG của từng dòng) vừa trọn; gọi ở `renderGrid`, `closeCardThen`,
+ResizeObserver. Xác minh: 20 ô (cell 121px), câu dài "What do you call a person who studies the weather
+patterns?" + "✓ Meteorologist" → back-fit 0.827, contentH 76 ≤ 78, 0 tràn ngang, HIỆN TRỌN.
+
+**4) KHÓA BẤM ĐÁP ÁN tới 80% animation (điểm 4).** Trước đây đáp án gắn onclick ngay khi build, bấm được
+lúc còn đang trượt vào (1.2s) → dễ bấm nhầm trước khi đọc. Sửa: biến `answersUnlocked` + `gateTimer`; khi
+build đặt `.aw-otb-q-answers.is-gated { pointer-events:none }` và hẹn giờ mở sau **80% × (ZOOM_TRANSFORM_MS
++ stagger ô cuối)**; `answer()` chốt chặn thêm `!answersUnlocked`. Xác minh: bấm ở 300ms KHÔNG ăn (vẫn ở màn
+câu hỏi), sau ~1.1s `is-gated` gỡ + `pointer-events:auto` → bấm được.
+
+**5) KHÔNG NGẮT TỪ trong ô đáp án + ô câu hỏi (điểm 5).** `overflow-wrap:normal` vốn không ngắt từ, nhưng
+từ >40 ký tự chạm sàn fit `FIT_MIN 0.4` rồi TRÀN; và `.aw-otb-q-qtext` chỉ kế thừa overflow-wrap. Sửa:
+(a) khai rõ `overflow-wrap:normal; word-break:keep-all` trên `.aw-otb-q-qtext`, `.aw-otb-q-text` (và back-q/
+back-a); (b) `fitOne` thêm bước co DƯỚI SÀN theo tỉ lệ `clientWidth/scrollWidth` (tới HARD_MIN 0.12) để từ
+cực dài vẫn nằm TRỌN 1 dòng. Xác minh: "Pneumonoultramicroscopicsilicovolcanoconiosis" (45 ký tự) →
+fit 0.372, KHÔNG tràn, 1 dòng; từ ngắn vẫn 1.5.
+
+**File đổi đợt này**: `open-the-box.js` (fitOne co dưới sàn; `--back-size` trong layoutGrid; hàm `fitBackFaces`
++ 3 chỗ gọi; gate `answersUnlocked/gateTimer` trong buildQuestion/answer/cleanup; border-radius trong
+zoomElTo/zoomElFrom + helper `readBoxRadius`), `open-the-box.css` (tap-highlight trên box+qtile; overflow-wrap
+rõ ràng + keep-all; `.is-gated`; back-face dùng `--back-size`/`--back-fit`).
+**Việc kế: thầy chơi thử trên màn cảm ứng thật (nhất là điểm 1 nháy vuông + điểm 2 bo góc) → duyệt →
+commit + push (gộp cùng Đợt 51–54 đang chờ).**
+
+## (Lịch sử) TRẠNG THÁI trước: ✅ ĐÃ CHỐT + LIVE — 1/8/2026 (đợt 19)
 
 > **CẬP NHẬT 1/8/2026:** TẤT CẢ các đợt **11 → 19** (mọi dòng "CHƯA COMMIT" bên dưới nay ĐÃ CŨ) đã được
 > thầy **DUYỆT** và **commit + push + live** — commit **`da11950`** (nhật ký dự án `5dc2283`). Xem

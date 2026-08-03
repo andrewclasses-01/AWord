@@ -5,6 +5,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 58 (4/8/2026, v0.9.33) — OPEN THE BOX: 5 CẢI TIẾN UX (thầy gửi 1 lượt) — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG ĐỤNG CORE.
+
+**Chỉ đụng 2 file `templates/open-the-box/open-the-box.js` + `.css` (+ 2 docs).** KHÔNG đụng core, KHÔNG đụng
+game khác. Tự test trình duyệt thật (`javascript_tool` trên test.html + dữ liệu bịa ép ca biên), 0 lỗi console.
+⚠️ Cây làm việc lúc làm còn thay đổi CHƯA COMMIT của phiên song song (find-the-match, whack-a-mole) — commit
+này chỉ add đúng file open-the-box + docs. (Số Đợt/version nhảy do nhiều phiên chốt cùng ngày.)
+
+1. **Nháy "nền vuông 4 góc" khi chạm ô (điểm 1).** Gốc: `-webkit-tap-highlight-color` **MẶC ĐỊNH của Chrome =
+   `rgba(0,0,0,0.18)`**, Blink vẽ lớp phủ chạm theo HÌNH CHỮ NHẬT (bỏ qua border-radius) → nháy vuông 1-2
+   frame trên màn cảm ứng. Sửa: `-webkit-tap-highlight-color: transparent` (+ touch-callout, user-select) trên
+   `.aw-otb-box` + `.aw-otb-qtile`. Đo: `webkitTapHighlightColor` = `rgba(0,0,0,0)` cả hai.
+2. **Bo góc DẦN khi ô câu hỏi bay về ô số (điểm 2).** Trước chỉ scale transform → bán kính bo bị scale nhỏ →
+   đáp xuống gần VUÔNG. Sửa: animate thêm `border-radius` trong `zoomElTo`+`zoomElFrom` (2 chiều), đích elip
+   `boxRadius/scaleX / boxRadius/scaleY` để sau scale khớp đúng độ bo ô số; `readBoxRadius()` đọc px thật, dọn
+   inline khi xong. (Hình mượt: thầy xem màn cảm ứng thật.)
+3. **Chữ back-face co theo cỡ ô khi nhiều ô (điểm 3).** Trước `1.5cqw` cố định → nhiều ô nhỏ tràn, bị
+   `overflow:hidden` cắt. Sửa: `--back-size = size*0.12`px trong `layoutGrid` + hàm mới `fitBackFaces()` co
+   `--back-fit` từng ô tới khi hiện TRỌN; gọi ở renderGrid/closeCardThen/ResizeObserver. Đo: 20 ô (cell
+   121px), câu dài → contentH 76 ≤ 78, 0 tràn.
+4. **Khóa bấm đáp án tới 80% animation (điểm 4).** Trước gắn onclick ngay khi build → bấm nhầm lúc đang trượt
+   vào. Sửa: `.aw-otb-q-answers.is-gated{pointer-events:none}` + `answersUnlocked`/`gateTimer` mở sau
+   80%×(zoom+stagger); `answer()` chốt chặn thêm. Đo: bấm ở 300ms KHÔNG ăn, ~1.1s sau mới ăn.
+5. **Không ngắt từ trong ô đáp án/câu hỏi (điểm 5).** Từ >40 ký tự chạm sàn fit 0.4 rồi TRÀN; `.aw-otb-q-qtext`
+   chỉ kế thừa overflow-wrap. Sửa: khai rõ `overflow-wrap:normal; word-break:keep-all` + `fitOne` thêm bước co
+   DƯỚI SÀN (tỉ lệ clientWidth/scrollWidth, tới 0.12). Đo: từ 45 ký tự → fit 0.372, 1 dòng, 0 tràn; ngắn vẫn 1.5.
+
+Chi tiết đầy đủ + cách đo: `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` (đợt 21).
+
 ## Đợt 57 (4/8/2026, v0.9.32) — WHACK-A-MOLE: mole rung lắc khi đập sai + ẩn nút Next/Back — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. KHÔNG ĐỤNG CORE.
 
 **Chỉ đụng 2 file `templates/whack-a-mole/whack-a-mole.js` + `.css`** (+ ghi chú). Không đụng core, không
