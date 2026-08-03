@@ -69,9 +69,16 @@
 }
 .aw-tile-text {
   display: block;
-  font-size: calc(2.9cqw * var(--fit));
-  line-height: 1.06;
-  overflow-wrap: anywhere;
+  /* --fit shrinks the WHOLE card (height fit); --tw shrinks THIS tile only
+     (width fit) so a long single word never has to break — see quiz.js fitNow(). */
+  font-size: calc(2.9cqw * var(--fit) * var(--tw, 1));
+  line-height: 1.12;
+  /* NEVER split a single word across two lines. Multi-word answers still wrap
+     at spaces (the tile just grows taller); a single word that is too wide is
+     handled by shrinking THIS tile's font (--tw) in quiz.js, not by breaking it. */
+  overflow-wrap: normal;
+  word-break: keep-all;
+  hyphens: none;
 }
 /* optional "Letters on answers" badge (Options panel) — top-left of the tile */
 .aw-quiz-letter {

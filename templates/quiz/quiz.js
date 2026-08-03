@@ -1,7 +1,11 @@
 // =============================================================
 // TEMPLATE: QUIZ — Wordwall style, English UI.  (REFERENCE TEMPLATE)
 //  • Big question near the top edge; chunky 3D answer tiles.
-//  • Text AUTO-SHRINKS to fit the 16:9 stage (long questions/answers never clip).
+//  • Text AUTO-SHRINKS to fit the 16:9 stage (long questions/answers never clip):
+//      - card-level HEIGHT fit shrinks everything so the answers never overlap
+//        the question (long multi-word answers just make the tiles TALLER first);
+//      - per-tile WIDTH fit shrinks ONE tile's font when a single long word would
+//        be too wide — a single word is NEVER broken across two lines.
 //  • Answer tiles adapt: 1 row for <=4 answers, 2 rows for 5-6.
 //  • Tiles NEVER change color after answering. Feedback instead:
 //      correct -> big white ✓ flies up + "ting" + small ✓ stays on the tile,
@@ -9,7 +13,10 @@
 //      wrong   -> big white ✗ rises and HOVERS ~1.9s + "Oh my god" sound,
 //                 small ✗ stays on the chosen tile, all wrong tiles fade,
 //                 the correct tile keeps its full color + small ✓
-//  • Simple fade between questions; navigate with ◁ ▷ OR the number keys 1-9;
+//  • NAVIGATION is IN-PLACE (build once, update content): moving to another
+//    question SLIDES the question text sideways while the answer tiles STAY PUT
+//    (same boxes, same colours) and only the TEXT inside them cross-fades to the
+//    new answers — no flicker, no rebuild. Navigate with ◁ ▷ OR number keys 1-9;
 //    last question shows ✓ (finish).
 //  • Menu "Submit answers" finishes at any time (unanswered = wrong).
 // =============================================================
@@ -17,7 +24,6 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { autoFit } from "../../core/fit.js";
 import { openQuizEditor } from "./quiz-editor.js";
 import { quizSound } from "./quiz-sound.js";
 
@@ -111,12 +117,34 @@ const quizTemplate = {
     const state = questions.map(() => ({ chosen: null, correct: null }));
     let index = 0;
     let finished = false;
-    let fitter = null;      // autoFit controller for the current card
     let autoTimer = null;   // pending "auto game complete" timer
+
+    // ----- Build the card & tiles ONCE; navigation updates them in place -----
+    root.innerHTML = "";
+    const card = el("div", "aw-quiz-card");
+    const questionEl = el("div", "aw-quiz-question");
+    const answersRow = el("div", "aw-quiz-answers");
+    card.append(questionEl, answersRow);
+    root.append(card);
+
+    // tiles[] holds a persistent { tile, textEl, letterEl } per answer slot.
+    // We reuse these boxes across questions (only their text/state changes), so
+    // the tiles never flicker or move when the question changes.
+    let tiles = [];
 
     ui.onSubmit(finish, () => state.filter(s => s.chosen !== null).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
-    render();
+
+    applyQuestion(0);   // first question, no animation
+    ui.setScore(scoreNow());
+    updateNav();
+
+    // Fit now, once fonts are ready, and on every resize.
+    fitNow();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitNow).catch(() => {});
+    let fitRaf = 0;
+    const onResize = () => { cancelAnimationFrame(fitRaf); fitRaf = requestAnimationFrame(fitNow); };
+    window.addEventListener("resize", onResize);
 
     // Live score = correct answers, minus `pointsOff` per WRONG answer. With the
     // feature off (pointsOff 0) this is byte-identical to the old correct-count.
@@ -130,60 +158,101 @@ const quizTemplate = {
     // Next is blocked until the current question is answered, unless Allow skip is on.
     function canAdvance() { return allowSkip || state[index].chosen !== null; }
 
-    function render() {
-      if (fitter) { fitter.destroy(); fitter = null; }
-      root.innerHTML = "";
-      const q = questions[index];
-      const st = state[index];
-      const answered = st.chosen !== null;
-
-      const card = el("div", "aw-quiz-card");
-      card.append(el("div", "aw-quiz-question", escapeHtml(q.question)));
-
-      const row = el("div", "aw-quiz-answers");
-      // Answers-per-row (teacher's layout): 2->2, 3->3, 4->4, 5->3(+2), 6->3(+3),
-      // 7->4(+3), 8->4(+4)... i.e. up to 4 in one row, otherwise two balanced rows
-      // with the bigger row on top. A short last row is centered by the CSS.
-      const n = q.answers.length;
-      const perRow = n <= 4 ? n : Math.ceil(n / 2);
-      row.style.setProperty("--per-row", perRow);
-
-      // "Letters on answers" option (read live so a change in the Options panel
-      // shows immediately — safe because it doesn't affect shuffle/scoring).
-      const showLetters = opt.lettersOnAnswers === "abc";
-
-      q.answers.forEach((ans, i) => {
+    // Make sure answersRow has exactly `n` tile boxes (create/remove as needed).
+    // Colours are assigned by POSITION and never change, so a box keeps its
+    // colour for the whole game (Start again reshuffles). Only ever grows/shrinks
+    // when a converted quiz has questions with different answer counts.
+    function syncTiles(n) {
+      while (tiles.length < n) {
+        const i = tiles.length;
         const tile = el("button", "aw-quiz-tile");
         const col = palette[i % palette.length];
         tile.style.setProperty("--tile", col.c);
         tile.style.setProperty("--tile-dark", col.d);
-        if (showLetters) tile.append(el("span", "aw-quiz-letter", String.fromCharCode(65 + i)));
-        tile.append(el("span", "aw-tile-text", escapeHtml(ans.text)));
+        const letterEl = el("span", "aw-quiz-letter");
+        const textEl = el("span", "aw-tile-text");
+        tile.append(letterEl, textEl);
+        tile.onclick = () => choose(i);
+        answersRow.append(tile);
+        tiles.push({ tile, textEl, letterEl });
+      }
+      while (tiles.length > n) {
+        const t = tiles.pop();
+        t.tile.remove();
+      }
+    }
+
+    // Put question `i`'s content into the (persistent) card + tiles.
+    function applyQuestion(i) {
+      const q = questions[i];
+      const st = state[i];
+      const answered = st.chosen !== null;
+      const nAns = q.answers.length;
+
+      questionEl.textContent = q.question;
+
+      // Answers-per-row: 2->2, 3->3, 4->4, 5->3(+2), 6->3(+3)... (max 4 per row,
+      // otherwise two balanced rows with the bigger row on top). CSS centers a
+      // short last row.
+      answersRow.style.setProperty("--per-row", nAns <= 4 ? nAns : Math.ceil(nAns / 2));
+
+      syncTiles(nAns);
+      const showLetters = opt.lettersOnAnswers === "abc";   // read live (safe: doesn't affect scoring)
+
+      q.answers.forEach((ans, k) => {
+        const { tile, textEl, letterEl } = tiles[k];
+        // wipe any per-question marks/animation from a previous question
+        tile.querySelectorAll(".aw-tile-badge, .aw-mark-fly").forEach(n => n.remove());
+        tile.classList.remove("is-dimmed");
+        tile.style.removeProperty("--tw");   // reset per-tile width fit
+        textEl.textContent = ans.text;
+        letterEl.textContent = showLetters ? String.fromCharCode(65 + k) : "";
+        letterEl.style.display = showLetters ? "" : "none";
         if (answered) {
           tile.disabled = true;
-          addBadges(tile, ans, i, st);
+          addBadges(tile, ans, k, st);
         } else {
-          tile.onclick = () => choose(tile, i);
+          tile.disabled = false;
         }
-        row.append(tile);
       });
-      card.append(row);
-      root.append(card);
+    }
 
-      // auto-shrink the whole card so nothing clips inside the 16:9 stage.
-      // measure = question height + answers block height (the card is stretched
-      // to 100%, so scrollHeight can't tell us the true content height).
-      // slack:12 leaves room for the tiles' 6px 3D shadow lip (+gap).
-      const questionEl = card.querySelector(".aw-quiz-question");
-      const answersEl = card.querySelector(".aw-quiz-answers");
-      // slack scales with the stage: card padding-bottom (3.2cqw) + 3D shadow lip.
-      fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
-        slack: root.clientWidth * 0.045,
-        measure: () => questionEl.offsetHeight + answersEl.offsetHeight
+    // HEIGHT fit (whole card) + per-tile WIDTH fit (never break a single word).
+    function fitNow() {
+      // reset scales
+      card.style.setProperty("--fit", 1);
+      tiles.forEach(t => t.textEl.style.removeProperty("--tw"));
+
+      // 1) HEIGHT fit: shrink --fit until question + answers fit the stage height.
+      //    slack scales with the stage (card padding-bottom + 3D shadow lip).
+      const slack = root.clientWidth * 0.045;
+      const measure = () => questionEl.offsetHeight + answersRow.offsetHeight;
+      const overH = () => measure() > root.clientHeight - slack;
+      if (overH()) {
+        let lo = 0.4, hi = 1, best = 0.4;
+        for (let k = 0; k < 14; k++) {
+          const mid = (lo + hi) / 2;
+          card.style.setProperty("--fit", mid);
+          if (overH()) hi = mid; else { best = mid; lo = mid; }
+        }
+        card.style.setProperty("--fit", best);
+      }
+
+      // 2) WIDTH fit per tile: if a tile's widest word overflows its box, shrink
+      //    just THAT tile's text (via --tw) so it fits — a single word is NEVER
+      //    broken across two lines. scrollWidth (measured at --tw:1) is the widest
+      //    unbreakable line, so avail/need gives the exact scale in one shot (a
+      //    0.2 floor keeps even a pathological 40+ char word from spilling out).
+      //    Multi-word answers that wrap cleanly at spaces don't overflow -> left
+      //    alone (their box simply grew taller in step 1).
+      tiles.forEach(({ textEl }) => {
+        const avail = textEl.clientWidth;
+        const need = textEl.scrollWidth;
+        if (need > avail + 0.5) {
+          const s = Math.max(0.2, (avail / need) * 0.99);
+          textEl.style.setProperty("--tw", s.toFixed(3));
+        }
       });
-
-      ui.setScore(scoreNow());
-      updateNav();
     }
 
     // Small persistent marks after answering + dim every WRONG tile
@@ -196,24 +265,25 @@ const quizTemplate = {
       }
     }
 
-    function choose(tile, i) {
+    function choose(i) {
       const q = questions[index];
       const st = state[index];
       if (st.chosen !== null || finished) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
 
-      // feedback WITHOUT re-render, so the fly-up animation plays
-      const row = tile.parentElement;
-      [...row.children].forEach(t => (t.disabled = true));
+      tiles.forEach(t => (t.tile.disabled = true));
 
+      // feedback: big ✓/✗ flies up from the chosen tile
+      const chosenTile = tiles[i].tile;
       const fly = el("span",
         "aw-mark-fly" + (st.correct ? "" : " is-cross"),
         st.correct ? icons.markCheck : icons.markCross);
-      tile.append(fly);
+      chosenTile.append(fly);
       setTimeout(() => fly.remove(), st.correct ? 900 : 2000);
 
-      [...row.children].forEach((t, k) => addBadges(t, q.answers[k], k, st));
+      // small persistent ✓/✗ + dim wrong tiles
+      tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
 
       if (st.correct) quizSound.correct(); else quizSound.wrong();
       ui.setScore(scoreNow());
@@ -238,19 +308,56 @@ const quizTemplate = {
       });
     }
 
-    // simple fade between questions, with a timeout fallback so a hidden/
-    // backgrounded tab (where animation callbacks can stall) still advances.
-    function fadeSwap(change) {
-      const card = root.querySelector(".aw-quiz-card");
-      if (!card) { change(); return; }
-      let done = false;
-      const run = () => { if (done) return; done = true; change(); };
-      const anim = card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, easing: "ease", fill: "forwards" });
-      anim.onfinish = run;
-      setTimeout(run, 220);
+    // Move to question `i` with a SLIDE for the question text and a text-only
+    // FADE inside the answer tiles (the tiles themselves never move or rebuild).
+    // dir: +1 = next (slide left), -1 = prev (slide right). A timeout fallback
+    // still advances a backgrounded/hidden tab where animation events can stall.
+    let animating = false;
+    function showQuestion(i, dir) {
+      if (i === index) return;
+      const outX = dir >= 0 ? -6 : 6;
+      const inX = dir >= 0 ? 6 : -6;
+      animating = true;
+
+      const outAnims = [];
+      outAnims.push(questionEl.animate(
+        [{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(${outX}%)`, opacity: 0 }],
+        { duration: 130, easing: "ease", fill: "forwards" }));
+      tiles.forEach(t => outAnims.push(t.textEl.animate(
+        [{ opacity: 1 }, { opacity: 0 }], { duration: 130, easing: "ease", fill: "forwards" })));
+
+      let swapped = false;
+      const doSwap = () => {
+        if (swapped) return;
+        swapped = true;
+        outAnims.forEach(a => { try { a.cancel(); } catch (_) {} });   // drop the "forwards" hold
+        index = i;
+        applyQuestion(i);
+        fitNow();
+        updateNav();
+        const inA = questionEl.animate(
+          [{ transform: `translateX(${inX}%)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
+          { duration: 190, easing: "ease", fill: "forwards" });
+        const tileIns = tiles.map(t => t.textEl.animate(
+          [{ opacity: 0 }, { opacity: 1 }], { duration: 190, easing: "ease", fill: "forwards" }));
+        inA.onfinish = () => {
+          try { inA.cancel(); } catch (_) {}
+          tileIns.forEach(a => { try { a.cancel(); } catch (_) {} });
+          animating = false;
+        };
+        setTimeout(() => { animating = false; }, 240);
+      };
+      outAnims[0].onfinish = doSwap;
+      setTimeout(doSwap, 190);
     }
-    function goPrev() { if (index > 0) fadeSwap(() => { index--; render(); }); }
-    function goNext() { if (!canAdvance()) return; if (index < total - 1) fadeSwap(() => { index++; render(); }); }
+
+    // Manually navigating (prev/next) CANCELS a pending auto-finish: if the
+    // teacher answered the last question and then went back to review, the game
+    // must NOT auto-end under them (same fix as Type-the-answer, Đợt 56). The
+    // auto-finish still fires when they answer everything and simply stop.
+    function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
+    function goPrev() { if (!animating && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
+    function goNext() { if (!animating && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
 
     // Keyboard: number keys 1-9 answer the current question; ← → navigate.
     function onKey(e) {
@@ -262,10 +369,9 @@ const quizTemplate = {
         return;
       }
       const n = parseInt(e.key, 10);
-      if (Number.isInteger(n) && n >= 1) {
-        const tiles = root.querySelectorAll(".aw-quiz-tile");
-        const tile = tiles[n - 1];
-        if (tile && !tile.disabled) tile.click();
+      if (Number.isInteger(n) && n >= 1 && n <= tiles.length) {
+        const t = tiles[n - 1];
+        if (t && !t.tile.disabled) t.tile.click();
       }
     }
 
@@ -296,16 +402,12 @@ const quizTemplate = {
     // cleanup: remove global listeners so nothing leaks after Start again / exit
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
-      if (fitter) fitter.destroy();
+      window.removeEventListener("resize", onResize);
+      cancelAnimationFrame(fitRaf);
       if (autoTimer) clearTimeout(autoTimer);
     };
   }
 };
-
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
 
 registerTemplate(quizTemplate);
 export default quizTemplate;

@@ -839,15 +839,13 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // GAME COMPLETE — celebration, then the dark panels
   // =============================================================
   function celebrate(result, entryId) {
-    // Nav (prev/next + "x of N") is hidden only for THIS brief fanfare window —
-    // it's meaningless once the game is over. BUG FIXED (3/8/2026): this used to
-    // never get restored, so the nav stayed invisible (while Menu/Sound/Fullscreen
-    // kept showing) for the ~1.9-2.2s the confetti overlay is up (it has no opaque
-    // background, so the bottom bar is still visible underneath) — read by the
-    // teacher as "the back-next buttons and page number sometimes go missing".
-    // Once the opaque Summary backdrop takes over it covers the whole bar anyway,
-    // so restoring it right here (before showSummary) is the correct, permanent fix.
-    navWrap.style.visibility = "hidden";
+    // The nav (prev/next + "x of N") is LEFT VISIBLE during the fanfare (teacher's
+    // call 3/8/2026). It used to be hidden for the ~1.9-2.2s confetti window, but
+    // because that overlay is transparent the bottom bar shows through, so the nav
+    // appeared to "sometimes vanish" — most noticeably on a short converted (Change
+    // template) quiz that auto-finishes the moment every answer is in. We keep the
+    // auto-finish but no longer touch the nav here; the opaque Summary backdrop
+    // that follows covers the whole bar anyway.
     const cover = el("div", "aw-celebrate");
     const text = el("div", "aw-gc-text", endTitle);
     cover.append(text);
@@ -856,7 +854,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     (tpl.sounds?.complete || sound.fanfare)();
     setTimeout(() => {
       text.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: "forwards" });
-      setTimeout(() => { cover.remove(); navWrap.style.visibility = ""; showSummary(result, entryId); }, 300);
+      setTimeout(() => { cover.remove(); showSummary(result, entryId); }, 300);
     }, 1900);
   }
 
