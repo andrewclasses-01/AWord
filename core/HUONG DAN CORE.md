@@ -249,6 +249,41 @@ Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đ�
   ngược TỪNG CÂU; nếu để engine chạy đồng hồ toàn ván sẽ đá nhau). Nhớ đặt `options.timer="none"` cho
   game đó (sample + editor) để engine không dựng đồng hồ toàn ván. Có thể mượn `ui.topbarMid` (bật
   `tpl.inlineTimerBar:true`) để vẽ thanh đếm ngược riêng của game trên cùng hàng với điểm.
+- `tpl.hidePointsOff:true` — (v0.9.28) ẩn nhóm **"Points off (wrong answer)"** CHUNG. Đặt cho game ĐÃ có
+  điểm trừ RIÊNG (type-the-answer, unjumble, crossword, whack-a-mole) hoặc game điểm không theo mô hình
+  "trừ mỗi câu sai" (gameshow — điểm theo tốc độ). Xem mục "Điểm trừ CHUNG" bên dưới.
+
+### Điểm trừ CHUNG "Points off" + màu điểm theo dấu (v0.9.28)
+
+- **Option chung `activity.options.pointsOff`** (slider 0–5, mặc định **0 = tắt**) do `buildOptionsPanel`
+  trong `engine.js` dựng, chỉ hiện khi `tpl.scorable !== false && !tpl.hidePointsOff`. Engine KHÔNG tự trừ
+  điểm — **mỗi template phải TỰ đọc `options.pointsOff` và trừ** ở nhánh câu SAI (mẫu: `templates/quiz/quiz.js`
+  `scoreNow()` = đúng − pointsOff×số-câu-sai). **BẮT BUỘC**: khi `pointsOff===0` phải zero-diff (trừ 0 = không
+  đổi gì) để không phá hành vi cũ. Điểm ĐƯỢC PHÉP âm (không kẹp 0). Đưa điểm đã trừ vào `ui.finish({score})`.
+- **`ui.setScore(n)` tô màu theo DẤU** (thầy chốt): dương = **XANH LÁ** (`--aw-ok`), âm = **ĐỎ** (`--aw-no`) và
+  **BỎ dấu trừ** (hiện `Math.abs`). Class `.is-pos`/`.is-neg` trên `.aw-top-score` (CSS trong `app.css`).
+  Áp cho MỌI game — game cũ không trừ điểm vẫn dương nên vẫn xanh, không đổi gì.
+- **Allow skip**: game có nút Next–Back tay (quiz/type-the-answer/anagram/unjumble) đọc `options.allowSkip`
+  để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
+  (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.
+
+### Cầu đồng bộ myActivity — `window.__awordBridge` + marker (v0.9.28)
+
+Khi chạy NHÚNG trong myActivity (2–4 bảng), pane 0 đổi Template/Options/Style phải lan sang bảng khác.
+`engine.js startGame` lộ (vô hại lúc standalone):
+- **`window.__awordBridge = { getState(), switchTemplate(type), applyOptions(opts), setTheme(id) }`** — các
+  setter chạy đúng luồng nội bộ (doSwitchTemplate/restart/loadTheme) NHƯNG có cờ `awSyncMute` nên KHÔNG phát
+  marker (chống dội).
+- Phát **`console.log("MYACT:AW:<TAG>:<payload>")`** khi USER đổi: `TPL:<type>` (Change template) ·
+  `OPT:<json options>` (Apply) · `STYLE:<themeId>` (đổi Style). myActivity bắt marker → gọi bridge trên bảng khác.
+> ⚠️ Đừng đổi tên marker/method nếu không sửa cả `myActivity/src/renderer/js/browser.js` (`mirrorAwordState`).
+
+### Chặn bàn phím ảo HĐH khi dùng bàn phím AWord (v0.9.28)
+
+Template nào có **ô nhập THẬT** (`<input>`/`<textarea>`/contenteditable) đi kèm bàn phím `core/keyboard.js`
+PHẢI đặt **`el.inputMode = "none"`** khi bàn phím AWord đang hiện → ẩn bàn phím ảo HĐH (Windows/Android/iOS),
+KHÔNG chặn con trỏ nháy hay bàn phím vật lý; đổi lại `"text"` khi HS ẩn bàn phím AWord. Mẫu: `type-the-answer.js`
+(theo cờ `keyboardVisible`). Crossword không cần vì ô là `<div>` (không input) → không phát sinh bàn phím ảo.
 
 ### PRINT — hệ thống in DÙNG CHUNG ở `core/print.js` (v0.7.1)
 

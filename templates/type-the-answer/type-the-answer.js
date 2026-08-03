@@ -34,6 +34,7 @@ function normalize(str) {
 const ttaTemplate = {
   type: "type_the_answer",
   scorable: true,
+  hidePointsOff: true,   // ships its own "Minus points" control -> hide the central Points off
   name: "Type the answer",
   edit: openTypeTheAnswerEditor,
   hideLettersOption: true,     // no lettered answer boxes here — hide that Options group entirely
@@ -77,7 +78,10 @@ const ttaTemplate = {
       mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
         v => draft.showAnswerWhenWrong = v),
       mkCheck(draft.minusPoints === true, "Minus points for wrong answers",
-        v => { draft.minusPoints = v; setSliderEnabled(v); })
+        v => { draft.minusPoints = v; setSliderEnabled(v); }),
+      // Default OFF -> the student must answer the current question before Next advances.
+      mkCheck(draft.allowSkip === true, "Allow skip (move on without answering)",
+        v => draft.allowSkip = v)
     );
     g.append(row);
     g.append(sliderWrap);
@@ -87,6 +91,7 @@ const ttaTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
+    const allowSkip = opt.allowSkip === true;   // move on without answering (default off)
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && it.prompt && Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length);
@@ -134,6 +139,12 @@ const ttaTemplate = {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.placeholder = "";   // no placeholder text — just the blinking caret
+    // AWord shows its OWN on-screen keyboard, so keep the OS soft keyboard OFF while
+    // that keyboard is up (Windows/Android/iOS). inputMode="none" hides the native
+    // virtual keyboard without blocking a physical keyboard or the blinking caret.
+    // If the student HIDES AWord's keyboard (kbd button), we flip it back to "text"
+    // so the OS keyboard can appear again. keyboardVisible is ON by default.
+    input.inputMode = keyboardVisible ? "none" : "text";
     input.addEventListener("keydown", e => {
       if (e.key === "Enter") { e.preventDefault(); submitAnswer(input.value); }   // never insert a newline
     });
@@ -187,6 +198,7 @@ const ttaTemplate = {
       kbdBtn.onclick = () => {
         keyboardVisible = !keyboardVisible;
         kbd.setHidden(!keyboardVisible);   // animates (CSS transition)
+        input.inputMode = keyboardVisible ? "none" : "text";   // OS keyboard off while AWord's is up
         syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
         updateKbdBtn();
         fitLayout();   // block height (outside Submit) + keyboard-top changed -> re-fit & re-centre
@@ -587,6 +599,9 @@ const ttaTemplate = {
       inp.focus();
     }
 
+    // Next is blocked until the current question is answered, unless Allow skip is on.
+    function canAdvance() { return allowSkip || state[index].graded; }
+
     function updateNav() {
       const isLast = index === total - 1;
       // No "finish/✓" button on the last question — the game auto-completes once
@@ -595,7 +610,7 @@ const ttaTemplate = {
         index: index + 1,
         total,
         onPrev: index > 0 ? goPrev : null,
-        onNext: isLast ? null : goNext,
+        onNext: (isLast || !canAdvance()) ? null : goNext,
         nextLabel: null
       });
     }
@@ -603,7 +618,7 @@ const ttaTemplate = {
     // Navigation uses the SAME "tock" as the letter keys (teacher's call). Only
     // the question text crossfades; the answer block stays put (no flicker).
     function goPrev() { if (index > 0) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index - 1, true); } }
-    function goNext() { if (index < total - 1) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
+    function goNext() { if (!canAdvance()) return; if (index < total - 1) { ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
 
     function finish() {
       if (finished) return;

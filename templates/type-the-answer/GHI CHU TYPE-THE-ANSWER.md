@@ -1,5 +1,13 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 54 (3/8/2026, v0.9.28) — Allow skip + chặn bàn phím ảo HĐH
+- **Allow skip:** đã có điểm trừ riêng (`minusPoints`/`minusAmount`) nên đặt `hidePointsOff:true` (ẩn option chung).
+  Thêm checkbox **"Allow skip"** (buildExtraOptions, mặc định KHÔNG tích): `canAdvance()` = `allowSkip || state[index].graded`;
+  `updateNav` cho `onNext=null` (nút Next mờ) + `goNext` chặn tới khi câu hiện tại đã chấm. Seed `allowSkip:false` vào sample.
+- **Chặn bàn phím ảo HĐH:** `input.inputMode = keyboardVisible ? "none" : "text"` (đặt lúc tạo `<textarea.aw-tta-input>`
+  + trong handler nút kbd). Bàn phím AWord BẬT (mặc định) → native HĐH TẮT (Windows/Android/iOS), vẫn gõ vật lý được;
+  ẩn bàn phím AWord → native bật lại. Đây là game DUY NHẤT có input thật nên chỉ sửa ở đây.
+
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT, ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
 
 Gộp cùng đợt với Open the box (thầy yêu cầu "đưa lên live" để dùng trên máy khác) — chi tiết đầy đủ

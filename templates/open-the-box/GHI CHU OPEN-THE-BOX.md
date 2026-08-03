@@ -9,6 +9,12 @@
 > `core/engine.js` (hunk `hideShuffleAnswers`), cả thư mục `templates/type-the-answer/` — **ĐỪNG commit
 > nhầm** phần đó; nó thuộc việc dở của phiên kia.
 
+## Đợt 20 (3/8/2026) — Thêm option TRỪ ĐIỂM khi trả lời SAI
+Thêm `pointsOff` (0..5, mặc định 0) đọc 1 lần trong `mountQuestions`. Mỗi lần chọn đáp án SAI trong
+`answer()` trừ `score -= pointsOff` (KHÔNG chặn về 0 — cho phép âm), `updateProgress()` sẵn có tự làm mới
+cả điểm góc phải lẫn bộ đếm nav. `finishRound` báo thêm `score` để màn kết thúc dùng đúng điểm này. Khi
+`pointsOff===0` mọi thứ y hệt trước (score luôn = số câu đúng). Đã seed `pointsOff: 0` vào sample.
+
 ## (Lịch sử) TRẠNG THÁI ban đầu: ĐÃ GỘP TRANG CHỦ + PUSH GITHUB (30/7/2026)
 
 Thầy yêu cầu thẳng "đưa lên live" (30/7/2026, không qua bước tự chơi thử ở local trước — thầy cần

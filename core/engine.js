@@ -87,6 +87,39 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
 
+  // ---- myActivity multi-pane sync bridge (a NO-OP when running standalone) ----
+  // When embedded in myActivity's 2-4 pane view, pane 0's Template / Options /
+  // Style changes are mirrored to the other panes. We log a console marker on
+  // each change (myActivity listens), and expose programmatic setters so
+  // myActivity can replay the same change on the OTHER panes. `awSyncMute` stops
+  // a replayed change from echoing straight back out as a new marker.
+  let awSyncMute = 0;
+  const awEmit = (tag, payload) => { if (awSyncMute <= 0) { try { console.log("MYACT:AW:" + tag + ":" + payload); } catch (_) {} } };
+  window.__awordBridge = {
+    getState: () => ({ type: activity.type, options: { ...(activity.options || {}) }, theme: activity.theme || null }),
+    switchTemplate(type) {
+      if (!type || type === activity.type) return;
+      awSyncMute++;
+      try { doSwitchTemplate(type); } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    },
+    applyOptions(opts) {
+      if (!opts) return;
+      awSyncMute++;
+      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); restart(); }
+      finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    },
+    setTheme(id) {
+      if (!id || id === activity.theme) return;
+      awSyncMute++;
+      try {
+        loadTheme(id);
+        stage.classList.forEach(c => { if (c.startsWith("theme-")) stage.classList.remove(c); });
+        stage.classList.add("theme-" + id);
+        activity.theme = id;
+      } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    }
+  };
+
   // ----- Top bar (timer left · score right) -----
   // `tpl.inlineTimerBar` (opt-in, currently only Open the box) adds a THIRD
   // slot in the middle of this row (`ui.topbarMid`) so a template's own
@@ -486,6 +519,31 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice });
     }
 
+    // POINTS OFF — deduct this many points for a WRONG answer (0 = off). Central
+    // option (teacher, 3/8/2026): shown for every SCORABLE template EXCEPT those
+    // that already ship their OWN points-off control (tpl.hidePointsOff — Type the
+    // answer, Unjumble, Crossword, Whack-a-mole) and Gameshow (speed-based scoring).
+    // A template honours it by reading activity.options.pointsOff in mount() and
+    // subtracting on a wrong answer (score may go negative -> shown red, no minus).
+    if (tpl.scorable !== false && !tpl.hidePointsOff) {
+      const clampPen = v => Math.max(0, Math.min(5, v | 0));
+      const gPen = el("div", "aw-opt-group");
+      gPen.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
+      const rowPen = el("div", "aw-opt-row");
+      const penSlider = el("input", "aw-opt-slider");
+      penSlider.type = "range"; penSlider.min = "0"; penSlider.max = "5"; penSlider.step = "1";
+      penSlider.value = String(clampPen(draft.pointsOff || 0));
+      const penVal = el("span", "aw-opt-slidval", clampPen(draft.pointsOff || 0) === 0 ? "Off" : "-" + clampPen(draft.pointsOff || 0));
+      penSlider.oninput = () => {
+        const v = clampPen(+penSlider.value);
+        draft.pointsOff = v;
+        penVal.textContent = v === 0 ? "Off" : "-" + v;
+      };
+      rowPen.append(penSlider, penVal);
+      gPen.append(rowPen);
+      panel.append(gPen);
+    }
+
     // END OF GAME — kept LAST (after the template's own extra options), per the
     // teacher's request (1/8/2026): "Show answers" sits at the very bottom.
     const gEnd = el("div", "aw-opt-group");
@@ -507,6 +565,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       sound.click();
       if (!activity.options) activity.options = {};
       Object.assign(activity.options, draft);
+      awEmit("OPT", JSON.stringify(activity.options));   // mirror applied Options to other myActivity panes
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist the applied options PERMANENTLY (teacher only — students never
       // reach this panel). For the original act, save its options straight onto
@@ -598,6 +657,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
         activity.theme = t.id;
         grid.querySelectorAll(".aw-style-item").forEach(x => x.classList.remove("is-active"));
         item.classList.add("is-active");
+        awEmit("STYLE", t.id);   // mirror the Style choice to other myActivity panes
       };
       grid.append(item);
     });
@@ -668,6 +728,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // The library act is untouched; the current theme is kept; fullscreen too
   // (the fullscreen target is the stable root, exactly like "Start again").
   async function doSwitchTemplate(targetType) {
+    awEmit("TPL", targetType);   // mirror the Template switch to other myActivity panes
     try {
       // Switching back to the original type restores the REAL library act (its
       // own id + saved options), not a throwaway converted copy. Always convert
@@ -716,7 +777,15 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     livesSlot,   // null unless tpl.hasLivesSlot is true — a span left of the score (True/false hearts)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
-    setScore(n) { scoreEl.innerHTML = `${icons.check} ${n}`; },
+    setScore(n) {
+      // Positive score = GREEN, negative = RED with NO minus sign (teacher, 3/8/2026).
+      // Templates that allow points-off may pass a negative n; the sign is carried by
+      // colour, not a "-", so a wrong-heavy round reads "3" in red, not "-3".
+      const v = Number(n) || 0;
+      scoreEl.innerHTML = `${icons.check} ${Math.abs(v)}`;
+      scoreEl.classList.toggle("is-pos", v > 0);
+      scoreEl.classList.toggle("is-neg", v < 0);
+    },
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null }) {
       navLabel.textContent = `${index} of ${total}`;
       wireNav(navPrev, onPrev);

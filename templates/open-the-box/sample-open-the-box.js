@@ -18,7 +18,8 @@ export const activity = {
     timer: "none",
     shuffleQuestions: true,
     shuffleAnswers: true,
-    questionTimeSeconds: 15
+    questionTimeSeconds: 15,
+    pointsOff: 0
   },
   content: {
     items: [

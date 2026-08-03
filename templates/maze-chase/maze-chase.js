@@ -217,6 +217,9 @@ const mazeChaseTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
+    // Optional penalty: points deducted from the live score on each WRONG answer
+    // (0..5). 0 → disabled, behaviour identical to before this option existed.
+    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
     let items = (activity.content?.questions || [])
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
     if (opt.shuffleQuestions) items = shuffle(items);
@@ -264,6 +267,7 @@ const mazeChaseTemplate = {
     // ---- state ----
     const state = items.map(() => ({ done: false, correct: false, wrong: [], answeredWith: null }));
     let index = 0, finished = false, livesLeft = Math.max(1, opt.lives || 5);
+    let penalty = 0;                      // total points subtracted for wrong answers (pointsOff)
     let grid = null, cells = [];          // gridLayer cell DOM
     let pads = [];                        // {r,c,el,ans,resolved}
     let player = { r: 0, c: 0, el: null, dir: "d", frame: 0, moving: false, invuln: false };
@@ -455,7 +459,7 @@ const mazeChaseTemplate = {
         pad.el.querySelector(".aw-mc-pad-mark").textContent = "✓";
         st.correct = true; st.done = true; st.answeredWith = pad.text;
         const gained = state.filter(s => s.correct).length;
-        ui.setScore(gained);
+        ui.setScore(gained - penalty);
         mcSound.correct();
         lockAndNext(true);
       } else {
@@ -463,6 +467,10 @@ const mazeChaseTemplate = {
         pad.el.style.backgroundImage = `url(${imgUrl("floor-incorrect.png")})`;
         pad.el.querySelector(".aw-mc-pad-mark").textContent = "✗";
         st.wrong.push(pad.text); st.answeredWith = pad.text;
+        if (pointsOff) {   // choosing a WRONG answer costs points (negative allowed, no clamp)
+          penalty += pointsOff;
+          ui.setScore(state.filter(s => s.correct).length - penalty);
+        }
         mcSound.wrong();
         loseLife("wrong");
         // eliminate the wrong pad after a beat
@@ -581,6 +589,7 @@ const mazeChaseTemplate = {
       });
       const answered = state.filter(s => s.correct || s.wrong.length > 0).length;
       ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered,
+                  score: correct - penalty,   // reflect wrong-answer penalty (pointsOff); == correct when disabled
                   title: endTitle || undefined });
     }
 

@@ -25,6 +25,7 @@ export const activity = {
     lives: 6,               // hearts — a wrong tap costs one
     speed: 7,               // 1..10 — how fast the fruits fly across
     retry: false,           // false = a wrong tap moves on; true = keep trying the same clue
+    pointsOff: 0,           // 0..5 — points subtracted from the live score on each wrong tap (negative allowed)
     shuffleQuestions: true,
     showAnswers: true
   },

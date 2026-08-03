@@ -83,3 +83,11 @@ clocktick, menu/menusubtle/reveal + ambience comet/jellyfish/ufo).
 
 - (nhẹ) Panel Options có nhóm **Shuffle answers/Letters** không hợp Maze chase — đã ẩn Letters
   (`hideLettersOption:true`). Không cần sửa core thêm.
+
+## Đợt bổ sung — Trừ điểm khi chọn SAI (pointsOff)
+
+- Thêm tuỳ chọn `pointsOff` (0–5, mặc định 0): mỗi lần chạy vào bệ đáp án SAI thì trừ `pointsOff` khỏi
+  điểm sống (cho phép âm, KHÔNG chặn về 0). Va vào ĐỊCH vẫn chỉ mất TIM, KHÔNG trừ điểm.
+- Cài trong `maze-chase.js` (biến `penalty`): điểm hiển thị = số câu đúng − `penalty`; `ui.finish` báo
+  `score: correct - penalty`. Khi `pointsOff=0` mọi thứ y hệt cũ (không gọi setScore thừa ở nhánh sai).
+  Đã thêm `pointsOff: 0` vào `sample-maze-chase.js`.

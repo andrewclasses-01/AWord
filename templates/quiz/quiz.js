@@ -69,8 +69,22 @@ const quizTemplate = {
     complete: quizSound.complete
   },
 
+  // Extra Options: the central Points off group is engine-built; here we add
+  // "Allow skip" (default OFF -> the student must answer before Next advances).
+  buildExtraOptions({ panel, draft, el, mkCheck }) {
+    const g = el("div", "aw-opt-group");
+    g.append(el("div", "aw-opt-label", "Navigation"));
+    const row = el("div", "aw-opt-row");
+    row.append(mkCheck(draft.allowSkip === true, "Allow skip (move on without answering)",
+      v => draft.allowSkip = v));
+    g.append(row);
+    panel.append(g);
+  },
+
   mount(root, activity, ui) {
     const opt = activity.options || {};
+    const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct per wrong (0 = off)
+    const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
 
     // one random colour set for this whole play (reshuffled on Start again)
     const palette = shuffle(PALETTE);
@@ -104,7 +118,17 @@ const quizTemplate = {
     window.addEventListener("keydown", onKey);
     render();
 
-    function scoreNow() { return state.filter(s => s.correct === true).length; }
+    // Live score = correct answers, minus `pointsOff` per WRONG answer. With the
+    // feature off (pointsOff 0) this is byte-identical to the old correct-count.
+    // May go negative — the engine shows a negative score in red with no minus.
+    function scoreNow() {
+      const correct = state.filter(s => s.correct === true).length;
+      if (!pointsOff) return correct;
+      const wrong = state.filter(s => s.chosen !== null && s.correct === false).length;
+      return correct - pointsOff * wrong;
+    }
+    // Next is blocked until the current question is answered, unless Allow skip is on.
+    function canAdvance() { return allowSkip || state[index].chosen !== null; }
 
     function render() {
       if (fitter) { fitter.destroy(); fitter = null; }
@@ -204,11 +228,12 @@ const quizTemplate = {
 
     function updateNav() {
       const isLast = index === total - 1;
+      const may = canAdvance();   // gate Next/finish on the current answer unless Allow skip
       ui.setNav({
         index: index + 1,
         total,
         onPrev: index > 0 ? goPrev : null,
-        onNext: isLast ? finish : goNext,
+        onNext: isLast ? (may ? finish : null) : (may ? goNext : null),
         nextLabel: isLast ? icons.check : null   // last question: arrow becomes ✓ (finish)
       });
     }
@@ -225,13 +250,14 @@ const quizTemplate = {
       setTimeout(run, 220);
     }
     function goPrev() { if (index > 0) fadeSwap(() => { index--; render(); }); }
-    function goNext() { if (index < total - 1) fadeSwap(() => { index++; render(); }); }
+    function goNext() { if (!canAdvance()) return; if (index < total - 1) fadeSwap(() => { index++; render(); }); }
 
     // Keyboard: number keys 1-9 answer the current question; ← → navigate.
     function onKey(e) {
       if (finished) return;
       if (e.key === "ArrowLeft") { goPrev(); return; }
       if (e.key === "ArrowRight") {
+        if (!canAdvance()) return;   // same gate as the Next button
         (index === total - 1 ? finish : goNext)();
         return;
       }
@@ -261,7 +287,10 @@ const quizTemplate = {
         };
       });
       const answered = state.filter(s => s.chosen !== null).length;
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered });
+      const raw = { correct, incorrect: total - correct, total, perQuestion, review, answered };
+      // With Points off on, rank + summary use the penalised score (may be negative).
+      if (pointsOff) { const pts = scoreNow(); raw.score = pts; raw.scoreText = String(pts); }
+      ui.finish(raw);
     }
 
     // cleanup: remove global listeners so nothing leaks after Start again / exit

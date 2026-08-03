@@ -105,6 +105,7 @@ const flyingFruitTemplate = {
     const maxLives = Number.isInteger(opt.lives) ? Math.max(1, Math.min(10, opt.lives)) : 6;
     const speed = Number.isInteger(opt.speed) ? Math.max(1, Math.min(10, opt.speed)) : 7;
     const retry = opt.retry === true;
+    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
     const timerMode = opt.timer ?? "countUp";
 
     // ---------- content ----------
@@ -290,6 +291,7 @@ const flyingFruitTemplate = {
         if (f.removeT) clearTimer(f.removeT);
         later(() => removeFruit(f), 320);
         lives = Math.max(0, lives - 1); wrong++; updateHearts();
+        if (pointsOff) { score -= pointsOff; ui.setScore(score); }   // penalty (negative allowed, not clamped)
         if (lives <= 0) { if (!results[index]) results[index] = "failed"; endGame("gameover"); return; }
         if (!retry) { results[index] = "failed"; advance(); }
       }
@@ -374,6 +376,7 @@ const flyingFruitTemplate = {
       later(reallyFinish.bind(null, title), 420);
     }
     function reallyFinish(title) {
+      const correctCount = results.filter(r => r === "correct").length;
       const review = items.map((it, i) => ({
         question: it.clue || it.word,
         answered: results[i] != null,
@@ -382,9 +385,10 @@ const flyingFruitTemplate = {
         correctText: it.word
       }));
       ui.finish({
-        correct: score,
-        incorrect: total - score,
+        correct: correctCount,
+        incorrect: total - correctCount,
         total,
+        score,   // penalized live score (pointsOff subtracted on wrong taps); === correctCount when pointsOff===0
         perQuestion: items.map((_, i) => ({ q: i, correct: results[i] === "correct" })),
         review,
         answered: results.filter(r => r != null).length,

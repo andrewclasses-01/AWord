@@ -139,6 +139,8 @@ const tfTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const repeatUntilCorrect = opt.repeatUntilCorrect === true;
+    // Points deducted per WRONG answer (0..5). 0 = no penalty (behaviour unchanged).
+    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
     const crawlMs = crawlMsFor(speed);
     const timerMode = opt.timer ?? "countUp";
@@ -164,6 +166,7 @@ const tfTemplate = {
     const state = statements.map(() => ({ answered: false, correct: false, chosen: null }));
     let finished = false;
     let livesLeft = startLives;
+    let penalty = 0;          // accumulated points-off from wrong answers (pointsOff each)
     let fitter = null;
     let promptAnim = null;    // the currently-running Animation on .aw-tf-prompt (enter/crawl/exit)
     let fallbackTimer = null; // setTimeout backup for whichever animation is running
@@ -188,6 +191,10 @@ const tfTemplate = {
     }
 
     function scoreNow() { return state.filter(s => s.correct).length; }
+    // The value actually shown/ranked: correct count minus wrong-answer penalty
+    // (negatives allowed, never clamped). When pointsOff===0, penalty stays 0 so
+    // liveScore() === scoreNow() and everything is byte-identical to before.
+    function liveScore() { return scoreNow() - penalty; }
 
     function armFallback(fn, ms) {
       if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -260,7 +267,7 @@ const tfTemplate = {
         measure: () => track.offsetHeight + btnRow.scrollHeight
       });
 
-      ui.setScore(scoreNow());
+      ui.setScore(liveScore());
       updateNav();
       renderLives();
       scheduleBalance();
@@ -475,7 +482,7 @@ const tfTemplate = {
       // score updates mid-flight, with a little pulse
       pendingMarks.push(setTimeout(() => {
         if (finished) return;
-        ui.setScore(scoreNow());
+        ui.setScore(liveScore());
         updateNav();
         try {
           scoreEl.animate([{ transform: "scale(1)" }, { transform: "scale(1.35)" }, { transform: "scale(1)" }],
@@ -532,6 +539,15 @@ const tfTemplate = {
         tfSound.wrong();
         flyMark(btn, false);
 
+        // Points-off penalty: subtract pointsOff (negatives allowed, no clamp) and
+        // refresh BOTH the top score and the nav counter so they stay in sync. The
+        // whole block is skipped when pointsOff===0 -> byte-identical to before.
+        if (pointsOff) {
+          penalty += pointsOff;
+          ui.setScore(liveScore());
+          updateNav();
+        }
+
         const outOfLives = loseLife();
         // A wrong tap: if "repeat until answered" is on, the statement comes
         // back later (it wasn't answered correctly); otherwise it's done.
@@ -546,7 +562,7 @@ const tfTemplate = {
     }
 
     function updateNav() {
-      ui.setNav({ index: scoreNow(), total, onPrev: null, onNext: null });
+      ui.setNav({ index: liveScore(), total, onPrev: null, onNext: null });
     }
 
     // Item 5 (teacher 1/8): keep the gap divider->buttons equal to the gap
@@ -625,7 +641,9 @@ const tfTemplate = {
           correctText
         };
       });
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered: state.filter(s => s.answered).length });
+      // Ranking score = correct count minus wrong-answer penalty. When pointsOff===0
+      // penalty is 0, so score === correct, which equals the engine's default.
+      ui.finish({ score: correct - penalty, correct, incorrect: total - correct, total, perQuestion, review, answered: state.filter(s => s.answered).length });
     }
 
     return function cleanup() {

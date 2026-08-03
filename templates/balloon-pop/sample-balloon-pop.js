@@ -26,7 +26,8 @@ export const activity = {
     bpLevels: 10,            // how many definitions to play this round (Wordwall default 10)
     bpBonusTime: false,      // Extra Time bonus balloons
     bpBonusPoints: false,    // Points bonus balloons
-    bpBonusX2: false         // x2 Score bonus balloons
+    bpBonusX2: false,        // x2 Score bonus balloons
+    pointsOff: 0             // points removed on each wrong pop (0..5; 0 = off)
   },
   content: {
     items: [

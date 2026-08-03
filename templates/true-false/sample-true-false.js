@@ -17,7 +17,8 @@ export const activity = {
     lives: 5,               // 5 hearts (set to null to turn lives off)
     showAnswers: true,
     speed: 0,               // 0 = the statement waits at the centre until answered
-    repeatUntilCorrect: false
+    repeatUntilCorrect: false,
+    pointsOff: 0            // points deducted per wrong answer (0..5); 0 = no penalty
   },
   content: {
     statements: [

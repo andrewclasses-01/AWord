@@ -1,5 +1,11 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 54 (3/8/2026, v0.9.28) — Điểm trừ khi sai (option chung `pointsOff`)
+Đọc `options.pointsOff` (0–5). Trừ **1 lần mỗi TỪ có lỗi**: bonus mode từ giải xong mà `hadMistake`
+(`finalizeBonusWord`), submit mode từ sai (`doSubmit`, `!allCorrect`). Gộp qua biến `penalty` trừ trong
+`scoreNow()` + `finish()` (giữ hiệu ứng bay dương). `pointsOff=0` = zero-diff. Điểm âm được phép (engine
+`ui.setScore` hiện đỏ, bỏ dấu). allowSkip GIỮ NGUYÊN (mặc định bật, lịch sử). Seed `pointsOff:0` vào sample.
+
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT — GẮN VÀO TRANG CHỦ (29/7/2026, thầy duyệt "tương đối rồi")
 
 `core/catalog.js` đổi `built:true`, đăng ký trong `manifest.js` + `main.js` (`import "./templates/anagram/anagram.js"`) + CSS trong `index.html`. Anagram giờ **chơi được** từ trang chủ thật (act có sẵn trong thư viện / bài giao).

@@ -93,6 +93,7 @@ function pickWeighted(list) {
 const wamTemplate = {
   type: "whack_a_mole",
   scorable: true,
+  hidePointsOff: true,   // ships its own "Points off per wrong hit" control
   name: "Whack-a-mole",
   inlineTimerBar: true,    // our own timer bar + hearts sit on the score row (ui.topbarMid)
   hideLettersOption: true, // no lettered answer boxes here

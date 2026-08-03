@@ -171,6 +171,7 @@ const anagramTemplate = {
     const mode = opt.anagramMode === "submit" ? "submit" : "bonus";
     const allCaps = opt.allCaps != null ? !!opt.allCaps : opt.changeCase === "upper";
     const allowSkip = opt.allowSkip !== false;
+    const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct once per WORD with a mistake (0 = off)
 
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
     if (opt.shuffleQuestions) items = shuffle(items);
@@ -198,6 +199,7 @@ const anagramTemplate = {
     }));
     let index = 0;
     let finished = false;
+    let penalty = 0;           // total points-off across words answered wrong (stays 0 when the option is off)
     let busy = false;          // true while a fly/reveal animation must not be interrupted
     let fitter = null;
     let autoTimer = null;
@@ -211,8 +213,10 @@ const anagramTemplate = {
     function doneCheck(s) { return mode === "bonus" ? s.correct === true : s.graded === true; }
 
     function scoreNow() {
-      if (mode === "bonus") return state.reduce((sum, s) => sum + (s.points || 0), 0);
-      return state.filter(s => s.correct === true).length;
+      const base = mode === "bonus"
+        ? state.reduce((sum, s) => sum + (s.points || 0), 0)
+        : state.filter(s => s.correct === true).length;
+      return base - penalty;   // points-off (may drive the total negative -> shown red)
     }
 
     function render() {
@@ -353,6 +357,7 @@ const anagramTemplate = {
       const it = items[index];
       const n = it.letters.length;
       const perfect = !st.hadMistake;
+      if (!perfect) penalty += pointsOff;   // one points-off for a word solved with any mistake
       const earned = n * (perfect ? 2 : 1);
       st.correct = true;               // word is DONE — points deferred, see below
       // No render() here: every origin tile is already .is-used and every
@@ -557,6 +562,7 @@ const anagramTemplate = {
 
       setTimeout(() => {
         st.correct = allCorrect;
+        if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }  // one points-off for a wrong word
         st.revealed = true;   // only matters if this word is re-rendered later (e.g. navigated back to)
         busy = false;
         updateSubmitButtonState();
@@ -834,6 +840,7 @@ const anagramTemplate = {
         };
       });
       const answered = state.filter(s => doneCheck(s)).length;
+      correct -= penalty;   // reflect points-off in the ranked/summary score (no-op when the option is off)
       ui.finish({ correct, incorrect: total - correctWords, total: finishTotal, perQuestion, review, answered });
     }
 

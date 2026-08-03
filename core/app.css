@@ -125,6 +125,11 @@ body {
   font-weight: 800; color: var(--aw-text); font-size: 2.2cqw;
 }
 .aw-top-score svg { width: 1em; height: 1em; color: var(--aw-ok); }
+/* Score colour by sign (teacher, 3/8/2026): positive GREEN, negative RED (the
+   engine's setScore already strips the "-", so a negative reads as a red number). */
+.aw-top-score.is-pos { color: var(--aw-ok); }
+.aw-top-score.is-neg { color: var(--aw-no); }
+.aw-top-score.is-neg svg { color: var(--aw-no); }
 
 /* Opt-in (tpl.hasLivesSlot): hearts sit just LEFT of the score, same row. The
    right-group keeps the score hard against the frame's right edge. Used by
@@ -422,7 +427,7 @@ body {
    center cluster drifts off-center (a long title "wins" more space than the
    short icon group on the right, which has almost no min-content). */
 .aw-below-left, .aw-below-right { min-width: 0; }
-.aw-below-left { justify-self: start; text-align: left; }
+.aw-below-left { justify-self: start; text-align: left; margin-left: 6%; }   /* inset the act name from the edge */
 .aw-below-title {
   font-size: 24px; font-weight: 800; color: #23303e;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -434,7 +439,7 @@ body {
 }
 
 .aw-below-center { justify-self: center; position: relative; z-index: 41; display: flex; gap: 10px; }
-.aw-below-right { justify-self: end; display: flex; gap: 8px; }
+.aw-below-right { justify-self: end; display: flex; gap: 8px; margin-right: 6%; }   /* inset the function buttons from the edge */
 
 /* Square rounded icon buttons — shared by both the center cluster and the
    right-side utility icons. */
@@ -501,6 +506,10 @@ body {
   font-size: 14px; font-weight: 600; color: #23303e; cursor: pointer;
 }
 .aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
+/* Shared numeric slider for central options (e.g. "Points off"). Template-local
+   sliders keep their own prefixed classes; this is only for engine-built groups. */
+.aw-opt-slider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; cursor: pointer; }
+.aw-opt-slidval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #57667a; }
 .aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; }
 /* "Count down" + its m/s time fields kept together on one line so the fields
    sit to the RIGHT of the button instead of wrapping onto the next row. */

@@ -16,6 +16,7 @@ export const activity = {
     shuffleQuestions: true,
     showAnswerWhenWrong: true,
     minusPoints: false,
+    allowSkip: false,
     showAnswers: true
   },
   content: {

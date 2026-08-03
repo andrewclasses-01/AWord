@@ -253,6 +253,11 @@ function mountQuestions(root, activity, ui) {
   const explicitCols = typeof opt.columns === "number" && opt.columns > 0 ? opt.columns : null;
   const questionSeconds = typeof opt.questionTimeSeconds === "number" && opt.questionTimeSeconds > 0
     ? opt.questionTimeSeconds : 15;
+  // Penalty (teacher's option, engine Options panel): subtract this many
+  // points on each WRONG answer, clamped 0..5. 0 = no penalty (default), so
+  // behaviour is identical to before this option existed. Negative scores are
+  // allowed (not clamped to 0) — ui.setScore renders them red without a minus.
+  const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
 
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
@@ -707,6 +712,7 @@ function mountQuestions(root, activity, ui) {
       resetSharedTimer();   // bar refills + fresh full countdown (see file header)
     } else {
       otbSound.wrong();     // timer is untouched — it just keeps draining, even at the grid
+      score -= pointsOff;   // penalty (negative allowed); updateProgress() below refreshes score + nav
     }
 
     if (correct) {
@@ -855,7 +861,11 @@ function mountQuestions(root, activity, ui) {
     });
     const correctCount = boxState.filter(s => s === "correct").length;
     const answeredCount = boxState.filter(s => s !== "unplayed").length;
-    ui.finish({ correct: correctCount, incorrect: total - correctCount, total, perQuestion, review, answered: answeredCount, title });
+    // Report the LIVE score (correct count minus wrong-answer penalties) as
+    // the final score. With pointsOff===0 this equals correctCount, i.e. the
+    // engine's own default, so nothing changes; with a penalty it can go below
+    // correctCount (and negative).
+    ui.finish({ score, correct: correctCount, incorrect: total - correctCount, total, perQuestion, review, answered: answeredCount, title });
   }
 
   return function cleanup() {

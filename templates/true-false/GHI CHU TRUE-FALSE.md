@@ -106,3 +106,10 @@ thứ tự chơi, nên luôn trộn để HS không đoán được.
   editor vẫn đã verify qua gọi trực tiếp.
 - Nguồn âm thanh gốc: `D:\APP AND DATA\AWord-data\Source\Sound effect\TRUE FALSE`. Bản dùng trong app ở
   `./sounds/`.
+
+## Thêm phạt điểm khi trả lời SAI (pointsOff) — 3/8/2026
+- Thêm option `pointsOff` (0..5) trong `options`: mỗi lần trả lời SAI trừ đi `pointsOff` điểm (cho phép
+  ÂM, KHÔNG kẹp về 0). Điểm hiển thị = số câu đúng − tổng phạt qua biến `penalty` + hàm `liveScore()`.
+- Cập nhật đồng bộ cả ô điểm góc trên (`ui.setScore`) và ô đếm nav (`ui.setNav.index`); `ui.finish` báo
+  `score: correct - penalty`. Khi `pointsOff===0`, `penalty` luôn 0 nên hành vi GIỐNG HỆT bản cũ. Đã seed
+  `pointsOff: 0` vào sample-true-false.js.

@@ -168,6 +168,9 @@ const ftmTemplate = {
     const repeatUntilCorrect = opt.repeatUntilCorrect === true;
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
     const crawlMs = crawlMsFor(speed);
+    // Penalty subtracted from the live score on each WRONG tap (0..5, 0 = off).
+    // When 0, the whole feature is inert and play is byte-identical to before.
+    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
     const timerMode = opt.timer ?? "countUp";
     const timerTotal = opt.timerTotalSeconds ?? 120;
 
@@ -199,6 +202,7 @@ const ftmTemplate = {
 
     const state = pairs.map(() => ({ solved: false, skipped: false }));
     let finished = false;
+    let penalty = 0;          // total points docked by wrong taps (pointsOff); stays 0 when the feature is off
     let livesLeft = normLives(opt.lives);
     let fitter = null;
     let promptAnim = null;    // the currently-running Animation on .aw-ftm-prompt (enter or crawl)
@@ -221,7 +225,10 @@ const ftmTemplate = {
       startCycle();
     }
 
-    function scoreNow() { return state.filter(s => s.solved).length; }
+    // Live score = pairs matched minus points docked for wrong taps. Negatives
+    // are allowed (the top-bar renders them red without a minus). With the
+    // feature off (penalty always 0) this equals the plain matched-count.
+    function scoreNow() { return state.filter(s => s.solved).length - penalty; }
 
     function armFallback(fn, ms) {
       if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -630,6 +637,14 @@ const ftmTemplate = {
         tile.append(fly);
         pendingMarks.push(setTimeout(() => fly.remove(), 900));
 
+        // Dock points for the wrong tap (no clamp — the score may go negative).
+        // Guarded by pointsOff so play is byte-identical when the feature is off.
+        if (pointsOff) {
+          penalty += pointsOff;
+          ui.setScore(scoreNow());
+          updateNav();
+        }
+
         const outOfLives = loseLife();
         dropOrRequeue(target);
         exitPromptThenCall(() => {
@@ -680,7 +695,11 @@ const ftmTemplate = {
       });
       // Out of lives shows "GAME OVER" (celebration cover + menu panel both
       // read this title); everything else keeps the default "Game complete".
+      // Report the SAME live value shown top-right (matched minus points off).
+      // With the feature off, penalty is 0 so this equals `correct` — the exact
+      // number ui.finish would default to anyway (byte-identical).
       ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered: correct,
+        score: scoreNow(),
         title: reason === "gameover" ? "Game over" : undefined });
     }
 

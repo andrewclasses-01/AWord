@@ -4,6 +4,13 @@
 
 ## Nhật ký
 
+### 3/8/2026 — Thêm option "Points off" (trừ điểm khi bấm sai)
+Thêm `options.pointsOff` (0..5, mặc định 0 = tắt): mỗi lần bấm SAI trừ `pointsOff` vào điểm sống qua biến
+`penalty` (điểm = số cặp ghép được − `penalty`, KHÔNG chặn về 0 nên điểm có thể âm — top-bar tự tô đỏ). Cập
+nhật cả `ui.setScore` lẫn thanh "x of y" (`updateNav`) và cho `ui.finish` báo đúng `score: scoreNow()`. Khi
+`pointsOff===0` mọi nhánh mới bị guard bỏ qua → chơi y hệt bản cũ. Chỉ sửa `find-the-match.js` +
+`sample-find-the-match.js` (thêm `pointsOff:0`). KHÔNG đụng core/UI Options (engine tự dựng).
+
 ### 1/8/2026 — Đợt 31: 4 loạt tinh chỉnh thầy yêu cầu (đã test trình duyệt thật, 0 lỗi console) — COMMIT + PUSH + LIVE
 Thầy chơi bản live rồi gửi 4 loạt yêu cầu. Tất cả đã đo DOM thật (không đoán qua ảnh) để xác nhận. Tóm tắt:
 

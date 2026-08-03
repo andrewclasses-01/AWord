@@ -72,6 +72,11 @@ blimp + máy bay + biển gỗ render đẹp, sát Wordwall.
   (timerEl) để tránh hiện "0:00" trùng với đồng hồ riêng của template. Hiện lách bằng cách để đồng hồ
   riêng trong topbarMid; ô trái vẫn hiện 0:00. (Điểm 2 mục polish.)
 
+## Đợt bổ sung — Penalty "points off" (3/8/2026)
+Thêm option `pointsOff` (0..5, mặc định 0): mỗi lần pop SAI (thùng vỡ trong `breakCrate`) trừ `pointsOff`
+điểm — cho phép điểm âm, KHÔNG kẹp về 0. Khi `pointsOff===0` hành vi giữ nguyên byte-identical (không gọi
+`updateScore`, `ui.finish` vẫn để score mặc định = correctCount). Chỉ đụng file trong `templates/balloon-pop/`.
+
 ## File của template
 `balloon-pop.js` (game) · `balloon-pop.css` (cảnh + editor CSS) · `sample-balloon-pop.js` (20 cặp mẫu) ·
 `balloon-pop-sound.js` (âm thanh) · `balloon-pop-editor.js` (soạn keyword/definition) ·

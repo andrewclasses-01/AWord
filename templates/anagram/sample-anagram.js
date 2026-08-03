@@ -17,6 +17,7 @@ export const activity = {
     anagramMode: "bonus",
     allCaps: true,
     allowSkip: true,
+    pointsOff: 0,
     showAnswers: true
   },
   content: {

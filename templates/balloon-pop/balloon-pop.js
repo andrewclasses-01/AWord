@@ -138,6 +138,8 @@ const balloonPopTemplate = {
 
 function mountBalloonPop(root, activity, ui) {
   const opt = activity.options || {};
+  // Penalty: points removed on each wrong pop (0..5; 0 = off, byte-identical to old behavior).
+  const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
 
   // ---- content ----
   let pool = [...(activity.content?.items || [])]
@@ -400,6 +402,8 @@ function mountBalloonPop(root, activity, ui) {
 
   function breakCrate(crate) {
     bpSound.cargoWrong();
+    // Wrong-answer penalty: subtract pointsOff (negative allowed, no clamp). pointsOff===0 → no change.
+    if (pointsOff > 0) { score -= pointsOff; updateScore(); }
     crate.classList.add("is-broken");
     setTimeout(() => crate.remove(), 500);
     flyMark(false);
@@ -515,6 +519,9 @@ function mountBalloonPop(root, activity, ui) {
       total: totalLevels,
       perQuestion, review,
       answered: correctCount,
+      // Only report the live (penalized) score when the penalty is on; otherwise
+      // omit it so score defaults to correctCount — byte-identical to old behavior.
+      ...(pointsOff > 0 ? { score } : {}),
       title
     });
   }

@@ -5,6 +5,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 54 (3/8/2026, v0.9.28) — ĐIỂM TRỪ MỌI TEMPLATE + ALLOW SKIP + CẦU ĐỒNG BỘ myActivity ⭐ CÓ SỬA CORE — 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi)
+
+**Yêu cầu thầy (2 việc AWord, đi kèm 2 việc myActivity ở kho riêng):**
+1. **Mọi template thêm "thanh Điểm trừ" khi chọn đáp án SAI** (cái nào đã có thì bỏ qua).
+2. **Các act có nút Next–Back (x of y) thêm "Allow skip"**: KHÔNG tích thì chưa làm KHÔNG next được.
+
+**A. ĐIỂM TRỪ + MÀU ĐIỂM (⭐ CÓ SỬA CORE `engine.js` + `app.css`):**
+- **Option "Points off (wrong answer)" CHUNG ở engine** (`buildOptionsPanel`): slider 0–5, mặc định **0 (tắt)**,
+  ghi `activity.options.pointsOff`. Chỉ hiện cho template `scorable !== false && !tpl.hidePointsOff`.
+- **Đặt `hidePointsOff: true`** cho 4 template ĐÃ có điểm trừ riêng (type-the-answer, unjumble, crossword,
+  whack-a-mole) + **gameshow** (điểm theo tốc độ). Chúng giữ nguyên cơ chế riêng, KHÔNG hiện option chung.
+- **`ui.setScore(n)` đổi màu theo dấu (thầy chốt):** điểm **dương = XANH LÁ** (`--aw-ok`), **âm = ĐỎ** (`--aw-no`)
+  **BỎ dấu trừ** (hiện trị tuyệt đối) — class `.is-pos`/`.is-neg` trên `.aw-top-score`. Cho phép điểm ÂM.
+- **Trừ điểm per-template** ở 8 game chưa có: `quiz, anagram, true-false, find-the-match, open-the-box,
+  balloon-pop, flying-fruit, maze-chase`. Mỗi game đọc `options.pointsOff`, câu SAI trừ (không kẹp 0, âm được),
+  gọi `ui.setScore` + đưa vào `ui.finish({score})`. **KHI pointsOff=0 hành vi Y HỆT trước (zero-diff)** — đã kiểm.
+  - anagram: trừ **1 lần mỗi TỪ có lỗi** (bonus: từ giải có sai; submit: từ sai), gộp qua biến `penalty` trong `scoreNow`.
+  - bỏ `speaking-cards` (không tính điểm). Seed `pointsOff:0` vào các `sample-*.js`.
+
+**B. ALLOW SKIP (quiz + type-the-answer):**
+- Thêm checkbox **"Allow skip (move on without answering)"** (buildExtraOptions), mặc định **KHÔNG tích**.
+  Khi tắt: `onNext=null` (nút Next MỜ) tới khi câu hiện tại đã trả lời (`canAdvance()`), khóa cả phím → và ✓ cuối.
+- anagram + unjumble ĐÃ có allowSkip riêng (mặc định bật) → GIỮ NGUYÊN. Seed `allowSkip:false` vào 2 sample mới.
+
+**C. CẦU ĐỒNG BỘ cho myActivity (⭐ CÓ SỬA CORE `engine.js`) — vô hại khi chạy standalone:**
+- `startGame` lộ **`window.__awordBridge`** `{ getState, switchTemplate(type), applyOptions(opts), setTheme(id) }`
+  + phát console marker khi USER đổi ở 1 bảng: **`MYACT:AW:TPL:<type>`** (Change template) · **`MYACT:AW:OPT:<json>`**
+  (Apply options) · **`MYACT:AW:STYLE:<themeId>`** (đổi Style). Biến `awSyncMute` chặn dội: bridge tự áp thì KHÔNG phát.
+- myActivity (kho riêng, v1.7.4) bắt marker từ MỌI bảng → gọi bridge trên các bảng còn lại (đồng bộ 2 CHIỀU).
+
+**Kiểm chứng (harness engine thật trên devserver, KHÔNG cần login):** 14/14 template mount **0 lỗi console**;
+quiz sai (pointsOff 2) → điểm nội bộ −2 hiện **"2" ĐỎ** `rgb(226,60,60)`, Next khóa trước khi trả lời/mở sau;
+true-false sai (pointsOff 3) → **"3" ĐỎ**; whack-a-mole KHÔNG hiện Points off chung (giữ riêng); bridge đủ 4 method,
+tự-áp không phát marker, user đổi Style phát `MYACT:AW:STYLE:...`. **Việc kế: thầy chơi thử + đăng nhập → commit + push.**
+Chi tiết per-template: `GHI CHU <TÊN>.md` từng thư mục. Hợp đồng core mới: `core/HUONG DAN CORE.md`.
+
+**D. CHẶN BÀN PHÍM ẢO HĐH khi bàn phím AWord hiện (thầy yêu cầu — Windows/Android/iOS):**
+- `type-the-answer.js` — game DUY NHẤT có ô nhập thật (`<textarea.aw-tta-input>`). Đặt
+  **`input.inputMode = keyboardVisible ? "none" : "text"`**: bàn phím AWord BẬT (mặc định) → `inputMode="none"`
+  ẩn bàn phím ảo HĐH (vẫn giữ con trỏ nháy + gõ bằng bàn phím vật lý được); HS ẩn bàn phím AWord (nút kbd) →
+  `"text"` cho native hiện lại. Cập nhật cả lúc tạo input lẫn trong handler nút kbd. Crossword dùng `core/keyboard.js`
+  nhưng ô là `<div>` (không input) → KHÔNG có bàn phím ảo, không cần sửa.
+- **Kiểm chứng live:** bàn phím AWord hiện → `inputMode="none"`; bấm Hide keyboard → `"text"`; Show lại → `"none"`.
+
+**E. CÂN LAYOUT thanh dưới khung (thầy: tên act + nút chức năng quá sát mép) — `app.css`:**
+- Thêm **`.aw-below-left { margin-left: 6% }`** + **`.aw-below-right { margin-right: 6% }`** → đẩy TÊN act sang phải,
+  cụm NÚT chức năng sang trái. % tính theo track grid nên tự co giãn theo cỡ màn. Đo live (stage 968px): inset **24px**
+  mỗi bên, cụm GIỮA (Options/Template/Style) vẫn CHÍNH GIỮA (mid=640=nửa cửa sổ). 14/14 template vẫn mount 0 lỗi.
+
+---
+
 ## Đợt 53 (3/8/2026, v0.9.27) — LƯU OPTIONS HẲN + NHỚ OPTIONS THEO TEMPLATE TẠM ⭐ CÓ SỬA CORE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
 **Yêu cầu thầy:** (1) Apply option cho 1 act → **lưu hẳn**. (2) Khi chọn 1 act + 1 **template tạm thời** (Change

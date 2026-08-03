@@ -18,7 +18,8 @@ export const activity = {
     showAnswers: true,
     speed: 0,
     repeatUntilCorrect: false,
-    removeCorrects: true
+    removeCorrects: true,
+    pointsOff: 0
   },
   content: {
     pairs: [

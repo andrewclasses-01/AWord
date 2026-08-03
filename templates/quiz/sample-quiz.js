@@ -16,6 +16,8 @@ export const activity = {
     timer: "countUp",
     shuffleQuestions: true,
     shuffleAnswers: true,
+    pointsOff: 0,
+    allowSkip: false,
     lives: null
   },
   content: {

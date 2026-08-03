@@ -35,6 +35,7 @@ const BONUS_CARD_VALUES = [50, 100, 150, 200, 250];
 const gameshowTemplate = {
   type: "gameshow",
   scorable: true,
+  hidePointsOff: true,   // speed-based scoring, never a flat per-wrong penalty (teacher, 3/8/2026)
   name: "Gameshow quiz",
 
   edit: openGameshowEditor,

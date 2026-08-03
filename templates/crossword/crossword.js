@@ -189,6 +189,7 @@ function buildCrossword(words) {
 const crosswordTemplate = {
   type: "crossword",
   scorable: true,
+  hidePointsOff: true,   // ships its own "Points off when wrong" control
   name: "Crossword",
   edit: openCrosswordEditor,
   hideLettersOption: true,     // a crossword has no lettered answer boxes

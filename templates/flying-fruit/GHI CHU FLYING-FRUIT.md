@@ -85,3 +85,7 @@ Làm ĐÚNG 4 chỗ này (đối chiếu cách `anagram` đã làm), rồi `curl
   `flying_fruit` để hiện "current" thay vì "coming soon".
 - Sau khi push: `curl` bản live kiểm `catalog.js` + `index.html` đã có flying-fruit (Pages cập nhật file
   KHÔNG đồng thời — xem APP_MASTER mục 9).
+
+## Chặng bổ sung — Points off (trừ điểm khi tap sai) — 3/8/2026
+- Thêm option `pointsOff` (0..5): mỗi lần chạm quả SAI thì trừ `pointsOff` khỏi biến `score` (KHÔNG chặn về 0, cho phép âm), rồi `ui.setScore(score)`. Khi `pointsOff===0` hành vi y hệt bản cũ (có bọc `if (pointsOff)` nên không gọi thừa setScore).
+- `ui.finish` giờ báo thêm `score` (điểm đã trừ) và giữ `correct/incorrect` tính từ số câu đúng thật (correctCount) để không bị âm. Seed mặc định `pointsOff: 0` trong sample. Chỉ sửa file trong `templates/flying-fruit/`.

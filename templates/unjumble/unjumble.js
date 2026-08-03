@@ -99,6 +99,7 @@ function normLives(v) {
 const unjumbleTemplate = {
   type: "unjumble",
   scorable: true,
+  hidePointsOff: true,   // ships its own "Points off when wrong" control
   name: "Unjumble",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
 
