@@ -5,7 +5,89 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 48 (3/8/2026, v0.9.22) — NÚT IMPORT: tạo hàng loạt act từ "gói JSON" (nền tảng taoactaw, Phần A) — 🟢 CHỜ THẦY ĐĂNG NHẬP TEST → COMMIT
+## Đợt 50 (3/8/2026, v0.9.24) — ĐỔI TEMPLATE MẶC ĐỊNH KHI IMPORT + CẤU TRÚC THƯ MỤC ACT/HOMEWORK — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**Yêu cầu thầy (đổi bản đồ act khi tạo từ file):**
+- ENG1/ENG2/VI1/VI2 + **PRONUNCIATION** → **ANAGRAM** (trước ENG/VI là Find the match).
+- **PRONUNCIATION** = dataset MỚI: tách cột IPA "WORD /ipa/" → anagram (word=từ, clue=phiên âm IPA).
+- IPA → **Speaking cards** (giữ). QUIZ1/QUIZ2 → **Quiz**. Reading act: TRUE FALSE / **FIND THE MATCH** (FILLING) / QUIZ.
+- **Thư mục:** READINGACT1 (v1) + QUIZ1/QUIZ2 → **ACT**; READINGACT2 (v2) → **HOMEWORK bên trong ACT**; vocab ở gốc.
+
+**Việc đã làm:**
+1. **`core/store.js` `importBundle`**: hỗ trợ **thư mục lồng nhau** qua trường **`subfolder`** trên mỗi act
+   (vd `"ACT"`, `"ACT/HOMEWORK"`). Hàm `resolveFolder(segments)` tạo/tái dùng từng cấp dưới base (thư mục
+   thầy đang đứng, hoặc folder mới nếu tick "Make a new folder"), cache theo path để ACT chỉ tạo 1 lần.
+2. **`core/lesson-import.js`**: thêm builder `anagram` + preset `OPT_ANA`; ENG/VI → anagram; thêm PRONUNCIATION
+   (regex `^(.+?)\s+(/[^/]*/)\s*$` tách "WORD /ipa/"); gắn `subfolder` "ACT" cho Quiz1/2, "ACT" cho reading v1,
+   "ACT/HOMEWORK" cho v2.
+3. **`main.js` importFlow**: dòng preview mỗi act nay hiện thêm **subfolder** (`Anagram · 100`, `Quiz · 30 · ACT`,
+   `True/False · 30 · ACT/HOMEWORK`) để thầy thấy act vào đâu.
+4. **Skill `taoactaw`** cập nhật khớp (anagram/pronunciation/subfolder) + đóng gói lại + gửi thầy.
+
+**Kiểm chứng (harness, 2 file thật, KHÔNG login):**
+- Reading `DS-S2.I1.W3`: **12 act** — anagram×4 (ENG/VI) + anagram PRONUNCIATION + speaking IPA (gốc) +
+  TF/FIND/QUIZ ở **ACT** (v1) và **ACT/HOMEWORK** (v2). Anagram đủ 100 items {word, clue}; PRONUNCIATION clue=/ipa/.
+- Listening `LSA2-S2.T1.P1-2`: **8 act** — 5 anagram + speaking IPA + QUIZ1/QUIZ2 ở **ACT**.
+- **20/20 mount 0 lỗi console**; skill Python cho kết quả Y HỆT (12/8 act, subfolder khớp).
+- `git status`: `core/store.js`, `core/lesson-import.js`, `main.js` (+ docs). File test tạm đã xoá.
+
+**CHƯA test được (cần login):** việc tạo thư mục lồng thật trên Firestore (logic `resolveFolder` review kỹ; teacher
+test khi bấm Import).
+
+**VIỆC ĐANG CHỜ:** thầy đăng nhập → Import 1 file .xlsm → xác nhận act đúng loại + đúng cây thư mục ACT/HOMEWORK
+→ **commit + push** (gộp Đợt 48–50). ⚠️ Bản đồ act nay ở 2 nơi (`lesson-import.js` = chính, skill = phụ) — sửa thì đồng bộ.
+
+---
+
+## Đợt 49 (3/8/2026, v0.9.23) — IMPORT ĐỌC THẲNG FILE .xlsm/.xls TRONG TRÌNH DUYỆT (bỏ bước JSON) — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+**Yêu cầu thầy:** "duyệt thẳng file .xlsm vào page live → đọc + tạo act ngay, KHÔNG qua trung gian JSON".
+
+**Việc đã làm:**
+1. **Nhúng bộ đọc Excel local**: `core/vendor/xlsx.mjs` (SheetJS ESM, ~1MB, tải từ cdn.sheetjs.com về REPO — KHÔNG
+   CDN lúc chạy, giữ offline). **Nạp LƯỜI** bằng `import()` — chỉ tải khi thầy chọn 1 file bảng tính, nên học sinh
+   + việc thường KHÔNG nặng thêm (đo: index.html vẫn parse sạch, SheetJS không tải).
+2. **`core/lesson-import.js`** (MỚI): port y nguyên logic skill `taoactaw` sang JS. `parseLessonToBundle(arrayBuffer,
+   {fileName})` → đọc WORDTABLE (cột D/E,H/I,L/M,P/Q,S) + Quiz1/2 + READINGACT1/2 (3 vùng TF/FILLING/READING QUIZ,
+   bỏ Q&A) → trả gói `{folder, activities}` y hệt taoactaw. Tự nhận reading/listening, bỏ sheet rỗng, tên sheet
+   không phân biệt hoa/thường. Đọc ô bằng `XLSX.utils.encode_cell` (1-indexed row/col kiểu openpyxl). Cùng 4 preset
+   `OPT_*` + quy ước title (v1 `<source> / …`, v2 `<source> HW / …`).
+3. **`main.js` `importFlow` — thiết kế lại hiện đại** (5 điều chỉnh của thầy): **drop-zone** (kéo-thả file VÀO
+   HOẶC bấm để duyệt, có icon upload, viền đứt, sáng lên khi kéo qua — `is-over`); **BỎ hộp paste JSON**; sau khi
+   nhận file → **danh sách act có CHECKBOX** (mỗi dòng: icon theo loại + title + "Loại · số câu", mặc định tích
+   hết) → chỉ act được tích mới tạo; header "N of M selected" + nút **Select all/Clear all**; nút **Import N** tự
+   đổi số, disable khi 0. **Mặc định vào THƯ MỤC HIỆN TẠI** (không tạo folder). Thêm tick **"Make a new folder"**
+   → hiện ô tên (điền sẵn `<source>`), tích thì tạo folder mới đưa act vào. Vẫn nhận file `.json` (thả/duyệt).
+   CSS mới `.aw-imp-*` trong `core/app.css` (drop-zone, list, row, folder — tông xanh #2f7bff, bo tròn, hover).
+
+**Kiểm chứng (dev server, harness gốc-web, copy 2 file .xlsm thật vào web root rồi fetch arrayBuffer):**
+- Reading `DS-S2.I1.W3`: đọc **151ms → 11 act** (đúng như skill Python). Listening `LSA2-S1.T4.P4-5`: **65ms → 7 act**.
+- **18/18 act mount engine thật, 0 lỗi console.** JS port cho kết quả Y HỆT bản Python.
+- index.html parse sạch (main.js/lesson-import không lỗi; SheetJS chưa tải vì chưa chọn file).
+- **UI thật** (tạm expose `importFlow`, nạp file .xlsm thật vào input): modal 540px, drop-zone viền đứt, **11 dòng
+  act có checkbox + icon + "Find the match · 100"**, header "11 of 11 selected", nút "Import 11"; bỏ tích 2 →
+  "Import 9" + dòng mờ; Select all/Clear all đổi nhãn + disable đúng; "Make a new folder" mặc định ẩn, tích thì
+  hiện ô tên điền sẵn `<source>`. Đã gỡ dòng debug + file test tạm (git diff sạch).
+- `git status`: `main.js` (M), `core/lesson-import.js` + `core/vendor/xlsx.mjs` (mới).
+
+**Đánh đổi (thầy đã đồng ý):** repo +1MB (`xlsx.mjs`) — nhưng nạp lười teacher-only, học sinh không tải. Logic ánh xạ
+giờ ở **2 nơi**: skill `taoactaw` (Python, dùng qua dòng lệnh) + `lesson-import.js` (JS, trong app — nay là ĐƯỜNG CHÍNH).
+Sửa bản đồ thì nhớ đồng bộ cả hai (hoặc coi lesson-import.js là bản chính).
+
+**⭐ FIX (thầy test báo lỗi):** nhiều act nhận nhầm ô rỗng có **số "0"** (WORDTABLE lấp dòng trống bằng công thức trả
+0; IPA còn ra `"0 "` có dấu cách) → 100 từ hoá 150, Speaking cards chia bài "0". Gốc: bản `taoact` có `ok()` loại cả
+`""` LẪN `"0"`, nhưng khi port sang JS/Python tôi rút gọn còn kiểm truthiness → mất bộ lọc "0". **Sửa:** hàm đọc ô
+(`cell()` trong `lesson-import.js` + `s()` trong skill) nay coi ô **trim ra "" hoặc "0"** = KHÔNG dữ liệu. Kiểm trên
+`LSA2-S2.T1.P1-2.xlsm` (100 từ + junk tới dòng 150): trước 150, **sau đúng 100/100/100/100/100 + Quiz 30/30, junk=0,
+7/7 mount 0 lỗi**; skill Python cho kết quả y hệt. Skill đã đóng gói lại + gửi thầy (Save skill đè bản cũ).
+
+**VIỆC ĐANG CHỜ:** thầy đăng nhập AWord → Import → **chọn thẳng 1 file .xlsm** → xác nhận act tạo đúng → **commit + push**
+(cùng đợt với nút Import Đợt 48 nếu chưa push). ⚠️ Nếu Pages có giới hạn kích thước/loại file thì kiểm `xlsx.mjs` có
+live không sau push (curl).
+
+---
+
+## Đợt 48 (3/8/2026, v0.9.22) — NÚT IMPORT: tạo hàng loạt act từ "gói JSON" (nền tảng taoactaw, Phần A) — ✅ THẦY TEST OK → COMMIT c4ee761 + PUSH + LIVE
 
 **Bối cảnh:** thầy muốn tính năng "taoactaw" — đọc file .xlsm bài học (giống skill `taoact` cho Wordwall) rồi tạo act
 trong thư viện AWord. Chốt cách làm (2 vòng hỏi): **(1) xây nút Import NGAY TRONG app AWord** (bền, không phụ thuộc

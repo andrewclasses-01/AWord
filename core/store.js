@@ -313,34 +313,54 @@ export async function getActivity(id) { return (await readAll())[id] || null; }
 
 // ---- BULK IMPORT ----
 // Create many acts at once from a "bundle" produced by a generator (e.g. the
-// taoactaw skill reading a lesson .xlsm). Shape:
-//   { folder?: "Folder name", activities: [ {type,title,theme?,instruction?,options?,content}, ... ] }
-// If `folder` is given, a subfolder of that name is created (or REUSED if it
-// already exists) under (activities root, opts.parentId) and the acts go inside;
-// otherwise the acts go straight into opts.parentId. Acts whose title already
-// exists in the target folder are SKIPPED (so re-running an import is safe and
-// never makes duplicates). Returns { folderId, folderName, created, skipped, errors }.
+// taoactaw skill / the in-app Import reading a lesson .xlsm). Shape:
+//   { folder?: "Base folder",
+//     activities: [ {type,title,theme?,instruction?,options?,content, subfolder?}, ... ] }
+// The acts land under `opts.parentId` (the folder the teacher is in). If `folder`
+// is given, a subfolder of that name is created/REUSED as the BASE. Each activity
+// may also carry a `subfolder` PATH (e.g. "ACT" or "ACT/HOMEWORK") that nests it
+// further under the base — folders are created/reused as needed. Acts whose title
+// already exists in their target folder are SKIPPED (re-import is safe, no dupes).
+// Returns { folderId, folderName, created, skipped, errors }.
 export async function importBundle(bundle, opts = {}) {
   const root = "activities";
   const activities = Array.isArray(bundle?.activities) ? bundle.activities : [];
-  let parentId = opts.parentId ?? null;
-  let folderName = null;
+  const baseParent = opts.parentId ?? null;
 
-  const wanted = (bundle?.folder || "").toString().trim();
-  if (wanted) {
-    const map = await readAll();
-    const existing = Object.values(map).find(n =>
-      n.kind === "folder" && !n.trashed && n.root === root &&
-      (n.parentId ?? null) === (parentId ?? null) && sameName(n.name, wanted));
-    if (existing) { parentId = existing.id; folderName = existing.name; }
-    else { const f = await createFolder(root, parentId, wanted); parentId = f.id; folderName = f.name; }
+  // Resolve (creating/reusing as needed) a folder from path SEGMENTS under the
+  // base parent, caching by full path so we don't re-create shared folders.
+  const cache = new Map();   // "ACT/HOMEWORK" -> folderId
+  async function resolveFolder(segments) {
+    let parentId = baseParent, pathKey = "";
+    for (const raw of segments) {
+      const name = (raw || "").toString().trim();
+      if (!name) continue;
+      pathKey = pathKey ? pathKey + "/" + name : name;
+      if (cache.has(pathKey)) { parentId = cache.get(pathKey); continue; }
+      const map = await readAll();
+      const existing = Object.values(map).find(n =>
+        n.kind === "folder" && !n.trashed && n.root === root &&
+        (n.parentId ?? null) === (parentId ?? null) && sameName(n.name, name));
+      parentId = existing ? existing.id : (await createFolder(root, parentId, name)).id;
+      cache.set(pathKey, parentId);
+    }
+    return parentId;
   }
 
-  const result = { folderId: parentId, folderName, created: 0, skipped: 0, errors: [] };
+  const baseSegs = [];
+  const wanted = (bundle?.folder || "").toString().trim();
+  if (wanted) baseSegs.push(wanted);
+
+  const result = { folderId: baseParent, folderName: wanted || null, created: 0, skipped: 0, errors: [] };
   for (const raw of activities) {
     if (!raw || typeof raw.type !== "string" || !raw.content || typeof raw.content !== "object") {
       result.skipped++; result.errors.push("An entry with no type/content was skipped."); continue;
     }
+    const subSegs = (raw.subfolder || "").toString().split("/");
+    let parentId;
+    try { parentId = await resolveFolder([...baseSegs, ...subSegs]); }
+    catch (e) { result.errors.push(`Folder for “${raw.title || raw.type}”: ${e?.message || e}`); continue; }
+
     const activity = {
       schemaVersion: 1,
       type: raw.type,
@@ -358,6 +378,7 @@ export async function importBundle(bundle, opts = {}) {
       else result.errors.push(`${activity.title}: ${e?.message || e}`);
     }
   }
+  if (baseSegs.length && cache.has(wanted)) result.folderId = cache.get(wanted);
   return result;
 }
 

@@ -875,69 +875,141 @@ function newFolderFlow() {
   });
 }
 
-// "Import" -> paste or load a JSON "bundle" ({folder?, activities:[...]}) made by
-// a generator (e.g. the taoactaw skill reading a lesson .xlsm) and bulk-create
-// the acts. They land in the current folder, or in the bundle's named subfolder
-// inside it. Acts whose title already exists are skipped, so re-import is safe.
+// ---------- Import dialog ----------
+// Drop or browse a lesson SPREADSHEET (.xlsm/.xlsx/.xls) — the app reads it in
+// the browser (same mapping as the taoactaw skill), lists the acts it found, and
+// you tick which to create. By default acts land in the CURRENT folder; ticking
+// "Make a new folder" puts them in a fresh subfolder instead. (A .json bundle
+// file works too.) Titles that already exist in the target are skipped.
+// SheetJS (~1 MB) loads only when a spreadsheet is actually read.
+const IMP_UPLOAD_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M8 9l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>`;
+const IMP_DOC_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
+const IMP_ACT_ICON = {
+  find_the_match: icons.link, balloon_pop: icons.link,
+  quiz: icons.fmtQuiz, gameshow: icons.fmtQuiz, maze_chase: icons.fmtQuiz, open_the_box: icons.fmtQuiz,
+  speaking_cards: icons.mic, true_false: icons.check, whack_a_mole: icons.check,
+  anagram: icons.fmtAnagram, flying_fruit: icons.fmtAnagram, crossword: icons.fmtCrossword, unjumble: icons.fmtUnjumble
+};
+
 function importFlow() {
   openModal("Import activities", (body, close) => {
-    body.append(el("div", "aw-pick-hint",
-      "Paste an activity bundle (JSON) or choose a .json file. Acts already in the folder are skipped."));
+    if (body.parentElement) body.parentElement.classList.add("is-import");
+    let acts = [], sourceName = "";
 
-    const ta = el("textarea", "aw-import-text");
-    ta.placeholder = '{ "folder": "DS-S2.I1.W3", "activities": [ … ] }';
-    ta.spellcheck = false;
-    ta.style.cssText = "width:100%;min-height:170px;box-sizing:border-box;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:13px;";
-    body.append(ta);
-
-    const file = el("input"); file.type = "file"; file.accept = ".json,application/json";
-    file.style.cssText = "display:block;margin-top:8px;";
-    file.onchange = () => {
-      const f = file.files && file.files[0];
-      if (!f) return;
-      const r = new FileReader();
-      r.onload = () => { ta.value = String(r.result || ""); };
-      r.readAsText(f);
+    // ----- drop zone: click to browse OR drag a file in -----
+    const fileInput = el("input"); fileInput.type = "file";
+    fileInput.accept = ".xlsm,.xlsx,.xls,.json,application/json";
+    fileInput.style.display = "none";
+    const drop = el("div", "aw-imp-drop");
+    const setDrop = (title, sub) => {
+      drop.innerHTML = `<div class="aw-imp-drop-icon">${IMP_UPLOAD_SVG}</div>` +
+        `<div class="aw-imp-drop-title">${title}</div><div class="aw-imp-drop-sub">${sub}</div>`;
     };
-    body.append(file);
+    const IDLE = ["Drag a lesson file here, or <b>click to browse</b>", ".xlsm · .xlsx · .xls"];
+    setDrop(...IDLE);
+    drop.onclick = () => fileInput.click();
+    ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("is-over"); }));
+    ["dragleave", "dragend"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("is-over"); }));
+    drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("is-over"); const f = e.dataTransfer && e.dataTransfer.files[0]; if (f) handleFile(f); });
+    fileInput.onchange = () => { const f = fileInput.files && fileInput.files[0]; if (f) handleFile(f); };
+    body.append(drop, fileInput);
 
-    const err = el("div", "aw-ed-error", ""); err.style.display = "none";
-    body.append(err);
-    const report = el("div", "aw-import-report", ""); report.style.display = "none";
-    report.style.cssText = "margin-top:8px;font-size:14px;line-height:1.5;";
-    body.append(report);
+    const err = el("div", "aw-ed-error", ""); err.style.display = "none"; body.append(err);
+    const panel = el("div"); panel.style.cssText = "flex-direction:column;gap:12px;display:none;"; body.append(panel);
+    const report = el("div", "aw-import-report"); report.style.cssText = "font-size:14px;line-height:1.5;max-height:150px;overflow:auto;display:none;"; body.append(report);
 
     const actions = el("div", "aw-modal-actions");
     const cancel = el("button", "aw-btn", "Close"); cancel.type = "button"; cancel.onclick = close;
-    const ok = el("button", "aw-btn aw-btn-primary", "Import"); ok.type = "button";
-    ok.onclick = async () => {
-      err.style.display = "none"; report.style.display = "none";
-      let bundle;
-      try { bundle = JSON.parse(ta.value); }
-      catch (e) { err.style.display = ""; err.textContent = "That is not valid JSON."; return; }
-      if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
-        err.style.display = ""; err.textContent = 'The bundle needs a non-empty "activities" list.'; return;
-      }
-      ok.disabled = true; ok.textContent = "Importing…";
+    const ok = el("button", "aw-btn aw-btn-primary", "Import"); ok.type = "button"; ok.disabled = true;
+    actions.append(cancel, ok); body.append(actions);
+    const showErr = m => { err.style.display = ""; err.textContent = m; };
+
+    async function handleFile(f) {
+      err.style.display = "none"; panel.style.display = "none"; report.style.display = "none"; acts = []; ok.disabled = true;
+      setDrop(`Reading <b>${escapeText(f.name)}</b>…`, "");
       try {
-        const res = await importBundle(bundle, { parentId: state.folderId });
-        report.style.display = "";
-        report.innerHTML = "";
-        report.append(el("div", "", `Created ${res.created} ${res.created === 1 ? "activity" : "activities"}` +
-          (res.folderName ? ` in “${escapeText(res.folderName)}”` : "") +
-          (res.skipped ? `, skipped ${res.skipped} (already there)` : "") + "."));
-        (res.errors || []).slice(0, 8).forEach(m => report.append(el("div", "aw-ed-error", escapeText(m))));
-        ok.textContent = "Import"; ok.disabled = false;
-        cancel.textContent = "Done";
-        render();   // refresh the library behind the modal so the new folder/acts appear
+        const { parseLessonToBundle, isSpreadsheet } = await import("./core/lesson-import.js");
+        const bundle = isSpreadsheet(f.name)
+          ? await parseLessonToBundle(await f.arrayBuffer(), { fileName: f.name })
+          : JSON.parse(await f.text());
+        if (!bundle || !Array.isArray(bundle.activities) || !bundle.activities.length) {
+          setDrop(...IDLE); showErr("No activities found in that file."); return;
+        }
+        acts = bundle.activities; sourceName = bundle.folder || "";
+        setDrop(`<b>${escapeText(f.name)}</b> — ${acts.length} activities`, "Click to choose a different file");
+        buildPanel();
       } catch (e) {
-        ok.disabled = false; ok.textContent = "Import";
-        err.style.display = "";
-        err.textContent = e?.code === "aw/signed-out" ? "Please sign in first." : (e?.message || "Import failed.");
+        setDrop(...IDLE); showErr("Could not read that file: " + (e && e.message ? e.message : e));
       }
-    };
-    actions.append(cancel, ok);
-    body.append(actions);
+    }
+
+    function buildPanel() {
+      panel.innerHTML = ""; panel.style.display = "flex";
+      const head = el("div", "aw-imp-head");
+      const count = el("span");
+      const selAll = el("button", "aw-imp-selall"); selAll.type = "button";
+      head.append(count, selAll);
+
+      const list = el("div", "aw-imp-list");
+      const checks = acts.map(a => {
+        const row = el("label", "aw-imp-row");
+        const cb = el("input"); cb.type = "checkbox"; cb.checked = true;
+        const c = a.content || {};
+        const n = (c.pairs || c.cards || c.statements || c.questions || []).length;
+        row.append(cb,
+          el("span", "aw-imp-ricon", IMP_ACT_ICON[a.type] || IMP_DOC_SVG),
+          el("span", "aw-imp-rtitle", escapeText(a.title)),
+          el("span", "aw-imp-rmeta", `${templateLabel(a.type)} · ${n}${a.subfolder ? " · " + escapeText(a.subfolder) : ""}`));
+        cb.onchange = () => { row.classList.toggle("is-off", !cb.checked); refresh(); };
+        list.append(row);
+        return cb;
+      });
+
+      const folder = el("div", "aw-imp-folder");
+      const fLabel = el("label");
+      const fCb = el("input"); fCb.type = "checkbox";
+      fLabel.append(fCb, document.createTextNode("Make a new folder"));
+      const fName = el("input", "aw-ed-input"); fName.value = sourceName; fName.placeholder = "Folder name"; fName.style.display = "none";
+      fCb.onchange = () => { fName.style.display = fCb.checked ? "" : "none"; if (fCb.checked) setTimeout(() => fName.focus(), 0); };
+      folder.append(fLabel, fName);
+
+      panel.append(head, list, folder);
+
+      function refresh() {
+        const sel = checks.filter(c => c.checked).length;
+        count.innerHTML = `<b>${sel}</b> of ${acts.length} selected`;
+        selAll.textContent = checks.every(c => c.checked) ? "Clear all" : "Select all";
+        ok.textContent = sel ? `Import ${sel}` : "Import";
+        ok.disabled = !sel;
+      }
+      selAll.onclick = () => {
+        const turnOn = checks.some(c => !c.checked);
+        checks.forEach(c => { c.checked = turnOn; c.closest(".aw-imp-row").classList.toggle("is-off", !turnOn); });
+        refresh();
+      };
+      refresh();
+
+      ok.onclick = async () => {
+        const chosen = acts.filter((_, i) => checks[i].checked);
+        if (!chosen.length) return;
+        const makeNew = fCb.checked, folderName = fName.value.trim();
+        if (makeNew && !folderName) { showErr("Type a folder name, or untick “Make a new folder”."); return; }
+        err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
+        try {
+          const res = await importBundle({ folder: makeNew ? folderName : null, activities: chosen }, { parentId: state.folderId });
+          report.style.display = ""; report.innerHTML = "";
+          report.append(el("div", "aw-imp-done", `✓ Created ${res.created} ${res.created === 1 ? "activity" : "activities"}` +
+            (res.folderName ? ` in “${escapeText(res.folderName)}”` : " here") +
+            (res.skipped ? `, skipped ${res.skipped} (already there)` : "") + "."));
+          (res.errors || []).slice(0, 8).forEach(m => report.append(el("div", "aw-ed-error", escapeText(m))));
+          cancel.textContent = "Done"; ok.textContent = "Import"; ok.disabled = false;
+          render();
+        } catch (e) {
+          ok.disabled = false; ok.textContent = `Import ${chosen.length}`;
+          showErr(e && e.code === "aw/signed-out" ? "Please sign in first." : (e && e.message ? e.message : "Import failed."));
+        }
+      };
+    }
   });
 }
 function renameFlow(node) {
