@@ -5,6 +5,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 59 (3/8/2026, v0.9.34) — QUIZ: 4 CẢI TIẾN THẦY YÊU CẦU (nav không biến mất · không tách từ đơn · ô cao cho đáp án dài · chuyển câu TRƯỢT + chữ fade, ô cố định) — ⭐ CÓ SỬA CORE (bỏ 1 lệnh ẩn nav). ✅ THẦY DUYỆT → COMMIT (fc8e722, code) + doc + PUSH + LIVE. Tự test trình duyệt thật, 0 lỗi console.
+
+> ⚠️ Số Đợt 59 chính là khe find-the-match (Đợt 60) đã reserve cho "phiên Quiz song song" — phiên này. Đặt Đợt 59 dù làm SAU Đợt 60 về thời gian. Chỉ đụng `templates/quiz/quiz.js` + `templates/quiz/quiz.css` + 1 chỗ nhỏ `core/engine.js`. KHÔNG đụng 13 game kia. quiz.js commit gần nhất vẫn là v0.9.28 (e23a3aa) → không đè mất công việc Quiz đã commit của ai.
+
+**Bối cảnh:** thầy chơi bản live, nêu 4 việc cho Quiz:
+
+**(1) Nav (next/back/số trang) đôi khi biến mất, dù đã chọn đáp án cũng không next được — hay xảy ra hơn với quiz TẠM từ Change Template.**
+- *Điều tra (tái hiện trình duyệt thật, cài MutationObserver theo dõi `.aw-nav`):* cơ chế DUY NHẤT ẩn nav là `core/engine.js celebrate()` chạy `navWrap.style.visibility="hidden"` ~2.2s lúc GAME-COMPLETE. Nav **không** biến mất giữa lúc chơi (đã loại trừ: rò rỉ overlay `toolDim`/`backdrop` sau switch — sạch cả 2 đường below-bar & Menu→Change template; gate nav đúng). Chuỗi nhân quả: Quiz có luật "trả lời HẾT mọi câu → tự kết thúc" (`state.every` → `autoTimer` → `finish`) → `celebrate` ẩn nav. Quiz tạm thường ngắn + thầy chỉ chuyển sang để trình diễn/xem lại nên vừa lỡ trả lời câu cuối là nó tự kết thúc.
+- *Thầy chốt:* GIỮ auto-finish, chỉ NGỪNG ẩn nav.
+- *Sửa:* (a) ⭐ **`core/engine.js celebrate()` bỏ hẳn `navWrap.style.visibility="hidden"` + lệnh khôi phục** — nav để nguyên hiển thị suốt màn pháo hoa (overlay confetti trong suốt nên nó vốn hiện xuyên qua); bảng Summary mờ đục sau đó tự che cả thanh dưới. Không đụng template khác (chỉ bỏ 1 toggle). (b) **quiz.js huỷ `autoTimer` khi điều hướng thủ công** (`clearAutoTimer()` trong `goPrev`/`goNext`) — khớp đúng fix Đợt 56 của Type-the-answer: trả lời câu cuối rồi bấm Prev xem lại thì game KHÔNG tự kết thúc dưới tay thầy; để yên thì auto-finish vẫn chạy như cũ.
+- *Đo thật:* trả lời hết 6/6 → bấm Prev → về 5/6, chờ 2.2s vẫn đang chơi, nav visible, 0 summary. Chơi tới hết KHÔNG chạm → auto-finish vẫn chạy, nav **không hề** hidden qua 12 mẫu trong cửa sổ celebrate, Summary hiện đúng.
+
+**(2) Một từ ĐƠN quá dài bị ngắt xuống 2 dòng — phải co cỡ chữ, tuyệt đối không tách 1 từ.**
+- CSS `.aw-tile-text`: bỏ `overflow-wrap:anywhere` → `overflow-wrap:normal; word-break:keep-all; hyphens:none` (không bao giờ bẻ giữa từ). Font ô = `calc(2.9cqw * var(--fit) * var(--tw,1))` — thêm biến co RIÊNG mỗi ô `--tw`.
+- quiz.js `fitNow()` bước 2 (WIDTH fit từng ô): nếu `textEl.scrollWidth > clientWidth` (từ rộng hơn ô) thì đặt `--tw = max(0.2, avail/need*0.99)` — 1 phát chính xác (scrollWidth đo ở `--tw:1` là bề rộng dòng không-bẻ-được). Đo thật: từ 45 ký tự "pneumono…" co `--tw≈0.31` (1 dòng, 0 tràn), 28 ký tự `--tw≈0.51`; `midWordBreak=false`.
+
+**(3) Đáp án dài nhiều chữ → nâng CHIỀU CAO ô, chỉ cần không đè câu hỏi, không tách từ.**
+- Ô là flex-item chiều cao AUTO → đáp án nhiều chữ wrap theo KHOẢNG TRẮNG (`word-break:keep-all` vẫn cho ngắt giữa các từ) → ô tự cao lên. quiz.js `fitNow()` bước 1 (HEIGHT fit) giữ nguyên logic autoFit cũ: đo `question.offsetHeight + answers.offsetHeight` vs stage, co `--fit` (0.4..1) để answers KHÔNG đè câu hỏi. Đo thật: đáp án 14 chữ → ô cao 259px (7 dòng), `--fit≈0.91`, `overlapQuestion=false`, `midWordBreak=false`.
+
+**(4) Chuyển câu: câu hỏi TRƯỢT (không fade); ô trả lời CỐ ĐỊNH không nhấp nháy, chỉ CHỮ trong ô fade sang đáp án câu mới.**
+- Viết lại `mount`: **dựng card + tiles 1 LẦN** rồi cập nhật TẠI CHỖ (trước đây re-render cả card mỗi câu → tiles nhấp nháy/dựng lại).
+  - `syncTiles(n)`: giữ đúng `n` ô (tạo/xoá khi số đáp án đổi — hiếm, chỉ quiz tạm số đáp án lệch); màu gán theo VỊ TRÍ, cố định cả ván.
+  - `applyQuestion(i)`: đổ nội dung câu `i` vào card/tiles sẵn có (text bằng `textContent`, xoá badge/dim/fly cũ, khôi phục trạng thái đã-trả-lời khi đi ngược).
+  - `showQuestion(i,dir)`: câu hỏi `animate` translateX ±6% + opacity (out 130ms → swap → in 190ms, `dir` = next/prev); MỖI `.aw-tile-text` fade opacity; **ô (`.aw-quiz-tile`) không đụng → không di chuyển/nhấp nháy**. Có timeout fallback cho tab ẩn; cờ `animating` chặn spam nav; huỷ animation "forwards" sau khi xong để không kẹt opacity.
+- Đo thật lúc bấm Next: `qAnimating=1` (câu hỏi đang animate), `tileTextFading=1` (chữ ô fade), `tilesFixed=true` (toạ độ x/y ô KHÔNG đổi). Điều hướng ngược khôi phục đúng badge/dim.
+
+**File đụng:** `templates/quiz/quiz.js` (viết lại `mount`, bỏ import `autoFit`/hàm `escapeHtml`), `templates/quiz/quiz.css` (`.aw-tile-text`), `core/engine.js` (`celebrate` bỏ ẩn nav). Harness tự tạo `_repro-switch.html`/`_repro-quiz.html` đã XOÁ sau khi test.
+**Việc kế:** thầy chơi thử (đặc biệt quiz TẠM từ Change Template + đáp án siêu dài trên màn TOMKO) → duyệt → commit + push (curl kiểm chứng live). ⚠️ Có phiên song song cũng dán nhãn "Quiz Đợt 59" — nếu là máy KHÁC, khi merge quiz.js sẽ đụng, thầy điều phối.
+
+---
+
 ## Đợt 60 (4/8/2026, v0.9.35) — FIND THE MATCH: PHÂN TRANG (≤35 ô/trang) + FIT CHỮ TRONG Ô — ✅ THẦY DUYỆT → COMMIT (94fd6bc) + PUSH + LIVE. KHÔNG ĐỤNG CORE.
 
 **Chỉ đụng 2 file `templates/find-the-match/find-the-match.js` + `.css` (+ GHI CHU của template).** KHÔNG đụng

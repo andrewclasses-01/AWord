@@ -216,6 +216,14 @@ registerTemplate({
 |---|---|
 | `ui.setScore(n)` | Cập nhật số điểm góc phải-trên (biểu tượng ✓ + số) |
 | `ui.setNav({index, total, onPrev, onNext, nextLabel})` | Cập nhật thanh dưới "x of N" + 2 nút mũi tên. `onPrev`/`onNext` = `null` → nút mờ (không bấm được). `nextLabel` (HTML/SVG) thay icon mũi tên (dùng cho câu cuối = dấu ✓) |
+
+> ⚠️ **Đợt 59 (3/8/2026) — `celebrate()` KHÔNG còn ẩn nav lúc game-complete.** Trước đây engine chạy
+> `navWrap.style.visibility="hidden"` suốt ~2.2s màn pháo hoa; vì overlay confetti trong suốt nên thầy
+> thấy nav "đôi khi biến mất" (rõ nhất ở quiz TẠM ngắn tự kết thúc khi trả lời hết). Nay bỏ hẳn toggle
+> đó — bảng Summary mờ đục sau pháo hoa vẫn tự che cả thanh dưới. Ảnh hưởng MỌI template (nav hiển thị
+> trong lúc pháo hoa thay vì ẩn) — lành tính. Nếu template nào cần auto-finish mà KHÔNG muốn kết thúc lúc
+> người chơi còn điều hướng, hãy huỷ hẹn giờ auto-finish trong hàm prev/next của mình (xem Quiz `clearAutoTimer`
+> + Type-the-answer Đợt 56).
 | `ui.onSubmit(fn)` | Đăng ký hàm chạy khi người dùng bấm "Submit answers" trong menu |
 | `ui.sound.correct()` / `.wrong()` / `.fanfare()` | Phát âm thanh (tự tôn trọng nút tắt tiếng) |
 | `ui.toast(msg)` | Hiện thông báo nhỏ nổi ở đáy khung, tự biến mất |
