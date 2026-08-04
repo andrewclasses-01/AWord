@@ -46,6 +46,41 @@ thư mục · bài giao trong cùng một thư mục Results. `core/store.js` n�
 chúng và lời hứa đó vỡ. Kiểm nhanh: mở play.html rồi chạy
 `performance.getEntriesByType('resource').map(r => r.name)` — không được thấy `store.js`.
 
+## ⚠️⚠️ MÀN CẢM ỨNG (TOMKO) — tap highlight của Chrome, đã vá TOÀN APP ở `app.css` (v0.9.40)
+
+**Triệu chứng thầy báo (4/8/2026, CHỈ máy 3):** chạm vào ô đáp án hay nút Next/Back (đều bo góc mềm)
+thì đúng khoảnh khắc nhấn hiện ra một mảng nền **GÓC VUÔNG** thò ra ngoài viền bo tròn, rất xấu. Có ở
+cả Chrome lẫn myActivity; máy 1 và máy 2 không bao giờ thấy.
+
+**Nguyên nhân:** giá trị MẶC ĐỊNH của Chrome `-webkit-tap-highlight-color: rgba(0,0,0,0.18)` — lớp phủ
+đen mờ Blink vẽ khi nhận input **CHẠM**, và hình dạng lớp phủ này **KHÔNG bám border-radius**. Máy 1/2
+điều khiển bằng **CHUỘT** nên lớp phủ này không bao giờ được vẽ → lỗi trông như "chỉ máy 3 bị" trong khi
+thực chất là mặc định của CSS. **Không liên quan GPU/driver** (đo tải chỉ 1-2%), cũng **không phải phản
+hồi chạm của Windows** (máy này `ContactVisualization = 0`, tức đang tắt).
+
+**Đã vá:** đúng **1 luật ở gốc** trong `core/app.css`:
+```css
+html { -webkit-tap-highlight-color: transparent; }
+```
+Thuộc tính này **KẾ THỪA**, nên khai một lần ở gốc là phủ mọi trang (khung game, thanh dưới, cụm công cụ
+dưới khung, editor, trang chủ, modal, popup in) và **mọi template về sau** — không phải nhớ thêm luật cho
+từng game. Phản hồi khi nhấn KHÔNG mất, vì mọi nút vốn đã có `:active` riêng.
+
+**Đo thật 4/8/2026 (14/14 template, trình duyệt thật trên chính máy 3):**
+- Trước: mỗi game 12 phần tử dùng chung mang `rgba(0,0,0,0.18)` (`.aw-navbtn` ×2 · `.aw-iconbtn` ×4 ·
+  `.aw-toolbtn` ×3 · `.aw-toolbtn-sm` ×4) cộng ô riêng của game — Crossword nặng nhất **143** (92 ô chữ
+  + 40 phím + 11 nút chung), Type the answer **53** (cả bàn phím ảo `core/keyboard.js`), Quiz **16**.
+- Sau: **392/392 phần tử bo góc bấm được = `rgba(0, 0, 0, 0)` · 0 phần tử còn dính · 0 lỗi console.**
+- Chỉ Open the box và Maze chase vốn đã sạch — đúng 2 file DUY NHẤT tự đặt sẵn thuộc tính này. Chính sự
+  trùng khớp đó chốt được nguyên nhân.
+- Editor vẫn gõ/bôi chọn chữ bình thường (`userSelect: auto` trên ô nhập) — bản vá KHÔNG đụng
+  `user-select`.
+
+> ⚠️ **LUẬT CHO MỌI TEMPLATE VỀ SAU:** ĐỪNG chép lại luật này vào CSS template nữa (Open the box và
+> Maze chase còn giữ bản của mình chỉ vì lý do lịch sử, vô hại). Đã có ở gốc rồi. Và **tuyệt đối không**
+> đặt `-webkit-tap-highlight-color` về một màu khác trong template — làm vậy là bật lại lỗi cho đúng
+> game đó.
+
 ## ⚠️ BẪY CSS (v0.9.1) — làm mờ "mọi thứ trừ một vùng"
 
 Muốn làm nổi 1 vùng và làm mờ phần còn lại thì luật làm-mờ phải dùng **con trực tiếp `>`**, không

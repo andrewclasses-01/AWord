@@ -17,6 +17,39 @@
 
 * { box-sizing: border-box; }
 
+/* ⚠️⚠️ TOUCH PANEL (TOMKO) — kill Chrome's default tap highlight, APP-WIDE.
+   =============================================================================
+   SYMPTOM (Teacher Andrew, máy 3 only, 4/8/2026): pressing any rounded tile or
+   button flashes an ugly SQUARE-cornered dark patch under it for a frame or two,
+   right as the press effect plays. Seen in Chrome AND inside myActivity; never on
+   máy 1/2.
+
+   CAUSE: Chrome's own default `-webkit-tap-highlight-color: rgba(0,0,0,0.18)` —
+   a translucent black overlay Blink paints on TOUCH input, whose geometry does
+   NOT follow border-radius. So its square corners poke out past every rounded
+   tile. Máy 1/2 drive the app with a MOUSE, where this highlight never paints at
+   all — which is the whole reason the bug looked machine-specific rather than
+   like the plain CSS default it is. Nothing to do with the GPU or the driver
+   (measured: 1-2% load), and not Windows' own touch feedback either (that is
+   switched off here: ContactVisualization = 0).
+
+   Measured 4/8/2026 across all 14 templates: 12 shared elements per game carried
+   the default (.aw-navbtn ×2 · .aw-iconbtn ×4 · .aw-toolbtn ×3 · .aw-toolbtn-sm
+   ×4), plus each game's own tiles — up to 143 elements in Crossword. Only Open
+   the box and Maze chase were clean, and those are exactly the two files that
+   already set this property themselves. That match is what pinned the cause.
+
+   WHY THIS ONE RULE IS ENOUGH: `-webkit-tap-highlight-color` is an INHERITED
+   property, so declaring it once at the root covers every page (stage, bottom
+   bar, the tools under the stage, the editor, the home page, modals, the print
+   popup) and every template built from here on — including any added later, with
+   no per-template rule to remember. Press feedback is unaffected: every button
+   already shows its own `:active` style (see .aw-navbtn:active etc.).
+   ============================================================================= */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
   font-family: "Baloo 2", "Segoe UI", system-ui, Arial, sans-serif;

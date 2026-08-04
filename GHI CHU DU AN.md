@@ -5,6 +5,180 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 65 (4/8/2026, v0.9.40) — HẾT "NỀN GÓC VUÔNG KHI CHẠM" TRÊN TOMKO, TOÀN BỘ 14 TEMPLATE. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+
+**Yêu cầu của thầy:** nhiều template (có Quiz và Open the box) khi chạm vào ô đáp án hoặc nút Next/Back
+thì đúng khoảnh khắc nhấn hiện ra nền ô **góc vuông** rất xấu dù ô bo góc mềm. **Chỉ máy 3 (TOMKO) bị**,
+máy 1 và 2 không; đã kiểm hiệu năng chỉ 1-2% GPU/CPU nên không phải máy yếu. Open the box đã hết sau vài
+đợt chỉnh, **Quiz và nhiều template khác vẫn bị**. Xảy ra trên **cả Chrome lẫn myActivity**. Thầy cho
+làm tự động nhiều tiếng, được sửa core, **chỉ làm local để thầy tự nghiệm thu**.
+
+### Nguyên nhân (đã chốt, có số đo)
+
+Mặc định của Chrome: **`-webkit-tap-highlight-color: rgba(0, 0, 0, 0.18)`** — lớp phủ đen mờ Blink vẽ
+khi nhận input **CHẠM**, và hình dạng lớp phủ **KHÔNG bám `border-radius`**, nên 4 góc vuông của nó thò
+ra ngoài viền bo tròn của mọi ô/nút. Đây là mặc định có ở MỌI máy, nhưng:
+
+- **Máy 3 có màn cảm ứng** (đo: `navigator.maxTouchPoints = 50`, Device Manager có "HID-compliant touch
+  screen") → chạm ⇒ Chrome vẽ lớp phủ ⇒ thấy lỗi.
+- **Máy 1/2 điều khiển bằng CHUỘT** → Chrome **không bao giờ** vẽ lớp phủ này ⇒ không bao giờ thấy lỗi.
+
+Đó là toàn bộ lý do lỗi trông như "tại máy 3" trong khi thực chất là một giá trị CSS mặc định.
+
+**Đã loại trừ, có bằng chứng:**
+| Giả thuyết | Kết luận |
+|---|---|
+| Máy yếu / GPU / driver | LOẠI — tải 1-2%; và lỗi biến mất chỉ bằng 1 dòng CSS, không đụng driver |
+| Phản hồi chạm của Windows | LOẠI — `HKCU\Control Panel\Cursors\ContactVisualization = 0` (đang TẮT) |
+| Lỗi riêng của Chrome hay của Electron | LOẠI — cùng lõi Chromium (Chrome 150.0.7871.187 / pane Electron Chromium 148) nên cùng mặc định, khớp việc cả hai đều bị |
+| Lỗi riêng của template nào đó | LOẠI — đo được **cả 14 template đều dính**, và 12 phần tử dính trong mỗi game là **nút dùng chung của engine** |
+
+**Vì sao riêng Open the box đã hết:** Đợt 21 (điểm 1) game đó tự đặt `-webkit-tap-highlight-color:
+transparent` cho `.aw-otb-box` + `.aw-otb-qtile`. Nhưng chỉ chữa 2 loại ô của riêng nó — **12 nút dùng
+chung của engine vẫn dính ngay cả khi đang chơi Open the box** (đo đúng 12). Maze chase cũng có 1 luật
+tương tự. Chính việc **đúng 2 file duy nhất có luật đó lại đúng là 2 game duy nhất sạch** là bằng chứng
+khoá lại nguyên nhân.
+
+### Đã sửa — ĐÚNG 1 LUẬT trong `core/app.css`
+
+```css
+html { -webkit-tap-highlight-color: transparent; }
+```
+
+`-webkit-tap-highlight-color` là thuộc tính **KẾ THỪA**, nên khai một lần ở gốc là phủ **mọi trang**:
+khung game 16:9, thanh dưới (Next/Back), cụm công cụ ngoài khung, editor, trang chủ thư viện, modal,
+popup in — và **mọi template làm về sau cũng tự hưởng, không phải nhớ thêm luật nào**. Phản hồi khi nhấn
+KHÔNG mất: mọi nút vốn đã có `:active` riêng (nút thụt xuống / `filter: brightness()`).
+
+Cố ý **KHÔNG** chép luật này vào 14 file CSS template: không có tác dụng gì thêm, chỉ tạo 14 chỗ để lệch
+nhau về sau. 2 luật cũ của open-the-box/maze-chase giữ nguyên (thừa nhưng vô hại, chú thích có giá trị
+lịch sử).
+
+### Đo thật (trình duyệt thật, trên chính máy 3, harness mount từng template rồi bấm PLAY)
+
+| Template | Phần tử bo góc bấm được | Dính TRƯỚC | Dính SAU |
+|---|---|---|---|
+| crossword | 141 | **143** (92 ô chữ + 40 phím + 11 nút chung) | 0 |
+| type_the_answer | 53 | **53** (cả bàn phím ảo `core/keyboard.js`) | 0 |
+| anagram | 20 | 21 | 0 |
+| find_the_match | 20 | 20 | 0 |
+| speaking_cards | 18 | 18 | 0 |
+| quiz | 16 | **16** (4 ô đáp án + 12 nút chung) | 0 |
+| gameshow | 16 | 16 | 0 |
+| maze_chase | 16 | 12 | 0 |
+| true_false | 14 | 14 | 0 |
+| open_the_box | 30 | 12 | 0 |
+| whack_a_mole · flying_fruit · balloon_pop · unjumble | 12 mỗi game | 12 mỗi game | 0 |
+| **TỔNG 14 template** | **392** | — | **0** |
+
+Console: **0 lỗi** ở cả 14 template, trước lẫn sau. Editor Quiz + Open the box: 0 dính, và ô nhập vẫn
+`userSelect: auto` → **gõ và bôi chọn chữ khi soạn bài không bị ảnh hưởng** (bản vá không đụng
+`user-select`). Trang chủ thư viện: 0 dính.
+
+### Nghiệm thu bằng NGÓN TAY (bắt buộc — máy không tự chạm được)
+
+Đây là giới hạn thật của việc tự kiểm: lớp phủ tap-highlight do trình duyệt vẽ **chỉ khi có chạm vật lý**;
+sự kiện chạm giả lập bằng script KHÔNG làm nó vẽ ra, và pane xem trước không cấp compositing nên cũng
+không chụp màn hình được (bẫy quen từ Đợt 57/62). Nên đã dựng sẵn trang so sánh:
+
+**`http://localhost:5510/scratch/kiem-tra-cham-tay.html`** (nằm trong `scratch/` nên git bỏ qua, không
+lọt vào commit) — 2 cột hình dạng **giống hệt nhau** (đã kiểm bằng script: cùng `border-radius`, cùng
+màu nền, cùng kích thước), cột trái cố ý bật lại `rgba(0,0,0,0.18)`, cột phải dùng bản vá. Chạm giữ ngón
+vào từng ô: trái phải thấy mảng vuông, phải thì không.
+
+### myActivity — KHÔNG phải sửa
+
+`myActivity/src/renderer/styles/main.css:4` đã có sẵn `* { ... -webkit-tap-highlight-color: transparent; }`
+nên giao diện của chính myActivity vốn miễn nhiễm. Chỗ thầy thấy lỗi trong myActivity **chính là trang
+AWord nhúng** (`isAword()` nạp từ `andrewclasses-01.github.io/AWord` — bản LIVE trên Pages). ⚠️ Do đó
+**trong myActivity lỗi chỉ hết sau khi thầy duyệt và push lên Pages**, chạy local không đổi được.
+
+---
+
+## ⭐⭐ LƯU Ý CHO MỌI TEMPLATE VỀ SAU — bài học rút từ Đợt 65
+
+> Đây là bài học **đắt nhất** của đợt này, đáng nhớ hơn cả bản vá. Phiên nào build template mới đọc kỹ.
+
+### 1. Bản vá tap-highlight ĐÃ Ở GỐC — đừng chép lại, và đừng phá
+
+`core/app.css` có `html { -webkit-tap-highlight-color: transparent; }`. Vì thuộc tính này **KẾ THỪA**,
+template mới **tự động được hưởng, không phải khai gì cả**.
+
+- ❌ **ĐỪNG** chép `-webkit-tap-highlight-color: transparent` vào CSS template mới. Thừa, và tạo thêm
+  một chỗ nữa để lệch nhau về sau. (2 luật cũ trong `open-the-box.css` + `maze-chase.css` giữ lại chỉ
+  vì lý do lịch sử.)
+- ⛔ **TUYỆT ĐỐI ĐỪNG** đặt `-webkit-tap-highlight-color` về một màu khác trong template — làm vậy là
+  bật lại đúng con bọ này cho riêng game đó, và sẽ **không ai phát hiện ra trên máy 1/2**.
+
+### 2. ⚠️ CÁI BẪY GỐC: máy build KHÔNG GIỐNG máy dùng
+
+Đây mới là điều cần khắc cốt:
+
+| | Máy 1 (nhà) · Máy 2 (lớp) | Máy 3 — TOMKO |
+|---|---|---|
+| Vai trò | **BUILD app** | **DÙNG app là chính** |
+| Điều khiển | **CHUỘT** | **CHẠM tay** |
+
+⇒ **Có nguyên một LỚP lỗi chỉ tồn tại trên đường CHẠM, và nó vô hình 100% trên máy build.** Lỗi này
+sống sót qua **12 template và rất nhiều đợt kiểm tra** đúng vì lý do đó — không ai sai sót cả, chỉ là
+máy build không bao giờ đi qua nhánh code ấy.
+
+**Những thứ chuột KHÔNG bao giờ tái hiện được** (nghi ngờ chỗ nào thì phải nhờ thầy chạm thử):
+- `-webkit-tap-highlight-color` — lớp phủ chạm (chính là đợt này)
+- `-webkit-touch-callout` — menu ngữ cảnh khi nhấn giữ lâu
+- Bôi chọn chữ + 2 "tay nắm" xanh khi kéo trên màn chạm (đã vá từ 1/8/2026 bằng `user-select:none`
+  trên `.aw-stage`)
+- `touch-action` — cuộn/zoom cướp mất thao tác kéo-thả của game (maze-chase đã phải đặt `none`)
+- Độ trễ ~300ms double-tap, ghost click, `:hover` **dính lại** sau khi nhấc ngón
+- Chạm nhiều điểm cùng lúc (học sinh chạm 2 tay)
+
+### 3. Cách tự kiểm khi không có ngón tay — làm được tới đâu, phải nhờ từ đâu
+
+**Tự kiểm được (nên làm, rẻ, chắc chắn):** đo `getComputedStyle` trên MỌI phần tử bấm được. Harness của
+đợt này dùng lại được nguyên: mount từng template → bấm PLAY → duyệt `querySelectorAll('*')`, lọc phần
+tử bấm được (`button`/`a`/`input`/`role=button`/`cursor:pointer`), rồi so `webkitTapHighlightColor` với
+`rgba(0, 0, 0, 0)`. Chạy hết 14 template mất chưa tới 1 phút.
+
+**KHÔNG tự kiểm được (phải nhờ thầy):** bản thân lớp phủ **chỉ được vẽ khi có chạm VẬT LÝ**. Sự kiện
+chạm giả lập bằng script (`PointerEvent`, `dispatchEvent`) **không** làm trình duyệt vẽ nó, và pane xem
+trước không cấp compositing nên screenshot cũng timeout (bẫy quen từ Đợt 57/62). ⇒ Điểm cuối cùng
+**bắt buộc** do thầy chạm tay.
+
+**Khuôn nghiệm thu 2 cột** (`scratch/kiem-tra-cham-tay.html` đợt này) dùng lại được cho MỌI lỗi chạm về
+sau: dựng 2 cột hình dạng **giống hệt nhau** (kiểm bằng script: cùng `border-radius`, cùng màu, cùng
+kích thước), một cột cố ý bật lại lỗi, một cột dùng bản vá → thầy chạm 30 giây là kết luận được, thay vì
+mô tả qua lại bằng lời. Để trong `scratch/` (đã có trong `.gitignore`) nên không lọt vào commit.
+
+### 4. Nghi lỗi "chỉ xảy ra trên 1 máy" thì hỏi câu này TRƯỚC
+
+Trước khi nghi phần cứng/driver, hãy hỏi: **"máy đó có gì KHÁC về đường VÀO (input), không phải về SỨC
+MẠNH?"** Đợt này nếu đi theo hướng "máy yếu → cập nhật driver" thì tốn hàng giờ mà không chữa được gì —
+driver đã cũ 1 năm thật, nhưng **hoàn toàn vô can**. Dấu hiệu nhận biết: tải GPU/CPU chỉ 1-2% mà vẫn lỗi
+⇒ gần như chắc chắn KHÔNG phải hiệu năng.
+
+Và luôn kiểm cả phía hệ điều hành trước khi đổ cho trình duyệt: máy này
+`HKCU\Control Panel\Cursors\ContactVisualization = 0` (phản hồi chạm của Windows đang TẮT) → loại trừ
+được ngay một nghi phạm bằng đúng 1 lệnh.
+
+### 5. Bài học lặp lại lần thứ 3: CSS template ở lại document VĨNH VIỄN
+
+Đợt 61 (open-the-box ẩn nút Back/Next của mọi game) · Đợt 22 · nay Đợt 65 — cùng một gốc rễ:
+`ensureTemplate()` chèn CSS template **một lần và không bao giờ gỡ**. Nên:
+- Luật **TRẦN** nhắm class của core trong CSS template = rò ra toàn app (Đợt 61).
+- Luật vá **hẹp** trong 1 template = 13 game kia không được hưởng (Đợt 65).
+
+⇒ **Quy tắc chọn chỗ đặt:** vấn đề thuộc về **thân phận chung** (nút của engine, hành vi trình duyệt,
+màn cảm ứng) thì đặt ở **`core/app.css`**; chỉ cái gì thật sự **riêng của game** mới ở lại CSS template.
+
+---
+
+### Việc kế
+
+Thầy chạm thử trang nghiệm thu + chơi Quiz thật trên TOMKO → duyệt → commit + push. Sau push nhớ `curl`
+kiểm bản live (bẫy quen: lần curl đầu Pages hay còn trả file CŨ).
+
+---
+
 ## Đợt 64 (4/8/2026, v0.9.39) — QUIZ: THÊM THANH LIVES (0–10, 0 = Unlimited). KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`f0b0830`) + PUSH + LIVE.
 
 **Yêu cầu của thầy:** đọc dự án + template QUIZ, xem đã có thanh Lives chưa; chưa có thì thêm, từ 0 đến 10.

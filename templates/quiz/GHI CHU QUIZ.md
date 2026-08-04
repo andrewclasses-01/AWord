@@ -9,6 +9,34 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⭐ ĐỢT 65 (4/8/2026, v0.9.40) — HẾT "GÓC VUÔNG KHI CHẠM" TRÊN TOMKO — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+> ⭐ **CÓ SỬA CORE** (thầy đồng ý trước). **KHÔNG sửa file nào của Quiz** — Quiz hết lỗi nhờ luật gốc.
+
+**Thầy báo:** chạm vào ô đáp án hoặc nút Next/Back thì đúng lúc nhấn hiện ra nền **góc vuông** thò ra
+ngoài viền bo tròn. Open the box đã hết sau vài đợt chỉnh, nhưng **Quiz và nhiều template khác vẫn bị**.
+Chỉ máy 3 (TOMKO) bị, máy 1 và 2 không; GPU/CPU chỉ chạy 1-2% nên không phải máy yếu.
+
+**Nguyên nhân (đo trên chính máy 3):** mặc định của Chrome `-webkit-tap-highlight-color: rgba(0,0,0,0.18)`,
+chỉ vẽ khi input là **CHẠM** và **không bám border-radius**. Máy 1/2 dùng chuột nên không bao giờ vẽ. Vì
+sao Open the box đã hết: Đợt 21 (điểm 1) nó tự đặt `-webkit-tap-highlight-color: transparent` cho
+`.aw-otb-box`/`.aw-otb-qtile` — nhưng chỉ chữa cho riêng nó, không lan sang Quiz. Chi tiết đầy đủ +
+số đo: `core/HUONG DAN CORE.md` mục "MÀN CẢM ỨNG (TOMKO)".
+
+**Đo Quiz cụ thể — trước khi sửa 16 phần tử dính:**
+`.aw-quiz-tile` ×4 (r=15.46px) · `.aw-navbtn` ×2 (r=14.49px) · `.aw-iconbtn` ×4 (r=9.66px) ·
+`.aw-toolbtn` ×3 (r=13px) · `.aw-toolbtn-sm` ×4 (r=11px) — tất cả đều `rgba(0, 0, 0, 0.18)`.
+**Sau khi sửa: 16/16 = `rgba(0, 0, 0, 0)`, 0 lỗi console.**
+
+**Đã sửa:** đúng 1 luật `html { -webkit-tap-highlight-color: transparent; }` trong `core/app.css`
+(thuộc tính KẾ THỪA nên phủ cả app). Không đụng `quiz.js`/`quiz.css`.
+
+**Nghiệm thu bằng tay (máy không tự chạm được):** mở
+`http://localhost:5510/scratch/kiem-tra-cham-tay.html` trên TOMKO — cột trái cố ý bật lại lỗi, cột phải
+là bản đã vá, hình dạng giống hệt nhau. Chạm giữ ngón vào từng ô để so.
+
+---
+
 ## ⭐ ĐỢT 64 (4/8/2026, v0.9.39) — THÊM THANH LIVES 0–10 — ✅ COMMIT `f0b0830` + PUSH + LIVE
 
 **Thầy yêu cầu:** kiểm tra Quiz đã có thanh Lives chưa, chưa có thì thêm, từ 0 đến 10.

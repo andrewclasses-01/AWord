@@ -2,6 +2,24 @@
 
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 4/8/2026 (đợt 22, v0.9.36) — SỬA 1 LỖI RÒ CSS RA TOÀN APP (thầy duyệt → commit `9dad80b` + push + live, đã kiểm chứng trên bản live)
 
+## Đợt 23 (4/8/2026, v0.9.40) — BẢN VÁ "GÓC VUÔNG KHI CHẠM" ĐÃ LÊN CORE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+> **KHÔNG sửa file nào của Open the box đợt này.** Ghi vào đây vì game này chính là nơi tìm ra thuốc.
+
+Thầy báo Open the box đã hết hiện tượng "nền góc vuông khi chạm", nhưng Quiz và nhiều game khác vẫn bị.
+Điều tra ra: thuốc chữa nằm ở **Đợt 21 điểm 1** của chính file này — `-webkit-tap-highlight-color:
+transparent` đặt trên `.aw-otb-box` + `.aw-otb-qtile` (xem dòng 90 và 378 `open-the-box.css`). Nhưng nó
+chỉ chữa cho **2 loại ô của riêng game này**; 12 nút dùng chung của engine (Next/Back, ☰, loa, phóng to,
+Options/Template/Style, Edit/Assignment/Print) **vẫn dính ngay cả khi đang chơi Open the box** — đo được
+12 phần tử.
+
+Nay đã nâng lên thành **1 luật gốc trong `core/app.css`**: `html { -webkit-tap-highlight-color:
+transparent; }` (thuộc tính KẾ THỪA → phủ cả app, mọi template hiện tại lẫn về sau). Chi tiết + số đo
+đầy đủ: `core/HUONG DAN CORE.md` mục "MÀN CẢM ỨNG (TOMKO)".
+
+2 luật cũ trong `open-the-box.css` **giữ nguyên** — nay là thừa nhưng vô hại, và phần chú thích của
+chúng là dấu vết lịch sử có ích. Đừng chép khuôn này sang template mới nữa: đã có ở gốc.
+
 ## Đợt 22 (4/8/2026, v0.9.36) — ⭐ SỬA LỖI THẬT: CSS của game này ẨN NÚT BACK/NEXT CỦA MỌI GAME KHÁC
 
 > Chỉ sửa `open-the-box.css` (2 luật đầu file). KHÔNG đụng `.js`, KHÔNG đụng core. Lỗi lộ ra khi làm
