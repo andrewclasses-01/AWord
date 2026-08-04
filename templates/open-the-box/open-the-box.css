@@ -13,17 +13,25 @@
 
 /* This game is "tap any box", not a linear sequence — the shared bottom
    Prev/Next/"X of N" nav bar core/engine.js always renders doesn't apply
-   here, so hide it. A plain CSS rule (not a core edit): only THIS
-   template's stylesheet is loaded while Open the box is playing, so this
-   has no effect on any other template. */
-.aw-nav { display: none; }
+   here, so hide it.
+
+   ⚠️ SCOPED to a LIVE open-the-box stage (its card is a direct child of
+   .aw-playarea). The rule used to be a bare `.aw-nav{display:none}`, whose
+   comment claimed "only THIS template's stylesheet is loaded while Open the
+   box is playing". That stopped being true in v0.9.7: `ensureTemplate()` now
+   inserts a template's CSS ONCE and NEVER removes it, so after the teacher
+   opened Open the box just once, the arrows stayed hidden in EVERY other game
+   for the rest of the session (measured 4/8/2026: play Open the box, then
+   Quiz -> .aw-nav computed display:none). Whack-a-mole already documents this
+   exact trap in its own CSS — this is the same fix. */
+.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar .aw-nav { display: none; }
 /* core/app.css's bottombar is a 3-column grid (menu | nav | sound+fullscreen)
    auto-placed in DOM order. display:none removes .aw-nav from that
    auto-placement entirely, so the sound/fullscreen group slides into the
    now-first-available MIDDLE column instead of staying in the right column
    — pin it back to column 3 explicitly so it stays in the corner like every
-   other template. */
-.aw-bottombar > .aw-tools { grid-column: 3; }
+   other template. Scoped for the same reason as the rule above. */
+.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
 
 .aw-otb-card {
   --fit: 1;

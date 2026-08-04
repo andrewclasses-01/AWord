@@ -5,6 +5,102 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 61 (4/8/2026, v0.9.36) — ĐIỀU CHỈNH TỔNG THỂ MỌI ACT: NÚT BACK/NEXT CÓ ĐẾ TO · TEMPLATE TẠM LUÔN MƯỢN DỮ LIỆU ACT GỐC · MỞ ĐƯỜNG ANAGRAM/QUIZ → WHACK-A-MOLE — ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 14/14 mount, 0 lỗi console).
+
+**Bối cảnh:** thầy gửi 4 yêu cầu chỉnh TỔNG THỂ (áp cho mọi act, không riêng game nào). Trong lúc kiểm chứng
+phát hiện thêm **2 lỗi thật** chặn đúng các yêu cầu đó — đã sửa luôn và ghi rõ bên dưới.
+
+**File đụng (5 + 4 theme):** `core/app.css` · `core/engine.js` · `core/convert.js` ·
+`core/themes/{classic,basic,classroom,beach}.css` · `templates/open-the-box/open-the-box.css`.
+KHÔNG đụng 13 template còn lại.
+
+### (1) Nút Back/Next: ĐẾ TO CỐ ĐỊNH, luôn nhìn thấy — `core/app.css` + 4 theme
+- Trước: `.aw-navbtn` là icon TRONG SUỐT 4cqw×4cqw, chỉ hiện nền khi rê chuột → trên bảng cảm ứng bấm
+  trượt là bấm vào khoảng không, không có phản hồi gì.
+- Nay: mỗi mũi tên nằm trên **đế bo tròn 8.6cqw × 5cqw VẼ SẴN mọi lúc** (nền + gờ 3D dưới kiểu Wordwall),
+  icon to lên 2.6→2.8cqw. **Vùng bấm 83×48px ở khung 968px = gấp ~2,7 lần** vùng cũ (38×38px).
+- **Lúc nút bị khoá (`:disabled`) đế VẪN HIỆN** (mờ .42, bỏ gờ) — chủ ý: nút không được biến mất dưới
+  ngón tay đang với tới; trước đây mờ .28 mà không có nền nên gần như tàng hình.
+- Nút cuối ván (`.is-finish`) đổi thành **đế XANH LÁ chữ trắng** (`--aw-ok`/`--aw-ok-d`) thay vì chỉ đổi
+  màu icon → dấu ✓ kết thúc nổi hẳn.
+- Màu đế lấy từ **4 biến theme MỚI** `--aw-nav-plate` / `--aw-nav-plate-hi` / `--aw-nav-lip` /
+  `--aw-nav-ink`, khai trong cả 4 file `core/themes/*` (classic xanh xám · classroom kem gỗ · beach xanh
+  biển nhạt · basic phẳng, "gờ" chỉ đậm hơn nền một chút). Trong `app.css` mọi biến đều có **giá trị dự
+  phòng** nên theme nào chưa khai vẫn hiện đúng.
+- ⚠️ **BẪY đã tránh:** phản hồi lúc NHẤN dùng `filter: brightness` + co gờ, **KHÔNG dùng `transform`** —
+  `.is-finish` đang chạy `@keyframes aw-glow` (scale), mà animation LUÔN thắng transition trên cùng thuộc
+  tính, nên nút finish sẽ không nhún được; dùng filter thì mọi nút phản hồi giống nhau.
+- **Hệ quả bố cục:** thanh dưới cao thêm ~1,1cqw → đo thật thấy **menu ☰ đè lên thanh dưới 8px**. Đã nâng
+  `.aw-menu` 5.8→**6.9cqw** và `.aw-toast` 6.4→**7.5cqw** (đo lại: menu hở 3px, toast hở 5px). Đây là 2
+  phần tử DUY NHẤT neo vào đáy khung (đã grep toàn bộ `bottom:*cqw` trong core + 14 template).
+- 4 game **không dùng** nav nên không ảnh hưởng: Open the box (ẩn cả cụm), Find the match / True-false /
+  Whack-a-mole (ẩn 2 nút, giữ cụm) — đúng thiết kế sẵn có của chúng.
+
+### (1b) ⭐ LỖI THẬT: chơi Open the box 1 lần là MẤT nút Back/Next ở MỌI game còn lại
+- Thầy yêu cầu nút to "ở mọi template" → khi quét mới lòi ra: `open-the-box.css` có luật **trần**
+  `.aw-nav { display: none; }` kèm ghi chú "chỉ CSS của template này được nạp khi Open the box đang chơi
+  nên không ảnh hưởng template khác". **Ghi chú đó đã SAI từ v0.9.7**: `ensureTemplate()` chèn CSS của
+  template MỘT LẦN và KHÔNG BAO GIỜ gỡ ra → mở Open the box xong thì luật đó nằm lại vĩnh viễn.
+- *Đo thật (trước khi sửa):* mount Open the box → mount Quiz → `.aw-nav` của Quiz `display:none`. Tức là
+  **cả buổi dạy, sau khi mở Open the box một lần, không game nào còn nút Back/Next** (tới khi tải lại trang).
+- *Sửa:* scope 2 luật theo đúng khuôn Whack-a-mole (Đợt 57 đã cảnh báo chính cái bẫy này):
+  `.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar .aw-nav{display:none}` và luật ghim `.aw-tools` cột 3.
+- *Đo lại:* Open the box vẫn tự ẩn nav + `.aw-tools` vẫn ở cột 3; 10 game còn lại có nav thì nav trở lại
+  đủ 83×48. **Chỉ sửa file của open-the-box, không đụng core.**
+
+### (2) Template TẠM luôn mượn dữ liệu của act GỐC — `core/engine.js`
+- Thầy chốt: act tạm chỉ **mượn** nội dung; bấm Template lần nữa thì template tạm mới phải lấy dữ liệu từ
+  **act CHÍNH ban đầu**, không phải từ act tạm trước đó.
+- `doSwitchTemplate` vốn ĐÃ convert từ `originAct` (Đợt 53) — nhưng **danh sách game đổi-được thì tính từ
+  act ĐANG CHƠI**: `switchTargets(activity)`. Vì convert là quá trình MẤT dữ liệu nên hỏi act tạm "mày đổi
+  được sang gì" cho ra danh sách nghèo đi → **khoá mất tính năng**, đúng như thầy mô tả.
+- *Đo thật (cách cũ):* act gốc Quiz → đổi tạm sang **Speaking cards** → `switchTargets` trả về **0 game**
+  (Speaking cards không có đáp án) ⇒ panel Template khoá SẠCH, thầy kẹt trong game tạm, chỉ còn cách về
+  trang chủ. Với act gốc Anagram không có clue thì mọi game cần đề cũng biến mất y hệt.
+- *Sửa:* thêm hàm `switchList()` trong `engine.js` — **luôn tính từ `originAct`**, rồi thêm lại chính loại
+  của act gốc (để thầy quay về act thật) và bỏ loại đang chơi. `buildTemplatePanel` + `openSwitchPicker`
+  (menu ☰ và màn kết thúc) đều dùng nó.
+- *Đo lại:* từ act tạm Speaking cards nay đổi được **11 game** (bằng đúng act gốc); chuỗi thật
+  **Quiz → tạm Speaking cards → Whack-a-mole** chạy trọn, và câu hỏi Whack giữ **đúng đáp án nhiễu gốc của
+  Quiz** (warm/wet/dry) — bằng chứng dữ liệu lấy từ act CHÍNH chứ không phải từ act tạm (Speaking cards
+  không hề có đáp án để mà lấy).
+
+### (3)+(4) ⭐ LỖI THẬT: Anagram → Whack-a-mole và Quiz → Whack-a-mole vốn HỎNG — `core/convert.js`
+- 2 chuyển đổi này **vẫn hiện sáng bấm được** trong panel Template từ trước (whack_a_mole nằm sẵn trong
+  `QA_TARGETS`) — nhưng bấm vào là game trắng, báo "This activity has no statements yet."
+- *Gốc:* Whack-a-mole là game DUY NHẤT có 2 hình dạng nội dung chọn bằng **option** `options.mode`
+  (`quiz` → `content.questions`, `trueFalse` → `content.statements`). `convertActivity` dựng đúng
+  `questions`, nhưng chỉ đặt mode `if (!options.mode)` — trong khi options được copy từ **sample của
+  Whack-a-mole vốn đã có sẵn `mode:"trueFalse"`**, nên điều kiện KHÔNG BAO GIỜ đúng. Act chuyển sang mang
+  câu hỏi trắc nghiệm mà tự khai là true/false → game tìm `statements` rỗng → trắng.
+- *Sửa 1 dòng:* bỏ điều kiện, **luôn ép** `options.mode = (kind === "tf") ? "trueFalse" : "quiz"` cho mọi
+  lần convert sang Whack-a-mole (mode phải bám theo nội dung vừa dựng, kể cả khi có options đã nhớ).
+- Cách dựng câu đúng như thầy yêu cầu (hàm `buildMc` sẵn có): **câu hỏi/định nghĩa + đáp án đúng của chính
+  câu đó + trộn thêm đáp án lấy từ các câu khác** trong bộ (ưu tiên đáp án nhiễu gốc nếu nguồn vốn là trắc
+  nghiệm, thiếu thì bù bằng `term` của câu khác), rồi xáo thứ tự.
+- *Đo thật:* Anagram → Whack: 6 câu, câu 1 = "A huge grey animal with a long trunk." + [elephant (ĐÚNG),
+  polar bear, penguin, dolphin], scene dựng OK. Quiz → Whack: 6 câu, câu 1 = 'The opposite of "hot" is ...'
+  + [cold (ĐÚNG), warm, wet, dry], scene OK. Find the match → Whack cũng OK (cùng nhóm qa).
+  **True/false → Whack vẫn ra `trueFalse` như cũ — không hồi quy.**
+
+### Tự kiểm (trình duyệt thật, chạy từ trang gốc `/` để đường dẫn CSS template đúng)
+- **14/14 template mount 0 lỗi console**; nút nav 83×48 ở 10 game có nav, 4 game còn lại ẩn đúng thiết kế.
+- Biến theme đế nút: classroom ra `#f0e4cd`, classic `#e9f0f8` — đúng file theme.
+- Nút finish: `is-finish` + đế `rgb(51,162,74)` + chữ trắng + gờ `rgb(35,122,55)`.
+- ⚠️ **BÀI HỌC ĐO ĐẠC (lặp lại bẫy throttle đã ghi ở Đợt 57):** pane trình duyệt bị ẩn thì Chromium NGƯNG
+  compositing → **CSS transition đứng im giữa chừng**, `getComputedStyle` đọc ra giá trị CŨ dù cascade đã
+  đúng (đế finish đọc ra xám, `opacity` nút khoá đọc ra 1). Kiểm `el.getAnimations()` thấy 3 CSSTransition
+  kẹt `state:"running"`; đặt `style.transition="none"` rồi đọc lại mới ra giá trị thật. **Đừng vội kết luận
+  CSS sai khi đo trong pane ẩn.**
+- Harness chạy từ trang `templates/<x>/test.html` cho kết quả CSS SAI (đường dẫn `css` trong catalog tính
+  từ TRANG, mà trang test nằm sâu 2 cấp → 404). Muốn quét nhiều template phải chạy từ `/`.
+
+**Việc kế:** thầy chơi thử trên TOMKO (đặc biệt: bấm Back/Next bằng tay xem còn trượt không · mở Open the box
+rồi sang game khác xem nav còn không · đổi template lòng vòng qua Speaking cards · Anagram/Quiz → Whack) →
+duyệt → commit + push (curl kiểm chứng live).
+
+---
+
 ## Đợt 59 (3/8/2026, v0.9.34) — QUIZ: 4 CẢI TIẾN THẦY YÊU CẦU (nav không biến mất · không tách từ đơn · ô cao cho đáp án dài · chuyển câu TRƯỢT + chữ fade, ô cố định) — ⭐ CÓ SỬA CORE (bỏ 1 lệnh ẩn nav). ✅ THẦY DUYỆT → COMMIT (fc8e722, code) + doc + PUSH + LIVE. Tự test trình duyệt thật, 0 lỗi console.
 
 > ⚠️ Số Đợt 59 chính là khe find-the-match (Đợt 60) đã reserve cho "phiên Quiz song song" — phiên này. Đặt Đợt 59 dù làm SAU Đợt 60 về thời gian. Chỉ đụng `templates/quiz/quiz.js` + `templates/quiz/quiz.css` + 1 chỗ nhỏ `core/engine.js`. KHÔNG đụng 13 game kia. quiz.js commit gần nhất vẫn là v0.9.28 (e23a3aa) → không đè mất công việc Quiz đã commit của ai.

@@ -173,6 +173,29 @@ crossword cần 2..40 câu.
 > `convert.js` (và, nếu là "kind" mới, khai target list). Không thêm thì game vẫn chạy bình thường, chỉ
 > là không hiện trong danh sách đổi.
 
+### ⭐ Danh sách game đổi-được LUÔN tính từ act GỐC — `switchList()` (v0.9.36)
+
+Act tạm (`conv_...`) chỉ **MƯỢN** nội dung của act gốc. Vì convert là quá trình **MẤT dữ liệu**, hỏi act
+tạm "đổi được sang gì" cho ra danh sách nghèo dần sau mỗi lần đổi — tức là **tự khoá mất tính năng**.
+Đo thật 4/8/2026: act gốc Quiz → đổi tạm sang **Speaking cards** (không có đáp án) →
+`switchTargets(actTạm)` trả về **0 game** ⇒ panel Template khoá sạch, thầy kẹt trong game tạm.
+
+→ `engine.js` có hàm **`switchList()`**: luôn `switchTargets(originAct)`, thêm lại chính loại của act gốc
+(lối quay về act thật) rồi bỏ loại đang chơi. **Mọi chỗ liệt kê game đổi-được PHẢI dùng `switchList()`,
+KHÔNG gọi thẳng `switchTargets(activity)`** — hiện là `buildTemplatePanel` (panel Template dưới khung) và
+`openSwitchPicker` (menu ☰ · "Play a different template" ở màn kết thúc). `doSwitchTemplate` vốn đã
+convert từ `originAct` từ v0.9.27, nay danh sách khớp với hành vi đó.
+
+### ⚠️ Whack-a-mole: `options.mode` PHẢI bám theo nội dung khi convert (v0.9.36)
+
+Whack-a-mole là template DUY NHẤT có 2 hình dạng nội dung chọn bằng **option**: `mode:"quiz"` đọc
+`content.questions`, `mode:"trueFalse"` đọc `content.statements`. Trong `convert.js` mode được **ép**
+theo `kind` của bộ nguồn, KHÔNG chỉ đặt-nếu-chưa-có — vì options được copy từ sample của game đích (và
+sample whack vốn mang sẵn `mode:"trueFalse"`), nên điều kiện `if (!options.mode)` cũ không bao giờ đúng:
+mọi act QA (Anagram, Quiz, Find the match...) chuyển sang Whack đều mang `questions` mà tự khai true/false
+→ game trắng, báo "This activity has no statements yet." **Template thứ 15 nào cũng chọn hình dạng nội
+dung bằng option thì phải ép tương tự.**
+
 ### Lưu options + act GỐC (`base`/`originAct`) — v0.9.27
 
 `startGame(root, activity, { base })` nhận thêm `base` = **act GỐC** trong thư viện đứng sau lượt chơi.
@@ -320,6 +343,22 @@ hiện trên màn hình) nằm trong `core/app.css` — DÙNG CHUNG cho mọi te
 Header (title + Name/Date) và footer (logo AWord) là `position:fixed` để LẶP trên mọi trang giấy; body
 2 cột (`column-count`) có vạch phân cách nét đứt. Thêm định dạng in mới = thêm renderer + icon trong
 `print.js`/`icons.js` (không đụng template).
+
+### ⚠️⚠️ CSS của template Ở LẠI DOCUMENT VĨNH VIỄN — cấm luật TRẦN nhắm vào class của core
+
+Từ v0.9.7, `ensureTemplate()` chèn stylesheet của template **MỘT LẦN và KHÔNG BAO GIỜ gỡ**. Nên một luật
+trần kiểu `.aw-nav { display:none }` trong CSS template sẽ tiếp tục tác động lên **MỌI game mở sau đó**
+trong cùng phiên. Đã cắn thật 2 lần:
+- Open the box từng có `.aw-nav{display:none}` trần → **mở Open the box 1 lần là mất nút Back/Next ở mọi
+  game còn lại tới khi tải lại trang** (đo 4/8/2026, sửa ở Đợt 61).
+- Whack-a-mole (Đợt 57) đã tránh sẵn bẫy này và ghi chú trong CSS của nó.
+
+→ **Khuôn chuẩn**: scope theo phần tử gốc của chính game đó, đang sống trong `.aw-playarea`:
+```css
+.aw-playarea:has(> .aw-<viet-tat>-<goc>) ~ .aw-bottombar .aw-navbtn { display: none; }
+```
+Ưu tiên ẩn `.aw-navbtn` (giữ `.aw-nav` để lưới 3 cột thanh dưới không vỡ); nếu buộc phải ẩn cả `.aw-nav`
+thì nhớ ghim lại `.aw-tools { grid-column: 3 }` **cũng scope y hệt** (xem `open-the-box.css`).
 
 ## Class dùng chung sẵn có (dùng lại thay vì tự tạo mới)
 

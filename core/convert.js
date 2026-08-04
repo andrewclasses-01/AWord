@@ -173,7 +173,17 @@ export async function convertActivity(activity, targetType) {
     if (remembered) options = { ...remembered };   // sample lỗi vẫn giữ options đã nhớ
   }
 
-  if (targetType === "whack_a_mole" && !options.mode) options.mode = (kind === "tf") ? "trueFalse" : "quiz";
+  // Whack-a-mole is the one game with TWO content shapes picked by an OPTION
+  // (options.mode: "quiz" -> content.questions, "trueFalse" -> content.statements).
+  // The mode MUST follow the content we just built, so it is forced here, never
+  // merely defaulted. It used to be set only `if (!options.mode)` — but the
+  // options above are copied from whack-a-mole's own sample (mode:"trueFalse")
+  // or from remembered options, so the flag was ALWAYS already present. A QA act
+  // (Anagram, Quiz, Find the match...) therefore arrived carrying quiz questions
+  // while claiming to be true/false, and the game showed "This activity has no
+  // statements yet." — the switch looked available but was broken. (Teacher
+  // reported it for Anagram and Quiz, 4/8/2026; it affected every QA source.)
+  if (targetType === "whack_a_mole") options.mode = (kind === "tf") ? "trueFalse" : "quiz";
 
   return {
     id: "conv_" + targetType + "_" + Math.floor(Math.random() * 1e9),

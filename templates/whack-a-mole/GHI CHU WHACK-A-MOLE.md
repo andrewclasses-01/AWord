@@ -1,9 +1,39 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (4/8/2026, **Đợt 57, v0.9.32** — 2 tinh chỉnh
-thầy yêu cầu; thầy duyệt → commit + push + live). `built:true` trong `core/catalog.js` từ Đợt 32.
+**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
+chuyển từ mọi game QA, sửa ở `core/convert.js`, không đụng file của template này; trước đó **Đợt 57,
+v0.9.32** — 2 tinh chỉnh thầy yêu cầu). `built:true` trong `core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`. **KHÔNG đụng core.**
+
+## ⭐ ĐỢT 61 (4/8/2026, v0.9.36) — NAY NHẬN ĐƯỢC ACT TỪ MỌI GAME QA (Anagram/Quiz/... → Whack-a-mole)
+
+> **KHÔNG sửa file nào của template này** — ghi lại ở đây vì hành vi của game thay đổi. Sửa nằm ở
+> `core/convert.js` (Đợt 61, xem `GHI CHU DU AN.md` mục (3)+(4) và `core/HUONG DAN CORE.md`).
+
+Thầy yêu cầu cho phép đổi template **Anagram → Whack-a-mole** và **Quiz → Whack-a-mole**. Kiểm chứng thì
+ra là 2 mục này **vốn đã hiện sáng bấm được từ trước** (whack_a_mole nằm sẵn trong `QA_TARGETS` của
+`convert.js`) — nhưng **bấm vào là game trắng**, báo `This activity has no quiz questions yet.` /
+`no statements yet.`
+
+**Gốc lỗi (đáng nhớ cho mọi người sửa game này):** Whack-a-mole là template DUY NHẤT có **2 hình dạng nội
+dung chọn bằng OPTION** — `options.mode === "quiz"` đọc `content.questions`, `"trueFalse"` đọc
+`content.statements`. `convertActivity` dựng đúng `questions`, nhưng chỉ đặt mode `if (!options.mode)`,
+trong khi options của act chuyển đổi được copy từ **`sample-whack-a-mole.js` vốn mang sẵn
+`mode:"trueFalse"`** → điều kiện không bao giờ đúng → act mang câu hỏi trắc nghiệm mà tự khai true/false.
+Nay `convert.js` **luôn ép** `options.mode` theo `kind` của bộ nguồn.
+
+**Cách một act QA thành ván Whack-a-mole** (hàm `buildMc` trong `convert.js`): mỗi câu = đề/định nghĩa +
+**đáp án đúng của chính câu đó** + trộn thêm đáp án lấy từ **các câu khác** trong bộ (ưu tiên đáp án nhiễu
+gốc nếu nguồn vốn là trắc nghiệm, thiếu thì bù bằng đáp án đúng của câu khác), rồi xáo thứ tự.
+
+**Đo thật:** Anagram → Whack 6 câu (câu 1 "A huge grey animal with a long trunk." + elephant ĐÚNG /
+polar bear / penguin / dolphin) · Quiz → Whack 6 câu (giữ nguyên bộ nhiễu gốc warm/wet/dry) ·
+Find the match → Whack 8 câu — cả 3 đều `mode:"quiz"`, scene dựng OK, 0 lỗi console.
+**True/false → Whack vẫn ra `mode:"trueFalse"` như cũ, không hồi quy.**
+
+⚠️ Nếu sau này sửa `sample-whack-a-mole.js` hay editor, **đừng bỏ `options.mode`** — nó là thứ duy nhất
+cho engine/convert biết game đang ở dạng nội dung nào.
 
 ## ⭐ ĐỢT 57 (4/8/2026, v0.9.32) — MOLE RUNG LẮC KHI ĐẬP SAI + ẨN NÚT NEXT/BACK
 

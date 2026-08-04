@@ -22,6 +22,12 @@
   --aw-ok:   #17a37e;  --aw-ok-d: #0f7d61;
   --aw-no:   #e2593c;  --aw-no-d: #b8422a;
 
+  /* Back/Next plate under the stage's nav arrows (always visible, 3D lip) */
+  --aw-nav-plate:    #e4f1f0;
+  --aw-nav-plate-hi: #d1e8e6;
+  --aw-nav-lip:      #bfdcda;
+  --aw-nav-ink:      #2c5a5e;
+
   /* Tile shape + question text style (themeable — see classroom.css). */
   --aw-tile-radius: 1.6cqw;
   --aw-tile-border-width: 0;

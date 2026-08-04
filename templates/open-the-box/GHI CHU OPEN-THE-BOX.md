@@ -1,6 +1,35 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE — cập nhật 4/8/2026 (đợt 21, v0.9.33) — 5 CẢI TIẾN UX (đã tự test trình duyệt thật, 0 lỗi console, KHÔNG đụng core)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 4/8/2026 (đợt 22, v0.9.36) — 🔴 SỬA 1 LỖI RÒ CSS RA TOÀN APP (chờ thầy duyệt cùng Đợt 61)
+
+## Đợt 22 (4/8/2026, v0.9.36) — ⭐ SỬA LỖI THẬT: CSS của game này ẨN NÚT BACK/NEXT CỦA MỌI GAME KHÁC
+
+> Chỉ sửa `open-the-box.css` (2 luật đầu file). KHÔNG đụng `.js`, KHÔNG đụng core. Lỗi lộ ra khi làm
+> Đợt 61 (thầy yêu cầu nút Back/Next to hơn "ở mọi template") — xem `GHI CHU DU AN.md` Đợt 61 mục (1b).
+
+**Lỗi:** file này mở đầu bằng luật **TRẦN** `.aw-nav { display: none; }` (kèm `.aw-bottombar > .aw-tools
+{ grid-column: 3 }`), với ghi chú tự trấn an *"chỉ CSS của template này được nạp khi Open the box đang
+chơi nên không ảnh hưởng template khác"*. **Ghi chú đó đã SAI kể từ v0.9.7 (Đợt 33)**: `ensureTemplate()`
+chèn stylesheet của template MỘT LẦN rồi để đó VĨNH VIỄN, không gỡ khi rời game. Hệ quả: thầy mở Open the
+box một lần là **mọi game mở sau đó trong cùng phiên đều mất nút Back/Next** (và mất luôn ô "x of N"),
+tới khi tải lại trang. Whack-a-mole đã cảnh báo đúng cái bẫy này trong CSS của nó từ Đợt 57, nhưng file
+này chưa được rà lại.
+
+**Đo thật (trước khi sửa):** mount Open the box → mount Quiz → `getComputedStyle('.aw-nav').display`
+= `"none"`. Sau khi sửa: Quiz trở lại `flex`, nút 83×48; quét 14 template thì 10 game có nav đều bình
+thường, còn Find the match / True-false / Whack-a-mole vẫn ẩn 2 nút theo thiết kế riêng của chúng.
+
+**Sửa:** scope cả 2 luật vào đúng lúc có sân Open the box đang sống (thẻ gốc `.aw-otb-card` là con TRỰC
+TIẾP của `.aw-playarea`), theo đúng khuôn whack-a-mole:
+```css
+.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar .aw-nav { display: none; }
+.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
+```
+Kiểm lại: Open the box vẫn tự ẩn nav như cũ và cụm loa/phóng-to vẫn nằm góc phải (cột 3).
+
+**Bài học cho mọi template:** đừng bao giờ viết luật CSS TRẦN nhắm vào class của core (`.aw-nav`,
+`.aw-bottombar`, `.aw-topbar`...) — CSS template ở lại document mãi mãi. Luật đã ghi vào
+`core/HUONG DAN CORE.md`.
 
 ## Đợt 21 (4/8/2026) — 5 cải tiến UX theo yêu cầu thầy
 

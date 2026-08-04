@@ -23,6 +23,12 @@
   --aw-ok:   #33a24a;  --aw-ok-d: #237a37;
   --aw-no:   #e23c3c;  --aw-no-d: #b32a2a;
 
+  /* Back/Next plate under the stage's nav arrows (always visible, 3D lip) */
+  --aw-nav-plate:    #e9f0f8;
+  --aw-nav-plate-hi: #d9e6f4;
+  --aw-nav-lip:      #ccd9e8;
+  --aw-nav-ink:      #48596e;
+
   /* Tile shape + question text style (themeable — see classroom.css for the
      "cartoon chalkboard" look). Classic keeps the current plain look. */
   --aw-tile-radius: 1.6cqw;

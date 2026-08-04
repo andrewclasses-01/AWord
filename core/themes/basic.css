@@ -28,6 +28,13 @@
   --aw-ok:   #2ea86a;  --aw-ok-d: #1f8452;
   --aw-no:   #e2593c;  --aw-no-d: #b8422a;
 
+  /* Back/Next plate under the stage's nav arrows (always visible). This theme
+     is deliberately FLAT, so the "lip" is only a whisper darker than the plate. */
+  --aw-nav-plate:    #e7edf9;
+  --aw-nav-plate-hi: #d8e2f4;
+  --aw-nav-lip:      #d2dcef;
+  --aw-nav-ink:      #2c3a6b;
+
   /* every tile: uniform dark navy, blue border, flat + soft drop shadow */
   --aw-tile-fixed:      #17255a;
   --aw-tile-fixed-dark: #101b44;

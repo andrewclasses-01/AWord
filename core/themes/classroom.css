@@ -23,6 +23,12 @@
   --aw-ok:   #2f6b4f;  --aw-ok-d: #1f4d38;
   --aw-no:   #b23a2a;  --aw-no-d: #8a2c20;
 
+  /* Back/Next plate under the stage's nav arrows (always visible, 3D lip) */
+  --aw-nav-plate:    #f0e4cd;
+  --aw-nav-plate-hi: #e6d5b6;
+  --aw-nav-lip:      #d6c09a;
+  --aw-nav-ink:      #5d4728;
+
   /* flat tiles + plain question text (same as Classic) */
   --aw-tile-radius: 1.6cqw;
   --aw-tile-border-width: 0;

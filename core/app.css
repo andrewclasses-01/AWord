@@ -228,11 +228,35 @@ body {
 
 .aw-nav { display: flex; align-items: center; gap: 1.4cqw; }
 .aw-nav-label { font-weight: 700; color: var(--aw-muted); font-size: 1.8cqw; min-width: 6.4cqw; text-align: center; }
-.aw-navbtn { width: 4cqw; height: 4cqw; }
-.aw-navbtn svg { width: 2.6cqw; height: 2.6cqw; }
-.aw-navbtn:hover:not(:disabled) { background: #eef3f9; color: var(--aw-text); }
-.aw-navbtn:disabled { opacity: .28; cursor: default; }
-.aw-navbtn.is-finish { color: var(--aw-ok); }
+/* ---- Back / Next: a BIG, ALWAYS-VISIBLE button plate (teacher, 4/8/2026) ----
+   The arrows used to be bare transparent icons that only grew a background on
+   hover — on the touch panel that made them easy to miss (a tap a centimetre
+   off hit nothing at all). Both arrows now sit on a fixed, wide 3D plate that
+   is drawn AT ALL TIMES, so the target is visible and hard to slip off.
+   The plate grew mostly sideways (+1cqw tall), the icon keeps its size, so a
+   template's play area loses ~1cqw of height and nothing else moves.
+   Colours come from theme vars with neutral fallbacks, so a theme that doesn't
+   declare them still renders correctly.
+   NOTE: press feedback deliberately uses brightness + shadow, NOT transform —
+   `.is-finish` runs the `aw-glow` scale animation and an animation always beats
+   a transition on the same property (see HUONG DAN CORE). */
+.aw-navbtn {
+  width: 8.6cqw; height: 5cqw;
+  border-radius: 1.5cqw; padding: 0;
+  background: var(--aw-nav-plate, #e9f0f8);
+  color: var(--aw-nav-ink, #48596e);
+  box-shadow: 0 0.4cqw 0 var(--aw-nav-lip, #ccd9e8);
+  transition: background .15s ease, color .15s ease, opacity .15s ease,
+              filter .12s ease, box-shadow .12s ease;
+}
+.aw-navbtn svg { width: 2.8cqw; height: 2.8cqw; }
+.aw-navbtn:hover:not(:disabled) { background: var(--aw-nav-plate-hi, #d9e6f4); color: var(--aw-nav-ink, #48596e); }
+.aw-navbtn:active:not(:disabled) { filter: brightness(.93); box-shadow: 0 0.12cqw 0 var(--aw-nav-lip, #ccd9e8); }
+/* Disabled: the plate STAYS visible (the button must never vanish from under a
+   finger that is already reaching for it) — it just fades and loses its lip. */
+.aw-navbtn:disabled { opacity: .42; box-shadow: none; cursor: default; }
+.aw-navbtn.is-finish { color: #fff; background: var(--aw-ok); box-shadow: 0 0.4cqw 0 var(--aw-ok-d); }
+.aw-navbtn.is-finish:hover:not(:disabled) { background: var(--aw-ok); color: #fff; }
 .aw-navbtn.is-finish:not(:disabled) { animation: aw-glow 1.1s ease-in-out infinite; }
 
 .aw-tools { display: flex; gap: 0.4cqw; }
@@ -243,7 +267,10 @@ body {
 
 /* ---------- Popup menu ---------- */
 .aw-menu {
-  position: absolute; left: 1.4cqw; bottom: 5.8cqw; z-index: 8;
+  /* bottom clears the bottom bar — raised from 5.8cqw when the Back/Next
+     plates made that bar ~1.1cqw taller (4/8/2026), otherwise the menu
+     overlapped it by ~8px. */
+  position: absolute; left: 1.4cqw; bottom: 6.9cqw; z-index: 8;
   background: #fff; border-radius: 1.2cqw; box-shadow: 0 1cqw 3cqw rgba(31,42,68,.22);
   padding: 0.6cqw; min-width: 19cqw;
 }
@@ -256,7 +283,8 @@ body {
 
 /* ---------- Toast ---------- */
 .aw-toast {
-  position: absolute; left: 50%; bottom: 6.4cqw; transform: translateX(-50%);
+  /* raised with .aw-menu above — the bottom bar grew with the Back/Next plates */
+  position: absolute; left: 50%; bottom: 7.5cqw; transform: translateX(-50%);
   background: rgba(35,48,62,.92); color: #fff;
   padding: 0.8cqw 1.8cqw; border-radius: 999px;
   font-weight: 600; font-size: 1.4cqw; z-index: 9;

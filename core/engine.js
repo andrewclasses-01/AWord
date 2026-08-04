@@ -624,10 +624,29 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // ("compatible group", teacher's call 3/8/2026); the rest are dimmed.
   // Clicking one converts the content and plays it straight away — the
   // original act in the library is never touched (see doSwitchTemplate).
+  // The games we can switch to, ALWAYS computed from the ORIGINAL act (teacher,
+  // 4/8/2026). A "Change template" play only BORROWS the origin's content, so
+  // the temp act must never become the source for the next switch: converting is
+  // lossy, and asking the temp act what it can turn into silently locked games
+  // out — e.g. from a temp Speaking cards (no answers at all) NOTHING was
+  // switchable, and from a temp Anagram without clues every clue-needing game
+  // disappeared. Reading the origin means every switch offers the same full
+  // list, whichever temp game happens to be on screen.
+  // switchTargets() drops the origin's OWN type, so we add it back while a temp
+  // act is playing — that entry is how the teacher returns to the real act.
+  function switchList() {
+    const list = switchTargets(originAct);
+    if (activity.type !== originAct.type) {
+      const home = ALL_TEMPLATES.find(t => t.type === originAct.type && t.built);
+      if (home) list.unshift({ type: home.type, label: home.label });
+    }
+    return list.filter(t => t.type !== activity.type);   // never offer what's already playing
+  }
+
   function buildTemplatePanel(panel) {
     panel.append(el("div", "aw-tool-panel-head", "Template"));
     const grid = el("div", "aw-tpl-grid");
-    const canSwitch = new Set(switchTargets(activity).map(t => t.type));
+    const canSwitch = new Set(switchList().map(t => t.type));
     ALL_TEMPLATES.forEach(t => {
       const isCurrent = t.type === activity.type;
       const enabled = !isCurrent && canSwitch.has(t.type);
@@ -759,7 +778,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     const bd = openBackdrop();
     const panel = el("div", "aw-panel aw-panel-wide");
     panel.append(el("div", "aw-panel-head", "CHANGE TEMPLATE"));
-    const targets = switchTargets(activity);
+    const targets = switchList();   // from the ORIGIN act — see switchList()
     if (!targets.length) {
       panel.append(el("div", "aw-panel-rank", "THIS CONTENT CAN'T BE PLAYED AS ANOTHER GAME"));
     } else {
