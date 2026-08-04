@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 70 (5/8/2026, v0.9.45) — RUNNING WORD: 8 TINH CHỈNH SAU KHI THẦY CHƠI THỬ ĐỢT 2. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+## Đợt 70 (5/8/2026, v0.9.45) — RUNNING WORD: 8 TINH CHỈNH SAU KHI THẦY CHƠI THỬ ĐỢT 2. KHÔNG ĐỤNG CORE. ✅ COMMIT (`a40809e`, gộp Đợt 68+69+70) + PUSH + LIVE
 
 Thầy chơi bản Đợt 2 (v0.9.44) rồi gửi ảnh bàn phím + 8 điểm. Chỉ 2 file: `running-word.js`,
 `running-word.css`.
@@ -46,12 +46,13 @@ chính panel (không bị chặn), bấm Start again → về màn READY (vẫn 
 
 ⚠️ **Vẫn 3 việc chỉ thầy làm được** (không đổi): TOMKO thật, fullscreen iPad thật, in A4 thật.
 
-Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8d. **Việc kế: thầy nghiệm thu 3 việc
-trên → duyệt → commit + push (gộp Đợt 68 + 69 + 70).**
+Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8d. **✅ Thầy "ok build" → đã COMMIT
+`a40809e` (gộp Đợt 68+69+70) + PUSH + LIVE; chạy lại trọn bộ TRÊN BẢN LIVE 0 lỗi (poll qua bẫy cache
+Pages lần 1 file cũ/lần 2 mới). Còn 3 việc thầy nghiệm thu tay: TOMKO thật, fullscreen iPad, in A4.**
 
 ---
 
-## Đợt 69 (5/8/2026, v0.9.44) — RUNNING WORD: LÀM LẠI GIAO DIỆN TRẬN ĐẤU (15 điểm). ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT
+## Đợt 69 (5/8/2026, v0.9.44) — RUNNING WORD: LÀM LẠI GIAO DIỆN TRẬN ĐẤU (15 điểm). ⭐ CÓ SỬA CORE. ✅ COMMIT a40809e + PUSH + LIVE
 
 Thầy gửi ảnh bàn phím chuẩn (Type the answer) + 15 điểm 1 lượt để làm lại toàn bộ màn trận đấu:
 
@@ -110,7 +111,7 @@ trên → duyệt → commit + push (gộp Đợt 68 + 69, cả hai đều đang
 
 ---
 
-## Đợt 68 (5/8/2026, v0.9.43) — RUNNING WORD: 8 ĐIỂM TỐI ƯU IPAD. 🟢 CHỜ THẦY DUYỆT
+## Đợt 68 (5/8/2026, v0.9.43) — RUNNING WORD: 8 ĐIỂM TỐI ƯU IPAD. ✅ COMMIT a40809e + PUSH + LIVE
 
 Thầy gửi 8 yêu cầu 1 lượt để tối ưu game cho iPad (chơi trong lớp trên TOMKO/iPad):
 

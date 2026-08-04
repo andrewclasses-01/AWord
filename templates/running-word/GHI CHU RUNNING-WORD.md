@@ -1,14 +1,15 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT** — 3 đợt sửa lớn liên tiếp trong cùng ngày (tất cả
-> đang gộp chờ duyệt, CHƯA commit/push):
+> **TRẠNG THÁI (5/8/2026): ✅ ĐÃ COMMIT (`a40809e`) + PUSH + LIVE** — 3 đợt sửa lớn liên tiếp trong
+> cùng ngày, gộp chung 1 commit sau khi thầy nói "ok build":
 > **Đợt 1** (mục 8b, v0.9.43) = 8 điểm tối ưu iPad. **Đợt 2** (mục 8c, v0.9.44) = 15 điểm làm lại
 > giao diện trận đấu. **Đợt 3** (mục 8d, v0.9.45) = 8 điểm tinh chỉnh sau khi thầy chơi thử (nút
 > Play/Pause nhạy + vuông bo tròn, slogan về hàng nút Menu + đổi màu, sửa icon loa↔fullscreen đè
 > nhau, chữ trong ô tự co không "…", đồng hồ thấp hơn, **bảng CHỈ 3 ô — input luôn ở đáy, đẩy lên khi
 > đảo lượt**, sửa màn GAME COMPLETE bị kẹt). Đợt 3 **KHÔNG đụng core** (chỉ 2 file template). **⭐ CÓ
-> SỬA CORE** vẫn là 1 dòng của Đợt 2 (`core/engine.js`, thầy duyệt — xem mục 8c). Tự test kỹ trên
-> devserver cả 3 đợt.
+> SỬA CORE** vẫn là 1 dòng của Đợt 2 (`core/engine.js`, thầy duyệt — xem mục 8c). Đã chạy lại trọn
+> bộ kiểm tra **TRÊN BẢN LIVE** (`andrewclasses-01.github.io/AWord`, poll qua bẫy cache Pages) — 0
+> lỗi console; hồi quy Type the answer live vẫn 16:9.
 > ⬜ **Còn chờ thầy nghiệm thu những việc máy không thay được**: xem khung 4:3 + đồng hồ + bảng
 > 70/30 + 3-ô trên TOMKO thật, bật thử fullscreen thật trên iPad, **in thử 3 tờ A4 giấy thật**.
 > Đọc kèm: `../HUONG DAN TEMPLATE.md`, `../CONG THUC MAU.md`, `../../core/HUONG DAN CORE.md`.
