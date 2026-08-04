@@ -9,7 +9,9 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
-## ⭐ ĐỢT 65 (4/8/2026, v0.9.40) — HẾT "GÓC VUÔNG KHI CHẠM" TRÊN TOMKO — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+## ⭐ ĐỢT 65 (4/8/2026, v0.9.40) — HẾT "GÓC VUÔNG KHI CHẠM" TRÊN TOMKO — ✅ THẦY DUYỆT → COMMIT `72e1b5f` + PUSH + LIVE
+
+> **Đã kiểm chứng trên bản live:** Quiz **16/16** phần tử bo góc = `rgba(0, 0, 0, 0)`, 0 lỗi console.
 
 > ⭐ **CÓ SỬA CORE** (thầy đồng ý trước). **KHÔNG sửa file nào của Quiz** — Quiz hết lỗi nhờ luật gốc.
 

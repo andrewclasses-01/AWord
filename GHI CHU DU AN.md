@@ -5,7 +5,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 65 (4/8/2026, v0.9.40) — HẾT "NỀN GÓC VUÔNG KHI CHẠM" TRÊN TOMKO, TOÀN BỘ 14 TEMPLATE. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+## Đợt 65 (4/8/2026, v0.9.40) — HẾT "NỀN GÓC VUÔNG KHI CHẠM" TRÊN TOMKO, TOÀN BỘ 14 TEMPLATE. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT `72e1b5f` + PUSH (`c7df3ed..72e1b5f`) + LIVE, ĐÃ KIỂM CHỨNG TRÊN BẢN LIVE.
+
+> **Kiểm chứng bản live (sau push):** `curl` **3 lần đầu Pages vẫn trả file CŨ**, lần thứ 4 (~60 giây)
+> mới thấy dấu mốc `-webkit-tap-highlight-color: transparent` ở dòng 50 `core/app.css` — đúng bẫy quen,
+> đừng tin lần curl đầu. Rồi **chạy lại TRỌN BỘ kiểm tra trên chính bản live**
+> (`andrewclasses-01.github.io/AWord`), 14/14 template mount + bấm PLAY: **391 phần tử bo góc bấm được ·
+> 0 còn dính · 0 lỗi console** · `getComputedStyle(html).webkitTapHighlightColor = rgba(0, 0, 0, 0)`.
+> (Crossword đếm 139 thay vì 141 như bản local: mỗi ván lưới sinh ngẫu nhiên nên số ô đổi — đúng thiết
+> kế, không phải sai lệch.)
 
 **Yêu cầu của thầy:** nhiều template (có Quiz và Open the box) khi chạm vào ô đáp án hoặc nút Next/Back
 thì đúng khoảnh khắc nhấn hiện ra nền ô **góc vuông** rất xấu dù ô bo góc mềm. **Chỉ máy 3 (TOMKO) bị**,
