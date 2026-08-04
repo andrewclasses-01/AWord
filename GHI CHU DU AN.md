@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 67 (4/8/2026, v0.9.42) — ⭐ TEMPLATE THỨ 15: **RUNNING WORD (RUNNINGW)** — trận đấu 2 đội trên đồng hồ cờ vua, có sẵn bàn phím AWord + nút Andrew + tự in 3 tờ A4. **⭐ CÓ SỬA CORE (`core/keyboard.js`, thầy yêu cầu sau khi xem báo cáo).** 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 15/15 template mount 0 lỗi console; CHƯA in giấy thật, CHƯA chơi trên TOMKO, CHƯA commit).
+## Đợt 67 (4/8/2026, v0.9.42) — ⭐ TEMPLATE THỨ 15: **RUNNING WORD (RUNNINGW)** — trận đấu 2 đội trên đồng hồ cờ vua, có sẵn bàn phím AWord + nút Andrew + tự in 3 tờ A4. **⭐ CÓ SỬA CORE (`core/keyboard.js`, thầy yêu cầu sau khi xem báo cáo).** ✅ **COMMIT (`7d721a7`) + PUSH + LIVE** — trước khi commit đã `git fetch` so origin (**0/0**, không máy nào đẩy chen); `curl` poll Pages (**đúng bẫy quen: lần 1 còn trả file CŨ, lần 2 mới đủ 6 file**) rồi **CHẠY LẠI trọn bộ kiểm tra TRÊN CHÍNH BẢN LIVE** (mở thẳng `andrewclasses-01.github.io/AWord/templates/running-word/test.html`, không phải bản local): bản vá bàn phím trên live đúng (dựng lúc disabled → bấm **0**; `refresh()` mở khoá → bấm **ăn ngay 1**), **15/15 template mount 0 lỗi**, công thức chia từ trên live ra đúng `50+50 · trùng 15 · phủ ALL` với pool 85, Andrew trên live hiện đúng từ, **chơi TRỌN 1 ván thật → "REDS WINS · finished the whole list" 3–2 + engine ăn mừng**, 0 từ bị lộ, 0 lỗi console. ⬜ **Còn chờ thầy**: chơi trên TOMKO + in thử 3 tờ A4 giấy thật.
 
 Thầy đưa 2 file nguồn và tả trò đang chơi bằng tay: `D:\4. LISTENING\...\IEL-S15.T3.P4.xlsm` sheet **`RunningW`** (3 mảng: PART A cột A-D · PART B cột E-H · TEAM A/TEAM B cột I-K) và `D:\10. ACTIVITIES\GAMES\WORD GAMES.xlsx` sheet **`RUNNING`** (chỉ là 1 cột rộng để typer gõ trên iPad, còn nguyên vết gõ sai "Inven5", "Invent\"). Luật: explainer tả từ → typer gõ → thầy soi tờ CHECK báo đúng → **bấm đồng hồ cờ vua** → đổi đội. Hết giờ trước là thua; hết từ thì so thời gian còn lại.
 
@@ -53,7 +53,7 @@ Vì màn hình **cố ý không hiện từ** nên không script nào đọc tr�
 
 ⚠️ Ghi lại 1 bẫy của chính khâu TEST: đừng khôi phục `window.print` ngay sau khi gọi `printRunningSheets()` — hàm này hẹn `window.print()` sau 60ms, khôi phục sớm là bung hộp thoại In THẬT và **treo cứng renderer** (đã dính, phải mở tab mới).
 
-**Việc kế: thầy chơi thử trên TOMKO (nhất là cỡ chữ ô nhập + 2 mặt đồng hồ nhìn từ cuối lớp) và IN THỬ 3 TỜ A4 THẬT → duyệt → commit + push (nhớ `curl` kiểm bản live).**
+**Việc kế: ĐÃ LÊN LIVE, không phải chờ gì thêm về mặt kỹ thuật. Thầy chỉ còn 2 việc mà máy không thay được: (1) chơi thử trên TOMKO — nhất là cỡ chữ ô nhập + 2 mặt đồng hồ nhìn từ cuối lớp; (2) IN THỬ 3 TỜ A4 GIẤY THẬT — xem 50 dòng có lọt đúng 1 trang và ô TURN có đủ to để tick không (máy mới chỉ tính được chiều cao trang, chưa cầm được tờ giấy). Chỗ nào chưa vừa thì báo.**
 
 ---
 

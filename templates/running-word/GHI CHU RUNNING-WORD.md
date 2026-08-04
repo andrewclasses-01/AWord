@@ -1,7 +1,10 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT** — đã tự test trình duyệt thật (0 lỗi console),
-> chưa chơi thử trên TOMKO, chưa in giấy thật, chưa commit.
+> **TRẠNG THÁI: ✅ ĐÃ COMMIT (`7d721a7`) + PUSH + LIVE** (4/8/2026) — đã chạy lại trọn bộ kiểm tra
+> TRÊN CHÍNH BẢN LIVE (`andrewclasses-01.github.io/AWord/templates/running-word/test.html`):
+> 15/15 template mount, chia từ đúng công thức, chơi trọn 1 ván ra kết quả đúng, 0 lỗi console.
+> ⬜ **Còn chờ thầy nghiệm thu 2 việc máy không thay được**: chơi trên TOMKO (cỡ chữ + đồng hồ nhìn
+> từ cuối lớp) và **in thử 3 tờ A4 giấy thật** (50 dòng lọt 1 trang? ô TURN đủ to để tick?).
 > Đọc kèm: `../HUONG DAN TEMPLATE.md`, `../CONG THUC MAU.md`, `../../core/HUONG DAN CORE.md`.
 
 ---
@@ -205,9 +208,13 @@ renderer** (đã dính, phải mở tab mới). Trong test hãy giữ bản stub
 
 ## 9. VIỆC ĐANG CHỜ
 
+- [x] ~~Commit + push + `curl` kiểm bản live~~ — XONG 4/8/2026, commit **`7d721a7`**. Bẫy quen tái
+      diễn đúng như ghi chú cũ: **lần `curl` đầu Pages còn trả file CŨ, lần 2 mới đủ 6 file.** Đã chạy
+      lại trọn bộ kiểm tra trên chính bản live (mở thẳng test.html trên Pages, không phải local).
 - [ ] **Thầy chơi thử trên TOMKO** — nhất là cỡ chữ ô nhập và 2 mặt đồng hồ nhìn từ cuối lớp.
 - [ ] **In thử 3 tờ ra giấy A4 thật** — kiểm 50 dòng có lọt đúng 1 trang không, ô TURN đủ to để tick.
-- [ ] Thầy duyệt → commit + push → `curl` kiểm bản live (bẫy quen: Pages hay trả file CŨ vài lần đầu).
+      Máy mới chỉ TÍNH được chiều cao trang (85 từ → 2 cột, dòng 7,4mm, chữ 10,5pt, cần 210/269mm),
+      chưa cầm được tờ giấy.
 - [ ] Cân nhắc sau: cho `running_word` vào `core/convert.js` để đổi qua lại với các act từ vựng.
 - [ ] Cân nhắc sau: chế độ 1 đội để giao bài `play.html` cho HS tự luyện.
 
