@@ -115,26 +115,32 @@
    below the moles/bubbles (z-index) so it never covers a mole's speech ---------- */
 .aw-wam-sign {
   position: absolute;
-  left: 50%; top: 6%;                        /* sits below the overlaid timer bar, high on the crest */
+  left: 50%; top: 14%;                       /* clear of the overlaid timer bar, high on the crest */
   transform: translateX(-50%);
   width: 35cqw;                              /* wider... */
   z-index: 3;
   pointer-events: none;
 }
-/* the post runs the full height of the sign; the board hangs at its MIDDLE, so
-   the post shows both above and below it (like the reference photo) */
+/* The post is CENTRED ON THE BOARD, not measured from the top of the sign
+   (teacher, 4/8/2026). The sign's own height IS the board's height, so
+   `top:50%` + `translateY(-50%)` puts the post's middle exactly on the board's
+   middle whatever the board grows to — a long quiz question, the end-of-game
+   score, True/False, all the same. The old fixed `top:0; height:18cqw` only
+   happened to look centred at the True/False size and hung badly otherwise.
+   Shortened 18cqw -> 15cqw as well, so the top of the post now sits clear
+   BELOW the timer bar instead of running up behind it (measured: post top was
+   49.5px vs the bar's 58.2px bottom — a real overlap). */
 .aw-wam-post {
   position: absolute;
-  left: 50%; top: 0;
-  transform: translateX(-50%);
-  width: 2.2cqw; height: 18cqw;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2.2cqw; height: 15cqw;
   background: url("./img/post.webp") center/100% 100% no-repeat;
   z-index: 1;
 }
 .aw-wam-board {
   position: relative;
   width: 100%;
-  margin-top: 3.6cqw;                        /* drop the board down onto the middle of the post */
   aspect-ratio: 474 / 150;                   /* ...and shorter than the original 474/190 */
   background: url("./img/thicksignplank.webp") center/100% 100% no-repeat;
   z-index: 2;
@@ -160,13 +166,30 @@
   text-transform: uppercase;
   transform-origin: center;
 }
-/* quiz mode: the whole board shows one question (auto-shrunk to fit) */
+/* quiz mode: the whole board shows one question (auto-shrunk to fit).
+   `--fit` is driven by autoFit in whack-a-mole.js — it MUST be consumed here or
+   the fit does nothing and a long question stretches the plank instead. */
 .aw-wam-sign-question {
-  font-size: 2.2cqw;
+  font-size: calc(2.2cqw * var(--fit, 1));
   font-weight: 800;
   color: #3a2412;
   line-height: 1.12;
   text-align: center;
+}
+
+/* end of game: the score takes the board over (the question/target is removed) */
+.aw-wam-sign-score {
+  font-size: 5cqw;
+  font-weight: 900;
+  color: #3a2412;
+  line-height: 1;
+  animation: aw-wam-scorepop .4s cubic-bezier(.2,1.3,.4,1) both;
+}
+/* safe to scale: the board centres its children with FLEX, so nothing here is
+   positioned by transform (see the popup-jump trap in core/HUONG DAN CORE.md) */
+@keyframes aw-wam-scorepop {
+  0%   { opacity: 0; transform: scale(.6); }
+  100% { opacity: 1; transform: scale(1); }
 }
 /* the sign "rotating" to a new question/target */
 .aw-wam-board.is-rotating { animation: aw-wam-signflip .5s ease both; }
@@ -261,7 +284,9 @@
    the -b variant). */
 .aw-wam-bubble {
   position: absolute;
-  left: 50%; bottom: 62%;                    /* just above the mole's head */
+  left: 50%; bottom: 80%;                    /* clear ABOVE the mole's head — at 62% the
+                                                tail dug ~20px into the mole's face (measured
+                                                against the sprite's real ink, 4/8/2026) */
   transform: translateX(-50%) scale(.6);
   transform-origin: 50% 130%;
   width: max-content;                        /* hug the text (NOT clamped by the narrow hole)... */
@@ -425,25 +450,16 @@
 .aw-wam-slider.is-speed { accent-color: #2f7bff; }
 .aw-wam-slider.is-lives { accent-color: #ef4444; }
 .aw-wam-slider.is-pen   { accent-color: #e0774a; }
+.aw-wam-slider.is-punish { accent-color: #22c55e; }   /* teacher asked for green */
 .aw-wam-sliderval { min-width: 86px; font-weight: 700; font-size: .85rem; }
 .aw-wam-sliderval.is-speed { color: #2f7bff; }
 .aw-wam-sliderval.is-lives { color: #ef4444; }
 .aw-wam-sliderval.is-pen   { color: #e0774a; }
+.aw-wam-sliderval.is-punish { color: #22c55e; }
 
-/* ---------- end-of-game score tally overlay ---------- */
-.aw-wam-tally {
-  position: absolute; left: 50%; top: 42%;
-  transform: translate(-50%, -50%) scale(.6);
-  z-index: 12;
-  font-weight: 900; font-size: 9cqw; color: #fff;
-  -webkit-text-stroke: 0.7cqw #7a3d12; paint-order: stroke fill;
-  opacity: 0;
-}
-.aw-wam-tally.is-on { animation: aw-wam-tallypop .4s ease-out forwards; }
-@keyframes aw-wam-tallypop {
-  0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); }
-  100% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
-}
+/* (The end-of-game tally used to be a huge number floating over the desert —
+   `.aw-wam-tally`. Since 4/8/2026 the score is shown ON THE SIGN instead, see
+   `.aw-wam-sign-score` above, so that overlay is gone.) */
 
 /* =============================================================
    EDITOR (full page, NOT inside the 16:9 stage — plain px units).

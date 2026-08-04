@@ -5,6 +5,70 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 63 (4/8/2026, v0.9.38) — WHACK-A-MOLE: 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT (bảng/cột · thang Speed · bubble · điểm cuối ván lên bảng · thanh Punishment). ⭐ CÓ SỬA 1 LỖI THẬT (autoFit chưa từng chạy). KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT — đã tự test trình duyệt thật, 0 lỗi console.
+
+**File đụng (3 + 3 docs):** `templates/whack-a-mole/whack-a-mole.js` · `whack-a-mole.css` ·
+`sample-whack-a-mole.js`. KHÔNG đụng `core/`, KHÔNG đụng 13 template khác (đã đo lại: 14/14 mount 0 lỗi).
+
+### (1) Bảng luôn nằm CHÍNH GIỮA cột, và cột không còn bị thanh giờ đè
+- **Đo trước khi sửa** (bản live, khung 968px): cột `49,5 → 223,4px`, thanh thời gian `43,7 → 58,2px`
+  → **cột thò lên sau thanh giờ thật**. Bảng lệch thấp hơn tâm cột 1,3px ở chế độ True/False.
+- **⭐ LỖI THẬT tìm ra khi truy nguyên "mọi size bảng"**: `updateSign()` gọi `autoFit(root, board, …)` —
+  tức so chiều cao câu hỏi với **CẢ VÙNG CHƠI** (~428px) chứ không phải cái bảng (~103px). Vì vậy `--fit`
+  **CHƯA BAO GIỜ chạy** kể từ lúc viết; thêm nữa `.aw-wam-sign-question` **không hề dùng `var(--fit)`**,
+  nên dù có chạy cũng vô nghĩa. Hậu quả đo được: câu hỏi 262 ký tự làm **bảng phình 376,7px** (gấp 3,6 lần
+  chiều cao thiết kế 103,4px) và thòng xuống dưới đáy cột 242px — đúng cái thầy thấy "bảng nằm thấp".
+- **Sửa 3 chỗ**: (a) `.aw-wam-post` đổi từ `top:0; height:18cqw` sang **`top:50%; transform:translate(-50%,-50%);
+  height:15cqw`** → cột tự lấy TÂM BẢNG làm tâm, đúng với MỌI chiều cao bảng; ngắn lại 18→15cqw nên đỉnh cột
+  tụt xuống dưới thanh giờ. (b) `.aw-wam-board` bỏ `margin-top:3.6cqw`, `.aw-wam-sign` `top:6%`→**`14%`**
+  (giữ nguyên vị trí bảng nhưng nay chiều cao khối sign = đúng chiều cao bảng, để `top:50%` của cột chính xác).
+  (c) autoFit nay so với **chiều cao THIẾT KẾ của tấm ván** (`offsetWidth × 150/474` − padding) qua một hộp
+  giả `plankFitBox()`, và `.aw-wam-sign-question` dùng `font-size: calc(2.2cqw * var(--fit,1))`.
+- **Đo lại:** True/False → bảng lệch tâm cột **0,0px**, thừa cột trên 18,9 / dưới 19,0px, đỉnh cột cách
+  thanh giờ **15,8px**. Quiz: câu 17/66/262 ký tự → bảng giữ đúng 103,4px (fit 1 / 0,91 / 0,48), câu 525 ký tự
+  → fit chạm sàn 0,4 nên bảng nở 133px **nhưng vẫn lệch tâm 0,0px**.
+- ⚠️ **BẪY vấp phải khi sửa**: đặt `const plankFitBox` ngay trên `function updateSign` là **sai** — `updateSign(false)`
+  được gọi ở TRÊN đó trong `mount()`, nên const còn trong vùng chết (temporal dead zone) → `ReferenceError`
+  (test trình duyệt bắt được, không phải suy đoán). Đã đổi thành **hàm** `plankFitBox()` (hàm được hoisted).
+
+### (2) Thang Speed trải ĐỀU từ cực chậm tới cực nhanh
+Thầy báo "speed 1 vẫn quá nhanh". Công thức cũ `1350 − speed×90` chỉ xuống tới 1260ms ở mức 1.
+Nay nội suy tuyến tính giữa 2 đầu: `pace=(speed−1)/9` · nhịp ra mole `2400→340ms` · thời gian mole đứng
+`4200→900ms` · số mole cùng lúc `1→8`. **Đo thật:** mức 1 = **1 mole mỗi 4,5s, 1 con một lúc, đứng 4,2s**;
+mức 5 = 1 mole mỗi 2,0s (đứng 2,7s); mức 10 = 1 mole mỗi 0,5s (đứng 0,9s).
+⚠️ Vì chia đều nên **mức 5 nay chậm hơn mức 5 cũ**; nhịp cũ ở mức 5 (≈0,9s/mole) nay tương đương **mức 7–8**.
+
+### (3) Bubble nâng lên khỏi mặt mole
+`.aw-wam-bubble` `bottom: 62% → 80%`. Cách đo (dùng lại được): quét **alpha** file `mole01ready.webp`
+(225×231) → 25,5% phía trên ảnh là trong suốt, mực vẽ mới bắt đầu. Trước: đuôi bubble **cắm sâu 20,1px vào
+mặt mole**. Sau: cả 3 cỡ hố đều thoát mặt — khe hở **3,3px (hố 10cqw) / 6,6 (11,5) / 9,9 (13)**, và bubble
+không vượt lên khỏi mép khung.
+
+### (4) Hết ván: điểm hiện TRÊN BẢNG, câu hỏi biến mất
+`endGame()` không còn đắp số khổng lồ giữa sa mạc (`.aw-wam-tally`, đã xoá cả CSS). Nay huỷ `fitter`, dọn
+sạch bảng, gắn class `is-score` rồi đặt **"SCORE" + số điểm** (`.aw-wam-sign-score`, 5cqw) lên chính tấm ván —
+cột vẫn đứng sau. Số ĐỌNG LẠI trên bảng (trước phải xoá đi kẻo đè chữ "TIME'S UP"; nay bảng ở trên cao,
+bảng tổng kết mờ đục của engine tự che). **Đo thật:** chơi 1 ván 6s ăn 16 điểm → bảng hiện `SCORE 16`,
+khớp ô điểm engine, `.aw-wam-sign-target` biến mất, bảng vẫn lệch tâm cột 0,0px.
+⚠️ Số đếm tăng dần chạy bằng `requestAnimationFrame` — pane ẩn thì rAF đóng băng nên chốt thẳng số cuối qua
+`setTimeout` dự phòng (thiết kế sẵn có, không phải lỗi mới).
+
+### (5) Thanh "Punishment" trong Options (0–10s, MÀU XANH LÁ)
+Số giây đông cứng sau khi đập sai — trước hard-code 4s (`PENALTY_FREEZE_MS`), nay là option
+`options.punishSeconds` (mặc định **4** ⇒ act cũ chơi y hệt). Slider nằm giữa "Points off per wrong hit" và
+"Bonus crates", nhãn **"Punishment (pause after a wrong hit)"**, accent `#22c55e`, hiện "Off" ở 0 và "7s"…
+Dưới 400ms thì bỏ luôn chữ "WAIT…" + rung lắc (quá ngắn, chớp nháy vô nghĩa).
+**Đo thật:** 0s → mole mới sau 362ms, KHÔNG rung · 2s → 2499ms · 8s → 8098ms, có rung.
+
+### Kiểm hồi quy
+14/14 template mount 0 lỗi console; sau khi CSS whack-a-mole đã nằm trong document, **Quiz vẫn còn đủ 2 nút
+mũi tên** (`display:flex`) → luật ẩn nav của whack vẫn scoped đúng, không rò sang game khác.
+
+**VIỆC ĐANG CHỜ:** thầy chơi thử trên TOMKO (đặc biệt xem mức Speed nào vừa tay, vì thang đã đổi) → duyệt →
+commit + push + `curl` kiểm live.
+
+---
+
 ## Đợt 62 (4/8/2026, v0.9.37) — FIND THE MATCH: BỎ "x of y" + ĐƯA "Page X/Y" XUỐNG THANH DƯỚI + BỎ NÚT LẬT TRANG + KHÔNG CÒN Ô ĐÁP ÁN BỊ CẮT. ⭐ CÓ SỬA CORE (1 chỗ, thêm mới). ✅ THẦY DUYỆT → COMMIT (`d4f526f`) + PUSH + LIVE.
 
 **Bối cảnh:** thầy gửi ảnh chụp 1 act 60 cặp đang chơi — **hàng ô cuối bị cắt ngang** vì thiếu chỗ, kèm 3 yêu cầu:

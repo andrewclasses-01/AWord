@@ -20,8 +20,11 @@
 //    own bar + clock (manualTimerStart, so bonus "time" can extend it) and ends
 //    at 0; "countUp" shows no bar and ends only on the objective. Either way,
 //    clearing every needed answer ends the round early.
-//  • Extras: Lives (hearts), a wrong-hit points penalty, combo streak bonus, and
-//    three independently-toggled bonus CRATES (time / loot / power).
+//  • Extras: Lives (hearts), a wrong-hit points penalty, a wrong-hit "Punishment"
+//    freeze (0-10s, Options), combo streak bonus, and three independently-toggled
+//    bonus CRATES (time / loot / power).
+//  • The wooden SIGN doubles as the scoreboard: when the round ends the question
+//    clears off the plank and the final score counts up there.
 //
 //  Wild West art + sounds are ripped from Wordwall's own theme (teacher's call)
 //  and live self-contained under ./img and ./sounds. This game keeps a FIXED
@@ -58,8 +61,15 @@ const CRATE_TYPES = [
 const COMBO_THRESHOLD = 3;     // consecutive correct hits before a combo bonus kicks in
 const POWER_MS = 6000;         // how long a power crate doubles points
 const CRATE_CHANCE = 0.16;     // chance a spawn is a crate instead of a mole (when enabled)
-const PENALTY_FREEZE_MS = 4000; // wrong hit: the dizzy mole stays up + everything else pauses this long
+const PUNISH_DEFAULT = 4;      // wrong hit: seconds the dizzy mole stays up + everything else pauses.
+                               // Teacher-adjustable since 4/8/2026 ("Punishment" slider, 0..10s);
+                               // 4 = the value this was hard-coded to before, so old acts play the same.
+const MAX_PUNISH = 10;
 const MAX_LIVES = 10;
+// Below this the freeze is too short to read as a punishment, so we skip the
+// "WAIT…" note and the dizzy wobble and just let the mole duck.
+const PUNISH_MIN_WOBBLE_MS = 400;
+const PLANK_RATIO = 150 / 474;   // the sign board's painted aspect (must match the CSS aspect-ratio)
 const TARGET_RATIO = 0.55;     // trueFalse: chance a fresh mole carries a still-needed answer (vs a distractor)
 
 // lives: 0 / null / undefined -> unlimited (never game-over); 1..10 -> that many hearts
@@ -159,6 +169,12 @@ const wamTemplate = {
     slider(gPen, "is-pen", 0, 5, () => (typeof draft.minusAmount === "number" ? Math.max(0, Math.min(5, draft.minusAmount)) : 1),
       v => draft.minusAmount = v, v => v === 0 ? "Off" : "−" + v);
 
+    // PUNISHMENT 0..10s (0 = off) — how long the game freezes after a wrong hit
+    const gPunish = group("Punishment (pause after a wrong hit)");
+    slider(gPunish, "is-punish", 0, MAX_PUNISH,
+      () => (typeof draft.punishSeconds === "number" ? Math.max(0, Math.min(MAX_PUNISH, draft.punishSeconds)) : PUNISH_DEFAULT),
+      v => draft.punishSeconds = v, v => v === 0 ? "Off" : v + "s");
+
     // BONUS crates — a separate checkbox for each of the three
     const gBonus = group("Bonus crates");
     gBonus.append(
@@ -202,6 +218,9 @@ const wamTemplate = {
     const startLives = normLives(opt.lives);
     let livesLeft = startLives;
     const penalty = (typeof opt.minusAmount === "number") ? Math.max(0, Math.min(5, opt.minusAmount)) : 1;
+    // Punishment = the freeze after a wrong hit, in seconds (Options slider, 0 = none)
+    const freezeMs = Math.round(1000 * ((typeof opt.punishSeconds === "number")
+      ? Math.max(0, Math.min(MAX_PUNISH, opt.punishSeconds)) : PUNISH_DEFAULT));
 
     // bonus crates — each independent; "time" only helps a count-down game
     const bonusTime = opt.bonusTime !== false && timerMode === "countDown";
@@ -225,9 +244,15 @@ const wamTemplate = {
     }
 
     // ---------- pacing from speed ----------
-    const spawnBase = Math.round(1350 - speed * 90);        // gap between spawns (ms)
-    const upDuration = Math.round(2700 - speed * 165);       // how long a mole stays up (ms)
-    const maxConcurrent = Math.min(HOLE_LAYOUT.length, 2 + Math.round(speed / 2.2));
+    // The 1..10 slider is spread EVENLY between the two real extremes (teacher,
+    // 4/8/2026): 1 = very slow (one mole at a time, up for ages), 10 = frantic.
+    // The old formula only reached 1260ms/2535ms/2 moles at speed 1, which the
+    // teacher still found too fast — so speed 1 now starts from a much slower
+    // pace and every step is one equal slice of the way to speed 10.
+    const pace = (speed - 1) / 9;                                            // 0 at speed 1 … 1 at speed 10
+    const spawnBase = Math.round(2400 + pace * (340 - 2400));                // gap between spawns (ms)
+    const upDuration = Math.round(4200 + pace * (900 - 4200));               // how long a mole stays up (ms)
+    const maxConcurrent = Math.min(HOLE_LAYOUT.length, Math.round(1 + pace * 7));
 
     // ---------- state ----------
     let score = 0, wrongCount = 0, whacks = 0;
@@ -357,6 +382,25 @@ const wamTemplate = {
     ensureTimerUI();
 
     // ---------- sign rendering ----------
+    // The question is fitted against the plank's DESIGNED height (its width ÷ the
+    // painted image's aspect ratio, minus the board's padding) — not against the
+    // board's own height, which grows with the text and would make the search
+    // circular. The old code fitted against `root` (the WHOLE play area), so
+    // `--fit` never once fired: a long question just stretched the plank to 3-4x
+    // its height and hung far below the post. Measured 4/8/2026: a 47-word
+    // question made the board 376px tall instead of 103px.
+    // NOTE: built INSIDE updateSign, not as a `const` next to it — `updateSign()`
+    // is called further up in mount(), so a const here would still be in its
+    // temporal dead zone at that point (caught by the browser test, 4/8/2026).
+    function plankFitBox() {
+      return {
+        get clientHeight() {
+          const cs = getComputedStyle(board);
+          const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+          return board.offsetWidth * PLANK_RATIO - padY;
+        }
+      };
+    }
     function updateSign(animate) {
       if (animate) {
         board.classList.remove("is-rotating"); void board.offsetWidth; board.classList.add("is-rotating");
@@ -367,8 +411,8 @@ const wamTemplate = {
         const q = questions[levelIndex];
         const qEl = el("div", "aw-wam-sign-question", escapeHtml(q ? q.question : ""));
         board.append(qEl);
-        fitter = autoFit(root, board, s => board.style.setProperty("--fit", s), {
-          slack: root.clientWidth * 0.02,
+        fitter = autoFit(plankFitBox(), board, s => board.style.setProperty("--fit", s), {
+          slack: 2,
           measure: () => qEl.offsetHeight
         });
       } else {
@@ -616,18 +660,21 @@ const wamTemplate = {
           later(() => endGame("gameover"), 600);
           h.freeT = later(() => { h.hole.classList.remove("is-up"); later(() => freeHole(h), 300); }, 520);
         } else {
+          // The freeze lasts as long as the "Punishment" option says (0 = none:
+          // the mole just ducks and play carries straight on).
           frozen = true;
-          floatText(h, "WAIT…", "is-minus");
+          const wobble = freezeMs >= PUNISH_MIN_WOBBLE_MS;
+          if (wobble) floatText(h, "WAIT…", "is-minus");
           holes.forEach(o => { if (o !== h && (o.status === "up" || o.status === "rising")) duck(o, false); });
           // ...and the mole itself staggers about, dizzy, for the whole penalty —
           // it only ducks once the freeze is over. Starts with the dizzy sprite
           // (swapped 150ms after the hit) so the wobble matches the picture.
-          later(() => { if (h.status === "hit") h.hole.classList.add("is-dizzy"); }, 150);
+          if (wobble) later(() => { if (h.status === "hit") h.hole.classList.add("is-dizzy"); }, 150);
           h.freeT = later(() => {
             h.hole.classList.remove("is-dizzy", "is-up");
             later(() => freeHole(h), 300);
             frozen = false;
-          }, PENALTY_FREEZE_MS);
+          }, freezeMs);
         }
       }
     }
@@ -706,10 +753,18 @@ const wamTemplate = {
       timers.forEach(t => clearTimeout(t)); timers.clear();
       holes.forEach(h => { h.hole.classList.remove("is-up", "is-crate", "is-dizzy"); });
 
-      // brief score tally, then hand off to the engine's celebration/summary
-      const tally = el("div", "aw-wam-tally", "0");
-      scene.append(tally);
-      void tally.offsetWidth; tally.classList.add("is-on");
+      // Brief score tally, then hand off to the engine's celebration/summary.
+      // The tally takes over the SIGN (teacher, 4/8/2026): the question / "Hit
+      // moles that are: TRUE" clears out and the number counts up on the plank,
+      // post still standing behind it, like a real scoreboard. (It used to be a
+      // huge number floating over the middle of the desert, which then had to be
+      // removed again so it wouldn't sit on top of "TIME'S UP".)
+      if (fitter) { fitter.destroy(); fitter = null; }
+      board.classList.remove("is-rotating");
+      board.classList.add("is-score");
+      board.innerHTML = "";
+      const tally = el("div", "aw-wam-sign-score", "0");
+      board.append(el("div", "aw-wam-sign-lead", "SCORE"), tally);
       wamSound.pointsCounting();
       const startT = performance.now(); const DUR = 900;
       let done = false;
@@ -717,7 +772,7 @@ const wamTemplate = {
         if (done) return; done = true;
         tally.textContent = String(score);
         wamSound.pointsCounted();
-        setTimeout(() => { tally.remove(); reallyFinish(); }, 500);   // clear our big number before the summary opens
+        setTimeout(reallyFinish, 500);   // the score STAYS on the sign behind the summary
       };
       const step = () => {
         if (done) return;

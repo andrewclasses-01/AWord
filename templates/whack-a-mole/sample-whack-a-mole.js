@@ -25,9 +25,10 @@ export const activity = {
     timer: "countDown",        // "countDown" (bar) | "countUp" (no bar; ends when all needed answers are hit)
     timerTotalSeconds: 60,     // count-down length; also the "None"-free timer the engine drives us from
     switchAnswers: false,      // true -> sign says FALSE, hit the FALSE moles
-    speed: 5,                  // 1..10 — how fast/often moles pop up
+    speed: 5,                  // 1..10 — how fast/often moles pop up (1 = very slow, 10 = frantic)
     lives: 0,                  // 0 = Unlimited; 1..10 = hearts (game over at 0)
     minusAmount: 1,            // points off per wrong hit (0 = off)
+    punishSeconds: 4,          // "Punishment": seconds everything freezes after a wrong hit (0..10, 0 = off)
     bonusTime: true,           // bonus crates — each toggles independently
     bonusLoot: true,
     bonusPower: true,

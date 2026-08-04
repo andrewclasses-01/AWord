@@ -1,10 +1,47 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE** (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
+**TRẠNG THÁI: 🟢 ĐỢT 63 (v0.9.38) CHỜ THẦY DUYỆT** — 5 điều chỉnh thầy gửi 1 lượt, đã tự test trình duyệt
+thật, 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
 chuyển từ mọi game QA, sửa ở `core/convert.js`, không đụng file của template này; trước đó **Đợt 57,
 v0.9.32** — 2 tinh chỉnh thầy yêu cầu). `built:true` trong `core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`. **KHÔNG đụng core.**
+
+## ⭐ ĐỢT 63 (4/8/2026, v0.9.38) — 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT
+
+Chỉ đụng 3 file của template (`whack-a-mole.js` · `.css` · `sample-whack-a-mole.js`). **KHÔNG đụng core.**
+Nhật ký đầy đủ kèm mọi con số đo: `GHI CHU DU AN.md` Đợt 63. Tóm tắt + BẪY để đời:
+
+**1. Bảng luôn giữa cột + cột không bị thanh giờ đè.** Cột nay `top:50%; translate(-50%,-50%); height:15cqw`
+(trước `top:0; height:18cqw`) → tự lấy TÂM BẢNG làm tâm với mọi chiều cao bảng; bảng bỏ `margin-top`, sign
+`top:6%→14%`. Đo: lệch tâm **0,0px**, đỉnh cột cách thanh giờ 15,8px (trước ĐÈ THẬT: cột 49,5px vs thanh 58,2px).
+
+> ⭐ **LỖI THẬT nằm dưới đáy chuyện "bảng nằm thấp"**: `autoFit` được gọi với `root` (CẢ VÙNG CHƠI ~428px)
+> làm hộp đo thay vì cái bảng (~103px), **và** `.aw-wam-sign-question` không dùng `var(--fit)` → `--fit`
+> chưa từng có tác dụng kể từ ngày viết. Câu hỏi 262 ký tự làm **bảng phình 376,7px**, thòng 242px dưới đáy cột.
+> Nay đo theo chiều cao THIẾT KẾ của ván (`offsetWidth × 150/474` − padding) qua hộp giả `plankFitBox()`,
+> và CSS dùng `calc(2.2cqw * var(--fit,1))`. **Ai sửa template khác nhớ soi lại: `--fit` chỉ có tác dụng khi
+> CSS THỰC SỰ tiêu thụ biến đó, và hộp đo phải là hộp bị giới hạn thật.**
+
+> ⚠️ **BẪY TDZ**: `updateSign()` được gọi Ở TRÊN chỗ khai báo trong `mount()`, nên `const plankFitBox = {...}`
+> đặt cạnh `updateSign` là `ReferenceError` (còn trong temporal dead zone). Phải dùng **hàm** (được hoisted).
+> Test trình duyệt bắt được — đọc code suông không thấy.
+
+**2. Thang Speed trải đều.** `pace=(speed−1)/9`; nhịp spawn `2400→340ms`, mole đứng `4200→900ms`, số mole
+cùng lúc `1→8`. Đo: mức 1 = 1 mole/4,5s (1 con, đứng 4,2s) · mức 5 = 1/2,0s · mức 10 = 1/0,5s.
+⚠️ Mức 5 nay CHẬM HƠN mức 5 cũ — nhịp cũ tương đương mức 7–8.
+
+**3. Bubble `bottom: 62% → 80%`.** Trước đuôi bubble cắm 20,1px vào mặt mole. Cách đo dùng lại được: **quét
+alpha** sprite (`mole01ready.webp` 225×231 → 25,5% trên cùng trong suốt) mới ra mực vẽ thật. Sau: khe hở
+3,3 / 6,6 / 9,9px theo 3 cỡ hố.
+
+**4. Hết ván điểm hiện TRÊN BẢNG.** Bỏ hẳn `.aw-wam-tally` (số khổng lồ giữa sa mạc + CSS của nó); `endGame()`
+dọn bảng, thêm `is-score` rồi đặt "SCORE" + số (`.aw-wam-sign-score`). Số ĐỌNG LẠI (bảng ở cao, Summary
+mờ đục tự che). Đo: ván 6s ăn 16 điểm → bảng hiện `SCORE 16` khớp ô điểm engine.
+
+**5. Option `punishSeconds` (0–10s, mặc định 4, slider XANH LÁ).** Thay hằng `PENALTY_FREEZE_MS` cũ; nhãn
+"Punishment (pause after a wrong hit)". Dưới 400ms bỏ "WAIT…" + rung lắc. Đo: 0s→362ms (không rung) ·
+2s→2499ms · 8s→8098ms. **Act cũ không có field này ⇒ vẫn 4s y như trước.**
 
 ## ⭐ ĐỢT 61 (4/8/2026, v0.9.36) — NAY NHẬN ĐƯỢC ACT TỪ MỌI GAME QA (Anagram/Quiz/... → Whack-a-mole)
 
@@ -136,7 +173,8 @@ nhóm "Auto switch" + nút Timer "None" (chỉ còn Count up / Count down; none�
 - **trueFalse**: `content.statements[{text, answer:bool}]`. **quiz**: `content.questions[{question,
   answers:[{text,correct}]}]`. `options.mode` chọn chế độ.
 - `options`: `mode`, `timer`(countUp/countDown), `timerTotalSeconds`, `switchAnswers`, `speed`,
-  `lives`(0=∞), `minusAmount`, `bonusTime/Loot/Power`, `shuffleQuestions`, `showAnswers`.
+  `lives`(0=∞), `minusAmount`, **`punishSeconds`**(0–10s đông cứng sau khi đập sai, thiếu field = 4s),
+  `bonusTime/Loot/Power`, `shuffleQuestions`, `showAnswers`.
 
 ## BẪY (đã gặp trong đợt này)
 - `.aw-top-timer` ẩn bằng `visibility:hidden` — `display:none` phá grid `has-inline` (topbarMid dồn về cột 0).
