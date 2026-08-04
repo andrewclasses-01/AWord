@@ -45,5 +45,9 @@ export const quizSound = {
   play: () => playFile("blockgameintro1"),
   restart: () => playFile("blockgamerestart"),
   timeWarning: () => playFile("blockgametimeout"),
-  complete: () => playFile("blockgamesuccessful")
+  complete: () => playFile("blockgamesuccessful"),
+  // Ran out of lives (Lives option, 4/8/2026) — the pack has no dedicated
+  // "game over" file, so the timeout cue stands in for it: a flat ending, not
+  // the success fanfare.
+  gameOver: () => playFile("blockgametimeout")
 };

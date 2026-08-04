@@ -19,6 +19,11 @@
 //    new answers — no flicker, no rebuild. Navigate with ◁ ▷ OR number keys 1-9;
 //    last question shows ✓ (finish).
 //  • Menu "Submit answers" finishes at any time (unanswered = wrong).
+//  • LIVES (Options, slider 0..10, 0 = Unlimited — the default, so every quiz
+//    made before this feature plays exactly as it always did): a WRONG answer
+//    costs a heart (shown in the top bar via ui.livesSlot, left of the score);
+//    reaching 0 ends the game right away with "Game over", even when questions
+//    are left. Same control + rendering as True/false and Type the answer.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -42,10 +47,21 @@ const PALETTE = [
   { c: "#8b5cf6", d: "#7c3aed" }  // violet
 ];
 
+const MAX_LIVES = 10;
+// Lives are opt-in (4/8/2026): 0, null or undefined -> unlimited. Every quiz
+// saved before this feature has no `lives` field at all, so undefined MUST mean
+// unlimited (not a default life count) — otherwise old content would suddenly
+// end in a Game Over nobody asked for. Same rule as Type the answer / Anagram.
+function normLives(v) {
+  if (v == null || v === 0) return null;
+  return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
+}
+
 const quizTemplate = {
   type: "quiz",
   scorable: true,
   name: "Quiz",
+  hasLivesSlot: true,      // hearts render in the top bar, left of the score (same slot as True/false)
 
   // Content editor for this game (opened by the home page and the in-game Edit
   // button). Each template supplies its own editor the same way.
@@ -72,11 +88,16 @@ const quizTemplate = {
     play: quizSound.play,
     restart: quizSound.restart,
     timeWarning: quizSound.timeWarning,
-    complete: quizSound.complete
+    // Silenced here on purpose: quiz.js's own finish() picks ONE end sound —
+    // the success fanfare, or the "timeout" cue when the player ran out of
+    // lives (a fanfare over GAME OVER would be plain wrong). Same pattern as
+    // Find the match / True or false.
+    complete: () => {}
   },
 
   // Extra Options: the central Points off group is engine-built; here we add
-  // "Allow skip" (default OFF -> the student must answer before Next advances).
+  // "Allow skip" (default OFF -> the student must answer before Next advances)
+  // and "Lives" (0..10, 0 = Unlimited).
   buildExtraOptions({ panel, draft, el, mkCheck }) {
     const g = el("div", "aw-opt-group");
     g.append(el("div", "aw-opt-label", "Navigation"));
@@ -85,6 +106,26 @@ const quizTemplate = {
       v => draft.allowSkip = v));
     g.append(row);
     panel.append(g);
+
+    // LIVES — a slider 0..10 (0 = Unlimited), teacher's spec 4/8/2026. A wrong
+    // answer costs a heart; hitting 0 ends the game right away. Same control and
+    // rendering pattern as True/false and Type the answer.
+    const gLives = el("div", "aw-opt-group");
+    gLives.append(el("div", "aw-opt-label", "Lives"));
+    const rowLives = el("div", "aw-opt-row aw-quiz-livesrow");
+    const curLives = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
+    const livesVal = el("span", "aw-quiz-livesval", curLives === 0 ? "Unlimited" : String(curLives));
+    const livesInput = el("input", "aw-quiz-livesslider");
+    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
+    livesInput.value = String(curLives);
+    livesInput.oninput = () => {
+      const v = parseInt(livesInput.value, 10);
+      draft.lives = v;   // 0 stored = unlimited
+      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
+    };
+    rowLives.append(livesInput, livesVal);
+    gLives.append(rowLives);
+    panel.append(gLives);
   },
 
   mount(root, activity, ui) {
@@ -118,6 +159,9 @@ const quizTemplate = {
     let index = 0;
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
+    let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
+    let ending = false;     // out of lives: the game is on its way out, ignore any further input
+    let heartTimer = null;  // fallback timer for the "heart pops out" animation
 
     // ----- Build the card & tiles ONCE; navigation updates them in place -----
     root.innerHTML = "";
@@ -138,6 +182,7 @@ const quizTemplate = {
     applyQuestion(0);   // first question, no animation
     ui.setScore(scoreNow());
     updateNav();
+    renderLives();
 
     // Fit now, once fonts are ready, and on every resize.
     fitNow();
@@ -268,7 +313,7 @@ const quizTemplate = {
     function choose(i) {
       const q = questions[index];
       const st = state[index];
-      if (st.chosen !== null || finished) return;
+      if (st.chosen !== null || finished || ending) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
 
@@ -289,21 +334,81 @@ const quizTemplate = {
       ui.setScore(scoreNow());
       updateNav();
 
+      // A wrong answer costs a heart when Lives are on. Running out ends the
+      // game right away ("Game over"), even with questions still unanswered —
+      // and `ending` locks the tiles + nav for the short wait so nothing can be
+      // clicked while the game is on its way out.
+      const outOfLives = st.correct ? false : loseLife();
+      if (outOfLives) {
+        ending = true;
+        tiles.forEach(t => (t.tile.disabled = true));
+        updateNav();          // grey the arrows out too — `ending` already blocks their handlers,
+                              // but a live-looking Next during the last 1.5s is just confusing
+        clearAutoTimer();
+        autoTimer = setTimeout(() => finish("gameover"), 1500);
+        return;
+      }
+
       // Auto "Game complete" once EVERY question has been answered (no question
       // left). Wait a moment so the ✓/✗ feedback plays first.
       if (state.every(s => s.chosen !== null)) {
-        autoTimer = setTimeout(finish, st.correct ? 1000 : 1500);
+        autoTimer = setTimeout(() => finish("complete"), st.correct ? 1000 : 1500);
       }
+    }
+
+    // ===== LIVES (opt-in via Options; ui.livesSlot is a span left of the score,
+    // reserved by tpl.hasLivesSlot) — same rendering pattern as True/false. =====
+    // 1..5 lives show that many separate hearts; 6..10 show a compact "N♥";
+    // unlimited shows nothing at all.
+    function renderLives() {
+      const slot = ui.livesSlot;
+      if (!slot) return;
+      slot.innerHTML = "";
+      if (livesLeft == null) return;                 // unlimited -> no hearts shown
+      if (livesLeft <= 5) {
+        for (let i = 0; i < livesLeft; i++) slot.append(el("span", "aw-top-heart", "&#9829;"));
+      } else {
+        slot.append(el("span", "aw-top-heartcount", String(livesLeft)));
+        slot.append(el("span", "aw-top-heart", "&#9829;"));
+      }
+    }
+
+    // Costs one life; pops the LEFTMOST heart out (when hearts are shown
+    // individually) then re-renders. Returns true if that was the last life.
+    // The pop uses .animate() WITH a setTimeout fallback (core rule: onfinish
+    // may never fire in a hidden tab).
+    function loseLife() {
+      if (livesLeft == null) return false;           // unlimited -> can't lose
+      const slot = ui.livesSlot;
+      const gone = (livesLeft <= 5 && slot) ? slot.firstChild : null;   // leftmost heart
+      livesLeft = Math.max(0, livesLeft - 1);
+      if (gone) {
+        let done = false;
+        const finishPop = () => { if (done) return; done = true; renderLives(); };
+        try {
+          const a = gone.animate(
+            [{ transform: "scale(1)", opacity: 1 }, { transform: "scale(1.7)", opacity: 0 }],
+            { duration: 320, easing: "ease-in", fill: "forwards" });
+          a.onfinish = finishPop;
+        } catch (e) { finishPop(); }
+        heartTimer = setTimeout(finishPop, 360);
+      } else {
+        renderLives();
+      }
+      return livesLeft <= 0;
     }
 
     function updateNav() {
       const isLast = index === total - 1;
-      const may = canAdvance();   // gate Next/finish on the current answer unless Allow skip
+      const may = canAdvance() && !ending;   // gate Next/finish on the current answer unless Allow skip
       ui.setNav({
         index: index + 1,
         total,
-        onPrev: index > 0 ? goPrev : null,
-        onNext: isLast ? (may ? finish : null) : (may ? goNext : null),
+        onPrev: (index > 0 && !ending) ? goPrev : null,
+        // wrapped, NOT `finish` itself: engine wires the button as
+        // `btn.onclick = handler`, so a bare `finish` would be handed the click
+        // event as its `reason` argument.
+        onNext: isLast ? (may ? () => finish("complete") : null) : (may ? goNext : null),
         nextLabel: isLast ? icons.check : null   // last question: arrow becomes ✓ (finish)
       });
     }
@@ -356,16 +461,16 @@ const quizTemplate = {
     // must NOT auto-end under them (same fix as Type-the-answer, Đợt 56). The
     // auto-finish still fires when they answer everything and simply stop.
     function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
-    function goPrev() { if (!animating && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
-    function goNext() { if (!animating && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
+    function goPrev() { if (!animating && !ending && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
+    function goNext() { if (!animating && !ending && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
 
     // Keyboard: number keys 1-9 answer the current question; ← → navigate.
     function onKey(e) {
-      if (finished) return;
+      if (finished || ending) return;
       if (e.key === "ArrowLeft") { goPrev(); return; }
       if (e.key === "ArrowRight") {
         if (!canAdvance()) return;   // same gate as the Next button
-        (index === total - 1 ? finish : goNext)();
+        (index === total - 1 ? () => finish("complete") : goNext)();
         return;
       }
       const n = parseInt(e.key, 10);
@@ -375,9 +480,14 @@ const quizTemplate = {
       }
     }
 
-    function finish() {
+    // `reason` is "complete" (everything answered / Submit answers / the ✓ button)
+    // or "gameover" (ran out of lives). It picks the end SOUND and the title on
+    // the celebration screen; everything else is identical.
+    function finish(reason = "complete") {
       if (finished) return;
       finished = true;
+      clearAutoTimer();
+      if (reason === "gameover") quizSound.gameOver(); else quizSound.complete();
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;
       // per-question detail for the "Show answers" review screen
@@ -396,6 +506,9 @@ const quizTemplate = {
       const raw = { correct, incorrect: total - correct, total, perQuestion, review, answered };
       // With Points off on, rank + summary use the penalised score (may be negative).
       if (pointsOff) { const pts = scoreNow(); raw.score = pts; raw.scoreText = String(pts); }
+      // Out of lives -> the celebration screen reads "Game over" instead of
+      // "Game complete" (engine reads raw.title; undefined = default).
+      if (reason === "gameover") raw.title = "Game over";
       ui.finish(raw);
     }
 
@@ -405,6 +518,8 @@ const quizTemplate = {
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(fitRaf);
       if (autoTimer) clearTimeout(autoTimer);
+      if (heartTimer) clearTimeout(heartTimer);
+      if (ui.livesSlot) ui.livesSlot.innerHTML = "";   // hearts must not survive into the next game
     };
   }
 };

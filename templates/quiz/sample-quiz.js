@@ -18,7 +18,7 @@ export const activity = {
     shuffleAnswers: true,
     pointsOff: 0,
     allowSkip: false,
-    lives: null
+    lives: 0            // 0 = Unlimited (slider's left end)
   },
   content: {
     questions: [

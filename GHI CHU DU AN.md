@@ -5,6 +5,54 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 64 (4/8/2026, v0.9.39) — QUIZ: THÊM THANH LIVES (0–10, 0 = Unlimited). KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 0 lỗi console).
+
+**Yêu cầu của thầy:** đọc dự án + template QUIZ, xem đã có thanh Lives chưa; chưa có thì thêm, từ 0 đến 10.
+**Kiểm tra ra:** Quiz **CHƯA hề có Lives** — cả `quiz.js` lẫn `quiz.css` không có chữ nào; duy nhất
+`sample-quiz.js` có dòng thừa `lives: null` (không ai đọc, sót lại từ lần copy khuôn nào đó).
+
+**File đụng (4, đều trong `templates/quiz/`):** `quiz.js` · `quiz.css` · `quiz-sound.js` · `sample-quiz.js`.
+KHÔNG đụng `core/` (không cần: hạ tầng tim đã có sẵn từ True/false), KHÔNG đụng 13 template khác.
+
+### Cách làm — bám ĐÚNG khuôn Type the answer (Đợt 56) và True/false
+- Ô chứa tim trong thanh trên **đã có sẵn ở core**: `tpl.hasLivesSlot = true` → `engine.js` dựng
+  `ui.livesSlot` ngay BÊN TRÁI ô điểm; CSS `.aw-top-lives/.aw-top-heart/.aw-top-heartcount` cũng đã có
+  trong `core/app.css`. Nên đợt này **không phải đề xuất sửa core dòng nào**.
+- **Options → nhóm "Lives"**: slider `0..10`, 0 hiện chữ **"Unlimited"** (class riêng
+  `.aw-quiz-livesrow/-livesslider/-livesval`, dựng trong `buildExtraOptions` cạnh nhóm Navigation).
+- **`normLives(v)`**: `0`/`null`/`undefined` → **vô số mạng**. ⭐ Quan trọng: "chưa set" PHẢI là vô số
+  mạng chứ không phải mặc định 5 — mọi act Quiz cũ đều không có trường `lives`, nếu mặc định 5 thì các
+  bộ đề cũ bỗng dưng "Game over" giữa chừng (đúng lý do Anagram/TTA đã chốt như vậy).
+- **Mất mạng**: chỉ khi trả lời SAI → tim TRÁI NHẤT phóng to rồi tan (`.animate()` **kèm `setTimeout`
+  dự phòng** theo luật core). 1..5 mạng hiện từng trái tim rời; 6..10 hiện gọn `N♥`.
+- **Hết mạng**: khoá hết ô đáp án + gọi `updateNav()` cho 2 mũi tên mờ hẳn (cờ `ending`), 1,5s sau
+  `finish("gameover")` → màn ăn mừng và bảng tổng kết hiện **"Game over"** thay "Game complete"
+  (qua `raw.title`, cơ chế sẵn có mà Anagram/Find the match/Unjumble đang dùng).
+- **Âm cuối ván**: pack Quiz không có file "game over" riêng → `sounds.complete` của template nay để
+  **rỗng** và chính `finish()` chọn: xong bài → `blockgamesuccessful` (y như cũ), hết mạng →
+  `blockgametimeout`. Cùng khuôn Find the match / True or false (nếu để nguyên thì hết mạng vẫn nổ
+  fanfare mừng chiến thắng — vô lý).
+- ⚠️ **BẪY tránh được**: `ui.setNav({onNext})` được engine gắn thẳng `btn.onclick = handler`, nên
+  KHÔNG được truyền `finish` trần vào (câu cuối) — nó sẽ nhận **MouseEvent làm tham số `reason`**.
+  Đã bọc `() => finish("complete")` (cả ở phím `→`).
+
+### Tự kiểm trên trình duyệt thật (devserver 5599, đo DOM — pane không compositing nên screenshot timeout)
+| Ca | Kết quả |
+|---|---|
+| lives=3, sai 3 câu | tim 3→2→1→0, hết mạng khoá ô + **2 mũi tên disabled**, 1,5s sau hiện **"Game over"**, bảng tổng kết "GAME OVER · Score 0/6" |
+| lives=2 | y hệt, hết mạng đúng ở câu sai thứ 2 |
+| lives=8 | thanh trên hiện gọn **`8♥`**, sai 1 câu → `7♥` |
+| **act CŨ không có trường `lives`** | **0 trái tim**, sai HẾT 6 câu vẫn chơi tiếp và kết thúc **"Game complete"** → zero-diff, đúng cam kết |
+| lives=3 nhưng trả lời đúng hết | 3 tim còn nguyên, "Game complete", Score 6/6 |
+| Menu → "Submit answers" | "Game complete" (engine gọi handler KHÔNG tham số → `reason` mặc định đúng) |
+| Panel Options | đủ 8 nhóm, nhóm **Lives** slider min 0 max 10, kéo về 0 hiện "Unlimited" |
+| Console | **0 lỗi** ở mọi ca |
+
+**Việc kế: thầy chơi thử trên TOMKO (chọn số mạng vừa tay) → duyệt → commit + push.**
+⚠️ Số Đợt/version lấy tiếp sau Đợt 63/v0.9.38; nếu có máy khác cũng đang giữ Đợt 64 thì đổi số khi merge.
+
+---
+
 ## Đợt 63 (4/8/2026, v0.9.38) — WHACK-A-MOLE: 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT (bảng/cột · thang Speed · bubble · điểm cuối ván lên bảng · thanh Punishment). ⭐ CÓ SỬA 1 LỖI THẬT (autoFit chưa từng chạy). KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`16586a6`) + PUSH + LIVE.
 
 **File đụng (3 + 3 docs):** `templates/whack-a-mole/whack-a-mole.js` · `whack-a-mole.css` ·
