@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 62 (4/8/2026, v0.9.37) — FIND THE MATCH: BỎ "x of y" + ĐƯA "Page X/Y" XUỐNG THANH DƯỚI + BỎ NÚT LẬT TRANG + KHÔNG CÒN Ô ĐÁP ÁN BỊ CẮT. ⭐ CÓ SỬA CORE (1 chỗ, thêm mới). 🟢 CHỜ THẦY DUYỆT.
+## Đợt 62 (4/8/2026, v0.9.37) — FIND THE MATCH: BỎ "x of y" + ĐƯA "Page X/Y" XUỐNG THANH DƯỚI + BỎ NÚT LẬT TRANG + KHÔNG CÒN Ô ĐÁP ÁN BỊ CẮT. ⭐ CÓ SỬA CORE (1 chỗ, thêm mới). ✅ THẦY DUYỆT → COMMIT (`d4f526f`) + PUSH + LIVE.
 
 **Bối cảnh:** thầy gửi ảnh chụp 1 act 60 cặp đang chơi — **hàng ô cuối bị cắt ngang** vì thiếu chỗ, kèm 3 yêu cầu:
 (1) bỏ cụm "x of y", hạ "Page x/y" xuống đúng vị trí đó; (2) bỏ nút lật trang — game này KHÔNG cho next/back,
@@ -54,7 +54,16 @@ chỉ hiển thị số trang để biết đang ở đâu; (3) bảo đảm kh�
   refit-qua-rAF khi test bằng pane này, (b) chụp màn hình bị timeout — phải đo DOM. Đây cũng là lý do
   `fitTiles()` phải gọi ĐỒNG BỘ (đã làm từ Đợt 60).
 
-**Việc kế: thầy chơi thử act 60 cặp trên TOMKO → duyệt → commit + push (curl kiểm live).**
+**Kiểm chứng BẢN LIVE sau khi push (4/8/2026):** `curl` 3 file — `core/engine.js` có `label != null ? label`;
+`find-the-match.js` có `gridNeedH` và **KHÔNG còn** `aw-ftm-pager`/`goPage`; `find-the-match.css` có luật
+`.aw-nav-label` scoped và **KHÔNG còn** `aw-ftm-pagebtn`. (⚠️ Lần `curl` đầu ngay sau push, engine.js đã mới mà
+2 file find-the-match còn CŨ — đúng bẫy "Pages cập nhật file KHÔNG đồng thời", phải poll lại mới đủ.)
+Rồi CHẠY LẠI trọn bộ kiểm tra **trên chính bản live** (`…/AWord/templates/find-the-match/test.html`):
+8 / 40 / 60 / 70 cặp → **0 ô cắt · 0 chữ tràn · 0 mũi tên · không pager**, nhãn `""` khi 1 trang và
+`"Page 1 / 2"` khi 2 trang; chống hồi quy live quiz/anagram/true-false/open-the-box → vẫn "1 of 6"/"0 of 8"…,
+nhãn vẫn `font-weight:700` (không rò CSS); console 0 lỗi.
+
+**Việc kế: thầy chơi thử act 60 cặp thật trên TOMKO (bản live) — nếu còn hàng nào chưa vừa thì báo em.**
 
 ---
 

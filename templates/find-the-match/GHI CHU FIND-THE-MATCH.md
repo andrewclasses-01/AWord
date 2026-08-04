@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → CHỜ THẦY CHƠI THỬ + COMMIT. Xem chặng đầu "Nhật ký".
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → **✅ THẦY DUYỆT → COMMIT `d4f526f` + PUSH + LIVE** (đã `curl` kiểm 3 file live + chạy lại bộ kiểm tra TRÊN BẢN LIVE: 8/40/60/70 cặp đều 0 ô cắt). Xem chặng đầu "Nhật ký".
 
 ## Nhật ký
 
