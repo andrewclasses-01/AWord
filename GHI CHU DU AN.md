@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 61 (4/8/2026, v0.9.36) — ĐIỀU CHỈNH TỔNG THỂ MỌI ACT: NÚT BACK/NEXT CÓ ĐẾ TO · TEMPLATE TẠM LUÔN MƯỢN DỮ LIỆU ACT GỐC · MỞ ĐƯỜNG ANAGRAM/QUIZ → WHACK-A-MOLE — ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 14/14 mount, 0 lỗi console).
+## Đợt 61 (4/8/2026, v0.9.36) — ĐIỀU CHỈNH TỔNG THỂ MỌI ACT: NÚT BACK/NEXT CÓ ĐẾ TO · TEMPLATE TẠM LUÔN MƯỢN DỮ LIỆU ACT GỐC · MỞ ĐƯỜNG ANAGRAM/QUIZ → WHACK-A-MOLE — ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT (`9dad80b`) + PUSH + LIVE.
 
 **Bối cảnh:** thầy gửi 4 yêu cầu chỉnh TỔNG THỂ (áp cho mọi act, không riêng game nào). Trong lúc kiểm chứng
 phát hiện thêm **2 lỗi thật** chặn đúng các yêu cầu đó — đã sửa luôn và ghi rõ bên dưới.
@@ -95,9 +95,20 @@ KHÔNG đụng 13 template còn lại.
 - Harness chạy từ trang `templates/<x>/test.html` cho kết quả CSS SAI (đường dẫn `css` trong catalog tính
   từ TRANG, mà trang test nằm sâu 2 cấp → 404). Muốn quét nhiều template phải chạy từ `/`.
 
-**Việc kế:** thầy chơi thử trên TOMKO (đặc biệt: bấm Back/Next bằng tay xem còn trượt không · mở Open the box
-rồi sang game khác xem nav còn không · đổi template lòng vòng qua Speaking cards · Anagram/Quiz → Whack) →
-duyệt → commit + push (curl kiểm chứng live).
+### Đã commit + push + kiểm chứng LIVE (4/8/2026)
+Commit **`9dad80b`** (13 file: 5 file code + 4 theme + 4 file ghi chú) → push `main`.
+- **`curl` bản live**: kiểm 10 dấu mốc trong 6 file (`app.css` đế nút + `bottom:6.9cqw` + `bottom:7.5cqw` ·
+  `engine.js switchList()` · `convert.js` ép mode · 4 theme · `open-the-box.css` luật đã scope) — **10/10 LIVE**.
+- **Chạy lại TRỌN bộ kiểm tra trên chính bản live** `andrewclasses-01.github.io/AWord`: mở Open the box
+  trước tiên (ca từng làm hỏng mọi game sau đó) → **14/14 game mount, 0 lỗi console**, 10 game có nav đều
+  83×48 đế `rgb(233,240,248)`, 4 game ẩn nav đúng thiết kế; chuỗi Quiz → tạm Speaking cards → Whack ra
+  `mode:"quiz"` scene dựng OK; Anagram → Whack 6 câu (elephant ĐÚNG lẫn giữa kangaroo/giraffe/dolphin —
+  mỗi ván trộn khác nhau), Quiz → Whack giữ bộ nhiễu gốc cold/dry/wet/warm.
+
+**Việc kế:** thầy chơi bản live trên TOMKO — đặc biệt 4 điểm: bấm Back/Next bằng tay xem còn trượt không ·
+mở Open the box rồi sang game khác xem nút nav còn không · đổi template lòng vòng qua Speaking cards ·
+Anagram/Quiz → Whack-a-mole. Hai thứ máy KHÔNG tự kiểm được: cảm giác bấm thật của nút to, và màu đế ở
+4 giao diện (pane ẩn làm đóng băng transition, chỉ đọc được khi tắt hiệu ứng).
 
 ---
 

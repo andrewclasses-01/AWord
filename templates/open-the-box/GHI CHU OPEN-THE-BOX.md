@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 4/8/2026 (đợt 22, v0.9.36) — 🔴 SỬA 1 LỖI RÒ CSS RA TOÀN APP (chờ thầy duyệt cùng Đợt 61)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 4/8/2026 (đợt 22, v0.9.36) — SỬA 1 LỖI RÒ CSS RA TOÀN APP (thầy duyệt → commit `9dad80b` + push + live, đã kiểm chứng trên bản live)
 
 ## Đợt 22 (4/8/2026, v0.9.36) — ⭐ SỬA LỖI THẬT: CSS của game này ẨN NÚT BACK/NEXT CỦA MỌI GAME KHÁC
 
