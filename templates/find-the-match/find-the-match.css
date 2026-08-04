@@ -123,35 +123,23 @@
   font-size: 2.2cqw; font-weight: 600;
 }
 
-/* PAGER (only when the set spans >1 page) — ‹ Page X / Y ›, sits under the grid
-   inside the stage, so cqw units scale with --fit like everything else. */
-.aw-ftm-pager {
-  flex: 0 0 auto;
-  display: flex; align-items: center; justify-content: center;
-  gap: calc(1.4cqw * var(--fit));
-  margin-top: calc(1cqw * var(--fit));
-}
-.aw-ftm-pagebtn {
-  display: inline-flex; align-items: center; justify-content: center;
-  width: calc(3.4cqw * var(--fit)); height: calc(3.4cqw * var(--fit));
-  border: none; border-radius: 50%;
-  background: var(--aw-muted, #64748b); color: #fff; cursor: pointer;
-  transition: filter .12s ease, opacity .12s ease;
-}
-.aw-ftm-pagebtn svg { width: 58%; height: 58%; }
-.aw-ftm-pagebtn:hover:not(:disabled) { filter: brightness(1.12); }
-.aw-ftm-pagebtn:disabled { opacity: .3; cursor: default; }
-.aw-ftm-pagelabel {
-  font-weight: 800; font-size: calc(1.9cqw * var(--fit));
-  color: var(--aw-question-fill, var(--aw-text));
-  min-width: calc(12cqw * var(--fit)); text-align: center;
+/* PAGE INDICATOR (teacher 4/8/2026): there is no in-board pager any more — the
+   page you're on is written in the SHARED nav row under the stage (find-the-
+   match.js feeds it through ui.setNav's `label`), which frees that height for
+   the tiles. Widen/darken that label a touch so "Page 1 / 2" reads clearly.
+   Scoped with :has() so it only applies while a Find the match board is
+   mounted: template CSS stays in the document forever (core rule), so a bare
+   rule here would silently restyle every other game for the rest of the session. */
+.aw-playarea:has(> .aw-ftm-card) ~ .aw-bottombar .aw-nav-label {
+  font-weight: 800;
+  min-width: 14cqw;
+  color: var(--aw-text);
 }
 
-/* Teacher's spec: there's no "previous question" to go back to (the prompt
-   only ever moves forward), so the shared prev/next arrows are hidden for
-   THIS template only — the "x of y" label next to them stays. Scoped via
-   :has() so core/engine.js's nav bar markup (shared by every template)
-   needs no change; only matches while a .aw-ftm-card is actually mounted. */
+/* Teacher's spec: there's no "previous question" to go back to (the prompt only
+   ever moves forward) and pages are never flipped by hand, so the shared
+   prev/next arrows are hidden for THIS template only — the label between them
+   stays. Scoped the same way, for the same reason. */
 .aw-playarea:has(> .aw-ftm-card) ~ .aw-bottombar .aw-navbtn { display: none; }
 
 /* =============================================================

@@ -6,7 +6,10 @@
 //  • PAGINATION (teacher 3/8/2026): more than 35 tiles splits the board into
 //    pages (divided evenly), each a self-contained round whose prompts only
 //    reference that page's tiles (so the answer is always on screen). Pages
-//    auto-advance as cleared; a ‹ Page X/Y › pager also flips manually.
+//    auto-advance as cleared. There are NO page arrows and no "x of N" progress
+//    (teacher 4/8/2026): the shared nav row under the stage shows only
+//    "Page X / Y" — a position indicator, not a control — via ui.setNav's
+//    `label`, which also keeps that row's height OUT of the board area.
 //  • TEXT FIT (teacher 3/8/2026): every tile flex-centres its keyword and, via
 //    a per-tile --tfit shrink (fitTiles), scales the font down until the word
 //    fits inside the tile both ways — it never spills outside its box.
@@ -223,7 +226,6 @@ const ftmTemplate = {
     let penalty = 0;          // total points docked by wrong taps (pointsOff); stays 0 when the feature is off
     let livesLeft = normLives(opt.lives);
     let fitter = null;
-    let pagerEl = null;       // the ‹ Page X/Y › bar (only when PAGE_COUNT > 1)
     let tileFitRaf = 0;       // rAF handle coalescing per-tile font fitting after --fit settles
     let promptAnim = null;    // the currently-running Animation on .aw-ftm-prompt (enter or crawl)
     let fallbackTimer = null; // setTimeout backup for whichever animation is running (rule: .animate() needs one)
@@ -341,29 +343,41 @@ const ftmTemplate = {
       });
       card.append(grid);
 
-      // Pager ‹ Page X / Y › — only when the set spans more than one page.
-      if (PAGE_COUNT > 1) {
-        const pager = el("div", "aw-ftm-pager");
-        const prevBtn = el("button", "aw-ftm-pagebtn", icons.prev);
-        const label = el("span", "aw-ftm-pagelabel", `Page ${curPage + 1} / ${PAGE_COUNT}`);
-        const nextBtn = el("button", "aw-ftm-pagebtn", icons.next);
-        prevBtn.type = "button"; nextBtn.type = "button";
-        prevBtn.disabled = curPage === 0;
-        nextBtn.disabled = curPage === PAGE_COUNT - 1;
-        prevBtn.onclick = () => goPage(curPage - 1);
-        nextBtn.onclick = () => goPage(curPage + 1);
-        pager.append(prevBtn, label, nextBtn);
-        card.append(pager);
-        pagerEl = pager;
-      } else {
-        pagerEl = null;
-      }
+      // The page indicator lives DOWN in the shared nav row under the stage (see
+      // updateNav) — no in-board pager any more, so every bit of the board's
+      // height goes to the tiles themselves (teacher 4/8/2026).
 
       root.append(card);
 
+      // The height the tile grid actually NEEDS. Not grid.scrollHeight: the grid
+      // is a stretched flex child, so its scrollHeight collapses to its stretched
+      // height (fit.js warns about exactly this) and real overflow stayed
+      // invisible until it exceeded the whole slack — which is why the bottom row
+      // was being clipped (measured 4/8/2026: 12 tiles cut, 11px over).
+      const gridNeedH = () => {
+        const tile = grid.querySelector(".aw-ftm-tile");
+        if (!tile) return 0;
+        const rowsUsed = Math.max(1, Math.min(ROWS, Math.ceil(pages[curPage].length / cols)));
+        const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+        return rowsUsed * tile.offsetHeight + (rowsUsed - 1) * gap;
+      };
+      // offsetHeight ignores margins, and this card's fixed chrome (the track's
+      // bottom margin, the divider's margin, the card's own padding) adds up to
+      // ~3cqw — leaving it out made autoFit think the board was shorter than it is.
+      const outerH = node => {
+        if (!node) return 0;
+        const cs = getComputedStyle(node);
+        return node.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+      };
       fitter = autoFit(root, card, s => { card.style.setProperty("--fit", s); scheduleTileFit(); }, {
-        slack: root.clientWidth * 0.03,
-        measure: () => track.offsetHeight + grid.scrollHeight + (pagerEl ? pagerEl.offsetHeight : 0)
+        // slack ~1.5cqw: the tiles' 3D shadow lip (0.5cqw) sits below their layout
+        // box and would otherwise be shaved off by the grid's overflow:hidden.
+        slack: root.clientWidth * 0.015,
+        measure: () => {
+          const cs = getComputedStyle(card);
+          return (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0)
+            + outerH(track) + outerH(card.querySelector(".aw-ftm-divider")) + gridNeedH();
+        }
       });
       // Fit the tiles NOW, synchronously (once --fit is set) — don't wait on the
       // rAF path, which is frozen while the tab isn't compositing. Re-fit once
@@ -410,20 +424,8 @@ const ftmTemplate = {
       return -1;
     }
 
-    // Manual page flip from the pager. Halts the current prompt, shows the target
-    // page and, if it still has prompts, starts its cycle. Flipping to a fully
-    // cleared page just shows its (dimmed) tiles — normal play auto-advances, so
-    // this only happens when the student deliberately flips back.
-    function goPage(p) {
-      if (finished || p < 0 || p >= PAGE_COUNT || p === curPage) return;
-      haltPromptAnim();
-      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
-      if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
-      curPage = p;
-      queue = pageQueues[curPage];
-      renderShell();
-      if (queue.length) startCycle();
-    }
+    // (Pages are never flipped by hand — the game moves on by itself once the
+    // current page is cleared; the nav row only REPORTS which page you're on.)
 
     // Hearts live in the top bar (ui.livesSlot), just left of the score — same
     // as True/false. 1..5 lives show that many separate hearts; 6..10 show a
@@ -774,8 +776,15 @@ const ftmTemplate = {
       }
     }
 
+    // The row under the stage (teacher 4/8/2026): NO "x of N" progress and NO
+    // arrows — this game never goes back, and the score is already top-right.
+    // It shows only WHICH PAGE of tiles is on screen, and nothing at all when
+    // the whole set fits on one page. (`label` is core's opt-in nav text.)
     function updateNav() {
-      ui.setNav({ index: scoreNow(), total, onPrev: null, onNext: null });
+      ui.setNav({
+        index: curPage + 1, total: PAGE_COUNT, onPrev: null, onNext: null,
+        label: PAGE_COUNT > 1 ? `Page ${curPage + 1} / ${PAGE_COUNT}` : ""
+      });
     }
 
     function onKey(e) {

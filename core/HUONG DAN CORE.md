@@ -238,7 +238,7 @@ registerTemplate({
 | Hàm | Việc gì |
 |---|---|
 | `ui.setScore(n)` | Cập nhật số điểm góc phải-trên (biểu tượng ✓ + số) |
-| `ui.setNav({index, total, onPrev, onNext, nextLabel})` | Cập nhật thanh dưới "x of N" + 2 nút mũi tên. `onPrev`/`onNext` = `null` → nút mờ (không bấm được). `nextLabel` (HTML/SVG) thay icon mũi tên (dùng cho câu cuối = dấu ✓) |
+| `ui.setNav({index, total, onPrev, onNext, nextLabel, label})` | Cập nhật thanh dưới "x of N" + 2 nút mũi tên. `onPrev`/`onNext` = `null` → nút mờ (không bấm được). `nextLabel` (HTML/SVG) thay icon mũi tên (dùng cho câu cuối = dấu ✓). **`label`** (v0.9.37, 4/8/2026) thay HẲN chữ "x of N" bằng chuỗi của template — vd Find the match hiện `"Page 1 / 2"`, hoặc `""` để thanh dưới TRỐNG. Không truyền = y hệt cũ (tương thích ngược tuyệt đối, đã đo lại 6 game) |
 
 > ⚠️ **Đợt 59 (3/8/2026) — `celebrate()` KHÔNG còn ẩn nav lúc game-complete.** Trước đây engine chạy
 > `navWrap.style.visibility="hidden"` suốt ~2.2s màn pháo hoa; vì overlay confetti trong suốt nên thầy

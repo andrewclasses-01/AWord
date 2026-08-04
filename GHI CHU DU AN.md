@@ -5,6 +5,59 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 62 (4/8/2026, v0.9.37) — FIND THE MATCH: BỎ "x of y" + ĐƯA "Page X/Y" XUỐNG THANH DƯỚI + BỎ NÚT LẬT TRANG + KHÔNG CÒN Ô ĐÁP ÁN BỊ CẮT. ⭐ CÓ SỬA CORE (1 chỗ, thêm mới). 🟢 CHỜ THẦY DUYỆT.
+
+**Bối cảnh:** thầy gửi ảnh chụp 1 act 60 cặp đang chơi — **hàng ô cuối bị cắt ngang** vì thiếu chỗ, kèm 3 yêu cầu:
+(1) bỏ cụm "x of y", hạ "Page x/y" xuống đúng vị trí đó; (2) bỏ nút lật trang — game này KHÔNG cho next/back,
+chỉ hiển thị số trang để biết đang ở đâu; (3) bảo đảm không ô đáp án nào bị cắt.
+
+**File đụng (3 + 4 docs):** `core/engine.js` (1 chỗ, thêm tham số) · `templates/find-the-match/find-the-match.js` ·
+`templates/find-the-match/find-the-match.css`. KHÔNG đụng 13 template khác.
+
+### (1)+(2) Số trang chuyển xuống thanh dưới, bỏ hẳn nút lật trang
+- **Bỏ pager trong khung** (`.aw-ftm-pager` + 2 nút `‹ ›` + hàm `goPage`): trang chỉ còn tự chuyển khi
+  chơi hết trang hiện tại — đúng ý thầy "không cho phép next/back".
+- **⭐ SỬA CORE (thêm mới, không đổi hành vi cũ):** `ui.setNav()` nhận thêm tuỳ chọn **`label`** — có thì
+  hiện NGUYÊN chuỗi đó thay cho "x of N", không truyền thì y hệt trước. Đúng khuôn các cờ opt-in cũ
+  (`hasLivesSlot`, `manualTimerStart`...). Find the match gọi
+  `ui.setNav({label: PAGE_COUNT>1 ? "Page 1 / 2" : ""})` → **1 trang thì thanh dưới TRỐNG hẳn**.
+- 2 mũi tên của core vốn đã bị CSS của template ẩn từ trước (`:has()` scoped) — giữ nguyên.
+- Nhãn ở thanh dưới được nới rộng + đậm hơn (`font-weight:800`, `min-width:14cqw`, màu `--aw-text`), **scope
+  bằng `:has(> .aw-ftm-card)`** theo đúng luật "CSS template ở lại document vĩnh viễn". Đã ĐO xác nhận không
+  rò: quiz vẫn `700 / 59px / xám`, find-the-match `800 / 135px / đậm`.
+- **Lợi kép:** hàng pager cũ chiếm ~4,4cqw TRONG khung nay biến mất → phần đó trả lại cho lưới ô.
+
+### (3) ⭐ LỖI THẬT: phép đo của autoFit "mù" nên ô cuối bị cắt
+- **Đo tái hiện trước khi sửa** (60 cặp, khung 16:9 chuẩn): `--fit=0.89` mà lưới vẫn tràn **11px**, **12 ô bị
+  cắt** (align-content:center nên tràn chia đôi trên/dưới) — đúng ảnh thầy gửi.
+- **Nguyên nhân 1:** `measure()` cũ dùng `grid.scrollHeight`. Lưới là flex item BỊ KÉO GIÃN nên
+  `scrollHeight` tụt về đúng chiều cao đã giãn (chính cái bẫy `core/fit.js` ghi ở đầu file) → tràn thật bị
+  che, autoFit chỉ phản ứng khi tràn vượt cả slack.
+- **Nguyên nhân 2:** `measure()` chỉ cộng `offsetHeight`, **bỏ quên margin** (track 1,2cqw + divider 1,8cqw)
+  và padding của card → tưởng nội dung thấp hơn thực tế ~3cqw.
+- **Sửa:** đo chiều cao lưới **CẦN** thật sự = `số hàng × chiều cao ô + khoảng cách` (đọc `offsetHeight` của
+  1 ô + `rowGap`), cộng `outerH()` (offsetHeight + margin trên/dưới) của track + divider + padding card.
+  `slack` đổi 3cqw → **1,5cqw** (vừa đủ ôm gờ 3D 0,5cqw của ô, vốn nằm ngoài hộp layout và bị
+  `overflow:hidden` của lưới xén).
+- **Kết quả đo lại:** 8 / 35 / 40 / 60 / 70 cặp → **0 ô bị cắt** (kể cả tính cả gờ 3D), **0 ô tràn chữ**,
+  `gridScrollHeight === gridClientHeight`.
+
+**Tự test trình duyệt thật (devserver 5510, `templates/find-the-match/test.html`, đo DOM — không đoán qua ảnh):**
+- 5 cỡ dữ liệu 8/35/40/60/70 cặp: 0 ô cắt · 0 chữ tràn · nhãn đúng ("" khi 1 trang, "Page 1 / 2" khi 2 trang)
+  · 0 nút mũi tên hiện · không còn pager trong khung.
+- **Chơi TRỌN 1 ván 36 cặp (2 trang)**: 36/36 bấm đúng, trang tự chuyển và nhãn đổi sang "Page 2 / 2" đúng lúc,
+  điểm 36, kết thúc "GAME COMPLETE", console 0 lỗi.
+- **Chống hồi quy core**: mount lại quiz / anagram / true_false / type_the_answer / open_the_box / unjumble →
+  thanh dưới vẫn "1 of 6" / "0 of 8"... y như cũ, 0 lỗi.
+- ⚠️ **BẪY gặp lại (ghi để phiên sau khỏi mất công)**: pane trình duyệt của công cụ KHÔNG compositing →
+  `requestAnimationFrame` ĐÓNG BĂNG (đã đo: rAF không bắn trong 600ms). Nên (a) không tin kết quả của đường
+  refit-qua-rAF khi test bằng pane này, (b) chụp màn hình bị timeout — phải đo DOM. Đây cũng là lý do
+  `fitTiles()` phải gọi ĐỒNG BỘ (đã làm từ Đợt 60).
+
+**Việc kế: thầy chơi thử act 60 cặp trên TOMKO → duyệt → commit + push (curl kiểm live).**
+
+---
+
 ## Đợt 61 (4/8/2026, v0.9.36) — ĐIỀU CHỈNH TỔNG THỂ MỌI ACT: NÚT BACK/NEXT CÓ ĐẾ TO · TEMPLATE TẠM LUÔN MƯỢN DỮ LIỆU ACT GỐC · MỞ ĐƯỜNG ANAGRAM/QUIZ → WHACK-A-MOLE — ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT (`9dad80b`) + PUSH + LIVE.
 
 **Bối cảnh:** thầy gửi 4 yêu cầu chỉnh TỔNG THỂ (áp cho mọi act, không riêng game nào). Trong lúc kiểm chứng

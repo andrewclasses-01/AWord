@@ -1,8 +1,40 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 3/8/2026 — PHÂN TRANG (≤35 ô/trang + pager) + FIT CHỮ trong ô (không tràn, luôn giữa): đã tự test browser thật 0 lỗi (8 & 40 cặp, auto-advance, score 40), KHÔNG đụng core → CHỜ THẦY CHƠI THỬ + COMMIT. Xem chặng đầu "Nhật ký".
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → CHỜ THẦY CHƠI THỬ + COMMIT. Xem chặng đầu "Nhật ký".
 
 ## Nhật ký
+
+### 4/8/2026 (Đợt 62) — Thanh dưới chỉ còn "Page X/Y" · bỏ nút lật trang · KHÔNG ô nào bị cắt
+Thầy gửi ảnh act 60 cặp: **hàng ô cuối bị cắt ngang**, kèm 3 yêu cầu (bỏ "x of y" và hạ "Page x/y" xuống
+đúng chỗ đó · bỏ next/back vì game này không cho lật tay, số trang chỉ để BIẾT đang ở đâu · không ô nào bị cắt).
+
+**(1) Số trang xuống thanh dưới — ⭐ có sửa core (thêm mới, zero-diff với 13 game kia):**
+- `core/engine.js`: `ui.setNav()` nhận thêm `label` — có thì hiện nguyên chuỗi thay "x of N"; không truyền
+  thì y hệt cũ. Đã đo lại 6 game khác: "1 of 6" / "0 of 8"… không đổi.
+- `updateNav()` của template nay báo TRANG chứ không báo tiến độ: `Page ${curPage+1} / ${PAGE_COUNT}`, và
+  **chuỗi rỗng khi chỉ có 1 trang** (thanh dưới trống hẳn — đúng ý "bỏ cụm x of y").
+- Nhãn được nới rộng + đậm (`font-weight:800; min-width:14cqw; color:var(--aw-text)`) nhưng **scope
+  `:has(> .aw-ftm-card)`** vì CSS template ở lại document vĩnh viễn. Đo xác nhận không rò sang quiz.
+
+**(2) Bỏ hẳn pager trong khung**: xoá `.aw-ftm-pager`/`.aw-ftm-pagebtn`/`.aw-ftm-pagelabel` + hàm `goPage()`.
+Trang chỉ tự chuyển khi chơi hết trang (logic `startCycle`/`nextNonEmptyPage` giữ nguyên). Hàng pager cũ
+chiếm ~4,4cqw trong khung → trả lại cho lưới ô.
+
+**(3) ⭐ LỖI THẬT — vì sao ô bị cắt:** `measure()` truyền cho `autoFit` sai 2 chỗ:
+- dùng `grid.scrollHeight` mà lưới là **flex item bị kéo giãn** → `scrollHeight` tụt về chiều cao đã giãn
+  (đúng bẫy ghi ở đầu `core/fit.js`), tràn thật bị che;
+- chỉ cộng `offsetHeight`, **quên margin** của track (1,2cqw) + divider (1,8cqw) + padding card → hụt ~3cqw.
+→ Đo tái hiện TRƯỚC khi sửa (60 cặp, khung 16:9): `--fit=0.89` mà vẫn tràn **11px**, **12 ô bị cắt**.
+**Sửa:** tính chiều cao lưới CẦN = `hàng × chiều cao ô + rowGap` + `outerH()` (kèm margin) của track/divider
++ padding card; `slack` 3cqw → **1,5cqw** (đủ ôm gờ 3D 0,5cqw của ô, thứ bị `overflow:hidden` xén).
+→ Đo lại 8/35/40/60/70 cặp: **0 ô cắt, 0 chữ tràn**, `gridScrollHeight === gridClientHeight`.
+
+**Test (browser thật, đo DOM):** 5 cỡ dữ liệu như trên · **chơi trọn ván 36 cặp 2 trang**: 36/36 đúng, nhãn
+tự đổi "Page 1 / 2" → "Page 2 / 2" khi hết trang, điểm 36, "GAME COMPLETE", console 0 lỗi · chống hồi quy 6
+template khác OK.
+⚠️ **BẪY**: pane trình duyệt của công cụ không compositing → `requestAnimationFrame` đóng băng (đo thật: rAF
+không bắn trong 600ms) và screenshot timeout → mọi kết luận phải đo DOM; đường refit-qua-rAF (khi RESIZE) chỉ
+kiểm được trên máy thật.
 
 ### 3/8/2026 — PHÂN TRANG lưới ô (≤35 ô/trang) + FIT CHỮ trong ô (không tràn, luôn giữa)
 Thầy báo 2 việc: (1) khi quá nhiều ô, chữ quá to so với ô → tràn ra ngoài; muốn tối đa **35 ô/trang**,

@@ -809,8 +809,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       scoreEl.classList.toggle("is-pos", v > 0);
       scoreEl.classList.toggle("is-neg", v < 0);
     },
-    setNav({ index, total, onPrev = null, onNext = null, nextLabel = null }) {
-      navLabel.textContent = `${index} of ${total}`;
+    // `label` (added 4/8/2026 for Find the match) REPLACES the default
+    // "x of N" text with the template's own wording — e.g. "Page 1 / 2" for a
+    // game that has no per-question progress, or "" to show nothing at all.
+    // Purely additive: leave it out and the text is exactly as before.
+    setNav({ index, total, onPrev = null, onNext = null, nextLabel = null, label = null }) {
+      navLabel.textContent = label != null ? label : `${index} of ${total}`;
       wireNav(navPrev, onPrev);
       wireNav(navNext, onNext);
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
