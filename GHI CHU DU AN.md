@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 66 (4/8/2026, v0.9.41) — CROSSWORD: PHÂN TRANG TỚI 120 ANSWER + ANAGRAM→CROSSWORD NÂNG TRẦN 40→120. KHÔNG ĐỤNG CORE (chỉ `core/convert.js`, dùng chung mọi template). 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật qua devserver, không đoán qua đọc code).
+## Đợt 66 (4/8/2026, v0.9.41) — CROSSWORD: PHÂN TRANG TỚI 120 ANSWER + ANAGRAM→CROSSWORD NÂNG TRẦN 40→120. KHÔNG ĐỤNG CORE (chỉ `core/convert.js`, dùng chung mọi template). ✅ COMMIT (`4d5b892`) + PUSH + LIVE — `curl` kiểm 3 file (crossword.js/convert.js/crossword-editor.js) **lên live ngay lần đầu, không dính bẫy cache cũ** lần này, rồi CHẠY LẠI trọn bộ kiểm tra TRÊN BẢN LIVE (import thẳng module từ `andrewclasses-01.github.io/AWord`, không phải bản local): n=31 → "Page 1/2" đúng, mũi tên ẩn đúng, `switchTargets()` live trả đúng 40→true/41→true/120→true/121→false, giải thật 3 từ trên bản live → điểm "3" đúng, 0 lỗi console.
 
 Thầy hỏi vì sao Anagram chưa đổi Template được sang Crossword (ảnh chụp bảng Template, Crossword mờ) — tra ra: **không phải lỗi**, `core/convert.js` giới hạn Crossword tối đa 40 từ (`n>40` bị loại), bộ act của thầy vượt mức đó. Thầy chốt 3 việc:
 
@@ -26,7 +26,7 @@ Thầy hỏi vì sao Anagram chưa đổi Template được sang Crossword (ản
 - `core/convert.js`: gọi thẳng `switchTargets()` với n=0,1,2,40,41,119,120,121,150 — đúng false/false/true/true/true/true/true/false/false, khớp chính xác biên `2..120`.
 - 0 lỗi console suốt toàn bộ quá trình test.
 
-**File đổi**: `templates/crossword/crossword.js` (phân trang), `templates/crossword/crossword.css` (2 luật scoped nav), `templates/crossword/crossword-editor.js` (MAX_WORDS), `core/convert.js` (trần 120). **Việc kế: thầy thử tạo 1 bộ Anagram >40 từ (có clue) → bấm Template → xác nhận Crossword sáng lên; và/hoặc soạn 1 Crossword >30 từ → xác nhận phân trang mượt trên TOMKO → duyệt → commit + push.**
+**File đổi**: `templates/crossword/crossword.js` (phân trang), `templates/crossword/crossword.css` (2 luật scoped nav), `templates/crossword/crossword-editor.js` (MAX_WORDS), `core/convert.js` (trần 120). **Việc kế: thầy thử tạo 1 bộ Anagram >40 từ (có clue) → bấm Template → xác nhận Crossword sáng lên; và/hoặc soạn 1 Crossword >30 từ → xác nhận phân trang mượt trên TOMKO. Đã lên live, không cần chờ gì thêm.**
 
 ## Đợt 65 (4/8/2026, v0.9.40) — HẾT "NỀN GÓC VUÔNG KHI CHẠM" TRÊN TOMKO, TOÀN BỘ 14 TEMPLATE. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT `72e1b5f` + PUSH (`c7df3ed..72e1b5f`) + LIVE, ĐÃ KIỂM CHỨNG TRÊN BẢN LIVE.
 

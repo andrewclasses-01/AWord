@@ -1,8 +1,8 @@
 # GHI CHU — CROSSWORD
 
 **TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE. TÁI THIẾT KẾ LỚN (Đợt 36/v0.9.10), rồi 🔧 3 LOẠT TINH CHỈNH REVEAL +
-ÂM THANH (2/8/2026, Đợt 43 / v0.9.17), rồi 🔧 PHÂN TRANG TỚI 120 ANSWER (4/8/2026, Đợt 66 / v0.9.41)
-theo yêu cầu thầy — 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, xem mục đầu file).** Chỉ đụng
+ÂM THANH (2/8/2026, Đợt 43 / v0.9.17), rồi 🔧 PHÂN TRANG TỚI 120 ANSWER (4/8/2026, Đợt 66 / v0.9.41) —
+✅ COMMIT (`4d5b892`) + PUSH + LIVE, đã kiểm chứng lại trên bản live (xem mục đầu file).** Chỉ đụng
 `templates/crossword/*` (crossword.js / .css / crossword-sound.js / crossword-editor.js), **KHÔNG đụng
 core** (nav + slogan chèn bằng DOM vào `.aw-topbar`/`.aw-nav` của engine rồi hoàn tác ở cleanup). Tự test
 trình duyệt thật đủ mọi mục (đo DOM/timeline, 0 lỗi console). ⚠️ Hiệu ứng trượt/bay bị ĐÓNG BĂNG trong
@@ -72,8 +72,12 @@ test, giải đúng, tính điểm bình thường.
   false/false, khớp chính xác biên 2..120.
 - 0 lỗi console suốt toàn bộ quá trình.
 
+**Đã lên live** (`4d5b892`) — kiểm chứng lại bằng cách import THẲNG module từ `andrewclasses-01.github.io/
+AWord` (không phải bản local): n=31 → "Page 1/2" đúng, `switchTargets()` trả đúng 40→true/41→true/
+120→true/121→false, giải thật 3 từ trên bản live → điểm cộng đúng, 0 lỗi console.
+
 **Việc kế**: thầy thử tạo 1 bộ Anagram >40 từ (có clue) → Template → xác nhận Crossword sáng; soạn 1
-Crossword >30 từ → xác nhận phân trang mượt trên TOMKO → duyệt → commit + push.
+Crossword >30 từ → xác nhận phân trang mượt trên TOMKO.
 
 ## 2/8/2026 — 3 LOẠT TINH CHỈNH REVEAL + ÂM THANH (Đợt 43 / v0.9.17) — đọc mục này TRƯỚC mục tái thiết kế
 
