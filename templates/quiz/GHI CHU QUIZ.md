@@ -9,7 +9,7 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
-## ⭐ ĐỢT 64 (4/8/2026, v0.9.39) — THÊM THANH LIVES 0–10
+## ⭐ ĐỢT 64 (4/8/2026, v0.9.39) — THÊM THANH LIVES 0–10 — ✅ COMMIT `f0b0830` + PUSH + LIVE
 
 **Thầy yêu cầu:** kiểm tra Quiz đã có thanh Lives chưa, chưa có thì thêm, từ 0 đến 10.
 **Kiểm tra:** Quiz **chưa hề có** (chỉ có dòng thừa `lives: null` trong `sample-quiz.js`, không ai đọc).
@@ -43,7 +43,16 @@ hết 6 câu vẫn "Game complete"** (zero-diff) · lives=3 đúng hết → 3 t
 Menu "Submit answers" → "Game complete" · panel Options đủ 8 nhóm, Lives min 0 max 10, về 0 =
 "Unlimited". **Console 0 lỗi ở mọi ca.**
 
-**Chờ thầy chơi thử trên TOMKO → duyệt → commit + push.**
+### ✅ THẦY DUYỆT → COMMIT `f0b0830` + PUSH + LIVE (4/8/2026)
+Push `d4fc9ff..f0b0830`. **`curl` lần đầu cả 3 file còn là bản CŨ**, poll lại 20s sau mới đủ dấu mốc
+(`hasLivesSlot` · `aw-quiz-livesslider` · `gameOver`) — bẫy Pages quen thuộc, đừng tin lần curl đầu.
+**Chạy lại trọn bộ kiểm tra TRÊN BẢN LIVE**: lives 3 → `♥♥♥→♥♥→♥→(trống)`, khoá ô + 2 mũi tên
+disabled, "GAME OVER · Score 0/6" · act cũ không có `lives` → 0 tim, sai hết 6 câu vẫn "Game complete" ·
+lives 8 → `8♥`→`7♥` · đúng hết → 3 tim nguyên 6/6 · Submit answers → "Game complete" · Options đủ
+8 nhóm, Lives 0..10 về 0 = "Unlimited" · **14/14 template mount 0 lỗi · console 0 lỗi**.
+⚠️ `javascript_tool` cắt ở 30s → kịch bản test dài phải chẻ nhiều lượt (giữ helper trên `window`).
+
+**Việc kế: thầy chơi thử trên TOMKO (chọn số mạng vừa tay); chỗ nào chưa vừa thì báo.**
 
 ---
 

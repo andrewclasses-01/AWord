@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 64 (4/8/2026, v0.9.39) — QUIZ: THÊM THANH LIVES (0–10, 0 = Unlimited). KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 0 lỗi console).
+## Đợt 64 (4/8/2026, v0.9.39) — QUIZ: THÊM THANH LIVES (0–10, 0 = Unlimited). KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`f0b0830`) + PUSH + LIVE.
 
 **Yêu cầu của thầy:** đọc dự án + template QUIZ, xem đã có thanh Lives chưa; chưa có thì thêm, từ 0 đến 10.
 **Kiểm tra ra:** Quiz **CHƯA hề có Lives** — cả `quiz.js` lẫn `quiz.css` không có chữ nào; duy nhất
@@ -48,7 +48,29 @@ KHÔNG đụng `core/` (không cần: hạ tầng tim đã có sẵn từ True/f
 | Panel Options | đủ 8 nhóm, nhóm **Lives** slider min 0 max 10, kéo về 0 hiện "Unlimited" |
 | Console | **0 lỗi** ở mọi ca |
 
-**Việc kế: thầy chơi thử trên TOMKO (chọn số mạng vừa tay) → duyệt → commit + push.**
+### Commit + push + kiểm chứng LIVE (4/8/2026)
+- **Commit `f0b0830`** (7 file: 4 file `templates/quiz/` + `APP_MASTER.md` + `GHI CHU DU AN.md` +
+  `templates/quiz/GHI CHU QUIZ.md` mới) → **push `d4fc9ff..f0b0830`** lên `andrewclasses-01/AWord` nhánh `main`.
+- **`curl` kiểm Pages**: ⚠️ đúng bẫy quen — **lần curl ĐẦU cả 3 file vẫn là bản CŨ** (0 dấu mốc), phải
+  poll lại 20s sau mới thấy đủ (`quiz.js` 2 lần `hasLivesSlot`, `quiz.css` 1 lần `aw-quiz-livesslider`,
+  `quiz-sound.js` 1 lần `gameOver`). **Đừng bao giờ tin lần curl đầu tiên.**
+- **Chạy lại TRỌN BỘ kiểm tra TRÊN BẢN LIVE** (`https://andrewclasses-01.github.io/AWord/`, đo DOM):
+
+| Ca (bản LIVE) | Kết quả |
+|---|---|
+| lives=3, sai 3 câu | tim `♥♥♥ → ♥♥ → ♥ → (trống)`, ô đáp án khoá hết + **2 mũi tên disabled**, 1,5s sau "**Game over**", tổng kết "GAME OVER · Score 0/6" |
+| **act CŨ không có trường `lives`** | **0 tim**, sai HẾT 6 câu vẫn chơi tiếp → "**Game complete**" (zero-diff) |
+| lives=8 | `8♥` → sai 1 câu → `7♥` |
+| lives=3, đúng hết | 3 tim còn nguyên, "Game complete", **Score 6/6** |
+| Menu → Submit answers | "Game complete" (engine gọi handler không tham số → `reason` đúng mặc định) |
+| Panel Options | đủ 8 nhóm, **Lives** min 0 max 10, kéo về 0 = "Unlimited" |
+| 14 template mount lại | **14/14 OK** |
+| Console | **0 lỗi** ở mọi ca |
+
+- ⚠️ Ghi lại cho lần sau: `javascript_tool` **cắt ở 30s** — kịch bản test dài phải chẻ thành nhiều lượt
+  (giữ `window.__eng/__mk/__hearts` giữa các lượt), và pane ẩn thì `screenshot` timeout nên đo DOM.
+
+**Việc kế: thầy chơi thử trên TOMKO (chọn số mạng vừa tay); còn chỗ nào chưa vừa thì báo.**
 ⚠️ Số Đợt/version lấy tiếp sau Đợt 63/v0.9.38; nếu có máy khác cũng đang giữ Đợt 64 thì đổi số khi merge.
 
 ---
