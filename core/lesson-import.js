@@ -26,6 +26,12 @@ const OPT_SC   = { timer: "none", timerTotalSeconds: 120, shuffleQuestions: true
 const OPT_TF   = { timer: "countUp", shuffleQuestions: true, lives: 5, showAnswers: true, speed: 0, repeatUntilCorrect: false };
 const OPT_QUIZ = { timer: "countUp", shuffleQuestions: true, shuffleAnswers: true, lives: null };
 const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: true, showAnswers: true };
+// Running word runs its OWN two clocks, so the engine's whole-game timer is off.
+// wordsPerTeam 0 = "give each team the whole pool"; the teacher normally drops it
+// to ~50 in the Options panel, which is what makes the two lists overlap.
+const OPT_RW   = { timer: "none", teamAName: "TEAM A", teamBName: "TEAM B", clockSeconds: 300,
+                   incrementSeconds: 0, wordsPerTeam: 0, allowPass: true, passPenaltySeconds: 10,
+                   andrewUses: 1, warnSeconds: 15 };
 
 const anagram = (title, pairs) => ({
   type: "anagram", title, theme: "classic", options: OPT_ANA,
@@ -38,6 +44,10 @@ const ftm = (title, pairs) => ({
 const speaking = (title, cards) => ({
   type: "speaking_cards", title, theme: "classic", options: OPT_SC,
   content: { cards: cards.filter(Boolean).map(t => ({ text: t })) }
+});
+const runningWord = (title, words) => ({
+  type: "running_word", title, theme: "classic", options: { ...OPT_RW },
+  content: { words: words.filter(Boolean) }
 });
 const trueFalse = (title, rows) => {
   const statements = [];
@@ -125,6 +135,11 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   IPA.forEach(t => { const m = t.match(/^(.+?)\s+(\/[^/]*\/)\s*$/); if (m) PRON.push([m[1].trim(), m[2].trim()]); });
   if (PRON.length) acts.push(anagram(`${source} / PRONUNCIATION`, PRON));
   if (IPA.length)  acts.push(speaking(`${source} / IPA`, IPA));
+  // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
+  // word list, so it reuses ENG1's words (column D = the same pool the teacher's
+  // hand-made `RunningW` sheet drew its two 50-word lists from). No clues, no
+  // answers: the explainer supplies the meaning out loud.
+  if (ENG1.length >= 2) acts.push(runningWord(`${source} / RUNNING WORD`, ENG1.map(([w]) => w)));
 
   // ---- comprehension Quiz1 / Quiz2 (listening files) ----
   for (const tag of ["QUIZ1", "QUIZ2"]) {

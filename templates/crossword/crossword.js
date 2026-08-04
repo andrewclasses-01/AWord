@@ -367,8 +367,13 @@ const crosswordTemplate = {
         label: "Andrew",
         className: "aw-cw-key-andrew",
         getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
-        // NB: must NOT be disabled at build time (curWord is -1 then), or the
-        // core keyboard never wires the click. useAndrew() guards the board.
+        // The `curWord >= 0` guard was originally here because core/keyboard.js
+        // never wired a key that was disabled at BUILD time (curWord is -1 then).
+        // That core trap was FIXED 4/8/2026, so the guard is no longer load-
+        // bearing — kept deliberately, because it is also correct on its own
+        // terms (no word selected yet == nothing to reveal, and useAndrew()
+        // guards the board), and rewriting working Crossword behaviour just to
+        // tidy a line isn't worth the risk.
         isDisabled: () => andrewUsed || finished || (curWord >= 0 && wordState[curWord].done),
         onClick: useAndrew
       }

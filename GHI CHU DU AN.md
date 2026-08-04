@@ -5,6 +5,58 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 67 (4/8/2026, v0.9.42) — ⭐ TEMPLATE THỨ 15: **RUNNING WORD (RUNNINGW)** — trận đấu 2 đội trên đồng hồ cờ vua, có sẵn bàn phím AWord + nút Andrew + tự in 3 tờ A4. **⭐ CÓ SỬA CORE (`core/keyboard.js`, thầy yêu cầu sau khi xem báo cáo).** 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, 15/15 template mount 0 lỗi console; CHƯA in giấy thật, CHƯA chơi trên TOMKO, CHƯA commit).
+
+Thầy đưa 2 file nguồn và tả trò đang chơi bằng tay: `D:\4. LISTENING\...\IEL-S15.T3.P4.xlsm` sheet **`RunningW`** (3 mảng: PART A cột A-D · PART B cột E-H · TEAM A/TEAM B cột I-K) và `D:\10. ACTIVITIES\GAMES\WORD GAMES.xlsx` sheet **`RUNNING`** (chỉ là 1 cột rộng để typer gõ trên iPad, còn nguyên vết gõ sai "Inven5", "Invent\"). Luật: explainer tả từ → typer gõ → thầy soi tờ CHECK báo đúng → **bấm đồng hồ cờ vua** → đổi đội. Hết giờ trước là thua; hết từ thì so thời gian còn lại.
+
+### ⭐ Giải mã được luật chia từ (đo file thật, không đoán)
+
+```
+pool (WORDTABLE cột D) = 85 từ · PART A = 50 · PART B = 50
+A ∪ B = ĐÚNG 85  -> phủ TRỌN pool, không sót từ nào
+A ∩ B = ĐÚNG 15  = 50 + 50 − 85  -> số từ trùng ÍT NHẤT có thể
+```
+
+Tức KHÔNG phải "xáo pool rồi bốc 50 hai lần" (kiểu đó trùng ~29 từ và bỏ sót cả chục từ). `rw-sets.js buildSets()` cài đúng luật này, **cộng 1 ràng buộc Excel không làm được**: từ trùng phải lệch vị trí ≥6 dòng giữa 2 danh sách, không thì đội B gõ ngay từ vừa nghe explainer đội A tả. Chạy lại với pool 85/50 mỗi đội → ra **đúng 50+50, trùng 15, phủ ALL** — trùng khít bản thầy làm tay.
+
+### ⭐ Luật thiết kế xuyên suốt: TỪ SẮP TỚI KHÔNG BAO GIỜ HIỆN LÊN MÀN HÌNH
+
+Typer đứng ngay trước màn hình. Nên dòng chưa chơi **chỉ hiện số thứ tự**; **màn setup cũng chỉ hiện CON SỐ** (85 từ · 50+50 · trùng 15 · phủ ALL · 5:00 mỗi đồng hồ), không hiện chữ nào; dòng PASS hiện `—` (từ đó có thể đang nằm trong danh sách đội kia — lộ ra là tặng không cho đối thủ). Chỉ dòng gõ ĐÚNG mới hiện chữ xanh lá (đúng yêu cầu thầy; chỗ này rò rỉ nhẹ y như bản Excel cũ vẫn rò). Đo thật lúc vào trận: quét toàn bộ `.aw-rw-row-body` → **rỗng hoàn toàn**.
+
+### Đã làm
+
+**7 file mới** trong `templates/running-word/`: `running-word.js` (setup → 3-2-1 → trận đấu → bảng kết quả), `running-word.css`, `running-word-editor.js` (**1 ô textarea, mỗi dòng 1 từ** — dán thẳng cột Excel; game này 1 item chỉ có 1 trường nên list ô kiểu Quiz là tra tấn với 85 từ), `rw-sets.js`, `rw-print.js`, `rw-sound.js` (synth Web Audio: tiếng **clack** đồng hồ cờ vua = 2 tiếng gõ cách 28ms trên 1 thùm trầm, chuông kết thúc dùng bồi âm **không điều hoà** cho ra chất kim loại, tick 15s cuối càng gần 0 càng cao và to), `sample-running-word.js`, kèm `test.html/test.js` + `GHI CHU RUNNING-WORD.md`.
+
+**Tính năng:** 2 đồng hồ cờ vua (đội đang chạy sáng, đội chờ tối hẳn) · gõ đúng → xanh + ✓ bay về ô đếm từ + **clack đảo đồng hồ** + xuống dòng đội kia · gõ sai → đỏ + rung, **đồng hồ vẫn chạy**, không cho qua (đúng luật cờ vua) · **nút PASS** (bật/tắt bằng Options theo yêu cầu thầy, phạt giây, dòng bỏ luôn để tờ giấy không lệch dòng) · **nút Andrew** (mỗi ĐỘI 1 lượt, 0-3) · **PAUSE + UNDO cho trọng tài** · 3-2-1 vào trận · 15s cuối chuông dồn + mặt đồng hồ đỏ nhấp · hết giờ → chuông 3 hồi → "BLUES WINS · REDS ran out of time" + bảng so 2 đội. Options: tên 2 đội, thời gian mỗi đội, thưởng Fischer, số từ mỗi đội, số lượt Andrew, bật/tắt PASS + mức phạt, mốc cảnh báo.
+
+**In 3 tờ A4** (`rw-print.js`, in từ màn setup): PART A · PART B · CHECK, đúng 3 trang, cột **TURN là ô trống để tick** (thầy chốt). Chiều cao dòng tự tính theo số từ; **≥41 dòng tự chảy 2 cột** để chữ không tụt xuống ~7pt (explainer vừa đứng vừa đọc vừa nói). Đo lại mọi cỡ pool thật: 20/40/60/85/100 từ đều **lọt 1 trang, chữ 9.9-10.5pt**.
+
+**Lưu bộ in vào act** (thầy chọn): 3 slot SET 1/2/3, nút "Shuffle new split" + "Save as SET n" ngay trong game; `store.js` **nạp trì hoãn trong chính hàm click** (đúng luật "trang HS không nạp code thư viện") và nút Save chỉ dựng khi phát hiện đang ở máy thầy (`.aw-below-right` — engine gỡ thanh công cụ này ở chế độ HS, nên đây là tín hiệu tin cậy mà không cần thêm API core).
+
+**2 chỗ core được phép sửa (thầy duyệt trước):** `core/catalog.js` thêm 1 mục (cổng tích hợp chính thức) · `core/lesson-import.js` thêm `runningWord()` + 1 nhánh → Import file `.xlsm` bài học tự sinh act `<mã bài> / RUNNING WORD`. Đo thật với chính file của thầy: bundle từ 8 → **9 act**, act mới có **đúng 85 từ**, giữ nguyên 4 từ nhiều chữ/gạch nối (`WASH DOWN`, `BRING IN`, `LARGE-SCALE`, `SKIN-SCRAPER`), parse hết 114ms. **KHÔNG đụng `core/convert.js`** → game này chưa tham gia Change template (cố ý, ghi trong GHI CHU).
+
+### ⭐ 2 LỖI THẬT BẮT ĐƯỢC KHI CHẠY THẬT (không phải khi đọc code)
+
+**(1) Phím Andrew chết cứng → ⭐ HOÁ RA LÀ LỖI CỦA CORE, ĐÃ VÁ TẬN GỐC.** `fnKey()` trong `core/keyboard.js` gắn `onclick` **CHỈ KHI phím không disabled lúc DỰNG** (`if (disabled) b.disabled = true; else if (onClick) b.onclick = …`), và `refresh()` về sau **chỉ đổi `.disabled`, không gắn lại handler** → phím nào sinh ra lúc đang khoá là **chết hẳn cả phiên, im lặng, không lỗi console**. Bản đầu của Running word dựng bàn phím ngay trong `mount()` (lúc đó còn màn setup, `phase === "setup"`) nên dính. Chỉ lộ ra khi BẤM THỬ THẬT.
+
+Ban đầu tôi chỉ né bằng cách dời `createKeyboard()` xuống `startMatch()` và ghi vào ĐỀ XUẤT SỬA CORE; **thầy chốt sửa luôn core**. Khi sửa mới phát hiện **Crossword ĐÃ TỪNG BỊ CHÍNH BẪY NÀY** và phải né bằng tay — `isDisabled` của nó có điều kiện thừa `(curWord >= 0 && ...)` kèm ghi chú *"must NOT be disabled at build time (curWord is -1 then), or the core keyboard never wires the click"*. Tức lỗi đã âm thầm bắt 2 session bẻ cong logic.
+
+**Bản vá (`core/keyboard.js`, 2 chỗ):** `fnKey()` **luôn gắn handler**, `disabled` một mình quyết định bấm được hay không (`<button disabled>` không bao giờ phát click nên gắn sẵn là an toàn tuyệt đối); `extraKeyEl()` thôi truyền `null` làm `onClick` khi đang khoá. Đo bằng ca tái hiện đúng lỗi cũ: dựng phím lúc **đang disabled** → bấm **0 lần ăn** (đúng), `refresh()` mở khoá → bấm **ăn ngay 1 lần** (trước vá: vẫn 0). caps/numbers giữ nguyên hành vi (caps vẫn khoá trong numbers mode, vẫn chạy lại khi thoát). Hồi quy 3 game dùng bàn phím: **Type the answer** (Andrew mở đáp án "gray", glow, khoá lại; gõ chữ + Submit bình thường), **Crossword** (26 phím chữ, caps sống), **Running word** (Andrew hiện từ, glow, khoá) — 0 lỗi console. Ghi chú thừa của Crossword được **giữ nguyên hành vi**, chỉ sửa comment cho khỏi đánh lừa session sau (không đổi code đang chạy tốt chỉ để dọn 1 dòng). Luật mới ghi vào `core/HUONG DAN CORE.md` mục "BẪY BÀN PHÍM": **từ nay template được tự do dựng bàn phím ở bất kỳ trạng thái nào.**
+
+Running word vẫn giữ việc dựng bàn phím ở `startMatch()` — không còn vì bắt buộc, mà vì màn setup không có gì để gõ, và như vậy game vẫn chạy đúng cả trên bản core cũ.
+
+**(2) Ngân sách chiều cao sai → bàn phím nuốt hết 2 cột.** Tôi tính theo khung 56.25cqw, nhưng **vùng chơi chỉ cao 45.67cqw** (thanh trên + thanh dưới ăn ~10.6cqw), và bàn phím ở cỡ gốc chiếm **20.3cqw** chứ không phải ~17.5 như ước lượng. Kết quả đo: đồng hồ 12.57 + bàn phím 20.3 = 32.9/45.67 → 2 cột chỉ còn **9.87cqw = 1.04 DÒNG**, tức mất sạch ý nghĩa của màn hình. Chụp ảnh mới thấy. **Sửa:** thu đồng hồ (12.57→9.62), thu dòng, và thu bàn phím (20.3→15.35) bằng các luật **scoped `.aw-rw-card .aw-kbd-*`** — tuyệt đối không luật trần, vì CSS template ở lại document vĩnh viễn nên sẽ thu nhỏ luôn bàn phím của Type the answer + Crossword suốt phiên. Đo lại: **5 dòng hiện trọn mỗi đội, 0 chồng lấn, 0 tràn**.
+
+### Tự test (trình duyệt thật, 0 lỗi console)
+
+Vì màn hình **cố ý không hiện từ** nên không script nào đọc trộm được đáp án → test hộp đen: dựng act pool nhỏ đã biết rồi **dò từng từ** (mỗi lần dò sai chính là 1 ca kiểm thử đường sai). Kết quả: chia từ đúng công thức ở 5 cỡ pool · vào trận đúng (3-2-1, 2 đồng hồ, ô nhập ở dòng 1 cột A, 0 từ lộ) · 5 lần gõ sai đều bị chặn, không nhảy dòng, đồng hồ vẫn chạy · gõ đúng → xanh + đảo đồng hồ + điểm 1–0 · Andrew hiện từ vàng đúng dòng, dùng xong đội kia vẫn còn lượt riêng · PASS phạt đúng −5s và không lộ từ · UNDO trả đúng lượt + đúng giờ · PAUSE đóng băng rồi chạy lại · hết danh sách → "REDS WINS · finished the whole list" 3–2 · **hết giờ: cảnh báo bật đúng mốc 0:15, đếm tới 0:00 hết đúng 30s, ra "BLUES WINS · REDS ran out of time"** · editor (dán cột Excel, dedupe, sort, save tự loại bộ in đã lỗi thời) · **in: 3 trang, 50 dòng/tờ, ô tick có, tờ CHECK ghép đúng cặp A/B theo dòng** · **4 theme đều tương phản tốt** (chữ nay theo `var(--aw-text)` của theme) · **142/142 phần tử bấm được có tap-highlight trong suốt** (thừa hưởng bản vá core v0.9.40, KHÔNG khai lại) · **hồi quy: 15/15 template mount + có editor, 0 lỗi console**.
+
+⚠️ Ghi lại 1 bẫy của chính khâu TEST: đừng khôi phục `window.print` ngay sau khi gọi `printRunningSheets()` — hàm này hẹn `window.print()` sau 60ms, khôi phục sớm là bung hộp thoại In THẬT và **treo cứng renderer** (đã dính, phải mở tab mới).
+
+**Việc kế: thầy chơi thử trên TOMKO (nhất là cỡ chữ ô nhập + 2 mặt đồng hồ nhìn từ cuối lớp) và IN THỬ 3 TỜ A4 THẬT → duyệt → commit + push (nhớ `curl` kiểm bản live).**
+
+---
+
 ## Đợt 66 (4/8/2026, v0.9.41) — CROSSWORD: PHÂN TRANG TỚI 120 ANSWER + ANAGRAM→CROSSWORD NÂNG TRẦN 40→120. KHÔNG ĐỤNG CORE (chỉ `core/convert.js`, dùng chung mọi template). ✅ COMMIT (`4d5b892`) + PUSH + LIVE — `curl` kiểm 3 file (crossword.js/convert.js/crossword-editor.js) **lên live ngay lần đầu, không dính bẫy cache cũ** lần này, rồi CHẠY LẠI trọn bộ kiểm tra TRÊN BẢN LIVE (import thẳng module từ `andrewclasses-01.github.io/AWord`, không phải bản local): n=31 → "Page 1/2" đúng, mũi tên ẩn đúng, `switchTargets()` live trả đúng 40→true/41→true/120→true/121→false, giải thật 3 từ trên bản live → điểm "3" đúng, 0 lỗi console.
 
 Thầy hỏi vì sao Anagram chưa đổi Template được sang Crossword (ảnh chụp bảng Template, Crossword mờ) — tra ra: **không phải lỗi**, `core/convert.js` giới hạn Crossword tối đa 40 từ (`n>40` bị loại), bộ act của thầy vượt mức đó. Thầy chốt 3 việc:

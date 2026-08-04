@@ -24,7 +24,8 @@
 //   onBackspace(),
 //   submit,             // optional { onClick(), isDisabled() } — omit for
 //                        // no Submit key (a template that grades some other
-//                        // way, e.g. Crossword grades per-word as you type)
+//                        // way). Type the answer, Crossword and Running word
+//                        // all pass one.
 //   extraKey            // optional { label, className, getState(), isDisabled(),
 //                        //   onClick(), silent } — a template-specific 5th
 //                        //   key (e.g. Type the answer's "Andrew help").
@@ -40,6 +41,9 @@
 //   life of the game (position/fit math, is-hidden toggling, etc).
 //   `refresh()` re-syncs the Submit-disabled state and the extra key's state
 //   IN PLACE (no rebuild) — call it whenever grading / question changes.
+//   A key may safely be BUILT in a disabled state and enabled later by
+//   refresh(): every key gets its click handler at build time and `disabled`
+//   alone gates it (fixed 4/8/2026 — see the note on fnKey below).
 // =============================================================
 import { el } from "./utils.js";
 
@@ -142,14 +146,25 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     b.classList.add("aw-kbd-key-back");   // red
     return b;
   }
+  // ⚠️ THE HANDLER IS ALWAYS ATTACHED; `disabled` alone decides whether the key
+  // can be pressed. It used to be `if (disabled) b.disabled = true; else b.onclick = …`
+  // — i.e. a key built in a disabled state got NO handler at all, and since
+  // refresh() only ever flips `.disabled`, re-enabling it later produced a key
+  // that looked alive and did nothing, for good, with no error anywhere.
+  // Running word hit exactly that on 4/8/2026: it builds its keyboard while the
+  // pre-match setup screen is up, so `extraKey.isDisabled()` was true at build
+  // time and its "Andrew" key was dead for the whole game. A disabled <button>
+  // never fires click, so attaching the handler up front is safe and makes the
+  // enabled/disabled state a pure property of `disabled` — which is what every
+  // caller and refresh() already assume.
   function fnKey(labelText, extraClass, onClick, disabled) {
     const b = el("button", "aw-kbd-key aw-kbd-key-fn " + extraClass);
     b.type = "button";
     b.tabIndex = -1;
     b.onmousedown = e => e.preventDefault();
     b.append(el("span", "aw-kbd-key-dot"), el("span", "aw-kbd-key-fnlabel", escapeHtml(labelText)));
-    if (disabled) b.disabled = true;
-    else if (onClick) b.onclick = () => { sound?.keyClick?.(); onClick(); };
+    if (onClick) b.onclick = () => { sound?.keyClick?.(); onClick(); };
+    b.disabled = !!disabled;
     return b;
   }
   function capsKeyEl() {
@@ -168,7 +183,9 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     if (state === "ready") cls += " is-ready";
     else if (state === "glowing") cls += " is-glowing";
     else if (state === "used") cls += " is-used";
-    return fnKey(extraKey.label || "", cls, disabled ? null : () => extraKey.onClick?.(), disabled);
+    // Pass the handler even when the key starts disabled — see fnKey's note.
+    // (This used to hand over `null`, which is what actually killed the key.)
+    return fnKey(extraKey.label || "", cls, () => extraKey.onClick?.(), disabled);
   }
   function setCaps(on) {
     capsOn = on;

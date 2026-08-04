@@ -100,7 +100,13 @@ export const TEMPLATES = [
     blurb: "Deal cards at random for speaking practice.",
     css: "templates/speaking-cards/speaking-cards.css",
     load: () => import("../templates/speaking-cards/speaking-cards.js"),
-    sample: () => import("../templates/speaking-cards/sample-speaking-cards.js") }
+    sample: () => import("../templates/speaking-cards/sample-speaking-cards.js") },
+
+  { type: "running_word",    label: "Running word",    built: true,
+    blurb: "Two teams race on a chess clock — explain the word, spell it, pass the turn.",
+    css: "templates/running-word/running-word.css",
+    load: () => import("../templates/running-word/running-word.js"),
+    sample: () => import("../templates/running-word/sample-running-word.js") }
 ];
 
 export function templateEntry(type) {

@@ -81,6 +81,36 @@ từng game. Phản hồi khi nhấn KHÔNG mất, vì mọi nút vốn đã có
 > đặt `-webkit-tap-highlight-color` về một màu khác trong template — làm vậy là bật lại lỗi cho đúng
 > game đó.
 
+## ⚠️ BẪY BÀN PHÍM — phím dựng lúc disabled từng CHẾT VĨNH VIỄN (đã VÁ 4/8/2026, v0.9.42)
+
+**Triệu chứng:** một phím chức năng của `core/keyboard.js` (caps · numbers · phím `extraKey` riêng của
+template, điển hình là **"Andrew"**) hiện ra bình thường, hết mờ đúng lúc, nhưng **bấm mãi không ăn** —
+không lỗi console, không dấu vết gì.
+
+**Nguyên nhân:** `fnKey()` trước đây gắn `onclick` **CHỈ KHI phím không disabled lúc DỰNG**:
+
+```js
+if (disabled) b.disabled = true;
+else if (onClick) b.onclick = ...;      // ← phím sinh ra lúc disabled thì KHÔNG có dòng này
+```
+
+mà `refresh()` về sau **chỉ đổi `.disabled`**, không bao giờ gắn bù handler. Nên phím nào sinh ra ở
+trạng thái disabled là chết hẳn cả phiên. `extraKeyEl()` còn làm nặng thêm: nó truyền thẳng `null`
+làm `onClick` khi đang disabled.
+
+**Đã cắn 2 lần:**
+- **Crossword** (trước đó): tác giả phải bẻ cong `isDisabled` thành `(curWord >= 0 && ...)` chỉ để
+  phím không bị disabled lúc dựng — có ghi chú "must NOT be disabled at build time" ngay trong code.
+- **Running word** (4/8/2026): dựng bàn phím ở màn setup trước trận (`phase === "setup"`) → phím
+  Andrew chết suốt ván. Chỉ lộ ra khi BẤM THỬ THẬT trong trình duyệt.
+
+**Bản vá:** `fnKey()` **luôn gắn handler**, còn `disabled` một mình quyết định bấm được hay không
+(`<button disabled>` không bao giờ phát sự kiện click, nên gắn sẵn là an toàn tuyệt đối); `extraKeyEl()`
+thôi truyền `null`. Đo lại: dựng lúc disabled → bấm **0 lần ăn**; `refresh()` mở khoá → bấm **ăn ngay**
+(trước đây vẫn 0). Hồi quy Type the answer · Crossword · Running word đều bình thường, 0 lỗi console.
+
+→ **Từ nay template được tự do dựng bàn phím ở bất kỳ trạng thái nào**, kể cả khi mọi phím đang khoá.
+
 ## ⚠️ BẪY CSS (v0.9.1) — làm mờ "mọi thứ trừ một vùng"
 
 Muốn làm nổi 1 vùng và làm mờ phần còn lại thì luật làm-mờ phải dùng **con trực tiếp `>`**, không
@@ -141,8 +171,10 @@ core/
 ├─ keyboard.js        ← createKeyboard({sound,onChar,onBackspace,submit?,extraKey?}) — BÀN PHÍM ẢO
 │                        CHUẨN dùng chung cho mọi template cần gõ chữ (tông tối cố định, 4 hàng kiểu
 │                        điện thoại: '/chữ/⌫, caps/chữ/?, numbers/chữ/.,, [extra?]/Space/[Submit?]).
-│                        Tách ra từ Type the answer (1/8/2026); Crossword dùng lại y hệt. `submit` và
-│                        `extraKey` là TÙY CHỌN — template không cần thì bỏ qua (Crossword không dùng).
+│                        Tách ra từ Type the answer (1/8/2026); Crossword và Running word dùng lại.
+│                        `submit` và `extraKey` là TÙY CHỌN — không cần thì bỏ qua.
+│                        ⭐ 4/8/2026: phím dựng lúc ĐANG disabled nay VẪN được gắn handler
+│                        (xem mục "BẪY BÀN PHÍM" bên dưới).
 ├─ utils.js           ← shuffle, formatTime, el(), ordinal(), fmtSecsParts()
 ├─ themes/            ← classic.css, classroom.css, beach.css + manifest.js (danh sách + lazy-load).
 │                        Mỗi theme định nghĩa cả biến hình dạng ô + chữ: --aw-tile-radius,
