@@ -1,7 +1,7 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: 🟢 ĐỢT 63 (v0.9.38) CHỜ THẦY DUYỆT** — 5 điều chỉnh thầy gửi 1 lượt, đã tự test trình duyệt
-thật, 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
+**TRẠNG THÁI: ✅ ĐỢT 63 (v0.9.38) THẦY DUYỆT → COMMIT `16586a6` + PUSH + LIVE** — 5 điều chỉnh thầy gửi 1
+lượt, đã chạy lại trọn bộ đo TRÊN BẢN LIVE, 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
 chuyển từ mọi game QA, sửa ở `core/convert.js`, không đụng file của template này; trước đó **Đợt 57,
 v0.9.32** — 2 tinh chỉnh thầy yêu cầu). `built:true` trong `core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở

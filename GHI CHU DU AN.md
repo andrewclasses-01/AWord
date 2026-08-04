@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 63 (4/8/2026, v0.9.38) — WHACK-A-MOLE: 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT (bảng/cột · thang Speed · bubble · điểm cuối ván lên bảng · thanh Punishment). ⭐ CÓ SỬA 1 LỖI THẬT (autoFit chưa từng chạy). KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT — đã tự test trình duyệt thật, 0 lỗi console.
+## Đợt 63 (4/8/2026, v0.9.38) — WHACK-A-MOLE: 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT (bảng/cột · thang Speed · bubble · điểm cuối ván lên bảng · thanh Punishment). ⭐ CÓ SỬA 1 LỖI THẬT (autoFit chưa từng chạy). KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`16586a6`) + PUSH + LIVE.
 
 **File đụng (3 + 3 docs):** `templates/whack-a-mole/whack-a-mole.js` · `whack-a-mole.css` ·
 `sample-whack-a-mole.js`. KHÔNG đụng `core/`, KHÔNG đụng 13 template khác (đã đo lại: 14/14 mount 0 lỗi).
@@ -64,8 +64,18 @@ Dưới 400ms thì bỏ luôn chữ "WAIT…" + rung lắc (quá ngắn, chớp 
 14/14 template mount 0 lỗi console; sau khi CSS whack-a-mole đã nằm trong document, **Quiz vẫn còn đủ 2 nút
 mũi tên** (`display:flex`) → luật ẩn nav của whack vẫn scoped đúng, không rò sang game khác.
 
-**VIỆC ĐANG CHỜ:** thầy chơi thử trên TOMKO (đặc biệt xem mức Speed nào vừa tay, vì thang đã đổi) → duyệt →
-commit + push + `curl` kiểm live.
+### Kiểm chứng SAU KHI PUSH (bản live)
+`curl` poll tới khi cả 3 file lên Pages — **lần thử đầu vẫn trả file CŨ, lần 2 mới đủ** (đúng bẫy quen
+"Pages cập nhật các file không đồng thời", y như Đợt 62). Rồi chạy LẠI trọn bộ đo **trên
+`andrewclasses-01.github.io/AWord/`**: bảng lệch tâm cột **0,0px** · thừa cột 18,9/19,0px · đỉnh cột cách
+thanh giờ **17,3px**, hết đè · bubble thoát mặt mole cả 3 cỡ hố (3,3 / 6,6 / 9,9px) · câu hỏi 229 ký tự giữ
+bảng đúng 103,4px (fit 0,503) và vẫn giữa cột 0,0px · hết ván bảng hiện `SCORE`, `.aw-wam-sign-target` biến
+mất, số khổng lồ cũ đã bỏ hẳn · slider Punishment 0–10 mặc định 4s, accent `rgb(34,197,94)`, "Off"/"10s" đúng,
+đặt 8s → mole mới sau **8204ms** kèm rung lắc · Speed 10 = 1 mole/526ms. **14/14 template mount 0 lỗi
+console; Quiz vẫn đủ 2 mũi tên** sau khi CSS whack nằm trong document.
+
+**VIỆC ĐANG CHỜ:** thầy chơi thử trên TOMKO — nhất là **chọn lại mức Speed vừa tay** (thang đã đổi: nhịp cũ
+ở mức 5 nay tương đương mức 7–8) và ngó cỡ chữ câu hỏi Quiz rất dài (nay co nhỏ thay vì kéo giãn tấm ván).
 
 ---
 
