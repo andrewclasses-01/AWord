@@ -107,15 +107,20 @@ export function openRunningWordEditor(container, activity, { onSave, onCancel, h
   // ===== saved print sets =====
   // Editing the pool can leave a saved split pointing at words that no longer
   // exist, so the teacher is told what is stored and given a way to drop it.
+  // readSets() is POSITIONAL now (5/8/2026) — index i is always SET i+1, and a
+  // hole is `null`, so this has to check for ANY saved slot and skip the
+  // holes rather than trusting .length (which is always up to MAX_SETS).
   const saved = readSets(data);
-  if (saved.length) {
+  const savedCount = saved.filter(Boolean).length;
+  if (savedCount) {
     body.append(el("div", "aw-ed-sectionhead", "Saved print sets"));
     const box = el("div", "aw-rw-ed-sets");
     saved.forEach((s, i) => {
+      if (!s) return;
       box.append(el("div", "aw-rw-ed-set",
         `SET ${i + 1} — ${s.a.length} + ${s.b.length} words`));
     });
-    const dropBtn = el("button", "aw-btn aw-ed-bulkdanger", `Delete ${saved.length} saved set(s)`);
+    const dropBtn = el("button", "aw-btn aw-ed-bulkdanger", `Delete ${savedCount} saved set(s)`);
     dropBtn.type = "button";
     dropBtn.onclick = () => {
       if (!confirm("Delete the saved splits? The printed sheets you already handed out will no longer match a set in the game.")) return;

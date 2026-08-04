@@ -30,21 +30,21 @@ import { el } from "../../core/utils.js";
 // A4 minus the @page margins declared below — the height the rows may occupy
 // once the sheet's own heading block is taken off.
 const PAGE_BODY_MM = 297 - 15 - 13;     // 269mm between the top and bottom margins
-// Heading block (tag + team + rule + margin ≈ 16mm) plus the table's head row
-// (≈3.5mm) plus ~5.5mm of SLACK. The slack is not decoration: at 50 words the
-// first version came out at exactly 269mm — precisely the page budget, with
-// nothing left for a rounded border or a font metric, so row 50 was one hair
-// from being pushed onto a second sheet. Measured 4/8/2026.
-const HEADING_MM = 25;
+// Heading block shrunk to a minimum (teacher's request, 5/8/2026 — every mm
+// not spent on the heading goes to the words): small tag + subtitle (≈11mm)
+// plus the table's head row (≈3mm) plus ~2mm of slack so a rounded border or
+// font metric never pushes the last row onto a second sheet — the earlier
+// design (25mm) learned that lesson the hard way at exactly 0 slack.
+const HEADING_MM = 16;
 const ROWS_MM = PAGE_BODY_MM - HEADING_MM;
-const ROW_MAX_MM = 7.4;                  // a short list shouldn't print comically tall rows
-// Below this a single column has to shrink the type past about 7pt. The
+// Below ROW_MIN_MM a single column has to shrink the type past about 7pt. The
 // explainer reads this sheet STANDING UP, holding it, while talking — so rather
-// than squeeze, the list flows into TWO columns and keeps big type. Measured
-// 4/8/2026: 50 words in one column came out at 4.88mm rows / ~6.9pt; the same 50
-// in two columns get 7.4mm rows / ~10.5pt. CSS columns fill column 1 top-to-
-// bottom before column 2, so 1..25 then 26..50 still reads in order, and every
-// row carries its own number anyway.
+// than squeeze, the list flows into TWO columns and keeps big type. CSS columns
+// fill column 1 top-to-bottom before column 2, so 1..25 then 26..50 still reads
+// in order, and every row carries its own number anyway. There is NO upper cap
+// on row height any more (teacher's request, 5/8/2026): a short list fills the
+// whole page with the biggest type that still fits, instead of stopping at a
+// fixed size and leaving the rest of the sheet blank.
 const ROW_MIN_MM = 5.2;
 
 // Work out the row height (and whether the list needs to flow into 2 columns)
@@ -52,13 +52,15 @@ const ROW_MIN_MM = 5.2;
 function metrics(count) {
   const n = Math.max(1, count);
   let cols = 1;
-  let rowH = Math.min(ROW_MAX_MM, ROWS_MM / n);
+  let rowH = ROWS_MM / n;
   if (rowH < ROW_MIN_MM) {
     cols = 2;
-    rowH = Math.min(ROW_MAX_MM, ROWS_MM / Math.ceil(n / 2));
-    if (rowH < ROW_MIN_MM) rowH = ROW_MIN_MM;   // >120 words: let it run onto a 2nd page
+    rowH = ROWS_MM / Math.ceil(n / 2);
+    if (rowH < ROW_MIN_MM) rowH = ROW_MIN_MM;   // extreme case: let it run onto a 2nd page
   }
-  return { cols, rowH, fs: +(rowH * 0.50).toFixed(2) };
+  // The word takes up more of the row (was 0.50): "minimal gap from the word
+  // to the divider line" (teacher's request, 5/8/2026).
+  return { cols, rowH, fs: +(rowH * 0.62).toFixed(2) };
 }
 
 // ---------- public entry ----------
@@ -159,7 +161,10 @@ function listPage(title, tag, teamName, words) {
 }
 
 // The referee's sheet — both lists row by row, so the teacher can check either
-// team's current word without shuffling papers.
+// team's current word without shuffling papers. Each team gets its OWN №
+// column (5/8/2026, teacher's request): the two lists just happen to share a
+// row index from how buildSets() laid them out, they aren't a matched pair,
+// so reading down either team's column needs its own numbering.
 function checkPage(title, teamA, teamB, set) {
   const n = Math.max(set.a.length, set.b.length);
   const { rowH, fs } = metrics(n);
@@ -174,12 +179,14 @@ function checkPage(title, teamA, teamB, set) {
   const th = el("div", "aw-rw-ps-row is-head");
   th.append(el("span", "aw-rw-ps-c-no", "№"),
             el("span", "aw-rw-ps-c-team", escapeHtml(teamA)),
+            el("span", "aw-rw-ps-c-no", "№"),
             el("span", "aw-rw-ps-c-team", escapeHtml(teamB)));
   table.append(th);
   for (let i = 0; i < n; i++) {
     const row = el("div", "aw-rw-ps-row");
-    row.append(el("span", "aw-rw-ps-c-no", String(i + 1)),
+    row.append(el("span", "aw-rw-ps-c-no", set.a[i] != null ? String(i + 1) : ""),
                el("span", "aw-rw-ps-c-team", escapeHtml(String(set.a[i] || "").toUpperCase())),
+               el("span", "aw-rw-ps-c-no", set.b[i] != null ? String(i + 1) : ""),
                el("span", "aw-rw-ps-c-team", escapeHtml(String(set.b[i] || "").toUpperCase())));
     table.append(row);
   }

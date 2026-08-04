@@ -1,29 +1,26 @@
 // =============================================================
 // RUNNING WORD — building a PAIR of team word lists from one shared pool.
 //
-// This file reproduces (and then tightens) the split Teacher Andrew has been
-// making by hand in the `RunningW` sheet of a lesson .xlsm. Measured from the
-// real file IEL-S15.T3.P4.xlsm on 4/8/2026:
+// Teacher's rule (5/8/2026, replaces the earlier random-overlap version): each
+// team's list holds AT MOST CAPACITY (50) words, and WHICH words go where is
+// decided by POSITION in the pool, not by random draw —
 //
-//     pool (WORDTABLE col D) = 85 words
-//     PART A = 50 · PART B = 50
-//     A ∪ B  = 85  -> EVERY word of the pool is used, none is dropped
-//     A ∩ B  = 15  = 50 + 50 − 85  -> the SMALLEST overlap those sizes allow
+//   pool.length <= CAPACITY  -> both teams get the SAME words (the whole
+//                                pool), each side independently shuffled.
+//   pool.length >  CAPACITY  -> Part A = the first CAPACITY words as entered
+//                                (1..50). Part B = the last CAPACITY words as
+//                                entered (n-49..n). A 70-word pool gives A
+//                                words 1-50 and B words 21-70 — 30 shared,
+//                                sitting in the middle of the teacher's list.
+//                                A pool of 100+ words leaves the middle
+//                                stretch on NEITHER list.
 //
-// So the rule is NOT "shuffle the pool and take 50 twice" (that would repeat
-// ~29 words and silently drop a dozen others). It is: cover the whole pool,
-// and share only the words you are forced to share. buildSets() below does
-// exactly that, plus one thing the spreadsheet could not do —
-//
-//   SHARED WORDS ARE PUSHED APART. A word on both lists must sit at least
-//   MIN_SHARED_GAP rows apart, so team B doesn't type a word 20 seconds after
-//   hearing team A's explainer describe it. In the real sheet this happened to
-//   work out; here it is guaranteed.
-//
-// Sizes:
-//   k >= n        -> both teams get the whole pool, independently shuffled
-//   2k >  n       -> full coverage, overlap = 2k − n  (the normal classroom case)
-//   2k <= n       -> the two lists are completely DISJOINT (a big pool, short round)
+// The one thing kept from the old design: SHARED WORDS ARE STILL PUSHED
+// APART on list B, at least MIN_SHARED_GAP rows from their position on list
+// A — so team B doesn't type a word moments after hearing team A's explainer
+// describe the very same one. Whichever words end up shared (the whole pool
+// when n<=CAPACITY, the middle stretch when n>CAPACITY), separateShared()
+// below runs on them exactly as before.
 // =============================================================
 
 import { shuffle } from "../../core/utils.js";
@@ -53,38 +50,30 @@ export function poolFrom(activity) {
   return out;
 }
 
-// How many words each team should get, given the pool and the teacher's
-// setting. 0 / missing / oversized -> the whole pool for each team.
-export function normWordsPerTeam(value, poolSize) {
-  const v = Number(value);
-  if (!Number.isFinite(v) || v <= 0) return poolSize;
-  return Math.max(1, Math.min(poolSize, Math.round(v)));
-}
+export const CAPACITY = 50;    // the most words either team's list may hold
 
 // Build one { a, b } pair of lists. Pure — pass the pool in, get arrays out.
-export function buildSets(pool, wordsPerTeam) {
+export function buildSets(pool) {
   const n = pool.length;
   if (n === 0) return { a: [], b: [] };
-  const k = normWordsPerTeam(wordsPerTeam, n);
 
-  let a, b;
-  if (2 * k <= n) {
-    // Enough words that the teams need share nothing at all.
-    const s = shuffle(pool);
-    a = shuffle(s.slice(0, k));
-    b = shuffle(s.slice(k, 2 * k));
-  } else {
-    // Cover the pool exactly once, sharing only the forced remainder.
-    const overlap = 2 * k - n;          // words that must appear on BOTH lists
-    const exclusive = n - k;             // words unique to each list
-    const s = shuffle(pool);
-    const shared = s.slice(0, overlap);
-    const onlyA = s.slice(overlap, overlap + exclusive);
-    const onlyB = s.slice(overlap + exclusive);
-    a = shuffle([...shared, ...onlyA]);
-    b = shuffle([...shared, ...onlyB]);
-    b = separateShared(a, b, shared);
+  if (n <= CAPACITY) {
+    // Small pool: both teams play the exact same words. Each side is its own
+    // independent shuffle, so the two orders never match by construction.
+    let a = shuffle(pool);
+    let b = shuffle(pool);
+    b = separateShared(a, b, pool);
+    return { a, b };
   }
+
+  // Big pool: position decides membership, not a random draw. A = the first
+  // CAPACITY words as the teacher entered them, B = the last CAPACITY words.
+  const onlyA = pool.slice(0, CAPACITY);
+  const onlyB = pool.slice(n - CAPACITY);
+  const shared = pool.slice(n - CAPACITY, CAPACITY);   // [] once n >= 2*CAPACITY
+  let a = shuffle(onlyA);
+  let b = shuffle(onlyB);
+  b = separateShared(a, b, shared);
   return { a, b };
 }
 
@@ -128,18 +117,24 @@ function separateShared(a, b, shared) {
 
 // A saved set is stored as plain string arrays on the activity (Firestore-safe:
 // an array of MAPS whose fields are arrays — never an array directly inside an
-// array, which Firestore rejects). Re-reading is defensive because the act may
-// have been edited (words removed) since the set was saved.
+// array, which Firestore rejects; Firestore is fine with `null` array entries).
+//
+// POSITIONAL (5/8/2026): index i is always SLOT i+1, on screen and in storage.
+// An earlier version FILTERED out empty slots before returning them, which
+// silently compacted the array — deleting SET 1 out of a saved [1,2,3] would
+// shift SET 2 into SET 1's position on reload. A hole is now `null` and stays
+// exactly where it is; only the caller (running-word.js) ever removes one.
+// Re-reading is still defensive because the act may have been edited (words
+// removed) since the set was saved.
 export function readSets(activity) {
   const raw = activity?.content?.printSets;
   if (!Array.isArray(raw)) return [];
-  return raw
-    .map(s => ({
-      a: Array.isArray(s?.a) ? s.a.map(cleanWord).filter(Boolean) : [],
-      b: Array.isArray(s?.b) ? s.b.map(cleanWord).filter(Boolean) : []
-    }))
-    .filter(s => s.a.length && s.b.length)
-    .slice(0, MAX_SETS);
+  return raw.slice(0, MAX_SETS).map(s => {
+    if (!s || !Array.isArray(s.a) || !Array.isArray(s.b)) return null;
+    const a = s.a.map(cleanWord).filter(Boolean);
+    const b = s.b.map(cleanWord).filter(Boolean);
+    return (a.length && b.length) ? { a, b } : null;
+  });
 }
 
 export const MAX_SETS = 3;

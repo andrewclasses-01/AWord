@@ -5,6 +5,165 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 70 (5/8/2026, v0.9.45) — RUNNING WORD: 8 TINH CHỈNH SAU KHI THẦY CHƠI THỬ ĐỢT 2. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+
+Thầy chơi bản Đợt 2 (v0.9.44) rồi gửi ảnh bàn phím + 8 điểm. Chỉ 2 file: `running-word.js`,
+`running-word.css`.
+
+1. **Nút Play/Pause: nhạy + hình vuông bo tròn.** ⭐ **Lỗi thật gây "lúc bấm được lúc không"**:
+   `paintClocks()` chạy mỗi 100ms và gán lại `innerHTML` của nút → thẻ `<svg>` con thay mới 10 lần/
+   giây; cú chạm mà pointerdown rơi vào SVG cũ, pointerup vào SVG mới thì trình duyệt **không phát
+   `click`**. Vá 2 lớp: chỉ đổi `innerHTML` khi icon thực sự đổi (`refUI._icon`) + `svg{pointer-
+   events:none}`. Đổi hình tròn → vuông bo tròn.
+2. **Slogan về hàng nút Menu + màu nhìn rõ.** Bản cũ slogan là div absolute đáy khung → **đè lên bàn
+   phím** + màu nhạt khó thấy. Nay đưa vào NHÃN NAV giữa thanh dưới (cùng hàng Menu, 2 mũi tên đã
+   ẩn), màu `var(--aw-muted)`.
+3. **Icon loa ↔ fullscreen hết đè nhau.** Do Đợt 2 ghim fullscreen `position:absolute` đúng chỗ nút
+   loa. Vá: bỏ ghim, để fullscreen nằm tự nhiên trong cụm tools (vốn luôn ở góc phải-dưới).
+4. **Chữ trong ô tự co, hết "…", 3 ô cùng cỡ.** Biến `--rw-fit` + hàm `fitBoard()` dùng span probe đo
+   bề rộng từ, co để từ rộng nhất vừa cột; mọi ô nhân cùng fit; chạy theo `ResizeObserver` nên mượt
+   lúc bảng 70↔30. Bỏ `text-overflow:ellipsis`.
+5. **Đồng hồ hạ thấp bỏ khoảng thừa.** `.aw-rw-clocks` `align-items: stretch→center` + giảm padding
+   dọc hộp.
+6. **⭐ Bảng CHỈ 3 ô — ô nhập LUÔN ở đáy, đẩy lên khi đảo lượt.** Bỏ cuộn danh sách; nay là cửa sổ cố
+   định 3 dòng, toàn bộ từ trên 1 track trượt bằng `translateY` (`applyTrack`). Dòng đáy = ô nhập khi
+   tới lượt (bottom=idx) hoặc từ vừa xong khi chờ (idx−1); 2 dòng trên là 2 từ trước; đảo lượt →
+   trượt lên 1 dòng (.35s). Số từ còn lại ở chân bảng (giữ từ Đợt 2).
+7. **⭐ Sửa màn GAME COMPLETE bị kẹt.** Bảng kết quả riêng `.aw-rw-result` z-index **45** che bảng
+   tổng kết engine `.aw-backdrop` z-index **13** → thầy thấy màn kết quả không nút, bảng thật nằm
+   dưới. Vá: gỡ `.aw-rw-result` khi gọi `ui.finish()`.
+8. **Bàn phím giữ đúng size gốc** (xác nhận lại `--kbd-kw`=5cqw).
+
+**Bài học đo đạc:** kiểm "board nào active" bằng script đừng dùng `className.includes('is-a')` —
+`is-active` chứa `is-a` → khớp nhầm; dùng `classList.contains('is-active')`.
+
+**Tự test devserver (trình duyệt thật, 0 lỗi console):** cửa sổ 3 ô đúng kịch bản gõ-từ-5 → hiện
+3-4-5 → submit → đảo → đẩy lên 4-5-6 (ô nhập là 6); bảng hẹp 30%(142px) fit=0.711 cả 3 từ cùng 20px
+0 cắt; play/pause toggle 4 lần play→pause→play→pause đúng icon+class; slogan ở hàng Menu màu
+rgb(107,122,144); loa[472-493] vs fullscreen[495-515] tách hẳn; hộp đồng hồ cao 28px; hết ván →
+`.aw-rw-result` biến mất, `.aw-panel` "TEAM A WINS" hiện 4 nút, `elementFromPoint` giữa panel trả về
+chính panel (không bị chặn), bấm Start again → về màn READY (vẫn 4:3, act-running_word).
+
+⚠️ **Vẫn 3 việc chỉ thầy làm được** (không đổi): TOMKO thật, fullscreen iPad thật, in A4 thật.
+
+Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8d. **Việc kế: thầy nghiệm thu 3 việc
+trên → duyệt → commit + push (gộp Đợt 68 + 69 + 70).**
+
+---
+
+## Đợt 69 (5/8/2026, v0.9.44) — RUNNING WORD: LÀM LẠI GIAO DIỆN TRẬN ĐẤU (15 điểm). ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT
+
+Thầy gửi ảnh bàn phím chuẩn (Type the answer) + 15 điểm 1 lượt để làm lại toàn bộ màn trận đấu:
+
+1. Đồng hồ bỏ tên đội, đẩy sát mép trên, hộp thu ngắn (cỡ chữ đồng hồ vẫn giữ/tăng nhẹ).
+2. Bàn phím về **đúng size gốc của core** — bỏ hẳn khối thu nhỏ đã làm ở Đợt 67 (khi đó khung còn
+   16:9, thiếu chỗ; nay 4:3 + bảng chỉ 3 dòng nên dư chỗ).
+3. Bảng gõ 1 đội chỉ hiện **3 dòng, chữ thật to, căn giữa**.
+4. Đến lượt đội nào, bảng đội đó **giãn ra 70%** (đội kia co còn 30%), có animation mượt khi đảo.
+5. Bỏ "TEAM X · word N of M" dưới bàn phím, thay bằng slogan "RUNNING WORD IN ANDREW CLASSES".
+6. Tên đội dời vào giữa đầu bảng gõ từ (thay vì trên đồng hồ).
+7. Số từ CÒN LẠI (không phải đã xong) ra giữa, chân bảng, chỉ 1 số, bỏ chữ "words".
+8. Bỏ nút ẩn/hiện bàn phím — mặc định luôn hiện.
+9. Bỏ 3 nút Assignment/Template/Print (Print vẫn làm được, từ màn setup của chính game).
+10. SET đã lưu hiện nút DELETE SET (xác nhận qua popup) → xoá xong mới Shuffle lại được cho slot đó;
+    lưu/xoá đi qua đúng đường `saveActivity()` nên tự đồng bộ Firestore sang máy/iPad khác.
+11. Nút Play/Pause TO, tròn, giữa 2 đồng hồ — thêm màn **"prep"**: bấm START MATCH chưa đếm 3-2-1
+    ngay, hiện 2 bảng bằng nhau, chạm 1 bảng để chọn đội đi trước (bảng đó giãn ra), bấm Play mới
+    chạy 3-2-1 rồi vào trận; bấm lại lúc đang chơi = tạm dừng/chạy tiếp.
+12. Bỏ hẳn nút Pause nhỏ + nút Undo cũ (thay bằng nút Play/Pause to ở trên).
+13. Nút PASS nay **lộ từ màu đen** (bỏ luật "không bao giờ lộ từ" riêng cho ca này).
+
+**⭐ CÓ SỬA CORE — `core/engine.js`, 1 dòng, thầy duyệt trước:** thêm
+`stage.classList.add(\`act-${activity.type}\`)` ngay sau khi dựng khung, cho MỌI activity. Lý do:
+2 yêu cầu (khung 4:3 + ẩn 3 nút) cần có hiệu lực **NGAY TỪ MÀN READY** (trước cả khi bấm nút PLAY
+xanh), mà markup riêng của RUNNINGW (`.aw-rw-card`) chỉ tồn tại SAU khi `mount()` chạy — nên kỹ
+thuật `:has(.aw-rw-card)` dùng ở Đợt 68 không thể áp dụng sớm hơn lúc đó được. Class mới này thuần
+cộng thêm (không CSS template nào khác đọc nó), nên 14 game kia không đổi gì — đã hồi quy xác nhận
+trên `type-the-answer/test.html`.
+
+**Luồng trận đấu đổi hẳn**: thêm phase `"prep"` giữa `"setup"` và `"countdown"` — `paintBoard()`
+tính độ giãn 70/30 theo `showSplit = phase is "prep"/"countdown"/"play"`, một công thức chạy xuyên
+suốt cả 3 giai đoạn thay vì viết riêng từng nơi.
+
+**⭐ 1 lỗi lưu trữ thật được vá luôn nhân dịp thêm DELETE**: `readSets()`/`saveCurrentSet()` bản cũ
+NÉN mảng `printSets` bằng `.filter()` trước khi lưu — xoá SET 1 khỏi `[A,B,C]` sẽ làm B/C tụt xuống
+vị trí 1/2 sau khi tải lại (đổi số SET âm thầm, chưa ai để ý vì trước đây chưa có DELETE). Đổi sang
+lưu **theo đúng vị trí** (mảng có thể chứa `null` = ô trống): slot i luôn là SET i+1, xoá 1 ô không
+đụng 2 ô còn lại. `running-word-editor.js` cũng phải sửa theo vì nó đọc cùng `readSets()`.
+
+**Tự test trên devserver (trình duyệt thật):** `stage.className` có `act-running_word` + tỉ lệ
+4:3 đúng **trước khi bấm PLAY**; nút Template/Set assignment/Print `display:none` + nút Fullscreen
+`position:absolute` sẵn từ màn READY; hồi quy Type the answer vẫn `act-type_the_answer` + 16:9 +
+0 lỗi · màn "prep": 2 bảng bằng nhau lúc mới vào, chạm bảng A → 70/30 đo sau 450ms ra đúng
+396.8px/171.2px (69.9%/30.1%) · 3 dòng: khung cuộn 205.25px ÷ 1 dòng 66.98px = đúng 3.00, cỡ chữ
+34.27px · bàn phím `--kbd-kw` đọc ra đúng `5cqw` (mặc định core) · PASS hiện từ màu ink thật (không
+còn "—") · Play/Pause dừng → 2 bảng + bàn phím `opacity` đo đúng về `0.4`, bấm lại về bình thường ·
+Andrew + gõ đúng vẫn cộng điểm/đổi lượt/remaining giảm đúng · dựng 1 act giả có SET 1 đã lưu sẵn →
+Shuffle tự khoá đúng tooltip, đúng 1 nút DELETE SET hiện, xoá lúc chưa đăng nhập báo lỗi gọn qua
+toast (không crash, giống hệt hành vi nút Save) — **0 lỗi console suốt toàn bộ**.
+
+⚠️ **3 việc máy không tự kiểm được (không đổi từ Đợt 68):** xem khung/đồng hồ/bảng 70/30 trên TOMKO
+thật; bấm fullscreen thật trên iPad (Fullscreen API cần cử chỉ người dùng thật); in thử A4 giấy thật.
+
+Chi tiết đầy đủ: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8c. **Việc kế: thầy xem 3 việc
+trên → duyệt → commit + push (gộp Đợt 68 + 69, cả hai đều đang chờ cùng lúc).**
+
+---
+
+## Đợt 68 (5/8/2026, v0.9.43) — RUNNING WORD: 8 ĐIỂM TỐI ƯU IPAD. 🟢 CHỜ THẦY DUYỆT
+
+Thầy gửi 8 yêu cầu 1 lượt để tối ưu game cho iPad (chơi trong lớp trên TOMKO/iPad):
+
+1. **Khung 4:3 thay 16:9** (RIÊNG game này) — iPad màn hình gần 4:3, khung 16:9 cũ để trống 2 bên.
+2. **2 đồng hồ đội lên sát mép trên** — ẩn thanh trên gốc của engine (đồng hồ tổng + tỉ số A-B, nay
+   dư thừa), mỗi khối đồng hồ chỉ còn TÊN ĐỘI nhỏ + THỜI GIAN to hơn, bỏ dòng "words".
+3. **Fullscreen sạch chữ** — ẩn hết Menu/mũi tên/nhãn/Sound, chỉ chừa icon Fullscreen ở góc để thoát.
+4. **Bỏ văn bản hướng dẫn** trên màn hình (phụ đề, ghi chú, dòng tóm tắt cấu hình).
+5. **Chia từ theo VỊ TRÍ, tối đa 50/bên** — thay hẳn luật chia ngẫu nhiên cũ: ≤50 từ thì 2 đội chơi
+   đúng cùng 1 danh sách (chỉ xáo thứ tự riêng); >50 từ thì Part A = 50 từ ĐẦU, Part B = 50 từ CUỐI
+   theo đúng thứ tự thầy nhập. Bỏ hẳn thanh "Words per team".
+6+7+8. **Tờ in tối ưu** — heading thu nhỏ (nhường mm cho bảng từ), bỏ trần cỡ chữ (luôn lấp kín
+   trang), gạch phân cách mỏng hơn, vẫn luôn A4 1 trang 1 tờ (đã đúng sẵn).
+9. **Tờ CHECK đánh số riêng cho cả 2 nửa** (`№ TEAM A № TEAM B`, 4 cột thay vì dùng chung 1 cột №).
+10. **Andrew help 1..5** (bỏ nấc 0/Off).
+11. **Thanh "Time each team" kiểu bậc thang** — 10 nấc cố định 0:30→5:00 + nấc Custom (Min/Sec riêng).
+12. Bonus 0-15s — đã đúng sẵn, không cần sửa.
+
+**KHÔNG ĐỤNG CORE** — chỉ 5 file trong `templates/running-word/` (`running-word.js/.css`,
+`rw-sets.js`, `rw-print.js`, `sample-running-word.js`). Khung 4:3 + fullscreen sạch chữ dùng kỹ
+thuật `:has()` để khoanh vùng CHỈ riêng game này (`.aw-stage:has(.aw-rw-card)`, đúng khuôn mẫu đã
+dùng cho việc ẩn mũi tên Back-Next từ Đợt 67) — **không sửa `core/app.css`**, 14 template kia (đã
+tinh chỉnh riêng cho 16:9) không hề bị ảnh hưởng.
+
+⭐ **1 lỗi thật bắt được lúc tự test trong trình duyệt** (không phải đọc code): thanh trượt "Time
+each team" kéo sang nấc Custom rồi tự nhảy về nấc cũ ngay lập tức. Nguyên nhân: hàm vẽ lại UI đọc vị
+trí thanh trượt TỪ giá trị đã lưu (`draft.clockSeconds`) thay vì tin thao tác kéo vừa xảy ra — mà lúc
+vừa vào Custom giá trị đó chưa kịp đổi nên tính ngược lại ra đúng nấc CŨ. Sửa: tách hẳn "vẽ lại toàn
+bộ lúc mở panel Options" khỏi "chỉ đổi 2 nửa hiện/ẩn lúc kéo thanh" — vị trí thanh trượt chỉ do chính
+thao tác kéo quyết định, không bao giờ bị suy ngược lại từ giá trị đã lưu.
+
+**Tự test trên devserver (trình duyệt thật, không phải đọc code suông):** tỉ lệ khung đo được đúng
+4:3 (968×726px), thanh trên gốc `display:none`, đồng hồ cách mép trên 5.8px · gọi thẳng
+`buildSets()`: pool 30 (≤50) → 2 đội giống hệt nội dung chỉ khác thứ tự, pool 70 → A đúng 1-50 / B
+đúng 21-70 / trùng đúng 30, pool 120 → trùng 0 — khớp 100% công thức mới · chơi thật: bấm Andrew hiện
+đúng từ, gõ đúng → dòng xanh + đồng hồ đảo + điểm cập nhật + turn label đổi đội, 0 lỗi console · mở
+Options: 4 nhóm còn lại đúng (Round chỉ còn Andrew 1-5), kéo Time each team qua đủ nấc + Custom →
+Apply → Play lại → facts hiện đúng "2:15" đã lưu → mở lại Options → đúng lại Custom "2"/"15"
+(round-trip không mất dữ liệu) · gọi thẳng `printRunningSheets()` (có tem `window.print` tránh treo
+renderer) với pool 50/30 → đúng 3 trang, PART A 50 dòng, PART B 30 dòng, CHECK 50 dòng **4 cột**
+`№ TEAM A № TEAM B`, pool 50 → 2 cột, dòng 10.12mm / chữ 6.27mm (~17.8pt, gần gấp đôi cỡ cũ ~10.5pt)
+· Edit mở không lỗi · **0 lỗi console suốt toàn bộ**.
+
+⚠️ **3 việc máy không tự kiểm được, cần thầy:** xem khung 4:3 + đồng hồ trên TOMKO thật; bấm thử
+Fullscreen thật trên iPad/Chrome (Fullscreen API cần cử chỉ người dùng thật, máy không tự bấm được)
+xem có sạch chữ như ý + nút thoát có dễ bấm không; in thử 3 tờ A4 giấy thật xem chữ có thật sự
+to/lấp kín trang như mong muốn, gạch phân cách mỏng có còn rõ không.
+
+Chi tiết đầy đủ từng điểm: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8b (và mục 3 đã viết
+lại cho luật chia từ mới). **Việc kế: thầy xem 3 việc trên → duyệt → commit + push.**
+
+---
+
 ## Đợt 67 (4/8/2026, v0.9.42) — ⭐ TEMPLATE THỨ 15: **RUNNING WORD (RUNNINGW)** — trận đấu 2 đội trên đồng hồ cờ vua, có sẵn bàn phím AWord + nút Andrew + tự in 3 tờ A4. **⭐ CÓ SỬA CORE (`core/keyboard.js`, thầy yêu cầu sau khi xem báo cáo).** ✅ **COMMIT (`7d721a7`) + PUSH + LIVE** — trước khi commit đã `git fetch` so origin (**0/0**, không máy nào đẩy chen); `curl` poll Pages (**đúng bẫy quen: lần 1 còn trả file CŨ, lần 2 mới đủ 6 file**) rồi **CHẠY LẠI trọn bộ kiểm tra TRÊN CHÍNH BẢN LIVE** (mở thẳng `andrewclasses-01.github.io/AWord/templates/running-word/test.html`, không phải bản local): bản vá bàn phím trên live đúng (dựng lúc disabled → bấm **0**; `refresh()` mở khoá → bấm **ăn ngay 1**), **15/15 template mount 0 lỗi**, công thức chia từ trên live ra đúng `50+50 · trùng 15 · phủ ALL` với pool 85, Andrew trên live hiện đúng từ, **chơi TRỌN 1 ván thật → "REDS WINS · finished the whole list" 3–2 + engine ăn mừng**, 0 từ bị lộ, 0 lỗi console. ⬜ **Còn chờ thầy**: chơi trên TOMKO + in thử 3 tờ A4 giấy thật.
 
 Thầy đưa 2 file nguồn và tả trò đang chơi bằng tay: `D:\4. LISTENING\...\IEL-S15.T3.P4.xlsm` sheet **`RunningW`** (3 mảng: PART A cột A-D · PART B cột E-H · TEAM A/TEAM B cột I-K) và `D:\10. ACTIVITIES\GAMES\WORD GAMES.xlsx` sheet **`RUNNING`** (chỉ là 1 cột rộng để typer gõ trên iPad, còn nguyên vết gõ sai "Inven5", "Invent\"). Luật: explainer tả từ → typer gõ → thầy soi tờ CHECK báo đúng → **bấm đồng hồ cờ vua** → đổi đội. Hết giờ trước là thua; hết từ thì so thời gian còn lại.

@@ -22,7 +22,6 @@ export const activity = {
     teamBName: "TEAM B",
     clockSeconds: 300,           // 5:00 each
     incrementSeconds: 0,         // Fischer bonus per correct word (0 = off)
-    wordsPerTeam: 25,            // 25 + 25 from a pool of 40 -> 10 shared words
     allowPass: true,
     passPenaltySeconds: 10,
     andrewUses: 1,               // one lifeline per team for the whole match

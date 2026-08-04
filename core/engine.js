@@ -86,6 +86,13 @@ export function startGame(root, activity, { onExit, session = null, base = null 
 
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
+  // Activity-type class on the stage, present from the very first paint (READY
+  // screen included) — before tpl.mount() ever runs. A template stylesheet can
+  // key off `.aw-stage.act-<type>` for anything that must look right BEFORE the
+  // teacher presses Play, which a `:has()` check against the template's own
+  // markup can never do (that markup doesn't exist until mount()). Purely
+  // additive: no other template's CSS reads an `.act-*` class today.
+  stage.classList.add(`act-${activity.type}`);
 
   // ---- myActivity multi-pane sync bridge (a NO-OP when running standalone) ----
   // When embedded in myActivity's 2-4 pane view, pane 0's Template / Options /

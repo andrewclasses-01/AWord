@@ -53,9 +53,91 @@
 
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding: 0.4cqw 0 0.4cqw;
+  padding: 0.2cqw 0;
   animation: aw-fadein .25s ease;
 }
+
+/* =============================================================
+   FRAME — 4:3, not the app's usual 16:9 (teacher's request, 5/8/2026: this
+   game is played standing over an iPad, whose screen is close to 4:3, and the
+   16:9 letterbox was wasting real width on that device).
+
+   Scoped through `.act-running_word` — a class `core/engine.js` stamps onto
+   `.aw-stage` for EVERY activity, from `activity.type`, at the very moment the
+   stage is built (before the READY/splash screen even shows, well before this
+   template's own mount() ever runs). The one-line, purely-additive core
+   change this needed (5/8/2026, teacher approved): no other template's CSS
+   reads an `.act-*` class, so the other 14 games — all tuned for 16:9 — are
+   untouched. The frame is now 4:3 from the very first paint, not just after
+   pressing PLAY (the earlier `:has(.aw-rw-card)` version could only kick in
+   once mount() had built that markup). Both the resting frame AND the
+   fullscreen letterbox need their own rule — core hardcodes 16/9 in both. */
+.aw-stage.act-running_word { aspect-ratio: 4 / 3; }
+:fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-webkit-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-moz-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-ms-fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+
+/* The engine's own top bar (elapsed timer + a-b score) is redundant here —
+   the two team clocks below say the same things, bigger, and this frame needs
+   every mm of height it can get. Hidden always (not just in fullscreen), so
+   the clocks sit right at the top edge in every mode. Minimal top/bottom
+   padding on the stage for the same reason (teacher's request: "margin trên
+   dưới cực kỳ tối thiểu"); side padding kept so nothing touches the rounded
+   corners. */
+.aw-stage.act-running_word .aw-stage-inner { padding: 0.4cqw 1.6cqw; }
+.aw-stage.act-running_word .aw-topbar { display: none; }
+
+/* Below-stage toolbar: Assignment/Template/Print don't apply to a live 2-team
+   match (Print happens from the game's own setup screen — rw-print.js) —
+   hidden from the very first paint too, same `.act-running_word` trick, so
+   they never flash on before disappearing. Edit/Home/Style/Options are left
+   alone. */
+.aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Set assignment"],
+.aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Template"],
+.aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Print"] { display: none; }
+
+/* The slogan rides the CENTRE of the bottom bar — the same row as the Menu
+   button (teacher's request, 5/8/2026). It replaces the engine's nav label
+   ("x of N"); the nav arrows on either side are hidden (visibility:hidden,
+   below) so only this shows, centred. A muted colour keeps it readable on the
+   white bar (the old floating version was near-white and landed on the
+   keyboard). Crossword's thin, wide-tracked uppercase look. */
+.aw-stage.act-running_word .aw-nav-label {
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300; font-size: 1.35cqw;
+  letter-spacing: 0.28em; text-indent: 0.28em;
+  text-transform: uppercase; white-space: nowrap;
+  color: var(--aw-muted); min-width: 0;
+}
+
+/* Fullscreen button: it lives in the bottom bar's right-hand tool group, next
+   to Sound, which already sits at the bottom-right corner in every state — so
+   NO absolute pin (an earlier pin put it on top of the Sound icon, 5/8/2026).
+   In fullscreen the other tools are hidden and this one stays put (below). */
+
+/* FULLSCREEN — hide the rest of the engine's own chrome (Menu, the Back/Next
+   arrows, the Sound button): nothing on screen but the game once fullscreen is
+   on. The Fullscreen icon (pinned above) is the one thing left, so there is
+   still something to tap to get back out — an icon carries no text, so it
+   doesn't break "no characters on screen" either. This game's OWN controls
+   (clocks, Play/Pause + Pass, the boards, the keyboard) are never touched
+   here — only the generic engine wrapper around them. Every vendor spelling
+   needs its own rule (core's rule, see app.css): grouping :fullscreen with
+   :-webkit-full-screen drops the whole selector if the browser doesn't know
+   one of them. */
+:fullscreen .aw-stage.act-running_word .aw-bottombar-left,
+:fullscreen .aw-stage.act-running_word .aw-nav,
+:fullscreen .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-webkit-full-screen .aw-stage.act-running_word .aw-bottombar-left,
+:-webkit-full-screen .aw-stage.act-running_word .aw-nav,
+:-webkit-full-screen .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-moz-full-screen .aw-stage.act-running_word .aw-bottombar-left,
+:-moz-full-screen .aw-stage.act-running_word .aw-nav,
+:-moz-full-screen .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-ms-fullscreen .aw-stage.act-running_word .aw-bottombar-left,
+:-ms-fullscreen .aw-stage.act-running_word .aw-nav,
+:-ms-fullscreen .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
 
 .aw-rw-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
@@ -88,8 +170,6 @@
   paint-order: stroke fill;
   line-height: 1;
 }
-.aw-rw-setup-sub { font-size: 1.75cqw; font-weight: 600; color: var(--aw-muted); margin-top: -0.8cqw; }
-
 /* ---- the three saved-split slots ---- */
 .aw-rw-slots { display: flex; gap: 1.4cqw; }
 .aw-rw-slot {
@@ -108,6 +188,21 @@
 .aw-rw-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .12em; opacity: .65; }
 .aw-rw-slot-main { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
 .aw-rw-slot-meta { font-size: 1.15cqw; font-weight: 600; opacity: .7; }
+/* DELETE SET — only drawn on the selected slot when it holds a saved split
+   (teacher's request, 5/8/2026): a slot with a saved split can't be reshuffled
+   until it's deleted first, so the printed sheets can never silently drift out
+   of sync with the game. `.aw-rw-slot` became a <div> (not a <button>) so this
+   can be a REAL button nested inside it — a button can't contain a button. */
+.aw-rw-slot-del {
+  margin-top: 0.2cqw;
+  font-family: inherit; cursor: pointer;
+  font-size: 1cqw; font-weight: 800; letter-spacing: .05em;
+  color: var(--rw-no);
+  background: none; border: 0;
+  padding: 0.15cqw 0.5cqw;
+  border-radius: 0.6cqw;
+}
+.aw-rw-slot-del:hover { background: rgba(239,68,68,.12); }
 
 /* ---- the numbers that prove the split is sound ---- */
 .aw-rw-facts { display: flex; gap: 2.6cqw; align-items: flex-end; }
@@ -132,8 +227,6 @@
 .aw-rw-btn.is-icon svg { width: 1.9cqw; height: 1.9cqw; }
 .aw-rw-btn.is-dirty { border-color: var(--rw-b); color: var(--rw-b-dark); }
 
-.aw-rw-setup-note { font-size: 1.25cqw; font-weight: 600; color: var(--aw-muted); max-width: 62%; }
-
 .aw-rw-start {
   font-family: inherit; cursor: pointer;
   font-size: 2.4cqw; font-weight: 800; letter-spacing: .06em;
@@ -147,8 +240,6 @@
 .aw-rw-start:hover { filter: brightness(1.05); }
 .aw-rw-start:active { transform: translateY(0.3cqw); box-shadow: 0 0.2cqw 0 #0b8f68; }
 
-.aw-rw-setup-cfg { font-size: 1.15cqw; font-weight: 600; color: var(--aw-muted); }
-
 /* =============================================================
    MATCH SCREEN
    ============================================================= */
@@ -158,17 +249,26 @@
   position: relative;
 }
 
-/* ---- the two clocks + the referee strip between them ---- */
+/* ---- the two clocks + the Play/Pause + Pass strip between them ---- */
 .aw-rw-clocks {
   flex: 0 0 auto;
   display: grid; grid-template-columns: 1fr auto 1fr;
-  gap: 1cqw; align-items: stretch;
+  gap: 1cqw;
+  /* CENTER, not stretch: the middle column (Play/Pause + Pass stacked) is
+     taller than a clock, and `stretch` used to blow the clock boxes up to
+     match it, leaving a slab of empty space inside each (teacher's request to
+     remove it, 5/8/2026). Now each clock box hugs its digits; the taller
+     referee column just centres beside them. */
+  align-items: center;
   padding: 0 1.4cqw;
 }
+/* No team name any more (teacher's request, 5/8/2026 — it moved to the board's
+   own header, see .aw-rw-rowhead-name below) — just the time, and the box is
+   shrunk to hug the digits (minimal vertical padding). */
 .aw-rw-clock {
   border-radius: 1.1cqw;
-  padding: 0.3cqw 1.2cqw 0.35cqw;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 0.15cqw 1.2cqw 0.05cqw;
+  display: flex; align-items: center; justify-content: center;
   background: rgba(23,34,47,.06);
   border: 0.3cqw solid transparent;
   color: var(--rw-dim);
@@ -185,18 +285,10 @@
 .aw-rw-clock.is-a.is-active { border-color: var(--rw-a); border-bottom-color: var(--rw-a); }
 .aw-rw-clock.is-b.is-active { border-color: var(--rw-b); border-bottom-color: var(--rw-b); }
 
-.aw-rw-clock-name {
-  font-size: 1.15cqw; font-weight: 800; letter-spacing: .1em;
-  text-transform: uppercase;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
-}
 .aw-rw-clock-time {
-  font-size: 3.6cqw; font-weight: 800; line-height: 1.02;
+  font-size: 4.8cqw; font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;   /* digits keep their width — no jitter each second */
 }
-.aw-rw-clock-meta { display: flex; align-items: baseline; gap: 0.45cqw; font-weight: 700; }
-.aw-rw-clock-wordslab { font-size: 0.9cqw; letter-spacing: .1em; text-transform: uppercase; opacity: .7; }
-.aw-rw-clock-words { font-size: 1.4cqw; }
 
 /* last N seconds — the clock face itself goes red and pulses in time with the
    ticking sound, so the warning is visible as well as audible. */
@@ -207,104 +299,151 @@
 .aw-rw-clock.is-dead { background: rgba(239,68,68,.14); border-color: var(--rw-no); color: var(--rw-no); opacity: 1; }
 .aw-rw-clock.is-paused .aw-rw-clock-time { opacity: .45; }
 
-/* ---- referee strip ---- */
+/* ---- referee strip: one big Play/Pause, Pass underneath (teacher's redesign,
+   5/8/2026 — replaces the old turn-arrow + Pass/Pause/Undo trio). ---- */
 .aw-rw-ref {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 0.5cqw; padding: 0 0.4cqw;
+  gap: 0.6cqw; padding: 0 0.4cqw;
 }
-/* a big arrow that points at whichever clock is running */
-.aw-rw-turnarrow {
-  font-size: 2.4cqw; line-height: 1; color: var(--rw-a);
-  /* Positioned by nothing (plain flow), so animating transform here is safe —
-     the "popup jumps then snaps back" trap only bites elements positioned WITH
-     a transform. */
-  transform: scaleX(-1);
-  transition: transform .22s cubic-bezier(.3,.8,.35,1.2), color .22s ease;
-}
-.aw-rw-turnarrow.is-b { transform: scaleX(1); color: var(--rw-b); }
-
-.aw-rw-refbtns { display: flex; gap: 0.45cqw; align-items: center; }
-.aw-rw-refbtn {
+/* A rounded SQUARE (teacher's request, 5/8/2026), not a circle. */
+.aw-rw-playpause {
+  width: 5.4cqw; height: 5.4cqw; border-radius: 1.4cqw;
+  display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
-  border: 0.2cqw solid rgba(23,34,47,.18);
-  background: #fff;
-  color: var(--rw-ink);
-  border-radius: 0.7cqw;
-  height: 3.1cqw; min-width: 3.1cqw;
-  display: inline-flex; align-items: center; justify-content: center;
-  font-weight: 800; font-size: 1.15cqw; letter-spacing: .06em;
-  padding: 0 0.6cqw;
+  background: var(--rw-ok); color: #fff; border: 0;
+  box-shadow: 0 0.42cqw 0 #0b8f68;
+  transition: background .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
-.aw-rw-refbtn svg { width: 1.6cqw; height: 1.6cqw; }
-.aw-rw-refbtn:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
-.aw-rw-refbtn:disabled { opacity: .35; cursor: default; }
-.aw-rw-refbtn.is-pass { color: var(--rw-b-dark); border-color: rgba(245,158,11,.45); }
-.aw-rw-refbtn.is-pause.is-on { background: var(--rw-b); color: #fff; border-color: var(--rw-b); }
+/* The glyph never intercepts the pointer, so a tap always lands on the BUTTON
+   even at the instant paintClocks() swaps the icon — half of the "sometimes
+   works" fix (the other half is only swapping innerHTML when it changes). */
+.aw-rw-playpause svg { width: 2.5cqw; height: 2.5cqw; pointer-events: none; }
+.aw-rw-playpause:active:not(:disabled) { transform: translateY(0.18cqw); box-shadow: 0 0.14cqw 0 #0b8f68; }
+.aw-rw-playpause.is-pause { background: var(--rw-b); box-shadow: 0 0.42cqw 0 var(--rw-b-dark); }
+.aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 0.14cqw 0 var(--rw-b-dark); }
+.aw-rw-playpause:disabled { opacity: .4; cursor: default; }
 
-/* ---- the two typing columns ---- */
+.aw-rw-passbtn {
+  font-family: inherit; cursor: pointer;
+  border: 0.2cqw solid rgba(23,34,47,.2);
+  background: #fff; color: var(--rw-b-dark);
+  border-radius: 0.8cqw;
+  height: 2.7cqw; padding: 0 1.1cqw;
+  font-weight: 800; font-size: 1.2cqw; letter-spacing: .08em;
+}
+.aw-rw-passbtn:hover:not(:disabled) { border-color: var(--rw-b); }
+.aw-rw-passbtn:disabled { opacity: .35; cursor: default; }
+
+/* ---- the two typing columns: FLEX so the active side can grow to 70% while
+   the waiting side shrinks to 30%, with a smooth animated swap (teacher's
+   request, 5/8/2026) — a CSS grid's column tracks don't animate reliably
+   across browsers, flex-grow does. Neither class = a neutral 50/50 split,
+   shown during "prep" before either team has been picked. ---- */
 .aw-rw-boards {
   flex: 1 1 auto; min-height: 0;
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 1.2cqw;
   padding: 0.55cqw 1.4cqw 0;
 }
 .aw-rw-board {
-  min-height: 0;
+  flex: 1 1 0%;
+  min-width: 0; min-height: 0;
+  display: flex; flex-direction: column;
   border-radius: 1cqw;
   background: rgba(23,34,47,.045);
   border: 0.26cqw solid transparent;
   overflow: hidden;
-  transition: opacity .18s ease, border-color .18s ease, background .18s ease;
+  transition: flex-grow .45s cubic-bezier(.22,.9,.3,1),
+              opacity .18s ease, border-color .18s ease, background .18s ease;
   opacity: .6;
 }
-.aw-rw-board.is-active { opacity: 1; background: #fff; }
+.aw-rw-board.is-active { opacity: 1; background: #fff; flex-grow: 7; }
+.aw-rw-board.is-waiting { flex-grow: 3; }
 .aw-rw-board.is-a.is-active { border-color: var(--rw-a); }
 .aw-rw-board.is-b.is-active { border-color: var(--rw-b); }
+/* tappable during "prep" (before the match starts) to pick who goes first */
+.aw-rw-board.is-pickable { cursor: pointer; }
+/* PAUSED: the typing area fades to show it won't respond (teacher's request,
+   5/8/2026 — the big Play/Pause button itself stays fully lit so there's
+   always something obvious to tap to resume). Comes AFTER is-active/is-waiting
+   in the file so it wins over both regardless of which one also applies. */
+.aw-rw-board.is-dimmed { opacity: .4; }
+.aw-rw-card:has(.aw-rw-board.is-dimmed) .aw-kbd { opacity: .4; pointer-events: none; }
 
-.aw-rw-rows { height: 100%; overflow-y: auto; scroll-behavior: smooth; padding: 0 0.7cqw 0.7cqw; }
-.aw-rw-rows::-webkit-scrollbar { width: 0.5cqw; }
-.aw-rw-rows::-webkit-scrollbar-thumb { background: rgba(23,34,47,.2); border-radius: 0.3cqw; }
-
+/* The rowhead (team name) is a compact fixed strip ABOVE the 3-row window. */
 .aw-rw-rowhead {
-  position: sticky; top: 0; z-index: 2;
-  display: flex; align-items: baseline; justify-content: space-between;
-  padding: 0.35cqw 0.4cqw 0.3cqw;
-  background: inherit;
-  backdrop-filter: blur(2px);
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.25cqw 0.4cqw;
 }
 .aw-rw-rowhead-name {
-  font-size: 1.35cqw; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  font-size: 1.7cqw; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
   color: var(--rw-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.aw-rw-rowhead-count { font-size: 1cqw; font-weight: 700; color: var(--aw-muted); flex: none; }
 .aw-rw-board.is-a .aw-rw-rowhead-name { color: var(--rw-a-dark); }
 .aw-rw-board.is-b .aw-rw-rowhead-name { color: var(--rw-b-dark); }
 
+/* The 3-row WINDOW (teacher's request, 5/8/2026): a fixed viewport exactly
+   three rows tall, with the full word list on a `.aw-rw-track` that slides up
+   one row at a time (translateY set from JS, see applyTrack). The input row
+   sits in the bottom third, the two words above it. No scrollbar — the window
+   is driven by turn state, never by the finger. */
+.aw-rw-rows {
+  flex: 1 1 auto; min-height: 0;
+  position: relative; overflow: hidden;
+}
+.aw-rw-track {
+  position: absolute; left: 0; right: 0; top: 0;
+  transition: transform .35s cubic-bezier(.22,.9,.3,1);
+  will-change: transform;
+}
 .aw-rw-row {
   position: relative;
+  height: var(--rw-rowh, 33.334%);   /* JS sets --rw-rowh = viewport height / 3 */
   display: grid; grid-template-columns: 2.4cqw 1fr 2cqw;
   align-items: center; gap: 0.5cqw;
-  min-height: 2.45cqw;
-  padding: 0.06cqw 0.4cqw;
+  padding: 0 0.4cqw;
   border-bottom: 0.12cqw solid rgba(23,34,47,.08);
+  overflow: hidden;
 }
 .aw-rw-row-no {
   font-size: 1.15cqw; font-weight: 800; color: var(--aw-muted);
   text-align: right; font-variant-numeric: tabular-nums;
 }
+/* --rw-fit (set per board by fitBoard) shrinks EVERY word on a board by the
+   same factor so the widest one fits its column — no "…" truncation, and all
+   three read at one size (teacher's request, 5/8/2026). No text-overflow
+   ellipsis: with the fit applied the word always fits, and dots were exactly
+   what the teacher asked to be rid of. */
 .aw-rw-row-body {
-  font-size: 1.75cqw; font-weight: 800; letter-spacing: .02em;
+  font-size: calc(5.6cqw * var(--rw-fit, 1));
+  line-height: 1.04;
+  font-weight: 800; letter-spacing: .01em;
+  text-align: center;
   color: var(--rw-ink);
   min-width: 0;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; overflow: hidden;
 }
 .aw-rw-row-mark { display: flex; align-items: center; justify-content: center; }
 .aw-rw-row-mark svg { width: 1.55cqw; height: 1.55cqw; stroke-width: 3.4; }
 
+/* Hidden probe used to measure a word's natural width at the BASE font (never
+   scaled by --rw-fit) — see fitBoard in running-word.js. */
+.aw-rw-probe {
+  position: absolute; left: -9999px; top: 0;
+  visibility: hidden; pointer-events: none;
+  white-space: nowrap;
+  font-family: inherit; font-weight: 800; letter-spacing: .01em;
+  text-transform: uppercase; font-size: 5.6cqw;
+}
+
 .aw-rw-row.is-done .aw-rw-row-body { color: var(--rw-ok); }
 .aw-rw-row.is-done .aw-rw-row-mark { color: var(--rw-ok); }
-.aw-rw-row.is-passed .aw-rw-row-body { color: var(--aw-muted); }
+/* PASSED words are now REVEALED in plain ink (teacher's request, 5/8/2026 —
+   overrides this game's usual "the word never appears" rule for this one
+   case only; correct/current words were never hidden either). */
+.aw-rw-row.is-passed .aw-rw-row-body { color: var(--rw-ink); }
 .aw-rw-row.is-passed .aw-rw-row-mark { color: var(--rw-no); opacity: .7; }
 /* an unplayed row shows its NUMBER and nothing else — never the word */
 .aw-rw-row.is-future { opacity: .5; }
@@ -319,12 +458,25 @@
   74% { transform: translateX(-0.3cqw); }
 }
 
+/* words remaining (not "done") — bare number, centred, bottom of the board
+   (teacher's request, 5/8/2026 — replaces the old "N words" in the header) */
+.aw-rw-remaining {
+  flex: 0 0 auto;
+  text-align: center;
+  padding: 0.2cqw 0 0.55cqw;
+  font-size: 2.1cqw; font-weight: 800;
+  color: var(--aw-muted);
+  font-variant-numeric: tabular-nums;
+}
+.aw-rw-board.is-active .aw-rw-remaining { color: var(--rw-ink); }
+
 /* ---- the single live input, re-parented into whichever row is in play ---- */
 .aw-rw-input {
   display: block; box-sizing: border-box;
   width: 100%;
   font-family: inherit;
-  font-size: 1.75cqw; font-weight: 800; letter-spacing: .02em;
+  font-size: calc(5.6cqw * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  text-align: center;
   text-transform: uppercase;
   color: var(--rw-ink);
   background: transparent;
@@ -337,16 +489,17 @@
 .aw-rw-board.is-b .aw-rw-input { border-bottom-color: var(--rw-b); }
 .aw-rw-input.is-wrong { color: var(--rw-no); border-bottom-color: var(--rw-no); }
 
-/* Andrew's reveal — the word, floating over its own row in the gold that the
-   Andrew key wears, so it is obvious a lifeline was spent. */
+/* Andrew's reveal — the word, floating over its own row (centred, matching
+   the row text now), in the gold that the Andrew key wears, so it is obvious
+   a lifeline was spent. */
 .aw-rw-reveal {
-  position: absolute; left: 3.2cqw; right: 2.6cqw; top: 50%;
+  position: absolute; left: 2.4cqw; right: 2cqw; top: 50%;
   /* positioned WITH a transform -> its animation must only touch opacity/filter,
      never transform (core's "popup jumps then snaps back" rule). */
   transform: translateY(-50%);
   pointer-events: none;
-  font-size: 1.75cqw; font-weight: 800; letter-spacing: .02em;
-  text-align: right;
+  font-size: calc(5.6cqw * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  text-align: center;
   color: #b8860b;
   background: linear-gradient(180deg, #ffe89a, #f0a500);
   -webkit-background-clip: text; background-clip: text;
@@ -424,46 +577,19 @@
 .aw-rw-result-time { font-size: 2.2cqw; font-weight: 800; color: var(--aw-muted); font-variant-numeric: tabular-nums; }
 .aw-rw-result-lab { font-size: 1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--aw-muted); }
 
-/* ---- top-bar score: "12 – 9" in the two team colours ---- */
-.aw-top-score .aw-rw-sc { font-weight: 800; }
-.aw-top-score .aw-rw-sc.is-a { color: #3b82f6; }
-.aw-top-score .aw-rw-sc.is-b { color: #f59e0b; }
-.aw-top-score .aw-rw-sc-sep { color: var(--aw-text); opacity: .5; }
+/* (The slogan moved to the bottom bar's nav label — see the
+   `.act-running_word .aw-nav-label` rule near the top of this file. It used to
+   be an absolutely-positioned div here, which landed on top of the keyboard.) */
 
 /* =============================================================
-   THE KEYBOARD, SHRUNK TO FIT — ⚠️ EVERY RULE HERE IS SCOPED UNDER .aw-rw-card.
-   core/keyboard.js is shared with Type the answer and Crossword, and a template
-   stylesheet is inserted ONCE and never removed (core rule) — so a bare
-   `.aw-kbd-key { font-size: … }` in this file would shrink THEIR keyboards too,
-   for every game opened afterwards in the same session. The `.aw-rw-card`
-   ancestor makes these overrides live and die with this game's DOM.
-
-   Why override at all: this is the only template that needs the keyboard AND
-   two full-height columns at the same time. At its natural size the keyboard is
-   20.3cqw of a 45.67cqw play area (measured), which left ~1 row per team.
+   THE KEYBOARD — core's DEFAULT size, unmodified (teacher's request,
+   5/8/2026: this used to be shrunk to fit a 16:9 frame — see the git history
+   if that measurement is ever needed again — but now the frame is 4:3 with
+   the top bar gone and the boards down to 3 visible rows, there is plenty of
+   room, and the keyboard should look and feel exactly like every other
+   template's). Nothing left to override here except the Andrew key's LOOK
+   (colour/glow), never its size.
    ============================================================= */
-.aw-rw-card .aw-kbd {
-  width: 64%;
-  margin: 0.45cqw auto 0;
-  padding: 0.6cqw;
-  border-radius: 0.9cqw;
-  --kbd-kw: 4.3cqw;
-  --kbd-caps-w: 7.4cqw;
-  --kbd-numbers-w: 9.6cqw;
-}
-.aw-rw-card .aw-kbd-main { gap: 0.38cqw; }
-.aw-rw-card .aw-kbd-row { gap: 0.34cqw; }
-.aw-rw-card .aw-kbd-key {
-  font-size: 1.12cqw;
-  padding: 0.6cqw 0;
-  border-radius: 0.45cqw;
-  box-shadow: 0 0.18cqw 0 #202022;
-}
-.aw-rw-card .aw-kbd-key:active { transform: translateY(0.14cqw); box-shadow: 0 0.05cqw 0 #202022; }
-.aw-rw-card .aw-kbd-key-back { font-size: 1.12cqw; box-shadow: 0 0.18cqw 0 #7f1212; }
-.aw-rw-card .aw-kbd-key-fn { padding: 0.42cqw 0.55cqw; }
-.aw-rw-card .aw-kbd-key-fnlabel { font-size: 0.88cqw; }
-.aw-rw-card .aw-kbd-key-dot { top: 0.55cqw; right: 0.55cqw; width: 0.6cqw; height: 0.6cqw; }
 
 /* ---- the Andrew key (core/keyboard.js owns the structure; this owns the look,
    matching Type the answer's so the lifeline reads the same in both games) ---- */
@@ -498,6 +624,19 @@
 }
 .aw-rw-opt-text:focus { outline: none; border-color: #3b82f6; }
 
+/* ---- "Time each team": stepped slider + the Custom Min/Sec pair it can
+   reveal (buildExtraOptions in running-word.js) ---- */
+.aw-rw-clockcol { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; }
+.aw-rw-custom-time { display: none; align-items: center; gap: 5px; }
+.aw-rw-opt-num {
+  width: 46px;
+  font-family: inherit; font-size: 14px; font-weight: 700; text-align: center;
+  padding: 5px 4px; border-radius: 8px;
+  border: 1.5px solid rgba(23,34,47,.2); background: #fff; color: var(--aw-text);
+}
+.aw-rw-opt-num:focus { outline: none; border-color: #3b82f6; }
+.aw-rw-opt-numlab { font-size: 12px; font-weight: 700; color: var(--aw-muted); }
+
 /* =============================================================
    EDITOR — also outside the stage, so px. The pool is one word per line in a
    single tall box (see running-word-editor.js for why it isn't a list of rows).
@@ -530,16 +669,19 @@
   .aw-rw-ps-page { break-after: page; page-break-after: always; }
   .aw-rw-ps-page.is-last { break-after: auto; page-break-after: auto; }
 
+  /* Heading trimmed to a minimum (teacher's request, 5/8/2026): every mm not
+     spent here goes to the word rows — see HEADING_MM in rw-print.js, which
+     this block's sizes were measured against. */
   .aw-rw-ps-head {
     display: flex; align-items: flex-end; justify-content: space-between;
-    border-bottom: 0.7mm solid #16202b;
-    padding-bottom: 2mm; margin-bottom: 3.5mm;
+    border-bottom: 0.5mm solid #16202b;
+    padding-bottom: 1mm; margin-bottom: 1.5mm;
   }
-  .aw-rw-ps-tag { font-size: 7mm; font-weight: 800; line-height: 1; letter-spacing: .04em; }
-  .aw-rw-ps-sub { font-size: 3.4mm; font-weight: 700; color: #5b6875; letter-spacing: .08em; margin-top: 0.8mm; }
+  .aw-rw-ps-tag { font-size: 4.6mm; font-weight: 800; line-height: 1; letter-spacing: .04em; }
+  .aw-rw-ps-sub { font-size: 2.6mm; font-weight: 700; color: #5b6875; letter-spacing: .08em; margin-top: 0.5mm; }
   .aw-rw-ps-headright { text-align: right; }
-  .aw-rw-ps-title { font-size: 3.8mm; font-weight: 700; color: #2b3644; }
-  .aw-rw-ps-extra { font-size: 3.4mm; color: #5b6875; margin-top: 1.4mm; }
+  .aw-rw-ps-title { font-size: 3mm; font-weight: 700; color: #2b3644; }
+  .aw-rw-ps-extra { font-size: 2.6mm; color: #5b6875; margin-top: 1mm; }
 
   /* --rw-rowh / --rw-fs are set per sheet by rw-print.js from the word count. */
   .aw-rw-ps-body.is-2col { column-count: 2; column-gap: 8mm; column-rule: .3mm dashed #b9c1ca; }
@@ -551,10 +693,17 @@
     align-items: center;
     height: var(--rw-rowh, 5mm);
     font-size: var(--rw-fs, 2.6mm);
-    border-bottom: .25mm solid #d3d9df;
+    /* an ultra-thin rule, and the row height itself is now maximised (no more
+       ROW_MAX_MM ceiling in rw-print.js) so the word sits close to it — both
+       teacher's requests, 5/8/2026. */
+    border-bottom: .12mm solid #d8dee4;
     break-inside: avoid; page-break-inside: avoid;
   }
-  .aw-rw-ps-table.is-check .aw-rw-ps-row { grid-template-columns: 8mm 1fr 1fr; }
+  /* CHECK sheet: each team gets its OWN № column (5/8/2026) — the two lists
+     share a row index only because of how buildSets() laid them out, they
+     are not a matched pair, so reading down one team's column needs its own
+     numbering. */
+  .aw-rw-ps-table.is-check .aw-rw-ps-row { grid-template-columns: 8mm 1fr 8mm 1fr; }
 
   .aw-rw-ps-row.is-head {
     font-weight: 800; letter-spacing: .1em;
