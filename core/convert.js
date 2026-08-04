@@ -138,7 +138,9 @@ export function switchTargets(activity) {
     const cluesPresent =
       records.filter(r => r.clue && r.clue.trim()).length >= Math.ceil(n * 0.6);
     targets = targets.filter(t => {
-      if (t === "crossword" && (n < 2 || n > 40)) return false;
+      // Crossword paginates at 30 answers/page up to 120 total (teacher
+      // 4/8/2026, crossword.js) — 120 is the hard ceiling here too.
+      if (t === "crossword" && (n < 2 || n > 120)) return false;
       if (NEED_CLUE.has(t) && !cluesPresent) return false;
       return true;
     });

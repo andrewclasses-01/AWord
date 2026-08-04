@@ -1,7 +1,8 @@
 # GHI CHU — CROSSWORD
 
 **TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE. TÁI THIẾT KẾ LỚN (Đợt 36/v0.9.10), rồi 🔧 3 LOẠT TINH CHỈNH REVEAL +
-ÂM THANH (2/8/2026, Đợt 43 / v0.9.17) theo yêu cầu thầy — ĐÃ COMMIT + PUSH + LIVE.** Chỉ đụng
+ÂM THANH (2/8/2026, Đợt 43 / v0.9.17), rồi 🔧 PHÂN TRANG TỚI 120 ANSWER (4/8/2026, Đợt 66 / v0.9.41)
+theo yêu cầu thầy — 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật, xem mục đầu file).** Chỉ đụng
 `templates/crossword/*` (crossword.js / .css / crossword-sound.js / crossword-editor.js), **KHÔNG đụng
 core** (nav + slogan chèn bằng DOM vào `.aw-topbar`/`.aw-nav` của engine rồi hoàn tác ở cleanup). Tự test
 trình duyệt thật đủ mọi mục (đo DOM/timeline, 0 lỗi console). ⚠️ Hiệu ứng trượt/bay bị ĐÓNG BĂNG trong
@@ -10,6 +11,69 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
+
+## 4/8/2026 — PHÂN TRANG TỚI 120 ANSWER (Đợt 66 / v0.9.41) — đọc mục này TRƯỚC mọi mục cũ bên dưới
+
+Thầy hỏi vì sao Anagram chưa đổi Template sang Crossword được — hoá ra `core/convert.js` giới hạn Crossword
+tối đa 40 từ. Thầy chốt nâng trần lên **120 answer**, tự động phân trang khi vượt 30/trang, và xác nhận
+answer nhiều từ (space) vốn đã chạy đúng.
+
+**Cơ chế phân trang** (`crossword.js` `mount()`): `PAGE_SIZE=30`, `PAGE_COUNT=ceil(n/30)`, chia ĐỀU các
+trang (`perPage=ceil(n/PAGE_COUNT)`, vd 45→23+22) — cùng công thức `find-the-match.js` đã dùng. **Khác
+Find the match ở chỗ cốt lõi**: mỗi trang KHÔNG chỉ là "tập con hiển thị" của 1 danh sách chung — mỗi trang
+là **1 lưới ô chữ hoàn toàn riêng**, tự gọi `buildCrossword()` cho đúng tập từ của trang đó (crossword
+không thể đan xen 120 từ vào 1 lưới duy nhất một cách hợp lý). `pageState[]` (mảng, 1 phần tử/trang) giữ
+`{grid, clues, rows, cols, userGrid, cellStatus, wordState}` — các biến `let grid/clues/rows/cols/userGrid/
+cellStatus/wordState` ở cấp `mount()` chỉ là "con trỏ" trỏ vào phần tử hiện tại của `pageState`, được gán
+lại bởi `loadPage(p)`. Vì `userGrid`/`cellStatus`/`wordState` là các Map/mảng SỐNG (mutate tại chỗ, không
+tạo mới mỗi lần đọc), tiến trình 1 trang KHÔNG mất khi game tự chuyển sang trang khác — `loadPage()` chỉ
+trỏ lại, không xoá.
+
+`buildGridDom()` (mới, tách ra từ đoạn dựng ô lưới cũ trong `mount()`) dựng lại toàn bộ `.aw-cw-cell` từ
+`grid/rows/cols` hiện tại — gọi 1 lần lúc mount (qua `loadPage(0)`) và lại mỗi lần đổi trang. `endWord()`
+đổi 3 dòng: hết từ mà TRANG hiện tại đã xong hết (`wordState.every(done)`) → còn trang sau thì
+`loadPage(curPageIdx+1)`, hết trang cuối mới `finish()`. `finish()` viết lại để gộp `review`/`perQuestion`/
+`correct`/`answered` từ **TẤT CẢ** `pageState[]` theo thứ tự trang (không chỉ trang đang hiện).
+
+**Thanh dưới**: 1 trang (≤30 từ) — ẩn HẲN như cũ (`navWrap.style.visibility="hidden"`, không đổi gì hành
+vi trước đây). >1 trang — thanh vẫn hiện nhưng CHỈ để hiện **"Page X / Y"** (`ui.setNav({label})`, không
+`onPrev`/`onNext`) — mũi tên ‹› bị ẩn qua CSS scoped `crossword.css`:
+`.aw-playarea:has(> .aw-cw-wrap) ~ .aw-bottombar .aw-navbtn{display:none}`, đúng kỹ thuật
+`find-the-match.css` đã dùng (Đợt 62) để không rò sang game khác — trang KHÔNG lật tay được, chỉ tự
+chuyển khi giải xong hết trang đó.
+
+**1 lỗi thật bắt được lúc viết** (không phải thầy báo, tự phát hiện khi đọc lại code cũ): `selectWord(i)`
+trước dùng `curWord = ((i % total) + total) % total` để bọc chỉ số — `total` giờ là TỔNG mọi trang, không
+còn là số từ của 1 trang nữa. Sửa lại bọc theo `clues.length` (số từ của TRANG hiện tại). May mắn không lộ
+triệu chứng thật (vì `i` truyền vào luôn nằm trong khoảng hợp lệ của trang), nhưng vẫn là lỗi logic cần
+sửa cho đúng ý nghĩa biến.
+
+**`core/convert.js`**: `switchTargets()` đổi `n>40` → `n>120` cho đích Crossword (dùng chung mọi nguồn
+"qa": Anagram/Quiz/Flying fruit/...).
+
+**`crossword-editor.js`**: `MAX_WORDS` 100→120, khớp trần chơi thật.
+
+**Answer nhiều từ (space) — KHÔNG cần sửa gì**: `gridKey()` (có từ trước, dòng đầu file) đã
+`.replace(/[^A-Z]/g, "")` — strip cả dấu cách trước khi dựng lưới, nên "sea horse" → "SEAHORSE" liền 8 ô,
+không có ô trống ở giữa. Xác nhận lại bằng cách CHƠI THẬT (không chỉ đọc code): nhét "SEA HORSE" vào bộ
+test, giải đúng, tính điểm bình thường.
+
+**Đã tự test qua trình duyệt thật** (devserver + harness tạm `_test-pagination.html`/`_test-convert.html`,
+đã xoá sau khi test xong — không phải file thật của dự án):
+- Toàn bộ mốc số từ 0/1/2/30/31/45/60/61/90/91/120/150 (kể cả vượt trần 120) → đúng số trang ở MỌI mốc,
+  vượt trần 120 vẫn chạy an toàn (chỉ Editor + convert.js chặn nhập/đổi từ trần 120, còn engine tự scale).
+- 1 trang: nav ẩn hẳn — y hệt trước khi có tính năng này.
+- **Chơi TRỌN 1 ván 2 trang thật** (n=31, gõ phím vật lý mô phỏng qua `KeyboardEvent`, không phải chỉ đọc
+  DOM): trang 1 xong → tự chuyển "Page 2/2", điểm giữ nguyên "15/28" (không reset) → giải nốt trang 2 →
+  "GAME COMPLETE", Score 28/28 — xác nhận `finish()` gộp đúng, không thiếu/lặp câu.
+- Hồi quy: `crossword/test.html` (20 từ mẫu gốc, 1 trang) y hệt trước; `find-the-match/test.html` không bị
+  ảnh hưởng (2 luật CSS mới của crossword.css không tải vào trang đó).
+- `convert.js switchTargets()` gọi trực tiếp với n=0,1,2,40,41,119,120,121,150 → false/false/true×5/
+  false/false, khớp chính xác biên 2..120.
+- 0 lỗi console suốt toàn bộ quá trình.
+
+**Việc kế**: thầy thử tạo 1 bộ Anagram >40 từ (có clue) → Template → xác nhận Crossword sáng; soạn 1
+Crossword >30 từ → xác nhận phân trang mượt trên TOMKO → duyệt → commit + push.
 
 ## 2/8/2026 — 3 LOẠT TINH CHỈNH REVEAL + ÂM THANH (Đợt 43 / v0.9.17) — đọc mục này TRƯỚC mục tái thiết kế
 

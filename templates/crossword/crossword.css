@@ -20,6 +20,23 @@
   min-height: 0;
 }
 
+/* PAGE INDICATOR (teacher 4/8/2026): a crossword over 30 answers splits into
+   pages (crossword.js) — the shared nav row under the stage shows only
+   "Page X / Y", never Prev/Next arrows (a page auto-advances once cleared,
+   it's never flipped by hand). Same technique as find-the-match.css's
+   identical rules. Scoped with :has() so it only applies while a Crossword
+   board is mounted: template CSS stays in the document forever (core rule),
+   so a bare rule here would silently restyle every other game for the rest
+   of the session. A single-page crossword never reaches this CSS at all —
+   crossword.js hides the whole nav row via inline style in that case, exactly
+   as before this feature existed. */
+.aw-playarea:has(> .aw-cw-wrap) ~ .aw-bottombar .aw-nav-label {
+  font-weight: 800;
+  min-width: 14cqw;
+  color: var(--aw-text);
+}
+.aw-playarea:has(> .aw-cw-wrap) ~ .aw-bottombar .aw-navbtn { display: none; }
+
 /* ----- slogan on the clock/score row: small, thin, spaced uppercase, grey ----- */
 .aw-cw-slogan {
   position: absolute;

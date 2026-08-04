@@ -19,7 +19,7 @@
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 
-const MAX_WORDS = 100;   // generous cap; Wordwall's crossword takes many words
+const MAX_WORDS = 120;   // matches the in-game pagination cap (crossword.js, teacher 4/8/2026)
 
 // Grow a <textarea> to fit its content (so a clue shows in full from the start).
 function autoGrow(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 2) + "px"; }

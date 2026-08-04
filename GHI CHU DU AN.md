@@ -5,6 +5,29 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 66 (4/8/2026, v0.9.41) — CROSSWORD: PHÂN TRANG TỚI 120 ANSWER + ANAGRAM→CROSSWORD NÂNG TRẦN 40→120. KHÔNG ĐỤNG CORE (chỉ `core/convert.js`, dùng chung mọi template). 🟢 CHỜ THẦY DUYỆT (tự test trình duyệt thật qua devserver, không đoán qua đọc code).
+
+Thầy hỏi vì sao Anagram chưa đổi Template được sang Crossword (ảnh chụp bảng Template, Crossword mờ) — tra ra: **không phải lỗi**, `core/convert.js` giới hạn Crossword tối đa 40 từ (`n>40` bị loại), bộ act của thầy vượt mức đó. Thầy chốt 3 việc:
+
+**(1) Crossword nâng trần lên 120 answer, tự chia trang khi vượt 30/trang** — `templates/crossword/crossword.js`: 1-30 từ chơi **y hệt hiện tại** (1 bảng, ẩn hẳn thanh điều hướng như cũ — không đụng gì hành vi cũ). 31-60 → 2 trang, 61-90 → 3 trang, 91-120 → 4 trang (`PAGE_COUNT=ceil(n/30)`, chia ĐỀU như `find-the-match.js` đã làm, vd 45→23+22 chứ không 30+15). **Mỗi trang là 1 Ô CHỮ HOÀN TOÀN RIÊNG** (tự `buildCrossword()` — khác Find the match: crossword không thể gộp 120 từ vào 1 lưới đan xen duy nhất, bản chất trò chơi là các từ bắt chữ với NHAU trong CÙNG 1 lưới) — `pageState[]` giữ lưới + toàn bộ tiến trình (`userGrid`/`cellStatus`/`wordState`) riêng từng trang nên **điểm và bài đã giải KHÔNG mất** khi trang tự chuyển. Hết trang (mọi từ trang đó `done`) → tự sang trang kế (`endWord()`→`loadPage()`); hết trang cuối → `finish()` gộp `review`/`correct`/`answered` từ TẤT CẢ các trang theo đúng thứ tự. Thanh dưới chỉ hiện **"Page X / Y"** khi >1 trang (như Find the match: `ui.setNav({label})`, KHÔNG có nút lật trang thủ công — trang chỉ tự chuyển khi giải xong) — `crossword.css` thêm 2 luật scoped `:has(> .aw-cw-wrap)` giống hệt kỹ thuật `find-the-match.css` (ẩn `.aw-navbtn`, đậm nhãn) để không rò sang game khác. Bắt được 1 lỗi khi viết: `selectWord()` cũ dùng biến `total` (giờ là TỔNG mọi trang) để bọc chỉ số modulo — sửa lại dùng `clues.length` (số từ CỦA TRANG hiện tại), nếu không sẽ sai khi có nhiều trang (may mắn không lộ triệu chứng vì `i` luôn nằm trong khoảng hợp lệ, nhưng vẫn là lỗi logic thật).
+
+**(2) `core/convert.js`**: `n>40` → **`n>120`** cho đích Crossword trong `switchTargets()` — dùng chung mọi nguồn "qa" (Anagram/Quiz/Flying fruit/...), không riêng Anagram.
+
+**(3) `templates/crossword/crossword-editor.js`**: `MAX_WORDS` 100→120 (khớp trần chơi thật, để cô giáo soạn được tới 120 từ).
+
+**(4) Answer nhiều từ (vd "polar bear") đã hoạt động ĐÚNG SẴN, không cần sửa gì** — `gridKey()` trong `crossword.js` (có từ trước) đã strip mọi ký tự không phải chữ cái (kể cả dấu cách) trước khi dựng lưới, nên "sea horse" tự thành 1 chuỗi 8 ô liền "SEAHORSE" không có ô trống ở giữa. Xác nhận lại bằng cách chơi thật (không chỉ đọc code): nhét từ "SEA HORSE" vào bộ test, giải đúng, được tính điểm bình thường.
+
+**Đã tự test qua trình duyệt thật (devserver + harness tạm, đã xoá sau khi xong)**, không chỉ đọc code:
+- 8 mốc số từ (0,1,2,30,31,45,60,61,90,91,120,150 — kể cả vượt trần 120 để chắc không crash): đúng số trang ở MỌI mốc (30→1, 31→2, 60→2, 61→3, 90→3, 91→4, 120→4, 150→5 — vượt trần vẫn chạy an toàn, chỉ trần 120 là do Editor + convert.js chặn từ khâu soạn/đổi template).
+- 1 trang (≤30 từ): thanh điều hướng ẩn HẲN, nhãn rỗng — **y hệt hành vi trước khi có tính năng này**.
+- >1 trang: nhãn "Page 1 / N", không có mũi tên ‹›.
+- **Chơi TRỌN 1 ván 2 trang thật** (n=31, gõ bàn phím vật lý mô phỏng qua sự kiện, không phải chỉ đọc DOM): trang 1 xong (15/? đúng, một số từ nguồn bị thuật toán đan xen loại — hành vi CŨ của `buildCrossword`, không liên quan đợt này) → **tự chuyển "Page 2/2"**, điểm giữ nguyên "15/28" (không reset) → giải nốt trang 2 → **"GAME COMPLETE", Score 28/28** — xác nhận `finish()` gộp đúng toàn bộ 2 trang, không thiếu/lặp câu nào.
+- Hồi quy: `crossword/test.html` (20 từ mẫu, 1 trang) vẫn y hệt trước — 80 ô có chữ, nav ẩn hoàn toàn. `find-the-match/test.html` không bị ảnh hưởng (2 luật CSS mới của crossword.css KHÔNG tải vào trang này).
+- `core/convert.js`: gọi thẳng `switchTargets()` với n=0,1,2,40,41,119,120,121,150 — đúng false/false/true/true/true/true/true/false/false, khớp chính xác biên `2..120`.
+- 0 lỗi console suốt toàn bộ quá trình test.
+
+**File đổi**: `templates/crossword/crossword.js` (phân trang), `templates/crossword/crossword.css` (2 luật scoped nav), `templates/crossword/crossword-editor.js` (MAX_WORDS), `core/convert.js` (trần 120). **Việc kế: thầy thử tạo 1 bộ Anagram >40 từ (có clue) → bấm Template → xác nhận Crossword sáng lên; và/hoặc soạn 1 Crossword >30 từ → xác nhận phân trang mượt trên TOMKO → duyệt → commit + push.**
+
 ## Đợt 65 (4/8/2026, v0.9.40) — HẾT "NỀN GÓC VUÔNG KHI CHẠM" TRÊN TOMKO, TOÀN BỘ 14 TEMPLATE. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT `72e1b5f` + PUSH (`c7df3ed..72e1b5f`) + LIVE, ĐÃ KIỂM CHỨNG TRÊN BẢN LIVE.
 
 > **Kiểm chứng bản live (sau push):** `curl` **3 lần đầu Pages vẫn trả file CŨ**, lần thứ 4 (~60 giây)

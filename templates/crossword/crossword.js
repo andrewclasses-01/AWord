@@ -44,6 +44,16 @@
 //    "Show answer when wrong" and "Change the crossword". No Shuffle / Letters
 //    (a crossword grid is fixed) — the Letters group is hidden via
 //    hideLettersOption.
+//
+//  • PAGINATION (teacher 4/8/2026): up to 120 answers total. ≤30 words plays
+//    exactly as before (single board, no nav row at all). >30 splits into
+//    pages of ≤30, divided evenly (e.g. 45 -> 23+22) — each page is its OWN
+//    separate interlocking grid (a crossword can't sensibly span 120 answers
+//    in one grid). Pages auto-advance as cleared, like find-the-match.js;
+//    the shared nav row shows only "Page X / Y" (no manual page-flip arrows).
+//    Multi-word answers (e.g. "polar bear") already fill as ONE continuous
+//    run of boxes — gridKey() strips spaces/punctuation before building the
+//    grid, unchanged by this pagination work.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -244,10 +254,31 @@ const crosswordTemplate = {
     // dragged to 0 IS the off switch, so there is no separate checkbox.
     const penalty = Math.max(0, Math.min(5, opt.minusAmount || 0));
     const minusOn = penalty > 0;
-    const words = [...(activity.content?.words || [])];
+    const PAGE_SIZE = 30;   // more than this and the board splits into pages (teacher 4/8/2026)
+    const words = [...(activity.content?.words || [])].filter(w => w && String(w.answer || "").trim());
 
-    const built = buildCrossword(words);
-    const total = built.clues.length;
+    // PAGINATION (teacher 4/8/2026): up to 120 answers total, split into pages
+    // of at most PAGE_SIZE, divided as evenly as possible (e.g. 45 -> 23+22,
+    // not 30+15) — same technique as find-the-match.js. Unlike Find the match,
+    // each page is a fully SEPARATE interlocking grid (buildCrossword runs once
+    // per page): a crossword's whole point is words crossing each other, so
+    // there is no single grid that could sensibly span up to 120 answers.
+    // pageState keeps each page's own grid AND play state, so an earlier
+    // page's progress survives once the game auto-advances past it.
+    const rawPageCount = Math.max(1, Math.ceil(words.length / PAGE_SIZE));
+    const perPage = Math.ceil(words.length / rawPageCount);
+    const wordPages = [];
+    for (let p = 0; p < rawPageCount; p++) wordPages.push(words.slice(p * perPage, (p + 1) * perPage));
+    const pageState = wordPages
+      .map(wp => buildCrossword(wp))
+      .filter(bp => bp.clues.length > 0)   // a page can only end up empty if every one of its words was <2 letters
+      .map(bp => ({
+        grid: bp.grid, clues: bp.clues, rows: bp.rows, cols: bp.cols,
+        userGrid: new Map(), cellStatus: new Map(),
+        wordState: bp.clues.map(() => ({ done: false, correct: false, revealed: false, wrong: false }))
+      }));
+    const PAGE_COUNT = pageState.length;
+    const total = pageState.reduce((sum, ps) => sum + ps.clues.length, 0);   // grand total across every page
 
     if (total === 0) {
       root.innerHTML = "";
@@ -255,10 +286,8 @@ const crosswordTemplate = {
       return () => {};
     }
 
-    const { grid, clues, rows, cols } = built;
-    const userGrid = new Map();      // "r,c" -> letter typed by the student
-    const cellStatus = new Map();    // "r,c" -> "solved" | "revealed" | "wrong"
-    const wordState = clues.map(() => ({ done: false, correct: false, revealed: false, wrong: false }));
+    let curPageIdx = 0;
+    let grid, clues, rows, cols, userGrid, cellStatus, wordState;   // set by loadPage() for the CURRENT page
 
     let curWord = -1;                // -1 = on the board (nothing picked)
     let curCell = 0;
@@ -274,13 +303,17 @@ const crosswordTemplate = {
 
     const bigCells = new Map();      // index-in-current-word -> big overlay cell
 
-    // Hide the engine's Prev/Next nav — a crossword can't be navigated (2/8).
-    // Use visibility (NOT display:none): the bottom bar is a 3-column grid
-    // (left | nav | tools), so removing the nav from layout would slide the
-    // sound/fullscreen tools inward. visibility keeps the nav's grid cell, so
-    // the tools stay in the right corner.
+    // Single page (≤30 words — the vast majority of crosswords): the engine's
+    // Prev/Next nav is fully hidden exactly as before, using visibility (NOT
+    // display:none) so the bottom bar's 3-column grid (left | nav | tools)
+    // doesn't slide the sound/fullscreen tools inward — a crossword can't be
+    // navigated (2/8), it's all picked from the board. Multiple pages
+    // (teacher 4/8/2026): the nav row stays visible to show "Page X / Y"
+    // (see updateNav below) — its ‹ › arrows are hidden separately via scoped
+    // CSS in crossword.css (same technique as find-the-match.css), since a
+    // page never flips by hand, only auto-advances once cleared.
     const navWrap = root.parentElement && root.parentElement.querySelector(".aw-nav");
-    if (navWrap) navWrap.style.visibility = "hidden";
+    if (PAGE_COUNT <= 1 && navWrap) navWrap.style.visibility = "hidden";
 
     // Slogan on the SAME row as the clock + score (centred, small, grey, spaced
     // uppercase). Absolutely centred over the top bar so it never depends on the
@@ -293,7 +326,7 @@ const crosswordTemplate = {
       topbar.append(sloganEl);
     }
 
-    ui.onSubmit(finish, () => wordState.filter(s => s.done).length);
+    ui.onSubmit(finish, () => pageState.reduce((sum, ps) => sum + ps.wordState.filter(s => s.done).length, 0));
     window.addEventListener("keydown", onKey);
 
     // ----- static shell: clue bar + grid + keyboard + active strip -----
@@ -308,25 +341,12 @@ const crosswordTemplate = {
     };
     wrap.append(clueBar);
 
+    // Grid cells themselves are built by buildGridDom() (called from
+    // loadPage()) since each page has its own rows/cols/grid — this shell
+    // just hosts them.
     const gridWrap = el("div", "aw-cw-gridwrap");
     const gridEl = el("div", "aw-cw-grid");
-    gridEl.style.setProperty("--cols", cols);
-    gridEl.style.setProperty("--rows", rows);
-    const cellEls = new Map();
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        const g = grid[r][c];
-        const cell = el("div", "aw-cw-cell" + (g ? "" : " is-blank"));
-        if (g) {
-          if (g.num) cell.append(el("span", "aw-cw-cellnum", String(g.num)));
-          cell.append(el("span", "aw-cw-letter", ""));
-          cell.dataset.rc = r + "," + c;
-          cell.onclick = () => onCellClick(r, c);
-          cellEls.set(r + "," + c, cell);
-        }
-        gridEl.append(cell);
-      }
-    }
+    let cellEls = new Map();
     gridWrap.append(gridEl);
     wrap.append(gridWrap);
 
@@ -363,14 +383,13 @@ const crosswordTemplate = {
 
     root.append(wrap);
 
+    loadPage(0);   // builds the first page's grid cells and shows the board
     relayout();
     requestAnimationFrame(() => requestAnimationFrame(relayout));
     const settleTimers = [setTimeout(relayout, 60), setTimeout(relayout, 200)];
     if (window.ResizeObserver) { ro = new ResizeObserver(relayout); ro.observe(gridWrap); }
     window.addEventListener("resize", relayout);
 
-    // start on the board.
-    activate();
     showScore();
 
     // -------------------------------------------------------------------
@@ -404,6 +423,59 @@ const crosswordTemplate = {
         (box.height - pad) / rows
       )));
       gridEl.style.setProperty("--cell", cell + "px");
+    }
+
+    // Rebuilds the grid's cells from the CURRENT page's grid/rows/cols — runs
+    // once for the first page (loadPage(0), called from mount) and again each
+    // time the game auto-advances to a new page (each page is independently
+    // sized, since it's its own separate interlocking crossword).
+    function buildGridDom() {
+      gridEl.innerHTML = "";
+      gridEl.style.setProperty("--cols", cols);
+      gridEl.style.setProperty("--rows", rows);
+      cellEls = new Map();
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const g = grid[r][c];
+          const cell = el("div", "aw-cw-cell" + (g ? "" : " is-blank"));
+          if (g) {
+            if (g.num) cell.append(el("span", "aw-cw-cellnum", String(g.num)));
+            cell.append(el("span", "aw-cw-letter", ""));
+            cell.dataset.rc = r + "," + c;
+            cell.onclick = () => onCellClick(r, c);
+            cellEls.set(r + "," + c, cell);
+          }
+          gridEl.append(cell);
+        }
+      }
+      resizeGrid();
+    }
+
+    // Switches to page `p`: points every page-scoped variable (grid/clues/
+    // rows/cols/userGrid/cellStatus/wordState) at pageState[p] — these are the
+    // SAME Map/array objects for the whole life of the game, so a page's
+    // progress is never lost, just not currently on screen — then rebuilds
+    // the grid cells and shows the board.
+    function loadPage(p) {
+      curPageIdx = p;
+      ({ grid, clues, rows, cols, userGrid, cellStatus, wordState } = pageState[p]);
+      curWord = -1; curCell = 0;
+      buildGridDom();
+      activate();
+      updateNav();
+      requestAnimationFrame(relayout);   // settle sizing once the new cells are in the DOM
+    }
+
+    // The shared nav row (teacher 4/8/2026): only shown at all when there is
+    // more than one page, and even then it's a plain position indicator, never
+    // a control (see the navWrap/CSS comments above) — a page only advances
+    // once every one of its words is done.
+    function updateNav() {
+      if (PAGE_COUNT <= 1) return;
+      ui.setNav({
+        index: curPageIdx + 1, total: PAGE_COUNT, onPrev: null, onNext: null,
+        label: `Page ${curPageIdx + 1} / ${PAGE_COUNT}`
+      });
     }
 
     function positionActive() {
@@ -487,7 +559,10 @@ const crosswordTemplate = {
     }
 
     function selectWord(i) {
-      curWord = ((i % total) + total) % total;
+      // Wrap within the CURRENT page's clue count — `total` is now the grand
+      // total across every page, not this page's count (teacher 4/8/2026).
+      const n = clues.length;
+      curWord = ((i % n) + n) % n;
       curCell = 0;   // typing always begins at the FIRST cell of the word
       activate();
     }
@@ -861,8 +936,11 @@ const crosswordTemplate = {
     // zoom back to the board (keyboard hides) so the next word is picked by hand.
     function endWord(ms) {
       pushTimer(() => {
-        if (wordState.every(s => s.done)) finish();
-        else returnToBoard();
+        if (!wordState.every(s => s.done)) { returnToBoard(); return; }
+        // This PAGE is fully done: auto-advance to the next one (a fresh
+        // board, own grid) or finish the whole game on the last page.
+        if (curPageIdx < PAGE_COUNT - 1) loadPage(curPageIdx + 1);
+        else finish();
       }, ms);
     }
 
@@ -889,20 +967,29 @@ const crosswordTemplate = {
       curWord = -1;
       kbd.setHidden(true);
       kbd.refresh();
-      const review = clues.map((w, i) => {
-        const s = wordState[i];
-        const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("");
-        return {
-          question: w.clue,
-          answered: s.done,
-          yourText: s.done ? typed : null,
-          yourCorrect: s.correct === true,
-          correctText: w.answer || w.key
-        };
+      // Aggregate across EVERY page, in page order — a page's own userGrid/
+      // wordState survive after the game auto-advances past it (loadPage()
+      // never discards pageState), so this sees the whole game's results,
+      // not just whichever page happens to be on screen right now.
+      const review = [];
+      const perQuestion = [];
+      let correct = 0, answered = 0;
+      pageState.forEach(ps => {
+        ps.clues.forEach((w, i) => {
+          const s = ps.wordState[i];
+          const typed = w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("");
+          if (s.correct) correct++;
+          if (s.done) answered++;
+          perQuestion.push({ q: perQuestion.length, correct: s.correct === true });
+          review.push({
+            question: w.clue,
+            answered: s.done,
+            yourText: s.done ? typed : null,
+            yourCorrect: s.correct === true,
+            correctText: w.answer || w.key
+          });
+        });
       });
-      const correct = wordState.filter(s => s.correct).length;
-      const answered = wordState.filter(s => s.done).length;
-      const perQuestion = wordState.map((s, i) => ({ q: i, correct: s.correct === true }));
       ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered });
     }
 
