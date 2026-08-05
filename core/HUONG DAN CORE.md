@@ -132,6 +132,25 @@ rule nếu gặp 1 selector lạ (Chrome vứt luôn rule chuẩn nếu chung v�
 helper `fsElement()`/`requestFs()`/`exitFs()` dò đủ tiền tố (panel TOMKO cũ thiếu API không tiền tố →
 từng chỉ full 1 góc màn 4K).
 
+### ⚠️ Fullscreen API THẬT không ổn định trên iPad Chrome — cờ `tpl.useZoomFullscreen` (5/8/2026)
+
+Đo thật (Running word, iPad M1 12.9", Chrome): `requestFullscreen()` thật trên iPad Chrome có **4 tật
+không sửa được bằng JS** vì thuộc lớp cử chỉ/heuristic riêng của trình duyệt: (1) Chrome tự vẽ nút X
+to góc trên không tắt được, (2) chỉ vuốt xuống nhẹ gần mép trên là tự thoát fullscreen — chết người
+với game chạm tay trẻ em, (3) tự thoát ngay sau 1 đoạn hoạt ảnh/thao tác (đo được: ngay sau màn 3-2-1
+của Running word), (4) tự bật popup "leave/stay fullscreen?" giữa chừng.
+
+**Lối thoát đã cài (opt-in, KHÔNG đổi hành vi mặc định):** template khai `useZoomFullscreen: true`
+trong `registerTemplate({...})` → nút Fullscreen của engine đổi cơ chế sang
+`root.classList.toggle("aw-zoomed")` (CSS thuần, **không hề gọi** Fullscreen API thật) thay vì
+`requestFs()`/`exitFs()` — xem hàm `setZoomed()` + `exitAnyFullscreen()` trong `engine.js`. Không
+đặt cờ = code chạy y hệt trước (zero-diff, đã đo lại Quiz/Type the answer). Đánh đổi: trình duyệt
+không còn tự che thanh tab/địa chỉ (không có top-layer thật) — game phải TỰ `position:fixed` root
++ khoá cuộn trang nền, và **template tự viết CSS cho `.aw-zoomed`** trong file CSS riêng của nó
+(mirror đúng hình dạng khối `:fullscreen` sẵn có, xem `templates/running-word/running-word.css`
+làm mẫu) — core KHÔNG có CSS chung cho `.aw-zoomed` (chỉ 1 game dùng tính tới 5/8/2026). Muốn dùng
+cho template khác: chỉ cần đặt cờ + copy khối CSS mẫu, đổi `.act-<type>` cho đúng game.
+
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,

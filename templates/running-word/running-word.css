@@ -139,6 +139,53 @@
 :-ms-fullscreen .aw-stage.act-running_word .aw-nav,
 :-ms-fullscreen .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
 
+/* ---------- ZOOM fullscreen (5/8/2026) — used INSTEAD of the real Fullscreen
+   API for this template (`tpl.useZoomFullscreen`, core/engine.js). Real
+   `:fullscreen` on iPad Chrome tested unusable for a kids' touch match: a
+   downward swipe near the top edge (right where the clocks live) silently
+   dropped it, it exited right after the 3-2-1 countdown, and Chrome threw its
+   own "leave/stay fullscreen?" banner mid-game. None of that is fixable from
+   JS — it's the browser's own gesture/heuristic layer sitting on top of the
+   real API. `root.classList.toggle("aw-zoomed")` sidesteps it entirely: no
+   Fullscreen API call is ever made, so none of those OS/browser affordances
+   exist to misfire — only the Fullscreen icon itself (kept on screen, see the
+   rule below) can turn it off. Trade-off: the browser's own tab/address bar
+   stays on screen (no top-layer promotion without the real API) — the same
+   trade-off Wordwall's own iPad UI makes; worth it for the stability.
+
+   Every rule below is the SAME shape as the real `:fullscreen` rules above
+   (core's generic ones in app.css + this file's `.act-running_word`
+   overrides), just keyed by a CLASS instead of the pseudo-class — and
+   double-guarded with `:has()` even though engine.js only ever adds
+   `.aw-zoomed` for THIS template, matching the project's usual caution around
+   template CSS living in the document forever. */
+.aw-zoomed:has(.aw-stage.act-running_word) {
+  position: fixed; inset: 0; z-index: 9000;
+  width: 100vw; height: 100vh; height: 100dvh;
+  background: #0b0b0d; overflow: hidden;
+}
+.aw-zoomed:has(.aw-stage.act-running_word) .aw-page {
+  width: 100%; height: 100%; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-zoomed .aw-stage.act-running_word {
+  width: min(100vw, calc(100vh * 4 / 3));
+  width: min(100vw, calc(100dvh * 4 / 3));
+  height: auto; border-radius: 0; border: none;
+}
+.aw-zoomed .aw-stage.act-running_word ~ .aw-below,
+.aw-zoomed .aw-stage.act-running_word ~ .aw-as-bars { display: none; }
+.aw-zoomed .aw-stage.act-running_word .aw-bottombar-left,
+.aw-zoomed .aw-stage.act-running_word .aw-nav,
+.aw-zoomed .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+
+/* The Fullscreen button itself gets a visible "on" state — real fullscreen
+   has the browser's own exit banner as a cue; zoom mode has nothing else, so
+   this is the only signal the teacher gets that tapping it again exits. */
+.aw-stage.act-running_word .aw-fs-always.is-zoomed {
+  color: var(--aw-accent); background: rgba(47, 123, 255, .14);
+}
+
 .aw-rw-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 700;

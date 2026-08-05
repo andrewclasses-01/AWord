@@ -98,6 +98,15 @@ const rwTemplate = {
   hideAutoSwitch: true,      // turns swap on a correct word, never on a checkbox
   hidePointsOff: true,       // wrong costs TIME here, not points
   manualTimerStart: true,    // the engine clock starts when the match does, not at mount
+  // Real Fullscreen API tested unusable on iPad Chrome for THIS game (5/8/2026,
+  // live device test): a downward swipe near the top edge (right where the
+  // clocks sit) silently drops fullscreen mid-match, it exits right after the
+  // 3-2-1 countdown, and Chrome throws a "leave/stay fullscreen?" banner over
+  // the board. core/engine.js reads this flag and swaps the Fullscreen button
+  // to a CSS-only zoom (`.aw-zoomed` on root) instead — see the flag's own
+  // comment in engine.js for the full trade-off. CSS for `.aw-zoomed` lives in
+  // running-word.css (this template's own file, not core).
+  useZoomFullscreen: true,
 
   sounds: {
     play: () => {},          // the 3-2-1 has its own sound; a jingle here would collide

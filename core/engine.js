@@ -59,6 +59,33 @@ function exitFs() {
   if (fn) try { fn.call(document); } catch (_) {}
 }
 
+// ----- "Zoom" fullscreen (opt-in via tpl.useZoomFullscreen, 5/8/2026) -----
+// The REAL Fullscreen API misbehaved on iPad Chrome for Running word (tested
+// live, not guessed): a stray downward swipe near the top edge drops out of
+// fullscreen (fatal on a kids' touch panel — the chess clocks sit right
+// there), it silently exits right after the 3-2-1 countdown, and Chrome pops
+// its own "leave/stay fullscreen?" banner mid-match. None of that is fixable
+// from JS — it's the browser's own gesture/heuristic layer.
+// A template that opts in gets a CSS-only stand-in instead: `root` (the same
+// stable element real fullscreen targets) just gets a class, and every OS/
+// browser affordance above stops applying — only this same Fullscreen button
+// (still on screen, still tappable) can turn it off. Trade-off: the browser's
+// own tab/address bar stays visible (no top-layer promotion without the real
+// API) — same trade-off Wordwall's own iPad experience makes, and worth it
+// for the stability. Zero-diff for every template that doesn't set the flag:
+// they keep calling the real requestFullscreen()/exitFullscreen() exactly as
+// before. Visual rules for `.aw-zoomed` live in the opting-in template's OWN
+// stylesheet (see templates/running-word/running-word.css), not here — this
+// core edit is purely behavioral (which mechanism the button drives).
+function setZoomed(root, fsBtn, on) {
+  root.classList.toggle("aw-zoomed", on);
+  fsBtn.classList.toggle("is-zoomed", on);
+  // Zoomed mode has no browser-level top-layer promotion, so the page behind
+  // `root` could still rubber-band/scroll under a child's touch drag — lock it
+  // for the duration, exactly like the real Fullscreen API effectively does.
+  document.documentElement.style.overflow = on ? "hidden" : "";
+}
+
 // Preview colors for the Style panel swatches (kept in sync with core/themes/*.css).
 const THEME_SWATCH = {
   classic:   "linear-gradient(135deg, #ffffff 50%, #2f7bff 50%)",
@@ -169,7 +196,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // Fullscreen must work BEFORE the game starts too (the teacher usually goes
   // fullscreen while the PLAY screen is still up), so this one button sits
   // above the READY overlay instead of behind it.
-  const fsBtn = iconBtn("aw-iconbtn aw-fs-always", icons.fullscreen, "Fullscreen");
+  const fsBtn = iconBtn("aw-iconbtn aw-fs-always" + (root.classList.contains("aw-zoomed") ? " is-zoomed" : ""), icons.fullscreen, "Fullscreen");
   rightTools.append(soundBtn, fsBtn);
   // Menu sits in a small wrapper (not appended bare) so `.aw-bottombar`'s grid
   // still gets exactly 3 children (its CSS targets :nth-child(1/2/3) to keep
@@ -209,13 +236,13 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // Leaving the game (Home / Edit) drops fullscreen so the library or editor
   // shows windowed as before — only "Start again" keeps fullscreen now that the
   // fullscreen target is the stable root (see the fullscreen helpers up top).
-  homeBtn.onclick = () => { sound.click(); if (fsElement()) exitFs(); cleanupAll(); onExit?.(); };
+  homeBtn.onclick = () => { sound.click(); exitAnyFullscreen(); cleanupAll(); onExit?.(); };
   editBtn.onclick = () => {
     sound.click();
     if (!tpl.edit) { toast("Edit — coming soon"); return; }
     // Leave the game, open this game's editor. Save -> store + replay with the
     // new content; Cancel -> replay the original untouched.
-    if (fsElement()) exitFs();
+    exitAnyFullscreen();
     cleanupAll();
     tpl.edit(root, activity, {
       onSave: async updated => {
@@ -365,9 +392,15 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // stable root means "Start again" (which rebuilds `page`) no longer drops us
   // out of fullscreen.
   fsBtn.onclick = () => {
-    if (!fsElement()) requestFs(root);
+    if (tpl.useZoomFullscreen) setZoomed(root, fsBtn, !root.classList.contains("aw-zoomed"));
+    else if (!fsElement()) requestFs(root);
     else exitFs();
   };
+  // Leaving the game (Home / Edit) must drop BOTH kinds of fullscreen.
+  function exitAnyFullscreen() {
+    if (fsElement()) exitFs();
+    if (root.classList.contains("aw-zoomed")) setZoomed(root, fsBtn, false);
+  }
 
   // =============================================================
   // OUTER TOOLBAR POPOVERS — Options / Template / Style

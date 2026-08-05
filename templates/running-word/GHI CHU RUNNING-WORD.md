@@ -1,6 +1,10 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): ✅ ĐÃ COMMIT (`a40809e`) + PUSH + LIVE** — 3 đợt sửa lớn liên tiếp trong
+> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 4 (mục 8e) đổi Fullscreen thật sang ZOOM CSS**
+> (chỉ RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật bị Chrome tự thoát
+> khi vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ opt-in
+> `tpl.useZoomFullscreen`, zero-diff cho 14 game khác — xem mục 8e). Chưa commit đợt này.
+> Đợt 1-3 dưới đây **✅ ĐÃ COMMIT (`a40809e`) + PUSH + LIVE** — 3 đợt sửa lớn liên tiếp trong
 > cùng ngày, gộp chung 1 commit sau khi thầy nói "ok build":
 > **Đợt 1** (mục 8b, v0.9.43) = 8 điểm tối ưu iPad. **Đợt 2** (mục 8c, v0.9.44) = 15 điểm làm lại
 > giao diện trận đấu. **Đợt 3** (mục 8d, v0.9.45) = 8 điểm tinh chỉnh sau khi thầy chơi thử (nút
@@ -128,7 +132,7 @@ không đổi thành mảng-lồng-mảng (`[[...],[...]]`), Firestore từ ch�
   whack-a-mole. TUYỆT ĐỐI không dùng luật trần `.aw-navbtn{display:none}` — CSS template ở lại
   document vĩnh viễn, sẽ giết mũi tên của mọi game mở sau đó (đã cắn thật ở open-the-box, Đợt 61).
 
-**3 chỗ core được phép sửa (thầy duyệt trước):**
+**4 chỗ core được phép sửa (thầy duyệt trước):**
 
 1. `core/catalog.js` — thêm đúng 1 mục (đây là cổng tích hợp chính thức của mọi template).
 2. `core/lesson-import.js` — thêm `runningWord()` + 1 nhánh: có `WORDTABLE` thì tự sinh act
@@ -138,6 +142,9 @@ không đổi thành mảng-lồng-mảng (`[[...],[...]]`), Firestore từ ch�
    CSS template nào khác — cho phép RUNNINGW tự đè khung 4:3 + ẩn 3 nút Assignment/Template/Print
    **ngay từ màn READY**, việc mà `:has(.aw-rw-card)` không làm được vì markup đó chỉ có sau khi
    mount() chạy. Xem mục 8c.
+4. `core/engine.js` (5/8/2026) — cờ opt-in `tpl.useZoomFullscreen`: nút Fullscreen đổi hẳn cơ chế
+   sang `root.classList.toggle("aw-zoomed")` (CSS thuần, không gọi Fullscreen API thật) thay vì
+   `requestFs/exitFs`. Zero-diff cho 14 game kia (không đặt cờ = y hệt code cũ). Xem mục 8e.
 
 **CHƯA làm (cố ý):** `core/convert.js` chưa có nhánh cho `running_word`, nên game này chưa tham
 gia "Change template". Muốn có thì thêm 1 nhánh `toRecords()` + 1 nhánh `buildContent()` — xem
@@ -464,13 +471,78 @@ GAME COMPLETE hiện + bấm được + Start again về READY.
 
 ⚠️ **Vẫn 3 việc chỉ thầy làm được** (không đổi): TOMKO thật, fullscreen iPad thật, in giấy A4 thật.
 
+## 8e. ⭐ ĐỢT 4 (5/8/2026) — ĐỔI FULLSCREEN THẬT SANG "ZOOM CSS" (chỉ RUNNINGW). CÓ SỬA CORE.
+
+Thầy tự chơi thật trên iPad (Chrome, iPad M1 12.9") sau khi bấm Fullscreen thật (Đợt 2/3 vẫn dùng
+Fullscreen API thật) và báo **4 vấn đề đều là hành vi của chính Fullscreen API trên iPad Chrome**,
+không sửa được bằng JS:
+
+1. Chrome tự vẽ 1 nút X to góc trên để thoát — không tắt được.
+2. Chỉ nhẹ tay vuốt xuống là **mất fullscreen** — cực kỳ dễ xảy ra khi trẻ chạm gần mép trên (đúng
+   chỗ 2 đồng hồ đứng), làm gián đoạn ván đấu.
+3. **Mất fullscreen ngay sau màn 3-2-1** — trải nghiệm tệ, vào trận là đã văng ra ngoài.
+4. Chrome tự bật popup "Do you want to stay in fullscreen?" giữa chừng — chặn thao tác.
+
+Thầy so sánh với chính Wordwall (ảnh chụp `wordwall.net` trên cùng iPad): nút "fullscreen" của
+Wordwall **không hề gọi Fullscreen API thật** — thanh tab + thanh địa chỉ Chrome vẫn còn nguyên,
+Wordwall chỉ phóng nội dung game lấp đầy viewport bằng CSS. Đổi lại: **tuyệt đối ổn định** (không
+cử chỉ hệ thống nào can thiệp được), đánh đổi là không che được thanh trình duyệt.
+
+**Quyết định (thầy chốt sau khi được hỏi phạm vi):** làm theo kiểu Wordwall, nhưng **CHỈ áp dụng
+cho RUNNINGW trước** — 14 game kia giữ nguyên Fullscreen API thật, chưa đổi. "Khi nào ổn định và
+chuẩn ta sẽ chỉnh các app khác sau."
+
+**Cơ chế mới — cờ `tpl.useZoomFullscreen` (core/engine.js):**
+- `setZoomed(root, fsBtn, on)` (hàm module-level mới): toggle class `aw-zoomed` trên `root` (chính
+  là phần tử Fullscreen thật vẫn nhắm tới — nên mọi lý luận "root ổn định qua Start again" áp dụng
+  y hệt) + class `is-zoomed` trên `fsBtn` (để CSS tô sáng nút, thay cho việc real fullscreen có sẵn
+  banner của Chrome làm dấu hiệu "đang bật") + khoá cuộn trang nền
+  (`document.documentElement.style.overflow="hidden"`, vì zoom không có top-layer promotion như
+  Fullscreen thật nên trang phía sau lý thuyết vẫn cuộn được).
+- `fsBtn.onclick`: `tpl.useZoomFullscreen` → gọi `setZoomed`; không có cờ → y hệt code cũ
+  (`requestFs`/`exitFs`). **Zero-diff cho 14 game không đặt cờ.**
+- `exitAnyFullscreen()` (hàm mới, thay cho `if (fsElement()) exitFs()` lặp lại 2 chỗ): gỡ CẢ 2 kiểu
+  fullscreen — dùng ở `homeBtn`/`editBtn` (rời game vẫn phải thoát fullscreen dù là fullscreen thật
+  hay zoom).
+- `fsBtn` mới dựng mỗi lần `startGame()` chạy lại (Start again giữ `root` nhưng xoá `innerHTML`) nên
+  đọc lại `root.classList.contains("aw-zoomed")` lúc tạo nút để đồng bộ class `is-zoomed` — khớp
+  hành vi cũ "Start again giữ nguyên fullscreen".
+
+**CSS — toàn bộ nằm trong `running-word.css`, KHÔNG đụng `core/app.css`:** 1 khối mới ngay dưới
+khối `:fullscreen` cũ, cùng hình dạng (`.aw-zoomed` thay `:fullscreen`, double-guard bằng
+`:has(.aw-stage.act-running_word)` dù cờ JS đã đảm bảo class chỉ bật cho game này) — `root` được
+`position:fixed;inset:0;z-index:9000` (không có top-layer thật nên phải tự ghim), `.aw-page` lấp
+100%/100%, `.aw-stage` giữ đúng công thức 4:3 letterbox cũ (`min(100vw, 100dvh*4/3)`, có dự phòng
+`vh` cho trình duyệt chưa hiểu `dvh`), ẩn `.aw-below`/`.aw-as-bars`/nav/toolbar y hệt fullscreen
+thật. Nút Fullscreen tô sáng màu accent khi `is-zoomed` (dấu hiệu duy nhất báo "đang zoom, bấm lại
+để thoát" — vì không còn banner nào của trình duyệt làm việc đó nữa).
+
+**Tự test (devserver, DOM thật, không giả lập cử chỉ hệ thống được):**
+- Bấm nút Fullscreen trên `running-word/test.html` → `#app` có class `aw-zoomed`, `document.
+  fullscreenElement` vẫn `null` (xác nhận **không hề gọi** Fullscreen API thật), tỉ lệ khung đo
+  được đúng 4:3 (960×720 = 1.333), nền `rgb(11,11,13)`, `.aw-below` `display:none`, `document.
+  documentElement.style.overflow` = `"hidden"`.
+- Bấm lại → gỡ sạch cả 2 class + trả lại `overflow`.
+- Bấm Home lúc đang zoom → `exitAnyFullscreen()` gỡ đúng, `#app` về `className=""`.
+- Hồi quy: `quiz/test.html` bấm Fullscreen → **có gọi** `Element.prototype.requestFullscreen` thật
+  (đo bằng cách tráo hàm tạm thời), KHÔNG có class `aw-zoomed`/`is-zoomed` nào xuất hiện — đúng
+  "zero-diff", 14 game khác không đổi gì. `type-the-answer/test.html` mount 0 lỗi console.
+
+⚠️ **Máy không tự vuốt màn hình / không tự bấm nút cần cử chỉ người dùng thật được**, nên 4 điều
+thầy báo (banner X, vuốt-mất, mất-sau-3-2-1, popup "stay fullscreen") chỉ có thể xác nhận ĐÃ HẾT
+bằng cách thầy tự chơi lại trên chính iPad đó. Về lý thuyết cả 4 đều hết vì không còn lời gọi
+Fullscreen API thật nào nữa trong đường này — nhưng "lý thuyết" khác "thầy cầm iPad chơi thật".
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
-- [ ] **Đợt 2 + Đợt 3 (5/8/2026, v0.9.44 + v0.9.45) — thầy duyệt rồi mới commit + push (gộp cả 3 đợt).**
+- [x] ~~Đợt 2 + Đợt 3 (5/8/2026, v0.9.44 + v0.9.45)~~ — thầy duyệt, commit **`a40809e`** + push + live.
+- [ ] **Đợt 4 (5/8/2026) — zoom fullscreen (mục 8e) — thầy duyệt rồi mới commit + push.**
 - [ ] **Thầy xem khung 4:3 + 2 đồng hồ trên TOMKO thật** — có vừa mắt hơn 16:9 cũ không.
-- [ ] **Thầy bấm thử Fullscreen thật trên iPad/TOMKO** — có sạch chữ như ý không, nút thoát (icon góc)
-      có dễ thấy/dễ bấm không (máy không tự bấm fullscreen được — cần cử chỉ người dùng thật).
+- [ ] **Thầy tự chơi lại trên iPad với ZOOM mode mới** — xác nhận hết cả 4 vấn đề (banner X của
+      Chrome, vuốt-xuống-mất, mất-sau-3-2-1, popup "stay fullscreen?"); icon Fullscreen tô sáng màu
+      xanh có đủ rõ để biết "đang zoom, bấm lại để thoát" không (không còn banner của Chrome làm
+      thay việc đó nữa).
 - [ ] **In thử 3 tờ ra giấy A4 thật** — chữ có thật sự to/lấp kín trang như ý không (nay không còn
       trần 7.4mm, danh sách 50 từ tính ra ~17.8pt — máy mới TÍNH được, chưa cầm được tờ giấy), gạch
       phân cách mỏng có còn rõ không, ô TURN đủ to để tick không.
