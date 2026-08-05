@@ -809,6 +809,19 @@ const rwTemplate = {
         }
       });
 
+      // Re-measure the row height on every paint, not just on resize. Before
+      // this fix, `--rw-rowh`/`b.rowH` were only ever set from `buildRows()`
+      // (once, at mount) and the `boardRO` ResizeObserver (only when the
+      // board's own box actually resizes) — never from a plain turn swap.
+      // Most of the time that's fine (the 70/30 width swap DOES fire the
+      // observer), but the observer is asynchronous and can land a frame
+      // after `paintBoard` already ran with a stale `b.rowH`, which throws
+      // off `applyTrack`'s translateY math for exactly one paint — the
+      // window can visibly land short of 3 full rows right on a turn swap.
+      // `measureRow` is a cheap synchronous read (no work if the height
+      // hasn't actually changed), so doing it unconditionally here removes
+      // the dependency on resize-event timing entirely.
+      measureRow(t);
       const animate = !boardEls[t].noAnim;
       boardEls[t].noAnim = false;
       applyTrack(t, animate);

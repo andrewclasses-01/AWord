@@ -179,11 +179,26 @@
 .aw-zoomed .aw-stage.act-running_word .aw-nav,
 .aw-zoomed .aw-stage.act-running_word .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
 
-/* The Fullscreen button itself gets a visible "on" state — real fullscreen
-   has the browser's own exit banner as a cue; zoom mode has nothing else, so
-   this is the only signal the teacher gets that tapping it again exits. */
-.aw-stage.act-running_word .aw-fs-always.is-zoomed {
-  color: var(--aw-accent); background: rgba(47, 123, 255, .14);
+/* Teacher's follow-up (5/8/2026): pin the Fullscreen button to the stage's
+   OWN bottom-right corner while zoomed, and keep it small/unobtrusive — no
+   background, low opacity at rest — since it's the only control left on
+   screen mid-match and shouldn't compete with the game for attention. Pinned
+   only in `.aw-zoomed` (the resting/non-zoomed state keeps the old inline
+   placement in `.aw-tools`, next to Sound, unchanged — pinning THERE once
+   collided with the Sound icon, see Đợt 3d point 3; no collision here since
+   Sound is already hidden the moment `.aw-zoomed` is on). `.aw-stage-inner`
+   (core) is `position:absolute;inset:0` — the nearest positioned ancestor —
+   so `position:absolute` here pins to the STAGE's own corner, not the
+   viewport's. */
+.aw-zoomed .aw-stage.act-running_word .aw-fs-always {
+  position: absolute; right: 0.8cqw; bottom: 0.8cqw; z-index: 20;
+  width: 2.2cqw; height: 2.2cqw;
+  background: transparent; opacity: .45;
+}
+.aw-zoomed .aw-stage.act-running_word .aw-fs-always svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-zoomed .aw-stage.act-running_word .aw-fs-always:hover,
+.aw-zoomed .aw-stage.act-running_word .aw-fs-always:active {
+  background: transparent; opacity: .85;
 }
 
 .aw-rw-empty {

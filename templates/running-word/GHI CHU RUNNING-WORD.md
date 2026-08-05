@@ -1,14 +1,17 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): ✅ ĐÃ COMMIT (`2fb19c7`) + PUSH + LIVE — Đợt 4 (mục 8e) đổi Fullscreen
-> thật sang ZOOM CSS** (chỉ RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật
-> bị Chrome tự thoát khi vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ
-> opt-in `tpl.useZoomFullscreen`, zero-diff cho 14 game khác — xem mục 8e). Đã kiểm chứng **TRÊN BẢN
+> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 5 (mục 8f) nút Fullscreen ghim góc + điều tra
+> lỗi cửa sổ 3 dòng của TEAM B.** KHÔNG ĐỤNG CORE (chỉ 2 file `running-word.js/.css`). Chưa commit
+> đợt này. Xem mục 8f để biết chi tiết + giới hạn của phần điều tra (không tái hiện được lỗi hiển thị
+> gốc trong môi trường tự test, đã vá defensive fix hợp lý nhất tìm được + cần thầy xác nhận lại).
+> Đợt 4 dưới đây **✅ ĐÃ COMMIT (`2fb19c7`) + PUSH + LIVE** — đổi Fullscreen thật sang ZOOM CSS (chỉ
+> RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật bị Chrome tự thoát khi
+> vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ opt-in
+> `tpl.useZoomFullscreen`, zero-diff cho 14 game khác — xem mục 8e). Đã kiểm chứng **TRÊN BẢN
 > LIVE** (`andrewclasses-01.github.io/AWord`, poll qua bẫy cache Pages — lần 1-2 còn file cũ, lần 3
 > mới đủ marker mới): RunningW live bấm Fullscreen → `aw-zoomed` bật, khung 4:3, `document.
 > fullscreenElement` vẫn `null` (không gọi API thật); Quiz live bấm Fullscreen → vẫn gọi
-> `requestFullscreen()` thật như cũ (đo bằng cách tráo hàm tạm thời) — 0 lỗi console cả 2. ⬜ **Còn
-> chờ thầy tự chơi thật trên iPad** xác nhận hết cả 4 vấn đề gốc (mục 8e).
+> `requestFullscreen()` thật như cũ (đo bằng cách tráo hàm tạm thời) — 0 lỗi console cả 2.
 > Đợt 1-3 dưới đây **✅ ĐÃ COMMIT (`a40809e`) + PUSH + LIVE** — 3 đợt sửa lớn liên tiếp trong
 > cùng ngày, gộp chung 1 commit sau khi thầy nói "ok build":
 > **Đợt 1** (mục 8b, v0.9.43) = 8 điểm tối ưu iPad. **Đợt 2** (mục 8c, v0.9.44) = 15 điểm làm lại
@@ -538,16 +541,77 @@ thầy báo (banner X, vuốt-mất, mất-sau-3-2-1, popup "stay fullscreen") c
 bằng cách thầy tự chơi lại trên chính iPad đó. Về lý thuyết cả 4 đều hết vì không còn lời gọi
 Fullscreen API thật nào nữa trong đường này — nhưng "lý thuyết" khác "thầy cầm iPad chơi thật".
 
+## 8f. Đợt 5 (5/8/2026) — NÚT FULLSCREEN GHIM GÓC + ĐIỀU TRA LỖI CỬA SỔ 3 DÒNG CỦA TEAM B
+
+Thầy chơi bản zoom mới (Đợt 4) và gửi 2 việc: (1) nút Fullscreen cần dọn về góc dưới-phải, nhỏ, trong
+suốt, thật kín đáo; (2) ảnh chụp cho thấy bảng TEAM B lúc đang chơi không hiện đủ 3 dòng như TEAM A.
+
+**1. Nút Fullscreen ghim góc (`running-word.css`).** Trước đó nút nằm TRONG cụm `.aw-tools` (theo
+dòng chảy flex, cạnh Sound) — đủ dùng ở trạng thái thường nhưng trong `.aw-zoomed` nó trôi lệch, to,
+có nền sáng, khá nổi. Nay khi `.aw-zoomed` bật: `position:absolute;right/bottom:0.8cqw` ghim vào
+ĐÚNG góc của `.aw-stage` (mượn `.aw-stage-inner` — core — vốn đã `position:absolute;inset:0` làm nơi
+neo), thu còn 2.2cqw, nền trong suốt, `opacity:.45` lúc nghỉ (chạm/hover lên `.85`). Chỉ scope trong
+`.aw-zoomed .aw-stage.act-running_word .aw-fs-always` — trạng thái thường (không zoom) giữ nguyên vị
+trí cũ trong `.aw-tools` cạnh Sound, vì ghim tuyệt đối ở ĐÓ từng đụng độ với icon Sound (Đợt 3d mục
+3) — nay không đụng vì trong `.aw-zoomed` Sound đã bị ẩn hẳn (`.aw-tools .aw-iconbtn:not(.aw-fs-
+always){display:none}`), không còn nguy cơ chồng. Đo (đã vá lỗi đo — xem mục "bẫy đo đạc" dưới): góc
+nút cách 2 cạnh stage đúng ~11px, kích thước 30×30px (khớp 2.2cqw ở khung ~1360px rộng), nền
+`rgba(0,0,0,0)`, `opacity` đúng `0.45` sau khi ép hoạt ảnh xong.
+
+**2. Điều tra lỗi "TEAM B không hiện đủ 3 dòng" — ĐÃ VÁ 1 NGUYÊN NHÂN THẬT, KHÔNG TÁI HIỆN ĐƯỢC
+NGUYÊN VĂN LỖI THẦY BÁO.** Đọc lại toàn bộ cơ chế cửa sổ 3-dòng (`measureRow`/`applyTrack`/
+`bottomIndexOf`/`paintBoard`) và lái 1 trận thật qua devserver (đóng vai trọng tài, bấm PASS liên
+tục 16 lượt liền — không dừng giữa chừng để tránh đồng hồ tự trôi thật giữa các lệnh, một bẫy đã
+cắn khi test lần đầu khiến TEAM B hết giờ oan) rồi soi DOM từng bước một:
+
+- 4 lượt ĐẦU trận: đúng là chỉ hiện 1-2 dòng (chưa đủ 2 từ trước đó để lấp 2 ô trên) — đây là **hành
+  vi ĐÚNG THIẾT KẾ**, không phải lỗi (2 dòng trên vốn nghĩa là "2 từ mới xong", đầu trận chưa có).
+- Từ lượt 5 trở đi (12 lượt liên tiếp sau đó, kiểm cả 2 đội mỗi lượt): **luôn đúng 3 dòng, dòng
+  đang gõ luôn ở ĐÁY** — không tái hiện được kiểu lỗi trong ảnh thầy gửi (dòng đang gõ ở TRÊN, 2 dòng
+  CHƯA CHƠI ở dưới — đúng chiều NGƯỢC với chủ đích, đáng lẽ đây là bất khả thi theo code hiện tại vì
+  `bottomIndexOf` luôn trả chỉ số hiện tại/lớn nhất khi đến lượt, không bao giờ trả chỉ số bé hơn 2
+  dòng phía sau).
+- ⭐ **Vẫn tìm ra 1 điểm chưa chắc chắn thật sự trong code, đã vá phòng ngừa**: `measureRow()` (đo
+  chiều cao 1 dòng = 1/3 chiều cao khung cuộn) trước đây CHỈ chạy lúc `buildRows()` (1 lần lúc vào
+  trận) và trong callback của `ResizeObserver` (chỉ khi khung board đổi KÍCH THƯỚC thật) — **không hề
+  chạy lại trong `paintBoard()`** mỗi lượt. Vì mỗi lần đảo lượt bảng 70/30 CŨNG đổi kích thước (nên
+  `ResizeObserver` thường bắt kịp), nhưng đây là 2 cơ chế ASYNC riêng nhau, không đảm bảo thứ tự — có
+  khả năng thật (dù không ép được trên môi trường tự test) là `paintBoard()` chạy trước khi
+  `ResizeObserver` kịp đo lại, dùng `--rw-rowh` CŨ một nhịp, khiến cửa sổ trông hụt dòng đúng lúc đảo
+  lượt. Đã vá: gọi `measureRow(t)` NGAY ĐẦU mỗi `paintBoard()`, không còn phụ thuộc thời điểm của
+  `ResizeObserver` nữa — rẻ (chỉ đọc `clientHeight`), không đổi hành vi khi kích thước thật sự không
+  đổi.
+
+⚠️ **Trung thực về giới hạn phần điều tra này**: đã KHÔNG tái hiện được đúng hình ảnh lỗi thầy chụp
+(current ở trên + 2 dòng tương lai ở dưới) trong 16 lượt kiểm liên tục — bản vá ở trên là ứng viên
+HỢP LÝ NHẤT tìm được qua đọc code, không phải "đã bắt tận tay". **Cần thầy chơi lại bản này** — nếu
+còn thấy lại y hệt kiểu lỗi cũ, xin gửi thêm: đúng lúc nào xảy ra (ngay khi đảo lượt hay xảy ra rồi ở
+yên?), có tự hết sau ~1 giây không, và nếu tiện — quay màn hình vài giây quanh lúc đảo lượt (ảnh tĩnh
+rất khó phân biệt "current ở đáy" hay "current ở đỉnh" khi 2 dòng future cũng chỉ hiện mỗi con số).
+
+**⭐ Bẫy đo đạc mới (dùng lại được cho mọi lần sau đo trong công cụ này):** phiên bản trình duyệt
+dùng để tự test KHÔNG compositing (pane ẩn) — mọi CSS `transition`/animation bị ĐÓNG BĂNG ở giá trị
+TRƯỚC lúc đổi (không tiến được, khác hẳn cắn thật lúc pane hiện thì animation vẫn chạy chỉ đơn giản
+không thấy được, ở ĐÂY animation không hề tiến chút nào). `getComputedStyle` do đó đọc ra giá trị CŨ
+mãi mãi cho MỌI thuộc tính có `transition` (bắt gặp với `flex-grow` của bảng 70/30 VÀ `opacity` của
+nút Fullscreen). Cách đo đúng: `el.getAnimations().forEach(a => a.finish())` — SCOPE ĐÚNG PHẦN TỬ
+đang đo, KHÔNG gọi `document.querySelectorAll('*').forEach(...)` trên toàn trang (đã thử, ép luôn cả
+animation "PLAY overlay fade-out" khiến trang tự rebuild về màn READY ngoài ý muốn — phải tải lại
+trang làm sạch).
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
 - [x] ~~Đợt 2 + Đợt 3 (5/8/2026, v0.9.44 + v0.9.45)~~ — thầy duyệt, commit **`a40809e`** + push + live.
 - [x] ~~Đợt 4 (5/8/2026) — zoom fullscreen (mục 8e)~~ — commit **`2fb19c7`** + push + kiểm live XONG.
+- [ ] **Đợt 5 (5/8/2026) — nút Fullscreen ghim góc + vá phòng ngừa cửa sổ 3 dòng (mục 8f) — thầy
+      duyệt rồi mới commit + push.**
+- [ ] **Thầy chơi lại xác nhận nút Fullscreen đã kín đáo/đúng góc dưới-phải** như ý muốn.
+- [ ] **⚠️ Thầy chơi lại xác nhận lỗi "TEAM B không hiện đủ 3 dòng" đã hết** — mục 8f vá 1 nguyên
+      nhân HỢP LÝ NHẤT tìm được (đo lại chiều cao dòng mỗi lượt thay vì chỉ lúc đổi kích thước) nhưng
+      KHÔNG tái hiện được nguyên văn lỗi trong môi trường tự test — nếu còn thấy lại, gửi thêm chi
+      tiết lúc nào/kéo dài bao lâu (xem mục 8f) hoặc quay màn hình.
 - [ ] **Thầy xem khung 4:3 + 2 đồng hồ trên TOMKO thật** — có vừa mắt hơn 16:9 cũ không.
-- [ ] **Thầy tự chơi lại trên iPad với ZOOM mode mới** — xác nhận hết cả 4 vấn đề (banner X của
-      Chrome, vuốt-xuống-mất, mất-sau-3-2-1, popup "stay fullscreen?"); icon Fullscreen tô sáng màu
-      xanh có đủ rõ để biết "đang zoom, bấm lại để thoát" không (không còn banner của Chrome làm
-      thay việc đó nữa).
 - [ ] **In thử 3 tờ ra giấy A4 thật** — chữ có thật sự to/lấp kín trang như ý không (nay không còn
       trần 7.4mm, danh sách 50 từ tính ra ~17.8pt — máy mới TÍNH được, chưa cầm được tờ giấy), gạch
       phân cách mỏng có còn rõ không, ô TURN đủ to để tick không.
