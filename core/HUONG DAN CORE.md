@@ -361,6 +361,14 @@ Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đ�
   câu sai hiện dòng bài-làm (đỏ ✗) rồi dòng đáp-án-đúng (xanh ✓). Dùng cho game câu DÀI (câu 3 cột bị co
   nhỏ tí xíu). Tương thích ngược tuyệt đối: template không đặt cờ giữ nguyên lưới 3 cột cũ. CSS của kiểu
   này nằm ở template (`.aw-rv-slist/.aw-rv-sitem/.aw-rv-sline`, xem `templates/unjumble/unjumble.css`).
+- `tpl.renderSummary(panel, {result, restart, panelItem, session})` — (thêm 5/8/2026 cho Running word)
+  hook opt-in trong `showSummary()`: nếu template khai hàm này, engine chỉ dựng TIÊU ĐỀ panel rồi giao
+  toàn bộ phần thân (stats + dòng rank + hàng nút) cho template tự vẽ, `return` sớm. Không khai = giữ
+  nguyên panel mặc định từng byte (zero-diff). Dùng khi cần bảng kết thúc hình dạng KHÁC HẲN (Running
+  word: 2 nửa "tên đội / điểm X/total" vàng, chỉ chừa Start again). Template nhận sẵn `restart` +
+  `panelItem(label, fn)` từ core; dữ liệu riêng thì tự stash ở biến cấp module trước khi gọi `ui.finish`
+  (mount chỉ 1 act 1 lúc). CSS bảng nằm ở template — LƯU Ý panel ở backdrop NGOÀI khung `.aw-<tpl>-card`
+  nên biến CSS `--*` scope theo card KHÔNG tới; dùng màu literal. Mẫu: `templates/running-word/running-word.js`.
 - `tpl.hideLettersOption:true` — ẩn nhóm "Letters on answers" (game không có ô đáp án chữ cái).
 - `tpl.hideTimerOption:true` — ẩn nhóm "Timer" (toàn ván) khi game TỰ QUẢN đồng hồ (vd Gameshow đếm
   ngược TỪNG CÂU; nếu để engine chạy đồng hồ toàn ván sẽ đá nhau). Nhớ đặt `options.timer="none"` cho

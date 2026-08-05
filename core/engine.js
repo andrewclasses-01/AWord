@@ -944,6 +944,18 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     const panel = el("div", "aw-panel");
     panel.append(el("div", "aw-panel-head", endTitle.toUpperCase()));
 
+    // Opt-in: a template may REPLACE the whole summary body (stats + rank line +
+    // action items) with its own. It gets the panel to fill, the computed
+    // result, the `restart` action and the `panelItem` button helper. Used by
+    // Running word to show a two-team scoreboard with only "Start again"
+    // (teacher's request, 5/8/2026). Purely additive — every template that
+    // doesn't define renderSummary keeps the default panel below, byte-for-byte.
+    if (typeof tpl.renderSummary === "function") {
+      tpl.renderSummary(panel, { result, restart, panelItem, session: !!session });
+      bd.append(panel);
+      return;
+    }
+
     const stats = el("div", "aw-sum-stats");
     const t = fmtSecsParts(result.timeMs);
     stats.append(

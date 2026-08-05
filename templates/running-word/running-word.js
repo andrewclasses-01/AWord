@@ -69,6 +69,14 @@ const other = t => (t === "a" ? "b" : "a");
 
 const SLOGAN = "RUNNING WORD IN ANDREW CLASSES";
 
+// The data the end-of-match summary panel needs, stashed here just before
+// ui.finish() runs. core/engine.js calls rwTemplate.renderSummary() AFTER the
+// confetti — a method on the template object, with no access to mount()'s
+// closure — so the per-team scoreboard it draws reads this instead. Safe as a
+// module-level single because AWord only ever mounts one activity at a time
+// (same reasoning the poolSizeHint pattern relies on).
+let rwEndData = null;
+
 // The 10 quick-pick notches on the "Time each team" slider (seconds), 0:30 up
 // to 5:00 in half-minute steps. Slider position 0 is "Custom" — not in this
 // list, handled separately in buildExtraOptions.
@@ -119,6 +127,29 @@ const rwTemplate = {
   // the three printed from the setup screen.
   toPrintItems(activity) {
     return poolFrom(activity).map(w => ({ clue: "", answer: w }));
+  },
+
+  // ===== END-OF-MATCH MENU PANEL (teacher's redesign, 5/8/2026) =============
+  // Replaces the engine's default summary body via the `tpl.renderSummary`
+  // hook. Deliberately stripped right down: no Time, no Leaderboard, no Show
+  // answers, no "Play a different template", no "you're Nth" line — just the
+  // two teams side by side (name over score, the score bigger and gold) and a
+  // single Start again. All the numbers come from rwEndData (set in endMatch).
+  renderSummary(panel, { restart, panelItem }) {
+    const d = rwEndData || { names: { a: "TEAM A", b: "TEAM B" }, wordsA: 0, wordsB: 0, totalA: 0, totalB: 0, winner: null };
+    const board = el("div", "aw-rw-sum");
+    TEAMS.forEach(t => {
+      const won = t === "a" ? d.wordsA : d.wordsB;
+      const total = t === "a" ? d.totalA : d.totalB;
+      const half = el("div", `aw-rw-sum-half is-${t}` + (d.winner === t ? " is-winner" : ""));
+      half.append(el("div", "aw-rw-sum-name", escapeHtml(d.names[t])));
+      half.append(el("div", "aw-rw-sum-score", `${won}/${total}`));
+      board.append(half);
+    });
+    panel.append(board);
+    const items = el("div", "aw-panel-items");
+    items.append(panelItem("Start again", restart));
+    panel.append(items);
   },
 
   buildExtraOptions({ panel, draft, el: E, mkCheck }) {
@@ -282,6 +313,16 @@ const rwTemplate = {
     let turn = null;                                  // null during "prep" until a board is tapped
     let running = false, paused = false, finished = false;
     const idx = { a: 0, b: 0 };
+    // Turn-ending moves per team (a correct word OR a pass — a wrong try does
+    // NOT count, it keeps the same team on the clock). The game only settles by
+    // LIST when both teams have taken the SAME number of moves (teacher's rule,
+    // 5/8/2026): the first team plays one more turn than the second at any
+    // moment, so if it finishes its list the second team is owed a final,
+    // equalising turn before time and score are locked. Running OUT OF TIME is
+    // unaffected — that ends on the spot, chess-clock law.
+    const moves = { a: 0, b: 0 };
+    let listDone = false;                             // some team has completed its whole list
+    let finisher = null;                              // the first team to complete its list
     const rows = { a: [], b: [] };                   // per-row status: null | "ok" | "pass"
     const clock = { a: cfg.clockMs, b: cfg.clockMs };
     const andrewLeft = { a: cfg.andrewUses, b: cfg.andrewUses };
@@ -425,6 +466,7 @@ const rwTemplate = {
     // still the honest thing to do, and it keeps this game working on any older
     // copy of core.
     let kbd = null;
+    let kbdRO = null;
     function buildKeyboard() {
       if (kbd) return;
       kbd = createKeyboard({
@@ -447,6 +489,11 @@ const rwTemplate = {
         }
       });
       match.append(kbd.el);
+      // Reposition PASS whenever the keyboard's box changes (frame resize,
+      // rotation). ResizeObserver fires once on observe, which also does the
+      // initial placement after layout settles.
+      kbdRO = new ResizeObserver(() => positionPass());
+      kbdRO.observe(kbd.el);
     }
 
     // ===== referee strip (between the two clocks): one big Play/Pause, Pass
@@ -455,20 +502,45 @@ const rwTemplate = {
     function refereeBar() {
       const bar = el("div", "aw-rw-ref");
 
+      // Just the Play/Pause now — it sits ALONE in the middle grid column of the
+      // clocks strip, so it's centred and balanced between the two clock faces
+      // (teacher's redesign, 5/8/2026 — Pass moved out to the keyboard's left).
       const playPauseBtn = el("button", "aw-rw-playpause", SVG_PLAY);
       playPauseBtn.type = "button";
       playPauseBtn.title = "Play";
       playPauseBtn.onclick = onPlayPauseClick;
       bar.append(playPauseBtn);
 
-      const passBtn = el("button", "aw-rw-passbtn", "PASS");
-      passBtn.type = "button";
-      passBtn.title = "Skip this word (time penalty)";
-      passBtn.onclick = () => doPass();
-      if (cfg.allowPass) bar.append(passBtn);
+      // PASS is a square button pinned into the empty gutter to the LEFT of the
+      // keyboard, centred on the keyboard's height (teacher's request,
+      // 5/8/2026). Built here so refUI can reach it, but appended to `match`
+      // (position:relative) and PLACED by positionPass() once the keyboard is
+      // up — its spot is measured from the live keyboard rect, not hard-coded.
+      let passBtn = null;
+      if (cfg.allowPass) {
+        passBtn = el("button", "aw-rw-passbtn", "PASS");
+        passBtn.type = "button";
+        passBtn.title = "Skip this word (time penalty)";
+        passBtn.onclick = () => doPass();
+        match.append(passBtn);
+      }
 
-      refUI = { bar, playPauseBtn, passBtn: cfg.allowPass ? passBtn : null };
+      refUI = { bar, playPauseBtn, passBtn };
       return bar;
+    }
+
+    // Pin PASS into the middle of the empty gutter LEFT of the keyboard, level
+    // with the keyboard's vertical centre. Measured from the live rects so it
+    // stays correct whatever the keyboard's size/scale turns out to be; re-run
+    // on every keyboard resize (see kbdRO in buildKeyboard).
+    function positionPass() {
+      const btn = refUI?.passBtn;
+      if (!btn || !kbd) return;
+      const mr = match.getBoundingClientRect();
+      const kr = kbd.el.getBoundingClientRect();
+      if (!mr.width || !kr.width) return;
+      btn.style.left = ((kr.left - mr.left) / 2) + "px";          // middle of the left gutter
+      btn.style.top = ((kr.top + kr.bottom) / 2 - mr.top) + "px"; // keyboard's vertical centre
     }
 
     // In "prep" (boards shown, nobody's clock running yet): starts the 3-2-1
@@ -671,6 +743,11 @@ const rwTemplate = {
       buildRows();
       buildKeyboard();
       paintAll();
+      // Place PASS now, synchronously — the ResizeObserver on the keyboard also
+      // fires an initial callback, but its delivery is tied to the render loop,
+      // so a direct call here guarantees PASS is positioned from the first paint
+      // (getBoundingClientRect forces the layout it needs regardless).
+      positionPass();
     }
 
     // ===== COUNTDOWN =======================================================
@@ -726,33 +803,36 @@ const rwTemplate = {
           const body = el("span", "aw-rw-row-body");
           const mark = el("span", "aw-rw-row-mark");
           row.append(no, body, mark);
-          track.append(row);
           rowEls.push({ row, body, mark });
         });
+        // ⭐ REVERSED STACKING (teacher's request, 5/8/2026): word N at the TOP
+        // of the track, word 1 at the bottom, so the CURRENT word rides the top
+        // of the 3-row window and finished words get pushed DOWN below it (the
+        // opposite of the old "input at the bottom" layout). rowEls stays indexed
+        // by word (rowEls[i] == word i) for every state path — only the visual
+        // stacking is flipped, by appending the rows to the track in reverse.
+        for (let i = rowEls.length - 1; i >= 0; i--) track.append(rowEls[i].row);
         boardEls[t].noAnim = true;   // first placement of the track shouldn't slide
       });
     }
 
-    // Which row sits at the BOTTOM of the 3-row window for team `t`:
+    // Which word sits at the TOP of the 3-row window for team `t` (teacher's
+    // reversed layout, 5/8/2026 — the newest word is on top now):
     //   • its turn (playing)      -> idx[t]      (the input row)
-    //   • before the match starts -> idx[t]      (word 1 ready at the bottom)
+    //   • before the match starts -> idx[t]      (word 1 ready at the top)
     //   • waiting / game over     -> idx[t] - 1  (the word it last completed)
-    // The two rows above are the previous two. See the header comment on the
-    // board build for the full picture.
-    function bottomIndexOf(t) {
+    // The two rows BELOW are the previous two (smaller and fainter — see the
+    // tier classes in paintBoard).
+    function topIndexOf(t) {
       if (phase === "play" && turn === t) return idx[t];
       if (phase === "prep" || phase === "countdown") return idx[t];
       return idx[t] - 1;
     }
 
-    // Slide the track so `bottomIndexOf(t)` lands in the bottom third of the
-    // window. `animate:false` (first build) suppresses the transition.
+    // Slide the track so `topIndexOf(t)` lands in the TOP third of the window.
+    // `animate:false` (first build) suppresses the transition.
     //
-    // ⭐ NO PIXELS ANYWHERE (5/8/2026). This used to measure the window with
-    // `clientHeight`, divide by 3 and slide by that many px — which meant a
-    // JS-held number had to stay in step with a CSS layout through two
-    // independent async paths (ResizeObserver and the paint), and `clientHeight`
-    // is integer-rounded on top of that. Now the track is exactly as tall as the
+    // ⭐ NO PIXELS ANYWHERE (5/8/2026). The track is exactly as tall as the
     // window (CSS `height:100%`) and each row is exactly `calc(100% / 3)` of it,
     // so ONE ROW = 100%/3 of the track by construction and the slide is written
     // in those same units. A `translateY` percentage resolves against the
@@ -760,9 +840,13 @@ const rwTemplate = {
     // layout, on any device, with nothing for this file to measure, cache or
     // re-sync. Rotate the iPad, let the URL bar slide away, change the frame
     // ratio, run it in a future browser — the window stays exactly 3 rows.
+    //
+    // The track is stacked word N-1 (top) .. word 0 (bottom), so word `top` sits
+    // at DOM slot (N-1-top); sliding it up by that many rows brings it to the
+    // window's top slot, with the two OLDER words falling into the slots below.
     function applyTrack(t, animate) {
       const b = boardEls[t];
-      const shift = 2 - bottomIndexOf(t);        // in ROWS (negative = slide up)
+      const shift = -((current[t].length - 1) - topIndexOf(t));   // in ROWS (negative = slide up)
       const y = `translateY(calc(${shift} * 100% / 3))`;
       if (animate) {
         b.track.style.transform = y;
@@ -785,9 +869,9 @@ const rwTemplate = {
       if (!sample) return;
       const avail = sample.body.clientWidth;
       if (avail <= 0) { b.board.style.setProperty("--rw-fit", "1"); return; }
-      const bottom = bottomIndexOf(t);
+      const top = topIndexOf(t);
       let maxNeed = 0;
-      for (const i of [bottom - 2, bottom - 1, bottom]) {
+      for (const i of [top, top - 1, top - 2]) {
         if (i < 0 || i >= current[t].length) continue;
         b.probe.textContent = String(current[t][i]).toUpperCase();
         maxNeed = Math.max(maxNeed, b.probe.offsetWidth);
@@ -811,6 +895,7 @@ const rwTemplate = {
       board.classList.toggle("is-pickable", phase === "prep");
       board.classList.toggle("is-dimmed", phase === "play" && paused);
 
+      const top = topIndexOf(t);
       rowEls.forEach((r, i) => {
         const status = rows[t][i];
         const isInput = i === idx[t] && phase === "play" && turn === t;
@@ -818,6 +903,14 @@ const rwTemplate = {
         r.row.classList.toggle("is-passed", status === "pass");
         r.row.classList.toggle("is-current", isInput);
         r.row.classList.toggle("is-future", !status && !isInput);
+        // Visible-tier shrink/fade (teacher's request, 5/8/2026): the top row
+        // (newest) is full size and opacity, the two OLDER rows below it get
+        // smaller and fainter (tier1 then tier2). Rows outside the window carry
+        // no tier class and are clipped away by the viewport.
+        const tier = top - i;
+        r.row.classList.toggle("tier0", tier === 0);
+        r.row.classList.toggle("tier1", tier === 1);
+        r.row.classList.toggle("tier2", tier === 2);
 
         if (status === "ok") {
           r.body.textContent = list[i].toUpperCase();
@@ -997,6 +1090,7 @@ const rwTemplate = {
       // CORRECT
       rows[t][idx[t]] = "ok";
       idx[t] = idx[t] + 1;
+      moves[t] = moves[t] + 1;
       clock[t] += cfg.incrementMs;
       lastTick[t] = null;
       input.value = "";
@@ -1005,11 +1099,18 @@ const rwTemplate = {
       hideReveal();
       rwSound.correct();
       flyWord(t);
+      endTurn(t);
+    }
 
-      if (idx[t] >= current[t].length) {           // this team finished its list
-        endMatch("list", t);
-        return;
-      }
+    // A move that ENDS team t's turn just happened (idx + moves already
+    // advanced). Decides whether the match settles now or the turn passes:
+    //   • note the FIRST team to finish its list (it owns the result label)
+    //   • settle by LIST only when a list is done AND both teams have played the
+    //     same number of moves (teacher's rule, 5/8/2026) — until then, hand the
+    //     clock over so the second team gets its equalising turn.
+    function endTurn(t) {
+      if (idx[t] >= current[t].length && !listDone) { listDone = true; finisher = t; }
+      if (listDone && moves.a === moves.b) { endMatch("list", finisher); return; }
       swapTurn();
     }
 
@@ -1019,6 +1120,7 @@ const rwTemplate = {
       if (idx[t] >= current[t].length) return;
       rows[t][idx[t]] = "pass";
       idx[t] = idx[t] + 1;
+      moves[t] = moves[t] + 1;
       clock[t] = Math.max(0, clock[t] - cfg.passPenaltyMs);
       lastTick[t] = null;
       input.value = "";
@@ -1026,8 +1128,7 @@ const rwTemplate = {
       hideReveal();
       rwSound.pass();
       if (clock[t] <= 0) { endMatch("timeout", other(t)); return; }
-      if (idx[t] >= current[t].length) { endMatch("list", t); return; }
-      swapTurn();
+      endTurn(t);
     }
 
     function swapTurn() {
@@ -1141,6 +1242,13 @@ const rwTemplate = {
         if (resultOverlay) { resultOverlay.remove(); resultOverlay = null; }
         const total = current.a.length + current.b.length;
         const correct = wordsA + wordsB;
+        // Hand the two-team scoreboard to renderSummary (per-team "won/total").
+        rwEndData = {
+          names: { a: cfg.names.a, b: cfg.names.b },
+          wordsA, wordsB,
+          totalA: current.a.length, totalB: current.b.length,
+          winner
+        };
         ui.finish({
           title: headline,
           score: winner === "b" ? wordsB : wordsA,
@@ -1214,6 +1322,7 @@ const rwTemplate = {
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
+      if (kbdRO) kbdRO.disconnect();
       if (tickId) clearInterval(tickId);
       timers.forEach(clearTimeout);
       timers.clear();

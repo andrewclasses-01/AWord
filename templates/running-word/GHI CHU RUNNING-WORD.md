@@ -1,10 +1,18 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 7 (mục 8h)** — ⭐ **TÌM RA GỐC LỖI TEAM B trên
-> iPad và TÁI HIỆN ĐƯỢC** (WebKit tự cuộn khung `overflow:hidden` để lộ con trỏ ô nhập, canh vào đầu
-> khung → lệch đúng 2 dòng; chỉ đội đang giữ ô nhập bị, Blink/Windows không làm cú lộ này) + bỏ nốt
-> phép đo pixel của cửa sổ 3 dòng + in PART A/B 1 cột (kèm vá lỗi tờ CHECK tràn sang trang 4) + khoá
-> zoom chạm đúp. KHÔNG ĐỤNG CORE (3 file `running-word.js/.css`, `rw-print.js`). Chưa commit đợt này.
+> **TRẠNG THÁI (5/8/2026): 🟡 CHỜ THẦY DUYỆT — Đợt 8 (mục 8i)** — 7 cải tiến hiển thị + gameplay thầy
+> gửi 1 lượt: (1) bảng MENU kết thúc gọn còn 2 nửa "tên đội / điểm X/total" vàng + Start again (bỏ
+> Time, Leaderboard, Show answers, Play a different template, dòng "you're Nth"); (2) bàn phím to
+> thêm 15% giữ nguyên tỷ lệ; (3) 2 đồng hồ chạm sát mép trên; (4) PASS thành nút VUÔNG ghim giữa
+> khoảng trống trái bàn phím, Play/Pause đứng giữa 2 đồng hồ; (5) ĐẢO CHIỀU danh sách — từ mới lên
+> TRÊN CÙNG, từ cũ tụt xuống; (6) từ càng cũ càng nhỏ + mờ dần (tier0/1/2 = 1 · .82/.7 · .66/.5);
+> (7) game chỉ chốt điểm khi 2 đội BẰNG số lượt submit (đội đi trước hết từ vẫn phải chờ đội kia
+> gõ nốt lượt chót). ⭐ **CÓ SỬA CORE 1 chỗ** (hook opt-in `tpl.renderSummary`, zero-diff 14 game
+> khác — xem mục 6 + 8i). Đã tự test devserver: **0 lỗi console**, đo khớp mọi con số, hồi quy
+> Type-the-answer + Crossword vẫn 16:9 / bàn phím không phóng / touch-action auto. **Chưa commit đợt
+> này — chờ thầy duyệt.**
+> Đợt 7 (mục 8h, gốc lỗi TEAM B + in 1 cột + khoá zoom chạm đúp) **✅ ĐÃ COMMIT (`6ff2da6`) + PUSH +
+> LIVE (`4115e89`)**.
 > Đợt 6 (mục 8g, ZOOM lấp kín bỏ khoá 4:3) **✅ ĐÃ COMMIT (`1304bf4`) + PUSH + LIVE**.
 > Đợt 5 (mục 8f, nút Fullscreen ghim góc + vá phòng ngừa cửa sổ 3 dòng) **✅ ĐÃ COMMIT (`fc54dcd`) +
 > PUSH + LIVE**, thầy đã xác nhận ổn.
@@ -157,6 +165,12 @@ không đổi thành mảng-lồng-mảng (`[[...],[...]]`), Firestore từ ch�
 4. `core/engine.js` (5/8/2026) — cờ opt-in `tpl.useZoomFullscreen`: nút Fullscreen đổi hẳn cơ chế
    sang `root.classList.toggle("aw-zoomed")` (CSS thuần, không gọi Fullscreen API thật) thay vì
    `requestFs/exitFs`. Zero-diff cho 14 game kia (không đặt cờ = y hệt code cũ). Xem mục 8e.
+5. `core/engine.js` (5/8/2026, Đợt 8) — hook opt-in `tpl.renderSummary(panel, {result, restart,
+   panelItem, session})` trong `showSummary()`: nếu template khai hàm này thì engine chỉ dựng tiêu đề
+   panel rồi giao TOÀN BỘ phần thân (stats + dòng rank + hàng nút) cho template tự vẽ, `return` sớm.
+   Không khai = giữ nguyên panel mặc định từng byte. Cùng khuôn với `tpl.reviewStyle==="stacked"` đã
+   có sẵn (customize `showReview`). RUNNINGW dùng để vẽ bảng 2 đội "tên/điểm X/total" vàng, chỉ chừa
+   Start again. Xem mục 8i.
 
 **CHƯA làm (cố ý):** `core/convert.js` chưa có nhánh cho `running_word`, nên game này chưa tham
 gia "Change template". Muốn có thì thêm 1 nhánh `toRecords()` + 1 nhánh `buildContent()` — xem
@@ -742,6 +756,86 @@ game khác (Type the answer / Crossword vẫn `auto`).
 — thật ra track đang trượt giữa chừng (hoạt ảnh .35s, nay đã chạy thật, xem mục 2). Phải đợi >400ms
 mới đo. Lần đầu tôi tưởng mình vừa gây hồi quy chính vì bẫy này.
 
+## 8i. ⭐ Đợt 8 (5/8/2026) — 7 CẢI TIẾN HIỂN THỊ + GAMEPLAY THẦY GỬI 1 LƯỢT. CÓ SỬA CORE 1 HOOK.
+
+Thầy gửi 6 điểm hiển thị + 1 điểm gameplay. 3 file template (`running-word.js/.css`) + **1 hook opt-in
+trong `core/engine.js`** (mục 6.5). Đã tự test bằng cách dựng act nhỏ (pool 6–8 từ đã biết) qua
+`engine.startGame` rồi lái đen (dò từng từ trong pool để gõ đúng) — cùng kiểu hộp đen ở Đợt 1.
+
+**1. Bảng MENU kết thúc — làm lại hẳn (CÓ SỬA CORE).** Thầy muốn panel "GAME COMPLETE" (bảng tối do
+engine dựng) chỉ còn: tiêu đề + 2 nửa trái/phải, mỗi nửa = TÊN ĐỘI (dòng trên) + ĐIỂM `X/total`
+(dòng dưới, to hơn tên, **chữ vàng**) + nút **Start again**. BỎ hẳn: khối Time, nút Leaderboard, nút
+Show answers, nút Play a different template, dòng "YOU'RE Nth ON THE LEADERBOARD".
+   - Cơ chế: thêm hook `tpl.renderSummary` vào `showSummary()` của core (mục 6.5) — engine dựng tiêu
+     đề rồi giao thân panel cho template, `return` sớm. Zero-diff cho 14 game khác (không khai hook).
+   - Template: `rwTemplate.renderSummary()` đọc `rwEndData` (biến cấp module, set ngay trước
+     `ui.finish()` trong `endMatch`) — chứa tên đội, số từ đúng mỗi đội, tổng từ mỗi đội, winner. Vẽ
+     `.aw-rw-sum` (2 `.aw-rw-sum-half`) + 1 nút `Start again` nối thẳng vào `restart` do core truyền
+     vào. Vì panel nằm trong backdrop NGOÀI `.aw-rw-card`, biến `--rw-a/--rw-b` không tới được → màu
+     đội dùng literal `#3b82f6/#f59e0b`.
+   - **Vẫn giữ**: confetti + lưu leaderboard nội bộ (game vẫn `scorable`, `ui.finish` chạy như cũ) —
+     chỉ ẩn phần HIỂN THỊ, không bỏ lưu. Điểm hiện `won/total` mỗi đội (vd 8/8), không phải tổng.
+   - Đo: head "REDS WINS"; 2 nửa REDS 8/8 (winner) + BLUES 8/8; màu điểm `rgb(255,207,51)` (vàng);
+     `menuItems=["Start again"]` DUY NHẤT; `hasTimeStat=false`, `hasRankLine=false`. Start again →
+     về màn READY, panel biến mất, stage vẫn `act-running_word`.
+
+**2. Bàn phím to thêm 15% giữ nguyên tỷ lệ.** Dùng `transform: scale(1.15)` trên `.aw-rw-card .aw-kbd`
+   — 1 dòng, scale ĐỀU nên mọi tỉ lệ (phím, khe, font, bo góc, "lip") y hệt core, chỉ to lên 15%,
+   không cần chồng từng biến `--kbd-*`/font/padding (né hẳn rủi ro lệch tỉ lệ). `transform-origin`
+   core đã đặt `bottom center` nên nó nở LÊN từ đáy, vẫn canh giữa; 70%×1.15=80.5% vẫn lọt khung.
+   Đo: `transform=matrix(1.15,...)`; hồi quy Type-the-answer/Crossword `transform:none` (không rò).
+
+**3. Đồng hồ chạm sát mép trên.** Bỏ padding TRÊN: `.aw-rw-card` `padding: 0 0 0.2cqw`, stage-inner
+   `padding: 0 1.6cqw 0.4cqw`. Đo: `.aw-rw-clocks` cách đỉnh stage-inner **0px**.
+
+**4. PASS thành nút VUÔNG bên trái bàn phím; Play/Pause giữa 2 đồng hồ.** Tách PASS khỏi
+   `refereeBar()` (cụm giữa 2 đồng hồ nay CHỈ còn Play/Pause → tự canh giữa, "cân bằng giữa 2 ô đồng
+   hồ"). PASS `position:absolute` trong `.aw-rw-match`, `transform:translate(-50%,-50%)`, hình vuông
+   6.2cqw. `positionPass()` đo rect thật của bàn phím + match rồi đặt `left`= giữa khoảng trống trái
+   (`(kbd.left−match.left)/2`), `top`= giữa chiều cao bàn phím — nên ĐÚNG dù bàn phím đã scale 1.15
+   (getBoundingClientRect trả rect ĐÃ scale). ⚠️ **Bẫy thật bắt được lúc test:** ban đầu chỉ dựa
+   `ResizeObserver(kbd.el)` để gọi `positionPass` → trong pane không compositing RO **không bắn**
+   (giao RO gắn với vòng render), PASS nằm nguyên góc (0,0). Vá: gọi `positionPass()` THẲNG (đồng bộ)
+   cuối `enterPrep()` — `getBoundingClientRect` tự ép layout nên chắc chắn đặt đúng ngay từ paint đầu;
+   vẫn giữ RO cho lúc xoay/đổi cỡ về sau. Đo: PASS centerX=45.6 = đúng nửa khoảng trống trái (gutter
+   91.2), centerY khớp tâm bàn phím, mép phải PASS 75.5 < mép trái bàn phím 91.2 (không đè). Bấm PASS
+   thật: đổi lượt A→B, remaining 6→5, từ hiện "FOXTROT" (ink thật), đồng hồ −5s.
+
+**5+6. ĐẢO CHIỀU danh sách + từ cũ nhỏ & mờ dần.** Trước: ô nhập ở ĐÁY, từ cũ ở trên. Nay: từ đang
+   gõ (mới nhất) ở TRÊN CÙNG, các từ đã xong tụt xuống dưới, càng cũ càng NHỎ + MỜ.
+   - Xếp lại DOM đảo ngược: `buildRows()` append rows vào track theo thứ tự GIẢM (word N ở đỉnh, word 1
+     ở đáy). `rowEls` VẪN đánh số theo từ (rowEls[i]↔word i) cho mọi logic — chỉ đảo phần hiển thị.
+   - `bottomIndexOf`→`topIndexOf` (từ ở ĐỈNH cửa sổ). `applyTrack` công thức mới:
+     `shift = −((N−1) − top)` rồi `translateY(calc(shift*100%/3))`. Đo pool 6, đầu trận: DOM
+     `[6,5,4,3,2,1]`, track `translateY(-166.667%)` (=−5 dòng), từ "1" (đang gõ) ở đỉnh cửa sổ (top=0px).
+   - `paintBoard` gắn `tier0/1/2` = `top−i` cho 3 dòng nhìn thấy; ngoài cửa sổ không có class → bị
+     `overflow:hidden` cắt. CSS: `tier0`{scale 1, opacity 1} · `tier1`{.82, .7} · `tier2`{.66, .5};
+     font body/input nhân `var(--rw-tier)`. Có `transition:opacity .3s` cho mượt lúc tụt xuống.
+   - Đo (đã `getAnimations().finish()` để né bẫy transition đóng băng của pane): REDS đang chờ hiện
+     3 dòng — từ 3 (mới nhất) tier0 opacity 1 font 54px; từ 2 tier1 opacity .7 font 44.36px; từ 1
+     tier2 opacity .5 font 35.70px. Đúng tỉ lệ 1 · .82 · .66.
+
+**7. Game chỉ chốt khi 2 đội BẰNG số lượt submit.** Thêm `moves{a,b}` (đếm nước KẾT THÚC LƯỢT = gõ
+   đúng HOẶC pass; gõ sai không tính, vẫn lượt mình), `listDone`, `finisher`. Gộp đuôi submit()/doPass()
+   vào `endTurn(t)`: ghi đội ĐẦU TIÊN hết list (giữ nhãn kết quả), rồi **chỉ `endMatch("list")` khi
+   `moves.a===moves.b`** — chưa bằng thì `swapTurn` cho đội kia gõ nốt lượt chót. Hết GIỜ vẫn kết
+   thúc ngay (chess-clock, không đụng). Đo: pool 6, REDS đi trước; chuỗi A,B,...,A#6 (REDS hết list),
+   game KHÔNG dừng, đảo sang B#6 rồi mới chốt → `moves A=6 B=6`, "REDS finished the list — more time
+   left decides". Đúng ý thầy "A submit đầu thì B phải được submit lần cuối mới chốt".
+
+### Tự test devserver (trình duyệt thật qua `aword` :5510, 0 lỗi console suốt)
+- Khung 4:3 (ratio 1.333) + `act-running_word` từ màn READY; card padding-top 0.
+- #2 bàn phím matrix(1.15); #3 đồng hồ 0px tới đỉnh; #4 PASS 45.6/tâm-bàn-phím vuông 60px không đè,
+  Play/Pause centerX = 467.5 = đúng nửa match 935; #5/#6 đảo chiều + tier khớp số; #7 A=B=6.
+- Bảng menu: chỉ 2 nửa + Start again; Start again → READY.
+- Hồi quy: Type-the-answer + Crossword vẫn 16:9, bàn phím KHÔNG scale 1.15, `touch-action:auto`,
+  không class `.aw-rw-*`/`act-running_word` nào rò; 0 lỗi console.
+
+⚠️ **Máy KHÔNG tự nghiệm thu được (cần mắt thầy trên máy thật):** cảm giác bàn phím to hơn 15% khi
+gõ 2 người trên TOMKO/iPad; nút PASS vuông ở lề trái có vừa tầm tay trọng tài không; nhìn danh sách
+ĐẢO CHIỀU (từ mới trên, cũ mờ dần) có tự nhiên không; đồng hồ chạm sát mép trên có bị màn hình cắt
+góc bo không; bảng menu 2 đội trên màn thật. Fullscreen thật / chạm-đúp / in giấy vẫn như các đợt trước.
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
@@ -754,8 +848,14 @@ mới đo. Lần đầu tôi tưởng mình vừa gây hồi quy chính vì bẫ
       được, chưa bắt tận tay" — và đúng là chưa trúng thật.
 - [x] ~~Đợt 6 (5/8/2026) — ZOOM lấp kín màn hình, bỏ khoá 4:3 (mục 8g)~~ — commit **`1304bf4`** +
       push + kiểm live XONG.
-- [ ] **Đợt 7 (5/8/2026) — gốc lỗi TEAM B + in 1 cột + khoá zoom chạm đúp (mục 8h) — thầy duyệt rồi
-      mới commit + push.**
+- [x] ~~Đợt 7 (5/8/2026) — gốc lỗi TEAM B + in 1 cột + khoá zoom chạm đúp (mục 8h)~~ — thầy duyệt,
+      commit **`6ff2da6`** + push + live (**`4115e89`**).
+- [ ] **Đợt 8 (5/8/2026) — 7 cải tiến hiển thị + gameplay (mục 8i) — thầy duyệt rồi mới commit + push.**
+      ⭐ Có sửa CORE 1 hook `tpl.renderSummary` (mục 6.5) — nhắc thầy đây là chỗ core mới, zero-diff 14
+      game khác nhưng vẫn là file dùng chung.
+- [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
+      có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
+      trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.
 - [ ] **⭐ Thầy chơi lại trên iPad xác nhận lỗi TEAM B đã HẾT HẲN** — lần này nguyên nhân đã bắt tận
       tay và **tái hiện được bằng script** (xem khối đo ở mục 8h), khác hẳn 2 lần đoán trước; vẫn cần
       mắt thầy trên máy thật để chốt.

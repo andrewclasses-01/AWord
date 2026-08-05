@@ -53,7 +53,9 @@
 
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding: 0.2cqw 0;
+  /* ZERO top padding (teacher's request, 5/8/2026): the two clocks must ride
+     the very top edge of the frame. Only a hair of bottom padding is kept. */
+  padding: 0 0 0.2cqw;
   animation: aw-fadein .25s ease;
 }
 
@@ -85,7 +87,7 @@
    padding on the stage for the same reason (teacher's request: "margin trên
    dưới cực kỳ tối thiểu"); side padding kept so nothing touches the rounded
    corners. */
-.aw-stage.act-running_word .aw-stage-inner { padding: 0.4cqw 1.6cqw; }
+.aw-stage.act-running_word .aw-stage-inner { padding: 0 1.6cqw 0.4cqw; }
 .aw-stage.act-running_word .aw-topbar { display: none; }
 
 /* ⭐ NO DOUBLE-TAP ZOOM (teacher's request, 5/8/2026 — it fired mid-match on the
@@ -414,16 +416,26 @@
 .aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 0.14cqw 0 var(--rw-b-dark); }
 .aw-rw-playpause:disabled { opacity: .4; cursor: default; }
 
+/* PASS: a SQUARE button pinned into the gutter left of the keyboard, centred on
+   the keyboard's height (teacher's redesign, 5/8/2026). positionPass() in
+   running-word.js sets `left`/`top` to the CENTRE point; the translate keeps
+   the button centred on it. */
 .aw-rw-passbtn {
+  position: absolute; z-index: 30;
+  transform: translate(-50%, -50%);
+  width: 6.2cqw; height: 6.2cqw;
+  display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
-  border: 0.2cqw solid rgba(23,34,47,.2);
+  border: 0.26cqw solid rgba(23,34,47,.22);
   background: #fff; color: var(--rw-b-dark);
-  border-radius: 0.8cqw;
-  height: 2.7cqw; padding: 0 1.1cqw;
-  font-weight: 800; font-size: 1.2cqw; letter-spacing: .08em;
+  border-radius: 1.4cqw;
+  font-weight: 800; font-size: 1.6cqw; letter-spacing: .06em;
+  box-shadow: 0 0.4cqw 0 rgba(23,34,47,.14);
+  transition: border-color .15s ease, opacity .15s ease;
 }
 .aw-rw-passbtn:hover:not(:disabled) { border-color: var(--rw-b); }
-.aw-rw-passbtn:disabled { opacity: .35; cursor: default; }
+.aw-rw-passbtn:active:not(:disabled) { transform: translate(-50%, -50%) translateY(0.18cqw); box-shadow: 0 0.14cqw 0 rgba(23,34,47,.14); }
+.aw-rw-passbtn:disabled { opacity: .3; cursor: default; }
 
 /* ---- the two typing columns: FLEX so the active side can grow to 70% while
    the waiting side shrinks to 30%, with a smooth animated swap (teacher's
@@ -520,7 +532,9 @@
    ellipsis: with the fit applied the word always fits, and dots were exactly
    what the teacher asked to be rid of. */
 .aw-rw-row-body {
-  font-size: calc(5.6cqw * var(--rw-fit, 1));
+  /* --rw-fit (fitBoard) makes the widest word fit; --rw-tier (paintBoard)
+     shrinks the older rows below the current one — see the tier rules below. */
+  font-size: calc(5.6cqw * var(--rw-fit, 1) * var(--rw-tier, 1));
   line-height: 1.04;
   font-weight: 800; letter-spacing: .01em;
   text-align: center;
@@ -552,6 +566,16 @@
 .aw-rw-row.is-future { opacity: .5; }
 .aw-rw-row.is-current { background: rgba(59,130,246,.07); border-radius: 0.6cqw; }
 .aw-rw-board.is-b .aw-rw-row.is-current { background: rgba(245,158,11,.09); }
+
+/* ⭐ VISIBLE-TIER shrink + fade (teacher's request, 5/8/2026): with the newest
+   word on TOP, the current row (tier0) is full size and opacity, and the two
+   OLDER rows below it get progressively smaller and fainter. Placed AFTER
+   is-future so the tier opacity wins for any visible row (equal specificity,
+   later rule). A short transition lets a row fade/shrink as it's pushed down. */
+.aw-rw-row { transition: opacity .3s ease; }
+.aw-rw-row.tier0 { --rw-tier: 1;   opacity: 1; }
+.aw-rw-row.tier1 { --rw-tier: .82; opacity: .7; }
+.aw-rw-row.tier2 { --rw-tier: .66; opacity: .5; }
 
 .aw-rw-row.is-shake { animation: aw-rw-shake .32s ease; }
 @keyframes aw-rw-shake {
@@ -680,6 +704,37 @@
 .aw-rw-result-time { font-size: 2.2cqw; font-weight: 800; color: var(--aw-muted); font-variant-numeric: tabular-nums; }
 .aw-rw-result-lab { font-size: 1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--aw-muted); }
 
+/* ---- end-of-match MENU panel body (tpl.renderSummary → core's dark .aw-panel).
+   The panel lives INSIDE the cqw stage, so cqw here like the rest of it. Two
+   teams side by side: team name over score, the score bigger and GOLD, only the
+   winner at full opacity — everything else (Time, Leaderboard, Show answers,
+   "play a different template", the "you're Nth" line) stripped out by
+   renderSummary (teacher's request, 5/8/2026). ---- */
+.aw-rw-sum { display: flex; gap: 4cqw; justify-content: center; margin: 0.6cqw 0 1.6cqw; }
+.aw-rw-sum-half {
+  display: flex; flex-direction: column; align-items: center;
+  min-width: 16cqw;
+  padding: 1.3cqw 2cqw;
+  border-radius: 1.2cqw;
+  border: 0.24cqw solid rgba(255,255,255,.14);
+  opacity: .72;
+}
+.aw-rw-sum-half.is-winner { opacity: 1; }
+/* literal team colours: this panel is in the engine backdrop, OUTSIDE
+   .aw-rw-card, so the --rw-a/--rw-b variables don't reach here. */
+.aw-rw-sum-half.is-a.is-winner { border-color: #3b82f6; background: rgba(59,130,246,.16); }
+.aw-rw-sum-half.is-b.is-winner { border-color: #f59e0b; background: rgba(245,158,11,.16); }
+.aw-rw-sum-name {
+  font-size: 1.7cqw; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: #f4f4f5;
+}
+.aw-rw-sum-score {
+  margin-top: 0.5cqw;
+  font-size: 5.2cqw; font-weight: 800; line-height: 1;
+  color: #ffcf33;   /* gold, and bigger than the team name */
+  font-variant-numeric: tabular-nums;
+}
+
 /* (The slogan moved to the bottom bar's nav label — see the
    `.act-running_word .aw-nav-label` rule near the top of this file. It used to
    be an absolutely-positioned div here, which landed on top of the keyboard.) */
@@ -693,6 +748,17 @@
    template's). Nothing left to override here except the Andrew key's LOOK
    (colour/glow), never its size.
    ============================================================= */
+
+/* +15% OVERALL keyboard (teacher's request, 5/8/2026). A single uniform
+   transform-scale keeps EVERY proportion exactly as core draws it — keys, gaps,
+   fonts, radius, the "lip" shadow — just 15% larger, with none of the per-metric
+   overrides (and drift risk) that resizing by hand would need. Scoped to this
+   template's card so it never touches Type the answer / Crossword. core already
+   sets `transform-origin: bottom center`, so it grows UP from the bottom bar and
+   stays horizontally centred; 70% × 1.15 = 80.5% width still clears the frame
+   sides. positionPass() measures the SCALED rect, so the Pass button lands in
+   the real gutter left of the grown keyboard. */
+.aw-rw-card .aw-kbd { transform: scale(1.15); }
 
 /* ---- the Andrew key (core/keyboard.js owns the structure; this owns the look,
    matching Type the answer's so the lifeline reads the same in both games) ---- */
