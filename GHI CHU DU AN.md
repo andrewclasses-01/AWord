@@ -5,6 +5,96 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 73 (5/8/2026, v0.9.48) — RUNNING WORD: ZOOM LẤP KÍN MÀN HÌNH, BỎ KHOÁ TỈ LỆ 4:3. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`1304bf4`) + PUSH + LIVE
+
+**Bối cảnh:** thầy chơi bản Đợt 72 (nút Fullscreen ghim góc) trên Chrome iPad, xác nhận nút ổn nhưng
+gửi lại đúng tấm ảnh chụp trước đó, lần này chỉ ra chi tiết mới: khung zoom hiện **2 dải đen 2 bên
+trái-phải**. Yêu cầu: lấp kín toàn màn hình, tự chỉnh theo MỌI trình duyệt/kích thước, kể cả khi
+trình duyệt thay đổi/cập nhật trong tương lai — không hard-code theo 1 hình dạng máy cụ thể.
+
+**Nguyên nhân:** công thức letterbox cũ lúc zoom (`width: min(100vw, calc(100dvh * 4/3)); height:
+auto`) COPY Y HỆT công thức của khung REST (khung 4:3 lúc chưa zoom — chọn 4:3 vì "màn iPad gần 4:3",
+xem Đợt 68) sang cho cả lúc zoom — ép cứng tỉ lệ 4:3 dù màn zoom không có lý do gì phải giữ đúng tỉ lệ
+đó. Viewport THẬT của Chrome trên iPad (sau khi trừ thanh tab/địa chỉ) không khớp đúng 4:3 tuyệt đối
+→ hụt theo 1 chiều → dải đen bù vào chiều kia.
+
+**Sửa:** bỏ hẳn công thức `min(...)` ép tỉ lệ, thay bằng `width:100%; height:100%` — khung LUÔN khít
+đúng `.aw-page` (đã là `100%` của khung zoom cố định `.aw-zoomed`, tức ĐÚNG BẰNG viewport thật). Cho
+CẢ width VÀ height cùng là giá trị tường minh cũng tự triệt tiêu luôn luật `aspect-ratio:4/3` ở trên
+(luật CSS: `aspect-ratio` chỉ dùng để SUY RA chiều còn thiếu — có đủ cả 2 chiều rồi thì không còn gì
+để suy). **Không có con số px/vw/vh cứng nào trong luật mới** — thuần `%`, nên trình duyệt tự tính
+lại `100%` mỗi khi viewport đổi (xoay ngang/dọc, thanh trình duyệt ẩn/hiện, đổi trình duyệt, đổi máy,
+phiên bản Chrome sau này đổi cách tính `dvh`...) mà KHÔNG cần sửa code lần nào nữa. Khung REST (chưa
+zoom) không đụng, vẫn giữ nguyên 4:3 như trước.
+
+**Tự test (devserver, viewport CỐ Ý không phải 4:3 để ép lộ dải đen nếu còn):** dựng cửa sổ 1366×900
+(tỉ lệ 1.518, khác hẳn 4:3=1.333) → bấm Fullscreen → đo `stage.getBoundingClientRect()` = đúng
+1366×900, khít 100% cả 4 cạnh, 0 khoảng hở (công thức cũ sẽ ra ~1200×900 kèm ~83px dải đen mỗi bên).
+Bấm lại → khung REST vẫn đúng 4:3 968×726. **Kiểm lại trên bản live** sau `curl` poll (bẫy quen: 3
+lần đầu còn cũ, lần 4 mới đủ marker) — đúng y hệt devserver; gặp 1 lần tab dùng để test tự đọc phải
+bản CSS CŨ do CACHE CỦA CHÍNH TRÌNH DUYỆT ĐÓ (không phải bản deploy — đã xác nhận bằng `fetch(...,
+{cache:"no-store"})` ra đúng nội dung mới), ép nạp lại stylesheet qua link `?cb=<timestamp>` thì đọc
+đúng ngay. 0 lỗi console.
+
+⚠️ **Đánh đổi đã biết:** bỏ khoá 4:3 nghĩa là hình dạng khung lúc zoom theo ĐÚNG hình dạng thật của
+viewport máy đang dùng (có thể hơi khác 4:3 tùy máy/trình duyệt) — mọi cỡ chữ/khoảng cách vẫn dùng
+`cqw` nên không vỡ layout, chỉ hơi kéo giãn nếu máy nào lệch rất xa 4:3. Đây đúng là điều thầy yêu
+cầu (ưu tiên lấp kín + tự thích ứng hơn giữ đúng hình chữ nhật 4:3 hoàn hảo).
+
+Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8g.
+
+**VIỆC ĐANG CHỜ:** thầy xem lại đúng trên chính iPad đã chụp ảnh dải đen, xác nhận hết dải đen + khung
+REST không đổi; các việc TOMKO/in giấy A4 của Đợt 68-70 vẫn còn treo, không đổi.
+
+---
+
+## Đợt 72 (5/8/2026, v0.9.47) — RUNNING WORD: NÚT FULLSCREEN GHIM GÓC DƯỚI-PHẢI + VÁ PHÒNG NGỪA LỖI CỬA SỔ 3 DÒNG CỦA TEAM B. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`fc54dcd`) + PUSH + LIVE
+
+Thầy chơi bản zoom (Đợt 71) và gửi 2 việc.
+
+**(1) Nút Fullscreen ghim góc.** Trước đó nút nằm TRONG cụm `.aw-tools` (theo dòng chảy flex, cạnh
+Sound) — đủ dùng ở trạng thái thường nhưng trong `.aw-zoomed` nó trôi lệch, to, có nền sáng, khá nổi.
+Sửa: khi `.aw-zoomed` bật, `position:absolute;right/bottom:0.8cqw` ghim vào ĐÚNG góc của `.aw-stage`
+(mượn `.aw-stage-inner` — core — vốn đã `position:absolute;inset:0` làm nơi neo), thu còn 2.2cqw,
+nền trong suốt, `opacity:.45` lúc nghỉ (chạm/hover lên `.85`). Chỉ scope trong `.aw-zoomed .aw-stage.
+act-running_word .aw-fs-always` — trạng thái thường giữ nguyên vị trí cũ cạnh Sound (ghim tuyệt đối ở
+ĐÓ từng đụng độ Sound, Đợt 3d mục 3 — nay an toàn vì Sound đã ẩn hẳn khi zoom).
+
+**(2) Điều tra lỗi "TEAM B không hiện đủ 3 dòng" — vá 1 nguyên nhân CHƯA CHẮC CHẮN, không tái hiện
+được nguyên văn lỗi.** Đọc lại toàn bộ cơ chế `measureRow`/`applyTrack`/`bottomIndexOf`/`paintBoard`,
+lái 1 trận thật qua devserver (đóng vai trọng tài, bấm PASS liên tục 16 lượt liền — không dừng giữa
+chừng để tránh đồng hồ tự trôi thật giữa các lệnh, bẫy đã cắn lúc test lần đầu khiến TEAM B hết giờ
+oan) rồi soi DOM từng bước: 4 lượt ĐẦU trận đúng là chỉ hiện 1-2 dòng — **hành vi ĐÚNG THIẾT KẾ**
+(chưa đủ 2 từ trước đó để lấp 2 ô trên); từ lượt 5 trở đi (12 lượt liên tiếp, kiểm cả 2 đội mỗi lượt)
+**luôn đúng 3 dòng, dòng đang gõ luôn ở ĐÁY** — không tái hiện được kiểu lỗi trong ảnh thầy gửi (dòng
+đang gõ ở TRÊN, 2 dòng CHƯA CHƠI ở dưới — về lý thuyết bất khả thi với code hiện tại). Vẫn tìm ra 1
+điểm chưa chắc chắn thật: `measureRow()` trước đây CHỈ chạy lúc `buildRows()` (1 lần lúc vào trận) và
+trong callback của `ResizeObserver` (chỉ khi khung board đổi KÍCH THƯỚC thật) — không hề chạy lại
+trong `paintBoard()` mỗi lượt. Vì mỗi lần đảo lượt bảng 70/30 CŨNG đổi kích thước (nên `ResizeObserver`
+thường bắt kịp), nhưng đây là 2 cơ chế ASYNC riêng nhau, không đảm bảo thứ tự — có khả năng thật (dù
+không ép được trên môi trường tự test) là `paintBoard()` chạy trước khi `ResizeObserver` kịp đo lại,
+dùng `--rw-rowh` CŨ một nhịp, khiến cửa sổ trông hụt dòng đúng lúc đảo lượt. Đã vá: gọi `measureRow(t)`
+NGAY ĐẦU mỗi `paintBoard()`, không còn phụ thuộc thời điểm của `ResizeObserver` nữa.
+
+⚠️ Ghi rõ trong hồ sơ: bản vá là "ứng viên hợp lý nhất tìm được qua đọc code", không phải "đã bắt
+tận tay" — thầy chơi lại xác nhận: **cả 2 điểm đều ổn, kể cả chưa thấy lại lỗi TEAM B**.
+
+**Bẫy đo đạc mới (dùng lại được):** pane tự test KHÔNG compositing (pane ẩn) → MỌI CSS
+`transition`/animation bị ĐÓNG BĂNG ở giá trị TRƯỚC lúc đổi, không tiến được chút nào (khác hẳn kiểu
+"animation chạy nhưng không thấy được" — ở đây animation không hề tiến). `getComputedStyle` do đó đọc
+ra giá trị CŨ mãi mãi cho MỌI thuộc tính có `transition` (bắt gặp với `flex-grow` của bảng 70/30 VÀ
+`opacity` của nút Fullscreen). Cách đo đúng: `el.getAnimations().forEach(a => a.finish())` — SCOPE
+ĐÚNG PHẦN TỬ đang đo, KHÔNG gọi `document.querySelectorAll('*').forEach(...)` trên toàn trang (đã
+thử, ép luôn cả animation "PLAY overlay fade-out" khiến trang tự rebuild về màn READY ngoài ý muốn —
+phải tải lại trang làm sạch).
+
+Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8f.
+
+**VIỆC ĐANG CHỜ (cập nhật):** đã lên live, thầy xác nhận ổn → mở đường cho Đợt 73 (bỏ khoá 4:3 lúc
+zoom, ở trên).
+
+---
+
 ## Đợt 71 (5/8/2026, v0.9.46) — RUNNING WORD: ĐỔI FULLSCREEN THẬT SANG "ZOOM" CSS (chỉ RUNNINGW). ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT (`2fb19c7`) + PUSH + LIVE
 
 **Bối cảnh:** sau khi Đợt 68-70 lên live, thầy cầm iPad M1 12.9" (Chrome) tự chơi thử với Fullscreen
