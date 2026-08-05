@@ -1,9 +1,14 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 4 (mục 8e) đổi Fullscreen thật sang ZOOM CSS**
-> (chỉ RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật bị Chrome tự thoát
-> khi vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ opt-in
-> `tpl.useZoomFullscreen`, zero-diff cho 14 game khác — xem mục 8e). Chưa commit đợt này.
+> **TRẠNG THÁI (5/8/2026): ✅ ĐÃ COMMIT (`2fb19c7`) + PUSH + LIVE — Đợt 4 (mục 8e) đổi Fullscreen
+> thật sang ZOOM CSS** (chỉ RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật
+> bị Chrome tự thoát khi vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ
+> opt-in `tpl.useZoomFullscreen`, zero-diff cho 14 game khác — xem mục 8e). Đã kiểm chứng **TRÊN BẢN
+> LIVE** (`andrewclasses-01.github.io/AWord`, poll qua bẫy cache Pages — lần 1-2 còn file cũ, lần 3
+> mới đủ marker mới): RunningW live bấm Fullscreen → `aw-zoomed` bật, khung 4:3, `document.
+> fullscreenElement` vẫn `null` (không gọi API thật); Quiz live bấm Fullscreen → vẫn gọi
+> `requestFullscreen()` thật như cũ (đo bằng cách tráo hàm tạm thời) — 0 lỗi console cả 2. ⬜ **Còn
+> chờ thầy tự chơi thật trên iPad** xác nhận hết cả 4 vấn đề gốc (mục 8e).
 > Đợt 1-3 dưới đây **✅ ĐÃ COMMIT (`a40809e`) + PUSH + LIVE** — 3 đợt sửa lớn liên tiếp trong
 > cùng ngày, gộp chung 1 commit sau khi thầy nói "ok build":
 > **Đợt 1** (mục 8b, v0.9.43) = 8 điểm tối ưu iPad. **Đợt 2** (mục 8c, v0.9.44) = 15 điểm làm lại
@@ -537,7 +542,7 @@ Fullscreen API thật nào nữa trong đường này — nhưng "lý thuyết" 
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
 - [x] ~~Đợt 2 + Đợt 3 (5/8/2026, v0.9.44 + v0.9.45)~~ — thầy duyệt, commit **`a40809e`** + push + live.
-- [ ] **Đợt 4 (5/8/2026) — zoom fullscreen (mục 8e) — thầy duyệt rồi mới commit + push.**
+- [x] ~~Đợt 4 (5/8/2026) — zoom fullscreen (mục 8e)~~ — commit **`2fb19c7`** + push + kiểm live XONG.
 - [ ] **Thầy xem khung 4:3 + 2 đồng hồ trên TOMKO thật** — có vừa mắt hơn 16:9 cũ không.
 - [ ] **Thầy tự chơi lại trên iPad với ZOOM mode mới** — xác nhận hết cả 4 vấn đề (banner X của
       Chrome, vuốt-xuống-mất, mất-sau-3-2-1, popup "stay fullscreen?"); icon Fullscreen tô sáng màu

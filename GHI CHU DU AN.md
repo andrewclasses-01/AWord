@@ -5,6 +5,78 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 71 (5/8/2026, v0.9.46) — RUNNING WORD: ĐỔI FULLSCREEN THẬT SANG "ZOOM" CSS (chỉ RUNNINGW). ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT (`2fb19c7`) + PUSH + LIVE
+
+**Bối cảnh:** sau khi Đợt 68-70 lên live, thầy cầm iPad M1 12.9" (Chrome) tự chơi thử với Fullscreen
+thật (nút Fullscreen của engine gọi `requestFullscreen()`) và báo 4 vấn đề:
+
+1. Chrome tự vẽ 1 nút X to góc trên để thoát — không tắt được.
+2. Chỉ nhẹ tay vuốt xuống gần mép trên (đúng chỗ 2 đồng hồ đứng) là **tự mất fullscreen** — nguy
+   hiểm với trẻ em chạm tay liên tục.
+3. **Tự mất fullscreen ngay sau màn 3-2-1** — vào trận là văng ra ngoài luôn.
+4. Chrome tự bật popup "Do you want to stay in fullscreen?" giữa trận, chặn thao tác.
+
+Cả 4 đều là hành vi RIÊNG của lớp cử chỉ/heuristic mà Chrome gắn lên Fullscreen API thật trên iPad —
+không sửa được bằng JS. Thầy chụp so sánh với chính `wordwall.net` trên cùng iPad: nút "fullscreen"
+của Wordwall **không hề gọi Fullscreen API thật** — thanh tab + thanh địa chỉ Chrome vẫn còn nguyên,
+Wordwall chỉ phóng nội dung game lấp đầy viewport bằng CSS thuần. Đổi lại: tuyệt đối ổn định, không
+cử chỉ hệ thống nào can thiệp được (đánh đổi là không che được thanh trình duyệt).
+
+**Quyết định phạm vi** (được hỏi trước khi sửa, vì đây là cơ chế dùng chung mọi game): **chỉ áp dụng
+cho RUNNINGW trước**, 14 game khác giữ nguyên Fullscreen API thật — "khi nào ổn định và chuẩn ta sẽ
+chỉnh các app khác sau".
+
+**⭐ CÓ SỬA CORE — `core/engine.js`, cờ opt-in `tpl.useZoomFullscreen`:**
+- Hàm mới `setZoomed(root, fsBtn, on)`: toggle class `aw-zoomed` trên `root` (đúng phần tử Fullscreen
+  thật vẫn nhắm tới, nên mọi suy luận "root ổn định qua Start again" áp dụng y hệt) + class
+  `is-zoomed` trên nút Fullscreen (để CSS tô sáng — dấu hiệu duy nhất báo "đang zoom, bấm lại để
+  thoát", vì không còn banner nào của Chrome làm việc đó nữa) + khoá cuộn trang nền
+  (`document.documentElement.style.overflow="hidden"`, vì zoom không có top-layer promotion như
+  Fullscreen thật).
+- `fsBtn.onclick`: có cờ `tpl.useZoomFullscreen` → gọi `setZoomed`; không có cờ → y hệt code cũ
+  (`requestFs`/`exitFs`). **Zero-diff cho 14 game không đặt cờ** (đã đo lại Quiz/Type the answer).
+- Hàm mới `exitAnyFullscreen()` thay 2 chỗ lặp `if (fsElement()) exitFs()` (ở `homeBtn`/`editBtn`) —
+  gỡ CẢ 2 kiểu fullscreen khi rời game.
+- `fsBtn` dựng lại mỗi lần `startGame()` chạy (Start again giữ `root` nhưng xoá `innerHTML`) nên đọc
+  `root.classList.contains("aw-zoomed")` lúc tạo nút để đồng bộ `is-zoomed` — khớp hành vi cũ "Start
+  again giữ nguyên fullscreen".
+
+**CSS — toàn bộ trong `templates/running-word/running-word.css`, KHÔNG đụng `core/app.css`:** 1 khối
+mới mirror đúng hình dạng khối `:fullscreen` cũ (`.aw-zoomed` thay pseudo-class, double-guard bằng
+`:has(.aw-stage.act-running_word)`): `root` được `position:fixed;inset:0;z-index:9000` (tự ghim vì
+không có top-layer thật), `.aw-page` lấp 100%/100%, `.aw-stage` giữ công thức 4:3 letterbox cũ
+(`min(100vw, 100dvh*4/3)`, có dự phòng `vh` cho trình duyệt chưa hiểu `dvh`), ẩn `.aw-below`/
+`.aw-as-bars`/nav/toolbar y hệt fullscreen thật.
+
+**Tự test (devserver + BẢN LIVE, DOM thật — không giả lập được cử chỉ hệ thống):**
+- `git fetch` 0/0 trước khi sửa (đúng quy trình bắt buộc, không máy nào đẩy chen).
+- Bấm Fullscreen trên `running-word/test.html` (cả devserver lẫn live) → `#app` có class
+  `aw-zoomed`, `document.fullscreenElement` vẫn `null` (xác nhận **không hề gọi** Fullscreen API
+  thật), tỉ lệ khung đo được đúng 4:3 (960×720=1.333 trên devserver, khớp lại trên live), nền
+  `rgb(11,11,13)`, `.aw-below` `display:none`, `overflow` khoá đúng `"hidden"`.
+- Bấm lại → gỡ sạch cả 2 class + trả lại `overflow`. Bấm Home lúc đang zoom → `exitAnyFullscreen()`
+  gỡ đúng.
+- Hồi quy: `quiz/test.html` (devserver + live) bấm Fullscreen → **có gọi** `Element.prototype.
+  requestFullscreen` thật (đo bằng cách tráo hàm tạm thời), KHÔNG có `aw-zoomed`/`is-zoomed` nào —
+  đúng zero-diff. `type-the-answer/test.html` mount 0 lỗi console.
+- `curl` poll Pages sau push (bẫy quen: lần 1-2 còn file CŨ, lần 3 mới đủ 3 marker
+  `useZoomFullscreen`/`aw-zoomed`/marker trong `running-word.js`) rồi chạy lại đúng bộ kiểm tra trên
+  ở TRÊN **bản live thật**, kết quả giống hệt devserver, 0 lỗi console.
+
+⚠️ **Máy không tự vuốt màn hình / không tự bấm nút cần cử chỉ người dùng thật được**, nên việc xác
+nhận cả 4 vấn đề gốc đã hết thật chỉ có thể do thầy tự chơi lại trên chính iPad đó — về lý thuyết cả
+4 đều hết vì không còn lời gọi Fullscreen API thật nào trong đường này nữa, nhưng "lý thuyết" khác
+"thầy cầm iPad chơi thật".
+
+Chi tiết đầy đủ hơn: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8e +
+`core/HUONG DAN CORE.md` mục "Fullscreen API THẬT không ổn định trên iPad Chrome".
+
+**VIỆC ĐANG CHỜ (cập nhật):** đã lên live; còn 1 việc mới — thầy tự chơi lại RunningW thật trên iPad
+xác nhận hết cả 4 tật cũ; 3 việc cũ của Đợt 68-70 (TOMKO thật / fullscreen iPad thật — nay đã đổi
+sang zoom nên câu hỏi này coi như đã trả lời một phần / in giấy A4 thật) vẫn còn treo, không đổi.
+
+---
+
 ## Đợt 70 (5/8/2026, v0.9.45) — RUNNING WORD: 8 TINH CHỈNH SAU KHI THẦY CHƠI THỬ ĐỢT 2. KHÔNG ĐỤNG CORE. ✅ COMMIT (`a40809e`, gộp Đợt 68+69+70) + PUSH + LIVE
 
 Thầy chơi bản Đợt 2 (v0.9.44) rồi gửi ảnh bàn phím + 8 điểm. Chỉ 2 file: `running-word.js`,
