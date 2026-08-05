@@ -5,6 +5,107 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 74 (5/8/2026, v0.9.49) — RUNNING WORD: ⭐ GỐC LỖI "TEAM B CHỈ HIỆN 1 HÀNG" TRÊN iPAD (tái hiện được!) + IN 1 CỘT + KHOÁ ZOOM CHẠM ĐÚP. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`6ff2da6`) + PUSH + LIVE
+
+Thầy gửi 3 việc sau khi chơi bản Đợt 73 trên iPad. Việc số 1 là lỗi đã đuổi theo suốt 2 đợt (Đợt 72
+đoán sai) — **đợt này bắt được tận tay và tái hiện được bằng script.**
+
+### 1. ⭐⭐ GỐC LỖI TEAM B: WebKit TỰ CUỘN khung để lộ con trỏ ô nhập
+
+**Triệu chứng:** đội ĐANG ĐẾN LƯỢT hiện từ đang gõ ở **TRÊN CÙNG** với 2 dòng CHƯA CHƠI bên dưới,
+đáng lẽ ở **ĐÁY** với 2 từ vừa xong ở trên. Đội kia luôn đúng. Chỉ iPad Chrome, Windows không bao giờ.
+
+**Cách lần ra:** đo hình học trên chính ảnh thầy chụp — độ lệch là **ĐÚNG 2 DÒNG**, đúng bằng khoảng
+cách từ khe đáy (khe 2) lên khe đỉnh (khe 0). Con số "đúng 2 dòng" không thể ngẫu nhiên, và nó chỉ
+thẳng tới một hành vi có tên: **"cuộn để lộ phần tử, canh vào ĐẦU khung cuộn"**.
+
+**Nguyên nhân:** cửa sổ 3 dòng (`.aw-rw-rows`) chứa ô `<input>` DUY NHẤT của trận. **WebKit** — nhân
+của MỌI trình duyệt trên iPad, kể cả Chrome — lộ ô đang focus / con trỏ đang chạy bằng cách **CUỘN
+khung cuộn gần nhất**, và **`overflow:hidden` VẪN LÀ một khung cuộn**: `hidden` chỉ chặn NGÓN TAY
+cuộn, còn trình duyệt và `scrollTop` vẫn chạy tự do. WebKit canh ô nhập vào ĐẦU khung → kéo dòng
+đang gõ từ khe đáy lên khe đỉnh = lệch đúng 2 dòng. Blink (Chrome trên Windows) không làm cú "lộ"
+này → cùng một dòng code mà máy bàn trông hoàn hảo.
+→ Giải thích trọn cả 2 điều lạ: **chỉ đội đang đến lượt bị** (chỉ đội đó giữ ô nhập) và **chỉ iPad bị**.
+→ `focus({preventScroll:true})` (đã có sẵn trong `focusInput` từ lâu) **KHÔNG đủ**: chỉ chặn đúng cú
+focus, không chặn `setSelectionRange` lẫn cú lộ-con-trỏ sau MỖI phím gõ.
+
+**Bản vá — không đi bắt từng API:** gắn `scroll` listener lên mỗi cửa sổ, hễ bị cuộn là bật ngay về 0.
+Bất kể thứ gì cuộn nó (focus, đặt con trỏ, gõ phím, hay một hành vi mới của trình duyệt đời sau) đều
+bị vô hiệu; vị trí track do `applyTrack()` của mình quyết định, không ai khác.
+
+**⭐ TÁI HIỆN ĐƯỢC trong trình duyệt** (điều Đợt 72 không làm được):
+```
+scrollHeight 3817  vs  clientHeight 294   → khung "overflow:hidden" VẪN cuộn được (tiền đề của lỗi)
+gán scrollTop = 196px (= đúng 2 dòng, mô phỏng WebKit canh vào đầu khung):
+   • đo NGAY lúc đó    → ["4:CUR", "5:FUT", "6:FUT"]   ← ĐÚNG Y HỆT ẢNH THẦY CHỤP
+   • sau khi guard chạy → ["2:PASS", "3:PASS", "4:CUR"]  ✓ đúng, scrollTop về 0
+```
+
+### 2. Bỏ nốt phép đo pixel của cửa sổ 3 dòng
+
+Xoá `measureRow()`/`b.rowH`/`--rw-rowh` (bản game). Trước: JS đo `clientHeight` (số nguyên, làm tròn),
+chia 3, trượt theo px — một con số trong JS phải khớp layout CSS qua 2 đường bất đồng bộ. Nay: track
+cao **đúng bằng cửa sổ** (`height:100%`), mỗi dòng **đúng `calc(100%/3)`** của track, cú trượt viết
+bằng chính đơn vị đó: `translateY(calc(N * 100% / 3))`. Phần trăm của `translateY` tính theo chiều cao
+CHÍNH track → trình duyệt tự tính lại mỗi lần layout, **không còn gì để đo, để nhớ, hay để lệch pha**.
+Đo xác nhận: track 293.594px = đúng chiều cao cửa sổ, mỗi dòng 97.859px = đúng 1/3.
+
+⭐ **Tác dụng phụ TỐT ngoài dự tính:** `ResizeObserver` trước đây gọi `applyTrack(t,false)` (ép
+`transition:none`) mỗi lần bảng đổi 70/30 — mà đổi 70/30 CHÍNH LÀ lúc đảo lượt → **hiệu ứng "đẩy lên"
+.35s thầy yêu cầu ở Đợt 70 thực ra đã bị giết, track nhảy cóc chứ không trượt**. Nay `ResizeObserver`
+chỉ còn lo co chữ (`fitBoard`) nên hiệu ứng chạy thật (đo: sau 40ms track đang giữa đường, 500ms mới
+tới đích).
+
+### 3. In: PART A / PART B luôn 1 CỘT (+ vá 1 lỗi tràn trang chưa ai để ý)
+
+Thầy chốt: PART A và PART B là **một cột chạy dọc** (50 từ = 50 hàng 1 cột); **chỉ tờ CHECK của GV**
+mới 2 cột (cột trái 50 từ PART A, cột phải 50 từ PART B — vốn đã đúng sẵn). Bỏ hẳn nhánh "chảy 2 cột
+khi dòng ngắn hơn 5.2mm" trong `metrics()` của `rw-print.js`.
+
+⚠️ **Bỏ nhánh đó vá luôn 1 lỗi thật nó đang che:** tờ CHECK gọi CÙNG hàm `metrics()` và nhận chiều cao
+dòng tính cho **2 cột** (10.12mm với 50 từ) trong khi nó vẽ **1 cột** → 50 × 10.12 = **506mm trên
+trang 253mm → tờ CHECK âm thầm tràn sang tờ giấy thứ 4**. Nay cả 3 tờ khít đúng 253mm.
+
+Đo thật (gọi thẳng `printRunningSheets`, giữ tem `window.print` ≥300ms đúng luật cũ): 20 từ →
+12.65mm/**22.2pt** · 30 từ → 8.43mm/**14.8pt** · 50 từ → 5.06mm/**8.9pt** — đều 1 cột, đều 253mm khít
+1 trang; đúng 3 trang; PART A/B đầu bảng 3 cột (`№ WORD TURN`), CHECK 4 cột (`№ TEAM A № TEAM B`).
+Sàn `ROW_MIN_MM` 5.2→4.2mm (với trần 50 từ/đội không bao giờ chạm tới, chỉ để pool tự chế quá khổ tràn
+sang trang 2 thay vì co chữ tới mức không đọc nổi).
+
+### 4. Khoá zoom khi chạm đúp
+
+`touch-action: manipulation` trên khung game + gốc `.aw-zoomed`: trình duyệt hiểu vùng này không có cử
+chỉ chạm-đúp nào phải chờ → cú chạm thứ hai được giao thẳng như cú chạm thường thay vì bị nuốt vào
+thao tác phóng to. Game này dính nặng nhất vì **hai người gõ bàn phím ảo liên tục sinh ra "chạm đúp"
+suốt mà chẳng ai định phóng to**; tiện thể bỏ luôn độ trễ ~300ms trình duyệt giữ để chờ cử chỉ đó nên
+phím ăn nhạy hơn. **Cố ý KHÔNG dùng `touch-action:none`** (giết luôn phóng-to-2-ngón, thứ không ai bấm
+nhầm và nên để lại làm lối thoát). ⚠️ Máy **không tự nghiệm thu được** điểm này (phóng-to-khi-chạm-đúp
+là hành vi của thiết bị cảm ứng thật) — chỉ xác nhận được luật CSS áp đúng ở cả 2 chế độ và không rò
+sang game khác.
+
+### Tự test (devserver + chạy lại trọn bộ TRÊN BẢN LIVE), 0 lỗi console
+
+- Tái hiện + vá lỗi iPad: khối đo ở mục 1, chạy đúng như vậy trên cả devserver lẫn live.
+- **10 lượt đảo liên tiếp, đo sau khi hoạt ảnh .35s kết thúc**: cả 2 đội, mọi lượt — **đúng 3 dòng,
+  dòng đang gõ luôn ở khe đáy, `scrollTop` luôn 0, 0 bất thường**.
+- In: bảng số liệu ở mục 3. Zoom vẫn lấp kín viewport (Đợt 73 không bị phá).
+- Hồi quy: Type the answer + Crossword vẫn `act-*` đúng, 16:9, `touch-action:auto` (luật mới không
+  rò), không class `.aw-rw-*` nào lọt sang.
+- ⚠️ Trên live: xác minh file bằng `fetch(..., {cache:"no-store"})` TRƯỚC khi đo, vì ở Đợt 73 chính
+  tab test đã đọc phải CSS cũ từ cache của nó.
+
+⚠️ **Bẫy đo đạc mới:** đo cửa sổ 3 dòng NGAY sau khi bấm (40ms) sẽ thấy "chỉ 2 dòng" và tưởng vừa gây
+hồi quy — thật ra track đang trượt giữa chừng (hoạt ảnh .35s, nay đã chạy thật, xem mục 2). Phải đợi
+>400ms mới đo. Lần đầu tôi đã tưởng nhầm đúng vì bẫy này.
+
+Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8h.
+
+**VIỆC ĐANG CHỜ:** thầy chơi lại trên iPad xác nhận lỗi TEAM B hết hẳn + chạm đúp không còn phóng to;
+in thử giấy A4 thật xem 1 cột 50 từ (8.9pt) có còn đọc thoải mái khi đứng cầm tờ giấy không (đánh đổi
+của việc bỏ 2 cột — chữ nhỏ hơn hẳn bản 2 cột cũ ~17.8pt); các việc TOMKO vẫn còn treo.
+
+---
+
 ## Đợt 73 (5/8/2026, v0.9.48) — RUNNING WORD: ZOOM LẤP KÍN MÀN HÌNH, BỎ KHOÁ TỈ LỆ 4:3. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`1304bf4`) + PUSH + LIVE
 
 **Bối cảnh:** thầy chơi bản Đợt 72 (nút Fullscreen ghim góc) trên Chrome iPad, xác nhận nút ổn nhưng
