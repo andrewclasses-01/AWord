@@ -1,9 +1,12 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 5 (mục 8f) nút Fullscreen ghim góc + điều tra
-> lỗi cửa sổ 3 dòng của TEAM B.** KHÔNG ĐỤNG CORE (chỉ 2 file `running-word.js/.css`). Chưa commit
-> đợt này. Xem mục 8f để biết chi tiết + giới hạn của phần điều tra (không tái hiện được lỗi hiển thị
-> gốc trong môi trường tự test, đã vá defensive fix hợp lý nhất tìm được + cần thầy xác nhận lại).
+> **TRẠNG THÁI (5/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 6 (mục 8g) ZOOM lấp kín màn hình, bỏ khoá 4:3**
+> (thầy chụp thấy 2 dải đen 2 bên trên iPad Chrome — vì khung zoom vẫn ép đúng tỉ lệ 4:3 trong khi
+> viewport thật không khớp hệt; nay zoom bỏ hẳn ép tỉ lệ, `width/height:100%` thuần — luôn khít mọi
+> kích thước viewport, không cần biết trước tỉ lệ, tự thích ứng mọi lần trình duyệt đổi). KHÔNG ĐỤNG
+> CORE (chỉ `running-word.css`). Chưa commit đợt này.
+> Đợt 5 (mục 8f, nút Fullscreen ghim góc + vá phòng ngừa cửa sổ 3 dòng) **✅ ĐÃ COMMIT (`fc54dcd`) +
+> PUSH + LIVE**, thầy đã xác nhận ổn.
 > Đợt 4 dưới đây **✅ ĐÃ COMMIT (`2fb19c7`) + PUSH + LIVE** — đổi Fullscreen thật sang ZOOM CSS (chỉ
 > RUNNINGW; sau khi thầy tự chơi thật trên iPad và báo Fullscreen API thật bị Chrome tự thoát khi
 > vuốt/mất sau 3-2-1/hiện popup "stay fullscreen?"). **CÓ SỬA CORE** (cờ opt-in
@@ -599,18 +602,56 @@ nút Fullscreen). Cách đo đúng: `el.getAnimations().forEach(a => a.finish())
 animation "PLAY overlay fade-out" khiến trang tự rebuild về màn READY ngoài ý muốn — phải tải lại
 trang làm sạch).
 
+## 8g. Đợt 6 (5/8/2026) — ZOOM LẤP KÍN MÀN HÌNH, BỎ KHOÁ 4:3
+
+Thầy chơi bản ghim-góc (Đợt 5), báo 2 điểm đó ổn, gửi thêm 1 việc mới: trên Chrome iPad, chế độ zoom
+hiện 2 dải đen 2 bên trái-phải (đúng ảnh thầy gửi lúc báo lỗi TEAM B — cùng 1 tấm, lần này thầy chỉ
+ra chi tiết dải đen). Yêu cầu: lấp kín toàn màn hình, tự chỉnh theo MỌI trình duyệt/kích thước, kể cả
+khi trình duyệt thay đổi/cập nhật trong tương lai — không được hard-code theo 1 hình dạng máy cụ thể.
+
+**Nguyên nhân**: công thức letterbox cũ (`width: min(100vw, calc(100dvh * 4/3)); height:auto`) COPY
+Y HỆT công thức của khung REST (khung 4:3 lúc chưa zoom, xem mục 8b — chọn 4:3 vì "màn iPad gần 4:3")
+sang cho cả lúc zoom — ép cứng tỉ lệ 4:3 dù màn zoom không có lý do gì phải giữ đúng tỉ lệ đó. Viewport
+THẬT của Chrome trên iPad (sau khi trừ thanh tab/địa chỉ) không khớp đúng 4:3 tuyệt đối → hụt theo 1
+chiều → dải đen bù vào chiều kia.
+
+**Sửa**: bỏ hẳn công thức `min(...)` ép tỉ lệ, thay bằng `width:100%; height:100%` — tức khung LUÔN
+khít đúng `.aw-page` (đã là `100%` của khung zoom cố định `.aw-zoomed`, tức là ĐÚNG BẰNG viewport
+thật). Cho CẢ width VÀ height cùng là giá trị tường minh cũng tự triệt tiêu luôn luật
+`aspect-ratio:4/3` ở trên (luật CSS: `aspect-ratio` chỉ dùng để SUY RA chiều còn thiếu — có đủ cả 2
+chiều rồi thì không còn gì để suy). **Không có con số px/vw/vh cứng nào trong luật mới** — thuần
+`%`, nên trình duyệt tự tính lại `100%` mỗi khi viewport đổi (xoay ngang/dọc, thanh trình duyệt
+ẩn/hiện, đổi trình duyệt, đổi máy, phiên bản Chrome sau này đổi cách tính `dvh`...) mà KHÔNG cần sửa
+code lần nào nữa — đúng yêu cầu "tự điều chỉnh khi trình duyệt thay đổi trong tương lai". Khung REST
+(chưa zoom) không đụng, vẫn giữ nguyên 4:3 như trước (chỉ 1 dòng CSS đổi, scope `.aw-zoomed
+.aw-stage.act-running_word`).
+
+**Tự test (devserver, viewport CỐ Ý không phải 4:3 để ép lộ dải đen nếu còn)**: dựng cửa sổ
+1366×900 (tỉ lệ 1.518, khác hẳn 4:3=1.333 — trước đây chắc chắn ra dải đen ở công thức cũ) → bấm
+Fullscreen → đo `stage.getBoundingClientRect()` = **đúng 1366×900, khít 100% appRect cả 4 cạnh, 0
+khoảng hở** (trước: sẽ ra ~1200×900 kèm ~83px dải đen mỗi bên theo công thức cũ). Bấm lại → về khung
+REST vẫn đúng tỉ lệ 4:3 968×726 như cũ (968/726=1.333) — xác nhận khung nghỉ không bị đụng. 0 lỗi
+console.
+
+⚠️ **Đánh đổi đã biết, thầy nên biết trước**: bỏ khoá 4:3 nghĩa là hình dạng khung lúc zoom sẽ theo
+ĐÚNG hình dạng thật của viewport máy đang dùng (có thể hơi khác 4:3 một chút tuỳ máy/trình duyệt) —
+mọi cỡ chữ/khoảng cách trong game vẫn dùng `cqw` (tỷ lệ theo BỀ RỘNG khung) nên không vỡ layout,
+nhưng NẾU máy nào có tỉ lệ lệch rất xa 4:3 (ví dụ màn siêu rộng) thì bố cục có thể trông hơi kéo giãn
+theo chiều đó — đổi lại luôn LẤP KÍN, không còn dải đen. Đây đúng là điều thầy yêu cầu (ưu tiên lấp
+kín + tự thích ứng hơn giữ đúng hình chữ nhật 4:3 hoàn hảo).
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
 - [x] ~~Đợt 2 + Đợt 3 (5/8/2026, v0.9.44 + v0.9.45)~~ — thầy duyệt, commit **`a40809e`** + push + live.
 - [x] ~~Đợt 4 (5/8/2026) — zoom fullscreen (mục 8e)~~ — commit **`2fb19c7`** + push + kiểm live XONG.
-- [ ] **Đợt 5 (5/8/2026) — nút Fullscreen ghim góc + vá phòng ngừa cửa sổ 3 dòng (mục 8f) — thầy
-      duyệt rồi mới commit + push.**
-- [ ] **Thầy chơi lại xác nhận nút Fullscreen đã kín đáo/đúng góc dưới-phải** như ý muốn.
-- [ ] **⚠️ Thầy chơi lại xác nhận lỗi "TEAM B không hiện đủ 3 dòng" đã hết** — mục 8f vá 1 nguyên
-      nhân HỢP LÝ NHẤT tìm được (đo lại chiều cao dòng mỗi lượt thay vì chỉ lúc đổi kích thước) nhưng
-      KHÔNG tái hiện được nguyên văn lỗi trong môi trường tự test — nếu còn thấy lại, gửi thêm chi
-      tiết lúc nào/kéo dài bao lâu (xem mục 8f) hoặc quay màn hình.
+- [x] ~~Đợt 5 (5/8/2026) — nút Fullscreen ghim góc + vá phòng ngừa cửa sổ 3 dòng (mục 8f)~~ — commit
+      **`fc54dcd`** + push + live; **thầy đã chơi lại xác nhận cả 2 điểm ổn** (kể cả cửa sổ 3 dòng —
+      chưa thấy báo lại lỗi cũ).
+- [ ] **Đợt 6 (5/8/2026) — ZOOM lấp kín màn hình, bỏ khoá 4:3 (mục 8g) — thầy duyệt rồi mới commit
+      + push.**
+- [ ] **Thầy xem lại trên chính iPad đã chụp ảnh dải đen** — xác nhận hết dải đen 2 bên, khung lấp
+      kín đúng ý; kiểm luôn khung REST (chưa zoom) vẫn đúng 4:3 như trước (không đổi).
 - [ ] **Thầy xem khung 4:3 + 2 đồng hồ trên TOMKO thật** — có vừa mắt hơn 16:9 cũ không.
 - [ ] **In thử 3 tờ ra giấy A4 thật** — chữ có thật sự to/lấp kín trang như ý không (nay không còn
       trần 7.4mm, danh sách 50 từ tính ra ~17.8pt — máy mới TÍNH được, chưa cầm được tờ giấy), gạch
