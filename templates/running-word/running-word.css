@@ -88,6 +88,20 @@
 .aw-stage.act-running_word .aw-stage-inner { padding: 0.4cqw 1.6cqw; }
 .aw-stage.act-running_word .aw-topbar { display: none; }
 
+/* ⭐ NO DOUBLE-TAP ZOOM (teacher's request, 5/8/2026 — it fired mid-match on the
+   iPad and threw the whole board off). `touch-action: manipulation` tells the
+   browser this subtree has no double-tap gesture to wait for, so a second quick
+   tap is delivered as a plain tap instead of being swallowed into a zoom. This
+   game is the one most exposed to it: two people hammering an on-screen
+   keyboard produce "double taps" constantly without ever meaning one. It also
+   removes the ~300ms click delay browsers keep in reserve for that gesture, so
+   the keys answer faster as a bonus. Declared on the stage AND on the zoom
+   root, because in zoom mode the game is painted from `.aw-zoomed` outward.
+   Deliberately NOT `touch-action: none`: that would also kill two-finger pinch,
+   which nobody triggers by accident and is worth leaving as an escape hatch. */
+.aw-stage.act-running_word,
+.aw-zoomed:has(.aw-stage.act-running_word) { touch-action: manipulation; }
+
 /* Below-stage toolbar: Assignment/Template/Print don't apply to a live 2-team
    match (Print happens from the game's own setup screen — rw-print.js) —
    hidden from the very first paint too, same `.act-running_word` trick, so
@@ -469,15 +483,27 @@
 .aw-rw-rows {
   flex: 1 1 auto; min-height: 0;
   position: relative; overflow: hidden;
+  /* `overflow:hidden` stops the FINGER scrolling this box, but the browser can
+     still scroll it itself — WebKit does exactly that to reveal the focused
+     input's caret, which is what broke the window on iPad (see the long note in
+     running-word.js where the scroll guard is installed). These two lines take
+     away what excuse they can; the guard handles the rest. */
+  overscroll-behavior: contain;
+  scrollbar-width: none;
 }
+/* ⭐ The track is EXACTLY as tall as the 3-row window, and each row is exactly
+   a third of it — so "one row" is a pure ratio (100%/3) that both this file and
+   applyTrack() speak in, with no pixel ever measured or stored. Rows past the
+   third overflow the track and are clipped by the window above. */
 .aw-rw-track {
   position: absolute; left: 0; right: 0; top: 0;
+  height: 100%;
   transition: transform .35s cubic-bezier(.22,.9,.3,1);
   will-change: transform;
 }
 .aw-rw-row {
   position: relative;
-  height: var(--rw-rowh, 33.334%);   /* JS sets --rw-rowh = viewport height / 3 */
+  height: calc(100% / 3);            /* one third of the track = one row */
   display: grid; grid-template-columns: 2.4cqw 1fr 2cqw;
   align-items: center; gap: 0.5cqw;
   padding: 0 0.4cqw;
@@ -760,8 +786,12 @@
   .aw-rw-ps-title { font-size: 3mm; font-weight: 700; color: #2b3644; }
   .aw-rw-ps-extra { font-size: 2.6mm; color: #5b6875; margin-top: 1mm; }
 
-  /* --rw-rowh / --rw-fs are set per sheet by rw-print.js from the word count. */
-  .aw-rw-ps-body.is-2col { column-count: 2; column-gap: 8mm; column-rule: .3mm dashed #b9c1ca; }
+  /* --rw-rowh / --rw-fs are set per sheet by rw-print.js from the word count.
+     (These are the PRINT sheets' own variables — unrelated to the on-screen
+     board, which stopped using any such variable on 5/8/2026.)
+     There is no `is-2col` rule any more: PART A and PART B are always a single
+     running column (teacher's request, 5/8/2026), and the CHECK sheet's two
+     columns are real table columns, not CSS column flow. */
   .aw-rw-ps-table { width: 100%; }
 
   .aw-rw-ps-row {

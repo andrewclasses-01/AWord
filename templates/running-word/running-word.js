@@ -347,22 +347,48 @@ const rwTemplate = {
       const viewport = el("div", "aw-rw-rows");
       const track = el("div", "aw-rw-track");
       viewport.append(track);
+      // ⭐⭐ THE iPAD BUG, ROOT-FIXED (5/8/2026). Symptom the teacher hit on
+      // iPad Chrome — never on Windows: the board of the team whose TURN it is
+      // showed the word being typed at the TOP of the window with the two
+      // UNPLAYED rows below it, instead of at the bottom with the two finished
+      // words above. The other team's board was always right.
+      //
+      // Cause: this window holds the one live `<input>`, and WebKit reveals a
+      // focused field / a moving caret by SCROLLING the nearest scroll
+      // container — and `overflow:hidden` still makes an element one (hidden
+      // only stops the USER scrolling it; the browser and `scrollTop` can move
+      // it freely). WebKit aligns the revealed element to the START of that
+      // container, which drags the current row from the bottom slot up to the
+      // top slot: an offset of exactly 2 rows, which is exactly what the
+      // teacher's screenshot measures. Blink (desktop Chrome) doesn't perform
+      // that reveal, so the very same code looked perfect on Windows.
+      // `focus({preventScroll:true})` (already in focusInput) is NOT enough —
+      // it only covers the focus call itself, not `setSelectionRange` nor the
+      // caret-reveal on every keystroke.
+      //
+      // So instead of trying to name every API that might scroll this box, we
+      // make the box refuse to STAY scrolled: whatever moves it, for whatever
+      // reason, now or in a future browser version, it snaps straight back.
+      // The track's position is owned by applyTrack() alone.
+      viewport.addEventListener("scroll", () => {
+        if (viewport.scrollTop !== 0) viewport.scrollTop = 0;
+        if (viewport.scrollLeft !== 0) viewport.scrollLeft = 0;
+      });
       const footer = el("div", "aw-rw-remaining", "0");
       const probe = el("span", "aw-rw-probe");   // measures a word at base font (see fitBoard)
       board.append(rowhead, viewport, footer, probe);
-      boardEls[t] = { board, viewport, track, footer, probe, rowEls: [], rowH: 0, noAnim: true };
+      boardEls[t] = { board, viewport, track, footer, probe, rowEls: [], noAnim: true };
       boards.append(board);
     });
     match.append(boards);
 
-    // Keep the 3-row window sized right and the words fitted as the boards
-    // grow/shrink (the 70/30 swap animates the width every frame). A pure size
-    // change never animates the track — only a turn change does.
+    // Re-fit the words as the boards grow/shrink (the 70/30 swap animates the
+    // width every frame). The 3-row WINDOW itself needs nothing here any more:
+    // it is pure CSS percentages now (see applyTrack), so the browser keeps it
+    // correct on every layout by itself.
     const boardRO = new ResizeObserver(entries => {
       for (const entry of entries) {
         const t = entry.target === boardEls.a.board ? "a" : "b";
-        measureRow(t);
-        applyTrack(t, false);
         fitBoard(t);
       }
     });
@@ -704,7 +730,6 @@ const rwTemplate = {
           rowEls.push({ row, body, mark });
         });
         boardEls[t].noAnim = true;   // first placement of the track shouldn't slide
-        measureRow(t);
       });
     }
 
@@ -720,27 +745,30 @@ const rwTemplate = {
       return idx[t] - 1;
     }
 
-    // Row height = a third of the viewport, measured (not guessed) so exactly
-    // 3 rows show whatever the frame's real height turns out to be.
-    function measureRow(t) {
-      const b = boardEls[t];
-      const vh = b.viewport.clientHeight;
-      if (vh > 0) {
-        b.rowH = vh / 3;
-        b.board.style.setProperty("--rw-rowh", b.rowH + "px");
-      }
-    }
-
     // Slide the track so `bottomIndexOf(t)` lands in the bottom third of the
-    // window. `animate:false` (resize / first build) suppresses the transition.
+    // window. `animate:false` (first build) suppresses the transition.
+    //
+    // ⭐ NO PIXELS ANYWHERE (5/8/2026). This used to measure the window with
+    // `clientHeight`, divide by 3 and slide by that many px — which meant a
+    // JS-held number had to stay in step with a CSS layout through two
+    // independent async paths (ResizeObserver and the paint), and `clientHeight`
+    // is integer-rounded on top of that. Now the track is exactly as tall as the
+    // window (CSS `height:100%`) and each row is exactly `calc(100% / 3)` of it,
+    // so ONE ROW = 100%/3 of the track by construction and the slide is written
+    // in those same units. A `translateY` percentage resolves against the
+    // element's own height, so the browser recomputes the whole thing on every
+    // layout, on any device, with nothing for this file to measure, cache or
+    // re-sync. Rotate the iPad, let the URL bar slide away, change the frame
+    // ratio, run it in a future browser — the window stays exactly 3 rows.
     function applyTrack(t, animate) {
       const b = boardEls[t];
-      const y = (2 - bottomIndexOf(t)) * (b.rowH || 0);
+      const shift = 2 - bottomIndexOf(t);        // in ROWS (negative = slide up)
+      const y = `translateY(calc(${shift} * 100% / 3))`;
       if (animate) {
-        b.track.style.transform = `translateY(${y}px)`;
+        b.track.style.transform = y;
       } else {
         b.track.style.transition = "none";
-        b.track.style.transform = `translateY(${y}px)`;
+        b.track.style.transform = y;
         void b.track.offsetWidth;              // flush, then restore the transition
         b.track.style.transition = "";
       }
@@ -809,19 +837,6 @@ const rwTemplate = {
         }
       });
 
-      // Re-measure the row height on every paint, not just on resize. Before
-      // this fix, `--rw-rowh`/`b.rowH` were only ever set from `buildRows()`
-      // (once, at mount) and the `boardRO` ResizeObserver (only when the
-      // board's own box actually resizes) — never from a plain turn swap.
-      // Most of the time that's fine (the 70/30 width swap DOES fire the
-      // observer), but the observer is asynchronous and can land a frame
-      // after `paintBoard` already ran with a stale `b.rowH`, which throws
-      // off `applyTrack`'s translateY math for exactly one paint — the
-      // window can visibly land short of 3 full rows right on a turn swap.
-      // `measureRow` is a cheap synchronous read (no work if the height
-      // hasn't actually changed), so doing it unconditionally here removes
-      // the dependency on resize-event timing entirely.
-      measureRow(t);
       const animate = !boardEls[t].noAnim;
       boardEls[t].noAnim = false;
       applyTrack(t, animate);
