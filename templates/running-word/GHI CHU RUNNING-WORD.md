@@ -1,6 +1,9 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (5/8/2026): 🟡 CHỜ THẦY DUYỆT — Đợt 8 (mục 8i)** — 7 cải tiến hiển thị + gameplay thầy
+> **TRẠNG THÁI (5/8/2026): 🟢 THẦY DUYỆT — Đợt 8 (mục 8i) ✅ ĐÃ COMMIT (`9f333ab`) + PUSH + LIVE**
+> (poll bản live `andrewclasses-01.github.io/AWord` qua bẫy cache Pages: lần 1 còn file cũ, lần 2 đã
+> đủ marker `renderSummary`/`topIndexOf`/`positionPass` + engine.js có `tpl.renderSummary`) — 7 cải
+> tiến hiển thị + gameplay thầy
 > gửi 1 lượt: (1) bảng MENU kết thúc gọn còn 2 nửa "tên đội / điểm X/total" vàng + Start again (bỏ
 > Time, Leaderboard, Show answers, Play a different template, dòng "you're Nth"); (2) bàn phím to
 > thêm 15% giữ nguyên tỷ lệ; (3) 2 đồng hồ chạm sát mép trên; (4) PASS thành nút VUÔNG ghim giữa
@@ -850,9 +853,8 @@ góc bo không; bảng menu 2 đội trên màn thật. Fullscreen thật / ch�
       push + kiểm live XONG.
 - [x] ~~Đợt 7 (5/8/2026) — gốc lỗi TEAM B + in 1 cột + khoá zoom chạm đúp (mục 8h)~~ — thầy duyệt,
       commit **`6ff2da6`** + push + live (**`4115e89`**).
-- [ ] **Đợt 8 (5/8/2026) — 7 cải tiến hiển thị + gameplay (mục 8i) — thầy duyệt rồi mới commit + push.**
-      ⭐ Có sửa CORE 1 hook `tpl.renderSummary` (mục 6.5) — nhắc thầy đây là chỗ core mới, zero-diff 14
-      game khác nhưng vẫn là file dùng chung.
+- [x] ~~Đợt 8 (5/8/2026) — 7 cải tiến hiển thị + gameplay (mục 8i)~~ — thầy duyệt, commit **`9f333ab`**
+      + push + kiểm live XONG. ⭐ Có sửa CORE 1 hook `tpl.renderSummary` (mục 6.5), zero-diff 14 game khác.
 - [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
       có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
       trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.
