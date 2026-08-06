@@ -1,7 +1,7 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (6/8/2026): ⏳ Đợt 9 (mục 8j) — 3 điều chỉnh thầy gửi 1 lượt, ĐÃ CODE + TỰ TEST
-> devserver (0 lỗi console), CHƯA commit — CHỜ THẦY DUYỆT.** (1) Thu nhỏ board (`margin-bottom`
+> **TRẠNG THÁI (6/8/2026): 🟢 THẦY DUYỆT — Đợt 9 (mục 8j) ✅ ĐÃ COMMIT (`123c439`) + PUSH.** 3 điều
+> chỉnh thầy gửi 1 lượt, tự test devserver 0 lỗi console. (1) Thu nhỏ board (`margin-bottom`
 > 3.4cqw) để bàn phím +15% không đè ô nhập — đo hở 13px trên khung 4:3 968px; (2) Dời PASS khỏi cạnh
 > bàn phím LÊN hàng đồng hồ: mỗi đội 1 nút PASS vuông ở MÉP NGOÀI (A trái, B phải), chỉ sáng đúng lượt
 > đội mình; đồng hồ ngắn lại căn giữa mỗi nửa; nút Play/Pause KÉO DÀI ngang (11cqw) — cả hàng
@@ -920,10 +920,10 @@ khi 2 em gõ thật; đồng hồ ngắn lại có còn đủ rõ số.
       commit **`6ff2da6`** + push + live (**`4115e89`**).
 - [x] ~~Đợt 8 (5/8/2026) — 7 cải tiến hiển thị + gameplay (mục 8i)~~ — thầy duyệt, commit **`9f333ab`**
       + push + kiểm live XONG. ⭐ Có sửa CORE 1 hook `tpl.renderSummary` (mục 6.5), zero-diff 14 game khác.
-- [ ] **⏳ Đợt 9 (6/8/2026) — dời PASS lên hàng đồng hồ + thu board + thời gian ở bảng kết quả (mục
-      8j)** — ĐÃ code + tự test devserver (0 lỗi console), **KHÔNG đụng core**. CHỜ thầy duyệt rồi
-      commit + push. Cần thầy nghiệm thu máy thật: hàng PASS/đồng hồ/Play-Pause cân đối vừa mắt; PASS
-      mép ngoài vừa tay trọng tài; bàn phím to không đè.
+- [x] ~~Đợt 9 (6/8/2026) — dời PASS lên hàng đồng hồ + thu board + thời gian ở bảng kết quả (mục
+      8j)~~ — thầy duyệt, commit **`123c439`** + push (`510ff9f..123c439`), **KHÔNG đụng core**.
+      ⬜ Còn chờ thầy nghiệm thu máy thật: hàng PASS/đồng hồ/Play-Pause cân đối vừa mắt; PASS mép ngoài
+      vừa tay trọng tài; bàn phím to không đè; kiểm bản LIVE sau khi Pages build.
 - [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
       có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
       trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.
