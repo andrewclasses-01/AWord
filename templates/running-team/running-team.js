@@ -510,8 +510,21 @@ const rtTemplate = {
       if (phase === "setup") renderSetup();
     }
 
+    // ⚠️ A TEMPORARY act (Change template built one from another game — id
+    // "conv_...", `_converted:true`) must NEVER reach saveActivity: core's rule
+    // is absolute, because saving one litters the library with a phantom
+    // activity that has no home folder and no way back. A set is a property of a
+    // REAL saved activity, so this simply refuses and says why.
+    function isTempAct() {
+      return activity?._converted === true || String(activity?.id || "").startsWith("conv_");
+    }
+
     async function saveCurrentSet(btn) {
       if (!current) return;
+      if (isTempAct()) {
+        ui.toast?.("This is a temporary activity — save it to your library first");
+        return;
+      }
       btn.disabled = true;
       const label = btn.textContent;
       btn.textContent = "Saving…";
@@ -540,6 +553,10 @@ const rtTemplate = {
     }
 
     async function confirmDeleteSet(i) {
+      if (isTempAct()) {                      // same rule as saveCurrentSet
+        ui.toast?.("This is a temporary activity — open the real one to edit its sets");
+        return;
+      }
       if (!confirm(`Delete SET ${i + 1}?\n\nThe sheet already handed out will no longer match a saved set.`)) return;
       try {
         const next = new Array(MAX_SETS).fill(null);

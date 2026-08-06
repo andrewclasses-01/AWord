@@ -268,6 +268,27 @@ nhập — sẽ vào được màn setup rồi **tắc ở đó**. Set demo tên
   — đúng, vì pool không có clue.
 - Pool 5 từ → **không** hiện `running_team` (sàn 6 từ hoạt động), Quiz 5 câu cũng vậy.
 
+## 9b. 🐞 LỖI THẬT TỰ BẮT ĐƯỢC SAU KHI ĐÃ COMMIT LẦN 1 (vá ngay, cùng ngày)
+
+Rà lại luật core sau khi push mới thấy: `core/HUONG DAN CORE.md` ghi **"TUYỆT ĐỐI không `saveActivity`
+act có id bắt đầu `conv_`"** (act TẠM do Change template dựng ra) — vì lưu nó là **đẻ rác vĩnh viễn
+trong thư viện**: một act ma không thuộc thư mục nào và không có đường quay về.
+
+`saveCurrentSet()` và `confirmDeleteSet()` của tôi gọi thẳng `saveActivity(activity)` **không kiểm tra
+gì**. Kịch bản dính lỗi có thật: thầy đang chơi 1 act Quiz → bấm **Change template → Running team** →
+màn setup hiện ra → chọn lớp → bấm **Save as SET 1** ⇒ ghi một act `conv_running_team_...` lên
+Firestore.
+
+**Đã vá:** thêm `isTempAct()` (kiểm `_converted === true` **hoặc** id bắt đầu `"conv_"` — 2 lớp, vì
+`convert.js` đặt cả hai) chặn ở đầu **cả 2** hàm, kèm toast giải thích thay vì im lặng.
+
+**Đo lại sau khi vá** (dựng đúng act `conv_running_team_123456`, `_converted:true`, rồi bấm DELETE SET):
+hộp thoại confirm **không còn hiện**, `saveActivity` **0 lần được gọi**, toast ra đúng chữ
+*"This is a temporary activity — open the real one to edit its sets"*.
+
+→ Bài học cho template sau: **hễ template nào tự gọi `saveActivity` thì phải tự chặn act `conv_`** —
+core không chặn hộ.
+
 ## 10. ⚠️ BẪY GẶP KHI TỰ TEST (ghi lại cho phiên sau)
 
 1. **Hàng tim đo bằng `textContent` là SAI.** Tim đã mất chỉ đổi *class* `is-out` chứ không biến mất,
