@@ -1,5 +1,18 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **TRẠNG THÁI (6/8/2026): ⏳ Đợt 9 (mục 8j) — 3 điều chỉnh thầy gửi 1 lượt, ĐÃ CODE + TỰ TEST
+> devserver (0 lỗi console), CHƯA commit — CHỜ THẦY DUYỆT.** (1) Thu nhỏ board (`margin-bottom`
+> 3.4cqw) để bàn phím +15% không đè ô nhập — đo hở 13px trên khung 4:3 968px; (2) Dời PASS khỏi cạnh
+> bàn phím LÊN hàng đồng hồ: mỗi đội 1 nút PASS vuông ở MÉP NGOÀI (A trái, B phải), chỉ sáng đúng lượt
+> đội mình; đồng hồ ngắn lại căn giữa mỗi nửa; nút Play/Pause KÉO DÀI ngang (11cqw) — cả hàng
+> `[PASS a][đồng hồ a][Play/Pause][đồng hồ b][PASS b]` đối xứng (đo: passA/passB cách mép đều 13px,
+> Play/Pause đúng tâm strip); bỏ hẳn `positionPass()`/`kbdRO` (PASS nay nằm trong grid, không còn định
+> vị tuyệt đối theo bàn phím). (3) Bảng MENU kết thúc thêm dòng **thời gian còn thừa** dưới điểm mỗi
+> đội (đo: A "0:00" / B "0:08" + nhãn "time left"). **KHÔNG sửa core** (chỉ 2 file template). Hồi quy
+> Type-the-answer + Crossword: vẫn 16:9, bàn phím `transform:none` (không rò scale 1.15), 0 rò class.
+> ⬜ **Cần thầy nghiệm thu máy thật:** hàng PASS+đồng hồ+Play/Pause có cân đối vừa mắt; nút PASS mép
+> ngoài có vừa tầm tay trọng tài; bàn phím to có còn đè gì không.
+>
 > **TRẠNG THÁI (5/8/2026): 🟢 THẦY DUYỆT — Đợt 8 (mục 8i) ✅ ĐÃ COMMIT (`9f333ab`) + PUSH + LIVE**
 > (poll bản live `andrewclasses-01.github.io/AWord` qua bẫy cache Pages: lần 1 còn file cũ, lần 2 đã
 > đủ marker `renderSummary`/`topIndexOf`/`positionPass` + engine.js có `tpl.renderSummary`) — 7 cải
@@ -839,6 +852,58 @@ gõ 2 người trên TOMKO/iPad; nút PASS vuông ở lề trái có vừa tầm
 ĐẢO CHIỀU (từ mới trên, cũ mờ dần) có tự nhiên không; đồng hồ chạm sát mép trên có bị màn hình cắt
 góc bo không; bảng menu 2 đội trên màn thật. Fullscreen thật / chạm-đúp / in giấy vẫn như các đợt trước.
 
+## 8j. ⏳ Đợt 9 (6/8/2026) — DỜI PASS LÊN HÀNG ĐỒNG HỒ + THU BOARD + THỜI GIAN Ở BẢNG KẾT QUẢ. KHÔNG ĐỤNG CORE.
+
+Thầy gửi 3 điều chỉnh 1 lượt sau khi chơi bản Đợt 8. Chỉ 2 file template (`running-word.js`,
+`running-word.css`). Đã tự test devserver (`aword` :5510, trình duyệt thật, 0 lỗi console).
+
+1. **Bàn phím +15% (Đợt 8) đè lên ô nhập → thu board xuống.** `.aw-rw-boards` thêm `margin-bottom:
+   3.4cqw`. Lý do gốc: bàn phím to lên bằng `transform: scale(1.15)` với `transform-origin: bottom
+   center` — mà `transform` KHÔNG reflow layout, nên bàn phím nở LÊN ~15% chiều cao (đo: cao thật
+   192px → scale 221px → tràn lên ~29px trên đỉnh hộp layout của nó) đè lên đáy board. Thêm
+   `margin-bottom` vừa đẩy bàn phím xuống vừa thu board nhỏ lại. Đo trên khung 4:3 968px: đáy board
+   449, đỉnh-thật bàn phím 462 → **hở 13px** (bản chưa sửa: chồng lên nhau). Cỡ chữ board nhỏ đi
+   không đáng kể (board mất ~10px chiều cao). ⭐ Ô nhập THỰC RA nằm ở ĐỈNH cửa sổ (đảo chiều từ Đợt 8),
+   nên bản vá này chủ yếu dọn phần bàn phím ăn vào các dòng DƯỚI của board — hở 13px an toàn cho cả
+   phần trên.
+2. **Dời PASS khỏi cạnh bàn phím, đưa LÊN hàng đồng hồ — 2 nút, 1 mỗi đội.** Trước: 1 nút PASS
+   `position:absolute` ghim cạnh trái bàn phím, đặt chỗ bằng `positionPass()` đo rect bàn phím. Nay:
+   hàng đồng hồ thành **grid 5 cột** `auto 1fr auto 1fr auto` chứa
+   `[PASS a][đồng hồ a][Play/Pause][đồng hồ b][PASS b]`:
+   - **PASS mỗi đội** = nút vuông 5cqw, đội A `justify-self:start` (ghim MÉP TRÁI), đội B
+     `justify-self:end` (ghim MÉP PHẢI) — cùng padding 1.4cqw với `.aw-rw-boards` nên **thẳng cạnh
+     ngoài của board**. Mỗi PASS **chỉ sáng đúng lượt đội mình** (`paintClocks`: `disabled` trừ khi
+     `phase==="play" && !paused && turn===t`) — vừa hợp lý (chỉ được bỏ từ CỦA MÌNH) vừa là chỉ báo
+     lượt trực quan. Click gọi `doPass()` (đã dùng `turn`, có guard `if (turn===t)`).
+   - **Đồng hồ ngắn lại**: padding ngang `1.2cqw→0.9cqw`, `justify-self:center` để hug chữ số và
+     **căn giữa mỗi nửa** (thẳng cột team). Đo center: đồng hồ A 403 ≈ tâm nửa trái 398; đồng hồ B
+     862 ≈ tâm nửa phải 866.
+   - **Play/Pause kéo dài ngang**: `5.4cqw vuông → 11cqw × 5cqw` (pill), nằm cột giữa auto giữa 2 cột
+     1fr → **đúng tâm strip** (đo center 632.5 = tâm strip). SVG giữ 2.5cqw + `pointer-events:none`
+     (giữ bản vá "sometimes works" Đợt 8d).
+   - Bỏ HẲN `positionPass()` + `kbdRO` (ResizeObserver bàn phím) + field `refUI.passBtn` — PASS nay
+     nằm trong dòng chảy grid, không còn đo/định vị tuyệt đối theo bàn phím ⇒ **xoá một mảng mã dễ
+     lỗi** (RO không bắn trong pane không compositing từng là bẫy Đợt 8i mục 4). `refereeBar()` nay
+     chỉ dựng Play/Pause. Có `.aw-rw-passgap` (div rỗng 5cqw, `is-b` thêm `justify-self:end`) giữ cân
+     bằng 5 cột khi Options tắt PASS.
+   - Đo hàng: passA [178–227] mép trái (cách strip-left 13px), passB [1038–1087] mép phải (cách
+     strip-right 13px) — **đối xứng**; tất cả `cy=45` (cùng 1 hàng ngang).
+3. **Bảng MENU kết thúc thêm THỜI GIAN CÒN THỪA.** `renderSummary` mỗi nửa nay có thêm
+   `.aw-rw-sum-timewrap` = `.aw-rw-sum-time` (giờ còn lại, `fmtClock`) + nhãn `.aw-rw-sum-timelab`
+   "time left", dưới dòng điểm vàng. `endMatch` nhét `timeA: clock.a, timeB: clock.b` vào `rwEndData`
+   (biến cấp module). Đo bản test (hết giờ): TEAM A "0:00" / TEAM B (winner) "0:08", đúng đồng hồ lúc
+   kết thúc.
+
+### Tự test devserver (trình duyệt thật, 0 lỗi console)
+- Hàng đồng hồ 5 cột đối xứng (số đo ở mục 2); bàn phím hở 13px không đè (mục 1); bảng menu 2 đội có
+  thời gian thừa + nhãn, chỉ nút Start again (mục 3).
+- Hồi quy: `type-the-answer` + `crossword` vẫn `act-*` đúng, tỉ lệ **16:9** (1.778), bàn phím
+  `transform:none` (KHÔNG rò scale 1.15), 0 class `.aw-rw-*` rò sang, 0 lỗi console.
+
+⚠️ **Máy KHÔNG tự nghiệm thu được (cần mắt thầy máy thật):** hàng PASS+đồng hồ+Play/Pause có cân đối
+đẹp trên TOMKO/iPad; nút PASS ở mép ngoài có vừa tầm tay trọng tài 2 bên; bàn phím to có còn đè gì
+khi 2 em gõ thật; đồng hồ ngắn lại có còn đủ rõ số.
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
@@ -855,6 +920,10 @@ góc bo không; bảng menu 2 đội trên màn thật. Fullscreen thật / ch�
       commit **`6ff2da6`** + push + live (**`4115e89`**).
 - [x] ~~Đợt 8 (5/8/2026) — 7 cải tiến hiển thị + gameplay (mục 8i)~~ — thầy duyệt, commit **`9f333ab`**
       + push + kiểm live XONG. ⭐ Có sửa CORE 1 hook `tpl.renderSummary` (mục 6.5), zero-diff 14 game khác.
+- [ ] **⏳ Đợt 9 (6/8/2026) — dời PASS lên hàng đồng hồ + thu board + thời gian ở bảng kết quả (mục
+      8j)** — ĐÃ code + tự test devserver (0 lỗi console), **KHÔNG đụng core**. CHỜ thầy duyệt rồi
+      commit + push. Cần thầy nghiệm thu máy thật: hàng PASS/đồng hồ/Play-Pause cân đối vừa mắt; PASS
+      mép ngoài vừa tay trọng tài; bàn phím to không đè.
 - [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
       có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
       trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.

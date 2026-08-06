@@ -136,7 +136,7 @@ const rwTemplate = {
   // two teams side by side (name over score, the score bigger and gold) and a
   // single Start again. All the numbers come from rwEndData (set in endMatch).
   renderSummary(panel, { restart, panelItem }) {
-    const d = rwEndData || { names: { a: "TEAM A", b: "TEAM B" }, wordsA: 0, wordsB: 0, totalA: 0, totalB: 0, winner: null };
+    const d = rwEndData || { names: { a: "TEAM A", b: "TEAM B" }, wordsA: 0, wordsB: 0, totalA: 0, totalB: 0, timeA: 0, timeB: 0, winner: null };
     const board = el("div", "aw-rw-sum");
     TEAMS.forEach(t => {
       const won = t === "a" ? d.wordsA : d.wordsB;
@@ -144,6 +144,12 @@ const rwTemplate = {
       const half = el("div", `aw-rw-sum-half is-${t}` + (d.winner === t ? " is-winner" : ""));
       half.append(el("div", "aw-rw-sum-name", escapeHtml(d.names[t])));
       half.append(el("div", "aw-rw-sum-score", `${won}/${total}`));
+      // Leftover clock time under the score (teacher's request, 6/8/2026).
+      const timeMs = t === "a" ? d.timeA : d.timeB;
+      const timeWrap = el("div", "aw-rw-sum-timewrap");
+      timeWrap.append(el("div", "aw-rw-sum-time", fmtClock(timeMs || 0)));
+      timeWrap.append(el("div", "aw-rw-sum-timelab", "time left"));
+      half.append(timeWrap);
       board.append(half);
     });
     panel.append(board);
@@ -352,20 +358,37 @@ const rwTemplate = {
     let refUI = null;
 
     // Docked at the very top of the frame (the engine's own topbar is hidden
-    // for this game — see running-word.css), just the two clock faces — no
-    // team name any more (teacher's request, 5/8/2026: the name moved to the
-    // board's own header, see buildRows()). Word count is still tracked
-    // internally off `rows` for scoring/review, just not shown on the clock.
+    // for this game — see running-word.css). ONE row, five items evenly
+    // balanced (teacher's redesign, 6/8/2026):
+    //   [PASS a] [clock a]  [Play/Pause]  [clock b] [PASS b]
+    // Each team's PASS is a square button on that team's OWN outer edge of the
+    // frame, level with the clocks; the clocks are shortened to hug their
+    // digits and sit over their team's column; Play/Pause is a wide pill
+    // centred between the two clocks. Word count is still tracked internally
+    // off `rows` for scoring/review, just not shown on the clock.
     const clocks = el("div", "aw-rw-clocks");
     const clockEls = {};
-    TEAMS.forEach(t => {
+    const passEls = {};
+    function makeClock(t) {
       const box = el("div", `aw-rw-clock is-${t}`);
       const time = el("div", "aw-rw-clock-time", fmtClock(clock[t]));
       box.append(time);
       clockEls[t] = { box, time };
-      clocks.append(box);
-      if (t === "a") clocks.append(refereeBar());
-    });
+      return box;
+    }
+    // PASS is per team now and only lives on that team's own turn (you can only
+    // skip your OWN word). A spacer keeps the 5-column grid balanced when PASS
+    // is switched off in Options.
+    function makePass(t) {
+      if (!cfg.allowPass) return el("div", `aw-rw-passgap is-${t}`);
+      const btn = el("button", `aw-rw-passbtn is-${t}`, "PASS");
+      btn.type = "button";
+      btn.title = "Skip this word (time penalty)";
+      btn.onclick = () => { if (turn === t) doPass(); };
+      passEls[t] = btn;
+      return btn;
+    }
+    clocks.append(makePass("a"), makeClock("a"), refereeBar(), makeClock("b"), makePass("b"));
     match.append(clocks);
 
     // Each board is a fixed 3-ROW WINDOW (teacher's request, 5/8/2026): the
@@ -466,7 +489,6 @@ const rwTemplate = {
     // still the honest thing to do, and it keeps this game working on any older
     // copy of core.
     let kbd = null;
-    let kbdRO = null;
     function buildKeyboard() {
       if (kbd) return;
       kbd = createKeyboard({
@@ -489,58 +511,20 @@ const rwTemplate = {
         }
       });
       match.append(kbd.el);
-      // Reposition PASS whenever the keyboard's box changes (frame resize,
-      // rotation). ResizeObserver fires once on observe, which also does the
-      // initial placement after layout settles.
-      kbdRO = new ResizeObserver(() => positionPass());
-      kbdRO.observe(kbd.el);
     }
 
-    // ===== referee strip (between the two clocks): one big Play/Pause, Pass
-    // underneath (teacher's redesign, 5/8/2026 — replaces the old turn-arrow
-    // + Pass/Pause/Undo trio; Undo is gone). ======================
+    // ===== referee: one wide Play/Pause, centred in the middle column of the
+    // clock strip (teacher's redesign, 6/8/2026 — PASS moved out to the two
+    // clock-strip edges, one per team; see makePass above). ==============
     function refereeBar() {
       const bar = el("div", "aw-rw-ref");
-
-      // Just the Play/Pause now — it sits ALONE in the middle grid column of the
-      // clocks strip, so it's centred and balanced between the two clock faces
-      // (teacher's redesign, 5/8/2026 — Pass moved out to the keyboard's left).
       const playPauseBtn = el("button", "aw-rw-playpause", SVG_PLAY);
       playPauseBtn.type = "button";
       playPauseBtn.title = "Play";
       playPauseBtn.onclick = onPlayPauseClick;
       bar.append(playPauseBtn);
-
-      // PASS is a square button pinned into the empty gutter to the LEFT of the
-      // keyboard, centred on the keyboard's height (teacher's request,
-      // 5/8/2026). Built here so refUI can reach it, but appended to `match`
-      // (position:relative) and PLACED by positionPass() once the keyboard is
-      // up — its spot is measured from the live keyboard rect, not hard-coded.
-      let passBtn = null;
-      if (cfg.allowPass) {
-        passBtn = el("button", "aw-rw-passbtn", "PASS");
-        passBtn.type = "button";
-        passBtn.title = "Skip this word (time penalty)";
-        passBtn.onclick = () => doPass();
-        match.append(passBtn);
-      }
-
-      refUI = { bar, playPauseBtn, passBtn };
+      refUI = { bar, playPauseBtn };
       return bar;
-    }
-
-    // Pin PASS into the middle of the empty gutter LEFT of the keyboard, level
-    // with the keyboard's vertical centre. Measured from the live rects so it
-    // stays correct whatever the keyboard's size/scale turns out to be; re-run
-    // on every keyboard resize (see kbdRO in buildKeyboard).
-    function positionPass() {
-      const btn = refUI?.passBtn;
-      if (!btn || !kbd) return;
-      const mr = match.getBoundingClientRect();
-      const kr = kbd.el.getBoundingClientRect();
-      if (!mr.width || !kr.width) return;
-      btn.style.left = ((kr.left - mr.left) / 2) + "px";          // middle of the left gutter
-      btn.style.top = ((kr.top + kr.bottom) / 2 - mr.top) + "px"; // keyboard's vertical centre
     }
 
     // In "prep" (boards shown, nobody's clock running yet): starts the 3-2-1
@@ -743,11 +727,6 @@ const rwTemplate = {
       buildRows();
       buildKeyboard();
       paintAll();
-      // Place PASS now, synchronously — the ResizeObserver on the keyboard also
-      // fires an initial callback, but its delivery is tied to the render loop,
-      // so a direct call here guarantees PASS is positioned from the first paint
-      // (getBoundingClientRect forces the layout it needs regardless).
-      positionPass();
     }
 
     // ===== COUNTDOWN =======================================================
@@ -966,8 +945,12 @@ const rwTemplate = {
           refUI._icon = icon;
         }
         refUI.playPauseBtn.title = isTicking ? "Pause" : (isPlaying ? "Resume" : "Play");
-        if (refUI.passBtn) refUI.passBtn.disabled = phase !== "play" || paused;
       }
+      // Each team's PASS lights up only on that team's own live turn.
+      TEAMS.forEach(t => {
+        const btn = passEls[t];
+        if (btn) btn.disabled = !(phase === "play" && !paused && turn === t);
+      });
     }
 
     // The engine's own nav label ("TEAM X · word N of M") is gone (teacher's
@@ -1247,6 +1230,7 @@ const rwTemplate = {
           names: { a: cfg.names.a, b: cfg.names.b },
           wordsA, wordsB,
           totalA: current.a.length, totalB: current.b.length,
+          timeA: clock.a, timeB: clock.b,
           winner
         };
         ui.finish({
@@ -1322,7 +1306,6 @@ const rwTemplate = {
     return function cleanup() {
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
-      if (kbdRO) kbdRO.disconnect();
       if (tickId) clearInterval(tickId);
       timers.forEach(clearTimeout);
       timers.clear();

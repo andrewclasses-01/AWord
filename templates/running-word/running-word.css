@@ -345,13 +345,14 @@
 /* ---- the two clocks + the Play/Pause + Pass strip between them ---- */
 .aw-rw-clocks {
   flex: 0 0 auto;
-  display: grid; grid-template-columns: 1fr auto 1fr;
-  gap: 1cqw;
-  /* CENTER, not stretch: the middle column (Play/Pause + Pass stacked) is
-     taller than a clock, and `stretch` used to blow the clock boxes up to
-     match it, leaving a slab of empty space inside each (teacher's request to
-     remove it, 5/8/2026). Now each clock box hugs its digits; the taller
-     referee column just centres beside them. */
+  /* ONE balanced row (teacher's redesign, 6/8/2026):
+     [PASS a] [clock a] [Play/Pause] [clock b] [PASS b].
+     The two 1fr columns hold the clocks (centred over each team's side and
+     hugging their digits); the auto edge columns hold the per-team PASS
+     squares, pushed to the frame edges; the auto middle column holds the wide
+     Play/Pause pill, centred between the clocks. */
+  display: grid; grid-template-columns: auto 1fr auto 1fr auto;
+  gap: 0.8cqw;
   align-items: center;
   padding: 0 1.4cqw;
 }
@@ -359,8 +360,9 @@
    own header, see .aw-rw-rowhead-name below) — just the time, and the box is
    shrunk to hug the digits (minimal vertical padding). */
 .aw-rw-clock {
+  justify-self: center;            /* hug the digits, centred over its team's side */
   border-radius: 1.1cqw;
-  padding: 0.15cqw 1.2cqw 0.05cqw;
+  padding: 0.2cqw 0.9cqw 0.1cqw;   /* shorter horizontally (teacher, 6/8/2026) */
   display: flex; align-items: center; justify-content: center;
   background: rgba(23,34,47,.06);
   border: 0.3cqw solid transparent;
@@ -394,13 +396,11 @@
 
 /* ---- referee strip: one big Play/Pause, Pass underneath (teacher's redesign,
    5/8/2026 — replaces the old turn-arrow + Pass/Pause/Undo trio). ---- */
-.aw-rw-ref {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 0.6cqw; padding: 0 0.4cqw;
-}
-/* A rounded SQUARE (teacher's request, 5/8/2026), not a circle. */
+.aw-rw-ref { display: flex; align-items: center; justify-content: center; }
+/* A wide, rounded pill now (teacher's redesign, 6/8/2026): stretched
+   horizontally to balance the row [PASS a][clock a][Play/Pause][clock b][PASS b]. */
 .aw-rw-playpause {
-  width: 5.4cqw; height: 5.4cqw; border-radius: 1.4cqw;
+  width: 11cqw; height: 5cqw; border-radius: 1.4cqw;
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
   background: var(--rw-ok); color: #fff; border: 0;
@@ -416,26 +416,30 @@
 .aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 0.14cqw 0 var(--rw-b-dark); }
 .aw-rw-playpause:disabled { opacity: .4; cursor: default; }
 
-/* PASS: a SQUARE button pinned into the gutter left of the keyboard, centred on
-   the keyboard's height (teacher's redesign, 5/8/2026). positionPass() in
-   running-word.js sets `left`/`top` to the CENTRE point; the translate keeps
-   the button centred on it. */
+/* PASS — one SQUARE per team, sitting in the clock strip on that team's OWN
+   outer edge (teacher's redesign, 6/8/2026): team A's is pushed to the LEFT
+   frame edge, team B's to the RIGHT, each level with the clocks. Each button
+   lights only on its team's own turn (see paintClocks). */
 .aw-rw-passbtn {
-  position: absolute; z-index: 30;
-  transform: translate(-50%, -50%);
-  width: 6.2cqw; height: 6.2cqw;
+  width: 5cqw; height: 5cqw;
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
   border: 0.26cqw solid rgba(23,34,47,.22);
-  background: #fff; color: var(--rw-b-dark);
-  border-radius: 1.4cqw;
-  font-weight: 800; font-size: 1.6cqw; letter-spacing: .06em;
+  background: #fff; color: var(--rw-ink);
+  border-radius: 1.2cqw;
+  font-weight: 800; font-size: 1.35cqw; letter-spacing: .05em;
   box-shadow: 0 0.4cqw 0 rgba(23,34,47,.14);
-  transition: border-color .15s ease, opacity .15s ease;
+  transition: border-color .15s ease, color .15s ease, opacity .15s ease, box-shadow .12s ease;
 }
-.aw-rw-passbtn:hover:not(:disabled) { border-color: var(--rw-b); }
-.aw-rw-passbtn:active:not(:disabled) { transform: translate(-50%, -50%) translateY(0.18cqw); box-shadow: 0 0.14cqw 0 rgba(23,34,47,.14); }
+.aw-rw-passbtn.is-a { justify-self: start; }
+.aw-rw-passbtn.is-b { justify-self: end; }
+.aw-rw-passbtn.is-a:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
+.aw-rw-passbtn.is-b:hover:not(:disabled) { border-color: var(--rw-b); color: var(--rw-b-dark); }
+.aw-rw-passbtn:active:not(:disabled) { transform: translateY(0.18cqw); box-shadow: 0 0.14cqw 0 rgba(23,34,47,.14); }
 .aw-rw-passbtn:disabled { opacity: .3; cursor: default; }
+/* keeps the 5-column grid balanced when PASS is switched off in Options */
+.aw-rw-passgap { width: 5cqw; height: 5cqw; }
+.aw-rw-passgap.is-b { justify-self: end; }
 
 /* ---- the two typing columns: FLEX so the active side can grow to 70% while
    the waiting side shrinks to 30%, with a smooth animated swap (teacher's
@@ -446,7 +450,11 @@
   flex: 1 1 auto; min-height: 0;
   display: flex;
   gap: 1.2cqw;
+  /* Bottom clearance so the +15%-scaled keyboard (transform-scale grows UP from
+     the bottom bar and does NOT reflow the layout) can't ride up over the
+     boards' active input row (teacher's request, 6/8/2026). */
   padding: 0.55cqw 1.4cqw 0;
+  margin-bottom: 3.4cqw;
 }
 .aw-rw-board {
   flex: 1 1 0%;
@@ -733,6 +741,20 @@
   font-size: 5.2cqw; font-weight: 800; line-height: 1;
   color: #ffcf33;   /* gold, and bigger than the team name */
   font-variant-numeric: tabular-nums;
+}
+/* leftover clock time under the score (teacher's request, 6/8/2026) */
+.aw-rw-sum-timewrap {
+  margin-top: 0.8cqw;
+  display: flex; flex-direction: column; align-items: center;
+}
+.aw-rw-sum-time {
+  font-size: 2.2cqw; font-weight: 800; line-height: 1;
+  color: #e4e4e7; font-variant-numeric: tabular-nums;
+}
+.aw-rw-sum-timelab {
+  margin-top: 0.3cqw;
+  font-size: 0.95cqw; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: #a1a1aa;
 }
 
 /* (The slogan moved to the bottom bar's nav label — see the
