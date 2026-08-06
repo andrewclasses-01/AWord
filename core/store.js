@@ -130,7 +130,10 @@ function nextNum(map) {
 // so the numbering matches the order the teacher made them in.
 export async function ensureNumbers() {
   const map = await readAll();
-  const missing = Object.values(map).filter(n => typeof n.num !== "number");
+  // Class rolls (kind "class", root "classes" — see core/classes.js) live in
+  // this same collection but are NOT linkable things, so they never take a link
+  // number. Without this filter every class would silently eat a number here.
+  const missing = Object.values(map).filter(n => n.kind !== "class" && typeof n.num !== "number");
   if (!missing.length) return 0;
   let next = nextNum(map);
   missing.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -143,7 +146,9 @@ export async function ensureNumbers() {
 export async function getByNum(num) {
   const n = Number(num);
   if (!Number.isFinite(n)) return null;
-  const hits = Object.values(await readAll()).filter(x => x.num === n);
+  // `kind !== "class"` for the same reason as in ensureNumbers(): a class roll
+  // is not something a ?f= / ?a= link may ever resolve to.
+  const hits = Object.values(await readAll()).filter(x => x.kind !== "class" && x.num === n);
   return hits.find(x => !x.trashed) || hits[0] || null;
 }
 

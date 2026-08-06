@@ -106,7 +106,13 @@ export const TEMPLATES = [
     blurb: "Two teams race on a chess clock — explain the word, spell it, pass the turn.",
     css: "templates/running-word/running-word.css",
     load: () => import("../templates/running-word/running-word.js"),
-    sample: () => import("../templates/running-word/sample-running-word.js") }
+    sample: () => import("../templates/running-word/sample-running-word.js") },
+
+  { type: "running_team",    label: "Running team",    built: true,
+    blurb: "The class races one clock: a named pupil reads a number off the paper, the rest pick that word from six look-alikes.",
+    css: "templates/running-team/running-team.css",
+    load: () => import("../templates/running-team/running-team.js"),
+    sample: () => import("../templates/running-team/sample-running-team.js") }
 ];
 
 export function templateEntry(type) {

@@ -32,6 +32,9 @@ const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus
 const OPT_RW   = { timer: "none", teamAName: "TEAM A", teamBName: "TEAM B", clockSeconds: 300,
                    incrementSeconds: 0, wordsPerTeam: 0, allowPass: true, passPenaltySeconds: 10,
                    andrewUses: 1, warnSeconds: 15 };
+// Running team also runs its own clocks: one countdown for the whole round and a
+// short one per question. `lives: 0` would mean unlimited; 3 is the default.
+const OPT_RT   = { timer: "none", mainSeconds: 600, questionSeconds: 15, lives: 3 };
 
 const anagram = (title, pairs) => ({
   type: "anagram", title, theme: "classic", options: OPT_ANA,
@@ -48,6 +51,13 @@ const speaking = (title, cards) => ({
 const runningWord = (title, words) => ({
   type: "running_word", title, theme: "classic", options: { ...OPT_RW },
   content: { words: words.filter(Boolean) }
+});
+// No `gameSets` here on purpose: a set pairs a printed numbering with the class
+// roll it was played with, so it can only be made in the game's setup screen
+// once a real class has been picked.
+const runningTeam = (title, words) => ({
+  type: "running_team", title, theme: "classic", options: { ...OPT_RT },
+  content: { words: words.filter(Boolean), gameSets: [] }
 });
 const trueFalse = (title, rows) => {
   const statements = [];
@@ -140,6 +150,10 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // hand-made `RunningW` sheet drew its two 50-word lists from). No clues, no
   // answers: the explainer supplies the meaning out loud.
   if (ENG1.length >= 2) acts.push(runningWord(`${source} / RUNNING WORD`, ENG1.map(([w]) => w)));
+  // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
+  // picked out of the pool itself by look-alike score, so no clues are needed.
+  // Six is the floor because every round puts six words on screen.
+  if (ENG1.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM`, ENG1.map(([w]) => w)));
 
   // ---- comprehension Quiz1 / Quiz2 (listening files) ----
   for (const tag of ["QUIZ1", "QUIZ2"]) {

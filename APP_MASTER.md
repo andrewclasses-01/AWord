@@ -3,7 +3,21 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **6/8/2026 (Đợt 77, v0.9.52) — WHACK-A-MOLE: SPEED 10 GẤP ĐÔI · PUNISHMENT TỐI ĐA
+> Cập nhật lần cuối: **6/8/2026 (Đợt 78, v0.9.53) — ⭐ TEMPLATE THỨ 16 "RUNNING TEAM" + ⭐ TÍNH NĂNG
+> MỚI "CLASSES" TRONG SETTINGS. CÓ SỬA CORE (thầy đặt hàng). 🟢 CHỜ THẦY DUYỆT.** Cả lớp chạy tiếp sức
+> quanh MỘT tờ giấy chuyền tay: màn hình gọi `MINH ANH — 23`, em đó dò dòng 23 trên giấy đọc to, em
+> khác chọn đúng từ giữa **6 ô mà 5 ô là từ trông giống nhất** (trò PHÂN BIỆT MẶT CHỮ → dữ liệu chỉ là
+> pool từ trần, y hệt RUNNING WORD). Hết tim = THUA · đồng hồ chính về 0 mà còn tim = THẮNG · hết từ =
+> THẮNG. **CLASSES**: danh sách lớp + học sinh, lưu bền, dùng chung cho các act sau — lưu vào **chính
+> `users/{uid}/items`** (`kind:"class"`, `root:"classes"`) để **KHỎI phải sửa luật Firebase Console**;
+> `ROOTS` cố ý KHÔNG thêm `"classes"` vì mảng đó vẽ các ô TRANG CHỦ. ⭐ **Bẫy core phát hiện được:**
+> `inlineTimerBar` và `hasLivesSlot` **loại trừ nhau** — khai cả 2 thì hàng tim được tạo rồi không bao
+> giờ gắn vào DOM, vô hình, 0 lỗi console; Running team né bằng cách ẩn topbar engine và tự vẽ hàng.
+> Tự test 0 lỗi console, đo đủ 4 cửa kết thúc + hồi quy 3 game không rò CSS. ⬜ **Đường ghi Firestore
+> của `core/classes.js` chưa từng chạy thật** (popup Google không tự động hoá được) — cần thầy tạo lớp
+> thật. Chi tiết: `templates/running-team/GHI CHU RUNNING-TEAM.md` + `GHI CHU DU AN.md` Đợt 78.
+>
+> Trước đó: **6/8/2026 (Đợt 77, v0.9.52) — WHACK-A-MOLE: SPEED 10 GẤP ĐÔI · PUNISHMENT TỐI ĐA
 > 30S · BẤM BUBBLE CŨNG TÍNH · BUBBLE ĐỎ + CHUI THEO MOLE KHI ĐẬP SAI. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY
 > DUYỆT.** 4 yêu cầu thầy gửi 1 lượt, chỉ đụng 2 file `templates/whack-a-mole/whack-a-mole.js` + `.css`.
 > **(1)** Speed 10 nhanh gấp đôi (`spawnBase` 340→170ms, `upDuration` 900→450ms), Speed 1 giữ nguyên
@@ -248,6 +262,11 @@
 > duyệt"). Trạng thái đúng là mục này.
 
 ### Đứng ở đâu rồi
+> ⚠️ **CẬP NHẬT 6/8/2026**: nay đã có **16 loại** — thêm **Running word** (thứ 15, ✅ live) và
+> **Running team** (thứ 16, 🟢 chờ thầy duyệt, Đợt 78). Ngoài ra Settings có thêm mục **Classes**
+> (danh sách lớp + học sinh, `core/classes.js`) — dữ liệu bền dùng chung, act nào gọi tên học sinh
+> thì đọc từ đó. Đoạn "14 loại" bên dưới giữ nguyên vì phần bài học kỹ thuật vẫn đúng.
+
 **Cả 14 loại act đã ✅ CHỐT, sống ở trang chủ, đã push + live** — Quiz · Anagram · Find the match ·
 Type the answer · Open the box · True or false · Gameshow quiz · Maze chase · Whack-a-mole ·
 Flying fruit · Balloon pop · Crossword · Unjumble · Speaking cards. Mỗi loại có content editor riêng.

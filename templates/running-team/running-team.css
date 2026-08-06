@@ -1,0 +1,454 @@
+/* =============================================================
+   RUNNING TEAM (RUNNINGT)
+
+   Class prefix `.aw-rt-`. Nothing in here may target a core class at the top
+   level: template stylesheets are injected ONCE by ensureTemplate() and are
+   NEVER removed, so a bare `.aw-navbtn { display:none }` would go on killing
+   the arrows in every OTHER game opened later in the same session (open-the-box
+   did exactly that, Đợt 61). Every rule that reaches a core class below is
+   scoped through `.act-running_team` or `.aw-rt-card`.
+
+   All in-frame sizing is in `cqw` — never vw/clamp — so the CSS-zoom fullscreen
+   keeps the proportions exactly (core rule).
+   ============================================================= */
+
+/* =============================================================
+   FRAME — 4:3, matching Running word. This game is played standing over an
+   iPad or a TOMKO panel, and the 16:9 letterbox wastes real width there.
+
+   Scoped through `.act-running_team`, a class core/engine.js stamps onto
+   `.aw-stage` for EVERY activity from `activity.type`, at the moment the stage
+   is built — before the READY splash, well before this template's mount() runs.
+   That is why the frame is 4:3 from the very first paint. Both the resting
+   frame AND the fullscreen letterbox need their own rule: core hardcodes 16/9
+   in both.
+   ============================================================= */
+.aw-stage.act-running_team { aspect-ratio: 4 / 3; }
+:fullscreen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-webkit-full-screen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-moz-full-screen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+:-ms-fullscreen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+
+/* ⭐ THE ENGINE'S TOP BAR IS HIDDEN and this game draws its own status row.
+   Not a style preference — a necessity. The row needs a main clock AND hearts
+   AND a per-question bar; core offers `inlineTimerBar` (a middle slot) and
+   `hasLivesSlot` (a hearts slot), but engine.js picks between them with
+   `if (topbarMid) ... else if (livesSlot)`, so a template asking for both gets
+   its hearts built and silently never appended. Owning the row sidesteps that
+   entirely and costs core nothing. */
+.aw-stage.act-running_team .aw-stage-inner { padding: 0 1.6cqw 0.4cqw; }
+.aw-stage.act-running_team .aw-topbar { display: none; }
+
+/* No double-tap zoom: children hammer six big tiles, which produces "double
+   taps" constantly without ever meaning one. `manipulation` also drops the
+   ~300ms click delay browsers hold in reserve for that gesture. Deliberately
+   NOT `touch-action:none` — that would kill two-finger pinch, which nobody
+   triggers by accident. Declared on the stage AND the zoom root, because in
+   zoom mode the game paints from `.aw-zoomed` outward. */
+.aw-stage.act-running_team,
+.aw-zoomed:has(.aw-stage.act-running_team) { touch-action: manipulation; }
+
+/* Assignment/Template/Print don't apply to a live classroom round (the sheet is
+   printed from the game's own setup screen — rt-print.js). Hidden from the
+   first paint via `.act-running_team` so they never flash on then vanish.
+   Edit/Home/Style/Options are left alone. */
+.aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Set assignment"],
+.aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Template"],
+.aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Print"] { display: none; }
+
+/* The nav arrows mean nothing here (questions advance on an answer), and the
+   slogan rides the centre of the bottom bar in their place. Scoped through the
+   playarea so no other game's arrows are ever touched — `visibility` rather
+   than `display` so the bottom bar's 3-column grid keeps its shape. */
+.aw-stage.act-running_team .aw-navbtn { visibility: hidden; }
+.aw-stage.act-running_team .aw-nav-label {
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300; font-size: 1.35cqw;
+  letter-spacing: 0.28em; text-indent: 0.28em;
+  text-transform: uppercase; white-space: nowrap;
+  color: var(--aw-muted); min-width: 0;
+}
+
+/* FULLSCREEN — strip the engine's wrapper chrome, leaving only the Fullscreen
+   icon so there is still a way back out. Every vendor spelling needs its OWN
+   rule: grouping them drops the entire selector in a browser that doesn't know
+   one of the names (core's rule, see app.css). */
+:fullscreen .aw-stage.act-running_team .aw-bottombar-left,
+:fullscreen .aw-stage.act-running_team .aw-nav,
+:fullscreen .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-webkit-full-screen .aw-stage.act-running_team .aw-bottombar-left,
+:-webkit-full-screen .aw-stage.act-running_team .aw-nav,
+:-webkit-full-screen .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-moz-full-screen .aw-stage.act-running_team .aw-bottombar-left,
+:-moz-full-screen .aw-stage.act-running_team .aw-nav,
+:-moz-full-screen .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+:-ms-fullscreen .aw-stage.act-running_team .aw-bottombar-left,
+:-ms-fullscreen .aw-stage.act-running_team .aw-nav,
+:-ms-fullscreen .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+
+/* ---------- ZOOM fullscreen (`tpl.useZoomFullscreen`) ----------
+   Used INSTEAD of the real Fullscreen API, for the reasons measured on Running
+   word (5/8/2026, live iPad Chrome): a downward swipe near the top edge
+   silently dropped real fullscreen mid-round, it exited right after the 3-2-1,
+   and Chrome threw its own "stay fullscreen?" banner over the board. None of
+   that is fixable from JS — it is the browser's gesture layer sitting on top of
+   the API. Toggling a class never calls the API, so none of those affordances
+   exist to misfire. Trade-off: the browser's own tab/address bar stays visible.
+
+   Same shapes as the `:fullscreen` rules above, keyed by class, and
+   double-guarded with `:has()` because template CSS lives in the document for
+   ever. Percentages only — no hardcoded px/vw/vh — so it self-adjusts to any
+   viewport, rotation or browser-chrome change with no code change. */
+.aw-zoomed:has(.aw-stage.act-running_team) {
+  position: fixed; inset: 0; z-index: 9000;
+  width: 100vw; height: 100vh; height: 100dvh;
+  background: #0b0b0d; overflow: hidden;
+}
+.aw-zoomed:has(.aw-stage.act-running_team) .aw-page {
+  width: 100%; height: 100%; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Zoomed mode drops 4:3 on purpose and fills the real viewport exactly — the
+   4:3 was chosen for the RESTING frame because it matches an iPad's screen,
+   while the whole point of zoom is "use every pixel actually there". Giving
+   both width and height explicit values also neutralises the `aspect-ratio`
+   rule above (CSS only derives a MISSING dimension from it). */
+.aw-zoomed .aw-stage.act-running_team {
+  width: 100%; height: 100%; border-radius: 0; border: none;
+}
+.aw-zoomed .aw-stage.act-running_team ~ .aw-below,
+.aw-zoomed .aw-stage.act-running_team ~ .aw-as-bars { display: none; }
+.aw-zoomed .aw-stage.act-running_team .aw-bottombar-left,
+.aw-zoomed .aw-stage.act-running_team .aw-nav,
+.aw-zoomed .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }
+/* The Fullscreen icon is the only control left on screen, so it is pinned into
+   the stage's own bottom-right corner and kept faint. `.aw-stage-inner` (core)
+   is `position:absolute;inset:0`, so it is the positioned ancestor here. */
+.aw-zoomed .aw-stage.act-running_team .aw-fs-always {
+  position: absolute; right: 0.8cqw; bottom: 0.8cqw; z-index: 20;
+  width: 2.2cqw; height: 2.2cqw;
+  background: transparent; opacity: .45;
+}
+.aw-zoomed .aw-stage.act-running_team .aw-fs-always svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-zoomed .aw-stage.act-running_team .aw-fs-always:hover,
+.aw-zoomed .aw-stage.act-running_team .aw-fs-always:active {
+  background: transparent; opacity: .85;
+}
+
+/* =============================================================
+   CARD — fills the play area; the setup screen and the match take turns.
+   ============================================================= */
+.aw-rt-card {
+  position: relative;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  color: var(--aw-text);
+}
+.aw-rt-empty {
+  display: flex; align-items: center; justify-content: center;
+  height: 100%; font-size: 2.2cqw; font-weight: 700; color: var(--aw-muted);
+  text-align: center; padding: 0 6cqw;
+}
+
+/* =============================================================
+   SETUP SCREEN
+   ============================================================= */
+.aw-rt-setup {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1.1cqw; padding: 1.2cqw 2cqw 0.6cqw;
+  overflow-y: auto;
+}
+.aw-rt-setup-title {
+  font-size: 4.4cqw; font-weight: 800; letter-spacing: 0.06em;
+  color: var(--aw-accent); line-height: 1.1;
+}
+
+/* -- saved set slots -- */
+.aw-rt-slots { display: flex; gap: 1.1cqw; }
+.aw-rt-slot {
+  position: relative;
+  min-width: 13cqw; padding: 0.8cqw 1.2cqw 1.5cqw;
+  border: 0.28cqw solid var(--aw-tile-border-color, #d8e2f0);
+  border-radius: var(--aw-tile-radius, 1.2cqw);
+  background: var(--aw-card, #fff);
+  text-align: center; cursor: pointer;
+  transition: border-color .12s ease, transform .12s ease;
+}
+.aw-rt-slot.is-empty { opacity: .55; cursor: default; }
+.aw-rt-slot.is-stale { opacity: .5; cursor: not-allowed; }
+.aw-rt-slot.is-sel { border-color: var(--aw-accent); transform: translateY(-0.2cqw); }
+.aw-rt-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .14em; color: var(--aw-muted); }
+.aw-rt-slot-main { font-size: 2.1cqw; font-weight: 800; line-height: 1.15; }
+.aw-rt-slot-meta { font-size: 1.05cqw; color: var(--aw-muted); }
+.aw-rt-slot-del {
+  position: absolute; left: 50%; bottom: 0.35cqw; transform: translateX(-50%);
+  border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: .95cqw; font-weight: 800; letter-spacing: .08em;
+  color: var(--aw-no); opacity: .75; padding: 0.1cqw 0.4cqw;
+}
+.aw-rt-slot-del:hover { opacity: 1; }
+
+/* -- class picker + roll review -- */
+.aw-rt-classblock {
+  width: 100%; max-width: 74cqw;
+  display: flex; flex-direction: column; align-items: center; gap: 0.55cqw;
+}
+.aw-rt-classhead { display: flex; align-items: center; gap: 0.9cqw; }
+.aw-rt-classlabel { font-size: 1.2cqw; font-weight: 800; letter-spacing: .16em; color: var(--aw-muted); }
+.aw-rt-classsel {
+  font-family: inherit; font-size: 1.7cqw; font-weight: 700;
+  padding: 0.35cqw 0.9cqw;
+  border: 0.22cqw solid var(--aw-tile-border-color, #d8e2f0);
+  border-radius: 0.8cqw; background: var(--aw-card, #fff); color: var(--aw-text);
+}
+.aw-rt-classtip { font-size: 1.15cqw; color: var(--aw-muted); }
+.aw-rt-chips {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5cqw;
+  max-height: 13cqw; overflow-y: auto;
+}
+.aw-rt-chip {
+  font-family: inherit; font-size: 1.35cqw; font-weight: 700;
+  padding: 0.3cqw 0.9cqw; border-radius: 999px; cursor: pointer;
+  border: 0.2cqw solid var(--aw-accent);
+  background: var(--aw-accent); color: #fff;
+  transition: opacity .12s ease, background .12s ease;
+}
+/* Absent pupils stay VISIBLE but greyed — the teacher is ticking off a register
+   they can see, so removing the name outright would make it hard to check. */
+.aw-rt-chip.is-out {
+  background: transparent; color: var(--aw-muted);
+  border-color: var(--aw-muted); opacity: .5;
+  text-decoration: line-through;
+}
+
+/* -- facts strip -- */
+.aw-rt-facts { display: flex; gap: 2.2cqw; }
+.aw-rt-fact { text-align: center; }
+.aw-rt-fact-big { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
+.aw-rt-fact-small { font-size: 1.02cqw; color: var(--aw-muted); letter-spacing: .04em; }
+
+/* -- actions -- */
+.aw-rt-setup-acts { display: flex; gap: 0.9cqw; flex-wrap: wrap; justify-content: center; }
+.aw-rt-btn {
+  font-family: inherit; font-size: 1.4cqw; font-weight: 800;
+  padding: 0.55cqw 1.4cqw; border-radius: 0.9cqw; cursor: pointer;
+  border: 0.22cqw solid var(--aw-tile-border-color, #d8e2f0);
+  background: var(--aw-card, #fff); color: var(--aw-text);
+}
+.aw-rt-btn:hover:not(:disabled) { border-color: var(--aw-accent); }
+.aw-rt-btn:disabled { opacity: .45; cursor: not-allowed; }
+.aw-rt-btn.is-dirty { border-color: var(--aw-accent); color: var(--aw-accent); }
+.aw-rt-btn.is-icon { display: inline-flex; align-items: center; gap: 0.5cqw; }
+.aw-rt-btn.is-icon svg { width: 1.5cqw; height: 1.5cqw; }
+.aw-rt-start {
+  font-family: inherit; font-size: 2.6cqw; font-weight: 800; letter-spacing: .06em;
+  padding: 0.7cqw 3.2cqw; border-radius: 1.1cqw; cursor: pointer;
+  border: none; background: var(--aw-accent); color: #fff;
+  box-shadow: var(--aw-tile-shadow, 0 0.3cqw 0 rgba(0,0,0,.18));
+}
+.aw-rt-start:disabled { opacity: .4; cursor: not-allowed; }
+
+/* =============================================================
+   MATCH SCREEN
+   ============================================================= */
+.aw-rt-match { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+
+/* -- status row: main clock · hearts · question bar · score -- */
+.aw-rt-top {
+  flex: 0 0 auto;
+  display: flex; align-items: center; gap: 1.2cqw;
+  padding: 0.6cqw 0.4cqw 0.5cqw;
+}
+.aw-rt-mainclock {
+  font-size: 3.1cqw; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;      /* digits stop jittering as they change */
+  color: var(--aw-text); min-width: 7.4cqw;
+}
+.aw-rt-mainclock.is-low { color: var(--aw-no); }
+.aw-rt-hearts { display: flex; align-items: center; gap: 0.25cqw; flex: 0 0 auto; }
+.aw-rt-heart { font-size: 2.1cqw; line-height: 1; color: var(--aw-no); }
+.aw-rt-heart.is-out { color: var(--aw-muted); opacity: .35; }
+.aw-rt-heart.is-inf { color: var(--aw-accent); font-weight: 800; }
+.aw-rt-heartx { font-size: 1.6cqw; font-weight: 800; color: var(--aw-no); }
+.aw-rt-qbar {
+  flex: 1 1 auto; min-width: 0; height: 1.5cqw;
+  border-radius: 999px; overflow: hidden;
+  background: rgba(0,0,0,.11);
+}
+.aw-rt-qbar-fill {
+  width: 100%; height: 100%; border-radius: 999px;
+  background: var(--aw-ok);
+  transition: width .1s linear, background-color .2s ease;
+}
+.aw-rt-qbar-fill.is-warning { background: var(--aw-no); }
+/* Deliberately UNOBTRUSIVE (teacher's request): the class is playing against
+   the clock, not for a scoreboard, so the tally sits small at the end of the
+   row rather than competing with the question. */
+.aw-rt-score {
+  display: inline-flex; align-items: center; gap: 0.3cqw;
+  font-size: 1.5cqw; font-weight: 800; color: var(--aw-muted); flex: 0 0 auto;
+}
+.aw-rt-score svg { width: 1.5cqw; height: 1.5cqw; }
+
+/* -- board -- */
+.aw-rt-board {
+  flex: 1 1 auto; min-height: 0;
+  display: flex; flex-direction: column; gap: 1cqw;
+  padding: 0.4cqw 0.4cqw 1cqw;
+}
+
+/* THE QUESTION IS A NAME AND A NUMBER — never the word. The pupil holding the
+   sheet reads it; the screen must not give it away. */
+.aw-rt-prompt {
+  flex: 0 0 auto;
+  display: flex; align-items: baseline; justify-content: center; gap: 1.6cqw;
+  min-height: 8cqw;
+}
+.aw-rt-prompt-name {
+  font-size: 5.6cqw; font-weight: 800; line-height: 1.05;
+  letter-spacing: .01em; text-transform: uppercase;
+  color: var(--aw-text);
+  max-width: 62cqw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.aw-rt-prompt-num {
+  font-size: 6.4cqw; font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--aw-accent);
+}
+.aw-rt-prompt-num::before { content: "— "; color: var(--aw-muted); font-weight: 400; }
+
+/* -- the six tiles -- */
+.aw-rt-tiles {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+  gap: 1cqw;
+}
+.aw-rt-tile {
+  position: relative;                       /* .aw-mark-fly anchors here */
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.4cqw 0.8cqw; min-width: 0; overflow: hidden;
+  font-family: inherit; cursor: pointer;
+  border: var(--aw-tile-border-width, 0.3cqw) solid var(--aw-tile-border-color, rgba(0,0,0,.12));
+  border-radius: var(--aw-tile-radius, 1.2cqw);
+  background: var(--aw-tile-0);
+  box-shadow: var(--aw-tile-shadow, 0 0.35cqw 0 rgba(0,0,0,.14));
+  transition: opacity .18s ease, transform .12s ease;
+}
+.aw-rt-tiles .aw-rt-tile:nth-child(2) { background: var(--aw-tile-1); }
+.aw-rt-tiles .aw-rt-tile:nth-child(3) { background: var(--aw-tile-2); }
+.aw-rt-tiles .aw-rt-tile:nth-child(4) { background: var(--aw-tile-3); }
+.aw-rt-tiles .aw-rt-tile:nth-child(5) { background: var(--aw-tile-1); }
+.aw-rt-tiles .aw-rt-tile:nth-child(6) { background: var(--aw-tile-2); }
+.aw-rt-tile:active:not(:disabled) { transform: translateY(0.2cqw); }
+.aw-rt-tile-text {
+  /* `--rt-fit` is set per tile by fitOnce() when a long entry would overflow;
+     1 (no shrink) is the normal case. */
+  font-size: calc(3.1cqw * var(--rt-fit, 1));
+  font-weight: 800; line-height: 1.1; text-align: center;
+  color: var(--aw-text); word-break: break-word;
+}
+/* A wrong tile dims but is NOT recoloured: the teacher's house style across
+   AWord is that a tile never changes colour on selection — feedback is the
+   flying mark plus the dimming. */
+.aw-rt-tile.is-wrong { opacity: .28; cursor: not-allowed; }
+.aw-rt-tile.is-dimmed { opacity: .15; }
+.aw-rt-tile.is-right,
+.aw-rt-tile.is-answer { outline: 0.45cqw solid var(--aw-ok); outline-offset: -0.45cqw; opacity: 1; }
+
+/* -- READY / 3-2-1 overlay -- */
+.aw-rt-overlay {
+  position: absolute; inset: 0; z-index: 8;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.93);
+  animation: aw-fadein .16s ease both;
+}
+/* The text is centred by FLEX, not by a transform — so scaling it in a keyframe
+   is safe here. (The classic AWord trap is animating `transform` on something
+   POSITIONED by `transform: translate(-50%)`; that is not the case in this
+   rule, and must not become the case.) */
+.aw-rt-overlay-text {
+  font-weight: 800; line-height: 1; letter-spacing: .06em;
+  color: var(--aw-accent);
+  animation: aw-rt-pop .3s ease both;
+}
+.aw-rt-overlay.is-ready .aw-rt-overlay-text { font-size: 9cqw; }
+.aw-rt-overlay.is-count .aw-rt-overlay-text { font-size: 16cqw; color: var(--aw-text); }
+@keyframes aw-rt-pop {
+  from { opacity: 0; transform: scale(.72); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* =============================================================
+   END-OF-ROUND PANEL (tpl.renderSummary)
+   ⚠️ This panel is drawn on the engine's backdrop OUTSIDE `.aw-rt-card`, so the
+   theme's `--aw-*` variables (scoped to the stage) do NOT reach it. Literal
+   colours only in this block — the same constraint Running word documented.
+   ============================================================= */
+.aw-rt-sum { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 4px 0 2px; }
+.aw-rt-sum-verdict { font-size: 2.6rem; font-weight: 800; letter-spacing: .04em; line-height: 1.05; }
+.aw-rt-sum.is-win .aw-rt-sum-verdict { color: #f5b301; }
+.aw-rt-sum.is-lose .aw-rt-sum-verdict { color: #e0524c; }
+.aw-rt-sum-why { font-size: .95rem; color: #8b98a8; text-align: center; }
+.aw-rt-sum-stats { display: flex; gap: 26px; margin-top: 4px; }
+.aw-rt-sum-stat { text-align: center; }
+.aw-rt-sum-big { font-size: 1.7rem; font-weight: 800; color: #f5f7fa; }
+.aw-rt-sum-small { font-size: .78rem; color: #8b98a8; letter-spacing: .04em; }
+.aw-rt-sum-class { font-size: .9rem; font-weight: 800; letter-spacing: .18em; color: #8b98a8; }
+.aw-rt-sum-acts { display: flex; justify-content: center; margin-top: 10px; }
+
+/* =============================================================
+   OPTIONS PANEL (buildExtraOptions) — the lives slider, same shape as Find the
+   match's so the two games feel identical to set up.
+   ============================================================= */
+.aw-rt-livesrow { display: flex; align-items: center; gap: 10px; }
+.aw-rt-livesslider { flex: 1 1 auto; min-width: 120px; accent-color: #e0524c; }
+.aw-rt-livesval { flex: 0 0 auto; min-width: 68px; font-weight: 800; font-size: .9rem; }
+
+/* =============================================================
+   EDITOR
+   ============================================================= */
+.aw-rt-ed-area { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.5; }
+.aw-rt-ed-sets { display: flex; flex-direction: column; gap: 6px; margin: 6px 0; }
+.aw-rt-ed-set {
+  font-size: .88rem; font-weight: 700; color: #34465c;
+  background: #f2f6fc; border: 1.5px solid #e0e9f5; border-radius: 8px; padding: 8px 10px;
+}
+
+/* =============================================================
+   PRINT — the one numbered sheet the class passes around (rt-print.js).
+   Everything is in mm: a printed page has no container-query ancestor, so cqw
+   is meaningless here and mm is the only unit that means the same thing on
+   paper as it does in the layout maths in rt-print.js.
+   ============================================================= */
+@media print {
+  .aw-rt-print { font-family: "Baloo 2", "Segoe UI", Arial, sans-serif; color: #000; }
+  .aw-rt-ps-page { page-break-after: avoid; }
+  .aw-rt-ps-head {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    border-bottom: 0.6mm solid #000; padding-bottom: 1.4mm; margin-bottom: 2.4mm;
+  }
+  .aw-rt-ps-tag { font-size: 5mm; font-weight: 800; letter-spacing: .06em; line-height: 1.05; }
+  .aw-rt-ps-sub { font-size: 3mm; font-weight: 700; color: #444; letter-spacing: .08em; }
+  .aw-rt-ps-headright { text-align: right; }
+  .aw-rt-ps-title { font-size: 3.6mm; font-weight: 800; }
+  .aw-rt-ps-extra { font-size: 2.8mm; color: #444; }
+
+  .aw-rt-ps-table.is-two { column-count: 2; column-gap: 7mm; column-fill: auto; }
+  .aw-rt-ps-row {
+    display: flex; align-items: center; gap: 2.4mm;
+    height: var(--rt-rowh); line-height: var(--rt-rowh);
+    border-bottom: 0.18mm dotted #9a9a9a;
+    break-inside: avoid;
+  }
+  .aw-rt-ps-c-no {
+    flex: 0 0 9mm; text-align: right;
+    font-size: calc(var(--rt-fs) * 0.86); font-weight: 700; color: #555;
+    font-variant-numeric: tabular-nums;
+  }
+  .aw-rt-ps-c-word {
+    flex: 1 1 auto; min-width: 0;
+    font-size: var(--rt-fs); font-weight: 700; letter-spacing: .01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+}

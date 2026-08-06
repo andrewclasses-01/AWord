@@ -212,6 +212,64 @@ không còn tự che thanh tab/địa chỉ (không có top-layer thật) — ga
 làm mẫu) — core KHÔNG có CSS chung cho `.aw-zoomed` (chỉ 1 game dùng tính tới 5/8/2026). Muốn dùng
 cho template khác: chỉ cần đặt cờ + copy khối CSS mẫu, đổi `.act-<type>` cho đúng game.
 
+## ⚠️⚠️ BẪY TOPBAR — `inlineTimerBar` và `hasLivesSlot` LOẠI TRỪ NHAU (phát hiện 6/8/2026, Đợt 78)
+
+Template khai **CẢ HAI** cờ này sẽ bị **hỏng im lặng**: phần tử tim được TẠO ra rồi **không bao giờ
+được gắn vào DOM** — không hiện, **0 lỗi console**, không dấu vết. Thủ phạm là nhánh dựng topbar trong
+`core/engine.js`:
+
+```js
+const livesSlot = tpl.hasLivesSlot ? el("span", "aw-top-lives") : null;
+if (topbarMid) topbar.append(timerEl, topbarMid, scoreEl);   // ← livesSlot BỊ BỎ RƠI
+else if (livesSlot) { ...topRight... }
+```
+
+Ghi chú ngay trong core đã nói *"A template never sets BOTH"* — nhưng đó là một **giả định**, không
+phải hàng rào: không có cảnh báo nào nếu ai đó khai cả 2.
+
+**Cách né KHÔNG cần sửa core** (Running word và Running team đều dùng): **ẩn hẳn topbar của engine rồi
+tự vẽ hàng trạng thái của mình** trong khung game —
+
+```css
+.aw-stage.act-<type> .aw-topbar { display: none; }
+```
+
+Cách này còn cho phép để **bao nhiêu thứ tuỳ ý** trên hàng đó (Running team để 4: đồng hồ chính · tim ·
+thanh giờ mỗi câu · điểm nhỏ) thay vì bị bó vào 2 khe core dựng sẵn.
+
+**⬜ ĐỀ XUẤT chưa làm**: sửa nhánh `if (topbarMid)` để nó cũng gắn `livesSlot` (bọc phải giống nhánh
+`else if`), xoá hẳn cái bẫy. Ghi ở `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 12.
+
+## LỚP HỌC (Settings → Classes) — `core/classes.js` (6/8/2026, v0.9.53)
+
+Danh sách lớp + học sinh là **dữ liệu bền cấp app**, không phải nội dung của act: act nào gọi tên học
+sinh (Running team, và các act sau) đều đọc từ đây. Sửa ở **Settings → Classes**, không sửa trong act.
+
+**Node**: `{ id, kind:"class", root:"classes", parentId:null, name, students:[{id,name}] }` — nằm
+**CHUNG collection `users/{uid}/items`** với thư mục và act.
+
+⚠️ **Vì sao chung chỗ chứ không tạo collection riêng**: luật bảo vệ Firestore chỉ mở đúng
+`match /users/{uid}/items/{itemId}`. Một collection mới (`users/{uid}/classes/...`) sẽ **bị từ chối**
+tới khi có người vào Firebase Console sửa luật bằng tay. Chung chỗ thì **không phải đụng Console**.
+Lớp vô hình với thư viện vì mọi hàm liệt kê (`listChildren`/`listFolders`/`searchItems`/`listTrash`)
+đều lọc `n.root === root`.
+
+⚠️ **KHÔNG thêm `"classes"` vào `ROOTS`.** Mảng đó điều khiển **các ô TRANG CHỦ** (`main.js`
+`renderTop()` chạy `ROOTS.forEach`), thêm vào là mọc ô thư viện thứ ba.
+
+⚠️ **`ensureNumbers()` và `getByNum()` trong `store.js` phải BỎ QUA `kind === "class"`.** Lớp học không
+phải thứ link tới được; thiếu bộ lọc thì mỗi lớp **ăn mất một số link** và `?a=57` có thể trỏ trúng một
+lớp học.
+
+⚠️ **`core/classes.js` có CACHE RIÊNG** → chỗ nào gọi `resetCache()` của store (đăng nhập/đăng xuất)
+phải gọi kèm **`resetClassesCache()`**, không thì dữ liệu 2 tài khoản lẫn nhau.
+
+⚠️ **ID học sinh phải sống sót qua lần sửa danh sách** — `mergeStudents()` giữ ID của em nào tên không
+đổi, vì dữ liệu đã lưu của act (vd GAME SET của Running team) gọi tên các em **theo ID**.
+
+⚠️ **Template nạp `core/classes.js` phải dùng `await import(...)` (ĐỘNG), không import tĩnh** — file
+này chạm tầng thư viện, mà luật "trang học sinh không nạp code thư viện" cấm kéo nó vào `play.html`.
+
 ## Luật số 1 — KHÔNG được sửa core/
 
 Thư mục `core/` (bao gồm `app.css`, `engine.js`, `registry.js`, `layout.js`, `scoring.js`,

@@ -31,6 +31,10 @@ import {
   emptyTrash, setFolderColor, folderCounts, importBundle,
   resetCache
 } from "./core/store.js";
+import {
+  listClasses, createClass, renameClass, setStudents, deleteClass,
+  parseStudentNames, mergeStudents, resetClassesCache, MAX_STUDENTS
+} from "./core/classes.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import {
   listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
@@ -197,6 +201,8 @@ function renderLogin(errorMsg) {
     try {
       await signIn();
       resetCache();
+      resetClassesCache();   // classes keep their own cache — drop it too, or the
+                             // previous account's class rolls would linger
       await init();
     } catch (e) {
       btn.disabled = false;
@@ -1317,6 +1323,7 @@ function accountBtn() {
 async function doSignOut() {
   try { await signOutNow(); } catch { /* ignore */ }
   resetCache();
+  resetClassesCache();
   state.user = null;
   state.view = "top"; state.root = null; state.folderId = null; state.query = "";
   renderLogin();
@@ -1390,10 +1397,185 @@ function openSettingsFlow() {
       const list = el("div", "aw-set-menu");
       list.append(menuRow("Default activity options",
         "Set the options new activities start with", showTemplates));
+      list.append(menuRow("Classes",
+        "Class rolls used by activities that call pupils by name", showClasses));
       // placeholder rows for features coming later
       list.append(menuRow("Appearance", "Coming soon", null));
       list.append(menuRow("Leaderboard & results", "Coming soon", null));
       body.append(list);
+    }
+
+    // ---------- Classes ----------
+    // The roll is app-wide data (core/classes.js), not activity content:
+    // Running team deals its turns to real pupils by name, and later activities
+    // will want the same list. Everything here is async — the rolls live in
+    // Firestore next to the library, so every machine signed into the teacher's
+    // account sees the same classes.
+    async function showClasses() {
+      setTitle("Classes", showMenu);
+      body.innerHTML = "";
+      body.append(el("div", "aw-set-hint",
+        "A class is a name and a list of pupils. Activities that call pupils by name "
+        + "(Running team) read these lists."));
+
+      // -- create --
+      const addRow = el("div", "aw-set-addrow");
+      const addInput = el("input", "aw-ed-input");
+      addInput.placeholder = "New class name, e.g. A1C";
+      addInput.maxLength = 40;
+      const addBtn = el("button", "aw-btn aw-btn-primary", "Create");
+      addBtn.type = "button";
+      const doCreate = async () => {
+        const name = addInput.value.trim();
+        if (!name) { addInput.focus(); return; }
+        addBtn.disabled = true;
+        try {
+          const cls = await createClass(name);
+          addInput.value = "";
+          toast(`Class "${cls.name}" created`);
+          await showClassEditor(cls.id);
+        } catch (e) {
+          addBtn.disabled = false;
+          showSetError(e.message || "Could not create the class.");
+        }
+      };
+      addBtn.onclick = doCreate;
+      addInput.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); doCreate(); } };
+      addRow.append(addInput, addBtn);
+      body.append(addRow);
+
+      // -- list --
+      const listWrap = el("div", "aw-set-menu");
+      body.append(listWrap);
+      listWrap.append(el("div", "aw-set-hint", "Loading…"));
+      try {
+        const classes = await listClasses();
+        listWrap.innerHTML = "";
+        if (!classes.length) {
+          listWrap.append(el("div", "aw-set-hint", "No classes yet — create one above."));
+        } else {
+          classes.forEach(c => {
+            const n = c.students.length;
+            listWrap.append(menuRow(c.name,
+              n === 1 ? "1 pupil" : `${n} pupils`,
+              () => showClassEditor(c.id)));
+          });
+        }
+      } catch (e) {
+        listWrap.innerHTML = "";
+        listWrap.append(el("div", "aw-set-hint", e.message || "Could not load your classes."));
+      }
+      addInput.focus();
+    }
+
+    // One class: rename it, edit its pupils, or delete it. Pupils are edited as
+    // ONE name-per-line box rather than a row of boxes — the source is nearly
+    // always a column pasted out of a register, and 25 single-field rows would
+    // be a scroll marathon. (Same reasoning as the Running word pool box.)
+    async function showClassEditor(id) {
+      setTitle("Class", showClasses);
+      body.innerHTML = "";
+      body.append(el("div", "aw-set-hint", "Loading…"));
+
+      let cls;
+      try {
+        const all = await listClasses();
+        cls = all.find(c => c.id === id);
+      } catch (e) {
+        body.innerHTML = "";
+        body.append(el("div", "aw-set-hint", e.message || "Could not load the class."));
+        return;
+      }
+      if (!cls) { showClasses(); return; }
+
+      body.innerHTML = "";
+      setTitle(cls.name, showClasses);
+
+      const errBar = el("div", "aw-ed-error");
+      errBar.style.display = "none";
+      body.append(errBar);
+
+      // -- name --
+      const nameField = el("div", "aw-ed-field");
+      nameField.append(el("label", "aw-ed-label", "Class name"));
+      const nameInput = el("input", "aw-ed-input");
+      nameInput.value = cls.name;
+      nameInput.maxLength = 40;
+      nameField.append(nameInput);
+      body.append(nameField);
+
+      // -- pupils --
+      body.append(el("div", "aw-ed-sectionhead", "Pupils"));
+      body.append(el("div", "aw-ed-tip",
+        "One name per line. In Excel, select the name column and paste (Ctrl+V) straight "
+        + "into the box. Renaming a pupil keeps their place in any saved game roster; "
+        + "deleting a line removes them."));
+      const area = el("textarea", "aw-ed-input");
+      area.rows = 14;
+      area.spellcheck = false;
+      area.placeholder = "MINH ANH\nBAO NAM\nTHUY LINH\n…";
+      area.value = cls.students.map(s => s.name).join("\n");
+      body.append(area);
+
+      const count = el("div", "aw-ed-qcount");
+      body.append(count);
+      const updateCount = () => {
+        const names = parseStudentNames(area.value);
+        count.textContent = `${names.length} / ${MAX_STUDENTS} pupils`;
+      };
+      area.oninput = () => { updateCount(); hideErr(); };
+      nameInput.oninput = hideErr;
+      updateCount();
+
+      // -- actions --
+      const actions = el("div", "aw-modal-actions");
+      const delBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete class");
+      delBtn.type = "button";
+      delBtn.onclick = async () => {
+        if (!confirm(`Delete the class "${cls.name}" and its ${cls.students.length} pupil(s)?\n\nThis cannot be undone.`)) return;
+        delBtn.disabled = true;
+        try {
+          await deleteClass(cls.id);
+          toast(`Class "${cls.name}" deleted`);
+          await showClasses();
+        } catch (e) {
+          delBtn.disabled = false;
+          showErr(e.message || "Could not delete the class.");
+        }
+      };
+      const saveBtn = el("button", "aw-btn aw-btn-primary", "Save");
+      saveBtn.type = "button";
+      saveBtn.onclick = async () => {
+        const newName = nameInput.value.trim();
+        if (!newName) { showErr("Please enter a class name."); return; }
+        saveBtn.disabled = true;
+        const label = saveBtn.textContent;
+        saveBtn.textContent = "Saving…";
+        try {
+          // mergeStudents keeps the ID of every pupil whose name is unchanged, so
+          // a Running team roster already saved against this class still points
+          // at the same people after an edit.
+          const students = mergeStudents(cls.students, parseStudentNames(area.value));
+          await setStudents(cls.id, students);
+          if (newName !== cls.name) await renameClass(cls.id, newName);
+          toast("Class saved");
+          await showClasses();
+        } catch (e) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = label;
+          showErr(e.message || "Could not save the class.");
+        }
+      };
+      actions.append(delBtn, saveBtn);
+      body.append(actions);
+      nameInput.focus();
+
+      function showErr(msg) { errBar.textContent = msg; errBar.style.display = "block"; body.scrollTop = 0; }
+      function hideErr() { if (errBar.style.display !== "none") errBar.style.display = "none"; }
+    }
+
+    function showSetError(msg) {
+      toast(msg);
     }
 
     function showTemplates() {

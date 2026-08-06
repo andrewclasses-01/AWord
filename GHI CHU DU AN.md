@@ -5,6 +5,81 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 78 (6/8/2026, v0.9.53) — ⭐ TEMPLATE THỨ 16 "RUNNING TEAM" + ⭐ TÍNH NĂNG MỚI "CLASSES" TRONG SETTINGS. CÓ SỬA CORE (thầy đặt hàng). 🟢 CHỜ THẦY DUYỆT
+
+Thầy mô tả một app mới rồi yêu cầu **thảo luận trước khi build**, sau đó chốt **triển khai cả 3 chặng,
+làm lần lượt**. Nhật ký đầy đủ + mọi số đo + thuật toán:
+`templates/running-team/GHI CHU RUNNING-TEAM.md`. Đây là bản tóm tắt cấp dự án.
+
+### Trò chơi là gì
+Cả lớp chạy tiếp sức quanh **MỘT tờ giấy chuyền tay**. Màn hình gọi `MINH ANH — 23`; em Minh Anh dò
+dòng 23 trên giấy, **đọc to từ đó**; một em khác chọn đúng từ giữa **6 ô, trong đó 5 ô là từ trông
+giống nhất**. Đúng → ✓ → **READY → 3 – 2 – 1** → câu mới, tên mới, giấy chuyền tiếp.
+Thắng thua: **hết tim = THUA · đồng hồ chính về 0 mà còn tim = THẮNG · hết sạch từ = THẮNG**.
+
+### Vòng thảo luận trước khi build đã cứu được 2 hiểu nhầm
+1. **"Ô đúng đi kèm số trong bản in"** có thể hiểu là *ô hiện số*. Nếu hiện số thì trò chơi chết ngay —
+   học sinh chỉ việc dò số khớp đề bài, không cần nghe bạn đọc. Hỏi lại → thầy chốt **6 ô CHỈ CÓ CHỮ**.
+2. Xác định được **bản chất là trò PHÂN BIỆT MẶT CHỮ**, không phải trò nghĩa → **dữ liệu chỉ là một
+   pool từ trần**, y hệt RUNNING WORD. Không phải soạn clue/nghĩa/đáp án gì cả, và dùng lại được nguyên
+   đường import `.xlsm` sẵn có. Nếu đoán bừa thành "6 nghĩa" thì đã build sai cả hình dạng dữ liệu.
+
+### ⭐ Quyết định kiến trúc quan trọng nhất — CLASSES lưu ở đâu
+Lưu lớp học vào **chính `users/{uid}/items`** (thêm `kind: "class"`, `root: "classes"`), **KHÔNG** tạo
+collection mới. Lý do: luật bảo vệ Firestore chỉ mở đúng `match /users/{uid}/items/{itemId}`, nên
+`users/{uid}/classes/...` sẽ **bị từ chối** cho tới khi có người vào Firebase Console sửa luật bằng tay
+— thêm việc tay, trên một máy có thể không phải máy đang chạy code, quên là lỗi quyền im lặng.
+Cách này **không phải đụng Console lần nào**. Lớp vô hình với thư viện vì mọi hàm liệt kê của
+`store.js` đều lọc `n.root === root`.
+
+⚠️ **`ROOTS` CỐ Ý KHÔNG thêm `"classes"`** — suýt thêm. Mảng đó điều khiển **các ô TRANG CHỦ**
+(`main.js renderTop()`); thêm vào là trang chủ mọc ô thứ ba, sai ý thầy (Classes thuộc Settings).
+
+### ⭐⭐ BẪY CORE PHÁT HIỆN ĐƯỢC (giá trị cho MỌI template sau)
+`tpl.inlineTimerBar` và `tpl.hasLivesSlot` **LOẠI TRỪ NHAU**. `core/engine.js` chọn một trong hai
+(`if (topbarMid) ... else if (livesSlot)`), nên template khai **cả 2** sẽ được tạo phần tử tim rồi
+**không bao giờ gắn vào DOM** — vô hình, **0 lỗi console**. Game này cần cả thanh giờ mỗi câu lẫn hàng
+tim lẫn đồng hồ chính, nên **ẩn hẳn topbar engine và tự vẽ hàng** (y RunningW) → **không phải sửa core
+cho bản thân game**. Đã ghi "ĐỀ XUẤT SỬA CORE" để vá bẫy cho tương lai.
+
+### Files
+**Mới**: `core/classes.js` · `templates/running-team/` (9 file).
+**Sửa core** (đều do Classes + tích hợp, thầy đặt hàng): `core/store.js` (2 dòng phòng vệ —
+`ensureNumbers`/`getByNum` bỏ qua `kind==="class"`, không thì mỗi lớp **ăn mất một số link** và `?a=57`
+có thể trỏ trúng lớp học) · `main.js` (hàng Classes + 2 màn quản lý + `resetClassesCache()` lúc đăng
+nhập/xuất) · `core/app.css` (4 dòng) · `core/catalog.js` (1 mục) · `core/lesson-import.js` (1 nhánh:
+file `.xlsm` nay tự sinh thêm act RUNNING TEAM từ cột D) · `core/convert.js` (2 nhánh + guard sàn 6 từ).
+
+### Tự test (devserver :5510, trình duyệt thật, **0 lỗi console** suốt phiên)
+- ⭐ **Vùng chơi khung 4:3 cao 69.01cqw**, KHÔNG phải 45.67cqw của khung 16:9 — số này phiên sau cần.
+  Card khớp đúng vùng chơi, tràn = 0.
+- **4 cửa kết thúc đo đủ**: hết tim → GAME OVER (tim `2/2→1/2→0/2`) · hết từ → CLASS WINS 6/6 · đồng hồ
+  chính cạn → CLASS WINS (đo 29,4s) · bảng kết thúc chỉ còn 1 nút Start again.
+- **Unlimited (tim=0)**: sai thì ô mờ + **chọn lại**, không mất tim, không over; hết giờ vẫn sang câu mới.
+- Số câu **ngẫu nhiên không lặp** (pool 6 → `5,6,4,1,3,2`), tên **chạy vòng tròn**.
+- Thuật toán nhiễu ra kết quả tốt: `SCRAPE→SCARCE`, `OUTLAW→OUTBREAK`, `CLEANSE→CLEANLINESS`,
+  `TRIAL→TRAIL/TRIBAL`.
+- ⭐ **Hồi quy rò CSS (làm 2 lần)**: lần 1 gọi `ensureTemplate()` từ trang con — hoá ra phép đo có tật
+  vì `catalog.js` khai đường dẫn CSS **tương đối với TRANG** nên 3 game kia chạy **thiếu CSS riêng**
+  (đó chính là 3 lỗi 404 trong console: **do cách test, không phải lỗi code**). Lần 2 chặt hơn: mở
+  thẳng `type-the-answer/test.html` rồi **bơm `running-team.css` vào giữa chừng** → tỉ lệ 1.778,
+  topbar, mũi tên, **cả 7 nút công cụ**, cỡ chữ bàn phím, `touch-action` — **không thuộc tính nào đổi**.
+- Đổi template 2 chiều đều đúng; in 20 từ → 1 cột 20,6pt, 50 từ → 2 cột 16,5pt, tờ in tự gỡ khỏi DOM.
+
+### ⚠️ Bẫy khi ĐO (không phải lỗi code) — ghi để phiên sau đỡ mất giờ
+- **Cache module ES che mất thay đổi**: nạp `convert.js?v=<time>` nhưng bên trong nó `import
+  "./catalog.js"` **không kèm tham số** → dính catalog CŨ đã nạp trong cùng trang → tưởng `running_team`
+  không vào được danh sách đích. **Tải lại trang sạch trước khi nghi code sai.**
+- **Đếm tim bằng `textContent` là sai** (tim mất chỉ đổi class `is-out`) → phải đếm `:not(.is-out)`.
+- **Layout in không đo được từ màn hình** (luật nằm trong `@media print`) → phải in giấy thật.
+
+### ⬜ Còn chờ thầy (máy không thay được)
+**Đường ghi Firestore của `core/classes.js` CHƯA từng chạy thật** — popup đăng nhập Google không tự
+động hoá được. Cần thầy vào **Settings → Classes** tạo lớp thật rồi báo. Kèm: in thử tờ A4 thật, chơi
+thử trên TOMKO/iPad.
+
+---
+
 ## Đợt 77 (6/8/2026, v0.9.52) — WHACK-A-MOLE: SPEED 10 GẤP ĐÔI · PUNISHMENT TỐI ĐA 30S · BẤM BUBBLE CŨNG TÍNH · BUBBLE ĐỎ + CHUI THEO MOLE KHI ĐẬP SAI. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
 
 Thầy gửi 4 yêu cầu 1 lượt cho riêng game Whack-a-mole. Chỉ đụng 2 file

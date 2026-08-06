@@ -1014,6 +1014,10 @@ body {
 .aw-set-rowtitle { font-size: 1rem; font-weight: 800; color: #23303e; }
 .aw-set-rowsub { font-size: .8rem; color: #7a8aa0; margin-top: 2px; }
 .aw-set-chev { flex: 0 0 auto; color: #9fb0c4; font-size: 1.4rem; line-height: 1; }
+/* Settings > Classes: the "name + Create" line above the list of classes. */
+.aw-set-addrow { display: flex; gap: 8px; align-items: center; margin: 4px 0 12px; }
+.aw-set-addrow .aw-ed-input { flex: 1 1 auto; min-width: 0; }
+.aw-set-addrow .aw-btn { flex: 0 0 auto; }
 .aw-optform { display: flex; flex-direction: column; gap: 14px; }
 .aw-optform-field { display: flex; flex-direction: column; gap: 5px; }
 .aw-optform-label { font-size: .82rem; font-weight: 700; color: #55657a; }

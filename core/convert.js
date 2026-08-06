@@ -27,8 +27,14 @@ import { shuffle } from "./utils.js";
 const QA_TARGETS = [
   "anagram", "flying_fruit", "crossword", "find_the_match", "balloon_pop",
   "quiz", "gameshow", "maze_chase", "open_the_box", "type_the_answer",
-  "whack_a_mole", "speaking_cards"
+  "whack_a_mole", "speaking_cards", "running_team"
 ];
+// Running team needs SIX words to fill a round (one answer + five look-alike
+// decoys). Hardcoded rather than imported from templates/running-team/rt-sets.js
+// on purpose: this module deliberately imports only catalog + utils so that
+// engine.js can import it statically without dragging template code onto the
+// student page. Keep in step with MIN_POOL there.
+const RUNNING_TEAM_MIN = 6;
 const TF_TARGETS = ["true_false", "whack_a_mole", "speaking_cards"];
 const SENTENCE_TARGETS = ["speaking_cards", "type_the_answer"];
 
@@ -96,6 +102,15 @@ export function toRecords(activity) {
       const cards = c.cards || [];
       return { kind: "card", records: cards.map(cd => ({ text: cd.text || "" })) };
     }
+    // Running team is a bare word pool — no clues exist to lose, and none are
+    // wanted: its wrong answers are generated from the pool by look-alike score.
+    // So it reads out as "qa" records with an empty clue, which correctly leaves
+    // only the clue-free targets (Anagram, Flying fruit, Speaking cards) offered
+    // on the way OUT, via the NEED_CLUE filter below.
+    case "running_team": {
+      const ws = c.words || [];
+      return { kind: "qa", records: ws.map(w => qaRec(typeof w === "string" ? w : w?.word, "")) };
+    }
     default:
       return { kind: "unknown", records: [] };
   }
@@ -141,6 +156,7 @@ export function switchTargets(activity) {
       // Crossword paginates at 30 answers/page up to 120 total (teacher
       // 4/8/2026, crossword.js) — 120 is the hard ceiling here too.
       if (t === "crossword" && (n < 2 || n > 120)) return false;
+      if (t === "running_team" && n < RUNNING_TEAM_MIN) return false;
       if (NEED_CLUE.has(t) && !cluesPresent) return false;
       return true;
     });
@@ -232,6 +248,12 @@ function buildContent(targetType, kind, records) {
       };
     case "speaking_cards":
       return { cards: records.map(r => ({ text: cardText(r, kind) })) };
+    // Only the terms travel: the clue (if the source had one) is dropped on
+    // purpose, because this game never shows a clue. `gameSets` starts EMPTY —
+    // a set pairs a printed numbering with a class roll, so it can only be made
+    // on the game's own setup screen once a real class has been picked.
+    case "running_team":
+      return { words: records.map(r => termOf(r, kind)).filter(Boolean), gameSets: [] };
     default:
       return {};
   }
