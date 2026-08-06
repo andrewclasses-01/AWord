@@ -70,6 +70,20 @@ tiếng Anh**, và cửa sổ 3 dòng của nó vừa được ổn định qua 
   chỗ, `autoFit` chưa phải co).
 - Chữ Việt vẫn **0/178 phải mượn font** (thành quả Đợt 75 không bị hỏng).
 
+### ✅ Đã lên LIVE — chạy lại trọn bộ TRÊN BẢN LIVE
+
+Commit `16b487b` (gộp Đợt 75 + 76) → push → `gh api .../pages/builds/latest` xác nhận Pages build đúng
+commit đó. Bẫy quen lặp lại đúng như mọi đợt: **3 lần `curl` đầu Pages còn trả file CŨ**, lần 4 mới đủ
+dấu mốc (`baloo-2-vi.woff2` ×4 · `unicode-range` ×8 · `line-height: 1.35` ×2 trong quiz.css · font
+HTTP 200). Sau đó chạy lại đầy đủ trên live (ép `fetch(..., {cache:"no-store"})` để chắc chắn đúng file):
+
+- chữ Việt **0/178 phải mượn font** · tiếng Anh **0 ký tự bị ảnh hưởng** · `baloo-2-vi.woff2` tải HTTP 200
+- **15/15 template mount · 0 lỗi console · 0 khung sai tỉ lệ**
+- **quét xén: sạch**, trừ đúng 1 điểm dư ghi lại cho trung thực — maze-chase `.aw-mc-pad-txt` xén
+  **0,6px** (đo cục bộ cùng phần tử ra **−0,4px**, tức không xén). Dưới 1 pixel, đúng chóp dấu hỏi chữ Ẳ,
+  và con số dao động theo kích thước ô mê cung. **Cố ý KHÔNG vá thêm**: ô này nhỏ, thêm `padding` dễ làm
+  lệch tâm chữ hơn là được lợi.
+
 ### File đụng vào
 
 `core/app.css` (5 luật) · 13 file CSS template (34 luật `line-height` + 3 `padding`) ·
