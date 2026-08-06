@@ -255,6 +255,31 @@
      thật "X/Y"**, logo AWord vẽ lại bằng SVG để tự thẳng hàng với tiêu đề/số trang, lề mỏng lại
      (16/12/14mm). Chi tiết đầy đủ: `GHI CHU DU AN.md` v0.9.4.
 
+## 0-BIS. ⚠️ BẪY "ĐÃ PUSH RỒI MÀ THẦY VẪN THẤY BẢN CŨ" — CACHE TRÌNH DUYỆT (6/8/2026)
+
+Có **HAI** lớp cache khác nhau, đừng lẫn:
+
+1. **Cache của GitHub Pages** (đã biết từ lâu): sau `git push`, các file lên live **không đồng thời** —
+   phải `curl` từng file kiểm chứng rồi mới tin. Đợt 78 đo được: **345 giây** mới đủ file.
+2. **⭐ Cache của TRÌNH DUYỆT THẦY** (bẫy mới, cắn thật ở Đợt 78): Pages trả
+   `Cache-Control: max-age=600` → trình duyệt giữ `main.js`/`catalog.js` **10 phút** mà KHÔNG hỏi lại
+   máy chủ. Nặng hơn nữa: nếu thầy đang mở sẵn tab AWord từ trước lúc push, **bấm lại nút trong app
+   chỉ chạy JS đã nằm trong bộ nhớ, không tải file nào** — bao lâu cũng vẫn là bản cũ.
+
+**Triệu chứng đã gặp:** curl chứng minh `main.js` live CÓ hàng Classes và `catalog.js` live CÓ 16
+template, nhưng thầy chụp màn hình Settings không có Classes và picker chỉ có 15 loại.
+
+**Cách phân biệt trong 10 giây** — đừng sửa code khi chưa làm bước này:
+```bash
+curl -s https://andrewclasses-01.github.io/AWord/core/catalog.js | grep -c '<đánh dấu mới>'
+```
+Ra `1` = **máy chủ đã đúng, lỗi ở cache trình duyệt** → bảo thầy `Ctrl+Shift+R`.
+Ra `0` = Pages chưa build xong → chờ tiếp.
+
+App **không có** service worker và **không có** cache-busting (`index.html` gọi thẳng
+`<script type="module" src="main.js">`), nên `Ctrl+Shift+R` là cách duy nhất, và sau 10 phút thì tự
+khỏi. Muốn hết hẳn thì phải thêm chuỗi phiên bản vào đường dẫn import — việc lớn, chưa làm.
+
 ## 0a. ⭐⭐ BÀN GIAO MỚI NHẤT (chốt 1/8/2026 sau Đợt 33 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục "0b" bên dưới là bàn giao CŨ của phiên 31/7 — giữ lại vì có nhiều bài học kỹ thuật còn giá trị,
