@@ -334,14 +334,32 @@ git fetch origin && git status -sb
 git add <đúng các file đã sửa> && git commit -m "..." && git push origin main
 ```
 
-**Bước 3 — ⭐ KÍCH HOẠT BUILD TRỰC TIẾP, ĐỪNG CHỜ ACTIONS**
-Pages của repo này là `build_type: "legacy"` (source = branch `main`, path `/`), nên có đường build
-**không đi qua Actions** → **không có đồng hồ 10 phút nào huỷ nó giữa chừng**:
+**Bước 3 — ⭐ KÍCH HOẠT BUILD LẠI, NHƯNG PHẢI ĐỢI RUN CŨ CHẾT HẲN**
+Pages repo này là `build_type: "legacy"` (source = branch `main`, path `/`). Có thể yêu cầu build lại
+bằng:
 ```bash
 TOKEN=$(printf "host=github.com\nprotocol=https\npath=andrewclasses-01/AWord.git\n" | git credential fill | grep ^password= | cut -d= -f2-)
 GH_TOKEN="$TOKEN" gh api -X POST repos/andrewclasses-01/AWord/pages/builds
 ```
-Đo thật ở Đợt 79: `queued` → `building` → **`built` sau 198 giây**, live cập nhật ngay.
+
+⚠️⚠️ **ĐÍNH CHÍNH (tối 6/8, sau khi đo thêm) — đừng gọi lệnh này NGAY sau `git push`.** Bản ghi đầu
+tiên của mục này nói lệnh trên "không đi qua Actions nên không bị đồng hồ 10 phút huỷ" — **SAI**. Đo
+`gh run list` cho thấy **mỗi lần POST cũng sinh ra một run `dynamic` y hệt run do push sinh ra**. Gọi
+ngay sau push = **2 run cách nhau 1 giây, giẫm chân nhau**, một cái bị `cancelled`:
+```
+b2c1f5f  15:02:48 failure   +  15:02:49 cancelled   <- push & POST cùng lúc => hỏng
+35f9ada  14:47:38 cancelled +  14:47:39 failure     <- push & POST cùng lúc
+8bd979f  14:36:59 cancelled +  14:37:00 failure     <- push & POST cùng lúc
+aafd454  14:16:03 failure   ...  14:28:19 SUCCESS   <- POST khi run cũ ĐÃ chết => CHẠY MỘT MÌNH, THẮNG
+```
+→ **Luật đúng: POST khi KHÔNG còn run nào đang chạy.** Kiểm trước bằng
+`gh run list --limit 3 --json status` (phải toàn `completed`). Sau `git push` thì run tự động sẽ ngốn
+~10 phút rồi mới chết — chờ nó chết hẳn rồi hẵng POST, build mới chạy một mình.
+
+**Bản chất:** backend Pages của repo này lúc nhanh lúc chậm thất thường (cùng nội dung: 20 giây · 30
+giây · 3,6 phút · 5,5 phút · 8,2 phút · rồi vượt 10 phút). Lệnh POST **không phải phép màu**, nó chỉ
+là **thử lại** — thắng khi vớ đúng lúc backend nhanh VÀ không bị run khác huỷ. Đo thật Đợt 79: có lần
+`built` sau 88 giây / 155 giây / 198 giây, có lần `errored`.
 
 **Bước 4 — chờ `built` rồi mới kiểm file live**
 ```bash
