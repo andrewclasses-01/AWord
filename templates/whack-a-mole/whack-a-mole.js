@@ -21,7 +21,7 @@
 //    at 0; "countUp" shows no bar and ends only on the objective. Either way,
 //    clearing every needed answer ends the round early.
 //  • Extras: Lives (hearts), a wrong-hit points penalty, a wrong-hit "Punishment"
-//    freeze (0-10s, Options), combo streak bonus, and three independently-toggled
+//    freeze (0-30s, Options), combo streak bonus, and three independently-toggled
 //    bonus CRATES (time / loot / power).
 //  • The wooden SIGN doubles as the scoreboard: when the round ends the question
 //    clears off the plank and the final score counts up there.
@@ -64,7 +64,8 @@ const CRATE_CHANCE = 0.16;     // chance a spawn is a crate instead of a mole (w
 const PUNISH_DEFAULT = 4;      // wrong hit: seconds the dizzy mole stays up + everything else pauses.
                                // Teacher-adjustable since 4/8/2026 ("Punishment" slider, 0..10s);
                                // 4 = the value this was hard-coded to before, so old acts play the same.
-const MAX_PUNISH = 10;
+const MAX_PUNISH = 30;      // teacher, 6/8/2026: raised from 10s so a class can get a much longer
+                             // "read the sign again" pause after a wrong hit if they want one.
 const MAX_LIVES = 10;
 // Below this the freeze is too short to read as a punishment, so we skip the
 // "WAIT…" note and the dizzy wobble and just let the mole duck.
@@ -169,7 +170,7 @@ const wamTemplate = {
     slider(gPen, "is-pen", 0, 5, () => (typeof draft.minusAmount === "number" ? Math.max(0, Math.min(5, draft.minusAmount)) : 1),
       v => draft.minusAmount = v, v => v === 0 ? "Off" : "−" + v);
 
-    // PUNISHMENT 0..10s (0 = off) — how long the game freezes after a wrong hit
+    // PUNISHMENT 0..30s (0 = off) — how long the game freezes after a wrong hit
     const gPunish = group("Punishment (pause after a wrong hit)");
     slider(gPunish, "is-punish", 0, MAX_PUNISH,
       () => (typeof draft.punishSeconds === "number" ? Math.max(0, Math.min(MAX_PUNISH, draft.punishSeconds)) : PUNISH_DEFAULT),
@@ -246,12 +247,14 @@ const wamTemplate = {
     // ---------- pacing from speed ----------
     // The 1..10 slider is spread EVENLY between the two real extremes (teacher,
     // 4/8/2026): 1 = very slow (one mole at a time, up for ages), 10 = frantic.
-    // The old formula only reached 1260ms/2535ms/2 moles at speed 1, which the
-    // teacher still found too fast — so speed 1 now starts from a much slower
-    // pace and every step is one equal slice of the way to speed 10.
+    // Speed 1 keeps its original pace (2400ms/4200ms); speed 10 was doubled again
+    // (teacher, 6/8/2026 — "tốc độ 10 tăng gấp đôi hiện tại"): the old top end was
+    // 340ms/900ms, the new one is exactly half of that, 170ms/450ms. Every step
+    // 2..9 is still one equal linear slice between those two endpoints (`pace`
+    // itself didn't change), so mid speeds land proportionally faster too.
     const pace = (speed - 1) / 9;                                            // 0 at speed 1 … 1 at speed 10
-    const spawnBase = Math.round(2400 + pace * (340 - 2400));                // gap between spawns (ms)
-    const upDuration = Math.round(4200 + pace * (900 - 4200));               // how long a mole stays up (ms)
+    const spawnBase = Math.round(2400 + pace * (170 - 2400));                // gap between spawns (ms)
+    const upDuration = Math.round(4200 + pace * (450 - 4200));               // how long a mole stays up (ms)
     const maxConcurrent = Math.min(HOLE_LAYOUT.length, Math.round(1 + pace * 7));
 
     // ---------- state ----------
@@ -355,7 +358,11 @@ const wamTemplate = {
       const zap = el("img", "aw-wam-zap"); zap.src = imgUrl(i % 2 ? "whackzaps2.png" : "whackzaps1.png"); zap.alt = "";
 
       hole.append(holeback, molewrap, holefront, bubble, zap);
+      // Whacking works from either the mole itself OR its speech bubble (teacher,
+      // 6/8/2026) — the bubble only becomes clickable while up (CSS: .is-up .aw-wam-bubble
+      // gets pointer-events:auto), so this never fires for a bubble that's hidden/empty.
       molewrap.addEventListener("pointerdown", () => onWhack(state));
+      bubble.addEventListener("pointerdown", () => onWhack(state));
 
       const state = {
         pos, hole, mole, crate, bubble, bubbleText, zap,
@@ -598,14 +605,14 @@ const wamTemplate = {
       if (h.status === "empty" || h.status === "ducking") return;
       clearTimer(h.duckT); h.duckT = null;
       h.status = "ducking";
-      h.hole.classList.remove("is-up", "is-crate", "is-dizzy");
+      h.hole.classList.remove("is-up", "is-crate", "is-dizzy", "is-wrong");
       if (wasMole && !h.isCrate) { wamSound.disappear(); combo = 0; }
       h.freeT = later(() => freeHole(h), 300);
     }
     function freeHole(h) {
       clearTimer(h.freeT); h.freeT = null;
       h.status = "empty"; h.item = null; h.isCrate = false; h.isCorrect = false;
-      h.hole.classList.remove("is-up", "is-hit", "is-crate", "is-dizzy");
+      h.hole.classList.remove("is-up", "is-hit", "is-crate", "is-dizzy", "is-wrong");
       h.bubbleText.textContent = "";
     }
 
@@ -654,6 +661,10 @@ const wamTemplate = {
         wamSound.wrong();
         combo = 0;
         wrongCount++;
+        // The wrong mole's own bubble turns red for the whole freeze (teacher,
+        // 6/8/2026) — independent of the dizzy wobble threshold below, so even a
+        // very short punishment still flashes red. CSS: .is-wrong .aw-wam-bubble.
+        h.hole.classList.add("is-wrong");
         if (penalty > 0) { score = Math.max(0, score - penalty); ui.setScore(score); floatText(h, "–" + penalty, "is-minus"); }
         const outOfLives = loseLife();
         if (outOfLives) {
@@ -671,7 +682,7 @@ const wamTemplate = {
           // (swapped 150ms after the hit) so the wobble matches the picture.
           if (wobble) later(() => { if (h.status === "hit") h.hole.classList.add("is-dizzy"); }, 150);
           h.freeT = later(() => {
-            h.hole.classList.remove("is-dizzy", "is-up");
+            h.hole.classList.remove("is-dizzy", "is-up", "is-wrong");
             later(() => freeHole(h), 300);
             frozen = false;
           }, freezeMs);
@@ -751,7 +762,7 @@ const wamTemplate = {
       if (spawnTimer) clearTimer(spawnTimer);
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
       timers.forEach(t => clearTimeout(t)); timers.clear();
-      holes.forEach(h => { h.hole.classList.remove("is-up", "is-crate", "is-dizzy"); });
+      holes.forEach(h => { h.hole.classList.remove("is-up", "is-crate", "is-dizzy", "is-wrong"); });
 
       // Brief score tally, then hand off to the engine's celebration/summary.
       // The tally takes over the SIGN (teacher, 4/8/2026): the question / "Hit

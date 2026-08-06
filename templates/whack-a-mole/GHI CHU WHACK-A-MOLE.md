@@ -1,11 +1,65 @@
 # GHI CHU — Template WHACK-A-MOLE
 
-**TRẠNG THÁI: ✅ ĐỢT 63 (v0.9.38) THẦY DUYỆT → COMMIT `16586a6` + PUSH + LIVE** — 5 điều chỉnh thầy gửi 1
+**TRẠNG THÁI: 🟢 ĐỢT 64 (6/8/2026, v0.9.52) CHỜ THẦY DUYỆT** — 4 yêu cầu thầy gửi 1 lượt (Speed 10 gấp
+đôi · Punishment tối đa 30s · bấm mole HAY bubble đều tính · bubble đỏ + chui theo mole khi đập sai).
+Đã tự test trên devserver (không phải đọc code suông), 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐỢT 63
+(v0.9.38) THẦY DUYỆT → COMMIT `16586a6` + PUSH + LIVE — 5 điều chỉnh thầy gửi 1
 lượt, đã chạy lại trọn bộ đo TRÊN BẢN LIVE, 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐÃ CHỐT — SỐNG Ở TRANG CHỦ + LIVE (4/8/2026, **Đợt 61, v0.9.36** — nay nhận được act
 chuyển từ mọi game QA, sửa ở `core/convert.js`, không đụng file của template này; trước đó **Đợt 57,
 v0.9.32** — 2 tinh chỉnh thầy yêu cầu). `built:true` trong `core/catalog.js` từ Đợt 32.
 > Sửa tiếp game này thì chỉ đụng `templates/whack-a-mole/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`. **KHÔNG đụng core.**
+
+## ⭐ ĐỢT 64 (6/8/2026, v0.9.52) — SPEED GẤP ĐÔI Ở MỨC 10 · PUNISHMENT TỐI ĐA 30S · BẤM BUBBLE CŨNG TÍNH · BUBBLE ĐỎ + CHUI THEO MOLE
+
+Chỉ đụng 2 file của template (`whack-a-mole.js` · `.css`). **KHÔNG đụng core.** Tự test trên devserver
+(`templates/whack-a-mole/test.html`, MutationObserver đo thời gian thật + đọc thẳng `cssRules` để tránh
+bẫy đọc `getComputedStyle` giữa lúc transition đang chạy — xem bẫy ghi dưới). 0 lỗi console.
+
+**1. Speed 10 nhanh gấp đôi, Speed 1 giữ nguyên, 2–9 vẫn trải đều tuyến tính.** Công thức `pace=(speed−1)/9`
+KHÔNG đổi (đã là "chia đều" từ trước) — chỉ đổi 2 điểm neo đầu-cuối nội suy: đích ở speed 10 giảm còn
+đúng MỘT NỬA giá trị cũ (`spawnBase` 340→**170ms**, `upDuration` 900→**450ms**); speed 1 vẫn 2400ms/4200ms.
+`maxConcurrent` (1+pace×7, trần 8/10 hố) không đổi — số mole cùng lúc không phải thứ thầy yêu cầu đổi.
+Đo thật (MutationObserver bắt `classList` đổi `is-up`, speed=10): **22 mẫu thời gian mole đứng trên mặt
+đất trung bình 451ms** (đích thiết kế 450ms, sai số đo do polling ~1-2ms) — so với 900ms cũ = **đúng gấp
+đôi**. Khoảng cách giữa các lần spawn đo được (27 mẫu) trung bình 340ms (dải 84–566ms, phản ánh cả lúc
+`maxConcurrent` đầy phải chờ thêm tick) — thấp hơn hẳn dải cũ (~240–740ms).
+
+**2. Punishment tối đa 10s → 30s.** Đổi đúng 1 hằng `MAX_PUNISH = 10 → 30`; slider Options + kẹp
+`freezeMs` đều đọc từ hằng này nên tự theo. Đo: `input.aw-wam-slider.is-punish` sau khi mở Options ra
+đúng `min="0" max="30"`, kéo tới 30 hiện nhãn "30s". Mặc định vẫn 4s (act cũ không có field này không đổi
+hành vi).
+
+**3. Bấm vào mole HAY bubble đều tính là đập.** Trước chỉ `molewrap` (mole/crate) có
+`pointerdown → onWhack`. Nay `bubble` cũng gắn thẳng listener y hệt, và CSS thêm
+`.aw-wam-hole.is-up .aw-wam-bubble { pointer-events: auto; }` (bubble mặc định `pointer-events:none` để
+không chặn nền phía sau khi ẩn) — chỉ bật khi mole đang lên (is-up), nên **không ăn vào ô của crate**
+(crate không có bubble, không set is-up). Đo: dispatch `pointerdown` thẳng vào phần tử `.aw-wam-bubble`
+của 1 mole đang `is-up` → hố nhận `is-hit` ngay (kể cả khi câu trả lời sai còn ra thêm `is-wrong`, xem
+mục 4) — xác nhận bubble bấm được y hệt mole, không bấm trùng 2 lần (2 phần tử DOM tách biệt).
+
+**4. Đập SAI → bubble của CHÍNH mole đó đỏ suốt thời gian phạt, rồi nhỏ lại + chui xuống theo mole.**
+- **Đỏ khi phạt:** thêm class `is-wrong` vào hố ngay lúc trúng sai (`onWhack`, trước cả khi kiểm tra hết
+  mạng hay chưa, nên game-over cũng đỏ) — KHÔNG phụ thuộc ngưỡng "wobble" 400ms như `is-dizzy` (dizzy chỉ
+  bật khi phạt ≥400ms để không rung vô nghĩa với phạt siêu ngắn, nhưng bubble đỏ luôn hiện dù phạt 0.1s).
+  CSS `.aw-wam-hole.is-wrong .aw-wam-bubble` đổi `background`/`border-color`; `.aw-wam-bubble-text` đổi
+  màu chữ đỏ đậm; tail `::before`/`::after` cũng đổi theo (khớp cả biến thể `-b` vì cùng mang class gốc
+  `aw-wam-bubble`). Dọn `is-wrong` ở **cả 4 chỗ** dọn `is-dizzy` cũ (nhánh hết-phạt trong `onWhack` ·
+  `duck()` · `freeHole()` · `endGame()`) — đúng khuôn phòng ngừa đã ghi từ Đợt 57, không bao giờ kẹt đỏ.
+- **Nhỏ lại + chui theo mole:** trạng thái ẩn mặc định của `.aw-wam-bubble` trước chỉ `scale(.6)` tại chỗ
+  (không di chuyển); nay thêm `translateY(45%)` xuống dưới + thu nhỏ hơn (`scale(.45)`), cùng nới
+  `transition` từ `.22s` lên `.3s cubic-bezier(.22,.9,.3,1)` — khớp gần đúng với `transition` `.26s` của
+  chính mole — nên khi `is-up` bị gỡ (duck), cả hai cùng lún xuống một nhịp, đọc như bubble "chui theo".
+- **⚠️ Bẫy đo:** `background: linear-gradient(...)` là thuộc tính RỜI RẠC (không nội suy mượt được) nên
+  Chrome đổi gần như NGAY LẬP TỨC sang giá trị đích; còn `border-color` (đã thêm vào danh sách
+  `transition`) là màu thật nên nội suy mượt trong `.25s`. Đọc `getComputedStyle` NGAY trong cùng tick
+  đồng bộ với lúc thêm class `is-wrong` bắt được `background` đã đổi nhưng `border-top-color` vẫn còn màu
+  nâu cũ — **không phải lỗi**, chỉ vì transition chưa kịp chạy khung hình nào. Đo đúng: hoặc đợi vài trăm
+  ms rồi đọc `getComputedStyle`, hoặc đọc thẳng `cssRules` khai báo trong stylesheet (không dính transition).
+  Đã xác nhận cả 2 cách: rule `.is-wrong .aw-wam-bubble` khai đúng `background`+`border-color` đích, và
+  rule `.is-up .aw-wam-bubble` khai đúng `translateY(0) scale(1)` (đối lập với hidden `translateY(45%)
+  scale(.45)`) — script đo giống hệt bẫy `el.getAnimations()` đã ghi ở Đợt 57, chỉ khác đây là
+  `transition` (CSS Transitions) chứ không phải `@keyframes` (CSS Animations).
 
 ## ⭐ ĐỢT 63 (4/8/2026, v0.9.38) — 5 ĐIỀU CHỈNH THẦY GỬI 1 LƯỢT
 
@@ -173,8 +227,8 @@ nhóm "Auto switch" + nút Timer "None" (chỉ còn Count up / Count down; none�
 - **trueFalse**: `content.statements[{text, answer:bool}]`. **quiz**: `content.questions[{question,
   answers:[{text,correct}]}]`. `options.mode` chọn chế độ.
 - `options`: `mode`, `timer`(countUp/countDown), `timerTotalSeconds`, `switchAnswers`, `speed`,
-  `lives`(0=∞), `minusAmount`, **`punishSeconds`**(0–10s đông cứng sau khi đập sai, thiếu field = 4s),
-  `bonusTime/Loot/Power`, `shuffleQuestions`, `showAnswers`.
+  `lives`(0=∞), `minusAmount`, **`punishSeconds`**(0–30s đông cứng sau khi đập sai, thiếu field = 4s;
+  nâng trần 10→30 ở Đợt 64), `bonusTime/Loot/Power`, `shuffleQuestions`, `showAnswers`.
 
 ## BẪY (đã gặp trong đợt này)
 - `.aw-top-timer` ẩn bằng `visibility:hidden` — `display:none` phá grid `has-inline` (topbarMid dồn về cột 0).

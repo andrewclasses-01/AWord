@@ -272,10 +272,14 @@
 .aw-wam-hole img { display: block; width: 100%; -webkit-user-drag: none; user-drag: none; }
 .aw-wam-molewrap .aw-wam-mole { pointer-events: auto; }
 
-/* the whole hole is only clickable while a mole is up */
+/* the whole hole is only clickable while a mole is up — the speech bubble counts
+   as a hit too (teacher, 6/8/2026), so it gets the same pointer-events toggle;
+   crates never carry a bubble (bubbleText stays empty, no .is-up class), so this
+   never makes an invisible bubble eat a crate click. */
 .aw-wam-hole { pointer-events: none; }
 .aw-wam-hole.is-up .aw-wam-molewrap,
 .aw-wam-hole.is-crate .aw-wam-molewrap { pointer-events: auto; }
+.aw-wam-hole.is-up .aw-wam-bubble { pointer-events: auto; }
 
 /* ---------- SPEECH BUBBLE (mole's content) — sits just above the mole ----------
    Drawn in CSS (cream body + brown outline + a little tail) instead of a stretched
@@ -287,13 +291,17 @@
   left: 50%; bottom: 80%;                    /* clear ABOVE the mole's head — at 62% the
                                                 tail dug ~20px into the mole's face (measured
                                                 against the sprite's real ink, 4/8/2026) */
-  transform: translateX(-50%) scale(.6);
+  /* hidden state also sinks DOWN + shrinks (not just scale in place), so ducking
+     reads as the bubble following its mole back into the hole (teacher, 6/8/2026) —
+     same .3s timing/easing as the mole's own duck transition so the two move together. */
+  transform: translateX(-50%) translateY(45%) scale(.45);
   transform-origin: 50% 130%;
   width: max-content;                        /* hug the text (NOT clamped by the narrow hole)... */
   max-width: 21cqw;                          /* ...but wrap long statements */
   z-index: 5;
   opacity: 0;
-  transition: opacity .2s ease, transform .22s cubic-bezier(.22,.9,.3,1);
+  transition: opacity .26s ease, transform .3s cubic-bezier(.22,.9,.3,1),
+              background .25s ease, border-color .25s ease;
   pointer-events: none;
   text-align: center;
   padding: 0.85cqw 1.2cqw;                   /* small gap between the text and the bubble edge */
@@ -320,7 +328,19 @@
 .aw-wam-bubble-b::before { left: auto; right: 30%; border-left: 1cqw solid transparent; border-right: 1.7cqw solid transparent; }
 .aw-wam-bubble-b::after  { left: auto; right: 31%; border-left: 0.8cqw solid transparent; border-right: 1.35cqw solid transparent; }
 /* only moles carry a speech bubble — crates (time/loot/power) show none */
-.aw-wam-hole.is-up .aw-wam-bubble { opacity: 1; transform: translateX(-50%) scale(1); }
+.aw-wam-hole.is-up .aw-wam-bubble { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+
+/* WRONG hit -> the bubble itself turns red for the whole punishment freeze
+   (teacher, 6/8/2026), independent of the dizzy wobble below — even a very short
+   punishment still flashes red. `background`/`border-color` are transitioned on
+   the base rule above so it also fades smoothly back to cream as it ducks out. */
+.aw-wam-hole.is-wrong .aw-wam-bubble {
+  background: linear-gradient(#f8d6d3, #eba8a0);
+  border-color: #8a2c22;
+}
+.aw-wam-hole.is-wrong .aw-wam-bubble-text { color: #6b1810; }
+.aw-wam-hole.is-wrong .aw-wam-bubble::before { border-top-color: #8a2c22; }
+.aw-wam-hole.is-wrong .aw-wam-bubble::after  { border-top-color: #eba8a0; }
 .aw-wam-bubble-text {
   font-size: 1.72cqw;
   font-weight: 700;

@@ -5,6 +5,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 77 (6/8/2026, v0.9.52) — WHACK-A-MOLE: SPEED 10 GẤP ĐÔI · PUNISHMENT TỐI ĐA 30S · BẤM BUBBLE CŨNG TÍNH · BUBBLE ĐỎ + CHUI THEO MOLE KHI ĐẬP SAI. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+
+Thầy gửi 4 yêu cầu 1 lượt cho riêng game Whack-a-mole. Chỉ đụng 2 file
+`templates/whack-a-mole/whack-a-mole.js` + `.css`. Đã tự test trên devserver
+(`templates/whack-a-mole/test.html`), **0 lỗi console**. Nhật ký đầy đủ + mọi số đo:
+`templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md` Đợt 64. Tóm tắt:
+
+1. **Speed 10 nhanh gấp đôi hiện tại, Speed 1 giữ nguyên, các mức 2–9 vẫn trải đều tuyến tính** — công
+   thức `pace=(speed−1)/9` không đổi (đã "chia đều" từ trước), chỉ đổi điểm neo speed 10:
+   `spawnBase` 340→**170ms**, `upDuration` 900→**450ms** (đúng một nửa). Đo thật bằng MutationObserver
+   theo dõi lớp `is-up` của 10 hố khi speed=10: **22 mẫu mole-đứng-trên-mặt-đất trung bình 451ms**
+   (đích 450ms) — đúng gấp đôi tốc độ so với 900ms cũ.
+2. **Punishment (thời gian đông cứng sau khi đập sai) tối đa 10s → 30s** — đổi hằng `MAX_PUNISH`, slider
+   Options tự theo (đo `min/max` của `<input>` ra đúng `0`/`30`). Mặc định vẫn 4s, act cũ không đổi.
+3. **Bấm vào mole HAY bubble (bong bóng chữ) đều tính là đập** — trước chỉ mole/crate bắt được
+   `pointerdown`; nay bubble cũng gắn thẳng, CSS chỉ mở `pointer-events:auto` cho bubble lúc mole đang
+   lên (không ăn vào crate, crate không có bubble). Đo: bắn `pointerdown` thẳng vào phần tử bubble của
+   1 mole đang lên → hố nhận `is-hit` ngay.
+4. **Đập sai → bubble của chính mole đó đỏ suốt thời gian phạt, rồi nhỏ lại + chui xuống theo mole mượt
+   mà** — thêm class `is-wrong` (đỏ nền/viền/chữ, đỏ dù phạt rất ngắn, không phụ thuộc ngưỡng rung như
+   `is-dizzy`), dọn ở cả 4 chỗ dọn `is-dizzy` cũ (đúng khuôn phòng ngừa đã có từ trước) — không bao giờ
+   kẹt đỏ. Trạng thái ẩn của bubble đổi từ "co tại chỗ" sang **lún xuống + thu nhỏ hơn**
+   (`translateY(45%) scale(.45)`, trước chỉ `scale(.6)`), transition nới lên `.3s` khớp gần đúng nhịp
+   `.26s` của chính mole, nên lúc duck cả hai cùng lún một nhịp — bubble đọc như đang "chui theo" mole.
+   ⚠️ Bẫy đo gặp lại: `background` (gradient) là thuộc tính RỜI RẠC nên đổi gần như tức thì, còn
+   `border-color` (đã thêm `transition`) nội suy mượt trong `.25s` — đọc `getComputedStyle` NGAY trong
+   cùng tick lúc thêm class sẽ thấy nền đã đổi mà viền chưa, **không phải lỗi**, chỉ do transition chưa
+   kịp chạy khung hình nào; đo đúng bằng cách đợi vài trăm ms hoặc đọc thẳng `cssRules` khai báo trong
+   stylesheet (tương tự bẫy `el.getAnimations()` đã ghi cho `@keyframes` ở Đợt 57, đây là bản `transition`).
+
+**Việc kế:** thầy chơi thử thật (chạm tay nếu có màn cảm ứng) để xác nhận cảm giác Speed 10 mới không
+quá tải với lớp học, xác nhận bấm trúng bubble ăn điểm giống bấm trúng mole, và xem màu đỏ + hiệu ứng
+bubble chui xuống có rõ/đẹp mắt không → duyệt → commit + push + live.
+
+---
+
 ## Đợt 76 (6/8/2026, v0.9.51) — ⭐ HẾT XÉN DẤU CHỮ VIỆT: `line-height` 1.35 CHO 34 Ô CHỮ NỘI DUNG + 3 CHỖ BÙ `padding`. ⭐ CÓ SỬA CORE (`core/app.css`, thầy duyệt trước). ✅ THẦY CHỐT LÀM LUÔN → COMMIT + PUSH CHUNG VỚI ĐỢT 75
 
 Nối tiếp Đợt 75 (đã chữa lẫn font). Đợt này chữa nốt lỗi số 2: **dấu bị xén cụt**.
