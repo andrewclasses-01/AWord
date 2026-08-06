@@ -349,6 +349,17 @@ GH_TOKEN="$TOKEN" gh api repos/andrewclasses-01/AWord/pages/builds/latest | grep
 ```
 Thấy `"built"` mới `curl` kiểm dấu mốc (rồi mới sang bẫy cache trình duyệt ở mục 0-BIS).
 
+⚠️⚠️ **`built` KHÔNG có nghĩa là file đã đổi ngay — ĐỪNG tưởng deploy lại hỏng.** Sau khi build xong
+còn phải chờ **CDN lan truyền**, và độ trễ này rất dài + không đều giữa các file (bẫy mục 9). Đo thật:
+Đợt 78 **345 giây**; Đợt 79 build `35f9ada` xong sau 88 giây nhưng `APP_MASTER.md` tới **570 giây** mới
+đổi (`curl` kèm `?cb=` ngẫu nhiên vẫn trả bản cũ suốt 9 phút đầu). **Cách kết luận đúng:** so `commit`
+của build mới nhất với `git rev-parse origin/main` —
+```bash
+GH_TOKEN="$TOKEN" gh api repos/andrewclasses-01/AWord/pages/builds/latest | grep -o '"commit":"[0-9a-f]*"'
+```
+trùng nhau + `"status":"built"` = **đã xong phía GitHub, chỉ còn chờ CDN**, tuyệt đối đừng build lại
+hay sửa code. Nếu cần chắc, poll `curl` tới ~10 phút rồi mới kết luận.
+
 ### ❌ NHỮNG VIỆC ĐỪNG LÀM (đã thử, vô ích)
 - **ĐỪNG đẩy commit rỗng để "kích hoạt lại deploy".** Đợt 79 đã lỡ đẩy **2 commit rác** (`f595233`,
   `aafd454`) — vô ích, vì chúng vẫn đi qua đúng đường Actions đang bị timeout. Chỉ làm bẩn lịch sử.
