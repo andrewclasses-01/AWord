@@ -46,7 +46,7 @@
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
-  line-height: 1.2;
+  line-height: 1.35;
   padding: 0 5cqw;
   will-change: transform;
 }
@@ -141,7 +141,7 @@
 .aw-tf-flyclone {
   position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
   display: flex; align-items: center; justify-content: center; text-align: center;
-  font-weight: 700; line-height: 1.2; padding: 0 1vw;
+  font-weight: 700; line-height: 1.35; padding: 0 1vw;
   will-change: transform, opacity;
 }
 .aw-tf-star {

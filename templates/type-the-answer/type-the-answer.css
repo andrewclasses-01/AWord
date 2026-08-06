@@ -38,9 +38,16 @@
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.35;
   margin: 0 auto;
   max-width: 92%;
+
+  /* Vietnamese headroom — see the same note in quiz.css. This one is CENTRED in
+     .aw-tta-qarea (flex, overflow:hidden), and for a centred child padding only buys
+     back HALF its value (the box grows, so centring pulls it back up by P/2). Hence
+     0.24em here vs 0.14em where the text is top-aligned. Measured 6/8/2026: 4px of
+     the Ẳ hook was being cut at the top, ~10px of slack left below. */
+  padding-top: 0.24em;
 }
 
 /* fills the space between the (fixed) question area and the (fixed-space)
@@ -82,7 +89,7 @@
   font-weight: 700;
   color: #10b981;
   font-size: calc(3.52cqw * var(--fit));   /* EXACTLY the input text size */
-  line-height: 1.15;
+  line-height: 1.35;
   padding-bottom: calc(0.6cqw * var(--fit));
 }
 /* When the reveal was opened by "Andrew help" (a hint before submitting), the
@@ -114,7 +121,7 @@
   font-family: inherit;
   font-size: calc(3.52cqw * var(--fit));   /* +10% (teacher, 1/8) — this is the FIXED size floor */
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.35;
   color: var(--aw-text);
   text-align: center;
   padding: calc(0.62cqw * var(--fit)) calc(1cqw * var(--fit));

@@ -75,7 +75,7 @@
 .aw-cw-clue-text {
   color: var(--aw-text);
   font-weight: 800;
-  line-height: 1.12;
+  line-height: 1.35;
   /* big-ish — prefer 1 line, wrap to 2, then autoFit (--fit) shrinks longer ones */
   font-size: calc(4.1cqw * var(--fit, 1));
   overflow-wrap: anywhere;
@@ -370,7 +370,7 @@
 .aw-cw-biglet {
   font-weight: 800;
   font-size: calc(var(--bigcell, 60px) * 0.56);
-  line-height: 1;
+  line-height: 1.35;
   color: var(--aw-text);
   text-transform: uppercase;
 }

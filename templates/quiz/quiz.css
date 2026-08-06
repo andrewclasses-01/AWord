@@ -27,10 +27,17 @@
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   text-align: center;
-  line-height: 1.12;
+  line-height: 1.35;
   margin: 0 auto;
   max-width: 96%;
   flex: 0 0 auto;
+
+  /* Vietnamese headroom: even at line-height 1.35 the tallest stacked diacritic
+     (Ẳ, ink 1.063em) still reaches 0.111em above the line box, and this text sits
+     FLUSH against the top of .aw-playarea, which clips. 0.14em of padding buys that
+     back for ~6px of drop, where raising line-height to the 1.57 it would otherwise
+     need makes autoFit shrink the whole question. Measured 6/8/2026. */
+  padding-top: 0.14em;
 }
 
 /* Answers in the lower part (margin-top:auto). Flex-wrap + justify-center gives
@@ -72,7 +79,7 @@
   /* --fit shrinks the WHOLE card (height fit); --tw shrinks THIS tile only
      (width fit) so a long single word never has to break — see quiz.js fitNow(). */
   font-size: calc(2.9cqw * var(--fit) * var(--tw, 1));
-  line-height: 1.12;
+  line-height: 1.35;
   /* NEVER split a single word across two lines. Multi-word answers still wrap
      at spaces (the tile just grows taller); a single word that is too wide is
      handled by shrinking THIS tile's font (--tw) in quiz.js, not by breaking it. */

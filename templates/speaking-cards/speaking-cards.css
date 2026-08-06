@@ -196,7 +196,7 @@
   width: 100%;                 /* fill the wrap so long prompts WRAP to many lines */
   text-align: center;
   font-weight: 700;
-  line-height: 1.14;
+  line-height: 1.35;
   color: #23303e;
   /* base × --fit (fitOnce grows --fit so the wrapped block fills the card) */
   font-size: calc(3cqw * var(--fit, 1));

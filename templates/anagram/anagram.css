@@ -33,10 +33,17 @@
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   text-align: center;
-  line-height: 1.15;
+  line-height: 1.35;
   margin: 0 auto;
   max-width: 92%;
   flex: 0 0 auto;
+
+  /* Vietnamese headroom: even at line-height 1.35 the tallest stacked diacritic
+     (Ẳ, ink 1.063em) still reaches 0.111em above the line box, and this text sits
+     FLUSH against the top of .aw-playarea, which clips. 0.14em of padding buys that
+     back for ~6px of drop, where raising line-height to the 1.57 it would otherwise
+     need makes autoFit shrink the whole question. Measured 6/8/2026. */
+  padding-top: 0.14em;
 }
 .aw-anagram-clue-generic { opacity: .75; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 

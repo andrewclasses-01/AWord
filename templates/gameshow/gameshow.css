@@ -112,7 +112,7 @@
 }
 .aw-gs-question {
   font-size: calc(4.8cqw * var(--fit));
-  font-weight: 800; text-align: center; line-height: 1.12;
+  font-weight: 800; text-align: center; line-height: 1.35;
   color: #fff; -webkit-text-stroke: 0.35cqw #05294f; paint-order: stroke fill;
   text-shadow: 0 0.4cqw 0 rgba(0,0,0,.35);
   margin: 0 auto; max-width: 98%; flex: 0 0 auto;
@@ -140,7 +140,7 @@
 }
 .aw-gs-letter { font-size: calc(1.7cqw * var(--fit)); font-weight: 900; opacity: .95; }
 .aw-gs-tiletext {
-  font-size: calc(2.7cqw * var(--fit)); line-height: 1.05; text-align: center;
+  font-size: calc(2.7cqw * var(--fit)); line-height: 1.35; text-align: center;
   color: #fff; overflow-wrap: anywhere; text-shadow: 0 0.15cqw 0.3cqw rgba(0,0,0,.4);
 }
 .aw-gs-tile:hover:not(:disabled) { filter: brightness(1.12); }

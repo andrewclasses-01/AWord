@@ -66,7 +66,7 @@
 .aw-ff-clue {
   font-size: calc(4.4cqw * var(--fit));
   font-weight: 800;
-  line-height: 1.08;
+  line-height: 1.35;
   color: #fffdf5;
   text-shadow: 0 0.25cqw 0.5cqw rgba(0,0,0,.65), 0 0 0.2cqw rgba(0,0,0,.5);
   letter-spacing: .01em;
@@ -130,7 +130,7 @@
   display: flex; align-items: center; justify-content: center;
   text-align: center;
   font-weight: 800;
-  line-height: 1;
+  line-height: 1.35;
   color: #1e3e16;
   -webkit-text-stroke: 0.18cqw #fcf0e0;
   paint-order: stroke fill;

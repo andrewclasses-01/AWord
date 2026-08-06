@@ -48,7 +48,7 @@
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
-  line-height: 1.2;
+  line-height: 1.35;
   padding: 0 4cqw;
   will-change: transform;
 }
@@ -98,7 +98,7 @@
   color: #fff; font-family: inherit; font-weight: 700;
   /* --tfit = per-tile shrink factor (fitTiles); --fit = whole-stage scale. */
   font-size: calc(1.85cqw * var(--fit) * var(--tfit, 1));
-  line-height: 1.1;
+  line-height: 1.35;
   overflow-wrap: anywhere; word-break: break-word;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
   padding: calc(0.5cqw * var(--fit)) calc(0.7cqw * var(--fit));
@@ -156,7 +156,7 @@
 .aw-ftm-flyclone {
   position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
   display: flex; align-items: center; justify-content: center; text-align: center;
-  font-weight: 700; line-height: 1.2; padding: 0 1vw;
+  font-weight: 700; line-height: 1.35; padding: 0 1vw;
   will-change: transform, opacity;
 }
 .aw-ftm-star {

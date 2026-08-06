@@ -137,7 +137,7 @@
      the box at every count), and --back-fit is a per-box shrink from
      fitBackFaces() that guarantees even a long question fits fully inside. */
   font-size: calc(var(--back-size, 1.5cqw) * var(--back-fit, 1));
-  line-height: 1.2;
+  line-height: 1.35;
   text-align: center;
   flex-direction: column;
   gap: calc(0.5cqw * var(--back-fit, 1));
@@ -339,7 +339,7 @@
      spaces and fill the tile's height instead, like before it had its own span. */
   width: 100%;
   font-size: calc(3cqw * var(--fit));
-  line-height: 1.15;
+  line-height: 1.35;
   /* Point 5 (never split a word, 4/8/2026): make this EXPLICIT here too (the
      answer text already had it; the question span only inherited it). A long
      single word must OVERFLOW (which setupFit then shrinks to fit) — it must
@@ -446,7 +446,7 @@
    single word instead overflows, which setupFit() detects (scrollWidth >
    clientWidth) and resolves by shrinking --fit until the word fits on one
    line — so the text is as large as possible with whole, unbroken words. */
-.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.1; overflow-wrap: normal; word-break: keep-all; }
+.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.35; overflow-wrap: normal; word-break: keep-all; }
 .aw-otb-q-letter {
   position: absolute; top: calc(0.8cqw * var(--fit)); left: calc(1cqw * var(--fit));
   font-size: calc(1.8cqw * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);

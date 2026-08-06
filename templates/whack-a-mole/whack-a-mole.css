@@ -155,14 +155,14 @@
   font-weight: 800;
   color: #4a3320;
   letter-spacing: .02em;
-  line-height: 1.05;
+  line-height: 1.35;
   text-align: center;
 }
 .aw-wam-sign-target {
   font-size: 4.3cqw;
   font-weight: 900;
   color: #3a2412;
-  line-height: 1;
+  line-height: 1.35;
   text-transform: uppercase;
   transform-origin: center;
 }
@@ -173,7 +173,7 @@
   font-size: calc(2.2cqw * var(--fit, 1));
   font-weight: 800;
   color: #3a2412;
-  line-height: 1.12;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -325,7 +325,7 @@
   font-size: 1.72cqw;
   font-weight: 700;
   color: #3a2a16;
-  line-height: 1.12;
+  line-height: 1.35;
   text-align: center;
 }
 

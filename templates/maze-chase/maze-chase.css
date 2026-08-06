@@ -41,7 +41,7 @@
   box-shadow: 0 .8cqw 0 rgba(0,0,0,.35), inset 0 0 2cqw rgba(126,90,214,.5);
 }
 .aw-mc-qtext {
-  --fit: 1; font-weight: 800; text-align: center; line-height: 1.15;
+  --fit: 1; font-weight: 800; text-align: center; line-height: 1.35;
   font-size: calc(3.6cqw * var(--fit));
   text-shadow: 0 .25cqw 0 rgba(0,0,0,.35);
 }
@@ -84,7 +84,7 @@
   transition: opacity .25s ease;
 }
 .aw-mc-pad-txt {
-  --fit: 1; width: 86%; text-align: center; line-height: 1.25; white-space: nowrap;
+  --fit: 1; width: 86%; text-align: center; line-height: 1.35; white-space: nowrap;
   font-weight: 800; color: #fff; font-size: calc(2cqw * var(--fit));
   text-shadow: 0 .2cqw .3cqw rgba(0,0,0,.7); overflow: hidden;
 }

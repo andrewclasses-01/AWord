@@ -46,6 +46,67 @@ thư mục · bài giao trong cùng một thư mục Results. `core/store.js` n�
 chúng và lời hứa đó vỡ. Kiểm nhanh: mở play.html rồi chạy
 `performance.getEntriesByType('resource').map(r => r.name)` — không được thấy `store.js`.
 
+## ⚠️⚠️ FONT TIẾNG VIỆT — `unicode-range` là BẮT BUỘC, không phải trang trí (v0.9.50)
+
+Font chung **Baloo 2** nay khai **8 khối `@font-face`** trong `core/app.css`: 4 khối trỏ file **latin**
+(`baloo-2-400/600/700/800.woff2`, font tĩnh) + 4 khối trỏ file **tiếng Việt** (`baloo-2-vi.woff2`, MỘT
+file biến thiên dùng chung cả 4 độ đậm). Trước v0.9.50 chỉ có 4 khối latin, và **102/178 chữ cái tiếng
+Việt bị mượn glyph của Segoe UI** → một từ hiện bằng hai font ("ĐƯỜNG" = Segoe `Đ Ư Ờ` + Baloo `N G`).
+
+**Ba luật phải giữ — sai một cái là tiếng Việt hỏng lại, im lặng, không lỗi console:**
+
+1. **MỌI khối latin phải có `unicode-range`.** Khối không khai là **nhận toàn bộ Unicode**; Chrome tin
+   lời khai chứ không tin cmap thật, nên nó chọn face latin cho chữ ă/đ/ơ/ư, thấy không có glyph, rồi
+   **nhảy thẳng sang FAMILY kế tiếp** mà không ngó khối tiếng Việt (đo được: file VN **chưa từng được
+   tải**). Thêm một độ đậm mới mà quên `unicode-range` = hỏng ngay.
+2. **KHÔNG gộp 4 khối tiếng Việt thành 1 khối `font-weight: 400 800`.** Trông gọn hơn (cùng 1 file) nhưng
+   đặt một DẢI độ đậm cạnh 4 khối latin khai giá trị ĐƠN làm Chrome thôi ghép family: face vẫn `loaded`,
+   `unicode-range` vẫn đúng, mà **không ký tự nào dùng nó**. Phải tách đúng 4 khối, mỗi khối 1 độ đậm —
+   đúng hình dạng Google Fonts tự phục vụ.
+3. **Đừng đổi 4 file latin sang bản khác** mà không đo lại chỉ số dọc. File VN được chọn vì chỉ số dọc
+   **trùng khít** file tĩnh (unitsPerEm 1000 · typoAscender 1078 · typoDescender −524 · winAscent 1050 ·
+   winDescent 524) → chữ Việt cùng baseline, không xô lệch bố cục. Lệch chỉ số = lệch dòng toàn app.
+
+**Bẫy khi tự kiểm:** `canvas.measureText` **không kích hoạt tải font**. Face chưa dùng tới luôn báo
+`unloaded`, nên đo bề rộng sẽ kết luận "vẫn mượn font" **oan**. Phải đặt chữ Việt thật vào DOM (hoặc gọi
+`FontFace.load()`) rồi mới đo.
+
+## ⚠️⚠️ `line-height` CHO CHỮ VIỆT — tối thiểu 1.35 ở mọi ô hiển thị nội dung (v0.9.51)
+
+Baloo 2 có dòng tự nhiên **1,602em** (ascent 1,078 + descent 0,524). Chữ Việt cao hơn chữ Anh nhiều:
+ink của **Ẳ = 1,063em**, của **Ạ = 0,234em** dưới baseline; chữ Anh HOA chỉ 0,70em.
+
+**Luật: mọi phần tử hiển thị NỘI DUNG của thầy (câu hỏi · clue · prompt · ô đáp án · thẻ · tiêu đề act)
+phải có `line-height` ≥ 1.35.** Lý do chính **không phải** chống xén mà là **chống chồng dòng**: khoảng
+cách baseline–baseline phải ≥ `1,063 + 0,234 = 1,297em`, nếu không thì dấu của dòng dưới **đâm vào**
+phần thò xuống của dòng trên — xảy ra ở MỌI template, dù có khung cắt hay không. Các ô chỉ hiện
+**số/biểu tượng** (đồng hồ, tim, bộ đếm, mũi tên, logo) thì **giữ nguyên**, nâng chỉ xô lệch bố cục.
+
+**Phần dư 0,111em:** ngay ở 1.35, ink của Ẳ vẫn vượt hộp dòng 0,111em. Chỉ thành lỗi khi chữ nằm **sát
+mép một khung `overflow:hidden`** — khi đó bù bằng `padding`, **đừng** đẩy `line-height` lên 1,57 (khối
+chữ cao thêm ~40%, `autoFit` sẽ co chữ thấy rõ). ⚠️ Với chữ **căn giữa** trong khung flex, `padding`
+chỉ ăn **một nửa** giá trị (hộp to ra thì phép căn giữa kéo ngược lại `P/2`) — xem `.aw-tta-prompt`
+(0.24em, căn giữa) so với `.aw-quiz-question` (0.14em, căn trên).
+
+### ⚠️⚠️ BẪY ĐO ĐẠC — `Range.getBoundingClientRect()` KHÔNG phải hộp dòng
+
+Nó trả về **hộp FONT**: mép trên = `baseline − fontAscent`, KHÔNG phải mép trên hộp dòng. Ai tưởng nhầm
+sẽ cộng thừa một lần `half-leading = (line-height − 1,602em)/2` — số này **luôn âm** khi `line-height`
+< 1,60 → báo "bị xén" **gấp đôi sự thật** và dựng ra cả những chỗ xén không có thật (đã cắn: 2/5 chỗ
+trong bản khảo sát đầu là dương tính giả).
+
+```
+inkTop = rangeTop + fontAscent − ink(Ẳ)          // ĐÚNG
+inkBot = rangeBottom − fontDescent + ink(Ạ)
+```
+
+Và **đo ink của Ẳ/Ạ bằng đúng font + đúng độ đậm của chính phần tử đó** (`ctx.font = computedStyle`),
+đừng dùng một hằng số chung — mỗi độ đậm cho ra một con số khác.
+
+⚠️ **Running word cố ý KHÔNG áp luật này** (4 luật `line-height` thấp còn nguyên): game đọc–gõ từ tiếng
+Anh, cửa sổ 3 dòng dựa trên `calc(100%/3)` + `translateY` rất nhạy, và đo cho thấy không xén. Muốn dùng
+nó với từ tiếng Việt thì phải đo lại cửa sổ 3 dòng trước.
+
 ## ⚠️⚠️ MÀN CẢM ỨNG (TOMKO) — tap highlight của Chrome, đã vá TOÀN APP ở `app.css` (v0.9.40)
 
 **Triệu chứng thầy báo (4/8/2026, CHỈ máy 3):** chạm vào ô đáp án hay nút Next/Back (đều bo góc mềm)

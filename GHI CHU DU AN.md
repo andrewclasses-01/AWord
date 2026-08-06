@@ -5,6 +5,162 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 76 (6/8/2026, v0.9.51) — ⭐ HẾT XÉN DẤU CHỮ VIỆT: `line-height` 1.35 CHO 34 Ô CHỮ NỘI DUNG + 3 CHỖ BÙ `padding`. ⭐ CÓ SỬA CORE (`core/app.css`, thầy duyệt trước). ✅ THẦY CHỐT LÀM LUÔN → COMMIT + PUSH CHUNG VỚI ĐỢT 75
+
+Nối tiếp Đợt 75 (đã chữa lẫn font). Đợt này chữa nốt lỗi số 2: **dấu bị xén cụt**.
+
+### ⭐ ĐÍNH CHÍNH TRƯỚC ĐÃ — công cụ đo của chính tôi bị sai, số liệu Đợt 75 bị thổi phồng
+
+Khi bắt tay vá mới lộ ra: `Range.getBoundingClientRect()` **KHÔNG** trả về hộp DÒNG (line box) như tôi
+tưởng, mà trả về **hộp FONT** — mép trên của nó là `baseline − fontAscent`, không phải mép trên hộp
+dòng. Công cụ quét vì thế cộng thừa một lần `half-leading = (line-height − 1,602em) / 2`, mà số này
+**luôn âm** khi `line-height` < 1,60 → mọi con số "xén" bị **thổi phồng gấp khoảng đôi**, và 2 chỗ
+hoàn toàn không xén bị báo nhầm là có.
+
+Bắt được bằng cách đo tay hình học Quiz: `question_top` = 70,3 = đúng mép `.aw-playarea`, nhưng
+`Range.top` = 63,3 — **cao hơn 7px so với chính mép trên phần tử**, điều bất khả nếu nó là hộp dòng.
+Công thức đúng: `inkTop = rangeTop + fontAscent − ink(Ẳ)`. Từ đó đo lại toàn bộ, và **ink của Ẳ/Ạ được
+đo trực tiếp bằng đúng font + đúng độ đậm của từng phần tử** thay vì dùng một hằng số chung.
+
+**Bảng đúng (thay bảng sai ở Đợt 75) — chỉ 3 chỗ xén thật, không phải 5:**
+
+| Template | Phần tử | lh cũ | Xén TRƯỚC | Xén SAU |
+|---|---|---|---|---|
+| Quiz | `.aw-quiz-question` | 1.12 | **9 px** | **0** |
+| Anagram | `.aw-anagram-clue` | 1.15 | **10 px** | **0,4 px** (dưới ngưỡng) |
+| Type the answer | `.aw-tta-prompt` | 1.15 | **8 px** | **0** (dư 6,7px trên · 10px dưới) |
+
+**Hai chỗ Đợt 75 báo nhầm — đo lại KHÔNG hề xén, kể cả trước khi sửa:** Flying fruit `.aw-ff-clue`
+(−1,6px, tức còn dư chỗ) và Maze chase `.aw-mc-pad-txt` (−0,2px). Đã sửa `line-height` cả hai vì lý do
+chống chồng dòng bên dưới, nhưng **không phải vì chúng bị xén**.
+
+### Vì sao vẫn chọn `line-height: 1.35` — lý do THẬT không phải chống xén
+
+Chống xén chỉ là phần nhỏ. Lý do chính: **hai dòng chữ Việt liền nhau đâm vào nhau**. Khoảng cách
+baseline–baseline phải ≥ `ink(Ẳ) + ink(Ạ)` = **1,297em**; ở `line-height` 1.12 thì dấu của dòng dưới
+(Ẳ, cao 1,063em) chồng lên phần thò xuống của dòng trên (Ạ, sâu 0,234em). Tức **mọi câu hỏi tiếng Việt
+xuống dòng đều bị dính chữ**, ở mọi template, dù có khung cắt hay không. `1.35 > 1.297` → hết.
+
+**Vì sao KHÔNG đẩy lên 1,57** (mức để dấu không tràn khỏi hộp dòng): 1,57 làm khối chữ cao thêm ~40%,
+`autoFit` sẽ co chữ nhỏ lại thấy rõ. Rẻ hơn nhiều: giữ 1.35 rồi bù đúng phần dư **0,111em** bằng
+`padding` tại 3 chỗ chữ nằm SÁT mép khung cắt. ⚠️ Lưu ý đã đo: với chữ **căn giữa** trong khung flex,
+`padding` chỉ ăn **một nửa** giá trị (hộp to ra thì phép căn giữa kéo ngược lại `P/2`) — nên
+`.aw-tta-prompt` phải `0.24em` trong khi `.aw-quiz-question`/`.aw-anagram-clue` (căn trên) chỉ cần `0.14em`.
+
+### Đã sửa gì
+
+**34 luật `line-height` → 1.35**, chỉ ở các ô hiển thị **nội dung của thầy** (câu hỏi · clue · prompt ·
+ô đáp án · thẻ · tiêu đề act · bảng review · thẻ thư viện). **KHÔNG đụng** các luật chỉ hiện số/biểu
+tượng (đồng hồ, tim, bộ đếm, mũi tên, logo) — nâng chúng chỉ xô lệch bố cục mà chẳng được gì.
+**3 luật thêm `padding`** như trên.
+
+⚠️ **CỐ Ý KHÔNG ĐỤNG RUNNING WORD.** Nó có 4 luật `line-height` thấp (`.aw-rw-row-body` 1.04,
+`.aw-rw-slot-main` 1.10, `.aw-rw-result-words` 1.05, `.aw-rw-setup-title` 1) nhưng là game đọc–gõ **từ
+tiếng Anh**, và cửa sổ 3 dòng của nó vừa được ổn định qua 8 đợt bằng phép toán `calc(100%/3)` +
+`translateY` rất nhạy — đổi `line-height` ở đó là đánh cược một tính năng vừa yên. Đo cũng cho thấy nó
+**không xén**. Nếu sau này thầy dùng RunningW với từ tiếng Việt thì mới xử lý, và phải đo lại cửa sổ 3 dòng.
+
+### Đo thật trên devserver
+
+- **0 chỗ còn bị xén** trên toàn bộ 15 template (quét mọi phần tử có chữ trong khung game, công thức đã sửa).
+- **Hồi quy 15/15 template**: mount hết, **0 lỗi console**, **0 khung sai tỉ lệ** (14 game 1.778; Running
+  word 1.333 = 4:3 đúng thiết kế).
+- **Giá phải trả gần như bằng 0**: câu hỏi Quiz mẫu — cỡ chữ **không đổi** (50,2px trước và sau). Ép câu
+  hỏi dài **120 ký tự** tiếng Việt — cỡ chữ vẫn **không đổi**, khối chỉ cao thêm 225 → 278,3px (còn thừa
+  chỗ, `autoFit` chưa phải co).
+- Chữ Việt vẫn **0/178 phải mượn font** (thành quả Đợt 75 không bị hỏng).
+
+### File đụng vào
+
+`core/app.css` (5 luật) · 13 file CSS template (34 luật `line-height` + 3 `padding`) ·
+`core/HUONG DAN CORE.md` · `APP_MASTER.md` · file này. **Không đụng 1 dòng JS nào.**
+
+**VIỆC ĐANG CHỜ:** thầy mở act có bộ từ VI1/VI2 trên TOMKO xem chữ đã đều font **và** dấu đã đủ chưa
+(nhất là chữ HOA có dấu như Ẳ Ắ Ộ Ữ), xem khoảng cách dòng giãn ra có vừa mắt không. Máy không tự chạm
+màn hình và **khung xem trình duyệt không hiển thị nên không chụp được ảnh** — mọi kết luận trên là đo
+DOM. Còn 2 việc chưa kiểm được: **phiếu in A4 giấy thật** (Running word) và **Running word với từ tiếng Việt**.
+
+---
+
+## Đợt 75 (6/8/2026, v0.9.50) — ⭐ CHỮ TIẾNG VIỆT HẾT LẪN FONT: BỔ SUNG SUBSET VIETNAMESE CHO BALOO 2. ⭐ CÓ SỬA CORE (`core/app.css`, thầy duyệt trước). 🟢 CHỜ THẦY DUYỆT
+
+Thầy yêu cầu khảo sát toàn bộ 15 template, soi kỹ lỗi hiển thị font khi có từ tiếng Việt (khuyết dấu
+hoặc sai font). Khảo sát tìm ra **HAI lỗi độc lập**; thầy chốt làm lần lượt, nên đợt này **chỉ vá lỗi
+số 1 (font)**, lỗi số 2 (cắt dấu) để dành đợt sau.
+
+### Lỗi 1 (vá đợt này) — font đóng gói thiếu 102/178 chữ cái tiếng Việt
+
+4 file `core/assets/fonts/baloo-2-*.woff2` chỉ là subset **latin** của Google (230 ký tự). Bảng chữ
+tiếng Việt có 178 ký tự thì font **chỉ phủ 76**. Chrome lặng lẽ mượn glyph của font kế tiếp trong
+stack (Segoe UI) → **một từ hiện bằng HAI font**: "ĐƯỜNG" = Segoe `Đ Ư Ờ` + Baloo `N G`, khác hẳn nét
+và độ đậm. Đo trên trình duyệt thật: **44 ký tự rơi thẳng sang Segoe UI**, số còn lại được trình duyệt
+chắp vá từ chữ nền + dấu rời.
+
+**Vá:** thêm subset `vietnamese` của **chính font đó** (Google Fonts) — `core/assets/fonts/baloo-2-vi.woff2`,
+**9,9 KB**, tải 1 lần dùng chung cả 4 độ đậm vì là **font biến thiên** (trục wght 400–800, đúng 4 độ
+đậm app dùng). Chỉ số dọc **trùng khít** file tĩnh đang có (unitsPerEm 1000 · typoAscender 1078 ·
+typoDescender −524 · winAscent 1050 · winDescent 524) nên chữ Việt nằm đúng cùng baseline, **không xô
+lệch bố cục ở đâu**. 4 file cũ **không đụng vào**, tiếng Anh giữ nguyên tuyệt đối.
+
+### ⚠️ HAI CÁI BẪY ĐÃ CẮN THẬT — ghi lại kẻo đợt sau vấp lại
+
+**Bẫy 1 — thêm khối `@font-face` mới KHÔNG có tác dụng gì cả.** `@font-face` không khai `unicode-range`
+là **nhận toàn bộ Unicode**, nên 4 face latin cũ vẫn "giành" ă/đ/ơ/ư. Chrome tin **lời khai**, không tin
+cmap thật: nó chọn face latin cho các chữ đó, thấy không có glyph, rồi **nhảy thẳng sang FAMILY kế tiếp**
+(Segoe UI) mà không hề ngó khối mới. Đo được: trình duyệt **chưa từng tải** file mới (`performance`
+không có entry, face báo `unloaded`). Khai sau **KHÔNG** thắng. → Phải khai `unicode-range` tường minh
+cho **cả 4 face latin**. Đã chứng minh an toàn TRƯỚC khi sửa: cmap 230 ký tự của 4 file cũ nằm **trọn**
+trong (dải latin ∪ dải Việt) — 225 thuộc dải latin, 5 ký tự còn lại là dấu rời U+0300/0301/0303/0309/0323
+mà file tiếng Việt cũng có. Còn ✓ ✗ ★ ♥ ☰ ⌫ ▲ ▼ và IPA ə ʊ ˈ thì **font vốn đã không có từ trước**, vẫn
+mượn Segoe UI y như cũ — không phải hồi quy mới.
+
+**Bẫy 2 — gộp 4 khối tiếng Việt thành 1 khối `font-weight: 400 800` thì HỎNG.** Trông rất gọn (cùng 1
+file mà), nhưng đặt một **DẢI** độ đậm cạnh 4 face latin khai **giá trị đơn** làm Chrome thôi ghép
+family: face vẫn `loaded`, vẫn đúng `unicode-range`, mà **không một ký tự nào dùng nó**. Phải viết
+**tách 4 khối, mỗi khối một độ đậm**, cùng trỏ 1 file — đúng hình dạng Google Fonts tự phục vụ. Đây là
+lý do CSS Google trả về 4 khối cùng URL, không phải thừa.
+
+### Đo thật trên devserver (không đọc code suông)
+
+- **Chữ Việt: 0/178 còn phải mượn font** (trước vá: 44 rơi hẳn + phần còn lại chắp vá) — đo bằng cách so
+  bề rộng ký tự giữa `'Baloo 2'` và `'Baloo 2', monospace`.
+- **Tiếng Anh: 0 ký tự bị ảnh hưởng** (52 chữ cái + số + dấu câu + — … ×).
+- **Font biến thiên ra đúng 4 độ đậm**: bề rộng "đường" tăng dần 278 → 293,95 → 303,33 → 311,41 px ở
+  400/600/700/800 (chữ Anh "railway" cũng tăng dần đúng nhịp) — không bị kẹt một độ đậm.
+- `baloo-2-vi.woff2` **được tải đúng 1 lần**, HTTP 200, 9888 byte, dùng chung cả 4 độ đậm.
+- **Hồi quy 15/15 template**: mount hết, **0 lỗi console**, tỉ lệ khung nguyên vẹn (14 game 1.778;
+  Running word 1.333 = 4:3 đúng thiết kế Đợt 68).
+- **In giấy không phải sửa gì**: `core/print.js` in ngay trong trang (không mở cửa sổ riêng) nên phiếu
+  in tự hưởng font mới.
+- ⚠️ Bẫy đo đạc gặp lại: khung xem trình duyệt không hiển thị → không compositing → `screenshot` timeout;
+  phải đo bằng DOM. Thêm bẫy MỚI: `canvas.measureText` **không kích hoạt tải font**, nên face chưa dùng
+  tới luôn báo `unloaded` và phép đo bề rộng sẽ báo "vẫn mượn font" oan — phải đặt chữ thật vào DOM
+  (hoặc gọi `FontFace.load()`) rồi mới đo.
+
+### Lỗi 2 (vá ở Đợt 76) — dấu bị xén cụt vì `line-height` quá thấp
+
+Baloo 2 cần chiều cao dòng tự nhiên **1,60em**. Ngưỡng: **HOA có dấu (Ẳ) cần `line-height` ≥ 1,57 ·
+thường có dấu (ẳ) ≥ 1,35 · dấu nặng (Ạ) ≥ 1,02**, trong khi **tiếng Anh chỉ cần 0,70–0,88** — cả app
+được căn chỉnh cho tiếng Anh. Toàn dự án có **67 khai báo `line-height` < 1,22**.
+
+Minh chứng trong sản phẩm thật (Quiz): tiêu đề **"ĐẲNG CẤP HỌC SINH" hiện ra "ĐĂNG CẤP HỌC SINH"** —
+dấu hỏi của chữ Ẳ bị xén sạch, thành **một từ khác nghĩa hẳn**. Lỗi sai nghĩa, không chỉ xấu.
+
+> ⚠️ **ĐÍNH CHÍNH (viết lại ở Đợt 76):** bảng "5 chỗ xén" từng ghi ở đây **có 2 dương tính giả và mọi
+> con số px đều bị thổi phồng** — công cụ đo dùng `Range.getBoundingClientRect()` tưởng nó trả về hộp
+> DÒNG, thật ra nó trả về **hộp FONT** (baseline − ascent), nên đã cộng thừa nửa khoảng dòng
+> (`half-leading`, luôn âm khi `line-height` < 1,60). Số đúng và danh sách đúng: xem Đợt 76.
+
+### File đụng vào
+
+`core/app.css` (+58 −5, thuần khai báo font + chú thích 2 cái bẫy) · **thêm** `core/assets/fonts/baloo-2-vi.woff2`
+(9,9 KB) · `core/HUONG DAN CORE.md` (thêm mục "FONT TIẾNG VIỆT") · `APP_MASTER.md` · file này.
+**Không đụng 1 dòng JS nào, không đụng template nào.**
+
+**VIỆC ĐANG CHỜ:** không còn — thầy chốt làm luôn Đợt 76 rồi commit + push một thể.
+
+---
+
 ## Đợt 74 (5/8/2026, v0.9.49) — RUNNING WORD: ⭐ GỐC LỖI "TEAM B CHỈ HIỆN 1 HÀNG" TRÊN iPAD (tái hiện được!) + IN 1 CỘT + KHOÁ ZOOM CHẠM ĐÚP. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT (`6ff2da6`) + PUSH + LIVE
 
 Thầy gửi 3 việc sau khi chơi bản Đợt 73 trên iPad. Việc số 1 là lỗi đã đuổi theo suốt 2 đợt (Đợt 72
