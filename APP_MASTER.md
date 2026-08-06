@@ -226,9 +226,12 @@
 2. Đọc `core/HUONG DAN CORE.md` → hợp đồng engine↔template + DANH SÁCH BẪY kỹ thuật (bắt buộc trước
    khi động vào code core hoặc viết game mới).
 3. **Cách chạy thử — LƯU Ý: từ v0.7.4 app BẮT ĐĂNG NHẬP Google mới vào được thư viện.**
-   - Bản LIVE (dùng thật): **https://andrewclasses-01.github.io/AWord/** — deploy = `git push`, chờ ~1
-     phút. ⚠️Sau khi push phải `curl` kiểm chứng file mới đã live rồi mới test (Pages cập nhật các file
-     KHÔNG đồng thời — xem BẪY mục 9).
+   - Bản LIVE (dùng thật): **https://andrewclasses-01.github.io/AWord/**.
+     ⚠️⚠️ **`git push` KHÔNG còn đủ để lên live** (ghi chú cũ "deploy = git push, chờ ~1 phút" nay ĐÃ
+     SAI — job deploy của Pages hay hết giờ 10 phút rồi tự huỷ). **BẮT BUỘC làm theo mục 0-TER: QUY
+     TRÌNH PUSH LÊN LIVE** (push xong phải `POST /pages/builds` để build trực tiếp). Sau đó mới `curl`
+     kiểm chứng file mới đã live rồi mới test (Pages cập nhật các file KHÔNG đồng thời — BẪY mục 9),
+     rồi tính tiếp bẫy cache trình duyệt ở mục 0-BIS.
    - Ở máy: `python devserver.py 5510` (KHÔNG dùng `python -m http.server` — mục 9) →
      `http://localhost:5510/` (localhost ĐÃ nằm trong authorized domains của Firebase nên đăng nhập được).
    - **Test KHÔNG cần đăng nhập**: trang test template chạy dữ liệu mẫu, không đụng store →
@@ -301,6 +304,71 @@ Ra `0` = Pages chưa build xong → chờ tiếp.
 App **không có** service worker và **không có** cache-busting (`index.html` gọi thẳng
 `<script type="module" src="main.js">`), nên `Ctrl+Shift+R` là cách duy nhất, và sau 10 phút thì tự
 khỏi. Muốn hết hẳn thì phải thêm chuỗi phiên bản vào đường dẫn import — việc lớn, chưa làm.
+
+## 0-TER. ⚠️⚠️ QUY TRÌNH PUSH LÊN LIVE — BẮT BUỘC LÀM THEO (chốt 6/8/2026, Đợt 79)
+
+> **Đọc mục này TRƯỚC KHI commit.** Đợt 79 mất gần 1 tiếng và **2 commit rác** chỉ vì không biết
+> quy trình dưới đây. Làm đúng 4 bước này thì không lặp lại được nữa.
+
+### Vì sao phải có mục này
+`git push` xong **KHÔNG có nghĩa là đã lên live**. Việc đưa lên live do GitHub Pages làm, và **nó
+đang hỏng có hệ thống với repo này**: job `deploy` của workflow `pages build and deployment` có
+`timeout: 600000` (**10 phút**); backend Pages của repo này ngày càng chậm (đo được: 20 giây → 22
+giây → 3,6 phút → 5,5 phút → **8,2 phút** → vượt 10 phút). Khi vượt ngưỡng, job **tự HUỶ deployment**
+(`Canceled deployment`), và Pages API ghi lại là `"status":"errored"`, `"duration":0`.
+
+⚠️ **ĐỪNG hiểu nhầm chữ "errored" đó là lỗi trong code.** Nó là **hậu quả của việc bị huỷ**. Bằng
+chứng: job `build` luôn thành công (~6 giây, artifact sạch), và **2 commit của Đợt 78** (`134ca64`,
+`f9a8333`) — *trước* mọi thay đổi của Đợt 79 — **cũng errored y hệt**. Repo chỉ 21 MB / 588 file,
+không đụng giới hạn nào của Pages.
+
+### 4 BƯỚC BẮT BUỘC
+
+**Bước 1 — trước khi commit: so với origin** (luật cũ, vẫn giữ)
+```bash
+git fetch origin && git status -sb
+```
+
+**Bước 2 — commit + push như thường**
+```bash
+git add <đúng các file đã sửa> && git commit -m "..." && git push origin main
+```
+
+**Bước 3 — ⭐ KÍCH HOẠT BUILD TRỰC TIẾP, ĐỪNG CHỜ ACTIONS**
+Pages của repo này là `build_type: "legacy"` (source = branch `main`, path `/`), nên có đường build
+**không đi qua Actions** → **không có đồng hồ 10 phút nào huỷ nó giữa chừng**:
+```bash
+TOKEN=$(printf "host=github.com\nprotocol=https\npath=andrewclasses-01/AWord.git\n" | git credential fill | grep ^password= | cut -d= -f2-)
+GH_TOKEN="$TOKEN" gh api -X POST repos/andrewclasses-01/AWord/pages/builds
+```
+Đo thật ở Đợt 79: `queued` → `building` → **`built` sau 198 giây**, live cập nhật ngay.
+
+**Bước 4 — chờ `built` rồi mới kiểm file live**
+```bash
+GH_TOKEN="$TOKEN" gh api repos/andrewclasses-01/AWord/pages/builds/latest | grep -o '"status":"[^"]*"'
+```
+Thấy `"built"` mới `curl` kiểm dấu mốc (rồi mới sang bẫy cache trình duyệt ở mục 0-BIS).
+
+### ❌ NHỮNG VIỆC ĐỪNG LÀM (đã thử, vô ích)
+- **ĐỪNG đẩy commit rỗng để "kích hoạt lại deploy".** Đợt 79 đã lỡ đẩy **2 commit rác** (`f595233`,
+  `aafd454`) — vô ích, vì chúng vẫn đi qua đúng đường Actions đang bị timeout. Chỉ làm bẩn lịch sử.
+- **ĐỪNG vội sửa code khi thấy email "Some jobs were not successful".** Mở job `build` xem trước:
+  build OK + deploy timeout = **lỗi hạ tầng, code không sao**.
+- **ĐỪNG tin trang githubstatus.com** — lúc sự cố này nó vẫn báo "All Systems Operational".
+
+### ⚠️ BẪY TÀI KHOẢN gh (khác với ghi nhớ "GitHub accounts" cũ, bổ sung thêm)
+- `git push` dùng credential **`andrewclasses-01`** ✅ (đúng chủ repo, `admin:true`).
+- `gh` CLI lại đăng nhập **`andrewclasses-code`** ❌ → `gh run rerun` báo *"Must have admin rights"*.
+- **Đăng nhập `-01` trên Chrome KHÔNG đổi được `gh`** (gh giữ token riêng trong keyring).
+- Muốn gh chạy bằng quyền `-01`: lấy token qua `git credential fill` như Bước 3 rồi `GH_TOKEN=... gh api ...`.
+- **Không `gh auth login` lưu hẳn được**: token OAuth của Git Credential Manager **thiếu scope
+  `read:org`** mà gh bắt buộc. Muốn lưu hẳn thì thầy phải tự tạo PAT mới có `read:org`.
+
+### ⚠️ Bẫy tự kiểm (nhỏ nhưng đã cắn)
+Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ dòng CHÚ THÍCH**. Đợt 79 grep
+`is-locked` trên CSS live ra "vẫn còn" → **báo động giả**, vì nó khớp vào chính dòng chú thích ghi
+*"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
+`grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
 ## 0a. ⭐⭐ BÀN GIAO MỚI NHẤT (chốt 1/8/2026 sau Đợt 33 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
@@ -755,6 +823,10 @@ KHÔNG hard-code màu — luôn dùng `var(--aw-*)`.
     `opacity`** — nếu không popup sẽ "hiện 1 nơi rồi nhảy về giữa" (lỗi hay gặp nhất, xem HUONG DAN
     CORE.md mục đó + cách rà soát bằng grep).
 13. **Mọi `element.animate()` phải có `setTimeout` dự phòng** (tab ẩn → onfinish có thể không bắn).
+14. **Push xong CHƯA phải là đã lên live** — bắt buộc theo **mục 0-TER** (push → `POST /pages/builds`
+    → chờ `built` → `curl` kiểm dấu mốc). **Cấm đẩy commit rỗng để "kích hoạt lại deploy"** (vô ích,
+    chỉ làm bẩn lịch sử — Đợt 79 đã lỡ 2 lần). Thấy email "Some jobs were not successful" thì xem job
+    `build` trước: build OK + deploy timeout = **lỗi hạ tầng GitHub, đừng sửa code**.
 
 ## 7. Chưa làm — ROADMAP
 
