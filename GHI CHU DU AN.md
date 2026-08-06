@@ -5,6 +5,31 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 79 (6/8/2026, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY; NON-REMOVE: Ô ĐÃ CHỌN GIỐNG HỆT Ô CHƯA CHỌN. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+
+Thầy gửi 2 yêu cầu cho template **Find the match**. Chỉ đụng `templates/find-the-match/find-the-match.js` +
+`find-the-match.css`, **không đụng core**. Chi tiết đầy đủ + mọi số đo: `templates/find-the-match/GHI CHU FIND-THE-MATCH.md` chặng 6/8 (Đợt 79).
+
+1. **Bấm đúng → nhịp mừng 2 pha:** thêm hàm `bigCheckThenFly()` — phát "ting" (`clocktick.mp3`) + bung một
+   đĩa tròn xanh có dấu ✓ trắng (`.aw-ftm-bigcheck`) **ở giữa câu hỏi**, giữ 560ms, RỒI mới fade ✓ + phát
+   tiếng "correct" + để câu hỏi và 11 ngôi sao bay vào ô điểm (như cũ). ✓ để trong `.aw-ftm-track` (KHÔNG
+   phải con của prompt) vì clone bay chỉ copy text của prompt. Tiếng "correct" dời từ lúc bấm sang lúc bay
+   để không đè "ting".
+2. **Chế độ tắt Remove corrects → ô đã chọn = ô chưa chọn:** bỏ hẳn dim `is-locked` + `disabled` + badge ✓
+   vĩnh viễn. Ô đã ghép đúng trở lại **đủ màu, bấm được, không dấu hiệu gì** (chỉ loé ✓ nhỏ lúc chọn rồi
+   mờ) → người chơi không phân biệt được ô nào đã dùng; bấm lại nó cho câu sau = **bấm sai** (mất tim). Xoá
+   luôn CSS `.is-locked` (hết chỗ dùng).
+
+**Test browser thật (port 5511, đo DOM + spy âm thanh, 0 lỗi console)** cả 2 chế độ: chuỗi âm đúng
+`ting → correct → conveyor`, ✓ to xuất hiện rồi biến mất, điểm +1, ô non-remove trở lại y hệt ô thường và
+bấm lại tính sai; ô remove:true vẫn mờ dần (`is-solved`) như cũ. Bẫy đo compositing quen thuộc (opacity
+`is-solved` đọc ra 1 do transition đóng băng — ép `transition:none` ra đúng 0).
+
+**Việc kế:** thầy chơi thử thật (trên TOMKO/iPad nếu tiện): nghe "ting" + xem ✓ to giữa câu có rõ/đẹp,
+và ở act tắt Remove corrects xác nhận ô đã chọn khó phân biệt như ý → duyệt → commit + push + live.
+
+---
+
 ## Đợt 78 (6/8/2026, v0.9.53) — ⭐ TEMPLATE THỨ 16 "RUNNING TEAM" + ⭐ TÍNH NĂNG MỚI "CLASSES" TRONG SETTINGS. CÓ SỬA CORE (thầy đặt hàng). 🟢 CHỜ THẦY DUYỆT
 
 Thầy mô tả một app mới rồi yêu cầu **thảo luận trước khi build**, sau đó chốt **triển khai cả 3 chặng,

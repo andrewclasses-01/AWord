@@ -1,8 +1,50 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → **✅ THẦY DUYỆT → COMMIT `d4f526f` + PUSH + LIVE** (đã `curl` kiểm 3 file live + chạy lại bộ kiểm tra TRÊN BẢN LIVE: 8/40/60/70 cặp đều 0 ô cắt). Xem chặng đầu "Nhật ký".
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 6/8/2026 (Đợt 79, v0.9.54) — BẤM ĐÚNG: THÊM "TING" + DẤU ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). Đã tự test browser thật cả 2 chế độ (đo DOM + spy âm thanh, 0 lỗi console). 🟢 CHỜ THẦY DUYỆT. Xem chặng đầu "Nhật ký".
+
+Trước đó: 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → **✅ THẦY DUYỆT → COMMIT `d4f526f` + PUSH + LIVE**.
 
 ## Nhật ký
+
+### 6/8/2026 (Đợt 79, v0.9.54) — Bấm đúng: "ting" + ✓ to giữa câu hỏi rồi mới bay · non-remove: ô đã chọn giống hệt ô chưa chọn
+Thầy gửi 2 yêu cầu:
+1. **Bấm đúng** → thêm âm "ting" + **dấu ✓ TO ở giữa câu hỏi**, *sau đó mới* cùng câu hỏi + các ngôi sao bay vào ô điểm.
+2. **Chế độ tắt Remove corrects** → ô đáp án đã chọn đúng **chỉ hiện ✓ ở khoảnh khắc chọn**, sau đó ✓ biến mất và ô **giống hệt các ô chưa chọn khác** (để gây khó cho người chơi).
+
+**Chỉ đụng `find-the-match.js` + `find-the-match.css`. KHÔNG đụng core.**
+
+**(1) Nhịp mừng 2 pha khi bấm đúng** — thêm hàm `bigCheckThenFly(promptEl, cb)` chèn giữa `choose()` và
+`flyPromptToScore()`:
+- Phát `ftmSound.clockTick()` (chính là "ting", cùng file `clocktick.mp3` dùng cho đếm 3-2-1).
+- Chèn 1 overlay `.aw-ftm-bigcheck` (đĩa tròn xanh + ✓ trắng `icons.markCheck`) vào **trong `.aw-ftm-track`**,
+  căn giữa tuyệt đối, pop-in 240ms. **Cố ý KHÔNG phải con của `.aw-ftm-prompt`** — vì `flyPromptToScore`
+  clone *chỉ* `textContent` của prompt, nếu để ✓ bên trong prompt nó sẽ không bay theo (và có thể lọt vào
+  clone). Đặt riêng trong track là sạch nhất.
+- Giữ **560ms**, rồi mới: fade ✓ ra + `ftmSound.correct()` (tiếng khớp) + gọi `flyPromptToScore` như cũ
+  (câu hỏi + 11 sao bay vào điểm, điểm nảy +1 giữa lúc bay). → Chuỗi âm đo được: **ting → correct → conveyor
+  (câu mới)**, đúng 2 nhịp.
+- `ftmSound.correct()` **dời từ lúc bấm sang lúc bay** (trước đây phát ngay ở đầu nhánh đúng) để không đè
+  lên "ting". `.aw-ftm-bigcheck` thêm vào cả dòng dọn của `cleanup()` phòng khi game kết thúc giữa lúc giữ ✓.
+
+**(2) Non-remove: ô đã chọn = ô chưa chọn** — nhánh đúng của `choose()` khi `removeCorrects:false`
+**bỏ hẳn** `is-locked` + `disabled` + badge `aw-tile-badge` vĩnh viễn. `renderShell()` cũng vẽ ô đã giải
+(non-remove) **y như ô thường**: đủ màu, `onclick` gắn bình thường, không dim, không badge. `startCycle` →
+`unlockTiles` tự bật lại ô (vì ô nay không mang `is-solved`/`is-locked`). Dấu hiệu "đúng" duy nhất còn lại
+là ✓ nhỏ `aw-mark-fly` bay lên rồi tự mờ. `state[idx].solved` vẫn `true` để tính điểm/review. Bấm lại ô đã
+giải cho câu SAU = **bấm sai** (cặp đó không còn trong queue) → mất tim, đúng ý "gây khó". CSS `.aw-ftm-tile.is-locked`
+**xoá** (không còn nơi gắn).
+
+**Test (browser thật port 5511, đo DOM + spy `HTMLAudioElement.play`, 0 lỗi console):**
+- **removeCorrects:false** — bấm đúng "Rice": ngay lập tức `.aw-ftm-bigcheck` có trong track + `clocktick.mp3`;
+  ô Rice `aw-ftm-tile` (không is-locked), không badge, opacity 1, chỉ có `aw-mark-fly`. Sau khi hoàn tất:
+  âm `[clocktick, correct-03, conveyorappear, conveyorcentred]`, điểm=1, ✓ to biến mất, ô Rice
+  `disabled:false` + nền teal đầy đủ = **y hệt ô thường**. Bấm lại Rice cho câu mới → `[incorrect-01,
+  conveyorleave]` + ✗ + điểm **vẫn 1** + ô còn nguyên. ✅
+- **removeCorrects:true** — bấm đúng "Banana": `.aw-ftm-bigcheck` + `clocktick` ngay; sau đó
+  `[clocktick, correct-02, conveyorappear, conveyorcentred]`, điểm=1, ✓ to biến mất, ô Banana nhận `is-solved`
+  (mờ dần) như cũ. ✅
+- ⚠️ **Bẫy đo quen thuộc**: ô `is-solved` computed opacity đọc ra **1** vì transition `opacity .3s` bị
+  **đóng băng** trong pane không compositing; ép `transition:none` đọc lại ra đúng **0** → không phải lỗi.
 
 ### 4/8/2026 (Đợt 62) — Thanh dưới chỉ còn "Page X/Y" · bỏ nút lật trang · KHÔNG ô nào bị cắt
 Thầy gửi ảnh act 60 cặp: **hàng ô cuối bị cắt ngang**, kèm 3 yêu cầu (bỏ "x of y" và hạ "Page x/y" xuống

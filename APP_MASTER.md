@@ -3,7 +3,20 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **6/8/2026 (Đợt 78, v0.9.53) — ⭐ TEMPLATE THỨ 16 "RUNNING TEAM" + ⭐ TÍNH NĂNG
+> Cập nhật lần cuối: **6/8/2026 (Đợt 79, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + DẤU ✓ TO GIỮA
+> CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA
+> CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). 🟢 CHỜ THẦY DUYỆT.** Thêm hàm
+> `bigCheckThenFly()`: phát "ting" (`clocktick.mp3`) + bung đĩa tròn xanh có ✓ trắng `.aw-ftm-bigcheck` giữa
+> `.aw-ftm-track` (KHÔNG là con của prompt vì clone bay chỉ copy text prompt), giữ 560ms, rồi mới fade ✓ +
+> phát "correct" + để câu hỏi và 11 sao bay vào điểm; tiếng "correct" dời từ lúc bấm sang lúc bay để khỏi đè
+> "ting". Non-remove: bỏ hẳn dim `is-locked`/`disabled`/badge vĩnh viễn ở cả `choose()` lẫn `renderShell()`
+> → ô đã ghép đủ màu + bấm được y hệt ô thường (bấm lại = SAI, mất tim); xoá CSS `.is-locked`. Tự test
+> browser thật cả 2 chế độ (đo DOM + spy `HTMLAudioElement.play`): chuỗi âm `ting→correct→conveyor`, ✓ to
+> hiện rồi biến mất, điểm +1, non-remove ô về y hệt ô thường; bẫy đo compositing quen (opacity `is-solved`
+> đọc ra 1 do transition đóng băng, ép `transition:none` ra 0). **0 lỗi console.** Chi tiết:
+> `templates/find-the-match/GHI CHU FIND-THE-MATCH.md` Đợt 79 + `GHI CHU DU AN.md` Đợt 79.
+>
+> Trước đó: **6/8/2026 (Đợt 78, v0.9.53) — ⭐ TEMPLATE THỨ 16 "RUNNING TEAM" + ⭐ TÍNH NĂNG
 > MỚI "CLASSES" TRONG SETTINGS. CÓ SỬA CORE (thầy đặt hàng). 🟢 CHỜ THẦY DUYỆT.** Cả lớp chạy tiếp sức
 > quanh MỘT tờ giấy chuyền tay: màn hình gọi `MINH ANH — 23`, em đó dò dòng 23 trên giấy đọc to, em
 > khác chọn đúng từ giữa **6 ô mà 5 ô là từ trông giống nhất** (trò PHÂN BIỆT MẶT CHỮ → dữ liệu chỉ là

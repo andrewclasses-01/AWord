@@ -61,6 +61,24 @@
   color: var(--aw-question-fill, var(--aw-text));
 }
 
+/* Big green ✓ that pops in the CENTRE of the question band on a correct match
+   (teacher 6/8/2026): held ~0.56s with a "ting", then removed as the prompt
+   flies to the score. An overlay INSIDE the track (cqw units, like the rest of
+   the in-stage styles), z above the prompt; driven by element.animate() in the
+   JS. The base transform keeps it centred and the JS keyframes all preserve
+   translate(-50%,-50%), so animating transform never knocks it off-centre. */
+.aw-ftm-bigcheck {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4; pointer-events: none;
+  width: calc(6.4cqw * var(--fit)); height: calc(6.4cqw * var(--fit));
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0.4cqw 1.1cqw rgba(0, 0, 0, .28);
+  display: flex; align-items: center; justify-content: center;
+}
+.aw-ftm-bigcheck svg { width: 64%; height: 64%; }
+
 .aw-ftm-divider {
   flex: 0 0 auto;
   height: 0;
@@ -113,10 +131,10 @@
    out, then removed from the DOM. */
 .aw-ftm-tile.is-solved { opacity: 0; transform: scale(.82); pointer-events: none; }
 
-/* correct match, removeCorrects:false — tile stays, dimmed a touch, with a
-   small permanent checkmark badge (.aw-tile-badge, shared class) appended
-   in find-the-match.js. */
-.aw-ftm-tile.is-locked { opacity: .68; filter: grayscale(.15); }
+/* NOTE (teacher 6/8/2026): removeCorrects:false no longer dims or badges the
+   matched tile — it's left looking exactly like an unmatched distractor so the
+   player can't tell which words are used up (see find-the-match.js). The old
+   `.aw-ftm-tile.is-locked` dim rule was removed as it's no longer applied. */
 
 .aw-ftm-empty {
   margin: auto; text-align: center; color: var(--aw-muted);

@@ -329,16 +329,13 @@ const ftmTemplate = {
         const col = PALETTE[i % PALETTE.length];
         tile.style.setProperty("--ftm-c", col.c);
         tile.style.setProperty("--ftm-d", col.d);
-        if (st.solved) {
-          // matched but kept (removeCorrects:false) — dimmed + permanent check.
-          tile.classList.add("is-locked");
-          tile.disabled = true;
-          tile.append(el("span", "aw-tile-badge", icons.markCheck));
-        } else {
-          // unmatched (incl. a skipped pair's keyword, which lingers as a
-          // distractor) — clickable.
-          tile.onclick = () => choose(idx, tile);
-        }
+        // Every rendered tile is a normal, full-colour, clickable tile — whether
+        // it's unmatched OR already matched-but-kept (removeCorrects:false). A
+        // kept match is deliberately INDISTINGUISHABLE from an unmatched
+        // distractor (teacher 6/8/2026: no dim, no permanent badge) so the player
+        // can't tell which words are "used up". Tapping a solved tile for a later
+        // prompt just counts as a wrong tap (its pair is no longer in the queue).
+        tile.onclick = () => choose(idx, tile);
         grid.append(tile);
       });
       card.append(grid);
@@ -638,6 +635,40 @@ const ftmTemplate = {
       armFallback(run, EXIT_MS + 100);
     }
 
+    // A correct answer gets a two-beat celebration (teacher 6/8/2026): a big
+    // green ✓ pops in the CENTRE of the question band with a "ting" and is held
+    // briefly, THEN the prompt itself flies to the score with its star burst.
+    // The check is a plain overlay inside the track (NOT a child of the prompt),
+    // so flyPromptToScore's clone — which copies only the prompt's text — never
+    // drags it along.
+    function bigCheckThenFly(promptEl, cb) {
+      const track = promptEl && promptEl.parentElement;   // .aw-ftm-track
+      if (!track) { flyPromptToScore(promptEl, cb); return; }
+      ftmSound.clockTick();                                // the "ting"
+      const big = el("div", "aw-ftm-bigcheck", icons.markCheck);
+      track.append(big);
+      try {
+        big.animate([
+          { transform: "translate(-50%,-50%) scale(.2)", opacity: 0 },
+          { transform: "translate(-50%,-50%) scale(1.12)", opacity: 1, offset: .65 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1 }
+        ], { duration: 240, easing: "cubic-bezier(.3,1.5,.5,1)", fill: "forwards" });
+      } catch (e) { /* ignore */ }
+      const flyOff = () => {
+        // fade the check out just as the prompt lifts off
+        try {
+          big.animate(
+            [{ opacity: 1 }, { opacity: 0, transform: "translate(-50%,-50%) scale(.65)" }],
+            { duration: 200, easing: "ease-in", fill: "forwards" }
+          ).onfinish = () => big.remove();
+        } catch (e) { big.remove(); }
+        pendingMarks.push(setTimeout(() => big.remove(), 260));
+        ftmSound.correct();                                // the match chime, on the fly
+        flyPromptToScore(promptEl, cb);
+      };
+      pendingMarks.push(setTimeout(() => { if (finished) { big.remove(); return; } flyOff(); }, 560));
+    }
+
     // A CORRECT answer: the whole prompt lifts off toward the score, bursting
     // into little stars that stream into it; the score then ticks up with a
     // pulse. THEN `cb` runs (start next / finish). Overlay nodes are appended to
@@ -725,27 +756,29 @@ const ftmTemplate = {
       if (idx === target) {
         queue.shift();
         state[target].solved = true;
-        ftmSound.correct();
 
         const fly = el("span", "aw-mark-fly", icons.markCheck);
         tile.append(fly);
         pendingMarks.push(setTimeout(() => fly.remove(), 900));
         if (removeCorrects) {
           removeTile(tile);
-        } else {
-          tile.classList.add("is-locked");
-          tile.disabled = true;
-          tile.append(el("span", "aw-tile-badge", icons.markCheck));
         }
+        // removeCorrects:false (teacher 6/8/2026): the matched tile is left
+        // exactly as it was — full colour, still clickable, NO permanent dim and
+        // NO permanent badge — so it stays indistinguishable from an unmatched
+        // distractor and the player can't tell which words are used up. Its only
+        // "correct" cue is the ✓ that flew up above, which fades on its own;
+        // startCycle's unlock re-enables it (it carries no is-solved/is-locked).
 
-        // The current PROMPT lifts off toward the score, bursting into little
-        // stars (same effect as True/false, teacher 1/8) — flyPromptToScore
-        // ticks the score up mid-flight with a pulse, then continues.
+        // The current PROMPT gets a two-beat celebration (teacher 6/8/2026): a
+        // big ✓ pops in the centre of the question with a "ting", is held ~0.56s,
+        // THEN the whole prompt lifts off toward the score bursting into stars
+        // (flyPromptToScore ticks the score up mid-flight with a pulse).
         const promptEl = root.querySelector(".aw-ftm-prompt");
         haltPromptAnim();
         // startCycle() auto-advances to the next page (or finishes) when this
         // page's queue is now empty — see its top-of-function guard.
-        flyPromptToScore(promptEl, () => startCycle());
+        bigCheckThenFly(promptEl, () => startCycle());
       } else {
         // Wrong tap (teacher's spec, 1/8): the TAPPED tile stays exactly where
         // it is — a ✗ flies up then fades, but the tile never moves or vanishes
@@ -842,7 +875,7 @@ const ftmTemplate = {
       pendingMarks.forEach(clearTimeout);
       haltPromptAnim();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
-      document.querySelectorAll(".aw-ftm-flyclone, .aw-ftm-star").forEach(n => n.remove());
+      document.querySelectorAll(".aw-ftm-flyclone, .aw-ftm-star, .aw-ftm-bigcheck").forEach(n => n.remove());
     };
   }
 };
