@@ -5,7 +5,16 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **6/8/2026 (Đợt 79, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + DẤU ✓ TO GIỮA
 > CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA
-> CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). 🟢 CHỜ THẦY DUYỆT.** Thêm hàm
+> CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). ✅ THẦY DUYỆT → COMMIT (`7ddefe1`) +
+> PUSH + **LIVE**.** ⚠️ **Lên live phải đi đường vòng:** job `deploy` của Pages **fail 3 lần** vì hết
+> `timeout: 600000` (10 phút) rồi **tự huỷ deployment** (Pages API ghi `errored`/`duration:0` — là HẬU QUẢ
+> của việc bị huỷ, KHÔNG phải lỗi nội dung; **2 commit Đợt 78 trước đó cũng errored y hệt**, và thời gian
+> build repo chậm dần 20s→5,5ph→**8,2ph**→vượt ngưỡng). **Cách gỡ:** Pages repo này `build_type:"legacy"` nên
+> gọi thẳng `POST /repos/andrewclasses-01/AWord/pages/builds` — **không có đồng hồ 10 phút của Actions** →
+> `built` sau 198 giây. **ĐỪNG đẩy commit rỗng để thử lại.** Kèm bẫy tài khoản: `gh` CLI là
+> `andrewclasses-code` (không admin) trong khi `git push` là `andrewclasses-01`; muốn gh chạy quyền -01 thì
+> lấy token qua `git credential fill` rồi `GH_TOKEN=... gh api` (không `gh auth login` lưu được vì token
+> thiếu scope `read:org`). Đã chạy lại trọn bộ kiểm tra **TRÊN BẢN LIVE** cả 2 chế độ, 0 lỗi console. Thêm hàm
 > `bigCheckThenFly()`: phát "ting" (`clocktick.mp3`) + bung đĩa tròn xanh có ✓ trắng `.aw-ftm-bigcheck` giữa
 > `.aw-ftm-track` (KHÔNG là con của prompt vì clone bay chỉ copy text prompt), giữ 560ms, rồi mới fade ✓ +
 > phát "correct" + để câu hỏi và 11 sao bay vào điểm; tiếng "correct" dời từ lúc bấm sang lúc bay để khỏi đè

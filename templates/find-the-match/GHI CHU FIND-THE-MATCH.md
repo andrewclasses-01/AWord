@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE FIND THE MATCH
 
-## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. 🟢 MỚI NHẤT 6/8/2026 (Đợt 79, v0.9.54) — BẤM ĐÚNG: THÊM "TING" + DẤU ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). Đã tự test browser thật cả 2 chế độ (đo DOM + spy âm thanh, 0 lỗi console). 🟢 CHỜ THẦY DUYỆT. Xem chặng đầu "Nhật ký".
+## TRẠNG THÁI: ✅ SỐNG Ở TRANG CHỦ. `built:true` từ 31/7. ✅ MỚI NHẤT 6/8/2026 (Đợt 79, v0.9.54) — BẤM ĐÚNG: THÊM "TING" + DẤU ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA CHỌN (GÂY KHÓ). KHÔNG ĐỤNG CORE (chỉ `find-the-match.js` + `.css`). **✅ THẦY DUYỆT → COMMIT `7ddefe1` + PUSH + LIVE** (đã chạy lại trọn bộ kiểm tra TRÊN BẢN LIVE cả 2 chế độ, 0 lỗi console). ⚠️ Lên live phải đi đường vòng vì GitHub Pages hỏng — xem mục "BẪY DEPLOY" cuối chặng. Xem chặng đầu "Nhật ký".
 
 Trước đó: 4/8/2026 (Đợt 62, v0.9.37) — BỎ "x of y", "Page X/Y" xuống thanh dưới, BỎ nút lật trang, SỬA LỖI THẬT cắt ô đáp án. ⭐ CÓ SỬA CORE (1 chỗ thêm mới: `ui.setNav({label})`). Đã tự test browser thật (5 cỡ dữ liệu + chơi trọn ván 36 cặp, 0 lỗi console) → **✅ THẦY DUYỆT → COMMIT `d4f526f` + PUSH + LIVE**.
 
@@ -45,6 +45,44 @@ giải cho câu SAU = **bấm sai** (cặp đó không còn trong queue) → m�
   (mờ dần) như cũ. ✅
 - ⚠️ **Bẫy đo quen thuộc**: ô `is-solved` computed opacity đọc ra **1** vì transition `opacity .3s` bị
   **đóng băng** trong pane không compositing; ép `transition:none` đọc lại ra đúng **0** → không phải lỗi.
+
+**Kiểm lại TRÊN BẢN LIVE sau khi push (`andrewclasses-01.github.io/AWord`, ép `?cb=`):**
+- removeCorrects **true**: bấm đúng "Milk" → `.aw-ftm-bigcheck` có thật trong `.aw-ftm-track`, nền đo được
+  `rgb(34,197,94)`, `border-radius:50%`, có SVG; `clocktick.mp3` ngay lập tức; sau đó
+  `[clocktick, correct-01, conveyorappear, conveyorcentred]`, điểm=1, ✓ to biến mất, ô nhận `is-solved`. ✅
+- removeCorrects **false** (tắt tick "Remove corrects" trong panel Options rồi Apply — đúng đường thầy dùng):
+  bấm đúng "Broccoli" → ô sau khi xong là `aw-ftm-tile` trần, `disabled:false`, `opacity:1`, `filter:none`,
+  **không badge, không mark** — **so sánh trực tiếp với ô chưa chọn ra CÙNG giá trị** (`opacity:1`,
+  `filter:none`) = không thể phân biệt. ✅
+- **0 lỗi console** trên live.
+- ⚠️ **Bẫy tự kiểm**: lệnh `grep "is-locked"` trên file CSS live báo "còn is-locked" → **báo động giả**, vì
+  nó khớp vào **dòng CHÚ THÍCH** tôi viết (`... .aw-ftm-tile.is-locked ... was removed`). Kiểm đúng phải tìm
+  rule thật (`^\s*\.aw-ftm-tile\.is-locked\s*\{`) → **0 kết quả** = đã xoá thật. Bài học: grep dấu mốc trên
+  file live phải loại trừ chú thích, nếu không tự mình báo động nhầm.
+
+### ⚠️ BẪY DEPLOY — GitHub Pages hết giờ 10 phút, phải build bằng API trực tiếp (6/8/2026)
+Push xong nhưng **3 lần liên tiếp** job `deploy` của workflow `pages build and deployment` **THẤT BẠI**
+(thầy nhận email báo lỗi). Điều tra ra:
+- Job **build luôn OK** (~6 giây, artifact sạch). Chỉ job **deploy** hỏng: nó chỉ *chờ* backend Pages báo
+  xong, hết `timeout: 600000` (10 phút) thì **tự HUỶ deployment** → `##[error]Timeout reached, aborting!` +
+  `Canceled deployment`. Vì vậy Pages API báo `"status":"errored"`, `"duration":0` — **"errored" là HẬU QUẢ
+  của việc bị huỷ, không phải lỗi nội dung**.
+- ⭐ **Bằng chứng KHÔNG phải lỗi code**: đọc `GET /pages/builds` thấy **2 commit của Đợt 78** (`134ca64`,
+  `f9a8333`) — trước đợt này — **cũng errored duration 0**. Và thời gian build của repo đang **chậm dần**:
+  20s → 22s → 3,6 phút → 5,5 phút → **8,2 phút** (lần cuối thành công, sát ngưỡng 10 phút) → rồi vượt ngưỡng.
+  Repo chỉ 21 MB / 588 file, không đụng giới hạn nào.
+- ⭐ **CÁCH GỠ (dùng lại được về sau)**: Pages của repo này là `build_type: "legacy"` (source = branch `main`,
+  path `/`), nên gọi thẳng **`POST /repos/andrewclasses-01/AWord/pages/builds`** để yêu cầu build — đường này
+  **KHÔNG có đồng hồ 10 phút của Actions** nên không ai huỷ giữa chừng. Kết quả: `queued` → `building` →
+  **`built` sau 198 giây**, live cập nhật ngay. **Đừng đẩy commit rỗng để thử lại** (tôi đã lỡ đẩy 2 commit
+  rỗng `f595233`, `aafd454` trước khi hiểu ra — vô ích vì cùng đi qua đường Actions bị timeout).
+- ⚠️ **BẪY TÀI KHOẢN gh**: `gh` CLI đăng nhập bằng **`andrewclasses-code`** (không có quyền admin repo -01)
+  nên `gh run rerun` bị từ chối, TRONG KHI `git push` lại dùng credential **`andrewclasses-01`** (đúng chủ).
+  Đăng nhập `-01` trên Chrome KHÔNG đổi được gh. Cách dùng token `-01` cho gh:
+  `TOKEN=$(printf "host=github.com\nprotocol=https\npath=andrewclasses-01/AWord.git\n" | git credential fill | grep ^password= | cut -d= -f2-)`
+  rồi chạy `GH_TOKEN="$TOKEN" gh api ...` (đo được `admin:true`). **KHÔNG lưu hẳn vào gh được** vì token OAuth
+  của Git Credential Manager **thiếu scope `read:org`** mà `gh auth login` bắt buộc — muốn lưu hẳn phải tạo
+  PAT mới có `read:org`.
 
 ### 4/8/2026 (Đợt 62) — Thanh dưới chỉ còn "Page X/Y" · bỏ nút lật trang · KHÔNG ô nào bị cắt
 Thầy gửi ảnh act 60 cặp: **hàng ô cuối bị cắt ngang**, kèm 3 yêu cầu (bỏ "x of y" và hạ "Page x/y" xuống

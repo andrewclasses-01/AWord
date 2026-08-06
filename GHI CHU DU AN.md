@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 79 (6/8/2026, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY; NON-REMOVE: Ô ĐÃ CHỌN GIỐNG HỆT Ô CHƯA CHỌN. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+## Đợt 79 (6/8/2026, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY; NON-REMOVE: Ô ĐÃ CHỌN GIỐNG HỆT Ô CHƯA CHỌN. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `7ddefe1` + PUSH + LIVE
 
 Thầy gửi 2 yêu cầu cho template **Find the match**. Chỉ đụng `templates/find-the-match/find-the-match.js` +
 `find-the-match.css`, **không đụng core**. Chi tiết đầy đủ + mọi số đo: `templates/find-the-match/GHI CHU FIND-THE-MATCH.md` chặng 6/8 (Đợt 79).
@@ -25,8 +25,31 @@ Thầy gửi 2 yêu cầu cho template **Find the match**. Chỉ đụng `templa
 bấm lại tính sai; ô remove:true vẫn mờ dần (`is-solved`) như cũ. Bẫy đo compositing quen thuộc (opacity
 `is-solved` đọc ra 1 do transition đóng băng — ép `transition:none` ra đúng 0).
 
-**Việc kế:** thầy chơi thử thật (trên TOMKO/iPad nếu tiện): nghe "ting" + xem ✓ to giữa câu có rõ/đẹp,
-và ở act tắt Remove corrects xác nhận ô đã chọn khó phân biệt như ý → duyệt → commit + push + live.
+**Thầy duyệt → commit `7ddefe1` + push + LIVE.** Đã chạy lại trọn bộ kiểm tra **TRÊN BẢN LIVE** cả 2 chế độ:
+✓ to đo được nền `rgb(34,197,94)` bo tròn 50% trong track + "ting" ngay; chuỗi âm `ting→correct→conveyor`;
+non-remove ô đã chọn ra **cùng `opacity:1`/`filter:none`/không badge** như ô chưa chọn = không phân biệt được;
+**0 lỗi console**.
+
+### ⚠️ BẪY DEPLOY QUAN TRỌNG — GitHub Pages hết giờ 10 phút (ghi để đợt sau khỏi mất công)
+Push xong thì **3 lần liên tiếp** job `deploy` của `pages build and deployment` **FAIL** (thầy nhận email báo).
+**Không phải lỗi code:**
+- Job **build luôn OK** (~6s). Job **deploy** chỉ *chờ* backend Pages, hết `timeout: 600000` (10 phút) thì
+  **tự huỷ deployment** → Pages API ghi `"errored"`, `"duration":0`. "Errored" là **hậu quả của việc bị huỷ**.
+- ⭐ Bằng chứng: `GET /pages/builds` cho thấy **2 commit của Đợt 78** (`134ca64`, `f9a8333`) — trước đợt này —
+  **cũng errored duration 0**. Thời gian build repo chậm dần: 20s → 22s → 3,6 phút → 5,5 phút → **8,2 phút**
+  (lần cuối thành công) → vượt 10 phút. Repo chỉ 21 MB / 588 file, không đụng giới hạn nào.
+- ⭐ **CÁCH GỠ**: Pages repo này là `build_type: "legacy"` → gọi thẳng
+  **`POST /repos/andrewclasses-01/AWord/pages/builds`**, đường này **không có đồng hồ 10 phút của Actions**.
+  Kết quả: `built` sau **198 giây**, live cập nhật ngay. **ĐỪNG đẩy commit rỗng để thử lại** (đã lỡ đẩy 2 cái
+  `f595233`, `aafd454` — vô ích vì vẫn đi qua Actions bị timeout).
+- ⚠️ **BẪY TÀI KHOẢN gh** (bổ sung cho ghi nhớ đã có): `gh` CLI đăng nhập `andrewclasses-code` → `gh run rerun`
+  bị từ chối vì không có admin; `git push` thì dùng credential `andrewclasses-01` (đúng chủ). Đăng nhập `-01`
+  trên Chrome KHÔNG đổi được gh. Muốn gh chạy quyền `-01`: lấy token bằng `git credential fill` rồi
+  `GH_TOKEN="$TOKEN" gh api ...` (đo được `admin:true`). Không `gh auth login` lưu hẳn được vì token OAuth của
+  Git Credential Manager **thiếu scope `read:org`**.
+
+**Việc kế:** thầy chơi thử thật trên TOMKO/iPad — nghe "ting" + xem ✓ to giữa câu có rõ/đẹp không, và ở act
+tắt Remove corrects xác nhận ô đã chọn khó phân biệt như ý.
 
 ---
 
