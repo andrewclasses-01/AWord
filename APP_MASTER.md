@@ -4,7 +4,8 @@
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 84, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG
-> NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. 🟢 CHỜ THẦY DUYỆT (mới ở LOCAL).** File mới
+> NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. ✅ THẦY DUYỆT → COMMIT `797670b` + PUSH + LIVE
+> (Đợt 83 = `cf3865b`, tách 2 commit riêng).** File mới
 > `core/mistakes.js` + `core/engine.js` + 12 file template. Bảng kết quả có thêm **"Start with mistakes"**
 > ngay dưới "Start again" → về màn READY của CÙNG game, tên đổi thành **"QUIZ WITH MISTAKES"**, danh sách
 > chỉ còn từ **sai hoặc bỏ trống**; bấm tiếp nhiều vòng thu hẹp dần. Về bộ đầy đủ: reload · đổi template
@@ -33,9 +34,13 @@
 > mount, 0 lỗi console**. ⚠️ **Ghi nhận ngữ nghĩa:** True/false · maze-chase · open-the-box **hỏi lại câu
 > sai đến khi đúng**, nên chơi hết bài với tim vô hạn là **không còn câu sai** → không có nút; chỉ hết
 > tim/hết giờ mới còn câu dang dở. Chi tiết: `GHI CHU DU AN.md` Đợt 84 + `core/HUONG DAN CORE.md` mục
-> "START WITH MISTAKES".
+> "START WITH MISTAKES". ⚠️ **BẪY ĐO MỚI khi kiểm bản live:** dấu mốc `padStart(2` cho `core/utils.js`
+> là VÔ GIÁ TRỊ — hàm `formatTime` cũ vốn đã có chuỗi đó nên nó báo "đã live" cả khi file còn cũ; phải
+> chọn dấu mốc CHỈ CÓ ở bản mới (`Math.floor(total / 100) % 10`). Gặp lại bẫy mục 9 (Pages cập nhật file
+> KHÔNG đồng thời): curl lần đầu `core/mistakes.js` còn 404 trong khi `utils.js` đã mới. Và: **không lái
+> được bản live bằng iframe từ localhost** (cross-origin) — phải cho tab chạy thẳng trang live.
 >
-> Trước đó: **7/8/2026 (Đợt 83, v0.9.58) — BẢNG KẾT QUẢ CUỐI GAME: THỜI GIAN LUÔN PHÚT:GIÂY ·
+> Trước đó: **7/8/2026 (Đợt 83, v0.9.58, commit `cf3865b`, ĐÃ LIVE) — BẢNG KẾT QUẢ CUỐI GAME: THỜI GIAN LUÔN PHÚT:GIÂY ·
 > SCORE = ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) · THÊM HÀNG NHỎ "Total: 9/10". ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY
 > DUYỆT (mới ở LOCAL, chưa commit).** 4 file: `core/utils.js` · `core/engine.js` · `core/app.css` ·
 > `templates/quiz/quiz.js`. **(1)** `fmtSecsParts()` (ô Time bảng tổng kết + cột Time của **cả 2**

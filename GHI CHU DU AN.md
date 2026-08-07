@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 84 (7/8/2026, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. 🟢 CHỜ THẦY DUYỆT (mới ở LOCAL, chưa commit)
+## Đợt 84 (7/8/2026, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. ✅ THẦY DUYỆT → COMMIT `797670b` + PUSH + **LIVE**
 
 Bảng kết quả có thêm hàng **"Start with mistakes"** ngay dưới **"Start again"**. Bấm vào → về màn READY
 (nút PLAY to) của **cùng game**, tên game đổi thành **"QUIZ WITH MISTAKES"**, danh sách chơi chỉ còn các
@@ -106,14 +106,35 @@ nhãn nút chữ nguyên vẹn không tràn ✅.
 **Hồi quy:** **16/16** trang `templates/*/test.html` mount đủ `.aw-stage` + PLAY, **0 lỗi console** (chạy 2
 lần: sau đợt sửa template, và sau khi vá 2 lỗi trên).
 
+### Lên live — 2 commit tách riêng, đã kiểm chứng TRÊN BẢN LIVE
+
+Thầy chốt commit lần lượt từng đợt. Vì 5 file bị **trộn** thay đổi của cả 2 đợt (`core/engine.js`,
+`templates/quiz/quiz.js` + 3 file hồ sơ), cách tách: **sao lưu bản cuối ra scratchpad → gỡ NGƯỢC các
+thay đổi Đợt 84 bằng thay-chuỗi chính xác (mỗi chuỗi phải khớp đúng 1 lần, không thì dừng) → commit Đợt
+83 → chép bản cuối trở lại → commit Đợt 84**. Đã `diff` xác nhận 5/5 file khớp bản cuối từng byte sau khi
+tách. Trạng thái trung gian "chỉ Đợt 83" cũng đã mount thử 5 template trước khi commit.
+
+- `cf3865b` — Đợt 83 (7 file)
+- `797670b` — Đợt 84 (15 file + `core/mistakes.js` mới)
+
+`git push` là đủ, Pages tự build (**đúng mục 0 điểm 3, không cần 0-TER**). ⚠️ Gặp lại **bẫy mục 9 —
+Pages cập nhật file KHÔNG đồng thời**: lần curl đầu `core/mistakes.js` còn **404** trong khi `utils.js`
+đã mới. ⚠️ Và một **bẫy đo mới**: dấu mốc `padStart(2` để kiểm `utils.js` là **VÔ GIÁ TRỊ** — hàm
+`formatTime` cũ vốn đã có chuỗi đó, nên nó báo "đã live" cả khi file còn cũ; phải chọn dấu mốc **chỉ có
+ở bản mới** (`Math.floor(total / 100) % 10`).
+
+**Kiểm chứng TRÊN BẢN LIVE** (`andrewclasses-01.github.io/AWord/templates/quiz/test.html`, `pointsOff=2`,
+đúng 4 sai 2): **Score 0/6** (4 − 2×2) · **Time 0:06.0s** · **Total: 4/6** · 4 nút gồm **Start with
+mistakes** → bấm → **"QUIZ WITH MISTAKES"**, vòng 2 đúng **2 câu**. **0 lỗi console.** ⚠️ Không lái được
+bản live bằng iframe từ localhost (cross-origin) — phải cho tab trình duyệt chạy thẳng trang live.
+
 **VIỆC ĐANG CHỜ:** thầy chơi thử máy thật — (a) nhịp bấm *Start with mistakes* → PLAY có tự nhiên trên
 TOMKO không, (b) chữ "QUIZ WITH MISTAKES" ở màn READY có dễ đọc từ xa không, (c) chấp nhận việc muốn đổi
-template ở màn kết thúc phải Start again trước → duyệt → commit + push + live. Nên tách **2 commit riêng**
-cho Đợt 83 và Đợt 84.
+template ở màn kết thúc phải Start again trước.
 
 ---
 
-## Đợt 83 (7/8/2026, v0.9.58) — BẢNG KẾT QUẢ: THỜI GIAN LUÔN PHÚT:GIÂY + SCORE LÀ ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) + HÀNG "Total: 9/10" NHỎ Ở DƯỚI. ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT (mới chỉ ở LOCAL, chưa commit)
+## Đợt 83 (7/8/2026, v0.9.58) — BẢNG KẾT QUẢ: THỜI GIAN LUÔN PHÚT:GIÂY + SCORE LÀ ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) + HÀNG "Total: 9/10" NHỎ Ở DƯỚI. ⭐ CÓ SỬA CORE. ✅ THẦY DUYỆT → COMMIT `cf3865b` + PUSH + **LIVE**
 
 Thầy gửi 2 yêu cầu cho **bảng tổng kết cuối game** (`showSummary` trong `core/engine.js`). **Đụng CORE**
 nên ảnh hưởng CẢ 15 template có chấm điểm. 4 file: `core/utils.js`, `core/engine.js`, `core/app.css`,
