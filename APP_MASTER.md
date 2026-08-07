@@ -3,7 +3,37 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 82, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI + SLOGAN
+> Cập nhật lần cuối: **7/8/2026 (Đợt 83, v0.9.58) — BẢNG KẾT QUẢ CUỐI GAME: THỜI GIAN LUÔN PHÚT:GIÂY ·
+> SCORE = ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) · THÊM HÀNG NHỎ "Total: 9/10". ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY
+> DUYỆT (mới ở LOCAL, chưa commit).** 4 file: `core/utils.js` · `core/engine.js` · `core/app.css` ·
+> `templates/quiz/quiz.js`. **(1)** `fmtSecsParts()` (ô Time bảng tổng kết + cột Time của **cả 2**
+> leaderboard) đổi "135.4s" → **"2:15.4s"**, luôn có phút kể cả dưới 1 phút. Đồng hồ lúc chơi
+> (`formatTime`), Running word/team (`fmtClock`), báo cáo assignment (`fmtDuration`) **vốn đã** m:ss —
+> không đụng. ⭐ Bắt được **lỗi cũ**: bản trước tính phần lẻ bằng số thực `Math.floor((s−whole)*10)` nên
+> **45300ms hiện "45.2s"** (2,9999… → cắt thành 2); nay tính bằng **số nguyên ms** (`Math.floor(ms/100)%10`).
+> **(2)** Ô Score hiện **`result.score`/total** thay cho `correct`/total — tức chính con số leaderboard đã
+> dùng để xếp hạng, nên bảng tổng kết và bảng xếp hạng **hết nói 2 số khác nhau**; bật *Points off* −5, làm
+> đúng 9 sai 1 → **"4/10"** chứ không phải 9/10. Template không có điểm trừ thì `scoring.js` mặc định
+> `score = correct` → **zero-diff**. Điểm âm: **giữ dấu trừ** + tô đỏ `.aw-sum-value.is-neg` (khác ô điểm
+> lúc chơi — chỗ đó chỉ vừa 1 con số nên bỏ dấu, dùng màu). ⚠️ **Phải gỡ `raw.scoreText` của Quiz**:
+> `scoreText` nghĩa là "điểm ở THANG RIÊNG" nên engine in số **trơ trọi** → giữ lại là ra "4" chứ không
+> phải "4/10"; **Gameshow giữ nguyên** (điểm tốc độ "1250", chia cho số câu thì vô nghĩa). **(3)** Hàng
+> `.aw-sum-total` "Total: 9/10" — 1.5cqw, xám, căn giữa, ngay dưới hàng Score+Time. **(4)** Cột Time
+> leaderboard nới **5.2 → 6.6cqw**: đo tại font thật "10:11.0s" cần 52,5px / "59:59.9s" 62,2px mà cột cũ
+> chỉ 50,2px → ván trên 10 phút sẽ tràn đè cột điểm (cột tên `1fr` tự nuốt phần chênh). Tự test devserver
+> riêng **:5511** (phiên khác đang chiếm :5510), chơi thật Quiz 6 câu 3 kịch bản: `pointsOff=2` đúng 5 sai 1
+> → **Score 3/6 · Total: 5/6**; `pointsOff=0` đúng 6 → **6/6 · Total: 6/6** (không lệch bản cũ);
+> `pointsOff=5` đúng 1 sai 5 → **−24/6 đỏ · Total: 1/6**. Hồi quy **16/16 template mount, 0 lỗi console**;
+> Running word/team dùng `renderSummary` nên không đi qua thân bảng mặc định. ⚠️ **Bẫy đo mới:** panel
+> `.aw-panel` có `animation: aw-gc-pop … both`, pane preview không compositing nên nó **đóng băng giữa cú
+> pop** — đo ra bề ngang 115,9px thay vì 386,4px; phải `style.animation="none"` rồi mới đo bố cục.
+> **(5)** Hàng Total **tự ẩn khi trùng Score** (thầy chốt): `pointsOff=0` là mặc định mọi act nên
+> `score === correct`, hàng đó sẽ in lại y nguyên phân số phía trên — điều kiện nay là
+> `total > 0 && score !== correct`. Đo 4 ván: 0/đúng 6 → ẩn · 0/đúng 5 → ẩn · 2/đúng 5 → "Total: 5/6" ·
+> 5/đúng 1 → "Total: 1/6". Chi tiết: `GHI CHU DU AN.md` Đợt 83 + `core/HUONG DAN CORE.md` mục
+> "BẢNG TỔNG KẾT".
+>
+> Trước đó: **7/8/2026 (Đợt 82, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI + SLOGAN
 > Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH +
 > LIVE (Pages tự build, `curl` xác nhận sau **23 giây** — đúng quy trình mục 0 điểm 3, không cần 0-TER).**
 > Chỉ 2 file template. **(1)** ⭐ Chỗ "vài

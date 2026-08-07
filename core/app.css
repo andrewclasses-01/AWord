@@ -457,6 +457,18 @@ body {
 .aw-sum-label { color: #35b1f0; font-weight: 700; font-size: 2.2cqw; }
 .aw-sum-value { font-weight: 800; font-size: 4.4cqw; line-height: 1.1; }
 .aw-sum-value span { font-size: .5em; font-weight: 700; color: #d0d3d6; }
+/* negative score (Points off) — same sign-carries-colour rule as the in-game
+   score chip, except the summary DOES keep the minus sign: there is room for it
+   here and "-6/10" is unambiguous, whereas the chip only has room for a digit. */
+.aw-sum-value.is-neg { color: #ff6b6b; }
+/* raw tally under the two big numbers ("Total: 9/10") — deliberately quiet.
+   Negative top margin so it tucks under the numbers instead of sitting a whole
+   row away; .aw-sum-stats keeps its ORIGINAL bottom margin, so a summary with
+   no tally line (total = 0) is spaced exactly as it was before Đợt 83. */
+.aw-sum-total {
+  font-size: 1.5cqw; font-weight: 700; letter-spacing: 0.06cqw;
+  color: #9aa0a8; margin: -0.7cqw 0 1.1cqw;
+}
 .aw-panel-rank {
   font-size: 1.3cqw; font-weight: 700; letter-spacing: 0.18cqw; color: #cfd2d6;
   padding-bottom: 1.2cqw; margin-bottom: 0.6cqw; border-bottom: 1px solid #3a3a3d;
@@ -479,7 +491,11 @@ body {
 /* ---------- Leaderboard table ---------- */
 .aw-lb-table { margin: 0.4cqw 0 1cqw; }
 .aw-lb-row {
-  display: grid; grid-template-columns: 4cqw 1fr 4.8cqw 5.2cqw;
+  /* time column 5.2 -> 6.6cqw (7/8/2026): the clock reads "10:11.0s" now, not
+     "611.0s". Measured at this font: 5.2cqw = 50.2px but "10:11.0s" needs 52.5px
+     and "59:59.9s" needs 62.2px, so anything past 10 minutes used to spill left
+     over the score. The name column is 1fr and simply absorbs the difference. */
+  display: grid; grid-template-columns: 4cqw 1fr 4.8cqw 6.6cqw;
   align-items: center; gap: 0.7cqw; padding: 0.6cqw 0.8cqw;
   border-radius: 0.8cqw; font-size: 1.7cqw;
 }

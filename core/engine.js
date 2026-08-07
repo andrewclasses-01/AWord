@@ -959,14 +959,31 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     const stats = el("div", "aw-sum-stats");
     const t = fmtSecsParts(result.timeMs);
     stats.append(
-      // Points-mode templates (Gameshow) pass a pre-formatted scoreText and show
-      // it alone; everyone else keeps the classic "correct/total" form.
+      // SCORE = the scored value, not the raw tally (teacher, 7/8/2026). With
+      // "Points off" on, a wrong answer subtracts, so 9 right + 1 wrong at −5
+      // reads "4/10", NOT "9/10". `result.score` is exactly the number the
+      // leaderboard already ranks by (scoring.js: raw.score ?? correct), so the
+      // summary and the ranking can no longer disagree. Templates with no
+      // penalty pass no `score` -> it defaults to `correct` -> byte-for-byte the
+      // old display. Points-mode templates (Gameshow) pass a pre-formatted
+      // scoreText on their OWN scale (e.g. "1250" speed points, where "/10"
+      // would be meaningless) and still show it alone.
       result.scoreText != null
         ? statBlock("Score", result.scoreText, "")
-        : statBlock("Score", `${result.correct}`, `/${result.total}`),
+        : statBlock("Score", `${result.score}`, `/${result.total}`, result.score < 0 ? "is-neg" : ""),
       statBlock("Time", t.big, t.small)
     );
     panel.append(stats);
+
+    // The raw tally on its own quiet line under the two big numbers: how many
+    // questions were actually right, regardless of what the penalty did to the
+    // score. Small and grey on purpose — the headline is the SCORE above.
+    // Only shown when it says something the Score line doesn't (teacher,
+    // 7/8/2026): with "Points off" at 0 — the default on every act — score IS
+    // the tally, so the line would just print the same fraction twice.
+    if (result.total > 0 && result.score !== result.correct) {
+      panel.append(el("div", "aw-sum-total", `Total: ${result.correct}/${result.total}`));
+    }
 
     if (!session) {
       const rank = getRank(activity.id, entryId);
@@ -1171,11 +1188,14 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     return c;
   }
 
-  function statBlock(label, big, small) {
+  // `valueCls` (optional) rides on the big number only — used to paint a
+  // negative score red, the same sign-carries-colour rule as ui.setScore().
+  function statBlock(label, big, small, valueCls = "") {
     const b = el("div", "aw-sum-stat");
     b.append(
       el("div", "aw-sum-label", label),
-      el("div", "aw-sum-value", `${escapeText(big)}<span>${escapeText(small)}</span>`)
+      el("div", "aw-sum-value" + (valueCls ? " " + valueCls : ""),
+         `${escapeText(big)}<span>${escapeText(small)}</span>`)
     );
     return b;
   }

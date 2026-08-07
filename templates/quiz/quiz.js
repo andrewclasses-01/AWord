@@ -505,7 +505,12 @@ const quizTemplate = {
       const answered = state.filter(s => s.chosen !== null).length;
       const raw = { correct, incorrect: total - correct, total, perQuestion, review, answered };
       // With Points off on, rank + summary use the penalised score (may be negative).
-      if (pointsOff) { const pts = scoreNow(); raw.score = pts; raw.scoreText = String(pts); }
+      // NO scoreText: that field means "my points are on a scale of their own"
+      // (Gameshow) and makes the summary print the number ALONE. Quiz's points
+      // are still out of `total`, and since 7/8/2026 the summary shows
+      // `result.score`/total by itself — so passing scoreText here would turn
+      // the teacher's "4/10" back into a bare "4".
+      if (pointsOff) raw.score = scoreNow();
       // Out of lives -> the celebration screen reads "Game over" instead of
       // "Game complete" (engine reads raw.title; undefined = default).
       if (reason === "gameover") raw.title = "Game over";

@@ -473,6 +473,49 @@ Không truyền 2 trường này → hành vi y hệt cũ (score = số câu đ�
 (`computeResult`/`rankCompare`), `core/leaderboard.js` (`addEntry` lưu `scoreText`), `core/engine.js`
 (hiển thị). **Tương thích ngược tuyệt đối** — mọi game cũ không đổi.
 
+### BẢNG TỔNG KẾT — Score / Total / Time hiện cái gì (Đợt 83, 7/8/2026)
+
+Bảng tổng kết mặc định (`showSummary` trong `engine.js`) nay có **3 dòng số**:
+
+| Dòng | Nội dung | Nguồn |
+|---|---|---|
+| **Score** (to) | `result.score` / `result.total` | điểm ĐÃ trừ phạt — đúng số leaderboard xếp hạng |
+| **Time** (to) | `m:ss.d` + `"s"` | `fmtSecsParts(result.timeMs)` |
+| **`Total: 9/10`** (nhỏ, xám, giữa) | `result.correct` / `result.total` | số câu đúng thuần, `.aw-sum-total` |
+
+Hàng **Total chỉ hiện khi `score !== correct`** — tức khi điểm phạt thật sự kéo điểm lệch khỏi số câu
+đúng. `pointsOff = 0` (mặc định mọi act) thì 2 số bằng nhau và hàng đó chỉ in lại phân số phía trên → ẩn.
+`.aw-sum-stats` giữ `margin-bottom` GỐC, hàng Total tự kéo lên bằng `margin-top` âm — nhờ vậy ván không có
+hàng Total giãn dòng y hệt trước Đợt 83.
+
+⚠️ **`score` ≠ `correct`.** Trước Đợt 83 ô Score hiện `correct/total` (số câu ĐÚNG) trong khi leaderboard
+xếp hạng theo `score` (đã trừ) → bật *Points off* là **2 chỗ nói 2 số khác nhau**. Nay cả hai đều đọc
+`result.score`. Template **không** có điểm trừ thì không truyền `score`, `scoring.js` mặc định
+`score = correct` → hiện y hệt cũ.
+
+⚠️ **ĐỪNG truyền `scoreText` chỉ để khoe điểm đã trừ.** `scoreText` mang nghĩa **"điểm của tôi ở THANG
+RIÊNG"** nên engine in số **TRƠ TRỌI, bỏ mẫu số**. Chỉ dùng khi mẫu số thật sự vô nghĩa (Gameshow: 1250
+điểm tốc độ / 10 câu = vô lý). Quiz từng truyền `scoreText = String(pts)` khi bật Points off và **đã phải
+gỡ ở Đợt 83** vì nó biến "4/10" thành "4". Điểm vẫn trên thang `total` → chỉ truyền `score`.
+
+- Điểm ÂM ở bảng tổng kết: **giữ dấu trừ** + tô đỏ (class `is-neg` trên `.aw-sum-value`). Khác luật ô điểm
+  lúc chơi (`ui.setScore`: bỏ dấu, chỉ dùng màu) — chỗ đó hẹp, chỉ vừa một con số; panel thì rộng.
+- Template khai `tpl.renderSummary` (Running word, Running team) **không đi qua** thân bảng này → mọi điều
+  trên KHÔNG áp dụng, template tự chịu trách nhiệm hiển thị.
+
+### Thời gian hiển thị — `fmtSecsParts(ms)` (Đợt 83)
+
+Trả `{ big: "2:15.", small: "4s" }`, ghép lại `"2:15.4s"`. **LUÔN có phần phút**, kể cả dưới 1 phút
+(`"0:45.3s"`); giây 2 chữ số; phần lẻ 1 chữ số và **cắt** chứ không làm tròn. Dùng ở 3 nơi: ô Time bảng
+tổng kết + cột Time của leaderboard local + của leaderboard online (học sinh).
+
+⚠️ **Tính bằng SỐ NGUYÊN mili-giây.** Bản trước đổi sang giây thực rồi `Math.floor((s − whole) * 10)` —
+số thực không giữ đúng phần lẻ nên **45300ms ra "45.2s"**, 59900ms ra "59.8s". Công thức đúng:
+`tenth = Math.floor(ms/100) % 10`. Bẫy này áp cho **mọi** chỗ cắt phần lẻ của thời gian.
+
+3 hàm định dạng giờ KHÁC trong app **vốn đã** đúng m:ss, đừng nhầm lẫn: `formatTime` (`utils.js`, đồng hồ
+lúc chơi), `fmtClock` (Running word/team, đồng hồ đội), `fmtDuration` (`assignment-ui.js`, báo cáo thầy).
+
 ### Cờ template ẩn nhóm Options không hợp lệ
 
 - `tpl.reviewStyle:"stacked"` — (thêm 2/8/2026 cho Unjumble) đổi màn **Show answers** từ lưới 3 cột

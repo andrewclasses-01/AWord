@@ -5,6 +5,79 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 83 (7/8/2026, v0.9.58) — BẢNG KẾT QUẢ: THỜI GIAN LUÔN PHÚT:GIÂY + SCORE LÀ ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) + HÀNG "Total: 9/10" NHỎ Ở DƯỚI. ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT (mới chỉ ở LOCAL, chưa commit)
+
+Thầy gửi 2 yêu cầu cho **bảng tổng kết cuối game** (`showSummary` trong `core/engine.js`). **Đụng CORE**
+nên ảnh hưởng CẢ 15 template có chấm điểm. 4 file: `core/utils.js`, `core/engine.js`, `core/app.css`,
+`templates/quiz/quiz.js`.
+
+**1. Thời gian LUÔN ở dạng phút:giây — "2:15.4s" thay cho "135.4s".**
+Chỗ duy nhất còn hiện tổng số giây thô là `fmtSecsParts()` trong `core/utils.js`, dùng ở **3 nơi**: ô Time
+của bảng tổng kết + cột Time của **cả 2** bảng xếp hạng (local và online của học sinh). Đồng hồ trong lúc
+chơi (`formatTime`), đồng hồ Running word/team (`fmtClock`) và bảng báo cáo assignment của thầy
+(`fmtDuration`) **vốn đã** là m:ss — không phải sửa. Nay luôn có phần phút kể cả dưới 1 phút ("0:45.3s"),
+giây luôn 2 chữ số, phần lẻ vẫn 1 chữ số và vẫn **cắt** chứ không làm tròn (45,39s → 45.3).
+
+⭐ **Bắt được 1 lỗi CŨ khi đo:** bản cũ đổi sang giây thực rồi lấy `Math.floor((s − whole) * 10)` — số thực
+không giữ đúng phần lẻ nên **45300ms ra "45.2s"** (`(45.3 − 45) × 10 = 2,9999…` → cắt thành 2), sai 1 chữ
+số ở rất nhiều mốc (59900ms → "59.8s"). Nay tính **toàn bộ bằng số nguyên mili-giây**
+(`Math.floor(ms/100) % 10`). Đo lại 12 mốc: `0→0:00.0s · 900→0:00.9s · 45300→0:45.3s · 59900→0:59.9s ·
+60000→1:00.0s · 135400→2:15.4s · 135399→2:15.3s · 611000→10:11.0s · 3600000→60:00.0s`, số âm kẹp về 0:00.0s.
+
+**2. Score = ĐIỂM ĐÃ TÍNH THEO BẢNG ĐIỂM, không phải số câu đúng.** Thầy: 10 câu, đúng +1, sai −5 (Options
+→ *Points off*), làm đúng 9 sai 1 → Score phải là **4/10**, không phải 9/10. Bảng tổng kết cũ hiện
+`result.correct/total` = **số câu đúng**, trong khi leaderboard lại xếp hạng theo `result.score` (đã trừ) →
+**2 chỗ nói 2 số khác nhau**. Nay ô Score hiện `result.score`/`total` — đúng cái số leaderboard xếp hạng.
+Template không có điểm trừ không truyền `score` → `scoring.js` mặc định `score = correct` → **hiện y hệt
+cũ từng byte**. Điểm âm hiện **có dấu trừ** và tô **đỏ** (`.aw-sum-value.is-neg`): bảng tổng kết rộng nên
+"-24/6" đọc rõ, khác ô điểm trong lúc chơi (chỗ đó chỉ vừa 1 con số nên theo luật cũ = bỏ dấu, dùng màu).
+
+**3. Hàng "Total: 9/10"** — số câu đúng/tổng, cỡ nhỏ (1.5cqw), chữ xám `#9aa0a8`, **căn giữa**, nằm ngay
+**dưới** hàng Score + Time (`.aw-sum-total`, chỉ hiện khi `total > 0`).
+
+⚠️ **Phải gỡ `scoreText` của Quiz** (`templates/quiz/quiz.js`): khi bật Points off, Quiz truyền
+`raw.scoreText = String(pts)` — mà `scoreText` mang nghĩa "điểm của tôi ở THANG RIÊNG" nên engine in số
+**trơ trọi**, tức yêu cầu của thầy sẽ ra "4" chứ không phải "4/10". Điểm Quiz vẫn tính trên `total` nên bỏ
+hẳn dòng `scoreText`, chỉ giữ `raw.score`. **Gameshow giữ nguyên `scoreText`** (điểm theo tốc độ, vd
+"1250" — chia cho 10 câu thì vô nghĩa).
+
+**4. Cột Time của leaderboard nới 5.2 → 6.6cqw.** Hệ quả trực tiếp của mục 1: đo tại font thật, "135.4s"
+chỉ 43,7px nhưng **"10:11.0s" cần 52,5px** và "59:59.9s" cần 62,2px, trong khi cột cũ 5.2cqw = **50,2px**
+→ ván trên 10 phút sẽ **tràn đè sang cột điểm**. Cột tên là `1fr` nên tự nuốt phần chênh (182,8 → 169px,
+vẫn thừa). Cột Score để nguyên: "-18/10" = 43,9px vẫn lọt 46,4px.
+
+**Tự test (devserver riêng :5511 — phiên khác đang chiếm :5510, trình duyệt thật, đo DOM).** Chơi thật
+Quiz mẫu 6 câu, 3 kịch bản:
+- `pointsOff=2`, đúng 5 sai 1 → điểm trong lúc chơi 5 → **3**; bảng tổng kết **Score 3/6 · Time 0:10.5s ·
+  Total: 5/6** ✅
+- `pointsOff=0` (mặc định của mọi act), đúng cả 6 → **Score 6/6 · Total: 6/6** — không lệch bản cũ ✅
+- `pointsOff=5`, đúng 1 sai 5 → **Score −24/6 tô đỏ** (`.is-neg`, `rgb(255,107,107)`) · **Total: 1/6** ✅
+
+Đo bố cục (phải **tắt `animation`** của `.aw-panel` mới đo được — pane preview không compositing nên panel
+đóng băng giữa cú "pop", đo ra bề ngang 115,9px thay vì 386,4px, **bẫy đo mới**): panel 386,4×454,3 nằm
+gọn trong sân 968×544,5; hàng Total căn giữa đúng tâm panel (cx 640 = cx panel), cách hàng số 4,8px.
+Leaderboard sau khi nới: cột Time 63,8px, chuỗi dài nhất 58,5px — **hết tràn**, 3 hàng không hàng nào
+`scrollWidth > clientWidth`.
+
+**Hồi quy:** nạp **16/16** trang `templates/*/test.html`, tất cả dựng đủ `.aw-stage` + nút PLAY, **0 lỗi
+console**. Running word + Running team dùng `tpl.renderSummary` nên **không đi qua** thân bảng mặc định →
+không đổi gì.
+
+**5. Hàng Total TỰ ẨN khi trùng Score (thầy chốt cùng ngày).** Khi `pointsOff = 0` — mặc định của mọi act
+— thì `score === correct`, hàng Total sẽ in **đúng cái phân số vừa in ở trên** ("Score 6/6" rồi "Total:
+6/6") = thừa. Điều kiện hiện nay: `result.total > 0 && result.score !== result.correct`, tức hàng Total
+chỉ xuất hiện khi điểm phạt **thật sự kéo điểm lệch khỏi số câu đúng**. Đo lại 4 ván:
+`pointsOff=0` đúng 6/6 → **ẩn** · `pointsOff=0` đúng 5/6 → **ẩn** · `pointsOff=2` đúng 5/6 → Score 3/6 +
+**"Total: 5/6"** · `pointsOff=5` đúng 1/6 → Score −24/6 + **"Total: 1/6"**. ⚠️ `.aw-sum-stats` giữ
+nguyên `margin-bottom` cũ và `.aw-sum-total` tự kéo lên bằng `margin-top` âm — nhờ vậy ván **không có**
+hàng Total giãn dòng y hệt bản trước Đợt 83.
+
+**VIỆC ĐANG CHỜ:** thầy mở act thật xem 3 điểm — (a) thời gian đọc có thuận mắt không, (b) Score/Total có
+đúng ý không (nhất là act bật Points off), (c) hàng Total cỡ chữ đã đủ "nhỏ, không nổi bật" chưa → duyệt →
+commit + push + live.
+
+---
+
 ## Đợt 82 (7/8/2026, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI THẬT: ANIMATION BỊ HUỶ Ở 840ms) + SLOGAN Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH + LIVE (23 GIÂY)
 
 Thầy gửi 2 yêu cầu 1 lượt cho **Open the box**. Chỉ đụng 2 file template (`open-the-box.js` +

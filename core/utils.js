@@ -35,12 +35,25 @@ export function ordinal(n) {
   return n + (m === 1 ? "ST" : m === 2 ? "ND" : m === 3 ? "RD" : "TH");
 }
 
-// Đổi mili-giây thành 2 phần hiển thị kiểu Wordwall: "4." to + "9s" nhỏ
+// Đổi mili-giây thành 2 phần hiển thị: phần TO "2:15." + phần nhỏ "1s"
+// (ghép lại = "2:15.1s").
+//
+// Thầy chốt 7/8/2026: thời gian LUÔN ở dạng phút:giây, kể cả dưới 1 phút
+// ("0:45.3s") — trước đây hàm này trả về tổng số giây thô ("135.4s"), đọc lâu
+// mới ra là 2 phút 15 giây. Giây luôn 2 chữ số, phần lẻ 1 chữ số, vẫn CẮT chứ
+// không làm tròn (một lượt 45,39s vẫn đọc là 45.3, không nhảy lên 45.4).
+//
+// ⚠️ Tính TOÀN BỘ bằng SỐ NGUYÊN mili-giây. Bản cũ đổi sang giây thực rồi lấy
+// `Math.floor((s - whole) * 10)` — sai một chữ số ở rất nhiều mốc vì số thực
+// không giữ đúng phần lẻ: 45300ms ra `(45.3 − 45) × 10 = 2,9999…` → cắt thành
+// **2**, hiện "45.2s" thay vì "45.3s" (đo thật 7/8/2026, lỗi có từ trước).
 export function fmtSecsParts(ms) {
-  const s = ms / 1000;
-  const whole = Math.floor(s);
-  const tenth = Math.floor((s - whole) * 10);
-  return { big: `${whole}.`, small: `${tenth}s` };
+  const total = Math.max(0, Math.floor(Number(ms) || 0));
+  const tenth = Math.floor(total / 100) % 10;
+  const whole = Math.floor(total / 1000);
+  const m = Math.floor(whole / 60);
+  const sec = whole % 60;
+  return { big: `${m}:${String(sec).padStart(2, "0")}.`, small: `${tenth}s` };
 }
 
 // Chép chữ vào clipboard, trả về true nếu chép được.
