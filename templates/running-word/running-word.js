@@ -269,11 +269,12 @@ const rwTemplate = {
     panel.append(gRound);
 
     // ---- pass ----
+    // A 0..5 slider replaces the old on/off checkbox (teacher's request,
+    // 7/8/2026): 0 = no passes at all, 1..5 = how many times each team may skip
+    // a word. The penalty slider still trims that team's clock on every pass.
     const gPass = group("Pass");
-    const rowPass = E("div", "aw-opt-row");
-    rowPass.append(mkCheck(draft.allowPass !== false, "Allow PASS (skip a word you can't get)",
-      v => { draft.allowPass = v; }));
-    gPass.append(rowPass);
+    slider(gPass, "Passes per team", "passUses", 0, 5, 1, 3,
+      v => (v ? `${v}×` : "Off"));
     slider(gPass, "Time penalty for a pass", "passPenaltySeconds", 0, 60, 5, 10,
       v => (v ? `−${v}s` : "Free"));
     panel.append(gPass);
@@ -304,10 +305,13 @@ const rwTemplate = {
       clockMs: clampInt(opt.clockSeconds, 10, 1800, 300) * 1000,
       incrementMs: clampInt(opt.incrementSeconds, 0, 15, 0) * 1000,
       warnSec: clampInt(opt.warnSeconds, 0, 60, 15),
-      allowPass: opt.allowPass !== false,
+      passUses: clampInt(opt.passUses, 0, 5, 3),
       passPenaltyMs: clampInt(opt.passPenaltySeconds, 0, 60, 10) * 1000,
       andrewUses: clampInt(opt.andrewUses, 1, 5, 1)
     };
+    // PASS is a limited resource now (0..5 per team). allowPass stays as the
+    // "any passes at all?" flag so makePass/doPass read the same as before.
+    cfg.allowPass = cfg.passUses > 0;
 
     // ---------- match state ----------
     let sets = readSets(activity);                 // saved splits (up to 3)
@@ -315,8 +319,9 @@ const rwTemplate = {
     let current = sets[0] || buildSets(pool);
     let dirty = !sets.length;                        // current split isn't one of the saved ones
 
-    let phase = "setup";                             // setup -> prep -> countdown -> play -> over
+    let phase = "setup";                             // setup -> prep -> play -> over
     let turn = null;                                  // null during "prep" until a board is tapped
+    let partFlip = false;                             // swap toggle: which side shows PART A vs PART B
     let running = false, paused = false, finished = false;
     const idx = { a: 0, b: 0 };
     // Turn-ending moves per team (a correct word OR a pass — a wrong try does
@@ -332,6 +337,7 @@ const rwTemplate = {
     const rows = { a: [], b: [] };                   // per-row status: null | "ok" | "pass"
     const clock = { a: cfg.clockMs, b: cfg.clockMs };
     const andrewLeft = { a: cfg.andrewUses, b: cfg.andrewUses };
+    const passLeft = { a: cfg.passUses, b: cfg.passUses };   // passes remaining per team
     let andrewShown = false;                         // the word is revealed for the current turn
     let lastTick = { a: null, b: null };              // whole second last announced per clock
     const timers = new Set();
@@ -366,6 +372,13 @@ const rwTemplate = {
     // digits and sit over their team's column; Play/Pause is a wide pill
     // centred between the two clocks. Word count is still tracked internally
     // off `rows` for scoring/review, just not shown on the clock.
+    // Which PART letter (A/B) side `t` currently shows. The swap button toggles
+    // partFlip, moving the PART A / PART B titles — and the word lists under
+    // them — between the two sides while colours stay put (teacher's choice,
+    // 7/8/2026).
+    const partLetter = t => (partFlip ? other(t) : t).toUpperCase();
+    const partLabel = t => `PART ${partLetter(t)}`;
+
     const clocks = el("div", "aw-rw-clocks");
     const clockEls = {};
     const passEls = {};
@@ -381,11 +394,14 @@ const rwTemplate = {
     // is switched off in Options.
     function makePass(t) {
       if (!cfg.allowPass) return el("div", `aw-rw-passgap is-${t}`);
-      const btn = el("button", `aw-rw-passbtn is-${t}`, "PASS");
+      const btn = el("button", `aw-rw-passbtn is-${t}`);
       btn.type = "button";
       btn.title = "Skip this word (time penalty)";
+      const lab = el("span", "aw-rw-passbtn-lab", "PASS");
+      const num = el("span", "aw-rw-passbtn-n", String(cfg.passUses));   // passes left
+      btn.append(lab, num);
       btn.onclick = () => { if (turn === t) doPass(); };
-      passEls[t] = btn;
+      passEls[t] = { btn, num, _n: cfg.passUses };
       return btn;
     }
     clocks.append(makePass("a"), makeClock("a"), refereeBar(), makeClock("b"), makePass("b"));
@@ -405,9 +421,20 @@ const rwTemplate = {
     const boardEls = {};
     TEAMS.forEach(t => {
       const board = el("div", `aw-rw-board is-${t}`);
-      board.onclick = () => { if (phase === "prep") { ui.sound.click?.(); turn = t; paintAll(); } };
+      // Tap a board during "prep" to pick who goes first. You can re-pick the
+      // other side any time before the first submit; switching drops the
+      // half-typed word so it can't carry over to the other team.
+      board.onclick = () => {
+        if (phase !== "prep") return;
+        ui.sound.click?.();
+        if (turn !== t) input.value = "";
+        turn = t;
+        paintAll();
+        focusInput();
+      };
       const rowhead = el("div", "aw-rw-rowhead");
-      rowhead.append(el("span", "aw-rw-rowhead-name", escapeHtml(cfg.names[t])));
+      const headName = el("span", "aw-rw-rowhead-name", "");   // "PART A/B" — set in paintBoard
+      rowhead.append(headName);
       const viewport = el("div", "aw-rw-rows");
       const track = el("div", "aw-rw-track");
       viewport.append(track);
@@ -441,7 +468,7 @@ const rwTemplate = {
       const footer = el("div", "aw-rw-remaining", "0");
       const probe = el("span", "aw-rw-probe");   // measures a word at base font (see fitBoard)
       board.append(rowhead, viewport, footer, probe);
-      boardEls[t] = { board, viewport, track, footer, probe, rowEls: [], noAnim: true };
+      boardEls[t] = { board, viewport, track, footer, probe, headName, rowEls: [], noAnim: true };
       boards.append(board);
     });
     match.append(boards);
@@ -497,7 +524,7 @@ const rwTemplate = {
         onBackspace: () => backspace(),
         submit: {
           onClick: () => submit(),
-          isDisabled: () => phase !== "play" || paused || !input.value.trim()
+          isDisabled: () => !canType() || !input.value.trim()
         },
         extraKey: {
           label: "Andrew",
@@ -527,17 +554,29 @@ const rwTemplate = {
       return bar;
     }
 
-    // In "prep" (boards shown, nobody's clock running yet): starts the 3-2-1
-    // once a side has been picked. In "play": pauses/resumes. Disabled the
-    // rest of the time (countdown, setup, over).
+    // The centre button changes job with the phase (teacher's redesign,
+    // 7/8/2026): in "prep" (clock still stopped) it is a SWAP that flips PART A
+    // / PART B between the two sides; in "play" it pauses/resumes. The match no
+    // longer starts from this button at all — the first Submit starts the clock.
     function onPlayPauseClick() {
-      if (phase === "prep") {
-        if (!turn) return;
-        ui.sound.click?.();
-        beginCountdown();
-      } else if (phase === "play") {
-        togglePause();
-      }
+      if (phase === "prep") doSwapParts();
+      else if (phase === "play") togglePause();
+    }
+
+    // Swap which side shows PART A vs PART B — the titles AND the word lists
+    // move together so a title never lies about the words under it, while each
+    // side keeps its own colour and clock (teacher's choice, 7/8/2026). Only
+    // meaningful before the first submit; `current` is reassigned to a NEW
+    // object so a saved set object is never mutated.
+    function doSwapParts() {
+      if (phase !== "prep") return;
+      ui.sound.click?.();
+      current = { a: current.b, b: current.a };
+      partFlip = !partFlip;
+      input.value = "";
+      buildRows();
+      paintAll();
+      focusInput();
     }
 
     // ===== SETUP SCREEN CONTENT ============================================
@@ -627,7 +666,7 @@ const rwTemplate = {
         const printBtn = el("button", "aw-rw-btn", `${icons.print}<span>Print 3 sheets</span>`);
         printBtn.type = "button";
         printBtn.classList.add("is-icon");
-        printBtn.onclick = () => { ui.sound.click?.(); printRunningSheets(activity, current, cfg.names); };
+        printBtn.onclick = () => { ui.sound.click?.(); printRunningSheets(activity, current, cfg.names, setIndex + 1); };
         acts.append(printBtn);
 
         const saveBtn = el("button", "aw-rw-btn" + (dirty ? " is-dirty" : ""),
@@ -729,33 +768,10 @@ const rwTemplate = {
       paintAll();
     }
 
-    // ===== COUNTDOWN =======================================================
-    function beginCountdown() {
-      phase = "countdown";
-      paintAll();
-
-      const overlay = el("div", "aw-rw-countdown");
-      const num = el("div", "aw-rw-countdown-num", "3");
-      overlay.append(num);
-      match.append(overlay);
-
-      let n = 3;
-      rwSound.ready(false);
-      const step = () => {
-        n--;
-        if (n > 0) {
-          num.textContent = String(n);
-          num.classList.remove("is-pop"); void num.offsetWidth; num.classList.add("is-pop");
-          rwSound.ready(n === 1);
-          later(step, 900);
-        } else {
-          overlay.remove();
-          startMatch();
-        }
-      };
-      later(step, 900);
-    }
-
+    // ===== START (first submit) ============================================
+    // The 3-2-1 countdown is gone (teacher's request, 7/8/2026). The clock
+    // starts the instant the first word is submitted — startMatch() is called
+    // from submit() when the phase is still "prep".
     function startMatch() {
       phase = "play";
       running = true;
@@ -795,20 +811,23 @@ const rwTemplate = {
       });
     }
 
-    // Which word sits at the TOP of the 3-row window for team `t` (teacher's
-    // reversed layout, 5/8/2026 — the newest word is on top now):
-    //   • its turn (playing)      -> idx[t]      (the input row)
-    //   • before the match starts -> idx[t]      (word 1 ready at the top)
-    //   • waiting / game over     -> idx[t] - 1  (the word it last completed)
+    // ⭐ PARALLEL WINDOWS (teacher's request, 7/8/2026). BOTH boards lock to the
+    // SAME row at the top, driven by the word the team currently on the clock is
+    // on. The waiting side shows that same numbered row too — as a green
+    // finished word if it already played it, or an EMPTY "waiting to type" slot
+    // if it hasn't. idx.a and idx.b stay in lockstep (the moves.a===moves.b
+    // rule), so the shared index is always valid on both equal-length lists.
     // The two rows BELOW are the previous two (smaller and fainter — see the
     // tier classes in paintBoard).
-    function topIndexOf(t) {
-      if (phase === "play" && turn === t) return idx[t];
-      if (phase === "prep" || phase === "countdown") return idx[t];
-      return idx[t] - 1;
+    function sharedTop() {
+      let top;
+      if (turn && (phase === "play" || phase === "prep")) top = idx[turn];
+      else top = Math.max(idx.a, idx.b);              // over, or prep before a pick
+      const len = Math.max(current.a.length, current.b.length);
+      return Math.max(0, Math.min(top, len - 1));
     }
 
-    // Slide the track so `topIndexOf(t)` lands in the TOP third of the window.
+    // Slide the track so `sharedTop()` lands in the TOP third of the window.
     // `animate:false` (first build) suppresses the transition.
     //
     // ⭐ NO PIXELS ANYWHERE (5/8/2026). The track is exactly as tall as the
@@ -825,7 +844,7 @@ const rwTemplate = {
     // window's top slot, with the two OLDER words falling into the slots below.
     function applyTrack(t, animate) {
       const b = boardEls[t];
-      const shift = -((current[t].length - 1) - topIndexOf(t));   // in ROWS (negative = slide up)
+      const shift = -((current[t].length - 1) - sharedTop());   // in ROWS (negative = slide up)
       const y = `translateY(calc(${shift} * 100% / 3))`;
       if (animate) {
         b.track.style.transform = y;
@@ -848,7 +867,7 @@ const rwTemplate = {
       if (!sample) return;
       const avail = sample.body.clientWidth;
       if (avail <= 0) { b.board.style.setProperty("--rw-fit", "1"); return; }
-      const top = topIndexOf(t);
+      const top = sharedTop();
       let maxNeed = 0;
       for (const i of [top, top - 1, top - 2]) {
         if (i < 0 || i >= current[t].length) continue;
@@ -863,21 +882,28 @@ const rwTemplate = {
     // every turn (50 rows), and far less error-prone than patching single rows.
     function paintBoard(t) {
       const list = current[t];
-      const { board, rowEls, footer } = boardEls[t];
+      const { board, rowEls, footer, headName } = boardEls[t];
+
+      // Board title: PART A / PART B (teacher's request, 7/8/2026) — follows the
+      // swap toggle, not the team name.
+      headName.textContent = partLabel(t);
 
       // The 70/30 split (teacher's request, 5/8/2026) applies from "prep"
-      // onward, not just "play" — so picking a side before the 3-2-1 already
-      // shows it wide. Neither class = the neutral 50/50 shown before a pick.
-      const showSplit = phase === "prep" || phase === "countdown" || phase === "play";
+      // onward, not just "play" — so picking a side already shows it wide.
+      // Neither class = the neutral 50/50 shown before a pick.
+      const showSplit = phase === "prep" || phase === "play";
       board.classList.toggle("is-active", showSplit && turn === t);
       board.classList.toggle("is-waiting", showSplit && !!turn && turn !== t);
       board.classList.toggle("is-pickable", phase === "prep");
       board.classList.toggle("is-dimmed", phase === "play" && paused);
 
-      const top = topIndexOf(t);
+      const top = sharedTop();
       rowEls.forEach((r, i) => {
         const status = rows[t][i];
-        const isInput = i === idx[t] && phase === "play" && turn === t;
+        // The input row belongs to the active team, at its own idx. It stays put
+        // during a pause (phase is still "play"), so the box isn't cleared out.
+        const isInput = i === idx[t] && turn === t &&
+          (phase === "play" || (phase === "prep" && !!turn));
         r.row.classList.toggle("is-done", status === "ok");
         r.row.classList.toggle("is-passed", status === "pass");
         r.row.classList.toggle("is-current", isInput);
@@ -930,26 +956,31 @@ const rwTemplate = {
         c.box.classList.toggle("is-dead", clock[t] <= 0);
       });
       if (refUI) {
-        const canStart = phase === "prep" && !!turn;
+        const inPrep = phase === "prep";
         const isPlaying = phase === "play";
         const isTicking = isPlaying && !paused;   // local — deliberately not the outer `running` flag
-        refUI.playPauseBtn.disabled = !(canStart || isPlaying);
+        // Prep = SWAP (always available, even before a pick); play = Pause/Resume.
+        refUI.playPauseBtn.disabled = !(inPrep || isPlaying);
         refUI.playPauseBtn.classList.toggle("is-pause", isTicking);
+        refUI.playPauseBtn.classList.toggle("is-swap", inPrep);
         // ⚠️ Only swap the icon SVG when it actually CHANGES. paintClocks() runs
         // every 100ms tick; blindly re-setting innerHTML replaced the button's
         // child SVG 10×/s, so a tap whose pointerdown/up straddled a rebuild
         // lost its click — that was the "sometimes works" bug (5/8/2026).
-        const icon = isTicking ? "pause" : "play";
+        const icon = inPrep ? "swap" : (isTicking ? "pause" : "play");
         if (refUI._icon !== icon) {
-          refUI.playPauseBtn.innerHTML = isTicking ? SVG_PAUSE : SVG_PLAY;
+          refUI.playPauseBtn.innerHTML = icon === "swap" ? SVG_SWAP : (icon === "pause" ? SVG_PAUSE : SVG_PLAY);
           refUI._icon = icon;
         }
-        refUI.playPauseBtn.title = isTicking ? "Pause" : (isPlaying ? "Resume" : "Play");
+        refUI.playPauseBtn.title = inPrep ? "Swap PART A / PART B" : (isTicking ? "Pause" : "Resume");
       }
-      // Each team's PASS lights up only on that team's own live turn.
+      // Each team's PASS lights up only on its own live turn, and only while it
+      // still has passes left. The small number shows how many remain.
       TEAMS.forEach(t => {
-        const btn = passEls[t];
-        if (btn) btn.disabled = !(phase === "play" && !paused && turn === t);
+        const p = passEls[t];
+        if (!p) return;
+        p.btn.disabled = !(phase === "play" && !paused && turn === t && passLeft[t] > 0);
+        if (p._n !== passLeft[t]) { p.num.textContent = String(passLeft[t]); p._n = passLeft[t]; }
       });
     }
 
@@ -1000,8 +1031,14 @@ const rwTemplate = {
     }
 
     // ===== TYPING ==========================================================
+    // Typing is live once a side has been picked in "prep" (before the clock
+    // starts) as well as during "play" — the first Submit is what starts the
+    // clock (teacher's redesign, 7/8/2026).
+    function canType() {
+      return (phase === "play" || (phase === "prep" && !!turn)) && !paused;
+    }
     function focusInput() {
-      if (phase !== "play" || paused) return;
+      if (!canType()) return;
       try { input.focus({ preventScroll: true }); } catch { input.focus(); }
       const n = input.value.length;
       try { input.setSelectionRange(n, n); } catch { /* not supported on some types */ }
@@ -1017,7 +1054,7 @@ const rwTemplate = {
       }
     }
     function insertChar(ch) {
-      if (phase !== "play" || paused) return;
+      if (!canType()) return;
       const s = input.selectionStart ?? input.value.length;
       const e = input.selectionEnd ?? input.value.length;
       input.value = input.value.slice(0, s) + ch + input.value.slice(e);
@@ -1028,7 +1065,7 @@ const rwTemplate = {
       focusInput();
     }
     function backspace() {
-      if (phase !== "play" || paused) return;
+      if (!canType()) return;
       const s = input.selectionStart ?? input.value.length;
       const e = input.selectionEnd ?? input.value.length;
       if (s === e) {
@@ -1047,9 +1084,12 @@ const rwTemplate = {
 
     // ===== THE THREE MOVES: submit · pass · Andrew ==========================
     function submit() {
-      if (phase !== "play" || paused || finished) return;
+      if (paused || finished) return;
+      const starting = phase === "prep" && !!turn;   // first submit starts the clock
+      if (!(phase === "play" || starting)) return;
       const typed = input.value.trim();
       if (!typed) return;
+      if (starting) startMatch();                     // the clock begins the moment they submit
       const t = turn;
       const word = current[t][idx[t]];
       if (word == null) return;
@@ -1100,7 +1140,9 @@ const rwTemplate = {
     function doPass() {
       if (phase !== "play" || paused || finished || !cfg.allowPass) return;
       const t = turn;
+      if (passLeft[t] <= 0) return;                    // this team is out of passes
       if (idx[t] >= current[t].length) return;
+      passLeft[t] = passLeft[t] - 1;
       rows[t][idx[t]] = "pass";
       idx[t] = idx[t] + 1;
       moves[t] = moves[t] + 1;
@@ -1321,6 +1363,8 @@ const rwTemplate = {
 // core stays untouched.
 const SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>';
 const SVG_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L19 12 8 5.2z"/></svg>';
+// Two arrows for the pre-start SWAP job on the same centre button.
+const SVG_SWAP  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 20 4-4-4-4"/><path d="M21 16H8"/></svg>';
 
 function escapeHtml(s) {
   return String(s ?? "")

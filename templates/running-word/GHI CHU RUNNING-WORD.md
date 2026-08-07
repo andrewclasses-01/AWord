@@ -1,5 +1,20 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **TRẠNG THÁI (7/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 10 (mục 8k, v0.9.55).** 5 nhóm thay đổi thầy gửi 1 lượt
+> (thầy đã chọn: PASS thay ô tích bằng thanh 0–5; nút swap chỉ đổi nhãn+danh sách từ). Chỉ 3 file template
+> (`running-word.js`, `.css`, `rw-print.js`), **KHÔNG đụng core**. (1) **PASS 0–5/đội** thay ô tích (state
+> `passLeft`, nút hiện số còn lại, hết=mờ, chỉ sáng đúng lượt). (2) **Tiêu đề PART A/PART B** thay tên đội
+> (cập nhật động trong `paintBoard`). (3) **2 bảng SONG SONG**: bỏ `topIndexOf(t)` → `sharedTop()` chung cho
+> cả 2 bảng, khóa theo từ đội-đang-tới-lượt; đội chờ hiện đúng số đó dạng ô trống hoặc chữ xanh (đo `topA===topB`
+> mọi bước). (4) **In thêm SET X** cả 3 tờ (`printRunningSheets(...,setIndex+1)`). (5a) **Bỏ 3-2-1**, bắt đầu
+> bằng **Submit lượt đầu** (`startMatch()` gọi từ `submit()` khi còn "prep"; thêm `canType()`; xoá
+> `beginCountdown`). (5b) Trước trận, nút giữa = **SWAP** (đổi nhãn+danh sách từ 2 bên, `current` gán object mới
+> tránh mutate set đã lưu, cờ `partFlip`; màu/đồng hồ giữ theo bên); lúc chơi vẫn là Tạm dừng/Chạy tiếp. (5c)
+> **In chữ to phủ trang**: bỏ dòng tiêu đề №/WORD/TURN + "Explainer", `HEADING_MM` 16→12, `fs` 0.62→0.78×rowH,
+> giữ ô TURN + CHECK 2 cột. Tự test devserver (:5510, đo DOM, 0 lỗi console); hồi quy Type-the-answer + Crossword
+> vẫn 16:9, 0 rò `.aw-rw-*`. ⬜ **Chưa commit — chờ thầy duyệt + nghiệm thu máy thật** (chọn-gõ-submit; nút swap;
+> 2 bảng song song; in giấy A4 chữ to + SET X). Chi tiết đầy đủ: mục **8k** dưới.
+>
 > **TRẠNG THÁI (6/8/2026): 🟢 THẦY DUYỆT — Đợt 9 (mục 8j) ✅ ĐÃ COMMIT (`123c439`) + PUSH.** 3 điều
 > chỉnh thầy gửi 1 lượt, tự test devserver 0 lỗi console. (1) Thu nhỏ board (`margin-bottom`
 > 3.4cqw) để bàn phím +15% không đè ô nhập — đo hở 13px trên khung 4:3 968px; (2) Dời PASS khỏi cạnh
@@ -904,6 +919,62 @@ Thầy gửi 3 điều chỉnh 1 lượt sau khi chơi bản Đợt 8. Chỉ 2 f
 đẹp trên TOMKO/iPad; nút PASS ở mép ngoài có vừa tầm tay trọng tài 2 bên; bàn phím to có còn đè gì
 khi 2 em gõ thật; đồng hồ ngắn lại có còn đủ rõ số.
 
+## 8k. ⭐ Đợt 10 (7/8/2026, v0.9.55) — 5 NHÓM THAY ĐỔI THẦY GỬI 1 LƯỢT. KHÔNG ĐỤNG CORE.
+
+Thầy chốt 2 điểm trước khi build: (a) PASS **thay** ô tích cũ bằng thanh 0–5; (b) nút swap **chỉ** đổi
+nhãn + danh sách từ (màu/đồng hồ giữ theo bên). Chỉ 3 file: `running-word.js`, `.css`, `rw-print.js`.
+
+1. **PASS 0–5 mỗi đội (thay ô tích).** `buildExtraOptions`: bỏ `mkCheck("Allow PASS")`, thêm
+   `slider("Passes per team","passUses",0,5,1,3, v=>v?`${v}×`:"Off")`. `cfg.passUses` (clamp 0–5, mặc định 3),
+   `cfg.allowPass = cfg.passUses > 0` (giữ tên cũ cho `makePass`/`doPass` đọc y như trước). State
+   `passLeft{a,b}` giống `andrewLeft`. `makePass` dựng nút = `<span PASS>` + `<span số-còn-lại>`; `passEls[t]`
+   nay là `{btn,num,_n}`. `doPass` chặn `passLeft[t]<=0` rồi `passLeft[t]--`. `paintClocks` bật nút chỉ khi
+   `phase play && !paused && turn===t && passLeft[t]>0`, cập nhật số **chỉ khi đổi** (tránh bẫy pointer straddle
+   như Play/Pause). Đo (thanh=2): pass trừ 2→1→0, nút chỉ sáng đúng lượt, về 0 khoá, bấm không ăn.
+2. **PART A / PART B thay tên đội.** rowhead dựng span rỗng, lưu `boardEls[t].headName`; `paintBoard` gán
+   `headName.textContent = partLabel(t)`. `partLetter(t)=(partFlip?other(t):t).toUpperCase()`. Tên đội tùy chỉnh
+   chỉ còn ở `renderSummary`/`showResult`.
+3. **⭐ 2 bảng SONG SONG.** Thay `topIndexOf(t)` (mỗi đội cuộn theo tiến độ riêng) bằng **`sharedTop()`** dùng
+   CHUNG: `turn && (play|prep) ? idx[turn] : max(idx.a,idx.b)`, clamp `[0,len-1]`. `applyTrack`/`fitBoard`/
+   `paintBoard` đều gọi `sharedTop()`. `idx.a` và `idx.b` luôn lockstep (luật `moves.a===moves.b`) nên số chung
+   luôn hợp lệ trên 2 danh sách BẰNG độ dài. `isInput` = `i===idx[t] && turn===t && (play || (prep&&turn))` (giữ
+   ô nhập cả khi paused vì phase vẫn "play"). Kết quả: đội tới lượt gõ ở đỉnh, đội chờ hiện đúng số đó = **ô
+   trống chờ nhập** (chưa gõ) hoặc **chữ xanh** (đã xong). Đo suốt ván: `topA===topB` mọi bước (1,1→2,2→3,3).
+4. **In thêm SET X.** `printRunningSheets(activity,set,names,setNo)` (thêm `setNo`), call site truyền
+   `setIndex+1`. Cả 3 tờ dùng `setTag="SET X"` làm subtitle. Đo: PART A/B/CHECK đều "SET 3".
+5. **Đổi cách bắt đầu:**
+   - **(5.1)** `submit()`: bỏ chặn `phase!=="play"`; nếu `starting = phase==="prep" && turn` thì gọi
+     `startMatch()` (khởi động đồng hồ) rồi xử lý từ như thường. Thêm `canType()=(play||(prep&&turn))&&!paused`
+     dùng ở `focusInput`/`insertChar`/`backspace`/keyboard `submit.isDisabled`. board.onclick chọn đội + focus,
+     đổi đội thì xoá input đang gõ dở. **Xoá hẳn `beginCountdown()` + phase "countdown"** (mọi nơi tham chiếu:
+     `sharedTop`, `paintBoard showSplit` gỡ "countdown"). Đo: chọn A → gõ → submit → đồng hồ A chạy; submit lượt
+     đầu kể cả SAI vẫn khởi động đồng hồ (đúng "bấm submit → đồng hồ chạy").
+   - **(5.2)** `onPlayPauseClick`: prep → `doSwapParts()`, play → `togglePause()`. `doSwapParts` (chỉ prep):
+     `current = {a:current.b, b:current.a}` (**object MỚI** — không mutate `sets[setIndex]` vì `current` có thể là
+     ref của set đã lưu), `partFlip=!partFlip`, xoá input, `buildRows()` + `paintAll()`. `paintClocks` đổi nút:
+     prep→icon `SVG_SWAP` + class `is-swap` (màu slate), play→pause/play. Đo: swap → header lật A↔B (và lật lại),
+     chơi sau swap 0 desync.
+   - **(5.3)** `rw-print.js`: `listPage`/`checkPage` bỏ hàng `is-head`; `listPage` bỏ extra "Explainer"
+     (`heading(...,null)`); subtitle = SET X. `HEADING_MM` 16→12 (đòi lại ~3mm của hàng tiêu đề đã bỏ), `metrics`
+     `fs` 0.62→**0.78×rowH**. Giữ ô TURN + `is-check` 2 cột. Đo (4 từ): rowH 64,25mm / fs 50,12mm (phủ kín);
+     50 từ ≈ 5,14mm / ~11,4pt (to hơn 1-cột cũ 8,9pt), tổng 257mm ≤ 257mm ROWS_MM → **vẫn 1 trang**, CHECK không
+     tràn tờ 4.
+
+**CSS:** thêm `.aw-rw-playpause.is-swap` (nền slate #64748b); `.aw-rw-passbtn` thành flex cột + 2 span
+`.aw-rw-passbtn-lab`/`-n`. `SVG_SWAP` (2 mũi tên) thêm cạnh `SVG_PLAY`/`SVG_PAUSE`.
+
+**Tự test devserver (`aword` :5510, trình duyệt thật, đo DOM — pane không compositing nên KHÔNG chụp ảnh được,
+đo bằng JS):** Options có "Passes per team", nhóm Pass hết ô tích; prep header PART A/B, nút swap enabled title
+"Swap PART A / PART B"; chọn A → gõ SAI → submit → đồng hồ A chạy + nút swap→pause; Andrew lộ từ → gõ đúng →
+đảo lượt B, topA=topB=1, A done/B input; pass 2→1→0 chuẩn + khoá; swap lật header A↔B + chơi tiếp 0 desync; in
+3 tờ SET 3, 0 hàng is-head, 0 "Explainer", fs 0.78×. Hồi quy Type-the-answer + Crossword vẫn 16:9 (1.778),
+0 rò `.aw-rw-*`, 0 lỗi console (chỉ 404 favicon). `renderSummary` (gọi trực tiếp) vẫn 2 nửa + "time left" +
+Start again.
+
+⚠️ **Máy KHÔNG tự nghiệm thu được (cần mắt thầy máy thật):** cảm giác chọn-bảng-gõ-submit để bắt đầu có mượt
+không; nút swap trước trận có dễ hiểu không; nhìn 2 bảng chạy song song có tự nhiên (đội chờ hiện ô trống) không;
+**in thử giấy A4** cỡ chữ to mới (50 từ ~11,4pt 1 cột) + nhãn SET X có ổn không.
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~Commit + push + `curl` kiểm bản live (đợt 1)~~ — XONG 4/8/2026, commit **`7d721a7`**.
@@ -924,6 +995,10 @@ khi 2 em gõ thật; đồng hồ ngắn lại có còn đủ rõ số.
       8j)~~ — thầy duyệt, commit **`123c439`** + push (`510ff9f..123c439`), **KHÔNG đụng core**.
       ⬜ Còn chờ thầy nghiệm thu máy thật: hàng PASS/đồng hồ/Play-Pause cân đối vừa mắt; PASS mép ngoài
       vừa tay trọng tài; bàn phím to không đè; kiểm bản LIVE sau khi Pages build.
+- [ ] **⭐ Đợt 10 (7/8/2026, v0.9.55) — 5 nhóm thay đổi (mục 8k): PASS 0–5, PART A/B, 2 bảng song song,
+      bắt đầu bằng Submit + nút SWAP, in chữ to + SET X. KHÔNG đụng core.** 🟢 Đã build + tự test devserver
+      (0 lỗi console, hồi quy sạch). **CHỜ THẦY DUYỆT** để commit + push. Nghiệm thu máy thật: chọn-gõ-submit;
+      nút swap; 2 bảng song song; in giấy A4 chữ to + SET X.
 - [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
       có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
       trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.

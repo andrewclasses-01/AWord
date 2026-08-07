@@ -5,6 +5,47 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 80 (7/8/2026, v0.9.55) — RUNNING WORD: PASS 0–5 + PART A/B + 2 BẢNG SONG SONG + BẮT ĐẦU BẰNG SUBMIT + NÚT SWAP + IN CHỮ TO/SET X. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+
+Thầy gửi 5 nhóm thay đổi cho template **Running word** (1 lượt). Chỉ đụng 3 file template
+(`templates/running-word/running-word.js`, `running-word.css`, `rw-print.js`) — **KHÔNG đụng core**.
+Chi tiết đầy đủ + mọi số đo: `templates/running-word/GHI CHU RUNNING-WORD.md` Đợt 10.
+
+1. **PASS 0–5 mỗi đội (thay ô tích cũ).** Bỏ ô tích "Allow PASS", thay bằng thanh **Passes per team 0–5**
+   (0 = không cho pass). State `passLeft{a,b}` đếm lùi giống `andrewLeft`; nút PASS hiện **số lần còn lại**
+   (span nhỏ dưới chữ PASS), hết = mờ. Đo: kéo thanh về 2 → mỗi đội 2 lần; pass trừ đúng 2→1→0, nút chỉ
+   sáng đúng lượt đội mình, về 0 thì khoá (bấm không ăn).
+2. **Tiêu đề bảng TEAM A/B → PART A/PART B.** Tên đội tùy chỉnh chỉ còn ở màn kết quả. Cập nhật động trong
+   `paintBoard` (vì đổi theo nút swap).
+3. **2 bảng SONG SONG cùng số thứ tự.** Bỏ `topIndexOf(t)` (mỗi bảng cuộn riêng) → `sharedTop()` chung cho
+   CẢ 2 bảng, khóa theo từ đội-đang-tới-lượt đang gõ. Đội chờ hiện đúng số đó: **ô trống chờ nhập** (chưa gõ)
+   hoặc **chữ xanh** (đã xong). Đo suốt ván: `topA===topB` mọi bước (1,1→2,2→3,3…).
+4. **Bản in thêm SET X.** Truyền `setIndex+1` vào `printRunningSheets`; cả 3 tờ (PART A/B + CHECK) mang nhãn
+   **SET X** thay tên đội. Đo: 3 tờ đều "SET 3".
+5. **Đổi cách bắt đầu game:**
+   - **(5.1) Bỏ 3-2-1, bắt đầu bằng Submit lượt đầu.** Chọn bảng → gõ luôn (đồng hồ đứng yên) → **Submit đầu
+     tiên khởi động đồng hồ** (`startMatch()` gọi từ `submit()` khi còn phase "prep"). Thêm `canType()` mở gõ
+     ở "prep" khi đã chọn đội. Xoá hẳn `beginCountdown()`/phase "countdown". Đo: chọn A → gõ → submit →
+     đồng hồ A chạy, nút giữa đổi swap→pause.
+   - **(5.2) Trước khi bắt đầu, nút giữa = SWAP.** Bấm → đổi nhãn PART A↔B **và** danh sách từ 2 bên (gán
+     `current = {a:current.b, b:current.a}` — object MỚI, không mutate set đã lưu) + cờ `partFlip`. Màu/đồng hồ
+     giữ theo bên. Trong lúc chơi nút giữ chức năng Tạm dừng/Chạy tiếp như cũ. Đo: swap → header lật A↔B, chơi
+     tiếp sau swap 0 desync (Andrew lộ "LAVISH", submit đúng, đảo lượt chuẩn).
+   - **(5.3) Bản in chữ to phủ trang.** Bỏ dòng tiêu đề (№/WORD/TURN), bỏ "Explainer"; `HEADING_MM` 16→12,
+     `fs` 0.62→**0.78×rowH**. Giữ ô TURN + CHECK 2 cột. Đo (4 từ): rowH 64mm/fs 50mm (cực to, "phủ kín");
+     với 50 từ ≈ 5,14mm/11,4pt (to hơn bản 1-cột cũ 8,9pt), vẫn lọt 1 trang.
+
+**Tự test devserver (`aword` :5510, trình duyệt thật, đo DOM — pane không compositing nên không chụp ảnh):**
+tất cả mục trên đo khớp. **Hồi quy:** `type-the-answer` + `crossword` vẫn tỉ lệ **16:9** (1.778), đúng
+`act-*`, **0 class `.aw-rw-*` rò sang**, 0 lỗi console (chỉ 404 favicon vô hại). Bảng kết quả `renderSummary`
+vẫn dựng đúng (2 nửa tên/điểm + "time left" + Start again).
+
+⬜ **Chưa commit — chờ thầy duyệt.** ⚠️ Máy không tự nghiệm thu được (cần mắt thầy máy thật): cảm giác chọn
+bảng-gõ-submit để bắt đầu; nút swap trước trận; nhìn 2 bảng chạy song song có tự nhiên; **in thử giấy A4** cỡ
+chữ to mới + nhãn SET X.
+
+---
+
 ## Đợt 79 (6/8/2026, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + ✓ TO GIỮA CÂU HỎI RỒI MỚI BAY; NON-REMOVE: Ô ĐÃ CHỌN GIỐNG HỆT Ô CHƯA CHỌN. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `7ddefe1` + PUSH + LIVE
 
 Thầy gửi 2 yêu cầu cho template **Find the match**. Chỉ đụng `templates/find-the-match/find-the-match.js` +

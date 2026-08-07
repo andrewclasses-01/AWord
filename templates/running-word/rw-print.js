@@ -36,7 +36,11 @@ const PAGE_BODY_MM = 297 - 15 - 13;     // 269mm between the top and bottom marg
 // plus the table's head row (≈3mm) plus ~2mm of slack so a rounded border or
 // font metric never pushes the last row onto a second sheet — the earlier
 // design (25mm) learned that lesson the hard way at exactly 0 slack.
-const HEADING_MM = 16;
+// There is NO table head row any more (teacher's request, 7/8/2026 — reclaim
+// its ~3mm for the words) and no "Explainer" line, so the heading block is just
+// the small tag + subtitle plus a little slack against a rounded border pushing
+// the last row onto a second sheet.
+const HEADING_MM = 12;
 const ROWS_MM = PAGE_BODY_MM - HEADING_MM;
 // ⭐ ONE COLUMN, ALWAYS (teacher's request, 5/8/2026). PART A and PART B are a
 // single running list down the page — 50 words means 50 rows in one column, and
@@ -63,23 +67,25 @@ const ROW_MIN_MM = 4.2;
 // Row height + font size for `count` rows in one column on ONE page.
 function metrics(count) {
   const rowH = Math.max(ROW_MIN_MM, ROWS_MM / Math.max(1, count));
-  // The word takes up more of the row (was 0.50): "minimal gap from the word
-  // to the divider line" (teacher's request, 5/8/2026).
-  return { rowH, fs: +(rowH * 0.62).toFixed(2) };
+  // Bigger type filling the row (teacher's request, 7/8/2026 — was 0.62): the
+  // words sit as large as possible with a minimal gap down to the divider line.
+  return { rowH, fs: +(rowH * 0.78).toFixed(2) };
 }
 
 // ---------- public entry ----------
 // `set` = { a:[...], b:[...] }, `names` = { a:"TEAM A", b:"TEAM B" }.
-export function printRunningSheets(activity, set, names = {}) {
-  const teamA = (names.a || "TEAM A").toUpperCase();
-  const teamB = (names.b || "TEAM B").toUpperCase();
+export function printRunningSheets(activity, set, names = {}, setNo = 1) {
   const title = activity?.title || "Running word";
+  // The team name is gone from the sheets (teacher's request, 7/8/2026); every
+  // sheet is tagged with its SET number instead so a printout can be traced
+  // back to the split it belongs to.
+  const setTag = `SET ${setNo}`;
 
   const sheet = el("div", "aw-print-sheet aw-rw-print");
   sheet.append(pageStyle());
-  sheet.append(listPage(title, "PART A", teamA, set.a));
-  sheet.append(listPage(title, "PART B", teamB, set.b));
-  sheet.append(checkPage(title, teamA, teamB, set));
+  sheet.append(listPage(title, "PART A", setTag, set.a));
+  sheet.append(listPage(title, "PART B", setTag, set.b));
+  sheet.append(checkPage(title, setTag, set));
 
   document.body.append(sheet);
 
@@ -137,22 +143,19 @@ function heading(title, tag, subtitle, extra) {
 }
 
 // One team's sheet: № · WORD · TURN. TURN is an empty box the explainer ticks
-// as each word is typed correctly (teacher's confirmation, 4/8/2026).
-function listPage(title, tag, teamName, words) {
+// as each word is typed correctly (teacher's confirmation, 4/8/2026). No header
+// row and no "Explainer" line any more (teacher's request, 7/8/2026) — every mm
+// goes to bigger words; the columns are the same, just unlabelled.
+function listPage(title, tag, subtitle, words) {
   const { rowH, fs } = metrics(words.length);
   const page = el("div", "aw-rw-ps-page");
-  page.append(heading(title, tag, teamName, "Explainer: ______________"));
+  page.append(heading(title, tag, subtitle, null));
 
   const body = el("div", "aw-rw-ps-body");
   body.style.setProperty("--rw-rowh", rowH + "mm");
   body.style.setProperty("--rw-fs", fs + "mm");
 
   const table = el("div", "aw-rw-ps-table");
-  const th = el("div", "aw-rw-ps-row is-head");
-  th.append(el("span", "aw-rw-ps-c-no", "№"),
-            el("span", "aw-rw-ps-c-word", "WORD"),
-            el("span", "aw-rw-ps-c-turn", "TURN"));
-  table.append(th);
   words.forEach((w, i) => {
     const row = el("div", "aw-rw-ps-row");
     row.append(el("span", "aw-rw-ps-c-no", String(i + 1)),
@@ -170,23 +173,19 @@ function listPage(title, tag, teamName, words) {
 // column (5/8/2026, teacher's request): the two lists just happen to share a
 // row index from how buildSets() laid them out, they aren't a matched pair,
 // so reading down either team's column needs its own numbering.
-function checkPage(title, teamA, teamB, set) {
+function checkPage(title, subtitle, set) {
   const n = Math.max(set.a.length, set.b.length);
   const { rowH, fs } = metrics(n);
   const page = el("div", "aw-rw-ps-page is-last");
-  page.append(heading(title, "CHECK", "TEACHER / REFEREE", "Date: ______________"));
+  page.append(heading(title, "CHECK", subtitle, "Date: ______________"));
 
   const body = el("div", "aw-rw-ps-body");
   body.style.setProperty("--rw-rowh", rowH + "mm");
   body.style.setProperty("--rw-fs", fs + "mm");
 
+  // No header row (teacher, 7/8/2026). Still two columns — PART A's list beside
+  // PART B's — each with its own № column.
   const table = el("div", "aw-rw-ps-table is-check");
-  const th = el("div", "aw-rw-ps-row is-head");
-  th.append(el("span", "aw-rw-ps-c-no", "№"),
-            el("span", "aw-rw-ps-c-team", escapeHtml(teamA)),
-            el("span", "aw-rw-ps-c-no", "№"),
-            el("span", "aw-rw-ps-c-team", escapeHtml(teamB)));
-  table.append(th);
   for (let i = 0; i < n; i++) {
     const row = el("div", "aw-rw-ps-row");
     row.append(el("span", "aw-rw-ps-c-no", set.a[i] != null ? String(i + 1) : ""),

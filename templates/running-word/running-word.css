@@ -415,6 +415,10 @@
 .aw-rw-playpause.is-pause { background: var(--rw-b); box-shadow: 0 0.42cqw 0 var(--rw-b-dark); }
 .aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 0.14cqw 0 var(--rw-b-dark); }
 .aw-rw-playpause:disabled { opacity: .4; cursor: default; }
+/* Before the clock starts the same button is a SWAP (PART A <-> PART B): a calm
+   slate look so it doesn't read as a green "start" (teacher's redesign, 7/8/2026). */
+.aw-rw-playpause.is-swap { background: #64748b; box-shadow: 0 0.42cqw 0 #475569; }
+.aw-rw-playpause.is-swap:active:not(:disabled) { box-shadow: 0 0.14cqw 0 #475569; }
 
 /* PASS — one SQUARE per team, sitting in the clock strip on that team's OWN
    outer edge (teacher's redesign, 6/8/2026): team A's is pushed to the LEFT
@@ -422,15 +426,19 @@
    lights only on its team's own turn (see paintClocks). */
 .aw-rw-passbtn {
   width: 5cqw; height: 5cqw;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 0.15cqw;
   font-family: inherit; cursor: pointer;
   border: 0.26cqw solid rgba(23,34,47,.22);
   background: #fff; color: var(--rw-ink);
   border-radius: 1.2cqw;
-  font-weight: 800; font-size: 1.35cqw; letter-spacing: .05em;
+  font-weight: 800; letter-spacing: .05em;
   box-shadow: 0 0.4cqw 0 rgba(23,34,47,.14);
   transition: border-color .15s ease, color .15s ease, opacity .15s ease, box-shadow .12s ease;
 }
+/* "PASS" over a small count of how many passes the team has left (0..5). */
+.aw-rw-passbtn-lab { font-size: 1.3cqw; line-height: 1; }
+.aw-rw-passbtn-n { font-size: 1.15cqw; line-height: 1; opacity: .7; }
 .aw-rw-passbtn.is-a { justify-self: start; }
 .aw-rw-passbtn.is-b { justify-self: end; }
 .aw-rw-passbtn.is-a:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
