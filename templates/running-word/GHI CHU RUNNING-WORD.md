@@ -1,6 +1,6 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 3 (mục 8l-3, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT + PUSH + LIVE.**
+> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 3 (mục 8l-3, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT `ac67836` + PUSH + LIVE (đã chạy lại trên chính bản live: khung nghỉ 1,5238 · 4 bước co 1,15/1,08/0,93/0,87 · ca của thầy tỷ lệ 2,019 kẹp về 16:9 dải 76px/bên, hàng 7,54 > chữ 5,82 hết đè · 0 lỗi console).**
 > Thầy nghiệm thu phần resize: *"việc resize ok"*, chỉ còn **phím Andrew ngắn hơn và phím Space dài hơn** so với
 > bàn phím chuẩn thầy gửi ảnh. ⭐ **KHÔNG PHẢI do việc hôm nay** — đã chứng minh bằng đo: (a) tạm `git stash`
 > quay về bản HEAD trước mọi thay đổi hôm nay → tỷ lệ y hệt (**Andrew 2,12 / Space 7,93** so với 1 phím chữ);
@@ -14,7 +14,7 @@
 > lề hai bên hẹp hơn (1,6cqw) nên bàn phím rộng hơn chuẩn một chút — cỡ **6px trên khung 968px**, và đây là lựa
 > chọn thiết kế cũ của chính thầy, em không đụng. Hồi quy **16/16 mount, 0 lỗi console**. Chi tiết: mục **8l-3**.
 >
-> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 2 (mục 8l-2, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT + PUSH + LIVE.**
+> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 2 (mục 8l-2, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT `ac67836` + PUSH + LIVE (đã chạy lại trên chính bản live: khung nghỉ 1,5238 · 4 bước co 1,15/1,08/0,93/0,87 · ca của thầy tỷ lệ 2,019 kẹp về 16:9 dải 76px/bên, hàng 7,54 > chữ 5,82 hết đè · 0 lỗi console).**
 > Thầy chơi thử bản 16:10,5 rồi gửi ảnh **3 dòng từ ĐÈ CHỒNG lên nhau khi fullscreen** trên cửa sổ 1920×950,
 > yêu cầu "phải có những giới hạn cần thiết... đảm bảo khi fullscreen và resize theo các dạng màn hình khác
 > nhau". **Gốc lỗi:** fullscreen (zoom) cố ý KHÔNG kẹp dải nên khung lấy đúng tỷ lệ màn; mà mọi cỡ trong game
@@ -33,7 +33,7 @@
 > im lặng vô hiệu hoá cả tính năng); và **ngưỡng không được đặt ĐÚNG vào tỷ lệ khung đang nghỉ** (16/10,5 làm
 > bước 1 tự kích hoạt ở khung nghỉ do làm tròn pixel) → đổi sang 16/10,4. Chi tiết: mục **8l-2** dưới.
 >
-> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 1 (mục 8l, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT + PUSH + LIVE.**
+> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 1 (mục 8l, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT `ac67836` + PUSH + LIVE (đã chạy lại trên chính bản live: khung nghỉ 1,5238 · 4 bước co 1,15/1,08/0,93/0,87 · ca của thầy tỷ lệ 2,019 kẹp về 16:9 dải 76px/bên, hàng 7,54 > chữ 5,82 hết đè · 0 lỗi console).**
 > Thầy chốt: **khung mặc định đổi 4:3 → 16:10,5**, giữ nguyên cách fullscreen. Chỉ **1 file**
 > (`running-word.css`), **2 luật CSS đổi giá trị** + ghi chú. Running word là **app làm mẫu** cho loạt cải
 > tiến kích cỡ màn hình sắp tới của cả 16 template. (1) `.aw-stage.act-running_word` đổi

@@ -151,7 +151,27 @@ này để lề khung hẹp hơn (`.aw-stage-inner` 1,6cqw, thầy chốt 5/8 đ
 chuẩn ~1,6% = **~6px trên khung 968px**; khớp tuyệt đối sẽ phải đặt một con số thần bí tính ngược từ lề của
 core, gãy ngay khi core đổi. Hồi quy **16/16 mount, 0 lỗi console**.
 
-### 8. Còn chờ
+### 8. Lên live + kiểm chứng trên chính bản live
+
+✅ **COMMIT `ac67836`** (5 file, `git add` từng tên) **+ PUSH + LIVE**. Pages tự build, `curl` xác nhận sau
+**~20 giây** ở lần poll thứ 2.
+
+⚠️ **BẪY DẤU MỐC — dính lần thứ HAI** (lần trước là `padStart(2` ở Đợt 84): `line-height: 1.04` là dấu mốc
+**VÔ GIÁ TRỊ** vì `.aw-rw-row-body` vốn đã có chuỗi đó từ trước → nó báo "đã live" ngay ở lần `curl` ĐẦU
+trong khi 4 dấu mốc kia còn báo 0 (file vẫn cũ). **Luật: dấu mốc phải là chuỗi CHỈ CÓ ở bản mới.** 4 cái dùng
+được: `aspect-ratio: 16 / 10.5` · `100dvh * 16 / 9` · `@container stage (aspect-ratio > 16/9.2)` ·
+`0 0 12.7cqw`.
+
+⭐ **Chạy lại TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io/AWord/templates/running-word/
+test.html`, không qua iframe từ localhost — bẫy cross-origin Đợt 84):
+
+- khung nghỉ **968×635 = 1,5238** · bàn phím **1,15** · hàng **7,01** · chữ 5,81 · Andrew/chữ **2,54**;
+- 4 bước co: 1,50 → **1,15** · 1,60 → **1,08** · 1,70 → **0,93** · 1,78 → **0,87**; Andrew giữ **2,54** ở mọi bước;
+- **đúng ca của thầy** (cửa sổ tỷ lệ **2,019**) → khung **kẹp về 1127×634 = 16:9**, dải **76px mỗi bên
+  (11,9% bề ngang)**, bàn phím 0,87, hàng **7,54 > chữ 5,82 → HẾT ĐÈ**;
+- **0 lỗi console**. Đã chụp màn hình bản live làm bằng chứng.
+
+### 9. Còn chờ
 
 ⬜ Thầy nghiệm thu máy thật: fullscreen trên **iPad phải y hệt trước** · trên màn lớp/cửa sổ máy tính: 3 dòng từ
 hết đè chưa, và **bàn phím nhỏ đi** (ở 16:9 còn ~76% cỡ cũ) có còn dễ bấm không — đây là đánh đổi trực tiếp của

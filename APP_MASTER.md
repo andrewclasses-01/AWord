@@ -5,7 +5,16 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 86, v0.9.61) — RUNNING WORD: KHUNG MẶC ĐỊNH 4:3 → 16:10,5 + GIỚI HẠN
 > FULLSCREEN + PHÍM ANDREW VỀ CHUẨN (app LÀM MẪU mở màn loạt cải tiến KÍCH CỠ MÀN HÌNH cho cả 16 template).
-> ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> ✅ THẦY DUYỆT → COMMIT `ac67836` + PUSH + **LIVE** (Pages tự build, `curl` xác nhận sau ~20 giây ở lần
+> poll thứ 2).**
+> ⭐ **ĐÃ CHẠY LẠI TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io`, không qua iframe):
+> khung nghỉ **968×635 = 1,5238**, bàn phím 1,15, hàng **7,01**, Andrew **2,54** · 4 bước co đúng
+> **1,15 / 1,08 / 0,93 / 0,87** · **đúng ca của thầy (tỷ lệ 2,019) → khung kẹp về 1127×634 = 16:9, dải
+> 76px mỗi bên (11,9% bề ngang), hàng 7,54 > chữ 5,82 → HẾT ĐÈ** · **0 lỗi console**.
+> ⚠️ **BẪY DẤU MỐC (lần thứ hai dính, sau `padStart(2` ở Đợt 84):** `line-height: 1.04` là dấu mốc **VÔ GIÁ
+> TRỊ** — `.aw-rw-row-body` vốn đã có chuỗi đó từ trước, nên nó báo "đã live" ngay ở lần `curl` ĐẦU khi file
+> còn cũ. 4 dấu mốc còn lại chỉ có ở bản mới nên mới dùng được: `aspect-ratio: 16 / 10.5` · `100dvh * 16 / 9`
+> · `@container stage (aspect-ratio > 16/9.2)` · `0 0 12.7cqw`.
 > ⭐⭐ **ĐÃ GHI TIÊU CHUẨN TOÀN HỆ THỐNG** vào `core/HUONG DAN CORE.md` mục **"TIÊU CHUẨN KHUNG HÌNH &
 > FULLSCREEN CỦA TOÀN HỆ THỐNG AWORD"**: cỡ mặc định **16:10,5** · fullscreen phủ kín nhưng **chốt chặn
 > 16:9** · **co giãn thành phần theo bậc** khi khung bè ("co trước, kẹp sau" + "ưu tiên chữ đọc được") ·
