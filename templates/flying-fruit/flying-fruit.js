@@ -291,6 +291,10 @@ const flyingFruitTemplate = {
       } else {
         floatMark(cx, cy, false);
         ffSound.wrong();
+        // Đợt 26: freeze the fruit's LIVE rotation before the shake takes over
+        // — see the long comment on aw-ff-shake in flying-fruit.css.
+        const wobbleXf = new DOMMatrixReadOnly(getComputedStyle(f.fruitEl).transform);
+        f.fruitEl.style.setProperty("--wrong-from", (Math.atan2(wobbleXf.b, wobbleXf.a) * 180 / Math.PI).toFixed(2) + "deg");
         f.fruitEl.classList.add("is-wrong");
         if (f.removeT) clearTimer(f.removeT);
         later(() => removeFruit(f), 320);

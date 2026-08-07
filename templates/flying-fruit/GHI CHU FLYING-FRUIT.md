@@ -89,3 +89,23 @@ Làm ĐÚNG 4 chỗ này (đối chiếu cách `anagram` đã làm), rồi `curl
 ## Chặng bổ sung — Points off (trừ điểm khi tap sai) — 3/8/2026
 - Thêm option `pointsOff` (0..5): mỗi lần chạm quả SAI thì trừ `pointsOff` khỏi biến `score` (KHÔNG chặn về 0, cho phép âm), rồi `ui.setScore(score)`. Khi `pointsOff===0` hành vi y hệt bản cũ (có bọc `if (pointsOff)` nên không gọi thừa setScore).
 - `ui.finish` giờ báo thêm `score` (điểm đã trừ) và giữ `correct/incorrect` tính từ số câu đúng thật (correctCount) để không bị âm. Seed mặc định `pointsOff: 0` trong sample. Chỉ sửa file trong `templates/flying-fruit/`.
+
+## Chặng bổ sung — sửa lỗi snap góc xoay khi tap SAI (Đợt 26, v0.9.63) — 7/8/2026 — 🟢 CHỜ THẦY DUYỆT (chưa commit)
+- Cùng họ lỗi vừa tìm/sửa ở Open the box + Crossword (Đợt 26): đổi CSS animation giữa chừng làm trình duyệt
+  nhảy về giá trị mặc định thay vì tiếp mượt từ vị trí hiện tại. Chỉ sửa `flying-fruit.js` (`onTap()`) +
+  `flying-fruit.css` (keyframe `aw-ff-shake`). **KHÔNG đụng core.**
+- **Lỗi:** quả bay liên tục lắc nhẹ qua lại (`aw-ff-wobble`, xoay ±`--spin` độ, mặc định 6°). Chạm SAI thêm
+  class `is-wrong` để đổi sang animation "rung" (`aw-ff-shake`) — animation này viết cứng `0%,100% { transform:
+  rotate(0)... }`, mà một CSS animation MỚI luôn khởi động từ đúng khung hình `0%` của chính nó bất kể góc
+  xoay thực tế đang ở đâu, nên quả nhảy phắt về đúng 0° (mất tới ±6°) rồi mới bắt đầu rung — lặp lại ở MỌI lần
+  chạm sai (không phải ca hiếm), tuy góc lệch nhỏ nên không quá gắt mắt như 2 ca kia.
+- Chỉ thấy được khi bật option **"Retry after incorrect answer"** — mặc định TẮT thì chạm sai gọi `advance()`
+  ngay lập tức, xoá quả khỏi DOM trong CÙNG tick trước khi animation kịp vẽ khung hình nào, nên với cấu hình
+  mặc định lỗi này vô hình; bật retry thì quả ở lại đủ 320ms và lỗi hiện rõ.
+- **Sửa:** ngay trước khi gắn `is-wrong`, đọc góc xoay THỰC TẾ từ `getComputedStyle(...).transform` (qua
+  `DOMMatrixReadOnly` + `Math.atan2`), ghi vào biến CSS `--wrong-from`; khung `0%` của `aw-ff-shake` đọc biến
+  đó thay vì `rotate(0)` cứng. Trường hợp không có gì để đọc (`--wrong-from` chưa set) vẫn mặc định `0deg` —
+  y hệt hành vi cũ.
+- **Tự test** (devserver `aword` :5510, ép `activity.options.retry = true` để bắt kịp cửa sổ 320ms, đo qua
+  `javascript_tool`): quả đang ở `matrix(0.990268, -0.139173, ...)` (góc xoay thật ≈ **−8.00°**) → chạm sai →
+  `--wrong-from` đọc lại đúng **"−8.00deg"** — khớp chính xác, không còn ép về 0. 0 lỗi console.

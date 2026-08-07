@@ -637,6 +637,23 @@ const crosswordTemplate = {
         const rc = r + "," + c;
         const cell = bigCells.get(i);
         if (!cell) return;
+        // Đợt 26 (same bug class as Open the box, đợt 26): useAndrew() below
+        // reveals empty cells' gold hint letters with a STAGGERED fade+scale-in
+        // (`is-hintin`, animation-delay per cell via --hd, fill-mode:both — held
+        // at opacity:0/scale(.35) for cells still waiting their turn). This
+        // function runs on EVERY keystroke (typeLetter/backspace), and the bare
+        // reset below used to strip `is-hintin` off every cell in the word —
+        // including ones whose reveal hadn't started or finished yet — the
+        // instant the player typed their very first letter. With nothing left
+        // to hold the mid-flight value, those cells SNAPPED straight to fully
+        // visible before the new state was even computed. Capture whether it
+        // was present before wiping the class, then hand it back below (still
+        // an unfilled-hint cell -> same synchronous tick, no reflow in between
+        // -> the browser treats it as no net change and the animation just
+        // continues, or if it had already finished, the `both` fill's held end
+        // state is unaffected either way — see the shakeCell() reflow trick
+        // just below for why a FORCED reflow would restart it instead).
+        const wasHinting = cell.classList.contains("is-hintin");
         cell.className = "aw-cw-bigcell";
         const letEl = cell.querySelector(".aw-cw-biglet");
         let text = "";
@@ -659,6 +676,7 @@ const crosswordTemplate = {
           // Andrew hint: the answer letter, glowing gold (still type it yourself)
           text = w.key[i];
           cell.classList.add("is-hint");
+          if (wasHinting) cell.classList.add("is-hintin");   // see the comment above — keep its reveal running/settled, don't snap it
         } else {
           text = userGrid.get(rc) || "";
         }

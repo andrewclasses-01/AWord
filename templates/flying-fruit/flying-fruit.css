@@ -139,11 +139,19 @@
   overflow-wrap: anywhere;
 }
 .aw-ff-fruit.is-wrong { animation: aw-ff-shake .32s ease; }
+/* Đợt 26 (same bug class as Open the box/crossword, đợt 26): this animation
+   REPLACES the base .aw-ff-fruit wobble (both target `transform` on the same
+   element) the instant a wrong tap adds .is-wrong — a CSS animation always
+   starts from its own 0%, so without --wrong-from the fruit used to snap
+   straight to rotate(0) the moment the class changed, before the shake even
+   started, cutting off whatever mid-wobble angle it was actually at. JS
+   (onTap() in flying-fruit.js) reads the live angle in as --wrong-from right
+   before adding the class, so this now continues smoothly instead. */
 @keyframes aw-ff-shake {
-  0%,100% { transform: rotate(0) translateX(0); }
-  25% { transform: rotate(-4deg) translateX(-0.8cqw); }
-  75% { transform: rotate(4deg) translateX(0.8cqw); opacity: .55; }
-  100% { opacity: 0; }
+  0%   { transform: rotate(var(--wrong-from, 0deg)) translateX(0); }
+  25%  { transform: rotate(-4deg) translateX(-0.8cqw); }
+  75%  { transform: rotate(4deg) translateX(0.8cqw); opacity: .55; }
+  100% { transform: rotate(0) translateX(0); opacity: 0; }
 }
 
 /* ---------- explosion (8-frame juice-splat sprite) ---------- */

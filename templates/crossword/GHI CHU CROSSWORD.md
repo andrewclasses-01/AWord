@@ -12,6 +12,31 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
+## 7/8/2026 — SỬA LỖI SNAP KHI GÕ PHÍM TRONG LÚC ANDREW ĐANG HIỆN CHỮ GỢI Ý (Đợt 26, v0.9.63) — 🟢 CHỜ THẦY DUYỆT (chưa commit)
+
+> Cùng họ lỗi vừa tìm/sửa ở Open the box (Đợt 26 của game đó): đổi CSS animation giữa chừng làm trình duyệt
+> nhảy về giá trị mặc định thay vì tiếp mượt từ vị trí hiện tại. Chỉ sửa `crossword.js` (`refreshActiveCells()`).
+> **KHÔNG đụng core.**
+
+**Lỗi:** bấm phím "Andrew" hiện lần lượt (so le, `is-hintin` + `animation-delay` theo `--hd`, `fill-mode:both`)
+các chữ gợi ý vàng vào từng ô còn trống trong từ đang chọn. Nhưng `refreshActiveCells()` — chạy lại ở MỌI lần
+gõ phím (`typeLetter`/`backspace`) — mở đầu bằng `cell.className = "aw-cw-bigcell"`, xoá sạch class của MỌI ô
+trong từ, kể cả những ô gợi ý chưa kịp hiện xong. Ngay chữ cái ĐẦU TIÊN gõ vào (rất bình thường, không phải ca
+hiếm) làm mọi ô gợi ý khác lập tức mất `is-hintin` — không còn gì giữ trạng thái `opacity:0/scale(.35)` giữa
+chừng nữa nên chúng nhảy thẳng lên hiện rõ hoàn toàn, TRƯỚC KHI trạng thái mới kịp tính lại.
+
+**Sửa:** trước khi xoá `className`, ghi nhớ ô đó có đang `is-hintin` hay không; ở nhánh gán lại `is-hint`
+(ô vẫn còn là gợi ý chưa điền), gắn lại `is-hintin` nếu trước đó đã có. Vì việc xoá rồi gắn lại diễn ra trong
+CÙNG một tick đồng bộ (không có `getComputedStyle`/`offsetWidth` xen giữa để ép reflow — khác hẳn `shakeCell()`
+ngay bên dưới, nơi cố ý ép reflow để animation phải chạy lại), trình duyệt gộp lại thành "không đổi gì" — ô nào
+gợi ý đang so le giữa chừng thì tiếp tục mượt, ô nào đã hiện xong thì cứ đứng yên, không có ô nào bị nhảy.
+
+**Tự test** (devserver `aword` :5510, đo DOM/computed style qua `javascript_tool`): bấm Andrew ở từ 4 ô →
+cả 4 ô đều `is-hintin` + `is-hint`, `--hd` so le đúng 0/120/240/360ms. Gõ chữ ĐÚNG vào ô đầu ngay lập tức →
+ô vừa điền mất hint (đúng, đã có chữ) nhưng **3 ô còn lại vẫn giữ nguyên `is-hintin:true` + `opacity` không hề
+nhảy** (đo ở pane không chạy animation thật — animation kẹt ở giá trị "from" nên đây là kịch bản XẤU NHẤT,
+và vẫn giữ nguyên không nhảy). 0 lỗi console. Trang chủ nạp lại đủ 0 lỗi (kiểm tra không hồi quy toàn hệ thống).
+
 ## 4/8/2026 — PHÂN TRANG TỚI 120 ANSWER (Đợt 66 / v0.9.41) — đọc mục này TRƯỚC mọi mục cũ bên dưới
 
 Thầy hỏi vì sao Anagram chưa đổi Template sang Crossword được — hoá ra `core/convert.js` giới hạn Crossword
