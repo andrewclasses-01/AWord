@@ -51,6 +51,19 @@ const ZOOM_TRANSFORM_MS = 1200;
 const ZOOM_OPACITY_MS = 840;
 const ZOOM_FALLBACK_MS = ZOOM_TRANSFORM_MS + 80;
 
+// Đợt 25 (7/8/2026, teacher: "vài frame cuối hơi khựng và giật"). The corner
+// rounding (point 2 of đợt 21) is the ONE part of the zoom the compositor
+// can't run: `border-radius` forces the browser to REPAINT the whole tile on
+// every single frame, and that repaint gets more expensive the BIGGER the tile
+// is — i.e. worst exactly at the end of the open. So the radius now only
+// animates over the CHEAP part of each flight (the first 45% of the OPEN,
+// while the tile is still small; the LAST 45% of the CLOSE, once it has shrunk
+// back down), leaving the other 55% as a pure transform+opacity animation the
+// compositor can carry on its own. The rendered corner still travels smoothly
+// between the box's radius and the tile's own, and still LANDS on exactly the
+// box's radius — see zoomElFrom/zoomElTo.
+const ZOOM_RADIUS_MS = Math.round(ZOOM_TRANSFORM_MS * 0.45);
+
 // Grid "pop in" entrance (teacher's request). Right after Play, the WHOLE
 // staggered sequence is timed to match ./sounds/intro.mp3's real length
 // (measured with ffmpeg: 2.46s) so the last box settles right as the music
@@ -108,6 +121,13 @@ const ICON_LOCK = `<svg viewBox="0 0 24 24" fill="none">
 // darker bottom-shadow "lip" — matches the Quiz answer tiles look, per the
 // teacher's reference photo). Cycles by COLUMN index for the box grid, and
 // by ANSWER position for the answer tiles (same as Quiz).
+// Đợt 25 (7/8/2026, teacher's request): the bottom bar's Prev/Next slot has
+// been empty since đợt 24 removed the nav from this game (a "tap any box" game
+// has no linear order to walk). The teacher asked for the brand line to sit
+// there instead — passed to the engine as ui.setNav({label}) (same route
+// Running word/team use), styled small + grey + spaced in open-the-box.css.
+const SLOGAN = "OPEN THE BOX IN ANDREW CLASSES";
+
 const PALETTE = [
   { c: "#3b82f6", d: "#2563eb" }, // blue
   { c: "#06b6d4", d: "#0e93ad" }, // cyan
@@ -353,6 +373,16 @@ function mountQuestions(root, activity, ui) {
   let pausedForNextBox = false;
   let tickInterval = null, endTimeout = null;
 
+  // Builds the clock + bar row inside the engine's topbar. Called ONCE at mount
+  // (see the call next to render() at the bottom) — NOT on the first box open
+  // like it used to be (đợt 25b). Building it late made the topbar grow from 34
+  // to 37px the instant the first box was tapped, which stole those 3px from the
+  // play area (431.3 -> 428.3) and visibly shrank the grid/tiles one time per
+  // round — the same class of glitch đợt 24 fixed on the BOTTOM bar, just from
+  // the other end of the frame. Building it up front makes the frame's three
+  // rows a fixed height for the whole round: nothing ever resizes mid-game. The
+  // bar simply sits full (scaleX defaults to 1) showing the per-question time
+  // until the first box starts the countdown.
   function ensureTimerUI() {
     if (sharedFillEl || !ui.topbarMid) return;
     ui.topbarMid.innerHTML = "";
@@ -380,12 +410,18 @@ function mountQuestions(root, activity, ui) {
     const startAt = performance.now();
     const totalDur = Math.max(durationSec, 0.05);
     if (sharedFillEl) {
+      // đợt 25: drains with `transform: scaleX()`, NOT `width`. A width
+      // transition is re-laid-out and repainted by the main thread on every
+      // frame for the WHOLE countdown (measured: a 15000ms `width` transition
+      // running right through the box-open zoom); a scaleX transition is handed
+      // to the compositor and costs the main thread nothing. The bar looks the
+      // same — it's anchored left by `transform-origin` in the CSS.
       sharedFillEl.classList.remove("is-warning");
       sharedFillEl.style.transition = "none";
-      sharedFillEl.style.width = "100%";
+      sharedFillEl.style.transform = "scaleX(1)";
       void sharedFillEl.offsetWidth; // force reflow so the transition below actually animates
-      sharedFillEl.style.transition = `width ${totalDur}s linear, background-color .4s ease`;
-      sharedFillEl.style.width = "0%";
+      sharedFillEl.style.transition = `transform ${totalDur}s linear, background-color .4s ease`;
+      sharedFillEl.style.transform = "scaleX(0)";
     }
     // A single unified "tick slot", in SECONDS: whole-second steps while
     // more than WARNING_SECONDS remain, half-second steps once inside the
@@ -426,13 +462,19 @@ function mountQuestions(root, activity, ui) {
     timeLeft = questionSeconds;
     if (sharedClockEl) sharedClockEl.textContent = formatTime(questionSeconds);
     if (sharedFillEl) {
-      const current = getComputedStyle(sharedFillEl).width;
+      // đợt 25: same switch to scaleX as runCountdown. The "current" position is
+      // now read out of the live transform MATRIX (its `a` component is scaleX)
+      // instead of a computed width — getComputedStyle returns the mid-flight
+      // animated value either way, so the refill still starts from exactly where
+      // the bar had drained to. `none` (no transform yet) means full = 1.
+      const cs = getComputedStyle(sharedFillEl).transform;
+      const current = (cs && cs !== "none") ? new DOMMatrixReadOnly(cs).a : 1;
       sharedFillEl.classList.remove("is-warning");
       sharedFillEl.style.transition = "none";
-      sharedFillEl.style.width = current;   // pin the current drained width as the animation's start point
+      sharedFillEl.style.transform = `scaleX(${current})`;   // pin the drained position as the animation's start point
       void sharedFillEl.offsetWidth;
-      sharedFillEl.style.transition = `width ${REFILL_MS}ms ease`;
-      sharedFillEl.style.width = "100%";
+      sharedFillEl.style.transition = `transform ${REFILL_MS}ms ease`;
+      sharedFillEl.style.transform = "scaleX(1)";
     }
     pausedForNextBox = true;
   }
@@ -442,6 +484,7 @@ function mountQuestions(root, activity, ui) {
     if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
   }
 
+  ensureTimerUI();   // đợt 25b: BEFORE the first render, so the topbar never changes height mid-round
   render();
   const ro = new ResizeObserver(() => { if (activeIndex === null) { layoutGrid(root, total, explicitCols); fitBackFaces(root); } });
   ro.observe(root);
@@ -580,6 +623,17 @@ function mountQuestions(root, activity, ui) {
     // grow the question tile from the tapped box's rect (captured in openBox);
     // the answer tiles slide in on their own (aw-otb-qtile-in keyframe).
     if (lastBoxRect) zoomElFrom(qTile, lastBoxRect);
+    // đợt 25: settle only once EVERY animation of the open has finished. This
+    // callback is real main-thread work — it deletes the whole box grid (up to
+    // 120 boxes) and takes both cards back out of absolute positioning, which
+    // forces a full re-layout of the play area. At the old fixed
+    // ZOOM_FALLBACK_MS (1280ms) that landed WHILE the last answer tiles were
+    // still sliding in (each tile ends at ZOOM_TRANSFORM_MS + its own stagger,
+    // i.e. up to 1425ms for 6 answers) — a layout spike dropped right into the
+    // final frames of the animation. Waiting for the last tile costs nothing
+    // visually: the boxes have been fully faded out (`forwards`) since 1200ms,
+    // so the grid is invisible the whole time it lingers.
+    const lastTileEndsAt = Math.max(0, items[i].answers.length - 1) * TILE_STAGGER_MS;
     pendingSettle = setTimeout(() => {
       pendingSettle = null;
       if (myToken !== animToken) return;   // a newer transition superseded this one
@@ -588,7 +642,7 @@ function mountQuestions(root, activity, ui) {
       // the question card keeps its inert .aw-otb-anim-top class (harmless
       // once root loses .aw-otb-anim) — it just suppresses a late card
       // fade-in flash; see the CSS note on .aw-otb-anim-top.
-    }, ZOOM_FALLBACK_MS);
+    }, ZOOM_FALLBACK_MS + lastTileEndsAt);
   }
 
   // CLOSE transition (teacher's request, đợt 14) — the EXACT reverse of
@@ -863,7 +917,14 @@ function mountQuestions(root, activity, ui) {
 
   function updateProgress() {
     ui.setScore(score);
-    ui.setNav({ index: score, total, onPrev: null, onNext: null });
+    // đợt 25 (teacher's request): the nav slot shows the BRAND LINE instead of
+    // "x of N". The arrows have been gone since đợt 24 (this game is "tap any
+    // box", there is no previous/next), and the count they sat next to was
+    // hidden with them — so nothing is lost, the empty middle of the bottom bar
+    // now carries the slogan. `label` is core/engine.js's own opt-in for exactly
+    // this (Find the match's "Page 1 / 2", Running word's slogan); index/total
+    // are still passed so the call stays valid if the label is ever dropped.
+    ui.setNav({ index: score, total, onPrev: null, onNext: null, label: SLOGAN });
   }
 
   // Shrink transform, same math as zoomElFrom but reversed (current
@@ -896,8 +957,13 @@ function mountQuestions(root, activity, ui) {
     el2.style.opacity = "1";
     if (br > 0) el2.style.borderRadius = natRadius;
     void el2.offsetWidth;
+    // đợt 25: mirror of zoomElFrom — the radius leg is short, but here it is
+    // DELAYED to the tail (ZOOM_TRANSFORM_MS - ZOOM_RADIUS_MS) so it runs while
+    // the tile is already small (cheap repaints) and still finishes at exactly
+    // ZOOM_TRANSFORM_MS, landing on the number box's own radius as before. The
+    // expensive first half of the shrink is now transform+opacity only.
     el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1), opacity ${ZOOM_OPACITY_MS}ms ease`
-      + (br > 0 ? `, border-radius ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.4,0,.2,1)` : "");
+      + (br > 0 ? `, border-radius ${ZOOM_RADIUS_MS}ms cubic-bezier(.4,0,.2,1) ${ZOOM_TRANSFORM_MS - ZOOM_RADIUS_MS}ms` : "");
     el2.style.transform = `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`;
     el2.style.opacity = "0.15";
     if (br > 0) el2.style.borderRadius = `${(br / scaleX).toFixed(2)}px / ${(br / scaleY).toFixed(2)}px`;
@@ -932,14 +998,31 @@ function mountQuestions(root, activity, ui) {
     el2.style.opacity = "0.5";
     if (br > 0) el2.style.borderRadius = `${(br / scaleX).toFixed(2)}px / ${(br / scaleY).toFixed(2)}px`;
     void el2.offsetWidth; // force reflow so the browser commits the shrunk starting state first
+    // đợt 25: the border-radius leg is SHORT (ZOOM_RADIUS_MS, no delay) so the
+    // per-frame repaint it forces happens while the tile is still small, and
+    // the last ~55% of the growth is transform+opacity only — see the constant.
     el2.style.transition = `transform ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1), opacity ${ZOOM_OPACITY_MS}ms ease`
-      + (br > 0 ? `, border-radius ${ZOOM_TRANSFORM_MS}ms cubic-bezier(.22,.9,.3,1)` : "");
+      + (br > 0 ? `, border-radius ${ZOOM_RADIUS_MS}ms cubic-bezier(.22,.9,.3,1)` : "");
     el2.style.transform = "translate(0px, 0px) scale(1, 1)";
     el2.style.opacity = "1";
     if (br > 0) el2.style.borderRadius = natRadius; // animate toward the natural (CSS) radius
     let done = false;
     const clear = () => { if (done) return; done = true; el2.style.transition = ""; el2.style.transform = ""; el2.style.borderRadius = ""; };
-    el2.addEventListener("transitionend", clear, { once: true });
+    // ⭐ đợt 25 — THE stutter the teacher reported ("vài frame cuối hơi khựng và
+    // giật" on the OPEN). This used to be a bare `transitionend {once:true}`,
+    // which fires on WHICHEVER of the three transitions ends FIRST — and that is
+    // OPACITY at ZOOM_OPACITY_MS (840ms), not the transform at 1200ms. clear()
+    // then wiped the inline `transition` + `transform` mid-flight, which CANCELS
+    // the still-running transform transition: the tile jumped straight to its end
+    // state at 70% of the way through. With this easing that jump is only ~1% of
+    // the distance (cubic-bezier(.22,.9,.3,1) is at 98.9% by then), so it doesn't
+    // read as a "leap" — it reads as the motion being chopped off, the last third
+    // of the slow-down never playing: exactly a hitch in the final frames.
+    // zoomElTo (the CLOSE) already keys on `transform` for this same reason and
+    // documents it (đợt 14) — the OPEN direction was simply never fixed, which is
+    // why only the open felt rough. Same fix here; the setTimeout stays as the
+    // backstop for a tab that never fires transitionend at all (hidden tab).
+    el2.addEventListener("transitionend", (e) => { if (e.propertyName === "transform") clear(); });
     setTimeout(clear, ZOOM_FALLBACK_MS);
   }
 

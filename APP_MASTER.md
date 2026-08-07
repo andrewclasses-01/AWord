@@ -3,7 +3,38 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 81, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK + GATE 80% KHI
+> Cập nhật lần cuối: **7/8/2026 (Đợt 82, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI + SLOGAN
+> Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> Chỉ 2 file template. **(1)** ⭐ Chỗ "vài
+> frame cuối khựng" **là LỖI CODE, không phải máy yếu**: `zoomElFrom` (chiều MỞ) chạy 3 transition
+> (`transform` 1200ms · `opacity` **840ms** · `border-radius` 1200ms) nhưng dọn dẹp bằng
+> `transitionend {once:true}` → nghe trúng sự kiện **xong sớm nhất = opacity ở 840ms** → `clear()` xoá
+> `style.transition`+`transform` inline = **huỷ transform giữa chừng**, ô nhảy tới đích ngay mốc **70%**;
+> easing lúc đó đã đi 98,9% nên không thấy "nhảy" mà thấy **chuyển động bị chặt cụt** (mất cả đoạn giảm tốc
+> cuối). Chiều ĐÓNG đã sửa đúng bẫy này từ **Đợt 14** và ghi chú sẵn — chiều mở bị **bỏ sót**. Sửa: lọc
+> `e.propertyName === "transform"`. **(2)** Dọn 4 thứ bắt CPU vẽ lại mỗi khung hình (đo
+> `document.getAnimations()`: **20 animation đồng thời**, bài 120 ô ~132 → còn **13**): `border-radius` chỉ
+> chạy 45% RẺ của quãng bay (`ZOOM_RADIUS_MS` 540ms — MỞ chạy đầu lúc ô còn bé, ĐÓNG delay 660ms chạy cuối
+> lúc ô đã co, vẫn đáp đúng độ bo ô số); thanh đồng hồ đổi `width` → `transform:scaleX()` (transition
+> `width 15000ms` = tính lại bố cục mỗi khung hình suốt ván); lưới mờ bằng **1 animation trên cả lưới** thay
+> vì mỗi ô một cái (120 ô = 120 lớp đồ hoạ); dời `pendingSettle` (xoá lưới + bỏ `position:absolute` = tính
+> lại bố cục cả sân) ra **sau khi mọi animation dừng** (trước hẹn cứng 1280ms, trong khi ô đáp án cuối còn
+> trượt tới 1425ms). **(3)** Slogan **"OPEN THE BOX IN ANDREW CLASSES"** vào chỗ nav bỏ trống từ Đợt 24: đi
+> `ui.setNav({label})` (như Running word), CSS đổi từ ẩn cả `.aw-nav` sang **chỉ ẩn `.aw-navbtn`** rồi tạo
+> kiểu `.aw-nav-label` — ⚠️ luật này BẮT BUỘC scope `:has()` vì label là của CORE (bẫy Đợt 22). Bottombar
+> vẫn **38.6px** ở cả 2 màn (ô không co). **(4)** (25b, thầy bảo xử lý luôn) **Khung hết co 3px lúc mở ô
+> đầu**: topbar phình 34→37 vì `ensureTimerUI()` dựng hàng đồng hồ MUỘN (lúc chạm ô đầu) → nay gọi 1 lần
+> **lúc mount** (luật đồng hồ không đổi, cờ `timerStarted` vẫn giữ); ⭐ và bẫy thứ hai ngoài dự đoán:
+> `.aw-otb-q-clock` không khai `line-height` nên chiều cao hàng lấy theo **metrics FONT** (dự phòng 31px →
+> Baloo 2 37px) — khai `line-height:1.6` để chiều cao tính từ CỠ CHỮ. Đo 3 mốc (mount / mở ô / sau
+> `fonts.ready`): **37.1 / 428.2px — chênh 0**; cả 3 hàng khung nay đứng yên tuyệt đối. **Luật rút ra cho
+> mọi template: luôn khai `line-height` cho chữ ở topbar/bottombar, và đừng dựng muộn một hàng cố định của
+> khung — cả hai đều biểu hiện là "ô tự dưng co lại giữa chừng" (Đợt 24 + 25b).** Tự test devserver: 0 lỗi
+> console, hồi quy Quiz/Anagram/True-false không rò CSS; ⚠️ pane preview `hidden` nên **animation không
+> chạy** → độ mượt bằng mắt vẫn cần thầy xác nhận trên TOMKO. Chi tiết:
+> `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` Đợt 25 + 25b + `GHI CHU DU AN.md` Đợt 82.
+>
+> Trước đó: **7/8/2026 (Đợt 81, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK + GATE 80% KHI
 > ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `f75a25e` + PUSH + LIVE.** Chỉ 2 file template (`open-the-box.css` + `.js`). **(1)** Luật
 > ẩn nav Đợt 22 chỉ khớp `:has(> .aw-otb-card)` = màn LƯỚI; mở 1 ô thì card lưới bị gỡ, chỉ còn
 > `.aw-otb-qcard` → selector thôi khớp → **nav hiện lại ở mọi màn câu hỏi**, mà `.aw-navbtn` cao 5cqw >

@@ -34,14 +34,45 @@
    play area, so the question + answer tiles visibly SHRANK the moment the zoom
    settled. Matching either card keeps the nav hidden across the whole game, so
    the tiles keep the full height and never shrink. Still self-clearing (keys
-   off THIS template's own markup, gone the instant another game mounts). */
-.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-nav { display: none; }
+   off THIS template's own markup, gone the instant another game mounts).
+
+   ⭐ ĐỢT 25 (7/8/2026, teacher's request): the empty middle of the bottom bar
+   now carries the brand line "OPEN THE BOX IN ANDREW CLASSES". So instead of
+   hiding the whole `.aw-nav` row, hide ONLY its two arrow BUTTONS and keep the
+   row itself — the label inside it is what the template fills with the slogan
+   (ui.setNav({label}) in updateProgress(), see open-the-box.js). The đợt 24
+   height rule is preserved by construction: `.aw-navbtn` is the 5cqw part, and
+   it is exactly what stays hidden; the slogan text is ~2cqw tall, well under
+   the 4cqw `.aw-iconbtn` group that sets the bar's height — so the bottom bar
+   does NOT grow and the question/answer tiles still never shrink (measured
+   again in đợt 25: bottombar identical on the grid screen and the question
+   screen). */
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-navbtn { display: none; }
+/* The slogan itself: same small / thin / spaced grey caps Crossword and
+   Speaking cards use for their own brand line, so all three read as one family.
+   Scoped exactly like the rule above — `.aw-nav-label` belongs to the ENGINE,
+   so an unscoped rule here would restyle "x of N" in every other game for the
+   rest of the session (the đợt 22 trap: template CSS is inserted once and never
+   removed). pointer-events:none keeps it from swallowing taps near the bar. */
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-nav-label {
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 1.5cqw;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #9aa3af;
+  pointer-events: none;
+  user-select: none; -webkit-user-select: none;
+}
 /* core/app.css's bottombar is a 3-column grid (menu | nav | sound+fullscreen)
-   auto-placed in DOM order. display:none removes .aw-nav from that
-   auto-placement entirely, so the sound/fullscreen group slides into the
-   now-first-available MIDDLE column instead of staying in the right column
-   — pin it back to column 3 explicitly so it stays in the corner like every
-   other template. Scoped for the same reason as the rule above. */
+   auto-placed in DOM order. Kept from đợt 22/24: back then `.aw-nav` was
+   display:none, which dropped it out of the auto-placement entirely and let the
+   sound/fullscreen group slide into the now-free MIDDLE column. Since đợt 25
+   the nav row is present again (it holds the slogan), so column 3 is where the
+   tools land anyway — this pin is now belt-and-braces, and keeps the corner
+   correct if the slogan is ever taken back out. Scoped like the rules above. */
 .aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
 
 .aw-otb-card {
@@ -221,15 +252,25 @@
 .aw-otb-anim-under { z-index: 1; }
 .aw-otb-anim-top, .aw-otb-anim-under { animation: none !important; }
 
-/* OPEN: the OTHER number boxes fade out (the tapped one is hidden in JS — its
+/* OPEN: the number boxes fade out (the tapped one is hidden in JS — its
    question tile grows on top from that exact spot instead). --otb-fade-ms is
    set in JS to ZOOM_TRANSFORM_MS so this span equals the tile zoom AND the
    answer tiles' slide-in (teacher: all three the same length). Must be a real
    ANIMATION, not a transition: the boxes' entrance animation holds opacity
    with fill-mode `both`, and a held animation always beats a transition on
    the same property (same trap documented on `.is-closing` below) — JS
-   removes `.is-entrance` first so this one takes over cleanly. */
-.aw-otb-grid.is-exiting .aw-otb-box {
+   removes `.is-entrance` first so this one takes over cleanly.
+
+   ⭐ ĐỢT 25: the fade runs on the GRID, not on each `.aw-otb-box`. It used to
+   be one animation PER BOX, which on a big activity meant up to 120 separate
+   opacity animations (the teacher can build 120 boxes) — the browser promotes
+   every animating element to its own compositor layer, so a 120-box grid built
+   120 layers, all rasterised, for what is visually a single uniform fade. One
+   animation on the container is one layer and pixel-identical here (the boxes
+   never overlap, so group opacity == per-box opacity). The tapped box's own
+   inline `opacity:0` still applies underneath it. No conflict with the entrance
+   animation any more either — that one lives on the boxes, this one doesn't. */
+.aw-otb-grid.is-exiting {
   animation: aw-otb-box-fade-out var(--otb-fade-ms, 1200ms) ease forwards;
 }
 @keyframes aw-otb-box-fade-out { from { opacity: 1; } to { opacity: 0; } }
@@ -239,11 +280,13 @@
    --otb-fade-ms. `both` so the boxes sit at opacity 0 from the very first
    frame (before the animation's 0% is reached) — no flash of fully-opaque
    boxes before the fade starts. */
-.aw-otb-grid.is-appearing-fade .aw-otb-box {
+.aw-otb-grid.is-appearing-fade {
   /* --otb-fade-delay (đợt 15) holds the fade-in back a bit so the boxes come
      in LATER on the close; `both` keeps them at opacity 0 through the delay
      (backwards fill). JS shortens --otb-fade-ms by the same delay so the fade
-     still ends exactly when the question card is removed. */
+     still ends exactly when the question card is removed.
+     đợt 25: moved from `.aw-otb-box` up to the grid, same reason as the
+     fade-out above (one animation/one layer instead of up to 120). */
   animation: aw-otb-box-fade-in var(--otb-fade-ms, 1200ms) ease var(--otb-fade-delay, 0ms) both;
 }
 @keyframes aw-otb-box-fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -299,6 +342,14 @@
 .aw-otb-q-clock {
   flex: 0 0 auto; min-width: calc(4cqw * var(--fit, 1));
   font-size: calc(2.4cqw * var(--fit, 1)); font-weight: 700; color: var(--aw-text);
+  /* đợt 25b: an EXPLICIT line-height, so this row's height is decided by the
+     font SIZE alone and never by the font's own metrics. Without it the row is
+     31px while the fallback font is in use and 37px once Baloo 2 finishes
+     loading — i.e. the whole top bar (and therefore the play area under it)
+     silently resized itself a moment after the game appeared. 1.6 reproduces
+     Baloo 2's rendered height exactly (measured 37px at a 968px stage), so the
+     look is unchanged — it just stops depending on WHEN the font arrives. */
+  line-height: 1.6;
 }
 .aw-otb-timerbar {
   flex: 1 1 auto;
@@ -308,6 +359,13 @@
 .aw-otb-timerbar-fill {
   height: 100%; width: 100%; border-radius: inherit;
   background: #2b2f36;
+  /* đợt 25: the bar drains with `transform: scaleX()` (set in JS), not `width`.
+     Anchoring the scale to the LEFT edge is what makes it look identical to the
+     old width animation — it empties toward the right, exactly as before — but
+     the compositor can now run it without the main thread re-laying-out and
+     repainting the bar on every frame of the whole countdown (which it was
+     doing right through the box-open zoom). */
+  transform-origin: left center;
   /* colour itself transitions smoothly (see the width+background-color
      transition set together in JS) — teacher's request: last 5s "chuyển
      dần sang màu đỏ" instead of snapping straight to red. */

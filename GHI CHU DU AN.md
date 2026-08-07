@@ -5,6 +5,77 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 82 (7/8/2026, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI THẬT: ANIMATION BỊ HUỶ Ở 840ms) + SLOGAN Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+Thầy gửi 2 yêu cầu 1 lượt cho **Open the box**. Chỉ đụng 2 file template (`open-the-box.js` +
+`open-the-box.css`) — **KHÔNG đụng core**. Chi tiết đầy đủ + mọi số đo: `templates/open-the-box/GHI CHU
+OPEN-THE-BOX.md` Đợt 25.
+
+**1. "Zoom từ ô số ra ô câu hỏi, vài frame cuối hơi khựng và giật" — hoá ra là LỖI CODE, không phải máy yếu.**
+`zoomElFrom()` (chiều MỞ) chạy 3 transition cùng lúc: `transform` 1200ms, `opacity` **840ms**,
+`border-radius` 1200ms; nhưng dòng dọn dẹp lại là `addEventListener("transitionend", clear, {once:true})`
+— nghe ĐÚNG 1 sự kiện đầu tiên, mà cái xong sớm nhất là **opacity ở 840ms**. `clear()` xoá
+`style.transition` + `style.transform` inline → **huỷ luôn transform đang chạy** → ô nhảy tới trạng thái
+cuối ngay ở mốc **70%**. Vì easing `cubic-bezier(.22,.9,.3,1)` lúc đó đã đi được **98,9%** quãng đường nên
+không nhìn ra là "nhảy", mà nhìn ra là **chuyển động bị chặt cụt**: mất trọn đoạn giảm tốc cuối. Đúng cái
+thầy tả, và giải thích luôn vì sao **chỉ chiều mở** bị. ⭐ Chiều ĐÓNG (`zoomElTo`) đã sửa đúng bẫy này từ
+**Đợt 14** và có sẵn ghi chú dài cảnh báo — chiều mở chỉ là **bỏ sót**. Nay lọc `if (e.propertyName ===
+"transform") clear()` y hệt chiều đóng; `setTimeout` dự phòng giữ nguyên.
+
+**2. Dọn thêm 4 thứ bắt CPU làm việc mỗi khung hình** (đo bằng `document.getAnimations()`: bản cũ có **20
+animation chạy đồng thời** lúc mở, bài 120 ô thì ~132):
+   - **`border-radius` chỉ chạy nửa RẺ của quãng bay** — đổi bo góc = vẽ lại CẢ ô mỗi khung hình, ô càng to
+     càng đắt (đắt nhất đúng lúc cuối cú mở). Hằng mới `ZOOM_RADIUS_MS` = 45% × 1200 = 540ms: chiều MỞ bo
+     góc chạy 540ms ĐẦU (ô còn bé), chiều ĐÓNG chạy 540ms CUỐI (delay 660ms, ô đã co) — vẫn kết thúc đúng
+     mốc 1200ms nên vẫn đáp xuống khớp độ bo ô số như Đợt 21. 55% còn lại là transform+opacity thuần.
+   - **Thanh đồng hồ đổi `width` → `transform: scaleX()`** (+ `transform-origin: left`): đang chạy
+     transition `width 15000ms` = tính lại bố cục + vẽ lại mỗi khung hình suốt cả ván, kể cả lúc zoom.
+     Nhìn y hệt; chỗ nạp đầy lại đọc vị trí từ ma trận transform thay cho `getComputedStyle().width`.
+   - **Lưới mờ đi bằng 1 animation trên CẢ LƯỚI** thay vì mỗi ô 1 animation (bài 120 ô = 120 lớp đồ hoạ
+     riêng cho một hiệu ứng mờ đồng loạt). Hình ảnh y hệt (ô không chồng nhau). 120 ô: **~132 → 13**.
+   - **Dời việc dọn DOM ra sau khi mọi animation dừng**: `pendingSettle` (xoá card lưới tới 120 ô + trả 2
+     card khỏi `position:absolute` = tính lại bố cục cả sân) trước hẹn cứng 1280ms, trong khi ô đáp án cuối
+     còn trượt tới 1425ms → cú tính bố cục rơi đúng mấy khung hình cuối. Nay hẹn theo số đáp án thật.
+
+**3. Slogan "OPEN THE BOX IN ANDREW CLASSES" vào đúng chỗ nút Next/Back cũ** (chỗ này bỏ trống từ Đợt 24).
+Đi đường có sẵn của engine: `ui.setNav({label})` (giống Running word/team). CSS đổi từ **ẩn cả `.aw-nav`**
+sang **chỉ ẩn `.aw-navbtn`**, rồi tạo kiểu `.aw-nav-label` thành chữ nhỏ/mảnh/giãn/IN HOA/xám — cùng phong
+cách slogan Crossword + Speaking cards. ⚠️ **Chiều cao bottombar KHÔNG đổi** (chỗ Đợt 24 từng cắn): thứ cao
+5cqw là `.aw-navbtn` và nó vẫn ẩn. Luật `.aw-nav-label` **bắt buộc scope** `:has(> .aw-otb-card, >
+.aw-otb-qcard)` vì label là của CORE — viết trần là đổi luôn "x of N" của mọi game khác (bẫy Đợt 22).
+
+**Tự test (devserver `aword` :5510, trình duyệt thật, đo DOM).** ⚠️ Pane preview `visibilityState:"hidden"`
+→ **animation không chạy chút nào** (`getAnimations()` rỗng, `transitionend` không bắn, chỉ nhánh
+`setTimeout` dự phòng chạy) → **độ mượt bằng mắt phải để thầy nghiệm thu máy thật**; ở đây kiểm bằng số:
+chuỗi transition inline đúng cả 2 chiều (MỞ `border-radius 540ms` không delay; ĐÓNG `540ms ... 660ms`);
+animation đồng thời 20 → **13** (120 ô: ~132 → 13); slogan đúng chữ + `.aw-navbtn` = `none`, `.aw-tools`
+vẫn cột 3; **bottombar 38.6px + playArea 431.3px ở CẢ 2 màn** (trùng khít số đo Đợt 24 → ô không co); chơi
+thật 1 vòng đúng-sai đủ (điểm, đồng hồ nạp đầy `scaleX(1)`, ô tick/khoá, card lưới gỡ đúng lúc);
+**0 lỗi console**. Hồi quy bẫy Đợt 22: mount Quiz/Anagram/True-false sau khi CSS Open the box đã nạp →
+nav `flex`, nút `flex` cao 48.3px, label vẫn 700/17.4px/spacing `normal` — **không rò**.
+
+**4. (Đợt 25b — thầy bảo "xử lý luôn") KHUNG HẾT CO 3px lúc mở ô đầu tiên.** Báo cáo mục trên có ghi nhận:
+lần mở ô ĐẦU TIÊN mỗi ván, **topbar** cao thêm 3px (34→37) → playArea 431.3→**428.3px**, lưới co lại một
+lần. Cùng loại lỗi với Đợt 24, chỉ khác đầu khung. Có **HAI** nguồn chứ không phải một:
+   - **`ensureTimerUI()` dựng muộn** — hàng đồng hồ + thanh giờ chỉ được chèn vào `ui.topbarMid` lúc chạm ô
+     đầu tiên. Sửa: gọi **1 lần lúc mount**, ngay trước `render()`. Luật đồng hồ KHÔNG đổi (cờ `timerStarted`
+     vẫn quyết định lúc nào bắt đầu đếm) — chỉ vẽ sẵn phần hình, thanh đầy + 0:15 đứng chờ ở màn lưới.
+   - **⭐ Bẫy ngoài dự đoán: chiều cao hàng đồng hồ phụ thuộc LÚC FONT TẢI XONG.** Sửa xong vẫn nhảy: topbar
+     **31px** lúc mount rồi **37px** vài trăm ms sau, vì `.aw-otb-q-clock` không khai `line-height` → chiều
+     cao dòng lấy theo **metrics của font** (font dự phòng 31px, Baloo 2 37px). Tức cú nhảy 3px cũ một phần
+     là do font chứ không chỉ do dựng muộn. Sửa: khai `line-height: 1.6` → chiều cao tính từ CỠ CHỮ (cqw,
+     luôn xác định); 1.6 tái tạo đúng chiều cao Baloo 2 hiện tại nên **nhìn không đổi gì**.
+   - **Đo lại 3 mốc trong cùng 1 lần chạy:** lúc mount (`fonts.status="loading"`) **37.1 / 428.2** → mở 1 ô
+     **37.1 / 428.2** → sau `fonts.ready` **37.1 / 428.2**. **Chênh = 0.** Cộng bottombar 38.6px cố định →
+     **cả 3 hàng của khung đứng yên tuyệt đối suốt ván.** Chơi lại đủ đường (đếm ngược khởi động đúng lúc
+     chạm ô đầu · trả lời đúng nạp đầy thanh · hết giờ ra panel GAME OVER + 9 ô nổ), **0 lỗi console**.
+
+**Bài học chung, nên áp cho mọi template:** đừng để chiều cao một hàng của khung phụ thuộc **metrics font**
+(luôn khai `line-height` rõ ràng cho chữ trong topbar/bottombar), và đừng **dựng muộn** một hàng cố định của
+khung. Cả hai biểu hiện y hệt nhau: "ô tự dưng co lại giữa chừng" — Đợt 24, 25b đều là ca của luật này.
+
+---
+
 ## Đợt 81 (7/8/2026, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK (Ô KHÔNG CÒN CO LẠI) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `f75a25e` + PUSH + LIVE
 
 Thầy gửi 2 yêu cầu cho template **Open the box**. Chỉ đụng 2 file template
