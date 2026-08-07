@@ -13,21 +13,20 @@
    ============================================================= */
 
 /* =============================================================
-   FRAME — 4:3, matching Running word. This game is played standing over an
-   iPad or a TOMKO panel, and the 16:9 letterbox wastes real width there.
+   FRAME — core's 16:10.5 standard (Đợt 87, 7/8/2026). Nothing is declared
+   here any more: this template used to pin its own 4:3 (plus four vendor
+   `:fullscreen` letterbox rules), and all five were deleted when 16:10.5
+   became core's default for every game.
 
-   Scoped through `.act-running_team`, a class core/engine.js stamps onto
-   `.aw-stage` for EVERY activity from `activity.type`, at the moment the stage
-   is built — before the READY splash, well before this template's mount() runs.
-   That is why the frame is 4:3 from the very first paint. Both the resting
-   frame AND the fullscreen letterbox need their own rule: core hardcodes 16/9
-   in both.
+       4 / 3      -> frame 75cqw tall     (what this game used to be)
+       16 / 10.5  -> frame 65.625cqw tall (now; -9.375cqw of height)
+       16 / 9     -> frame 56.25cqw tall  (the zoom-mode cap, see below)
+
+   ⚠️ Of all 16 templates this is the ONLY one whose frame got SHORTER — the
+   other 15 came up from 16:9 (or were already 16:10.5). Everything measured
+   in `cqw` keeps its size, so the whole 9.375cqw comes out of the flexible
+   rows. See the note on `.aw-rt-tiles` for where it actually landed.
    ============================================================= */
-.aw-stage.act-running_team { aspect-ratio: 4 / 3; }
-:fullscreen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-webkit-full-screen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-moz-full-screen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-ms-fullscreen .aw-stage.act-running_team { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
 
 /* ⭐ THE ENGINE'S TOP BAR IS HIDDEN and this game draws its own status row.
    Not a style preference — a necessity. The row needs a main clock AND hearts
@@ -108,13 +107,24 @@
   width: 100%; height: 100%; max-width: none; margin: 0; padding: 0;
   display: flex; align-items: center; justify-content: center;
 }
-/* Zoomed mode drops 4:3 on purpose and fills the real viewport exactly — the
-   4:3 was chosen for the RESTING frame because it matches an iPad's screen,
-   while the whole point of zoom is "use every pixel actually there". Giving
-   both width and height explicit values also neutralises the `aspect-ratio`
-   rule above (CSS only derives a MISSING dimension from it). */
+/* Zoomed mode fills the real viewport exactly — the whole point of zoom is
+   "use every pixel actually there". Giving both width and height explicit
+   values also neutralises core's `aspect-ratio` (CSS only derives a MISSING
+   dimension from it).
+
+   ⭐ ONE LIMIT (Đợt 87, the system-wide standard): never wider than 16:9. Past
+   that the frame's height collapses while every `cqw`-sized block keeps its
+   size, and the tile rows are what pay for it. At 16:9 an iPad 4:3, a 16:10
+   laptop and a 16:9 TV all still get NO bars and keep every pixel; only a
+   windowed browser with several toolbars or an ultrawide sees one, and there
+   the alternative is overlapping text. `dvh` is this panel's own height
+   (`.aw-zoomed` is `position:fixed; inset:0`), with a `vh` line first for
+   anything that doesn't know `dvh`; the flex centring on `.aw-page` above puts
+   the leftover width into two even bars of the dark background. */
 .aw-zoomed .aw-stage.act-running_team {
   width: 100%; height: 100%; border-radius: 0; border: none;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 .aw-zoomed .aw-stage.act-running_team ~ .aw-below,
 .aw-zoomed .aw-stage.act-running_team ~ .aw-as-bars { display: none; }

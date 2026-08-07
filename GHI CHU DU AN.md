@@ -5,6 +5,133 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 87 (7/8/2026, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO **TOÀN BỘ 16 TEMPLATE**, BẰNG CÁCH ĐƯA VÀO **CORE**. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**
+
+Thầy ra lệnh: *"Áp dụng tiêu chuẩn khung hình và fullscreen cho toàn bộ các template trên AWord."*
+Thầy chốt thêm 3 điều qua AskUserQuestion: **(1)** fullscreen của 14 game đang dùng API thật →
+**phủ kín + chốt chặn 16:9** (đúng tiêu chuẩn, không chọn phương án letterbox cho nhanh);
+**(2)** làm hết 15 game trong **1 đợt**, duyệt 1 lần; **(3)** Running team **chuyển sang 16:10,5**.
+Và chốt cách áp: **sửa CORE 1 lần**, không chép khối CSS vào 15 file template.
+
+### 0. ⭐ PHÁT HIỆN LÀM ĐỔI HẲN KHỐI LƯỢNG CÔNG VIỆC (khảo sát trước khi code)
+
+Tưởng là phải làm 4 bậc co giãn cho từng game như Running word. **Không phải.**
+
+14 game đang thiết kế cho **16:9 = 56,25cqw**. Khung mới **16:10,5 = 65,625cqw** là **CAO HƠN
+9,375cqw** — nội dung được THÊM chỗ, không hề bị bóp. Và vì fullscreen mới có **chốt chặn 16:9**,
+khung **ngắn nhất** chúng gặp phải chính là **16:9 = đúng thiết kế hiện tại của chúng**.
+
+⇒ **14 game không cần bậc co giãn** (bậc chỉ có nghĩa khi khung bè hơn tỷ lệ thiết kế; ở đây chốt
+chặn trùng khít thiết kế cũ). ⇒ **Bẫy `line-height` của mục 4.3 cũng không áp** cho chúng — bẫy đó
+chỉ lộ khi khung NGẮN LẠI. **Running team là ca duy nhất ngắn lại** (75 → 65,625cqw).
+
+### 1. Sửa CORE — `core/app.css`, đúng 2 chỗ
+
+| Chỗ | Trước | Sau |
+|---|---|---|
+| `.aw-stage` | `aspect-ratio: 16 / 9` | **`16 / 10.5`** |
+| 4 luật `:fullscreen .aw-stage` (đủ 4 tiền tố, mỗi cái 1 rule riêng) | `width: min(100vw, calc(100vh*16/9)); height: auto` (letterbox theo tỷ lệ khung) | **`width:100%; height:100%; flex-shrink:0`** + **`max-width: calc(100dvh*16/9)`** (kèm dòng `100vh` dự phòng) |
+
+Nhờ để ở core: cả 16 game đúng ngay, **template thứ 17 sau này tự động đúng**, và không có 15 bản
+sao cùng một khối CSS phải giữ đồng bộ. Game nào thật sự cần hình khác vẫn đè được qua
+`.aw-stage.act-<type>`.
+
+### 2. ⭐⭐ LỖI THẬT TỰ TÌM RA GIỮA ĐƯỜNG — `flex-shrink: 0` là HÀNG RÀO, không phải trang trí
+
+`.aw-page` là **flex ROW**, khung là một flex item. Khai `width: 100%` **chỉ là một LỜI ĐỀ NGHỊ**:
+anh em nào còn hiện trong `.aw-page` cũng cướp bề ngang, và `flex-shrink: 1` mặc định **lặng lẽ
+nhường**. Đo được lúc bàn thử vô tình để `.aw-as-bars` (băng assignment) hiện: khung **sụp từ 1280px
+xuống 688px** — game chỉ nhỏ đi, **0 lỗi console, không dấu vết gì**.
+
+Hôm nay chưa ai cướp thật (core ẩn cả `.aw-below` lẫn `.aw-as-bars` khi fullscreen), nhưng luật
+letterbox CŨ giấu kín cả lớp lỗi này vì nó luôn xin **ít** bề ngang hơn khung cha có. Luật mới xin
+**trọn**, nên phải có hàng rào. `flex-shrink: 0` **không đá nhau với `max-width`** — chốt chặn 16:9
+vẫn thắng. Đo lại đúng kịch bản xấu đó sau khi vá: khung **phủ kín 1280×800, 0 dải**, anh em bị ép
+về 0px.
+
+### 3. Ba template có luật riêng — dọn cho khỏi mâu thuẫn
+
+- **Running word**: gỡ `.aw-stage.act-running_word { aspect-ratio: 16/10.5 }` (trùng khít core) **và
+  4 luật letterbox `:fullscreen` riêng** — 4 luật này nay **MÂU THUẪN** với core mới (chúng ghim khung
+  về 16:10,5 trong khi core bảo phủ kín, mà chúng specific hơn nên **sẽ thắng**). Chúng chưa từng chạy
+  (template dùng `useZoomFullscreen` nên `:fullscreen` không bao giờ khớp), nhưng để một mâu thuẫn
+  nằm chờ sau một cái cờ đúng là loại bẫy làm mất cả phiên sau này. Zoom fullscreen + 4 bậc co giãn +
+  phím Andrew **giữ nguyên**.
+- **Running team**: gỡ `aspect-ratio: 4/3` + 4 luật letterbox riêng; **thêm chốt chặn 16:9** vào khối
+  `.aw-zoomed` (trước đây cố ý không kẹp).
+- 13 game còn lại: **không đụng một dòng CSS nào**.
+
+### 4. Số đo thật (devserver :5510, chạy từ trang gốc `/index.html` — bẫy 4)
+
+**Khung nghỉ:** **16/16 template ra `1.5261`** (966×633; đúng 16:10,5 = 1,5238, lệch do chiều cao rơi
+vào pixel lẻ), **0 lỗi console**.
+
+**Chốt chặn 16:9** — đo trên chế độ zoom (class thật, Running team) **và** trên bản mô phỏng đúng bộ
+khai báo của luật `:fullscreen`:
+
+| Viewport | Tỷ lệ | Khung | Dải mỗi bên |
+|---|---|---|---|
+| 1024×768 (iPad 4:3) | 1,333 | **1024×768 phủ kín** | **0** |
+| 1280×720 (TV 16:9) | 1,778 | **1280×720 phủ kín** | **0** |
+| 1280×800 (16:10) | 1,600 | **1280×800 phủ kín** | **0** |
+| 1280×634 (**đúng ảnh thầy gửi Đợt 86**) | 2,019 | kẹp **1127×634 = 16:9** | **77px** |
+| 1280×540 (ultrawide) | 2,370 | kẹp **960×540 = 16:9** | **160px** |
+
+Khớp chính xác bộ số Đợt 86 đã đo cho Running word (76px / 160px).
+
+**Running word — zero-diff, đúng bản thầy đã duyệt:** bàn phím scale **1,15** · boards margin
+**3,4cqw** · hàng từ **7,02cqw** (Đợt 86: 7,01) · `.aw-kbd`.offsetHeight **19,98cqw** (N = 20) ·
+Andrew **14,6cqw** = 12,7 × 1,15 (đúng bẫy `getBoundingClientRect` trả kích thước ĐÃ nhân scale —
+CSS vẫn là 12,7cqw). Không bậc nào khớp ở khung nghỉ, đúng như thiết kế.
+
+**Running team — ca duy nhất khung ngắn lại**, toàn bộ 9,375cqw rơi vào `.aw-rt-tiles` (`flex:1` duy nhất):
+
+| | 4:3 (cũ) | 16:10,5 (mới) | 16:9 (chốt chặn) |
+|---|---|---|---|
+| Vùng 6 ô | 54,61cqw | **45,17** | 35,73 |
+| 1 ô | 26,81cqw | **22,09** | 17,37 |
+| Chữ trong ô | 3,41cqw | **3,41** | **3,41** |
+
+Hàng trạng thái (4,2cqw) và prompt (8cqw) **không đổi một ly**. Ngay ở chốt chặn 16:9 ô vẫn cao gấp
+**5 lần** chữ ⇒ **không cần bậc co giãn**, không có nguy cơ đè chữ. Màn setup của cả Running
+word/team **không phải cuộn** ở cả 3 tỷ lệ (tràn 0px).
+
+**Quét tràn 16/16 game ở 3 tỷ lệ** (sau khi bấm PLAY thật): không game nào sinh tràn MỚI. 4 game có
+tràn thì có **ở cả 16:9** — tức sẵn có từ trước, không do đợt này: whack-a-mole (223px ngang, cố ý),
+crossword (17px), flying-fruit (5–7px), open-the-box (1px). **speaking-cards** báo 301px ngang ở 4:3
+là **dương tính giả**: `.aw-sc-bg` là ảnh nền panorama **cố ý rộng hơn khung**, cha `overflow:hidden`
+— và khung càng cao thì nền phủ càng rộng (16:9 rộng 1802px → 4:3 rộng 2409px), tức đợt này **cải
+thiện** game đó chứ không làm hỏng.
+
+### 5. ⚠️ HAI BẪY ĐO ĐÃ CẮN TRONG ĐỢT NÀY (ghi để đừng lặp)
+
+1. **`.aw-playarea` RỖNG cho tới khi bấm PLAY.** Bảng đo đầu tiên đo trên vùng rỗng và trả về
+   **"0 tràn" cho cả 16 game** — trông y hệt một kết quả đẹp. Chỉ lộ ra khi phần tử đo là `null` làm
+   đổ một phép đo khác. **Luôn bấm `.aw-play-overlay button` trước khi đo bố cục**, và luôn cho bàn đo
+   một **ca kiểm chứng** (ở đây: ép tỷ lệ 6.0, phải thấy tràn 57–245px) để chứng minh nó có phản ứng.
+2. **Div bọc của bàn thử che mất kết quả.** Host đặt `width:1000px` làm chế độ zoom đo ra 1000×720
+   thay vì phủ kín — suýt kết luận nhầm là lỗi sản phẩm. Đo chế độ phủ kín thì **host không được có
+   bề ngang cố định**.
+
+Thêm: **fullscreen API THẬT không kích hoạt được trong pane preview** (click thật qua `ref` vẫn ra
+`document.fullscreenElement === null`), và pane không compositing nên **không chụp được ảnh**. Đường
+`:fullscreen` vì vậy được kiểm bằng **CSSOM** (xác nhận đúng `width/height:100%`, `flex-shrink:0`,
+`max-width: calc(1.77778 * 100dvh)`) **cộng** bản mô phỏng đúng bộ khai báo — chưa chạy fullscreen
+thật. ⚠️ Chrome chỉ giữ **2/4** luật (`:fullscreen`, `:-webkit-full-screen`) và vứt `-moz`/`-ms` nó
+không hiểu — **đúng như thiết kế**, và chính là lý do mỗi tiền tố phải là một rule riêng.
+
+### 6. ⬜ CHỜ THẦY NGHIỆM THU MÁY THẬT
+
+- **Fullscreen trên iPad sẽ khác hẳn**: trước letterbox 16:9 (dải đen trên dưới), nay **phủ kín tới
+  4:3** — game có nhiều chỗ trống dọc hơn hẳn, chữ của game dùng autoFit sẽ **to lên**. Đây là đánh
+  đổi trực tiếp của lựa chọn "phủ kín".
+- Khung nghỉ 16:10,5 có vừa mắt hơn 16:9 ở **cả 16 game** không (game bố cục "đẩy xuống đáy" như Quiz
+  sẽ giãn khoảng cách câu hỏi ↔ đáp án).
+- Dải hai bên chỉ hiện khi màn **bè hơn 16:9**.
+- **Running team**: ô từ nhỏ hơn trước (22,09 so với 26,81cqw) có còn dễ nhìn từ cuối lớp không.
+
+---
+
 ## Đợt 86 (7/8/2026, v0.9.61) — RUNNING WORD: KHUNG MẶC ĐỊNH 4:3 → **16:10,5** + **GIỚI HẠN CHO FULLSCREEN/ĐA MÀN HÌNH** + PHÍM ANDREW VỀ CHUẨN. ⭐ **GHI TIÊU CHUẨN TOÀN HỆ THỐNG vào `core/HUONG DAN CORE.md`**. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
 ### 0. ⭐⭐ TIÊU CHUẨN TOÀN HỆ THỐNG (thầy yêu cầu ghi rõ)

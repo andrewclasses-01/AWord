@@ -79,28 +79,24 @@
    Written as `16 / 10.5` rather than the equivalent `32 / 21` purely so the
    number matches how the teacher asked for it. CSS ratios take decimals.
 
-   Scoped through `.act-running_word` — a class `core/engine.js` stamps onto
-   `.aw-stage` for EVERY activity, from `activity.type`, at the very moment the
-   stage is built (before the READY/splash screen even shows, well before this
-   template's own mount() ever runs). The one-line, purely-additive core
-   change this needed (5/8/2026, teacher approved): no other template's CSS
-   reads an `.act-*` class, so the other 15 games — all still on 16:9 — are
-   untouched. The frame is 16:10.5 from the very first paint, not just after
-   pressing PLAY (the earlier `:has(.aw-rw-card)` version could only kick in
-   once mount() had built that markup). Both the resting frame AND the
-   fullscreen letterbox need their own rule — core hardcodes 16/9 in both.
+   ⭐ Đợt 87 (7/8/2026): THIS FILE NO LONGER SETS THE RATIO. What started here
+   as one template's exception became the system-wide standard, so 16:10.5 is
+   now core's own default for `.aw-stage` (core/app.css) and all 16 games share
+   it. The five rules that used to live here — `.aw-stage.act-running_word
+   { aspect-ratio: 16/10.5 }` plus the four vendor-prefixed `:fullscreen`
+   letterbox rules — were deleted rather than left in place: the ratio one was
+   an exact duplicate of core's, and the letterbox four now actively CONTRADICT
+   core's new "fill the screen, capped at 16:9" fullscreen (they pin it back to
+   16:10.5, and being more specific they would win). They never ran today —
+   this template uses `tpl.useZoomFullscreen`, so the real `:fullscreen` never
+   matches — but leaving a contradiction armed behind a flag is exactly the
+   kind of trap that costs a session later. The zoom fullscreen further down is
+   untouched and remains this game's real fullscreen path.
 
-   ⚠️ The letterbox rules below are for the REAL Fullscreen API, which this
-   template does not use (`tpl.useZoomFullscreen`, see running-word.js) — the
-   zoom fullscreen further down fills the whole viewport and overrides
-   `aspect-ratio` outright, so the WAY fullscreen works is untouched by this
-   change. They are kept in step with the resting frame anyway so the game
-   can never change shape if that flag is ever turned off. */
-.aw-stage.act-running_word { aspect-ratio: 16 / 10.5; }
-:fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
-:-webkit-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
-:-moz-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
-:-ms-fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
+   Nothing else about the frame changed: core's default is byte-for-byte the
+   ratio this template already had, so the resting frame, the four container-
+   query steps at the end of this file, and the 16:9 cap in zoom mode all keep
+   the numbers the teacher approved on 7/8/2026. */
 
 /* ⭐ A frame WIDER than this design ratio (only possible in zoom fullscreen)
    would starve the word rows — see the "SCREENS WIDER THAN THE DESIGN RATIO"

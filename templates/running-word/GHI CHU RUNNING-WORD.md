@@ -1332,6 +1332,24 @@ Quy ra pixel: **~6px trên khung 968px**. Muốn khớp tuyệt đối thì ph�
 **16/16 template mount, 0 lỗi console**, tỷ lệ khung đúng (14 game 16:9 · running_word 16:10,5 · running_team
 4:3). Sửa nằm trong class `.aw-rw-key-andrew` nên không thể rò sang Type the answer / Crossword.
 
+## 8m. Đợt 87 (7/8/2026, v0.9.62) — TEMPLATE NÀY THÔI KHAI KHUNG: TIÊU CHUẨN LÊN CORE
+
+Cái bắt đầu ở đây như một ngoại lệ của một game nay là **tiêu chuẩn của cả hệ thống**: `16 / 10.5` là
+**mặc định của `core/app.css`**, cả 16/16 game dùng chung. Nên **5 luật khung của file này đã bị XOÁ**:
+
+- `.aw-stage.act-running_word { aspect-ratio: 16 / 10.5 }` — **trùng khít** luật core, thừa.
+- 4 luật letterbox `:fullscreen ... { width: min(100vw, calc(100vh * 16 / 10.5)) }` — nay **MÂU THUẪN**
+  với core mới (core bảo *phủ kín, kẹp ở 16:9*, 4 luật này ghim lại 16:10,5) và vì **specific hơn** nên
+  **chúng sẽ thắng**. Chúng chưa từng chạy ngày nào (template khai `useZoomFullscreen`, `:fullscreen`
+  không bao giờ khớp) — nhưng để một mâu thuẫn nằm chờ sau một cái cờ đúng là loại bẫy làm mất cả phiên
+  sau này, nên xoá hẳn thay vì "để đó cho an toàn".
+
+**KHÔNG đụng gì khác**: zoom fullscreen, 4 bậc co giãn cuối file, phím Andrew 12,7cqw đều nguyên vẹn.
+Đo lại sau khi đổi, khớp đúng bản thầy đã duyệt ở Đợt 86: bàn phím **1,15** · boards margin **3,4cqw** ·
+hàng từ **7,02cqw** · `.aw-kbd`.offsetHeight **19,98cqw** (N = 20) · Andrew **14,6cqw = 12,7 × 1,15**
+(⚠️ `getBoundingClientRect` trả kích thước **ĐÃ nhân scale** — CSS vẫn đúng 12,7cqw). Không bậc nào khớp
+ở khung nghỉ, đúng thiết kế. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
+
 ## 9. VIỆC ĐANG CHỜ
 
 - [x] ~~**Đợt 11 (7/8/2026, v0.9.61)**~~ — ✅ THẦY DUYỆT + COMMIT + PUSH + LIVE. Phần 1 khung 16:10,5 (mục 8l) +

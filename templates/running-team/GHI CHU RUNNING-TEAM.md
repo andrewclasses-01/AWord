@@ -302,6 +302,30 @@ core không chặn hộ.
 4. **Layout in không đo được từ màn hình.** Mọi luật in nằm trong `@media print` nên trên màn hình
    chúng **không áp dụng** — đo DOM lúc đó là đo nhầm layout. Đây là lý do mục 11 nói phải in giấy thật.
 
+## 10b. Đợt 87 (7/8/2026, v0.9.62) — KHUNG 4:3 → 16:10,5 (theo tiêu chuẩn toàn hệ thống)
+
+Tiêu chuẩn khung hình lên **core** cho cả 16 game, nên file này **thôi khai khung**: đã xoá
+`.aw-stage.act-running_team { aspect-ratio: 4/3 }` và 4 luật letterbox `:fullscreen` riêng; và **thêm
+chốt chặn 16:9** (`max-width: calc(100dvh * 16 / 9)`) vào khối `.aw-zoomed`, chỗ trước đây cố ý không kẹp.
+
+⭐ **Đây là template DUY NHẤT trong 16 game có khung NGẮN LẠI** (75 → 65,625cqw, hụt 9,375cqw) — 15 game
+kia đi LÊN từ 16:9. Vì `.aw-rt-tiles` là phần tử `flex:1` **duy nhất**, nó gánh trọn phần hụt:
+
+| | 4:3 (cũ) | **16:10,5 (nay)** | 16:9 (chốt chặn) |
+|---|---|---|---|
+| Vùng 6 ô | 54,61cqw | **45,17** | 35,73 |
+| 1 ô | 26,81cqw | **22,09** | 17,37 |
+| Chữ trong ô | 3,41cqw | **3,41** | **3,41** |
+
+Hàng trạng thái (**4,2cqw**) và prompt (**8cqw**) **không đổi một ly** — chúng là `flex: 0 0 auto`.
+Ngay ở ca xấu nhất (chốt chặn 16:9) ô vẫn cao **gấp 5 lần** chữ ⇒ **KHÔNG cần bậc co giãn** cho game này,
+và không có nguy cơ đè chữ. Màn setup **không phải cuộn** ở cả 3 tỷ lệ (tràn 0px) — đã đo riêng vì
+`.aw-rt-setup` có `overflow-y:auto`, chỗ dễ chật nhất khi khung ngắn lại.
+
+Chốt chặn đo trên **chế độ zoom thật** của chính game này: iPad 1024×768 → phủ kín 0 dải · 1280×720 →
+phủ kín 0 dải · 1280×634 (2,019) → kẹp **1127×634**, dải **77px** · 1280×540 (2,37) → kẹp **960×540**,
+dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
+
 ## 11. VIỆC ĐANG CHỜ
 
 - [ ] **⭐ Thầy tạo lớp thật trong Settings → Classes** rồi báo kết quả. Máy **không tự làm được** khúc

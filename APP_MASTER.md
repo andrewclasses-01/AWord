@@ -3,7 +3,61 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 86, v0.9.61) — RUNNING WORD: KHUNG MẶC ĐỊNH 4:3 → 16:10,5 + GIỚI HẠN
+> Cập nhật lần cuối: **7/8/2026 (Đợt 87, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO TOÀN BỘ
+> 16 TEMPLATE, BẰNG CÁCH ĐƯA VÀO CORE. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> Thầy ra lệnh *"áp dụng tiêu chuẩn khung hình và fullscreen cho toàn bộ các template"*, rồi chốt qua
+> AskUserQuestion: fullscreen 14 game **phủ kín + chốt chặn 16:9** (không chọn letterbox cho nhanh) · làm
+> **hết 15 game trong 1 đợt** · Running team **về 16:10,5** · và **sửa CORE 1 lần** thay vì chép khối CSS
+> vào 15 file.
+> ⭐ **PHÁT HIỆN LÀM ĐỔI HẲN KHỐI LƯỢNG (khảo sát trước khi code):** tưởng phải làm 4 bậc co giãn cho từng
+> game — **không phải**. 14 game đang thiết kế cho **16:9 = 56,25cqw**; khung mới **16:10,5 = 65,625cqw** là
+> **CAO HƠN 9,375cqw** (thêm chỗ, không bóp), và vì fullscreen mới **chốt chặn 16:9** nên khung **NGẮN NHẤT**
+> chúng gặp chính là **16:9 = đúng thiết kế hiện tại**. ⇒ **14 game không cần bậc co giãn**, và **bẫy
+> `line-height` (mục 4.3) cũng không áp** vì bẫy đó chỉ lộ khi khung NGẮN LẠI. **Running team là ca duy nhất
+> ngắn lại** (75 → 65,625cqw).
+> **(1) CORE `core/app.css`, đúng 2 chỗ:** `.aw-stage` `aspect-ratio: 16/9` → **`16 / 10.5`**; và 4 luật
+> `:fullscreen .aw-stage` (đủ 4 tiền tố, mỗi cái 1 rule riêng) từ letterbox `width: min(100vw, 100vh*16/9)`
+> → **`width:100%; height:100%; flex-shrink:0`** + **`max-width: calc(100dvh*16/9)`** (kèm dòng `100vh` dự
+> phòng). Nhờ ở core: 16 game đúng ngay, **template thứ 17 tự động đúng**, không có 15 bản sao phải giữ đồng bộ.
+> **(2) ⭐⭐ LỖI THẬT TỰ TÌM RA GIỮA ĐƯỜNG — `flex-shrink: 0` là HÀNG RÀO:** `.aw-page` là **flex ROW**, khung
+> là flex item, nên `width:100%` **chỉ là LỜI ĐỀ NGHỊ** — anh em nào còn hiện cũng cướp bề ngang và
+> `flex-shrink:1` mặc định **lặng lẽ nhường**. Đo được khi bàn thử để sót `.aw-as-bars`: khung **sụp
+> 1280px → 688px**, game chỉ nhỏ đi, **0 lỗi console, không dấu vết**. Luật letterbox CŨ giấu kín cả lớp lỗi
+> này vì luôn xin ÍT bề ngang hơn khung cha có. Vá xong đo lại đúng kịch bản xấu đó: **phủ kín 1280×800, 0 dải**.
+> **(3) Dọn 2 template có luật riêng:** Running word gỡ luật `aspect-ratio` (trùng khít core) **và 4 luật
+> letterbox `:fullscreen` riêng** — 4 luật này nay **MÂU THUẪN** core mới (ghim khung về 16:10,5 trong khi
+> core bảo phủ kín, mà chúng specific hơn nên **sẽ thắng**); chúng chưa từng chạy vì template dùng
+> `useZoomFullscreen`, nhưng để mâu thuẫn nằm chờ sau một cái cờ là bẫy mất cả phiên sau. Running team gỡ
+> `4/3` + 4 luật letterbox, **thêm chốt chặn 16:9** vào khối `.aw-zoomed`. **13 game còn lại: không đụng
+> một dòng CSS nào.**
+> **(4) SỐ ĐO THẬT** (devserver :5510, chạy từ `/index.html` — bẫy 4): khung nghỉ **16/16 ra 1,5261**
+> (966×633), **0 lỗi console**. Chốt chặn: iPad 1024×768 → **phủ kín, 0 dải** · TV 1280×720 → **phủ kín, 0
+> dải** · 16:10 1280×800 → **phủ kín, 0 dải** · **1280×634 (đúng ảnh thầy gửi Đợt 86, tỷ lệ 2,019) → kẹp
+> 1127×634 = 16:9, dải 77px** · ultrawide 1280×540 (2,37) → kẹp **960×540**, dải **160px** — khớp chính xác
+> bộ số Đợt 86. **Running word zero-diff**: bàn phím **1,15** · margin **3,4cqw** · hàng **7,02cqw** · Andrew
+> **14,6 = 12,7 × 1,15** (đúng bẫy `getBoundingClientRect` trả kích thước ĐÃ nhân scale). **Running team**:
+> cả 9,375cqw rơi vào `.aw-rt-tiles` (ô **26,81 → 22,09cqw**), **chữ giữ nguyên 3,41cqw**, ở chốt chặn 16:9 ô
+> vẫn cao **gấp 5 lần** chữ ⇒ **không cần bậc co giãn**; setup 2 game **không phải cuộn** ở cả 3 tỷ lệ. Quét
+> tràn 16/16 game sau khi bấm PLAY thật: **không game nào sinh tràn MỚI** (whack-a-mole 223px · crossword 17px
+> · flying-fruit 5–7px · open-the-box 1px đều có **ở cả 16:9** = sẵn có); **speaking-cards 301px ở 4:3 là
+> DƯƠNG TÍNH GIẢ** — `.aw-sc-bg` là ảnh nền panorama **cố ý rộng hơn khung**, cha `overflow:hidden`, và khung
+> càng cao thì nền phủ càng rộng (1802 → 2409px) ⇒ đợt này **cải thiện** game đó.
+> ⚠️ **HAI BẪY ĐO ĐÃ CẮN (đã ghi vào `core/HUONG DAN CORE.md` mục 4b):** **(a)** `.aw-playarea` **RỖNG cho tới
+> khi bấm PLAY** — bảng đo đầu tiên đo trên vùng rỗng và trả "0 tràn" cho cả 16 game, **trông y hệt kết quả
+> đẹp**; phải bấm PLAY trước, và phải cho bàn đo một **ca kiểm chứng** (ép tỷ lệ 6.0 → thấy tràn 57–245px) để
+> chứng minh nó biết phản ứng. **(b)** div bọc bàn thử để `width:1000px` làm chế độ phủ kín đo ra 1000px —
+> **suýt kết luận nhầm là lỗi sản phẩm**.
+> ⚠️ **Giới hạn đã biết:** **fullscreen API THẬT không kích hoạt được trong pane preview** (click thật qua
+> `ref` vẫn ra `document.fullscreenElement === null`) và pane **không compositing nên không chụp được ảnh** →
+> đường `:fullscreen` kiểm bằng **CSSOM** (đúng `width/height:100%`, `flex-shrink:0`,
+> `max-width: calc(1.77778 * 100dvh)`) **cộng** bản mô phỏng đúng bộ khai báo. Chrome chỉ giữ **2/4** luật
+> (vứt `-moz`/`-ms` nó không hiểu) — **đúng thiết kế**, và chính là lý do mỗi tiền tố phải là 1 rule riêng.
+> ⬜ **CHỜ THẦY NGHIỆM THU MÁY THẬT:** fullscreen trên **iPad khác hẳn** (trước letterbox 16:9 có dải trên
+> dưới, nay **phủ kín tới 4:3** → nhiều chỗ trống dọc hơn, chữ autoFit **to lên**) · khung nghỉ 16:10,5 có vừa
+> mắt hơn 16:9 ở **cả 16 game** · dải hai bên chỉ hiện khi màn **bè hơn 16:9** · Running team ô từ nhỏ hơn
+> trước có còn nhìn rõ từ cuối lớp. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
+>
+> Trước đó: **7/8/2026 (Đợt 86, v0.9.61) — RUNNING WORD: KHUNG MẶC ĐỊNH 4:3 → 16:10,5 + GIỚI HẠN
 > FULLSCREEN + PHÍM ANDREW VỀ CHUẨN (app LÀM MẪU mở màn loạt cải tiến KÍCH CỠ MÀN HÌNH cho cả 16 template).
 > ✅ THẦY DUYỆT → COMMIT `ac67836` + PUSH + **LIVE** (Pages tự build, `curl` xác nhận sau ~20 giây ở lần
 > poll thứ 2).**

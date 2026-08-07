@@ -247,30 +247,37 @@ bên trong vùng sáng, phải ra `opacity: 1`.
 
 > **ĐÂY LÀ TIÊU CHUẨN CHUNG. Mọi template làm mới, và mọi template cũ khi được chuyển đổi, phải theo mục này.**
 > Bản mẫu tham chiếu đã build + đo đầy đủ: `templates/running-word/` (xem `GHI CHU RUNNING-WORD.md` mục
-> 8l / 8l-2 / 8l-3). **Tính tới 7/8/2026 mới CHỈ Running word chạy tiêu chuẩn này**; 14 game còn lại vẫn
-> 16:9 và Running team vẫn 4:3 — chuyển dần theo lệnh của thầy, KHÔNG tự ý đổi hàng loạt.
+> 8l / 8l-2 / 8l-3).
+>
+> ⭐⭐ **TỪ Đợt 87 (7/8/2026) TIÊU CHUẨN NÀY LÀ MẶC ĐỊNH CỦA CORE — cả 16/16 template đang chạy nó.**
+> Hai mục 1 và 2 dưới đây **đã nằm sẵn trong `core/app.css`**, nên **template mới KHÔNG phải khai lại gì**.
+> Chỉ mục 3 (co giãn theo bậc) là việc riêng của từng template, và chỉ cần khi game có khối điều khiển
+> cao cố định. ⚠️ **Đừng chép lại luật khung/fullscreen vào CSS template** — bản sao sẽ specific hơn
+> core và âm thầm thắng, đúng cái bẫy Đợt 87 phải đi dọn ở Running word.
 
-### 1. Cỡ mặc định: **16 : 10,5**
+### 1. Cỡ mặc định: **16 : 10,5** — ĐÃ Ở TRONG CORE
 
 ```css
-.aw-stage.act-<type> { aspect-ratio: 16 / 10.5; }
+.aw-stage { aspect-ratio: 16 / 10.5; }     /* core/app.css — KHÔNG khai lại trong template */
 ```
 
 - Bằng **32/21**; khung cao **65,625cqw** tính theo bề ngang. Mốc so sánh: 16:9 = 56,25cqw · 4:3 = 75cqw.
 - Viết `16 / 10.5` (CSS nhận số thập phân trong tỷ lệ) cho khớp cách gọi của thầy.
-- Scope qua class **`.act-<type>`** mà `core/engine.js` tự đóng lên `.aw-stage` từ `activity.type`, **ngay
-  lúc dựng khung** — trước cả màn READY, nên khung đúng tỷ lệ từ nét vẽ ĐẦU TIÊN. Đừng dùng
-  `:has(.aw-<x>-card)`: cách đó chỉ ăn sau khi `mount()` đã dựng markup, khung sẽ nhảy hình một nhịp.
-- 4 luật letterbox `:fullscreen` (4 cách viết vendor, **mỗi cái một rule riêng**) đổi theo cho khớp:
-  `width: min(100vw, calc(100vh * 16 / 10.5))`.
+- Game nào **thật sự** cần hình khác thì đè qua class **`.act-<type>`** mà `core/engine.js` tự đóng lên
+  `.aw-stage` từ `activity.type`, **ngay lúc dựng khung** — trước cả màn READY, nên khung đúng tỷ lệ từ
+  nét vẽ ĐẦU TIÊN. Đừng dùng `:has(.aw-<x>-card)`: cách đó chỉ ăn sau khi `mount()` đã dựng markup, khung
+  sẽ nhảy hình một nhịp. Tính tới nay **không game nào cần** — cả 16 dùng mặc định.
 
-### 2. Fullscreen: phủ kín màn hình, **có CHỐT CHẶN 16:9**
+### 2. Fullscreen: phủ kín màn hình, **có CHỐT CHẶN 16:9** — ĐÃ Ở TRONG CORE
 
-- Cơ chế fullscreen giữ nguyên như từng game đang dùng (`useZoomFullscreen` cho game chạm nhiều — xem mục
-  ngay dưới). Nguyên tắc: **dùng trọn màn hình thật, không kẹp dải** — trừ khi vượt chốt chặn.
+- Cơ chế fullscreen giữ nguyên như từng game đang dùng: **API thật** (14 game, CSS ở `core/app.css`) hoặc
+  **`useZoomFullscreen`** (Running word/team, CSS ở file template — xem mục riêng bên dưới). Nguyên tắc
+  chung cho cả hai: **dùng trọn màn hình thật, không kẹp dải** — trừ khi vượt chốt chặn.
 - **Chốt chặn: khung KHÔNG BAO GIỜ được bè hơn 16:9.** Trong khối CSS của chế độ phủ kín:
 
 ```css
+width: 100%; height: 100%;
+flex-shrink: 0;                       /* ⚠️ HÀNG RÀO, xem bẫy 5 — không phải trang trí */
 max-width: calc(100vh * 16 / 9);      /* dòng dự phòng cho trình duyệt chưa biết dvh */
 max-width: calc(100dvh * 16 / 9);
 ```
@@ -323,7 +330,7 @@ trong khi **chiều cao khung sụp xuống** — và toàn bộ phần thiếu 
   — nó trả về kích thước ĐÃ nhân scale. Với bàn phím core hiện nay **N = 20cqw** (bản `getBoundingClientRect`
   ra 23cqw vì đang scale 1,15). Thử lại công thức ở `S = 1.15` phải ra đúng con số margin mà game đang dùng.
 
-### 4. ⚠️⚠️ BỐN BẪY BẮT BUỘC BIẾT TRƯỚC KHI ÁP CHO TEMPLATE KHÁC
+### 4. ⚠️⚠️ NĂM BẪY BẮT BUỘC BIẾT TRƯỚC KHI ÁP CHO TEMPLATE KHÁC
 
 1. **Khối `@container` PHẢI đặt CUỐI FILE CSS.** Container query **không cộng thêm specificity** nào cả.
    Đặt ở đầu file trong khi các luật gốc (`transform`, `margin-bottom`) nằm bên dưới ⇒ **luật dưới thắng,
@@ -344,6 +351,21 @@ trong khi **chiều cao khung sụp xuống** — và toàn bộ phần thiếu 
    dẫn **tương đối theo TÀI LIỆU**; chạy từ `templates/<x>/test.html` sẽ xin
    `/templates/<x>/templates/<y>/<y>.css` → **404**, sheet rỗng, và template `<y>` đo ra tỷ lệ sai —
    **trông y hệt một lỗi thật của dự án**.
+5. **`width: 100%` ở chế độ phủ kín chỉ là một LỜI ĐỀ NGHỊ — phải kèm `flex-shrink: 0`** (Đợt 87).
+   `.aw-page` là **flex ROW** và khung là một flex item: anh em nào còn hiện trong `.aw-page`
+   (`.aw-below`, `.aw-as-bars`, hay bất cứ thứ gì thêm sau này) cũng cướp bề ngang, và `flex-shrink: 1`
+   mặc định **lặng lẽ nhường**. Đo thật khi để sót `.aw-as-bars`: khung **sụp 1280px → 688px**, game chỉ
+   nhỏ đi, **0 lỗi console, không dấu vết**. Luật letterbox CŨ giấu kín cả lớp lỗi này vì nó luôn xin
+   **ít** bề ngang hơn khung cha có. `flex-shrink: 0` **không đá nhau với `max-width`** — chốt chặn 16:9
+   vẫn thắng.
+
+### 4b. Quét nhanh khi đổi tỷ lệ một template — 2 bẫy ĐO
+
+- **`.aw-playarea` RỖNG cho tới khi bấm PLAY.** Đo bố cục trước cú bấm thì mọi phép đo trả về "0 tràn"
+  cho MỌI game — trông y hệt kết quả đẹp. Luôn bấm `.aw-play-overlay button` trước, và luôn cho bàn đo
+  một **ca kiểm chứng** (ép tỷ lệ vô lý như 6.0 rồi kiểm nó CÓ báo tràn) để chứng minh bàn đo biết phản ứng.
+- **Đo chế độ phủ kín thì div bọc của bàn thử không được có bề ngang cố định** — một `width:1000px` sót
+  lại làm khung đo ra 1000px thay vì phủ kín, trông y hệt lỗi sản phẩm.
 
 ### 5. Bề ngang phím "Andrew" — **12,7cqw**, dùng chung
 

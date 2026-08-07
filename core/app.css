@@ -111,13 +111,24 @@ body {
   min-height: 100vh;
 }
 
-/* ---------- Page + 16:9 stage ---------- */
+/* ---------- Page + 16:10.5 stage ----------
+   ⭐ SYSTEM-WIDE FRAME STANDARD (teacher, 7/8/2026 — Đợt 86 set it, Đợt 87
+   made it the core default for all 16 templates). The resting frame is
+   16:10.5 (= 32/21, i.e. 65.625cqw tall; 16:9 was 56.25, 4:3 is 75). Written
+   as `16 / 10.5` — CSS takes decimals in a ratio — to match how the teacher
+   states it. Full rules + the four traps: `core/HUONG DAN CORE.md`, section
+   "TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CỦA TOÀN HỆ THỐNG AWORD".
+
+   A template that genuinely needs a different shape overrides this through
+   `.aw-stage.act-<type>` (the class engine.js stamps from `activity.type` at
+   build time) — but the default is now the standard, so template #17 is
+   correct without touching anything. */
 .aw-page { max-width: 1000px; margin: 0 auto; padding: 16px 16px 40px; }
 
 .aw-stage {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 10.5;
   container-type: size;         /* internal sizes use cqw and scale with the stage */
   container-name: stage;
   background: var(--aw-stage-bg);
@@ -146,8 +157,25 @@ body {
   gap: 0.4cqw;
 }
 
-/* ---------- Fullscreen: letterbox the 16:9 stage (ratio kept, just zoom) ----------
-   We now fullscreen the STABLE app container (root), not the .aw-page — so a
+/* ---------- Fullscreen: FILL the screen, capped at 16:9 ----------
+   ⭐ Đợt 87 (teacher's brief): fullscreen uses the WHOLE real screen instead of
+   letterboxing to the resting ratio — "dùng trọn màn hình thật, không kẹp dải"
+   — with ONE limit: the frame is never allowed to go wider than 16:9 (see the
+   `max-width` on `.aw-stage` below). Before this, `width: min(100vw, 100vh*16/9)`
+   pinned the frame to its own ratio, so an iPad's 4:3 screen wasted two black
+   bars top and bottom on every game.
+
+   Why the cap is 16:9 and not the design 16:10.5: at 16:9 every real device
+   here — iPad 4:3, 16:10 laptop, 16:9 TV — still gets NO bars at all. Only a
+   genuinely wider-than-16:9 viewport (a windowed browser with several toolbars,
+   an ultrawide) sees one, and there the alternative is overlapping text: every
+   size in every game is measured in `cqw` (% of frame WIDTH), so a wider frame
+   keeps the fixed-height blocks the same while the frame's own height collapses
+   underneath them. Templates that need to give the leftover height back to
+   their text as the frame widens do it with the stepped container queries
+   described in `core/HUONG DAN CORE.md` (Running word is the worked example).
+
+   We fullscreen the STABLE app container (root), not the .aw-page — so a
    "Start again" (which rebuilds .aw-page) keeps fullscreen instead of dropping
    out. The rules therefore key on the fullscreen ANCESTOR + the .aw-page inside.
    Every vendor spelling gets its OWN rule: a browser throws away an entire
@@ -177,17 +205,51 @@ body {
   display: flex; align-items: center; justify-content: center;
 }
 
+/* Giving BOTH width and height explicit values also neutralises the
+   `aspect-ratio` above (CSS only derives a MISSING dimension from it — with
+   both already set there is nothing left to derive), which is exactly what
+   "fill the screen" needs. Pure percentages of `.aw-page` (itself 100vw x
+   100vh here), so this self-adjusts to any viewport, rotation or browser
+   chrome with no code change. `max-width` is the 16:9 cap; the `vh` line is
+   the fallback for anything that doesn't know `dvh`, and the flex centring on
+   `.aw-page` above turns the leftover width into two even bars of the dark
+   fullscreen background.
+
+   ⚠️ `flex-shrink: 0` is a GUARD, not decoration. `.aw-page` is a flex ROW and
+   the stage is one of its items, so `width: 100%` alone is only a REQUEST: any
+   sibling still visible in `.aw-page` steals width and the default
+   `flex-shrink: 1` quietly gives it up. Measured 7/8/2026 with `.aw-as-bars`
+   (the assignment banner) left visible by mistake: the stage collapsed from
+   1280px to 688px — the game just renders smaller, with no error anywhere. The
+   two rules below this one do hide `.aw-below` and `.aw-as-bars` in
+   fullscreen, so nothing steals width TODAY; this line is what keeps that true
+   if anyone ever adds a third child to `.aw-page` and forgets. It never fights
+   `max-width` — the 16:9 cap still wins over a shrink-proof width. The old
+   letterbox formula hid this whole class of bug by asking for less width than
+   the container had. */
 :fullscreen .aw-stage {
-  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+  width: 100%; height: 100%; border-radius: 0; border: none;
+  flex-shrink: 0;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 :-webkit-full-screen .aw-stage {
-  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+  width: 100%; height: 100%; border-radius: 0; border: none;
+  flex-shrink: 0;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 :-moz-full-screen .aw-stage {
-  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+  width: 100%; height: 100%; border-radius: 0; border: none;
+  flex-shrink: 0;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 :-ms-fullscreen .aw-stage {
-  width: min(100vw, calc(100vh * 16 / 9)); height: auto; border-radius: 0; border: none;
+  width: 100%; height: 100%; border-radius: 0; border: none;
+  flex-shrink: 0;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 
 :fullscreen .aw-below { display: none; }
