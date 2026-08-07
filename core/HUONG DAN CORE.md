@@ -268,6 +268,18 @@ bên trong vùng sáng, phải ra `opacity: 1`.
   nét vẽ ĐẦU TIÊN. Đừng dùng `:has(.aw-<x>-card)`: cách đó chỉ ăn sau khi `mount()` đã dựng markup, khung
   sẽ nhảy hình một nhịp. Tính tới nay **không game nào cần** — cả 16 dùng mặc định.
 
+> ⚠️ **CÓ APP NGOÀI ĐANG ĐỌC KHAI BÁO NÀY — đừng bỏ dòng `aspect-ratio` đi (7/8/2026).**
+> App **myActivity** (`E:\LAP TRINH APP\myActivity`, bản v1.7.5) mở act AWord trong khung cột của nó và
+> phải lấp khung cho vừa cột. Trước đây nó **ép cứng 16:9** nên Đợt 86/87 đổi sang 16:10,5 là nó hiện sai
+> ngay. Nay nó **không tự đoán nữa mà đi hỏi**: đọc `getComputedStyle('.aw-stage').aspectRatio` rồi tự
+> tính bề rộng khung theo tỷ lệ đọc được (biến `--myact-aw-ar`) — nên đổi chuẩn khung ở đây, kể cả đè
+> `.act-<type>` riêng cho 1 game, myActivity **tự bám theo, không phải sửa gì**.
+> **Hệ quả:** nếu sau này core dựng khung bằng cách khác (đặt `height` tường minh, JS tính px, `fit.js`…)
+> mà **bỏ khai báo `aspect-ratio`** trên `.aw-stage`, myActivity sẽ âm thầm rơi về mặc định 16:10,5 ghi
+> cứng trong CSS của nó và **hiện sai mà không báo lỗi**. Đổi kiểu đó thì phải sửa `AWORD_CSS`/`AWORD_JS`
+> trong `myActivity/src/renderer/js/wordwall.js` cùng đợt. Fullscreen (mục 2) và `.aw-zoomed` cũng được
+> myActivity chép lại đúng luật — đổi luật ở đây thì chép lại bên đó.
+
 ### 2. Fullscreen: phủ kín màn hình, **có CHỐT CHẶN 16:9** — ĐÃ Ở TRONG CORE
 
 - Cơ chế fullscreen giữ nguyên như từng game đang dùng: **API thật** (14 game, CSS ở `core/app.css`) hoặc
