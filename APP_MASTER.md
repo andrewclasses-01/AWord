@@ -5,7 +5,14 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 85, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK MP3 + HÂM NÓNG
 > AUDIOCONTEXT + NÉN LẠI 310 FILE. ⭐ CÓ SỬA CORE (1 file MỚI `core/sfx.js` + `core/sound.js`; KHÔNG đụng
-> `engine.js`). 🟢 CHỜ THẦY DUYỆT, CHƯA COMMIT.**
+> `engine.js`). ✅ THẦY DUYỆT → COMMIT `00eb228` + PUSH + **LIVE** (Pages tự build, `curl` xác nhận đủ 6 dấu
+> mốc ngay lần kiểm đầu — đúng quy trình mục 0 điểm 3, không cần đường vòng POST pages/builds).**
+> ⭐ **ĐÃ CHẠY LẠI TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io`, không qua iframe):
+> pack quiz **10/10 file sẵn sàng sau 702ms** trong khi màn READY còn nguyên chưa ai bấm PLAY; lần phát
+> ĐẦU của từng hiệu ứng **8 · 8 · 18,7 · 18,7ms (TB 13,4ms)** — trước bản vá đo trên cùng origin là **67,5ms**.
+> Dấu mốc curl đã dùng (đều VẮNG ở bản cũ): `core/sfx.js` trả 200 + chứa `PRIME_CONCURRENCY` · `core/sound.js`
+> chứa `warmup` · `templates/quiz/quiz-sound.js` chứa `createPack` · và **Content-Length của 3 file mp3 khớp
+> đúng số byte sau khi nén** (6005 · 29187 · 59289).
 > **Thầy báo:** gần như MỌI hiệu ứng âm thanh đều trễ so với hình; chơi một lúc hoặc bấm Start again mới khớp.
 > Thầy đoán do AWord dùng mp3 còn Wordwall dùng ogg.
 > ⭐ **ĐÃ BÁC BỎ GIẢ THUYẾT ĐỊNH DẠNG bằng số đo:** giải mã 8 cặp `.ogg` gốc Wordwall ↔ `.mp3` của AWord,

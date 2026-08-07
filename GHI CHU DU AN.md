@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 85 (7/8/2026, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK + HÂM NÓNG AUDIOCONTEXT + NÉN LẠI 310 FILE MP3. ⭐ CÓ SỬA CORE (1 file MỚI + `sound.js`; KHÔNG đụng `engine.js`). 🟢 CHỜ THẦY DUYỆT
+## Đợt 85 (7/8/2026, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK + HÂM NÓNG AUDIOCONTEXT + NÉN LẠI 310 FILE MP3. ⭐ CÓ SỬA CORE (1 file MỚI + `sound.js`; KHÔNG đụng `engine.js`). ✅ THẦY DUYỆT → COMMIT `00eb228` + PUSH + **LIVE**
 
 ### Bối cảnh — thầy báo gì
 
@@ -163,11 +163,33 @@ Còn 2 bẫy PowerShell 5.1 dính khi viết script nén (đã ghi trong chính 
 stderr thành `NativeCommandError` nên nuốt mất dòng `Duration` của ffmpeg (phải cho `cmd.exe` chuyển hướng ra
 file); và toán tử `,` **bám chặt hơn phép trừ** nên `@($k, $k-1, $k+1)` bị hiểu thành *mảng trừ mảng*.
 
+### 6. Lên live — commit `00eb228`, đã kiểm chứng TRÊN CHÍNH BẢN LIVE
+
+`git push` là đủ (Pages repo này `build_type: "legacy"`, tự build). **`curl` xác nhận đủ 6 dấu mốc ngay
+lần kiểm ĐẦU TIÊN** — không phải dùng đường vòng `POST pages/builds` của Đợt 79. Dấu mốc chọn sao cho
+**chắc chắn VẮNG ở bản cũ** (rút từ bẫy Đợt 84, khi `padStart(2` vốn đã có sẵn trong `utils.js` cũ nên báo
+"đã live" oan):
+
+| dấu mốc | vì sao chắc chỉ có ở bản mới |
+|---|---|
+| `core/sfx.js` trả **200** | file hoàn toàn mới, trước đó 404 |
+| trong đó có `PRIME_CONCURRENCY` | hằng chỉ tồn tại trong file mới |
+| `core/sound.js` chứa `warmup` | chữ này chưa từng có trong file cũ |
+| `templates/quiz/quiz-sound.js` chứa `createPack` | chỉ xuất hiện sau khi viết lại |
+| Content-Length 3 file mp3 = **6005 · 29187 · 59289** | đúng số byte SAU khi nén |
+
+Rồi **chạy lại trọn bộ trên chính bản live** (cho tab chạy thẳng `andrewclasses-01.github.io`, KHÔNG qua
+iframe từ localhost — luật cũ vẫn đúng):
+
+- pack quiz **10/10 file sẵn sàng sau 702ms**, trong khi màn READY còn nguyên và **chưa ai bấm PLAY**;
+- lần phát **ĐẦU TIÊN** của từng hiệu ứng: **8 · 8 · 18,7 · 18,7ms — trung bình 13,4ms**, so với **67,5ms**
+  đo trên cùng origin trước bản vá.
+
 ### Việc kế
 
 Thầy chơi thử trên máy thật (nhất là TOMKO + qua myActivity): xác nhận tiếng đã khớp hình **ngay từ câu đầu
 tiên của ván đầu tiên**, và nghe xem bản nén `-q:a 6` có bị mỏng/rè ở game nào không (gameshow và
-speaking-cards là 2 pack đáng nghe kỹ nhất). Duyệt xong → commit + push + `curl` kiểm bản live.
+speaking-cards là 2 pack đáng nghe kỹ nhất).
 
 ---
 
