@@ -243,6 +243,116 @@ dùng dấu cách (mọi cấp) — nếu không, chính nội dung BÊN TRONG v
 mờ theo (đã dính ở bảng chi tiết trong pop-up báo cáo). Cách nhanh để kiểm: `getComputedStyle` phần tử
 bên trong vùng sáng, phải ra `opacity: 1`.
 
+## ⭐⭐ TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CỦA TOÀN HỆ THỐNG AWORD (thầy chốt 7/8/2026, Đợt 86)
+
+> **ĐÂY LÀ TIÊU CHUẨN CHUNG. Mọi template làm mới, và mọi template cũ khi được chuyển đổi, phải theo mục này.**
+> Bản mẫu tham chiếu đã build + đo đầy đủ: `templates/running-word/` (xem `GHI CHU RUNNING-WORD.md` mục
+> 8l / 8l-2 / 8l-3). **Tính tới 7/8/2026 mới CHỈ Running word chạy tiêu chuẩn này**; 14 game còn lại vẫn
+> 16:9 và Running team vẫn 4:3 — chuyển dần theo lệnh của thầy, KHÔNG tự ý đổi hàng loạt.
+
+### 1. Cỡ mặc định: **16 : 10,5**
+
+```css
+.aw-stage.act-<type> { aspect-ratio: 16 / 10.5; }
+```
+
+- Bằng **32/21**; khung cao **65,625cqw** tính theo bề ngang. Mốc so sánh: 16:9 = 56,25cqw · 4:3 = 75cqw.
+- Viết `16 / 10.5` (CSS nhận số thập phân trong tỷ lệ) cho khớp cách gọi của thầy.
+- Scope qua class **`.act-<type>`** mà `core/engine.js` tự đóng lên `.aw-stage` từ `activity.type`, **ngay
+  lúc dựng khung** — trước cả màn READY, nên khung đúng tỷ lệ từ nét vẽ ĐẦU TIÊN. Đừng dùng
+  `:has(.aw-<x>-card)`: cách đó chỉ ăn sau khi `mount()` đã dựng markup, khung sẽ nhảy hình một nhịp.
+- 4 luật letterbox `:fullscreen` (4 cách viết vendor, **mỗi cái một rule riêng**) đổi theo cho khớp:
+  `width: min(100vw, calc(100vh * 16 / 10.5))`.
+
+### 2. Fullscreen: phủ kín màn hình, **có CHỐT CHẶN 16:9**
+
+- Cơ chế fullscreen giữ nguyên như từng game đang dùng (`useZoomFullscreen` cho game chạm nhiều — xem mục
+  ngay dưới). Nguyên tắc: **dùng trọn màn hình thật, không kẹp dải** — trừ khi vượt chốt chặn.
+- **Chốt chặn: khung KHÔNG BAO GIỜ được bè hơn 16:9.** Trong khối CSS của chế độ phủ kín:
+
+```css
+max-width: calc(100vh * 16 / 9);      /* dòng dự phòng cho trình duyệt chưa biết dvh */
+max-width: calc(100dvh * 16 / 9);
+```
+
+  Phần thừa thành 2 dải nền tối hai bên (khung tự căn giữa nhờ `.aw-page` đã `display:flex; center`).
+- **Vì sao mốc 16:9 chứ không phải 16:10,5:** ở mốc này **mọi thiết bị thật của thầy — iPad 4:3, laptop
+  16:10, TV 16:9 — đều KHÔNG có dải nào**, giữ trọn từng pixel. Chỉ cửa sổ trình duyệt nhiều thanh công cụ
+  hoặc màn siêu bè mới thấy dải, mà ở đó lựa chọn còn lại là **chữ đè lên nhau**. Đo thật: màn 1920×950 →
+  dải chỉ **~115px mỗi bên = 6% bề ngang**.
+
+### 3. Co giãn thành phần khi khung bè hơn tỷ lệ thiết kế
+
+**Vì sao BẮT BUỘC phải có:** mọi cỡ trong game đo bằng `cqw` = phần trăm **bề NGANG** khung. Màn càng bè
+thì các khối cao **cố định theo bề ngang** (bàn phím, đồng hồ, thanh tiêu đề…) **giữ nguyên kích thước**
+trong khi **chiều cao khung sụp xuống** — và toàn bộ phần thiếu dồn hết vào phần tử `flex:1` duy nhất.
+Ở Running word, đo được 1 hàng từ tụt **11,92 → 5,61 → 3,35 → 0,92cqw** khi tỷ lệ đi từ 1,33 → 1,78 → 2,02
+→ 2,37, trong khi con chữ luôn cần 5,82cqw ⇒ **ba dòng chồng lên nhau**.
+
+**LUẬT THẦY CHỐT — "co trước, kẹp sau" + "ưu tiên chữ đọc được":**
+
+1. **Chữ (nội dung bài học) KHÔNG BAO GIỜ bị co** để nhường chỗ. Thứ phải nhường là **khối điều khiển**:
+   bàn phím, đồng hồ, thanh trạng thái…
+2. Co theo **bậc** bằng container query trên chính khung — `.aw-stage` đã sẵn `container-type: size`,
+   `container-name: stage` (core), nên hỏi được tỷ lệ khung trực tiếp:
+
+```css
+@container stage (aspect-ratio > 16/10.4) { … }   /* bậc 1 */
+@container stage (aspect-ratio > 16/10)   { … }   /* bậc 2 */
+@container stage (aspect-ratio > 16/9.5)  { … }   /* bậc 3 */
+@container stage (aspect-ratio > 16/9.2)  { … }   /* bậc 4 — tới sát chốt chặn 16:9 */
+```
+
+3. Ở tỷ lệ thiết kế và **mọi tỷ lệ CAO hơn** (iPad 4:3, khung nghỉ 16:10,5, laptop 16:10 dọc hơn…)
+   **không bậc nào khớp ⇒ không đổi một ly nào**. Đây là điều kiện bắt buộc: bản đã duyệt phải giữ nguyên.
+
+**Cách co một khối mà KHÔNG chép lại số đo của core** (dùng cho bàn phím `core/keyboard.js`):
+
+```css
+.aw-<x>-card .aw-kbd { transform: scale(S); }              /* phần HÌNH */
+.aw-<x>-boards       { margin-bottom: calc(N*(S-1) + 0.4cqw); }   /* phần BỐ CỤC */
+```
+
+- `transform: scale()` giữ **đúng từng tỉ lệ core vẽ** (phím, khe, cỡ chữ, bo góc, bóng gờ) — không có
+  nguy cơ lệch khi core đổi số đo, và **không hề đụng tới việc chia bề ngang giữa các phím**.
+- Nhưng scale **chỉ ăn phần HÌNH**: hộp bố cục vẫn đứng nguyên ở chiều cao tự nhiên **N**, nên tự nó
+  **không nhả một ly nào** cho phần tử `flex:1`. `margin-bottom` của khối phía trên mới biến nó thành chỗ
+  thật. Khi `S < 1`, margin thành **ÂM** — đúng chủ đích: khối co lại để trống phần TRÊN hộp bố cục của nó
+  (core neo `transform-origin: bottom center`), margin âm giao đúng khoảng trống đó cho nội dung.
+- ⚠️ **N phải đo bằng `.aw-kbd.offsetHeight`** (bỏ qua transform). **KHÔNG dùng `getBoundingClientRect()`**
+  — nó trả về kích thước ĐÃ nhân scale. Với bàn phím core hiện nay **N = 20cqw** (bản `getBoundingClientRect`
+  ra 23cqw vì đang scale 1,15). Thử lại công thức ở `S = 1.15` phải ra đúng con số margin mà game đang dùng.
+
+### 4. ⚠️⚠️ BỐN BẪY BẮT BUỘC BIẾT TRƯỚC KHI ÁP CHO TEMPLATE KHÁC
+
+1. **Khối `@container` PHẢI đặt CUỐI FILE CSS.** Container query **không cộng thêm specificity** nào cả.
+   Đặt ở đầu file trong khi các luật gốc (`transform`, `margin-bottom`) nằm bên dưới ⇒ **luật dưới thắng,
+   cả tính năng im lặng không chạy**: 0 lỗi console, thử `@container` bằng probe vẫn báo "khớp", mà màn hình
+   không đổi gì. Chỉ lộ ra khi đo thấy "khối không bao giờ co".
+2. **ĐỪNG đặt ngưỡng ĐÚNG vào tỷ lệ mà khung đang nghỉ.** Để bậc 1 là `> 16/10.5` — đúng bằng tỷ lệ nghỉ —
+   thì nó **tự kích hoạt ngay ở khung nghỉ**: chiều cao suy ra từ bề ngang qua `aspect-ratio`, rơi vào pixel
+   lẻ, tỷ lệ đo được nhỉnh hơn phân số đúng ⇒ `>` khớp. Đo được: khung nghỉ ra scale 1,08 thay vì 1,15 đã
+   duyệt, **không một dòng lỗi**. Vì vậy bậc 1 dùng **16/10,4**.
+3. **Rút ngắn khung sẽ LÀM LỘ MỌI phần tử chữ quên khai `line-height`** — chúng đang âm thầm chiếm cao gấp
+   **~1,6 lần** cỡ chữ (metrics tự nhiên của Baloo 2), nhất là thẻ `<input>`. Ở Running word, ô nhập cao
+   **9,29cqw** trong khi chữ chỉ 5,81cqw; thời 4:3 hàng cao 10,13cqw nên lọt, sang 16:10,5 hàng còn 7,01cqw
+   ⇒ tràn 2,28cqw và `overflow:hidden` **cắt mất gạch chân**. **Trước khi đổi tỷ lệ template nào, quét trước
+   các phần tử chữ nằm trong hàng cao cố định mà thiếu `line-height`.** (Xem thêm mục `line-height` cho chữ
+   Việt phía trên: tối thiểu **1.35** cho chữ hiển thị nội dung bài học; các ô chữ HOA tiếng Anh cỡ lớn như
+   ô nhập của Running word thì khai bằng đúng phần tử chữ nằm cạnh nó để hai bên không nhảy cỡ.)
+4. **Vòng quét nhiều template phải chạy từ trang gốc `/index.html`.** `core/catalog.js` khai `css` bằng đường
+   dẫn **tương đối theo TÀI LIỆU**; chạy từ `templates/<x>/test.html` sẽ xin
+   `/templates/<x>/templates/<y>/<y>.css` → **404**, sheet rỗng, và template `<y>` đo ra tỷ lệ sai —
+   **trông y hệt một lỗi thật của dự án**.
+
+### 5. Bề ngang phím "Andrew" — **12,7cqw**, dùng chung
+
+`.aw-tta-key-andrew` (Type the answer) · `.aw-cw-key-andrew` (Crossword) · `.aw-rw-key-andrew`
+(Running word, đã sửa 7/8/2026 từ 10,6cqw) — **đều 12,7cqw**. Template nào mọc thêm phím Andrew thì dùng
+đúng số này. ⚠️ Andrew là phím **cố định bề ngang** duy nhất của hàng cuối, còn Space/Submit **co giãn**
+chia nhau phần còn lại — nên đặt sai bề ngang Andrew sẽ biểu hiện thành **HAI** phím trông khác đi
+(Andrew ngắn + Space dài), rất dễ đổ oan cho một thay đổi khác.
+
 ## ⚠️ FULLSCREEN (đợt 12, 30/7/2026) — nhắm vào `root`, KHÔNG phải `page`
 
 `fsBtn` request fullscreen trên **`root` (`#app`)**, không phải `.aw-page`. Lý do: `restart()` gọi

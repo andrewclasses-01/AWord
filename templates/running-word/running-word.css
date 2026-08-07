@@ -2,28 +2,34 @@
    RUNNING WORD template — styles that belong ONLY to this template.
    Class prefix: .aw-rw-*
 
-   Everything inside the 16:9 frame is sized in cqw so fullscreen keeps the
+   Everything inside the frame is sized in cqw so fullscreen keeps the
    proportions (core rule). The Options panel and the printed sheets live
    OUTSIDE that container, so those two sections use px and mm respectively —
    cqw would not resolve there.
 
-   ⭐ VERTICAL BUDGET — MEASURED, NOT GUESSED (4/8/2026).
-   The frame is 56.25cqw tall, but the PLAY AREA is only **45.67cqw**: the top bar
-   (timer/score) and the bottom bar (nav + tools) take the other ~10.6cqw. The
-   first draft budgeted against 56.25 and used core/keyboard.js at its natural
-   size; measured in a real browser that came out as
+   ⭐ VERTICAL BUDGET — MEASURED, NOT GUESSED (re-measured 7/8/2026 on the
+   16:10.5 frame; see the FRAME section below for the ratio history).
 
-       clocks 12.57  +  keyboard 20.30  =  32.9cqw of 45.67
-       -> the two team columns were left 9.87cqw = **1.04 rows visible**
+   The frame is 65.625cqw tall, but the PLAY AREA is only **59.63cqw**: the
+   bottom bar (nav + tools) takes ~5cqw and the stage padding the rest. (The
+   engine top bar is hidden for this template, so it costs nothing.) Measured
+   in a real browser, that 59.63 is spent as:
 
-   so the whole point of the screen was squeezed off it. Retuned to:
+       clocks    5.81   fixed
+       boards   29.43   flex: 1  -> a 21.03cqw 3-row window, 7.01cqw per row
+       keyboard 22.88   fixed (core keyboard, scaled)
+       gaps      1.31   boards' bottom clearance under the scaled keyboard
 
-       clocks   ~8.5cqw
-       boards    flex: 1  -> ~23cqw = about 6 rows per team
-       keyboard ~13cqw
+   ⚠️ ONLY `.aw-rw-boards` is flex:1, so EVERY cqw the frame gains or loses
+   comes out of the word rows and nothing else. Going 4:3 -> 16:10.5 took
+   9.38cqw straight off the boards (38.81 -> 29.43) and shortened each row
+   10.13 -> 7.01cqw, while the word's own line box stayed 5.81cqw. That is
+   still a fit, but the headroom per row is down to ~1.2cqw — so if this frame
+   is ever made shorter again, THIS is the number that runs out first, and the
+   keyboard/clocks would have to give some cqw back.
 
-   Getting the keyboard down to 13cqw means overriding core/keyboard.js's key
-   metrics. Those overrides are all SCOPED under `.aw-rw-card` (see the keyboard
+   The keyboard is core/keyboard.js's, with this template's own key metrics.
+   Those overrides are all SCOPED under `.aw-rw-card` (see the keyboard
    section at the bottom) — a template stylesheet stays in the document forever,
    so a bare `.aw-kbd-key { … }` here would shrink the keyboard in Type the
    answer and Crossword too, for the rest of the session.
@@ -60,25 +66,48 @@
 }
 
 /* =============================================================
-   FRAME — 4:3, not the app's usual 16:9 (teacher's request, 5/8/2026: this
-   game is played standing over an iPad, whose screen is close to 4:3, and the
-   16:9 letterbox was wasting real width on that device).
+   FRAME — 16:10.5, not the app's usual 16:9 (teacher's request, 7/8/2026).
+   History: this template started on the app's 16:9, went to 4:3 on 5/8/2026
+   (the game is played standing over an iPad, and the 16:9 letterbox wasted
+   real width there), and is now 16:10.5 — the same idea, dialled back: still
+   noticeably taller than 16:9, but no longer as tall as a full 4:3.
+
+       16 / 9     -> frame 56.25cqw tall
+       16 / 10.5  -> frame 65.625cqw tall   (= 32/21; +9.375 over 16:9)
+       4 / 3      -> frame 75cqw tall       (the previous setting)
+
+   Written as `16 / 10.5` rather than the equivalent `32 / 21` purely so the
+   number matches how the teacher asked for it. CSS ratios take decimals.
 
    Scoped through `.act-running_word` — a class `core/engine.js` stamps onto
    `.aw-stage` for EVERY activity, from `activity.type`, at the very moment the
    stage is built (before the READY/splash screen even shows, well before this
    template's own mount() ever runs). The one-line, purely-additive core
    change this needed (5/8/2026, teacher approved): no other template's CSS
-   reads an `.act-*` class, so the other 14 games — all tuned for 16:9 — are
-   untouched. The frame is now 4:3 from the very first paint, not just after
+   reads an `.act-*` class, so the other 15 games — all still on 16:9 — are
+   untouched. The frame is 16:10.5 from the very first paint, not just after
    pressing PLAY (the earlier `:has(.aw-rw-card)` version could only kick in
    once mount() had built that markup). Both the resting frame AND the
-   fullscreen letterbox need their own rule — core hardcodes 16/9 in both. */
-.aw-stage.act-running_word { aspect-ratio: 4 / 3; }
-:fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-webkit-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-moz-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
-:-ms-fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 4 / 3)); height: auto; }
+   fullscreen letterbox need their own rule — core hardcodes 16/9 in both.
+
+   ⚠️ The letterbox rules below are for the REAL Fullscreen API, which this
+   template does not use (`tpl.useZoomFullscreen`, see running-word.js) — the
+   zoom fullscreen further down fills the whole viewport and overrides
+   `aspect-ratio` outright, so the WAY fullscreen works is untouched by this
+   change. They are kept in step with the resting frame anyway so the game
+   can never change shape if that flag is ever turned off. */
+.aw-stage.act-running_word { aspect-ratio: 16 / 10.5; }
+:fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
+:-webkit-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
+:-moz-full-screen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
+:-ms-fullscreen .aw-stage.act-running_word { width: min(100vw, calc(100vh * 16 / 10.5)); height: auto; }
+
+/* ⭐ A frame WIDER than this design ratio (only possible in zoom fullscreen)
+   would starve the word rows — see the "SCREENS WIDER THAN THE DESIGN RATIO"
+   section at the END of this file, which shrinks the keyboard in steps and
+   caps the frame at 16:9. It lives at the end because those steps have to
+   override `.aw-rw-boards`' and `.aw-kbd`'s base rules below, and container
+   queries add no specificity of their own — the later rule simply wins. */
 
 /* The engine's own top bar (elapsed timer + a-b score) is redundant here —
    the two team clocks below say the same things, bigger, and this frame needs
@@ -200,9 +229,30 @@
    number anywhere in this rule, so it self-adjusts to ANY future viewport
    change (rotation, the browser showing/hiding its own bars, a different
    browser's chrome height, a different device) with no code change needed —
-   the browser recomputes `100%` on every resize on its own. */
+   the browser recomputes `100%` on every resize on its own.
+
+   ⭐ ONE LIMIT ADDED 7/8/2026 (teacher's brief): "fill whatever is there" is
+   right up to a point, and past 16:9 it stops being right — see the long note
+   on the container-query steps near the top of this file. The four steps
+   shrink the keyboard to keep the word rows alive as the frame gets wider, but
+   they cannot keep up for ever: at 2.02 (an ordinary browser window on a 1080p
+   screen, which is exactly the teacher's screenshot) the frame is only 49.5cqw
+   tall, and at 2.37 (ultrawide) 42.2cqw — there is no keyboard size that
+   rescues those. So `max-width` caps the frame at 16:9 and the flex centring on
+   `.aw-page` above puts the leftover width into two bars of `.aw-zoomed`'s own
+   dark background, one per side.
+
+   Deliberately 16:9 and not the design 16:10.5: at 16:9 every real device the
+   teacher uses — iPad 4:3, 16:10 laptop, 16:9 TV — still gets NO bars at all
+   and keeps every pixel, exactly as before this change. Only a genuinely
+   wider-than-16:9 viewport (a windowed browser with several toolbars, an
+   ultrawide monitor) ever sees a bar, and there the alternative was overlapping
+   text. `dvh` is the panel's own height (`.aw-zoomed` is `position:fixed;
+   inset:0`), with a `vh` line first for anything that doesn't know `dvh`. */
 .aw-zoomed .aw-stage.act-running_word {
   width: 100%; height: 100%; border-radius: 0; border: none;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
 }
 .aw-zoomed .aw-stage.act-running_word ~ .aw-below,
 .aw-zoomed .aw-stage.act-running_word ~ .aw-as-bars { display: none; }
@@ -614,11 +664,25 @@
 .aw-rw-board.is-active .aw-rw-remaining { color: var(--rw-ink); }
 
 /* ---- the single live input, re-parented into whichever row is in play ---- */
+/* ⚠️ `line-height` is NOT optional here (found by measurement, 7/8/2026, when
+   the frame went 4:3 -> 16:10.5). An <input> with no line-height takes its
+   height from the FONT'S OWN METRICS, and Baloo 2's natural line box is
+   ~1.6em — so this box measured 9.29cqw while its own text is only 5.81cqw
+   tall, and while the settled word next to it (.aw-rw-row-body, which DOES
+   declare line-height: 1.04) measured 5.81cqw. On the 4:3 frame the row was
+   10.13cqw and that slop went unnoticed; on 16:10.5 the row is 7.01cqw, so
+   the input overflowed it by 2.28cqw and `overflow:hidden` on the row cut off
+   the underline. Matching the row body's 1.04 fixes the clipping AND removes
+   a wobble that was always there: the word used to shrink its box the instant
+   it was submitted and turned from input into plain text.
+   This is the same trap core/HUONG DAN CORE.md records for topbar/bottombar
+   text — "always declare line-height on text in a fixed-height row". */
 .aw-rw-input {
   display: block; box-sizing: border-box;
   width: 100%;
   font-family: inherit;
   font-size: calc(5.6cqw * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  line-height: 1.04;
   text-align: center;
   text-transform: uppercase;
   color: var(--rw-ink);
@@ -791,8 +855,21 @@
 .aw-rw-card .aw-kbd { transform: scale(1.15); }
 
 /* ---- the Andrew key (core/keyboard.js owns the structure; this owns the look,
-   matching Type the answer's so the lifeline reads the same in both games) ---- */
-.aw-rw-key-andrew { flex: 0 0 10.6cqw; }
+   matching Type the answer's so the lifeline reads the same in both games) ----
+
+   ⚠️ 12.7cqw is THE STANDARD WIDTH, shared with `.aw-tta-key-andrew`
+   (type-the-answer.css) and `.aw-cw-key-andrew` (crossword.css). This file used
+   10.6cqw from the day the template was built — the only one of the three out
+   of step — and because Andrew is the row's one FIXED-width key while Space and
+   Submit flex, those 2.1cqw went straight into the Space bar: measured against
+   a letter key, Andrew read 2.12 wide instead of 2.54 and Space 7.93 instead of
+   7.50. The teacher spotted it (7/8/2026) comparing this keyboard against the
+   standard one. Nothing to do with the frame-ratio work of the same day —
+   verified by measuring the pre-change commit, which gave the identical 2.12 /
+   7.93, and by confirming the four keyboard-shrink steps leave every internal
+   proportion untouched (`transform: scale()` scales the whole row as one).
+   If a fourth template ever grows an Andrew key, use 12.7cqw. */
+.aw-rw-key-andrew { flex: 0 0 12.7cqw; }
 .aw-rw-key-andrew.is-ready .aw-kbd-key-fnlabel { color: #f4f4f5; }
 .aw-rw-key-andrew.is-ready:disabled { opacity: .55; }
 .aw-rw-card .aw-rw-key-andrew.is-glowing {
@@ -934,4 +1011,102 @@
     border: .35mm solid #7b8794;
     border-radius: .6mm;
   }
+}
+
+/* =============================================================
+   ⭐ SCREENS WIDER THAN THE DESIGN RATIO (teacher's brief, 7/8/2026)
+   "co truoc, kep sau" — shrink first, letterbox only as a last resort.
+
+   ⚠️ THIS SECTION MUST STAY LAST. A container query adds NO specificity of its
+   own, so these rules only beat `.aw-rw-boards { margin-bottom }` and
+   `.aw-rw-card .aw-kbd { transform }` above by being later in the file. Moving
+   this block up silently disables the whole thing — 0 console errors, the
+   queries still "match", nothing changes on screen. (Cost an hour; measured it
+   as "keyboard never shrinks" before spotting the cause.)
+
+   THE PROBLEM (measured, reproduced from the teacher's screenshot). In
+   fullscreen this template deliberately does NOT letterbox: `.aw-zoomed` gives
+   the stage the SCREEN's own ratio (5/8/2026, so an iPad loses no pixels). But
+   every size in the game is in `cqw` = a share of the frame's WIDTH, so on a
+   wide-and-short screen the keyboard (23cqw) and the clocks (5.81cqw) keep
+   their full size while the frame's HEIGHT collapses — and `.aw-rw-boards` is
+   the only `flex:1` item, so it alone absorbs the whole loss. Measured in the
+   zoom panel, one word row against the 5.82cqw the word itself needs:
+
+       1024x768  (4:3,   iPad)          row 11.92   ok
+       1440x900  (16:10, laptop)        row  7.72   ok
+       1920x1080 (16:9,  TV)            row  5.61   starts to overlap
+       1920x950  (2.02, teacher's shot) row  3.35   THREE ROWS ON TOP OF EACH OTHER
+       2560x1080 (2.37, ultrawide)      row  0.92   unreadable
+
+   THE FIX, in two halves:
+
+   (1) HERE — the keyboard gives its height back, in four steps, as the frame
+       gets wider than the design ratio. The teacher's call: words stay
+       READABLE and the keyboard is what shrinks ("uu tien chu doc duoc"). The
+       word text is NOT touched at all — it keeps its full 5.6cqw everywhere.
+
+   (2) The `max-width` on `.aw-zoomed .aw-stage.act-running_word` caps the
+       frame at 16:9, so these steps never have to cover a worse ratio.
+
+   WHY `transform: scale()` PLUS a matching margin, instead of restating core's
+   ~18 keyboard metrics here: scale keeps EVERY proportion exactly as core
+   draws it (keys, gaps, fonts, radius, the "lip" shadow) with no drift risk —
+   the same reason the +15% was done this way on 5/8/2026. But scale is purely
+   VISUAL: the keyboard's LAYOUT box stays at its natural height N, so on its
+   own it would hand the boards nothing. `.aw-rw-boards`' bottom margin is what
+   turns the visual change into real layout space:
+
+       margin-bottom = N x (scale - 1) + 0.4cqw     N = 20cqw, MEASURED as
+                                                    `.aw-kbd`.offsetHeight
+                                                    (offsetHeight ignores the
+                                                    transform; getBoundingClient-
+                                                    Rect does NOT — it returns
+                                                    the scaled 23cqw)
+
+   At the shipped scale 1.15 that formula gives exactly the 3.4cqw this file
+   already used, so the design ratio and anything TALLER (iPad 4:3, the resting
+   16:10.5 frame, a 16:10 laptop) is byte-for-byte what the teacher already
+   approved — no step matches there at all. Below scale 1 the margin goes
+   NEGATIVE, which is the whole point: a shrunk keyboard leaves empty space at
+   the TOP of its own layout box (core anchors it `transform-origin: bottom
+   center`), and the negative margin hands exactly that space to the boards.
+
+   ⚠️ If core's keyboard metrics ever change, N changes with them — re-measure
+   `.aw-kbd`.offsetHeight and redo the four margins. That single number is the
+   only thing in this section that mirrors core.
+
+   Steps are ordered narrowest -> widest; every matching one applies, so the
+   last match wins. `stage` is the container name core gives `.aw-stage`.
+   ============================================================= */
+
+/* step 1 — clear of the design ratio.
+   ⚠️ The threshold is 16/10.4 (1.5385), NOT 16/10.5 (1.5238), on purpose. With
+   `> 16/10.5` this step fired on the RESTING frame itself, which IS exactly
+   16:10.5: the stage derives its height from its width via `aspect-ratio`, the
+   result lands on a fractional pixel, and the container's measured ratio comes
+   out a hair OVER the exact fraction — so a strict `>` matched. Measured on the
+   resting frame: keyboard scale 1.08 and boards margin 2cqw instead of the
+   approved 1.15 / 3.4cqw, with no console error to give it away. Never put a
+   container-query threshold ON a ratio the layout actually rests at. */
+@container stage (aspect-ratio > 16/10.4) {
+  .aw-rw-card .aw-kbd { transform: scale(1.08); }
+  .aw-rw-boards { margin-bottom: 2cqw; }
+}
+/* step 2 — past 16:10 */
+@container stage (aspect-ratio > 16/10) {
+  .aw-rw-card .aw-kbd { transform: scale(1); }
+  .aw-rw-boards { margin-bottom: 0.4cqw; }
+}
+/* step 3 — past 16:9.5 */
+@container stage (aspect-ratio > 16/9.5) {
+  .aw-rw-card .aw-kbd { transform: scale(0.93); }
+  .aw-rw-boards { margin-bottom: -1cqw; }
+}
+/* step 4 — past 16:9.2, i.e. everything up to and including the 16:9 cap. On a
+   1920-wide 16:9 screen the keyboard is still ~17.4cqw = 334px tall (keys
+   ~73px), comfortably bigger than a phone keyboard's. */
+@container stage (aspect-ratio > 16/9.2) {
+  .aw-rw-card .aw-kbd { transform: scale(0.87); }
+  .aw-rw-boards { margin-bottom: -2.2cqw; }
 }

@@ -5,6 +5,161 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 86 (7/8/2026, v0.9.61) — RUNNING WORD: KHUNG MẶC ĐỊNH 4:3 → **16:10,5** + **GIỚI HẠN CHO FULLSCREEN/ĐA MÀN HÌNH** + PHÍM ANDREW VỀ CHUẨN. ⭐ **GHI TIÊU CHUẨN TOÀN HỆ THỐNG vào `core/HUONG DAN CORE.md`**. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+### 0. ⭐⭐ TIÊU CHUẨN TOÀN HỆ THỐNG (thầy yêu cầu ghi rõ)
+
+Đã thêm mục **"TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CỦA TOÀN HỆ THỐNG AWORD"** vào
+`core/HUONG DAN CORE.md` (ngay trước mục FULLSCREEN cũ). Nội dung chốt:
+
+1. **Cỡ mặc định `aspect-ratio: 16 / 10.5`** (= 32/21, khung cao 65,625cqw), scope qua class
+   `.act-<type>` mà engine tự đóng lên `.aw-stage` từ nét vẽ đầu tiên.
+2. **Fullscreen phủ kín màn hình thật, nhưng CHỐT CHẶN 16:9** (`max-width: calc(100dvh*16/9)` + dòng
+   `100vh` dự phòng). Chọn 16:9 vì ở mốc đó iPad 4:3 / laptop 16:10 / TV 16:9 **đều không có dải nào**.
+3. **Co giãn thành phần theo BẬC** khi khung bè hơn tỷ lệ thiết kế, bằng `@container stage (aspect-ratio > …)`
+   — luật thầy chốt: **"co trước, kẹp sau"** + **"ưu tiên chữ đọc được"** (chữ KHÔNG bao giờ bị co; thứ
+   nhường chỗ là bàn phím/đồng hồ/thanh trạng thái). Kèm công thức co khối mà không phải chép số đo core:
+   `transform: scale(S)` cho phần HÌNH + `margin-bottom = N×(S−1)+0,4cqw` cho phần BỐ CỤC, **N đo bằng
+   `offsetHeight`** (N = 20cqw với bàn phím core hiện nay).
+4. **4 bẫy bắt buộc biết** trước khi áp cho template khác (xem mục 6 dưới).
+5. **Phím Andrew chuẩn 12,7cqw** dùng chung 3 template.
+
+⚠️ **Tính tới 7/8/2026 mới CHỈ Running word chạy tiêu chuẩn này**; 14 game còn lại vẫn 16:9 và Running team
+vẫn 4:3 — chuyển dần theo lệnh thầy, **KHÔNG tự ý đổi hàng loạt**.
+
+### Bối cảnh
+
+Thầy mở một loạt việc mới: *"Các cải tiến đều liên quan đến kích cỡ màn hình và việc fullscreen của các
+template. Trước tiên, ta cùng build 1 app làm mẫu là RUNNING WORD trước. Hãy chuyển kích cỡ mặc định thành
+tỷ lệ 16:10,5, giữ nguyên cách fullscreen như hiện tại."*
+
+→ Running word là **bản mẫu**; cách làm + bẫy tìm được ở đây dùng lại cho 15 template còn lại.
+Đổi **1 file duy nhất**: `templates/running-word/running-word.css`.
+
+### 1. Đổi tỷ lệ (5 luật, chỉ thay con số)
+
+`.aw-stage.act-running_word` từ `aspect-ratio: 4 / 3` → **`16 / 10.5`** (= 32/21). Chiều cao khung tính theo
+bề ngang: 16:9 = 56,25cqw · **16:10,5 = 65,625cqw** · 4:3 = 75cqw. 4 luật letterbox `:fullscreen` (4 cách
+viết vendor) đổi theo cho khớp.
+
+⚠️ **Cách fullscreen KHÔNG đổi** — template này chạy `tpl.useZoomFullscreen`, tức fullscreen đi đường
+`.aw-zoomed` (`width/height:100%`, vô hiệu hoá luôn `aspect-ratio`), nên 4 luật `:fullscreen` kia là **code
+chết**; vẫn sửa cho khớp phòng sau này tắt cờ. Đo lại xác nhận: `.aw-zoomed` bật,
+`document.fullscreenElement` vẫn `null`, khung phủ **đúng cả viewport 1280×720**, thoát ra về **1,5238**.
+
+### 2. ⭐ Toàn bộ 9,38cqw khung mất đi rơi hết vào BẢNG TỪ
+
+Chỉ `.aw-rw-boards` là `flex:1` → mọi thay đổi chiều cao khung trừ vào đúng chỗ đó. Đo thật (devserver
+:5510, khung 968px), trước → sau: vùng chơi 69,01 → **59,63** · đồng hồ 5,81 → **5,81** (không đổi) ·
+**bảng từ 38,81 → 29,43** · cửa sổ 3 hàng 30,40 → **21,03** · **1 hàng 10,13 → 7,01** · bàn phím 22,88 →
+**22,88** (không đổi) · hở bảng↔bàn phím 1,31 → **1,31** (không đổi). Chữ của từ vẫn cao 5,81cqw → hàng
+7,01cqw vẫn lọt, **dư 1,2cqw** — đây là con số sẽ hết trước tiên nếu khung còn ngắn nữa.
+
+### 3. ⭐ LỖI THẬT bắt được nhờ khung ngắn lại: ô nhập bị cắt gạch chân
+
+`.aw-rw-input` **quên khai `line-height`** → thẻ `<input>` lấy chiều cao theo **metrics font Baloo 2
+(~1,6em)**, cao **9,29cqw** trong khi chữ thật chỉ 5,81cqw. Thời 4:3 hàng 10,13cqw nên lọt, **lỗi nằm im từ
+đầu**; sang 16:10,5 hàng còn 7,01cqw → tràn **2,28cqw**, hàng có `overflow:hidden` → **cắt mất gạch chân**.
+Sửa: khai `line-height:1.04` đúng bằng `.aw-rw-row-body` → ô nhập còn **6,21cqw**, nằm gọn, và **hết nhảy cỡ
+chữ lúc submit** (trước 9,29 → 5,81; nay cả hai 5,81). Kiểm không cắt nét bằng
+`canvas.measureText().actualBoundingBox*`: chữ ăn mực **3,62cqw** trong hộp **5,81cqw** → dư 2,19.
+(`scrollHeight > clientHeight` của `<input>` ở đây là **báo động giả** — phần đệm rỗng của font, không phải nét chữ.)
+
+⭐ **LUẬT CHO 15 TEMPLATE CÒN LẠI:** rút ngắn khung sẽ **làm lộ MỌI phần tử chữ quên khai `line-height`**
+(chúng đang âm thầm chiếm cao gấp ~1,6× cỡ chữ). Trước khi đổi tỷ lệ template nào, quét trước các phần tử
+chữ nằm trong hàng cao cố định mà thiếu `line-height`. Đúng cái bẫy `core/HUONG DAN CORE.md` đã ghi từ Đợt 82.
+
+### 4. Tự test (0 lỗi console)
+
+Khung đo ra đúng 968×635px = **1,5238** = 16/10,5, cao **65,625cqw** khớp lý thuyết tuyệt đối · màn SETUP
+không tràn (33,9cqw nội dung trong 59,4cqw) · màn trận đấu `.aw-rw-card` không tràn · ô nhập lọt hàng ·
+**bảng kết quả cuối trận** (ép `clockSeconds:4`) cao 31,51cqw nằm 17,06→48,57 trong khung 65,63, không cuộn ·
+fullscreen zoom y hệt trước · **hồi quy 16/16 template mount, 0 lỗi console**: 14 game vẫn 16:9 (1,7778),
+running_word 16:10,5 (1,5238), running_team vẫn 4:3 (1,3333) · CSS vẫn parse đủ 173 luật.
+
+⚠️ **BẪY BÀN THỬ MỚI:** vòng quét nhiều template **phải chạy từ trang gốc `/index.html`**. Chạy từ
+`templates/running-word/test.html` thì `catalog.js` khai `css` bằng đường dẫn **tương đối theo TÀI LIỆU** →
+xin `/templates/running-word/templates/running-team/running-team.css` → **404**, sheet rỗng, running_team đo
+ra 16:9 và **trông y hệt một lỗi thật** của dự án.
+
+### 5. Thầy duyệt phần khung nghỉ, rồi báo lỗi FULLSCREEN → PHẦN 2
+
+Thầy: *"Về size RUNNING WORD khi là mặc định thì ok rồi, nhưng tôi muốn chỉnh thêm một chút khi là fullscreen.
+Phải có những giới hạn cần thiết nào đó... không gặp hiện tượng như ảnh này"* — ảnh cửa sổ **1920×950** với
+**3 dòng từ ĐÈ CHỒNG lên nhau**.
+
+**Gốc lỗi:** fullscreen đi đường zoom và **cố ý không kẹp dải** (quyết định 5/8 để iPad không phí pixel) → khung
+lấy **đúng tỷ lệ màn thật**. Mà mọi cỡ trong game đo theo **bề NGANG**, nên màn càng bè thì bàn phím (23cqw) +
+đồng hồ (5,81cqw) **giữ nguyên** trong khi chiều cao khung sụp, và `.aw-rw-boards` là `flex:1` **duy nhất** nên
+gánh trọn. Đo (cao 1 hàng / chữ cần 5,82): iPad 4:3 **11,92** ✅ · 16:10 **7,72** ✅ · 16:9 **5,61** ⚠️ ·
+**2,02 → 3,35** ❌ (ảnh thầy) · 2,37 → **0,92** ❌.
+
+**Thầy chốt (AskUserQuestion):** "co trước, kẹp sau" + "ưu tiên chữ đọc được".
+
+**(a) 4 bước co bàn phím** bằng `@container stage (aspect-ratio > …)` — `.aw-stage` vốn đã là
+`container-type:size` tên `stage` của core nên hỏi được tỷ lệ khung trực tiếp. Ngưỡng 16/10,4 · 16/10 · 16/9,5 ·
+16/9,2 → scale **1,08 · 1,00 · 0,93 · 0,87**. ⭐ **Chữ KHÔNG bị co**, giữ 5,6cqw ở mọi tỷ lệ.
+Dùng `transform: scale()` (giữ đúng từng tỉ lệ core vẽ, không chép lại ~18 số đo bàn phím) + `margin-bottom`
+của boards theo `N×(scale−1)+0,4cqw`, **N = 20cqw** — vì scale chỉ ăn phần HÌNH, hộp bố cục vẫn nguyên, margin
+mới biến nó thành chỗ THẬT. ⚠️ **N phải đo bằng `offsetHeight`**, KHÔNG dùng `getBoundingClientRect()` (cái sau
+trả 23cqw vì đã nhân scale 1,15). Thử công thức ở 1,15 ra **đúng 3,4cqw** = con số đang dùng → **tỷ lệ thiết kế
+và mọi tỷ lệ cao hơn: không bước nào khớp, không đổi gì**.
+
+**(b) Chốt chặn 16:9**: `max-width: calc(100dvh*16/9)` trong luật zoom (có dòng `100vh` dự phòng), khung tự căn
+giữa, phần thừa thành 2 dải nền tối. Chọn 16:9 chứ không phải 16:10,5 vì ở mốc đó **iPad 4:3 / laptop 16:10 /
+TV 16:9 đều KHÔNG có dải nào**; trên màn 1920×950 của thầy dải chỉ **~115px mỗi bên = 6% bề ngang**.
+
+**Số đo sau khi sửa** (đổi cỡ cửa sổ THẬT): iPad 1024×768 → 0 dải, scale **1,15**, hàng **11,92** (**y hệt
+trước**) · khung nghỉ → scale **1,15**, margin **3,39**, hàng **7,01** (**y hệt bản đã duyệt**) · 1280×800 →
+1,08 hàng 8,15 · 1280×720 (16:9) → 0 dải, 0,87, hàng **7,47** · **1280×634 (ảnh thầy, 2,019) → khung kẹp về
+16:9, dải 76px/bên, hàng 7,54** ✅ · 1280×540 (2,37) → dải 160px/bên, hàng 7,43. Quét mịn 7 tỷ lệ: phần dư luôn
+**1,76–3,36cqw**, luôn rộng hơn khung nghỉ (1,2). Hở bảng↔bàn phím ổn định **1,25–1,36cqw**, không bước nào đè.
+Hồi quy **16/16 mount, 0 lỗi console**, không template nào khác dính transform bàn phím.
+
+### 6. ⭐ HAI BẪY MỚI — dùng cho 15 template còn lại
+
+**(a) Khối `@container` PHẢI đặt CUỐI FILE.** Container query **không cộng thêm specificity**. Đặt 4 khối ở đầu
+file trong khi `.aw-rw-card .aw-kbd { transform }` và `.aw-rw-boards { margin-bottom }` nằm dưới → **luật dưới
+thắng, cả tính năng im lặng không chạy**: 0 lỗi console, probe thử `@container` vẫn báo "khớp", màn hình không
+đổi gì. Chỉ lộ khi đo thấy "bàn phím không bao giờ co".
+
+**(b) ĐỪNG đặt ngưỡng ĐÚNG vào tỷ lệ khung đang nghỉ.** Để `> 16/10.5` (đúng bằng tỷ lệ nghỉ) thì bước 1 **tự
+kích hoạt ngay ở khung nghỉ**: chiều cao suy ra từ bề ngang qua `aspect-ratio`, rơi vào pixel lẻ, tỷ lệ đo được
+nhỉnh hơn phân số đúng → `>` khớp. Khung nghỉ ra scale 1,08 / margin 2cqw thay vì 1,15 / 3,4 đã duyệt, **không
+một dòng lỗi**. Đổi sang **16/10,4**.
+
+### 7. PHẦN 3 — phím Andrew về đúng bề ngang chuẩn (thầy phát hiện khi nghiệm thu)
+
+Thầy: *"việc resize ok, chỉ có một vấn đề là bàn phím có sự thay đổi nhẹ: phím Andrew bị ngắn đi và phím cách
+bị dài ra."*
+
+⭐ **Việc đầu tiên là chứng minh nó KHÔNG do thay đổi hôm nay** (thầy mô tả là "thay đổi", nên phải kiểm):
+(a) `git stash` riêng file CSS → quay về HEAD trước mọi sửa hôm nay → đo ra **đúng cùng bộ số** (Andrew/chữ
+**2,120**, Space/chữ **7,927**, Andrew/numbers **0,938**), rồi `stash pop`; (b) đo ở 4 mốc tỷ lệ fullscreen →
+mọi tỉ lệ **đứng yên tuyệt đối**, đúng bản chất `transform: scale()` (phóng/thu cả hàng như một khối ảnh, không
+tính lại việc chia bề ngang). → **Lệch có từ ngày dựng template, hôm nay đặt cạnh bản chuẩn mới lộ.**
+
+**Gốc:** bản chuẩn dùng chung là **12,7cqw** (`.aw-tta-key-andrew` ở Type the answer + `.aw-cw-key-andrew` ở
+Crossword), riêng `.aw-rw-key-andrew` để **10,6cqw** — template DUY NHẤT lệch.
+⭐ **Vì sao thiếu ở Andrew lại làm SPACE DÀI RA:** hàng cuối `[Andrew][Space][Submit]` chỉ có Andrew là phím
+**cố định bề ngang**, Space/Submit **co giãn** chia nhau phần còn lại → 2,1cqw hụt **chảy thẳng sang chúng**.
+Một con số sai biểu hiện thành **hai** phím trông khác đi.
+
+**Sửa 10,6 → 12,7cqw.** Đo lại: Andrew/chữ **2,540** và Andrew/numbers **1,124** — **khớp CHÍNH XÁC bản chuẩn**,
+giữ nguyên ở cả 4 bước fullscreen. Space/Submit còn lệch **1,6%** (7,619 vs 7,496) và **cố ý không sửa**: game
+này để lề khung hẹp hơn (`.aw-stage-inner` 1,6cqw, thầy chốt 5/8 để bảng từ rộng thêm) nên bàn phím rộng hơn
+chuẩn ~1,6% = **~6px trên khung 968px**; khớp tuyệt đối sẽ phải đặt một con số thần bí tính ngược từ lề của
+core, gãy ngay khi core đổi. Hồi quy **16/16 mount, 0 lỗi console**.
+
+### 8. Còn chờ
+
+⬜ Thầy nghiệm thu máy thật: fullscreen trên **iPad phải y hệt trước** · trên màn lớp/cửa sổ máy tính: 3 dòng từ
+hết đè chưa, và **bàn phím nhỏ đi** (ở 16:9 còn ~76% cỡ cũ) có còn dễ bấm không — đây là đánh đổi trực tiếp của
+lựa chọn "ưu tiên chữ" · dải hai bên chỉ hiện khi màn bè hơn 16:9, thầy xem có chấp nhận được không.
+Chi tiết đầy đủ: `templates/running-word/GHI CHU RUNNING-WORD.md` mục **8l** (phần 1) + **8l-2** (phần 2).
+
+---
+
 ## Đợt 85 (7/8/2026, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK + HÂM NÓNG AUDIOCONTEXT + NÉN LẠI 310 FILE MP3. ⭐ CÓ SỬA CORE (1 file MỚI + `sound.js`; KHÔNG đụng `engine.js`). ✅ THẦY DUYỆT → COMMIT `00eb228` + PUSH + **LIVE**
 
 ### Bối cảnh — thầy báo gì
