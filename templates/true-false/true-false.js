@@ -64,6 +64,10 @@ function normLives(v) {
 const tfTemplate = {
   type: "true_false",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "statements",
   name: "True or false",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score
   manualTimerStart: true,   // the clock starts only after our 3-2-1 prep countdown
@@ -638,7 +642,8 @@ const tfTemplate = {
           answered: s.answered,
           yourText: s.chosen == null ? null : (s.chosen ? "True" : "False"),
           yourCorrect: s.correct,
-          correctText
+          correctText,
+          src: st   // `statements` is a shallow copy, so `st` IS the content object
         };
       });
       // Ranking score = correct count minus wrong-answer penalty. When pointsOff===0

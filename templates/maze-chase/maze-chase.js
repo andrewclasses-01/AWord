@@ -172,6 +172,10 @@ function bfsStep(grid, sr, sc, tr, tc) {
 const mazeChaseTemplate = {
   type: "maze_chase",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "questions",
   name: "Maze chase",
   hideLettersOption: true,   // answers ride on maze pads, not lettered boxes
 
@@ -584,7 +588,8 @@ const mazeChaseTemplate = {
           answered,
           yourText: s.correct ? correctText : (s.wrong[s.wrong.length - 1] || ""),
           yourCorrect: s.correct === true,
-          correctText
+          correctText,
+          src: q   // `items` is a shallow copy, so `q` IS the content object
         };
       });
       const answered = state.filter(s => s.correct || s.wrong.length > 0).length;

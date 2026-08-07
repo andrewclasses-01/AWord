@@ -60,6 +60,10 @@ function normLives(v) {
 const quizTemplate = {
   type: "quiz",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "questions",
   name: "Quiz",
   hasLivesSlot: true,      // hearts render in the top bar, left of the score (same slot as True/false)
 
@@ -144,7 +148,8 @@ const quizTemplate = {
     questions = questions.map(q => ({
       question: q.question || "",
       answers: (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers])
-        .filter(a => a && a.text != null)
+        .filter(a => a && a.text != null),
+      src: q   // the ORIGINAL content object — "Start with mistakes" filters by it
     }));
 
     const total = questions.length;
@@ -499,7 +504,8 @@ const quizTemplate = {
           answered: s.chosen !== null,
           yourText: s.chosen !== null ? q.answers[s.chosen].text : null,
           yourCorrect: s.correct === true,
-          correctText: correctAns ? correctAns.text : ""
+          correctText: correctAns ? correctAns.text : "",
+          src: q.src
         };
       });
       const answered = state.filter(s => s.chosen !== null).length;

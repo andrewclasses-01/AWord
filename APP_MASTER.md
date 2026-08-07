@@ -3,7 +3,39 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 83, v0.9.58) — BẢNG KẾT QUẢ CUỐI GAME: THỜI GIAN LUÔN PHÚT:GIÂY ·
+> Cập nhật lần cuối: **7/8/2026 (Đợt 84, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG
+> NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. 🟢 CHỜ THẦY DUYỆT (mới ở LOCAL).** File mới
+> `core/mistakes.js` + `core/engine.js` + 12 file template. Bảng kết quả có thêm **"Start with mistakes"**
+> ngay dưới "Start again" → về màn READY của CÙNG game, tên đổi thành **"QUIZ WITH MISTAKES"**, danh sách
+> chỉ còn từ **sai hoặc bỏ trống**; bấm tiếp nhiều vòng thu hẹp dần. Về bộ đầy đủ: reload · đổi template
+> rồi chọn lại · **Start again**. ⭐ **Chốt cách nối review→từ gốc: GẮN THAM CHIẾU.** Mọi template đều mở
+> đầu `[...(activity.content?.X||[])]` = sao chép **NÔNG**, nên phần tử đang chơi **chính là object trong
+> `activity.content`** → chỉ cần LỌC LẠI mảng gốc, không dựng lại gì (đáp án/clue/acceptedAnswers nguyên
+> vẹn). Hợp đồng mới: `review[i].src` = object nguồn + `tpl.itemsKey` = tên mảng. ⚠️ **6/12 template phải
+> luồn `src` qua một bước `.map()`** (quiz · gameshow · open-the-box · anagram · unjumble · balloon-pop),
+> **crossword luồn qua HAI bước**. **4 game CỐ Ý không có**: whack-a-mole (review ghi MỌI hàng là sai — trò
+> arcade, không xác định được câu sai), speaking-cards (`scorable:false`), running-word/team
+> (`renderSummary` riêng). **Ngưỡng tối thiểu theo game** (`MIN_ITEMS` trong `mistakes.js`): balloon-pop 5 ·
+> find-the-match 3 · crossword 2 · còn lại 2 → thiếu thì toast **đúng con số** và ở nguyên bảng kết quả.
+> **3 luật phụ:** ván mistakes **không ghi leaderboard** + ẩn dòng hạng; **"Play a different template" rời
+> khỏi bảng kết quả** (đo: nút thứ 5 đẩy panel 454→**507px** vượt trần **497px** → cuộn, khuất nút cuối) —
+> vẫn còn ở menu ☰ tên "Change template", ⚠️ đổi lại: ở màn kết thúc phải Start again trước mới mở được ☰;
+> nút chỉ hiện khi ván đó thật sự có câu sai. ⭐ **HAI LỖI TỰ TÌM RA, đã vá:** **(a)** act tạm `mist_` **bị
+> ghi vào thư viện** khi bấm Apply (chỗ đó chỉ chặn tiền tố `"conv_"`) → nay quy options về act mẹ
+> `_mistakesBase` và chặn `/^(conv|mist)_/`; **(b)** Apply Options giữa ván mistakes làm **mất bộ từ đang
+> luyện** (Apply gọi `restart()`, mà `restart()` nay luôn về bộ đầy đủ) → tách **`replayCurrent()`** (chơi
+> lại đúng cái đang có, dùng cho Apply + cầu myActivity) khỏi **`restart()`** (nút Start again). Tự test
+> devserver :5511 — kịch bản 4 vòng liên tiếp Quiz 6 câu: 6 → **4** → **3** (đúng hết → **nút biến mất**,
+> **không có dòng hạng**) → Start again về **6**; leaderboard 10 hàng **đều `/6`**, `localStorage` **không
+> có key `mist_`**; sai đúng **1 câu** → toast **"Need at least 2 words"**, ở nguyên bảng; True or false
+> (`statements`, `lives:1`) → **"TRUE OR FALSE WITH MISTAKES"**, vòng 2 đúng **6 = 8−2** câu; sau khi vá (b)
+> thì Apply giữa vòng vẫn giữ **4 câu**; panel 4 nút **454,3px < 497px, không cuộn**; hồi quy **16/16
+> mount, 0 lỗi console**. ⚠️ **Ghi nhận ngữ nghĩa:** True/false · maze-chase · open-the-box **hỏi lại câu
+> sai đến khi đúng**, nên chơi hết bài với tim vô hạn là **không còn câu sai** → không có nút; chỉ hết
+> tim/hết giờ mới còn câu dang dở. Chi tiết: `GHI CHU DU AN.md` Đợt 84 + `core/HUONG DAN CORE.md` mục
+> "START WITH MISTAKES".
+>
+> Trước đó: **7/8/2026 (Đợt 83, v0.9.58) — BẢNG KẾT QUẢ CUỐI GAME: THỜI GIAN LUÔN PHÚT:GIÂY ·
 > SCORE = ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) · THÊM HÀNG NHỎ "Total: 9/10". ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY
 > DUYỆT (mới ở LOCAL, chưa commit).** 4 file: `core/utils.js` · `core/engine.js` · `core/app.css` ·
 > `templates/quiz/quiz.js`. **(1)** `fmtSecsParts()` (ô Time bảng tổng kết + cột Time của **cả 2**

@@ -122,6 +122,10 @@ function prepareItem(word) {
 const anagramTemplate = {
   type: "anagram",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   name: "Anagram",
   hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
 
@@ -209,7 +213,9 @@ const anagramTemplate = {
 
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
     if (opt.shuffleQuestions) items = shuffle(items);
-    items = items.map(it => ({ clue: it.clue || "", word: it.word, ...prepareItem(it.word) }));
+    // `src` = the ORIGINAL content object, carried through so "Start with
+    // mistakes" can filter activity.content.items by identity (core/mistakes.js).
+    items = items.map(it => ({ clue: it.clue || "", word: it.word, ...prepareItem(it.word), src: it }));
 
     const total = items.length;
     if (total === 0) {
@@ -949,7 +955,8 @@ const anagramTemplate = {
           answered: doneCheck(s),
           yourText: s.correct === true ? it.word : partial,
           yourCorrect: s.correct === true,
-          correctText: it.word
+          correctText: it.word,
+          src: it.src
         };
       });
       const answered = state.filter(s => doneCheck(s)).length;

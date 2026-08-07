@@ -251,6 +251,10 @@ function fitBackFaces(root) {
 const otbTemplate = {
   type: "open_the_box",
   scorable: true,   // every play is scored now that Simple mode is gone
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   name: "Open the box",
 
   // Opt-in: put THIS template's per-question timer bar on the SAME row as
@@ -312,7 +316,8 @@ function mountQuestions(root, activity, ui) {
   if (opt.shuffleQuestions) items = shuffle(items);
   items = items.map(it => ({
     question: it.question,
-    answers: (opt.shuffleAnswers ? shuffle(it.answers) : [...it.answers]).filter(a => a && a.text != null)
+    answers: (opt.shuffleAnswers ? shuffle(it.answers) : [...it.answers]).filter(a => a && a.text != null),
+    src: it   // the ORIGINAL content object — "Start with mistakes" filters by it
   }));
 
   const total = items.length;
@@ -1068,16 +1073,16 @@ function mountQuestions(root, activity, ui) {
     const review = items.map((it, i) => {
       const correctText = (it.answers.find(a => a.correct) || {}).text || "";
       if (boxState[i] === "correct") {
-        return { question: it.question, answered: true, yourText: correctText, yourCorrect: true, correctText };
+        return { question: it.question, answered: true, yourText: correctText, yourCorrect: true, correctText, src: it.src };
       }
       if (boxState[i] === "locked") {
-        return { question: it.question, answered: true, yourText: lastWrongText[i], yourCorrect: false, correctText };
+        return { question: it.question, answered: true, yourText: lastWrongText[i], yourCorrect: false, correctText, src: it.src };
       }
       // "unplayed" at the end (never attempted, or was wrong earlier but a
       // later correct answer elsewhere freed it back up) — reported as not
       // answered; this game allows retries so it doesn't map perfectly onto
       // Quiz's single-attempt review, this is the closest honest reading.
-      return { question: it.question, answered: false, yourText: null, yourCorrect: false, correctText };
+      return { question: it.question, answered: false, yourText: null, yourCorrect: false, correctText, src: it.src };
     });
     const correctCount = boxState.filter(s => s === "correct").length;
     const answeredCount = boxState.filter(s => s !== "unplayed").length;

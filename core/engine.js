@@ -17,6 +17,7 @@
 import { getTemplate, ensureTemplate } from "./registry.js";
 import { switchTargets, convertActivity } from "./convert.js";
 import { computeResult } from "./scoring.js";
+import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
 import { buildStage } from "./layout.js";
 import { formatTime, el, ordinal, fmtSecsParts } from "./utils.js";
 import { icons } from "./icons.js";
@@ -139,7 +140,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     applyOptions(opts) {
       if (!opts) return;
       awSyncMute++;
-      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); restart(); }
+      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); replayCurrent(); }
       finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
     },
     setTheme(id) {
@@ -313,8 +314,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   const bigPlay = el("button", "aw-bigplay", icons.playBig);
   bigPlay.type = "button"; bigPlay.title = "Play"; bigPlay.setAttribute("aria-label", "Play");
   readyCenter.append(bigPlay);
-  // below the play button: the GAME (template) name, big & bold (replaces the instruction line)
-  readyCenter.append(el("div", "aw-ready-game", escapeText(tpl.name || activity.type).toUpperCase()));
+  // below the play button: the GAME (template) name, big & bold (replaces the
+  // instruction line). A "Start with mistakes" run says so right here — the
+  // teacher must be able to tell the two apart at a glance from across the
+  // room, BEFORE pressing Play (Đợt 84).
+  const gameName = (tpl.name || activity.type) + (activity._mistakes ? " with mistakes" : "");
+  readyCenter.append(el("div", "aw-ready-game", escapeText(gameName).toUpperCase()));
   playOverlay.append(readyCenter);
   inner.append(playOverlay);
 
@@ -618,13 +623,20 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       // picking that template for this act again later restores them — and NEVER
       // save a throwaway "conv_" act into the library.
       if (!session) {
-        const isConv = !!activity._converted;
+        // A "Start with mistakes" act (id "mist_", Đợt 84) is a throwaway too:
+        // its content is a CUT-DOWN copy of a real act. Options belong to the
+        // act it was cut from — saving the cut-down copy would quietly drop a
+        // 3-word act into the teacher's library. `activity.options` is the SAME
+        // object as the base act's (buildMistakesActivity spreads shallowly),
+        // so the Object.assign above already updated the real act in memory.
+        const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : activity;
+        const isConv = !!realAct._converted;
         if (isConv) {
           if (!originAct.templateOptions) originAct.templateOptions = {};
-          originAct.templateOptions[activity.type] = { ...activity.options };
+          originAct.templateOptions[realAct.type] = { ...realAct.options };
         }
-        const target = isConv ? originAct : activity;
-        if (target.id && !String(target.id).startsWith("conv_")) {
+        const target = isConv ? originAct : realAct;
+        if (target.id && !/^(conv|mist)_/.test(String(target.id))) {
           import("./store.js").then(m => m.saveActivity(target)).catch(() => {});
         }
       }
@@ -633,7 +645,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       // game hasn't started yet (Play overlay still up), there's nothing to
       // restart — just apply and close; the options take effect on Play.
       const playing = !playOverlay.isConnected;
-      if (playing) { closeToolPanel(false); restart(); return; }
+      if (playing) { closeToolPanel(false); replayCurrent(); return; }
       toast("Options applied");
       closeToolPanel(true);
     };
@@ -771,10 +783,55 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     return b;
   }
 
+  // "Start again" ALWAYS goes back to the FULL word list (teacher, 7/8/2026).
+  // On a "Start with mistakes" run `activity` is the cut-down act, so replaying
+  // `activity` would lock the player inside the shrinking set forever. The act
+  // carries `_mistakesBase` = the full act it was cut from (and stays pointing
+  // at the FIRST one however many rounds deep you go), so this is the one
+  // documented way back to everything — along with reloading the page and
+  // switching template and back.
   function restart() {
     tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click
     cleanupAll();
+    const target = activity._mistakes ? activity._mistakesBase : activity;
+    startGame(root, target, { onExit, session, base: originAct });
+  }
+
+  // Replay whatever is loaded RIGHT NOW, mistakes round included. Used by
+  // Options → Apply, which restarts only so the new settings take effect: it
+  // must not double as the way out of a mistakes round (the teacher nudging
+  // the timer mid-practice would silently get the whole word list back).
+  function replayCurrent() {
+    cleanupAll();
     startGame(root, activity, { onExit, session, base: originAct });
+  }
+
+  // Is there a "Start with mistakes" round to offer? Needs a template that
+  // opted in (tpl.itemsKey + `src` on its review rows) AND at least one item
+  // this play got wrong or left blank.
+  function mistakesAvailable() {
+    if (session) return false;   // students get only what the teacher ticked
+    const kept = pickMistakes(activity, tpl, reviewData);
+    return !!(kept && kept.length);
+  }
+
+  // "Start with mistakes" — replay THIS play's wrong + unanswered items only.
+  // Lands on the READY screen (big PLAY) of the same game, so the teacher can
+  // hand the board over before anything starts.
+  function startWithMistakes() {
+    const next = buildMistakesActivity(activity, tpl, reviewData);
+    const min = minItemsFor(activity.type);
+    const n = next ? (next.content[tpl.itemsKey] || []).length : 0;
+    if (n < min) {
+      // Nothing left to practise, or too few for the game to work at all.
+      // Say which, and stay on the summary so nothing is lost.
+      toast(n === 0 ? "No mistakes to practise" : `Need at least ${min} words`);
+      return;
+    }
+    cleanupAll();
+    // base stays originAct: "Change template" still converts from the ORIGINAL
+    // full act, which is the teacher's other documented way back to everything.
+    startGame(root, next, { onExit, session, base: originAct });
   }
   function cleanupAll() { stopTimer(); closeMenu(); closeToolPanel(false); cleanup(); }
 
@@ -882,7 +939,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
         celebrate(result, null);
         return;
       }
-      if (answered > 0) {
+      // A "Start with mistakes" round is PRACTICE, not a scored play (teacher,
+      // 7/8/2026): it never reaches the leaderboard. Its act has a fresh id
+      // every round, so scoring it would build a one-row board per round that
+      // always reads "YOU'RE 1ST" — noise on top of a table meant for comparing
+      // real, full plays against each other.
+      if (answered > 0 && !activity._mistakes) {
         // stored (incl. review) so it can sync later and students can compete.
         entryId = addEntry(activity.id, {
           name: "Player", score: result.score, total: result.total, timeMs,
@@ -985,7 +1047,10 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       panel.append(el("div", "aw-sum-total", `Total: ${result.correct}/${result.total}`));
     }
 
-    if (!session) {
+    // No rank line on a "Start with mistakes" run — that play is deliberately
+    // not scored (teacher, 7/8/2026), so `entryId` is null and the "you're 1st"
+    // line would be meaningless anyway (see finish()).
+    if (!session && !activity._mistakes) {
       const rank = getRank(activity.id, entryId);
       if (rank) panel.append(el("div", "aw-panel-rank", `YOU'RE ${ordinal(rank)} ON THE LEADERBOARD`));
     }
@@ -1007,10 +1072,16 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       if (reviewData.length && activity.options?.showAnswers !== false) {
         items.append(panelItem("Show answers", () => showReview(result, entryId)));
       }
-      items.append(
-        panelItem("Start again", restart),
-        panelItem("Play a different template", () => openSwitchPicker(() => showSummary(result, entryId)))
-      );
+      items.append(panelItem("Start again", restart));
+      // "Start with mistakes" sits right under "Start again" (teacher's layout).
+      // Only for games that opted in with tpl.itemsKey AND only when this play
+      // actually left something wrong or blank — a clean sheet gets no button
+      // rather than a button that only ever says "No mistakes to practise".
+      if (mistakesAvailable()) items.append(panelItem("Start with mistakes", startWithMistakes));
+      // "Play a different template" was HERE until Đợt 84 and moved out to make
+      // room: a 5th button pushed the panel past its 92% max-height and made it
+      // scroll, hiding the last row. The same picker still lives in the ☰ menu
+      // as "Change template" (teacher's call, 7/8/2026).
     }
     panel.append(items);
     bd.append(panel);

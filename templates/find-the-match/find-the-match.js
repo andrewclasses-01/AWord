@@ -92,6 +92,10 @@ function crawlMsFor(speed) {
 const ftmTemplate = {
   type: "find_the_match",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "pairs",
   name: "Find the match",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
   manualTimerStart: true,   // the visible clock starts only after our 3-2-1 prep (count-up), so the prep isn't counted
@@ -851,7 +855,8 @@ const ftmTemplate = {
           answered: s.solved,
           yourText: s.solved ? p.keyword : null,
           yourCorrect: s.solved,
-          correctText: p.keyword
+          correctText: p.keyword,
+          src: p   // `pairs` is a shallow copy, so `p` IS the content object
         };
       });
       // Out of lives shows "GAME OVER" (celebration cover + menu panel both

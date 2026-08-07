@@ -85,6 +85,10 @@ const ENGINE_SVG = `<svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg
 const balloonPopTemplate = {
   type: "balloon_pop",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   name: "Balloon pop",
   inlineTimerBar: true,   // gives us ui.topbarMid for the countdown clock + level progress bar
 
@@ -145,7 +149,9 @@ function mountBalloonPop(root, activity, ui) {
   let pool = [...(activity.content?.items || [])]
     .filter(it => it && it.keyword != null && it.definition != null
       && String(it.keyword).trim() && String(it.definition).trim())
-    .map(it => ({ keyword: String(it.keyword).trim(), definition: String(it.definition).trim() }));
+    // `src` = the ORIGINAL content object, carried through so "Start with
+    // mistakes" can filter activity.content.items by identity (core/mistakes.js).
+    .map(it => ({ keyword: String(it.keyword).trim(), definition: String(it.definition).trim(), src: it }));
 
   if (pool.length === 0) {
     root.innerHTML = "";
@@ -510,7 +516,8 @@ function mountBalloonPop(root, activity, ui) {
       answered: i < levelIndex,
       yourText: i < levelIndex ? it.keyword : null,
       yourCorrect: i < levelIndex,
-      correctText: it.keyword
+      correctText: it.keyword,
+      src: it.src
     }));
     const correctCount = levelItems.filter((it, i) => i < levelIndex).length;
     ui.finish({

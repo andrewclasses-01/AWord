@@ -40,6 +40,10 @@ function isValidItem(it) { return it && typeof it.word === "string" && it.word.t
 const flyingFruitTemplate = {
   type: "flying_fruit",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   name: "Flying fruit",
   inlineTimerBar: true,     // gives us ui.topbarMid — we draw the LIVES (hearts) there
   hideLettersOption: true,  // no lettered answer boxes here
@@ -382,7 +386,8 @@ const flyingFruitTemplate = {
         answered: results[i] != null,
         yourText: results[i] === "correct" ? it.word : (results[i] === "failed" ? "—" : null),
         yourCorrect: results[i] === "correct",
-        correctText: it.word
+        correctText: it.word,
+        src: it   // `items` is a shallow copy, so `it` IS the content object
       }));
       ui.finish({
         correct: correctCount,

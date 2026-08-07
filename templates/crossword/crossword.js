@@ -78,7 +78,10 @@ function gridKey(str) {
 // -------------------------------------------------------------------
 function buildCrossword(words) {
   const usable = words
-    .map(w => ({ key: gridKey(w.answer), clue: w.clue || "", answer: w.answer || "" }))
+    // `src` = the ORIGINAL content object, carried through BOTH hops of this
+    // build (here, then into the placed-clue objects below) so "Start with
+    // mistakes" can filter activity.content.words by identity (core/mistakes.js).
+    .map(w => ({ key: gridKey(w.answer), clue: w.clue || "", answer: w.answer || "", src: w }))
     .filter(w => w.key.length >= 2);
 
   const seen = new Set();
@@ -185,7 +188,7 @@ function buildCrossword(words) {
     const cellsOf = [];
     for (let i = 0; i < p.key.length; i++) cellsOf.push([p.row + dr * i, p.col + dc * i]);
     return {
-      key: p.key, answer: p.answer, clue: p.clue,
+      key: p.key, answer: p.answer, clue: p.clue, src: p.src,
       dir: p.dir, row: p.row, col: p.col,
       number: numAt.get(p.row + "," + p.col) || 0,
       cells: cellsOf
@@ -199,6 +202,10 @@ function buildCrossword(words) {
 const crosswordTemplate = {
   type: "crossword",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "words",
   hidePointsOff: true,   // ships its own "Points off when wrong" control
   name: "Crossword",
   edit: openCrosswordEditor,
@@ -991,7 +998,8 @@ const crosswordTemplate = {
             answered: s.done,
             yourText: s.done ? typed : null,
             yourCorrect: s.correct === true,
-            correctText: w.answer || w.key
+            correctText: w.answer || w.key,
+            src: w.src
           });
         });
       });

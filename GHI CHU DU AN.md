@@ -5,6 +5,114 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 84 (7/8/2026, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. 🟢 CHỜ THẦY DUYỆT (mới ở LOCAL, chưa commit)
+
+Bảng kết quả có thêm hàng **"Start with mistakes"** ngay dưới **"Start again"**. Bấm vào → về màn READY
+(nút PLAY to) của **cùng game**, tên game đổi thành **"QUIZ WITH MISTAKES"**, danh sách chơi chỉ còn các
+từ **làm sai hoặc bỏ trống** ở ván vừa rồi. Chơi tiếp mà vẫn còn sai thì lại bấm được nữa, thu hẹp dần.
+Muốn về **bộ đầy đủ**: reload trang · đổi template rồi chọn lại · hoặc **Start again**. File mới
+`core/mistakes.js`; sửa `core/engine.js` + 12 file template.
+
+### Cách nối từ hàng review về đúng từ gốc — thầy chốt đường "gắn tham chiếu"
+
+⭐ **Phát hiện làm cả tính năng này thành dễ:** MỌI template đều mở đầu bằng
+`[...(activity.content?.X || [])]` — sao chép **NÔNG**, nên phần tử trong danh sách chơi **chính là object**
+trong `activity.content`, không phải bản sao. Vậy chỉ cần **lọc lại mảng gốc** là xong: câu hỏi giữ nguyên
+4 đáp án, clue, acceptedAnswers — **không dựng lại gì cả**.
+
+Mỗi hàng `review` truyền vào `ui.finish()` nay mang thêm **`src`** = chính object nguồn, và mỗi template
+khai **`tpl.itemsKey`** ("questions" | "items" | "words" | "pairs" | "statements"). Core làm đúng 2 dòng:
+`bad = new Set(review.filter(r => !r.yourCorrect).map(r => r.src))` rồi
+`content[itemsKey].filter(it => bad.has(it))`. "Sai **hoặc** chưa làm" gói gọn trong một phép thử
+`!r.yourCorrect`. **Đường đã cân nhắc và BỎ:** dò theo chữ (so `correctText`/`question` với `toRecords()`
+của `convert.js`) — không phải sửa template nào, nhưng hai từ trùng nhau là chọn nhầm, crossword rơi về
+`w.key`, running-team ghi `question` là `"MINH ANH — 23"` nên không khớp, và nội dung phải dựng lại qua
+record nên đáp án nhiễu bị sinh mới.
+
+⚠️ **6/12 template phải LUỒN `src` qua một bước `.map()`** vì chúng dựng object mới trước khi chơi: quiz ·
+gameshow · open-the-box (xáo đáp án) · anagram · unjumble (`prepareItem` tách chữ cái/từ) · balloon-pop
+(chuẩn hoá `trim`). **Crossword phải luồn qua HAI bước** (`buildCrossword` map lần 1 ra `{key,clue,answer}`,
+lần 2 ra object đã đặt vào lưới kèm `cells`). 5 template còn lại (find-the-match · flying-fruit ·
+maze-chase · true-false · type-the-answer) dùng thẳng object nguồn nên chỉ thêm `src: it`.
+
+### 4 template CỐ Ý không có tính năng này
+
+| Game | Vì sao |
+|---|---|
+| **Whack-a-mole** | `reallyFinish()` dựng review với **MỌI hàng `yourCorrect:false`** — nó chỉ liệt kê đáp án chứ không ghi em làm đúng câu nào (trò arcade, một từ chui lên nhiều lần). "Câu sai" không xác định được. Muốn có thì phải sửa lõi ghi điểm của chính nó. |
+| **Speaking cards** | `scorable:false`, không có bảng kết quả |
+| **Running word / Running team** | dùng `tpl.renderSummary` riêng, không đi qua bảng mặc định; là trò đồng đội nên "chơi lại từ sai" vô nghĩa |
+
+### Số phần tử tối thiểu — không phải game nào cũng 2
+
+Thầy dặn "còn 1 từ thì báo cần ít nhất 2". Nhưng luật chơi vài game cần nhiều hơn, nên
+`core/mistakes.js` giữ bảng `MIN_ITEMS` (lấy đúng số từ editor của chính game đó): **balloon-pop 5** (bóng
+phải có bạn để bay thành chùm) · **find-the-match 3** (mỗi câu cần ≥2 ô nhiễu) · **crossword 2** (hai từ
+mới giao nhau) · còn lại **2**. Thiếu thì báo `"Need at least 5 words"` — nói đúng con số chứ không nói
+chung chung — và **ở nguyên bảng kết quả**, không mất gì.
+
+### 3 luật phụ thầy chốt
+
+**(1) Ván mistakes KHÔNG tính điểm.** `finish()` bỏ qua `addEntry` khi `activity._mistakes`, và bảng kết
+quả ẩn luôn dòng `YOU'RE Nth ON THE LEADERBOARD`. Lý do: mỗi ván mistakes là một act id riêng nên nếu ghi
+thì bảng nào cũng chỉ có một mình em đó, luôn hiện "YOU'RE 1ST".
+
+**(2) "Play a different template" RỜI khỏi bảng kết quả** để nhường chỗ. Đo trước khi làm: panel đang
+454px, thêm nút thứ 5 thành **507px** trong khi `.aw-panel` có `max-height:92%` = **497px** → panel **bắt
+đầu cuộn, nút cuối khuất**. Cùng cái picker đó vẫn nằm ở menu ☰ với tên **"Change template"**. ⚠️ **Đổi
+lại một chút:** lúc đang ở bảng kết quả thì thanh dưới bị backdrop che nên không mở ☰ được — muốn đổi
+template ở màn kết thúc phải **Start again** trước rồi mới ☰ → Change template.
+
+**(3) Nút chỉ hiện khi ván đó THẬT SỰ có câu sai.** Làm đúng hết thì không có nút, thay vì có một nút bấm
+vào chỉ để bị báo "No mistakes to practise".
+
+### ⭐ HAI LỖI TỰ TÌM RA TRONG LÚC LÀM (đều là lỗi thật, đã sửa)
+
+**(a) Act tạm `mist_` bị GHI VÀO THƯ VIỆN của thầy.** Chỗ Apply trong Options chỉ chặn id bắt đầu bằng
+`"conv_"`; act mistakes không mang cờ `_converted` nên lọt qua → bấm Apply lúc đang luyện là **một act 3
+từ bị lưu đè vào thư viện**. Sửa: nhận diện `_mistakes`, quy options về **act mẹ** (`_mistakesBase`) và
+chặn cả hai tiền tố `/^(conv|mist)_/`. Ghi chú: `activity.options` **cùng một object** với act mẹ (do
+`{...base}` sao chép nông) nên `Object.assign` phía trên đã cập nhật đúng act thật trong bộ nhớ.
+
+**(b) Apply Options giữa ván mistakes làm MẤT bộ từ đang luyện.** Apply gọi `restart()`, mà `restart()` nay
+đã được dạy "luôn quay về bộ đầy đủ" — nên thầy chỉ nhích cái đồng hồ là bộ 4 từ đang luyện biến mất, quay
+lại 6 từ. Tách thành **hai hàm**: `restart()` = nút *Start again* (về bộ đầy đủ) · **`replayCurrent()`** =
+chơi lại **đúng cái đang có**, dùng cho Apply và cho cầu đồng bộ myActivity `__awordBridge.applyOptions`.
+
+### Tự test (devserver riêng :5511, trình duyệt thật, đo DOM)
+
+**Kịch bản 4 vòng liên tiếp trên Quiz (6 câu):** vòng 1 đúng 2 → panel có nút, Score 2/6 → *Start with
+mistakes* → màn READY ghi **"QUIZ WITH MISTAKES"** → vòng 2 đúng **4 câu** (đúng 4 câu đã sai), đúng 1 →
+*Start with mistakes* → vòng 3 **3 câu**, đúng hết → **nút biến mất** ✅ và **không có dòng hạng** ✅ →
+*Start again* → tên về **"QUIZ"**, **6 câu** ✅. Bảng xếp hạng cuối cùng: **10 hàng đều là `/6`** — không
+một hàng `/4` hay `/3` nào, tức ván mistakes thật sự không được ghi ✅ (`localStorage` chỉ có
+`aword-lb-act_sample_quiz` + `aword-lb-act_sample_tf`, **không có key `mist_`**).
+
+**Ngưỡng tối thiểu:** cố tình chỉ sai **đúng 1 câu** → nút vẫn hiện, bấm vào ra toast
+**"Need at least 2 words"**, **ở nguyên bảng kết quả**, không vào màn READY ✅.
+
+**Template khác hình dạng dữ liệu — True or false (`content.statements`)**: đặt `lives:1` để kết thúc sớm,
+đúng 2 sai 1 (còn 5 câu chưa hỏi) → READY ghi **"TRUE OR FALSE WITH MISTAKES"**, vòng 2 hỏi đúng **6 câu**
+= 8 − 2 câu đã đúng ✅. ⚠️ **Ghi nhận về ngữ nghĩa:** True/false (và maze-chase, open-the-box) **hỏi lại
+câu sai đến khi đúng**, nên chơi hết bài với tim vô hạn là **không còn câu sai nào** → không có nút. Chỉ
+khi hết tim/hết giờ mới còn câu dang dở. Đây là ngữ nghĩa sẵn có của chính các game đó, không phải lỗi.
+
+**Lỗi (b) sau khi sửa:** đang ở vòng mistakes 4 câu → `applyOptions({pointsOff:1})` → vẫn **"QUIZ WITH
+MISTAKES"**, vẫn **4 câu** ✅.
+
+**Bố cục:** panel 4 nút = **454,3px / 497px trần**, `scrollHeight === clientHeight` → **không cuộn**; cả 4
+nhãn nút chữ nguyên vẹn không tràn ✅.
+
+**Hồi quy:** **16/16** trang `templates/*/test.html` mount đủ `.aw-stage` + PLAY, **0 lỗi console** (chạy 2
+lần: sau đợt sửa template, và sau khi vá 2 lỗi trên).
+
+**VIỆC ĐANG CHỜ:** thầy chơi thử máy thật — (a) nhịp bấm *Start with mistakes* → PLAY có tự nhiên trên
+TOMKO không, (b) chữ "QUIZ WITH MISTAKES" ở màn READY có dễ đọc từ xa không, (c) chấp nhận việc muốn đổi
+template ở màn kết thúc phải Start again trước → duyệt → commit + push + live. Nên tách **2 commit riêng**
+cho Đợt 83 và Đợt 84.
+
+---
+
 ## Đợt 83 (7/8/2026, v0.9.58) — BẢNG KẾT QUẢ: THỜI GIAN LUÔN PHÚT:GIÂY + SCORE LÀ ĐIỂM ĐÃ TRỪ (KHÔNG PHẢI SỐ CÂU ĐÚNG) + HÀNG "Total: 9/10" NHỎ Ở DƯỚI. ⭐ CÓ SỬA CORE. 🟢 CHỜ THẦY DUYỆT (mới chỉ ở LOCAL, chưa commit)
 
 Thầy gửi 2 yêu cầu cho **bảng tổng kết cuối game** (`showSummary` trong `core/engine.js`). **Đụng CORE**

@@ -99,6 +99,10 @@ function normLives(v) {
 const unjumbleTemplate = {
   type: "unjumble",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   hidePointsOff: true,   // ships its own "Points off when wrong" control
   name: "Unjumble",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
@@ -201,7 +205,9 @@ const unjumbleTemplate = {
     let items = [...(activity.content?.items || [])]
       .filter(it => it && String(itemSentence(it)).trim());
     if (opt.shuffleQuestions) items = shuffle(items);
-    items = items.map(it => ({ clue: it.clue || "", ...prepareItem(itemSentence(it)) }));
+    // `src` = the ORIGINAL content object, carried through so "Start with
+    // mistakes" can filter activity.content.items by identity (core/mistakes.js).
+    items = items.map(it => ({ clue: it.clue || "", ...prepareItem(itemSentence(it)), src: it }));
 
     const total = items.length;
     if (total === 0) {
@@ -878,7 +884,8 @@ const unjumbleTemplate = {
           answered: doneCheck(st),
           yourText: (doneCheck(st) || started) ? yourWords : null,
           yourCorrect: st.correct === true,
-          correctText: sentenceText(it)
+          correctText: sentenceText(it),
+          src: it.src
         };
       });
       const answered = state.filter(st => doneCheck(st)).length;

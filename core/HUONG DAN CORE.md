@@ -516,6 +516,59 @@ số thực không giữ đúng phần lẻ nên **45300ms ra "45.2s"**, 59900ms
 3 hàm định dạng giờ KHÁC trong app **vốn đã** đúng m:ss, đừng nhầm lẫn: `formatTime` (`utils.js`, đồng hồ
 lúc chơi), `fmtClock` (Running word/team, đồng hồ đội), `fmtDuration` (`assignment-ui.js`, báo cáo thầy).
 
+### START WITH MISTAKES — chơi lại đúng những từ vừa sai (Đợt 84, 7/8/2026)
+
+Bảng kết quả có nút **"Start with mistakes"** ngay dưới "Start again": về màn READY của CÙNG game, tên
+game thành **"QUIZ WITH MISTAKES"**, danh sách chỉ còn từ **sai hoặc bỏ trống**. Cài đặt ở
+`core/mistakes.js` + `core/engine.js`. Về bộ đầy đủ: reload trang · đổi template rồi chọn lại ·
+**Start again**.
+
+**Template muốn có tính năng này phải khai ĐÚNG 2 THỨ:**
+
+```js
+  itemsKey: "questions",              // 1) tên mảng trong activity.content
+  ...
+  review.push({ ..., src: q })        // 2) object NGUỒN của câu đó
+```
+
+⭐ **Vì sao `src` là object chứ không phải chỉ số:** mọi template đều mở đầu bằng
+`[...(activity.content?.X || [])]` — sao chép **NÔNG**, nên phần tử trong danh sách chơi **chính là
+object** trong `activity.content`. Core chỉ việc `content[itemsKey].filter(it => bad.has(it))`, tức **lọc
+lại mảng gốc** — câu hỏi giữ nguyên 4 đáp án/clue/acceptedAnswers, **không dựng lại gì**, và xáo câu hay
+xáo đáp án cũng không ảnh hưởng.
+
+⚠️ **Nếu template `.map()` ra object MỚI trước khi chơi thì phải LUỒN `src` qua bước đó.** Có 6 template
+như vậy: quiz · gameshow · open-the-box (xáo đáp án) · anagram · unjumble (`prepareItem`) · balloon-pop
+(chuẩn hoá). **Crossword luồn qua HAI bước** (`buildCrossword` map lần 1, rồi map lần 2 ra object đã đặt
+vào lưới). Quên luồn = `r.src` là `undefined` → không câu nào lọt qua bộ lọc → nút không bao giờ hiện, mà
+**0 lỗi console** (bẫy im lặng, y như bẫy `inlineTimerBar`+`hasLivesSlot` của Đợt 78).
+
+- **"Sai hoặc chưa làm"** gói trong một phép thử: `!row.yourCorrect`.
+- **Ngưỡng tối thiểu** khai ở bảng `MIN_ITEMS` trong `mistakes.js`, lấy đúng số từ editor của game:
+  balloon-pop **5** · find-the-match **3** · crossword **2** · còn lại **2**. Thiếu thì toast đúng con số,
+  ở nguyên bảng kết quả.
+- **Không khai `itemsKey`** → engine không dựng nút, zero-diff. Đang cố ý bỏ: **whack-a-mole** (review ghi
+  MỌI hàng `yourCorrect:false` — trò arcade, không xác định được câu sai; muốn có phải sửa lõi ghi điểm của
+  chính nó), **speaking-cards** (`scorable:false`), **running-word/team** (`renderSummary` riêng).
+- **Ván mistakes KHÔNG ghi leaderboard** và ẩn dòng hạng (`activity._mistakes`).
+- Act tạm mang id **`mist_...`** + cờ `_mistakes` + `_mistakesBase` (act ĐẦY ĐỦ để Start again quay về —
+  chơi bao nhiêu vòng vẫn trỏ về act đầu tiên).
+
+⚠️ **`restart()` và `replayCurrent()` KHÁC NHAU, đừng dùng lẫn:**
+- `restart()` = nút **Start again** → luôn về **bộ đầy đủ** (`_mistakesBase`).
+- `replayCurrent()` = chơi lại **đúng cái đang có** (giữ bộ mistakes) → dùng cho **Options → Apply** và cho
+  `__awordBridge.applyOptions` của myActivity. Trước khi tách, Apply gọi `restart()` nên thầy chỉ nhích cái
+  đồng hồ là bộ từ đang luyện biến mất.
+
+⚠️ **Act `mist_` là act TẠM, đừng để lọt vào thư viện.** Chỗ Apply trong `buildOptionsPanel` phải chặn
+**cả hai** tiền tố `/^(conv|mist)_/` và quy options về act mẹ. Bản đầu chỉ chặn `"conv_"` → một act 3 từ
+suýt bị lưu đè vào thư viện của thầy.
+
+⚠️ **Ngữ nghĩa riêng của vài game:** True/false · maze-chase · open-the-box **hỏi lại câu sai đến khi
+đúng**, nên chơi hết bài với tim vô hạn là **không còn câu sai nào** → nút không hiện. Chỉ khi hết tim/hết
+giờ mới còn câu dang dở. Balloon-pop coi **mọi từ chưa lên tới đều là chưa làm** (`yourCorrect: i <
+levelIndex`) nên ván mistakes gồm cả từ chưa từng xuất hiện.
+
 ### Cờ template ẩn nhóm Options không hợp lệ
 
 - `tpl.reviewStyle:"stacked"` — (thêm 2/8/2026 cho Unjumble) đổi màn **Show answers** từ lưới 3 cột

@@ -52,6 +52,10 @@ function normLives(v) {
 const ttaTemplate = {
   type: "type_the_answer",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "items",
   hidePointsOff: true,   // ships its own "Minus points" control -> hide the central Points off
   name: "Type the answer",
   edit: openTypeTheAnswerEditor,
@@ -736,7 +740,8 @@ const ttaTemplate = {
           answered: s.graded,
           yourText: s.graded ? s.typed : null,
           yourCorrect: s.correct === true,
-          correctText: it.acceptedAnswers[0]
+          correctText: it.acceptedAnswers[0],
+          src: it   // `items` is a shallow copy, so `it` IS the content object
         };
       });
       const answered = state.filter(s => s.graded).length;

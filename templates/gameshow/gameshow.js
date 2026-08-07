@@ -35,6 +35,10 @@ const BONUS_CARD_VALUES = [50, 100, 150, 200, 250];
 const gameshowTemplate = {
   type: "gameshow",
   scorable: true,
+  // "Start with mistakes" (Đợt 84): which array in activity.content holds the
+  // playable items. Core filters THAT array by the `src` refs the review rows
+  // carry, so a replay keeps the originals untouched. See core/mistakes.js.
+  itemsKey: "questions",
   hidePointsOff: true,   // speed-based scoring, never a flat per-wrong penalty (teacher, 3/8/2026)
   name: "Gameshow quiz",
 
@@ -132,7 +136,8 @@ const gameshowTemplate = {
     if (opt.shuffleQuestions !== false) questions = shuffle(questions);
     questions = questions.map(q => ({
       question: q.question || "",
-      answers: (opt.shuffleAnswers !== false ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null)
+      answers: (opt.shuffleAnswers !== false ? shuffle(q.answers) : [...q.answers]).filter(a => a && a.text != null),
+      src: q   // the ORIGINAL content object — "Start with mistakes" filters by it
     }));
     const total = questions.length;
 
@@ -561,7 +566,8 @@ const gameshowTemplate = {
           answered: s.chosen !== null,
           yourText: s.chosen !== null ? q.answers[s.chosen].text : null,
           yourCorrect: s.correct === true,
-          correctText: correctAns ? correctAns.text : ""
+          correctText: correctAns ? correctAns.text : "",
+          src: q.src
         };
       });
       const answered = state.filter(s => s.chosen !== null).length;
