@@ -5,7 +5,30 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 88, v0.9.63) — ⭐⭐ SỬA BẪY "SNAP KHỰC MỘT CÁI" Ở 3 TEMPLATE (Open the
+> Cập nhật lần cuối: **8/8/2026 (Đợt 89, v0.9.64) — ANAGRAM: KÉO-THẢ VẬT LÝ THẬT + HIỆU ỨNG MỀM HƠN +
+> SLOGAN. Chỉ đụng `templates/anagram/*`, KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `5d504f7` + PUSH +
+> **LIVE** (`curl` xác nhận `aw-anagram-slogan` trong CSS + `moveResultTile`/`showTransientMark`/"ANAGRAM
+> IN ANDREW CLASSES" trong JS live).**
+> 4 lượt góp ý liên tiếp trong cùng 1 phiên (thầy tự chơi bản live rồi gửi từng lượt), mỗi lượt tự test qua
+> trình duyệt thật (mô phỏng `PointerEvent` thật cho kéo-thả, đo `getComputedStyle`/`getAnimations()`).
+> **Lượt 1:** hết "đổi hình dạng"/bóng đổ méo khi chữ bay (bản sao bay giờ đọc bo góc/bóng THẬT của ô thay
+> vì số cố định) + bỏ hẳn bóng đổ mọi ô + thêm kéo-thả đặt chữ ở CẢ 2 chế độ (trước chỉ bấm được) + sửa lần
+> đầu vật lý đổi chỗ 2 ô hết giật. **Lượt 2:** tích đúng dời sang ô đích (đổi phong cách trắng như dấu X) +
+> PERFECT tách khỏi số điểm (to dần rồi tự biến mất tại chỗ, số điểm bay riêng sau một nhịp) + khối ô chữ
+> đổi từ dồn hết trống lên trên sang chia đệm co giãn tỉ lệ 1:2 (đỡ dính đáy) + ⭐ vật lý swap đổi hẳn kỹ
+> thuật (animate TRỰC TIẾP 2 ô thật thay vì ẩn-bay-bản-sao, bắt được lỗi WAAPI `fill:"forwards"` phải gọi
+> `anim.cancel()` mới xoá transform thật). **Lượt 3:** đổi hẳn "đổi chỗ 2 ô" → "chèn-đẩy" (kéo 1 ô chèn
+> đúng vị trí, đẩy lùi mọi ô ở giữa, dùng `Array.splice` như kéo-thả sắp hàng có sẵn trong
+> `anagram-editor.js`) + đổi âm "Oh my god" (core) sang âm "Incorrect" thật có sẵn trong bộ âm riêng
+> Anagram + tích/X trong ô hết "hiển thị cứng" (tự gỡ sau 550ms). **Lượt 4:** thêm slogan "ANAGRAM IN
+> ANDREW CLASSES" trên thanh đồng hồ/điểm (đúng kỹ thuật Crossword đã dùng) + tích/X đổi từ "CSS animation
+> lo hiện + xoá DOM tức thì lúc mất" sang MỘT animation WAAPI liên tục suốt vòng đời (nhỏ→lớn→giữ→nhỏ rồi
+> mới gỡ) — đo scale từng khung 25ms xác nhận đường cong liên tục, hết bước nhảy ở cả 2 đầu. ⚠️ Có thử tham
+> khảo Anagram thật trên Wordwall (bản công khai, vì bản riêng thầy gửi là "private resource") nhưng game
+> đó vẽ bằng CANVAS nên công cụ tự động không lái được, chỉ quan sát được cấu trúc (dãy đích là 1 dải gạch
+> chân liền). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 89 + `templates/anagram/GHI CHU ANAGRAM.md` Đợt 89.
+>
+> Trước đó: **7/8/2026 (Đợt 88, v0.9.63) — ⭐⭐ SỬA BẪY "SNAP KHỰC MỘT CÁI" Ở 3 TEMPLATE (Open the
 > box, Crossword, Flying fruit) + GHI LUẬT CHUNG VÀO `core/HUONG DAN CORE.md` CHO MỌI TEMPLATE VỀ SAU.
 > KHÔNG SỬA CORE ENGINE. ✅ THẦY DUYỆT → COMMIT `eed2a45` + `6b0dc5e` + PUSH + **LIVE** (`curl` xác nhận cả
 > 3 template).**

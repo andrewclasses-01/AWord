@@ -5,6 +5,41 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 89 (8/8/2026, v0.9.64) — ANAGRAM: KÉO-THẢ VẬT LÝ THẬT + HIỆU ỨNG MỀM HƠN + SLOGAN. Chỉ đụng `templates/anagram/*`, KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `5d504f7` + PUSH + **LIVE** (`curl` xác nhận `aw-anagram-slogan` trong CSS + `moveResultTile`/`showTransientMark`/"ANAGRAM IN ANDREW CLASSES" trong JS live)
+
+4 lượt góp ý liên tiếp trong cùng 1 phiên (thầy tự chơi bản live rồi gửi từng lượt), mỗi lượt tự test qua
+trình duyệt thật (mô phỏng `PointerEvent` thật cho kéo-thả, đo `getComputedStyle`/`getAnimations()`) trước
+khi báo thầy xem. Chi tiết đầy đủ từng điểm: `templates/anagram/GHI CHU ANAGRAM.md` Đợt 89.
+
+**Lượt 1** — (1) "đổi hình dạng" lúc chữ bay + bóng đổ méo: bản sao bay dùng bo góc/bóng CỐ ĐỊNH khác hẳn ô
+thật (theo theme) → sửa bằng đọc `getComputedStyle` thật ngay trước khi tạo bản sao; (2) bỏ hẳn bóng đổ ở
+mọi ô chữ; (3) thêm kéo-thả đặt chữ ở CẢ 2 chế độ (trước chỉ bấm được) — bonus giữ đúng luật thứ tự, submit
+cho chọn ô tự do khi kéo; (4) vật lý đổi chỗ 2 ô lần đầu — hết giật nhờ đọc rect trước khi reset transform.
+
+**Lượt 2** — (1) tích đúng dời từ ô gốc sang ô đích, đổi phong cách trắng giống dấu X; (2) PERFECT tách
+khỏi số điểm: PERFECT to dần rồi tự biến mất tại chỗ, số `+N` xuất hiện sau một nhịp rồi mới bay vào ô
+điểm; (3) khối ô chữ đổi từ `margin-top:auto` (dồn hết trống lên trên, ô luôn dính đáy) sang 2 vùng đệm co
+giãn tỉ lệ 1:2; (4) ⭐ vật lý swap đổi hẳn kỹ thuật — bỏ ẩn-ô-thật-bay-bản-sao, animate TRỰC TIẾP 2 ô thật
+bằng `transform`, bắt được lỗi WAAPI `fill:"forwards"` giữ khung hình cuối phải gọi `anim.cancel()` mới xoá
+được thật.
+
+**Lượt 3** — (1) đổi hẳn "đổi chỗ 2 ô" → "chèn-đẩy" (kéo 1 ô chèn vào đúng vị trí, đẩy lùi mọi ô ở giữa,
+tổng quát cho N ô chứ không chỉ 2 ô liền kề, dùng `Array.splice` như kiểu kéo-thả sắp hàng có sẵn trong
+`anagram-editor.js`); (2) đổi âm "Oh my god" (tổng hợp của core) sang âm "Incorrect" thật đã có sẵn trong bộ
+âm riêng Anagram (tra lại đúng theo ghi chú nguồn Wordwall — họ dùng CHUNG 1 âm sai cho mọi cấp độ); (3)
+tích/X trong ô hết "hiển thị cứng" — thêm tự gỡ sau 550ms thay vì nằm vĩnh viễn.
+
+**Lượt 4** — (1) thêm slogan "ANAGRAM IN ANDREW CLASSES" trên thanh đồng hồ/điểm, đúng kỹ thuật/CSS đã
+dùng ở Crossword (gắn 1 lần lúc mount vào `.aw-topbar` chung của engine); (2) tích/X đổi từ "CSS animation
+lo phần hiện + xoá DOM tức thì lúc biến mất" sang MỘT animation WAAPI duy nhất chạy suốt vòng đời (nhỏ→lớn
+nảy nhẹ→giữ→nhỏ dần rồi mới gỡ khỏi DOM) — đo scale từng khung 25ms xác nhận một đường cong liên tục,
+không còn bước nhảy ở cả 2 đầu.
+
+⚠️ Có thử tham khảo Anagram thật trên Wordwall (`wordwall.net/resource/98204906/anagram`, bản CÔNG KHAI vì
+bản riêng thầy gửi là "private resource" không đăng nhập hộ được) nhưng game đó vẽ bằng **CANVAS** nên công
+cụ tự động không lái được (không có DOM để bắt sự kiện) — chỉ quan sát được cấu trúc (dãy đích là 1 dải
+gạch chân liền, không phải từng ô riêng), không đo được animation thật của họ.
+
 ## Đợt 88 (7/8/2026, v0.9.63) — ⭐⭐ SỬA BẪY "SNAP KHỰC MỘT CÁI" Ở 3 TEMPLATE (Open the box, Crossword, Flying fruit) + GHI LUẬT CHUNG VÀO `core/HUONG DAN CORE.md` CHO MỌI TEMPLATE VỀ SAU. KHÔNG SỬA CORE ENGINE (chỉ tài liệu). ✅ THẦY DUYỆT → COMMIT `eed2a45` + `6b0dc5e` + PUSH + **LIVE** (`curl` xác nhận cả 3 template)
 
 > Thầy báo (chơi Open the box): *"các ô số khác không được fade dần mà xuất hiện hoặc biến mất khực một cái,

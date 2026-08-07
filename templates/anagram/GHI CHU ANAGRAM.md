@@ -469,3 +469,87 @@ vẫn dùng chung `.aw-ed-*` của core như cũ):
    Sửa: **set `height` tường minh** bằng `width` (bỏ phụ thuộc `aspect-ratio` mập mờ) + tăng `bottom`
    xuống `-1.6cqw` (gấp đôi, hạ thấp thêm). Đã đo lại + chụp màn hình thật (chơi hết từ "dolphin" ở chế
    độ On submit): dấu ✓ nằm hẳn dưới từng ô chữ, không còn đè chữ nào.
+
+## Đợt 89 (8/8/2026, v0.9.64) — Kéo-thả vật lý thật + hiệu ứng mềm hơn + slogan. ✅ THẦY DUYỆT → COMMIT `5d504f7` + PUSH + **LIVE** (`curl` xác nhận `aw-anagram-slogan` trong CSS + `moveResultTile`/`showTransientMark`/"ANAGRAM IN ANDREW CLASSES" trong JS)
+
+4 lượt góp ý liên tiếp trong cùng 1 phiên, mỗi lượt đã tự test qua trình duyệt thật (đo `getComputedStyle`/
+`getAnimations()`/mô phỏng `PointerEvent` thật, không đoán qua ảnh) trước khi báo thầy xem. Chỉ sửa
+`templates/anagram/anagram.js` + `anagram.css`, KHÔNG đụng `core/`.
+
+### Lượt 1 — 4 điểm gốc thầy nêu sau khi tự chơi bản live
+1. **"Đổi hình dạng" lúc bay + bóng đổ méo**: ô chữ thật lấy bo góc/bóng từ theme (Classic 1.6cqw, bóng là
+   1 gờ màu đặc kiểu nút 3D), nhưng "bản sao" bay (`flyLetter`/`flyTileClone`) dùng số cố định (`12px`,
+   bóng đen mờ) → suốt chuyến bay hình dạng khác hẳn ô gốc rồi "giật" về lúc đáp. Sửa: đọc bo góc THẬT
+   bằng `getComputedStyle` ngay trước khi tạo bản sao, gán y hệt. Đo xác nhận: Classic ra đúng `9.792px`,
+   Basic ra đúng `7.344px` (khác nhau đúng theo theme, không còn hardcode).
+2. **Bỏ bóng đổ hoàn toàn** ở ô gốc, ô kết quả, và bản sao bay — chỉ giữ hiệu ứng lún (`translateY`) khi
+   bấm, không còn `box-shadow` nào trên các ô chữ.
+3. **Kéo-thả đặt chữ ở CẢ 2 chế độ** (trước chỉ bấm được) — thêm `attachOriginTileInteraction()` dùng
+   Pointer Events song song với tap cũ (tap vẫn y hệt cũ). Bonus mode: chỉ nhận đúng ô đang chờ
+   (`nextPos`), thả sai ô = huỷ không tính lỗi, thả đúng ô nhưng sai chữ = tính 1 lỗi rồi bay về (tái dùng
+   `bonusPick()`, không viết luật mới). Submit mode: thả vào đúng ô mình chọn (không tự nhảy ô trống trái
+   nhất như bấm) — hàm mới `submitPickAt(tileId, tileEl, slotIdx)` tách từ `submitPick()` cũ.
+4. **Vật lý đổi chỗ 2 ô "giả"**: gốc lỗi là ô đang cầm bị RESET transform về 0 (giật về ô gốc) TRƯỚC khi
+   đọc rect để tính chuyến bay của 2 "bản sao" khác — chuyển động không liền mạch với tay vừa kéo. Sửa lần
+   đầu: đọc rect NGAY LÚC còn transform (drop trước khi reset), thêm sáng viền ô đích lúc kéo gần tới
+   (`.is-droptarget`), thêm easing nảy nhẹ `cubic-bezier(.22,1.12,.36,1)` dùng chung mọi chuyến bay.
+   ⭐ Đã đo bắt được 1 lỗi tự phát sinh: `fill:"forwards"` của WAAPI giữ khung hình cuối dù đã xoá
+   `style.transform=""` sau đó — phải gọi `anim.cancel()` TRƯỚC khi xoá style thì mới thật sự về 0 (áp
+   dụng cho cả `swapResultPositions`/`animateReturnHome`, nếu không thì lần kéo sau bị "cấm" luôn vì
+   animation cũ còn đang giữ chỗ).
+
+### Lượt 2 — 4 điểm tinh chỉnh tiếp theo
+1. **Tích đúng dời từ ô gốc sang Ô ĐÍCH**, cùng phong cách trắng với dấu X (không còn tích xanh nhỏ nổi ở
+   ô vừa bấm) — hàm mới `showCorrectPickBadge`/sau đổi tên `showLandedCheckBadge`, gọi trong `onDone` của
+   `flyLetter` (đúng lúc chữ đáp xuống), dùng `icons.markCheck` giống hệt X.
+2. **PERFECT + số điểm tách rời**: PERFECT hiện to dần rồi TỰ BIẾN MẤT TẠI CHỖ (không bay đi nữa); số
+   `+N` xuất hiện SAU một nhịp (`PERFECT_TO_POINTS_DELAY_MS`) rồi mới là thứ bay về ô điểm — 2 hàm mới
+   `showPerfectBurst()` + `flyPointsOnly()`, thay hẳn cách dùng `flyScoreGain()` cũ cho bonus mode (submit
+   mode vẫn dùng `flyScoreGain()` y nguyên, chỉ bỏ tham số `kind` không còn "perfect" nào gọi tới).
+3. **Khối ô chữ "có xu hướng cao hơn"**: `.aw-anagram-group` trước dùng `margin-top:auto` (100% khoảng
+   trống dồn hết lên trên → khối ô luôn dính đáy). Thay bằng 2 vùng đệm co giãn `.aw-anagram-topspace`
+   (flex:1) / `.aw-anagram-botspace` (flex:2) — chia khoảng trống theo tỉ lệ 1:2, đo xác nhận đúng
+   `2.0004` lần.
+4. **Vật lý swap lần 2 — đổi hẳn kỹ thuật**: bỏ HẲN cách ẩn-2-ô-thật + bay-2-bản-sao, giờ **animate trực
+   tiếp 2 ô THẬT** bằng `transform` (đọc rect "nhà" của ô A bằng cách tắt/bật transform tạm thời để đo,
+   không cần parse chuỗi transform). Ô đang cầm bay tiếp từ ĐÚNG chỗ tay thả (không giật), ô kia trượt
+   khoảng ngắn để nhường chỗ — không còn `.aw-anagram-flytile` nào được tạo trong lúc swap (đã đếm bằng
+   `document.querySelectorAll` = 0).
+
+### Lượt 3 — 3 điểm tiếp
+1. **Đổi cơ chế "đổi chỗ 2 ô" → "chèn-đẩy"** (thầy: kéo 1 ô không còn tráo với ô kia mà CHÈN vào đúng vị
+   trí, đẩy lùi mọi ô ở giữa) — hàm `swapResultPositions` bị thay hẳn bằng `moveResultTile(fromPos, toPos,
+   draggedFromRect)`: dùng `Array.splice` (gỡ rồi chèn, giống hệt kiểu kéo-thả sắp xếp hàng trong
+   `anagram-editor.js`), rồi với MỖI ô nằm giữa `[lo,hi]` tìm vị trí mới của chữ nó đang giữ (so khớp theo
+   `tileId`, không theo vị trí) để animate đúng ô đó trượt tới đích — tổng quát cho bao nhiêu ô cũng chạy
+   đúng, không chỉ 2 ô liền kề. Đã test kéo xuyên 4 ô cả 2 chiều (tiến/lùi), kết quả mảng khớp CHÍNH XÁC
+   phép tính tay.
+2. **Đổi âm "Oh my god"**: tra lại thư mục gốc `D:\...\Source\Sound effect\ANAGRAM\GHI CHU.md` — Wordwall
+   KHÔNG có âm riêng cho "cả từ sai", dùng CHUNG âm "07. Đáp sai (Incorrect)" ở mọi cấp độ → đổi
+   `ui.sound.wrong()` (âm tổng hợp của core) thành `anagramSound.wrongPick()` (đã có sẵn file thật
+   `blockchipfail1/2/3`, không cần tải thêm gì).
+3. **Tích/X trong ô hết "hiển thị cứng"** — trước đây permanent (append 1 lần, không bao giờ gỡ, kể cả mỗi
+   lần render() lại khi quay về xem từ đã nộp). Thêm `setTimeout(() => mark.remove(), 550)` ở cả 2 nơi
+   append (`render()` và vòng lặp so le của `doSubmit()`).
+
+### Lượt 4 — slogan + hiệu ứng mượt tuyệt đối
+1. **Thêm slogan "ANAGRAM IN ANDREW CLASSES"** — đúng kỹ thuật/CSS đang dùng ở `crossword.js`
+   (`.aw-cw-slogan`, gắn 1 lần lúc `mount()` vào `.aw-topbar` dùng chung của engine, không phải trong
+   `render()` vì topbar sống xuyên suốt cả ván): `topbar.style.position="relative"` rồi chèn
+   `<div class="aw-anagram-slogan">`, gỡ lại lúc `cleanup()`. CSS copy y hệt Crossword (chữ mảnh, xám,
+   dãn chữ 0.32em, canh giữa tuyệt đối bằng `translate(-50%,-50%)`).
+2. **Hiệu ứng tích/X mượt tuyệt đối cả 2 đầu** — trước: CSS `animation` lo phần HIỆN (pop-in .2s), còn
+   phần BIẾN MẤT là `mark.remove()` tức thì (khực một cái, đúng lời thầy tả). Viết hàm dùng chung MỚI
+   `showTransientMark(parentEl, className, iconSvg, totalMs)`: MỘT animation WAAPI duy nhất chạy suốt
+   vòng đời (nhỏ→lớn nảy nhẹ→giữ→nhỏ dần TRƯỚC KHI gỡ khỏi DOM), xoá hẳn `@keyframes aw-pop-cx-scale`
+   không dùng nữa. Cả 4 nơi tạo tích/X (`showLandedCheckBadge`, `showWrongPickMark`, `render()`,
+   `doSubmit()`) đều gọi qua hàm này. Đã đo scale từng khung 25ms suốt vòng đời: 0.3→0.72→0.90→1.03
+   (nảy nhẹ)→1.0 (giữ)→0.98→0.90→0.82→0.72→0.63→0.46... — một đường cong LIÊN TỤC, không có bước nhảy nào
+   ở cả lúc hiện lẫn lúc biến mất.
+
+**Tự test toàn bộ 4 lượt** qua devserver `aword` (:5510), dựng script mô phỏng `PointerEvent` thật
+(pointerdown/move/up có `pointerId`) cho mọi thao tác kéo-thả — kể cả 1 lần cố tình dùng Wordwall Anagram
+CÔNG KHAI thật (`wordwall.net/resource/98204906/anagram`) để tham khảo bố cục gốc, nhưng game đó vẽ bằng
+CANVAS nên không lái được bằng công cụ tự động (không có DOM để bắt sự kiện) — chỉ quan sát được cấu trúc
+(dãy đích là 1 dải gạch chân liền, không phải từng ô riêng) chứ không đo được animation thật của họ.
+0 lỗi console suốt toàn bộ 4 lượt kiểm tra.
