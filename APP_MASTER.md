@@ -4,7 +4,12 @@
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 87, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO TOÀN BỘ
-> 16 TEMPLATE, BẰNG CÁCH ĐƯA VÀO CORE. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> 16 TEMPLATE, BẰNG CÁCH ĐƯA VÀO CORE. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT `bef4594` + PUSH
+> + **LIVE** (Pages tự build, `curl` xác nhận ngay lần poll đầu).**
+> ⭐ **ĐÃ CHẠY LẠI TRỌN BỘ TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io/AWord/`, không
+> qua iframe): **16/16 template mount, tất cả cùng tỷ lệ `1.5261`, 0 lỗi console**; chốt chặn đo bằng class
+> `.aw-zoomed` **THẬT** của Running team: viewport 1839×1270 (1,448) → **phủ kín, 0 dải** · 1280×540 (2,37)
+> → **kẹp 960×540 = 16:9, dải 160px**.
 > Thầy ra lệnh *"áp dụng tiêu chuẩn khung hình và fullscreen cho toàn bộ các template"*, rồi chốt qua
 > AskUserQuestion: fullscreen 14 game **phủ kín + chốt chặn 16:9** (không chọn letterbox cho nhanh) · làm
 > **hết 15 game trong 1 đợt** · Running team **về 16:10,5** · và **sửa CORE 1 lần** thay vì chép khối CSS

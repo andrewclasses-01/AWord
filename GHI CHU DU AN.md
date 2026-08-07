@@ -5,7 +5,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 87 (7/8/2026, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO **TOÀN BỘ 16 TEMPLATE**, BẰNG CÁCH ĐƯA VÀO **CORE**. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**
+## Đợt 87 (7/8/2026, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO **TOÀN BỘ 16 TEMPLATE**, BẰNG CÁCH ĐƯA VÀO **CORE**. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT `bef4594` + PUSH + **LIVE**
+
+> ⭐ **ĐÃ CHẠY LẠI TRỌN BỘ TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io/AWord/`,
+> không qua iframe): **16/16 template mount, tất cả cùng tỷ lệ `1.5261`, 0 lỗi console**; chốt chặn đo
+> bằng **class `.aw-zoomed` THẬT** của Running team: viewport 1839×1270 (1,448) → **phủ kín, 0 dải** ·
+> viewport 1280×540 (2,37) → **kẹp 960×540 = 16:9, dải 160px**.
+>
+> ⚠️ **BẪY DẤU MỐC — lần thứ BA dính, nhưng kiểu MỚI: dấu mốc PHỦ ĐỊNH bị chính COMMENT làm nhiễu.**
+> Hai lần trước (`padStart(2` Đợt 84, `line-height: 1.04` Đợt 86) là dấu mốc **khẳng định** vô giá trị vì
+> bản CŨ vốn đã có chuỗi đó. Lần này ngược lại: dùng *"`core/app.css` **không được** chứa `min(100vw`"*
+> làm bằng chứng đã gỡ luật letterbox — nhưng **comment giải thích ở ngay trên luật mới có nhắc lại công
+> thức cũ**, nên `grep` luôn đếm được 1 và điều kiện không bao giờ đúng, dù bản live ĐÃ mới hoàn toàn.
+> Suýt kết luận nhầm là Pages chưa build. **Dấu mốc phủ định chỉ dùng được khi chắc chắn chuỗi đó không
+> nằm trong comment** — hoặc dùng dấu mốc khẳng định chỉ có ở bản mới. 3 dấu mốc tốt của đợt này:
+> `aspect-ratio: 16 / 10.5` trong **app.css** · `100dvh * 16 / 9` đếm được **đúng 4 lần** trong app.css
+> (4 luật vendor) · `100dvh * 16 / 9` trong **running-team.css**.
+>
+> ⚠️ Và một tự-sửa lúc commit: lệnh `git commit` đầu tiên viết bằng cú pháp here-string của **PowerShell**
+> (`@'...'@`) nhưng chạy trong **Bash** → hai ký tự `@` lọt vào message, biến dòng tiêu đề commit thành
+> `"@"`. Đã `--amend` ngay khi chưa push. **Bash dùng heredoc `<<'MSG' ... MSG`, PowerShell mới dùng `@'`.**
 
 Thầy ra lệnh: *"Áp dụng tiêu chuẩn khung hình và fullscreen cho toàn bộ các template trên AWord."*
 Thầy chốt thêm 3 điều qua AskUserQuestion: **(1)** fullscreen của 14 game đang dùng API thật →
