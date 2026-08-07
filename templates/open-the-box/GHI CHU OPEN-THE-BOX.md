@@ -2,7 +2,7 @@
 
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 24, v0.9.56) — BỎ HẲN NAV NEXT/BACK (Ô HẾT CO) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. (thầy duyệt → commit + push + live)
 
-## Đợt 24 (7/8/2026, v0.9.56) — BỎ NAV Ở CẢ MÀN CÂU HỎI + GATE 80% KHI ĐÓNG — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+## Đợt 24 (7/8/2026, v0.9.56) — BỎ NAV Ở CẢ MÀN CÂU HỎI + GATE 80% KHI ĐÓNG — ✅ THẦY DUYỆT → COMMIT `f75a25e` + PUSH + LIVE
 
 > Chỉ sửa 2 file template: `open-the-box.css` (2 selector ẩn nav) + `open-the-box.js` (`boxUnlockTimer` trong
 > `closeCardThen`). **KHÔNG đụng core.** Thầy gửi 2 yêu cầu 1 lượt.

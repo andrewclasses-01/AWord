@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 81 (7/8/2026, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK (Ô KHÔNG CÒN CO LẠI) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+## Đợt 81 (7/8/2026, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK (Ô KHÔNG CÒN CO LẠI) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `f75a25e` + PUSH + LIVE
 
 Thầy gửi 2 yêu cầu cho template **Open the box**. Chỉ đụng 2 file template
 (`templates/open-the-box/open-the-box.css` + `open-the-box.js`) — **KHÔNG đụng core**. Chi tiết đầy đủ +

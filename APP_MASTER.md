@@ -4,7 +4,7 @@
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 81, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK + GATE 80% KHI
-> ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chỉ 2 file template (`open-the-box.css` + `.js`). **(1)** Luật
+> ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `f75a25e` + PUSH + LIVE.** Chỉ 2 file template (`open-the-box.css` + `.js`). **(1)** Luật
 > ẩn nav Đợt 22 chỉ khớp `:has(> .aw-otb-card)` = màn LƯỚI; mở 1 ô thì card lưới bị gỡ, chỉ còn
 > `.aw-otb-qcard` → selector thôi khớp → **nav hiện lại ở mọi màn câu hỏi**, mà `.aw-navbtn` cao 5cqw >
 > `.aw-iconbtn` 4cqw nên bottombar phình ~1cqw → **ô câu hỏi/đáp án co lại**. Sửa: nới selector khớp CẢ hai
