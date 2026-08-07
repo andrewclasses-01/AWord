@@ -1,6 +1,6 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **TRẠNG THÁI (7/8/2026): 🟢 CHỜ THẦY DUYỆT — Đợt 10 (mục 8k, v0.9.55).** 5 nhóm thay đổi thầy gửi 1 lượt
+> **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 10 (mục 8k, v0.9.55) ĐÃ COMMIT (`0b629b3`) + PUSH + LIVE.** 5 nhóm thay đổi thầy gửi 1 lượt
 > (thầy đã chọn: PASS thay ô tích bằng thanh 0–5; nút swap chỉ đổi nhãn+danh sách từ). Chỉ 3 file template
 > (`running-word.js`, `.css`, `rw-print.js`), **KHÔNG đụng core**. (1) **PASS 0–5/đội** thay ô tích (state
 > `passLeft`, nút hiện số còn lại, hết=mờ, chỉ sáng đúng lượt). (2) **Tiêu đề PART A/PART B** thay tên đội
@@ -12,8 +12,9 @@
 > tránh mutate set đã lưu, cờ `partFlip`; màu/đồng hồ giữ theo bên); lúc chơi vẫn là Tạm dừng/Chạy tiếp. (5c)
 > **In chữ to phủ trang**: bỏ dòng tiêu đề №/WORD/TURN + "Explainer", `HEADING_MM` 16→12, `fs` 0.62→0.78×rowH,
 > giữ ô TURN + CHECK 2 cột. Tự test devserver (:5510, đo DOM, 0 lỗi console); hồi quy Type-the-answer + Crossword
-> vẫn 16:9, 0 rò `.aw-rw-*`. ⬜ **Chưa commit — chờ thầy duyệt + nghiệm thu máy thật** (chọn-gõ-submit; nút swap;
-> 2 bảng song song; in giấy A4 chữ to + SET X). Chi tiết đầy đủ: mục **8k** dưới.
+> vẫn 16:9, 0 rò `.aw-rw-*`. ✅ **THẦY DUYỆT → commit `0b629b3` + push + LIVE** (poll bản live: đủ marker
+> `sharedTop`/`doSwapParts`/`passLeft`, hết `beginCountdown`). ⬜ Còn chờ thầy nghiệm thu máy thật
+> (chọn-gõ-submit; nút swap; 2 bảng song song; in giấy A4 chữ to + SET X). Chi tiết đầy đủ: mục **8k** dưới.
 >
 > **TRẠNG THÁI (6/8/2026): 🟢 THẦY DUYỆT — Đợt 9 (mục 8j) ✅ ĐÃ COMMIT (`123c439`) + PUSH.** 3 điều
 > chỉnh thầy gửi 1 lượt, tự test devserver 0 lỗi console. (1) Thu nhỏ board (`margin-bottom`
@@ -995,10 +996,10 @@ không; nút swap trước trận có dễ hiểu không; nhìn 2 bảng chạy 
       8j)~~ — thầy duyệt, commit **`123c439`** + push (`510ff9f..123c439`), **KHÔNG đụng core**.
       ⬜ Còn chờ thầy nghiệm thu máy thật: hàng PASS/đồng hồ/Play-Pause cân đối vừa mắt; PASS mép ngoài
       vừa tay trọng tài; bàn phím to không đè; kiểm bản LIVE sau khi Pages build.
-- [ ] **⭐ Đợt 10 (7/8/2026, v0.9.55) — 5 nhóm thay đổi (mục 8k): PASS 0–5, PART A/B, 2 bảng song song,
-      bắt đầu bằng Submit + nút SWAP, in chữ to + SET X. KHÔNG đụng core.** 🟢 Đã build + tự test devserver
-      (0 lỗi console, hồi quy sạch). **CHỜ THẦY DUYỆT** để commit + push. Nghiệm thu máy thật: chọn-gõ-submit;
-      nút swap; 2 bảng song song; in giấy A4 chữ to + SET X.
+- [x] ~~**⭐ Đợt 10 (7/8/2026, v0.9.55) — 5 nhóm thay đổi (mục 8k): PASS 0–5, PART A/B, 2 bảng song song,
+      bắt đầu bằng Submit + nút SWAP, in chữ to + SET X. KHÔNG đụng core.**~~ — thầy duyệt, commit
+      **`0b629b3`** + push (`a426a6c..0b629b3`) + LIVE (build ~27s). ⬜ Còn chờ thầy nghiệm thu máy thật:
+      chọn-gõ-submit; nút swap; 2 bảng song song; in giấy A4 chữ to + SET X.
 - [ ] **⭐ Thầy nghiệm thu Đợt 8 trên máy thật:** bàn phím to +15% khi 2 em gõ; nút PASS vuông lề trái
       có vừa tay trọng tài; danh sách ĐẢO CHIỀU (mới trên, cũ mờ) nhìn có tự nhiên; đồng hồ chạm mép
       trên có bị bo góc cắt; bảng menu 2 đội "tên/điểm vàng" trên màn thật.

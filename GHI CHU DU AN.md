@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 80 (7/8/2026, v0.9.55) — RUNNING WORD: PASS 0–5 + PART A/B + 2 BẢNG SONG SONG + BẮT ĐẦU BẰNG SUBMIT + NÚT SWAP + IN CHỮ TO/SET X. KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT
+## Đợt 80 (7/8/2026, v0.9.55) — RUNNING WORD: PASS 0–5 + PART A/B + 2 BẢNG SONG SONG + BẮT ĐẦU BẰNG SUBMIT + NÚT SWAP + IN CHỮ TO/SET X. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `0b629b3` + PUSH + LIVE
 
 Thầy gửi 5 nhóm thay đổi cho template **Running word** (1 lượt). Chỉ đụng 3 file template
 (`templates/running-word/running-word.js`, `running-word.css`, `rw-print.js`) — **KHÔNG đụng core**.
@@ -40,9 +40,12 @@ tất cả mục trên đo khớp. **Hồi quy:** `type-the-answer` + `crossword
 `act-*`, **0 class `.aw-rw-*` rò sang**, 0 lỗi console (chỉ 404 favicon vô hại). Bảng kết quả `renderSummary`
 vẫn dựng đúng (2 nửa tên/điểm + "time left" + Start again).
 
-⬜ **Chưa commit — chờ thầy duyệt.** ⚠️ Máy không tự nghiệm thu được (cần mắt thầy máy thật): cảm giác chọn
-bảng-gõ-submit để bắt đầu; nút swap trước trận; nhìn 2 bảng chạy song song có tự nhiên; **in thử giấy A4** cỡ
-chữ to mới + nhãn SET X.
+✅ **THẦY DUYỆT → commit `0b629b3` + push (`a426a6c..0b629b3`) + LIVE.** Bản live build ~27s (không dính bẫy
+timeout 10 phút của Pages đợt trước — build_type legacy tự build nhanh); đã poll bản live
+`andrewclasses-01.github.io/AWord` (cache-bust): `running-word.js` có đủ marker `sharedTop`/`doSwapParts`/
+`passLeft`, KHÔNG còn `beginCountdown`; `rw-print.js` có `setNo`+`0.78`; `.css` có `is-swap`+`passbtn-n`.
+⚠️ Máy không tự nghiệm thu được (cần mắt thầy máy thật): cảm giác chọn bảng-gõ-submit để bắt đầu; nút swap
+trước trận; nhìn 2 bảng chạy song song có tự nhiên; **in thử giấy A4** cỡ chữ to mới + nhãn SET X.
 
 ---
 

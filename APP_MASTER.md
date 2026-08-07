@@ -4,7 +4,7 @@
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 80, v0.9.55) — RUNNING WORD: 5 NHÓM THAY ĐỔI (thầy gửi 1 lượt).
-> KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT.** (1) **PASS 0–5/đội** thay ô tích "Allow PASS" (thanh "Passes per
+> KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `0b629b3` + PUSH + LIVE (build ~27s).** (1) **PASS 0–5/đội** thay ô tích "Allow PASS" (thanh "Passes per
 > team", state `passLeft`, nút hiện số còn lại, hết=mờ, chỉ sáng đúng lượt). (2) **Tiêu đề bảng PART A /
 > PART B** thay tên đội (cập nhật động trong `paintBoard`; tên đội chỉ còn ở màn kết quả). (3) **2 bảng
 > SONG SONG**: bỏ `topIndexOf(t)` (mỗi bảng cuộn riêng) → **`sharedTop()`** chung, khóa theo từ đội-đang-tới-
@@ -16,8 +16,9 @@
 > (5c) **In chữ to phủ trang**: bỏ dòng tiêu đề №/WORD/TURN + "Explainer", `HEADING_MM` 16→12, `fs` 0.62→
 > 0.78×rowH, giữ ô TURN + CHECK 2 cột (50 từ ~11,4pt vẫn 1 trang). Chỉ 3 file template. Tự test devserver
 > (:5510, đo DOM — pane không compositing nên không chụp ảnh): mọi mục khớp; hồi quy Type-the-answer +
-> Crossword vẫn 16:9, 0 rò `.aw-rw-*`, 0 lỗi console. ⬜ **Chưa commit — chờ thầy duyệt + nghiệm thu máy thật.**
-> Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8k + `GHI CHU DU AN.md` Đợt 80.
+> Crossword vẫn 16:9, 0 rò `.aw-rw-*`, 0 lỗi console. ✅ **Commit `0b629b3` + push + LIVE** (poll bản live OK).
+> ⬜ Còn chờ thầy nghiệm thu máy thật. Chi tiết: `templates/running-word/GHI CHU RUNNING-WORD.md` mục 8k +
+> `GHI CHU DU AN.md` Đợt 80.
 >
 > Trước đó: **6/8/2026 (Đợt 79, v0.9.54) — FIND THE MATCH: BẤM ĐÚNG THÊM "TING" + DẤU ✓ TO GIỮA
 > CÂU HỎI RỒI MỚI BAY VÀO ĐIỂM; CHẾ ĐỘ TẮT REMOVE CORRECTS: Ô ĐÃ CHỌN CHỈ LOÉ ✓ RỒI TRỞ LẠI Y HỆT Ô CHƯA
