@@ -918,6 +918,69 @@ setTimeout(run, 260);   // dự phòng: lớn hơn duration một chút, phòng 
 
 Thiếu bước này → game có thể bị "kẹt" vĩnh viễn ở màn chuyển tiếp nếu học sinh lỡ chuyển tab.
 
+## ⭐⭐ BẪY "SNAP KHỰC MỘT CÁI" — đổi animation giữa chừng làm phần tử nhảy về giá trị mặc định (Đợt 26, 7/8/2026)
+
+Tìm ra + sửa ở 3 template cùng ngày (Open the box, Crossword, Flying fruit) sau khi thầy báo "ô số fade
+không mượt, xuất hiện/biến mất khực một cái" — cùng MỘT cơ chế lỗi, khác biểu hiện. **Đọc mục này TRƯỚC khi
+viết bất kỳ hiệu ứng entrance/exit/fade/pop nào có thể bị một thao tác của người chơi ngắt giữa chừng.**
+
+**Cơ chế:** một CSS `@keyframes` **animation** (khác `transition`) LUÔN khởi động lại từ đúng khung hình `from`
+(hay `0%`) của chính nó mỗi khi nó được (tái) áp dụng — không quan tâm phần tử đang ở giá trị nào lúc đó. Kèm
+theo đó, nếu class đang giữ animation bị GỠ mà không có animation/rule nào khác giữ chỗ, phần tử **nhảy tức
+thì** về giá trị mặc định thô (thường `opacity:1`, không transform) — dù đang ở giữa animation-delay (giữ
+`opacity:0` nhờ `fill-mode:both`) hay giữa chừng chuyển động. Bình thường không ai để ý vì animation luôn được
+để chạy hết tự nhiên — lỗi chỉ lộ ra khi **JS chủ động đổi/gỡ class đó ĐANG LÚC animation còn chạy dở**, mà
+việc này rất dễ xảy ra bất cứ khi nào input KHÔNG bị khoá trong lúc hiệu ứng đang chạy (một cú chạm sớm, một
+lượt gõ phím, một lần bấm tiếp theo thật nhanh).
+
+**3 ca thật đã tìm + sửa** (xem chi tiết số đo ở `GHI CHU OPEN-THE-BOX.md` / `GHI CHU CROSSWORD.md` /
+`GHI CHU FLYING-FRUIT.md` mục Đợt 26 của từng file):
+- **Open the box** — chạm 1 ô lúc lưới còn đang nảy vào (`is-entrance`, so le tới 2,46s): gỡ class ngay lập
+  tức làm mọi ô khác (kể cả ô chưa kịp hiện) nhảy về `opacity:1` trước khi fade ra mới bắt đầu.
+- **Open the box** (ca 2) — chạm ô mới thật nhanh trong lúc lưới đang fade-in lại sau khi đóng câu hỏi trước
+  (tính năng cố ý "mở khoá sớm ở 80%"): keyframe fade-out mới viết cứng `from{opacity:1}` ép lưới (thực tế
+  đang ~0,7) nhảy sáng lên rồi mới mờ đi.
+- **Crossword** — gõ chữ ĐẦU TIÊN ngay sau khi bấm "Andrew help": hàm vẽ lại (`refreshActiveCells()`) chạy ở
+  MỌI lần gõ phím, xoá sạch class của mọi ô trong từ kể cả ô gợi ý chưa kịp hiện xong theo hiệu ứng so le.
+- **Flying fruit** — chạm SAI đổi animation "lắc" sang animation "rung"; animation rung viết cứng góc bắt
+  đầu 0°, quả đang lắc dở (tới ±6°) nhảy phắt về thẳng trước khi rung. Chỉ lộ khi bật option "Retry after
+  incorrect answer" — mặc định tắt thì quả bị xoá khỏi DOM ngay trong cùng tick nên không kịp thấy.
+
+**Cách phòng khi viết template MỚI — 2 lựa chọn, chọn 1 theo tình huống:**
+
+**(A) Nếu dùng CSS `@keyframes` qua `classList.add/remove/toggle`** (cách hầu hết template cũ trong app này
+làm cho hiệu ứng entrance/exit/pop/fade so le nhiều phần tử — rẻ, 1 rule cho cả nhóm): TRƯỚC khi gỡ/đổi class
+đang giữ animation, nếu có khả năng animation đó CHƯA chạy xong (không bị khoá input, hoặc có khoá nhưng mở
+sớm như kiểu "80%"), hãy đọc giá trị SỐNG THỰC TẾ của phần tử bằng `getComputedStyle(el).opacity` /
+`.transform` NGAY LÚC ĐÓ, rồi một trong hai:
+  - **Ghim làm inline style** trước khi gỡ class (gỡ class lúc đó chỉ là thao tác vô hình) — dùng khi phần tử
+    sắp bị animation MỚI khác cấp (vd container) điều khiển tiếp, như Open the box ca 1 (ghim từng ô, rồi
+    animation fade cấp LƯỚI nhân với giá trị đã ghim).
+  - **Đưa vào biến CSS rồi cho khung `from`/`0%` của animation MỚI đọc biến đó** thay vì viết cứng số — dùng
+    khi CHÍNH phần tử đó sẽ chạy tiếp animation mới, như Open the box ca 2 (`--otb-fade-from`) và Flying fruit
+    (`--wrong-from`). Xem `open-the-box.js` hàm `animateOpen()` hoặc `flying-fruit.js` hàm `onTap()` làm mẫu.
+  - Nếu class bị gỡ rồi GẮN LẠI (không đổi tên animation) trong CÙNG một tick đồng bộ — không có
+    `getComputedStyle`/`offsetWidth`/paint xen giữa để ép reflow — trình duyệt gộp lại thành "không đổi gì"
+    và animation cứ tiếp tục mượt, không cần đọc/ghim gì cả (mẫu: `crossword.js` `refreshActiveCells()`).
+    Ngược lại, nếu MUỐN animation chạy lại từ đầu (vd `shakeCell()` cùng file), phải CHỦ ĐỘNG ép reflow
+    (`void el.offsetWidth`) giữa lúc gỡ và gắn lại — không ép thì trình duyệt cũng gộp lại, không restart.
+
+**(B) Nếu dùng Web Animations API (`el.animate()`)** — cách AN TOÀN HƠN theo mặc định cho hiệu ứng của MỘT
+phần tử đơn lẻ có thể bị ngắt giữa chừng bởi thao tác tiếp theo (kéo-thả, trượt prompt, bay chữ...), vì mỗi
+lời gọi tự mang khung hình riêng, không phụ thuộc stylesheet `from`. Nhưng vẫn phải tự tay nối tiếp cho mượt:
+trước khi gọi `.animate()` MỚI đè lên animation CŨ trên cùng phần tử, gọi `oldAnim.commitStyles()` (ghi giá
+trị đang animate vào inline style) rồi `oldAnim.cancel()` — xem `true-false.js`/`find-the-match.js` hàm
+`haltPromptAnim()` làm mẫu chuẩn đã kiểm chứng. Thiếu bước `commitStyles()` thì `.cancel()` một mình vẫn làm
+phần tử nhảy về giá trị TRƯỚC animation (không phải giá trị đang animate dở) — cùng họ lỗi (A) ở trên, chỉ
+khác API.
+
+**Khi nào KHÔNG cần lo:** nếu input bị khoá HẲN (disabled/pointer-events:none) suốt từ lúc animation bắt đầu
+tới lúc nó tự chạy xong tự nhiên, không có đường nào để người chơi ngắt giữa chừng — không phải sửa gì (xem
+`speaking-cards.js` `doShuffle()` khoá bằng cờ `busy`, hoặc `running-team.js` khoá bằng cờ `locked` suốt màn
+đếm ngược). Cũng không cần lo nếu animation-đến-animation dùng CHUNG khung hình `from`/`to` với trạng thái
+nghỉ của phần tử (vd `is-shake` của Running word: `0%,100%` trùng khớp transform nghỉ, nên bị ngắt giữa chừng
+chỉ cắt ngắn dao động chứ không tạo trạng thái lạ mắt nào).
+
 ## Theme (bảng màu)
 
 Mọi theme là 1 file CSS trong `core/themes/`, định nghĩa biến `--aw-*` trên class `.theme-<tên>`

@@ -2,8 +2,27 @@
 
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
-> `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 87, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO TOÀN BỘ
+> `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
+> nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
+> Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
+> Cập nhật lần cuối: **7/8/2026 (Đợt 88, v0.9.63) — ⭐⭐ SỬA BẪY "SNAP KHỰC MỘT CÁI" Ở 3 TEMPLATE (Open the
+> box, Crossword, Flying fruit) + GHI LUẬT CHUNG VÀO `core/HUONG DAN CORE.md` CHO MỌI TEMPLATE VỀ SAU.
+> KHÔNG SỬA CORE ENGINE. ✅ THẦY DUYỆT → COMMIT `eed2a45` + `6b0dc5e` + PUSH + **LIVE** (`curl` xác nhận cả
+> 3 template).**
+> ⭐ **Cơ chế lỗi:** một CSS `@keyframes` animation LUÔN khởi động lại từ đúng khung `from` của chính nó mỗi
+> khi được (tái) áp dụng, bất kể phần tử đang ở giá trị nào — nếu JS đổi/gỡ class giữ animation đó ĐANG LÚC
+> nó còn chạy dở (chạm sớm, gõ phím, tap nhanh — bất cứ đâu input không bị khoá trong lúc hiệu ứng chạy),
+> phần tử **nhảy tức thì** về giá trị mặc định trước khi animation mới kịp bắt đầu — "khực một cái" đúng như
+> thầy tả. Điều tra 15 template còn lại (5 agent song song): 13/15 sạch (dùng WAAPI có `.cancel()`/
+> `commitStyles()`, CSS transition, hoặc input khoá hẳn — đều tự miễn nhiễm); Whack-a-mole đã tự vá đúng họ
+> lỗi này từ trước. 2 ca thật còn lại: Crossword (gõ chữ đầu tiên sau khi bấm "Andrew help" xoá sạch hiệu
+> ứng hiện dần của các ô gợi ý khác) và Flying fruit (chạm sai làm quả nhảy góc xoay về 0° trước khi rung —
+> chỉ lộ khi bật option "Retry after incorrect answer"). Cách sửa cả 2: ghim/đọc giá trị SỐNG THỰC TẾ
+> (`getComputedStyle`) ngay trước khi đổi animation, thay vì để trình duyệt ép về mặc định. Đã ghi thành
+> luật chung + mẫu code cho mọi template về sau vào `core/HUONG DAN CORE.md`. Chi tiết: `GHI CHU DU AN.md`
+> Đợt 88.
+>
+> Trước đó: **7/8/2026 (Đợt 87, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO TOÀN BỘ
 > 16 TEMPLATE, BẰNG CÁCH ĐƯA VÀO CORE. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT `bef4594` + PUSH
 > + **LIVE** (Pages tự build, `curl` xác nhận ngay lần poll đầu).**
 > ⭐ **ĐÃ CHẠY LẠI TRỌN BỘ TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io/AWord/`, không

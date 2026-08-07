@@ -90,8 +90,8 @@ Làm ĐÚNG 4 chỗ này (đối chiếu cách `anagram` đã làm), rồi `curl
 - Thêm option `pointsOff` (0..5): mỗi lần chạm quả SAI thì trừ `pointsOff` khỏi biến `score` (KHÔNG chặn về 0, cho phép âm), rồi `ui.setScore(score)`. Khi `pointsOff===0` hành vi y hệt bản cũ (có bọc `if (pointsOff)` nên không gọi thừa setScore).
 - `ui.finish` giờ báo thêm `score` (điểm đã trừ) và giữ `correct/incorrect` tính từ số câu đúng thật (correctCount) để không bị âm. Seed mặc định `pointsOff: 0` trong sample. Chỉ sửa file trong `templates/flying-fruit/`.
 
-## Chặng bổ sung — sửa lỗi snap góc xoay khi tap SAI (Đợt 26, v0.9.63) — 7/8/2026 — 🟢 CHỜ THẦY DUYỆT (chưa commit)
-- Cùng họ lỗi vừa tìm/sửa ở Open the box + Crossword (Đợt 26): đổi CSS animation giữa chừng làm trình duyệt
+## Chặng bổ sung — sửa lỗi snap góc xoay khi tap SAI (v0.9.63) — 7/8/2026 — ✅ THẦY DUYỆT → COMMIT `6b0dc5e` + PUSH + LIVE (`curl` xác nhận) — mốc chung toàn dự án: xem GHI CHU DU AN.md Đợt 88/89
+- Cùng họ lỗi vừa tìm/sửa ở Open the box + Crossword: đổi CSS animation giữa chừng làm trình duyệt
   nhảy về giá trị mặc định thay vì tiếp mượt từ vị trí hiện tại. Chỉ sửa `flying-fruit.js` (`onTap()`) +
   `flying-fruit.css` (keyframe `aw-ff-shake`). **KHÔNG đụng core.**
 - **Lỗi:** quả bay liên tục lắc nhẹ qua lại (`aw-ff-wobble`, xoay ±`--spin` độ, mặc định 6°). Chạm SAI thêm

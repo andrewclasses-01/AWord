@@ -12,9 +12,10 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
-## 7/8/2026 — SỬA LỖI SNAP KHI GÕ PHÍM TRONG LÚC ANDREW ĐANG HIỆN CHỮ GỢI Ý (Đợt 26, v0.9.63) — 🟢 CHỜ THẦY DUYỆT (chưa commit)
+## 7/8/2026 — SỬA LỖI SNAP KHI GÕ PHÍM TRONG LÚC ANDREW ĐANG HIỆN CHỮ GỢI Ý (Đợt 67, v0.9.63) — ✅ THẦY DUYỆT → COMMIT `6b0dc5e` + PUSH + LIVE (`curl` xác nhận)
 
-> Cùng họ lỗi vừa tìm/sửa ở Open the box (Đợt 26 của game đó): đổi CSS animation giữa chừng làm trình duyệt
+> Cùng họ lỗi vừa tìm/sửa ở Open the box (Đợt 26 của file GHI CHU riêng game đó — hai template đánh số đợt
+> độc lập với nhau, xem GHI CHU DU AN.md Đợt 88 cho mốc chung toàn dự án): đổi CSS animation giữa chừng làm trình duyệt
 > nhảy về giá trị mặc định thay vì tiếp mượt từ vị trí hiện tại. Chỉ sửa `crossword.js` (`refreshActiveCells()`).
 > **KHÔNG đụng core.**
 

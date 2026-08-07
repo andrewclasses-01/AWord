@@ -5,6 +5,67 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 88 (7/8/2026, v0.9.63) — ⭐⭐ SỬA BẪY "SNAP KHỰC MỘT CÁI" Ở 3 TEMPLATE (Open the box, Crossword, Flying fruit) + GHI LUẬT CHUNG VÀO `core/HUONG DAN CORE.md` CHO MỌI TEMPLATE VỀ SAU. KHÔNG SỬA CORE ENGINE (chỉ tài liệu). ✅ THẦY DUYỆT → COMMIT `eed2a45` + `6b0dc5e` + PUSH + **LIVE** (`curl` xác nhận cả 3 template)
+
+> Thầy báo (chơi Open the box): *"các ô số khác không được fade dần mà xuất hiện hoặc biến mất khực một cái,
+> không mượt"*. Sau khi sửa xong game đó, thầy yêu cầu thêm: *"điều tra tất cả các template khác xem có lỗi
+> tương tự không và sửa tất cả"*, rồi *"ghi rõ vào dự án để trong tương lai khi build template mới trong
+> session mới có thể có cách làm tốt nhất mà không bị lỗi"*.
+>
+> ⭐ **CƠ CHẾ LỖI (một họ, 2 biểu hiện):** một CSS `@keyframes` **animation** (khác `transition`) LUÔN khởi
+> động lại từ đúng khung `from`/`0%` của chính nó mỗi khi được (tái) áp dụng, bất kể phần tử đang ở giá trị
+> nào; và nếu class giữ animation bị GỠ mà không còn gì giữ chỗ, phần tử **nhảy tức thì** về mặc định thô
+> (thường `opacity:1`, không transform). Bình thường vô hại vì animation luôn chạy hết tự nhiên — chỉ lộ khi
+> **JS chủ động đổi/gỡ class đó ĐANG LÚC animation còn dở**, mà việc này rất dễ xảy ra bất cứ khi nào input
+> KHÔNG bị khoá trong lúc hiệu ứng đang chạy.
+>
+> **Open the box** (`open-the-box.js`/`.css`) — 2 ca: **(a)** chạm ô lúc lưới còn đang nảy vào lúc mới bấm
+> Play (`is-entrance`, so le tới 2,46s) — gỡ class ngay lập tức làm ô chưa kịp hiện nhảy về `opacity:1` trước
+> khi fade ra mới bắt đầu; **(b)** chạm ô mới thật nhanh lúc lưới đang fade-in lại sau khi đóng câu hỏi trước
+> (tính năng cố ý "mở khoá sớm ở 80%", Đợt 24) — keyframe fade-out cũ viết cứng `from{opacity:1}` ép lưới
+> (thực tế ~0,7) nhảy sáng lên rồi mới mờ đi. **Sửa:** ghim opacity/transform THỰC TẾ (đọc bằng
+> `getComputedStyle`) vào inline style / biến CSS `--otb-fade-from` ngay trước khi đổi animation, thay vì để
+> trình duyệt ép về mặc định. Đường không bị ngắt quãng giữ nguyên hành vi cũ (đo lại đúng `"1"`).
+>
+> **Điều tra 15 template còn lại** (5 agent song song, mỗi agent đọc kỹ 3 template + đối chiếu GHI CHU riêng
+> từng game): 13/15 SẠCH — phần lớn dùng Web Animations API (`el.animate()` kèm `.cancel()`/`commitStyles()`
+> trước khi chạy tiếp, tự miễn nhiễm vì mỗi lời gọi mang khung hình riêng không phụ thuộc stylesheet `from`),
+> CSS transition (tự miễn nhiễm, luôn nội suy từ giá trị SỐNG), hoặc input bị khoá hẳn trong lúc animation
+> chạy nên không có đường ngắt quãng. Whack-a-mole đã tự tìm + tự vá đúng họ lỗi này từ trước (ghi trong
+> `GHI CHU WHACK-A-MOLE.md`).
+>
+> **Crossword** (`crossword.js`, hàm `refreshActiveCells()`) — gõ chữ ĐẦU TIÊN ngay sau khi bấm "Andrew
+> help" (không phải ca hiếm — đúng luồng chơi bình thường của tính năng): hàm này chạy lại ở MỌI lần gõ phím,
+> xoá sạch class mọi ô trong từ kể cả ô gợi ý vàng (`is-hintin`, so le `--hd`) chưa kịp hiện xong theo hiệu
+> ứng. **Sửa:** ghi nhớ ô đó có `is-hintin` hay không TRƯỚC khi xoá, gắn lại nếu ô vẫn còn là gợi ý chưa điền
+> — vì việc xoá-rồi-gắn-lại diễn ra CÙNG một tick đồng bộ (không ép reflow xen giữa), trình duyệt gộp thành
+> "không đổi gì" nên animation cứ tiếp tục mượt, không cần đọc/ghim giá trị gì thêm.
+>
+> **Flying fruit** (`flying-fruit.js` hàm `onTap()` + `.css` keyframe `aw-ff-shake`) — chạm SAI đổi animation
+> "lắc" (`aw-ff-wobble`, xoay ±spin) sang animation "rung" (`aw-ff-shake`, viết cứng góc bắt đầu `rotate(0)`)
+> → quả đang lắc dở nhảy phắt về thẳng trước khi rung. Chỉ lộ khi bật option **"Retry after incorrect
+> answer"** (mặc định TẮT thì `advance()` xoá quả khỏi DOM ngay trong cùng tick, không kịp thấy). **Sửa:**
+> đọc góc xoay thật lúc chạm (`getComputedStyle` → `DOMMatrixReadOnly` → `Math.atan2`) vào biến CSS
+> `--wrong-from`, cho khung `0%` của `aw-ff-shake` đọc biến đó. Test ép `retry:true` bắt đúng khung 320ms:
+> góc thật đo được **−8,00°**, `--wrong-from` đọc lại khớp tuyệt đối.
+>
+> ⭐⭐ **GHI THÀNH LUẬT CHUNG** vào `core/HUONG DAN CORE.md`, mục mới **"BẪY 'SNAP KHỰC MỘT CÁI'"** (ngay sau
+> mục `element.animate()` sẵn có) — để mọi session BUILD TEMPLATE MỚI đọc trước: cách phòng khi dùng CSS
+> `@keyframes` qua classList (ghim giá trị sống hoặc đưa vào biến CSS cho khung `from` đọc), cách phòng khi
+> dùng WAAPI (`commitStyles()` + `.cancel()` trước animation mới — mẫu `true-false.js`/`find-the-match.js`
+> hàm `haltPromptAnim()`, PHÁT HIỆN THÊM đã làm đúng từ trước nhưng CHƯA từng được ghi thành luật chung), và
+> khi nào KHÔNG cần lo (input khoá hẳn, hoặc khung `from`/`to` trùng trạng thái nghỉ).
+>
+> **Tự test cả 3 template** (devserver `aword` :5510, đo DOM/computed style qua `javascript_tool` — pane
+> preview không compositing nên `visibilityState:"hidden"` đóng băng animation hoàn toàn, tức đây luôn là
+> kịch bản XẤU NHẤT có thể xảy ra: mọi animation kẹt nguyên ở giá trị "from" cho tới khi bị ngắt): cả 3 ca
+> đều xác nhận giá trị được ghim/đọc đúng, không có bước nào nhảy về mặc định; đường không ngắt quãng giữ
+> nguyên hành vi cũ. 0 lỗi console ở cả 3 template + trang chủ (kiểm tra không hồi quy toàn hệ thống).
+> Chi tiết đầy đủ: `GHI CHU OPEN-THE-BOX.md` Đợt 26, `GHI CHU CROSSWORD.md` Đợt 67, `GHI CHU FLYING-FRUIT.md`
+> mục "sửa lỗi snap góc xoay".
+>
+> Trước đó: **Đợt 87 (7/8/2026, v0.9.62)** — xem bên dưới.
+
 ## Đợt 87 (7/8/2026, v0.9.62) — ⭐⭐ ÁP TIÊU CHUẨN KHUNG HÌNH & FULLSCREEN CHO **TOÀN BỘ 16 TEMPLATE**, BẰNG CÁCH ĐƯA VÀO **CORE**. ⭐ CÓ SỬA CORE (thầy duyệt). ✅ THẦY DUYỆT → COMMIT `bef4594` + PUSH + **LIVE**
 
 > ⭐ **ĐÃ CHẠY LẠI TRỌN BỘ TRÊN CHÍNH BẢN LIVE** (tab chạy thẳng `andrewclasses-01.github.io/AWord/`,
