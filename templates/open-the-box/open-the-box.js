@@ -617,7 +617,44 @@ function mountQuestions(root, activity, ui) {
     // tile is what grows from that exact spot instead, so leaving the number
     // there too would double-image). --otb-fade-ms keeps the fade span equal
     // to the tile zoom + the answers' slide-in.
-    grid.classList.remove("is-entrance");
+    // Đợt 26 (teacher-reported bug: "các ô số khác không fade dần mà xuất
+    // hiện/biến mất khực một cái"). Two DIFFERENT stale-animation-state bugs,
+    // both only visible when a box is tapped while an EARLIER animation on
+    // this same grid hasn't finished yet — very plausible: the entrance pop
+    // right after Play runs up to ENTRANCE_MUSIC_MS (2460ms), and đợt 24's
+    // "unlock the grid at 80% of a close" deliberately lets the NEXT open
+    // start before the close's own fade-in has finished landing.
+    //
+    // (a) PER-BOX: `is-entrance` drives EACH box's own opacity/scale via a
+    // CSS *animation* with fill-mode `both`. The instant that class is
+    // removed, any box still mid-flight (or still sitting in its own
+    // animation-delay, held invisible at opacity:0/scale:.72 by the `both`
+    // fill) has nothing left to hold that value — it SNAPS straight to the
+    // element's plain default (opacity:1, no transform) before the grid-level
+    // fade-out even starts. Freeze each box's CURRENT live value as an inline
+    // style FIRST so removing the class is a visual no-op; the grid's own
+    // fade (below) then multiplies that already-in-flight opacity down to 0,
+    // so a box that hadn't appeared yet (frozen at 0) simply never appears
+    // instead of flashing on then off. (Harmless to leave these inline styles
+    // set afterwards — this whole card is destroyed in pendingSettle below.)
+    if (grid.classList.contains("is-entrance")) {
+      grid.querySelectorAll(".aw-otb-box").forEach(b => {
+        const cs = getComputedStyle(b);
+        b.style.opacity = cs.opacity;
+        b.style.transform = cs.transform;
+      });
+    }
+    // (b) GRID-LEVEL: is-exiting's keyframe reads --otb-fade-from as its start
+    // (see open-the-box.css) — fine as a plain 1 when the grid was sitting
+    // idle, but if a close's own `is-appearing-fade` was interrupted mid-fade
+    // (the đợt 24 80%-early-tap window above), the grid's REAL current
+    // opacity is wherever that fade-in had reached (measured: ~0.7 at the
+    // earliest possible re-tap moment), not 1. Feed the actual live value in
+    // instead of letting the keyframe assume 1 — in the common uninterrupted
+    // case getComputedStyle just reads back 1, so nothing changes there.
+    grid.style.setProperty("--otb-fade-from", getComputedStyle(grid).opacity);
+    grid.classList.remove("is-entrance", "is-appearing-fade");
+    grid.style.removeProperty("--otb-fade-delay");
     grid.style.setProperty("--otb-fade-ms", ZOOM_TRANSFORM_MS + "ms");
     grid.classList.add("is-exiting");
     grid.style.pointerEvents = "none";

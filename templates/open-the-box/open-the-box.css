@@ -273,7 +273,15 @@
 .aw-otb-grid.is-exiting {
   animation: aw-otb-box-fade-out var(--otb-fade-ms, 1200ms) ease forwards;
 }
-@keyframes aw-otb-box-fade-out { from { opacity: 1; } to { opacity: 0; } }
+/* Đợt 26: `from` reads a JS-set custom property instead of a hard-coded 1.
+   Normally the grid really is at opacity 1 when this starts (default 1, same
+   visible result). But if this open interrupts an in-flight CLOSE fade-in
+   (đợt 24's 80%-early-tap window — is-appearing-fade below, not yet finished),
+   the grid's REAL current opacity is wherever that fade-in had reached, not 1;
+   animateOpen() in open-the-box.js measures it and writes --otb-fade-from right
+   before swapping classes, so the fade-out picks up from there instead of
+   forcing a snap-to-1 flash first. See the long comment there. */
+@keyframes aw-otb-box-fade-out { from { opacity: var(--otb-fade-from, 1); } to { opacity: 0; } }
 
 /* CLOSE: the number boxes fade back IN while the question tile shrinks back
    onto its box — the exact reverse of OPEN (teacher's request). Same span via

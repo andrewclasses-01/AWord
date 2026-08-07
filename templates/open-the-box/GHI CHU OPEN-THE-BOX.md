@@ -1,6 +1,63 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 25 + 25b, v0.9.57) — ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI ANIMATION BỊ CẮT Ở 840ms) + SLOGAN "OPEN THE BOX IN ANDREW CLASSES" Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px LÚC MỞ Ô ĐẦU. KHÔNG ĐỤNG CORE. (thầy duyệt → commit + push + live)
+## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT — 7/8/2026 (Đợt 26, v0.9.63 dự kiến) — SỬA 2 LỖI "Ô SỐ FADE KHỰC MỘT CÁI" KHI CHẠM SỚM. KHÔNG ĐỤNG CORE. (mới ở LOCAL, chưa commit)
+
+## Đợt 26 (7/8/2026, v0.9.63 dự kiến) — SỬA 2 LỖI SNAP KHI FADE LƯỚI Ô SỐ — 🟢 CHỜ THẦY DUYỆT (chưa commit)
+
+> Chỉ sửa 2 file template: `open-the-box.js` (trong `animateOpen()`) + `open-the-box.css` (keyframe
+> `aw-otb-box-fade-out`). **KHÔNG đụng core.** Thầy báo: "khi chọn 1 ô số, các ô số khác đáng lẽ fade dần
+> nhưng có trường hợp lại xuất hiện hoặc biến mất khực một cái, không mượt."
+
+### Điều tra — 2 lỗi RIÊNG BIỆT, cùng một họ (đổi animation CSS giữa chừng làm trình duyệt nhảy về giá trị
+### `from` thay vì tiếp tục mượt từ vị trí hiện tại), nhưng ở 2 tình huống khác nhau
+
+**Lỗi A — chạm ô khi lưới còn đang "nảy vào" lúc mới bấm Play.** Lưới đầu tiên nảy vào theo nhạc
+(`is-entrance`, mỗi ô một animation `fill-mode:both` + `animation-delay` riêng), kéo dài tới
+`ENTRANCE_MUSIC_MS` = 2460ms. Chạm 1 ô TRONG lúc đó (rất dễ xảy ra) làm `animateOpen()` gỡ
+`grid.classList.remove("is-entrance")` ngay lập tức — với animation `fill-mode:both`, ô nào chưa tới lượt
+(còn giữ `opacity:0/scale:.72` nhờ giữ trạng thái "from") hay đang nảy dở, khi gỡ animation thì KHÔNG còn gì
+giữ giá trị đó nữa → nhảy thẳng về mặc định `opacity:1/transform:none` tức thì, RỒI mới bắt đầu fade ra (vì
+`is-exiting` chỉ chạy Ở CẤP LƯỚI từ Đợt 25, không cứu được từng ô). Đúng triệu chứng "xuất hiện khực một cái".
+
+**Lỗi B — chạm ô kế tiếp nhanh trong lúc lưới đang fade-in trở lại sau khi đóng câu hỏi trước.** Đợt 24 cố ý
+cho mở khoá chạm ô mới sớm, ở 80% animation đóng (để nhạy tay) — lúc đó lưới vẫn còn đang chạy
+`is-appearing-fade` (đo thật: ở đúng mốc mở khoá 80%×1200=960ms, animation đó mới đi được ~70% quãng
+đường tính từ lúc bắt đầu ở delay 400ms, tức lưới đang ở opacity ~0,7, CHƯA xong). `animateOpen()` cũ chỉ
+thêm `is-exiting` mà KHÔNG gỡ `is-appearing-fade`, và keyframe `is-exiting` viết cứng `from{opacity:1}` —
+khi 2 animation cùng nhắm `opacity` trên cùng phần tử, trình duyệt buộc lưới nhảy về đúng `opacity:1` (dù
+thực tế đang ~0,7) trước khi mới fade xuống 0. Đúng triệu chứng "biến mất khực một cái" — cả lưới chớp sáng
+lên rồi mới mờ đi.
+
+### Sửa
+
+**Lỗi A** — trong `animateOpen()`, TRƯỚC khi gỡ `is-entrance`: nếu lưới đang có class đó, đọc
+`getComputedStyle` opacity + transform THỰC TẾ của từng ô rồi ghim làm inline style. Gỡ class lúc đó chỉ là
+thao tác vô hình (giá trị đã bị ghim y hệt), và fade cấp lưới (opacity lưới 1→0) sau đó nhân với opacity ĐÃ
+ghim của từng ô — ô nào ghim ở 0 thì cứ đứng yên vô hình suốt, không còn chớp lên nữa.
+
+**Lỗi B** — đọc `getComputedStyle(grid).opacity` THỰC TẾ ngay trước khi đổi class, ghi vào biến CSS mới
+`--otb-fade-from`; keyframe `aw-otb-box-fade-out` trong `open-the-box.css` đổi `from{opacity:1}` →
+`from{opacity:var(--otb-fade-from,1)}`. Đồng thời gỡ hẳn `is-appearing-fade` + xoá `--otb-fade-delay` cũ
+(tránh rò sang lần fade sau). Trường hợp KHÔNG bị ngắt quãng (đa số các lần chạm), `getComputedStyle` đọc lại
+đúng `1` — hành vi y hệt trước, không đổi gì.
+
+### Tự test (devserver `aword` :5510, đo DOM/computed style — pane preview không chạy animation thật,
+### `visibilityState:"hidden"` đóng băng animation hoàn toàn, đúng bẫy đã ghi từ Đợt 25, nên đây là kịch bản
+### XẤU NHẤT có thể xảy ra: mọi animation kẹt nguyên ở giá trị "from" cho tới khi bị ngắt)
+
+- **Lỗi A**: chạm ô 0 ngay khi `is-entrance` vẫn đang active (9 ô, mọi ô đang kẹt ở `opacity:0`,
+  `transform:matrix(0.72,...)` vì animation đứng yên trong pane) → sau khi chạm: `grid` đổi đúng
+  `"aw-otb-grid is-exiting"`, và **cả 9 ô đều có inline `opacity:"0"` + `transform:matrix(0.72,...)`** — đúng
+  y hệt giá trị TRƯỚC khi gỡ class, xác nhận đã ghim đúng, không có bước nào nhảy về 1.
+- **Lỗi B**: chơi thật 1 vòng (mở ô 0 → chờ hết gate → bấm 1 đáp án SAI → 1400ms sau `closeCardThen` dựng
+  lưới mới `is-appearing-fade`, kẹt ở `opacity:"0"`) → chạm ô kế NGAY lúc đó: `grid` đổi đúng
+  `"aw-otb-grid is-exiting"`, **`--otb-fade-from` đọc lại đúng `"0"`** (giá trị thật lúc ngắt, không phải 1
+  cứng), `--otb-fade-delay` cũ đã bị xoá sạch (chuỗi rỗng).
+- **Hồi quy đường KHÔNG ngắt quãng**: chờ trọn 3s cho lưới nảy vào xong xuôi rồi mới chạm ô 0 →
+  `--otb-fade-from` đọc lại đúng **`"1"`** — y hệt hành vi cũ, 0 lỗi console.
+- Mount lại Quiz sau Open the box (bẫy rò CSS Đợt 22): 0 lỗi console.
+- **Việc kế: thầy chơi thử trên máy thật** (tốt nhất bấm ô ngay lúc lưới còn đang nảy vào, và bấm ô kế thật
+  nhanh ngay sau khi vừa trả lời xong) → xác nhận 2 ca trên hết chớp/khực → duyệt → commit + push + live.
 
 ## Đợt 25 (7/8/2026, v0.9.57) — MƯỢT HOÁ ZOOM MỞ + SLOGAN Ở THANH DƯỚI — ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH + LIVE (Pages tự build, `curl` xác nhận sau 23 giây)
 
