@@ -4,7 +4,8 @@
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **7/8/2026 (Đợt 82, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI + SLOGAN
-> Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH +
+> LIVE (Pages tự build, `curl` xác nhận sau **23 giây** — đúng quy trình mục 0 điểm 3, không cần 0-TER).**
 > Chỉ 2 file template. **(1)** ⭐ Chỗ "vài
 > frame cuối khựng" **là LỖI CODE, không phải máy yếu**: `zoomElFrom` (chiều MỞ) chạy 3 transition
 > (`transform` 1200ms · `opacity` **840ms** · `border-radius` 1200ms) nhưng dọn dẹp bằng

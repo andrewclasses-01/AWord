@@ -2,7 +2,7 @@
 
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 25 + 25b, v0.9.57) — ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI ANIMATION BỊ CẮT Ở 840ms) + SLOGAN "OPEN THE BOX IN ANDREW CLASSES" Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px LÚC MỞ Ô ĐẦU. KHÔNG ĐỤNG CORE. (thầy duyệt → commit + push + live)
 
-## Đợt 25 (7/8/2026, v0.9.57) — MƯỢT HOÁ ZOOM MỞ + SLOGAN Ở THANH DƯỚI — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+## Đợt 25 (7/8/2026, v0.9.57) — MƯỢT HOÁ ZOOM MỞ + SLOGAN Ở THANH DƯỚI — ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH + LIVE (Pages tự build, `curl` xác nhận sau 23 giây)
 
 > Chỉ sửa 2 file template: `open-the-box.js` + `open-the-box.css`. **KHÔNG đụng core.** Thầy gửi 2 yêu cầu
 > 1 lượt: (1) "khi zoom từ ô số ra ô câu hỏi lớn, vài frame cuối hơi khựng và giật, muốn mượt từ đầu tới

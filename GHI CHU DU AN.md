@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 82 (7/8/2026, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI THẬT: ANIMATION BỊ HUỶ Ở 840ms) + SLOGAN Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+## Đợt 82 (7/8/2026, v0.9.57) — OPEN THE BOX: ZOOM MỞ Ô MƯỢT TỪ ĐẦU TỚI CUỐI (SỬA LỖI THẬT: ANIMATION BỊ HUỶ Ở 840ms) + SLOGAN Ở CHỖ NÚT NEXT/BACK CŨ + KHUNG HẾT CO 3px. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `b6e7a12` + PUSH + LIVE (23 GIÂY)
 
 Thầy gửi 2 yêu cầu 1 lượt cho **Open the box**. Chỉ đụng 2 file template (`open-the-box.js` +
 `open-the-box.css`) — **KHÔNG đụng core**. Chi tiết đầy đủ + mọi số đo: `templates/open-the-box/GHI CHU
