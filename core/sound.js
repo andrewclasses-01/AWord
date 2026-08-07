@@ -36,12 +36,16 @@ function tone({ freq, freqEnd = null, dur, type = "sine", gain = 0.15, delay = 0
 // URL is resolved RELATIVE TO THIS FILE (works from any page depth or host subpath).
 const WRONG_MP3 = new URL("./assets/sounds/oh-my-god-meme.mp3", import.meta.url).href;
 let wrongAudio = null;
+function wrongEl() {
+  if (!wrongAudio) {
+    wrongAudio = new Audio(WRONG_MP3);
+    wrongAudio.preload = "auto";
+  }
+  return wrongAudio;
+}
 function playWrongFile() {
   try {
-    if (!wrongAudio) {
-      wrongAudio = new Audio(WRONG_MP3);
-      wrongAudio.preload = "auto";
-    }
+    wrongEl();
     wrongAudio.currentTime = 0;
     // if the file fails for any reason, fall back to a low "womp" tone
     wrongAudio.play().catch(() => tone({ freq: 220, freqEnd: 110, dur: 320, type: "sawtooth", gain: 0.11 }));
@@ -94,5 +98,48 @@ export const sound = {
     tone({ freq: 160, dur: 140, type: "square", gain: 0.09, delay: 120 });
   },
   isMuted() { return muted; },
-  toggle()  { muted = !muted; return muted; }
+  toggle()  { muted = !muted; return muted; },
+
+  // The SHARED AudioContext. Templates that synthesize their own sounds
+  // (crossword, running word, running team) used to each build a private
+  // context — and a fresh context makes its FIRST sound arrive ~37 ms late while
+  // the output device spins up (measured: 48 ms vs 10.7 ms). Borrowing this one
+  // means they inherit the warm-up below and start in time. (Đợt 85, 7/8/2026)
+  context() { return ac(); },
+
+  // ----- WAKE THE AUDIO DEVICE (Đợt 85, 7/8/2026) -----
+  // The AudioContext above is built lazily inside the FIRST tone() call, and the
+  // very first sound of a page therefore also pays for starting the output
+  // device. Measured on the teacher's machine: first synthesized tone 48 ms,
+  // every tone after it 10.7 ms. warmup() pays that 37 ms in advance:
+  // it builds + resumes the context, pushes one SILENT sample through it so the
+  // device is actually spun up, and creates the wrong-answer element so its file
+  // starts downloading too. Safe to call any number of times.
+  // (Template mp3 packs warm themselves up — see core/sfx.js prime().)
+  warmup() {
+    try {
+      const a = ac();
+      if (a.state === "suspended") a.resume();
+      const src = a.createBufferSource();
+      src.buffer = a.createBuffer(1, 1, a.sampleRate);   // 1 silent frame
+      src.connect(a.destination);
+      src.start(0);
+      wrongEl();
+    } catch { /* browser blocked audio — nothing to warm up */ }
+  }
 };
+
+// An AudioContext may only start inside a user gesture, so hook the FIRST one
+// anywhere on the page (capture phase, so it lands before the button's own
+// click handler). On the teacher's side that gesture is opening the activity,
+// long before PLAY; on the student page it is the PLAY press itself, which still
+// gets the device started a few ms ahead of the intro sound.
+if (typeof window !== "undefined") {
+  const wake = () => {
+    sound.warmup();
+    window.removeEventListener("pointerdown", wake, true);
+    window.removeEventListener("keydown", wake, true);
+  };
+  window.addEventListener("pointerdown", wake, true);
+  window.addEventListener("keydown", wake, true);
+}

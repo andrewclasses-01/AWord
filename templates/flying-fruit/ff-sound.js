@@ -13,37 +13,23 @@
 // global sound toggle like everything else).
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name, volume) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    if (volume != null) a.volume = volume;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// Random-variant pool (avoid repeating the same file twice in a row).
-function makePool(names, volume) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i], volume);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. ./sounds/music.mp3 is in the folder but this template never
+// plays it, so it is left out and never downloaded.
+const pack = createPack(import.meta.url, {
+  names: ["intro", "restart", "correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "timesup", "gamecompleted", "gameover", "leaderboard", "menu", "reveal",
+          "frog", "toucan", "monkey"],
+  hot:   ["correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "frog", "toucan", "monkey"]
+});
+const playFile = pack.play;    // (name, volume?)
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 export const ffSound = {
   // engine lifecycle hooks (registerTemplate.sounds)

@@ -172,6 +172,70 @@ thôi truyền `null`. Đo lại: dựng lúc disabled → bấm **0 lần ăn**
 
 → **Từ nay template được tự do dựng bàn phím ở bất kỳ trạng thái nào**, kể cả khi mọi phím đang khoá.
 
+## ⭐⭐ ÂM THANH — NẠP TRƯỚC cả pack, đừng tạo `<audio>` lúc cần phát (Đợt 85, 7/8/2026)
+
+**Triệu chứng thầy báo:** gần như MỌI hiệu ứng âm thanh đều trễ so với hình; chơi được một lúc,
+hoặc bấm Start again, thì mới khớp.
+
+**Nguyên nhân:** cả 14 template đều chép chung một khuôn, tạo `<audio>` **đúng lúc cần phát**:
+
+```js
+if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
+a.currentTime = 0; a.play();
+```
+
+Nên LẦN ĐẦU của mỗi tên file phải **đi mạng lấy file rồi mới kêu**. Đo trên bản live:
+**lần đầu 67–363ms, các lần sau 5–19ms**. Một game có 10–47 file → cả lượt chơi đầu tiên lệch tiếng,
+tới khi mỗi file đã kêu một lần thì hết. Khớp chính xác điều thầy mô tả.
+
+**KHÔNG phải do định dạng.** Đã đo 8 cặp `.ogg` gốc của Wordwall ↔ `.mp3` của AWord: khoảng lặng đầu
+file **chênh 0ms** (Chrome tự cắt phần đệm mã hoá của MP3 nhờ header LAME), chi phí giải mã ngang nhau.
+Wordwall khớp tiếng là nhờ nó **nạp trước**, không phải nhờ ogg. Đừng tốn công đổi sang ogg/wav.
+
+**Cách làm đúng — `core/sfx.js`:**
+
+```js
+import { createPack } from "../../core/sfx.js";
+
+const pack = createPack(import.meta.url, {
+  names: [...],        // MỌI file template này phát
+  hot:   [...],        // các tiếng nổ ra TRONG lúc chơi — xếp hàng tải trước
+  skip:  ["music"]     // nhạc nền dài: phát kiểu stream, đừng kéo trước cho nghẽn đường
+});
+const playFile = pack.play;   // (name, volume?)
+const makePool = pack.pool;   // (names, volume?) — chọn ngẫu nhiên, không lặp lại liền
+pack.prime();                 // ⭐ ĐÂY là bản vá
+```
+
+`prime()` chạy ngay lúc module được **import**, mà `ensureTemplate()` import module **trước khi** màn
+READY được vẽ → tới lúc thầy bấm PLAY thì file đã nằm sẵn. **Đo sau khi vá: 8ms cho lần đầu** (so với
+67,5ms). Nạp 4 file một lúc (`PRIME_CONCURRENCY`) để pack 47 file không giành hết đường truyền lớp học.
+
+**Số đo chống lại các phương án khác** (đừng làm lại từ đầu):
+- Giải mã sẵn ra AudioBuffer của Web Audio: **6,7ms** — nhanh hơn 1,3ms nhưng tốn **3,6–49MB RAM** mỗi
+  pack (gameshow 47 file = 49,3MB nếu giải mã hết). Không đáng.
+- Sợ nhiều `<audio>` sống cùng lúc bị Chrome thu hồi: đã đo **200 element** cùng lúc, cái CŨ NHẤT vẫn
+  phát trong **11ms**, `readyState 4`. Không cần cơ chế LRU.
+
+**Luật cho template về sau:**
+1. **KHÔNG tự viết `new Audio()`/`audioFor`/`makePool` nữa** — dùng `createPack`. Ngoại lệ duy nhất
+   hiện có là nhạc nền lặp của Gameshow (một element riêng, cố ý stream).
+2. **Khai đủ `names`.** Thiếu tên nào thì đúng tiếng đó lại trễ như cũ — và **im lặng**, vì nó vẫn kêu.
+   File nằm trong `./sounds/` nhưng template không dùng thì **đừng khai** (khỏi tải phí).
+3. **Template tự tổng hợp tiếng bằng Web Audio** (crossword, running word, running team) phải dùng
+   **`coreSound.context()`**, đừng `new AudioContext()` riêng: context mới toanh làm tiếng ĐẦU TIÊN trễ
+   ~37ms (đo: 48ms so với 10,7ms) vì phải khởi động thiết bị âm thanh.
+4. `core/sound.js` tự gọi **`warmup()`** ở cú chạm/gõ phím ĐẦU TIÊN trên trang (nghe ở pha capture) —
+   dựng + resume context, đẩy 1 mẫu câm cho thiết bị chạy. Không phải gọi tay, và **đừng gỡ** cái hook đó.
+5. Kiểm nhanh xem pack đã sẵn sàng chưa: `window.__awSfxPacks.map(p => p.stats())` →
+   `{total, built, ready, primed}`; `ready === total` là đủ.
+
+⚠️ **File mp3 của pack đã được nén lại ở LAME VBR `-q:a 6`** (Đợt 85): 10,25MB → **6,42MB (nhỏ hơn 37%)**,
+độ dài và khoảng lặng đầu file giữ nguyên. Thêm file mới thì nén cùng mức cho đồng bộ.
+⚠️ **ĐỪNG ghép file theo ĐỘ DÀI.** Bản đầu của đợt này định lấy lại `.ogg` gốc để đỡ một đời nén, ghép
+ogg↔mp3 bằng cách so độ dài — kết quả **57 file bị thay bằng âm thanh KHÁC hẳn cùng độ dài** (chỉ
+GAMESHOW và MAZE CHASE có ogg gốc, vậy mà anagram/whack-a-mole cũng "khớp"). Độ dài không phải danh tính.
+
 ## ⚠️ BẪY CSS (v0.9.1) — làm mờ "mọi thứ trừ một vùng"
 
 Muốn làm nổi 1 vùng và làm mờ phần còn lại thì luật làm-mờ phải dùng **con trực tiếp `>`**, không
@@ -298,7 +362,11 @@ core/
 ├─ scoring.js         ← computeResult(raw, seconds), rankCompare(a,b)
 ├─ leaderboard.js     ← lưu kết quả trên máy (localStorage), theo activityId
 ├─ confetti.js        ← confettiBurst(container) — hiệu ứng pháo giấy "Game complete"
-├─ sound.js           ← sound.correct()/wrong()/fanfare()/toggle()/isMuted()
+├─ sound.js           ← sound.correct()/wrong()/fanfare()/toggle()/isMuted() + AudioContext
+│                        DÙNG CHUNG: context() và warmup() (xem mục "ÂM THANH")
+├─ sfx.js             ← createPack(import.meta.url, {names, hot, skip}) — kho mp3 dùng chung
+│                        cho MỌI template: play/pool/stop/durationMs/el/prime/stats.
+│                        ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
 ├─ icons.js           ← bộ icon SVG dùng chung (menu, prev, next, sound, fullscreen, check, cross,
 │                        close, options, template, style, edit, assignment, print, playBig,
 │                        markCheck, markCross)

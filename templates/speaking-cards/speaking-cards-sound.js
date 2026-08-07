@@ -13,56 +13,36 @@
 // Board Games = the AWord "Classic" look for this template (teacher's call, 1/8/2026).
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name, volume = 1) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    a.volume = volume;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
+// Đợt 85 (7/8/2026) — the whole pack is fetched at IMPORT time (prime() below),
+// not one file at a time on its first play. See core/sfx.js. This template was
+// the one that already hinted at the fix: it used to warm up intro-01 and
+// shuffle-01 by hand at the bottom of the file, because it needs their
+// `.duration` to time a visual — now every file gets that treatment.
+const pack = createPack(import.meta.url, {
+  names: ["intro-01", "shuffle-01",
+          "tileappear-01", "tileappear-02", "tileappear-03",
+          "tileflip-01", "tileflip-02", "tileflip-03", "tileflip-04", "tileflip-05", "tileflip-06",
+          "restart-01", "timesup-01", "menu-01", "menusubtle-01"],
+  hot:   ["intro-01", "shuffle-01",
+          "tileappear-01", "tileappear-02", "tileappear-03",
+          "tileflip-01", "tileflip-02", "tileflip-03"]
+});
+const playFile = (name, volume = 1) => pack.play(name, volume);
+const makePool = (names, volume = 1) => pack.pool(names, volume);
+pack.prime();
 
 // Stop a sound early (e.g. cut the long shuffle clip at its halfway point so it
 // matches the shortened riffle animation).
-export function stopSound(name) {
-  try { const a = cache.get(name); if (a) { a.pause(); a.currentTime = 0; } } catch { /* ignore */ }
-}
+export function stopSound(name) { pack.stop(name); }
 
 // The true length of a sound file, in ms — so a VISUAL effect can be made to
 // last exactly as long as its sound (the intro camera pan runs for the intro
 // sound; the deck's shuffle riffle repeats until the shuffle sound ends).
-// Returns `fallbackMs` until the file's metadata has loaded (preload="auto" +
-// the warm-up at the bottom of this file means it usually already has).
-export function soundDurationMs(name, fallbackMs = 0) {
-  try {
-    const d = audioFor(name).duration;
-    return (isFinite(d) && d > 0) ? Math.round(d * 1000) : fallbackMs;
-  } catch { return fallbackMs; }
-}
-
-// One random file from a same-purpose pool — never the same one twice in a
-// row so dealing several cards quickly doesn't sound robotic.
-function makePool(names, volume = 1) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i], volume);
-  };
-}
+// prime() means the metadata is normally already there, so `fallbackMs` is now
+// only a safety net.
+export function soundDurationMs(name, fallbackMs = 0) { return pack.durationMs(name, fallbackMs); }
 
 export const scSound = {
   intro:      () => playFile("intro-01"),                                       // 01 — Play pressed
@@ -75,8 +55,3 @@ export const scSound = {
   menu:       () => playFile("menu-01"),                                        // 07 — open menu / bottom-bar button
   menuSubtle: () => playFile("menusubtle-01")                                   // 08 — minor menu action (Undo)
 };
-
-// Warm up the two files we time visuals against, so their `.duration` is ready
-// the moment we need it (soundDurationMs) instead of on the first play.
-audioFor("intro-01");
-audioFor("shuffle-01");

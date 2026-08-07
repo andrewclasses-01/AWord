@@ -26,11 +26,10 @@
 
 import { sound as coreSound } from "../../core/sound.js";
 
-let actx = null;
-function ac() {
-  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-  return actx;
-}
+// Borrow the SHARED context from core/sound.js (Đợt 85) instead of building a
+// private one: a brand-new context makes its first sound ~37 ms late (48 ms vs
+// 10.7 ms measured), and the shared one is warmed up on the first tap.
+function ac() { return coreSound.context(); }
 
 // One oscillator note. `freqEnd` glides the pitch across the note.
 function tone({ freq, freqEnd = null, dur, type = "sine", gain = 0.15, delay = 0, attack = 0.004 }) {

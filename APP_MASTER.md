@@ -3,7 +3,52 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 84, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG
+> Cập nhật lần cuối: **7/8/2026 (Đợt 85, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK MP3 + HÂM NÓNG
+> AUDIOCONTEXT + NÉN LẠI 310 FILE. ⭐ CÓ SỬA CORE (1 file MỚI `core/sfx.js` + `core/sound.js`; KHÔNG đụng
+> `engine.js`). 🟢 CHỜ THẦY DUYỆT, CHƯA COMMIT.**
+> **Thầy báo:** gần như MỌI hiệu ứng âm thanh đều trễ so với hình; chơi một lúc hoặc bấm Start again mới khớp.
+> Thầy đoán do AWord dùng mp3 còn Wordwall dùng ogg.
+> ⭐ **ĐÃ BÁC BỎ GIẢ THUYẾT ĐỊNH DẠNG bằng số đo:** giải mã 8 cặp `.ogg` gốc Wordwall ↔ `.mp3` của AWord,
+> khoảng lặng đầu file **chênh 0ms** (Chrome tự cắt phần đệm mã hoá MP3 nhờ header LAME), chi phí giải mã
+> ngang nhau (3–20ms). **Định dạng KHÔNG gây trễ** — Wordwall khớp tiếng là nhờ NẠP TRƯỚC.
+> ⭐ **GỐC LỖI THẬT:** cả 14 template chép chung một khuôn tạo `<audio>` **đúng lúc cần phát**
+> (`if (!a) { a = new Audio(urlFor(name)) … } a.play()`), nên LẦN ĐẦU của mỗi tên file phải đi mạng lấy file
+> rồi mới kêu. **Đo trên BẢN LIVE: lần đầu 67–363ms (TB 143ms), các lần sau 5–19ms**; kéo file lạnh từ
+> GitHub Pages tốn **290–654ms**, và header live là `Cache-Control: max-age=600` nên cứ 10 phút lại phải hỏi
+> lại server (~55–80ms). Một game có 10–47 file → cả lượt chơi ĐẦU lệch tiếng, tới khi mỗi file kêu một lần
+> thì hết. Khớp chính xác điều thầy tả. Chạy trên localhost thì **mọi đường đều ~6ms** → chứng minh code không
+> chậm, chỉ có MẠNG nằm trên đường đi của tiếng.
+> ⭐ **BẢN VÁ 3 phần.** **(1)** File MỚI `core/sfx.js`: `createPack(import.meta.url, {names, hot, skip})` →
+> `play/pool/stop/durationMs/el/prime/stats`. `prime()` chạy ngay lúc module âm thanh được **import**, mà
+> `ensureTemplate()` import **trước khi** màn READY được vẽ → tới lúc thầy bấm PLAY thì file đã nằm sẵn; nạp
+> 4 file một lúc để pack 47 file không giành hết đường truyền lớp học. 14 file `*-sound.js` chuyển sang dùng
+> nó, **giữ nguyên tên `playFile`/`makePool`** nên khối export của từng game **không đổi một dòng**.
+> **(2)** `core/sound.js` thêm `context()` + `warmup()`: `warmup()` tự chạy ở cú **chạm/gõ phím ĐẦU TIÊN**
+> trên trang (nghe ở pha capture) — dựng + resume AudioContext, đẩy 1 mẫu câm cho thiết bị chạy; và crossword
+> · running-word · running-team thôi dựng AudioContext RIÊNG, dùng chung context này. Nhờ vậy **KHÔNG phải
+> sửa `engine.js`**. **(3)** Nén lại **310 file mp3** ở LAME VBR `-q:a 6`: **10,25MB → 6,42MB (nhỏ hơn 37%)**.
+> ⭐ **SỐ ĐO SAU KHI VÁ:** lần đầu **6,2ms** (trước 67,5ms) · tiếng tổng hợp **48ms → 10,7ms** · trên trang
+> thật gameshow **46/46 file sẵn sàng sau 1,1 giây** trong khi màn READY còn nguyên, chưa ai bấm PLAY ·
+> **16/16 template mount, 0 lỗi console** · 14 pack đều **ready = total** · nút tắt tiếng vẫn ăn (bật 1 / tắt
+> 0 / bật lại 1). Nén: **310/310 file vẫn ĐÚNG âm thanh cũ** (SNR trung bình 26,9dB — nếu bị thay nhầm sẽ ~0dB),
+> **độ dài lệch 0ms**, khoảng lặng đầu file lệch **≤ 0,4ms**.
+> ⚠️ **SỐ ĐO CHỐNG LẠI PHƯƠNG ÁN KHÁC (đừng làm lại):** giải mã sẵn ra AudioBuffer của Web Audio chỉ nhanh hơn
+> **1,3ms** (6,7 so với 8,0) mà tốn **3,6–49MB RAM mỗi pack** (gameshow 47 file = 49,3MB) → bỏ. Sợ nhiều
+> `<audio>` bị Chrome thu hồi: đã đo **200 element** cùng lúc, cái CŨ NHẤT vẫn phát trong **11ms**,
+> `readyState 4` → không cần cơ chế LRU.
+> ⚠️ **LỖI TỰ GÂY RA RỒI TỰ BẮT (ghi lại để đừng lặp):** bản nén đầu tiên định lấy lại `.ogg` gốc cho đỡ một
+> đời nén, ghép ogg↔mp3 **bằng cách so ĐỘ DÀI** → **57 file bị thay bằng âm thanh KHÁC hẳn** cùng độ dài (chỉ
+> GAMESHOW và MAZE CHASE có ogg gốc, vậy mà anagram/whack-a-mole/balloon-pop cũng "khớp"). **Độ dài không phải
+> danh tính.** Đã khôi phục từ backup và nén lại, mỗi file từ CHÍNH NÓ; rồi viết hẳn một bước kiểm chứng
+> nội dung (trừ sóng cũ − sóng mới, so mức còn lại) chạy trên **cả 310 file** để chốt không file nào bị đổi.
+> ⚠️ **BẪY ĐO MỚI:** pane preview có `visibilityState = "hidden"` nên **`requestAnimationFrame` bị đóng băng
+> hoàn toàn** — mọi bàn đo dò thời điểm bằng rAF sẽ treo, không ra một dòng kết quả nào. Phải dò trên
+> **audio thread** (`ScriptProcessorNode`) và tính giờ bằng **`ctx.currentTime`**. Và **`readyState` đọc ngay
+> lúc gọi `play()` hay ra 1** (không phải chưa tải xong): `currentTime = 0` khởi động một cú seek, đọc lại sau
+> khi seek xong là **4**. Backup 310 file gốc: `D:\APP AND DATA\AWord-data\Backup\sounds-truoc-khi-nen-07-08-2026`.
+> Luật đầy đủ cho template về sau: `core/HUONG DAN CORE.md` mục "ÂM THANH". Chi tiết: `GHI CHU DU AN.md` Đợt 85.
+>
+> Trước đó: **7/8/2026 (Đợt 84, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG
 > NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. ✅ THẦY DUYỆT → COMMIT `797670b` + PUSH + LIVE
 > (Đợt 83 = `cf3865b`, tách 2 commit riêng).** File mới
 > `core/mistakes.js` + `core/engine.js` + 12 file template. Bảng kết quả có thêm **"Start with mistakes"**

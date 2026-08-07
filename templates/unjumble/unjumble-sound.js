@@ -19,37 +19,28 @@
 //   play/restart/timeWarning/complete = intro/restart/timesup/gamesuccessful
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// One random file from a same-purpose pool — never the same one twice in a
-// row, so rapid repeats (dragging several words fast) don't sound identical.
-function makePool(names) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i]);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. This is the biggest one-shot pack (37 files: 8 pickups,
+// 8 drops, 4×4 verdicts) and every one of them fires while dragging words, so
+// almost the whole pack is hot.
+const pack = createPack(import.meta.url, {
+  names: ["pickup1", "pickup2", "pickup3", "pickup4", "pickup5", "pickup6", "pickup7", "pickup8",
+          "drop1", "drop2", "drop3", "drop4", "drop5", "drop6", "drop7", "drop8",
+          "correct1", "correct2", "correct3", "correct4",
+          "fastcorrect1", "fastcorrect2", "fastcorrect3", "fastcorrect4",
+          "incorrect1", "incorrect2", "incorrect3", "incorrect4",
+          "fastincorrect1", "fastincorrect2", "fastincorrect3", "fastincorrect4",
+          "perfect", "intro", "restart", "timesup", "gamecompleted"],
+  hot:   ["pickup1", "pickup2", "pickup3", "pickup4",
+          "drop1", "drop2", "drop3", "drop4",
+          "correct1", "correct2", "incorrect1", "incorrect2",
+          "fastcorrect1", "fastincorrect1"]
+});
+const playFile = pack.play;    // (name, volume?)
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 export const unjumbleSound = {
   pickup: makePool(["pickup1", "pickup2", "pickup3", "pickup4", "pickup5", "pickup6", "pickup7", "pickup8"]),

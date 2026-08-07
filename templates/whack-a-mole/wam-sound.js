@@ -11,37 +11,26 @@
 // NOT wired up (no engine hook / left for later): Menu, MenuSubtle.
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name, volume) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    if (volume != null) a.volume = volume;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// Random-variant pool (avoid repeating the same file twice in a row).
-function makePool(names, volume) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i], volume);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. At Speed 10 a mole pops every 170 ms, so the 7 mole sounds
+// plus both verdict sets are hot.
+const pack = createPack(import.meta.url, {
+  names: ["intro", "go", "clocktick",
+          "mole-01", "mole-02", "mole-03", "mole-04", "mole-05", "mole-06", "mole-07",
+          "correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "combo", "disappear", "crate", "time", "loot", "power",
+          "tablerotation-01", "tablerotation-02",
+          "levelcomplete", "nextlevel", "pointscounting", "pointscounted", "reveal"],
+  hot:   ["mole-01", "mole-02", "mole-03", "mole-04", "mole-05", "mole-06", "mole-07",
+          "correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03", "disappear", "clocktick"]
+});
+const playFile = pack.play;    // (name, volume?)
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 export const wamSound = {
   // engine lifecycle hooks (registerTemplate.sounds)

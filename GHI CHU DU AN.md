@@ -5,6 +5,172 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 85 (7/8/2026, v0.9.60) — ⭐ HẾT TRỄ ÂM THANH: NẠP TRƯỚC CẢ PACK + HÂM NÓNG AUDIOCONTEXT + NÉN LẠI 310 FILE MP3. ⭐ CÓ SỬA CORE (1 file MỚI + `sound.js`; KHÔNG đụng `engine.js`). 🟢 CHỜ THẦY DUYỆT
+
+### Bối cảnh — thầy báo gì
+
+> "Sau một thời gian chơi thử, tôi nhận thấy các hiệu ứng âm thanh hầu như đều bị delay, chỉ khi game đã
+> load, chơi được một lúc và start again thì các hiệu ứng âm thanh mới đồng bộ với hiển thị. Việc này cực kỳ
+> khó chịu." Thầy còn gợi ý: Wordwall dùng file **`.ogg`**, AWord dùng **`.mp3`** — liệu định dạng có liên quan?
+
+### 1. Bác bỏ giả thuyết ĐỊNH DẠNG (làm trước, vì nếu đúng thì cả hướng sửa sẽ khác)
+
+Lấy **8 cặp file cùng một âm thanh gốc**: bản `.ogg` Wordwall tải về (`D:\APP AND DATA\AWord-data\Source\
+Sound effect\...\_goc-ogg\`) và bản `.mp3` đang chạy trong AWord. Giải mã cả hai bằng `decodeAudioData` rồi
+dò **mẫu đầu tiên vượt ngưỡng ồn** (chính xác tới từng sample):
+
+| sound | ogg lead | mp3 lead | chênh |
+|---|---|---|---|
+| answer | 1,8ms | 1,8ms | **0** |
+| correct | 13,4ms | 13,4ms | **0** |
+| incorrect | 7,9ms | 7,9ms | **0** |
+| footsteps-01 | 8,7ms | 8,3ms | −0,4ms |
+| tileappear | 0,1ms | 0,1ms | **0** |
+| clocktick | 1,1ms | 0ms | −1,1ms |
+| menu | 0,3ms | 0,3ms | **0** |
+| teleport | 2,9ms | 3,0ms | +0,1ms |
+
+Chi phí giải mã cũng ngang nhau (3–20ms cả hai). **Kết luận: định dạng KHÔNG gây trễ.** MP3 vốn có phần đệm
+mã hoá ở đầu, nhưng ffmpeg ghi sẵn header LAME nên Chrome tự cắt. Wordwall nghe khớp là nhờ nó **nạp trước**.
+Điểm duy nhất thầy đúng: **mp3 của ta NẶNG hơn gần gấp đôi** bản ogg (`correct` 92KB so với 49KB) — chuyện
+dung lượng, không phải định dạng. (Đã xử lý ở mục 4.)
+
+### 2. Gốc lỗi thật — `<audio>` được sinh ra ĐÚNG LÚC cần phát
+
+Cả 14 template chép chung một khuôn:
+
+```js
+if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
+a.currentTime = 0; a.play();
+```
+
+`new Audio()` chạy **đúng khoảnh khắc em trả lời đúng**, nên lần đầu của mỗi tên file phải đi mạng lấy file
+rồi mới kêu. Đo trên **bản live** (dò tiếng ở audio thread, tính giờ bằng đồng hồ audio):
+
+| | lần đầu | phát lại |
+|---|---|---|
+| pack quiz (9 file) | **67–363ms** (TB 143ms) | **5–19ms** |
+| đối chứng 6 file, mỗi lần một URL lạnh | **67,5ms** đều | — |
+
+Chi phí kéo file từ GitHub Pages: **lạnh 290–654ms**, đã có sẵn kết nối 55–98ms. Header bản live là
+`Cache-Control: max-age=600` → **cứ 10 phút là phải hỏi lại server**. Một game có 10–47 file khác nhau nên cả
+lượt chơi ĐẦU TIÊN lệch tiếng; tới khi mỗi file đã kêu một lần thì hết — **đúng y điều thầy tả**.
+
+⭐ Chạy cùng bàn đo đó trên **localhost** thì **mọi đường đều ~6ms** → chứng minh bản thân code không chậm,
+chỉ có **mạng** nằm trên đường đi của tiếng.
+
+**Nguyên nhân phụ (nhỏ hơn nhưng có thật):** `core/sound.js` dựng AudioContext **lazy ngay trong tiếng đầu
+tiên**, nên tiếng tổng hợp (click/ting/buzz) đầu tiên mất **48ms**, các tiếng sau **10,7ms**. Crossword,
+running-word, running-team mỗi cái còn dựng một AudioContext RIÊNG → mỗi cái lại chịu 37ms đó một lần nữa.
+
+### 3. Bản vá
+
+**(1) File MỚI `core/sfx.js`** — kho mp3 dùng chung:
+
+```js
+const pack = createPack(import.meta.url, { names: [...], hot: [...], skip: ["music"] });
+const playFile = pack.play;   // (name, volume?)   — TÊN CŨ, chữ ký cũ
+const makePool = pack.pool;   // (names, volume?)  — TÊN CŨ, chữ ký cũ
+pack.prime();                 // ⭐ bản vá nằm ở đây
+```
+
+`prime()` chạy ngay lúc module được **import**, mà `ensureTemplate()` import module **trước khi** màn READY
+được vẽ → tới lúc thầy bấm PLAY thì file đã nằm sẵn. Nạp **4 file một lúc** để pack 47 file (gameshow) không
+giành hết đường truyền lớp học; `hot` = các tiếng nổ ra TRONG lúc chơi, xếp hàng trước; `skip` = nhạc nền dài
+(phát kiểu stream, kéo trước chỉ tổ nghẽn). Vì giữ nguyên tên `playFile`/`makePool` nên **khối export của
+từng game không đổi một dòng** — 14 file chỉ thay đúng phần đầu.
+
+**(2) `core/sound.js`** thêm `context()` và `warmup()`. `warmup()` **tự chạy ở cú chạm/gõ phím ĐẦU TIÊN trên
+trang** (nghe ở pha capture): dựng + `resume()` AudioContext, đẩy 1 mẫu **câm** cho thiết bị âm thanh khởi
+động, và tạo sẵn element tiếng "oh my god". Crossword · running-word · running-team thôi dựng context riêng,
+gọi `coreSound.context()` → hưởng luôn cú hâm nóng. ⭐ Nhờ cách này **KHÔNG phải sửa `engine.js`** dòng nào.
+
+**(3) Nén lại 310 file mp3** ở LAME VBR `-q:a 6` (mục 4).
+
+**Thêm móc chẩn đoán** `window.__awSfxPacks` (cùng tinh thần với `window.__awordBridge` sẵn có):
+`p.stats()` → `{total, built, ready, primed}` để phiên sau kiểm chứng được pack đã nạp xong trước PLAY chưa.
+
+### 4. Nén lại pack mp3
+
+Khảo sát trước: 310 file **đều stereo, 44.1kHz** (3 file 32kHz), VBR trung bình ~110–130kbps. Thử đo tỉ lệ
+giữa 2 kênh (`pan=mono|c0=0.5*c0-0.5*c1` + `volumedetect`) — **đa số là stereo THẬT** (kênh chênh −6 đến
+−28dB), chỉ vài file là stereo giả → **không được ép mono hàng loạt**. Nén thử ở `-q:a 6` cho **35–45%**.
+
+Làm thật: sao lưu → nén từng file **từ chính nó** → chỉ giữ bản mới nếu **nhỏ hơn ≥10%** và **độ dài lệch
+≤50ms**. Kết quả **298 file nén, 12 file giữ nguyên**:
+
+| pack | trước | sau | | pack | trước | sau |
+|---|---|---|---|---|---|---|
+| quiz | 289KB | 142KB (−51%) | | maze-chase | 1.190KB | 780KB (−34%) |
+| anagram | 351KB | 188KB (−46%) | | whack-a-mole | 799KB | 507KB (−37%) |
+| crossword | 381KB | 188KB (−51%) | | balloon-pop | 915KB | 691KB (−24%) |
+| find-the-match | 396KB | 196KB (−50%) | | flying-fruit | 753KB | 594KB (−21%) |
+| type-the-answer | 475KB | 244KB (−49%) | | unjumble | 668KB | 488KB (−27%) |
+| open-the-box | 668KB | 398KB (−40%) | | true-false | 306KB | 200KB (−35%) |
+| speaking-cards | 582KB | 332KB (−43%) | | gameshow | 2.483KB | 1.476KB (−41%) |
+
+**TỔNG 10.255KB → 6.423KB (nhỏ hơn 37%).** Backup 310 file gốc:
+`D:\APP AND DATA\AWord-data\Backup\sounds-truoc-khi-nen-07-08-2026`.
+
+### ⚠️ LỖI TỰ GÂY RA RỒI TỰ BẮT — ghép file theo ĐỘ DÀI
+
+Bản nén đầu tiên định "khôn": ở đâu còn `.ogg` gốc thì nén lại **từ ogg** cho đỡ một đời nén, ghép ogg↔mp3
+bằng cách **so độ dài (±30ms) và chỉ nhận khi khớp duy nhất**. Báo cáo ra **77 file "lấy từ ogg"** — trong khi
+**chỉ có 73 file ogg**, và chúng chỉ thuộc GAMESHOW + MAZE CHASE. Vậy mà anagram 8 file, whack-a-mole 9 file,
+balloon-pop 5 file… cũng "khớp" → **57 file đã bị thay bằng âm thanh KHÁC hẳn, chỉ vì trùng độ dài.**
+
+Đã khôi phục toàn bộ từ backup, **bỏ hẳn** cơ chế ghép theo độ dài, nén lại mỗi file từ chính nó, rồi viết
+thêm một bước **kiểm chứng nội dung chạy trên cả 310 file**: trừ sóng cũ − sóng mới
+(`amerge` + `pan=mono|c0=c0-c2`) rồi so mức còn lại với mức tín hiệu gốc.
+
+> **310/310 file vẫn ĐÚNG âm thanh cũ.** SNR nhỏ nhất **8,5dB**, trung bình **26,9dB**, lớn nhất 72,7dB —
+> nếu một file bị thay nhầm thì SNR sẽ ≈ **0dB**. Mấy file SNR thấp nhất đều là tiếng ồn (conveyor whoosh,
+> shuffle, menu) — MP3 không giữ nguyên pha của tiếng ồn nên số thấp là bình thường, không phải bị đổi.
+
+**Luật rút ra: ĐỘ DÀI KHÔNG PHẢI DANH TÍNH.** Đừng bao giờ ghép/thay file media bằng cách so thời lượng.
+
+### 5. Đo lại sau khi vá
+
+| | trước | sau |
+|---|---|---|
+| lần phát ĐẦU của một hiệu ứng | **67,5ms** (live) | **6,2ms** |
+| tiếng tổng hợp đầu tiên | **48ms** | **10,7ms** |
+| pack gameshow sẵn sàng | — | **46/46 file sau 1,1 giây**, màn READY còn nguyên, chưa ai bấm PLAY |
+| dung lượng pack | 10,25MB | **6,42MB** |
+
+**Hồi quy:** **16/16 template mount, 0 lỗi console**; 14 pack đều `ready = total` (46/46 gameshow, 18/18
+anagram, 10/10 quiz…); trên trang thật bấm PLAY → `blockgameintro1.mp3` kêu, bấm đáp án → tiếng verdict kêu,
+0 lỗi; **nút tắt tiếng vẫn ăn** (bật → 1 lần phát · tắt → 0 · bật lại → 1). Chất lượng nén trên 17 file mẫu:
+**độ dài lệch 0ms**, khoảng lặng đầu file lệch **≤0,4ms**.
+
+### ⚠️ Số đo chống lại các phương án khác — đừng làm lại từ đầu
+
+- **Giải mã sẵn ra AudioBuffer của Web Audio**: 6,7ms so với 8,0ms của `<audio>` nạp sẵn — nhanh hơn đúng
+  **1,3ms** mà tốn **3,6–49MB RAM mỗi pack** (gameshow giải mã hết = 49,3MB; tổng 14 pack = 241MB). Bỏ.
+- **Sợ nhiều `<audio>` sống cùng lúc bị Chrome thu hồi**: đã dựng **200 element** cùng lúc rồi phát cái
+  **CŨ NHẤT** → vẫn **11ms**, `readyState 4`. Không cần LRU, cứ để pack nằm đó.
+
+### ⚠️ Hai bẫy ĐO ĐẠC mới
+
+1. **Pane preview có `visibilityState = "hidden"` → `requestAnimationFrame` ĐÓNG BĂNG HOÀN TOÀN.** Bàn đo
+   đầu tiên dò thời điểm phát tiếng bằng rAF nên treo, không ra nổi một dòng kết quả (mục 1 xong, mục 2
+   đứng im). Phải dò trên **audio thread** (`ScriptProcessorNode` — không bị throttle) và tính giờ bằng
+   **`ctx.currentTime`**. Đây là họ hàng của bẫy đã ghi từ trước ("cửa sổ bị che thì Chromium đóng băng rAF").
+2. **`readyState` đọc NGAY lúc gọi `play()` hay ra 1**, dễ tưởng "chưa tải xong": `currentTime = 0` khởi
+   động một cú **seek**, đọc lại sau khi seek xong là **4**. Đừng kết luận vội.
+
+Còn 2 bẫy PowerShell 5.1 dính khi viết script nén (đã ghi trong chính script): `2>&1` trên lệnh ngoài biến
+stderr thành `NativeCommandError` nên nuốt mất dòng `Duration` của ffmpeg (phải cho `cmd.exe` chuyển hướng ra
+file); và toán tử `,` **bám chặt hơn phép trừ** nên `@($k, $k-1, $k+1)` bị hiểu thành *mảng trừ mảng*.
+
+### Việc kế
+
+Thầy chơi thử trên máy thật (nhất là TOMKO + qua myActivity): xác nhận tiếng đã khớp hình **ngay từ câu đầu
+tiên của ván đầu tiên**, và nghe xem bản nén `-q:a 6` có bị mỏng/rè ở game nào không (gameshow và
+speaking-cards là 2 pack đáng nghe kỹ nhất). Duyệt xong → commit + push + `curl` kiểm bản live.
+
+---
+
 ## Đợt 84 (7/8/2026, v0.9.59) — ⭐ TÍNH NĂNG MỚI "START WITH MISTAKES": CHƠI LẠI ĐÚNG NHỮNG TỪ VỪA SAI. ⭐ CÓ SỬA CORE + 12 TEMPLATE. ✅ THẦY DUYỆT → COMMIT `797670b` + PUSH + **LIVE**
 
 Bảng kết quả có thêm hàng **"Start with mistakes"** ngay dưới **"Start again"**. Bấm vào → về màn READY

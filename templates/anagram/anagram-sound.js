@@ -6,38 +6,25 @@
 // Respects the shared mute toggle via core/sound.js's isMuted().
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// One random file from a same-purpose pool of 3 — never the same one twice
-// in a row, so rapid repeats (e.g. tapping several correct letters fast)
-// don't sound identical/robotic.
-function makePool(names) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i]);
-  };
-}
+// Đợt 85 (7/8/2026) — files are fetched AT IMPORT TIME (prime() below), before
+// the READY screen, instead of on their own first play. `hot` = the effects
+// that fire while playing. See core/sfx.js.
+const pack = createPack(import.meta.url, {
+  names: ["blocktiledrop1", "blocktiledrop2", "blocktiledrop3",
+          "blocktilepickup1", "blocktilepickup2", "blocktilepickup3",
+          "blockchipminor1", "blockchipminor2", "blockchipminor3",
+          "blockchipfail1", "blockchipfail2", "blockchipfail3",
+          "blockchipmajor", "blockchipminorfast",
+          "blockgameintro1", "blockgamerestart", "blockgametimeout", "blockgamesuccessful"],
+  hot:   ["blocktiledrop1", "blocktiledrop2", "blocktiledrop3",
+          "blocktilepickup1", "blocktilepickup2", "blocktilepickup3",
+          "blockchipminorfast", "blockchipfail1", "blockchipfail2", "blockchipfail3"]
+});
+const playFile = pack.play;    // (name, volume?)
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 export const anagramSound = {
   place: makePool(["blocktiledrop1", "blocktiledrop2", "blocktiledrop3"]),

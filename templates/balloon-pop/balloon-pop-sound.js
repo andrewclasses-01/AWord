@@ -12,38 +12,28 @@
 // AWord "Classic" look for this template (teacher's call, 1/8/2026).
 // =============================================================
 
-import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name, volume = 1) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    a.volume = volume;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// One random file from a same-purpose pool — never the same one twice in a
-// row so rapid repeats (popping several balloons fast) don't sound robotic.
-function makePool(names, volume = 1) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i], volume);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. `hot` = the effects that fire while the train is running.
+const pack = createPack(import.meta.url, {
+  names: ["intro-01", "balloonpop-01", "cargocorrect-01", "cargocorrect-02",
+          "cargoincorrect-01", "cargoincorrect-02", "cargoincorrect-03",
+          "cargobounce-01", "cargobounce-02", "ting-01", "ting-02",
+          "trainchug-01", "trainbell-01", "traintoot-01", "traintime-01",
+          "balloontime-01", "balloonloot-01", "ballooncombo-01", "planeflyby-01",
+          "gamecompleted-01", "gameover-01", "timesup-01", "restart-01",
+          "menu-01", "menusubtle-01", "leaderboard-01", "revealanswers-01"],
+  hot:   ["balloonpop-01", "cargocorrect-01", "cargocorrect-02",
+          "cargoincorrect-01", "cargoincorrect-02", "cargoincorrect-03",
+          "cargobounce-01", "cargobounce-02", "ting-01", "ting-02", "trainchug-01"]
+});
+// `volume` defaulted to 1 here before; pack.play leaves the element's volume
+// alone when it is omitted, which is the same thing (elements start at 1) and
+// keeps a per-call volume from sticking to the next call.
+const playFile = (name, volume = 1) => pack.play(name, volume);
+const makePool = (names, volume = 1) => pack.pool(names, volume);
+pack.prime();
 
 export const bpSound = {
   intro:      () => playFile("intro-01"),                                    // 01 — Play pressed, camera pans up

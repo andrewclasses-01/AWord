@@ -19,36 +19,22 @@
 // =============================================================
 
 import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name) {
-  if (coreSound.isMuted()) return;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    a.play().catch(() => {});
-  } catch { /* ignore if the browser blocks audio */ }
-}
-
-// One random file from a same-purpose pool of 3 — never the same one twice in a
-// row, so solving several words in a row doesn't sound robotic.
-function makePool(names) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    playFile(names[i]);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. menu/leaderboard/revealanswers sit in ./sounds/ for
+// completeness but this template never fires them, so they are not listed and
+// therefore not downloaded.
+const pack = createPack(import.meta.url, {
+  names: ["correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "intro", "restart", "timesup", "gamecompleted"],
+  hot:   ["correct-01", "correct-02", "correct-03",
+          "incorrect-01", "incorrect-02", "incorrect-03"]
+});
+const playFile = pack.play;    // (name, volume?)
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 // -------------------------------------------------------------------
 // Tiny Web-Audio synth for the per-cell effects (no files needed): a short
@@ -56,11 +42,10 @@ function makePool(names) {
 // arpeggio for Andrew's hint. Kept here (not in core/sound.js) so the template
 // stays self-contained and does NOT touch core. Respects the shared mute.
 // -------------------------------------------------------------------
-let actx = null;
-function ac() {
-  if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
-  return actx;
-}
+// Borrow the SHARED context from core/sound.js (Đợt 85) instead of building a
+// private one: a brand-new context makes its first sound ~37 ms late, and the
+// shared one is already warmed up by the teacher's first tap on the page.
+function ac() { return coreSound.context(); }
 function blip({ freq, freqEnd = null, dur, type = "sine", gain = 0.14, delay = 0 }) {
   if (coreSound.isMuted()) return;
   try {

@@ -14,45 +14,41 @@
 // =============================================================
 
 import { sound as coreSound } from "../../core/sound.js";
+import { createPack } from "../../core/sfx.js";
 
-function urlFor(name) { return new URL(`./sounds/${name}.mp3`, import.meta.url).href; }
-
-const cache = new Map();
-function audioFor(name) {
-  let a = cache.get(name);
-  if (!a) { a = new Audio(urlFor(name)); a.preload = "auto"; cache.set(name, a); }
-  return a;
-}
-
-function playFile(name, volume) {
-  if (coreSound.isMuted()) return null;
-  try {
-    const a = audioFor(name);
-    a.currentTime = 0;
-    if (volume != null) a.volume = volume;
-    a.play().catch(() => {});
-    return a;
-  } catch { return null; }
-}
-
-// Random-variant pool (never the same file twice in a row — several correct
-// answers in a row won't sound robotic).
-function makePool(names, volume) {
-  let last = -1;
-  return function play() {
-    let i = Math.floor(Math.random() * names.length);
-    if (names.length > 1 && i === last) i = (i + 1) % names.length;
-    last = i;
-    return playFile(names[i], volume);
-  };
-}
+// Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
+// See core/sfx.js. This is the biggest pack (47 files); `skip` keeps the long
+// background-music track OUT of the pre-fetch — it is streamed while it plays
+// and pulling it up front would hog a slow classroom link for the one-shots
+// that actually need to be instant.
+const pack = createPack(import.meta.url, {
+  names: ["intro", "restart", "opendoor", "getready", "questionappear", "chooseanswer",
+          "correct-01", "correct-02", "correct-03",
+          "perfect-01", "perfect-02", "perfect-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "plusscore", "minusscore", "clocktick", "timesup", "chipdisappear",
+          "bonusstart", "tileappear", "bonuspick",
+          "bonusflip-01", "bonusflip-02", "bonusflip-03", "bonusflip-04",
+          "bonusmove-01", "bonusmove-02", "bonusmove-03",
+          "bonusreveal-01", "bonusreveal-02", "bonusreveal-03", "bonusreveal-04", "bonusreveal-05",
+          "uselifeline", "lifeline5050", "lifelinex2", "lifelinetime", "lifelinecheat",
+          "complete", "gameover", "leaderboard", "reveal", "menu", "menusubtle"],
+  hot:   ["correct-01", "correct-02", "correct-03",
+          "perfect-01", "perfect-02", "perfect-03",
+          "incorrect-01", "incorrect-02", "incorrect-03",
+          "chooseanswer", "questionappear", "getready", "clocktick", "plusscore"],
+  skip:  ["music"]
+});
+const playFile = pack.play;    // (name, volume?) — returns the element, like before
+const makePool = pack.pool;    // (names, volume?) — random variant, never twice in a row
+pack.prime();
 
 // ----- background music: a separate looping Audio (own low volume) -----
 let musicEl = null;
 function musicStart() {
   if (coreSound.isMuted()) return;
   try {
-    if (!musicEl) { musicEl = new Audio(urlFor("music")); musicEl.loop = true; musicEl.volume = 0.28; }
+    if (!musicEl) { musicEl = new Audio(pack.urlFor("music")); musicEl.loop = true; musicEl.volume = 0.28; }
     musicEl.currentTime = 0;
     musicEl.play().catch(() => {});
   } catch { /* ignore */ }
