@@ -1,8 +1,8 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: 🟢 CHỜ THẦY DUYỆT — 7/8/2026 (Đợt 26, v0.9.63 dự kiến) — SỬA 2 LỖI "Ô SỐ FADE KHỰC MỘT CÁI" KHI CHẠM SỚM. KHÔNG ĐỤNG CORE. (mới ở LOCAL, chưa commit)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 26, v0.9.63) — SỬA 2 LỖI "Ô SỐ FADE KHỰC MỘT CÁI" KHI CHẠM SỚM. KHÔNG ĐỤNG CORE. (thầy duyệt → commit `eed2a45` + push + LIVE, `curl` xác nhận cả CSS lẫn JS)
 
-## Đợt 26 (7/8/2026, v0.9.63 dự kiến) — SỬA 2 LỖI SNAP KHI FADE LƯỚI Ô SỐ — 🟢 CHỜ THẦY DUYỆT (chưa commit)
+## Đợt 26 (7/8/2026, v0.9.63) — SỬA 2 LỖI SNAP KHI FADE LƯỚI Ô SỐ — ✅ THẦY DUYỆT → COMMIT `eed2a45` + PUSH + LIVE
 
 > Chỉ sửa 2 file template: `open-the-box.js` (trong `animateOpen()`) + `open-the-box.css` (keyframe
 > `aw-otb-box-fade-out`). **KHÔNG đụng core.** Thầy báo: "khi chọn 1 ô số, các ô số khác đáng lẽ fade dần
