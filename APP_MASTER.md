@@ -261,11 +261,14 @@
    khi động vào code core hoặc viết game mới).
 3. **Cách chạy thử — LƯU Ý: từ v0.7.4 app BẮT ĐĂNG NHẬP Google mới vào được thư viện.**
    - Bản LIVE (dùng thật): **https://andrewclasses-01.github.io/AWord/**.
-     ⚠️⚠️ **`git push` KHÔNG còn đủ để lên live** (ghi chú cũ "deploy = git push, chờ ~1 phút" nay ĐÃ
-     SAI — job deploy của Pages hay hết giờ 10 phút rồi tự huỷ). **BẮT BUỘC làm theo mục 0-TER: QUY
-     TRÌNH PUSH LÊN LIVE** (push xong phải `POST /pages/builds` để build trực tiếp). Sau đó mới `curl`
-     kiểm chứng file mới đã live rồi mới test (Pages cập nhật các file KHÔNG đồng thời — BẪY mục 9),
-     rồi tính tiếp bẫy cache trình duyệt ở mục 0-BIS.
+     ⚠️ **Lên live (đính chính 7/8/2026, Đợt 81): `git push` LÀ ĐỦ trong đa số trường hợp** — Pages
+     tự build khi push (Đợt 80 ~27s, Đợt 81 ~1–2 phút, không cần POST gì thêm). Quy trình chuẩn:
+     push → chờ 1–3 phút → `curl` cache-bust kiểm dấu mốc file mới (Pages cập nhật các file KHÔNG
+     đồng thời — BẪY mục 9), rồi tính tiếp bẫy cache trình duyệt ở mục 0-BIS. **CHỈ KHI bản live vẫn
+     cũ sau ~10 phút** mới sang **mục 0-TER (ĐƯỜNG CỨU HỘ)** — backend Pages repo này thất thường,
+     Đợt 78–79 từng treo >10 phút làm job deploy tự huỷ, nhưng đó là SỰ CỐ chứ không phải trạng thái
+     thường trực. (Bản ghi cũ ở đây từng ép "BẮT BUỘC làm theo 0-TER" cho MỌI lần push — chính nó làm
+     Đợt 81 mất 3 lệnh fail vô ích rồi mới phát hiện bản live đã tự build xong từ lâu.)
    - Ở máy: `python devserver.py 5510` (KHÔNG dùng `python -m http.server` — mục 9) →
      `http://localhost:5510/` (localhost ĐÃ nằm trong authorized domains của Firebase nên đăng nhập được).
    - **Test KHÔNG cần đăng nhập**: trang test template chạy dữ liệu mẫu, không đụng store →
@@ -339,9 +342,16 @@ App **không có** service worker và **không có** cache-busting (`index.html`
 `<script type="module" src="main.js">`), nên `Ctrl+Shift+R` là cách duy nhất, và sau 10 phút thì tự
 khỏi. Muốn hết hẳn thì phải thêm chuỗi phiên bản vào đường dẫn import — việc lớn, chưa làm.
 
-## 0-TER. ⚠️⚠️ QUY TRÌNH PUSH LÊN LIVE — BẮT BUỘC LÀM THEO (chốt 6/8/2026, Đợt 79)
+## 0-TER. ⚠️ ĐƯỜNG CỨU HỘ KHI BẢN LIVE KHÔNG CHỊU CẬP NHẬT (chốt 6/8/2026 Đợt 79 — hạ cấp 7/8/2026 Đợt 81)
 
-> **Đọc mục này TRƯỚC KHI commit.** Đợt 79 mất gần 1 tiếng và **2 commit rác** chỉ vì không biết
+> ⭐ **ĐÍNH CHÍNH 7/8/2026 (Đợt 81): mục này KHÔNG còn là quy trình chuẩn.** Push là đủ — Pages tự
+> build khi push (Đợt 80 ~27s, Đợt 81 ~1–2 phút, hoàn toàn không cần POST). Quy trình chuẩn nằm ở
+> **mục 0 điểm 3**: push → chờ 1–3 phút → `curl` kiểm dấu mốc. **CHỈ mở mục này khi bản live vẫn cũ
+> sau ~10 phút** (tức backend Pages lại rơi vào trạng thái chậm >10 phút như Đợt 78–79). Đợt 81 đã
+> trả giá cho việc coi mục này là bắt buộc: 3 lệnh fail liên tiếp (classifier chặn rút token → Git
+> Bash rewrite path → 404 do tài khoản gh) trong khi bản live ĐÃ tự build xong từ trước lệnh đầu tiên.
+>
+> **Đọc tiếp từ đây = đang xử lý SỰ CỐ.** Đợt 79 mất gần 1 tiếng và **2 commit rác** chỉ vì không biết
 > quy trình dưới đây. Làm đúng 4 bước này thì không lặp lại được nữa.
 
 ### Vì sao phải có mục này
@@ -421,9 +431,17 @@ hay sửa code. Nếu cần chắc, poll `curl` tới ~10 phút rồi mới kế
 
 ### ⚠️ BẪY TÀI KHOẢN gh (khác với ghi nhớ "GitHub accounts" cũ, bổ sung thêm)
 - `git push` dùng credential **`andrewclasses-01`** ✅ (đúng chủ repo, `admin:true`).
-- `gh` CLI lại đăng nhập **`andrewclasses-code`** ❌ → `gh run rerun` báo *"Must have admin rights"*.
+- `gh` CLI lại đăng nhập **`andrewclasses-code`** ❌ → `gh run rerun` báo *"Must have admin rights"*,
+  còn **`POST pages/builds` không token trả `404`** (đo Đợt 81 — GitHub GIẤU 403 thành 404 để khỏi lộ
+  thông tin, nên thông báo lỗi KHÔNG hề nói "thiếu quyền", rất dễ tưởng sai endpoint).
 - **Đăng nhập `-01` trên Chrome KHÔNG đổi được `gh`** (gh giữ token riêng trong keyring).
 - Muốn gh chạy bằng quyền `-01`: lấy token qua `git credential fill` như Bước 3 rồi `GH_TOKEN=... gh api ...`.
+  ⚠️ **Đợt 81: chuỗi rút-token này bị permission classifier của Claude Code auto mode CHẶN** (rút
+  credential ra biến môi trường là thao tác nhạy cảm) — phiên tự động KHÔNG chạy được, phải nhờ thầy
+  duyệt tay đúng lệnh đó (hoặc thầy tự chạy).
+- ⚠️ **Git Bash nuốt endpoint**: `gh api ... /repos/...` bị MSYS rewrite thành đường dẫn ổ đĩa
+  (`C:/Program Files/Git/repos/...`) → lỗi "invalid API endpoint". Bỏ dấu `/` đầu (như lệnh Bước 3 đã
+  viết đúng) hoặc thêm `MSYS_NO_PATHCONV=1`, hoặc chạy gh bằng PowerShell.
 - **Không `gh auth login` lưu hẳn được**: token OAuth của Git Credential Manager **thiếu scope
   `read:org`** mà gh bắt buộc. Muốn lưu hẳn thì thầy phải tự tạo PAT mới có `read:org`.
 
@@ -886,10 +904,11 @@ KHÔNG hard-code màu — luôn dùng `var(--aw-*)`.
     `opacity`** — nếu không popup sẽ "hiện 1 nơi rồi nhảy về giữa" (lỗi hay gặp nhất, xem HUONG DAN
     CORE.md mục đó + cách rà soát bằng grep).
 13. **Mọi `element.animate()` phải có `setTimeout` dự phòng** (tab ẩn → onfinish có thể không bắn).
-14. **Push xong CHƯA phải là đã lên live** — bắt buộc theo **mục 0-TER** (push → `POST /pages/builds`
-    → chờ `built` → `curl` kiểm dấu mốc). **Cấm đẩy commit rỗng để "kích hoạt lại deploy"** (vô ích,
-    chỉ làm bẩn lịch sử — Đợt 79 đã lỡ 2 lần). Thấy email "Some jobs were not successful" thì xem job
-    `build` trước: build OK + deploy timeout = **lỗi hạ tầng GitHub, đừng sửa code**.
+14. **Push xong CHƯA phải là đã lên live — nhưng push LÀ đủ để kích build** (đính chính Đợt 81):
+    quy trình chuẩn = push → chờ 1–3 phút → `curl` cache-bust kiểm dấu mốc; **chỉ khi ~10 phút vẫn
+    cũ** mới sang đường cứu hộ **mục 0-TER**. **Cấm đẩy commit rỗng để "kích hoạt lại deploy"** (vô
+    ích, chỉ làm bẩn lịch sử — Đợt 79 đã lỡ 2 lần). Thấy email "Some jobs were not successful" thì
+    xem job `build` trước: build OK + deploy timeout = **lỗi hạ tầng GitHub, đừng sửa code**.
 
 ## 7. Chưa làm — ROADMAP
 
