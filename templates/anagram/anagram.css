@@ -26,6 +26,26 @@
   animation: aw-fadein .25s ease;
 }
 
+/* Slogan on the top bar (clock/score row) — same look as crossword.js's
+   .aw-cw-slogan / speaking-cards.js's .aw-sc-slogan (teacher, 8/8/2026).
+   Absolutely centred over the bar so it never depends on clock/score widths;
+   JS sets .aw-topbar to position:relative and appends this once at mount. */
+.aw-anagram-slogan {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 1.7cqw;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #9aa3af;               /* grey — visible but not loud */
+  pointer-events: none;
+  user-select: none;
+}
+
 .aw-anagram-clue {
   font-size: calc(4.4cqw * var(--fit));
   font-weight: 600;
@@ -47,14 +67,26 @@
 }
 .aw-anagram-clue-generic { opacity: .75; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 
-/* Both rows live here, pushed up a bit off the bottom (not glued to it) and
-   kept tight against each other. */
+/* Leftover vertical space (between the clue and everything below it) is
+   split 1:2 between these two spacers instead of collapsing entirely above
+   the tile block — the OLD single `margin-top:auto` on .aw-anagram-group put
+   100% of any slack above it, gluing the tiles to the very bottom whenever
+   the clue was short (1 line) and leaving a big empty gap above them.
+   Teacher, 8/8/2026: "có xu hướng cao hơn... không sát quá so với câu hỏi" —
+   giving the BOTTOM spacer the bigger share pulls the tile block up while
+   the TOP spacer still keeps a real (if smaller) gap under the clue. Both
+   use flex-basis:0 so they shrink to nothing first when the card is tight on
+   height, never fighting the fixed-content rows for space. */
+.aw-anagram-topspace { flex: 1 1 0; min-height: 0; }
+.aw-anagram-botspace { flex: 2 1 0; min-height: 0; }
+
+/* Both rows live here, kept tight against each other. */
 .aw-anagram-group {
   --aw-ana-origin-bg: #6b7785;
   --aw-ana-result-bg: #2f6fed;
   --aw-ana-wrong-bg: #9aa3ac;
   position: relative;
-  margin: auto 0 6.5cqw;
+  margin: 0 0 6.5cqw;
   width: 100%;
   display: flex; flex-direction: column; align-items: center;
   gap: calc(1cqw * var(--fit));
@@ -66,6 +98,7 @@
 
 /* ---------- Result row ("dãy kết quả") — target word shape ---------- */
 .aw-anagram-result {
+  position: relative;   /* anchors .aw-anagram-perfect-burst to THIS row, not the whole group */
   display: flex; flex-wrap: wrap;
   justify-content: center; align-items: center;
   gap: calc(0.8cqw * var(--fit));
@@ -88,34 +121,104 @@
   opacity: 1;
   border-style: solid;
   border-color: transparent;
-  background: var(--aw-ana-origin-bg);
+  background-color: var(--aw-ana-origin-bg);
   color: #fff;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 rgba(0,0,0,.18));
 }
-.aw-anagram-rtile.is-filled.is-blue { background: var(--aw-ana-result-bg); }
-.aw-anagram-rtile.is-filled.is-wrongbg { background: var(--aw-ana-wrong-bg); }
+.aw-anagram-rtile.is-filled.is-blue { background-color: var(--aw-ana-result-bg); }
+.aw-anagram-rtile.is-filled.is-wrongbg { background-color: var(--aw-ana-wrong-bg); }
+
+/* Subtle glossy sheen instead of a flat solid fill (teacher, 8/8/2026) —
+   layered as background-IMAGE so it rides on top of whichever background-
+   COLOR is active (CSS var above, or the flying clone's inline style)
+   without fighting it. Shared by both tile rows and the flying clone so a
+   tile's look never changes mid-flight — same principle as the border-radius
+   fix above. `background-color`, never the `background` shorthand, must be
+   used everywhere a fill color is set here on, or this gets wiped out. */
+.aw-anagram-otile,
+.aw-anagram-rtile.is-filled,
+.aw-anagram-flytile {
+  background-image: linear-gradient(135deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.08) 32%, rgba(255,255,255,0) 55%);
+}
 .aw-anagram-rspace { width: calc(var(--aw-ana-tile, 6cqw) * 0.45 * var(--fit)); flex: 0 0 auto; }
 
 /* "on submit" pre-Submit tiles can be tapped (send back) or dragged
    (swap) — a visible grab cursor hints that. */
 .aw-anagram-result.is-interactive .aw-anagram-rtile.is-filled { cursor: grab; touch-action: none; }
-.aw-anagram-rtile.is-dragging {
-  cursor: grabbing; z-index: 15;
-  box-shadow: 0 0.9cqw 1.6cqw rgba(0,0,0,.35);
+/* Lifted-while-held cue — a slight scale-up (set inline via JS, together with
+   the live translate()) instead of a drop shadow (teacher asked to remove
+   tile shadows entirely, 8/8/2026). `transition: none` keeps the tile
+   tracking the pointer 1:1 instead of lagging behind a CSS transition. */
+.aw-anagram-rtile.is-dragging { cursor: grabbing; z-index: 15; transition: none; }
+
+/* Drop-target hint while dragging a tile (from the origin row, or another
+   result tile) over a slot that WOULD accept it — an outline, not a shadow. */
+.aw-anagram-rtile.is-droptarget {
+  outline: 0.28cqw solid var(--aw-accent, #2f7bff);
+  outline-offset: 0.12cqw;
 }
 
-/* small correct/wrong badge, bottom-center of the ONE result tile it lands
-   on — pulled DOWN further than core's default (0.4cqw) so it hangs lower
-   off the tile's bottom edge instead of overlapping the letter. `height`
-   MUST be set explicitly (not left to core's `aspect-ratio:1`) — with only
-   `bottom` pinned and no `top`, this tile's flex-centered layout resolves
-   the badge's auto height to roughly the WHOLE tile's height instead of a
-   square matching its width, which pushed the visible checkmark back up
-   into the letter despite the negative `bottom` offset (measured: badge
-   box top landed ~2px under the tile's top). An explicit `height` removes
-   that ambiguity outright. */
-.aw-anagram-rtile .aw-tile-badge { width: 1.9cqw; height: 1.9cqw; bottom: -1.6cqw; }
+/* Big white/dark-outline check or cross INSIDE the result tile itself —
+   replaces the old small bottom-anchored green/red corner badge (teacher,
+   8/8/2026: "tích to ngay trong ô chữ" instead of a small badge underneath).
+   Reuses core/icons.js's markCheck/markCross — same "big celebratory mark"
+   look already used elsewhere in this file, just sized to a single tile. */
+.aw-anagram-revealmark {
+  position: absolute; inset: 12%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.aw-anagram-revealmark svg { width: 100%; height: 100%; }
+
+/* Big white X (wrong pick) OR big white check (correct pick landed) inside
+   ONE result slot — same family, transient, pop-in/pop-out driven entirely
+   by JS's showTransientMark() (small->large fade in, hold, large->small
+   fade out — one continuous animation, teacher 8/8/2026: no more instant
+   `.remove()` "khực một cái"). */
+.aw-anagram-slotmark {
+  position: absolute; inset: 10%;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.aw-anagram-slotmark svg { width: 100%; height: 100%; }
+
+/* "PERFECT" pop-in-and-vanish IN PLACE, centered on the RESULT row
+   specifically (not the whole group, which would land it in the gap between
+   the two rows — teacher-reported "bị lệch", 8/8/2026). Doubled size, white
+   (was gold), stays up longer before fading — see .aw-anagram-result's
+   position:relative below and PERFECT_BURST_MS/aw-ana-perfect-pop's duration
+   in anagram.js/here, kept in sync. The point value is a separate, later
+   effect — see .aw-anagram-flynum below. */
+.aw-anagram-perfect-burst {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  font-size: calc(13cqw * var(--fit));
+  color: #fff; -webkit-text-stroke: 0.09em #1a2230; paint-order: stroke fill;
+  pointer-events: none; white-space: nowrap; z-index: 20;
+  animation: aw-ana-perfect-pop .95s cubic-bezier(.2,.9,.3,1.1) forwards;
+}
+@keyframes aw-ana-perfect-pop {
+  0%   { transform: translate(-50%,-50%) scale(.3); opacity: 0; }
+  25%  { transform: translate(-50%,-50%) scale(1.3); opacity: 1; }
+  65%  { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%,-50%) scale(1); opacity: 0; }
+}
+
+/* "+N" flying from the tile rows to the score badge, no icon — bonus mode's
+   own point-gain effect (teacher, 8/8/2026), separate from
+   .aw-anagram-flygain below (submit mode's icon-then-number, unchanged).
+   Doubled size + white (was gold), matching .aw-anagram-perfect-burst — JS
+   sets font-size inline (reads the real tile size), this only supplies the
+   color/outline/shadow treatment. */
+.aw-anagram-flynum {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800; color: #fff;
+  -webkit-text-stroke: 0.07em #1a2230; paint-order: stroke fill;
+  pointer-events: none; z-index: 60; white-space: nowrap;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
+}
 
 /* correct-answer reveal — ALWAYS reserves its height (min-height) so the
    Submit button below it never shifts, whether or not it has text; only
@@ -142,37 +245,24 @@
   height: calc(var(--aw-ana-tile, 5.4cqw) * var(--fit));
   border-radius: var(--aw-tile-radius, 1cqw);
   border: none;
-  background: var(--aw-ana-origin-bg, #6b7785);
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 rgba(0,0,0,.2));
+  background-color: var(--aw-ana-origin-bg, #6b7785);
   color: #fff; font-family: inherit; font-weight: 800;
   font-size: calc(var(--aw-ana-tile, 5.4cqw) * 0.64 * var(--fit));
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
   cursor: pointer;
-  transition: transform .06s ease, box-shadow .06s ease, opacity .2s ease;
+  transition: transform .06s ease, opacity .2s ease;
 }
 .aw-anagram-otile:hover:not(:disabled) { filter: brightness(1.08); }
-.aw-anagram-otile:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-anagram-otile:active:not(:disabled) { transform: translateY(0.3cqw); }
 .aw-anagram-otile.is-used { opacity: 0; pointer-events: none; }
 /* NOTE: no opacity change here on purpose — this covers the whole row being
    transiently disabled while ONE tile flies (setOriginLocked in anagram.js).
    Dimming here used to make the WHOLE row flash together; only the tapped
    tile itself should visibly react (it does, via flyLetter hiding it). */
 .aw-anagram-otile:disabled:not(.is-used) { cursor: default; }
-
-/* small cross that flashes ON the tile itself when the wrong letter is tapped */
-.aw-anagram-pickbadge {
-  position: absolute; inset: 0;
-  display: flex; align-items: center; justify-content: center;
-  width: 60%; height: 60%; margin: auto;
-  pointer-events: none;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,.3));
-  animation: aw-pop-cx-scale .2s ease;
-}
-.aw-anagram-pickbadge svg { width: 100%; height: 100%; }
-@keyframes aw-pop-cx-scale {
-  from { transform: scale(0.4); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
+/* Dragged straight off the origin row (8/8/2026) — same lifted-scale cue as
+   the result row's .is-dragging, no shadow; transition:none for 1:1 tracking. */
+.aw-anagram-otile.is-dragging { cursor: grabbing; z-index: 20; transition: none; }
 
 /* ---------- SUBMIT button ("on submit" mode) ---------- */
 .aw-anagram-submit {
@@ -194,12 +284,16 @@
 /* ---------- Flying tile clone (fixed-position, JS-sized) ---------- */
 .aw-anagram-flytile {
   display: flex; align-items: center; justify-content: center;
-  border-radius: 12px;
   color: #fff; font-family: inherit; font-weight: 800;
   text-shadow: 0 1px 2px rgba(0,0,0,.2);
-  box-shadow: 0 4px 0 rgba(0,0,0,.2);
   z-index: 50; pointer-events: none;
-  /* Promotes this clone to its own compositor layer proactively, so the
+  /* border-radius is set inline by JS to match the REAL tile's computed
+     border-radius (theme-dependent, e.g. Classic 1.6cqw) — a hardcoded value
+     here used to visibly mismatch the real tile's shape for the whole flight,
+     "un-rounding" then "re-rounding" right as it landed (teacher-reported
+     "đổi hình dạng", 8/8/2026). No box-shadow (teacher asked to remove all
+     tile shadows, 8/8/2026).
+     Promotes this clone to its own compositor layer proactively, so the
      rounded-corner clip is already established on the FIRST painted frame —
      without this, the transform animation starting right after insertion can
      race the layer promotion and flash one raw square-cornered frame

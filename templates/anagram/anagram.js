@@ -57,22 +57,52 @@ import { openAnagramEditor } from "./anagram-editor.js";
 const ORIGIN_BG = "#6b7785";
 const RESULT_BG = "#2f6fed";
 
-// Small colored check/cross for the "on submit" per-position reveal —
-// deliberately distinct from core/icons.js's white/dark-outline markCheck/
-// markCross (those are for the big celebratory marks; these are small and
-// carry meaning through COLOR, per the teacher's request).
-const SMALL_CHECK_GREEN = `<svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5l5 5L19.5 6.5" stroke="#22a35e" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-const SMALL_CROSS_RED = `<svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6L6 18" stroke="#e0453f" stroke-width="3.6" stroke-linecap="round"/></svg>`;
+// Big white/dark-outline check or cross INSIDE a result tile — used both for
+// bonus mode's wrong-pick mark (in the pending slot) and submit mode's
+// per-position reveal (teacher, 8/8/2026: "tích to ngay trong ô chữ" instead
+// of a small corner badge). core/icons.js's markCheck/markCross already are
+// exactly this look (used elsewhere in this file for the whole-word marks).
 
-const FLY_DURATION = 340;   // ms — one tile's flight into the result row
 const STAGGER_MS = 260;     // ms — gap between each position's reveal in "submit" mode
 
+// Shared "settle" easing for every tile flight (letter placement, swap,
+// return-to-origin) — a mild spring overshoot instead of flat ease-in-out,
+// so a tile looks like it has real weight when it arrives somewhere
+// (teacher-reported "trông cực kỳ giả", 8/8/2026). Kept subtle (~12%
+// overshoot) since bonus-mode taps can queue several flights back to back.
+const FLY_EASING = "cubic-bezier(.22,1.12,.36,1)";
+
+// Flight duration now scales with DISTANCE instead of one flat number for
+// every trip — a fixed 340ms made a short adjacent-tile swap look like it
+// was gliding in slow motion compared to how far it actually travelled
+// (teacher-reported "rất delay, không tự nhiên", 8/8/2026). Modelled as a
+// roughly constant "toss speed" instead, clamped so neither a 1-tile hop nor
+// a whole-word-wide flight feels wrong.
+const FLY_SPEED_PX_MS = 1.4;   // px per ms
+const FLY_MIN_MS = 130;
+const FLY_MAX_MS = 380;
+function flyDurationFor(dx, dy) {
+  return Math.max(FLY_MIN_MS, Math.min(FLY_MAX_MS, Math.hypot(dx, dy) / FLY_SPEED_PX_MS));
+}
+
 // The shared "hold, then fly to the score, morph into +points, pulse-count
-// it in" sequence (bonus PERFECT, bonus normal-correct, submit all-correct).
+// it in" sequence — submit mode's all-correct outcome only now (bonus mode's
+// own perfect/non-perfect feedback is showPerfectBurst()/flyPointsOnly()
+// below, teacher 8/8/2026).
 const FLYGAIN_HOLD_MS = 550;
 const FLYGAIN_FLIGHT_MS = 550;
 const FLYGAIN_PULSE_MS = 420;
 const FLYGAIN_TOTAL_MS = FLYGAIN_HOLD_MS + FLYGAIN_FLIGHT_MS;
+
+// Bonus-mode word-complete feedback (teacher, 8/8/2026): "PERFECT" pops in
+// place (no longer flies anywhere); the "+N" points fly to the score
+// separately, starting a beat after PERFECT for a perfect word, or right
+// away when the word had a mistake (no icon shown at all in that case).
+const PERFECT_BURST_MS = 950;
+const PERFECT_TO_POINTS_DELAY_MS = 420;
+const PICKFLY_HOLD_MS = 320;
+const PICKFLY_FLIGHT_MS = 600;
+const PICKFLY_TOTAL_MS = PICKFLY_HOLD_MS + PICKFLY_FLIGHT_MS;
 
 // Lives (v0.9.29, teacher 3/8/2026) — a slider 0..10 in Options, same convention
 // as true-false.js/find-the-match.js: 0 (or missing) = unlimited, 1..10 = that
@@ -248,6 +278,19 @@ const anagramTemplate = {
     let revealSlotEl = null;   // current word's answer-reveal line (submit mode) — ditto
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
+    // Slogan on the SAME row as the clock + score (centred, small, grey,
+    // spaced uppercase) — same look/technique as crossword.js/speaking-cards.js
+    // (teacher, 8/8/2026). Absolutely centred over the top bar so it never
+    // depends on the clock/score widths; set up ONCE here (not in render(),
+    // which reruns per word) since the top bar itself persists across words.
+    const topbar = root.parentElement && root.parentElement.querySelector(".aw-topbar");
+    let sloganEl = null;
+    if (topbar) {
+      topbar.style.position = "relative";
+      sloganEl = el("div", "aw-anagram-slogan", "ANAGRAM IN ANDREW CLASSES");
+      topbar.append(sloganEl);
+    }
+
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
     renderLives();
     render();
@@ -315,6 +358,12 @@ const anagramTemplate = {
       if (it.clue) card.append(el("div", "aw-anagram-clue", escapeHtml(it.clue)));
       else card.append(el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word"));
 
+      // Flexible slack, split 1:2 — see anagram.css's comment on these two
+      // classes for why (teacher, 8/8/2026: tile rows should lean higher
+      // when the clue leaves a lot of empty room, not sit glued to the
+      // bottom of the stage).
+      card.append(el("div", "aw-anagram-topspace"));
+
       const group = el("div", "aw-anagram-group");
       group.style.setProperty("--aw-ana-tile", tileSize + "cqw");
 
@@ -337,7 +386,12 @@ const anagramTemplate = {
         const box = el("div", cls.join(" "));
         box.dataset.pos = String(pos);
         if (tileId != null) box.textContent = displayChar(it.letters[tileId], allCaps);
-        if (isRight != null) box.append(el("span", "aw-tile-badge", isRight ? SMALL_CHECK_GREEN : SMALL_CROSS_RED));
+        // Transient flash, not a permanent fixture (teacher, 8/8/2026) — the
+        // tile's own background color (.is-blue/.is-wrongbg, set above)
+        // already conveys right/wrong permanently; the icon is just a brief
+        // confirmation, even on a re-render (e.g. navigating back to an
+        // already-submitted word).
+        if (isRight != null) showTransientMark(box, "aw-anagram-revealmark", isRight ? icons.markCheck : icons.markCross, 550);
         if (mode === "submit" && !st.graded) attachResultTileInteraction(box, pos);
         resultRow.append(box);
       });
@@ -353,7 +407,7 @@ const anagramTemplate = {
         tile.textContent = displayChar(it.letters[tileId], allCaps);
         const locked = used || wordDone;
         tile.disabled = locked;
-        tile.onclick = () => onTileClick(tileId, tile);
+        attachOriginTileInteraction(tile, tileId);
         originRow.append(tile);
       });
       group.append(originRow);
@@ -374,6 +428,8 @@ const anagramTemplate = {
         card.append(submitBtn);
         submitBtnEl = submitBtn;
       }
+
+      card.append(el("div", "aw-anagram-botspace"));
 
       root.append(card);
       updateSubmitButtonState();
@@ -409,17 +465,20 @@ const anagramTemplate = {
       if (mode === "bonus") bonusPick(tileId, tileEl); else submitPick(tileId, tileEl);
     }
 
+    // Returns true if the letter was placed, false on a mismatch/no-op — the
+    // caller (a plain tap, or a drag-drop onto the receiving slot) uses this
+    // to know whether to spring the tile back to the origin row.
     function bonusPick(tileId, tileEl) {
       const st = state[index];
-      if (st.correct === true || st.used[tileId]) return;
+      if (st.correct === true || st.used[tileId]) return false;
       const it = items[index];
       const expected = it.letters[st.nextPos];
       const picked = it.letters[tileId];
       if (picked.toLowerCase() !== expected.toLowerCase()) {
         st.hadMistake = true;
         anagramSound.wrongPick();
-        showWrongPickBadge(tileEl);
-        return;
+        showWrongPickMark();
+        return false;
       }
       anagramSound.place();
       // State advances THE INSTANT a correct tap is validated — not when its fly
@@ -439,8 +498,13 @@ const anagramTemplate = {
       flyLetter(tileEl, destEl, shownChar, RESULT_BG, () => {
         patchTileUsed(tileEl);
         patchResultFilled(destEl, shownChar, "is-blue");
+        // Confirmation check lands on the DESTINATION tile (the one that was
+        // just correctly filled) — teacher, 8/8/2026 (was on the origin tile,
+        // which read as "wrong end" once she saw it land).
+        showLandedCheckBadge(destEl);
         if (wordDone) finalizeBonusWord();
       });
+      return true;
     }
 
     function finalizeBonusWord() {
@@ -458,18 +522,40 @@ const anagramTemplate = {
       // WHOLE card's fade-in animation for no visual gain (that's exactly
       // the flash bug). Only updateNav() is a real change at this instant.
       updateNav();
-      flyScoreGain(perfect ? "perfect" : "check", earned, () => { st.points = earned; return scoreNow(); });
       anagramSound.wordCompleteBonus();
-      if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
-      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250);
+      const applyAndGetNewTotal = () => { st.points = earned; return scoreNow(); };
+      let finishDelay;
+      if (perfect) {
+        // PERFECT pops in place; the point value follows it a beat later and
+        // is the thing that actually flies to the score (teacher, 8/8/2026).
+        showPerfectBurst();
+        flyPointsOnly(earned, applyAndGetNewTotal, PERFECT_TO_POINTS_DELAY_MS);
+        finishDelay = PERFECT_TO_POINTS_DELAY_MS + PICKFLY_TOTAL_MS + FLYGAIN_PULSE_MS + 250;
+      } else {
+        // Had a mistake: no PERFECT, no icon at all — just the points flying.
+        flyPointsOnly(earned, applyAndGetNewTotal, 0);
+        finishDelay = PICKFLY_TOTAL_MS + FLYGAIN_PULSE_MS + 250;
+      }
+      if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), finishDelay);
+      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, finishDelay);
     }
 
     // ----- interaction: submit mode -----
+    // Plain tap: always the leftmost empty slot (unchanged behaviour).
     function submitPick(tileId, tileEl) {
-      const st = state[index];
-      if (st.graded || st.used[tileId]) return;
-      const slotIdx = st.placed.findIndex(p => p === null);
+      const slotIdx = state[index].placed.findIndex(p => p === null);
       if (slotIdx === -1) return;
+      submitPickAt(tileId, tileEl, slotIdx);
+    }
+
+    // Drag-drop: the PLAYER chose the destination slot (teacher, 8/8/2026 —
+    // "On submit" drags land wherever dropped, unlike the tap's auto-fill).
+    // Returns true if placed, false if the slot was invalid/occupied — the
+    // caller springs the tile back to the origin row on false.
+    function submitPickAt(tileId, tileEl, slotIdx) {
+      const st = state[index];
+      if (st.graded || st.used[tileId]) return false;
+      if (slotIdx == null || slotIdx < 0 || st.placed[slotIdx] != null) return false;
       const it = items[index];
       anagramSound.place();   // same "drop" as bonus mode's correct pick — both modes tap the origin row alike
       // Same decoupling as bonusPick: the slot is claimed and the tile locked
@@ -487,6 +573,7 @@ const anagramTemplate = {
         patchTileUsed(tileEl);
         patchResultFilled(destEl, shownChar, null);
       });
+      return true;
     }
 
     function unplace(pos) {
@@ -510,59 +597,124 @@ const anagramTemplate = {
       const fromRect = resultEl.getBoundingClientRect();
       const toRect = originEl.getBoundingClientRect();
       const fontSize = getComputedStyle(resultEl).fontSize;
+      const borderRadius = getComputedStyle(resultEl).borderRadius;
       patchResultSlotDisplay(pos);
       busy = true;
       flyTileClone(fromRect, toRect, shownChar, ORIGIN_BG, fontSize, () => {
         patchOriginRestored(tileId);
         busy = false;
         updateSubmitButtonState();
-      });
+      }, borderRadius);
     }
 
-    function swapResultPositions(posA, posB) {
+    // "Chèn-đẩy" (insert-and-shift) reorder — replaces the old A<->B swap
+    // (teacher, 8/8/2026): dragging a placed tile onto another slot no
+    // longer just trades those two — it's pulled OUT of its slot and
+    // INSERTED at the target slot, shifting every tile between the two
+    // positions back by one, the same mental model as reordering a list
+    // (the content editor's row drag already works this way). `fromPos`'s
+    // tile keeps going from EXACTLY where the hand let go —
+    // `draggedFromRect`, its current on-screen rect, still carrying the live
+    // drag transform — so it never stops looking like itself mid-flight (no
+    // hide/reveal seam). Every REAL tile between fromPos/toPos slides the
+    // short one-slot distance to make room. All of them reset `transform:""`
+    // and repaint via patchResultSlotDisplay() in the SAME synchronous tick
+    // once every animation finishes — the browser only ever paints the
+    // combined "back home + correct letter" frame, never an in-between flash
+    // (same trick used by every other patch* function here).
+    function moveResultTile(fromPos, toPos, draggedFromRect) {
       const st = state[index];
-      if (st.graded || busy) return;
-      const elA = root.querySelector(`.aw-anagram-rtile[data-pos="${posA}"]`);
-      const elB = root.querySelector(`.aw-anagram-rtile[data-pos="${posB}"]`);
-      const charA = elA ? elA.textContent : "";
-      const charB = elB ? elB.textContent : "";
-      const tmp = st.placed[posA];
-      st.placed[posA] = st.placed[posB];
-      st.placed[posB] = tmp;
+      if (st.graded || busy || fromPos === toPos) return;
+      const lo = Math.min(fromPos, toPos), hi = Math.max(fromPos, toPos);
+
+      // Snapshot each affected slot's TRUE (untransformed) layout rect
+      // BEFORE anything moves — toggling transform off/on to measure is
+      // cheap and avoids parsing transform strings back into numbers.
+      const els = {}, homes = {};
+      for (let p = lo; p <= hi; p++) {
+        const elp = root.querySelector(`.aw-anagram-rtile[data-pos="${p}"]`);
+        els[p] = elp;
+        if (!elp) continue;
+        const saved = elp.style.transform;
+        elp.style.transform = "";
+        homes[p] = elp.getBoundingClientRect();
+        elp.style.transform = saved;
+      }
+
+      const oldPlaced = st.placed.slice();
+      const moved = st.placed.splice(fromPos, 1)[0];
+      st.placed.splice(toPos, 0, moved);
       anagramSound.pickup();
       updateSubmitButtonState();
-      if (!elA || !elB) { patchResultSlotDisplay(posA); patchResultSlotDisplay(posB); return; }
-      const rectA = elA.getBoundingClientRect();
-      const rectB = elB.getBoundingClientRect();
-      const fontSize = getComputedStyle(elA).fontSize;   // A and B are same-size tiles in the same group
-      // Blank both tiles now, fly each letter to the OTHER tile's spot, then
-      // commit the final text once both clones land — a real swap-in-flight
-      // instead of the two tiles instantly trading text.
-      elA.textContent = ""; elB.textContent = "";
+
+      // For every OLD occupant of a slot in [lo,hi], find where its content
+      // ends up now (unique by tileId) and animate THAT DOM node sliding
+      // there. Slots that were already empty carry no letter, so there's
+      // nothing to visibly slide for them — patchResultSlotDisplay() alone
+      // (at settle) is enough, and lands invisibly under whichever real tile
+      // just finished animating into that exact spot.
+      const jobs = [];
+      let dur = FLY_MIN_MS;
+      for (let p = lo; p <= hi; p++) {
+        const tileId = oldPlaced[p];
+        if (tileId == null) continue;
+        const elp = els[p];
+        const homeP = homes[p];
+        if (!elp || !homeP) continue;
+        const destPos = st.placed.indexOf(tileId);
+        const destHome = homes[destPos];
+        if (!destHome || destPos === p) continue;
+        const curP = (p === fromPos && draggedFromRect) ? draggedFromRect : homeP;
+        const dx = (destHome.left + destHome.width / 2) - (homeP.left + homeP.width / 2);
+        const dy = (destHome.top + destHome.height / 2) - (homeP.top + homeP.height / 2);
+        const travelDx = (destHome.left + destHome.width / 2) - (curP.left + curP.width / 2);
+        const travelDy = (destHome.top + destHome.height / 2) - (curP.top + curP.height / 2);
+        dur = Math.max(dur, flyDurationFor(travelDx, travelDy));
+        jobs.push({ el: elp, from: (p === fromPos ? elp.style.transform : "") || "translate(0,0) scale(1)",
+                    to: `translate(${dx}px, ${dy}px) scale(1)` });
+      }
+
+      if (!jobs.length) {
+        for (let p = lo; p <= hi; p++) patchResultSlotDisplay(p);
+        return;
+      }
+
       busy = true;
-      let pending = (charA ? 1 : 0) + (charB ? 1 : 0);
-      if (pending === 0) { busy = false; return; }   // both were empty — nothing to actually fly
+      let pending = jobs.length;
       const settle = () => {
         pending--;
         if (pending > 0) return;
-        patchResultSlotDisplay(posA);
-        patchResultSlotDisplay(posB);
+        // `fill:"forwards"` keeps a FINISHED animation's last keyframe active
+        // over the cascade — clearing style.transform alone does nothing
+        // while that hold is still in effect (caught measuring
+        // getComputedStyle post-settle during testing, 8/8/2026); cancel()
+        // releases the hold so the (now-empty) inline style wins.
+        jobs.forEach(j => { j.anim.cancel(); j.el.style.transform = ""; });
+        if (els[fromPos]) els[fromPos].classList.remove("is-dragging");
+        for (let p = lo; p <= hi; p++) patchResultSlotDisplay(p);
         busy = false;
         updateSubmitButtonState();
       };
-      // settle() must fire EXACTLY `pending` times — only call it as a
-      // flyTileClone completion, never synchronously for an empty side.
-      if (charA) flyTileClone(rectA, rectB, charA, ORIGIN_BG, fontSize, settle);
-      if (charB) flyTileClone(rectB, rectA, charB, ORIGIN_BG, fontSize, settle);
+
+      jobs.forEach(job => {
+        job.anim = job.el.animate(
+          [{ transform: job.from }, { transform: job.to }],
+          { duration: dur, easing: FLY_EASING, fill: "forwards" }
+        );
+        let done = false;
+        const finish = () => { if (done) return; done = true; settle(); };
+        job.anim.onfinish = finish;
+        setTimeout(finish, dur + 100);
+      });
     }
 
     // Shared position-only fly (no color morph — everything pre-Submit
-    // stays the neutral origin grey) used by unplace()/swapResultPositions().
+    // stays the neutral origin grey) used by unplace().
     // `fontSize` MUST be passed in (read from the real tile before it's
     // touched) — this clone used to fall back to the page's inherited
     // font-size instead of the tile's actual size, which is why a swapped or
     // returned letter visibly shrank mid-flight (teacher-reported, 3/8/2026).
-    function flyTileClone(fromRect, toRect, char, bg, fontSize, onDone) {
+    function flyTileClone(fromRect, toRect, char, bg, fontSize, onDone, borderRadius) {
       const clone = el("div", "aw-anagram-flytile", escapeHtml(char));
       clone.style.position = "fixed";
       clone.style.left = fromRect.left + "px";
@@ -570,7 +722,11 @@ const anagramTemplate = {
       clone.style.width = fromRect.width + "px";
       clone.style.height = fromRect.height + "px";
       clone.style.fontSize = fontSize;
-      clone.style.background = bg;
+      // backgroundCOLOR (longhand), not the `background` shorthand — the
+      // shorthand would blank out the CSS-declared gloss `background-image`
+      // that .aw-anagram-flytile shares with the real tiles (teacher, 8/8/2026).
+      clone.style.backgroundColor = bg;
+      if (borderRadius) clone.style.borderRadius = borderRadius;
       document.body.append(clone);
       // Forces a synchronous style/layout flush BEFORE the transform animation
       // starts, so the browser paints one legitimate "at rest" frame (already
@@ -581,6 +737,7 @@ const anagramTemplate = {
       activeFlyNodes.add(clone);
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+      const duration = flyDurationFor(dx, dy);
       let done = false;
       const finishFly = () => {
         if (done) return; done = true;
@@ -590,14 +747,15 @@ const anagramTemplate = {
       const anim = clone.animate([
         { transform: "translate(0,0)" },
         { transform: `translate(${dx}px, ${dy}px)` }
-      ], { duration: FLY_DURATION, easing: "ease-in-out", fill: "forwards" });
+      ], { duration, easing: FLY_EASING, fill: "forwards" });
       anim.onfinish = finishFly;
-      setTimeout(finishFly, FLY_DURATION + 150);
+      setTimeout(finishFly, duration + 150);
     }
 
-    // Drag (pointer events, mouse+touch alike) to swap two already-placed
-    // result tiles, OR a plain tap (no real movement) to send one back to
-    // the origin row — only while the word hasn't been submitted yet.
+    // Drag (pointer events, mouse+touch alike) to INSERT an already-placed
+    // result tile at another slot (pushing everything in between back by
+    // one — see moveResultTile()), OR a plain tap (no real movement) to send
+    // it back to the origin row — only while the word hasn't been submitted yet.
     function attachResultTileInteraction(tileEl, pos) {
       let dragging = false, moved = false, startX = 0, startY = 0;
       const THRESHOLD = 6;
@@ -608,29 +766,174 @@ const anagramTemplate = {
         dragging = true; moved = false;
         startX = e.clientX; startY = e.clientY;
         tileEl.setPointerCapture(e.pointerId);
-        tileEl.classList.add("is-dragging");
       });
       tileEl.addEventListener("pointermove", e => {
         if (!dragging) return;
         const dx = e.clientX - startX, dy = e.clientY - startY;
-        if (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD) moved = true;
-        if (moved) tileEl.style.transform = `translate(${dx}px, ${dy}px)`;
+        if (!moved && (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD)) {
+          moved = true;
+          tileEl.classList.add("is-dragging");
+        }
+        if (moved) {
+          tileEl.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
+          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
+          setDropHighlight(target && target !== tileEl ? target : null);
+        }
       });
       const endDrag = e => {
         if (!dragging) return;
         dragging = false;
-        tileEl.classList.remove("is-dragging");
-        tileEl.style.transform = "";
+        clearDropHighlight();
         if (moved) {
-          tileEl.style.pointerEvents = "none";
-          const under = document.elementFromPoint(e.clientX, e.clientY);
-          tileEl.style.pointerEvents = "";
-          const targetTile = under && under.closest(".aw-anagram-rtile");
-          if (targetTile && targetTile !== tileEl && targetTile.dataset.pos != null) {
-            swapResultPositions(pos, Number(targetTile.dataset.pos));
+          // Read the tile's CURRENT on-screen rect — still carrying its drag
+          // transform at this instant — BEFORE anything resets it. This is
+          // the fix for the old "snap back to source slot, then a separate
+          // clone flies" bug: the flight now starts from wherever the hand
+          // actually let go.
+          const draggedRect = tileEl.getBoundingClientRect();
+          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
+          if (target && target !== tileEl && target.dataset.pos != null) {
+            // .is-dragging (elevated z-index) stays on until moveResultTile
+            // actually settles — the real tile keeps sliding in view now
+            // (no more hide-and-fly-a-clone), so it must stay on top of the
+            // other tiles it's crossing over the whole way across.
+            moveResultTile(pos, Number(target.dataset.pos), draggedRect);
+          } else {
+            animateReturnHome(tileEl);   // keeps .is-dragging (elevated z-index) until it has actually settled
           }
         } else {
+          tileEl.classList.remove("is-dragging");
+          tileEl.style.transform = "";
           unplace(pos);
+        }
+      };
+      tileEl.addEventListener("pointerup", endDrag);
+      tileEl.addEventListener("pointercancel", endDrag);
+    }
+
+    // ----- drag & drop helpers (shared by origin-row placement drags and
+    // result-row swap drags) -----
+    let dropHighlightEl = null;
+    function setDropHighlight(target) {
+      if (dropHighlightEl === target) return;
+      if (dropHighlightEl) dropHighlightEl.classList.remove("is-droptarget");
+      dropHighlightEl = target || null;
+      if (dropHighlightEl) dropHighlightEl.classList.add("is-droptarget");
+    }
+    function clearDropHighlight() { setDropHighlight(null); }
+
+    // Finds the real drop target under the pointer, ignoring the element
+    // being dragged itself (it's still under the pointer while held).
+    function hitTestUnder(el0, x, y, selector) {
+      const prevPE = el0.style.pointerEvents;
+      el0.style.pointerEvents = "none";
+      const under = document.elementFromPoint(x, y);
+      el0.style.pointerEvents = prevPE;
+      return under ? under.closest(selector) : null;
+    }
+
+    // Smoothly slides a tile that's mid-drag (still carrying its drag
+    // transform) back to its normal layout position — used whenever a drag
+    // ends without landing anywhere valid (dropped in empty space, dropped
+    // on the wrong slot, or the letter turned out wrong). Animates the REAL
+    // tile, not a clone — it never actually left the DOM, which is what
+    // makes "let go and it springs back to your hand" read as physical
+    // instead of an instant teleport (teacher, 8/8/2026).
+    function animateReturnHome(tileEl) {
+      const current = tileEl.style.transform;
+      const m = /translate\(\s*(-?[\d.]+)px,\s*(-?[\d.]+)px\)/.exec(current || "");
+      const duration = flyDurationFor(m ? parseFloat(m[1]) : 0, m ? parseFloat(m[2]) : 0);
+      let done = false;
+      const anim = tileEl.animate(
+        [{ transform: current || "translate(0,0)" }, { transform: "translate(0,0) scale(1)" }],
+        { duration, easing: FLY_EASING, fill: "forwards" }
+      );
+      const finishIt = () => {
+        if (done) return; done = true;
+        // Must cancel BEFORE clearing the inline style — a finished
+        // `fill:"forwards"` animation keeps holding its last keyframe over
+        // the cascade otherwise, which would then also block any FUTURE
+        // plain `style.transform` write on this tile (e.g. the very next
+        // drag's live pointermove tracking) from having any visible effect
+        // (caught by measuring getComputedStyle post-settle in the swap
+        // path's identical pattern, 8/8/2026 — fixed here too for the same
+        // reason, even though this keyframe's end value happens to already
+        // look identical to "").
+        anim.cancel();
+        tileEl.style.transform = "";
+        tileEl.classList.remove("is-dragging");
+      };
+      anim.onfinish = finishIt;
+      setTimeout(finishIt, duration + 150);
+    }
+
+    // Is `target` (a result-row tile the player is hovering/dropping over)
+    // a legal destination for a letter dragged straight from the origin
+    // row? Bonus mode only ever accepts the ONE slot currently being
+    // solved for (order still matters, per the teacher's ruling — dragging
+    // just changes HOW you place a letter, not the turn order); On-submit
+    // accepts any still-empty slot (the player picks where it goes).
+    function isValidOriginDropTarget(target) {
+      if (!target || target.dataset.pos == null) return false;
+      const st = state[index];
+      const pos = Number(target.dataset.pos);
+      if (mode === "bonus") return pos === st.nextPos;
+      return st.placed[pos] == null;
+    }
+
+    // Resolves a drag that started on an ORIGIN tile and ended over `target`
+    // (may be null). Dropping on an invalid slot never counts as a real
+    // attempt — it just springs back with no penalty. Dropping the WRONG
+    // letter on bonus mode's one legal (receiving) slot DOES count as a
+    // mistake, same as tapping the wrong tile — bonusPick() already applies
+    // that penalty, this just also has to spring the tile back since (unlike
+    // a tap) it actually left its spot.
+    function handleOriginDrop(tileId, tileEl, target) {
+      if (finished || !isValidOriginDropTarget(target)) { animateReturnHome(tileEl); return; }
+      const pos = Number(target.dataset.pos);
+      const ok = mode === "bonus" ? bonusPick(tileId, tileEl) : submitPickAt(tileId, tileEl, pos);
+      if (ok) tileEl.classList.remove("is-dragging");   // flyLetter has already hidden the tile — safe now
+      else animateReturnHome(tileEl);
+    }
+
+    // Lets an origin-row tile be DRAGGED straight onto a result slot (both
+    // modes), on top of the existing plain-tap placement. A tap (no real
+    // pointer movement past THRESHOLD) falls through to the exact same
+    // onTileClick() path as before — drag is purely an alternate input, the
+    // tap behaviour is untouched.
+    function attachOriginTileInteraction(tileEl, tileId) {
+      let dragging = false, moved = false, startX = 0, startY = 0;
+      const THRESHOLD = 6;
+      tileEl.style.touchAction = "none";
+      tileEl.addEventListener("pointerdown", e => {
+        if (finished || tileEl.disabled) return;
+        dragging = true; moved = false;
+        startX = e.clientX; startY = e.clientY;
+        tileEl.setPointerCapture(e.pointerId);
+      });
+      tileEl.addEventListener("pointermove", e => {
+        if (!dragging) return;
+        const dx = e.clientX - startX, dy = e.clientY - startY;
+        if (!moved && (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD)) {
+          moved = true;
+          tileEl.classList.add("is-dragging");
+        }
+        if (moved) {
+          tileEl.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
+          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
+          setDropHighlight(isValidOriginDropTarget(target) ? target : null);
+        }
+      });
+      const endDrag = e => {
+        if (!dragging) return;
+        dragging = false;
+        clearDropHighlight();
+        if (moved) {
+          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
+          handleOriginDrop(tileId, tileEl, target);
+        } else {
+          tileEl.style.transform = "";
+          onTileClick(tileId, tileEl);
         }
       };
       tileEl.addEventListener("pointerup", endDrag);
@@ -662,7 +965,11 @@ const anagramTemplate = {
           const slotEl = root.querySelector(`.aw-anagram-rtile[data-pos="${pos}"]`);
           if (!slotEl) return;
           slotEl.classList.add(isRight ? "is-blue" : "is-wrongbg");
-          slotEl.append(el("span", "aw-tile-badge", isRight ? SMALL_CHECK_GREEN : SMALL_CROSS_RED));
+          // Transient flash (teacher, 8/8/2026) — see the identical note at
+          // render()'s revealmark append.
+          const mark = el("span", "aw-anagram-revealmark", isRight ? icons.markCheck : icons.markCross);
+          slotEl.append(mark);
+          setTimeout(() => mark.remove(), 550);
           (isRight ? anagramSound.submitTileCorrect : anagramSound.wrongPick)();
         }, pos * STAGGER_MS);
       }
@@ -680,11 +987,17 @@ const anagramTemplate = {
         // line's text is still outstanding, patch it in place.
         if (revealSlotEl) revealSlotEl.textContent = allCorrect ? "" : (allCaps ? it.word.toUpperCase() : it.word);
         if (allCorrect) {
-          flyScoreGain("check", 1, () => { st.points = 1; return scoreNow(); });
+          flyScoreGain(1, () => { st.points = 1; return scoreNow(); });
           anagramSound.submitWordCorrect();
         } else {
           showBigMark(false);
-          ui.sound.wrong();
+          // Real Anagram "Incorrect" sound (same pool as a per-letter wrong
+          // pick) instead of core's generic synthesized wrong tone (teacher,
+          // 8/8/2026 — "âm chuẩn trong source âm thanh"). Wordwall's own
+          // asset set has no SEPARATE "whole word wrong" sound — "Incorrect"
+          // is reused at every granularity, per the source folder's own
+          // notes (GHI CHU.md).
+          anagramSound.wrongPick();
         }
         if (outOfLives) {
           autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
@@ -705,6 +1018,8 @@ const anagramTemplate = {
       // where the tile used to be. Leaving it hidden is permanent and fine:
       // this tile is used for good, it never needs to reappear.
       tileEl.classList.add("is-used");
+      tileEl.classList.remove("is-dragging");
+      tileEl.style.transform = "";
       tileEl.disabled = true;
     }
     function patchOriginRestored(tileId) {
@@ -746,10 +1061,117 @@ const anagramTemplate = {
     }
 
     // ----- shared visual effects -----
-    function showWrongPickBadge(tileEl) {
-      const badge = el("span", "aw-anagram-pickbadge", SMALL_CROSS_RED);
-      tileEl.append(badge);
-      setTimeout(() => badge.remove(), 550);
+
+    // Pops a transient check/cross mark into `parentEl`: small->large while
+    // fading in, holds at full size, then large->small while fading out — a
+    // SINGLE continuous animation instead of a CSS entrance + an instant
+    // `.remove()`, which used to make the mark vanish with a jerk (teacher,
+    // 8/8/2026: "biến mất khực một cái"). Removing the element only happens
+    // once the shrink-out has actually finished playing.
+    function showTransientMark(parentEl, className, iconSvg, totalMs) {
+      const mark = el("span", className, iconSvg);
+      parentEl.append(mark);
+      const anim = mark.animate([
+        { transform: "scale(.3)", opacity: 0, offset: 0, easing: "cubic-bezier(.34,1.4,.4,1)" },
+        { transform: "scale(1)", opacity: 1, offset: 0.32 },
+        { transform: "scale(1)", opacity: 1, offset: 0.7, easing: "ease-in" },
+        { transform: "scale(.4)", opacity: 0, offset: 1 }
+      ], { duration: totalMs, fill: "forwards" });
+      let done = false;
+      const finish = () => { if (done) return; done = true; mark.remove(); };
+      anim.onfinish = finish;
+      setTimeout(finish, totalMs + 100);
+      return mark;
+    }
+
+    // A big white check on the DESTINATION tile right as a correct letter
+    // lands — same visual family as the big white X (teacher, 8/8/2026: it
+    // used to sit on the ORIGIN tile, which read as the wrong end once the
+    // letter had already flown away).
+    function showLandedCheckBadge(destEl) {
+      showTransientMark(destEl, "aw-anagram-slotmark", icons.markCheck, 550);
+    }
+
+    // A big white X inside the currently-PENDING result slot (the one a
+    // wrong letter was aimed at) — replaces the old small red X that used to
+    // sit on the origin tile itself (teacher, 8/8/2026).
+    function showWrongPickMark() {
+      const slotEl = root.querySelector(`.aw-anagram-rtile[data-pos="${state[index].nextPos}"]`);
+      if (!slotEl) return;
+      showTransientMark(slotEl, "aw-anagram-slotmark", icons.markCross, 550);
+    }
+
+    // "PERFECT" pops up at the middle of the tile rows, grows in, then fades
+    // out IN PLACE — it no longer flies anywhere (teacher, 8/8/2026: the
+    // point value is a separate, later effect — see flyPointsOnly() below).
+    function showPerfectBurst() {
+      // Centered on the RESULT row specifically (not the whole group, which
+      // spans both rows and would land it in the gap between them — teacher-
+      // reported "bị lệch", 8/8/2026).
+      const row = root.querySelector(".aw-anagram-result");
+      if (!row) return;
+      const burst = el("span", "aw-anagram-perfect-burst", "PERFECT");
+      row.append(burst);
+      setTimeout(() => burst.remove(), PERFECT_BURST_MS);
+    }
+
+    // Flies "+N" from the middle of the tile rows to the score badge, no icon
+    // shown first — used for BOTH bonus-mode outcomes (teacher, 8/8/2026): a
+    // non-perfect word calls this immediately with delayMs=0, a perfect word
+    // calls it a beat after showPerfectBurst() (delayMs>0) so PERFECT reads
+    // as "for the word", then the number reads as "here's what it earned".
+    function flyPointsOnly(points, applyAndGetNewTotal, delayMs) {
+      const run = () => {
+        // Same anchor as showPerfectBurst() (the RESULT row) so the two
+        // effects visually belong together instead of jumping between spots
+        // (teacher, 8/8/2026).
+        const row = root.querySelector(".aw-anagram-result");
+        const scoreEl = document.querySelector(".aw-top-score");
+        if (!row || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
+        // "slightly bigger than one tile" (teacher, 8/8/2026), THEN doubled
+        // again per the follow-up request — read the REAL rendered tile size
+        // directly instead of guessing a cqw->px conversion, so this stays
+        // correct at any fit/zoom level.
+        const tileEl = root.querySelector(".aw-anagram-otile, .aw-anagram-rtile");
+        const tilePx = tileEl ? tileEl.getBoundingClientRect().width : 40;
+        const baseSize = Math.max(48, tilePx * 1.15 * 2);
+
+        const startRect = row.getBoundingClientRect();
+        const endRect = scoreEl.getBoundingClientRect();
+        const cx = startRect.left + startRect.width / 2;
+        const cy = startRect.top + startRect.height / 2;
+        const dx = (endRect.left + endRect.width / 2) - cx;
+        const dy = (endRect.top + endRect.height / 2) - cy;
+
+        const scoreFontPx = parseFloat(getComputedStyle(scoreEl).fontSize) || baseSize * 0.4;
+        const endScale = Math.max(0.12, Math.min(1, scoreFontPx / baseSize));
+
+        const numEl = el("div", "aw-anagram-flynum", "+" + points);
+        numEl.style.left = cx + "px";
+        numEl.style.top = cy + "px";
+        numEl.style.fontSize = baseSize + "px";
+        document.body.append(numEl);
+        activeFlyNodes.add(numEl);
+
+        const total = PICKFLY_HOLD_MS + PICKFLY_FLIGHT_MS;
+        const holdFrac = PICKFLY_HOLD_MS / total;
+        const anim = numEl.animate([
+          { transform: "translate(-50%,-50%) scale(.6)", opacity: 0, offset: 0 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: Math.min(1, holdFrac * 0.5) },
+          { transform: "translate(-50%,-50%) scale(1.06)", opacity: 1, offset: holdFrac },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, opacity: 1, offset: 1 }
+        ], { duration: total, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
+
+        let done = false;
+        const complete = () => {
+          if (done) return; done = true;
+          numEl.remove(); activeFlyNodes.delete(numEl);
+          pulseScoreTo(applyAndGetNewTotal());
+        };
+        anim.onfinish = complete;
+        setTimeout(complete, total + 150);
+      };
+      if (delayMs) setTimeout(run, delayMs); else run();
     }
 
     // In-place big check/cross — used ONLY for the "submit" mode's WRONG
@@ -764,13 +1186,14 @@ const anagramTemplate = {
     }
 
     // Shared "hold in place, then fly to the score, morphing into +points,
-    // pulse-counting it in" effect — bonus PERFECT, bonus normal-correct,
-    // submit all-correct all use this. `applyAndGetNewTotal` is called only
-    // once the mark ARRIVES (it applies this word's points and returns the
-    // fresh scoreNow() total) — so the score visibly stays unchanged until
-    // that exact moment, matching "chuyển dần thành điểm... rồi nhập vào
-    // số điểm tổng".
-    function flyScoreGain(kind, points, applyAndGetNewTotal) {
+    // pulse-counting it in" effect — submit mode's all-correct outcome ONLY
+    // now (bonus mode's own feedback is showPerfectBurst()/flyPointsOnly()
+    // above, teacher 8/8/2026). `applyAndGetNewTotal` is called only once
+    // the mark ARRIVES (it applies this word's points and returns the fresh
+    // scoreNow() total) — so the score visibly stays unchanged until that
+    // exact moment, matching "chuyển dần thành điểm... rồi nhập vào số điểm
+    // tổng".
+    function flyScoreGain(points, applyAndGetNewTotal) {
       const g = root.querySelector(".aw-anagram-group");
       const scoreEl = document.querySelector(".aw-top-score");
       if (!g || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
@@ -784,13 +1207,11 @@ const anagramTemplate = {
       const wrap = el("div", "aw-anagram-flygain");
       wrap.style.left = cx + "px";
       wrap.style.top = cy + "px";
-      // "check" must match the big X's size exactly (both are "whole word"
-      // marks) — the X is CSS width:34.7% of this SAME .aw-anagram-group
-      // (see anagram.css), so mirror that fraction here in px (font-size
-      // drives width/height via the 1em box on .aw-anagram-flygain).
-      const baseSize = kind === "perfect"
-        ? Math.max(24, startRect.width * 0.0825)   // PERFECT text — 1.5x a normal check
-        : Math.max(28, startRect.width * 0.347);   // check — same size as the big X mark
+      // Must match the big X's size exactly (both are "whole word" marks) —
+      // the X is CSS width:34.7% of this SAME .aw-anagram-group (see
+      // anagram.css), so mirror that fraction here in px (font-size drives
+      // width/height via the 1em box on .aw-anagram-flygain).
+      const baseSize = Math.max(28, startRect.width * 0.347);
       wrap.style.fontSize = baseSize + "px";
 
       // How far to shrink by the time it ARRIVES: the actual score badge's own
@@ -801,7 +1222,7 @@ const anagramTemplate = {
       const scoreFontPx = parseFloat(getComputedStyle(scoreEl).fontSize) || baseSize * 0.4;
       const endScale = Math.max(0.12, Math.min(1, scoreFontPx / baseSize));
 
-      const iconSpan = el("span", "afg-icon", kind === "perfect" ? "PERFECT" : icons.markCheck);
+      const iconSpan = el("span", "afg-icon", icons.markCheck);
       const numSpan = el("span", "afg-num", "+" + points);
       wrap.append(iconSpan, numSpan);
       document.body.append(wrap);
@@ -872,6 +1293,7 @@ const anagramTemplate = {
       const fromRect = fromEl.getBoundingClientRect();
       const toRect = toEl.getBoundingClientRect();
       const fontSize = getComputedStyle(fromEl).fontSize;
+      const borderRadius = getComputedStyle(fromEl).borderRadius;
       fromEl.style.visibility = "hidden";
       const clone = el("div", "aw-anagram-flytile", escapeHtml(char));
       clone.style.position = "fixed";
@@ -880,7 +1302,9 @@ const anagramTemplate = {
       clone.style.width = fromRect.width + "px";
       clone.style.height = fromRect.height + "px";
       clone.style.fontSize = fontSize;
-      clone.style.background = toColor;
+      // backgroundCOLOR (longhand) — see the identical note in flyTileClone().
+      clone.style.backgroundColor = toColor;
+      clone.style.borderRadius = borderRadius;
       document.body.append(clone);
       // See the identical comment in flyTileClone() — forces one legitimate
       // "at rest" paint before the transform animation starts, avoiding a
@@ -889,6 +1313,7 @@ const anagramTemplate = {
       activeFlyNodes.add(clone);
       const dx = (toRect.left + toRect.width / 2) - (fromRect.left + fromRect.width / 2);
       const dy = (toRect.top + toRect.height / 2) - (fromRect.top + fromRect.height / 2);
+      const duration = flyDurationFor(dx, dy);
       let done = false;
       const finishFly = () => {
         if (done) return; done = true;
@@ -896,11 +1321,11 @@ const anagramTemplate = {
         onDone();
       };
       const anim = clone.animate([
-        { transform: "translate(0,0)", background: ORIGIN_BG },
-        { transform: `translate(${dx}px, ${dy}px)`, background: toColor }
-      ], { duration: FLY_DURATION, easing: "ease-in-out", fill: "forwards" });
+        { transform: "translate(0,0)", backgroundColor: ORIGIN_BG },
+        { transform: `translate(${dx}px, ${dy}px)`, backgroundColor: toColor }
+      ], { duration, easing: FLY_EASING, fill: "forwards" });
       anim.onfinish = finishFly;
-      setTimeout(finishFly, FLY_DURATION + 150);
+      setTimeout(finishFly, duration + 150);
     }
 
     // ----- navigation -----
@@ -973,6 +1398,8 @@ const anagramTemplate = {
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
+      if (sloganEl) sloganEl.remove();
+      if (topbar) topbar.style.position = "";
     };
   }
 };
