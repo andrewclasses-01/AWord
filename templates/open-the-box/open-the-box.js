@@ -335,7 +335,15 @@ function mountQuestions(root, activity, ui) {
   // animation); the stale callback checks the token and bails.
   let animToken = 0;
   let pendingSettle = null;
-  const clearPending = () => { if (pendingSettle) { clearTimeout(pendingSettle); pendingSettle = null; } };
+  // Đợt 24 (7/8/2026): after an answer, the number boxes are held un-tappable
+  // until 80% of the close-back animation, then unlocked (see closeCardThen).
+  // This timer drives that unlock; clearPending() cancels it whenever a newer
+  // transition starts or the template is cleaned up.
+  let boxUnlockTimer = null;
+  const clearPending = () => {
+    if (pendingSettle) { clearTimeout(pendingSettle); pendingSettle = null; }
+    if (boxUnlockTimer) { clearTimeout(boxUnlockTimer); boxUnlockTimer = null; }
+  };
 
   // ----- Shared continuous countdown (see file header) -----
   let sharedClockEl = null, sharedFillEl = null;
@@ -626,6 +634,26 @@ function mountQuestions(root, activity, ui) {
     grid.classList.add("is-appearing-fade");
     grid.style.pointerEvents = "none";
     updateProgress();
+    // Point 6 (đợt 24, 7/8/2026, teacher's request): don't let the next box be
+    // tapped until 80% of the close-back animation has played — symmetric with
+    // the OPEN read-gate (point 4) that unlocks the answers at 80% of their
+    // slide-in. TWO things must be lifted for a tap to land: the fresh grid is
+    // held pointer-inert (above), AND the question card sits ON TOP of it
+    // (z-index 2, .aw-otb-anim-top) intercepting every tap while it zooms back.
+    // At 80% we lift BOTH — the grid goes live and the still-visibly-shrinking
+    // question card is made pointer-transparent so a tap passes straight through
+    // to the box beneath it (the zoom-back keeps playing to 100% visually; only
+    // the input gate opens early). Guarded by the transition token so a
+    // superseded close never re-enables a grid a newer transition already owns;
+    // clearPending() (top of every open/close + cleanup) cancels a stale timer.
+    // Boxes that are solved/locked/ended stay disabled regardless (buildBoxGrid),
+    // so this only ever frees the still-playable boxes.
+    boxUnlockTimer = setTimeout(() => {
+      boxUnlockTimer = null;
+      if (myToken !== animToken) return;
+      grid.style.pointerEvents = "";
+      qcard.style.pointerEvents = "none";
+    }, Math.round(ZOOM_TRANSFORM_MS * 0.8));
     // slide the answers out + shrink the question tile back onto its box, all
     // at the same time (đợt 12 kept these two equal; đợt 14 adds the grid
     // fade-in to the SAME span so the whole thing reverses the open exactly).

@@ -3,7 +3,24 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE). Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **7/8/2026 (Đợt 80, v0.9.55) — RUNNING WORD: 5 NHÓM THAY ĐỔI (thầy gửi 1 lượt).
+> Cập nhật lần cuối: **7/8/2026 (Đợt 81, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK + GATE 80% KHI
+> ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chỉ 2 file template (`open-the-box.css` + `.js`). **(1)** Luật
+> ẩn nav Đợt 22 chỉ khớp `:has(> .aw-otb-card)` = màn LƯỚI; mở 1 ô thì card lưới bị gỡ, chỉ còn
+> `.aw-otb-qcard` → selector thôi khớp → **nav hiện lại ở mọi màn câu hỏi**, mà `.aw-navbtn` cao 5cqw >
+> `.aw-iconbtn` 4cqw nên bottombar phình ~1cqw → **ô câu hỏi/đáp án co lại**. Sửa: nới selector khớp CẢ hai
+> card `:has(> .aw-otb-card, > .aw-otb-qcard)` → nav ẩn suốt game, ô hết co; vẫn tự-dọn (keys theo markup
+> riêng, không rò sang game khác — không dính lại bẫy Đợt 22). **(2)** Khoá bấm ô số tới **80% animation ĐÓNG**
+> (đối xứng gate mở đáp án 80% point 4): thêm `boxUnlockTimer = setTimeout(0.8×ZOOM_TRANSFORM_MS)` trong
+> `closeCardThen`, ở 80% nhấc CẢ hai — grid về live + qcard `pointer-events:none` để tap XUYÊN QUA xuống ô dưới
+> (zoom-đóng vẫn chạy tới 100% về hình ảnh); token chặn close cũ, gộp vào `clearPending()`. Tự test devserver
+> (:5510, đo DOM — pane không compositing, timer throttle nên timeline giãn nhưng thứ tự+tỉ lệ đúng): YC1 nav
+> `display:none` + bottombar 38.6px Ở CẢ màn lưới lẫn câu hỏi (ô 0 co); YC2 driver trong trang đo chuỗi
+> pointer-events lúc đóng: CHẶN (gridPE=none+qcard che) → ~80% MỞ KHOÁ (gridPE=auto+qcardPE=none, qcard vẫn
+> present) → tap lúc đó **ô kế mở thật**; 0 lỗi console. ⬜ Chờ thầy chơi thử máy thật (ô hết co + nhịp chọn ô
+> kế ở 80% đóng tự nhiên) → duyệt → commit + push + live. Chi tiết: `templates/open-the-box/GHI CHU
+> OPEN-THE-BOX.md` Đợt 24 + `GHI CHU DU AN.md` Đợt 81.
+>
+> Trước đó: **7/8/2026 (Đợt 80, v0.9.55) — RUNNING WORD: 5 NHÓM THAY ĐỔI (thầy gửi 1 lượt).
 > KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `0b629b3` + PUSH + LIVE (build ~27s).** (1) **PASS 0–5/đội** thay ô tích "Allow PASS" (thanh "Passes per
 > team", state `passLeft`, nút hiện số còn lại, hết=mờ, chỉ sáng đúng lượt). (2) **Tiêu đề bảng PART A /
 > PART B** thay tên đội (cập nhật động trong `paintBoard`; tên đội chỉ còn ở màn kết quả). (3) **2 bảng

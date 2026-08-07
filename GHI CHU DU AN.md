@@ -5,6 +5,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 81 (7/8/2026, v0.9.56) — OPEN THE BOX: BỎ HẲN NAV NEXT/BACK (Ô KHÔNG CÒN CO LẠI) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+Thầy gửi 2 yêu cầu cho template **Open the box**. Chỉ đụng 2 file template
+(`templates/open-the-box/open-the-box.css` + `open-the-box.js`) — **KHÔNG đụng core**. Chi tiết đầy đủ +
+mọi số đo: `templates/open-the-box/GHI CHU OPEN-THE-BOX.md` Đợt 24.
+
+1. **Bỏ hẳn thanh nav Next/Back/"x of N" — ô câu hỏi/đáp án hết bị co.** Open the box là game "bấm ô bất kỳ",
+   không có thứ tự tuyến tính, nên nav dưới đáy vô nghĩa. Luật ẩn nav CŨ chỉ khớp `:has(> .aw-otb-card)` =
+   màn LƯỚI số; khi mở 1 ô, card lưới bị gỡ, chỉ còn `.aw-otb-qcard` (màn câu hỏi) là con trực tiếp
+   `.aw-playarea` → selector thôi khớp → **nav hiện lại ở mọi màn câu hỏi**. Hệ quả đo được: `.aw-navbtn` cao
+   **5cqw** > `.aw-iconbtn` **4cqw** (core/app.css) nên nav xuất hiện làm bottombar cao thêm ~1cqw, ăn vào
+   playArea → **ô câu hỏi + ô đáp án co nhỏ lại đúng lúc zoom mở xong**. Sửa: mở rộng selector khớp CẢ hai card
+   `:has(> .aw-otb-card, > .aw-otb-qcard)` → nav ẩn suốt cả game, ô giữ nguyên chiều cao. Vẫn tự-dọn (keys theo
+   markup riêng của template, biến mất ngay khi game khác mount → KHÔNG dính lại bẫy Đợt 22 vì luật vẫn có scope,
+   chỉ nới thêm card nào khớp).
+2. **Khoá bấm ô số tới 80% animation ĐÓNG mới cho chọn ô kế** (đối xứng với gate mở đáp án 80% ở point 4 đợt 21).
+   Trước: ô số chỉ bấm được khi zoom đóng xong 100% (qcard z-index:2 che + grid `pointer-events:none`). Nay thêm
+   `boxUnlockTimer = setTimeout(80% × ZOOM_TRANSFORM_MS)` trong `closeCardThen`: ở 80% nhấc CẢ hai — grid
+   `pointer-events` về live **và** qcard (còn đang co lại) thành `pointer-events:none` để tap **xuyên qua** xuống
+   ô bên dưới. Có token chặn close cũ bị vượt; `clearPending()` (đầu mỗi open/close + cleanup) huỷ timer treo.
+   Ô đã giải/khoá/hết game vẫn disabled → chỉ mở ô còn chơi được.
+
+**Tự test devserver (`aword` :5510, trình duyệt thật, đo DOM — pane không compositing nên không chụp ảnh,
+timer bị throttle nên timeline giãn ra nhưng THỨ TỰ + tỉ lệ giữ đúng):**
+- **YC1:** màn LƯỚI nav `display:none`, bottombar **38.6px**; màn CÂU HỎI (chỉ còn `.aw-otb-qcard`) nav VẪN
+  `display:none`, bottombar **38.6px** = y hệt → **0 co**. (Selector cũ sẽ để nav = `flex` ở màn này.)
+- **YC2:** driver tự chạy trong trang đo chuỗi pointer-events lúc đóng: t≈2113ms CLOSE bắt đầu `gridPE=none` +
+  qcard che (`qcardPE=auto`) = CHẶN; t≈3016ms (~903ms vào close ≈ 80% của 1200ms) `gridPE=auto` +
+  `qcardPE=none`, **qcard VẪN còn** = mở khoá; **tap ngay lúc đó xuyên qua qcard → ô kế MỞ THẬT** (open
+  transition mới t≈3114ms). Khoảng mở-khoá→gỡ qcard ≈ 240ms = đúng tỉ lệ 960/1200.
+- **0 lỗi console.** Hồi quy: luật ẩn nav vẫn có scope `:has()` theo card riêng của Open the box → KHÔNG rò
+  sang template khác (bảo đảm bằng ngữ nghĩa CSS: playArea game khác không bao giờ có con `.aw-otb-*`).
+
+✅ **THẦY DUYỆT → commit + push + live.** ⬜ Còn chờ thầy nghiệm thu trên màn cảm ứng thật (ô không còn co +
+nhịp chọn ô kế ở 80% đóng thấy tự nhiên).
+
+---
+
 ## Đợt 80 (7/8/2026, v0.9.55) — RUNNING WORD: PASS 0–5 + PART A/B + 2 BẢNG SONG SONG + BẮT ĐẦU BẰNG SUBMIT + NÚT SWAP + IN CHỮ TO/SET X. KHÔNG ĐỤNG CORE. ✅ THẦY DUYỆT → COMMIT `0b629b3` + PUSH + LIVE
 
 Thầy gửi 5 nhóm thay đổi cho template **Running word** (1 lượt). Chỉ đụng 3 file template

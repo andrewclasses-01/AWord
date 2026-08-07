@@ -15,23 +15,34 @@
    Prev/Next/"X of N" nav bar core/engine.js always renders doesn't apply
    here, so hide it.
 
-   ⚠️ SCOPED to a LIVE open-the-box stage (its card is a direct child of
-   .aw-playarea). The rule used to be a bare `.aw-nav{display:none}`, whose
-   comment claimed "only THIS template's stylesheet is loaded while Open the
-   box is playing". That stopped being true in v0.9.7: `ensureTemplate()` now
-   inserts a template's CSS ONCE and NEVER removes it, so after the teacher
-   opened Open the box just once, the arrows stayed hidden in EVERY other game
-   for the rest of the session (measured 4/8/2026: play Open the box, then
-   Quiz -> .aw-nav computed display:none). Whack-a-mole already documents this
-   exact trap in its own CSS — this is the same fix. */
-.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar .aw-nav { display: none; }
+   ⚠️ SCOPED to a LIVE open-the-box stage. The rule used to be a bare
+   `.aw-nav{display:none}`, whose comment claimed "only THIS template's
+   stylesheet is loaded while Open the box is playing". That stopped being true
+   in v0.9.7: `ensureTemplate()` now inserts a template's CSS ONCE and NEVER
+   removes it, so after the teacher opened Open the box just once, the arrows
+   stayed hidden in EVERY other game for the rest of the session (measured
+   4/8/2026: play Open the box, then Quiz -> .aw-nav computed display:none).
+   Whack-a-mole already documents this exact trap in its own CSS.
+
+   ⭐ ĐỢT 24 (7/8/2026): the scope must cover BOTH of this game's screens. It
+   used to be `:has(> .aw-otb-card)` only — but that card is the number GRID;
+   once a box is opened the grid card is removed and only `.aw-otb-qcard` (the
+   question screen) is a direct child of .aw-playarea, so the selector stopped
+   matching and the nav REAPPEARED for every question. That mattered because
+   .aw-navbtn is 5cqw tall vs .aw-iconbtn's 4cqw (see core/app.css) — the nav
+   showing up made the bottom bar ~1cqw taller, stealing that height from the
+   play area, so the question + answer tiles visibly SHRANK the moment the zoom
+   settled. Matching either card keeps the nav hidden across the whole game, so
+   the tiles keep the full height and never shrink. Still self-clearing (keys
+   off THIS template's own markup, gone the instant another game mounts). */
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-nav { display: none; }
 /* core/app.css's bottombar is a 3-column grid (menu | nav | sound+fullscreen)
    auto-placed in DOM order. display:none removes .aw-nav from that
    auto-placement entirely, so the sound/fullscreen group slides into the
    now-first-available MIDDLE column instead of staying in the right column
    — pin it back to column 3 explicitly so it stays in the corner like every
    other template. Scoped for the same reason as the rule above. */
-.aw-playarea:has(> .aw-otb-card) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
 
 .aw-otb-card {
   --fit: 1;

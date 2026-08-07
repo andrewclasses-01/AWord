@@ -1,6 +1,68 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — cập nhật 4/8/2026 (đợt 22, v0.9.36) — SỬA 1 LỖI RÒ CSS RA TOÀN APP (thầy duyệt → commit `9dad80b` + push + live, đã kiểm chứng trên bản live)
+## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 24, v0.9.56) — BỎ HẲN NAV NEXT/BACK (Ô HẾT CO) + KHOÁ CHỌN Ô SỐ TỚI 80% ANIMATION ĐÓNG. KHÔNG ĐỤNG CORE. (thầy duyệt → commit + push + live)
+
+## Đợt 24 (7/8/2026, v0.9.56) — BỎ NAV Ở CẢ MÀN CÂU HỎI + GATE 80% KHI ĐÓNG — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
+
+> Chỉ sửa 2 file template: `open-the-box.css` (2 selector ẩn nav) + `open-the-box.js` (`boxUnlockTimer` trong
+> `closeCardThen`). **KHÔNG đụng core.** Thầy gửi 2 yêu cầu 1 lượt.
+
+**YC1 — Bỏ hẳn nav Next/Back/"x of N", ô câu hỏi/đáp án hết bị co.**
+Open the box là game "bấm ô bất kỳ", nav tuyến tính vô nghĩa → phải ẩn. Luật ẩn nav CŨ (Đợt 22) chỉ scope
+`.aw-playarea:has(> .aw-otb-card)` = màn **LƯỚI SỐ**. Nhưng khi mở 1 ô, `animateOpen` gỡ card lưới, chỉ còn
+`.aw-otb-qcard` (màn câu hỏi) là con trực tiếp `.aw-playarea` → selector **thôi khớp** → **nav hiện lại ở MỌI
+màn câu hỏi**. Đây chính là chỗ "co lại": `.aw-navbtn` cao **5cqw** trong khi `.aw-iconbtn` (menu, loa,
+phóng-to) chỉ **4cqw** (xem `core/app.css`), nên nav xuất hiện làm bottombar cao thêm ~1cqw, **cướp đúng
+ngần đó chiều cao của playArea** → ô câu hỏi + ô đáp án co nhỏ đúng lúc zoom mở vừa xong (lúc `gridCard.remove()`
+chạy). **Sửa:** nới selector khớp CẢ hai card:
+```css
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-nav { display: none; }
+.aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar > .aw-tools { grid-column: 3; }
+```
+→ nav ẩn suốt cả game (lưới lẫn câu hỏi lẫn 2 lúc chuyển cảnh đều có ít nhất 1 trong 2 card), bottombar giữ
+nguyên **4cqw**, ô không bao giờ co. **Vẫn tự-dọn** như Đợt 22 (keys theo markup RIÊNG của template — biến mất
+ngay khi game khác mount): KHÔNG dính lại bẫy "CSS ở lại document mãi mãi" vì luật vẫn có scope, chỉ nới thêm
+card nào được coi là "đang có sân Open the box".
+
+**YC2 — Sau khi chọn đáp án + câu hỏi đóng lại, khoá chọn ô số tới 80% animation đóng.**
+Đối xứng với gate mở đáp án 80% ở **point 4 (Đợt 21)** lúc MỞ. Trước đây ô số chỉ bấm được khi zoom đóng xong
+**100%** (2 lớp chặn: grid `pointer-events:none` + qcard `z-index:2` `.aw-otb-anim-top` che lên trên chặn tap).
+Thêm biến `boxUnlockTimer` + hàm mở khoá trong `closeCardThen`:
+```js
+boxUnlockTimer = setTimeout(() => {
+  boxUnlockTimer = null;
+  if (myToken !== animToken) return;   // close cũ bị close/open mới vượt → bỏ
+  grid.style.pointerEvents = "";       // grid về live
+  qcard.style.pointerEvents = "none";  // qcard (vẫn đang co) thành trong suốt → tap XUYÊN QUA
+}, Math.round(ZOOM_TRANSFORM_MS * 0.8));   // 80% × 1200 = 960ms
+```
+Phải nhấc CẢ hai: chỉ mở grid thôi vẫn bị qcard che; phải cho qcard `pointer-events:none` để tap đi thẳng
+xuống ô bên dưới, trong khi zoom-đóng vẫn chạy tiếp về 100% về mặt HÌNH ẢNH (chỉ mở INPUT sớm). `boxUnlockTimer`
+gộp vào `clearPending()` (gọi ở đầu mọi open/close + trong cleanup) nên close/open mới hoặc rời template đều huỷ
+timer treo. Ô đã giải/khoá hoặc khi `ended` vẫn disabled trong `buildBoxGrid` → gate này chỉ mở ô còn chơi được.
+
+**Tự test devserver (`aword` :5510, trình duyệt thật, đo DOM — pane không compositing: KHÔNG chụp ảnh được,
+transition không chạy, timer bị throttle nên timeline GIÃN ra; nhưng pointer-events là inline set tức thì khi
+timer bắn nên đo chính xác, và THỨ TỰ + TỈ LỆ giữ đúng):**
+- **YC1:** màn LƯỚI: nav `display:none`, bottombar **38.6px**, playArea 431.3px. Mở 1 ô → màn CÂU HỎI (DOM chỉ
+  còn `.aw-otb-qcard`, KHÔNG còn `.aw-otb-card`): nav VẪN `display:none`, bottombar **38.6px** = **y hệt** →
+  ô **0 co**. (Với selector CŨ, ở màn này nav sẽ là `flex` và bottombar phình lên.)
+- **YC2 (đường chọn đáp án bình thường, driver tự chạy trong trang):** t=1114 clickAnswer → t≈2113 CLOSE bắt đầu
+  `gridPE=none` + qcard che `qcardPE=auto` = **CHẶN** → t≈3016 (~903ms vào close ≈ **80%** của 1200ms)
+  `gridPE=auto` + `qcardPE=none`, qcard **vẫn present** = **MỞ KHOÁ**; tap ô kế NGAY lúc đó (`qcardPresentAtTap:
+  true, qcardPEatTap:"none"`) → **ô kế MỞ THẬT** (open transition mới t≈3114). Khoảng mở-khoá→gỡ qcard ≈ 240ms
+  = đúng tỉ lệ 960/1200. Cũng đo lại đường **timeout 15s → gameOver** (cùng `closeCardThen`): chuỗi chặn→mở-80%→
+  gỡ giống hệt, ô vẫn disabled đúng khi `ended`.
+- **0 lỗi console.** Bẫy gặp lại: (a) pane `visibilityState:"hidden"` → throttle timer, phải chờ thời gian thực
+  dài + đo bằng recorder trong trang (round-trip ngoài quá chậm, đua với timeout 15s). (b) trong trình duyệt
+  `clearInterval`/`clearTimeout` HOÁN ĐỔI id được — vòng lặp `for(i)clearInterval(i)` để dọn recorder đã giết
+  luôn timer của game, làm nhiễu 1 lần đo → phải giữ id recorder riêng, đừng quét sạch.
+
+**Việc kế:** thầy chơi thử trên màn cảm ứng thật (TOMKO): xác nhận (1) ô câu hỏi/đáp án KHÔNG còn co khi mở, và
+(2) sau khi trả lời, nhịp cho chọn ô kế ở ~80% lúc đóng thấy nhạy/tự nhiên (không hụt, không lỡ tay bấm sớm) →
+duyệt → commit + push + live.
+
+## (Lịch sử) TRẠNG THÁI trước: ✅ ĐÃ CHỐT + LIVE — 4/8/2026 (đợt 22, v0.9.36) — SỬA 1 LỖI RÒ CSS RA TOÀN APP (thầy duyệt → commit `9dad80b` + push + live, đã kiểm chứng trên bản live)
 
 ## Đợt 23 (4/8/2026, v0.9.40) — BẢN VÁ "GÓC VUÔNG KHI CHẠM" ĐÃ LÊN CORE — ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE
 
