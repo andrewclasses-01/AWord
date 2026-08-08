@@ -101,6 +101,12 @@ function pickWeighted(list) {
   return list[list.length - 1];
 }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
+// one activity at a time.
+let wamPauseHandlers = null;
+
 const wamTemplate = {
   type: "whack_a_mole",
   scorable: true,
@@ -457,24 +463,48 @@ const wamTemplate = {
       ui.topbarMid.append(row);
       renderLives();
     }
+    // `lastTickSlot` lives outside tickClock (module-of-mount scope) so Menu
+    // pause (below) can restart the SAME interval without duplicating this body
+    // or resetting the tick-sound cadence.
+    let lastTickSlot = Math.ceil(totalSeconds);
+    function tickClock() {
+      if (ended) return;
+      const remaining = Math.max(0, (endAt - performance.now()) / 1000);
+      if (clockEl) clockEl.textContent = formatTime(Math.ceil(remaining));
+      if (fillEl) {
+        fillEl.style.width = Math.max(0, Math.min(100, (remaining / totalSeconds) * 100)) + "%";
+        fillEl.classList.toggle("is-orange", remaining <= 30 && remaining > 10);   // 30s left -> orange
+        fillEl.classList.toggle("is-red", remaining <= 10);                          // 10s left -> red
+      }
+      // tick sound: once/sec in the last 10s, twice/sec in the last 5s
+      const slot = remaining > 5 ? Math.ceil(remaining) : Math.ceil(remaining * 2) / 2;
+      if (remaining <= 10 && slot < lastTickSlot && remaining > 0) { lastTickSlot = slot; wamSound.clockTick(); }
+      if (remaining <= 0) endGame("time");
+    }
     function startClock() {
       endAt = performance.now() + totalSeconds * 1000;
-      let lastTickSlot = Math.ceil(totalSeconds);
-      clockTimer = setInterval(() => {
-        if (ended) return;
-        const remaining = Math.max(0, (endAt - performance.now()) / 1000);
-        if (clockEl) clockEl.textContent = formatTime(Math.ceil(remaining));
-        if (fillEl) {
-          fillEl.style.width = Math.max(0, Math.min(100, (remaining / totalSeconds) * 100)) + "%";
-          fillEl.classList.toggle("is-orange", remaining <= 30 && remaining > 10);   // 30s left -> orange
-          fillEl.classList.toggle("is-red", remaining <= 10);                          // 10s left -> red
-        }
-        // tick sound: once/sec in the last 10s, twice/sec in the last 5s
-        const slot = remaining > 5 ? Math.ceil(remaining) : Math.ceil(remaining * 2) / 2;
-        if (remaining <= 10 && slot < lastTickSlot && remaining > 0) { lastTickSlot = slot; wamSound.clockTick(); }
-        if (remaining <= 0) endGame("time");
-      }, 200);
+      lastTickSlot = Math.ceil(totalSeconds);
+      clockTimer = setInterval(tickClock, 200);
     }
+
+    // ----- Menu pause (Đợt 91, 8/8/2026) -----
+    // Without this, the game clock keeps counting down behind the dimmed Menu
+    // popup and can end the whole game ("time's up") while the teacher isn't
+    // looking, and new moles keep spawning invisibly. `endAt` shifts forward by
+    // the paused duration on resume (same trick as the core/Gameshow clocks);
+    // the spawn scheduler just gets a FRESH cadence on resume (not worth
+    // tracking exact remaining time for a randomised spawn gap).
+    let pausedClockAt = 0;
+    function pauseGame() {
+      if (clockTimer) { clearInterval(clockTimer); clockTimer = null; pausedClockAt = performance.now(); }
+      if (spawnTimer) { clearTimer(spawnTimer); spawnTimer = null; }
+    }
+    function resumeGame() {
+      if (ended) return;
+      if (pausedClockAt) { endAt += performance.now() - pausedClockAt; pausedClockAt = 0; clockTimer = setInterval(tickClock, 200); }
+      if (!spawnTimer) scheduleSpawn();
+    }
+    wamPauseHandlers = { pause: pauseGame, resume: resumeGame };
     function addTime(sec) {
       endAt += sec * 1000;
       const remaining = Math.max(0, (endAt - performance.now()) / 1000);
@@ -824,6 +854,7 @@ const wamTemplate = {
 
     // ---------- cleanup ----------
     return function cleanup() {
+      wamPauseHandlers = null;
       ended = true;
       if (spawnTimer) clearTimeout(spawnTimer);
       if (clockTimer) clearInterval(clockTimer);
@@ -833,6 +864,13 @@ const wamTemplate = {
       chrome.forEach(e => { e.style.position = ""; e.style.zIndex = ""; });   // drop the chrome back to normal flow
       if (engTimer) engTimer.style.visibility = "";
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `wamPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!wamPauseHandlers) return;
+    if (paused) wamPauseHandlers.pause(); else wamPauseHandlers.resume();
   }
 };
 

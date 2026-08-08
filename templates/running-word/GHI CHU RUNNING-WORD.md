@@ -1,5 +1,13 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+> Chỉ đụng `running-word.js`: thêm `menuPause`/`menuResume` + bridge module `rwPauseHandlers` + `onPause`.
+> Game này ĐÃ CÓ SẴN cơ chế Pause/Resume của trọng tài từ đầu (`togglePause()`, phím Esc, nút play/pause
+> trên `refUI`) — không viết cơ chế mới, chỉ GỌI LẠI đúng state machine đó (`paused=true/false`,
+> `lastFrame=performance.now()` để đồng hồ delta-tick không nuốt mất thời gian đã dừng), thêm cờ
+> `pausedByMenu` để Menu đóng lại không vô tình MỞ KHOÁ một ván mà TRỌNG TÀI đã tự tay tạm dừng trước đó.
+> Chi tiết cơ chế chung: `core/HUONG DAN CORE.md` mục "MENU PAUSE", `GHI CHU DU AN.md` Đợt 91.
+
 > **TRẠNG THÁI (7/8/2026): ✅ THẦY DUYỆT — Đợt 11 PHẦN 3 (mục 8l-3, v0.9.61). KHÔNG ĐỤNG LOGIC CORE. ĐÃ COMMIT `ac67836` + PUSH + LIVE (đã chạy lại trên chính bản live: khung nghỉ 1,5238 · 4 bước co 1,15/1,08/0,93/0,87 · ca của thầy tỷ lệ 2,019 kẹp về 16:9 dải 76px/bên, hàng 7,54 > chữ 5,82 hết đè · 0 lỗi console).**
 > Thầy nghiệm thu phần resize: *"việc resize ok"*, chỉ còn **phím Andrew ngắn hơn và phím Space dài hơn** so với
 > bàn phím chuẩn thầy gửi ảnh. ⭐ **KHÔNG PHẢI do việc hôm nay** — đã chứng minh bằng đo: (a) tạm `git stash`

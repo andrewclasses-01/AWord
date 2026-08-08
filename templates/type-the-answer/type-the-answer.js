@@ -745,7 +745,21 @@ const ttaTemplate = {
         };
       });
       const answered = state.filter(s => s.graded).length;
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered });
+      // Deducted score for ranking/summary: +1 per correct, −minusAmount per
+      // wrong-and-graded question. Computed HERE from `state` (set synchronously
+      // in submitAnswer) rather than read off `livePoints` — that variable is only
+      // incremented inside the fly-to-score animation's `land()` callback, ~0.9–1.1s
+      // after submit, which can still be pending when the LAST question's 1000ms
+      // auto-finish timer fires (observed: last correct answer's +1 missing from
+      // the final score even though the live badge already showed it seconds
+      // later). Without any of this, the score silently defaulted to `correct`
+      // and "Points off per wrong" had zero effect on the final result.
+      const wrongGraded = state.filter(s => s.graded && s.correct === false).length;
+      const penalty = Math.max(0, Math.min(5, Number(opt.minusAmount) || 0));
+      ui.finish({
+        correct, incorrect: total - correct, total, perQuestion, review, answered,
+        score: correct - penalty * wrongGraded
+      });
     }
 
     return function cleanup() {

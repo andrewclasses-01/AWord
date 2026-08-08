@@ -353,6 +353,22 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // prep. Guarded so it can only start once per play. Templates that don't opt
   // in behave exactly as before (begin() starts the clock immediately).
   let timerStarted = false;
+  // Split out of startTimerNow() so the Menu-pause code (below) can restart
+  // the exact same interval after adjusting `startedAt` — kept as one function
+  // so the two call sites can never drift apart.
+  function tickTimer() {
+    const elapsed = Math.floor((performance.now() - startedAt) / 1000);
+    if (timerMode() === "countDown") {
+      const remaining = Math.max(0, timerTotal() - elapsed);
+      timerEl.textContent = formatTime(remaining);
+      // Optional per-template hook — no default sound, so templates that
+      // don't opt in (e.g. Quiz) behave exactly as before.
+      if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; tpl.sounds?.timeWarning?.(); }
+      if (remaining <= 0) { stopTimer(); submitHandler?.(); }
+    } else {
+      timerEl.textContent = formatTime(elapsed);
+    }
+  }
   function startTimerNow() {
     if (timerStarted) return;
     timerStarted = true;
@@ -362,19 +378,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     if (timerMode() !== "none") {
       // show the correct value immediately (don't wait for the first 500ms tick)
       timerEl.textContent = timerMode() === "countDown" ? formatTime(timerTotal()) : formatTime(0);
-      timerId = setInterval(() => {
-        const elapsed = Math.floor((performance.now() - startedAt) / 1000);
-        if (timerMode() === "countDown") {
-          const remaining = Math.max(0, timerTotal() - elapsed);
-          timerEl.textContent = formatTime(remaining);
-          // Optional per-template hook — no default sound, so templates that
-          // don't opt in (e.g. Quiz) behave exactly as before.
-          if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; tpl.sounds?.timeWarning?.(); }
-          if (remaining <= 0) { stopTimer(); submitHandler?.(); }
-        } else {
-          timerEl.textContent = formatTime(elapsed);
-        }
-      }, 500);
+      timerId = setInterval(tickTimer, 500);
     }
   }
 
@@ -385,6 +389,22 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
   }
   const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; };
+
+  // ----- Menu pause (Đợt 91, 8/8/2026) — freeze the shared clock while the ☰
+  // Menu popup is open, so the visible time (and any countDown auto-submit)
+  // doesn't advance during the pause. `pausedClockAt` records WHEN it paused;
+  // resuming shifts `startedAt` forward by exactly the paused duration so the
+  // elapsed/remaining time picks up from the same value, not a jump. -----
+  let pausedClockAt = 0;
+  function pauseClockForMenu() {
+    if (timerId) { clearInterval(timerId); timerId = null; pausedClockAt = performance.now(); }
+  }
+  function resumeClockForMenu() {
+    if (!pausedClockAt) return;
+    startedAt += performance.now() - pausedClockAt;
+    pausedClockAt = 0;
+    if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
+  }
 
   // ----- Sound / fullscreen buttons -----
   soundBtn.onclick = () => {
@@ -749,6 +769,48 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   let menuEl = null;
   menuBtn.onclick = () => (menuEl ? closeMenu() : openMenu());
 
+  // ----- Menu pause (Đợt 91, 8/8/2026) — teacher's brief: opening the ☰ Menu
+  // dims + softly blurs the STAGE only (title/Options/Template/Style/Edit/
+  // Assignment/Print below the stage stay fully lit, unlike `.aw-tool-dim`
+  // which dims the whole viewport for Options/Template/Style) and puts the
+  // WHOLE game on hold — clock, shared audio, any running animation — so
+  // nothing moves/plays/counts down behind the popup; closing it (Resume, or
+  // clicking outside) picks up exactly where it left off. -----
+  let stageDim = null;
+  let pausedAnimations = [];
+  function enterMenuPause() {
+    stageDim = el("div", "aw-stage-dim");
+    inner.append(stageDim);
+    pauseClockForMenu();
+    sound.pauseContext();   // the shared Web Audio context (crossword/running word/team's own tones)
+    if (typeof window !== "undefined" && window.__awSfxPacks) {
+      window.__awSfxPacks.forEach(p => p.pauseActive?.());   // any playing mp3 sfx/music, every template's pack
+    }
+    // Freeze whatever CSS/WAAPI animation is running INSIDE the stage right
+    // now (entrance/exit pops, shakes, a template's own continuous movement
+    // built on `element.animate()` or `@keyframes`) — remembering only the
+    // ones we actually paused, so resume can't accidentally restart something
+    // that was already paused/finished on its own.
+    pausedAnimations = stage.getAnimations({ subtree: true }).filter(a => a.playState === "running");
+    pausedAnimations.forEach(a => { try { a.pause(); } catch { /* ignore */ } });
+    // Optional per-template hook — for timers a template manages ITSELF
+    // (its own setInterval game clock, spawn scheduling, background music not
+    // routed through core) that the steps above can't reach. Templates that
+    // don't opt in are unaffected: the stage just dims+freezes visually.
+    tpl.onPause?.(true);
+  }
+  function exitMenuPause() {
+    stageDim?.remove(); stageDim = null;
+    resumeClockForMenu();
+    sound.resumeContext();
+    if (typeof window !== "undefined" && window.__awSfxPacks) {
+      window.__awSfxPacks.forEach(p => p.resumeActive?.());
+    }
+    pausedAnimations.forEach(a => { try { a.play(); } catch { /* ignore */ } });
+    pausedAnimations = [];
+    tpl.onPause?.(false);
+  }
+
   function onMenuOutside(ev) {
     if (menuEl && !menuEl.contains(ev.target) && !menuBtn.contains(ev.target)) closeMenu();
   }
@@ -769,12 +831,16 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       // Back = drop the picker and resume the running game.
       openSwitchPicker(() => { backdrop?.remove(); backdrop = null; });
     }));
+    enterMenuPause();
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
   }
   function closeMenu() {
-    if (menuEl) { menuEl.remove(); menuEl = null; document.removeEventListener("pointerdown", onMenuOutside); }
+    if (menuEl) {
+      menuEl.remove(); menuEl = null; document.removeEventListener("pointerdown", onMenuOutside);
+      exitMenuPause();
+    }
   }
   function menuItem(label, action) {
     const b = el("button", "aw-menu-item", label);

@@ -1385,9 +1385,16 @@ const anagramTemplate = {
         };
       });
       const answered = state.filter(s => doneCheck(s)).length;
-      correct -= penalty;   // reflect points-off in the ranked/summary score (no-op when the option is off)
       ui.finish({
+        // `correct` stays the genuine measure (words, or letters in bonus mode) so
+        // the summary's small "Total: x/y" row can show it distinctly; `score` is
+        // what ranking/leaderboard actually use — reflects points-off (no-op when
+        // the option is off). Previously `correct` itself was decremented in place
+        // and no separate `score` was sent, so ranking/summary matched `correct`
+        // exactly and that secondary row could never appear even when a penalty
+        // had been applied.
         correct, incorrect: total - correctWords, total: finishTotal, perQuestion, review, answered,
+        score: correct - penalty,
         title: opts?.gameover ? "Game over" : undefined
       });
     }

@@ -1,5 +1,13 @@
 # GHI CHU — Template WHACK-A-MOLE
 
+**Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+Chỉ đụng `whack-a-mole.js`: tách `tickClock()` ra khỏi `startClock()`, thêm `pauseGame`/`resumeGame` +
+bridge module `wamPauseHandlers` + `onPause`. Bấm ☰ Menu giờ dừng đúng đồng hồ ván (dịch `endAt`, không
+hết giờ oan khi thầy đang xem menu) VÀ ngừng spawn mole mới (huỷ `spawnTimer`, hẹn lại từ đầu lúc đóng —
+không giữ đúng phần dư của gap ngẫu nhiên, không đáng công). Timer riêng của TỪNG ô/mole đang lên
+(duck/free, nằm trong `timers` Set dùng chung) CỐ Ý không dừng — chấp nhận trôi nhẹ. Chi tiết cơ chế
+chung: `core/HUONG DAN CORE.md` mục "MENU PAUSE", `GHI CHU DU AN.md` Đợt 91.
+
 **TRẠNG THÁI: 🟢 ĐỢT 64 (6/8/2026, v0.9.52) CHỜ THẦY DUYỆT** — 4 yêu cầu thầy gửi 1 lượt (Speed 10 gấp
 đôi · Punishment tối đa 30s · bấm mole HAY bubble đều tính · bubble đỏ + chui theo mole khi đập sai).
 Đã tự test trên devserver (không phải đọc code suông), 0 lỗi console, KHÔNG đụng core. Trước đó ✅ ĐỢT 63

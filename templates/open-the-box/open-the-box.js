@@ -248,6 +248,12 @@ function fitBackFaces(root) {
   });
 }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
+// one activity at a time.
+let otbPauseHandlers = null;
+
 const otbTemplate = {
   type: "open_the_box",
   scorable: true,   // every play is scored now that Simple mode is gone
@@ -297,6 +303,13 @@ const otbTemplate = {
     row.append(secs);
     g.append(row);
     panel.append(g);
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `otbPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!otbPauseHandlers) return;
+    if (paused) otbPauseHandlers.pause(); else otbPauseHandlers.resume();
   },
 
   mount(root, activity, ui) {
@@ -377,6 +390,29 @@ function mountQuestions(root, activity, ui) {
   // full but the countdown does NOT resume until openBox() runs again.
   let pausedForNextBox = false;
   let tickInterval = null, endTimeout = null;
+
+  // ----- Menu pause (Đợt 91, 8/8/2026) -----
+  // `startAt`/`totalDur` live INSIDE runCountdown()'s own closure (a `const`
+  // per call), so there's nothing to "shift forward" from out here. Simplest
+  // correct fix: just stop the two timers now (the bar's CSS transition
+  // freezes on its own via engine.js's generic stage-animation pause), and on
+  // resume call `runCountdown(timeLeft)` again — the SAME call
+  // `resetSharedTimer()`'s "resume on next box tap" path already uses to
+  // restart a partially-drained countdown from exactly where it left off.
+  // Only actually resume if the countdown was RUNNING at pause time — it's
+  // legitimately idle between a correct answer and the next box tap
+  // (`pausedForNextBox`), and must stay that way.
+  let menuPausedRunning = false;
+  function pauseGame() {
+    menuPausedRunning = !!tickInterval;
+    if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
+    if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
+  }
+  function resumeGame() {
+    if (menuPausedRunning && !pausedForNextBox) runCountdown(timeLeft);
+    menuPausedRunning = false;
+  }
+  otbPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
   // Builds the clock + bar row inside the engine's topbar. Called ONCE at mount
   // (see the call next to render() at the bottom) — NOT on the first box open
@@ -1131,6 +1167,7 @@ function mountQuestions(root, activity, ui) {
   }
 
   return function cleanup() {
+    otbPauseHandlers = null;
     ro.disconnect();
     clearPending();
     if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }

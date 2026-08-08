@@ -507,10 +507,11 @@ core/
 ├─ leaderboard.js     ← lưu kết quả trên máy (localStorage), theo activityId
 ├─ confetti.js        ← confettiBurst(container) — hiệu ứng pháo giấy "Game complete"
 ├─ sound.js           ← sound.correct()/wrong()/fanfare()/toggle()/isMuted() + AudioContext
-│                        DÙNG CHUNG: context() và warmup() (xem mục "ÂM THANH")
+│                        DÙNG CHUNG: context() và warmup() (xem mục "ÂM THANH"); pauseContext()/
+│                        resumeContext() cho Menu pause (xem mục "MENU PAUSE")
 ├─ sfx.js             ← createPack(import.meta.url, {names, hot, skip}) — kho mp3 dùng chung
-│                        cho MỌI template: play/pool/stop/durationMs/el/prime/stats.
-│                        ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
+│                        cho MỌI template: play/pool/stop/durationMs/el/prime/stats/pauseActive/
+│                        resumeActive. ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
 ├─ icons.js           ← bộ icon SVG dùng chung (menu, prev, next, sound, fullscreen, check, cross,
 │                        close, options, template, style, edit, assignment, print, playBig,
 │                        markCheck, markCross)
@@ -804,6 +805,115 @@ levelIndex`) nên ván mistakes gồm cả từ chưa từng xuất hiện.
 - `tpl.hidePointsOff:true` — (v0.9.28) ẩn nhóm **"Points off (wrong answer)"** CHUNG. Đặt cho game ĐÃ có
   điểm trừ RIÊNG (type-the-answer, unjumble, crossword, whack-a-mole) hoặc game điểm không theo mô hình
   "trừ mỗi câu sai" (gameshow — điểm theo tốc độ). Xem mục "Điểm trừ CHUNG" bên dưới.
+
+## ⭐⭐ MENU PAUSE — mở ☰ Menu là TẠM DỪNG CẢ GAME (v0.9.65, Đợt 91, 8/8/2026)
+
+Thầy chốt: bấm nút **☰ Menu** (góc dưới-trái TRONG khung game, KHÁC với 3 nút Options/Template/Style
+NGOÀI khung) phải làm nền khung tối đi + nhoè nhẹ VÀ tạm dừng thật sự cả game (đồng hồ, âm thanh, mọi
+chuyển động) — không chỉ che bằng hình. Đóng menu (bấm "Resume" hoặc bấm ra ngoài) thì mọi thứ chạy tiếp
+đúng chỗ đã dừng, không nhảy cóc thời gian.
+
+### 1. `.aw-stage-dim` — CHỈ tối khung game, KHÁC `.aw-tool-dim`
+
+`.aw-tool-dim` (Options/Template/Style) làm tối **toàn màn hình** kể cả thanh dưới khung (title +
+Options/Template/Style + Edit/Assignment/Print). `.aw-stage-dim` (Menu) thì **CHỈ tối phần trong
+`.aw-stage-inner`** (topbar + playarea + bottombar) — thanh dưới khung **CỐ Ý giữ nguyên độ sáng** (thầy
+chốt: menu + tên bài + cụm nút vẫn phải đọc được/bấm được trong lúc game tạm dừng). Cài đặt:
+`inner.append(stageDim)` trong `enterMenuPause()` (`core/engine.js`), z-index **7** (dưới `.aw-menu` z-index
+8, để popup không bị chính lớp tối của nó che). Bấm ra ngoài đóng menu vẫn dùng `pointerdown` như cũ.
+
+### 2. Những gì TỰ ĐỘNG dừng — không cần đụng gì ở template
+
+`enterMenuPause()`/`exitMenuPause()` (`core/engine.js`) tự lo 4 việc, áp dụng cho **MỌI** template kể cả
+game build sau này, không cần khai gì thêm:
+1. **Đồng hồ chung của engine** (`ui.startTimer`) — `pauseClockForMenu()`/`resumeClockForMenu()` dịch
+   `startedAt` tới bằng đúng thời gian đã tạm dừng, nên đồng hồ tiếp đúng số cũ chứ không nhảy.
+2. **AudioContext dùng chung** (`core/sound.js` `context()`, dùng bởi crossword/running-word/running-team
+   để tổng hợp tiếng) — `sound.pauseContext()`/`resumeContext()` gọi `ctx.suspend()/.resume()`.
+3. **Mọi pack mp3** (`core/sfx.js createPack`, TẤT CẢ template) — mỗi pack có `pauseActive()`/
+   `resumeActive()` MỚI: tạm dừng đúng những `<audio>` đang thật sự phát (kể cả nhạc nền loop), nhớ lại để
+   phát tiếp đúng chỗ; phần tử đã dừng/xong từ trước không bị đụng. Engine gọi qua registry toàn cục
+   `window.__awSfxPacks`.
+4. **Mọi animation CSS/WAAPI đang chạy TRONG khung** — `stage.getAnimations({subtree:true})`, lọc
+   `playState==="running"`, `.pause()` rồi nhớ lại để `.play()` khi đóng menu. Cái này che được cả
+   `element.animate()` (bay điểm, shake, fade...) LẪN CSS `transition`/`@keyframes` (kể cả thanh đếm giờ
+   riêng của Open the box, vốn là 1 CSS `transition` chạy `totalDur` giây).
+
+⚠️ **Giới hạn đã biết của bước 4**: nếu một hiệu ứng dùng `element.animate()` + `setTimeout` dự phòng
+(luật bắt buộc ở mục "Luật bắt buộc khi dùng `element.animate()`" phía trên) thì PAUSE animation không
+dừng được cái `setTimeout` đó — nó vẫn đếm theo giờ thực và có thể bắn ĐÚNG LÚC animation đang bị đóng
+băng. Chỉ ảnh hưởng tới đúng khung hình đang bay dở tại thời điểm bấm Menu (hiếm, vô hại về mặt điểm số/
+dữ liệu — chỉ lệch hình một nhịp), KHÔNG sửa vì phải sửa mọi `setTimeout` lẻ tẻ trong toàn app.
+
+### 3. `tpl.onPause(paused)` — hook TÙY CHỌN cho timer/nhạc RIÊNG của template
+
+Game có `setInterval`/spawn timer riêng (KHÔNG đi qua đồng hồ chung ở mục 2.1) phải tự lo lấy — engine gọi
+`tpl.onPause(true)` NGAY SAU 4 bước trên lúc mở Menu, và `tpl.onPause(false)` NGAY TRƯỚC KHI bỏ dim lúc
+đóng — không khai hàm này thì template không đổi gì (an toàn tuyệt đối, giống mọi cờ opt-in khác).
+
+**Bẫy scope**: các biến timer luôn nằm trong closure của `mount()` (mỗi lượt chơi một bộ mới), mà
+`onPause` là hàm cấp TEMPLATE (không có closure đó). Cách chuẩn — DÙNG CHUNG Ở CẢ 7 GAME ĐÃ LÀM — là một
+biến **module-level bridge** (giống hệt kiểu `rwEndData`/`rtEndData` đã dùng cho `renderSummary`, vì
+"AWord chỉ mount 1 activity tại 1 thời điểm"):
+
+```js
+let xxPauseHandlers = null;   // module-level, NGOÀI registerTemplate({...})
+
+const xxTemplate = {
+  ...
+  mount(root, activity, ui) {
+    ...
+    function pauseGame() { /* dừng timer/nhạc riêng của game này */ }
+    function resumeGame() { /* chạy lại đúng chỗ */ }
+    xxPauseHandlers = { pause: pauseGame, resume: resumeGame };
+    return function cleanup() {
+      xxPauseHandlers = null;   // BẮT BUỘC — kẻo lượt chơi sau đọc nhầm handler cũ đã cleanup
+      ...
+    };
+  },
+  onPause(paused) {
+    if (!xxPauseHandlers) return;
+    if (paused) xxPauseHandlers.pause(); else xxPauseHandlers.resume();
+  }
+};
+```
+
+**3 kiểu `pauseGame`/`resumeGame` đã dùng, chọn đúng kiểu theo cách timer của bạn tính giờ:**
+
+1. **Đồng hồ đếm tới hạn tuyệt đối** (`deadline = performance.now() + N`, kiểu Gameshow `qDeadline`, Open
+   the box `endAt`-tương-đương): `clearInterval` + ghi `pausedAt = performance.now()`; lúc resume
+   `deadline += performance.now() - pausedAt` rồi `setInterval` lại — dịch hạn tới đúng bằng thời gian đã
+   dừng. Xem `gameshow.js` (`tickCountdown`/`pauseGame`/`resumeGame`) và `whack-a-mole.js` (`tickClock`).
+2. **Đồng hồ tính theo DELTA mỗi tick** (`now - last`, `last` reset mỗi lần chạy, kiểu Running team
+   `mainTimer`/`qTimer`): KHÔNG cần dịch gì — `clearInterval` xong `setInterval` lại (hàm start tự bắt
+   `last = performance.now()` mới) là đủ, vì số còn lại (`mainLeft`/`qLeft`) đứng yên suốt lúc dừng. Xem
+   `running-team.js`. Maze chase (`moveTimer`/`enemyTimer`) còn đơn giản hơn nữa — không đếm ngược gì cả,
+   chỉ là nhịp di chuyển cố định, nên `clearInterval`/`setInterval` lại y hệt, không cần biến `last`.
+3. **Game ĐÃ SẴN có cờ pause riêng** (Running word: nút Pause/Resume của trọng tài, phím Esc,
+   `togglePause()`): đừng viết cơ chế mới — gọi lại ĐÚNG state machine đó, chỉ thêm cờ `pausedByMenu` để
+   phân biệt "Menu tự dừng" với "trọng tài tự dừng", tránh Menu đóng lại vô tình MỞ KHOÁ ván trọng tài đang
+   cố ý tạm dừng tay. Xem `running-word.js` (`menuPause`/`menuResume`).
+
+**Spawn timer kiểu `setTimeout` đệ quy** (KHÔNG đếm tới hạn, chỉ tự hẹn giờ lần kế): đừng cố giữ đúng thời
+gian còn lại của lần hẹn dở — chỉ cần HUỶ lịch hẹn hiện tại lúc dừng (không cho spawn thêm gì trong lúc
+dừng) rồi HẸN LẠI TỪ ĐẦU (gap ngẫu nhiên mới) lúc mở lại. Xem `whack-a-mole.js` (mole `spawnTimer`) và
+`flying-fruit.js` (`spawnTimer`) — cả hai đều theo mẫu `if (spawnTimer) clearTimer(spawnTimer); ...
+scheduleSpawn();`. Đủ để "không spawn gì trong lúc dừng", không đáng công theo dõi phần trăm gap còn lại.
+
+⚠️ **Nhớ đặt bridge var = `null` trong `cleanup()`** (mọi mẫu trên đều làm) — thiếu bước này thì lượt chơi
+MỚI (sau restart/đổi template) không có `mount()` chạy lại kịp lúc Menu mở ra giữa màn hình READY sẽ gọi
+nhầm handler của lượt chơi TRƯỚC đã dọn dẹp (dù hiếm khi xảy ra vì Menu chỉ hiện khi đang chơi).
+
+**7 game đã nối `onPause`** (game thứ 8 trở đi vẫn CHẠY ĐÚNG mà không cần hook này — chỉ là timer riêng
+của nó tiếp tục chạy ẩn sau lớp tối, một khoảng lệch nhỏ không ảnh hưởng điểm/dữ liệu): Gameshow (đếm
+ngược mỗi câu + nhạc nền `musicPause/musicResume` mới thêm ở `gs-sound.js`), Whack-a-mole (đồng hồ ván +
+spawn mole), Maze chase (di chuyển người chơi + enemy), Open the box (đồng hồ mỗi câu — gọi lại
+`runCountdown(timeLeft)` y hệt đường "refill rồi đợi ô tiếp theo" có sẵn), Running word (đồng hồ cờ vua,
+tái dùng cơ chế Pause trọng tài), Running team (2 đồng hồ chính + mỗi câu), Flying fruit (spawn hoa quả).
+**CHƯA nối** (game "lượt-một", không có vòng lặp thời gian thực riêng ngoài đồng hồ chung — Quiz, Anagram,
+Find the match, Type the answer, True/false, Crossword, Unjumble, Balloon pop, Speaking cards): đã đúng
+mà không cần hook, vì đồng hồ chung ở mục 2.1 đã đủ. Whack-a-mole KHÔNG có thêm gì cần dừng ngoài 2 cái
+trên (mỗi ô/mole riêng tự hết hạn bằng timer trong `timers` Set dùng chung, chấp nhận trôi nhẹ).
 
 ### Điểm trừ CHUNG "Points off" + màu điểm theo dấu (v0.9.28)
 

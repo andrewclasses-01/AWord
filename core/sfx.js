@@ -90,6 +90,20 @@ export function createPack(moduleUrl, spec = {}) {
     try { const a = cache.get(name); if (a) { a.pause(); a.currentTime = 0; } } catch { /* ignore */ }
   }
 
+  // ----- Menu pause (Đợt 91, 8/8/2026) -----
+  // Pause whichever cached elements are ACTUALLY playing right now (a one-shot
+  // ding, a template's own looping background music, whatever), remembering
+  // only those — so resume doesn't restart something that was already stopped
+  // or had simply finished. Safe to call with nothing playing (no-op).
+  const pausedByMenu = new Set();
+  function pauseActive() {
+    cache.forEach(a => { try { if (!a.paused && !a.ended) { a.pause(); pausedByMenu.add(a); } } catch { /* ignore */ } });
+  }
+  function resumeActive() {
+    pausedByMenu.forEach(a => { try { a.play().catch(() => {}); } catch { /* ignore */ } });
+    pausedByMenu.clear();
+  }
+
   // True length of a file in ms, so a VISUAL effect can be timed to its sound.
   // After prime() the metadata is there, so the fallback is now a rare path.
   function durationMs(name, fallbackMs = 0) {
@@ -139,7 +153,7 @@ export function createPack(moduleUrl, spec = {}) {
     for (let i = 0; i < PRIME_CONCURRENCY; i++) startOne();
   }
 
-  const pack = { play, stop, pool, prime, durationMs, el: elFor, urlFor,
+  const pack = { play, stop, pool, prime, durationMs, el: elFor, urlFor, pauseActive, resumeActive,
 
     // Diagnostics — lets a test page (or a future session) prove the pack really
     // was loaded BEFORE the teacher pressed PLAY, which is the whole point of

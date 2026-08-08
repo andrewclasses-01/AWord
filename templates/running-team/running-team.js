@@ -93,6 +93,12 @@ function fmtClock(ms) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as `rtEndData` below: AWord only ever mounts one
+// activity at a time.
+let rtPauseHandlers = null;
+
 const rtTemplate = {
   type: "running_team",
   scorable: true,
@@ -700,6 +706,29 @@ const rtTemplate = {
     }
     function stopQuestionClock() { if (qTimer) { clearInterval(qTimer); qTimer = null; } }
 
+    // ----- Menu pause (Đợt 91, 8/8/2026) -----
+    // Both clocks tick by DELTA (`now - last`, `last` reset every tick) rather
+    // than counting down to an absolute deadline, so pausing is simply
+    // stopping now / calling the same start*Clock() again on resume — a fresh
+    // `last` is captured internally, so the paused duration is never
+    // subtracted. Only restart whichever was ACTUALLY running (the question
+    // clock is intentionally stopped during the READY/3-2-1 countdown; don't
+    // resurrect it early).
+    let pausedMainRunning = false, pausedQRunning = false;
+    function pauseGame() {
+      pausedMainRunning = !!mainTimer;
+      pausedQRunning = !!qTimer;
+      stopMainClock();
+      stopQuestionClock();
+    }
+    function resumeGame() {
+      if (finished) return;
+      if (pausedMainRunning) startMainClock();
+      if (pausedQRunning) startQuestionClock();
+      pausedMainRunning = pausedQRunning = false;
+    }
+    rtPauseHandlers = { pause: pauseGame, resume: resumeGame };
+
     function onTile(btn, picked, answer) {
       if (locked || phase !== "question") return;
       if (String(picked).toUpperCase() === String(answer).toUpperCase()) {
@@ -899,6 +928,7 @@ const rtTemplate = {
     loadClasses();
 
     return function cleanup() {
+      rtPauseHandlers = null;
       window.removeEventListener("keydown", onKey);
       stopMainClock();
       stopQuestionClock();
@@ -906,6 +936,13 @@ const rtTemplate = {
       timers.clear();
       finished = true;
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `rtPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!rtPauseHandlers) return;
+    if (paused) rtPauseHandlers.pause(); else rtPauseHandlers.resume();
   }
 };
 

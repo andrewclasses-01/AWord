@@ -1,5 +1,22 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 90 (8/8/2026, v0.9.65) — SỬA: điểm trừ ("Points off per wrong") bị rơi mất khỏi bảng kết quả
+
+Thầy quan sát bảng kết quả cuối game hiện số câu làm được (`correct`) chứ không phải điểm đã trừ. Đúng:
+`finish()` tính `livePoints` (điểm đã trừ) và hiện đúng lúc đang chơi (ô điểm góc phải-trên), nhưng
+**không truyền `score` vào `ui.finish()`** → `core/scoring.js` mặc định `score = correct` → bảng kết
+quả + xếp hạng bỏ qua hoàn toàn slider "Points off per wrong".
+
+⚠️ **Bẫy tự bắt được khi test:** vá tạm bằng `score: livePoints` tưởng xong, nhưng test trình duyệt thật
+(6 câu, phạt −2/câu sai, câu cuối ĐÚNG) ra `Score 2/6` trong khi ô điểm sống hiện đúng `3/6` ngay sau đó —
+vì `livePoints` chỉ cộng bên trong callback `land()` của animation bay điểm (~0,9–1,1s sau khi nộp: shake
+430ms + fly 480ms), mà bộ đếm auto-finish câu CUỐI lại đúng 1000ms — animation thua cuộc đua trong pane
+test. Sửa đúng: tính điểm trừ **ĐỒNG BỘ trong `finish()`** từ `state` (đã set synchronous trong
+`submitAnswer`, không phụ thuộc animation): `score: correct - penalty * wrongGraded`.
+
+Test thật: 5 đúng + 1 sai (phạt 2) → `Score 3/6`, khớp `Total: 5/6`. Không đụng core. Chi tiết chung:
+`GHI CHU DU AN.md` Đợt 90.
+
 ## Đợt 55 (3/8/2026) — Bỏ checkbox Minus points, thêm Lives, sửa 3 lỗi nav/auto-advance (⚠️ LOCAL)
 
 Thầy yêu cầu 5 việc qua chat (không kèm ảnh). CHỈ đụng `type-the-answer.js` + `.css` +

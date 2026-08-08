@@ -12,6 +12,22 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
+## 8/8/2026 — SỬA: điểm trừ ("Minus mode") bị rơi mất khỏi bảng kết quả (Đợt 90 dự án, v0.9.65) — 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi). KHÔNG đụng core.
+
+Cùng lỗi tìm thấy ở Type the answer (xem `GHI CHU DU AN.md` Đợt 90 cho bối cảnh chung, thầy phát hiện ra ở
+game đó trước). `finish()` tính đúng `livePoints` (điểm đã trừ, +1 đúng/−penalty sai, cộng dồn qua CẢ nhiều
+trang) và hiện đúng lúc đang chơi, nhưng không truyền `score` vào `ui.finish()` → bảng kết quả + xếp hạng
+mặc định `score = correct`, bỏ qua hoàn toàn "Points off when wrong".
+
+**Sửa:** tính điểm trừ ĐỒNG BỘ ngay trong `finish()` từ `wordState` đã chấm (`s.correct`/`s.done`), KHÔNG
+đọc `livePoints` — biến đó chỉ cập nhật bên trong `pushTimer` sau animation reveal-từng-ô (900–1900ms trễ),
+và Type the answer đã lộ ra trường hợp animation thua cuộc đua với timer auto-finish; Crossword có biên độ
+trễ lớn hơn nhiều nên rủi ro thấp hơn nhưng vẫn đổi cho an toàn tuyệt đối, không phụ thuộc số đo animation.
+`score = minusOn ? correct - penalty * wrongDone : correct`.
+
+Test thật (test.html, Points off = 2): chọn 1 từ đúng (MATTER) + 1 từ sai, "Submit answers" sớm (18/20 câu
+còn lại chưa làm) → `Score -1/20`, `Total: 1/20` — khớp đúng công thức.
+
 ## 7/8/2026 — SỬA LỖI SNAP KHI GÕ PHÍM TRONG LÚC ANDREW ĐANG HIỆN CHỮ GỢI Ý (Đợt 67, v0.9.63) — ✅ THẦY DUYỆT → COMMIT `6b0dc5e` + PUSH + LIVE (`curl` xác nhận)
 
 > Cùng họ lỗi vừa tìm/sửa ở Open the box (Đợt 26 của file GHI CHU riêng game đó — hai template đánh số đợt

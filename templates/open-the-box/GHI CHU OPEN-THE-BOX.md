@@ -1,5 +1,16 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
+## Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.
+
+Chỉ đụng `open-the-box.js`: thêm `pauseGame`/`resumeGame` + bridge module `otbPauseHandlers` + `onPause`.
+`startAt`/`totalDur` của `runCountdown()` là `const` RIÊNG mỗi lần gọi (không dịch được từ ngoài), nên cách
+đơn giản + đúng nhất là: lúc dừng chỉ `clearInterval`/`clearTimeout` 2 timer (`tickInterval`/`endTimeout`)
+— thanh đếm giờ CSS-transition tự đứng yên nhờ core pause animation chung; lúc mở lại gọi thẳng
+`runCountdown(timeLeft)`, ĐÚNG con đường "refill xong đợi ô tiếp theo" (`resetSharedTimer`) đã có sẵn từ
+trước, không viết cơ chế mới. Có cờ `menuPausedRunning` để không vô tình chạy lại đồng hồ khi nó đang
+NGHỈ HỢP LỆ giữa 2 lượt mở hộp (`pausedForNextBox`). Chi tiết cơ chế chung: `core/HUONG DAN CORE.md` mục
+"MENU PAUSE", `GHI CHU DU AN.md` Đợt 91.
+
 ## TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE — 7/8/2026 (Đợt 26, v0.9.63) — SỬA 2 LỖI "Ô SỐ FADE KHỰC MỘT CÁI" KHI CHẠM SỚM. KHÔNG ĐỤNG CORE. (thầy duyệt → commit `eed2a45` + push + LIVE, `curl` xác nhận cả CSS lẫn JS)
 
 ## Đợt 26 (7/8/2026, v0.9.63) — SỬA 2 LỖI SNAP KHI FADE LƯỚI Ô SỐ — ✅ THẦY DUYỆT → COMMIT `eed2a45` + PUSH + LIVE

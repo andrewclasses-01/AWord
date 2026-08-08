@@ -169,6 +169,12 @@ function bfsStep(grid, sr, sc, tr, tc) {
   return null;
 }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
+// one activity at a time.
+let mazePauseHandlers = null;
+
 const mazeChaseTemplate = {
   type: "maze_chase",
   scorable: true,
@@ -284,6 +290,25 @@ const mazeChaseTemplate = {
     const enemyStepMs = Math.max(230, 400 - difficulty * 14);
     const GRACE_MS = 1900;         // no enemy damage for a moment after (re)spawn
     let graceUntil = 0, enemySpots = [];
+
+    // ----- Menu pause (Đợt 91, 8/8/2026) -----
+    // Both are plain fixed-rate loops (not counting down to a deadline), so
+    // pausing is just clearInterval now / setInterval again on resume — only
+    // restart whichever was ACTUALLY running (enemyTimer is intentionally null
+    // during the question-lock hold between questions; don't resurrect it).
+    let moveWasRunning = false, enemyWasRunning = false;
+    function pauseGame() {
+      moveWasRunning = !!moveTimer; enemyWasRunning = !!enemyTimer;
+      if (moveTimer) { clearInterval(moveTimer); moveTimer = null; }
+      if (enemyTimer) { clearInterval(enemyTimer); enemyTimer = null; }
+    }
+    function resumeGame() {
+      if (finished) return;
+      if (moveWasRunning) moveTimer = setInterval(tickPlayer, STEP_MS);
+      if (enemyWasRunning) enemyTimer = setInterval(tickEnemies, enemyStepMs);
+      moveWasRunning = enemyWasRunning = false;
+    }
+    mazePauseHandlers = { pause: pauseGame, resume: resumeGame };
 
     ui.onSubmit(finish, () => state.filter(s => s.correct || s.wrong.length > 0).length);   // block "Submit answers" at 0 answered
     ui.setScore(0);
@@ -599,10 +624,18 @@ const mazeChaseTemplate = {
     }
 
     return function cleanup() {
+      mazePauseHandlers = null;
       window.removeEventListener("keydown", onKey);
       clearInterval(moveTimer); clearInterval(enemyTimer);
       clearTimeout(invulnTimer);
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `mazePauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!mazePauseHandlers) return;
+    if (paused) mazePauseHandlers.pause(); else mazePauseHandlers.resume();
   }
 };
 

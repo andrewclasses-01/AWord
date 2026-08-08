@@ -107,6 +107,19 @@ export const sound = {
   // means they inherit the warm-up below and start in time. (Đợt 85, 7/8/2026)
   context() { return ac(); },
 
+  // ----- Pause/resume the shared context (Đợt 91, 8/8/2026 — Menu pause) -----
+  // Every synthesized tone here + every template that borrows this context
+  // (crossword, running word, running team) is short one-shot notes, so
+  // suspending mid-note just silences it instantly; resuming continues the
+  // clock cleanly. No-op if the context was never created (nothing has made a
+  // sound yet) or already suspended/running, so this is safe to call blindly.
+  pauseContext() {
+    try { if (ctx && ctx.state === "running") ctx.suspend(); } catch { /* ignore */ }
+  },
+  resumeContext() {
+    try { if (ctx && ctx.state === "suspended") ctx.resume(); } catch { /* ignore */ }
+  },
+
   // ----- WAKE THE AUDIO DEVICE (Đợt 85, 7/8/2026) -----
   // The AudioContext above is built lazily inside the FIRST tone() call, and the
   // very first sound of a page therefore also pays for starting the output

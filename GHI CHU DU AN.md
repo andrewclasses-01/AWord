@@ -5,6 +5,94 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 91 (8/8/2026, v0.9.65) — ⭐⭐ TÍNH NĂNG MỚI: MỞ ☰ MENU LÀ TẠM DỪNG CẢ GAME. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp trong phiên). 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi console).
+
+Thầy yêu cầu: *"Khi bấm nút Menu, chỉ pop-up menu + tên act + các nút tùy chỉnh + các nút chức năng là giữ
+độ sáng, toàn bộ nền phía dưới chuyển thành màu tối hơn một chút và hơi blur nhẹ, mọi act khi đang hiện
+menu đều ở trạng thái tạm ngưng (dừng game, dừng âm thanh,...), khi bấm ra ngoài để Menu ẩn đi thì mọi thứ
+tiếp tục"* — áp dụng cho **mọi template có nút Menu** (☰, góc dưới-trái TRONG khung game). Chi tiết kỹ
+thuật đầy đủ: `core/HUONG DAN CORE.md` mục **"MENU PAUSE"** (mới, ngay sau "Cờ template ẩn nhóm Options").
+
+**(1) `.aw-stage-dim`** (`core/app.css` + `core/engine.js`) — lớp tối+nhoè MỚI, khác hẳn `.aw-tool-dim` có
+sẵn của Options/Template/Style (cái đó tối CẢ thanh dưới khung): `.aw-stage-dim` chỉ phủ `.aw-stage-inner`
+(topbar+playarea+bottombar), thanh dưới khung (tên bài, Options/Template/Style, Edit/Assignment/Print)
+**cố ý giữ nguyên sáng** đúng yêu cầu. z-index 7, dưới `.aw-menu` (8) nên popup không bị chính lớp tối che.
+
+**(2) 4 việc TỰ ĐỘNG dừng cho MỌI template**, không cần khai gì thêm (`enterMenuPause`/`exitMenuPause`
+trong `core/engine.js`): đồng hồ chung (`ui.startTimer`, dịch `startedAt` bằng đúng thời gian đã dừng —
+tiếp đúng số cũ không nhảy) · AudioContext dùng chung (`sound.pauseContext/resumeContext` MỚI, suspend/
+resume) · mọi pack mp3 (`sfx.js` mỗi pack có `pauseActive/resumeActive` MỚI, chỉ tạm dừng đúng file ĐANG
+phát kể cả nhạc nền loop, không đụng file đã xong) · mọi animation CSS/WAAPI đang chạy TRONG khung
+(`stage.getAnimations({subtree:true})`, `.pause()`/`.play()` — che cả `element.animate()` lẫn CSS
+`transition`, kể cả thanh đếm giờ CSS-transition riêng của Open the box).
+
+**(3) Hook TÙY CHỌN `tpl.onPause(paused)`** cho game có timer/nhạc RIÊNG (KHÔNG qua đồng hồ chung) — dùng
+mẫu **module-level bridge** giống hệt `rwEndData`/`rtEndData` đã có (vì `mount()` mỗi lượt chơi một
+closure timer riêng, mà `onPause` là hàm cấp template không có closure đó). **7 game đã nối**: Gameshow
+(đếm ngược mỗi câu, dịch hạn tới như đồng hồ chung + `musicPause/musicResume` MỚI ở `gs-sound.js` cho nhạc
+nền), Whack-a-mole (đồng hồ ván + spawn mole, spawn thì huỷ-rồi-hẹn-lại-từ-đầu chứ không giữ đúng phần dư),
+Maze chase (nhịp di chuyển người chơi/enemy, đơn giản nhất — không đếm ngược gì, clear/set lại y hệt),
+Open the box (đồng hồ mỗi câu — tái dùng ĐÚNG đường "refill rồi đợi ô tiếp theo" `runCountdown(timeLeft)`
+có sẵn từ trước, không viết cơ chế mới), Running word (tái dùng CƠ CHẾ PAUSE TRỌNG TÀI có sẵn từ đầu —
+thêm cờ `pausedByMenu` để Menu đóng lại không vô tình mở khoá ván trọng tài đang tự tạm dừng tay), Running
+team (2 đồng hồ chính+mỗi câu, kiểu tính DELTA nên clear/set lại không cần dịch gì), Flying fruit (spawn
+hoa quả, cùng kiểu huỷ-hẹn-lại như Whack-a-mole). **9 game còn lại KHÔNG cần hook** (Quiz, Anagram, Find
+the match, Type the answer, True/false, Crossword, Unjumble, Balloon pop, Speaking cards) — game "lượt
+một", không có vòng lặp thời gian thực riêng ngoài đồng hồ chung, nên đã đúng ngay từ bước (2).
+
+⚠️ **Giới hạn đã biết, cố ý không sửa** (ghi rõ trong HUONG DAN CORE để không ai tưởng nhầm là bug): một
+`element.animate()` có `setTimeout` dự phòng (luật bắt buộc) thì PAUSE animation không dừng được
+`setTimeout` đó — nó vẫn đếm theo giờ thực, có thể bắn đúng lúc animation đang đóng băng (lệch một khung
+hình, không ảnh hưởng điểm/dữ liệu). Và các chuỗi kịch bản dựng bằng `setTimeout` đệ quy KHÔNG phải spawn
+timer đơn (Gameshow: intro 6s + get-ready 1,65s; Whack-a-mole: từng ô/mole hết hạn riêng trong `timers`
+Set dùng chung) vẫn chạy theo giờ thực khi bị Menu mở giữa chừng — chấp nhận vì đây là chuyển cảnh ngắn,
+sửa đúng sẽ phải viết lại cơ chế timer của cả file, không đáng cho một tình huống hiếm.
+
+**Tự test trình duyệt thật** (đủ 16 template load 0 lỗi console; 4 game chơi thật hết vòng mở/đóng Menu):
+Quiz (đồng hồ chung dừng đúng tại chỗ, dim CHỈ phủ khung — đo `getBoundingClientRect` khớp khít
+`.aw-stage-inner`, thanh dưới khung `filter:none` không đổi) · Gameshow (đếm ngược mỗi câu dừng đúng, mở
+menu giữa lúc đang chạy không làm auto-timeout oan) · Maze chase (đo toạ độ `--r/--c` của enemy: đứng yên
+tuyệt đối suốt lúc Menu mở, di chuyển lại đúng khi đóng) · Running team (đồng hồ chính đứng yên, chạy lại
+đúng nhịp thời gian thực sau khi đóng) · True/false (mở Menu ngay giữa màn đếm 3-2-1 riêng — không crash,
+không lỗi console, game tiếp tục bình thường sau khi đóng).
+
+## Đợt 90 (8/8/2026, v0.9.65) — SỬA LỖI "ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ" Ở 3 TEMPLATE (Type the answer, Crossword, Anagram). KHÔNG đụng core. 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật cho cả 3 game, 0 lỗi console).
+
+Thầy quan sát: *"game Type The Answer trong bảng kết quả sau game là số câu làm được chứ không phải số điểm
+trên bảng điểm"*. Điều tra toàn bộ 16 template theo cùng tiêu chí (game nào có điểm trừ riêng có thật sự đưa
+vào `ui.finish({score})` không) — tìm ra **2 lỗi thật** + **1 lệch nhãn** (không mất điểm, chỉ thiếu hàng phụ):
+
+- **Type the answer** (`type-the-answer.js`) & **Crossword** (`crossword.js`): cả hai đều tính đúng
+  `livePoints` (điểm đã trừ) và hiện đúng lúc đang chơi (ô điểm góc phải-trên), nhưng `finish()` không
+  truyền `score` vào `ui.finish()` → `core/scoring.js` mặc định `score = correct` (số câu đúng thuần) →
+  bảng kết quả + xếp hạng **bỏ qua hoàn toàn** slider "Points off per wrong"/"Minus mode".
+- **Anagram** (`anagram.js`): có tính điểm trừ (`correct -= penalty` ngay trong `finish()`) nên điểm CUỐI
+  vẫn đúng, nhưng gộp chung `correct` với điểm đã trừ nên hàng phụ "Total: x/y" (Đợt 83) không bao giờ hiện
+  dù có bị trừ điểm — khác chuẩn Quiz/True-false/Maze-chase (giữ `correct` = số đúng thật, `score` riêng =
+  điểm xếp hạng).
+- **Whack-a-mole** — điều tra rồi loại: điểm của nó vốn là hệ arcade riêng (1-2đ/lần đập tuỳ combo/power-up,
+  +5 loot), không phải mô hình "1 điểm/câu đúng trừ N khi sai", nên điểm phạt vẫn luôn nằm trong biến điểm
+  xếp hạng — không có gì bị rơi mất, không sửa.
+
+⭐ **Bẫy tự bắt được khi test (KHÔNG PHẢI chỉ thêm `score: livePoints` là xong):** bản vá đầu cho Type the
+answer dùng thẳng `score: livePoints`, nhưng test bằng trình duyệt thật (6 câu, phạt −2/câu sai) ra
+**"Score 2/6" trong khi ô điểm sống đã hiện đúng "3/6" ngay sau đó** — vì `livePoints` chỉ được cộng bên
+trong callback `land()` của animation bay điểm tới ô điểm (~0,9–1,1s sau khi nộp câu: shake 430ms + fly
+480ms), còn bộ đếm giờ auto-finish câu CUỐI lại đúng 1000ms — sát nút tới mức animation thua cuộc đua. Sửa
+đúng: tính điểm trừ **ĐỒNG BỘ ngay trong `finish()`** từ `state`/`wordState` (đã set synchronous lúc chấm
+câu, không phụ thuộc animation) thay vì đọc biến `livePoints` đang chạy dở. Áp dụng cho cả Crossword (biên
+độ trễ ở đó lớn hơn nhiều — 900–1900ms đệm — nên rủi ro thấp hơn, nhưng vẫn đổi cho nhất quán + an toàn
+tuyệt đối, không phụ thuộc số đo animation nào).
+
+**Đã tự test trình duyệt thật (test.html từng game), xác nhận đúng số:**
+- Type the answer: 5 đúng + 1 sai (phạt 2) → `Score 3/6` (kể cả đúng câu cuối cùng đúng lúc đua thời gian).
+- Crossword: 1 đúng + 1 sai (phạt 2), 18 câu chưa làm (Submit answers sớm) → `Score -1/20`, `Total: 1/20`.
+- Anagram (mode "On submit"): 1 đúng + 1 sai (phạt 2) → `Score -1/6`, `Total: 1/6` (trước đây không có
+  hàng Total này).
+
+Chi tiết đầy đủ: `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md`, `templates/crossword/GHI CHU
+CROSSWORD.md`, `templates/anagram/GHI CHU ANAGRAM.md` — mục Đợt 90 của từng file.
+
 ## Đợt 89 (8/8/2026, v0.9.64) — ANAGRAM: KÉO-THẢ VẬT LÝ THẬT + HIỆU ỨNG MỀM HƠN + SLOGAN. Chỉ đụng `templates/anagram/*`, KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `5d504f7` + PUSH + **LIVE** (`curl` xác nhận `aw-anagram-slogan` trong CSS + `moveResultTile`/`showTransientMark`/"ANAGRAM IN ANDREW CLASSES" trong JS live)
 
 4 lượt góp ý liên tiếp trong cùng 1 phiên (thầy tự chơi bản live rồi gửi từng lượt), mỗi lượt tự test qua

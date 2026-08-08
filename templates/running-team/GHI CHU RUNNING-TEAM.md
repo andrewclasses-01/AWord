@@ -1,5 +1,15 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+> Chỉ đụng `running-team.js`: thêm `pauseGame`/`resumeGame` + bridge module `rtPauseHandlers` + `onPause`.
+> Cả `mainTimer` (đồng hồ chính) lẫn `qTimer` (đồng hồ mỗi câu) tính giờ theo DELTA mỗi tick (`now-last`,
+> `last` reset mỗi lần chạy) chứ không đếm tới hạn tuyệt đối, nên dừng/mở lại chỉ cần
+> `stopMainClock()`/`stopQuestionClock()` rồi gọi `startMainClock()`/`startQuestionClock()` lại — hàm start
+> tự bắt `last` mới, không cần dịch gì. Có nhớ đúng cái nào ĐANG chạy lúc dừng (qTimer cố ý ngừng suốt màn
+> READY/3-2-1 — không hồi sinh nhầm). Tự test trình duyệt thật: đồng hồ chính đứng yên tuyệt đối lúc Menu
+> mở, chạy lại đúng nhịp thời gian thực sau khi đóng. Chi tiết cơ chế chung: `core/HUONG DAN CORE.md` mục
+> "MENU PAUSE", `GHI CHU DU AN.md` Đợt 91.
+
 > **TRẠNG THÁI (6/8/2026, v0.9.53): 🟢 CHỜ THẦY DUYỆT — build xong trọn 3 chặng trong 1 phiên,
 > chưa commit.** Template thứ 16. Đã tự test trình duyệt thật qua devserver
 > (`templates/running-team/test.html`), **0 lỗi console** suốt cả phiên. Đã kiểm đủ **4 cửa kết thúc**,

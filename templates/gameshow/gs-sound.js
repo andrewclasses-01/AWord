@@ -54,6 +54,10 @@ function musicStart() {
   } catch { /* ignore */ }
 }
 function musicStop() { try { if (musicEl) { musicEl.pause(); musicEl.currentTime = 0; } } catch {} }
+// Menu pause (Đợt 91, 8/8/2026): pause/resume IN PLACE (no currentTime reset,
+// unlike musicStop) so the loop picks back up exactly where it left off.
+function musicPause() { try { if (musicEl && !musicEl.paused) musicEl.pause(); } catch {} }
+function musicResume() { try { if (musicEl && musicEl.paused) musicEl.play().catch(() => {}); } catch {} }
 
 export const gsSound = {
   // ----- engine lifecycle hooks (registerTemplate.sounds) -----
@@ -101,5 +105,5 @@ export const gsSound = {
   menuSubtle: () => playFile("menusubtle"),      // 31
 
   // ----- background music -----
-  musicStart, musicStop
+  musicStart, musicStop, musicPause, musicResume
 };

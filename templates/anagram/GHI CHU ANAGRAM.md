@@ -553,3 +553,19 @@ CÔNG KHAI thật (`wordwall.net/resource/98204906/anagram`) để tham khảo b
 CANVAS nên không lái được bằng công cụ tự động (không có DOM để bắt sự kiện) — chỉ quan sát được cấu trúc
 (dãy đích là 1 dải gạch chân liền, không phải từng ô riêng) chứ không đo được animation thật của họ.
 0 lỗi console suốt toàn bộ 4 lượt kiểm tra.
+
+## Đợt 90 (8/8/2026, v0.9.65) — SỬA: "Points off" bị gộp lẫn vào `correct`, mất hàng "Total" phụ. 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi). KHÔNG đụng core.
+
+Điều tra chung toàn dự án sau khi thầy phát hiện lỗi tương tự ở Type the answer (xem `GHI CHU DU AN.md`
+Đợt 90). Anagram KHÔNG mất điểm trừ (khác Type the answer/Crossword) — `finish()` đã có `correct -= penalty`
+ngay tại chỗ — nhưng làm vậy khiến `correct` (số từ đúng thật, hoặc số điểm chữ ở mode bonus) và `score`
+(điểm xếp hạng) LUÔN bằng nhau, nên hàng phụ "Total: x/y" (Đợt 83, chỉ hiện khi `score !== correct`)
+**không bao giờ xuất hiện** dù có bị trừ điểm — khác chuẩn Quiz/True-false/Maze-chase.
+
+**Sửa:** bỏ dòng `correct -= penalty` mutate tại chỗ, thay bằng truyền riêng `score: correct - penalty`
+trong `ui.finish()` — `correct` giữ nguyên là số đo thật (từ hoặc chữ tuỳ mode), `score` mới là điểm đã trừ
+dùng để xếp hạng. Không đổi thời điểm đọc `penalty` (vẫn đọc synchronous ngay đầu `finish()`, y hệt code cũ)
+nên không có rủi ro đua thời gian nào bị đổi.
+
+Test thật (mode "On submit", Points off = 2): 1 từ đúng (ELEPHANT) + 1 từ sai chủ ý (POLAR BEAR, xếp sai
+thứ tự) → `Score -1/6`, `Total: 1/6` — trước đây sẽ chỉ hiện `Score -1/6` không kèm hàng Total.

@@ -32,6 +32,12 @@ const BASE_POINTS = 100;   // for any correct answer
 const SPEED_BONUS = 100;   // extra, scaled by how much time was left (timed only)
 const BONUS_CARD_VALUES = [50, 100, 150, 200, 250];
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
+// one activity at a time.
+let gsPauseHandlers = null;
+
 const gameshowTemplate = {
   type: "gameshow",
   scorable: true,
@@ -215,7 +221,7 @@ const gameshowTemplate = {
     const used = { fifty: false, x2: false, time: false, cheat: false };
     let doubleArmed = false;
     // timer
-    let tickId = null, qDeadline = 0, warned = false;
+    let tickId = null, qDeadline = 0, warned = false, pausedQAt = 0;
     // pending timeouts to clear on cleanup/restart
     const pending = new Set();
     function later(fn, ms) { const id = setTimeout(() => { pending.delete(id); fn(); }, ms); pending.add(id); return id; }
@@ -316,6 +322,14 @@ const gameshowTemplate = {
     function tiles() { return [...play.querySelectorAll(".aw-gs-tile")]; }
 
     // ============================================================= TIMER
+    // `tickCountdown` is split out so Menu-pause (below) can restart the exact
+    // same interval after shifting `qDeadline`, without duplicating it.
+    function tickCountdown() {
+      updateBar();
+      const left = qDeadline - performance.now();
+      if (left <= 5000 && left > 0 && !warned) { warned = true; gsSound.clockTick(); }
+      if (left <= 0) { stopTimer(); resolveQuestion(null, true); }
+    }
     function startTimer() {
       stopTimer();
       if (!timed) { timerWrap.style.visibility = "hidden"; return; }
@@ -323,14 +337,28 @@ const gameshowTemplate = {
       qDeadline = performance.now() + secondsPerQ * 1000;
       warned = false;
       updateBar();
-      tickId = setInterval(() => {
-        updateBar();
-        const left = qDeadline - performance.now();
-        if (left <= 5000 && left > 0 && !warned) { warned = true; gsSound.clockTick(); }
-        if (left <= 0) { stopTimer(); resolveQuestion(null, true); }
-      }, 100);
+      tickId = setInterval(tickCountdown, 100);
     }
     function stopTimer() { if (tickId) { clearInterval(tickId); tickId = null; } }
+
+    // ----- Menu pause (Đợt 91) -----
+    // Without this, a question's per-Q countdown keeps running behind the
+    // dimmed Menu popup and can auto-timeout (mark it wrong) while the
+    // teacher isn't even looking at the game. Shifts `qDeadline` forward by
+    // the paused duration on resume, same trick as the core clock.
+    function pauseGame() {
+      if (tickId) { clearInterval(tickId); tickId = null; pausedQAt = performance.now(); }
+      gsSound.musicPause();
+    }
+    function resumeGame() {
+      if (pausedQAt) {
+        qDeadline += performance.now() - pausedQAt;
+        pausedQAt = 0;
+        if (timed && !finished) tickId = setInterval(tickCountdown, 100);
+      }
+      gsSound.musicResume();
+    }
+    gsPauseHandlers = { pause: pauseGame, resume: resumeGame };
     function updateBar() {
       const totalMs = secondsPerQ * 1000;
       const left = Math.max(0, qDeadline - performance.now());
@@ -580,6 +608,7 @@ const gameshowTemplate = {
 
     // ----- cleanup -----
     return function cleanup() {
+      gsPauseHandlers = null;
       window.removeEventListener("keydown", onKey);
       stopTimer();
       pending.forEach(clearTimeout); pending.clear();
@@ -593,6 +622,13 @@ const gameshowTemplate = {
       if (innerEl) innerEl.classList.remove("aw-gs-inner");
       decor.remove(); screen.remove();
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `gsPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!gsPauseHandlers) return;
+    if (paused) gsPauseHandlers.pause(); else gsPauseHandlers.resume();
   }
 };
 

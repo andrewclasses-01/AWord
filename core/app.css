@@ -413,6 +413,20 @@ body {
    keyboard toggle — see `.aw-bottombar-extra` in that template's own CSS). */
 .aw-bottombar-left { display: flex; align-items: center; gap: 0.4cqw; }
 
+/* ---------- Menu pause overlay (Đợt 91) ----------
+   Dims + softly blurs the STAGE ONLY (topbar/playarea/bottombar) while the ☰
+   Menu popup is open — everything below the stage (title, Options/Template/
+   Style, Edit/Assignment/Print) stays at full brightness on purpose, unlike
+   `.aw-tool-dim` which dims the whole viewport. Sits inside `.aw-stage-inner`
+   (position:absolute already), z-index BELOW `.aw-menu` (8) so the popup
+   itself is never dimmed. */
+.aw-stage-dim {
+  position: absolute; inset: 0; z-index: 7;
+  background: rgba(18, 23, 32, .32);
+  backdrop-filter: blur(2px);
+  animation: aw-fadein .15s ease;
+}
+
 /* ---------- Popup menu ---------- */
 .aw-menu {
   /* bottom clears the bottom bar — raised from 5.8cqw when the Back/Next

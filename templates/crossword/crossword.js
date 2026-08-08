@@ -1003,13 +1003,13 @@ const crosswordTemplate = {
       // not just whichever page happens to be on screen right now.
       const review = [];
       const perQuestion = [];
-      let correct = 0, answered = 0;
+      let correct = 0, answered = 0, wrongDone = 0;
       pageState.forEach(ps => {
         ps.clues.forEach((w, i) => {
           const s = ps.wordState[i];
           const typed = w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("");
           if (s.correct) correct++;
-          if (s.done) answered++;
+          if (s.done) { answered++; if (!s.correct) wrongDone++; }
           perQuestion.push({ q: perQuestion.length, correct: s.correct === true });
           review.push({
             question: w.clue,
@@ -1021,7 +1021,17 @@ const crosswordTemplate = {
           });
         });
       });
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered });
+      // Deducted score for ranking/summary: +1 per correct word, −penalty per
+      // wrong-and-graded word (Minus mode only). Computed HERE from `wordState`
+      // (set synchronously in gradeWord) rather than read off `livePoints` — that
+      // variable is only updated inside `pushTimer` callbacks fired well after the
+      // per-cell reveal animation, and reading it right at finish() risks catching
+      // it mid-update (same class of bug found + fixed in Type the answer's
+      // finish(), which had a much tighter margin). Without any of this, the score
+      // silently defaulted to `correct` and "Minus mode" had zero effect on the
+      // final result.
+      const score = minusOn ? correct - penalty * wrongDone : correct;
+      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered, score });
     }
 
     return function cleanup() {

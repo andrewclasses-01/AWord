@@ -94,6 +94,12 @@ function fmtClock(ms) {
   return `${m}:${String(s).padStart(2, "0")}`;
 }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as `rwEndData` below: AWord only ever mounts one
+// activity at a time.
+let rwPauseHandlers = null;
+
 const rwTemplate = {
   type: "running_word",
   scorable: true,
@@ -1030,6 +1036,21 @@ const rwTemplate = {
       paintAll();
     }
 
+    // ----- Menu pause (Đợt 91, 8/8/2026) -----
+    // Both chess clocks already stop cold whenever `paused` is true (see
+    // `tick()` above) — this game had a referee Pause button from the start.
+    // Route the ☰ Menu the same way, tracking whether MENU is the one that
+    // paused it (`pausedByMenu`) so closing the menu can't accidentally
+    // resume a match the referee had already paused on their own.
+    let pausedByMenu = false;
+    function menuPause() {
+      if (phase === "play" && !paused) { paused = true; pausedByMenu = true; lastFrame = performance.now(); paintAll(); }
+    }
+    function menuResume() {
+      if (pausedByMenu) { paused = false; pausedByMenu = false; lastFrame = performance.now(); focusInput(); paintAll(); }
+    }
+    rwPauseHandlers = { pause: menuPause, resume: menuResume };
+
     // ===== TYPING ==========================================================
     // Typing is live once a side has been picked in "prep" (before the clock
     // starts) as well as during "play" — the first Submit is what starts the
@@ -1346,6 +1367,7 @@ const rwTemplate = {
     ui.setNav({ index: 0, total: 0, onPrev: null, onNext: null, label: SLOGAN });
 
     return function cleanup() {
+      rwPauseHandlers = null;
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
       if (tickId) clearInterval(tickId);
@@ -1355,6 +1377,13 @@ const rwTemplate = {
       flyNodes.clear();
       hideReveal();
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `rwPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!rwPauseHandlers) return;
+    if (paused) rwPauseHandlers.pause(); else rwPauseHandlers.resume();
   }
 };
 

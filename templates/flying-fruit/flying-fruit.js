@@ -37,6 +37,12 @@ const EXPLO = { kivano: "explosion-green", mango: "explosion-yellow", papaya: "e
 function randi(n) { return Math.floor(Math.random() * n); }
 function isValidItem(it) { return it && typeof it.word === "string" && it.word.trim() !== ""; }
 
+// Menu pause (Đợt 91, 8/8/2026) — bridges the CURRENT mount's pause/resume
+// pair out to the template-level `onPause` hook engine.js calls. Module-level
+// single, same pattern as running-word's `rwEndData`: AWord only ever mounts
+// one activity at a time.
+let ffPauseHandlers = null;
+
 const flyingFruitTemplate = {
   type: "flying_fruit",
   scorable: true,
@@ -222,6 +228,18 @@ const flyingFruitTemplate = {
       if (activeFruits.size < maxConcurrent) spawnFruit();
       scheduleSpawn();
     }
+
+    // ----- Menu pause (Đợt 91, 8/8/2026) -----
+    // Fruits already on screen freeze visually on their own (engine.js pauses
+    // every running CSS animation in the stage, and `.aw-ff-fly`'s flight path
+    // is exactly that), but the SPAWN schedule is a plain setTimeout chain —
+    // left alone it would keep spawning fresh fruit invisibly behind the
+    // dimmed Menu popup. Not worth tracking the exact remaining gap for a
+    // randomised interval: just stop scheduling now, and give it a FRESH gap
+    // on resume (same approach as Whack-a-mole's mole spawner).
+    function pauseGame() { if (spawnTimer) { clearTimer(spawnTimer); spawnTimer = null; } }
+    function resumeGame() { if (!ended && !spawnTimer) scheduleSpawn(); }
+    ffPauseHandlers = { pause: pauseGame, resume: resumeGame };
 
     function spawnFruit() {
       const entry = nextEntry();
@@ -412,6 +430,7 @@ const flyingFruitTemplate = {
 
     // ---------- cleanup ----------
     return function cleanup() {
+      ffPauseHandlers = null;
       ended = true;
       if (spawnTimer) clearTimeout(spawnTimer);
       if (ambientTimer) clearTimeout(ambientTimer);
@@ -419,6 +438,13 @@ const flyingFruitTemplate = {
       if (fitter) fitter.destroy();
       if (ui.topbarMid) ui.topbarMid.innerHTML = "";
     };
+  },
+
+  // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/
+  // close(false). See `ffPauseHandlers` above for why it's a module bridge.
+  onPause(paused) {
+    if (!ffPauseHandlers) return;
+    if (paused) ffPauseHandlers.pause(); else ffPauseHandlers.resume();
   }
 };
 
