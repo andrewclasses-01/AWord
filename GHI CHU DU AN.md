@@ -5,6 +5,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 92 (8/8/2026, v0.9.66) — SỬA LỖI ĐỢT 91: DIM + BLUR CỦA MENU KHÔNG HIỆN (chỉ đồng hồ dừng). KHÔNG đụng gì thêm ngoài `core/engine.js` + `core/app.css`. ✅ THẦY DUYỆT → COMMIT `b48c315` + PUSH + **LIVE** (`curl` xác nhận `blur(3px)` trong `core/app.css`; tự chụp ảnh màn hình thật xác nhận dim/blur hiện rõ, cả local lẫn live).
+
+Thầy báo qua test live: *"đồng hồ dừng rồi, nhưng dim và blur thì không thấy"*. ⭐ **Lỗi thật, không phải
+do quá nhạt** — dù ban đầu cũng tăng độ đậm cho khớp `.aw-tool-dim` (`rgba(...,.5)` + `blur(3px)`, trước
+là `.32`/`2px`) nhưng vẫn không thấy gì, vì gốc lỗi nằm ở CHÍNH `enterMenuPause()`: hàm này tạo + append
+`.aw-stage-dim` vào `.aw-stage` **TRƯỚC** khi gọi `stage.getAnimations({subtree:true})` để tạm dừng mọi
+animation đang chạy trong khung — mà `.aw-stage-dim` VỪA thêm vào đã tự khởi động animation `aw-fadein`
+của chính nó (khai trong CSS), nên `getAnimations()` **BẮT LUÔN animation đó** (đang `playState:"running"`)
+và pause **NGAY LẬP TỨC**, đóng băng dim ở khung hình đầu tiên (`opacity≈0`) — tự bắn vào chân mình. Đo
+`getComputedStyle` thấy `background`/`backdrop-filter` vẫn đúng giá trị đã khai (dễ tưởng nhầm là "chỉ cần
+tăng độ đậm"), phải tự đo riêng `opacity` mới lộ ra `"0"`. **Sửa**: đảo thứ tự — bắt + pause animation đang
+chạy TRƯỚC, tạo/append `.aw-stage-dim` SAU, nên animation vào-màn của chính nó không bao giờ lọt vào danh
+sách bị bắt. Luật chung cho overlay mới sau này: `core/HUONG DAN CORE.md` mục "MENU PAUSE" mục 1, đoạn
+"BẪY THẬT ĐÃ CẮN".
+
+Tự test: chụp ảnh màn hình thật (không chỉ đo `getComputedStyle`) trước/sau khi bấm Menu — xác nhận khung
+game tối hẳn + nhoè rõ, popup và thanh dưới khung vẫn sắc nét, đóng menu về lại bình thường; lặp lại y hệt
+trên bản live. 0 lỗi console cả hai nơi.
+
 ## Đợt 91 (8/8/2026, v0.9.65) — ⭐⭐ TÍNH NĂNG MỚI: MỞ ☰ MENU LÀ TẠM DỪNG CẢ GAME. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp trong phiên). ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + **LIVE** (`curl` xác nhận `aw-stage-dim`/`enterMenuPause`/`gsPauseHandlers`).
 
 Thầy yêu cầu: *"Khi bấm nút Menu, chỉ pop-up menu + tên act + các nút tùy chỉnh + các nút chức năng là giữ

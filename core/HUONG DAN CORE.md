@@ -820,7 +820,25 @@ Options/Template/Style + Edit/Assignment/Print). `.aw-stage-dim` (Menu) thì **C
 `.aw-stage-inner`** (topbar + playarea + bottombar) — thanh dưới khung **CỐ Ý giữ nguyên độ sáng** (thầy
 chốt: menu + tên bài + cụm nút vẫn phải đọc được/bấm được trong lúc game tạm dừng). Cài đặt:
 `inner.append(stageDim)` trong `enterMenuPause()` (`core/engine.js`), z-index **7** (dưới `.aw-menu` z-index
-8, để popup không bị chính lớp tối của nó che). Bấm ra ngoài đóng menu vẫn dùng `pointerdown` như cũ.
+8, để popup không bị chính lớp tối của nó che). Bấm ra ngoài đóng menu vẫn dùng `pointerdown` như cũ. Độ
+đậm khớp Y HỆT `.aw-tool-dim` (`rgba(18,23,32,.5)` + `blur(3px)`) — thầy chốt sau khi thấy bản đầu
+(`rgba(...,.32)` + `blur(2px)`) quá nhạt, không nhận ra trên máy thật dù `getComputedStyle` đo đúng.
+
+⚠️⚠️ **BẪY THẬT ĐÃ CẮN (8/8/2026, v0.9.66) — thứ tự bắt buộc: PAUSE animation trước, TẠO `stageDim` sau.**
+Bản đầu viết `stageDim = el(...); inner.append(stageDim); ...; stage.getAnimations({subtree:true})...` —
+tưởng vô hại vì chỉ là đổi thứ tự vài dòng, nhưng **`stageDim` VỪA được thêm vào `stage` đã tự động bắt đầu
+chạy animation `aw-fadein` của chính nó** (khai trong CSS, không cần JS gọi gì thêm), nên câu lệnh
+`getAnimations({subtree:true})` ngay sau đó **BẮT LUÔN animation NÀY** (nó đang `playState:"running"`, vừa
+mới bắt đầu) và `.pause()` nó **NGAY LẬP TỨC** — đóng băng chính lớp dim ở khung hình ĐẦU TIÊN (`opacity`
+gần bằng 0). Hậu quả: đồng hồ dừng đúng (mọi thứ khác vẫn work), nhưng **dim/blur hoàn toàn vô hình** —
+mà `getComputedStyle(dim)` vẫn báo `background`/`backdrop-filter` ĐÚNG giá trị đã khai (vì CSS rule không
+sai, animation runtime mới sai) → dễ kết luận nhầm "chắc do quá nhạt" thay vì lỗi thật (đã tự đo `opacity`
+riêng mới lộ ra `"0"`). **Sửa: gọi `stage.getAnimations()` + `.pause()` các animation TRƯỚC khi tạo/append
+`stageDim`**, để dim's animation không bao giờ lọt vào danh sách bị bắt tạm dừng.
+→ **LUẬT CHUNG cho bất kỳ overlay/animation MỚI nào thêm vào TRONG `.aw-stage` sau này**: nếu overlay đó tự
+có animation vào-màn (CSS `animation` hay `element.animate()` gọi ngay lúc tạo), và có chỗ khác trong code
+đang "bắt hết animation đang chạy trong stage" (như `enterMenuPause`), PHẢI tạo/append overlay đó SAU khi
+đã bắt xong danh sách, không phải trước.
 
 ### 2. Những gì TỰ ĐỘNG dừng — không cần đụng gì ở template
 

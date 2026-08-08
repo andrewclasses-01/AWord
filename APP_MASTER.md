@@ -5,7 +5,20 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **8/8/2026 (Đợt 90+91, v0.9.65) — SỬA ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ (3 template)
+> Cập nhật lần cuối: **8/8/2026 (Đợt 92, v0.9.66) — SỬA LỖI ĐỢT 91: DIM + BLUR CỦA MENU PAUSE KHÔNG HIỆN
+> (chỉ đồng hồ dừng). ✅ THẦY DUYỆT → COMMIT `b48c315` + PUSH + **LIVE** (đã tự chụp ảnh màn hình thật xác
+> nhận, cả local lẫn live).**
+> ⭐ **Lỗi thật, không phải do màu quá nhạt**: `enterMenuPause()` (`core/engine.js`) tạo + append
+> `.aw-stage-dim` TRƯỚC khi gọi `stage.getAnimations({subtree:true})` để tạm dừng animation đang chạy
+> trong khung — mà `.aw-stage-dim` vừa thêm vào đã tự khởi động animation `aw-fadein` của chính nó, nên bị
+> chính `getAnimations()` bắt và `.pause()` ngay lập tức, đóng băng ở `opacity≈0`. `getComputedStyle` vẫn
+> báo đúng giá trị CSS đã khai (dễ tưởng nhầm "chỉ cần tăng độ đậm") — phải tự đo riêng `opacity` mới lộ ra
+> `"0"`. Sửa: đảo thứ tự — bắt+pause animation đang chạy TRƯỚC, tạo/append `.aw-stage-dim` SAU. Luật chung
+> cho overlay mới sau này: `core/HUONG DAN CORE.md` mục "MENU PAUSE" mục 1 (đoạn "BẪY THẬT ĐÃ CẮN"). Nhân
+> tiện tăng độ đậm khớp `.aw-tool-dim` (`rgba(...,.5)` + `blur(3px)`, trước `.32`/`2px`). Chi tiết:
+> `GHI CHU DU AN.md` Đợt 92.
+>
+> Trước đó: **8/8/2026 (Đợt 90+91, v0.9.65) — SỬA ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ (3 template)
 > + ⭐⭐ TÍNH NĂNG MỚI "MENU PAUSE" TOÀN HỆ THỐNG. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp). ✅ THẦY DUYỆT
 > → COMMIT `be7cd55` + PUSH + **LIVE** (`curl` xác nhận `aw-stage-dim` trong `core/app.css` +
 > `enterMenuPause` trong `core/engine.js` + `gsPauseHandlers` trong `gameshow.js`).**
