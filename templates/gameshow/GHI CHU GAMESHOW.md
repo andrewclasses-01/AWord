@@ -5,9 +5,10 @@
 > `onPause`) + `gs-sound.js` (thêm `musicPause`/`musicResume`). Bấm ☰ Menu giờ tạm dừng đúng cả đếm ngược
 > mỗi câu (dịch `qDeadline` bằng đúng thời gian dừng, không auto-timeout oan khi thầy đang xem menu) VÀ
 > nhạc nền loop (pause/resume tại chỗ, không tua về đầu). Cinematic intro/get-ready (`later()` timeout
-> chain) CỐ Ý không dừng — quá ngắn, không đáng sửa lại cả cơ chế timer. 🟢 CHỜ THẦY DUYỆT (tự test trình
-> duyệt thật: mở menu giữa câu hỏi đang đếm giờ, countdown đứng yên rồi chạy lại đúng, 0 lỗi console). Chi
-> tiết cơ chế chung: `core/HUONG DAN CORE.md` mục "MENU PAUSE", `GHI CHU DU AN.md` Đợt 91.
+> chain) CỐ Ý không dừng — quá ngắn, không đáng sửa lại cả cơ chế timer. ✅ THẦY DUYỆT → COMMIT `be7cd55`
+> + PUSH + LIVE (tự test trình duyệt thật trước đó: mở menu giữa câu hỏi đang đếm giờ, countdown đứng yên
+> rồi chạy lại đúng, 0 lỗi console). Chi tiết cơ chế chung: `core/HUONG DAN CORE.md` mục "MENU PAUSE",
+> `GHI CHU DU AN.md` Đợt 91.
 
 > **⭐ Đợt 34 (1/8/2026, v0.9.8) — DỰNG LẠI INTRO + GET READY + NỀN PHỦ TOÀN KHUNG cho giống act gốc.
 > ✅ THẦY DUYỆT → ĐÃ COMMIT + PUSH. Chỉ sửa `templates/gameshow/*`, KHÔNG đụng core.**

@@ -1,6 +1,7 @@
 # GHI CHU — FLYING FRUIT (game thứ 8)
 
-**Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+**Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
+`be7cd55` + PUSH + LIVE.**
 Chỉ đụng `flying-fruit.js`: thêm `pauseGame`/`resumeGame` + bridge module `ffPauseHandlers` + `onPause`.
 Quả đang bay đứng yên tự động (animation CSS bị core pause chung), riêng lịch SPAWN quả mới
 (`spawnTimer`, một chuỗi `setTimeout` đệ quy) phải tự dừng tay: huỷ lịch hẹn hiện tại lúc Menu mở (không

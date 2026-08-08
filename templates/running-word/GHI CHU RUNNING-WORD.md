@@ -1,6 +1,7 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
-> **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+> **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT →
+> COMMIT `be7cd55` + PUSH + LIVE.**
 > Chỉ đụng `running-word.js`: thêm `menuPause`/`menuResume` + bridge module `rwPauseHandlers` + `onPause`.
 > Game này ĐÃ CÓ SẴN cơ chế Pause/Resume của trọng tài từ đầu (`togglePause()`, phím Esc, nút play/pause
 > trên `refUI`) — không viết cơ chế mới, chỉ GỌI LẠI đúng state machine đó (`paused=true/false`,

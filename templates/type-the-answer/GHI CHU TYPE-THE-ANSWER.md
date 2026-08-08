@@ -15,7 +15,7 @@ test. Sửa đúng: tính điểm trừ **ĐỒNG BỘ trong `finish()`** từ `
 `submitAnswer`, không phụ thuộc animation): `score: correct - penalty * wrongGraded`.
 
 Test thật: 5 đúng + 1 sai (phạt 2) → `Score 3/6`, khớp `Total: 5/6`. Không đụng core. Chi tiết chung:
-`GHI CHU DU AN.md` Đợt 90.
+`GHI CHU DU AN.md` Đợt 90. ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + LIVE.
 
 ## Đợt 55 (3/8/2026) — Bỏ checkbox Minus points, thêm Lives, sửa 3 lỗi nav/auto-advance (⚠️ LOCAL)
 

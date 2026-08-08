@@ -5,7 +5,45 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **8/8/2026 (Đợt 89, v0.9.64) — ANAGRAM: KÉO-THẢ VẬT LÝ THẬT + HIỆU ỨNG MỀM HƠN +
+> Cập nhật lần cuối: **8/8/2026 (Đợt 90+91, v0.9.65) — SỬA ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ (3 template)
+> + ⭐⭐ TÍNH NĂNG MỚI "MENU PAUSE" TOÀN HỆ THỐNG. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp). ✅ THẦY DUYỆT
+> → COMMIT `be7cd55` + PUSH + **LIVE** (`curl` xác nhận `aw-stage-dim` trong `core/app.css` +
+> `enterMenuPause` trong `core/engine.js` + `gsPauseHandlers` trong `gameshow.js`).**
+>
+> **Đợt 90 — điểm trừ ("Points off"/"Minus mode") không vào bảng kết quả cuối game.** Thầy phát hiện ở
+> Type the answer, điều tra ra thêm Crossword dính lỗi Y HỆT: cả hai tính đúng điểm trừ và hiện đúng lúc
+> đang chơi, nhưng `finish()` không truyền `score` vào `ui.finish()` → mặc định lấy số câu đúng thuần, bật
+> "Points off" **không hề ảnh hưởng** điểm cuối/xếp hạng. ⭐ **Bẫy tự bắt được**: vá tạm bằng đọc thẳng biến
+> `livePoints` (tính bên trong callback animation bay điểm, trễ ~0,9-1,1s) THUA CUỘC ĐUA với timer
+> auto-finish câu cuối (đúng 1000ms) — test thật ra `Score 2/6` trong khi ô điểm sống đã hiện `3/6`. Sửa
+> đúng: tính điểm trừ ĐỒNG BỘ trong `finish()` từ `state`/`wordState` (set lúc chấm câu, không phụ thuộc
+> animation). Anagram: tách `correct` (số đúng thật) khỏi `score` (điểm đã trừ) — trước đó gộp chung làm
+> hàng phụ "Total: x/y" không bao giờ hiện. Whack-a-mole điều tra rồi loại (hệ điểm arcade riêng, không mất
+> gì). Chi tiết: `GHI CHU DU AN.md` Đợt 90, + `GHI CHU <TEN>.md` của 3 game.
+>
+> **Đợt 91 — MENU PAUSE.** Thầy yêu cầu: *"bấm Menu thì pop-up + tên act + nút tùy chỉnh + nút chức năng
+> giữ sáng, nền phía dưới tối hơn + nhoè nhẹ, mọi act tạm ngưng (dừng game, dừng âm thanh), đóng menu thì
+> tiếp tục"*. `.aw-stage-dim` MỚI (`core/app.css`) chỉ tối `.aw-stage-inner` (topbar/playarea/bottombar) —
+> thanh dưới khung (title/Options/Template/Style/Edit/Assignment/Print) CỐ Ý giữ sáng, khác hẳn
+> `.aw-tool-dim` cũ (tối cả màn hình). `enterMenuPause()`/`exitMenuPause()` (`core/engine.js`) tự động dừng
+> CHO MỌI TEMPLATE: đồng hồ chung (dịch `startedAt`), AudioContext dùng chung
+> (`sound.pauseContext/resumeContext` MỚI), mọi pack mp3 đang phát kể cả nhạc nền loop
+> (`sfx.js pauseActive/resumeActive` MỚI, qua registry `window.__awSfxPacks`), mọi animation CSS/WAAPI
+> đang chạy trong khung (`stage.getAnimations({subtree:true})`). Hook tuỳ chọn MỚI **`tpl.onPause(paused)`**
+> cho game có timer/nhạc RIÊNG — đã nối cho 7 game: Gameshow (đếm ngược mỗi câu + nhạc nền), Whack-a-mole
+> (đồng hồ ván + spawn mole), Maze chase (di chuyển player/enemy), Open the box (đồng hồ mỗi câu — tái dùng
+> đúng đường `runCountdown(timeLeft)` có sẵn), Running word (tái dùng CƠ CHẾ PAUSE TRỌNG TÀI có sẵn, thêm
+> cờ `pausedByMenu`), Running team (2 đồng hồ delta-tick), Flying fruit (spawn hoa quả). 9 game còn lại
+> KHÔNG cần hook (game "lượt một", đồng hồ chung đã đủ). ⚠️ Giới hạn đã biết, cố ý không sửa: `setTimeout`
+> dự phòng của `element.animate()` không bị pause cùng animation (lệch một khung hình hiếm gặp, vô hại);
+> chuỗi cinematic dựng bằng `setTimeout` đệ quy (Gameshow intro/get-ready, timer riêng từng ô/mole của
+> Whack-a-mole) vẫn chạy theo giờ thực khi Menu mở giữa chừng — quá ngắn/hiếm, không đáng viết lại cơ chế
+> timer của cả file. Test trình duyệt thật: cả 16 template load 0 lỗi console; Quiz/Gameshow/Maze
+> chase/Running team/True-false chơi thật qua vòng mở-đóng Menu (đồng hồ/di chuyển đứng yên tuyệt đối lúc
+> mở, chạy lại đúng nhịp thời gian thực lúc đóng). Luật đầy đủ + mẫu code cho template thứ 17: `core/HUONG
+> DAN CORE.md` mục **"MENU PAUSE"**. Chi tiết: `GHI CHU DU AN.md` Đợt 91 + `GHI CHU <TEN>.md` của 7 game.
+>
+> Trước đó: **8/8/2026 (Đợt 89, v0.9.64) — ANAGRAM: KÉO-THẢ VẬT LÝ THẬT + HIỆU ỨNG MỀM HƠN +
 > SLOGAN. Chỉ đụng `templates/anagram/*`, KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `5d504f7` + PUSH +
 > **LIVE** (`curl` xác nhận `aw-anagram-slogan` trong CSS + `moveResultTile`/`showTransientMark`/"ANAGRAM
 > IN ANDREW CLASSES" trong JS live).**

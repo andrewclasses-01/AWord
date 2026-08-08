@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 91 (8/8/2026, v0.9.65) — ⭐⭐ TÍNH NĂNG MỚI: MỞ ☰ MENU LÀ TẠM DỪNG CẢ GAME. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp trong phiên). 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi console).
+## Đợt 91 (8/8/2026, v0.9.65) — ⭐⭐ TÍNH NĂNG MỚI: MỞ ☰ MENU LÀ TẠM DỪNG CẢ GAME. ⭐ CÓ SỬA CORE (thầy đặt hàng trực tiếp trong phiên). ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + **LIVE** (`curl` xác nhận `aw-stage-dim`/`enterMenuPause`/`gsPauseHandlers`).
 
 Thầy yêu cầu: *"Khi bấm nút Menu, chỉ pop-up menu + tên act + các nút tùy chỉnh + các nút chức năng là giữ
 độ sáng, toàn bộ nền phía dưới chuyển thành màu tối hơn một chút và hơi blur nhẹ, mọi act khi đang hiện
@@ -56,7 +56,7 @@ tuyệt đối suốt lúc Menu mở, di chuyển lại đúng khi đóng) · Ru
 đúng nhịp thời gian thực sau khi đóng) · True/false (mở Menu ngay giữa màn đếm 3-2-1 riêng — không crash,
 không lỗi console, game tiếp tục bình thường sau khi đóng).
 
-## Đợt 90 (8/8/2026, v0.9.65) — SỬA LỖI "ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ" Ở 3 TEMPLATE (Type the answer, Crossword, Anagram). KHÔNG đụng core. 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật cho cả 3 game, 0 lỗi console).
+## Đợt 90 (8/8/2026, v0.9.65) — SỬA LỖI "ĐIỂM TRỪ BỊ RƠI MẤT KHỎI BẢNG KẾT QUẢ" Ở 3 TEMPLATE (Type the answer, Crossword, Anagram). KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + **LIVE**.
 
 Thầy quan sát: *"game Type The Answer trong bảng kết quả sau game là số câu làm được chứ không phải số điểm
 trên bảng điểm"*. Điều tra toàn bộ 16 template theo cùng tiêu chí (game nào có điểm trừ riêng có thật sự đưa

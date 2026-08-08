@@ -12,7 +12,7 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
-## 8/8/2026 — SỬA: điểm trừ ("Minus mode") bị rơi mất khỏi bảng kết quả (Đợt 90 dự án, v0.9.65) — 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi). KHÔNG đụng core.
+## 8/8/2026 — SỬA: điểm trừ ("Minus mode") bị rơi mất khỏi bảng kết quả (Đợt 90 dự án, v0.9.65) — ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + LIVE. KHÔNG đụng core.
 
 Cùng lỗi tìm thấy ở Type the answer (xem `GHI CHU DU AN.md` Đợt 90 cho bối cảnh chung, thầy phát hiện ra ở
 game đó trước). `finish()` tính đúng `livePoints` (điểm đã trừ, +1 đúng/−penalty sai, cộng dồn qua CẢ nhiều

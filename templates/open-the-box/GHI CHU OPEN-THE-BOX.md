@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.
+## Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + LIVE.
 
 Chỉ đụng `open-the-box.js`: thêm `pauseGame`/`resumeGame` + bridge module `otbPauseHandlers` + `onPause`.
 `startAt`/`totalDur` của `runCountdown()` là `const` RIÊNG mỗi lần gọi (không dịch được từ ngoài), nên cách

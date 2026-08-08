@@ -1,6 +1,7 @@
 # GHI CHÚ — MAZE CHASE (game thứ 9)
 
-**Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. 🟢 CHỜ THẦY DUYỆT.**
+**Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
+`be7cd55` + PUSH + LIVE.**
 Chỉ đụng `maze-chase.js`: thêm `pauseGame`/`resumeGame` + bridge module `mazePauseHandlers` + `onPause`.
 Đơn giản nhất trong 7 game đã nối — `moveTimer`/`enemyTimer` là nhịp di chuyển cố định (không đếm ngược
 gì), nên chỉ cần `clearInterval` lúc dừng / `setInterval` lại y hệt lúc mở, có nhớ đúng cái nào ĐANG chạy

@@ -554,7 +554,7 @@ CANVAS nên không lái được bằng công cụ tự động (không có DOM 
 (dãy đích là 1 dải gạch chân liền, không phải từng ô riêng) chứ không đo được animation thật của họ.
 0 lỗi console suốt toàn bộ 4 lượt kiểm tra.
 
-## Đợt 90 (8/8/2026, v0.9.65) — SỬA: "Points off" bị gộp lẫn vào `correct`, mất hàng "Total" phụ. 🟢 CHỜ THẦY DUYỆT (đã tự test trình duyệt thật, 0 lỗi). KHÔNG đụng core.
+## Đợt 90 (8/8/2026, v0.9.65) — SỬA: "Points off" bị gộp lẫn vào `correct`, mất hàng "Total" phụ. ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + LIVE. KHÔNG đụng core.
 
 Điều tra chung toàn dự án sau khi thầy phát hiện lỗi tương tự ở Type the answer (xem `GHI CHU DU AN.md`
 Đợt 90). Anagram KHÔNG mất điểm trừ (khác Type the answer/Crossword) — `finish()` đã có `correct -= penalty`
