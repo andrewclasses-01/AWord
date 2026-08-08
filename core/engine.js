@@ -779,8 +779,6 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   let stageDim = null;
   let pausedAnimations = [];
   function enterMenuPause() {
-    stageDim = el("div", "aw-stage-dim");
-    inner.append(stageDim);
     pauseClockForMenu();
     sound.pauseContext();   // the shared Web Audio context (crossword/running word/team's own tones)
     if (typeof window !== "undefined" && window.__awSfxPacks) {
@@ -791,6 +789,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     // built on `element.animate()` or `@keyframes`) — remembering only the
     // ones we actually paused, so resume can't accidentally restart something
     // that was already paused/finished on its own.
+    // ⚠️ MUST run BEFORE `stageDim` is created below: `stage.getAnimations()`
+    // walks the WHOLE subtree, so appending the dim FIRST would catch its own
+    // `aw-fadein` entrance animation (just started -> playState "running") and
+    // immediately pause IT too, freezing the dim at opacity 0 — invisible dim
+    // + blur despite every style being computed "correctly". (Caught live,
+    // 8/8/2026: teacher saw the clock freeze but no dim/blur at all.)
     pausedAnimations = stage.getAnimations({ subtree: true }).filter(a => a.playState === "running");
     pausedAnimations.forEach(a => { try { a.pause(); } catch { /* ignore */ } });
     // Optional per-template hook — for timers a template manages ITSELF
@@ -798,6 +802,8 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     // routed through core) that the steps above can't reach. Templates that
     // don't opt in are unaffected: the stage just dims+freezes visually.
     tpl.onPause?.(true);
+    stageDim = el("div", "aw-stage-dim");
+    inner.append(stageDim);
   }
   function exitMenuPause() {
     stageDim?.remove(); stageDim = null;

@@ -422,8 +422,12 @@ body {
    itself is never dimmed. */
 .aw-stage-dim {
   position: absolute; inset: 0; z-index: 7;
-  background: rgba(18, 23, 32, .32);
-  backdrop-filter: blur(2px);
+  /* Same strength as `.aw-tool-dim` (teacher's ask, 8/8/2026: "tối hẳn xuống và
+     blur giống như lúc bấm các nút tùy chỉnh") — was rgba(...,.32), too subtle
+     to notice against a bright theme even though the computed style was
+     correct (confirmed via automated check); this matches it exactly. */
+  background: rgba(18, 23, 32, .5);
+  backdrop-filter: blur(3px);
   animation: aw-fadein .15s ease;
 }
 
