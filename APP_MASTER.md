@@ -5,7 +5,20 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **8/8/2026 (Đợt 92, v0.9.66) — SỬA LỖI ĐỢT 91: DIM + BLUR CỦA MENU PAUSE KHÔNG HIỆN
+> Cập nhật lần cuối: **9/8/2026 (Đợt 93, v0.9.67) — ⭐ GẮN DOMAIN RIÊNG `aword.andrewclasses.com`. Không
+> đụng code, chỉ hạ tầng. ✅ THẦY DUYỆT → COMMIT `5e510d2` (file `CNAME`) + PUSH + **LIVE** tại
+> `https://aword.andrewclasses.com/`.**
+> Domain gốc `andrewclasses.com` thầy mới mua (quản lý ở **portal.inet.vn**, nameserver iNET
+> `sapa/laocai.vclouddns.com`) — dùng làm domain gốc cho MỌI app Andrew Classes từ nay, mỗi app một
+> subdomain. 3 bước đã làm: **(1)** DNS trên portal.inet.vn → OneShield → Bản ghi DNS → CNAME `aword` →
+> `andrewclasses-01.github.io` (tắt "Trạng thái Bảo vệ"/proxy). **(2)** file `CNAME` trong repo +
+> `gh api -X PUT repos/andrewclasses-01/AWord/pages -f cname=...` → chờ chứng chỉ SSL `approved` → ép
+> HTTPS bằng `gh api ... -F https_enforced=true` (chú ý `-F` hoa, không phải `-f` thường). **(3)** Firebase
+> Console (project `aword-70dae`) → Authentication → Authorized domains → thêm domain mới (bắt buộc, nếu
+> không nút "Sign in with Google" sẽ lỗi). Domain cũ `andrewclasses-01.github.io` vẫn chạy song song,
+> không xoá. Mẫu đầy đủ để gắn domain cho app tiếp theo: `GHI CHU DU AN.md` Đợt 93.
+>
+> Trước đó: **8/8/2026 (Đợt 92, v0.9.66) — SỬA LỖI ĐỢT 91: DIM + BLUR CỦA MENU PAUSE KHÔNG HIỆN
 > (chỉ đồng hồ dừng). ✅ THẦY DUYỆT → COMMIT `b48c315` + PUSH + **LIVE** (đã tự chụp ảnh màn hình thật xác
 > nhận, cả local lẫn live).**
 > ⭐ **Lỗi thật, không phải do màu quá nhạt**: `enterMenuPause()` (`core/engine.js`) tạo + append

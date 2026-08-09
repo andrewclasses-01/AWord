@@ -5,6 +5,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 93 (9/8/2026, v0.9.67) — ⭐ GẮN DOMAIN RIÊNG: `aword.andrewclasses.com`. Không đụng code, chỉ hạ tầng (DNS + GitHub Pages + Firebase). ✅ THẦY DUYỆT → COMMIT `5e510d2` (thêm file `CNAME`) + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đã tự mở kiểm tra: trang hiện đúng, HTTPS khoá xanh, nút "Sign in with Google" hoạt động).
+
+Thầy mới mua domain **`andrewclasses.com`** (quản lý tại **portal.inet.vn**, tài khoản PHẠM XUÂN NINH,
+hạn 09/08/2027) — dùng làm **domain gốc cho MỌI app Andrew Classes từ nay về sau**, mỗi app một
+subdomain riêng (vd `aword.`, `speaking.`...). AWord là app đầu tiên gắn thử.
+
+**Đã làm (3 bước, đúng thứ tự):**
+1. **DNS trên portal.inet.vn** → OneShield → Bản ghi DNS → Thêm bản ghi: Loại `CNAME`, Tên `aword`,
+   Đích `andrewclasses-01.github.io`. ⚠️ **Tắt "Trạng thái Bảo vệ"** (toggle proxy giống Cloudflare
+   proxy, ẩn IP gốc) — dropdown "Loại" đổi sang CNAME thì Firebase form tự bỏ luôn toggle này, không
+   cần tự tắt tay; **để yên là mặc định KHÔNG bật proxy** cho CNAME, đúng ý muốn (nếu bật, GitHub Pages
+   khó xác minh domain + xin chứng chỉ SSL vì "gặp" IP của OneShield thay vì IP GitHub).
+2. **GitHub repo `andrewclasses-01/AWord`**: tạo file `CNAME` ở root chứa đúng 1 dòng
+   `aword.andrewclasses.com`, commit+push (nhánh `main`). Sau đó gọi
+   `gh api -X PUT repos/andrewclasses-01/AWord/pages -f cname='aword.andrewclasses.com'` để GitHub nhận
+   domain (tương đương điền ở Settings → Pages → Custom domain trên web UI). GitHub tự xin chứng chỉ
+   SSL — kiểm bằng `gh api repos/andrewclasses-01/AWord/pages` tới khi `https_certificate.state` =
+   `"approved"` (lần này ra ngay lập tức, không phải chờ). Xong thì bật ép HTTPS:
+   `gh api -X PUT repos/andrewclasses-01/AWord/pages -F https_enforced=true` — **chú ý `-F` viết hoa**
+   (gửi giá trị `true` kiểu boolean thật), dùng `-f` chữ thường sẽ gửi chuỗi `"true"` và bị GitHub từ
+   chối (422 "not of type boolean").
+3. **Firebase Console** (project `aword-70dae`) → Authentication → Settings → Authorized domains →
+   Add domain → `aword.andrewclasses.com`. ⭐ **Bắt buộc phải làm bước này** vì AWord dùng Firebase
+   Auth (nút "Sign in with Google") — thiếu bước này thì domain mới mở được trang nhưng **đăng nhập
+   Google sẽ báo lỗi** (domain chưa được whitelist). Domain cũ `andrewclasses-01.github.io` vẫn còn
+   trong danh sách, không xoá — cả hai domain cùng chạy song song, không ảnh hưởng nhau.
+
+**⭐ Ghi lại cho các lần gắn subdomain tiếp theo (myLesson, myBoard... nếu thầy muốn):**
+- Domain gốc `andrewclasses.com` đã trỏ nameserver về iNET (`sapa.vclouddns.com` +
+  `laocai.vclouddns.com`) — mọi bản ghi DNS quản lý tại **portal.inet.vn** → OneShield → Bản ghi DNS,
+  KHÔNG phải ở nơi mua domain gốc.
+- Mẫu chung cho 1 app tĩnh trên GitHub Pages: DNS CNAME `<sub> → <tài-khoản-github>.github.io` (tắt
+  Bảo vệ) → file `CNAME` trong repo + `gh api ... -f cname=` → chờ cert `approved` → `-F
+  https_enforced=true`. Nếu app KHÔNG dùng Firebase Auth thì bỏ qua bước 3.
+- Repo GitHub Pages kiểu "legacy" (build thẳng từ nhánh, không qua Actions) — xác nhận cấu hình hiện
+  tại bằng `gh api repos/<owner>/<repo>/pages`.
+
+Thầy có ý muốn dùng domain này để dán khắp mọi app khác — nếu làm tiếp app nào, lặp lại đúng 3 bước
+trên (bỏ bước 3 nếu app đó không có đăng nhập Google/Firebase).
+
 ## Đợt 92 (8/8/2026, v0.9.66) — SỬA LỖI ĐỢT 91: DIM + BLUR CỦA MENU KHÔNG HIỆN (chỉ đồng hồ dừng). KHÔNG đụng gì thêm ngoài `core/engine.js` + `core/app.css`. ✅ THẦY DUYỆT → COMMIT `b48c315` + PUSH + **LIVE** (`curl` xác nhận `blur(3px)` trong `core/app.css`; tự chụp ảnh màn hình thật xác nhận dim/blur hiện rõ, cả local lẫn live).
 
 Thầy báo qua test live: *"đồng hồ dừng rồi, nhưng dim và blur thì không thấy"*. ⭐ **Lỗi thật, không phải
