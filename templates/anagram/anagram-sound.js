@@ -36,5 +36,12 @@ export const anagramSound = {
   play: () => playFile("blockgameintro1"),
   restart: () => playFile("blockgamerestart"),
   timeWarning: () => playFile("blockgametimeout"),
-  complete: () => playFile("blockgamesuccessful")
+  complete: () => playFile("blockgamesuccessful"),
+  // Real length of the "Play" chime (10/8/2026) — anagram.js delays the
+  // FIRST word's auto-played pronunciation clip by this long, so it never
+  // talks over this intro sound. The file is already primed (loaded) well
+  // before the teacher can press Play, so the real duration is available;
+  // the fallback only matters on a very slow connection where metadata
+  // hasn't arrived yet.
+  introDurationMs: (fallbackMs = 700) => pack.durationMs("blockgameintro1", fallbackMs)
 };

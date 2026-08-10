@@ -295,6 +295,8 @@ const anagramTemplate = {
     const voiceClipCache = new Map();   // clipId -> data: URL
     let voiceAudioEl = null;            // currently-playing/loaded clip, stopped on cleanup
     let voiceBtnEl = null;              // listen button currently wired to voiceAudioEl's play state
+    let voiceIntroTimeoutId = null;     // pending delayed auto-play (first word only), see render() below
+    let firstWordRendered = false;      // only the VERY first render() of this mount() waits for the intro chime
     function setListenGlow(btn, glowing) {
       if (btn) btn.classList.toggle("is-playing", glowing);
     }
@@ -402,7 +404,10 @@ const anagramTemplate = {
       // render() only ever runs at a real word start/change boundary (see
       // this file's header comment) — the ONE moment any audio left over
       // from the previous word must be silenced, regardless of whether the
-      // NEW word even has a voice of its own.
+      // NEW word even has a voice of its own. A pending DELAYED first-word
+      // auto-play (see below) must be cancelled too, or it would fire late
+      // and talk over whatever word the player has since moved on to.
+      if (voiceIntroTimeoutId) { clearTimeout(voiceIntroTimeoutId); voiceIntroTimeoutId = null; }
       stopVoiceClip();
       voiceAudioEl = null; voiceBtnEl = null;
       const it = items[index];
@@ -412,24 +417,25 @@ const anagramTemplate = {
       const card = el("div", "aw-anagram-card");
       const hasVoice = !!(it.src && it.src.voice);
       const hideText = hasVoice && !!it.src.hideText;
-      // Hide text (10/8/2026): when ON, the Clue itself never appears —
-      // only the spoken clip conveys it — so the clueEl instead carries a
-      // short prompt pointing at the listen button, distinct from the
-      // ORDINARY "no clue was written" fallback below (same generic
-      // styling, different wording, so a "text hidden" word never reads as
-      // "this word has no clue at all").
+      // Hide text (10/8/2026, revised 10/8/2026): when ON, the Clue never
+      // appears in any form — teacher's request was "just ONE big centered
+      // listen button standing where the question normally sits, nothing
+      // else" (no placeholder text, no other icon) — so clueEl carries NO
+      // text content at all in this case; `.aw-anagram-clue-voiceonly`
+      // centers the (larger) button inside the same box the text would
+      // otherwise fill. The ORDINARY "no clue was written" fallback (no
+      // voice involved) is unchanged.
       const clueEl = hideText
-        ? el("div", "aw-anagram-clue aw-anagram-clue-generic", "🔊 Listen for the clue")
+        ? el("div", "aw-anagram-clue aw-anagram-clue-voiceonly")
         : it.clue
           ? el("div", "aw-anagram-clue", escapeHtml(it.clue))
           : el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word");
-      // Listen button is a CHILD of the clue box, absolutely positioned just
-      // past its right edge — not a flex sibling — so activities with no
-      // voice clip (the vast majority, and every pre-existing one) get
-      // byte-for-byte the same clue layout as before; .aw-anagram-clue's own
-      // centering (margin:auto + max-width:92%) is untouched either way.
+      // Listen button is a CHILD of the clue box — a flowing INLINE child
+      // after the clue text normally (not absolutely positioned, see the
+      // comment on .aw-anagram-listenbtn in the CSS for why), or the box's
+      // SOLE child, larger, when hideText has left the box textless.
       if (hasVoice) {
-        const listenBtn = el("button", "aw-anagram-listenbtn", icons.soundOn);
+        const listenBtn = el("button", "aw-anagram-listenbtn" + (hideText ? " aw-anagram-listenbtn-lg" : ""), icons.soundOn);
         listenBtn.type = "button";
         listenBtn.setAttribute("aria-label", "Listen to pronunciation");
         listenBtn.onclick = () => toggleVoiceClip(it.src.voice, listenBtn);
@@ -438,9 +444,21 @@ const anagramTemplate = {
         // 10/8/2026) — safe to call unconditionally here since render()
         // never re-runs mid-word (see the file header comment); if the
         // browser blocks autoplay, startVoicePlayback() degrades silently
-        // and the tap still works.
-        playVoiceClip(it.src.voice, listenBtn);
+        // and the tap still works. The FIRST word of the whole play waits
+        // out the engine's own "Play" chime (`anagramSound.play`, fired by
+        // core/engine.js right before mount() — see anagram-sound.js's
+        // introDurationMs()) so the two sounds never overlap; every later
+        // word (reached via Next/Previous) plays immediately as before.
+        if (!firstWordRendered) {
+          voiceIntroTimeoutId = setTimeout(() => {
+            voiceIntroTimeoutId = null;
+            playVoiceClip(it.src.voice, listenBtn);
+          }, anagramSound.introDurationMs());
+        } else {
+          playVoiceClip(it.src.voice, listenBtn);
+        }
       }
+      firstWordRendered = true;
       card.append(clueEl);
 
       // Flexible slack, split 1:2 — see anagram.css's comment on these two
@@ -1487,6 +1505,7 @@ const anagramTemplate = {
     return function cleanup() {
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
+      if (voiceIntroTimeoutId) clearTimeout(voiceIntroTimeoutId);
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
       if (voiceAudioEl) voiceAudioEl.pause();

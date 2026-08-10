@@ -66,6 +66,12 @@
   padding-top: 0.14em;
 }
 .aw-anagram-clue-generic { opacity: .75; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+/* Hide-text word (10/8/2026): the clue box is left textless on purpose (see
+   render()'s comment) — this just centers its one child, the enlarged
+   listen button (.aw-anagram-listenbtn-lg below). font-size still cascades
+   down from .aw-anagram-clue even with no text painted, so the button's own
+   `em` sizing lines up with a normal word's the same way it always did. */
+.aw-anagram-clue-voiceonly { display: flex; align-items: center; justify-content: center; min-height: 1.6em; }
 
 /* Listen button (10/8/2026) — a REAL child appended after the clue text,
    flowing INLINE at the end of the (last line of the) text rather than
@@ -94,6 +100,11 @@
 .aw-anagram-listenbtn svg { width: 66%; height: 66%; }
 .aw-anagram-listenbtn:hover { background: rgba(47, 111, 237, .24); }
 .aw-anagram-listenbtn:active { transform: scale(.9); }
+/* Larger, un-inset variant (10/8/2026) for the hide-text case — it's the
+   box's ONLY child (see .aw-anagram-clue-voiceonly) instead of trailing
+   after text, so it drops the text-hugging vertical-align/margin-left and
+   simply grows ("to hơn một chút", teacher's words). */
+.aw-anagram-listenbtn-lg { width: 1.7em; height: 1.7em; margin-left: 0; vertical-align: middle; }
 /* Playing glow (10/8/2026, teacher's request) — green pulse while the clip
    is actually sounding (auto-play on word open, or a manual replay); a
    plain CSS animation so it automatically freezes along with everything
@@ -395,6 +406,23 @@
    is Anagram-specific (Quiz's row is a different shape: question + 2x3
    answer grid, this is a single word+clue table row instead).
    ============================================================= */
+
+/* Bulk-bar action buttons (10/8/2026) — icon-only per the teacher's request
+   (no visible text; the full label lives in title/aria-label for hover and
+   screen readers). Bigger than the per-row .aw-anagram-ed-iconbtn (34px) so
+   they read as primary page-level actions, not row-level housekeeping. */
+.aw-anagram-ed-bulkicon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 42px; height: 42px; flex: 0 0 auto; border: none; border-radius: 10px;
+  background: #eef2f7; color: #55657a; cursor: pointer;
+}
+.aw-anagram-ed-bulkicon svg { width: 22px; height: 22px; }
+.aw-anagram-ed-bulkicon:hover:not(:disabled) { filter: brightness(.96); }
+.aw-anagram-ed-bulkicon:active:not(:disabled) { transform: scale(.96); }
+.aw-anagram-ed-bulkicon:disabled { opacity: .4; cursor: default; }
+.aw-anagram-ed-bulkicon.is-primary { background: #2f7bff; color: #fff; }
+.aw-anagram-ed-bulkicon.is-danger { background: #fdeaea; color: #d33; }
+.aw-anagram-ed-bulkicon.is-danger:hover:not(:disabled) { background: #fbdada; }
 .aw-anagram-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .aw-anagram-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 152px; }
 .aw-anagram-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }

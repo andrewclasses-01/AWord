@@ -51,6 +51,14 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   let voicePopEl = null;
   let voiceBackdropEl = null;     // dim+blur overlay behind the Generate-all popover, if open (see buildGenerateAllPopover)
   let voicePreviewAudio = null;   // currently-playing preview, so a second Play doesn't overlap the first
+  // "Hide/Show all text" bulk button (10/8/2026) — built once in buildBulkBar()
+  // but its icon/label must track the CURRENT aggregate state of every row's
+  // hideText, which can change from many places (a single row's toggle, a
+  // single Generate/Remove, any bulk action). refreshHideAllBtn() is the one
+  // place that recomputes it; every mutation site calls it (renderItems()
+  // calls it unconditionally at the end, so anything that already goes
+  // through renderItems() is covered for free — see its own comment).
+  let hideAllBtn = null;
   // Item -> its Clue <input>, so onVoicePopOutside (below) can tell "clicked
   // into the very Clue box this popover's hint is tracking" apart from
   // "clicked away" — the popover must NOT close in the first case, or the
@@ -159,6 +167,22 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     iWrap.append(addI);
     const count = el("div", "aw-ed-qcount", `${data.content.items.length} / ${MAX_ITEMS} words`);
     iWrap.append(count);
+    refreshHideAllBtn();
+  }
+
+  // See hideAllBtn's declaration above for why this needs a dedicated
+  // refresh function instead of just living inline in buildBulkBar().
+  function refreshHideAllBtn() {
+    if (!hideAllBtn) return;
+    const voiced = data.content.items.filter(it => it.voice);
+    const allHidden = voiced.length > 0 && voiced.every(it => it.hideText);
+    hideAllBtn.innerHTML = allHidden ? icons.eyeOff : icons.eye;
+    hideAllBtn.disabled = voiced.length === 0;
+    const title = voiced.length === 0
+      ? "Hide all text (needs at least one row with a voice first)"
+      : allHidden ? "Show all text (every voiced row is currently hidden)" : "Hide all text";
+    hideAllBtn.title = title;
+    hideAllBtn.setAttribute("aria-label", title);
   }
 
   // Paste a copied Excel RANGE: first column -> word, second column
@@ -216,7 +240,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       // core/voice-clips.js's file comment).
       if (it.voice) {
         it.voice = ""; it.voiceId = ""; it.hideText = false;
-        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); closeVoicePopover();
+        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); refreshHideAllBtn(); closeVoicePopover();
       } else if (voicePopEl && voicePopEl._forItem === it && voicePopEl._updateHint) {
         // Popover already open for THIS row (no voice yet) -- keep its
         // "Will speak" preview line live instead of making the teacher
@@ -248,6 +272,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       if (!it.voice) return;
       it.hideText = !it.hideText;
       setHideTextState(hideTextBtn, it);
+      refreshHideAllBtn();
     };
     const imgBtn = iconBtn(icons.image, "Add image (coming soon)");
     imgBtn.onclick = () => showInfo("Images — coming soon.");
@@ -512,7 +537,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         genBtn.disabled = true; playBtn.disabled = true; delBtn.disabled = true;
         try { await deleteVoiceClip(it.voice); } catch { /* ignore — clip may already be gone */ }
         it.voice = ""; it.voiceId = ""; it.hideText = false;
-        setMicState(micBtn, false); setHideTextState(hideTextBtn, it);
+        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); refreshHideAllBtn();
         buildVoicePopover(micBtn, hideTextBtn, it);
       };
       btnRow.append(delBtn);
@@ -538,7 +563,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         it.voice = id;
         it.voiceId = select.value;
         it.hideText = true;   // default ON the moment a voice exists (teacher's request, 10/8/2026)
-        setMicState(micBtn, true); setHideTextState(hideTextBtn, it);
+        setMicState(micBtn, true); setHideTextState(hideTextBtn, it); refreshHideAllBtn();
         buildVoicePopover(micBtn, hideTextBtn, it);
       } catch (e) {
         status.textContent = e && e.code === "aw/signed-out"
@@ -907,24 +932,45 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   }
 
   // ---------- bulk actions bar (above the word table) ----------
+  // Icon-only (no text) per the teacher's request, 10/8/2026 — the tooltip/
+  // aria-label still carries the full label for hover/screen readers.
+  // Order fixed left-to-right: Generate all voices - Hide/Show all text -
+  // Delete all voices - Delete all words.
   function buildBulkBar() {
     const bar = el("div", "aw-ed-bulk");
-    const clearBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete all words");
-    clearBtn.type = "button";
-    clearBtn.onclick = () => toggleBulkPopover(clearBtn, "deleteWords");
-    bar.append(clearBtn);
 
-    const genAllBtn = el("button", "aw-btn aw-btn-primary", "Generate all voices");
-    genAllBtn.type = "button";
+    const genAllBtn = bulkIconBtn(icons.wand, "Generate all voices", "is-primary");
     genAllBtn.onclick = () => toggleBulkPopover(genAllBtn, "generate");
     bar.append(genAllBtn);
 
-    const delAllVoicesBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete all voices");
-    delAllVoicesBtn.type = "button";
+    hideAllBtn = bulkIconBtn(icons.eye, "Hide all text");
+    hideAllBtn.onclick = () => {
+      const voiced = data.content.items.filter(it => it.voice);
+      if (!voiced.length) return;
+      const next = !voiced.every(it => it.hideText);   // currently all hidden -> show all; otherwise -> hide all
+      voiced.forEach(it => { it.hideText = next; });
+      renderItems();   // touches every row's icon at once — same bulk-action convention as Swap Columns
+      showInfo(next ? "Text hidden for every voiced row." : "Text shown for every voiced row.");
+    };
+    bar.append(hideAllBtn);
+    refreshHideAllBtn();   // initial icon/title for the activity's starting data
+
+    const delAllVoicesBtn = bulkIconBtn(icons.micOff, "Delete all voices", "is-danger");
     delAllVoicesBtn.onclick = () => toggleBulkPopover(delAllVoicesBtn, "delete");
     bar.append(delAllVoicesBtn);
 
+    const clearBtn = bulkIconBtn(icons.trash, "Delete all words", "is-danger");
+    clearBtn.onclick = () => toggleBulkPopover(clearBtn, "deleteWords");
+    bar.append(clearBtn);
+
     return bar;
+  }
+  function bulkIconBtn(svg, title, extraClass) {
+    const b = el("button", "aw-anagram-ed-bulkicon" + (extraClass ? " " + extraClass : ""), svg);
+    b.type = "button";
+    b.title = title;
+    b.setAttribute("aria-label", title);
+    return b;
   }
 
   // ---------- small helpers ----------
