@@ -135,8 +135,13 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
       const s = cell(wt, r, 19); if (s) IPA.push(s);
     }
   }
-  if (ENG1.length) acts.push(anagram(`${source} / ENG1`, ENG1));
-  if (ENG2.length) acts.push(anagram(`${source} / ENG2`, ENG2));
+  // ENG1/ENG2 clues are English, so they're the only two variants offered
+  // for auto-TTS in the Import dialog's voice panel (teacher confirmed
+  // 10/8/2026). VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a
+  // raw IPA symbol — an English Kokoro voice would misread both, so they
+  // stay un-tagged and import exactly as before, text-only.
+  if (ENG1.length) acts.push({ ...anagram(`${source} / ENG1`, ENG1), ttsEligible: true });
+  if (ENG2.length) acts.push({ ...anagram(`${source} / ENG2`, ENG2), ttsEligible: true });
   if (VI1.length)  acts.push(anagram(`${source} / VI1`, VI1));
   if (VI2.length)  acts.push(anagram(`${source} / VI2`, VI2));
   // PRONUNCIATION: unscramble the word with its IPA as the clue — split the IPA

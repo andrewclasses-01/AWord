@@ -61,6 +61,18 @@ export const VOICES = [
 // British, best-graded of the bf_/bm_ set — teacher's default (10/8/2026).
 export const DEFAULT_VOICE = "bf_emma";
 
+// Remembers the last voice a teacher picked in any bulk-generate flow
+// (Anagram editor's "Generate all voices", the Excel-import voice panel, …)
+// so the next picker opens on it instead of always resetting to DEFAULT_VOICE.
+const LAST_VOICE_KEY = "aw.tts.lastVoice";
+export function getLastVoice() {
+  const v = localStorage.getItem(LAST_VOICE_KEY);
+  return (v && VOICES.some(x => x.id === v)) ? v : DEFAULT_VOICE;
+}
+export function setLastVoice(voiceId) {
+  if (voiceId) localStorage.setItem(LAST_VOICE_KEY, voiceId);
+}
+
 let _ttsP = null;
 function loadTTS(onProgress) {
   if (!_ttsP) {

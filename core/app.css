@@ -1455,6 +1455,35 @@ body {
 .aw-imp-note { font-size: .82rem; color: #7c8aa0; }
 .aw-imp-done { font-weight: 700; color: #1e9e5a; }
 
+/* Excel-import voice panel (10/8/2026) — shown first, above the act list,
+   only when the workbook produced at least one TTS-eligible act (the
+   ENG1/ENG2 anagram variants — see core/lesson-import.js). Same visual
+   language as templates/anagram/anagram.css's ed-voice* block, but
+   redeclared here rather than shared: this dialog lives on the library
+   page, which never loads anagram.css. */
+.aw-imp-voice { border: 1.5px solid #cfe0ff; background: #f3f8ff; border-radius: 12px; padding: .7rem .8rem; }
+.aw-imp-voice-head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #23303e; cursor: pointer; user-select: none; }
+.aw-imp-voice-head input[type=checkbox] { width: 18px; height: 18px; accent-color: #2f7bff; cursor: pointer; }
+.aw-imp-voice-hint { font-size: .78rem; color: #55657a; margin: .35rem 0 .5rem 26px; line-height: 1.35; }
+.aw-imp-voice-select {
+  margin-left: 26px; width: calc(100% - 26px); padding: .45rem .55rem; border: 1.5px solid #e2e9f2;
+  border-radius: 8px; background: #fff; font-size: .88rem; font-family: inherit; color: #23303e;
+}
+.aw-imp-voice.is-off .aw-imp-voice-hint, .aw-imp-voice.is-off .aw-imp-voice-select { opacity: .45; pointer-events: none; }
+
+/* Generic sequential-batch progress bar + soft-cancel, shared by any bulk
+   TTS flow outside the Anagram editor (see core/voice-batch.js). */
+.aw-voice-progress { height: 8px; border-radius: 4px; background: #eaf0f8; overflow: hidden; }
+.aw-voice-progressfill { height: 100%; width: 0%; background: #2f7bff; transition: width .25s ease; }
+.aw-voice-runcancel {
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: .35rem .65rem; font-size: .78rem; font-weight: 700;
+  border: none; border-radius: 8px; background: #fdeaea; color: #d33; cursor: pointer;
+}
+.aw-voice-runcancel:hover:not(:disabled) { background: #fbdada; }
+.aw-voice-runcancel:disabled { opacity: .6; cursor: default; }
+.aw-voice-status { min-height: 1.1em; font-size: .85rem; color: #55657a; }
+
 /* =====================================================================
    PRINT — format picker popup (on SCREEN) + the printed worksheets.
    Flow (core/print.js): click Print -> popup to choose a FORMAT

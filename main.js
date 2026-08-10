@@ -938,6 +938,7 @@ function importFlow() {
   openModal("Import activities", (body, close) => {
     if (body.parentElement) body.parentElement.classList.add("is-import");
     let acts = [], sourceName = "";
+    let ttsMod = null;   // { VOICES, getLastVoice, setLastVoice, generateVoicesSequential } — lazy, loaded in handleFile()
 
     // ----- drop zone: click to browse OR drag a file in -----
     const fileInput = el("input"); fileInput.type = "file";
@@ -971,7 +972,10 @@ function importFlow() {
       err.style.display = "none"; panel.style.display = "none"; report.style.display = "none"; acts = []; ok.disabled = true;
       setDrop(`Reading <b>${escapeText(f.name)}</b>…`, "");
       try {
-        const { parseLessonToBundle, isSpreadsheet } = await import("./core/lesson-import.js");
+        const [{ parseLessonToBundle, isSpreadsheet }, tts, voiceBatch] = await Promise.all([
+          import("./core/lesson-import.js"), import("./core/tts.js"), import("./core/voice-batch.js")
+        ]);
+        ttsMod = { ...tts, ...voiceBatch };
         const bundle = isSpreadsheet(f.name)
           ? await parseLessonToBundle(await f.arrayBuffer(), { fileName: f.name })
           : JSON.parse(await f.text());
@@ -988,6 +992,35 @@ function importFlow() {
 
     function buildPanel() {
       panel.innerHTML = ""; panel.style.display = "flex";
+
+      // ---- voice panel (first, teacher's request 10/8/2026) — only when the
+      // workbook produced at least one TTS-eligible act (ENG1/ENG2). VI1/VI2
+      // (Vietnamese clues) and PRONUNCIATION (IPA clues) never get this box —
+      // an English Kokoro voice would misread both. ----
+      let voiceChk = null, voiceSelect = null;
+      if (ttsMod && acts.some(a => a.ttsEligible)) {
+        const vbox = el("div", "aw-imp-voice");
+        const vhead = el("label", "aw-imp-voice-head");
+        voiceChk = el("input"); voiceChk.type = "checkbox"; voiceChk.checked = true;
+        vhead.append(voiceChk, document.createTextNode("Automatically generate voices (TTS) for ENG1 / ENG2"));
+        const vhint = el("div", "aw-imp-voice-hint",
+          "Reads each word's Clue in the picked voice and saves it — same as Anagram's “Generate all voices”. " +
+          "VI1/VI2/PRONUNCIATION are skipped (Vietnamese or IPA text). Runs AFTER the acts are created, and needs you signed in.");
+        voiceSelect = el("select", "aw-imp-voice-select");
+        const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
+        const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
+        ttsMod.VOICES.forEach(v => {
+          const o = document.createElement("option");
+          o.value = v.id; o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
+          (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
+        });
+        voiceSelect.append(gbGroup, usGroup);
+        voiceSelect.value = ttsMod.getLastVoice();
+        voiceChk.onchange = () => vbox.classList.toggle("is-off", !voiceChk.checked);
+        vbox.append(vhead, vhint, voiceSelect);
+        panel.append(vbox);
+      }
+
       const head = el("div", "aw-imp-head");
       const count = el("span");
       const selAll = el("button", "aw-imp-selall"); selAll.type = "button";
@@ -1040,6 +1073,21 @@ function importFlow() {
         if (!chosen.length) return;
         const makeNew = fCb.checked, folderName = fName.value.trim();
         if (makeNew && !folderName) { showErr("Type a folder name, or untick “Make a new folder”."); return; }
+
+        const voiceEligible = chosen.filter(a => a.ttsEligible);
+        let wantVoice = !!(voiceChk && voiceChk.checked && voiceEligible.length);
+        const voiceId = voiceSelect ? voiceSelect.value : null;
+        if (wantVoice) {
+          const wordCount = voiceEligible.reduce((s, a) => s + ((a.content.items || []).length), 0);
+          const voiceName = ttsMod.VOICES.find(v => v.id === voiceId)?.name || voiceId;
+          // "Skip voices" (or dismissing the dialog) does NOT cancel the
+          // import — it only downgrades this run to text-only, same as if
+          // the checkbox above had been unticked. The acts themselves are
+          // always what "Import" promised.
+          wantVoice = await confirmVoiceGeneration(wordCount, voiceName);
+          if (wantVoice) ttsMod.setLastVoice(voiceId);
+        }
+
         err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
         try {
           const res = await importBundle({ folder: makeNew ? folderName : null, activities: chosen }, { parentId: state.folderId });
@@ -1057,6 +1105,13 @@ function importFlow() {
           if (makeNew && res.folderId) enterFolder(state.root, res.folderId);
           else render();
           if (res.skipped) toast(`Imported ${res.created}, skipped ${res.skipped} already there`);
+          // Voice generation runs AFTER the acts already exist (teacher's
+          // request 10/8/2026) — the other acts in this import shouldn't wait
+          // on a possibly-slow, sequential TTS batch.
+          if (wantVoice) {
+            const voiceActs = (res.createdActs || []).filter(a => a.ttsEligible);
+            if (voiceActs.length) runVoiceBatch(voiceActs, voiceId, ttsMod);
+          }
         } catch (e) {
           ok.disabled = false; ok.textContent = `Import ${chosen.length}`;
           showErr(e && e.code === "aw/signed-out" ? "Please sign in first." : (e && e.message ? e.message : "Import failed."));
@@ -1065,6 +1120,102 @@ function importFlow() {
     }
   });
 }
+// Small OK/Skip gate before the (possibly slow, sequential) TTS batch
+// starts — shown once, right before Import actually runs. Resolves false
+// if skipped via either button or by dismissing the dialog (outside click
+// / Escape) — openModal's onClose always fires, but a Promise only
+// settles on its FIRST resolve() call, so a "Generate" click followed by
+// the dialog's own close() (which re-fires onClose) is harmless.
+function confirmVoiceGeneration(wordCount, voiceName) {
+  return new Promise(resolve => {
+    openModal("Generate voices?", (body, close) => {
+      body.append(el("div", "aw-modal-text",
+        `Will generate voice for <b>${wordCount}</b> word${wordCount === 1 ? "" : "s"} using <b>${escapeText(voiceName)}</b>. ` +
+        `Runs after the import finishes, one word at a time — you'll need to be signed in to save the clips.`));
+      const actions = el("div", "aw-modal-actions");
+      const no = el("button", "aw-btn", "Skip voices"); no.type = "button";
+      no.onclick = () => { resolve(false); close(); };
+      const yes = el("button", "aw-btn aw-btn-primary", "Generate"); yes.type = "button";
+      yes.onclick = () => { resolve(true); close(); };
+      actions.append(no, yes);
+      body.append(actions);
+    }, () => resolve(false));
+  });
+}
+
+// Generates voice for every item of every act in `acts` (already-created
+// ENG1/ENG2 anagram acts, from importBundle()'s createdActs), sequentially,
+// in its own modal — outside-click is ignored while running (same idiom as
+// templates/anagram/anagram-editor.js's "Generate all voices" popover) so
+// the batch can't be dismissed by accident, but the small red Cancel is
+// always one click away (soft-cancel: the word in flight always finishes).
+// Persists each act ONCE, right after ITS OWN words are done — not per
+// word — so a cancel or sign-out partway through never loses whatever was
+// already generated, and Firestore only takes 1 write per act either way.
+function runVoiceBatch(acts, voiceId, ttsMod) {
+  const GENERIC_CLUE_TEXT = "Unscramble the word";
+  const overlay = el("div", "aw-modal-overlay");
+  const modal = el("div", "aw-modal");
+  modal.append(el("div", "aw-modal-title", "Generating voices"));
+  const body = el("div", "aw-modal-body");
+  modal.append(body);
+  overlay.append(modal);
+  let running = true;
+  overlay.onclick = e => { if (e.target === overlay && !running) closeOverlay(); };
+  document.body.append(overlay);
+  function closeOverlay() { overlay.remove(); }
+
+  const totalWords = acts.reduce((s, a) => s + ((a.content.items || []).length), 0);
+  const status = el("div", "aw-voice-status", `Generating 0 / ${totalWords}…`);
+  const progressWrap = el("div", "aw-voice-progress");
+  const progressFill = el("div", "aw-voice-progressfill");
+  progressWrap.append(progressFill);
+  const btnRow = el("div", "aw-modal-actions");
+  const runCancelBtn = el("button", "aw-voice-runcancel", "Cancel");
+  runCancelBtn.type = "button";
+  btnRow.append(runCancelBtn);
+  body.append(status, progressWrap, btnRow);
+
+  let cancelled = false;
+  runCancelBtn.onclick = () => { cancelled = true; runCancelBtn.disabled = true; runCancelBtn.textContent = "Cancelling…"; };
+
+  (async () => {
+    let doneWords = 0, failedWords = 0, signedOut = false;
+    for (const act of acts) {
+      if (cancelled) break;
+      const items = act.content.items || [];
+      const res = await ttsMod.generateVoicesSequential(items, voiceId, {
+        textFor: it => (it.clue || "").trim() || GENERIC_CLUE_TEXT,
+        isCancelled: () => cancelled,
+        onProgress: (done, failed) => {
+          status.textContent = `Generating ${doneWords + done + failedWords + failed} / ${totalWords}… (${act.title})`;
+          progressFill.style.width = `${Math.round(((doneWords + done + failedWords + failed) / totalWords) * 100)}%`;
+        }
+      });
+      doneWords += res.done; failedWords += res.failed;
+      if (res.done) {
+        // Strip the import-only `ttsEligible` flag before persisting — it
+        // has no place in the saved activity document.
+        const { ttsEligible, ...actToSave } = act;
+        try { await saveActivity(actToSave, {}); } catch { /* left text-only; teacher can retry per-row in Edit */ }
+      }
+      if (res.signedOut) { signedOut = true; break; }
+    }
+    running = false;
+    runCancelBtn.style.display = "none";
+    if (signedOut) {
+      status.textContent = "Please sign in first — the words already voiced were saved; the rest stayed text-only.";
+    } else if (cancelled) {
+      status.textContent = `Cancelled — generated voice for ${doneWords} word(s) before stopping.`;
+    } else {
+      status.textContent = `Done — generated voice for ${doneWords} word(s)${failedWords ? `, ${failedWords} failed` : ""}.`;
+    }
+    const doneBtn = el("button", "aw-btn aw-btn-primary", "OK");
+    doneBtn.type = "button"; doneBtn.onclick = closeOverlay;
+    btnRow.innerHTML = ""; btnRow.append(doneBtn);
+  })();
+}
+
 function renameFlow(node) {
   openTextModal("Rename", "New name", itemName(node), async name => {
     if (name.trim()) { await renameItem(node.id, name.trim()); render(); }

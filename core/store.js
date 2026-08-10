@@ -326,7 +326,11 @@ export async function getActivity(id) { return (await readAll())[id] || null; }
 // may also carry a `subfolder` PATH (e.g. "ACT" or "ACT/HOMEWORK") that nests it
 // further under the base — folders are created/reused as needed. Acts whose title
 // already exists in their target folder are SKIPPED (re-import is safe, no dupes).
-// Returns { folderId, folderName, created, skipped, errors }.
+// Returns { folderId, folderName, created, skipped, errors, createdActs }.
+// `createdActs` carries the full saved node (with its real `.id`) for every
+// act actually created, plus whatever `ttsEligible` flag the bundle entry
+// arrived with — the Import dialog's voice panel uses that to know which
+// freshly-created acts to run bulk TTS against afterward.
 export async function importBundle(bundle, opts = {}) {
   const root = "activities";
   const activities = Array.isArray(bundle?.activities) ? bundle.activities : [];
@@ -356,7 +360,7 @@ export async function importBundle(bundle, opts = {}) {
   const wanted = (bundle?.folder || "").toString().trim();
   if (wanted) baseSegs.push(wanted);
 
-  const result = { folderId: baseParent, folderName: wanted || null, created: 0, skipped: 0, errors: [] };
+  const result = { folderId: baseParent, folderName: wanted || null, created: 0, skipped: 0, errors: [], createdActs: [] };
   for (const raw of activities) {
     if (!raw || typeof raw.type !== "string" || !raw.content || typeof raw.content !== "object") {
       result.skipped++; result.errors.push("An entry with no type/content was skipped."); continue;
@@ -376,8 +380,9 @@ export async function importBundle(bundle, opts = {}) {
       content: raw.content
     };
     try {
-      await saveActivity(activity, { root, parentId });
+      const node = await saveActivity(activity, { root, parentId });
       result.created++;
+      result.createdActs.push({ ...node, ttsEligible: !!raw.ttsEligible });
     } catch (e) {
       if (e && e.code === "aw/duplicate-name") result.skipped++;
       else result.errors.push(`${activity.title}: ${e?.message || e}`);
