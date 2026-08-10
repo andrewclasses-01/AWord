@@ -28,7 +28,7 @@ import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./c
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
-  emptyTrash, setFolderColor, folderCounts, importBundle,
+  emptyTrash, setFolderColor, folderCounts, importBundle, sameName,
   resetCache
 } from "./core/store.js";
 import {
@@ -993,19 +993,41 @@ function importFlow() {
     function buildPanel() {
       panel.innerHTML = ""; panel.style.display = "flex";
 
-      // ---- voice panel (first, teacher's request 10/8/2026) — only when the
-      // workbook produced at least one TTS-eligible act (ENG1/ENG2). VI1/VI2
-      // (Vietnamese clues) and PRONUNCIATION (IPA clues) never get this box —
-      // an English Kokoro voice would misread both. ----
-      let voiceChk = null, voiceSelect = null;
+      function buildActRow(a) {
+        const row = el("label", "aw-imp-row");
+        const cb = el("input"); cb.type = "checkbox"; cb.checked = true;
+        const c = a.content || {};
+        const n = (c.pairs || c.cards || c.statements || c.questions || c.items || []).length;
+        row.append(cb,
+          el("span", "aw-imp-ricon", IMP_ACT_ICON[a.type] || IMP_DOC_SVG),
+          el("span", "aw-imp-rtitle", escapeText(a.title)),
+          el("span", "aw-imp-rmeta", `${templateLabel(a.type)} · ${n}${a.subfolder ? " · " + escapeText(a.subfolder) : ""}`));
+        cb.onchange = () => { row.classList.toggle("is-off", !cb.checked); refresh(); };
+        return { el: row, cb };
+      }
+
+      // ---- voice panel (first, teacher's request 10/8/2026) — each
+      // TTS-eligible act (ENG1/ENG2) gets its OWN row here, same shape as a
+      // normal row below: ticking it both includes it in the import AND
+      // generates its voice — the only difference is living in this box, to
+      // draw more attention to the voice-capable acts. VI1/VI2 (Vietnamese
+      // clues) and PRONUNCIATION (IPA clues) never appear here or get a
+      // voice — an English Kokoro voice would misread both.
+      let voiceSelect = null;
+      const voiceRowOf = new Map();   // act -> its already-built row (voice box OR list, never both)
       if (ttsMod && acts.some(a => a.ttsEligible)) {
         const vbox = el("div", "aw-imp-voice");
-        const vhead = el("label", "aw-imp-voice-head");
-        voiceChk = el("input"); voiceChk.type = "checkbox"; voiceChk.checked = true;
-        vhead.append(voiceChk, document.createTextNode("Automatically generate voices (TTS) for ENG1 / ENG2"));
-        const vhint = el("div", "aw-imp-voice-hint",
+        vbox.append(el("div", "aw-imp-voice-title", "Voice (TTS)"));
+        vbox.append(el("div", "aw-imp-voice-hint",
           "Reads each word's Clue in the picked voice and saves it — same as Anagram's “Generate all voices”. " +
-          "VI1/VI2/PRONUNCIATION are skipped (Vietnamese or IPA text). Runs AFTER the acts are created, and needs you signed in.");
+          "Runs AFTER the acts are created, and needs you signed in."));
+        const vrows = el("div", "aw-imp-voice-rows");
+        acts.filter(a => a.ttsEligible).forEach(a => {
+          const row = buildActRow(a);
+          voiceRowOf.set(a, row);
+          vrows.append(row.el);
+        });
+        vbox.append(vrows);
         voiceSelect = el("select", "aw-imp-voice-select");
         const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
         const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
@@ -1016,8 +1038,7 @@ function importFlow() {
         });
         voiceSelect.append(gbGroup, usGroup);
         voiceSelect.value = ttsMod.getLastVoice();
-        voiceChk.onchange = () => vbox.classList.toggle("is-off", !voiceChk.checked);
-        vbox.append(vhead, vhint, voiceSelect);
+        vbox.append(voiceSelect);
         panel.append(vbox);
       }
 
@@ -1028,17 +1049,8 @@ function importFlow() {
 
       const list = el("div", "aw-imp-list");
       const checks = acts.map(a => {
-        const row = el("label", "aw-imp-row");
-        const cb = el("input"); cb.type = "checkbox"; cb.checked = true;
-        const c = a.content || {};
-        const n = (c.pairs || c.cards || c.statements || c.questions || c.items || []).length;
-        row.append(cb,
-          el("span", "aw-imp-ricon", IMP_ACT_ICON[a.type] || IMP_DOC_SVG),
-          el("span", "aw-imp-rtitle", escapeText(a.title)),
-          el("span", "aw-imp-rmeta", `${templateLabel(a.type)} · ${n}${a.subfolder ? " · " + escapeText(a.subfolder) : ""}`));
-        cb.onchange = () => { row.classList.toggle("is-off", !cb.checked); refresh(); };
-        list.append(row);
-        return cb;
+        const row = voiceRowOf.get(a) || (() => { const r = buildActRow(a); list.append(r.el); return r; })();
+        return row.cb;
       });
 
       const folder = el("div", "aw-imp-folder");
@@ -1049,8 +1061,8 @@ function importFlow() {
       fLabel.append(fCb, document.createTextNode("Make a new folder"));
       const fName = el("input", "aw-ed-input"); fName.value = sourceName; fName.placeholder = "Folder name";
       fName.style.display = fCb.checked ? "" : "none";
-      fCb.onchange = () => { fName.style.display = fCb.checked ? "" : "none"; if (fCb.checked) setTimeout(() => fName.focus(), 0); };
-      folder.append(fLabel, fName);
+      const fHint = el("div", "aw-imp-folder-hint", ""); fHint.style.display = "none";
+      folder.append(fLabel, fName, fHint);
 
       panel.append(head, list, folder);
 
@@ -1068,21 +1080,121 @@ function importFlow() {
       };
       refresh();
 
+      // ---- duplicate-name guard (teacher's request 10/8/2026) — flags any
+      // act row whose title already exists in its REAL target folder RED
+      // (stays ticked; teacher renames/deletes the existing item, or unticks
+      // the row) and flags the folder-name field the same way if "Make a
+      // new folder" would collide with an existing sibling folder.
+      // Blocking itself happens on the Import click below — this only
+      // updates the visual state, re-run on every input that could change
+      // the target (file, folder toggle, folder name).
+      let folderDup = false;
+      // `undefined` means "this target doesn't exist / hasn't been created
+      // yet, so nothing can conflict with it" — kept STRICTLY distinct from
+      // `null`, which is the real, valid id of the library's top level
+      // (state.folderId is `null` there, not a sentinel — using `null` for
+      // both would make root-level imports never flag a real duplicate).
+      async function resolveFolderPath(parentId, segments) {
+        let pid = parentId;
+        for (const raw of segments) {
+          const name = (raw || "").toString().trim();
+          if (!name) continue;
+          const kids = await listChildren(state.root, pid);
+          const match = kids.find(k => k.kind === "folder" && sameName(k.name, name));
+          if (!match) return undefined;
+          pid = match.id;
+        }
+        return pid;
+      }
+      async function refreshDupState() {
+        const makeNew = fCb.checked && !fCb.disabled, folderName = fName.value.trim();
+        let baseId = state.folderId;
+        folderDup = false;
+        if (makeNew) {
+          if (!folderName) baseId = undefined;   // no name yet — nothing to check against
+          else {
+            const siblings = await listChildren(state.root, state.folderId);
+            const match = siblings.find(k => k.kind === "folder" && sameName(k.name, folderName));
+            // A brand-new folder (no existing sibling with this name) is
+            // guaranteed empty — acts land INSIDE it, not in the current
+            // folder, so nothing there can conflict. Only an EXISTING
+            // same-named sibling (reused, same as importBundle()'s own
+            // resolveFolder()) has real children worth checking.
+            if (match) { baseId = match.id; folderDup = true; } else baseId = undefined;
+          }
+        }
+        folder.classList.toggle("is-dup", folderDup);
+
+        const pathCache = new Map();
+        for (let i = 0; i < acts.length; i++) {
+          const a = acts[i];
+          const row = checks[i].closest(".aw-imp-row");
+          if (!row) continue;
+          if (baseId === undefined) { row.classList.remove("is-dup"); continue; }
+          const key = (a.subfolder || "").toString();
+          let targetId;
+          if (pathCache.has(key)) targetId = pathCache.get(key);
+          else { targetId = await resolveFolderPath(baseId, key.split("/").filter(Boolean)); pathCache.set(key, targetId); }
+          let dup = false;
+          if (targetId !== undefined) {
+            const kids = await listChildren(state.root, targetId);
+            dup = kids.some(k => k.kind === "act" && sameName(k.title, a.title));
+          }
+          row.classList.toggle("is-dup", dup);
+        }
+      }
+      fCb.onchange = () => { fName.style.display = fCb.checked ? "" : "none"; if (fCb.checked) setTimeout(() => fName.focus(), 0); refreshDupState(); };
+      let dupDebounce = null;
+      fName.oninput = () => { clearTimeout(dupDebounce); dupDebounce = setTimeout(refreshDupState, 250); };
+
+      // ---- "ACT" subfolder guard (teacher's request 10/8/2026): Quiz/
+      // Reading acts land inside a literal "ACT" (and "ACT/HOMEWORK")
+      // subfolder — if the CURRENT folder is already named "ACT", or
+      // already HAS a child folder named "ACT", making ANOTHER new folder
+      // here would nest a second "ACT" oddly inside it. Force straight-
+      // into-current-folder instead so the existing "ACT" folder is reused
+      // in place, same as importBundle()'s own reuse logic already does.
+      (async () => {
+        let blockNewFolder = false;
+        if (state.folderId) {
+          const here = await getItem(state.folderId);
+          if (here && sameName(itemName(here), "ACT")) blockNewFolder = true;
+        }
+        if (!blockNewFolder) {
+          const siblings = await listChildren(state.root, state.folderId);
+          if (siblings.some(n => n.kind === "folder" && sameName(n.name, "ACT"))) blockNewFolder = true;
+        }
+        if (blockNewFolder) {
+          fCb.checked = false; fCb.disabled = true;
+          fLabel.style.opacity = ".55";
+          fName.style.display = "none";
+          fHint.textContent = "There's already an “ACT” folder here — new acts will go straight into the current folder.";
+          fHint.style.display = "";
+        }
+        refreshDupState();
+      })();
+
       ok.onclick = async () => {
         const chosen = acts.filter((_, i) => checks[i].checked);
         if (!chosen.length) return;
-        const makeNew = fCb.checked, folderName = fName.value.trim();
+        const makeNew = fCb.checked && !fCb.disabled, folderName = fName.value.trim();
         if (makeNew && !folderName) { showErr("Type a folder name, or untick “Make a new folder”."); return; }
 
+        const dupTicked = acts.some((a, i) => checks[i].checked && checks[i].closest(".aw-imp-row")?.classList.contains("is-dup"));
+        if (folderDup || dupTicked) {
+          showErr("There's a name conflict with something already in your library — rename or delete it (or untick the conflicting row), then Import again.");
+          return;
+        }
+
         const voiceEligible = chosen.filter(a => a.ttsEligible);
-        let wantVoice = !!(voiceChk && voiceChk.checked && voiceEligible.length);
+        let wantVoice = voiceEligible.length > 0;
         const voiceId = voiceSelect ? voiceSelect.value : null;
         if (wantVoice) {
           const wordCount = voiceEligible.reduce((s, a) => s + ((a.content.items || []).length), 0);
           const voiceName = ttsMod.VOICES.find(v => v.id === voiceId)?.name || voiceId;
           // "Skip voices" (or dismissing the dialog) does NOT cancel the
           // import — it only downgrades this run to text-only, same as if
-          // the checkbox above had been unticked. The acts themselves are
+          // every voice row had been unticked. The acts themselves are
           // always what "Import" promised.
           wantVoice = await confirmVoiceGeneration(wordCount, voiceName);
           if (wantVoice) ttsMod.setLastVoice(voiceId);
