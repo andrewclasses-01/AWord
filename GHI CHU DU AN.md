@@ -7,8 +7,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 105 (10/8/2026, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ 3) + GOM "POINTS
 OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `.css`, dùng
-`tpl.hidePointsOff` đã có sẵn cho nhiều template khác). 🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt
-thật, CHƯA commit).
+`tpl.hidePointsOff` đã có sẵn cho nhiều template khác). ✅ THẦY DUYỆT (yêu cầu trực tiếp "commit + push
+live") → COMMIT `1e2c7ce` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ
+`bonusMinus`/`flyLetterPenalty` trong `anagram.js` + `.aw-anagram-flynum-bad`/`.aw-anagram-multslider`
+trong `anagram.css` ngay lần poll thứ 5).
 
 Thầy yêu cầu chế độ chơi thứ 3: giống "Letters with bonus" (bấm đúng thứ tự chữ) nhưng có điểm trừ mỗi
 lần bấm sai + hệ số nhân điểm khi giải hoàn hảo, kèm sắp xếp lại thanh "Points off".
@@ -36,8 +38,10 @@ throttle đã biết) — hiệu ứng số bay GIỮA game không thấy cập 
 nhận qua log tạm), chỉ xác nhận chắc chắn được qua BẢNG TỔNG KẾT cuối game (không phụ thuộc rAF). Không
 phải bug, chỉ là giới hạn máy test.
 
-**Việc kế: thầy tự chơi "Bonus and minus" trên `test.html`, đặc biệt xem MẮT THẬT hiệu ứng số đỏ bay lên
-(máy build không tự xác nhận được vì bẫy rAF ở trên) → nói "lưu lại"/"commit" nếu ổn.**
+**Việc kế (không gấp): thầy tự vào act Anagram thật trên bản LIVE, đổi mode "Bonus and minus", chỉnh
+Points off (wrong letter)/Bonus x, chơi thử xem MẮT THẬT hiệu ứng số đỏ bay lên + nhãn "Nx PERFECT" (máy
+build không tự xác nhận được vì bẫy rAF ở Browser pane test, chỉ xác nhận được kết quả cuối qua bảng tổng
+kết).**
 
 ---
 

@@ -8,10 +8,18 @@
 > Cập nhật lần cuối: **10/8/2026 (Đợt 105, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ
 > 3, giống "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai + hệ số nhân "Bonus x" cho từ PERFECT) +
 > GOM THANH "POINTS OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js`
-> + `.css`, dùng `tpl.hidePointsOff` đã có sẵn). 🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt thật —
-> `Score -13/46` cho 1 từ có lỗi với Points off wrong-letter=20, `Score 14/46` cho 1 từ PERFECT với Bonus
-> x=2 mặc định, cả hai khớp phép tính tay; chế độ cũ không hồi quy — CHƯA commit).**
-> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 105 + `templates/anagram/GHI CHU ANAGRAM.md` Đợt 105.
+> + `.css`, dùng `tpl.hidePointsOff` đã có sẵn). ✅ THẦY DUYỆT (yêu cầu trực tiếp "commit + push live") →
+> COMMIT `1e2c7ce` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ
+> `bonusMinus`/`flyLetterPenalty` trong `anagram.js` + `.aw-anagram-flynum-bad`/`.aw-anagram-multslider`
+> trong `anagram.css` ngay lần poll thứ 5).**
+> Đã tự test qua trình duyệt thật TRƯỚC khi commit: `Score -13/46` cho 1 từ có lỗi với Points off
+> wrong-letter=20, `Score 14/46` cho 1 từ PERFECT với Bonus x=2 mặc định (cả hai khớp phép tính tay), chế
+> độ "Letters with bonus" cũ không hồi quy (vẫn ra đúng 16/46). ⚠️ Thầy chưa tự mắt xem hiệu ứng số đỏ bay
+> lên trên bản LIVE (máy build chỉ xác nhận được kết quả cuối qua bảng tổng kết, do bẫy rAF của Browser
+> pane test — xem chi tiết dưới). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 105 +
+> `templates/anagram/GHI CHU ANAGRAM.md` Đợt 105. **Việc kế (không gấp): thầy tự vào act Anagram thật, đổi
+> mode "Bonus and minus", chỉnh Points off (wrong letter)/Bonus x, chơi thử xem hiệu ứng số đỏ bay + nhãn
+> "Nx PERFECT" trên bản LIVE.**
 >
 > Trước đó: **10/8/2026 (Đợt 104, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN
 > TRÙNG TÊN + GUARD THƯ MỤC "ACT". CÓ SỬA CORE: `core/lesson-import.js` (tiêu đề ENG1/ENG2 đổi thành

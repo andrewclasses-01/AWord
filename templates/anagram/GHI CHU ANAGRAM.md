@@ -948,7 +948,9 @@ trước khi bắt tay vào.
 
 ## Đợt 105 (10/8/2026, v0.9.79) — THÊM CHẾ ĐỘ THỨ 3 "BONUS AND MINUS" + GOM "POINTS OFF" VỀ 1 CHỖ.
 KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `anagram.css`, dùng `tpl.hidePointsOff` sẵn có).
-🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt thật, chưa commit).
+✅ THẦY DUYỆT (yêu cầu trực tiếp "commit + push live") → COMMIT `1e2c7ce` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận đủ `bonusMinus`/`flyLetterPenalty` trong `anagram.js`
++ `.aw-anagram-flynum-bad`/`.aw-anagram-multslider` trong `anagram.css` ngay lần poll thứ 5).
 
 Thầy yêu cầu thêm chế độ chơi thứ 3 (giống "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai) +
 sắp xếp lại vị trí/hành vi thanh "Points off":
@@ -1019,6 +1021,8 @@ vẫn lọt qua được `pointerup`/`onTileClick` nhờ `dragging=true` đã g�
 `.aw-anagram-flynum-bad`, `.aw-anagram-multslider`/`.aw-anagram-multval`). Không đụng `core/`,
 `anagram-editor.js`, `sample-anagram.js`.
 
-**Việc kế: thầy tự chơi thử `bonusMinus` trên `test.html` (đặc biệt xem MẮT THẬT hiệu ứng số đỏ bay lên —
-máy build không chụp được animation do bẫy rAF ở trên, chỉ xác nhận được kết quả CUỐI qua bảng tổng kết) →
-nói "lưu lại"/"commit" nếu ổn.**
+**Trạng thái**: ✅ ĐÃ COMMIT (`1e2c7ce`) + PUSH + LIVE, test thật qua trình duyệt TRƯỚC khi commit (không
+chỉ mô phỏng). **Việc kế (không gấp)**: thầy tự vào act Anagram thật trên bản LIVE, đổi mode "Bonus and
+minus", chỉnh Points off (wrong letter)/Bonus x, chơi thử xem MẮT THẬT hiệu ứng số đỏ bay lên + nhãn "Nx
+PERFECT" (máy build không chụp được animation do bẫy rAF của Browser pane test, chỉ xác nhận được kết quả
+CUỐI qua bảng tổng kết).
