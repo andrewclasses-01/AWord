@@ -5,17 +5,23 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 103, v0.9.77) — TĂNG TỐC TẠO GIỌNG (TTS): WEBGPU-FIRST + WORKER
-> POOL. CÓ SỬA CORE: `core/tts.js` (`loadTTS()` thử `device:"webgpu"` trước, tự lùi về `wasm` — MỌI nơi
-> gọi `generateSpeechDataUrl` được lợi tự động), `core/tts-worker.js` + `core/tts-pool.js` (MỚI —
-> `createPool()` device-aware: GPU → pool size 1, không GPU → size theo `hardwareConcurrency`),
-> `core/voice-batch.js` (đổi tên `generateVoicesSequential`→`generateVoicesBatch`, chạy qua pool). +
-> `templates/anagram/anagram-editor.js` (thay vòng lặp tuần tự cũ trong "Generate all voices" bằng
-> `generateVoicesBatch()` dùng chung — LẦN ĐẦU sửa lại code đã chạy ổn định từ Đợt 96-98, vì chính yêu cầu
-> là "cả khi generate voice trong edit" cũng phải nhanh hơn) + `main.js` (đổi tên gọi hàm). ✅ THẦY DUYỆT
-> (chốt "cả hai: WebGPU trước, tự fallback WASM+Worker Pool") → COMMIT `20dea42` + PUSH + **LIVE** tại
-> `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `device:"webgpu"`/`recommendedPoolSize`/
-> `generateVoicesBatch` (cả trong `voice-batch.js` VÀ `anagram-editor.js`) ngay lần poll thứ 3).**
+> Cập nhật lần cuối: **10/8/2026 (Đợt 104, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN
+> TRÙNG TÊN + GUARD THƯ MỤC "ACT". CÓ SỬA CORE: `core/lesson-import.js` (tiêu đề ENG1/ENG2 đổi thành
+> `xxx / ENG1 VOICE`/`xxx / ENG2 VOICE`). + `main.js` (khung Voice giờ là danh sách hàng riêng từng act
+> thay vì 1 ô tích gộp; dò trùng tên act/thư mục trước khi Import — đỏ nhưng vẫn tích, chặn Import tới khi
+> giải quyết; tự khoá "Make a new folder" khi đang ở/gần thư mục "ACT") + `core/app.css` (`.is-dup`,
+> `.aw-imp-voice-rows`, `.aw-imp-folder-hint`). ✅ THẦY DUYỆT (test Đợt 103 ok, gửi 3 yêu cầu tinh chỉnh) →
+> COMMIT `9c2d165` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ "ENG1
+> VOICE"/`blockNewFolder`/`.is-dup` ngay lần poll thứ 2).**
+> Lỗi thật bắt được lúc test: logic dò trùng tên dùng `null` cho 2 nghĩa khác nhau (ROOT thật VÀ "thư mục
+> chưa tồn tại") khiến act trùng tên ở gốc thư viện KHÔNG BAO GIỜ bị bắt — sửa bằng cách tách hẳn
+> `undefined` (sentinel) khỏi `null` (ROOT hợp lệ), dùng `===`/`!==` nghiêm ngặt. Chi tiết: `GHI CHU DU
+> AN.md` Đợt 104.
+>
+> Trước đó: **10/8/2026 (Đợt 103, v0.9.77) — TĂNG TỐC TẠO GIỌNG (TTS): WEBGPU-FIRST + WORKER POOL. CÓ SỬA
+> CORE: `core/tts.js`, `core/tts-worker.js` + `core/tts-pool.js` (MỚI), `core/voice-batch.js` (đổi tên
+> `generateVoicesSequential`→`generateVoicesBatch`). + `templates/anagram/anagram-editor.js` + `main.js`.
+> ✅ THẦY DUYỆT → COMMIT `20dea42` + PUSH + **LIVE**.**
 > Đo THẬT trên GPU NVIDIA: `webgpu` nhanh hơn `wasm` **~8.6 lần** mỗi lần gọi (0.62s vs 5.3s/từ) — đòn bẩy
 > lớn nhất. Giả định BAN ĐẦU sai, sửa bằng số đo thật: tưởng chạy nhiều Worker WebGPU song song sẽ nhân
 > thêm tốc độ — đo thật lại cho kết quả NGƯỢC LẠI (1 Worker=1.9s/từ, 2 Worker=2.6s/từ, 4 Worker=4.6s/từ,

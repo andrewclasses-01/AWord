@@ -5,6 +5,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 104 (10/8/2026, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN TRÙNG TÊN + GUARD
+THƯ MỤC "ACT" ⭐ CÓ SỬA CORE (`core/lesson-import.js` — đổi tên act) — ✅ THẦY DUYỆT (test "generate all
+voices" ok, gửi 3 yêu cầu tinh chỉnh cho popup Import) → COMMIT `9c2d165` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận đủ "ENG1 VOICE" trong `core/lesson-import.js`,
+`blockNewFolder` trong `main.js`, `.is-dup` trong `core/app.css` ngay lần poll thứ 2)
+
+Sau khi thầy test "Generate all voices" ổn (Đợt 103), gửi 3 yêu cầu tinh chỉnh cho popup Import Excel
+(Đợt 102):
+
+**(1) Gộp ENG1/ENG2 vào danh sách, không còn 1 ô tích gộp** — trước đây khung Voice chỉ có 1 ô tích chung
+"Automatically generate voices for ENG1/ENG2" áp lên bất kỳ act ENG1/ENG2 nào đã tích ở danh sách CHÍNH
+bên dưới. Nay: mỗi act ENG1/ENG2 có HÀNG RIÊNG ngay trong khung Voice (giống hệt các hàng act khác — icon,
+tiêu đề, số từ), **KHÔNG còn xuất hiện lặp lại ở danh sách chính**. Tích hàng nào thì act đó vừa được tạo
+vừa có giọng — không còn khái niệm "tạo nhưng không giọng" cho riêng 2 act này qua đường Import. Tiêu đề
+hiển thị (và LƯU THẬT vào act) đổi từ `xxx / ENG1` thành **`xxx / ENG1 VOICE`** (và ENG2 tương tự) —
+sửa tại nguồn `core/lesson-import.js`, để về sau nhìn tên act trong thư viện biết ngay act nào có giọng.
+
+**(2) Cảnh báo trùng tên + chặn Import cho tới khi giải quyết** — trước đây act/thư mục trùng tên bị
+`importBundle()` ÂM THẦM bỏ qua (đếm "skipped", báo sau khi xong). Nay: ngay khi mở file (và mỗi khi đổi
+tích "Make a new folder" / gõ lại tên thư mục), dò trước từng act's tên thật sẽ nằm ở đâu (tính cả
+`subfolder` như "ACT"/"ACT/HOMEWORK" của Quiz/Reading) so với thư viện hiện có — nếu trùng, hàng đó
+**hiện viền/nền đỏ nhưng vẫn giữ nguyên trạng thái tích** (thầy tự quyết: bỏ tích hàng đó, hoặc đi đổi
+tên/xoá bản cũ). Thư mục cũng vậy: nếu "Make a new folder" trùng tên 1 thư mục con đã có, ô nhập tên hiện
+đỏ. Bấm Import khi còn ít nhất 1 hàng đỏ ĐANG TÍCH (hoặc thư mục trùng) → **KHÔNG import gì cả**, hiện
+thông báo yêu cầu giải quyết trước rồi thử lại.
+
+**(3) Guard thư mục "ACT"** — Quiz/Reading act luôn đi vào 1 thư mục con tên `ACT` (và `ACT/HOMEWORK`).
+Nếu đang đứng trong 1 thư mục **tên chính là "ACT"**, hoặc thư mục hiện tại **đã có con tên "ACT"**, thì ô
+"Make a new folder" tự **khoá + bỏ tích** (kèm dòng giải thích), buộc act mới đi thẳng vào thư mục hiện
+tại — tránh lồng thêm 1 "ACT" nữa lệch vị trí với "ACT" đã có.
+
+**Lỗi thật bắt được lúc tự test (không phải giả định)**: logic dò trùng tên ban đầu dùng `null` làm 2
+nghĩa khác nhau cùng lúc — vừa là "thư mục ROOT thật" (giá trị `state.folderId` khi đứng ở gốc Activities)
+vừa là sentinel "thư mục đích chưa tồn tại, khỏi cần dò". Hậu quả: đứng ở ROOT + bỏ tích "Make a new
+folder" (target = root thật, `null`) bị code hiểu NHẦM thành "chưa tồn tại", bỏ qua luôn việc dò trùng —
+act trùng tên ở gốc thư viện KHÔNG BAO GIỜ bị bắt. Bắt được bằng cách seed 1 act trùng tên thật vào gốc
+qua harness rồi so sánh 2 kịch bản (tạo thư mục mới trống — đúng không nên báo trùng — và import thẳng
+vào gốc đã có act đó — phải báo trùng) — kịch bản thứ 2 sai. Sửa bằng cách tách hẳn `undefined` (sentinel
+"chưa tồn tại") ra khỏi `null` (định danh ROOT hợp lệ), dùng so sánh `===`/`!==` nghiêm ngặt xuyên suốt
+thay vì `== null`.
+
+**Test thật qua Browser pane** (harness Firestore giả trong bộ nhớ, seed dữ liệu trùng tên/thư mục "ACT"
+thật qua `saveActivity()`/`createFolder()` của chính store.js đang chạy — không phải ghi tay vào Map giả,
+để cache nội bộ của store.js phản ánh đúng, tránh lặp lại kiểu bug seed-không-qua-cache đã gặp lúc đầu):
+- Khung Voice hiện đúng 2 hàng riêng "xxx / ENG1 VOICE"/"xxx / ENG2 VOICE", tích/bỏ tích từng hàng độc lập
+  đúng số đếm "N of 3 selected".
+- Seed act trùng tên ở gốc: tạo thư mục MỚI (tên chưa tồn tại) → không báo đỏ (đúng, vì thư mục mới trống)
+  → SAU KHI sửa lỗi trên, bỏ tích "Make a new folder" (target = gốc, có act trùng) → hàng hiện đỏ đúng;
+  bấm Import bị chặn đúng thông báo; bỏ tích riêng hàng đỏ → Import 2 chạy được, act cũ giữ nguyên.
+- Seed thư mục trùng tên (tên mặc định = mã nguồn file): ô tên thư mục hiện đỏ đúng; bấm Import bị chặn;
+  gõ tên khác → đỏ tự hết (debounce 250ms); Import chạy được, tạo thư mục MỚI, thư mục cũ không đụng tới.
+- Seed thư mục "ACT" ở gốc: "Make a new folder" tự khoá + bỏ tích + hiện dòng giải thích đúng; Import 3
+  act thẳng vào gốc (cùng cấp thư mục "ACT" có sẵn), không tạo thêm thư mục thừa.
+- 0 lỗi console thật (chỉ còn cảnh báo vô hại onnxruntime đã biết từ trước) suốt toàn bộ các lượt test.
+
+**VIỆC ĐANG CHỜ**: thầy tự thử Import 1 file thật có act trùng tên với thư viện hiện có, xác nhận hàng đỏ
++ thông báo chặn đúng ý; và thử Import khi đang đứng trong (hoặc cùng cấp) thư mục "ACT" có sẵn.
+
+---
+
 ## Đợt 103 (10/8/2026, v0.9.77) — TĂNG TỐC TẠO GIỌNG (TTS): WEBGPU-FIRST + WORKER POOL ⭐ CÓ SỬA CORE
 ✅ THẦY DUYỆT (chốt "cả hai: WebGPU trước, tự fallback WASM+Worker Pool") → COMMIT `20dea42` + PUSH +
 **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `device: "webgpu"` trong
