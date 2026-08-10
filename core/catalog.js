@@ -112,7 +112,13 @@ export const TEMPLATES = [
     blurb: "The class races one clock: a named pupil reads a number off the paper, the rest pick that word from six look-alikes.",
     css: "templates/running-team/running-team.css",
     load: () => import("../templates/running-team/running-team.js"),
-    sample: () => import("../templates/running-team/sample-running-team.js") }
+    sample: () => import("../templates/running-team/sample-running-team.js") },
+
+  { type: "speaking",        label: "Speaking",        built: true,
+    blurb: "Say each word into the mic — an AI grades your pronunciation.",
+    css: "templates/speaking/speaking.css",
+    load: () => import("../templates/speaking/speaking.js"),
+    sample: () => import("../templates/speaking/sample-speaking.js") }
 ];
 
 export function templateEntry(type) {

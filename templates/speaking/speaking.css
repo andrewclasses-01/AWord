@@ -1,0 +1,132 @@
+/* =============================================================
+   SPEAKING template — styles that belong ONLY to this template.
+   Class prefix: .aw-spk-*
+
+   Layout: word (+ optional clue + Listen button) centred at the top, a big
+   circular mic button + status line centred in the space below. No answer
+   "tiles" here (rule "tile never recolors on select" doesn't apply — the
+   mic button is a CONTROL, not an answer choice, so it's fine for it to
+   change appearance to show its own state).
+   ============================================================= */
+
+.aw-spk-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3cqw;
+  padding: 1.2cqw 4cqw;
+  animation: aw-fadein .25s ease;
+}
+
+.aw-spk-wordarea {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+}
+
+.aw-spk-word {
+  font-size: calc(6.4cqw * var(--fit));
+  font-weight: 700;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  line-height: 1.35;
+  padding-top: 0.14em;   /* Vietnamese/accent headroom, same margin as quiz.css */
+}
+
+.aw-spk-clue {
+  font-size: calc(2.6cqw * var(--fit));
+  color: var(--aw-text);
+  opacity: .72;
+  margin-top: 0.6cqw;
+  line-height: 1.35;
+}
+
+.aw-spk-empty {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 8cqw;
+  font-size: 2.4cqw; color: var(--aw-text); opacity: .7;
+}
+
+/* ---------- mic ---------- */
+.aw-spk-micwrap {
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 1.4cqw;
+}
+
+.aw-spk-micbtn {
+  width: 13cqw; height: 13cqw;
+  min-width: 64px; min-height: 64px;
+  border-radius: 50%;
+  border: none;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--aw-accent, #3b82f6);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18);
+  transition: background .15s ease, box-shadow .15s ease;
+}
+.aw-spk-micbtn svg { width: 46%; height: 46%; }
+.aw-spk-micbtn:active { transform: translateY(2px); box-shadow: 0 0.3cqw 0 rgba(0, 0, 0, .18); }
+.aw-spk-micbtn:disabled { cursor: default; }
+
+.aw-spk-micbtn.is-recording {
+  background: #ef4444;
+  animation: aw-spk-pulse 1.1s ease-in-out infinite;
+}
+@keyframes aw-spk-pulse {
+  0%, 100% { box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18), 0 0 0 0 rgba(239, 68, 68, .5); }
+  50% { box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18), 0 0 0 1.6cqw rgba(239, 68, 68, 0); }
+}
+
+.aw-spk-micbtn.is-processing {
+  background: #94a3b8;
+  animation: aw-spk-spin 1s linear infinite;
+}
+@keyframes aw-spk-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.aw-spk-micbtn.is-pass { background: #22c55e; }
+.aw-spk-micbtn.is-fail { background: #f59e0b; }
+
+.aw-spk-status {
+  font-size: calc(2.4cqw * var(--fit));
+  color: var(--aw-text);
+  text-align: center;
+  max-width: 90cqw;
+  min-height: 1.6em;   /* reserves its own line so the mic button never shifts when the text appears/changes */
+}
+
+/* ---------- Options panel extras (OUTSIDE the 16:9 stage -> px, not cqw,
+   same note as templates/type-the-answer/type-the-answer.css) ---------- */
+.aw-spk-opt-slider {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-size: 14px; color: var(--aw-text);
+}
+.aw-spk-opt-slider input[type="range"] {
+  flex: 0 0 160px; max-width: 55%; accent-color: var(--aw-accent, #3b82f6); cursor: pointer;
+}
+.aw-spk-opt-slidercap { font-weight: 600; }
+.aw-spk-opt-sliderval { min-width: 3em; text-align: center; font-weight: 800; color: var(--aw-accent, #3b82f6); }
+
+/* ---------- Editor (speaking-editor.js) — also OUTSIDE the
+   16:9 stage, px/rem, reuses the shared .aw-ed-* shell from core/app.css.
+   ---------- */
+.aw-spk-ed-row { display: flex; gap: 14px; flex-wrap: wrap; }
+.aw-spk-ed-row .aw-ed-field { flex: 1 1 220px; min-width: 0; }
+
+.aw-spk-ed-phrow {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px;
+}
+.aw-spk-ed-phstatus {
+  flex: 1 1 auto; min-width: 0;
+  font-size: .85rem; color: #94a3b8;
+  font-family: "Courier New", monospace;
+}
+.aw-spk-ed-phstatus.is-ready { color: #16a34a; font-weight: 700; }
+.aw-spk-ed-genbtn { flex: 0 0 auto; white-space: nowrap; margin-top: 10px; }
+.aw-spk-ed-phrow .aw-spk-ed-genbtn { margin-top: 0; }

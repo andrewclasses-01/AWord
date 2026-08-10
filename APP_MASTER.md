@@ -5,7 +5,29 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 106, v0.9.80) — POPUP IMPORT: GIỚI HẠN LOẠI ACT TRONG THƯ MỤC "ACT"
+> Cập nhật lần cuối: **10-11/8/2026 (Đợt 107, v0.9.81) — ⭐⭐ TEMPLATE THỨ 17 "SPEAKING" (ý tưởng
+> riêng của thầy, không có bên Wordwall — ⚠️ đừng nhầm với "Speaking cards"): học sinh đọc to 1 từ vào
+> mic, AI nghe + chấm điểm phát âm 0-100%, so ngưỡng đạt/chưa đạt (Options "Pass threshold"). ⭐ CÓ SỬA
+> CORE — thêm MỚI `core/phonemize.js` (chữ→IPA, gói `phonemizer`/eSpeak-NG WASM) + `core/speech-score.js`
+> (nghe+chấm, mô hình `wav2vec2-lv-60-espeak-cv-ft` qua `@huggingface/transformers`), cả hai thuần cộng
+> thêm, cùng kiểu tiền lệ Đợt 94 (`core/tts.js`) + 1 mục `core/catalog.js`. ✅ THẦY DUYỆT (test cơ bản mic
+> thật 11/8; yêu cầu tên "SPEAKING" + bỏ âm "Oh my god" → thay bằng bộ classic Wordwall 9 mp3 tự-chứa
+> trong `templates/speaking/sounds/`, copy từ Type the answer) → GỘP TRANG CHỦ + COMMIT + PUSH + **LIVE**
+> — đang giai đoạn thầy test thêm trên live, sẽ còn chỉnh theo phản hồi.**
+> ⭐⭐ Bẫy thật bắt được lúc test: `pipeline()` tiện lợi của `@huggingface/transformers@3.8.1` LUÔN lỗi
+> thiếu `tokenizer.json` cho đúng mô hình này (kho chỉ có `vocab.json` — hạn chế còn MỞ của chính thư viện,
+> GitHub issue #93) — sửa bằng cách bỏ hẳn tokenizer, tự tải `AutoProcessor`+`AutoModelForCTC` (không cần
+> tokenizer) + tự `fetch()` `vocab.json` + tự viết giải mã CTC "greedy" (~15 dòng). Xác nhận đúng bằng vòng
+> lặp thật: TTS (Kokoro) đọc "elephant" → đưa qua pipeline mới → nghe ra khớp 100% với
+> `phonemizeWord("elephant")`, so ngược từ khác ra 0%. Quyết định thứ 2: bỏ hẳn nhánh WebGPU cho mô hình
+> NGHE này (đo thật fp32/WebGPU ~1,26GB so với q4/wasm ~240MB — khác Kokoro, ở đây mỗi lượt chỉ ghi 1 từ
+> ngắn 1 lần nên dung lượng tải quan trọng hơn tốc độ; học sinh tải ~240MB đúng 1 lần ở lần ghi âm đầu).
+> Chi tiết đầy đủ + giới hạn test (Browser pane không tự xin được quyền micro): `GHI CHU DU AN.md` Đợt 107
+> + `templates/speaking/GHI CHU SPEAKING.md`. **Việc kế: thầy test thêm trên bản LIVE (nhiều từ, giọng học
+> sinh thật, thử cả iPhone/iPad — chưa có bằng chứng thật trên Safari iOS); độ chính xác với giọng học
+> sinh VN là ẩn số chính, `passThreshold` chỉnh được ngay qua Options không cần sửa code.**
+>
+> Trước đó: **10/8/2026 (Đợt 106, v0.9.80) — POPUP IMPORT: GIỚI HẠN LOẠI ACT TRONG THƯ MỤC "ACT"
 > + NÚT IMPORT NHẬN KÉO-THẢ FILE TRỰC TIẾP. KHÔNG ĐỤNG CORE (chỉ `main.js` + `core/app.css`). ✅ THẦY
 > DUYỆT (test Đợt 104 ok, gửi 2 yêu cầu tinh chỉnh) → COMMIT `a6b1b67` + PUSH + **LIVE** tại
 > `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `ACT_FOLDER_ALLOWED_TYPES`/`aw-fm-importbtn`/
@@ -1056,7 +1078,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > duyệt"). Trạng thái đúng là mục này.
 
 ### Đứng ở đâu rồi
-> ⚠️ **CẬP NHẬT 6/8/2026**: nay đã có **16 loại** — thêm **Running word** (thứ 15, ✅ live) và
+> ⚠️ **CẬP NHẬT 11/8/2026**: nay đã có **17 loại** — thêm **Speaking** (thứ 17, ✅ live, Đợt 107 — AI chấm
+> phát âm, đừng nhầm với Speaking cards).
+> ⚠️ **CẬP NHẬT 6/8/2026**: 16 loại — thêm **Running word** (thứ 15, ✅ live) và
 > **Running team** (thứ 16, 🟢 chờ thầy duyệt, Đợt 78). Ngoài ra Settings có thêm mục **Classes**
 > (danh sách lớp + học sinh, `core/classes.js`) — dữ liệu bền dùng chung, act nào gọi tên học sinh
 > thì đọc từ đó. Đoạn "14 loại" bên dưới giữ nguyên vì phần bài học kỹ thuật vẫn đúng.

@@ -5,6 +5,92 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 107 (10-11/8/2026, v0.9.81) — ⭐⭐ TEMPLATE THỨ 17 "SPEAKING": AI NGHE + CHẤM PHÁT ÂM TỪNG TỪ
+(ý tưởng riêng của thầy, KHÔNG có bên Wordwall). ⭐ CÓ SỬA CORE — thêm MỚI 2 file `core/phonemize.js` +
+`core/speech-score.js` (thuần cộng thêm, giống tiền lệ Đợt 94 thêm `core/tts.js`) + 1 mục
+`core/catalog.js`. ✅ THẦY DUYỆT (test cơ bản bằng mic thật 11/8, yêu cầu: tên "SPEAKING", bỏ âm "Oh my
+god", đưa lên live để test tiếp) → ĐÃ GỘP TRANG CHỦ + COMMIT + PUSH + **LIVE** — đang giai đoạn thầy test
+thêm trên live, sẽ còn chỉnh theo phản hồi.
+
+**3 thay đổi sau khi thầy duyệt (11/8, trước khi commit — cả đợt ship trong 1 commit):**
+1. **Tên chốt "SPEAKING"** (build ban đầu tạm gọi "Pronunciation check") — đổi toàn bộ: thư mục
+   `templates/speaking/`, `type:"speaking"`, class `aw-spk-*`. An toàn vì chưa có act nào lưu type cũ.
+   ⚠️ Đừng nhầm với "Speaking cards" (`speaking_cards`) — 2 template khác nhau.
+2. **Bỏ âm "Oh my god"** (thầy yêu cầu): không dùng `ui.sound.correct/wrong` của engine — thêm
+   `speaking-sound.js` + copy 9 mp3 bộ classic Wordwall từ `templates/type-the-answer/sounds/` vào
+   `templates/speaking/sounds/` (tự-chứa đúng quy ước): intro/correct×3/incorrect×3/gamecompleted/restart,
+   khai `tpl.sounds={play,restart,complete}`. Xác nhận Browser pane: `pack.stats()` ra `ready:9,primed:true`.
+3. **Gộp trang chủ**: 1 mục `core/catalog.js`. Test đường nạp thật từ trang gốc (console `play.html`):
+   `ensureTemplate("speaking")` tự chèn CSS + đăng ký module, `startGame` mount ra `.aw-stage` tên
+   "SPEAKING" — 0 lỗi.
+
+**Bối cảnh**: thầy muốn 1 act cho học sinh đọc to từng từ, AI nghe rồi chấm điểm phát âm, tuỳ ngưỡng
+(Options) mà báo đạt/chưa đạt. Đã nghiên cứu các dự án mã nguồn mở (OpenPronounce, AI Pronunciation
+Trainer) — cả hai đều cần máy chủ Python, không hợp AWord (web tĩnh) — nên dựng lại đúng công thức của họ
+(nghe → nhận diện ÂM → so khớp với ÂM chuẩn) bằng 2 mảnh AI chạy thẳng trong trình duyệt (giống hệt cách
+giọng đọc AI Kokoro của Anagram đã làm, Đợt 94):
+
+1. **`core/phonemize.js`** — gói `phonemizer` (Xenova, Apache-2.0, eSpeak-NG biên dịch WASM) đổi 1 từ
+   tiếng Anh thành chuỗi ký hiệu ngữ âm IPA "chuẩn". Chạy ở BƯỚC SOẠN NỘI DUNG (trong editor, 1 lần/từ),
+   không đụng gì lúc học sinh chơi, không cần đăng nhập.
+2. **`core/speech-score.js`** — nghe file học sinh vừa ghi âm bằng mô hình AI
+   `onnx-community/wav2vec2-lv-60-espeak-cv-ft-ONNX` (Facebook/Meta, Apache-2.0) chạy qua
+   `@huggingface/transformers`, ra chuỗi IPA đã "nghe được", rồi so với chuỗi IPA chuẩn (thuật toán
+   Levenshtein tự viết, so từng ký tự IPA) ra điểm khớp 0-100%.
+
+**⭐⭐ BẪY THẬT bắt được lúc tự test (không phải đoán)**: cách gọi tiện lợi `pipeline("automatic-speech-
+recognition", MODEL_ID)` của `@huggingface/transformers@3.8.1` LUÔN báo lỗi `Could not locate file:
+"tokenizer.json"` — kho mô hình này chỉ có định dạng "tokenizer cũ" (`vocab.json`), thư viện JS chưa hỗ
+trợ dự phòng đọc thẳng `vocab.json` khi thiếu `tokenizer.json` (đây là hạn chế đã biết, còn mở của chính
+thư viện — issue #93 trên GitHub `huggingface/transformers.js`, xác nhận cả gọi trực tiếp
+`Wav2Vec2CTCTokenizer.from_pretrained` cũng lỗi y hệt). **Sửa**: bỏ hẳn phần tokenizer của thư viện — tự
+tải `AutoProcessor` (xử lý âm thanh) + `AutoModelForCTC` (mô hình) trực tiếp (2 phần này KHÔNG cần
+tokenizer nên tải bình thường), tự `fetch()` thẳng file `vocab.json` (chỉ ánh xạ ký-hiệu↔số, không phải
+tokenizer), rồi tự viết thuật toán giải mã CTC kiểu "greedy" (~15 dòng: mỗi khung thời gian lấy ký hiệu
+điểm cao nhất, gộp các khung liên tiếp trùng nhau, bỏ ký hiệu "trống"). Xác nhận đúng bằng vòng lặp
+THẬT: dùng chính giọng đọc AI (Kokoro) tạo âm thanh cho từ "elephant" → đưa qua toàn bộ pipeline mới →
+nghe ra "ɛlɪfənt", so với `phonemizeWord("elephant")` = "ˈɛlɪfənt" → **khớp 100%** (chỉ khác dấu trọng âm,
+vốn đã được bỏ qua có chủ ý khi so điểm); so ngược với mục tiêu "banana" ra **0%** — xác nhận thuật toán
+phân biệt đúng "gần" và "khác hẳn".
+
+**⭐ Quyết định kỹ thuật thứ 2 (cũng đổi giữa chừng sau khi đo thật)**: bỏ hẳn nhánh WebGPU/fp32 (giống
+Kokoro hay dùng) cho riêng mô hình NGHE này — đo thật cho thấy bản fp32/WebGPU nặng **~1,26GB** (tự thấy
+lúc tải bị "kẹt" lâu bất thường trong lúc test), trong khi bản q4/wasm chỉ **~240MB** và tốc độ nhận diện
+1 từ ngắn vẫn nhanh dù không có GPU tăng tốc (khác Kokoro — nơi thầy TẠO NHIỀU giọng liên tục nên tốc độ
+đáng công đổi lấy file nặng hơn; ở đây mỗi lượt học sinh chỉ ghi 1 từ ngắn, dung lượng tải LẦN ĐẦU quan
+trọng hơn tốc độ). Chốt: `core/speech-score.js` LUÔN dùng q4/wasm, không thử WebGPU.
+
+**Cách chơi**: mỗi lượt hiện 1 từ (+ gợi ý tuỳ chọn) + nút 🔊 nghe phát âm chuẩn (tái dùng NGUYÊN giọng đọc
+AI + hạ tầng `voiceClips` đã có của Anagram/Type the answer, `core/voice-playback.js`) + nút 🎤 tròn to ghi
+âm. Ghi xong tự chấm, đạt ngưỡng (Options → "Pass threshold", mặc định 70%) thì tự sang từ sau; chưa đạt
+thì đứng lại, cho bấm 🎤 thử lại (Options → "Allow trying again") hoặc tự bấm Next bỏ qua — **chỉ lần ghi
+CUỐI của mỗi từ được tính**. Khoá hẳn nút chuyển câu trong lúc AI đang chấm (tránh đổi câu giữa chừng làm
+lệch kết quả). Editor (`speaking-editor.js`) bắt buộc bấm "Generate phonemes" cho từng từ (hoặc
+1 nút chạy cả loạt) trước khi từ đó chơi được — từ chưa có phonemes bị game tự bỏ qua, không chặn Save.
+
+**Đã tự test kỹ qua Browser pane thật** (không đoán): `phonemizeWord()` ra IPA thật cho 4 từ mẫu (elephant/
+banana/butterfly/umbrella) — dùng LUÔN kết quả thật này làm dữ liệu mẫu, không tự bịa IPA; vòng TTS→AI
+nghe→chấm điểm cho kết quả đúng như trên; giao diện chơi (từ + gợi ý + nút mic + trạng thái nút Next/
+Previous khoá đúng lúc chưa trả lời) hiện đúng qua `test.html`; **màn hình editor** mở qua nút "Edit" của
+engine thật, hiện đúng 4 từ mẫu kèm IPA đã lưu, bấm "+ Add word" + gõ "giraffe" + bấm "Generate phonemes"
+ra đúng "/dʒᵻɹˈæf/" ngay trên giao diện thật (không phải gọi hàm trực tiếp); **0 lỗi console JS thật** suốt
+cả phiên test (chỉ có vài dòng cảnh báo vô hại của chính onnxruntime, không phải lỗi ứng dụng).
+**Không tự test được bằng automation**: xin quyền microphone thật — môi trường Browser pane build tự động
+chặn hẳn (giống hệt giới hạn "không tự động hoá được popup đăng nhập Google" đã biết) — đã xác nhận nhánh
+"microphone access was blocked" hiện đúng thông báo + nút mic trở lại bình thường, không kẹt màn hình,
+nhưng KHÔNG có bằng chứng thật về việc ghi-âm-thật→chấm-điểm chạy trên giọng nói THẬT (chỉ xác nhận trên
+giọng máy tổng hợp).
+
+**File thêm mới**: `core/phonemize.js`, `core/speech-score.js`, 1 mục `core/catalog.js`, và trọn thư mục
+`templates/speaking/` (`speaking.js` / `.css` / `sample-speaking.js` / `speaking-editor.js` /
+`speaking-sound.js` / `sounds/`×9 mp3 / `test.html` / `test.js` / `GHI CHU SPEAKING.md`).
+
+**Việc kế**: thầy test thêm trên bản LIVE (nhiều từ, giọng học sinh thật, thử cả trên iPhone/iPad — chưa
+có bằng chứng thật trên Safari iOS) — sẽ còn chỉnh sửa theo phản hồi. Độ chính xác với giọng học sinh
+Việt Nam là ẩn số chính; `passThreshold` là Option chỉnh được ngay không cần sửa code.
+
+---
+
 ## Đợt 106 (10/8/2026, v0.9.80) — POPUP IMPORT: GIỚI HẠN LOẠI ACT TRONG THƯ MỤC "ACT" + NÚT IMPORT NHẬN
 KÉO-THẢ FILE TRỰC TIẾP ⭐ KHÔNG ĐỤNG CORE (chỉ `main.js` + `core/app.css`) — ✅ THẦY DUYỆT (test Đợt 104
 ok, gửi 2 yêu cầu tinh chỉnh tiếp) → COMMIT `a6b1b67` + PUSH + **LIVE** tại
