@@ -776,3 +776,94 @@ act thật `?a=256`. Thầy duyệt commit+push thẳng dựa trên kết quả 
 trước) — **việc kế cho phiên sau (không gấp): thầy tự vào act thật `?a=256` (hoặc act Anagram bất kỳ) trên
 bản LIVE, đổi vài Clue rồi Generate lại giọng, nghe qua Play xem sóng âm có hiện đúng không, thử Generate
 all/Delete all trên 1 act nhiều từ — nếu gặp gì bất thường thì báo lại.**
+
+## Đợt 98 (10/8/2026, v0.9.72) — 6 CẢI TIẾN TIẾP THEO THẦY YÊU CẦU: HIDE TEXT + WAVEFORM AUDITION-STYLE +
+DIM/BLUR/PROGRESS/CANCEL CHO GENERATE ALL + POPUP DELETE ALL WORDS + AUTO-PLAY/PHÁT QUANG TRONG GAME.
+KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thuần thêm 2 icon mới — + 3 file `templates/anagram/*`). ✅ THẦY
+DUYỆT → COMMIT `06fec24` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` — test THẬT qua trình
+duyệt trước khi commit (harness thay Firestore, kể cả phía CHƠI, xem mục kỹ thuật test bên dưới), 0 lỗi
+console suốt toàn bộ; sau push đã `curl` xác nhận đủ dấu mốc mới (`loadWaveform`/`setHideTextState`/
+`buildDeleteAllWordsPopover` trong `anagram-editor.js`, `toggleVoiceClip`/`setListenGlow`/"Listen for the
+clue" trong `anagram.js`, `aw-anagram-ed-backdrop`/`aw-anagram-ed-runcancel`/`listenglow` trong
+`anagram.css`, `eyeOff` trong `core/icons.js`) trên bản live ngay lần poll thứ 2, và mở lại
+`templates/anagram/test.html` live chơi thật 0 lỗi console.
+
+Ngay sau khi duyệt Đợt 96, thầy gửi tiếp 1 lượt 6 điểm (2 nhóm — Edit và Game):
+
+**NHÓM EDIT**
+
+**(1) Icon "Hide text" cạnh mỗi hàng Clue** — bấm ON thì Clue ẩn khi chơi, chỉ còn giọng đọc; mặc định
+ON ngay khi Generate/Regenerate xong (đơn lẻ lẫn Generate all) — đúng yêu cầu thầy. Field mới `it.hideText`
+(bool) — CHỈ có ý nghĩa khi có voice (`setHideTextState()` tự khoá nút + ép về `false` nếu `it.voice`
+rỗng, tránh trạng thái "ẩn chữ mà không có gì đọc thay"). Icon mới `eye`/`eyeOff` (`core/icons.js`, thuần
+thêm — không sửa/xoá icon nào có sẵn). Tự động **tắt hideText** ở mọi chỗ voice bị xoá: Remove voice (đơn
+lẻ), Delete all voices (hàng loạt), sửa lại Clue (voice cũ sai từ), Swap Columns (Clue đổi giá trị).
+
+**(2) Waveform ĐỔI SANG DẠNG TĨNH kiểu Adobe Audition** (trước ở Đợt 96 là cột tần số ĐỘNG theo
+`AnalyserNode`, thầy muốn dạng "ảnh chụp cả đoạn" + vạch thời gian chạy qua, giống phần mềm dựng âm
+thanh thật) — viết lại hoàn toàn: `decodeAudioData()` giải mã clip 1 LẦN (không phải để phát, chỉ để lấy
+biên độ), tính đỉnh biên độ mỗi cột pixel (228 cột cho cả đoạn), vẽ thành 1 bức tranh CỐ ĐỊNH ngay khi mở
+popover (không cần đợi bấm Play). Bấm ▶ Play chỉ chạy 1 vạch (playhead) quét qua bức tranh đó theo đúng
+`audio.currentTime/audio.duration`, tô lại phần đã-phát màu xanh đậm/chưa-phát màu xám nhạt, kèm nhãn thời
+gian `0:01 / 0:03` cập nhật sống. `AudioContext` giờ CHỈ dùng để giải mã (không nối `MediaElementSource`
+tới loa nữa) — đơn giản hơn hẳn bản Đợt 96, và tách hẳn khỏi luồng phát âm thật (`new Audio()+.play()`
+không đổi gì). Đã đo bằng canvas thật: giọng "elephant" sinh ra file ~3 giây → ảnh sóng vẽ đúng 1670 pixel
+có màu (khác canvas trống) → nhãn thời gian đúng `0:00 / 0:03` lúc chưa phát.
+
+**(3) Popup "Generate all voices" có DIM+BLUR nền, thanh %, khoá đóng khi đang chạy + nút Cancel đỏ nhỏ**
+— thêm lớp phủ `.aw-anagram-ed-backdrop` (rgba đen 40% + `blur(3px)`) NGAY khi popup mở (đo
+`getComputedStyle` xác nhận đúng `rgba(15,22,34,0.4)` + `blur(3px)`), z-index dưới popup. Bấm Generate →
+`pop._running=true` → ẩn 2 nút Cancel/Generate thường, hiện đúng 1 nút Cancel NHỎ MÀU ĐỎ
+(`.aw-anagram-ed-runcancel`, đo `rgb(221,51,51)` trên nền `rgb(253,234,234)`) + thanh tiến độ
+`.aw-anagram-ed-voiceprogress` chạy theo % số hàng đã xong. `onVoicePopOutside` thêm 1 dòng chặn: đang
+`_running` thì bấm ra ngoài **KHÔNG đóng được** — đã đo thật (16 hàng, bấm ra ngoài giữa lúc "Generating
+9/16…" → popup + backdrop vẫn còn, `_running` vẫn `true`, tiến độ tiếp tục chạy bình thường). Bấm nút
+Cancel đỏ → dừng ĐÚNG lúc hàng hiện tại xong (soft-cancel, không huỷ giữa chừng 1 lần gọi Kokoro vì thư
+viện không có cơ chế abort) → đo thật: "Cancelled — generated voice for 12 row(s) before stopping." đúng
+số hàng đã kịp xong trước khi bấm Cancel.
+
+**(4) "Delete all words" đổi từ `confirm()` trần sang popup giống "Delete all voices"** — hàm mới
+`buildDeleteAllWordsPopover()`, `toggleBulkPopover()` thêm nhánh `kind:"deleteWords"`. Không có bước
+Firestore nào (words/clue chỉ tồn tại cục bộ tới khi Save) nên không cần nhánh sign-out.
+
+**NHÓM GAME**
+
+**(5)+(6) Auto-play khi mở câu mới + nút loa phát quang xanh lá khi đang phát, bấm để dừng/phát lại** —
+viết lại toàn bộ khối phát âm trong `anagram.js`: `playVoiceClip(clipId, btn)` giờ nhận thêm nút loa để
+gắn hiệu ứng phát quang (`setListenGlow`/`.is-playing`); `toggleVoiceClip()` MỚI — đang phát thì dừng,
+không thì phát (lại) từ đầu; `render()` (đúng ranh giới "mở từ mới" — file này đã ghi rõ trong comment đầu
+file là render() CHỈ chạy lúc bắt đầu/đổi từ, không chạy giữa chừng) giờ tự gọi `playVoiceClip(...)` ngay
+khi dựng xong nút loa của từ đó, và LUÔN dừng audio của từ TRƯỚC ở đầu hàm (kể cả khi từ mới không có
+voice) để không lọt tiếng từ cũ sang từ mới. Phát quang bằng `@keyframes` CSS thuần (không phải
+`element.animate()`) nên tự động ĐÓNG BĂNG cùng mọi animation khác khi Menu Pause mở (cơ chế chung
+`stage.getAnimations({subtree:true})` của `core/engine.js`, không cần nối hook riêng — đúng khuôn đã
+dùng cho phần lớn hiệu ứng khác trong dự án). Track "ended" tự tắt phát quang khi clip phát xong tự nhiên.
+⚠️ Bẫy đã tránh: click play() bị chặn bởi autoplay policy trình duyệt (hiếm gặp vì trang đã có tương tác
+từ nút "Play" mở ván) → `.catch()` tắt phát quang lặng lẽ, không phá ván đang chơi.
+
+**Hide text hiển thị trong game**: `clueEl` giờ có 3 nhánh — có Clue thật (hiện nguyên văn) / không có
+Clue (hiện "Unscramble the word", y hệt cũ) / có Clue NHƯNG `hideText` bật (hiện "🔊 Listen for the clue"
+— khác chữ với nhánh "không có Clue" để học sinh không hiểu nhầm "từ này không có gợi ý gì cả").
+
+**Kỹ thuật test** (không có quyền đăng nhập Google trong phiên này, như Đợt 96): dựng lại 2 file harness
+tạm trỏ import sang kho voice giả `_test-voice-clips-stub.js` — `_test-anagram-editor.js` (test phần
+soạn) VÀ **THÊM MỚI** `_test-anagram.js` (test phần CHƠI, dùng `generateSpeechDataUrl` sinh 1 giọng thật
+rồi `_seed()` thẳng vào kho giả, gắn cho 1 từ mẫu có `hideText:true` + 1 từ `hideText:false` + 1 từ không
+voice để so sánh cả 3 nhánh cùng lúc) — cả 2 cùng chạy qua `core/engine.js` thật (`registerTemplate`) như
+`test.html` gốc. Đã đo bằng cách tráo tạm `HTMLMediaElement.prototype.play` (chỉ trong phiên trình duyệt
+test, không đụng file nguồn) để BẮT ĐƯỢC bằng chứng `.play()` thật sự được gọi (không chỉ suy luận qua
+UI) — xác nhận đúng 1 lần gọi cho voice mỗi lần mở từ mới (lần đo ra "2" là do bắt luôn cả tiếng chuông
+"Play" của `anagram-sound.js`, cũng dùng `<audio>`, không phải bug). ⚠️ Clip test chỉ ~3 giây trong khi độ
+trễ round-trip của môi trường test nhiều khi vượt 3 giây, nên KHÔNG bắt được đúng 1 khung hình giữa lúc
+đang phát (phát quang/playhead) bằng ảnh chụp — đã xác nhận gián tiếp chắc chắn qua: `.play()` có gọi
+thật, waveform tĩnh vẽ đúng dữ liệu thật, trạng thái trước/sau đúng theo thiết kế, đọc lại code logic đơn
+giản (bật/tắt class, không có điều kiện đua tranh); phần "nhìn thấy phát quang thật" nhờ thầy tự xác nhận
+mắt thường khi chơi bản live. Đã XOÁ toàn bộ 7 file tạm sau khi test xong.
+
+**File đổi**: `core/icons.js` (+`eye`/`eyeOff`, thuần thêm), `templates/anagram/anagram-editor.js` (mục
+1-4), `templates/anagram/anagram.css` (CSS mới cho cả 4 mục edit), `templates/anagram/anagram.js` (mục
+5-6). Không đụng file nào khác.
+
+**Trạng thái**: ✅ ĐÃ COMMIT (`06fec24`) + PUSH + LIVE, test THẬT trước khi commit (không chỉ mô phỏng).
+**Việc kế (không gấp)**: thầy tự vào act thật trên bản LIVE — mở 1 từ có voice xem chữ Clue có ẩn đúng +
+nút loa có sáng xanh lúc phát không, thử bấm Cancel giữa lúc Generate all 1 act nhiều từ.

@@ -5,6 +5,55 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 98 (10/8/2026, v0.9.72) — ANAGRAM: HIDE TEXT + WAVEFORM AUDITION-STYLE + DIM/BLUR/PROGRESS/CANCEL
+CHO GENERATE ALL + POPUP DELETE ALL WORDS + AUTO-PLAY/PHÁT QUANG TRONG GAME (6 điểm thầy gửi tiếp ngay sau
+khi duyệt Đợt 96). KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thuần thêm 2 icon — + 3 file
+`templates/anagram/*`). ✅ THẦY DUYỆT → COMMIT `06fec24` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/`, test THẬT qua trình duyệt cả 2 phía Edit lẫn Game bằng harness thay
+Firestore trước khi commit, 0 lỗi console; sau push `curl` xác nhận đủ dấu mốc mới trên bản live ngay lần
+poll thứ 2, mở lại `test.html` live chơi thật 0 lỗi console.
+
+**Nhóm Edit**: (1) icon Hide text cạnh mỗi hàng Clue — ON thì ẩn Clue khi chơi chỉ còn giọng đọc, mặc
+định ON ngay khi Generate/Regenerate xong (đơn lẻ lẫn hàng loạt), tự tắt bất cứ khi nào voice bị xoá
+(Remove/Delete all/sửa Clue/Swap Columns) — field mới `it.hideText`, khoá cứng bằng `!it.voice` để
+không thể "ẩn chữ mà không có gì đọc thay". (2) Waveform đổi hẳn từ cột tần số ĐỘNG (Đợt 96) sang TĨNH
+kiểu Adobe Audition: `decodeAudioData()` giải mã 1 lần lấy đỉnh biên độ 228 cột, vẽ ảnh cố định ngay khi
+mở popover (không cần đợi Play), bấm Play chỉ chạy 1 vạch playhead quét qua theo đúng
+`currentTime/duration` + nhãn thời gian sống — đo canvas thật ra 1670 pixel có vẽ đúng dữ liệu thật
+(không phải giả). (3) Popup "Generate all voices" thêm lớp phủ dim+blur nền (đo đúng `rgba(15,22,34,.4)`
++ `blur(3px)`) NGAY khi mở, thanh % tiến độ khi chạy, khoá bấm-ra-ngoài-để-đóng trong lúc đang chạy (đo
+thật: 16 hàng, bấm ra ngoài giữa "Generating 9/16…" → popup vẫn còn, tiến độ vẫn chạy tiếp), và 1 nút
+Cancel nhỏ màu đỏ để dừng giữa chừng (soft-cancel — dừng ĐÚNG lúc hàng hiện tại xong vì Kokoro không có
+cơ chế abort giữa chừng 1 lần gọi; đo thật ra "Cancelled — generated voice for 12 row(s) before
+stopping."). (4) "Delete all words" đổi từ `confirm()` trần sang popup xác nhận cùng kiểu "Delete all
+voices".
+
+**Nhóm Game**: (5) auto-play giọng ngay khi mở từ mới (đúng ranh giới `render()` đã có sẵn trong code —
+CHỈ chạy lúc bắt đầu/đổi từ, không chạy giữa chừng, nên an toàn để auto-play ở đó không sợ lặp). (6) nút
+loa phát quang xanh lá khi đang phát (CSS `@keyframes` thuần nên tự đóng băng cùng Menu Pause qua cơ chế
+chung có sẵn, không cần hook riêng), bấm khi đang phát = dừng, bấm khi đang dừng = phát lại từ đầu. Ẩn
+Clue thật (`hideText`) hiện "🔊 Listen for the clue" — khác chữ với trường hợp "vốn không có Clue" (vẫn
+"Unscramble the word" như cũ) để học sinh không hiểu nhầm "từ này không có gợi ý".
+
+**Kỹ thuật test**: harness tạm y hệt Đợt 96 (kho voice giả thay Firestore) + THÊM MỚI 1 bản test riêng
+cho phía CHƠI (dùng `generateSpeechDataUrl` sinh giọng thật rồi seed thẳng vào kho giả, gắn cho 3 từ mẫu
+— có voice+hideText bật, có voice+hideText tắt, không voice — để so cả 3 nhánh hiển thị cùng lúc qua
+`core/engine.js` thật). Dùng mẹo tráo tạm `HTMLMediaElement.prototype.play` (chỉ trong phiên trình duyệt
+test) để BẮT ĐƯỢC bằng chứng thật `.play()` có được gọi, không chỉ suy luận qua giao diện. Clip test chỉ
+~3s trong khi độ trễ round-trip môi trường test hay vượt 3s nên không chụp được đúng khung hình giữa lúc
+phát quang/playhead — xác nhận gián tiếp chắc chắn qua bằng chứng `.play()` thật + soát lại code (logic
+đơn giản, không có điều kiện đua tranh); phần "thấy phát quang bằng mắt" nhờ thầy tự xác nhận khi chơi bản
+live. Đã xoá toàn bộ 7 file tạm sau khi test xong. Chi tiết đầy đủ: `templates/anagram/GHI CHU
+ANAGRAM.md` Đợt 98.
+
+**⚠️ Số Đợt 97 đã bị phiên song song khác dùng cho Type the answer (commit `931ca20`) trong lúc phiên
+này đang làm** — nhảy sang Đợt 98 để không trùng, đúng tiền lệ đã ghi ở các đợt trước.
+
+**VIỆC ĐANG CHỜ**: thầy tự vào act thật trên bản LIVE — mở 1 từ có voice xem chữ Clue có ẩn đúng + nút
+loa có sáng xanh lúc phát không, thử bấm Cancel giữa lúc Generate all trên 1 act nhiều từ.
+
+---
+
 ## Đợt 97 (10/8/2026, v0.9.71) — TYPE THE ANSWER: chống iOS Safari tự zoom ô nhập + đẩy xa dấu tích/X +
 hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `templates/type-the-answer/type-the-answer.js` +
 `.css`). ✅ THẦY DUYỆT → COMMIT `931ca20` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đo DOM
