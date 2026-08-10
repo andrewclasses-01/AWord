@@ -5,7 +5,40 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 94, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT (Kokoro TTS) cho icon 🎤 Anagram
+> Cập nhật lần cuối: **10/8/2026 (Đợt 96, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word,
+> sóng âm khi preview, Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ
+> `templates/anagram/anagram-editor.js` + `anagram.css`). ✅ THẦY DUYỆT → COMMIT `fdcd403` + PUSH +
+> **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `speakTextFor`/`GENERIC_CLUE_TEXT`/
+> `clueInputByItem`/`startWaveform`/`toggleBulkPopover` trong JS + `aw-anagram-ed-wave`/
+> `aw-anagram-ed-voicehint` trong CSS ngay lần poll đầu; mở lại `test.html` live chơi thật 0 lỗi console).**
+> Thầy thử act live `?a=256` rồi gửi 3 điểm sửa cho tính năng 🎤 của Đợt 94. **(1)** Voice đổi sang đọc
+> CLUE thay vì Word (nút loa lúc chơi nằm cạnh clue — đọc Word ra sẽ lộ đáp án); hàm dùng chung
+> `speakTextFor(it)` = Clue hoặc fallback "Unscramble the word" khớp đúng chữ hiển thị trong game; sửa
+> Word không còn xoá voice, sửa Clue mới xoá; thêm dòng "Will speak: ..." sống động trong popover. ⭐ Bắt
+> được 1 lỗi thật: bấm vào chính ô Clue đang mở popover bị cơ chế đóng-khi-bấm-ra-ngoài coi là "ra ngoài"
+> nên tự đóng trước khi kịp gõ — sửa bằng `WeakMap` nhận diện đúng ô Clue của hàng đang mở. **(2)** Thêm
+> canvas sóng âm (Web Audio `AnalyserNode` thật, không phải giả lập) khi bấm ▶ Play, tự ẩn khi phát xong.
+> **(3)** Thêm nút Generate all voices / Delete all voices trong bulk bar, mỗi nút có popup riêng (chọn
+> giọng + skip-existing / xác nhận + đếm số hàng), dừng đúng lúc gặp lỗi chưa đăng nhập. Không có quyền
+> đăng nhập Google trong phiên này nên test bằng harness thay Firestore (Map trong bộ nhớ, cùng chữ ký hàm,
+> đã xoá 4 file tạm sau khi test xong). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 96 +
+> `templates/anagram/GHI CHU ANAGRAM.md` Đợt 96. **Việc kế (không gấp): thầy tự vào act thật `?a=256` trên
+> bản LIVE thử vòng Save→Play→waveform→Generate all/Delete all thật qua Firestore thật.**
+>
+> Trước đó: **10/8/2026 (Đợt 95, v0.9.69) — FIX bridge myActivity: bridge cũ bị VỨT giữa lúc đổi Template
+> làm mất đồng bộ Options/Style. CÓ SỬA CORE (chỉ `core/engine.js`, đúng đoạn bridge). ✅ THẦY DUYỆT →
+> COMMIT `7f3d23e` + PUSH.**
+> Bắt nguồn từ myActivity (nhúng AWord qua WebContentsView 2-4 cột): mở act AWord ở 1 cột đổi
+> Template/Options thì các cột khác đồng bộ "lúc được lúc không". Gốc lỗi: `startGame()` tạo
+> `window.__awordBridge = {...}` MỚI mỗi lần chạy, kể cả khi chạy lại do `doSwitchTemplate()` (async, có
+> thể mất vài giây) — nếu 1 lệnh Options/Style tới đúng lúc cột đang giữa chừng đổi Template, nó ghi vào
+> bridge CŨ sắp bị vứt bỏ → thay đổi mất, không lỗi console. Sửa: `window.__awordBridge` nay là 1 object
+> duy nhất sống suốt vòng đời trang, có `_setCurrent(delegate)` gọi NGAY đầu mount trước mọi `await`;
+> `applyOptions()`/`setTheme()` chờ xong `switchTemplate()` đang chạy dở trước rồi mới áp. Cả 3 hàm giờ
+> `async`, trả `Promise<boolean>`. Chưa mở trình duyệt thật test (chỉ lộ ra khi chạy trong myActivity nhiều
+> cột). Chi tiết: `GHI CHU DU AN.md` Đợt 95.
+>
+> Trước đó: **10/8/2026 (Đợt 94, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT (Kokoro TTS) cho icon 🎤 Anagram
 > editor. CÓ SỬA CORE (2 file MỚI, thuần cộng thêm — `core/tts.js`, `core/voice-clips.js`). ✅ THẦY DUYỆT
 > → COMMIT `a853a34` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `core/tts.js`
 > có `DEFAULT_VOICE`, `core/voice-clips.js` trả 200, `anagram.css` có `font: inherit` + `aw-anagram-

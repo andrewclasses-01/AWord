@@ -695,8 +695,11 @@ cần viết phần UI popover trong editor riêng của từng game, giống kh
 
 ## Đợt 96 (10/8/2026, v0.9.70) — 3 CẢI TIẾN VOICE THEO YÊU CẦU THẦY (đổi sang đọc Clue, thêm sóng âm
 preview, thêm Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram-editor.js`
-+ `anagram.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (đã tự test kỹ qua trình duyệt thật trước khi commit, 0 lỗi
-console — xem hash + xác nhận LIVE ở cuối mục này).
++ `anagram.css`). ✅ THẦY DUYỆT → COMMIT `fdcd403` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+(đã tự test kỹ qua trình duyệt thật trước khi commit, 0 lỗi console; sau khi push đã `curl` xác nhận cả 4
+dấu mốc mới có mặt trên bản live ngay lần poll đầu — `speakTextFor`/`GENERIC_CLUE_TEXT`/`clueInputByItem`/
+`startWaveform`/`toggleBulkPopover` trong `anagram-editor.js`, `aw-anagram-ed-wave`/`aw-anagram-ed-voicehint`
+trong `anagram.css` — và mở lại `templates/anagram/test.html` live, chơi thật 0 lỗi console).
 
 Thầy chơi thử act live (`aword.andrewclasses.com/?a=256`, không đăng nhập được nên không xem trực tiếp
 được nội dung act đó — tự test bằng harness thay thế, xem mục kỹ thuật test bên dưới) rồi gửi 3 điểm sửa

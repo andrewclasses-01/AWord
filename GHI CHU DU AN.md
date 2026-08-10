@@ -7,8 +7,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 96 (10/8/2026, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word, sóng âm khi preview,
 Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram-editor.js` +
-`anagram.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (tự test kỹ qua trình duyệt thật bằng harness thay Firestore
-trước khi commit, 0 lỗi console — xem hash + xác nhận LIVE ở cuối mục này).
+`anagram.css`). ✅ THẦY DUYỆT → COMMIT `fdcd403` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+(tự test kỹ qua trình duyệt thật bằng harness thay Firestore trước khi commit, 0 lỗi console; sau push đã
+`curl` xác nhận đủ dấu mốc mới trên bản live ngay lần poll đầu, và mở lại `test.html` live chơi thật 0
+lỗi console).
 
 Thầy thử act live `?a=256` rồi gửi 3 điểm sửa cho tính năng 🎤 vừa xong ở Đợt 94/95 (không đăng nhập được
 trong phiên này nên test bằng harness giả lập thay Firestore, xem chi tiết đầy đủ ở
