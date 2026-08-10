@@ -5,6 +5,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 95 (10/8/2026, v0.9.69) — FIX bridge myActivity: bridge cũ bị VỨT giữa lúc đổi Template làm mất
+đồng bộ Options/Style. CÓ SỬA CORE (chỉ `core/engine.js`, đúng đoạn bridge dòng ~125-190). ✅ THẦY DUYỆT
+→ COMMIT `7f3d23e` + PUSH.
+
+Bắt nguồn từ myActivity (app trình duyệt game của Teacher Andrew, nhúng AWord qua WebContentsView 2-4
+cột): thầy báo mở act AWord ở 1 cột đổi Template/Options thì các cột khác đồng bộ "lúc được lúc không".
+Điều tra thấy gốc lỗi nằm ở chính bridge `window.__awordBridge` khai trong `core/engine.js`.
+
+**Nguyên nhân:** `startGame()` tạo `window.__awordBridge = {...}` MỚI mỗi lần chạy — kể cả khi chạy lại
+do `doSwitchTemplate()` (async, `await ensureTemplate()` + `await convertActivity()`, có thể mất vài
+giây lần đầu tải 1 template type). myActivity gọi bridge của các cột KHÁC để lặp lại đúng thay đổi
+(switchTemplate/applyOptions/setTheme) — nếu 1 lệnh Options/Style tới ĐÚNG lúc cột đó đang giữa chừng
+đổi Template, nó ghi vào bridge CŨ sắp bị `startGame()` tiếp theo vứt bỏ hoàn toàn → thay đổi mất, không
+lỗi console, không dấu vết.
+
+**Đã sửa (chỉ đoạn bridge, không đụng gì khác trong engine.js, không đụng bất kỳ template nào):**
+`window.__awordBridge` nay là **1 object duy nhất, sống suốt vòng đời trang** (`if (!window.__awordBridge)`
+tạo đúng 1 lần), có `_setCurrent(delegate)` để mỗi `startGame()` GÁN LẠI delegate của chính nó — gọi
+NGAY ở đầu hàm mount, TRƯỚC bất kỳ `await` nào chạy, nên bridge luôn trỏ đúng mount hiện có (kể cả giữa
+lúc `startGame()` cũ chưa kịp bị `root.innerHTML=""` xoá). `applyOptions()`/`setTheme()` khi gọi mà có 1
+`switchTemplate()` đang chạy dở sẽ **await xong** promise đó trước (đảm bảo trỏ đúng delegate MỚI) rồi
+mới áp — không còn cửa sổ ghi nhầm. Cả 3 hàm giờ `async`, trả `Promise<boolean>` (trước đây không trả
+gì) để bên gọi (myActivity) biết CHẮC đã áp xong — dùng để hiện icon ✓ báo đồng bộ ở myActivity.
+
+**Kiểm chứng:** `node --check core/engine.js` sạch. Đọc lại thứ tự thực thi bằng tay: `_setCurrent()` là
+lệnh ĐỒNG BỘ nằm trước dòng gọi `doSwitchTemplate`'s `await`, nên khi `switchTemplate()` của bridge cũ
+`await` xong promise `doSwitchTemplate(type)`, `current` đã trỏ đúng mount mới TỪ TRƯỚC (vì mount mới tự
+gọi `_setCurrent` ngay khi `startGame()` chạy xong phần đồng bộ của nó, đúng lúc `doSwitchTemplate` gọi
+`startGame(...)` rồi return). Chưa mở trình duyệt thật test (không phải việc riêng của AWord — chỉ lộ ra
+khi chạy trong myActivity nhiều cột; xem `GHI CHU DU AN.md` của myActivity mục v1.7.9 để biết bối cảnh +
+kế hoạch test TOMKO đầy đủ).
+
+**VIỆC ĐANG CHỜ:** thầy duyệt rồi mới commit + push (đúng quy trình mọi đợt trước — đây là core, ảnh
+hưởng cả 16 template, dù đoạn sửa không đụng logic hiển thị/gameplay). myActivity đang CHỜ bản này lên
+GitHub Pages/domain thì mới hết lỗi đồng bộ thật trên máy.
+
+---
+
 ## Đợt 94 (10/8/2026, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT (Kokoro TTS) cho icon 🎤 Anagram editor. CÓ SỬA
 CORE (2 file MỚI, thuần cộng thêm). ✅ THẦY DUYỆT → COMMIT `a853a34` + PUSH + **LIVE** tại
 `https://aword.andrewclasses.com/` (`curl` xác nhận `core/tts.js`/`core/voice-clips.js` có mặt, `anagram.css`
