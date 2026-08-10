@@ -2,8 +2,9 @@
 
 ## Đợt 97 (10/8/2026, v0.9.71) — 3 tinh chỉnh màn chơi: chống iOS Safari tự zoom ô nhập, đẩy xa dấu
 tích/X, hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `type-the-answer.js` + `.css`). ✅ THẦY
-DUYỆT → COMMIT + PUSH (đo DOM qua trình duyệt thật trước khi commit, `node --check` sạch, 0 lỗi console
-— xem hash + xác nhận LIVE ở cuối mục này).
+DUYỆT → COMMIT `931ca20` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đo DOM qua trình duyệt
+thật trước khi commit, `node --check` sạch, 0 lỗi console; sau push `curl` xác nhận đủ `--tta-input-fs`
+trong CSS + `size + 22` và `revealShown ? 2600` trong JS trên bản live).
 
 Thầy tự mở act trên iPhone, báo qua chat 3 điều (không kèm ảnh):
 

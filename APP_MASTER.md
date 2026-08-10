@@ -5,7 +5,24 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 96, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word,
+> Cập nhật lần cuối: **10/8/2026 (Đợt 97, v0.9.71) — TYPE THE ANSWER: chống iOS Safari tự zoom ô nhập +
+> đẩy xa dấu tích/X + hiện đáp án đúng lâu hơn khi sai. KHÔNG ĐỤNG CORE (chỉ
+> `templates/type-the-answer/type-the-answer.js` + `.css`). ✅ THẦY DUYỆT → COMMIT `931ca20` + PUSH +
+> **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `--tta-input-fs` trong CSS +
+> `size + 22`/`revealShown ? 2600` trong JS ngay lần poll đầu).**
+> Thầy tự mở act trên iPhone, báo 3 điều: **(1)** ô nhập bị Safari tự zoom khi bấm vào — do font tính
+> theo đơn vị `cqw` (% chiều rộng container game) xuống dưới 16px trên màn hẹp; sửa bằng biến
+> `--tta-input-fs: max(16px, calc(3.9cqw * var(--fit)))` dùng chung cho ô nhập + chữ đáp án đúng (giữ
+> bất biến "reveal = input" có sẵn từ 1/8/2026) — hết zoom (sàn cứng 16px) + to hơn ~11% như thầy muốn.
+> **(2)** dấu tích xanh/X đỏ bay ra xa ô nhập hơn (`flyMark()` gap 6px→22px, đo DOM thật ~14px→~30.7px).
+> **(3)** đáp án đúng hiện lâu hơn khi sai trước khi tự chuyển câu (1400ms→2600ms, CHỈ khi đang thật sự
+> hiện đáp án — tắt "Show answer when wrong" thì giữ nhịp cũ). Đo bằng bộ đếm thời gian thật chạy trong
+> trang: submit sai → prompt đổi câu sau ~2841ms (khớp 2600ms + crossfade chữ câu hỏi). Chi tiết đầy đủ:
+> `GHI CHU DU AN.md` Đợt 97 + `templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 97. **Việc kế
+> (không gấp): thầy tự mở lại trên iPhone thật xác nhận hết zoom khi bấm vào ô nhập (máy build chỉ đo
+> được computed font-size qua DOM, không mô phỏng được hành vi zoom thật của Safari).**
+>
+> Trước đó: **10/8/2026 (Đợt 96, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word,
 > sóng âm khi preview, Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ
 > `templates/anagram/anagram-editor.js` + `anagram.css`). ✅ THẦY DUYỆT → COMMIT `fdcd403` + PUSH +
 > **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `speakTextFor`/`GENERIC_CLUE_TEXT`/

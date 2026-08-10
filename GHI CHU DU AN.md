@@ -7,8 +7,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 97 (10/8/2026, v0.9.71) — TYPE THE ANSWER: chống iOS Safari tự zoom ô nhập + đẩy xa dấu tích/X +
 hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `templates/type-the-answer/type-the-answer.js` +
-`.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (đo DOM qua trình duyệt thật trước khi commit, 0 lỗi console — xem
-hash + xác nhận LIVE ở cuối mục này).
+`.css`). ✅ THẦY DUYỆT → COMMIT `931ca20` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đo DOM
+qua trình duyệt thật trước khi commit, 0 lỗi console; sau push `curl` xác nhận cả `--tta-input-fs` trong
+CSS lẫn `size + 22`/`revealShown ? 2600` trong JS đã có trên bản live).
 
 Thầy tự mở act trên iPhone, báo 3 điều qua chat: (1) ô nhập bị Safari tự zoom khi bấm vào — do font tính
 theo đơn vị `cqw` (% chiều rộng container game) xuống dưới 16px trên màn hẹp, Safari coi đó là "cần zoom
