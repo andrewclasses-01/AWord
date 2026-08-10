@@ -5,6 +5,82 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 103 (10/8/2026, v0.9.77) — TĂNG TỐC TẠO GIỌNG (TTS): WEBGPU-FIRST + WORKER POOL ⭐ CÓ SỬA CORE
+✅ THẦY DUYỆT (chốt "cả hai: WebGPU trước, tự fallback WASM+Worker Pool") → COMMIT `20dea42` + PUSH +
+**LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `device: "webgpu"` trong
+`core/tts.js`, `recommendedPoolSize` trong `core/tts-pool.js`, `generateVoicesBatch` trong
+`core/voice-batch.js` VÀ `templates/anagram/anagram-editor.js` ngay lần poll thứ 3).
+
+Thầy phản ánh: tạo giọng cho bộ vài trăm từ (Generate all voices trong Anagram editor, hoặc tự động khi
+Import Excel — Đợt 102) rất chậm. Yêu cầu nghiên cứu chạy song song nhiều luồng. Máy thầy: 16GB RAM, GPU
+8GB/16GB VRAM, không ngại nóng máy, muốn khai thác tối đa phần cứng.
+
+**Nghiên cứu (trước khi build)**: onnxruntime-web (lõi kokoro-js dùng) CÓ multi-thread nội bộ nhưng bắt
+buộc `SharedArrayBuffer`, mà cái đó cần header `Cross-Origin-Opener-Policy`/`Cross-Origin-Embedder-Policy`
+— GitHub Pages không cho chỉnh header tuỳ ý, có mẹo Service Worker giả lập nhưng dễ làm gãy Firebase
+Auth/CDN khác đang chạy tốt → BỎ hướng này. Hướng khả thi không cần đổi hosting: (1) đổi device tính toán
+từ `wasm` sang `webgpu` (máy có GPU), (2) chạy nhiều Worker độc lập song song, mỗi Worker giữ 1 model
+riêng.
+
+**Đo THẬT (không giả định) trên GPU NVIDIA (kiến trúc Lovelace), kokoro-js@1.2.1**:
+- **`wasm`/q8 (đường cũ)**: generate() 1 câu ngắn (làm nóng) = **5.3s**.
+- **`webgpu`/fp32**: generate() cùng câu (làm nóng) = **0.62-0.69s** — nhanh hơn **~8.6 LẦN**. Load model
+  chậm hơn (~8.6s so với ~0.8s, chi phí biên dịch shader 1 lần), nhưng chi phí đó trả 1 lần/phiên, không
+  đáng kể so với tiết kiệm trên mỗi từ khi có hàng chục/trăm từ. Đối chiếu chất lượng âm thanh qua
+  `decodeAudioData` (duration/peak/rms/NaN) giữa 2 đường — khớp nhau, không có tạp âm/lỗi.
+- **Giả định BAN ĐẦU sai — đã sửa bằng số đo thật**: tưởng chạy nhiều Worker song song (mỗi Worker giữ 1
+  phiên WebGPU riêng) sẽ nhân thêm tốc độ. Đo thật 8 từ qua 1/2/4 Worker: **1 Worker = 1.9s/từ, 2 Worker =
+  2.6s/từ (CHẬM HƠN), 4 Worker = 4.6s/từ (CHẬM HƠN NỮA)**, và phép đo đầu tiên với 8 Worker cho 10 từ mất
+  tới **79.8s (7.98s/từ)** so với baseline 1 Worker chỉ 18.3s cho cùng 10 từ. Lý do: 1 GPU vật lý chia sẻ
+  hàng đợi lệnh cho MỌI Worker mở phiên trên nó — nhiều phiên WebGPU song song chủ yếu chỉ nhân thêm chi
+  phí biên dịch shader + tranh chấp driver, không nhân thêm băng thông tính toán thật.
+
+**Thiết kế cuối (device-aware, dựa đúng số đo trên)**:
+- `core/tts.js`: `loadTTS()` giờ LUÔN THỬ `device:"webgpu"` trước (chỉ khi `navigator.gpu` tồn tại +
+  `requestAdapter()` thành công), tự lặng lẽ lùi về `device:"wasm"`/q8 nếu không có GPU hoặc
+  `from_pretrained` némlỗi (vd thiếu 1 op WebGPU trên driver nào đó) — MỌI nơi gọi `generateSpeechDataUrl`
+  được lợi tự động, không cần sửa nơi gọi. Thêm `activeDevice()` để biết đang chạy đường nào.
+- `core/tts-worker.js` (MỚI): 1 Worker độc lập, tự `loadTTS()` riêng (webgpu→wasm riêng từng Worker), giao
+  tiếp qua `postMessage`.
+- `core/tts-pool.js` (MỚI): `createPool(size?)` — nếu không truyền `size`, tự dò: có GPU → **pool size 1**
+  (đúng kết luận đo thật ở trên — KHÔNG chạy nhiều phiên WebGPU song song); không có GPU (rơi về wasm) →
+  pool size theo `navigator.hardwareConcurrency` (2-8) — CPU đa nhân thật sự song song được, khác hẳn 1
+  GPU vật lý bị chia sẻ, nhưng nhánh này CHƯA đo thật (máy test có GPU nên luôn đi nhánh webgpu) — dựa
+  trên lý thuyết CPU-parallelism đã biết + soát code, ghi rõ để phiên sau đo lại nếu có máy không GPU.
+- `core/voice-batch.js` (SỬA LỚN): đổi tên `generateVoicesSequential` → **`generateVoicesBatch`**, nội bộ
+  dùng `pool.run()` qua N "lane" kéo từ 1 con trỏ dùng chung (thay vì vòng lặp tuần tự gọi thẳng
+  `generateSpeechDataUrl`) — với pool size 1 (trường hợp GPU) thực chất vẫn chạy tuần tự nhưng MỖI lần gọi
+  đã nhanh hơn ~8.6 lần nhờ webgpu; với wasm-fallback thực sự chạy song song N lane. `isCancelled()` được
+  poll giữa MỖI từ trên MỖI lane (không chỉ 1 lần), cancel vẫn đúng ngữ nghĩa "từ đang dở luôn chạy xong".
+- **`templates/anagram/anagram-editor.js` — ĐỔI CẢ CODE ĐÃ CHẠY ỔN ĐỊNH TỪ ĐỢT 96-98**: vòng lặp tuần tự
+  cũ trong `buildGenerateAllPopover()` (gọi thẳng `generateSpeechDataUrl`+`saveVoiceClip` từng từ) thay
+  bằng 1 lệnh gọi `generateVoicesBatch()` dùng chung — đây là lần đầu sửa lại code cũ CHỦ Ý (không phải dọn
+  dẹp thừa) vì chính yêu cầu của thầy là "cả khi generate voice trong edit" cũng phải nhanh hơn.
+- `main.js` (luồng Import Excel, Đợt 102): chỉ đổi tên gọi `ttsMod.generateVoicesSequential` →
+  `ttsMod.generateVoicesBatch`, logic khác giữ nguyên.
+
+**Test thật qua Browser pane (harness tạm Firestore giả trong bộ nhớ, xoá sau khi xong), dùng GPU thật —
+không giả lập**:
+- `generateVoicesBatch()` trần (6 từ, act giả): 6/6 thành công, ~14.4s LẦN ĐẦU (gồm ~8.6s load 1 lần) —
+  so với đường cũ hoàn toàn tuần tự trên wasm (6×5.3s ≈ 32s), đã nhanh hơn ngay ở batch nhỏ; với batch lớn
+  hơn (hàng chục/trăm từ) chi phí load 1 lần càng loãng ra, tiệm cận đúng mức nhanh ~8.6 lần đo được ở
+  từng lệnh gọi đơn lẻ.
+- **Anagram editor "Generate all voices"** (5 từ, qua harness mở thẳng editor bằng
+  `openAnagramEditor()`): bấm Generate → "Generated voice for 5 row(s)." → Save → xác nhận dữ liệu lưu
+  đúng cả 5 hàng có `voice`/`voiceId`/`hideText:true`.
+- **Import Excel + tạo voice** (luồng Đợt 102, act mới): import 3 act xong ngay lập tức → pop-up tiến
+  trình xuất hiện sau, "Generating 3/6…" đã đạt được trong 10s đầu (nhanh rõ rệt so với đợt trước) →
+  "Done — generated voice for 6 word(s)." → dữ liệu Firestore xác nhận đúng `voice`/`voiceId`/
+  `hideText:true` trên cả 6 từ.
+- 0 lỗi console thật suốt toàn bộ (chỉ còn cảnh báo vô hại có sẵn từ onnxruntime — thông tin hiệu năng, đã
+  thấy từ trước, không phải lỗi).
+
+**VIỆC ĐANG CHỜ**: thầy tự thử "Generate all voices" trên 1 act nhiều từ (vài chục) và Import Excel thật
+để cảm nhận tốc độ mới; nếu có sẵn máy KHÔNG có GPU rời, thử lại để đo thật nhánh wasm-Worker-Pool (hiện
+mới dựa trên lý thuyết CPU-parallelism, chưa đo thật như nhánh webgpu).
+
+---
+
 ## Đợt 102 (10/8/2026, v0.9.76) — IMPORT EXCEL: TỰ ĐỘNG TẠO GIỌNG ĐỌC (TTS) CHO ENG1/ENG2 ⭐ CÓ SỬA CORE
 ✅ THẦY DUYỆT (chốt scope qua AskUserQuestion) → COMMIT `8488c5b` + PUSH + **LIVE** tại
 `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `generateVoicesSequential` trong

@@ -5,24 +5,36 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 102, v0.9.76) — IMPORT EXCEL: TỰ ĐỘNG TẠO GIỌNG ĐỌC (TTS) CHO
-> ENG1/ENG2. CÓ SỬA CORE: `core/tts.js` (thêm `getLastVoice`/`setLastVoice`), `core/voice-batch.js` (MỚI
-> — `generateVoicesSequential()` dùng chung), `core/lesson-import.js` (cờ `ttsEligible` cho ENG1/ENG2 —
-> VI1/VI2 tiếng Việt + PRONUNCIATION là IPA thô nên KHÔNG được tự tạo voice), `core/store.js`
-> (`importBundle()` trả thêm `createdActs`), `core/app.css` (`.aw-imp-voice*`/`.aw-voice-progress*`). +
-> `main.js` (khung Voice trong popup Import, pop-up xác nhận, pop-up tiến trình %). ✅ THẦY DUYỆT (chốt
-> scope qua AskUserQuestion) → COMMIT `8488c5b` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
-> (`curl` xác nhận đủ `generateVoicesSequential`/`ttsEligible`/`confirmVoiceGeneration`/`createdActs`
-> ngay lần poll thứ 3).**
-> Lỗi thật bắt được lúc test: nút "Skip voices" trên pop-up xác nhận từng HUỶ CẢ LƯỢT IMPORT thay vì chỉ
-> bỏ qua bước tạo giọng (return sớm trước cả `importBundle()`) — đã sửa. Test thật qua Browser pane với
-> giọng Kokoro THẬT (harness Firestore giả trong bộ nhớ, xoá sau khi xong): khung Voice hiện đúng + mặc
-> định tích + nhớ giọng gần nhất, pop-up xác nhận đúng số từ/tên giọng, acts tạo trước — voice tạo sau
-> (không chờ nhau), cả 6 từ test đều có `voice`/`voiceId`/`hideText:true` đúng, cờ `ttsEligible` không lẫn
-> vào tài liệu đã lưu, đường Skip voices và bỏ tích từ đầu đều đúng, 0 lỗi console. CHƯA test bằng tay:
-> bấm Cancel giữa batch + đường lỗi chưa đăng nhập giữa batch (dựa trên soát code khớp pattern đã chứng
-> minh ổn định từ Anagram editor Đợt 98). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 102. **Việc kế: thầy tự
-> Import 1 file Excel thật, xác nhận nghe được giọng vừa tạo + thử Cancel giữa lúc đang tạo hàng loạt.**
+> Cập nhật lần cuối: **10/8/2026 (Đợt 103, v0.9.77) — TĂNG TỐC TẠO GIỌNG (TTS): WEBGPU-FIRST + WORKER
+> POOL. CÓ SỬA CORE: `core/tts.js` (`loadTTS()` thử `device:"webgpu"` trước, tự lùi về `wasm` — MỌI nơi
+> gọi `generateSpeechDataUrl` được lợi tự động), `core/tts-worker.js` + `core/tts-pool.js` (MỚI —
+> `createPool()` device-aware: GPU → pool size 1, không GPU → size theo `hardwareConcurrency`),
+> `core/voice-batch.js` (đổi tên `generateVoicesSequential`→`generateVoicesBatch`, chạy qua pool). +
+> `templates/anagram/anagram-editor.js` (thay vòng lặp tuần tự cũ trong "Generate all voices" bằng
+> `generateVoicesBatch()` dùng chung — LẦN ĐẦU sửa lại code đã chạy ổn định từ Đợt 96-98, vì chính yêu cầu
+> là "cả khi generate voice trong edit" cũng phải nhanh hơn) + `main.js` (đổi tên gọi hàm). ✅ THẦY DUYỆT
+> (chốt "cả hai: WebGPU trước, tự fallback WASM+Worker Pool") → COMMIT `20dea42` + PUSH + **LIVE** tại
+> `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `device:"webgpu"`/`recommendedPoolSize`/
+> `generateVoicesBatch` (cả trong `voice-batch.js` VÀ `anagram-editor.js`) ngay lần poll thứ 3).**
+> Đo THẬT trên GPU NVIDIA: `webgpu` nhanh hơn `wasm` **~8.6 lần** mỗi lần gọi (0.62s vs 5.3s/từ) — đòn bẩy
+> lớn nhất. Giả định BAN ĐẦU sai, sửa bằng số đo thật: tưởng chạy nhiều Worker WebGPU song song sẽ nhân
+> thêm tốc độ — đo thật lại cho kết quả NGƯỢC LẠI (1 Worker=1.9s/từ, 2 Worker=2.6s/từ, 4 Worker=4.6s/từ,
+> càng nhiều Worker càng CHẬM) vì 1 GPU vật lý chia sẻ hàng đợi lệnh cho mọi Worker mở phiên trên nó —
+> sửa thiết kế: GPU→pool size 1, chỉ CPU-wasm-fallback mới thật sự lợi từ nhiều Worker song song (nhánh đó
+> chưa đo thật, dựa lý thuyết CPU-parallelism). Test thật qua Browser pane với GPU thật (harness Firestore
+> giả trong bộ nhớ, xoá sau khi xong): `generateVoicesBatch()` trần 6/6 thành công; Anagram editor
+> "Generate all voices" (mở thẳng qua `openAnagramEditor()`) 5/5 thành công + Save lưu đúng
+> `voice`/`voiceId`/`hideText:true`; luồng Import Excel (Đợt 102) vẫn đúng sau đổi tên hàm, 6/6 từ có
+> voice đúng, tốc độ cảm nhận rõ rệt (đạt "3/6" trong 10s đầu thay vì phải chờ lâu hơn nhiều như trước). 0
+> lỗi console thật. Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 103. **Việc kế: thầy tự thử Generate all
+> voices trên 1 act nhiều từ + Import Excel thật để cảm nhận tốc độ mới; nếu có máy KHÔNG GPU rời, thử lại
+> đo thật nhánh wasm-Worker-Pool (hiện chỉ dựa lý thuyết, chưa đo thật như nhánh webgpu).**
+>
+> Trước đó: **10/8/2026 (Đợt 102, v0.9.76) — IMPORT EXCEL: TỰ ĐỘNG TẠO GIỌNG ĐỌC (TTS) CHO ENG1/ENG2. CÓ
+> SỬA CORE: `core/tts.js`, `core/voice-batch.js` (MỚI), `core/lesson-import.js`, `core/store.js`,
+> `core/app.css`. + `main.js`. ✅ THẦY DUYỆT → COMMIT `8488c5b` + PUSH + **LIVE**.**
+> Lỗi thật bắt được lúc test: nút "Skip voices" từng HUỶ CẢ LƯỢT IMPORT thay vì chỉ bỏ qua bước tạo
+> giọng — đã sửa. Chi tiết: `GHI CHU DU AN.md` Đợt 102.
 >
 > Trước đó: **10/8/2026 (Đợt 101, v0.9.75) — ĐỒNG BỘ VOICE/HIDE TEXT QUA 12 TEMPLATE TẠM KHI DÙNG "CHANGE
 > TEMPLATE" (thầy chốt "Toàn bộ 12 game"). CÓ SỬA CORE: `core/convert.js`, `core/voice-playback.js` (MỚI),
