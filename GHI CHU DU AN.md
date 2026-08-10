@@ -5,6 +5,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 100 (10/8/2026, v0.9.74) — ANAGRAM: NÚT HIDE/SHOW ALL TEXT + 4 NÚT BULK ICON-ONLY + NÚT LOA TO
+GIỮA KHUNG KHI ẨN TEXT + TRÌ HOÃN AUTO-PLAY TỚI HẾT NHẠC INTRO (5 tinh chỉnh thầy gửi sau khi tự chơi thử
+Đợt 98). KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thêm 2 icon — + 3 file `templates/anagram/*`). ✅ THẦY
+DUYỆT → COMMIT `7140c98` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`, test THẬT qua trình
+duyệt trước khi commit, 0 lỗi console; sau push `curl` xác nhận đủ dấu mốc mới trên bản live ngay lần
+poll thứ 2, mở lại `test.html` live chơi thật 0 lỗi console.
+
+**(1)** Nút "Hide all text"/"Show all text" trong thanh bulk, tự đổi nhãn/icon theo trạng thái tổng hợp
+(còn hàng chưa ẩn → "Hide all text"; mọi hàng có voice đều đã ẩn → "Show all text"; chưa hàng nào có
+voice → khoá). Bẫy kỹ thuật: nút build 1 lần lúc mở trang nhưng phải đúng sau CẢ những thao tác KHÔNG gọi
+`renderItems()` (Generate/Remove 1 hàng, sửa Clue, toggle 1 hàng) — giải quyết bằng hàm dùng chung
+`refreshHideAllBtn()` gọi ở cuối `renderItems()` + tại đúng 4 chỗ vá DOM trực tiếp còn lại. **(2)** Sắp
+xếp lại cố định: Generate all voices (icon `wand` mới) → Hide/Show all text → Delete all voices (icon
+`micOff` mới, mic gạch chéo) → Delete all words (icon `trash`) — cả 4 đổi hẳn sang ICON-ONLY 42×42px, chữ
+đầy đủ vẫn còn trong title/aria-label. **(3)** Khi ẩn text trong game: bỏ hẳn dòng "🔊 Listen for the
+clue" (Đợt 98) — nay `clueEl` không còn chữ nào cả, chỉ đúng 1 nút loa to (`.aw-anagram-listenbtn-lg`,
+đo thật 72.25px so với kích cỡ gốc) đứng giữa khung. **(4)** Trì hoãn auto-play của từ ĐẦU TIÊN tới khi
+hết tiếng chuông "Play" (`anagramSound.introDurationMs()`, đọc thời lượng thật của file
+`blockgameintro1.mp3` đã được tải sẵn từ trước) — đo bằng cách tráo `HTMLMediaElement.prototype.play` ghi
+mốc thời gian thật: chuông phát lúc t=13882ms, giọng đọc từ đầu phát lúc t=15932ms (trễ đúng ~2050ms khớp
+thời lượng file), từ thứ hai trở đi phát ngay không trễ. Chi tiết đầy đủ: `templates/anagram/GHI CHU
+ANAGRAM.md` Đợt 100.
+
+**Nghiên cứu riêng (chưa build, đã báo thầy)**: yêu cầu thứ 6 của thầy — đồng bộ voice/hideText qua các
+template TẠM khi dùng nút "Change Template" (core/convert.js) — đã đọc kỹ convert.js, xác nhận Anagram
+đổi được sang 12 game khác, mỗi game hình dạng câu hỏi khác hẳn nhau (Crossword lưới nhiều ô, Find the
+match hiện nhiều cặp cùng lúc không có "câu hỏi hiện tại", Running team không mang clue...) nên đây là 1
+đợt THIẾT KẾ RIÊNG cho từng game, không phải bản vá máy móc — theo đúng luật dự án "tính năng mới lớn:
+nghiên cứu + báo trước, chờ thầy ok build", đã dừng lại xin thầy chốt phạm vi trước khi làm.
+
+**VIỆC ĐANG CHỜ**: thầy tự chơi lại bản live xác nhận cảm giác nhạc intro → giọng đọc mượt, nút loa to
+giữa khung dễ bấm trên màn cảm ứng; và cho biết muốn làm đồng bộ Change Template cho TOÀN BỘ 12 game hay
+chỉ vài game hay dùng nhất.
+
+---
+
 ## Đợt 99 (10/8/2026, v0.9.73) — WHACK-A-MOLE: THANH "PHẠT" ĐỎ Ở HÀNG NÚT MENU/SOUND KHI ĐẬP SAI. Chỉ
 đụng `templates/whack-a-mole/*` (2 file: `.js` + `.css`), KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `cde45a2`
 + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `aw-wam-punishbar` trong CSS +

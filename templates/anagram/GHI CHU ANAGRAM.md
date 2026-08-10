@@ -867,3 +867,81 @@ mắt thường khi chơi bản live. Đã XOÁ toàn bộ 7 file tạm sau khi 
 **Trạng thái**: ✅ ĐÃ COMMIT (`06fec24`) + PUSH + LIVE, test THẬT trước khi commit (không chỉ mô phỏng).
 **Việc kế (không gấp)**: thầy tự vào act thật trên bản LIVE — mở 1 từ có voice xem chữ Clue có ẩn đúng +
 nút loa có sáng xanh lúc phát không, thử bấm Cancel giữa lúc Generate all 1 act nhiều từ.
+
+## Đợt 100 (10/8/2026, v0.9.74) — 5 TINH CHỈNH THẦY GỬI SAU KHI TỰ CHƠI THỬ ĐỢT 98: NÚT HIDE/SHOW ALL
+TEXT + SẮP XẾP LẠI 4 NÚT BULK THÀNH ICON-ONLY + NÚT LOA TO GIỮA KHUNG KHI ẨN TEXT + TRÌ HOÃN AUTO-PLAY TỚI
+HẾT NHẠC INTRO. KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thêm 2 icon — + 3 file `templates/anagram/*`). ✅
+THẦY DUYỆT → COMMIT `7140c98` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` — test THẬT qua
+trình duyệt trước khi commit, 0 lỗi console; sau push đã `curl` xác nhận đủ dấu mốc mới trên bản live ngay
+lần poll thứ 2 (`refreshHideAllBtn`/`bulkIconBtn` trong `anagram-editor.js`,
+`aw-anagram-clue-voiceonly`/`firstWordRendered` trong `anagram.js`,
+`aw-anagram-ed-bulkicon`/`aw-anagram-listenbtn-lg` trong `anagram.css`, `introDurationMs` trong
+`anagram-sound.js`, `micOff`/`wand` trong `core/icons.js`), mở lại `test.html` live chơi thật 0 lỗi.
+
+**(1) Nút "Hide all text" / "Show all text"** — thêm vào thanh bulk, đổi nhãn/icon theo trạng thái TỔNG:
+còn ít nhất 1 hàng có voice mà CHƯA ẩn → hiện "Hide all text" (icon `eye`); MỌI hàng có voice đều đã ẩn →
+đổi thành "Show all text" (icon `eyeOff`); chưa hàng nào có voice → khoá nút (đúng quy tắc "không có gì
+để ẩn/hiện"). Bấm 1 lần đảo NGƯỢC trạng thái cho MỌI hàng có voice cùng lúc (đúng quy ước bulk action có
+sẵn — giống Swap Columns, gọi `renderItems()`).
+
+⚠️ **Bẫy kỹ thuật đáng ghi lại**: nút này build 1 LẦN duy nhất lúc mở trang (`buildBulkBar()` không nằm
+trong `renderItems()`), nhưng trạng thái tổng hợp của nó phải đúng SAU MỌI thao tác đổi voice/hideText ở
+bất kỳ đâu — kể cả 4 chỗ KHÔNG gọi `renderItems()` (Generate/Regenerate 1 hàng, Remove voice 1 hàng, gõ
+lại Clue làm mất voice, bấm toggle Hide text 1 hàng — cả 4 chỗ này cố tình chỉ vá DOM trực tiếp để tránh
+nháy màn hình, theo đúng quy ước đã có từ Đợt 94/96). Giải pháp: hàm `refreshHideAllBtn()` dùng chung, gọi
+ở CUỐI `renderItems()` (miễn phí cho mọi đường đã qua đó) VÀ gọi thêm tại đúng 4 chỗ vá trực tiếp kể trên.
+Đã đo thật: Generate 1 hàng → nút tự chuyển "Show all text" (vì đó là hàng có voice DUY NHẤT, mặc định ẩn
+sẵn); bấm icon Hide text của chính hàng đó về hiện lại → nút tự chuyển ngược "Hide all text" — cả 2 chiều
+đều đúng, không cần bấm gì thêm để "làm mới" nút.
+
+**(2) Sắp xếp lại 4 nút bulk + đổi TOÀN BỘ sang dạng ICON-ONLY** (không còn chữ) — thứ tự cố định:
+**Generate all voices (icon `wand` mới, nền xanh dương đậm) → Hide/Show all text (`eye`/`eyeOff`) →
+Delete all voices (icon `micOff` mới — mic có gạch chéo, khác hẳn hình dáng thùng rác để không nhầm với
+"xoá cả hàng") → Delete all words (icon `trash`, sẵn có)**. Nhãn đầy đủ vẫn còn nguyên trong `title`/
+`aria-label` (hiện khi rê chuột, đọc được bằng trình đọc màn hình) — chỉ bỏ chữ NHÌN THẤY. CSS mới
+`.aw-anagram-ed-bulkicon` (42×42px, to hơn hẳn icon trong từng hàng 34px, đúng ý "to, rõ ràng, dễ hiểu").
+
+**(3) Ẩn text: chỉ còn ĐÚNG 1 nút loa to giữa khung, không chữ/icon nào khác** — trước đó (Đợt 98) vẫn còn
+dòng "🔊 Listen for the clue" làm chỗ đứng cho nút; nay bỏ hẳn dòng chữ đó, `clueEl` khi `hideText` bật
+KHÔNG còn nội dung chữ nào (`clueText:""`, `childCount:1` — chỉ còn đúng nút loa là con duy nhất), dùng
+class mới `.aw-anagram-clue-voiceonly` (flex căn giữa) + nút loa dùng class bổ sung
+`.aw-anagram-listenbtn-lg` (1.7em thay vì 0.9em — đo thật ra 72.25px so với kích cỡ gốc, to hơn hẳn theo
+đúng ý "to hơn một chút"). Trường hợp có Clue nhưng KHÔNG ẩn vẫn giữ nguyên layout cũ (chữ + nút nhỏ nối
+liền sau chữ).
+
+**(4) Trì hoãn auto-play tới khi hết nhạc intro** — nhạc "intro" chính là tiếng chuông bấm Play
+(`anagramSound.play` → file `blockgameintro1.mp3`, do `core/engine.js`'s `bigPlay.onclick` phát ngay
+trước khi gọi `mount()`, gần như CÙNG LÚC với `render()` đầu tiên). Thêm `anagramSound.introDurationMs()`
+(đọc `pack.durationMs("blockgameintro1")` — file này đã được `prime()` tải sẵn từ trước màn READY nên gần
+như luôn có metadata đúng, có fallback 700ms phòng khi chưa kịp) — CHỈ từ ĐẦU TIÊN của cả ván (cờ
+`firstWordRendered`) mới `setTimeout` chờ đúng ngần ấy mili-giây rồi mới gọi `playVoiceClip`; mọi từ sau
+đó (bấm Next/Previous) vẫn phát NGAY như Đợt 98. Có huỷ đúng timeout treo nếu người chơi bấm chuyển từ
+trước khi hết giờ chờ (tránh giọng đọc của từ CŨ phát chèn vào lúc đang xem từ MỚI). Đo bằng cách tráo
+`HTMLMediaElement.prototype.play` ghi lại mốc thời gian thật: chuông intro phát lúc t=13882ms, giọng đọc
+từ đầu tiên phát lúc t=15932ms — **trễ đúng ~2050ms khớp thời lượng file intro thật** (không phải suy
+đoán — đo được số liệu cụ thể); từ thứ hai (bấm Next) phát ngay tại thời điểm bấm, không còn độ trễ.
+
+**File đổi**: `core/icons.js` (+`wand`/`micOff`), `templates/anagram/anagram-editor.js` (mục 1-2),
+`templates/anagram/anagram.css` (CSS mới cho cả 3 mục edit + game), `templates/anagram/anagram.js` (mục
+3-4), `templates/anagram/anagram-sound.js` (+`introDurationMs`).
+
+**Kỹ thuật test**: harness y hệt Đợt 96/98 (kho voice giả + tráo `HTMLMediaElement.prototype.play` để bắt
+mốc thời gian thật). Đã xoá 7 file tạm sau khi test xong.
+
+**Trạng thái**: ✅ ĐÃ COMMIT (`7140c98`) + PUSH + LIVE, test THẬT trước khi commit. **Việc kế (không
+gấp)**: thầy tự chơi lại bản live xác nhận cảm giác nhạc intro → giọng đọc mượt, nút loa to giữa khung dễ
+bấm trên màn cảm ứng.
+
+### Nghiên cứu riêng (chưa build) — đồng bộ voice/hideText qua "Change Template"
+
+Thầy yêu cầu thêm: khi 1 act Anagram được đổi tạm sang game khác qua nút Template (core/convert.js, Đợt
+47), game tạm đó cũng phải đọc đúng `voice`/`hideText` và tự hiện nút loa/ẩn text giống Anagram. Đã đọc kỹ
+`core/convert.js` để đánh giá phạm vi trước khi làm (đúng luật dự án ở `APP_MASTER.md`: "tính năng mới
+lớn: nghiên cứu + báo trước, chờ thầy 'ok build'") — xem tin nhắn báo cáo riêng gửi thầy cùng đợt này.
+Tóm tắt: Anagram (kind "qa") đổi được sang **12 game khác** (Flying fruit, Crossword, Find the match,
+Balloon pop, Quiz, Gameshow, Maze chase, Open the box, Type the answer, Whack-a-mole, Speaking cards,
+Running team) — mỗi game có hình dạng câu hỏi RẤT khác nhau (Crossword là lưới nhiều ô + danh sách gợi ý
+bên cạnh, Find the match hiện NHIỀU cặp cùng lúc không có khái niệm "câu hỏi hiện tại", Running team
+không hề mang theo clue). Muốn làm ĐÚNG như Anagram (auto-play, phát quang, ẩn/hiện text đồng bộ) cho cả
+12 game này là 1 đợt thiết kế riêng cho từng game, không phải 1 bản vá máy móc — cần thầy chốt phạm vi
+trước khi bắt tay vào.
