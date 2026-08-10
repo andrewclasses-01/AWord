@@ -705,23 +705,19 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       progressWrap.style.display = "block";
       progressFill.style.width = "0%";
 
-      let done = 0, failed = 0, signedOut = false;
-      for (const it of targets) {
-        if (cancelled) break;
-        status.textContent = `Generating ${done + failed + 1} / ${targets.length}…`;
-        const text = speakTextFor(it);
-        try {
-          const dataUrl = await generateSpeechDataUrl(text, voiceId, () => {});
-          const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId, audioDataUrl: dataUrl });
-          it.voice = id; it.voiceId = voiceId;
-          it.hideText = true;   // default ON, same as the single-row Generate (teacher's request, 10/8/2026)
-          done++;
-        } catch (e) {
-          if (e && e.code === "aw/signed-out") { signedOut = true; break; }
-          failed++;
+      // core/voice-batch.js runs this on a pooled set of Workers (webgpu-
+      // first per Worker, see core/tts.js) instead of one call at a time on
+      // this thread — a real speedup on a large word list, not just a
+      // DRY-up (10/8/2026, teacher asked for parallel generation here too).
+      const { generateVoicesBatch } = await import("../../core/voice-batch.js");
+      const { done, failed, signedOut } = await generateVoicesBatch(targets, voiceId, {
+        textFor: speakTextFor,
+        isCancelled: () => cancelled,
+        onProgress: (d, f, total) => {
+          status.textContent = `Generating ${d + f} / ${total}…`;
+          progressFill.style.width = `${Math.round(((d + f) / total) * 100)}%`;
         }
-        progressFill.style.width = `${Math.round(((done + failed) / targets.length) * 100)}%`;
-      }
+      });
       pop._running = false;
 
       if (cancelled) {

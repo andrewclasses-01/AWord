@@ -938,7 +938,7 @@ function importFlow() {
   openModal("Import activities", (body, close) => {
     if (body.parentElement) body.parentElement.classList.add("is-import");
     let acts = [], sourceName = "";
-    let ttsMod = null;   // { VOICES, getLastVoice, setLastVoice, generateVoicesSequential } — lazy, loaded in handleFile()
+    let ttsMod = null;   // { VOICES, getLastVoice, setLastVoice, generateVoicesBatch } — lazy, loaded in handleFile()
 
     // ----- drop zone: click to browse OR drag a file in -----
     const fileInput = el("input"); fileInput.type = "file";
@@ -1184,7 +1184,7 @@ function runVoiceBatch(acts, voiceId, ttsMod) {
     for (const act of acts) {
       if (cancelled) break;
       const items = act.content.items || [];
-      const res = await ttsMod.generateVoicesSequential(items, voiceId, {
+      const res = await ttsMod.generateVoicesBatch(items, voiceId, {
         textFor: it => (it.clue || "").trim() || GENERIC_CLUE_TEXT,
         isCancelled: () => cancelled,
         onProgress: (done, failed) => {

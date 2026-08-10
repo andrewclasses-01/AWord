@@ -73,12 +73,37 @@ export function setLastVoice(voiceId) {
   if (voiceId) localStorage.setItem(LAST_VOICE_KEY, voiceId);
 }
 
+// Real-world measurement (10/8/2026, RTX-class GPU, kokoro-js@1.2.1): a WARM
+// generate() call is ~5.3s on "wasm"/q8 vs ~0.6s on "webgpu"/fp32 — about 8.6x
+// faster — with the same output (duration/RMS/peak all matched in a decode
+// comparison, no NaNs). Model load itself is slower on webgpu (~8.5s vs
+// ~0.8s, one-time shader-compile cost) but that's dwarfed by the per-word
+// saving on anything past a handful of words. So: always TRY webgpu first,
+// and silently fall back to wasm if `navigator.gpu` is missing, no adapter
+// is available, or `from_pretrained` itself throws (e.g. a WebGPU op the
+// ONNX graph needs isn't implemented on some driver) — every caller of
+// generateSpeechDataUrl gets this for free, no call-site changes needed.
+let _activeDevice = null;
+export function activeDevice() { return _activeDevice; }   // "webgpu" | "wasm" | null (not loaded yet)
+
 let _ttsP = null;
 function loadTTS(onProgress) {
   if (!_ttsP) {
     _ttsP = (async () => {
       const { KokoroTTS } = await import(/* @vite-ignore */ CDN);
-      return KokoroTTS.from_pretrained(MODEL_ID, { dtype: "q8", device: "wasm", progress_callback: onProgress });
+      if (typeof navigator !== "undefined" && navigator.gpu) {
+        try {
+          const adapter = await navigator.gpu.requestAdapter();
+          if (adapter) {
+            const tts = await KokoroTTS.from_pretrained(MODEL_ID, { dtype: "fp32", device: "webgpu", progress_callback: onProgress });
+            _activeDevice = "webgpu";
+            return tts;
+          }
+        } catch { /* fall through to wasm below */ }
+      }
+      const tts = await KokoroTTS.from_pretrained(MODEL_ID, { dtype: "q8", device: "wasm", progress_callback: onProgress });
+      _activeDevice = "wasm";
+      return tts;
     })();
   }
   return _ttsP;
