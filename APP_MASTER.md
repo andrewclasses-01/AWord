@@ -5,7 +5,26 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **9/8/2026 (Đợt 93, v0.9.67) — ⭐ GẮN DOMAIN RIÊNG `aword.andrewclasses.com`. Không
+> Cập nhật lần cuối: **10/8/2026 (Đợt 94, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT (Kokoro TTS) cho icon 🎤 Anagram
+> editor. CÓ SỬA CORE (2 file MỚI, thuần cộng thêm — `core/tts.js`, `core/voice-clips.js`). ✅ THẦY DUYỆT
+> → COMMIT `a853a34` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `core/tts.js`
+> có `DEFAULT_VOICE`, `core/voice-clips.js` trả 200, `anagram.css` có `font: inherit` + `aw-anagram-
+> listenbtn`, `anagram-editor.js` có `toggleVoicePopover`).**
+> Đã test THẬT đầu-cuối qua Claude in Chrome (thầy cho phép): dán + Publish luật Firestore, đăng nhập
+> Google thật, Generate/Save/Play một clip thật, chơi game bấm nút loa thật — bắt và sửa 1 bug thật giữa
+> chừng (nút loa gần như vô hình vì `<button>` không kế thừa font-size, sửa `font: inherit` trong
+> `anagram.css`).
+> Icon 🎤 trong Anagram editor (trước "coming soon") giờ mở popover: chọn 1 trong 28 giọng tiếng Anh
+> (Kokoro-82M, chạy 100% trong trình duyệt, không cần server) → Generate → lưu 1 document Firestore riêng
+> (`voiceClips/{clipId}`, KHÔNG nhét vào `content.items[]` vì audio ~50-150KB/từ sẽ vỡ giới hạn 1MB/document
+> nếu act có nhiều từ) → lúc chơi hiện nút loa cạnh clue phát lại. ⭐ Cân nhắc kiến trúc quan trọng giữa
+> chừng: Firebase Storage từ 3/2/2026 bắt buộc gói Blaze (phải nhập thẻ ngân hàng dù 0đ) — trái nguyên tắc
+> "không cần thẻ" của dự án — nên đổi hẳn sang lưu qua Firestore (collection mới, đọc công khai theo id
+> giống `assignments/{code}`, để audio tự đi theo bản snapshot bài giao mà không cần bước copy riêng).
+> Chi tiết đầy đủ + bug tự bắt được lúc test (TDZ, trùng biến): `GHI CHU DU AN.md` Đợt 94 +
+> `templates/anagram/GHI CHU ANAGRAM.md` Đợt 94.
+>
+> Trước đó: **9/8/2026 (Đợt 93, v0.9.67) — ⭐ GẮN DOMAIN RIÊNG `aword.andrewclasses.com`. Không
 > đụng code, chỉ hạ tầng. ✅ THẦY DUYỆT → COMMIT `5e510d2` (file `CNAME`) + PUSH + **LIVE** tại
 > `https://aword.andrewclasses.com/`.**
 > Domain gốc `andrewclasses.com` thầy mới mua (quản lý ở **portal.inet.vn**, nameserver iNET

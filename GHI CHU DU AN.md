@@ -5,6 +5,40 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 94 (10/8/2026, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT (Kokoro TTS) cho icon 🎤 Anagram editor. CÓ SỬA
+CORE (2 file MỚI, thuần cộng thêm). ✅ THẦY DUYỆT → COMMIT `a853a34` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận `core/tts.js`/`core/voice-clips.js` có mặt, `anagram.css`
+có `font: inherit` + `aw-anagram-listenbtn`, `anagram-editor.js` có `toggleVoicePopover`).
+
+Thầy yêu cầu nghiên cứu rồi làm tính năng "tạo voice trong phần edit" ở Anagram, chốt dùng Kokoro-82M
+(TTS mã nguồn mở, chạy 100% trong trình duyệt qua `kokoro-js`, không cần server). Đã tự kiểm tra API thật
+qua trình duyệt (không đoán qua tài liệu): 28 giọng tiếng Anh, model ~88MB tải 1 lần, sinh 1 từ ~3.3s.
+⭐ **Phát hiện giữa chừng làm đổi hướng**: Firebase Storage từ 3/2/2026 bắt buộc gói Blaze (phải nhập thẻ
+ngân hàng dù 0đ) — trái nguyên tắc "không cần thẻ" của dự án — nên đổi sang lưu MỖI CLIP 1 DOCUMENT
+Firestore riêng (collection mới `voiceClips/{clipId}`, đọc công khai như `assignments/{code}`, để đi
+theo bản snapshot bài giao mà không cần bước copy). Chi tiết đầy đủ (kiến trúc, code, bug tự bắt được lúc
+test — TDZ `voicePopEl`, trùng biến `clueEl`): `templates/anagram/GHI CHU ANAGRAM.md` Đợt 94.
+
+**File mới**: `core/tts.js`, `core/voice-clips.js`. **File sửa**: `templates/anagram/anagram-editor.js`
+(icon mic thật, popover chọn giọng/Generate/Play/Remove), `templates/anagram/anagram.js` (nút loa cạnh
+clue lúc chơi), `docs/08-FIREBASE-SETUP.md` (luật Firestore mới cho `voiceClips`, có cảnh báo ⚠️ ở đầu
+file cần thầy tự dán lại + Publish).
+
+**✅ CẬP NHẬT cùng ngày**: thầy cho phép mở Claude in Chrome làm thay cả 2 việc trên. (1) Luật Firestore
+đã dán + Publish thành công (bắt được 1 lỗi tự gõ — chèn nhầm 1 dòng, khối `voiceClips` lọt RA NGOÀI
+`match /databases/.../documents{}` — phát hiện bằng đọc lại text thay vì tin toạ độ click, sửa bằng
+Discard + làm lại). (2) Đăng nhập Google (session Chrome có sẵn) → Generate/Save/Play thật cho từ
+"elephant" → **thành công thật trên Firestore** → chơi game bắt được 1 bug thật: nút loa cạnh clue gần
+như vô hình (bug `<button>` không kế thừa font-size → `em` tính sai) → đã sửa `anagram.css` (`font:
+inherit`) → test lại đúng. Đã xoá act test (vào Recycle bin). Chi tiết đầy đủ:
+`templates/anagram/GHI CHU ANAGRAM.md` Đợt 94. Toàn bộ tính năng đã test THẬT đầu-cuối trước khi commit.
+
+**VIỆC ĐANG CHỜ**: không còn việc gấp — session sau có thể tiếp tục sang 🖼️ ảnh (Anagram, vẫn "coming
+soon") hoặc nối 🎤 giọng đọc cho Unjumble/Crossword/Flying-fruit (tái dùng thẳng `core/tts.js` +
+`core/voice-clips.js`, không cần viết lại phần TTS/lưu trữ).
+
+---
+
 ## Đợt 93 (9/8/2026, v0.9.67) — ⭐ GẮN DOMAIN RIÊNG: `aword.andrewclasses.com`. Không đụng code, chỉ hạ tầng (DNS + GitHub Pages + Firebase). ✅ THẦY DUYỆT → COMMIT `5e510d2` (thêm file `CNAME`) + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đã tự mở kiểm tra: trang hiện đúng, HTTPS khoá xanh, nút "Sign in with Google" hoạt động).
 
 Thầy mới mua domain **`andrewclasses.com`** (quản lý tại **portal.inet.vn**, tài khoản PHẠM XUÂN NINH,
@@ -3150,9 +3184,11 @@ chơi được cả 14 loại** (trước chỉ Quiz). Thầy đã tự test b�
 - **(B) Dọn 3 ĐỀ XUẤT SỬA CORE còn treo** (template đang tự lách bằng JS/tỉa DOM): Speaking cards xin cờ
   `openEnded`/`hideScore` + cờ ẩn nhóm Options; Crossword xin `tpl.hideRandomOption`; Balloon pop xin
   ẩn `timerEl` khi `inlineTimerBar:true` + `timer:"none"`.
-- **(C) Còn ngỏ từng game**: 🎤/🖼️ voice+image trong editor Anagram/Crossword; Find the match thiếu 3 âm
-  Menu/Leaderboard/RevealAnswers (core chưa có hook); Crossword bật bàn phím ảo nên phóng to theo từ
-  đang chọn thay vì thu cả lưới.
+- **(C) Còn ngỏ từng game**: 🎤 voice ở Anagram editor XONG từ Đợt 94 (`core/tts.js` + `core/voice-clips.js`,
+  Kokoro TTS — chờ thầy dán luật Firestore + tự test đăng nhập); 🖼️ ảnh Anagram và cả 🎤/🖼️ ở Crossword/
+  Unjumble/Flying-fruit VẪN "coming soon" (2 module core mới viết sẵn để tái dùng khi tới lượt các game
+  đó, không cần viết lại phần TTS); Find the match thiếu 3 âm Menu/Leaderboard/RevealAnswers (core chưa có
+  hook); Crossword bật bàn phím ảo nên phóng to theo từ đang chọn thay vì thu cả lưới.
 - **(D) Chưa ai kiểm**: fullscreen thật trên bảng TOMKO; nghe thật các bộ mp3.
 
 **Khúc không tự test được**: trang chủ + assignment thật đều sau popup đăng nhập Google (không tự động

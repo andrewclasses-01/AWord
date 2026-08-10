@@ -569,3 +569,126 @@ nên không có rủi ro đua thời gian nào bị đổi.
 
 Test thật (mode "On submit", Points off = 2): 1 từ đúng (ELEPHANT) + 1 từ sai chủ ý (POLAR BEAR, xếp sai
 thứ tự) → `Score -1/6`, `Total: 1/6` — trước đây sẽ chỉ hiện `Score -1/6` không kèm hàng Total.
+
+## Đợt 94 (10/8/2026, v0.9.68) — ⭐⭐ GIỌNG ĐỌC THẬT cho icon 🎤 (Kokoro TTS) — icon mic từ chỗ
+"coming soon" giờ tạo được pronunciation clip thật cho từng từ, phát lại được lúc chơi. ⭐ CÓ SỬA CORE
+(2 file MỚI, không sửa file core nào có sẵn). ✅ THẦY DUYỆT → COMMIT `a853a34` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/`.
+
+Thầy yêu cầu nghiên cứu rồi làm tính năng "tạo voice trong phần edit ở Anagram", chốt dùng **Kokoro-82M**
+(TTS mã nguồn mở, Apache-2.0) sau khi tham khảo. Tự kiểm tra kỹ qua trình duyệt thật (không đoán qua tài
+liệu suông) trước khi viết code — xem mục "Nghiên cứu Kokoro" bên dưới.
+
+**Nghiên cứu Kokoro (đo thật, không phải suy đoán từ tài liệu):**
+- Chạy qua `kokoro-js@1.2.1` từ CDN `esm.sh`, model `onnx-community/Kokoro-82M-v1.0-ONNX`, dtype `q8`,
+  device `wasm` — **100% trong trình duyệt, không cần server**, khớp kiến trúc AWord (site tĩnh GitHub
+  Pages). Model **~88MB** (`onnx/model_quantized.onnx`, 92.361.116 bytes), tải 1 lần/máy có cache.
+- Đọc trực tiếp `tts.voices` (không đoán) ra đúng **28 giọng tiếng Anh** (11 Mỹ nữ `af_*`, 9 Mỹ nam `am_*`,
+  4 Anh nữ `bf_*`, 4 Anh nam `bm_*`), mỗi giọng có hạng chất lượng A-F từ tác giả model — chép nguyên vào
+  `core/tts.js`'s `VOICES` để Editor hiện được danh sách MÀ KHÔNG PHẢI tải 88MB trước (chỉ tải khi bấm
+  "Generate"). Giọng Anh tốt nhất: `bf_emma` (B-) → chọn làm mặc định theo đúng ý thầy.
+- Sinh 1 từ ("elephant") mất **~3.3 giây** (CPU/WASM), ra file WAV **~98KB**, `audio.toBlob()` hoạt động
+  đúng như tài liệu.
+- ⚠️ **Phát hiện quan trọng làm đổi hướng lưu trữ**: kể từ chính sách Google hiệu lực **3/2/2026**,
+  **Firebase Storage không còn miễn phí trên gói Spark** — bắt buộc gói Blaze (phải nhập thẻ ngân hàng, dù
+  0đ trong hạn miễn phí). Trái với đúng nguyên tắc đã ghi ở `docs/08-FIREBASE-SETUP.md`
+  ("Không cần nhập thẻ ngân hàng"). Thầy chọn (AskUserQuestion) **KHÔNG dùng Storage** — dùng Firestore
+  sẵn có, không cần thẻ.
+
+**Kiến trúc đã chọn — Firestore, MỖI CLIP 1 DOCUMENT RIÊNG** (không nhét vào `content.items[]` của act):
+audio ~50-150KB/từ, act tối đa 100 từ → nhét chung sẽ vỡ giới hạn 1MB/document (áp dụng luôn cho
+`assignments/{code}` — `core/assignments.js`'s `snapshotOf()` chép NGUYÊN `content` thành 1 document, đã
+đọc code xác nhận). Giải pháp: collection **top-level `voiceClips/{clipId}`** (không nằm dưới
+`users/{uid}`), **ĐỌC CÔNG KHAI** — id là Firestore auto-id (không đoán được), cùng mô hình tin cậy với
+`assignments/{code}`. Nhờ vậy khi thầy giao bài, `content.items[].voice` (chỉ là 1 chuỗi id) tự động đi
+theo bản snapshot **KHÔNG CẦN BƯỚC COPY RIÊNG** — và trang chơi của học sinh (`play.js`, không đăng nhập)
+vẫn đọc được đúng clip vì rule cho phép đọc công khai theo id.
+
+**2 file MỚI trong `core/`** (core touched nhưng THUẦN CỘNG THÊM — không sửa export nào có sẵn, không đổi
+hành vi template khác):
+- `core/tts.js` — bọc `kokoro-js`: `VOICES` (28 giọng, hardcode từ số đo thật), `DEFAULT_VOICE` (`bf_emma`),
+  `generateSpeechDataUrl(text, voiceId, onProgress)` → trả `data:audio/wav;base64,...` (không dùng Blob URL
+  để khỏi phải `revokeObjectURL`). Model là singleton lazy-load — sinh nhiều từ liên tiếp chỉ tải model 1 lần.
+- `core/voice-clips.js` — `saveVoiceClip`/`getVoiceClip`/`deleteVoiceClip` thao tác `voiceClips/{clipId}`.
+  `saveVoiceClip` nhận `id` tuỳ chọn: có `id` = ghi đè (dùng cho "Regenerate", tránh rác mỗi lần đổi giọng
+  thử lại); không có `id` = tạo mới.
+- **Luật Firestore mới** (`docs/08-FIREBASE-SETUP.md` BƯỚC 6, đã ghi cảnh báo ngay đầu file):
+  `match /voiceClips/{clipId} { allow read: if true; allow write: if isTeacher(); }` — **thầy PHẢI dán lại
+  + Publish trên Firebase Console thì tính năng mới chạy được** (trước đó Firestore production-mode từ
+  chối mọi ghi vào collection chưa có luật).
+
+**`templates/anagram/anagram-editor.js`** — icon 🎤 giờ có state thật (`icons.soundOn` khi đã có voice,
+`icons.mic` khi chưa) thay vì luôn hiện banner "coming soon". Bấm mở **1 popover dùng chung** (không phải
+1 popover/hàng — `position:fixed`, định vị dưới đúng nút mic vừa bấm, đóng khi bấm ra ngoài/khi row đổi):
+dropdown 28 giọng (2 optgroup Anh/Mỹ) + nút Generate/Regenerate + (nếu đã có voice) nút ▶ Play + nút 🗑
+Remove. Generate xong **cập nhật TRỰC TIẾP đúng nút mic** (`setMicState()`) thay vì gọi `renderItems()` —
+tránh đúng bẫy đã biết trong codebase này (`renderItems()` xoá-vẽ-lại toàn bộ DOM hàng, sẽ làm mất luôn
+chính cái nút popover đang neo vào).
+- **Voice tự động MẤT khi Word đổi** (gõ lại chữ, hoặc bấm Swap Columns) — vì clip cũ giờ đọc SAI từ. Doc
+  Firestore cũ không bị xoá (rác nhỏ, single-teacher scale, đã ghi rõ giới hạn này trong file comment của
+  `core/voice-clips.js`, không đáng viết cơ chế GC).
+- `normalize()`/`blankItem()`/mapping lúc Save đều thêm `voice`/`voiceId` vào item — trước đây các hàm này
+  CHỈ giữ `{word, clue}` (allowlist), nên nếu không sửa sẽ ÂM THẦM XOÁ field voice mỗi lần Save.
+
+**`templates/anagram/anagram.js`** (phía chơi) — nút loa (`icons.soundOn`) chỉ hiện khi `it.src.voice` có
+giá trị, là **CON của chính `.aw-anagram-clue`** (không phải div bọc ngoài) — cân nhắc kỹ để KHÔNG đổi
+layout của mọi act cũ (100% chưa có voice): thử phương án bọc flex trước, phát hiện rủi ro icon bị
+`.aw-playarea{overflow:hidden}` cắt khi clue dài chạm mép 92% max-width (chỉ còn ~4cqw lề, không đủ chắc
+chắn) → đổi sang gắn INLINE ngay sau chữ cuối (cỡ `em`, ăn theo font-size của chính clue nên tự co theo
+`--fit` của autoFit, không cần tính cqw riêng) — an toàn tuyệt đối cho mọi act không có voice vì hoàn toàn
+không đụng CSS/DOM của `.aw-anagram-clue` khi không có voice. Bấm phát: fetch `voiceClips/{id}` lười (chỉ
+lần đầu, cache theo `Map` trong closure của `mount()`), lỗi (mất mạng, doc không tồn tại) bị nuốt lặng lẽ
+— phát âm là tính năng phụ trợ, không được phép làm gãy ván đang chơi. Dừng audio trong `cleanup()`.
+⚠️ KHÔNG nối `tpl.onPause` cho audio phát âm — clip ngắn ~1-2s, tương tự các `setTimeout` lẻ tẻ khác đã
+được chấp nhận "hiếm, vô hại" trong `core/HUONG DAN CORE.md` mục MENU PAUSE, không đáng thêm hook mới.
+
+**Đã tự test qua trình duyệt thật** (devserver `aword` :5510, 2 trang harness tạm tự viết rồi XOÁ sau khi
+xong, đúng quy ước đã dùng cho editor Quiz/Anagram trước đây):
+- Editor: 6 từ mẫu, mic icon đúng trạng thái ban đầu (chưa voice) cho cả 6 hàng; bấm mở popover đúng vị
+  trí, đúng 28 giọng chia 2 nhóm (British trước, đúng thầy chọn mặc định Anh); bấm Generate → status hiện
+  "Loading voice model… (first time only, ~86MB)" → sinh xong → gọi `saveVoiceClip` → **đúng báo lỗi "Please
+  sign in first."** (chưa đăng nhập trong phiên test, đúng hành vi mong đợi vì `core/voice-clips.js` bắt
+  buộc `currentUser()`) → nút Generate/dropdown tự mở khoá lại đúng. Toggle đóng/mở popover đúng (bấm lại
+  cùng nút mic = đóng); bấm ra ngoài popover = đóng (đã đo có độ trễ 1 tick, đúng chủ đích tránh đóng ngay
+  bởi chính cú click vừa mở).
+- Chơi: activity giả có 1 từ gắn `voice:"FAKE_CLIP_ID..."` + 1 từ không có voice → nút loa CHỈ hiện đúng ở
+  từ có voice, từ kia không có; bấm nút loa (clip không tồn tại thật) → **0 lỗi console, không crash**,
+  game chơi tiếp bình thường.
+- 1 bug thật tự bắt được khi test (không phải đoán): khai `let voicePopEl`/`voicePreviewAudio` ngay cạnh
+  các hàm popover (sau `itemRow`) gây `ReferenceError: Cannot access 'voicePopEl' before initialization` —
+  vì `renderItems()` (chạy NGAY LÚC mở editor, TRƯỚC điểm khai báo đó trong luồng thực thi) gọi
+  `closeVoicePopover()` đọc `voicePopEl` khi biến còn trong TDZ. Sửa: dời khai báo lên đầu
+  `openAnagramEditor()`, trước lời gọi `renderItems()` đầu tiên.
+- Trùng tên biến `clueEl` (dòng mới ở đầu `render()` trùng với `const clueEl = card.querySelector(...)` có
+  sẵn ở cuối hàm) — `node --check` bắt ngay lúc soát cú pháp trước khi mở trình duyệt; xoá dòng
+  querySelector thừa (đã có sẵn tham chiếu trực tiếp).
+
+**Việc kế — 2 việc CHỈ THẦY LÀM ĐƯỢC:** ✅ ĐÃ LÀM XONG (10/8/2026, cùng ngày, thầy cho phép mở Claude in
+Chrome làm thay):
+1. Dán lại luật Firestore ở `docs/08-FIREBASE-SETUP.md` BƯỚC 6 → Publish trên Firebase Console
+   (`aword-70dae`). ⚠️ Bẫy tự bắt được lúc gõ: click "End" trên dòng lệch 1 dòng (đúng dòng đóng
+   `/results/{resultId}`, không phải dòng đóng `documents`) làm khối `voiceClips` bị chèn RA NGOÀI
+   `match /databases/{database}/documents {...}` (Firestore rules không hợp lệ ở vị trí đó) — bắt được
+   bằng cách đọc lại `get_page_text` đếm số dòng `}` liên tiếp trước khi Publish, không tin vào toạ độ
+   click mù; sửa bằng Discard rồi làm lại với `Ctrl+End` + `Up` 2 lần (đếm từ CUỐI file, đáng tin hơn đếm
+   từ đầu vì cuối file cố định 3 dấu `}` lồng nhau). Publish thành công, đã đọc lại rules đã publish để
+   xác nhận đúng cấu trúc lồng.
+2. Đăng nhập Google (session Chrome có sẵn, không cần gõ mật khẩu) → tạo act Anagram test thật
+   ("TEST voice feature", xoá sau khi xong) → bấm mic → Generate voice (giọng mặc định Emma hiện đúng) →
+   **Save vào Firestore thành công thật** (mic đổi xanh, hiện Regenerate/▶ Play/🗑) → Play nghe thử OK →
+   Save act → Play game → **⭐ bắt được 1 bug thật**: nút loa cạnh clue hiện ra chỉ như 1 CHẤM TÍ HON gần
+   như vô hình (đo bằng `zoom` region) — nguyên nhân: `<button>` không tự kế thừa `font-size` từ tổ tiên
+   (dùng font UI mặc định của trình duyệt thay vì 4.4cqw của `.aw-anagram-clue`), nên `width/height: 0.9em`
+   của nút tính theo cỡ chữ UI bé xíu chứ không phải cỡ chữ clue. Sửa: thêm `font: inherit;` vào
+   `.aw-anagram-listenbtn` (`anagram.css`) — nạp lại, nút hiện đúng kích cỡ, bấm phát đúng, 0 lỗi console.
+   Đã xoá act test (chuyển vào Recycle bin, không xoá vĩnh viễn).
+
+**Chưa làm (biết trước, không phải bug)**: nút 🖼️ ảnh vẫn "coming soon" y như cũ (không đụng); chưa có cơ
+chế dọn rác `voiceClips` mồ côi khi xoá/sửa từ; chưa nối `voice` cho các template khác cùng có icon mic
+placeholder (Unjumble/Crossword/Flying-fruit) — `core/tts.js`/`core/voice-clips.js` viết sẵn để dùng
+chung khi tới lượt các template đó, không cần viết lại.
+
+**Trạng thái**: ✅ ĐÃ COMMIT (`a853a34`) + PUSH + LIVE, test THẬT đầu-cuối trước khi commit (không chỉ
+mô phỏng). **Việc kế cho phiên sau** (không gấp): 🖼️ ảnh Anagram vẫn "coming soon"; hoặc nối 🎤 giọng đọc
+cho Unjumble/Crossword/Flying-fruit bằng cách tái dùng thẳng `core/tts.js` + `core/voice-clips.js` (chỉ
+cần viết phần UI popover trong editor riêng của từng game, giống khuôn `anagram-editor.js` đã làm).
