@@ -47,6 +47,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { getVoiceClip } from "../../core/voice-clips.js";
 import { anagramSound } from "./anagram-sound.js";
 import { openAnagramEditor } from "./anagram-editor.js";
 
@@ -278,6 +279,29 @@ const anagramTemplate = {
     let revealSlotEl = null;   // current word's answer-reveal line (submit mode) — ditto
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
+    // Pronunciation playback (10/8/2026) — clips are generated once in the
+    // editor (anagram-editor.js) and referenced by id (it.src.voice, a
+    // voiceClips/{id} Firestore doc — public read, see core/voice-clips.js's
+    // file comment for why). Fetched lazily on first tap of the listen
+    // button and cached here so replaying the same word never re-fetches.
+    const voiceClipCache = new Map();   // clipId -> data: URL
+    let voiceAudioEl = null;            // currently-playing clip, stopped on cleanup
+    function playVoiceClip(clipId) {
+      if (!clipId) return;
+      const cached = voiceClipCache.get(clipId);
+      if (cached) { startVoicePlayback(cached); return; }
+      getVoiceClip(clipId).then(clip => {
+        if (!clip || !clip.audio) return;
+        voiceClipCache.set(clipId, clip.audio);
+        startVoicePlayback(clip.audio);
+      }).catch(() => { /* no pronunciation audio — not fatal, game plays on without it */ });
+    }
+    function startVoicePlayback(dataUrl) {
+      if (voiceAudioEl) voiceAudioEl.pause();
+      voiceAudioEl = new Audio(dataUrl);
+      voiceAudioEl.play().catch(() => {});
+    }
+
     // Slogan on the SAME row as the clock + score (centred, small, grey,
     // spaced uppercase) — same look/technique as crossword.js/speaking-cards.js
     // (teacher, 8/8/2026). Absolutely centred over the top bar so it never
@@ -355,8 +379,23 @@ const anagramTemplate = {
       const tileSize = computeTileSize(it.letters.length);
 
       const card = el("div", "aw-anagram-card");
-      if (it.clue) card.append(el("div", "aw-anagram-clue", escapeHtml(it.clue)));
-      else card.append(el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word"));
+      const clueEl = it.clue
+        ? el("div", "aw-anagram-clue", escapeHtml(it.clue))
+        : el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word");
+      // Listen button (10/8/2026) is a CHILD of the clue box, absolutely
+      // positioned just past its right edge — not a flex sibling — so
+      // activities with no voice clip (the vast majority, and every
+      // pre-existing one) get byte-for-byte the same clue layout as before;
+      // .aw-anagram-clue's own centering (margin:auto + max-width:92%) is
+      // untouched either way.
+      if (it.src && it.src.voice) {
+        const listenBtn = el("button", "aw-anagram-listenbtn", icons.soundOn);
+        listenBtn.type = "button";
+        listenBtn.setAttribute("aria-label", "Listen to pronunciation");
+        listenBtn.onclick = () => playVoiceClip(it.src.voice);
+        clueEl.append(listenBtn);
+      }
+      card.append(clueEl);
 
       // Flexible slack, split 1:2 — see anagram.css's comment on these two
       // classes for why (teacher, 8/8/2026: tile rows should lean higher
@@ -434,8 +473,8 @@ const anagramTemplate = {
       root.append(card);
       updateSubmitButtonState();
 
-      const clueEl = card.querySelector(".aw-anagram-clue");
-      // offsetHeight never includes MARGIN — group's bottom margin, the
+      // clueEl was captured when the card was built, above — offsetHeight
+      // never includes MARGIN — group's bottom margin, the
       // reveal line's top margin, the Submit button's top margin, and the
       // card's own bottom padding are all real fixed (non-fit-scaled) vertical
       // space that autoFit must know about, or it under-shrinks on a 2-line
@@ -1404,6 +1443,7 @@ const anagramTemplate = {
       if (autoTimer) clearTimeout(autoTimer);
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
+      if (voiceAudioEl) voiceAudioEl.pause();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
       if (sloganEl) sloganEl.remove();
       if (topbar) topbar.style.position = "";

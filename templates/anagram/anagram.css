@@ -67,6 +67,34 @@
 }
 .aw-anagram-clue-generic { opacity: .75; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 
+/* Listen button (10/8/2026) — a REAL child appended after the clue text,
+   flowing INLINE at the end of the (last line of the) text rather than
+   absolutely positioned. That keeps it immune to .aw-playarea's
+   overflow:hidden clipping a long clue's edge (its box can be up to 92%
+   wide, leaving only ~4cqw of margin — too tight to trust for an
+   absolutely-positioned icon) AND keeps autoFit's clueEl.offsetHeight
+   measurement honest (an absolutely-positioned child wouldn't count
+   toward it at all). Sized in `em` so it scales with the clue's own
+   font-size (which already includes --fit) with no extra cqw math. */
+.aw-anagram-listenbtn {
+  /* Buttons don't inherit font-size from their ancestors by default (they
+     use the browser's UI font stack) — without this, `em` below resolves
+     against that tiny UI size instead of the clue's 4.4cqw*--fit, and the
+     button renders as a near-invisible dot (caught by screenshot, 10/8/2026). */
+  font: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  vertical-align: -0.18em;
+  width: 0.9em; height: 0.9em;
+  margin-left: 0.3em;
+  padding: 0; border: none; border-radius: 50%;
+  background: rgba(47, 111, 237, .14);
+  color: #2f6fed;
+  cursor: pointer;
+}
+.aw-anagram-listenbtn svg { width: 66%; height: 66%; }
+.aw-anagram-listenbtn:hover { background: rgba(47, 111, 237, .24); }
+.aw-anagram-listenbtn:active { transform: scale(.9); }
+
 /* Leftover vertical space (between the clue and everything below it) is
    split 1:2 between these two spacers instead of collapsing entirely above
    the tile block — the OLD single `margin-top:auto` on .aw-anagram-group put
@@ -389,7 +417,28 @@
 .aw-anagram-ed-iconbtn:disabled { opacity: .35; cursor: default; }
 .aw-anagram-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
 .aw-anagram-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+.aw-anagram-ed-iconbtn.is-active { color: #2f7bff; }
+.aw-anagram-ed-iconbtn.is-active:hover:not(:disabled) { background: #eaf1ff; color: #2f7bff; }
 .aw-anagram-ed-gap { flex: 0 0 6px; }
+
+/* ---------- voice popover (mic icon) — a single shared floating panel,
+   position:fixed under whichever row's mic button was clicked. ---------- */
+.aw-anagram-ed-voicepop {
+  position: fixed; z-index: 500; width: 260px;
+  background: #fff; border: 1.5px solid #e2e9f2; border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(20,30,45,.16); padding: .8rem;
+}
+.aw-anagram-ed-voicetitle { font-weight: 700; font-size: .85rem; color: #23303e; margin-bottom: .5rem; }
+.aw-anagram-ed-voicefield { display: flex; flex-direction: column; gap: .25rem; margin-bottom: .55rem; }
+.aw-anagram-ed-voicelabel { font-size: .72rem; font-weight: 700; color: #8a97a8; text-transform: uppercase; letter-spacing: .03em; }
+.aw-anagram-ed-voiceselect {
+  width: 100%; padding: .45rem .55rem; border: 1.5px solid #e2e9f2; border-radius: 8px;
+  background: #fff; font-size: .88rem; font-family: inherit; color: #23303e;
+}
+.aw-anagram-ed-voicestatus { min-height: 1.1em; font-size: .78rem; color: #55657a; margin-bottom: .5rem; }
+.aw-anagram-ed-voicebtns { display: flex; align-items: center; gap: 6px; }
+.aw-anagram-ed-voicebtns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
+.aw-anagram-ed-voicebtns .aw-anagram-ed-iconbtn { margin-left: auto; }
 
 .aw-anagram-ed-addrow {
   display: flex; align-items: center; justify-content: center; gap: 6px;

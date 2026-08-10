@@ -10,9 +10,12 @@
 // SCOPE (same simplification as Quiz, per Teacher Andrew): this page edits
 // ONLY the title + the word list (word + optional clue). Theme is always
 // Classic; default options (timer/mode/allCaps/...) live in Settings;
-// per-act options are tweaked from the in-game Options panel. The mic/image
-// buttons are placeholders for now (teacher said "we'll discuss them
-// later") — they just show an info banner, no upload wired up yet.
+// per-act options are tweaked from the in-game Options panel. The image
+// button is still a placeholder (teacher said "we'll discuss it later") —
+// it just shows an info banner, no upload wired up yet. The mic button
+// (10/8/2026) is real: it opens a small popover to generate a Kokoro TTS
+// pronunciation clip for that row's Word, stored via core/voice-clips.js
+// and played back in-game by anagram.js's "listen" button next to the clue.
 //
 // Row reordering uses the SAME native HTML5 drag-and-drop idiom as
 // main.js's folder/act drag-drop (draggable + dragstart/dragover/drop), so
@@ -23,6 +26,8 @@
 
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+import { VOICES, DEFAULT_VOICE, generateSpeechDataUrl } from "../../core/tts.js";
+import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-clips.js";
 
 const MAX_ITEMS = 100;
 
@@ -30,6 +35,12 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   const isNew = !(activity && activity.id);
   const data = normalize(activity);
   let draggingIndex = null;   // module-scoped to this editor instance's drag session
+  // Voice popover state — declared up here (not next to the functions that
+  // use it, further down) because renderItems() calls closeVoicePopover()
+  // and renderItems() runs during initial setup, BEFORE execution would
+  // otherwise reach a `let` placed near the popover functions (TDZ error).
+  let voicePopEl = null;
+  let voicePreviewAudio = null;   // currently-playing preview, so a second Play doesn't overlap the first
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -82,7 +93,13 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   swapBtn.type = "button";
   swapBtn.title = "Swap the Word and Clue value in every row (fixes a list pasted in the wrong order)";
   swapBtn.onclick = () => {
-    data.content.items.forEach(it => { const tmp = it.word; it.word = it.clue; it.clue = tmp; });
+    // Swapping changes what Word IS, so any voice clip (generated for the
+    // pre-swap word) is now stale — same reasoning as the wordInput.oninput
+    // guard in itemRow() below, just applied to every row at once here.
+    data.content.items.forEach(it => {
+      const tmp = it.word; it.word = it.clue; it.clue = tmp;
+      it.voice = ""; it.voiceId = "";
+    });
     renderItems();
     showInfo("Word and Clue swapped in every row.");
   };
@@ -100,6 +117,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
   // ---------- word-list rendering ----------
   function renderItems() {
+    closeVoicePopover();   // any full re-render replaces row DOM, invalidating the popover's anchor button
     iWrap.innerHTML = "";
     data.content.items.forEach((it, ii) => iWrap.append(itemRow(it, ii)));
     const addI = el("button", "aw-anagram-ed-addrow", null);
@@ -155,7 +173,14 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const wordInput = el("input", "aw-anagram-ed-word");
     wordInput.value = it.word;
     wordInput.placeholder = "Word or phrase to unscramble";
-    wordInput.oninput = () => { it.word = wordInput.value; clearError(); };
+    wordInput.oninput = () => {
+      it.word = wordInput.value;
+      clearError();
+      // Editing the word invalidates any voice clip already generated for the
+      // OLD spelling — clear the reference (the orphaned Firestore doc, if
+      // any, is not deleted here; see core/voice-clips.js's file comment).
+      if (it.voice) { it.voice = ""; it.voiceId = ""; setMicState(micBtn, false); closeVoicePopover(); }
+    };
     wordInput.addEventListener("paste", e => onRowPaste(e, ii));
     const clueInput = el("input", "aw-anagram-ed-clue");
     clueInput.value = it.clue;
@@ -166,8 +191,10 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     row.append(box);
 
     const iconsWrap = el("div", "aw-anagram-ed-icons");
-    const micBtn = iconBtn(icons.mic, "Add voice (coming soon)");
-    micBtn.onclick = () => showInfo("Voice recordings — coming soon.");
+    const micBtn = iconBtn(it.voice ? icons.soundOn : icons.mic,
+      it.voice ? "Voice added — click to preview, change or remove" : "Add a pronunciation voice");
+    if (it.voice) micBtn.classList.add("is-active");
+    micBtn.onclick = () => toggleVoicePopover(micBtn, it);
     const imgBtn = iconBtn(icons.image, "Add image (coming soon)");
     imgBtn.onclick = () => showInfo("Images — coming soon.");
     iconsWrap.append(micBtn, imgBtn, el("span", "aw-anagram-ed-gap"));
@@ -199,6 +226,145 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     b.title = title;
     b.setAttribute("aria-label", title);
     return b;
+  }
+
+  // ---------- voice popover (mic icon — generate/preview/remove a Kokoro
+  // TTS pronunciation clip for one row's Word). A single shared popover
+  // element (not one per row) toggled open/closed, positioned under
+  // whichever mic button was clicked. Success/failure update the SAME
+  // mic button in place (icon + title) instead of calling renderItems() —
+  // a full re-render would replace every row's DOM, including the very
+  // button this popover is anchored to, breaking its position. (voicePopEl/
+  // voicePreviewAudio are declared near the top of openAnagramEditor, not
+  // here — see the comment there.)
+  function closeVoicePopover() {
+    if (voicePopEl) { voicePopEl.remove(); voicePopEl = null; }
+    document.removeEventListener("pointerdown", onVoicePopOutside, true);
+  }
+  function onVoicePopOutside(e) {
+    if (voicePopEl && !voicePopEl.contains(e.target)) closeVoicePopover();
+  }
+  function stopVoicePreview() {
+    if (voicePreviewAudio) { voicePreviewAudio.pause(); voicePreviewAudio = null; }
+  }
+  function setMicState(micBtn, hasVoice) {
+    micBtn.innerHTML = hasVoice ? icons.soundOn : icons.mic;
+    micBtn.classList.toggle("is-active", hasVoice);
+    const title = hasVoice ? "Voice added — click to preview, change or remove" : "Add a pronunciation voice";
+    micBtn.title = title;
+    micBtn.setAttribute("aria-label", title);
+  }
+
+  function toggleVoicePopover(micBtn, it) {
+    if (voicePopEl && voicePopEl._forItem === it) { closeVoicePopover(); return; }
+    buildVoicePopover(micBtn, it);
+  }
+
+  function buildVoicePopover(micBtn, it) {
+    closeVoicePopover();
+    stopVoicePreview();
+
+    const pop = el("div", "aw-anagram-ed-voicepop");
+    pop._forItem = it;
+
+    pop.append(el("div", "aw-anagram-ed-voicetitle", "Pronunciation voice"));
+
+    const selectField = el("div", "aw-anagram-ed-voicefield");
+    selectField.append(el("label", "aw-anagram-ed-voicelabel", "Voice"));
+    const select = el("select", "aw-anagram-ed-voiceselect");
+    const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
+    const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
+    VOICES.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v.id;
+      o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
+      (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
+    });
+    select.append(gbGroup, usGroup);
+    select.value = it.voiceId || DEFAULT_VOICE;
+    selectField.append(select);
+    pop.append(selectField);
+
+    const status = el("div", "aw-anagram-ed-voicestatus");
+    pop.append(status);
+
+    const btnRow = el("div", "aw-anagram-ed-voicebtns");
+    const genBtn = el("button", "aw-btn aw-btn-primary", it.voice ? "Regenerate" : "Generate voice");
+    genBtn.type = "button";
+    btnRow.append(genBtn);
+
+    let playBtn = null, delBtn = null;
+    if (it.voice) {
+      playBtn = el("button", "aw-btn", "▶ Play");
+      playBtn.type = "button";
+      playBtn.onclick = async () => {
+        playBtn.disabled = true;
+        try {
+          const clip = await getVoiceClip(it.voice);
+          if (clip && clip.audio) {
+            stopVoicePreview();
+            voicePreviewAudio = new Audio(clip.audio);
+            voicePreviewAudio.play().catch(() => {});
+          } else {
+            status.textContent = "Could not load the saved clip.";
+          }
+        } catch {
+          status.textContent = "Could not load the saved clip.";
+        } finally {
+          playBtn.disabled = false;
+        }
+      };
+      btnRow.append(playBtn);
+
+      delBtn = iconBtn(icons.trash, "Remove voice", "is-danger");
+      delBtn.onclick = async () => {
+        genBtn.disabled = true; playBtn.disabled = true; delBtn.disabled = true;
+        try { await deleteVoiceClip(it.voice); } catch { /* ignore — clip may already be gone */ }
+        it.voice = ""; it.voiceId = "";
+        setMicState(micBtn, false);
+        buildVoicePopover(micBtn, it);
+      };
+      btnRow.append(delBtn);
+    }
+    pop.append(btnRow);
+
+    genBtn.onclick = async () => {
+      const word = (it.word || "").trim();
+      if (!word) { status.textContent = "Enter a word first."; return; }
+      genBtn.disabled = true; select.disabled = true;
+      if (playBtn) playBtn.disabled = true;
+      if (delBtn) delBtn.disabled = true;
+      status.textContent = "Loading voice model… (first time only, ~86MB)";
+      try {
+        const dataUrl = await generateSpeechDataUrl(word, select.value, p => {
+          if (p && /\.onnx$/.test(p.file || "") && p.progress != null) {
+            status.textContent = `Loading voice model… ${Math.round(p.progress)}%`;
+          } else if (p && p.status === "done") {
+            status.textContent = "Generating…";
+          }
+        });
+        status.textContent = "Saving…";
+        const id = await saveVoiceClip({ id: it.voice || undefined, text: word, voiceId: select.value, audioDataUrl: dataUrl });
+        it.voice = id;
+        it.voiceId = select.value;
+        setMicState(micBtn, true);
+        buildVoicePopover(micBtn, it);
+      } catch (e) {
+        status.textContent = e && e.code === "aw/signed-out"
+          ? "Please sign in first."
+          : "Could not generate voice — please try again.";
+        genBtn.disabled = false; select.disabled = false;
+        if (playBtn) playBtn.disabled = false;
+        if (delBtn) delBtn.disabled = false;
+      }
+    };
+
+    document.body.append(pop);
+    const r = micBtn.getBoundingClientRect();
+    pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 40) + "px";
+    pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 272)) + "px";
+    voicePopEl = pop;
+    setTimeout(() => document.addEventListener("pointerdown", onVoicePopOutside, true), 0);
   }
 
   // ---------- drag-to-reorder (native HTML5 DnD, same idiom as main.js) ----------
@@ -244,9 +410,10 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   }
 
   // ---------- save / cancel ----------
-  cancelBtn.onclick = () => onCancel?.();
+  cancelBtn.onclick = () => { closeVoicePopover(); stopVoicePreview(); onCancel?.(); };
 
   saveBtn.onclick = async () => {
+    closeVoicePopover(); stopVoicePreview();
     // validate on a CLEANED copy (drop fully-blank rows) so the live model
     // the teacher is editing is never mutated by a failed save attempt.
     const clean = JSON.parse(JSON.stringify(data));
@@ -254,7 +421,10 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     clean.instruction = (clean.instruction || "").trim();
     clean.theme = "classic";
     clean.content.items = clean.content.items
-      .map(it => ({ word: (it.word || "").trim(), clue: (it.clue || "").trim() }))
+      .map(it => ({
+        word: (it.word || "").trim(), clue: (it.clue || "").trim(),
+        voice: it.voice || "", voiceId: it.voiceId || ""
+      }))
       .filter(it => it.word !== "");
 
     const err = validate(clean);
@@ -324,10 +494,12 @@ function normalize(activity) {
   a.content = a.content || {};
   let items = Array.isArray(a.content.items) ? a.content.items : [];
   if (items.length === 0) items = [blankItem()];
-  a.content.items = items.map(it => ({ word: it.word || "", clue: it.clue || "" }));
+  a.content.items = items.map(it => ({
+    word: it.word || "", clue: it.clue || "", voice: it.voice || "", voiceId: it.voiceId || ""
+  }));
   return a;
 }
-function blankItem() { return { word: "", clue: "" }; }
+function blankItem() { return { word: "", clue: "", voice: "", voiceId: "" }; }
 
 function validate(d) {
   if (!d.title) return "Please enter an activity title.";

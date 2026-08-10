@@ -1,6 +1,15 @@
 # 08 — FIREBASE (✅ ĐÃ LÀM XONG 19/7/2026)
 
-> ## ✅ TRẠNG THÁI: XONG — thầy KHÔNG phải làm gì nữa
+> ## ⚠️ 10/8/2026 — CẦN THẦY LÀM 1 VIỆC: dán lại luật bảo vệ (BƯỚC 6)
+>
+> Tính năng "Tạo giọng đọc" (Anagram editor, Kokoro TTS) thêm 1 collection Firestore mới
+> (`voiceClips`) — luật bảo vệ ở BƯỚC 6 bên dưới đã được cập nhật để cho phép nó, nhưng
+> **chỉ có hiệu lực SAU KHI thầy dán lại + Publish trên Firebase Console** (Claude không tự
+> đẩy luật lên Console được). Trước khi làm bước này, bấm "Generate voice" trong Anagram editor
+> sẽ báo lỗi (Firestore từ chối ghi vào collection chưa được luật cho phép). Không cần làm lại
+> BƯỚC 1-5 hay 7 — chỉ BƯỚC 6.
+>
+> ## ✅ TRẠNG THÁI: XONG — thầy KHÔNG phải làm gì nữa (trừ mục cảnh báo ngay trên)
 >
 > Toàn bộ 6 bước dưới đây **đã được làm tự động qua Claude in Chrome** ngày 19/7/2026, trên tài
 > khoản `namdaptrai01@gmail.com`. Giữ lại phần hướng dẫn bên dưới để tra cứu / làm lại nếu cần.
@@ -196,6 +205,17 @@ service cloud.firestore {
                     && request.resource.data.total is int;
       allow update: if false;
     }
+
+    // (10/8/2026) GIỌNG ĐỌC (TTS Kokoro, mục Anagram editor): mỗi từ 1 document
+    // riêng — KHÔNG nằm trong content.items[] của act/assignment vì audio
+    // (~50-150KB/từ) sẽ vỡ giới hạn 1MB/document nếu act có nhiều từ (tối đa
+    // 100 từ). id là Firestore auto-id (không đoán được) — ĐỌC CÔNG KHAI như
+    // assignments/{code}, để trang chơi của học sinh (không đăng nhập) vẫn
+    // phát được giọng đọc gắn trong bài đã giao, không cần bước copy riêng.
+    match /voiceClips/{clipId} {
+      allow read: if true;
+      allow write: if isTeacher();
+    }
   }
 }
 ```
@@ -246,6 +266,13 @@ assignments/{code}/scores/{id} ← (v0.8.0) bảng xếp hạng CÔNG KHAI: name
 
 results/{resultId}            ← mỗi lượt HS nộp 1 doc: assignmentId, studentName,
                                  score, total, timeMs, review, createdAt
+
+voiceClips/{clipId}           ← (10/8/2026) 1 document/từ = 1 giọng đọc TTS (text, voiceId,
+                                 audio base64, createdAt, ownerUid). CÔNG KHAI đọc — id
+                                 (auto-id) chỉ được biết tới qua content.items[].voice của
+                                 1 act/assignment, không list được cả collection. Tách riêng
+                                 khỏi act/assignment vì audio ~50-150KB/từ, 100 từ sẽ vỡ giới
+                                 hạn 1MB/document nếu nhét chung. core/voice-clips.js.
 ```
 
 **Vì sao tách `assignments` ra khỏi thư viện?** Để thư viện của thầy luôn riêng tư — HS chỉ
