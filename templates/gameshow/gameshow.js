@@ -22,6 +22,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
+import { createVoicePlayer } from "../../core/voice-playback.js";
 import { openGameshowEditor } from "./gameshow-editor.js";
 import { gsSound } from "./gs-sound.js";
 
@@ -146,6 +147,14 @@ const gameshowTemplate = {
       src: q   // the ORIGINAL content object — "Start with mistakes" filters by it
     }));
     const total = questions.length;
+
+    // Pronunciation playback (10/8/2026) — optional per-question, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // No extra "wait for the intro chime" delay is needed here (unlike
+    // simpler templates) — showQuestion() only ever runs after the TV-doors
+    // intro AND the ~1.65s "Get ready!" screen, both already well past any
+    // startup chime by the time the first question actually appears.
+    const voicePlayer = createVoicePlayer();
 
     // ----- scene -----
     root.innerHTML = "";
@@ -288,9 +297,23 @@ const gameshowTemplate = {
       const q = questions[index];
       const st = state[index];
 
+      voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       play.innerHTML = "";
       const card = el("div", "aw-gs-card");
-      card.append(el("div", "aw-gs-question", escapeHtml(q.question)));
+      const hasVoice = !!(q.src && q.src.voice);
+      const hideText = hasVoice && !!q.src.hideText;
+      const qEl0 = hideText
+        ? el("div", "aw-gs-question aw-clue-voiceonly")
+        : el("div", "aw-gs-question", escapeHtml(q.question));
+      card.append(qEl0);
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
+        qEl0.append(vBtn);
+        voicePlayer.play(q.src.voice, vBtn);
+      }
 
       const answers = el("div", "aw-gs-answers");
       const n = q.answers.length;
@@ -613,6 +636,7 @@ const gameshowTemplate = {
       stopTimer();
       pending.forEach(clearTimeout); pending.clear();
       gsSound.musicStop();
+      voicePlayer.stop();
       if (fitter) fitter.destroy();
       // undo the full-bleed background so other templates / re-mounts start clean
       if (stageEl) {

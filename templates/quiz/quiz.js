@@ -29,6 +29,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openQuizEditor } from "./quiz-editor.js";
 import { quizSound } from "./quiz-sound.js";
 
@@ -168,6 +169,13 @@ const quizTemplate = {
     let ending = false;     // out of lives: the game is on its way out, ignore any further input
     let heartTimer = null;  // fallback timer for the "heart pops out" animation
 
+    // Pronunciation playback (10/8/2026) — optional per-question, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `q.src` is the ORIGINAL content object (see the `questions` map
+    // above), so `.voice`/`.hideText` live at `q.src.voice`/`q.src.hideText`.
+    const voicePlayer = createVoicePlayer();
+    let firstQuestionSpoken = false;
+
     // ----- Build the card & tiles ONCE; navigation updates them in place -----
     root.innerHTML = "";
     const card = el("div", "aw-quiz-card");
@@ -239,7 +247,25 @@ const quizTemplate = {
       const answered = st.chosen !== null;
       const nAns = q.answers.length;
 
-      questionEl.textContent = q.question;
+      voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
+      questionEl.className = "aw-quiz-question";
+      const hasVoice = !!(q.src && q.src.voice);
+      const hideText = hasVoice && !!q.src.hideText;
+      if (hideText) {
+        questionEl.textContent = "";
+        questionEl.classList.add("aw-clue-voiceonly");
+      } else {
+        questionEl.textContent = q.question;
+      }
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
+        questionEl.append(vBtn);
+        voicePlayer.playDelayed(q.src.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstQuestionSpoken = true;
 
       // Answers-per-row: 2->2, 3->3, 4->4, 5->3(+2), 6->3(+3)... (max 4 per row,
       // otherwise two balanced rows with the bigger row on top). CSS centers a
@@ -530,6 +556,7 @@ const quizTemplate = {
       cancelAnimationFrame(fitRaf);
       if (autoTimer) clearTimeout(autoTimer);
       if (heartTimer) clearTimeout(heartTimer);
+      voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";   // hearts must not survive into the next game
     };
   }

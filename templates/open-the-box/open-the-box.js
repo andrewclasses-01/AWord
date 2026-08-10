@@ -28,6 +28,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+import { createVoicePlayer } from "../../core/voice-playback.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { otbSound } from "./otb-sound.js";
 import { openOtbEditor } from "./open-the-box-editor.js";
@@ -358,6 +359,11 @@ function mountQuestions(root, activity, ui) {
   let fitter = null;
   let lastBoxRect = null;    // rect of the tapped box, for the open/close zoom animation
   let hasPlayedEntrance = false;   // the LONG music-synced grid pop only plays once per play-through
+  // Pronunciation playback (10/8/2026) — optional per-question, carried
+  // through Change Template from an Anagram source (core/convert.js). No
+  // "wait for the intro chime" delay is needed: a question is only ever
+  // built in response to the PLAYER tapping a box, well after mount.
+  const voicePlayer = createVoicePlayer();
   // Point 4 (4/8/2026): answer tiles ignore taps until 80% of their slide-in
   // has played, so the player can't mis-tap a still-arriving tile before
   // reading it. Set false while the tiles slide in, flipped true by gateTimer.
@@ -816,11 +822,26 @@ function mountQuestions(root, activity, ui) {
     const it = items[i];
     const card = el("div", "aw-otb-qcard");
 
+    voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
     const body = el("div", "aw-otb-q-body");
     const qTile = el("div", "aw-otb-q-question");
+    const hasVoice = !!(it.src && it.src.voice);
+    const hideText = hasVoice && !!it.src.hideText;
     // inner text span so setupFit can size the question independently of its
-    // tile (the tile is the fit "box", this span is the "content").
-    qTile.append(el("div", "aw-otb-q-qtext", escapeHtml(it.question)));
+    // tile (the tile is the fit "box", this span is the "content"). Left
+    // textless when hideText is on — see .aw-otb-listenbtn (CSS) for why the
+    // listen button is absolutely positioned rather than a flow sibling: it
+    // must stay OUT of setupFit's fitOne() measurement of qTextEl, or the
+    // fit box wouldn't reserve room for it.
+    qTile.append(el("div", "aw-otb-q-qtext", hideText ? "" : escapeHtml(it.question)));
+    if (hasVoice) {
+      const vBtn = el("button", "aw-otb-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
+      vBtn.type = "button";
+      vBtn.setAttribute("aria-label", "Listen to pronunciation");
+      vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
+      qTile.append(vBtn);
+      voicePlayer.play(it.src.voice, vBtn);
+    }
     body.append(qTile);
 
     const row = el("div", "aw-otb-q-answers");
@@ -1173,6 +1194,7 @@ function mountQuestions(root, activity, ui) {
     if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
     if (fitter) fitter.destroy();
     stopSharedTimer();
+    voicePlayer.stop();
     if (ui.topbarMid) ui.topbarMid.innerHTML = "";
   };
 }

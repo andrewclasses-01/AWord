@@ -36,6 +36,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTfEditor } from "./true-false-editor.js";
 import { tfSound } from "./tf-sound.js";
 
@@ -179,6 +180,13 @@ const tfTemplate = {
     let gateTimer = null;     // unlocks the buttons once a new statement is ~50% in (item, 1/8)
     const tickTimers = [];    // discrete count-down "ting" timeouts (count-down mode only)
     const pendingMarks = [];
+
+    // Pronunciation playback (10/8/2026) — optional per-statement, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `statements[i]` IS the raw content object (line 154 is a shallow
+    // array copy only), so `.voice`/`.hideText` read straight off it.
+    const voicePlayer = createVoicePlayer();
+    let firstStatementSpoken = false;
 
     ui.onSubmit(() => finish("timesup"));
     window.addEventListener("keydown", onKey);
@@ -332,7 +340,26 @@ const tfTemplate = {
       const promptEl = root.querySelector(".aw-tf-prompt");
       if (!promptEl) return;
       promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
-      promptEl.textContent = statements[queue[0]].text;
+      voicePlayer.stop();                       // silence the PREVIOUS statement's clip, if any
+      promptEl.className = "aw-tf-prompt";       // drop any stale voiceonly class from the last statement
+      const st = statements[queue[0]];
+      const hasVoice = !!st.voice;
+      const hideText = hasVoice && !!st.hideText;
+      if (hideText) {
+        promptEl.textContent = "";
+        promptEl.classList.add("aw-clue-voiceonly");
+      } else {
+        promptEl.textContent = st.text;
+      }
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); };
+        promptEl.append(vBtn);
+        voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstStatementSpoken = true;
       const off = offscreenPx();
       promptEl.style.transform = `translateX(${-off}px)`;
       void promptEl.offsetWidth; // reflow so the start position is committed before animating from it
@@ -660,6 +687,7 @@ const tfTemplate = {
       if (balanceTimer) clearTimeout(balanceTimer);
       if (gateTimer) clearTimeout(gateTimer);
       tickTimers.forEach(clearTimeout);
+      voicePlayer.stop();
       haltPromptAnim();
       pendingMarks.forEach(clearTimeout);
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";

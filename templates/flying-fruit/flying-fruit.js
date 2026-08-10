@@ -25,7 +25,9 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { ffSound } from "./ff-sound.js";
 import { openFlyingFruitEditor } from "./flying-fruit-editor.js";
 
@@ -120,7 +122,12 @@ const flyingFruitTemplate = {
 
     // ---------- content ----------
     let items = [...(activity.content?.items || [])].filter(isValidItem)
-      .map(it => ({ word: it.word.trim(), clue: (it.clue || "").trim() }));
+      .map(it => ({
+        word: it.word.trim(), clue: (it.clue || "").trim(),
+        // Pronunciation playback (10/8/2026) — optional per-item, carried
+        // through Change Template from an Anagram source (core/convert.js).
+        voice: it.voice || "", voiceId: it.voiceId || "", hideText: !!(it.voice && it.hideText)
+      }));
     if (opt.shuffleQuestions) items = shuffle(items);
     const total = items.length;
     if (total === 0) {
@@ -196,13 +203,36 @@ const flyingFruitTemplate = {
     }
     buildHearts();
 
+    // Pronunciation playback (10/8/2026) — see the `items` map above for
+    // where voice/voiceId/hideText are carried from the source content.
+    const voicePlayer = createVoicePlayer();
+    let firstItemSpoken = false;
+
     // ---------- clue / item ----------
     function startItem(i) {
       current = items[i];
       otherWords = items.filter((_, j) => j !== i).map(x => x.word).filter(Boolean);
       queue = [];
       if (fitter) { fitter.destroy(); fitter = null; }
-      clue.textContent = current.clue || "Tap the correct answer.";
+      voicePlayer.stop();   // silence the PREVIOUS item's clip, if any
+      clue.className = "aw-ff-clue";
+      const hasVoice = !!current.voice;
+      const hideText = hasVoice && !!current.hideText;
+      if (hideText) {
+        clue.textContent = "";
+        clue.classList.add("aw-clue-voiceonly");
+      } else {
+        clue.textContent = current.clue || "Tap the correct answer.";
+      }
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(current.voice, vBtn); };
+        clue.append(vBtn);
+        voicePlayer.playDelayed(current.voice, vBtn, firstItemSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstItemSpoken = true;
       fitter = autoFit(root, clueWrap, s => clueWrap.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.02,
         measure: () => clue.offsetHeight
@@ -436,6 +466,7 @@ const flyingFruitTemplate = {
       if (ambientTimer) clearTimeout(ambientTimer);
       timers.forEach(t => clearTimeout(t)); timers.clear();
       if (fitter) fitter.destroy();
+      voicePlayer.stop();
       if (ui.topbarMid) ui.topbarMid.innerHTML = "";
     };
   },

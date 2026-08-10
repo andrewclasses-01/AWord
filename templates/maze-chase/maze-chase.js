@@ -26,8 +26,10 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { mcSound } from "./mc-sound.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
 
@@ -277,6 +279,13 @@ const mazeChaseTemplate = {
     // ---- state ----
     const state = items.map(() => ({ done: false, correct: false, wrong: [], answeredWith: null }));
     let index = 0, finished = false, livesLeft = Math.max(1, opt.lives || 5);
+
+    // Pronunciation playback (10/8/2026) — optional per-question, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `items[index]` IS the raw content object (line 233 only filters, no
+    // copy/map), so `.voice`/`.hideText` read straight off it.
+    const voicePlayer = createVoicePlayer();
+    let firstQuestionSpoken = false;
     let penalty = 0;                      // total points subtracted for wrong answers (pointsOff)
     let grid = null, cells = [];          // gridLayer cell DOM
     let pads = [];                        // {r,c,el,ans,resolved}
@@ -346,10 +355,27 @@ const mazeChaseTemplate = {
 
       // question + answers
       const q = items[index];
+      voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       qBanner.innerHTML = "";
+      qBanner.className = "aw-mc-question";
+      const hasVoice = !!q.voice;
+      const hideText = hasVoice && !!q.hideText;
       const qText = el("div", "aw-mc-qtext", "");
-      qText.textContent = q.question || "";
+      if (hideText) {
+        qBanner.classList.add("aw-clue-voiceonly");
+      } else {
+        qText.textContent = q.question || "";
+      }
       qBanner.append(qText);
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
+        qText.append(vBtn);
+        voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstQuestionSpoken = true;
       fitText(qBanner, qText);
 
       // player start = a cell in the left third; enemies far on the right
@@ -628,6 +654,7 @@ const mazeChaseTemplate = {
       window.removeEventListener("keydown", onKey);
       clearInterval(moveTimer); clearInterval(enemyTimer);
       clearTimeout(invulnTimer);
+      voicePlayer.stop();
     };
   },
 

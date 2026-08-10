@@ -47,6 +47,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openFtmEditor } from "./find-the-match-editor.js";
 import { ftmSound } from "./ftm-sound.js";
 
@@ -237,6 +238,13 @@ const ftmTemplate = {
     let gateTimer = null;     // unlocks the tiles once a new prompt is ~50% in (like True/false)
     const tickTimers = [];    // discrete count-down "ting" timeouts (count-down mode only)
     const pendingMarks = [];  // setTimeouts for fly marks / heart-pop cleanup
+
+    // Pronunciation playback (10/8/2026) — optional per-pair, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `pairs[i]` IS the raw content object (line 191 is a shallow filter
+    // copy only), so `.voice`/`.hideText` read straight off it.
+    const voicePlayer = createVoicePlayer();
+    let firstPromptSpoken = false;
 
     ui.onSubmit(() => finish("timesup"), () => state.filter(s => s.solved || s.skipped).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
@@ -514,7 +522,26 @@ const ftmTemplate = {
       const promptEl = root.querySelector(".aw-ftm-prompt");
       if (!promptEl) return;
       promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
-      promptEl.textContent = escapeHtml(pairs[queue[0]].definition);
+      voicePlayer.stop();                       // silence the PREVIOUS pair's clip, if any
+      promptEl.className = "aw-ftm-prompt";      // drop any stale voiceonly class from the last pair
+      const pr = pairs[queue[0]];
+      const hasVoice = !!pr.voice;
+      const hideText = hasVoice && !!pr.hideText;
+      if (hideText) {
+        promptEl.textContent = "";
+        promptEl.classList.add("aw-clue-voiceonly");
+      } else {
+        promptEl.textContent = escapeHtml(pr.definition);
+      }
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(pr.voice, vBtn); };
+        promptEl.append(vBtn);
+        voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstPromptSpoken = true;
       fitPrompt(promptEl);                       // shrink long definitions so nothing is clipped
       const off = offscreenPx();
       promptEl.style.transform = `translateX(${-off}px)`;
@@ -878,6 +905,7 @@ const ftmTemplate = {
       if (gateTimer) clearTimeout(gateTimer);
       tickTimers.forEach(clearTimeout);
       pendingMarks.forEach(clearTimeout);
+      voicePlayer.stop();
       haltPromptAnim();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
       document.querySelectorAll(".aw-ftm-flyclone, .aw-ftm-star, .aw-ftm-bigcheck").forEach(n => n.remove());

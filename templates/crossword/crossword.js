@@ -61,6 +61,7 @@ import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { createVoicePlayer } from "../../core/voice-playback.js";
 import { openCrosswordEditor } from "./crossword-editor.js";
 import { crosswordSound } from "./crossword-sound.js";
 
@@ -302,6 +303,13 @@ const crosswordTemplate = {
     let livePoints = 0;              // shown score: +1 per correct, −penalty per wrong (Minus mode); may go negative
     let clueFitter = null;
     let ro = null;
+    // Pronunciation playback (10/8/2026) — optional per-word, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `clues[curWord].src` is the ORIGINAL content object (see the `clues`
+    // build at the top of this file), so `.voice`/`.hideText` live there. No
+    // "wait for the intro chime" delay is needed — a word's clue is only
+    // ever shown after the PLAYER taps a numbered cell, well after mount.
+    const voicePlayer = createVoicePlayer();
     const timers = [];               // pending setTimeouts for the current word's end sequence
     const pushTimer = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const clearTimers = () => { timers.forEach(clearTimeout); timers.length = 0; };
@@ -547,7 +555,10 @@ const crosswordTemplate = {
         clueBar.classList.remove("is-active");   // empty on the board (slogan is up top now)
         clueText.style.removeProperty("--fit");
         clueText.textContent = "";
-        clueText.classList.remove("is-exit");
+        clueText.classList.remove("is-exit", "aw-clue-voiceonly");
+        voicePlayer.stop();   // a word just closed — silence its clip, if any
+        const oldBtn = clueBar.querySelector(".aw-voicebtn");
+        if (oldBtn) oldBtn.remove();
         paintGrid();
         return;
       }
@@ -687,7 +698,31 @@ const crosswordTemplate = {
 
     function updateClueBar() {
       const w = clues[curWord];
-      clueText.textContent = w.clue || "(no clue)";
+      voicePlayer.stop();   // silence the PREVIOUS word's clip, if any
+      const oldBtn = clueBar.querySelector(".aw-voicebtn");
+      if (oldBtn) oldBtn.remove();
+      const hasVoice = !!(w.src && w.src.voice);
+      const hideText = hasVoice && !!w.src.hideText;
+      clueText.classList.toggle("aw-clue-voiceonly", hideText);
+      clueText.textContent = hideText ? "" : (w.clue || "(no clue)");
+      if (hasVoice) {
+        // Appended INSIDE clueText (not clueBar) on purpose, mirroring
+        // Anagram's own pattern: `.aw-voicebtn`'s `font: inherit; width:
+        // 0.9em` needs clueText's OWN dynamic font-size (--fit) to size
+        // itself correctly, and updateClueBar()'s autoFit measures
+        // `clueText.scrollHeight` — which correctly grows to include the
+        // button, same as Anagram's outer-card fitter does for its clueEl.
+        // Own click handler must stop propagation — .aw-cw-cluebar.is-active
+        // itself is clickable (tap the clue to bail back to the board, see
+        // the clueBar.onclick set up above) and would otherwise catch this
+        // click too and exit the word the instant the button is tapped.
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(w.src.voice, vBtn); };
+        clueText.append(vBtn);
+        voicePlayer.play(w.src.voice, vBtn);
+      }
       if (clueFitter) { clueFitter.destroy(); clueFitter = null; }
       clueFitter = autoFit(clueBar, clueText, s => clueText.style.setProperty("--fit", s),
         { min: 0.55, slack: 4, measure: () => clueText.scrollHeight });
@@ -1045,6 +1080,7 @@ const crosswordTemplate = {
       if (clueFitter) clueFitter.destroy();
       clearTimers();
       settleTimers.forEach(clearTimeout);
+      voicePlayer.stop();
     };
   }
 };

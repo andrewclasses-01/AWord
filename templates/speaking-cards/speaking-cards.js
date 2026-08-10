@@ -39,6 +39,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { sound as coreSound } from "../../core/sound.js";
+import { createVoicePlayer } from "../../core/voice-playback.js";
 import { scSound, soundDurationMs, stopSound } from "./speaking-cards-sound.js";
 
 // How many deal places fit per row for a given count (kept tidy by hand).
@@ -146,6 +147,12 @@ const speakingCardsTemplate = {
     let rr = 0;                                // round-robin: which place gets the next deal
     let roundOver = false;
     let busy = false;                          // guards against double-deal mid-animation
+    // Pronunciation playback (10/8/2026) — optional per-card, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `cards[idx]` IS the raw content object (line 125 only filters), so
+    // `.voice`/`.hideText` read straight off it. See buildFront()/
+    // finishFlip() for where the button/auto-play actually hook in.
+    const voicePlayer = createVoicePlayer();
     let panning = true;                        // true during the intro camera pan (no dealing yet)
     let shuffleTimer = null;
 
@@ -411,8 +418,18 @@ const speakingCardsTemplate = {
         if (swapped) return; swapped = true;
         const front = buildFront(cards[idx]);
         cardEl.className = "aw-sc-card";
-        cardEl.innerHTML = front.innerHTML;
+        // MOVE front's children in (not `innerHTML = front.innerHTML`, a
+        // string round-trip that would silently drop the listen button's
+        // onclick — replaceChildren() relocates the actual node objects,
+        // listeners intact, since `front` itself was never inserted anywhere).
+        cardEl.replaceChildren(...front.childNodes);
         fitCard(place, cardEl);
+        // Freshly DEALT card only (not a resting one from renderStatic, e.g.
+        // after Undo/Shuffle/initial mount) auto-plays its pronunciation —
+        // avoids several cards' clips firing/overlapping when more than one
+        // deal place is already occupied at once.
+        const card = cards[idx];
+        if (card.voice) voicePlayer.play(card.voice, cardEl.querySelector(".aw-sc-listenbtn"));
         half2 = cardEl.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
           { duration: 130, easing: "ease-out", fill: "forwards" });
         let ended = false;
@@ -439,17 +456,40 @@ const speakingCardsTemplate = {
       const body = el("div", "aw-sc-cardbody");
       const txtWrap = el("div", "aw-sc-cardtextwrap");
       const txt = el("div", "aw-sc-cardtext");
-      const ph = splitPhonetic(card.text);
-      if (ph) {
-        txt.innerHTML =
-          `<span class="aw-sc-word">${escapeHtml(ph.word)}</span>` +
-          `<span class="aw-sc-cardipa">${escapeHtml(ph.ipa)}</span>`;
+      const hasVoice = !!card.voice;
+      // Hide text (10/8/2026) is only offered with exactly ONE deal place —
+      // with several cards dealt at once there's no room for a giant
+      // centered button per card, and the prompt reads better always-shown
+      // in that layout (teacher's scope call for this template). A small
+      // listen icon is still offered on every card, any deal-place count.
+      const hideText = hasVoice && !!card.hideText && dealPlaces === 1;
+      if (hideText) {
+        txtWrap.classList.add("aw-clue-voiceonly");
       } else {
-        txt.textContent = card.text || "";   // textContent → wraps at spaces, never mid-word
+        const ph = splitPhonetic(card.text);
+        if (ph) {
+          txt.innerHTML =
+            `<span class="aw-sc-word">${escapeHtml(ph.word)}</span>` +
+            `<span class="aw-sc-cardipa">${escapeHtml(ph.ipa)}</span>`;
+        } else {
+          txt.textContent = card.text || "";   // textContent → wraps at spaces, never mid-word
+        }
       }
       txtWrap.append(txt);
       body.append(txtWrap);
       cardEl.append(body);
+      if (hasVoice) {
+        // Small variant sits OUTSIDE txtWrap (absolute corner on .aw-sc-card,
+        // which is already position:absolute — a containing block for free)
+        // so it never participates in fitCard()'s wrap/txt measurements. The
+        // large hideText variant is txtWrap's own sole child instead, using
+        // the same .aw-clue-voiceonly centering every other template uses.
+        const vBtn = el("button", "aw-sc-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(card.voice, vBtn); };
+        (hideText ? txtWrap : cardEl).append(vBtn);
+      }
       return cardEl;
     }
 
@@ -515,6 +555,7 @@ const speakingCardsTemplate = {
       window.removeEventListener("keydown", onKey);
       clearTimeout(shuffleTimer);
       stopIntro();
+      voicePlayer.stop();
       sceneBar.destroy();
       clearFitters();
       restoreChrome();

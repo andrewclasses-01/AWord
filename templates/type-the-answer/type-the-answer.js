@@ -30,6 +30,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
 
@@ -160,6 +161,13 @@ const ttaTemplate = {
     let andrewUsed = false;             // "Andrew help" — ONE use for the WHOLE game (all questions share it)
     let andrewGlowing = false;          // true from the press until that question is submitted (bright + halo)
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
+
+    // Pronunciation playback (10/8/2026) — optional per-question, carried
+    // through Change Template from an Anagram source (core/convert.js).
+    // `items[i]` IS the raw content object directly (no `.src` wrapper in
+    // this template), so `.voice`/`.hideText` read straight off it.
+    const voicePlayer = createVoicePlayer();
+    let firstQuestionSpoken = false;
 
     // ===== persistent shell — built ONCE, updated in place per question =====
     const card = el("div", "aw-tta-card");
@@ -425,7 +433,24 @@ const ttaTemplate = {
       fitLayout();
 
       // --- question text ---
-      const setPrompt = () => { promptEl.innerHTML = escapeHtml(it.prompt); fitLayout(); };
+      const setPrompt = () => {
+        voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
+        const oldBtn = qArea.querySelector(".aw-tta-listenbtn");
+        if (oldBtn) oldBtn.remove();
+        const hasVoice = !!it.voice;
+        const hideText = hasVoice && !!it.hideText;
+        promptEl.innerHTML = hideText ? "" : escapeHtml(it.prompt);
+        if (hasVoice) {
+          const vBtn = el("button", "aw-tta-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
+          vBtn.type = "button";
+          vBtn.setAttribute("aria-label", "Listen to pronunciation");
+          vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); };
+          qArea.append(vBtn);
+          voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        }
+        firstQuestionSpoken = true;
+        fitLayout();
+      };
       if (withFade) {
         const out = promptEl.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease" });
         const swap = () => {
@@ -773,6 +798,7 @@ const ttaTemplate = {
       clearAutoTimer();
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
+      voicePlayer.stop();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
     };
   }

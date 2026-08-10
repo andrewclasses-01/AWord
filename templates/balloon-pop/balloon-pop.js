@@ -23,8 +23,10 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { icons } from "../../core/icons.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { autoFit } from "../../core/fit.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { bpSound } from "./balloon-pop-sound.js";
 import { openBalloonPopEditor } from "./balloon-pop-editor.js";
 
@@ -214,6 +216,13 @@ function mountBalloonPop(root, activity, ui) {
     ui.topbarMid.append(row);
   }
 
+  // Pronunciation playback (10/8/2026) — optional per-level, carried
+  // through Change Template from an Anagram source (core/convert.js).
+  // `it.src` is the ORIGINAL content object (see the `pool` map above), so
+  // `.voice`/`.hideText` live at `it.src.voice`/`it.src.hideText`.
+  const voicePlayer = createVoicePlayer();
+  let firstLevelSpoken = false;
+
   loadLevel(0);
   updateScore();
   rafId = requestAnimationFrame(tick);
@@ -225,8 +234,26 @@ function mountBalloonPop(root, activity, ui) {
     levelIndex = i;
     const it = levelItems[i];
     if (levelSign) levelSign.textContent = "Level " + (i + 1);
+    voicePlayer.stop();   // silence the PREVIOUS level's clip, if any
     if (cartText) {
-      cartText.textContent = it.definition;
+      cartText.className = "aw-bp-cart-text";
+      const hasVoice = !!(it.src && it.src.voice);
+      const hideText = hasVoice && !!it.src.hideText;
+      if (hideText) {
+        cartText.textContent = "";
+        cartText.classList.add("aw-clue-voiceonly");
+      } else {
+        cartText.textContent = it.definition;
+      }
+      if (hasVoice) {
+        const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+        vBtn.type = "button";
+        vBtn.setAttribute("aria-label", "Listen to pronunciation");
+        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
+        cartText.append(vBtn);
+        voicePlayer.playDelayed(it.src.voice, vBtn, firstLevelSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+      }
+      firstLevelSpoken = true;
       setupCartFit();
     }
     buildDeck();
@@ -539,6 +566,7 @@ function mountBalloonPop(root, activity, ui) {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
     if (fitter) { fitter.destroy(); fitter = null; }
+    voicePlayer.stop();
     blimps.length = 0;
     if (ui.topbarMid) ui.topbarMid.innerHTML = "";
   };

@@ -33,7 +33,9 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
+import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { wamSound } from "./wam-sound.js";
 import { openWamEditor } from "./whack-a-mole-editor.js";
 
@@ -274,6 +276,14 @@ const wamTemplate = {
     let endAt = 0;                      // performance.now() ms when the countdown hits 0
     const timers = new Set();           // every pending setTimeout (swept on cleanup)
     let fitter = null;                  // autoFit for the quiz sign question
+    // Pronunciation playback (10/8/2026) — optional per-question, QUIZ MODE
+    // ONLY (carried through Change Template from an Anagram source, see
+    // core/convert.js). Deliberately NOT wired up for true/false mode: its
+    // several-moles-on-screen-at-once bubbles have no single "current
+    // question" and are sized/timed for a fast reflex read, not a listen —
+    // see templates/whack-a-mole/GHI CHU WHACK-A-MOLE.md for the reasoning.
+    const voicePlayer = createVoicePlayer();
+    let firstQuestionSpoken = false;
 
     // ---------- OBJECTIVE model ----------
     // trueFalse: the "needed" answers are the ones the sign points at (TRUE, or
@@ -452,10 +462,24 @@ const wamTemplate = {
       }
       if (fitter) { fitter.destroy(); fitter = null; }
       board.innerHTML = "";
+      voicePlayer.stop();   // silence the PREVIOUS question's clip, if any (quiz mode only ever plays one)
       if (mode === "quiz") {
         const q = questions[levelIndex];
-        const qEl = el("div", "aw-wam-sign-question", escapeHtml(q ? q.question : ""));
+        const hasVoice = !!(q && q.voice);
+        const hideText = hasVoice && !!q.hideText;
+        const qEl = hideText
+          ? el("div", "aw-wam-sign-question aw-clue-voiceonly")
+          : el("div", "aw-wam-sign-question", escapeHtml(q ? q.question : ""));
         board.append(qEl);
+        if (hasVoice) {
+          const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+          vBtn.type = "button";
+          vBtn.setAttribute("aria-label", "Listen to pronunciation");
+          vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
+          qEl.append(vBtn);
+          voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        }
+        firstQuestionSpoken = true;
         fitter = autoFit(plankFitBox(), board, s => board.style.setProperty("--fit", s), {
           slack: 2,
           measure: () => qEl.offsetHeight
@@ -895,6 +919,7 @@ const wamTemplate = {
       if (clockTimer) clearInterval(clockTimer);
       timers.forEach(t => clearTimeout(t)); timers.clear();
       if (fitter) fitter.destroy();
+      voicePlayer.stop();
       if (ui.topbarMid) ui.topbarMid.innerHTML = "";
       chrome.forEach(e => { e.style.position = ""; e.style.zIndex = ""; });   // drop the chrome back to normal flow
       if (engTimer) engTimer.style.visibility = "";

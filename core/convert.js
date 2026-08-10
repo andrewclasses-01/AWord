@@ -57,7 +57,7 @@ export function toRecords(activity) {
     case "anagram":
     case "flying_fruit": {
       const items = c.items || [];
-      return { kind: "qa", records: items.map(i => qaRec(i.word, i.clue)) };
+      return { kind: "qa", records: items.map(i => qaRec(i.word, i.clue, i)) };
     }
     case "crossword": {
       const ws = c.words || [];
@@ -116,9 +116,20 @@ export function toRecords(activity) {
   }
 }
 
-function qaRec(term, clue) {
+// `extra` (10/8/2026) — the RAW source item, if the caller has one (only
+// Anagram's own items carry `voice`/`voiceId`/`hideText` today; every other
+// source template's items simply lack these fields, so they end up "").
+// Carrying them through the record lets Change Template hand the SAME
+// pronunciation + hide-text choice to whichever game the teacher switches
+// to, instead of that choice only ever surviving inside Anagram itself.
+function qaRec(term, clue, extra) {
   const t = String(term || "");
-  return { term: t, clue: String(clue || ""), altAnswers: [t], distractors: [] };
+  return {
+    term: t, clue: String(clue || ""), altAnswers: [t], distractors: [],
+    voice: (extra && extra.voice) || "",
+    voiceId: (extra && extra.voiceId) || "",
+    hideText: !!(extra && extra.voice && extra.hideText)   // only ever true alongside a real voice
+  };
 }
 
 // A quiz-shaped list [{question, answers:[{text,correct}]}] -> qa records.
@@ -216,20 +227,44 @@ export async function convertActivity(activity, targetType) {
   };
 }
 
+// Voice/hideText travel the SAME across every target (10/8/2026) — every
+// item shape below gets these 3 extra fields on top of its own normal
+// ones, regardless of target type, so each template's play-side code can
+// check `item.voice`/`item.hideText` with one shared convention instead of
+// a different property name per game. "tf"/"sentence"/"card" records never
+// carry them (only Anagram's "qa" records do, via qaRec's `extra` param
+// above) — voiceOf/voiceIdOf/hideTextOf just read "" / false for those,
+// same as any other QA record with no voice.
+function voiceOf(r) { return r.voice || ""; }
+function voiceIdOf(r) { return r.voiceId || ""; }
+function hideTextOf(r) { return !!(r.voice && r.hideText); }
+
 function buildContent(targetType, kind, records) {
   switch (targetType) {
     case "anagram":
     case "flying_fruit":
       return {
         withClues: records.some(r => clueOf(r, kind).trim()),
-        items: records.map(r => ({ word: termOf(r, kind), clue: clueOf(r, kind) }))
+        items: records.map(r => ({
+          word: termOf(r, kind), clue: clueOf(r, kind),
+          voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+        }))
       };
     case "crossword":
-      return { words: records.map(r => ({ answer: termOf(r, kind), clue: clueOf(r, kind) })) };
+      return { words: records.map(r => ({
+        answer: termOf(r, kind), clue: clueOf(r, kind),
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
     case "find_the_match":
-      return { pairs: records.map(r => ({ keyword: termOf(r, kind), definition: clueOf(r, kind) })) };
+      return { pairs: records.map(r => ({
+        keyword: termOf(r, kind), definition: clueOf(r, kind),
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
     case "balloon_pop":
-      return { items: records.map(r => ({ keyword: termOf(r, kind), definition: clueOf(r, kind) })) };
+      return { items: records.map(r => ({
+        keyword: termOf(r, kind), definition: clueOf(r, kind),
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
     case "quiz":
     case "gameshow":
     case "maze_chase":
@@ -237,21 +272,32 @@ function buildContent(targetType, kind, records) {
     case "open_the_box":
       return { items: records.map(r => buildMc(r, records, kind)) };
     case "whack_a_mole":
-      if (kind === "tf") return { statements: records.map(r => ({ text: r.text, answer: !!r.truth })) };
+      if (kind === "tf") return { statements: records.map(r => ({
+        text: r.text, answer: !!r.truth,
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
       return { questions: records.map(r => buildMc(r, records, kind)) };
     case "true_false":
-      return { statements: records.map(r => ({ text: r.text || "", answer: !!r.truth })) };
+      return { statements: records.map(r => ({
+        text: r.text || "", answer: !!r.truth,
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
     case "type_the_answer":
       return {
         mode: "qa",
-        items: records.map(r => ({ prompt: promptOf(r, kind), acceptedAnswers: acceptedOf(r, kind) }))
+        items: records.map(r => ({
+          prompt: promptOf(r, kind), acceptedAnswers: acceptedOf(r, kind),
+          voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+        }))
       };
     case "speaking_cards":
-      return { cards: records.map(r => ({ text: cardText(r, kind) })) };
+      return { cards: records.map(r => ({
+        text: cardText(r, kind), voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+      })) };
     // Only the terms travel: the clue (if the source had one) is dropped on
-    // purpose, because this game never shows a clue. `gameSets` starts EMPTY —
-    // a set pairs a printed numbering with a class roll, so it can only be made
-    // on the game's own setup screen once a real class has been picked.
+    // purpose, because this game never shows a clue — and with no clue
+    // there is nothing for hideText to stand in for either, so voice/
+    // hideText are deliberately NOT carried into Running team.
     case "running_team":
       return { words: records.map(r => termOf(r, kind)).filter(Boolean), gameSets: [] };
     default:
@@ -300,5 +346,8 @@ function buildMc(r, all, kind) {
     { text: correct, correct: true },
     ...distr.map(d => ({ text: d, correct: false }))
   ]);
-  return { question: (r.clue && r.clue.trim()) ? r.clue : correct, answers };
+  return {
+    question: (r.clue && r.clue.trim()) ? r.clue : correct, answers,
+    voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+  };
 }

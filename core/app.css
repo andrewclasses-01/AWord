@@ -795,6 +795,52 @@ body {
 .aw-btn-primary { background: #2f7bff; color: #fff; }
 .aw-btn-big { font-size: 2cqw; padding: 1.4cqw 4.4cqw; }
 
+/* ---------- Shared "listen to pronunciation" button (10/8/2026) ----------
+   Used by any template whose content items can carry an optional `voice`
+   clip (Anagram originally; now every game "Change Template" can convert an
+   Anagram-sourced activity into, via core/convert.js carrying voice/
+   voiceId/hideText through for each target — see core/voice-playback.js).
+   Sized in `em` via `font: inherit` so it automatically matches whichever
+   question/clue text element it's appended into, in ANY template's own
+   font-size, with ZERO per-template CSS needed beyond adding the class.
+   (Anagram itself pre-dates this and keeps its own near-identical
+   `.aw-anagram-listenbtn` — not migrated to this shared class, to avoid
+   touching already-shipped/tested code for an unrelated batch of games.) */
+.aw-voicebtn {
+  font: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  vertical-align: -0.18em;
+  width: 0.9em; height: 0.9em;
+  margin-left: 0.3em;
+  padding: 0; border: none; border-radius: 50%;
+  background: rgba(47, 111, 237, .14);
+  color: #2f6fed;
+  cursor: pointer;
+}
+.aw-voicebtn svg { width: 66%; height: 66%; }
+.aw-voicebtn:hover { background: rgba(47, 111, 237, .24); }
+.aw-voicebtn:active { transform: scale(.9); }
+/* Larger, un-inset variant for the hide-text case — the box's ONLY child
+   instead of trailing after text, so it drops the text-hugging
+   vertical-align/margin-left and simply grows. */
+.aw-voicebtn-lg { width: 1.7em; height: 1.7em; margin-left: 0; vertical-align: middle; }
+/* Playing glow — green pulse while the clip is actually sounding. A plain
+   CSS animation so it automatically freezes along with everything else in
+   the stage when Menu Pause opens (core/engine.js's enterMenuPause() pauses
+   every WAAPI/CSS animation under .aw-stage-inner — no extra hook needed). */
+.aw-voicebtn.is-playing {
+  background: rgba(34, 197, 94, .22);
+  color: #16a34a;
+  animation: aw-voicebtn-glow 1.1s ease-in-out infinite;
+}
+@keyframes aw-voicebtn-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); }
+  50% { box-shadow: 0 0 0 0.35em rgba(34, 197, 94, 0); }
+}
+/* Centers a textless clue/question box's ONLY child (the enlarged
+   .aw-voicebtn-lg) when a template hides its text entirely. */
+.aw-clue-voiceonly { display: flex; align-items: center; justify-content: center; min-height: 1.6em; }
+
 /* ---------- Shared animations ---------- */
 @keyframes aw-pop { from { opacity: 0; transform: translateY(6px) scale(.98); } to { opacity: 1; transform: none; } }
 /* Pop-in that PRESERVES horizontal centering — for any element positioned with
