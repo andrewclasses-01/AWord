@@ -5,7 +5,15 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 104, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN
+> Cập nhật lần cuối: **10/8/2026 (Đợt 105, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ
+> 3, giống "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai + hệ số nhân "Bonus x" cho từ PERFECT) +
+> GOM THANH "POINTS OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js`
+> + `.css`, dùng `tpl.hidePointsOff` đã có sẵn). 🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt thật —
+> `Score -13/46` cho 1 từ có lỗi với Points off wrong-letter=20, `Score 14/46` cho 1 từ PERFECT với Bonus
+> x=2 mặc định, cả hai khớp phép tính tay; chế độ cũ không hồi quy — CHƯA commit).**
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 105 + `templates/anagram/GHI CHU ANAGRAM.md` Đợt 105.
+>
+> Trước đó: **10/8/2026 (Đợt 104, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN
 > TRÙNG TÊN + GUARD THƯ MỤC "ACT". CÓ SỬA CORE: `core/lesson-import.js` (tiêu đề ENG1/ENG2 đổi thành
 > `xxx / ENG1 VOICE`/`xxx / ENG2 VOICE`). + `main.js` (khung Voice giờ là danh sách hàng riêng từng act
 > thay vì 1 ô tích gộp; dò trùng tên act/thư mục trước khi Import — đỏ nhưng vẫn tích, chặn Import tới khi

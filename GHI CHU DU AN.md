@@ -5,6 +5,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 105 (10/8/2026, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ 3) + GOM "POINTS
+OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `.css`, dùng
+`tpl.hidePointsOff` đã có sẵn cho nhiều template khác). 🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt
+thật, CHƯA commit).
+
+Thầy yêu cầu chế độ chơi thứ 3: giống "Letters with bonus" (bấm đúng thứ tự chữ) nhưng có điểm trừ mỗi
+lần bấm sai + hệ số nhân điểm khi giải hoàn hảo, kèm sắp xếp lại thanh "Points off".
+
+**Tóm tắt (chi tiết đầy đủ + kỹ thuật test: `templates/anagram/GHI CHU ANAGRAM.md` Đợt 105)**:
+1. 3 chế độ: Letters with bonus · On submit · **Bonus and minus** (mới) — chế độ mới dùng chung mọi tương
+   tác của "bonus" (gộp qua biến `isBonusFamily`), chỉ khác cách tính điểm.
+2. Thanh "Points off" dời lên ngay dưới 3 chế độ, ngay trên Lives (trước đây là control CHUNG của core,
+   nằm dưới cùng) — Anagram giờ tự xây control này (`hidePointsOff: true`), đổi Ý NGHĨA theo mode: "Letters
+   with bonus" không còn thanh nào (bỏ hẳn trừ điểm); "On submit" mở rộng 0..5 → **0..-10**; "Bonus and
+   minus" đổi thành "Points off (wrong letter)" 0..100 (nấc 5) trừ **mỗi lần bấm sai 1 chữ**, kèm thanh
+   MỚI "Bonus x" (1x..5x, mặc định 2x) nhân điểm từ PERFECT.
+3. Bấm sai (chế độ mới) bay thêm 1 số ĐỎ "-N" từ đúng ô đang chờ chữ tới ô điểm (hàm mới
+   `flyLetterPenalty`, cỡ chữ tối thiểu ~1 ô thật theo đúng yêu cầu "không bị nhỏ"), trừ điểm lúc số bay
+   TỚI NƠI. PERFECT hiện "Nx PERFECT" thay vì "PERFECT" trơn khi ở chế độ mới.
+
+**Đã test qua trình duyệt thật** (`test.html`, bấm THẬT qua Browser pane, không mô phỏng PointerEvent giả
+— giả lập bị Chrome từ chối `setPointerCapture` do không phải pointer thật, tự bắt được và đổi cách test
+giữa chừng): chơi hết 1 từ có 1 lỗi ở chế độ mới (Points off wrong-letter=20) → bảng tổng kết đúng
+**`Score -13/46` / `Total: 7/46`** (7×1 − 20, khớp phép tính tay); 1 từ PERFECT (Bonus x giữ mặc định 2x)
+→ **`Score 14/46`** (7×2, xác nhận công thức `n × mult`); chế độ "Letters with bonus" cũ không đổi gì vẫn
+ra đúng `Score 16/46` cho 1 từ 8 chữ PERFECT (8×2) — xác nhận không hồi quy. 0 lỗi console mới. ⚠️ Phiên
+Browser pane này có `document.visibilityState:"hidden"` nên `requestAnimationFrame` không chạy (đúng bẫy
+throttle đã biết) — hiệu ứng số bay GIỮA game không thấy cập nhật trên màn hình dù logic tính đúng (xác
+nhận qua log tạm), chỉ xác nhận chắc chắn được qua BẢNG TỔNG KẾT cuối game (không phụ thuộc rAF). Không
+phải bug, chỉ là giới hạn máy test.
+
+**Việc kế: thầy tự chơi "Bonus and minus" trên `test.html`, đặc biệt xem MẮT THẬT hiệu ứng số đỏ bay lên
+(máy build không tự xác nhận được vì bẫy rAF ở trên) → nói "lưu lại"/"commit" nếu ổn.**
+
+---
+
 ## Đợt 104 (10/8/2026, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN TRÙNG TÊN + GUARD
 THƯ MỤC "ACT" ⭐ CÓ SỬA CORE (`core/lesson-import.js` — đổi tên act) — ✅ THẦY DUYỆT (test "generate all
 voices" ok, gửi 3 yêu cầu tinh chỉnh cho popup Import) → COMMIT `9c2d165` + PUSH + **LIVE** tại

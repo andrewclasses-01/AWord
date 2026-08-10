@@ -6,8 +6,8 @@
 //      boxes that fill in as letters land, ABOVE —
 //      "dãy chữ gốc" (origin row)  — the scrambled letter tiles (grey box,
 //      white letter), just BELOW.
-//  • Two modes, chosen in Options ("Anagram mode") — switching mode always
-//    restarts the game (the 2 scoring models are incompatible mid-play,
+//  • Three modes, chosen in Options ("Anagram mode") — switching mode always
+//    restarts the game (the scoring models are incompatible mid-play,
 //    see optionsNeedRestart()):
 //      "bonus"  = Letters with bonus — tap the correct NEXT letter (in
 //                 order); a wrong tap flashes a small cross right on that
@@ -17,7 +17,8 @@
 //                 flies into the score, morphing into the point value and
 //                 pulse-counting it in — DOUBLE points; any mistake along
 //                 the way -> a small check instead of "PERFECT", normal
-//                 points (1 per letter), same fly+pulse treatment.
+//                 points (1 per letter), same fly+pulse treatment. No
+//                 points-off of any kind in this mode (teacher, 10/8/2026).
 //      "submit" = On submit — tap any tile (any order), it flies to the
 //                 next empty result slot KEEPING the origin's grey color
 //                 (no color change yet); tap a filled slot to send it back,
@@ -29,7 +30,23 @@
 //                 the whole word; a correct word flies+pulses into the
 //                 score exactly like bonus mode (1 point); a wrong word
 //                 reveals the correct spelling (green, caps per option, no
-//                 "Correct:" prefix) in the reserved line, no fly.
+//                 "Correct:" prefix) in the reserved line, no fly. Its own
+//                 "Points off (wrong answer)" slider, 0..10, once per wrong
+//                 WORD.
+//      "bonusMinus" = Bonus and minus (teacher, 10/8/2026) — identical
+//                 interaction/feel to "bonus" (same bonusPick(), same tap-
+//                 in-order rules), but with 2 extra dials replacing the
+//                 fixed "double points" rule: a "Bonus x" multiplier
+//                 (1..5, teacher-chosen, replaces the hardcoded x2 for a
+//                 PERFECT word — burst text becomes "Nx PERFECT") and a
+//                 "Points off (wrong letter)" slider (0..100, step 5) that
+//                 fires on EVERY wrong tap, not once per word: a big red
+//                 "-N" flies from the mis-tapped slot to the score the
+//                 instant it lands (see flyLetterPenalty()), on top of the
+//                 existing small cross flash. isBonusFamily (mode==="bonus"
+//                 || mode==="bonusMinus") gates every place the two share
+//                 mechanics; the scoring math itself still branches on the
+//                 exact mode inside finalizeBonusWord()/bonusPick().
 //  • Multi-word phrases keep their spaces as fixed gaps (no slot to fill).
 //  • Options: timer, shuffleQuestions, allCaps (force uppercase tiles),
 //    allowSkip (Next may skip an unfinished word).
@@ -117,6 +134,25 @@ function normLives(v) {
   return Math.min(MAX_LIVES, Math.max(1, Math.round(v)));
 }
 
+// "Bonus and minus" mode dials (teacher, 10/8/2026) — see the header
+// comment above for what each one does. Anagram now builds its OWN
+// "Points off" control(s) entirely (tpl.hidePointsOff = true, below) since
+// the meaning/range differs per mode; these are the shared clamp rules used
+// by BOTH buildExtraOptions() (the slider UI) and mount() (reading the
+// saved value), kept in one place so they can't drift apart.
+const MAX_SUBMIT_PENALTY = 10;      // "On submit" — once per wrong WORD
+const MAX_LETTER_PENALTY = 100;     // "Bonus and minus" — once per wrong LETTER TAP
+const LETTER_PENALTY_STEP = 5;
+const MIN_BONUS_MULT = 1, MAX_BONUS_MULT = 5, DEFAULT_BONUS_MULT = 2;   // 2x matches the old fixed "double" bonus
+function clampSubmitPenalty(v) { return Math.max(0, Math.min(MAX_SUBMIT_PENALTY, Math.round(v) || 0)); }
+function clampLetterPenalty(v) {
+  return Math.max(0, Math.min(MAX_LETTER_PENALTY, Math.round((v || 0) / LETTER_PENALTY_STEP) * LETTER_PENALTY_STEP));
+}
+function clampBonusMult(v) {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && n >= MIN_BONUS_MULT ? Math.min(MAX_BONUS_MULT, n) : DEFAULT_BONUS_MULT;
+}
+
 function displayChar(ch, allCaps) { return allCaps ? ch.toUpperCase() : ch; }
 
 // Tile size (in cqw) so the WHOLE origin row occupies ~90% of the stage
@@ -159,6 +195,7 @@ const anagramTemplate = {
   itemsKey: "items",
   name: "Anagram",
   hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
+  hidePointsOff: true,  // ships its own mode-dependent "Points off" control(s) — see buildExtraOptions (10/8/2026)
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -175,13 +212,82 @@ const anagramTemplate = {
     const gMode = el("div", "aw-opt-group");
     gMode.append(el("div", "aw-opt-label", "Anagram mode"));
     const rowMode = el("div", "aw-opt-row");
-    const isSubmit = draft.anagramMode === "submit";
+    const curMode = draft.anagramMode === "submit" ? "submit"
+      : draft.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
+
+    // POINTS OFF (teacher, 10/8/2026) — 3 groups built up front, right in the
+    // fixed slot the teacher asked for (directly below the mode radios,
+    // directly above Lives); only .style.display toggles per mode (see
+    // syncPenaltyGroups below) so switching the radio updates the panel
+    // instantly with no rebuild — same technique core/engine.js already uses
+    // for the Timer group's "Count down" fields. This whole block REPLACES
+    // the shared core "Points off" control (tpl.hidePointsOff = true below):
+    // "bonus" needs no points-off UI at all, "submit" keeps the classic
+    // once-per-wrong-WORD deduction (just widened to 0..10), "bonusMinus"
+    // repurposes the same visual slot for a once-per-wrong-LETTER deduction
+    // (0..100, step 5) plus its own "Bonus x" multiplier.
+    const gPenSubmit = el("div", "aw-opt-group");
+    gPenSubmit.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
+    const rowPenSubmit = el("div", "aw-opt-row");
+    const curSubmitPen = clampSubmitPenalty(draft.pointsOff || 0);
+    const penSubmitSlider = el("input", "aw-opt-slider");
+    penSubmitSlider.type = "range"; penSubmitSlider.min = "0"; penSubmitSlider.max = String(MAX_SUBMIT_PENALTY); penSubmitSlider.step = "1";
+    penSubmitSlider.value = String(curSubmitPen);
+    const penSubmitVal = el("span", "aw-opt-slidval", curSubmitPen === 0 ? "Off" : "-" + curSubmitPen);
+    penSubmitSlider.oninput = () => {
+      const v = clampSubmitPenalty(+penSubmitSlider.value);
+      draft.pointsOff = v;
+      penSubmitVal.textContent = v === 0 ? "Off" : "-" + v;
+    };
+    rowPenSubmit.append(penSubmitSlider, penSubmitVal);
+    gPenSubmit.append(rowPenSubmit);
+
+    const gPenLetter = el("div", "aw-opt-group");
+    gPenLetter.append(el("div", "aw-opt-label", "Points off (wrong letter)"));
+    const rowPenLetter = el("div", "aw-opt-row");
+    const curLetterPen = clampLetterPenalty(draft.letterPenalty || 0);
+    const penLetterSlider = el("input", "aw-opt-slider");
+    penLetterSlider.type = "range"; penLetterSlider.min = "0"; penLetterSlider.max = String(MAX_LETTER_PENALTY); penLetterSlider.step = String(LETTER_PENALTY_STEP);
+    penLetterSlider.value = String(curLetterPen);
+    const penLetterVal = el("span", "aw-opt-slidval", curLetterPen === 0 ? "Off" : "-" + curLetterPen);
+    penLetterSlider.oninput = () => {
+      const v = clampLetterPenalty(+penLetterSlider.value);
+      draft.letterPenalty = v;
+      penLetterVal.textContent = v === 0 ? "Off" : "-" + v;
+    };
+    rowPenLetter.append(penLetterSlider, penLetterVal);
+    gPenLetter.append(rowPenLetter);
+
+    const gBonusMult = el("div", "aw-opt-group");
+    gBonusMult.append(el("div", "aw-opt-label", "Bonus x (perfect-word multiplier)"));
+    const rowBonusMult = el("div", "aw-opt-row");
+    const curMult = clampBonusMult(draft.bonusMult);
+    const multSlider = el("input", "aw-anagram-multslider");
+    multSlider.type = "range"; multSlider.min = String(MIN_BONUS_MULT); multSlider.max = String(MAX_BONUS_MULT); multSlider.step = "1";
+    multSlider.value = String(curMult);
+    const multVal = el("span", "aw-anagram-multval", curMult + "x");
+    multSlider.oninput = () => {
+      const v = Math.max(MIN_BONUS_MULT, Math.min(MAX_BONUS_MULT, +multSlider.value | 0));
+      draft.bonusMult = v;
+      multVal.textContent = v + "x";
+    };
+    rowBonusMult.append(multSlider, multVal);
+    gBonusMult.append(rowBonusMult);
+
+    function syncPenaltyGroups(m) {
+      gPenSubmit.style.display = m === "submit" ? "" : "none";
+      gPenLetter.style.display = m === "bonusMinus" ? "" : "none";
+      gBonusMult.style.display = m === "bonusMinus" ? "" : "none";
+    }
+    syncPenaltyGroups(curMode);
+
     rowMode.append(
-      mkRadioChoice("aw-anagram-mode", "bonus", "Letters with bonus", !isSubmit, v => draft.anagramMode = v),
-      mkRadioChoice("aw-anagram-mode", "submit", "On submit", isSubmit, v => draft.anagramMode = v)
+      mkRadioChoice("aw-anagram-mode", "bonus", "Letters with bonus", curMode === "bonus", v => { draft.anagramMode = v; syncPenaltyGroups(v); }),
+      mkRadioChoice("aw-anagram-mode", "submit", "On submit", curMode === "submit", v => { draft.anagramMode = v; syncPenaltyGroups(v); }),
+      mkRadioChoice("aw-anagram-mode", "bonusMinus", "Bonus and minus", curMode === "bonusMinus", v => { draft.anagramMode = v; syncPenaltyGroups(v); })
     );
     gMode.append(rowMode);
-    panel.append(gMode);
+    panel.append(gMode, gPenSubmit, gPenLetter, gBonusMult);
 
     // LIVES — a slider 0..10 (0 = Unlimited), same shape/convention as
     // true-false.js's Lives control (teacher, 3/8/2026).
@@ -236,10 +342,22 @@ const anagramTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const mode = opt.anagramMode === "submit" ? "submit" : "bonus";
+    const mode = opt.anagramMode === "submit" ? "submit"
+      : opt.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
+    // "bonus" and "bonusMinus" share every interaction/rendering mechanic
+    // (tap-the-next-letter, tiles turn blue immediately, etc.) — only their
+    // SCORING differs, handled separately inside finalizeBonusWord()/
+    // bonusPick() (see the header comment for the full breakdown).
+    const isBonusFamily = mode === "bonus" || mode === "bonusMinus";
     const allCaps = opt.allCaps != null ? !!opt.allCaps : opt.changeCase === "upper";
     const allowSkip = opt.allowSkip !== false;
-    const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct once per WORD with a mistake (0 = off)
+    // Points off: "submit" = once per wrong WORD (0..10); "bonusMinus" = once
+    // per wrong LETTER TAP (0..100, step 5), applied live in bonusPick() via
+    // flyLetterPenalty() rather than aggregated here. Plain "bonus" uses
+    // neither (0) — see buildExtraOptions/the header comment for why.
+    const pointsOff = mode === "submit" ? clampSubmitPenalty(opt.pointsOff || 0) : 0;
+    const letterPenalty = mode === "bonusMinus" ? clampLetterPenalty(opt.letterPenalty || 0) : 0;
+    const bonusMult = mode === "bonusMinus" ? clampBonusMult(opt.bonusMult) : 2;   // "bonus" keeps the old fixed x2
     const startLives = normLives(opt.lives);   // null = unlimited
 
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
@@ -346,10 +464,10 @@ const anagramTemplate = {
     renderLives();
     render();
 
-    function doneCheck(s) { return mode === "bonus" ? s.correct === true : s.graded === true; }
+    function doneCheck(s) { return isBonusFamily ? s.correct === true : s.graded === true; }
 
     function scoreNow() {
-      const base = mode === "bonus"
+      const base = isBonusFamily
         ? state.reduce((sum, s) => sum + (s.points || 0), 0)
         : state.filter(s => s.correct === true).length;
       return base - penalty;   // points-off (may drive the total negative -> shown red)
@@ -479,7 +597,7 @@ const anagramTemplate = {
         let isRight = null;
         if (tileId != null) {
           cls.push("is-filled");
-          if (mode === "bonus") {
+          if (isBonusFamily) {
             cls.push("is-blue");
           } else if (st.revealed) {
             isRight = it.letters[tileId].toLowerCase() === it.letters[pos].toLowerCase();
@@ -501,7 +619,7 @@ const anagramTemplate = {
       group.append(resultRow);
 
       const originRow = el("div", "aw-anagram-origin");
-      const wordDone = mode === "bonus" ? st.correct === true : st.graded;
+      const wordDone = isBonusFamily ? st.correct === true : st.graded;
       it.tileOrder.forEach(tileId => {
         const used = st.used[tileId];
         const tile = el("button", "aw-anagram-otile" + (used ? " is-used" : ""));
@@ -565,7 +683,7 @@ const anagramTemplate = {
       // flight, which felt laggy when tapping fast. `busy` still guards the
       // heavier result-row actions (Submit / drag-swap / send-back) below.
       if (finished) return;
-      if (mode === "bonus") bonusPick(tileId, tileEl); else submitPick(tileId, tileEl);
+      if (isBonusFamily) bonusPick(tileId, tileEl); else submitPick(tileId, tileEl);
     }
 
     // Returns true if the letter was placed, false on a mismatch/no-op — the
@@ -581,6 +699,15 @@ const anagramTemplate = {
         st.hadMistake = true;
         anagramSound.wrongPick();
         showWrongPickMark();
+        // "Bonus and minus" (teacher, 10/8/2026): a wrong tap ALSO flies a
+        // big red "-N" from the mis-tapped slot to the score, on top of the
+        // small cross flash — the deduction lands (and the score visibly
+        // drops) the instant the number arrives, same convention as every
+        // other fly effect here. Plain "bonus" mode never deducts anything.
+        if (mode === "bonusMinus" && letterPenalty > 0) {
+          const pendingSlot = root.querySelector(`.aw-anagram-rtile[data-pos="${st.nextPos}"]`);
+          flyLetterPenalty(pendingSlot, letterPenalty);
+        }
         return false;
       }
       anagramSound.place();
@@ -615,9 +742,14 @@ const anagramTemplate = {
       const it = items[index];
       const n = it.letters.length;
       const perfect = !st.hadMistake;
-      if (!perfect) penalty += pointsOff;   // one points-off for a word solved with any mistake
-      const outOfLives = !perfect && loseLife();   // a life is lost on a word solved WITH a mistake
-      const earned = n * (perfect ? 2 : 1);
+      // No word-level points-off here (any longer): plain "bonus" never had
+      // one to begin with in the new design, and "bonusMinus" already
+      // deducted per wrong LETTER TAP live in bonusPick() via
+      // flyLetterPenalty() — double-charging the same mistakes at word-end
+      // too would be wrong (teacher, 10/8/2026).
+      const outOfLives = !perfect && loseLife();   // a life is lost on a word solved WITH a mistake (both modes)
+      const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2
+      const earned = n * (perfect ? mult : 1);
       st.correct = true;               // word is DONE — points deferred, see below
       // No render() here: every origin tile is already .is-used and every
       // result tile already .is-blue via the incremental patches each
@@ -631,7 +763,9 @@ const anagramTemplate = {
       if (perfect) {
         // PERFECT pops in place; the point value follows it a beat later and
         // is the thing that actually flies to the score (teacher, 8/8/2026).
-        showPerfectBurst();
+        // "bonusMinus" prefixes the multiplier ("5x PERFECT") so the earned
+        // total that follows makes sense at a glance (teacher, 10/8/2026).
+        showPerfectBurst(mode === "bonusMinus" ? `${mult}x PERFECT` : "PERFECT");
         flyPointsOnly(earned, applyAndGetNewTotal, PERFECT_TO_POINTS_DELAY_MS);
         finishDelay = PERFECT_TO_POINTS_DELAY_MS + PICKFLY_TOTAL_MS + FLYGAIN_PULSE_MS + 250;
       } else {
@@ -980,7 +1114,7 @@ const anagramTemplate = {
       if (!target || target.dataset.pos == null) return false;
       const st = state[index];
       const pos = Number(target.dataset.pos);
-      if (mode === "bonus") return pos === st.nextPos;
+      if (isBonusFamily) return pos === st.nextPos;
       return st.placed[pos] == null;
     }
 
@@ -994,7 +1128,7 @@ const anagramTemplate = {
     function handleOriginDrop(tileId, tileEl, target) {
       if (finished || !isValidOriginDropTarget(target)) { animateReturnHome(tileEl); return; }
       const pos = Number(target.dataset.pos);
-      const ok = mode === "bonus" ? bonusPick(tileId, tileEl) : submitPickAt(tileId, tileEl, pos);
+      const ok = isBonusFamily ? bonusPick(tileId, tileEl) : submitPickAt(tileId, tileEl, pos);
       if (ok) tileEl.classList.remove("is-dragging");   // flyLetter has already hidden the tile — safe now
       else animateReturnHome(tileEl);
     }
@@ -1207,13 +1341,14 @@ const anagramTemplate = {
     // "PERFECT" pops up at the middle of the tile rows, grows in, then fades
     // out IN PLACE — it no longer flies anywhere (teacher, 8/8/2026: the
     // point value is a separate, later effect — see flyPointsOnly() below).
-    function showPerfectBurst() {
+    function showPerfectBurst(label) {
       // Centered on the RESULT row specifically (not the whole group, which
       // spans both rows and would land it in the gap between them — teacher-
-      // reported "bị lệch", 8/8/2026).
+      // reported "bị lệch", 8/8/2026). `label` defaults to "PERFECT"; "bonus
+      // and minus" mode passes "Nx PERFECT" instead (teacher, 10/8/2026).
       const row = root.querySelector(".aw-anagram-result");
       if (!row) return;
-      const burst = el("span", "aw-anagram-perfect-burst", "PERFECT");
+      const burst = el("span", "aw-anagram-perfect-burst", label || "PERFECT");
       row.append(burst);
       setTimeout(() => burst.remove(), PERFECT_BURST_MS);
     }
@@ -1275,6 +1410,57 @@ const anagramTemplate = {
         setTimeout(complete, total + 150);
       };
       if (delayMs) setTimeout(run, delayMs); else run();
+    }
+
+    // "Bonus and minus" mode ONLY (teacher, 10/8/2026): a big RED "-N" flies
+    // from the mis-tapped slot (the very tile showWrongPickMark() just put
+    // an X on) straight to the score, landing = the deduction actually
+    // applies — same "hold the score until it arrives" convention as every
+    // other fly effect in this file. Sized off the REAL tile width so it
+    // never reads as a throwaway detail even when the slider's penalty is
+    // small ("không bị nhỏ, nhỏ nhất cũng phải gần bằng size của 1 ô").
+    function flyLetterPenalty(slotEl, points) {
+      const applyAndGetNewTotal = () => { penalty += points; return scoreNow(); };
+      const scoreEl = document.querySelector(".aw-top-score");
+      if (!slotEl || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
+      const tileEl = root.querySelector(".aw-anagram-otile, .aw-anagram-rtile");
+      const tilePx = tileEl ? tileEl.getBoundingClientRect().width : 40;
+      const baseSize = Math.max(42, tilePx * 1.05);
+
+      const startRect = slotEl.getBoundingClientRect();
+      const endRect = scoreEl.getBoundingClientRect();
+      const cx = startRect.left + startRect.width / 2;
+      const cy = startRect.top + startRect.height / 2;
+      const dx = (endRect.left + endRect.width / 2) - cx;
+      const dy = (endRect.top + endRect.height / 2) - cy;
+
+      const scoreFontPx = parseFloat(getComputedStyle(scoreEl).fontSize) || baseSize * 0.4;
+      const endScale = Math.max(0.12, Math.min(1, scoreFontPx / baseSize));
+
+      const numEl = el("div", "aw-anagram-flynum aw-anagram-flynum-bad", "-" + points);
+      numEl.style.left = cx + "px";
+      numEl.style.top = cy + "px";
+      numEl.style.fontSize = baseSize + "px";
+      document.body.append(numEl);
+      activeFlyNodes.add(numEl);
+
+      const total = PICKFLY_HOLD_MS + PICKFLY_FLIGHT_MS;
+      const holdFrac = PICKFLY_HOLD_MS / total;
+      const anim = numEl.animate([
+        { transform: "translate(-50%,-50%) scale(.6)", opacity: 0, offset: 0 },
+        { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: Math.min(1, holdFrac * 0.5) },
+        { transform: "translate(-50%,-50%) scale(1.06)", opacity: 1, offset: holdFrac },
+        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, opacity: 1, offset: 1 }
+      ], { duration: total, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
+
+      let done = false;
+      const complete = () => {
+        if (done) return; done = true;
+        numEl.remove(); activeFlyNodes.delete(numEl);
+        pulseScoreTo(applyAndGetNewTotal());
+      };
+      anim.onfinish = complete;
+      setTimeout(complete, total + 150);
     }
 
     // In-place big check/cross — used ONLY for the "submit" mode's WRONG
@@ -1462,12 +1648,13 @@ const anagramTemplate = {
       finished = true;
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correctWords = perQuestion.filter(p => p.correct).length;
-      // Bonus mode scores per LETTER (+ the double-perfect bonus), so the
-      // "Score" total shown at game-complete is the letter count too — the
-      // word count (`total`, used for nav) is a different, unrelated number
-      // here. Submit mode scores 1 point per word, so total stays word-based.
+      // Bonus-family modes score per LETTER (+ the perfect-word multiplier),
+      // so the "Score" total shown at game-complete is the letter count too
+      // — the word count (`total`, used for nav) is a different, unrelated
+      // number here. Submit mode scores 1 point per word, so total stays
+      // word-based.
       let correct, finishTotal;
-      if (mode === "bonus") {
+      if (isBonusFamily) {
         correct = state.reduce((sum, s) => sum + (s.points || 0), 0);
         finishTotal = items.reduce((sum, it) => sum + it.letters.length, 0);
       } else {

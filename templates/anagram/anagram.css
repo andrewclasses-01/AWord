@@ -274,6 +274,11 @@
   filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
 }
 
+/* "Bonus and minus" mode's per-wrong-letter deduction (teacher, 10/8/2026) —
+   same fixed/flying "+N" element as .aw-anagram-flynum above, just red
+   instead of white so a point LOSS never reads as another gain. */
+.aw-anagram-flynum-bad { color: #ff5c5c; -webkit-text-stroke: 0.07em #4a0d0d; }
+
 /* correct-answer reveal — ALWAYS reserves its height (min-height) so the
    Submit button below it never shifts, whether or not it has text; only
    shows content after a WRONG submit: the plain word (no "Correct:"
@@ -397,6 +402,13 @@
 .aw-anagram-livesrow { display: flex; align-items: center; gap: 10px; }
 .aw-anagram-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; }
 .aw-anagram-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
+
+/* "Bonus and minus" mode's "Bonus x" multiplier slider (Options panel,
+   teacher, 10/8/2026) — same shape as the Lives slider above, but gold/
+   amber (a GAIN dial) to read as the opposite of the red penalty sliders
+   (.aw-opt-slider, reused as-is for both "Points off" variants). */
+.aw-anagram-multslider { flex: 1 1 auto; max-width: 220px; accent-color: #f5a623; cursor: pointer; }
+.aw-anagram-multval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #f5a623; }
 
 /* =============================================================
    CONTENT EDITOR (anagram-editor.js) — Word/Clue table, Wordwall-style.

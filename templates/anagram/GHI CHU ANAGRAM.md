@@ -945,3 +945,80 @@ bên cạnh, Find the match hiện NHIỀU cặp cùng lúc không có khái ni�
 không hề mang theo clue). Muốn làm ĐÚNG như Anagram (auto-play, phát quang, ẩn/hiện text đồng bộ) cho cả
 12 game này là 1 đợt thiết kế riêng cho từng game, không phải 1 bản vá máy móc — cần thầy chốt phạm vi
 trước khi bắt tay vào.
+
+## Đợt 105 (10/8/2026, v0.9.79) — THÊM CHẾ ĐỘ THỨ 3 "BONUS AND MINUS" + GOM "POINTS OFF" VỀ 1 CHỖ.
+KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `anagram.css`, dùng `tpl.hidePointsOff` sẵn có).
+🟢 CHỜ THẦY DUYỆT (đã tự test qua trình duyệt thật, chưa commit).
+
+Thầy yêu cầu thêm chế độ chơi thứ 3 (giống "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai) +
+sắp xếp lại vị trí/hành vi thanh "Points off":
+
+1. **3 chế độ trong "Anagram mode"**: Letters with bonus (`bonus`, cũ) · On submit (`submit`, cũ) · **Bonus
+   and minus (`bonusMinus`, MỚI)**. `bonusMinus` dùng CHUNG toàn bộ cơ chế tương tác của `bonus` (bấm đúng
+   thứ tự, ô kết quả tô xanh ngay) — gộp lại qua biến `isBonusFamily` (thay mọi `mode === "bonus"` liên
+   quan tới TƯƠNG TÁC/HIỂN THỊ bằng biến này: `doneCheck`, `scoreNow`, `render()`, dispatch bấm/kéo-thả,
+   `finish()`); phần ĐIỂM SỐ mới tách riêng theo từng mode trong `finalizeBonusWord()`/`bonusPick()`.
+2. **Thanh "Points off" dời lên ngay dưới 3 chế độ, ngay trên Lives** (trước đây là control CHUNG của core,
+   nằm tuốt dưới cùng, sau cả Lives/Anagram options) — Anagram giờ tự xây TOÀN BỘ control này trong
+   `buildExtraOptions()` (đặt `hidePointsOff: true` để ẩn control chung của `core/engine.js`, đúng khuôn đã
+   dùng ở crossword/unjumble/type-the-answer), và Ý NGHĨA đổi theo mode đang chọn (3 group DOM dựng sẵn
+   MỘT LẦN, chỉ đổi `display` khi bấm radio — kỹ thuật giống Timer's "Count down" của core):
+   - **Letters with bonus**: KHÔNG có thanh Points off nào (trước đây bản cũ có deduct-per-word ẩn ngầm
+     qua control chung, thầy chốt bỏ hẳn — chế độ này giờ hoàn toàn không trừ điểm gì).
+   - **On submit**: giữ "Points off (wrong answer)", NHƯNG mở rộng từ 0..5 (giới hạn cũ của control chung)
+     lên **0..-10** theo yêu cầu thầy.
+   - **Bonus and minus**: đổi hẳn ý nghĩa — **"Points off (wrong letter)"**, 0..100, nấc 5 điểm, trừ **mỗi
+     lần bấm SAI 1 CHỮ** (không phải mỗi từ) — cùng lúc hiện thêm thanh **"Bonus x"** (1x..5x, mặc định 2x
+     khớp hành vi nhân đôi cũ của "Letters with bonus"), là hệ số nhân điểm của 1 từ PERFECT.
+3. **Hiệu ứng bay điểm trừ khi bấm sai (`bonusMinus` only)** — hàm mới `flyLetterPenalty(slotEl, points)`
+   (nhái cấu trúc `flyPointsOnly()` có sẵn): số đỏ "-N" bay từ đúng ô đang chờ chữ (ô vừa hiện dấu ✗ của
+   `showWrongPickMark()`) thẳng tới ô điểm, cỡ chữ tính theo bề ngang 1 ô THẬT (`tilePx * 1.05`, tối thiểu
+   42px — "không bị nhỏ, gần bằng size 1 ô" theo đúng lời thầy), điểm chỉ THẬT SỰ bị trừ (`penalty += points`)
+   lúc số bay TỚI NƠI, giữ đúng quy ước "áp dụng lúc đáp xuống" mọi hiệu ứng bay khác trong file này. CSS
+   mới `.aw-anagram-flynum-bad` (đỏ `#ff5c5c`, tái dùng nguyên khung `.aw-anagram-flynum` có sẵn — chỉ đổi
+   màu).
+4. **"Nx PERFECT"** — `showPerfectBurst()` nhận thêm tham số `label` (mặc định vẫn "PERFECT" cho chế độ
+   `bonus`); `bonusMinus` truyền `"${bonusMult}x PERFECT"` để số nhân đọc rõ ngay lúc chữ hiện lên, trước
+   khi số điểm thật (đã nhân) bay vào ô điểm theo sau như cũ.
+5. **CSS mới khác**: `.aw-anagram-multslider`/`.aw-anagram-multval` (thanh "Bonus x", màu vàng/hổ phách
+   `#f5a623` — CỐ Ý khác màu đỏ của mọi thanh Points off, vì đây là hệ số CỘNG điểm chứ không phải trừ),
+   nhái đúng khuôn `.aw-anagram-livesslider`/`.aw-anagram-livesval` có sẵn.
+
+**Đã test qua trình duyệt thật** (devserver `aword` :5510, `templates/anagram/test.html`, KHÔNG mô phỏng
+PointerEvent giả — bấm thật qua Browser pane's `computer` tool, vì lệnh bấm giả `new PointerEvent(...)` bị
+Chrome từ chối `setPointerCapture` (`NotFoundError: No active pointer...`) do không phải pointer thật, dù
+vẫn lọt qua được `pointerup`/`onTileClick` nhờ `dragging=true` đã gán trước dòng gây lỗi — action mẫu này
+đã tự bắt được và ghi lại làm bài học cho lần test sau, không phải bug của code Anagram):
+- Panel Options: chọn từng radio trong 3 mode → đúng 3 group Points off/Bonus x đổi `display` NGAY (không
+  cần Apply) — `bonus`: cả 3 group ẩn; `submit`: chỉ "Points off (wrong answer)" hiện, `max="10"` xác nhận
+  qua `getComputedStyle`/thuộc tính DOM thật; `bonusMinus`: "Points off (wrong letter)" + "Bonus x" cùng
+  hiện, "Points off (wrong answer)" ẩn.
+- **`bonusMinus`, từ có 1 lỗi** (GIRAFFE, bấm sai "R" trước rồi giải đúng cả 7 chữ, Points off wrong-letter
+  = 20): chơi hết 6 từ (5 từ còn lại bỏ qua bằng Next, `allowSkip` mặc định bật) → bảng tổng kết hiện đúng
+  **`Score -13/46`** + **`Total: 7/46`** — khớp CHÍNH XÁC phép tính tay (7 chữ × 1 điểm, không nhân vì có
+  lỗi, trừ đúng 20 của 1 lần bấm sai).
+- **`bonusMinus`, từ PERFECT** (PENGUIN, giải đúng cả 7 chữ liền, không set lại Bonus x sau khi tải lại
+  trang nên giữ mặc định 2x): bảng tổng kết hiện đúng **`Score 14/46`** = 7×2 — xác nhận công thức
+  `n × mult` cho từ hoàn hảo đúng cả khi dùng giá trị MẶC ĐỊNH (chưa từng đụng slider).
+- **`bonus` (chế độ cũ, không đổi gì)**: chơi hết ELEPHANT (8 chữ) không sai lần nào → `Score 16/46` = 8×2
+  — xác nhận chế độ cũ NGUYÊN VẸN, không hồi quy.
+- 0 lỗi console MỚI phát sinh từ code Anagram (chỉ còn 8 lỗi `setPointerCapture` cũ của chính kịch bản test
+  giả lập nói trên, không liên quan code nguồn).
+- ⚠️ **Phát hiện môi trường test (không phải bug)**: `document.visibilityState === "hidden"` trong Browser
+  pane phiên này khiến `requestAnimationFrame` KHÔNG BAO GIỜ chạy (đo thật: chờ 2s không có khung hình nào)
+  — đúng bẫy đã ghi ở memory "Bẫy throttle khi test Electron". Hệ quả: `pulseScoreTo()` (hàm CHUNG, có từ
+  trước, dùng cho MỌI hiệu ứng cộng/trừ điểm trong file) không cập nhật được số hiển thị GIỮA game dù logic
+  điểm bên trong đã tính đúng (xác nhận bằng log tạm thời: `penalty`/`scoreNow()` ra đúng số ngay khi hiệu
+  ứng bay bắt đầu) — chỉ lộ ra ở BẢNG TỔNG KẾT cuối game (không phụ thuộc rAF, gọi thẳng `ui.finish()`).
+  Không sửa gì (không phải lỗi của tính năng này), chỉ ghi lại để phiên sau biết nguyên nhân nếu gặp lại số
+  điểm "đứng yên" giữa game khi test qua Browser pane.
+
+**File đổi**: `templates/anagram/anagram.js` (buildExtraOptions viết lại đoạn Points off/mode; mount() đọc
+`letterPenalty`/`bonusMult`; `isBonusFamily` thay `mode==="bonus"` ở 7 chỗ; `bonusPick`/`finalizeBonusWord`/
+`showPerfectBurst` sửa theo mode; hàm mới `flyLetterPenalty`), `templates/anagram/anagram.css` (
+`.aw-anagram-flynum-bad`, `.aw-anagram-multslider`/`.aw-anagram-multval`). Không đụng `core/`,
+`anagram-editor.js`, `sample-anagram.js`.
+
+**Việc kế: thầy tự chơi thử `bonusMinus` trên `test.html` (đặc biệt xem MẮT THẬT hiệu ứng số đỏ bay lên —
+máy build không chụp được animation do bẫy rAF ở trên, chỉ xác nhận được kết quả CUỐI qua bảng tổng kết) →
+nói "lưu lại"/"commit" nếu ổn.**
