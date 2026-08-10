@@ -1,8 +1,62 @@
 # GHI CHÚ — SPEAKING
 
-**TRẠNG THÁI: ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** (11/8/2026, Đợt 107, v0.9.81). Thầy test cơ bản trên máy
+**TRẠNG THÁI: ✅ ĐÃ CHỐT, SỐNG Ở TRANG CHỦ** (11/8/2026, Đợt 108, v0.9.82). Thầy test cơ bản trên máy
 thật (mic thật) rồi duyệt đưa lên live để test tiếp — đã thêm vào `core/catalog.js` + commit + push.
 **Đang trong giai đoạn thầy test thêm trên bản LIVE — sẽ còn chỉnh sửa theo phản hồi.**
+
+## Đợt 108 (11/8/2026, v0.9.82) — 6 CẢI TIẾN THẦY GỬI SAU KHI TEST LIVE
+
+Thầy chơi thử bản live rồi gửi 6 điểm; đã hỏi lại 6 câu bằng AskUserQuestion trước khi code (thầy chốt:
+được sửa core; bỏ câu hướng dẫn nhưng GIỮ báo trạng thái; sao **tối đa 5, nấc nửa sao**; **ngưỡng đạt
+trong Options đổi hẳn từ % sang SAO**; thang quy đổi **chia đều `% ÷ 20`**). Thầy nói "ok build" + cho
+phép tự test xong thì tự commit/push/ghi nhật ký.
+
+1. **Tải bộ chấm NGAY khi mở act, chưa xong thì chưa có nút PLAY** ⭐ CÓ SỬA CORE — móc mới
+   `tpl.prepare(activity, onProgress)` trong `core/engine.js` (+ `.aw-ready-prep*` trong `core/app.css`,
+   + `warmup()` trong `core/speech-score.js`). Hợp đồng đầy đủ: `core/HUONG DAN CORE.md` mục "CHUẨN BỊ
+   TRƯỚC KHI CHƠI". Template gộp tiến độ theo TỪNG FILE của transformers.js thành 1 con số %.
+2. **Slogan** "SPEAKING IN ANDREW CLASSES" giữa hàng đồng hồ/điểm (đúng khuôn Anagram/Crossword; nhớ
+   `sloganEl.remove()` trong `cleanup`).
+3. **Tự dừng ghi âm khi học sinh nói xong** — `startLevelWatch()`: `AnalyserNode` + `setInterval`
+   (KHÔNG `requestAnimationFrame` — bẫy tab ẩn), đo RMS, **học mức ồn của phòng trong 250ms đầu** rồi
+   suy ra 2 ngưỡng bật/tắt, im `SILENCE_HOLD_MS` = 800ms sau khi đã có tiếng nói thì tự `stopRecording()`.
+   Bấm mic lần nữa vẫn dừng tay được; trần cứng 6s vẫn giữ.
+4. **Hiện IPA** (`it.phonemes`) ngay dưới từ, chữ monospace mờ.
+5. **Bỏ hết câu hướng dẫn** ("Tap the microphone…", "…or press Next"); dòng chữ chỉ còn trạng thái thật
+   (Listening… / Checking… / mic bị chặn / bản ghi quá ngắn).
+6. **Sao 0–5 nấc nửa sao** (`starsForScore` = `Math.round(score/10)/2`), vẽ bằng 2 lớp sao chồng nhau,
+   lớp vàng bị **cắt theo `width` %** — đó là cách ra nửa sao mà không cần thêm hình. Options đổi
+   "Pass threshold (%)" → **"Stars needed to pass" (1→5, nấc 0,5, mặc định 3,5★)**; act cũ lưu
+   `passThreshold` % vẫn chạy (quy đổi cùng công thức ÷20 → 70% = 3,5★). Điểm tổng vẫn = **số từ đạt**.
+
+### Đã tự test THẬT (Browser pane, cổng riêng 5511 vì phiên Claude khác đang giữ 5510)
+
+**Mẹo test quan trọng — GIẢ LẬP MICRO, dùng lại được cho mọi lần sau**: Browser pane không xin được
+quyền mic thật, nhưng **tráo `navigator.mediaDevices.getUserMedia`** trả về `MediaStreamAudioDestinationNode`
+phát một `AudioBuffer` tự dựng = **0,4s im + clip giọng AI (Kokoro TTS) + 2,0s im** thì toàn bộ đường
+đi thật (MediaRecorder → AnalyserNode → mô hình AI → chấm điểm → sao) chạy y như mic thật.
+
+- **Thanh %**: PLAY bị ẩn (`display:none`), thanh chạy thật 38% → 61% → xong sau **23,5 giây**, rồi PLAY
+  hiện ra. Dựng lại act lần 2: PLAY hiện sau **55 mili giây** (mô hình đã nhớ).
+- **Tự dừng**: mở mic ở mốc 0 → "Listening…" ở 20ms → **"Checking…" ở 2123ms** = đúng 0,4s im đầu +
+  ~0,9s tiếng + 0,8s im cuối. Không hề bấm lần 2.
+- **Chấm + sao**: đọc "elephant" cho từ "elephant" → **100% = 5 sao**, đạt, điểm lên 1, tự sang từ sau.
+  Đọc "elephants" cho từ "elephant" → **86% = 4,5 sao** (4 sao đầy + 1 nửa, đúng `width:50%`), với
+  ngưỡng 5★ thì KHÔNG đạt, đứng lại, mic vẫn bấm lại được.
+- **Act kiểu cũ** (`passThreshold: 70`, không có `passStars`): 86% → 4,5★ ≥ 3,5★ → đạt, điểm 1. ✔
+- **Quay lại từ đã chấm** (nút Previous): sao + % hiện lại đúng.
+- **Options**: hiện "Stars needed to pass", min 1 / max 5 / step 0,5, kéo ra "2.5 ★" đúng.
+- **Không hồi quy**: Quiz + Anagram mở lên PLAY hiện NGAY, không có thanh %, chơi bình thường.
+- **Editor**: vẫn mở đúng 4 từ mẫu kèm IPA.
+- **0 lỗi console** (chỉ 2 dòng cảnh báo quen thuộc của onnxruntime).
+
+### ⚠️ Lỗi thật bắt được lúc tự test (và đã sửa)
+
+Hàng sao làm nội dung **tràn 9px** ở tỷ lệ 16:9 (mức hẹp nhất khi phủ kín màn hình) — sửa bằng cách
+siết `gap` của `.aw-spk-card` 3cqw→2,2cqw, `.aw-spk-micwrap` 1,4cqw→1cqw, sao 4,8cqw→4,2cqw. Đo lại: 0
+tràn ở cả 16:10,5 lẫn 16:9, **ca kiểm chứng 21:6 vẫn báo tràn 132px** (chứng minh phép đo có thật, đúng
+luật "cho bàn đo một ca phải-thấy-tràn" của HUONG DAN CORE mục 4b). Màn điện thoại 375px: 0 tràn, nút
+mic chạm sàn 64px như thiết kế.
 
 ## Đợt 107b (11/8/2026) — thầy duyệt + 3 thay đổi trước khi lên live
 
@@ -70,12 +124,14 @@ mỗi lượt học sinh chỉ ghi 1 từ ngắn 1 lần, dung lượng tải L�
 
 ## Cách chơi
 
-Mỗi lượt: từ (+ gợi ý tuỳ chọn) + nút 🔊 nghe phát âm chuẩn (tái dùng NGUYÊN hạ tầng `voiceClips` +
-`core/voice-playback.js` đã có của Anagram/Type the answer — KHÔNG viết lại) + nút 🎤 tròn ghi âm. Ghi
-xong tự chấm; đạt ngưỡng (Options → "Pass threshold", mặc định 70%, nấc 5%) → tự sang từ sau; chưa đạt →
-đứng lại, cho bấm 🎤 thử lại (Options → "Allow trying again") hoặc tự bấm Next bỏ qua — **chỉ lần ghi CUỐI
-của mỗi từ được tính điểm**. Khoá nút chuyển câu (`Previous`/`Next`) trong lúc AI đang chấm — tránh đổi
-câu giữa chừng làm sai lệch kết quả (xem `updateNav()`'s biến `locked`).
+Mỗi lượt: từ + **IPA chuẩn ngay dưới từ** (+ gợi ý tuỳ chọn) + nút 🔊 nghe phát âm chuẩn (tái dùng
+NGUYÊN hạ tầng `voiceClips` + `core/voice-playback.js` đã có của Anagram/Type the answer — KHÔNG viết
+lại) + nút 🎤 tròn ghi âm. Bấm 🎤 rồi đọc, **nói xong là nó tự dừng và tự chấm** (không phải bấm lần 2);
+kết quả hiện bằng **0–5 sao (nấc nửa sao) + số %**. Đạt ngưỡng sao (Options → "Stars needed to pass",
+mặc định 3,5★) → tự sang từ sau; chưa đạt → đứng lại, cho bấm 🎤 thử lại (Options → "Allow trying
+again") hoặc tự bấm Next bỏ qua — **chỉ lần ghi CUỐI của mỗi từ được tính điểm**. Khoá nút chuyển câu
+(`Previous`/`Next`) trong lúc AI đang chấm — tránh đổi câu giữa chừng làm sai lệch kết quả (xem
+`updateNav()`'s biến `locked`).
 
 `itemsKey: "items"` (hỗ trợ "Start with mistakes"). `hidePointsOff`/`hideLettersOption`/
 `hideShuffleAnswers` = true (không áp dụng cho game này). `toPrintItems` trả về dạng danh sách từ đơn giản
@@ -111,14 +167,19 @@ chứng thật về ghi-âm-thật→chấm-điểm trên GIỌNG NGƯỜI THẬ
 Mô hình `wav2vec2-lv-60-espeak-cv-ft` vốn luyện cho câu nói dài (CommonVoice, giọng người lớn nhiều ngôn
 ngữ), chưa có số đo công bố cho: (a) 1 từ đơn lẻ ngắn, (b) giọng học sinh Việt Nam/trẻ em nói tiếng Anh.
 **11/8/2026: thầy đã test cơ bản bằng mic thật trên máy thật và duyệt đưa lên live để test tiếp** — nếu
-độ chính xác chưa như ý ở diện rộng, `passThreshold` đã là Option nên thầy tự chỉnh thử được ngay không
-cần sửa code; nặng hơn mới tính cân nhắc mô hình khác.
+độ chính xác chưa như ý ở diện rộng, ngưỡng đạt đã là Option (từ Đợt 108 tính bằng **sao**) nên thầy tự
+chỉnh thử được ngay không cần sửa code; nặng hơn mới tính cân nhắc mô hình khác.
 
 ## Việc kế tiếp
 
 1. **Thầy test thêm trên bản LIVE** (nhiều từ, nhiều giọng học sinh thật) — sẽ còn chỉnh sửa theo phản hồi.
-2. Nếu muốn: bổ sung popover chọn giọng đầy đủ cho "Generate voice" (hiện chỉ 1 giọng mặc định
+2. **Riêng phần TỰ DỪNG (Đợt 108) cần tai người nghiệm thu**: máy build chỉ chứng minh được bằng giọng
+   AI trong phòng hoàn toàn yên. Lớp ồn thật có thể cần chỉnh `SILENCE_HOLD_MS` (800ms) hoặc 2 hệ số
+   ngưỡng `floor * 3.2` / `floor * 1.8` trong `startLevelWatch()` — 3 con số này nằm cùng một chỗ, đổi
+   rất nhanh.
+3. Nếu muốn: bổ sung popover chọn giọng đầy đủ cho "Generate voice" (hiện chỉ 1 giọng mặc định
    `DEFAULT_VOICE`, khác Anagram có popover 28 giọng).
-3. Chưa test thật trên iPhone/iPad (Safari) — MediaRecorder trên iOS ra định dạng mp4/aac thay vì webm,
+4. Chưa test thật trên iPhone/iPad (Safari) — MediaRecorder trên iOS ra định dạng mp4/aac thay vì webm,
    `read_audio` của transformers.js giải mã qua Web Audio nên NHIỀU KHẢ NĂNG vẫn ổn, nhưng chưa có bằng
-   chứng thật.
+   chứng thật. iOS cũng là nơi đáng nghi nhất cho phần tự-dừng (AudioContext trên Safari khắt khe hơn về
+   "phải có cú chạm của người dùng" — ở đây cú chạm nút mic chính là cú chạm đó, cộng `ctx.resume()`).

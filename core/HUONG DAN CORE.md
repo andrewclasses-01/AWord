@@ -674,6 +674,33 @@ Engine tự động lo (KHÔNG cần template làm): nút PLAY khổng lồ che 
 nút phóng to, menu (☰), pháo giấy khi hoàn thành, bảng tổng kết, bảng xếp hạng, khung 16:9, tên
 game + hướng dẫn hiển thị dưới khung.
 
+### ⭐ CHUẨN BỊ TRƯỚC KHI CHƠI — `tpl.prepare(activity, onProgress)` (Đợt 108, 11/8/2026)
+
+Template nào **thật sự không chạy được** cho tới khi một thứ nặng nạp xong thì khai thêm:
+
+```js
+prepare(activity, onProgress) {
+  return somePromise;      // engine chỉ cần biết "xong hay chưa"
+}
+```
+
+Engine gọi hàm này **ngay khi act mở ra** (lúc màn hình READY hiện, trước khi ai bấm gì), rồi:
+**ẨN nút PLAY** → hiện **thanh % đứng đúng chỗ nút PLAY** (`.aw-ready-prep`) → promise xong mới hiện
+lại PLAY. `onProgress({percent, text})`: `percent` 0-100 kéo thanh, `text` thay dòng chú thích — cả 2
+đều không bắt buộc, và engine cố ý KHÔNG biết gì về "mô hình"/"tải" (template tự quy đổi).
+
+- **Đẻ ra cho SPEAKING**: mô hình chấm phát âm ~240MB, nếu để tải sau khi bấm PLAY thì học sinh ngồi
+  trước cái nút mic chưa chấm được gì (thầy yêu cầu 11/8/2026).
+- **Tương thích ngược tuyệt đối**: template KHÔNG khai `prepare` thì không vào nhánh này, PLAY hiện
+  ngay như xưa nay (đã đo lại thật Quiz + Anagram ở Đợt 108).
+- **prepare() LỖI vẫn hiện PLAY** — không được để act chết cứng sau 1 thanh % không bao giờ đầy.
+  Template phải tự lo đường lùi (SPEAKING quay về nạp mô hình ở lần ghi âm đầu tiên).
+- ⚠️ Chạy **mỗi lần dựng lại màn READY** (kể cả "Start again"), nên hàm nạp của template **phải nhớ
+  kết quả** (`_asrP` trong `core/speech-score.js`) — không thì tải lại từ đầu mỗi ván. Đo thật Đợt 108:
+  lần đầu **23,5 giây**, lần dựng lại **55 mili giây**.
+- ⚠️ Đừng nhớ một promise **ĐÃ HỎNG**: mất mạng 1 giây mà cache luôn kết quả hỏng thì cả tab đó vĩnh
+  viễn không nạp lại được (đã vá trong `loadASR` bằng `_asrP.catch(() => { _asrP = null; })`).
+
 ### Điểm tuỳ biến (points) — `ui.finish({score, scoreText})` (thêm ở Gameshow, 1/8/2026)
 
 Mặc định điểm để xếp hạng = **số câu đúng** (`result.correct`) và bảng tổng kết/leaderboard hiện

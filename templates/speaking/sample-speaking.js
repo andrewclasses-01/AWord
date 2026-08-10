@@ -13,11 +13,14 @@ export const activity = {
   id: "sample-speaking",
   type: "speaking",
   title: "Say It Right — Animals",
-  instruction: "Tap the microphone and say each word out loud.",
+  instruction: "Say each word out loud.",
   theme: "classic",
   options: {
     shuffleQuestions: false,
-    passThreshold: 70,
+    // Đợt 108: the pass bar is in STARS now (half-star steps). Activities
+    // saved with the older `passThreshold` percentage keep working —
+    // speaking.js converts them with the same ÷20 rule (70% -> 3.5★).
+    passStars: 3.5,
     playReference: true,
     allowRetry: true,
     timer: "none"

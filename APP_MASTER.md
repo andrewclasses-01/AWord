@@ -5,7 +5,30 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10-11/8/2026 (Đợt 107, v0.9.81) — ⭐⭐ TEMPLATE THỨ 17 "SPEAKING" (ý tưởng
+> Cập nhật lần cuối: **11/8/2026 (Đợt 108, v0.9.82) — SPEAKING: 6 CẢI TIẾN SAU KHI THẦY TEST LIVE.
+> ⭐ CÓ SỬA CORE — móc mới **`tpl.prepare(activity, onProgress)`** trong `core/engine.js`
+> (+ `.aw-ready-prep*` trong `core/app.css`, + `warmup()` trong `core/speech-score.js`): template nào
+> cần chuẩn bị nặng thì engine **ẩn nút PLAY + hiện thanh % ngay chỗ nút PLAY** từ lúc act mở ra, xong
+> mới trả PLAY lại — thuần cộng thêm, template không khai `prepare` chạy y như cũ (đã đo lại thật Quiz +
+> Anagram). Hợp đồng đầy đủ ở `core/HUONG DAN CORE.md` mục "CHUẨN BỊ TRƯỚC KHI CHƠI". 6 điểm thầy gửi:
+> (1) tải mô hình ~240MB ngay khi mở link, chưa xong chưa có PLAY · (2) slogan "SPEAKING IN ANDREW
+> CLASSES" · (3) **ghi âm TỰ DỪNG khi học sinh nói xong** (AnalyserNode + `setInterval`, học mức ồn của
+> phòng 250ms đầu rồi im 800ms là chấm) · (4) hiện IPA dưới từ · (5) bỏ hết câu hướng dẫn · (6) **sao
+> 0–5 nấc nửa sao** (`% ÷ 20`) và Options đổi ngưỡng đạt từ % sang **SAO** (act cũ lưu `passThreshold` %
+> vẫn chạy). ✅ THẦY DUYỆT TRƯỚC ("ok build" + cho phép tự test đạt thì tự commit/push/ghi nhật ký) →
+> COMMIT + PUSH + **LIVE**.**
+> ⭐⭐ **MẸO TEST đáng nhớ — GIẢ LẬP MICRO** (dùng lại được cho mọi việc dính mic): Browser pane không xin
+> được quyền mic thật, nhưng **tráo `navigator.mediaDevices.getUserMedia`** trả về
+> `MediaStreamAudioDestinationNode` đang phát `AudioBuffer` tự dựng = 0,4s im + clip giọng AI (Kokoro
+> TTS) + 2,0s im thì cả đường đi thật chạy y hệt mic thật và đo được tới mili giây. Số đo thu được:
+> thanh % xong sau **23,5 giây**, dựng lại lần 2 PLAY hiện sau **55ms**; tự dừng đúng mốc **2123ms**;
+> "elephant"→**100% = 5 sao**, "elephants" cho từ "elephant"→**86% = 4,5 sao**; 0 lỗi console.
+> ⚠️ Lỗi thật bắt được lúc test: hàng sao làm **tràn 9px** ở tỷ lệ 16:9 → siết `gap`; đo lại 0 tràn, ca
+> kiểm chứng 21:6 vẫn báo tràn 132px. **Việc kế: thầy nghiệm thu phần TỰ DỪNG bằng tai trong lớp ồn
+> thật — chỉnh 3 con số cạnh nhau trong `startLevelWatch()` nếu cắt sớm/muộn. Chưa có bằng chứng
+> iPhone/iPad.** Chi tiết: `GHI CHU DU AN.md` Đợt 108 + `templates/speaking/GHI CHU SPEAKING.md`.
+>
+> Trước đó: **10-11/8/2026 (Đợt 107, v0.9.81) — ⭐⭐ TEMPLATE THỨ 17 "SPEAKING" (ý tưởng
 > riêng của thầy, không có bên Wordwall — ⚠️ đừng nhầm với "Speaking cards"): học sinh đọc to 1 từ vào
 > mic, AI nghe + chấm điểm phát âm 0-100%, so ngưỡng đạt/chưa đạt (Options "Pass threshold"). ⭐ CÓ SỬA
 > CORE — thêm MỚI `core/phonemize.js` (chữ→IPA, gói `phonemizer`/eSpeak-NG WASM) + `core/speech-score.js`

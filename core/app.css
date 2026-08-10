@@ -502,6 +502,30 @@ body {
 .aw-bigplay:hover { transform: scale(1.09); filter: brightness(1.1); }
 .aw-bigplay:active { transform: scale(.96); }
 
+/* "Getting this game ready" bar — stands exactly where the PLAY button will
+   appear, so nothing jumps when it's swapped in (see `tpl.prepare` in
+   core/engine.js, Đợt 108). Only ever shown by templates that declare a
+   prepare() step; every other game skips this markup entirely. */
+.aw-ready-prep {
+  display: flex; flex-direction: column; align-items: center; gap: 1.4cqw;
+  width: 100%;
+}
+.aw-ready-prepbar {
+  width: 46cqw; max-width: 90%; height: 1.5cqw;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+  overflow: hidden;
+}
+.aw-ready-prepfill {
+  width: 0%; height: 100%;
+  border-radius: 999px;
+  background: #35b1f0;
+  transition: width .2s ease;
+}
+.aw-ready-preptext {
+  font-size: 2cqw; color: #b8c0cc; line-height: 1.35; text-align: center; max-width: 80%;
+}
+
 /* ---------- "Game complete" celebration ---------- */
 .aw-celebrate {
   position: absolute; inset: 0; z-index: 11; pointer-events: none; overflow: hidden;

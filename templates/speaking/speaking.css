@@ -13,7 +13,10 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3cqw;
+  /* Tightened from 3cqw when the star row was added (Đợt 108): with stars +
+     status both showing, the old spacing overflowed the stage by ~9px at the
+     16:9 fullscreen floor — measured, not guessed. */
+  gap: 2.2cqw;
   padding: 1.2cqw 4cqw;
   animation: aw-fadein .25s ease;
 }
@@ -35,12 +38,44 @@
   padding-top: 0.14em;   /* Vietnamese/accent headroom, same margin as quiz.css */
 }
 
+/* Target pronunciation, straight under the word (teacher, Đợt 108). Mono so
+   the IPA symbols keep even spacing, and dimmer than the word itself so it
+   reads as a helper line, not a second word. */
+.aw-spk-ipa {
+  font-family: "Courier New", monospace;
+  font-size: calc(2.9cqw * var(--fit));
+  color: var(--aw-text);
+  opacity: .6;
+  margin-top: 0.5cqw;
+  line-height: 1.35;
+  letter-spacing: .02em;
+}
+
 .aw-spk-clue {
   font-size: calc(2.6cqw * var(--fit));
   color: var(--aw-text);
   opacity: .72;
   margin-top: 0.6cqw;
   line-height: 1.35;
+}
+
+/* Slogan on the SAME row as the clock + score — absolutely centred over the
+   top bar so it never depends on the clock/score widths. Same look/technique
+   as anagram.css / crossword.css (teacher, Đợt 108). */
+.aw-spk-slogan {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300;
+  font-size: 1.7cqw;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #9aa3af;               /* grey — visible but not loud */
+  pointer-events: none;
+  user-select: none;
 }
 
 .aw-spk-empty {
@@ -54,7 +89,7 @@
 .aw-spk-micwrap {
   flex: 0 0 auto;
   display: flex; flex-direction: column; align-items: center;
-  gap: 1.4cqw;
+  gap: 1cqw;
 }
 
 .aw-spk-micbtn {
@@ -97,6 +132,63 @@
   text-align: center;
   max-width: 90cqw;
   min-height: 1.6em;   /* reserves its own line so the mic button never shifts when the text appears/changes */
+  line-height: 1.35;
+}
+
+/* ---------- stars (Đợt 108) ----------
+   0-5 stars in half-star steps: each star is a grey outline with a gold copy
+   layered on top and CLIPPED to a width — that's what makes a half star a
+   half star, with no extra artwork. The row keeps its space when empty
+   (visibility, not display) so the mic button never jumps as results come
+   and go. */
+.aw-spk-stars {
+  --spk-star: 4.2cqw;
+  display: flex; align-items: center; justify-content: center;
+  gap: 0.5cqw;
+  visibility: hidden;
+  min-height: var(--spk-star);
+}
+.aw-spk-stars.is-shown { visibility: visible; }
+
+.aw-spk-star {
+  position: relative;
+  width: var(--spk-star); height: var(--spk-star);
+  flex: 0 0 auto;
+  color: rgba(148, 163, 184, .38);   /* empty star */
+}
+.aw-spk-star-bg, .aw-spk-star-fill { position: absolute; inset: 0; display: block; }
+.aw-spk-star-fill {
+  width: 0%;
+  overflow: hidden;                  /* the clip that draws half stars */
+  color: #fbbf24;
+  transition: width .35s ease;
+}
+.aw-spk-star svg { display: block; width: var(--spk-star); height: var(--spk-star); }
+
+/* A passing take gets a warmer gold; a failing one stays muted amber so the
+   two read differently across the room without needing words. */
+.aw-spk-stars.is-pass .aw-spk-star-fill { color: #fcd34d; }
+
+/* `backwards` (never `forwards`): the pop must not keep holding `transform`
+   after it ends — a held property permanently blocks later transitions on it
+   (core/HUONG DAN CORE.md). */
+.aw-spk-stars.is-pop .aw-spk-star {
+  animation: aw-spk-starpop .34s cubic-bezier(.22, .9, .3, 1) backwards;
+  animation-delay: calc(var(--i) * 70ms);
+}
+@keyframes aw-spk-starpop {
+  0% { transform: scale(.4); opacity: 0; }
+  70% { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.aw-spk-pct {
+  font-size: calc(2.4cqw * var(--fit));
+  font-weight: 800;
+  color: var(--aw-text);
+  opacity: .78;
+  margin-left: 0.8cqw;
+  line-height: 1.35;
 }
 
 /* ---------- Options panel extras (OUTSIDE the 16:9 stage -> px, not cqw,

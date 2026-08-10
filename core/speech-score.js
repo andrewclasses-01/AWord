@@ -97,6 +97,13 @@ function loadASR(onProgress) {
       _activeDevice = "wasm";
       return { readAudio: mod.read_audio, processor, model, id2phoneme };
     })();
+    // A FAILED load must not be cached: without this, one flaky download
+    // (offline for a second, CDN hiccup) would leave a permanently rejected
+    // promise behind and every later attempt in that tab would fail instantly
+    // with the same stale error. Clearing it lets the next call start over —
+    // which is exactly the fallback path SPEAKING relies on when `prepare`
+    // couldn't arm the model before PLAY (Đợt 108).
+    _asrP.catch(() => { _asrP = null; });
   }
   return _asrP;
 }
@@ -126,6 +133,17 @@ function greedyCtcDecode(logits, id2phoneme) {
     prev = id;
   }
   return out.join("");
+}
+
+// Starts (or joins) the model download WITHOUT recognizing anything, so a
+// caller can get the wait out of the way up front instead of making a student
+// pay for it mid-game — SPEAKING calls this from `tpl.prepare`, which the
+// engine runs the moment the activity opens, gating the PLAY button on it
+// (Đợt 108). Shares the exact same `_asrP` promise as recognizePhonemes(), so
+// warming up and then recognizing never downloads twice, and calling it on an
+// already-warm model resolves immediately.
+export async function warmup(onProgress) {
+  await loadASR(onProgress);
 }
 
 // Listens to `audioSource` (a Blob/File — e.g. straight out of a

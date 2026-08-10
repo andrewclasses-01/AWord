@@ -363,6 +363,51 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   playOverlay.append(readyCenter);
   inner.append(playOverlay);
 
+  // ----- OPTIONAL "get ready first" gate — `tpl.prepare` (Đợt 108, 11/8/2026) --
+  // A template whose game genuinely CANNOT start until something heavy has
+  // loaded declares:
+  //     tpl.prepare = (activity, onProgress) => Promise<any>
+  // and the engine then, on THIS ready screen (i.e. the moment the activity
+  // opens, before anyone presses anything): hides PLAY, shows a progress bar
+  // in its place, and only reveals PLAY once that promise settles. Built for
+  // SPEAKING, whose ~240MB in-browser pronunciation model would otherwise
+  // download only after PLAY, leaving the student staring at a mic button
+  // that can't grade anything yet (teacher, 11/8/2026).
+  //
+  // `onProgress({ percent, text })` — both optional: `percent` 0-100 drives
+  // the bar, `text` replaces the caption. Deliberately a plain, template-
+  // agnostic shape: the engine knows nothing about models or downloads, the
+  // template maps whatever its own loader reports onto these two fields.
+  //
+  // Backward compatible by construction: a template that doesn't declare
+  // `prepare` never enters this branch, so PLAY appears immediately exactly
+  // as it always has (verified against Quiz + Anagram, Đợt 108).
+  //
+  // A prepare() that REJECTS still reveals PLAY (with a warning caption)
+  // rather than bricking the activity behind a bar that never fills — the
+  // template is expected to degrade gracefully in that case (SPEAKING falls
+  // back to loading the model on the first recording, as it did before).
+  if (typeof tpl.prepare === "function") {
+    bigPlay.style.display = "none";
+    const prep = el("div", "aw-ready-prep");
+    const prepBar = el("div", "aw-ready-prepbar");
+    const prepFill = el("div", "aw-ready-prepfill");
+    prepBar.append(prepFill);
+    const prepText = el("div", "aw-ready-preptext", "Getting this game ready…");
+    prep.append(prepBar, prepText);
+    readyCenter.insertBefore(prep, bigPlay);
+    const revealPlay = () => { prep.remove(); bigPlay.style.display = ""; };
+    try {
+      Promise.resolve(tpl.prepare(activity, p => {
+        const pct = Number(p && p.percent);
+        if (Number.isFinite(pct)) prepFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+        if (p && p.text) prepText.textContent = String(p.text);
+      })).then(revealPlay, () => revealPlay());
+    } catch (e) {
+      revealPlay();   // a prepare() that throws synchronously must not hide PLAY forever
+    }
+  }
+
   bigPlay.onclick = () => {
     bigPlay.disabled = true;
     (tpl.sounds?.play || sound.start)();        // startup chime (template may override)

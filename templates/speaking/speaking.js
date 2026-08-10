@@ -2,8 +2,9 @@
 // TEMPLATE: SPEAKING — new game type, no Wordwall equivalent
 // (Teacher Andrew's own idea, 10/8/2026). One word at a time: the student
 // taps the mic, says the word out loud, and an AI (core/speech-score.js)
-// grades how close it sounded to the target pronunciation. A score at or
-// above `options.passThreshold` counts the word as correct.
+// grades how close it sounded to the target pronunciation. The score is
+// shown as 0-5 STARS (half-star steps) and a word counts as correct when it
+// reaches `options.passStars`.
 //
 //  • Each item needs `word` + `phonemes` (the target IPA string, generated
 //    ONCE in the editor via core/phonemize.js — see speaking-editor.js).
@@ -15,12 +16,23 @@
 //    core/voice-playback.js + the shared `.aw-voicebtn` styling as-is.
 //  • Recording uses the browser's own mic (MediaRecorder) — no upload, the
 //    audio never leaves the device except into the in-browser AI model.
-//  • A PASS (score >= passThreshold) auto-advances to the next word after a
-//    short pause. A FAIL does NOT auto-advance — the student can either tap
-//    the mic again to retry (if options.allowRetry) or press Next to move
-//    on anyway; only the LAST attempt's score counts.
-//  • First recording of a session downloads the ~240MB scoring model — the
-//    mic status text shows a live download percentage during that wait.
+//  • A PASS auto-advances to the next word after a short pause. A FAIL does
+//    NOT auto-advance — the student can tap the mic again to retry (if
+//    options.allowRetry) or press Next to move on; only the LAST attempt of
+//    each word counts.
+//
+// Đợt 108 (11/8/2026) — six changes asked for by the teacher:
+//  (1) The ~240MB scoring model now downloads while the READY screen is up,
+//      via the new `prepare` engine hook — PLAY only appears once it's armed,
+//      so a student never meets a mic that can't grade yet.
+//  (2) "SPEAKING IN ANDREW CLASSES" slogan across the top bar.
+//  (3) Recording STOPS ITSELF once the student stops talking (~0.8s of
+//      quiet) — no second tap needed.
+//  (4) The target IPA is shown under the word.
+//  (5) All "Tap the microphone…"-style coaching text removed; only real
+//      status (listening / checking / mic blocked) survives.
+//  (6) 0-5 stars in half-star steps (score ÷ 20), and the pass threshold in
+//      Options is now expressed in STARS instead of a percentage.
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
@@ -28,17 +40,51 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
-import { recognizePhonemes, scorePronunciation } from "../../core/speech-score.js";
+import { recognizePhonemes, scorePronunciation, warmup } from "../../core/speech-score.js";
 import { openSpeakingEditor } from "./speaking-editor.js";
 import { spkSound } from "./speaking-sound.js";
 
 const MIN_RECORD_MS = 350;     // shorter than this is almost certainly an accidental tap
-const MAX_RECORD_MS = 6000;    // words are short — auto-stop so a forgotten mic doesn't run forever
-const DEFAULT_PASS_THRESHOLD = 70;
+const MAX_RECORD_MS = 6000;    // words are short — hard cap so a forgotten mic doesn't run forever
+const MAX_STARS = 5;
+const DEFAULT_PASS_STARS = 3.5;   // exactly the old 70% default, expressed in stars
+
+// ---- auto-stop tuning (see startLevelWatch) ----
+const CALIBRATE_MS = 250;      // listen to the room's own noise this long before judging anything
+const SILENCE_HOLD_MS = 800;   // this much quiet AFTER speech = "they've finished the word"
+const LEVEL_POLL_MS = 50;
+
+// Star drawn locally rather than added to core/icons.js — it's this
+// template's own decoration, and core/icons.js is shared by all 17 games
+// (core rule: don't grow the shared surface for one template's ornament).
+const STAR_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.4l2.94 5.96 6.58.96-4.76 4.64 1.12 6.55L12 17.42 6.12 20.51l1.12-6.55L2.48 9.32l6.58-.96z"/></svg>';
 
 function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// score (0-100) -> stars, in HALF-star steps. The teacher's own formula:
+// "% ÷ 20" — 100%=5★, 90%=4.5★, 80%=4★, 70%=3.5★ … rounded to the nearest
+// half star in between.
+function starsForScore(score) {
+  const s = Math.round(Number(score) / 10) / 2;
+  return Math.max(0, Math.min(MAX_STARS, s));
+}
+
+function clampStars(v) {
+  return Math.max(0.5, Math.min(MAX_STARS, Math.round(Number(v) * 2) / 2));
+}
+
+// The pass bar, in stars. Activities saved BEFORE Đợt 108 stored a 0-100
+// percentage in `passThreshold` instead — those keep working: the old
+// percentage is converted with the same ÷20 rule, so a 70% activity becomes
+// a 3.5★ activity and grades identically.
+function passStarsOf(opt) {
+  if (Number.isFinite(Number(opt?.passStars))) return clampStars(opt.passStars);
+  if (Number.isFinite(Number(opt?.passThreshold))) return clampStars(starsForScore(opt.passThreshold));
+  return DEFAULT_PASS_STARS;
 }
 
 const spkTemplate = {
@@ -49,13 +95,42 @@ const spkTemplate = {
   edit: openSpeakingEditor,
   hideLettersOption: true,    // no lettered answer choices here
   hideShuffleAnswers: true,   // no answer options to shuffle, only question order
-  hidePointsOff: true,        // scoring is a 0-100 match %, not a per-wrong-answer penalty
+  hidePointsOff: true,        // scoring is a star rating, not a per-wrong-answer penalty
   // Classic Wordwall pack (see speaking-sound.js) — replaces the engine
   // defaults, including the "Oh my god" wrong sound (teacher, 11/8/2026).
   sounds: {
     play: spkSound.intro,
     restart: spkSound.restart,
     complete: spkSound.complete
+  },
+
+  // ----- (1) download the scoring model BEFORE the game can start -----
+  // The engine calls this as soon as the activity opens (READY screen), hides
+  // PLAY, and shows a progress bar until the returned promise settles — see
+  // `tpl.prepare` in core/engine.js. Progress from transformers.js arrives
+  // per FILE, so add the files up into one overall percentage; a rejection is
+  // deliberately NOT rethrown as a dead end (the engine reveals PLAY anyway
+  // and the model gets one more chance on the first recording).
+  prepare(activity, onProgress) {
+    const files = new Map();
+    return warmup(p => {
+      if (!p || !p.file) return;
+      if (p.status === "progress") {
+        files.set(p.file, { loaded: Number(p.loaded) || 0, total: Number(p.total) || 0 });
+      } else if (p.status === "done") {
+        const f = files.get(p.file);
+        if (f && f.total) f.loaded = f.total;
+      }
+      let loaded = 0, total = 0;
+      for (const f of files.values()) { loaded += f.loaded; total += f.total; }
+      const percent = total ? (loaded / total) * 100 : null;
+      onProgress({
+        percent,
+        text: total
+          ? `Downloading the pronunciation checker… ${Math.round(percent)}% (first time only)`
+          : "Getting the pronunciation checker ready…"
+      });
+    });
   },
 
   toPrintItems(activity) {
@@ -68,14 +143,20 @@ const spkTemplate = {
     const g = mkEl("div", "aw-opt-group");
     g.append(mkEl("div", "aw-opt-label", "Speaking"));
 
-    if (draft.passThreshold == null) draft.passThreshold = DEFAULT_PASS_THRESHOLD;
+    // Pass bar in STARS (half-star steps), teacher 11/8/2026 — replaces the
+    // old percentage slider. `passStarsOf` seeds it from an old percentage if
+    // this activity was made before Đợt 108.
+    if (draft.passStars == null) draft.passStars = passStarsOf(draft);
     const sliderWrap = mkEl("div", "aw-spk-opt-slider");
-    sliderWrap.append(mkEl("span", "aw-spk-opt-slidercap", "Pass threshold"));
+    sliderWrap.append(mkEl("span", "aw-spk-opt-slidercap", "Stars needed to pass"));
     const slider = mkEl("input");
-    slider.type = "range"; slider.min = "30"; slider.max = "100"; slider.step = "5";
-    slider.value = String(draft.passThreshold);
-    const sliderVal = mkEl("span", "aw-spk-opt-sliderval", `${draft.passThreshold}%`);
-    slider.oninput = () => { draft.passThreshold = +slider.value; sliderVal.textContent = `${slider.value}%`; };
+    slider.type = "range"; slider.min = "1"; slider.max = String(MAX_STARS); slider.step = "0.5";
+    slider.value = String(draft.passStars);
+    const sliderVal = mkEl("span", "aw-spk-opt-sliderval", `${draft.passStars} ★`);
+    slider.oninput = () => {
+      draft.passStars = +slider.value;
+      sliderVal.textContent = `${slider.value} ★`;
+    };
     sliderWrap.append(slider, sliderVal);
     g.append(sliderWrap);
 
@@ -92,7 +173,7 @@ const spkTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const passThreshold = Math.max(30, Math.min(100, Number(opt.passThreshold) || DEFAULT_PASS_THRESHOLD));
+    const passStars = passStarsOf(opt);
     const playReference = opt.playReference !== false;
     const allowRetry = opt.allowRetry !== false;
 
@@ -108,7 +189,7 @@ const spkTemplate = {
       return () => {};
     }
 
-    const state = items.map(() => ({ graded: false, correct: null, score: null }));
+    const state = items.map(() => ({ graded: false, correct: null, score: null, stars: null }));
     let index = 0;
     let finished = false;
     let autoTimer = null;
@@ -121,25 +202,57 @@ const spkTemplate = {
     // allowRetry goes back to "idle" so the mic button works again.
     let micState = "idle";
     let mediaStream = null, mediaRecorder = null, chunks = [], recordStartedAt = 0, autoStopTimer = null;
+    let audioCtx = null, levelTimer = null;
 
     // ===== persistent shell =====
     const card = el("div", "aw-spk-card");
 
     const wordArea = el("div", "aw-spk-wordarea");
     const wordEl = el("div", "aw-spk-word");
+    const ipaEl = el("div", "aw-spk-ipa");       // (4) target pronunciation, under the word
     const clueEl = el("div", "aw-spk-clue");
-    wordArea.append(wordEl, clueEl);
+    wordArea.append(wordEl, ipaEl, clueEl);
 
     const micWrap = el("div", "aw-spk-micwrap");
     const micBtn = el("button", "aw-spk-micbtn", icons.mic);
     micBtn.type = "button";
     micBtn.setAttribute("aria-label", "Record your pronunciation");
     micBtn.onclick = onMicClick;
-    const statusEl = el("div", "aw-spk-status", "Tap the microphone and say the word.");
-    micWrap.append(micBtn, statusEl);
+
+    // (6) star row + the raw percentage beside it
+    const starsRow = el("div", "aw-spk-stars");
+    const starEls = [];
+    for (let i = 0; i < MAX_STARS; i++) {
+      const star = el("span", "aw-spk-star");
+      star.style.setProperty("--i", String(i));
+      const bg = el("span", "aw-spk-star-bg", STAR_SVG);
+      const fill = el("span", "aw-spk-star-fill", STAR_SVG);
+      star.append(bg, fill);
+      starsRow.append(star);
+      starEls.push(fill);
+    }
+    const pctEl = el("span", "aw-spk-pct");
+    starsRow.append(pctEl);
+
+    // (5) status line: real status ONLY (listening / checking / something went
+    // wrong). No coaching sentences — the teacher removed them.
+    const statusEl = el("div", "aw-spk-status", "");
+    micWrap.append(micBtn, starsRow, statusEl);
 
     card.append(wordArea, micWrap);
     root.append(card);
+
+    // ----- (2) slogan on the SAME row as the clock + score -----
+    // Same technique as anagram.js/crossword.js: absolutely centred over the
+    // top bar so it never depends on the clock/score widths, set up ONCE (the
+    // top bar outlives every word).
+    const topbar = root.parentElement && root.parentElement.querySelector(".aw-topbar");
+    let sloganEl = null;
+    if (topbar) {
+      topbar.style.position = "relative";
+      sloganEl = el("div", "aw-spk-slogan", "SPEAKING IN ANDREW CLASSES");
+      topbar.append(sloganEl);
+    }
 
     ui.onSubmit(finish, () => state.filter(s => s.graded).length);
     loadQuestion(0, false);
@@ -151,13 +264,14 @@ const spkTemplate = {
       index = i;
       const it = items[index];
       wordEl.innerHTML = escapeHtml(it.word);
+      ipaEl.textContent = it.phonemes ? `/${it.phonemes}/` : "";
+      ipaEl.style.display = it.phonemes ? "" : "none";
       clueEl.innerHTML = it.clue ? escapeHtml(it.clue) : "";
       clueEl.style.display = it.clue ? "" : "none";
       updateNav();
       updateMicUI();
-      setStatus(state[index].graded
-        ? resultText(state[index])
-        : "Tap the microphone and say the word.");
+      showResult(state[index]);
+      setStatus("");
 
       voicePlayer.stop();
       if (playReference && it.voice) {
@@ -185,7 +299,7 @@ const spkTemplate = {
 
     // ===== recording =====
     function onMicClick() {
-      if (micState === "recording") { stopRecording(); return; }
+      if (micState === "recording") { stopRecording(); return; }   // manual stop still works
       if (micState !== "idle") return;   // busy processing, or already passed
       startRecording();
     }
@@ -215,18 +329,87 @@ const spkTemplate = {
       recordStartedAt = performance.now();
       micState = "recording";
       updateMicUI();
-      setStatus("Recording… tap again to stop.");
+      hideResult();
+      setStatus("Listening…");
       autoStopTimer = setTimeout(stopRecording, MAX_RECORD_MS);
+      startLevelWatch();
+    }
+
+    // ----- (3) stop by itself when the student stops talking -----
+    // Watches the live mic level and ends the take after SILENCE_HOLD_MS of
+    // quiet that FOLLOWS actual speech, so the student never taps twice.
+    //
+    // • The room's own noise is measured for the first CALIBRATE_MS and the
+    //   two thresholds are derived from it — a noisy classroom would trip a
+    //   fixed threshold instantly and cut the recording off before the word.
+    // • setInterval, NOT requestAnimationFrame: rAF is frozen solid in a
+    //   hidden tab / preview pane (core/HUONG DAN CORE.md) and this loop MUST
+    //   keep running or a recording could never auto-stop.
+    // • Any failure here is non-fatal — the MAX_RECORD_MS cap and a second tap
+    //   both still stop the recording.
+    function startLevelWatch() {
+      stopLevelWatch();
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx || !mediaStream) return;
+        audioCtx = new Ctx();
+        const src = audioCtx.createMediaStreamSource(mediaStream);
+        const analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        src.connect(analyser);
+        const buf = new Uint8Array(analyser.fftSize);
+
+        const watchStartedAt = performance.now();
+        let noiseSum = 0, noiseN = 0, floor = 0;
+        let speechSeen = false, quietSince = 0;
+
+        levelTimer = setInterval(() => {
+          analyser.getByteTimeDomainData(buf);
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) {
+            const v = (buf[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / buf.length);
+          const now = performance.now();
+
+          if (now - watchStartedAt < CALIBRATE_MS) { noiseSum += rms; noiseN++; return; }
+          if (!floor) floor = noiseN ? Math.max(0.004, noiseSum / noiseN) : 0.01;
+
+          const onLevel = Math.max(0.035, floor * 3.2);    // "they've started"
+          const offLevel = Math.max(0.018, floor * 1.8);   // "they've stopped"
+
+          if (!speechSeen) {
+            if (rms >= onLevel) speechSeen = true;
+            return;
+          }
+          if (rms >= offLevel) { quietSince = 0; return; }
+          if (!quietSince) quietSince = now;
+          else if (now - quietSince >= SILENCE_HOLD_MS) stopRecording();
+        }, LEVEL_POLL_MS);
+      } catch (e) {
+        stopLevelWatch();
+      }
+    }
+
+    function stopLevelWatch() {
+      if (levelTimer) { clearInterval(levelTimer); levelTimer = null; }
+      if (audioCtx) {
+        const ctx = audioCtx;
+        audioCtx = null;
+        try { ctx.close(); } catch (e) { /* already closed */ }
+      }
     }
 
     function stopRecording() {
       if (micState !== "recording") return;
+      stopLevelWatch();
       if (autoStopTimer) { clearTimeout(autoStopTimer); autoStopTimer = null; }
       try { mediaRecorder.stop(); } catch (e) { /* already inactive */ }
       micState = "processing";
       updateMicUI();
       updateNav();   // locks Prev/Next while the AI grades this take
-      setStatus("Checking your pronunciation…");
+      setStatus("Checking…");
     }
 
     function stopStream() {
@@ -234,6 +417,7 @@ const spkTemplate = {
     }
 
     function cancelAnyRecording() {
+      stopLevelWatch();
       if (autoStopTimer) { clearTimeout(autoStopTimer); autoStopTimer = null; }
       if (mediaRecorder && mediaRecorder.state === "recording") {
         mediaRecorder.onstop = null;   // don't grade a cancelled recording
@@ -251,7 +435,7 @@ const spkTemplate = {
         micState = "idle";
         updateMicUI();
         updateNav();
-        setStatus("Too short — tap and hold a moment longer.");
+        setStatus("That was too short.");
         return;
       }
       // Nav is disabled while micState === "processing" (see updateNav), so
@@ -270,16 +454,17 @@ const spkTemplate = {
         micState = "idle";
         updateMicUI();
         updateNav();
-        setStatus("Could not check that recording — tap the microphone to try again.");
+        setStatus("Could not check that recording.");
       }
     }
 
+    // Only ever seen if `prepare` failed and the model is being fetched late.
     function onModelProgress(p) {
       if (!p) return;
       if (p.status === "progress" && typeof p.progress === "number") {
-        setStatus(`Downloading the pronunciation checker (first time only)… ${Math.round(p.progress)}%`);
+        setStatus(`Downloading the pronunciation checker… ${Math.round(p.progress)}%`);
       } else if (p.status === "ready" || p.status === "done") {
-        setStatus("Checking your pronunciation…");
+        setStatus("Checking…");
       }
     }
 
@@ -287,10 +472,12 @@ const spkTemplate = {
       const st = state[index];
       st.graded = true;
       st.score = score;
-      st.correct = score >= passThreshold;
+      st.stars = starsForScore(score);
+      st.correct = st.stars >= passStars;
       micState = "done";
       updateMicUI();
-      setStatus(resultText(st));
+      setStatus("");
+      showResult(st, true);
       if (st.correct) spkSound.correct(); else spkSound.wrong();   // classic pack — NOT ui.sound.wrong() ("Oh my god")
       ui.setScore(state.filter(s => s.correct).length);
       updateNav();
@@ -299,17 +486,36 @@ const spkTemplate = {
         autoTimer = setTimeout(() => {
           if (finished) return;
           if (index < total - 1) goNext(); else finish("complete");
-        }, 1100);
+        }, 1400);   // long enough to actually read the stars before it moves on
       } else if (allowRetry) {
         micState = "idle";   // mic ready again for another attempt
         updateMicUI();
       }
     }
 
-    function resultText(st) {
-      return st.correct
-        ? `${st.score}% — nice pronunciation!`
-        : `${st.score}% — not quite.` + (allowRetry ? " Tap the mic to try again, or press Next." : " Press Next to continue.");
+    // ----- (6) star display -----
+    function showResult(st, animate) {
+      if (!st || !st.graded) { hideResult(); return; }
+      starsRow.classList.add("is-shown");
+      starsRow.classList.toggle("is-pass", st.correct === true);
+      starsRow.classList.remove("is-pop");
+      if (animate) {
+        // Re-adding the class on the next frame restarts the pop; a plain
+        // remove+add in the same tick would be collapsed by the style engine.
+        void starsRow.offsetWidth;
+        starsRow.classList.add("is-pop");
+      }
+      starEls.forEach((fill, i) => {
+        const pct = Math.max(0, Math.min(1, st.stars - i)) * 100;
+        fill.style.width = `${pct}%`;
+      });
+      pctEl.textContent = `${st.score}%`;
+    }
+
+    function hideResult() {
+      starsRow.classList.remove("is-shown", "is-pass", "is-pop");
+      starEls.forEach(fill => { fill.style.width = "0%"; });
+      pctEl.textContent = "";
     }
 
     function updateMicUI() {
@@ -360,7 +566,7 @@ const spkTemplate = {
         return {
           question: it.clue || `Say: ${it.word}`,
           answered: s.graded,
-          yourText: s.graded ? `${s.score}%` : null,
+          yourText: s.graded ? `${s.stars}★ (${s.score}%)` : null,
           yourCorrect: s.correct === true,
           correctText: it.word,
           src: it
@@ -374,6 +580,7 @@ const spkTemplate = {
       cancelAnyRecording();
       voicePlayer.stop();
       if (fitter) fitter.destroy();
+      if (sloganEl) sloganEl.remove();
     };
   }
 };

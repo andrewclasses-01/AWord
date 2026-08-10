@@ -5,6 +5,58 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 108 (11/8/2026, v0.9.82) — SPEAKING: 6 CẢI TIẾN SAU KHI THẦY TEST LIVE (tải sẵn bộ chấm + chặn
+nút PLAY, slogan, TỰ DỪNG GHI ÂM, hiện IPA, bỏ câu hướng dẫn, SAO 0–5 nấc nửa sao thay ngưỡng %)
+⭐ CÓ SỬA CORE: `core/engine.js` (móc mới `tpl.prepare`), `core/app.css` (`.aw-ready-prep*`),
+`core/speech-score.js` (thêm `warmup()` + không nhớ promise hỏng), `core/HUONG DAN CORE.md` (chép hợp
+đồng móc mới). + 3 file `templates/speaking/*`. ✅ THẦY DUYỆT TRƯỚC ("ok build" + cho phép tự test đạt
+thì tự commit/push/ghi nhật ký, không phải hỏi lại)
+
+Thầy chơi bản live rồi gửi 6 điểm. Đã hỏi lại bằng AskUserQuestion trước khi code — thầy chốt: **được
+sửa core**; bỏ câu hướng dẫn nhưng **giữ báo trạng thái**; sao **tối đa 5, có nửa sao**; **ngưỡng đạt
+trong Options đổi hẳn từ % sang SAO** (đạt mức sao = 1 điểm, điểm tổng vẫn kiểu 7/10); thang quy đổi
+**chia đều `% ÷ 20`**.
+
+**(1) Tải bộ chấm ngay khi mở act, xong mới hiện nút PLAY** — móc mới `tpl.prepare(activity, onProgress)`:
+engine gọi ngay lúc màn READY dựng lên, **ẩn PLAY**, hiện thanh % đúng chỗ nút PLAY, promise xong mới trả
+PLAY lại. Cố ý làm móc TRUNG LẬP (`{percent, text}`) — engine không biết gì về "mô hình"/"tải", template
+tự quy đổi; template không khai `prepare` thì không vào nhánh này (Quiz + Anagram đã đo lại thật). Hợp
+đồng đầy đủ ghi vào `core/HUONG DAN CORE.md`.
+
+**(2)** Slogan "SPEAKING IN ANDREW CLASSES" giữa hàng đồng hồ/điểm (khuôn Anagram/Crossword).
+**(3) Tự dừng ghi âm khi học sinh nói xong**: `AnalyserNode` + `setInterval` (KHÔNG rAF — bẫy tab ẩn),
+**học mức ồn của phòng trong 250ms đầu** rồi suy ra ngưỡng bật/tắt (nên lớp ồn không bị cắt oan), im
+800ms sau khi đã có tiếng nói thì tự chấm. Bấm mic lần nữa vẫn dừng tay được; trần cứng 6s vẫn giữ.
+**(4)** Hiện IPA chuẩn ngay dưới từ. **(5)** Bỏ hết câu hướng dẫn, dòng chữ chỉ còn trạng thái thật.
+**(6)** Sao 0–5 nấc nửa sao: 2 lớp sao chồng nhau, lớp vàng **cắt theo `width` %** → nửa sao không cần
+thêm hình. Options đổi thành "Stars needed to pass" (1→5, nấc 0,5, mặc định 3,5★). Act cũ lưu
+`passThreshold` % vẫn chạy (quy đổi cùng công thức ÷20 → 70% = 3,5★).
+
+**⭐ MẸO TEST đáng nhớ — GIẢ LẬP MICRO** (dùng lại được cho mọi việc dính mic sau này): Browser pane
+không xin được quyền mic thật, nhưng **tráo `navigator.mediaDevices.getUserMedia`** trả về
+`MediaStreamAudioDestinationNode` đang phát một `AudioBuffer` tự dựng = **0,4s im + clip giọng AI (Kokoro
+TTS) + 2,0s im** thì cả đường đi thật (MediaRecorder → AnalyserNode → mô hình AI → chấm → sao) chạy y hệt
+mic thật, và còn ĐO ĐƯỢC thời điểm tự dừng chính xác tới mili giây.
+
+**Số đo thật thu được**: thanh % chạy thật 38%→61%→xong sau **23,5 giây** (PLAY ẩn suốt thời gian đó),
+dựng lại act lần 2 PLAY hiện sau **55 mili giây**; tự dừng đúng mốc **2123ms** = 0,4s im + ~0,9s tiếng +
+0,8s im; "elephant" cho từ "elephant" → **100% = 5 sao** (đạt, tự sang từ sau, điểm lên 1); "elephants"
+cho từ "elephant" → **86% = 4,5 sao** (đúng nửa sao `width:50%`), ngưỡng 5★ thì đứng lại cho thử lại;
+act kiểu cũ `passThreshold:70` → 4,5★ ≥ 3,5★ → đạt; quay lại từ đã chấm thì sao + % hiện lại đúng;
+Options ra đúng "Stars needed to pass" min 1/max 5/step 0,5; Quiz + Anagram mở lên PLAY hiện NGAY, chơi
+bình thường; editor vẫn đúng; **0 lỗi console** (chỉ 2 dòng cảnh báo quen thuộc của onnxruntime).
+
+**⚠️ Lỗi thật bắt được lúc tự test**: hàng sao làm nội dung **tràn 9px** ở tỷ lệ 16:9 (mức hẹp nhất khi
+phủ kín) — siết `gap` `.aw-spk-card` 3→2,2cqw, `.aw-spk-micwrap` 1,4→1cqw, sao 4,8→4,2cqw; đo lại 0 tràn
+ở cả 16:10,5 lẫn 16:9, **ca kiểm chứng 21:6 vẫn báo tràn 132px** (chứng minh phép đo có thật, đúng luật
+"cho bàn đo một ca phải-thấy-tràn"). Màn điện thoại 375px: 0 tràn, nút mic chạm sàn 64px như thiết kế.
+
+**Việc kế**: thầy nghiệm thu phần TỰ DỪNG bằng tai trong lớp thật (máy build chỉ chứng minh được trong
+phòng yên bằng giọng AI) — nếu cắt sớm/muộn thì chỉnh 3 con số nằm cạnh nhau trong `startLevelWatch()`
+(`SILENCE_HOLD_MS` 800ms, `floor*3.2`, `floor*1.8`). Chưa có bằng chứng trên iPhone/iPad.
+
+---
+
 ## Đợt 107 (10-11/8/2026, v0.9.81) — ⭐⭐ TEMPLATE THỨ 17 "SPEAKING": AI NGHE + CHẤM PHÁT ÂM TỪNG TỪ
 (ý tưởng riêng của thầy, KHÔNG có bên Wordwall). ⭐ CÓ SỬA CORE — thêm MỚI 2 file `core/phonemize.js` +
 `core/speech-score.js` (thuần cộng thêm, giống tiền lệ Đợt 94 thêm `core/tts.js`) + 1 mục
