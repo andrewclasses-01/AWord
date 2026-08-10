@@ -5,6 +5,53 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 99 (10/8/2026, v0.9.73) — WHACK-A-MOLE: THANH "PHẠT" ĐỎ Ở HÀNG NÚT MENU/SOUND KHI ĐẬP SAI. Chỉ
+đụng `templates/whack-a-mole/*` (2 file: `.js` + `.css`), KHÔNG đụng core. 🟡 CHỜ THẦY DUYỆT — đã tự test
+kỹ qua trình duyệt (0 lỗi console), **CHƯA COMMIT/PUSH** (đợt này chỉ ghi log theo yêu cầu thầy).
+
+Thầy yêu cầu: khi đập sai bị "đông cứng" (Punishment), thêm 1 thanh hiển thị thời gian ở vị trí **ngang
+hàng với nút Menu và nút loa**, nằm giữa màn hình, dài **~65% bề ngang** khung, **cỡ bằng thanh giờ có
+sẵn** nhưng phần chạy bên trong màu **đỏ**, **không số**. Chạy hết thời gian phạt thì tự ẩn; chỉ hiện +
+chạy đúng lúc đang ở trạng thái chờ do phạt.
+
+**Vị trí — gắn thẳng vào `.aw-bottombar` của core (không sửa core, chỉ thao tác DOM lúc mount, đúng cách
+file này đã làm với `chrome`/`engTimer` từ trước):** thêm làm con **thứ 4** (append SAU CÙNG) nên
+`:nth-child(1/2/3)` của core vẫn đúng nhắm Menu/nav/Sound như cũ; phần tử `position:absolute` không tham
+gia track CSS Grid nên không phá lưới `1fr auto 1fr` có sẵn. `.aw-bottombar` đã tự mang `position:relative`
+từ đoạn `chrome.forEach` sẵn có (dùng để nổi topbar/bottombar lên trên cảnh full-bleed) → containing block
+của thanh mới là TOÀN BOTTOMBAR, mà `cqw` bên trong vẫn đọc theo `.aw-stage` (container gốc) chứ không
+phải theo box riêng của bottombar, nên `width:65cqw` + `left:50%; transform:translateX(-50%)` ra đúng 65%
+bề ngang KHUNG GAME và tâm đúng tâm khung. Đo thật (devserver): tâm ngang thanh trùng khít tâm khung
+(632,5px = 632,5px), tâm dọc trùng đúng tâm nút Menu **và** nút Sound (615,48px cả 3), bề ngang 627,9/968px
+= **64,9%** (khớp "~65%"), cao **14,48px = ĐÚNG BẰNG** thanh giờ hiện có (`.aw-wam-timerbar`).
+
+**Hành vi:** `startPunishBar(freezeMs)` gọi đúng lúc `frozen = true` (nhánh đập sai, còn mạng) trong
+`onWhack()` — set `width:100%`, ép reflow (`void punishFill.offsetWidth`) rồi mới đổi
+`transition: width {freezeMs}ms linear; width:0%` (đúng khuôn ép-reflow-trước-khi-transition đã dùng ở
+nhiều chỗ khác trong file, vd `is-rotating`/`zap`). `stopPunishBar()` gọi ở 3 chỗ: hết hạn tự nhiên (trong
+callback `h.freeT`, đúng lúc `frozen = false`), đầu `endGame()` (phòng ván kết thúc giữa lúc đang phạt),
+và `cleanup()` (gỡ hẳn phần tử khỏi bottombar lúc unmount). Đập ĐÚNG không đụng tới các hàm này nên thanh
+không bao giờ hiện ngoài lúc phạt. `freezeMs = 0` (Punishment "Off") thì `startPunishBar` tự bỏ qua
+(guard `ms <= 0`).
+
+**⚠️ Bẫy đo gặp lại (đã ghi ở `GHI CHU WHACK-A-MOLE.md` Đợt 57):** pane trình duyệt bị ẩn lúc test lần
+này → CSS transition ĐÓNG BĂNG thật (đọc `getComputedStyle` suốt 4 giây ra `opacity:"0"`/`width` không
+đổi, y hệt một lỗi thật). Đo đúng bằng `el.getAnimations()[0]` + tự set `currentTime` — kỹ thuật này áp
+dụng được cho cả **CSS Transition** (không chỉ `@keyframes` như bẫy cũ đã ghi): xác nhận `opacity`
+transition 150ms chạy đúng 0→1, `width` transition 4000ms (đúng `punishSeconds=4` mặc định × 1000) nội
+suy TUYẾN TÍNH 627,9px → 470,9 → 313,9 → 157,0 → 0px ở các mốc 0/25/50/75/100% — đúng thiết kế, không
+phải lỗi thật.
+
+**Test thật** qua devserver (`templates/whack-a-mole/test.html`), dispatch thẳng `PointerEvent("pointerdown")`
+vào đúng mole mang phát biểu SAI (khỏi chờ may rủi bấm trúng): đập sai → thanh hiện đúng lúc + đúng cỡ/vị
+trí, đập ĐÚNG → thanh không hiện, hết 4s phạt → tự ẩn (lớp `is-on` mất lúc ~4,34s, khớp `freezeMs` + độ
+trễ `later()` bình thường). 0 lỗi console.
+
+**VIỆC ĐANG CHỜ**: thầy tự chơi thử trên trình duyệt THẬT (không bị che pane) để mắt thường xác nhận thanh
+chạy mượt + đúng cảm giác mong muốn, rồi mới commit + push.
+
+---
+
 ## Đợt 98 (10/8/2026, v0.9.72) — ANAGRAM: HIDE TEXT + WAVEFORM AUDITION-STYLE + DIM/BLUR/PROGRESS/CANCEL
 CHO GENERATE ALL + POPUP DELETE ALL WORDS + AUTO-PLAY/PHÁT QUANG TRONG GAME (6 điểm thầy gửi tiếp ngay sau
 khi duyệt Đợt 96). KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thuần thêm 2 icon — + 3 file

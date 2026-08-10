@@ -464,6 +464,33 @@
 .aw-wam-heart { display: inline-block; width: 2.3cqw; text-align: center; transform: translateY(0.09em); filter: drop-shadow(0 0.12cqw 0.18cqw rgba(0,0,0,.28)); }
 .aw-wam-heartcount { font-weight: 800; letter-spacing: .01em; }
 
+/* ---------- punishment wait bar (teacher, 10/8/2026) ----------
+   Sits centred on core's .aw-bottombar, at the SAME height as the Menu (left)
+   and Sound (right) buttons — appended there directly by whack-a-mole.js,
+   which already flips that bar to `position:relative` (see the `chrome` float
+   in mount()), so this is positioned against the WHOLE bottombar box (i.e. the
+   whole stage width, since the bar spans it) rather than any single column of
+   its 3-column grid. Absolutely-positioned children sit outside CSS Grid's
+   column tracks entirely, so it doesn't disturb the existing
+   `:nth-child(1/2/3)` layout of Menu / nav / Sound+Fullscreen.
+   Same height/radius as the round's own countdown bar (.aw-wam-timerbar), but
+   plain red and no numbers: it only exists to show a wrong-hit freeze running
+   out, and disappears the instant it's over. */
+.aw-wam-punishbar {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 65cqw; height: 1.5cqw; border-radius: 1cqw;
+  background: rgba(0,0,0,.28); overflow: hidden;
+  opacity: 0; pointer-events: none;
+  transition: opacity .15s ease;
+}
+.aw-wam-punishbar.is-on { opacity: 1; }
+.aw-wam-punishbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 1cqw;
+  background: linear-gradient(90deg, #ff7a5c, #e0453f);   /* same red as .aw-wam-timerbar-fill.is-red */
+}
+
 /* ---------- options-panel sliders (popup below the stage — plain px units) ---------- */
 .aw-wam-sliderrow { display: flex; align-items: center; gap: 10px; }
 .aw-wam-slider { flex: 1 1 auto; max-width: 220px; }

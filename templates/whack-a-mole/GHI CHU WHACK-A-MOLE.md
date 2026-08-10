@@ -1,5 +1,41 @@
 # GHI CHU — Template WHACK-A-MOLE
 
+**Đợt 99 dự án (10/8/2026, v0.9.73) — THANH "PHẠT" (đỏ, không số) hiện ở hàng nút Menu/Sound khi đập sai
+bị đông cứng. 🟡 CHỜ THẦY DUYỆT (đã test kỹ qua trình duyệt thật, 0 lỗi console, CHƯA commit/push).**
+Chỉ đụng `whack-a-mole.js` + `.css`, KHÔNG đụng core. Thầy yêu cầu: khi đập sai bị "đông cứng"
+(Punishment), thêm 1 thanh thời gian ngang hàng với nút Menu/Sound (đáy khung), giữa màn hình, dài ~65%
+bề ngang, cỡ bằng thanh giờ có sẵn (`.aw-wam-timerbar`) nhưng phần chạy màu đỏ, không số; chạy hết thời
+gian phạt thì tự ẩn, chỉ hiện đúng lúc đang chờ do phạt.
+
+**Vị trí:** gắn thẳng vào `.aw-bottombar` của core lúc mount (không sửa core) — con **thứ 4**, append
+SAU CÙNG nên `:nth-child(1/2/3)` core vẫn đúng nhắm Menu/nav/Sound; `position:absolute` không tham gia
+CSS Grid track nên không phá lưới `1fr auto 1fr`. `.aw-bottombar` đã sẵn `position:relative` từ đoạn
+`chrome.forEach` (nổi topbar/bottombar lên trên cảnh full-bleed) → containing block là toàn bottombar, mà
+`cqw` bên trong vẫn đọc theo `.aw-stage` gốc, nên `width:65cqw` + `left:50%; translateX(-50%)` ra đúng
+65% bề ngang KHUNG GAME, tâm đúng tâm khung. Đo thật: tâm ngang thanh = tâm khung (632,5px = 632,5px);
+tâm dọc = tâm nút Menu = tâm nút Sound (615,48px cả 3); bề ngang 627,9/968px = 64,9%; cao 14,48px =
+ĐÚNG BẰNG `.aw-wam-timerbar`.
+
+**Hành vi:** `startPunishBar(freezeMs)` gọi ngay lúc `frozen = true` trong nhánh đập sai (còn mạng) của
+`onWhack()` — set full rồi ép reflow (`void punishFill.offsetWidth`) trước khi đổi
+`transition: width {freezeMs}ms linear; width:0%` (khuôn ép-reflow-trước-transition đã dùng nhiều chỗ
+khác trong file). `stopPunishBar()` gọi ở 3 chỗ: hết hạn tự nhiên (callback `h.freeT`, đúng lúc
+`frozen = false`), đầu `endGame()` (phòng ván kết thúc giữa lúc đang phạt), `cleanup()` (gỡ phần tử khỏi
+bottombar lúc unmount). `freezeMs = 0` (Punishment "Off") thì bỏ qua (guard `ms <= 0`).
+
+**⚠️ Bẫy đo GẶP LẠI (giống hệt bẫy "pane bị ẩn" đã ghi ở Đợt 57, nhưng lần này là CSS Transition chứ
+không phải `@keyframes`):** pane trình duyệt bị ẩn lúc test → transition ĐÓNG BĂNG thật, `getComputedStyle`
+suốt 4 giây ra `opacity:"0"`/`width` không đổi, y hệt lỗi thật. Đo đúng bằng `el.getAnimations()[0]` +
+tự set `currentTime` — áp dụng được cho CẢ CSS Transition, không riêng animation: xác nhận `opacity`
+150ms chạy đúng 0→1, `width` 4000ms (đúng `punishSeconds=4` mặc định) nội suy tuyến tính 627,9→470,9→
+313,9→157,0→0px ở 0/25/50/75/100% — đúng thiết kế. Test thật qua `test.html`, dispatch thẳng
+`PointerEvent("pointerdown")` vào đúng mole mang phát biểu sai (khỏi chờ may rủi): đập sai → thanh hiện
+đúng lúc/cỡ/vị trí; đập đúng → không hiện; hết 4s → tự ẩn (`is-on` mất lúc ~4,34s). 0 lỗi console.
+Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 99.
+
+**VIỆC ĐANG CHỜ:** thầy tự chơi thử trên trình duyệt THẬT (không bị che pane) xác nhận mắt thường thanh
+chạy mượt + đúng ý, rồi mới commit + push.
+
 **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
 `be7cd55` + PUSH + LIVE.**
 Chỉ đụng `whack-a-mole.js`: tách `tickClock()` ra khỏi `startClock()`, thêm `pauseGame`/`resumeGame` +

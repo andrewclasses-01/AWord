@@ -314,6 +314,38 @@ const wamTemplate = {
     // removing it would collapse the has-inline grid and shove everything left.
     const engTimer = stageInner && stageInner.querySelector(".aw-top-timer");
     if (engTimer) engTimer.style.visibility = "hidden";
+
+    // Punishment wait bar (teacher, 10/8/2026) — a plain red strip centred on
+    // the bottom bar, at the SAME height as the Menu (left) / Sound (right)
+    // buttons, that drains over the "Punishment" freeze after a wrong hit and
+    // disappears the instant it's over. Appended straight into core's
+    // .aw-bottombar (already `position:relative` from the `chrome` float
+    // above), so `left:50%` centres it against the WHOLE stage width, and its
+    // cqw units read off the stage container same as everything else here.
+    const bottombarEl = stageInner && stageInner.querySelector(".aw-bottombar");
+    let punishBar = null, punishFill = null;
+    if (bottombarEl) {
+      punishBar = el("div", "aw-wam-punishbar");
+      punishFill = el("div", "aw-wam-punishbar-fill");
+      punishBar.append(punishFill);
+      bottombarEl.append(punishBar);
+    }
+    function startPunishBar(ms) {
+      if (!punishFill || ms <= 0) return;
+      punishBar.classList.add("is-on");
+      punishFill.style.transition = "none";
+      punishFill.style.width = "100%";
+      void punishFill.offsetWidth;               // lock the full bar before animating it away
+      punishFill.style.transition = "width " + ms + "ms linear";
+      punishFill.style.width = "0%";
+    }
+    function stopPunishBar() {
+      if (!punishBar) return;
+      punishBar.classList.remove("is-on");
+      punishFill.style.transition = "none";
+      punishFill.style.width = "100%";
+    }
+
     const scene = el("div", "aw-wam-scene");
     const world = el("div", "aw-wam-world");   // holds the whole picture; zooms as one unit for the intro
     const bg = el("div", "aw-wam-bg");          // sky (bg2.webp, via CSS)
@@ -704,6 +736,7 @@ const wamTemplate = {
           // The freeze lasts as long as the "Punishment" option says (0 = none:
           // the mole just ducks and play carries straight on).
           frozen = true;
+          startPunishBar(freezeMs);
           const wobble = freezeMs >= PUNISH_MIN_WOBBLE_MS;
           if (wobble) floatText(h, "WAIT…", "is-minus");
           holes.forEach(o => { if (o !== h && (o.status === "up" || o.status === "rising")) duck(o, false); });
@@ -715,6 +748,7 @@ const wamTemplate = {
             h.hole.classList.remove("is-dizzy", "is-up", "is-wrong");
             later(() => freeHole(h), 300);
             frozen = false;
+            stopPunishBar();
           }, freezeMs);
         }
       }
@@ -789,6 +823,7 @@ const wamTemplate = {
       if (ended) return;
       endReason = reason || "time";
       ended = true;
+      stopPunishBar();
       if (spawnTimer) clearTimer(spawnTimer);
       if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
       timers.forEach(t => clearTimeout(t)); timers.clear();
@@ -863,6 +898,7 @@ const wamTemplate = {
       if (ui.topbarMid) ui.topbarMid.innerHTML = "";
       chrome.forEach(e => { e.style.position = ""; e.style.zIndex = ""; });   // drop the chrome back to normal flow
       if (engTimer) engTimer.style.visibility = "";
+      if (punishBar) punishBar.remove();
     };
   },
 
