@@ -438,9 +438,21 @@ function toolbar() {
     left.append(newFolder);
   }
   if (state.view !== "trash" && state.root === "activities") {
-    const imp = el("button", "aw-btn aw-fm-iconbtn", IMP_UPLOAD_SVG);
-    imp.type = "button"; imp.title = "Import from a lesson file"; imp.setAttribute("aria-label", "Import");
-    imp.onclick = importFlow;
+    // Wider than a plain icon button on purpose (teacher's request
+    // 10/8/2026) — it doubles as a drop target: dragging a lesson file
+    // straight onto it opens Import already reading that file, skipping
+    // the click-to-open step. The dialog's own internal drop-zone (inside
+    // importFlow()) still works too, for picking a different file once open.
+    const imp = el("button", "aw-btn aw-fm-iconbtn aw-fm-importbtn", IMP_UPLOAD_SVG);
+    imp.type = "button"; imp.title = "Import from a lesson file — or drag one here"; imp.setAttribute("aria-label", "Import");
+    imp.onclick = () => importFlow();
+    ["dragenter", "dragover"].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.add("is-dragover"); }));
+    ["dragleave", "dragend"].forEach(ev => imp.addEventListener(ev, e => { e.preventDefault(); imp.classList.remove("is-dragover"); }));
+    imp.addEventListener("drop", e => {
+      e.preventDefault(); imp.classList.remove("is-dragover");
+      const f = e.dataTransfer && e.dataTransfer.files[0];
+      importFlow(f || undefined);
+    });
     left.append(imp);
   }
   const inTrash = state.view === "trash";
@@ -933,8 +945,14 @@ const IMP_ACT_ICON = {
   speaking_cards: icons.mic, true_false: icons.check, whack_a_mole: icons.check,
   anagram: icons.fmtAnagram, flying_fruit: icons.fmtAnagram, crossword: icons.fmtCrossword, unjumble: icons.fmtUnjumble
 };
+// The "ACT" folder (core/lesson-import.js's QUIZ1/QUIZ2/READINGACT subfolder
+// target) is meant to hold only these lesson-comprehension types — Quiz
+// covers both QUIZ1/QUIZ2 and "3. READING QUIZ" (same `type`), find_the_match
+// covers "2. FILLING". Teacher's request 10/8/2026: keep vocab/pronunciation
+// acts (Anagram, Speaking cards) OUT of "ACT" so it never gets mixed up.
+const ACT_FOLDER_ALLOWED_TYPES = new Set(["quiz", "true_false", "find_the_match", "running_word", "running_team"]);
 
-function importFlow() {
+function importFlow(initialFile) {
   openModal("Import activities", (body, close) => {
     if (body.parentElement) body.parentElement.classList.add("is-import");
     let acts = [], sourceName = "";
@@ -989,6 +1007,10 @@ function importFlow() {
         setDrop(...IDLE); showErr("Could not read that file: " + (e && e.message ? e.message : e));
       }
     }
+    // A file dropped straight onto the toolbar's Import button (teacher's
+    // request 10/8/2026) skips the click-to-open step — the dialog opens
+    // already reading it.
+    if (initialFile) handleFile(initialFile);
 
     function buildPanel() {
       panel.innerHTML = ""; panel.style.display = "flex";
@@ -1135,12 +1157,22 @@ function importFlow() {
           let targetId;
           if (pathCache.has(key)) targetId = pathCache.get(key);
           else { targetId = await resolveFolderPath(baseId, key.split("/").filter(Boolean)); pathCache.set(key, targetId); }
-          let dup = false;
+          let dup = false, wrongType = false;
           if (targetId !== undefined) {
             const kids = await listChildren(state.root, targetId);
             dup = kids.some(k => k.kind === "act" && sameName(k.title, a.title));
+            // "ACT" (the Quiz/Reading subfolder) is meant to hold only its
+            // own comprehension types (teacher's request 10/8/2026) — an
+            // Anagram/Speaking-cards act landing there (e.g. because the
+            // teacher is standing inside "ACT" itself, see the guard below)
+            // gets flagged the same way a name clash does.
+            if (!ACT_FOLDER_ALLOWED_TYPES.has(a.type)) {
+              const targetNode = await getItem(targetId);
+              if (targetNode && sameName(itemName(targetNode), "ACT")) wrongType = true;
+            }
           }
           row.classList.toggle("is-dup", dup);
+          row.classList.toggle("is-wrongtype", wrongType);
         }
       }
       fCb.onchange = () => { fName.style.display = fCb.checked ? "" : "none"; if (fCb.checked) setTimeout(() => fName.focus(), 0); refreshDupState(); };
@@ -1181,8 +1213,12 @@ function importFlow() {
         if (makeNew && !folderName) { showErr("Type a folder name, or untick “Make a new folder”."); return; }
 
         const dupTicked = acts.some((a, i) => checks[i].checked && checks[i].closest(".aw-imp-row")?.classList.contains("is-dup"));
-        if (folderDup || dupTicked) {
-          showErr("There's a name conflict with something already in your library — rename or delete it (or untick the conflicting row), then Import again.");
+        const wrongTypeTicked = acts.some((a, i) => checks[i].checked && checks[i].closest(".aw-imp-row")?.classList.contains("is-wrongtype"));
+        if (folderDup || dupTicked || wrongTypeTicked) {
+          const parts = [];
+          if (folderDup || dupTicked) parts.push("a name conflict with something already in your library");
+          if (wrongTypeTicked) parts.push("an act type that doesn't belong in the “ACT” folder (only Quiz, Running word, Running team, True/False, Filling and Reading quiz go there)");
+          showErr(`There's ${parts.join(" and ")} — fix it (rename/delete the conflict, or untick the flagged row), then Import again.`);
           return;
         }
 

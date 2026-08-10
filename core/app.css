@@ -1250,6 +1250,11 @@ body {
 .aw-lib .aw-fm-iconbtn { display: inline-flex; align-items: center; justify-content: center; padding: .5rem .62rem; border-radius: 10px; }
 .aw-fm-iconbtn svg { width: 19px; height: 19px; }
 .aw-fm-iconbtn.is-on { background: #2f7bff; color: #fff; }
+/* Wider than a plain icon button (10/8/2026) — also a file-drop target, so
+   it needs a bit more room to read as "drop here" rather than just "click
+   me". `is-dragover` mirrors the in-dialog drop-zone's own hover state. */
+.aw-lib .aw-fm-importbtn { padding-left: 1.1rem; padding-right: 1.1rem; transition: border-color .12s ease, background .12s ease, transform .12s ease; }
+.aw-fm-importbtn.is-dragover { border: 1.5px dashed #2f7bff; background: #eef5ff; transform: scale(1.04); }
 
 /* body + layouts */
 .aw-fm-body { min-height: 200px; }
@@ -1458,12 +1463,14 @@ body {
 .aw-imp-note { font-size: .82rem; color: #7c8aa0; }
 .aw-imp-done { font-weight: 700; color: #1e9e5a; }
 
-/* Row-level duplicate-name flag (10/8/2026): title already exists in the
-   act's real target folder. Stays ticked on purpose — teacher decides
-   whether to untick it or go rename/delete the existing item; blocking
-   itself happens on the Import click (main.js), not here. */
-.aw-imp-row.is-dup { border-color: #e5484d; background: #fdeceb; }
-.aw-imp-row.is-dup .aw-imp-rtitle { color: #c53030; }
+/* Row-level flags (10/8/2026), same red treatment for both: `is-dup` = title
+   already exists in the act's real target folder; `is-wrongtype` = the act's
+   type doesn't belong in the "ACT" folder it would land in (only Quiz/
+   Reading-comprehension types do). Both stay ticked on purpose — teacher
+   decides whether to untick or go fix the real cause; blocking itself
+   happens on the Import click (main.js), not here. */
+.aw-imp-row.is-dup, .aw-imp-row.is-wrongtype { border-color: #e5484d; background: #fdeceb; }
+.aw-imp-row.is-dup .aw-imp-rtitle, .aw-imp-row.is-wrongtype .aw-imp-rtitle { color: #c53030; }
 
 /* Excel-import voice panel (10/8/2026) — shown first, above the act list,
    only when the workbook produced at least one TTS-eligible act (the
