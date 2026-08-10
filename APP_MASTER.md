@@ -5,14 +5,29 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 101, v0.9.75) — ĐỒNG BỘ VOICE/HIDE TEXT QUA 12 TEMPLATE TẠM KHI
-> DÙNG "CHANGE TEMPLATE" (thầy chốt "Toàn bộ 12 game"). CÓ SỬA CORE: `core/convert.js` (mang
-> `voice`/`voiceId`/`hideText` qua mọi target QA), `core/voice-playback.js` (MỚI — module
-> `createVoicePlayer()` dùng chung), `core/app.css` (thêm `.aw-voicebtn`/`.aw-voicebtn-lg`/
-> `.aw-clue-voiceonly`). + 12 file `templates/*/[template].js` + 3 file `.css` (open-the-box,
-> type-the-answer, speaking-cards). `running_team` CHỦ Ý bỏ qua (không có khái niệm clue). ✅ THẦY DUYỆT
-> → COMMIT `7f154cc` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ
-> `createVoicePlayer`/`hideTextOf`/`replaceChildren(...front.childNodes)` ngay lần poll thứ 2).**
+> Cập nhật lần cuối: **10/8/2026 (Đợt 102, v0.9.76) — IMPORT EXCEL: TỰ ĐỘNG TẠO GIỌNG ĐỌC (TTS) CHO
+> ENG1/ENG2. CÓ SỬA CORE: `core/tts.js` (thêm `getLastVoice`/`setLastVoice`), `core/voice-batch.js` (MỚI
+> — `generateVoicesSequential()` dùng chung), `core/lesson-import.js` (cờ `ttsEligible` cho ENG1/ENG2 —
+> VI1/VI2 tiếng Việt + PRONUNCIATION là IPA thô nên KHÔNG được tự tạo voice), `core/store.js`
+> (`importBundle()` trả thêm `createdActs`), `core/app.css` (`.aw-imp-voice*`/`.aw-voice-progress*`). +
+> `main.js` (khung Voice trong popup Import, pop-up xác nhận, pop-up tiến trình %). ✅ THẦY DUYỆT (chốt
+> scope qua AskUserQuestion) → COMMIT `8488c5b` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+> (`curl` xác nhận đủ `generateVoicesSequential`/`ttsEligible`/`confirmVoiceGeneration`/`createdActs`
+> ngay lần poll thứ 3).**
+> Lỗi thật bắt được lúc test: nút "Skip voices" trên pop-up xác nhận từng HUỶ CẢ LƯỢT IMPORT thay vì chỉ
+> bỏ qua bước tạo giọng (return sớm trước cả `importBundle()`) — đã sửa. Test thật qua Browser pane với
+> giọng Kokoro THẬT (harness Firestore giả trong bộ nhớ, xoá sau khi xong): khung Voice hiện đúng + mặc
+> định tích + nhớ giọng gần nhất, pop-up xác nhận đúng số từ/tên giọng, acts tạo trước — voice tạo sau
+> (không chờ nhau), cả 6 từ test đều có `voice`/`voiceId`/`hideText:true` đúng, cờ `ttsEligible` không lẫn
+> vào tài liệu đã lưu, đường Skip voices và bỏ tích từ đầu đều đúng, 0 lỗi console. CHƯA test bằng tay:
+> bấm Cancel giữa batch + đường lỗi chưa đăng nhập giữa batch (dựa trên soát code khớp pattern đã chứng
+> minh ổn định từ Anagram editor Đợt 98). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 102. **Việc kế: thầy tự
+> Import 1 file Excel thật, xác nhận nghe được giọng vừa tạo + thử Cancel giữa lúc đang tạo hàng loạt.**
+>
+> Trước đó: **10/8/2026 (Đợt 101, v0.9.75) — ĐỒNG BỘ VOICE/HIDE TEXT QUA 12 TEMPLATE TẠM KHI DÙNG "CHANGE
+> TEMPLATE" (thầy chốt "Toàn bộ 12 game"). CÓ SỬA CORE: `core/convert.js`, `core/voice-playback.js` (MỚI),
+> `core/app.css`. + 12 file `templates/*/[template].js` + 3 file `.css`. `running_team` CHỦ Ý bỏ qua
+> (không có khái niệm clue). ✅ THẦY DUYỆT → COMMIT `7f154cc` + PUSH + **LIVE**.**
 > Test thật qua Browser pane cho 4/12 template đại diện (quiz, crossword, open_the_box, speaking_cards) —
 > 0 lỗi console mỗi lần; bắt và vá được 1 lỗi thật lúc soát code: `speaking-cards.js`'s `finishFlip()`
 > dùng `innerHTML = front.innerHTML` xoá mất listener nút loa mới gắn (chuỗi text round-trip, không phải

@@ -5,6 +5,85 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 102 (10/8/2026, v0.9.76) — IMPORT EXCEL: TỰ ĐỘNG TẠO GIỌNG ĐỌC (TTS) CHO ENG1/ENG2 ⭐ CÓ SỬA CORE
+✅ THẦY DUYỆT (chốt scope qua AskUserQuestion) → COMMIT `8488c5b` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận đủ `generateVoicesSequential` trong
+`core/voice-batch.js`, `ttsEligible` trong `core/lesson-import.js`, `confirmVoiceGeneration` trong
+`main.js`, `createdActs` trong `core/store.js` ngay lần poll thứ 3).
+
+Từ khi có TTS (Đợt 96-101), thầy muốn tính năng "kéo file Excel vào page để tạo act"
+(`core/lesson-import.js`, có từ Đợt 49-50) cũng tận dụng được — sinh sẵn giọng đọc cho các Anagram vừa
+import thay vì phải mở từng act vào Edit bấm "Generate all voices" thủ công.
+
+**Quyết định phạm vi (hỏi thầy trước khi build, đúng luật "tính năng mới: nghiên cứu + báo trước")**:
+- Sheet `WORDTABLE` sinh ra 4 biến thể Anagram: ENG1/ENG2 (Clue tiếng Anh) và VI1/VI2 (Clue **tiếng
+  Việt**, thầy xác nhận) — Kokoro chỉ có giọng tiếng Anh nên **CHỈ ENG1/ENG2 được tự động tạo voice**,
+  VI1/VI2 và PRONUNCIATION (Clue là ký hiệu IPA thô) vẫn import như cũ, không đụng tới.
+- Kích hoạt: 1 khung riêng "Voice" trong popup Import, đặt **lên đầu tiên**, **mặc định tích**, có ô chọn
+  giọng mặc định = **giọng dùng gần nhất** (mới, chưa từng lưu trước đây). Bấm Import → **pop-up xác
+  nhận** trước ("Sẽ tạo giọng cho N từ bằng giọng X") → OK thì **các act khác được tạo trước** (không chờ
+  TTS chậm) → **sau đó mới hiện pop-up tiến trình %** riêng, có nút Cancel đỏ nhỏ (soft-cancel, giống hệt
+  ý tưởng "Generate all voices" của Anagram editor).
+- Sau khi có giọng: **vẫn hiện chữ Clue trong Edit**, nhưng **`hideText: true`** khi chơi (giống mặc định
+  của "Generate all voices" thủ công) — dữ liệu Clue không hề bị xoá, chỉ ẩn lúc chơi.
+
+**Triển khai:**
+- `core/tts.js` — thêm `getLastVoice()`/`setLastVoice()` (localStorage key `aw.tts.lastVoice`) — tính
+  năng "giọng gần nhất" trước đây CHƯA tồn tại kể cả trong Anagram editor, giờ mới có lần đầu.
+- `core/voice-batch.js` (MỚI) — tách vòng lặp tuần tự "sinh giọng cho từng item" (đã có sẵn dạng closure
+  riêng trong `anagram-editor.js`) thành 1 hàm dùng chung `generateVoicesSequential(items, voiceId,
+  {textFor, onProgress, isCancelled})` — dùng cho luồng import mới; KHÔNG đụng bản copy trong
+  `anagram-editor.js` (đã chạy ổn định từ Đợt 96, không có lý do sửa lại chỉ để DRY).
+- `core/lesson-import.js` — gắn cờ `ttsEligible: true` vào 2 act ENG1/ENG2 (không lưu vào Firestore, chỉ
+  để `main.js` biết act nào cần tạo voice).
+- `core/store.js` — `importBundle()` giờ trả thêm `createdActs` (node đã lưu, kèm `id` thật + cờ
+  `ttsEligible`) để bên gọi biết chính xác act nào vừa tạo cần tạo voice tiếp, không phải tra lại theo
+  tiêu đề.
+- `main.js` — `importFlow()`: thêm khung Voice (checkbox + `<select>` giọng, ẩn nếu file không có act
+  ENG1/ENG2 nào); `confirmVoiceGeneration()` (pop-up OK/Skip); `runVoiceBatch()` (pop-up tiến trình %,
+  chạy SAU khi `importBundle()` đã xong, lưu content của TỪNG act qua `saveActivity()` ngay khi act đó
+  xong — không lưu từng từ một, giữ số lần ghi Firestore ở mức 1/act). `core/tts.js`/`core/voice-batch.js`
+  được dynamic-import CÙNG với `core/lesson-import.js` trong `handleFile()` (chỉ tải khi thầy thật sự mở
+  Import, không tải sẵn mỗi lần vào trang thư viện — đúng triết lý lazy-load xuyên suốt dự án).
+- `core/app.css` — thêm `.aw-imp-voice*` (khung Voice trong popup Import) + `.aw-voice-progress*`/
+  `.aw-voice-runcancel*` (thanh tiến trình + nút Cancel đỏ dùng chung, tách riêng khỏi
+  `.aw-anagram-ed-voice*` vì trang thư viện không nạp `anagram.css`).
+
+**Lỗi thật bắt được lúc test (không phải giả định)**: nút "Skip voices" trên pop-up xác nhận ban đầu làm
+**HUỶ CẢ LƯỢT IMPORT** (không chỉ bỏ qua bước tạo giọng) — vì code `return` sớm ngay khi
+`confirmVoiceGeneration()` trả `false`, trước cả khi gọi `importBundle()`. Sửa: đổi `wantVoice` từ
+`const` sang biến gán lại bằng kết quả `confirmVoiceGeneration()`, import LUÔN chạy tiếp dù thầy chọn Skip
+voices — chỉ khác là không tạo giọng.
+
+**Test thật qua devserver + Browser pane** (harness tạm: `core/_test-firebase-stub.js` — 1 Firestore giả
+trong bộ nhớ đủ `doc/collection/getDoc/getDocs/setDoc/deleteDoc/writeBatch` — + sed-copy `_test-main.js`/
+`_test-store.js`/`_test-voice-clips.js`/`_test-voice-batch.js` trỏ vào stub, `_test-index.html` mở thẳng
+bản test, xoá sạch sau khi xong; workbook test tự sinh bằng `core/vendor/xlsx.mjs` qua Node), dùng
+**giọng Kokoro thật** (không giả lập):
+- Khung Voice hiện đúng, đặt đầu tiên, mặc định tích, giọng mặc định = giọng gần nhất (đúng, kể cả sau
+  khi đổi giọng ở lượt trước).
+- Pop-up xác nhận hiện đúng số từ (6 = 3 ENG1 + 3 ENG2) + tên giọng đã chọn.
+- Bấm Generate: 3 act tạo xong TRƯỚC (điều hướng vào folder mới ngay), SAU ĐÓ pop-up tiến trình % xuất
+  hiện, chạy "Generating 1/6…" → "Done — generated voice for 6 word(s)." — kiểm tra trực tiếp dữ liệu đã
+  lưu: cả 6 item của ENG1+ENG2 đều có `voice` (id clip thật) + `voiceId: "bf_emma"` + `hideText: true`,
+  6 clip thật trong `voiceClips` (audio thật ~250-320KB/clip, không phải giả), cờ `ttsEligible` KHÔNG bị
+  lẫn vào tài liệu đã lưu (đã strip trước khi `saveActivity`).
+  - Bấm "Skip voices": xác nhận LỖI THẬT nêu trên trước khi sửa; sau khi sửa, import vẫn chạy đúng
+    (3 act được tạo), item ENG1 không có field voice nào — đúng như kỳ vọng "chỉ bỏ qua bước tạo giọng".
+  - Bỏ tích khung Voice từ đầu: import chạy thẳng, không có pop-up xác nhận, không có pop-up tiến trình
+    — đúng.
+- 0 lỗi console suốt toàn bộ các lượt test trên.
+- CHƯA test: bấm Cancel giữa lúc đang chạy batch (đường soft-cancel dùng lại logic pattern đã chứng minh
+  ổn định của Anagram editor Đợt 98, độ tin cậy dựa trên soát code chứ không phải test thật do giọng
+  Kokoro sau lần tải đầu chạy quá nhanh để bắt kịp bằng thao tác tự động), và đường lỗi "chưa đăng nhập"
+  giữa batch (tương tự, dựa trên soát code khớp đúng pattern `aw/signed-out` đã dùng ở nơi khác).
+
+**VIỆC ĐANG CHỜ**: thầy tự thử Import 1 file Excel thật có sheet WORDTABLE (ENG1/ENG2), để tích Voice mặc
+định, xác nhận giọng nghe được trong act vừa tạo, và thử bấm Cancel giữa lúc đang tạo giọng hàng loạt xem
+có dừng đúng + giữ lại phần đã tạo hay không (đường chưa test được ở trên).
+
+---
+
 ## Đợt 101 (10/8/2026, v0.9.75) — ĐỒNG BỘ VOICE/HIDE TEXT QUA 12 TEMPLATE TẠM KHI DÙNG "CHANGE TEMPLATE"
 ⭐ CÓ SỬA CORE — ✅ THẦY DUYỆT (chốt "Toàn bộ 12 game") → COMMIT `7f154cc` + PUSH + **LIVE** tại
 `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `createVoicePlayer` trong `core/voice-playback.js`,
