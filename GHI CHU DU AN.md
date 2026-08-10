@@ -5,6 +5,94 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 101 (10/8/2026, v0.9.75) — ĐỒNG BỘ VOICE/HIDE TEXT QUA 12 TEMPLATE TẠM KHI DÙNG "CHANGE TEMPLATE"
+⭐ CÓ SỬA CORE — ✅ THẦY DUYỆT (chốt "Toàn bộ 12 game") → COMMIT `7f154cc` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận đủ `createVoicePlayer` trong `core/voice-playback.js`,
+`hideTextOf` trong `core/convert.js`, `voicePlayer` trong `templates/crossword/crossword.js`,
+`replaceChildren(...front.childNodes)` trong `templates/speaking-cards/speaking-cards.js` ngay lần poll
+thứ 2).
+
+Tiếp nối yêu cầu thứ 6 của thầy ở Đợt 100 ("Edit của Anagram cũng là Edit của các template tạm thời...
+template chính sử dụng nguồn ntn thì các template tạm cũng sử dụng đồng bộ như vậy"). Đã hỏi lại phạm vi
+qua AskUserQuestion, thầy chọn **"Toàn bộ 12 game"** — tức là khi giáo viên bấm "Change Template" biến 1
+act Anagram (có sẵn voice/hideText mỗi từ) sang chơi tạm dưới dạng game khác, game tạm đó phải đọc/ẩn
+giọng giống hệt cách Anagram gốc làm, cho cả 12 target trong `QA_TARGETS` (`core/convert.js`).
+
+**Bước 1 — mang dữ liệu qua `convert.js`:** `toRecords()` (case anagram/flying_fruit) giờ gói thêm
+`voice`/`voiceId`/`hideText` vào mỗi record qua helper `qaRec()` mới; 3 helper đọc lại
+`voiceOf()`/`voiceIdOf()`/`hideTextOf()`; `buildContent()` gắn 3 field này vào MỌI item dựng cho từng
+target QA (anagram, flying_fruit, crossword, find_the_match, balloon_pop, quiz/gameshow/maze_chase/
+open_the_box qua `buildMc()`, whack_a_mole tf+quiz, true_false, type_the_answer, speaking_cards).
+**`running_team` CHỦ Ý bỏ qua** — template đó không có khái niệm "clue" nên không mang voice/hideText.
+
+**Bước 2 — module dùng chung `core/voice-playback.js` (MỚI):** thay vì chép lại ~40 dòng phát/dừng/toggle
+giọng 12 lần, tách thành 1 factory `createVoicePlayer()` trả về `{play, playDelayed, toggle, stop}` —
+đúng logic Anagram đã dùng, cache theo `clipId`, tự dừng clip cũ khi phát clip mới, set/gỡ class
+`is-playing` để phát quang. Hằng số `DEFAULT_INTRO_DELAY_MS = 650` — độ trễ ước lượng dùng cho các template
+KHÔNG có tiếng chuông intro đo được riêng (Anagram tự đo bằng `introDurationMs()` của chính nó, các
+template khác không có cơ chế tương đương nên dùng hằng số chung này).
+
+**Bước 3 — CSS dùng chung `core/app.css`:** `.aw-voicebtn` (icon nút loa nhỏ `em`-size, tự khớp cỡ chữ của
+phần tử chứa nó nhờ `font: inherit`) + biến thể `.aw-voicebtn-lg` (nút to khi voice-only) +
+`.aw-voicebtn.is-playing` (viền xanh lá phát quang, `@keyframes`) + `.aw-clue-voiceonly` (khung căn giữa khi
+ẩn hết chữ).
+
+**Bước 4 — sửa từng template (12 file `.js`, 3 file `.css`), quyết định riêng cho từng game do hình dạng
+câu hỏi khác nhau:**
+- **true_false, find_the_match** — mẫu giống Anagram nhất: xoá chữ `.aw-tf-prompt`/prompt khi `hideText`,
+  gắn `.aw-voicebtn`, dùng `DEFAULT_INTRO_DELAY_MS` cho câu đầu tiên.
+- **quiz, gameshow, maze_chase, open_the_box** — qua `buildMc()`, đọc `q.src.voice`/`q.src.hideText`.
+  Riêng **gameshow** KHÔNG dùng delay (tự có màn cửa TV mở + "Get ready!" ~1650ms đã đủ dài).
+  Riêng **open_the_box** KHÔNG dùng delay (câu hỏi chỉ hiện sau khi HS tự bấm mở hộp — hành động người
+  dùng thật, không cần trì hoãn) — và vì khung câu hỏi vốn `display:flex` với chữ chiếm 100% bề ngang, nút
+  `.aw-voicebtn` em-size sẽ vỡ layout nên đổi sang nút RIÊNG `.aw-otb-listenbtn` định vị `absolute`, cỡ cố
+  định theo `cqw` (không nằm trong luồng đo `fitOne()`).
+- **type_the_answer** — cùng lý do layout với open_the_box (khung 2 dòng cố định), dùng nút riêng
+  `.aw-tta-listenbtn` absolute/cqw, có `DEFAULT_INTRO_DELAY_MS`.
+- **crossword** — chỉ phát khi HS tự mở 1 từ (không delay). Nút gắn vào `clueText` (không phải `clueBar`)
+  vì `.aw-voicebtn` cần đọc đúng `--fit` của `clueText` + `autoFit` đo `clueText.scrollHeight` phải tính cả
+  nút. `e.stopPropagation()` trên nút vì `.aw-cw-cluebar.is-active` có sẵn `onclick` bấm-ra-để-thoát-từ.
+- **balloon_pop, flying_fruit** — nút gắn trong phần tử chữ mà `autoFit` đang đo (`cartText`/`clue`) để
+  không lệch phép đo. Cả 2 file trước đó THIẾU import `icons` — đã bổ sung.
+- **whack_a_mole** — CHỦ Ý CHỈ áp dụng cho **chế độ quiz** (bảng hỏi tĩnh); **KHÔNG đụng chế độ true/false**
+  (nhiều chuột nhô lên cùng lúc, chữ rất nhỏ, cơ chế phản xạ nhanh — gắn nút loa vào mỗi bong bóng chuột sẽ
+  phá trải nghiệm). Thiếu import `icons` — đã bổ sung.
+- **speaking_cards** — `hideText` chỉ áp dụng khi `dealPlaces === 1` (khi chia nhiều bài cùng lúc, chữ luôn
+  hiện, không ẩn). Nút nhỏ `.aw-sc-listenbtn` (absolute trên `.aw-sc-card` vốn đã `position:absolute`) hoặc
+  to `.aw-sc-listenbtn.is-lg` (khi voice-only) — cỡ tính theo `calc(var(--card-w) * ...cqw)` chứ KHÔNG
+  dùng `em` vì cỡ chữ lá bài có thể co rất nhỏ. **Lỗi thật bắt được lúc đọc code**: `finishFlip()` dùng
+  `cardEl.innerHTML = front.innerHTML` — vòng qua chuỗi text, XOÁ MẤT mọi listener JS gắn trong `front`
+  (kể cả `onclick` của nút loa mới, nút sẽ hiện nhưng bấm vô tác dụng) — sửa thành
+  `cardEl.replaceChildren(...front.childNodes)` (DI CHUYỂN node thật, giữ nguyên listener vì `front` chưa
+  từng gắn vào document). Đã xác nhận sửa đúng bằng test thật: tráo `HTMLMediaElement.prototype.play`, bấm
+  nút trên lá bài vừa lật → `.play()` được gọi thật + class `is-playing` bật.
+
+**Test thật qua devserver + Browser pane (harness tạm `_test-*`, seed 1 giọng thật qua
+`generateSpeechDataUrl`, xoá sạch sau khi xong) cho 4 template đại diện — 0 lỗi console mỗi lần:**
+- **Quiz**: 3 câu (ẩn text+voice / hiện text+voice / không voice) — cả 3 hiện đúng, nút chỉ xuất hiện khi
+  có voice, câu ẩn chỉ còn nút loa cạnh 2 đáp án.
+- **Crossword**: 4 từ (elephant ẩn+voice, dolphin hiện+voice, giraffe không voice, penguin không voice) —
+  dò đúng cả 4 qua thanh clue (bẫy test: `onCellClick` chỉ nhận click MỘT LẦN từ board, phải bấm clue-bar
+  để thoát về board giữa mỗi lần chọn từ khác — không phải lỗi app, là hành vi sẵn có).
+  Elephant clue rỗng+có nút, dolphin có chữ+có nút, giraffe/penguin có chữ+KHÔNG nút — đúng cả 4.
+- **Open the box**: 3 hộp (ẩn+voice → chỉ 1 nút loa to giữa khung; hiện+voice → chữ + nút nhỏ, tự phát
+  ngay lúc mở hộp không trễ, bắt được class `is-playing` ngay sau khi mở; không voice → chữ thường không
+  nút) — cả 3 đúng.
+- **Speaking cards** (`dealPlaces: 1`): 3 lá (ẩn+voice → không chữ, chỉ nút to giữa lá, bấm nút xác nhận
+  `.play()` thật được gọi — xác nhận trực tiếp lỗi `innerHTML` ở trên ĐÃ được vá đúng; hiện+voice → chữ +
+  nút nhỏ; không voice → chữ thường không nút) — cả 3 đúng.
+
+8 template còn lại (true_false, find_the_match, balloon_pop, flying_fruit, gameshow, maze_chase,
+type_the_answer, whack_a_mole) chỉ xác nhận qua `node --check` (cú pháp sạch) + soát code kỹ theo từng
+dòng, KHÔNG chạy thật qua browser — thầy nên tự thử qua "Change Template" trên vài act Anagram thật để
+xác nhận thêm nếu có thời gian, đặc biệt 4 template dùng nút loa định vị `absolute`/`cqw` riêng
+(open_the_box, type_the_answer) vì đó là nơi rủi ro layout cao nhất.
+
+**VIỆC ĐANG CHỜ**: thầy tự thử "Change Template" từ 1 act Anagram có voice sang vài game trong 12 game
+trên, xác nhận giọng đọc/ẩn text hoạt động đúng trên bản LIVE, đặc biệt các game chưa test thật ở trên.
+
+---
+
 ## Đợt 100 (10/8/2026, v0.9.74) — ANAGRAM: NÚT HIDE/SHOW ALL TEXT + 4 NÚT BULK ICON-ONLY + NÚT LOA TO
 GIỮA KHUNG KHI ẨN TEXT + TRÌ HOÃN AUTO-PLAY TỚI HẾT NHẠC INTRO (5 tinh chỉnh thầy gửi sau khi tự chơi thử
 Đợt 98). KHÔNG ĐỤNG CORE (chỉ `core/icons.js` — thêm 2 icon — + 3 file `templates/anagram/*`). ✅ THẦY
