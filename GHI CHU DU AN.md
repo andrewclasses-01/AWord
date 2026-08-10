@@ -6,8 +6,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ---
 
 ## Đợt 99 (10/8/2026, v0.9.73) — WHACK-A-MOLE: THANH "PHẠT" ĐỎ Ở HÀNG NÚT MENU/SOUND KHI ĐẬP SAI. Chỉ
-đụng `templates/whack-a-mole/*` (2 file: `.js` + `.css`), KHÔNG đụng core. 🟡 CHỜ THẦY DUYỆT — đã tự test
-kỹ qua trình duyệt (0 lỗi console), **CHƯA COMMIT/PUSH** (đợt này chỉ ghi log theo yêu cầu thầy).
+đụng `templates/whack-a-mole/*` (2 file: `.js` + `.css`), KHÔNG đụng core. ✅ THẦY DUYỆT → COMMIT `cde45a2`
++ PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `aw-wam-punishbar` trong CSS +
+`startPunishBar` trong JS đã có trên bản live ngay lần poll thứ 2).
 
 Thầy yêu cầu: khi đập sai bị "đông cứng" (Punishment), thêm 1 thanh hiển thị thời gian ở vị trí **ngang
 hàng với nút Menu và nút loa**, nằm giữa màn hình, dài **~65% bề ngang** khung, **cỡ bằng thanh giờ có
@@ -47,8 +48,7 @@ vào đúng mole mang phát biểu SAI (khỏi chờ may rủi bấm trúng): đ
 trí, đập ĐÚNG → thanh không hiện, hết 4s phạt → tự ẩn (lớp `is-on` mất lúc ~4,34s, khớp `freezeMs` + độ
 trễ `later()` bình thường). 0 lỗi console.
 
-**VIỆC ĐANG CHỜ**: thầy tự chơi thử trên trình duyệt THẬT (không bị che pane) để mắt thường xác nhận thanh
-chạy mượt + đúng cảm giác mong muốn, rồi mới commit + push.
+**VIỆC ĐANG CHỜ**: không còn việc gấp — thầy đã tự chơi thử trên trình duyệt thật và duyệt trực tiếp.
 
 ---
 

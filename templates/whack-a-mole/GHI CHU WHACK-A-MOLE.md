@@ -1,7 +1,9 @@
 # GHI CHU — Template WHACK-A-MOLE
 
 **Đợt 99 dự án (10/8/2026, v0.9.73) — THANH "PHẠT" (đỏ, không số) hiện ở hàng nút Menu/Sound khi đập sai
-bị đông cứng. 🟡 CHỜ THẦY DUYỆT (đã test kỹ qua trình duyệt thật, 0 lỗi console, CHƯA commit/push).**
+bị đông cứng. ✅ THẦY DUYỆT → COMMIT `cde45a2` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+(`curl` xác nhận `aw-wam-punishbar` trong CSS + `startPunishBar` trong JS đã có trên bản live ngay lần
+poll thứ 2).**
 Chỉ đụng `whack-a-mole.js` + `.css`, KHÔNG đụng core. Thầy yêu cầu: khi đập sai bị "đông cứng"
 (Punishment), thêm 1 thanh thời gian ngang hàng với nút Menu/Sound (đáy khung), giữa màn hình, dài ~65%
 bề ngang, cỡ bằng thanh giờ có sẵn (`.aw-wam-timerbar`) nhưng phần chạy màu đỏ, không số; chạy hết thời
@@ -33,8 +35,7 @@ tự set `currentTime` — áp dụng được cho CẢ CSS Transition, không r
 đúng lúc/cỡ/vị trí; đập đúng → không hiện; hết 4s → tự ẩn (`is-on` mất lúc ~4,34s). 0 lỗi console.
 Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 99.
 
-**VIỆC ĐANG CHỜ:** thầy tự chơi thử trên trình duyệt THẬT (không bị che pane) xác nhận mắt thường thanh
-chạy mượt + đúng ý, rồi mới commit + push.
+**VIỆC ĐANG CHỜ:** không còn việc gấp — thầy đã tự chơi thử trên trình duyệt thật và duyệt trực tiếp.
 
 **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT
 `be7cd55` + PUSH + LIVE.**
