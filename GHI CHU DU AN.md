@@ -5,6 +5,45 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 106 (10/8/2026, v0.9.80) — POPUP IMPORT: GIỚI HẠN LOẠI ACT TRONG THƯ MỤC "ACT" + NÚT IMPORT NHẬN
+KÉO-THẢ FILE TRỰC TIẾP ⭐ KHÔNG ĐỤNG CORE (chỉ `main.js` + `core/app.css`) — ✅ THẦY DUYỆT (test Đợt 104
+ok, gửi 2 yêu cầu tinh chỉnh tiếp) → COMMIT `a6b1b67` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận đủ `ACT_FOLDER_ALLOWED_TYPES`/`aw-fm-importbtn` trong
+`main.js`, `.is-wrongtype` trong `core/app.css` ngay lần poll thứ 3)
+
+Sau khi thầy test popup Import (Đợt 104) ổn, gửi 2 yêu cầu tinh chỉnh tiếp:
+
+**(1) Giới hạn loại act được phép trong thư mục "ACT"** — thư mục "ACT" (nơi Quiz/Reading act tự động
+nằm vào) giờ chỉ chấp nhận 5 loại: **Quiz** (bao luôn "3. READING QUIZ" — cùng `type`), **Running word**,
+**Running team**, **True/False**, **Filling** (`find_the_match`). Nếu 1 hàng act sắp import sẽ nằm vào 1
+thư mục tên đúng "ACT" (dò qua đúng cơ chế `subfolder` + `baseId` đã xây ở Đợt 104) mà `type` không nằm
+trong 5 loại trên (vd Anagram ENG1/ENG2 VOICE, VI1/VI2, PRONUNCIATION, hay Speaking cards IPA) — hàng đó
+hiện **đỏ** (class `is-wrongtype`, dùng chung màu với `is-dup` của Đợt 104) và **chặn Import** nếu còn
+tích, kèm thông báo rõ lý do; bỏ tích riêng hàng đó (hoặc đổi target sang thư mục khác) thì Import chạy
+bình thường cho các act còn lại.
+
+**(2) Nút Import trong toolbar nhận kéo-thả file trực tiếp** — trước đây phải bấm nút Import mở popup rồi
+mới kéo file vào vùng thả BÊN TRONG popup. Nay nút Import ở toolbar (`aw-fm-importbtn`, rộng hơn
+`.aw-fm-iconbtn` thường một chút — `padding` ngang `1.1rem` — vừa để dễ bấm vừa để là vùng thả rõ ràng
+hơn) tự nhận sự kiện `dragenter/dragover/drop` — kéo file thả thẳng lên nút sẽ **mở popup Import VÀ đọc
+file đó ngay lập tức**, không cần bấm mở popup trước. `importFlow(initialFile)` giờ nhận thêm 1 tham số
+tuỳ chọn — nếu có, tự gọi `handleFile()` ngay sau khi popup dựng xong. Vùng thả CŨ bên trong popup (để
+đổi file khác sau khi đã mở) vẫn giữ nguyên, không đụng.
+
+**Test thật qua Browser pane** (harness Firestore giả trong bộ nhớ, seed 1 thư mục "ACT" thật qua
+`createFolder()` rồi vào thẳng thư mục đó qua link ngắn `?f=<num>` — xoá sau khi xong):
+- Đứng trong thư mục "ACT" (rỗng), mô phỏng kéo-thả file THẬT lên nút Import toolbar (dispatch `DragEvent`
+  kèm `DataTransfer` chứa file) → popup mở ngay, đã đọc xong file, hiện đủ panel — xác nhận đúng ý (2).
+- Cùng lúc xác nhận (1): ENG1/ENG2 VOICE (Anagram) hiện đỏ `is-wrongtype` đúng, RUNNING WORD (loại được
+  phép) không đỏ; bấm Import bị chặn đúng thông báo; bỏ tích 2 hàng đỏ → Import RUNNING WORD một mình
+  thành công, nằm thẳng vào "ACT".
+- 0 lỗi console thật suốt lượt test.
+
+**VIỆC ĐANG CHỜ**: thầy tự kéo 1 file Excel thật thả thẳng lên nút Import trong thư viện, và thử import
+1 file có cả Anagram lẫn Quiz/Reading khi đang đứng trong thư mục "ACT" để xác nhận đúng ý cả 2.
+
+---
+
 ## Đợt 105 (10/8/2026, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ 3) + GOM "POINTS
 OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `.css`, dùng
 `tpl.hidePointsOff` đã có sẵn cho nhiều template khác). ✅ THẦY DUYỆT (yêu cầu trực tiếp "commit + push

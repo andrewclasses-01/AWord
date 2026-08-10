@@ -5,21 +5,30 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **10/8/2026 (Đợt 105, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ
-> 3, giống "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai + hệ số nhân "Bonus x" cho từ PERFECT) +
-> GOM THANH "POINTS OFF" VỀ 1 CHỖ NGAY DƯỚI 3 CHẾ ĐỘ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js`
-> + `.css`, dùng `tpl.hidePointsOff` đã có sẵn). ✅ THẦY DUYỆT (yêu cầu trực tiếp "commit + push live") →
-> COMMIT `1e2c7ce` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận đủ
-> `bonusMinus`/`flyLetterPenalty` trong `anagram.js` + `.aw-anagram-flynum-bad`/`.aw-anagram-multslider`
-> trong `anagram.css` ngay lần poll thứ 5).**
+> Cập nhật lần cuối: **10/8/2026 (Đợt 106, v0.9.80) — POPUP IMPORT: GIỚI HẠN LOẠI ACT TRONG THƯ MỤC "ACT"
+> + NÚT IMPORT NHẬN KÉO-THẢ FILE TRỰC TIẾP. KHÔNG ĐỤNG CORE (chỉ `main.js` + `core/app.css`). ✅ THẦY
+> DUYỆT (test Đợt 104 ok, gửi 2 yêu cầu tinh chỉnh) → COMMIT `a6b1b67` + PUSH + **LIVE** tại
+> `https://aword.andrewclasses.com/` (`curl` xác nhận đủ `ACT_FOLDER_ALLOWED_TYPES`/`aw-fm-importbtn`/
+> `.is-wrongtype` ngay lần poll thứ 3).**
+> (1) Thư mục "ACT" giờ chỉ nhận 5 loại: Quiz (bao "3. READING QUIZ"), Running word, Running team,
+> True/False, Filling — act khác (Anagram, Speaking cards…) nhắm vào "ACT" bị flag đỏ `is-wrongtype` +
+> chặn Import, dùng lại đúng cơ chế dò-target-folder của Đợt 104. (2) Nút Import trong toolbar
+> (`.aw-fm-importbtn`, rộng hơn icon-button thường) tự nhận `drop` — kéo file thả thẳng lên nút mở popup
+> VÀ đọc file luôn, không cần bấm mở trước (`importFlow(initialFile)` nhận thêm tham số tuỳ chọn). Test
+> thật qua Browser pane (đứng trong 1 thư mục "ACT" seed thật, dispatch DragEvent+DataTransfer thật lên
+> nút): cả 2 đúng, 0 lỗi console. Chi tiết: `GHI CHU DU AN.md` Đợt 106. **Việc kế: thầy tự kéo file thả
+> lên nút Import + thử import file có cả Anagram lẫn Quiz khi đứng trong "ACT".**
+>
+> Trước đó: **10/8/2026 (Đợt 105, v0.9.79) — ANAGRAM: THÊM CHẾ ĐỘ "BONUS AND MINUS" (chế độ thứ 3, giống
+> "Letters with bonus" nhưng có điểm trừ mỗi lần bấm sai + hệ số nhân "Bonus x" cho từ PERFECT) + GOM
+> THANH "POINTS OFF" VỀ 1 CHỖ. KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram.js` + `.css`). ✅ THẦY
+> DUYỆT → COMMIT `1e2c7ce` + PUSH + **LIVE**.**
 > Đã tự test qua trình duyệt thật TRƯỚC khi commit: `Score -13/46` cho 1 từ có lỗi với Points off
 > wrong-letter=20, `Score 14/46` cho 1 từ PERFECT với Bonus x=2 mặc định (cả hai khớp phép tính tay), chế
 > độ "Letters with bonus" cũ không hồi quy (vẫn ra đúng 16/46). ⚠️ Thầy chưa tự mắt xem hiệu ứng số đỏ bay
 > lên trên bản LIVE (máy build chỉ xác nhận được kết quả cuối qua bảng tổng kết, do bẫy rAF của Browser
-> pane test — xem chi tiết dưới). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 105 +
-> `templates/anagram/GHI CHU ANAGRAM.md` Đợt 105. **Việc kế (không gấp): thầy tự vào act Anagram thật, đổi
-> mode "Bonus and minus", chỉnh Points off (wrong letter)/Bonus x, chơi thử xem hiệu ứng số đỏ bay + nhãn
-> "Nx PERFECT" trên bản LIVE.**
+> pane test). Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 105 + `templates/anagram/GHI CHU ANAGRAM.md` Đợt
+> 105.
 >
 > Trước đó: **10/8/2026 (Đợt 104, v0.9.78) — POPUP IMPORT EXCEL: GỘP VOICE VÀO DANH SÁCH + CHẶN
 > TRÙNG TÊN + GUARD THƯ MỤC "ACT". CÓ SỬA CORE: `core/lesson-import.js` (tiêu đề ENG1/ENG2 đổi thành
