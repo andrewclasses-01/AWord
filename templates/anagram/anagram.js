@@ -279,27 +279,52 @@ const anagramTemplate = {
     let revealSlotEl = null;   // current word's answer-reveal line (submit mode) — ditto
     const activeFlyNodes = new Set();   // stray document.body clones — swept on cleanup
 
-    // Pronunciation playback (10/8/2026) — clips are generated once in the
-    // editor (anagram-editor.js) and referenced by id (it.src.voice, a
-    // voiceClips/{id} Firestore doc — public read, see core/voice-clips.js's
-    // file comment for why). Fetched lazily on first tap of the listen
-    // button and cached here so replaying the same word never re-fetches.
+    // Pronunciation playback (10/8/2026, revised 10/8/2026) — clips are
+    // generated once in the editor (anagram-editor.js) and referenced by id
+    // (it.src.voice, a voiceClips/{id} Firestore doc — public read, see
+    // core/voice-clips.js's file comment for why). Fetched lazily (on first
+    // need — either the auto-play at the bottom of render(), or a tap) and
+    // cached here so replaying the same word never re-fetches.
+    //  • Opening a NEW word auto-plays its voice immediately, if it has one
+    //    (teacher's request, 10/8/2026).
+    //  • The listen button GLOWS (`.is-playing`) while its clip is actually
+    //    sounding, and toggles: tap while playing -> stop; tap while
+    //    stopped -> (re)play from the top. `voiceBtnEl` tracks which
+    //    button is wired to `voiceAudioEl` right now so the glow always
+    //    lands on the correct (current word's) button.
     const voiceClipCache = new Map();   // clipId -> data: URL
-    let voiceAudioEl = null;            // currently-playing clip, stopped on cleanup
-    function playVoiceClip(clipId) {
+    let voiceAudioEl = null;            // currently-playing/loaded clip, stopped on cleanup
+    let voiceBtnEl = null;              // listen button currently wired to voiceAudioEl's play state
+    function setListenGlow(btn, glowing) {
+      if (btn) btn.classList.toggle("is-playing", glowing);
+    }
+    function stopVoiceClip() {
+      if (voiceAudioEl) voiceAudioEl.pause();
+      setListenGlow(voiceBtnEl, false);
+    }
+    // Tap handler: playing -> stop; anything else (stopped, or a fresh
+    // word's first play) -> (re)play from the top.
+    function toggleVoiceClip(clipId, btn) {
+      if (voiceAudioEl && voiceBtnEl === btn && !voiceAudioEl.paused) { stopVoiceClip(); return; }
+      playVoiceClip(clipId, btn);
+    }
+    function playVoiceClip(clipId, btn) {
       if (!clipId) return;
       const cached = voiceClipCache.get(clipId);
-      if (cached) { startVoicePlayback(cached); return; }
+      if (cached) { startVoicePlayback(cached, btn); return; }
       getVoiceClip(clipId).then(clip => {
         if (!clip || !clip.audio) return;
         voiceClipCache.set(clipId, clip.audio);
-        startVoicePlayback(clip.audio);
+        startVoicePlayback(clip.audio, btn);
       }).catch(() => { /* no pronunciation audio — not fatal, game plays on without it */ });
     }
-    function startVoicePlayback(dataUrl) {
-      if (voiceAudioEl) voiceAudioEl.pause();
+    function startVoicePlayback(dataUrl, btn) {
+      if (voiceAudioEl) { voiceAudioEl.pause(); setListenGlow(voiceBtnEl, false); }
       voiceAudioEl = new Audio(dataUrl);
-      voiceAudioEl.play().catch(() => {});
+      voiceBtnEl = btn || null;
+      voiceAudioEl.addEventListener("ended", () => setListenGlow(voiceBtnEl, false));
+      setListenGlow(voiceBtnEl, true);
+      voiceAudioEl.play().catch(() => setListenGlow(voiceBtnEl, false));   // e.g. autoplay blocked — fails silently, tap still works
     }
 
     // Slogan on the SAME row as the clock + score (centred, small, grey,
@@ -374,26 +399,47 @@ const anagramTemplate = {
       root.innerHTML = "";
       submitBtnEl = null;
       revealSlotEl = null;
+      // render() only ever runs at a real word start/change boundary (see
+      // this file's header comment) — the ONE moment any audio left over
+      // from the previous word must be silenced, regardless of whether the
+      // NEW word even has a voice of its own.
+      stopVoiceClip();
+      voiceAudioEl = null; voiceBtnEl = null;
       const it = items[index];
       const st = state[index];
       const tileSize = computeTileSize(it.letters.length);
 
       const card = el("div", "aw-anagram-card");
-      const clueEl = it.clue
-        ? el("div", "aw-anagram-clue", escapeHtml(it.clue))
-        : el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word");
-      // Listen button (10/8/2026) is a CHILD of the clue box, absolutely
-      // positioned just past its right edge — not a flex sibling — so
-      // activities with no voice clip (the vast majority, and every
-      // pre-existing one) get byte-for-byte the same clue layout as before;
-      // .aw-anagram-clue's own centering (margin:auto + max-width:92%) is
-      // untouched either way.
-      if (it.src && it.src.voice) {
+      const hasVoice = !!(it.src && it.src.voice);
+      const hideText = hasVoice && !!it.src.hideText;
+      // Hide text (10/8/2026): when ON, the Clue itself never appears —
+      // only the spoken clip conveys it — so the clueEl instead carries a
+      // short prompt pointing at the listen button, distinct from the
+      // ORDINARY "no clue was written" fallback below (same generic
+      // styling, different wording, so a "text hidden" word never reads as
+      // "this word has no clue at all").
+      const clueEl = hideText
+        ? el("div", "aw-anagram-clue aw-anagram-clue-generic", "🔊 Listen for the clue")
+        : it.clue
+          ? el("div", "aw-anagram-clue", escapeHtml(it.clue))
+          : el("div", "aw-anagram-clue aw-anagram-clue-generic", "Unscramble the word");
+      // Listen button is a CHILD of the clue box, absolutely positioned just
+      // past its right edge — not a flex sibling — so activities with no
+      // voice clip (the vast majority, and every pre-existing one) get
+      // byte-for-byte the same clue layout as before; .aw-anagram-clue's own
+      // centering (margin:auto + max-width:92%) is untouched either way.
+      if (hasVoice) {
         const listenBtn = el("button", "aw-anagram-listenbtn", icons.soundOn);
         listenBtn.type = "button";
         listenBtn.setAttribute("aria-label", "Listen to pronunciation");
-        listenBtn.onclick = () => playVoiceClip(it.src.voice);
+        listenBtn.onclick = () => toggleVoiceClip(it.src.voice, listenBtn);
         clueEl.append(listenBtn);
+        // Auto-play the moment this word opens (teacher's request,
+        // 10/8/2026) — safe to call unconditionally here since render()
+        // never re-runs mid-word (see the file header comment); if the
+        // browser blocks autoplay, startVoicePlayback() degrades silently
+        // and the tap still works.
+        playVoiceClip(it.src.voice, listenBtn);
       }
       card.append(clueEl);
 

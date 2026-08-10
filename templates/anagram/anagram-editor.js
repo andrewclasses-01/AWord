@@ -28,7 +28,7 @@
 // clicking/selecting text in the Word/Clue inputs is unaffected.
 // =============================================================
 
-import { el } from "../../core/utils.js";
+import { el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { VOICES, DEFAULT_VOICE, generateSpeechDataUrl } from "../../core/tts.js";
 import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-clips.js";
@@ -49,6 +49,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // and renderItems() runs during initial setup, BEFORE execution would
   // otherwise reach a `let` placed near the popover functions (TDZ error).
   let voicePopEl = null;
+  let voiceBackdropEl = null;     // dim+blur overlay behind the Generate-all popover, if open (see buildGenerateAllPopover)
   let voicePreviewAudio = null;   // currently-playing preview, so a second Play doesn't overlap the first
   // Item -> its Clue <input>, so onVoicePopOutside (below) can tell "clicked
   // into the very Clue box this popover's hint is tracking" apart from
@@ -57,18 +58,18 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // seen updating while the teacher types.
   const clueInputByItem = new WeakMap();
 
-  // Waveform visualizer state (10/8/2026) -- a single shared AudioContext +
-  // AnalyserNode, reused across every Play click (a NEW MediaElementSource
-  // is required per <audio> element, but the context/analyser/destination
-  // routing can stay the same). Declared here for the same TDZ reason as
-  // voicePopEl above: closeVoicePopover()/stopVoicePreview() reference
-  // these and can run before execution would otherwise reach a `let`
-  // placed near the waveform helper functions further down.
+  // Waveform visualizer state (10/8/2026) -- `waveAudioCtx` is a lazy
+  // singleton used ONLY for offline decodeAudioData calls (see
+  // loadWaveform below), never connected to playback. `waveRafId`/
+  // `waveCanvasEl`/`waveTimeEl` track the CURRENTLY animating playhead (at
+  // most one preview plays at a time). Declared here for the same TDZ
+  // reason as voicePopEl above: closeVoicePopover()/stopVoicePreview()
+  // reference these and can run before execution would otherwise reach a
+  // `let` placed near the waveform helper functions further down.
   let waveAudioCtx = null;
-  let waveAnalyser = null;
-  let waveSource = null;   // MediaElementAudioSourceNode for the CURRENTLY playing preview, if any
   let waveRafId = null;
-  let waveCanvasEl = null; // the <canvas> currently animating, if any
+  let waveCanvasEl = null; // the <canvas> whose playhead is currently animating, if any
+  let waveTimeEl = null;   // its time label, ditto
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -126,7 +127,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     // guard in itemRow() below, just applied to every row at once here.
     data.content.items.forEach(it => {
       const tmp = it.word; it.word = it.clue; it.clue = tmp;
-      it.voice = ""; it.voiceId = "";
+      it.voice = ""; it.voiceId = ""; it.hideText = false;
     });
     renderItems();
     showInfo("Word and Clue swapped in every row.");
@@ -214,7 +215,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       // orphaned Firestore doc, if any, is not deleted here; see
       // core/voice-clips.js's file comment).
       if (it.voice) {
-        it.voice = ""; it.voiceId = ""; setMicState(micBtn, false); closeVoicePopover();
+        it.voice = ""; it.voiceId = ""; it.hideText = false;
+        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); closeVoicePopover();
       } else if (voicePopEl && voicePopEl._forItem === it && voicePopEl._updateHint) {
         // Popover already open for THIS row (no voice yet) -- keep its
         // "Will speak" preview line live instead of making the teacher
@@ -231,10 +233,25 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const micBtn = iconBtn(it.voice ? icons.soundOn : icons.mic,
       it.voice ? "Clue voice added — click to preview, change or remove" : "Add a spoken clue");
     if (it.voice) micBtn.classList.add("is-active");
-    micBtn.onclick = () => toggleVoicePopover(micBtn, it);
+    micBtn.onclick = () => toggleVoicePopover(micBtn, hideTextBtn, it);
+    // Hide text (10/8/2026) — needs a voice to mean anything (disabled
+    // without one, see setHideTextState); ON hides the Clue text in-game and
+    // relies on the voice alone (anagram.js shows "Listen for the clue"
+    // instead). Defaults ON the moment a voice is generated (single row or
+    // Generate all) — see genBtn.onclick/buildGenerateAllPopover — and
+    // forced back OFF whenever the voice goes away (Remove voice, Clue
+    // edited, Swap Columns, Delete all voices) so text is never hidden with
+    // nothing spoken to replace it.
+    const hideTextBtn = iconBtn(icons.eye, "");
+    setHideTextState(hideTextBtn, it);
+    hideTextBtn.onclick = () => {
+      if (!it.voice) return;
+      it.hideText = !it.hideText;
+      setHideTextState(hideTextBtn, it);
+    };
     const imgBtn = iconBtn(icons.image, "Add image (coming soon)");
     imgBtn.onclick = () => showInfo("Images — coming soon.");
-    iconsWrap.append(micBtn, imgBtn, el("span", "aw-anagram-ed-gap"));
+    iconsWrap.append(micBtn, hideTextBtn, imgBtn, el("span", "aw-anagram-ed-gap"));
 
     const dragBtn = iconBtn(icons.dragHandle, "Drag to reorder", "is-drag");
     const dupBtn = iconBtn(icons.duplicate, "Duplicate");
@@ -277,11 +294,16 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // here — see the comment there.)
   function closeVoicePopover() {
     if (voicePopEl) { voicePopEl.remove(); voicePopEl = null; }
+    if (voiceBackdropEl) { voiceBackdropEl.remove(); voiceBackdropEl = null; }
     document.removeEventListener("pointerdown", onVoicePopOutside, true);
-    stopWaveform();
+    stopPlayhead();
   }
   function onVoicePopOutside(e) {
     if (!voicePopEl || voicePopEl.contains(e.target)) return;
+    // While "Generate all voices" is actively running, outside clicks must
+    // NOT close it — the only way to stop mid-run is the small red Cancel
+    // button inside the popover itself (see buildGenerateAllPopover).
+    if (voicePopEl._running) return;
     // Exception: clicking into the very Clue box this popover's hint is
     // tracking should focus it for typing, not close the popover out from
     // under the teacher (see clueInputByItem's comment above).
@@ -291,7 +313,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   }
   function stopVoicePreview() {
     if (voicePreviewAudio) { voicePreviewAudio.pause(); voicePreviewAudio = null; }
-    stopWaveform();
+    stopPlayhead();
   }
   function setMicState(micBtn, hasVoice) {
     micBtn.innerHTML = hasVoice ? icons.soundOn : icons.mic;
@@ -301,6 +323,25 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     micBtn.setAttribute("aria-label", title);
   }
 
+  // Hide-text toggle icon state — disabled (and forced off) without a
+  // voice, since "hide the clue, play voice only" makes no sense with
+  // nothing to play. `it` is read fresh each call rather than passing
+  // separate booleans so every call site (row build, Generate/Regenerate,
+  // Remove voice, bulk Generate/Delete all) stays a one-liner.
+  function setHideTextState(btn, it) {
+    const hidden = !!(it.voice && it.hideText);
+    if (!it.voice) it.hideText = false;   // enforce the invariant even if a caller forgot to
+    btn.innerHTML = hidden ? icons.eyeOff : icons.eye;
+    btn.classList.toggle("is-active", hidden);
+    btn.disabled = !it.voice;
+    const title = !it.voice
+      ? "Hide clue text (needs a voice first)"
+      : hidden ? "Clue text hidden in-game — voice only (click to show text)"
+               : "Clue text visible in-game (click to hide — voice only)";
+    btn.title = title;
+    btn.setAttribute("aria-label", title);
+  }
+
   // What Generate/Regenerate will actually say for this row RIGHT NOW —
   // shared by the popover's live hint line and the genBtn click handler
   // itself, so the two can never drift apart.
@@ -308,67 +349,87 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     return (it.clue || "").trim() || GENERIC_CLUE_TEXT;
   }
 
-  function toggleVoicePopover(micBtn, it) {
+  function toggleVoicePopover(micBtn, hideTextBtn, it) {
     if (voicePopEl && voicePopEl._forItem === it) { closeVoicePopover(); return; }
-    buildVoicePopover(micBtn, it);
+    buildVoicePopover(micBtn, hideTextBtn, it);
   }
 
-  // ---------- waveform visualizer (10/8/2026) — a small animated bar chart
-  // driven by a Web Audio AnalyserNode, shown while a preview clip plays so
-  // the teacher can SEE the clip is actually playing/decoded, not just hear
-  // it. Cosmetic only: if Web Audio is unavailable/blocked for any reason,
-  // startWaveform() swallows the error and hides the canvas — playback
-  // itself (already started by the caller via audioEl.play()) is unaffected.
+  // ---------- waveform visualizer (10/8/2026, redrawn as a FIXED picture of
+  // the whole clip — Adobe-Audition style, not a live frequency readout) —
+  // decodes the clip's raw PCM ONCE via decodeAudioData into a per-pixel
+  // peak-amplitude profile, drawn as a static bar chart the instant the
+  // popover opens (whether or not Play has been pressed yet), with a moving
+  // playhead line + time label layered on top DURING actual playback. The
+  // AudioContext here is used ONLY for offline decoding — it is never
+  // connected to anything audible, so it can't affect or be affected by the
+  // real playback (`new Audio(...)` + `.play()`), which is untouched.
+  // Cosmetic only throughout: any failure here just leaves the canvas blank
+  // — real playback (already started by the caller) is unaffected.
   function ensureWaveAudioCtx() {
     if (!waveAudioCtx) waveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
     return waveAudioCtx;
   }
-  function stopWaveform() {
-    if (waveRafId) { cancelAnimationFrame(waveRafId); waveRafId = null; }
-    if (waveSource) { try { waveSource.disconnect(); } catch { /* already disconnected */ } waveSource = null; }
-    if (waveCanvasEl) { waveCanvasEl.style.display = "none"; waveCanvasEl = null; }
-  }
-  function startWaveform(audioEl, canvas) {
-    stopWaveform();
-    try {
-      const ctx = ensureWaveAudioCtx();
-      if (ctx.state === "suspended") ctx.resume().catch(() => {});
-      // A MediaElementAudioSourceNode can only be created ONCE per <audio>
-      // element ever — safe here because the caller always hands us a
-      // FRESH `new Audio(...)` (see playBtn.onclick below).
-      waveSource = ctx.createMediaElementSource(audioEl);
-      if (!waveAnalyser) waveAnalyser = ctx.createAnalyser();
-      waveAnalyser.fftSize = 256;
-      waveSource.connect(waveAnalyser);
-      waveAnalyser.connect(ctx.destination);   // keep routing to speakers — analysing must not mute playback
-
-      canvas.style.display = "block";
-      waveCanvasEl = canvas;
-      const bufferLen = waveAnalyser.frequencyBinCount;
-      const data = new Uint8Array(bufferLen);
-      const cctx = canvas.getContext("2d");
-      const barCount = 28;
-      const step = Math.max(1, Math.floor(bufferLen / barCount));
-      const barW = canvas.width / barCount;
-      const draw = () => {
-        waveRafId = requestAnimationFrame(draw);
-        waveAnalyser.getByteFrequencyData(data);
-        cctx.clearRect(0, 0, canvas.width, canvas.height);
-        for (let i = 0; i < barCount; i++) {
-          const v = data[i * step] / 255;
-          const h = Math.max(2, v * canvas.height);
-          cctx.fillStyle = "#2f6fed";
-          cctx.fillRect(i * barW + 1, canvas.height - h, Math.max(1, barW - 2), h);
-        }
-      };
-      draw();
-      audioEl.addEventListener("ended", stopWaveform, { once: true });
-    } catch {
-      canvas.style.display = "none";
+  function paintWaveform(canvas, cols, playedFrac) {
+    const cctx = canvas.getContext("2d");
+    const w = canvas.width, h = canvas.height, mid = h / 2;
+    cctx.clearRect(0, 0, w, h);
+    const playedX = playedFrac * w;
+    for (let x = 0; x < cols.length; x++) {
+      const barH = Math.max(1, cols[x] * (h - 4));
+      cctx.fillStyle = x <= playedX ? "#2f6fed" : "#c3d2e8";
+      cctx.fillRect(x, mid - barH / 2, 1, barH);
     }
+    cctx.fillStyle = "#1c3d8f";
+    cctx.fillRect(Math.min(w - 1.5, Math.max(0, playedX)), 0, 1.5, h);
+  }
+  async function loadWaveform(canvas, timeEl, voiceId) {
+    try {
+      const clip = await getVoiceClip(voiceId);
+      if (!clip || !clip.audio) return;
+      const arrBuf = await (await fetch(clip.audio)).arrayBuffer();
+      const audioBuf = await ensureWaveAudioCtx().decodeAudioData(arrBuf);
+      const raw = audioBuf.getChannelData(0);
+      const w = canvas.width;
+      const cols = new Float32Array(w);
+      const step = Math.max(1, Math.floor(raw.length / w));
+      for (let x = 0; x < w; x++) {
+        let peak = 0;
+        const start = x * step, end = Math.min(raw.length, start + step);
+        for (let j = start; j < end; j++) { const v = Math.abs(raw[j]); if (v > peak) peak = v; }
+        cols[x] = peak;
+      }
+      canvas._cols = cols;
+      canvas._duration = audioBuf.duration;
+      paintWaveform(canvas, cols, 0);
+      if (timeEl) timeEl.textContent = `0:00 / ${formatTime(Math.round(audioBuf.duration))}`;
+    } catch { /* leave the canvas blank — cosmetic only */ }
+  }
+  function stopPlayhead() {
+    if (waveRafId) { cancelAnimationFrame(waveRafId); waveRafId = null; }
+    if (waveCanvasEl && waveCanvasEl._cols) paintWaveform(waveCanvasEl, waveCanvasEl._cols, 0);
+    if (waveTimeEl && waveCanvasEl && waveCanvasEl._duration != null) {
+      waveTimeEl.textContent = `0:00 / ${formatTime(Math.round(waveCanvasEl._duration))}`;
+    }
+    waveCanvasEl = null; waveTimeEl = null;
+  }
+  function startPlayhead(audioEl, canvas, timeEl) {
+    stopPlayhead();
+    if (!canvas._cols) return;   // picture not decoded yet — playback still works, just no moving cursor this time
+    waveCanvasEl = canvas; waveTimeEl = timeEl;
+    const draw = () => {
+      if (audioEl.paused || audioEl.ended) { stopPlayhead(); return; }
+      const frac = audioEl.duration ? audioEl.currentTime / audioEl.duration : 0;
+      paintWaveform(canvas, canvas._cols, frac);
+      if (timeEl) {
+        timeEl.textContent =
+          `${formatTime(Math.round(audioEl.currentTime))} / ${formatTime(Math.round(audioEl.duration || canvas._duration || 0))}`;
+      }
+      waveRafId = requestAnimationFrame(draw);
+    };
+    draw();
   }
 
-  function buildVoicePopover(micBtn, it) {
+  function buildVoicePopover(micBtn, hideTextBtn, it) {
     closeVoicePopover();
     stopVoicePreview();
 
@@ -405,12 +466,24 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const status = el("div", "aw-anagram-ed-voicestatus");
     pop.append(status);
 
+    let waveCanvas = null, waveTimeLabel = null;
+    if (it.voice) {
+      // The static waveform picture loads immediately (doesn't wait for
+      // Play) so the teacher sees it the instant the popover opens.
+      waveCanvas = el("canvas", "aw-anagram-ed-wave");
+      waveCanvas.width = 228; waveCanvas.height = 40;
+      pop.append(waveCanvas);
+      waveTimeLabel = el("div", "aw-anagram-ed-wavetime", "Loading…");
+      pop.append(waveTimeLabel);
+      loadWaveform(waveCanvas, waveTimeLabel, it.voice);
+    }
+
     const btnRow = el("div", "aw-anagram-ed-voicebtns");
     const genBtn = el("button", "aw-btn aw-btn-primary", it.voice ? "Regenerate" : "Generate voice");
     genBtn.type = "button";
     btnRow.append(genBtn);
 
-    let playBtn = null, delBtn = null, waveCanvas = null;
+    let playBtn = null, delBtn = null;
     if (it.voice) {
       playBtn = el("button", "aw-btn", "▶ Play");
       playBtn.type = "button";
@@ -422,7 +495,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
             stopVoicePreview();
             voicePreviewAudio = new Audio(clip.audio);
             voicePreviewAudio.play().catch(() => {});
-            if (waveCanvas) startWaveform(voicePreviewAudio, waveCanvas);
+            if (waveCanvas) startPlayhead(voicePreviewAudio, waveCanvas, waveTimeLabel);
           } else {
             status.textContent = "Could not load the saved clip.";
           }
@@ -438,21 +511,13 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       delBtn.onclick = async () => {
         genBtn.disabled = true; playBtn.disabled = true; delBtn.disabled = true;
         try { await deleteVoiceClip(it.voice); } catch { /* ignore — clip may already be gone */ }
-        it.voice = ""; it.voiceId = "";
-        setMicState(micBtn, false);
-        buildVoicePopover(micBtn, it);
+        it.voice = ""; it.voiceId = ""; it.hideText = false;
+        setMicState(micBtn, false); setHideTextState(hideTextBtn, it);
+        buildVoicePopover(micBtn, hideTextBtn, it);
       };
       btnRow.append(delBtn);
     }
     pop.append(btnRow);
-
-    if (it.voice) {
-      // The waveform canvas only makes sense once there's a clip to preview
-      // (Play button above); it stays hidden until that Play is clicked.
-      waveCanvas = el("canvas", "aw-anagram-ed-wave");
-      waveCanvas.width = 228; waveCanvas.height = 40;
-      pop.append(waveCanvas);
-    }
 
     genBtn.onclick = async () => {
       const text = speakTextFor(it);
@@ -472,8 +537,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId: select.value, audioDataUrl: dataUrl });
         it.voice = id;
         it.voiceId = select.value;
-        setMicState(micBtn, true);
-        buildVoicePopover(micBtn, it);
+        it.hideText = true;   // default ON the moment a voice exists (teacher's request, 10/8/2026)
+        setMicState(micBtn, true); setHideTextState(hideTextBtn, it);
+        buildVoicePopover(micBtn, hideTextBtn, it);
       } catch (e) {
         status.textContent = e && e.code === "aw/signed-out"
           ? "Please sign in first."
@@ -501,7 +567,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
   function toggleBulkPopover(anchorBtn, kind) {
     if (voicePopEl && voicePopEl._bulkKind === kind) { closeVoicePopover(); return; }
-    if (kind === "delete") buildDeleteAllPopover(anchorBtn);
+    if (kind === "deleteWords") buildDeleteAllWordsPopover(anchorBtn);
+    else if (kind === "delete") buildDeleteAllPopover(anchorBtn);
     else buildGenerateAllPopover(anchorBtn);
   }
 
@@ -517,6 +584,15 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   function buildGenerateAllPopover(anchorBtn) {
     closeVoicePopover();
     stopVoicePreview();
+
+    // Dim + blur the rest of the page behind this ONE popover — teacher's
+    // request (10/8/2026): this is the only bulk action that runs a
+    // possibly-long batch job, so it gets the "you're in a modal now" cue
+    // the others don't. `positionPopover()` (below) still anchors the
+    // popover box itself under the button; the backdrop is a separate
+    // full-viewport layer BEHIND it, removed together in closeVoicePopover().
+    voiceBackdropEl = el("div", "aw-anagram-ed-backdrop");
+    document.body.append(voiceBackdropEl);
 
     const pop = el("div", "aw-anagram-ed-voicepop");
     pop._bulkKind = "generate";
@@ -555,6 +631,14 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const status = el("div", "aw-anagram-ed-voicestatus");
     pop.append(status);
 
+    // Progress bar — hidden until Generate is pressed, shows % of the
+    // TARGET list (not the whole activity) converted so far.
+    const progressWrap = el("div", "aw-anagram-ed-voiceprogress");
+    const progressFill = el("div", "aw-anagram-ed-voiceprogressfill");
+    progressWrap.append(progressFill);
+    progressWrap.style.display = "none";
+    pop.append(progressWrap);
+
     const btnRow = el("div", "aw-anagram-ed-voicebtns");
     const cancelBtn2 = el("button", "aw-btn", "Cancel");
     cancelBtn2.type = "button";
@@ -562,6 +646,18 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const goBtn = el("button", "aw-btn aw-btn-primary", "Generate");
     goBtn.type = "button";
     btnRow.append(cancelBtn2, goBtn);
+    // Small red Cancel — the ONLY control left active once a run is under
+    // way (teacher's request): everything else disables and outside clicks
+    // are ignored (see onVoicePopOutside's `_running` check) so the batch
+    // can't be dismissed by accident, but a deliberate stop is still one
+    // click away. Soft-cancel: can't abort a generateSpeechDataUrl call
+    // that's already in flight (no cancellation hook in kokoro-js), so it
+    // sets a flag the loop checks BETWEEN words and stops before starting
+    // the next one — the current word always finishes first.
+    const runCancelBtn = el("button", "aw-anagram-ed-runcancel", "Cancel");
+    runCancelBtn.type = "button";
+    runCancelBtn.style.display = "none";
+    btnRow.append(runCancelBtn);
     pop.append(btnRow);
 
     goBtn.onclick = async () => {
@@ -569,24 +665,51 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       const skipExisting = skipChk.checked;
       const targets = data.content.items.filter(it => !skipExisting || !it.voice);
       if (!targets.length) { status.textContent = "Nothing to generate — every row already has a voice."; return; }
-      goBtn.disabled = true; cancelBtn2.disabled = true; select.disabled = true; skipChk.disabled = true;
+
+      let cancelled = false;
+      runCancelBtn.onclick = () => {
+        cancelled = true;
+        runCancelBtn.disabled = true;
+        runCancelBtn.textContent = "Cancelling…";
+      };
+
+      pop._running = true;
+      select.disabled = true; skipChk.disabled = true;
+      cancelBtn2.style.display = "none"; goBtn.style.display = "none";
+      runCancelBtn.style.display = "inline-flex"; runCancelBtn.disabled = false; runCancelBtn.textContent = "Cancel";
+      progressWrap.style.display = "block";
+      progressFill.style.width = "0%";
+
       let done = 0, failed = 0, signedOut = false;
       for (const it of targets) {
+        if (cancelled) break;
         status.textContent = `Generating ${done + failed + 1} / ${targets.length}…`;
         const text = speakTextFor(it);
         try {
           const dataUrl = await generateSpeechDataUrl(text, voiceId, () => {});
           const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId, audioDataUrl: dataUrl });
           it.voice = id; it.voiceId = voiceId;
+          it.hideText = true;   // default ON, same as the single-row Generate (teacher's request, 10/8/2026)
           done++;
         } catch (e) {
           if (e && e.code === "aw/signed-out") { signedOut = true; break; }
           failed++;
         }
+        progressFill.style.width = `${Math.round(((done + failed) / targets.length) * 100)}%`;
+      }
+      pop._running = false;
+
+      if (cancelled) {
+        renderItems();
+        showInfo(`Cancelled — generated voice for ${done} row(s) before stopping.`);
+        return;
       }
       if (signedOut) {
         status.textContent = "Please sign in first.";
-        goBtn.disabled = false; cancelBtn2.disabled = false; select.disabled = false; skipChk.disabled = false;
+        select.disabled = false; skipChk.disabled = false;
+        cancelBtn2.style.display = ""; goBtn.style.display = "";
+        runCancelBtn.style.display = "none";
+        progressWrap.style.display = "none";
         return;
       }
       renderItems();
@@ -636,7 +759,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
             if (e && e.code === "aw/signed-out") { signedOut = true; break; }
             // otherwise ignore — clip may already be gone (same tolerance as the per-row Remove voice)
           }
-          it.voice = ""; it.voiceId = "";
+          it.voice = ""; it.voiceId = ""; it.hideText = false;
         }
         if (signedOut) {
           status.textContent = "Please sign in first.";
@@ -648,6 +771,43 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       };
       btnRow.append(delAllGo);
     }
+    pop.append(btnRow);
+
+    positionPopover(pop, anchorBtn);
+  }
+
+  // "Delete all words" — same confirm-popover idiom as "Delete all voices"
+  // above (replaces the old native confirm(), teacher's request 10/8/2026),
+  // shown when the "Delete all words" button in the bulk bar is clicked.
+  // Purely local (no Firestore calls — words/clues never lived server-side
+  // outside a Save), so there's no sign-out branch to handle.
+  function buildDeleteAllWordsPopover(anchorBtn) {
+    closeVoicePopover();
+    stopVoicePreview();
+
+    const pop = el("div", "aw-anagram-ed-voicepop");
+    pop._bulkKind = "deleteWords";
+
+    pop.append(el("div", "aw-anagram-ed-voicetitle", "Delete all words?"));
+    const n = data.content.items.length;
+    pop.append(el("div", "aw-anagram-ed-voicestatus",
+      `This removes all ${n} word(s) (and any voice generated for them) and starts over with a single ` +
+      `blank row. This cannot be undone.`));
+
+    const btnRow = el("div", "aw-anagram-ed-voicebtns");
+    const cancelBtn2 = el("button", "aw-btn", "Cancel");
+    cancelBtn2.type = "button";
+    cancelBtn2.onclick = () => closeVoicePopover();
+    btnRow.append(cancelBtn2);
+
+    const delAllGo = el("button", "aw-btn aw-ed-bulkdanger", "Delete all");
+    delAllGo.type = "button";
+    delAllGo.onclick = () => {
+      data.content.items = [blankItem()];
+      renderItems();
+      showInfo("All words deleted.");
+    };
+    btnRow.append(delAllGo);
     pop.append(btnRow);
 
     positionPopover(pop, anchorBtn);
@@ -709,7 +869,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     clean.content.items = clean.content.items
       .map(it => ({
         word: (it.word || "").trim(), clue: (it.clue || "").trim(),
-        voice: it.voice || "", voiceId: it.voiceId || ""
+        voice: it.voice || "", voiceId: it.voiceId || "",
+        hideText: !!(it.voice && it.hideText)
       }))
       .filter(it => it.word !== "");
 
@@ -750,12 +911,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const bar = el("div", "aw-ed-bulk");
     const clearBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete all words");
     clearBtn.type = "button";
-    clearBtn.onclick = () => {
-      if (!confirm("Delete ALL words?")) return;
-      data.content.items = [blankItem()];
-      renderItems();
-      showInfo("All words deleted.");
-    };
+    clearBtn.onclick = () => toggleBulkPopover(clearBtn, "deleteWords");
     bar.append(clearBtn);
 
     const genAllBtn = el("button", "aw-btn aw-btn-primary", "Generate all voices");
@@ -792,11 +948,12 @@ function normalize(activity) {
   let items = Array.isArray(a.content.items) ? a.content.items : [];
   if (items.length === 0) items = [blankItem()];
   a.content.items = items.map(it => ({
-    word: it.word || "", clue: it.clue || "", voice: it.voice || "", voiceId: it.voiceId || ""
+    word: it.word || "", clue: it.clue || "", voice: it.voice || "", voiceId: it.voiceId || "",
+    hideText: !!(it.voice && it.hideText)   // hideText only ever means anything alongside a voice
   }));
   return a;
 }
-function blankItem() { return { word: "", clue: "", voice: "", voiceId: "" }; }
+function blankItem() { return { word: "", clue: "", voice: "", voiceId: "", hideText: false }; }
 
 function validate(d) {
   if (!d.title) return "Please enter an activity title.";

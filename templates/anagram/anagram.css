@@ -94,6 +94,21 @@
 .aw-anagram-listenbtn svg { width: 66%; height: 66%; }
 .aw-anagram-listenbtn:hover { background: rgba(47, 111, 237, .24); }
 .aw-anagram-listenbtn:active { transform: scale(.9); }
+/* Playing glow (10/8/2026, teacher's request) — green pulse while the clip
+   is actually sounding (auto-play on word open, or a manual replay); a
+   plain CSS animation so it automatically freezes along with everything
+   else in the stage when Menu Pause opens (`core/engine.js`'s
+   enterMenuPause() pauses every WAAPI/CSS animation under .aw-stage-inner —
+   no extra hook needed here). */
+.aw-anagram-listenbtn.is-playing {
+  background: rgba(34, 197, 94, .22);
+  color: #16a34a;
+  animation: aw-anagram-listenglow 1.1s ease-in-out infinite;
+}
+@keyframes aw-anagram-listenglow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); }
+  50% { box-shadow: 0 0 0 0.35em rgba(34, 197, 94, 0); }
+}
 
 /* Leftover vertical space (between the clue and everything below it) is
    split 1:2 between these two spacers instead of collapsing entirely above
@@ -424,9 +439,16 @@
 /* ---------- voice popover (mic icon) — a single shared floating panel,
    position:fixed under whichever row's mic button was clicked. ---------- */
 .aw-anagram-ed-voicepop {
-  position: fixed; z-index: 500; width: 260px;
+  position: fixed; z-index: 501; width: 260px;
   background: #fff; border: 1.5px solid #e2e9f2; border-radius: 12px;
   box-shadow: 0 10px 28px rgba(20,30,45,.16); padding: .8rem;
+}
+/* Dim + blur backdrop behind the "Generate all voices" popover only
+   (10/8/2026, teacher's request) — see buildGenerateAllPopover(). Sits just
+   under the popover's z-index so the popover stays on top of it. */
+.aw-anagram-ed-backdrop {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(15,22,34,.4); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
 }
 .aw-anagram-ed-voicetitle { font-weight: 700; font-size: .85rem; color: #23303e; margin-bottom: .5rem; }
 .aw-anagram-ed-voicehint {
@@ -447,11 +469,33 @@
 .aw-anagram-ed-voicebtns { display: flex; align-items: center; gap: 6px; }
 .aw-anagram-ed-voicebtns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
 .aw-anagram-ed-voicebtns .aw-anagram-ed-iconbtn { margin-left: auto; }
-/* Waveform preview canvas (10/8/2026) — hidden until Play is clicked (see
-   startWaveform() in anagram-editor.js); internal resolution is set via the
-   canvas width/height ATTRIBUTES in JS (228x40), this just stretches it to
-   the popover's inner width. */
-.aw-anagram-ed-wave { display: none; width: 100%; height: 40px; margin-top: .55rem; border-radius: 8px; background: #f3f6fa; }
+/* Waveform preview canvas (10/8/2026, redrawn Adobe-Audition-style) — a
+   FIXED picture of the whole clip, drawn once the popover opens (see
+   loadWaveform() in anagram-editor.js), with a moving playhead line during
+   playback; internal resolution is set via the canvas width/height
+   ATTRIBUTES in JS (228x40), this just stretches it to the popover's inner
+   width. */
+.aw-anagram-ed-wave { display: block; width: 100%; height: 40px; margin-top: .55rem; border-radius: 8px; background: #f3f6fa; }
+.aw-anagram-ed-wavetime {
+  font-size: .7rem; color: #8a97a8; text-align: right; margin-top: .25rem; font-variant-numeric: tabular-nums;
+}
+/* Progress bar (10/8/2026) shown only while "Generate all voices" is
+   running — see buildGenerateAllPopover(). */
+.aw-anagram-ed-voiceprogress {
+  height: 8px; border-radius: 4px; background: #eaf0f8; overflow: hidden; margin-bottom: .55rem;
+}
+.aw-anagram-ed-voiceprogressfill {
+  height: 100%; width: 0%; background: #2f7bff; transition: width .25s ease;
+}
+/* Small red Cancel that replaces the normal Cancel/Generate row once a
+   batch run starts (10/8/2026) — see buildGenerateAllPopover(). */
+.aw-anagram-ed-runcancel {
+  display: none; align-items: center; justify-content: center;
+  padding: .35rem .65rem; font-size: .78rem; font-weight: 700;
+  border: none; border-radius: 8px; background: #fdeaea; color: #d33; cursor: pointer;
+}
+.aw-anagram-ed-runcancel:hover:not(:disabled) { background: #fbdada; }
+.aw-anagram-ed-runcancel:disabled { opacity: .6; cursor: default; }
 
 .aw-anagram-ed-addrow {
   display: flex; align-items: center; justify-content: center; gap: 6px;
