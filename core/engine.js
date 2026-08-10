@@ -128,32 +128,72 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // each change (myActivity listens), and expose programmatic setters so
   // myActivity can replay the same change on the OTHER panes. `awSyncMute` stops
   // a replayed change from echoing straight back out as a new marker.
+  //
+  // v0.9.6x fix (reported by Teacher Andrew: sync "sometimes" worked, timing-
+  // dependent): `window.__awordBridge` used to be a brand-new object created by
+  // EVERY startGame() call — and "Change template" re-enters startGame() via the
+  // ASYNC doSwitchTemplate() (awaits ensureTemplate()+convertActivity(), which can
+  // take anywhere from ~0ms cached to 1-2s on first load of a template type). Any
+  // Options/Style call that arrived from myActivity DURING that window landed on
+  // the OLD bridge — mutating an `activity`/`stage` object that was about to be
+  // discarded the instant startGame() re-ran — and was silently lost. Fix: the
+  // bridge itself is now a STABLE, page-lifetime singleton that only ever
+  // delegates to whichever mount is CURRENT (`_setCurrent`, called synchronously
+  // at the top of every startGame(), before any await can run); a switchTemplate()
+  // in flight is tracked so a concurrent applyOptions()/setTheme() call WAITS for
+  // it to land (and the now-current delegate) instead of racing it. Every method
+  // is async and resolves true/false so myActivity knows for certain whether the
+  // change actually applied (used to show a per-pane sync checkmark).
+  if (!window.__awordBridge) {
+    let current = null;   // delegate of the live mount: {getState,switchTemplate,applyOptions,setTheme}
+    let inFlight = null;  // Promise of an in-flight switchTemplate — others await it first
+    window.__awordBridge = {
+      getState: () => (current ? current.getState() : null),
+      async switchTemplate(type) {
+        if (!current) return false;
+        const p = Promise.resolve().then(() => current.switchTemplate(type));
+        inFlight = p;
+        try { return await p; } finally { if (inFlight === p) inFlight = null; }
+      },
+      async applyOptions(opts) {
+        if (inFlight) await inFlight.catch(() => {});
+        return current ? current.applyOptions(opts) : false;
+      },
+      async setTheme(id) {
+        if (inFlight) await inFlight.catch(() => {});
+        return current ? current.setTheme(id) : false;
+      },
+      _setCurrent(delegate) { current = delegate; },
+    };
+  }
   let awSyncMute = 0;
   const awEmit = (tag, payload) => { if (awSyncMute <= 0) { try { console.log("MYACT:AW:" + tag + ":" + payload); } catch (_) {} } };
-  window.__awordBridge = {
+  window.__awordBridge._setCurrent({
     getState: () => ({ type: activity.type, options: { ...(activity.options || {}) }, theme: activity.theme || null }),
     switchTemplate(type) {
-      if (!type || type === activity.type) return;
+      if (!type || type === activity.type) return false;
       awSyncMute++;
-      try { doSwitchTemplate(type); } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+      return Promise.resolve(doSwitchTemplate(type)).then(() => true, () => false)
+        .finally(() => { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); });
     },
     applyOptions(opts) {
-      if (!opts) return;
+      if (!opts) return false;
       awSyncMute++;
-      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); replayCurrent(); }
+      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); replayCurrent(); return true; }
       finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
     },
     setTheme(id) {
-      if (!id || id === activity.theme) return;
+      if (!id || id === activity.theme) return false;
       awSyncMute++;
       try {
         loadTheme(id);
         stage.classList.forEach(c => { if (c.startsWith("theme-")) stage.classList.remove(c); });
         stage.classList.add("theme-" + id);
         activity.theme = id;
+        return true;
       } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
     }
-  };
+  });
 
   // ----- Top bar (timer left · score right) -----
   // `tpl.inlineTimerBar` (opt-in, currently only Open the box) adds a THIRD
