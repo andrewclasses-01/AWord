@@ -13,9 +13,13 @@
 // per-act options are tweaked from the in-game Options panel. The image
 // button is still a placeholder (teacher said "we'll discuss it later") —
 // it just shows an info banner, no upload wired up yet. The mic button
-// (10/8/2026) is real: it opens a small popover to generate a Kokoro TTS
-// pronunciation clip for that row's Word, stored via core/voice-clips.js
-// and played back in-game by anagram.js's "listen" button next to the clue.
+// (10/8/2026, revised 10/8/2026) is real: it opens a small popover to
+// generate a Kokoro TTS clip, stored via core/voice-clips.js and played
+// back in-game by anagram.js's "listen" button next to the clue. The clip
+// reads the row's CLUE (or the generic "Unscramble the word" fallback if
+// the Clue is blank) -- NOT the Word -- because the Word is exactly what
+// the student is trying to solve for; speaking it aloud would give the
+// answer away.
 //
 // Row reordering uses the SAME native HTML5 drag-and-drop idiom as
 // main.js's folder/act drag-drop (draggable + dragstart/dragover/drop), so
@@ -31,6 +35,11 @@ import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-c
 
 const MAX_ITEMS = 100;
 
+// Must match the literal fallback string anagram.js shows in-game (its
+// clueEl) when a row has no Clue -- so the voice clip says the same thing
+// the student reads on screen.
+const GENERIC_CLUE_TEXT = "Unscramble the word";
+
 export function openAnagramEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
   const data = normalize(activity);
@@ -41,6 +50,25 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // otherwise reach a `let` placed near the popover functions (TDZ error).
   let voicePopEl = null;
   let voicePreviewAudio = null;   // currently-playing preview, so a second Play doesn't overlap the first
+  // Item -> its Clue <input>, so onVoicePopOutside (below) can tell "clicked
+  // into the very Clue box this popover's hint is tracking" apart from
+  // "clicked away" — the popover must NOT close in the first case, or the
+  // live-updating hint (voicePopEl._updateHint) could never actually be
+  // seen updating while the teacher types.
+  const clueInputByItem = new WeakMap();
+
+  // Waveform visualizer state (10/8/2026) -- a single shared AudioContext +
+  // AnalyserNode, reused across every Play click (a NEW MediaElementSource
+  // is required per <audio> element, but the context/analyser/destination
+  // routing can stay the same). Declared here for the same TDZ reason as
+  // voicePopEl above: closeVoicePopover()/stopVoicePreview() reference
+  // these and can run before execution would otherwise reach a `let`
+  // placed near the waveform helper functions further down.
+  let waveAudioCtx = null;
+  let waveAnalyser = null;
+  let waveSource = null;   // MediaElementAudioSourceNode for the CURRENTLY playing preview, if any
+  let waveRafId = null;
+  let waveCanvasEl = null; // the <canvas> currently animating, if any
 
   container.innerHTML = "";
   const page = el("div", "aw-ed");
@@ -93,8 +121,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   swapBtn.type = "button";
   swapBtn.title = "Swap the Word and Clue value in every row (fixes a list pasted in the wrong order)";
   swapBtn.onclick = () => {
-    // Swapping changes what Word IS, so any voice clip (generated for the
-    // pre-swap word) is now stale — same reasoning as the wordInput.oninput
+    // Swapping changes what Clue IS, so any voice clip (generated for the
+    // pre-swap clue) is now stale -- same reasoning as the clueInput.oninput
     // guard in itemRow() below, just applied to every row at once here.
     data.content.items.forEach(it => {
       const tmp = it.word; it.word = it.clue; it.clue = tmp;
@@ -173,26 +201,35 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const wordInput = el("input", "aw-anagram-ed-word");
     wordInput.value = it.word;
     wordInput.placeholder = "Word or phrase to unscramble";
-    wordInput.oninput = () => {
-      it.word = wordInput.value;
-      clearError();
-      // Editing the word invalidates any voice clip already generated for the
-      // OLD spelling — clear the reference (the orphaned Firestore doc, if
-      // any, is not deleted here; see core/voice-clips.js's file comment).
-      if (it.voice) { it.voice = ""; it.voiceId = ""; setMicState(micBtn, false); closeVoicePopover(); }
-    };
+    wordInput.oninput = () => { it.word = wordInput.value; clearError(); };
     wordInput.addEventListener("paste", e => onRowPaste(e, ii));
     const clueInput = el("input", "aw-anagram-ed-clue");
     clueInput.value = it.clue;
     clueInput.placeholder = "Optional clue / definition";
-    clueInput.oninput = () => { it.clue = clueInput.value; clearError(); };
+    clueInput.oninput = () => {
+      it.clue = clueInput.value;
+      clearError();
+      // The voice clip reads the Clue, so editing it invalidates any clip
+      // already generated for the OLD text -- clear the reference (the
+      // orphaned Firestore doc, if any, is not deleted here; see
+      // core/voice-clips.js's file comment).
+      if (it.voice) {
+        it.voice = ""; it.voiceId = ""; setMicState(micBtn, false); closeVoicePopover();
+      } else if (voicePopEl && voicePopEl._forItem === it && voicePopEl._updateHint) {
+        // Popover already open for THIS row (no voice yet) -- keep its
+        // "Will speak" preview line live instead of making the teacher
+        // close/reopen it to see the updated text.
+        voicePopEl._updateHint();
+      }
+    };
     clueInput.addEventListener("paste", e => onRowPaste(e, ii));
+    clueInputByItem.set(it, clueInput);
     box.append(wordInput, clueInput);
     row.append(box);
 
     const iconsWrap = el("div", "aw-anagram-ed-icons");
     const micBtn = iconBtn(it.voice ? icons.soundOn : icons.mic,
-      it.voice ? "Voice added — click to preview, change or remove" : "Add a pronunciation voice");
+      it.voice ? "Clue voice added — click to preview, change or remove" : "Add a spoken clue");
     if (it.voice) micBtn.classList.add("is-active");
     micBtn.onclick = () => toggleVoicePopover(micBtn, it);
     const imgBtn = iconBtn(icons.image, "Add image (coming soon)");
@@ -229,35 +266,106 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   }
 
   // ---------- voice popover (mic icon — generate/preview/remove a Kokoro
-  // TTS pronunciation clip for one row's Word). A single shared popover
-  // element (not one per row) toggled open/closed, positioned under
-  // whichever mic button was clicked. Success/failure update the SAME
-  // mic button in place (icon + title) instead of calling renderItems() —
-  // a full re-render would replace every row's DOM, including the very
-  // button this popover is anchored to, breaking its position. (voicePopEl/
-  // voicePreviewAudio are declared near the top of openAnagramEditor, not
+  // TTS clip that reads a row's Clue). A single shared popover element (not
+  // one per row) toggled open/closed, positioned under whichever mic button
+  // (or bulk-action button, see buildGenerateAllPopover/buildDeleteAllPopover
+  // below) was clicked. Success/failure update the SAME mic button in place
+  // (icon + title) instead of calling renderItems() — a full re-render would
+  // replace every row's DOM, including the very button this popover is
+  // anchored to, breaking its position. (voicePopEl/voicePreviewAudio/the
+  // wave* variables are declared near the top of openAnagramEditor, not
   // here — see the comment there.)
   function closeVoicePopover() {
     if (voicePopEl) { voicePopEl.remove(); voicePopEl = null; }
     document.removeEventListener("pointerdown", onVoicePopOutside, true);
+    stopWaveform();
   }
   function onVoicePopOutside(e) {
-    if (voicePopEl && !voicePopEl.contains(e.target)) closeVoicePopover();
+    if (!voicePopEl || voicePopEl.contains(e.target)) return;
+    // Exception: clicking into the very Clue box this popover's hint is
+    // tracking should focus it for typing, not close the popover out from
+    // under the teacher (see clueInputByItem's comment above).
+    const liveClueInput = voicePopEl._forItem && clueInputByItem.get(voicePopEl._forItem);
+    if (liveClueInput && e.target === liveClueInput) return;
+    closeVoicePopover();
   }
   function stopVoicePreview() {
     if (voicePreviewAudio) { voicePreviewAudio.pause(); voicePreviewAudio = null; }
+    stopWaveform();
   }
   function setMicState(micBtn, hasVoice) {
     micBtn.innerHTML = hasVoice ? icons.soundOn : icons.mic;
     micBtn.classList.toggle("is-active", hasVoice);
-    const title = hasVoice ? "Voice added — click to preview, change or remove" : "Add a pronunciation voice";
+    const title = hasVoice ? "Clue voice added — click to preview, change or remove" : "Add a spoken clue";
     micBtn.title = title;
     micBtn.setAttribute("aria-label", title);
+  }
+
+  // What Generate/Regenerate will actually say for this row RIGHT NOW —
+  // shared by the popover's live hint line and the genBtn click handler
+  // itself, so the two can never drift apart.
+  function speakTextFor(it) {
+    return (it.clue || "").trim() || GENERIC_CLUE_TEXT;
   }
 
   function toggleVoicePopover(micBtn, it) {
     if (voicePopEl && voicePopEl._forItem === it) { closeVoicePopover(); return; }
     buildVoicePopover(micBtn, it);
+  }
+
+  // ---------- waveform visualizer (10/8/2026) — a small animated bar chart
+  // driven by a Web Audio AnalyserNode, shown while a preview clip plays so
+  // the teacher can SEE the clip is actually playing/decoded, not just hear
+  // it. Cosmetic only: if Web Audio is unavailable/blocked for any reason,
+  // startWaveform() swallows the error and hides the canvas — playback
+  // itself (already started by the caller via audioEl.play()) is unaffected.
+  function ensureWaveAudioCtx() {
+    if (!waveAudioCtx) waveAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return waveAudioCtx;
+  }
+  function stopWaveform() {
+    if (waveRafId) { cancelAnimationFrame(waveRafId); waveRafId = null; }
+    if (waveSource) { try { waveSource.disconnect(); } catch { /* already disconnected */ } waveSource = null; }
+    if (waveCanvasEl) { waveCanvasEl.style.display = "none"; waveCanvasEl = null; }
+  }
+  function startWaveform(audioEl, canvas) {
+    stopWaveform();
+    try {
+      const ctx = ensureWaveAudioCtx();
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      // A MediaElementAudioSourceNode can only be created ONCE per <audio>
+      // element ever — safe here because the caller always hands us a
+      // FRESH `new Audio(...)` (see playBtn.onclick below).
+      waveSource = ctx.createMediaElementSource(audioEl);
+      if (!waveAnalyser) waveAnalyser = ctx.createAnalyser();
+      waveAnalyser.fftSize = 256;
+      waveSource.connect(waveAnalyser);
+      waveAnalyser.connect(ctx.destination);   // keep routing to speakers — analysing must not mute playback
+
+      canvas.style.display = "block";
+      waveCanvasEl = canvas;
+      const bufferLen = waveAnalyser.frequencyBinCount;
+      const data = new Uint8Array(bufferLen);
+      const cctx = canvas.getContext("2d");
+      const barCount = 28;
+      const step = Math.max(1, Math.floor(bufferLen / barCount));
+      const barW = canvas.width / barCount;
+      const draw = () => {
+        waveRafId = requestAnimationFrame(draw);
+        waveAnalyser.getByteFrequencyData(data);
+        cctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (let i = 0; i < barCount; i++) {
+          const v = data[i * step] / 255;
+          const h = Math.max(2, v * canvas.height);
+          cctx.fillStyle = "#2f6fed";
+          cctx.fillRect(i * barW + 1, canvas.height - h, Math.max(1, barW - 2), h);
+        }
+      };
+      draw();
+      audioEl.addEventListener("ended", stopWaveform, { once: true });
+    } catch {
+      canvas.style.display = "none";
+    }
   }
 
   function buildVoicePopover(micBtn, it) {
@@ -267,7 +375,16 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const pop = el("div", "aw-anagram-ed-voicepop");
     pop._forItem = it;
 
-    pop.append(el("div", "aw-anagram-ed-voicetitle", "Pronunciation voice"));
+    pop.append(el("div", "aw-anagram-ed-voicetitle", "Clue voice"));
+
+    // Live preview of exactly what Generate will speak — updates as the
+    // teacher types in the Clue box (see clueInput.oninput's call to
+    // voicePopEl._updateHint above), so there's never a surprise between
+    // what this line says and what the clip actually says.
+    const hint = el("div", "aw-anagram-ed-voicehint");
+    pop._updateHint = () => { hint.textContent = `Will speak: "${speakTextFor(it)}"`; };
+    pop._updateHint();
+    pop.append(hint);
 
     const selectField = el("div", "aw-anagram-ed-voicefield");
     selectField.append(el("label", "aw-anagram-ed-voicelabel", "Voice"));
@@ -293,7 +410,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     genBtn.type = "button";
     btnRow.append(genBtn);
 
-    let playBtn = null, delBtn = null;
+    let playBtn = null, delBtn = null, waveCanvas = null;
     if (it.voice) {
       playBtn = el("button", "aw-btn", "▶ Play");
       playBtn.type = "button";
@@ -305,6 +422,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
             stopVoicePreview();
             voicePreviewAudio = new Audio(clip.audio);
             voicePreviewAudio.play().catch(() => {});
+            if (waveCanvas) startWaveform(voicePreviewAudio, waveCanvas);
           } else {
             status.textContent = "Could not load the saved clip.";
           }
@@ -328,15 +446,22 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     }
     pop.append(btnRow);
 
+    if (it.voice) {
+      // The waveform canvas only makes sense once there's a clip to preview
+      // (Play button above); it stays hidden until that Play is clicked.
+      waveCanvas = el("canvas", "aw-anagram-ed-wave");
+      waveCanvas.width = 228; waveCanvas.height = 40;
+      pop.append(waveCanvas);
+    }
+
     genBtn.onclick = async () => {
-      const word = (it.word || "").trim();
-      if (!word) { status.textContent = "Enter a word first."; return; }
+      const text = speakTextFor(it);
       genBtn.disabled = true; select.disabled = true;
       if (playBtn) playBtn.disabled = true;
       if (delBtn) delBtn.disabled = true;
       status.textContent = "Loading voice model… (first time only, ~86MB)";
       try {
-        const dataUrl = await generateSpeechDataUrl(word, select.value, p => {
+        const dataUrl = await generateSpeechDataUrl(text, select.value, p => {
           if (p && /\.onnx$/.test(p.file || "") && p.progress != null) {
             status.textContent = `Loading voice model… ${Math.round(p.progress)}%`;
           } else if (p && p.status === "done") {
@@ -344,7 +469,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
           }
         });
         status.textContent = "Saving…";
-        const id = await saveVoiceClip({ id: it.voice || undefined, text: word, voiceId: select.value, audioDataUrl: dataUrl });
+        const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId: select.value, audioDataUrl: dataUrl });
         it.voice = id;
         it.voiceId = select.value;
         setMicState(micBtn, true);
@@ -359,12 +484,173 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       }
     };
 
+    positionPopover(pop, micBtn);
+  }
+
+  // Shared by buildVoicePopover above and the two bulk popovers below —
+  // fixed-position under whichever button opened it, clamped to the
+  // viewport, closes on an outside click.
+  function positionPopover(pop, anchorBtn) {
     document.body.append(pop);
-    const r = micBtn.getBoundingClientRect();
+    const r = anchorBtn.getBoundingClientRect();
     pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 40) + "px";
     pop.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 272)) + "px";
     voicePopEl = pop;
     setTimeout(() => document.addEventListener("pointerdown", onVoicePopOutside, true), 0);
+  }
+
+  function toggleBulkPopover(anchorBtn, kind) {
+    if (voicePopEl && voicePopEl._bulkKind === kind) { closeVoicePopover(); return; }
+    if (kind === "delete") buildDeleteAllPopover(anchorBtn);
+    else buildGenerateAllPopover(anchorBtn);
+  }
+
+  // "Generate all voices" — one popover for the whole list (not anchored to
+  // a row), same visual language as the per-row voice popover. Runs
+  // sequentially (the Kokoro model is a lazy singleton anyway — see
+  // core/tts.js — so back-to-back generateSpeechDataUrl calls only pay the
+  // ~86MB load once) with a live "Generating X / Y…" status. Stops on the
+  // FIRST sign-out error (every subsequent save would fail identically —
+  // no point burning WASM time generating audio that can't be saved) but
+  // otherwise keeps going past a single row's failure so one bad row can't
+  // block the rest of a 100-word list.
+  function buildGenerateAllPopover(anchorBtn) {
+    closeVoicePopover();
+    stopVoicePreview();
+
+    const pop = el("div", "aw-anagram-ed-voicepop");
+    pop._bulkKind = "generate";
+
+    pop.append(el("div", "aw-anagram-ed-voicetitle", "Generate all voices"));
+
+    const total = data.content.items.length;
+    const already = data.content.items.filter(it => it.voice).length;
+    pop.append(el("div", "aw-anagram-ed-voicehint",
+      `${total} row(s) total${already ? `, ${already} already have a voice` : ""}. Reads each row's Clue ` +
+      `(or "${GENERIC_CLUE_TEXT}" if the Clue is blank).`));
+
+    const skipLabel = el("label", "aw-anagram-ed-voicecheck");
+    const skipChk = document.createElement("input");
+    skipChk.type = "checkbox";
+    skipChk.checked = true;
+    skipLabel.append(skipChk, document.createTextNode(" Skip rows that already have a voice"));
+    pop.append(skipLabel);
+
+    const selectField = el("div", "aw-anagram-ed-voicefield");
+    selectField.append(el("label", "aw-anagram-ed-voicelabel", "Voice"));
+    const select = el("select", "aw-anagram-ed-voiceselect");
+    const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
+    const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
+    VOICES.forEach(v => {
+      const o = document.createElement("option");
+      o.value = v.id;
+      o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
+      (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
+    });
+    select.append(gbGroup, usGroup);
+    select.value = DEFAULT_VOICE;
+    selectField.append(select);
+    pop.append(selectField);
+
+    const status = el("div", "aw-anagram-ed-voicestatus");
+    pop.append(status);
+
+    const btnRow = el("div", "aw-anagram-ed-voicebtns");
+    const cancelBtn2 = el("button", "aw-btn", "Cancel");
+    cancelBtn2.type = "button";
+    cancelBtn2.onclick = () => closeVoicePopover();
+    const goBtn = el("button", "aw-btn aw-btn-primary", "Generate");
+    goBtn.type = "button";
+    btnRow.append(cancelBtn2, goBtn);
+    pop.append(btnRow);
+
+    goBtn.onclick = async () => {
+      const voiceId = select.value;
+      const skipExisting = skipChk.checked;
+      const targets = data.content.items.filter(it => !skipExisting || !it.voice);
+      if (!targets.length) { status.textContent = "Nothing to generate — every row already has a voice."; return; }
+      goBtn.disabled = true; cancelBtn2.disabled = true; select.disabled = true; skipChk.disabled = true;
+      let done = 0, failed = 0, signedOut = false;
+      for (const it of targets) {
+        status.textContent = `Generating ${done + failed + 1} / ${targets.length}…`;
+        const text = speakTextFor(it);
+        try {
+          const dataUrl = await generateSpeechDataUrl(text, voiceId, () => {});
+          const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId, audioDataUrl: dataUrl });
+          it.voice = id; it.voiceId = voiceId;
+          done++;
+        } catch (e) {
+          if (e && e.code === "aw/signed-out") { signedOut = true; break; }
+          failed++;
+        }
+      }
+      if (signedOut) {
+        status.textContent = "Please sign in first.";
+        goBtn.disabled = false; cancelBtn2.disabled = false; select.disabled = false; skipChk.disabled = false;
+        return;
+      }
+      renderItems();
+      showInfo(`Generated voice for ${done} row(s)${failed ? `, ${failed} failed — please try again` : ""}.`);
+    };
+
+    positionPopover(pop, anchorBtn);
+  }
+
+  // "Delete all voices" — small confirm popover (same idiom as the native
+  // confirm() used by "Delete all words", but this one needs to show a
+  // live count first, which confirm() can't do). Stops on the first
+  // sign-out error WITHOUT clearing any `it.voice` from that point on, so a
+  // signed-out attempt can't desync the UI from what's actually still in
+  // Firestore.
+  function buildDeleteAllPopover(anchorBtn) {
+    closeVoicePopover();
+    stopVoicePreview();
+
+    const pop = el("div", "aw-anagram-ed-voicepop");
+    pop._bulkKind = "delete";
+
+    pop.append(el("div", "aw-anagram-ed-voicetitle", "Remove all voices?"));
+    const withVoice = data.content.items.filter(it => it.voice).length;
+    const status = el("div", "aw-anagram-ed-voicestatus",
+      withVoice ? `This removes the generated voice from ${withVoice} row(s). This cannot be undone.`
+                 : "No rows currently have a voice.");
+    pop.append(status);
+
+    const btnRow = el("div", "aw-anagram-ed-voicebtns");
+    const cancelBtn2 = el("button", "aw-btn", "Cancel");
+    cancelBtn2.type = "button";
+    cancelBtn2.onclick = () => closeVoicePopover();
+    btnRow.append(cancelBtn2);
+
+    if (withVoice) {
+      const delAllGo = el("button", "aw-btn aw-ed-bulkdanger", "Delete all");
+      delAllGo.type = "button";
+      delAllGo.onclick = async () => {
+        delAllGo.disabled = true; cancelBtn2.disabled = true;
+        const targets = data.content.items.filter(it => it.voice);
+        let signedOut = false;
+        for (const it of targets) {
+          try {
+            await deleteVoiceClip(it.voice);
+          } catch (e) {
+            if (e && e.code === "aw/signed-out") { signedOut = true; break; }
+            // otherwise ignore — clip may already be gone (same tolerance as the per-row Remove voice)
+          }
+          it.voice = ""; it.voiceId = "";
+        }
+        if (signedOut) {
+          status.textContent = "Please sign in first.";
+          delAllGo.disabled = false; cancelBtn2.disabled = false;
+          return;
+        }
+        renderItems();
+        showInfo(`Removed voice from ${targets.length} row(s).`);
+      };
+      btnRow.append(delAllGo);
+    }
+    pop.append(btnRow);
+
+    positionPopover(pop, anchorBtn);
   }
 
   // ---------- drag-to-reorder (native HTML5 DnD, same idiom as main.js) ----------
@@ -471,6 +757,17 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       showInfo("All words deleted.");
     };
     bar.append(clearBtn);
+
+    const genAllBtn = el("button", "aw-btn aw-btn-primary", "Generate all voices");
+    genAllBtn.type = "button";
+    genAllBtn.onclick = () => toggleBulkPopover(genAllBtn, "generate");
+    bar.append(genAllBtn);
+
+    const delAllVoicesBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete all voices");
+    delAllVoicesBtn.type = "button";
+    delAllVoicesBtn.onclick = () => toggleBulkPopover(delAllVoicesBtn, "delete");
+    bar.append(delAllVoicesBtn);
+
     return bar;
   }
 

@@ -5,6 +5,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 96 (10/8/2026, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word, sóng âm khi preview,
+Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram-editor.js` +
+`anagram.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (tự test kỹ qua trình duyệt thật bằng harness thay Firestore
+trước khi commit, 0 lỗi console — xem hash + xác nhận LIVE ở cuối mục này).
+
+Thầy thử act live `?a=256` rồi gửi 3 điểm sửa cho tính năng 🎤 vừa xong ở Đợt 94/95 (không đăng nhập được
+trong phiên này nên test bằng harness giả lập thay Firestore, xem chi tiết đầy đủ ở
+`templates/anagram/GHI CHU ANAGRAM.md` Đợt 96). (1) **Voice đổi sang đọc CLUE thay vì Word** — nút loa
+lúc chơi nằm cạnh clue, đọc Word ra sẽ lộ đáp án; hàm dùng chung mới `speakTextFor(it)` = Clue (hoặc
+fallback "Unscramble the word", khớp đúng chữ hiển thị trong game). Sửa Word không còn xoá voice nữa,
+sửa Clue mới xoá; Swap Columns vẫn xoá (đúng, Clue đổi giá trị). Thêm dòng "Will speak: ..." sống động
+trong popover, tự cập nhật khi gõ Clue. ⚠️ Bắt được 1 lỗi thật: cơ chế đóng-popover-khi-bấm-ra-ngoài coi
+bấm vào chính ô Clue cũng là "ra ngoài" → đóng popover trước khi kịp gõ, làm hint sống động không bao giờ
+chạy được — sửa bằng `WeakMap` nhận diện đúng ô Clue của hàng đang mở, bỏ qua đúng 1 trường hợp này. (2)
+**Thanh sóng âm khi Play preview** — canvas + Web Audio `AnalyserNode` thật nối từ `<audio>` đang phát, vẽ
+28 cột theo tần số thật, tự ẩn khi phát xong; lỗi Web Audio (nếu có) bị nuốt lặng lẽ, không ảnh hưởng phát
+âm thanh thật. Đo bằng harness: đọc `ImageData` canvas ngay sau khi phát ra 392 pixel có vẽ (khác 0) →
+xác nhận có vẽ dữ liệu tần số thật. (3) **Nút Generate all voices / Delete all voices** trong thanh bulk
+— Delete hiện đúng số hàng có voice + cảnh báo không hoàn tác, dừng ngay nếu chưa đăng nhập (không xoá cục
+bộ hàng chưa xoá được thật); Generate có chọn giọng + checkbox skip-hàng-đã-có (mặc định bật) + chạy tuần
+tự có tiến độ "Generating X/Y", dừng khi gặp lỗi chưa-đăng-nhập nhưng không dừng vì 1 hàng lỗi khác. Test
+harness: 3 hàng mẫu → Generate all (skip bật) → "Generated voice for 2 row(s)" đúng 2 hàng thiếu → Delete
+all → "Removed voice from 3 row(s)" đúng cả 3. 0 lỗi console suốt mọi bước.
+
+**Kỹ thuật test** (không có quyền đăng nhập Google trong phiên này): tạo 2 file TẠM
+`_test-anagram-editor.js` (bản sao y hệt editor thật, chỉ đổi 1 dòng import trỏ sang kho voice giả) +
+`_test-voice-clips-stub.js` (Map trong bộ nhớ thay Firestore, cùng chữ ký hàm) để chạy được TRỌN luồng
+Generate→Save→Play→waveform mà không cần đăng nhập — logic 100% giống bản thật, chỉ khác nguồn lưu trữ.
+Đã XOÁ cả 4 file tạm (`_test-editor.html`/`_test-editor-run.js` + 2 file trên) sau khi test xong, đúng quy
+ước cũ (Đợt 94 cũng làm vậy).
+
+**⚠️ Phát hiện ngoài lề (không phải việc đợt này)**: lúc đang làm, `git status` lộ ra
+`templates/type-the-answer/*.css|js` đang bị sửa dở (chống iOS Safari tự zoom ô nhập) bởi **phiên/máy
+khác** đồng bộ qua Drive giữa chừng — đã KHÔNG đụng 2 file đó, không dùng `git add -A`, chỉ stage đúng
+file Anagram của đợt này khi commit.
+
+**VIỆC ĐANG CHỜ**: thầy duyệt commit+push thẳng dựa trên kết quả test harness (không đợi tự chơi act thật
+trước) — phiên sau (không gấp): thầy tự vào act thật `?a=256` (hoặc act Anagram bất kỳ) trên bản LIVE, thử
+đổi Clue → Generate lại → nghe qua Play xem sóng âm hiện đúng không; thử Generate all/Delete all trên 1
+act nhiều từ, báo lại nếu gặp gì bất thường.
+
+---
+
 ## Đợt 95 (10/8/2026, v0.9.69) — FIX bridge myActivity: bridge cũ bị VỨT giữa lúc đổi Template làm mất
 đồng bộ Options/Style. CÓ SỬA CORE (chỉ `core/engine.js`, đúng đoạn bridge dòng ~125-190). ✅ THẦY DUYỆT
 → COMMIT `7f3d23e` + PUSH.

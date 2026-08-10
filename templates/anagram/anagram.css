@@ -429,6 +429,14 @@
   box-shadow: 0 10px 28px rgba(20,30,45,.16); padding: .8rem;
 }
 .aw-anagram-ed-voicetitle { font-weight: 700; font-size: .85rem; color: #23303e; margin-bottom: .5rem; }
+.aw-anagram-ed-voicehint {
+  font-size: .76rem; color: #55657a; background: #f3f6fa; border-radius: 7px;
+  padding: .4rem .55rem; margin-bottom: .55rem; line-height: 1.35; word-break: break-word;
+}
+.aw-anagram-ed-voicecheck {
+  display: flex; align-items: center; gap: 6px; font-size: .8rem; color: #55657a;
+  margin-bottom: .55rem; cursor: pointer;
+}
 .aw-anagram-ed-voicefield { display: flex; flex-direction: column; gap: .25rem; margin-bottom: .55rem; }
 .aw-anagram-ed-voicelabel { font-size: .72rem; font-weight: 700; color: #8a97a8; text-transform: uppercase; letter-spacing: .03em; }
 .aw-anagram-ed-voiceselect {
@@ -439,6 +447,11 @@
 .aw-anagram-ed-voicebtns { display: flex; align-items: center; gap: 6px; }
 .aw-anagram-ed-voicebtns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
 .aw-anagram-ed-voicebtns .aw-anagram-ed-iconbtn { margin-left: auto; }
+/* Waveform preview canvas (10/8/2026) — hidden until Play is clicked (see
+   startWaveform() in anagram-editor.js); internal resolution is set via the
+   canvas width/height ATTRIBUTES in JS (228x40), this just stretches it to
+   the popover's inner width. */
+.aw-anagram-ed-wave { display: none; width: 100%; height: 40px; margin-top: .55rem; border-radius: 8px; background: #f3f6fa; }
 
 .aw-anagram-ed-addrow {
   display: flex; align-items: center; justify-content: center; gap: 6px;

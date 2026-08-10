@@ -692,3 +692,84 @@ chung khi tới lượt các template đó, không cần viết lại.
 mô phỏng). **Việc kế cho phiên sau** (không gấp): 🖼️ ảnh Anagram vẫn "coming soon"; hoặc nối 🎤 giọng đọc
 cho Unjumble/Crossword/Flying-fruit bằng cách tái dùng thẳng `core/tts.js` + `core/voice-clips.js` (chỉ
 cần viết phần UI popover trong editor riêng của từng game, giống khuôn `anagram-editor.js` đã làm).
+
+## Đợt 96 (10/8/2026, v0.9.70) — 3 CẢI TIẾN VOICE THEO YÊU CẦU THẦY (đổi sang đọc Clue, thêm sóng âm
+preview, thêm Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram-editor.js`
++ `anagram.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (đã tự test kỹ qua trình duyệt thật trước khi commit, 0 lỗi
+console — xem hash + xác nhận LIVE ở cuối mục này).
+
+Thầy chơi thử act live (`aword.andrewclasses.com/?a=256`, không đăng nhập được nên không xem trực tiếp
+được nội dung act đó — tự test bằng harness thay thế, xem mục kỹ thuật test bên dưới) rồi gửi 3 điểm sửa
+cho tính năng 🎤 vừa xong ở Đợt 94.
+
+**(1) Voice đổi sang đọc CLUE thay vì Word** — lý do hợp lý: nút loa lúc chơi nằm NGAY CẠNH clue (xem
+Đợt 94), còn Word chính là đáp án học sinh đang giải — đọc to Word ra sẽ lộ đáp án. `genBtn.onclick`
+(cả bản đơn `buildVoicePopover` lẫn bản hàng loạt `buildGenerateAllPopover`) đổi từ
+`(it.word||"").trim()` sang hàm dùng chung mới `speakTextFor(it)` = `(it.clue||"").trim() ||
+"Unscramble the word"` — **hằng số `GENERIC_CLUE_TEXT` phải khớp Y HỆT** chuỗi generic hiển thị trong
+`anagram.js` (dòng ~384) để giọng đọc luôn khớp đúng chữ hiện trên màn. Đảo hẳn chỗ "sửa Word/Clue nào
+thì xoá voice": trước đây `wordInput.oninput` xoá voice, nay bỏ hẳn (sửa Word không còn ảnh hưởng voice);
+`clueInput.oninput` mới là chỗ xoá voice khi Clue đổi. `swapBtn` (Swap Columns) giữ nguyên hành vi xoá
+voice mọi hàng (đúng, vì Clue đổi giá trị). Thêm dòng **"Will speak: "..."" sống động** ngay dưới tiêu đề
+popover — đọc đúng y văn bản SẼ được đọc (kể cả fallback), tự cập nhật khi gõ Clue trong lúc popover đang
+mở (không cần đóng/mở lại) nhờ `pop._updateHint()` gọi từ `clueInput.oninput`. ⚠️ **Bắt được 1 lỗi thật
+lúc tự test**: cơ chế đóng popover khi bấm ra ngoài (`onVoicePopOutside`, có sẵn từ Đợt 94) coi việc bấm
+vào CHÍNH ô Clue của hàng đang mở popover cũng là "bấm ra ngoài" → đóng popover ngay khi vừa focus vào ô
+Clue để gõ, khiến tính năng "hint sống động" ở trên **không bao giờ có cơ hội chạy** (đã tự đóng trước
+khi kịp gõ chữ nào). Sửa: thêm `clueInputByItem` (WeakMap item→input Clue của chính hàng đó) để
+`onVoicePopOutside` nhận diện và BỎ QUA đúng 1 trường hợp này — mọi cú bấm khác vẫn đóng như cũ. Đã đo lại
+bằng trình duyệt thật: mở popover hàng "elephant"/"A big grey animal with a trunk" → bấm vào ô Clue gõ
+thêm " LIVE-EDIT" → popover **KHÔNG đóng**, dòng hint đổi ngay thành
+`Will speak: "A big grey animal LIVE-EDITwith a trunk"`.
+
+**(2) Thanh sóng âm khi Play preview** — canvas `.aw-anagram-ed-wave` (228×40, ẩn mặc định) nằm dưới cụm
+nút Play/Regenerate/Remove, chỉ hiện khi bấm ▶ Play. Dùng Web Audio API thật: `AudioContext` +
+`AnalyserNode` (`fftSize:256`) nối từ `MediaElementAudioSourceNode` của chính thẻ `<audio>` đang phát
+(bắt buộc phải là `<audio>` MỚI mỗi lần — 1 phần tử chỉ tạo được đúng 1 `MediaElementAudioSourceNode`
+suốt đời nó, khớp code sẵn có vì mỗi lần Play đều `new Audio(...)`), vẽ 28 cột bằng
+`requestAnimationFrame` + `getByteFrequencyData`, tự ẩn khi audio phát xong (`'ended'`, 1 lần). Cosmetic
+thuần: nếu Web Audio bị chặn/lỗi vì lý do gì thì `try/catch` nuốt lỗi, ẩn canvas, KHÔNG ảnh hưởng phát âm
+thanh thật (đã `play()` từ trước, độc lập với waveform). Test bằng harness clone (`_test-anagram-editor.js`
+trỏ tới `_test-voice-clips-stub.js` — kho voice giả bằng `Map` trong bộ nhớ thay Firestore, để chạy được
+TRỌN luồng Generate→Save→Play mà không cần đăng nhập Google, cùng logic 100% với bản thật, khác đúng 1
+dòng import; cả 2 file + `_test-editor.html`/`_test-editor-run.js` đã XOÁ sau khi test xong, đúng quy ước
+cũ): sinh giọng thật cho "A big grey animal with a trunk" (giọng Emma mặc định) → Save → bấm Play → đọc
+`ImageData` của canvas ngay sau khi phát xong ra **392 pixel có vẽ** (khác 0, chứng minh có vẽ cột thật
+theo dữ liệu tần số thật, không phải canvas trống) → canvas tự ẩn đúng lúc audio kết thúc. 0 lỗi console.
+
+**(3) Nút "Generate all voices" / "Delete all voices"** — thêm vào thanh bulk phía trên bảng (cạnh "Delete
+all words"). Cả 2 dùng lại đúng khung popover `.aw-anagram-ed-voicepop` (hàm dùng chung mới
+`positionPopover()`, tách từ code định vị lặp lại 3 chỗ của Đợt 94) + cờ `pop._bulkKind` để phân biệt với
+popover-1-hàng khi toggle. **Delete all voices**: popup nhỏ hiện đúng số hàng đang có voice + cảnh báo
+"không hoàn tác được" (nếu 0 hàng có voice thì chỉ có nút Cancel, không có nút xoá) — xoá tuần tự qua
+`deleteVoiceClip`, dừng NGAY nếu gặp lỗi chưa-đăng-nhập (không âm thầm xoá cục bộ những hàng còn lại khi
+Firestore chưa xoá được, tránh lệch dữ liệu cục bộ/thật). **Generate all voices**: popup có ô chọn giọng
+(28 giọng, mặc định Emma) + checkbox "Skip rows that already have a voice" (mặc định BẬT, tránh tốn thời
+gian sinh lại giọng đã có) + dòng đếm "N row(s) total, M already have a voice" + mô tả ngắn hành vi đọc
+Clue. Bấm Generate chạy TUẦN TỰ từng hàng (model Kokoro vẫn chỉ tải 1 lần vì là singleton lười có sẵn ở
+`core/tts.js`), hiện tiến độ "Generating X / Y…", dừng ngay khi gặp lỗi chưa-đăng-nhập (không tốn thời
+gian WASM sinh tiếp những giọng chắc chắn không lưu được) nhưng KHÔNG dừng vì 1 hàng lỗi khác (để 1 hàng
+hỏng không chặn cả danh sách 100 từ). Test qua harness giả (như mục 2): 3 hàng mẫu (1 đã có voice, 2 chưa)
+→ bấm Generate all với Skip bật → đúng "Generating 2 / 2…" → xong hiện "Generated voice for 2 row(s)."
+→ cả 3 hàng đều có voice (hàng có sẵn giữ nguyên, không bị sinh lại) → bấm Delete all voices → đúng số
+đếm "3 row(s)" → xác nhận → "Removed voice from 3 row(s)." → cả 3 về trạng thái chưa có voice. 0 lỗi
+console suốt.
+
+**File đổi**: `templates/anagram/anagram-editor.js` (cả 3 mục), `templates/anagram/anagram.css` (thêm CSS
+`.aw-anagram-ed-wave`/`.aw-anagram-ed-voicehint`/`.aw-anagram-ed-voicecheck`). Không đụng `anagram.js`
+(phía chơi không đổi gì — nút loa vẫn đọc đúng `it.src.voice` như Đợt 94, chỉ NỘI DUNG của clip đổi từ
+lúc soạn).
+
+**⚠️ Phát hiện ngoài lề lúc test (không phải việc của đợt này)**: `git status` lúc đang làm cho thấy
+`templates/type-the-answer/type-the-answer.css`/`.js` bị sửa dở (thêm biến `--tta-input-fs` chống iOS
+Safari tự zoom ô nhập khi cỡ chữ tính ra dưới 16px) — **không phải do phiên này gây ra**, khả năng cao do
+máy khác đồng bộ qua Drive giữa lúc đang làm (đúng mô hình "3 máy đồng bộ, build song song" đã ghi ở
+memory). Đã KHÔNG đụng 2 file đó, không `git add -A`, chỉ stage đúng 2 file Anagram của đợt này khi commit.
+
+**Chưa test được** (cần thầy hoặc máy có đăng nhập Google — không tự làm được vì không có quyền đăng nhập
+tài khoản thầy trong phiên này): vòng Save→Play THẬT qua Firestore thật (harness ở mục 2 mô phỏng bằng
+kho giả nhưng logic y hệt bản thật, chỉ khác đúng 1 dòng import); waveform + Generate all/Delete all trên
+act thật `?a=256`. Thầy duyệt commit+push thẳng dựa trên kết quả test harness (không đợi tự chơi act thật
+trước) — **việc kế cho phiên sau (không gấp): thầy tự vào act thật `?a=256` (hoặc act Anagram bất kỳ) trên
+bản LIVE, đổi vài Clue rồi Generate lại giọng, nghe qua Play xem sóng âm có hiện đúng không, thử Generate
+all/Delete all trên 1 act nhiều từ — nếu gặp gì bất thường thì báo lại.**
