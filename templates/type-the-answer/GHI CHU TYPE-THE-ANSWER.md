@@ -1,5 +1,44 @@
 # GHI CHÚ — TEMPLATE TYPE THE ANSWER
 
+## Đợt 97 (10/8/2026, v0.9.71) — 3 tinh chỉnh màn chơi: chống iOS Safari tự zoom ô nhập, đẩy xa dấu
+tích/X, hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `type-the-answer.js` + `.css`). ✅ THẦY
+DUYỆT → COMMIT + PUSH (đo DOM qua trình duyệt thật trước khi commit, `node --check` sạch, 0 lỗi console
+— xem hash + xác nhận LIVE ở cuối mục này).
+
+Thầy tự mở act trên iPhone, báo qua chat 3 điều (không kèm ảnh):
+
+1. **Zoom khi bấm vào ô nhập trên iPhone**: nguyên nhân — `.aw-tta-input` đặt cỡ chữ theo đơn vị `cqw`
+   (% chiều rộng CONTAINER game, không phải viewport); trên màn điện thoại hẹp, container co lại kéo
+   font tính ra dưới 16px → Safari tự động zoom cả trang khi input nhận focus (hành vi chuẩn của iOS,
+   không phải bug JS — bất kỳ input nào dưới 16px đều bị vậy). Sửa: thêm 1 biến CSS
+   `--tta-input-fs: max(16px, calc(3.9cqw * var(--fit)))` khai trong `.aw-tta-card`, gán CHUNG cho cả
+   `.aw-tta-input` VÀ `.aw-tta-reveal-text` (thay vì chép số `3.52cqw` riêng ở 2 chỗ như cũ) — vừa giữ
+   đúng bất biến "reveal = input" đã có từ đợt 1/8/2026, vừa đảm bảo 2 giá trị không bao giờ lệch nhau ở
+   các lần sửa sau. Tăng từ 3.52cqw lên 3.9cqw (~+11%, thầy cũng muốn ô đáp án to hơn 1 chút) VÀ có sàn
+   cứng 16px không bao giờ xuống dưới nữa. Đo qua trình duyệt thật (`test.html`, đổi viewport 377px kiểu
+   mobile): input/reveal đều ra đúng **16px** (chạm sàn, hết nguy cơ zoom); ở viewport 1280px thì ra
+   **37.7px** (to hơn bản cũ ~32.5px) — input/reveal luôn bằng nhau ở cả 2 kích thước, không phá bất biến.
+2. **Đẩy dấu tích xanh/X đỏ ra xa mép phải ô nhập hơn một chút**: khoảng lùi trong `flyMark()` tăng từ
+   `size + 6` lên `size + 22`. Đo DOM: khoảng cách thật từ mép phải hàng input (`.aw-tta-inputrow`) tới
+   mép trái dấu tăng từ ~14px lên ~30.7px.
+3. **Hiện đáp án đúng lâu hơn khi trả lời sai**: thời gian trước khi tự chuyển câu/kết thúc — trước đây
+   1400ms (hoặc 1500ms nếu hết mạng) — nay là **2600ms**, nhưng CHỈ khi đang thật sự hiện đáp án đúng
+   (`showAnswerWhenWrong` bật): thêm biến `revealShown` (tách ra từ điều kiện mở reveal đã có sẵn, dùng
+   lại chỗ tính `delay` thay vì viết logic riêng) để nếu thầy tắt "Show answer when wrong" thì giữ nguyên
+   nhịp nhanh cũ 1400/1500ms — không có gì để đọc thêm thì không cần chờ lâu hơn. Đo bằng bộ đếm thời
+   gian thật chạy TRONG trang (không phải áng chừng bằng mắt): submit sai → prompt đổi sang câu kế tiếp
+   sau **~2841ms**, khớp đúng 2600ms + ~240ms crossfade chữ câu hỏi.
+
+**Test thật qua trình duyệt** (`test.html`, đo DOM qua `javascript_tool` — gán `.value` bằng
+`Object.getOwnPropertyDescriptor` setter rồi dispatch `KeyboardEvent Enter`/`Event input`, giống kỹ thuật
+các đợt trước; pane phiên này không composite nên không chụp được ảnh, chỉ đo số liệu DOM): cả 3 điểm
+đúng số đo nêu trên; đúng → điểm lên bình thường (1/6); sai → reveal mở đúng đáp án; auto-advance vẫn
+đúng luồng cũ (Lives/Andrew/Minus không bị ảnh hưởng, không đụng gì khác ngoài 3 điểm trên). `node --check
+type-the-answer.js` sạch. 0 lỗi console.
+
+File đụng: `type-the-answer.js`, `type-the-answer.css` (đều trong thư mục riêng của template, không đụng
+core, không đụng editor/sound/sample).
+
 ## Đợt 90 (8/8/2026, v0.9.65) — SỬA: điểm trừ ("Points off per wrong") bị rơi mất khỏi bảng kết quả
 
 Thầy quan sát bảng kết quả cuối game hiện số câu làm được (`correct`) chứ không phải điểm đã trừ. Đúng:

@@ -5,6 +5,26 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 97 (10/8/2026, v0.9.71) — TYPE THE ANSWER: chống iOS Safari tự zoom ô nhập + đẩy xa dấu tích/X +
+hiện đáp án đúng lâu hơn khi sai. KHÔNG đụng core (chỉ `templates/type-the-answer/type-the-answer.js` +
+`.css`). ✅ THẦY DUYỆT → COMMIT + PUSH (đo DOM qua trình duyệt thật trước khi commit, 0 lỗi console — xem
+hash + xác nhận LIVE ở cuối mục này).
+
+Thầy tự mở act trên iPhone, báo 3 điều qua chat: (1) ô nhập bị Safari tự zoom khi bấm vào — do font tính
+theo đơn vị `cqw` (% chiều rộng container game) xuống dưới 16px trên màn hẹp, Safari coi đó là "cần zoom
+để đọc được"; sửa bằng biến `--tta-input-fs: max(16px, calc(3.9cqw * var(--fit)))` dùng CHUNG cho ô nhập
++ chữ đáp án đúng (giữ đúng bất biến "reveal = input" có sẵn từ 1/8/2026) thay vì chép số ở 2 nơi — vừa
+hết zoom (sàn cứng 16px) vừa to hơn ~11% như thầy muốn; (2) dấu tích xanh/X đỏ bay ra xa ô nhập hơn (gap
+trong `flyMark()`: 6px→22px, đo DOM tăng từ ~14px lên ~30.7px thật); (3) đáp án đúng hiện lâu hơn khi sai
+trước khi tự chuyển câu (1400ms→2600ms, CHỈ khi đang thật sự hiện đáp án — tắt "Show answer when wrong"
+thì giữ nhịp cũ, không có gì để đọc thêm thì không cần chờ). Chi tiết đầy đủ (số đo cụ thể từng điểm):
+`templates/type-the-answer/GHI CHU TYPE-THE-ANSWER.md` Đợt 97.
+
+**VIỆC ĐANG CHỜ**: thầy tự mở lại trên iPhone thật xác nhận hết zoom khi bấm vào ô nhập (máy build chỉ đo
+được computed font-size qua DOM, không mô phỏng được hành vi zoom thật của Safari).
+
+---
+
 ## Đợt 96 (10/8/2026, v0.9.70) — ANAGRAM: 3 CẢI TIẾN VOICE (đổi đọc Clue thay Word, sóng âm khi preview,
 Generate all/Delete all voices). KHÔNG ĐỤNG CORE (chỉ `templates/anagram/anagram-editor.js` +
 `anagram.css`). ✅ THẦY DUYỆT → COMMIT `fdcd403` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`

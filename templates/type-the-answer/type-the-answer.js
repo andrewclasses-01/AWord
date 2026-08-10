@@ -460,7 +460,8 @@ const ttaTemplate = {
                       // question was graded — without this it stayed stuck disabled until
                       // some unrelated Prev/Next call happened to refresh it)
 
-      if (!st.correct && opt.showAnswerWhenWrong !== false) {
+      const revealShown = !st.correct && opt.showAnswerWhenWrong !== false;
+      if (revealShown) {
         revealText.textContent = it.acceptedAnswers[0];
         revealWrap.classList.add("is-open");
         scheduleRevealRefit();
@@ -484,7 +485,11 @@ const ttaTemplate = {
       // navigated elsewhere) — that was the source of the nav bar sometimes going
       // invisible mid-review and Next sometimes appearing to do nothing.
       clearAutoTimer();
-      const delay = st.correct ? 1000 : (outOfLives ? 1500 : 1400);
+      // Wrong answers that reveal the correct one get more time before the
+      // auto-advance/auto-finish fires — the teacher found 1.4s too fast to
+      // actually read the reveal. When the reveal is off (showAnswerWhenWrong
+      // false) there's nothing extra to read, so keep the original brisk pace.
+      const delay = st.correct ? 1000 : (revealShown ? 2600 : (outOfLives ? 1500 : 1400));
       if (outOfLives) {
         autoTimer = setTimeout(() => finish("gameover"), delay);
       } else if (state.every(s => s.graded)) {
@@ -515,7 +520,7 @@ const ttaTemplate = {
       // sit just outside the RIGHT edge of the input row, vertically centred on it
       row.style.position = "relative";
       mark.style.position = "absolute";
-      mark.style.right = `-${Math.round(size + 6)}px`;
+      mark.style.right = `-${Math.round(size + 22)}px`;   // a bit further out from the input row (was +6)
       mark.style.top = "50%";
       mark.style.marginTop = `-${Math.round(size / 2)}px`;
       row.append(mark);
