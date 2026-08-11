@@ -5,6 +5,91 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 114 (11/8/2026) — ⭐⭐ TỔNG RÀ CẢ 17 TEMPLATE THEO LỚP LỖI ĐỢT 112/113: 9 TEMPLATE CÒN DÍNH,
+TRONG ĐÓ CÓ **MICRO VẪN BẬT SAU KHI RỜI GAME**. ⭐ CÓ SỬA CORE (`engine.js`, `voice-playback.js`) + 9
+template. ✅ THẦY DUYỆT ("làm cả 2 bước luôn nhưng chú ý an toàn") → 3 COMMIT `fc507da` / `9d72801` /
+`96eadfe` + PUSH + **LIVE**.
+
+### Vì sao có đợt này
+Sau Đợt 113 thầy hỏi: *"kiểm tra xem các template khác còn lỗi tương tự không"*. Đây không phải 1 lỗi mà
+là một **LỚP lỗi**: *thứ gì đó sinh ra trong ván chơi nhưng sống sót qua `cleanup()`*.
+
+### Cách rà (2 hướng, bổ trợ nhau — hướng nào một mình cũng bỏ sót)
+1. **Đo thật, tự động, cả 17 game**: máy dò bắt mọi `setInterval`/`setTimeout`/`rAF`/listener toàn cục
+   kèm file tạo ra chúng; chơi thật 3-5s rồi bỏ ván. **Kết quả: 16/17 SẠCH.** ⚠️ Đây chính là **cái bẫy
+   của phép đo tự động**: nó bỏ ván lúc "yên tĩnh", mà lỗi chỉ lộ khi bỏ ván ĐÚNG LÚC hoạt cảnh cuối đang
+   chạy. Suýt kết luận sai là "không còn lỗi".
+   *(Nhiễu cần biết cho lần sau: mọi timer "không rõ nguồn" đều là của **Firebase SDK** — auth poll 800ms,
+   Firestore keepalive 10s/45s/60s; `playerappear.mp3` của Maze chase là tiếng restart dài 2,6s; 2 `rAF`
+   của Crossword là callback đo layout một-nhát. Không cái nào là rò rỉ.)*
+2. **Soi mã song song 4 nhóm** (mỗi nhóm 4-5 template, đọc trọn `mount()`+`cleanup()`, đối chiếu từng
+   handle). Đây mới là hướng tìm ra 9 template dính.
+
+### Gốc chung — đúng 2 thói quen, không phải 17 lỗi rời rạc
+1. **`cleanup()` không đặt cờ "ván đã chết"**. Rất nhiều callback ĐÃ CÓ sẵn chốt `if (ended) return` /
+   `if (finished) return` — thậm chí `speaking.js` còn ghi chú rõ *"phòng khi cleanup() chạy giữa lúc
+   chấm"* — nhưng **không ai bật cờ**, nên chốt vô hiệu suốt.
+2. **Đúng những `setTimeout` ở đường KẾT THÚC ván lại viết trần**, không đi qua helper gom timer mà chính
+   file đó đã có. Mà đó là chỗ nguy hiểm nhất vì nó dẫn thẳng tới `ui.finish()`.
+
+### BƯỚC 1 — 3 chốt ở CORE (commit `fc507da`), chặn hậu quả nặng nhất cho CẢ 17 game
+| Chỗ vá | Lỗ hổng |
+|---|---|
+| `engine.js startTimerNow()` | **CÙNG lỗ Đợt 112, cửa vào khác.** Đợt 112 chỉ vá `resumeClockForMenu`. Game khai `manualTimerStart` (Unjumble, True/false) gọi `ui.startTimer()` từ timer RIÊNG của nó → ván chết vẫn dựng được đồng hồ. |
+| `engine.js ui.finish()` | ⭐ **Chốt giá trị nhất.** Chặn MỌI điểm ma / `session.submit()` giả, bất kể template nào gọi tới — kể cả template viết sau này. |
+| `voice-playback.js stop()` | Thêm `epoch`: clip đang TẢI DỞ không được phát khi `stop()` đã chạy (bản Đợt 113 cho pack mp3, đây là đường pack không quản). |
+
+⭐ **Đo được lỗi THẬT trước khi vá** (Unjumble): bấm PLAY → bấm Home ở giây 1 (giữa intro) → **giây 5,1
+đồng hồ ma ra đời, giây 13,4 nghe `timesup.mp3` trong khi đang ở THƯ VIỆN, không có game nào chạy**. Sau
+khi vá: 0 đồng hồ, im lặng.
+Cách chứng minh chốt `ui.finish` (không tái hiện tự nhiên được): **bắt đúng object `ui` engine trao cho
+template** (bọc `tpl.mount`), bỏ ván, rồi tự gọi `ui.finish({...})` → bảng xếp hạng đứng yên 0 dòng.
+
+### BƯỚC 2 — vá 9 template (commit `9d72801` + `96eadfe`)
+| Game | Bỏ ván đúng lúc nào thì dính | Hậu quả |
+|---|---|---|
+| **Speaking** | đang "Checking…" (AI chấm) · **đang hỏi quyền micro** | điểm ma + **MICRO BẬT ngoài phiên chơi** |
+| **Maze chase** | 0,9s sau khi chạy trúng ô đúng | tự đẻ lại **2 `setInterval` bất tử** (tiếng bước chân kêu mãi) + điểm ma |
+| **Anagram** | vừa Submit (**cửa sổ 1,9-2,9s** — rộng nhất) | điểm ma + ghi đè ô điểm ván mới |
+| **Unjumble** | trong intro (3,3s) · đang chấm bài (2,2s) | đồng hồ ma + điểm ma + đếm điểm ván cũ lên badge ván mới |
+| **Open the box** | hộp đang nổ sau Game over (1,15s) | điểm ma + tiếng thắng cuộc vang giữa ván mới |
+| **Whack-a-mole** | bảng điểm đang đếm (1,4s) | điểm ma |
+| **Balloon pop** | 0,3-0,5s trước bảng tổng kết | điểm ma + rò listener `resize` vĩnh viễn |
+| **Type the answer** | ~1s sau khi trả lời | điểm ván cũ đè lên ô điểm ván mới |
+| **Speaking cards** | 0,6s sau khi chia bài | tiếng lật bài + giọng đọc ván cũ + rò listener |
+| *running-word / running-team* | — | dọn nốt `rwEndData`/`rtEndData` (mìn cho tương lai) |
+
+### ⚠️ BẪY SUÝT LÀM HỎNG — ghi lại kẻo đợt sau vấp
+Whack-a-mole và Balloon pop đã có sẵn cờ `ended`, tôi định dùng luôn. **SAI**: ở 2 game này `ended` nghĩa
+là *"ván đã kết thúc"* và được bật **NGAY TRƯỚC** màn đếm điểm — dùng nó làm chốt sẽ **chặn luôn đường
+kết thúc bình thường**, game không bao giờ ra bảng tổng kết. Bắt được lúc đang sửa nhờ đọc kỹ `endGame()`
+trước khi tin vào tên biến. **Luật: cờ "ván đã KẾT THÚC" ≠ cờ "mount đã CHẾT"** — phải là 2 biến riêng.
+Vì vậy 6 template dùng biến MỚI tên `dead`, chỉ bật DUY NHẤT trong `cleanup()` (đã grep xác nhận từng
+file: đúng 1 dòng gán).
+
+### Đã đo những gì (0 lỗi console ở MỌI ca)
+- **Cả 17 template**, kịch bản "chơi → làm 1 hành động sinh hoạt cảnh → bỏ ván sau 120ms → chờ 3,2s":
+  `ui.finish` ma **0**, điểm ma **0**, timer sống sót **0**, listener `resize` rò **0**, âm phát sau khi
+  bỏ ván **0**.
+- **Không hồi quy**: Type the answer chơi đúng hết 6 câu → điểm cộng dần 0→5, `ui.finish` đúng **1** lần,
+  bảng xếp hạng **1** dòng · Whack-a-mole kết thúc tự nhiên vẫn `ui.finish` 1 lần (title "Time's up") ·
+  Unjumble/True-false/Quiz vẫn khởi động đồng hồ đúng (0:59→0:56).
+- **Micro**: giả lập `getUserMedia` trả về sau 1,5s (như lúc Chrome đang hỏi quyền), thoát game giữa
+  chừng → `track.readyState = "ended"` (trước đó micro sẽ BẬT và ghi 6 giây).
+
+### Giới hạn của lần kiểm này (nói thẳng để phiên sau biết)
+- Đồng hồ Balloon pop chạy bằng vòng `rAF`, mà **Browser pane đóng băng `rAF` khi bị ẩn** (bẫy đã biết),
+  nên không lái được nó tới lúc hết giờ tự nhiên. An toàn của nó dựa trên bảo chứng tĩnh: `dead` chỉ có
+  đúng 1 lần gán, nằm trong `cleanup()`.
+- Running word / Running team: bấm PLAY vào thẳng màn SETUP nên phép đo tự động chưa chơi thật được.
+- Speaking: phải tráo `tpl.prepare` mới bỏ qua được bước tải mô hình 240MB.
+- Các cửa sổ thời gian (0,3-2,9s) lấy từ đọc mã, chưa bấm tay từng ca trên máy thật.
+
+**Việc kế: thầy dùng bình thường; nếu còn nghe âm lạ hay thấy điểm lạ trong bảng xếp hạng thì báo — giờ
+mọi đường đều có chốt, nên nếu còn lọt là có cửa thứ ba chưa biết.**
+
+---
+
 ## Đợt 113 (11/8/2026) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN" (dứt điểm nốt "quan sát phụ" của
 Đợt 112). ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT ("sửa luôn") → COMMIT `dc1cf4f`
 + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `function dropPaused()` trong

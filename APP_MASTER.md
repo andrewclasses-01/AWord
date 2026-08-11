@@ -5,7 +5,29 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 113) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN".
+> Cập nhật lần cuối: **11/8/2026 (Đợt 114) — ⭐⭐ TỔNG RÀ CẢ 17 TEMPLATE THEO LỚP LỖI ĐỢT 112/113:
+> **9 template còn dính**, nặng nhất là **MICRO VẪN BẬT SAU KHI RỜI GAME** (Speaking) và một loạt đường
+> ghi **điểm ma vào bảng xếp hạng / `session.submit()` giả lên Firestore**. ⭐ CÓ SỬA CORE
+> (`engine.js` + `voice-playback.js`) + 9 template. ✅ THẦY DUYỆT → COMMIT `fc507da` / `9d72801` /
+> `96eadfe` + PUSH + **LIVE**.**
+> **Bước 1 — 3 chốt ở CORE, che cho cả 17 game:** `startTimerNow()` (CÙNG lỗ Đợt 112, cửa vào khác — game
+> `manualTimerStart` gọi `ui.startTimer()` từ timer riêng; đo thật: bấm Home giữa intro Unjumble rồi 12
+> giây sau nghe `timesup.mp3` khi đang ở THƯ VIỆN) · **`ui.finish()` — chốt giá trị nhất của dự án**, chặn
+> mọi điểm ma bất kể template nào gọi tới, kể cả template viết sau này · `voice-playback.js stop()` thêm
+> `epoch` để clip đang tải dở không phát vào ván sau.
+> **Bước 2 — 9 template:** Speaking (micro + điểm ma), Maze chase (tự đẻ lại 2 `setInterval` bất tử),
+> Anagram (cửa sổ 2,9s — rộng nhất), Unjumble (3 lỗ), Open the box, Whack-a-mole, Balloon pop,
+> Type the answer, Speaking cards, + dọn `rwEndData`/`rtEndData`.
+> ⚠️ **BẪY SUÝT LÀM HỎNG, nhớ kỹ:** cờ **"ván đã KẾT THÚC" ≠ cờ "mount đã CHẾT"**. Whack-a-mole và
+> Balloon pop bật `ended` NGAY TRƯỚC màn đếm điểm, nên dùng `ended` làm chốt sẽ chặn luôn đường kết thúc
+> bình thường. Phải là biến riêng (`dead`), chỉ gán DUY NHẤT trong `cleanup()`.
+> **Đo:** cả 17 template, kịch bản "chơi → sinh hoạt cảnh → bỏ ván sau 120ms" → `ui.finish` ma 0, điểm ma
+> 0, timer sống sót 0, listener rò 0, âm sau khi bỏ ván 0, lỗi console 0. Không hồi quy (Type the answer
+> chơi đúng 6 câu vẫn cộng điểm 0→5, nộp bài đúng 1 lần). Micro: `track.readyState = "ended"`.
+> ⚠️ Luật viết `cleanup()` cho template MỚI (6 điều) + mẹo tự kiểm 17 game một lượt: `core/HUONG DAN
+> CORE.md` mục "BẪY ĐỒNG HỒ MA" → phần Đợt 114. Chi tiết: `GHI CHU DU AN.md` Đợt 114.**
+>
+> Trước đó: **11/8/2026 (Đợt 113) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN".
 > ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT → COMMIT `dc1cf4f` + PUSH + **LIVE**
 > tại `https://aword.andrewclasses.com/` (đã chạy lại phép thử trên chính bản LIVE: "Start again" ra đúng
 > 1 tiếng restart, Resume vẫn phát tiếp, 0 đồng hồ ma, 0 lỗi console).**

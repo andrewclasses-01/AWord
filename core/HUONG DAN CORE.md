@@ -1018,6 +1018,41 @@ gọi từ trong đường dọn dẹp** (`cleanupAll` gọi `closeMenu` gọi `
 `torndown`. Đừng tin vào thứ tự lệnh trong `cleanupAll` — một hàm dọn dẹp gọi một hàm "khôi phục trạng
 thái" là chuyện rất bình thường và rất dễ tái diễn.
 
+### ⭐⭐ Đợt 114 — CHỐT `torndown` Ở 2 CHỖ NỮA, và LUẬT VIẾT `cleanup()` CHO MỌI TEMPLATE
+
+Đợt 112 mới bịt 1 trong 3 cửa. Hai cửa còn lại (đã vá):
+
+| Chỗ | Vì sao lọt |
+|---|---|
+| `startTimerNow()` | Template khai `manualTimerStart` gọi `ui.startTimer()` từ timer RIÊNG của nó (Unjumble: hết intro, 3,3s sau PLAY). Rời game trong khoảng đó → ván chết vẫn dựng được đồng hồ. **Đo thật:** bấm Home ở giây 1, giây 13,4 nghe `timesup.mp3` khi đang ở THƯ VIỆN. |
+| `ui.finish()` | ⭐ **Chốt giá trị nhất của toàn dự án.** Nhiều template hẹn hoạt cảnh kết thúc bằng `setTimeout` TRẦN (0,3-2,9s) rồi gọi `finish()`; rời game trong khoảng đó = **1 dòng điểm ma vào bảng xếp hạng**, hoặc **`session.submit()` giả lên Firestore** ở chế độ học sinh. Một chốt này che cho CẢ 17 template và mọi template viết sau. |
+
+**⚠️⚠️ LUẬT BẮT BUỘC KHI VIẾT `cleanup()` CHO TEMPLATE MỚI** (rút từ 9 template phải vá lại):
+
+1. **Dòng ĐẦU TIÊN của `cleanup()` phải bật một cờ "mount đã chết"** — quy ước dự án đặt tên là `dead`.
+   Không có cờ này thì mọi chốt `if (...) return` bạn viết trong callback đều **vô hiệu**, vì không ai bật.
+2. **⚠️ Cờ "ván đã KẾT THÚC" ≠ cờ "mount đã CHẾT". PHẢI là 2 biến riêng.** Suýt hỏng thật ở Đợt 114:
+   Whack-a-mole và Balloon pop có sẵn `ended`, nhưng `ended` được bật **NGAY TRƯỚC** màn đếm điểm cuối ván
+   — dùng nó làm chốt sẽ **chặn luôn đường kết thúc bình thường**, game không bao giờ ra bảng tổng kết.
+   `dead` chỉ được gán ĐÚNG MỘT LẦN, trong `cleanup()` (dễ kiểm: `grep -n "dead\s*=" file.js` phải ra 2
+   dòng — 1 khai báo, 1 trong cleanup).
+3. **Mọi `setTimeout` phải đi qua helper gom timer** (`later()` + một `Set`, xem `flying-fruit.js`,
+   `whack-a-mole.js`, `running-team.js`). Bẫy thực tế: 3 game ĐÃ CÓ helper nhưng đúng những timer ở
+   **đường kết thúc** lại viết trần — mà đó là chỗ nguy hiểm nhất vì nó dẫn thẳng tới `ui.finish()`.
+4. **Vòng lặp `requestAnimationFrame` phải dừng bằng cờ `dead`**, không chỉ bằng cờ nội bộ của nó.
+5. **`document.querySelector(".aw-top-score")` là TRUY VẤN SỐNG** — trên ván đã chết nó KHÔNG trả về
+   `null` mà trúng đúng ô điểm của ván MỚI. Anagram / Unjumble / Type the answer từng ghi điểm ván cũ đè
+   lên ván mới vì vậy. Hàm nào truy vấn kiểu này phải kiểm `dead` ở dòng đầu.
+6. **Sau mỗi `await`, kiểm lại `dead` trước khi đụng vào bất cứ thứ gì** — promise không huỷ được.
+   Nặng nhất từng gặp: `speaking.js` `await getUserMedia` — rời game lúc Chrome đang hỏi quyền thì
+   **micro BẬT khi không còn game nào chạy**. Có tài nguyên phần cứng thì phải trả lại ngay
+   (`stream.getTracks().forEach(t => t.stop())`).
+
+**Mẹo tự kiểm cả 17 template một lượt** (dùng lại được): bọc `tpl.mount` để tráo `ui.finish` thành bản
+đếm số lần gọi, đồng thời đếm listener `resize` và timer theo stack; rồi với mỗi game: chơi → làm 1 hành
+động sinh hoạt cảnh → **bỏ ván sau ~120ms** → chờ 3,2s → tất cả các số phải bằng **0**. ⚠️ Nếu chỉ bỏ ván
+lúc "yên tĩnh" thì 16/17 game trông sạch — lỗi chỉ lộ khi cắt ngang đúng hoạt cảnh cuối.
+
 **Cách tự kiểm nhanh** (dùng lại được cho mọi nghi ngờ rò timer): đếm số `setInterval` do CHÍNH
 `core/engine.js` tạo, lọc theo stack — sau khi rời ván phải về 0.
 ```js
