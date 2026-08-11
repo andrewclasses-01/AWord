@@ -456,6 +456,13 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   }
   function startTimerNow() {
     if (timerStarted) return;
+    // Đợt 114 — SAME hole as Đợt 112, different door. A `manualTimerStart`
+    // template calls ui.startTimer() from its own timer (Unjumble: when the
+    // intro animation ends, 3.3s after PLAY). Leave the game during that window
+    // and the dead play still starts a 500ms ticker nobody can clear — measured:
+    // left to the library mid-intro, the "time's up" cue fired 12s later with no
+    // game on screen at all.
+    if (torndown) return;
     timerStarted = true;
     startedAt = performance.now();
     timeWarned = false;
@@ -1108,6 +1115,16 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     sound,
     toast,
     finish(raw) {
+      // ⭐⭐ Đợt 114 — THE one guard that matters most. A play that has been
+      // thrown away must never hand in a result: several templates schedule
+      // their end-of-round animation with a bare setTimeout (0.3–2.9s) and call
+      // finish() when it lands, so leaving the game during that window used to
+      // write a phantom row into the leaderboard (teacher mode) or fire a
+      // phantom session.submit() to Firestore (student mode) for a game nobody
+      // was playing — while the NEXT play was already on screen. The templates
+      // are being fixed one by one too, but this is the single place that
+      // protects ALL of them, including any template written later.
+      if (torndown) return;
       stopTimer();
       endTitle = raw.title || "Game complete";
       const timeMs = Math.round(performance.now() - startedAt);

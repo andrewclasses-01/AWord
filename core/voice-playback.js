@@ -56,6 +56,7 @@ export function createVoicePlayer() {
   let audioEl = null;               // currently-playing/loaded clip
   let btnEl = null;                 // listen button wired to audioEl's play state (for the glow)
   let delayTimer = null;            // pending delayed first-play, if any
+  let epoch = 0;                    // bumped by stop(): clips requested before it must not start (Đợt 114)
 
   function setGlow(btn, on) {
     if (btn) btn.classList.toggle("is-playing", on);
@@ -71,6 +72,14 @@ export function createVoicePlayer() {
     setGlow(btnEl, false);
     audioEl = null;
     btnEl = null;
+    // Đợt 114 — cancel any clip still being FETCHED. Without this, stop() only
+    // silenced what had already arrived: a clip whose getVoiceClip() round-trip
+    // (IndexedDB, or Firestore on a cold cache) was still in flight went on to
+    // play whenever it landed — bleeding the previous question's word into the
+    // next one, and, when cleanup() was the caller, playing a dead game's
+    // pronunciation over the next game's intro. Nothing to abort at the network
+    // level; we just refuse to start a clip requested before this stop().
+    epoch++;
   }
 
   function start(dataUrl, btn) {
@@ -86,9 +95,11 @@ export function createVoicePlayer() {
     if (!clipId) return;
     const cached = cache.get(clipId);
     if (cached) { start(cached, btn); return; }
+    const myEpoch = epoch;
     getVoiceClip(clipId).then(clip => {
       if (!clip || !clip.audio) return;
-      cache.set(clipId, clip.audio);
+      cache.set(clipId, clip.audio);          // keep the download either way -- it is still valid next time
+      if (myEpoch !== epoch) return;          // stop() happened while this was loading (see stop)
       start(clip.audio, btn);
     }).catch(() => { /* no pronunciation audio -- not fatal, the game plays on without it */ });
   }
