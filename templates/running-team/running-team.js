@@ -50,7 +50,6 @@ import { registerTemplate } from "../../core/registry.js";
 import { el, shuffle } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
 import { openRunningTeamEditor } from "./running-team-editor.js";
 import { rtSound } from "./rt-sound.js";
 import { printRunningTeamSheet } from "./rt-print.js";
@@ -164,36 +163,56 @@ const rtTemplate = {
   },
 
   // ===== OPTIONS ============================================================
+  // All three controls below are the SAME slider shape (touch-friendly, one
+  // glance to read) so the panel feels like one family rather than three
+  // different widgets glued together.
   buildExtraOptions({ panel, draft }) {
-    // -- main clock (whole minutes: nobody sets a class game to 7m20s) --
+    // -- main clock: 0:30 to 10:00, snapped to whole 30s steps --
     const gMain = el("div", "aw-opt-group");
     gMain.append(el("div", "aw-opt-label", "Round time (whole game)"));
-    const rowMain = el("div", "aw-opt-row");
-    const mainMins = Math.round(clampInt(draft.mainSeconds, 30, 3600, 600) / 60) || 1;
-    const mainStep = makeNumberStepper(mainMins, 1, 60, v => { draft.mainSeconds = v * 60; });
-    rowMain.append(mainStep.el, el("span", "aw-opt-time", "minutes"));
+    const rowMain = el("div", "aw-opt-row aw-rt-sliderrow");
+    const mainSecs = Math.round(clampInt(draft.mainSeconds, 30, 600, 600) / 30) * 30;
+    const mainVal = el("span", "aw-rt-sliderval", fmtClock(mainSecs * 1000));
+    const mainSlider = el("input", "aw-rt-slider");
+    mainSlider.type = "range"; mainSlider.min = "30"; mainSlider.max = "600"; mainSlider.step = "30";
+    mainSlider.value = String(mainSecs);
+    mainSlider.oninput = () => {
+      const v = parseInt(mainSlider.value, 10);
+      draft.mainSeconds = v;
+      mainVal.textContent = fmtClock(v * 1000);
+    };
+    rowMain.append(mainSlider, mainVal);
     gMain.append(rowMain);
     panel.append(gMain);
 
-    // -- per-question clock --
+    // -- per-question clock: 0 (untimed) to 30s --
     const gQ = el("div", "aw-opt-group");
     gQ.append(el("div", "aw-opt-label", "Question time"));
-    const rowQ = el("div", "aw-opt-row");
-    const qStep = makeNumberStepper(
-      clampInt(draft.questionSeconds, 3, 59, 15), 3, 59,
-      v => { draft.questionSeconds = v; });
-    rowQ.append(qStep.el, el("span", "aw-opt-time", "seconds"));
+    const rowQ = el("div", "aw-opt-row aw-rt-sliderrow");
+    const qSecs = clampInt(draft.questionSeconds, 0, 30, 15);
+    const qVal = el("span", "aw-rt-sliderval", qSecs === 0 ? "Untimed" : `${qSecs}s`);
+    const qSlider = el("input", "aw-rt-slider");
+    qSlider.type = "range"; qSlider.min = "0"; qSlider.max = "30"; qSlider.step = "1";
+    qSlider.value = String(qSecs);
+    qSlider.oninput = () => {
+      const v = parseInt(qSlider.value, 10);
+      draft.questionSeconds = v;
+      qVal.textContent = v === 0 ? "Untimed" : `${v}s`;
+    };
+    rowQ.append(qSlider, qVal);
     gQ.append(rowQ);
+    gQ.append(el("div", "aw-opt-note",
+      "At 0s a question never runs out on its own — a wrong tap still costs a life, there is just no clock pushing the class along."));
     panel.append(gQ);
 
     // -- lives (0 = unlimited, exactly like Find the match) --
     const gL = el("div", "aw-opt-group");
     gL.append(el("div", "aw-opt-label", "Lives"));
-    const rowL = el("div", "aw-opt-row aw-rt-livesrow");
+    const rowL = el("div", "aw-opt-row aw-rt-sliderrow");
     const cur = normLives(draft.lives);
     const curNum = cur === null ? 0 : cur;
-    const val = el("span", "aw-rt-livesval", curNum === 0 ? "Unlimited" : String(curNum));
-    const slider = el("input", "aw-rt-livesslider");
+    const val = el("span", "aw-rt-sliderval", curNum === 0 ? "Unlimited" : String(curNum));
+    const slider = el("input", "aw-rt-slider");
     slider.type = "range"; slider.min = "0"; slider.max = String(MAX_LIVES); slider.step = "1";
     slider.value = String(curNum);
     slider.oninput = () => {
@@ -226,8 +245,8 @@ const rtTemplate = {
     const isTeacher = !!document.querySelector(".aw-below-right");
 
     const cfg = {
-      mainMs: clampInt(opt.mainSeconds, 30, 3600, 600) * 1000,
-      questionMs: clampInt(opt.questionSeconds, 3, 59, 15) * 1000,
+      mainMs: clampInt(opt.mainSeconds, 30, 600, 600) * 1000,
+      questionMs: clampInt(opt.questionSeconds, 0, 30, 15) * 1000,   // 0 = untimed
       lives: normLives(opt.lives)               // null = unlimited
     };
 
@@ -362,7 +381,7 @@ const rtTemplate = {
         fact(String(pool.length), "words in pool"),
         fact(String(present.length), "pupils playing"),
         fact(fmtClock(cfg.mainMs), "round time"),
-        fact(`${Math.round(cfg.questionMs / 1000)}s`, "per question"),
+        fact(cfg.questionMs <= 0 ? "Untimed" : `${Math.round(cfg.questionMs / 1000)}s`, "per question"),
         fact(cfg.lives === null ? "∞" : String(cfg.lives), "lives")
       );
       setup.append(facts);
@@ -457,9 +476,6 @@ const rtTemplate = {
       wrap.append(head);
 
       if (rosterDraft.length) {
-        const present = rosterDraft.filter(s => s.present).length;
-        wrap.append(el("div", "aw-rt-classtip",
-          `Tap anyone who is away today to grey them out — ${present} of ${rosterDraft.length} playing.`));
         const chips = el("div", "aw-rt-chips");
         rosterDraft.forEach(s => {
           const chip = el("button", "aw-rt-chip" + (s.present ? "" : " is-out"), escapeHtml(s.name));
@@ -693,6 +709,10 @@ const rtTemplate = {
 
     function startQuestionClock() {
       stopQuestionClock();
+      // Untimed (Question time = 0s, Đợt 109): no interval at all — the bar
+      // stays exactly where resetQBar() left it (full) and onTimeUp() can never
+      // fire. A wrong tap still costs a life; there is just no clock for it.
+      if (cfg.questionMs <= 0) return;
       let last = performance.now();
       qTimer = setInterval(() => {
         const now = performance.now();

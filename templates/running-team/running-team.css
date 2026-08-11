@@ -174,11 +174,18 @@
   color: var(--aw-accent); line-height: 1.1;
 }
 
-/* -- saved set slots -- */
+/* -- saved set slots --
+   ⚠️ `.aw-rt-slot-del` used to be `position:absolute` pinned to the box's
+   bottom edge, with only `padding-bottom` reserving its space. A two-line
+   meta string ("25 words · 9 pupils" wrapping on a narrow slot) grew past that
+   reserved padding and the DELETE SET button sat on top of it — overlapping
+   text, caught on a live screenshot (Đợt 109). Fixed structurally: the slot is
+   a flex COLUMN now, so the delete button is a normal flow child stacked
+   below the meta text and can never overlap it, no matter how the text wraps. */
 .aw-rt-slots { display: flex; gap: 1.1cqw; }
 .aw-rt-slot {
-  position: relative;
-  min-width: 13cqw; padding: 0.8cqw 1.2cqw 1.5cqw;
+  display: flex; flex-direction: column; align-items: center; gap: 0.35cqw;
+  min-width: 15cqw; padding: 0.9cqw 1.3cqw 0.8cqw;
   border: 0.28cqw solid var(--aw-tile-border-color, #d8e2f0);
   border-radius: var(--aw-tile-radius, 1.2cqw);
   background: var(--aw-card, #fff);
@@ -189,10 +196,10 @@
 .aw-rt-slot.is-stale { opacity: .5; cursor: not-allowed; }
 .aw-rt-slot.is-sel { border-color: var(--aw-accent); transform: translateY(-0.2cqw); }
 .aw-rt-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .14em; color: var(--aw-muted); }
-.aw-rt-slot-main { font-size: 2.1cqw; font-weight: 800; line-height: 1.15; }
-.aw-rt-slot-meta { font-size: 1.05cqw; color: var(--aw-muted); }
+.aw-rt-slot-main { font-size: 2.1cqw; font-weight: 800; line-height: 1.25; }
+.aw-rt-slot-meta { font-size: 1.05cqw; color: var(--aw-muted); line-height: 1.3; }
 .aw-rt-slot-del {
-  position: absolute; left: 50%; bottom: 0.35cqw; transform: translateX(-50%);
+  margin-top: 0.15cqw;
   border: none; background: transparent; cursor: pointer;
   font-family: inherit; font-size: .95cqw; font-weight: 800; letter-spacing: .08em;
   color: var(--aw-no); opacity: .75; padding: 0.1cqw 0.4cqw;
@@ -212,7 +219,6 @@
   border: 0.22cqw solid var(--aw-tile-border-color, #d8e2f0);
   border-radius: 0.8cqw; background: var(--aw-card, #fff); color: var(--aw-text);
 }
-.aw-rt-classtip { font-size: 1.15cqw; color: var(--aw-muted); }
 .aw-rt-chips {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5cqw;
   max-height: 13cqw; overflow-y: auto;
@@ -315,8 +321,12 @@
   display: flex; align-items: baseline; justify-content: center; gap: 1.6cqw;
   min-height: 8cqw;
 }
+/* line-height 1.3, not 1.05: Vietnamese tone marks (Ả, Ẩ, Ẫ…) sit ABOVE cap
+   height, and `overflow:hidden` (needed below for the ellipsis) clips
+   whatever doesn't fit inside the line box — at 1.05 that was the marks
+   themselves. 1.3 gives them room without visibly changing the baseline. */
 .aw-rt-prompt-name {
-  font-size: 5.6cqw; font-weight: 800; line-height: 1.05;
+  font-size: 5.6cqw; font-weight: 800; line-height: 1.3;
   letter-spacing: .01em; text-transform: uppercase;
   color: var(--aw-text);
   max-width: 62cqw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -408,12 +418,14 @@
 .aw-rt-sum-acts { display: flex; justify-content: center; margin-top: 10px; }
 
 /* =============================================================
-   OPTIONS PANEL (buildExtraOptions) — the lives slider, same shape as Find the
-   match's so the two games feel identical to set up.
+   OPTIONS PANEL (buildExtraOptions) — round time, question time and lives
+   share one slider shape (Đợt 109: the first two used to be number steppers,
+   swapped for touch-friendly sliders to match lives) so the panel reads as
+   one family of controls instead of three different widgets.
    ============================================================= */
-.aw-rt-livesrow { display: flex; align-items: center; gap: 10px; }
-.aw-rt-livesslider { flex: 1 1 auto; min-width: 120px; accent-color: #e0524c; }
-.aw-rt-livesval { flex: 0 0 auto; min-width: 68px; font-weight: 800; font-size: .9rem; }
+.aw-rt-sliderrow { display: flex; align-items: center; gap: 10px; }
+.aw-rt-slider { flex: 1 1 auto; min-width: 120px; accent-color: #e0524c; }
+.aw-rt-sliderval { flex: 0 0 auto; min-width: 68px; font-weight: 800; font-size: .9rem; }
 
 /* =============================================================
    EDITOR
@@ -444,11 +456,14 @@
   .aw-rt-ps-title { font-size: 3.6mm; font-weight: 800; }
   .aw-rt-ps-extra { font-size: 2.8mm; color: #444; }
 
-  .aw-rt-ps-table.is-two { column-count: 2; column-gap: 7mm; column-fill: auto; }
+  /* Always 3 columns (Đợt 109, teacher's call) — a lookup sheet is scanned by
+     number, never read top-to-bottom, so more/narrower columns buy more type
+     size per word regardless of how long the pool is. */
+  .aw-rt-ps-table { column-count: 3; column-gap: 7mm; column-fill: auto; }
   .aw-rt-ps-row {
     display: flex; align-items: center; gap: 2.4mm;
     height: var(--rt-rowh); line-height: var(--rt-rowh);
-    border-bottom: 0.18mm dotted #9a9a9a;
+    border-bottom: 0.1mm dotted #9a9a9a;
     break-inside: avoid;
   }
   .aw-rt-ps-c-no {

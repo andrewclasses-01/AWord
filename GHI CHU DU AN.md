@@ -5,6 +5,65 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 109 (11/8/2026) — RUNNING TEAM: 6 CẢI TIẾN THEO YÊU CẦU THẦY (Options đổi sang thanh trượt, vá
+lỗi chồng chữ ở SET slot, chữ tên tiếng Việt bị đè cắt, và 3 cải tiến tờ in). KHÔNG ĐỤNG CORE (chỉ 3 file
+`templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT — build xong, tự test qua devserver, chưa commit.
+
+Thầy gửi 6 yêu cầu kèm 3 ảnh chụp màn hình thật (SET slot chữ đè lên nhau, tên "THẢO" bị đè dấu, tờ in
+100 từ). Đã tự test lại qua Browser pane (đợt trước không có ảnh chụp màn hình, dùng phép đo DOM
+`getBoundingClientRect` + gọi thẳng module để thay cho mắt).
+
+**Options — 2 ô nhập đổi thành thanh trượt** (`running-team.js buildExtraOptions`): Round time nay là
+thanh trượt **0:30 → 10:00, nấc 30s** (trước là ô số nhập PHÚT); Question time nay là thanh trượt
+**0s → 30s, nấc 1s** (trước là ô số nhập giây, sàn cứng 3s). ⭐ **0s = UNTIMED** (quyết định tự đưa ra,
+không có trong yêu cầu gốc): sàn cũ là 3s nên 0s chưa từng xảy ra; kéo thẳng xuống 0 mà không xử lý gì
+sẽ làm câu hỏi hết giờ NGAY LẬP TỨC — hỏng game. Xử lý bằng cách không khởi động `qTimer` khi
+`questionMs<=0`; thanh giờ câu đứng nguyên ở 100% (do `resetQBar()` đặt sẵn trước mỗi câu), sai vẫn mất
+tim bình thường, chỉ là không có đồng hồ nào đẩy lớp đi tiếp. Thêm dòng chú thích dưới thanh trượt giải
+thích, và đồng bộ chữ "Untimed" ở cả khối facts màn setup (trước hiện nhầm "0s"). Cả 3 thanh trượt (Round
+time, Question time, Lives) dùng chung 1 bộ class CSS (`aw-rt-slider*`, trước đây đặt tên riêng theo
+"lives"). **Đã tự test hết vòng**: kéo Question=0/Round=0:30 → Apply → chơi thật qua Browser pane, câu
+hỏi đứng yên (thanh giờ 100% suốt, không "is-warning"), đồng hồ chính đếm 0:30→0:00 đúng nhịp thật, kết
+thúc đúng **CLASS WINS** với tim còn nguyên — 0 lỗi console.
+
+**Setup — vá lỗi chồng chữ ở khối SET**: nút "DELETE SET" trước là `position:absolute` neo đáy khối,
+chỉ trông cậy vào `padding-bottom` để chừa chỗ — khi chữ "25 words · 9 pupils" xuống 2 dòng trên khối
+hẹp, nút đè thẳng lên chữ (đúng như ảnh thầy chụp). Sửa tận gốc: `.aw-rt-slot` đổi thành `flex-direction:
+column`, nút xuống dòng bình thường thay vì tọa độ tuyệt đối → về mặt cấu trúc KHÔNG THỂ đè nhau dù chữ
+dài bao nhiêu. Đo lại bằng cách ép khối co xuống 70px (ép chữ xuống nhiều dòng) qua Browser pane:
+overlap = false. Cũng bỏ hẳn dòng hướng dẫn "Tap anyone who is away today…" theo đúng yêu cầu (số
+"X of Y playing" vẫn còn ở khối facts bên dưới nên không mất thông tin).
+
+**Trong game — tên tiếng Việt bị đè cắt dấu**: `.aw-rt-prompt-name` có `line-height:1.05` — dấu thanh
+tiếng Việt (Ả, Ẩ, Ẫ…) nằm CAO HƠN đỉnh chữ hoa, và `overflow:hidden` (cần để chữ dài co bằng "…") cắt mất
+phần không vừa khung dòng. Tăng lên `line-height:1.3`, đo lại bằng `getComputedStyle`: `70.32px / 54.1px
+= 1.3` đúng tỷ lệ, đủ chỗ cho dấu mà không đổi baseline nhìn thấy được.
+
+**Tờ in — 3 cải tiến**: **(1)** Tự thêm ngày in thật vào đầu trang (`Date: ${ngày/tháng/năm hôm nay}`,
+trước là để trống gạch chân) — đo thật ra đúng "11/8/2026". **(2)** Luôn 3 cột (trước: 1 cột nếu <29 từ,
+2 cột nếu nhiều hơn) — bỏ hẳn `TWO_COL_FROM`, gộp về 1 class `.aw-rt-ps-table{column-count:3}`. **(3)**
+Đường kẻ ngăn mảnh hơn (`0.18mm→0.1mm`) + tỷ lệ cỡ chữ/chiều cao dòng tăng (`0.58→0.74`) để chữ to hơn và
+sát dòng kẻ hơn. ⭐ **Rủi ro tự phát hiện khi làm (3)**: công thức cỡ chữ CŨ chỉ tính theo CHIỀU CAO dòng,
+không biết gì về BỀ RỘNG cột — vô hại khi có 1-2 cột rộng, nhưng ép cứng 3 cột (hẹp hơn ~⅓ trang) cộng tỷ
+lệ chữ tăng thì chữ dài (`SKIN-SCRAPER`, `UNINTENTIONALLY`…) sẽ bị `text-overflow:ellipsis` cắt cụt — trên
+một tờ giấy MỤC ĐÍCH DUY NHẤT là đọc đúng chính tả, chữ bị cắt là SAI, không phải lỗi thẩm mỹ. Thêm
+"WIDTH GUARD": tính cỡ chữ tối đa mà TỪ DÀI NHẤT trong pool còn vừa 1 dòng (theo bề rộng cột thật trừ cột
+số + khoảng cách, ước lượng bề ngang ký tự HOA đậm ≈ 0.62× cỡ chữ), lấy `Math.min` giữa cỡ theo chiều cao
+và cỡ theo bề rộng. Đo thật qua Browser pane (gọi thẳng `printRunningTeamSheet()`, tráo tạm `window.print`
+thành hàm rỗng để xem DOM tờ in mà không bật hộp thoại in thật):
+- Pool 10 từ có `UNINTENTIONALLY` (15 ký tự) → `fs` ra **4.72mm** (đúng bằng cỡ theo BỀ RỘNG, nhỏ hơn
+  nhiều so với cỡ theo chiều cao lúc đó ~45mm) — không bị cắt.
+- Pool 100 từ ngắn → `fs` **5.4mm** (đúng cỡ theo chiều cao, bề rộng dư dả nên không phải chặn).
+- Pool 6 từ (sàn tối thiểu, dòng cao tới **124mm**/hàng) → `fs` bị chặn còn **6.44mm** thay vì phóng to
+  theo chiều cao (~92mm) — tránh chữ khổng lồ vỡ khung ở pool cực ngắn.
+0 lỗi console suốt toàn bộ 3 lần gọi.
+
+**VIỆC ĐANG CHỜ (đợt này)**: thầy tự nhìn ảnh chụp/tờ in thật xác nhận không còn chồng chữ, dấu tiếng
+Việt không còn bị đè, tờ in 3 cột thật (máy chỉ đo được DOM/CSS, không nhìn được kết quả in giấy thật hay
+độ nét chữ trên máy in cụ thể). Chi tiết đầy đủ: `templates/running-team/GHI CHU RUNNING-TEAM.md` Đợt 109.
+
+---
+
 ## Đợt 108 (11/8/2026, v0.9.82) — SPEAKING: 6 CẢI TIẾN SAU KHI THẦY TEST LIVE (tải sẵn bộ chấm + chặn
 nút PLAY, slogan, TỰ DỪNG GHI ÂM, hiện IPA, bỏ câu hướng dẫn, SAO 0–5 nấc nửa sao thay ngưỡng %)
 ⭐ CÓ SỬA CORE: `core/engine.js` (móc mới `tpl.prepare`), `core/app.css` (`.aw-ready-prep*`),

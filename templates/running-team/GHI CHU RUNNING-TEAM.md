@@ -1,5 +1,19 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 109 dự án (11/8/2026) — 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT CỦA THẦY. KHÔNG ĐỤNG CORE.
+> 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> Options: Round time + Question time đổi từ ô số sang **thanh trượt** (0:30–10:00 nấc 30s ·
+> 0s–30s nấc 1s, **0s = Untimed** — quyết định tự thêm để 0 không làm câu hỏi hết giờ ngay lập tức,
+> xem mục 6b). Setup: vá `.aw-rt-slot-del` từng `position:absolute` đè lên `.aw-rt-slot-meta` khi chữ
+> xuống 2 dòng (đổi khối sang `flex-direction:column` — hết đè về mặt CẤU TRÚC, không phải chỉnh số đo
+> may rủi) + bỏ dòng "Tap anyone who is away…". Trong game: `line-height` prompt-name 1.05→1.3 (dấu
+> tiếng Việt bị cắt vì cao hơn khung dòng cũ). Tờ in: tự thêm ngày in thật, LUÔN 3 cột (bỏ hẳn ngưỡng
+> 1/2 cột cũ), đường kẻ mảnh hơn + chữ to hơn — kèm **WIDTH GUARD mới** chặn cỡ chữ theo bề rộng cột
+> thật để từ dài (`SKIN-SCRAPER`, `UNINTENTIONALLY`…) không bị `ellipsis` cắt cụt trên 1 tờ giấy mà
+> việc duy nhất là đọc ĐÚNG chính tả. Đo thật qua Browser pane (bounding-rect cho lỗi đè chữ, gọi thẳng
+> `printRunningTeamSheet()` với `window.print` tráo rỗng để soi DOM tờ in, chơi 1 ván thật với
+> Round=0:30/Question=Untimed tới khi CLASS WINS). Chi tiết: mục 6b, 9c, `GHI CHU DU AN.md` Đợt 109.
+
 > **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT →
 > COMMIT `be7cd55` + PUSH + LIVE.**
 > Chỉ đụng `running-team.js`: thêm `pauseGame`/`resumeGame` + bridge module `rtPauseHandlers` + `onPause`.
@@ -342,11 +356,14 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
 - [ ] **⭐ Thầy tạo lớp thật trong Settings → Classes** rồi báo kết quả. Máy **không tự làm được** khúc
       này: popup đăng nhập Google không tự động hoá được, nên đường ghi Firestore của `core/classes.js`
       **chưa từng chạy thật**. Đây là rủi ro còn lại lớn nhất của đợt này.
-- [ ] **⭐ In thử tờ A4 thật.** 50 từ → 2 cột ~16,5pt. Cần thầy xác nhận: đứng cầm tờ giấy dò số có
-      nhanh không, 2 cột có làm rối việc dò số không (nếu rối thì hạ `TWO_COL_FROM` trong `rt-print.js`
-      cho ra 1 cột luôn).
+- [ ] **⭐ In thử tờ A4 thật (Đợt 109 đổi luôn 3 cột, chưa in giấy thật để xác nhận).** Cần thầy xác nhận:
+      3 cột có làm rối việc dò số không so với 1-2 cột cũ (nếu rối thì hạ `COLS` trong `rt-print.js`),
+      cỡ chữ WIDTH GUARD mới (mục 9c, ưu tiên không cắt chữ hơn là chữ thật to) có vừa mắt không.
 - [ ] Chơi thử trên **TOMKO / iPad**: khung 4:3, nút Fullscreen kiểu zoom, 6 ô có đủ to để em cuối lớp
       đọc không.
+- [ ] **Đợt 109 — thầy tự xem 3 chỗ đã sửa theo ảnh chụp màn hình**: khối SET không còn chồng chữ dù
+      chữ dài, tên tiếng Việt có dấu không còn bị đè cắt trên đầu, và 2 thanh trượt Options mới
+      (Round time / Question time, đặc biệt thử kéo Question time về 0 = Untimed) chơi mượt như mong đợi.
 - [ ] Cân nhắc: **chế độ ĐÔI** (2 đội) — thầy nói làm sau. Chỗ lắp vào đã tính sẵn: thêm
       `options.mode: "single" | "double"`, chia `roster` làm 2 và cho `renderSummary` vẽ 2 nửa như
       RunningW. Cố ý **chưa** ship option chết trong dữ liệu.
@@ -362,3 +379,80 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
 2. ⬜ **`core/lesson-import.js` còn rác `wordsPerTeam: 0` trong `OPT_RW`** — RunningW đã bỏ tham số này
    từ 5/8/2026 (mục 4 GHI CHU RUNNING-WORD), nhưng import vẫn ghi nó lên Firestore cho mọi act RUNNING
    WORD sinh từ file bài học. Vô hại nhưng là rác vĩnh viễn. Không tự sửa vì ngoài phạm vi đợt này.
+
+## 13. Đợt 109 (11/8/2026) — 6 cải tiến theo ảnh chụp màn hình thật của thầy
+
+Thầy gửi 3 ảnh chụp (khối SET chồng chữ, tên "THẢO" bị đè dấu, tờ in 100 từ) + 6 yêu cầu chữ. KHÔNG ĐỤNG
+CORE — chỉ `running-team.js`, `running-team.css`, `rt-print.js`.
+
+### 13a. Options: 2 ô nhập → thanh trượt, và quyết định tự đưa ra cho "0s"
+
+Round time (0:30–10:00, nấc 30s) và Question time (0s–30s, nấc 1s) đổi từ ô số bấm sang `<input
+type=range>`, cùng khuôn với thanh Lives có sẵn (gộp chung 1 bộ class `aw-rt-slider*` thay vì đặt tên
+riêng "lives" cho cả 3). ⭐ **Thầy chỉ nói "kéo từ 0s đến 30s" cho Question time, không nói 0 nghĩa là
+gì.** Sàn CŨ là 3s nên giá trị 0 chưa từng xảy ra trong code. Nếu chỉ đổi UI mà không xử lý gì, kéo về 0
+sẽ làm `openQuestion()` set `qLeft=0` rồi tick đầu tiên của `qTimer` gọi `onTimeUp()` ngay — câu hỏi hết
+giờ tức khắc, hỏng cả trò chơi ngay khi mở giá trị nhỏ nhất của chính thanh trượt vừa yêu cầu. Đây không
+phải tính năng phụ mà là ĐIỀU KIỆN CẦN để "kéo từ 0" không vỡ trận. Xử lý theo đúng khuôn có sẵn của
+Lives (0 = Unlimited): **0s = Untimed** — `startQuestionClock()` không khởi động `qTimer` khi
+`cfg.questionMs<=0`, thanh giờ câu đứng nguyên ở trạng thái `resetQBar()` đặt sẵn (100%, không cảnh báo
+đỏ) suốt câu đó, `onTimeUp()` không bao giờ được gọi. Sai vẫn mất tim bình thường — chỉ là không có đồng
+hồ đẩy lớp đi. Thêm dòng ghi chú dưới thanh trượt + đồng bộ chữ "Untimed" ở khối facts màn setup (trước
+sửa hiện nhầm "0s").
+
+### 13b. Setup: chồng chữ ở khối SET — lỗi cấu trúc, không phải lỗi số đo
+
+`.aw-rt-slot-del` cũ là `position:absolute; bottom:0.35cqw` với `padding-bottom:1.5cqw` của khối cha là
+CHỖ DUY NHẤT chừa không gian. Chữ `.aw-rt-slot-meta` ("25 words · 9 pupils") khi khối hẹp xuống 2 dòng thì
+CHIỀU CAO THẬT của nội dung tràn qua phần padding đó — nút tuyệt đối vẫn neo đúng vị trí cũ, giờ nằm đè
+lên dòng chữ thứ 2. Đây là bẫy kinh điển của định vị tuyệt đối dựa vào padding ước lượng thay vì luồng
+tài liệu thật. **Sửa tận gốc chứ không phải tăng padding cho qua**: `.aw-rt-slot` đổi
+`display:flex;flex-direction:column`, nút xuống hàng bình thường trong luồng — về mặt cấu trúc, dù chữ
+dài bao nhiêu dòng, nút luôn nằm SAU nó, không thể đè. Đo lại bằng Browser pane: ép khối co xuống 70px
+(buộc chữ xuống nhiều dòng), so `getBoundingClientRect()` của meta và nút → `overlap:false`. Cũng bỏ
+dòng "Tap anyone who is away today to grey them out — X of Y playing." theo đúng yêu cầu; số đếm
+present/total không mất vì khối facts bên dưới còn "pupils playing".
+
+### 13c. Trong game: dấu tiếng Việt bị đè cắt vì `overflow:hidden` + `line-height` quá sát
+
+`.aw-rt-prompt-name` cần `white-space:nowrap;overflow:hidden;text-overflow:ellipsis` để tên dài không vỡ
+khung — nhưng `overflow:hidden` cắt MỌI THỨ không vừa khung dòng, kể cả theo chiều DỌC. `line-height:
+1.05` ở cỡ chữ 5.6cqw chỉ chừa khung dòng cao hơn cỡ chữ 5%, trong khi dấu thanh tiếng Việt (Ả, Ẩ, Ẫ…)
+vẽ CAO HƠN đỉnh chữ hoa thường — phần vẽ tràn khung bị cắt ngay tại đó, không phải lỗi font hay lỗi
+encoding. Tăng `line-height:1.3`; đo `getComputedStyle` xác nhận đúng tỷ lệ (`70.32px / 54.1px = 1.3`)
+mà không cần đụng gì khác (không cần padding-top, không đổi baseline nhìn thấy được vì flex `align-items:
+baseline` của `.aw-rt-prompt` tự căn lại).
+
+### 13d. Tờ in: ngày in thật, luôn 3 cột, và một WIDTH GUARD mới chưa từng có
+
+**(1)** `Date: ______________` (chỗ trống viết tay) đổi thành ngày in thật `${ngày}/${tháng}/${năm}` lấy
+từ `new Date()` tại đúng lúc bấm in — đo thật ra `"11/8/2026"` khớp ngày hệ thống.
+
+**(2)** Bỏ hẳn `TWO_COL_FROM` (ngưỡng 29 từ để chuyển 1↔2 cột) — luôn `column-count:3`. Đường kẻ ngăn
+`0.18mm dotted`→`0.1mm dotted` (mảnh hơn theo đúng yêu cầu).
+
+**(3) ⭐ Bẫy tự phát hiện lúc làm, không có trong yêu cầu gốc:** công thức cỡ chữ CŨ (`fs = rowH × 0.58`)
+chỉ nhìn CHIỀU CAO hàng, chưa từng cần biết bề rộng cột vì trước đây tối đa 2 cột khá rộng. Ép cứng 3 cột
+(mỗi cột hẹp còn ~⅓ trang) VÀ tăng tỷ lệ chữ lên `0.74` (theo đúng yêu cầu "tăng tối đa size chữ") cùng
+lúc thì với một pool có từ dài (`SKIN-SCRAPER`, `CIVILISATION`, `UNINTENTIONALLY` — đều là từ THẬT trong
+sample data), cỡ chữ tính theo chiều cao có thể vượt xa bề rộng cột thật, và `.aw-rt-ps-c-word` sẵn có
+`overflow:hidden;text-overflow:ellipsis` sẽ ÂM THẦM cắt cụt từ đó thành "SKIN-SCRA…". Trên một tờ giấy
+mà việc duy nhất là đọc ĐÚNG một từ cho cả lớp nghe, một từ bị cắt cụt là SAI, không phải lỗi trình bày —
+nghiêm trọng hơn hẳn "chữ hơi nhỏ". Thêm hàm `wordColumnWidthMm()` tính bề rộng cột chữ thật (trừ cột số
++ khoảng cách + đệm an toàn 2mm), rồi `metrics()` lấy `Math.min(cỡ theo chiều cao, cỡ theo bề rộng)` với
+cỡ theo bề rộng ước lượng từ TỪ DÀI NHẤT trong pool (hệ số bề ngang ký tự HOA đậm ước lượng 0.62em — không
+đo được canvas thật từ trong `@media print`, nên chọn số đủ rộng rãi để trường hợp xấu nhất vẫn lọt).
+
+**Đo thật qua Browser pane** (tráo tạm `window.print = () => {}` rồi gọi thẳng
+`printRunningTeamSheet()` từ module để soi DOM tờ in mà không phải bấm qua hộp thoại in thật của hệ
+điều hành — hộp thoại đó chặn luôn cả JS của trang, xác nhận lại bằng cách bấm nút Print thật một lần và
+thấy `javascript_tool` treo đúng như dự đoán cho tới khi bấm Esc):
+
+| Pool | Từ dài nhất | Hàng/cột | Cỡ chữ ra | Vì sao |
+|---|---|---|---|---|
+| 10 từ (có `UNINTENTIONALLY`, 15 ký tự) | UNINTENTIONALLY | 4 hàng | **4.72mm** | bị BỀ RỘNG chặn (cỡ theo chiều cao lúc đó ~46mm, sẽ cắt chữ nếu không chặn) |
+| 100 từ ngắn (`WORD0`…`WORD99`) | WORD99 (6 ký tự) | 34 hàng | **5.4mm** | CHIỀU CAO thắng, bề rộng dư dả nên không phải chặn |
+| 6 từ (sàn `MIN_POOL`) | CLEANLINESS (11 ký tự) | 2 hàng, cao **124mm/hàng** | **6.44mm** | bị BỀ RỘNG chặn — không để chữ phóng to theo chiều cao (~92mm) thành khổng lồ vỡ khung |
+
+0 lỗi console cả 3 lần gọi. Ba con số trên tự chứng minh cả 2 nhánh của `Math.min` đều từng thắng thật,
+không phải một công thức chết chỉ chạy 1 đường.

@@ -5,7 +5,24 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 108, v0.9.82) — SPEAKING: 6 CẢI TIẾN SAU KHI THẦY TEST LIVE.
+> Cập nhật lần cuối: **11/8/2026 (Đợt 109) — RUNNING TEAM: 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT
+> CỦA THẦY. KHÔNG ĐỤNG CORE (chỉ 3 file `templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> Options: Round time + Question time đổi từ ô số sang **thanh trượt** (0:30–10:00 nấc 30s ·
+> 0s–30s nấc 1s, **0s = Untimed** — quyết định tự thêm để 0 không làm câu hỏi hết giờ ngay lập tức,
+> vì sàn cũ 3s nên giá trị 0 chưa từng xảy ra trong code). Setup: vá `.aw-rt-slot-del` từng
+> `position:absolute` đè lên chữ meta khi xuống 2 dòng (đổi khối sang flex-column — hết đè về mặt CẤU
+> TRÚC) + bỏ dòng "Tap anyone who is away…". Trong game: `line-height` prompt-name 1.05→1.3 (dấu tiếng
+> Việt bị `overflow:hidden` cắt vì cao hơn khung dòng cũ). Tờ in: tự thêm ngày in thật, LUÔN 3 cột (bỏ
+> ngưỡng 1/2 cột cũ), đường kẻ mảnh hơn + chữ to hơn — kèm **WIDTH GUARD mới**: cỡ chữ tính theo
+> `Math.min(chiều cao hàng, bề rộng cột thật ÷ từ dài nhất)` để từ dài (`SKIN-SCRAPER`,
+> `UNINTENTIONALLY`…) không bị `ellipsis` cắt cụt trên một tờ giấy mà việc duy nhất là đọc ĐÚNG chính
+> tả — bẫy tự phát hiện khi ép cứng 3 cột hẹp + tăng tỷ lệ chữ cùng lúc, không có trong yêu cầu gốc. Đo
+> thật qua Browser pane (bounding-rect cho lỗi đè chữ, gọi thẳng `printRunningTeamSheet()` với
+> `window.print` tráo rỗng để soi DOM tờ in, chơi 1 ván thật Round=0:30/Question=Untimed tới khi CLASS
+> WINS) — 0 lỗi console. Chi tiết: `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 13,
+> `GHI CHU DU AN.md` Đợt 109.**
+>
+> Trước đó: **11/8/2026 (Đợt 108, v0.9.82) — SPEAKING: 6 CẢI TIẾN SAU KHI THẦY TEST LIVE.
 > ⭐ CÓ SỬA CORE — móc mới **`tpl.prepare(activity, onProgress)`** trong `core/engine.js`
 > (+ `.aw-ready-prep*` trong `core/app.css`, + `warmup()` trong `core/speech-score.js`): template nào
 > cần chuẩn bị nặng thì engine **ẩn nút PLAY + hiện thanh % ngay chỗ nút PLAY** từ lúc act mở ra, xong
