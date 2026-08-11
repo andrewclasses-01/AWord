@@ -1,5 +1,31 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 120 (11/8/2026) — ⭐ LỖI THẬT: điểm rơi dương→âm GIỮA LƯỢT vẫn hiện XANH, phải Next mới đỏ
+
+Thầy chơi bản live rồi báo. **Gốc lỗi**: SỐ và MÀU do cùng `ui.setScore()` sơn ra (nó vừa ghi số vừa
+toggle `is-pos`/`is-neg`), nhưng `pulseScoreTo()` — vòng đếm điểm nhảy dần khi số "+N"/"-N" bay tới ô
+điểm — **tự ghi thẳng `scoreEl.innerHTML` mỗi khung, bỏ qua 2 class kia** → vẽ số mới, để lại màu cũ.
+Màu chỉ đúng lại khi có ai gọi lại `ui.setScore()`, mà nơi gần nhất là `render()` — hàm CHỈ chạy lúc đổi
+từ (đúng thiết kế chống nháy màn hình của Đợt 55/vòng 2) → đúng hiện tượng "phải Next mới đỏ".
+
+**Sửa**: 2 lệnh `scoreEl.innerHTML = ...` trong `pulseScoreTo()` (khung giữa chừng + khung cuối) đổi
+thành `ui.setScore(val)`/`ui.setScore(newValue)`. Markup y hệt (`${icons.check} ${n}`) nên hình thức
+không đổi, chỉ được thêm phần tô màu. Bonus: ghi vào `scoreEl` closure của đúng ván này thay vì
+`querySelector` sống (an toàn hơn với bẫy "ván đã chết" Đợt 114; cờ `dead` vẫn giữ). Đã rà cả 17 template
+— **chỉ Anagram sai**; Type the answer/Unjumble/Crossword đều tính lại class mỗi lần sơn nên đúng sẵn.
+
+**⚠️ 2 bẫy test đáng nhớ**: (1) pane test có `visibilityState:"hidden"` → **rAF chết hẳn** (đo: 0
+khung/500ms), mà `pulseScoreTo` chạy bằng rAF → phải **tráo `requestAnimationFrame` sang microtask**
+(`Promise.resolve().then`) + đồng hồ giả +70ms/khung + bộ ghi vết chụp `textContent`+`className` sau từng
+khung (chạy đúng hàm `step` thật, chỉ thay bộ lập lịch). (2) **`.click()` và `PointerEvent` giả đều KHÔNG
+tap được tile** (Pointer Events thật từ Đợt 89 + `setPointerCapture` từ chối pointer giả) → phải bấm
+THẬT qua công cụ `computer`.
+
+**Đo thật** (mode Bonus and minus, wrong-letter = 100, Bonus x2, tắt shuffle): ELEPHANT hoàn hảo → đếm
+lên `7→11→14→15→16` mọi khung `is-pos` xanh `rgb(51,162,74)`; sang GIRAFFE bấm sai → đếm xuống
+`-26→-54→-72→-80→-84`, **khung âm ĐẦU TIÊN đã `is-neg`** đỏ `rgb(226,60,60)`, đỏ ngay khi CHƯA bấm Next.
+0 lỗi console.
+
 ## Đợt 55 (3/8/2026, v0.9.29) — 8 lỗi/yêu cầu thầy gửi 1 lượt: hiệu ứng bay, tốc độ bấm, Lives, màu Points off
 Thầy chơi bản live rồi gửi 8 điểm 1 lượt. Đã tự test qua trình duyệt thật (devserver + DOM/PointerEvent
 giả lập thật, không đoán qua ảnh) cho từng điểm — chi tiết dưới đây theo đúng số thứ tự thầy nêu.

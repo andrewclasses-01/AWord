@@ -5,7 +5,22 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 119) — ĐIỂM ÂM Ở CHIP ĐIỂM LUÔN CÓ DẤU "-" + MÀU ĐỎ (trước chỉ đổi
+> Cập nhật lần cuối: **11/8/2026 (Đợt 120) — ⭐ LỖI THẬT: ĐIỂM RƠI DƯƠNG→ÂM GIỮA LƯỢT VẪN XANH, PHẢI
+> NEXT MỚI ĐỎ (Anagram). KHÔNG ĐỤNG MÃ CORE (chỉ `templates/anagram/anagram.js` + mục cảnh báo mới trong
+> `core/HUONG DAN CORE.md`).**
+> Gốc lỗi: SỐ và MÀU do CÙNG `ui.setScore()` sơn ra, nhưng vòng đếm điểm `pulseScoreTo()` của Anagram tự
+> ghi thẳng `scoreEl.innerHTML` mỗi khung → vẽ số mới, để lại màu cũ; màu chỉ đúng lại khi `render()`
+> (chỉ chạy lúc ĐỔI TỪ) gọi lại `ui.setScore()`. Sửa: mọi khung của vòng đếm đi qua `ui.setScore(val)`
+> (markup y hệt, chỉ thêm phần tô màu). Đã rà cả 17 template — **chỉ Anagram sai**; Type the answer /
+> Unjumble / Crossword đều tính lại class mỗi lần sơn nên đúng sẵn; 11 template kia chỉ gọi `ui.setScore`.
+> ⚠️ **2 bẫy test dùng lại được**: pane test `visibilityState:"hidden"` làm **rAF chết hẳn** (0 khung/500ms)
+> → tráo `requestAnimationFrame` sang **microtask** + đồng hồ giả 70ms/khung + ghi vết từng khung; và
+> **`.click()`/`PointerEvent` giả KHÔNG tap được tile** (Pointer Events thật từ Đợt 89) → phải bấm thật
+> bằng công cụ `computer`. Đo thật: ELEPHANT hoàn hảo `7→11→14→15→16` toàn `is-pos`; GIRAFFE bấm sai
+> `-26→-54→-72→-80→-84` — **khung âm ĐẦU TIÊN đã đỏ `is-neg`**, chưa cần bấm Next. Chi tiết:
+> `GHI CHU DU AN.md` Đợt 120 + `templates/anagram/GHI CHU ANAGRAM.md`.**
+>
+> Trước đó: **11/8/2026 (Đợt 119) — ĐIỂM ÂM Ở CHIP ĐIỂM LUÔN CÓ DẤU "-" + MÀU ĐỎ (trước chỉ đổi
 > màu, bỏ hẳn dấu trừ). ⭐ CÓ SỬA CORE — `core/engine.js` (`ui.setScore`, 1 dòng) + comment trong
 > `core/app.css`/`core/HUONG DAN CORE.md`. ✅ THẦY DUYỆT ("commit + push live") → COMMIT `84d050a` + PUSH
 > + **LIVE** (`curl` poll xác nhận đủ dấu mốc mới ở cả 3 file trong ~1 phút).**

@@ -1562,9 +1562,17 @@ const anagramTemplate = {
     }
 
     // Animates the top-score badge from its currently-shown number up to
-    // `newValue`, with a scale "pulse" — reaches directly into engine.js's
-    // `.aw-top-score` (same element/markup ui.setScore() writes:
-    // `${icons.check} ${n}`) since ui.setScore() itself has no animated form.
+    // `newValue`, with a scale "pulse" — ui.setScore() itself has no animated
+    // form, so this drives the count frame by frame.
+    // ⚠️ Every frame goes THROUGH ui.setScore() rather than writing
+    // `scoreEl.innerHTML` here: the sign colour (.is-pos/.is-neg) lives in
+    // ui.setScore(), so a hand-rolled innerHTML write paints the new NUMBER
+    // while leaving the old COLOUR behind. That was a real bug (teacher,
+    // 11/8/2026): crossing from + to − mid-word showed a negative score still
+    // in GREEN, and it only turned red at the next word — because render(),
+    // which runs at word boundaries only, was the next thing to call
+    // ui.setScore(). Same markup as before (`${icons.check} ${n}`), so nothing
+    // else changes.
     function pulseScoreTo(newValue) {
       // ⚠️ Đợt 114 — the querySelector below is a LIVE lookup, so on a discarded
       // play it does not fail quietly: it finds the NEXT game's score badge and
@@ -1583,10 +1591,10 @@ const anagramTemplate = {
         const t = Math.min(1, (now - start) / FLYGAIN_PULSE_MS);
         const eased = 1 - Math.pow(1 - t, 3);
         const val = Math.round(oldValue + (newValue - oldValue) * eased);
-        scoreEl.innerHTML = `${icons.check} ${val}`;
+        ui.setScore(val);
         if (t < 1) requestAnimationFrame(step);
         else {
-          scoreEl.innerHTML = `${icons.check} ${newValue}`;
+          ui.setScore(newValue);
           setTimeout(() => scoreEl.classList.remove("aw-score-pulse"), 200);
         }
       };

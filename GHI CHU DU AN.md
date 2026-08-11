@@ -5,6 +5,65 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 120 (11/8/2026) — ⭐ LỖI THẬT: ĐIỂM RƠI TỪ DƯƠNG XUỐNG ÂM GIỮA LƯỢT VẪN HIỆN MÀU XANH, PHẢI SANG
+CÂU SAU MỚI ĐỎ (Anagram). KHÔNG ĐỤNG CORE về mã (chỉ `templates/anagram/anagram.js` + thêm mục cảnh báo
+vào `core/HUONG DAN CORE.md`).
+
+Nối tiếp Đợt 119, thầy tự chơi Anagram và bắt được: "đang xanh mà bị trừ điểm thành âm trong lượt thì
+thấy SỐ đã âm nhưng màu VẪN XANH, phải đến khi Next sang câu tiếp theo mới chuyển đỏ". Yêu cầu: ở bất cứ
+template nào, mode nào, số điểm chuyển từ dương sang âm là phải đỏ NGAY LẬP TỨC.
+
+**Nguyên nhân (bắt tận tay, không đoán)**: SỐ và MÀU do cùng một hàm sơn ra — `ui.setScore()` vừa ghi số
+vừa `classList.toggle("is-pos"/"is-neg")`. Nhưng `pulseScoreTo()` của Anagram (hiệu ứng đếm điểm nhảy dần
+khi số "+N"/"-N" bay tới ô điểm) **tự ghi thẳng `scoreEl.innerHTML = `${icons.check} ${val}`` mỗi khung
+hình, KHÔNG hề đụng tới 2 class kia** → vẽ số MỚI nhưng để nguyên màu CŨ. Màu chỉ được sửa lại khi có ai
+đó gọi lại `ui.setScore()`, mà nơi gần nhất là `render()` — hàm CHỈ chạy khi đổi từ (đúng thiết kế chống
+nháy màn hình từ Đợt 55). Đó chính xác là lý do "phải Next mới đỏ".
+
+**Rà soát toàn bộ trước khi sửa** (để trả lời đúng yêu cầu "bất cứ template nào"): grep mọi chỗ ghi
+`.aw-top-score`/`scoreEl` trên `core/` + cả 17 thư mục template. Kết quả — **chỉ Anagram sai**:
+- `core/engine.js` — nơi DUY NHẤT trong core ghi ô điểm, và nó toggle class đúng. 11 template chỉ gọi
+  `ui.setScore()` (quiz, true-false, find-the-match, open-the-box, balloon-pop, flying-fruit, maze-chase,
+  whack-a-mole, gameshow, speaking, + anagram ở các nhánh khác) → tự động đúng.
+- **Type the answer**: `pulseScoreTo` gọi `scoreHTML(val)` mỗi khung, mà `scoreHTML` TÍNH LẠI class từ
+  chính `val` → đúng sẵn.
+- **Unjumble**: `pulseScoreTo` gọi `showScore(val)` mỗi khung, mà `showScore` toggle `aw-unj-neg` theo
+  `val < 0` → đúng sẵn.
+- **Crossword**: `showScore()` tính class từ `livePoints` mỗi lần gọi, không có vòng đếm → đúng sẵn.
+- **Running team**: chip riêng nhưng chỉ hiện `correctCount` (không có khái niệm điểm âm) → không liên quan.
+
+**Sửa (1 chỗ)**: `pulseScoreTo()` trong `anagram.js` — 2 lệnh ghi `innerHTML` (khung giữa chừng + khung
+cuối) đổi thành `ui.setScore(val)` / `ui.setScore(newValue)`. **Markup y hệt** (`ui.setScore` sinh đúng
+`${icons.check} ${n}`) nên không đổi gì về hình thức, chỉ được thêm phần toggle class. Tiện thể an toàn
+hơn: `ui.setScore` ghi vào `scoreEl` closure của ĐÚNG ván này thay vì `document.querySelector` sống
+(đúng tinh thần chống lỗi "ván đã chết ghi đè lên ô điểm ván mới" của Đợt 114; cờ `dead` ở đầu hàm vẫn
+giữ nguyên). Ghi thêm 1 mục cảnh báo dài vào `core/HUONG DAN CORE.md` để template sau không lặp lại.
+
+**⚠️ Kỹ thuật test (đáng ghi lại — pane test đóng băng rAF)**: `pulseScoreTo` chạy bằng
+`requestAnimationFrame`, mà Browser pane phiên này có `document.visibilityState === "hidden"` → đo thật
+ra **0 khung/500ms**, rAF chết hẳn (đúng bẫy đã ghi ở Đợt 105 + memory "Bẫy throttle khi test Electron").
+Không thể quan sát hiệu ứng theo cách thường. Cách gỡ: **tráo `window.requestAnimationFrame` bằng bản
+chạy qua microtask** (`Promise.resolve().then(...)`, microtask KHÔNG bị throttle) kèm **đồng hồ giả tăng
+70ms mỗi khung** và một bộ **ghi vết chụp lại `textContent` + `className` của ô điểm sau TỪNG khung** —
+nhờ vậy chạy được CHÍNH hàm `step` thật, `ui.setScore` thật, DOM thật, chỉ thay bộ lập lịch khung hình;
+có chặn trần 3000 khung phòng treo trang. Thêm 1 bẫy nữa: **tap tile bằng `.click()` hay `PointerEvent`
+giả đều KHÔNG ăn** (tile dùng Pointer Events thật từ Đợt 89, `setPointerCapture` từ chối pointer giả) →
+phải bấm THẬT qua công cụ `computer` của Browser pane.
+
+**Số đo thật thu được** (mode "Bonus and minus", Points off wrong-letter = 100, Bonus x = 2, tắt shuffle):
+- Từ 1 ELEPHANT giải hoàn hảo → đếm lên qua 5 khung `7 → 11 → 14 → 15 → 16`, **mọi khung đều `is-pos`**,
+  màu xanh `rgb(51,162,74)` — không hồi quy chiều dương.
+- Next sang từ 2 GIRAFFE (điểm 16, xanh) → bấm SAI 1 chữ → trừ 100 → đếm xuống
+  `-26 → -54 → -72 → -80 → -84`, **khung ĐẦU TIÊN có số âm đã mang `is-neg` ngay**, màu đỏ
+  `rgb(226,60,60)`, **và vẫn đỏ khi CHƯA bấm Next** — đúng y điều thầy yêu cầu. Trước bản vá, cả 5 khung
+  này sẽ giữ `is-pos` (xanh).
+- 0 lỗi console suốt quá trình.
+
+**File đổi**: `templates/anagram/anagram.js` (`pulseScoreTo`, 2 dòng + comment giải thích bẫy),
+`core/HUONG DAN CORE.md` (mục cảnh báo mới). Không đụng mã core, không đụng 16 template còn lại.
+
+---
+
 ## Đợt 119 (11/8/2026) — ĐIỂM ÂM LUÔN CÓ DẤU "-" + MÀU ĐỎ, RÀ SOÁT TOÀN BỘ 15 TEMPLATE (trước chỉ đổi
 màu đỏ, bỏ hẳn dấu trừ, và 2 template tự dựng chip riêng bị sót). ⭐ CÓ SỬA CORE — `core/engine.js` (1
 dòng) + `core/app.css`/`core/HUONG DAN CORE.md` (comment, không đổi luật CSS nào) — cộng 2 template tự

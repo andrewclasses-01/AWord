@@ -1083,6 +1083,15 @@ window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(
   dạng "✓ N/total" (`scoreHTML()`/`showScore()` riêng, đọc `.aw-top-score` trực tiếp) — **PHẢI tự áp dụng
   đúng luật này** (không `Math.abs`, số âm giữ dấu, class `-neg` tô đỏ) chứ engine không tự lo được cho
   chip tự dựng. Anagram/Unjumble đã đúng luật này từ trước (chưa từng `Math.abs`).
+- ⚠️⚠️ **BẪY "SỐ ĐỔI MÀ MÀU KHÔNG ĐỔI" — bắt buộc đọc nếu viết hiệu ứng ĐẾM ĐIỂM (count-up/pulse)**
+  (lỗi thật, thầy bắt được 11/8/2026 ở Anagram): SỐ và MÀU do CÙNG một hàm sơn ra (`ui.setScore`, hoặc
+  `showScore()`/`scoreHTML()` riêng của template). Vòng lặp đếm điểm nào tự ghi thẳng
+  `scoreEl.innerHTML = ...` mỗi khung sẽ **vẽ số MỚI nhưng để lại màu CŨ** — điểm rơi từ dương xuống âm
+  hiện số âm mà vẫn XANH, tới tận lúc có ai đó gọi lại hàm sơn (ở Anagram là `render()`, chỉ chạy khi
+  ĐỔI TỪ) mới đỏ. **LUẬT: mọi khung của vòng đếm phải đi qua đúng hàm sơn đó** (`ui.setScore(val)` hoặc
+  `showScore(val)` của template), TUYỆT ĐỐI không ghi `innerHTML` tay trong vòng lặp. Làm đúng thì màu tự
+  lật đúng ngay khung số đi qua mốc 0. Đã đúng: `anagram.js`/`unjumble.js` (`pulseScoreTo` → hàm sơn),
+  `type-the-answer.js` (`pulseScoreTo` → `scoreHTML(val)` tính lại class mỗi khung).
 - **Allow skip**: game có nút Next–Back tay (quiz/type-the-answer/anagram/unjumble) đọc `options.allowSkip`
   để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
   (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.
