@@ -5,6 +5,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 118 (11/8/2026) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1 VOICE/ENG2 VOICE
+(trước đây bị THAY THẾ). CÓ SỬA CORE — chỉ `core/lesson-import.js`. KHÔNG cần đăng nhập để test (logic
+đọc Excel thuần), verify bằng script Node dựng workbook giả.
+
+Thầy phát hiện: từ Đợt 104 (đổi tiêu đề `ENG1`/`ENG2` thành `ENG1 VOICE`/`ENG2 VOICE` để gộp vào danh
+sách Voice), 2 act ENG1/ENG2 bản text-thường (không giọng đọc) đã biến mất khỏi import — trong khi
+skill `taoact` (tạo trực tiếp trên Wordwall) vẫn luôn tạo CẢ HAI song song, không bao giờ bỏ bản thường.
+Import web bị lệch với skill kể từ đó mà không ai để ý (comment đầu file `lesson-import.js` ghi rõ "mirrors
+the taoactaw skill's mapping exactly... keep the other in sync" — bị phá vỡ ngầm).
+
+**Sửa:** trong `parseLessonToBundle()`, mỗi khi `ENG1.length`/`ENG2.length` có dữ liệu, đẩy vào bundle
+CẢ 2 act: `${source} / ENG1` (anagram thường, không `ttsEligible`) VÀ `${source} / ENG1 VOICE`
+(`ttsEligible:true`, y hệt cũ) — tương tự ENG2. Nội dung 2 act giống hệt nhau (cùng mảng `pairs`), chỉ
+khác cờ TTS. KHÔNG đụng `main.js` — popup Import tự xếp đúng chỗ vì đã sẵn logic: act có `ttsEligible`
+rơi vào khung "Voice (TTS)" ở đầu popup, act thường rơi vào danh sách bên dưới; cả 2 đều tự tách dòng
+tick riêng, độc lập nhau (tick ENG1 VOICE không kéo theo ENG1 thường và ngược lại) — đúng yêu cầu "song
+song" của thầy mà không cần sửa gì thêm ở UI.
+
+**Verify:** không có Excel mẫu tay + không cần đăng nhập Firebase nên viết 1 script Node (`node
+test-import.mjs`, đã xoá sau khi xong) dựng workbook `.xlsx` giả bằng chính `core/vendor/xlsx.mjs` của
+app (2 dòng WORDTABLE, cột D/E=ENG1, H/I=ENG2), gọi thẳng `parseLessonToBundle()` — output đúng thứ tự
+`ENG1 → ENG1 VOICE → ENG2 → ENG2 VOICE → RUNNING WORD`, nội dung `items` giống hệt giữa cặp thường/VOICE,
+cờ `ttsEligible` đúng (`undefined` ở bản thường, `true` ở bản VOICE). **Chưa test qua popup Import thật
+với file .xlsm thật + đăng nhập** — thầy nên thử 1 lượt import file lớp thật để chắc khung Voice/danh
+sách thường hiển thị đúng như mô tả.
+
+---
+
 ## Đợt 117 (11/8/2026) — RUNNING TEAM: ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START RUNNING THEO SAVE, IN TO TỐI ĐA, TÊN HIỆN TỪ READY, ĐẾM CHẬM HƠN + ANIMATION MƯỢT, DẤU ✓/✗ BAY ĐÚNG LỚP
 
 Thầy gửi 1 lượt yêu cầu cho Running team, theo đúng khuôn 3 nhóm của Running word Đợt 116 (màn chuẩn

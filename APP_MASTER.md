@@ -5,9 +5,23 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 117) — RUNNING TEAM: ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START
+> Cập nhật lần cuối: **11/8/2026 (Đợt 118) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1
+> VOICE/ENG2 VOICE (trước đó bị THAY THẾ mất từ Đợt 104). ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`.
+> Chưa commit lúc ghi dòng này.**
+> Thầy phát hiện: từ Đợt 104, `parseLessonToBundle()` đổi tiêu đề `ENG1`/`ENG2` thành `ENG1 VOICE`/
+> `ENG2 VOICE` thay vì thêm mới — bản anagram text-thường (không giọng đọc) biến mất khỏi Import trong
+> khi skill `taoact` (tạo trực tiếp Wordwall) vẫn luôn tạo cả 2 song song. Sửa: mỗi khi có ENG1/ENG2, đẩy
+> vào bundle CẢ `${source} / ENG1` (không `ttsEligible`) LẪN `${source} / ENG1 VOICE` (`ttsEligible:true`,
+> y hệt cũ) — tương tự ENG2. Không đụng `main.js`: popup Import đã sẵn logic tách act có `ttsEligible`
+> vào khung "Voice (TTS)" và act thường vào danh sách dưới, nên 2 bản tự nằm cạnh nhau, tick độc lập.
+> Verify bằng script Node dựng workbook `.xlsx` giả (2 dòng WORDTABLE) gọi thẳng `parseLessonToBundle()`
+> — thứ tự & nội dung đúng như thiết kế, cờ `ttsEligible` đúng ở cả 2 bản. ⬜ **Chưa test qua popup Import
+> thật với file .xlsm thật + đăng nhập** (môi trường phiên này không đăng nhập Firebase được). Chi tiết:
+> `GHI CHU DU AN.md` Đợt 118.**
+>
+> Trước đó: **11/8/2026 (Đợt 117) — RUNNING TEAM: ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START
 > RUNNING THEO SAVE, IN TO TỐI ĐA, OVERLAY READY/3-2-1 HIỆN TÊN + CHẬM HƠN + MƯỢT HƠN, DẤU ✓/✗ BAY ĐÚNG
-> LỚP. KHÔNG ĐỤNG CORE (chỉ `running-team.js`/`.css` + `rt-print.js`). Chưa commit lúc ghi dòng này.**
+> LỚP. KHÔNG ĐỤNG CORE (chỉ `running-team.js`/`.css` + `rt-print.js`).**
 > Theo đúng khuôn 3 nhóm yêu cầu Running word Đợt 116 đã làm (màn chuẩn bị / nội dung in / trong game) +
 > 1 việc riêng (dấu bay bị ô khác che). (1) **Ô SET đồng bộ y hệt Running word**: Shuffle/Save/Print vào
 > hẳn trong ô SET đang chọn (icon-only, copy nguyên SVG từ running-word.js), DELETE SET đổi thành nút
