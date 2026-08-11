@@ -103,6 +103,15 @@ export function createPack(moduleUrl, spec = {}) {
     pausedByMenu.forEach(a => { try { a.play().catch(() => {}); } catch { /* ignore */ } });
     pausedByMenu.clear();
   }
+  // Same moment as resumeActive(), opposite intent (Đợt 113): the ☰ Menu is
+  // closing because the play is being THROWN AWAY (Start again / Home / Change
+  // template), not resumed. Playing those clips now would drop the dead game's
+  // sounds ON TOP of the next game's intro — measured: a chip + the restart cue
+  // over blockgameintro1. So rewind and forget them instead of resuming.
+  function dropPaused() {
+    pausedByMenu.forEach(a => { try { a.currentTime = 0; } catch { /* ignore */ } });
+    pausedByMenu.clear();
+  }
 
   // True length of a file in ms, so a VISUAL effect can be timed to its sound.
   // After prime() the metadata is there, so the fallback is now a rare path.
@@ -153,7 +162,7 @@ export function createPack(moduleUrl, spec = {}) {
     for (let i = 0; i < PRIME_CONCURRENCY; i++) startOne();
   }
 
-  const pack = { play, stop, pool, prime, durationMs, el: elFor, urlFor, pauseActive, resumeActive,
+  const pack = { play, stop, pool, prime, durationMs, el: elFor, urlFor, pauseActive, resumeActive, dropPaused,
 
     // Diagnostics — lets a test page (or a future session) prove the pack really
     // was loaded BEFORE the teacher pressed PLAY, which is the whole point of

@@ -5,6 +5,52 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 113 (11/8/2026) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN" (dứt điểm nốt "quan sát phụ" của
+Đợt 112). ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT ("sửa luôn") → COMMIT `<hash>`
++ PUSH + **LIVE**.
+
+### Vấn đề
+Ở Đợt 112 tôi ghi lại một quan sát phụ chưa sửa: mở ☰ Menu đúng lúc một âm đang phát rồi bấm
+"Start again" thì âm cũ **phát nốt chồng lên nhạc intro của ván mới** (đo được: `blockgamerestart` +
+`blockgameintro1` cùng lúc). Thầy yêu cầu làm luôn.
+
+### Gốc — `exitMenuPause()` không phân biệt được HAI nghĩa của "đóng Menu"
+| Đóng Menu vì… | Đúng ra phải làm gì |
+|---|---|
+| **Resume / bấm ra ngoài** — chơi tiếp | khôi phục y nguyên: phát tiếp âm, chạy tiếp animation, `tpl.onPause(false)` |
+| **`cleanupAll()`** — Start again / Home / Change template, ván bị **VỨT BỎ** | KHÔNG khôi phục gì cả |
+
+Bản cũ xử lý cả hai y hệt nhau, nên lúc bỏ ván nó vẫn "khôi phục" một cách chăm chỉ: `resumeActive()`
+phát nốt mp3 của ván sắp chết, `pausedAnimations.play()` chạy lại animation trên DOM sắp bị thay,
+`tpl.onPause(false)` đánh thức timer/nhạc riêng của template — ngay trước khi `cleanup()` giết tất cả.
+Cờ `torndown` (vừa thêm ở Đợt 112) chính là thứ phân biệt được 2 nghĩa đó, chỉ việc dùng lại.
+
+### Đã sửa
+1. `core/sfx.js` — thêm `dropPaused()` cạnh `resumeActive()`: tua các clip đang tạm dừng về 0 rồi **quên
+   đi** thay vì phát nốt. Thuần cộng thêm, pack nào không gọi thì y như cũ.
+2. `core/engine.js` `exitMenuPause()` — rẽ theo `torndown`:
+   `torndown ? p.dropPaused() : p.resumeActive()`, và bỏ qua `pausedAnimations.play()` +
+   `tpl.onPause(false)` khi đang bỏ ván.
+   ⭐ **Ngoại lệ CỐ Ý: `sound.resumeContext()` vẫn chạy trong CẢ HAI trường hợp** — AudioContext dùng
+   chung sống lâu hơn ván chơi; để nó suspended thì ván SAU bị **câm tiếng tổng hợp** (Crossword /
+   Running word / Running team). Đây là chỗ dễ "dọn quá tay" nhất, đừng gộp nó vào nhánh `torndown`.
+3. Bỏ `tpl.onPause(false)` lúc bỏ ván có an toàn không? Có — đã kiểm: `gameshow.js cleanup()` (game duy
+   nhất có nhạc nền loop) tự gọi `gsSound.musicStop()`, nên nhạc chắc chắn tắt dù không được "resume".
+
+### Đo thật (Browser pane, 0 lỗi console mọi ca)
+- **Quiz — CA A** (mở Menu lúc intro đang phát → "Start again"): chỉ còn **đúng 1** tiếng
+  `blockgamerestart`, intro cũ **không** phát lại; bấm PLAY thì đúng 1 intro của ván mới.
+  (Trước khi vá, đúng kịch bản này ra **3** tiếng chồng nhau.)
+- **Quiz — CA B (hồi quy Đợt 91)**: mở Menu lúc intro đang phát → bấm **Resume** → intro **được phát
+  tiếp** đúng như thiết kế cũ.
+- **Gameshow** (game duy nhất có nhạc nền + hook `onPause`): đang chơi `[intro, music]` → mở Menu →
+  `[]` (im hết) → "Start again" → **chỉ `restart.mp3`**, nhạc ván cũ không sống lại → PLAY ván mới →
+  `[intro, music]` của ván mới. Hồi quy Resume: mở Menu → `[]` → Resume → `[intro, music]` chạy lại đúng.
+- **Không hồi quy Đợt 112**: đếm lại interval do `core/engine.js` tạo — đang chơi 1, sau
+  ☰ Menu → "Start again" **0**, PLAY ván mới **1**.
+
+---
+
 ## Đợt 112 (11/8/2026) — ⭐⭐ BUG "ĐỒNG HỒ MA": ÂM HẾT GIỜ NỔ GIỮA VÁN + ĐIỂM MA VÀO BẢNG XẾP HẠNG.
 ⭐ CÓ SỬA CORE (chỉ `core/engine.js`, 17 dòng thêm / 1 dòng đổi). VÁ MỘT CHỖ = **CHỮA CHO CẢ 17 TEMPLATE**.
 ✅ THẦY DUYỆT ("ok build") → COMMIT `94d4778` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
@@ -83,7 +129,7 @@ Luật rút ra + mẹo tự kiểm đã ghi vào `core/HUONG DAN CORE.md` mục 
    sau "Start again" = **0** đồng hồ, ván mới = **1**, đúng **1** tiếng `blockgametimeout` tại **0:05**,
    1 fanfare tại 0:00, bảng xếp hạng **0 dòng**, **0 lỗi console**.
 
-### 🔎 Quan sát phụ, CHƯA sửa (để thầy quyết)
+### 🔎 Quan sát phụ — ✅ ĐÃ SỬA NGAY SAU ĐÓ Ở ĐỢT 113 (thầy chốt "sửa luôn")
 Nếu mở ☰ Menu đúng lúc một âm đang phát rồi bấm "Start again", `resumeActive()` của `core/sfx.js` sẽ
 **phát nốt** đoạn âm bị tạm dừng đó chồng lên nhạc intro của ván mới (đo được ở test hồi quy: 2 tiếng
 `blockgamerestart` + `blockgameintro1` chồng nhau). Đây là hành vi CÓ SẴN từ Đợt 91, **không phải do đợt

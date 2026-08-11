@@ -511,7 +511,9 @@ core/
 │                        resumeContext() cho Menu pause (xem mục "MENU PAUSE")
 ├─ sfx.js             ← createPack(import.meta.url, {names, hot, skip}) — kho mp3 dùng chung
 │                        cho MỌI template: play/pool/stop/durationMs/el/prime/stats/pauseActive/
-│                        resumeActive. ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
+│                        resumeActive/dropPaused (dropPaused = bỏ chỗ đang tạm dừng KHÔNG phát nốt,
+│                        dùng khi ván bị vứt — xem mục "MENU PAUSE" điểm 3).
+│                        ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
 ├─ icons.js           ← bộ icon SVG dùng chung (menu, prev, next, sound, fullscreen, check, cross,
 │                        close, options, template, style, edit, assignment, print, playBig,
 │                        markCheck, markCross)
@@ -875,6 +877,18 @@ game build sau này, không cần khai gì thêm:
    `startedAt` tới bằng đúng thời gian đã tạm dừng, nên đồng hồ tiếp đúng số cũ chứ không nhảy.
 2. **AudioContext dùng chung** (`core/sound.js` `context()`, dùng bởi crossword/running-word/running-team
    để tổng hợp tiếng) — `sound.pauseContext()`/`resumeContext()` gọi `ctx.suspend()/.resume()`.
+> ⚠️ **Đóng Menu có HAI NGHĨA — Đợt 113 (11/8/2026).** `exitMenuPause()` chạy cho cả 2 tình huống:
+> "Resume / bấm ra ngoài" (chơi tiếp) **và** `cleanupAll()` (Start again / Home / Change template — ván
+> bị VỨT BỎ). Trước Đợt 113 nó xử lý y như nhau, nên bỏ ván cũng "khôi phục": âm mp3 đang tạm dừng của
+> ván sắp chết được phát lại **chồng lên nhạc intro của ván mới** (đo thật: `blockgamerestart` +
+> `blockgameintro1` cùng lúc). Nay đọc cờ `torndown`: bỏ ván thì `p.dropPaused()` (tua về 0 rồi quên đi)
+> thay cho `p.resumeActive()`, đồng thời **không** chạy lại `pausedAnimations` và **không** gọi
+> `tpl.onPause(false)` (cleanup() của template dọn ngay sau đó — đánh thức timer/nhạc lên trước chỉ tạo
+> tiếng "bụp", không được lợi gì; đã xác nhận `gameshow.js cleanup()` tự gọi `musicStop()`).
+> ⭐ **Ngoại lệ DUY NHẤT: `sound.resumeContext()` vẫn chạy trong CẢ HAI trường hợp** — AudioContext dùng
+> chung sống lâu hơn ván chơi, để nó suspended thì ván SAU sẽ **câm tiếng tổng hợp** (Crossword /
+> Running word / Running team).
+>
 3. **Mọi pack mp3** (`core/sfx.js createPack`, TẤT CẢ template) — mỗi pack có `pauseActive()`/
    `resumeActive()` MỚI: tạm dừng đúng những `<audio>` đang thật sự phát (kể cả nhạc nền loop), nhớ lại để
    phát tiếp đúng chỗ; phần tử đã dừng/xong từ trước không bị đụng. Engine gọi qua registry toàn cục

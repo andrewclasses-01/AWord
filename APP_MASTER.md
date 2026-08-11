@@ -5,7 +5,22 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 112) — ⭐⭐ BUG "ĐỒNG HỒ MA" (sống ẩn từ Đợt 91, 8/8): âm HẾT GIỜ
+> Cập nhật lần cuối: **11/8/2026 (Đợt 113) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN".
+> ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT → COMMIT `<hash>` + PUSH + **LIVE**.**
+> `exitMenuPause()` không phân biệt được HAI nghĩa của "đóng Menu": *Resume* (chơi tiếp — phải khôi phục
+> mọi thứ) và *`cleanupAll()`* (Start again / Home / Change template — ván bị VỨT BỎ, không được khôi phục
+> gì). Nên lúc bỏ ván nó vẫn phát nốt mp3 đang tạm dừng của ván sắp chết, **chồng lên nhạc intro của ván
+> mới**. Vá bằng cách dùng lại cờ `torndown` của Đợt 112: thêm `dropPaused()` vào `core/sfx.js` (tua về 0
+> rồi quên đi) và rẽ nhánh `torndown ? p.dropPaused() : p.resumeActive()`, đồng thời bỏ qua
+> `pausedAnimations.play()` + `tpl.onPause(false)` khi đang bỏ ván. ⭐ **Ngoại lệ CỐ Ý:
+> `sound.resumeContext()` vẫn chạy ở CẢ HAI nhánh** — AudioContext dùng chung sống lâu hơn ván chơi, để
+> suspended thì ván SAU câm tiếng tổng hợp (Crossword / Running word / Running team); đây là chỗ dễ "dọn
+> quá tay" nhất. Đo thật: Quiz "Start again" từ 3 tiếng chồng nhau còn **đúng 1**; Resume vẫn phát tiếp
+> (Đợt 91 nguyên vẹn); Gameshow (game duy nhất có nhạc nền loop + `onPause`) bỏ ván thì nhạc cũ không
+> sống lại, Resume thì có; Đợt 112 không hồi quy (0 đồng hồ ma). 0 lỗi console. Chi tiết:
+> `GHI CHU DU AN.md` Đợt 113 + `core/HUONG DAN CORE.md` mục "MENU PAUSE".**
+>
+> Trước đó: **11/8/2026 (Đợt 112) — ⭐⭐ BUG "ĐỒNG HỒ MA" (sống ẩn từ Đợt 91, 8/8): âm HẾT GIỜ
 > nổ giữa ván khi đồng hồ còn 0:28, kèm fanfare giả và **ĐIỂM MA vào bảng xếp hạng / `session.submit()`
 > giả lên Firestore**. ⭐ CÓ SỬA CORE (chỉ `core/engine.js`) — vá 1 chỗ, CHỮA CHO CẢ 17 TEMPLATE.
 > ✅ THẦY DUYỆT → COMMIT `94d4778` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đã chạy lại

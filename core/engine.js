@@ -901,16 +901,30 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     stageDim = el("div", "aw-stage-dim");
     inner.append(stageDim);
   }
+  // The Menu closes for TWO different reasons and they need opposite endings:
+  //   • Resume / click-outside  -> put the play back exactly as it was;
+  //   • cleanupAll() (Start again / Home / Change template) -> the play is being
+  //     THROWN AWAY, so "resuming" it means dropping a dead game's sounds and
+  //     animations on top of the next one. `torndown` (set by cleanupAll before
+  //     it calls closeMenu) tells the two apart. Đợt 113.
+  // The shared AudioContext is the ONE thing resumed either way: it outlives the
+  // play, and leaving it suspended would mute the NEXT game's synthesized tones
+  // (crossword / running word / running team).
   function exitMenuPause() {
     stageDim?.remove(); stageDim = null;
     resumeClockForMenu();
     sound.resumeContext();
     if (typeof window !== "undefined" && window.__awSfxPacks) {
-      window.__awSfxPacks.forEach(p => p.resumeActive?.());
+      window.__awSfxPacks.forEach(p => (torndown ? p.dropPaused?.() : p.resumeActive?.()));
     }
-    pausedAnimations.forEach(a => { try { a.play(); } catch { /* ignore */ } });
+    // Those animations live in the stage DOM that is about to be replaced —
+    // restarting them buys nothing and can flash a frame of the dying game.
+    if (!torndown) pausedAnimations.forEach(a => { try { a.play(); } catch { /* ignore */ } });
     pausedAnimations = [];
-    tpl.onPause?.(false);
+    // Same reasoning for a template's OWN timers/music: cleanup() runs a moment
+    // later and tears them down anyway, so waking them up first is a blip (an
+    // audible one for Gameshow's background music), never a benefit.
+    if (!torndown) tpl.onPause?.(false);
   }
 
   function onMenuOutside(ev) {
