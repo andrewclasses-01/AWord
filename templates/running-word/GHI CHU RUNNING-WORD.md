@@ -1,5 +1,81 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **Đợt 116 dự án (11/8/2026) — số Đợt 115 đã bị một phiên song song khác dùng (LOGO + link giao bài,
+> xem đầu `APP_MASTER.md`) khi phiên này đang làm — nhảy sang 116 để không trùng, đúng quy ước dự án.
+> 7 CẢI TIẾN THEO YÊU CẦU THẦY: KHOÁ START/PRINT TỚI KHI SAVE, GOM
+> SHUFFLE/SAVE/PRINT VÀO Ô SET DẠNG ICON + DELETE GÓC BẰNG POPUP, THÊM IPA (nhập/import/in/trong game),
+> BỎ BONUS LƯỢT ĐẦU, ANDREW HIỆN Ở Ô PLAY/PAUSE. ✅ THẦY DUYỆT → COMMIT `d399342` + PUSH + **LIVE**
+> tại `https://aword.andrewclasses.com/`.**
+> Yêu cầu gốc (nguyên văn thầy, chia 3 phần): màn chuẩn bị / nội dung in / trong game. Nghiên cứu trước
+> khi code (bắt buộc theo quy trình): đọc toàn bộ `running-word.js` + `rw-sets.js` + `rw-print.js` +
+> `running-word-editor.js` + `core/HUONG DAN CORE.md`, hỏi lại 4 điểm mập mờ bằng AskUserQuestion (kiểu
+> ô nhập IPA, nguồn IPA khi import, có khoá Print theo Save không, phạm vi "lượt đầu" bỏ bonus) — thầy
+> chọn cả 4 theo phương án "Recommended" — rồi mới build sau khi thầy gõ "ok build".
+>
+> **1. Màn chuẩn bị — khoá START MATCH + PRINT tới khi đã Save.** `start.disabled = isTeacher && dirty`
+> (chỉ khoá phía GIÁO VIÊN — học sinh mở qua session không có nút Save nên không bao giờ bị khoá cứng).
+> Print cũng khoá y hệt (`printBtn.disabled = dirty`) — đảm bảo tờ in KHÔNG BAO GIỜ được sinh ra từ một
+> split chưa lưu/chưa đồng bộ Firestore, đúng ý "save xong phải đồng bộ ngay, tờ in không lệch bản lưu".
+>
+> **2. Ô SET: Shuffle/Save/Print thành icon BÊN TRONG ô đang chọn + DELETE góc tròn mở popup nhỏ.**
+> 3 nút chữ dưới hàng slot (cũ) chuyển hẳn vào bên trong SLOT ĐANG CHỌN (`isSel && isTeacher`), dạng
+> icon-only: Shuffle (glyph cục bộ mới `SVG_SHUFFLE`) chỉ bấm được khi `dirty`; Save (`SVG_SAVE` khi
+> chưa lưu → đổi thành `icons.check` khi đã lưu, disabled) cũng chỉ bấm được khi `dirty`; Print
+> (`icons.print`) chỉ bấm được khi `!dirty`. DELETE SET đổi từ nút chữ trong slot sang 1 nút TRÒN ghim
+> góc trên-phải mỗi slot ĐÃ LƯU (`position:absolute`), bấm ra POPUP NHỎ neo cạnh nút (`openDeletePopover`,
+> cùng khuôn `positionPopover` của Anagram editor — `position:fixed` theo `getBoundingClientRect`, đóng
+> khi bấm ra ngoài) thay hẳn `confirm()` trần của trình duyệt. Ô SET rộng ra 14→16.4cqw để chứa hàng icon.
+>
+> **3. IPA — nhập/import/in/trong game.** ⭐ ĐỔI CẤU TRÚC DỮ LIỆU: `content.words` từ `string[]` sang
+> `{word, ipa}[]` (mảng MAP — Firestore-safe, cùng kiểu `printSets` đã dùng; KHÔNG đụng `buildSets`/
+> `readSets`/`printSets` — 2 danh sách A/B đã lưu vẫn là string[] thuần, tương thích ngược 100% với SET
+> đã lưu từ trước). `poolFrom()` đã sẵn tương thích 2 chiều (đọc cả string lẫn `.word`) từ trước — chỉ
+> thêm hàm MỚI `ipaFrom(activity)` trong `rw-sets.js` (word→IPA Map, đọc riêng ở thời điểm RENDER, không
+> đụng thuật toán chia). **Editor** viết lại hẳn từ 1 ô textarea to (dán cả cột) sang danh sách MỖI TỪ
+> 1 HÀNG có ô Word + ô IPA cạnh nhau, dán được cả VÙNG 2 CỘT Excel 1 lần (`onRowPaste`, cùng khuôn
+> Anagram), kéo-thả đổi thứ tự (native HTML5 DnD, cùng khuôn Anagram) — CSS mới `.aw-rw-ed-*` phỏng
+> đúng `.aw-anagram-ed-*`. **Import Excel** (`core/lesson-import.js`, CÓ SỬA CORE — thầy duyệt phương án
+> tự động): tự khớp IPA cho RUNNING WORD từ đúng cột IPA có sẵn trong file (tái dùng `PRON` — cặp
+> word/ipa PRONUNCIATION đã tách sẵn từ "WORD /ipa/" — dựng `ipaByWord` Map, khớp theo chữ HOA). **In**
+> (`rw-print.js` + CSS `@media print`): mỗi từ in kèm `WORD • /ipa/`, IPA nhỏ hơn/nhạt hơn/mảnh hơn
+> (`.aw-rw-ps-ipa`, cỡ chữ tính theo `--rw-fs` của chính hàng nên luôn tỷ lệ đúng dù pool ngắn/dài).
+> **Trong game** (`paintBoard`): từ đã CHỐT (đúng hoặc pass) hiện thêm IPA nhỏ cạnh phải, đúng phong
+> cách tờ in (`.aw-rw-row-ipa`, đơn vị `em` nên tự ăn theo `--rw-fit`/`--rw-tier` của chính chữ cạnh nó).
+> ⭐ `fitBoard()` phải đo THÊM cả chuỗi IPA (đo tại font TỪ, cố ý đo dư an toàn hơn là đo thiếu) để hàng
+> có IPA không tràn — bài học đúng mục 4 "5 BẪY" của `HUONG DAN CORE.md`.
+>
+> **4. Bỏ bonus lượt submit ĐẦU TIÊN của cả trận.** `starting` (cờ đã có sẵn — lượt submit đánh dấu bắt
+> đầu đồng hồ, thay 3-2-1 cũ) chụp lại đúng 1 LẦN duy nhất ở đầu `submit()`; nhánh CORRECT đổi
+> `clock[t] += cfg.incrementMs` thành `if (!starting) clock[t] += cfg.incrementMs`. Chỉ literally lượt
+> gọi `submit()` ĐẦU TIÊN của trận (bất kể đội nào đi trước) mất bonus — lượt kế tiếp của CHÍNH đội đó
+> và lượt đầu của đội kia đều cộng bình thường.
+>
+> **5. Andrew hiện ở đúng vị trí nút Play/Pause (nút ẩn tạm).** `useAndrew()` ẩn `refUI.playPauseBtn`
+> (`style.display="none"`) rồi chèn `.aw-rw-reveal` vào `refUI.bar` (đúng ô giữa dải đồng hồ, `.aw-rw-ref`
+> grid `auto` — cố định 11×5cqw bằng CSS nên cột grid không nhảy khi đổi nút↔chữ); cỡ chữ tự co bằng
+> `core/fit.js`'s `fitOnce()` (đo lần đầu, không cần theo dõi resize vì chỉ hiện tạm thời) — không nhỏ
+> quá/to quá/đè lên đồng hồ 2 bên (đo thật: box 106×48px, không chạm `clockA`/`clockB`). `hideReveal()`
+> trả `display=""` cho nút. Trọng tài vẫn Pause được lúc Andrew đang hiện qua phím Esc (độc lập, không
+> đụng).
+>
+> **Đã tự test qua Browser pane (đủ 6 mục trên, không phải đọc code suông):** gating Start/Print đúng cả
+> 2 chiều (khoá khi chưa lưu, mở ngay khi đã lưu — dùng harness tạm bơm sẵn `printSets[0]` cho `test.html`
+> vì môi trường test không tự đăng nhập Firestore được, xoá harness sau khi xong); popup Delete mở/đóng
+> đúng, Cancel không xoá; tờ in 3 trang có IPA đúng định dạng `WORD • /ipa/` (đếm được 40 span IPA); editor
+> render đủ 40 hàng word+ipa đúng dữ liệu, dán 1 vùng 2 cột thật thay đúng list từ dòng dán trở xuống;
+> chơi thật: lượt STIR (từ đầu) giữ nguyên `5:00` dù bonus Options=+5s, lượt CYLINDER kế tiếp (không phải
+> lượt đầu) cộng đúng `+5` (đo tại 272→277, 70ms thực); IPA hiện đúng cạnh từ khi đúng (`STIR • /stɜː/`)
+> lẫn khi pass (`OBEDIENCE • /əˈbiːdiəns/`); Andrew bấm → nút Play/Pause ẩn, `.aw-rw-reveal` hiện đúng vị
+> trí + auto-fit + không đè đồng hồ, nộp xong → nút Play/Pause hiện lại. **0 lỗi console suốt toàn bộ.**
+> ⬜ **Chưa tự test được (cần thầy):** Import Excel thật (chưa có file .xlsm mẫu trong phiên này để kiểm
+> `ipaByWord` khớp đúng cột IPA thật); Save/Delete THẬT lên Firestore (môi trường test không đăng nhập
+> được — chỉ kiểm logic gọi đúng hàm + xử lý lỗi không crash); cảm nhận cỡ icon/vị trí popup trên máy
+> thật/TOMKO cảm ứng; nghe thử IPA có dùng được font hiện tại hay cần phông IPA riêng (chưa đổi font,
+> dùng "Baloo 2" sẵn có — hầu hết ký hiệu IPA thường dùng (ə ɪ iː ʃ ʒ etc.) đo được hiển thị hình dạng
+> hợp lý qua Browser pane, nhưng chưa xác nhận trên mọi trình duyệt/thiết bị của thầy).
+> **CÓ SỬA CORE:** chỉ `core/lesson-import.js` (mục 3, IPA cho Running word) — không đụng file core nào
+> khác. Không đụng `core/store.js`, `core/print.js`, `core/keyboard.js`.
+
 > **Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT →
 > COMMIT `be7cd55` + PUSH + LIVE.**
 > Chỉ đụng `running-word.js`: thêm `menuPause`/`menuResume` + bridge module `rwPauseHandlers` + `onPause`.

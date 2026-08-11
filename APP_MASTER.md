@@ -5,7 +5,31 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 115) — LOGO (favicon từ `LOGO AW.png`, 7 file ở
+> Cập nhật lần cuối: **11/8/2026 (Đợt 116) — RUNNING WORD: 7 CẢI TIẾN THEO YÊU CẦU THẦY (màn chuẩn bị +
+> tờ in + trong game). ✅ THẦY DUYỆT → COMMIT `d399342` + PUSH + **LIVE**.**
+> (1) **START MATCH + PRINT khoá tới khi SET đang chọn đã Save** — tờ in không bao giờ còn lệch bản đã
+> lưu/đồng bộ Firestore. (2) **Ô SET gọn lại**: Shuffle/Save/Print thành icon nằm ngay trong ô đang
+> chọn; DELETE SET đổi từ nút chữ + `confirm()` sang nút tròn góc trên-phải mở popup nhỏ neo cạnh (cùng
+> khuôn `positionPopover` của Anagram). (3) ⭐ **IPA xuyên suốt**: `content.words` đổi từ `string[]` sang
+> `{word, ipa}[]` (Firestore-safe, tương thích ngược 100% với pool cũ — `poolFrom()`/`buildSets()`/
+> `printSets` không đổi gì) — Editor viết lại từ 1 ô textarea to sang danh sách mỗi từ 1 hàng có ô
+> Word + ô IPA (dán được cả vùng 2 cột Excel, kéo-thả đổi thứ tự, cùng khuôn Anagram); Import Excel tự
+> khớp IPA từ đúng cột IPA có sẵn trong file; cả 3 tờ in VÀ trong game (từ đã chốt: đúng hoặc pass) đều
+> hiện `WORD • /ipa/`, IPA nhỏ/nhạt/mảnh hơn. (4) **Lượt submit ĐẦU TIÊN của cả trận không cộng bonus
+> thời gian** (lượt này vốn chỉ có nhiệm vụ bắt đầu đồng hồ, thay 3-2-1 cũ) — mọi lượt sau, kể cả lượt
+> đầu của đội kia, cộng bình thường. (5) **Andrew hiện đúng vị trí nút Play/Pause** (nút ẩn tạm) thay vì
+> nổi trên hàng đang gõ — tự co cỡ chữ bằng `core/fit.js`, không đè 2 đồng hồ hai bên.
+> ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js` (khớp IPA tự động cho bundle RUNNING WORD), không đụng
+> file core nào khác. Tự test kỹ qua Browser pane (harness offline bơm sẵn 1 SET đã "lưu" vì môi trường
+> test không đăng nhập Firestore được): khoá/mở Start+Print đúng cả 2 chiều, popup Delete mở/đóng/Cancel
+> đúng, 3 tờ in đủ IPA, chơi thật đo được lượt đầu giữ nguyên đồng hồ còn lượt sau cộng đúng +5s (272→277,
+> trong 70ms thực), IPA hiện đúng cạnh từ khi đúng lẫn khi pass, Andrew ẩn/hiện nút đúng + auto-fit +
+> không đè đồng hồ — **0 lỗi console mọi bước**. ⬜ **Chưa tự test được (cần thầy)**: import 1 file .xlsm
+> thật (không có sẵn file mẫu trong phiên này), Save/Delete thật lên Firestore (môi trường test không
+> đăng nhập được), cảm nhận cỡ icon/vị trí popup/IPA đọc được trên máy thật hay TOMKO cảm ứng. Chi tiết
+> đầy đủ: `GHI CHU DU AN.md` Đợt 116 + `templates/running-word/GHI CHU RUNNING-WORD.md` Đợt 116.**
+>
+> Trước đó: **11/8/2026 (Đợt 115) — LOGO (favicon từ `LOGO AW.png`, 7 file ở
 > `core/assets/icons/`) + LINK GIAO BÀI CÓ TÊN ĐỌC ĐƯỢC (`play.html?g=<mã>` → đuôi mới
 > `.../g/<mã>/ten-bai-hoc`), để app **myLink** tự đọc tên đúng khi soạn link cho lớp.
 > Đuôi mới đi qua `404.html` (file mới, gốc repo — GitHub Pages tự phục vụ nó cho path lạ) rồi
