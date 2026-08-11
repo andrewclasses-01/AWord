@@ -7,7 +7,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 120 (11/8/2026) — ⭐ LỖI THẬT: ĐIỂM RƠI TỪ DƯƠNG XUỐNG ÂM GIỮA LƯỢT VẪN HIỆN MÀU XANH, PHẢI SANG
 CÂU SAU MỚI ĐỎ (Anagram). KHÔNG ĐỤNG CORE về mã (chỉ `templates/anagram/anagram.js` + thêm mục cảnh báo
-vào `core/HUONG DAN CORE.md`).
+vào `core/HUONG DAN CORE.md`). ✅ THẦY DUYỆT ("commit + push live") → COMMIT `cddc5c6` + PUSH + **LIVE**
+tại `https://aword.andrewclasses.com/` (`curl` poll xác nhận dấu mốc mới `ui.setScore(val);` CÓ mặt và
+dấu mốc cũ `` scoreEl.innerHTML = `${icons.check} ${val}` `` đã BIẾN MẤT hẳn — ngay lần poll thứ 2, ~15
+giây sau khi push).
 
 Nối tiếp Đợt 119, thầy tự chơi Anagram và bắt được: "đang xanh mà bị trừ điểm thành âm trong lượt thì
 thấy SỐ đã âm nhưng màu VẪN XANH, phải đến khi Next sang câu tiếp theo mới chuyển đỏ". Yêu cầu: ở bất cứ
@@ -61,6 +64,11 @@ phải bấm THẬT qua công cụ `computer` của Browser pane.
 
 **File đổi**: `templates/anagram/anagram.js` (`pulseScoreTo`, 2 dòng + comment giải thích bẫy),
 `core/HUONG DAN CORE.md` (mục cảnh báo mới). Không đụng mã core, không đụng 16 template còn lại.
+
+**Việc kế (không gấp)**: thầy tự chơi lại Anagram trên bản LIVE, chơi đúng kịch bản cũ (đang dương rồi bị
+trừ thành âm giữa lượt) xác nhận bằng MẮT THẬT là số đổi màu đỏ ngay tức khắc — máy chỉ xác nhận được
+bằng cách tráo bộ lập lịch khung hình rồi đọc class/màu từng khung, không "nhìn" được animation thật do
+bẫy rAF của pane test.
 
 ---
 

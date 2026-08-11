@@ -7,7 +7,8 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **11/8/2026 (Đợt 120) — ⭐ LỖI THẬT: ĐIỂM RƠI DƯƠNG→ÂM GIỮA LƯỢT VẪN XANH, PHẢI
 > NEXT MỚI ĐỎ (Anagram). KHÔNG ĐỤNG MÃ CORE (chỉ `templates/anagram/anagram.js` + mục cảnh báo mới trong
-> `core/HUONG DAN CORE.md`).**
+> `core/HUONG DAN CORE.md`). ✅ THẦY DUYỆT → COMMIT `cddc5c6` + PUSH + **LIVE** (`curl` xác nhận dấu mốc
+> mới có mặt + dấu mốc cũ biến mất hẳn, ngay lần poll thứ 2).**
 > Gốc lỗi: SỐ và MÀU do CÙNG `ui.setScore()` sơn ra, nhưng vòng đếm điểm `pulseScoreTo()` của Anagram tự
 > ghi thẳng `scoreEl.innerHTML` mỗi khung → vẽ số mới, để lại màu cũ; màu chỉ đúng lại khi `render()`
 > (chỉ chạy lúc ĐỔI TỪ) gọi lại `ui.setScore()`. Sửa: mọi khung của vòng đếm đi qua `ui.setScore(val)`
