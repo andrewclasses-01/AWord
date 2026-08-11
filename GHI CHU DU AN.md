@@ -5,6 +5,91 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 112 (11/8/2026) — ⭐⭐ BUG "ĐỒNG HỒ MA": ÂM HẾT GIỜ NỔ GIỮA VÁN + ĐIỂM MA VÀO BẢNG XẾP HẠNG.
+⭐ CÓ SỬA CORE (chỉ `core/engine.js`, 17 dòng thêm / 1 dòng đổi). VÁ MỘT CHỖ = **CHỮA CHO CẢ 17 TEMPLATE**.
+✅ THẦY DUYỆT ("ok build") → COMMIT `<hash>` + PUSH + **LIVE**.
+
+### Thầy báo gì
+Hai lần, cách nhau một lượt trao đổi. Lần đầu: *"đôi khi tôi thấy có âm khi chuẩn bị hết giờ (timesup)
+khi vẫn còn nhiều thời gian"*. Tôi soi code trả lời rằng đó là do `quiz-sound.js` dùng CHUNG file
+`blockgametimeout.mp3` cho cả `timeWarning` (còn 5s) lẫn `gameOver` (hết Lives) — tức hết mạng thì nghe
+nhầm ra tiếng hết giờ. **Trả lời đó SAI** (đúng về mặt code nhưng không phải cái thầy gặp): thầy chốt lại
+*"đếm ngược còn nhiều + KHÔNG set lives (unlimited)"*, loại sạch giả thuyết Lives. ⭐ **Bài học: đừng dừng
+ở lời giải thích đầu tiên nghe hợp lý — phải mở trình duyệt đo cho tới khi tái hiện được đúng triệu chứng.**
+
+### Bug thật (nằm ở CORE, không dính gì Quiz)
+`cleanupAll()` cũ: `stopTimer(); closeMenu(); closeToolPanel(false); cleanup();`
+
+`closeMenu()` → `exitMenuPause()` → `resumeClockForMenu()` — và hàm này **tạo `setInterval` MỚI**. Vì
+`stopTimer()` chạy TRƯỚC, cái interval vừa sinh ra **không còn ai tắt**. Ván đã bị vứt bỏ nhưng đồng hồ
+của nó vẫn tick 500ms/lần **vĩnh viễn**, với `startedAt` cũ + cờ `timeWarned` còn `false`, ghi giờ vào
+`timerEl` thuộc DOM đã tháo — **nên hoàn toàn VÔ HÌNH**. Đó là lý do bug sống từ Đợt 91 (8/8) tới giờ mà
+không ai thấy: triệu chứng duy nhất lọt ra ngoài là ÂM THANH.
+
+Đúng **một** đường kích hoạt: **☰ Menu → "Start again"**. Nút này nằm BÊN TRONG menu nên cơ chế "bấm ra
+ngoài thì đóng menu" (`onMenuOutside`, nghe `pointerdown`) không kịp đóng menu trước khi `cleanupAll()`
+chạy. Mọi lối khác đều gọi `closeMenu()` từ trước nên vô hại: Options→Apply (`replayCurrent`), Change
+template, Submit answers, nút Home, "Start again" ở bảng tổng kết. Mỗi lần bấm lại chồng thêm 1 đồng hồ ma.
+
+### Đo thật, trước/sau (Browser pane, Quiz, đếm ngược 20s, Lives=Unlimited, trả lời 1 câu rồi restart ở giây 3,6)
+| Mốc | Bản LỖI | Bản ĐÃ VÁ |
+|---|---|---|
+| ngay sau "Start again" | **1** đồng hồ còn sống | **0** |
+| bấm PLAY ván mới | **2** đồng hồ chạy song song | **1** |
+| giây 16,1 — đồng hồ hiện **0:09** | 🔊 `blockgametimeout` **GIẢ** ⬅ đúng thứ thầy nghe | im lặng |
+| giây 19,4 — đồng hồ hiện 0:05 | 🔊 `blockgametimeout` (thật) | 🔊 (thật) |
+| giây 21,1 | 🔊 `blockgamesuccessful` **GIẢ** | im lặng |
+| bảng xếp hạng | **0 → 1 dòng ma** (`Player 0/6, 20.2s`) | **0 dòng** |
+| lỗi console | 0 | 0 |
+
+Lần đo thứ hai (đếm ngược 30s) cho cùng kết quả: âm hết giờ nổ khi đồng hồ còn **0:28**.
+
+### 3 tầng hậu quả — tầng 3 mới là tầng đáng sợ
+1. Âm "hết giờ" nổ giữa ván (thứ duy nhất thầy nghe được).
+2. Nhạc "Game complete" nổ giả + màn tổng kết dựng vào DOM đã chết (vô hình).
+3. ⚠️ Đồng hồ ma chạm 0 → gọi `submitHandler?.()` → **ván CŨ tự nộp bài**. Chế độ giáo viên: 1 dòng rác
+   trong bảng xếp hạng (còn cửa `answered > 0` chặn bớt). **Chế độ học sinh (`session`)**: `ui.finish()`
+   gọi thẳng `session.submit()` — **KHÔNG có cửa nào chặn** → đẩy một bài nộp GIẢ lên Firestore trong khi
+   em học sinh vẫn đang chơi ván mới. Đây là lỗi DỮ LIỆU, không chỉ lỗi âm thanh.
+
+### Đã sửa (2 lớp, cố ý làm cả hai)
+```js
+let torndown = false;                       // cạnh `pausedClockAt`
+function resumeClockForMenu() {
+  ...
+  if (torndown) return;                     // lớp 1: đang dọn ván thì CẤM dựng lại đồng hồ
+  if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
+}
+function cleanupAll() { torndown = true; closeMenu(); stopTimer(); closeToolPanel(false); cleanup(); }
+```
+Lớp 1 cứu nếu sau này có ai thêm đường "khôi phục" mới; lớp 2 (đổi thứ tự) cứu nếu sau này có ai gỡ lớp 1.
+Luật rút ra + mẹo tự kiểm đã ghi vào `core/HUONG DAN CORE.md` mục "BẪY ĐỒNG HỒ MA" (ngay sau Menu pause).
+
+### Đã test thật những gì (Browser pane, server `devserver.py` 5510, 0 lỗi console ở MỌI ca)
+1. **Tái hiện bug** trên bản chưa vá — 2 lần, 2 mốc thời gian khác nhau, khớp y hệt triệu chứng thầy tả.
+2. **Kịch bản y hệt trên bản đã vá** — 0 đồng hồ ma, chỉ còn 1 tiếng hết giờ ĐÚNG lúc 0:05, 1 fanfare đúng
+   lúc kết thúc, bảng xếp hạng **0 dòng**.
+3. **Hồi quy Menu pause (Đợt 91) còn nguyên** — chơi 4s (đồng hồ 0:57) → mở Menu 5 GIÂY → vẫn **0:57**
+   (đứng yên) → Resume → 2s sau **0:55** (chạy tiếp đúng chỗ, không nhảy vọt).
+4. **Bấm "Start again" 3 LẦN LIÊN TIẾP** — sau mỗi lần đều 0 đồng hồ, mỗi lần PLAY lại đúng 1 (không dồn).
+5. **Cross-template**: chạy lại kịch bản trên **Anagram** và **True/false** — True/false cố ý chọn vì nó
+   dùng `manualTimerStart` (đồng hồ khởi động tay sau đếm 3-2-1, đường đi khác Quiz). Cả hai: sau
+   "Start again" = 0, chơi ván mới = 1. Cách đếm: spy `setInterval` **lọc theo stack** chỉ tính interval
+   do chính `core/engine.js` tạo, để không nhầm với timer riêng của template.
+6. Dọn sạch dữ liệu rác test tự sinh (`localStorage` key `aword-lb-act_*test*`) sau khi đo xong.
+
+### 🔎 Quan sát phụ, CHƯA sửa (để thầy quyết)
+Nếu mở ☰ Menu đúng lúc một âm đang phát rồi bấm "Start again", `resumeActive()` của `core/sfx.js` sẽ
+**phát nốt** đoạn âm bị tạm dừng đó chồng lên nhạc intro của ván mới (đo được ở test hồi quy: 2 tiếng
+`blockgamerestart` + `blockgameintro1` chồng nhau). Đây là hành vi CÓ SẴN từ Đợt 91, **không phải do đợt
+này gây ra** (thứ tự `closeMenu` trong `cleanupAll` không ảnh hưởng, vì `closeMenu` được gọi ở cả 2 bản).
+Chỉ hơi rối tai ~0,3s, không sai dữ liệu. Muốn dứt điểm thì thêm cờ bỏ qua `resumeActive()` khi `torndown`.
+
+**Việc kế: thầy chơi thử trên bản LIVE — mở ☰ Menu → "Start again" giữa ván đếm ngược vài lần rồi để ván
+mới chạy qua mốc mà lẽ ra đồng hồ ma sẽ kêu, xác nhận tai không còn nghe tiếng hết giờ lạc lõng nữa.**
+
+---
+
 ## Đợt 111 (11/8/2026) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY (giống bộ màu/màu chữ
 của Quiz, mỗi ô 1 màu riêng, tăng cỡ chữ tối đa). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
 `running-team.css`). ✅ THẦY DUYỆT → COMMIT `28177e2` + PUSH + **LIVE** tại

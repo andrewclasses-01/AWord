@@ -5,7 +5,27 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 111) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY
+> Cập nhật lần cuối: **11/8/2026 (Đợt 112) — ⭐⭐ BUG "ĐỒNG HỒ MA" (sống ẩn từ Đợt 91, 8/8): âm HẾT GIỜ
+> nổ giữa ván khi đồng hồ còn 0:28, kèm fanfare giả và **ĐIỂM MA vào bảng xếp hạng / `session.submit()`
+> giả lên Firestore**. ⭐ CÓ SỬA CORE (chỉ `core/engine.js`) — vá 1 chỗ, CHỮA CHO CẢ 17 TEMPLATE.
+> ✅ THẦY DUYỆT → COMMIT `<hash>` + PUSH + **LIVE**.**
+> Gốc lỗi: `cleanupAll()` chạy `stopTimer()` TRƯỚC `closeMenu()`, mà `closeMenu()` → `exitMenuPause()` →
+> `resumeClockForMenu()` lại **dựng `setInterval` MỚI** cho ván vừa bị vứt — không ai tắt nữa. Ván chết
+> nhưng đồng hồ của nó tick mãi trên `timerEl` của DOM đã tháo (**vô hình**, nên bug sống lâu mà không ai
+> thấy), tới mốc "còn 5s" của CHÍNH NÓ thì kêu `timeWarning`, chạm 0 thì gọi `submitHandler()` → ván cũ
+> tự nộp bài. Đúng 1 đường kích hoạt: **☰ Menu → "Start again"** (nút nằm TRONG menu nên cơ chế
+> bấm-ra-ngoài-để-đóng không kịp chạy); mỗi lần bấm chồng thêm 1 đồng hồ ma. Vá 2 lớp: cờ `torndown`
+> chặn `resumeClockForMenu`, + đổi thứ tự thành `torndown = true; closeMenu(); stopTimer(); …`.
+> Đo thật trước/sau (Quiz, đếm ngược 20s, Lives=Unlimited): trước = 2 đồng hồ song song, `blockgametimeout`
+> nổ lúc đồng hồ hiện **0:09**, fanfare giả, bảng xếp hạng **0→1 dòng ma**; sau = 0 đồng hồ ma, đúng 1
+> tiếng hết giờ tại 0:05, **0 dòng**. Hồi quy: Menu pause (Đợt 91) còn nguyên (0:57 → giữ 5s → 0:55), bấm
+> "Start again" 3 lần liên tiếp không dồn đồng hồ, **Anagram + True/false** (`manualTimerStart`) cùng sạch.
+> 0 lỗi console mọi ca. ⚠️ **LUẬT MỚI cho mọi lần sửa core**: hàm nào tạo `setInterval`/`setTimeout` mà có
+> thể bị gọi từ trong đường dọn dẹp thì PHẢI có cờ chặn kiểu `torndown` — đừng tin vào thứ tự lệnh trong
+> `cleanupAll`. Chi tiết + mẹo đếm interval rò: `core/HUONG DAN CORE.md` mục "BẪY ĐỒNG HỒ MA",
+> `GHI CHU DU AN.md` Đợt 112.**
+>
+> Trước đó: **11/8/2026 (Đợt 111) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY
 > ("giống Quiz, mỗi ô 1 màu, hiện đại, dịu mắt, chữ tối đa"). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
 > `running-team.css`). ✅ THẦY DUYỆT → COMMIT `28177e2` + PUSH + **LIVE** tại
 > `https://aword.andrewclasses.com/` (`curl` xác nhận `const PALETTE = [` trong `running-team.js` +

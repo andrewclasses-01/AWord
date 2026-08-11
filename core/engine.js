@@ -481,6 +481,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // resuming shifts `startedAt` forward by exactly the paused duration so the
   // elapsed/remaining time picks up from the same value, not a jump. -----
   let pausedClockAt = 0;
+  let torndown = false;   // set by cleanupAll(): this play is over, nothing may restart its clock
   function pauseClockForMenu() {
     if (timerId) { clearInterval(timerId); timerId = null; pausedClockAt = performance.now(); }
   }
@@ -488,6 +489,16 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     if (!pausedClockAt) return;
     startedAt += performance.now() - pausedClockAt;
     pausedClockAt = 0;
+    // ⚠️ GHOST CLOCK GUARD (Đợt 112, 11/8/2026 — teacher heard the "time's up"
+    // cue with plenty of time left). This runs from closeMenu(), and closeMenu()
+    // is ALSO called by cleanupAll() while the game is being torn down — so
+    // without this line "☰ Menu -> Start again" would hand the DEAD play a brand
+    // new setInterval that nothing ever clears: it kept ticking on an invisible
+    // timerEl, fired timeWarning at ITS own 5-seconds-left mark (during the NEXT
+    // play, clock showing 0:28), then hit 0 and called submitHandler() — a
+    // phantom fanfare AND a phantom leaderboard row / session.submit() for a game
+    // nobody was playing. Every restart stacked one more. See GHI CHU DU AN.md.
+    if (torndown) return;
     if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
   }
 
@@ -990,7 +1001,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     // full act, which is the teacher's other documented way back to everything.
     startGame(root, next, { onExit, session, base: originAct });
   }
-  function cleanupAll() { stopTimer(); closeMenu(); closeToolPanel(false); cleanup(); }
+  // Order matters (Đợt 112): `torndown` first so the closeMenu() below can't
+  // revive the clock (see resumeClockForMenu), and stopTimer AFTER closeMenu so
+  // even a future resume path added in between still ends up cleared. Belt and
+  // braces on purpose — a leaked 500ms ticker is invisible and cost the teacher
+  // a phantom "time's up" mid-game plus phantom results.
+  function cleanupAll() { torndown = true; closeMenu(); stopTimer(); closeToolPanel(false); cleanup(); }
 
   // ----- Small toast message -----
   function toast(msg) {

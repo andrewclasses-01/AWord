@@ -9,6 +9,28 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⚠️ ĐỢT 112 (11/8/2026) — "ÂM HẾT GIỜ NỔ KHI CÒN NHIỀU THỜI GIAN": KHÔNG PHẢI LỖI CỦA QUIZ
+
+> **KHÔNG SỬA FILE NÀO CỦA QUIZ** — ghi ở đây vì thầy phát hiện lúc test Quiz, phiên sau dễ đi soi
+> `quiz-sound.js` rồi mất công vô ích. Bug nằm ở `core/engine.js`, chi tiết đầy đủ ở
+> `../../GHI CHU DU AN.md` Đợt 112 + `../../core/HUONG DAN CORE.md` mục "BẪY ĐỒNG HỒ MA".
+
+**Triệu chứng thầy gặp:** đang chơi ván đếm ngược, đồng hồ còn nhiều (đo được: **0:28** và **0:09**) mà
+`blockgametimeout.mp3` vẫn nổ. Lives để **Unlimited**.
+
+**⚠️ HAI CÁI BẪY CHẨN ĐOÁN, đừng vấp lại:**
+1. `quiz-sound.js` dùng CHUNG `blockgametimeout.mp3` cho cả `timeWarning` (còn 5s) **lẫn** `gameOver`
+   (hết Lives — Đợt 64 cố ý làm vậy vì pack "Block" không có file game-over riêng). Nhìn code là ra ngay
+   giả thuyết "hết mạng nghe nhầm ra hết giờ" — **nghe rất hợp lý nhưng SAI**, vì thầy để Lives Unlimited.
+2. Đường `timeWarning` trong `core/engine.js` (`remaining <= 5 && remaining > 0 && !timeWarned`) **hoàn
+   toàn đúng**, soi mãi cũng không thấy lỗi — vì thủ phạm là một đồng hồ của **VÁN TRƯỚC** còn sống ngầm.
+
+**Thủ phạm thật:** bấm **☰ Menu → "Start again"** để lại một `setInterval` "ma" của ván cũ (chi tiết ở
+core). Nó đếm ngược trên đồng hồ VÔ HÌNH của ván đã chết, tới mốc "còn 5s" của chính nó thì kêu — trong
+khi màn hình đang hiện đồng hồ của ván MỚI, còn nhiều thời gian. Đã vá ở `core/engine.js` (Đợt 112).
+
+---
+
 ## ⭐ ĐỢT 65 (4/8/2026, v0.9.40) — HẾT "GÓC VUÔNG KHI CHẠM" TRÊN TOMKO — ✅ THẦY DUYỆT → COMMIT `72e1b5f` + PUSH + LIVE
 
 > **Đã kiểm chứng trên bản live:** Quiz **16/16** phần tử bo góc = `rgba(0, 0, 0, 0)`, 0 lỗi console.

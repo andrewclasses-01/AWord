@@ -960,6 +960,64 @@ Find the match, Type the answer, True/false, Crossword, Unjumble, Balloon pop, S
 mà không cần hook, vì đồng hồ chung ở mục 2.1 đã đủ. Whack-a-mole KHÔNG có thêm gì cần dừng ngoài 2 cái
 trên (mỗi ô/mole riêng tự hết hạn bằng timer trong `timers` Set dùng chung, chấp nhận trôi nhẹ).
 
+### 4. ⚠️⚠️ BẪY "ĐỒNG HỒ MA" — dọn ván xong mà `closeMenu()` HỒI SINH đồng hồ (đã VÁ Đợt 112, 11/8/2026)
+
+**Bẫy này do chính Menu pause ở trên đẻ ra, và nó ÂM THẦM suốt 3 ngày** (từ Đợt 91 đến Đợt 112) — thầy chỉ
+phát hiện vì nghe tiếng "hết giờ" nổ giữa ván trong khi đồng hồ còn 0:28.
+
+Cơ chế: `cleanupAll()` gọi `closeMenu()` → `exitMenuPause()` → `resumeClockForMenu()` → hàm này **tạo
+`setInterval` MỚI**. Bản cũ chạy `stopTimer()` TRƯỚC `closeMenu()`, nên cái interval vừa sinh ra sau đó
+**không ai tắt nữa**: ván đã chết nhưng đồng hồ của nó vẫn tick 500ms/lần vĩnh viễn, ghi vào `timerEl` của
+DOM đã tháo (nên VÔ HÌNH — đó là lý do bug sống lâu vậy mà không ai thấy).
+
+Chỉ đúng **một** đường kích hoạt: **☰ Menu → "Start again"** — vì nút đó nằm BÊN TRONG menu nên cơ chế
+"bấm ra ngoài thì đóng menu" (`onMenuOutside`, nghe `pointerdown`) không kịp đóng menu trước. Mọi lối khác
+(Options→Apply, Change template, Submit answers, nút Home) đều đã `closeMenu()` từ trước nên vô hại.
+
+Hậu quả đo được (Quiz, đếm ngược 20s, Lives=Unlimited, restart ở giây 3,6):
+| Mốc | Bản LỖI | Bản ĐÃ VÁ |
+|---|---|---|
+| ngay sau "Start again" | **1** đồng hồ ma còn sống | **0** |
+| giây 16,1 (đồng hồ hiện **0:09**) | 🔊 `blockgametimeout` — **âm hết giờ GIẢ** | im lặng |
+| giây 19,4 (đồng hồ hiện 0:05) | 🔊 `blockgametimeout` (thật) | 🔊 (thật) |
+| giây 21,1 | 🔊 `blockgamesuccessful` — **fanfare GIẢ** | im lặng |
+| bảng xếp hạng | **0 → 1 dòng ma** (`0/6, 20.2s`) | **0 dòng** |
+
+Tầng nặng nhất: đồng hồ ma chạm 0 thì gọi `submitHandler?.()` → **ván cũ TỰ NỘP BÀI**. Ở chế độ giáo viên
+là 1 dòng rác trong bảng xếp hạng (còn có cửa `answered > 0` chặn bớt); ở **chế độ học sinh (`session`)**
+thì `ui.finish()` gọi thẳng `session.submit()` **không có cửa nào chặn** → đẩy một bài nộp GIẢ lên
+Firestore trong khi em học sinh vẫn đang chơi ván mới. Mỗi lần bấm "Start again" lại chồng thêm 1 đồng hồ ma.
+
+**Đã vá bằng 2 lớp** (`core/engine.js`, cố ý làm cả hai):
+```js
+let torndown = false;                       // cạnh `pausedClockAt`
+function resumeClockForMenu() {
+  ...
+  if (torndown) return;                     // lớp 1: ván đang bị dọn thì CẤM dựng lại đồng hồ
+  if (timerStarted && timerMode() !== "none") timerId = setInterval(tickTimer, 500);
+}
+function cleanupAll() { torndown = true; closeMenu(); stopTimer(); ... }   // lớp 2: đổi thứ tự
+```
+
+**LUẬT RÚT RA cho mọi lần sửa core sau này:** bất cứ hàm nào tạo `setInterval`/`setTimeout` mà **có thể bị
+gọi từ trong đường dọn dẹp** (`cleanupAll` gọi `closeMenu` gọi `exitMenuPause`…) đều phải có cờ chặn kiểu
+`torndown`. Đừng tin vào thứ tự lệnh trong `cleanupAll` — một hàm dọn dẹp gọi một hàm "khôi phục trạng
+thái" là chuyện rất bình thường và rất dễ tái diễn.
+
+**Cách tự kiểm nhanh** (dùng lại được cho mọi nghi ngờ rò timer): đếm số `setInterval` do CHÍNH
+`core/engine.js` tạo, lọc theo stack — sau khi rời ván phải về 0.
+```js
+window.__eng = new Set();
+const si = window.setInterval, ci = window.clearInterval;
+window.setInterval = function (fn, ms) {
+  const id = si.apply(this, arguments);
+  if (/core\/engine\.js/.test(new Error().stack || "")) window.__eng.add(id);
+  return id;
+};
+window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(this, arguments); };
+// đang chơi -> 1 · sau ☰ Menu > "Start again" -> PHẢI 0 · chơi ván mới -> 1 (không phải 2)
+```
+
 ### Điểm trừ CHUNG "Points off" + màu điểm theo dấu (v0.9.28)
 
 - **Option chung `activity.options.pointsOff`** (slider 0–5, mặc định **0 = tắt**) do `buildOptionsPanel`
