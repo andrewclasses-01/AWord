@@ -5,6 +5,69 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 115 (11/8/2026) — LOGO (favicon) + LINK GIAO BÀI CÓ TÊN ĐỌC ĐƯỢC, ĐỂ myLink TỰ ĐẶT TÊN LINK ĐÚNG
+
+Thầy yêu cầu 2 việc liên tiếp: (1) icon tab trình duyệt dùng ảnh logo "AW" thầy đưa (`LOGO AW.png`),
+(2) link giao bài cho học sinh có đuôi URL đọc được theo tên bài, để app myLink (soạn link
+NGÀY→LỚP) tự nhận ra và đặt tên link đúng thay vì tên chung chung. ✅ THẦY "ok build" → chưa commit
+lúc code xong, sẽ push cùng đợt ghi chú này.
+
+### 1. Favicon + tiêu đề tab
+- 7 file icon (`favicon.ico` + PNG 16/32/48/180/192/512) sinh từ `LOGO AW.png` (vuông, nền xanh, chữ
+  "AW" trắng), lưu ở `core/assets/icons/`. Gắn vào `<head>` của `index.html` và `play.html`.
+- Tiêu đề tab 2 trang gốc đổi thành cố định "AWord in ANDREW CLASSES" (trước đó là "AWord — English
+  Games" / "AWord — Play", không có favicon nào cả).
+- Logo CHỮ trong trang (góc trên "AWord in ANDREW CLASSES") giữ nguyên, không đụng — thầy chỉ muốn
+  đổi favicon.
+
+### 2. Link giao bài có tên đọc được (đuôi `/g/<mã>/ten-bai-hoc`)
+**Bối cảnh quan trọng — có 2 loại link khác nhau trong app, dễ nhầm:**
+- Link thư viện riêng của giáo viên (`?f=<num>&a=<num>`, `main.js linkFor()`) — chỉ giáo viên đăng
+  nhập mới mở được, dùng để myActivity mirror act sang bảng đôi. **KHÔNG đụng tới link này.**
+- Link giao bài cho học sinh (`play.html?g=<mã 6 ký tự ngẫu nhiên>`, `assignments.js
+  assignmentLink()`) — đây là link thầy dán vào myLink. Đây mới là link được sửa.
+
+**Xung đột phát hiện trước khi code:** myLink tự đặt tên link theo thứ tự ưu tiên: giải mã mã-bài
+riêng → **đọc `<title>` trang** → cắt đuôi URL. Vì `<title>` của `play.html` trước đây CỐ ĐỊNH
+("AWord — Play" rồi "AWord in ANDREW CLASSES") cho MỌI bài, myLink sẽ luôn đặt tên giống nhau dù đuôi
+URL có đẹp cỡ nào — phải sửa cả 2 phía mới có tác dụng.
+
+**Đã làm (chỉ sửa AWord, KHÔNG đụng gì bên myLink):**
+- `core/assignments.js`: thêm `slugify()` (bỏ dấu tiếng Việt, chữ thường, nối gạch ngang, tối đa 40
+  ký tự — vd "Bộ từ vựng 3" → `bo-tu-vung-3`). `assignmentLink(code, title)` giờ nhận thêm tên bài,
+  trả về `.../g/<mã>/<slug>` (không có tên hợp lệ thì rút gọn còn `.../g/<mã>`).
+- `core/assignment-ui.js`: cả 4 chỗ gọi `assignmentLink()` (mở popup chia sẻ, nút Copy link, Copy QR,
+  popup chi tiết) đều truyền thêm `assignment.title`.
+- `play.js`: ngay sau khi tải bài giao thành công, `document.title` đổi thành `<tên bài> — AWord` —
+  myLink giờ đọc `<title>` ra đúng tên, không cần sửa `namer.js` bên myLink.
+- `404.html` (file mới, gốc repo): AWord là site tĩnh 100% trên GitHub Pages, không có cách nào server
+  hiểu đường dẫn thật `/g/...` — nên dùng đúng cơ chế GitHub Pages tự phục vụ `404.html` cho path lạ.
+  Script đọc `/g/<mã>/...` trong `location.pathname`, chuyển hướng (`location.replace`) sang
+  `play.html?g=<mã>` (giữ nguyên mọi query khác, vd `&n=` do myLesson gắn thêm). Đuôi tên sau mã chỉ
+  là trang trí, không ảnh hưởng việc mở đúng bài.
+- **Link cũ (`?g=<mã>` không có đuôi) vẫn mở bình thường** — thuần túy thêm tính năng, không xóa gì.
+
+**⚠️ Bẫy đã gặp lúc tự kiểm tra (sửa trước khi commit):** ghép `location.search` thẳng vào URL mới
+sinh ra `...?g=<mã>?n=<tên>` (2 dấu `?`) — query thứ 2 hỏng. Sửa: nếu có `location.search` thì đổi
+dấu `?` đầu thành `&` trước khi nối.
+
+**Đã tự kiểm (không thể test hết vì cần đăng nhập Google thật của thầy):**
+- `slugify()` + logic chuyển hướng trong `404.html`: chạy độc lập qua Node với nhiều tên mẫu (có dấu,
+  ký tự đặc biệt, rỗng, có kèm `&n=`) — đúng cả.
+- Mở `play.html?g=<mã không tồn tại>` trên máy chủ dev: 0 lỗi console, hiện đúng "Assignment not
+  found" — `play.js` không lỗi cú pháp.
+- **Chưa tự test được**: toàn bộ luồng tạo bài giao thật (cần đăng nhập), và đuôi `/g/...` thật sự
+  chuyển hướng đúng trên GitHub Pages (máy chủ dev cục bộ `devserver.py` là `http.server` trần, không
+  mô phỏng kiểu lỗi 404 của GitHub Pages nên không test được tại chỗ) — cần thầy thử trên bản LIVE
+  sau khi đẩy lên.
+
+File đổi: `index.html`, `play.html`, `play.js`, `core/assignments.js`, `core/assignment-ui.js`,
+`404.html` (mới), `core/assets/icons/` (mới, 7 file). **KHÔNG đụng** `core/lesson-import.js` và
+`templates/running-word/*` — 2 chỗ này đang có sửa dở từ trước (không phải việc của đợt này), giữ
+nguyên chưa commit.
+
+---
+
 ## Đợt 114 (11/8/2026) — ⭐⭐ TỔNG RÀ CẢ 17 TEMPLATE THEO LỚP LỖI ĐỢT 112/113: 9 TEMPLATE CÒN DÍNH,
 TRONG ĐÓ CÓ **MICRO VẪN BẬT SAU KHI RỜI GAME**. ⭐ CÓ SỬA CORE (`engine.js`, `voice-playback.js`) + 9
 template. ✅ THẦY DUYỆT ("làm cả 2 bước luôn nhưng chú ý an toàn") → 3 COMMIT `fc507da` / `9d72801` /

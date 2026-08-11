@@ -295,10 +295,29 @@ export async function submitResult({ code, studentName, score, total, timeMs, re
 
 // ---- shared helpers ---------------------------------------------------------
 
+// "Bộ từ vựng 3" -> "bo-tu-vung-3". Used only to make links self-explanatory
+// when another app (myLink) reads the URL to name a shortcut — the code alone
+// is what actually opens the assignment; the slug is decoration.
+function slugify(text) {
+  return String(text || "")
+    .replace(/đ/g, "d").replace(/Đ/g, "D")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")   // strip accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/g, "");
+}
+
 // The link a student opens. Works from any page of the app.
-export function assignmentLink(code) {
+// `title`, when given, adds a readable slug after the code — 404.html reads
+// past it and redirects to the real play.html?g= link, so old plain links
+// (no slug) still work exactly as before.
+export function assignmentLink(code, title) {
   const dir = location.pathname.replace(/[^/]*$/, "");   // strip index.html / play.html
-  return `${location.origin}${dir}play.html?g=${encodeURIComponent(code)}`;
+  const slug = slugify(title);
+  const tail = slug ? `g/${encodeURIComponent(code)}/${slug}` : `g/${encodeURIComponent(code)}`;
+  return `${location.origin}${dir}${tail}`;
 }
 
 export function isLate(assignment, when = now()) {

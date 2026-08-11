@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>AWord in ANDREW CLASSES</title>
+  <link rel="icon" href="core/assets/icons/favicon.ico" sizes="any" />
+</head>
+<body>
+  <!-- GitHub Pages serves this file for any URL it doesn't recognize. AWord uses
+       that on purpose: a pretty student link like /g/<code>/lesson-name isn't a
+       real file, so it lands here — this script pulls the code back out and
+       sends the browser straight to the real play.html?g=<code> link. The name
+       after the code is decoration only (so tools like myLink can read it off
+       the URL); it plays no part in finding the assignment. -->
+  <script>
+    (function () {
+      var idx = location.pathname.indexOf("/g/");
+      var base = idx >= 0 ? location.pathname.slice(0, idx + 1) : "/";
+      var m = location.pathname.match(/\/g\/([^/]+)/);
+      if (!m) { location.replace(base); return; }
+      var extra = location.search ? "&" + location.search.slice(1) : "";
+      location.replace(base + "play.html?g=" + m[1] + extra);
+    })();
+  </script>
+</body>
+</html>

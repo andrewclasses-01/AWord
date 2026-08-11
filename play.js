@@ -40,6 +40,9 @@ async function start() {
   if (!assignment || !assignment.activity) {
     return showMessage("Assignment not found", "This link may be old. Ask your teacher for a new one.");
   }
+  // So a link-naming tool (myLink) reading this page's <title> gets the actual
+  // assignment name instead of the same generic title on every play link.
+  document.title = `${assignment.title || assignment.activityTitle || "AWord"} — AWord`;
   // The teacher can close an assignment, or move it to the recycle bin. Either
   // way the link still opens — it just explains itself instead of playing.
   if (assignment.trashed) {

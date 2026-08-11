@@ -5,7 +5,20 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 114) — ⭐⭐ TỔNG RÀ CẢ 17 TEMPLATE THEO LỚP LỖI ĐỢT 112/113:
+> Cập nhật lần cuối: **11/8/2026 (Đợt 115) — LOGO (favicon từ `LOGO AW.png`, 7 file ở
+> `core/assets/icons/`) + LINK GIAO BÀI CÓ TÊN ĐỌC ĐƯỢC (`play.html?g=<mã>` → đuôi mới
+> `.../g/<mã>/ten-bai-hoc`), để app **myLink** tự đọc tên đúng khi soạn link cho lớp.
+> Đuôi mới đi qua `404.html` (file mới, gốc repo — GitHub Pages tự phục vụ nó cho path lạ) rồi
+> `location.replace()` vào đúng `play.html?g=<mã>`; **link cũ không đuôi vẫn mở bình thường**.
+> `play.js` cũng đổi `document.title` theo tên bài giao ngay khi tải xong — myLink đọc `<title>` ra
+> tên thật thay vì tên chung "AWord in ANDREW CLASSES" cho mọi link như trước.
+> ⚠️ Chỉ sửa link `play.html?g=` (giao cho học sinh) — link thư viện riêng của giáo viên
+> (`?f=/?a=`, dùng cho myActivity mirror) không đụng tới.
+> Chưa tự test được luồng tạo bài giao thật (cần đăng nhập Google) lẫn đường dẫn `/g/...` trên
+> GitHub Pages thật (máy chủ dev cục bộ không mô phỏng được lỗi 404 kiểu GitHub Pages) — thầy tự
+> thử trên bản LIVE. Chi tiết: `GHI CHU DU AN.md` Đợt 115.**
+>
+> Trước đó: **11/8/2026 (Đợt 114) — ⭐⭐ TỔNG RÀ CẢ 17 TEMPLATE THEO LỚP LỖI ĐỢT 112/113:
 > **9 template còn dính**, nặng nhất là **MICRO VẪN BẬT SAU KHI RỜI GAME** (Speaking) và một loạt đường
 > ghi **điểm ma vào bảng xếp hạng / `session.submit()` giả lên Firestore**. ⭐ CÓ SỬA CORE
 > (`engine.js` + `voice-playback.js`) + 9 template. ✅ THẦY DUYỆT → COMMIT `fc507da` / `9d72801` /

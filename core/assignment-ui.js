@@ -285,7 +285,7 @@ export function openAssignmentShare(assignment) {
   openModal("", (modal, close) => {
     modal.append(headRow("Assignment created", close));
     const body = el("div", "aw-as-body");
-    const url = assignmentLink(assignment.code);
+    const url = assignmentLink(assignment.code, assignment.title);
 
     body.append(el("div", "aw-as-sub", escapeText(assignment.title)));
     body.append(el("label", "aw-as-label", "Student link"));
@@ -455,10 +455,11 @@ export function confirmTrashAssignment(assignment, { onDone } = {}) {
 
 // Shared little actions so the Results cards and the strips behave identically.
 export async function copyAssignmentLink(assignment) {
-  flash(await copyText(assignmentLink(assignment.code)) ? "Link copied" : assignmentLink(assignment.code));
+  const url = assignmentLink(assignment.code, assignment.title);
+  flash(await copyText(url) ? "Link copied" : url);
 }
 export async function copyAssignmentQr(assignment) {
-  const url = assignmentLink(assignment.code);
+  const url = assignmentLink(assignment.code, assignment.title);
   try { await copyQrImage(url, 700); flash("QR image copied"); }
   catch (e) { downloadQrPng(url, `QR ${assignment.code}.png`); flash("QR saved to your Downloads"); }
 }
@@ -499,7 +500,7 @@ export function openAssignmentDetail(assignment, { onChanged, inAct = false } = 
   }
 
   openModal("wide", (modal, close) => {
-    const url = assignmentLink(assignment.code);
+    const url = assignmentLink(assignment.code, assignment.title);
 
     // ---- top strip: what this assignment is, plus the share buttons
     const top = el("div", "aw-as-top");
