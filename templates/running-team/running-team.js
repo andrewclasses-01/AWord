@@ -82,6 +82,17 @@ const PALETTE = [
 // identically for the teacher. `null` internally means unlimited.
 const MAX_LIVES = 10;
 const DEFAULT_LIVES = 3;
+
+// READY -> 3 -> 2 -> 1 timing (Đợt 117, teacher's request: "hơi nhanh" -> slower).
+// Was 850/680 — both bumped by roughly half so the pupil's name has time to
+// register before the numbers start, and each digit gets a beat to read.
+const READY_HOLD_MS = 1300;
+const COUNT_STEP_MS = 1000;
+// How long the READY/3-2-1 overlay's own opacity transition takes — hideOverlay()
+// waits this long before setting display:none, so the fade-out actually plays
+// instead of being cut off mid-transition. Must match running-team.css's
+// `.aw-rt-overlay { transition: opacity ... }` duration.
+const OVERLAY_FADE_MS = 380;
 function normLives(v) {
   if (v === 0 || v === null || v === undefined) return v === 0 ? null : DEFAULT_LIVES;
   const n = Math.round(Number(v));
@@ -335,23 +346,77 @@ const rtTemplate = {
     match.append(board);
 
     // The READY / 3-2-1 card. It sits OVER the board rather than replacing it so
-    // the board never has to be rebuilt between questions.
+    // the board never has to be rebuilt between questions. Đợt 117 (teacher's
+    // request): the pupil's NAME is shown here too — top, big — with the
+    // READY/3-2-1 status below it, so the class already knows who's up before
+    // the number ever appears.
     const overlay = el("div", "aw-rt-overlay");
-    const overlayText = el("div", "aw-rt-overlay-text");
-    overlay.append(overlayText);
+    const overlayName = el("div", "aw-rt-overlay-name");
+    const overlayCount = el("div", "aw-rt-overlay-count");
+    overlay.append(overlayName, overlayCount);
     overlay.style.display = "none";
     match.append(overlay);
 
+    // ===== DELETE SET — anchored popover ====================================
+    // Đợt 117 (11/8/2026, teacher's redesign, mirrors Running word's own
+    // 11/8/2026 change): replaces the old full-width "DELETE SET" text button
+    // + native confirm() with a small round icon pinned to the slot's own
+    // top-right corner, opening a compact popover anchored under it (same
+    // `positionPopover` shape Anagram's editor popovers use). isTempAct() is
+    // still checked BEFORE the popover opens — a temporary `conv_` act gets a
+    // toast instead, never a popover asking to confirm something that would
+    // just fail after saveActivity is called.
+    let delPopEl = null;
+    function closeDeletePopover() {
+      if (delPopEl) { delPopEl.remove(); delPopEl = null; }
+      document.removeEventListener("pointerdown", onDeletePopOutside, true);
+    }
+    function onDeletePopOutside(e) {
+      if (!delPopEl || delPopEl.contains(e.target)) return;
+      closeDeletePopover();
+    }
+    function openDeletePopover(anchorBtn, i) {
+      closeDeletePopover();
+      const pop = el("div", "aw-rt-delpop");
+      pop.append(el("div", "aw-rt-delpop-title", `Delete SET ${i + 1}?`));
+      pop.append(el("div", "aw-rt-delpop-status",
+        "The printed sheet for it will no longer match anything saved here."));
+      const btnRow = el("div", "aw-rt-delpop-btns");
+      const cancelBtn = el("button", "aw-btn", "Cancel");
+      cancelBtn.type = "button";
+      cancelBtn.onclick = () => closeDeletePopover();
+      const goBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete");
+      goBtn.type = "button";
+      goBtn.onclick = () => { closeDeletePopover(); deleteSetNow(i); };
+      btnRow.append(cancelBtn, goBtn);
+      pop.append(btnRow);
+
+      document.body.append(pop);
+      const r = anchorBtn.getBoundingClientRect();
+      pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 40) + "px";
+      pop.style.left = Math.max(8, Math.min(r.right - 210, window.innerWidth - 218)) + "px";
+      delPopEl = pop;
+      setTimeout(() => document.addEventListener("pointerdown", onDeletePopOutside, true), 0);
+    }
+
     // ===== SETUP SCREEN =====================================================
     function renderSetup() {
+      closeDeletePopover();   // a re-render replaces the anchor button under it
       setup.innerHTML = "";
       setup.append(el("div", "aw-rt-setup-title", "RUNNING TEAM"));
 
       // -- saved set slots --
+      // Đợt 117: Shuffle / Save / Print moved OFF the shared row below the
+      // slots and INTO the slot they act on (icon-only, drawn only on the
+      // slot that's actually `current` — mirrors Running word's 11/8/2026
+      // redesign so both games read as one family). `isSel` alone (not
+      // `isSel && !dirty` as before) decides which slot gets the action row —
+      // an EMPTY slot that a fresh, unsaved deal is about to land in still
+      // needs Shuffle/Save on it, not just a saved one.
       const slots = el("div", "aw-rt-slots");
       for (let i = 0; i < MAX_SETS; i++) {
         const saved = sets[i];
-        const isSel = i === setIndex && !dirty;
+        const isSel = i === setIndex;
         const slot = el("div", "aw-rt-slot" + (isSel ? " is-sel" : "") + (saved ? "" : " is-empty"));
         slot.setAttribute("role", "button"); slot.tabIndex = 0;
         slot.append(el("div", "aw-rt-slot-num", `SET ${i + 1}`));
@@ -369,6 +434,7 @@ const rtTemplate = {
         slot.onclick = () => {
           if (!sets[i]) return;                 // an empty slot is only a save target
           if (!setFitsPool(sets[i], pool)) return;
+          ui.sound.click?.();
           setIndex = i;
           current = sets[i];
           rosterDraft = rosterOf(current).map(s => ({ ...s, present: true }));
@@ -376,15 +442,72 @@ const rtTemplate = {
           dirty = false;
           renderSetup();
         };
+
         // A saved slot can't be re-dealt until it is deleted — the sheets the
-        // class is holding must never silently stop matching the game (the same
-        // rule Running word settled on, 5/8/2026).
+        // class is holding must never silently stop matching the game (the
+        // same rule Running word settled on, 5/8/2026).
         if (saved && isTeacher) {
-          const del = el("button", "aw-rt-slot-del", "DELETE SET");
-          del.type = "button";
-          del.onclick = e => { e.stopPropagation(); confirmDeleteSet(i); };
-          slot.append(del);
+          const delBtn = el("button", "aw-rt-slot-delcorner", icons.trash);
+          delBtn.type = "button";
+          delBtn.title = `Delete SET ${i + 1}`;
+          delBtn.onclick = e => {
+            e.stopPropagation();
+            if (isTempAct()) {
+              ui.toast?.("This is a temporary activity — open the real one to edit its sets");
+              return;
+            }
+            openDeletePopover(delBtn, i);
+          };
+          slot.append(delBtn);
         }
+
+        if (isSel && isTeacher) {
+          const acts = el("div", "aw-rt-slot-acts");
+
+          const shuffleBtn = el("button", "aw-rt-slot-actbtn", SVG_SHUFFLE);
+          shuffleBtn.type = "button";
+          shuffleBtn.disabled = !canDeal() || (!!current && !dirty);
+          shuffleBtn.title = (!!current && !dirty)
+            ? "Delete this SET first to deal a new numbering."
+            : "Shuffle a new numbering";
+          shuffleBtn.onclick = () => {
+            if (shuffleBtn.disabled) return;
+            ui.sound.click?.();
+            dealCurrent();
+            renderSetup();
+          };
+          acts.append(shuffleBtn);
+
+          // ⭐ Save gates BOTH Print and Start Running (teacher's request,
+          // Đợt 117 — same reasoning Running word settled on the same day):
+          // the printed sheet and the numbering the game actually deals can
+          // now never drift apart, because both actions refuse to run on a
+          // `dirty` (unsaved) split.
+          const saveBtn = el("button", "aw-rt-slot-actbtn" + (dirty ? " is-dirty" : ""),
+            dirty ? SVG_SAVE : icons.check);
+          saveBtn.type = "button";
+          saveBtn.disabled = !dirty || !current;
+          saveBtn.title = dirty ? `Save as SET ${firstFreeSlot() + 1}` : (current ? `SET ${setIndex + 1} saved` : "Nothing to save");
+          saveBtn.onclick = () => saveCurrentSet(saveBtn);
+          acts.append(saveBtn);
+
+          const printBtn = el("button", "aw-rt-slot-actbtn", icons.print);
+          printBtn.type = "button";
+          printBtn.disabled = !current || dirty;
+          printBtn.title = dirty ? "Save this SET first to print it." : "Print word list";
+          printBtn.onclick = () => {
+            if (!current || dirty) return;
+            ui.sound.click?.();
+            printRunningTeamSheet(current.order, {
+              title: activity.title || "Running team",
+              className: current.className
+            });
+          };
+          acts.append(printBtn);
+
+          slot.append(acts);
+        }
+
         slots.append(slot);
       }
       setup.append(slots);
@@ -404,49 +527,19 @@ const rtTemplate = {
       );
       setup.append(facts);
 
-      // -- actions --
-      const acts = el("div", "aw-rt-setup-acts");
-
-      const shuffleBtn = el("button", "aw-rt-btn", "Shuffle new numbering");
-      shuffleBtn.type = "button";
-      shuffleBtn.disabled = !canDeal() || (!!current && !dirty);
-      shuffleBtn.title = (!!current && !dirty)
-        ? "Delete this SET first to deal a new numbering."
-        : "";
-      shuffleBtn.onclick = () => {
-        if (shuffleBtn.disabled) return;
-        dealCurrent();
-        renderSetup();
-      };
-      acts.append(shuffleBtn);
-
-      if (isTeacher) {
-        const printBtn = el("button", "aw-rt-btn is-icon", `${icons.print}<span>Print word list</span>`);
-        printBtn.type = "button";
-        printBtn.disabled = !current;
-        printBtn.onclick = () => {
-          if (!current) return;
-          printRunningTeamSheet(current.order, {
-            title: activity.title || "Running team",
-            className: current.className
-          });
-        };
-        acts.append(printBtn);
-
-        const saveBtn = el("button", "aw-rt-btn" + (dirty ? " is-dirty" : ""),
-          dirty ? `Save as SET ${firstFreeSlot() + 1}` : (current ? `SET ${setIndex + 1} saved` : "Nothing to save"));
-        saveBtn.type = "button";
-        saveBtn.disabled = !dirty || !current;
-        saveBtn.onclick = () => saveCurrentSet(saveBtn);
-        acts.append(saveBtn);
-      }
-      setup.append(acts);
-
+      // ⭐ START RUNNING requires a picked class AND a saved SET (teacher's
+      // request, Đợt 117): `readyToStart()` already implies a class was
+      // picked (nothing reaches `current` without one — see dealCurrent()),
+      // and the `dirty` check on top of it is the "saved" half. Students
+      // never hit this gate: `dirty` can't go true on their side of the app
+      // at all (classBlock, the only thing that sets it, is teacher-only).
+      const dataReady = readyToStart();
+      const locked = !dataReady || (isTeacher && dirty);
       const start = el("button", "aw-rt-start", "START RUNNING");
       start.type = "button";
-      start.disabled = !readyToStart();
-      start.title = readyToStart() ? "" : "Pick a class and deal a numbering first.";
-      start.onclick = () => { if (readyToStart()) startRunning(); };
+      start.disabled = locked;
+      start.title = !dataReady ? "Pick a class and deal a numbering first." : (locked ? "Save this SET first." : "");
+      start.onclick = () => { if (!locked) { ui.sound.click?.(); startRunning(); } };
       setup.append(start);
 
       function fact(big, small) {
@@ -592,12 +685,10 @@ const rtTemplate = {
       }
     }
 
-    async function confirmDeleteSet(i) {
-      if (isTempAct()) {                      // same rule as saveCurrentSet
-        ui.toast?.("This is a temporary activity — open the real one to edit its sets");
-        return;
-      }
-      if (!confirm(`Delete SET ${i + 1}?\n\nThe sheet already handed out will no longer match a saved set.`)) return;
+    // The confirmation itself now happens in the popover BEFORE this is ever
+    // called (openDeletePopover, which also runs the isTempAct() check before
+    // opening) — this function no longer asks anything, it just deletes.
+    async function deleteSetNow(i) {
       try {
         const next = new Array(MAX_SETS).fill(null);
         for (let k = 0; k < MAX_SETS; k++) next[k] = sets[k] || null;
@@ -666,6 +757,11 @@ const rtTemplate = {
 
     // READY -> 3 -> 2 -> 1 -> the tiles. Every step is a plain timeout, and the
     // whole chain is registered in `timers` so cleanup() can cancel it mid-flight.
+    // ⭐ Đợt 117: `turnPtr` already points at the NEXT pupil the instant this
+    // runs (it's bumped right after the previous question resolves, before
+    // goReady() is ever called — see onTile()/loseLife() below), so the name
+    // shown through the whole READY/3-2-1 sequence is computed ONCE here and
+    // is exactly who openQuestion() will call a moment later. No new state.
     function goReady() {
       if (finished) return;
       if (!queue.length) { endGame(true, "cleared"); return; }
@@ -673,16 +769,17 @@ const rtTemplate = {
       locked = true;
       stopQuestionClock();
       resetQBar();
-      showOverlay("READY", "is-ready");
+      const who = roster.length ? roster[turnPtr % roster.length] : { name: "" };
+      showOverlay(who.name || "", "READY", "is-ready");
       rtSound.ready();
-      later(() => step(3), 850);
+      later(() => step(3), READY_HOLD_MS);
 
       function step(n) {
         if (finished) return;
         if (n === 0) { hideOverlay(); openQuestion(); return; }
-        showOverlay(String(n), "is-count");
+        updateCount(String(n), "is-count");
         rtSound.count(n);
-        later(() => step(n - 1), 680);
+        later(() => step(n - 1), COUNT_STEP_MS);
       }
     }
 
@@ -720,6 +817,15 @@ const rtTemplate = {
           fitOnce(b, span, s => span.style.setProperty("--rt-fit", s), { min: 0.42, contentBox: true });
         });
       });
+
+      // ⭐ Đợt 117: the question fades/rises in rather than snapping into place
+      // the instant the 3-2-1 overlay clears — restart the keyframe every
+      // question the same way the overlay's own count does (remove, force a
+      // reflow, re-add), since the class is `both`-filled and won't replay on
+      // its own if just left on the element.
+      board.classList.remove("is-entering");
+      void board.offsetWidth;
+      board.classList.add("is-entering");
 
       askedCount++;
       locked = false;
@@ -919,31 +1025,69 @@ const rtTemplate = {
       }
     }
 
-    function showOverlay(text, cls) {
+    // Đợt 117: split in two on purpose. showOverlay() runs ONCE per
+    // ready-cycle (at READY) and is what fades the whole card in — calling it
+    // again for every 3-2-1 tick would re-fade the backdrop each time and read
+    // as four separate flashes instead of one held card. updateCount() moves
+    // the countdown along underneath that same fade, touching only the number.
+    function showOverlay(name, sub, cls) {
       overlay.className = "aw-rt-overlay " + (cls || "");
-      overlay.style.display = "";
-      overlayText.textContent = text;
-      // Only `opacity` is animated. The text is centred by FLEX, but the pop
-      // scales it — so the scale lives on the TEXT (no translate involved) and
-      // the fade on the backdrop. See the core notes on animating a
-      // transform-positioned element.
-      overlayText.style.animation = "none";
-      void overlayText.offsetWidth;               // restart the keyframe
-      overlayText.style.animation = "";
+      overlay.style.display = "flex";
+      overlayName.textContent = name;
+      overlayCount.textContent = sub;
+      void overlay.offsetWidth;                    // force layout before the class below can transition
+      overlay.classList.add("is-visible");
     }
-    function hideOverlay() { overlay.style.display = "none"; }
+    function updateCount(sub, cls) {
+      overlay.classList.remove("is-ready", "is-count");
+      if (cls) overlay.classList.add(cls);
+      overlayCount.textContent = sub;
+      // Only the count pops — the text is centred by FLEX, not a transform, so
+      // scaling it here is safe (the classic AWord trap is animating
+      // `transform` on something POSITIONED by `transform:translate(-50%)`;
+      // that isn't the case here).
+      overlayCount.style.animation = "none";
+      void overlayCount.offsetWidth;                // restart the keyframe
+      overlayCount.style.animation = "";
+    }
+    // Fades OUT rather than vanishing (Đợt 117, "always use slow, smooth
+    // animation for every transition") — `later()` stands in for a
+    // `transitionend` listener because CSS transitions carry the exact same
+    // hidden-tab risk the rest of this file already times out for.
+    function hideOverlay() {
+      overlay.classList.remove("is-visible");
+      later(() => { overlay.style.display = "none"; }, OVERLAY_FADE_MS);
+    }
 
     // A big ✓ / ✗ floating up off the tile. Reuses core's `.aw-mark-fly`, whose
     // keyframes already bake the -50% centring into every step.
+    //
+    // ⭐ Đợt 117: appended to `tilesEl`, NOT to `host` (the tile itself) — the
+    // old version appended it as a child of the tile, but `.aw-rt-tile` sets
+    // `overflow:hidden` (needed so a long word never spills past its own tile),
+    // which was silently CLIPPING the mark the instant `aw-fly`'s keyframe
+    // (translateY up to -170%) carried it past the tile's own edge — exactly
+    // what read as the mark going "behind" the neighbouring tiles instead of
+    // flying in front of them. Positioning it in pixels against `tilesEl`
+    // (never clipped, `.aw-rt-tiles` is `position:relative` for this) and
+    // appending it LAST — after all six tile buttons — also guarantees normal
+    // paint order puts it on top of every one of them; the explicit z-index is
+    // just insurance on top of that.
     function flyMark(host, ok) {
       const mark = el("div", "aw-mark-fly" + (ok ? "" : " is-cross"), ok ? icons.markCheck : icons.markCross);
-      host.append(mark);
+      const hostRect = host.getBoundingClientRect();
+      const parentRect = tilesEl.getBoundingClientRect();
+      mark.style.left = (hostRect.left - parentRect.left + hostRect.width / 2) + "px";
+      mark.style.top = (hostRect.top - parentRect.top + hostRect.height / 2) + "px";
+      mark.style.width = (hostRect.width * 0.52) + "px";
+      mark.style.zIndex = "5";
+      tilesEl.append(mark);
       let done = false;
       const kill = () => { if (done) return; done = true; mark.remove(); };
-      later(kill, 1000);                          // element.animate() may never
-                                                   // finish in a hidden tab; the
-                                                   // CSS animation is the same
-                                                   // risk, so time it out.
+      // `.is-cross` runs a longer 1.9s keyframe (see core/app.css) than the
+      // plain 0.85s check — the old flat 1000ms timeout was cutting the cross
+      // mark's own fade-out off mid-flight on every wrong answer.
+      later(kill, ok ? 1000 : 2000);
     }
 
     // ===== WIRING ===========================================================
@@ -1001,5 +1145,11 @@ function escapeHtml(s) {
   return String(s ?? "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+// Copied — not imported — from running-word.js (Đợt 116's SET-slot redesign),
+// same self-contained-template convention rt-sound.js already documents for
+// copying rw-sound.js. Kept as raw SVG strings, exactly like core/icons.js.
+const SVG_SHUFFLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
+const SVG_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>';
 
 registerTemplate(rtTemplate);

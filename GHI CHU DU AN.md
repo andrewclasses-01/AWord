@@ -5,6 +5,93 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 117 (11/8/2026) — RUNNING TEAM: ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START RUNNING THEO SAVE, IN TO TỐI ĐA, TÊN HIỆN TỪ READY, ĐẾM CHẬM HƠN + ANIMATION MƯỢT, DẤU ✓/✗ BAY ĐÚNG LỚP
+
+Thầy gửi 1 lượt yêu cầu cho Running team, theo đúng khuôn 3 nhóm của Running word Đợt 116 (màn chuẩn
+bị / nội dung in / trong game) + 1 việc riêng (dấu bay đúng lớp). KHÔNG ĐỤNG CORE — chỉ
+`running-team.js`, `running-team.css`, `rt-print.js`. Test qua Browser pane với `test.html` (sample có
+sẵn 1 GAME SET "DEMO" nên không cần đăng nhập).
+
+### 1. Màn chuẩn bị — Ô SET đồng bộ y hệt Running word Đợt 116
+Copy đúng khuôn Running word: Shuffle/Save/Print chuyển từ hàng chữ dưới các ô SET vào BÊN TRONG ô đang
+chọn (`isSel = i === setIndex`, bỏ điều kiện `&& !dirty` cũ — một ô TRỐNG sắp nhận bộ vừa xáo cũng cần
+hiện hàng icon, không chỉ ô đã lưu), dạng icon-only (`SVG_SHUFFLE`/`SVG_SAVE`/`icons.check`/
+`icons.print`, copy nguyên si từ `running-word.js` — đúng quy ước tự-chứa). DELETE SET đổi từ nút chữ
+`DELETE SET` full-width sang nút TRÒN ghim góc trên-phải mỗi ô đã lưu (`aw-rt-slot-delcorner`), bấm ra
+popover nhỏ neo cạnh (`openDeletePopover`, cùng khuôn `positionPopover`/`aw-rw-delpop` của Running word)
+thay hẳn `confirm()` trần cũ. `isTempAct()` (chặn act `conv_`, bài học Đợt 105 "9b") giờ kiểm NGAY khi
+bấm nút tròn — trước khi popover mở — thay vì sau khi bấm Delete trong popover. Ô SET rộng 15→17.4cqw
+để chứa hàng icon. Xoá hẳn `.aw-rt-setup-acts`/`.aw-rt-btn` (CSS chết, không còn phần tử nào dùng).
+
+### 2. Màn chuẩn bị — START RUNNING khoá tới khi đã chọn lớp VÀ đã Save
+`locked = !readyToStart() || (isTeacher && dirty)` — trước đây `readyToStart()` chỉ đòi có `current`
+hợp lệ, KHÔNG đòi đã lưu, nên một lớp vừa xáo xong (chưa bấm Save) vẫn bấm START RUNNING được thẳng,
+tờ in sau đó có thể lệch với ván đang chơi. Print cũng khoá theo `dirty` y hệt (đã có sẵn từ trước, giờ
+đồng bộ logic chung). Học sinh mở qua session không có nút Save nên `dirty` phía họ không bao giờ lên
+`true` — cổng này chỉ chặn phía giáo viên.
+
+### 3. Nội dung in — chữ to tối đa, giảm khoảng cách thừa
+`rt-print.js`: `FS_HEIGHT_RATIO` 0.74→0.8 (chữ theo chiều cao to hơn khi bề rộng không phải giới hạn);
+`HEADING_MM` 21→17 (giảm phần đệm an toàn từ ~9mm còn ~5mm — vẫn còn đệm thật, không về 0, phòng tiêu đề
+dài xuống 2 dòng); 3 khoảng cách cột (`COL_GAP_MM` 7→5, `NO_COL_MM` 9→7.5, `NO_GAP_MM` 2.4→1.8) nhường
+thêm bề rộng cho chính từ. `CHAR_WIDTH_EM`/`WORD_SAFETY_MM` GIỮ NGUYÊN — WIDTH GUARD (Đợt 109, chặn từ
+dài bị `ellipsis` cắt cụt) không bị nới lỏng, chỉ có nhiều bề rộng hơn để làm việc. CSS `@media print`
+đồng bộ 3 hằng số cột (`column-gap`, `.aw-rt-ps-c-no{flex-basis}`, `.aw-rt-ps-row{gap}`) + giảm
+padding/margin khối tiêu đề (1.4/2.4mm → 1/1.6mm). Đã đối chiếu công thức bằng script Node mô phỏng
+`metrics()`: cỡ chữ tăng ở MỌI trường hợp đã đo (10 từ có UNINTENTIONALLY: 4.72→5.09mm · 100 từ ngắn:
+5.4→5.93mm · 6 từ có CLEANLINESS: 6.44→6.95mm), và về cấu trúc `fs = min(fsByHeight, fsByWidth) ≤
+fsByHeight = rowH×0.8 < rowH` nên chữ không bao giờ vượt quá chiều cao hàng — không có rủi ro đè dòng
+mới. Đã gọi thẳng `printRunningTeamSheet()` qua Browser pane (tráo `window.print`) để đọc lại
+`--rt-rowh`/`--rt-fs` từ DOM thật, khớp đúng số Node tính (n=40, longest UNINTENTIONALLY: 18mm/5.09mm).
+⬜ Vẫn chưa in giấy thật (như mọi đợt trước, xem mục 11 file riêng) — số đo trên chỉ xác nhận công thức
+đúng, không xác nhận cảm giác thật trên A4.
+
+### 4. Trong game — tên hiện từ READY, đếm chậm hơn, chuyển cảnh mượt
+**Tên hiện sớm**: `goReady()` tính `who` (em kế tiếp) MỘT LẦN duy nhất — dùng đúng công thức
+`roster[turnPtr % roster.length]` mà `openQuestion()` vẫn dùng, không thêm state mới — rồi hiện tên đó
+suốt READY→3→2→1 (KHÔNG hiện số hàng). Overlay đổi bố cục thành CỘT: `.aw-rt-overlay-name` (9cqw, cùng
+kiểu chữ/HOA/đậm với `.aw-rt-prompt-name` trong game nhưng to hơn hẳn) ở trên, `.aw-rt-overlay-count`
+(5.6cqw lúc "READY", 14cqw lúc đếm số) ở dưới.
+**Đếm chậm lại**: `READY_HOLD_MS` 850→1300, `COUNT_STEP_MS` 680→1000 (thầy: "hơi nhanh").
+**Chuyển cảnh mượt**: overlay đổi từ `animation:...both` (chỉ hiện, biến mất tức khắc bằng
+`display:none`) sang `opacity` + `transition:.4s` thật (`showOverlay()`/`hideOverlay()` mới, tách biệt
+khỏi `updateCount()` — hàm đếm số CHỈ đổi số + pop lại, KHÔNG re-fade cả overlay, để READY→3→2→1 đọc
+như MỘT tấm thẻ giữ nguyên chứ không phải 4 lần chớp riêng). Câu hỏi mới cũng fade+trồi lên
+(`@keyframes aw-rt-boardin`, gắn vào `.aw-rt-board`, restart bằng kỹ thuật remove/reflow/add quen thuộc
+của dự án) ngay khi overlay bắt đầu mờ đi — tạo hiệu ứng crossfade tự nhiên giữa đếm số và câu hỏi.
+Đã đo qua Browser pane bằng `MutationObserver` gắn cờ thời gian: READY→"3" = 1302ms, "3"→"2" = 1015ms,
+"2"→"1" = 1015ms, "1"→ẩn = 1018ms — khớp đúng 3 hằng số mới (sai số setTimeout vài ms).
+
+### 5. Dấu ✓/✗ bay đúng LỚP TRƯỚC (không còn bị ô khác che)
+`flyMark()`: dấu trước đây là CON của chính ô bấm (`host.append(mark)`), mà `.aw-rt-tile` có
+`overflow:hidden` (cần để chữ dài không tràn ô) — khi keyframe `aw-fly` bay lên tới `translateY(-170%)`,
+phần bay ra ngoài biên ô bị CẮT MẤT ngay tại viền, đọc như dấu "biến mất"/"chìm sau" ô khác. Sửa: dựng
+dấu làm CON của `tilesEl` (đã thêm `position:relative`), định vị bằng px tính từ
+`getBoundingClientRect()` của ô gốc trừ đi của `tilesEl` (tự thay cho `left:50%;top:50%` phần trăm vốn
+chỉ đúng khi cha là chính ô) + `z-index:5`. Không còn bị ô nào cắt hay che, vì không còn là con của ô
+nào cả — và vì là phần tử SAU CÙNG trong `tilesEl`, thứ tự vẽ mặc định đã đặt nó trên hết. Nhân tiện vá
+1 lỗi có thật cùng hàm: timeout dọn dấu cũ 1000ms cắt ngang animation `is-cross` (chạy 1.9s) giữa chừng
+— tách riêng `ok ? 1000 : 2000`.
+Đã xác nhận qua Browser pane (`MutationObserver` bắt đúng lúc phần tử `.aw-mark-fly` được chèn): cha là
+`tilesEl` (không phải ô), `z-index:5`, toạ độ `left`/`top` khớp tâm ô gốc.
+
+### Đã tự test qua Browser pane (0 lỗi console mọi bước)
+Ô SET mặc định (DEMO đã lưu): icon Save hiện dấu ✓ (đã lưu) khoá, Shuffle khoá kèm chú thích "Delete
+this SET first…", Print bật, START RUNNING bật ngay (đúng — set đã lưu từ trước không cần lưu lại).
+Popover Delete mở đúng vị trí, Cancel không xoá, Delete thật gọi đúng luồng (môi trường test không có
+Firestore nên bản thân việc XOÁ không hoàn tất — xem mục "Chưa tự test được"). Chơi 1 ván thật: tên hiện
+đúng suốt READY→3→2→1, số hàng CHỈ hiện lúc câu hỏi mở, `.aw-rt-board` có class `is-entering` đúng lúc
+câu mới mở, dấu ✗ (chọn sai) render đúng làm con `tilesEl` không phải con ô. 0 lỗi console.
+
+⬜ **Chưa tự test được (cần thầy)**: luồng "chọn lớp thật → xáo → CHƯA lưu → thử bấm START RUNNING/Print
+bị khoá → Save → mở khoá" — môi trường test không đăng nhập Firestore được nên không tạo ra được trạng
+thái "đã chọn lớp nhưng chưa lưu" thật qua UI (điều kiện có sẵn từ trước, không phải hạn chế mới); logic
+đã đọc kỹ và giống hệt công thức Running word Đợt 116 đã thầy duyệt sống thật. Cảm giác tốc độ đếm mới
+(1300/1000ms) và cỡ chữ tên trên overlay có "thật đẹp/cân đối" trên máy/TOMKO thật. In giấy A4 thật với
+cỡ chữ mới.
+
+---
+
 ## Đợt 116 (11/8/2026) — RUNNING WORD: KHOÁ START/PRINT THEO SAVE, Ô SET DẠNG ICON + DELETE POPUP, IPA XUYÊN SUỐT, BỎ BONUS LƯỢT ĐẦU, ANDREW Ở Ô PLAY/PAUSE
 
 Thầy gửi 1 lượt 3 nhóm yêu cầu cho Running word (màn chuẩn bị / nội dung in / trong game). Đã nghiên cứu

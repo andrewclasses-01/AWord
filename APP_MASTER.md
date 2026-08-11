@@ -5,7 +5,31 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 116) — RUNNING WORD: 7 CẢI TIẾN THEO YÊU CẦU THẦY (màn chuẩn bị +
+> Cập nhật lần cuối: **11/8/2026 (Đợt 117) — RUNNING TEAM: ĐỒNG BỘ Ô SET VỚI RUNNING WORD, KHOÁ START
+> RUNNING THEO SAVE, IN TO TỐI ĐA, OVERLAY READY/3-2-1 HIỆN TÊN + CHẬM HƠN + MƯỢT HƠN, DẤU ✓/✗ BAY ĐÚNG
+> LỚP. KHÔNG ĐỤNG CORE (chỉ `running-team.js`/`.css` + `rt-print.js`). Chưa commit lúc ghi dòng này.**
+> Theo đúng khuôn 3 nhóm yêu cầu Running word Đợt 116 đã làm (màn chuẩn bị / nội dung in / trong game) +
+> 1 việc riêng (dấu bay bị ô khác che). (1) **Ô SET đồng bộ y hệt Running word**: Shuffle/Save/Print vào
+> hẳn trong ô SET đang chọn (icon-only, copy nguyên SVG từ running-word.js), DELETE SET đổi thành nút
+> tròn góc trên-phải mở popover nhỏ (thay `confirm()` trần). (2) **START RUNNING khoá tới khi đã chọn
+> lớp VÀ đã Save** (`locked = !readyToStart() || (isTeacher && dirty)` — trước đây chỉ đòi có set hợp
+> lệ, không đòi đã lưu). (3) **Tờ in tăng cỡ chữ ở mọi trường hợp đã đo** (`FS_HEIGHT_RATIO` 0.74→0.8,
+> giảm các khoảng đệm — WIDTH GUARD Đợt 109 không nới lỏng, `CHAR_WIDTH_EM` giữ nguyên). (4) **Overlay
+> READY/3-2-1 hiện tên em suốt cả 3 bước** (tên trên to 9cqw, số/READY dưới), tốc độ đếm chậm lại
+> (850→1300ms / 680→1000ms), chuyển cảnh dùng `opacity transition` thật (mờ ra được, không chỉ mờ vào)
+> thay vì `display:none` tức khắc; câu hỏi mới fade+trồi lên khi overlay biến mất, tạo crossfade tự
+> nhiên. (5) **Dấu ✓/✗ bay** đổi từ con của Ô (bị chính `overflow:hidden` của ô đó cắt khi bay ra ngoài
+> biên) sang con của `tilesEl` định vị bằng px + `z-index` — không còn bị ô nào cắt/che nữa; nhân tiện vá
+> timeout dọn dấu ✗ cắt ngang animation 1.9s của chính nó.
+> Tự test kỹ qua Browser pane (`templates/running-team/test.html`, sample có sẵn 1 GAME SET "DEMO" nên
+> không cần đăng nhập): ô SET/gating/overlay/timing/dấu bay đều đúng như thiết kế, đối chiếu công thức
+> in bằng script Node độc lập khớp 100% với số đọc từ DOM thật, đo timing overlay bằng MutationObserver
+> khớp đúng 3 hằng số mới. 0 lỗi console mọi bước. ⬜ **Chưa tự test được**: luồng Save/Delete THẬT lên
+> Firestore + trạng thái "đã chọn lớp nhưng chưa lưu" qua UI thật (môi trường test không đăng nhập
+> được); in giấy A4 thật; cảm giác tốc độ đếm mới + cỡ chữ overlay trên máy/TOMKO thật. Chi tiết đầy đủ:
+> `GHI CHU DU AN.md` Đợt 117 + `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 16.**
+>
+> Trước đó: **11/8/2026 (Đợt 116) — RUNNING WORD: 7 CẢI TIẾN THEO YÊU CẦU THẦY (màn chuẩn bị +
 > tờ in + trong game). ✅ THẦY DUYỆT → COMMIT `d399342` + PUSH + **LIVE**.**
 > (1) **START MATCH + PRINT khoá tới khi SET đang chọn đã Save** — tờ in không bao giờ còn lệch bản đã
 > lưu/đồng bộ Firestore. (2) **Ô SET gọn lại**: Shuffle/Save/Print thành icon nằm ngay trong ô đang

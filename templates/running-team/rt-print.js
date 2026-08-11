@@ -42,26 +42,31 @@ import { el } from "../../core/utils.js";
 
 // A4 minus the @page margins declared below.
 const PAGE_BODY_MM = 297 - 15 - 13;      // 269mm between the top and bottom margins
-// The heading block measures ~12mm (5mm tag + 3mm subtitle + 1.4mm padding +
-// 2.4mm margin). The rest is DELIBERATE SLACK. The row maths below divides the
-// remaining height EXACTLY between the rows, so with a tight budget any small
-// real-world excess — a rounded border, a font metric, a printer driver that
-// rounds a margin up — lands the final row on a second sheet. Running word's
-// sheets learned this at 0mm slack (rw-print.js). Nothing here can measure the
+// The heading block measures ~10.6mm (5mm tag + 3mm subtitle + 1mm padding +
+// 1.6mm margin — both trimmed from Đợt 109's 1.4/2.4mm, Đợt 117: "less
+// spacing, more space for the words"). The rest is DELIBERATE SLACK, kept
+// deliberately non-zero: the row maths below divides the remaining height
+// EXACTLY between the rows, so with a tight budget any small real-world
+// excess — a rounded border, a font metric, a printer driver that rounds a
+// margin up — lands the final row on a second sheet. Running word's sheets
+// learned this at 0mm slack (rw-print.js). Nothing here can measure the
 // printed page from JS: these rules live inside `@media print`, so on screen
 // they simply do not apply and any DOM measurement of them is measuring the
-// wrong layout. Slack is the only defence, and 9mm costs ~0.36mm per row on a
-// full 25-row column — invisible on paper.
-const HEADING_MM = 21;
+// wrong layout. Đợt 117 trims the slack from 9mm to ~5mm (21 -> 17) rather
+// than to 0 — still real insurance against a 2-line title, just less of it.
+const HEADING_MM = 17;
 const ROWS_MM = PAGE_BODY_MM - HEADING_MM;
 const ROW_MIN_MM = 4.2;                   // ~7.5pt — below this nobody can scan it standing up
 const COLS = 3;                           // always 3 (Đợt 109) — see file header
 
-// Font size as a fraction of the row's height. Bumped from 0.58 to 0.74
-// (Đợt 109, "thinner line, tighter gap, biggest possible word") — the ruled
-// line sits at the BOTTOM of a row whose height is `line-height`, so a bigger
-// fraction is simultaneously a bigger word and a smaller gap above that line.
-const FS_HEIGHT_RATIO = 0.74;
+// Font size as a fraction of the row's height. 0.58 -> 0.74 at Đợt 109,
+// -> 0.8 at Đợt 117 (teacher's repeat request: "max size, don't need much
+// spacing") — the ruled line sits at the BOTTOM of a row whose height is
+// `line-height`, so a bigger fraction is simultaneously a bigger word and a
+// smaller gap above that line. The WIDTH GUARD below still wins whenever a
+// pool's longest word would otherwise get ellipsised, so this only makes
+// text bigger in the (common) case where height, not width, is the limit.
+const FS_HEIGHT_RATIO = 0.8;
 
 // ---------- WIDTH GUARD ----------
 // The height-only maths above has no idea how WIDE a column is — fine when
@@ -74,10 +79,14 @@ const FS_HEIGHT_RATIO = 0.74;
 // size only wins when it is the smaller (i.e. tighter) of the two.
 const PAGE_WIDTH_MM = 210;                // A4 portrait
 const PAGE_MARGIN_LR_MM = 12;             // matches the @page rule below
-const COL_GAP_MM = 7;                     // matches .aw-rt-ps-table column-gap
-const NO_COL_MM = 9;                      // matches .aw-rt-ps-c-no flex-basis
-const NO_GAP_MM = 2.4;                    // matches .aw-rt-ps-row gap
-const WORD_SAFETY_MM = 2;                 // rounding/margin-of-error buffer
+// Đợt 117: the three gaps below are trimmed (7/9/2.4 -> 5/7.5/1.8mm) to hand
+// more of each column's width back to the word itself — CHAR_WIDTH_EM and
+// WORD_SAFETY_MM are left untouched, so the guarantee that a word never gets
+// ellipsised doesn't get any looser, it just has a wider column to work with.
+const COL_GAP_MM = 5;                     // matches .aw-rt-ps-table column-gap
+const NO_COL_MM = 7.5;                    // matches .aw-rt-ps-c-no flex-basis
+const NO_GAP_MM = 1.8;                    // matches .aw-rt-ps-row gap
+const WORD_SAFETY_MM = 2;                 // rounding/margin-of-error buffer — unchanged
 // Rough average glyph advance for BOLD UPPERCASE "Baloo 2" as a fraction of
 // its own font-size — an estimate, not a measured metric (no canvas access
 // from inside @media print), deliberately generous enough that the real

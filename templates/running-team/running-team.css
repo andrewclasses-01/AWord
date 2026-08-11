@@ -185,17 +185,17 @@
 }
 
 /* -- saved set slots --
-   ⚠️ `.aw-rt-slot-del` used to be `position:absolute` pinned to the box's
-   bottom edge, with only `padding-bottom` reserving its space. A two-line
-   meta string ("25 words · 9 pupils" wrapping on a narrow slot) grew past that
-   reserved padding and the DELETE SET button sat on top of it — overlapping
-   text, caught on a live screenshot (Đợt 109). Fixed structurally: the slot is
-   a flex COLUMN now, so the delete button is a normal flow child stacked
-   below the meta text and can never overlap it, no matter how the text wraps. */
+   Đợt 117 (11/8/2026, teacher's redesign, mirrors Running word's own same-day
+   change): wider than before (15 -> 17.4cqw) to hold the icon action row when
+   selected, and `position:relative` so the round DELETE button can pin to its
+   own top-right corner. `align-items:stretch` isn't set here (flex COLUMN
+   default is stretch on the cross axis already via width, not height) — the
+   slot still grows to fit `.aw-rt-slot-acts` only when it's `.is-sel`. */
 .aw-rt-slots { display: flex; gap: 1.1cqw; }
 .aw-rt-slot {
+  position: relative;
   display: flex; flex-direction: column; align-items: center; gap: 0.35cqw;
-  min-width: 15cqw; padding: 0.9cqw 1.3cqw 0.8cqw;
+  min-width: 17.4cqw; padding: 0.9cqw 1.3cqw 0.8cqw;
   border: 0.28cqw solid var(--aw-tile-border-color, #d8e2f0);
   border-radius: var(--aw-tile-radius, 1.2cqw);
   background: var(--aw-card, #fff);
@@ -208,13 +208,56 @@
 .aw-rt-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .14em; color: var(--aw-muted); }
 .aw-rt-slot-main { font-size: 2.1cqw; font-weight: 800; line-height: 1.25; }
 .aw-rt-slot-meta { font-size: 1.05cqw; color: var(--aw-muted); line-height: 1.3; }
-.aw-rt-slot-del {
-  margin-top: 0.15cqw;
-  border: none; background: transparent; cursor: pointer;
-  font-family: inherit; font-size: .95cqw; font-weight: 800; letter-spacing: .08em;
-  color: var(--aw-no); opacity: .75; padding: 0.1cqw 0.4cqw;
+
+/* DELETE SET — a small round icon pinned to the slot's own top-right corner
+   (Đợt 117, replaces the old full-width text button + native confirm(); see
+   openDeletePopover() in running-team.js for the small anchored popover it
+   opens instead). Drawn on ANY slot holding a saved set, selected or not —
+   deleting doesn't require selecting it first. */
+.aw-rt-slot-delcorner {
+  position: absolute; top: 0.35cqw; right: 0.35cqw;
+  width: 1.9cqw; height: 1.9cqw; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; cursor: pointer;
+  background: rgba(23,34,47,.06); border: 0; color: var(--aw-muted);
+  transition: background .14s ease, color .14s ease;
 }
-.aw-rt-slot-del:hover { opacity: 1; }
+.aw-rt-slot-delcorner svg { width: 1cqw; height: 1cqw; }
+.aw-rt-slot-delcorner:hover { background: rgba(239,68,68,.16); color: var(--aw-no); }
+
+/* Shuffle / Save / Print — icon-only, INSIDE the selected slot (Đợt 117,
+   replaces the old text-labelled row below the slots). Save shows a checkmark
+   once the slot is no longer dirty (SET already saved) instead of the
+   floppy-disk glyph, so the state reads at a glance without any text. */
+.aw-rt-slot-acts { display: flex; gap: 0.5cqw; margin-top: 0.35cqw; }
+.aw-rt-slot-actbtn {
+  width: 2.6cqw; height: 2.6cqw; border-radius: 0.7cqw;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; cursor: pointer;
+  background: var(--aw-card, #fff); border: 0.2cqw solid var(--aw-tile-border-color, #d8e2f0);
+  color: var(--aw-text);
+  transition: border-color .14s ease, color .14s ease, opacity .14s ease;
+}
+.aw-rt-slot-actbtn svg { width: 1.35cqw; height: 1.35cqw; }
+.aw-rt-slot-actbtn:hover:not(:disabled) { border-color: var(--aw-accent); color: var(--aw-accent); }
+.aw-rt-slot-actbtn:disabled { opacity: .4; cursor: default; }
+.aw-rt-slot-actbtn.is-dirty { border-color: var(--aw-accent); color: var(--aw-accent); }
+
+/* Small anchored confirm popover for DELETE (Đợt 117) — position:fixed by JS
+   (openDeletePopover), so it sits OUTSIDE the cqw stage like every other
+   floating popover in the app (Anagram's editor ones included): plain px/rem,
+   not cqw. `.aw-btn` alone is sized for buttons INSIDE the stage
+   (core/app.css) — the `.aw-rt-delpop-btns .aw-btn` override below is the
+   same trick Running word's own popover uses. */
+.aw-rt-delpop {
+  position: fixed; z-index: 501; width: 240px;
+  background: #fff; border: 1.5px solid #e2e9f2; border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(20,30,45,.16); padding: .8rem;
+}
+.aw-rt-delpop-title { font-weight: 700; font-size: .85rem; color: #23303e; margin-bottom: .4rem; }
+.aw-rt-delpop-status { font-size: .78rem; color: #55657a; line-height: 1.35; margin-bottom: .6rem; }
+.aw-rt-delpop-btns { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.aw-rt-delpop-btns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
 
 /* -- class picker + roll review -- */
 .aw-rt-classblock {
@@ -254,19 +297,7 @@
 .aw-rt-fact-big { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
 .aw-rt-fact-small { font-size: 1.02cqw; color: var(--aw-muted); letter-spacing: .04em; }
 
-/* -- actions -- */
-.aw-rt-setup-acts { display: flex; gap: 0.9cqw; flex-wrap: wrap; justify-content: center; }
-.aw-rt-btn {
-  font-family: inherit; font-size: 1.4cqw; font-weight: 800;
-  padding: 0.55cqw 1.4cqw; border-radius: 0.9cqw; cursor: pointer;
-  border: 0.22cqw solid var(--aw-tile-border-color, #d8e2f0);
-  background: var(--aw-card, #fff); color: var(--aw-text);
-}
-.aw-rt-btn:hover:not(:disabled) { border-color: var(--aw-accent); }
-.aw-rt-btn:disabled { opacity: .45; cursor: not-allowed; }
-.aw-rt-btn.is-dirty { border-color: var(--aw-accent); color: var(--aw-accent); }
-.aw-rt-btn.is-icon { display: inline-flex; align-items: center; gap: 0.5cqw; }
-.aw-rt-btn.is-icon svg { width: 1.5cqw; height: 1.5cqw; }
+/* -- start button -- */
 .aw-rt-start {
   font-family: inherit; font-size: 2.6cqw; font-weight: 800; letter-spacing: .06em;
   padding: 0.7cqw 3.2cqw; border-radius: 1.1cqw; cursor: pointer;
@@ -348,12 +379,28 @@
 }
 .aw-rt-prompt-num::before { content: "— "; color: var(--aw-muted); font-weight: 400; }
 
-/* -- the six tiles -- */
+/* -- the six tiles --
+   `position:relative` (Đợt 117) so flyMark() in running-team.js can position
+   its ✓/✗ mark in PIXELS against this element instead of the tile it came
+   from — a tile clips its own children with `overflow:hidden`, which was
+   silently cutting the mark off the instant its fly-up keyframe carried it
+   past the tile's edge. See the comment on flyMark() for the full story. */
 .aw-rt-tiles {
+  position: relative;
   flex: 1 1 auto; min-height: 0;
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
   gap: 1cqw;
 }
+/* Đợt 117: the question fades/rises in after the READY/3-2-1 overlay clears,
+   rather than snapping into place — "every transition should be slow and
+   smooth". `board.offsetWidth` is forced in JS before this class is re-added
+   each question, since `both`-filled keyframes don't replay just by staying
+   on the element. */
+@keyframes aw-rt-boardin {
+  from { opacity: 0; transform: translateY(0.9cqw); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.aw-rt-board.is-entering { animation: aw-rt-boardin .5s ease-out both; }
 /* Tile colour — same mechanism as Quiz (Đợt 111, teacher's call: "same tile
    colours/text colour as Quiz, modern and easy on the eyes, not glaring").
    `--tile`/`--tile-dark` are set INLINE per tile in running-team.js (one of
@@ -396,26 +443,49 @@
 .aw-rt-tile.is-right,
 .aw-rt-tile.is-answer { outline: 0.45cqw solid var(--aw-ok); outline-offset: -0.45cqw; opacity: 1; }
 
-/* -- READY / 3-2-1 overlay -- */
+/* -- READY / 3-2-1 overlay --
+   Đợt 117 (teacher's request: show the pupil's name through the whole READY/
+   3-2-1, slow every transition down, and never let a mark fly BEHIND a tile).
+   Column layout now — NAME on top, big; READY/3-2-1 status below it.
+   `opacity` is a plain transition rather than an `animation…both`
+   (running-team.js's `showOverlay()` toggles `.is-visible` after forcing a
+   reflow — the standard trick to make a transition actually run from a
+   `display:none` starting point) so it can fade back OUT too: the old version
+   only ever animated IN and vanished instantly via `display:none`. */
 .aw-rt-overlay {
   position: absolute; inset: 0; z-index: 8;
-  display: flex; align-items: center; justify-content: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.6cqw;
   background: rgba(255,255,255,.93);
-  animation: aw-fadein .16s ease both;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.aw-rt-overlay.is-visible { opacity: 1; }
+
+/* The pupil's name — same weight/case as the in-game prompt name
+   (.aw-rt-prompt-name) but noticeably bigger, since this is its one moment to
+   be the only thing on screen. Never the row NUMBER, on purpose: the class
+   isn't meant to be able to look it up before the tiles even appear. */
+.aw-rt-overlay-name {
+  font-weight: 800; line-height: 1.2; letter-spacing: .01em; text-transform: uppercase;
+  color: var(--aw-text);
+  font-size: 9cqw;
+  max-width: 88cqw; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The text is centred by FLEX, not by a transform — so scaling it in a keyframe
    is safe here. (The classic AWord trap is animating `transform` on something
    POSITIONED by `transform: translate(-50%)`; that is not the case in this
    rule, and must not become the case.) */
-.aw-rt-overlay-text {
+.aw-rt-overlay-count {
   font-weight: 800; line-height: 1; letter-spacing: .06em;
   color: var(--aw-accent);
-  animation: aw-rt-pop .3s ease both;
+  animation: aw-rt-pop .45s ease-out both;
 }
-.aw-rt-overlay.is-ready .aw-rt-overlay-text { font-size: 9cqw; }
-.aw-rt-overlay.is-count .aw-rt-overlay-text { font-size: 16cqw; color: var(--aw-text); }
+.aw-rt-overlay.is-ready .aw-rt-overlay-count { font-size: 5.6cqw; letter-spacing: .32em; }
+.aw-rt-overlay.is-count .aw-rt-overlay-count { font-size: 14cqw; color: var(--aw-text); }
 @keyframes aw-rt-pop {
-  from { opacity: 0; transform: scale(.72); }
+  from { opacity: 0; transform: scale(.68); }
   to   { opacity: 1; transform: scale(1); }
 }
 
@@ -468,7 +538,7 @@
   .aw-rt-ps-page { page-break-after: avoid; }
   .aw-rt-ps-head {
     display: flex; align-items: flex-end; justify-content: space-between;
-    border-bottom: 0.6mm solid #000; padding-bottom: 1.4mm; margin-bottom: 2.4mm;
+    border-bottom: 0.6mm solid #000; padding-bottom: 1mm; margin-bottom: 1.6mm;
   }
   .aw-rt-ps-tag { font-size: 5mm; font-weight: 800; letter-spacing: .06em; line-height: 1.05; }
   .aw-rt-ps-sub { font-size: 3mm; font-weight: 700; color: #444; letter-spacing: .08em; }
@@ -478,16 +548,19 @@
 
   /* Always 3 columns (Đợt 109, teacher's call) — a lookup sheet is scanned by
      number, never read top-to-bottom, so more/narrower columns buy more type
-     size per word regardless of how long the pool is. */
-  .aw-rt-ps-table { column-count: 3; column-gap: 7mm; column-fill: auto; }
+     size per word regardless of how long the pool is. Gaps trimmed at Đợt 117
+     (7 -> 5mm / 2.4 -> 1.8mm) to give the word column more width — keep these
+     in sync with COL_GAP_MM/NO_GAP_MM in rt-print.js, which assumes the same
+     numbers when it computes the WIDTH GUARD. */
+  .aw-rt-ps-table { column-count: 3; column-gap: 5mm; column-fill: auto; }
   .aw-rt-ps-row {
-    display: flex; align-items: center; gap: 2.4mm;
+    display: flex; align-items: center; gap: 1.8mm;
     height: var(--rt-rowh); line-height: var(--rt-rowh);
     border-bottom: 0.1mm dotted #9a9a9a;
     break-inside: avoid;
   }
   .aw-rt-ps-c-no {
-    flex: 0 0 9mm; text-align: right;
+    flex: 0 0 7.5mm; text-align: right;
     font-size: calc(var(--rt-fs) * 0.86); font-weight: 700; color: #555;
     font-variant-numeric: tabular-nums;
   }
