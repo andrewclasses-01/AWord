@@ -7,7 +7,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 112 (11/8/2026) — ⭐⭐ BUG "ĐỒNG HỒ MA": ÂM HẾT GIỜ NỔ GIỮA VÁN + ĐIỂM MA VÀO BẢNG XẾP HẠNG.
 ⭐ CÓ SỬA CORE (chỉ `core/engine.js`, 17 dòng thêm / 1 dòng đổi). VÁ MỘT CHỖ = **CHỮA CHO CẢ 17 TEMPLATE**.
-✅ THẦY DUYỆT ("ok build") → COMMIT `<hash>` + PUSH + **LIVE**.
+✅ THẦY DUYỆT ("ok build") → COMMIT `94d4778` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+(`curl` xác nhận đủ `GHOST CLOCK GUARD` + `cleanupAll` mới trong `core/engine.js` — **lần poll đầu vẫn là
+bản CŨ, lần thứ 2 mới có**, đúng bẫy Pages quen thuộc, đừng tin lần curl đầu).
 
 ### Thầy báo gì
 Hai lần, cách nhau một lượt trao đổi. Lần đầu: *"đôi khi tôi thấy có âm khi chuẩn bị hết giờ (timesup)
@@ -77,6 +79,9 @@ Luật rút ra + mẹo tự kiểm đã ghi vào `core/HUONG DAN CORE.md` mục 
    "Start again" = 0, chơi ván mới = 1. Cách đếm: spy `setInterval` **lọc theo stack** chỉ tính interval
    do chính `core/engine.js` tạo, để không nhầm với timer riêng của template.
 6. Dọn sạch dữ liệu rác test tự sinh (`localStorage` key `aword-lb-act_*test*`) sau khi đo xong.
+7. **Chạy lại trọn phép thử TRÊN BẢN LIVE sau khi push** (`aword.andrewclasses.com/templates/quiz/test.html`):
+   sau "Start again" = **0** đồng hồ, ván mới = **1**, đúng **1** tiếng `blockgametimeout` tại **0:05**,
+   1 fanfare tại 0:00, bảng xếp hạng **0 dòng**, **0 lỗi console**.
 
 ### 🔎 Quan sát phụ, CHƯA sửa (để thầy quyết)
 Nếu mở ☰ Menu đúng lúc một âm đang phát rồi bấm "Start again", `resumeActive()` của `core/sfx.js` sẽ

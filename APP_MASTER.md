@@ -8,7 +8,9 @@
 > Cập nhật lần cuối: **11/8/2026 (Đợt 112) — ⭐⭐ BUG "ĐỒNG HỒ MA" (sống ẩn từ Đợt 91, 8/8): âm HẾT GIỜ
 > nổ giữa ván khi đồng hồ còn 0:28, kèm fanfare giả và **ĐIỂM MA vào bảng xếp hạng / `session.submit()`
 > giả lên Firestore**. ⭐ CÓ SỬA CORE (chỉ `core/engine.js`) — vá 1 chỗ, CHỮA CHO CẢ 17 TEMPLATE.
-> ✅ THẦY DUYỆT → COMMIT `<hash>` + PUSH + **LIVE**.**
+> ✅ THẦY DUYỆT → COMMIT `94d4778` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (đã chạy lại
+> trọn phép thử TRÊN CHÍNH BẢN LIVE: sau "Start again" = 0 đồng hồ, ván mới = 1, đúng 1 tiếng hết giờ tại
+> 0:05, bảng xếp hạng 0 dòng, 0 lỗi console).**
 > Gốc lỗi: `cleanupAll()` chạy `stopTimer()` TRƯỚC `closeMenu()`, mà `closeMenu()` → `exitMenuPause()` →
 > `resumeClockForMenu()` lại **dựng `setInterval` MỚI** cho ván vừa bị vứt — không ai tắt nữa. Ván chết
 > nhưng đồng hồ của nó tick mãi trên `timerEl` của DOM đã tháo (**vô hình**, nên bug sống lâu mà không ai
