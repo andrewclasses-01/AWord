@@ -7,7 +7,9 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **11/8/2026 (Đợt 111) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY
 > ("giống Quiz, mỗi ô 1 màu, hiện đại, dịu mắt, chữ tối đa"). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
-> `running-team.css`). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> `running-team.css`). ✅ THẦY DUYỆT → COMMIT `28177e2` + PUSH + **LIVE** tại
+> `https://aword.andrewclasses.com/` (`curl` xác nhận `const PALETTE = [` trong `running-team.js` +
+> `tile-eff` trong `running-team.css`).**
 > Sao chép nguyên `PALETTE` 8 màu của `quiz.js` (không import xuyên template, đúng quy ước tự-chứa),
 > xáo 6/8 màu 1 lần mỗi VÁN rồi gán cố định theo VỊ TRÍ ô suốt ván (giống Quiz gán theo vị trí câu trả
 > lời cho cả game). Nền ô đổi từ `var(--aw-tile-0..3)` (4 màu, lặp 2 ô khi có 6 ô — đúng lỗi trong ảnh
@@ -20,7 +22,7 @@
 > `--rt-fit:1`. 0 lỗi console. Chi tiết: `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 15.**
 >
 > Trước đó: **11/8/2026 (Đợt 110) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI so với
-> Running word. KHÔNG ĐỤNG CORE (1 dòng CSS). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> Running word. KHÔNG ĐỤNG CORE (1 dòng CSS). ✅ THẦY DUYỆT → COMMIT `bb2b3c8` + PUSH + **LIVE**.**
 > `.aw-rw-setup` có `justify-content:center`, `.aw-rt-setup` thiếu đúng dòng đó nên flex column dồn hết
 > nội dung lên đỉnh, đẩy toàn bộ khoảng trống xuống đáy. Thêm `justify-content:center` + cân lại padding
 > trên/dưới (`1.2cqw/0.6cqw`→`1cqw` đều). Đo thật: khoảng trống trên/dưới `66.97px`/`66.98px` (coi như
@@ -29,7 +31,8 @@
 > `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 14.**
 >
 > Trước đó: **11/8/2026 (Đợt 109) — RUNNING TEAM: 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT
-> CỦA THẦY. KHÔNG ĐỤNG CORE (chỉ 3 file `templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> CỦA THẦY. KHÔNG ĐỤNG CORE (chỉ 3 file `templates/running-team/*`). ✅ THẦY DUYỆT → COMMIT `544f8cb` +
+> PUSH + **LIVE**.**
 > Options: Round time + Question time đổi từ ô số sang **thanh trượt** (0:30–10:00 nấc 30s ·
 > 0s–30s nấc 1s, **0s = Untimed** — quyết định tự thêm để 0 không làm câu hỏi hết giờ ngay lập tức,
 > vì sàn cũ 3s nên giá trị 0 chưa từng xảy ra trong code). Setup: vá `.aw-rt-slot-del` từng

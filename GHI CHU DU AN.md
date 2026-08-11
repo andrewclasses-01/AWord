@@ -7,7 +7,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 111 (11/8/2026) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY (giống bộ màu/màu chữ
 của Quiz, mỗi ô 1 màu riêng, tăng cỡ chữ tối đa). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
-`running-team.css`). 🟢 CHỜ THẦY DUYỆT, chưa commit.
+`running-team.css`). ✅ THẦY DUYỆT → COMMIT `28177e2` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` xác nhận `const PALETTE = [` trong `running-team.js` +
+`tile-eff` trong `running-team.css`).
 
 Trước đó 6 ô dùng đúng 4 biến theme `--aw-tile-0..3` (xanh dương/đỏ/cam/xanh lá) lặp lại 2 lần cho đủ 6
 ô (đúng như ảnh thầy gửi: 2 ô đỏ, 2 ô cam) — không phải lỗi, chỉ là hệ theme chung của cả 16 game chưa
@@ -32,7 +34,7 @@ cho MỌI từ đã biết chứ không chỉ đo may rủi trên 1 pool ngẫu 
 ---
 
 ## Đợt 110 (11/8/2026) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI. KHÔNG ĐỤNG CORE (1 dòng CSS).
-🟢 CHỜ THẦY DUYỆT, chưa commit.
+✅ THẦY DUYỆT → COMMIT `bb2b3c8` + PUSH + **LIVE**.
 
 Thầy so ảnh chụp Running word (khối nội dung nằm giữa, khoảng trống trên/dưới gần bằng nhau) với Running
 team (khối nội dung dồn sát đỉnh, gần hết khoảng trống rơi xuống đáy). Gốc: `.aw-rw-setup` (Running word)
@@ -50,7 +52,7 @@ toàn vẫn còn tác dụng nếu có ca thật tràn sau này. 0 lỗi console
 
 ## Đợt 109 (11/8/2026) — RUNNING TEAM: 6 CẢI TIẾN THEO YÊU CẦU THẦY (Options đổi sang thanh trượt, vá
 lỗi chồng chữ ở SET slot, chữ tên tiếng Việt bị đè cắt, và 3 cải tiến tờ in). KHÔNG ĐỤNG CORE (chỉ 3 file
-`templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT — build xong, tự test qua devserver, chưa commit.
+`templates/running-team/*`). ✅ THẦY DUYỆT → COMMIT `544f8cb` + PUSH + **LIVE**.
 
 Thầy gửi 6 yêu cầu kèm 3 ảnh chụp màn hình thật (SET slot chữ đè lên nhau, tên "THẢO" bị đè dấu, tờ in
 100 từ). Đã tự test lại qua Browser pane (đợt trước không có ảnh chụp màn hình, dùng phép đo DOM
