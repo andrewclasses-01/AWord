@@ -6,8 +6,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ---
 
 ## Đợt 113 (11/8/2026) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN" (dứt điểm nốt "quan sát phụ" của
-Đợt 112). ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT ("sửa luôn") → COMMIT `<hash>`
-+ PUSH + **LIVE**.
+Đợt 112). ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT ("sửa luôn") → COMMIT `dc1cf4f`
++ PUSH + **LIVE** tại `https://aword.andrewclasses.com/` (`curl` xác nhận `function dropPaused()` trong
+`sfx.js` + nhánh `torndown ? p.dropPaused` trong `engine.js` — **lại đúng bẫy Pages: lần poll đầu vẫn bản
+cũ, lần 2 mới có**). Đã chạy lại phép thử TRÊN BẢN LIVE: "Start again" ra đúng **1** tiếng
+`blockgamerestart` (intro cũ không sống lại), đồng hồ engine **0** rồi **1** khi PLAY ván mới, còn bấm
+**Resume** thì intro **được phát tiếp** — 0 lỗi console.
 
 ### Vấn đề
 Ở Đợt 112 tôi ghi lại một quan sát phụ chưa sửa: mở ☰ Menu đúng lúc một âm đang phát rồi bấm

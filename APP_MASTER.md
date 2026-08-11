@@ -6,7 +6,9 @@
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **11/8/2026 (Đợt 113) — ÂM THANH CHỒNG NHAU KHI BẤM "START AGAIN".
-> ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT → COMMIT `<hash>` + PUSH + **LIVE**.**
+> ⭐ CÓ SỬA CORE (`core/sfx.js` + `core/engine.js`). ✅ THẦY DUYỆT → COMMIT `dc1cf4f` + PUSH + **LIVE**
+> tại `https://aword.andrewclasses.com/` (đã chạy lại phép thử trên chính bản LIVE: "Start again" ra đúng
+> 1 tiếng restart, Resume vẫn phát tiếp, 0 đồng hồ ma, 0 lỗi console).**
 > `exitMenuPause()` không phân biệt được HAI nghĩa của "đóng Menu": *Resume* (chơi tiếp — phải khôi phục
 > mọi thứ) và *`cleanupAll()`* (Start again / Home / Change template — ván bị VỨT BỎ, không được khôi phục
 > gì). Nên lúc bỏ ván nó vẫn phát nốt mp3 đang tạm dừng của ván sắp chết, **chồng lên nhạc intro của ván
