@@ -5,7 +5,23 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 118) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1
+> Cập nhật lần cuối: **11/8/2026 (Đợt 119) — ĐIỂM ÂM Ở CHIP ĐIỂM LUÔN CÓ DẤU "-" + MÀU ĐỎ (trước chỉ đổi
+> màu, bỏ hẳn dấu trừ). ⭐ CÓ SỬA CORE — `core/engine.js` (`ui.setScore`, 1 dòng) + comment trong
+> `core/app.css`/`core/HUONG DAN CORE.md`. ✅ THẦY DUYỆT ("commit + push live") → COMMIT `84d050a` + PUSH
+> + **LIVE** (`curl` poll xác nhận đủ dấu mốc mới ở cả 3 file trong ~1 phút).**
+> Thầy yêu cầu áp dụng cho TOÀN BỘ template + mọi mode: sửa `ui.setScore()` dùng chung (bỏ `Math.abs`) —
+> tự động áp cho mọi template gọi hàm này (Anagram, Quiz, True-false, Find the match, Open the box, Balloon
+> pop, Flying fruit, Maze chase...). Rà soát riêng toàn bộ 15 template tìm nơi TỰ DỰNG chip điểm (bỏ qua
+> `ui.setScore()`, không tự ăn theo bản sửa trên) — bắt được đúng **2 chỗ có cùng lỗi `Math.abs`** (copy
+> nguyên comment từ bản core cũ): `templates/type-the-answer/type-the-answer.js` (`scoreHTML()`) và
+> `templates/crossword/crossword.js` (`showScore()`) — đã sửa cả hai. Anagram (`pulseScoreTo()`) và
+> Unjumble (`showScore()`) vốn đã đúng luật từ trước (chưa từng dùng `Math.abs`), không cần sửa. Test qua
+> trình duyệt thật cả 3 kiểu chip khác nhau (Anagram "-10" đơn số · Type the answer "-5/6" · Crossword
+> "-5/18", điền sai 1 từ 4 ô rồi bấm phím Submit ảo) — đều đúng dấu "-" + màu đỏ (`rgb(239,68,68)`/
+> `rgb(226,60,60)`), 0 lỗi console. Chi tiết: `GHI CHU DU AN.md` Đợt 119 + `core/HUONG DAN CORE.md` mục
+> "Điểm trừ CHUNG + màu điểm theo dấu" (đã cập nhật, thêm cảnh báo cho template tự dựng chip riêng).**
+>
+> Trước đó: **11/8/2026 (Đợt 118) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1
 > VOICE/ENG2 VOICE (trước đó bị THAY THẾ mất từ Đợt 104). ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`.
 > ✅ THẦY DUYỆT → COMMIT `a4b4db6` + PUSH + **LIVE** (GitHub Pages — có thể mất vài phút để lan CDN).**
 > Thầy phát hiện: từ Đợt 104, `parseLessonToBundle()` đổi tiêu đề `ENG1`/`ENG2` thành `ENG1 VOICE`/

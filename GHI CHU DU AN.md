@@ -9,7 +9,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 màu đỏ, bỏ hẳn dấu trừ, và 2 template tự dựng chip riêng bị sót). ⭐ CÓ SỬA CORE — `core/engine.js` (1
 dòng) + `core/app.css`/`core/HUONG DAN CORE.md` (comment, không đổi luật CSS nào) — cộng 2 template tự
 dựng chip điểm riêng: `templates/type-the-answer/type-the-answer.js` + `templates/crossword/crossword.js`.
-🟢 ĐÃ SỬA + TỰ TEST QUA TRÌNH DUYỆT THẬT, CHƯA COMMIT (chờ thầy chốt).
+✅ THẦY DUYỆT ("commit + push live") → COMMIT `84d050a` + PUSH + **LIVE** tại
+`https://aword.andrewclasses.com/` (`curl` poll mỗi 15s xác nhận đủ cả 3 dấu mốc mới —
+`` scoreEl.innerHTML = `${icons.check} ${v}` `` trong `engine.js`, `` aw-cw-score-num ${cls}">${livePoints} ``
+trong `crossword.js`, `` aw-tta-score-num ${cls}">${v} `` trong `type-the-answer.js` — ngay lần poll thứ 4,
+~45-60 giây sau khi push).
 
 Thầy yêu cầu: điểm âm luôn màu đỏ VÀ luôn có dấu "-" ở phía trước — **áp dụng cho toàn bộ template và
 mọi mode của chúng**, không riêng Anagram. Từ Đợt 54 (3/8/2026), `ui.setScore()` (dùng chung mọi
@@ -55,8 +59,9 @@ dựng chip riêng phải tự áp dụng luật này), `templates/type-the-answ
 bỏ `Math.abs`), `templates/crossword/crossword.js` (`showScore()`, bỏ `Math.abs`). Không đụng file nào
 khác — Anagram/Unjumble/11 template còn lại không cần sửa vì đã đúng luật hoặc tự động ăn theo Bước 1.
 
-**Việc kế**: thầy xem qua vài template khác nếu muốn chắc chắn hơn, rồi cho biết có commit + push luôn
-không.
+**Việc kế**: thầy tự xem qua chip điểm âm trên bản LIVE ở vài template (đặc biệt Type the answer/Crossword,
+2 chỗ vừa vá) nếu muốn chắc chắn hơn — máy chỉ xác nhận được bằng đo DOM qua trình duyệt tự động, không
+"nhìn" màu bằng mắt thật.
 
 ---
 
