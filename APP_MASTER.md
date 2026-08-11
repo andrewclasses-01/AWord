@@ -7,7 +7,7 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **11/8/2026 (Đợt 118) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1
 > VOICE/ENG2 VOICE (trước đó bị THAY THẾ mất từ Đợt 104). ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`.
-> Chưa commit lúc ghi dòng này.**
+> ✅ THẦY DUYỆT → COMMIT `a4b4db6` + PUSH + **LIVE** (GitHub Pages — có thể mất vài phút để lan CDN).**
 > Thầy phát hiện: từ Đợt 104, `parseLessonToBundle()` đổi tiêu đề `ENG1`/`ENG2` thành `ENG1 VOICE`/
 > `ENG2 VOICE` thay vì thêm mới — bản anagram text-thường (không giọng đọc) biến mất khỏi Import trong
 > khi skill `taoact` (tạo trực tiếp Wordwall) vẫn luôn tạo cả 2 song song. Sửa: mỗi khi có ENG1/ENG2, đẩy
