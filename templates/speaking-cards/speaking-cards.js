@@ -155,6 +155,7 @@ const speakingCardsTemplate = {
     const voicePlayer = createVoicePlayer();
     let panning = true;                        // true during the intro camera pan (no dealing yet)
     let shuffleTimer = null;
+    let dead = false;   // "this mount was thrown away" — set ONLY by cleanup() (Đợt 114)
 
     // ----- scene = a camera viewport over the real board-games table photo -----
     // `bg` is the wide background image the "camera" pans across; `play` is the
@@ -410,6 +411,11 @@ const speakingCardsTemplate = {
     // a setTimeout, and the final step cancels the flip animations so a hidden
     // tab can never leave the card stuck collapsed (scaleX 0).
     function flip(place, cardEl, idx, done) {
+      // Đợt 114 — reached from animateDeal's untracked 400ms fallback. On a
+      // thrown-away play this used to play the flip cue and the card's voice clip
+      // over the next game, and its fitCard() call registered a window resize
+      // listener that clearFitters() (already run) could never destroy.
+      if (dead) return;
       scSound.tileFlip();
       const half1 = cardEl.animate([{ transform: "scaleX(1)" }, { transform: "scaleX(0)" }],
         { duration: 130, easing: "ease-in", fill: "forwards" });
@@ -552,6 +558,7 @@ const speakingCardsTemplate = {
     }
 
     return function cleanup() {
+      dead = true;   // Đợt 114 — MUST be first; see flip()
       window.removeEventListener("keydown", onKey);
       clearTimeout(shuffleTimer);
       stopIntro();

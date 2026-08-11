@@ -388,6 +388,10 @@ const anagramTemplate = {
     }));
     let index = 0;
     let finished = false;
+    // "this mount was thrown away" — set ONLY by cleanup(), never by finish().
+    // Separate from `finished` so a legitimately completed game still animates
+    // its last score pulse (Đợt 114).
+    let dead = false;
     let penalty = 0;           // total points-off across words answered wrong (stays 0 when the option is off)
     let livesLeft = startLives;   // null = unlimited (can't lose)
     let busy = false;          // true while a fly/reveal animation must not be interrupted
@@ -738,6 +742,10 @@ const anagramTemplate = {
     }
 
     function finalizeBonusWord() {
+      // Đợt 114 — reached from flyLetter's untracked 150ms-past-the-animation
+      // fallback, and it arms `autoTimer` -> finish(). Placing the last letter of
+      // the last word and leaving within ~0.5s used to hand in the dead play.
+      if (dead) return;
       const st = state[index];
       const it = items[index];
       const n = it.letters.length;
@@ -1207,11 +1215,18 @@ const anagramTemplate = {
           const mark = el("span", "aw-anagram-revealmark", isRight ? icons.markCheck : icons.markCross);
           slotEl.append(mark);
           setTimeout(() => mark.remove(), 550);
+          if (dead) return;   // Đợt 114 — the play area is detached but the SOUND still played
           (isRight ? anagramSound.submitTileCorrect : anagramSound.wrongPick)();
         }, pos * STAGGER_MS);
       }
 
       setTimeout(() => {
+        // Đợt 114 — this timer is 1.9-2.9s out (n × 260ms + 300) and nothing
+        // holds its handle, so pressing Submit on the last word and then leaving
+        // used to land HERE on a discarded play and arm a brand-new autoTimer
+        // (below) that finished it into the leaderboard. Widest window of any
+        // leak found in the audit.
+        if (dead) return;
         st.correct = allCorrect;
         if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }  // one points-off for a wrong word
         const outOfLives = !allCorrect && loseLife();   // a life is lost on a wrong word
@@ -1551,6 +1566,11 @@ const anagramTemplate = {
     // `.aw-top-score` (same element/markup ui.setScore() writes:
     // `${icons.check} ${n}`) since ui.setScore() itself has no animated form.
     function pulseScoreTo(newValue) {
+      // ⚠️ Đợt 114 — the querySelector below is a LIVE lookup, so on a discarded
+      // play it does not fail quietly: it finds the NEXT game's score badge and
+      // animates the dead game's number onto it. Several 0.9-1.9s fly/pulse
+      // timers reach here, so the flag has to be tested at the top.
+      if (dead) return;
       const scoreEl = document.querySelector(".aw-top-score");
       if (!scoreEl) return;
       const match = /(-?\d+)/.exec(scoreEl.textContent || "");
@@ -1690,6 +1710,10 @@ const anagramTemplate = {
     }
 
     return function cleanup() {
+      // Đợt 114 — MUST be first. This file schedules its whole end-of-word
+      // sequence with untracked setTimeouts (up to 2.9s), so clearing autoTimer
+      // alone was never enough: a later timer simply armed a new one.
+      dead = true;
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
       if (voiceIntroTimeoutId) clearTimeout(voiceIntroTimeoutId);

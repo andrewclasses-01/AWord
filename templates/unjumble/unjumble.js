@@ -237,6 +237,10 @@ const unjumbleTemplate = {
 
     let index = 0;
     let finished = false;
+    // "this mount was thrown away" — set ONLY by cleanup(). Separate from
+    // `finished` (the game legitimately ended) so a real finish still animates
+    // its closing score pulse (Đợt 114).
+    let dead = false;
     let busy = false;
     let fitter = null;
     let autoTimer = null;
@@ -290,6 +294,7 @@ const unjumbleTemplate = {
     // when negative. maxScore counts by SENTENCE: bonus = 2 per sentence, submit = 1.
     const maxScore = mode === "submit" ? total : 2 * total;
     function showScore(val) {
+      if (dead) return;   // Đợt 114 — live lookup: on a dead play this hits the NEXT game's badge
       const sc = document.querySelector(".aw-top-score");
       if (!sc) return;
       sc.innerHTML = `${icons.check} ${val} <span class="aw-unj-smax">/ ${maxScore}</span>`;
@@ -701,6 +706,11 @@ const unjumbleTemplate = {
         }, slot * STAGGER_MS);
       }
       setTimeout(() => {
+        // Đợt 114 — up to ~2.2s out and untracked, and it ARMS `autoTimer` below.
+        // cleanup() clearing autoTimer could never help: this timer simply made a
+        // new one on the dead play, which then finished it (fanfare over the next
+        // game + a phantom leaderboard row).
+        if (dead) return;
         st.correct = allCorrect;
         st.points = 0;   // banked by the effect below
         busy = false;
@@ -828,6 +838,11 @@ const unjumbleTemplate = {
     }
 
     function pulseScoreTo(newValue) {
+      // Đợt 114 — same live-lookup trap as showScore, reached from the 0.76-1.25s
+      // star/tick fly timers: the dead play's total used to count up on the NEW
+      // game's badge, complete with Unjumble's "/ max" markup even after a
+      // Change Template to Quiz.
+      if (dead) return;
       const scoreEl = document.querySelector(".aw-top-score");
       if (!scoreEl) return;
       const match = /(-?\d+)/.exec(scoreEl.textContent || "");
@@ -940,6 +955,13 @@ const unjumbleTemplate = {
 
       let finishedIntro = false, flewWords = false;
       const finishIntro = () => {
+        // ⚠️ Đợt 114 — MEASURED bug, not a theoretical one. This runs 3.3s after
+        // PLAY off an untracked timer and ends by calling ui.startTimer(). Press
+        // PLAY, press Home a second later, and the discarded play still started
+        // the shared clock: the "time's up" cue then fired 12 seconds later with
+        // the library on screen and no game running at all. (core/engine.js now
+        // refuses this too — belt and braces, same as Đợt 112.)
+        if (dead) return;
         if (finishedIntro) return;
         finishedIntro = true;
         introEl.removeEventListener("pointerdown", finishIntro);
@@ -997,6 +1019,7 @@ const unjumbleTemplate = {
     }
 
     return function cleanup() {
+      dead = true;   // Đợt 114 — MUST be first; see finishIntro / doSubmit / pulseScoreTo
       if (fitter) fitter.destroy();
       if (autoTimer) clearTimeout(autoTimer);
       if (stageEl) stageEl.classList.remove("aw-unj-active");

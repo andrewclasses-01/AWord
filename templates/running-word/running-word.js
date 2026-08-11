@@ -1368,6 +1368,8 @@ const rwTemplate = {
 
     return function cleanup() {
       rwPauseHandlers = null;
+      rwEndData = null;   // Đợt 114 — module-level bridge, same rule as rwPauseHandlers:
+                          // no summary of a discarded match may survive into the next mount
       window.removeEventListener("keydown", onKey);
       boardRO.disconnect();
       if (tickId) clearInterval(tickId);

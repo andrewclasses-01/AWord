@@ -154,6 +154,7 @@ const ttaTemplate = {
     const state = items.map(() => ({ typed: null, graded: false, correct: null }));
     let index = 0;
     let finished = false;
+    let dead = false;   // "this mount was thrown away" — set ONLY by cleanup() (Đợt 114)
     let autoTimer = null;
     let livePoints = 0;                 // running score shown live (can be reduced by Minus mode)
     let livesLeft = normLives(opt.lives);   // null = unlimited (see normLives)
@@ -591,7 +592,11 @@ const ttaTemplate = {
           { transform: `translate(${dx}px, ${dy}px) scale(.4)`, opacity: 0, offset: 1 }
         ], { duration: dur, easing: "cubic-bezier(.3,.6,.3,1)", fill: "forwards" });
         const land = () => {
-          if (done) return;
+          // Đợt 114 — `done` alone was not enough: cleanup() removes the flying
+          // node but never sets it, so this landed ~1s after the play was thrown
+          // away and pushed the dead game's points onto the NEXT game's score
+          // badge (showScore/pulseScoreTo look `.aw-top-score` up live).
+          if (done || dead) return;
           cleanupMark();
           const oldPts = livePoints;
           livePoints = correct ? livePoints + 1 : livePoints - penalty;   // may go negative
@@ -655,12 +660,14 @@ const ttaTemplate = {
         + `<span class="aw-tta-score-total">${total}</span>`;
     }
     function showScore(n) {
+      if (dead) return;   // Đợt 114 — live lookup; on a dead play this is the NEXT game's badge
       const scoreEl = document.querySelector(".aw-top-score");
       if (scoreEl) scoreEl.innerHTML = scoreHTML(n);
     }
 
     // Animate `.aw-top-score` from oldValue to newValue with a small bounce.
     function pulseScoreTo(oldValue, newValue) {
+      if (dead) return;   // Đợt 114 — see showScore
       const scoreEl = document.querySelector(".aw-top-score");
       if (!scoreEl) return;
       if (oldValue === newValue) { showScore(newValue); return; }
@@ -793,6 +800,7 @@ const ttaTemplate = {
     }
 
     return function cleanup() {
+      dead = true;   // Đợt 114 — MUST be first; see land() / showScore / pulseScoreTo
       window.removeEventListener("resize", onResize);
       cancelAnimationFrame(rafFit);
       clearAutoTimer();

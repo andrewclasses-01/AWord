@@ -971,6 +971,7 @@ const rtTemplate = {
 
     return function cleanup() {
       rtPauseHandlers = null;
+      rtEndData = null;   // Đợt 114 — see running-word.js; module-level bridge must not outlive the mount
       window.removeEventListener("keydown", onKey);
       stopMainClock();
       stopQuestionClock();
