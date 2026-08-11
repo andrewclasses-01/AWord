@@ -72,9 +72,23 @@ function metrics(count) {
   return { rowH, fs: +(rowH * 0.78).toFixed(2) };
 }
 
+// A word's IPA, rendered next to it as "WORD • /ipa/" — the dot separator and
+// the smaller/lighter/thinner IPA styling are declared once in running-word.css
+// (`.aw-rw-ps-ipa`, @media print) and shared by every sheet below. A word with
+// no IPA in the pool (or no `ipaMap` passed at all — every caller now passes
+// one, but this keeps an old call site from throwing) just prints bare, same
+// as before IPA existed.
+function wordCellHtml(word, ipaMap) {
+  const base = escapeHtml(String(word).toUpperCase());
+  const ipa = ipaMap?.get ? ipaMap.get(String(word).toUpperCase()) : null;
+  if (!ipa) return base;
+  return `${base} <span class="aw-rw-ps-ipa">• ${escapeHtml(ipa)}</span>`;
+}
+
 // ---------- public entry ----------
-// `set` = { a:[...], b:[...] }, `names` = { a:"TEAM A", b:"TEAM B" }.
-export function printRunningSheets(activity, set, names = {}, setNo = 1) {
+// `set` = { a:[...], b:[...] }, `names` = { a:"TEAM A", b:"TEAM B" },
+// `ipaMap` = Map<UPPER_WORD, ipa> from rw-sets.js's ipaFrom() (11/8/2026).
+export function printRunningSheets(activity, set, names = {}, setNo = 1, ipaMap = new Map()) {
   const title = activity?.title || "Running word";
   // The team name is gone from the sheets (teacher's request, 7/8/2026); every
   // sheet is tagged with its SET number instead so a printout can be traced
@@ -83,9 +97,9 @@ export function printRunningSheets(activity, set, names = {}, setNo = 1) {
 
   const sheet = el("div", "aw-print-sheet aw-rw-print");
   sheet.append(pageStyle());
-  sheet.append(listPage(title, "PART A", setTag, set.a));
-  sheet.append(listPage(title, "PART B", setTag, set.b));
-  sheet.append(checkPage(title, setTag, set));
+  sheet.append(listPage(title, "PART A", setTag, set.a, ipaMap));
+  sheet.append(listPage(title, "PART B", setTag, set.b, ipaMap));
+  sheet.append(checkPage(title, setTag, set, ipaMap));
 
   document.body.append(sheet);
 
@@ -146,7 +160,7 @@ function heading(title, tag, subtitle, extra) {
 // as each word is typed correctly (teacher's confirmation, 4/8/2026). No header
 // row and no "Explainer" line any more (teacher's request, 7/8/2026) — every mm
 // goes to bigger words; the columns are the same, just unlabelled.
-function listPage(title, tag, subtitle, words) {
+function listPage(title, tag, subtitle, words, ipaMap) {
   const { rowH, fs } = metrics(words.length);
   const page = el("div", "aw-rw-ps-page");
   page.append(heading(title, tag, subtitle, null));
@@ -159,7 +173,7 @@ function listPage(title, tag, subtitle, words) {
   words.forEach((w, i) => {
     const row = el("div", "aw-rw-ps-row");
     row.append(el("span", "aw-rw-ps-c-no", String(i + 1)),
-               el("span", "aw-rw-ps-c-word", escapeHtml(String(w).toUpperCase())),
+               el("span", "aw-rw-ps-c-word", wordCellHtml(w, ipaMap)),
                el("span", "aw-rw-ps-c-turn", '<span class="aw-rw-ps-box"></span>'));
     table.append(row);
   });
@@ -173,7 +187,7 @@ function listPage(title, tag, subtitle, words) {
 // column (5/8/2026, teacher's request): the two lists just happen to share a
 // row index from how buildSets() laid them out, they aren't a matched pair,
 // so reading down either team's column needs its own numbering.
-function checkPage(title, subtitle, set) {
+function checkPage(title, subtitle, set, ipaMap) {
   const n = Math.max(set.a.length, set.b.length);
   const { rowH, fs } = metrics(n);
   const page = el("div", "aw-rw-ps-page is-last");
@@ -189,9 +203,9 @@ function checkPage(title, subtitle, set) {
   for (let i = 0; i < n; i++) {
     const row = el("div", "aw-rw-ps-row");
     row.append(el("span", "aw-rw-ps-c-no", set.a[i] != null ? String(i + 1) : ""),
-               el("span", "aw-rw-ps-c-team", escapeHtml(String(set.a[i] || "").toUpperCase())),
+               el("span", "aw-rw-ps-c-team", set.a[i] != null ? wordCellHtml(set.a[i], ipaMap) : ""),
                el("span", "aw-rw-ps-c-no", set.b[i] != null ? String(i + 1) : ""),
-               el("span", "aw-rw-ps-c-team", escapeHtml(String(set.b[i] || "").toUpperCase())));
+               el("span", "aw-rw-ps-c-team", set.b[i] != null ? wordCellHtml(set.b[i], ipaMap) : ""));
     table.append(row);
   }
   body.append(table);

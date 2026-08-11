@@ -48,9 +48,11 @@ const speaking = (title, cards) => ({
   type: "speaking_cards", title, theme: "classic", options: OPT_SC,
   content: { cards: cards.filter(Boolean).map(t => ({ text: t })) }
 });
+// `words` is an array of {word, ipa} (11/8/2026 — was a plain string array
+// before Running word's editor grew an IPA column; see running-word-editor.js).
 const runningWord = (title, words) => ({
   type: "running_word", title, theme: "classic", options: { ...OPT_RW },
-  content: { words: words.filter(Boolean) }
+  content: { words: words.filter(w => w.word) }
 });
 // No `gameSets` here on purpose: a set pairs a printed numbering with the class
 // roll it was played with, so it can only be made in the game's setup screen
@@ -150,11 +152,21 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   IPA.forEach(t => { const m = t.match(/^(.+?)\s+(\/[^/]*\/)\s*$/); if (m) PRON.push([m[1].trim(), m[2].trim()]); });
   if (PRON.length) acts.push(anagram(`${source} / PRONUNCIATION`, PRON));
   if (IPA.length)  acts.push(speaking(`${source} / IPA`, IPA));
+  // word -> IPA lookup for RUNNING WORD below (11/8/2026) — the same
+  // "WORD /ipa/" pairs PRONUNCIATION just parsed out of the IPA column,
+  // keyed upper-case so it matches ENG1's words regardless of case.
+  const ipaByWord = new Map();
+  PRON.forEach(([w, ipa]) => ipaByWord.set(w.toUpperCase(), ipa));
   // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
   // word list, so it reuses ENG1's words (column D = the same pool the teacher's
   // hand-made `RunningW` sheet drew its two 50-word lists from). No clues, no
-  // answers: the explainer supplies the meaning out loud.
-  if (ENG1.length >= 2) acts.push(runningWord(`${source} / RUNNING WORD`, ENG1.map(([w]) => w)));
+  // answers: the explainer supplies the meaning out loud. IPA is matched in
+  // from ipaByWord above when the sheet has one for that word; a word with
+  // none just imports with a blank IPA, same as before this existed.
+  if (ENG1.length >= 2) {
+    acts.push(runningWord(`${source} / RUNNING WORD`,
+      ENG1.map(([w]) => ({ word: w, ipa: ipaByWord.get(w.toUpperCase()) || "" }))));
+  }
   // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
   // picked out of the pool itself by look-alike score, so no clues are needed.
   // Six is the floor because every round puts six words on screen.

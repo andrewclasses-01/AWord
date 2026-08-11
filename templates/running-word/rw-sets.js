@@ -50,6 +50,27 @@ export function poolFrom(activity) {
   return out;
 }
 
+// A word -> IPA lookup (11/8/2026, IPA on the printed sheets + in-game reveal).
+// Deliberately separate from poolFrom/buildSets/readSets: the split algorithm
+// and the saved SET slots (printSets) keep working on plain word STRINGS,
+// untouched — this is only consulted at RENDER time (paintBoard, rw-print.js)
+// by looking a word up in the pool. Keeps the Firestore-safe printSets shape
+// (array of maps, each field a plain string array) exactly as it was before
+// IPA existed, so every SET saved before this change still loads fine.
+export function ipaFrom(activity) {
+  const raw = activity?.content?.words || [];
+  const map = new Map();
+  raw.forEach(w => {
+    if (typeof w === "string") return;      // no IPA on a bare-string entry
+    const word = cleanWord(w?.word);
+    const ipa = String(w?.ipa ?? "").trim();
+    if (!word || !ipa) return;
+    const key = word.toUpperCase();
+    if (!map.has(key)) map.set(key, ipa);   // first one wins, same tie-break as poolFrom's dedupe
+  });
+  return map;
+}
+
 export const CAPACITY = 50;    // the most words either team's list may hold
 
 // Build one { a, b } pair of lists. Pure — pass the pool in, get arrays out.

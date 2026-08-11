@@ -311,9 +311,16 @@
 }
 /* ---- the three saved-split slots ---- */
 .aw-rw-slots { display: flex; gap: 1.4cqw; }
+/* ⭐ 11/8/2026 (teacher's redesign): wider than before (14 -> 16.4cqw) to hold
+   the icon action row when selected, and `position:relative` so the round
+   DELETE button can pin to its own top-right corner. `align-items:stretch`
+   (the flex row's default) keeps every slot the height of the tallest one —
+   only the SELECTED slot ever grows to fit `.aw-rw-slot-acts`, so the other
+   two automatically match it instead of leaving a ragged row. */
 .aw-rw-slot {
+  position: relative;
   font-family: inherit; cursor: pointer;
-  width: 14cqw; padding: 0.9cqw 0.6cqw;
+  width: 16.4cqw; padding: 0.9cqw 0.6cqw;
   border: 0.26cqw solid rgba(23,34,47,.16);
   border-radius: 1.2cqw;
   background: #fff;
@@ -327,44 +334,62 @@
 .aw-rw-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .12em; opacity: .65; }
 .aw-rw-slot-main { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
 .aw-rw-slot-meta { font-size: 1.15cqw; font-weight: 600; opacity: .7; }
-/* DELETE SET — only drawn on the selected slot when it holds a saved split
-   (teacher's request, 5/8/2026): a slot with a saved split can't be reshuffled
-   until it's deleted first, so the printed sheets can never silently drift out
-   of sync with the game. `.aw-rw-slot` became a <div> (not a <button>) so this
-   can be a REAL button nested inside it — a button can't contain a button. */
-.aw-rw-slot-del {
-  margin-top: 0.2cqw;
+
+/* DELETE SET — a small round icon pinned to the slot's own top-right corner
+   (11/8/2026, teacher's redesign — replaces the old text button + native
+   confirm(); see openDeletePopover() in running-word.js for the small
+   anchored popover it now opens). Drawn on ANY slot holding a saved split,
+   selected or not — deleting doesn't require selecting it first. */
+.aw-rw-slot-delcorner {
+  position: absolute; top: 0.35cqw; right: 0.35cqw;
+  width: 1.9cqw; height: 1.9cqw; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
-  font-size: 1cqw; font-weight: 800; letter-spacing: .05em;
-  color: var(--rw-no);
-  background: none; border: 0;
-  padding: 0.15cqw 0.5cqw;
-  border-radius: 0.6cqw;
+  background: rgba(23,34,47,.06); border: 0; color: var(--rw-dim);
+  transition: background .14s ease, color .14s ease;
 }
-.aw-rw-slot-del:hover { background: rgba(239,68,68,.12); }
+.aw-rw-slot-delcorner svg { width: 1cqw; height: 1cqw; }
+.aw-rw-slot-delcorner:hover { background: rgba(239,68,68,.16); color: var(--rw-no); }
+
+/* Shuffle / Save / Print — icon-only, INSIDE the selected slot (11/8/2026,
+   teacher's redesign — replaces the old text-labelled row below the slots).
+   Save shows a checkmark once the slot is no longer dirty (SET already
+   saved) instead of the floppy-disk glyph, so the state reads at a glance
+   without any text. */
+.aw-rw-slot-acts { display: flex; gap: 0.5cqw; margin-top: 0.35cqw; }
+.aw-rw-slot-actbtn {
+  width: 2.6cqw; height: 2.6cqw; border-radius: 0.7cqw;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; cursor: pointer;
+  background: #fff; border: 0.2cqw solid rgba(23,34,47,.18); color: var(--rw-ink);
+  transition: border-color .14s ease, color .14s ease, opacity .14s ease;
+}
+.aw-rw-slot-actbtn svg { width: 1.35cqw; height: 1.35cqw; }
+.aw-rw-slot-actbtn:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
+.aw-rw-slot-actbtn:disabled { opacity: .4; cursor: default; }
+.aw-rw-slot-actbtn.is-dirty { border-color: var(--rw-b); color: var(--rw-b-dark); }
+
+/* Small anchored confirm popover for DELETE (11/8/2026) — position:fixed by
+   JS (see openDeletePopover), so it sits OUTSIDE the cqw stage like every
+   other floating popover in the app (Anagram's editor ones included): plain
+   px/rem, not cqw. `.aw-btn` on its own is sized for buttons INSIDE the
+   stage (core/app.css) — the `.aw-rw-delpop-btns .aw-btn` override below is
+   the same trick Anagram's own popovers use. */
+.aw-rw-delpop {
+  position: fixed; z-index: 501; width: 240px;
+  background: #fff; border: 1.5px solid #e2e9f2; border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(20,30,45,.16); padding: .8rem;
+}
+.aw-rw-delpop-title { font-weight: 700; font-size: .85rem; color: #23303e; margin-bottom: .4rem; }
+.aw-rw-delpop-status { font-size: .78rem; color: #55657a; line-height: 1.35; margin-bottom: .6rem; }
+.aw-rw-delpop-btns { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.aw-rw-delpop-btns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
 
 /* ---- the numbers that prove the split is sound ---- */
 .aw-rw-facts { display: flex; gap: 2.6cqw; align-items: flex-end; }
 .aw-rw-fact { display: flex; flex-direction: column; align-items: center; }
 .aw-rw-fact-big { font-size: 2.5cqw; font-weight: 800; color: var(--rw-ink); line-height: 1.05; }
 .aw-rw-fact-small { font-size: 1.1cqw; font-weight: 600; color: var(--aw-muted); letter-spacing: .04em; }
-
-/* ---- action buttons ---- */
-.aw-rw-setup-acts { display: flex; gap: 1cqw; flex-wrap: wrap; justify-content: center; }
-.aw-rw-btn {
-  font-family: inherit; cursor: pointer;
-  font-size: 1.5cqw; font-weight: 700;
-  color: var(--rw-ink);
-  background: #fff;
-  border: 0.24cqw solid rgba(23,34,47,.18);
-  border-radius: 0.9cqw;
-  padding: 0.75cqw 1.4cqw;
-  display: inline-flex; align-items: center; gap: 0.6cqw;
-}
-.aw-rw-btn:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
-.aw-rw-btn:disabled { opacity: .45; cursor: default; }
-.aw-rw-btn.is-icon svg { width: 1.9cqw; height: 1.9cqw; }
-.aw-rw-btn.is-dirty { border-color: var(--rw-b); color: var(--rw-b-dark); }
 
 .aw-rw-start {
   font-family: inherit; cursor: pointer;
@@ -376,8 +401,13 @@
   box-shadow: 0 0.5cqw 0 #0b8f68;
   padding: 1cqw 4.2cqw;
 }
-.aw-rw-start:hover { filter: brightness(1.05); }
-.aw-rw-start:active { transform: translateY(0.3cqw); box-shadow: 0 0.2cqw 0 #0b8f68; }
+.aw-rw-start:hover:not(:disabled) { filter: brightness(1.05); }
+.aw-rw-start:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: 0 0.2cqw 0 #0b8f68; }
+/* ⭐ Locked until the selected SET is saved (11/8/2026, teacher's request) —
+   see the `locked` gate in renderSetup(). Dims flat rather than fading the
+   green away entirely, so it still reads as "this is the START button", just
+   not one you can press yet. */
+.aw-rw-start:disabled { opacity: .45; cursor: default; box-shadow: 0 0.5cqw 0 rgba(11,143,104,.45); }
 
 /* =============================================================
    MATCH SCREEN
@@ -607,6 +637,18 @@
 .aw-rw-row-mark { display: flex; align-items: center; justify-content: center; }
 .aw-rw-row-mark svg { width: 1.55cqw; height: 1.55cqw; stroke-width: 3.4; }
 
+/* IPA next to a settled word — "WORD • /ipa/" (11/8/2026, teacher's request),
+   same shape as the printed sheets' `.aw-rw-ps-ipa`. `em` so it scales with
+   the word's OWN font-size (which already carries --rw-fit/--rw-tier) instead
+   of needing its own cqw formula; a fixed muted colour regardless of the
+   word's own colour (green when done, plain ink when passed — see
+   .is-done/.is-passed below) keeps the IPA reading as "quieter" in both cases. */
+.aw-rw-row-ipa {
+  font-size: 0.6em; font-weight: 400;
+  color: var(--aw-muted);
+  letter-spacing: 0;
+}
+
 /* Hidden probe used to measure a word's natural width at the BASE font (never
    scaled by --rw-fit) — see fitBoard in running-word.js. */
 .aw-rw-probe {
@@ -692,22 +734,27 @@
 .aw-rw-board.is-b .aw-rw-input { border-bottom-color: var(--rw-b); }
 .aw-rw-input.is-wrong { color: var(--rw-no); border-bottom-color: var(--rw-no); }
 
-/* Andrew's reveal — the word, floating over its own row (centred, matching
-   the row text now), in the gold that the Andrew key wears, so it is obvious
-   a lifeline was spent. */
+/* Andrew's reveal — the word, shown in the Play/Pause button's own spot in
+   the clock strip while Andrew is active (11/8/2026, teacher's redesign; used
+   to float over the input row). Fixed to that button's exact footprint
+   (`.aw-rw-playpause` is 11 x 5cqw) so the clock-strip grid never reflows
+   when the button hides — see useAndrew() in running-word.js, which also
+   auto-fits `.aw-rw-reveal-text` to this box via core/fit.js's fitOnce(). */
 .aw-rw-reveal {
-  position: absolute; left: 2.4cqw; right: 2cqw; top: 50%;
-  /* positioned WITH a transform -> its animation must only touch opacity/filter,
-     never transform (core's "popup jumps then snaps back" rule). */
-  transform: translateY(-50%);
+  width: 11cqw; height: 5cqw; border-radius: 1.4cqw;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 0.5cqw;
+  overflow: hidden;
   pointer-events: none;
-  font-size: calc(5.6cqw * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
-  text-align: center;
+  animation: aw-rw-reveal-glow 2.2s ease-in-out infinite;
+}
+.aw-rw-reveal-text {
+  font-size: calc(3.6cqw * var(--rw-reveal-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  white-space: nowrap;
   color: #b8860b;
   background: linear-gradient(180deg, #ffe89a, #f0a500);
   -webkit-background-clip: text; background-clip: text;
   -webkit-text-fill-color: transparent;
-  animation: aw-rw-reveal-glow 2.2s ease-in-out infinite;
 }
 @keyframes aw-rw-reveal-glow {
   0%, 100% { filter: drop-shadow(0 0 0.5cqw rgba(255,193,7,.55)); }
@@ -910,17 +957,61 @@
 .aw-rw-opt-numlab { font-size: 12px; font-weight: 700; color: var(--aw-muted); }
 
 /* =============================================================
-   EDITOR — also outside the stage, so px. The pool is one word per line in a
-   single tall box (see running-word-editor.js for why it isn't a list of rows).
+   EDITOR — also outside the stage, so px. One WORD per row, an IPA box next
+   to it (11/8/2026 rebuild — see running-word-editor.js's file comment for
+   why the old design was a single big textarea, and what changed). Same
+   visual language as Anagram's Word|Clue table (`.aw-anagram-ed-*` in
+   anagram.css) — a teacher who has used one editor already knows the other.
    ============================================================= */
-.aw-rw-ed-area {
-  width: 100%; box-sizing: border-box;
-  font-family: "Baloo 2", ui-monospace, "Segoe UI", sans-serif;
-  font-size: 15px; font-weight: 600; line-height: 1.55;
-  letter-spacing: .02em;
-  resize: vertical;
-  min-height: 260px;
+.aw-rw-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.aw-rw-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 84px; }
+.aw-rw-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }
+
+.aw-rw-ed-row { display: flex; align-items: stretch; gap: 8px; margin-bottom: 6px; }
+.aw-rw-ed-row.is-dragging { opacity: .4; }
+.aw-rw-ed-row.is-dropbefore { box-shadow: 0 -3px 0 0 #2f7bff; }
+.aw-rw-ed-row.is-dropafter { box-shadow: 0 3px 0 0 #2f7bff; }
+
+.aw-rw-ed-num {
+  flex: 0 0 26px; display: flex; align-items: center; justify-content: center;
+  font-weight: 700; color: #8a97a8; font-size: .9rem;
 }
+.aw-rw-ed-box {
+  flex: 1; min-width: 0; display: flex;
+  border: 1.5px solid #e2e9f2; border-radius: 11px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-rw-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-rw-ed-word, .aw-rw-ed-ipa {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: .6rem .75rem; font-size: .95rem; font-family: inherit; color: #23303e;
+}
+.aw-rw-ed-word { font-weight: 600; text-transform: uppercase; }
+/* IPA keeps its own case/diacritics as typed -- never uppercased like the word
+   box (a thinner, more muted look than the word next to it, matching how it
+   reads on the printed sheet and in-game). */
+.aw-rw-ed-ipa { border-left: 1.5px solid #e2e9f2; font-weight: 400; color: #5b6875; }
+
+.aw-rw-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; }
+.aw-rw-ed-iconbtn {
+  width: 34px; height: 34px; flex: 0 0 auto; border: none; border-radius: 9px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-rw-ed-iconbtn svg { width: 18px; height: 18px; }
+.aw-rw-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-rw-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-rw-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-rw-ed-iconbtn.is-drag { cursor: grab; margin-left: 6px; }
+
+.aw-rw-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px;
+  background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer;
+}
+.aw-rw-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-rw-ed-addrow:disabled { opacity: .4; cursor: default; }
+
 .aw-rw-ed-sets { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
 .aw-rw-ed-set {
   font-size: 14px; font-weight: 700; color: #2b3644;
@@ -995,6 +1086,16 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .aw-rw-ps-c-team { padding-right: 3mm; }
+  /* IPA next to the word (11/8/2026, teacher's request): smaller, lighter,
+     thinner than the word itself — "WORD • /ipa/". Sized off the row's own
+     --rw-fs so it scales with everything else on the sheet (a short pool
+     prints big words AND a proportionally big IPA, never a fixed pt size). */
+  .aw-rw-ps-ipa {
+    font-weight: 400; font-style: normal;
+    color: #8a97a8;
+    font-size: calc(var(--rw-fs, 2.6mm) * .74);
+    letter-spacing: 0;
+  }
   .aw-rw-ps-c-turn { display: flex; justify-content: center; }
 
   /* the TURN column: an empty box the explainer ticks off word by word

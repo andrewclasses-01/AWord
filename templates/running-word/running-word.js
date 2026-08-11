@@ -38,10 +38,11 @@ import { registerTemplate } from "../../core/registry.js";
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
+import { fitOnce } from "../../core/fit.js";
 import { openRunningWordEditor } from "./running-word-editor.js";
 import { rwSound } from "./rw-sound.js";
 import { printRunningSheets } from "./rw-print.js";
-import { poolFrom, buildSets, readSets, setStats, MAX_SETS } from "./rw-sets.js";
+import { poolFrom, ipaFrom, buildSets, readSets, setStats, MAX_SETS } from "./rw-sets.js";
 
 // ---------------------------------------------------------------
 // Answer matching. Deliberately forgiving about the things a race on a
@@ -290,6 +291,10 @@ const rwTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const pool = poolFrom(activity);
+    // Word -> IPA lookup (11/8/2026), read once at mount — the pool doesn't
+    // change mid-match. Used by the printed sheets and by the in-game reveal
+    // once a row is settled (see paintBoard); a word with none is just skipped.
+    const ipaMap = ipaFrom(activity);
 
     root.innerHTML = "";
     if (pool.length < 2) {
@@ -589,17 +594,59 @@ const rwTemplate = {
     // Deliberately shows COUNTS ONLY. Rendering the actual lists here would put
     // both teams' words on the classroom screen with the typers watching.
     let setUI = null;
+    // Small anchored popover (11/8/2026, teacher's request) — replaces the old
+    // native confirm() for "Delete SET": one shared floating element, closed on
+    // an outside click, same idiom as Anagram's editor popovers
+    // (anagram-editor.js's positionPopover). Module-scoped to this mount, like
+    // every other piece of match state in this function.
+    let delPopEl = null;
+    function closeDeletePopover() {
+      if (delPopEl) { delPopEl.remove(); delPopEl = null; }
+      document.removeEventListener("pointerdown", onDeletePopOutside, true);
+    }
+    function onDeletePopOutside(e) {
+      if (!delPopEl || delPopEl.contains(e.target)) return;
+      closeDeletePopover();
+    }
+    function openDeletePopover(anchorBtn, i) {
+      closeDeletePopover();
+      const pop = el("div", "aw-rw-delpop");
+      pop.append(el("div", "aw-rw-delpop-title", `Delete SET ${i + 1}?`));
+      pop.append(el("div", "aw-rw-delpop-status",
+        "The printed sheets for it will no longer match anything saved here."));
+      const btnRow = el("div", "aw-rw-delpop-btns");
+      const cancelBtn = el("button", "aw-btn", "Cancel");
+      cancelBtn.type = "button";
+      cancelBtn.onclick = () => closeDeletePopover();
+      const goBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete");
+      goBtn.type = "button";
+      goBtn.onclick = () => { closeDeletePopover(); deleteSetNow(i); };
+      btnRow.append(cancelBtn, goBtn);
+      pop.append(btnRow);
+
+      document.body.append(pop);
+      const r = anchorBtn.getBoundingClientRect();
+      pop.style.top = Math.min(r.bottom + 6, window.innerHeight - 40) + "px";
+      pop.style.left = Math.max(8, Math.min(r.right - 210, window.innerWidth - 218)) + "px";
+      delPopEl = pop;
+      setTimeout(() => document.addEventListener("pointerdown", onDeletePopOutside, true), 0);
+    }
+
     function renderSetup() {
+      closeDeletePopover();   // a re-render replaces the anchor button under it
       setup.innerHTML = "";
       setup.append(el("div", "aw-rw-setup-title", "RUNNING WORD"));
 
       // -- saved set chooser --
-      // A slot with a saved split shows a DELETE SET button (teacher's
-      // request, 5/8/2026): a saved slot can't be reshuffled until it's
-      // deleted first, so the printed sheets can never silently drift out of
-      // sync with the game (see the Shuffle button below). `.aw-rw-slot` is a
-      // <div>, not a <button>, so the delete button can nest inside it —
-      // a button can never contain another button.
+      // ⭐ 11/8/2026 (teacher's redesign): Shuffle / Save / Print moved OFF the
+      // shared row below the slots and INTO the slot they act on — icon-only,
+      // drawn only on the SELECTED slot (they only ever mean something for
+      // `current`, the split being edited). DELETE is a small round corner
+      // button on any SAVED slot, opening the popover above instead of the
+      // old native confirm(). A slot with a saved split still can't be
+      // reshuffled until it's deleted first, so the printed sheets can never
+      // silently drift out of sync with the game. `.aw-rw-slot` stays a
+      // <div>, not a <button>, so these can nest inside it.
       const slots = el("div", "aw-rw-slots");
       for (let i = 0; i < MAX_SETS; i++) {
         const saved = sets[i];
@@ -622,12 +669,56 @@ const rwTemplate = {
           else { current = buildSets(pool); dirty = true; }
           renderSetup();
         };
+
         if (saved && isTeacher) {
-          const delBtn = el("button", "aw-rw-slot-del", "DELETE SET");
+          const delBtn = el("button", "aw-rw-slot-delcorner", icons.trash);
           delBtn.type = "button";
-          delBtn.onclick = e => { e.stopPropagation(); confirmDeleteSet(i); };
+          delBtn.title = `Delete SET ${i + 1}`;
+          delBtn.onclick = e => { e.stopPropagation(); openDeletePopover(delBtn, i); };
           slot.append(delBtn);
         }
+
+        if (isSel && isTeacher) {
+          const acts = el("div", "aw-rw-slot-acts");
+
+          // ⭐ 2 — PRINT and START MATCH require a SAVE first (teacher's
+          // request, 11/8/2026): the printed sheets and the act saved on
+          // Firestore can now never drift apart — a teacher can only ever
+          // print (or play) a split that has already been written and synced.
+          const shuffleBtn = el("button", "aw-rw-slot-actbtn", SVG_SHUFFLE);
+          shuffleBtn.type = "button";
+          shuffleBtn.disabled = !dirty;
+          shuffleBtn.title = dirty ? "Shuffle a new split" : "Delete this SET first to shuffle a new split.";
+          shuffleBtn.onclick = () => {
+            if (!dirty) return;
+            ui.sound.click?.();
+            current = buildSets(pool);
+            renderSetup();
+          };
+          acts.append(shuffleBtn);
+
+          const saveBtn = el("button", "aw-rw-slot-actbtn" + (dirty ? " is-dirty" : ""),
+            dirty ? SVG_SAVE : icons.check);
+          saveBtn.type = "button";
+          saveBtn.disabled = !dirty;
+          saveBtn.title = dirty ? `Save as SET ${i + 1}` : `SET ${i + 1} saved`;
+          saveBtn.onclick = () => saveCurrentSet(saveBtn);
+          acts.append(saveBtn);
+
+          const printBtn = el("button", "aw-rw-slot-actbtn", icons.print);
+          printBtn.type = "button";
+          printBtn.disabled = dirty;
+          printBtn.title = dirty ? "Save this SET first to print it." : "Print 3 sheets";
+          printBtn.onclick = () => {
+            if (dirty) return;
+            ui.sound.click?.();
+            printRunningSheets(activity, current, cfg.names, i + 1, ipaMap);
+          };
+          acts.append(printBtn);
+
+          slot.append(acts);
+        }
+
         slots.append(slot);
       }
       setup.append(slots);
@@ -649,44 +740,16 @@ const rwTemplate = {
       );
       setup.append(facts);
 
-      // -- actions --
-      const acts = el("div", "aw-rw-setup-acts");
-
-      // Disabled once `current` IS a saved slot (not dirty) — delete it first
-      // (teacher's request, 5/8/2026: never let Shuffle quietly invalidate
-      // sheets that have already been printed for this SET).
-      const shuffleBtn = el("button", "aw-rw-btn", "Shuffle new split");
-      shuffleBtn.type = "button";
-      shuffleBtn.disabled = !dirty;
-      shuffleBtn.title = dirty ? "" : "Delete this SET first to shuffle a new split.";
-      shuffleBtn.onclick = () => {
-        if (!dirty) return;
-        ui.sound.click?.();
-        current = buildSets(pool);
-        dirty = true;
-        renderSetup();
-      };
-      acts.append(shuffleBtn);
-
-      if (isTeacher) {
-        const printBtn = el("button", "aw-rw-btn", `${icons.print}<span>Print 3 sheets</span>`);
-        printBtn.type = "button";
-        printBtn.classList.add("is-icon");
-        printBtn.onclick = () => { ui.sound.click?.(); printRunningSheets(activity, current, cfg.names, setIndex + 1); };
-        acts.append(printBtn);
-
-        const saveBtn = el("button", "aw-rw-btn" + (dirty ? " is-dirty" : ""),
-          dirty ? `Save as SET ${setIndex + 1}` : `SET ${setIndex + 1} saved`);
-        saveBtn.type = "button";
-        saveBtn.disabled = !dirty;
-        saveBtn.onclick = () => saveCurrentSet(saveBtn);
-        acts.append(saveBtn);
-      }
-      setup.append(acts);
-
+      // ⭐ 1 — START MATCH requires a SAVE first too (teacher's request,
+      // 11/8/2026), same reasoning as Print above. Teacher-only: a student
+      // opening this act via a session has no Save button to fix a `dirty`
+      // state with, so the gate never applies to them — see `isTeacher` above.
       const start = el("button", "aw-rw-start", "START MATCH");
       start.type = "button";
-      start.onclick = () => { ui.sound.click?.(); enterPrep(); };
+      const locked = isTeacher && dirty;
+      start.disabled = locked;
+      start.title = locked ? "Save this SET first." : "";
+      start.onclick = () => { if (locked) return; ui.sound.click?.(); enterPrep(); };
       setup.append(start);
 
       setUI = { start };
@@ -710,9 +773,7 @@ const rwTemplate = {
         ui.toast?.("Save the activity to your library first.");
         return;
       }
-      const label = btn.textContent;
       btn.disabled = true;
-      btn.textContent = "Saving…";
       try {
         const { saveActivity } = await import("../../core/store.js");
         const next = snapshotSlots();
@@ -727,7 +788,6 @@ const rwTemplate = {
       } catch (e) {
         console.warn("AWord/running-word: could not save the split", e);
         btn.disabled = false;
-        btn.textContent = label;
         ui.toast?.("Could not save — are you signed in?");
       }
     }
@@ -735,12 +795,13 @@ const rwTemplate = {
     // Clear slot `i` back to empty. Same store.js pathway as save, so the
     // deletion syncs to every other device signed into this activity exactly
     // like any other save (teacher's request, 5/8/2026 — no new plumbing).
-    async function confirmDeleteSet(i) {
+    // Confirmation now happens in the popover BEFORE this is ever called (see
+    // openDeletePopover above) — this function itself no longer asks.
+    async function deleteSetNow(i) {
       if (!activity.id || String(activity.id).startsWith("conv_")) {
         ui.toast?.("Save the activity to your library first.");
         return;
       }
-      if (!confirm(`Delete SET ${i + 1}? The printed sheets for it will no longer match anything saved here.`)) return;
       try {
         const { saveActivity } = await import("../../core/store.js");
         const next = snapshotSlots();
@@ -877,11 +938,34 @@ const rwTemplate = {
       let maxNeed = 0;
       for (const i of [top, top - 1, top - 2]) {
         if (i < 0 || i >= current[t].length) continue;
-        b.probe.textContent = String(current[t][i]).toUpperCase();
+        const word = String(current[t][i]).toUpperCase();
+        // A settled row (ok/pass) now prints its IPA next to the word (see
+        // paintBoard) — fold it into the measurement too, else a long word
+        // WITH an IPA suffix could overflow a column sized for the word
+        // alone. Measured at the word's own (bigger) probe font rather than
+        // the IPA's real smaller one — a deliberate over-estimate, since the
+        // probe can't easily mix two font sizes in one string; it only ever
+        // shrinks the fit a little more than strictly necessary, never risks
+        // a real overflow.
+        const status = rows[t][i];
+        const ipa = (status === "ok" || status === "pass") ? ipaMap.get(word) : null;
+        b.probe.textContent = ipa ? `${word} • ${ipa}` : word;
         maxNeed = Math.max(maxNeed, b.probe.offsetWidth);
       }
       const fit = maxNeed > avail ? avail / maxNeed : 1;
       b.board.style.setProperty("--rw-fit", fit.toFixed(3));
+    }
+
+    // A settled word (ok/pass) prints its IPA next to it, same style as the
+    // paper sheets — "WORD • /ipa/", the IPA smaller/lighter (11/8/2026,
+    // teacher's request; `.aw-rw-row-ipa` in the CSS). A word with none in
+    // the pool (ipaMap, built once at mount from content.words) just prints
+    // bare, exactly like before IPA existed.
+    function wordWithIpaHtml(word) {
+      const base = escapeHtml(String(word).toUpperCase());
+      const ipa = ipaMap.get(String(word).toUpperCase());
+      if (!ipa) return base;
+      return `${base} <span class="aw-rw-row-ipa">• ${escapeHtml(ipa)}</span>`;
     }
 
     // Repaint one team's rows from state. Cheap enough to run whole-column on
@@ -924,12 +1008,12 @@ const rwTemplate = {
         r.row.classList.toggle("tier2", tier === 2);
 
         if (status === "ok") {
-          r.body.textContent = list[i].toUpperCase();
+          r.body.innerHTML = wordWithIpaHtml(list[i]);
           r.mark.innerHTML = icons.check;
         } else if (status === "pass") {
           // PASSED words are now REVEALED, in plain ink (teacher's request,
           // 5/8/2026 — the one deliberate exception to "never show the word").
-          r.body.textContent = list[i].toUpperCase();
+          r.body.innerHTML = wordWithIpaHtml(list[i]);
           r.mark.innerHTML = icons.cross;
         } else if (isInput) {
           r.body.innerHTML = "";
@@ -1135,7 +1219,16 @@ const rwTemplate = {
       rows[t][idx[t]] = "ok";
       idx[t] = idx[t] + 1;
       moves[t] = moves[t] + 1;
-      clock[t] += cfg.incrementMs;
+      // The very first submit of the match doesn't earn the increment
+      // (teacher's request, 11/8/2026): that submit's whole job is STARTING
+      // the clock (see `starting` above, which replaced the old 3-2-1
+      // countdown on 7/8/2026) — a bonus for beating a clock that wasn't
+      // running yet doesn't mean anything. `starting` is a const captured at
+      // the top of THIS call, so it still reads true here even though
+      // startMatch() has already flipped `phase` to "play" by now. Every
+      // later correct word, including the other team's own first turn, earns
+      // the bonus normally.
+      if (!starting) clock[t] += cfg.incrementMs;
       lastTick[t] = null;
       input.value = "";
       input.classList.remove("is-wrong");
@@ -1187,6 +1280,16 @@ const rwTemplate = {
 
     // Andrew: show the word for the current turn so the typer can copy it.
     // One use per TEAM for the whole match (Options: 0..3).
+    //
+    // ⭐ 11/8/2026 (teacher's redesign): the reveal used to float over the
+    // input row; now it takes over the Play/Pause button's own spot in the
+    // clock strip instead (the button hides while it's up — there's still
+    // Esc for the referee to pause, see onKey below). It's boxed to that
+    // button's exact footprint (`.aw-rw-reveal`, 11 x 5cqw in the CSS) so the
+    // clock-strip grid never reflows when the button is swapped out, and the
+    // word auto-fits that fixed box via core/fit.js's fitOnce() — the same
+    // module Quiz/Anagram use for long content, one-shot since this is a
+    // single transient label, not something that needs to track a resize.
     let revealEl = null;
     function useAndrew() {
       if (phase !== "play" || paused || andrewShown) return;
@@ -1196,14 +1299,25 @@ const rwTemplate = {
       andrewShown = true;
       const word = current[t][idx[t]];
       hideReveal();
-      revealEl = el("div", "aw-rw-reveal", escapeHtml(String(word).toUpperCase()));
-      const rowEl = boardEls[t].rowEls[idx[t]];
-      (rowEl ? rowEl.row : match).append(revealEl);
+      revealEl = el("div", "aw-rw-reveal");
+      const textEl = el("span", "aw-rw-reveal-text", escapeHtml(String(word).toUpperCase()));
+      revealEl.append(textEl);
+      if (refUI) {
+        refUI.playPauseBtn.style.display = "none";
+        refUI.bar.append(revealEl);
+        fitOnce(revealEl, textEl, s => textEl.style.setProperty("--rw-reveal-fit", s),
+          { min: 0.28, max: 1, contentBox: true });
+      } else {
+        match.append(revealEl);   // defensive fallback — refUI is always built before "play"
+      }
       rwSound.andrew();
       refreshKeys();
       focusInput();
     }
-    function hideReveal() { if (revealEl) { revealEl.remove(); revealEl = null; } }
+    function hideReveal() {
+      if (revealEl) { revealEl.remove(); revealEl = null; }
+      if (refUI) refUI.playPauseBtn.style.display = "";
+    }
 
     // A ghost of the word just won flies from its row to the team's clock —
     // the same "reward flies to the counter" language the other templates use.
@@ -1396,6 +1510,11 @@ const SVG_PAUSE = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="tru
 const SVG_PLAY  = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.2v13.6L19 12 8 5.2z"/></svg>';
 // Two arrows for the pre-start SWAP job on the same centre button.
 const SVG_SWAP  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4 3 8l4 4"/><path d="M3 8h13"/><path d="m17 20 4-4-4-4"/><path d="M21 16H8"/></svg>';
+// Icons for the SET slot's own action row (11/8/2026) — local rather than
+// added to core/icons.js, same reasoning as the three above: no other
+// template needs a shuffle or a floppy-disk glyph.
+const SVG_SHUFFLE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>';
+const SVG_SAVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8"/><path d="M7 3v5h8"/></svg>';
 
 function escapeHtml(s) {
   return String(s ?? "")

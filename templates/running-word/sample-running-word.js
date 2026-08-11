@@ -28,15 +28,19 @@ export const activity = {
     warnSeconds: 15
   },
   content: {
+    // A mix of {word, ipa} and bare strings (11/8/2026 — IPA is optional):
+    // exercises both the "has IPA" and "no IPA" paths on the printed sheets
+    // and the in-game reveal at once, same as a real teacher's pool will
+    // once some rows are filled in and others aren't.
     words: [
-      "CYLINDER", "LUXURIOUS", "NECESSITY", "PUMICE", "AQUEDUCT",
-      "STIR", "LIGHTEN", "INVENT", "STRIGIL", "ALKALI",
-      "OUTLAW", "EPIDEMIC", "SODIUM", "CIVILISATION", "INSCRIPTION",
-      "GLYCERINE", "FATTY", "PREHISTORIC", "CARBONATE", "OBEDIENCE",
-      "SANITARY", "CLEANLINESS", "RESERVATION", "SCRAPE", "ANOINT",
-      "INSCRIBE", "REINFORCE", "HYGIENE", "OUTBREAK", "BATHE",
+      { word: "CYLINDER", ipa: "/sɪˈlɪndə/" }, "LUXURIOUS", { word: "NECESSITY", ipa: "/nəˈsesəti/" }, "PUMICE", "AQUEDUCT",
+      { word: "STIR", ipa: "/stɜː/" }, "LIGHTEN", { word: "INVENT", ipa: "/ɪnˈvent/" }, "STRIGIL", "ALKALI",
+      "OUTLAW", { word: "EPIDEMIC", ipa: "/ˌepɪˈdemɪk/" }, "SODIUM", { word: "CIVILISATION", ipa: "/ˌsɪvəlaɪˈzeɪʃn/" }, "INSCRIPTION",
+      "GLYCERINE", "FATTY", "PREHISTORIC", "CARBONATE", { word: "OBEDIENCE", ipa: "/əˈbiːdiəns/" },
+      { word: "SANITARY", ipa: "/ˈsænɪtri/" }, "CLEANLINESS", "RESERVATION", "SCRAPE", "ANOINT",
+      "INSCRIBE", "REINFORCE", { word: "HYGIENE", ipa: "/ˈhaɪdʒiːn/" }, "OUTBREAK", "BATHE",
       "CLEANSE", "PLAGUE", "FETCH", "LAVISH", "RINSE",
-      "SCARCE", "DOWNHILL", "SKIN-SCRAPER", "LARGE-SCALE", "WASH DOWN"
+      "SCARCE", "DOWNHILL", { word: "SKIN-SCRAPER", ipa: "/ˈskɪn ˌskreɪpə/" }, "LARGE-SCALE", "WASH DOWN"
     ]
   }
 };
