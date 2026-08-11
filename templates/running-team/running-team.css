@@ -354,29 +354,39 @@
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
   gap: 1cqw;
 }
+/* Tile colour — same mechanism as Quiz (Đợt 111, teacher's call: "same tile
+   colours/text colour as Quiz, modern and easy on the eyes, not glaring").
+   `--tile`/`--tile-dark` are set INLINE per tile in running-team.js (one of
+   Quiz's 8-colour palette, copied — not imported, see the file header there
+   — and shuffled once per round so all 6 positions get a distinct colour for
+   the whole round). `--aw-tile-fixed` is a THEME override (e.g. Basic forces
+   one uniform navy tile everywhere) and must win when a theme sets it, so it
+   comes first in the fallback chain exactly like quiz.css does. */
 .aw-rt-tile {
   position: relative;                       /* .aw-mark-fly anchors here */
   display: flex; align-items: center; justify-content: center;
   padding: 0.4cqw 0.8cqw; min-width: 0; overflow: hidden;
+  --tile-eff: var(--aw-tile-fixed, var(--tile));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
   font-family: inherit; cursor: pointer;
-  border: var(--aw-tile-border-width, 0.3cqw) solid var(--aw-tile-border-color, rgba(0,0,0,.12));
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   border-radius: var(--aw-tile-radius, 1.2cqw);
-  background: var(--aw-tile-0);
-  box-shadow: var(--aw-tile-shadow, 0 0.35cqw 0 rgba(0,0,0,.14));
-  transition: opacity .18s ease, transform .12s ease;
+  background: var(--tile-eff);
+  box-shadow: var(--aw-tile-shadow, 0 0.35cqw 0 var(--tile-dark-eff));
+  transition: opacity .18s ease, transform .12s ease, filter .12s ease;
 }
-.aw-rt-tiles .aw-rt-tile:nth-child(2) { background: var(--aw-tile-1); }
-.aw-rt-tiles .aw-rt-tile:nth-child(3) { background: var(--aw-tile-2); }
-.aw-rt-tiles .aw-rt-tile:nth-child(4) { background: var(--aw-tile-3); }
-.aw-rt-tiles .aw-rt-tile:nth-child(5) { background: var(--aw-tile-1); }
-.aw-rt-tiles .aw-rt-tile:nth-child(6) { background: var(--aw-tile-2); }
+.aw-rt-tile:hover:not(:disabled) { filter: brightness(1.05); }
 .aw-rt-tile:active:not(:disabled) { transform: translateY(0.2cqw); }
 .aw-rt-tile-text {
   /* `--rt-fit` is set per tile by fitOnce() when a long entry would overflow;
-     1 (no shrink) is the normal case. */
-  font-size: calc(3.1cqw * var(--rt-fit, 1));
+     1 (no shrink) is the normal case. Base bumped 3.1cqw -> 4.2cqw (Đợt 111,
+     "biggest possible size in the tile") — fitOnce's shrink-to-fit is what
+     keeps a long entry (SKIN-SCRAPER, CIVILISATION, UNINTENTIONALLY) from
+     overflowing at the new size, the same safety net that already covered
+     the old size. */
+  font-size: calc(4.2cqw * var(--rt-fit, 1));
   font-weight: 800; line-height: 1.1; text-align: center;
-  color: var(--aw-text); word-break: break-word;
+  color: #fff; word-break: break-word;
 }
 /* A wrong tile dims but is NOT recoloured: the teacher's house style across
    AWord is that a tile never changes colour on selection — feedback is the

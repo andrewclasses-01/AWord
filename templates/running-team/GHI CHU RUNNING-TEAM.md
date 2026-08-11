@@ -1,5 +1,16 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 111 dự án (11/8/2026) — MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY ("giống Quiz, mỗi ô 1 màu,
+> hiện đại, dịu mắt, chữ tối đa"). KHÔNG ĐỤNG CORE. 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> Sao chép nguyên `PALETTE` 8 màu của `quiz.js` (không import xuyên template, đúng quy ước tự-chứa —
+> xem mục 15), xáo 6/8 màu 1 lần mỗi VÁN rồi gán cố định theo VỊ TRÍ ô suốt ván (giống Quiz gán theo vị
+> trí câu trả lời cho cả game). Nền ô đổi từ `var(--aw-tile-0..3)` (4 màu, lặp 2 ô khi có 6 ô — đúng lỗi
+> trong ảnh thầy chụp) sang `--tile`/`--tile-dark` set qua JS; chữ đổi đen→trắng; giữ đúng chuỗi fallback
+> `--aw-tile-fixed` của Quiz để theme "Basic" (ép 1 màu đồng nhất) vẫn còn tác dụng. Cỡ chữ nền tảng
+> `3.1cqw→4.2cqw`. Đo thật: 5 từ dài nhất từng ghi nhận (CIVILISATION, SKIN-SCRAPER, UNINTENTIONALLY,
+> CHARACTERISE, LARGE-SCALE) qua đúng `fitOnce()` game dùng khi chơi — co về `0.615–0.869`, còn cách xa
+> sàn `0.42`. 0 lỗi console.
+
 > **Đợt 110 dự án (11/8/2026) — MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI, so với Running word. KHÔNG ĐỤNG CORE
 > (1 dòng CSS). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
 > `.aw-rw-setup` có `justify-content:center`, `.aw-rt-setup` thiếu đúng dòng đó nên flex column dồn hết
@@ -374,6 +385,9 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
       (Round time / Question time, đặc biệt thử kéo Question time về 0 = Untimed) chơi mượt như mong đợi.
 - [ ] **Đợt 110 — thầy tự xem màn setup đã cân đối trên/dưới** như Running word (đặc biệt trên màn
       TOMKO/iPad thật, chỗ máy chỉ đo được ở trình duyệt Chrome desktop).
+- [ ] **Đợt 111 — thầy tự mắt xem 6 màu ô mới** có đúng "hiện đại, dịu mắt, không chói" như mong đợi,
+      và cỡ chữ mới có quá to/vừa mắt trên màn thật (máy chỉ đo được không tràn, không đo được "vừa
+      mắt" chủ quan).
 - [ ] Cân nhắc: **chế độ ĐÔI** (2 đội) — thầy nói làm sau. Chỗ lắp vào đã tính sẵn: thêm
       `options.mode: "single" | "double"`, chia `roster` làm 2 và cho `renderSummary` vẽ 2 nửa như
       RunningW. Cố ý **chưa** ship option chết trong dữ liệu.
@@ -495,3 +509,54 @@ khung 380px: vẫn `scrollable:false`, tiêu đề vẫn nằm đúng vị trí 
 
 **Đo cân đối**: `topGap: 66.97px`, `bottomGap: 66.98px` (lệch 0.01px — coi như tuyệt đối bằng nhau),
 đúng cảm giác thị giác của Running word. 0 lỗi console.
+
+## 15. Đợt 111 (11/8/2026) — màu ô đáp án + cỡ chữ, giống Quiz
+
+Thầy: *"sử dụng màu chữ và bộ màu nền ô kết quả giống trong Quiz, mỗi ô một màu khác nhau, sử dụng các
+màu hiện đại, dịu mắt, không bị chói"* + *"tăng size chữ lớn tối đa trong ô"*.
+
+**Trạng thái trước đó**: 6 ô chỉ dùng 4 biến theme dùng chung cho cả 16 game (`--aw-tile-0..3`: xanh
+dương/đỏ/cam/xanh lá — bộ màu Wordwall cổ điển, khá chói) qua `nth-child`, nên với 6 ô thì 2 màu phải
+lặp lại (đúng những gì ảnh thầy chụp cho thấy: 2 ô đỏ, 2 ô cam). Không phải lỗi code — hệ theme chung
+chưa từng cần quá 4 màu vì phần lớn game khác có tối đa 4-5 lựa chọn hiển thị cùng lúc.
+
+**Quiz đã tự có sẵn đúng thứ thầy muốn**: `quiz.js` khai một `PALETTE` 8 màu ("Modern answer-tile
+palette (8 well-separated colors)" — nguyên văn comment trong đó), mỗi màu kèm bản đậm hơn cho viền
+bóng 3D, xáo 1 lần mỗi game rồi gán theo VỊ TRÍ câu trả lời cho suốt game, chữ trắng `#fff`.
+
+**Áp dụng cho Running team**:
+1. **Sao chép** (không `import`) nguyên `PALETTE` 8 màu vào `running-team.js` — đúng quy ước tự-chứa
+   của dự án (`rt-sound.js` từng giải thích lý do y hệt khi sao `rw-sound.js`: import xuyên thư mục
+   template kéo theo cả số phận module/CSS của game kia vào lượt tải của game này).
+2. Thêm `let tileColors = []` (trạng thái ván đấu), gán bằng `shuffle(PALETTE.slice()).slice(0, TILES)`
+   trong `startRunning()` — xáo 1 lần mỗi VÁN, không phải mỗi câu, để màu ổn định suốt trận đúng cảm
+   giác Quiz (đổi màu mỗi câu sẽ gây chớp/nhiễu mắt không cần thiết).
+3. `openQuestion()` gán `--tile`/`--tile-dark` inline theo chỉ số vị trí `i % tileColors.length` khi
+   dựng từng nút ô — đúng cơ chế `quiz.js` dùng (`palette[i % palette.length]`).
+4. CSS (`running-team.css`): nền ô đổi `var(--aw-tile-0)` → `--tile-eff` (biến trung gian
+   `var(--aw-tile-fixed, var(--tile))`); chữ đổi `var(--aw-text)` (đen) → `#fff` (trắng, đủ tương phản
+   trên nền màu đậm); viền + bóng đổi fallback từ đen chung chung sang màu tối CỦA CHÍNH Ô đó
+   (`var(--tile-dark-eff)`) — tạo cảm giác "nút 3D cùng tông màu" giống Quiz thay vì viền/bóng xám vô
+   can; thêm `:hover { filter: brightness(1.05) }` (Quiz có, RT trước đây không).
+
+⚠️ **Lý do giữ `--aw-tile-fixed` trong chuỗi fallback, không bỏ qua**: đây là cờ theme "Basic"
+(`core/themes/basic.css`) ép TOÀN BỘ ô của MỌI game về đúng 1 màu navy đồng nhất — nếu bỏ qua, chọn
+theme Basic sẽ đổi màu đúng ở 15 game kia nhưng Running team vẫn giữ 6 màu riêng, một kiểu không nhất
+quán ÂM THẦM (đổi theme mà 1 game không đổi theo, không lỗi console nào báo). Test cách ly được (test.html
+chỉ nạp `classic.css`, không có `basic.css` để test theme thật) nên xác nhận bằng cách đọc đúng
+`quiz.css` dùng chuỗi fallback y hệt — RT giờ dùng chung chuỗi đó nên chắc chắn ăn theo hành vi đã có
+sẵn của Quiz, không phải suy đoán.
+
+**Cỡ chữ**: nền tảng `3.1cqw → 4.2cqw` (~35%, `fitOnce()` sẵn có từ trước là lưới an toàn tự co khi từ
+dài — không cần build thêm gì mới, khác với "WIDTH GUARD" phải tự viết mới cho tờ in ở Đợt 109 vì tờ in
+chưa từng có cơ chế tự co). Đo thật qua Browser pane:
+- Một ván chơi thật (pool đang mở, không phải dựng giả): 6 ô ra đúng 6 màu riêng biệt (cam/đỏ/cyan/vàng
+  hổ phách/xanh ngọc/xanh dương), chữ trắng, cỡ chữ `40.572px`, `--rt-fit:1` (không cần co) cho từ dài
+  nhất trong lượt đó (`INSCRIPTION`, 11 ký tự).
+- Dựng riêng 5 từ dài nhất từng ghi nhận trong toàn bộ dự án này (mục 3: `CIVILISATION`, `SKIN-SCRAPER`,
+  `UNINTENTIONALLY`, `CHARACTERISE`, `LARGE-SCALE`) qua ĐÚNG hàm `fitOnce()` game dùng khi chơi (không
+  phải phép đo xấp xỉ riêng) — co về `0.615`–`0.869`, còn cách xa sàn cứng `0.42` (mức fitOnce không co
+  thêm được nữa, dưới đó chữ có thể tràn) ở mọi trường hợp, kể cả ca xấu nhất `UNINTENTIONALLY` (15 ký
+  tự, `fit:0.615`). Xác nhận mức tăng 35% này an toàn cho MỌI từ đã biết, không phải may rủi trên 1 pool.
+
+0 lỗi console suốt cả phiên test.

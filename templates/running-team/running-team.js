@@ -60,6 +60,23 @@ import {
 
 const SLOGAN = "RUNNING TEAM IN ANDREW CLASSES";
 
+// Modern answer-tile palette — a COPY of Quiz's (templates are self-contained
+// by contract, same reasoning rt-sound.js gives for copying rather than
+// importing across template folders). Six of these eight get shuffled onto
+// the six tile POSITIONS once per round (startRunning()) and stay put for
+// every question in that round, exactly like Quiz assigns colour per answer
+// position for the whole game rather than reshuffling every question.
+const PALETTE = [
+  { c: "#3b82f6", d: "#2563eb" }, // blue
+  { c: "#06b6d4", d: "#0e93ad" }, // cyan
+  { c: "#10b981", d: "#059669" }, // emerald
+  { c: "#f59e0b", d: "#d97706" }, // amber
+  { c: "#f97316", d: "#ea580c" }, // orange
+  { c: "#ef4444", d: "#dc2626" }, // red
+  { c: "#14b8a6", d: "#0f9488" }, // teal
+  { c: "#8b5cf6", d: "#7c3aed" }  // violet
+];
+
 // Lives are stored as 0 = UNLIMITED, 1..10 = that many hearts — the same
 // convention (and the same slider) as Find the match, so the two games behave
 // identically for the teacher. `null` internally means unlimited.
@@ -277,6 +294,7 @@ const rtTemplate = {
     let lastQTick = null;                       // last whole second announced on the question bar
     const perQuestion = [];                     // [{q, correct}] for the engine's scoring
     const review = [];                          // [{question, answered, yourText, yourCorrect, correctText}]
+    let tileColors = [];                        // 6 {c,d} entries, one per tile POSITION, set in startRunning()
 
     let mainTimer = null, qTimer = null;
     const timers = new Set();
@@ -611,6 +629,7 @@ const rtTemplate = {
       mainLeft = cfg.mainMs;
       correctCount = 0; askedCount = 0; turnPtr = 0;
       perQuestion.length = 0; review.length = 0;
+      tileColors = shuffle(PALETTE.slice()).slice(0, TILES);
       finished = false;
 
       setup.style.display = "none";
@@ -682,9 +701,12 @@ const rtTemplate = {
       // like it (rt-sets.js), already shuffled.
       const tiles = buildTiles(word, pool);
       tilesEl.innerHTML = "";
-      tiles.forEach(t => {
+      tiles.forEach((t, i) => {
         const b = el("button", "aw-rt-tile");
         b.type = "button";
+        const col = tileColors[i % tileColors.length];
+        b.style.setProperty("--tile", col.c);
+        b.style.setProperty("--tile-dark", col.d);
         const span = el("span", "aw-rt-tile-text", escapeHtml(String(t).toUpperCase()));
         b.append(span);
         b.onclick = () => onTile(b, t, word);

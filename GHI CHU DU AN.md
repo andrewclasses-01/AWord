@@ -5,6 +5,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 111 (11/8/2026) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY (giống bộ màu/màu chữ
+của Quiz, mỗi ô 1 màu riêng, tăng cỡ chữ tối đa). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
+`running-team.css`). 🟢 CHỜ THẦY DUYỆT, chưa commit.
+
+Trước đó 6 ô dùng đúng 4 biến theme `--aw-tile-0..3` (xanh dương/đỏ/cam/xanh lá) lặp lại 2 lần cho đủ 6
+ô (đúng như ảnh thầy gửi: 2 ô đỏ, 2 ô cam) — không phải lỗi, chỉ là hệ theme chung của cả 16 game chưa
+từng cần quá 4 màu. Thầy yêu cầu dùng ĐÚNG bộ màu/kiểu chữ của Quiz: sao chép nguyên bộ `PALETTE` 8 màu
+"hiện đại, dịu mắt" của `quiz.js` (không import xuyên template — đúng quy ước tự-chứa của dự án, giống
+cách `rt-sound.js` từng sao `rw-sound.js`), xáo 6/8 màu một lần mỗi VÁN (`startRunning()`) rồi gán cố
+định theo VỊ TRÍ ô suốt cả ván — giống hệt cách Quiz gán màu theo vị trí câu trả lời cho cả game chứ
+không đổi màu mỗi câu. Đổi CSS nền ô từ `var(--aw-tile-0)` sang biến `--tile`/`--tile-dark` set trực
+tiếp qua JS (`b.style.setProperty(...)`, đúng cơ chế Quiz dùng), chữ đổi từ `var(--aw-text)` (đen) sang
+`#fff` (trắng) để đủ tương phản trên nền màu đậm. ⭐ Giữ đúng chuỗi fallback `--aw-tile-fixed` của Quiz
+(`--tile-eff: var(--aw-tile-fixed, var(--tile))`) — đây là cờ theme "Basic" ép TOÀN BỘ ô về 1 màu navy
+đồng nhất; không giữ chuỗi này thì chọn theme Basic sẽ không còn tác dụng gì lên Running team trong khi
+mọi game khác vẫn đổi màu đúng, một kiểu không nhất quán im lặng.
+
+Cỡ chữ nền tảng tăng `3.1cqw→4.2cqw` (~35%). Đo thật qua Browser pane: dựng 5 từ dài nhất từng ghi
+nhận trong dự án này (`CIVILISATION`, `SKIN-SCRAPER`, `UNINTENTIONALLY`, `CHARACTERISE`, `LARGE-SCALE`)
+qua đúng `fitOnce()` mà `running-team.js` dùng khi chơi thật — cả 5 co về `0.615–0.869`, còn cách xa sàn
+cứng `0.42` (mức mà dưới đó chữ không co thêm được nữa và có thể tràn), xác nhận mức tăng này an toàn
+cho MỌI từ đã biết chứ không chỉ đo may rủi trên 1 pool ngẫu nhiên. Một ván chơi thật (pool đang mở) ra
+đúng 6 màu khác nhau, chữ trắng, `--rt-fit:1` (không cần co) cho cả 6 ô. 0 lỗi console.
+
+---
+
 ## Đợt 110 (11/8/2026) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI. KHÔNG ĐỤNG CORE (1 dòng CSS).
 🟢 CHỜ THẦY DUYỆT, chưa commit.
 

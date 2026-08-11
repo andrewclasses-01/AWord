@@ -5,7 +5,21 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 110) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI so với
+> Cập nhật lần cuối: **11/8/2026 (Đợt 111) — RUNNING TEAM: MÀU Ô ĐÁP ÁN + CỠ CHỮ THEO YÊU CẦU THẦY
+> ("giống Quiz, mỗi ô 1 màu, hiện đại, dịu mắt, chữ tối đa"). KHÔNG ĐỤNG CORE (chỉ `running-team.js` +
+> `running-team.css`). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> Sao chép nguyên `PALETTE` 8 màu của `quiz.js` (không import xuyên template, đúng quy ước tự-chứa),
+> xáo 6/8 màu 1 lần mỗi VÁN rồi gán cố định theo VỊ TRÍ ô suốt ván (giống Quiz gán theo vị trí câu trả
+> lời cho cả game). Nền ô đổi từ `var(--aw-tile-0..3)` (4 màu, lặp 2 ô khi có 6 ô — đúng lỗi trong ảnh
+> thầy chụp) sang `--tile`/`--tile-dark` set qua JS; chữ đổi đen→trắng; giữ đúng chuỗi fallback
+> `--aw-tile-fixed` của Quiz để theme "Basic" (ép 1 màu đồng nhất) vẫn còn tác dụng — không giữ sẽ tạo
+> ra một kiểu không nhất quán ÂM THẦM giữa Running team và 15 game khác khi đổi theme. Cỡ chữ nền tảng
+> `3.1cqw→4.2cqw`. Đo thật qua Browser pane: 5 từ dài nhất từng ghi nhận trong dự án (CIVILISATION,
+> SKIN-SCRAPER, UNINTENTIONALLY, CHARACTERISE, LARGE-SCALE) qua đúng `fitOnce()` game dùng khi chơi —
+> co về `0.615–0.869`, còn cách xa sàn `0.42`; một ván chơi thật ra đúng 6 màu riêng biệt, chữ trắng,
+> `--rt-fit:1`. 0 lỗi console. Chi tiết: `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 15.**
+>
+> Trước đó: **11/8/2026 (Đợt 110) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI so với
 > Running word. KHÔNG ĐỤNG CORE (1 dòng CSS). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
 > `.aw-rw-setup` có `justify-content:center`, `.aw-rt-setup` thiếu đúng dòng đó nên flex column dồn hết
 > nội dung lên đỉnh, đẩy toàn bộ khoảng trống xuống đáy. Thêm `justify-content:center` + cân lại padding
