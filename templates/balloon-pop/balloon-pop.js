@@ -182,6 +182,12 @@ function mountBalloonPop(root, activity, ui) {
   let timeLeft = roundSeconds;
   let x2Turns = 0;             // remaining pops scored double (from an x2 bonus)
   let ended = false;
+  // Đợt 114 — "this mount was thrown away", set ONLY by cleanup(). Deliberately
+  // separate from `ended` ("the round is over"), which endRound() sets before it
+  // schedules finishRound — testing that one here would break every normal end.
+  // Needed because EVERY setTimeout in this file is bare (no timer helper), so a
+  // flag is the only brake available.
+  let dead = false;
   let rafId = null;
   let lastTs = 0;
   let sinceSpawn = SPAWN_GAP_MS;
@@ -231,6 +237,7 @@ function mountBalloonPop(root, activity, ui) {
   // level / definition handling
   // =========================================================
   function loadLevel(i) {
+    if (dead) return;   // Đợt 114 — reached late via landCrate/trainAdvance; see landCrate
     levelIndex = i;
     const it = levelItems[i];
     if (levelSign) levelSign.textContent = "Level " + (i + 1);
@@ -418,6 +425,11 @@ function mountBalloonPop(root, activity, ui) {
   }
 
   function landCrate(crate) {
+    // Đợt 114 — reached from dropCrate's 700ms bare fallback timer. Left running
+    // after teardown it played the cargo/ting/train cues over the next game and,
+    // worse, ran on into loadLevel -> setupCartFit -> autoFit(), which registers
+    // a NEW window resize listener that cleanup() can no longer destroy.
+    if (dead) return;
     bpSound.cargoCorrect(); bpSound.ting();
     crate.classList.add("is-landed");
     setTimeout(() => crate.remove(), 500);
@@ -446,6 +458,7 @@ function mountBalloonPop(root, activity, ui) {
 
   // slide the whole train left a touch and back (a "chug") between levels
   function trainAdvance(after) {
+    if (dead) return;   // Đợt 114 — same chain as landCrate, second entry point
     bpSound.trainChug();
     const train = scene.querySelector(".aw-bp-train");
     let done = false;
@@ -529,13 +542,14 @@ function mountBalloonPop(root, activity, ui) {
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;
     if (win) { if (progFillEl) progFillEl.style.width = "100%"; bpSound.complete(); }
-    else { bpSound.timesUp(); setTimeout(() => bpSound.gameOver(), 260); }
+    else { bpSound.timesUp(); setTimeout(() => { if (!dead) bpSound.gameOver(); }, 260); }
     // freeze remaining blimps
     blimps.forEach(b => { b.popped = true; b.el.disabled = true; });
     setTimeout(() => finishRound(win ? "Game complete" : "Time's up"), win ? 300 : 500);
   }
 
   function finishRound(title) {
+    if (dead) return;   // Đợt 114 — the 300/500ms timer above outlived the play; never hand in
     // review + perQuestion over the LEVELS played (each level = one definition)
     const perQuestion = levelItems.map((it, i) => ({ q: i, correct: i < levelIndex }));
     const review = levelItems.map((it, i) => ({
@@ -562,6 +576,7 @@ function mountBalloonPop(root, activity, ui) {
 
   // =========================================================
   return function cleanup() {
+    dead = true;      // Đợt 114 — the only brake on this file's 11 bare setTimeouts
     ended = true;
     if (rafId) cancelAnimationFrame(rafId);
     rafId = null;

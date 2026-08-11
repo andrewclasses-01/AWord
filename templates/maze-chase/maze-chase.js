@@ -650,6 +650,15 @@ const mazeChaseTemplate = {
     }
 
     return function cleanup() {
+      // Đợt 114 — MUST come first. lockAndNext()'s hold timer (900ms), and the
+      // two smaller ones in checkPad()/hitByEnemy(), are bare setTimeouts we
+      // cannot clear; their only brake is this flag. Without it, answering
+      // correctly and leaving within 900ms let the dead play run startQuestion()
+      // again, which builds a FRESH moveTimer + enemyTimer pair that nothing
+      // holds a handle to any more: footsteps ticking for ever over the next
+      // game, and eventually a phantom finish(). Same flag Running team and
+      // Flying fruit already set here.
+      finished = true;
       mazePauseHandlers = null;
       window.removeEventListener("keydown", onKey);
       clearInterval(moveTimer); clearInterval(enemyTimer);

@@ -269,6 +269,10 @@ const wamTemplate = {
     let score = 0, wrongCount = 0, whacks = 0;
     let combo = 0, bestCombo = 0;
     let ended = false;
+    // "this mount was thrown away" — set ONLY by cleanup(). Deliberately NOT the
+    // same flag as `ended` ("the round is over"), which endGame() sets before the
+    // score tally even starts (Đợt 114).
+    let dead = false;
     let powerUntil = 0;                 // performance.now() ms while a power crate is active
     let spawnTimer = null;
     let clockTimer = null;
@@ -869,22 +873,28 @@ const wamTemplate = {
       const startT = performance.now(); const DUR = 900;
       let done = false;
       const finishTally = () => {
-        if (done) return; done = true;
+        if (done || dead) return; done = true;
         tally.textContent = String(score);
         wamSound.pointsCounted();
-        setTimeout(reallyFinish, 500);   // the score STAYS on the sign behind the summary
+        later(reallyFinish, 500);   // the score STAYS on the sign behind the summary
       };
       const step = () => {
-        if (done) return;
+        // `dead` (set ONLY by cleanup) as well as `done`: this loop re-registers
+        // itself, so without it the count-up kept running on a thrown-away play
+        // and landed in finishTally -> ui.finish (Đợt 114). NOT `ended` — that
+        // one means "the round is over" and is already true by the time the
+        // tally starts, so testing it here would break every normal finish.
+        if (done || dead) return;
         const t = Math.min(1, (performance.now() - startT) / DUR);
         tally.textContent = String(Math.round(score * (1 - Math.pow(1 - t, 3))));
         if (t < 1) requestAnimationFrame(step); else finishTally();
       };
       requestAnimationFrame(step);
-      setTimeout(finishTally, DUR + 200);   // absolute fallback (rAF can stall in a hidden tab)
+      later(finishTally, DUR + 200);   // absolute fallback (rAF can stall in a hidden tab)
     }
 
     function reallyFinish() {
+      if (dead) return;   // Đợt 114 — never hand in a play that was thrown away
       const review = mode === "quiz"
         ? questions.map(q => ({ question: q.question, answered: false, yourText: null, yourCorrect: false, correctText: (q.answers.find(a => a.correct) || {}).text || "" }))
         : statements.map(s => ({ question: s.text, answered: false, yourText: null, yourCorrect: false, correctText: s.answer ? "True" : "False" }));
@@ -914,6 +924,7 @@ const wamTemplate = {
     // ---------- cleanup ----------
     return function cleanup() {
       wamPauseHandlers = null;
+      dead = true;      // Đợt 114 — stops the score-tally rAF loop + blocks reallyFinish()
       ended = true;
       if (spawnTimer) clearTimeout(spawnTimer);
       if (clockTimer) clearInterval(clockTimer);

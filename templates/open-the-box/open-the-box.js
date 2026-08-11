@@ -1188,6 +1188,16 @@ function mountQuestions(root, activity, ui) {
   }
 
   return function cleanup() {
+    // Đợt 114 — the two brakes this file already relies on, but never engaged
+    // when the play is thrown away. The answer-hold timer (900/1400ms), the
+    // zoom fallback (1280ms) and the game-over explosion chain (500 + 650ms) are
+    // bare setTimeouts we cannot clear; they guard themselves with `ended` and
+    // `myToken !== animToken`, and BOTH were still saying "carry on" after
+    // cleanup. Worst case measured by review: leaving during the game-over
+    // explosion let finishRound() call ui.finish() for a dead play (phantom
+    // leaderboard row / session.submit) and fired the win cue over the next game.
+    ended = true;
+    animToken++;
     otbPauseHandlers = null;
     ro.disconnect();
     clearPending();

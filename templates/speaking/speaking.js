@@ -309,12 +309,22 @@ const spkTemplate = {
         setStatus("This browser can't record audio.");
         return;
       }
+      let stream;
       try {
-        mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       } catch (e) {
         setStatus("Microphone access was blocked — allow it in the browser to play this game.");
         return;
       }
+      // ⚠️ Đợt 114 — the await above can take a LONG time: the very first take on
+      // a machine parks here until someone answers Chrome's permission prompt.
+      // Leave the game meanwhile (Home / Start again / Change template) and
+      // cleanup() has already run and found nothing to stop — `mediaStream` was
+      // still null. Without this check the microphone then switched ON with no
+      // game on screen: recording light lit, 6 seconds captured, and the take
+      // graded into a dead play. Hand the tracks straight back instead.
+      if (finished) { stream.getTracks().forEach(t => t.stop()); return; }
+      mediaStream = stream;
       chunks = [];
       try {
         mediaRecorder = new MediaRecorder(mediaStream);
@@ -576,6 +586,13 @@ const spkTemplate = {
     }
 
     return function cleanup() {
+      // Đợt 114 — MUST be first. `finished` is the brake onRecordingStopped()
+      // already documents ("in case cleanup() ran mid-recognize") and the one
+      // startRecording() needs after its getUserMedia await — but nothing ever
+      // engaged it here, so recognizePhonemes() (seconds of WASM inference, not
+      // cancellable) went on to grade a thrown-away play: pass/fail cue over the
+      // next game, then a fresh autoTimer that finished it into the leaderboard.
+      finished = true;
       clearAutoTimer();
       cancelAnyRecording();
       voicePlayer.stop();
