@@ -1,5 +1,13 @@
 # GHI CHU RUNNING TEAM (RUNNINGT)
 
+> **Đợt 110 dự án (11/8/2026) — MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI, so với Running word. KHÔNG ĐỤNG CORE
+> (1 dòng CSS). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> `.aw-rw-setup` có `justify-content:center`, `.aw-rt-setup` thiếu đúng dòng đó nên flex column dồn hết
+> nội dung lên đỉnh, đẩy toàn bộ khoảng trống xuống đáy — đúng như ảnh thầy so 2 game. Thêm
+> `justify-content:center` + cân lại padding trên/dưới (`1.2cqw/0.6cqw` lệch → `1cqw` đều). Đo thật:
+> khoảng trống trên/dưới `66.97px`/`66.98px` (coi như bằng nhau). `overflow-y:auto` giữ nguyên làm van an
+> toàn (RT nhiều hàng hơn RW), đo lại ở khung rất thấp xác nhận vẫn 0 tràn như trước khi sửa. Xem mục 14.
+
 > **Đợt 109 dự án (11/8/2026) — 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT CỦA THẦY. KHÔNG ĐỤNG CORE.
 > 🟢 CHỜ THẦY DUYỆT, chưa commit.**
 > Options: Round time + Question time đổi từ ô số sang **thanh trượt** (0:30–10:00 nấc 30s ·
@@ -364,6 +372,8 @@ dải **160px**. Chi tiết: `GHI CHU DU AN.md` Đợt 87.
 - [ ] **Đợt 109 — thầy tự xem 3 chỗ đã sửa theo ảnh chụp màn hình**: khối SET không còn chồng chữ dù
       chữ dài, tên tiếng Việt có dấu không còn bị đè cắt trên đầu, và 2 thanh trượt Options mới
       (Round time / Question time, đặc biệt thử kéo Question time về 0 = Untimed) chơi mượt như mong đợi.
+- [ ] **Đợt 110 — thầy tự xem màn setup đã cân đối trên/dưới** như Running word (đặc biệt trên màn
+      TOMKO/iPad thật, chỗ máy chỉ đo được ở trình duyệt Chrome desktop).
 - [ ] Cân nhắc: **chế độ ĐÔI** (2 đội) — thầy nói làm sau. Chỗ lắp vào đã tính sẵn: thêm
       `options.mode: "single" | "double"`, chia `roster` làm 2 và cho `renderSummary` vẽ 2 nửa như
       RunningW. Cố ý **chưa** ship option chết trong dữ liệu.
@@ -456,3 +466,32 @@ thấy `javascript_tool` treo đúng như dự đoán cho tới khi bấm Esc):
 
 0 lỗi console cả 3 lần gọi. Ba con số trên tự chứng minh cả 2 nhánh của `Math.min` đều từng thắng thật,
 không phải một công thức chết chỉ chạy 1 đường.
+
+## 14. Đợt 110 (11/8/2026) — màn setup mất cân đối trên/dưới, so với Running word
+
+Thầy gửi 2 ảnh chụp cạnh nhau: Running word có khối nội dung (tiêu đề → nút START) nằm giữa khung, khoảng
+trống trên và dưới gần bằng nhau; Running team thì khối nội dung dồn sát đỉnh, gần như toàn bộ khoảng
+trống rơi hết xuống đáy — nhìn "hụt hẫng" dù cả 2 dùng chung khuôn màn setup.
+
+**Gốc**: `.aw-rw-setup` (`running-word.css`) khai `display:flex; flex-direction:column; align-items:
+center; justify-content:center;`. `.aw-rt-setup` (file này) chỉ có `align-items:center`, THIẾU
+`justify-content:center` — mặc định flex column là `justify-content:flex-start`, dồn mọi thứ lên đầu
+container `flex:1 1 auto` rồi để phần cao còn lại trống trơn phía dưới. Một dòng thiếu, không phải lỗi
+tính toán gì phức tạp.
+
+**Sửa**: thêm `justify-content:center`; đồng thời cân lại `padding` (cũ `1.2cqw 2cqw 0.6cqw` — trên
+nhiều hơn dưới đúng 0.6cqw, tự nó cũng lệch tâm một chút) thành `1cqw 2cqw` đều 2 phía.
+
+⚠️ **`overflow-y:auto` giữ nguyên, không xoá** — đây là van an toàn thật (không phải thừa): Running team
+có NHIỀU hàng hơn Running word (thêm khối CLASS + hàng chip điểm danh có thể xuống nhiều dòng cho lớp
+đông), nên rủi ro tràn dọc cao hơn. Việc `justify-content:center` phối hợp với `overflow-y:auto` khi
+NỘI DUNG THẬT SỰ TRÀN là điểm cần cẩn thận: về lý thuyết center một khối tràn có thể cắt mất đầu khối
+thay vì cuối — trình duyệt hiện đại xử lý bằng "safe centering" (tự rơi về căn-đầu khi tràn để vẫn cuộn
+tới được dòng đầu). Đã đo thật để không chỉ tin lý thuyết: ép khung xuống **1280×380** (thấp hơn nhiều so
+với vận hành thật) TRƯỚC khi sửa — `scrollHeight === clientHeight`, đã 0 tràn sẵn (khối co theo `cqw`
+cùng khung hình, đúng kết quả Đợt 87 đã đo). Đo lại **SAU** khi thêm `justify-content:center` ở cùng
+khung 380px: vẫn `scrollable:false`, tiêu đề vẫn nằm đúng vị trí — không có ca thật nào lộ ra rủi ro cắt
+đầu, vì thiết kế `cqw` của template này chưa từng thật sự tràn ở bất kỳ tỷ lệ nào đã test.
+
+**Đo cân đối**: `topGap: 66.97px`, `bottomGap: 66.98px` (lệch 0.01px — coi như tuyệt đối bằng nhau),
+đúng cảm giác thị giác của Running word. 0 lỗi console.

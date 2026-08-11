@@ -5,6 +5,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 110 (11/8/2026) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI. KHÔNG ĐỤNG CORE (1 dòng CSS).
+🟢 CHỜ THẦY DUYỆT, chưa commit.
+
+Thầy so ảnh chụp Running word (khối nội dung nằm giữa, khoảng trống trên/dưới gần bằng nhau) với Running
+team (khối nội dung dồn sát đỉnh, gần hết khoảng trống rơi xuống đáy). Gốc: `.aw-rw-setup` (Running word)
+có `justify-content:center`, còn `.aw-rt-setup` thì KHÔNG — thiếu đúng 1 khai báo khiến flex column dồn
+nội dung lên đầu theo mặc định. Thêm `justify-content:center`, đồng thời cân lại padding trên/dưới
+(`1.2cqw/0.6cqw` lệch nhau → `1cqw` đều 2 phía). `overflow-y:auto` **giữ nguyên** làm van an toàn (RT có
+nhiều hàng hơn RW — thêm khối CLASS + hàng chip học sinh).
+
+Đo thật qua Browser pane: khoảng trống trên `66.97px` / dưới `66.98px` (gần như tuyệt đối bằng nhau, khớp
+mắt nhìn của Running word). Đo thêm rủi ro tràn ở khung rất thấp (1280×380) trước khi sửa vốn đã 0 tràn
+(khối co theo `cqw` cùng khung hình) — không đổi sau khi thêm `justify-content:center`, xác nhận van an
+toàn vẫn còn tác dụng nếu có ca thật tràn sau này. 0 lỗi console.
+
+---
+
 ## Đợt 109 (11/8/2026) — RUNNING TEAM: 6 CẢI TIẾN THEO YÊU CẦU THẦY (Options đổi sang thanh trượt, vá
 lỗi chồng chữ ở SET slot, chữ tên tiếng Việt bị đè cắt, và 3 cải tiến tờ in). KHÔNG ĐỤNG CORE (chỉ 3 file
 `templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT — build xong, tự test qua devserver, chưa commit.

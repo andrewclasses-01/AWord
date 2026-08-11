@@ -5,7 +5,16 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 109) — RUNNING TEAM: 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT
+> Cập nhật lần cuối: **11/8/2026 (Đợt 110) — RUNNING TEAM: MÀN SETUP MẤT CÂN ĐỐI TRÊN/DƯỚI so với
+> Running word. KHÔNG ĐỤNG CORE (1 dòng CSS). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
+> `.aw-rw-setup` có `justify-content:center`, `.aw-rt-setup` thiếu đúng dòng đó nên flex column dồn hết
+> nội dung lên đỉnh, đẩy toàn bộ khoảng trống xuống đáy. Thêm `justify-content:center` + cân lại padding
+> trên/dưới (`1.2cqw/0.6cqw`→`1cqw` đều). Đo thật: khoảng trống trên/dưới `66.97px`/`66.98px` (coi như
+> bằng nhau). `overflow-y:auto` giữ nguyên làm van an toàn (RT nhiều hàng hơn RW), đo lại ở khung rất
+> thấp (1280×380) xác nhận vẫn 0 tràn như trước khi sửa. Chi tiết:
+> `templates/running-team/GHI CHU RUNNING-TEAM.md` mục 14.**
+>
+> Trước đó: **11/8/2026 (Đợt 109) — RUNNING TEAM: 6 CẢI TIẾN THEO ẢNH CHỤP MÀN HÌNH THẬT
 > CỦA THẦY. KHÔNG ĐỤNG CORE (chỉ 3 file `templates/running-team/*`). 🟢 CHỜ THẦY DUYỆT, chưa commit.**
 > Options: Round time + Question time đổi từ ô số sang **thanh trượt** (0:30–10:00 nấc 30s ·
 > 0s–30s nấc 1s, **0s = Untimed** — quyết định tự thêm để 0 không làm câu hỏi hết giờ ngay lập tức,

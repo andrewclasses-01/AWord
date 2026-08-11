@@ -163,10 +163,20 @@
 /* =============================================================
    SETUP SCREEN
    ============================================================= */
+/* `justify-content: center` (Running word already does this) is what keeps
+   this screen from reading top-heavy: without it a flex column with no
+   explicit height just piles everything at the top and dumps all the
+   leftover space below the START button — exactly the lopsided look a
+   teacher flagged from a live screenshot (Đợt 110). `overflow-y: auto` stays
+   — this screen has MORE rows than Running word's (a CLASS picker + a chip
+   list that can wrap to several lines for a big roster), so it is the one
+   real safety valve if a tall class roster ever does not fit; modern
+   browsers fall back centred content to start-aligned once it truly
+   overflows, so scrolling still reaches the top row instead of clipping it. */
 .aw-rt-setup {
   flex: 1 1 auto; min-height: 0;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 1.1cqw; padding: 1.2cqw 2cqw 0.6cqw;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.1cqw; padding: 1cqw 2cqw;
   overflow-y: auto;
 }
 .aw-rt-setup-title {
