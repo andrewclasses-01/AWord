@@ -1092,11 +1092,11 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
     setScore(n) {
-      // Positive score = GREEN, negative = RED with NO minus sign (teacher, 3/8/2026).
-      // Templates that allow points-off may pass a negative n; the sign is carried by
-      // colour, not a "-", so a wrong-heavy round reads "3" in red, not "-3".
+      // Positive score = GREEN, negative = RED WITH a leading "-" (teacher,
+      // 11/8/2026 — previously the chip dropped the sign and relied on
+      // colour alone; now a wrong-heavy round reads "-3" in red, not "3").
       const v = Number(n) || 0;
-      scoreEl.innerHTML = `${icons.check} ${Math.abs(v)}`;
+      scoreEl.innerHTML = `${icons.check} ${v}`;
       scoreEl.classList.toggle("is-pos", v > 0);
       scoreEl.classList.toggle("is-neg", v < 0);
     },

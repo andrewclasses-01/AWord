@@ -1074,9 +1074,15 @@ window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(
   điểm — **mỗi template phải TỰ đọc `options.pointsOff` và trừ** ở nhánh câu SAI (mẫu: `templates/quiz/quiz.js`
   `scoreNow()` = đúng − pointsOff×số-câu-sai). **BẮT BUỘC**: khi `pointsOff===0` phải zero-diff (trừ 0 = không
   đổi gì) để không phá hành vi cũ. Điểm ĐƯỢC PHÉP âm (không kẹp 0). Đưa điểm đã trừ vào `ui.finish({score})`.
-- **`ui.setScore(n)` tô màu theo DẤU** (thầy chốt): dương = **XANH LÁ** (`--aw-ok`), âm = **ĐỎ** (`--aw-no`) và
-  **BỎ dấu trừ** (hiện `Math.abs`). Class `.is-pos`/`.is-neg` trên `.aw-top-score` (CSS trong `app.css`).
-  Áp cho MỌI game — game cũ không trừ điểm vẫn dương nên vẫn xanh, không đổi gì.
+- **`ui.setScore(n)` tô màu theo DẤU** (thầy chốt): dương = **XANH LÁ** (`--aw-ok`), âm = **ĐỎ** (`--aw-no`)
+  **VÀ GIỮ dấu trừ** (từ 11/8/2026 — trước đó hiện `Math.abs`, bỏ hẳn dấu, chỉ đổi màu; thầy yêu cầu đổi
+  lại vì chip trong game và bảng tổng kết cuối ván (`statBlock`, vốn CHƯA BAO GIỜ bỏ dấu) khi đó đọc khác
+  nhau). Class `.is-pos`/`.is-neg` trên `.aw-top-score` (CSS trong `app.css`). Áp cho MỌI game — game cũ
+  không trừ điểm vẫn dương nên vẫn xanh, không đổi gì.
+  ⚠️ **Template nào tự dựng chip điểm riêng (không gọi `ui.setScore`)** — vd Type the answer/Crossword hiện
+  dạng "✓ N/total" (`scoreHTML()`/`showScore()` riêng, đọc `.aw-top-score` trực tiếp) — **PHẢI tự áp dụng
+  đúng luật này** (không `Math.abs`, số âm giữ dấu, class `-neg` tô đỏ) chứ engine không tự lo được cho
+  chip tự dựng. Anagram/Unjumble đã đúng luật này từ trước (chưa từng `Math.abs`).
 - **Allow skip**: game có nút Next–Back tay (quiz/type-the-answer/anagram/unjumble) đọc `options.allowSkip`
   để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
   (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.

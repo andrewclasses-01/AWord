@@ -273,8 +273,9 @@ body {
   font-weight: 800; color: var(--aw-text); font-size: 2.2cqw;
 }
 .aw-top-score svg { width: 1em; height: 1em; color: var(--aw-ok); }
-/* Score colour by sign (teacher, 3/8/2026): positive GREEN, negative RED (the
-   engine's setScore already strips the "-", so a negative reads as a red number). */
+/* Score colour by sign (teacher, 3/8/2026, sign restored 11/8/2026): positive
+   GREEN, negative RED — engine's setScore now keeps the leading "-" too, so a
+   negative reads as e.g. "-3" in red, not just a red "3". */
 .aw-top-score.is-pos { color: var(--aw-ok); }
 .aw-top-score.is-neg { color: var(--aw-no); }
 .aw-top-score.is-neg svg { color: var(--aw-no); }
@@ -561,9 +562,8 @@ body {
 .aw-sum-label { color: #35b1f0; font-weight: 700; font-size: 2.2cqw; }
 .aw-sum-value { font-weight: 800; font-size: 4.4cqw; line-height: 1.1; }
 .aw-sum-value span { font-size: .5em; font-weight: 700; color: #d0d3d6; }
-/* negative score (Points off) — same sign-carries-colour rule as the in-game
-   score chip, except the summary DOES keep the minus sign: there is room for it
-   here and "-6/10" is unambiguous, whereas the chip only has room for a digit. */
+/* negative score (Points off) — same sign+colour rule as the in-game score
+   chip (both now keep the leading "-"), e.g. "-6/10" here. */
 .aw-sum-value.is-neg { color: #ff6b6b; }
 /* raw tally under the two big numbers ("Total: 9/10") — deliberately quiet.
    Negative top margin so it tucks under the numbers instead of sitting a whole

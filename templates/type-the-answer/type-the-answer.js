@@ -647,15 +647,17 @@ const ttaTemplate = {
       return livesLeft <= 0;
     }
 
-    // Score reads "correct/max" (e.g. ✓ 1/6). The running number is GREEN when
-    // ≥0 and RED when negative (no minus sign — red itself means below zero); the
-    // slash and the TOTAL are always the normal dark text colour. Numerator,
-    // slash and total are separate flex items, so `.aw-top-score`'s own `gap`
-    // spaces them evenly (numerator↔slash == slash↔total).
+    // Score reads "correct/max" (e.g. ✓ 1/6, or ✓ -3/6). The running number is
+    // GREEN when ≥0 and RED WITH a leading "-" when negative (teacher,
+    // 11/8/2026 — previously dropped the sign and relied on colour alone,
+    // same change as core's ui.setScore()); the slash and the TOTAL are always
+    // the normal dark text colour. Numerator, slash and total are separate
+    // flex items, so `.aw-top-score`'s own `gap` spaces them evenly
+    // (numerator↔slash == slash↔total).
     function scoreHTML(v) {
       const cls = v < 0 ? "aw-tta-score-neg" : "aw-tta-score-pos";
       return `${icons.check}`
-        + `<span class="aw-tta-score-num ${cls}">${Math.abs(v)}</span>`
+        + `<span class="aw-tta-score-num ${cls}">${v}</span>`
         + `<span class="aw-tta-score-sep">/</span>`
         + `<span class="aw-tta-score-total">${total}</span>`;
     }

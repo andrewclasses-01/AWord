@@ -415,15 +415,16 @@ const crosswordTemplate = {
     // -------------------------------------------------------------------
     function relayout() { resizeGrid(); if (curWord >= 0) positionActive(); }
 
-    // Score: the running points, GREEN when ≥0 and RED when negative (no minus
-    // sign — red itself means below zero); the slash + total stay normal. Same
-    // look as Type the answer (its CSS isn't loaded here, hence the .aw-cw-
-    // prefixed classes styled in crossword.css).
+    // Score: the running points, GREEN when ≥0 and RED WITH a leading "-" when
+    // negative (teacher, 11/8/2026 — previously dropped the sign and relied on
+    // colour alone, same change as core's ui.setScore()); the slash + total
+    // stay normal. Same look as Type the answer (its CSS isn't loaded here,
+    // hence the .aw-cw-prefixed classes styled in crossword.css).
     function showScore() {
       if (!ui.scoreEl) return;
       const cls = livePoints < 0 ? "aw-cw-score-neg" : "aw-cw-score-pos";
       ui.scoreEl.innerHTML = `${icons.check}`
-        + `<span class="aw-cw-score-num ${cls}">${Math.abs(livePoints)}</span>`
+        + `<span class="aw-cw-score-num ${cls}">${livePoints}</span>`
         + `<span class="aw-cw-score-sep">/</span>`
         + `<span class="aw-cw-score-total">${total}</span>`;
       ui.scoreEl.classList.remove("aw-cw-score-pulse");

@@ -5,6 +5,61 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 119 (11/8/2026) — ĐIỂM ÂM LUÔN CÓ DẤU "-" + MÀU ĐỎ, RÀ SOÁT TOÀN BỘ 15 TEMPLATE (trước chỉ đổi
+màu đỏ, bỏ hẳn dấu trừ, và 2 template tự dựng chip riêng bị sót). ⭐ CÓ SỬA CORE — `core/engine.js` (1
+dòng) + `core/app.css`/`core/HUONG DAN CORE.md` (comment, không đổi luật CSS nào) — cộng 2 template tự
+dựng chip điểm riêng: `templates/type-the-answer/type-the-answer.js` + `templates/crossword/crossword.js`.
+🟢 ĐÃ SỬA + TỰ TEST QUA TRÌNH DUYỆT THẬT, CHƯA COMMIT (chờ thầy chốt).
+
+Thầy yêu cầu: điểm âm luôn màu đỏ VÀ luôn có dấu "-" ở phía trước — **áp dụng cho toàn bộ template và
+mọi mode của chúng**, không riêng Anagram. Từ Đợt 54 (3/8/2026), `ui.setScore()` (dùng chung mọi
+template) cố ý **bỏ hẳn dấu trừ** (chỉ đổi màu qua class `is-neg`) — lý do ghi trong comment cũ lúc đó:
+"ô điểm chỉ có chỗ cho 1 chữ số". Bảng tổng kết cuối game (`statBlock()` trong `finish()`) thì **chưa
+bao giờ bỏ dấu** — 2 chỗ hiện điểm âm khác hành vi nhau.
+
+**Bước 1 — sửa `ui.setScore()`** (`core/engine.js`): bỏ `Math.abs(v)`, chip giờ in thẳng `v`. Vì hàm này
+dùng chung, MỌI template gọi thẳng `ui.setScore()` (Anagram, Quiz, True-false, Find the match, Open the
+box, Balloon pop, Flying fruit, Maze chase, Whack-a-mole, Gameshow, Speaking, Running word/team...) tự
+động nhận thay đổi mà không cần sửa gì thêm.
+
+**Bước 2 — rà soát TOÀN BỘ 15 template** tìm nơi tự dựng chip điểm RIÊNG (đọc/ghi thẳng `.aw-top-score`,
+bỏ qua `ui.setScore()`) — vì những chỗ đó KHÔNG tự động ăn theo bước 1. Grep `scoreEl.innerHTML` +
+`Math.abs` + `is-neg`/`score-neg` trên toàn bộ `templates/`, thấy đúng 4 template tự dựng chip:
+- **Type the answer** (`scoreHTML()`, dạng "✓ N/total") và **Crossword** (`showScore()`, dạng
+  "✓ N/total") — **CẢ HAI đều copy nguyên bản `Math.abs` giống hệt bản core cũ** (kể cả nguyên văn comment
+  "no minus sign — red itself means below zero") → **có lỗi giống nhau, đã sửa cả hai**: bỏ `Math.abs`,
+  số âm giờ tự mang dấu "-" (class `-neg` tô đỏ sẵn có, không cần đổi CSS).
+- **Anagram** (`pulseScoreTo()`, đọc lại số hiện tại từ `scoreEl.textContent` bằng regex `/(-?\d+)/` rồi
+  tự vẽ) — **ĐÃ ĐÚNG SẴN, không cần sửa**: chưa từng dùng `Math.abs`, và regex vốn đã cho phép dấu "-"
+  (`-?`) nên tự động ăn theo đúng số đã có dấu ngay khi `ui.setScore()` sửa xong ở Bước 1.
+- **Unjumble** (`showScore()`, dạng "✓ N / max") — **ĐÃ ĐÚNG SẴN, không cần sửa**: chưa từng dùng
+  `Math.abs`, tô đỏ qua class `aw-unj-neg` (Đợt 40) độc lập với core.
+`Running team`'s `paintScore()` cũng tự dựng chip riêng nhưng chỉ hiện `correctCount` (không có khái
+niệm điểm âm) nên không liên quan. 11 template còn lại không tự dựng chip điểm, đều đi qua
+`ui.setScore()` nên chỉ cần Bước 1.
+
+**Test qua trình duyệt thật** (3 template đại diện, đủ 3 kiểu chip khác nhau: số đơn / "N/total" /
+"bay điểm"):
+- Anagram (`test.html`, mode "On submit", Points off = 10): nộp sai 1 từ → chip **"-10"** đỏ
+  (`rgb(226,60,60)`, class `is-neg`); bảng tổng kết vẫn **"Score -10/6"** như trước (không hồi quy).
+- Type the answer (`test.html`, Points off per wrong = 5): trả lời sai → chip **"-5/6"**, đo riêng span
+  số `.aw-tta-score-num` ra đúng text `-5` và màu `rgb(239,68,68)` (đỏ, class `aw-tta-score-neg`).
+- Crossword (`test.html`, Points off when wrong = 5): điền sai 1 từ 4 ô ("WXYZ" thay vì đáp án đúng) rồi
+  bấm phím Submit trên bàn phím ảo → chip **"-5/18"**, span số `.aw-cw-score-num` ra đúng text `-5` màu
+  `rgb(239,68,68)` (class `aw-cw-score-neg`).
+0 lỗi console ở cả 3 lượt test.
+
+**File đổi**: `core/engine.js` (`ui.setScore`, bỏ `Math.abs`), `core/app.css` (2 comment),
+`core/HUONG DAN CORE.md` (cập nhật mục hợp đồng "Points off + màu điểm theo dấu" + cảnh báo template tự
+dựng chip riêng phải tự áp dụng luật này), `templates/type-the-answer/type-the-answer.js` (`scoreHTML()`,
+bỏ `Math.abs`), `templates/crossword/crossword.js` (`showScore()`, bỏ `Math.abs`). Không đụng file nào
+khác — Anagram/Unjumble/11 template còn lại không cần sửa vì đã đúng luật hoặc tự động ăn theo Bước 1.
+
+**Việc kế**: thầy xem qua vài template khác nếu muốn chắc chắn hơn, rồi cho biết có commit + push luôn
+không.
+
+---
+
 ## Đợt 118 (11/8/2026) — POPUP IMPORT: ENG1/ENG2 GIỮ NGUYÊN SONG SONG VỚI ENG1 VOICE/ENG2 VOICE
 (trước đây bị THAY THẾ). CÓ SỬA CORE — chỉ `core/lesson-import.js`. KHÔNG cần đăng nhập để test (logic
 đọc Excel thuần), verify bằng script Node dựng workbook giả.
