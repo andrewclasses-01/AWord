@@ -291,8 +291,9 @@ itemsKey: "questions",                // BẮT BUỘC — fight.js đọc/ghi m�
 fightMode: true,                      // đây là thứ làm nút MODE hiện ra
 // trong mount(): const f = activity._fight;  // { side, ctl } — không có = chơi đơn như thường
 f.ctl.attach(side, { total, goToIndex(i), lock(on) })   // đăng ký bàn
-f.ctl.wordDone(side, { index, earned, perfect })        // vừa giải xong 1 từ (hoặc 1 câu — earned/perfect
-                                                         // là thông tin thêm, fight.js hiện KHÔNG đọc lại)
+f.ctl.wordDone(side, { index, correct })                 // bàn này đã XONG với từ/câu đó
+    // ⚠️ `correct:false` = xong nhưng SAI. XONG TRƯỚC ≠ THẮNG (Đợt 128) — xem mục dưới.
+    // Không gửi cờ = coi như ĐÚNG (dành cho template mà từ chỉ có thể kết thúc đúng).
 f.ctl.isLocked(side)                                    // chặn thao tác khi đã thua vòng
 f.ctl.shareLetters · f.ctl.speaks(side)                 // giữ công bằng + không đọc chồng
 f.ctl.boardMoved(side, index)                           // thầy bấm ‹ › ở bàn này
@@ -352,6 +353,21 @@ Cả 2 template hiện có đều làm vậy qua một hàm tên `syncFightLock(
 **Cách đo lại khi nghi có nháy** (tái dùng được): `MutationObserver` trên playarea của khung THUA,
 đếm số lần thẻ bài bị THAY THẾ **kèm dấu thời gian** — bắt buộc phải có mốc thời gian, vì lần vẽ lại
 HỢP LỆ lúc sang từ mới rơi vào đúng `+ROUND_HOLD_MS` và rất dễ bị đọc nhầm thành cái nháy.
+
+⭐⭐ **XONG TRƯỚC ≠ THẮNG (Đợt 128) — luật trung tâm của vòng đấu.**
+Ban đầu ai báo `wordDone` trước là thắng vòng, bất kể đúng sai ⇒ **bấm bừa thật nhanh là cướp được từ**
+của đội kia. Luật đúng:
+- Xong mà **SAI** → chỉ kết thúc lượt CỦA CHÍNH BÀN ĐÓ: nó bị khoá lại (giữ nguyên phản hồi sai quen
+  thuộc của template), nhưng **vòng vẫn MỞ** — bàn kia **không bị khoá, không bị đổi màu**, chơi tiếp
+  bình thường và **vẫn thắng được vòng đó**.
+- Chỉ xong **ĐÚNG** mới đặt `roundWinner`, mới ăn thưởng tốc độ, mới khoá bàn kia.
+- Mấu chốt: **`roundDone[2]`** ("bàn này đã có lượt chưa") là khái niệm KHÁC **`roundWinner`** ("vòng đã
+  có ai thắng chưa"). Gộp 2 thứ này làm một chính là gốc của luật sai ban đầu.
+- Template **phải báo cả ca SAI** (`correct:false`), đừng im lặng: im lặng thì trọng tài không biết bàn
+  đó đã xong, nên vòng không thể đóng lại sớm khi cả hai đã có lượt mà phải chờ hết chốt chặn 20 giây
+  (`LATE_LIMIT_MS`) — đúng lỗi Anagram "On submit" mắc phải trước Đợt 128.
+- Template mà một từ **chỉ có thể kết thúc ĐÚNG** (Anagram bonus: phải bấm chữ theo thứ tự, bấm sai bị
+  từ chối) thì khỏi gửi cờ — mặc định là đúng. Sai ở đó chỉ mất hệ số nhân, không mất vòng.
 
 ⚠️ **"Quá chậm" — đội thua phải THẤY ngay** (Đợt 127): khi bị `lock`, template nên làm ô đáp án của
 mình **mất màu + mờ** (`.is-fightlost`, `opacity:.55`) để cả lớp nhìn là biết, thay vì bấm mãi không

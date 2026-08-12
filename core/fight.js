@@ -37,7 +37,9 @@
 //   A template joins fight mode by setting `tpl.fightMode = true` (that is what
 //   makes the MODE button appear at all) and talking to `activity._fight`:
 //     ctl.attach(side, { goToIndex, lock, total })   register the board
-//     ctl.wordDone(side, { index, earned, perfect }) a word was just solved
+//     ctl.wordDone(side, { index, correct })         this board finished a word
+//        `correct:false` = finished it WRONG, which ends only THIS board's go:
+//        the round stays open and the other team plays on (see wordDone).
 //     ctl.isLocked(side)                             refuse input while locked
 //     ctl.scoreTarget(side)                          where "+8" should fly to
 //     ctl.shareLetters / ctl.speaks(side)            keep the two boards fair
@@ -297,7 +299,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const frozenAt = [null, null];    // game+bonus at the moment of freezing, while a freeze is on
   const boards = [null, null];          // the template's own handles, via ctl.attach
   let roundIndex = 0;
-  let roundWinner = null;               // side that finished the current word first
+  // Side that got the current word RIGHT first — i.e. actually won the round.
+  // Getting there first while WRONG does not win it (teacher, 12/8/2026), see
+  // ctl.wordDone.
+  let roundWinner = null;
+  // Which sides have already had their go at the current word (right or wrong).
+  // A team that answered WRONG is finished with this word — locked and out —
+  // but the round itself stays open for the other team, so "has this side
+  // finished" and "has the round been won" are two different questions and
+  // need two different flags.
+  let roundDone = [false, false];
   let roundTimer = null;
   let matchOver = false;
   let torndown = false;
@@ -325,6 +336,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function advanceRound() {
     if (matchOver || torndown) return;
     roundWinner = null;
+    roundDone = [false, false];
     // The winner's glow belongs to the word that was just won, not to the next
     // one — leaving it on made one team look permanently ahead.
     teams.forEach(t => t.el.classList.remove("is-won"));
@@ -376,11 +388,40 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (roundIndex > 0) api.goToIndex(roundIndex);
       if (ctl.isLocked(side)) api.lock(true);
     },
+    // A board has finished with the current word — `info.correct === false`
+    // means it finished it WRONG.
+    //
+    // ⚠️ BEING FIRST IS NOT THE SAME AS WINNING (teacher, 12/8/2026). Racing to
+    // a wrong answer must not take the word away from the other team: a wrong
+    // finish only ends THAT team's go (it is marked wrong and locked out as
+    // usual, exactly as in single play), while the round stays open and the
+    // other team keeps playing, unblocked and un-greyed, until it finishes.
+    // Only a CORRECT finish wins the round and locks the loser out.
     wordDone(side, info) {
       if (matchOver || torndown) return;
       if (info && info.index !== roundIndex) return;    // a stale word (teacher used Next) — ignore
-      const first = roundWinner === null;
-      if (first) {
+      if (roundDone[side]) return;                      // this side already had its go this round
+      roundDone[side] = true;
+      // Anything that doesn't say otherwise counts as correct: templates whose
+      // word can only ever END correct (Anagram's tap-in-order modes) simply
+      // don't send the flag.
+      const correct = !info || info.correct !== false;
+      const other = side === 0 ? 1 : 0;
+
+      if (!correct) {
+        // Wrong. This board is out of the round — lock it so the mistake
+        // stands (its own template already painted the usual wrong-answer
+        // feedback; the "too slow" grey is deliberately NOT used here, that
+        // one means "the other team beat you to it").
+        boards[side] && boards[side].lock(true);
+        // If the other team has already had its go, nobody is left to play —
+        // move on. Otherwise wait for them, with the same walk-away backstop
+        // used by "let the other team finish" so a lesson can never hang.
+        later(advanceRound, (roundDone[other] || roundWinner !== null) ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+        return;
+      }
+
+      if (roundWinner === null) {
         roundWinner = side;
         if (fo.fightSpeedBonus > 0) {
           bonus[side] += fo.fightSpeedBonus;
@@ -388,18 +429,19 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           flashTeam(side, `+${fo.fightSpeedBonus}`);
         }
         teams[side].el.classList.add("is-won");
-        if (fo.fightFirstRule === "lock") {
-          const other = side === 0 ? 1 : 0;
-          boards[other] && boards[other].lock(true);
-          later(advanceRound, ROUND_HOLD_MS);
-        } else {
-          // Let the other team finish — but never hang the lesson on it.
-          later(advanceRound, LATE_LIMIT_MS);
-        }
+        // Lock the other side out only if it is still IN the round; one that
+        // already answered wrong is locked already, and re-locking it would
+        // repaint it as "too slow" on top of its own wrong-answer feedback.
+        if (fo.fightFirstRule === "lock" && !roundDone[other]) boards[other] && boards[other].lock(true);
+        // Hold briefly when nobody is left to play (either the rules end the
+        // round here, or the other team is already done); otherwise give them
+        // their chance, capped so a team that walks away can't freeze the class.
+        const nobodyLeft = fo.fightFirstRule === "lock" || roundDone[other];
+        later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
       } else {
-        // The slower team just got there. With `fightLateScores:false` only the
-        // winner scores the round, so this team's number is frozen where it is
-        // and the points still on their way in are cancelled as they land.
+        // Correct, but the round was already won. With `fightLateScores:false`
+        // only the winner scores it, so this team's number is frozen where it
+        // is and the points still on their way in are cancelled as they land.
         if (!fo.fightLateScores) { frozenAt[side] = game[side] + bonus[side]; holdFreeze(side); paintScore(side); }
         later(advanceRound, ROUND_HOLD_MS);
       }
@@ -410,6 +452,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (index === roundIndex || matchOver || torndown) return;
       roundIndex = index;
       roundWinner = null;
+      roundDone = [false, false];
       clearTimeout(roundTimer); roundTimer = null;
       teams.forEach(t => t.el.classList.remove("is-won"));
       const other = side === 0 ? 1 : 0;

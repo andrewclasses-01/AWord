@@ -1,5 +1,30 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 128 (12/8/2026) — "ON SUBMIT" NAY BÁO CẢ CA NỘP SAI (xong trước mà sai thì không cướp được từ)
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 128 và
+`../../core/HUONG DAN CORE.md` mục "XONG TRƯỚC ≠ THẮNG".
+
+**Đổi 2 dòng, đều ở chỗ báo lên trọng tài:**
+1. `doSubmit()` — nộp SAI trước đây **im lặng**, chỉ nộp đúng mới báo. Nay báo cả hai:
+   `wordDone(fightSide, { index, correct: allCorrect })`. Im lặng có 2 cái hại: trọng tài không biết
+   bàn này đã xong nên vòng **không đóng lại được sớm** khi cả hai đã có lượt (phải chờ hết chốt chặn
+   20 giây), và bàn nộp sai **không bị khoá** nên vẫn hí hoáy tiếp dù đã hết lượt.
+2. `finalizeBonusWord()` — thêm `correct: true` cho tường minh. **Bonus/bonusMinus không bao giờ sai
+   được**: phải bấm chữ theo ĐÚNG THỨ TỰ, bấm sai bị từ chối tại chỗ ⇒ tới được đây nghĩa là từ đã
+   giải xong. Sai dọc đường chỉ mất hệ số nhân (`perfect`), **không mất vòng**.
+
+Nhờ vậy: bàn nộp sai trước bị khoá riêng nó + hiện từ đúng như thường lệ, còn **bàn kia không bị chặn,
+không bị đổi màu**, vẫn xếp tiếp và **vẫn ăn được từ đó**.
+
+**Đo thật (mode On submit, 2 bàn)**: bàn 0 nộp "PNLETEAH" (sai) → bàn 0 hiện "ELEPHANT", khoá,
+**KHÔNG khoác lớp xám "quá chậm"** (nó có phản hồi sai riêng rồi); bàn 1 **còn đủ 8 ô bấm được, không
+xám, opacity 1** → bàn 1 xếp đúng ELEPHANT rồi nộp → **0–1, bàn 1 THẮNG**.
+⚠️ Điểm của Anagram **tới muộn ~1,5 giây** (bay + đếm), nên đọc điểm ngay sau khi nộp sẽ thấy 0–0 —
+suýt kết luận nhầm là không cộng điểm. Phải chờ hoạt cảnh điểm hạ cánh rồi mới đo.
+
+---
+
 ## ⭐ Đợt 127 (12/8/2026) — LỖI THẬT: KHUNG BÊN THUA NHÁY 1 NHỊP + ĐỘI THUA MỜ ĐI NGAY
 
 **Gốc lỗi (thầy báo)**: `lock(on)` — cửa mà Đợt 124 mở cho trọng tài khoá khung — gọi thẳng

@@ -839,7 +839,11 @@ const anagramTemplate = {
       // FIGHT MODE: tell the match this board just solved the round's word.
       // The controller decides who scores, whether the other board keeps
       // playing, and when both move on — this play only reports.
-      if (fightCtl) fightCtl.wordDone(fightSide, { index, earned, perfect });
+      // No `correct` flag: in the bonus-family modes a word can only ever end
+      // SOLVED (letters must be tapped in the right order, a wrong tap is
+      // simply refused), so getting here always means correct. Mistakes along
+      // the way cost the multiplier, not the round — see `perfect`.
+      if (fightCtl) fightCtl.wordDone(fightSide, { index, earned, perfect, correct: true });
       if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), finishDelay);
       // In a fight the controller drives the last word too (it ends the match
       // once both boards are done), so don't race it with a local finish().
@@ -1312,10 +1316,15 @@ const anagramTemplate = {
           // notes (GHI CHU.md).
           anagramSound.wrongPick();
         }
-        // FIGHT MODE — "On submit" scores a whole word at once, so a CORRECT
-        // submit is this board finishing the round. A wrong one is not: the
-        // other team is still racing and this board simply waits it out.
-        if (fightCtl && allCorrect) fightCtl.wordDone(fightSide, { index, earned: 1, perfect: true });
+        // FIGHT MODE — "On submit" settles a whole word at once, so EITHER
+        // outcome ends this board's go at it and both are reported. Only the
+        // correct one wins the round, though: a wrong submit leaves the round
+        // open so the other team can still finish (teacher, 12/8/2026), and
+        // the controller locks just this board out. Reporting the wrong case
+        // too (it used to stay silent) is what lets the controller know this
+        // board is done, so the round can close as soon as BOTH have had a go
+        // instead of waiting out the walk-away timeout.
+        if (fightCtl) fightCtl.wordDone(fightSide, { index, correct: allCorrect });
         if (outOfLives) {
           autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
         } else if (!fightCtl && state.every(doneCheck)) {

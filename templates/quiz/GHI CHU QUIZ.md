@@ -9,6 +9,30 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⭐ ĐỢT 128 (12/8/2026) — TRẢ LỜI NHANH MÀ SAI THÌ KHÔNG CƯỚP ĐƯỢC CÂU CỦA ĐỘI KIA
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung + phần trọng tài: `../../GHI CHU DU AN.md` Đợt 128
+và `../../core/HUONG DAN CORE.md` mục "XONG TRƯỚC ≠ THẮNG".
+
+Trước đây Quiz báo `wordDone(side, {index})` **không kèm đúng/sai**, nên trọng tài coi ai bấm trước là
+thắng ⇒ bấm bừa thật nhanh là cướp mất câu. Nay báo **`{index, correct: st.correct === true}`** — chỉ
+1 dòng ở `choose()`, phần luật nằm hết bên trọng tài.
+
+Hệ quả trong lớp: đội bấm bừa trước mà sai thì **tự khoá mình lại** (kèm phản hồi sai bình thường: ô
+sai mờ 15%, dấu ✗, ô đúng giữ màu), còn đội kia **không bị chặn, không bị đổi màu**, vẫn trả lời và
+**vẫn ăn được câu đó**.
+
+**Đo thật** (bấm bằng script để khống chế thời gian — mỗi lượt gọi công cụ tốn vài giây, dễ vượt mốc
+chốt chặn 20s):
+
+| Kịch bản | Đội làm trước | Đội kia | Điểm |
+|---|---|---|---|
+| A sai trước → B đúng sau | khoá, **KHÔNG xám**, giữ ✗ + 3 ô mờ | **không khoá, không xám, opacity 1, còn nguyên màu** | **0–1, B THẮNG** |
+| A đúng trước | khoá, không xám | **khoá + xám** `.55`, ô `rgb(179,186,195)` | 1–0 |
+| Cả hai cùng sai | khoá | khoá | 0–0, sang câu sau **2458ms** |
+
+---
+
 ## ĐỢT 127 (12/8/2026) — ĐỘI XỬ LÝ MUỘN: HÀNG ĐÁP ÁN MẤT MÀU + MỜ ĐI NGAY
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chi tiết chung: `../../GHI CHU DU AN.md` Đợt 127.

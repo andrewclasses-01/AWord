@@ -5,6 +5,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 128 (12/8/2026) — NHANH MÀ SAI THÌ KHÔNG ĐƯỢC CƯỚP TỪ + VÁ 404 CSS Ở TRANG TEST
+⭐ CÓ SỬA CORE (`core/fight.js` + `core/registry.js`) + `templates/anagram/anagram.js` + `templates/quiz/quiz.js`.
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+
+### 1. ⭐ LUẬT MỚI: **XONG TRƯỚC ≠ THẮNG** — chỉ xong ĐÚNG mới ăn từ
+Trước đây `wordDone()` coi ai báo xong TRƯỚC là thắng vòng, bất kể đúng sai ⇒ một đội bấm bừa thật
+nhanh là cướp mất từ của đội kia. Thầy chốt luật mới:
+- **Đội xong trước mà SAI**: chỉ kết thúc lượt CỦA CHÍNH NÓ — bị tính sai như bình thường, hiện đúng
+  phản hồi sai quen thuộc của template (Quiz: mờ ô sai + dấu ✗; Anagram submit: hiện từ đúng), và bị
+  **khoá riêng nó** để chờ. **Vòng đấu VẪN MỞ.**
+- **Đội kia KHÔNG bị chặn, KHÔNG bị đổi màu**, chơi tiếp bình thường tới khi xong, và **vẫn thắng
+  được vòng đó** dù làm sau.
+- Chỉ **xong ĐÚNG** mới đặt `roundWinner`, mới ăn thưởng tốc độ và mới khoá đội kia.
+
+**Cách làm**: `wordDone(side, {index, correct})` — thêm cờ `correct`. Trọng tài thêm mảng
+**`roundDone[2]`** (đội này đã có lượt chưa) **tách hẳn khỏi `roundWinner`** (vòng đã có ai thắng
+chưa) — đây chính là mấu chốt: trước đây 2 khái niệm này bị gộp làm một nên "xong" mới đồng nghĩa
+"thắng".
+- Template không gửi cờ = coi như ĐÚNG (Anagram bonus/bonusMinus: từ chỉ có thể kết thúc ĐÚNG vì phải
+  bấm chữ theo thứ tự, bấm sai bị từ chối — sai chỉ mất hệ số nhân, không mất vòng).
+- **Anagram "On submit" nay báo CẢ ca sai** (`correct:false`) — trước đây nộp sai thì **im lặng**, nên
+  trọng tài không biết đội đó đã xong; nay biết nên vòng đóng lại ngay khi **cả hai** đã có lượt, thay
+  vì phải chờ hết đồng hồ bỏ cuộc 20 giây.
+- **Quiz** báo `correct: st.correct === true`.
+- ⚠️ Đội SAI **không** bị khoác lớp xám "quá chậm" (`is-fightlost`) — lớp đó mang nghĩa "bị đội kia
+  giành mất", còn đội sai đã có phản hồi sai của riêng nó rồi; chồng 2 thứ lên nhau là sai thông điệp.
+  Điều kiện `locked && !wordDone` (Anagram) / `locked && !answered` (Quiz) vốn đã lo đúng việc này.
+- Chống treo lớp: đội sai xong mà đội kia chưa xong thì đặt hẹn giờ **LATE_LIMIT_MS (20s)** làm chốt
+  chặn (đội bỏ đi không được làm đứng cả buổi học); đội kia vừa xong là hẹn giờ đó bị thay bằng
+  ROUND_HOLD_MS ngay.
+
+**Đã đo thật đủ 4 nhánh trên trình duyệt** (Quiz — bấm bằng script để khống chế thời gian, vì mỗi lượt
+gọi công cụ tốn vài giây, suýt vượt mốc 20s):
+| Kịch bản | Đội làm trước | Đội kia | Điểm |
+|---|---|---|---|
+| A sai trước → B đúng sau | khoá, **KHÔNG xám**, giữ phản hồi sai (✗ + 3 ô mờ) | **không khoá, không xám, opacity 1, còn nguyên màu** | **0–1, B THẮNG** |
+| A đúng trước | khoá (đã trả lời), không xám | **khoá + xám** `opacity .55`, ô `rgb(179,186,195)` | 1–0 |
+| Cả hai cùng sai | khoá | khoá | 0–0, sang câu sau **2458ms** (đường ROUND_HOLD_MS, không phải 20s) |
+| Anagram "On submit": A nộp sai → B nộp đúng | hiện "ELEPHANT", khoá, **KHÔNG xám** | **còn đủ 8 ô bấm được, không xám** | **0–1, B THẮNG** |
+
+### 2. Vá lỗi 404 CSS khi đổi template ở TRANG TEST (phát hiện ở Đợt 127, nay sửa)
+`core/catalog.js` khai css kiểu `"templates/quiz/quiz.css"` — tương đối với **GỐC WEB**. `loadCss` để
+trình duyệt tự giải theo **TRANG đang mở**: đúng với `index.html`/`play.html` (đều ở gốc) nhưng SAI với
+trang test của template (sâu 2 cấp) ⇒ đi tìm `/templates/quiz/templates/anagram/anagram.css` → 404,
+game chạy nhưng **mất sạch style**.
+
+**Sửa**: `core/registry.js` suy ra gốc web từ **chính nó** — `new URL("../", import.meta.url)` (file này
+luôn nằm ở `/core/`) — rồi giải mọi đường dẫn css theo gốc đó. Đúng ở MỌI trang, không phụ thuộc trang
+nào đang mở.
+**Vá kèm 1 lỗi ngầm cùng chỗ**: kiểm "css này nạp chưa" trước đây so **chuỗi thô** `getAttribute("href")`;
+trang test khai `<link href="./anagram.css">` còn catalog khai `templates/anagram/anagram.css` — 2 chuỗi
+khác nhau nhưng CÙNG một file ⇒ không nhận ra, chèn thêm 1 bản CSS trùng. Nay so `l.href` (URL đã giải).
+
+**Đo thật**: từ `templates/quiz/test.html` đổi sang Anagram → chỉ còn đúng 1 lượt tải
+`/templates/anagram/anagram.css` (không còn đường dẫn lồng), **0 tài nguyên lỗi, 0 đường dẫn lồng**, và
+CSS **áp thật** (ô chữ ra đúng `rgb(107,119,133)` = `#6b7785` của Anagram, biến `--aw-ana-lost-bg` giải
+được) — trước khi sửa thì trang này hiện game không có style.
+
+---
+
 ## Đợt 127 (12/8/2026) — FIGHT MODE: HẾT NHÁY KHUNG THUA + ĐỘI THUA MỜ ĐI NGAY + ĐỔI TEMPLATE GIỮA TRẬN
 ⭐ CÓ SỬA CORE (`core/engine.js` + `core/fight.js`) + `templates/anagram/*` + `templates/quiz/*`.
 ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.

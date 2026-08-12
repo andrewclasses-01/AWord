@@ -414,11 +414,12 @@ const quizTemplate = {
       ui.setScore(scoreNow());
       updateNav();
 
-      // FIGHT MODE: tell the match this board just answered the round's
-      // question — right or wrong, a tap resolves the question with no
-      // retry, same as Anagram's bonus-mode letters. The controller decides
-      // who scores the round and when both boards move on.
-      if (fightCtl) fightCtl.wordDone(fightSide, { index });
+      // FIGHT MODE: tell the match this board has finished with the question —
+      // a tap resolves it either way, there is no retry. `correct` is what
+      // decides whether that WON the round: answering first but wrong leaves
+      // the round open for the other team (teacher, 12/8/2026), so the flag
+      // has to be reported honestly here rather than inferred from being first.
+      if (fightCtl) fightCtl.wordDone(fightSide, { index, correct: st.correct === true });
 
       // A wrong answer costs a heart when Lives are on. Running out ends the
       // game right away ("Game over"), even with questions still unanswered —

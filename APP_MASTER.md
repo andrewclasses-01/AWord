@@ -5,7 +5,31 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 127) — FIGHT MODE: HẾT NHÁY KHUNG THUA · ĐỘI THUA MỜ ĐI NGAY ·
+> Cập nhật lần cuối: **12/8/2026 (Đợt 128) — ⭐ XONG TRƯỚC MÀ SAI THÌ KHÔNG ĐƯỢC CƯỚP TỪ +
+> VÁ 404 CSS Ở TRANG TEST. ⭐ CÓ SỬA CORE (`fight.js` + `registry.js`) + Anagram + Quiz.
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+> (1) ⭐ **LUẬT MỚI: XONG TRƯỚC ≠ THẮNG.** Trước đây ai báo xong trước là ăn từ, bất kể đúng sai ⇒ bấm
+> bừa thật nhanh là cướp mất từ của đội kia. Nay: đội xong trước mà **SAI** chỉ kết thúc lượt của
+> CHÍNH NÓ (bị tính sai + khoá riêng nó, giữ đúng phản hồi sai quen thuộc của template), **vòng vẫn
+> mở**, **đội kia không bị chặn, không bị đổi màu**, chơi tiếp và **vẫn thắng được vòng đó**. Chỉ xong
+> **ĐÚNG** mới đặt `roundWinner`, mới ăn thưởng tốc độ, mới khoá đội kia. Mấu chốt kỹ thuật: tách
+> **`roundDone[2]`** ("đội này đã có lượt chưa") ra khỏi **`roundWinner`** ("vòng có ai thắng chưa") —
+> trước đây 2 khái niệm bị gộp làm một nên "xong" mới đồng nghĩa "thắng". Anagram "On submit" nay báo
+> **cả ca nộp sai** (trước im lặng, nên trọng tài không biết đội đó đã xong và phải chờ hết 20s).
+> ⚠️ Đội SAI **không** khoác lớp xám "quá chậm" — lớp đó nghĩa là "bị giành mất", đội sai đã có phản
+> hồi sai riêng rồi. Đo thật đủ 4 nhánh: A-sai-trước→B-đúng-sau ra **0–1 (B thắng)** và B **còn nguyên
+> màu, không bị khoá**; A-đúng-trước → B **khoá + xám .55**; cả hai cùng sai → sang câu sau **2458ms**
+> (đường ROUND_HOLD_MS, không phải chốt chặn 20s); Anagram submit A-sai→B-đúng ra **0–1**, B còn đủ
+> 8 ô bấm được.
+> (2) **Vá nốt lỗi 404 CSS** đã ghi nợ ở Đợt 127: `catalog.js` khai css theo GỐC WEB nhưng `loadCss`
+> để trình duyệt giải theo TRANG ⇒ ở trang test (sâu 2 cấp) ra `/templates/quiz/templates/anagram/…`.
+> Nay `registry.js` suy gốc web từ **chính nó** (`new URL("../", import.meta.url)`, file luôn ở `/core/`)
+> — đúng ở mọi trang. Vá kèm 1 lỗi ngầm cùng chỗ: kiểm trùng css so **chuỗi thô** nên `./anagram.css`
+> và `templates/anagram/anagram.css` bị coi là 2 file khác nhau ⇒ chèn CSS trùng; nay so `l.href` đã
+> giải. Đo: 0 tài nguyên lỗi, 0 đường dẫn lồng, CSS áp thật.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 128.
+>
+> Trước đó: **12/8/2026 (Đợt 127) — FIGHT MODE: HẾT NHÁY KHUNG THUA · ĐỘI THUA MỜ ĐI NGAY ·
 > ĐỔI TEMPLATE GIỮA TRẬN. ⭐ CÓ SỬA CORE (`engine.js` + `fight.js`) + Anagram + Quiz.
 > ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
 > (1) ⭐ **LỖI THẬT thầy báo — khung bên THUA nháy 1 nhịp** khi bên kia giải xong từ: `lock()` của

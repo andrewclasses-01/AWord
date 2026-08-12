@@ -52,6 +52,20 @@ export function listTemplates() {
 // ---------------------------------------------------------------
 const pending = new Map();
 
+// ---------------------------------------------------------------
+// GỐC WEB, suy từ CHÍNH file này (Đợt 128)
+//
+// `core/catalog.js` khai đường dẫn css kiểu "templates/quiz/quiz.css" — tương
+// đối với GỐC WEB. Trước đây `loadCss` để trình duyệt tự giải theo TRANG đang
+// mở, đúng với `index.html`/`play.html` (cả hai nằm ở gốc) nhưng SAI với trang
+// test của template (`templates/<x>/test.html`, sâu 2 cấp): đổi template ở đó
+// đi tìm `/templates/quiz/templates/anagram/anagram.css` → 404, game chạy
+// nhưng mất sạch style. `registry.js` luôn nằm ở `/core/` nên `../` từ chính
+// nó là gốc web — đúng ở MỌI trang, không phụ thuộc trang nào đang mở.
+// ---------------------------------------------------------------
+const WEB_ROOT = new URL("../", import.meta.url);
+function assetUrl(path) { return new URL(path, WEB_ROOT).href; }
+
 export function ensureTemplate(type) {
   if (templates.has(type)) return Promise.resolve(templates.get(type));
   if (pending.has(type)) return pending.get(type);
@@ -98,7 +112,7 @@ const PRELOAD_IMG_CONCURRENCY = 6;
 export function cssImageUrls(type) {
   const entry = templateEntry(type);
   if (!entry || !entry.css) return [];
-  const href = new URL(entry.css, location.href).href;
+  const href = assetUrl(entry.css);   // theo GỐC WEB, không theo trang (xem WEB_ROOT)
   // Khớp lỏng theo TÊN FILE nữa, vì trang test của template
   // (`templates/<x>/test.html`) khai <link> bằng đường dẫn tương đối của
   // riêng nó chứ không đi qua ensureTemplate() — so cứng href sẽ trượt.
@@ -167,14 +181,20 @@ export async function preloadImages(urls, onProgress) {
 // reject: CSS hỏng chỉ làm game xấu, không đáng chặn cả lượt chơi.
 function loadCss(href) {
   if (!href) return Promise.resolve();
-  const done = [...document.querySelectorAll("link[rel=stylesheet]")]
-    .some(l => l.getAttribute("href") === href);
+  // Giải về URL tuyệt đối theo GỐC WEB (xem WEB_ROOT ở trên) chứ không theo
+  // trang đang mở.
+  const url = assetUrl(href);
+  // So bằng `l.href` (URL đã giải) chứ KHÔNG phải `getAttribute("href")` (chuỗi
+  // thô): trang test khai `<link href="./anagram.css">` còn catalog khai
+  // `templates/anagram/anagram.css` — hai chuỗi khác nhau nhưng CÙNG một file.
+  // So chuỗi thô thì không nhận ra, và chèn thêm một bản CSS trùng nữa.
+  const done = [...document.querySelectorAll("link[rel=stylesheet]")].some(l => l.href === url);
   if (done) return Promise.resolve();
 
   return new Promise(resolve => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = href;
+    link.href = url;
     link.onload = resolve;
     link.onerror = resolve;
     document.head.append(link);
