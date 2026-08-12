@@ -5,7 +5,17 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 132) — 6 CẢI TIẾN ANAGRAM: MIX VOICE (4 giọng loại trừ lẫn
+> Cập nhật lần cuối: **13/8/2026 (Đợt 133) — FIGHT MODE: cửa sổ HÒA 0,1s (2 đội xong đúng cách nhau
+> ≤100ms → cả 2 cùng được điểm) + cơ chế mới `ctl.mayScore()` khiến điểm bị từ chối RƠI XUỐNG MÀN
+> thay vì đáp vào ô điểm (hỏi lại đúng lúc điểm bay TỚI nơi, không còn kẽ hở đua thời gian như cách
+> đóng băng số cũ) · bỏ hẳn "Same word, same letters", mặc định nay là "Same words, mix letters" ·
+> Voice dùng CHUNG 1 bản duy nhất cho cả 2 đội, đồng bộ hào quang + equalizer tuyệt đối, đang phát
+> thì bấm gì cũng không dừng được.**
+> ⭐ CÓ SỬA CORE (`core/fight.js`) + Anagram (`anagram.js`). 🟢 ĐÃ TỰ TEST kỹ (mô phỏng 2 bàn gõ chữ
+> thật qua PointerEvent, đo điểm/is-won/giá trị equalizer) — **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.**
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 133.
+>
+> Trước đó: **13/8/2026 (Đợt 132) — 6 CẢI TIẾN ANAGRAM: MIX VOICE (4 giọng loại trừ lẫn
 > nhau + Random UK/US, cân bằng Nam/Nữ ±1 + không lệch giọng, đo 500 lần thử đúng cả 2 luật) · LOA +
 > EQUALIZER thật (AnalyserNode, gộp 1 nút, hào quang hết bị cắt) · SLOGAN trở lại (đơn+đấu) · ẨN LOA
 > khi Content=Text · KHUNG DƯỚI (tên act/nút) co giãn theo cửa sổ (áp cho cả 17 game) · OPTIONS rộng

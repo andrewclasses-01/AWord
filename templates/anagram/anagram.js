@@ -469,8 +469,21 @@ const anagramTemplate = {
     let voiceBtnEl = null;              // listen button currently wired to voiceAudioEl's play state
     let voiceIntroTimeoutId = null;     // pending delayed auto-play (first word only), see render() below
     let firstWordRendered = false;      // only the VERY first render() of this mount() waits for the intro chime
+    // Đợt 133 — THIS board's current listen button, tracked regardless of
+    // whether playback has ever started (unlike `voiceBtnEl`, which is only
+    // set once a play begins). Needed so a REMOTE toggle request or a mirror
+    // update (see toggleVoiceRemote/syncVoice below) always has somewhere to
+    // land, even on a board that has never itself started a clip.
+    let currentListenBtn = null;
     function setListenGlow(btn, glowing) {
       if (btn) btn.classList.toggle("is-playing", glowing);
+      // FIGHT MODE (Đợt 133, teacher): only the SPEAKING board (ctl.speaks)
+      // ever owns a real <audio> element — report every glow change out so
+      // the OTHER board's mirror (syncVoice, via ctl.attach) matches it
+      // exactly instead of guessing. Guarded by `speaks()` so the call on
+      // the MIRROR side (which reaches this same function through syncVoice
+      // below) never reports back and creates a relay loop.
+      if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: glowing });
     }
 
     // ----- Equalizer visualizer (Đợt 132, teacher) -----
@@ -526,11 +539,18 @@ const anagramTemplate = {
       const perBar = Math.max(1, Math.floor(eqData.length / bars.length));
       eqTimer = setInterval(() => {
         analyser.getByteFrequencyData(eqData);
+        // Đợt 133 — collected into `levels` (not just painted locally) so
+        // fight mode's speaking board can report it out; the mirror board
+        // paints from the SAME array instead of running its own analyser.
+        const levels = [];
         bars.forEach((bar, i) => {
           let sum = 0;
           for (let j = i * perBar; j < i * perBar + perBar; j++) sum += eqData[j] || 0;
-          bar.style.setProperty("--h", (sum / perBar / 255).toFixed(2));
+          const level = +(sum / perBar / 255).toFixed(2);
+          bar.style.setProperty("--h", level);
+          levels.push(level);
         });
+        if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { levels });
       }, 70);
     }
 
@@ -540,9 +560,25 @@ const anagramTemplate = {
       stopEqualizer();
     }
     // Tap handler: playing -> stop; anything else (stopped, or a fresh
-    // word's first play) -> (re)play from the top.
+    // word's first play) -> (re)play from the top. SINGLE MODE ONLY — fight
+    // mode's tap handling is handleListenTap() below, which this no longer
+    // gates on its own (Đợt 133): a fight board never calls this directly.
     function toggleVoiceClip(clipId, btn) {
       if (voiceAudioEl && voiceBtnEl === btn && !voiceAudioEl.paused) { stopVoiceClip(); return; }
+      playVoiceClip(clipId, btn);
+    }
+    // Đợt 133 (teacher) — the ACTUAL tap handler wired to every listen
+    // button's onclick. Single mode: unchanged, delegates straight to
+    // toggleVoiceClip. FIGHT MODE: only ONE clip plays for the whole match,
+    // owned by the speaking board (ctl.speaks) — a tap on EITHER board's
+    // button routes here, and once a clip is actually playing, NO tap (on
+    // either board) can stop it early; only once it has fully finished can a
+    // tap start it again ("không thể dừng voice khi đang chạy... chỉ khi
+    // voice đã dừng hoàn toàn mới có thể bấm để phát lại").
+    function handleListenTap(clipId, btn) {
+      if (!fightCtl) { toggleVoiceClip(clipId, btn); return; }
+      if (!fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+      if (voiceAudioEl && !voiceAudioEl.paused) return;   // playing -- ignore, can't be stopped early
       playVoiceClip(clipId, btn);
     }
     function playVoiceClip(clipId, btn) {
@@ -649,6 +685,7 @@ const anagramTemplate = {
       if (voiceIntroTimeoutId) { clearTimeout(voiceIntroTimeoutId); voiceIntroTimeoutId = null; }
       stopVoiceClip();
       voiceAudioEl = null; voiceBtnEl = null;
+      currentListenBtn = null;   // reset every word — set again below only if this word actually gets a listen button
       const it = items[index];
       const st = state[index];
       const tileSize = computeTileSize(it.letters.length);
@@ -701,7 +738,8 @@ const anagramTemplate = {
         const eqEl = el("span", "aw-anagram-eq");
         for (let i = 0; i < EQ_BAR_COUNT; i++) eqEl.append(el("span", "aw-anagram-eq-bar"));
         listenBtn.append(eqEl);
-        listenBtn.onclick = () => toggleVoiceClip(it.src.voice, listenBtn);
+        listenBtn.onclick = () => handleListenTap(it.src.voice, listenBtn);
+        currentListenBtn = listenBtn;
         clueEl.append(listenBtn);
         // Auto-play the moment this word opens (teacher's request,
         // 10/8/2026) — safe to call unconditionally here since render()
@@ -1645,6 +1683,44 @@ const anagramTemplate = {
       setTimeout(() => burst.remove(), PERFECT_BURST_MS);
     }
 
+    // ----- FIGHT MODE: land a flying score mark, or reject it (Đợt 133) -----
+    // Every "+N flies to the score" effect in this file (flyScoreGain below,
+    // flyPointsOnly further down) funnels through here at the exact instant
+    // it ARRIVES. In fight mode this is the one place that decides whether
+    // the point actually counts: `fightCtl.mayScore()` reads the round's
+    // FINAL, already-decided outcome — word-completion timestamps (and the
+    // controller's own 0.1s tie-window) are settled within ~100ms, while a
+    // flight itself takes 0.9-1.8s to land, so this can never be caught out
+    // by the exact race the old numeric freeze/holdFreeze alone was
+    // vulnerable to (teacher, 13/8/2026: "vẫn báo điểm... phải có cơ chế làm
+    // điểm rơi ra khỏi màn hình"). Single mode (`fightCtl` null) always lands
+    // normally — nothing here changes for it.
+    //
+    // A rejected mark falls a little further down and fades, instead of
+    // landing — `dx`/`dy`/`endScale` are the position it's ALREADY sitting at
+    // (its own flight animation holds its last keyframe via fill:"forwards"),
+    // so this is a small delta from there, not a fresh flight across the
+    // screen. `applyAndGetNewTotal()` is never called for a rejected mark, so
+    // this word's points are simply never added — nothing to freeze or
+    // un-freeze later, because the increment never happened in the first
+    // place.
+    function landOrReject(node, anim, applyAndGetNewTotal, dx, dy, endScale) {
+      if (fightCtl && !fightCtl.mayScore(fightSide)) {
+        try { anim.cancel(); } catch { /* already gone — same "release the fill:forwards hold before touching it again" trap this file already documents elsewhere */ }
+        const fall = node.animate([
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, opacity: 1, offset: 0 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy + 70}px)) scale(${endScale * 0.7})`, opacity: 0, offset: 1 }
+        ], { duration: 380, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+        let fell = false;
+        const settle = () => { if (fell) return; fell = true; node.remove(); activeFlyNodes.delete(node); };
+        fall.onfinish = settle;
+        setTimeout(settle, 380 + 150);
+        return;
+      }
+      node.remove(); activeFlyNodes.delete(node);
+      pulseScoreTo(applyAndGetNewTotal());
+    }
+
     // Flies "+N" from the middle of the tile rows to the score badge, no icon
     // shown first — used for BOTH bonus-mode outcomes (teacher, 8/8/2026): a
     // non-perfect word calls this immediately with delayMs=0, a perfect word
@@ -1697,8 +1773,7 @@ const anagramTemplate = {
         let done = false;
         const complete = () => {
           if (done) return; done = true;
-          numEl.remove(); activeFlyNodes.delete(numEl);
-          pulseScoreTo(applyAndGetNewTotal());
+          landOrReject(numEl, anim, applyAndGetNewTotal, dx, dy, endScale);
         };
         anim.onfinish = complete;
         setTimeout(complete, total + 150);
@@ -1833,8 +1908,7 @@ const anagramTemplate = {
       let done = false;
       const complete = () => {
         if (done) return; done = true;
-        wrap.remove(); activeFlyNodes.delete(wrap);
-        pulseScoreTo(applyAndGetNewTotal());
+        landOrReject(wrap, wrapAnim, applyAndGetNewTotal, dx, dy, endScale);
       };
       wrapAnim.onfinish = complete;
       setTimeout(complete, total + 150);
@@ -2000,7 +2074,32 @@ const anagramTemplate = {
           // for real word boundaries).
           syncFightLock();
         },
-        reveal: revealFightResult
+        reveal: revealFightResult,
+        // Đợt 133 (teacher: "chỉ phát 1 voice duy nhất cho cả 2 đội") — the
+        // MATCH's own relay for shared voice playback. Only ever called on
+        // the SPEAKING board (fightCtl.speaks) — a tap on the OTHER board's
+        // listen button (handleListenTap) reaches here via
+        // ctl.requestVoiceToggle(), which always targets board 0. Same
+        // "can't interrupt a playing clip" rule as a local tap.
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+          if (voiceAudioEl && !voiceAudioEl.paused) return;
+          if (currentListenBtn) playVoiceClip(clipId, currentListenBtn);
+        },
+        // The MIRROR side's half: paints glow/equalizer bars to match
+        // whatever the speaking board just reported (reportVoiceState,
+        // called from setListenGlow/startEqualizer above) — no real <audio>
+        // of its own. `setListenGlow` here is safe from re-reporting a loop:
+        // it only calls fightCtl.reportVoiceState() when `speaks(fightSide)`
+        // is true, which is false on this side by construction.
+        syncVoice(state) {
+          if (!currentListenBtn) return;
+          if (state.playing !== undefined) setListenGlow(currentListenBtn, state.playing);
+          if (state.levels) {
+            const bars = currentListenBtn.querySelectorAll(".aw-anagram-eq-bar");
+            bars.forEach((bar, i) => { if (state.levels[i] != null) bar.style.setProperty("--h", state.levels[i]); });
+          }
+        }
       });
     }
 

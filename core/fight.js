@@ -62,6 +62,12 @@ const ROUND_HOLD_MS = 2100;
 // "Let the other team finish" can't wait forever — a team that walks away must
 // not freeze the lesson.
 const LATE_LIMIT_MS = 20000;
+// Đợt 133 (teacher, 13/8/2026): two correct finishes within this many ms of
+// each other count as SIMULTANEOUS — both score, neither is locked/frozen.
+// A clean 0.1s per the teacher's own words; well inside ROUND_HOLD_MS's own
+// margin above the 1760ms flight time, so waiting it out never risks the
+// round turning over before either side's score has actually landed.
+const TIE_WINDOW_MS = 100;
 
 // The teacher's hand-given points, per side. MODULE level on purpose: the
 // teacher asked for a number that survives "Start again" and a template change
@@ -74,7 +80,13 @@ const handPoints = [0, 0];
 const handAwake = [false, false];
 
 export const FIGHT_DEFAULTS = {
-  fightContent: "same",      // same | scramble | different
+  // Đợt 133 (teacher): "same" ("same word, same letters") is GONE as a
+  // choice — see buildOptions below — and the default moved from it to
+  // "scramble". `fightOptionsFrom()` still accepts "same" verbatim if it
+  // reads it off an OLD saved act's options (nothing migrates existing
+  // acts), so a match started from one keeps working exactly as it did —
+  // this default only decides what a never-configured act starts on.
+  fightContent: "scramble",  // scramble | different (legacy acts may still carry "same")
   fightFirstRule: "lock",    // lock | finish
   fightSpeedBonus: 0,        // extra points for the team that got there first
   fightLateScores: true      // the slower team still keeps what it earned
@@ -318,6 +330,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // Getting there first while WRONG does not win it (teacher, 12/8/2026), see
   // ctl.wordDone.
   let roundWinner = null;
+  // Đợt 133 — the side of the FIRST correct answer this round, while the
+  // TIE_WINDOW_MS grace period is still open deciding whether a second
+  // correct answer (if one comes) counts as simultaneous. `roundWinner`
+  // itself stays null the whole time this is set — see finalizeSingleWinner/
+  // finalizeTie below, the only two places allowed to clear it.
+  let pendingWinner = null;
+  let pendingTimer = null;
   // Which sides have already had their go at the current word (right or wrong).
   // A team that answered WRONG is finished with this word — locked and out —
   // but the round itself stays open for the other team, so "has this side
@@ -357,6 +376,48 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     boards.forEach(b => { try { b && b.reveal && b.reveal(); } catch { /* board already gone */ } });
   }
 
+  // Đợt 133 — the SINGLE path that turns "one side finished correctly" into
+  // a settled round, whether that's decided the instant it happens (no
+  // tie-window was open) or TIE_WINDOW_MS later once the window closes with
+  // nobody else joining it. Kept as one function so revealBoards()/
+  // later(advanceRound…) below is only ever reached from exactly one place —
+  // calling it twice for the same round would reveal / fly a score twice.
+  function finalizeSingleWinner(side) {
+    roundWinner = side;
+    const other = side === 0 ? 1 : 0;
+    if (fo.fightSpeedBonus > 0) {
+      bonus[side] += fo.fightSpeedBonus;
+      paintScore(side);
+      flashTeam(side, `+${fo.fightSpeedBonus}`);
+    }
+    teams[side].el.classList.add("is-won");
+    // Lock the other side out only if it is still IN the round; one that
+    // already answered wrong is locked already, and re-locking it would
+    // repaint it as "too slow" on top of its own wrong-answer feedback.
+    if (fo.fightFirstRule === "lock" && !roundDone[other]) boards[other] && boards[other].lock(true);
+    const nobodyLeft = fo.fightFirstRule === "lock" || roundDone[other];
+    if (nobodyLeft) revealBoards();
+    later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+  }
+
+  // Đợt 133 (teacher): two correct finishes within TIE_WINDOW_MS of each
+  // other are simultaneous — BOTH score, neither is locked out or frozen.
+  // `roundWinner` deliberately stays null (there is no EXCLUSIVE winner);
+  // `ctl.mayScore()` already treats null as "let it count", so a tie needs no
+  // extra flag of its own — see mayScore's own comment.
+  function finalizeTie(sideA, sideB) {
+    [sideA, sideB].forEach(side => {
+      if (fo.fightSpeedBonus > 0) {
+        bonus[side] += fo.fightSpeedBonus;
+        paintScore(side);
+        flashTeam(side, `+${fo.fightSpeedBonus}`);
+      }
+      teams[side].el.classList.add("is-won");
+    });
+    revealBoards();
+    later(advanceRound, ROUND_HOLD_MS);
+  }
+
   // ----- the round: both boards hold the SAME word index -----
   function advanceRound() {
     if (matchOver || torndown) return;
@@ -365,6 +426,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // board would carry the withheld grey into the next word.
     revealBoards();
     roundWinner = null;
+    // A pending tie-window can't outlive its own round — boardMoved() (Next/
+    // Previous) and this natural round-turnover both jump straight past
+    // whatever it was waiting to decide.
+    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+    pendingWinner = null;
     roundDone = [false, false];
     // The winner's glow belongs to the word that was just won, not to the next
     // one — leaving it on made one team look permanently ahead.
@@ -396,6 +462,26 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // The frames have no score chip in fight mode, so a template's "+N" flies
     // all the way out to this team's number on the strip above its board.
     scoreTarget(side) { return teams[side].value; },
+
+    // Đợt 133 (teacher: "chỉ phát 1 voice duy nhất cho cả 2 đội") — a tap on
+    // EITHER board's listen button routes here (see anagram.js's
+    // handleListenTap), and this always hands it to board 0 — the one board
+    // ctl.speaks() ever lets own real playback — regardless of which board
+    // was actually tapped. There is never more than one <audio> element
+    // playing across the whole match.
+    requestVoiceToggle(clipId) {
+      if (boards[0] && boards[0].toggleVoiceRemote) boards[0].toggleVoiceRemote(clipId);
+    },
+    // The speaking board reports every glow/equalizer change here (from
+    // anagram.js's setListenGlow / startEqualizer) — relayed straight to
+    // whichever board is NOT side, so both boards' listen buttons glow and
+    // jump identically off the ONE real clip. A board with nothing
+    // registered for `syncVoice` (a template that hasn't opted in) simply
+    // doesn't receive anything — safe no-op.
+    reportVoiceState(side, state) {
+      const other = side === 0 ? 1 : 0;
+      if (boards[other] && boards[other].syncVoice) boards[other].syncVoice(state);
+    },
 
     // Both boards start together (teacher, 12/8/2026). Pressing PLAY on either
     // one presses the other's too, so the two clocks — and therefore the shared
@@ -434,6 +520,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // usual, exactly as in single play), while the round stays open and the
     // other team keeps playing, unblocked and un-greyed, until it finishes.
     // Only a CORRECT finish wins the round and locks the loser out.
+    //
+    // ⭐ Đợt 133 (teacher): a CORRECT finish no longer wins the round the
+    // instant it happens — it opens a TIE_WINDOW_MS grace period first. If
+    // the OTHER side also finishes correctly inside that window, it's a tie
+    // (finalizeTie: both score). Otherwise, once the window closes with
+    // nobody else joining it, the first side wins exclusively exactly as
+    // before (finalizeSingleWinner). The other side stays UNLOCKED for the
+    // whole window (isLocked() only fires once `roundWinner` is actually
+    // set), which is exactly what lets it still tie if it's that close.
     wordDone(side, info) {
       if (matchOver || torndown) return;
       if (info && info.index !== roundIndex) return;    // a stale word (teacher used Next) — ignore
@@ -452,6 +547,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // still choosing and would otherwise read the answer straight off this
         // board.
         boards[side] && boards[side].lock(true);
+        if (pendingWinner !== null) {
+          // The OTHER side already answered correctly and is waiting out the
+          // tie-window — this side finishing WRONG rules a tie out, so settle
+          // right now through the SAME path the timer would have used rather
+          // than let both fire (revealBoards()/advanceRound must only ever
+          // run once per round).
+          clearTimeout(pendingTimer); pendingTimer = null;
+          const decided = pendingWinner; pendingWinner = null;
+          finalizeSingleWinner(decided);
+          return;
+        }
         // If the other team has already had its go, nobody is left to play —
         // show both results and move on. Otherwise wait for them, with the
         // same walk-away backstop used by "let the other team finish" so a
@@ -462,32 +568,59 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         return;
       }
 
-      if (roundWinner === null) {
-        roundWinner = side;
-        if (fo.fightSpeedBonus > 0) {
-          bonus[side] += fo.fightSpeedBonus;
-          paintScore(side);
-          flashTeam(side, `+${fo.fightSpeedBonus}`);
-        }
-        teams[side].el.classList.add("is-won");
-        // Lock the other side out only if it is still IN the round; one that
-        // already answered wrong is locked already, and re-locking it would
-        // repaint it as "too slow" on top of its own wrong-answer feedback.
-        if (fo.fightFirstRule === "lock" && !roundDone[other]) boards[other] && boards[other].lock(true);
-        // Hold briefly when nobody is left to play (either the rules end the
-        // round here, or the other team is already done); otherwise give them
-        // their chance, capped so a team that walks away can't freeze the class.
-        const nobodyLeft = fo.fightFirstRule === "lock" || roundDone[other];
-        if (nobodyLeft) revealBoards();
-        later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
-      } else {
-        // Correct, but the round was already won. With `fightLateScores:false`
-        // only the winner scores it, so this team's number is frozen where it
-        // is and the points still on their way in are cancelled as they land.
+      // CORRECT.
+      if (roundWinner !== null) {
+        // Round already has an EXCLUSIVE winner (the tie-window, if there
+        // ever was one, is long closed) — old "late correct" path, unchanged:
+        // with `fightLateScores:false` only the winner scores it, so this
+        // team's number is frozen where it is and the points still on their
+        // way in are cancelled as they land. (Anagram additionally self-
+        // rejects via ctl.mayScore() at the exact moment its flight would
+        // land, which can never be fooled by timing the way this numeric
+        // freeze alone could — see mayScore's own comment. Both stay active
+        // together: this covers every OTHER fight-enabled template too.)
         if (!fo.fightLateScores) { frozenAt[side] = game[side] + bonus[side]; holdFreeze(side); paintScore(side); }
         revealBoards();
         later(advanceRound, ROUND_HOLD_MS);
+        return;
       }
+
+      if (pendingWinner === null) {
+        // First correct answer this round — open the tie-window rather than
+        // deciding immediately.
+        pendingWinner = side;
+        pendingTimer = setTimeout(() => {
+          pendingTimer = null;
+          if (torndown) return;   // teardown() already cleared this timer -- belt and braces
+          const decided = pendingWinner; pendingWinner = null;
+          finalizeSingleWinner(decided);
+        }, TIE_WINDOW_MS);
+        return;
+      }
+
+      // A second correct answer, with `pendingWinner` still set — proves this
+      // landed WITHIN the window: JS is single-threaded, so nothing else could
+      // have run between the window opening and this call, meaning the timer
+      // above hasn't fired yet. That makes it a tie.
+      clearTimeout(pendingTimer); pendingTimer = null;
+      const firstSide = pendingWinner; pendingWinner = null;
+      finalizeTie(firstSide, side);
+    },
+    // Đợt 133 — does THIS side's word actually get to count, checked at the
+    // exact moment its score animation is about to land (~0.9-1.8s after
+    // wordDone() above, well after any tie-window has closed — so unlike a
+    // pre-computed freeze snapshot, this can never be caught out by timing).
+    // `roundWinner === null` covers BOTH "nobody has finished this round yet"
+    // (shouldn't really be reachable this late, permissive default) AND "it
+    // was a tie" (finalizeTie deliberately never sets roundWinner) — both
+    // cases mean "let it count". A side that lost a DECISIVE round only
+    // counts if the teacher's own "slower team still keeps its points" rule
+    // says so. Templates that don't call this (Quiz today) are unaffected —
+    // they still go through the numeric freeze above alone, exactly as before.
+    mayScore(side) {
+      if (roundWinner === null) return true;
+      if (roundWinner === side) return true;
+      return fo.fightLateScores !== false;
     },
     // The teacher pressed Next/Previous on either board: both boards move, and
     // the round follows the board that was pressed.
@@ -495,6 +628,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (index === roundIndex || matchOver || torndown) return;
       roundIndex = index;
       roundWinner = null;
+      if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+      pendingWinner = null;
       roundDone = [false, false];
       clearTimeout(roundTimer); roundTimer = null;
       teams.forEach(t => t.el.classList.remove("is-won"));
@@ -605,9 +740,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     g.append(el("div", "aw-opt-label", "Fight mode"));
     const rowContent = el("div", "aw-opt-row");
     const cur = fightOptionsFrom(draft);
+    // Đợt 133 (teacher): "Same word, same letters" is GONE — dropped
+    // entirely, not just re-labelled. A legacy act that still carries
+    // `fightContent:"same"` (nothing migrates existing acts, see
+    // FIGHT_DEFAULTS) shows "Same words, mix letters" selected here instead
+    // — visually the nearest of the two remaining choices — but its OWN
+    // value on disk stays "same" unless the teacher actually touches this
+    // row; `ctl.shareLetters` above still reads it correctly either way.
     rowContent.append(
-      mkRadioChoice("aw-fight-content", "same", "Same word, same letters", cur.fightContent === "same", v => draft.fightContent = v),
-      mkRadioChoice("aw-fight-content", "scramble", "Same word, letters mixed differently", cur.fightContent === "scramble", v => draft.fightContent = v),
+      mkRadioChoice("aw-fight-content", "scramble", "Same words, mix letters",
+        cur.fightContent === "scramble" || cur.fightContent === "same", v => draft.fightContent = v),
       mkRadioChoice("aw-fight-content", "different", "Different words", cur.fightContent === "different", v => draft.fightContent = v)
     );
     g.append(rowContent);
@@ -735,6 +877,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function teardown() {
     torndown = true;
     clearTimeout(roundTimer);
+    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }   // Đợt 133 — same reasoning as roundTimer
     FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });
     boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
     // Đợt 131: the actual fix for the ghost-clock bug — stop BOTH boards'

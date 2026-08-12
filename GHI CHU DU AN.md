@@ -5,6 +5,62 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 133 (13/8/2026) — FIGHT MODE: CỬA SỔ HÒA 0,1s + ĐIỂM RƠI KHỎI MÀN KHI BỊ TỪ CHỐI · BỎ "SAME LETTERS" · VOICE DÙNG CHUNG 1 BẢN
+⭐ CÓ SỬA CORE (`core/fight.js`) + Anagram (`anagram.js`). KHÔNG đụng CSS.
+🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (mô phỏng 2 bàn bấm chữ thật qua PointerEvent, đo bằng số điểm
++ class `is-won` + giá trị `--h` equalizer), 0 lỗi mới (chỉ còn lỗi CŨ đã biết từ trước, không phải do
+đợt này) — **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.**
+
+### 1. Cửa sổ "hòa" 0,1 giây + cơ chế điểm rơi khỏi màn khi bị từ chối
+Trước đây hễ ai xong ĐÚNG trước là thắng ngay lập tức, dù chỉ hơn đối thủ vài mili-giây. Nay `wordDone()`
+mở ra **cửa sổ chờ 100ms** trước khi công bố người thắng: nếu đội kia cũng xong ĐÚNG trong vòng 100ms đó
+→ **cả 2 đội cùng thắng, cùng được điểm** (`finalizeTie`); hết 100ms mà không ai xong thêm → đội đầu
+tiên thắng độc quyền như cũ (`finalizeSingleWinner`). Xong SAI trong lúc cửa sổ đang mở sẽ chốt cửa sổ
+ngay (không đợi hết 100ms) tránh gọi `revealBoards()`/bay điểm 2 lần.
+
+⭐ **Cơ chế mới thay thế hoàn toàn cách "đóng băng số" cũ cho riêng Anagram**: trước đây phát hiện điểm
+bị huỷ chỉ bằng cách chụp nhanh (`frozenAt`) rồi trừ ngược lại SAU khi số đã cộng — có kẽ hở nếu độ trễ
+khiến khoá không kịp áp. Nay thêm `ctl.mayScore(side)` — Anagram hỏi lại NGAY LÚC điểm bay TỚI nơi (chứ
+không phải lúc vừa giải xong), tức là **luôn hỏi SAU KHI** cửa sổ hòa 100ms + toàn bộ logic thắng thua
+đã chốt xong (bay mất 0,9–1,8s, cửa sổ hòa chỉ 100ms — không bao giờ hỏi sớm). Nếu câu trả lời là
+KHÔNG, số điểm đang bay (`landOrReject` trong `anagram.js`, áp cho cả `flyScoreGain` lẫn `flyPointsOnly`
+— không áp cho phạt trừ điểm sai, cái đó luôn tính) đổi hướng **rơi xuống dưới + mờ dần rồi biến mất**
+thay vì đáp xuống ô điểm, và **không hề gọi hàm cộng điểm** — điểm chưa từng được cộng chứ không phải
+cộng rồi bị trừ lại, nên không có kẽ hở đua thời gian nào nữa. Cơ chế đóng băng số cũ (`frozenAt`/
+`holdFreeze`) **vẫn giữ nguyên, không xoá** — Quiz (chưa gọi `mayScore`) vẫn dựa vào nó y hệt trước.
+
+**Đã đo qua trình duyệt thật** (gõ đúng thứ tự chữ bằng PointerEvent thật, không phải giả lập):
+- 2 bàn cùng bấm gần như đồng thời (chênh đo được **224ms tổng thời gian gõ cả từ**, đủ để 2 lượt xong
+  rơi sát nhau) → **cả 2 `is-won`**, cả 2 điểm đều tăng đúng (+14 mỗi bên, từ 7 chữ x2 hoàn hảo).
+- 1 bàn xong trước, bàn kia xong **600ms sau** (ngoài cửa sổ 100ms, chế độ "Let the other team finish" +
+  "slower team keeps nothing") → chỉ bàn đầu được **16 điểm**, bàn sau vẫn **0 điểm dù đã xong đúng** —
+  xác nhận điểm bị từ chối đúng lúc bay tới, không cộng nhầm.
+
+### 2. Bỏ hẳn "Same word, same letters"
+`FIGHT_DEFAULTS.fightContent` đổi mặc định từ `"same"` sang `"scramble"`. Panel Options chỉ còn 2 lựa
+chọn: **"Same words, mix letters"** (mặc định) và **"Different words"**. Act cũ đã lỡ lưu `"same"`
+KHÔNG bị đổi dữ liệu gì (không migrate) — vẫn chạy đúng y hệt trước, chỉ hiện chọn nhầm vào ô "Same
+words, mix letters" trên panel (gần nghĩa nhất) cho tới khi thầy tự bấm lại.
+
+### 3-4. Voice dùng CHUNG 1 bản duy nhất cho cả 2 đội, đồng bộ loa + sóng âm
+Trước đây mỗi bàn có `<audio>` riêng — bấm loa bàn nào phát bàn đó, có thể phát trùng 2 tiếng cùng lúc.
+Nay CHỈ bàn 0 (`ctl.speaks`) được giữ audio thật; mọi cú bấm loa — kể cả bấm ở bàn còn lại — đều được
+`ctl.requestVoiceToggle()` chuyển thẳng về bàn 0 (`toggleVoiceRemote`). Bàn 0 phát tới đâu, báo lại
+`ctl.reportVoiceState()` tới đâu (hào quang bật/tắt + từng giá trị equalizer), bàn kia chỉ VẼ LẠI y hệt
+qua `syncVoice()` — không có AnalyserNode thật thứ 2, không phát tiếng thật thứ 2. Đang phát mà bấm (ở
+BẤT KỲ bàn nào) thì **bị lờ đi, không dừng được** — chỉ khi phát xong tự nhiên mới bấm lại được.
+
+**Đã đo qua trình duyệt thật**: bấm loa ở bàn 1 (không giữ audio thật) → cả 2 bàn cùng `is-playing`,
+equalizer 2 bàn ra **giá trị `--h` giống hệt nhau từng thanh** (0.55/0.03/0/0 cả 2 bên); bấm bất kỳ bàn
+nào trong lúc đang phát → vẫn tiếp tục phát bình thường, không dừng; phát hết (~2s) → cả 2 bàn tắt hào
+quang cùng lúc; bấm lại → phát lại được, cả 2 bàn đồng bộ lại từ đầu.
+
+⚠️ Chưa xử lý riêng trường hợp "Different words": khi 2 bàn có từ khác nhau, loa vẫn chỉ phát của bàn 0
+và bàn kia mirror y hệt (không phát đúng giọng của TỪ RIÊNG nó) — hợp lý vì "Same words" nay là mặc
+định và là ca chính; nếu thầy dùng "Different words" kèm giọng đọc thường xuyên, cần bàn thêm.
+
+---
+
 ## Đợt 132 (13/8/2026) — 6 CẢI TIẾN ANAGRAM: MIX VOICE · LOA+EQUALIZER · SLOGAN · TEXT ẨN LOA · KHUNG DƯỚI CO GIÃN · OPTIONS RỘNG HƠN
 ⭐ CÓ SỬA CORE (`core/engine.js` + `core/app.css`, dùng chung 17 game) + Anagram
 (`anagram.js` + `anagram.css` + `anagram-editor.js`) + `core/voice-batch.js`.
