@@ -95,6 +95,31 @@ const INTRO_ZOOM = 2200;
 const HILL_IMG = "mound02.webp";        // hill + mesas + prickly-pear, one painted image
 const FRONT_HILL_IMG = "mound01.webp";  // plain dome, blurred, for the foreground corners
 
+// real cactus props at the edges (crisp foreground). The paddle cacti on the
+// ridge come baked into the hill image; these are the sharp near ones, like
+// the live original: a tall saguaro standing on the right slope + one left.
+// Đợt 122 — đưa ra cấp module (trước đây khai trong mount) để `JS_IMAGES` bên
+// dưới đọc thẳng, đổi ảnh cactus thì phần nạp trước tự đúng theo.
+const DECOR = [
+  { img: "cactus.webp",  css: "right:-11%; bottom:8%; width:18cqw;" },   // tall saguaro — bigger + lowered so its rocky base tucks behind the front-right hill; pushed right so holes clear it
+  { img: "cactus2.webp", css: "left:-10%; bottom:12%; width:17cqw;" }      // left cactus — bigger + higher, pushed further left so its right edge still clears the holes
+];
+
+// Mọi ảnh template này tự dựng bằng JS (`el("img")`) — KHÔNG nằm trong CSS nên
+// engine quét CSS không thấy; khai ở đây để `tpl.preloadImages` kéo về trước
+// khi hiện nút PLAY (Đợt 122). `bg2.webp`, `post.webp`, `thicksignplank.webp`
+// nằm trong whack-a-mole.css nên engine đã tự nhặt, không khai lại.
+// ⚠️ Thêm ảnh mới trong mount() thì nhớ bổ sung vào đây, không thì đúng ảnh đó
+// nháy ở lần hiện đầu tiên — và im lặng, vì nó vẫn hiện ra.
+const JS_IMAGES = [
+  HILL_IMG, FRONT_HILL_IMG,
+  "holeback.webp", "holefront.webp",
+  "whackzaps1.png", "whackzaps2.png",
+  ...DECOR.map(d => d.img),
+  ...MOLE_VARIANTS.flatMap(v => [`${v}ready.webp`, `${v}tapped.webp`, `${v}dizzy.webp`]),
+  ...CRATE_TYPES.map(c => c.img)
+];
+
 function randi(n) { return Math.floor(Math.random() * n); }
 function pickWeighted(list) {
   const total = list.reduce((s, x) => s + x.weight, 0);
@@ -114,6 +139,7 @@ const wamTemplate = {
   scorable: true,
   hidePointsOff: true,   // ships its own "Points off per wrong hit" control
   name: "Whack-a-mole",
+  preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,    // our own timer bar + hearts sit on the score row (ui.topbarMid)
   hideLettersOption: true, // no lettered answer boxes here
   manualTimerStart: true,  // we drive our OWN countdown (bonus time can extend it) — the engine
@@ -377,13 +403,7 @@ const wamTemplate = {
     sign.append(post, board);
     world.append(sign);
 
-    // real cactus props at the edges (crisp foreground). The paddle cacti on the
-    // ridge come baked into the hill image; these are the sharp near ones, like
-    // the live original: a tall saguaro standing on the right slope + one left.
-    const DECOR = [
-      { img: "cactus.webp",  css: "right:-11%; bottom:8%; width:18cqw;" },   // tall saguaro — bigger + lowered so its rocky base tucks behind the front-right hill; pushed right so holes clear it
-      { img: "cactus2.webp", css: "left:-10%; bottom:12%; width:17cqw;" }      // left cactus — bigger + higher, pushed further left so its right edge still clears the holes
-    ];
+    // real cactus props at the edges — DECOR nay ở cấp module (đầu file, Đợt 122)
     DECOR.forEach(d => {
       const im = el("img", "aw-wam-decor"); im.src = imgUrl(d.img); im.alt = "";
       im.style.cssText += d.css;

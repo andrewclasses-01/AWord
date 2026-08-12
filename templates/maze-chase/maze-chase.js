@@ -185,6 +185,19 @@ const mazeChaseTemplate = {
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "questions",
   name: "Maze chase",
+  // Đợt 122 — ảnh template TỰ DỰNG BẰNG JS (mảnh mê cung `maze-*`, hành tinh,
+  // 2 ô sàn đúng/sai): không có trong CSS nên engine quét CSS không thấy.
+  // `bg.webp`, `floor-neutral.png`, `player.png`, `enemy-*.png` đã khai trong
+  // maze-chase.css nên engine tự nhặt, không kê lại ở đây.
+  // ⚠️ Mọi mảnh `pieceFor()` có thể trả về đều phải có mặt: thiếu mảnh nào thì
+  // đúng ô đó nháy trắng lúc mê cung vẽ ra lần đầu.
+  preloadImages: [
+    ...["cross", "tjunction-udl", "tjunction-udr", "tjunction-ulr", "tjunction-dlr",
+        "path-ud", "path-lr", "corner-ul", "corner-ur", "corner-dl", "corner-dr",
+        "closed", "endleft", "endright"].map(p => `maze-${p}.webp`),
+    "bigplanet.webp", "greenplanet.webp", "sun.webp",
+    "floor-correct.png", "floor-incorrect.png"
+  ].map(imgUrl),
   hideLettersOption: true,   // answers ride on maze pads, not lettered boxes
 
   edit: openMazeChaseEditor,

@@ -48,6 +48,11 @@ const gameshowTemplate = {
   itemsKey: "questions",
   hidePointsOff: true,   // speed-based scoring, never a flat per-wrong penalty (teacher, 3/8/2026)
   name: "Gameshow quiz",
+  // Đợt 122 — ảnh template tự dựng bằng JS (đèn sân khấu, khán giả, 2 cánh cửa
+  // vòng bonus). Phần nền/khung màn hình khai trong gameshow.css thì engine tự
+  // quét, không kê lại ở đây.
+  preloadImages: ["stagelight-left.webp", "stagelight-right.webp", "audience.webp",
+                  "bonusdoor-left.png", "bonusdoor-right.png"].map(imgUrl),
 
   edit: openGameshowEditor,
 

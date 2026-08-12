@@ -76,6 +76,93 @@ export function ensureTemplate(type) {
   return p;
 }
 
+// ---------------------------------------------------------------
+// NẠP TRƯỚC ẢNH CỦA TEMPLATE (Đợt 122, 12/8/2026)
+//
+// Ảnh nền khai trong CSS chỉ được trình duyệt đi lấy KHI phần tử dùng nó hiện
+// ra — nên ván đầu hay nháy đúng lúc cần mượt nhất (vụ nổ đầu tiên của Flying
+// fruit, hố chuột đầu tiên của Whack-a-mole).
+//
+// Cách quét: đọc thẳng `cssRules` của CHÍNH stylesheet template vừa nạp và
+// nhặt mọi `url(...)`. Tự động đúng cho cả template làm sau này — không ai
+// phải khai danh sách. Đọc được vì mọi file CSS đều CÙNG ORIGIN.
+//
+// ⚠️ BẪY: quét CSS KHÔNG thấy ảnh do JS tự dựng bằng `new Image()`/`el("img")`
+// — `templates/flying-fruit` và `templates/whack-a-mole` làm đúng vậy. Hai
+// template đó tự khai thêm mảng `preloadImages` trong module của mình (engine
+// gộp cả 2 nguồn lại).
+// ---------------------------------------------------------------
+const PRELOAD_IMG_CONCURRENCY = 6;
+
+// Mọi URL ảnh khai trong file CSS của một loại game.
+export function cssImageUrls(type) {
+  const entry = templateEntry(type);
+  if (!entry || !entry.css) return [];
+  const href = new URL(entry.css, location.href).href;
+  // Khớp lỏng theo TÊN FILE nữa, vì trang test của template
+  // (`templates/<x>/test.html`) khai <link> bằng đường dẫn tương đối của
+  // riêng nó chứ không đi qua ensureTemplate() — so cứng href sẽ trượt.
+  const fileName = entry.css.split("/").pop();
+  const out = new Set();
+  for (const sheet of document.styleSheets) {
+    if (!sheet.href) continue;
+    if (sheet.href !== href && !sheet.href.endsWith(`/${fileName}`)) continue;
+    let rules;
+    try { rules = sheet.cssRules; } catch { continue; }   // sheet chưa áp xong / khác origin
+    collectUrls(rules, out);
+  }
+  return [...out];
+}
+
+function collectUrls(rules, out) {
+  if (!rules) return;
+  for (const rule of rules) {
+    // @media / @supports (và luật lồng nhau kiểu CSS Nesting) — đào tiếp vào trong.
+    // ⚠️ BẪY ĐÃ DÍNH khi build Đợt 122: từ khi Chrome có CSS Nesting thì MỘT LUẬT
+    // THƯỜNG cũng có `.cssRules` (rỗng nhưng vẫn "truthy"), nên bản đầu viết
+    // `if (rule.cssRules) { ...; continue; }` đã nhảy qua SẠCH mọi luật và trả về
+    // danh sách rỗng — im lặng, không lỗi gì. Phải xét ĐỘ DÀI, và tuyệt đối
+    // không `continue`: luật lồng vẫn có khai báo của chính nó.
+    if (rule.cssRules && rule.cssRules.length) collectUrls(rule.cssRules, out);
+    const text = rule.style && rule.style.cssText;
+    if (!text || text.indexOf("url(") < 0) continue;
+    for (const m of text.matchAll(/url\(\s*["']?([^"')]+)["']?\s*\)/g)) {
+      const raw = m[1].trim();
+      if (!raw || raw.startsWith("data:")) continue;      // ảnh nhúng sẵn: không phải đi mạng
+      if (/\.(woff2?|ttf|otf)$/i.test(raw)) continue;     // font để trình duyệt tự lo
+      try { out.add(new URL(raw, rule.parentStyleSheet?.href || location.href).href); } catch { /* bỏ qua */ }
+    }
+  }
+}
+
+// Kéo trước cả rổ ảnh. KHÔNG BAO GIỜ reject — thiếu ảnh thì game vẫn phải chơi
+// được. `onProgress({done, total})` để engine vẽ thanh %.
+export async function preloadImages(urls, onProgress) {
+  const list = [...new Set((urls || []).filter(Boolean))];
+  const total = list.length;
+  if (!total) return { done: 0, total: 0 };
+  let done = 0, next = 0;
+  const one = url => new Promise(resolve => {
+    const img = new Image();
+    img.decoding = "async";
+    let over = false;
+    const finish = () => { if (over) return; over = true; resolve(); };
+    img.onload = finish;
+    img.onerror = finish;                 // ảnh thiếu không được treo hàng đợi
+    setTimeout(finish, 8000);             // mạng lớp học treo cứng cũng phải nhả
+    img.src = url;
+  });
+  async function worker() {
+    while (next < list.length) {
+      await one(list[next++]);
+      done++;
+      if (onProgress) { try { onProgress({ done, total }); } catch { /* ignore */ } }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(PRELOAD_IMG_CONCURRENCY, total) }, worker));
+  return { done, total };
+}
+
 // Chèn 1 <link rel=stylesheet> và đợi trình duyệt áp xong. Không bao giờ
 // reject: CSS hỏng chỉ làm game xấu, không đáng chặn cả lượt chơi.
 function loadCss(href) {

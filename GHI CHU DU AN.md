@@ -5,6 +5,83 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 122 (12/8/2026) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY: GIỌNG + TIẾNG + ẢNH, CÓ ĐỆM CACHE
+1 NGÀY ⭐ CÓ SỬA CORE (`engine.js` + `registry.js` + `sfx.js` + `voice-clips.js`)
+
+Thầy hỏi: *"khi chạy một act thì thiết bị tải toàn bộ trước rồi mới chạy, hay chạy đến đâu load đến
+đó?"* → rà xong trả lời: **lai** (phần chữ tải hết trước, giọng đọc tải dần theo câu). Thầy yêu cầu
+nghiên cứu nạp trước **toàn bộ** để *"chơi mượt, không trễ dù chơi với tốc độ rất cao"*, chốt 4 điểm
+rồi gõ "ok build". ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE** (hash + kết quả kiểm LIVE ghi ở mục 7).
+
+### 1. Nghiên cứu trước khi build (số đo thật, 12/8/2026)
+| Thứ | Dung lượng | Ghi chú |
+|---|---|---|
+| Giọng đọc 40 từ | ~0,5 MB | 12KB/từ **nhờ Đợt 121**; trước đó là 7,4 MB |
+| Giọng đọc act 100 từ | ~1,2 MB | |
+| Âm thanh 1 game | 116KB – **1,58MB** | Gameshow 47 file nặng nhất, Quiz chỉ 164KB |
+| Ảnh 1 game | **0 với 13/17 template** | Flying fruit 788KB, Maze chase 389KB, Whack-a-mole 360KB |
+| **Tổng xấu nhất** | **~3,2 MB** | ≈5 giây wifi 5Mbps ⇒ đủ nhẹ để chặn nút PLAY |
+
+⇒ Khả thi, và **rẻ hơn hẳn vì làm SAU Đợt 121** (nén MP3) chứ không phải trước.
+
+### 2. Thầy chốt 4 điểm (qua AskUserQuestion)
+Trọn gói (giọng + tiếng + ảnh) · giữ cache **1 ngày** · áp cho **cả trang HS lẫn trang thầy** ·
+**không** đổi cách lưu clip khi Regenerate (nên mới cần hạn 1 ngày — xem bẫy 1).
+
+### 3. Làm gì — 4 file core, 5 template chỉ thêm 1 dòng khai ảnh
+- **`core/voice-clips.js`** — đệm 3 tầng RAM → Cache Storage (`aword-voice-v1`, hạn 1 ngày) →
+  Firestore, thêm `collectVoiceIds()` (quét ĐỆ QUY), `preloadVoiceClips()` (6 luồng),
+  `forgetVoiceClip()`. ⭐ Vì mọi nơi phát đều chui qua `getVoiceClip()` nên **cả 14 template dùng
+  `voice-playback.js` lẫn bản riêng của Anagram đều hưởng mà không sửa một dòng nào**.
+- **`core/sfx.js`** — `prime()` trả Promise, thêm `whenPrimed()` + `whenAllPacksPrimed()`.
+- **`core/registry.js`** — `cssImageUrls()` (tự quét `url(...)` trong CSS template) + `preloadImages()`.
+- **`core/engine.js`** — cổng chờ Đợt 108 nâng thành **của LÕI**: chờ song song 4 việc (giọng / tiếng /
+  ảnh / `tpl.prepare`) trên **một** thanh %; thanh chỉ hiện sau 250ms; quá 12 giây thì mở PLAY.
+- **5 template khai `preloadImages`** (ảnh do JS tự dựng nên quét CSS không thấy): `flying-fruit` 14,
+  `whack-a-mole` 20, `maze-chase` 19, `gameshow` 5, `speaking-cards` 1. Nhân tiện đưa `DECOR` của
+  whack-a-mole ra cấp module để danh sách ảnh không lệch về sau.
+
+### 4. ⚠️ BA BẪY (bẫy 2 đã dính thật lúc build)
+1. **`saveVoiceClip()` DÙNG LẠI ID CŨ khi Regenerate** (cả 3 đường ghi: anagram-editor,
+   speaking-editor, voice-batch) — cache vĩnh viễn sẽ khiến máy HS phát mãi giọng cũ trong khi máy
+   thầy nghe bản mới. Đây là lý do **bắt buộc có hạn**; thầy chốt 1 ngày. Đồng thời
+   `saveVoiceClip`/`deleteVoiceClip` tự dọn đệm ngay tại máy thầy.
+2. **`CSSStyleRule.cssRules` là "truthy"** từ khi Chrome có CSS Nesting. Bản đầu viết
+   `if (rule.cssRules) { đào tiếp; continue; }` ⇒ `continue` qua **sạch** mọi luật và trả về danh sách
+   rỗng — **im lặng, không lỗi gì**. Lộ ra nhờ Flying fruit không nạp `bg.jpg`. Phải xét `.length` và
+   **không được** `continue`.
+3. **Đừng đoán ảnh cần nạp bằng cách nhìn thư mục `img/`.** Quét thật mới thấy: Gameshow có 4 file
+   **không hề dùng** (`introdoor-*`, `bg-section`, `cross`, `tick`), còn `speaking-cards` để ảnh ở
+   `./assets/` chứ không phải `./img/`. Nạp thừa thì phí băng thông lớp học, nạp thiếu thì nháy hình.
+
+### 5. Test thật (Chrome, devserver gửi `no-store` nên mọi lần đều là tải mới)
+- **Cổng chờ TIẾNG**: Gameshow — PLAY hiện đúng **861ms**, khớp chính xác lúc pack báo `ready 46/46`.
+  (Trước đợt này PLAY bấm được từ ~0ms, nên bấm nhanh là hụt tiếng lần đầu.)
+- **Cổng chờ GIỌNG**: nhét 14 id giả vào `statements` + `questions` của act mẫu → thanh hiện ở
+  **283ms**, chạy `66% "Loading the spoken words… 6/14"` → `91% 12/14` → PLAY ở **442ms**.
+  ⭐ Chính act đó **không có mảng `items`** nào — đúng bài kiểm chứng minh phải quét đệ quy. Và **không**
+  nhặt nhầm `voiceId` (tên giọng Kokoro) làm id clip.
+- **Đệm**: clip còn hạn trả về **2ms / 0 lượt gọi Firestore**; clip quá 1 ngày bị **bỏ + tự xoá** khỏi
+  cache; `forgetVoiceClip()` dọn được cả 2 tầng.
+- **Đường lùi**: `prepare` treo vĩnh viễn → PLAY vẫn hiện ở **12,03 giây**; `prepare` ném lỗi → 28ms;
+  reject → 26ms; template không khai `prepare` → 26ms (y hệt trước).
+- **Ảnh**: Whack-a-mole 20/20 · Maze chase **24/24 (trọn thư mục img)** · Flying fruit 15/15 ·
+  Gameshow 7/7 · Speaking cards 1/1 — tất cả xong **trước** khi PLAY hiện.
+- **Quét cả 16 template built** (trừ SPEAKING, không tải mô hình 240MB khi test): mở PLAY
+  **21–863ms**, **0 lỗi JS**, 14 pack đều `ready === total`.
+- **SPEAKING**: thay `prepare` bằng bản giả báo cáo y hệt → thanh chạy `8% → 31% → 54% → 77%` rồi mở
+  PLAY, chữ riêng của template đè lên chữ chung ⇒ hợp đồng Đợt 108 nguyên vẹn.
+- **Chơi thật**: Quiz bấm liên tục ~280ms/câu chạy hết 6/6 câu, 0 lỗi. Whack-a-mole vào ván bình
+  thường, không ảnh nào `naturalWidth === 0`.
+- **Luật core số 2 (trang HS không được chạm thư viện)**: 3 module engine mới import tĩnh có cây phụ
+  thuộc `registry→catalog`, `sfx→sound`, `voice-clips→firebase` — **không đường nào tới `store.js`**.
+
+### 6. Chưa kiểm được (nói rõ để không tưởng là đã xong)
+- **Chưa chạy với clip giọng THẬT** (phiên build không đăng nhập tài khoản thầy): đường Firestore mới
+  chỉ test bằng id giả (trả `null`) và bằng bản đệm tự gieo. Nghiệm thu: thầy mở một act có nút loa.
+- **Chưa test trên `play.html`** vì cần mã bài giao thật. Cùng một `startGame()` nên rủi ro thấp,
+  nhưng nghiệm thu nên bấm thử 1 link HS.
+
 ## Đợt 121 (12/8/2026) — GIỌNG ĐỌC NÉN MP3 48k (NHẸ ~15 LẦN) + XOÁ SẠCH KHO AUDIO WAV CŨ
 
 Thầy yêu cầu nghiên cứu việc đưa dữ liệu nặng (audio, sau này có thể cả ảnh) lên Firebase Storage.

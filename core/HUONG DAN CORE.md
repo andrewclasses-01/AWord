@@ -229,6 +229,11 @@ READY được vẽ → tới lúc thầy bấm PLAY thì file đã nằm sẵn.
    dựng + resume context, đẩy 1 mẫu câm cho thiết bị chạy. Không phải gọi tay, và **đừng gỡ** cái hook đó.
 5. Kiểm nhanh xem pack đã sẵn sàng chưa: `window.__awSfxPacks.map(p => p.stats())` →
    `{total, built, ready, primed}`; `ready === total` là đủ.
+6. **Đợt 122**: `prime()` nay **trả về Promise** và pack có thêm `whenPrimed()`; `core/sfx.js` xuất
+   `whenAllPacksPrimed()` để engine **giữ nút PLAY** tới khi tiếng sẵn sàng. Trước đó prime() chạy
+   ngầm nên ai bấm PLAY thật nhanh trong giây đầu **vẫn** hụt tiếng lần đầu — Đợt 85 mới chỉ tải sớm,
+   chưa chặn. Đo thật (Gameshow, 46 file, localhost): PLAY hiện đúng lúc **861ms** = đúng lúc pack báo
+   `ready === total`. Template không phải sửa gì: 17 nơi đều gọi trần `pack.prime();`.
 
 ⚠️ **File mp3 của pack đã được nén lại ở LAME VBR `-q:a 6`** (Đợt 85): 10,25MB → **6,42MB (nhỏ hơn 37%)**,
 độ dài và khoảng lặng đầu file giữ nguyên. Thêm file mới thì nén cùng mức cho đồng bộ.
@@ -262,6 +267,23 @@ và **✅ ĐÃ NGHIỆM THU: thầy tự test iPhone + iPad + Windows, nghe tố
 
 Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
 nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
+
+### ⭐ BỘ ĐỆM CLIP GIỌNG — 3 TẦNG, HẠN 1 NGÀY (Đợt 122, 12/8/2026)
+
+`getVoiceClip()` của `core/voice-clips.js` nay đi qua **RAM → Cache Storage (`aword-voice-v1`) →
+Firestore**. Sửa ở đúng một chỗ này nên **cả `core/voice-playback.js` (14 template) lẫn bản riêng của
+`templates/anagram/anagram.js` đều hưởng, 0 dòng sửa ở template**. Đo thật: clip đã đệm trả về trong
+**2ms, 0 lượt gọi Firestore**.
+
+⚠️⚠️ **VÌ SAO PHẢI CÓ HẠN, VÀ VÌ SAO LÀ 1 NGÀY (thầy chốt)**: bấm **"Regenerate"** giọng thì cả 3
+đường ghi (`anagram-editor.js`, `speaking-editor.js`, `voice-batch.js`) đều **dùng lại ĐÚNG ID CŨ** —
+nội dung đổi mà tên không đổi. Cache vĩnh viễn theo id ⇒ máy học sinh phát mãi bản cũ còn máy thầy
+nghe bản mới: loại lỗi cực khó truy. Hạn 1 ngày = trong buổi học chơi lại bao nhiêu lần cũng tức thì,
+mà sửa giọng hôm nay thì mai HS đã nghe bản mới. **Chỉ được bỏ hạn này nếu sau này đổi sang "mỗi lần
+tạo lại đẻ id mới"** (khi đó phải tính chuyện bài ĐÃ GIAO còn trỏ id cũ).
+
+`saveVoiceClip()` / `deleteVoiceClip()` tự gọi `forgetVoiceClip(id)` để dọn cả 2 tầng **ngay tại máy
+thầy** — không thì nghe thử lại trong editor vẫn ra giọng vừa bị thay.
 
 ### ⭐⭐ LUẬT CHUNG — MEDIA SINH RA TRONG TRÌNH DUYỆT PHẢI NÉN TRƯỚC KHI LƯU
 Rút ra từ đợt này, áp cho **mọi loại media về sau** (âm thanh, ảnh, video ngắn), ở AWord lẫn app khác:
@@ -754,6 +776,47 @@ lại PLAY. `onProgress({percent, text})`: `percent` 0-100 kéo thanh, `text` th
   lần đầu **23,5 giây**, lần dựng lại **55 mili giây**.
 - ⚠️ Đừng nhớ một promise **ĐÃ HỎNG**: mất mạng 1 giây mà cache luôn kết quả hỏng thì cả tab đó vĩnh
   viễn không nạp lại được (đã vá trong `loadASR` bằng `_asrP.catch(() => { _asrP = null; })`).
+
+### ⭐⭐ CỔNG CHỜ NAY LÀ CỦA LÕI — NẠP TRƯỚC MỌI THỨ RỒI MỚI CHO BẤM PLAY (Đợt 122, 12/8/2026)
+
+Thầy yêu cầu: *"chuẩn bị trước toàn bộ những gì cần thiết trước khi bấm START để chơi mượt, không trễ
+dù chơi với tốc độ rất cao."* Cùng thanh % và nút PLAY của Đợt 108, nhưng nay engine chờ **4 việc song
+song** cho **mọi template**, không riêng SPEAKING:
+
+| # | Việc | Ai lo | Template phải khai gì |
+|---|---|---|---|
+| 1 | **Giọng đọc** từng từ | `collectVoiceIds()` + `preloadVoiceClips()` của `core/voice-clips.js` | không |
+| 2 | **Âm thanh** mp3 | `whenAllPacksPrimed()` của `core/sfx.js` | không |
+| 3 | **Ảnh nền** khai trong CSS | `cssImageUrls()` của `core/registry.js` (tự quét `url(...)`) | không |
+| 3b | **Ảnh template tự dựng bằng JS** | `preloadImages` | **CÓ — xem dưới** |
+| 4 | Việc riêng của template | `tpl.prepare` (hợp đồng Đợt 108, không đổi) | chỉ khi cần |
+
+**`tpl.preloadImages`** = mảng URL tuyệt đối, khai ở cấp module rồi `.map(imgUrl)`. **Chỉ khai ảnh mà
+JS tự dựng** (`el("img").src = ...`, `style.backgroundImage = ...`) — ảnh nằm trong file CSS của
+template thì engine đã tự quét, khai lại chỉ tổ trùng. Hiện có 5 template khai: `flying-fruit` (14),
+`whack-a-mole` (20), `maze-chase` (19), `gameshow` (5), `speaking-cards` (1 — ảnh nằm ở `./assets/`
+chứ không phải `./img/`, quét CSS không thấy).
+
+**Ba luật an toàn — đừng gỡ:**
+- Thanh % chỉ hiện **sau 250ms**. Mọi thứ đã có cache thì PLAY ra ngay, không nháy thanh chớp tắt.
+  (Đo thật: ván thứ 2 trở đi mở PLAY trong **21–26ms**, không hề thấy thanh.)
+- Quá **12 giây** là mở PLAY, phần còn thiếu tải tiếp ở nền. Mạng lớp học chết không được khoá cứng
+  nút chơi. (Đo thật với `prepare` treo vĩnh viễn: PLAY hiện ở **12,03 giây**.)
+- **Mọi bước không bao giờ reject.** Thiếu tiếng còn hơn không chơi được.
+
+⚠️ **Trọng số thanh %**: `prepare` của template = 12, giọng = 3, tiếng = 1, ảnh = 1 (chỉ tính bước
+thực sự có việc). Nên với SPEAKING thì mô hình 240MB chiếm gần hết thanh — đúng ý đồ. Chữ chú thích
+lấy theo báo cáo mới nhất, nên chữ của template (cụ thể hơn) sẽ đè lên chữ chung.
+
+⚠️ **BẪY ĐÃ DÍNH LÚC BUILD — `CSSStyleRule.cssRules` LÀ "TRUTHY"**. Bản đầu của `collectUrls()` viết
+`if (rule.cssRules) { đào tiếp; continue; }` để nhảy vào `@media`. Từ khi Chrome có **CSS Nesting**,
+một luật CSS **thường** cũng có `.cssRules` (rỗng nhưng vẫn truthy) ⇒ hàm `continue` qua **sạch** mọi
+luật và trả về danh sách rỗng — **im lặng, không lỗi gì**, chỉ là chẳng ảnh nào được nạp trước. Phải
+xét **`.length`** và **không được `continue`** (luật lồng vẫn có khai báo của chính nó).
+
+⚠️ Quét CSS đọc thẳng `document.styleSheets` nên **chỉ chạy khi CSS đã áp xong** — đó là lý do
+`ensureTemplate()` phải `await loadCss()` trước. Khớp sheet theo href đầy đủ **và** theo tên file, vì
+trang `templates/<x>/test.html` khai `<link>` bằng đường dẫn tương đối của riêng nó.
 
 ### Điểm tuỳ biến (points) — `ui.finish({score, scoreText})` (thêm ở Gameshow, 1/8/2026)
 

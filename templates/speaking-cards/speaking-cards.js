@@ -110,6 +110,9 @@ const speakingCardsTemplate = {
   type: "speaking_cards",
   scorable: false,
   name: "Speaking cards",
+  // Đợt 122 — ảnh nền gán bằng JS (`bg.style.backgroundImage`), lại nằm trong
+  // ./assets/ chứ không phải ./img/ nên engine quét CSS không thấy.
+  preloadImages: [BG_URL],
   hideLettersOption: true,   // no lettered answers here — engine skips that Options group
 
   // Engine hooks it auto-calls: `play` on the PLAY button (the intro sound — the

@@ -5,7 +5,31 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 121) — ⭐ GIỌNG ĐỌC NÉN MP3 48k (nhẹ ~15 LẦN) + XOÁ SẠCH KHO
+> Cập nhật lần cuối: **12/8/2026 (Đợt 122) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY (giọng đọc +
+> âm thanh + ảnh của game), có ĐỆM CACHE 1 NGÀY cho clip giọng. ⭐ CÓ SỬA CORE (`engine.js` +
+> `registry.js` + `sfx.js` + `voice-clips.js`) + 5 template khai `preloadImages`.
+> ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> Thầy hỏi act tải kiểu gì → trả lời: **lai** (chữ tải hết trước, giọng tải dần). Thầy yêu cầu nạp
+> trước trọn gói để *"chơi mượt dù chơi với tốc độ rất cao"*. Đo trước khi làm: xấu nhất **~3,2MB**
+> (thường 0,5–1,5MB) — nhẹ vậy là **nhờ Đợt 121 nén giọng còn 12KB/từ**.
+> **Cách làm**: nâng cổng chờ `tpl.prepare` (Đợt 108, vốn của riêng SPEAKING) thành **cổng của LÕI**
+> chờ song song 4 việc trên MỘT thanh %. Chỗ hẹp nhất là `getVoiceClip()` — sửa 1 hàm thì **cả 14
+> template dùng `voice-playback.js` lẫn bản riêng của Anagram đều hưởng, 0 dòng sửa ở template**.
+> **3 luật an toàn**: thanh chỉ hiện sau 250ms (đã cache thì PLAY ra ngay, không nháy) · quá 12 giây
+> vẫn mở PLAY (mạng chết không được khoá nút) · mọi bước không bao giờ reject.
+> **Số đo**: Gameshow PLAY mở đúng lúc pack `ready 46/46` (861ms) · 14 clip giọng: thanh 283ms → PLAY
+> 442ms · clip đã đệm **2ms, 0 lượt Firestore** · `prepare` treo → PLAY vẫn hiện ở **12,03s** · 16/16
+> template built mở PLAY 21–863ms, 0 lỗi JS.
+> ⚠️ **Bẫy cache**: `saveVoiceClip()` khi Regenerate **dùng lại đúng id cũ** ⇒ cache vĩnh viễn sẽ làm
+> máy HS phát mãi giọng cũ. Vì vậy mới có **hạn 1 ngày** (thầy chốt).
+> ⚠️ **Bẫy đã dính lúc build**: `CSSStyleRule.cssRules` là **truthy** (CSS Nesting) làm hàm quét ảnh
+> `continue` qua sạch mọi luật và trả về rỗng — im lặng, không lỗi. Phải xét `.length`.
+> ⚠️ **Chưa kiểm được**: clip giọng THẬT (phiên build không đăng nhập được) và `play.html` (cần mã bài
+> giao). Nghiệm thu nên mở 1 act có nút loa + bấm thử 1 link HS.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 122 · hợp đồng mới: `core/HUONG DAN CORE.md` mục "CỔNG CHỜ NAY LÀ
+> CỦA LÕI".
+>
+> Trước đó: **12/8/2026 (Đợt 121) — ⭐ GIỌNG ĐỌC NÉN MP3 48k (nhẹ ~15 LẦN) + XOÁ SẠCH KHO
 > AUDIO WAV CŨ. ⭐ CÓ SỬA CORE (`core/tts.js` + file mới `core/vendor/lamejs.mjs`).
 > ✅ THẦY DUYỆT → COMMIT `cbf5ed9` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
 > (`curl` xác nhận: `tts.js` có `MP3_KBPS = 48` + `toMp3DataUrl` + trỏ `vendor/lamejs.mjs`, và VẪN CÒN

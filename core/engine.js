@@ -14,7 +14,9 @@
 // Results (incl. per-question review) are saved to the local leaderboard.
 // =============================================================
 
-import { getTemplate, ensureTemplate } from "./registry.js";
+import { getTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./registry.js";
+import { whenAllPacksPrimed } from "./sfx.js";
+import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";
 import { switchTargets, convertActivity } from "./convert.js";
 import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
@@ -387,25 +389,128 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // rather than bricking the activity behind a bar that never fills — the
   // template is expected to degrade gracefully in that case (SPEAKING falls
   // back to loading the model on the first recording, as it did before).
-  if (typeof tpl.prepare === "function") {
-    bigPlay.style.display = "none";
-    const prep = el("div", "aw-ready-prep");
-    const prepBar = el("div", "aw-ready-prepbar");
-    const prepFill = el("div", "aw-ready-prepfill");
-    prepBar.append(prepFill);
-    const prepText = el("div", "aw-ready-preptext", "Getting this game ready…");
-    prep.append(prepBar, prepText);
-    readyCenter.insertBefore(prep, bigPlay);
-    const revealPlay = () => { prep.remove(); bigPlay.style.display = ""; };
-    try {
-      Promise.resolve(tpl.prepare(activity, p => {
-        const pct = Number(p && p.percent);
-        if (Number.isFinite(pct)) prepFill.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-        if (p && p.text) prepText.textContent = String(p.text);
-      })).then(revealPlay, () => revealPlay());
-    } catch (e) {
-      revealPlay();   // a prepare() that throws synchronously must not hide PLAY forever
+  //
+  // ⬇️ ĐỌC TIẾP: từ Đợt 122 `tpl.prepare` không còn là thứ DUY NHẤT giữ nút
+  // PLAY. Hợp đồng với template không đổi một chữ nào — nó chỉ trở thành MỘT
+  // trong bốn bước của cổng chờ chung ngay dưới đây.
+  // ----- ĐỢT 122 (12/8/2026) — CỔNG CHỜ NAY LÀ CỦA LÕI, CHẠY CHO CẢ 17 GAME --
+  //
+  // Thầy yêu cầu: "chuẩn bị trước toàn bộ những gì cần thiết trước khi bấm
+  // START để chơi mượt, không trễ dù chơi với tốc độ rất cao."
+  //
+  // Cùng một thanh %, một nút PLAY, nhưng nay chờ BỐN việc song song:
+  //   1. GIỌNG ĐỌC  — quét đệ quy `content` gom id clip rồi kéo hết về (nguồn
+  //                   trễ lớn nhất: trước đợt này mỗi từ đợi tới lượt mới tải)
+  //   2. ÂM THANH   — chờ `prime()` của bộ mp3 (Đợt 85 đã tải sớm nhưng KHÔNG
+  //                   chặn PLAY, nên ai bấm nhanh trong giây đầu vẫn hụt tiếng)
+  //   3. ẢNH        — ảnh nền trong CSS template + mảng `tpl.preloadImages`
+  //   4. tpl.prepare — phần riêng của template (SPEAKING: mô hình chấm ~240MB)
+  //
+  // Đo dung lượng thật 12/8/2026: xấu nhất ~3,2MB (Gameshow 1,58MB tiếng +
+  // act 100 từ 1,2MB giọng), thường chỉ 0,5–1,5MB — nhẹ nhờ Đợt 121 nén giọng
+  // xuống 12KB/từ.
+  //
+  // BA LUẬT AN TOÀN (đừng gỡ khi sửa sau này):
+  //  · Thanh chỉ hiện sau 250ms — mọi thứ đã có cache thì PLAY ra ngay, không
+  //    nháy một thanh % chớp tắt vô nghĩa.
+  //  · Quá 12 giây là mở PLAY, phần còn thiếu tải tiếp ở nền. Mạng lớp học
+  //    chết không được phép khoá cứng nút chơi.
+  //  · Mọi bước đều KHÔNG BAO GIỜ reject (giữ đúng luật Đợt 108: prepare lỗi
+  //    vẫn phải hiện PLAY) — thiếu tiếng còn hơn không chơi được.
+  //
+  // Chạy lại mỗi lần dựng màn READY, kể cả "Start again" — rẻ, vì cả 4 bước
+  // đều nhớ kết quả (giọng: bộ đệm `core/voice-clips.js`; tiếng: `primedP`
+  // của pack; ảnh: cache HTTP của trình duyệt; mô hình: `_asrP`).
+  const PREP_BAR_DELAY_MS = 250;
+  const PREP_TIMEOUT_MS = 12000;
+  prepareBeforePlay();
+
+  function prepareBeforePlay() {
+    const steps = [];
+
+    // 1. giọng đọc từng từ
+    const voiceIds = [...collectVoiceIds(activity.content || {})];
+    if (voiceIds.length) {
+      steps.push({
+        weight: 3,
+        run: report => preloadVoiceClips(voiceIds, ({ done, total }) =>
+          report(done / total, `Loading the spoken words… ${done}/${total}`))
+      });
     }
+
+    // 2. bộ âm thanh mp3 của game (không báo % — pack không đếm được từng byte)
+    steps.push({ weight: 1, run: () => whenAllPacksPrimed() });
+
+    // 3. ảnh: khai trong CSS + ảnh do chính template dựng bằng JS
+    const imageUrls = [...cssImageUrls(activity.type), ...(tpl.preloadImages || [])];
+    if (imageUrls.length) {
+      steps.push({
+        weight: 1,
+        run: report => preloadImages(imageUrls, ({ done, total }) => report(done / total))
+      });
+    }
+
+    // 4. phần riêng của template (giữ nguyên hợp đồng Đợt 108)
+    if (typeof tpl.prepare === "function") {
+      steps.push({
+        weight: 12,      // nặng nhất trong các bước hiện có (mô hình 240MB của SPEAKING)
+        run: report => tpl.prepare(activity, p => {
+          const pct = Number(p && p.percent);
+          report(Number.isFinite(pct) ? pct / 100 : null, p && p.text);
+        })
+      });
+    }
+
+    bigPlay.style.display = "none";
+    let prep = null, prepFill = null, prepText = null, caption = "Getting this game ready…";
+    let settled = false;
+
+    const barTimer = setTimeout(() => {
+      if (settled) return;
+      prep = el("div", "aw-ready-prep");
+      const prepBar = el("div", "aw-ready-prepbar");
+      prepFill = el("div", "aw-ready-prepfill");
+      prepBar.append(prepFill);
+      prepText = el("div", "aw-ready-preptext", caption);
+      prep.append(prepBar, prepText);
+      readyCenter.insertBefore(prep, bigPlay);
+      paint();
+    }, PREP_BAR_DELAY_MS);
+
+    const fractions = steps.map(() => 0);
+    const totalWeight = steps.reduce((s, x) => s + x.weight, 0);
+
+    function paint() {
+      if (!prep) return;
+      let acc = 0;
+      steps.forEach((s, i) => { acc += s.weight * Math.max(0, Math.min(1, fractions[i])); });
+      prepFill.style.width = `${Math.round((acc / totalWeight) * 100)}%`;
+      prepText.textContent = caption;
+    }
+
+    function reveal() {
+      if (settled) return;
+      settled = true;
+      clearTimeout(barTimer);
+      if (prep) prep.remove();
+      bigPlay.style.display = "";
+    }
+
+    const runOne = (step, i) => {
+      const report = (fraction, text) => {
+        if (Number.isFinite(fraction)) fractions[i] = fraction;
+        if (text) caption = String(text);
+        paint();
+      };
+      // Một bước ném lỗi NGAY (không phải reject) cũng không được giết cả cổng.
+      try { return Promise.resolve(step.run(report)).catch(() => {}).then(() => { fractions[i] = 1; paint(); }); }
+      catch (e) { fractions[i] = 1; return Promise.resolve(); }
+    };
+
+    Promise.race([
+      Promise.all(steps.map(runOne)),
+      new Promise(r => setTimeout(r, PREP_TIMEOUT_MS))
+    ]).then(reveal, reveal);
   }
 
   bigPlay.onclick = () => {

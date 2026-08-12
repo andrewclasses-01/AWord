@@ -37,6 +37,12 @@ import { sound as coreSound } from "./sound.js";
 // starving anything else.
 const PRIME_CONCURRENCY = 4;
 
+// Mọi pack đã được tạo trong trang này. Chỉ template ĐANG nạp mới đẻ pack mới
+// (ensureTemplate import module đúng một lần), nên chờ "tất cả" thực chất là
+// chờ đúng game sắp chơi; pack của ván trước đã xong nên trả lời tức thì.
+// Nhờ danh sách nằm ở đây mà engine không cần template khai thêm bất cứ gì.
+const ALL_PACKS = [];
+
 /**
  * Build a sound pack for one template.
  *
@@ -136,33 +142,53 @@ export function createPack(moduleUrl, spec = {}) {
   }
 
   // ---- the actual fix: fetch everything up front, a few files at a time ----
+  // Đợt 122 — prime() nay TRẢ VỀ một Promise (xong khi cả hàng đợi đã tải hoặc
+  // bỏ cuộc), để `core/engine.js` giữ nút PLAY lại cho tới lúc bộ tiếng sẵn
+  // sàng. Trước đó prime() chạy ngầm, nên ai bấm PLAY thật nhanh trong giây
+  // đầu vẫn vượt mặt nó và mất tiếng lần đầu — đúng thứ đợt này đi vá.
+  // Tương thích ngược: 17 template đều gọi trần `pack.prime();` và không dùng
+  // giá trị trả về, nên không nơi nào phải sửa.
   let primed = false;
+  let primedP = null;
   function prime() {
-    if (primed) return;
+    if (primedP) return primedP;
     primed = true;
     // hot names first, then the rest, minus anything the template asked to skip
     const queue = [...new Set([...hot, ...names])].filter(n => !skip.has(n));
-    let next = 0;
-    const startOne = () => {
-      if (next >= queue.length) return;
-      const name = queue[next++];
-      let moved = false;
-      const advance = () => { if (moved) return; moved = true; startOne(); };
-      try {
-        const a = elFor(name);
-        if (a.readyState >= 4) return advance();
-        a.addEventListener("canplaythrough", advance, { once: true });
-        a.addEventListener("error", advance, { once: true });   // a missing file must not stall the queue
-        // Belt and braces: a stalled request (or a tab that never fires media
-        // events because it is hidden) must not park the queue forever.
-        setTimeout(advance, 8000);
-        a.load();
-      } catch { advance(); }
-    };
-    for (let i = 0; i < PRIME_CONCURRENCY; i++) startOne();
+    if (!queue.length) { primedP = Promise.resolve(); return primedP; }
+    primedP = new Promise(resolve => {
+      let next = 0, finished = 0;
+      const startOne = () => {
+        if (next >= queue.length) return;
+        const name = queue[next++];
+        let moved = false;
+        const advance = () => {
+          if (moved) return;
+          moved = true;
+          if (++finished >= queue.length) resolve();
+          startOne();
+        };
+        try {
+          const a = elFor(name);
+          if (a.readyState >= 4) return advance();
+          a.addEventListener("canplaythrough", advance, { once: true });
+          a.addEventListener("error", advance, { once: true });   // a missing file must not stall the queue
+          // Belt and braces: a stalled request (or a tab that never fires media
+          // events because it is hidden) must not park the queue forever.
+          setTimeout(advance, 8000);
+          a.load();
+        } catch { advance(); }
+      };
+      for (let i = 0; i < PRIME_CONCURRENCY; i++) startOne();
+    });
+    return primedP;
   }
 
-  const pack = { play, stop, pool, prime, durationMs, el: elFor, urlFor, pauseActive, resumeActive, dropPaused,
+  // "Bộ tiếng này đã tải xong chưa?" — chưa ai gọi prime() thì coi như xong
+  // (template đó cố ý không nạp trước), engine không phải chờ vô cớ.
+  function whenPrimed() { return primedP || Promise.resolve(); }
+
+  const pack = { play, stop, pool, prime, whenPrimed, durationMs, el: elFor, urlFor, pauseActive, resumeActive, dropPaused,
 
     // Diagnostics — lets a test page (or a future session) prove the pack really
     // was loaded BEFORE the teacher pressed PLAY, which is the whole point of
@@ -180,5 +206,12 @@ export function createPack(moduleUrl, spec = {}) {
   if (typeof window !== "undefined") {
     (window.__awSfxPacks = window.__awSfxPacks || []).push(pack);
   }
+  ALL_PACKS.push(pack);
   return pack;
+}
+
+// Dùng ở `core/engine.js` (Đợt 122) để giữ nút PLAY tới khi tiếng sẵn sàng.
+// Không bao giờ reject.
+export function whenAllPacksPrimed() {
+  return Promise.all(ALL_PACKS.map(p => p.whenPrimed().catch(() => {}))).then(() => {});
 }

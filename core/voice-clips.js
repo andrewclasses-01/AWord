@@ -34,9 +34,129 @@
 // of stray ~100KB docs is not worth a GC pass over the whole library).
 // =============================================================
 
+// -------------------------------------------------------------------
+// ĐỢT 122 (12/8/2026) — BỘ ĐỆM DÙNG CHUNG + NẠP TRƯỚC.
+//
+// Trước đợt này mỗi clip chỉ được lấy về ĐÚNG LÚC học sinh tới từ đó, và
+// bộ nhớ tạm nằm trong TỪNG người chơi (`cache` của createVoicePlayer, hay
+// `voiceClipCache` của anagram.js) — nên đổi câu là chờ mạng, "Start again"
+// là tải lại từ đầu, F5 cũng tải lại từ đầu.
+//
+// Sửa ở ĐÂY là chỗ hẹp nhất: cả `core/voice-playback.js` (14 template) lẫn
+// bản riêng của `templates/anagram/anagram.js` đều đi qua getVoiceClip(),
+// nên KHÔNG template nào phải sửa một dòng.
+//
+// Ba tầng, theo thứ tự:
+//   1. RAM      (`mem`)            — trong 1 lần mở trang, kể cả đổi ván
+//   2. Cache Storage của trình duyệt — sống qua F5 / mở lại link, HẠN 1 NGÀY
+//   3. Firestore                    — nguồn thật, rồi ghi ngược vào 1 + 2
+//
+// ⚠️ VÌ SAO CÓ HẠN 1 NGÀY (thầy chốt 12/8/2026): bấm "Regenerate" giọng cho
+// một từ thì cả 3 đường ghi (`anagram-editor.js`, `speaking-editor.js`,
+// `voice-batch.js`) đều DÙNG LẠI ĐÚNG ID CŨ — nội dung đổi mà tên không đổi.
+// Cache vĩnh viễn theo id sẽ khiến máy học sinh phát mãi bản cũ, còn máy thầy
+// nghe bản mới: loại lỗi rất khó truy. Hạn 1 ngày = trong buổi học chơi lại
+// bao nhiêu lần cũng tức thì, mà thầy sửa giọng hôm nay thì mai học sinh đã
+// nghe bản mới. Nếu sau này đổi sang "mỗi lần tạo lại đẻ id mới" thì mới được
+// phép bỏ hạn này.
+// -------------------------------------------------------------------
 import { db, fs, currentUser } from "./firebase.js";
 
 function now() { return Date.now(); }
+
+const CACHE_NAME = "aword-voice-v1";
+const MAX_AGE_MS = 24 * 60 * 60 * 1000;   // 1 ngày — xem khối ⚠️ ở trên
+const PRELOAD_CONCURRENCY = 6;            // cùng tinh thần PRIME_CONCURRENCY của core/sfx.js
+
+// id -> Promise<clip|null>. Lời hứa (không phải kết quả) nên 2 chỗ hỏi cùng
+// một clip một lúc chỉ tốn 1 lượt đọc Firestore.
+const mem = new Map();
+
+// Cache Storage chỉ có ở ngữ cảnh bảo mật (https / localhost). Mở bằng
+// file:// hay trình duyệt cũ thì `caches` không tồn tại — khi đó vẫn chạy
+// bình thường, chỉ mất tầng 2.
+function cacheStore() {
+  try {
+    if (typeof caches === "undefined") return null;
+    return caches.open(CACHE_NAME).catch(() => null);
+  } catch { return null; }
+}
+
+// Khoá là một URL giả cùng origin — Cache API không hề gọi mạng tới nó.
+function cacheKey(id) { return `/__aword-voice/${encodeURIComponent(id)}`; }
+
+async function readCached(id) {
+  try {
+    const store = await cacheStore();
+    if (!store) return null;
+    const res = await store.match(cacheKey(id));
+    if (!res) return null;
+    const saved = Number(res.headers.get("x-aword-saved")) || 0;
+    if (!saved || now() - saved > MAX_AGE_MS) {
+      store.delete(cacheKey(id)).catch(() => {});
+      return null;
+    }
+    const clip = await res.json();
+    return (clip && clip.audio) ? clip : null;
+  } catch { return null; }        // cache hỏng/đầy chỉ làm chậm, không được làm gãy
+}
+
+async function writeCached(id, clip) {
+  try {
+    const store = await cacheStore();
+    if (!store || !clip || !clip.audio) return;
+    const body = JSON.stringify({ text: clip.text || "", voiceId: clip.voiceId || "", audio: clip.audio });
+    await store.put(cacheKey(id), new Response(body, {
+      headers: { "content-type": "application/json", "x-aword-saved": String(now()) }
+    }));
+  } catch { /* hết chỗ / chế độ riêng tư: bỏ qua, lần sau tải lại là cùng */ }
+}
+
+async function fetchClip(id) {
+  const cached = await readCached(id);
+  if (cached) return cached;
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const snap = await getDoc(doc(d, "voiceClips", id));
+  const clip = snap.exists() ? snap.data() : null;
+  if (clip && clip.audio) writeCached(id, clip);   // không chờ: phát được rồi thì phát
+  return clip;
+}
+
+// Gom mọi id giọng đọc nằm trong `content` của một act.
+// ⚠️ PHẢI ĐỆ QUY: 17 template đặt tên mảng khác nhau (items / questions /
+// words / cards ...), viết cứng `content.items` là bỏ sót — đúng bài học của
+// `stripVoices()` trong tools-voice-cleanup.html.
+// ⚠️ CHỈ lấy khoá `voice` (id clip). `voiceId` là TÊN GIỌNG Kokoro, không
+// phải id document — nhặt nhầm là đi đọc Firestore những id không tồn tại.
+export function collectVoiceIds(node, out = new Set()) {
+  if (!node || typeof node !== "object") return out;
+  if (Array.isArray(node)) { node.forEach(x => collectVoiceIds(x, out)); return out; }
+  for (const [k, v] of Object.entries(node)) {
+    if (k === "voice" && typeof v === "string" && v) out.add(v);
+    else if (v && typeof v === "object") collectVoiceIds(v, out);
+  }
+  return out;
+}
+
+// Kéo trước cả rổ clip (engine gọi ở màn READY, trước khi hiện nút PLAY).
+// KHÔNG BAO GIỜ reject: thiếu tiếng thì vẫn phải chơi được.
+// `onProgress({ done, total })` để engine vẽ thanh %.
+export async function preloadVoiceClips(ids, onProgress) {
+  const list = [...new Set((ids || []).filter(Boolean))];
+  const total = list.length;
+  if (!total) return { done: 0, total: 0 };
+  let done = 0, next = 0;
+  const tick = () => { done++; if (onProgress) { try { onProgress({ done, total }); } catch { /* ignore */ } } };
+  async function worker() {
+    while (next < list.length) {
+      const id = list[next++];
+      try { await getVoiceClip(id); } catch { /* clip hỏng không được chặn cả rổ */ }
+      tick();
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(PRELOAD_CONCURRENCY, total) }, worker));
+  return { done, total };
+}
 
 function requireSignedIn(user) {
   if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
@@ -49,16 +169,38 @@ export async function saveVoiceClip({ id, text, voiceId, audioDataUrl }) {
   const [d, { doc, collection, setDoc }] = await Promise.all([db(), fs()]);
   const ref = id ? doc(d, "voiceClips", id) : doc(collection(d, "voiceClips"));
   await setDoc(ref, { text, voiceId, audio: audioDataUrl, createdAt: now(), ownerUid: user.uid });
+  // Đợt 122 — "Regenerate" ghi đè ĐÚNG id cũ, nên phải dọn bộ đệm ngay tại
+  // MÁY THẦY, không thì nghe thử lại vẫn ra giọng vừa bị thay. (Máy học sinh
+  // thì trông vào hạn 1 ngày, xem khối ⚠️ ở đầu file.)
+  forgetVoiceClip(ref.id);
   return ref.id;
+}
+
+// Xoá clip khỏi cả 2 tầng đệm. Dùng khi nội dung của chính id đó đã đổi.
+export function forgetVoiceClip(id) {
+  if (!id) return;
+  mem.delete(id);
+  const opening = cacheStore();      // null khi trình duyệt không có Cache Storage
+  if (opening) {
+    opening.then(store => { if (store) store.delete(cacheKey(id)).catch(() => {}); }).catch(() => {});
+  }
 }
 
 // Public read — no sign-in required, so a student's play.js can fetch a
 // clip referenced inside an assignment it was handed a link to.
-export async function getVoiceClip(id) {
-  if (!id) return null;
-  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
-  const snap = await getDoc(doc(d, "voiceClips", id));
-  return snap.exists() ? snap.data() : null;
+// Đợt 122: đi qua bộ đệm 3 tầng ở đầu file. Chữ ký + giá trị trả về giữ
+// nguyên nên mọi nơi gọi cũ (voice-playback.js, anagram.js, anagram-editor.js)
+// không phải sửa gì.
+export function getVoiceClip(id) {
+  if (!id) return Promise.resolve(null);
+  const hit = mem.get(id);
+  if (hit) return hit;
+  // ⚠️ Đừng nhớ một lời hứa ĐÃ HỎNG (luật core, xem `_asrP` trong
+  // speech-score.js): mất mạng 1 giây mà nhớ luôn cái hỏng thì cả tab đó
+  // vĩnh viễn không lấy lại được clip.
+  const p = fetchClip(id).catch(err => { mem.delete(id); throw err; });
+  mem.set(id, p);
+  return p;
 }
 
 export async function deleteVoiceClip(id) {
@@ -67,4 +209,5 @@ export async function deleteVoiceClip(id) {
   requireSignedIn(user);
   const [d, { doc, deleteDoc }] = await Promise.all([db(), fs()]);
   await deleteDoc(doc(d, "voiceClips", id));
+  forgetVoiceClip(id);
 }

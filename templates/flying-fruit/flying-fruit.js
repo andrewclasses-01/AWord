@@ -36,6 +36,19 @@ function imgUrl(name) { return new URL(`./img/${name}`, import.meta.url).href; }
 const FRUITS = ["kivano", "mango", "papaya"];
 const EXPLO = { kivano: "explosion-green", mango: "explosion-yellow", papaya: "explosion-orange" };
 
+// Ảnh template này tự dựng bằng JS (`el("img")`), NÊN KHÔNG nằm trong CSS —
+// engine quét CSS sẽ không thấy, phải khai tay ở đây để `tpl.preloadImages`
+// kéo về trước khi hiện nút PLAY (Đợt 122). `bg.jpg` cố ý KHÔNG có mặt: nó là
+// background trong flying-fruit.css nên engine đã tự nhặt.
+// ⚠️ Thêm/đổi ảnh trong mount() thì nhớ cập nhật danh sách này, không thì
+// đúng ảnh đó lại nháy ở lần hiện đầu tiên — và im lặng, vì vẫn hiện ra.
+const JS_IMAGES = [
+  "palmtrees.png", "toucan.png", "butterfly.png", "frog.png", "frogthroat.png",
+  "spark.png", "tick.png", "cross.png",
+  ...FRUITS.map(f => `${f}.png`),
+  ...Object.values(EXPLO).map(e => `${e}.png`)
+];
+
 function randi(n) { return Math.floor(Math.random() * n); }
 function isValidItem(it) { return it && typeof it.word === "string" && it.word.trim() !== ""; }
 
@@ -53,6 +66,7 @@ const flyingFruitTemplate = {
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
   name: "Flying fruit",
+  preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,     // gives us ui.topbarMid — we draw the LIVES (hearts) there
   hideLettersOption: true,  // no lettered answer boxes here
 
