@@ -5,6 +5,155 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 124 (12/8/2026) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ (Anagram).
+⭐ CÓ SỬA CORE (file MỚI `core/fight.js` + `engine.js` + `sfx.js` + `icons.js` + `app.css`).
+🟢 CHỜ THẦY DUYỆT — chưa commit.
+
+**ĐỢT B** của kế hoạch 12/8. Thầy chốt làm cho **DUY NHẤT Anagram** trước cho hoàn thiện.
+
+### 1. Thầy thấy gì
+Nút **MODE** mới (cạnh Options/Template/Style, chỉ hiện với template có khai `fightMode`) lật qua lại
+giữa **SINGLE MODE** (y hệt xưa nay) và **FIGHT MODE**:
+
+```
+        SCOREBOARD 1  │  ĐỒNG HỒ  │  SCOREBOARD 2        ← dải chung, mỗi bên có nút +/−
+   ┌──────────────┐   ┌──────────────┐
+   │   ĐỘI 1      │   │   ĐỘI 2      │                   ← 2 ván THẬT, cùng một từ
+   └──────────────┘   └──────────────┘
+      Options · Template · Style · MODE · ⛶              ← MỘT thanh công cụ dùng chung
+```
+Hai chỗ để trống 2 đầu dải trên **cố ý chừa cho CHUÔNG** (thầy chốt bỏ chuông đợt này) — thêm sau
+không phải xếp lại bố cục.
+
+### 2. Cách chạy được 2 ván trong 1 trang
+`startGame()` giữ **toàn bộ trạng thái trong closure**, nên gọi 2 lần vào 2 thẻ div là có 2 ván độc
+lập, **không phải viết lại engine**. Cái KHÔNG miễn phí là những thứ vươn ra ngoài một ván — 5 rào
+cản đã báo thầy hôm bàn, nay giải hết:
+
+| # | Rào cản | Cách giải + số đo |
+|---|---|---|
+| 1 | `core/sfx.js` giữ **1 thẻ `<audio>` mỗi file** → 2 đội bấm cùng lúc chỉ nghe 1 tiếng | Thêm **giọng dự phòng** (tối đa 3/file), chỉ đẻ khi file đang bận. Đo thật: 3 lần phát chồng nhau = **3 thẻ khác nhau**, thẻ đầu vẫn đang chạy (0,05s) khi thẻ 2 bắt đầu. Ván 1 bàn dùng y nguyên thẻ cũ ⇒ zero-diff |
+| 2 | 4 chỗ trong Anagram tìm ô điểm bằng `document.querySelector(".aw-top-score")` = **quét cả trang** | Đổi sang `scoreTargetEl()`: ô điểm của CHÍNH ván đó, còn trong fight thì bay thẳng tới **scoreboard của đội mình** |
+| 3 | `window.__awordBridge` chỉ có 1 chỗ ngồi (`_setCurrent`) | Chỉ **bàn 0** ngồi vào; myActivity vẫn lái đúng bàn trái |
+| 4 | Giọng đọc phát 2 lần chồng nhau | **Chỉ bàn 0 đọc** (`ctl.speaks`). Đo thật: 2 bàn cùng bật, **đúng 1 lần phát**, nút loa to vẫn có ở cả 2 bàn để bấm nghe lại |
+| 5 | Khung nhỏ đi | Đo thật 1920×1080: mỗi khung **939×616**, **đúng tỷ lệ 16:10,5**, không tràn ngang. Cửa sổ thường thì gần bằng single (single bị chặn 1000px); **khác biệt thật nằm ở fullscreen** — xem mục 6 |
+
+### 3. Luật chơi (thầy chốt) + nhóm Options mới
+Nhóm **"Fight mode"** nằm trong CHÍNH panel Options (không đẻ panel thứ hai):
+- **Nội dung 2 khung**: `Giống hệt` (cùng từ, cùng thứ tự chữ) · `Cùng từ, xáo khác` · `Từ khác nhau`.
+- **Khi một đội xong trước**: `Đội đầu tiên ăn từ đó` (khoá đội kia) · `Cho đội kia chơi nốt`.
+- **Thưởng đội nhanh**: 0→20 điểm.
+- **Đội chậm vẫn được điểm**: bật/tắt.
+Điểm chạy **theo đúng luật điểm Anagram** (Bonus x2, trừ điểm...) + nút **+/−** cho thầy chỉnh tay.
+Bấm ‹ › ở khung nào cũng **chuyển cả hai khung**. Hết từ → bảng **TEAM x WINS** + Start again.
+
+### 3b. Ba chỉnh sửa thầy gửi ngay sau bản đầu (12/8, cùng đợt)
+1. **Đồng hồ vào GIỮA hàng điểm số.** Nó vốn đã nằm giữa 2 scoreboard, nhưng là một dòng đơn nên
+   **trôi lệch 10px** so với 2 con số điểm: cả 3 khối căn giữa theo chiều dọc, mà hộp đội cao hơn
+   (có dòng tên ở trên). Sửa: đồng hồ nay có **cùng cấu trúc 2 dòng** (nhãn "TIME" + số) và **cùng
+   đúng cỡ chữ** với số điểm ⇒ đo lại: cả 3 số đều ở `top = 40px`, **thẳng một hàng**. Đồng hồ vẫn
+   "nhẹ" hơn nhờ màu/độ đậm chứ không phải nhờ nhỏ hơn.
+2. **Một bên bấm START là bên kia chạy theo.** Trước đó thầy phải bấm PLAY 2 lần, và nếu chỉ bấm 1
+   bên thì đồng hồ chung (đọc theo bàn 0) **đứng im hoặc chạy sai** cho cả trận. Nay
+   `bigPlay.onclick` báo `ctl.playPressed(side)` và trọng tài bấm hộ nút PLAY của bàn kia (có cờ
+   `playRelaying` chống dội ngược). Đo thật: bấm PLAY **chỉ ở bàn PHẢI** → cả 2 overlay biến mất, cả
+   2 bàn dựng bài, đồng hồ chạy 0:02 → 0:04.
+3. **Ô điểm trở lại GIỮA khung mỗi bên, điểm bay vào đó y như single mode.** Bản đầu ẩn hẳn topbar
+   và cho điểm bay lên scoreboard chung — xa chỗ đang chơi. Nay mỗi bàn giữ **ô điểm của chính nó,
+   căn giữa đỉnh khung** (đo: lệch tâm **0-1px**, cỡ chữ 3cqw ≈ 28px vì khung chỉ rộng một nửa), chỉ
+   **đồng hồ** là rời khỏi khung. `scoreTargetEl()` của Anagram nay **luôn** trả `ui.scoreEl` — tức
+   đúng đường bay của single mode, không còn nhánh riêng cho fight. Scoreboard chung vẫn cộng song
+   song (nó còn mang điểm thưởng tốc độ + phần thầy chỉnh tay). Đo: giải xong 1 từ ở bàn phải → ô
+   điểm bàn phải đếm lên **12**, scoreboard 2 cũng **12**, bàn trái vẫn 0.
+
+### 3c. Lượt chỉnh thứ hai — 8 việc thầy gửi (12/8, cùng đợt)
+1. **Bỏ hẳn slogan "ANAGRAM IN ANDREW CLASSES"** (cả single lẫn fight — thầy không giới hạn "trong
+   mode FIGHT" như ở mục 5, nên bỏ toàn bộ). Xoá cả CSS `.aw-anagram-slogan`. Crossword và Speaking
+   cards giữ slogan riêng của chúng.
+2. **Bỏ ô điểm trong khung**, chỉ còn điểm ở dải trên; **điểm bay thẳng từ trong game ra ô điểm
+   ngoài khung** (`scoreTargetEl()` trả `ctl.scoreTarget(side)` khi đấu). Topbar để `visibility:hidden`
+   + `height:0` chứ KHÔNG `display:none` — template vẫn ghi vào ô điểm ẩn đó và Anagram còn **đọc
+   ngược lại** để đếm số (nếu bỏ hẳn là vỡ vòng đếm).
+3. **Điểm mỗi đội ra chính giữa khung của bên mình**: dải trên nay là lưới **2 nửa** khớp đúng 2
+   khung. ⚠️ Phải bỏ `padding` ngang của dải trên — có padding riêng thì mỗi nửa hẹp hơn khung bên
+   dưới và số điểm **lệch tâm 13px** (đo thật; sau khi sửa còn **1px**).
+4. **Hai đội cùng luật màu**: dương **xanh lá**, âm **đỏ VÀ giữ dấu trừ** (trước đó đội 2 màu xanh
+   dương). Đo: cả 2 đều `rgb(47,158,68)`; ván `bonusMinus` bấm sai 3 lần ra **"-60" đỏ**.
+5. **Đồng hồ đổi màu cho tương phản**: nền trang SÁNG mà cả dải đang dùng chữ sáng ⇒ đồng hồ gần
+   như vô hình. Cả dải chuyển sang **chữ tối trên nền sáng**, đồng hồ `#55606d` (xám đậm).
+6. **Bỏ tên act dưới khung** khi đấu, và **7. bỏ hẳn cụm Edit/Assignment/Print/Home**.
+   ⚠️ Dùng `visibility:hidden` chứ KHÔNG `display:none`: thanh dưới là lưới 3 cột `1fr auto 1fr`,
+   bỏ 2 ô ngoài thì cụm nút **rơi về cột 1** (dạt hẳn sang trái) thay vì nằm giữa.
+8. **Bỏ nút fullscreen trong CẢ HAI khung, thêm 1 nút Fullscreen vào dãy nút dưới** (thành 5:
+   Options · Template · Style · MODE · Fullscreen). Nút mới chỉ gọi lại `fsBtn.click()` của engine —
+   một cách làm duy nhất, không viết lại logic fullscreen.
+9. **Hai ô điểm THỦ CÔNG hai bên đồng hồ**: chạm hoặc vuốt LÊN = +1, vuốt XUỐNG = −1; **dương xanh
+   dương, âm đỏ và KHÔNG có dấu trừ**. Đây là điểm thầy tự cho, **tách hẳn** khỏi điểm game (nên
+   `manual[]` cũ bị gỡ khỏi tổng điểm đội). Lưu ở **biến cấp module** trong `fight.js` ⇒ **giữ
+   nguyên qua Start again và qua đổi template, chỉ mất khi tải lại trang** — đúng vòng đời thầy
+   yêu cầu. Đo thật: chạm ×2 + vuốt lên = **3**; vuốt xuống ×2 bên phải = **2 màu đỏ**; sau "Start
+   again" điểm game về 0/0 mà điểm thủ công vẫn **2/1**.
+
+⚠️⚠️ **LỖI NẶNG NHẤT CỦA CẢ ĐỢT, tự bắt được ở đây**: xoá slogan làm mất biến `topbar`, nhưng
+`cleanup()` vẫn còn dòng `if (topbar) topbar.style.position = ""` ⇒ **`ReferenceError` giữa lúc dọn
+ván**. Hậu quả không nằm ở chỗ dễ thấy: nó khiến `teardown()` của trận đấu chết giữa chừng nên
+**"Start again" không dựng lại được trận** (màn hình đứng nguyên, không báo lỗi gì cho thầy) — và nó
+phá `cleanup()` của **cả single mode**. Đã sửa + thêm 2 lớp phòng: `lock()` của Anagram thoát ngay
+nếu `dead`, và `teardown()` bọc `try/catch` (**không hàm dọn dẹp nào được phép ném**, vì nó chạy
+trên đường ĐI VÀO một lần dựng lại).
+
+### 4. ⚠️ 3 LỖI THẬT TỰ BẮT ĐƯỢC LÚC TEST (không phải suy đoán)
+1. **"Đội chậm không được điểm" ra −12 thay vì 0.** Gốc: điểm của Anagram **bay tới nơi 1.760ms
+   SAU** khi giải xong (420 chờ + 920 bay + 420 đếm), nên trừ `earned` ngay lúc báo thắng là trừ vào
+   số **chưa có** → số lao xuống âm rồi bò về 0 trước mắt cả lớp. Sửa: **ĐÓNG BĂNG** tổng của đội
+   chậm ở giá trị trước từ đó, và huỷ đúng phần điểm đang bay tới khi nó tới. Đo lại: dãy số đi
+   `0/0 → 4/0 → 9/0 → 12/0`, **không một khung hình nào âm**. Kéo `ROUND_HOLD_MS` 1700 → **2100ms**
+   cho dài hơn 1.760ms — nếu không, vòng đấu lật đúng lúc điểm còn đang bay.
+2. **"Start again" trong ☰ Menu của một bàn biến bàn đó thành act đơn lẻ** — `restart()` gọi lại
+   `startGame()` mà **không truyền `fight`**, nên bàn đó mọc lại thanh công cụ riêng + ô điểm riêng
+   và thôi báo cáo lên scoreboard. Sửa: trong fight, `restart()`/`replayCurrent()` đi qua
+   `ctl.restartMatch()` = dựng lại CẢ TRẬN.
+3. **Options → Apply chỉ vào bản sao.** Mỗi bàn chơi một **BẢN SAO** của act (thứ tự từ đã chốt
+   cứng), nên `Object.assign(activity.options, draft)` ghi vào bản sao — act thật và bàn kia không
+   biết gì. Sửa: trong fight, Apply giao thẳng cho `ctl.applyOptions()` (ghi vào act THẬT, lưu
+   Firestore, rồi dựng lại cả trận).
+
+Ngoài ra **Đổi template giữa trận bị TỪ CHỐI** (toast "Switch back to single mode to change
+template") — chuyển sang template chưa biết gì về vòng đấu/khoá bàn thì **vẫn chạy**, mà "trông như
+một trận đấu nhưng không phải" còn tệ hơn là từ chối thẳng.
+Và **nhạc PLAY chỉ kêu 1 lần** (trước là 2, mỗi bàn 1 — nghe như tiếng vỗ đúp, chính vì bản vá
+rào cản 1 làm cả hai tiếng đều nghe được).
+
+### 5. Test thật (trình duyệt, 0 lỗi console của sản phẩm)
+Bàn thử tạm `_test-fight.html/.js` — **đã XOÁ**. Đo được:
+- Vào fight: **2 bàn, 1 thanh công cụ, topbar ẩn cả 2**; PLAY 1 lần chạy cả 2 bàn.
+- Chế độ "giống hệt": 2 bàn **cùng clue, cùng chuỗi chữ** (`YNBIEL`/`YNBIEL`), cùng "1 of 4".
+- Đội 2 giải xong: scoreboard 2 đếm lên **12** (6 chữ × 2 PERFECT), hào quang bật, **6 ô chữ của đội
+  1 tắt hẳn** (0 ô bấm được) → sau 2,1 giây **cả 2 bàn sang từ 2** cùng chuỗi chữ mới, hào quang tắt.
+- Thưởng nhanh 5 điểm + "cho chơi nốt": đội 1 được **17** (12+5), đội 2 vẫn giải và được **12**.
+- Next ở bàn trái → **cả 2 bàn** sang "2 of 4"; giải từ cuối → **"TEAM 2 WINS" 0–16**.
+- Ra khỏi fight: về đúng 1 khung, topbar hiện lại, 1 thanh công cụ.
+- Hồi quy: **Quiz và True/false KHÔNG mọc nút MODE** (chỉ 3 nút như cũ); Anagram 1 bàn chơi hết 1 từ
+  vẫn ra đúng 12 điểm, nav đúng.
+
+⚠️ **Bẫy test dùng lại được**: ô chữ Anagram **chỉ nghe pointerdown/pointerup**, `.click()` KHÔNG ăn
+(cả tap lẫn kéo đi chung một đường). Bắn `PointerEvent` giả thì `setPointerCapture` ném lỗi —
+**nhưng vẫn tap được** vì dòng đó chạy SAU `dragging = true`. Mỗi bàn dùng một `pointerId` riêng:
+đó chính là ca 2 ngón cùng lúc.
+
+### 6. Việc còn lại / giới hạn đã biết
+- ⬜ **Chưa nhìn được bằng mắt**: pane test của phiên này không hiện hình nên **không chụp được ảnh**
+  — thầy tự mở xem bố cục thật giúp (nhất là cỡ chữ khi fullscreen trên TOMKO).
+- **Cỡ chữ khi FULLSCREEN**: tính theo CSS thì 1 khung fight ≈ **950px** ngang so với ≈1646px của
+  single fullscreen ⇒ chữ còn khoảng **57–60%**. Đúng như đã cảnh báo lúc bàn. Nếu chơi thật thấy
+  nhỏ quá, đường lùi đã tính sẵn: bỏ dải trên, cho scoreboard đè mờ vào góc khung.
+- **☰ Menu chỉ tạm dừng bàn của nó** (mỗi ván có đồng hồ riêng). Chưa gộp — mở menu giữa trận là
+  chuyện hiếm, và gộp thì phải đụng cơ chế Menu pause dùng chung của cả 17 template.
+- Chưa làm: **CHUÔNG** (thầy chốt bỏ đợt này, đã chừa chỗ), tên đội tự đặt (đang cứng "TEAM 1/2"),
+  fight mode cho 16 template còn lại (thầy chốt làm sau).
+
+---
+
 ## Đợt 123 (12/8/2026) — ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG: OPTIONS > CONTENT (TEXT / VOICE).
 ⭐ CÓ SỬA CORE (`engine.js` + `voice-playback.js` + `convert.js` + `lesson-import.js`) + 13 template.
 🟢 CHỜ THẦY DUYỆT — chưa commit.

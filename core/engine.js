@@ -106,7 +106,13 @@ const THEME_SWATCH = {
 //   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
 // With a session the teacher-only tools (Options/Template/Style, Edit, Set
 // assignment, Print, Home) are not built at all, so a student cannot reach them.
-export function startGame(root, activity, { onExit, session = null, base = null } = {}) {
+// `fight` (Đợt 124) — set ONLY by core/fight.js when this play is one of the two
+// boards of a FIGHT MODE match: `{ side: 0|1, ctl }`. Everything about a single
+// play stays identical; the flag just (a) keeps the second board off the shared
+// myActivity bridge seat and out of the assignment strips, and (b) reports
+// score / clock / finish to the match controller so the shared strip on top can
+// show them. A play without it behaves exactly as it always has.
+export function startGame(root, activity, { onExit, session = null, base = null, fight = null } = {}) {
   root.innerHTML = "";
 
   // The ORIGINAL library act behind this play. For a normal play it's `activity`
@@ -171,7 +177,10 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   }
   let awSyncMute = 0;
   const awEmit = (tag, payload) => { if (awSyncMute <= 0) { try { console.log("MYACT:AW:" + tag + ":" + payload); } catch (_) {} } };
-  window.__awordBridge._setCurrent({
+  // FIGHT MODE: the bridge has exactly ONE seat (`_setCurrent`), so the second
+  // board must not take it — otherwise myActivity would drive the right-hand
+  // board while the teacher is looking at the left one. Board 0 keeps the seat.
+  if (!fight || fight.side === 0) window.__awordBridge._setCurrent({
     getState: () => ({ type: activity.type, options: { ...(activity.options || {}) }, theme: activity.theme || null }),
     switchTemplate(type) {
       if (!type || type === activity.type) return false;
@@ -270,6 +279,38 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   const templateBtn = toolBtn(icons.template, "Template");
   const styleBtn = toolBtn(icons.style, "Style");
   belowCenter.append(optionsBtn, templateBtn, styleBtn);
+  // MODE (Đợt 124) — SINGLE MODE <-> FIGHT MODE, for templates that opt in with
+  // `tpl.fightMode` (Anagram so far). Teacher path only: a pupil playing an
+  // assignment never sees this row at all. core/fight.js is DYNAMIC-imported so
+  // the student page never downloads it, and so this file doesn't take a static
+  // dependency on a module that imports it straight back.
+  const modeBtn = (tpl.fightMode && !session) ? toolBtn(icons.mode, "Mode: single / fight") : null;
+  if (modeBtn) {
+    if (fight) modeBtn.classList.add("is-active");
+    modeBtn.onclick = async () => {
+      sound.click();
+      if (fight) { fight.ctl.exitFight(); return; }
+      exitAnyFullscreen();
+      cleanupAll();
+      try {
+        const { startFight } = await import("./fight.js");
+        startFight(root, activity, { onExit });
+      } catch (e) {
+        console.warn("AWord: fight mode failed to load", e);
+        startGame(root, activity, { onExit, base });
+      }
+    };
+    belowCenter.append(modeBtn);
+  }
+  // FIGHT MODE: one Fullscreen for the whole match, in the same row as
+  // Options/Template/Style/MODE (teacher, 12/8/2026). The per-board buttons
+  // inside the two frames are hidden by CSS — two of them made no sense when
+  // both boards go full-screen together as one page.
+  const fightFsBtn = fight ? toolBtn(icons.fullscreen, "Fullscreen") : null;
+  if (fightFsBtn) {
+    fightFsBtn.onclick = () => fsBtn.click();   // one implementation, in the engine's own handler
+    belowCenter.append(fightFsBtn);
+  }
 
   const belowRight = el("div", "aw-below-right");
   const editBtn = toolBtn(icons.edit, "Edit", true);
@@ -315,7 +356,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // ----- The assignment strips, a little below the stage -----
   // One per assignment made from this act; clicking one opens its report.
   const barsWrap = el("div", "aw-as-bars");
-  if (!session && activity.id) {
+  if (!session && !fight && activity.id) {
     page.append(barsWrap);
     loadAssignmentBars();
   }
@@ -520,7 +561,18 @@ export function startGame(root, activity, { onExit, session = null, base = null 
 
   bigPlay.onclick = () => {
     bigPlay.disabled = true;
-    (tpl.sounds?.play || sound.start)();        // startup chime (template may override)
+    // FIGHT MODE: whichever board the teacher presses, the OTHER one starts at
+    // the same instant (teacher, 12/8/2026). Both plays run their own clock, so
+    // starting them apart would leave the shared clock — which reads board 0 —
+    // telling one team's time to both. Relayed before anything else here so the
+    // two boards' clocks start on the same tick.
+    if (fight) fight.ctl.playPressed(fight.side);
+    // FIGHT MODE: both boards press Play together, so the lifecycle chimes
+    // would fire twice a few milliseconds apart — one flammed, louder chime
+    // instead of a clean one (the per-file extra voices in core/sfx.js make
+    // BOTH audible now, which is right for gameplay sounds and wrong for this).
+    // The board-0 copy is the match's chime.
+    if (!fight || fight.side === 0) (tpl.sounds?.play || sound.start)();
     playOverlay.style.pointerEvents = "none";   // never block the game, even if the fade stalls
     let removed = false;
     const removeOverlay = () => { if (removed) return; removed = true; playOverlay.remove(); };
@@ -558,11 +610,15 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       timerEl.textContent = formatTime(remaining);
       // Optional per-template hook — no default sound, so templates that
       // don't opt in (e.g. Quiz) behave exactly as before.
-      if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; tpl.sounds?.timeWarning?.(); }
+      if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; if (!fight || fight.side === 0) tpl.sounds?.timeWarning?.(); }
       if (remaining <= 0) { stopTimer(); submitHandler?.(); }
     } else {
       timerEl.textContent = formatTime(elapsed);
     }
+    // FIGHT MODE: both boards keep their own clock (each play still needs one
+    // for its own timing), but only board 0's reading is shown — on the shared
+    // strip between the two scoreboards.
+    if (fight) fight.ctl.onTimer(fight.side, timerEl.textContent);
   }
   function startTimerNow() {
     if (timerStarted) return;
@@ -826,6 +882,13 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice });
     }
 
+    // FIGHT MODE settings (content of the two boards, who scores a word, speed
+    // bonus) go in the SAME panel rather than a second one — only while a match
+    // is actually running, since they mean nothing to a single board.
+    if (fight && typeof fight.ctl.buildOptions === "function") {
+      fight.ctl.buildOptions({ panel, draft, el, mkCheck, mkRadioChoice });
+    }
+
     // POINTS OFF — deduct this many points for a WRONG answer (0 = off). Central
     // option (teacher, 3/8/2026): shown for every SCORABLE template EXCEPT those
     // that already ship their OWN points-off control (tpl.hidePointsOff — Type the
@@ -872,6 +935,11 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       sound.click();
       if (!activity.options) activity.options = {};
       Object.assign(activity.options, draft);
+      // FIGHT MODE: each board plays a COPY of the act (its own frozen word
+      // order), so writing into this copy's options would leave the real act —
+      // and the other board — untouched. Hand the whole draft to the match,
+      // which owns the real act, saves it, and rebuilds BOTH boards.
+      if (fight) { fight.ctl.applyOptions({ ...draft }); closeToolPanel(false); return; }
       awEmit("OPT", JSON.stringify(activity.options));   // mirror applied Options to other myActivity panes
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist the applied options PERMANENTLY (teacher only — students never
@@ -1115,7 +1183,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // documented way back to everything — along with reloading the page and
   // switching template and back.
   function restart() {
-    tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click
+    if (!fight || fight.side === 0) tpl.sounds?.restart?.();   // optional per-template restart sound, layered on the menu/button's own click (one board's copy is enough — see the Play chime above)
+    // FIGHT MODE: "Start again" belongs to the MATCH, not to one board. Left to
+    // itself this re-entered startGame() with no `fight` option, so the board
+    // came back as an ordinary single play INSIDE the match — its own toolbar,
+    // its own score chip, and no more reporting to the scoreboard above it.
+    if (fight) { cleanupAll(); fight.ctl.restartMatch(); return; }
     cleanupAll();
     const target = activity._mistakes ? activity._mistakesBase : activity;
     startGame(root, target, { onExit, session, base: originAct });
@@ -1127,6 +1200,7 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // the timer mid-practice would silently get the whole word list back).
   function replayCurrent() {
     cleanupAll();
+    if (fight) { fight.ctl.restartMatch(); return; }   // same reason as restart() above
     startGame(root, activity, { onExit, session, base: originAct });
   }
 
@@ -1177,6 +1251,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   // The library act is untouched; the current theme is kept; fullscreen too
   // (the fullscreen target is the stable root, exactly like "Start again").
   async function doSwitchTemplate(targetType) {
+    // FIGHT MODE: changing template mid-match would hand the two boards to a
+    // template that knows nothing about rounds, locking or the shared
+    // scoreboard — it would still RUN, which is worse than refusing, because
+    // it looks like a match and isn't one. Anagram is the only template wired
+    // for fights so far; switching is a single-board decision until more are.
+    if (fight) { toast("Switch back to single mode to change template"); return; }
     awEmit("TPL", targetType);   // mirror the Template switch to other myActivity panes
     try {
       // Switching back to the original type restores the REAL library act (its
@@ -1234,6 +1314,9 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       scoreEl.innerHTML = `${icons.check} ${v}`;
       scoreEl.classList.toggle("is-pos", v > 0);
       scoreEl.classList.toggle("is-neg", v < 0);
+      // FIGHT MODE: the in-frame chip is hidden and this team's number lives on
+      // the shared strip above both boards instead.
+      if (fight) fight.ctl.onScore(fight.side, v);
     },
     // `label` (added 4/8/2026 for Find the match) REPLACES the default
     // "x of N" text with the template's own wording — e.g. "Page 1 / 2" for a
@@ -1261,6 +1344,10 @@ export function startGame(root, activity, { onExit, session = null, base = null 
       // protects ALL of them, including any template written later.
       if (torndown) return;
       stopTimer();
+      // FIGHT MODE: a board running out of words (or lives) ends the MATCH —
+      // the winner comes from the two scoreboards, so this play doesn't draw
+      // its own summary panel or write a single-player row to the leaderboard.
+      if (fight) { fight.ctl.onFinish(fight.side, raw); return; }
       endTitle = raw.title || "Game complete";
       const timeMs = Math.round(performance.now() - startedAt);
       const result = computeResult(raw, timeMs / 1000);

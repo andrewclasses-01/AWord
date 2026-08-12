@@ -77,6 +77,46 @@ export function createPack(moduleUrl, spec = {}) {
     return a;
   }
 
+  // ----- EXTRA VOICES (Đợt 124, 12/8/2026) — needed by FIGHT MODE -----
+  // One <audio> per file was enough while only one game was on screen: playing
+  // the same effect again just rewound it. With TWO boards racing side by side,
+  // both teams tap "correct" within the same few milliseconds — and the second
+  // play() rewound the FIRST team's sound, so the class heard ONE chip for two
+  // taps (measured before this: 2 taps -> 1 audible sound).
+  //
+  // Deliberately additive: the primary element is still used whenever it is
+  // free, so a single-board play produces byte-identical behaviour and the same
+  // element prime()/stats()/durationMs() already know about. Spares are only
+  // ever born when a sound is asked for WHILE it is still playing, and the file
+  // is in the browser's HTTP cache by then (prime() fetched it), so a spare
+  // costs no download.
+  const MAX_VOICES = 3;          // one busy sound + 2 overlaps is plenty for 2 boards
+  const extras = new Map();      // name -> [<audio>] spare voices, created on demand
+
+  function freeElFor(name) {
+    const primary = elFor(name);
+    if (primary.paused || primary.ended) return primary;
+    let list = extras.get(name);
+    if (!list) { list = []; extras.set(name, list); }
+    for (const a of list) if (a.paused || a.ended) return a;
+    if (list.length < MAX_VOICES - 1) {
+      const a = new Audio(urlFor(name));
+      a.preload = "auto";
+      a.volume = primary.volume;
+      list.push(a);
+      return a;
+    }
+    return primary;              // every voice busy: rewind the primary, exactly as before
+  }
+
+  // Every live element of this pack — primary + spares. Used by the Menu-pause
+  // helpers so a spare mid-flight is paused/resumed/dropped like any other.
+  function allEls() {
+    const out = [...cache.values()];
+    extras.forEach(list => out.push(...list));
+    return out;
+  }
+
   // Play one file. `volume` is optional — leaving it out keeps whatever volume
   // the element already had, exactly like the old per-template playFile().
   // Returns the element (some templates keep it to stop the sound early), or
@@ -84,7 +124,7 @@ export function createPack(moduleUrl, spec = {}) {
   function play(name, volume) {
     if (coreSound.isMuted()) return null;
     try {
-      const a = elFor(name);
+      const a = freeElFor(name);
       a.currentTime = 0;
       if (volume != null) a.volume = volume;
       a.play().catch(() => {});
@@ -93,7 +133,10 @@ export function createPack(moduleUrl, spec = {}) {
   }
 
   function stop(name) {
-    try { const a = cache.get(name); if (a) { a.pause(); a.currentTime = 0; } } catch { /* ignore */ }
+    try {
+      const a = cache.get(name); if (a) { a.pause(); a.currentTime = 0; }
+      (extras.get(name) || []).forEach(x => { try { x.pause(); x.currentTime = 0; } catch { /* ignore */ } });
+    } catch { /* ignore */ }
   }
 
   // ----- Menu pause (Đợt 91, 8/8/2026) -----
@@ -103,7 +146,7 @@ export function createPack(moduleUrl, spec = {}) {
   // or had simply finished. Safe to call with nothing playing (no-op).
   const pausedByMenu = new Set();
   function pauseActive() {
-    cache.forEach(a => { try { if (!a.paused && !a.ended) { a.pause(); pausedByMenu.add(a); } } catch { /* ignore */ } });
+    allEls().forEach(a => { try { if (!a.paused && !a.ended) { a.pause(); pausedByMenu.add(a); } } catch { /* ignore */ } });
   }
   function resumeActive() {
     pausedByMenu.forEach(a => { try { a.play().catch(() => {}); } catch { /* ignore */ } });

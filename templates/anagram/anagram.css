@@ -26,25 +26,9 @@
   animation: aw-fadein .25s ease;
 }
 
-/* Slogan on the top bar (clock/score row) — same look as crossword.js's
-   .aw-cw-slogan / speaking-cards.js's .aw-sc-slogan (teacher, 8/8/2026).
-   Absolutely centred over the bar so it never depends on clock/score widths;
-   JS sets .aw-topbar to position:relative and appends this once at mount. */
-.aw-anagram-slogan {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
-  font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-weight: 300;
-  font-size: 1.7cqw;
-  letter-spacing: 0.32em;
-  text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: #9aa3af;               /* grey — visible but not loud */
-  pointer-events: none;
-  user-select: none;
-}
+/* The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89) was REMOVED on 12/8/2026 at
+   the teacher's request — two boards in a fight meant two slogans, and it was
+   clutter on one board too. Crossword and Speaking cards keep their own. */
 
 .aw-anagram-clue {
   font-size: calc(4.4cqw * var(--fit));

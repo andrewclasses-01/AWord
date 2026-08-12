@@ -1,5 +1,43 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 124 (12/8/2026) — ⭐⭐ TEMPLATE ĐẦU TIÊN BIẾT ĐẤU 2 ĐỘI (FIGHT MODE)
+
+Anagram là template đầu tiên khai **`fightMode: true`** — đó chính là thứ làm nút **MODE** hiện ra
+dưới khung. Hạ tầng nằm ở `core/fight.js` (xem `core/HUONG DAN CORE.md` mục FIGHT MODE); phía
+Anagram chỉ thêm các nhánh đọc `activity._fight`:
+
+- **`scoreTargetEl()`** thay cho 4 lần `document.querySelector(".aw-top-score")` — quét cả trang thì
+  bàn PHẢI ghi điểm vào ô điểm của bàn TRÁI (và trên ván đã chết thì trúng ô điểm của ván MỚI, đúng
+  bẫy Đợt 114). Chơi đơn: `ui.scoreEl`. Đấu: **`ctl.scoreTarget(side)`** — khung không còn ô điểm
+  nào (thầy chốt 12/8), điểm bay thẳng ra con số của đội mình trên dải trên.
+  ⚠️ `pulseScoreTo()` vẫn đọc số cũ từ **`ui.scoreEl`** (ô điểm ẩn trong khung), KHÔNG từ số ngoài —
+  nên topbar trong fight phải `visibility:hidden` chứ không `display:none`, và không được xoá.
+- **BỎ slogan "ANAGRAM IN ANDREW CLASSES"** (12/8, cả 2 chế độ) — kèm CSS.
+  ⚠️⚠️ Bỏ nó làm mất biến `topbar` mà `cleanup()` còn tham chiếu ⇒ **`ReferenceError` giữa lúc dọn
+  ván**, làm hỏng "Start again" của cả trận đấu LẪN single mode, **không hiện lỗi gì cho thầy**.
+  Bài học: xoá một khối UI thì phải **soát luôn `cleanup()`** — nó thường giữ tham chiếu cuối cùng.
+- **`prepareItem(word, fixedOrder)`** — bàn nào chuẩn bị từ trước thì để lại thứ tự xáo trên chính
+  object nguồn (`it._fightOrder`) cho bàn kia chép, nên chế độ "giống hệt" hai bên **cùng một chuỗi
+  chữ**. Hai bàn dùng CHUNG các object item nên chuyện này không cần đường truyền riêng nào.
+- **`fightLocked()`** chặn ở `onTileClick` (mọi đường tap LẪN kéo-thả đều đi qua đó) **và** làm ô chữ
+  `disabled` trong `render()` — để cả lớp NHÌN THẤY vòng đấu đã ngã ngũ, chứ không phải bấm mãi
+  không ăn.
+- **`fightCtl.wordDone(...)`** báo lên trọng tài ở `finalizeBonusWord()` (bonus family) và ở nhánh
+  submit ĐÚNG (chỉ khi `allCorrect` — nộp sai không phải là xong vòng, đội kia còn đang đua).
+  Trong fight, Anagram **KHÔNG tự gọi `finish()`** khi hết từ nữa — trọng tài kết thúc trận.
+- **Giọng đọc**: bàn 1 không tự đọc (`ctl.speaks`), nếu không 2 clip cùng một từ lệch nhau vài mili
+  giây = tiếng vọng. Nút loa to vẫn có ở cả hai bàn để bấm nghe lại.
+- **Nav**: `goPrev/goNext` báo `ctl.boardMoved(...)` → bấm ‹ › ở khung nào cũng chuyển **cả hai**.
+
+⚠️ **Số đo phải nhớ**: điểm của Anagram **tới nơi 1.760ms** sau khi giải xong từ (chờ 420 + bay 920 +
+đếm 420 — `PERFECT_TO_POINTS_DELAY_MS` + `PICKFLY_TOTAL_MS` + `FLYGAIN_PULSE_MS`). Trọng tài phải giữ
+vòng đấu dài hơn con số này (`ROUND_HOLD_MS` = 2100ms), và mọi phép tính điểm của nó phải chờ điểm
+tới chứ không tính ngay lúc `wordDone`.
+
+⚠️ **Bẫy test dùng lại được**: ô chữ chỉ nghe `pointerdown`/`pointerup` (tap và kéo chung một đường),
+`.click()` **không ăn**. `PointerEvent` giả làm `setPointerCapture` ném lỗi **nhưng vẫn tap được** vì
+dòng đó chạy SAU `dragging = true` — mỗi bàn một `pointerId` riêng chính là ca 2 ngón cùng lúc.
+
 ## Đợt 123 (12/8/2026) — CHỮ HAY GIỌNG NAY DO OPTIONS > CONTENT QUYẾT ĐỊNH (không còn đọc `hideText`)
 
 Một act nay mang **cả chữ lẫn giọng** (bỏ cặp `ENG1` + `ENG1 VOICE`), và `options.contentMode` chọn

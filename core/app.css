@@ -1973,3 +1973,223 @@ body {
 }
 .aw-kbd-submit:active { box-shadow: 0 0.06cqw 0 var(--aw-tile-fixed-dark, #2563eb); }
 .aw-kbd-submit:disabled { opacity: .4; }
+
+/* ============================================================
+   FIGHT MODE (Đợt 124, 12/8/2026) — two boards facing each other.
+   Only ever applied inside `.aw-fight`, which core/fight.js builds; a normal
+   single play never matches any rule below, so this whole block is inert for
+   every act until the teacher presses MODE.
+   ============================================================ */
+.aw-fight {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 24px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+}
+
+/* --- the shared strip above the boards ---
+   Two halves that line up with the two boards, so each team's number sits dead
+   centre over ITS OWN board, plus a middle cluster floating over the join:
+   [teacher points] CLOCK [teacher points]  (teacher, 12/8/2026). */
+.aw-fight-top {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1.2vw, 18px);      /* same gap as the boards, so the halves match them */
+  align-items: center;
+  /* NO horizontal padding: the halves have to be exactly as wide as the boards
+     below them, or each team's number drifts off its own board's centre
+     (measured 13px off when this row had padding of its own). */
+  padding: 4px 0 2px;
+  /* The page behind this is LIGHT, so the strip is dark-on-light (teacher,
+     12/8/2026: the clock was near-invisible in the pale text it started with). */
+  color: #26303c;
+}
+.aw-fight-half { display: flex; justify-content: center; min-width: 0; }
+
+.aw-fight-team { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
+.aw-fight-teamname {
+  font-size: clamp(11px, 1.5vw, 16px);
+  letter-spacing: .18em;
+  font-weight: 700;
+  color: #7b8794;
+  line-height: 1.35;
+}
+.aw-fight-score {
+  font-size: clamp(30px, 5.2vw, 68px);
+  font-weight: 800;
+  line-height: 1.15;
+  min-width: 1.6em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  /* BOTH teams read the same way (teacher, 12/8/2026): positive green, negative
+     red and keeping its minus sign — the same rule as the in-frame chip. */
+  color: #2f9e44;
+  transition: color .18s ease;
+}
+.aw-fight-score.is-neg { color: #e03131; }
+
+/* --- the middle cluster: teacher points · clock · teacher points --- */
+/* Absolutely centred over the WHOLE strip so it stays on the join between the
+   two boards no matter how wide the team numbers grow. */
+.aw-fight-middle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 1.6vw, 22px);
+}
+.aw-fight-clockbox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.aw-fight-clock {
+  /* EXACTLY the score's font-size and line-height so all three numbers sit on
+     one line; it stays quieter by colour, not by size. */
+  font-size: clamp(30px, 5.2vw, 68px);
+  line-height: 1.15;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #55606d;
+}
+
+/* The teacher's own points: tap or swipe up to add, swipe down to take off.
+   Blue when positive, red when negative — and a negative shows the bare number
+   with NO minus sign (teacher, 12/8/2026). */
+.aw-fight-hand {
+  min-width: clamp(46px, 4.6vw, 72px);
+  padding: 4px 6px 5px;
+  border-radius: 14px;
+  border: 1.6px solid #d5dde6;
+  background: #fbfdff;
+  cursor: ns-resize;
+  user-select: none;
+  touch-action: none;
+  text-align: center;
+  transition: border-color .15s ease, background .15s ease;
+}
+.aw-fight-hand:hover { border-color: #b9c6d4; background: #fff; }
+.aw-fight-hand:active { background: #f1f5fa; }
+.aw-fight-handvalue {
+  font-size: clamp(20px, 3.2vw, 42px);
+  font-weight: 800;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  color: #2b7fd4;
+}
+.aw-fight-handvalue.is-neg { color: #e03131; }
+
+/* Same two-line shape as a team box (label over number) so the clock sits on
+   the SAME baseline as the two scores instead of floating between a team's
+   label and its number. */
+.aw-fight-clockbox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.aw-fight-clock {
+  /* EXACTLY the score's font-size and line-height: a smaller clock sat 10px
+     lower than the two numbers (both boxes are centred vertically, so a shorter
+     line box starts further down) and the row stopped reading as one line.
+     It stays quieter than the scores by weight and colour, not by size. */
+  font-size: clamp(30px, 5.2vw, 68px);
+  line-height: 1.15;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: .78;
+}
+
+/* the winning team's box pulses once when it takes a word */
+.aw-fight-team.is-won .aw-fight-score { animation: aw-fight-pop .5s ease; }
+@keyframes aw-fight-pop { 0% { transform: scale(1); } 40% { transform: scale(1.22); } 100% { transform: scale(1); } }
+/* "+5" speed bonus. Positioned with a transform, so its keyframes BAKE that
+   transform into every step — see the "popup jumps into place" rule near the
+   top of this file. */
+.aw-fight-flash {
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  transform: translateX(-50%);
+  font-size: clamp(14px, 1.8vw, 22px);
+  font-weight: 800;
+  color: #ffd166;
+  pointer-events: none;
+  animation: aw-fight-flash 1.2s ease forwards;
+}
+@keyframes aw-fight-flash {
+  0% { opacity: 0; transform: translate(-50%, 6px); }
+  22% { opacity: 1; transform: translate(-50%, -6px); }
+  100% { opacity: 0; transform: translate(-50%, -26px); }
+}
+
+/* --- the two boards --- */
+.aw-fight-boards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1.2vw, 18px);
+  align-items: start;
+  justify-items: center;
+  min-width: 0;
+}
+.aw-fight-board { width: 100%; min-width: 0; }
+/* `.aw-page` normally caps itself at 1000px and centres — inside a fight board
+   it must simply fill its half. */
+.aw-fight-board .aw-page { max-width: none; width: 100%; padding: 0; }
+/* Nothing from the engine's top bar is shown inside a fight board (teacher,
+   12/8/2026): the ONE score each team watches is its big number on the strip
+   above its board, and there is ONE clock for the match up there too. The bar
+   itself stays in the DOM — templates keep writing to the chip (Anagram reads
+   it back for its count-up) and hearts still need their slot. */
+.aw-fight-board .aw-topbar { visibility: hidden; height: 0; margin: 0; padding: 0; overflow: hidden; }
+/* Both in-frame Fullscreen buttons go too: one button for the whole match now
+   sits with Options/Template/Style/MODE under the boards. */
+.aw-fight-board .aw-fs-always { display: none; }
+/* In a match the act's own title, and the Edit/Assignment/Print/Home cluster,
+   are noise — the board is the lesson at that moment.
+   ⚠️ `visibility`, NOT `display:none`: the bar is a 3-column grid (1fr auto 1fr)
+   and removing the two outer cells would leave the tool cluster auto-placed in
+   column ONE, i.e. hard against the left edge instead of centred. */
+.aw-fight-bottom .aw-below-left,
+.aw-fight-bottom .aw-below-right { visibility: hidden; }
+
+/* --- the one shared toolbar, moved here from board 0 --- */
+.aw-fight-bottom { display: flex; justify-content: center; }
+.aw-fight-bottom .aw-below { width: min(1000px, 100%); }
+/* MODE lights up while a match is on, like the other tool buttons do when
+   their panel is open. */
+.aw-below-center .aw-toolbtn.is-active { color: #fff; background: rgba(96, 165, 250, .28); }
+
+/* --- who won --- */
+.aw-fight-result {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: rgba(12, 17, 24, .82);
+  backdrop-filter: blur(4px);
+  animation: aw-fadein .22s ease;
+}
+.aw-fight-result-title {
+  font-size: clamp(28px, 5vw, 66px);
+  font-weight: 800;
+  letter-spacing: .04em;
+  color: #ffd166;
+  line-height: 1.35;
+}
+.aw-fight-result-scores { display: flex; align-items: center; gap: clamp(14px, 3vw, 40px); color: #f4f7fb; }
+.aw-fight-result-score {
+  font-size: clamp(30px, 5.6vw, 74px);
+  font-weight: 800;
+  opacity: .55;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.aw-fight-result-score.is-top { opacity: 1; color: #7ee08a; }
+.aw-fight-result-vs { opacity: .4; font-size: clamp(18px, 2.4vw, 30px); }
+
+/* Fullscreen: the whole match goes full-screen as one piece (core/engine.js
+   requests it on `#app`, which is the fight shell's parent). */
+:fullscreen .aw-fight,
+:-webkit-full-screen .aw-fight { height: 100%; padding-bottom: 10px; }

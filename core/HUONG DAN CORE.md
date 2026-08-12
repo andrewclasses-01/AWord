@@ -268,6 +268,75 @@ và **✅ ĐÃ NGHIỆM THU: thầy tự test iPhone + iPad + Windows, nghe tố
 Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
 nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
 
+## ⭐⭐ FIGHT MODE — HAI BÀN, MỘT TRẬN (`core/fight.js`, Đợt 124, 12/8/2026)
+
+Nút **MODE** dưới khung lật act giữa SINGLE MODE và FIGHT MODE: 2 ván THẬT cạnh nhau, một dải
+SCOREBOARD 1 · ĐỒNG HỒ · SCOREBOARD 2 ở trên, MỘT thanh công cụ dùng chung ở dưới.
+
+**Chạy được là nhờ `startGame()` giữ mọi trạng thái trong closure** → gọi 2 lần vào 2 div là xong.
+Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ danh sách này khi thêm bất cứ thứ gì dùng chung:
+
+| Thứ vươn ra ngoài | Đã xử |
+|---|---|
+| `core/sfx.js` giữ 1 `<audio>`/file | thêm **giọng dự phòng** (tối đa 3/file, chỉ đẻ khi bận) — nếu không, 2 đội bấm cùng lúc chỉ nghe 1 tiếng |
+| `document.querySelector(".aw-top-score")` | **CẤM** — quét cả trang thì bàn phải ghi điểm vào bàn trái. Dùng `ui.scoreEl`, hoặc `ctl.scoreTarget(side)` khi đấu |
+| `window.__awordBridge` (1 chỗ ngồi) | chỉ bàn 0 ngồi |
+| Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
+| Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
+
+**Hợp đồng cho template muốn tham gia** (opt-in, mới có Anagram):
+```js
+fightMode: true,                      // đây là thứ làm nút MODE hiện ra
+// trong mount(): const f = activity._fight;  // { side, ctl } — không có = chơi đơn như thường
+f.ctl.attach(side, { total, goToIndex(i), lock(on) })   // đăng ký bàn
+f.ctl.wordDone(side, { index, earned, perfect })        // vừa giải xong 1 từ
+f.ctl.isLocked(side)                                    // chặn thao tác khi đã thua vòng
+f.ctl.shareLetters · f.ctl.speaks(side)                 // giữ công bằng + không đọc chồng
+f.ctl.boardMoved(side, index)                           // thầy bấm ‹ › ở bàn này
+```
+
+**Ô điểm ở ĐÂU** (thầy chốt 12/8/2026, bản cuối): **KHÔNG có ô điểm trong khung khi đấu** — mỗi đội
+chỉ có MỘT con số, nằm **chính giữa phía trên khung của mình**, và điểm bay thẳng từ trong game ra
+tới đó (`ctl.scoreTarget(side)`). Dải trên là lưới **2 nửa khớp đúng 2 khung** + cụm giữa
+`[điểm thủ công] ĐỒNG HỒ [điểm thủ công]` neo tuyệt đối ở tâm.
+⚠️ Topbar trong khung để **`visibility:hidden; height:0`**, KHÔNG `display:none`: template vẫn ghi
+vào ô điểm ẩn đó và Anagram còn **đọc ngược lại** để đếm số — bỏ hẳn là vỡ vòng đếm.
+⚠️ Dải trên **không được có padding ngang riêng**, nếu không mỗi nửa hẹp hơn khung bên dưới và số
+điểm lệch tâm (đo: 13px).
+⚠️ Ẩn tên act / cụm Edit-Assignment-Print-Home cũng phải bằng **`visibility`**: thanh dưới là lưới
+`1fr auto 1fr`, `display:none` làm cụm nút rơi về cột 1 (dạt trái) thay vì nằm giữa.
+
+**Điểm THỦ CÔNG của thầy** (2 ô cạnh đồng hồ): chạm/vuốt lên +1, vuốt xuống −1; dương xanh dương, âm
+đỏ **không có dấu trừ**. Tách hẳn khỏi điểm game và giữ ở **biến cấp module** trong `fight.js` ⇒ sống
+qua Start again và đổi template, chỉ mất khi tải lại trang.
+
+**Một bên bấm PLAY là bên kia chạy theo** — `bigPlay.onclick` gọi `ctl.playPressed(side)`, trọng tài
+bấm hộ nút PLAY của bàn kia. Bắt buộc phải vậy: mỗi ván có đồng hồ RIÊNG, khởi động lệch nhau là
+đồng hồ chung (đọc bàn 0) nói giờ của một đội cho cả hai.
+
+⚠️⚠️ **BA BẪY BẮT BUỘC BIẾT — cả ba đã cắn thật ở Đợt 124:**
+1. **Điểm của template TỚI MUỘN.** Anagram trả điểm **1.760ms** sau khi giải xong (chờ 420 + bay 920
+   + đếm 420). Bất cứ phép tính nào của trọng tài dựa trên "điểm hiện tại" ngay lúc `wordDone` đều
+   sai. Cách đúng: **đóng băng** con số rồi huỷ phần đang bay tới (xem `frozenAt`/`holdFreeze`), và
+   giữ `ROUND_HOLD_MS` **dài hơn** hoạt cảnh điểm của template (nay 2100ms).
+2. **Mọi đường `startGame()` gọi lại PHẢI mang theo `fight`** — `restart()`, `replayCurrent()`,
+   `doSwitchTemplate()`. Thiếu là bàn đó **âm thầm biến thành act đơn lẻ NẰM TRONG trận đấu**: mọc
+   thanh công cụ riêng, ô điểm riêng, thôi báo cáo lên scoreboard. Hiện cả 3 đường đều đi qua
+   `ctl.restartMatch()`.
+3. **Mỗi bàn chơi một BẢN SAO của act** (thứ tự từ chốt cứng để 2 bàn khớp nhau), nên
+   `Object.assign(activity.options, draft)` của Apply **chỉ ghi vào bản sao**. Options phải đi qua
+   `ctl.applyOptions()` để ghi vào act THẬT rồi dựng lại cả trận.
+4. ⭐ **KHÔNG hàm dọn dẹp nào được phép NÉM LỖI.** `teardown()` chạy trên đường **ĐI VÀO** một lần
+   dựng lại, và nó nói chuyện với những ván đang bị tháo dở. Một `ReferenceError` ở đó (thật: biến
+   `topbar` còn sót trong `cleanup()` của Anagram sau khi bỏ slogan) làm **trận không bao giờ được
+   dựng lại — màn hình đứng nguyên, không một dấu hiệu nào cho thầy**. Nay `teardown()` bọc
+   `try/catch` và `lock()` của template thoát ngay khi `dead`.
+
+⚠️ **Đổi template giữa trận bị TỪ CHỐI** (toast): template chưa khai `fightMode` vẫn CHẠY được 2 bàn,
+mà "trông như trận đấu nhưng không có luật" tệ hơn là từ chối thẳng.
+⚠️ `core/fight.js` **nạp trì hoãn** (`await import`) từ nút MODE, và MODE chỉ dựng khi `!session` —
+trang học sinh không bao giờ tải nó, và engine không phải import tĩnh một module import ngược lại nó.
+
 ### ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG — `voiceView()` (Đợt 123, 12/8/2026)
 
 Trước đây mỗi bộ từ có HAI act (`ENG1` chơi bằng chữ · `ENG1 VOICE` chơi bằng giọng) tuy nội dung chữ

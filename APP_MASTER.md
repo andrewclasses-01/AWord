@@ -5,7 +5,36 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 123) — ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG: nhóm **Content
+> Cập nhật lần cuối: **12/8/2026 (Đợt 124) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ
+> (Anagram trước, thầy chốt). ⭐ CÓ SỬA CORE — file MỚI `core/fight.js` + `engine.js` + `sfx.js` +
+> `icons.js` + `app.css`. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> Nút **MODE** (chỉ hiện với template khai `tpl.fightMode`) lật SINGLE ↔ FIGHT: 2 ván THẬT cạnh nhau
+> (mỗi khung vẫn đúng 16:10,5 — đo 939×616 ở 1920×1080), dải trên SCOREBOARD 1 · ĐỒNG HỒ ·
+> SCOREBOARD 2 (chừa sẵn 2 ô cho CHUÔNG sau này), MỘT thanh công cụ dùng chung. Chạy được 2 ván
+> trong 1 trang là nhờ `startGame()` giữ mọi trạng thái trong closure.
+> **Hai lượt chỉnh thầy gửi sau bản đầu, đã làm + đo hết**: bấm PLAY một bên là bên kia chạy theo ·
+> **bỏ slogan Anagram** (cả single) · **bỏ ô điểm trong khung**, mỗi đội chỉ còn MỘT số **chính giữa
+> phía trên khung của mình** (lệch tâm 1px) và điểm bay thẳng ra đó · 2 đội **cùng luật màu**
+> (dương xanh lá, âm đỏ giữ dấu −) · đồng hồ đổi sang **xám đậm** cho hợp nền sáng · **bỏ tên act +
+> cụm Edit/Assignment/Print/Home** khi đấu · bỏ fullscreen trong 2 khung, thêm **1 nút Fullscreen**
+> vào dãy nút dưới (thành 5) · thêm **2 ô ĐIỂM THỦ CÔNG** hai bên đồng hồ (chạm/vuốt lên +1, vuốt
+> xuống −1, xanh dương/đỏ không dấu trừ) **sống qua Start again + đổi template, chỉ mất khi tải lại
+> trang**.
+> ⚠️⚠️ **Lỗi nặng nhất cả đợt**: bỏ slogan làm sót biến `topbar` trong `cleanup()` của Anagram ⇒
+> `ReferenceError` giữa lúc dọn ván ⇒ **"Start again" không dựng lại được trận, im lặng hoàn toàn**,
+> và hỏng luôn `cleanup()` của single mode. Rút ra: **không hàm dọn dẹp nào được phép ném lỗi** (xem
+> bẫy 4 mục FIGHT MODE trong `core/HUONG DAN CORE.md`).
+> **5 rào cản đã giải**: sfx 1 thẻ audio/file (thêm giọng dự phòng — đo: 3 tiếng chồng = 3 thẻ) ·
+> `querySelector(".aw-top-score")` quét cả trang · bridge myActivity 1 chỗ ngồi · giọng đọc phát 2
+> lần · khung nhỏ đi.
+> ⚠️ **3 lỗi thật tự bắt được**: điểm template TỚI MUỘN 1.760ms (làm "đội chậm không được điểm" lao
+> xuống −12 rồi bò về 0) · `restart()` không mang `fight` biến bàn thành act đơn lẻ NẰM TRONG trận ·
+> Apply chỉ ghi vào BẢN SAO của act. Cả 3 đã vá + đo lại.
+> Hợp đồng template + 3 bẫy: `core/HUONG DAN CORE.md` mục "FIGHT MODE". Chi tiết: `GHI CHU DU AN.md`
+> Đợt 124. ⬜ **Chưa nhìn được bằng mắt** (pane test không hiện hình) — thầy xem giúp bố cục thật,
+> nhất là cỡ chữ lúc fullscreen (tính ra còn ~57-60% so với single fullscreen).
+>
+> Trước đó: **12/8/2026 (Đợt 123) — ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG: nhóm **Content
 > (Text / Voice)** ở đầu panel Options. ⭐ CÓ SỬA CORE (`engine.js` + `voice-playback.js` +
 > `convert.js` + `lesson-import.js`) + 13 template. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
 > Bỏ hẳn cặp act `ENG1` + `ENG1 VOICE`: Import Excel nay tạo **1 act ENG1 duy nhất** (đảo lại Đợt

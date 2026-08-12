@@ -169,7 +169,11 @@ function computeTileSize(nLetters) {
 //  letters   = target chars, letter positions only, in the CORRECT order
 //  cells     = full word split into { isSpace, letterIdx } (letterIdx into `letters`)
 //  tileOrder = a shuffled permutation of letters' indices (origin row display order)
-function prepareItem(word) {
+// `fixedOrder` (Đợt 124, FIGHT MODE) — when the two boards must show the SAME
+// scramble, the first board to prepare a word hands its tileOrder to the second
+// through the shared source object. Without it each board shuffles for itself
+// and one team gets an easier arrangement of the same word.
+function prepareItem(word, fixedOrder) {
   const chars = String(word ?? "").split("");
   const letters = [];
   const cells = chars.map(ch => {
@@ -179,6 +183,9 @@ function prepareItem(word) {
     return { isSpace: false, letterIdx };
   });
   let tileOrder = letters.map((_, i) => i);
+  if (Array.isArray(fixedOrder) && fixedOrder.length === letters.length) {
+    return { letters, cells, tileOrder: [...fixedOrder] };
+  }
   const original = tileOrder.join(",");
   for (let tries = 0; tries < 8; tries++) {
     tileOrder = shuffle(tileOrder);
@@ -196,6 +203,10 @@ const anagramTemplate = {
   itemsKey: "items",
   name: "Anagram",
   hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
+  // FIGHT MODE (Đợt 124) — makes the MODE button appear under the frame, and
+  // means this template knows how to run as one of two boards racing (see the
+  // `_fight` branches in mount()). The first template to opt in.
+  fightMode: true,
   hidePointsOff: true,  // ships its own mode-dependent "Points off" control(s) — see buildExtraOptions (10/8/2026)
 
   toPrintItems(activity) {
@@ -361,11 +372,38 @@ const anagramTemplate = {
     const bonusMult = mode === "bonusMinus" ? clampBonusMult(opt.bonusMult) : 2;   // "bonus" keeps the old fixed x2
     const startLives = normLives(opt.lives);   // null = unlimited
 
+    // ----- FIGHT MODE (Đợt 124) — this play is one of two boards racing -----
+    // `_fight` is put here by core/fight.js; everything below degrades to the
+    // ordinary single-board behaviour when it is absent.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;                 // set by the match controller between rounds
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    // Where a "+N" flies to, and what gets the count-up pulse. Single mode: the
+    // frame's own score chip, exactly as always. FIGHT MODE (teacher, 12/8/2026,
+    // second pass): the frame has NO chip any more — the only score on screen is
+    // this team's number on the strip above its board, so the points fly the
+    // whole way out to it.
+    // ⚠️ NEVER `document.querySelector(".aw-top-score")` here: that is a
+    // document-wide lookup, so with two boards on screen the RIGHT-hand board
+    // animates its points onto the LEFT-hand board's chip — and on a discarded
+    // play it finds the NEXT game's chip (Đợt 114).
+    const scoreTargetEl = () => (fightCtl ? fightCtl.scoreTarget(fightSide) : ui.scoreEl);
+
     let items = [...(activity.content?.items || [])].filter(it => it && String(it.word || "").trim());
     if (opt.shuffleQuestions) items = shuffle(items);
     // `src` = the ORIGINAL content object, carried through so "Start with
     // mistakes" can filter activity.content.items by identity (core/mistakes.js).
-    items = items.map(it => ({ clue: it.clue || "", word: it.word, ...prepareItem(it.word), src: it }));
+    // In a fight with "same letters" the two boards share these very objects,
+    // so whichever board prepares a word first leaves its scramble on the
+    // source for the other to copy.
+    items = items.map(it => {
+      const shared = fightCtl && fightCtl.shareLetters;
+      const prepared = prepareItem(it.word, shared ? it._fightOrder : null);
+      if (shared && !it._fightOrder) it._fightOrder = prepared.tileOrder;
+      return { clue: it.clue || "", word: it.word, ...prepared, src: it };
+    });
 
     const total = items.length;
     if (total === 0) {
@@ -452,18 +490,13 @@ const anagramTemplate = {
       voiceAudioEl.play().catch(() => setListenGlow(voiceBtnEl, false));   // e.g. autoplay blocked — fails silently, tap still works
     }
 
-    // Slogan on the SAME row as the clock + score (centred, small, grey,
-    // spaced uppercase) — same look/technique as crossword.js/speaking-cards.js
-    // (teacher, 8/8/2026). Absolutely centred over the top bar so it never
-    // depends on the clock/score widths; set up ONCE here (not in render(),
-    // which reruns per word) since the top bar itself persists across words.
-    const topbar = root.parentElement && root.parentElement.querySelector(".aw-topbar");
-    let sloganEl = null;
-    if (topbar) {
-      topbar.style.position = "relative";
-      sloganEl = el("div", "aw-anagram-slogan", "ANAGRAM IN ANDREW CLASSES");
-      topbar.append(sloganEl);
-    }
+    // The "ANAGRAM IN ANDREW CLASSES" slogan that used to sit centred on the top
+    // bar was dropped on 12/8/2026 (teacher) — in a fight it appeared twice, one
+    // per board, and it was clutter on a single board too. CSS for it is gone
+    // from anagram.css as well; crossword/speaking-cards keep their own.
+    // (The `topbar` lookup and its position:relative went with it — cleanup()
+    // must not reference them either, or it throws mid-teardown.)
+    const sloganEl = null;
 
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
     renderLives();
@@ -576,8 +609,10 @@ const anagramTemplate = {
         // introDurationMs()) so the two sounds never overlap; every later
         // word (reached via Next/Previous) plays immediately as before.
         // ...but only in VOICE mode: in TEXT mode the clue is on screen to be
-        // read, so the button waits to be asked (vv.autoPlay).
-        if (!vv.autoPlay) {
+        // read, so the button waits to be asked (vv.autoPlay). And in FIGHT
+        // MODE only ONE board speaks — both show the same word, so two copies
+        // of the same clip a few milliseconds apart is an echo, not a reading.
+        if (!vv.autoPlay || (fightCtl && !fightCtl.speaks(fightSide))) {
           /* text mode — button only, no automatic speech */
         } else if (!firstWordRendered) {
           voiceIntroTimeoutId = setTimeout(() => {
@@ -638,7 +673,10 @@ const anagramTemplate = {
         tile.type = "button";
         tile.dataset.tile = String(tileId);
         tile.textContent = displayChar(it.letters[tileId], allCaps);
-        const locked = used || wordDone;
+        // `fightLocked()` = the other team already took this word (or the match
+        // is over): the tiles go visibly dead rather than silently ignoring
+        // taps, so the class can SEE that the round is decided.
+        const locked = used || wordDone || fightLocked();
         tile.disabled = locked;
         attachOriginTileInteraction(tile, tileId);
         originRow.append(tile);
@@ -695,6 +733,10 @@ const anagramTemplate = {
       // flight, which felt laggy when tapping fast. `busy` still guards the
       // heavier result-row actions (Submit / drag-swap / send-back) below.
       if (finished) return;
+      // FIGHT MODE: this board is out of the round (the other team got the word
+      // first, or the match is over). One test here covers taps AND drags,
+      // since every drop path ends up in bonusPick/submitPick through here.
+      if (fightLocked()) return;
       if (isBonusFamily) bonusPick(tileId, tileEl); else submitPick(tileId, tileEl);
     }
 
@@ -789,8 +831,14 @@ const anagramTemplate = {
         flyPointsOnly(earned, applyAndGetNewTotal, 0);
         finishDelay = PICKFLY_TOTAL_MS + FLYGAIN_PULSE_MS + 250;
       }
+      // FIGHT MODE: tell the match this board just solved the round's word.
+      // The controller decides who scores, whether the other board keeps
+      // playing, and when both move on — this play only reports.
+      if (fightCtl) fightCtl.wordDone(fightSide, { index, earned, perfect });
       if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), finishDelay);
-      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, finishDelay);
+      // In a fight the controller drives the last word too (it ends the match
+      // once both boards are done), so don't race it with a local finish().
+      else if (!fightCtl && state.every(doneCheck)) autoTimer = setTimeout(finish, finishDelay);
     }
 
     // ----- interaction: submit mode -----
@@ -1259,9 +1307,13 @@ const anagramTemplate = {
           // notes (GHI CHU.md).
           anagramSound.wrongPick();
         }
+        // FIGHT MODE — "On submit" scores a whole word at once, so a CORRECT
+        // submit is this board finishing the round. A wrong one is not: the
+        // other team is still racing and this board simply waits it out.
+        if (fightCtl && allCorrect) fightCtl.wordDone(fightSide, { index, earned: 1, perfect: true });
         if (outOfLives) {
           autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
-        } else if (state.every(doneCheck)) {
+        } else if (!fightCtl && state.every(doneCheck)) {
           autoTimer = setTimeout(finish, allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
         }
       }, n * STAGGER_MS + 300);
@@ -1387,8 +1439,10 @@ const anagramTemplate = {
         // effects visually belong together instead of jumping between spots
         // (teacher, 8/8/2026).
         const row = root.querySelector(".aw-anagram-result");
-        const scoreEl = document.querySelector(".aw-top-score");
+        const scoreEl = scoreTargetEl();
         if (!row || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
+        // (scoreTargetEl: this board's own chip, or in FIGHT MODE this team's
+        // number on the shared strip above — see its definition in mount().)
         // "slightly bigger than one tile" (teacher, 8/8/2026), THEN doubled
         // again per the follow-up request — read the REAL rendered tile size
         // directly instead of guessing a cqw->px conversion, so this stays
@@ -1444,7 +1498,7 @@ const anagramTemplate = {
     // small ("không bị nhỏ, nhỏ nhất cũng phải gần bằng size của 1 ô").
     function flyLetterPenalty(slotEl, points) {
       const applyAndGetNewTotal = () => { penalty += points; return scoreNow(); };
-      const scoreEl = document.querySelector(".aw-top-score");
+      const scoreEl = scoreTargetEl();
       if (!slotEl || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
       const tileEl = root.querySelector(".aw-anagram-otile, .aw-anagram-rtile");
       const tilePx = tileEl ? tileEl.getBoundingClientRect().width : 40;
@@ -1507,7 +1561,7 @@ const anagramTemplate = {
     // tổng".
     function flyScoreGain(points, applyAndGetNewTotal) {
       const g = root.querySelector(".aw-anagram-group");
-      const scoreEl = document.querySelector(".aw-top-score");
+      const scoreEl = scoreTargetEl();
       if (!g || !scoreEl) { pulseScoreTo(applyAndGetNewTotal()); return; }
       const startRect = g.getBoundingClientRect();
       const endRect = scoreEl.getBoundingClientRect();
@@ -1587,9 +1641,12 @@ const anagramTemplate = {
       // animates the dead game's number onto it. Several 0.9-1.9s fly/pulse
       // timers reach here, so the flag has to be tested at the top.
       if (dead) return;
-      const scoreEl = document.querySelector(".aw-top-score");
+      const scoreEl = scoreTargetEl();
       if (!scoreEl) return;
-      const match = /(-?\d+)/.exec(scoreEl.textContent || "");
+      // Read the old value off THIS PLAY's own chip, never off the fight
+      // scoreboard: that one also carries the teacher's hand adjustments and
+      // speed bonuses, so counting up from it would jump by whatever those add.
+      const match = /(-?\d+)/.exec((ui.scoreEl || scoreEl).textContent || "");
       const oldValue = match ? parseInt(match[1], 10) : 0;
       if (oldValue === newValue) { ui.setScore(newValue); return; }
       scoreEl.classList.remove("aw-score-pulse"); void scoreEl.offsetWidth; // restart if still running
@@ -1676,8 +1733,42 @@ const anagramTemplate = {
       anim.onfinish = run;
       setTimeout(run, 220);
     }
-    function goPrev() { if (busy) return; if (index > 0) fadeSwap(() => { index--; render(); }); }
-    function goNext() { if (busy) return; if (index < total - 1) fadeSwap(() => { index++; render(); }); }
+    function goPrev() {
+      if (busy) return;
+      if (index > 0) fadeSwap(() => { index--; render(); if (fightCtl) fightCtl.boardMoved(fightSide, index); });
+    }
+    function goNext() {
+      if (busy) return;
+      if (index < total - 1) fadeSwap(() => { index++; render(); if (fightCtl) fightCtl.boardMoved(fightSide, index); });
+    }
+
+    // ----- FIGHT MODE: the match controller drives both boards through this -----
+    // Registered AFTER goTo/render exist so the controller can move this board
+    // the moment it attaches (board 1 mounts later than board 0 and would
+    // otherwise sit on word 1 while the match is already on word 3).
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total,
+        goToIndex(i) {
+          const target = Math.max(0, Math.min(total - 1, i | 0));
+          if (target === index) return;
+          if (busy) busy = false;          // a round change outranks a half-finished animation
+          fadeSwap(() => { index = target; render(); });
+        },
+        lock(on) {
+          // ⚠️ `dead` first. The match locks both boards while tearing itself
+          // down (Start again), i.e. AFTER cleanup() has run here — repainting
+          // a dismantled play threw, and the exception killed the rebuild
+          // halfway, leaving the OLD match on screen with no error visible to
+          // the teacher. Same family as the Đợt 114 "ván đã chết" rules.
+          if (dead) return;
+          fightBoardLock = !!on;
+          // Repaint so the origin tiles show as unavailable straight away
+          // rather than only refusing the next tap.
+          if (!busy) render();
+        }
+      });
+    }
 
     function finish(opts) {
       if (finished) return;
@@ -1738,7 +1829,6 @@ const anagramTemplate = {
       if (voiceAudioEl) voiceAudioEl.pause();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
       if (sloganEl) sloganEl.remove();
-      if (topbar) topbar.style.position = "";
     };
   }
 };
