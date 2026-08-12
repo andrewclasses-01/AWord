@@ -5,6 +5,83 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 131 (12/8/2026) — ⭐ LỖI THẬT: ĐỒNG HỒ MA TRONG FIGHT MODE — "HẾT GIỜ" GIẢ KHI ĐỒNG HỒ CÒN 2 PHÚT
+⭐ CÓ SỬA CORE (`core/engine.js` + `core/fight.js`). KHÔNG đụng template nào.
+✅ THẦY DUYỆT → COMMIT (LOCAL). **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — thầy đang gộp chung với nhiều
+thay đổi khác đang làm, sẽ push một thể sau (xem mục 0b APP_MASTER.md nếu có, hoặc log push kế tiếp).
+
+**Thầy báo**: đang chơi, có lượt phát tiếng "hết giờ" trong khi đồng hồ trên màn còn nguyên 2 phút.
+Cùng lúc thầy báo thêm vấn đề #2 (bấm ô chữ không nhận, xem cuối mục này) — vấn đề đó CHƯA sửa, còn
+đang điều tra.
+
+### Gốc lỗi — trọng tài trận đấu chưa bao giờ tắt "đồng hồ ngầm" của 2 bàn khi dựng lại trận
+Mỗi khi trận Fight dựng lại — Start again, Options > Apply, đổi template giữa trận, hoặc thoát Fight
+về Single — `core/fight.js`'s `teardown()` **chỉ gọi `lock(true)`**, tức hàm khoá của RIÊNG TEMPLATE
+(đăng ký qua `ctl.attach`). Nó **chưa bao giờ** gọi tới `cleanupAll()` thật của engine — hàm duy nhất
+thực sự tắt đồng hồ đếm 500ms (`setInterval`), đóng menu/panel, và chạy `cleanup()` riêng của template.
+
+Soát lại toàn bộ 5 đường có thể dựng lại/thoát một trận Fight trong `core/engine.js`:
+| Đường | Trước sửa: bàn giữ thanh công cụ (bàn 0) | Trước sửa: bàn còn lại (bàn 1) |
+|---|---|---|
+| Menu ☰ → Start again | ✅ có gọi `cleanupAll()` | ❌ không bao giờ |
+| Options → Apply | ✅ có gọi `cleanupAll()` | ❌ không bao giờ |
+| Đổi template (Change template) | ❌ không gọi | ❌ không bao giờ |
+| MODE → thoát về Single | ❌ không gọi | ❌ không bao giờ |
+| "Start again" ở màn kết quả trận | ❌ không gọi (nút này nằm trong `fight.js`, gọi thẳng
+`ctl.restartMatch()`, không đi qua bàn nào cả) | ❌ không bao giờ |
+
+**Bàn 1 (bàn không giữ thanh công cụ) 100% KHÔNG BAO GIỜ được dọn ở bất kỳ đường nào** — nút Menu/Home
+riêng của nó đã bị gỡ ngay khi vào trận (`below1.remove()`, xem Đợt 124), nên các đường dọn-qua-nút-của-
+chính-nó không bao giờ chạm tới nó. Đồng hồ 500ms của nó cứ đếm tiếp mãi trong im lặng ở một
+`timerEl` đã rời khỏi trang, và tới đúng lúc NÓ hết giờ theo lịch riêng (khởi động từ lần Play cuối
+cùng của chính nó, không phải trận đang chơi) thì vẫn phát `tpl.sounds?.timeWarning?.()` / gọi
+`submitHandler?.()` như thường — hoàn toàn không liên quan tới đồng hồ MỚI trên màn.
+
+Đây là **họ lỗi y hệt "Đồng hồ ma"** dự án từng gặp và đặt tên ở Đợt 112/114 (khi đó là 1 template
+`manualTimerStart` bỏ sót đường dọn khi rời trang giữa lúc intro đang chạy) — lần này là một cửa MỚI,
+đặc thù của Fight mode, chưa từng được vá.
+
+### Sửa
+- `core/engine.js`: ngay từ đầu `startGame()`, nếu đang trong 1 trận (`fight` khác null), đăng ký
+  `cleanupAll` thật của bàn này với trọng tài: `fight.ctl.registerCleanup(fight.side, cleanupAll)`.
+  Gọi được ngay ở đây vì `cleanupAll` là 1 **function declaration** (hoisted) trong cùng closure.
+  `cleanupAll()` thêm cờ chặn gọi 2 lần (`if (torndown) return;` trước khi làm bất cứ gì) — một bàn có
+  thể vừa tự dọn qua nút riêng của nó (2 đường cũ), vừa bị trọng tài dọn lại qua cơ chế mới; lần gọi
+  thứ 2 phải là no-op an toàn, không chạy lại `closeMenu`/`stopTimer`/`cleanup()` lần nữa.
+- `core/fight.js`: thêm `cleanupFns[2]` giữ 2 hàm vừa đăng ký, `ctl.registerCleanup(side, fn)` để nhận
+  đăng ký, và `teardown()` gọi lại **cả 2** (bọc try/catch, đúng luật "không hàm dọn dẹp nào được ném
+  lỗi" của file này) — ngay sau dòng `lock(true)` cũ.
+
+### Đã tự đo qua trình duyệt thật (tráo `window.setInterval`/`clearInterval` để đếm đồng hồ đang sống)
+Dựng 1 trận Anagram thật (`sample-anagram.js`, 6 từ), bấm Play cả 2 bàn (đo: **2 đồng hồ sống**), rồi
+lần lượt thử cả 3 đường TRƯỚC ĐÂY rò rỉ hoàn toàn:
+1. **Start again** (từ Menu trong game) → **0 đồng hồ sống** ngay sau khi dựng lại (trước sửa: giữ
+   nguyên 2, không bao giờ về 0). Bấm Play lại → đúng 2 đồng hồ mới.
+2. **Đổi template Anagram → Quiz giữa trận** (cả 2 bàn cùng đấu Quiz) → **0 đồng hồ sống** ngay sau
+   khi đổi (trước sửa: vẫn giữ nguyên 2 đồng hồ Anagram cũ chạy ngầm mãi). Bấm Play → đúng 2 đồng hồ
+   Quiz mới.
+3. **MODE → "Back to single"** (thoát hẳn Fight) → **0 đồng hồ sống** (trước sửa: đây là đường tệ
+   nhất — cả 2 đồng hồ Fight cũ bị bỏ quên vĩnh viễn, không có cách nào dọn được nữa vì trận đã đóng).
+- **Chế độ chơi đơn (không đấu) test lại để chắc không đổi hành vi**: Play → 1 đồng hồ sống; Start
+  again → về 0 rồi Play lại → 1 đồng hồ mới. Y hệt trước khi sửa.
+- 0 lỗi console qua toàn bộ các bước trên.
+
+### ⬜ Vấn đề #2 thầy báo cùng lúc — CHƯA sửa, còn điều tra
+"Có lượt 1 trong 2 bên bấm ô chữ không nhận, next sang ô khác thì được." Thầy xác nhận: xảy ra **ngay
+trong vài giây đầu** khi từ mới vừa hiện ra (không phải giữa chừng đang làm), và **không thấy quy luật
+rõ ràng** về đội nào (không cố định là đội vừa thắng hay đội vừa thua vòng trước).
+- Nghi vấn hàng đầu: một khoảnh khắc rất ngắn (dưới nửa giây) ngay lúc chuyển sang từ mới mà cả hàng ô
+  chữ của 1 bàn bị khoá nhầm dù đội đó thật ra chưa hề bị khoá — có thể là một cuộc đua giữa hoạt cảnh
+  chuyển từ (`fadeSwap`, chạy bất đồng bộ ~160-220ms) và thời điểm trọng tài đổi trạng thái khoá.
+- Nghi vấn phụ (không riêng Fight mode, có thể ảnh hưởng cả chơi đơn): `attachOriginTileInteraction`
+  gọi `tileEl.setPointerCapture(e.pointerId)` mà KHÔNG bọc try/catch — trong khi `core/fight.js`'s
+  `makeHand()` (ô điểm tay) đã biết bọc try/catch đúng chỗ này với lý do "synthetic pointers". Nếu gặp
+  đúng kiểu chạm mà lệnh này ném lỗi, cú chạm có thể "tuột" khỏi đúng ô đang bấm.
+- **Chưa bắt được tận tay** — cần thầy quan sát/mô tả thêm khi gặp lại (đội thắng hay đội thua vòng
+  trước, đang test bằng chuột hay cảm ứng TOMKO thật) trước khi sửa mù.
+
+---
+
 ## Đợt 130 (12/8/2026) — ⭐ LỖI THẬT: MỞ PANEL NÚT CHỨC NĂNG KHI ĐẤU THÌ KHÔNG BẤM ĐƯỢC GÌ
 ⭐ CÓ SỬA CORE (`core/app.css` 1 khối + `core/engine.js` 1 chỗ). KHÔNG đụng template nào.
 ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.

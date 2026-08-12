@@ -121,6 +121,20 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // and a converted act's options are remembered in originAct.templateOptions[type].
   const originAct = base || activity;
 
+  // FIGHT MODE (Đợt 131, 12/8/2026 — teacher heard the "time's up" cue with
+  // 2 minutes left on the visible clock): hand this board's REAL teardown to
+  // the match controller. Until now core/fight.js's own teardown() only ever
+  // called the TEMPLATE's `lock(true)` (see ctl.attach below) — it never
+  // touched this engine's own `cleanupAll()`, so this board's 500ms clock
+  // interval (and everything else cleanupAll() stops) kept running forever in
+  // the background every time a match rebuilt (Start again / Options > Apply
+  // / Change template / exit fight to single). `cleanupAll` is a function
+  // DECLARATION further down this same closure, hoisted, so it already exists
+  // here. Registering unconditionally, before anything else, guarantees the
+  // controller can always reach it — even a match that is torn down within
+  // the same tick this board mounted (student closing the page mid-load).
+  if (fight) fight.ctl.registerCleanup(fight.side, cleanupAll);
+
   const tpl = getTemplate(activity.type);
   const { page, stage, inner, below } = buildStage(activity.theme || "classic");
   // Activity-type class on the stage, present from the very first paint (READY
@@ -1290,7 +1304,13 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // even a future resume path added in between still ends up cleared. Belt and
   // braces on purpose — a leaked 500ms ticker is invisible and cost the teacher
   // a phantom "time's up" mid-game plus phantom results.
-  function cleanupAll() { torndown = true; closeMenu(); stopTimer(); closeToolPanel(false); cleanup(); }
+  // ⚠️ Idempotent on purpose (Đợt 131): a fight-mode board can now be torn
+  // down BOTH by its own button handler (e.g. restart()/replayCurrent() call
+  // this directly, then hand off to fight.ctl.restartMatch()) AND by the
+  // match controller's teardown() calling the very same function back via
+  // registerCleanup — the second call must be a safe no-op, not a second run
+  // of closeMenu/stopTimer/cleanup().
+  function cleanupAll() { if (torndown) return; torndown = true; closeMenu(); stopTimer(); closeToolPanel(false); cleanup(); }
 
   // ----- Small toast message -----
   function toast(msg) {

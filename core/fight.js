@@ -303,6 +303,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const freezeAdj = [0, 0];         // permanent, accumulated across rounds
   const frozenAt = [null, null];    // game+bonus at the moment of freezing, while a freeze is on
   const boards = [null, null];          // the template's own handles, via ctl.attach
+  // Each board's REAL engine teardown (core/engine.js's own cleanupAll —
+  // stops that board's 500ms clock interval, closes its menu/panel, runs the
+  // template's own cleanup), registered by engine.js itself via
+  // ctl.registerCleanup below. Đợt 131: teardown() used to call only
+  // `boards[side].lock(true)` (the TEMPLATE's lock, from ctl.attach) and
+  // never this — so every match rebuild left both boards' old clocks ticking
+  // forever in the background, each free to fire its own "time's up" cue on
+  // its own leftover schedule while the NEW match's clock read something
+  // else entirely (teacher, 12/8/2026: heard it with 2 minutes still showing).
+  const cleanupFns = [null, null];
   let roundIndex = 0;
   // Side that got the current word RIGHT first — i.e. actually won the round.
   // Getting there first while WRONG does not win it (teacher, 12/8/2026), see
@@ -399,6 +409,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (btn && !btn.disabled) btn.click();
       setTimeout(() => { playRelaying = false; }, 400);
     },
+
+    // The engine's own teardown for this board (Đợt 131) — called from
+    // engine.js's startGame() unconditionally, before anything else, so
+    // teardown() below can always reach it. Kept separate from `attach`
+    // (the TEMPLATE's own handle) on purpose: a template that never joins
+    // the fight contract at all would still leak its clock without this.
+    registerCleanup(side, fn) { cleanupFns[side] = fn; },
 
     // --- what the template tells us ---
     attach(side, api) {
@@ -720,5 +737,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     clearTimeout(roundTimer);
     FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });
     boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
+    // Đợt 131: the actual fix for the ghost-clock bug — stop BOTH boards'
+    // engines for real, not just the template's lock() above. Safe to call
+    // even when a board already tore itself down through its own button
+    // (cleanupAll() is idempotent, see core/engine.js) and safe when a board
+    // never finished mounting (cleanupFns[side] stays null, guarded below).
+    cleanupFns.forEach(fn => { try { fn && fn(); } catch { /* board already gone */ } });
   }
 }

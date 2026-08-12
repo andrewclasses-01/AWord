@@ -5,7 +5,38 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 130) — ⭐ LỖI THẬT: ĐANG ĐẤU MÀ MỞ PANEL NÚT CHỨC NĂNG
+> Cập nhật lần cuối: **12/8/2026 (Đợt 131) — ⭐ LỖI THẬT: ĐỒNG HỒ MA — TIẾNG "HẾT GIỜ" PHÁT
+> RA DÙ ĐỒNG HỒ TRÊN MÀN CÒN NGUYÊN 2 PHÚT (FIGHT MODE). ⭐ CÓ SỬA CORE (`engine.js` + `fight.js`),
+> KHÔNG đụng template nào. 🟢 ĐÃ TỰ TEST (đo bằng đếm `setInterval` sống qua trình duyệt thật, 0 lỗi
+> console). ✅ THẦY DUYỆT → **COMMIT (LOCAL)** — **CHỐT Ở LOCAL, CHƯA PUSH** (thầy gộp chung với các
+> đợt sửa khác đang làm, sẽ push một thể sau).
+> Thầy báo: đang chơi, nghe tiếng hết giờ trong khi đồng hồ hiển thị còn 2 phút.
+> **Gốc lỗi**: mỗi khi trận Fight dựng lại (Start again / Options > Apply / Đổi template giữa trận /
+> thoát Fight về Single), `core/fight.js`'s `teardown()` chỉ gọi `lock(true)` — hàm khoá của
+> RIÊNG TEMPLATE — chứ chưa bao giờ gọi `cleanupAll()` thật của engine (hàm tắt đồng hồ 500ms, đóng
+> menu/panel, chạy cleanup riêng của template). Khung KHÔNG-giữ-thanh-công-cụ (bàn còn lại) thì
+> **100% không bao giờ được dọn** ở BẤT KỲ đường nào (nút Menu/Home của nó đã bị gỡ khi vào trận), còn
+> khung GIỮ thanh công cụ chỉ được dọn ở 2/5 đường (Start again từ Menu trong game, Options > Apply) —
+> **3 đường còn lại (Đổi template, thoát Fight về Single, "Start again" từ màn kết quả trận) không dọn
+> bàn nào cả**. Đồng hồ bị bỏ quên cứ đếm tiếp trong im lặng, và khi NÓ hết giờ theo lịch riêng của nó
+> thì vẫn phát tiếng — không liên quan gì tới đồng hồ MỚI đang hiện trên màn.
+> **Sửa**: `core/engine.js` đăng ký `cleanupAll` thật của mỗi bàn với trọng tài trận đấu
+> (`fight.ctl.registerCleanup(side, cleanupAll)`, gọi ngay từ đầu `startGame()`); `core/fight.js` gọi
+> lại TOÀN BỘ các hàm đã đăng ký trong `teardown()`. `cleanupAll()` được thêm cờ chặn gọi 2 lần (một
+> bàn có thể vừa tự dọn qua nút riêng, vừa bị trọng tài dọn lại — an toàn, không chạy 2 lần).
+> **Đã tự đo qua trình duyệt thật** (đếm `setInterval` đang sống bằng cách tráo `window.setInterval`):
+> cả 3 đường trước đây rò rỉ (Đổi template Anagram↔Quiz giữa trận, thoát Fight về Single, Start again)
+> nay đều về **đúng 0 đồng hồ sống** ngay sau khi dựng lại/thoát (trước sửa sẽ giữ nguyên 2); chế độ
+> chơi đơn (không đấu) vẫn tắt bình thường y hệt trước — không đổi hành vi. 0 lỗi console.
+> ⬜ **Vẫn còn 1 vấn đề khác thầy báo cùng lúc CHƯA có kết luận chắc chắn**: "có lượt 1 trong 2 bên bấm
+> ô chữ không nhận, next sang ô khác thì được" — thầy xác nhận xảy ra NGAY LÚC TỪ MỚI VỪA HIỆN, không
+> rõ đội thắng hay đội thua vòng trước. Nghi vấn hàng đầu: một khoảnh khắc rất ngắn ngay lúc từ mới
+> hiện ra mà cả hàng ô chữ bị khoá nhầm dù đội đó chưa hề bị khoá thật (đường đua giữa hoạt cảnh chuyển
+> từ không đồng bộ và trạng thái khoá của trọng tài) — CHƯA bắt được tận tay, cần điều tra thêm/thầy
+> quan sát thêm trước khi sửa.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 131.
+>
+> Trước đó: **12/8/2026 (Đợt 130) — ⭐ LỖI THẬT: ĐANG ĐẤU MÀ MỞ PANEL NÚT CHỨC NĂNG
 > THÌ KHÔNG BẤM ĐƯỢC GÌ. ⭐ CÓ SỬA CORE (`app.css` 1 khối + `engine.js` 1 chỗ), KHÔNG đụng template.
 > ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
 > Thầy báo kèm ảnh: đang đấu, bấm Options/Template/Style thì màn tối sầm, panel hiện ra nhưng **bấm gì
