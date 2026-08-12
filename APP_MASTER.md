@@ -1653,7 +1653,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (chốt 12/8/2026 sau Đợt 124 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 134 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -1678,7 +1678,7 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (12/8/2026)
+### 3. Đứng ở đâu (13/8/2026)
 **17 template, tất cả `built:true` trong `core/catalog.js`, tất cả LIVE**, mỗi loại có content editor
 riêng, và `play.html` (trang HS) chơi được cả 17:
 
@@ -1686,27 +1686,47 @@ riêng, và `play.html` (trang HS) chơi được cả 17:
 maze_chase · whack_a_mole · flying_fruit · balloon_pop · crossword · unjumble · speaking_cards ·
 running_word · running_team · speaking`
 
+**FIGHT MODE** (nút MODE lật 1 khung ↔ 2 khung đấu nhau, `core/fight.js`, từ Đợt 124) nay có **2 template
+tham gia: Anagram và Quiz** (`tpl.fightMode: true`) — mọi thay đổi ở `core/fight.js` từ giờ PHẢI tự test
+cả 2, không chỉ Anagram.
+
 **3 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **124** | ⭐⭐ **FIGHT MODE** — nút MODE lật 1 khung ↔ **2 khung đấu nhau cùng 1 từ** (Anagram trước). File mới `core/fight.js` | `80d3e86` |
-| **123** | **Một act mang cả chữ lẫn giọng** — Options > Content (Text/Voice), bỏ cặp ENG1 + ENG1 VOICE | `1f8552a` |
-| **122** | **Nạp trước giọng + tiếng + ảnh** rồi mới cho bấm PLAY (cổng chờ của lõi) | `5b9f8ec` |
+| **134** | **12 cải tiến UI/UX Anagram đơn+đấu** (slogan lên chung thanh trên, cụm loa 5 cột nhạy hơn, Options tự thu nhỏ khi tràn, animation popup mượt toàn app, số điểm tay 7-segment, "TEAM LEFT/RIGHT WINS"...) + ⭐ vá lỗi thật "2 loa lệch màu" (PULL voice state) | `0a24c62` |
+| **133** | FIGHT MODE: cửa sổ hòa 0,1s, điểm rơi khi bị từ chối, bỏ "Same letters", voice dùng chung 1 bản | `1222b23` |
+| **132** | 6 cải tiến Anagram: Mix voice, loa+equalizer thật, slogan trở lại, ẩn loa khi Text, khung dưới co giãn, Options rộng hơn | `b4df0d0` |
 
 Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`) — dữ liệu bền cấp app,
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
-**Đang chờ thầy xem bằng MẮT (Đợt 124, không ai tự kiểm được):**
-- Bố cục FIGHT MODE thật, và **cỡ chữ khi fullscreen trên bảng TOMKO** (tính ra còn ~57-60% so với
-  single fullscreen). Nếu nhỏ quá: đường lùi đã tính sẵn — bỏ dải trên, cho scoreboard đè mờ vào góc
-  khung để lấy lại chiều cao.
+**⭐ MỚI nhất — CHỜ TEST TOMKO (Đợt 134, không ai tự kiểm được qua code):**
+- Nghe cụm loa 5 cột qua loa ngoài thật (chỉ đo được bằng số `--h` qua code, chưa nghe bằng tai)
+- Cảm giác chạm cụm loa/nút loa đã dài hơn — có thoải mái trên màn cảm ứng không
+- Số điểm tay kiểu 7 nét (LED) — nhìn trên màn 86" có rõ/đẹp không (mới lần đầu dùng kiểu chữ này ở AWord)
+- Animation mở/đóng popup (Options/Menu...) mượt tới đâu khi bấm tay thật — code đo được KHÔNG lỗi
+  nhưng "cảm giác mượt" chỉ thầy đánh giá được
+
+**Còn tồn đọng từ các đợt trước (chưa ai xử lý):**
+- **Đợt 131 #2 CHƯA sửa**: đôi khi bấm ô chữ đầu từ mới trong FIGHT MODE không nhận ngay, next sang ô
+  khác thì được — nghi race giữa `fadeSwap` và trạng thái khoá của trọng tài lúc từ mới vừa hiện. CHƯA
+  bắt được tận tay qua code, cần thầy quan sát thêm khi nào tái hiện lại. (Khác với lỗi "2 loa lệch
+  màu" đã vá ở Đợt 134 — đó là bug khác, cùng họ race-condition nhưng không phải cùng 1 chỗ.)
+- **Panel Options Đấu+Anagram vẫn có thể cần cuộn ở trường hợp cực đoan** (màn thấp + nhiều nhóm cùng
+  hiện) — Đợt 134 đã thêm cơ chế tự thu nhỏ chữ/khoảng cách (`is-compact-opts`, ~78-86% cỡ thường), đo
+  thật giảm được kha khá (603px→556px ở 1 phép đo) nhưng KHÔNG hứa hết cuộn tuyệt đối; muốn hết hẳn
+  phải cho panel đè lên hàng nút phía dưới (Đợt 132 từng nêu hướng này) — **thầy chưa duyệt hướng đó**.
+- **"Different words" trong fight mode chưa có voice riêng từng bàn** (Đợt 132) — chỉ mirror giọng của
+  bàn 0 sang bàn kia dù 2 bàn đang chơi 2 từ khác nhau.
 
 **FIGHT MODE — phần thầy đã chốt là LÀM SAU, đừng tự làm:**
 - **CHUÔNG** (đã chừa sẵn chỗ trong bố cục, thầy chốt bỏ ở đợt đầu)
-- **Tên đội tự đặt** (đang cứng "TEAM 1"/"TEAM 2")
-- **16 template còn lại** (thầy chốt: hoàn thiện Anagram trước rồi mới lan ra)
+- **Tên đội tự đặt** (đang cứng "TEAM LEFT"/"TEAM RIGHT" từ Đợt 134, trước đó "TEAM 1"/"TEAM 2")
+- **15 template còn lại chưa vào fight mode** (chỉ Anagram + Quiz đã có, Đợt 133; thầy chốt: hoàn
+  thiện Anagram trước rồi mới lan ra)
 - Đổi template giữa trận đang bị **từ chối có chủ ý** (toast) — chỉ mở khi có template thứ 2 biết đấu
+  (⚠️ giờ ĐÃ có Quiz — câu hỏi treo này có thể đã lỗi thời, hỏi lại thầy có muốn mở chưa)
 
 **Câu hỏi treo, chưa hỏi thầy:**
 - `anagram-editor.js` còn nút **"Hide text" từng hàng + Hide/Show all**; từ Đợt 123 chúng chỉ còn ý
