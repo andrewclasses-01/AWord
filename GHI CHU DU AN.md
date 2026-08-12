@@ -141,8 +141,32 @@ Tờ ghi chú "cần tạo lại giọng ở bài nào" đã lưu tay vào
 tay vẫn chạy bình thường). Đáng tạo lại thật sự: **4 act nội dung thật = 360 từ**, ước tính chỉ còn
 **4-5 MB** thay vì 154 MB.
 
-- ⬜ **Chưa tự test được (cần thầy)**: nghe thử clip mp3 mới trên **iPad/iPhone thật**, và tạo lại giọng
-  cho 4 act nội dung thật để nghiệm thu chất lượng 48k trong lớp.
+### 7. ✅ NGHIỆM THU XONG TRÊN DỮ LIỆU THẬT + THIẾT BỊ THẬT (12/8/2026, cùng ngày)
+
+**a) Bài thật đầu tiên thầy tự tạo sau khi lên MP3** — `LSA2-S2.T4.P3-4-5 / ENG1` (anagram, act num
+163, giọng `bf_isabella`). Đọc thẳng Firestore để kiểm, không tin cảm giác:
+
+| | |
+|---|---|
+| Từ có giọng | **35/35**, không sót, không clip hỏng |
+| Định dạng | **35 MP3 / 0 WAV** (`data:audio/mpeg;base64`) |
+| **Bitrate ĐO NGƯỢC** (bytes×8÷thời lượng giải mã) | **đúng 48 kbps** ở mọi clip kiểm |
+| Cả bài | **918,6 KB** (nếu còn WAV: ~17 MB ⇒ **nhẹ ~19 lần**) |
+| Cả kho `voiceClips` | **35 clip / 0,90 MB = 0,09%** hạn mức 1 GiB |
+
+⚠️ **Đừng hoảng khi thấy clip nặng hơn số đo trong mục 2** (26,2KB trung bình so với 8–16KB): **Anagram
+đọc CÂU GỢI Ý chứ không phải từ đơn** (vd `LICENCE` → *"An official paper that says you are allowed
+t…"*, **4,68 giây**). Cách kiểm đúng là **đo ngược bitrate**, đừng so kích thước tuyệt đối giữa các
+template — template nào đọc câu dài thì clip to hơn là chuyện bình thường. Clip càng dài nén càng lợi
+(19x so với 15x của từ đơn).
+
+**b) ✅ THIẾT BỊ THẬT — THẦY ĐÃ TỰ TEST: iPhone, iPad, Windows đều NGHE TỐT.**
+⭐ Đây là mảnh cuối cùng của rủi ro lớn nhất đợt này. Quyết định "MP3 chứ không Opus" (mục 3) nay
+**đã được chứng thực trên máy Apple thật**, không còn là suy luận từ bảng tương thích. Từ đây MP3 là
+lựa chọn ĐÃ NGHIỆM THU cho mọi thứ audio của hệ AWord — đừng đem ra bàn lại.
+
+⬜ Còn lại (không chặn gì): tạo lại giọng cho 4 act cũ trong danh sách ở
+`AWord-data\Backup\GIONG DOC CAN TAO LAI (sau don dep 12-8-2026).txt`.
 
 ---
 

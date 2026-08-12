@@ -11,6 +11,15 @@
 > (`curl` xác nhận: `tts.js` có `MP3_KBPS = 48` + `toMp3DataUrl` + trỏ `vendor/lamejs.mjs`, và VẪN CÒN
 > `audio.toBlob` của nhánh dự phòng; `core/vendor/lamejs.mjs` 200/165,4KB có `Mp3Encoder`;
 > `tools-voice-cleanup.html` 200).
+> ✅✅ **ĐÃ NGHIỆM THU TRỌN VẸN (12/8/2026)** — bài thật đầu tiên thầy tự tạo sau khi lên MP3
+> (`LSA2-S2.T4.P3-4-5 / ENG1`, act 163): đọc thẳng Firestore ra **35/35 clip MP3, 0 WAV**, **bitrate đo
+> ngược đúng 48 kbps**, cả bài **918,6 KB** (nếu còn WAV: ~17 MB ⇒ **nhẹ ~19 lần**), cả kho `voiceClips`
+> nay **0,90 MB = 0,09%** hạn mức. **Thầy tự test iPhone + iPad + Windows: nghe tốt cả ba** ⇒ quyết định
+> "MP3 chứ không Opus" đã được chứng thực trên máy Apple thật, KHÔNG bàn lại.
+> ⚠️ Clip Anagram nặng hơn số đo từ-đơn (26,2KB vs 8–16KB) là **bình thường: Anagram đọc CÂU GỢI Ý**
+> (3,6–4,7 giây). Muốn kiểm nén có chạy không thì **đo bitrate**, đừng so kích thước tuyệt đối.
+> ⭐ Luật chung "media sinh trong trình duyệt phải nén trước khi lưu" (7 điều, dùng cho MỌI app sau này)
+> đã ghi ở `core/HUONG DAN CORE.md` mục GIỌNG ĐỌC TTS.
 > ⚠️ **Đợt này đánh số 121 chứ không phải 117** — build xong mới biết một phiên Claude song song đã lấy
 > mất 117→120; đã đổi số + xếp lại thứ tự lúc rebase. Nhắc lại luật: nhiều phiên chạy song song, phải
 > `git status`/`git diff` TRƯỚC khi add, KHÔNG BAO GIỜ `git add -A`, và **kiểm lại số Đợt sau khi pull**.**

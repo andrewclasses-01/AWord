@@ -257,10 +257,30 @@ loạt của `core/voice-batch.js`). Worker **KHÔNG có `AudioContext`**. Mọi
 ⚠️ **BẪY 3 — ĐỪNG "tối ưu" MP3 sang Opus.** Opus nhỏ hơn ~3x nữa và Chrome có sẵn WebCodecs (không cần
 thư viện), nhưng **Safari chỉ phát được Opus từ iOS 18.4 (3/2025)** → HS dùng iPad đời cũ sẽ **câm
 tiếng**, đúng loại bug mà máy build Chrome/Windows mù hoàn toàn (cùng họ với bẫy
-`-webkit-tap-highlight-color`). MP3 chạy mọi trình duyệt, mọi đời máy. Đây là quyết định CÓ CHỦ Ý.
+`-webkit-tap-highlight-color`). MP3 chạy mọi trình duyệt, mọi đời máy. Đây là quyết định CÓ CHỦ Ý —
+và **✅ ĐÃ NGHIỆM THU: thầy tự test iPhone + iPad + Windows, nghe tốt cả ba** (12/8/2026). Không bàn lại.
 
 Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
 nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
+
+### ⭐⭐ LUẬT CHUNG — MEDIA SINH RA TRONG TRÌNH DUYỆT PHẢI NÉN TRƯỚC KHI LƯU
+Rút ra từ đợt này, áp cho **mọi loại media về sau** (âm thanh, ảnh, video ngắn), ở AWord lẫn app khác:
+1. **Thư viện AI/Web API hay trả định dạng THÔ** vì nó tiện cho xử lý, không phải để phát: Kokoro trả
+   PCM 32-bit float (768 kb/s), canvas trả `toDataURL()` PNG không nén ảnh chụp. **Mặc định là lãng phí
+   — luôn kiểm định dạng đầu ra trước khi đem lưu.**
+2. **Nén ngay tại HÀM SINH RA nó, không phải ở nơi gọi.** Sửa 1 chỗ (`generateSpeechDataUrl`) là cả 4
+   đường gọi + mọi template được hưởng, 0 call-site phải đổi.
+3. **Đổi định dạng phải tương thích ngược miễn phí**: dữ liệu cũ vẫn phải dùng được. Ở đây được là nhờ
+   nơi phát chỉ gán chuỗi vào `<audio>.src` — MIME nằm trong chính data URL. Thiết kế mới nên giữ tính
+   chất đó (ảnh: `<img>.src`; đừng đi đường nào phải "biết trước định dạng").
+4. **Luôn có nhánh dự phòng**: nén lỗi thì `console.warn` + trả bản thô, đừng để mất hẳn dữ liệu.
+5. **Chọn định dạng theo MÁY YẾU NHẤT của học sinh, không theo máy build.** Cứ có 2 lựa chọn "nhỏ hơn
+   nhưng mới" và "to hơn nhưng chạy mọi nơi" thì **chọn cái chạy mọi nơi** — trừ khi đã test máy thật.
+6. **Đo bằng bitrate/tỷ lệ, đừng đo bằng kích thước tuyệt đối.** Clip dài thì file to là đúng; muốn biết
+   nén có chạy không thì lấy `bytes×8÷thời-lượng` rồi so với bitrate đã khai.
+7. **Nhớ trần lưu trữ của nơi chứa**: Firestore = **1 MiB/document** và base64 phình **+33%**; batch bị
+   chặn theo **DUNG LƯỢNG ~10 MiB** chứ không chỉ 500 thao tác. Media nặng thì tách document riêng
+   (kiểu `voiceClips/{id}`) và thao tác từng cái, đừng gộp lô lớn.
 
 ⚠️ **KHI XOÁ AUDIO HÀNG LOẠT**: một item mang voice qua 3 khoá đi liền nhau `voice` / `voiceId` /
 `hideText`. **TUYỆT ĐỐI KHÔNG đụng `phonemes`** — đó là chuỗi IPA template **Speaking** dùng để chấm
