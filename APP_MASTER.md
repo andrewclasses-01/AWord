@@ -5,7 +5,40 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 128) — ⭐ XONG TRƯỚC MÀ SAI THÌ KHÔNG ĐƯỢC CƯỚP TỪ +
+> Cập nhật lần cuối: **12/8/2026 (Đợt 129) — GIẤU ĐÁP ÁN TỚI KHI CẢ 2 XONG · ĐỒNG BỘ 100%
+> HIỆU ỨNG NEXT/BACK · GỘP HÀNG NÚT · ⭐ FULLSCREEN THẬT. ⭐ CÓ SỬA CORE (`fight.js` + `engine.js` +
+> `app.css`) + Anagram + Quiz. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+> (1) ⭐ **Giấu ✓/✗ của đội xong trước cho tới khi đội kia xong.** Đợt 128 cho đội sai "hiện phản hồi
+> sai như bình thường" — nhưng chính nó **lộ đáp án**: Quiz vẽ ✓ lên ô ĐÚNG và làm mờ mọi ô sai (riêng
+> việc làm mờ đã chỉ thẳng ra ô đúng), Anagram tô màu TỪNG VỊ TRÍ và **in thẳng từ đúng**. Nay bàn xong
+> khi vòng còn mở **chỉ đổi màu xám**, không dấu/không mờ/không tô chữ/không in đáp án; vòng đóng thì
+> **cả 2 bàn cùng lộ** để mỗi bên biết mình sai đâu và đáp án là gì. Hợp đồng thêm `reveal()`;
+> Anagram lộ **cả 7-8 vị trí CÙNG LÚC** (bản lần lượt tốn 2,4s > `ROUND_HOLD_MS` 2100ms nên vòng sẽ
+> sang từ mới giữa chừng). Âm thanh KHÔNG giấu (chỉ nói đội đó làm sao, không chỉ ra đáp án).
+> (2) **Next/Back đồng bộ 100%**: cả 2 template báo `boardMoved` **SAU** hoạt cảnh ⇒ bàn kia trễ
+> 130-160ms; và Quiz `jumpTo` **cắt phụt không hoạt cảnh** trong khi bàn kia trượt. Nay báo TRƯỚC, và
+> `jumpTo` gọi thẳng `showQuestion()` nên 2 bàn chạy CÙNG hàm. Đo: bấm Previous ở 1 bàn, opacity 2 bàn
+> **trùng khít từng khung** (0.76/0.76 · 0.38/0.38 · 0.12/0.12 …).
+> (3-5) **MODE vào ghế giữa** (Options·Template·**MODE**·Style·Fullscreen) · **ô điểm tay = đúng cỡ nút
+> công cụ 44×44** · **gộp hàng ô điểm tay + hàng nút thành MỘT hàng** (ô điểm tay vẫn đúng tâm khung
+> của đội mình — đo 246/726 khớp tâm 2 khung; lệch dọc **0px**).
+> ⚠️ 2 bẫy đã vá: thanh công cụ rộng 1000px **nằm đè lên 2 ô điểm tay và nuốt hết cú chạm** (2 ô ngoài
+> chỉ `visibility:hidden` nên vẫn chiếm chỗ) → `pointer-events:none` cho thanh, trả `auto` cho cụm nút;
+> và `.aw-below` có `margin-top:18px`, nằm trong hộp căn giữa tuyệt đối thì đẩy nút xuống đúng **nửa**
+> (đo lệch 9px) → ép `margin-top:0`.
+> (6) ⭐ **FULLSCREEN THẬT — lỗi gốc là nút phóng to NHẦM PHẦN TỬ.** Nút dùng chung gọi `fsBtn.click()`
+> của engine **bàn 0**, mà engine mỗi bàn chạy với `root = boardEls[i]` = **div của riêng bàn đó** ⇒
+> phóng to đúng 1 khung, bàn kia + dải điểm + hàng nút nằm ngoài màn hình (đo: `board0.contains(.aw-fight)`
+> = **false**). Nay `ctl.toggleFullscreen()` phóng to **root của chính TRẬN**; đo lại: yêu cầu trên
+> **`#app`**, và `#app` **chứa trọn cả trận**. Bố cục `.aw-fight.is-fs` dùng **class do JS bật** chứ
+> không dùng `:fullscreen` (CSS single-mode sẵn có sẽ thổi từng khung con ra 100vw và **xoá luôn thanh
+> công cụ**; thêm nữa mỗi tiền tố phải là luật riêng ⇒ ~20 luật trùng). Chống tràn dọc bằng cách giới
+> hạn **BỀ NGANG** hàng khung. Đo 1280×720 và 1600×520: tràn **0px**, tỉ lệ khung **1.524-1.525** đúng
+> đích, thanh công cụ còn nguyên. ⬜ **Chưa bấm được fullscreen THẬT** (API đòi user-activation thật,
+> pane test không cấp) — thầy bấm thử trên máy giúp em.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 129.
+>
+> Trước đó: **12/8/2026 (Đợt 128) — ⭐ XONG TRƯỚC MÀ SAI THÌ KHÔNG ĐƯỢC CƯỚP TỪ +
 > VÁ 404 CSS Ở TRANG TEST. ⭐ CÓ SỬA CORE (`fight.js` + `registry.js`) + Anagram + Quiz.
 > ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
 > (1) ⭐ **LUẬT MỚI: XONG TRƯỚC ≠ THẮNG.** Trước đây ai báo xong trước là ăn từ, bất kể đúng sai ⇒ bấm

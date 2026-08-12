@@ -278,7 +278,6 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   const optionsBtn = toolBtn(icons.options, "Options");
   const templateBtn = toolBtn(icons.template, "Template");
   const styleBtn = toolBtn(icons.style, "Style");
-  belowCenter.append(optionsBtn, templateBtn, styleBtn);
   // MODE (Đợt 124) — SINGLE MODE <-> FIGHT MODE, for templates that opt in with
   // `tpl.fightMode` (Anagram so far). Teacher path only: a pupil playing an
   // assignment never sees this row at all. core/fight.js is DYNAMIC-imported so
@@ -292,8 +291,14 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // no way back. Same popover mechanism as Options/Template/Style
     // (openToolPanel), just with a Yes/Cancel question instead of controls.
     modeBtn.onclick = () => openToolPanel(modeBtn, buildModeConfirmPanel);
-    belowCenter.append(modeBtn);
   }
+  // DURING A MATCH the row is 5 wide (…/MODE/Fullscreen) and MODE swaps places
+  // with Style so it lands dead centre (teacher, 12/8/2026) — it is the button
+  // that governs the whole match, so it gets the middle seat. Outside a match
+  // the row is its usual Options/Template/Style, with MODE simply appended.
+  if (fight && modeBtn) belowCenter.append(optionsBtn, templateBtn, modeBtn, styleBtn);
+  else if (modeBtn) belowCenter.append(optionsBtn, templateBtn, styleBtn, modeBtn);
+  else belowCenter.append(optionsBtn, templateBtn, styleBtn);
   function buildModeConfirmPanel(panel) {
     const toFight = !fight;
     panel.append(el("div", "aw-tool-panel-head", toFight ? "Switch to Fight mode?" : "Switch to Single mode?"));
@@ -337,7 +342,12 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // both boards go full-screen together as one page.
   const fightFsBtn = fight ? toolBtn(icons.fullscreen, "Fullscreen") : null;
   if (fightFsBtn) {
-    fightFsBtn.onclick = () => fsBtn.click();   // one implementation, in the engine's own handler
+    // ⚠️ NOT `fsBtn.click()`. This engine's own Fullscreen promotes ITS `root`,
+    // which inside a match is just this ONE board's div — so the match went
+    // full-screen showing a single board, with the other board, the scoreboard
+    // strip and this very toolbar all left outside. The match controller owns
+    // the element that holds all of them (see ctl.toggleFullscreen).
+    fightFsBtn.onclick = () => { sound.click(); fight.ctl.toggleFullscreen(); };
     belowCenter.append(fightFsBtn);
   }
 

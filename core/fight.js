@@ -110,7 +110,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const wrap = el("div", "aw-fight");
   const top = el("div", "aw-fight-top");
   const boardsRow = el("div", "aw-fight-boards");
-  const handsRow = el("div", "aw-fight-hands");
+  // ONE row under the boards holds BOTH the teacher's hand-point boxes and the
+  // shared toolbar, on the same line (teacher, 12/8/2026 fourth pass) — the
+  // hands stay dead centre under their own board while the toolbar floats
+  // centred over the join between them.
+  const controlsRow = el("div", "aw-fight-controls");
   const bottom = el("div", "aw-fight-bottom");
 
   // ----- the strip above the boards -----
@@ -133,20 +137,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   middle.append(clockBox);
   top.append(half0, half1, middle);
 
-  // ----- one row below the boards, each hand-points box under its own board -----
-  // Same two-halves grid as `top` (matches boardsRow's columns/gap) so each
-  // box sits dead centre under ITS OWN board, same reasoning as the team score
-  // above it.
+  // ----- the row under the boards: hand points · toolbar · hand points -----
+  // Same two-halves grid as `top` (matches boardsRow's columns/gap) so each box
+  // sits dead centre under ITS OWN board, same reasoning as the team score
+  // above it. `bottom` (the shared toolbar) is absolutely centred over the
+  // whole row by CSS, so all three sit on one line.
   const hands = [makeHand(0), makeHand(1)];
   const handHalf0 = el("div", "aw-fight-handhalf");
   const handHalf1 = el("div", "aw-fight-handhalf");
   handHalf0.append(hands[0].el);
   handHalf1.append(hands[1].el);
-  handsRow.append(handHalf0, handHalf1);
+  controlsRow.append(handHalf0, handHalf1, bottom);
 
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
-  wrap.append(top, boardsRow, handsRow, bottom);
+  wrap.append(top, boardsRow, controlsRow);
   root.append(wrap);
 
   function makeTeam(side) {
@@ -332,9 +337,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     roundTimer = setTimeout(() => { roundTimer = null; if (!torndown) fn(); }, ms);
   }
 
+  // The round is settled for BOTH teams — let each board finally show the ✓/✗
+  // it has been holding back (teacher, 12/8/2026: a board that finishes while
+  // the other is still playing must not display which answer was right, or the
+  // team still choosing simply copies it). Called only once nobody is left to
+  // play, so there is nothing left to give away. Templates that don't
+  // implement `reveal` are unaffected.
+  function revealBoards() {
+    boards.forEach(b => { try { b && b.reveal && b.reveal(); } catch { /* board already gone */ } });
+  }
+
   // ----- the round: both boards hold the SAME word index -----
   function advanceRound() {
     if (matchOver || torndown) return;
+    // Safety net for the walk-away path (the 20s backstop fires straight in
+    // here): nobody may leave a round still owing a hidden result, or the
+    // board would carry the withheld grey into the next word.
+    revealBoards();
     roundWinner = null;
     roundDone = [false, false];
     // The winner's glow belongs to the word that was just won, not to the next
@@ -352,6 +371,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function endMatch() {
     if (matchOver) return;
     matchOver = true;
+    revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
     showResult();
   }
@@ -410,14 +430,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
       if (!correct) {
         // Wrong. This board is out of the round — lock it so the mistake
-        // stands (its own template already painted the usual wrong-answer
-        // feedback; the "too slow" grey is deliberately NOT used here, that
-        // one means "the other team beat you to it").
+        // stands. Its result stays HIDDEN for now (the template withholds the
+        // ✓/✗ and shows only neutral grey) precisely because the other team is
+        // still choosing and would otherwise read the answer straight off this
+        // board.
         boards[side] && boards[side].lock(true);
         // If the other team has already had its go, nobody is left to play —
-        // move on. Otherwise wait for them, with the same walk-away backstop
-        // used by "let the other team finish" so a lesson can never hang.
-        later(advanceRound, (roundDone[other] || roundWinner !== null) ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+        // show both results and move on. Otherwise wait for them, with the
+        // same walk-away backstop used by "let the other team finish" so a
+        // lesson can never hang.
+        const settled = roundDone[other] || roundWinner !== null;
+        if (settled) revealBoards();
+        later(advanceRound, settled ? ROUND_HOLD_MS : LATE_LIMIT_MS);
         return;
       }
 
@@ -437,12 +461,14 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // round here, or the other team is already done); otherwise give them
         // their chance, capped so a team that walks away can't freeze the class.
         const nobodyLeft = fo.fightFirstRule === "lock" || roundDone[other];
+        if (nobodyLeft) revealBoards();
         later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
       } else {
         // Correct, but the round was already won. With `fightLateScores:false`
         // only the winner scores it, so this team's number is frozen where it
         // is and the points still on their way in are cancelled as they land.
         if (!fo.fightLateScores) { frozenAt[side] = game[side] + bonus[side]; holdFreeze(side); paintScore(side); }
+        revealBoards();
         later(advanceRound, ROUND_HOLD_MS);
       }
     },
@@ -508,6 +534,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     //    from it again would compound the loss — hence `originAct`, the
     //    teacher's original, carried across every rebuild by restartMatch.
     sourceActivity() { return originAct; },
+    // ⚠️ FULLSCREEN BELONGS TO THE MATCH, NOT TO A BOARD (teacher, 12/8/2026:
+    // "fullscreen hiển thị đủ toàn bộ cả 2 khung act + dải điểm + hàng nút").
+    // The engine's own Fullscreen button promotes ITS `root` — and inside a
+    // match each board's engine was started with `root = boardEls[i]`, so
+    // going full-screen from there blew up ONE BOARD to fill the screen and
+    // left the other board, the scoreboard strip and the toolbar outside it
+    // entirely. The match's own root is the only element that holds all three,
+    // so the shared button routes here instead.
+    toggleFullscreen() {
+      if (anyFsElement()) exitFsAny();
+      else requestFsOn(root);
+    },
     // The MODE button, also drawn by the engine, comes back here.
     isFight: true,
     // Back to a single board. `base` goes with it for the same reason it
@@ -633,6 +671,45 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   paintScore(0); paintScore(1);
   paintHand(0); paintHand(1);   // carried over from the previous match, by design
 
+  // ----- FULLSCREEN (teacher, 12/8/2026 fourth pass) -----
+  // A match must go full-screen as ONE picture: both boards + the score/clock
+  // strip + the toolbar, all visible, nothing cut off, no browser chrome.
+  //
+  // ⚠️ Why a CLASS and not the `:fullscreen` pseudo-class. core/app.css already
+  // has `:fullscreen .aw-page { width:100vw; height:100vh }` and
+  // `:fullscreen .aw-below { display:none }` for SINGLE mode — inside a match
+  // those hit EACH BOARD's own page (blowing both up to the whole screen) and
+  // delete the shared toolbar. Overriding them needs higher specificity, and
+  // every vendor spelling must be written as its OWN rule (a browser drops a
+  // whole selector list containing one pseudo-class it doesn't know), so the
+  // pseudo-class route costs ~20 near-duplicate rules. One JS-toggled class
+  // beats all of them on specificity and stays in ONE readable block.
+  const FS_EVENTS = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+  function anyFsElement() {
+    return document.fullscreenElement || document.webkitFullscreenElement ||
+           document.mozFullScreenElement || document.msFullscreenElement || null;
+  }
+  // Vendor-probed, same spellings core/engine.js uses (the TOMKO panel needs
+  // the prefixed ones — unprefixed alone left it filling a corner there).
+  function requestFsOn(elem) {
+    const fn = elem.requestFullscreen || elem.webkitRequestFullscreen ||
+               elem.mozRequestFullScreen || elem.msRequestFullscreen;
+    if (fn) try { fn.call(elem); } catch { /* refused (no user gesture) */ }
+  }
+  function exitFsAny() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen ||
+               document.mozCancelFullScreen || document.msExitFullscreen;
+    if (fn) try { fn.call(document); } catch { /* ignore */ }
+  }
+  function syncFullscreenClass() {
+    // `root` is what the engine's Fullscreen button actually promotes, so only
+    // treat it as ours when the fullscreen element really contains this match.
+    const fsEl = anyFsElement();
+    wrap.classList.toggle("is-fs", !!fsEl && fsEl.contains(wrap));
+  }
+  FS_EVENTS.forEach(evt => document.addEventListener(evt, syncFullscreenClass));
+  syncFullscreenClass();   // already full-screen when the match is rebuilt (Start again / Apply)
+
   // ⚠️ Nothing in here may throw. teardown() runs on the way INTO a rebuild
   // (Start again / Apply / leaving fight mode), so an exception here stops the
   // new match from ever being built and the old one just sits there — no error
@@ -641,6 +718,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function teardown() {
     torndown = true;
     clearTimeout(roundTimer);
+    FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });
     boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
   }
 }

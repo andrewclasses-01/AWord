@@ -2068,28 +2068,36 @@ body {
   color: #55606d;
 }
 
-/* --- the teacher's own hand points, one box below EACH board (Đợt 124,
-   third pass) --- tap or swipe up to add, swipe down to take off. */
-.aw-fight-hands {
+/* --- ONE row under the boards: hand points · toolbar · hand points ---
+   (teacher, 12/8/2026 fourth pass: the toolbar came UP and the hand boxes went
+   DOWN until they met on a single line.) Same two-column grid as the boards so
+   each hand box stays dead centre under ITS OWN board; the toolbar is centred
+   over the join by .aw-fight-bottom below. */
+.aw-fight-controls {
+  position: relative;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(6px, 1.2vw, 18px);      /* same gap as .aw-fight-boards, so each half matches its board */
+  align-items: center;
+  margin-top: 6px;                   /* a little air under the boards */
 }
 .aw-fight-handhalf { display: flex; justify-content: center; }
 
-/* The BOX ("ô nền") is 60% of its original clamp(46px,4.6vw,72px) — same 60%
-   pass as the score/clock above — and stays exactly this size regardless of
-   what's happening to the number inside (teacher's ask: "giữ nguyên size ô
-   nền" when the number itself was asked to grow back a little, see
-   .aw-fight-handnum below). Blue when positive, red when negative — and a
-   negative shows the bare number with NO minus sign (teacher, 12/8/2026). */
+/* The BOX is EXACTLY a toolbar button (.aw-toolbtn: 44x44, radius 13) so the
+   two hand boxes and the row of tool buttons read as one family across the
+   whole row (teacher, 12/8/2026 fourth pass). Blue when positive, red when
+   negative — and a negative shows the bare number with NO minus sign. */
 .aw-fight-hand {
-  width: clamp(27.6px, 2.76vw, 43.2px);
+  width: 44px;
+  height: 44px;
   box-sizing: border-box;
-  padding: 2.4px 3.6px 3px;
-  border-radius: 8px;
-  border: 1px solid #d5dde6;
-  background: #fbfdff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 13px;
+  border: 1.5px solid #e2e9f2;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(31, 42, 68, .07);   /* same lift as .aw-toolbtn */
   cursor: ns-resize;
   user-select: none;
   touch-action: none;
@@ -2107,14 +2115,14 @@ body {
 /* Fixed-height clipping window for the odometer-style slide (core/fight.js's
    animateHandSlide()) — carries the font-size so .aw-fight-handvalue can just
    `font: inherit` and the two overlapping numbers (old sliding out, new
-   sliding in) always share the exact same metrics. Deliberately a touch
-   BIGGER than a strict 60%-of-original scale (clamp(12px,1.92vw,25.2px) would
-   be the literal 60%) — the box above stays at the 60% width regardless
-   (teacher's ask: "giữ nguyên size ô nền"), only the number reads bigger. */
+   sliding in) always share the exact same metrics. Sized to fill the 44px box
+   generously (teacher: the number reads bigger than a strict scale-down of the
+   box would give) while the box itself stays button-sized. */
 .aw-fight-handnum {
   position: relative;
   overflow: hidden;
-  font-size: clamp(15px, 2.3vw, 29px);
+  width: 100%;
+  font-size: 24px;
   line-height: 1.2;
   height: 1.2em;
 }
@@ -2185,9 +2193,28 @@ body {
 .aw-fight-bottom .aw-below-left,
 .aw-fight-bottom .aw-below-right { visibility: hidden; }
 
-/* --- the one shared toolbar, moved here from board 0 --- */
-.aw-fight-bottom { display: flex; justify-content: center; }
-.aw-fight-bottom .aw-below { width: min(1000px, 100%); }
+/* --- the one shared toolbar, moved here from board 0 ---
+   Absolutely centred over the controls row so it shares that row's single line
+   with the two hand-point boxes instead of sitting on a line of its own. */
+.aw-fight-bottom {
+  position: absolute;
+  left: 0; right: 0; top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  /* ⚠️ The bar is min(1000px,…) wide and therefore lies straight ACROSS both
+     hand-point boxes, which sit at roughly the 25%/75% marks. Without this it
+     would swallow every tap meant for them (its two outer cells are only
+     `visibility:hidden`, so they still cover ground). Only the button cluster
+     itself takes pointer events back. */
+  pointer-events: none;
+}
+/* margin-top:0 overrides `.aw-below`'s usual 18px: inside an absolutely
+   CENTRED box that margin makes the box 18px taller, which pushes the buttons
+   exactly half of it (9px, measured) below the hand boxes they must line up
+   with. */
+.aw-fight-bottom .aw-below { width: min(1000px, 100%); margin-top: 0; }
+.aw-fight-bottom .aw-below-center { pointer-events: auto; }
 /* MODE lights up while a match is on, like the other tool buttons do when
    their panel is open. */
 .aw-below-center .aw-toolbtn.is-active { color: #fff; background: rgba(96, 165, 250, .28); }
@@ -2224,7 +2251,63 @@ body {
 .aw-fight-result-score.is-top { opacity: 1; color: #7ee08a; }
 .aw-fight-result-vs { opacity: .4; font-size: clamp(18px, 2.4vw, 30px); }
 
-/* Fullscreen: the whole match goes full-screen as one piece (core/engine.js
-   requests it on `#app`, which is the fight shell's parent). */
-:fullscreen .aw-fight,
-:-webkit-full-screen .aw-fight { height: 100%; padding-bottom: 10px; }
+/* ============================================================
+   FULLSCREEN, FIGHT MODE (teacher, 12/8/2026 fourth pass)
+   The whole match goes full-screen as ONE picture: score/clock strip + both
+   boards + the toolbar, everything visible, nothing cut off.
+
+   ⚠️ Driven by `.is-fs`, a class core/fight.js toggles on the real
+   fullscreenchange event — NOT by `:fullscreen`. Two reasons, both load-bearing:
+   (1) core/app.css's SINGLE-mode fullscreen rules further up (`:fullscreen
+       .aw-page { width:100vw; height:100vh }` and `:fullscreen .aw-below
+       { display:none }`) would otherwise blow up EACH board's own page to the
+       whole screen and delete the shared toolbar — these rules must outrank
+       them, and a class inside `.aw-fight` does;
+   (2) every vendor spelling of the pseudo-class needs its OWN rule (a browser
+       throws away a whole selector list containing one it doesn't know), so
+       doing this with `:fullscreen` would mean ~20 near-duplicate rules.
+   ============================================================ */
+.aw-fight.is-fs {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  padding: 8px 10px;
+  gap: 8px;
+  justify-content: center;
+}
+/* Everything that is NOT the boards is fixed-height chrome; this is what the
+   boards have to share the screen with. Measured against the real strip
+   (score line-height) + the 44px controls row + the gaps/padding above. */
+.aw-fight.is-fs { --aw-fight-chrome: 132px; }
+/* The two 16:10.5 stages are WIDTH-driven, so the only way to stop them
+   overflowing vertically is to cap how WIDE the row may get: at the cap, a
+   board's derived height is exactly the leftover screen height. */
+.aw-fight.is-fs .aw-fight-boards {
+  flex: 0 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: calc((100dvh - var(--aw-fight-chrome)) * 16 / 10.5 * 2);
+  margin: 0 auto;
+}
+/* Undo the single-mode fullscreen page/stage rules for the boards INSIDE a
+   match: each board's page is a cell of the match, not the screen. */
+.aw-fight.is-fs .aw-fight-board .aw-page {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+.aw-fight.is-fs .aw-fight-board .aw-stage {
+  width: 100%;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  border-radius: 14px;
+}
+/* The shared toolbar stays — in a match it IS the only way out of fullscreen. */
+.aw-fight.is-fs .aw-below { display: grid; }
+/* The controls row keeps its own line at the bottom of the picture. */
+.aw-fight.is-fs .aw-fight-controls { flex: 0 0 auto; margin-top: 0; }
+.aw-fight.is-fs .aw-fight-top { flex: 0 0 auto; }

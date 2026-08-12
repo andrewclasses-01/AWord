@@ -154,6 +154,12 @@ const quizTemplate = {
     const fightCtl = fight ? fight.ctl : null;
     let fightBoardLock = false;   // set by the match controller between rounds
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    // FIGHT MODE — this board has answered but its ✓/✗ are still WITHHELD
+    // because the other team is still playing (teacher, 12/8/2026): showing the
+    // check on the right answer, or even dimming the wrong ones, hands the
+    // answer straight to the team still choosing. Cleared by reveal(), which
+    // the match calls once the round is settled for both.
+    let fightPendingReveal = false;
 
     // one random colour set for this whole play (reshuffled on Start again)
     const palette = shuffle(PALETTE);
@@ -263,6 +269,10 @@ const quizTemplate = {
       const st = state[i];
       const answered = st.chosen !== null;
       const nAns = q.answers.length;
+      // A withheld reveal belongs to the question that was on screen; moving to
+      // another one clears it, or the new question would arrive wearing the
+      // previous round's grey.
+      fightPendingReveal = false;
 
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       questionEl.className = "aw-quiz-question";
@@ -335,11 +345,29 @@ const quizTemplate = {
       // An already-answered question keeps every tile disabled regardless —
       // choose() did that, and the lock must not hand any of them back.
       if (!answered) tiles.forEach(t => { t.tile.disabled = locked; });
-      // "Too slow" (teacher, 12/8/2026) — see the .is-fightlost CSS comment.
-      // A board that answered for ITSELF is excluded: it is locked only
-      // because the round is now over for both, and it has earned the right
-      // to keep showing its own ✓/✗ feedback in full colour.
-      answersRow.classList.toggle("is-fightlost", locked && !answered);
+      // Grey while this board's go is over but its result is not on show yet:
+      // either it never got to play ("too slow" — the other team took the
+      // question), or it HAS answered but the marks are still withheld while
+      // the other team finishes. Once revealed, an answered board drops the
+      // grey so its own ✓/✗ read in full colour.
+      answersRow.classList.toggle("is-fightlost", locked && (!answered || fightPendingReveal));
+    }
+
+    // FIGHT MODE — the match says the round is settled for both teams, so the
+    // ✓/✗ withheld above can finally go up (teacher, 12/8/2026: "cả 2 bên biết
+    // mình làm sai gì và đúng là đáp án nào"). Also runs on the board that
+    // never got to answer, so IT is shown the right answer too.
+    function revealFightMarks() {
+      const q = questions[index], st = state[index];
+      if (!q) return;
+      fightPendingReveal = false;
+      // addBadges is safe for an unanswered board: with `chosen` null it puts
+      // the check on the correct tile and dims the rest, marking nothing wrong.
+      tiles.forEach((t, k) => {
+        if (t.tile.querySelector(".aw-tile-badge")) return;   // already revealed
+        addBadges(t.tile, q.answers[k], k, st);
+      });
+      syncFightLock();
     }
 
     // HEIGHT fit (whole card) + per-tile WIDTH fit (never break a single word).
@@ -399,16 +427,28 @@ const quizTemplate = {
 
       tiles.forEach(t => (t.tile.disabled = true));
 
-      // feedback: big ✓/✗ flies up from the chosen tile
-      const chosenTile = tiles[i].tile;
-      const fly = el("span",
-        "aw-mark-fly" + (st.correct ? "" : " is-cross"),
-        st.correct ? icons.markCheck : icons.markCross);
-      chosenTile.append(fly);
-      setTimeout(() => fly.remove(), st.correct ? 900 : 2000);
+      // FIGHT MODE: every visual that says WHICH answer was right is withheld
+      // until the match says both teams are done — the big flying mark, the
+      // small badges, and the dimming (dimming alone would single the correct
+      // tile out just as plainly). The board still visibly changes: it goes
+      // neutral grey via syncFightLock, which is the "your go is over" cue.
+      // Sounds are NOT withheld: a right/wrong tone says how THIS team did
+      // without pointing at any option.
+      if (fightCtl) {
+        fightPendingReveal = true;
+        syncFightLock();
+      } else {
+        // feedback: big ✓/✗ flies up from the chosen tile
+        const chosenTile = tiles[i].tile;
+        const fly = el("span",
+          "aw-mark-fly" + (st.correct ? "" : " is-cross"),
+          st.correct ? icons.markCheck : icons.markCross);
+        chosenTile.append(fly);
+        setTimeout(() => fly.remove(), st.correct ? 900 : 2000);
 
-      // small persistent ✓/✗ + dim wrong tiles
-      tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+        // small persistent ✓/✗ + dim wrong tiles
+        tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+      }
 
       if (st.correct) quizSound.correct(); else quizSound.wrong();
       ui.setScore(scoreNow());
@@ -511,6 +551,15 @@ const quizTemplate = {
     let animating = false;
     function showQuestion(i, dir) {
       if (i === index) return;
+      // ⚠️ FIGHT MODE: tell the match BEFORE the slide starts, not from inside
+      // doSwap after the out-animation has finished — that left the other board
+      // starting its own slide ~130ms late, a visible lag between two frames
+      // meant to move as one (teacher, 12/8/2026). The controller passes the
+      // target to the other board, which runs this SAME function, so both
+      // slides start in the same frame with the identical animation. The echo
+      // back from that board is a no-op: the controller drops a boardMoved for
+      // the index it just set.
+      if (fightCtl) fightCtl.boardMoved(fightSide, i);
       const outX = dir >= 0 ? -6 : 6;
       const inX = dir >= 0 ? 6 : -6;
       animating = true;
@@ -531,10 +580,6 @@ const quizTemplate = {
         applyQuestion(i);
         fitNow();
         updateNav();
-        // FIGHT MODE: the teacher pressed ‹ › on THIS board — tell the match so
-        // the other board follows (see jumpTo()/ctl.attach below for the other
-        // direction: the controller moving a board that didn't initiate).
-        if (fightCtl) fightCtl.boardMoved(fightSide, i);
         const inA = questionEl.animate(
           [{ transform: `translateX(${inX}%)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
           { duration: 190, easing: "ease", fill: "forwards" });
@@ -559,18 +604,18 @@ const quizTemplate = {
     function goPrev() { if (!animating && !ending && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
     function goNext() { if (!animating && !ending && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
 
-    // FIGHT MODE: the match controller moving THIS board because the OTHER
-    // one navigated — a hard cut, not the slide (no `dir` to animate towards,
-    // and a round change outranks whatever slide might already be running).
+    // FIGHT MODE: the match controller moving THIS board — because the OTHER
+    // one navigated, or because the round advanced. Runs the SAME slide the
+    // initiating board runs, in the direction it travelled, so the two frames
+    // are visually identical (teacher, 12/8/2026 — this used to be a hard cut
+    // while the other board slid). `animating` is cleared first: a round change
+    // outranks whatever transition might still be mid-flight.
     function jumpTo(i) {
       const target = Math.max(0, Math.min(total - 1, i | 0));
       if (target === index) return;
       animating = false;
       clearAutoTimer();
-      index = target;
-      applyQuestion(target);
-      fitNow();
-      updateNav();
+      showQuestion(target, target > index ? 1 : -1);
     }
 
     // ----- FIGHT MODE: the match controller drives both boards through this -----
@@ -584,7 +629,8 @@ const quizTemplate = {
         lock(on) {
           fightBoardLock = !!on;
           syncFightLock();
-        }
+        },
+        reveal: revealFightMarks
       });
     }
 

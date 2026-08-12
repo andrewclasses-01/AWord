@@ -380,6 +380,12 @@ const anagramTemplate = {
     const fightCtl = fight ? fight.ctl : null;
     let fightBoardLock = false;                 // set by the match controller between rounds
     const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    // FIGHT MODE — a graded "On submit" word whose result is still WITHHELD
+    // while the other team plays (teacher, 12/8/2026). Holds `{rights,
+    // allCorrect}` so revealFightResult() can draw the whole picture later;
+    // null when there is nothing owed. See doSubmit's fight branch for why the
+    // per-position colours in particular must not go up early.
+    let fightPendingReveal = null;
     // Where a "+N" flies to, and what gets the count-up pulse. Single mode: the
     // frame's own score chip, exactly as always. FIGHT MODE (teacher, 12/8/2026,
     // second pass): the frame has NO chip any more — the only score on screen is
@@ -557,6 +563,10 @@ const anagramTemplate = {
       root.innerHTML = "";
       submitBtnEl = null;
       revealSlotEl = null;
+      // A withheld result belongs to the word that was on screen; a real word
+      // boundary (which is the only time render() runs) clears the debt, or
+      // the next word would arrive wearing the previous round's grey.
+      fightPendingReveal = null;
       // render() only ever runs at a real word start/change boundary (see
       // this file's header comment) — the ONE moment any audio left over
       // from the previous word must be silenced, regardless of whether the
@@ -1266,11 +1276,40 @@ const anagramTemplate = {
       updateNav();
 
       const n = it.letters.length;
+      const rights = [];
       let allCorrect = true;
       for (let pos = 0; pos < n; pos++) {
         const tileId = st.placed[pos];
         const isRight = it.letters[tileId].toLowerCase() === it.letters[pos].toLowerCase();
+        rights.push(isRight);
         if (!isRight) allCorrect = false;
+      }
+
+      // ----- FIGHT MODE: hold the WHOLE grading picture back -----
+      // Per-position green/grey is the biggest answer leak this template has —
+      // it shows the other team exactly which letters are already home — and
+      // the reveal line literally prints the word. So in a match nothing is
+      // drawn now: the board just goes neutral grey (syncFightLock) and the
+      // match calls reveal() once both teams are done (teacher, 12/8/2026).
+      // The state itself still settles immediately, so the controller hears
+      // about this board's result straight away rather than ~2.4s later.
+      if (fightCtl) {
+        fightPendingReveal = { rights, allCorrect };
+        st.correct = allCorrect;
+        if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }
+        const outOfLivesFight = !allCorrect && loseLife();
+        st.revealed = true;
+        busy = false;
+        updateSubmitButtonState();
+        updateNav();
+        syncFightLock();
+        fightCtl.wordDone(fightSide, { index, correct: allCorrect });
+        if (outOfLivesFight) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
+        return;
+      }
+
+      for (let pos = 0; pos < n; pos++) {
+        const isRight = rights[pos];
         setTimeout(() => {
           const slotEl = root.querySelector(`.aw-anagram-rtile[data-pos="${pos}"]`);
           if (!slotEl) return;
@@ -1316,21 +1355,52 @@ const anagramTemplate = {
           // notes (GHI CHU.md).
           anagramSound.wrongPick();
         }
-        // FIGHT MODE — "On submit" settles a whole word at once, so EITHER
-        // outcome ends this board's go at it and both are reported. Only the
-        // correct one wins the round, though: a wrong submit leaves the round
-        // open so the other team can still finish (teacher, 12/8/2026), and
-        // the controller locks just this board out. Reporting the wrong case
-        // too (it used to stay silent) is what lets the controller know this
-        // board is done, so the round can close as soon as BOTH have had a go
-        // instead of waiting out the walk-away timeout.
-        if (fightCtl) fightCtl.wordDone(fightSide, { index, correct: allCorrect });
+        // (FIGHT MODE never reaches here — it returned early above, having
+        // already settled the state and reported to the match.)
         if (outOfLives) {
           autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
-        } else if (!fightCtl && state.every(doneCheck)) {
+        } else if (state.every(doneCheck)) {
           autoTimer = setTimeout(finish, allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
         }
       }, n * STAGGER_MS + 300);
+    }
+
+    // ----- FIGHT MODE: the withheld grading picture, finally drawn -----
+    // Called by the match once BOTH teams are done with the word. Everything
+    // lands AT ONCE rather than position-by-position: the staggered version
+    // takes n×260ms+300 (≈2.4s for an 8-letter word), which would still be
+    // playing when the round turns over at ROUND_HOLD_MS (2100ms) — and a
+    // simultaneous reveal is the fairer read in a race anyway, since both
+    // boards show their result in the same instant.
+    // Also runs on a board that never submitted, so IT is shown the answer too.
+    function revealFightResult() {
+      if (dead) return;
+      const pend = fightPendingReveal;
+      fightPendingReveal = null;
+      const st = state[index], it = items[index];
+      if (mode !== "submit" || !it) { syncFightLock(); return; }
+      if (pend) {
+        pend.rights.forEach((isRight, pos) => {
+          const slotEl = root.querySelector(`.aw-anagram-rtile[data-pos="${pos}"]`);
+          if (!slotEl) return;
+          slotEl.classList.add(isRight ? "is-blue" : "is-wrongbg");
+          showTransientMark(slotEl, "aw-anagram-revealmark",
+            isRight ? icons.markCheck : icons.markCross, 550);
+        });
+        if (revealSlotEl) revealSlotEl.textContent = pend.allCorrect ? "" : (allCaps ? it.word.toUpperCase() : it.word);
+        if (pend.allCorrect) {
+          flyScoreGain(1, () => { st.points = 1; return scoreNow(); });
+          anagramSound.submitWordCorrect();
+        } else {
+          showBigMark(false);
+          anagramSound.wrongPick();
+        }
+      } else if (revealSlotEl && st.correct !== true) {
+        // Never submitted (the other team took the word): no marks to draw —
+        // just show what the answer was.
+        revealSlotEl.textContent = allCaps ? it.word.toUpperCase() : it.word;
+      }
+      syncFightLock();
     }
 
     // ----- incremental DOM patches (avoid a full render() mid-word — that
@@ -1405,8 +1475,13 @@ const anagramTemplate = {
       // the round is already decided instead of discovering it by tapping.
       // A board that finished the word ITSELF keeps its colours — it earned
       // them, and it is only locked because the round is now over for both.
+      // Grey while this board's go is over but its result is not on show yet:
+      // either it never got to play ("too slow" — the other team took the
+      // word), or it HAS submitted but the marks are withheld until the other
+      // team finishes. Once revealed, a board that played drops the grey so
+      // its own per-letter colours read properly.
       const groupEl = root.querySelector(".aw-anagram-group");
-      if (groupEl) groupEl.classList.toggle("is-fightlost", locked && !wordDone);
+      if (groupEl) groupEl.classList.toggle("is-fightlost", locked && (!wordDone || !!fightPendingReveal));
       updateSubmitButtonState();
     }
 
@@ -1771,13 +1846,24 @@ const anagramTemplate = {
       anim.onfinish = run;
       setTimeout(run, 220);
     }
+    // ⚠️ FIGHT MODE: tell the match BEFORE the fade starts, not after it ends.
+    // Reporting from inside fadeSwap's callback meant the other board only
+    // began its own fade once THIS one had finished — a visible ~160ms lag
+    // between two frames that are meant to move as one (teacher, 12/8/2026:
+    // "2 bên đều đồng bộ 100% và có hiệu ứng giống hệt nhau"). The controller
+    // hands the target straight to the other board, so both fades start in the
+    // same frame and run the identical `fadeSwap` + `render`.
     function goPrev() {
-      if (busy) return;
-      if (index > 0) fadeSwap(() => { index--; render(); if (fightCtl) fightCtl.boardMoved(fightSide, index); });
+      if (busy || index === 0) return;
+      const target = index - 1;
+      if (fightCtl) fightCtl.boardMoved(fightSide, target);
+      fadeSwap(() => { index = target; render(); });
     }
     function goNext() {
-      if (busy) return;
-      if (index < total - 1) fadeSwap(() => { index++; render(); if (fightCtl) fightCtl.boardMoved(fightSide, index); });
+      if (busy || index >= total - 1) return;
+      const target = index + 1;
+      if (fightCtl) fightCtl.boardMoved(fightSide, target);
+      fadeSwap(() => { index = target; render(); });
     }
 
     // ----- FIGHT MODE: the match controller drives both boards through this -----
@@ -1809,7 +1895,8 @@ const anagramTemplate = {
           // file (see the header comment's note on why render() is reserved
           // for real word boundaries).
           syncFightLock();
-        }
+        },
+        reveal: revealFightResult
       });
     }
 

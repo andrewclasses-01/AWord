@@ -1,5 +1,40 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 129 (12/8/2026) — GIẤU KẾT QUẢ "ON SUBMIT" TỚI KHI CẢ 2 ĐỘI XONG + NEXT/BACK ĐỒNG BỘ
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 129 +
+`../../core/HUONG DAN CORE.md` mục "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ".
+
+**Lỗi Đợt 128 để lại**: đội nộp sai trước được chấm "như bình thường" — nhưng chấm bình thường của
+Anagram gồm **tô xanh/xám TỪNG VỊ TRÍ** (chỉ rõ chữ nào đã đúng chỗ) và **in thẳng từ đúng ra dòng đáp
+án**. Đây là chỗ lộ đáp án nặng nhất trong cả app: đội kia chỉ việc đọc.
+
+**Sửa — `doSubmit()` tách đôi trong fight mode:**
+1. Tính `allCorrect` xong là **chốt trạng thái + báo trọng tài NGAY** rồi `return` — không chờ hết
+   `n×260+300` ms hoạt cảnh như trước. Trọng tài biết sớm ⇒ vòng đóng/mở đúng lúc hơn.
+2. Toàn bộ phần VẼ (màu từng vị trí, dấu ✓/✗, dấu to, dòng đáp án, điểm bay, âm kết quả) dồn vào
+   `revealFightResult()`, chỉ chạy khi trọng tài gọi `reveal()`.
+⚠️ Lúc reveal thì tô **CẢ 7-8 vị trí CÙNG LÚC, không chạy lần lượt**: bản lần lượt tốn ~2,4 giây cho từ
+8 chữ, **dài hơn `ROUND_HOLD_MS` (2100ms)** nên vòng sẽ sang từ mới khi hoạt cảnh còn dở; và trong trận
+thì 2 bàn lộ kết quả cùng một khoảnh khắc mới công bằng.
+Bàn **chưa kịp nộp cũng được gọi** `reveal()` → nó không có dấu để vẽ, nhưng vẫn được **hiện từ đúng**.
+Điều kiện xám nay là `locked && (!wordDone || fightPendingReveal)`; `render()` xoá cờ giấu ở mỗi ranh
+giới từ (không xoá thì từ sau bị xám oan).
+
+**Đo thật** (bàn 0 nộp "UNPNEIG" sai trước, bàn 1 nộp PENGUIN đúng sau):
+| | ô được tô màu | dấu | dòng đáp án | ô còn bấm được |
+|---|---|---|---|---|
+| bàn 0 vừa nộp SAI | **0** | **0** | **rỗng** (trước đây in "PENGUIN") | 0 (khoá) |
+| bàn 1 lúc đó | 0 | 0 | rỗng | **7 (chơi bình thường)** |
+| bàn 0 sau khi bàn 1 xong | **7** | có | **"PENGUIN"** | 0 |
+| bàn 1 sau khi xong | **7** (xanh hết) | có | rỗng (đúng nên không cần) | 0 |
+Điểm về **0–1** sau khi hoạt cảnh điểm hạ cánh (~1,5s — bẫy đã ghi ở Đợt 128).
+
+**Next/Back đồng bộ**: `goPrev/goNext` nay báo `fightCtl.boardMoved()` **TRƯỚC** khi gọi `fadeSwap`
+(trước đây báo TRONG callback của fadeSwap, tức sau khi đã mờ xong ⇒ bàn kia bắt đầu mờ **muộn ~160ms**).
+
+---
+
 ## ⭐ Đợt 128 (12/8/2026) — "ON SUBMIT" NAY BÁO CẢ CA NỘP SAI (xong trước mà sai thì không cướp được từ)
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 128 và

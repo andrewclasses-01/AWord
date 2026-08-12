@@ -9,6 +9,40 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⭐ ĐỢT 129 (12/8/2026) — GIẤU ✓/✗ TỚI KHI CẢ 2 ĐỘI XONG + NEXT/BACK ĐỒNG BỘ TỪNG KHUNG HÌNH
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 129 +
+`../../core/HUONG DAN CORE.md` mục "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ".
+
+**Lỗi Đợt 128 để lại**: đội trả lời sai trước được hiện "phản hồi sai như bình thường" — nhưng phản hồi
+đó gồm **✓ đặt lên ô ĐÚNG** và **làm mờ mọi ô sai**. ⚠️ Riêng việc làm mờ đã đủ lộ: ô đúng là ô DUY
+NHẤT còn sáng. Đội còn đang chọn chỉ việc nhìn sang bàn kia.
+
+**Sửa**: trong fight, `choose()` **không vẽ gì cả** — không badge, không dấu bay, không làm mờ; chỉ để
+`syncFightLock()` phủ xám. `revealFightMarks()` (khai qua `reveal` trong `ctl.attach`) vẽ tất cả khi
+trọng tài báo vòng đã ngã ngũ. Bàn **chưa kịp trả lời cũng được gọi** → nó thấy ✓ nằm ở đâu (đúng ý
+thầy: "cả 2 bên biết mình làm sai gì và đúng là đáp án nào"); `addBadges` với `chosen = null` tự lo
+đúng việc đó (chỉ đánh ✓, không đánh ✗ vào đâu).
+Điều kiện xám nay là `locked && (!answered || fightPendingReveal)` — bàn đã trả lời vẫn xám **trong lúc
+còn giấu**, hết giấu thì bỏ xám để ✓/✗ của nó đọc rõ. `applyQuestion()` xoá cờ giấu khi sang câu mới
+(ô đáp án dùng lại giữa các câu nên không xoá là câu sau bị xám oan).
+**Âm thanh vẫn phát bình thường** — tiếng đúng/sai chỉ nói đội đó làm sao, không chỉ ra đáp án nào.
+
+**Đo thật** (bàn 0 chọn sai trước, bàn 1 chọn đúng sau):
+| | badge | dấu bay | ô mờ | xám | khoá |
+|---|---|---|---|---|---|
+| bàn 0 vừa SAI | **0** | **0** | **0** | có | có |
+| bàn 1 lúc đó | 0 | 0 | 0 | **không** | **không** |
+| bàn 0 sau khi bàn 1 xong | **2** (✗+✓) | 0 | 3 | hết | có |
+| bàn 1 sau khi xong | **1** (✓) | 0 | 3 | hết | có |
+
+**Next/Back đồng bộ**: `showQuestion()` nay báo `boardMoved` **TRƯỚC** hoạt cảnh (trước báo trong
+`doSwap` = sau khi hoạt cảnh rời câu xong ⇒ bàn kia trễ ~130ms), và `jumpTo()` **bỏ kiểu cắt phụt**,
+gọi thẳng `showQuestion()` với đúng chiều nên 2 bàn chạy CÙNG một hoạt cảnh. Đo: bấm Previous chỉ ở
+bàn 0 → opacity 2 bàn trùng khít từng khung (`0.76/0.76 · 0.38/0.38 · 0.12/0.12 · 0.02/0.02 …`).
+
+---
+
 ## ⭐ ĐỢT 128 (12/8/2026) — TRẢ LỜI NHANH MÀ SAI THÌ KHÔNG CƯỚP ĐƯỢC CÂU CỦA ĐỘI KIA
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung + phần trọng tài: `../../GHI CHU DU AN.md` Đợt 128

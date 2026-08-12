@@ -294,6 +294,9 @@ f.ctl.attach(side, { total, goToIndex(i), lock(on) })   // đăng ký bàn
 f.ctl.wordDone(side, { index, correct })                 // bàn này đã XONG với từ/câu đó
     // ⚠️ `correct:false` = xong nhưng SAI. XONG TRƯỚC ≠ THẮNG (Đợt 128) — xem mục dưới.
     // Không gửi cờ = coi như ĐÚNG (dành cho template mà từ chỉ có thể kết thúc đúng).
+f.ctl.toggleFullscreen()                                 // phóng to CẢ TRẬN (xem mục FULLSCREEN dưới)
+// và trong đối tượng trả cho ctl.attach():
+reveal()                                                 // ⭐ vòng đã ngã ngũ: được phép lộ ✓/✗ (Đợt 129)
 f.ctl.isLocked(side)                                    // chặn thao tác khi đã thua vòng
 f.ctl.shareLetters · f.ctl.speaks(side)                 // giữ công bằng + không đọc chồng
 f.ctl.boardMoved(side, index)                           // thầy bấm ‹ › ở bàn này
@@ -368,6 +371,39 @@ của đội kia. Luật đúng:
   (`LATE_LIMIT_MS`) — đúng lỗi Anagram "On submit" mắc phải trước Đợt 128.
 - Template mà một từ **chỉ có thể kết thúc ĐÚNG** (Anagram bonus: phải bấm chữ theo thứ tự, bấm sai bị
   từ chối) thì khỏi gửi cờ — mặc định là đúng. Sai ở đó chỉ mất hệ số nhân, không mất vòng.
+
+⭐⭐ **GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ (Đợt 129) — `reveal()`.**
+Bàn nào xong trong khi bàn kia **vẫn đang làm** thì **tuyệt đối không được vẽ thứ gì chỉ ra đáp án**:
+không ✓, không ✗, không làm mờ ô sai, không tô màu từng vị trí, không in từ đúng. Chỉ **đổi màu xám**
+(`is-fightlost`). Bằng không đội còn lại chỉ việc nhìn sang bàn kia mà chép.
+⚠️ Cẩn thận với những thứ *tưởng* vô hại: **làm mờ hết ô sai cũng chính là chỉ ra ô đúng** (nó là ô
+duy nhất còn sáng) — đó là ca đã lọt ở Đợt 128.
+Trọng tài gọi **`reveal()` trên CẢ HAI bàn** đúng lúc vòng ngã ngũ (`revealBoards()`, thêm ở
+`advanceRound`/`endMatch` làm lưới an toàn). Bàn **chưa kịp chơi cũng được gọi** — nó cần biết đáp án.
+Template không khai `reveal` thì không sao (chạy y như cũ).
+⚠️ Hoạt cảnh lộ kết quả trong trận nên **lộ HẾT CÙNG LÚC**, đừng chạy lần lượt: bản lần lượt của
+Anagram tốn `n×260+300` ≈ 2,4s, **dài hơn `ROUND_HOLD_MS` (2100ms)** nên vòng sang từ mới khi hoạt
+cảnh còn đang chạy; và trong một trận đấu thì 2 bàn lộ cùng một khoảnh khắc mới công bằng.
+⚠️ **Âm thanh KHÔNG cần giấu**: tiếng đúng/sai chỉ nói đội đó làm thế nào, không chỉ ra đáp án nào.
+
+⚠️ **NEXT/BACK PHẢI ĐỒNG BỘ TỪNG KHUNG HÌNH (Đợt 129).** Báo `boardMoved` **TRƯỚC KHI** bắt đầu hoạt
+cảnh, đừng báo trong callback lúc nó chạy xong — báo muộn thì bàn kia khởi động chậm **130-160ms**,
+nhìn rõ bằng mắt. Và đường "bị trọng tài đẩy đi" (`goToIndex`) phải chạy **ĐÚNG hàm/hoạt cảnh** mà
+đường "tự bấm" chạy, nếu không một bên trượt còn một bên cắt phụt. Echo báo ngược vô hại: trọng tài bỏ
+qua `boardMoved` trùng chỉ số.
+
+⭐ **FULLSCREEN LÀ CỦA TRẬN, KHÔNG PHẢI CỦA BÀN (Đợt 129).**
+Nút Fullscreen dùng chung **không được** gọi `fsBtn.click()` của engine: engine mỗi bàn khởi động với
+`root = boardEls[i]`, tức **div của riêng bàn đó**, nên phóng to sẽ chỉ thấy MỘT khung — bàn kia, dải
+điểm và chính hàng nút đều nằm ngoài màn hình. Phải đi qua **`ctl.toggleFullscreen()`**, thứ duy nhất
+nắm phần tử chứa cả trận.
+⚠️ Bố cục fullscreen của trận dùng **class `.is-fs` do JS bật** (nghe `fullscreenchange`), KHÔNG dùng
+`:fullscreen`: (a) CSS single-mode sẵn có `:fullscreen .aw-page{width:100vw;height:100vh}` +
+`:fullscreen .aw-below{display:none}` sẽ thổi từng khung con ra full màn hình và **xoá luôn thanh công
+cụ** — cần selector mạnh hơn để đè; (b) mỗi biến thể tiền tố phải viết thành luật RIÊNG nên đường
+`:fullscreen` tốn ~20 luật gần trùng.
+⚠️ 2 khung 16:10,5 nằm ngang là bố cục rất "bè" ⇒ chống tràn dọc bằng cách **giới hạn BỀ NGANG** hàng
+khung (suy từ chiều cao còn lại), cùng thủ pháp `max-width: calc(100vh*16/9)` single mode đã dùng.
 
 ⚠️ **"Quá chậm" — đội thua phải THẤY ngay** (Đợt 127): khi bị `lock`, template nên làm ô đáp án của
 mình **mất màu + mờ** (`.is-fightlost`, `opacity:.55`) để cả lớp nhìn là biết, thay vì bấm mãi không
