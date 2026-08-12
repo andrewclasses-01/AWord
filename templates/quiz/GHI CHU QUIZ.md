@@ -9,6 +9,41 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⭐⭐ ĐỢT 125 (12/8/2026) — QUIZ TRỞ THÀNH TEMPLATE THỨ HAI KHAI `fightMode` (THỬ NGHIỆM)
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chi tiết đầy đủ (kèm cả phần sửa core dùng chung cho mọi
+template sau này, và tiếp tục ở Đợt 126 — chỉnh cỡ chữ + dời ô điểm tay): `../../GHI CHU DU AN.md`
+Đợt 125 + 126. Đây chỉ tóm tắt phần RIÊNG của Quiz.
+
+Sau Anagram (Đợt 124, template đầu tiên), thầy chốt **"áp dụng tạm cho Quiz"** để thử Fight mode ở
+template thứ hai. `quiz.js` thêm `fightMode: true` + đọc `activity._fight` giống hệt khuôn Anagram,
+nhưng **nhẹ hơn nhiều**: Quiz không có hoạt ảnh bay điểm riêng, `ui.setScore()` sẵn có đã được engine
+tự chuyển tiếp vào `fight.ctl.onScore()` — không phải viết thêm dòng nào cho phần điểm.
+
+- `choose(i)`: chặn thêm `fightLocked()`; sau khi chấm (đúng/sai đều tính — 1 lượt bấm là xong câu,
+  không sửa lại được) gọi `fightCtl.wordDone(fightSide,{index})`.
+- Auto "Game complete" khi trả lời hết bị tắt trong fight (`!fightCtl &&`) — trọng tài tự kết thúc
+  trận qua `advanceRound()`/`endMatch()` của `core/fight.js`, gọi `finish()` cục bộ nữa sẽ đua với nó.
+- `showQuestion()` (tự bấm ‹ ›) báo `fightCtl.boardMoved()`; hàm mới `jumpTo()` (trọng tài đẩy khung
+  này đi vì khung kia vừa bấm) đổi câu ngay, không hoạt ảnh trượt — 2 đường tách riêng để không vòng
+  lặp báo ngược nhau.
+- Giọng đọc autoplay thêm điều kiện `fightCtl.speaks(fightSide)` — chỉ khung 0 đọc.
+- **Đơn giản hoá cố ý, chưa làm**: 2 khung KHÔNG chia sẻ thứ tự xáo đáp án (như Anagram chia sẻ
+  `_fightOrder` cho thứ tự chữ cái) — nếu bật `shuffleAnswers`, 2 khung có thể hiện đúng đáp án nhưng
+  ở VỊ TRÍ khác nhau. Không ảnh hưởng ai thắng, chỉ là bố cục khác nhau; để tạm đúng tinh thần "thử
+  nghiệm", bàn thêm sau nếu thầy muốn giống Anagram.
+
+⚠️ **Điều kiện để làm được**: `core/fight.js` trước đó đọc cứng `activity.content.items` (chỉ đúng
+Anagram) — phải tổng quát hoá sang `getTemplate(activity.type).itemsKey` (Quiz đã khai sẵn
+`itemsKey:"questions"` từ lâu cho "Start with mistakes") thì Quiz mới nhận đúng mảng câu hỏi khi vào
+Fight. Sửa 1 lần ở `fight.js`, không đụng gì thêm ở `quiz.js` cho phần này.
+
+**Đã test qua trình duyệt thật** (`test.html`, không chỉ đọc code): Fight dựng đủ 2 khung cùng câu hỏi,
+chọn đúng "beautiful" ở khung 0 → điểm 1-0, khung 1 khoá rồi cả 2 tự đồng bộ sang câu tiếp; thoát Fight
+về Single không lỗi. 0 lỗi console.
+
+---
+
 ## ⚠️ ĐỢT 112 (11/8/2026) — "ÂM HẾT GIỜ NỔ KHI CÒN NHIỀU THỜI GIAN": KHÔNG PHẢI LỖI CỦA QUIZ
 
 > **KHÔNG SỬA FILE NÀO CỦA QUIZ** — ghi ở đây vì thầy phát hiện lúc test Quiz, phiên sau dễ đi soi

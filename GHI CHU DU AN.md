@@ -5,9 +5,135 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 126 (12/8/2026) — FIGHT MODE: THU NHỎ 60%, Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG + NGỦ KHI BẰNG 0 + HIỆU ỨNG TRƯỢT
+⭐ CÓ SỬA CORE (`core/fight.js` + `core/app.css`, KHÔNG đụng file nào của template).
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 124 + 125, thầy duyệt cả 3 cùng lúc).
+
+Tiếp nối Đợt 125 (chưa commit) — thầy gửi thêm 2 điểm chỉnh cho dải điểm/đồng hồ/ô điểm tay.
+
+### 1. Thu nhỏ điểm số / đồng hồ / ô điểm tay còn 60%
+`.aw-fight-score`/`.aw-fight-clock`: `clamp(30px,5.2vw,68px)` → `clamp(18px,3.12vw,40.8px)` (đúng 60%).
+`.aw-fight-hand` (ô nền): `clamp(46px,4.6vw,72px)` → `clamp(27.6px,2.76vw,43.2px)` (đúng 60%, kèm
+padding/border-radius/border cũng thu theo tỉ lệ). Đo thật ở màn rộng (chạm trần clamp): điểm/đồng hồ
+ra đúng **40.8px**, ô điểm tay ra đúng **43.19px** — khớp phép tính.
+
+### 2. Ô điểm tay: dời xuống dưới khung, số to hơn ô, "ngủ" khi bằng 0, trượt khi đổi số
+- **Dời khỏi cụm giữa cạnh đồng hồ, xuống 1 hàng MỚI ngay dưới khung act**, mỗi ô nằm **chính giữa
+  khung của đúng đội đó** (hàng mới dùng lại đúng lưới `1fr 1fr` + gap của `boardsRow` nên tự động
+  thẳng cột). Nhờ vậy đồng hồ ở cụm giữa nay chỉ còn MỘT MÌNH — việc căn giữa đúng vạch chia 2 khung
+  (Đợt 125) tự nhiên còn chắc chắn hơn (không còn phụ thuộc 2 ô điểm tay phải bằng nhau nữa). Đo thật:
+  `centerX` của ô điểm tay và của khung board **khớp tuyệt đối** (472.5px và 1411.5px, cả 2 template).
+- **Số bên trong to hơn ô nền một chút**: ô nền giữ nguyên 60% (`.aw-fight-hand`), nhưng chữ số
+  (`.aw-fight-handnum`, cỡ `clamp(15px,2.3vw,29px)`) được nới rộng hơn mức 60% thuần (lẽ ra chỉ
+  `clamp(12px,1.92vw,25.2px)`) — ô không phình theo, chỉ chữ lớn hơn.
+- **"Ngủ" khi bằng 0**: ô mờ đi (`opacity:.42`, class `.is-dim`) khi số đang là 0 VÀ chưa được "đánh
+  thức". Lượt bấm/vuốt ĐẦU TIÊN trên ô đang mờ chỉ **đánh thức** (sáng lên, số không đổi); lượt
+  bấm/vuốt TIẾP THEO mới thật sự tăng/giảm (`interact()` mới, gác trước `bump()` cũ). Số về đúng 0 lần
+  nữa (vuốt giảm từ 1 xuống 0) thì **tự mờ lại ngay**, phải đánh thức lại từ đầu. Mục đích: ô nằm sát
+  đáy khung dễ bị chạm nhầm — không dim nữa khi đã có điểm (chạm phát nào ăn phát đó), chỉ dim lúc đang
+  nghỉ ở 0. Đã test qua PointerEvent thật: chạm 1 → mờ hết, vẫn "0"; chạm 2 → thành "1", hết mờ; vuốt
+  xuống → về "0", mờ lại ngay.
+- **Hiệu ứng trượt khi đổi số** (`animateHandSlide()`): tăng (+1) — số MỚI trượt lên từ dưới vào đúng
+  chỗ, số CŨ trượt lên và biến mất phía trên; giảm (−1) thì ngược lại (số mới từ trên trượt xuống, số
+  cũ trượt xuống mất). Dựng bằng 2 lớp `.aw-fight-handvalue` chồng lên nhau trong 1 khung `overflow:
+  hidden` (`.aw-fight-handnum`), animate bằng `.animate()` + `cancel()` giải phóng `fill:"forwards"`
+  trước khi gán lại `style.transform=""` (đúng bẫy đã ghi ở `templates/anagram/anagram.js`). Đo thật
+  giữa lúc trượt: đúng 2 phần tử cùng tồn tại (`translateY(100%)`/`translateY(-100%)` tuỳ chiều), sau
+  ~320ms rút gọn lại còn đúng 1 phần tử, transform sạch.
+
+**Đã test qua trình duyệt thật** (`devserver.py`, cả `templates/anagram/test.html` lẫn `templates/quiz/
+test.html` — Quiz hưởng lây vì đây là sửa `core/fight.js`/`app.css` dùng chung): dựng Fight mode, đo
+`getBoundingClientRect` xác nhận căn giữa + cỡ chữ đúng như tính toán, mô phỏng 3 lượt chạm/vuốt trên ô
+điểm tay đúng kịch bản ngủ/thức/tăng/giảm/trượt, thoát Fight về Single cả 2 template không lỗi. 0 lỗi
+console suốt quá trình. ⬜ Vẫn **chưa nhìn được bằng mắt** (pane phiên này không hiện hình).
+
+**VIỆC ĐANG CHỜ (đợt này):** ĐÃ commit + push + live (thầy duyệt 12/8/2026, gộp cùng Đợt 124+125).
+Vẫn nên tự xem lại bằng mắt lúc rảnh (đặc biệt hiệu ứng trượt + độ mờ lúc "ngủ" — 2 thứ khó đánh giá
+chỉ qua số đo) — nếu thấy gì lệch thì báo, không phải chặn buổi học.
+
+---
+
+## Đợt 125 (12/8/2026) — DẢI TRÊN FIGHT MODE GỌN LẠI + XÁC NHẬN TRƯỚC KHI ĐỔI MODE + QUIZ THỬ NGHIỆM ĐẤU
+⭐ CÓ SỬA CORE (`core/engine.js`, `core/fight.js`, `core/app.css`) + `templates/quiz/quiz.js`.
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 124 + 126, thầy duyệt cả 3 cùng lúc).
+
+Tiếp nối Đợt 124 (Fight mode Anagram, chưa commit) — thầy chơi thử bản live rồi gửi 4 yêu cầu chỉnh
+dải trên + mở rộng Fight sang Quiz.
+
+### 1. Bấm MODE giờ phải xác nhận mới đổi
+Trước đây bấm nút MODE là đổi NGAY (SINGLE↔FIGHT), lỡ tay là mất cả trận đang chơi. Nay bấm MODE mở
+1 popover nhỏ ngay cạnh nút (dùng lại đúng cơ chế `openToolPanel` của Options/Template/Style, không
+đẻ cơ chế mới): hỏi "Switch to Fight mode?"/"Switch to Single mode?" kèm 2 nút Cancel/xác nhận — chỉ
+bấm xác nhận mới thật sự chuyển. `panelItem()` (nút trắng-trên-nền-tối của `.aw-panel` toàn màn hình)
+**không dùng được** ở đây vì popover này là `.aw-tool-panel` nền sáng ngoài khung — phải tự dựng nút
+`.aw-btn`/`.aw-btn-primary` với class cỡ-px riêng (`.aw-mode-confirm-btn`), đúng bẫy comment cũ đã ghi
+cạnh nút Apply của Options ("`.aw-btn` cỡ cqw sẽ phồng to bất thường ở panel ngoài khung 16:9").
+
+### 2. Dải điểm/đồng hồ trên cùng: bỏ nhãn chữ, cân đối lại
+Thầy gửi ảnh chụp: "TEAM 1"/"TEAM 2"/"TIME" thừa chữ, và cả dải lệch/mất cân đối.
+- **Bỏ hẳn 3 nhãn chữ** — bố cục tự nói lên ý nghĩa, không cần nhãn.
+- **Gốc thật của lệch**: trước đó hộp đội + hộp đồng hồ đều là ngăn xếp **2 dòng** (nhãn + số), còn
+  hộp điểm tay của thầy chỉ **1 dòng** — 3 khối cao khác nhau nên không thể cùng nằm giữa dải cho
+  thẳng hàng được. Bỏ nhãn xong, cả 3 đều còn đúng 1 dòng, cùng `font-size`/`line-height` (điểm đội
+  và đồng hồ vốn đã cố ý dùng chung 1 cỡ chữ từ Đợt 124) → tự động thẳng hàng, không cần chỉnh tay.
+  Đo qua `getBoundingClientRect()` trên trình duyệt thật: `centerY` của điểm đội, đồng hồ, ô điểm tay
+  chỉ lệch **≤1.5px** — coi như một hàng.
+- Dọn luôn 1 khối CSS `.aw-fight-clockbox`/`.aw-fight-clock` bị KHAI TRÙNG 2 LẦN từ trước (lỗi cũ,
+  không phải do đợt này gây ra, tiện tay dọn khi đụng vào đúng vùng đó).
+
+### 3. Đồng hồ: 2 số phút + 2 số giây, dấu ":" nằm đúng vạch chia 2 khung
+Trước: `formatTime()` dùng chung cho cả chip đơn (1 chữ số phút, "0:45") lẫn dải fight — thầy muốn
+RIÊNG dải fight có "00:45" (2 số mỗi bên) cho cân, và dấu `:` phải rơi đúng đường nối 2 khung.
+- **Không đổi `formatTime()` dùng chung** (chip đơn giữ nguyên) — `core/engine.js`'s `tickTimer()` nay
+  gửi thẳng **số giây thô** cho `fight.ctl.onTimer()` thay vì chuỗi đã format sẵn; `core/fight.js` tự
+  `padStart(2,"0")` cả 2 nửa.
+- **Không cần chỉnh tay px**: sửa `.aw-fight-hand` từ `min-width` sang **`width` cố định** — trước đó
+  2 hộp điểm tay hai bên đồng hồ chỉ có BỀ RỘNG TỐI THIỂU, nên hộp điểm tay 2 chữ số (vd "-12") sẽ
+  rộng hơn hộp bên kia đang "0", đẩy khối đồng hồ ở giữa lệch khỏi tâm. Ép 2 hộp bằng nhau tuyệt đối
+  bất kể số chữ số → khối giữa luôn đối xứng → tâm chữ `:` (chuỗi `tabular-nums` nên tự đối xứng qua
+  dấu `:`) luôn rơi đúng tâm dải, tức đúng đường nối 2 khung — không phải chỉnh 1 con số px cố định dễ
+  vỡ khi đổi cỡ màn/cỡ chữ. Đo thật (1280×720): `seam = 639.99px`, tâm chữ đồng hồ `= 640.00px`.
+
+### 4. Quiz — template THỨ HAI thử Fight mode (thầy chốt "áp dụng tạm cho Quiz")
+`core/fight.js` trước đó **đọc cứng `activity.content.items`** — chỉ đúng với Anagram. Tổng quát hoá
+bằng `getTemplate(activity.type).itemsKey` (đúng field mỗi template đã khai sẵn cho "Start with
+mistakes", `core/mistakes.js` cũng đọc field này) — Quiz khai `itemsKey:"questions"` nên tự động đúng,
+không cần sửa gì thêm ở `fight.js` cho từng template mới sau này.
+`templates/quiz/quiz.js` thêm `fightMode:true` + các nhánh đọc `activity._fight`, mô phỏng đúng khuôn
+Anagram nhưng **đơn giản hơn nhiều** vì Quiz không có hoạt ảnh bay điểm riêng — `ui.setScore()` engine
+đã tự chuyển tiếp vào `fight.ctl.onScore()` sẵn, không cần code gì thêm cho phần điểm:
+- `choose(i)` chặn thêm bằng `fightLocked()`, và SAU khi chấm (đúng/sai đều tính, không retry được)
+  gọi `fightCtl.wordDone(fightSide,{index})` — giống hệt lý do Anagram gọi `finalizeBonusWord()` bất
+  kể đúng/sai (một lượt bấm là xong câu, không sửa lại được).
+- Auto "Game complete" khi trả lời hết bị tắt trong fight (`!fightCtl &&`) — trọng tài tự kết thúc
+  trận qua `advanceRound()`/`endMatch()` khi hết câu, gọi `finish()` cục bộ nữa sẽ đua với trọng tài
+  (y hệt lý do Anagram bỏ auto-finish trong fight).
+- `showQuestion()` (khi TỰ bấm ‹ ›) báo `fightCtl.boardMoved()`; hàm MỚI `jumpTo()` (khi TRỌNG TÀI di
+  chuyển khung này vì khung kia vừa bấm) đổi câu ngay không hoạt ảnh trượt — tách riêng 2 đường để
+  không vòng lặp báo ngược (dù có vòng cũng vô hại nhờ chốt `if (index === roundIndex) return;` sẵn
+  có ở `fight.js`).
+- Giọng đọc autoplay thêm điều kiện `fightCtl.speaks(fightSide)` — chỉ khung 0 đọc, y hệt Anagram.
+- **Đơn giản hoá cố ý, chưa làm**: không chia sẻ thứ tự xáo đáp án giữa 2 khung như Anagram chia sẻ
+  `_fightOrder` (2 khung có thể hiện đáp án đúng nhưng khác vị trí khi `shuffleAnswers` bật) — không
+  ảnh hưởng ai thắng, chỉ là bố cục khác nhau; để tạm vì đây là bản "thử nghiệm" theo đúng ý thầy.
+
+**Đã test qua trình duyệt thật** (`devserver.py` cổng 5510, KHÔNG chỉ đọc code): cả
+`templates/anagram/test.html` lẫn `templates/quiz/test.html` — bấm MODE hiện đúng popover, Cancel
+đúng hủy/không đổi mode, xác nhận đúng chuyển; Fight mode dựng đủ 2 khung, chơi 1 vòng (Anagram gõ
+đúng "KANGAROO" 8 chữ hoàn hảo → +16 đúng điểm x2; Quiz chọn đúng "beautiful" → +1) → khung kia khoá
+rồi cả 2 tự chuyển câu tiếp theo ĐỒNG BỘ; thoát Fight về Single ở cả 2 template không lỗi. 0 lỗi
+console suốt toàn bộ quá trình. **Chưa nhìn được bằng mắt** (pane trình duyệt của phiên này không hiện
+hình) — số đo `getBoundingClientRect()` xác nhận layout đúng như tính toán, nhưng thầy nên tự mở
+`test.html` xem lại bằng mắt cho chắc trước khi duyệt.
+
+**VIỆC ĐANG CHỜ (đợt này):** ĐÃ commit + push + live (thầy duyệt 12/8/2026, gộp cùng Đợt 124+126).
+Có thể bàn thêm sau: chia sẻ thứ tự đáp án Quiz giữa 2 khung (mục 4, đang để đơn giản).
+
+---
+
 ## Đợt 124 (12/8/2026) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ (Anagram).
 ⭐ CÓ SỬA CORE (file MỚI `core/fight.js` + `engine.js` + `sfx.js` + `icons.js` + `app.css`).
-🟢 CHỜ THẦY DUYỆT — chưa commit.
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 125 + 126, thầy duyệt cả 3 cùng lúc).
 
 **ĐỢT B** của kế hoạch 12/8. Thầy chốt làm cho **DUY NHẤT Anagram** trước cho hoàn thiện.
 

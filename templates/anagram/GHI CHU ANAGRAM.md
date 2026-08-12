@@ -1,5 +1,16 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 125 (12/8/2026) — dải trên Fight mode gọn lại (KHÔNG đụng `anagram.js`)
+
+Thầy chơi thử Đợt 124 rồi gửi 4 điểm chỉnh cho Fight mode: bỏ nhãn "TEAM 1"/"TEAM 2"/"TIME", cân đối
+lại điểm/đồng hồ/ô điểm tay trên cùng 1 hàng, đồng hồ đổi "00:45" (2 số mỗi bên) + dấu `:` rơi đúng
+đường nối 2 khung, và bấm MODE nay phải xác nhận qua 1 popover mới thật sự đổi mode. **Toàn bộ nằm ở
+`core/fight.js` + `core/engine.js` + `core/app.css` (dùng chung cho MỌI template có `fightMode`) —
+Anagram không đổi dòng nào.** Đợt này cũng là lúc **Quiz** trở thành template thứ hai khai
+`fightMode:true` (thử nghiệm). Chi tiết đầy đủ: `../../GHI CHU DU AN.md` Đợt 125.
+
+---
+
 ## Đợt 124 (12/8/2026) — ⭐⭐ TEMPLATE ĐẦU TIÊN BIẾT ĐẤU 2 ĐỘI (FIGHT MODE)
 
 Anagram là template đầu tiên khai **`fightMode: true`** — đó chính là thứ làm nút **MODE** hiện ra

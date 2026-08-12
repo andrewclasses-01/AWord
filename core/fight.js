@@ -10,6 +10,7 @@
 //     ┌───────────┐   ┌───────────┐
 //     │  TEAM 1   │   │  TEAM 2   │                <- two REAL plays, side by side
 //     └───────────┘   └───────────┘
+//        [hand pts]      [hand pts]                <- one below EACH board, dead centre under it
 //        Options · Template · Style · MODE · ⛶     <- the ONE toolbar, shared
 //
 //   Both teams solve the SAME word at the same time on a touch screen; whoever
@@ -48,6 +49,7 @@ import { el, shuffle } from "./utils.js";
 import { startGame } from "./engine.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
+import { getTemplate } from "./registry.js";
 
 // How long the winning word stays on screen before both boards move on.
 // ⚠️ Must outlast the template's own score animation, measured at 1760ms for a
@@ -65,6 +67,9 @@ const LATE_LIMIT_MS = 20000;
 // lifetime of a module variable. (Every other score belongs to a match and is
 // rebuilt with it.)
 const handPoints = [0, 0];
+// "Woken" state for the "asleep at zero" gate (Đợt 124, third pass) — same
+// module-level lifetime as handPoints, see interact()/paintHand() below.
+const handAwake = [false, false];
 
 export const FIGHT_DEFAULTS = {
   fightContent: "same",      // same | scramble | different
@@ -95,12 +100,16 @@ export function startFight(root, activity, { onExit } = {}) {
   const wrap = el("div", "aw-fight");
   const top = el("div", "aw-fight-top");
   const boardsRow = el("div", "aw-fight-boards");
+  const handsRow = el("div", "aw-fight-hands");
   const bottom = el("div", "aw-fight-bottom");
 
   // ----- the strip above the boards -----
   // Two halves that line up with the two boards (each team's number sits dead
-  // centre over ITS OWN board — teacher, 12/8/2026), plus a middle cluster that
-  // floats over the join: [teacher points] CLOCK [teacher points].
+  // centre over ITS OWN board — teacher, 12/8/2026), plus the clock floating
+  // over the join. The teacher's own hand points used to live in this strip
+  // too (either side of the clock) but moved DOWN below each board, dead
+  // centre under it, at the teacher's request (12/8/2026, third pass) — see
+  // `handsRow` below.
   const teams = [makeTeam(0), makeTeam(1)];
   const half0 = el("div", "aw-fight-half");
   const half1 = el("div", "aw-fight-half");
@@ -109,40 +118,60 @@ export function startFight(root, activity, { onExit } = {}) {
 
   const middle = el("div", "aw-fight-middle");
   const clockBox = el("div", "aw-fight-clockbox");
-  const clockEl = el("div", "aw-fight-clock", "0:00");
-  clockBox.append(el("div", "aw-fight-teamname", "TIME"), clockEl);
-  const hands = [makeHand(0), makeHand(1)];
-  middle.append(hands[0].el, clockBox, hands[1].el);
+  const clockEl = el("div", "aw-fight-clock", "00:00");
+  clockBox.append(clockEl);
+  middle.append(clockBox);
   top.append(half0, half1, middle);
+
+  // ----- one row below the boards, each hand-points box under its own board -----
+  // Same two-halves grid as `top` (matches boardsRow's columns/gap) so each
+  // box sits dead centre under ITS OWN board, same reasoning as the team score
+  // above it.
+  const hands = [makeHand(0), makeHand(1)];
+  const handHalf0 = el("div", "aw-fight-handhalf");
+  const handHalf1 = el("div", "aw-fight-handhalf");
+  handHalf0.append(hands[0].el);
+  handHalf1.append(hands[1].el);
+  handsRow.append(handHalf0, handHalf1);
 
   const boardEls = [el("div", "aw-fight-board"), el("div", "aw-fight-board")];
   boardsRow.append(boardEls[0], boardEls[1]);
-  wrap.append(top, boardsRow, bottom);
+  wrap.append(top, boardsRow, handsRow, bottom);
   root.append(wrap);
 
   function makeTeam(side) {
     const box = el("div", `aw-fight-team side-${side}`);
-    const name = el("div", "aw-fight-teamname", side === 0 ? "TEAM 1" : "TEAM 2");
-    // No +/- buttons here any more: the teacher's own points are a SEPARATE
-    // number beside the clock (makeHand below), so this one stays purely what
-    // the game scored.
+    // No name label any more (teacher, 12/8/2026 second pass) — "TEAM 1"/
+    // "TEAM 2" was clutter once the layout itself already says which number
+    // belongs to which board (it sits dead centre above it). No +/- buttons
+    // here either: the teacher's own points are a SEPARATE number beside the
+    // clock (makeHand below), so this one stays purely what the game scored.
     const value = el("div", "aw-fight-score", "0");
-    box.append(name, value);
+    box.append(value);
     return { el: box, value };
   }
 
-  // ----- the teacher's own points (Đợt 124, second pass) -----
-  // One box each side of the clock, entirely by hand: TAP or swipe UP adds a
-  // point, swipe DOWN takes one off. Kept apart from the game's score on
-  // purpose — it survives Start again and a template change (module-level, see
-  // handPoints) and only a page reload clears it, which is exactly how the
-  // scoreboards on the classroom whiteboard behave.
+  // ----- the teacher's own points (Đợt 124, second + third pass) -----
+  // One box below EACH board, entirely by hand: TAP or swipe UP adds a point,
+  // swipe DOWN takes one off. Kept apart from the game's score on purpose — it
+  // survives Start again and a template change (module-level, see handPoints)
+  // and only a page reload clears it, which is exactly how the scoreboards on
+  // the classroom whiteboard behave.
+  //
+  // "Asleep at zero" (12/8/2026, third pass): a box reading 0 is dimmed, and
+  // the FIRST tap/swipe on a dimmed box only wakes it (brightens, no change) —
+  // the SECOND is what actually bumps the number. A touchscreen box that sits
+  // at the bottom of the frame gets brushed by accident; this costs the
+  // teacher nothing when the box is already away from zero (never dims, every
+  // touch counts immediately), only guards the box's resting state.
   function makeHand(side) {
     const box = el("div", `aw-fight-hand side-${side}`);
     box.tabIndex = 0;
     box.title = "Teacher points — tap or swipe up to add, swipe down to take off";
+    const numWrap = el("div", "aw-fight-handnum");
     const value = el("div", "aw-fight-handvalue", "0");
-    box.append(value);
+    numWrap.append(value);
+    box.append(numWrap);
 
     const SWIPE = 14;                       // px before a drag counts as a swipe
     let startY = null, acted = false;
@@ -156,30 +185,91 @@ export function startFight(root, activity, { onExit } = {}) {
       const dy = e.clientY - startY;
       if (Math.abs(dy) < SWIPE) return;
       acted = true;                          // one step per swipe, not one per pixel
-      bump(side, dy < 0 ? +1 : -1);
+      interact(side, dy < 0 ? +1 : -1);
     });
     const end = () => {
       if (startY === null) return;
-      if (!acted) bump(side, +1);            // a plain tap adds a point
+      if (!acted) interact(side, +1);        // a plain tap adds a point
       startY = null; acted = false;
     };
     box.addEventListener("pointerup", end);
     box.addEventListener("pointercancel", end);
-    return { el: box, value };
+    return { el: box, value, numWrap };
+  }
+
+  // The gate described above: a dimmed (0, not-yet-woken) box just wakes on
+  // this touch: `handAwake` flips true and the box repaints brighter, but
+  // `handPoints` doesn't move — the very next touch is what calls bump().
+  function interact(side, delta) {
+    if (handPoints[side] === 0 && !handAwake[side]) {
+      handAwake[side] = true;
+      sound.click();
+      paintHand(side, 0);
+      return;
+    }
+    bump(side, delta);
   }
 
   function bump(side, delta) {
     handPoints[side] += delta;
+    // Landing back on exactly 0 re-arms the "wake first" gate — the box is at
+    // rest again, so the next touch should ask before it moves once more.
+    if (handPoints[side] === 0) handAwake[side] = false;
     sound.click();
-    paintHand(side);
+    paintHand(side, delta);
   }
-  function paintHand(side) {
+
+  const HAND_SLIDE_MS = 200;
+  // `dir` is the numeric change just applied (+1/-1), or 0/undefined for a
+  // repaint with no value change (waking a dimmed box, or the initial/carried-
+  // over paint at match start) — only a real change gets the slide animation.
+  function paintHand(side, dir) {
+    const h = hands[side];
     const v = handPoints[side];
-    // Teacher points read POSITIVE BLUE / NEGATIVE RED, and a negative one shows
-    // the bare number without a minus (teacher, 12/8/2026) — colour alone says
-    // which way it went, and the box is small.
-    hands[side].value.textContent = String(Math.abs(v));
-    hands[side].value.classList.toggle("is-neg", v < 0);
+    const text = String(Math.abs(v));
+    const isNeg = v < 0;
+    // "Asleep at zero": dim while resting on 0 and not yet woken by a touch —
+    // still legible, not fully invisible (teacher's ask: "vẫn dim một chút đủ
+    // nhìn"). Away from zero the box is ALWAYS bright; only 0 can dim.
+    h.el.classList.toggle("is-dim", v === 0 && !handAwake[side]);
+    if (dir) { animateHandSlide(side, text, isNeg, dir); return; }
+    h.value.textContent = text;
+    h.value.classList.toggle("is-neg", isNeg);
+  }
+
+  // The "odometer" swap (teacher's ask, 12/8/2026 third pass): the OLD number
+  // slides out one way while the NEW one slides in from the other, instead of
+  // just replacing the text. Increasing (+1) reads as the number climbing —
+  // new value rises in from below, old one exits upward; decreasing is the
+  // mirror. `.aw-fight-handnum` is the fixed-height clipping window (CSS) that
+  // makes the two overlapping numbers look like one sliding strip.
+  function animateHandSlide(side, text, isNeg, dir) {
+    const h = hands[side];
+    const oldEl = h.value;
+    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), text);
+    newEl.style.transform = `translateY(${dir > 0 ? "100%" : "-100%"})`;
+    h.numWrap.append(newEl);
+    const outAnim = oldEl.animate(
+      [{ transform: "translateY(0)" }, { transform: `translateY(${dir > 0 ? "-100%" : "100%"})` }],
+      { duration: HAND_SLIDE_MS, easing: "ease", fill: "forwards" });
+    const inAnim = newEl.animate(
+      [{ transform: `translateY(${dir > 0 ? "100%" : "-100%"})` }, { transform: "translateY(0)" }],
+      { duration: HAND_SLIDE_MS, easing: "ease", fill: "forwards" });
+    let done = false;
+    const settle = () => {
+      if (done) return;
+      done = true;
+      // `fill:"forwards"` holds the last keyframe after the animation ends —
+      // cancel() releases that hold before the inline style reset below, or
+      // the reset is a no-op and the element stays visually stuck mid-flight
+      // (same trap documented in templates/anagram/anagram.js).
+      try { outAnim.cancel(); inAnim.cancel(); } catch { /* already gone */ }
+      oldEl.remove();
+      newEl.style.transform = "";
+      h.value = newEl;
+    };
+    inAnim.onfinish = settle;
+    setTimeout(settle, HAND_SLIDE_MS + 120);   // fallback: a hidden/backgrounded tab can stall animation events
   }
 
   // ----- per-side running totals -----
@@ -321,7 +411,16 @@ export function startFight(root, activity, { onExit } = {}) {
 
     // --- what the ENGINE reports (see startGame's `fight` option) ---
     onScore(side, value) { game[side] = Number(value) || 0; holdFreeze(side); paintScore(side); },
-    onTimer(side, text) { if (side === 0) clockEl.textContent = text; },
+    // `seconds` is the RAW count (engine.js sends the number, not its own
+    // single-digit-minutes chip text) — the strip pads both halves to 2
+    // digits ("05:07", not "5:07") so the width never shifts and the ":"
+    // stays parked on the seam between the two boards (teacher, 12/8/2026).
+    onTimer(side, seconds) {
+      if (side !== 0) return;
+      const s = Math.max(0, Math.floor(Number(seconds) || 0));
+      const m = Math.floor(s / 60);
+      clockEl.textContent = `${String(m).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+    },
     onFinish(side) {
       // One board ran out of words/lives on its own — the match is over for
       // both, and the winner is simply whoever has more points.
@@ -424,7 +523,13 @@ export function startFight(root, activity, { onExit } = {}) {
   // Both sides share the SAME item objects (so "same letters" can hand the
   // scramble from one board to the other, and so Start-with-mistakes `src`
   // identity still works); only the ORDER and the options object differ.
-  const srcItems = (activity.content && activity.content.items) || [];
+  // `itemsKey` — which array in activity.content holds the playable items —
+  // is per-template ("items" for Anagram, "questions" for Quiz, ...; see
+  // tpl.itemsKey, the same field core/mistakes.js reads). Hardcoding ".items"
+  // here worked only by accident while Anagram was the sole fightMode
+  // template; Quiz joining (12/8/2026, trial) is what surfaced it.
+  const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
+  const srcItems = (activity.content && activity.content[itemsKey]) || [];
   const orderA = fo.fightContent === "different" && (activity.options || {}).shuffleQuestions !== false
     ? shuffle([...srcItems]) : [...srcItems];
   const orderB = fo.fightContent === "different"
@@ -440,7 +545,7 @@ export function startFight(root, activity, { onExit } = {}) {
     return {
       ...activity,
       options: { ...(activity.options || {}), shuffleQuestions: false },
-      content: { ...(activity.content || {}), items },
+      content: { ...(activity.content || {}), [itemsKey]: items },
       _fight: { side, ctl }
     };
   }

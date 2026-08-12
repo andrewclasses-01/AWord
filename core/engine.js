@@ -287,8 +287,32 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   const modeBtn = (tpl.fightMode && !session) ? toolBtn(icons.mode, "Mode: single / fight") : null;
   if (modeBtn) {
     if (fight) modeBtn.classList.add("is-active");
-    modeBtn.onclick = async () => {
+    // MODE never switches on the bare click any more (teacher, 12/8/2026) — a
+    // stray tap used to drop a running match straight back to single mode with
+    // no way back. Same popover mechanism as Options/Template/Style
+    // (openToolPanel), just with a Yes/Cancel question instead of controls.
+    modeBtn.onclick = () => openToolPanel(modeBtn, buildModeConfirmPanel);
+    belowCenter.append(modeBtn);
+  }
+  function buildModeConfirmPanel(panel) {
+    const toFight = !fight;
+    panel.append(el("div", "aw-tool-panel-head", toFight ? "Switch to Fight mode?" : "Switch to Single mode?"));
+    panel.append(el("div", "aw-mode-confirm-text", toFight
+      ? "Two teams play the same act side by side, racing for points."
+      : "Leave the match and go back to one board."));
+    const row = el("div", "aw-mode-confirm-row");
+    // NOT panelItem(): that helper is styled for the dark in-stage .aw-panel
+    // (white text, cqw sizing) — invisible/oversized out here in the light
+    // below-stage popover, same trap the "Apply" button comment warns about.
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); closeToolPanel(true); };
+    row.append(cancelBtn);
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", toFight ? "Start fight" : "Back to single");
+    goBtn.type = "button";
+    goBtn.onclick = async () => {
       sound.click();
+      closeToolPanel(false);
       if (fight) { fight.ctl.exitFight(); return; }
       exitAnyFullscreen();
       cleanupAll();
@@ -300,7 +324,8 @@ export function startGame(root, activity, { onExit, session = null, base = null,
         startGame(root, activity, { onExit, base });
       }
     };
-    belowCenter.append(modeBtn);
+    row.append(goBtn);
+    panel.append(row);
   }
   // FIGHT MODE: one Fullscreen for the whole match, in the same row as
   // Options/Template/Style/MODE (teacher, 12/8/2026). The per-board buttons
@@ -605,20 +630,25 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // so the two call sites can never drift apart.
   function tickTimer() {
     const elapsed = Math.floor((performance.now() - startedAt) / 1000);
+    let secondsNow;
     if (timerMode() === "countDown") {
       const remaining = Math.max(0, timerTotal() - elapsed);
       timerEl.textContent = formatTime(remaining);
+      secondsNow = remaining;
       // Optional per-template hook — no default sound, so templates that
       // don't opt in (e.g. Quiz) behave exactly as before.
       if (remaining <= 5 && remaining > 0 && !timeWarned) { timeWarned = true; if (!fight || fight.side === 0) tpl.sounds?.timeWarning?.(); }
       if (remaining <= 0) { stopTimer(); submitHandler?.(); }
     } else {
       timerEl.textContent = formatTime(elapsed);
+      secondsNow = elapsed;
     }
     // FIGHT MODE: both boards keep their own clock (each play still needs one
     // for its own timing), but only board 0's reading is shown — on the shared
-    // strip between the two scoreboards.
-    if (fight) fight.ctl.onTimer(fight.side, timerEl.textContent);
+    // strip between the two scoreboards. Raw seconds, not the in-frame chip's
+    // text: the strip pads BOTH minutes and seconds to 2 digits (12/8/2026,
+    // for a steady width/centering), unlike the single-digit-minutes chip.
+    if (fight) fight.ctl.onTimer(fight.side, secondsNow);
   }
   function startTimerNow() {
     if (timerStarted) return;
@@ -635,7 +665,9 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (timerMode() !== "none") {
       // show the correct value immediately (don't wait for the first 500ms tick)
-      timerEl.textContent = timerMode() === "countDown" ? formatTime(timerTotal()) : formatTime(0);
+      const initialSeconds = timerMode() === "countDown" ? timerTotal() : 0;
+      timerEl.textContent = formatTime(initialSeconds);
+      if (fight) fight.ctl.onTimer(fight.side, initialSeconds);
       timerId = setInterval(tickTimer, 500);
     }
   }

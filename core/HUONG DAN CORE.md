@@ -284,16 +284,27 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
 
-**Hợp đồng cho template muốn tham gia** (opt-in, mới có Anagram):
+**Hợp đồng cho template muốn tham gia** (opt-in — Anagram Đợt 124, Quiz thêm ở Đợt 125 làm thử
+nghiệm; template cần khai sẵn `itemsKey`, xem cảnh báo dưới):
 ```js
+itemsKey: "questions",                // BẮT BUỘC — fight.js đọc/ghi mảng item qua field này (xem dưới)
 fightMode: true,                      // đây là thứ làm nút MODE hiện ra
 // trong mount(): const f = activity._fight;  // { side, ctl } — không có = chơi đơn như thường
 f.ctl.attach(side, { total, goToIndex(i), lock(on) })   // đăng ký bàn
-f.ctl.wordDone(side, { index, earned, perfect })        // vừa giải xong 1 từ
+f.ctl.wordDone(side, { index, earned, perfect })        // vừa giải xong 1 từ (hoặc 1 câu — earned/perfect
+                                                         // là thông tin thêm, fight.js hiện KHÔNG đọc lại)
 f.ctl.isLocked(side)                                    // chặn thao tác khi đã thua vòng
 f.ctl.shareLetters · f.ctl.speaks(side)                 // giữ công bằng + không đọc chồng
 f.ctl.boardMoved(side, index)                           // thầy bấm ‹ › ở bàn này
 ```
+⚠️ **`fight.js` KHÔNG còn đọc cứng `activity.content.items`** (đúng lỗi Đợt 124 chỉ hợp Anagram) — nay
+tra `getTemplate(activity.type).itemsKey` để biết mảng item nằm ở field nào (Quiz là `"questions"`).
+Template mới tham gia Fight chỉ cần đã khai `itemsKey` đúng (mọi template có tính năng "Start with
+mistakes" đều đã khai sẵn) — không phải sửa gì thêm ở `fight.js`.
+⚠️ **Điểm KHÔNG cần hoạt ảnh bay riêng vẫn tự động vào scoreboard** — nếu template chỉ gọi
+`ui.setScore(n)` như bình thường (không tự vẽ hiệu ứng bay số như Anagram), engine đã tự chuyển tiếp
+vào `fight.ctl.onScore()` cho template đó rồi (xem `ui.setScore` trong `core/engine.js`) — KHÔNG cần
+đọc `ctl.scoreTarget(side)` trừ khi template tự vẽ hoạt ảnh bay điểm ra ngoài khung.
 
 **Ô điểm ở ĐÂU** (thầy chốt 12/8/2026, bản cuối): **KHÔNG có ô điểm trong khung khi đấu** — mỗi đội
 chỉ có MỘT con số, nằm **chính giữa phía trên khung của mình**, và điểm bay thẳng từ trong game ra
@@ -336,6 +347,18 @@ bấm hộ nút PLAY của bàn kia. Bắt buộc phải vậy: mỗi ván có �
 mà "trông như trận đấu nhưng không có luật" tệ hơn là từ chối thẳng.
 ⚠️ `core/fight.js` **nạp trì hoãn** (`await import`) từ nút MODE, và MODE chỉ dựng khi `!session` —
 trang học sinh không bao giờ tải nó, và engine không phải import tĩnh một module import ngược lại nó.
+
+**Bấm MODE nay phải xác nhận (Đợt 125)**: `core/engine.js`'s `modeBtn.onclick` không còn đổi mode
+ngay — nó mở 1 popover Yes/Cancel ngay cạnh nút (`openToolPanel` — cùng cơ chế Options/Template/Style,
+không đẻ cơ chế mới), chỉ bấm xác nhận mới thật gọi `startFight()`/`fight.ctl.exitFight()`. Việc này
+nằm ở `engine.js` chung, template không cần biết/sửa gì.
+
+**Dải điểm/đồng hồ trên cùng không còn nhãn chữ** (Đợt 125): "TEAM 1"/"TEAM 2"/"TIME" đã bỏ hẳn — mọi
+khối trên dải nay đúng **1 dòng** (điểm đội, đồng hồ, ô điểm tay), cùng cỡ chữ với điểm đội/đồng hồ
+nên tự thẳng hàng, không cần chỉnh tay. Đồng hồ hiện **"00:45"** (2 số mỗi bên, không phải "0:45" như
+chip đơn) — `tickTimer()` gửi SỐ GIÂY THÔ cho `fight.ctl.onTimer()`, `fight.js` tự pad. `.aw-fight-hand`
+dùng `width` CỐ ĐỊNH (không phải `min-width`) để 2 ô điểm tay hai bên đồng hồ luôn bằng nhau bất kể số
+chữ số — đây chính là điều giữ đồng hồ (và dấu `:`) luôn đúng tâm dải dù điểm tay lệch số.
 
 ### ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG — `voiceView()` (Đợt 123, 12/8/2026)
 

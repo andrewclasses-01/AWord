@@ -5,9 +5,52 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 124) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ
+> Cập nhật lần cuối: **12/8/2026 (Đợt 126) — FIGHT MODE: THU NHỎ 60% + Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG,
+> NGỦ KHI BẰNG 0, TRƯỢT KHI ĐỔI SỐ. ⭐ CÓ SỬA CORE (`fight.js` + `app.css`, không đụng template nào).
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 124 + 125, thầy duyệt cả 3 cùng lúc).
+> Thầy gửi thêm 2 điểm sau Đợt 125: (1) **điểm/đồng hồ/ô điểm tay còn 60%** kích cỡ cũ (đo thật ở màn
+> rộng: 40.8px/40.8px/43.19px, khớp phép tính); (2) **ô điểm tay rời khỏi cụm giữa cạnh đồng hồ,
+> xuống hẳn 1 hàng MỚI dưới khung act**, mỗi ô chính giữa khung của đúng đội đó (đo `centerX`: khớp
+> tuyệt đối với khung) — nhờ đó đồng hồ ở cụm giữa nay chỉ còn 1 mình, càng chắc chắn đúng tâm vạch
+> chia 2 khung. Số bên trong ô nới to hơn mức 60% thuần một chút, **ô nền vẫn giữ đúng 60%** (không
+> phình theo số). Ô **"ngủ" (mờ `opacity:.42`) khi đang ở 0** — chạm/vuốt đầu tiên trên ô mờ chỉ đánh
+> thức (sáng lên, số không đổi), chạm/vuốt tiếp mới thật tăng/giảm; về lại đúng 0 thì tự mờ lại — tránh
+> ô sát đáy khung bị chạm nhầm đổi điểm ngoài ý muốn. Đổi số có **hiệu ứng trượt kiểu đồng hồ số**
+> (tăng: số mới trượt lên từ dưới, số cũ trượt lên mất phía trên; giảm thì ngược lại), dựng bằng 2 lớp
+> chồng nhau trong khung `overflow:hidden`, đúng kỹ thuật `.animate()+cancel()` đã có ở anagram.js.
+> Đã test qua trình duyệt thật (cả Anagram lẫn Quiz, vì đây là sửa core dùng chung): mô phỏng PointerEvent
+> thật qua đúng 3 lượt chạm/vuốt xác nhận ngủ→thức→tăng→giảm→tự ngủ lại, đo `getBoundingClientRect` xác
+> nhận căn giữa + cỡ chữ đúng tính toán, 0 lỗi console. ⬜ Vẫn **chưa nhìn được bằng mắt**.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 126.
+>
+> Trước đó: **12/8/2026 (Đợt 125) — DẢI TRÊN FIGHT MODE GỌN LẠI + XÁC NHẬN TRƯỚC KHI ĐỔI
+> MODE + QUIZ THỬ NGHIỆM ĐẤU. ⭐ CÓ SỬA CORE (`engine.js` + `fight.js` + `app.css`) +
+> `templates/quiz/quiz.js`. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 124 + 126).
+> Thầy chơi thử Đợt 124 rồi gửi 4 điểm: (1) **bấm MODE nay phải xác nhận** qua 1 popover Yes/Cancel
+> ngay cạnh nút (dùng lại `openToolPanel`, không đẻ cơ chế mới) mới thật sự đổi SINGLE↔FIGHT — lỡ tay
+> không còn mất trận đang chơi; (2) **bỏ hẳn nhãn chữ "TEAM 1"/"TEAM 2"/"TIME"** trên dải điểm; (3)
+> dải điểm/đồng hồ/ô điểm tay thầy nay **thẳng hàng, cân đối tuyệt đối** — gốc lệch thật là đội+đồng hồ
+> vốn 2 dòng (nhãn+số) còn ô điểm tay 1 dòng, bỏ nhãn xong cả 3 tự về 1 dòng cùng cỡ chữ (đo
+> `getBoundingClientRect`: lệch tâm dọc ≤1.5px); (4) **đồng hồ đấu đổi "00:45" (2 số mỗi bên)**, dấu
+> `:` luôn rơi đúng đường nối 2 khung nhờ ép 2 ô điểm tay hai bên đồng hồ **cùng bề rộng cố định**
+> (trước là bề rộng tối thiểu, số 2 chữ số đẩy lệch tâm) — đo thật: tâm chữ đồng hồ lệch tâm dải
+> **0.008px**, coi như tuyệt đối.
+> ⭐ Thầy cũng chốt **"áp dụng tạm cho Quiz"** — Quiz trở thành template THỨ HAI khai `fightMode:true`.
+> Việc này buộc tổng quát hoá `core/fight.js`: nó từng **đọc cứng `activity.content.items`** (chỉ
+> đúng Anagram) → đổi sang tra `getTemplate(activity.type).itemsKey` (field mỗi template đã khai sẵn
+> cho "Start with mistakes"), nên **template thứ ba sau này tự động đúng, không cần sửa `fight.js`**.
+> Quiz's `mount()` mô phỏng đúng khuôn `_fight` của Anagram nhưng nhẹ hơn nhiều — Quiz không có hoạt
+> ảnh bay điểm riêng, `ui.setScore()` engine đã tự chuyển vào `fight.ctl.onScore()` sẵn.
+> Đã test qua trình duyệt thật (`devserver.py`, `templates/anagram/test.html` + `templates/quiz/
+> test.html`): popover MODE đúng Cancel/xác nhận, Fight dựng 2 khung, chơi 1 vòng mỗi template (Anagram
+> KANGAROO hoàn hảo +16, Quiz chọn đúng +1), khung thua khoá rồi cả 2 tự đồng bộ sang câu tiếp, thoát
+> Fight về Single cả 2 template không lỗi, 0 lỗi console. ⬜ **Chưa nhìn được bằng mắt** (pane phiên
+> này không hiện hình) — số đo xác nhận layout đúng, thầy tự mở xem lại trước khi duyệt.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 125.
+>
+> Trước đó: **12/8/2026 (Đợt 124) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ
 > (Anagram trước, thầy chốt). ⭐ CÓ SỬA CORE — file MỚI `core/fight.js` + `engine.js` + `sfx.js` +
-> `icons.js` + `app.css`. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> `icons.js` + `app.css`. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 125 + 126).
 > Nút **MODE** (chỉ hiện với template khai `tpl.fightMode`) lật SINGLE ↔ FIGHT: 2 ván THẬT cạnh nhau
 > (mỗi khung vẫn đúng 16:10,5 — đo 939×616 ở 1920×1080), dải trên SCOREBOARD 1 · ĐỒNG HỒ ·
 > SCOREBOARD 2 (chừa sẵn 2 ô cho CHUÔNG sau này), MỘT thanh công cụ dùng chung. Chạy được 2 ván

@@ -776,6 +776,14 @@ body {
    fall back to viewport width and render the button far too big. */
 .aw-btn.aw-opt-apply { padding: 9px 34px; font-size: 15px; }
 
+/* MODE confirm popover (12/8/2026) — Yes/Cancel question shown by the MODE
+   button before switching SINGLE <-> FIGHT, same .aw-tool-panel popover as
+   Options/Template/Style. Same fixed-px trap as .aw-opt-apply above: this
+   lives OUTSIDE the 16:9 stage, so .aw-btn's cqw sizing would render huge. */
+.aw-mode-confirm-text { font-size: 13px; color: #57667a; line-height: 1.4; margin-top: 2px; max-width: 30ch; }
+.aw-mode-confirm-row { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
+.aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; }
+
 /* Template panel */
 .aw-tpl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 .aw-tpl-item {
@@ -1993,7 +2001,12 @@ body {
 /* --- the shared strip above the boards ---
    Two halves that line up with the two boards, so each team's number sits dead
    centre over ITS OWN board, plus a middle cluster floating over the join:
-   [teacher points] CLOCK [teacher points]  (teacher, 12/8/2026). */
+   [teacher points] CLOCK [teacher points]. No text labels anywhere in this
+   strip any more (teacher, 12/8/2026 second pass — "TEAM 1"/"TEAM 2"/"TIME"
+   were dropped: the layout itself already says what each number is, and the
+   labels cost the row real vertical space it didn't have to spend). Every
+   number left is now genuinely ONE LINE, which is also what makes the row
+   read as evenly balanced — see the single shared line-box height, below. */
 .aw-fight-top {
   position: relative;
   display: grid;
@@ -2008,18 +2021,13 @@ body {
      12/8/2026: the clock was near-invisible in the pale text it started with). */
   color: #26303c;
 }
-.aw-fight-half { display: flex; justify-content: center; min-width: 0; }
+.aw-fight-half { display: flex; align-items: center; justify-content: center; min-width: 0; }
 
-.aw-fight-team { display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative; }
-.aw-fight-teamname {
-  font-size: clamp(11px, 1.5vw, 16px);
-  letter-spacing: .18em;
-  font-weight: 700;
-  color: #7b8794;
-  line-height: 1.35;
-}
+.aw-fight-team { position: relative; }
 .aw-fight-score {
-  font-size: clamp(30px, 5.2vw, 68px);
+  /* 60% of the original clamp(30px,5.2vw,68px) — teacher's ask, 12/8/2026
+     third pass: the score/clock/hand-points strip read too large/heavy. */
+  font-size: clamp(18px, 3.12vw, 40.8px);
   font-weight: 800;
   line-height: 1.15;
   min-width: 1.6em;
@@ -2032,9 +2040,14 @@ body {
 }
 .aw-fight-score.is-neg { color: #e03131; }
 
-/* --- the middle cluster: teacher points · clock · teacher points --- */
-/* Absolutely centred over the WHOLE strip so it stays on the join between the
-   two boards no matter how wide the team numbers grow. */
+/* --- the clock, floating over the join between the two boards ---
+   Absolutely centred over the WHOLE strip (not the .aw-fight-half cells
+   either side of it, whose width can differ from the true seam once a score
+   grows) so it always sits on the boards' actual join, regardless of team
+   score width. The teacher's own hand points used to share this cluster
+   (either side of the clock) — moved below the boards instead (Đợt 124,
+   third pass, see .aw-fight-hands below), so centring the clock alone here
+   is now trivial: nothing else in this box to stay symmetric around. */
 .aw-fight-middle {
   position: absolute;
   left: 50%;
@@ -2042,60 +2055,82 @@ body {
   transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  gap: clamp(8px, 1.6vw, 22px);
 }
-.aw-fight-clockbox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.aw-fight-clockbox { display: flex; align-items: center; }
 .aw-fight-clock {
-  /* EXACTLY the score's font-size and line-height so all three numbers sit on
-     one line; it stays quieter by colour, not by size. */
-  font-size: clamp(30px, 5.2vw, 68px);
+  /* EXACTLY the score's font-size and line-height so both numbers sit on one
+     line and share one line-box height; it stays quieter by colour, not by
+     size. */
+  font-size: clamp(18px, 3.12vw, 40.8px);
   line-height: 1.15;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: #55606d;
 }
 
-/* The teacher's own points: tap or swipe up to add, swipe down to take off.
-   Blue when positive, red when negative — and a negative shows the bare number
-   with NO minus sign (teacher, 12/8/2026). */
+/* --- the teacher's own hand points, one box below EACH board (Đợt 124,
+   third pass) --- tap or swipe up to add, swipe down to take off. */
+.aw-fight-hands {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1.2vw, 18px);      /* same gap as .aw-fight-boards, so each half matches its board */
+}
+.aw-fight-handhalf { display: flex; justify-content: center; }
+
+/* The BOX ("ô nền") is 60% of its original clamp(46px,4.6vw,72px) — same 60%
+   pass as the score/clock above — and stays exactly this size regardless of
+   what's happening to the number inside (teacher's ask: "giữ nguyên size ô
+   nền" when the number itself was asked to grow back a little, see
+   .aw-fight-handnum below). Blue when positive, red when negative — and a
+   negative shows the bare number with NO minus sign (teacher, 12/8/2026). */
 .aw-fight-hand {
-  min-width: clamp(46px, 4.6vw, 72px);
-  padding: 4px 6px 5px;
-  border-radius: 14px;
-  border: 1.6px solid #d5dde6;
+  width: clamp(27.6px, 2.76vw, 43.2px);
+  box-sizing: border-box;
+  padding: 2.4px 3.6px 3px;
+  border-radius: 8px;
+  border: 1px solid #d5dde6;
   background: #fbfdff;
   cursor: ns-resize;
   user-select: none;
   touch-action: none;
   text-align: center;
-  transition: border-color .15s ease, background .15s ease;
+  transition: border-color .15s ease, background .15s ease, opacity .18s ease;
 }
 .aw-fight-hand:hover { border-color: #b9c6d4; background: #fff; }
 .aw-fight-hand:active { background: #f1f5fa; }
-.aw-fight-handvalue {
-  font-size: clamp(20px, 3.2vw, 42px);
-  font-weight: 800;
+/* "Asleep at zero" (teacher's ask, 12/8/2026 third pass): dimmed while resting
+   on 0 and not yet woken by a touch — still legible ("vẫn dim một chút đủ
+   nhìn"), not invisible. The FIRST touch on a dimmed box only wakes it
+   (core/fight.js's interact()); the box never dims once away from 0. */
+.aw-fight-hand.is-dim { opacity: .42; }
+
+/* Fixed-height clipping window for the odometer-style slide (core/fight.js's
+   animateHandSlide()) — carries the font-size so .aw-fight-handvalue can just
+   `font: inherit` and the two overlapping numbers (old sliding out, new
+   sliding in) always share the exact same metrics. Deliberately a touch
+   BIGGER than a strict 60%-of-original scale (clamp(12px,1.92vw,25.2px) would
+   be the literal 60%) — the box above stays at the 60% width regardless
+   (teacher's ask: "giữ nguyên size ô nền"), only the number reads bigger. */
+.aw-fight-handnum {
+  position: relative;
+  overflow: hidden;
+  font-size: clamp(15px, 2.3vw, 29px);
   line-height: 1.2;
+  height: 1.2em;
+}
+.aw-fight-handvalue {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: inherit;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #2b7fd4;
+  will-change: transform;
 }
 .aw-fight-handvalue.is-neg { color: #e03131; }
-
-/* Same two-line shape as a team box (label over number) so the clock sits on
-   the SAME baseline as the two scores instead of floating between a team's
-   label and its number. */
-.aw-fight-clockbox { display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.aw-fight-clock {
-  /* EXACTLY the score's font-size and line-height: a smaller clock sat 10px
-     lower than the two numbers (both boxes are centred vertically, so a shorter
-     line box starts further down) and the row stopped reading as one line.
-     It stays quieter than the scores by weight and colour, not by size. */
-  font-size: clamp(30px, 5.2vw, 68px);
-  line-height: 1.15;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  opacity: .78;
-}
 
 /* the winning team's box pulses once when it takes a word */
 .aw-fight-team.is-won .aw-fight-score { animation: aw-fight-pop .5s ease; }

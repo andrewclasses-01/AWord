@@ -67,6 +67,13 @@ const quizTemplate = {
   itemsKey: "questions",
   name: "Quiz",
   hasLivesSlot: true,      // hearts render in the top bar, left of the score (same slot as True/false)
+  // FIGHT MODE (12/8/2026, trial second template after Anagram) — see the
+  // `_fight` branches in mount() below and core/fight.js's header comment for
+  // the contract. Quiz's own scoring already goes through ui.setScore(), which
+  // the engine forwards to the match scoreboard on its own — so unlike Anagram
+  // (which flies its "+N" to a spot it has to ask fight.ctl.scoreTarget() for),
+  // Quiz needed no scoring plumbing of its own, only round/lock bookkeeping.
+  fightMode: true,
 
   // Content editor for this game (opened by the home page and the in-game Edit
   // button). Each template supplies its own editor the same way.
@@ -137,6 +144,16 @@ const quizTemplate = {
     const opt = activity.options || {};
     const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct per wrong (0 = off)
     const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
+
+    // ----- FIGHT MODE (12/8/2026, trial) — this play is one of two boards
+    // racing. `_fight` is put here by core/fight.js; everything below falls
+    // back to ordinary single-board behaviour when it is absent. See
+    // anagram.js's own `_fight` branches for the fuller pattern this mirrors.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;   // set by the match controller between rounds
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
 
     // one random colour set for this whole play (reshuffled on Start again)
     const palette = shuffle(PALETTE);
@@ -263,7 +280,12 @@ const quizTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
         questionEl.append(vBtn);
-        if (vv.autoPlay) voicePlayer.playDelayed(q.src.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        // FIGHT MODE: both boards show the same question, so only board 0
+        // speaks — two copies of the same clip a few ms apart is an echo, not
+        // a reading (same rule as anagram.js).
+        if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
+          voicePlayer.playDelayed(q.src.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        }
       }
       firstQuestionSpoken = true;
 
@@ -288,9 +310,22 @@ const quizTemplate = {
           tile.disabled = true;
           addBadges(tile, ans, k, st);
         } else {
-          tile.disabled = false;
+          // FIGHT MODE: the other team already took this question (or the
+          // match is over) — tiles go visibly dead rather than silently
+          // ignoring taps, so the class can SEE the round is decided.
+          tile.disabled = fightLocked();
         }
       });
+    }
+
+    // Toggle just the disabled state of this question's not-yet-answered
+    // tiles, without rebuilding anything — used by the fight controller's
+    // lock(on) so a round-lock never replays this question's voice clip
+    // (a full applyQuestion() call would, since it always restarts playback).
+    function syncFightLock() {
+      if (state[index].chosen !== null) return;   // already answered -> stays disabled regardless
+      const locked = fightLocked();
+      tiles.forEach(t => { t.tile.disabled = locked; });
     }
 
     // HEIGHT fit (whole card) + per-tile WIDTH fit (never break a single word).
@@ -344,7 +379,7 @@ const quizTemplate = {
     function choose(i) {
       const q = questions[index];
       const st = state[index];
-      if (st.chosen !== null || finished || ending) return;
+      if (st.chosen !== null || finished || ending || fightLocked()) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
 
@@ -365,6 +400,12 @@ const quizTemplate = {
       ui.setScore(scoreNow());
       updateNav();
 
+      // FIGHT MODE: tell the match this board just answered the round's
+      // question — right or wrong, a tap resolves the question with no
+      // retry, same as Anagram's bonus-mode letters. The controller decides
+      // who scores the round and when both boards move on.
+      if (fightCtl) fightCtl.wordDone(fightSide, { index });
+
       // A wrong answer costs a heart when Lives are on. Running out ends the
       // game right away ("Game over"), even with questions still unanswered —
       // and `ending` locks the tiles + nav for the short wait so nothing can be
@@ -381,8 +422,12 @@ const quizTemplate = {
       }
 
       // Auto "Game complete" once EVERY question has been answered (no question
-      // left). Wait a moment so the ✓/✗ feedback plays first.
-      if (state.every(s => s.chosen !== null)) {
+      // left). Wait a moment so the ✓/✗ feedback plays first. FIGHT MODE skips
+      // this: the match controller ends the whole match itself once every
+      // round has been played (advanceRound()/endMatch() in core/fight.js) —
+      // a board calling finish() here too would race it (same reasoning as
+      // Anagram's finalizeBonusWord()).
+      if (!fightCtl && state.every(s => s.chosen !== null)) {
         autoTimer = setTimeout(() => finish("complete"), st.correct ? 1000 : 1500);
       }
     }
@@ -471,6 +516,10 @@ const quizTemplate = {
         applyQuestion(i);
         fitNow();
         updateNav();
+        // FIGHT MODE: the teacher pressed ‹ › on THIS board — tell the match so
+        // the other board follows (see jumpTo()/ctl.attach below for the other
+        // direction: the controller moving a board that didn't initiate).
+        if (fightCtl) fightCtl.boardMoved(fightSide, i);
         const inA = questionEl.animate(
           [{ transform: `translateX(${inX}%)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }],
           { duration: 190, easing: "ease", fill: "forwards" });
@@ -494,6 +543,35 @@ const quizTemplate = {
     function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
     function goPrev() { if (!animating && !ending && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
     function goNext() { if (!animating && !ending && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
+
+    // FIGHT MODE: the match controller moving THIS board because the OTHER
+    // one navigated — a hard cut, not the slide (no `dir` to animate towards,
+    // and a round change outranks whatever slide might already be running).
+    function jumpTo(i) {
+      const target = Math.max(0, Math.min(total - 1, i | 0));
+      if (target === index) return;
+      animating = false;
+      clearAutoTimer();
+      index = target;
+      applyQuestion(target);
+      fitNow();
+      updateNav();
+    }
+
+    // ----- FIGHT MODE: the match controller drives both boards through this -----
+    // Registered after the functions above exist so the controller can move
+    // this board the moment it attaches (board 1 mounts later than board 0 and
+    // would otherwise sit on question 1 while the match is already on 3).
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total,
+        goToIndex: jumpTo,
+        lock(on) {
+          fightBoardLock = !!on;
+          syncFightLock();
+        }
+      });
+    }
 
     // Keyboard: number keys 1-9 answer the current question; ← → navigate.
     function onKey(e) {
