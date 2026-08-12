@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AWord — Voice cleanup (one-off tool)</title>
+<link rel="icon" href="core/assets/icons/favicon-32.png" sizes="32x32">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 32px 20px; background: #0b1220; color: #e6edf7;
+         font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { color: #93a4bd; margin: 0 0 24px; }
+  .card { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+          border-radius: 18px; padding: 20px; margin-bottom: 16px; }
+  button { font: inherit; font-weight: 600; border: 0; border-radius: 12px; padding: 11px 18px;
+           background: #60a5fa; color: #07121f; cursor: pointer; transition: filter .18s cubic-bezier(.22,.9,.3,1); }
+  button:hover:not(:disabled) { filter: brightness(1.12); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.ghost { background: rgba(255,255,255,.1); color: #e6edf7; }
+  button.danger { background: #f87171; color: #2b0707; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  pre { background: #060b14; border: 1px solid rgba(255,255,255,.08); border-radius: 12px;
+        padding: 14px; overflow-x: auto; white-space: pre-wrap; margin: 14px 0 0; font-size: 13.5px; }
+  .warn { border-color: rgba(248,113,113,.45); background: rgba(248,113,113,.08); }
+  b.num { color: #7dd3fc; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Voice cleanup</h1>
+  <p class="sub">One-off tool (12/8/2026) — wipes every voice clip generated during the WAV
+     trial period, so voices can be regenerated in the new, ~15x smaller MP3 format.
+     Not linked from anywhere; open it by URL when needed.</p>
+
+  <div class="card">
+    <div class="row">
+      <button id="signin">Sign in with Google</button>
+      <span id="who" class="sub" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <button id="scan" disabled>1 &nbsp;Scan</button>
+      <button id="save" class="ghost" disabled>2 &nbsp;Download the list of affected activities</button>
+    </div>
+    <pre id="report">Sign in, then press Scan.</pre>
+  </div>
+
+  <div class="card warn">
+    <div class="row">
+      <button id="wipe" class="danger" disabled>3 &nbsp;Delete every voice clip — cannot be undone</button>
+    </div>
+    <pre id="log">Nothing has been changed yet.</pre>
+  </div>
+</div>
+
+<script type="module">
+import { signIn, currentUser, db, fs } from "./core/firebase.js";
+
+const $ = id => document.getElementById(id);
+const report = $("report"), logEl = $("log");
+let uid = null;
+let found = null;          // result of the last scan
+
+const lines = [];
+const log = m => { lines.push(m); logEl.textContent = lines.join("\n"); };
+
+// ---- the one rule that matters --------------------------------------------
+// A voice lives on an item as three fields written together by the editors and
+// core/voice-batch.js: `voice` (the voiceClips id), `voiceId` (which Kokoro
+// voice made it) and `hideText` (show only the speaker button, no text).
+//
+// Every template reads hideText as `hasVoice && item.hideText` (verified across
+// all 17 on 12/8/2026), so dropping `voice` alone would already bring the text
+// back — but all three go, so an activity reads as genuinely "no audio yet" in
+// the editors too.
+//
+// `phonemes` is deliberately NOT touched: it is the IPA string the Speaking
+// template grades pronunciation against, not audio. Removing it would break
+// that template outright.
+const VOICE_KEYS = ["voice", "voiceId", "hideText"];
+
+// Walk any content shape. The 17 templates each name their arrays differently
+// (items / questions / words / cards …), so instead of listing them — and
+// silently missing whichever template gets added next — this recurses through
+// everything and strips the keys wherever the trio appears.
+function stripVoices(node, stats) {
+  if (Array.isArray(node)) { node.forEach(n => stripVoices(n, stats)); return; }
+  if (!node || typeof node !== "object") return;
+  if (typeof node.voice === "string" && node.voice) {
+    stats.clipIds.add(node.voice);
+    stats.items++;
+  }
+  let touched = false;
+  for (const k of VOICE_KEYS) if (k in node) { delete node[k]; touched = true; }
+  if (touched) stats.stripped++;
+  for (const v of Object.values(node)) stripVoices(v, stats);
+}
+
+function newStats() { return { items: 0, stripped: 0, clipIds: new Set() }; }
+const kb = n => (n / 1024).toFixed(0) + " KB";
+const mb = n => (n / 1024 / 1024).toFixed(1) + " MB";
+
+// ---- sign in ---------------------------------------------------------------
+$("signin").onclick = async () => {
+  try {
+    const user = await signIn();
+    uid = user.uid;
+    $("who").textContent = `Signed in as ${user.email}`;
+    $("signin").disabled = true;
+    $("scan").disabled = false;
+  } catch (e) {
+    $("who").textContent = e && e.message ? e.message : "Could not sign in.";
+  }
+};
+
+(async () => {
+  const user = await currentUser();
+  if (user) { uid = user.uid; $("who").textContent = `Signed in as ${user.email}`;
+              $("signin").disabled = true; $("scan").disabled = false; }
+})();
+
+// ---- 1. scan ---------------------------------------------------------------
+$("scan").onclick = async () => {
+  $("scan").disabled = true;
+  report.textContent = "Scanning…";
+  try {
+    const [d, sdk] = await Promise.all([db(), fs()]);
+    const { collection, getDocs, query, where } = sdk;
+
+    // every clip, including ones no activity points at any more (orphans left
+    // behind whenever a word was edited after its voice was generated — a known
+    // gap documented in core/voice-clips.js)
+    const clipSnap = await getDocs(collection(d, "voiceClips"));
+    let clipBytes = 0;
+    clipSnap.forEach(s => { const a = s.data().audio; if (typeof a === "string") clipBytes += a.length; });
+
+    const actSnap = await getDocs(collection(d, `users/${uid}/items`));
+    const acts = [];
+    const actStats = newStats();
+    actSnap.forEach(s => {
+      const data = s.data();
+      if (data.kind !== "act") return;
+      const probe = newStats();
+      stripVoices(JSON.parse(JSON.stringify(data.content ?? {})), probe);
+      if (probe.items) acts.push({ id: s.id, title: data.title || "Untitled", type: data.type,
+                                   words: probe.items, trashed: !!data.trashed });
+      actStats.items += probe.items;
+    });
+
+    const asgSnap = await getDocs(query(collection(d, "assignments"), where("ownerUid", "==", uid)));
+    const asgs = [];
+    asgSnap.forEach(s => {
+      const data = s.data();
+      const probe = newStats();
+      stripVoices(JSON.parse(JSON.stringify(data.activity?.content ?? {})), probe);
+      if (probe.items) asgs.push({ code: s.id, title: data.title || "Untitled", words: probe.items });
+    });
+
+    const referenced = new Set();
+    acts.forEach(a => a.words && referenced.add(a.id));
+
+    found = { clips: clipSnap.size, clipBytes, acts, asgs };
+    report.textContent =
+      `Voice clips stored:            ${clipSnap.size}  (${mb(clipBytes)} of the 1 GiB budget)\n` +
+      `Activities carrying a voice:   ${acts.length}  (${actStats.items} words in total)\n` +
+      `Assignments already handed out: ${asgs.length}\n\n` +
+      (acts.length
+        ? acts.slice(0, 40).map(a => `  • ${a.title}  [${a.type}]  ${a.words} word(s)${a.trashed ? "  (in the bin)" : ""}`).join("\n") +
+          (acts.length > 40 ? `\n  … and ${acts.length - 40} more` : "")
+        : "  (nothing to clean)") +
+      `\n\nWrites needed: ${clipSnap.size} deletes + ${acts.length + asgs.length} updates ` +
+      `(daily free limit is 20,000 of each — press 3 again tomorrow if it ever runs out).`;
+
+    $("save").disabled = acts.length === 0;
+    $("wipe").disabled = clipSnap.size === 0 && acts.length === 0 && asgs.length === 0;
+  } catch (e) {
+    report.textContent = "Scan failed: " + ((e && e.message) || e);
+  } finally {
+    $("scan").disabled = false;
+  }
+};
+
+// ---- 2. keep a note of what to regenerate later ----------------------------
+$("save").onclick = () => {
+  const when = new Date().toISOString().slice(0, 10);
+  const text =
+    `AWord — activities that had voice audio before the ${when} cleanup\n` +
+    `(audio was deleted on purpose; regenerate when convenient)\n\n` +
+    found.acts.map(a => `${a.title}\t[${a.type}]\t${a.words} word(s)${a.trashed ? "\t(in the bin)" : ""}`).join("\n") +
+    `\n\nTotal: ${found.acts.length} activities.\n`;
+  const url = URL.createObjectURL(new Blob([text], { type: "text/plain" }));
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `AWord-voices-to-regenerate-${when}.txt`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+};
+
+// ---- 3. wipe ---------------------------------------------------------------
+$("wipe").onclick = async () => {
+  $("wipe").disabled = true;
+  lines.length = 0;
+  try {
+    const [d, sdk] = await Promise.all([db(), fs()]);
+    const { collection, doc, getDocs, query, where, deleteDoc, updateDoc } = sdk;
+
+    // --- the clips themselves ---
+    // NOT writeBatch: a batch is capped by SIZE (~10 MiB), not just by the
+    // 500-operation count, and these documents are ~370KB each — a 400-strong
+    // batch died with "Transaction too big" on the real library (417 clips,
+    // 154 MB) the first time this ran. Independent deletes, 25 at a time, have
+    // no such ceiling and are still fast.
+    const clipSnap = await getDocs(collection(d, "voiceClips"));
+    const clipDocs = clipSnap.docs;
+    const CHUNK = 25;
+    for (let i = 0; i < clipDocs.length; i += CHUNK) {
+      await Promise.all(clipDocs.slice(i, i + CHUNK).map(s => deleteDoc(s.ref)));
+      log(`Deleted clips ${Math.min(i + CHUNK, clipDocs.length)}/${clipDocs.length}`);
+    }
+    if (!clipDocs.length) log("No voice clips were stored.");
+
+    // --- the pointers inside the teacher's activities ---
+    const actSnap = await getDocs(collection(d, `users/${uid}/items`));
+    let actsCleaned = 0;
+    for (const s of actSnap.docs) {
+      const data = s.data();
+      if (data.kind !== "act" || !data.content) continue;
+      const content = JSON.parse(JSON.stringify(data.content));
+      const stats = newStats();
+      stripVoices(content, stats);
+      if (!stats.stripped) continue;
+      await updateDoc(doc(d, `users/${uid}/items`, s.id), { content, updatedAt: Date.now() });
+      actsCleaned++;
+      log(`Cleaned activity: ${data.title || s.id}`);
+    }
+
+    // --- and inside the snapshots already handed to students ---
+    const asgSnap = await getDocs(query(collection(d, "assignments"), where("ownerUid", "==", uid)));
+    let asgCleaned = 0;
+    for (const s of asgSnap.docs) {
+      const data = s.data();
+      if (!data.activity?.content) continue;
+      const activity = JSON.parse(JSON.stringify(data.activity));
+      const stats = newStats();
+      stripVoices(activity.content, stats);
+      if (!stats.stripped) continue;
+      await updateDoc(doc(d, "assignments", s.id), { activity });
+      asgCleaned++;
+      log(`Cleaned assignment: ${data.title || s.id}`);
+    }
+
+    log("");
+    log(`DONE — ${clipDocs.length} clip(s) deleted, ${actsCleaned} activity(ies) and ${asgCleaned} assignment(s) cleaned.`);
+    log("Every activity now reads as having no audio, ready to generate again in MP3.");
+  } catch (e) {
+    log("FAILED: " + ((e && e.message) || e));
+    log("Nothing else was touched. Fix the error and press the button again — it is safe to re-run.");
+    $("wipe").disabled = false;
+  }
+};
+</script>
+</body>
+</html>

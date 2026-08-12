@@ -236,6 +236,38 @@ READY được vẽ → tới lúc thầy bấm PLAY thì file đã nằm sẵn.
 ogg↔mp3 bằng cách so độ dài — kết quả **57 file bị thay bằng âm thanh KHÁC hẳn cùng độ dài** (chỉ
 GAMESHOW và MAZE CHASE có ogg gốc, vậy mà anagram/whack-a-mole cũng "khớp"). Độ dài không phải danh tính.
 
+## ⭐⭐ GIỌNG ĐỌC TTS — LUÔN nén MP3 trước khi lưu, và 3 bẫy (Đợt 121, 12/8/2026)
+
+`core/tts.js`'s `generateSpeechDataUrl()` nay trả **`data:audio/mpeg`** (MP3 48 kb/s mono) chứ không
+còn WAV. Nén ngay trong hàm đó nên **mọi nơi gọi đều được hưởng, không phải sửa gì**; nơi phát chỉ gán
+chuỗi vào `<audio>.src` nên **clip WAV cũ vẫn phát bình thường**. Lý do: Kokoro trả PCM 32-bit float
+768 kb/s, mà mỗi clip là 1 document Firestore lưu base64 (+33%) ⇒ ~186KB/từ, trong khi gói Spark chỉ
+có 1 GiB. Nén xong đo thật: **giảm 14,8–15,7 lần**, tốn thêm ~110ms/từ.
+
+⚠️ **BẪY 1 — `generateSpeechDataUrl` CHẠY CẢ TRONG WEB WORKER** (`core/tts-worker.js`, đường sinh hàng
+loạt của `core/voice-batch.js`). Worker **KHÔNG có `AudioContext`**. Mọi cách xử lý âm thanh kiểu
+`decodeAudioData` / `OfflineAudioContext` / `MediaRecorder` sẽ **chết ở đường hàng loạt trong khi đường
+1-từ vẫn chạy ngon** — bug chỉ lộ khi import cả bộ từ. Kokoro đã trả sẵn
+`RawAudio {audio: Float32Array, sampling_rate: 24000}` → xử lý thẳng từ đó.
+
+⚠️ **BẪY 2 — `decodeAudioData` TỰ RESAMPLE lên tần số thiết bị.** Cùng một file 24kHz, đo qua
+`AudioContext` ra **48000 Hz**: gấp đôi số mẫu, không thêm một chút chất lượng nào. Đừng cho âm thanh
+đi qua Web Audio chỉ để "đọc mẫu ra".
+
+⚠️ **BẪY 3 — ĐỪNG "tối ưu" MP3 sang Opus.** Opus nhỏ hơn ~3x nữa và Chrome có sẵn WebCodecs (không cần
+thư viện), nhưng **Safari chỉ phát được Opus từ iOS 18.4 (3/2025)** → HS dùng iPad đời cũ sẽ **câm
+tiếng**, đúng loại bug mà máy build Chrome/Windows mù hoàn toàn (cùng họ với bẫy
+`-webkit-tap-highlight-color`). MP3 chạy mọi trình duyệt, mọi đời máy. Đây là quyết định CÓ CHỦ Ý.
+
+Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
+nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
+
+⚠️ **KHI XOÁ AUDIO HÀNG LOẠT**: một item mang voice qua 3 khoá đi liền nhau `voice` / `voiceId` /
+`hideText`. **TUYỆT ĐỐI KHÔNG đụng `phonemes`** — đó là chuỗi IPA template **Speaking** dùng để chấm
+phát âm, không phải audio. Và phải **duyệt đệ quy `content`**, đừng liệt kê tên mảng theo template
+(17 template đặt tên khác nhau: items / questions / words / cards / rounds.bonus.prompts…). Công cụ
+đã viết sẵn: `tools-voice-cleanup.html` (gốc repo, không link từ đâu).
+
 ## ⚠️ BẪY CSS (v0.9.1) — làm mờ "mọi thứ trừ một vùng"
 
 Muốn làm nổi 1 vùng và làm mờ phần còn lại thì luật làm-mờ phải dùng **con trực tiếp `>`**, không

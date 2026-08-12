@@ -10,8 +10,10 @@
 // USAGE (an editor generating a pronunciation clip):
 //   import { VOICES, DEFAULT_VOICE, generateSpeechDataUrl } from "../../core/tts.js";
 //   const dataUrl = await generateSpeechDataUrl("elephant", "bf_emma", p => ...progress...);
-//   // dataUrl is a "data:audio/wav;base64,..." string — hand it straight
+//   // dataUrl is a "data:audio/mpeg;base64,..." string — hand it straight
 //   // to core/voice-clips.js's saveVoiceClip() or an <audio> tag.
+//   (It was raw "data:audio/wav" before 12/8/2026 — see the MP3 section near
+//   the bottom of this file. Both forms play; only the size differs.)
 //
 // The model itself is only loaded ONCE per page (module-scoped singleton
 // promise) even if generateSpeechDataUrl() is called many times in a row
@@ -109,7 +111,63 @@ function loadTTS(onProgress) {
   return _ttsP;
 }
 
-// Generates speech for `text` in `voiceId`. Returns a "data:audio/wav;
+// ---- MP3 COMPRESSION (12/8/2026) -------------------------------------------
+// Kokoro hands back RAW 32-bit float PCM at 24kHz — 768 kb/s, a studio format,
+// not a delivery one. Every clip becomes its own Firestore document
+// (core/voice-clips.js), stored as base64, which piles another 33% on top. So
+// a raw WAV clip cost ~186KB on average (measured on real output: 90KB for
+// "cat", 256KB for "photosynthesis") out of a 1 GiB free-tier budget.
+//
+// Encoding to MP3 48 kb/s mono first cuts that ~15x — measured end to end:
+// "elephant" 131,260 -> 8,663 bytes, "photosynthesis" 256,060 -> 16,535 — for
+// ~110ms of extra work per word, next to nothing beside the ~1.3s the model
+// already spends generating. 48 kb/s is the teacher's own pick (12/8/2026)
+// after listening to 64 / 48 / 32 side by side.
+//
+// WHY MP3 AND NOT OPUS, which would be ~3x smaller again: Safari only learned
+// to play Opus in iOS 18.4 (March 2025), so a student on an older iPad would
+// get SILENCE — precisely the class of bug that never shows up on the machine
+// this is built on. MP3 plays everywhere, on every vintage.
+//
+// WHY THE ENCODER IS NOT WEB AUDIO: this function also runs inside
+// core/tts-worker.js, a Worker with NO AudioContext at all. Kokoro's RawAudio
+// already exposes `.audio` (Float32Array) + `.sampling_rate`, so the encoder is
+// fed straight from those — which also dodges decodeAudioData silently
+// resampling 24kHz up to the device's 48kHz, doubling the samples for no gain.
+//
+// Note: MP3 adds ~55ms of encoder padding at the head of a clip (measured: a
+// 1.025s clip reads back as 1.08s). Irrelevant for a spoken word; recorded here
+// because leading silence is exactly what core/sfx.js has to care about.
+const MP3_KBPS = 48;
+const MP3_FRAME = 1152;   // samples per MP3 frame — what encodeBuffer expects
+
+let _lameP = null;
+function loadLame() {
+  if (!_lameP) _lameP = import("./vendor/lamejs.mjs").then(m => m.default ?? m);
+  return _lameP;
+}
+
+// Kokoro RawAudio -> "data:audio/mpeg;base64,..."
+async function toMp3DataUrl(raw) {
+  const lamejs = await loadLame();
+  const f32 = raw.audio;
+  const pcm = new Int16Array(f32.length);
+  for (let i = 0; i < f32.length; i++) {
+    const s = f32[i] < -1 ? -1 : (f32[i] > 1 ? 1 : f32[i]);   // clamp, then scale
+    pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  const encoder = new lamejs.Mp3Encoder(1, raw.sampling_rate, MP3_KBPS);
+  const parts = [];
+  for (let i = 0; i < pcm.length; i += MP3_FRAME) {
+    const chunk = encoder.encodeBuffer(pcm.subarray(i, i + MP3_FRAME));
+    if (chunk.length) parts.push(chunk);
+  }
+  const tail = encoder.flush();
+  if (tail.length) parts.push(tail);
+  return blobToDataUrl(new Blob(parts, { type: "audio/mpeg" }));
+}
+
+// Generates speech for `text` in `voiceId`. Returns a "data:audio/mpeg;
 // base64,..." string — chosen over a Blob/object URL because that's
 // exactly what core/voice-clips.js stores in Firestore AND what an
 // <audio> tag's src can use directly, no URL.revokeObjectURL bookkeeping
@@ -117,7 +175,16 @@ function loadTTS(onProgress) {
 export async function generateSpeechDataUrl(text, voiceId, onProgress) {
   const tts = await loadTTS(onProgress);
   const audio = await tts.generate(text, { voice: voiceId || DEFAULT_VOICE });
-  return blobToDataUrl(audio.toBlob());
+  try {
+    return await toMp3DataUrl(audio);
+  } catch (e) {
+    // A voice the teacher can hear beats no voice at all: if the encoder ever
+    // fails, fall back to the uncompressed WAV this used to return. Callers
+    // just store the string and players just set it as an <audio> src, so both
+    // forms work — the only difference is size.
+    console.warn("AWord: MP3 compression failed, storing WAV instead:", (e && e.message) || e);
+    return blobToDataUrl(audio.toBlob());
+  }
 }
 
 function blobToDataUrl(blob) {

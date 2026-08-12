@@ -5,7 +5,41 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **11/8/2026 (Đợt 120) — ⭐ LỖI THẬT: ĐIỂM RƠI DƯƠNG→ÂM GIỮA LƯỢT VẪN XANH, PHẢI
+> Cập nhật lần cuối: **12/8/2026 (Đợt 121) — ⭐ GIỌNG ĐỌC NÉN MP3 48k (nhẹ ~15 LẦN) + XOÁ SẠCH KHO
+> AUDIO WAV CŨ. ⭐ CÓ SỬA CORE (`core/tts.js` + file mới `core/vendor/lamejs.mjs`).
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.**
+> **Gốc vấn đề**: Kokoro trả PCM **32-bit float 24kHz (768 kb/s)** — định dạng phòng thu, không phải
+> định dạng phát. Mỗi clip là 1 document Firestore lưu base64 (phình thêm 33%) ⇒ **~186KB/từ** (đo thật:
+> "cat" 90KB, "photosynthesis" 256KB) trong hạn mức **1 GiB** của gói Spark ⇒ chỉ chứa nổi ~5.700 từ.
+> **Vá**: nén MP3 48 kb/s mono ngay trước khi lưu. Đo thật qua chính `core/tts.js`: "elephant"
+> 131.282 → **8.855 B (14,8x)**, "photosynthesis" 256.082 → **16.343 B (15,7x)**; sức chứa **~5.700 →
+> ~89.000 từ**. Tốn thêm ~110ms/từ (so với ~1,3s model đã tốn để sinh — không đáng kể). Thầy tự nghe
+> 64/48/32 rồi **chốt 48k**.
+> ⚠️ **Vì sao MP3 chứ không phải Opus** (nhỏ hơn ~3x nữa): Safari chỉ phát được Opus từ **iOS 18.4**
+> (3/2025) → iPad đời cũ của HS sẽ **câm tiếng**, đúng loại bug máy build không bao giờ thấy. MP3 chạy
+> mọi trình duyệt, mọi đời máy.
+> ⚠️ **Vì sao KHÔNG dùng Web Audio để nén**: `generateSpeechDataUrl` chạy CẢ trong `core/tts-worker.js`
+> — Worker **không có `AudioContext`** (đã kiểm chứng thật). May là Kokoro trả sẵn RawAudio
+> `{audio: Float32Array, sampling_rate: 24000}` nên nén thẳng từ đó — đồng thời né luôn bẫy
+> `decodeAudioData` **tự resample 24kHz → 48kHz** của thiết bị (gấp đôi mẫu, không thêm chất lượng).
+> ⚠️ **Firebase Storage KHÔNG dùng được** (xác minh lại 12/8): từ **3/2/2026** bắt buộc gói Blaze.
+> Thầy nói sẵn sàng nâng Blaze, nhưng sau khi nén thì audio không cần Storage nữa — để dành cho ẢNH sau.
+> **Xoá kho cũ**: thầy chốt **xoá hẳn** (giai đoạn WAV chỉ là thử nghiệm, generate lại được) thay vì nén
+> lại. File mới `tools-voice-cleanup.html` (chạy 1 lần, không link từ đâu) dọn **3 nơi**: `voiceClips/*`
+> + trường `voice`/`voiceId`/`hideText` trong act **và** trong `assignments` đã giao.
+> ⭐ **Bẫy đã tránh: TUYỆT ĐỐI KHÔNG xoá `phonemes`** — đó là chuỗi IPA template **Speaking** dùng để
+> chấm phát âm, không phải audio; xoá là hỏng hẳn tính năng. Dọn bằng cách **duyệt đệ quy `content`**
+> chứ không liệt kê tên mảng theo template (17 template đặt tên khác nhau: items/questions/words/cards…,
+> liệt kê là chắc chắn sót template thứ 18). 16/16 test đơn vị đúng.
+> ✅ **ĐÃ CHẠY THẬT** (qua Claude in Chrome, thầy cho phép): trước khi dọn **417 clip = 154,2 MB ≈ 15%
+> hạn mức 1 GiB** (trong đó **32 clip MỒ CÔI**); sau khi dọn Scan lại ra **0 clip / 0,0 MB / 0 act**.
+> ⚠️⚠️ **Lỗi thật bắt được**: `writeBatch` lô 400 (chép idiom `core/store.js`) **chết ngay lô đầu vì
+> "Transaction too big"** — batch Firestore bị chặn theo **DUNG LƯỢNG ~10 MiB**, không chỉ theo số thao
+> tác 500, mà doc audio ~370KB/cái. **Idiom lô-400 của `store.js` chỉ an toàn với doc NHỎ — đừng bê
+> nguyên sang collection chứa doc nặng.** Vá bằng `deleteDoc` 25 cái/lượt.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 121.
+>
+> Trước đó: **11/8/2026 (Đợt 120) — ⭐ LỖI THẬT: ĐIỂM RƠI DƯƠNG→ÂM GIỮA LƯỢT VẪN XANH, PHẢI
 > NEXT MỚI ĐỎ (Anagram). KHÔNG ĐỤNG MÃ CORE (chỉ `templates/anagram/anagram.js` + mục cảnh báo mới trong
 > `core/HUONG DAN CORE.md`). ✅ THẦY DUYỆT → COMMIT `cddc5c6` + PUSH + **LIVE** (`curl` xác nhận dấu mốc
 > mới có mặt + dấu mốc cũ biến mất hẳn, ngay lần poll thứ 2).**

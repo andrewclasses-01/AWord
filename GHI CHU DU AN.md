@@ -5,6 +5,136 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 121 (12/8/2026) — GIỌNG ĐỌC NÉN MP3 48k (NHẸ ~15 LẦN) + XOÁ SẠCH KHO AUDIO WAV CŨ
+
+Thầy yêu cầu nghiên cứu việc đưa dữ liệu nặng (audio, sau này có thể cả ảnh) lên Firebase Storage.
+Nghiên cứu xong ra kết luận khác: **vấn đề không nằm ở CHỖ CHỨA mà ở ĐỊNH DẠNG**. Thầy chốt nén 48k
++ xoá sạch kho cũ, rồi gõ "ok build". ⭐ CÓ SỬA CORE.
+✅ THẦY DUYỆT → **COMMIT + PUSH + LIVE** tại `https://aword.andrewclasses.com/`.
+
+### 1. Vì sao Firebase Storage không phải câu trả lời
+- Xác minh lại 12/8/2026: từ **3/2/2026** Cloud Storage for Firebase **bắt buộc gói Blaze** (phải gắn
+  thẻ ngân hàng). Project Spark gọi API sẽ nhận lỗi 402/403. (Đúng phát hiện cũ của Đợt 105.)
+- ⚠️ Điều Đợt 105 CHƯA nêu, nay nêu rõ: nâng Blaze là nâng **CẢ project** — Firestore mất luôn cơ chế
+  "chặn cứng khi hết hạn mức" và chuyển sang tính tiền. Google Cloud không có nút chặn chi tiêu tự động.
+- Thầy trả lời **sẵn sàng nâng Blaze**. Nhưng sau khi có số đo nén, audio không còn cần Storage nữa →
+  để dành quyết định đó cho lúc thật sự làm ẢNH. Ảnh thì Firestore đúng là ngõ cụt (trần 1MB/document
+  ⇒ ảnh gốc >~700KB không lưu nổi; và Firestore không có CDN nên HS mở lại là tải lại từ đầu).
+
+### 2. Gốc vấn đề thật: định dạng, không phải chỗ chứa
+Kokoro trả **PCM 32-bit float, 24kHz, mono = 768 kb/s** — định dạng phòng thu. Mỗi clip là 1 document
+Firestore lưu chuỗi base64 (phình thêm 33%). Đo thật 5 từ bằng chính model + giọng `bf_emma` của dự án:
+
+| Từ | WAV → Firestore | MP3 64k | MP3 48k | MP3 32k |
+|---|---|---|---|---|
+| cat | 90 KB | 8,3 | 6,3 | 4,3 |
+| elephant | 131 KB | 11,6 | 8,7 | 5,9 |
+| environment | 198 KB | 17,1 | 12,9 | 8,7 |
+| photosynthesis | 256 KB | 21,8 | 16,4 | 11,1 |
+| responsibility | 256 KB | 21,8 | 16,4 | 11,1 |
+| **TB** | **186 KB** | 16 KB | **12 KB** | 8 KB |
+
+Sức chứa trong 1 GiB: **~5.700 từ → ~89.000 từ**. Băng thông 10 GiB/tháng: ~56.000 → ~650.000 lượt nghe.
+Thầy tự nghe file so sánh 64/48/32 rồi **chốt 48k**.
+
+### 3. Sửa CORE — chỉ 1 hàm, cả hệ thống nén theo
+Rà trước khi sửa: **mọi** đường sinh giọng đều chui qua `generateSpeechDataUrl()` của `core/tts.js` —
+4 nơi gọi (`anagram-editor.js`, `speaking-editor.js`, `tts-worker.js` → `voice-batch.js`). Nên chỉ sửa
+đúng hàm đó là xong, **0 call-site phải đổi**. Mọi nơi PHÁT chỉ gán `clip.audio` vào `<audio>.src` nên
+data URL mp3 chạy y hệt wav ⇒ **clip WAV cũ vẫn phát bình thường**, tương thích ngược 100%.
+- File mới **`core/vendor/lamejs.mjs`** (165KB, bundle tự chứa, đã gỡ `sourceMappingURL` chết): tự host
+  theo đúng tiền lệ `core/vendor/xlsx.mjs` — việc tạo giọng không được phụ thuộc thêm 1 CDN ngoài.
+- Có nhánh **dự phòng**: nén lỗi thì `console.warn` + trả WAV như cũ. Giọng nghe được vẫn hơn không có.
+
+⚠️ **2 bẫy phải né khi đụng lại chỗ này:**
+- **`generateSpeechDataUrl` chạy CẢ trong Web Worker** (`core/tts-worker.js`) — Worker **không có
+  `AudioContext`** (đã kiểm chứng thật trong bàn thử, không suy đoán). Mọi ý tưởng nén kiểu
+  `decodeAudioData`/`OfflineAudioContext` là **chết ở đường hàng loạt** trong khi đường 1-từ vẫn chạy →
+  loại bug chỉ lộ khi import cả bộ. May là RawAudio đã có sẵn `{audio: Float32Array, sampling_rate}`.
+- **`decodeAudioData` tự resample 24kHz → 48kHz** theo thiết bị (đo được trong bàn thử đầu tiên: cùng
+  file mà báo 48000 Hz). Gấp đôi số mẫu, không thêm một chút chất lượng nào.
+
+⚠️ **Vì sao MP3 chứ không phải Opus** (nhỏ hơn ~3x nữa, Chrome lại có sẵn WebCodecs, không cần thư viện):
+**Safari chỉ phát được Opus từ iOS 18.4 (3/2025)**. HS mở link bằng iPad đời cũ sẽ **câm tiếng** — đúng
+loại bug mà máy build (Chrome/Windows) mù hoàn toàn, cùng họ với bẫy `-webkit-tap-highlight-color`.
+Ghi lại đây để đợt sau đừng "tối ưu" ngược lại.
+
+Ghi chú nhỏ: MP3 chèn **~55ms im lặng ở đầu** clip (đo: 1,025s → đọc lại 1,08s). Không ảnh hưởng giọng
+đọc từ đơn; nêu vì `core/sfx.js` có cả một mục về độ trễ âm thanh.
+
+### 4. Xoá sạch kho WAV cũ — `tools-voice-cleanup.html` (file mới, chạy 1 lần)
+Thầy chốt **xoá hẳn** thay vì nén lại (giai đoạn WAV chỉ là thử nghiệm, generate lại được), và cho phép
+xoá không cần hỏi lại. Trang không link từ đâu, mở bằng URL; 3 bước: **Scan** (đếm clip + act + bài đã
+giao, ước tính số write cần) → **Download** danh sách act từng có audio (tờ ghi chú để biết đường
+generate lại) → **Delete**.
+
+Dọn **3 nơi**, vì thiếu 1 nơi là act vẫn "tưởng mình có audio":
+`voiceClips/*` (cả clip mồ côi) · trường `voice`/`voiceId`/`hideText` trong act · và trong bản snapshot
+`assignments/{code}` đã giao.
+
+⭐ **2 quyết định thiết kế đáng nhớ:**
+- **KHÔNG được xoá `phonemes`** — đó là chuỗi IPA template **Speaking** dùng để CHẤM PHÁT ÂM, không phải
+  audio (`speaking.js` lọc `it.phonemes` để biết item có chơi được không; `voice` ở Speaking chỉ là nút
+  nghe mẫu, mất cũng không sao). Xoá nhầm là hỏng hẳn template thứ 17.
+- **Duyệt ĐỆ QUY toàn bộ `content`** thay vì liệt kê tên mảng theo template. 17 template đặt tên khác
+  nhau (items / questions / words / cards / rounds.bonus.prompts…), liệt kê thì chắc chắn sót — và sót
+  luôn cả template thứ 18 viết sau này.
+- Dọn cả 3 khoá tuy chỉ cần `voice` là đủ để chữ hiện lại (đã soát: cả 17 template đều đọc
+  `hasVoice && hideText`, Anagram editor còn tự ép `if (!it.voice) it.hideText = false`) — xoá cả 3 để
+  editor hiện đúng trạng thái "chưa có audio". Chạy lại lần 2 vô hại.
+
+### 5. Đo thật (không suy đoán)
+- **16/16 test đơn vị** `stripVoices` đúng — test **trích thẳng hàm từ file HTML** chứ không chép tay,
+  phủ: anagram / quiz lồng mảng đáp án / crossword `hideText:false` / speaking giữ `phonemes` / object
+  lồng 3 tầng / từ chưa có voice không bị đụng / chạy lại lần 2.
+- **`core/tts.js` thật trong trình duyệt** (devserver + Browser pane, gọi đúng hàm dự án, không mô phỏng):
+  "elephant" **131.282 → 8.855 B (14,8x)**, "photosynthesis" **256.082 → 16.343 B (15,7x)**; đúng tiền tố
+  `data:audio/mpeg;base64,`; **phát lại được** 1,10s / 2,04s; `activeDevice()` vẫn là **webgpu** (không
+  phá đường webgpu của Đợt 105). 0 lỗi console (chỉ 2 dòng `W:onnxruntime` cảnh báo sẵn có của ONNX).
+- **Trang công cụ**: dựng đúng, và khi **chưa đăng nhập thì cả 3 nút Scan/Download/Delete đều khoá** —
+  không bấm nhầm Delete được. 0 lỗi console.
+
+### 6. ⭐ ĐÃ CHẠY THẬT TRÊN FIRESTORE (không còn là "chờ thầy chạy")
+Thầy cho phép dùng **Claude in Chrome**; Chrome thật đã đăng nhập sẵn `namdaptrai01@gmail.com` nên tool
+tự nhận, không phải qua popup đăng nhập. Số đo thật của thư viện trước khi dọn:
+
+| | |
+|---|---|
+| Clip đã lưu | **417 — 154,2 MB** (≈ **15%** hạn mức 1 GiB) |
+| Act có giọng đọc | 8 (385 từ) |
+| Bài đã giao dính | 0 |
+
+⇒ 417 clip nhưng chỉ 385 từ dùng tới: **32 clip MỒ CÔI** (đúng cái gap `core/voice-clips.js` đã ghi là
+"không đáng viết GC" — hoá ra chiếm gần 8%).
+
+⚠️⚠️ **LỖI THẬT BẮT ĐƯỢC KHI CHẠY LẦN ĐẦU — `writeBatch` CHẾT VÌ "Transaction too big".**
+Bản đầu xoá theo lô 400 (chép đúng idiom `persist()`/`persistDelete()` của `core/store.js`). Chạy trên
+dữ liệu thật thì **Firestore từ chối ngay lô đầu tiên**: batch bị chặn theo **DUNG LƯỢNG (~10 MiB)** chứ
+không chỉ theo số thao tác 500 — mà mỗi doc ở đây ~370KB. **Bài học dùng lại được: idiom lô-400 của
+`store.js` chỉ an toàn vì act là doc NHỎ; đừng bê nguyên sang collection chứa doc nặng.** Vá: bỏ
+`writeBatch`, dùng `deleteDoc` độc lập **25 cái một lượt** (`Promise.all`) — không có trần dung lượng,
+vẫn nhanh. ✅ Điểm sáng: nhánh `catch` viết sẵn hoạt động đúng — báo lỗi rõ, **không xoá dở dang gì**,
+và câu "safe to re-run" là thật.
+
+**Kết quả sau khi vá — chạy trọn vẹn:** `DONE — 417 clip(s) deleted, 11 activity(ies) and 0
+assignment(s) cleaned.` Chạy **Scan lại để xác minh**: `Voice clips stored: 0 (0.0 MB)` ·
+`Activities carrying a voice: 0 (0 words)` · `(nothing to clean)`.
+
+📌 **11 act được dọn tuy Scan chỉ báo 8** — KHÔNG phải lỗi: Scan đếm act có `voice` **thật sự có giá
+trị**, còn bước dọn quét cả act chỉ còn 3 khoá RỖNG (`voice: ""` / `hideText: false`) do `blankItem()`
+của Anagram editor luôn sinh ra. 3 act chênh lệch chính là loại đó.
+
+Tờ ghi chú "cần tạo lại giọng ở bài nào" đã lưu tay vào
+`D:\APP AND DATA\AWord-data\Backup\GIONG DOC CAN TAO LAI (sau don dep 12-8-2026).txt`
+(nút Download trong tool bấm qua automation thì Chrome chặn không lưu file — không sửa, vì thầy bấm
+tay vẫn chạy bình thường). Đáng tạo lại thật sự: **4 act nội dung thật = 360 từ**, ước tính chỉ còn
+**4-5 MB** thay vì 154 MB.
+
+- ⬜ **Chưa tự test được (cần thầy)**: nghe thử clip mp3 mới trên **iPad/iPhone thật**, và tạo lại giọng
+  cho 4 act nội dung thật để nghiệm thu chất lượng 48k trong lớp.
+
+---
+
 ## Đợt 120 (11/8/2026) — ⭐ LỖI THẬT: ĐIỂM RƠI TỪ DƯƠNG XUỐNG ÂM GIỮA LƯỢT VẪN HIỆN MÀU XANH, PHẢI SANG
 CÂU SAU MỚI ĐỎ (Anagram). KHÔNG ĐỤNG CORE về mã (chỉ `templates/anagram/anagram.js` + thêm mục cảnh báo
 vào `core/HUONG DAN CORE.md`). ✅ THẦY DUYỆT ("commit + push live") → COMMIT `cddc5c6` + PUSH + **LIVE**
