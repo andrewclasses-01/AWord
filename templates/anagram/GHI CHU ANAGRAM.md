@@ -1,5 +1,25 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 123 (12/8/2026) — CHỮ HAY GIỌNG NAY DO OPTIONS > CONTENT QUYẾT ĐỊNH (không còn đọc `hideText`)
+
+Một act nay mang **cả chữ lẫn giọng** (bỏ cặp `ENG1` + `ENG1 VOICE`), và `options.contentMode` chọn
+cách chơi. Anagram là template có **bản phát giọng RIÊNG** (không dùng `core/voice-playback.js` như
+13 game kia — xem Đợt 94), nên phải sửa tay 2 chỗ trong `render()`:
+
+1. `const hasVoice/hideText` thôi đọc `it.src.hideText`, chuyển sang **`voiceView(activity, it.src)`**
+   (import từ `core/voice-playback.js` — chỉ lấy đúng hàm này, phần phát vẫn của Anagram).
+2. Khối tự đọc khi mở từ mới bọc thêm nhánh `if (!vv.autoPlay)`: **mode Text thì không tự đọc**, nút
+   loa nhỏ vẫn bấm nghe được. Nhánh chờ hết nhạc intro cho từ ĐẦU TIÊN (`firstWordRendered` +
+   `anagramSound.introDurationMs()`, Đợt 100) giữ nguyên, chỉ nằm trong nhánh voice.
+
+**Chưa đụng `anagram-editor.js`**: nút "Hide text" từng hàng + Hide/Show all vẫn còn, nhưng nay chỉ
+còn tác dụng với act ở chế độ AUTO (act cũ chưa từng chọn Content). Cần hỏi thầy có gỡ cho gọn không.
+
+Đo thật (bàn thử tạm, clip giả nhét thẳng vào Cache Storage `aword-voice-v1` nên không cần đăng
+nhập): act cũ không khai mode → ẩn chữ + nút to + đọc 1 lần (y như trước); `text` → hiện đủ câu
+gợi ý + nút nhỏ + **0 lần đọc**; `voice` → ẩn chữ + nút to + đọc 1 lần. 0 lỗi console.
+Chi tiết chung: `GHI CHU DU AN.md` Đợt 123.
+
 ## Đợt 120 (11/8/2026) — ⭐ LỖI THẬT: điểm rơi dương→âm GIỮA LƯỢT vẫn hiện XANH, phải Next mới đỏ
 
 Thầy chơi bản live rồi báo. **Gốc lỗi**: SỐ và MÀU do cùng `ui.setScore()` sơn ra (nó vừa ghi số vừa

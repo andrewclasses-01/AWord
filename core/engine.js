@@ -17,6 +17,7 @@
 import { getTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./registry.js";
 import { whenAllPacksPrimed } from "./sfx.js";
 import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";
+import { hasAnyVoice, hasHiddenText } from "./voice-playback.js";
 import { switchTargets, convertActivity } from "./convert.js";
 import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
@@ -428,8 +429,12 @@ export function startGame(root, activity, { onExit, session = null, base = null 
   function prepareBeforePlay() {
     const steps = [];
 
-    // 1. giọng đọc từng từ
-    const voiceIds = [...collectVoiceIds(activity.content || {})];
+    // 1. giọng đọc từng từ. Mode "Text" KHÔNG tự đọc gì (voiceView), nên tải
+    //    trước cả kho clip là phí đường truyền lớp học — act 100 từ ≈ 1,2MB.
+    //    Nút loa nhỏ vẫn còn: bấm thì clip đó tải lẻ ngay lúc ấy, y như trước
+    //    khi có bước nạp trước này (Đợt 122).
+    const voiceIds = (activity.options || {}).contentMode === "text"
+      ? [] : [...collectVoiceIds(activity.content || {})];
     if (voiceIds.length) {
       steps.push({
         weight: 3,
@@ -700,6 +705,31 @@ export function startGame(root, activity, { onExit, session = null, base = null 
     const draft = { ...base };
 
     panel.append(el("div", "aw-tool-panel-head", "Options"));
+
+    // CONTENT (teacher, 12/8/2026) — TOPMOST group, and only for acts that
+    // actually carry spoken clips. One act now holds the written clue AND the
+    // spoken one (the old "ENG1" + "ENG1 VOICE" pair merged into a single
+    // act), so this is where the class picks which one it plays with today.
+    // The meaning of each value, and the untouched-old-act AUTO case, live in
+    // ONE place: voiceView() in core/voice-playback.js. Nothing here is
+    // template-specific — all 14 games with a listen button obey it.
+    if (hasAnyVoice(activity.content || {})) {
+      const gContent = el("div", "aw-opt-group");
+      gContent.append(el("div", "aw-opt-label", "Content"));
+      const rowContent = el("div", "aw-opt-row");
+      // An act saved BEFORE this option existed has no contentMode, and its
+      // items may be mixed (some hideText, some not). Show the nearest of the
+      // two buttons but DON'T write it into the draft — leaving contentMode
+      // unset keeps the per-item AUTO behaviour byte-for-byte until the
+      // teacher actually picks one.
+      const shown = draft.contentMode || (hasAnyVoice(activity.content) && hasHiddenText(activity.content) ? "voice" : "text");
+      rowContent.append(
+        mkRadioChoice("aw-content", "text", "Text", shown === "text", v => draft.contentMode = v),
+        mkRadioChoice("aw-content", "voice", "Voice", shown === "voice", v => draft.contentMode = v)
+      );
+      gContent.append(rowContent);
+      panel.append(gContent);
+    }
 
     // TIMER — a template can hide this whole group (tpl.hideTimerOption) when it
     // runs its OWN timer (e.g. Gameshow's per-QUESTION countdown, which the shared

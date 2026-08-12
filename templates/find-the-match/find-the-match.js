@@ -47,7 +47,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openFtmEditor } from "./find-the-match-editor.js";
 import { ftmSound } from "./ftm-sound.js";
 
@@ -525,8 +525,8 @@ const ftmTemplate = {
       voicePlayer.stop();                       // silence the PREVIOUS pair's clip, if any
       promptEl.className = "aw-ftm-prompt";      // drop any stale voiceonly class from the last pair
       const pr = pairs[queue[0]];
-      const hasVoice = !!pr.voice;
-      const hideText = hasVoice && !!pr.hideText;
+      const vv = voiceView(activity, pr);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
         promptEl.textContent = "";
         promptEl.classList.add("aw-clue-voiceonly");
@@ -539,7 +539,7 @@ const ftmTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(pr.voice, vBtn); };
         promptEl.append(vBtn);
-        voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstPromptSpoken = true;
       fitPrompt(promptEl);                       // shrink long definitions so nothing is clipped

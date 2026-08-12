@@ -5,6 +5,125 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 123 (12/8/2026) — ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG: OPTIONS > CONTENT (TEXT / VOICE).
+⭐ CÓ SỬA CORE (`engine.js` + `voice-playback.js` + `convert.js` + `lesson-import.js`) + 13 template.
+🟢 CHỜ THẦY DUYỆT — chưa commit.
+
+Đây là **ĐỢT A** của kế hoạch 2 ý thầy gửi 12/8 (ý 2 là FIGHT MODE, làm sau — xem mục 8).
+
+### 1. Vấn đề thầy nêu
+Trước nay mỗi bộ từ sinh ra **HAI act**: `ENG1` (chơi bằng chữ) và `ENG1 VOICE` (chơi bằng giọng
+đọc) — nội dung chữ **y hệt nhau**, chỉ khác ở chỗ act sau có clip + `hideText`. Thầy muốn gộp:
+*"1 act duy nhất là ENG1, trong edit generate luôn voice, chứa cả text và voice. Mặc định là text,
+nhưng trong options có phần trên cùng để chọn mode: TEXT và VOICE."*
+
+**Rà trước khi build — hoá ra dữ liệu VỐN đã gộp sẵn**: `core/voice-batch.js` khi sinh giọng hàng
+loạt đã ghi `voice` + `voiceId` + `hideText:true` vào **chính item của act**, nên "act VOICE" chưa
+bao giờ là một hình dạng dữ liệu riêng. Việc phải làm chỉ là một **công tắc lúc chơi**, không phải
+chuyển đổi dữ liệu — và không một act cũ nào cần sửa.
+
+### 2. Đã làm
+| # | Chỗ sửa | Việc |
+|---|---|---|
+| 1 | `core/voice-playback.js` | **`voiceView(activity, item)`** — MỘT nơi duy nhất quyết định text/voice, trả `{hasVoice, hideText, autoPlay}`. Thêm `hasAnyVoice()`/`hasHiddenText()` để lõi biết act có giọng hay không |
+| 2 | `core/engine.js` | Nhóm **"Content"** ở ĐẦU panel Options (2 nút Text · Voice), **chỉ hiện khi act thật sự có clip**. Và: mode Text thì **BỎ bước nạp trước giọng** của Đợt 122 |
+| 3 | 12 template dùng chung + `anagram.js` | Thôi đọc thẳng `item.hideText`, đi qua `voiceView()`; chỗ tự phát tiếng gói trong `if (vv.autoPlay)` |
+| 4 | `core/convert.js` | `contentMode` **đi theo act khi Đổi template** (xem bẫy ở mục 4) |
+| 5 | `core/lesson-import.js` | Import Excel tạo **1 act ENG1** (`ttsEligible`) thay vì cặp ENG1 + ENG1 VOICE; act mở ra ở mode `text` |
+
+**3 giá trị của `contentMode`** (luật nằm gọn trong `voiceView`):
+- `"text"` — hiện chữ, **không tự đọc**; nút loa nhỏ vẫn còn để HS bấm nghe thêm.
+- `"voice"` — ẩn chữ, nút loa TO giữa khung, tự đọc khi mở từ mới (đúng hành vi cũ).
+- **không khai** = AUTO — theo `hideText` từng từ, tức **y nguyên từng pixel như trước đợt này**.
+  Act cũ vì vậy không đổi gì cho tới khi thầy tự bấm chọn.
+
+⚠️ **Vì sao AUTO phải tồn tại thay vì ép mặc định "text"**: hàng trăm act `ENG1 VOICE` đang nằm
+trong thư viện thầy đều mang `hideText:true`. Ép mặc định text = **tất cả tự nhiên hiện chữ ra**,
+đúng thứ giáo viên đang cố giấu. Panel vẫn *hiện* nút gần đúng cho act cũ (dò `hasHiddenText`)
+nhưng **không ghi** giá trị vào act cho tới khi thầy bấm — nhìn thì đúng, hành vi thì bất động.
+
+### 3. Import: 2 act → 1 act
+Đảo lại đúng quyết định của **Đợt 118 (11/8)** — hôm đó thầy yêu cầu giữ song song ENG1 + ENG1
+VOICE; nay 1 act làm được cả hai việc nên cặp đó hết lý do tồn tại (thầy chốt 12/8). Đo thật bằng
+workbook giả chạy qua chính `parseLessonToBundle()`: trước ra **4 act anagram**, nay ra **2**
+(`/ ENG1`, `/ ENG2`), cả hai `ttsEligible:true` + `contentMode:"text"`.
+Luồng cũ vẫn nguyên: tick act ở khung "Voice (TTS)" rồi bấm **Skip** ở hộp xác nhận = act text-only,
+đúng vai trò của act "thường" ngày trước.
+⚠️ Skill **`taoact`** (tạo trên Wordwall) vẫn tạo 2 act — nằm ngoài AWord, không tự đổi theo.
+
+### 4. ⚠️ BẪY TỰ BẮT ĐƯỢC LÚC BUILD — Đổi template làm MẤT lựa chọn, và nó ĐỔI NGƯỢC
+`core/convert.js` lấy options từ **file sample của game ĐÍCH**, nên act tạm sinh ra không có
+`contentMode` ⇒ rơi về AUTO ⇒ đọc `hideText` (đang là `true` vì clip do batch sinh) ⇒ một lớp đang
+chơi ở **mode Text** mà bấm Đổi template sẽ **đột nhiên bị giấu chữ và bị đọc oang oang**. Đúng họ
+bẫy "options copy từ sample" mà Whack-a-mole từng dính ở v0.9.36. Vá: chép `contentMode` sang act
+tạm khi act nguồn có khai (act cũ không khai vẫn về AUTO như trước).
+⚠️ Bản vá đầu tiên viết `opt.contentMode` — `opt` là biến của `toRecords()`, **không có** trong
+`convertActivity()`; đọc lại phạm vi biến mới thấy, nếu không thì ReferenceError ngay lần đổi đầu.
+
+### 5. Test thật (trình duyệt, devserver :5510, 0 lỗi console)
+Bàn thử tạm `_test-content-mode.html/.js` (**đã XOÁ sau khi xong**, đúng quy ước Đợt 96/98/100).
+⭐ **Mẹo test dùng lại được — không cần đăng nhập, không cần chép file template**: nhét thẳng clip
+giả vào **tầng Cache Storage** (`aword-voice-v1`) mà `core/voice-clips.js` đọc TRƯỚC Firestore, kèm
+header `x-aword-saved` còn hạn. `getVoiceClip()` trả về clip thật, 0 lượt Firestore, và **chạy đúng
+module thật** chứ không phải bản sao (Đợt 96/98/100 phải chép file vì hồi đó chưa có tầng cache).
+Kèm tráo `HTMLMediaElement.prototype.play` để ĐẾM tiếng thật sự phát ra, không suy đoán qua UI.
+
+| Ca | Chữ | Nút loa | Tự đọc |
+|---|---|---|---|
+| Act cũ (không khai mode) | ẩn | to | **1** ✔ y như trước |
+| `text` | **hiện đủ câu** | nhỏ | **0** ✔ |
+| `voice` | ẩn | to | **1** ✔ |
+
+- Panel Options: nhóm **"Content" đứng ĐẦU** (index 0/12) với đúng 2 nút Text·Voice; act **không có
+  giọng** thì không mọc nhóm này (11 nhóm, không có "Content").
+- Đổi Text → Voice → Apply → chơi lại: chữ ẩn + nút to + đọc. Đúng đường thầy sẽ bấm.
+- **13/13 template có giọng** đều đúng cả 2 mode: quiz · flying-fruit · balloon-pop · maze-chase ·
+  type-the-answer · whack-a-mole · find-the-match · true-false · crossword · open-the-box ·
+  gameshow · speaking-cards · anagram. `contentMode` giữ đúng qua **11 lần Đổi template**.
+- Hồi quy act THƯỜNG (sample thật, không giọng): quiz/anagram/true-false/open-the-box chạy y cũ,
+  0 nút loa, 0 lỗi.
+
+⚠️ **2 bẫy của BÀN ĐO, không phải của sản phẩm** (ghi lại kẻo phiên sau đổ oan): (1) đo nhiều
+template nối tiếp trong CÙNG một lần chạy làm tiếng của ván trước lọt vào bộ đếm ván sau — hai lần
+"phát tiếng khi đang ở mode Text" đều biến mất khi chạy lại trên **trang vừa tải mới**; (2)
+Gameshow/True-false/Find-the-match có màn intro/đếm 3-2-1, đo ở 1,5–2 giây thì **câu hỏi chưa vẽ
+xong** và bàn đo báo "(no clue element)" — phải chờ ≥4 giây.
+
+### 6. Chưa làm / cố ý bỏ
+- **`templates/speaking/speaking.js` KHÔNG đụng**: nút loa ở đó đọc **từ mẫu để HS bắt chước phát
+  âm**, không phải gợi ý được giấu — nó có option riêng `playReference`, và chữ thì bắt buộc phải
+  hiện để HS đọc. Ép theo Content mode là hỏng chính tính năng của game.
+- **Editor Anagram giữ nguyên** nút "Hide text" từng hàng + Hide/Show all: nay chúng chỉ còn ý
+  nghĩa cho act ở AUTO. Chưa gỡ vì thầy chưa yêu cầu — **nên hỏi thầy ở đợt sau** có muốn bỏ hẳn
+  cho gọn không.
+- ⬜ **Chưa test được**: act THẬT trên Firestore + trang HS `play.html` (phiên này không đăng nhập
+  Google được — hàng rào cũ). `contentMode` nằm trong `options` nên tự đi theo bản snapshot của bài
+  giao; nghiệm thu nên **giao thử 1 bài ở mode Voice** rồi mở link HS.
+
+### 7. Ghi chú kỹ thuật để lại
+⚠️ `OPT_ANA` trong `lesson-import.js` là **một object dùng chung cho MỌI act anagram** của cùng lần
+import (`options: OPT_ANA`, không sao chép). Sửa options của act này trong bộ nhớ là đụng cả act
+kia. Vô hại tới giờ (act được lưu ra Firestore rồi đọc lại thành object riêng), nhưng ai thêm chức
+năng "sửa options ngay trong hộp Import" thì phải tách `{...OPT_ANA}` trước.
+
+### 8. Việc kế — ĐỢT B/C: FIGHT MODE (đã bàn xong với thầy 12/8, CHƯA build)
+Nút **MODE** ngoài khung, đổi giữa SINGLE MODE (như hiện nay) và **FIGHT MODE**: 2 khung game cạnh
+nhau (mỗi khung vẫn 16:10,5), dải trên có SCOREBOARD 1 · ĐỒNG HỒ · SCOREBOARD 2 (thầy chốt **bỏ
+chuông** ở đợt này, nhưng chừa chỗ 2 bên cho sau). Thầy chốt: **Anagram trước**, 2 đội **đua cùng
+một từ**, điểm chạy **theo đúng luật điểm Anagram** + thầy chỉnh tay được bằng nút +/−, và một nhóm
+Options riêng cho fight mode (nội dung 2 khung giống hệt / xáo chữ khác nhau / từ khác nhau · khi
+một đội xong trước thì khoá đội kia hay cho chơi nốt · thưởng đội nhanh · đội xong sau vẫn được
+điểm). **5 rào cản đã đo trước, phải giải trong đợt B**: (1) `core/sfx.js` giữ đúng 1 thẻ `<audio>`
+mỗi tên file nên 2 đội bấm cùng lúc chỉ nghe 1 tiếng; (2) 6 template tìm ô điểm bằng
+`document.querySelector(".aw-top-score")` = quét CẢ TRANG nên khung 2 ghi điểm vào khung 1;
+(3) `window.__awordBridge` chỉ có 1 chỗ ngồi (`_setCurrent`) mà myActivity đang đọc; (4) giọng đọc
+sẽ phát 2 lần chồng nhau; (5) mỗi khung chỉ còn rộng ~960px (chữ nhỏ đi ~một nửa) — đây là hình
+học, không cứu được bằng code. Đa chạm thì **an toàn**: myBoard đã chứng minh TOMKO nhận 2 người
+chạm cùng lúc ở 2 vùng khác nhau, và kéo-thả của Anagram vốn giữ trạng thái riêng từng ô + bắt
+`pointerId` riêng nên không đá nhau.
+
+---
+
 ## Đợt 122 (12/8/2026) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY: GIỌNG + TIẾNG + ẢNH, CÓ ĐỆM CACHE
 1 NGÀY ⭐ CÓ SỬA CORE (`engine.js` + `registry.js` + `sfx.js` + `voice-clips.js`)
 

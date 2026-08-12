@@ -27,7 +27,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { ffSound } from "./ff-sound.js";
 import { openFlyingFruitEditor } from "./flying-fruit-editor.js";
 
@@ -230,8 +230,8 @@ const flyingFruitTemplate = {
       if (fitter) { fitter.destroy(); fitter = null; }
       voicePlayer.stop();   // silence the PREVIOUS item's clip, if any
       clue.className = "aw-ff-clue";
-      const hasVoice = !!current.voice;
-      const hideText = hasVoice && !!current.hideText;
+      const vv = voiceView(activity, current);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
         clue.textContent = "";
         clue.classList.add("aw-clue-voiceonly");
@@ -244,7 +244,7 @@ const flyingFruitTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(current.voice, vBtn); };
         clue.append(vBtn);
-        voicePlayer.playDelayed(current.voice, vBtn, firstItemSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(current.voice, vBtn, firstItemSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstItemSpoken = true;
       fitter = autoFit(root, clueWrap, s => clueWrap.style.setProperty("--fit", s), {

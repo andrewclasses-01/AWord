@@ -39,7 +39,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { sound as coreSound } from "../../core/sound.js";
-import { createVoicePlayer } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { scSound, soundDurationMs, stopSound } from "./speaking-cards-sound.js";
 
 // How many deal places fit per row for a given count (kept tidy by hand).
@@ -438,7 +438,7 @@ const speakingCardsTemplate = {
         // avoids several cards' clips firing/overlapping when more than one
         // deal place is already occupied at once.
         const card = cards[idx];
-        if (card.voice) voicePlayer.play(card.voice, cardEl.querySelector(".aw-sc-listenbtn"));
+        if (voiceView(activity, card).autoPlay) voicePlayer.play(card.voice, cardEl.querySelector(".aw-sc-listenbtn"));
         half2 = cardEl.animate([{ transform: "scaleX(0)" }, { transform: "scaleX(1)" }],
           { duration: 130, easing: "ease-out", fill: "forwards" });
         let ended = false;
@@ -465,13 +465,14 @@ const speakingCardsTemplate = {
       const body = el("div", "aw-sc-cardbody");
       const txtWrap = el("div", "aw-sc-cardtextwrap");
       const txt = el("div", "aw-sc-cardtext");
-      const hasVoice = !!card.voice;
+      const vv = voiceView(activity, card);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice;
       // Hide text (10/8/2026) is only offered with exactly ONE deal place —
       // with several cards dealt at once there's no room for a giant
       // centered button per card, and the prompt reads better always-shown
       // in that layout (teacher's scope call for this template). A small
       // listen icon is still offered on every card, any deal-place count.
-      const hideText = hasVoice && !!card.hideText && dealPlaces === 1;
+      const hideText = vv.hideText && dealPlaces === 1;
       if (hideText) {
         txtWrap.classList.add("aw-clue-voiceonly");
       } else {

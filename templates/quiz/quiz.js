@@ -29,7 +29,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openQuizEditor } from "./quiz-editor.js";
 import { quizSound } from "./quiz-sound.js";
 
@@ -249,8 +249,8 @@ const quizTemplate = {
 
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       questionEl.className = "aw-quiz-question";
-      const hasVoice = !!(q.src && q.src.voice);
-      const hideText = hasVoice && !!q.src.hideText;
+      const vv = voiceView(activity, q.src);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
         questionEl.textContent = "";
         questionEl.classList.add("aw-clue-voiceonly");
@@ -263,7 +263,7 @@ const quizTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
         questionEl.append(vBtn);
-        voicePlayer.playDelayed(q.src.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(q.src.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstQuestionSpoken = true;
 

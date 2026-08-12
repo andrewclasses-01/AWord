@@ -22,7 +22,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
-import { createVoicePlayer } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { openGameshowEditor } from "./gameshow-editor.js";
 import { gsSound } from "./gs-sound.js";
 
@@ -305,8 +305,8 @@ const gameshowTemplate = {
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       play.innerHTML = "";
       const card = el("div", "aw-gs-card");
-      const hasVoice = !!(q.src && q.src.voice);
-      const hideText = hasVoice && !!q.src.hideText;
+      const vv = voiceView(activity, q.src);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       const qEl0 = hideText
         ? el("div", "aw-gs-question aw-clue-voiceonly")
         : el("div", "aw-gs-question", escapeHtml(q.question));
@@ -317,7 +317,7 @@ const gameshowTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
         qEl0.append(vBtn);
-        voicePlayer.play(q.src.voice, vBtn);
+        if (vv.autoPlay) voicePlayer.play(q.src.voice, vBtn);
       }
 
       const answers = el("div", "aw-gs-answers");

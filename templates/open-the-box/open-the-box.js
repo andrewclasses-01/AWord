@@ -28,7 +28,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { createVoicePlayer } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { otbSound } from "./otb-sound.js";
 import { openOtbEditor } from "./open-the-box-editor.js";
@@ -825,8 +825,8 @@ function mountQuestions(root, activity, ui) {
     voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
     const body = el("div", "aw-otb-q-body");
     const qTile = el("div", "aw-otb-q-question");
-    const hasVoice = !!(it.src && it.src.voice);
-    const hideText = hasVoice && !!it.src.hideText;
+    const vv = voiceView(activity, it.src);   // Options > Content decides text/voice
+    const hasVoice = vv.hasVoice, hideText = vv.hideText;
     // inner text span so setupFit can size the question independently of its
     // tile (the tile is the fit "box", this span is the "content"). Left
     // textless when hideText is on — see .aw-otb-listenbtn (CSS) for why the
@@ -840,7 +840,7 @@ function mountQuestions(root, activity, ui) {
       vBtn.setAttribute("aria-label", "Listen to pronunciation");
       vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
       qTile.append(vBtn);
-      voicePlayer.play(it.src.voice, vBtn);
+      if (vv.autoPlay) voicePlayer.play(it.src.voice, vBtn);
     }
     body.append(qTile);
 

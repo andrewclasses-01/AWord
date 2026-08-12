@@ -268,6 +268,36 @@ và **✅ ĐÃ NGHIỆM THU: thầy tự test iPhone + iPad + Windows, nghe tố
 Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
 nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
 
+### ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG — `voiceView()` (Đợt 123, 12/8/2026)
+
+Trước đây mỗi bộ từ có HAI act (`ENG1` chơi bằng chữ · `ENG1 VOICE` chơi bằng giọng) tuy nội dung chữ
+y hệt nhau. Nay **một act mang cả hai**, và `activity.options.contentMode` chọn cách chơi hôm nay:
+
+| Giá trị | Chữ | Nút loa | Tự đọc |
+|---|---|---|---|
+| `"text"` | hiện | nhỏ, cạnh chữ | **không** |
+| `"voice"` | ẩn | to, giữa khung | có |
+| **không khai** (AUTO) | theo `hideText` từng từ | theo `hideText` | có |
+
+> ⚠️ **TEMPLATE TUYỆT ĐỐI KHÔNG ĐỌC THẲNG `item.hideText` NỮA.** Phải đi qua
+> **`voiceView(activity, item)`** của `core/voice-playback.js` — trả `{hasVoice, hideText, autoPlay}`.
+> Quên là game đó **lờ đi công tắc của thầy trong im lặng**: chữ vẫn ẩn khi thầy chọn Text, hoặc
+> tiếng vẫn tự phát trong giờ luyện đọc. Khuôn chuẩn nằm ở khối USAGE đầu `voice-playback.js`;
+> 13 template hiện có đều theo đúng khuôn đó, kể cả Anagram (vốn có bản phát riêng).
+
+- Nhóm **Content** ở ĐẦU panel Options do `core/engine.js` dựng, **chỉ hiện khi act có clip thật**
+  (`hasAnyVoice`). Template không phải khai gì.
+- **AUTO phải giữ nguyên mãi mãi**: hàng trăm act cũ mang `hideText:true`; ép mặc định "text" là
+  phơi hết gợi ý mà giáo viên đang cố giấu. Panel *hiện* nút gần đúng cho act cũ nhưng **không ghi**
+  giá trị cho tới khi thầy tự bấm.
+- Mode `"text"` **bỏ luôn bước nạp trước giọng** ở `prepareBeforePlay` (act 100 từ ≈ 1,2MB) — nút loa
+  nhỏ vẫn bấm được, clip đó tải lẻ lúc bấm.
+- `core/convert.js` **chép `contentMode` sang act tạm** khi Đổi template. Bỏ dòng đó là act đang chơi
+  mode Text nhảy sang game khác rồi tự nhiên giấu chữ + đọc oang oang (options của act tạm vốn lấy từ
+  sample của game ĐÍCH, không biết gì về act này).
+- **Ngoại lệ cố ý: `templates/speaking/speaking.js` không theo luật này** — nút loa ở đó đọc từ mẫu
+  cho HS bắt chước, chữ bắt buộc phải hiện; nó có option riêng `playReference`.
+
 ### ⭐ BỘ ĐỆM CLIP GIỌNG — 3 TẦNG, HẠN 1 NGÀY (Đợt 122, 12/8/2026)
 
 `getVoiceClip()` của `core/voice-clips.js` nay đi qua **RAM → Cache Storage (`aword-voice-v1`) →

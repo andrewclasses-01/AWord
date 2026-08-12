@@ -29,7 +29,7 @@ import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { mcSound } from "./mc-sound.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
 
@@ -371,8 +371,8 @@ const mazeChaseTemplate = {
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
       qBanner.innerHTML = "";
       qBanner.className = "aw-mc-question";
-      const hasVoice = !!q.voice;
-      const hideText = hasVoice && !!q.hideText;
+      const vv = voiceView(activity, q);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       const qText = el("div", "aw-mc-qtext", "");
       if (hideText) {
         qBanner.classList.add("aw-clue-voiceonly");
@@ -386,7 +386,7 @@ const mazeChaseTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
         qText.append(vBtn);
-        voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstQuestionSpoken = true;
       fitText(qBanner, qText);

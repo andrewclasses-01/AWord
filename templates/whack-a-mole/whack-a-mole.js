@@ -35,7 +35,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { wamSound } from "./wam-sound.js";
 import { openWamEditor } from "./whack-a-mole-editor.js";
 
@@ -489,8 +489,8 @@ const wamTemplate = {
       voicePlayer.stop();   // silence the PREVIOUS question's clip, if any (quiz mode only ever plays one)
       if (mode === "quiz") {
         const q = questions[levelIndex];
-        const hasVoice = !!(q && q.voice);
-        const hideText = hasVoice && !!q.hideText;
+        const vv = voiceView(activity, q);   // Options > Content decides text/voice
+        const hasVoice = vv.hasVoice, hideText = vv.hideText;
         const qEl = hideText
           ? el("div", "aw-wam-sign-question aw-clue-voiceonly")
           : el("div", "aw-wam-sign-question", escapeHtml(q ? q.question : ""));
@@ -501,7 +501,7 @@ const wamTemplate = {
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
           vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
           qEl.append(vBtn);
-          voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+          if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
         }
         firstQuestionSpoken = true;
         fitter = autoFit(plankFitBox(), board, s => board.style.setProperty("--fit", s), {

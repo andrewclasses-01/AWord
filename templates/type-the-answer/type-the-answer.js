@@ -30,7 +30,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTypeTheAnswerEditor } from "./type-the-answer-editor.js";
 import { ttaSound } from "./type-the-answer-sound.js";
 
@@ -438,8 +438,8 @@ const ttaTemplate = {
         voicePlayer.stop();   // silence the PREVIOUS question's clip, if any
         const oldBtn = qArea.querySelector(".aw-tta-listenbtn");
         if (oldBtn) oldBtn.remove();
-        const hasVoice = !!it.voice;
-        const hideText = hasVoice && !!it.hideText;
+        const vv = voiceView(activity, it);   // Options > Content decides text/voice
+        const hasVoice = vv.hasVoice, hideText = vv.hideText;
         promptEl.innerHTML = hideText ? "" : escapeHtml(it.prompt);
         if (hasVoice) {
           const vBtn = el("button", "aw-tta-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
@@ -447,7 +447,7 @@ const ttaTemplate = {
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
           vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); };
           qArea.append(vBtn);
-          voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+          if (vv.autoPlay) voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
         }
         firstQuestionSpoken = true;
         fitLayout();

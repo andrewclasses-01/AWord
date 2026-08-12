@@ -36,7 +36,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openTfEditor } from "./true-false-editor.js";
 import { tfSound } from "./tf-sound.js";
 
@@ -343,8 +343,8 @@ const tfTemplate = {
       voicePlayer.stop();                       // silence the PREVIOUS statement's clip, if any
       promptEl.className = "aw-tf-prompt";       // drop any stale voiceonly class from the last statement
       const st = statements[queue[0]];
-      const hasVoice = !!st.voice;
-      const hideText = hasVoice && !!st.hideText;
+      const vv = voiceView(activity, st);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
         promptEl.textContent = "";
         promptEl.classList.add("aw-clue-voiceonly");
@@ -357,7 +357,7 @@ const tfTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); };
         promptEl.append(vBtn);
-        voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstStatementSpoken = true;
       const off = offscreenPx();

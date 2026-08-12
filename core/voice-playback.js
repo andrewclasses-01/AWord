@@ -22,14 +22,15 @@
 //   ...
 //   function render() {
 //     voicePlayer.stop();   // silence whatever the PREVIOUS item was playing
+//     const vv = voiceView(activity, it);      // NEVER read it.hideText directly
 //     ...
-//     if (it.voice) {
-//       const btn = el("button", "aw-voicebtn" + (it.hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
+//     if (vv.hasVoice) {
+//       const btn = el("button", "aw-voicebtn" + (vv.hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
 //       btn.type = "button";
 //       btn.setAttribute("aria-label", "Listen to pronunciation");
 //       btn.onclick = () => voicePlayer.toggle(it.voice, btn);
 //       questionEl.append(btn);
-//       voicePlayer.playDelayed(it.voice, btn, isFirstQuestion ? INTRO_DELAY_MS : 0);
+//       if (vv.autoPlay) voicePlayer.playDelayed(it.voice, btn, isFirstQuestion ? INTRO_DELAY_MS : 0);
 //     }
 //   }
 //   ...
@@ -50,6 +51,58 @@ import { getVoiceClip } from "./voice-clips.js";
 // than measuring each template's own file duration (which only Anagram's
 // anagram-sound.js does today, via core/sfx.js's `durationMs()`).
 export const DEFAULT_INTRO_DELAY_MS = 650;
+
+// ---------------------------------------------------------------
+// CONTENT MODE — one act now carries BOTH the written clue and the spoken
+// one, and `activity.options.contentMode` decides which of the two the
+// class actually plays with (teacher, 12/8/2026). Before this there were
+// two separate acts ("ENG1" and "ENG1 VOICE") holding identical words.
+//
+//   "text"      show the clue, never speak on its own. The small listen
+//               button stays, so a pupil can still ask for the sound.
+//   "voice"     hide the clue, big listen button in the middle, speak it
+//               automatically when the item opens.
+//   undefined   AUTO = exactly how every act behaved before this option
+//               existed: obey the per-item `hideText` flag that the editor
+//               and the bulk generator set. Old acts therefore do not
+//               change by one pixel until the teacher picks a mode.
+//
+// EVERY template that shows a voice button must go through this function
+// rather than reading `item.hideText` directly, or its game would ignore
+// the switch. See the usage block at the top of this file.
+// ---------------------------------------------------------------
+export function voiceView(activity, item) {
+  const hasVoice = !!(item && item.voice);
+  if (!hasVoice) return { hasVoice: false, hideText: false, autoPlay: false };
+  const mode = activity && activity.options ? activity.options.contentMode : null;
+  if (mode === "text") return { hasVoice: true, hideText: false, autoPlay: false };
+  if (mode === "voice") return { hasVoice: true, hideText: true, autoPlay: true };
+  return { hasVoice: true, hideText: !!item.hideText, autoPlay: true };
+}
+
+// True when the act holds at least one clip — the Options panel only grows a
+// "Content" group for acts that actually have a spoken side (core/engine.js).
+// Deliberately a shallow-ish recursive walk of `content`, mirroring
+// collectVoiceIds(): the 17 templates name their item arrays differently
+// (items / questions / words / cards / rounds.bonus.prompts…), so listing
+// them by name is guaranteed to miss template number 18.
+export function hasAnyVoice(node) {
+  if (!node || typeof node !== "object") return false;
+  if (Array.isArray(node)) return node.some(hasAnyVoice);
+  if (typeof node.voice === "string" && node.voice) return true;
+  return Object.values(node).some(hasAnyVoice);
+}
+
+// Same walk, for the flag the editor sets alongside a clip. Only used to
+// decide which of the two Content buttons to SHOW for an act that predates
+// the option (see core/engine.js) — never to decide playback, which is
+// voiceView()'s job alone.
+export function hasHiddenText(node) {
+  if (!node || typeof node !== "object") return false;
+  if (Array.isArray(node)) return node.some(hasHiddenText);
+  if (node.hideText === true && node.voice) return true;
+  return Object.values(node).some(hasHiddenText);
+}
 
 export function createVoicePlayer() {
   const cache = new Map();          // clipId -> data: URL

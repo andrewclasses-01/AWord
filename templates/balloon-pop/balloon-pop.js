@@ -26,7 +26,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { makeNumberStepper } from "../../core/numberstepper.js";
 import { autoFit } from "../../core/fit.js";
-import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { bpSound } from "./balloon-pop-sound.js";
 import { openBalloonPopEditor } from "./balloon-pop-editor.js";
 
@@ -244,8 +244,8 @@ function mountBalloonPop(root, activity, ui) {
     voicePlayer.stop();   // silence the PREVIOUS level's clip, if any
     if (cartText) {
       cartText.className = "aw-bp-cart-text";
-      const hasVoice = !!(it.src && it.src.voice);
-      const hideText = hasVoice && !!it.src.hideText;
+      const vv = voiceView(activity, it.src);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
         cartText.textContent = "";
         cartText.classList.add("aw-clue-voiceonly");
@@ -258,7 +258,7 @@ function mountBalloonPop(root, activity, ui) {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
         cartText.append(vBtn);
-        voicePlayer.playDelayed(it.src.voice, vBtn, firstLevelSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        if (vv.autoPlay) voicePlayer.playDelayed(it.src.voice, vBtn, firstLevelSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
       firstLevelSpoken = true;
       setupCartFit();

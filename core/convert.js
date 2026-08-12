@@ -214,6 +214,16 @@ export async function convertActivity(activity, targetType) {
   // reported it for Anagram and Quiz, 4/8/2026; it affected every QA source.)
   if (targetType === "whack_a_mole") options.mode = (kind === "tf") ? "trueFalse" : "quiz";
 
+  // CONTENT MODE follows the WORDS across the switch (12/8/2026). Every option
+  // above comes from the TARGET game's sample file, which knows nothing about
+  // this act — so without this line a class playing an act in Text mode would
+  // switch template and suddenly get hidden clues + auto-speech (the per-item
+  // `hideText` flags travel with the content and AUTO mode would obey them).
+  // Only carried when the source act actually stated a mode; an untouched old
+  // act keeps arriving with none, i.e. AUTO, exactly as before.
+  const srcMode = (activity && activity.options) ? activity.options.contentMode : null;
+  if (srcMode) options.contentMode = srcMode;
+
   return {
     id: "conv_" + targetType + "_" + Math.floor(Math.random() * 1e9),
     schemaVersion: 1,

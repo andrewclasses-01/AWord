@@ -25,7 +25,11 @@ const OPT_FTM  = { timer: "countUp", shuffleQuestions: true, lives: 5, showAnswe
 const OPT_SC   = { timer: "none", timerTotalSeconds: 120, shuffleQuestions: true, dealPlaces: 1 };
 const OPT_TF   = { timer: "countUp", shuffleQuestions: true, lives: 5, showAnswers: true, speed: 0, repeatUntilCorrect: false };
 const OPT_QUIZ = { timer: "countUp", shuffleQuestions: true, shuffleAnswers: true, lives: null };
-const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: true, showAnswers: true };
+// contentMode "text" (12/8/2026): an imported act may be given voice clips right
+// here in the Import dialog, but it still OPENS as an ordinary written-clue act —
+// the teacher flips it to Voice in Options when the lesson calls for listening.
+// This is what makes one act able to replace the old ENG1 / ENG1 VOICE pair.
+const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: true, showAnswers: true, contentMode: "text" };
 // Running word runs its OWN two clocks, so the engine's whole-game timer is off.
 // wordsPerTeam 0 = "give each team the whole pool"; the teacher normally drops it
 // to ~50 in the Options panel, which is what makes the two lists overlap.
@@ -142,16 +146,16 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // 10/8/2026). VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a
   // raw IPA symbol — an English Kokoro voice would misread both, so they
   // stay un-tagged and import exactly as before, text-only.
-  // Each also gets a plain text-only sibling (teacher's request 11/8/2026 —
-  // VOICE used to REPLACE the plain act; now both come in side by side).
-  if (ENG1.length) {
-    acts.push(anagram(`${source} / ENG1`, ENG1));
-    acts.push({ ...anagram(`${source} / ENG1 VOICE`, ENG1), ttsEligible: true });
-  }
-  if (ENG2.length) {
-    acts.push(anagram(`${source} / ENG2`, ENG2));
-    acts.push({ ...anagram(`${source} / ENG2 VOICE`, ENG2), ttsEligible: true });
-  }
+  // ⭐ 12/8/2026 — ONE act, not two. The "ENG1" + "ENG1 VOICE" PAIR (added
+  // 11/8/2026, Đợt 118) held byte-identical words; the only difference was the
+  // clips + `hideText` hanging off the second one. A single act now carries
+  // both sides and Options > Content picks which one the class plays with
+  // (see voiceView() in core/voice-playback.js), so the library stops holding
+  // two copies of every vocabulary list. `ttsEligible` still marks it for the
+  // Import dialog's voice panel; leaving that box unticked simply imports the
+  // act text-only, exactly like the old plain sibling did.
+  if (ENG1.length) acts.push({ ...anagram(`${source} / ENG1`, ENG1), ttsEligible: true });
+  if (ENG2.length) acts.push({ ...anagram(`${source} / ENG2`, ENG2), ttsEligible: true });
   if (VI1.length)  acts.push(anagram(`${source} / VI1`, VI1));
   if (VI2.length)  acts.push(anagram(`${source} / VI2`, VI2));
   // PRONUNCIATION: unscramble the word with its IPA as the clue — split the IPA

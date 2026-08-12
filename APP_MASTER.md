@@ -5,7 +5,22 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 122) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY (giọng đọc +
+> Cập nhật lần cuối: **12/8/2026 (Đợt 123) — ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG: nhóm **Content
+> (Text / Voice)** ở đầu panel Options. ⭐ CÓ SỬA CORE (`engine.js` + `voice-playback.js` +
+> `convert.js` + `lesson-import.js`) + 13 template. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> Bỏ hẳn cặp act `ENG1` + `ENG1 VOICE`: Import Excel nay tạo **1 act ENG1 duy nhất** (đảo lại Đợt
+> 118 theo yêu cầu thầy 12/8). Hoá ra dữ liệu VỐN đã gộp sẵn — `core/voice-batch.js` luôn ghi
+> `voice`+`hideText` vào chính item của act — nên đây chỉ là công tắc lúc chơi, **0 act cũ phải sửa**.
+> Luật mới gói trong MỘT hàm: **`voiceView(activity, item)`**, template cấm đọc thẳng `item.hideText`
+> (xem `core/HUONG DAN CORE.md` mục "MỘT ACT MANG CẢ CHỮ LẪN GIỌNG"). Act cũ không khai `contentMode`
+> = AUTO = **y nguyên như trước**.
+> Test thật 13/13 template có giọng, cả 2 mode, 0 lỗi console; Import đo bằng workbook giả: 4 act
+> anagram → **2**. ⚠️ Bẫy tự bắt được: Đổi template làm MẤT lựa chọn và đổi NGƯỢC lại (đã vá ở
+> `convert.js`). ⬜ Chưa test: act thật trên Firestore + `play.html` (phiên này không đăng nhập được).
+> **Việc kế = ĐỢT B: FIGHT MODE** (2 khung đấu nhau, Anagram trước) — thiết kế + 5 rào cản kỹ thuật
+> đã chốt với thầy, ghi ở `GHI CHU DU AN.md` Đợt 123 mục 8.
+>
+> Trước đó: **12/8/2026 (Đợt 122) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY (giọng đọc +
 > âm thanh + ảnh của game), có ĐỆM CACHE 1 NGÀY cho clip giọng. ⭐ CÓ SỬA CORE (`engine.js` +
 > `registry.js` + `sfx.js` + `voice-clips.js`) + 5 template khai `preloadImages`.
 > ✅ THẦY DUYỆT → COMMIT `5b9f8ec` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`

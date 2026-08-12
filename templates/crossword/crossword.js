@@ -61,7 +61,7 @@ import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createKeyboard } from "../../core/keyboard.js";
-import { createVoicePlayer } from "../../core/voice-playback.js";
+import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { openCrosswordEditor } from "./crossword-editor.js";
 import { crosswordSound } from "./crossword-sound.js";
 
@@ -702,8 +702,8 @@ const crosswordTemplate = {
       voicePlayer.stop();   // silence the PREVIOUS word's clip, if any
       const oldBtn = clueBar.querySelector(".aw-voicebtn");
       if (oldBtn) oldBtn.remove();
-      const hasVoice = !!(w.src && w.src.voice);
-      const hideText = hasVoice && !!w.src.hideText;
+      const vv = voiceView(activity, w.src);   // Options > Content decides text/voice
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       clueText.classList.toggle("aw-clue-voiceonly", hideText);
       clueText.textContent = hideText ? "" : (w.clue || "(no clue)");
       if (hasVoice) {
@@ -722,7 +722,7 @@ const crosswordTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(w.src.voice, vBtn); };
         clueText.append(vBtn);
-        voicePlayer.play(w.src.voice, vBtn);
+        if (vv.autoPlay) voicePlayer.play(w.src.voice, vBtn);
       }
       if (clueFitter) { clueFitter.destroy(); clueFitter = null; }
       clueFitter = autoFit(clueBar, clueText, s => clueText.style.setProperty("--fit", s),

@@ -65,6 +65,7 @@ import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { getVoiceClip } from "../../core/voice-clips.js";
+import { voiceView } from "../../core/voice-playback.js";
 import { anagramSound } from "./anagram-sound.js";
 import { openAnagramEditor } from "./anagram-editor.js";
 
@@ -537,8 +538,11 @@ const anagramTemplate = {
       const tileSize = computeTileSize(it.letters.length);
 
       const card = el("div", "aw-anagram-card");
-      const hasVoice = !!(it.src && it.src.voice);
-      const hideText = hasVoice && !!it.src.hideText;
+      // Options > Content (12/8/2026) decides whether this act plays as TEXT
+      // or as VOICE today — one act now holds both. voiceView() is the single
+      // place that rule lives; never read it.src.hideText directly.
+      const vv = voiceView(activity, it.src);
+      const hasVoice = vv.hasVoice, hideText = vv.hideText;
       // Hide text (10/8/2026, revised 10/8/2026): when ON, the Clue never
       // appears in any form — teacher's request was "just ONE big centered
       // listen button standing where the question normally sits, nothing
@@ -571,7 +575,11 @@ const anagramTemplate = {
         // core/engine.js right before mount() — see anagram-sound.js's
         // introDurationMs()) so the two sounds never overlap; every later
         // word (reached via Next/Previous) plays immediately as before.
-        if (!firstWordRendered) {
+        // ...but only in VOICE mode: in TEXT mode the clue is on screen to be
+        // read, so the button waits to be asked (vv.autoPlay).
+        if (!vv.autoPlay) {
+          /* text mode — button only, no automatic speech */
+        } else if (!firstWordRendered) {
           voiceIntroTimeoutId = setTimeout(() => {
             voiceIntroTimeoutId = null;
             playVoiceClip(it.src.voice, listenBtn);
