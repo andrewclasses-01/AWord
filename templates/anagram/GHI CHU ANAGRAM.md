@@ -2,8 +2,9 @@
 
 ## ⭐ Đợt 134 (13/8/2026) — 12 CẢI TIẾN UI/UX ĐƠN+ĐẤU + VÁ LỖI THẬT "2 LOA LỆCH MÀU"
 
-✅ **THẦY DUYỆT ("ok build") → ĐÃ CODE + TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight
-để soát core dùng chung không vỡ).** Luật chung: `../../GHI CHU DU AN.md` Đợt 134. ⭐ CÓ SỬA CORE
+✅ **THẦY DUYỆT ("ok build") → ĐÃ TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight để
+soát core dùng chung không vỡ) → COMMIT `0a24c62` + PUSH + LIVE.** Luật chung:
+`../../GHI CHU DU AN.md` Đợt 134. ⭐ CÓ SỬA CORE
 (`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
 (`anagram.js`/`.css`) — ảnh hưởng tới TẤT CẢ 17 game (animation popup mượt hơn) và tới **Quiz fight
 mode** (nhóm Options tách + "TEAM LEFT/RIGHT WINS" + số 7 nét — đã tự test riêng, không vỡ).

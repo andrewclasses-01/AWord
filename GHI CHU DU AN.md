@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 "TEAM LEFT/RIGHT WINS" + số điểm tay 7-segment — 3 thứ này dùng chung `core/fight.js`).
 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight để soát core không vỡ), đo trực
 tiếp qua DOM (không dựa console — bàn console-log của công cụ test bị kẹt dữ liệu cũ suốt buổi, xem BẪY
-bên dưới). ✅ THẦY DUYỆT ("ok build") → ĐÃ CODE, CHỜ COMMIT/PUSH.
+bên dưới). ✅ THẦY DUYỆT ("ok build") → COMMIT `0a24c62` + PUSH + **LIVE**.
 
 **Thầy chốt / Yêu cầu Teacher Andrew** (12 việc, single + fight):
 1. Slogan lên chung thanh trên cùng với đồng hồ+điểm (đơn)

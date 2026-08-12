@@ -16,8 +16,8 @@
 > ⭐ CÓ SỬA CORE (`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
 > (`anagram.js`/`.css`). 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn+đấu, cả Quiz fight để soát core
 > không vỡ) — đo trực tiếp DOM, không dựa console (bàn console-log của công cụ test bị kẹt dữ liệu cũ
-> suốt buổi, xem BẪY ở `GHI CHU DU AN.md` Đợt 134). ✅ THẦY DUYỆT ("ok build") → ĐÃ CODE, CHỜ
-> COMMIT/PUSH.
+> suốt buổi, xem BẪY ở `GHI CHU DU AN.md` Đợt 134). ✅ THẦY DUYỆT ("ok build") → COMMIT `0a24c62` +
+> PUSH + **LIVE**.
 > ⚠️ BẪY MỚI đáng nhớ: TDZ (`const` khai SAU dòng gọi hàm dùng nó trong cùng closure) trong
 > `core/fight.js` làm `startFight()` lỗi ÂM THẦM (bọc try/catch + console.warn, không throw ra UI) —
 > nút "Start fight" chỉ im lặng không phản ứng, dễ tưởng nhầm bug khác.
