@@ -7,7 +7,7 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **12/8/2026 (Đợt 126) — FIGHT MODE: THU NHỎ 60% + Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG,
 > NGỦ KHI BẰNG 0, TRƯỢT KHI ĐỔI SỐ. ⭐ CÓ SỬA CORE (`fight.js` + `app.css`, không đụng template nào).
-> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 124 + 125, thầy duyệt cả 3 cùng lúc).
+> ✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + **LIVE** (gộp cùng Đợt 124 + 125, 1 commit).
 > Thầy gửi thêm 2 điểm sau Đợt 125: (1) **điểm/đồng hồ/ô điểm tay còn 60%** kích cỡ cũ (đo thật ở màn
 > rộng: 40.8px/40.8px/43.19px, khớp phép tính); (2) **ô điểm tay rời khỏi cụm giữa cạnh đồng hồ,
 > xuống hẳn 1 hàng MỚI dưới khung act**, mỗi ô chính giữa khung của đúng đội đó (đo `centerX`: khớp
@@ -25,7 +25,7 @@
 >
 > Trước đó: **12/8/2026 (Đợt 125) — DẢI TRÊN FIGHT MODE GỌN LẠI + XÁC NHẬN TRƯỚC KHI ĐỔI
 > MODE + QUIZ THỬ NGHIỆM ĐẤU. ⭐ CÓ SỬA CORE (`engine.js` + `fight.js` + `app.css`) +
-> `templates/quiz/quiz.js`. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 124 + 126).
+> `templates/quiz/quiz.js`. ✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + **LIVE** (gộp cùng Đợt 124 + 126).
 > Thầy chơi thử Đợt 124 rồi gửi 4 điểm: (1) **bấm MODE nay phải xác nhận** qua 1 popover Yes/Cancel
 > ngay cạnh nút (dùng lại `openToolPanel`, không đẻ cơ chế mới) mới thật sự đổi SINGLE↔FIGHT — lỡ tay
 > không còn mất trận đang chơi; (2) **bỏ hẳn nhãn chữ "TEAM 1"/"TEAM 2"/"TIME"** trên dải điểm; (3)
@@ -50,7 +50,7 @@
 >
 > Trước đó: **12/8/2026 (Đợt 124) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ
 > (Anagram trước, thầy chốt). ⭐ CÓ SỬA CORE — file MỚI `core/fight.js` + `engine.js` + `sfx.js` +
-> `icons.js` + `app.css`. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE** (gộp cùng Đợt 125 + 126).
+> `icons.js` + `app.css`. ✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + **LIVE** (gộp cùng Đợt 125 + 126).
 > Nút **MODE** (chỉ hiện với template khai `tpl.fightMode`) lật SINGLE ↔ FIGHT: 2 ván THẬT cạnh nhau
 > (mỗi khung vẫn đúng 16:10,5 — đo 939×616 ở 1920×1080), dải trên SCOREBOARD 1 · ĐỒNG HỒ ·
 > SCOREBOARD 2 (chừa sẵn 2 ô cho CHUÔNG sau này), MỘT thanh công cụ dùng chung. Chạy được 2 ván

@@ -7,7 +7,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 126 (12/8/2026) — FIGHT MODE: THU NHỎ 60%, Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG + NGỦ KHI BẰNG 0 + HIỆU ỨNG TRƯỢT
 ⭐ CÓ SỬA CORE (`core/fight.js` + `core/app.css`, KHÔNG đụng file nào của template).
-✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 124 + 125, thầy duyệt cả 3 cùng lúc).
+✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE (gộp cùng Đợt 124 + 125, 1 commit — `curl` cachebust
+query xác nhận origin GitHub Pages đã lên bản mới, CDN edge cache 10 phút cần thêm ít phút để lan hết).
 
 Tiếp nối Đợt 125 (chưa commit) — thầy gửi thêm 2 điểm chỉnh cho dải điểm/đồng hồ/ô điểm tay.
 
@@ -55,7 +56,7 @@ chỉ qua số đo) — nếu thấy gì lệch thì báo, không phải chặn 
 
 ## Đợt 125 (12/8/2026) — DẢI TRÊN FIGHT MODE GỌN LẠI + XÁC NHẬN TRƯỚC KHI ĐỔI MODE + QUIZ THỬ NGHIỆM ĐẤU
 ⭐ CÓ SỬA CORE (`core/engine.js`, `core/fight.js`, `core/app.css`) + `templates/quiz/quiz.js`.
-✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 124 + 126, thầy duyệt cả 3 cùng lúc).
+✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE (gộp cùng Đợt 124 + 126, 1 commit).
 
 Tiếp nối Đợt 124 (Fight mode Anagram, chưa commit) — thầy chơi thử bản live rồi gửi 4 yêu cầu chỉnh
 dải trên + mở rộng Fight sang Quiz.
@@ -133,7 +134,7 @@ Có thể bàn thêm sau: chia sẻ thứ tự đáp án Quiz giữa 2 khung (m�
 
 ## Đợt 124 (12/8/2026) — ⭐⭐ FIGHT MODE: HAI ĐỘI, HAI KHUNG, MỘT TỪ (Anagram).
 ⭐ CÓ SỬA CORE (file MỚI `core/fight.js` + `engine.js` + `sfx.js` + `icons.js` + `app.css`).
-✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (gộp cùng Đợt 125 + 126, thầy duyệt cả 3 cùng lúc).
+✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE (gộp cùng Đợt 125 + 126, 1 commit).
 
 **ĐỢT B** của kế hoạch 12/8. Thầy chốt làm cho **DUY NHẤT Anagram** trước cho hoàn thiện.
 

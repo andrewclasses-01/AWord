@@ -11,7 +11,7 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ## ⭐⭐ ĐỢT 125 (12/8/2026) — QUIZ TRỞ THÀNH TEMPLATE THỨ HAI KHAI `fightMode` (THỬ NGHIỆM)
 
-✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chi tiết đầy đủ (kèm cả phần sửa core dùng chung cho mọi
+✅ **THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE.** Chi tiết đầy đủ (kèm cả phần sửa core dùng chung cho mọi
 template sau này, và tiếp tục ở Đợt 126 — chỉnh cỡ chữ + dời ô điểm tay): `../../GHI CHU DU AN.md`
 Đợt 125 + 126. Đây chỉ tóm tắt phần RIÊNG của Quiz.
 
