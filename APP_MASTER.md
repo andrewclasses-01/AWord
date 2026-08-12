@@ -12,7 +12,8 @@
 > Voice dùng CHUNG 1 bản duy nhất cho cả 2 đội, đồng bộ hào quang + equalizer tuyệt đối, đang phát
 > thì bấm gì cũng không dừng được.**
 > ⭐ CÓ SỬA CORE (`core/fight.js`) + Anagram (`anagram.js`). 🟢 ĐÃ TỰ TEST kỹ (mô phỏng 2 bàn gõ chữ
-> thật qua PointerEvent, đo điểm/is-won/giá trị equalizer) — **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.**
+> thật qua PointerEvent, đo điểm/is-won/giá trị equalizer). ✅ THẦY DUYỆT → COMMIT `1222b23` + PUSH +
+> **LIVE**.
 > Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 133.
 >
 > Trước đó: **13/8/2026 (Đợt 132) — 6 CẢI TIẾN ANAGRAM: MIX VOICE (4 giọng loại trừ lẫn
@@ -21,8 +22,8 @@
 > khi Content=Text · KHUNG DƯỚI (tên act/nút) co giãn theo cửa sổ (áp cho cả 17 game) · OPTIONS rộng
 > hơn + cao hơn + nút Text/Voice kiểu công tắc trượt + bỏ chữ OPTIONS toàn bộ.**
 > ⭐ CÓ SỬA CORE (`engine.js` + `app.css`) + Anagram (`anagram.js`/`.css`/`anagram-editor.js`) +
-> `voice-batch.js`. 🟢 ĐÃ TỰ TEST kỹ (đơn+đấu+Quiz để soát game khác không vỡ), 0 lỗi console —
-> **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.** ⚠️ 1 điểm CHƯA giải quyết trọn vẹn: Options khi ĐẤU +
+> `voice-batch.js`. 🟢 ĐÃ TỰ TEST kỹ (đơn+đấu+Quiz để soát game khác không vỡ), 0 lỗi console.
+> ✅ THẦY DUYỆT → COMMIT `b4df0d0` + PUSH + **LIVE**. ⚠️ 1 điểm CHƯA giải quyết trọn vẹn: Options khi ĐẤU +
 > Anagram (12 nhóm tuỳ chọn cùng lúc) vẫn cần cuộn dọc ở màn hình thường (~364px tràn) — đã tối ưu hết
 > mức an toàn, muốn hết hẳn phải cho panel đè lên hàng nút thật (thầy từng gợi ý chấp nhận được) —
 > CHƯA làm, chờ thầy xác nhận có cần đi tiếp không.

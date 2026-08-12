@@ -9,7 +9,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`core/fight.js`) + Anagram (`anagram.js`). KHÔNG đụng CSS.
 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (mô phỏng 2 bàn bấm chữ thật qua PointerEvent, đo bằng số điểm
 + class `is-won` + giá trị `--h` equalizer), 0 lỗi mới (chỉ còn lỗi CŨ đã biết từ trước, không phải do
-đợt này) — **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.**
+đợt này). ✅ THẦY DUYỆT → COMMIT `1222b23` + PUSH + **LIVE**.
 
 ### 1. Cửa sổ "hòa" 0,1 giây + cơ chế điểm rơi khỏi màn khi bị từ chối
 Trước đây hễ ai xong ĐÚNG trước là thắng ngay lập tức, dù chỉ hơn đối thủ vài mili-giây. Nay `wordDone()`
@@ -64,8 +64,8 @@ và bàn kia mirror y hệt (không phát đúng giọng của TỪ RIÊNG nó) 
 ## Đợt 132 (13/8/2026) — 6 CẢI TIẾN ANAGRAM: MIX VOICE · LOA+EQUALIZER · SLOGAN · TEXT ẨN LOA · KHUNG DƯỚI CO GIÃN · OPTIONS RỘNG HƠN
 ⭐ CÓ SỬA CORE (`core/engine.js` + `core/app.css`, dùng chung 17 game) + Anagram
 (`anagram.js` + `anagram.css` + `anagram-editor.js`) + `core/voice-batch.js`.
-🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu + Quiz để soát không vỡ game khác), 0 lỗi console —
-**CHỜ THẦY TỰ CHƠI THỬ RỒI DUYỆT MỚI COMMIT.**
+🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu + Quiz để soát không vỡ game khác), 0 lỗi console.
+✅ THẦY DUYỆT → COMMIT `b4df0d0` + PUSH + **LIVE** (gộp cùng đợt push với Đợt 131/133).
 
 Thầy gửi 1 loạt yêu cầu chia 3 nhóm (Edit / Game / Options). Đã hỏi trước 4 điểm chưa rõ (nhãn
 Male C/D trùng giọng, phạm vi hạ layout, kiểu Equalizer, phạm vi bỏ chữ OPTIONS, xác định đúng nút
