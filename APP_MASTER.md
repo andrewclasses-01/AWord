@@ -1426,28 +1426,144 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ BÀN GIAO MỚI NHẤT (chốt 1/8/2026 sau Đợt 33 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (chốt 12/8/2026 sau Đợt 124 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> Mục "0b" bên dưới là bàn giao CŨ của phiên 31/7 — giữ lại vì có nhiều bài học kỹ thuật còn giá trị,
-> nhưng **phần trạng thái game trong đó đã lỗi thời** (nó còn ghi Crossword/Flying fruit/Unjumble "chờ
-> duyệt"). Trạng thái đúng là mục này.
+> Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
+> (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
 
-### Đứng ở đâu rồi
-> ⚠️ **CẬP NHẬT 11/8/2026**: nay đã có **17 loại** — thêm **Speaking** (thứ 17, ✅ live, Đợt 107 — AI chấm
-> phát âm, đừng nhầm với Speaking cards).
-> ⚠️ **CẬP NHẬT 6/8/2026**: 16 loại — thêm **Running word** (thứ 15, ✅ live) và
-> **Running team** (thứ 16, 🟢 chờ thầy duyệt, Đợt 78). Ngoài ra Settings có thêm mục **Classes**
-> (danh sách lớp + học sinh, `core/classes.js`) — dữ liệu bền dùng chung, act nào gọi tên học sinh
-> thì đọc từ đó. Đoạn "14 loại" bên dưới giữ nguyên vì phần bài học kỹ thuật vẫn đúng.
+### 1. Dự án là gì
+Web game tiếng Anh kiểu Wordwall, **giáo viên soạn — học sinh chơi qua link/QR — hệ thu điểm về**.
+Vanilla JS, **zero-build**, chạy trên GitHub Pages.
+- **LIVE**: `https://aword.andrewclasses.com/` (= `https://andrewclasses-01.github.io/AWord/`)
+- **Repo**: `andrewclasses-01/AWord`, code ở `E:\LAP TRINH APP\AWord\web`, dữ liệu ở
+  `D:\APP AND DATA\AWord-data`
+- **Backend**: Firebase Firestore `aword-70dae` (gói Spark, MIỄN PHÍ — **không có Storage**)
+- **Sản phẩm 100% tiếng Anh**; trao đổi + mọi tài liệu nội bộ 100% tiếng Việt
 
-**Cả 14 loại act đã ✅ CHỐT, sống ở trang chủ, đã push + live** — Quiz · Anagram · Find the match ·
-Type the answer · Open the box · True or false · Gameshow quiz · Maze chase · Whack-a-mole ·
-Flying fruit · Balloon pop · Crossword · Unjumble · Speaking cards. Mỗi loại có content editor riêng.
-Thầy đã tự chạy thử bản live và xác nhận (1/8/2026).
+### 2. Đọc theo đúng thứ tự này
+| # | File | Dùng để |
+|---|---|---|
+| 1 | `core/HUONG DAN CORE.md` (~1.580 dòng) | **Hợp đồng engine ↔ template + TOÀN BỘ bẫy kỹ thuật.** Bắt buộc trước khi sửa code |
+| 2 | `APP_MASTER.md` mục 0a (file này) | Trạng thái + luật làm việc + việc đang chờ |
+| 3 | `GHI CHU DU AN.md` (~7.400 dòng) | Nhật ký từng đợt, **mới nhất ở TRÊN CÙNG** |
+| 4 | `templates/<tên>/GHI CHU <TÊN>.md` | Chỉ đọc của template đang đụng tới |
 
-**Trang học sinh `play.html` nay chơi được CẢ 14 loại** (trước chỉ Quiz — xem Đợt 33).
+Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
+vừa xảy ra.
 
-### ⚠️ 2 THÓI QUEN CŨ NAY ĐÃ SAI — đọc kỹ kẻo làm hỏng
+### 3. Đứng ở đâu (12/8/2026)
+**17 template, tất cả `built:true` trong `core/catalog.js`, tất cả LIVE**, mỗi loại có content editor
+riêng, và `play.html` (trang HS) chơi được cả 17:
+
+`quiz · anagram · find_the_match · type_the_answer · open_the_box · true_false · gameshow ·
+maze_chase · whack_a_mole · flying_fruit · balloon_pop · crossword · unjumble · speaking_cards ·
+running_word · running_team · speaking`
+
+**3 đợt gần nhất (đều đã LIVE):**
+| Đợt | Việc | Commit |
+|---|---|---|
+| **124** | ⭐⭐ **FIGHT MODE** — nút MODE lật 1 khung ↔ **2 khung đấu nhau cùng 1 từ** (Anagram trước). File mới `core/fight.js` | `80d3e86` |
+| **123** | **Một act mang cả chữ lẫn giọng** — Options > Content (Text/Voice), bỏ cặp ENG1 + ENG1 VOICE | `1f8552a` |
+| **122** | **Nạp trước giọng + tiếng + ảnh** rồi mới cho bấm PLAY (cổng chờ của lõi) | `5b9f8ec` |
+
+Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`) — dữ liệu bền cấp app,
+act nào gọi tên HS thì đọc từ đó.
+
+### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+**Đang chờ thầy xem bằng MẮT (Đợt 124, không ai tự kiểm được):**
+- Bố cục FIGHT MODE thật, và **cỡ chữ khi fullscreen trên bảng TOMKO** (tính ra còn ~57-60% so với
+  single fullscreen). Nếu nhỏ quá: đường lùi đã tính sẵn — bỏ dải trên, cho scoreboard đè mờ vào góc
+  khung để lấy lại chiều cao.
+
+**FIGHT MODE — phần thầy đã chốt là LÀM SAU, đừng tự làm:**
+- **CHUÔNG** (đã chừa sẵn chỗ trong bố cục, thầy chốt bỏ ở đợt đầu)
+- **Tên đội tự đặt** (đang cứng "TEAM 1"/"TEAM 2")
+- **16 template còn lại** (thầy chốt: hoàn thiện Anagram trước rồi mới lan ra)
+- Đổi template giữa trận đang bị **từ chối có chủ ý** (toast) — chỉ mở khi có template thứ 2 biết đấu
+
+**Câu hỏi treo, chưa hỏi thầy:**
+- `anagram-editor.js` còn nút **"Hide text" từng hàng + Hide/Show all**; từ Đợt 123 chúng chỉ còn ý
+  nghĩa với act cũ (chế độ AUTO). Có gỡ cho gọn không?
+
+**Chưa nghiệm thu được vì không đăng nhập Google được:**
+- Act THẬT trên Firestore + trang HS `play.html` cho Đợt 123 (mode Text/Voice) và Đợt 122.
+
+**Tồn kho cũ (từ Đợt 33, thầy chưa chốt cái nào — đừng tự làm):**
+- Balloon pop còn mục "cần POLISH" (blimp chồng lane ở khung hẹp; hiện 2 đồng hồ).
+- 3 **ĐỀ XUẤT SỬA CORE** treo trong GHI CHU của template: Speaking cards xin cờ `openEnded`/
+  `hideScore`; Crossword xin `tpl.hideRandomOption`; Balloon pop xin ẩn `timerEl`.
+- Find the match thiếu 3 âm Menu/Leaderboard/RevealAnswers (core chưa có hook).
+
+### 5. Kiến trúc trong 1 trang
+- `core/` (34 file JS) = lõi dùng chung. `templates/<game>/` = mỗi game 1 thư mục, tự đăng ký bằng
+  `registerTemplate()`.
+- **Thêm/gỡ một template = sửa ĐÚNG 1 dòng trong `core/catalog.js`** (xem khuôn bên dưới).
+- **FIGHT MODE** sống ở `core/fight.js` (nạp trì hoãn từ nút MODE). Template tham gia bằng cách khai
+  `tpl.fightMode` + nói chuyện với `activity._fight` — hợp đồng đầy đủ + 4 bẫy ở
+  `core/HUONG DAN CORE.md` mục "FIGHT MODE".
+- 2 trang gốc: `index.html`→`main.js` (thư viện GV kiểu Google Drive, phải đăng nhập) ·
+  `play.html`→`play.js` (HS chơi qua link/QR, **không đăng nhập**).
+- ⛔ **Ranh giới bảo mật cố ý**: `play.html` KHÔNG được tải code thư viện GV. Thêm `import` TĨNH
+  `store.js`/`assignment-ui.js`/`fight.js` vào engine là **vỡ** — phải `await import(...)`.
+- Firestore: `users/{uid}/items` (thư viện + lớp học) · `assignments/{code}` (bản SAO act lúc giao,
+  đọc công khai) · `assignments/{code}/scores/{id}` · `results/{id}` · `voiceClips/{id}` (đọc công
+  khai). Bảo mật dựa vào 1 email GV whitelist trong luật Firestore.
+
+```js
+// khuôn 1 mục catalog — thêm chừng này là act hiện đủ ở picker, panel Template, play.html, Settings
+{ type: "<ten_type>", label: "<Tên hiện ra>", built: true,
+  blurb: "1 câu tả cho picker New activity.",
+  css:    "templates/<ten>/<ten>.css",
+  load:   () => import("../templates/<ten>/<ten>.js"),
+  sample: () => import("../templates/<ten>/sample-<ten>.js") },
+```
+
+### 6. Luật làm việc BẮT BUỘC
+1. **Tính năng mới: nghiên cứu + báo xung đột + CHỜ thầy nói "ok build" mới code.** Phần chưa rõ thì
+   hỏi bằng **AskUserQuestion**, không hỏi bằng văn xuôi.
+2. **Chỉ commit sau khi thầy duyệt.** Việc chưa duyệt ghi 🟢 CHỜ THẦY DUYỆT và **không commit**.
+   Câu chốt chuẩn trong nhật ký: "✅ THẦY DUYỆT → COMMIT + PUSH + LIVE".
+3. **KHÔNG BAO GIỜ `git add -A`** — nhiều phiên Claude chạy song song. Luôn `git fetch` +
+   `git status` trước, rồi add ĐÚNG file của mình theo tên.
+4. ⚠️ **Số Đợt chỉ chốt được SAU khi pull** — đã có lần build xong đánh số 117 rồi push bị từ chối
+   vì phiên song song lấy mất 117→120. Xung đột gần như luôn rơi vào `APP_MASTER.md` +
+   `GHI CHU DU AN.md` (mục mới nhất nằm đầu file).
+5. **Mỗi đợt phải**: ghi `GHI CHU DU AN.md` + cập nhật khối tóm tắt đầu `APP_MASTER.md` + ghi
+   `GHI CHU <TEMPLATE>.md` nếu có đụng template.
+6. **Không tự sửa `core/` khi đang làm 1 template** — ghi "ĐỀ XUẤT SỬA CORE" vào GHI CHU của
+   template rồi chờ. Mọi thay đổi core phải **cộng thêm, tương thích ngược**, và kiểm lại
+   Quiz + Anagram không đổi hành vi.
+7. **File thử tạm (`_test-*.html/.js`) phải XOÁ sau khi test xong** — quy ước từ Đợt 96.
+
+### 7. Chạy thử & test
+- Máy: `python devserver.py 5510` (⛔ **không** dùng `python -m http.server` — xem mục 9) →
+  `http://localhost:5510/`
+- **Test KHÔNG cần đăng nhập**: `http://localhost:5510/templates/<tên>/test.html` (chạy dữ liệu mẫu,
+  không đụng thư viện). Đây là cách test chính.
+- Lên live: **`git push` là đủ**, chờ 1-3 phút rồi `curl` kiểm dấu mốc. Chỉ khi >10 phút vẫn cũ mới
+  mở **mục 0-TER (đường cứu hộ)**.
+- ⚠️ Push xong mà thầy vẫn thấy bản cũ: xem **mục 0-BIS** — Pages cập nhật các file KHÔNG đồng thời,
+  và trình duyệt giữ cache 10 phút (`Ctrl+Shift+R`).
+- ⛔ **KHÔNG tự động hoá được**: popup đăng nhập Google (nên trang chủ + assignment thật phải nhờ
+  thầy), và pane trình duyệt của phiên tự động **không chụp được ảnh** khi bị ẩn.
+- ⭐ **Mẹo test giọng đọc không cần đăng nhập** (Đợt 123): nhét clip giả thẳng vào **Cache Storage
+  `aword-voice-v1`** (khoá `/__aword-voice/<id>` + header `x-aword-saved` còn hạn) — tầng này được
+  `getVoiceClip()` đọc TRƯỚC Firestore nên chạy đúng module thật, không phải chép file.
+- ⭐ **Mẹo đo âm thanh**: tráo `HTMLMediaElement.prototype.play` để ĐẾM tiếng thật sự phát ra, đừng
+  suy đoán qua giao diện.
+
+### 8. Năm bẫy cắn nhiều nhất (đầy đủ ở `core/HUONG DAN CORE.md`)
+1. **`document.querySelector(".aw-top-score")` và họ hàng** = truy vấn SỐNG toàn trang: trên ván đã
+   chết nó trúng ô điểm ván MỚI, trong fight mode nó trúng bàn BÊN KIA.
+2. **Không hàm dọn dẹp nào được phép ném lỗi** — `cleanup()`/`teardown()` chạy trên đường đi vào một
+   lần dựng lại; một `ReferenceError` ở đó làm màn hình đứng im **không báo gì** (Đợt 124).
+3. **`element.animate().onfinish` có thể KHÔNG BAO GIỜ bắn** khi tab bị ẩn → luôn kèm `setTimeout`
+   dự phòng + cờ `done`. `requestAnimationFrame` cũng đóng băng hoàn toàn trong pane ẩn.
+4. **CSS của template KHÔNG BAO GIỜ bị gỡ khỏi trang** → cấm selector trần nhắm class lõi.
+5. **Hoạt cảnh điểm của template TỚI MUỘN** (Anagram: 1.760ms) — mọi thứ tính điểm ở ngoài phải chờ,
+   đừng đọc "điểm hiện tại" ngay lúc game báo xong.
+
+### 9. ⚠️ Hai thói quen cũ NAY ĐÃ SAI — đọc kỹ kẻo làm hỏng
 1. **Gộp template = sửa ĐÚNG 1 FILE `core/catalog.js`.** Từ v0.9.7 (Đợt 33) `index.html`, `play.html`,
    `main.js`, `play.js`, `manifest.js` **không còn liệt kê template nào** — `ensureTemplate()` trong
    `core/registry.js` tự chèn CSS + import module lúc act được chơi/sửa. Mọi ghi chú cũ bảo "thêm import
@@ -1456,37 +1572,8 @@ Thầy đã tự chạy thử bản live và xác nhận (1/8/2026).
 2. **`manifest.js` không còn là danh sách chép tay** — nó chỉ là view suy ra từ catalog. Đừng thêm gì
    vào đó.
 
-Khuôn 1 mục catalog (xem thêm `templates/HUONG DAN TEMPLATE.md`):
-```js
-{ type: "<ten_type>", label: "<Tên hiện ra>", built: true,
-  blurb: "1 câu tả cho picker New activity.",
-  css:    "templates/<ten>/<ten>.css",
-  load:   () => import("../templates/<ten>/<ten>.js"),
-  sample: () => import("../templates/<ten>/sample-<ten>.js") },
-```
-
-### Việc kế tiếp — HỎI THẦY TRƯỚC, đừng tự đoán
-Xếp theo mức đáng làm (đánh giá của phiên Đợt 33, thầy chưa chốt cái nào):
-
-- **(A) Balloon pop — polish**: đây là template DUY NHẤT lên trang chủ mà còn mục "Điểm cần POLISH" chưa
-  làm: blimp có thể chồng lane ở khung hẹp; **hiện 2 đồng hồ** (đồng hồ riêng ở `topbarMid` + ô đồng hồ
-  engine bên trái hiện "0:00" vì `options.timer:"none"`). Kèm 1 **ĐỀ XUẤT SỬA CORE** đã ghi sẵn: khi
-  template có `inlineTimerBar:true` VÀ `options.timer==="none"` thì engine nên ẩn `timerEl`. Chi tiết:
-  `templates/balloon-pop/GHI CHU BALLOON-POP.md`.
-- **(B) Dọn 3 ĐỀ XUẤT SỬA CORE còn treo** (đều do template tự lách, ghi trong GHI CHU của chúng):
-  Speaking cards xin cờ `openEnded`/`hideScore` (ẩn chip điểm + nav + "Submit answers" cho game
-  `scorable:false`) và cờ ẩn nhóm Options thay vì tỉa DOM bằng tay; Crossword xin
-  `tpl.hideRandomOption` (lưới cố định, nhóm Shuffle vô nghĩa); Balloon pop xin ẩn `timerEl` như (A).
-- **(C) Việc còn ngỏ của từng game** (thầy chưa yêu cầu, đừng tự làm): 🎤/🖼️ voice+image trong editor
-  của Anagram/Crossword; Find the match thiếu 3 âm Menu/Leaderboard/RevealAnswers (core chưa có hook);
-  Crossword bật bàn phím ảo thì nên phóng to theo từ đang chọn thay vì thu cả lưới.
-- **(D) Chưa ai test**: fullscreen thật trên bảng TOMKO; nghe thật các bộ mp3.
-
-### Khúc KHÔNG tự test được — phải nhờ thầy
-Trang chủ và assignment thật đều nằm sau **popup đăng nhập Google, không tự động hoá được**. Phiên mới
-muốn kiểm tra logic mà không cần đăng nhập thì dùng `templates/<ten>/test.html`, hoặc `import()` thẳng
-`core/registry.js` + `core/catalog.js` từ console trang đang mở (cách Đợt 32/33 đã dùng để test cả 14
-loại: `ensureTemplate` → `startGame` vào 1 div rời → đếm `.aw-stage`).
+*(Khuôn 1 mục catalog + danh sách việc đang chờ + cách test: xem mục 5, 4 và 7 ở trên — bản Đợt 33
+của mấy mục đó đã được gộp lên trên và xoá khỏi đây để không có hai danh sách nói khác nhau.)*
 
 ## 0b. BÀN GIAO CŨ (phiên 31/7/2026 — trạng thái game đã lỗi thời, giữ lại vì các bài học kỹ thuật)
 
