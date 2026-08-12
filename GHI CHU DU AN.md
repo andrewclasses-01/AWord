@@ -10,7 +10,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 Thầy yêu cầu nghiên cứu việc đưa dữ liệu nặng (audio, sau này có thể cả ảnh) lên Firebase Storage.
 Nghiên cứu xong ra kết luận khác: **vấn đề không nằm ở CHỖ CHỨA mà ở ĐỊNH DẠNG**. Thầy chốt nén 48k
 + xoá sạch kho cũ, rồi gõ "ok build". ⭐ CÓ SỬA CORE.
-✅ THẦY DUYỆT → **COMMIT + PUSH + LIVE** tại `https://aword.andrewclasses.com/`.
+✅ THẦY DUYỆT → **COMMIT `cbf5ed9` + PUSH + LIVE** tại `https://aword.andrewclasses.com/`
+(`curl` xác nhận trên chính bản LIVE: `core/tts.js` có `MP3_KBPS = 48` + `toMp3DataUrl` + trỏ
+`vendor/lamejs.mjs` và vẫn còn `audio.toBlob` của nhánh dự phòng · `core/vendor/lamejs.mjs` 200,
+165,4KB, có `Mp3Encoder` · `tools-voice-cleanup.html` 200).
+
+⚠️ **ĐÁNH SỐ 121 CHỨ KHÔNG PHẢI 117 — bài học về chạy song song.** Lúc bắt đầu, đợt mới nhất là 116 nên
+đặt là 117; build xong đi push thì bị `rejected` vì một phiên Claude song song đã push **Đợt 117, 118,
+119, 120** (Running team + Anagram điểm âm + popup Import). Xung đột ở đúng 2 file nhật ký, phải đổi số
+và xếp lại thứ tự trong lúc rebase. **Luật rút ra cho mọi phiên sau: số Đợt chỉ chốt được SAU khi
+`git pull`, đừng tin số đọc lúc mới mở việc.** (Luật cũ "không bao giờ `git add -A`" đã cứu ở đây:
+`templates/running-word/test.js` của phiên kia đang sửa dở trong cây làm việc và không hề bị dính vào
+commit này.)
 
 ### 1. Vì sao Firebase Storage không phải câu trả lời
 - Xác minh lại 12/8/2026: từ **3/2/2026** Cloud Storage for Firebase **bắt buộc gói Blaze** (phải gắn

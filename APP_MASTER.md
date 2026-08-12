@@ -7,7 +7,13 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **12/8/2026 (Đợt 121) — ⭐ GIỌNG ĐỌC NÉN MP3 48k (nhẹ ~15 LẦN) + XOÁ SẠCH KHO
 > AUDIO WAV CŨ. ⭐ CÓ SỬA CORE (`core/tts.js` + file mới `core/vendor/lamejs.mjs`).
-> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.**
+> ✅ THẦY DUYỆT → COMMIT `cbf5ed9` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+> (`curl` xác nhận: `tts.js` có `MP3_KBPS = 48` + `toMp3DataUrl` + trỏ `vendor/lamejs.mjs`, và VẪN CÒN
+> `audio.toBlob` của nhánh dự phòng; `core/vendor/lamejs.mjs` 200/165,4KB có `Mp3Encoder`;
+> `tools-voice-cleanup.html` 200).
+> ⚠️ **Đợt này đánh số 121 chứ không phải 117** — build xong mới biết một phiên Claude song song đã lấy
+> mất 117→120; đã đổi số + xếp lại thứ tự lúc rebase. Nhắc lại luật: nhiều phiên chạy song song, phải
+> `git status`/`git diff` TRƯỚC khi add, KHÔNG BAO GIỜ `git add -A`, và **kiểm lại số Đợt sau khi pull**.**
 > **Gốc vấn đề**: Kokoro trả PCM **32-bit float 24kHz (768 kb/s)** — định dạng phòng thu, không phải
 > định dạng phát. Mỗi clip là 1 document Firestore lưu base64 (phình thêm 33%) ⇒ **~186KB/từ** (đo thật:
 > "cat" 90KB, "photosynthesis" 256KB) trong hạn mức **1 GiB** của gói Spark ⇒ chỉ chứa nổi ~5.700 từ.
