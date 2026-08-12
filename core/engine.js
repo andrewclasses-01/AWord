@@ -29,7 +29,7 @@ import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // store.js (the teacher's library) is imported LAZILY for the same reason as
 // assignment-ui.js: the student page must not even load code that can reach it.
-import { TEMPLATES } from "./catalog.js";
+import { TEMPLATES, templateLabel } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
 import { makeNumberStepper } from "./numberstepper.js";
@@ -318,7 +318,11 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       cleanupAll();
       try {
         const { startFight } = await import("./fight.js");
-        startFight(root, activity, { onExit });
+        // `base` travels into the match so a Change-template DURING the fight
+        // still converts from the teacher's original act, exactly as it does
+        // in single mode (entering a fight from an already-converted act is
+        // the case that needs it).
+        startFight(root, activity, { onExit, base: originAct });
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
         startGame(root, activity, { onExit, base });
@@ -1283,14 +1287,38 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // The library act is untouched; the current theme is kept; fullscreen too
   // (the fullscreen target is the stable root, exactly like "Start again").
   async function doSwitchTemplate(targetType) {
-    // FIGHT MODE: changing template mid-match would hand the two boards to a
-    // template that knows nothing about rounds, locking or the shared
-    // scoreboard — it would still RUN, which is worse than refusing, because
-    // it looks like a match and isn't one. Anagram is the only template wired
-    // for fights so far; switching is a single-board decision until more are.
-    if (fight) { toast("Switch back to single mode to change template"); return; }
     awEmit("TPL", targetType);   // mirror the Template switch to other myActivity panes
     try {
+      // FIGHT MODE (teacher, 12/8/2026): the switch belongs to the MATCH, not
+      // to the board whose toolbar was used — both boards must land on the same
+      // new template, sharing one word order and one scoreboard. So convert
+      // here, then hand the finished act to the controller, which rebuilds the
+      // whole match around it (the same door Options > Apply goes through).
+      if (fight) {
+        await ensureTemplate(targetType);
+        // Only a template that knows the fight contract may take a match over.
+        // One that doesn't would still RUN — which is worse than refusing,
+        // because it would LOOK like a match while quietly ignoring rounds,
+        // locking and the shared scoreboard.
+        // ⚠️ Checked here, after the module is loaded, rather than greying the
+        // panel out: `tpl.fightMode` lives on the module and is the single
+        // source of truth. Mirroring it into core/catalog.js (the only way to
+        // know without loading) would mean two places to keep in sync, and
+        // pre-loading all 17 modules just to draw the panel wastes the very
+        // lazy-loading that catalog exists for.
+        if (!getTemplate(targetType).fightMode) {
+          toast(`${templateLabel(targetType)} can't be played as a fight yet`);
+          return;
+        }
+        // Convert from the MATCH's act, never this board's frozen copy — see
+        // ctl.sourceActivity() in core/fight.js for why.
+        const matchAct = fight.ctl.sourceActivity();
+        const next = targetType === matchAct.type
+          ? matchAct
+          : await convertActivity(matchAct, targetType);
+        fight.ctl.restartMatch(next);
+        return;
+      }
       // Switching back to the original type restores the REAL library act (its
       // own id + saved options), not a throwaway converted copy. Always convert
       // FROM the origin so options are remembered per (origin act, template).

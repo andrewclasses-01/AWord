@@ -88,13 +88,21 @@ export function fightOptionsFrom(options = {}) {
 }
 
 // ---------------------------------------------------------------
-// startFight(root, activity, { onExit }) — replaces the single play in `root`.
-// Returns nothing; the MODE button inside the shared toolbar comes back here
-// to switch off again.
+// startFight(root, activity, { onExit, base }) — replaces the single play in
+// `root`. Returns nothing; the MODE button inside the shared toolbar comes
+// back here to switch off again.
+//
+// `base` is the teacher's ORIGINAL library act, when `activity` is a converted
+// copy of it ("conv_..."). Same contract as startGame's `base`, and for the
+// same reason: every Change-template conversion must start from the original,
+// never from the previous conversion, or the content degrades a little more
+// each hop (anagram -> quiz invents distractors; quiz -> anagram then keeps
+// only the right answer, and so on).
 // ---------------------------------------------------------------
-export function startFight(root, activity, { onExit } = {}) {
+export function startFight(root, activity, { onExit, base = null } = {}) {
   root.innerHTML = "";
   const fo = fightOptionsFrom(activity.options || {});
+  const originAct = base || activity;
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -445,11 +453,25 @@ export function startFight(root, activity, { onExit } = {}) {
     },
     // "Start again" (either board's menu, or the result panel) rebuilds the
     // MATCH — one board restarting on its own would leave the two on different
-    // words with one of the scoreboards stuck.
-    restartMatch(nextActivity) { teardown(); startFight(root, nextActivity || activity, { onExit }); },
+    // words with one of the scoreboards stuck. Also how a mid-match TEMPLATE
+    // CHANGE lands: the engine converts the act, then hands the whole thing
+    // over here so BOTH boards are rebuilt onto it together.
+    restartMatch(nextActivity) { teardown(); startFight(root, nextActivity || activity, { onExit, base: originAct }); },
+    // What a NEW act must be derived from (Change template). Two things make
+    // this the right source rather than what a board is holding:
+    //  • each board only ever sees a frozen COPY of the match act (its own
+    //    fixed word order, shuffleQuestions forced off — see actFor below);
+    //  • after one switch the match act is itself a conversion, so converting
+    //    from it again would compound the loss — hence `originAct`, the
+    //    teacher's original, carried across every rebuild by restartMatch.
+    sourceActivity() { return originAct; },
     // The MODE button, also drawn by the engine, comes back here.
     isFight: true,
-    exitFight() { teardown(); startGame(root, activity, { onExit }); }
+    // Back to a single board. `base` goes with it for the same reason it
+    // travelled in: leaving a match that had been switched to another template
+    // must not let that CONVERTED act become the origin every later switch
+    // converts from.
+    exitFight() { teardown(); startGame(root, activity, { onExit, base: originAct }); }
   };
 
   function flashTeam(side, text) {

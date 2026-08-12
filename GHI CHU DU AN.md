@@ -5,6 +5,87 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 127 (12/8/2026) — FIGHT MODE: HẾT NHÁY KHUNG THUA + ĐỘI THUA MỜ ĐI NGAY + ĐỔI TEMPLATE GIỮA TRẬN
+⭐ CÓ SỬA CORE (`core/engine.js` + `core/fight.js`) + `templates/anagram/*` + `templates/quiz/*`.
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+
+Thầy chơi bản Đợt 126 rồi gửi 3 việc.
+
+### 1. ⭐ LỖI THẬT: khung bên thua NHÁY 1 NHỊP khi bên kia giải xong từ (Anagram)
+**Gốc lỗi**: `lock(on)` trong `templates/anagram/anagram.js` gọi thẳng **`render()`** — mà `render()`
+làm `root.innerHTML = ""` rồi dựng lại TOÀN BỘ thẻ `.aw-anagram-card`, tức **chạy lại animation
+`aw-fadein`** của thẻ. Hàm này bị gọi đúng vào giây phút đội kia vừa xong từ ⇒ khung thua chớp 1 nhịp
+ngay trước mặt cả lớp. Đây **đúng lớp lỗi "nháy màn hình"** mà chính file này đã trị ở Đợt 55 vòng 2/4
+(mọi cập nhật GIỮA CHỪNG một từ đều phải vá thẳng DOM, `render()` chỉ dành cho ranh giới từ thật sự) —
+lần này nó lọt vào qua cửa `lock()` mới mở ở Đợt 124.
+
+**Sửa**: thêm `syncFightLock()` — chỉ sờ đúng 2 thứ đang có sẵn trên màn: thuộc tính `disabled` của
+từng ô chữ gốc, và 1 class trên `.aw-anagram-group`. Không dựng lại gì cả. `lock()` gọi hàm này thay
+cho `render()`. (Quiz cũng có `syncFightLock()` cùng tinh thần từ Đợt 125, nay bổ sung phần class.)
+
+**Đo thật bằng MutationObserver + mốc thời gian trên khung THUA** (đây là cách đo tái dùng được cho mọi
+lỗi nháy sau này — đếm số lần thẻ card bị THAY THẾ, kèm dấu thời gian, để tách "nháy" khỏi "vẽ lại
+hợp lệ lúc sang từ mới"):
+```
+t=35708ms  GROUP_CLASS lost:true     ← đội kia xong từ, khoá khung này
+                                      ✅ KHÔNG có CARD_REPLACED ở mốc này = hết nháy
+t=37808ms  GROUP_CLASS lost:false    ← đúng +2100ms = ROUND_HOLD_MS, mở khoá sang từ mới
+t=37976ms  CARD_REPLACED             ← vẽ lại HỢP LỆ cho từ mới (sau fadeSwap 160ms)
+```
+Trước khi sửa, mốc 35708 sẽ có thêm 1 `CARD_REPLACED` kèm `aw-fadein` — chính là cái nháy.
+
+### 2. Đội xử lý muộn: ô đáp án MẤT MÀU + MỜ ĐI ngay lập tức (Anagram + Quiz)
+Thầy muốn nhìn là biết ngay đội nào lỡ nhịp, không phải bấm mới biết. Ngay khi đội kia xong:
+- **Anagram**: class `is-fightlost` trên `.aw-anagram-group` → cả khối `opacity:.55`, ô chữ gốc lẫn ô
+  kết quả đã điền đều về xám `--aw-ana-lost-bg` (#b3bac3).
+- **Quiz**: class `is-fightlost` trên `.aw-quiz-answers` → hàng đáp án `opacity:.55`, các ô về xám.
+  ⚠️ Không đè thẳng `background` mà **đè 2 biến `--tile-eff`/`--tile-dark-eff`** — vì cả mặt ô LẪN
+  **cái vành 3D** (`box-shadow`) đều đọc qua 2 biến này, nên vành cũng xám theo, không còn màu cũ thò ra.
+- **Khung TỰ GIẢI XONG thì KHÔNG mờ** (nó cũng bị `lock` vì vòng đã ngã ngũ, nhưng nó thắng — vẫn giữ
+  nguyên màu + dấu ✓/✗ của mình). Điều kiện: `locked && !wordDone`.
+- Màu/độ mờ đặt HẾT trong CSS, JS chỉ bật/tắt 1 class — chính là thứ khiến mục 1 không cần vẽ lại gì.
+
+**Đo thật lúc đang khoá** (chụp `getComputedStyle` ngay trong lúc bị khoá, không phải đọc code):
+Anagram `opacity 0.55` · ô gốc `rgb(179,186,195)` · ô kết quả đang xanh `#2f6fed` → cũng `rgb(179,186,195)`.
+Quiz `opacity 0.55` · mặt ô từ hổ phách `rgb(245,158,11)` → `rgb(179,186,195)` · **vành 3D `rgb(152,160,170)`**
+· **0 lần dựng lại thẻ**. Sang từ/câu mới: class tự gỡ, màu về nguyên, ô bấm lại được (đã đo).
+
+### 3. Đổi template NGAY GIỮA TRẬN ĐẤU (trước đây bị từ chối thẳng)
+Đợt 124 chặn cứng (`toast("Switch back to single mode…")`) vì lúc đó chỉ Anagram biết đấu. Nay đã có 2
+template biết đấu nên mở ra:
+- `doSwitchTemplate()` thêm nhánh fight: convert xong thì **giao cả act cho trọng tài**
+  (`fight.ctl.restartMatch(next)`) để dựng lại CẢ TRẬN — 2 khung cùng đổi, chung một thứ tự câu, chung
+  bảng điểm. Một khung tự đổi riêng sẽ thành 2 game khác nhau nằm trong cùng 1 trận.
+- **Chỉ template khai `fightMode` mới được nhận trận**: template không khai vẫn CHẠY được 2 khung, mà
+  "trông như trận đấu nhưng không có luật" còn tệ hơn là từ chối. Kiểm SAU khi `ensureTemplate()` nạp
+  xong module, vì `tpl.fightMode` nằm trên module và đó là **nguồn sự thật duy nhất** — nếu chép cờ này
+  sang `core/catalog.js` (cách duy nhất để biết mà không cần nạp) thì thành 2 nơi phải giữ đồng bộ, còn
+  nạp trước cả 17 module chỉ để vẽ panel thì phá đúng cái lazy-load mà catalog sinh ra để làm.
+  Không hợp lệ → toast **"<Tên game> can't be played as a fight yet"**, trận giữ nguyên không hề hấn.
+- ⚠️ **Bẫy đã tránh: chuyển đổi CHỒNG chuyển đổi làm hỏng dần nội dung.** Anagram→Quiz phải BỊA thêm
+  đáp án nhiễu; Quiz→Anagram thì chỉ giữ lại đáp án đúng. Đổi qua đổi lại vài lần là nội dung rơi rụng
+  dần. Bản single đã tránh sẵn bằng cách LUÔN convert từ `originAct` (act gốc của thầy). Nay `startFight`
+  cũng nhận `base` và mang nó qua **mọi** lần dựng lại (`restartMatch`), thêm `ctl.sourceActivity()` trả
+  act gốc đó. Cũng vá nốt `exitFight()` (trước không mang `base` — thoát trận sau khi đã đổi template là
+  act ĐÃ CONVERT biến thành gốc cho mọi lần đổi sau).
+  Thêm một lý do nữa phải dùng `sourceActivity()`: mỗi khung chỉ giữ **BẢN SAO đông cứng** của act
+  (thứ tự câu cố định, `shuffleQuestions:false`) — convert từ bản sao đó là kế thừa luôn 2 thứ đó.
+
+**Đã test qua trình duyệt thật** (`devserver.py`, không chỉ đọc code): Anagram→Quiz và Quiz→Anagram ngay
+giữa trận đều giữ nguyên chế độ đấu, 2 khung cùng đổi, điểm thủ công của thầy còn nguyên; bấm "Find the
+match" (chưa biết đấu) ra đúng toast từ chối và **trận không suy suyển** (vẫn quiz, vẫn đang đấu, điểm
+1-0 nguyên vẹn).
+
+⬜ **Một phát hiện phụ, CHƯA sửa (không nằm trong 3 việc thầy giao, và KHÔNG ảnh hưởng thầy)**: đổi
+template từ **trang test của template** (`templates/<x>/test.html`) thì CSS của game đích 404 —
+`core/catalog.js` khai đường dẫn css **tương đối với TRANG**, mà 2 trang thật (`index.html`,
+`play.html`) nằm ở gốc web còn trang test nằm sâu 2 cấp ⇒ ra `/templates/quiz/templates/anagram/anagram.css`.
+Game vẫn chạy (chỉ mất style, `loadCss` có sẵn onerror + timeout 4s). Chỉ ảnh hưởng người dev test, KHÔNG
+ảnh hưởng bản thầy dùng. Cách sửa nếu sau này muốn: cho `loadCss` trong `core/registry.js` giải đường dẫn
+theo **gốc web suy từ `import.meta.url`** (registry.js nằm ở `/core/` nên `../` là gốc) thay vì theo trang.
+
+---
+
 ## Đợt 126 (12/8/2026) — FIGHT MODE: THU NHỎ 60%, Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG + NGỦ KHI BẰNG 0 + HIỆU ỨNG TRƯỢT
 ⭐ CÓ SỬA CORE (`core/fight.js` + `core/app.css`, KHÔNG đụng file nào của template).
 ✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE (gộp cùng Đợt 124 + 125, 1 commit — `curl` cachebust

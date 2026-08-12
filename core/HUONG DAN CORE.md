@@ -343,8 +343,39 @@ bấm hộ nút PLAY của bàn kia. Bắt buộc phải vậy: mỗi ván có �
    dựng lại — màn hình đứng nguyên, không một dấu hiệu nào cho thầy**. Nay `teardown()` bọc
    `try/catch` và `lock()` của template thoát ngay khi `dead`.
 
-⚠️ **Đổi template giữa trận bị TỪ CHỐI** (toast): template chưa khai `fightMode` vẫn CHẠY được 2 bàn,
-mà "trông như trận đấu nhưng không có luật" tệ hơn là từ chối thẳng.
+⚠️⚠️ **BẪY THỨ 5 (Đợt 127): `lock()` TUYỆT ĐỐI KHÔNG ĐƯỢC VẼ LẠI (re-render).**
+`lock(on)` bị gọi đúng vào giây phút đội kia vừa xong từ. Nếu template hưởng ứng bằng cách dựng lại
+thẻ bài của mình thì animation vào-màn (fade-in/pop) **chạy lại** ⇒ khung bên THUA **nháy 1 nhịp**
+trước mặt cả lớp (thầy báo thật; gốc: `anagram.js` gọi `render()` trong `lock()`). Đúng cách: chỉ vá
+tại chỗ những gì đang có trên màn — `disabled` + **một class CSS**, để MÀU/ĐỘ MỜ nằm hết trong CSS.
+Cả 2 template hiện có đều làm vậy qua một hàm tên `syncFightLock()` (xem `anagram.js`/`quiz.js`).
+**Cách đo lại khi nghi có nháy** (tái dùng được): `MutationObserver` trên playarea của khung THUA,
+đếm số lần thẻ bài bị THAY THẾ **kèm dấu thời gian** — bắt buộc phải có mốc thời gian, vì lần vẽ lại
+HỢP LỆ lúc sang từ mới rơi vào đúng `+ROUND_HOLD_MS` và rất dễ bị đọc nhầm thành cái nháy.
+
+⚠️ **"Quá chậm" — đội thua phải THẤY ngay** (Đợt 127): khi bị `lock`, template nên làm ô đáp án của
+mình **mất màu + mờ** (`.is-fightlost`, `opacity:.55`) để cả lớp nhìn là biết, thay vì bấm mãi không
+ăn. Nhưng **khung TỰ giải xong thì KHÔNG mờ** — nó cũng bị khoá vì vòng đã ngã ngũ, nhưng nó thắng:
+điều kiện đúng là `locked && !wordDone`, không phải `locked` trần.
+Mẹo cho template có ô màu qua BIẾN CSS (Quiz): đè **biến màu** (`--tile-eff`/`--tile-dark-eff`) chứ
+đừng đè `background` — vành 3D `box-shadow` cũng đọc qua biến đó nên mới xám theo, không thò màu cũ.
+
+⭐ **ĐỔI TEMPLATE GIỮA TRẬN — ĐƯỢC PHÉP từ Đợt 127** (trước đó từ chối thẳng vì mới có 1 template):
+- Việc đổi thuộc về **TRẬN**, không thuộc cái bàn có thanh công cụ: `doSwitchTemplate()` convert xong
+  thì giao act cho **`ctl.restartMatch(next)`** dựng lại CẢ TRẬN — 2 bàn cùng đổi, chung thứ tự câu,
+  chung bảng điểm. Một bàn tự đổi riêng = 2 game khác nhau nằm trong cùng 1 trận.
+- **Chỉ template khai `fightMode` mới được nhận trận**; không khai → toast từ chối, trận giữ nguyên
+  (lý do cũ vẫn đúng: nó vẫn CHẠY được, mà "trông như trận đấu nhưng không có luật" tệ hơn từ chối).
+  Kiểm **sau** `ensureTemplate()` vì `tpl.fightMode` nằm trên module = **nguồn sự thật duy nhất**;
+  chép cờ sang `core/catalog.js` thì thành 2 nơi phải giữ đồng bộ, còn nạp trước cả 17 module chỉ để
+  vẽ panel thì phá đúng cái lazy-load mà catalog sinh ra để làm.
+- ⚠️ **Convert CHỒNG convert làm rơi rụng nội dung** (Anagram→Quiz phải BỊA đáp án nhiễu; Quiz→Anagram
+  chỉ giữ lại đáp án đúng). Vì vậy `startFight(root, act, { onExit, base })` nhận `base` = act GỐC và
+  mang nó qua **mọi** lần dựng lại (`restartMatch`), rồi **`ctl.sourceActivity()`** trả về act gốc đó
+  cho mọi lần convert — đúng luật `base`/`originAct` mà `startGame` vẫn theo. `exitFight()` cũng phải
+  mang `base` về single, nếu không act ĐÃ CONVERT sẽ thành "gốc" cho mọi lần đổi sau.
+  Lý do thứ hai: mỗi bàn chỉ giữ **BẢN SAO đông cứng** của act (thứ tự cố định, `shuffleQuestions:false`)
+  — convert từ bản sao đó là kế thừa luôn cả 2 thứ đó.
 ⚠️ `core/fight.js` **nạp trì hoãn** (`await import`) từ nút MODE, và MODE chỉ dựng khi `!session` —
 trang học sinh không bao giờ tải nó, và engine không phải import tĩnh một module import ngược lại nó.
 

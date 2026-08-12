@@ -123,11 +123,30 @@
   --aw-ana-origin-bg: #6b7785;
   --aw-ana-result-bg: #2f6fed;
   --aw-ana-wrong-bg: #9aa3ac;
+  /* FIGHT MODE only — the colour a tile falls back to on the board that just
+     LOST the round (see .is-fightlost below). */
+  --aw-ana-lost-bg: #b3bac3;
   position: relative;
   margin: 0 0 6.5cqw;
   width: 100%;
   display: flex; flex-direction: column; align-items: center;
   gap: calc(1cqw * var(--fit));
+  transition: opacity .2s ease;
+}
+
+/* FIGHT MODE — "too slow": the other team finished this word first (teacher,
+   12/8/2026). Every tile drops its colour and the whole block dims ON THE
+   SPOT, so the class can SEE the round is already decided rather than finding
+   out by tapping a dead tile.
+   ⚠️ Deliberately ONE class toggled on the group (anagram.js's syncFightLock)
+   and nothing else: the obvious implementation — re-render the card with the
+   new state — replayed the card's fade-in and read as a one-frame FLASH on
+   the losing board, which is exactly what the teacher reported. Colour lives
+   here in CSS precisely so JS never has to rebuild anything to express it. */
+.aw-anagram-group.is-fightlost { opacity: .55; }
+.aw-anagram-group.is-fightlost .aw-anagram-rtile.is-filled,
+.aw-anagram-group.is-fightlost .aw-anagram-otile {
+  background-color: var(--aw-ana-lost-bg);
 }
 
 /* the big check/cross (.aw-mark-fly is core/app.css, generic to every

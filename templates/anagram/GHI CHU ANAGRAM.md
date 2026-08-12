@@ -1,5 +1,43 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 127 (12/8/2026) — LỖI THẬT: KHUNG BÊN THUA NHÁY 1 NHỊP + ĐỘI THUA MỜ ĐI NGAY
+
+**Gốc lỗi (thầy báo)**: `lock(on)` — cửa mà Đợt 124 mở cho trọng tài khoá khung — gọi thẳng
+**`render()`**. Mà `render()` làm `root.innerHTML=""` rồi dựng lại TOÀN BỘ `.aw-anagram-card`, tức
+**chạy lại animation `aw-fadein`**. Nó bị gọi đúng lúc đội kia vừa giải xong từ ⇒ khung thua chớp
+1 nhịp trước mặt cả lớp.
+
+⚠️ **Đây đúng lớp lỗi "nháy màn hình" mà chính file này đã trị 2 lần ở Đợt 55 (vòng 2 và vòng 4)** —
+luật đã ghi sẵn ngay trong comment đầu `anagram.js`: *mọi cập nhật GIỮA CHỪNG một từ phải vá thẳng DOM,
+`render()` chỉ dành cho ranh giới từ thật sự*. Lần này nó lọt lại qua một cửa MỚI. Bài học: mỗi lần
+thêm một đường gọi mới vào giữa vòng đời một từ, phải hỏi ngay "đường này có chạm `render()` không?".
+
+**Sửa**: thêm `syncFightLock()` — chỉ sờ đúng thứ đã có sẵn trên màn: `disabled` của từng ô chữ gốc +
+1 class trên `.aw-anagram-group`. `lock()` gọi hàm này thay cho `render()`. `render()` cũng tự khoác
+sẵn class đó khi dựng lại hợp lệ (sang từ mới / khung mount vào vòng đã ngã ngũ), gắn TRƯỚC khi vào
+document nên không bao giờ thấy nó thiếu class 1 nhịp.
+
+**Đội xử lý muộn mờ đi ngay** (thầy yêu cầu cùng đợt): class `is-fightlost` → cả khối `opacity:.55`,
+ô chữ gốc lẫn ô kết quả ĐÃ ĐIỀN đều về xám `--aw-ana-lost-bg` (#b3bac3). Khung TỰ giải xong thì KHÔNG
+mờ (`locked && !wordDone`) — nó cũng bị khoá vì vòng đã xong, nhưng nó thắng, giữ nguyên màu.
+Màu để HẾT trong CSS, JS chỉ bật/tắt class — chính là thứ khiến việc sửa nháy ở trên không phải vẽ lại gì.
+`updateSubmitButtonState()` cũng xét thêm `fightLocked()` (mode On submit).
+
+**Đo thật bằng MutationObserver + mốc thời gian trên khung THUA** (cách đo TÁI DÙNG ĐƯỢC cho mọi nghi
+vấn nháy sau này — phải có DẤU THỜI GIAN mới tách được "nháy" khỏi "vẽ lại hợp lệ lúc sang từ mới";
+lần đo đầu thiếu mốc nên suýt kết luận nhầm là vẫn còn nháy):
+```
+t=35708ms  GROUP_CLASS lost:true    ← đội kia xong từ  → 0 lần CARD_REPLACED = HẾT NHÁY ✅
+t=37808ms  GROUP_CLASS lost:false   ← +2100ms = đúng ROUND_HOLD_MS
+t=37976ms  CARD_REPLACED            ← vẽ lại HỢP LỆ cho từ mới (sau fadeSwap 160ms)
+```
+Số đo lúc đang khoá: `opacity 0.55`, ô gốc `rgb(179,186,195)`, ô kết quả đang xanh `#2f6fed` cũng về
+`rgb(179,186,195)`. Sang từ mới: class tự gỡ, màu về nguyên, bấm lại được.
+
+Chi tiết chung + phần đổi template giữa trận: `../../GHI CHU DU AN.md` Đợt 127.
+
+---
+
 ## Đợt 125 (12/8/2026) — dải trên Fight mode gọn lại (KHÔNG đụng `anagram.js`)
 
 Thầy chơi thử Đợt 124 rồi gửi 4 điểm chỉnh cho Fight mode: bỏ nhãn "TEAM 1"/"TEAM 2"/"TIME", cân đối

@@ -5,7 +5,38 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 126) — FIGHT MODE: THU NHỎ 60% + Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG,
+> Cập nhật lần cuối: **12/8/2026 (Đợt 127) — FIGHT MODE: HẾT NHÁY KHUNG THUA · ĐỘI THUA MỜ ĐI NGAY ·
+> ĐỔI TEMPLATE GIỮA TRẬN. ⭐ CÓ SỬA CORE (`engine.js` + `fight.js`) + Anagram + Quiz.
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+> (1) ⭐ **LỖI THẬT thầy báo — khung bên THUA nháy 1 nhịp** khi bên kia giải xong từ: `lock()` của
+> Anagram gọi thẳng **`render()`**, mà `render()` dựng lại TOÀN BỘ thẻ card ⇒ chạy lại `aw-fadein`.
+> Đúng lớp lỗi "nháy màn hình" chính file này đã trị ở Đợt 55 (mọi cập nhật GIỮA CHỪNG một từ phải vá
+> thẳng DOM), lọt lại qua cửa `lock()` mở ở Đợt 124. Sửa bằng `syncFightLock()` — chỉ đổi `disabled`
+> của ô chữ + 1 class, không dựng lại gì. **Đo bằng MutationObserver có mốc thời gian trên khung thua:
+> tại đúng mốc khoá (t=35708ms) có 0 lần thẻ card bị thay thế** (trước đây là 1, kèm `aw-fadein`);
+> lần thay thế duy nhất rơi vào t=37976ms = sau khi hết `ROUND_HOLD_MS` 2100ms, tức vẽ lại HỢP LỆ cho
+> từ mới. Cách đo này dùng lại được cho mọi nghi vấn "nháy" sau này.
+> (2) **Đội xử lý muộn mờ đi + mất màu NGAY** (cả Anagram lẫn Quiz): class `is-fightlost`, `opacity:.55`,
+> ô về xám `#b3bac3`. Quiz đè **`--tile-eff`/`--tile-dark-eff`** chứ không đè `background`, nhờ vậy
+> **cái vành 3D cũng xám theo** (đo: mặt `rgb(179,186,195)`, vành `rgb(152,160,170)`). Khung TỰ giải
+> xong thì KHÔNG mờ — nó thắng, giữ nguyên màu. Toàn bộ màu nằm trong CSS, JS chỉ bật/tắt class: đó
+> chính là thứ khiến mục (1) không phải vẽ lại gì.
+> (3) **Đổi template ngay giữa trận** (trước bị từ chối thẳng): convert xong giao cả act cho trọng tài
+> `ctl.restartMatch(next)` để dựng lại CẢ TRẬN — 2 khung cùng đổi, chung thứ tự câu, chung bảng điểm.
+> Chỉ template khai `fightMode` được nhận trận (kiểm SAU khi `ensureTemplate` nạp module — `tpl.fightMode`
+> là nguồn sự thật DUY NHẤT; chép sang catalog = 2 nơi phải đồng bộ, mà nạp trước 17 module chỉ để vẽ
+> panel thì phá đúng cái lazy-load catalog sinh ra để làm); không hợp lệ → toast, trận giữ nguyên.
+> ⚠️ **Bẫy đã tránh: convert CHỒNG convert làm rơi rụng nội dung** (Anagram→Quiz bịa đáp án nhiễu,
+> Quiz→Anagram chỉ giữ đáp án đúng). `startFight` nay nhận `base` và mang qua MỌI lần dựng lại, thêm
+> `ctl.sourceActivity()` — luôn convert từ act GỐC của thầy, y như bản single vẫn làm; vá nốt
+> `exitFight()` (trước không mang `base`).
+> Test thật cả 2 chiều Anagram↔Quiz giữa trận + ca từ chối, 0 lỗi console.
+> ⬜ Phát hiện phụ CHƯA sửa (không ảnh hưởng thầy): đổi template từ **trang test của template** thì CSS
+> game đích 404 (catalog khai css tương đối với TRANG; 2 trang thật ở gốc web, trang test sâu 2 cấp) —
+> chỉ dev thấy, game vẫn chạy, chi tiết + cách sửa ghi ở `GHI CHU DU AN.md` Đợt 127.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 127.
+>
+> Trước đó: **12/8/2026 (Đợt 126) — FIGHT MODE: THU NHỎ 60% + Ô ĐIỂM TAY XUỐNG DƯỚI KHUNG,
 > NGỦ KHI BẰNG 0, TRƯỢT KHI ĐỔI SỐ. ⭐ CÓ SỬA CORE (`fight.js` + `app.css`, không đụng template nào).
 > ✅ THẦY DUYỆT → COMMIT `0523bef` + PUSH + **LIVE** (gộp cùng Đợt 124 + 125, 1 commit).
 > Thầy gửi thêm 2 điểm sau Đợt 125: (1) **điểm/đồng hồ/ô điểm tay còn 60%** kích cỡ cũ (đo thật ở màn

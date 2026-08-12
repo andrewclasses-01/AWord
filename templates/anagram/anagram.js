@@ -682,6 +682,11 @@ const anagramTemplate = {
         originRow.append(tile);
       });
       group.append(originRow);
+      // A legitimate rebuild (new word, or a board mounting into a round that
+      // is already decided) has to arrive wearing the same "too slow" look
+      // syncFightLock() paints the rest of the time — set on the group BEFORE
+      // it goes into the document so it is never seen without it.
+      if (fightLocked() && !wordDone) group.classList.add("is-fightlost");
       card.append(group);
 
       let revealSlot = null;
@@ -1369,7 +1374,31 @@ const anagramTemplate = {
       if (!submitBtnEl) return;
       const st = state[index];
       const filled = st.placed.every(p => p != null);
-      submitBtnEl.disabled = !filled || st.graded || busy;
+      submitBtnEl.disabled = !filled || st.graded || busy || fightLocked();
+    }
+
+    // FIGHT MODE — apply a lock change WITHOUT re-rendering (12/8/2026).
+    // Called by the match controller's lock() the instant the other team wins
+    // the word, so it must touch as little as possible: a full render() here
+    // replayed the card's fade-in and read as a one-frame flash on the losing
+    // board. Everything below is an in-place patch of state that is already on
+    // screen — the same discipline the rest of this file uses mid-word.
+    function syncFightLock() {
+      const locked = fightLocked();
+      const st = state[index];
+      const wordDone = isBonusFamily ? st.correct === true : st.graded;
+      root.querySelectorAll(".aw-anagram-otile").forEach(tileEl => {
+        const tileId = Number(tileEl.dataset.tile);
+        tileEl.disabled = st.used[tileId] || wordDone || locked;
+      });
+      // "Too slow" (teacher, 12/8/2026): the moment the other team takes the
+      // word, this board's tiles lose their colour and dim, so the class SEES
+      // the round is already decided instead of discovering it by tapping.
+      // A board that finished the word ITSELF keeps its colours — it earned
+      // them, and it is only locked because the round is now over for both.
+      const groupEl = root.querySelector(".aw-anagram-group");
+      if (groupEl) groupEl.classList.toggle("is-fightlost", locked && !wordDone);
+      updateSubmitButtonState();
     }
 
     // ----- shared visual effects -----
@@ -1763,9 +1792,14 @@ const anagramTemplate = {
           // the teacher. Same family as the Đợt 114 "ván đã chết" rules.
           if (dead) return;
           fightBoardLock = !!on;
-          // Repaint so the origin tiles show as unavailable straight away
-          // rather than only refusing the next tap.
-          if (!busy) render();
+          // ⚠️ NEVER render() here (teacher-reported flash, 12/8/2026). This
+          // fires on the LOSING board at the exact moment the other team
+          // finishes a word, and render() replaces the whole card — replaying
+          // its fade-in as a one-frame flash right in the class's face. Patch
+          // in place instead, exactly like every other mid-word update in this
+          // file (see the header comment's note on why render() is reserved
+          // for real word boundaries).
+          syncFightLock();
         }
       });
     }

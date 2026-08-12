@@ -102,6 +102,21 @@
 /* wrong tiles fade to a very faint ghost after answering */
 .aw-quiz-tile.is-dimmed { opacity: .15; }
 
+/* FIGHT MODE — "too slow": the other team answered this question first
+   (teacher, 12/8/2026). The whole answer row drops its colours and dims on the
+   spot, so the class can SEE the round is decided rather than finding out by
+   tapping a dead tile. A board that answered for ITSELF never gets this — it
+   keeps its own ✓/✗ feedback colours (see quiz.js's syncFightLock).
+   Overriding --tile-eff / --tile-dark-eff rather than `background` directly is
+   what makes the 3D coloured lip (box-shadow) go grey along with the face —
+   both already read through these two variables (see .aw-quiz-tile above). */
+.aw-quiz-answers { transition: opacity .2s ease; }
+.aw-quiz-answers.is-fightlost { opacity: .55; }
+.aw-quiz-answers.is-fightlost .aw-quiz-tile {
+  --tile-eff: #b3bac3;
+  --tile-dark-eff: #98a0aa;
+}
+
 /* Lives slider in the Options panel (0 = Unlimited). This control lives OUTSIDE
    the 16:9 stage, so plain px/rem is right here — cqw would be meaningless.
    Same look as True/false's and Type the answer's Lives control. */

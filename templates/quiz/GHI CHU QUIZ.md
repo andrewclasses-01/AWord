@@ -9,6 +9,29 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ĐỢT 127 (12/8/2026) — ĐỘI XỬ LÝ MUỘN: HÀNG ĐÁP ÁN MẤT MÀU + MỜ ĐI NGAY
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Chi tiết chung: `../../GHI CHU DU AN.md` Đợt 127.
+
+Ngay khi đội kia trả lời xong, hàng đáp án của khung này mất màu + mờ đi, để cả lớp NHÌN là biết vòng
+đã ngã ngũ chứ không phải bấm mới biết. Class `is-fightlost` trên `.aw-quiz-answers`, `opacity:.55`.
+
+⚠️ **Điểm kỹ thuật đáng nhớ**: KHÔNG đè thẳng `background` của ô, mà đè **2 biến
+`--tile-eff` / `--tile-dark-eff`**. Lý do: cả mặt ô (`background`) LẪN **cái vành 3D**
+(`box-shadow`) đều đọc qua đúng 2 biến đó (xem `.aw-quiz-tile`), nên đè biến thì vành xám theo luôn;
+đè `background` thì mặt ô xám mà vành vẫn còn màu cũ thò ra rất lộ. Đo thật lúc đang khoá: mặt ô từ hổ
+phách `rgb(245,158,11)` → `rgb(179,186,195)`, **vành `rgb(152,160,170)`**, `opacity 0.55`, **0 lần
+dựng lại thẻ card**.
+
+Khung **TỰ trả lời xong thì KHÔNG mờ** (`locked && !answered`) — nó cũng bị khoá vì vòng đã xong, nhưng
+nó đã chơi, giữ nguyên màu + dấu ✓/✗ của mình. `syncFightLock()` (có từ Đợt 125) nay lo cả class này;
+`applyQuestion()` gọi lại nó ở cuối vì **các ô đáp án được DÙNG LẠI giữa các câu** (đó là thứ khiến
+chuyển câu không nháy) — không gọi thì vòng thua sẽ để hàng đáp án xám sang cả câu sau.
+
+Đợt này Quiz cũng nhận được **đổi template ngay giữa trận đấu** (phần core, xem nhật ký chung).
+
+---
+
 ## ⭐⭐ ĐỢT 125 (12/8/2026) — QUIZ TRỞ THÀNH TEMPLATE THỨ HAI KHAI `fightMode` (THỬ NGHIỆM)
 
 ✅ **THẦY DUYỆT → COMMIT `0523bef` + PUSH + LIVE.** Chi tiết đầy đủ (kèm cả phần sửa core dùng chung cho mọi

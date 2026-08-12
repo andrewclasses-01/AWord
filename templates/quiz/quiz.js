@@ -316,16 +316,30 @@ const quizTemplate = {
           tile.disabled = fightLocked();
         }
       });
+      // The tile boxes are REUSED across questions (that is what makes
+      // navigation flicker-free), so the "too slow" row class has to be
+      // re-evaluated here too — otherwise a lost round would leave the next
+      // question's answers greyed out.
+      if (fightCtl) syncFightLock();
     }
 
-    // Toggle just the disabled state of this question's not-yet-answered
-    // tiles, without rebuilding anything — used by the fight controller's
-    // lock(on) so a round-lock never replays this question's voice clip
-    // (a full applyQuestion() call would, since it always restarts playback).
+    // Apply a lock change WITHOUT rebuilding anything — used by the fight
+    // controller's lock(on), so a round-lock never replays this question's
+    // voice clip (a full applyQuestion() would, since it restarts playback)
+    // and never re-triggers any entrance animation. Same discipline as
+    // anagram.js's syncFightLock, and for the same teacher-reported reason:
+    // a rebuild at this exact moment reads as a flash on the losing board.
     function syncFightLock() {
-      if (state[index].chosen !== null) return;   // already answered -> stays disabled regardless
       const locked = fightLocked();
-      tiles.forEach(t => { t.tile.disabled = locked; });
+      const answered = state[index].chosen !== null;
+      // An already-answered question keeps every tile disabled regardless —
+      // choose() did that, and the lock must not hand any of them back.
+      if (!answered) tiles.forEach(t => { t.tile.disabled = locked; });
+      // "Too slow" (teacher, 12/8/2026) — see the .is-fightlost CSS comment.
+      // A board that answered for ITSELF is excluded: it is locked only
+      // because the round is now over for both, and it has earned the right
+      // to keep showing its own ✓/✗ feedback in full colour.
+      answersRow.classList.toggle("is-fightlost", locked && !answered);
     }
 
     // HEIGHT fit (whole card) + per-tile WIDTH fit (never break a single word).
