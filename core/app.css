@@ -297,6 +297,26 @@ body {
 /* the leftmost heart popping out when a life is lost */
 .aw-top-heart.is-losing { will-change: transform, opacity; }
 
+/* Opt-in (tpl.hasSloganSlot): a caption centered between the timer and the
+   score/lives group, same row (Đợt 134 — Anagram's "ANAGRAM IN ANDREW
+   CLASSES"). `flex:1 1 auto` on a plain flex row absorbs all the leftover
+   space itself, so the timer and the score/lives group still hug the
+   frame's edges exactly as before — no grid, no extra wrapper needed. Empty
+   by default so a future template that doesn't fill it in stays invisible. */
+.aw-top-slogan {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: 1.3cqw;
+  font-weight: 300;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--aw-muted);
+  opacity: .45;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-top-slogan:empty { display: none; }
+
 /* Opt-in (tpl.inlineTimerBar): a 3rd column so a template's own timer bar can
    share this row with the score, instead of a separate row below it. Only
    applies when `.has-inline` is present — every other template's `.aw-topbar`
@@ -440,6 +460,12 @@ body {
   position: absolute; left: 1.4cqw; bottom: 6.9cqw; z-index: 8;
   background: #fff; border-radius: 1.2cqw; box-shadow: 0 1cqw 3cqw rgba(31,42,68,.22);
   padding: 0.6cqw; min-width: 19cqw;
+  /* Đợt 134 — this popup has no self transform to protect (plain
+     left/bottom positioning), so it can use the plain `aw-pop` keyframe
+     directly; grows up from its bottom-left anchor near the Menu button.
+     core/engine.js's closeMenu() mirrors this for the exit. */
+  animation: aw-pop .18s cubic-bezier(.22,.9,.3,1);
+  transform-origin: left bottom;
 }
 .aw-menu-item {
   display: block; width: 100%; text-align: left; border: none; background: none;
@@ -748,12 +774,16 @@ body {
   width: max-content; min-width: 260px; max-width: min(94vw, 580px);
   overflow-y: auto; overflow-x: hidden;
   text-align: left;
-  /* PURE OPACITY fade — must never animate `transform`, since this element's
-     own transform:translateX(-50%) is what keeps it centered. A keyframe that
-     also touches transform (like the generic aw-pop) would override that for
-     the animation's duration, making the panel visibly jump from off-center
-     to centered once the animation ends. */
-  animation: aw-fadein .16s ease;
+  /* Đợt 134 (teacher: "hiệu ứng animations mượt" mở/đóng popup) — reuses the
+     existing centering-safe `aw-pop-cx` keyframe (defined below, under
+     "Shared animations") instead of the old flat opacity-only `aw-fadein`:
+     rises + scales in, but every keyframe stop still carries
+     `translateX(-50%)` alongside the entrance motion, so this element's own
+     centering transform is never overridden mid-animation. core/engine.js's
+     closeToolPanel() mirrors the same rule for the exit (WAAPI keyframes that
+     also always include translateX(-50%)). */
+  animation: aw-pop-cx .22s cubic-bezier(.22,.9,.3,1);
+  transform-origin: center bottom;
 }
 .aw-tool-panel-head {
   font-size: 12.5px; font-weight: 800; letter-spacing: .06em; color: #8b93a1;
@@ -834,6 +864,31 @@ body {
    sit to the RIGHT of the button instead of wrapping onto the next row. */
 .aw-opt-cd { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
 .aw-opt-hint { font-size: 12px; color: #8b93a1; margin-top: 10px; font-style: italic; }
+
+/* Đợt 134 (teacher: "Options khi thay đổi mode và hiện thêm các dòng sẽ tự
+   động rộng ra hoặc chỉnh kích thước nội dung bên trong nhỏ lại để hiển thị
+   được đầy đủ mà không cần scroll"). Opt-in — core/engine.js's openToolPanel
+   only ever adds `.is-compact-opts` for a template that sets
+   `tpl.compactOptionsOnOverflow` (currently only Anagram) AND only when the
+   OPTIONS panel's natural content is actually taller than the room above the
+   toolbar (a ResizeObserver re-checks live, so toggling a radio that reveals
+   more rows mid-session re-evaluates too — see openToolPanel). Every other
+   template's Options panel, and every template's Template/Style/Mode panel,
+   is untouched by this rule. Values are a uniform ~86% scale of the normal
+   ones above — enough to routinely clear the ~364px overflow the teacher
+   measured (Đợt 132) without the text going illegibly small. */
+.aw-tool-panel.is-compact-opts { padding: 8px 15px 10px; }
+.aw-tool-panel.is-compact-opts .aw-opt-group { margin-bottom: 5px; }
+.aw-tool-panel.is-compact-opts .aw-opt-label { font-size: 9.5px; margin-bottom: 2px; }
+.aw-tool-panel.is-compact-opts .aw-opt-row { gap: 8px; row-gap: 4px; }
+.aw-tool-panel.is-compact-opts .aw-opt-choice { font-size: 12px; gap: 4px; }
+.aw-tool-panel.is-compact-opts .aw-opt-choice input { width: 12px; height: 12px; }
+.aw-tool-panel.is-compact-opts .aw-opt-switch { margin-bottom: 8px; padding: 3px; }
+.aw-tool-panel.is-compact-opts .aw-opt-switch-btn { padding: 5px 0; font-size: 11px; }
+.aw-tool-panel.is-compact-opts .aw-opt-slidval { font-size: 12px; }
+.aw-tool-panel.is-compact-opts .aw-opt-time { font-size: 11px; gap: 4px; }
+.aw-tool-panel.is-compact-opts .aw-opt-hint { font-size: 10px; margin-top: 5px; }
+.aw-tool-panel.is-compact-opts .aw-panel-items { gap: 5px; }
 
 /* Number stepper — small ▲/number/▼ control, drag the number up/down to change it */
 .aw-stepper { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; user-select: none; }
@@ -2210,7 +2265,10 @@ body {
   position: relative;
   overflow: hidden;
   width: 100%;
-  font-size: clamp(16px, 3vw, 24px);
+  /* Đợt 134 (teacher: "tăng size cho số") — was clamp(16px,3vw,24px); the box
+     itself (.aw-fight-hand above) stays toolbar-button-sized on purpose, so
+     only the digits themselves grew, not their footprint. */
+  font-size: clamp(18px, 3.4vw, 27px);
   line-height: 1.2;
   height: 1.2em;
 }
@@ -2221,12 +2279,35 @@ body {
   align-items: center;
   justify-content: center;
   font: inherit;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
   color: #2b7fd4;
   will-change: transform;
 }
 .aw-fight-handvalue.is-neg { color: #e03131; }
+
+/* 7-segment digits (Đợt 134, teacher: "dùng phong cách số 7 nét") — pure CSS,
+   see fight.js's sevenSegHtml(). Every digit box always renders all 7 bars;
+   the ones OFF for that particular digit sit at low opacity instead of
+   vanishing, which is what reads as an authentic "unlit LED segment" rather
+   than random gaps. Segments use `currentColor` so .is-neg's red (above)
+   colors them for free — one value to change, never two. */
+.aw-seg-digit { position: relative; display: inline-block; width: .62em; height: 1em; margin: 0 .045em; vertical-align: middle; }
+.aw-seg { position: absolute; background: currentColor; opacity: .1; transition: opacity .12s ease; }
+.aw-seg.on { opacity: 1; }
+.aw-seg-a, .aw-seg-d, .aw-seg-g {
+  left: 12%; width: 76%; height: 11%;
+  clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
+}
+.aw-seg-a { top: 0; }
+.aw-seg-g { top: 44.5%; }
+.aw-seg-d { bottom: 0; }
+.aw-seg-f, .aw-seg-b, .aw-seg-e, .aw-seg-c {
+  width: 13%; height: 41%;
+  clip-path: polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%);
+}
+.aw-seg-f, .aw-seg-b { top: 6.5%; }
+.aw-seg-e, .aw-seg-c { bottom: 6.5%; }
+.aw-seg-f, .aw-seg-e { left: 0; }
+.aw-seg-b, .aw-seg-c { right: 0; }
 
 /* the winning team's box pulses once when it takes a word */
 .aw-fight-team.is-won .aw-fight-score { animation: aw-fight-pop .5s ease; }

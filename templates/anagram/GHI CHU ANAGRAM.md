@@ -1,5 +1,103 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 134 (13/8/2026) — 12 CẢI TIẾN UI/UX ĐƠN+ĐẤU + VÁ LỖI THẬT "2 LOA LỆCH MÀU"
+
+✅ **THẦY DUYỆT ("ok build") → ĐÃ CODE + TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight
+để soát core dùng chung không vỡ).** Luật chung: `../../GHI CHU DU AN.md` Đợt 134. ⭐ CÓ SỬA CORE
+(`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
+(`anagram.js`/`.css`) — ảnh hưởng tới TẤT CẢ 17 game (animation popup mượt hơn) và tới **Quiz fight
+mode** (nhóm Options tách + "TEAM LEFT/RIGHT WINS" + số 7 nét — đã tự test riêng, không vỡ).
+
+**SINGLE mode (6 việc):**
+1. **Slogan "ANAGRAM IN ANDREW CLASSES" lên chung thanh trên cùng** với đồng hồ+điểm — trước đây nó là
+   1 hàng flex bên TRONG khung câu hỏi (Đợt 132), giờ chuyển hẳn ra `.aw-topbar` qua slot mới
+   `ui.sloganSlot` (`core/engine.js`, opt-in `tpl.hasSloganSlot` — **chỉ Anagram bật**, 16 game khác
+   không đổi gì). `.aw-anagram-card` được `padding-top` thay chỗ trống cũ (giữ nguyên khoảng thở cho
+   hào quang nút loa, tránh lặp lại lỗi Đợt 132 "hào quang bị `.aw-playarea` cắt").
+2. **Cụm loa+sóng**: thêm cột sóng thứ 5 (`EQ_BAR_COUNT` 4→5), độ nhạy tăng (`smoothingTimeConstant`
+   0.55→0.35 + gain/curve mới `EQ_GAIN=1.55`, `EQ_CURVE=0.7` khuếch đại cả đoạn nói khẽ, không chỉ đỉnh
+   to), nút dài hơn + padding-trong/gap-icon↔sóng **bằng nhau tuyệt đối** (đo pixel: cả 3 khoảng cách
+   = 12px ở font-size 40px, xác nhận qua DOM thật).
+3. **Panel Options tự thu nhỏ khi tràn** (opt-in `tpl.compactOptionsOnOverflow`, chỉ Anagram) —
+   `ResizeObserver` đo `scrollHeight` TỰ NHIÊN (gỡ class rồi đo lại, tránh dao động lặp vô hạn), tự
+   thêm/gỡ `.is-compact-opts` (chữ/khoảng cách ~78-86%). Đo thật: Đấu+Anagram trước đây tràn 603px
+   (so max 471px) → sau khi nén còn 556px — giảm nhưng KHÔNG hết hẳn (đúng dự kiến, Đợt 132 từng ghi
+   hướng "đè lên hàng nút" mới hết hẳn cuộn — thầy chưa duyệt hướng đó).
+4. **Animation mở/đóng popup mượt hơn** (Options/Template/Style/Mode dùng `.aw-tool-panel`, Menu dùng
+   `.aw-menu`) — thay `aw-fadein` (chỉ mờ dần) bằng `aw-pop-cx`/`aw-pop` (nảy + phóng to nhẹ), có sẵn
+   trong app rồi, chỉ cần đổi tên animation dùng. Đóng cũng mirror bằng WAAPI, **luôn giữ
+   `translateX(-50%)` trong mọi keyframe** để không phá phép canh giữa (bẫy đã ghi ở `core/app.css`).
+   ẢNH HƯỞNG TOÀN BỘ 17 GAME (dùng chung `core/engine.js`'s `openToolPanel`/`closeToolPanel`).
+5. **Animation mượt cho 3 nhóm Points-off/Bonus x khi đổi Anagram mode** — thay `display:none` cứng
+   bằng 2 lớp: khung ngoài `.aw-opt-group` chuyển `margin-bottom` mượt, khung trong
+   `.aw-anagram-pencontent` chuyển `max-height`+`opacity` theo `scrollHeight` đo thật (kỹ thuật y hệt
+   `.aw-as-answers` đã có sẵn trong app). Lần vẽ đầu tiên panel còn NGOÀI DOM (`scrollHeight`=0) nên
+   dùng `max-height:none` tức thì rồi đợi 1 tick (`setTimeout 0`) chốt lại số đo thật — nhóm đầu tiên
+   không bị "giật" lúc user bấm radio đầu tiên.
+6. **Âm thanh khi điểm chạy tăng/giảm** (`pulseScoreTo`) — phát hiện: **trước đây CẢ đơn lẫn đấu đều
+   CHƯA có** hiệu ứng này (không phải "port" từ đơn sang đấu như giả định ban đầu, xác nhận qua đọc
+   code). Thêm 1 tiếng lướt cao độ (`ui.sound.glide`, hàm MỚI trong `core/sound.js`, thin wrap quanh
+   `tone()` nội bộ — không lộ Web Audio thô ra ngoài module) đúng `FLYGAIN_PULSE_MS`=420ms, lên cao khi
+   cộng điểm, xuống thấp khi trừ (mode "submit" có thể trừ điểm). Dùng chung `pulseScoreTo` cho cả
+   2 chế độ nên **fight mode cũng tự động có** — không cần code riêng.
+
+**FIGHT mode (6 việc):**
+7. **Ẩn hẳn slogan khi đấu** — miễn phí nhờ việc 1: `.aw-fight-board .aw-topbar` đã bị collapse
+   `visibility:hidden; height:0` từ trước (Đợt 129), slogan nằm trong đó nên tự động vô hình, không
+   cần nhánh code riêng.
+8. **⭐ VÁ LỖI THẬT "2 loa lệch màu"** (thầy báo: bấm next câu mới, 1 loa xanh dương 1 loa xanh lá) —
+   KHÔNG phải do CSS team-color (đã kiểm chứng .is-playing dùng chung, không theo side). Gốc lỗi: bàn
+   không phát tiếng (mirror) đọc `reportVoiceState` kiểu PUSH — nếu tin nhắn tới đúng lúc `currentListenBtn`
+   đang `null` (khoảnh khắc giữa lúc `render()` reset và gán nút mới), tin bị rớt VĨNH VIỄN cho tới hết
+   clip. Sửa: `core/fight.js` giữ `lastVoiceState` (merge từng field) + thêm `ctl.voiceState()` để PULL;
+   `anagram.js` gọi pull này NGAY sau khi gán `currentListenBtn` mới trong `render()` (trích logic dùng
+   chung thành `applyVoiceState()`, dùng cho cả push lẫn pull). Tự test: chuyển từ nhiều lần trong fight
+   mode, 0 lỗi console, DOM confirm `fightBoards:2`.
+9. **Tách nhóm Options** "First team wins the word" + "Let the other team finish" + thanh trượt "Bonus
+   for finishing first" ra khỏi nhóm "Fight mode" (Same/Different words), tạo nhóm riêng "Round rule";
+   "The slower team still keeps its points" cũng ra nhóm riêng — panel giờ có nhịp đều (nhóm/nhóm/nhóm)
+   thay vì 4 hàng dồn cục 1 nhóm. Ở `core/fight.js` (dùng chung Quiz) — đã tự test Quiz fight, panel
+   hiện đúng "Fight mode" → "Round rule" (2 dòng) → "(không nhãn)" → các nhóm khác của Quiz, không vỡ.
+10. **Số điểm chỉnh tay kiểu 7 nét** — vẽ THẬT bằng CSS thuần (`core/fight.js`'s `sevenSegHtml()`, mỗi
+    số là 1 hộp 7 thanh `clip-path` hình thang/lục giác, nét TẮT hiện mờ 10% thay vì biến mất hẳn —
+    đúng cảm giác đèn LED thật), không tải/nhúng font ngoài (giữ đúng luật "tự chứa 100%, chạy offline"
+    của app). Size tăng: `.aw-fight-handnum` clamp(16,3vw,24)px → clamp(18,3.4vw,27)px, ô số
+    (`.aw-fight-hand`) GIỮ NGUYÊN cỡ nút toolbar (thầy chỉ xin tăng size SỐ, không xin to hộp).
+    ⚠️ **BẪY đã vấp phải khi code**: `const SEVEN_SEG = {...}` khai sau `const hands = [makeHand(0),
+    makeHand(1)]` (dòng gọi sớm hơn trong cùng closure) → `ReferenceError: Cannot access 'SEVEN_SEG'
+    before initialization` (temporal dead zone) — fight mode load lỗi im lặng (catch + console.warn),
+    KHÔNG throw ra ngoài nên dễ bỏ sót. Sửa: chuyển khai báo `SEVEN_SEG`/`sevenSegHtml` lên TRƯỚC dòng
+    `const hands = ...`. **Ghi nhớ**: mọi hằng/hàm mà `makeHand()`/`makeTeam()` dùng phải khai TRƯỚC
+    dòng gọi `[makeTeam(0),makeTeam(1)]`/`[makeHand(0),makeHand(1)]`, không phải trước ĐỊNH NGHĨA hàm
+    (function declaration hoist được, nhưng `const` bên trong nó thì KHÔNG).
+11. **Âm thanh khi điểm đội chạy tăng** — dùng chung `pulseScoreTo`/`ui.sound.glide` với việc 6, không
+    cần code riêng cho fight (`ui.setScore` đã tự gọi `fight.ctl.onScore` mỗi bước đếm sẵn từ trước).
+12. **"TEAM 1/2 WINS" → "TEAM LEFT/RIGHT WINS"** — `core/fight.js`'s `showResult()`, side 0 luôn là
+    bàn TRÁI (`boardsRow.append(boardEls[0], boardEls[1])`, xác nhận qua đọc code) nên `a>b` (side 0
+    cao hơn) = "TEAM LEFT WINS". Áp dụng cho cả Quiz (dùng chung `showResult`) theo đúng thầy chọn.
+
+**⚠️ BẪY MỚI đúc ra từ đợt này (nên thêm vào `core/HUONG DAN CORE.md`):**
+- **Bàn console-log của công cụ test trình duyệt tự động có thể TRẢ VỀ DỮ LIỆU CŨ** dù trang đã tải lại
+  hoàn toàn nhiều lần (kể cả đổi URL, đổi query string, restart hẳn server) — đừng tin `console` log khi
+  gỡ lỗi mà PHẢI đối chiếu bằng cách đọc thẳng DOM (`document.querySelector(...)`) hoặc gắn
+  `window.addEventListener('error', ...)` TRƯỚC khi thao tác để bắt lỗi thật.
+- **TDZ (`const` sau điểm gọi trong cùng closure) là lỗi ĐẶC BIỆT nguy hiểm ở đây** vì `core/fight.js`
+  tự bọc toàn bộ `startFight()` trong try/catch + `console.warn("fight mode failed to load")` — không
+  có gì đỏ/throw ra UI, người chơi chỉ thấy nút "Start fight" không phản ứng gì (im lặng), rất dễ tưởng
+  là do mạng chậm hay do bấm nhầm.
+
+**Đã test**: cả 12 việc đều đo được bằng DOM trực tiếp (không dựa console) — slot slogan đúng vị trí/ẩn
+đúng lúc, 5 cột sóng cân đối tuyệt đối (12px=12px=12px), panel Options co giãn đúng công thức không dao
+động lặp, popup mở/đóng không lỗi + giữ canh giữa, 3 nhóm penalty ẩn/hiện mượt đúng scrollHeight, âm
+thanh gọi đúng hàm mới không throw, fight mode dựng đúng 2 bàn sau khi vá TDZ, Options Quiz+Anagram đều
+tách nhóm đúng, 7-segment vẽ đúng số nét bật/tắt theo bảng tra. 0 lỗi console thật (đã lọc nhiễu do bẫy
+console-cache ở trên).
+**CHỜ TEST TOMKO**: nghe thật cụm loa 5 cột + âm thanh đếm điểm trên loa ngoài; cảm giác chạm cụm loa đã
+dài hơn có thoải mái không; nhìn số 7 nét trên màn 86" có rõ/đẹp không; bấm thật nút Menu/Options xem
+animation mới có mượt như mong đợi trên máy cảm ứng thật (khác hẳn cảm giác khi đo bằng code).
+
+---
+
 ## ⭐ Đợt 129 (12/8/2026) — GIẤU KẾT QUẢ "ON SUBMIT" TỚI KHI CẢ 2 ĐỘI XONG + NEXT/BACK ĐỒNG BỘ
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 129 +

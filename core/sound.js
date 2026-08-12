@@ -97,6 +97,14 @@ export const sound = {
     tone({ freq: 190, dur: 110, type: "square", gain: 0.09 });
     tone({ freq: 160, dur: 140, type: "square", gain: 0.09, delay: 120 });
   },
+  // Pitch-glide tone spanning an EXACT duration the caller controls — for an
+  // effect that must sync with a running animation (e.g. Anagram's score
+  // count-up, Đợt 134) rather than one of the fixed "themed" sounds above.
+  // Thin wrapper so callers outside this module never touch the raw
+  // Web-Audio `tone()` internals directly.
+  glide({ freq, freqEnd, dur, gain = 0.1, type = "sine" }) {
+    tone({ freq, freqEnd, dur, type, gain });
+  },
   isMuted() { return muted; },
   toggle()  { muted = !muted; return muted; },
 

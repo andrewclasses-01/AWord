@@ -22,27 +22,15 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
+  /* padding-top (Đợt 134) replaces the old slogan row's height+margin as the
+     listen button's glow-ring headroom at the very top of the stage (teacher,
+     12/8/2026: the ring used to poke past .aw-playarea's overflow:hidden and
+     get clipped) — the slogan itself now lives on the timer/score row
+     instead (ui.sloganSlot, core/engine.js), not inside this card. Counted in
+     autoFit's `measure` (anagram.js) via `cardPaddingTop`. */
+  padding-top: 2.6cqw;
   padding-bottom: 2.4cqw;
   animation: aw-fadein .25s ease;
-}
-
-/* The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89, removed Đợt ~124, brought
-   back Đợt 132) — unlike crossword's copy (a child of the shared `.aw-topbar`,
-   see crossword.css), this one is a normal flex child INSIDE `.aw-anagram-card`
-   (see anagram.js render()) so it survives fight mode, where `.aw-topbar` is
-   hidden per board. `--fit`-scaled like the rest of the card so it shrinks
-   along with everything else on a long clue, and its height is folded into
-   autoFit's own `measure` — it is real layout, not a decoration on top. */
-.aw-anagram-slogan {
-  flex: 0 0 auto;
-  font-size: calc(1.5cqw * var(--fit));
-  font-weight: 300;
-  letter-spacing: .3em;
-  text-transform: uppercase;
-  text-align: center;
-  color: var(--aw-question-fill, var(--aw-text));
-  opacity: .45;
-  margin: 0 0 1.1cqw;
 }
 
 .aw-anagram-clue {
@@ -96,11 +84,18 @@
      button renders as a near-invisible dot (caught by screenshot, 10/8/2026). */
   font: inherit;
   display: inline-flex; align-items: center; justify-content: center;
-  gap: 0.16em;
+  /* Đợt 134 (teacher: "khoảng cách từ mép nút đến icon loa và dải sóng phải
+     cực kỳ cân đối") — the icon<->eq gap now uses the EXACT SAME length as
+     the left/right padding, so the rhythm reads as pad / icon / gap / eq /
+     pad with every one of those 3 gaps identical, not just the outer padding
+     being symmetric on its own (which it already was — `padding: 0 Xem`
+     always sets left=right). Also widened overall (was 0.22em / 0.9em) —
+     teacher: "nút... kéo dài hơn nữa". */
+  gap: 0.3em;
   vertical-align: -0.18em;
-  height: 0.9em;
+  height: 0.95em;
   margin-left: 0.3em;
-  padding: 0 0.22em;
+  padding: 0 0.3em;
   border: none; border-radius: 999px;
   background: rgba(47, 111, 237, .14);
   color: #2f6fed;
@@ -113,8 +108,9 @@
 /* Larger, un-inset variant (10/8/2026) for the hide-text case — it's the
    box's ONLY child (see .aw-anagram-clue-voiceonly) instead of trailing
    after text, so it drops the text-hugging vertical-align/margin-left and
-   simply grows ("to hơn một chút", teacher's words). */
-.aw-anagram-listenbtn-lg { height: 1.7em; margin-left: 0; padding: 0 0.4em; gap: 0.28em; vertical-align: middle; }
+   simply grows ("to hơn một chút", teacher's words). Đợt 134: same
+   pad=gap symmetry rule as the base button above, also widened. */
+.aw-anagram-listenbtn-lg { height: 1.75em; margin-left: 0; padding: 0 0.48em; gap: 0.48em; vertical-align: middle; }
 .aw-anagram-listenbtn-lg .aw-anagram-listenicon { width: 1.1em; height: 1.1em; }
 .aw-anagram-listenbtn-lg .aw-anagram-eq { height: 0.95em; gap: 0.15em; }
 .aw-anagram-listenbtn-lg .aw-anagram-eq-bar { width: 0.16em; }
@@ -595,3 +591,17 @@
 }
 .aw-anagram-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
 .aw-anagram-ed-addrow:disabled { opacity: .4; cursor: default; }
+
+/* Options panel — the 3 mode-dependent penalty groups (Points off / Bonus
+   multiplier) collapse smoothly instead of snapping via display:none (Đợt
+   134, teacher: "animation mượt"). Two layers, see buildExtraOptions in
+   anagram.js: the OUTER .aw-opt-group (already core-styled) just gains this
+   margin-bottom transition; the INNER .aw-anagram-pencontent wrapper is what
+   actually collapses (max-height + opacity), sized off its own measured
+   scrollHeight so it works for any content length. */
+.aw-anagram-pengroup { transition: margin-bottom .28s cubic-bezier(.22,.9,.3,1); }
+.aw-anagram-pencontent {
+  max-height: 0; opacity: 0;
+  transition: max-height .28s cubic-bezier(.22,.9,.3,1), opacity .2s ease;
+}
+.aw-anagram-pencontent.is-open { opacity: 1; }

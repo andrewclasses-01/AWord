@@ -5,7 +5,25 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 133) — FIGHT MODE: cửa sổ HÒA 0,1s (2 đội xong đúng cách nhau
+> Cập nhật lần cuối: **13/8/2026 (Đợt 134) — 12 CẢI TIẾN UI/UX ANAGRAM ĐƠN+ĐẤU: slogan lên chung
+> thanh trên cùng (đơn) + tự ẩn khi đấu (miễn phí nhờ topbar đã collapse sẵn) · cụm loa +1 cột sóng,
+> nhạy hơn, canh lề icon↔sóng cân đối tuyệt đối · panel Options tự thu nhỏ khi tràn (ResizeObserver,
+> không dao động lặp) · animation mở/đóng MỌI popup mượt hơn (áp cho cả 17 game) · animation mượt cho
+> 3 nhóm Points-off/Bonus khi đổi mode · âm thanh mới khi điểm chạy đếm (cả đơn lẫn đấu, hoá ra trước
+> đây cả 2 đều chưa có) · ⭐ VÁ LỖI THẬT "2 loa lệch màu" (PULL voice state thay vì chỉ PUSH) · Options
+> đấu tách nhóm "Round rule" riêng (áp cho cả Quiz) · số điểm tay to hơn kiểu 7-segment vẽ bằng CSS
+> thuần (không nhúng font ngoài) · "TEAM 1/2 WINS" → "TEAM LEFT/RIGHT WINS" (áp cho cả Quiz).**
+> ⭐ CÓ SỬA CORE (`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
+> (`anagram.js`/`.css`). 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn+đấu, cả Quiz fight để soát core
+> không vỡ) — đo trực tiếp DOM, không dựa console (bàn console-log của công cụ test bị kẹt dữ liệu cũ
+> suốt buổi, xem BẪY ở `GHI CHU DU AN.md` Đợt 134). ✅ THẦY DUYỆT ("ok build") → ĐÃ CODE, CHỜ
+> COMMIT/PUSH.
+> ⚠️ BẪY MỚI đáng nhớ: TDZ (`const` khai SAU dòng gọi hàm dùng nó trong cùng closure) trong
+> `core/fight.js` làm `startFight()` lỗi ÂM THẦM (bọc try/catch + console.warn, không throw ra UI) —
+> nút "Start fight" chỉ im lặng không phản ứng, dễ tưởng nhầm bug khác.
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 134, `templates/anagram/GHI CHU ANAGRAM.md` Đợt 134.
+>
+> Trước đó: **13/8/2026 (Đợt 133) — FIGHT MODE: cửa sổ HÒA 0,1s (2 đội xong đúng cách nhau
 > ≤100ms → cả 2 cùng được điểm) + cơ chế mới `ctl.mayScore()` khiến điểm bị từ chối RƠI XUỐNG MÀN
 > thay vì đáp vào ô điểm (hỏi lại đúng lúc điểm bay TỚI nơi, không còn kẽ hở đua thời gian như cách
 > đóng băng số cũ) · bỏ hẳn "Same word, same letters", mặc định nay là "Same words, mix letters" ·

@@ -136,6 +136,33 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // too (either side of the clock) but moved DOWN below each board, dead
   // centre under it, at the teacher's request (12/8/2026, third pass) — see
   // `handsRow` below.
+  // Đợt 134 (teacher: "tăng size... dùng phong cách số 7 nét" for the manual
+  // hand-points box) — a real segmented display, not just a bigger/bolder
+  // digit font: each character becomes a small box of 7 bars (a..g, standard
+  // 7-segment naming), the ones this digit doesn't use rendered at low
+  // opacity instead of hidden entirely (reads as an unlit LED segment, the
+  // authentic look, rather than empty space). Pure CSS/HTML — no font file
+  // to source or embed, matches this app's "self-contained, works offline"
+  // rule everywhere else (core/app.css's own @font-face is the only font,
+  // and that one IS bundled locally). `el()`'s 3rd argument is innerHTML
+  // (core/utils.js), so this can just return a string. Declared up here
+  // (not just above makeHand(), which is defined further down) because
+  // `hands = [makeHand(0), makeHand(1)]` below calls it immediately — a
+  // `const` after that point would be a temporal-dead-zone ReferenceError.
+  const SEVEN_SEG = {
+    "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc",
+    "5": "afgcd", "6": "afgecd", "7": "abc", "8": "abcdefg", "9": "abcdfg"
+  };
+  function sevenSegHtml(text) {
+    return [...text].map(ch => {
+      const on = SEVEN_SEG[ch] || "";
+      const segs = "abcdefg".split("")
+        .map(s => `<i class="aw-seg aw-seg-${s}${on.includes(s) ? " on" : ""}"></i>`)
+        .join("");
+      return `<span class="aw-seg-digit">${segs}</span>`;
+    }).join("");
+  }
+
   const teams = [makeTeam(0), makeTeam(1)];
   const half0 = el("div", "aw-fight-half");
   const half1 = el("div", "aw-fight-half");
@@ -196,7 +223,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     box.tabIndex = 0;
     box.title = "Teacher points — tap or swipe up to add, swipe down to take off";
     const numWrap = el("div", "aw-fight-handnum");
-    const value = el("div", "aw-fight-handvalue", "0");
+    const value = el("div", "aw-fight-handvalue", sevenSegHtml("0"));
     numWrap.append(value);
     box.append(numWrap);
 
@@ -260,7 +287,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // nhìn"). Away from zero the box is ALWAYS bright; only 0 can dim.
     h.el.classList.toggle("is-dim", v === 0 && !handAwake[side]);
     if (dir) { animateHandSlide(side, text, isNeg, dir); return; }
-    h.value.textContent = text;
+    h.value.innerHTML = sevenSegHtml(text);
     h.value.classList.toggle("is-neg", isNeg);
   }
 
@@ -273,7 +300,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function animateHandSlide(side, text, isNeg, dir) {
     const h = hands[side];
     const oldEl = h.value;
-    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), text);
+    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), sevenSegHtml(text));
     newEl.style.transform = `translateY(${dir > 0 ? "100%" : "-100%"})`;
     h.numWrap.append(newEl);
     const outAnim = oldEl.animate(
@@ -347,6 +374,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   let matchOver = false;
   let torndown = false;
   let playRelaying = false;             // guards the "one PLAY starts both" relay
+  // Đợt 134 — a running snapshot of the speaking board's voice state, merged
+  // field-by-field (playing / levels are reported separately, at different
+  // moments — see anagram.js's setListenGlow/startEqualizer). Lets a board
+  // PULL "what's true right now" instead of only relying on the one-shot
+  // PUSH from reportVoiceState below, which is silently dropped if the
+  // receiving board's own listen button doesn't exist yet at that exact
+  // instant (the two boards' render() calls are not perfectly synchronized —
+  // teacher-reported "2 loa lệch màu" bug, one board stuck on the old color
+  // through an entire clip because the push landed in that gap).
+  let lastVoiceState = null;
 
   function totalOf(side) { return game[side] + bonus[side] + freezeAdj[side]; }
   // Called on every score report while a freeze is on: keep the total pinned to
@@ -479,9 +516,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // registered for `syncVoice` (a template that hasn't opted in) simply
     // doesn't receive anything — safe no-op.
     reportVoiceState(side, state) {
+      lastVoiceState = { ...lastVoiceState, ...state };
       const other = side === 0 ? 1 : 0;
       if (boards[other] && boards[other].syncVoice) boards[other].syncVoice(state);
     },
+    // Đợt 134 — the PULL half of the fix above: a board calls this itself
+    // right after it (re)builds its own listen button (anagram.js's
+    // render()), instead of only waiting to be pushed to. Returns null until
+    // the speaking board has reported anything at all this match.
+    voiceState() { return lastVoiceState; },
 
     // Both boards start together (teacher, 12/8/2026). Pressing PLAY on either
     // one presses the other's too, so the two clocks — and therefore the shared
@@ -717,7 +760,12 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function showResult() {
     const a = totalOf(0), b = totalOf(1);
     const panel = el("div", "aw-fight-result");
-    const winner = a === b ? "IT'S A DRAW" : (a > b ? "TEAM 1 WINS" : "TEAM 2 WINS");
+    // Đợt 134 (teacher: "TEAM 1/2 WINS" -> "TEAM LEFT/RIGHT WINS", applies to
+    // every fightMode template — currently Anagram and Quiz). Side 0 is
+    // always the LEFT board and side 1 always RIGHT (their team name labels
+    // were dropped back in Đợt 125 — see the comment on .aw-fight-team below
+    // — so position is the only thing left distinguishing them on screen).
+    const winner = a === b ? "IT'S A DRAW" : (a > b ? "TEAM LEFT WINS" : "TEAM RIGHT WINS");
     panel.append(el("div", "aw-fight-result-title", winner));
     const rowEl = el("div", "aw-fight-result-scores");
     rowEl.append(
@@ -753,13 +801,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       mkRadioChoice("aw-fight-content", "different", "Different words", cur.fightContent === "different", v => draft.fightContent = v)
     );
     g.append(rowContent);
+    panel.append(g);
 
+    // Đợt 134 (teacher: "tách... thành 1 cụm riêng, cân đối khoảng cách" —
+    // these 3 controls used to be crammed into the SAME group as "Same/
+    // Different words" above with nothing but a row-gap between any of the
+    // 4 rows, reading as one dense, unevenly-spaced block). Own group, own
+    // label, same margin-bottom rhythm as every other group in this panel.
+    const gRule = el("div", "aw-opt-group");
+    gRule.append(el("div", "aw-opt-label", "Round rule"));
     const rowRule = el("div", "aw-opt-row");
     rowRule.append(
       mkRadioChoice("aw-fight-rule", "lock", "First team wins the word", cur.fightFirstRule === "lock", v => draft.fightFirstRule = v),
       mkRadioChoice("aw-fight-rule", "finish", "Let the other team finish", cur.fightFirstRule === "finish", v => draft.fightFirstRule = v)
     );
-    g.append(rowRule);
+    gRule.append(rowRule);
 
     const rowBonus = el("div", "aw-opt-row");
     const slider = el("input", "aw-opt-slider");
@@ -772,13 +828,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       val.textContent = v === 0 ? "Off" : "+" + v;
     };
     rowBonus.append(el("span", "aw-opt-sublabel", "Bonus for finishing first"), slider, val);
-    g.append(rowBonus);
+    gRule.append(rowBonus);
+    panel.append(gRule);
 
+    // "The slower team still keeps its points" stays OUTSIDE the new "Round
+    // rule" group — it's about what happens AFTER a round ends, not about
+    // the round rule itself — but still gets its own group (rather than
+    // dangling with no label/spacing of its own) so the panel's rhythm
+    // stays even throughout: group, group, group, not group + 3 loose rows.
+    const gLate = el("div", "aw-opt-group");
     const rowLate = el("div", "aw-opt-row");
     rowLate.append(mkCheck(cur.fightLateScores !== false, "The slower team still keeps its points",
       v => draft.fightLateScores = v));
-    g.append(rowLate);
-    panel.append(g);
+    gLate.append(rowLate);
+    panel.append(gLate);
   }
 
   // ----- build the two plays -----

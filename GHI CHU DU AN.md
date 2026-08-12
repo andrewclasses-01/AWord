@@ -5,6 +5,71 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 134 (13/8/2026) — 12 CẢI TIẾN UI/UX ANAGRAM ĐƠN+ĐẤU + VÁ LỖI THẬT "2 LOA LỆCH MÀU"
+⭐ CÓ SỬA CORE (`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
+(`anagram.js`/`.css`). Ảnh hưởng TOÀN BỘ 17 game (animation mở/đóng popup mượt hơn — dùng chung
+`openToolPanel`/`closeToolPanel`) và **Quiz fight mode** (nhóm Options tách "Round rule" riêng +
+"TEAM LEFT/RIGHT WINS" + số điểm tay 7-segment — 3 thứ này dùng chung `core/fight.js`).
+🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight để soát core không vỡ), đo trực
+tiếp qua DOM (không dựa console — bàn console-log của công cụ test bị kẹt dữ liệu cũ suốt buổi, xem BẪY
+bên dưới). ✅ THẦY DUYỆT ("ok build") → ĐÃ CODE, CHỜ COMMIT/PUSH.
+
+**Thầy chốt / Yêu cầu Teacher Andrew** (12 việc, single + fight):
+1. Slogan lên chung thanh trên cùng với đồng hồ+điểm (đơn)
+2. Cụm loa: +1 cột sóng, nhạy hơn, nút dài hơn, canh lề icon↔sóng cân đối tuyệt đối (đơn)
+3. Panel Options tự thu nhỏ khi tràn thay vì cuộn (đơn)
+4. Animation mượt mở/đóng mọi popup (Options/Template/Style/Mode/Menu) (đơn, thật ra áp cả app)
+5. Animation mượt ẩn/hiện dòng option con khi đổi mode (đơn)
+6. Âm thanh khi điểm chạy đếm tăng/giảm (đơn — hoá ra fight cũng chưa có, cùng làm luôn)
+7. Ẩn hẳn slogan khi đấu (đấu)
+8. 2 loa lệch màu lúc chuyển câu — báo là lỗi thật, yêu cầu sửa (đấu)
+9. Tách 3 tuỳ chọn (first-wins/let-finish/bonus-slider) thành nhóm riêng, cân khoảng cách (đấu)
+10. Số điểm tay to hơn, kiểu 7 nét (đấu)
+11. Âm thanh khi điểm đội chạy tăng (đấu)
+12. "TEAM 1/2 WINS" → "TEAM LEFT/RIGHT WINS" (đấu)
+
+**FIX/Đã làm**: chi tiết đầy đủ từng việc (số dòng file, số đo, ảnh chụp DOM) ở
+`templates/anagram/GHI CHU ANAGRAM.md` Đợt 134 — tóm tắt các điểm CỐT LÕI:
+- Slogan chuyển từ 1 hàng trong khung câu hỏi (Đợt 132) sang slot mới `ui.sloganSlot` trên
+  `.aw-topbar` thật (`core/engine.js`, opt-in `tpl.hasSloganSlot`, chỉ Anagram bật) — tự động ẩn khi
+  đấu vì `.aw-fight-board .aw-topbar` đã bị collapse từ Đợt 129, không cần code riêng cho việc 7.
+- `core/sound.js` có thêm hàm public MỚI `glide({freq,freqEnd,dur,gain})` — thin wrap quanh `tone()`
+  nội bộ — dùng cho việc 6+11 (chung 1 chỗ gọi, `anagram.js`'s `pulseScoreTo`).
+- ⭐ **LỖI THẬT đã vá (việc 8)**: bàn mirror (không phát tiếng thật) bỏ lỡ tín hiệu "đang phát" nếu nó
+  tới đúng lúc `currentListenBtn` đang `null` giữa 2 lần `render()` — PUSH-only không đủ. Thêm PULL:
+  `core/fight.js` giữ `lastVoiceState`, `ctl.voiceState()` cho bàn tự hỏi lại ngay sau khi dựng xong nút
+  loa mới của nó, không chỉ chờ được đẩy tin.
+- Options `core/fight.js`'s `buildOptions()`: tách nhóm "Round rule" (first-wins/let-finish/bonus) +
+  nhóm riêng cho "slower team keeps points" khỏi nhóm "Fight mode" (Same/Different words) — áp cho cả
+  Quiz vì dùng chung hàm.
+- `core/fight.js`'s `showResult()`: "TEAM 1/2 WINS" → "TEAM LEFT/RIGHT WINS" (side 0 luôn = TRÁI).
+- Số điểm tay: `sevenSegHtml()` mới trong `core/fight.js`, vẽ 7 thanh CSS thuần (`clip-path`) mỗi số,
+  nét tắt còn mờ 10% (giống LED thật) — không tải/nhúng font ngoài.
+
+**BẪY / BÀI HỌC**:
+1. ⭐ **TDZ giữa chừng code**: khai `const SEVEN_SEG = {...}` SAU dòng `const hands = [makeHand(0),
+   makeHand(1)]` (dòng gọi hàm nằm sớm hơn trong cùng closure `startFight`) → `ReferenceError: Cannot
+   access before initialization`. `core/fight.js` bọc `startFight()` trong try/catch +
+   `console.warn(...)` nên KHÔNG throw ra UI — nút "Start fight" chỉ im lặng không phản ứng, dễ tưởng
+   nhầm là bug khác. Quy tắc: mọi `const`/hàm mà `makeHand()`/`makeTeam()` dùng phải khai TRƯỚC dòng
+   GỌI `[makeX(0), makeX(1)]`, không phải trước ĐỊNH NGHĨA hàm (function declaration hoist được, `const`
+   bên trong thì không).
+2. **Công cụ test trình duyệt tự động (Browser pane) từng bị KẸT dữ liệu console cũ** suốt cả buổi test
+   — đổi URL, thêm query string cache-bust, restart hẳn `preview_stop`/`preview_start`, gọi
+   `location.reload()` đều KHÔNG làm log mới thay log cũ, dù `fetch()` xác nhận server luôn trả file mới
+   nhất. Chỉ đọc DOM trực tiếp (`document.querySelector`) hoặc gắn `window.addEventListener('error',...)`
+   TRƯỚC khi thao tác mới cho kết quả đúng thực tế. Đừng tin console log của Browser pane khi debug lỗi
+   khó hiểu — đối chiếu DOM trước khi kết luận có bug thật.
+
+**Đã test**: DOM trực tiếp xác nhận cả 12 việc hoạt động đúng (xem chi tiết số đo ở file Anagram); Quiz
+fight mode tự test riêng — Options hiện đúng nhóm "Fight mode"→"Round rule", 2 bàn dựng đúng, 7-segment
+render đúng, không vỡ do sửa core dùng chung. 0 lỗi JS thật (xác nhận qua `window.onerror` hook, không
+dựa console reader bị kẹt).
+**CHỜ TEST TOMKO**: nghe cụm loa 5 cột trên loa ngoài, cảm giác chạm cụm loa dài hơn, nhìn số 7 nét trên
+màn 86", animation Menu/Options mượt tới đâu trên máy cảm ứng thật.
+
+---
+
 ## Đợt 133 (13/8/2026) — FIGHT MODE: CỬA SỔ HÒA 0,1s + ĐIỂM RƠI KHỎI MÀN KHI BỊ TỪ CHỐI · BỎ "SAME LETTERS" · VOICE DÙNG CHUNG 1 BẢN
 ⭐ CÓ SỬA CORE (`core/fight.js`) + Anagram (`anagram.js`). KHÔNG đụng CSS.
 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (mô phỏng 2 bàn bấm chữ thật qua PointerEvent, đo bằng số điểm

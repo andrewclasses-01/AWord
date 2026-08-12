@@ -239,8 +239,24 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // exact same 2-child flex row as before. (A template never sets BOTH this and
   // inlineTimerBar, so the topbarMid branch takes precedence harmlessly.)
   const livesSlot = tpl.hasLivesSlot ? el("span", "aw-top-lives") : null;
-  if (topbarMid) topbar.append(timerEl, topbarMid, scoreEl);
-  else if (livesSlot) {
+  // Opt-in (tpl.hasSloganSlot): a centered slot between the timer and the
+  // score/lives group, on the SAME row — Anagram uses it for its "ANAGRAM IN
+  // ANDREW CLASSES" caption (Đợt 134, moved here from a child of the question
+  // card so it truly shares the timer/score row). The template fills the text
+  // itself via ui.sloganSlot; empty by default so no other template is
+  // affected. Automatically invisible in fight mode for free — a board's own
+  // `.aw-topbar` collapses to 0 height there (see app.css), same as the timer
+  // and score already do.
+  const sloganSlot = tpl.hasSloganSlot ? el("span", "aw-top-slogan") : null;
+  if (topbarMid) {
+    topbar.append(timerEl, topbarMid, scoreEl);
+  } else if (livesSlot && sloganSlot) {
+    const topRight = el("div", "aw-top-right");
+    topRight.append(livesSlot, scoreEl);
+    topbar.append(timerEl, sloganSlot, topRight);
+  } else if (sloganSlot) {
+    topbar.append(timerEl, sloganSlot, scoreEl);
+  } else if (livesSlot) {
     const topRight = el("div", "aw-top-right");
     topRight.append(livesSlot, scoreEl);
     topbar.append(timerEl, topRight);
@@ -763,6 +779,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // (game included) behind it. Click outside (the dim, or elsewhere) closes it.
   // =============================================================
   let toolDim = null, toolPanelEl = null, activeToolBtn = null;
+  let panelCompactObs = null;   // ResizeObserver for is-compact-opts (Đợt 134) — see openToolPanel
 
   // fade = true -> animate opacity out before removing (a real user-initiated
   // close: outside click, or toggling the open button again). fade = false ->
@@ -772,17 +789,25 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   function closeToolPanel(fade = true) {
     const dim = toolDim, panel = toolPanelEl, btn = activeToolBtn;
     toolDim = null; toolPanelEl = null; activeToolBtn = null;
+    panelCompactObs?.disconnect(); panelCompactObs = null;
     document.removeEventListener("pointerdown", onToolOutside);
     if (btn) btn.classList.remove("is-active");
     if (!dim && !panel) return;
     if (!fade) { dim?.remove(); panel?.remove(); return; }
     let done = false;
     const remove = () => { if (done) return; done = true; dim?.remove(); panel?.remove(); };
-    const fadeOpts = { duration: 150, easing: "ease", fill: "forwards" };
+    const fadeOpts = { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" };
     const a = dim?.animate([{ opacity: 1 }, { opacity: 0 }], fadeOpts);
-    panel?.animate([{ opacity: 1 }, { opacity: 0 }], fadeOpts);
+    // Mirrors .aw-tool-panel's entrance (app.css, `aw-pop-cx`) in reverse —
+    // every keyframe stop keeps `translateX(-50%)` so the panel's own
+    // centering transform is never overridden mid-animation (Đợt 134).
+    panel?.animate(
+      [{ opacity: 1, transform: "translateX(-50%) translateY(0) scale(1)" },
+       { opacity: 0, transform: "translateX(-50%) translateY(6px) scale(.94)" }],
+      fadeOpts
+    );
     if (a) a.onfinish = remove;
-    setTimeout(remove, 220);   // fallback (a hidden/backgrounded tab can stall animation events)
+    setTimeout(remove, 260);   // fallback (a hidden/backgrounded tab can stall animation events)
   }
   function onToolOutside(ev) {
     if (!toolPanelEl) return;
@@ -812,7 +837,27 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // there was never a reason to leave it capped tighter there. Applying it
     // everywhere is a strict increase, nothing shrinks for anyone.
     const roomAbove = belowCenter.getBoundingClientRect().top - 24;
-    toolPanelEl.style.maxHeight = Math.max(200, roomAbove) + "px";
+    const maxH = Math.max(200, roomAbove);
+    toolPanelEl.style.maxHeight = maxH + "px";
+    // Đợt 134 (teacher, Anagram Options: "tự động... chỉnh kích thước nội
+    // dung bên trong nhỏ lại để hiển thị được đầy đủ mà không cần scroll").
+    // Opt-in (tpl.compactOptionsOnOverflow) and scoped to the OPTIONS panel
+    // only — Template/Style/Mode panels, and every other template's Options,
+    // are unaffected. A ResizeObserver (not a one-shot check at open time) so
+    // toggling a radio that reveals MORE option rows mid-session re-evaluates
+    // live too. Each callback measures against the panel's NATURAL (class
+    // removed first) height, never its own already-compacted height, or the
+    // decision would oscillate: compact -> shrinks -> looks like it fits ->
+    // un-compact -> grows again -> overflows -> compact... forever.
+    if (tpl.compactOptionsOnOverflow && buildContent === buildOptionsPanel) {
+      const recheck = () => {
+        toolPanelEl.classList.remove("is-compact-opts");
+        toolPanelEl.classList.toggle("is-compact-opts", toolPanelEl.scrollHeight > maxH + 1);
+      };
+      recheck();
+      panelCompactObs = new ResizeObserver(recheck);
+      panelCompactObs.observe(toolPanelEl);
+    }
     btn.classList.add("is-active");
     activeToolBtn = btn;
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
@@ -1260,10 +1305,22 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
   }
   function closeMenu() {
-    if (menuEl) {
-      menuEl.remove(); menuEl = null; document.removeEventListener("pointerdown", onMenuOutside);
-      exitMenuPause();
-    }
+    if (!menuEl) return;
+    const el2 = menuEl;
+    menuEl = null;
+    document.removeEventListener("pointerdown", onMenuOutside);
+    exitMenuPause();
+    // Mirrors .aw-menu's entrance (app.css, `aw-pop`) in reverse (Đợt 134) —
+    // this popup has no self transform to protect, unlike .aw-tool-panel.
+    let done = false;
+    const remove = () => { if (done) return; done = true; el2.remove(); };
+    const a = el2.animate(
+      [{ opacity: 1, transform: "translateY(0) scale(1)" },
+       { opacity: 0, transform: "translateY(4px) scale(.96)" }],
+      { duration: 140, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" }
+    );
+    a.onfinish = remove;
+    setTimeout(remove, 200);   // fallback (a hidden/backgrounded tab can stall animation events)
   }
   function menuItem(label, action) {
     const b = el("button", "aw-menu-item", label);
@@ -1431,6 +1488,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     topbarMid,   // null unless tpl.inlineTimerBar is true — see topbar setup above
     kbdSlot,     // null unless tpl.hasKeyboardToggle is true — see bottombar setup above
     livesSlot,   // null unless tpl.hasLivesSlot is true — a span left of the score (True/false hearts)
+    sloganSlot,  // null unless tpl.hasSloganSlot is true — a centered span between timer and score (Anagram)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
     setScore(n) {

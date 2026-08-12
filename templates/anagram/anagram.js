@@ -83,7 +83,15 @@ const RESULT_BG = "#2f6fed";
 // exactly this look (used elsewhere in this file for the whole-word marks).
 
 const STAGGER_MS = 260;     // ms — gap between each position's reveal in "submit" mode
-const EQ_BAR_COUNT = 4;     // Đợt 132 — equalizer bars beside the listen button
+const EQ_BAR_COUNT = 5;     // Đợt 134 (teacher: "thêm 1 cột sóng nữa") — was 4 (Đợt 132)
+// Đợt 134 (teacher: "độ dao động nhạy hơn để dễ nhận ra biến động âm lượng
+// hơn") — raw byte-frequency levels for ordinary speech rarely reach anywhere
+// near the top of the 0..1 range, so bars barely moved. EQ_GAIN multiplies
+// the level up, and the exponent (applied in startEqualizer, <1 = curves
+// upward) lifts quiet passages specifically, not just loud peaks — together
+// they make normal talking swing the bars visibly instead of just spikes.
+const EQ_GAIN = 1.55;
+const EQ_CURVE = 0.7;
 
 // Shared "settle" easing for every tile flight (letter placement, swap,
 // return-to-origin) — a mild spring overshoot instead of flat ease-in-out,
@@ -204,11 +212,13 @@ const anagramTemplate = {
   itemsKey: "items",
   name: "Anagram",
   hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
+  hasSloganSlot: true,  // "ANAGRAM IN ANDREW CLASSES" on the timer/score row (Đợt 134)
   // FIGHT MODE (Đợt 124) — makes the MODE button appear under the frame, and
   // means this template knows how to run as one of two boards racing (see the
   // `_fight` branches in mount()). The first template to opt in.
   fightMode: true,
   hidePointsOff: true,  // ships its own mode-dependent "Points off" control(s) — see buildExtraOptions (10/8/2026)
+  compactOptionsOnOverflow: true,  // Options panel shrinks its own text/spacing instead of scrolling when it overflows — Đợt 134, see core/engine.js's openToolPanel
 
   toPrintItems(activity) {
     return (activity.content?.items || [])
@@ -243,8 +253,16 @@ const anagramTemplate = {
     // once-per-wrong-WORD deduction (just widened to 0..10), "bonusMinus"
     // repurposes the same visual slot for a once-per-wrong-LETTER deduction
     // (0..100, step 5) plus its own "Bonus x" multiplier.
-    const gPenSubmit = el("div", "aw-opt-group");
-    gPenSubmit.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
+    // Đợt 134 (teacher: "animation mượt" khi đổi mode ẩn/hiện các nhóm này) —
+    // each of these 3 groups is now TWO layers: the outer `.aw-opt-group`
+    // (unchanged spacing/identity, just gains `.aw-anagram-pengroup` for its
+    // margin-bottom transition) holds an inner `.aw-anagram-pencontent`
+    // wrapper around the actual label+row, which is what collapses (max-
+    // height/opacity) — see syncPenaltyGroups below.
+    const gPenSubmit = el("div", "aw-opt-group aw-anagram-pengroup");
+    const cPenSubmit = el("div", "aw-anagram-pencontent");
+    gPenSubmit.append(cPenSubmit);
+    cPenSubmit.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
     const rowPenSubmit = el("div", "aw-opt-row");
     const curSubmitPen = clampSubmitPenalty(draft.pointsOff || 0);
     const penSubmitSlider = el("input", "aw-opt-slider");
@@ -257,10 +275,12 @@ const anagramTemplate = {
       penSubmitVal.textContent = v === 0 ? "Off" : "-" + v;
     };
     rowPenSubmit.append(penSubmitSlider, penSubmitVal);
-    gPenSubmit.append(rowPenSubmit);
+    cPenSubmit.append(rowPenSubmit);
 
-    const gPenLetter = el("div", "aw-opt-group");
-    gPenLetter.append(el("div", "aw-opt-label", "Points off (wrong letter)"));
+    const gPenLetter = el("div", "aw-opt-group aw-anagram-pengroup");
+    const cPenLetter = el("div", "aw-anagram-pencontent");
+    gPenLetter.append(cPenLetter);
+    cPenLetter.append(el("div", "aw-opt-label", "Points off (wrong letter)"));
     const rowPenLetter = el("div", "aw-opt-row");
     const curLetterPen = clampLetterPenalty(draft.letterPenalty || 0);
     const penLetterSlider = el("input", "aw-opt-slider");
@@ -273,10 +293,12 @@ const anagramTemplate = {
       penLetterVal.textContent = v === 0 ? "Off" : "-" + v;
     };
     rowPenLetter.append(penLetterSlider, penLetterVal);
-    gPenLetter.append(rowPenLetter);
+    cPenLetter.append(rowPenLetter);
 
-    const gBonusMult = el("div", "aw-opt-group");
-    gBonusMult.append(el("div", "aw-opt-label", "Bonus x (perfect-word multiplier)"));
+    const gBonusMult = el("div", "aw-opt-group aw-anagram-pengroup");
+    const cBonusMult = el("div", "aw-anagram-pencontent");
+    gBonusMult.append(cBonusMult);
+    cBonusMult.append(el("div", "aw-opt-label", "Bonus x (perfect-word multiplier)"));
     const rowBonusMult = el("div", "aw-opt-row");
     const curMult = clampBonusMult(draft.bonusMult);
     const multSlider = el("input", "aw-anagram-multslider");
@@ -289,14 +311,58 @@ const anagramTemplate = {
       multVal.textContent = v + "x";
     };
     rowBonusMult.append(multSlider, multVal);
-    gBonusMult.append(rowBonusMult);
+    cBonusMult.append(rowBonusMult);
 
-    function syncPenaltyGroups(m) {
-      gPenSubmit.style.display = m === "submit" ? "" : "none";
-      gPenLetter.style.display = m === "bonusMinus" ? "" : "none";
-      gBonusMult.style.display = m === "bonusMinus" ? "" : "none";
+    // Đợt 134 (teacher: "animation mượt" hiện/ẩn) — smooth collapse instead
+    // of a display:none snap. The OUTER group's margin-bottom is cleared
+    // inline while closed (CSS transitions it back to whatever it should be
+    // when open — normal or the `.is-compact-opts` panel's smaller one, see
+    // app.css — since we never hardcode a px number here) while the INNER
+    // content wrapper's max-height goes to its measured scrollHeight, so the
+    // reveal works for any content length. Used by the mode radios' onChange
+    // below, where the panel is already live in the document and
+    // `scrollHeight` is real.
+    function setPenGroup(group, content, open) {
+      if (open) {
+        group.style.marginBottom = "";
+        content.classList.add("is-open");
+        content.style.maxHeight = content.scrollHeight + "px";
+      } else {
+        group.style.marginBottom = "0px";
+        content.classList.remove("is-open");
+        content.style.maxHeight = "0px";
+      }
     }
-    syncPenaltyGroups(curMode);
+    function syncPenaltyGroups(m) {
+      setPenGroup(gPenSubmit, cPenSubmit, m === "submit");
+      setPenGroup(gPenLetter, cPenLetter, m === "bonusMinus");
+      setPenGroup(gBonusMult, cBonusMult, m === "bonusMinus");
+    }
+    // FIRST paint is different: buildExtraOptions runs BEFORE core/engine.js
+    // appends this whole panel to the document, so `scrollHeight` would read
+    // 0 for everything right now. The initially-open group (if any) is set
+    // to `max-height:none` instead — correct and instant, no animation
+    // needed for a panel that is itself still fading/popping in. One tick
+    // later (setTimeout 0, same "wait for the DOM to catch up" idiom
+    // core/engine.js already uses for its own outside-click listener), swap
+    // that "none" for a real measured px number, so the teacher's FIRST
+    // radio click has something concrete to transition FROM — a transition
+    // starting at "none" can't be interpolated and would just snap shut.
+    const curSubmitOpen = curMode === "submit", curMinusOpen = curMode === "bonusMinus";
+    gPenSubmit.style.marginBottom = curSubmitOpen ? "" : "0px";
+    gPenLetter.style.marginBottom = curMinusOpen ? "" : "0px";
+    gBonusMult.style.marginBottom = curMinusOpen ? "" : "0px";
+    cPenSubmit.classList.toggle("is-open", curSubmitOpen);
+    cPenLetter.classList.toggle("is-open", curMinusOpen);
+    cBonusMult.classList.toggle("is-open", curMinusOpen);
+    cPenSubmit.style.maxHeight = curSubmitOpen ? "none" : "0px";
+    cPenLetter.style.maxHeight = curMinusOpen ? "none" : "0px";
+    cBonusMult.style.maxHeight = curMinusOpen ? "none" : "0px";
+    setTimeout(() => {
+      [cPenSubmit, cPenLetter, cBonusMult].forEach(c => {
+        if (c.classList.contains("is-open")) c.style.maxHeight = c.scrollHeight + "px";
+      });
+    }, 0);
 
     rowMode.append(
       mkRadioChoice("aw-anagram-mode", "bonus", "Letters with bonus", curMode === "bonus", v => { draft.anagramMode = v; syncPenaltyGroups(v); }),
@@ -358,6 +424,12 @@ const anagramTemplate = {
   },
 
   mount(root, activity, ui) {
+    // Slogan (Đợt 134) — now lives on the shared timer/score row
+    // (ui.sloganSlot, core/engine.js) instead of a child of the question
+    // card, so it truly shares that row in single mode. Set once; the text
+    // never changes. Automatically invisible in fight mode for free — a
+    // board's own .aw-topbar collapses to 0 height there (app.css).
+    if (ui.sloganSlot) ui.sloganSlot.textContent = "ANAGRAM IN ANDREW CLASSES";
     const opt = activity.options || {};
     const mode = opt.anagramMode === "submit" ? "submit"
       : opt.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
@@ -485,6 +557,25 @@ const anagramTemplate = {
       // below) never reports back and creates a relay loop.
       if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: glowing });
     }
+    // Đợt 134 (bug fix, teacher: "2 loa lệch màu... 1 cái xanh dương, 1 cái
+    // xanh lá") — paints CURRENT_LISTEN_BTN to match a voice state snapshot.
+    // Used two ways: as the PUSH target (ctl.attach's syncVoice, called by
+    // fight.js's reportVoiceState the moment the speaking board's glow/
+    // equalizer changes) AND as the PULL target (called directly, right after
+    // this board builds its OWN currentListenBtn in render() — see below).
+    // The push alone used to silently drop a state change that landed in the
+    // narrow window where this board's currentListenBtn was momentarily null
+    // (mid-render, between the reset at the top of render() and the new
+    // button being built) — the pull closes that gap by asking fight.js
+    // "what's true RIGHT NOW" instead of only reacting to being told.
+    function applyVoiceState(state) {
+      if (!currentListenBtn || !state) return;
+      if (state.playing !== undefined) setListenGlow(currentListenBtn, state.playing);
+      if (state.levels) {
+        const bars = currentListenBtn.querySelectorAll(".aw-anagram-eq-bar");
+        bars.forEach((bar, i) => { if (state.levels[i] != null) bar.style.setProperty("--h", state.levels[i]); });
+      }
+    }
 
     // ----- Equalizer visualizer (Đợt 132, teacher) -----
     // A few CSS bars (`.aw-anagram-eq-bar`, children of the listen button
@@ -531,7 +622,11 @@ const anagramTemplate = {
       catch { return; }   // e.g. this exact element was already wired once — degrade silently
       const analyser = ctx.createAnalyser();
       analyser.fftSize = 64;             // few, chunky bins — "màu đơn giản", not a fine spectrum
-      analyser.smoothingTimeConstant = 0.55;
+      // Đợt 134 (teacher: "độ dao động nhạy hơn") — less smoothing (was 0.55)
+      // means each 70ms sample reacts to the CURRENT instant rather than
+      // being dragged toward the last few frames, so a bar can visibly snap
+      // up and down with the voice instead of drifting slowly.
+      analyser.smoothingTimeConstant = 0.35;
       source.connect(analyser);
       analyser.connect(ctx.destination);
       eqSource = source; eqAnalyser = analyser;
@@ -546,7 +641,8 @@ const anagramTemplate = {
         bars.forEach((bar, i) => {
           let sum = 0;
           for (let j = i * perBar; j < i * perBar + perBar; j++) sum += eqData[j] || 0;
-          const level = +(sum / perBar / 255).toFixed(2);
+          const raw = sum / perBar / 255;
+          const level = Math.min(1, +(Math.pow(raw, EQ_CURVE) * EQ_GAIN).toFixed(2));
           bar.style.setProperty("--h", level);
           levels.push(level);
         });
@@ -602,16 +698,13 @@ const anagramTemplate = {
       voiceAudioEl.play().catch(() => { setListenGlow(voiceBtnEl, false); stopEqualizer(); });   // e.g. autoplay blocked — fails silently, tap still works
     }
 
-    // The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89) was dropped on 12/8/2026
-    // then brought BACK on 12/8/2026 (Đợt 132, teacher: wants it on both a
-    // single board and a fight — two boards showing two slogans is fine this
-    // time). It does NOT reuse crossword's approach (a child of `.aw-topbar`,
-    // appended once in mount()) because in FIGHT MODE `.aw-topbar` is hidden
-    // per board (core/fight.js draws its own shared strip instead) — a slogan
-    // parked there would be invisible in exactly the mode the teacher most
-    // wants it in. Instead it's a normal flex child INSIDE `.aw-anagram-card`,
-    // rebuilt every render() like everything else in this file, which is
-    // visible in both modes for free and needs no separate fight-mode branch.
+    // The "ANAGRAM IN ANDREW CLASSES" slogan: Đợt 89 added it as a card child,
+    // Đợt 132 kept it there but wanted it visible in fight too, Đợt 134
+    // (teacher) reversed that: SINGLE only, and truly on the timer/score row
+    // rather than inside the question card — see ui.sloganSlot, set once in
+    // mount() above. That slot lives on the per-board `.aw-topbar`, which
+    // fight mode already collapses to 0 height (app.css), so "hidden in
+    // fight" comes for free with no separate branch here.
 
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
     renderLives();
@@ -740,6 +833,13 @@ const anagramTemplate = {
         listenBtn.append(eqEl);
         listenBtn.onclick = () => handleListenTap(it.src.voice, listenBtn);
         currentListenBtn = listenBtn;
+        // Đợt 134 (bug fix) — the MIRROR board (never the speaking one, which
+        // owns the real playback and has nothing to pull) asks fight.js for
+        // the CURRENT voice state the instant its own button exists, instead
+        // of only waiting for the next push. Closes the exact gap that used
+        // to leave this board showing the wrong glow color for a whole clip
+        // when a push landed while currentListenBtn was still null.
+        if (fightCtl && !fightCtl.speaks(fightSide)) applyVoiceState(fightCtl.voiceState());
         clueEl.append(listenBtn);
         // Auto-play the moment this word opens (teacher's request,
         // 10/8/2026) — safe to call unconditionally here since render()
@@ -766,14 +866,13 @@ const anagramTemplate = {
         }
       }
       firstWordRendered = true;
-      // Slogan row (see mount()'s header comment above) — a real flex child,
-      // first in the card, so its own height + margin also buys the listen
-      // button's glow ring some breathing room at the very top of the stage
-      // (teacher, 12/8/2026: the ring used to poke past `.aw-playarea`'s
-      // `overflow:hidden` and get clipped). Counted in autoFit's `measure`
-      // below like every other fixed-height piece of this card.
-      const sloganEl = el("div", "aw-anagram-slogan", "ANAGRAM IN ANDREW CLASSES");
-      card.append(sloganEl);
+      // The slogan used to be the card's first child here, and its height +
+      // margin doubled as breathing room for the listen button's glow ring at
+      // the very top of the stage (teacher, 12/8/2026: the ring used to poke
+      // past `.aw-playarea`'s `overflow:hidden` and get clipped). Now that the
+      // slogan lives on the timer/score row instead (Đợt 134, see mount()),
+      // `.aw-anagram-card`'s own `padding-top` keeps that same headroom — see
+      // `cardPaddingTop` in autoFit's `measure` below.
       card.append(clueEl);
 
       // Flexible slack, split 1:2 — see anagram.css's comment on these two
@@ -870,10 +969,10 @@ const anagramTemplate = {
       const revealMarginTop = revealSlot ? parseFloat(getComputedStyle(revealSlot).marginTop) || 0 : 0;
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
       const cardPaddingBottom = parseFloat(getComputedStyle(card).paddingBottom) || 0;
-      const sloganMarginBottom = parseFloat(getComputedStyle(sloganEl).marginBottom) || 0;
+      const cardPaddingTop = parseFloat(getComputedStyle(card).paddingTop) || 0;
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.045,
-        measure: () => sloganEl.offsetHeight + sloganMarginBottom +
+        measure: () => cardPaddingTop +
           clueEl.offsetHeight + group.offsetHeight + groupMarginBottom +
           (revealSlot ? revealSlot.offsetHeight + revealMarginTop : 0) +
           (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + cardPaddingBottom
@@ -1942,6 +2041,19 @@ const anagramTemplate = {
       if (oldValue === newValue) { ui.setScore(newValue); return; }
       scoreEl.classList.remove("aw-score-pulse"); void scoreEl.offsetWidth; // restart if still running
       scoreEl.classList.add("aw-score-pulse");
+      // Đợt 134 (teacher: "âm thanh tương ứng" khi điểm chạy tăng lên) — one
+      // pitch-glide tone spanning the exact same FLYGAIN_PULSE_MS as the
+      // count-up below (rising for a gain, falling for a loss — "submit"
+      // mode's points-off can lower the total), instead of a tick per
+      // animation frame. Reuses the app's shared synthesized-tone engine
+      // (ui.sound, core/sound.js) — no new asset, and it already respects
+      // the global mute toggle on its own.
+      ui.sound.glide({
+        freq: newValue > oldValue ? 700 : 1000,
+        freqEnd: newValue > oldValue ? 1500 : 550,
+        dur: FLYGAIN_PULSE_MS,
+        gain: 0.07
+      });
       const start = performance.now();
       const step = now => {
         const t = Math.min(1, (now - start) / FLYGAIN_PULSE_MS);
@@ -2089,17 +2201,10 @@ const anagramTemplate = {
         // The MIRROR side's half: paints glow/equalizer bars to match
         // whatever the speaking board just reported (reportVoiceState,
         // called from setListenGlow/startEqualizer above) — no real <audio>
-        // of its own. `setListenGlow` here is safe from re-reporting a loop:
-        // it only calls fightCtl.reportVoiceState() when `speaks(fightSide)`
-        // is true, which is false on this side by construction.
-        syncVoice(state) {
-          if (!currentListenBtn) return;
-          if (state.playing !== undefined) setListenGlow(currentListenBtn, state.playing);
-          if (state.levels) {
-            const bars = currentListenBtn.querySelectorAll(".aw-anagram-eq-bar");
-            bars.forEach((bar, i) => { if (state.levels[i] != null) bar.style.setProperty("--h", state.levels[i]); });
-          }
-        }
+        // of its own. See applyVoiceState above (Đợt 134) for why this is
+        // now a thin call into a shared function instead of its own copy of
+        // the logic — the PULL call in render() uses the exact same code.
+        syncVoice: applyVoiceState
       });
     }
 
