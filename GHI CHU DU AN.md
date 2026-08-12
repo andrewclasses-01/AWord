@@ -5,6 +5,48 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 130 (12/8/2026) — ⭐ LỖI THẬT: MỞ PANEL NÚT CHỨC NĂNG KHI ĐẤU THÌ KHÔNG BẤM ĐƯỢC GÌ
+⭐ CÓ SỬA CORE (`core/app.css` 1 khối + `core/engine.js` 1 chỗ). KHÔNG đụng template nào.
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+
+**Thầy báo kèm ảnh**: đang đấu, bấm Options/Template/Style thì màn tối sầm, panel hiện ra nhưng
+**bấm gì cũng không ăn** — panel tự đóng lại.
+
+### Gốc lỗi — do chính Đợt 129 gây ra: `transform` ĐẺ RA STACKING CONTEXT
+Đợt 129 gộp hàng nút vào hàng ô điểm tay, và canh giữa dọc bằng
+`position:absolute; top:50%; **transform: translateY(-50%)**`.
+⚠️ **`transform` tạo ra một stacking context mới.** Từ đó `z-index` của mọi thứ BÊN TRONG
+`.aw-fight-bottom` bị **nhốt lại trong hộp đó** — kể cả `.aw-below-center` (z-index 41) và
+`.aw-tool-panel` (z-index 42). Hộp cha lại là `z-index:auto` nên xếp lớp ngang mức 0, trong khi
+`.aw-tool-dim` (z-index **40**, nằm thẳng dưới `<body>`) ở ngoài ⇒ **tấm che phủ LÊN TRÊN panel**.
+Panel vẫn VẼ ra (nên nhìn thấy) nhưng mọi cú chạm đều rơi vào tấm che — mà tấm che có
+`onclick = đóng panel`. Đúng hiện tượng "bấm gì cũng không chỉnh được".
+
+**Đo trước khi sửa**: `document.elementFromPoint(tâm panel)` trả về **`aw-tool-dim`** (đáng lẽ phải là
+phần tử trong panel).
+
+**Sửa**: bỏ hẳn `transform`, canh giữa bằng cách kéo hộp phủ kín cả hàng rồi dùng flex:
+`left/right/top/bottom: 0` + `align-items: center`. Không còn stacking context ⇒ z-index 41/42 lại
+tính ở gốc như single mode, panel nằm trên tấm che như thiết kế ban đầu.
+**Đo sau khi sửa**: `elementFromPoint(tâm panel)` ra `aw-tpl-item`; bấm thẳng mục "Quiz" → **đổi
+template thật, cả 2 khung sang Quiz, panel đóng, tấm che biến mất**. Thử đủ 4 panel
+(Options/Template/Style/MODE) đều **chạm tới được**.
+
+### Vá kèm: panel bị bóp quá thấp khi đấu
+`openToolPanel` giới hạn chiều cao panel bằng **chiều cao stage** — hợp lý ở single mode, nhưng khi
+đấu thì "stage" là **một trong hai khung nửa bề ngang**, chỉ ~307px, nhét danh sách 17 template cao
+557px vào ⇒ thành cái khe cuộn tí xíu. Nay khi đấu thì đo **khoảng trống THẬT phía trên hàng nút**
+(`belowCenter.top - 24`, sàn 200px). Đo: 307 → **360px**, panel bắt đầu từ y=12 tức đã dùng hết chỗ
+có thể. Single mode giữ nguyên công thức cũ (zero-diff).
+
+⚠️ **Bài học ghi vào `core/HUONG DAN CORE.md`**: trong app này `z-index` của thanh công cụ và panel
+(40/41/42) là một hệ thống **phẳng, tính ở gốc tài liệu**. Bất cứ khi nào bọc chúng vào một phần tử có
+`transform`, `filter`, `opacity < 1`, `backdrop-filter`, `will-change`... là **âm thầm nhốt cả hệ
+thống lại** và tấm che sẽ leo lên trên. Triệu chứng rất dễ đọc nhầm thành "panel không bấm được" chứ
+không ai nghĩ tới xếp lớp.
+
+---
+
 ## Đợt 129 (12/8/2026) — GIẤU ĐÁP ÁN TỚI KHI CẢ 2 XONG · ĐỒNG BỘ 100% HIỆU ỨNG NEXT/BACK · GỘP HÀNG NÚT · FULLSCREEN THẬT
 ⭐ CÓ SỬA CORE (`core/fight.js` + `core/engine.js` + `core/app.css`) + Anagram + Quiz.
 ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.

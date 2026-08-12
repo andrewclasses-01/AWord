@@ -786,9 +786,17 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     toolPanelEl = el("div", "aw-tool-panel");
     buildContent(toolPanelEl);
     belowCenter.append(toolPanelEl);
-    // Cap the panel's height to the stage's own height (never taller than
-    // the 16:9 frame it floats above) and let it scroll internally past that.
-    toolPanelEl.style.maxHeight = stage.getBoundingClientRect().height + "px";
+    // Cap the panel's height so it never runs off the top of the screen, and
+    // let it scroll internally past that.
+    //  • single play: the stage's own height (never taller than the frame it
+    //    floats above) — unchanged.
+    //  • FIGHT MODE: the toolbar sits in the MIDDLE of the page, and the stage
+    //    it would measure is just ONE of two half-width boards — only ~307px,
+    //    which squeezed a 557px Template list into a stub of a scroller
+    //    (teacher, 12/8/2026). Measure the room actually above the buttons.
+    const roomAbove = belowCenter.getBoundingClientRect().top - 24;
+    toolPanelEl.style.maxHeight =
+      (fight ? Math.max(200, roomAbove) : stage.getBoundingClientRect().height) + "px";
     btn.classList.add("is-active");
     activeToolBtn = btn;
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);

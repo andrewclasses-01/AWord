@@ -5,7 +5,30 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 129) — GIẤU ĐÁP ÁN TỚI KHI CẢ 2 XONG · ĐỒNG BỘ 100%
+> Cập nhật lần cuối: **12/8/2026 (Đợt 130) — ⭐ LỖI THẬT: ĐANG ĐẤU MÀ MỞ PANEL NÚT CHỨC NĂNG
+> THÌ KHÔNG BẤM ĐƯỢC GÌ. ⭐ CÓ SỬA CORE (`app.css` 1 khối + `engine.js` 1 chỗ), KHÔNG đụng template.
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+> Thầy báo kèm ảnh: đang đấu, bấm Options/Template/Style thì màn tối sầm, panel hiện ra nhưng **bấm gì
+> cũng không ăn**, panel tự đóng. **Gốc lỗi do chính Đợt 129 gây ra**: khi gộp hàng nút vào hàng ô điểm
+> tay em canh giữa bằng `transform: translateY(-50%)` — mà **`transform` ĐẺ RA STACKING CONTEXT**, nhốt
+> `z-index` của cụm nút (41) và của panel (42) **vào trong hộp đó**; hộp cha `z-index:auto` xếp ngang
+> mức 0, còn `.aw-tool-dim` (z-index **40**) nằm thẳng dưới `<body>` ở ngoài ⇒ **tấm che phủ LÊN TRÊN
+> panel**. Panel vẫn VẼ ra nên nhìn thấy, nhưng mọi cú chạm rơi vào tấm che, mà tấm che có
+> `onclick = đóng panel`. Đo trước khi sửa: `elementFromPoint(tâm panel)` = **`aw-tool-dim`**.
+> **Sửa**: bỏ `transform`, phủ kín hàng rồi canh giữa bằng flex (`inset:0` + `align-items:center`) —
+> hết stacking context, z-index lại tính ở gốc như single mode. Đo lại: `elementFromPoint` ra
+> `aw-tpl-item`, bấm "Quiz" **đổi template thật (cả 2 khung sang Quiz, panel đóng, tấm che biến mất)**,
+> cả 4 panel Options/Template/Style/MODE đều chạm tới được; bố cục giữ nguyên (lệch dọc 0px, ô điểm tay
+> vẫn bấm được). **Vá kèm**: panel bị giới hạn chiều cao theo "stage", mà khi đấu stage là MỘT khung nửa
+> bề ngang (~307px) nên danh sách 17 template cao 557px bị bóp thành khe cuộn tí xíu → khi đấu đo
+> **khoảng trống thật phía trên hàng nút** (307 → **360px**); single mode giữ nguyên.
+> ⚠️ **Bài học đã ghi vào `core/HUONG DAN CORE.md`**: z-index 40/41/42 của tấm che/thanh công cụ/panel
+> là hệ thống **phẳng tính ở gốc tài liệu** — bọc chúng vào phần tử có `transform`/`filter`/`opacity<1`/
+> `backdrop-filter`/`will-change` là **âm thầm nhốt cả hệ thống** và tấm che leo lên trên; triệu chứng
+> rất dễ đọc nhầm thành "panel hỏng" chứ không ai nghĩ tới xếp lớp.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 130.
+>
+> Trước đó: **12/8/2026 (Đợt 129) — GIẤU ĐÁP ÁN TỚI KHI CẢ 2 XONG · ĐỒNG BỘ 100%
 > HIỆU ỨNG NEXT/BACK · GỘP HÀNG NÚT · ⭐ FULLSCREEN THẬT. ⭐ CÓ SỬA CORE (`fight.js` + `engine.js` +
 > `app.css`) + Anagram + Quiz. ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
 > (1) ⭐ **Giấu ✓/✗ của đội xong trước cho tới khi đội kia xong.** Đợt 128 cho đội sai "hiện phản hồi

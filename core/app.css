@@ -2198,9 +2198,16 @@ body {
    with the two hand-point boxes instead of sitting on a line of its own. */
 .aw-fight-bottom {
   position: absolute;
-  left: 0; right: 0; top: 50%;
-  transform: translateY(-50%);
+  /* ⚠️ Stretched to the full row and centred with `align-items`, NOT with
+     `top:50%; transform:translateY(-50%)`. A `transform` CREATES A STACKING
+     CONTEXT, which trapped the tool panel's z-index:42 and the button row's
+     z-index:41 inside this box — so `.aw-tool-dim` (z-index 40, a sibling out
+     at the root) painted OVER the open panel and swallowed every click on it.
+     Symptom: opening Options/Template/Style dimmed the screen and the panel
+     could not be used at all (teacher, 12/8/2026). */
+  left: 0; right: 0; top: 0; bottom: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
   /* ⚠️ The bar is min(1000px,…) wide and therefore lies straight ACROSS both
      hand-point boxes, which sit at roughly the 25%/75% marks. Without this it

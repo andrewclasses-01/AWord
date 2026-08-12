@@ -1162,6 +1162,23 @@ NGOÀI khung) phải làm nền khung tối đi + nhoè nhẹ VÀ tạm dừng t
 chuyển động) — không chỉ che bằng hình. Đóng menu (bấm "Resume" hoặc bấm ra ngoài) thì mọi thứ chạy tiếp
 đúng chỗ đã dừng, không nhảy cóc thời gian.
 
+### 0. ⚠️⚠️ BẪY XẾP LỚP: ĐỪNG BỌC THANH CÔNG CỤ / PANEL VÀO PHẦN TỬ CÓ `transform` (Đợt 130)
+
+`z-index` của bộ ba này là một hệ thống **PHẲNG, tính ở GỐC tài liệu**:
+`.aw-tool-dim` **40** (con của `<body>`) · `.aw-below-center` **41** · `.aw-tool-panel` **42**.
+Tấm che nằm dưới cụm nút và panel — nhờ đó vẫn bấm được chúng khi panel đang mở.
+
+⚠️ Bọc cụm nút/panel vào một phần tử có **`transform`** (hoặc `filter`, `opacity < 1`,
+`backdrop-filter`, `will-change`, `contain:paint`…) là **ĐẺ RA STACKING CONTEXT MỚI** ⇒ z-index 41/42
+bị **nhốt bên trong** hộp đó; hộp cha thường là `z-index:auto` (xếp ngang mức 0) nên **tấm che 40 leo
+lên TRÊN panel**. Panel vẫn VẼ ra bình thường (nhìn thấy rõ) nhưng **mọi cú chạm rơi vào tấm che**, mà
+tấm che có `onclick = đóng panel` ⇒ **"bấm gì cũng không ăn, panel tự đóng"**.
+
+Đã cắn thật ở Đợt 129→130: `.aw-fight-bottom` canh giữa dọc bằng `top:50%; transform:translateY(-50%)`.
+Cách canh giữa AN TOÀN: phủ kín (`left/right/top/bottom: 0`) rồi `display:flex; align-items:center`.
+**Cách soi nhanh khi nghi ngờ**: `document.elementFromPoint(tâm panel)` — ra `aw-tool-dim` là dính bẫy
+này, ra phần tử trong panel là lành.
+
 ### 1. `.aw-stage-dim` — CHỈ tối khung game, KHÁC `.aw-tool-dim`
 
 `.aw-tool-dim` (Options/Template/Style) làm tối **toàn màn hình** kể cả thanh dưới khung (title +
