@@ -8,7 +8,11 @@
 > Cập nhật lần cuối: **12/8/2026 (Đợt 122) — ⭐⭐ NẠP TRƯỚC TOÀN BỘ RỒI MỚI CHO BẤM PLAY (giọng đọc +
 > âm thanh + ảnh của game), có ĐỆM CACHE 1 NGÀY cho clip giọng. ⭐ CÓ SỬA CORE (`engine.js` +
 > `registry.js` + `sfx.js` + `voice-clips.js`) + 5 template khai `preloadImages`.
-> ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.**
+> ✅ THẦY DUYỆT → COMMIT `5b9f8ec` + PUSH + **LIVE** tại `https://aword.andrewclasses.com/`
+> (`curl` xác nhận trên chính bản LIVE: `engine.js` có `prepareBeforePlay`+`PREP_TIMEOUT_MS`,
+> `registry.js` có `cssImageUrls`+`preloadImages`, `sfx.js` có `whenAllPacksPrimed`, `voice-clips.js`
+> có `aword-voice-v1`+`collectVoiceIds`; chạy thật Gameshow trên LIVE: PLAY chỉ hiện khi pack báo
+> `ready 46/46`, 7 ảnh nạp trước, Cache Storage có mặt).**
 > Thầy hỏi act tải kiểu gì → trả lời: **lai** (chữ tải hết trước, giọng tải dần). Thầy yêu cầu nạp
 > trước trọn gói để *"chơi mượt dù chơi với tốc độ rất cao"*. Đo trước khi làm: xấu nhất **~3,2MB**
 > (thường 0,5–1,5MB) — nhẹ vậy là **nhờ Đợt 121 nén giọng còn 12KB/từ**.

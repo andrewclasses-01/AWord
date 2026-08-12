@@ -82,6 +82,22 @@ Trọn gói (giọng + tiếng + ảnh) · giữ cache **1 ngày** · áp cho **
 - **Chưa test trên `play.html`** vì cần mã bài giao thật. Cùng một `startGame()` nên rủi ro thấp,
   nhưng nghiệm thu nên bấm thử 1 link HS.
 
+### 7. ✅ COMMIT + PUSH + LIVE
+**Commit `5b9f8ec`** (12 file, +638/−51) → push `ca1f199..5b9f8ec` → **LIVE** tại
+`https://aword.andrewclasses.com/`.
+
+`curl` xác nhận trên chính bản LIVE (tất cả HTTP 200): `core/engine.js` có `prepareBeforePlay` +
+`PREP_TIMEOUT_MS` · `core/registry.js` có `cssImageUrls` + `preloadImages` · `core/sfx.js` có
+`whenAllPacksPrimed` · `core/voice-clips.js` có `aword-voice-v1` + `collectVoiceIds` ·
+`maze-chase.js` / `speaking-cards.js` có `preloadImages` · `whack-a-mole.js` có `JS_IMAGES`.
+
+Chạy thật trên bản LIVE (Gameshow, Chrome): PLAY chỉ hiện sau khi pack báo **`ready 46/46`**, 7 ảnh
+đã nạp trước, **Cache Storage có mặt** (https nên là ngữ cảnh bảo mật — chi tiết đáng nhớ: mở bằng
+`file://` thì tầng đệm 2 tự tắt, code vẫn chạy).
+
+⚠️ Đánh số 122 chốt **sau** `git pull` (đúng luật rút ra từ Đợt 121) — lần này không có phiên song
+song nào chen vào.
+
 ## Đợt 121 (12/8/2026) — GIỌNG ĐỌC NÉN MP3 48k (NHẸ ~15 LẦN) + XOÁ SẠCH KHO AUDIO WAV CŨ
 
 Thầy yêu cầu nghiên cứu việc đưa dữ liệu nặng (audio, sau này có thể cả ảnh) lên Firebase Storage.
