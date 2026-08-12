@@ -659,26 +659,51 @@ body {
 /* min-width:0 lets both flexible tracks shrink to an EQUAL share even when the
    title text is long — otherwise its min-content width skews the grid and the
    center cluster drifts off-center (a long title "wins" more space than the
-   short icon group on the right, which has almost no min-content). */
+   short icon group on the right, which has almost no min-content).
+   ⚠️ Đợt 132: `justify-self` on this pair used to be `start`/`end` — but
+   that sizes a grid item to its OWN content ("max-content"), not its track,
+   and only then slots that box against the track's start/end edge. A long
+   title's content box could end up WIDER than the 1fr track `min-width:0`
+   computed for it and spill straight into the centre cluster — narrower
+   windows just made the track thinner, so the same overflow got worse. Left
+   at the default `stretch` (i.e. not set at all) the item's box IS the
+   track's own width, and `text-align`/`justify-content` below do the exact
+   same "hug this edge" job from safely inside it — `overflow:hidden` on the
+   title can then actually clip, which it never reliably could before. */
 .aw-below-left, .aw-below-right { min-width: 0; }
-.aw-below-left { justify-self: start; text-align: left; margin-left: 6%; }   /* inset the act name from the edge */
+.aw-below-left { text-align: left; margin-left: 6%; }   /* inset the act name from the edge */
+/* Đợt 132 (teacher): title + toolbar buttons used to be fixed px, so resizing
+   the window/pane shrank `.aw-stage` (it's `width:100%` of `.aw-page`, which
+   is itself capped at 1000px, see below) while this row's own content stayed
+   the SAME size — once the row got narrower than its buttons' fixed min-
+   content width, they started overlapping the title/centre cluster. `vw` is
+   the right driver here (not `cqw`): `cqw` only means something INSIDE
+   `.aw-stage`'s own container-query scope (core/HUONG DAN CORE.md), and this
+   row is a SIBLING of the stage, not a descendant of it. `clamp()`'s own max
+   term reproduces the old fixed size once the viewport is wide enough that
+   `.aw-page`'s 1000px cap is what's actually limiting things — nothing
+   changes for anyone already comfortable today. */
 .aw-below-title {
-  font-size: 24px; font-weight: 800; color: #23303e;
+  font-size: clamp(13px, 3.6vw, 24px); font-weight: 800; color: #23303e;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.aw-below-desc { color: #6b7a90; margin-top: 4px; font-size: 15px; font-weight: 500; }
+.aw-below-desc { color: #6b7a90; margin-top: 4px; font-size: clamp(9px, 2.2vw, 15px); font-weight: 500; }
 .aw-activity-type {
   display: inline-block; background: #eaf2fb; color: #2f7bff; font-weight: 700;
   font-size: 12px; padding: 3px 12px; border-radius: 999px; text-transform: uppercase; margin-bottom: 8px;
 }
 
 .aw-below-center { justify-self: center; position: relative; z-index: 41; display: flex; gap: 10px; }
-.aw-below-right { justify-self: end; display: flex; gap: 8px; margin-right: 6%; }   /* inset the function buttons from the edge */
+.aw-below-right { display: flex; justify-content: flex-end; gap: 8px; margin-right: 6%; }   /* inset the function buttons from the edge; justify-content (not justify-self:end) keeps the box AT the track's own width — see the Đợt 132 comment on .aw-below-left */
 
 /* Square rounded icon buttons — shared by both the center cluster and the
    right-side utility icons. */
 .aw-toolbtn {
-  width: 44px; height: 44px;
+  /* clamp() min chosen so the row of up to ~9 buttons (Options/Template/
+     Style/Edit/Assignment/Print/Home, see the "default" comment above) still
+     fits a narrow embedding pane without any two ever overlapping — a real
+     floor, not just "small", since these stay tap targets on touch screens. */
+  width: clamp(30px, 5.5vw, 44px); height: clamp(30px, 5.5vw, 44px);
   border-radius: 13px;
   border: 1.5px solid #e2e9f2;
   background: #fff;
@@ -688,7 +713,9 @@ body {
   box-shadow: 0 2px 6px rgba(31,42,68,.07);
   transition: box-shadow .15s ease, color .15s ease, border-color .15s ease, transform .08s ease;
 }
-.aw-toolbtn svg { width: 22px; height: 22px; }
+/* % of the button's OWN (now-responsive) size, not a second clamp() to keep
+   in sync by hand — 22/44 = 50%, the exact ratio this always was. */
+.aw-toolbtn svg { width: 50%; height: 50%; }
 .aw-toolbtn:hover { color: #2f7bff; border-color: #bcd6fb; }
 .aw-toolbtn:active { transform: scale(.94); }
 /* "glow" when its panel is open */
@@ -696,8 +723,8 @@ body {
   color: #2f7bff; border-color: #2f7bff;
   box-shadow: 0 0 0 5px rgba(47,123,255,.20), 0 0 22px 2px rgba(47,123,255,.45);
 }
-.aw-toolbtn-sm { width: 38px; height: 38px; border-radius: 11px; }
-.aw-toolbtn-sm svg { width: 18px; height: 18px; }
+.aw-toolbtn-sm { width: clamp(26px, 4.8vw, 38px); height: clamp(26px, 4.8vw, 38px); border-radius: 11px; }
+.aw-toolbtn-sm svg { width: 47%; height: 47%; }
 
 /* ---------- Popover system: dim the whole screen, panel centered under the cluster ---------- */
 .aw-tool-dim {
@@ -711,9 +738,15 @@ body {
   z-index: 42;
   background: #fff; border-radius: 16px;
   box-shadow: 0 20px 50px rgba(15,20,30,.35);
-  padding: 18px 22px 20px;
-  width: max-content; min-width: 260px; max-width: min(88vw, 420px);
-  overflow-y: auto;
+  /* Đợt 132 (teacher): wide enough that the Timer row (None / Count up /
+     Count down + mm:ss steppers, forced onto one line — see .aw-opt-row-
+     nowrap) and Anagram's 3-choice mode row never need to wrap or scroll
+     sideways. Padding trimmed a little (was 18/22/20) to buy the TALL panels
+     (Options with many groups) a bit more room before their own maxHeight
+     (set in JS, core/engine.js's openToolPanel) forces internal scrolling. */
+  padding: 14px 20px 16px;
+  width: max-content; min-width: 260px; max-width: min(94vw, 580px);
+  overflow-y: auto; overflow-x: hidden;
   text-align: left;
   /* PURE OPACITY fade — must never animate `transform`, since this element's
      own transform:translateX(-50%) is what keeps it centered. A keyframe that
@@ -727,26 +760,76 @@ body {
   text-transform: uppercase; margin-bottom: 12px;
 }
 
-/* Options panel controls */
-.aw-opt-group { margin-bottom: 14px; }
+/* Options panel controls — spacing trimmed a little Đợt 132 (was 14px/7px;
+   teacher: shrink the gaps between options so the whole panel fits without
+   ever needing to scroll) — still comfortable, just not padded as generously. */
+.aw-opt-group { margin-bottom: 10px; }
 .aw-opt-group:last-child { margin-bottom: 0; }
 .aw-opt-label {
   font-size: 11.5px; font-weight: 800; letter-spacing: .05em; color: #8b93a1;
-  text-transform: uppercase; margin-bottom: 7px;
+  text-transform: uppercase; margin-bottom: 5px;
 }
 .aw-opt-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Đợt 132 — rows that must NEVER wrap onto a second line regardless of panel
+   width (the Timer row, Anagram's mode row): opt-in per row rather than
+   changing the base .aw-opt-row, since a row with genuinely many choices
+   (a template with a long list of extra options) should still be free to
+   wrap rather than force the whole panel wider than this file's max-width. */
+.aw-opt-row-nowrap { flex-wrap: nowrap; }
 .aw-opt-choice {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 14px; font-weight: 600; color: #23303e; cursor: pointer;
+  white-space: nowrap;
 }
 .aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
+
+/* Content Text/Voice switch (Đợt 132, teacher: "nút chuyển đẹp và mượt hơn",
+   replaces the old plain radio pair) — two big buttons sharing a track, a
+   sliding white "thumb" underneath marks which one is active. The thumb is a
+   real element (not a background-position trick) so its move is one clean
+   `transform` transition — same easing family as the rest of the app's
+   panel/menu motion (cubic-bezier(.22,.9,.3,1), see core/HUONG DAN CORE.md's
+   design-token notes). */
+.aw-opt-switch {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: #eef2f7;
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 14px;
+}
+.aw-opt-switch-thumb {
+  position: absolute; top: 4px; left: 4px;
+  width: calc(50% - 4px); height: calc(100% - 8px);
+  background: #fff;
+  border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(31,42,68,.14);
+  transition: transform .24s cubic-bezier(.22,.9,.3,1);
+  pointer-events: none;
+}
+.aw-opt-switch.is-voice .aw-opt-switch-thumb { transform: translateX(100%); }
+.aw-opt-switch-btn {
+  position: relative; z-index: 1;
+  border: none; background: transparent;
+  padding: 10px 0;
+  font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: #8b93a1;
+  cursor: pointer;
+  border-radius: 9px;
+  transition: color .18s ease;
+}
+.aw-opt-switch-btn.is-active { color: #2f7bff; }
 /* Shared numeric slider for central options (e.g. "Points off"). Template-local
    sliders keep their own prefixed classes; this is only for engine-built groups.
    Red (teacher, 3/8/2026) — it's specifically a wrong-answer deduction, same red
    as the per-template Lives sliders (e.g. true-false.css's #ef4444). */
 .aw-opt-slider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; cursor: pointer; }
 .aw-opt-slidval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #ef4444; }
-.aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; }
+.aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; transition: opacity .15s ease; }
+/* Đợt 132 (teacher): the mm:ss steppers stay on screen at all times now
+   (see the timerRow comment in core/engine.js) instead of display:none —
+   dimmed and non-interactive whenever "Count down" isn't the picked mode. */
+.aw-opt-time.is-dim { opacity: .38; pointer-events: none; }
 /* "Count down" + its m/s time fields kept together on one line so the fields
    sit to the RIGHT of the button instead of wrapping onto the next row. */
 .aw-opt-cd { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
@@ -2083,13 +2166,15 @@ body {
 }
 .aw-fight-handhalf { display: flex; justify-content: center; }
 
-/* The BOX is EXACTLY a toolbar button (.aw-toolbtn: 44x44, radius 13) so the
-   two hand boxes and the row of tool buttons read as one family across the
-   whole row (teacher, 12/8/2026 fourth pass). Blue when positive, red when
-   negative — and a negative shows the bare number with NO minus sign. */
+/* The BOX is EXACTLY a toolbar button (.aw-toolbtn: clamp(30px,5.5vw,44px),
+   radius 13 — same clamp() formula copied here on purpose, Đợt 132, so the
+   two stay the same size at every window width, not just at the old fixed
+   44px) so the two hand boxes and the row of tool buttons read as one family
+   across the whole row (teacher, 12/8/2026 fourth pass). Blue when positive,
+   red when negative — and a negative shows the bare number with NO minus sign. */
 .aw-fight-hand {
-  width: 44px;
-  height: 44px;
+  width: clamp(30px, 5.5vw, 44px);
+  height: clamp(30px, 5.5vw, 44px);
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -2115,14 +2200,17 @@ body {
 /* Fixed-height clipping window for the odometer-style slide (core/fight.js's
    animateHandSlide()) — carries the font-size so .aw-fight-handvalue can just
    `font: inherit` and the two overlapping numbers (old sliding out, new
-   sliding in) always share the exact same metrics. Sized to fill the 44px box
+   sliding in) always share the exact same metrics. Sized to fill the box
    generously (teacher: the number reads bigger than a strict scale-down of the
-   box would give) while the box itself stays button-sized. */
+   box would give) while the box itself stays button-sized. `clamp()` here is
+   the SAME box-size clamp scaled by the original 24/44 ratio (Đợt 132) — the
+   box shrinks responsively now (see .aw-fight-hand above), so a fixed 24px
+   would overflow it at narrow widths. */
 .aw-fight-handnum {
   position: relative;
   overflow: hidden;
   width: 100%;
-  font-size: 24px;
+  font-size: clamp(16px, 3vw, 24px);
   line-height: 1.2;
   height: 1.2em;
 }

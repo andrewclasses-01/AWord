@@ -27,6 +27,15 @@ import { createPool, recommendedPoolSize } from "./tts-pool.js";
 // `pool.size` more words after the click, same idea as the old one-at-a-
 // time soft-cancel just N-wide.
 //
+// `voiceId` is either a single string (every item gets the same voice — the
+// original contract, still exactly how the Excel-import panel uses this) or
+// a function `(item, index) => voiceId` (Đợt 132, Anagram editor's "Mix
+// voice" — a different voice per row, `index` being this item's position in
+// THIS `items` array so a caller can hand in a pre-computed plan array and
+// just index into it). `index` is the claim order off the shared cursor
+// below, which — since `items` here is already whatever list the caller
+// built — is stable and matches the plan the caller computed it against.
+//
 // Mutates each generated item in place (`voice`/`voiceId`/`hideText`) and
 // returns { done, failed, signedOut } — the caller decides what "signed
 // out" or a partial run means for its own UI/persistence.
@@ -42,12 +51,14 @@ export async function generateVoicesBatch(items, voiceId, { textFor, onProgress,
   async function lane() {
     while (cursor < items.length) {
       if (signedOut || (isCancelled && isCancelled())) return;
-      const it = items[cursor++];
+      const i = cursor++;
+      const it = items[i];
+      const thisVoiceId = typeof voiceId === "function" ? voiceId(it, i) : voiceId;
       const text = textFor(it);
       try {
-        const dataUrl = await pool.run(text, voiceId);
-        const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId, audioDataUrl: dataUrl });
-        it.voice = id; it.voiceId = voiceId; it.hideText = true;
+        const dataUrl = await pool.run(text, thisVoiceId);
+        const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId: thisVoiceId, audioDataUrl: dataUrl });
+        it.voice = id; it.voiceId = thisVoiceId; it.hideText = true;
         done++;
       } catch (e) {
         if (e && e.code === "aw/signed-out") { signedOut = true; return; }

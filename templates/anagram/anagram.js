@@ -83,6 +83,7 @@ const RESULT_BG = "#2f6fed";
 // exactly this look (used elsewhere in this file for the whole-word marks).
 
 const STAGGER_MS = 260;     // ms — gap between each position's reveal in "submit" mode
+const EQ_BAR_COUNT = 4;     // Đợt 132 — equalizer bars beside the listen button
 
 // Shared "settle" easing for every tile flight (letter placement, swap,
 // return-to-origin) — a mild spring overshoot instead of flat ease-in-out,
@@ -223,7 +224,11 @@ const anagramTemplate = {
   buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
     const gMode = el("div", "aw-opt-group");
     gMode.append(el("div", "aw-opt-label", "Anagram mode"));
-    const rowMode = el("div", "aw-opt-row");
+    // nowrap (Đợt 132, teacher: "mở rộng đủ để hiện các mode ANAGRAM mà ko
+    // cần xuống dòng") — matches core/engine.js's Timer row, same reasoning:
+    // the panel is now wide enough (core/app.css) to actually fit this on
+    // one line.
+    const rowMode = el("div", "aw-opt-row aw-opt-row-nowrap");
     const curMode = draft.anagramMode === "submit" ? "submit"
       : draft.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
 
@@ -467,9 +472,72 @@ const anagramTemplate = {
     function setListenGlow(btn, glowing) {
       if (btn) btn.classList.toggle("is-playing", glowing);
     }
+
+    // ----- Equalizer visualizer (Đợt 132, teacher) -----
+    // A few CSS bars (`.aw-anagram-eq-bar`, children of the listen button
+    // itself — see render()) driven by a REAL AnalyserNode on whatever clip
+    // is currently playing, not a canned CSS loop — teacher's ask was "nhảy
+    // theo đúng âm lượng thật". One shared AudioContext for the whole play
+    // (created lazily — browsers refuse an AudioContext before any user
+    // gesture, and the very first word can auto-play before one exists).
+    // `setInterval`, not `requestAnimationFrame`: rAF freezes solid while the
+    // tab/pane is backgrounded (documented trap, see core/HUONG DAN CORE.md)
+    // — the clip would keep playing with the bars frozen mid-jump instead of
+    // just running a little chunkier, which is the worst of both.
+    let audioCtx = null;
+    function ensureAudioCtx() {
+      if (audioCtx) return audioCtx;
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      audioCtx = Ctx ? new Ctx() : null;
+      return audioCtx;
+    }
+    let eqTimer = null, eqAnalyser = null, eqSource = null, eqData = null;
+    function stopEqualizer() {
+      if (eqTimer) { clearInterval(eqTimer); eqTimer = null; }
+      // Disconnect rather than just drop the reference — an AnalyserNode left
+      // wired to `ctx.destination` stays part of the audio graph forever
+      // otherwise, and a long play (dozens of words, one clip each) would
+      // pile up that many silently-connected nodes by the end.
+      if (eqAnalyser) { try { eqAnalyser.disconnect(); } catch { /* already gone */ } eqAnalyser = null; }
+      if (eqSource) { try { eqSource.disconnect(); } catch { /* already gone */ } eqSource = null; }
+    }
+    // `audioEl` MUST be routed analyser -> ctx.destination or the clip goes
+    // SILENT: `createMediaElementSource` hands the element's whole output to
+    // the Web Audio graph, and nothing plays through the normal <audio> path
+    // once that happens — the graph itself is now the only way out to
+    // speakers. A button with no `.aw-anagram-eq-bar` children (there isn't
+    // one today, but keep this defensive) or a browser with no Web Audio at
+    // all just skips the visualizer; playback itself never depends on it.
+    function startEqualizer(audioEl, btn) {
+      stopEqualizer();
+      const ctx = ensureAudioCtx();
+      const bars = btn ? btn.querySelectorAll(".aw-anagram-eq-bar") : null;
+      if (!ctx || !bars || !bars.length) return;
+      let source;
+      try { source = ctx.createMediaElementSource(audioEl); }
+      catch { return; }   // e.g. this exact element was already wired once — degrade silently
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 64;             // few, chunky bins — "màu đơn giản", not a fine spectrum
+      analyser.smoothingTimeConstant = 0.55;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      eqSource = source; eqAnalyser = analyser;
+      eqData = new Uint8Array(analyser.frequencyBinCount);
+      const perBar = Math.max(1, Math.floor(eqData.length / bars.length));
+      eqTimer = setInterval(() => {
+        analyser.getByteFrequencyData(eqData);
+        bars.forEach((bar, i) => {
+          let sum = 0;
+          for (let j = i * perBar; j < i * perBar + perBar; j++) sum += eqData[j] || 0;
+          bar.style.setProperty("--h", (sum / perBar / 255).toFixed(2));
+        });
+      }, 70);
+    }
+
     function stopVoiceClip() {
       if (voiceAudioEl) voiceAudioEl.pause();
       setListenGlow(voiceBtnEl, false);
+      stopEqualizer();
     }
     // Tap handler: playing -> stop; anything else (stopped, or a fresh
     // word's first play) -> (re)play from the top.
@@ -489,20 +557,25 @@ const anagramTemplate = {
     }
     function startVoicePlayback(dataUrl, btn) {
       if (voiceAudioEl) { voiceAudioEl.pause(); setListenGlow(voiceBtnEl, false); }
+      stopEqualizer();
       voiceAudioEl = new Audio(dataUrl);
       voiceBtnEl = btn || null;
-      voiceAudioEl.addEventListener("ended", () => setListenGlow(voiceBtnEl, false));
+      voiceAudioEl.addEventListener("ended", () => { setListenGlow(voiceBtnEl, false); stopEqualizer(); });
       setListenGlow(voiceBtnEl, true);
-      voiceAudioEl.play().catch(() => setListenGlow(voiceBtnEl, false));   // e.g. autoplay blocked — fails silently, tap still works
+      startEqualizer(voiceAudioEl, voiceBtnEl);
+      voiceAudioEl.play().catch(() => { setListenGlow(voiceBtnEl, false); stopEqualizer(); });   // e.g. autoplay blocked — fails silently, tap still works
     }
 
-    // The "ANAGRAM IN ANDREW CLASSES" slogan that used to sit centred on the top
-    // bar was dropped on 12/8/2026 (teacher) — in a fight it appeared twice, one
-    // per board, and it was clutter on a single board too. CSS for it is gone
-    // from anagram.css as well; crossword/speaking-cards keep their own.
-    // (The `topbar` lookup and its position:relative went with it — cleanup()
-    // must not reference them either, or it throws mid-teardown.)
-    const sloganEl = null;
+    // The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89) was dropped on 12/8/2026
+    // then brought BACK on 12/8/2026 (Đợt 132, teacher: wants it on both a
+    // single board and a fight — two boards showing two slogans is fine this
+    // time). It does NOT reuse crossword's approach (a child of `.aw-topbar`,
+    // appended once in mount()) because in FIGHT MODE `.aw-topbar` is hidden
+    // per board (core/fight.js draws its own shared strip instead) — a slogan
+    // parked there would be invisible in exactly the mode the teacher most
+    // wants it in. Instead it's a normal flex child INSIDE `.aw-anagram-card`,
+    // rebuilt every render() like everything else in this file, which is
+    // visible in both modes for free and needs no separate fight-mode branch.
 
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
     renderLives();
@@ -586,6 +659,15 @@ const anagramTemplate = {
       // place that rule lives; never read it.src.hideText directly.
       const vv = voiceView(activity, it.src);
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
+      // Đợt 132 (teacher): in TEXT mode the clue is fully written out, so the
+      // manual listen button is now dropped entirely rather than kept as a
+      // "still tap it if you want" extra — a scoped reversal of Đợt 123's
+      // original call (documented there as "the small listen button stays"),
+      // just for Anagram. Reads `contentMode` directly rather than through
+      // `voiceView()` because `vv.hideText` alone can't tell "explicit Text"
+      // apart from "AUTO, and this item happens to have hideText:false" —
+      // AUTO must keep showing the button exactly as it always has.
+      const textMode = activity.options?.contentMode === "text";
       // Hide text (10/8/2026, revised 10/8/2026): when ON, the Clue never
       // appears in any form — teacher's request was "just ONE big centered
       // listen button standing where the question normally sits, nothing
@@ -603,10 +685,22 @@ const anagramTemplate = {
       // after the clue text normally (not absolutely positioned, see the
       // comment on .aw-anagram-listenbtn in the CSS for why), or the box's
       // SOLE child, larger, when hideText has left the box textless.
-      if (hasVoice) {
-        const listenBtn = el("button", "aw-anagram-listenbtn" + (hideText ? " aw-anagram-listenbtn-lg" : ""), icons.soundOn);
+      if (hasVoice && !textMode) {
+        // Đợt 132 (teacher): the speaker is now ONE cluster — icon on the
+        // left, equalizer bars on the right — and the whole thing is a
+        // SINGLE `<button>` rather than two separately-clickable pieces.
+        // That was a deliberate choice over a wrapper `<div>` holding two
+        // click targets: two `onclick` handlers on nested elements both
+        // reachable by the same tap would fire TWICE (bubbling), toggling
+        // play then immediately stop — one button, one handler, sidesteps
+        // that bug entirely and "bấm vào cái nào cũng được" is true for free.
+        const listenBtn = el("button", "aw-anagram-listenbtn" + (hideText ? " aw-anagram-listenbtn-lg" : ""));
         listenBtn.type = "button";
         listenBtn.setAttribute("aria-label", "Listen to pronunciation");
+        listenBtn.append(el("span", "aw-anagram-listenicon", icons.soundOn));
+        const eqEl = el("span", "aw-anagram-eq");
+        for (let i = 0; i < EQ_BAR_COUNT; i++) eqEl.append(el("span", "aw-anagram-eq-bar"));
+        listenBtn.append(eqEl);
         listenBtn.onclick = () => toggleVoiceClip(it.src.voice, listenBtn);
         clueEl.append(listenBtn);
         // Auto-play the moment this word opens (teacher's request,
@@ -634,6 +728,14 @@ const anagramTemplate = {
         }
       }
       firstWordRendered = true;
+      // Slogan row (see mount()'s header comment above) — a real flex child,
+      // first in the card, so its own height + margin also buys the listen
+      // button's glow ring some breathing room at the very top of the stage
+      // (teacher, 12/8/2026: the ring used to poke past `.aw-playarea`'s
+      // `overflow:hidden` and get clipped). Counted in autoFit's `measure`
+      // below like every other fixed-height piece of this card.
+      const sloganEl = el("div", "aw-anagram-slogan", "ANAGRAM IN ANDREW CLASSES");
+      card.append(sloganEl);
       card.append(clueEl);
 
       // Flexible slack, split 1:2 — see anagram.css's comment on these two
@@ -730,9 +832,11 @@ const anagramTemplate = {
       const revealMarginTop = revealSlot ? parseFloat(getComputedStyle(revealSlot).marginTop) || 0 : 0;
       const btnMarginTop = submitBtnEl ? parseFloat(getComputedStyle(submitBtnEl).marginTop) || 0 : 0;
       const cardPaddingBottom = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+      const sloganMarginBottom = parseFloat(getComputedStyle(sloganEl).marginBottom) || 0;
       fitter = autoFit(root, card, s => card.style.setProperty("--fit", s), {
         slack: root.clientWidth * 0.045,
-        measure: () => clueEl.offsetHeight + group.offsetHeight + groupMarginBottom +
+        measure: () => sloganEl.offsetHeight + sloganMarginBottom +
+          clueEl.offsetHeight + group.offsetHeight + groupMarginBottom +
           (revealSlot ? revealSlot.offsetHeight + revealMarginTop : 0) +
           (submitBtnEl ? submitBtnEl.offsetHeight + btnMarginTop : 0) + cardPaddingBottom
       });
@@ -1957,8 +2061,8 @@ const anagramTemplate = {
       activeFlyNodes.forEach(n => n.remove());
       activeFlyNodes.clear();
       if (voiceAudioEl) voiceAudioEl.pause();
+      stopEqualizer();
       if (ui.livesSlot) ui.livesSlot.innerHTML = "";
-      if (sloganEl) sloganEl.remove();
     };
   }
 };

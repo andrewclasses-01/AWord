@@ -801,16 +801,18 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     buildContent(toolPanelEl);
     belowCenter.append(toolPanelEl);
     // Cap the panel's height so it never runs off the top of the screen, and
-    // let it scroll internally past that.
-    //  • single play: the stage's own height (never taller than the frame it
-    //    floats above) — unchanged.
-    //  • FIGHT MODE: the toolbar sits in the MIDDLE of the page, and the stage
-    //    it would measure is just ONE of two half-width boards — only ~307px,
-    //    which squeezed a 557px Template list into a stub of a scroller
-    //    (teacher, 12/8/2026). Measure the room actually above the buttons.
+    // let it scroll internally past that — but the cap itself is the ACTUAL
+    // room above the toolbar (viewport top to `belowCenter`), not the stage's
+    // own height. That distinction used to matter only in FIGHT MODE, where
+    // the stage is just ONE of two half-width boards — measuring it gave a
+    // squeezed ~307px scroller for a 557px Template list (teacher, 12/8/2026,
+    // Đợt 130). Đợt 132 (teacher: "tăng tối đa chiều dọc… không bao giờ cần
+    // scroll dọc, có thể đè lên nút tùy chỉnh nếu cần"): the same measurement
+    // is simply MORE room than the stage's own height in single mode too —
+    // there was never a reason to leave it capped tighter there. Applying it
+    // everywhere is a strict increase, nothing shrinks for anyone.
     const roomAbove = belowCenter.getBoundingClientRect().top - 24;
-    toolPanelEl.style.maxHeight =
-      (fight ? Math.max(200, roomAbove) : stage.getBoundingClientRect().height) + "px";
+    toolPanelEl.style.maxHeight = Math.max(200, roomAbove) + "px";
     btn.classList.add("is-active");
     activeToolBtn = btn;
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
@@ -828,31 +830,46 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     const base = activity.options || {};
     const draft = { ...base };
 
-    panel.append(el("div", "aw-tool-panel-head", "Options"));
+    // Đợt 132 (teacher): the "OPTIONS" heading is gone — for EVERY template,
+    // not just acts with a Content switch (below) to replace it — the panel
+    // now just starts with its first real group. One line, one place: no
+    // per-template opt-out needed since every panel goes through this one
+    // function.
 
-    // CONTENT (teacher, 12/8/2026) — TOPMOST group, and only for acts that
-    // actually carry spoken clips. One act now holds the written clue AND the
-    // spoken one (the old "ENG1" + "ENG1 VOICE" pair merged into a single
-    // act), so this is where the class picks which one it plays with today.
-    // The meaning of each value, and the untouched-old-act AUTO case, live in
-    // ONE place: voiceView() in core/voice-playback.js. Nothing here is
-    // template-specific — all 14 games with a listen button obey it.
+    // CONTENT (teacher, 12/8/2026, redesigned Đợt 132) — TOPMOST control, and
+    // only for acts that actually carry spoken clips. One act now holds the
+    // written clue AND the spoken one (the old "ENG1" + "ENG1 VOICE" pair
+    // merged into a single act), so this is where the class picks which one
+    // it plays with today. The meaning of each value, and the untouched-old-
+    // act AUTO case, live in ONE place: voiceView() in core/voice-
+    // playback.js. Nothing here is template-specific — all 14 games with a
+    // listen button obey it. Redesigned from a plain radio pair into a big
+    // two-button switch with a sliding thumb (teacher: "nút chuyển đẹp và
+    // mượt hơn", "bỏ chữ CONTENT") — same draft-mutation contract as before,
+    // just different markup.
     if (hasAnyVoice(activity.content || {})) {
-      const gContent = el("div", "aw-opt-group");
-      gContent.append(el("div", "aw-opt-label", "Content"));
-      const rowContent = el("div", "aw-opt-row");
       // An act saved BEFORE this option existed has no contentMode, and its
       // items may be mixed (some hideText, some not). Show the nearest of the
       // two buttons but DON'T write it into the draft — leaving contentMode
       // unset keeps the per-item AUTO behaviour byte-for-byte until the
       // teacher actually picks one.
       const shown = draft.contentMode || (hasAnyVoice(activity.content) && hasHiddenText(activity.content) ? "voice" : "text");
-      rowContent.append(
-        mkRadioChoice("aw-content", "text", "Text", shown === "text", v => draft.contentMode = v),
-        mkRadioChoice("aw-content", "voice", "Voice", shown === "voice", v => draft.contentMode = v)
-      );
-      gContent.append(rowContent);
-      panel.append(gContent);
+      const switchEl = el("div", "aw-opt-switch" + (shown === "voice" ? " is-voice" : ""));
+      switchEl.append(el("div", "aw-opt-switch-thumb"));
+      const textBtn = el("button", "aw-opt-switch-btn" + (shown === "text" ? " is-active" : ""), "Text");
+      const voiceBtn = el("button", "aw-opt-switch-btn" + (shown === "voice" ? " is-active" : ""), "Voice");
+      textBtn.type = "button"; voiceBtn.type = "button";
+      const pick = value => {
+        draft.contentMode = value;
+        switchEl.classList.toggle("is-voice", value === "voice");
+        textBtn.classList.toggle("is-active", value === "text");
+        voiceBtn.classList.toggle("is-active", value === "voice");
+        sound.click();
+      };
+      textBtn.onclick = () => pick("text");
+      voiceBtn.onclick = () => pick("voice");
+      switchEl.append(textBtn, voiceBtn);
+      panel.append(switchEl);
     }
 
     // TIMER — a template can hide this whole group (tpl.hideTimerOption) when it
@@ -862,12 +879,22 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     if (!tpl.hideTimerOption) {
       const gTimer = el("div", "aw-opt-group");
       gTimer.append(el("div", "aw-opt-label", "Timer"));
-      const timerRow = el("div", "aw-opt-row");
+      // nowrap (Đợt 132, teacher: "các mode timer luôn nằm cùng dòng, không
+      // bao giờ xuống dòng") — safe now that the panel itself is wide enough
+      // to actually fit None / Count up / Count down+mm:ss on one line (see
+      // .aw-tool-panel's widened max-width in app.css).
+      const timerRow = el("div", "aw-opt-row aw-opt-row-nowrap");
       const mkRadio = (value, label) => {
         const wrap = el("label", "aw-opt-choice");
         const r = el("input"); r.type = "radio"; r.name = "aw-timer"; r.value = value;
         r.checked = (draft.timer ?? "countUp") === value;
-        r.onchange = () => { draft.timer = value; timeFields.style.display = value === "countDown" ? "inline-flex" : "none"; };
+        // Đợt 132 (teacher): the mm:ss steppers now stay VISIBLE at all times
+        // next to "Count down" — dimmed + non-interactive when a different
+        // timer mode is picked, rather than vanishing via display:none. That
+        // also keeps the row's own width constant, which matters now that
+        // it's forced onto one line (aw-opt-row-nowrap above) — a field that
+        // popped in and out of the layout used to be able to reflow the row.
+        r.onchange = () => { draft.timer = value; timeFields.classList.toggle("is-dim", value !== "countDown"); };
         wrap.append(r, document.createTextNode(label));
         return wrap;
       };
@@ -877,7 +904,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { draft.timerTotalSeconds = v * 60 + ss.get(); });
       const ss = makeNumberStepper(total % 60, 0, 59, v => { draft.timerTotalSeconds = mm.get() * 60 + v; });
       timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
-      timeFields.style.display = (draft.timer ?? "countUp") === "countDown" ? "inline-flex" : "none";
+      timeFields.classList.toggle("is-dim", (draft.timer ?? "countUp") !== "countDown");
       // Keep "Count down" + its time fields together on one line (a no-wrap group)
       // so the fields sit to the RIGHT of the button instead of wrapping below.
       const cdGroup = el("span", "aw-opt-cd");
@@ -991,8 +1018,10 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     gEnd.append(rowEnd);
     panel.append(gEnd);
 
-    panel.append(el("div", "aw-opt-hint",
-      playOverlay.isConnected ? "Options apply when you press Play." : "Applying restarts the game with the new options."));
+    // The "Options apply when you press Play / Applying restarts the game…"
+    // hint line was dropped Đợt 132 (teacher: trim guidance text so the whole
+    // panel fits without scrolling) — the Apply button's own behaviour is
+    // unchanged, this only removed the sentence explaining it.
 
     // APPLY — only now does the draft get written into activity.options.
     // Clicking outside without pressing this discards every change above.

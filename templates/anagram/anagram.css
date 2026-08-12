@@ -26,9 +26,24 @@
   animation: aw-fadein .25s ease;
 }
 
-/* The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89) was REMOVED on 12/8/2026 at
-   the teacher's request — two boards in a fight meant two slogans, and it was
-   clutter on one board too. Crossword and Speaking cards keep their own. */
+/* The "ANAGRAM IN ANDREW CLASSES" slogan (Đợt 89, removed Đợt ~124, brought
+   back Đợt 132) — unlike crossword's copy (a child of the shared `.aw-topbar`,
+   see crossword.css), this one is a normal flex child INSIDE `.aw-anagram-card`
+   (see anagram.js render()) so it survives fight mode, where `.aw-topbar` is
+   hidden per board. `--fit`-scaled like the rest of the card so it shrinks
+   along with everything else on a long clue, and its height is folded into
+   autoFit's own `measure` — it is real layout, not a decoration on top. */
+.aw-anagram-slogan {
+  flex: 0 0 auto;
+  font-size: calc(1.5cqw * var(--fit));
+  font-weight: 300;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+  text-align: center;
+  color: var(--aw-question-fill, var(--aw-text));
+  opacity: .45;
+  margin: 0 0 1.1cqw;
+}
 
 .aw-anagram-clue {
   font-size: calc(4.4cqw * var(--fit));
@@ -65,7 +80,15 @@
    absolutely-positioned icon) AND keeps autoFit's clueEl.offsetHeight
    measurement honest (an absolutely-positioned child wouldn't count
    toward it at all). Sized in `em` so it scales with the clue's own
-   font-size (which already includes --fit) with no extra cqw math. */
+   font-size (which already includes --fit) with no extra cqw math.
+
+   Đợt 132 (teacher): the button is now a "audio cluster" pill — a small
+   round icon on the left, a few equalizer bars on the right (driven by a
+   real AnalyserNode, see anagram.js's startEqualizer()) — instead of just
+   the round icon alone. Still ONE `<button>`, so "bấm vào cái nào cũng
+   được" (tap the icon or the bars, either one toggles) is true for free —
+   see the comment on the render() call site for why this isn't two nested
+   click targets. */
 .aw-anagram-listenbtn {
   /* Buttons don't inherit font-size from their ancestors by default (they
      use the browser's UI font stack) — without this, `em` below resolves
@@ -73,22 +96,47 @@
      button renders as a near-invisible dot (caught by screenshot, 10/8/2026). */
   font: inherit;
   display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.16em;
   vertical-align: -0.18em;
-  width: 0.9em; height: 0.9em;
+  height: 0.9em;
   margin-left: 0.3em;
-  padding: 0; border: none; border-radius: 50%;
+  padding: 0 0.22em;
+  border: none; border-radius: 999px;
   background: rgba(47, 111, 237, .14);
   color: #2f6fed;
   cursor: pointer;
 }
-.aw-anagram-listenbtn svg { width: 66%; height: 66%; }
+.aw-anagram-listenicon { flex: 0 0 auto; display: flex; width: 0.62em; height: 0.62em; }
+.aw-anagram-listenicon svg { width: 100%; height: 100%; }
 .aw-anagram-listenbtn:hover { background: rgba(47, 111, 237, .24); }
-.aw-anagram-listenbtn:active { transform: scale(.9); }
+.aw-anagram-listenbtn:active { transform: scale(.94); }
 /* Larger, un-inset variant (10/8/2026) for the hide-text case — it's the
    box's ONLY child (see .aw-anagram-clue-voiceonly) instead of trailing
    after text, so it drops the text-hugging vertical-align/margin-left and
    simply grows ("to hơn một chút", teacher's words). */
-.aw-anagram-listenbtn-lg { width: 1.7em; height: 1.7em; margin-left: 0; vertical-align: middle; }
+.aw-anagram-listenbtn-lg { height: 1.7em; margin-left: 0; padding: 0 0.4em; gap: 0.28em; vertical-align: middle; }
+.aw-anagram-listenbtn-lg .aw-anagram-listenicon { width: 1.1em; height: 1.1em; }
+.aw-anagram-listenbtn-lg .aw-anagram-eq { height: 0.95em; gap: 0.15em; }
+.aw-anagram-listenbtn-lg .aw-anagram-eq-bar { width: 0.16em; }
+
+/* Equalizer bars (Đợt 132) — one `<span>` per bar, height driven purely by
+   JS setting `--h` (0..1, read straight off AnalyserNode.getByteFrequencyData,
+   see anagram.js). CSS only ever reads that number; it never invents motion
+   on its own, so there is nothing to keep "in sync" with the real audio. A
+   `max()` floor keeps a small resting nub instead of fully vanishing at
+   silence, which reads as "idle", not "broken". Colour tracks the button's
+   own `color` (blue normally, green while playing, exactly like the icon)
+   via `currentColor` — one value to change, never two. */
+.aw-anagram-eq { flex: 0 0 auto; display: flex; align-items: flex-end; height: 0.5em; gap: 0.09em; }
+.aw-anagram-eq-bar {
+  width: 0.1em; height: 100%;
+  border-radius: 0.05em 0.05em 0 0;
+  background: currentColor;
+  opacity: .8;
+  transform-origin: bottom;
+  transform: scaleY(max(0.08, var(--h, 0)));
+  transition: transform 90ms linear;
+}
 /* Playing glow (10/8/2026, teacher's request) — green pulse while the clip
    is actually sounding (auto-play on word open, or a manual replay); a
    plain CSS animation so it automatically freezes along with everything

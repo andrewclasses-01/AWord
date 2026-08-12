@@ -5,6 +5,90 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 132 (13/8/2026) — 6 CẢI TIẾN ANAGRAM: MIX VOICE · LOA+EQUALIZER · SLOGAN · TEXT ẨN LOA · KHUNG DƯỚI CO GIÃN · OPTIONS RỘNG HƠN
+⭐ CÓ SỬA CORE (`core/engine.js` + `core/app.css`, dùng chung 17 game) + Anagram
+(`anagram.js` + `anagram.css` + `anagram-editor.js`) + `core/voice-batch.js`.
+🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu + Quiz để soát không vỡ game khác), 0 lỗi console —
+**CHỜ THẦY TỰ CHƠI THỬ RỒI DUYỆT MỚI COMMIT.**
+
+Thầy gửi 1 loạt yêu cầu chia 3 nhóm (Edit / Game / Options). Đã hỏi trước 4 điểm chưa rõ (nhãn
+Male C/D trùng giọng, phạm vi hạ layout, kiểu Equalizer, phạm vi bỏ chữ OPTIONS, xác định đúng nút
+loa cần ẩn) rồi mới code.
+
+### EDIT — Mix voice ("Generate all voices")
+- Tích **Mix voice** hiện ra 4 ô chọn giọng, mặc định **Isabella / George / Alice / Fable** (đúng ý
+  thầy) — mỗi ô loại trừ giọng đã chọn ở 3 ô còn lại, làm lại danh sách mỗi lần đổi.
+- ⚠️ Đã xác nhận nghi ngờ ban đầu: kho giọng KHÔNG có giọng nào tên "Female C"/"Male C" — đó chỉ là
+  Giới tính+Hạng ghép lại, và **"Male C" trùng CẢ George lẫn Fable** (cả 2 đều Nam/Anh-Anh/hạng C).
+  Nhãn hiển thị dùng đúng kiểu app đã có sẵn: **tên thật trước** ("Isabella (Female, C)"), không đổi gì
+  khác.
+- Tích **Random** (lồng trong Mix voice) ẩn 4 ô, hiện chọn **UK/US accents** (mặc định UK) — trộn toàn
+  bộ giọng của accent đó.
+- **Thuật toán chia giọng** (`buildVoicePlan` trong `anagram-editor.js`): tính TRƯỚC một mảng giọng
+  cho cả lô (không phải tung xúc xắc từng câu — luật "Nam=Nữ" là tính chất của CẢ LÔ, tung riêng từng
+  câu không đảm bảo tổng khớp), chia Nam/Nữ chỉ lệch nhau tối đa 1 (bên lệch chọn ngẫu nhiên), rồi
+  random round-robin trong từng giới để không giọng nào bị dùng trội hơn hẳn. **Đã đo bằng 500 lần thử
+  x 27 câu**: lệch Nam/Nữ tối đa đúng **1** qua mọi lần, mỗi giọng trong 4 giọng chiếm đúng **~25%**
+  (24.9–25.1%) — cả 2 luật thầy yêu cầu đều đúng.
+- `core/voice-batch.js`'s `generateVoicesBatch(items, voiceId, ...)` nay nhận `voiceId` là **string HOẶC
+  hàm** `(item, index) => voiceId` — additive, đường cũ (Excel-import panel) không đổi 1 dòng.
+- ⚠️ Vá kèm 1 lỗi tự bắt được lúc test: bọc ngoài của khối Mix voice lúc đầu dùng TRÙNG class CSS với
+  từng hàng con bên trong (`aw-anagram-ed-voicefield`) → 1 vòng `querySelectorAll` bắt nhầm nó thành
+  1 "field" thừa. Đổi bọc ngoài sang class riêng `aw-anagram-ed-mixwrap`.
+
+### GAME — Anagram
+1. **Hào quang nút loa hết bị cắt**: gốc lỗi không phải do dải điểm/đồng hồ mà do `.aw-playarea` có
+   `overflow:hidden` và khung câu hỏi sát mép trên quá — thêm khoảng đệm (slogan mới, xem mục 2) đã đủ
+   chỗ. Đo thật: còn dư **19,96–37,8px** trước khi chạm mép cắt (đơn lẫn đấu), trước sửa đo ra CÓ
+   trường hợp cắt.
+2. **Slogan "ANAGRAM IN ANDREW CLASSES" trở lại** — cả đơn lẫn đấu (thầy chấp nhận đấu = 2 slogan như
+   trước khi bỏ). KHÔNG dùng lại cách cũ (gắn vào `.aw-topbar` như Crossword) vì `.aw-topbar` bị ẩn
+   riêng từng bàn khi đấu — slogan nay là 1 hàng thật NẰM TRONG `.aw-anagram-card`, tự dựng lại mỗi
+   `render()`, sống ở cả 2 chế độ miễn phí, và chính hàng này cũng là chỗ đệm giúp hào quang không bị
+   cắt (mục 1).
+3. **Equalizer Visualizer cạnh loa, nhảy theo ÂM LƯỢNG THẬT** (thầy chọn, không phải hiệu ứng giả):
+   dựng `AnalyserNode` thật trên đúng clip đang phát (`fftSize:64` — vài thanh to, đúng ý "màu đơn
+   giản"), đọc dữ liệu mỗi 70ms bằng `setInterval` (KHÔNG `requestAnimationFrame` — đóng băng khi tab
+   nền, bẫy đã ghi ở HUONG DAN CORE.md). Loa+equalizer nay là **MỘT `<button>` duy nhất** (icon +
+   thanh nhảy làm 2 `<span>` con) — "bấm cái nào cũng được" mà không cần 2 handler (2 handler lồng
+   nhau sẽ bắn 2 lần khi bấm, tự huỷ nhau). Đã đo thật bằng tông giả 220Hz: thanh đọc ra số **0.54,
+   0.56** (khác 0), xác nhận đường AnalyserNode chạy đúng, không phải hiệu ứng giả.
+4. **Ẩn hẳn nút loa khi chọn Content = Text** — trước đây Đợt 123 CỐ Ý giữ nút (đọc thủ công), nay đảo
+   lại theo đúng ý thầy, CHỈ RIÊNG Anagram (đọc thẳng `contentMode`, không đụng `voiceView()` dùng
+   chung 14 game khác). Chế độ AUTO (act cũ chưa từng chọn) giữ nguyên hành vi cũ, không đổi 1 pixel.
+5. **Tên act + nút chức năng co giãn theo cửa sổ** — đổi từ px cố định sang `clamp(..,vw,..)`, áp dụng
+   ở CORE nên cả 17 game đều hưởng. Vá kèm 1 lỗi ẩn liên quan: `.aw-below-left`/`-right` dùng
+   `justify-self:start/end` khiến hộp co theo NỘI DUNG thay vì theo CỘT LƯỚI — chữ dài vẫn tràn ra dù
+   font đã co nhỏ. Đổi sang mặc định `stretch` + `justify-content`/`text-align` để hộp LUÔN đúng bề
+   rộng cột, `overflow:hidden` mới cắt được thật. Đo tại 375px/480px: hết đè nhau; tại 1400px: y hệt
+   cỡ cũ (24px/44px), không ai bị đổi gì. Vá theo dây chuyền 2 chỗ khác từng cố ý khớp cỡ 44px cũ:
+   `.aw-fight-hand` (ô điểm tay) và `.aw-fight-handnum` (cỡ chữ trong đó) — nay dùng chung công thức
+   clamp() để vẫn khớp nhau ở mọi cỡ màn, không riêng 44px.
+
+### OPTIONS
+- Bề ngang tối đa `min(88vw,420px)` → **`min(94vw,580px)`**; dòng Timer và dòng "Anagram mode" khoá
+  `flex-wrap:nowrap` (class mới `.aw-opt-row-nowrap`, chỉ áp cho 2 dòng này — dòng khác vẫn được xuống
+  dòng nếu template nào đó có danh sách dài).
+- Bề dọc: bỏ cách tính cũ (chỉ đo chiều cao khung game) sang dùng chung công thức "đo khoảng trống thật
+  phía trên hàng nút" mà Đợt 130 từng làm riêng cho chế độ đấu — nay áp cho CẢ chơi đơn, tăng thật sự
+  chỗ hiển thị. Bớt khoảng cách giữa các mục (14px→10px, nhãn 7px→5px), bỏ hẳn dòng hướng dẫn "Applying
+  restarts…". Đơn: **hết cuộn dọc** (đo Apply luôn nằm trọn trong khung nhìn). ⚠️ **Đấu + Anagram vẫn
+  còn phải cuộn** khi mở đủ 12 nhóm tuỳ chọn cùng lúc (đo thật: tràn ~364px ở màn 910px cao) — đây là
+  trường hợp cực đoan (Anagram có nhiều nhóm riêng NHẤT + thêm nhóm Fight mode chỉ hiện khi đấu); đã
+  làm hết mức trong phạm vi an toàn (không đè lên nút), muốn hết cuộn tuyệt đối ở ca này phải cho phép
+  panel đè lên hàng nút thật sự — CHƯA làm, hỏi thầy nếu cần đi tiếp.
+- **2 cuộn phút/giây LUÔN hiện** cạnh "Count down" (đổi từ ẩn hẳn `display:none` sang mờ `opacity:.38 +
+  pointer-events:none` khi chọn mode khác) — rõ hẳn khi chọn đúng Count down.
+- Bỏ chữ "OPTIONS" ở đầu pop-up cho **TOÀN BỘ mọi game** (đã tự test cả Quiz không có giọng đọc — panel
+  vẫn chạy bình thường, chỉ là không còn dòng tiêu đề).
+- **Content Text/Voice**: bỏ chữ "Content", thay cặp radio bằng **2 nút to = ~nửa bề ngang panel**, có
+  1 "thumb" trắng trượt mượt phía sau (transition `cubic-bezier(.22,.9,.3,1)`, cùng easing chuẩn app) —
+  đo thật: bấm đổi, `transform` của thumb đổi giá trị (trượt đúng sang nửa kia).
+
+Chi tiết đo đạc đầy đủ nằm trong log build (không tách file riêng — đợt này gộp nhiều mục nhỏ).
+
+---
+
 ## Đợt 131 (12/8/2026) — ⭐ LỖI THẬT: ĐỒNG HỒ MA TRONG FIGHT MODE — "HẾT GIỜ" GIẢ KHI ĐỒNG HỒ CÒN 2 PHÚT
 ⭐ CÓ SỬA CORE (`core/engine.js` + `core/fight.js`). KHÔNG đụng template nào.
 ✅ THẦY DUYỆT → COMMIT (LOCAL). **CHỐT Ở LOCAL, CHƯA PUSH GITHUB** — thầy đang gộp chung với nhiều

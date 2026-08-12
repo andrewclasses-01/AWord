@@ -5,7 +5,20 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **12/8/2026 (Đợt 131) — ⭐ LỖI THẬT: ĐỒNG HỒ MA — TIẾNG "HẾT GIỜ" PHÁT
+> Cập nhật lần cuối: **13/8/2026 (Đợt 132) — 6 CẢI TIẾN ANAGRAM: MIX VOICE (4 giọng loại trừ lẫn
+> nhau + Random UK/US, cân bằng Nam/Nữ ±1 + không lệch giọng, đo 500 lần thử đúng cả 2 luật) · LOA +
+> EQUALIZER thật (AnalyserNode, gộp 1 nút, hào quang hết bị cắt) · SLOGAN trở lại (đơn+đấu) · ẨN LOA
+> khi Content=Text · KHUNG DƯỚI (tên act/nút) co giãn theo cửa sổ (áp cho cả 17 game) · OPTIONS rộng
+> hơn + cao hơn + nút Text/Voice kiểu công tắc trượt + bỏ chữ OPTIONS toàn bộ.**
+> ⭐ CÓ SỬA CORE (`engine.js` + `app.css`) + Anagram (`anagram.js`/`.css`/`anagram-editor.js`) +
+> `voice-batch.js`. 🟢 ĐÃ TỰ TEST kỹ (đơn+đấu+Quiz để soát game khác không vỡ), 0 lỗi console —
+> **CHỜ THẦY TỰ CHƠI RỒI DUYỆT MỚI COMMIT.** ⚠️ 1 điểm CHƯA giải quyết trọn vẹn: Options khi ĐẤU +
+> Anagram (12 nhóm tuỳ chọn cùng lúc) vẫn cần cuộn dọc ở màn hình thường (~364px tràn) — đã tối ưu hết
+> mức an toàn, muốn hết hẳn phải cho panel đè lên hàng nút thật (thầy từng gợi ý chấp nhận được) —
+> CHƯA làm, chờ thầy xác nhận có cần đi tiếp không.
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 132.
+>
+> Trước đó: **12/8/2026 (Đợt 131) — ⭐ LỖI THẬT: ĐỒNG HỒ MA — TIẾNG "HẾT GIỜ" PHÁT
 > RA DÙ ĐỒNG HỒ TRÊN MÀN CÒN NGUYÊN 2 PHÚT (FIGHT MODE). ⭐ CÓ SỬA CORE (`engine.js` + `fight.js`),
 > KHÔNG đụng template nào. 🟢 ĐÃ TỰ TEST (đo bằng đếm `setInterval` sống qua trình duyệt thật, 0 lỗi
 > console). ✅ THẦY DUYỆT → **COMMIT (LOCAL)** — **CHỐT Ở LOCAL, CHƯA PUSH** (thầy gộp chung với các

@@ -28,7 +28,7 @@
 // clicking/selecting text in the Word/Clue inputs is unaffected.
 // =============================================================
 
-import { el, formatTime } from "../../core/utils.js";
+import { el, formatTime, shuffle } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { VOICES, DEFAULT_VOICE, generateSpeechDataUrl } from "../../core/tts.js";
 import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-clips.js";
@@ -597,6 +597,54 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     else buildGenerateAllPopover(anchorBtn);
   }
 
+  // ----- MIX VOICE — the assignment plan (Đợt 132, teacher) -----
+  // Builds ONE voiceId per target row, from a small pool of candidate voices,
+  // following the teacher's two rules: (1) as many Male rows as Female rows,
+  // never off by more than 1; (2) genuinely random, no single voice used
+  // noticeably more than the others. Computed ONCE, up front, as a plain
+  // array — NOT a "pick one at random per row" closure — because rule (1) is
+  // a property of the WHOLE batch, not any one row; a per-row coin flip can't
+  // guarantee the totals land within 1 of each other.
+  //
+  // `pool` is whatever the teacher is mixing FROM: the 4 hand-picked voices
+  // (manual mix), or every catalog voice of one accent (Random mix). If the
+  // pool happens to be all-one-gender (e.g. the teacher set all 4 manual
+  // boxes to Female voices), rule (1) is simply unsatisfiable — every row
+  // falls back to that one gender rather than silently generating fewer rows
+  // than asked.
+  function buildVoicePlan(count, pool) {
+    const males = pool.filter(v => v.gender === "Male");
+    const females = pool.filter(v => v.gender === "Female");
+    let nMale, nFemale;
+    if (!males.length) { nMale = 0; nFemale = count; }
+    else if (!females.length) { nMale = count; nFemale = 0; }
+    else {
+      const half = Math.floor(count / 2), extra = count - half * 2;   // extra is 0 or 1
+      // Which side gets the odd one out is random too — always favouring the
+      // same gender on every odd-length batch would itself be a small but
+      // real bias, exactly the kind rule (2) is there to avoid.
+      const extraToMale = Math.random() < 0.5;
+      nMale = half + (extra && extraToMale ? 1 : 0);
+      nFemale = half + (extra && !extraToMale ? 1 : 0);
+    }
+    // Round-robin through a FRESH shuffle of the gender's own voices every
+    // time it runs out, rather than one shuffle repeated in the same order
+    // — otherwise voice #1 of the pool would always land on rows 1, N+1,
+    // 2N+1… a visible pattern, not the "genuinely random" the teacher asked
+    // for, even though the raw per-voice COUNT would still come out even.
+    function fill(n, voices) {
+      const out = [];
+      let round = [];
+      while (out.length < n) {
+        if (!round.length) round = shuffle([...voices]);
+        out.push(round.pop());
+      }
+      return out;
+    }
+    const plan = shuffle([...fill(nMale, males), ...fill(nFemale, females)]);
+    return plan.map(v => v.id);
+  }
+
   // "Generate all voices" — one popover for the whole list (not anchored to
   // a row), same visual language as the per-row voice popover. Runs
   // sequentially (the Kokoro model is a lazy singleton anyway — see
@@ -637,21 +685,111 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     skipLabel.append(skipChk, document.createTextNode(" Skip rows that already have a voice"));
     pop.append(skipLabel);
 
+    // Shared option-list builder — the single dropdown below AND each of the
+    // 4 "Mix voice" pickers all render the same way (real name first, then
+    // gender+grade in parens — never the other way round: "Female C" alone
+    // collides between multiple real voices in this catalog, e.g. bm_fable
+    // and bm_george are BOTH "Male, C").
+    function fillVoiceOptions(sel, excludeIds) {
+      const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
+      const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
+      VOICES.forEach(v => {
+        if (excludeIds && excludeIds.includes(v.id)) return;
+        const o = document.createElement("option");
+        o.value = v.id;
+        o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
+        (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
+      });
+      sel.innerHTML = "";
+      sel.append(gbGroup, usGroup);
+    }
+
     const selectField = el("div", "aw-anagram-ed-voicefield");
     selectField.append(el("label", "aw-anagram-ed-voicelabel", "Voice"));
     const select = el("select", "aw-anagram-ed-voiceselect");
-    const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
-    const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
-    VOICES.forEach(v => {
-      const o = document.createElement("option");
-      o.value = v.id;
-      o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
-      (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
-    });
-    select.append(gbGroup, usGroup);
+    fillVoiceOptions(select, null);
     select.value = DEFAULT_VOICE;
     selectField.append(select);
     pop.append(selectField);
+
+    // ----- MIX VOICE (Đợt 132, teacher) -----
+    const mixLabel = el("label", "aw-anagram-ed-voicecheck");
+    const mixChk = document.createElement("input");
+    mixChk.type = "checkbox";
+    mixLabel.append(mixChk, document.createTextNode(" Mix voice — take turns through a few voices"));
+    pop.append(mixLabel);
+
+    // ⚠️ Plain wrapper class, deliberately NOT "aw-anagram-ed-voicefield" —
+    // that class is shared by every leaf row inside it (the 4 pickers,
+    // accentField), and re-using it here too made a `querySelectorAll` over
+    // that class match this wrapper as an extra, mislabelled "field" (caught
+    // while testing, Đợt 132). No dedicated CSS needed: a plain block is
+    // exactly what a column of already block/flex children wants.
+    const mixField = el("div", "aw-anagram-ed-mixwrap");
+    mixField.style.display = "none";
+
+    // 4 manual pickers, defaults per the teacher's own pick (Isabella /
+    // George / Alice / Fable — all en-gb, matching Random's own UK default
+    // below). Each excludes whatever the OTHER 3 currently hold, refreshed
+    // on every change so there is never a way to pick the same voice twice.
+    const MIX_DEFAULTS = ["bf_isabella", "bm_george", "bf_alice", "bm_fable"];
+    const mixRows = MIX_DEFAULTS.map((defId, i) => {
+      const row = el("div", "aw-anagram-ed-voicefield");
+      row.style.marginBottom = ".4rem";
+      row.append(el("label", "aw-anagram-ed-voicelabel", `Voice ${i + 1}`));
+      const sel = el("select", "aw-anagram-ed-voiceselect");
+      fillVoiceOptions(sel, null);
+      sel.value = defId;
+      row.append(sel);
+      mixField.append(row);
+      return { row, select: sel };
+    });
+    function refreshMixSelects() {
+      const chosen = mixRows.map(r => r.select.value);
+      mixRows.forEach((r, i) => {
+        const keep = r.select.value;
+        fillVoiceOptions(r.select, chosen.filter((_, j) => j !== i));
+        r.select.value = keep;   // its own id was never in its own exclude list, so this always sticks
+      });
+    }
+    mixRows.forEach(r => { r.select.onchange = refreshMixSelects; });
+    refreshMixSelects();
+
+    // Random — replaces the 4 boxes with a single UK/US pick, mixing every
+    // catalog voice of that accent instead of just 4 chosen ones.
+    const randomLabel = el("label", "aw-anagram-ed-voicecheck");
+    const randomChk = document.createElement("input");
+    randomChk.type = "checkbox";
+    randomLabel.append(randomChk, document.createTextNode(" Random — mix ALL voices of an accent"));
+    mixField.append(randomLabel);
+
+    const accentField = el("div", "aw-anagram-ed-voicefield");
+    accentField.style.display = "none";
+    let mixAccent = "en-gb";   // UK default (teacher) — matches the 4 manual defaults above
+    const ukLabel = el("label", "aw-anagram-ed-voicecheck");
+    const ukRadio = document.createElement("input");
+    ukRadio.type = "radio"; ukRadio.name = "aw-mix-accent"; ukRadio.checked = true;
+    ukLabel.append(ukRadio, document.createTextNode(" UK accents"));
+    const usLabel = el("label", "aw-anagram-ed-voicecheck");
+    const usRadio = document.createElement("input");
+    usRadio.type = "radio"; usRadio.name = "aw-mix-accent";
+    usLabel.append(usRadio, document.createTextNode(" US accents"));
+    ukRadio.onchange = () => { if (ukRadio.checked) mixAccent = "en-gb"; };
+    usRadio.onchange = () => { if (usRadio.checked) mixAccent = "en-us"; };
+    accentField.append(ukLabel, usLabel);
+    mixField.append(accentField);
+    pop.append(mixField);
+
+    mixChk.onchange = () => {
+      const on = mixChk.checked;
+      selectField.style.display = on ? "none" : "";
+      mixField.style.display = on ? "" : "none";
+    };
+    randomChk.onchange = () => {
+      const on = randomChk.checked;
+      mixRows.forEach(r => { r.row.style.display = on ? "none" : ""; });
+      accentField.style.display = on ? "" : "none";
+    };
 
     const status = el("div", "aw-anagram-ed-voicestatus");
     pop.append(status);
@@ -686,10 +824,28 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     pop.append(btnRow);
 
     goBtn.onclick = async () => {
-      const voiceId = select.value;
       const skipExisting = skipChk.checked;
       const targets = data.content.items.filter(it => !skipExisting || !it.voice);
       if (!targets.length) { status.textContent = "Nothing to generate — every row already has a voice."; return; }
+
+      // Đợt 132 — resolve to either a single string (unchanged path) or a
+      // pre-computed per-row plan, indexed by this row's position in
+      // `targets` (matches how generateVoicesBatch's `index` argument is
+      // defined — see its own comment). The plan is built ONCE here, before
+      // the run starts, precisely so the Male/Female balance is a property
+      // of the whole batch rather than something re-decided row by row.
+      let voiceId;
+      if (!mixChk.checked) {
+        voiceId = select.value;
+      } else if (randomChk.checked) {
+        const pool = VOICES.filter(v => v.lang === mixAccent);
+        const plan = buildVoicePlan(targets.length, pool);
+        voiceId = (it, i) => plan[i];
+      } else {
+        const pool = mixRows.map(r => VOICES.find(v => v.id === r.select.value)).filter(Boolean);
+        const plan = buildVoicePlan(targets.length, pool);
+        voiceId = (it, i) => plan[i];
+      }
 
       let cancelled = false;
       runCancelBtn.onclick = () => {
@@ -700,6 +856,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
       pop._running = true;
       select.disabled = true; skipChk.disabled = true;
+      mixChk.disabled = true; randomChk.disabled = true;
+      mixRows.forEach(r => { r.select.disabled = true; });
+      ukRadio.disabled = true; usRadio.disabled = true;
       cancelBtn2.style.display = "none"; goBtn.style.display = "none";
       runCancelBtn.style.display = "inline-flex"; runCancelBtn.disabled = false; runCancelBtn.textContent = "Cancel";
       progressWrap.style.display = "block";
@@ -728,6 +887,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       if (signedOut) {
         status.textContent = "Please sign in first.";
         select.disabled = false; skipChk.disabled = false;
+        mixChk.disabled = false; randomChk.disabled = false;
+        mixRows.forEach(r => { r.select.disabled = false; });
+        ukRadio.disabled = false; usRadio.disabled = false;
         cancelBtn2.style.display = ""; goBtn.style.display = "";
         runCancelBtn.style.display = "none";
         progressWrap.style.display = "none";
