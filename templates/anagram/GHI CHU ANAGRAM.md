@@ -1,5 +1,24 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 142 (13/8/2026) — LUẬT MIX GIỌNG RỜI KHỎI FILE NÀY, LÊN `core/voice-mix.js`
+
+🟢 **CHỜ THẦY DUYỆT.** Editor **không đổi 1 pixel giao diện, không đổi 1 hành vi** — chỉ đổi chỗ ở
+của mấy hàm quyết định, vì **popup Import** (`main.js`) nay cũng có Mix voice và **không được phép
+import từ template**. Giữ 2 bản luật là đúng loại lỗi đã cắn ở Đợt 118.
+
+Rời khỏi `anagram-editor.js` → `core/voice-mix.js`: `buildVoicePlan()` (chuyển **nguyên văn**) ·
+`fillVoiceOptions()` · hằng `MIX_DEFAULTS` (Isabella/George/Alice/Fable). Khối chọn giọng lúc bấm
+Generate nay gọi `planFor({mix, random, accent, mixIds, singleId}, targets.length)` — cùng hàm popup
+Import gọi. `shuffle` không còn dùng trong file này nên đã gỡ khỏi dòng import `core/utils.js`.
+
+⚠️ **Sửa cách chia giọng từ nay là sửa `core/voice-mix.js`**, và phải tự test **cả 2 đường** (popover
+editor + panel Import), giống luật "đụng `fight.js` là phải test cả Anagram lẫn Quiz".
+
+**Đã tự test (không đăng nhập)**: mount editor thật standalone, mở popover "Generate all voices" →
+đủ **5 tick** (Skip / Mix / Random / UK / US), 4 giọng mặc định đúng thứ tự, optgroup **UK 8 + US 20**;
+luật chia giọng đo riêng bằng Node: 7 cỡ mẻ × 200 lượt cân bằng nam/nữ ≤1, 4 giọng qua 16.000 chỗ
+lệch **0.0%**. ⬜ Chưa chạy TTS thật (cần model 86MB + đăng nhập).
+
 ## ⭐ Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: Anagram là ca nặng nhất, viết lại toàn bộ `buildExtraOptions`
 
 ✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** (đã đo lại trên chính bản live: 397px, không cuộn). Số đo đầy đủ + 5 luật mới: `../../GHI CHU DU AN.md` Đợt 140 và

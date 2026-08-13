@@ -1751,6 +1751,22 @@ body {
 }
 .aw-cp-play svg { width: 22px; height: 22px; }
 .aw-cp-play:hover { background: #2f7bff; transform: translate(-50%, -50%) scale(1.08); }
+/* "This act speaks" badge (Đợt 142) — soft green pill in the preview's top
+   LEFT corner: the play button owns the centre and the "new results" dot the
+   top right, so this is the only free corner. Shown ONLY when every item has
+   a clip (see actFullyVoiced in main.js). */
+.aw-cp-voice {
+  position: absolute; left: 8px; top: 8px; width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #e8f9f0; color: #17a673; border: 1.5px solid #b9ead3;
+  box-shadow: 0 2px 6px rgba(23, 166, 115, .18);
+}
+.aw-cp-voice svg { width: 15px; height: 15px; }
+/* The badge sits ON the first line of the preview question, so that line
+   starts after it — caught on the very first screenshot, where the badge ate
+   the first two letters ("…assy field"). Only the FIRST line is indented, so
+   a long question still uses the full width on its second line. */
+.aw-cp.has-voice .aw-cp-q { text-indent: 30px; }
 
 /* trash cards */
 .aw-card-foot-trash { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -1767,6 +1783,15 @@ body {
 .aw-fm-list .aw-cp-answers { display: none; }
 .aw-fm-list .aw-cp-play { width: 30px; height: 30px; }
 .aw-fm-list .aw-cp-play svg { width: 13px; height: 13px; }
+/* LIST view: the thumbnail is only 92x58 and its answer chips are hidden, so
+   the badge moves to the free BOTTOM-RIGHT corner instead of stealing room
+   from the two lines of question text. */
+.aw-fm-list .aw-cp-voice {
+  width: 17px; height: 17px; left: auto; right: 3px; top: auto; bottom: 3px;
+  border-width: 1px; box-shadow: none;
+}
+.aw-fm-list .aw-cp-voice svg { width: 10px; height: 10px; }
+.aw-fm-list .aw-cp.has-voice .aw-cp-q { text-indent: 0; }
 .aw-fm-list .aw-card-foot { flex: 1 1 auto; border-top: none; }
 .aw-fm-list .aw-card-foot-trash { flex-direction: row; align-items: center; }
 .aw-fm-list .aw-trash-actions { flex: 0 0 auto; }
@@ -1893,6 +1918,17 @@ body {
   margin-top: .55rem; width: 100%; padding: .45rem .55rem; border: 1.5px solid #e2e9f2;
   border-radius: 8px; background: #fff; font-size: .88rem; font-family: inherit; color: #23303e;
 }
+/* Mix voice (Đợt 142) — the same choices as the Anagram editor's popover,
+   laid out for a panel inside a modal instead of a floating card. */
+.aw-imp-voice-check {
+  display: flex; align-items: center; gap: 7px; margin-top: .5rem; cursor: pointer;
+  font-size: .82rem; font-weight: 600; color: #33455c; line-height: 1.35;
+}
+.aw-imp-voice-check input { width: 15px; height: 15px; accent-color: #2f7bff; flex: 0 0 auto; cursor: pointer; }
+.aw-imp-voice-mix { padding-left: 22px; }
+.aw-imp-voice-mixrow { display: flex; align-items: center; gap: 8px; margin-top: .35rem; }
+.aw-imp-voice-mixrow > span { font-size: .78rem; font-weight: 700; color: #5a6b80; flex: 0 0 52px; }
+.aw-imp-voice-accent { display: flex; gap: 16px; padding-left: 22px; }
 
 /* Generic sequential-batch progress bar + soft-cancel, shared by any bulk
    TTS flow outside the Anagram editor (see core/voice-batch.js). */

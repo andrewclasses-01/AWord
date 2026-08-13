@@ -5,6 +5,92 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 142 (13/8/2026) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ CÓ ĐỦ GIỌNG
+⭐ CÓ SỬA CORE (`core/voice-mix.js` **MỚI** + `core/app.css`) + `main.js` + `templates/anagram/anagram-editor.js`.
+🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+
+### 1. Thầy đặt hàng
+> "Generate voice trong edit đã hoàn thiện (có tích chế độ mix giọng...), nhưng khi import file chưa
+> có chế độ này mà mới chọn single voice. […] Ngoài ra, các act đã có voice cũng cần có thêm một icon
+> voice hiển thị trên hình preview để tôi biết cái nào đã có voice rồi."
+
+3 câu hỏi chốt bằng AskUserQuestion → thầy chọn: icon **chỉ là loa, không kèm số, xanh lá nhạt, chỉ
+hiện khi ĐỦ 100% từ có giọng** · mix dùng **một kế hoạch chung cho cả mẻ import** · **được** nâng luật
+mix lên core.
+
+### 2. Luật mix chuyển lên core — `core/voice-mix.js` (file MỚI)
+Luật cân bằng giọng (Đợt 132) trước nay nằm **trong file template** `anagram-editor.js`, mà popup
+Import ở `main.js` **không được phép import từ template** (sai chiều phụ thuộc + template nạp trì
+hoãn). Nếu chép sang là có 2 bản luật — đúng loại lỗi đã cắn ở Đợt 118 (bản đồ import lệch với skill
+suốt 6 đợt không ai biết). Nay 1 nhà duy nhất:
+
+| Xuất ra | Việc |
+|---|---|
+| `buildVoicePlan(count, pool)` | chuyển **nguyên văn** từ editor: số hàng Nam ≈ Nữ (lệch ≤1), xáo lại mỗi vòng nên không giọng nào bị dùng trội |
+| `planFor(choice, count)` | quyết định cuối: trả `"single"` (chuỗi id, y đường cũ) hoặc kế hoạch `(item,i)=>id` + mảng `plan` |
+| `fillVoiceOptions(sel, excludeIds)` | đổ option `Tên (Giới tính, hạng)` gom nhóm UK/US — trước đây có **2 bản chép tay** (editor + main.js) |
+| `MIX_DEFAULTS` | 4 giọng mặc định của thầy (Isabella · George · Alice · Fable) |
+| `describeChoice(choice)` | câu chữ cho hộp xác nhận |
+| `getLastMix/setLastMix` | nhớ cấu hình mix cho lần import sau (thầy hay import liên tiếp nhiều file) |
+
+**Giao diện thì KHÔNG dùng chung, cố ý**: editor là popover neo dưới nút, Import là panel trong modal.
+Ép chung markup = phải sửa UI editor thầy đã duyệt, rủi ro không đáng — chỉ **quyết định** mới dùng chung.
+Editor chỉ đổi phần import + gọi `planFor`, **hành vi y hệt**.
+
+### 3. Popup Import (`main.js`)
+Khung "Voice (TTS)" nay có đúng bộ điều khiển của editor (trừ tick "bỏ qua hàng đã có giọng" — act
+vừa import thì chưa hàng nào có giọng, đưa vào chỉ tổ rối):
+- dropdown **1 giọng** (mặc định, y như trước — nhớ giọng lần trước qua `getLastVoice`)
+- tick **Mix voice** → hiện 4 ô chọn **loại trừ lẫn nhau**
+- tick **Random** → giấu 4 ô, hiện chọn **UK / US**, trộn toàn bộ giọng của giọng vùng đó
+- Hộp xác nhận đổi từ *"using **Emma**"* sang câu mô tả thật: *"using **a mix of 4 voices: Isabella,
+  George, Alice, Fable**"* / *"**a random mix of all 8 British English voices**"*
+
+⭐ **MỘT kế hoạch cho CẢ MẺ** (thầy chọn): tổng số từ của mọi act được tích (ENG1+ENG2) tính 1 lần,
+rồi `runVoiceBatch()` đi qua từng act theo **con trỏ dịch** (`plan[offset + i]`) — vì `index` mà
+`generateVoicesBatch` đưa ra là vị trí trong RIÊNG act đó.
+
+### 4. Icon loa trên thẻ act (`main.js` + `core/app.css`)
+`actFullyVoiced(node)` — **chỉ** khi mọi phần tử đều có `item.voice` (đúng dấu hiệu `voiceView()` của
+core đọc, và `convert.js` mang theo qua mọi hình dạng content nên act đổi template vẫn nhận đúng).
+Dữ liệu đã nằm sẵn trong `node.content` để vẽ preview ⇒ **0 lượt đọc Firestore thêm**.
+Huy hiệu: hình tròn xanh lá nhạt (`#e8f9f0` / viền `#b9ead3` / icon `#17a673`), góc **trên-trái** vùng
+preview (giữa là nút Play, trên-phải là chấm "kết quả mới").
+
+⭐ **Lỗi thật tự bắt được NGAY TRÊN ẢNH CHỤP ĐẦU TIÊN**: huy hiệu **đè lên chữ** dòng câu hỏi — ảnh
+hiện "…assy field" (mất "gr" của "grassy"). Vá: `.aw-cp.has-voice .aw-cp-q { text-indent: 30px }` —
+chỉ thụt **dòng đầu**, câu dài vẫn dùng hết bề ngang ở dòng 2. Chế độ **danh sách** (thumbnail chỉ
+92×58, chữ 2 dòng đã chật) thì huy hiệu **dời xuống góc dưới-phải** và bỏ thụt lề.
+
+### 5. Kiểm chứng
+**(a) Luật mix — Node, chạy thẳng module core**: 7 cỡ mẻ × 200 lượt → **cân bằng nam/nữ lệch ≤1 ở
+100% lượt**; 4 giọng qua 16.000 chỗ ra **4000/4000/4000/4000, lệch 0.0%**; hàng đầu tiên **không**
+cố định 1 giọng (50 lượt ra đủ 4 giọng khác nhau) — tức không có mẫu lặp; random UK **không lọt giọng
+Mỹ**; pool toàn nữ vẫn điền đủ hàng; **pool rỗng thì rơi về giọng đơn** thay vì đẻ kế hoạch `undefined`.
+**(b) Popup Import — trình duyệt thật, KHÔNG đăng nhập** (tạm mở `window.__awTest`, **đã gỡ**): mở
+file `.xlsm` thật → khung Voice đúng 2 act ENG1/ENG2, dropdown mặc định `bf_emma` (nhớ lần trước),
+UK 8 + US 20 giọng; bật Mix → dropdown đơn ẩn, 4 ô hiện; bật Random → 4 ô ẩn, UK/US hiện; **loại trừ
+lẫn nhau đo thật**: đổi Voice 1 sang Emma thì Voice 3 **mất Emma khỏi danh sách của nó**; bấm Import →
+hộp xác nhận đọc đúng *"70 words using a mix of 4 voices: Emma, George, Alice, Fable"*.
+**(c) Kế hoạch đi qua 2 act — đo bằng bộ TTS giả**: 70 từ, **70/70 từ nhận đúng giọng đã hoạch định**,
+mối nối 2 act liên tục (ENG1W34 → ENG2W0 đi tiếp đúng kế hoạch), tổng mẻ **35 nam / 35 nữ**, thanh
+tiến trình chạy tới 100%, dòng kết "Done — generated voice for 70 word(s)".
+**(d) Editor không hồi quy**: mount editor thật standalone rồi mở popover "Generate all voices" →
+vẫn đủ **5 tick** (Skip / Mix / Random / UK / US), 4 giọng mặc định đúng, optgroup UK 8 + US 20.
+**(e) Bố cục**: cửa sổ 1280×800 — panel cao 277px (mix tắt) → **441px (mix bật)**, modal 640px,
+**không mode nào phải cuộn**. Huy hiệu **không đè** nút Play, không đè chữ (cả 2 chế độ xem), và
+`elementFromPoint` tại tâm huy hiệu trả về **chính nó** (kiểm đúng bẫy stacking context).
+⬜ **Chưa test được**: chạy TTS THẬT (cần tải model 86MB + đăng nhập để lưu clip) — thầy import 1 file
+thật rồi nghe 2-3 từ đầu xem có đúng đổi giọng luân phiên không.
+
+### 6. Ghi chú để lại
+⚠️ Lỗi `aw/signed-out` ở `main.js:1282` khi mở popup Import lúc chưa đăng nhập là **hàng rào cũ** của
+Đợt 106 (guard thư mục "ACT" gọi `listChildren`), không phải của đợt này.
+⚠️ Ai thêm tính năng "sửa options ngay trong hộp Import" vẫn phải nhớ `OPT_ANA` là object DÙNG CHUNG
+(Đợt 123 mục 7) — đợt này không đụng tới.
+
+---
+
 ## Đợt 141 (13/8/2026) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ **CHỮ EXCEL ĐANG HIỆN** — ĐÁP ÁN "8:30" VÀO ACT THÀNH `0.3541666666666667`
 ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`, **1 hàm, 2 dòng lệnh**. KHÔNG cần đăng nhập để test.
 ✅ **THẦY DUYỆT → COMMIT `0f67311` + PUSH + LIVE** tại `https://aword.andrewclasses.com/`

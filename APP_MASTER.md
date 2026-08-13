@@ -8,7 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 141) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ
+> Cập nhật lần cuối: **13/8/2026 (Đợt 142) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR
+> (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ ĐỦ GIỌNG.**
+> Luật mix (cân bằng nam/nữ ±1, không giọng nào bị dùng trội) trước nay nằm TRONG template
+> `anagram-editor.js` — popup Import không được import từ template, nên luật chuyển lên **`core/voice-mix.js`
+> (file MỚI)**: `buildVoicePlan` · `planFor` · `fillVoiceOptions` · `MIX_DEFAULTS` · `describeChoice` ·
+> `getLastMix/setLastMix`. **Giao diện KHÔNG dùng chung (cố ý)** — popover editor giữ nguyên từng pixel,
+> Import có panel riêng. Import nay: 1 giọng (mặc định, như cũ) · **Mix 4 giọng loại trừ lẫn nhau** ·
+> **Random toàn bộ giọng UK/US**; **MỘT kế hoạch cho CẢ MẺ**, `runVoiceBatch` đi qua từng act bằng con
+> trỏ dịch `plan[offset+i]`. Thẻ act đủ 100% giọng đeo **huy hiệu loa xanh lá nhạt** góc trên-trái
+> (`actFullyVoiced`, đọc `item.voice` sẵn có trong `node.content` ⇒ 0 lượt Firestore thêm).
+> ⭐ **Lỗi thật bắt ngay trên ảnh chụp đầu tiên**: huy hiệu đè mất 2 chữ đầu câu hỏi → thụt lề DÒNG ĐẦU
+> (`text-indent`), chế độ danh sách dời huy hiệu xuống góc dưới-phải.
+> 🟢 ĐÃ TỰ TEST: luật mix 7 cỡ mẻ × 200 lượt cân bằng ≤1 (4 giọng qua 16.000 chỗ lệch **0.0%**) ·
+> popup thật với file `.xlsm` thật (loại trừ lẫn nhau đo thật, hộp xác nhận đọc đúng "a mix of 4
+> voices: …") · **70/70 từ nhận đúng giọng đã hoạch định qua 2 act** · editor không hồi quy (5 tick +
+> 4 mặc định + optgroup y cũ) · 1280×800 panel 441px, không cuộn.
+> ⬜ Chưa chạy TTS THẬT (cần model 86MB + đăng nhập) — thầy nghe thử khi import file thật.
+> 🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+>
+> Trước đó: **13/8/2026 (Đợt 141) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ
 > **CHỮ EXCEL ĐANG HIỆN**.** Thầy báo đáp án `8:30` vào act thành `0.3541666666666667`. Gốc: trong
 > Excel `8:30` là **số 0.3541666666666667** khoác định dạng `h:mm`; SheetJS cho 2 mặt (`v` thô ·
 > `w` = đúng chữ đang hiện) mà `cell()` trong `core/lesson-import.js` lấy **`v` trước**. Vá **2 dòng**:
@@ -1839,6 +1858,7 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 **5 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **142** | ⭐ **Import có đủ bộ chọn giọng như editor** (Mix 4 giọng · Random UK/US), luật mix lên `core/voice-mix.js` dùng chung 2 đường + **huy hiệu loa xanh** trên thẻ act đã đủ 100% giọng | 🟢 **chưa commit** |
 | **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | `0f67311` |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
@@ -1856,6 +1876,13 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+**⭐ GIỌNG ĐỌC (Đợt 142) — chỉ còn phần máy không tự làm được:**
+- Thầy **import 1 file thật rồi nghe** 2-3 từ đầu ở chế độ Mix xem giọng có luân phiên đúng không
+  (phiên tự động không chạy TTS thật được: cần tải model 86MB + đăng nhập để lưu clip).
+- Nhìn **huy hiệu loa xanh** trên thư viện thật: đúng những act đã đủ giọng mới đeo huy hiệu.
+- ⚠️ Luật mix nay ở **`core/voice-mix.js`** — sửa cách chia giọng thì sửa ĐÚNG file đó, cả editor
+  Anagram lẫn popup Import đều gọi `planFor()` từ đây.
+
 **⭐ IMPORT EXCEL (Đợt 141) — thầy đã xem báo cáo, chốt CHƯA làm, đừng tự làm:**
 - **43/102 file bài học có sheet tên `Quiz` (không có số)** → importer chỉ dò `QUIZ1`/`QUIZ2` nên
   **bộ quiz đầu 30–35 câu bị bỏ im lặng**. Sửa được nhưng phải kèm việc dưới, không thì vẫn ra act rỗng.

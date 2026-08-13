@@ -28,10 +28,16 @@
 // clicking/selecting text in the Word/Clue inputs is unaffected.
 // =============================================================
 
-import { el, formatTime, shuffle } from "../../core/utils.js";
+import { el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { VOICES, DEFAULT_VOICE, generateSpeechDataUrl } from "../../core/tts.js";
 import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-clips.js";
+// The mix RULES (gender balance, no-voice-used-twice-as-often, the shared 4
+// defaults, the option-list format) live in core since Đợt 142 — the Excel
+// import panel needs the exact same rules and can't import from a template.
+// This file keeps its own MARKUP (a popover anchored under the button);
+// only the decisions are shared.
+import { MIX_DEFAULTS, fillVoiceOptions, planFor } from "../../core/voice-mix.js";
 
 const MAX_ITEMS = 100;
 
@@ -598,52 +604,11 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   }
 
   // ----- MIX VOICE — the assignment plan (Đợt 132, teacher) -----
-  // Builds ONE voiceId per target row, from a small pool of candidate voices,
-  // following the teacher's two rules: (1) as many Male rows as Female rows,
-  // never off by more than 1; (2) genuinely random, no single voice used
-  // noticeably more than the others. Computed ONCE, up front, as a plain
-  // array — NOT a "pick one at random per row" closure — because rule (1) is
-  // a property of the WHOLE batch, not any one row; a per-row coin flip can't
-  // guarantee the totals land within 1 of each other.
-  //
-  // `pool` is whatever the teacher is mixing FROM: the 4 hand-picked voices
-  // (manual mix), or every catalog voice of one accent (Random mix). If the
-  // pool happens to be all-one-gender (e.g. the teacher set all 4 manual
-  // boxes to Female voices), rule (1) is simply unsatisfiable — every row
-  // falls back to that one gender rather than silently generating fewer rows
-  // than asked.
-  function buildVoicePlan(count, pool) {
-    const males = pool.filter(v => v.gender === "Male");
-    const females = pool.filter(v => v.gender === "Female");
-    let nMale, nFemale;
-    if (!males.length) { nMale = 0; nFemale = count; }
-    else if (!females.length) { nMale = count; nFemale = 0; }
-    else {
-      const half = Math.floor(count / 2), extra = count - half * 2;   // extra is 0 or 1
-      // Which side gets the odd one out is random too — always favouring the
-      // same gender on every odd-length batch would itself be a small but
-      // real bias, exactly the kind rule (2) is there to avoid.
-      const extraToMale = Math.random() < 0.5;
-      nMale = half + (extra && extraToMale ? 1 : 0);
-      nFemale = half + (extra && !extraToMale ? 1 : 0);
-    }
-    // Round-robin through a FRESH shuffle of the gender's own voices every
-    // time it runs out, rather than one shuffle repeated in the same order
-    // — otherwise voice #1 of the pool would always land on rows 1, N+1,
-    // 2N+1… a visible pattern, not the "genuinely random" the teacher asked
-    // for, even though the raw per-voice COUNT would still come out even.
-    function fill(n, voices) {
-      const out = [];
-      let round = [];
-      while (out.length < n) {
-        if (!round.length) round = shuffle([...voices]);
-        out.push(round.pop());
-      }
-      return out;
-    }
-    const plan = shuffle([...fill(nMale, males), ...fill(nFemale, females)]);
-    return plan.map(v => v.id);
-  }
+  // `buildVoicePlan` + the 4 shared defaults now live in core/voice-mix.js
+  // (Đợt 142) so the Excel-import panel obeys byte-for-byte the same rules:
+  // as many Male rows as Female (off by at most 1), and no voice used
+  // noticeably more than the others. This popover just collects the state
+  // and hands it to `planFor()` below.
 
   // "Generate all voices" — one popover for the whole list (not anchored to
   // a row), same visual language as the per-row voice popover. Runs
@@ -685,24 +650,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     skipLabel.append(skipChk, document.createTextNode(" Skip rows that already have a voice"));
     pop.append(skipLabel);
 
-    // Shared option-list builder — the single dropdown below AND each of the
-    // 4 "Mix voice" pickers all render the same way (real name first, then
-    // gender+grade in parens — never the other way round: "Female C" alone
-    // collides between multiple real voices in this catalog, e.g. bm_fable
-    // and bm_george are BOTH "Male, C").
-    function fillVoiceOptions(sel, excludeIds) {
-      const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
-      const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
-      VOICES.forEach(v => {
-        if (excludeIds && excludeIds.includes(v.id)) return;
-        const o = document.createElement("option");
-        o.value = v.id;
-        o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
-        (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
-      });
-      sel.innerHTML = "";
-      sel.append(gbGroup, usGroup);
-    }
+    // The option-list builder (real name first, then gender+grade in parens)
+    // is core/voice-mix.js's `fillVoiceOptions` — the single dropdown below,
+    // the 4 mix pickers here, and the import panel all render identically.
 
     const selectField = el("div", "aw-anagram-ed-voicefield");
     selectField.append(el("label", "aw-anagram-ed-voicelabel", "Voice"));
@@ -730,9 +680,10 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
     // 4 manual pickers, defaults per the teacher's own pick (Isabella /
     // George / Alice / Fable — all en-gb, matching Random's own UK default
-    // below). Each excludes whatever the OTHER 3 currently hold, refreshed
-    // on every change so there is never a way to pick the same voice twice.
-    const MIX_DEFAULTS = ["bf_isabella", "bm_george", "bf_alice", "bm_fable"];
+    // below; the list itself is MIX_DEFAULTS in core/voice-mix.js so the
+    // import panel opens with the same four). Each excludes whatever the
+    // OTHER 3 currently hold, refreshed on every change so there is never a
+    // way to pick the same voice twice.
     const mixRows = MIX_DEFAULTS.map((defId, i) => {
       const row = el("div", "aw-anagram-ed-voicefield");
       row.style.marginBottom = ".4rem";
@@ -834,18 +785,11 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       // defined — see its own comment). The plan is built ONCE here, before
       // the run starts, precisely so the Male/Female balance is a property
       // of the whole batch rather than something re-decided row by row.
-      let voiceId;
-      if (!mixChk.checked) {
-        voiceId = select.value;
-      } else if (randomChk.checked) {
-        const pool = VOICES.filter(v => v.lang === mixAccent);
-        const plan = buildVoicePlan(targets.length, pool);
-        voiceId = (it, i) => plan[i];
-      } else {
-        const pool = mixRows.map(r => VOICES.find(v => v.id === r.select.value)).filter(Boolean);
-        const plan = buildVoicePlan(targets.length, pool);
-        voiceId = (it, i) => plan[i];
-      }
+      // (Đợt 142: the same `planFor` the import panel calls.)
+      const { voiceId } = planFor({
+        mix: mixChk.checked, random: randomChk.checked, accent: mixAccent,
+        mixIds: mixRows.map(r => r.select.value), singleId: select.value
+      }, targets.length);
 
       let cancelled = false;
       runCancelBtn.onclick = () => {

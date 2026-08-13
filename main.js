@@ -618,6 +618,19 @@ function previewPick(node) {
   return { question, answers };
 }
 
+// Does EVERY item of this act carry a voice clip? (Đợt 142, teacher.) The
+// badge on the card means "this one is finished", so a half-generated list
+// deliberately stays unmarked — a green speaker on an act where only 12 of
+// 35 words speak would be worse than no badge at all.
+// `item.voice` is the same marker core/voice-playback.js's voiceView() reads,
+// and core/convert.js carries it across every template shape, so this one
+// check covers an Anagram act and anything it was converted into.
+function actFullyVoiced(node) {
+  const c = node.content || {};
+  const list = c.questions || c.items || c.words || c.statements || c.cards || c.pairs || [];
+  return list.length > 0 && list.every(it => it && it.voice);
+}
+
 function actCard(node) {
   const card = el("div", "aw-card aw-card-act");
 
@@ -639,6 +652,15 @@ function actCard(node) {
   playBtn.type = "button"; playBtn.title = "Play";
   playBtn.onclick = e => { e.stopPropagation(); playAct(node.id); };
   preview.append(playBtn);
+  if (actFullyVoiced(node)) {
+    const voiceBadge = el("div", "aw-cp-voice", icons.soundOn);
+    voiceBadge.title = "Every word in this act has a voice clip";
+    preview.append(voiceBadge);
+    // `has-voice` is what lets the CSS start the question's FIRST line clear
+    // of the badge — the badge is absolutely positioned, so without it the
+    // text runs underneath (seen on the very first screenshot of this build).
+    preview.classList.add("has-voice");
+  }
   card.append(preview);
   // an act wears the dot when one of ITS assignments has new results
   if (actHasNews(node.id)) card.append(newDot("New results in an assignment"));
@@ -990,10 +1012,11 @@ function importFlow(initialFile) {
       err.style.display = "none"; panel.style.display = "none"; report.style.display = "none"; acts = []; ok.disabled = true;
       setDrop(`Reading <b>${escapeText(f.name)}</b>…`, "");
       try {
-        const [{ parseLessonToBundle, isSpreadsheet }, tts, voiceBatch] = await Promise.all([
-          import("./core/lesson-import.js"), import("./core/tts.js"), import("./core/voice-batch.js")
+        const [{ parseLessonToBundle, isSpreadsheet }, tts, voiceBatch, voiceMix] = await Promise.all([
+          import("./core/lesson-import.js"), import("./core/tts.js"),
+          import("./core/voice-batch.js"), import("./core/voice-mix.js")
         ]);
-        ttsMod = { ...tts, ...voiceBatch };
+        ttsMod = { ...tts, ...voiceBatch, ...voiceMix };
         const bundle = isSpreadsheet(f.name)
           ? await parseLessonToBundle(await f.arrayBuffer(), { fileName: f.name })
           : JSON.parse(await f.text());
@@ -1035,13 +1058,20 @@ function importFlow(initialFile) {
       // draw more attention to the voice-capable acts. VI1/VI2 (Vietnamese
       // clues) and PRONUNCIATION (IPA clues) never appear here or get a
       // voice — an English Kokoro voice would misread both.
-      let voiceSelect = null;
+      // ⭐ 13/8/2026 (Đợt 142) — this box now offers the SAME voice choices as
+      // the Anagram editor's "Generate all voices": one voice, or Mix voice
+      // (4 hand-picked voices taking turns), or Random (every voice of one
+      // accent). The rules behind the mix — as many Male rows as Female, no
+      // voice used noticeably more than the rest — are core/voice-mix.js's
+      // `planFor`, the exact function the editor calls, so the two can never
+      // drift apart. Only the markup differs (panel here, popover there).
+      let readVoiceChoice = null;   // () => {mix,random,accent,mixIds,singleId}
       const voiceRowOf = new Map();   // act -> its already-built row (voice box OR list, never both)
       if (ttsMod && acts.some(a => a.ttsEligible)) {
         const vbox = el("div", "aw-imp-voice");
         vbox.append(el("div", "aw-imp-voice-title", "Voice (TTS)"));
         vbox.append(el("div", "aw-imp-voice-hint",
-          "Reads each word's Clue in the picked voice and saves it — same as Anagram's “Generate all voices”. " +
+          "Reads each word's Clue and saves it — same as Anagram's “Generate all voices”, including Mix voice. " +
           "Runs AFTER the acts are created, and needs you signed in."));
         const vrows = el("div", "aw-imp-voice-rows");
         acts.filter(a => a.ttsEligible).forEach(a => {
@@ -1050,18 +1080,78 @@ function importFlow(initialFile) {
           vrows.append(row.el);
         });
         vbox.append(vrows);
-        voiceSelect = el("select", "aw-imp-voice-select");
-        const usGroup = document.createElement("optgroup"); usGroup.label = "American English";
-        const gbGroup = document.createElement("optgroup"); gbGroup.label = "British English";
-        ttsMod.VOICES.forEach(v => {
-          const o = document.createElement("option");
-          o.value = v.id; o.textContent = `${v.name} (${v.gender}, ${v.grade})`;
-          (v.lang === "en-gb" ? gbGroup : usGroup).append(o);
+
+        // Last time's setup comes back (teacher imports several lesson files
+        // in a row): the single voice from core/tts.js's own key, the mix
+        // setup from core/voice-mix.js's.
+        const last = ttsMod.getLastMix() || { mix: false, random: false, accent: "en-gb", mixIds: [...ttsMod.MIX_DEFAULTS] };
+
+        const singleSelect = el("select", "aw-imp-voice-select");
+        ttsMod.fillVoiceOptions(singleSelect, null);
+        singleSelect.value = ttsMod.getLastVoice();
+
+        const mixChk = document.createElement("input"); mixChk.type = "checkbox"; mixChk.checked = last.mix;
+        const mixLabel = el("label", "aw-imp-voice-check");
+        mixLabel.append(mixChk, document.createTextNode(" Mix voice — take turns through a few voices"));
+
+        const mixWrap = el("div", "aw-imp-voice-mix");
+        // 4 pickers that exclude each other, so the same voice can never be
+        // chosen twice — identical rule and defaults to the editor's.
+        const mixRows = last.mixIds.map((defId, i) => {
+          const row = el("div", "aw-imp-voice-mixrow");
+          row.append(el("span", null, `Voice ${i + 1}`));
+          const sel = el("select", "aw-imp-voice-select");
+          sel.style.marginTop = "0";
+          ttsMod.fillVoiceOptions(sel, null);
+          sel.value = defId;
+          row.append(sel);
+          mixWrap.append(row);
+          return { row, select: sel };
         });
-        voiceSelect.append(gbGroup, usGroup);
-        voiceSelect.value = ttsMod.getLastVoice();
-        vbox.append(voiceSelect);
+        function refreshMixSelects() {
+          const chosen = mixRows.map(r => r.select.value);
+          mixRows.forEach((r, i) => {
+            const keep = r.select.value;
+            ttsMod.fillVoiceOptions(r.select, chosen.filter((_, j) => j !== i));
+            r.select.value = keep;   // its own id was never in its own exclude list, so this always sticks
+          });
+        }
+        mixRows.forEach(r => { r.select.onchange = refreshMixSelects; });
+        refreshMixSelects();
+
+        const randomChk = document.createElement("input"); randomChk.type = "checkbox"; randomChk.checked = last.random;
+        const randomLabel = el("label", "aw-imp-voice-check");
+        randomLabel.append(randomChk, document.createTextNode(" Random — mix ALL voices of an accent"));
+        mixWrap.append(randomLabel);
+
+        const accentWrap = el("div", "aw-imp-voice-accent");
+        let mixAccent = last.accent;
+        const ukChk = document.createElement("input"); ukChk.type = "radio"; ukChk.name = "aw-imp-mix-accent"; ukChk.checked = mixAccent === "en-gb";
+        const ukLabel = el("label", "aw-imp-voice-check"); ukLabel.append(ukChk, document.createTextNode(" UK accents"));
+        const usChk = document.createElement("input"); usChk.type = "radio"; usChk.name = "aw-imp-mix-accent"; usChk.checked = mixAccent === "en-us";
+        const usLabel = el("label", "aw-imp-voice-check"); usLabel.append(usChk, document.createTextNode(" US accents"));
+        ukChk.onchange = () => { if (ukChk.checked) mixAccent = "en-gb"; };
+        usChk.onchange = () => { if (usChk.checked) mixAccent = "en-us"; };
+        accentWrap.append(ukLabel, usLabel);
+        mixWrap.append(accentWrap);
+
+        const syncVoiceUI = () => {
+          singleSelect.style.display = mixChk.checked ? "none" : "";
+          mixWrap.style.display = mixChk.checked ? "" : "none";
+          mixRows.forEach(r => { r.row.style.display = randomChk.checked ? "none" : ""; });
+          accentWrap.style.display = randomChk.checked ? "" : "none";
+        };
+        mixChk.onchange = syncVoiceUI;
+        randomChk.onchange = syncVoiceUI;
+
+        vbox.append(singleSelect, mixLabel, mixWrap);
+        syncVoiceUI();
         panel.append(vbox);
+
+        readVoiceChoice = () => ({
+          mix: mixChk.checked, random: randomChk.checked, accent: mixAccent,
+          mixIds: mixRows.map(r => r.select.value), singleId: singleSelect.value
+        });
       }
 
       const head = el("div", "aw-imp-head");
@@ -1224,16 +1314,25 @@ function importFlow(initialFile) {
 
         const voiceEligible = chosen.filter(a => a.ttsEligible);
         let wantVoice = voiceEligible.length > 0;
-        const voiceId = voiceSelect ? voiceSelect.value : null;
+        // ONE plan for the WHOLE import, not one per act (teacher's choice
+        // 13/8/2026): the Male/Female balance is a property of everything
+        // being generated in this run, so ENG1 and ENG2 share a single plan
+        // and runVoiceBatch() walks it with a running offset.
+        let voicePlan = null, voiceId = null;
         if (wantVoice) {
           const wordCount = voiceEligible.reduce((s, a) => s + ((a.content.items || []).length), 0);
-          const voiceName = ttsMod.VOICES.find(v => v.id === voiceId)?.name || voiceId;
+          const choice = readVoiceChoice();
+          const resolved = ttsMod.planFor(choice, wordCount);
+          voicePlan = resolved.plan; voiceId = choice.singleId;
           // "Skip voices" (or dismissing the dialog) does NOT cancel the
           // import — it only downgrades this run to text-only, same as if
           // every voice row had been unticked. The acts themselves are
           // always what "Import" promised.
-          wantVoice = await confirmVoiceGeneration(wordCount, voiceName);
-          if (wantVoice) ttsMod.setLastVoice(voiceId);
+          wantVoice = await confirmVoiceGeneration(wordCount, ttsMod.describeChoice(choice));
+          if (wantVoice) {
+            if (!choice.mix) ttsMod.setLastVoice(choice.singleId);
+            ttsMod.setLastMix(choice);
+          }
         }
 
         err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
@@ -1258,7 +1357,7 @@ function importFlow(initialFile) {
           // on a possibly-slow, sequential TTS batch.
           if (wantVoice) {
             const voiceActs = (res.createdActs || []).filter(a => a.ttsEligible);
-            if (voiceActs.length) runVoiceBatch(voiceActs, voiceId, ttsMod);
+            if (voiceActs.length) runVoiceBatch(voiceActs, { plan: voicePlan, voiceId }, ttsMod);
           }
         } catch (e) {
           ok.disabled = false; ok.textContent = `Import ${chosen.length}`;
@@ -1274,12 +1373,14 @@ function importFlow(initialFile) {
 // / Escape) — openModal's onClose always fires, but a Promise only
 // settles on its FIRST resolve() call, so a "Generate" click followed by
 // the dialog's own close() (which re-fires onClose) is harmless.
-function confirmVoiceGeneration(wordCount, voiceName) {
+// `voiceWhat` is core/voice-mix.js's describeChoice() — a ready sentence
+// naming either the single voice or the mix about to be used.
+function confirmVoiceGeneration(wordCount, voiceWhat) {
   return new Promise(resolve => {
     openModal("Generate voices?", (body, close) => {
       body.append(el("div", "aw-modal-text",
-        `Will generate voice for <b>${wordCount}</b> word${wordCount === 1 ? "" : "s"} using <b>${escapeText(voiceName)}</b>. ` +
-        `Runs after the import finishes, one word at a time — you'll need to be signed in to save the clips.`));
+        `Will generate voice for <b>${wordCount}</b> word${wordCount === 1 ? "" : "s"} using <b>${escapeText(voiceWhat)}</b>. ` +
+        `Runs after the import finishes — you'll need to be signed in to save the clips.`));
       const actions = el("div", "aw-modal-actions");
       const no = el("button", "aw-btn", "Skip voices"); no.type = "button";
       no.onclick = () => { resolve(false); close(); };
@@ -1300,7 +1401,11 @@ function confirmVoiceGeneration(wordCount, voiceName) {
 // Persists each act ONCE, right after ITS OWN words are done — not per
 // word — so a cancel or sign-out partway through never loses whatever was
 // already generated, and Firestore only takes 1 write per act either way.
-function runVoiceBatch(acts, voiceId, ttsMod) {
+// `choice` is { plan, voiceId }: `plan` is the one voice-per-word array built
+// for the WHOLE import (null when the teacher picked a single voice), and the
+// acts here are walked in the same order the plan was sized against, so each
+// act reads its own slice through a running offset.
+function runVoiceBatch(acts, choice, ttsMod) {
   const GENERIC_CLUE_TEXT = "Unscramble the word";
   const overlay = el("div", "aw-modal-overlay");
   const modal = el("div", "aw-modal");
@@ -1329,10 +1434,16 @@ function runVoiceBatch(acts, voiceId, ttsMod) {
 
   (async () => {
     let doneWords = 0, failedWords = 0, signedOut = false;
+    let planOffset = 0;   // how many words of `choice.plan` earlier acts already used
     for (const act of acts) {
       if (cancelled) break;
       const items = act.content.items || [];
-      const res = await ttsMod.generateVoicesBatch(items, voiceId, {
+      // generateVoicesBatch's `index` is this item's position in THIS act's
+      // array, so the shared plan is read at offset + index.
+      const base = planOffset;
+      const voiceFor = choice.plan ? ((it, i) => choice.plan[base + i]) : choice.voiceId;
+      planOffset += items.length;
+      const res = await ttsMod.generateVoicesBatch(items, voiceFor, {
         textFor: it => (it.clue || "").trim() || GENERIC_CLUE_TEXT,
         isCancelled: () => cancelled,
         onProgress: (done, failed) => {
