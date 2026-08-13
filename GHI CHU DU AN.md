@@ -8,7 +8,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 139 (13/8/2026) — ⭐ TÍNH NĂNG MỚI: "TIME COST" — MỖI GIÂY **TRỐNG** TRÔI QUA LÀ TRỪ ĐIỂM + BONUS X LÊN 10X
 ⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js`, + file mới `core/timecost.js`)
 + Anagram + Quiz. 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu, cả 2 template, có đo đối chứng
-zero-diff). 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+zero-diff). ✅ **THẦY DUYỆT → COMMIT `c840baf` + PUSH + LIVE** (đã curl xác nhận 6 dấu mốc trên bản
+live: `core/timecost.js` tồn tại + có `flyTimeCost` · `setIdleGuard` trong `engine.js` · `onTimeCost`
+trong `fight.js` · `MAX_BONUS_MULT = 10` trong `anagram.js` · `timeCost: true` trong `quiz.js` ·
+`.aw-timecost-fly` trong `app.css`).
 
 ### Thầy yêu cầu
 1. Thêm thanh kéo **Time cost** (0–100, mỗi nấc 1 điểm) cho cả Anagram và Quiz. Ban đầu thầy nói "cứ

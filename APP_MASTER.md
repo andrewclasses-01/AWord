@@ -12,7 +12,7 @@
 > (HS ngồi không làm gì) TRÔI QUA LÀ TỔNG ĐIỂM BỊ TRỪ, số `-N` ĐỎ BAY TỪ Ô ĐIỂM VÀO ĐỒNG HỒ +
 > ĐIỂM CHẠY GIẢM. KÈM: BONUS X CỦA ANAGRAM LÊN 10X.**
 > ⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js` + **file mới `core/timecost.js`**)
-> + Anagram + Quiz. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> + Anagram + Quiz. ✅ **THẦY DUYỆT → COMMIT `c840baf` + PUSH + LIVE** (curl xác nhận 6 dấu mốc).
 > Thanh trượt 0–100 (0 = Off) + ô **ngưỡng trống 1–5s**, nằm **chung hàng 2 cột với "Points off"** nên
 > panel Options **không cao thêm pixel nào** ở 2/3 mode Anagram. Chỉ Anagram + Quiz có (thầy chốt),
 > template khác thêm sau chỉ tốn 1 cờ + 4 dòng — hợp đồng ở `core/HUONG DAN CORE.md` mục "TIME COST".
@@ -1787,10 +1787,10 @@ cả 2, không chỉ Anagram.
 (`tpl.timeCost: true`). Thêm cho template khác = 1 cờ + 4 dòng, hợp đồng ở `core/HUONG DAN CORE.md`
 mục "TIME COST". Hiệu ứng dùng chung nằm ở `core/timecost.js`.
 
-**4 đợt gần nhất:**
+**4 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | 🟢 **CHỜ DUYỆT** |
+| **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
 | **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
 | **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | `912016b` |
 | **136** | Icon trong nút to hẳn (15px→26px) + bỏ số 7 nét, trả số điểm tay về font Baloo 2 của app (**đảo ngược** việc 10 của Đợt 134) | `05b73b5` |

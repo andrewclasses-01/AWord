@@ -2,7 +2,7 @@
 
 ## ⭐ Đợt 139 (13/8/2026) — TIME COST (trừ điểm mỗi giây TRỐNG) + BONUS X LÊN 10X
 
-🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ + toàn bộ số đo: `../../GHI CHU DU AN.md` Đợt 139.
+✅ **THẦY DUYỆT → COMMIT `c840baf` + PUSH + LIVE.** Chi tiết đầy đủ + toàn bộ số đo: `../../GHI CHU DU AN.md` Đợt 139.
 Hợp đồng `tpl.timeCost` dùng chung: `../../core/HUONG DAN CORE.md` mục "TIME COST".
 
 **Anagram phải làm gì (rất ít — engine lo phần còn lại):**

@@ -11,7 +11,7 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ## ⭐ ĐỢT 139 (13/8/2026) — TIME COST (trừ điểm mỗi giây TRỐNG)
 
-🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ: `../../GHI CHU DU AN.md` Đợt 139.
+✅ **THẦY DUYỆT → COMMIT `c840baf` + PUSH + LIVE.** Chi tiết đầy đủ: `../../GHI CHU DU AN.md` Đợt 139.
 Hợp đồng dùng chung: `../../core/HUONG DAN CORE.md` mục "TIME COST".
 
 Quiz là template thứ 2 nhận tính năng này, và là **ca chứng minh giá trị của việc để hiệu ứng nằm ở
