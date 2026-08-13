@@ -29,7 +29,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
+import { makeHStepper } from "../../core/numberstepper.js";
 import { otbSound } from "./otb-sound.js";
 import { openOtbEditor } from "./open-the-box-editor.js";
 
@@ -290,20 +290,18 @@ const otbTemplate = {
       }));
   },
 
-  buildExtraOptions({ panel, draft }) {
-    const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Question time"));
-    const row = el("div", "aw-opt-row");
-    const secs = el("span", "aw-opt-time");
-    const stepper = makeNumberStepper(
+  // Đợt 140 — shared panel builders: one cell with the horizontal stepper
+  // instead of a full-width group holding a 69px-tall ▲/▼ field.
+  buildExtraOptions({ panel, draft, mkCell }) {
+    const c = mkCell({ label: "Question time" });
+    const stepper = makeHStepper(
       typeof draft.questionTimeSeconds === "number" ? draft.questionTimeSeconds : 15,
       3, 59,
-      v => draft.questionTimeSeconds = v
+      v => { draft.questionTimeSeconds = v; },
+      { format: v => v + "s" }
     );
-    secs.append(stepper.el, document.createTextNode("s"));
-    row.append(secs);
-    g.append(row);
-    panel.append(g);
+    c.ctl.append(stepper.el);
+    panel.append(c.cell);
   },
 
   // Menu pause hook (Đợt 91) — engine.js calls this on ☰ Menu open(true)/

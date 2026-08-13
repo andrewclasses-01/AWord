@@ -32,7 +32,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 import { TEMPLATES, templateLabel } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
-import { makeNumberStepper } from "./numberstepper.js";
+import { makeNumberStepper, makeHStepper } from "./numberstepper.js";
 import { openPrintPopup } from "./print.js";
 // Time cost (Đợt 139) — leaf module, no dependency of its own beyond utils, so
 // importing it statically is safe on the STUDENT page too (the ⛔ boundary is
@@ -951,7 +951,11 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     toolDim = el("div", "aw-tool-dim");
     toolDim.onclick = () => closeToolPanel(true);
     document.body.append(toolDim);
-    toolPanelEl = el("div", "aw-tool-panel");
+    // `is-opts` (Đợt 140) gives the Options panel a stated width so its two
+    // grid columns are always the same comfortable size — see app.css. Set
+    // BEFORE buildContent so anything that measures itself while building
+    // (an accordion reading scrollHeight) reads the final width.
+    toolPanelEl = el("div", "aw-tool-panel" + (buildContent === buildOptionsPanel ? " is-opts" : ""));
     buildContent(toolPanelEl);
     belowCenter.append(toolPanelEl);
     // Cap the panel's height so it never runs off the top of the screen, and
@@ -1004,42 +1008,119 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     const base = activity.options || {};
     const draft = { ...base };
 
+    // ============================================================
+    // PANEL v2 (Đợt 140) — ONE grid, ONE row shape for every option.
+    // Why (all measured on the live panel before the rewrite, see
+    // core/app.css's "OPTIONS PANEL v2" block for the full list): content
+    // started at 4 different x, three "identical" sliders were 212/208/220px
+    // long, a 69px ▲/▼ stepper sat inside a 12px row, and the panel was 22px
+    // TOO TALL for the room above the toolbar so `.is-compact-opts` had to
+    // shrink every label to 9.5px. Alignment now comes from the grid, not
+    // from each control happening to agree.
+    //
+    // Everything below builds CELLS and hands them to `grid`; a template that
+    // still appends old `.aw-opt-group` markup lands in the same grid and
+    // spans both columns (the legacy bridge rule in app.css), so nothing
+    // breaks while templates are upgraded one at a time.
+    // ============================================================
+    const grid = el("div", "aw-opt-grid");
+    // Every loose checkbox in the panel — engine's AND (via addCheck) the
+    // template's — collects HERE and renders as one block near the bottom.
+    // The old panel gave four single-checkbox groups their own uppercase
+    // heading; this is what removes them.
+    const checksBox = el("div", "aw-checks");
+    const checksHost = el("div", "aw-optc aw-optc-wide");
+    checksHost.append(checksBox);
+
+    // one option = one cell: a label line and a control line, nothing else
+    function mkCell({ label, sub, wide } = {}) {
+      const cell = el("div", "aw-optc" + (wide ? " aw-optc-wide" : ""));
+      const lab = el("div", "aw-optc-lab", label || "");
+      if (sub) lab.append(el("span", "aw-optc-sub", sub));
+      const ctl = el("div", "aw-optc-ctl");
+      cell.append(lab, ctl);
+      return { cell, lab, ctl };
+    }
+
+    // segmented control — replaces a row of radios. `choices` = [{value,label,title}]
+    function mkSeg(choices, current, onPick) {
+      const seg = el("div", "aw-seg");
+      const btns = choices.map(c => {
+        const b = el("button", "aw-seg-btn" + (c.value === current ? " is-on" : ""), c.label);
+        b.type = "button";
+        if (c.title) b.title = c.title;
+        b.onclick = () => {
+          if (b.classList.contains("is-on")) return;
+          btns.forEach(x => x.classList.remove("is-on"));
+          b.classList.add("is-on");
+          sound.click();
+          onPick(c.value);
+        };
+        return b;
+      });
+      seg.append(...btns);
+      return seg;
+    }
+
+    // slider + value chip. `offAt` = the value that means "switched off" (its
+    // chip greys out instead of shouting in red). `fmt` prints the number.
+    function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, offAt, onInput, wide }) {
+      const c = mkCell({ label, sub, wide });
+      // Number, not `v | 0`: Speaking's "stars to pass" moves in 0.5 steps and
+      // a bitwise clamp would silently floor every half star away.
+      const clamp = v => Math.max(min, Math.min(max, Number(v)));
+      const cur = clamp(Number(value) || 0);
+      const s = el("input", "aw-optc-slider" + (tone ? " is-" + tone : ""));
+      s.type = "range"; s.min = String(min); s.max = String(max); s.step = String(step || 1);
+      s.value = String(cur);
+      const print = v => (fmt ? fmt(v) : String(v));
+      const chip = el("span", "aw-optc-chip" + (tone ? " is-" + tone : ""), print(cur));
+      const paint = v => {
+        chip.textContent = print(v);
+        chip.classList.toggle("is-off", offAt != null && v === offAt);
+      };
+      paint(cur);
+      s.oninput = () => { const v = clamp(s.value); paint(v); onInput(v); };
+      c.ctl.append(s, chip);
+      return { ...c, slider: s, chip, paint };
+    }
+
+    // add a checkbox to the shared block at the bottom (engine + templates)
+    function addCheck(label, checked, onChange, opts = {}) {
+      const wrap = mkCheck(checked, label, onChange);
+      if (opts.title) wrap.title = opts.title;
+      checksBox.append(wrap);
+      return wrap;
+    }
+
     // TIME COST cell (Đợt 139) — declared up here, before buildExtraOptions()
-    // runs, because a template may CLAIM it (Anagram does, so it can stand the
-    // cell beside its own mode-dependent Points off groups instead of letting
-    // the panel grow a whole extra row). `let` in a closure read by a function
-    // called earlier in the same body is exactly the TDZ trap that silently
-    // broke startFight() in Đợt 134 — so both live at the very top.
+    // runs, because a template may CLAIM it (place it itself). `let` in a
+    // closure read by a function called earlier in the same body is exactly
+    // the TDZ trap that silently broke startFight() in Đợt 134 — so both live
+    // at the very top.
     let timeCostUsed = false;
     const buildTimeCostCell = () => {
       timeCostUsed = true;
-      const clampCost = v => Math.max(0, Math.min(100, v | 0));
       const clampIdle = v => Math.max(1, Math.min(5, Math.round(v) || 1));
-      const cell = el("div", "aw-opt-cell");
-      cell.append(el("div", "aw-opt-label", "Time cost (per idle second)"));
-      const row = el("div", "aw-opt-row aw-opt-row-nowrap");
-      const cur = clampCost(draft.timeCost || 0);
-      const slider = el("input", "aw-opt-slider");
-      slider.type = "range"; slider.min = "0"; slider.max = "100"; slider.step = "1";
-      slider.value = String(cur);
-      const val = el("span", "aw-opt-slidval", cur === 0 ? "Off" : "-" + cur);
-      // How long the student may think before the FIRST charge. Same stepper
-      // control as the countdown's mm:ss, and dimmed the same way when the
-      // thing it qualifies is switched off — "1s grace on a 0-point cost" is
-      // noise, not a setting.
-      const idleWrap = el("span", "aw-opt-idle");
-      const idleStep = makeNumberStepper(clampIdle(draft.timeCostIdle ?? 1), 1, 5, v => { draft.timeCostIdle = v; });
-      idleWrap.append(document.createTextNode("after"), idleStep.el, document.createTextNode("s"));
-      idleWrap.classList.toggle("is-dim", cur === 0);
-      slider.oninput = () => {
-        const v = clampCost(+slider.value);
-        draft.timeCost = v;
-        val.textContent = v === 0 ? "Off" : "-" + v;
-        idleWrap.classList.toggle("is-dim", v === 0);
-      };
-      row.append(slider, val, idleWrap);
-      cell.append(row);
-      return cell;
+      const cur = Math.max(0, Math.min(100, (draft.timeCost || 0) | 0));
+      // The grace stepper rides on the LABEL line, not the control line.
+      // Measured while drafting the redesign: standing it beside the slider
+      // squeezed that slider to 78px (the others were 176) and pushed its
+      // value chip 160px out of the column — i.e. it would have rebuilt the
+      // exact raggedness this đợt exists to remove.
+      const idleStep = makeHStepper(clampIdle(draft.timeCostIdle ?? 1), 1, 5,
+        v => { draft.timeCostIdle = v; }, { format: v => v + "s" });
+      idleStep.el.classList.add("is-sm");
+      idleStep.el.classList.toggle("is-dim", cur === 0);
+      idleStep.el.title = "Seconds of doing nothing before the first charge";
+      const cell = mkSliderCell({
+        label: "Time cost", sub: "per idle second",
+        min: 0, max: 100, step: 1, value: cur, offAt: 0,
+        fmt: v => (v === 0 ? "Off" : "-" + v),
+        onInput: v => { draft.timeCost = v; idleStep.el.classList.toggle("is-dim", v === 0); }
+      });
+      cell.lab.append(idleStep.el);
+      return cell.cell;
     };
 
     // Đợt 132 (teacher): the "OPTIONS" heading is gone — for EVERY template,
@@ -1084,67 +1165,69 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       panel.append(switchEl);
     }
 
+    panel.append(grid);
+
     // TIMER — a template can hide this whole group (tpl.hideTimerOption) when it
     // runs its OWN timer (e.g. Gameshow's per-QUESTION countdown, which the shared
     // whole-game timer would fight). Mirror of tpl.hideLettersOption below; every
-    // other template keeps this group exactly as before.
+    // other template keeps this option exactly as before.
+    //
+    // Đợt 140: three radios + a 69px-tall ▲/▼ mm:ss pair became a segmented
+    // control + ONE horizontal stepper on a single 30px line. The mm:ss pair
+    // is where 2 of the panel's empty bands came from (its 69px height inside
+    // a 12px row also pushed this group to 92px). The countdown is now one
+    // number in SECONDS stepped by 5 and printed "2:00" — the same value
+    // `timerTotalSeconds` as before, so every saved act keeps working.
     if (!tpl.hideTimerOption) {
-      const gTimer = el("div", "aw-opt-group");
-      gTimer.append(el("div", "aw-opt-label", "Timer"));
-      // nowrap (Đợt 132, teacher: "các mode timer luôn nằm cùng dòng, không
-      // bao giờ xuống dòng") — safe now that the panel itself is wide enough
-      // to actually fit None / Count up / Count down+mm:ss on one line (see
-      // .aw-tool-panel's widened max-width in app.css).
-      const timerRow = el("div", "aw-opt-row aw-opt-row-nowrap");
-      const mkRadio = (value, label) => {
-        const wrap = el("label", "aw-opt-choice");
-        const r = el("input"); r.type = "radio"; r.name = "aw-timer"; r.value = value;
-        r.checked = (draft.timer ?? "countUp") === value;
-        // Đợt 132 (teacher): the mm:ss steppers now stay VISIBLE at all times
-        // next to "Count down" — dimmed + non-interactive when a different
-        // timer mode is picked, rather than vanishing via display:none. That
-        // also keeps the row's own width constant, which matters now that
-        // it's forced onto one line (aw-opt-row-nowrap above) — a field that
-        // popped in and out of the layout used to be able to reflow the row.
-        r.onchange = () => { draft.timer = value; timeFields.classList.toggle("is-dim", value !== "countDown"); };
-        wrap.append(r, document.createTextNode(label));
-        return wrap;
-      };
-      // countdown minutes/seconds — press-and-hold or swipe-to-adjust steppers.
-      const timeFields = el("span", "aw-opt-time");
-      const total = draft.timerTotalSeconds ?? 120;
-      const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { draft.timerTotalSeconds = v * 60 + ss.get(); });
-      const ss = makeNumberStepper(total % 60, 0, 59, v => { draft.timerTotalSeconds = mm.get() * 60 + v; });
-      timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
-      timeFields.classList.toggle("is-dim", (draft.timer ?? "countUp") !== "countDown");
-      // Keep "Count down" + its time fields together on one line (a no-wrap group)
-      // so the fields sit to the RIGHT of the button instead of wrapping below.
-      const cdGroup = el("span", "aw-opt-cd");
-      cdGroup.append(mkRadio("countDown", "Count down"), timeFields);
-      timerRow.append(mkRadio("none", "None"), mkRadio("countUp", "Count up"), cdGroup);
-      gTimer.append(timerRow);
-      panel.append(gTimer);
+      // `tpl.hideTimerNone` (Đợt 140) — a game that must always be on a clock
+      // (Whack-a-mole) drops the "None" choice and snaps a legacy act that was
+      // saved with timer:"none" onto Count down. This used to be done by
+      // whack-a-mole.js reaching INTO the panel and deleting the radio it
+      // didn't want; that broke the moment the radios became a segmented
+      // control, so it is a declared flag now — engine builds what a template
+      // asks for, templates never operate on the panel's DOM.
+      if (tpl.hideTimerNone && (!draft.timer || draft.timer === "none")) draft.timer = "countDown";
+      const cur = draft.timer ?? "countUp";
+      const total = Math.max(5, Math.min(3599, draft.timerTotalSeconds ?? 120));
+      const stepper = makeHStepper(total, 5, 3599, v => { draft.timerTotalSeconds = v; },
+        { step: 5, format: v => Math.floor(v / 60) + ":" + String(v % 60).padStart(2, "0") });
+      // Đợt 132 (teacher): the countdown field stays VISIBLE at all times —
+      // dimmed + non-interactive when another timer mode is picked, never
+      // display:none (a field popping in and out used to reflow the row).
+      stepper.el.classList.toggle("is-dim", cur !== "countDown");
+      stepper.el.title = "Countdown length";
+      const c = mkCell({ label: "Timer", wide: true });
+      const timerChoices = [
+        { value: "none", label: "None" },
+        { value: "countUp", label: "Count up" },
+        { value: "countDown", label: "Count down" }
+      ].filter(x => !(tpl.hideTimerNone && x.value === "none"));
+      c.ctl.append(
+        mkSeg(timerChoices, cur,
+          v => { draft.timer = v; stepper.el.classList.toggle("is-dim", v !== "countDown"); }),
+        stepper.el
+      );
+      grid.append(c.cell);
     }
 
-    // RANDOM
-    const gRandom = el("div", "aw-opt-group");
-    gRandom.append(el("div", "aw-opt-label", "Random"));
-    const rowRandom = el("div", "aw-opt-row");
-    rowRandom.append(
-      mkCheck(draft.shuffleQuestions !== false, "Shuffle question order", v => draft.shuffleQuestions = v)
-    );
+    // RANDOM + AUTO SWITCH + (further down) END OF GAME — three groups that
+    // were three uppercase headings over four loose checkboxes. They are the
+    // same KIND of control, so they now live together in the checkbox block at
+    // the bottom (Đợt 140). Labels shortened to fit two per row; the full
+    // sentence survives as the tooltip.
+    // `tpl.shuffleLabel` (Đợt 140) — a game whose items aren't "questions"
+    // (Speaking cards deals CARDS) renames this one switch. It used to rewrite
+    // the text node from inside the template, which stopped working the moment
+    // the markup changed; declared, it cannot rot.
+    addCheck(tpl.shuffleLabel || "Shuffle questions", draft.shuffleQuestions !== false,
+      v => draft.shuffleQuestions = v, { title: tpl.shuffleLabel || "Shuffle question order" });
     // "Shuffle answer order" is meaningless for templates with no answer choices
     // (e.g. Type the answer — the student types, there are no options to shuffle),
-    // so those opt out via tpl.hideShuffleAnswers. Mirror of tpl.hideLettersOption
-    // above; every other template keeps this checkbox exactly as before.
+    // so those opt out via tpl.hideShuffleAnswers.
     if (!tpl.hideShuffleAnswers) {
-      rowRandom.append(
-        mkCheck(draft.shuffleAnswers !== false, "Shuffle answer order", v => draft.shuffleAnswers = v)
-      );
+      addCheck("Shuffle answers", draft.shuffleAnswers !== false, v => draft.shuffleAnswers = v,
+        { title: "Shuffle answer order" });
     }
-    gRandom.append(rowRandom);
-    panel.append(gRandom);
-
     // AUTO SWITCH — advance to the next question automatically once the current
     // one has an answer. OFF by default; a template acts on it by reading
     // activity.options.autoSwitch. Shown for every template (teacher's call,
@@ -1152,33 +1235,8 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // now always auto-advances a graded question on its own (3/8/2026 spec), so
     // this checkbox would no longer do anything there and only confuse things.
     if (!tpl.hideAutoSwitch) {
-      const gAuto = el("div", "aw-opt-group");
-      gAuto.append(el("div", "aw-opt-label", "Auto switch"));
-      const rowAuto = el("div", "aw-opt-row");
-      rowAuto.append(mkCheck(draft.autoSwitch === true, "Move to the next question automatically",
-        v => draft.autoSwitch = v));
-      gAuto.append(rowAuto);
-      panel.append(gAuto);
-    }
-
-    // LETTERS ON ANSWERS — a template can opt out entirely (e.g. Type the
-    // answer has no letter-lettered answer boxes, so the option is meaningless
-    // for it). Every other template keeps this group exactly as before.
-    if (!tpl.hideLettersOption) {
-      const gLet = el("div", "aw-opt-group");
-      gLet.append(el("div", "aw-opt-label", "Letters on answers"));
-      const rowLet = el("div", "aw-opt-row");
-      const mkRadioLet = (value, label) => {
-        const wrap = el("label", "aw-opt-choice");
-        const r = el("input"); r.type = "radio"; r.name = "aw-letters"; r.value = value;
-        r.checked = (draft.lettersOnAnswers ?? "none") === value;
-        r.onchange = () => { draft.lettersOnAnswers = value; };
-        wrap.append(r, document.createTextNode(label));
-        return wrap;
-      };
-      rowLet.append(mkRadioLet("abc", "A, B, C"), mkRadioLet("none", "None"));
-      gLet.append(rowLet);
-      panel.append(gLet);
+      addCheck("Auto next question", draft.autoSwitch === true, v => draft.autoSwitch = v,
+        { title: "Move to the next question automatically" });
     }
 
     // TEMPLATE-SPECIFIC EXTRA OPTIONS (optional hook) — a template can append its
@@ -1190,14 +1248,43 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       // Time cost. A template that DOES opt in may either call it — and own
       // where the cell sits — or ignore it, in which case the block further
       // down places the cell itself (that is Quiz's path).
-      tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice, timeCostCell: tpl.timeCost ? buildTimeCostCell : null });
+      //
+      // Đợt 140: `panel` here is now the GRID, and four new builders come with
+      // it (mkCell/mkSeg/mkSliderCell/addCheck) so a template can produce cells
+      // that line up with the engine's own. A template that ignores them and
+      // appends the old `.aw-opt-group` markup still works — such a group spans
+      // both columns and renders exactly as it does today (legacy bridge rule
+      // in app.css). Old field names are all still passed: nothing to change
+      // in a template until someone gets round to upgrading it.
+      tpl.buildExtraOptions({
+        panel: grid, draft, el, mkCheck, mkRadioChoice,
+        mkCell, mkSeg, mkSliderCell, addCheck,
+        timeCostCell: tpl.timeCost ? buildTimeCostCell : null
+      });
     }
 
     // FIGHT MODE settings (content of the two boards, who scores a word, speed
     // bonus) go in the SAME panel rather than a second one — only while a match
     // is actually running, since they mean nothing to a single board.
     if (fight && typeof fight.ctl.buildOptions === "function") {
-      fight.ctl.buildOptions({ panel, draft, el, mkCheck, mkRadioChoice });
+      fight.ctl.buildOptions({ panel: grid, draft, el, mkCheck, mkRadioChoice, mkCell, mkSeg, mkSliderCell, addCheck });
+    }
+
+    // LETTERS ON ANSWERS — a template can opt out entirely (e.g. Type the
+    // answer has no letter-lettered answer boxes, so the option is meaningless
+    // for it).
+    // Đợt 140: moved BELOW the template's own options on purpose. It is a
+    // narrow cell, and the templates with a WIDE first option (Anagram's mode
+    // row) would otherwise leave a half-empty slot beside it; down here it
+    // pairs with Points off / Lives instead.
+    if (!tpl.hideLettersOption) {
+      const c = mkCell({ label: "Letters on answers" });
+      c.ctl.append(mkSeg(
+        [{ value: "abc", label: "A, B, C" }, { value: "none", label: "None" }],
+        draft.lettersOnAnswers ?? "none",
+        v => { draft.lettersOnAnswers = v; }
+      ));
+      grid.append(c.cell);
     }
 
     // POINTS OFF — deduct this many points for a WRONG answer (0 = off). Central
@@ -1211,37 +1298,39 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // (teacher: "gộp Time cost vào chung hàng với Points off"). The panel was
     // already one group away from having to scroll in fight mode, so the new
     // option had to cost zero extra height — side by side, it does.
-    const gPair = el("div", "aw-opt-group aw-opt-2up");
+    // Đợt 139: Points off and Time cost were one row of two half-width cells.
+    // Đợt 140: they are simply two ordinary cells of the panel-wide grid —
+    // same result, no special row wrapper, and they pair with whatever narrow
+    // cell happens to sit beside them.
     if (tpl.scorable !== false && !tpl.hidePointsOff) {
-      const clampPen = v => Math.max(0, Math.min(5, v | 0));
-      const cellPen = el("div", "aw-opt-cell");
-      cellPen.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
-      const rowPen = el("div", "aw-opt-row");
-      const penSlider = el("input", "aw-opt-slider");
-      penSlider.type = "range"; penSlider.min = "0"; penSlider.max = "5"; penSlider.step = "1";
-      penSlider.value = String(clampPen(draft.pointsOff || 0));
-      const penVal = el("span", "aw-opt-slidval", clampPen(draft.pointsOff || 0) === 0 ? "Off" : "-" + clampPen(draft.pointsOff || 0));
-      penSlider.oninput = () => {
-        const v = clampPen(+penSlider.value);
-        draft.pointsOff = v;
-        penVal.textContent = v === 0 ? "Off" : "-" + v;
-      };
-      rowPen.append(penSlider, penVal);
-      cellPen.append(rowPen);
-      gPair.append(cellPen);
+      grid.append(mkSliderCell({
+        label: "Points off", sub: "wrong answer",
+        min: 0, max: 5, step: 1, value: draft.pointsOff || 0, offAt: 0,
+        fmt: v => (v === 0 ? "Off" : "-" + v),
+        onInput: v => { draft.pointsOff = v; }
+      }).cell);
     }
-    // Only if the template didn't already place the cell itself (Anagram does).
-    if (tpl.timeCost && !timeCostUsed) gPair.append(buildTimeCostCell());
-    if (gPair.children.length) panel.append(gPair);
+    // Only if the template didn't already place the cell itself.
+    if (tpl.timeCost && !timeCostUsed) grid.append(buildTimeCostCell());
 
-    // END OF GAME — kept LAST (after the template's own extra options), per the
-    // teacher's request (1/8/2026): "Show answers" sits at the very bottom.
-    const gEnd = el("div", "aw-opt-group");
-    gEnd.append(el("div", "aw-opt-label", "End of game"));
-    const rowEnd = el("div", "aw-opt-row");
-    rowEnd.append(mkCheck(draft.showAnswers !== false, "Show answers", v => draft.showAnswers = v));
-    gEnd.append(rowEnd);
-    panel.append(gEnd);
+    // END OF GAME — "Show answers" stays LAST, per the teacher's request
+    // (1/8/2026), which it still is: it is the last item of the checkbox block,
+    // and that block is the last thing above Apply.
+    // `tpl.hideShowAnswers` (Đợt 140): an open-ended game with no answers to
+    // show (Speaking cards) opts out. Also a former piece of DOM surgery — the
+    // template used to delete the whole group, twice, once immediately and
+    // once in a requestAnimationFrame, because the engine appended it AFTER
+    // the template's hook had already run.
+    if (!tpl.hideShowAnswers) {
+      addCheck("Show answers at end", draft.showAnswers !== false, v => draft.showAnswers = v,
+        { title: "Show answers when the game ends" });
+    }
+
+    // the gathered checkboxes, with a hairline above them so the block reads as
+    // "and these switches" rather than as another option cell
+    if (checksBox.children.length) {
+      grid.append(el("div", "aw-optc-sep"), checksHost);
+    }
 
     // The "Options apply when you press Play / Applying restarts the game…"
     // hint line was dropped Đợt 132 (teacher: trim guidance text so the whole
@@ -1300,11 +1389,18 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     applyWrap.append(applyBtn);
     panel.append(applyWrap);
 
+    // Đợt 140 — same contract (returns an element, caller decides where it
+    // goes), new markup: the native box is kept in the DOM for keyboard and
+    // :checked but drawn by CSS instead, so every checkbox in every template
+    // matches the rest of the panel without any template being touched.
+    // NEVER display:none the input — that drops it out of the tab order.
     function mkCheck(checked, label, onChange) {
-      const wrap = el("label", "aw-opt-choice");
-      const c = el("input"); c.type = "checkbox"; c.checked = checked;
+      const wrap = el("label", "aw-check");
+      const c = el("input", "aw-check-in"); c.type = "checkbox"; c.checked = checked;
       c.onchange = () => onChange(c.checked);
-      wrap.append(c, document.createTextNode(label));
+      // the text is its own element (not a bare text node) so it can ellipsis
+      // instead of widening its column — the block auto-fits 2 or 3 columns
+      wrap.append(c, el("span", "aw-check-box"), el("span", "aw-check-t", label));
       return wrap;
     }
 

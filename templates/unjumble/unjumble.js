@@ -124,60 +124,44 @@ const unjumbleTemplate = {
 
   edit: openUnjumbleEditor,
 
-  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
-    const gMode = el("div", "aw-opt-group");
-    gMode.append(el("div", "aw-opt-label", "Marking"));
-    const rowMode = el("div", "aw-opt-row");
-    const mode = draft.unjumbleMode === "submit" ? "submit" : "bonus";
-    rowMode.append(
-      mkRadioChoice("aw-unj-mode", "bonus", "Words with bonus", mode === "bonus", v => draft.unjumbleMode = v),
-      mkRadioChoice("aw-unj-mode", "submit", "On submit", mode === "submit", v => draft.unjumbleMode = v)
-    );
-    gMode.append(rowMode);
-    panel.append(gMode);
+  // Đợt 140 — shared panel builders (see core/engine.js buildOptionsPanel).
+  buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck }) {
+    const cMode = mkCell({ label: "Marking" });
+    cMode.ctl.append(mkSeg([
+      { value: "bonus", label: "With bonus", title: "Words with bonus" },
+      { value: "submit", label: "On submit" }
+    ], draft.unjumbleMode === "submit" ? "submit" : "bonus",
+      v => { draft.unjumbleMode = v; }));
 
-    const gAlign = el("div", "aw-opt-group");
-    gAlign.append(el("div", "aw-opt-label", "Alignment"));
-    const rowAlign = el("div", "aw-opt-row");
-    const align = draft.align === "center" ? "center" : "left";
-    rowAlign.append(
-      mkRadioChoice("aw-unj-align", "left", "Left", align === "left", v => draft.align = v),
-      mkRadioChoice("aw-unj-align", "center", "Centered", align === "center", v => draft.align = v)
+    const cAlign = mkCell({ label: "Alignment" });
+    cAlign.ctl.append(mkSeg([
+      { value: "left", label: "Left" },
+      { value: "center", label: "Centered" }
+    ], draft.align === "center" ? "center" : "left",
+      v => { draft.align = v; }));
+
+    panel.append(
+      cMode.cell, cAlign.cell,
+      // On-submit mode: how many points a WRONG sentence costs (0–5).
+      mkSliderCell({
+        label: "Points off", sub: "wrong sentence", min: 0, max: 5, step: 1,
+        value: Math.max(0, Math.min(5, draft.pointsOff == null ? 1 : draft.pointsOff)), offAt: 0,
+        fmt: v => (v === 0 ? "Off" : "-" + v),
+        onInput: v => { draft.pointsOff = v; }
+      }).cell,
+      // Lives (0 = unlimited, 1..10 hearts) — like True/false.
+      mkSliderCell({
+        label: "Lives", min: 0, max: 10, step: 1,
+        value: (draft.lives == null || draft.lives === 0) ? 0 : Math.min(10, Math.max(1, Math.round(draft.lives))),
+        tone: "blue", offAt: 0,
+        fmt: v => (v === 0 ? "∞" : String(v)),
+        onInput: v => { draft.lives = v; }
+      }).cell
     );
-    gAlign.append(rowAlign);
-    panel.append(gAlign);
 
     // On-submit mode: whether a wrong submission reveals the correct sentence.
-    const gReveal = el("div", "aw-opt-group");
-    gReveal.append(mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
-      v => draft.showAnswerWhenWrong = v));
-    panel.append(gReveal);
-
-    // On-submit mode: how many points a WRONG sentence costs (0–5).
-    const gPen = el("div", "aw-opt-group");
-    gPen.append(el("div", "aw-opt-label", "Points off when wrong"));
-    const cur = Math.max(0, Math.min(5, draft.pointsOff == null ? 1 : draft.pointsOff));
-    const rowPen = el("div", "aw-unj-penrow");
-    const slider = el("input"); slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
-    slider.value = String(cur); slider.className = "aw-unj-penslider";
-    const val = el("span", "aw-unj-penval", String(cur));
-    slider.oninput = () => { draft.pointsOff = Number(slider.value); val.textContent = slider.value; };
-    rowPen.append(slider, val);
-    gPen.append(rowPen);
-    panel.append(gPen);
-
-    // Lives (0 = unlimited, 1..10 hearts) — like True/false.
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const curL = (draft.lives == null || draft.lives === 0) ? 0 : Math.min(10, Math.max(1, Math.round(draft.lives)));
-    const rowL = el("div", "aw-unj-penrow");
-    const sliderL = el("input"); sliderL.type = "range"; sliderL.min = "0"; sliderL.max = "10"; sliderL.step = "1";
-    sliderL.value = String(curL); sliderL.className = "aw-unj-penslider";
-    const valL = el("span", "aw-unj-penval", curL === 0 ? "∞" : String(curL));
-    sliderL.oninput = () => { const v = Number(sliderL.value); draft.lives = v; valL.textContent = v === 0 ? "∞" : String(v); };
-    rowL.append(sliderL, valL);
-    gLives.append(rowL);
-    panel.append(gLives);
+    addCheck("Show answer when wrong", draft.showAnswerWhenWrong !== false,
+      v => { draft.showAnswerWhenWrong = v; });
   },
 
   // Any Options change restarts the act (the 3 marking models are not

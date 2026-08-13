@@ -187,3 +187,25 @@ Editor (12 dòng, badge, thumbnail, Cancel về game) · đổi theme Classroom 
 - Thêm `<link ... speaking-cards.css>` vào `index.html` gốc.
 - Thêm vào `../../core/catalog.js` (built:true) để hiện ở picker "New activity".
 - Thêm `speaking_cards` vào danh sách `ALL_TEMPLATES` trong `core/engine.js` (panel Template).
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+⚠️ **RIÊNG TEMPLATE NÀY — gỡ một quả bom hẹn giờ**: `buildExtraOptions` cũ mở đầu bằng `prune()` —
+**cắt DOM của panel bằng tay** (xoá nhóm nhãn `"End of game"`, xoá `.aw-opt-choice` chứa chữ "answer",
+**sửa text node** để đổi tên "Shuffle question order" → "Shuffle item order"), và phải chạy **2 lần**
+(một lần ngay + một lần trong `requestAnimationFrame`) vì engine append "End of game" SAU hook này.
+Nay là 3 **cờ khai báo**: `hideShowAnswers: true` · `hideShuffleAnswers: true` ·
+`shuffleLabel: "Shuffle item order"`. Đã đo lại: đúng y hành vi cũ.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **372px → 242px**.

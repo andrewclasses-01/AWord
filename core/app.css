@@ -914,6 +914,173 @@ body {
   filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
 }
 
+/* =====================================================================
+   OPTIONS PANEL v2 — ONE grid, ONE row shape (Đợt 140, 13/8/2026)
+   ---------------------------------------------------------------------
+   Teacher: "bảng options rất rối, khó nhìn, không thẳng hàng, không ngăn
+   nắp và không thẩm mỹ". Measured on the live Anagram panel before this
+   rewrite (mode "Bonus and minus", 1280x720):
+     · content started at FOUR different x — label 15, slider 17,
+       checkbox 19, radio 20
+     · three "identical" sliders were 212 / 208 / 220px long, and the Time
+       cost one 121 — so their value chips began at 3 different x
+     · the vertical rhythm read 41,41,41,41,91,44,41 because a 69px-tall
+       ▲/▼ stepper sat inside a 12px row (twice)
+     · 6 of 9 rows wasted 30-76% of the panel's WIDTH while the panel was
+       22px TOO TALL for the room above the toolbar (667 vs 645), which is
+       what kept forcing `.is-compact-opts` to shrink every label to 9.5px
+   The fix is structural, not cosmetic: every option becomes one CELL in a
+   two-column grid, and every cell has the same two parts (label line,
+   control line). Alignment then comes from the grid instead of from each
+   control agreeing to line up by accident.
+   LEGACY BRIDGE: a template that still appends the old `.aw-opt-group`
+   markup lands in this grid too — the rule at the end of this block makes
+   such a group span BOTH columns, i.e. it keeps looking exactly like it
+   does today. Nothing breaks while templates are upgraded one at a time.
+   ===================================================================== */
+/* The OPTIONS panel gets a fixed comfortable width (every other tool panel
+   still sizes to its content). Two `1fr` columns have no intrinsic width of
+   their own, so under the shell's `width: max-content` the grid collapsed to
+   whatever the longest label happened to need — measured 422px, i.e. 186px
+   per column, which is not enough for a 3-choice segmented control. A stated
+   width also means the teacher sees the SAME panel shape in every game
+   instead of one that changes size per template. */
+.aw-tool-panel.is-opts { width: min(94vw, 560px); }
+.aw-opt-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px 16px;
+  align-items: start;
+}
+.aw-optc { min-width: 0; }              /* one option = one cell */
+.aw-optc-wide { grid-column: 1 / -1; }  /* controls too wide for half a panel */
+/* Label line. `min-height` (not a fixed height) keeps two cells side by side
+   starting their CONTROL line at the same y even when one label wraps and the
+   other doesn't — the grid aligns cell tops, this aligns what's inside them. */
+.aw-optc-lab {
+  display: flex; align-items: center; gap: 6px; min-height: 16px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+  color: #8b93a1; text-transform: uppercase; margin-bottom: 4px;
+}
+/* The old labels carried their qualifier inline and in caps — "POINTS OFF
+   (WRONG ANSWER)", "BONUS X (PERFECT-WORD MULTIPLIER)". Same words, but the
+   qualifier now reads as a quiet sub-label so the eye finds the NAME first. */
+.aw-optc-sub {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0;
+  text-transform: none; color: #c3cad6;
+}
+.aw-optc-ctl { display: flex; align-items: center; gap: 10px; min-height: 30px; }
+/* pushes a trailing control (the Time cost grace stepper) to the label's right edge */
+.aw-optc-lab .aw-hstep { margin-left: auto; }
+
+/* ---- SEGMENTED control — replaces radio rows (Đợt 140) ----
+   Same visual language as the Text/Voice switch above, which was the one
+   modern control in the old panel. Also a real touch win at zero height
+   cost: a 15px radio dot becomes a 30px-tall button. */
+.aw-seg {
+  display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  gap: 2px; width: 100%; height: 30px;
+  background: #eef2f7; border-radius: 9px; padding: 3px;
+  flex: 1 1 auto; min-width: 0;
+}
+.aw-seg-btn {
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: transparent; padding: 0 8px;
+  font-family: inherit; font-size: 12.5px; font-weight: 700;
+  color: #6b7688; border-radius: 7px; cursor: pointer;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: color .16s ease;
+}
+.aw-seg-btn.is-on {
+  background: #fff; color: #2f7bff;
+  box-shadow: 0 2px 6px rgba(31,42,68,.14);
+}
+
+/* ---- HORIZONTAL stepper (core/numberstepper.js makeHStepper) ---- */
+.aw-hstep {
+  display: inline-flex; align-items: center; flex: 0 0 auto;
+  height: 30px; border: 1px solid #e6ebf2; border-radius: 9px; overflow: hidden;
+  transition: opacity .15s ease;
+}
+.aw-hstep-btn {
+  border: none; background: transparent; cursor: pointer;
+  width: 26px; height: 100%; padding: 0;
+  font-family: inherit; font-size: 15px; font-weight: 800; color: #94a0b2;
+}
+.aw-hstep-btn:hover { color: #2f7bff; background: #f4f7fb; }
+.aw-hstep-val {
+  min-width: 46px; text-align: center; cursor: ew-resize;
+  font-size: 13.5px; font-weight: 800; color: #23303e;
+  font-variant-numeric: tabular-nums; touch-action: none;
+}
+.aw-hstep-val.is-dragging { color: #2f7bff; }
+.aw-hstep.is-sm { height: 21px; border-radius: 7px; }
+.aw-hstep.is-sm .aw-hstep-btn { width: 19px; font-size: 13px; }
+.aw-hstep.is-sm .aw-hstep-val { min-width: 27px; font-size: 11.5px; }
+/* dimmed = the thing it qualifies is switched off (same rule the old mm:ss
+   fields used, kept: a grace period on a 0-point cost means nothing) */
+.aw-hstep.is-dim { opacity: .38; pointer-events: none; }
+
+/* ---- SLIDER + value chip, one shape for every numeric option ----
+   `margin: 0` is not decoration: <input type=range> ships a 2px default
+   margin, and that alone put the sliders 2px right of every label — one of
+   the four ragged left edges measured above. */
+.aw-optc-slider {
+  flex: 1 1 auto; min-width: 0; margin: 0; height: 18px;
+  accent-color: #ef4444; cursor: pointer;
+}
+.aw-optc-slider.is-amber { accent-color: #f5a623; }
+.aw-optc-slider.is-blue  { accent-color: #2f7bff; }
+/* Fixed basis + right-aligned = every chip in a column ends on the SAME x,
+   whatever the number inside is. Never give one cell a wider chip: that
+   shortens its slider and the column stops lining up (measured while
+   drafting this: a wider chip cost the Time cost slider 98px). */
+.aw-optc-chip {
+  flex: 0 0 52px; text-align: right;
+  font-size: 13.5px; font-weight: 800; color: #ef4444;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.aw-optc-chip.is-amber { color: #f5a623; }
+.aw-optc-chip.is-blue  { color: #2f7bff; }
+.aw-optc-chip.is-off   { color: #b3bcc9; }   /* "Off" must not shout in red */
+
+/* ---- CHECKBOX block — every loose tick in the panel, gathered ----
+   The old panel gave four one-checkbox groups their own uppercase heading
+   ("AUTO SWITCH", "END OF GAME"...). Gathering them removes 4 headings and
+   ~90px of height, and puts like with like. */
+/* auto-fit, not a fixed 1fr 1fr: 7 switches (Anagram in fight mode) become 3
+   columns × 3 rows instead of 2 × 4, which is the last 25px that keeps that
+   panel off a scrollbar. Long labels ellipsis (see .aw-check-t) rather than
+   widening their column — the full sentence is on the tooltip. */
+.aw-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 6px 14px; }
+.aw-check {
+  display: flex; align-items: center; gap: 8px; min-height: 26px; min-width: 0;
+  font-size: 13px; font-weight: 600; color: #23303e; cursor: pointer;
+}
+.aw-check-t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* the real input stays in the DOM (keyboard, :checked, form semantics) — it
+   is only made invisible, never display:none, which would drop it out of the
+   tab order */
+.aw-check-in { position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none; }
+.aw-check-box {
+  flex: 0 0 18px; width: 18px; height: 18px; border-radius: 6px;
+  border: 2px solid #cdd6e2; background: #fff; position: relative;
+  transition: background .14s ease, border-color .14s ease;
+}
+.aw-check-in:checked + .aw-check-box { background: #2f7bff; border-color: #2f7bff; }
+.aw-check-in:checked + .aw-check-box::after {
+  content: ""; position: absolute; left: 4.5px; top: 1px;
+  width: 5px; height: 9px; border: solid #fff; border-width: 0 2.5px 2.5px 0;
+  transform: rotate(43deg);
+}
+.aw-check-in:focus-visible + .aw-check-box { box-shadow: 0 0 0 3px rgba(47,123,255,.35); }
+.aw-optc-sep { grid-column: 1 / -1; height: 1px; background: #e6ebf2; margin: 3px 0 1px; }
+
+/* LEGACY BRIDGE — a not-yet-upgraded template appends `.aw-opt-group` into
+   this grid; spanning both columns makes it render exactly as it does today.
+   Keep this rule as long as ANY template still ships old-style groups. */
+.aw-opt-grid > .aw-opt-group { grid-column: 1 / -1; margin-bottom: 0; }
+
 /* Đợt 134 (teacher: "Options khi thay đổi mode và hiện thêm các dòng sẽ tự
    động rộng ra hoặc chỉnh kích thước nội dung bên trong nhỏ lại để hiển thị
    được đầy đủ mà không cần scroll"). Opt-in — core/engine.js's openToolPanel
@@ -939,6 +1106,23 @@ body {
 .aw-tool-panel.is-compact-opts .aw-opt-idle { font-size: 11px; gap: 3px; }
 .aw-tool-panel.is-compact-opts .aw-opt-2up { gap: 3px 12px; }
 .aw-tool-panel.is-compact-opts .aw-opt-hint { font-size: 10px; margin-top: 5px; }
+/* Đợt 140 — the same emergency shrink applied to the v2 grid. It should now
+   almost never fire (the redesign measured 36% shorter), but fight mode plus a
+   template with many extras can still get there, and a panel that silently
+   scrolls is worse than one that shrinks. */
+.aw-tool-panel.is-compact-opts .aw-opt-grid { gap: 6px 12px; }
+.aw-tool-panel.is-compact-opts .aw-optc-lab { font-size: 9.5px; margin-bottom: 2px; min-height: 13px; }
+.aw-tool-panel.is-compact-opts .aw-optc-sub { font-size: 9.5px; }
+.aw-tool-panel.is-compact-opts .aw-optc-ctl { min-height: 24px; gap: 8px; }
+.aw-tool-panel.is-compact-opts .aw-seg { height: 24px; }
+.aw-tool-panel.is-compact-opts .aw-seg-btn { font-size: 11.5px; padding: 0 5px; }
+.aw-tool-panel.is-compact-opts .aw-hstep { height: 24px; }
+.aw-tool-panel.is-compact-opts .aw-hstep-val { font-size: 12px; min-width: 40px; }
+.aw-tool-panel.is-compact-opts .aw-hstep.is-sm { height: 18px; }
+.aw-tool-panel.is-compact-opts .aw-optc-chip { font-size: 12px; flex-basis: 46px; }
+.aw-tool-panel.is-compact-opts .aw-check { font-size: 12px; min-height: 22px; gap: 6px; }
+.aw-tool-panel.is-compact-opts .aw-check-box { flex-basis: 16px; width: 16px; height: 16px; }
+.aw-tool-panel.is-compact-opts .aw-checks { gap: 4px 12px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
 .aw-tool-panel.is-compact-opts .aw-panel-items { gap: 5px; }
 
 /* Number stepper — small ▲/number/▼ control, drag the number up/down to change it */

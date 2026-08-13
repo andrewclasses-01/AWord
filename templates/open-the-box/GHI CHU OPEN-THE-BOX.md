@@ -1292,3 +1292,18 @@ nên cân nhắc thêm 1 nhánh UI trong `core/engine.js` đọc cờ `scorable:
 thể thêm 1 nút "Reset boxes"/"Close all" chuẩn trong thanh dưới khung thay vì chỉ có "Start again" (vốn
 dựng lại toàn bộ activity, hơi nặng cho nhu cầu "đóng hết hộp lại" đơn giản). Chưa cấp thiết — 4/4 game
 hiện tại vẫn chạy tốt với engine như hiện có, ghi lại để cân nhắc khi có thêm game mở thứ 2.
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **516px → 333px**.

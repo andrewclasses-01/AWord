@@ -226,33 +226,22 @@ const crosswordTemplate = {
   },
 
   // This template's own extra options.
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
-    const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Crossword"));
-    const r1 = el("div", "aw-opt-row");
-    r1.append(mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
-      v => draft.showAnswerWhenWrong = v));
-    g.append(r1);
-    const r2 = el("div", "aw-opt-row");
-    r2.append(mkCheck(draft.changeCrossword !== false, "Change the crossword",
-      v => draft.changeCrossword = v));
-    g.append(r2);
-
+  // Đợt 140 — shared panel builders.
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     // "Points off when wrong" (0..5). 0 = no penalty (drag it to 0 to turn
     // Minus mode off) — no separate checkbox.
     if (draft.minusAmount == null) draft.minusAmount = 0;
-    const sliderWrap = el("div", "aw-cw-opt-minus");
-    sliderWrap.append(el("span", "aw-cw-opt-minus-cap", "Points off when wrong"));
-    const slider = el("input", "aw-cw-opt-slider");
-    slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
-    slider.value = String(draft.minusAmount || 0);
-    const fmt = v => (+v > 0 ? `−${v}` : "0");
-    const sliderVal = el("span", "aw-cw-opt-minus-val", fmt(slider.value));
-    slider.oninput = () => { draft.minusAmount = +slider.value; sliderVal.textContent = fmt(slider.value); };
-    sliderWrap.append(slider, sliderVal);
-    g.append(sliderWrap);
+    panel.append(mkSliderCell({
+      label: "Points off", sub: "wrong answer", min: 0, max: 5, step: 1,
+      value: draft.minusAmount || 0, offAt: 0,
+      fmt: v => (v === 0 ? "Off" : "-" + v),
+      onInput: v => { draft.minusAmount = v; }
+    }).cell);
 
-    panel.append(g);
+    addCheck("Show answer when wrong", draft.showAnswerWhenWrong !== false,
+      v => draft.showAnswerWhenWrong = v);
+    addCheck("Change the crossword", draft.changeCrossword !== false,
+      v => draft.changeCrossword = v);
   },
 
   mount(root, activity, ui) {

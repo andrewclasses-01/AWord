@@ -142,6 +142,12 @@ const wamTemplate = {
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,    // our own timer bar + hearts sit on the score row (ui.topbarMid)
   hideLettersOption: true, // no lettered answer boxes here
+  // Đợt 140 — these two were done by deleting nodes out of the built panel
+  // (see buildExtraOptions below for why that had to stop). Same effect,
+  // declared instead of surgical: no "Auto switch" switch at all, and the
+  // Timer offers only Count up / Count down (this game must be on a clock).
+  hideAutoSwitch: true,
+  hideTimerNone: true,
   manualTimerStart: true,  // we drive our OWN countdown (bonus time can extend it) — the engine
                            // timer must NOT run, or it would auto-submit at the original length
 
@@ -172,68 +178,56 @@ const wamTemplate = {
   // Options panel extras (engine calls this — see CONG THUC MAU §5).
   // The game MODE (True/False vs Quiz) is chosen in the editor now (with a lock),
   // NOT here — so we don't offer a mode radio in-game.
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
-    const group = (label) => { const g = el("div", "aw-opt-group"); g.append(el("div", "aw-opt-label", label)); panel.append(g); return g; };
-    const slider = (g, cls, min, max, get, set, fmt) => {
-      const row = el("div", "aw-opt-row aw-wam-sliderrow");
-      const val = el("span", "aw-wam-sliderval " + cls, fmt(get()));
-      const inp = el("input", "aw-wam-slider " + cls);
-      inp.type = "range"; inp.min = String(min); inp.max = String(max); inp.step = "1"; inp.value = String(get());
-      inp.oninput = () => { const v = parseInt(inp.value, 10); set(v); val.textContent = fmt(v); };
-      row.append(inp, val); g.append(row);
-    };
-
-    // SWITCH correct / incorrect — flips the sign to "Hit moles that are: FALSE"
-    const gSwitch = group("Answers");
-    gSwitch.append(mkCheck(draft.switchAnswers === true, "Switch correct and incorrect",
-      v => draft.switchAnswers = v));
-
-    // SPEED 1..10
-    const gSpeed = group("Speed");
-    slider(gSpeed, "is-speed", 1, 10, () => Number.isInteger(draft.speed) ? draft.speed : 5,
-      v => draft.speed = v, v => String(v));
-
-    // LIVES 0..10 (0 = Unlimited)
-    const gLives = group("Lives");
-    const curLives = (draft.lives == null) ? 0 : Math.min(MAX_LIVES, Math.max(0, draft.lives));
-    slider(gLives, "is-lives", 0, MAX_LIVES, () => curLives,
-      v => draft.lives = v, v => v === 0 ? "Unlimited" : String(v));
-
-    // PENALTY 0..5 (0 = off) — points lost per wrong hit
-    const gPen = group("Points off per wrong hit");
-    slider(gPen, "is-pen", 0, 5, () => (typeof draft.minusAmount === "number" ? Math.max(0, Math.min(5, draft.minusAmount)) : 1),
-      v => draft.minusAmount = v, v => v === 0 ? "Off" : "−" + v);
-
-    // PUNISHMENT 0..30s (0 = off) — how long the game freezes after a wrong hit
-    const gPunish = group("Punishment (pause after a wrong hit)");
-    slider(gPunish, "is-punish", 0, MAX_PUNISH,
-      () => (typeof draft.punishSeconds === "number" ? Math.max(0, Math.min(MAX_PUNISH, draft.punishSeconds)) : PUNISH_DEFAULT),
-      v => draft.punishSeconds = v, v => v === 0 ? "Off" : v + "s");
-
-    // BONUS crates — a separate checkbox for each of the three
-    const gBonus = group("Bonus crates");
-    gBonus.append(
-      mkCheck(draft.bonusTime !== false, "Extra time", v => draft.bonusTime = v),
-      mkCheck(draft.bonusLoot !== false, "Loot", v => draft.bonusLoot = v),
-      mkCheck(draft.bonusPower !== false, "Power Up", v => draft.bonusPower = v)
+  // Đợt 140 — rebuilt on the shared panel builders. Six full-width groups (the
+  // tallest Options panel in the app, measured 573px) become four cells and
+  // four switches.
+  // ⚠️ The two "prune what the teacher doesn't want" blocks that used to live
+  // at the end of this function are GONE — they reached into the panel's DOM
+  // (deleting the group whose label matched /auto switch/, deleting the radio
+  // named "aw-timer" with value "none"). That kind of surgery breaks silently
+  // the moment the panel's markup changes, which is exactly what happened
+  // here. Both are now declared flags the engine honours: `hideAutoSwitch` and
+  // `hideTimerNone` (see the template header below).
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
+    panel.append(
+      // SPEED 1..10
+      mkSliderCell({
+        label: "Speed", min: 1, max: 10, step: 1,
+        value: Number.isInteger(draft.speed) ? draft.speed : 5, tone: "blue",
+        onInput: v => { draft.speed = v; }
+      }).cell,
+      // LIVES 0..10 (0 = Unlimited)
+      mkSliderCell({
+        label: "Lives", min: 0, max: MAX_LIVES, step: 1,
+        value: (draft.lives == null) ? 0 : Math.min(MAX_LIVES, Math.max(0, draft.lives)),
+        tone: "blue", offAt: 0,
+        fmt: v => (v === 0 ? "∞" : String(v)),
+        onInput: v => { draft.lives = v; }
+      }).cell,
+      // PENALTY 0..5 (0 = off) — points lost per wrong hit
+      mkSliderCell({
+        label: "Points off", sub: "wrong hit", min: 0, max: 5, step: 1,
+        value: typeof draft.minusAmount === "number" ? Math.max(0, Math.min(5, draft.minusAmount)) : 1,
+        offAt: 0, fmt: v => (v === 0 ? "Off" : "-" + v),
+        onInput: v => { draft.minusAmount = v; }
+      }).cell,
+      // PUNISHMENT 0..30s (0 = off) — how long the game freezes after a wrong hit
+      mkSliderCell({
+        label: "Punishment", sub: "pause after miss", min: 0, max: MAX_PUNISH, step: 1,
+        value: typeof draft.punishSeconds === "number"
+          ? Math.max(0, Math.min(MAX_PUNISH, draft.punishSeconds)) : PUNISH_DEFAULT,
+        offAt: 0, fmt: v => (v === 0 ? "Off" : v + "s"),
+        onInput: v => { draft.punishSeconds = v; }
+      }).cell
     );
 
-    // ---- prune two standard groups the teacher doesn't want here ----
-    // 1) "Auto switch / Move to the next question automatically" — not used.
-    [...panel.querySelectorAll(".aw-opt-group")].forEach(g => {
-      const lbl = g.querySelector(".aw-opt-label");
-      if (lbl && /auto\s*switch/i.test(lbl.textContent || "")) g.remove();
-    });
-    // 2) The Timer "None" radio — only Count up / Count down are allowed. If the
-    //    activity was on "none" (old ones were), snap it to Count down.
-    const timerRadios = [...panel.querySelectorAll('input[name="aw-timer"]')];
-    const noneR = timerRadios.find(r => r.value === "none");
-    if (noneR) { const w = noneR.closest("label") || noneR.parentElement; if (w) w.remove(); }
-    if (!draft.timer || draft.timer === "none") {
-      const cdR = timerRadios.find(r => r.value === "countDown");
-      draft.timer = "countDown";
-      if (cdR) { cdR.checked = true; cdR.dispatchEvent(new Event("change")); }
-    }
+    // SWITCH correct / incorrect — flips the sign to "Hit moles that are: FALSE"
+    addCheck("Switch right/wrong", draft.switchAnswers === true, v => draft.switchAnswers = v,
+      { title: "Switch correct and incorrect" });
+    // BONUS crates — one switch each
+    addCheck("Crate: extra time", draft.bonusTime !== false, v => draft.bonusTime = v);
+    addCheck("Crate: loot", draft.bonusLoot !== false, v => draft.bonusLoot = v);
+    addCheck("Crate: power up", draft.bonusPower !== false, v => draft.bonusPower = v);
   },
 
   // Any Options change restarts (everything is read fresh at mount()).

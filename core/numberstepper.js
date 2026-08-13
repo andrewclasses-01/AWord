@@ -3,6 +3,14 @@
 // AND vertical swipe/drag-to-adjust (like a wheel picker) — used by the
 // Options panel's countdown minutes/seconds fields. Reusable anywhere a
 // touch-friendly small-range number input helps (e.g. a future "Lives" count).
+//
+// TWO SHAPES, same interaction (Đợt 140):
+//   makeNumberStepper — the original ▲/▼ TALL one (69px). Still used by any
+//                       template that builds its own fields.
+//   makeHStepper      — [−][value][+] on ONE line (30px). The Options panel
+//                       redesign uses this: the tall shape was measured at
+//                       69px inside a 12px row, which is where two of the
+//                       panel's empty bands came from.
 // =============================================================
 
 import { el } from "./utils.js";
@@ -73,5 +81,82 @@ export function makeNumberStepper(value, min, max, onChange) {
   valEl.addEventListener("pointercancel", endDrag);
 
   wrap.append(upBtn, valEl, downBtn);
+  return { el: wrap, get: () => current, set: v => apply(v, false) };
+}
+
+// -------------------------------------------------------------------------
+// HORIZONTAL stepper — [−][value][+] on one 30px line (Đợt 140).
+// Same press-and-hold acceleration and drag-to-adjust as the tall one above,
+// only the axis and the DOM order differ. Extra options over the tall shape:
+//   step   — how much one press moves (the countdown uses 5 seconds)
+//   format — how the number is PRINTED (the countdown prints 125 as "2:05");
+//            the value itself always stays a plain number.
+// Returns { el, get, set } — the same handle, so callers are interchangeable.
+// -------------------------------------------------------------------------
+export function makeHStepper(value, min, max, onChange, opts = {}) {
+  const step = opts.step || 1;
+  const format = opts.format || (v => String(v).padStart(2, "0"));
+  let current = clamp(value);
+  function clamp(v) { return Math.max(min, Math.min(max, v)); }
+  function apply(v, fire) {
+    // Snap to the step GRID rather than to "current ± step", so a value that
+    // arrived off-grid (an old act saved with timerTotalSeconds: 137) tidies
+    // itself up on the first press instead of staying off-grid forever.
+    current = clamp(Math.round(v / step) * step);
+    valEl.textContent = format(current);
+    if (fire) onChange(current);
+  }
+
+  const wrap = el("div", "aw-hstep");
+  const downBtn = el("button", "aw-hstep-btn", "−");
+  downBtn.type = "button"; downBtn.setAttribute("aria-label", "Decrease");
+  const valEl = el("div", "aw-hstep-val", format(current));
+  valEl.title = "Drag left or right to change";
+  const upBtn = el("button", "aw-hstep-btn", "+");
+  upBtn.type = "button"; upBtn.setAttribute("aria-label", "Increase");
+
+  function holdRepeat(btn, dir) {
+    let delayT = null, repT = null, tick = 0;
+    const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; tick = 0; };
+    btn.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      try { btn.setPointerCapture(ev.pointerId); } catch {}
+      apply(current + dir * step, true);
+      delayT = setTimeout(() => {
+        repT = setInterval(() => {
+          tick++;
+          const mult = tick > 22 ? 3 : tick > 10 ? 2 : 1;
+          apply(current + dir * step * mult, true);
+        }, 55);
+      }, 320);
+    });
+    btn.addEventListener("pointerup", stop);
+    btn.addEventListener("pointerleave", stop);
+    btn.addEventListener("pointercancel", stop);
+    btn.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); apply(current + dir * step, true); }
+    });
+  }
+  holdRepeat(downBtn, -1);
+  holdRepeat(upBtn, +1);
+
+  // drag straight on the number — HORIZONTAL here (right = up), matching the
+  // control's own axis so the gesture reads the same way it looks.
+  const PX_PER_STEP = 12;
+  let dragging = false, startX = 0, startVal = 0;
+  valEl.addEventListener("pointerdown", ev => {
+    dragging = true; startX = ev.clientX; startVal = current;
+    try { valEl.setPointerCapture(ev.pointerId); } catch {}
+    valEl.classList.add("is-dragging");
+  });
+  valEl.addEventListener("pointermove", ev => {
+    if (!dragging) return;
+    apply(startVal + Math.round((ev.clientX - startX) / PX_PER_STEP) * step, true);
+  });
+  const endDrag = () => { dragging = false; valEl.classList.remove("is-dragging"); };
+  valEl.addEventListener("pointerup", endDrag);
+  valEl.addEventListener("pointercancel", endDrag);
+
+  wrap.append(downBtn, valEl, upBtn);
   return { el: wrap, get: () => current, set: v => apply(v, false) };
 }

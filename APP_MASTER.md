@@ -8,7 +8,34 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 139) — ⭐ TÍNH NĂNG MỚI "TIME COST": MỖI GIÂY **TRỐNG**
+> Cập nhật lần cuối: **13/8/2026 (Đợt 140) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"):
+> MỘT LƯỚI 2 CỘT, MỘT KHUÔN HÀNG DUY NHẤT, DÙNG CHUNG CHO CẢ 17 TEMPLATE.**
+> ⭐ CÓ SỬA CORE (`engine.js`, `app.css`, `fight.js`, `numberstepper.js`) + **16/17 template**.
+> Thầy báo: *"bảng options đang rất rối, khó nhìn, không thẳng hàng, không ngăn nắp và không thẩm mỹ"*.
+> **Đo trước khi sửa** (Anagram, mode Bonus and minus): nội dung bắt đầu ở **4 mép trái khác nhau**
+> (nhãn 15 · thanh trượt 17 · ô tick 19 · radio 20) · 3 thanh trượt "giống nhau" dài **212/208/220px**
+> nên 3 chip giá trị bắt đầu ở 3 chỗ · bộ chỉnh số ▲▼ **cao 69px nằm trong hàng cao 12px** (2 chỗ) ·
+> 6/9 hàng bỏ phí **30–76% chiều ngang** trong khi panel **cao hơn chỗ cho phép 22px** (667 vs 645)
+> nên `.is-compact-opts` phải nén mọi nhãn xuống 9.5px.
+> **Cách chữa (cấu trúc, không phải trang trí)**: mỗi tuỳ chọn = **1 ô của lưới 2 cột**, mỗi ô đúng 2
+> phần (dòng nhãn · dòng điều khiển); radio → **segmented** (giống nút TEXT/VOICE, vùng chạm 15→30px);
+> ▲▼ → **stepper NẰM NGANG** `− 2:00 +`; mọi ô tick rời rạc gom vào **một khối switch** ở đáy
+> (xoá 4 tiêu đề thừa); chip giá trị **rộng cố định 52px** nên thẳng cột.
+> 📉 **Đo lại cả 17 template (cùng phép đo, cùng cửa sổ 1280×720)**: trung bình **−36% chiều cao**
+> (Quiz 605→344 · Anagram 616→397 · Gameshow 563→306 · Whack-a-mole 575→365 · **Balloon pop 757→424,
+> trước đây PHẢI CUỘN**) · **0/17 phải cuộn** · **0/17 phải nén chữ** · fight mode Anagram (chỗ trống
+> chỉ 471px) nay **không cuộn ở cả 3 mode**.
+> ⚠️ **Bắt được 2 quả bom hẹn giờ**: `whack-a-mole.js` và `speaking-cards.js` đang **cắt DOM của panel
+> bằng tay** (xoá nhóm có nhãn khớp /auto switch/, xoá radio `name="aw-timer"` value "none", xoá nhóm
+> "End of game", sửa text node) — đổi markup là chúng **hỏng im lặng**. Nay là **cờ khai báo**:
+> `hideAutoSwitch` · `hideTimerNone` (mới) · `hideShowAnswers` (mới) · `hideShuffleAnswers` ·
+> `shuffleLabel` (mới). **LUẬT MỚI: template KHÔNG BAO GIỜ thao tác lên DOM của panel.**
+> 🟢 ĐÃ TỰ TEST: 17/17 template mở panel sạch (0 lỗi console, 0 điều khiển bị che — có **đối chứng
+> ngược** tái tạo đúng lỗi Đợt 137 để chứng minh phép đo lật được 2 chiều) · Apply ghi đúng giá trị
+> đầu-cuối (đồng hồ đếm ngược chạy đúng 2:05 sau khi chỉnh) · `play.html` vẫn không nạp code thư viện GV.
+> ⬜ Chưa chạm tay thật trên màn TOMKO.
+>
+> Trước đó: **13/8/2026 (Đợt 139) — ⭐ TÍNH NĂNG MỚI "TIME COST": MỖI GIÂY **TRỐNG**
 > (HS ngồi không làm gì) TRÔI QUA LÀ TỔNG ĐIỂM BỊ TRỪ, số `-N` ĐỎ BAY TỪ Ô ĐIỂM VÀO ĐỒNG HỒ +
 > ĐIỂM CHẠY GIẢM. KÈM: BONUS X CỦA ANAGRAM LÊN 10X.**
 > ⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js` + **file mới `core/timecost.js`**)
@@ -1746,7 +1773,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 139 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 140 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -1787,9 +1814,16 @@ cả 2, không chỉ Anagram.
 (`tpl.timeCost: true`). Thêm cho template khác = 1 cờ + 4 dòng, hợp đồng ở `core/HUONG DAN CORE.md`
 mục "TIME COST". Hiệu ứng dùng chung nằm ở `core/timecost.js`.
 
-**4 đợt gần nhất (đều đã LIVE):**
+**BẢNG OPTIONS v2** (Đợt 140) — mọi tuỳ chọn là **1 ô của lưới 2 cột**, dựng bằng 4 hàm chung engine
+truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợp đồng đầy đủ +
+5 luật (trong đó **cấm template đụng DOM của panel**) ở `core/HUONG DAN CORE.md` mục
+"OPTIONS PANEL v2". 16/17 template đã chuyển; **running-word còn dùng nhóm kiểu cũ** (panel bespoke:
+ô nhập tên đội + đồng hồ tuỳ chỉnh) và vẫn hiện y như trước nhờ "cầu tương thích" trong `app.css`.
+
+**5 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | HASH140 |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
 | **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
 | **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | `912016b` |

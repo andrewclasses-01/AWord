@@ -241,192 +241,121 @@ const anagramTemplate = {
   edit: openAnagramEditor,
 
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
-  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice, timeCostCell }) {
-    const gMode = el("div", "aw-opt-group");
-    gMode.append(el("div", "aw-opt-label", "Anagram mode"));
-    // nowrap (Đợt 132, teacher: "mở rộng đủ để hiện các mode ANAGRAM mà ko
-    // cần xuống dòng") — matches core/engine.js's Timer row, same reasoning:
-    // the panel is now wide enough (core/app.css) to actually fit this on
-    // one line.
-    const rowMode = el("div", "aw-opt-row aw-opt-row-nowrap");
+  // Đợt 140 — rebuilt on the shared panel builders. What did NOT change: the
+  // draft fields, the ranges, the 3-mode logic, and the idea of a FIXED slot
+  // for the mode-dependent Points off control(s) (teacher, 10/8/2026). What
+  // changed: those controls are cells of the panel's grid, so they line up
+  // with everything else, and the whole panel stopped being 22px too tall for
+  // the screen (which is what forced `.is-compact-opts` to shrink every label
+  // to 9.5px whenever this game's Options were opened).
+  buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck }) {
     const curMode = draft.anagramMode === "submit" ? "submit"
       : draft.anagramMode === "bonusMinus" ? "bonusMinus" : "bonus";
 
-    // POINTS OFF (teacher, 10/8/2026) — 3 groups built up front, right in the
-    // fixed slot the teacher asked for (directly below the mode radios,
-    // directly above Lives); only .style.display toggles per mode (see
-    // syncPenaltyGroups below) so switching the radio updates the panel
-    // instantly with no rebuild — same technique core/engine.js already uses
-    // for the Timer group's "Count down" fields. This whole block REPLACES
-    // the shared core "Points off" control (tpl.hidePointsOff = true below):
-    // "bonus" needs no points-off UI at all, "submit" keeps the classic
-    // once-per-wrong-WORD deduction (just widened to 0..10), "bonusMinus"
-    // repurposes the same visual slot for a once-per-wrong-LETTER deduction
-    // (0..100, step 5) plus its own "Bonus x" multiplier.
-    // Đợt 134 (teacher: "animation mượt" khi đổi mode ẩn/hiện các nhóm này) —
-    // each of these 3 groups is now TWO layers: the outer `.aw-opt-group`
-    // (unchanged spacing/identity, just gains `.aw-anagram-pengroup` for its
-    // margin-bottom transition) holds an inner `.aw-anagram-pencontent`
-    // wrapper around the actual label+row, which is what collapses (max-
-    // height/opacity) — see syncPenaltyGroups below.
-    const gPenSubmit = el("div", "aw-opt-group aw-anagram-pengroup");
-    const cPenSubmit = el("div", "aw-anagram-pencontent");
-    gPenSubmit.append(cPenSubmit);
-    cPenSubmit.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
-    const rowPenSubmit = el("div", "aw-opt-row");
-    const curSubmitPen = clampSubmitPenalty(draft.pointsOff || 0);
-    const penSubmitSlider = el("input", "aw-opt-slider");
-    penSubmitSlider.type = "range"; penSubmitSlider.min = "0"; penSubmitSlider.max = String(MAX_SUBMIT_PENALTY); penSubmitSlider.step = "1";
-    penSubmitSlider.value = String(curSubmitPen);
-    const penSubmitVal = el("span", "aw-opt-slidval", curSubmitPen === 0 ? "Off" : "-" + curSubmitPen);
-    penSubmitSlider.oninput = () => {
-      const v = clampSubmitPenalty(+penSubmitSlider.value);
-      draft.pointsOff = v;
-      penSubmitVal.textContent = v === 0 ? "Off" : "-" + v;
-    };
-    rowPenSubmit.append(penSubmitSlider, penSubmitVal);
-    cPenSubmit.append(rowPenSubmit);
+    // MODE — the three names are kept in FULL ("Letters with bonus" / "On
+    // submit" / "Bonus and minus"): they are what the teacher reads mid-
+    // lesson, and shortening a setting's name to win layout is how a panel
+    // becomes unreadable in a different way. Full names need the whole width,
+    // so this cell spans both columns.
+    const modeCell = mkCell({ label: "Anagram mode", wide: true });
 
-    const gPenLetter = el("div", "aw-opt-group aw-anagram-pengroup");
-    const cPenLetter = el("div", "aw-anagram-pencontent");
-    gPenLetter.append(cPenLetter);
-    cPenLetter.append(el("div", "aw-opt-label", "Points off (wrong letter)"));
-    const rowPenLetter = el("div", "aw-opt-row");
-    const curLetterPen = clampLetterPenalty(draft.letterPenalty || 0);
-    const penLetterSlider = el("input", "aw-opt-slider");
-    penLetterSlider.type = "range"; penLetterSlider.min = "0"; penLetterSlider.max = String(MAX_LETTER_PENALTY); penLetterSlider.step = String(LETTER_PENALTY_STEP);
-    penLetterSlider.value = String(curLetterPen);
-    const penLetterVal = el("span", "aw-opt-slidval", curLetterPen === 0 ? "Off" : "-" + curLetterPen);
-    penLetterSlider.oninput = () => {
-      const v = clampLetterPenalty(+penLetterSlider.value);
-      draft.letterPenalty = v;
-      penLetterVal.textContent = v === 0 ? "Off" : "-" + v;
-    };
-    rowPenLetter.append(penLetterSlider, penLetterVal);
-    cPenLetter.append(rowPenLetter);
+    // POINTS OFF — mode-dependent, in ONE wide cell holding a nested 2-column
+    // grid: "On submit" shows 1 slider, "Bonus and minus" shows 2, plain
+    // "Letters with bonus" shows none. Collapsing this ONE wrapper (rather
+    // than three separate groups, as before) is what keeps the outer grid's
+    // rows from jumping while still giving the smooth open/close the teacher
+    // asked for in Đợt 134.
+    // ⚠️ `overflow:hidden` on the animating wrapper is NOT optional — Đợt 137
+    // was an entire session spent on an invisible slider eating the mouse
+    // because a max-height accordion lacked exactly that. See anagram.css.
+    const penHost = el("div", "aw-optc aw-optc-wide");
+    const penWrap = el("div", "aw-anagram-penwrap");
+    const penGrid = el("div", "aw-opt-grid");
+    penWrap.append(penGrid);
+    penHost.append(penWrap);
 
-    const gBonusMult = el("div", "aw-opt-group aw-anagram-pengroup");
-    const cBonusMult = el("div", "aw-anagram-pencontent");
-    gBonusMult.append(cBonusMult);
-    cBonusMult.append(el("div", "aw-opt-label", "Bonus x (perfect-word multiplier)"));
-    const rowBonusMult = el("div", "aw-opt-row");
-    const curMult = clampBonusMult(draft.bonusMult);
-    const multSlider = el("input", "aw-anagram-multslider");
-    multSlider.type = "range"; multSlider.min = String(MIN_BONUS_MULT); multSlider.max = String(MAX_BONUS_MULT); multSlider.step = "1";
-    multSlider.value = String(curMult);
-    const multVal = el("span", "aw-anagram-multval", curMult + "x");
-    multSlider.oninput = () => {
-      const v = Math.max(MIN_BONUS_MULT, Math.min(MAX_BONUS_MULT, +multSlider.value | 0));
-      draft.bonusMult = v;
-      multVal.textContent = v + "x";
-    };
-    rowBonusMult.append(multSlider, multVal);
-    cBonusMult.append(rowBonusMult);
+    const cSubmit = mkSliderCell({
+      label: "Points off", sub: "wrong answer",
+      min: 0, max: MAX_SUBMIT_PENALTY, step: 1,
+      value: clampSubmitPenalty(draft.pointsOff || 0), offAt: 0,
+      fmt: v => (v === 0 ? "Off" : "-" + v),
+      onInput: v => { draft.pointsOff = v; }
+    });
+    const cLetter = mkSliderCell({
+      label: "Points off", sub: "wrong letter",
+      min: 0, max: MAX_LETTER_PENALTY, step: LETTER_PENALTY_STEP,
+      value: clampLetterPenalty(draft.letterPenalty || 0), offAt: 0,
+      fmt: v => (v === 0 ? "Off" : "-" + v),
+      onInput: v => { draft.letterPenalty = v; }
+    });
+    const cMult = mkSliderCell({
+      label: "Bonus x", sub: "perfect word",
+      min: MIN_BONUS_MULT, max: MAX_BONUS_MULT, step: 1,
+      value: clampBonusMult(draft.bonusMult), tone: "amber",
+      fmt: v => v + "x",
+      onInput: v => { draft.bonusMult = v; }
+    });
+    penGrid.append(cSubmit.cell, cLetter.cell, cMult.cell);
 
-    // Đợt 134 (teacher: "animation mượt" hiện/ẩn) — smooth collapse instead
-    // of a display:none snap. The OUTER group's margin-bottom is cleared
-    // inline while closed (CSS transitions it back to whatever it should be
-    // when open — normal or the `.is-compact-opts` panel's smaller one, see
-    // app.css — since we never hardcode a px number here) while the INNER
-    // content wrapper's max-height goes to its measured scrollHeight, so the
-    // reveal works for any content length. Used by the mode radios' onChange
-    // below, where the panel is already live in the document and
-    // `scrollHeight` is real.
-    function setPenGroup(group, content, open) {
-      if (open) {
-        group.style.marginBottom = "";
-        content.classList.add("is-open");
-        content.style.maxHeight = content.scrollHeight + "px";
-      } else {
-        group.style.marginBottom = "0px";
-        content.classList.remove("is-open");
-        content.style.maxHeight = "0px";
+    // Which cells a mode shows. `openPen` also drives the wrapper's height, so
+    // the two can never disagree.
+    let penHideT = null;
+    function syncPen(m, animate) {
+      clearTimeout(penHideT);
+      cSubmit.cell.style.display = m === "submit" ? "" : "none";
+      cLetter.cell.style.display = m === "bonusMinus" ? "" : "none";
+      cMult.cell.style.display = m === "bonusMinus" ? "" : "none";
+      const open = m !== "bonus";
+      // second guard, kept from Đợt 137: a closed wrapper must never take a
+      // pointer even if a future layout change defeats `overflow:hidden`
+      penWrap.classList.toggle("is-closed", !open);
+      if (open) penHost.style.display = "";
+      if (!animate) {
+        // FIRST paint: this runs BEFORE the panel is in the document, so
+        // scrollHeight would read 0 for everything. "none" is correct and
+        // instant; one tick later (below) it becomes a real px number so the
+        // teacher's first click has something to transition FROM.
+        penWrap.style.maxHeight = open ? "none" : "0px";
+        if (!open) penHost.style.display = "none";
+        return;
       }
+      penWrap.style.maxHeight = open ? penGrid.scrollHeight + "px" : "0px";
+      // An empty wrapper still costs the grid one row-gap, so drop it out of
+      // the layout once it has finished closing (never before, or the collapse
+      // would snap instead of animate).
+      if (!open) penHideT = setTimeout(() => { penHost.style.display = "none"; }, 240);
     }
-    function syncPenaltyGroups(m) {
-      setPenGroup(gPenSubmit, cPenSubmit, m === "submit");
-      setPenGroup(gPenLetter, cPenLetter, m === "bonusMinus");
-      setPenGroup(gBonusMult, cBonusMult, m === "bonusMinus");
-    }
-    // FIRST paint is different: buildExtraOptions runs BEFORE core/engine.js
-    // appends this whole panel to the document, so `scrollHeight` would read
-    // 0 for everything right now. The initially-open group (if any) is set
-    // to `max-height:none` instead — correct and instant, no animation
-    // needed for a panel that is itself still fading/popping in. One tick
-    // later (setTimeout 0, same "wait for the DOM to catch up" idiom
-    // core/engine.js already uses for its own outside-click listener), swap
-    // that "none" for a real measured px number, so the teacher's FIRST
-    // radio click has something concrete to transition FROM — a transition
-    // starting at "none" can't be interpolated and would just snap shut.
-    const curSubmitOpen = curMode === "submit", curMinusOpen = curMode === "bonusMinus";
-    gPenSubmit.style.marginBottom = curSubmitOpen ? "" : "0px";
-    gPenLetter.style.marginBottom = curMinusOpen ? "" : "0px";
-    gBonusMult.style.marginBottom = curMinusOpen ? "" : "0px";
-    cPenSubmit.classList.toggle("is-open", curSubmitOpen);
-    cPenLetter.classList.toggle("is-open", curMinusOpen);
-    cBonusMult.classList.toggle("is-open", curMinusOpen);
-    cPenSubmit.style.maxHeight = curSubmitOpen ? "none" : "0px";
-    cPenLetter.style.maxHeight = curMinusOpen ? "none" : "0px";
-    cBonusMult.style.maxHeight = curMinusOpen ? "none" : "0px";
+    syncPen(curMode, false);
     setTimeout(() => {
-      [cPenSubmit, cPenLetter, cBonusMult].forEach(c => {
-        if (c.classList.contains("is-open")) c.style.maxHeight = c.scrollHeight + "px";
-      });
+      if (penWrap.style.maxHeight === "none") penWrap.style.maxHeight = penGrid.scrollHeight + "px";
     }, 0);
 
-    rowMode.append(
-      mkRadioChoice("aw-anagram-mode", "bonus", "Letters with bonus", curMode === "bonus", v => { draft.anagramMode = v; syncPenaltyGroups(v); }),
-      mkRadioChoice("aw-anagram-mode", "submit", "On submit", curMode === "submit", v => { draft.anagramMode = v; syncPenaltyGroups(v); }),
-      mkRadioChoice("aw-anagram-mode", "bonusMinus", "Bonus and minus", curMode === "bonusMinus", v => { draft.anagramMode = v; syncPenaltyGroups(v); })
-    );
-    gMode.append(rowMode);
-    // Đợt 139 — the 3 points-off groups above now sit in the LEFT half of a
-    // 2-column row, with the shared Time cost cell in the RIGHT half (teacher:
-    // "gộp Time cost vào chung hàng với Points off"). Why it is worth the
-    // wrapper: the left column is 2 groups tall in "Bonus and minus", 1 in "On
-    // submit" and 0 in "Letters with bonus", so standing Time cost beside them
-    // adds NO height at all in the first two modes — and the panel here is the
-    // one that already had to scroll in fight mode (open item since Đợt 132).
-    // ⚠️ The collapsing accordion inside each group is NOT touched: those
-    // groups are appended unchanged, just into a column instead of the panel.
-    // That machinery is what Đợt 137 had to fix; it stays exactly as it is.
-    const penCol = el("div", "aw-opt-cell aw-anagram-pencol");
-    penCol.append(gPenSubmit, gPenLetter, gBonusMult);
-    const penRow = el("div", "aw-opt-group aw-opt-2up");
-    penRow.append(penCol);
-    if (timeCostCell) penRow.append(timeCostCell());
-    panel.append(gMode, penRow);
+    modeCell.ctl.append(mkSeg([
+      { value: "bonus", label: "Letters with bonus" },
+      { value: "submit", label: "On submit" },
+      { value: "bonusMinus", label: "Bonus and minus" }
+    ], curMode, v => { draft.anagramMode = v; syncPen(v, true); }));
 
-    // LIVES — a slider 0..10 (0 = Unlimited), same shape/convention as
-    // true-false.js's Lives control (teacher, 3/8/2026).
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-anagram-livesrow");
+    // LIVES — 0..10, 0 = Unlimited (teacher, 3/8/2026). "∞" rather than the
+    // word: the value chip is a fixed 52px in every cell — that fixed width is
+    // WHY the chips line up — and "Unlimited" needs 84px, which would shorten
+    // this slider and break the column it belongs to.
     const curLives = (draft.lives === 0 || draft.lives == null) ? 0
       : Math.min(MAX_LIVES, Math.max(1, Math.round(draft.lives)));
-    const livesVal = el("span", "aw-anagram-livesval", curLives === 0 ? "Unlimited" : String(curLives));
-    const livesInput = el("input", "aw-anagram-livesslider");
-    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
-    livesInput.value = String(curLives);
-    livesInput.oninput = () => {
-      const v = parseInt(livesInput.value, 10);
-      draft.lives = v;   // 0 stored = unlimited
-      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
-    };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
+    const lives = mkSliderCell({
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "∞" : String(v)),
+      onInput: v => { draft.lives = v; }        // 0 stored = unlimited
+    });
+    lives.cell.title = "0 = unlimited lives";
 
-    const gMore = el("div", "aw-opt-group");
-    gMore.append(el("div", "aw-opt-label", "Anagram options"));
-    const rowMore = el("div", "aw-opt-row");
-    rowMore.append(
-      mkCheck(draft.allCaps === true, "All caps", v => draft.allCaps = v),
-      mkCheck(draft.allowSkip !== false, "Allow skip (Next can move on early)", v => draft.allowSkip = v)
-    );
-    gMore.append(rowMore);
-    panel.append(gMore);
+    panel.append(modeCell.cell, penHost, lives.cell);
+
+    addCheck("All caps", draft.allCaps === true, v => draft.allCaps = v);
+    addCheck("Allow skip", draft.allowSkip !== false, v => draft.allowSkip = v,
+      { title: "Allow skip (Next can move on early)" });
   },
+
 
   // Engine calls this right after Apply mutates activity.options. Per the
   // teacher's request, ANY Options change restarts the act immediately

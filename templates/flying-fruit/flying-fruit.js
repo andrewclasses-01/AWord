@@ -85,42 +85,22 @@ const flyingFruitTemplate = {
   },
 
   // Options panel extras (engine calls this — see CONG THUC MAU §5).
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
-    // LIVES
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-ff-optrow");
-    const livesInit = Number.isInteger(draft.lives) ? draft.lives : 6;
-    const livesVal = el("span", "aw-ff-optval", String(livesInit));
-    const livesInput = el("input", "aw-ff-slider");
-    livesInput.type = "range"; livesInput.min = "1"; livesInput.max = "10"; livesInput.step = "1";
-    livesInput.value = String(livesInit);
-    livesInput.oninput = () => { const v = parseInt(livesInput.value, 10); draft.lives = v; livesVal.textContent = String(v); };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
-
-    // SPEED
-    const gSpeed = el("div", "aw-opt-group");
-    gSpeed.append(el("div", "aw-opt-label", "Speed"));
-    const rowSpeed = el("div", "aw-opt-row aw-ff-optrow");
-    const speedInit = Number.isInteger(draft.speed) ? draft.speed : 7;
-    const speedVal = el("span", "aw-ff-optval", String(speedInit));
-    const speedInput = el("input", "aw-ff-slider");
-    speedInput.type = "range"; speedInput.min = "1"; speedInput.max = "10"; speedInput.step = "1";
-    speedInput.value = String(speedInit);
-    speedInput.oninput = () => { const v = parseInt(speedInput.value, 10); draft.speed = v; speedVal.textContent = String(v); };
-    rowSpeed.append(speedInput, speedVal);
-    gSpeed.append(rowSpeed);
-    panel.append(gSpeed);
-
-    // RETRY
-    const gRetry = el("div", "aw-opt-group");
-    gRetry.append(el("div", "aw-opt-label", "Answering"));
-    const rowRetry = el("div", "aw-opt-row");
-    rowRetry.append(mkCheck(draft.retry === true, "Retry after incorrect answer", v => draft.retry = v));
-    gRetry.append(rowRetry);
-    panel.append(gRetry);
+  // Đợt 140 — shared panel builders (see core/engine.js buildOptionsPanel).
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
+    panel.append(
+      mkSliderCell({
+        label: "Lives", min: 1, max: 10, step: 1,
+        value: Number.isInteger(draft.lives) ? draft.lives : 6, tone: "blue",
+        onInput: v => { draft.lives = v; }
+      }).cell,
+      mkSliderCell({
+        label: "Speed", min: 1, max: 10, step: 1,
+        value: Number.isInteger(draft.speed) ? draft.speed : 7, tone: "blue",
+        onInput: v => { draft.speed = v; }
+      }).cell
+    );
+    addCheck("Retry after wrong", draft.retry === true, v => draft.retry = v,
+      { title: "Retry after incorrect answer" });
   },
 
   // Lives/speed/retry/shuffle are all read once at mount() -> restart to apply.

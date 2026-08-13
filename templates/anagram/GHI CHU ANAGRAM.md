@@ -1,5 +1,44 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: Anagram là ca nặng nhất, viết lại toàn bộ `buildExtraOptions`
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Số đo đầy đủ + 5 luật mới: `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Vì sao Anagram là ca nặng nhất**: panel của nó chính là panel thầy chụp màn hình gửi kèm lời phàn
+nàn, và cũng là panel duy nhất **cao quá chỗ cho phép** (667 > 645px) nên `is-compact-opts` phải nén
+mọi nhãn xuống 9.5px mỗi lần thầy mở Options — tức là **thứ thầy nhìn thấy là bản đã bị nén khẩn cấp**.
+
+**Đo thật (1280×720)**:
+| | Trước | Sau |
+|---|---|---|
+| Mode "Bonus and minus" | **667px** (bị nén còn 543) | **488px**, KHÔNG nén |
+| Mode mặc định | 616px | **397px** |
+| Fight mode (chỗ trống chỉ 471px) | cuộn ở 2/3 mode | **446 / 405 / 399px, không mode nào cuộn** |
+| Mép trái | 4 đường (15/17/19/20) | **2 đường** = đúng 2 cột |
+| Thanh trượt | 212 / 208 / 220 / 121px | **190px cả 4** |
+
+**Bố cục mới**: `Anagram mode` (segmented 3 lựa chọn, **giữ nguyên văn tên 3 mode**, chiếm 2 cột) →
+khối điểm phạt theo mode → `Lives` → (engine) `Letters on answers` · `Time cost` → khối switch
+(`All caps`, `Allow skip`).
+
+**Khối điểm phạt theo mode — đổi cách làm, giữ nguyên ý đồ Đợt 134/137:**
+- Trước: **3 nhóm** riêng, mỗi nhóm tự thu/mở bằng `max-height` (`.aw-anagram-pengroup` +
+  `.aw-anagram-pencontent`).
+- Nay: **1 wrapper** `.aw-anagram-penwrap` (`overflow:hidden`, animate `max-height`) bọc một lưới 2 cột
+  con; từng ô bên trong bật/tắt bằng `display:none`. Nhờ vậy lưới NGOÀI không bao giờ thấy một hàng
+  mở dở, mà vẫn giữ hiệu ứng mượt thầy yêu cầu ở Đợt 134.
+- ⚠️ **Bài học Đợt 137 giữ nguyên 2 lớp bảo vệ**: `overflow:hidden` trên wrapper + class `is-closed`
+  cắt `pointer-events`. Thêm nữa, ô ẩn nay `display:none` nên **về mặt cấu trúc** không thể ăn chuột.
+- Đã **đối chứng ngược**: tái tạo đúng bệnh Đợt 137 (ô ẩn vẫn được bố trí + wrapper không clip) →
+  phép soi `elementFromPoint` bắt đúng **3 ca**, chữa xong về **0**. Lành → bệnh → lành.
+
+**Apply đo thật**: ghi đúng `{anagramMode:"bonusMinus", letterPenalty:25, bonusMult:7, lives:4}`, chip
+hiện `-25`. Không đổi tên trường nào — act cũ mở lên vẫn y như trước.
+
+**Chữ rút gọn cần thầy duyệt**: `∞` thay "Unlimited" ở Lives (chip phải vừa 52px, nới ra là gãy cột
+giá trị) · "Allow skip" thay "Allow skip (Next can move on early)" (câu đầy đủ nằm ở tooltip).
+
 ## ⭐ Đợt 139 (13/8/2026) — TIME COST (trừ điểm mỗi giây TRỐNG) + BONUS X LÊN 10X
 
 ✅ **THẦY DUYỆT → COMMIT `c840baf` + PUSH + LIVE.** Chi tiết đầy đủ + toàn bộ số đo: `../../GHI CHU DU AN.md` Đợt 139.

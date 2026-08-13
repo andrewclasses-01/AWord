@@ -183,3 +183,21 @@ chỉnh thử được ngay không cần sửa code; nặng hơn mới tính câ
    `read_audio` của transformers.js giải mã qua Web Audio nên NHIỀU KHẢ NĂNG vẫn ổn, nhưng chưa có bằng
    chứng thật. iOS cũng là nơi đáng nghi nhất cho phần tự-dừng (AudioContext trên Safari khắt khe hơn về
    "phải có cú chạm của người dùng" — ở đây cú chạm nút mic chính là cú chạm đó, cộng `ctx.resume()`).
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+⚠️ Thanh "Stars to pass" chạy theo bước **0.5** — vì nó mà `mkSliderCell` của core phải clamp bằng
+`Number()` chứ không `v|0` (phép bitwise sẽ nuốt sạch nửa sao mà không báo gì).
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **396px → 274px**.

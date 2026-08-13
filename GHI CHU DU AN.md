@@ -5,6 +5,122 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 140 (13/8/2026) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"): MỘT LƯỚI 2 CỘT DÙNG CHUNG CHO 17 TEMPLATE
+⭐ CÓ SỬA CORE (`engine.js`, `app.css`, `fight.js`, `numberstepper.js`) + **16/17 template**.
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE** (đã tự test đo thật cả 17 template, đơn + đấu, có đối chứng ngược).
+
+### Thầy yêu cầu
+Thầy gửi ảnh chụp bảng Options của Anagram: *"Tôi cần thiết kế lại bảng options vì nó đang rất rối,
+khó nhìn, không thẳng hàng, không ngăn nắp và không thẩm mỹ."*
+
+### Thầy chốt qua AskUserQuestion (3 câu)
+| Câu | Thầy chọn |
+|---|---|
+| Phạm vi | **Cả 17 template (sửa core)** |
+| Bố cục | **Lưới 2 cột, tất cả trong 1 màn** (không chia tab) |
+| Ưu tiên khi 2 thứ đánh nhau | **Gọn tối đa, không bao giờ phải cuộn** |
+
+Thầy nói "ok build" mà không trả lời 4 câu phụ trong bản vẽ ⇒ em làm đúng bản vẽ thầy đã xem, **riêng
+tên 3 mode Anagram thì GIỮ NGUYÊN VĂN** (cho ô đó chiếm 2 cột) vì rút gọn tên một tuỳ chọn thầy đang
+dùng khi dạy là đổi nghĩa, không phải đổi bố cục.
+
+### ⭐ ĐO TRƯỚC KHI SỬA — 5 bệnh, đều có số (Anagram, mode "Bonus and minus", 1280×720)
+1. **4 mép trái khác nhau**: nhãn 15 · thanh trượt 17 · ô tick 19 · radio 20 → răng cưa 5px.
+2. **3 thanh trượt "giống nhau" dài 212 / 208 / 220px** (Time cost thì 121) ⇒ 3 chip giá trị bắt đầu
+   ở 238.5 / 234.9 / 247, và chữ "Unlimited" thò ra tận 331.
+3. **Bộ chỉnh số ▲▼ cao 69px nằm trong hàng cao 12px** (2 chỗ: mm:ss của Timer, "after 1s" của Time
+   cost) → đẩy nhóm Timer phình lên 92px và đẻ ra 2 mảng trống.
+4. **6/9 hàng bỏ phí 30–76% chiều ngang** (End of game 76%, Letters on answers 71%).
+5. **Panel cao 667px trong khi chỗ cho phép 645px** ⇒ `.is-compact-opts` phải nén MỌI thứ còn ~86%
+   (nhãn 11.5→9.5px, chữ 14→12px, ô tick 15→12px). Tức là **cái thầy nhìn thấy là bản đã bị nén khẩn cấp**.
+
+### Cách chữa — cấu trúc, không phải trang trí
+| Việc | Chi tiết |
+|---|---|
+| **1 tuỳ chọn = 1 ô** | Lưới 2 cột `.aw-opt-grid`; ô nào cần rộng thì `.aw-optc-wide` |
+| **1 khuôn hàng** | Mỗi ô đúng 2 phần: dòng nhãn (+ nhãn phụ xám) · dòng điều khiển |
+| **Radio → segmented** | Cùng ngôn ngữ với nút TEXT/VOICE sẵn có; vùng chạm **15px → 30px** mà KHÔNG cao thêm |
+| **▲▼ → stepper NẰM NGANG** | `− 2:00 +` (`makeHStepper` mới trong `numberstepper.js`, bộ dọc cũ giữ nguyên) |
+| **Gom ô tick** | Mọi switch rời rạc vào **một khối** ở đáy (lưới tự chia 2–3 cột) → xoá 4 tiêu đề thừa |
+| **Chip giá trị 52px cố định** | Canh phải ⇒ thẳng một cột; "Unlimited" → `∞` để không phải nới chip |
+| **Màu có nghĩa** | đỏ = trừ điểm · cam = thưởng · xanh = số lượng trung tính · xám = Off |
+
+### 📉 Đo lại CẢ 17 TEMPLATE (cùng phép đo; "trước" lấy từ `git archive HEAD` bung ra chạy song song)
+| Template | Trước | Sau | Template | Trước | Sau |
+|---|---|---|---|---|---|
+| quiz | 605 | **344** | balloon-pop | **757 (CUỘN)** | **424** |
+| anagram | 616 | **397** | crossword | 447 | **280** |
+| find-the-match | 621 | **392** | unjumble | 603 | **392** |
+| type-the-answer | 400 | **274** | speaking-cards | 372 | **242** |
+| open-the-box | 516 | **333** | running-word | 514 | 458 *(chưa chuyển)* |
+| true-false | 570 | **392** | running-team | 410 | **242** |
+| gameshow | 563 | **306** | speaking | 396 | **274** |
+| maze-chase | 562 | **333** | whack-a-mole | 575 | **365** |
+| flying-fruit | 525 | **333** | **Trung bình** | | **−36%** |
+
+- **0/17 phải cuộn · 0/17 phải nén chữ · 0 lỗi console · 0 điều khiển bị che.**
+- **Fight mode Anagram** (chỗ trống chỉ **471px** vì 2 bàn đẩy thanh nút lên cao): sau khi chuyển nốt 3
+  nhóm của trọng tài (`fight.js`) thành ô + cho khối switch tự chia 3 cột →
+  **446 / 405 / 399px, không mode nào cuộn**.
+- Mọi thanh trượt trong panel giờ **dài đúng bằng nhau (190px)**, chip giá trị thẳng 2 cột (272 / 540).
+
+### ⚠️⚠️ BẮT ĐƯỢC 2 QUẢ BOM HẸN GIỜ: TEMPLATE ĐANG CẮT DOM CỦA PANEL BẰNG TAY
+Đây là phần **quan trọng nhất** của đợt này, không phải phần thẩm mỹ.
+
+| Ở đâu | Nó làm gì | Sẽ hỏng thế nào |
+|---|---|---|
+| `whack-a-mole.js` | Xoá nhóm có nhãn khớp `/auto switch/i`; xoá `input[name="aw-timer"][value="none"]` rồi tự bấm `countDown` | Bản mới không còn nhóm/radio đó ⇒ tuỳ chọn thầy đã bỏ **hiện lại**, im lặng |
+| `speaking-cards.js` | Xoá nhóm nhãn `"End of game"`; xoá `.aw-opt-choice` chứa chữ "answer"; **sửa text node** để đổi tên "Shuffle question order" | Y hệt — và nó phải chạy `prune()` **2 lần** (một lần ngay + một lần trong `requestAnimationFrame`) vì engine append "End of game" SAU hook của nó |
+
+⇒ Cả 5 ý định đó nay là **cờ khai báo**: `hideAutoSwitch` · `hideTimerNone` (mới) · `hideShowAnswers`
+(mới) · `hideShuffleAnswers` · `shuffleLabel` (mới). Engine **không dựng ra ngay từ đầu** thay vì dựng
+rồi để template đi xoá.
+→ **LUẬT MỚI ghi vào `core/HUONG DAN CORE.md`: template KHÔNG BAO GIỜ thao tác lên DOM của panel.**
+Đã đo lại đúng hành vi cũ: whack-a-mole chỉ còn 2 lựa chọn Timer + không có "Auto next question";
+speaking-cards không có "Show answers at end", không có "Shuffle answers", chữ đúng là "Shuffle item order".
+
+### Bẫy gặp trong lúc làm (ghi để lần sau khỏi mất giờ)
+1. ⭐ **ĐO PANEL PHẢI TẮT ANIMATION TRƯỚC.** Số đo đầu tiên ra 504×410 trong khi số thật là 560×456 —
+   đúng **0,9 lần**, vì `.aw-tool-panel` mở bằng `aw-pop-cx` (scale .94→1) và em đo trúng khung giữa
+   chừng. (Họ hàng của bẫy Đợt 139 #1, nhưng lần này là animation ĐANG chạy chứ không phải bị đóng băng.)
+2. **Hai cột `1fr` không có bề ngang nội tại** → dưới `width:max-content` của vỏ panel, lưới tự co còn
+   **422px** (186px/cột, không đủ cho segmented 3 lựa chọn). Phải khai
+   `.aw-tool-panel.is-opts { width: min(94vw,560px) }`.
+3. **`<input type=range>` có `margin` mặc định 2px** — đúng 1 trong 4 mép trái lệch. Phải `margin:0`.
+4. **Đừng nhét thêm điều khiển vào dòng slider**: đo thật, ô "sau mấy giây" đứng cạnh thanh Time cost
+   làm thanh đó còn 78px (các thanh khác 176) và đẩy chip lệch cột 160px ⇒ dời lên **dòng nhãn**.
+5. **`mkSliderCell` phải clamp bằng `Number()`, không `v|0`** — Speaking chỉnh sao theo bước **0.5**,
+   dùng phép bitwise là mất sạch nửa sao mà không báo gì.
+6. **Bản vẽ mockup của chính em cũng dính đúng 2 lỗi em vừa chê** (thanh trượt lệch 2px vì margin mặc
+   định; chip lệch cột 160px vì nhét stepper vào dòng slider) — bắt được vì **đo bản vẽ** thay vì nhìn.
+
+### Đối chứng ngược (luật Đợt 138 — bắt buộc, kẻo phép đo vô nghĩa)
+Phép soi "có điều khiển nào bị khối vô hình che không" (`elementFromPoint` giữa mỗi thanh trượt /
+segmented / ô tick) báo **0 lỗi** ở cả 3 mode Anagram. Chưa đủ ⇒ **tái tạo đúng bệnh Đợt 137** (cho các
+ô ẩn được bố trí lại + wrapper `max-height:0` nhưng `overflow:visible`):
+**0 → 3 → 0** (lành → phát bệnh, bắt đúng 3 ca → chữa xong hết). Phép đo lật được 2 chiều ⇒ đáng tin.
+
+### Đã test đầu-cuối (không chỉ nhìn)
+- **Quiz**: chỉnh Count down + bấm `+` → panel hiện `2:05`; Apply → `options` ghi đúng
+  `{timer:"countDown", timerTotalSeconds:125, lettersOnAnswers:"abc", lives:3, pointsOff:2, timeCost:20,
+  shuffleQuestions:false, allowSkip:true}`; bấm PLAY → **đồng hồ chạy 2:05 → 2:04 → 2:03**.
+- **Anagram**: đổi mode → đúng bộ ô hiện/ẩn theo mode; Apply ghi đúng
+  `{anagramMode:"bonusMinus", letterPenalty:25, bonusMult:7, lives:4}`; chip hiện `-25`.
+- **17/17 template**: mở panel, 0 lỗi console, 0 điều khiển bị che.
+- **`play.html` (trang HS)**: nạp sạch, **không** kéo theo `store.js`/`assignment-ui.js`/`fight.js`
+  (ranh giới bảo mật còn nguyên), 0 lỗi console.
+
+### ⬜ CHƯA kiểm được (cần thầy)
+- **Chạm tay thật trên màn TOMKO**: kéo thanh trượt, bấm nút segmented, bấm `−/+` của stepper ngang.
+  (Segmented 30px và ô tick 18px đều TO HƠN radio/checkbox 15px cũ, nhưng chưa ai chạm bằng ngón tay.)
+- **Ý thầy về vài chữ đã rút gọn**: `∞` thay "Unlimited" (chip phải vừa 52px, không thì gãy cột) ·
+  "Allow skip" thay "Allow skip (Next can move on early)" · fight mode rút còn "Same words / Different"
+  và "First wins / Both finish" (câu đầy đủ nằm ở tooltip).
+- **running-word chưa chuyển** (panel bespoke: ô nhập tên 2 đội + đồng hồ tuỳ chỉnh Min/Sec).
+  Nó vẫn hiện y như trước nhờ cầu tương thích. Thầy muốn chuyển nốt thì em làm riêng một đợt.
+
+---
+
 ## Đợt 139 (13/8/2026) — ⭐ TÍNH NĂNG MỚI: "TIME COST" — MỖI GIÂY **TRỐNG** TRÔI QUA LÀ TRỪ ĐIỂM + BONUS X LÊN 10X
 ⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js`, + file mới `core/timecost.js`)
 + Anagram + Quiz. 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu, cả 2 template, có đo đối chứng

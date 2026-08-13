@@ -1529,6 +1529,79 @@ sẽ nuốt luôn khoản trừ. `totalOf = game + bonus + freezeAdj − cost` (
 Template tự dựng points-off riêng (Anagram) nhận hàm dựng ô qua `buildExtraOptions({ timeCostCell })`
 và tự đặt chỗ; template không dùng thì engine tự ghép cạnh points-off của nó (Quiz).
 
+### ⭐⭐ OPTIONS PANEL v2 — MỘT LƯỚI, MỘT KHUÔN HÀNG (Đợt 140, 13/8/2026)
+
+Thầy: *"bảng options rất rối, khó nhìn, không thẳng hàng, không ngăn nắp và không thẩm mỹ."*
+Đo trước khi sửa (Anagram, mode "Bonus and minus", 1280×720) — **đây là bằng chứng, không phải cảm nhận**:
+
+| Triệu chứng | Số đo |
+|---|---|
+| Mép trái | **4 đường**: nhãn 15 · slider 17 · checkbox 19 · radio 20 |
+| 3 thanh trượt "giống nhau" | dài **212 / 208 / 220** px ⇒ 3 chip giá trị bắt đầu 3 chỗ |
+| Bộ chỉnh số ▲▼ | **cao 69px** nằm trong hàng cao **12px**, ở 2 chỗ |
+| Bề ngang bỏ phí | 6/9 hàng phí **30–76%** |
+| Chiều cao | **667px** > **645px** chỗ cho phép ⇒ `.is-compact-opts` nén nhãn còn 9.5px |
+
+**Cách chữa là CẤU TRÚC**: mỗi tuỳ chọn = **1 ô** của lưới 2 cột (`.aw-opt-grid`), mỗi ô đúng 2 phần
+(dòng nhãn `.aw-optc-lab` · dòng điều khiển `.aw-optc-ctl`). Thẳng hàng đến từ **lưới**, không đến từ
+việc từng điều khiển tình cờ chịu xếp bằng nhau.
+
+**Kết quả đo lại cả 17 template** (cùng phép đo): trung bình **−36%** chiều cao · **0/17 phải cuộn** ·
+**0/17 phải nén chữ** · fight mode Anagram (chỉ 471px chỗ trống) không cuộn ở cả 3 mode.
+
+#### 4 hàm dựng engine truyền cho template
+
+```js
+buildExtraOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck,
+                    el, mkCheck, mkRadioChoice, timeCostCell })   // 4 tên cũ vẫn còn
+```
+
+| Hàm | Trả về / việc |
+|---|---|
+| `mkCell({label, sub, wide})` | `{cell, lab, ctl}` — ô trống để tự nhét điều khiển vào `ctl`. `wide:true` = chiếm cả 2 cột |
+| `mkSeg([{value,label,title}], current, onPick)` | Segmented control thay cho một hàng radio |
+| `mkSliderCell({label, sub, min, max, step, value, tone, fmt, offAt, onInput, wide})` | Cả ô: thanh trượt + chip giá trị. `tone`: `""`(đỏ)/`amber`/`blue`. `offAt` = giá trị nghĩa là "tắt" (chip xám) |
+| `addCheck(label, checked, onChange, {title})` | Đẩy 1 ô tick vào **khối switch dùng chung** ở đáy panel |
+
+`panel` bây giờ **chính là lưới**. Template cũ `append` `.aw-opt-group` vào đó vẫn chạy y như trước —
+luật cầu tương thích `.aw-opt-grid > .aw-opt-group { grid-column: 1/-1 }` trong `app.css` cho nó
+chiếm cả 2 cột. Giữ luật đó **chừng nào còn template chưa chuyển** (hiện còn **running-word**).
+
+#### 5 luật BẮT BUỘC
+
+1. ⛔ **TEMPLATE KHÔNG BAO GIỜ ĐƯỢC THAO TÁC LÊN DOM CỦA PANEL.** Muốn ẩn/đổi thứ do engine dựng thì
+   **khai cờ**, engine sẽ không dựng ra ngay từ đầu. Cờ hiện có: `hideTimerOption` · `hideTimerNone`
+   (mới) · `hideLettersOption` · `hideAutoSwitch` · `hideShuffleAnswers` · `hideShowAnswers` (mới) ·
+   `hidePointsOff` · `shuffleLabel` (mới).
+   **Vì sao thành luật**: Đợt 140 phát hiện 2 template đang cắt DOM thật —
+   `whack-a-mole.js` xoá nhóm có nhãn khớp `/auto switch/i` và xoá `input[name="aw-timer"][value=none]`;
+   `speaking-cards.js` xoá nhóm nhãn `"End of game"`, xoá `.aw-opt-choice` chứa chữ "answer", và sửa
+   **text node** để đổi tên "Shuffle question order". Cả 5 việc đó **hỏng IM LẶNG** ngay khi markup đổi
+   (không lỗi console, chỉ là tuỳ chọn thầy đã bỏ bỗng hiện lại). speaking-cards còn phải gọi `prune()`
+   **hai lần** (một lần ngay, một lần trong `requestAnimationFrame`) vì engine append "End of game"
+   SAU khi hook của nó chạy — dấu hiệu rõ nhất cho thấy cách làm đó sai từ gốc.
+2. **Chip giá trị rộng CỐ ĐỊNH 52px** (`.aw-optc-chip`, `flex: 0 0 52px`, canh phải). Đây chính là
+   thứ làm các chip thành MỘT CỘT. Cho một ô cái chip rộng hơn (vd để in chữ "Unlimited" 84px) là
+   **thanh trượt ô đó ngắn lại và cột gãy** → dùng `∞` / `Off`, đừng nới chip.
+3. **`<input type=range>` phải có `margin: 0`.** Mặc định trình duyệt cho nó margin 2px — đúng một
+   trong 4 mép trái lệch đo được ở trên.
+4. **Đừng nhét thêm điều khiển vào dòng ĐIỀU KHIỂN của ô slider.** Đo thật lúc dựng bản vẽ: đặt ô
+   "sau mấy giây" của Time cost cạnh thanh trượt làm thanh đó còn **78px** (các thanh khác 176) và
+   đẩy chip lệch cột **160px**. Thứ phụ thì cho lên **dòng NHÃN** (`.aw-optc-lab .aw-hstep`
+   `margin-left:auto`) — đó là cách Time cost đang làm.
+5. **Ô ẩn theo mode thì `display:none`, đừng chỉ `max-height:0`.** Xem lại bài học Đợt 137 ở mục
+   accordion: một khối "ẩn" mà vẫn được bố trí sẽ **ăn chuột**. Anagram gói 3 ô điểm phạt vào **một**
+   wrapper có `overflow:hidden` để animate chiều cao, còn từng ô bên trong thì `display:none` —
+   hai lớp bảo vệ, và lưới ngoài không bao giờ thấy một hàng mở dở.
+
+⚠️ **Đo panel phải TẮT ANIMATION trước.** `.aw-tool-panel` mở bằng `aw-pop-cx` (scale .94→1); đo ngay
+sau khi bấm sẽ bắt trúng khung giữa chừng — Đợt 140 đo ra 504×410 trong khi số thật là 560×456 (đúng
+0,9 lần). Tiêm `*{transition:none!important;animation:none!important}` rồi mới đo.
+
+⚠️ **`.aw-tool-panel.is-opts`** (chỉ panel Options) có **bề ngang khai sẵn 560px**. Hai cột `1fr`
+không có bề ngang nội tại, nên dưới `width:max-content` của vỏ panel, lưới tự co còn **422px** (186px
+mỗi cột — không đủ cho segmented 3 lựa chọn). Đừng gỡ dòng đó.
+
 ### Cầu đồng bộ myActivity — `window.__awordBridge` + marker (v0.9.28)
 
 Khi chạy NHÚNG trong myActivity (2–4 bảng), pane 0 đổi Template/Options/Style phải lan sang bảng khác.

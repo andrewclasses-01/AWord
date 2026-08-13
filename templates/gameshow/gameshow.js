@@ -21,7 +21,7 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
+import { makeHStepper } from "../../core/numberstepper.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { openGameshowEditor } from "./gameshow-editor.js";
 import { gsSound } from "./gs-sound.js";
@@ -86,47 +86,40 @@ const gameshowTemplate = {
   // ----- Options panel extras: Time per question · Lives · Questions before a
   // bonus round · Lifelines (see CONG THUC MAU §5). `draft` is what Apply writes
   // back into activity.options, so we mutate fields on it directly. -----
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
+  // Đợt 140 — shared panel builders. The three ▲/▼ steppers became one
+  // horizontal stepper (seconds need an exact number) and two sliders, so this
+  // game's four groups collapse into two rows of the panel grid.
+  buildExtraOptions({ panel, draft, mkCell, mkSliderCell, addCheck }) {
     // Time per question (0 = no time pressure)
-    const gT = el("div", "aw-opt-group");
-    gT.append(el("div", "aw-opt-label", "Time per question"));
-    const rowT = el("div", "aw-opt-row");
-    const secs = typeof draft.gsSeconds === "number" ? draft.gsSeconds : 20;
-    const stT = makeNumberStepper(secs, 0, 120, v => draft.gsSeconds = v);
-    rowT.append(stT.el, document.createTextNode(" seconds  (0 = no timer)"));
-    gT.append(rowT); panel.append(gT);
+    const cTime = mkCell({ label: "Question time", sub: "0 = off" });
+    const stT = makeHStepper(typeof draft.gsSeconds === "number" ? draft.gsSeconds : 20,
+      0, 120, v => { draft.gsSeconds = v; }, { format: v => (v === 0 ? "Off" : v + "s") });
+    cTime.ctl.append(stT.el);
 
-    // Lives (0 = Unlimited)
-    const gL = el("div", "aw-opt-group");
-    gL.append(el("div", "aw-opt-label", "Lives"));
-    const rowL = el("div", "aw-opt-row");
-    const lv = typeof draft.lives === "number" ? draft.lives : 0;
-    const note = document.createTextNode(lv === 0 ? " (0 = Unlimited)" : " lives");
-    const stL = makeNumberStepper(lv, 0, 9, v => { draft.lives = v; note.textContent = v === 0 ? " (0 = Unlimited)" : " lives"; });
-    rowL.append(stL.el, note);
-    gL.append(rowL); panel.append(gL);
-
-    // Questions before a bonus round (0 = no bonus round)
-    const gB = el("div", "aw-opt-group");
-    gB.append(el("div", "aw-opt-label", "Questions before a bonus round"));
-    const rowB = el("div", "aw-opt-row");
-    const be = typeof draft.bonusEvery === "number" ? draft.bonusEvery : 3;
-    const stB = makeNumberStepper(be, 0, 20, v => draft.bonusEvery = v);
-    rowB.append(stB.el, document.createTextNode("  (0 = off)"));
-    gB.append(rowB); panel.append(gB);
-
-    // Lifelines
-    const gLL = el("div", "aw-opt-group");
-    gLL.append(el("div", "aw-opt-label", "Lifelines"));
-    const rowLL = el("div", "aw-opt-row");
-    const ll = draft.lifelines || (draft.lifelines = { fifty: true, x2: true, time: true, cheat: true });
-    rowLL.append(
-      mkCheck(ll.fifty !== false, "50:50", v => ll.fifty = v),
-      mkCheck(ll.x2 !== false, "x2 Score", v => ll.x2 = v),
-      mkCheck(ll.time !== false, "Extra Time", v => ll.time = v),
-      mkCheck(ll.cheat !== false, "Cheat", v => ll.cheat = v)
+    panel.append(
+      cTime.cell,
+      // Lives (0 = Unlimited)
+      mkSliderCell({
+        label: "Lives", min: 0, max: 9, step: 1,
+        value: typeof draft.lives === "number" ? draft.lives : 0, tone: "blue", offAt: 0,
+        fmt: v => (v === 0 ? "∞" : String(v)),
+        onInput: v => { draft.lives = v; }
+      }).cell,
+      // Questions before a bonus round (0 = no bonus round)
+      mkSliderCell({
+        label: "Bonus round", sub: "every N", min: 0, max: 20, step: 1,
+        value: typeof draft.bonusEvery === "number" ? draft.bonusEvery : 3, tone: "amber", offAt: 0,
+        fmt: v => (v === 0 ? "Off" : String(v)),
+        onInput: v => { draft.bonusEvery = v; }
+      }).cell
     );
-    gLL.append(rowLL); panel.append(gLL);
+
+    // Lifelines — four switches, so they join the shared checkbox block
+    const ll = draft.lifelines || (draft.lifelines = { fifty: true, x2: true, time: true, cheat: true });
+    addCheck("50:50", ll.fifty !== false, v => ll.fifty = v, { title: "Lifeline: 50:50" });
+    addCheck("x2 Score", ll.x2 !== false, v => ll.x2 = v, { title: "Lifeline: double score" });
+    addCheck("Extra Time", ll.time !== false, v => ll.time = v, { title: "Lifeline: extra time" });
+    addCheck("Cheat", ll.cheat !== false, v => ll.cheat = v, { title: "Lifeline: cheat" });
   },
   // Changing any of the above makes the CURRENT play meaningless -> restart.
   optionsNeedRestart() { return true; },

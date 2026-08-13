@@ -285,3 +285,25 @@ nhóm "Auto switch" + nút Timer "None" (chỉ còn Count up / Count down; none�
 ## LƯU Ý / ĐÁNH ĐỔI
 - Game KHÔNG đổi màu theo theme (art Wild West cố định — thầy chốt).
 - Chưa test trang HS `play.html` (nạp template động) cho bản mới — engine giống nhau nên khả năng OK.
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+⚠️ **RIÊNG TEMPLATE NÀY — gỡ một quả bom hẹn giờ**: `buildExtraOptions` cũ kết thúc bằng 2 đoạn **cắt
+DOM của panel bằng tay** (xoá nhóm có nhãn khớp `/auto switch/i`; xoá `input[name="aw-timer"]` value
+`"none"` rồi tự bấm `countDown`). Bản mới không còn nhóm/radio đó ⇒ 2 đoạn ấy sẽ **hỏng im lặng** và
+tuỳ chọn thầy đã bỏ sẽ hiện lại. Nay thay bằng **cờ khai báo** `hideAutoSwitch: true` và
+`hideTimerNone: true` (cờ mới của core) — engine không dựng ra ngay từ đầu. Đã đo lại: Timer chỉ còn
+"Count up / Count down", không có "Auto next question", act đang ở `countDown` giữ nguyên.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **575px → 365px**.

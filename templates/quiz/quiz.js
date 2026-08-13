@@ -115,34 +115,28 @@ const quizTemplate = {
   // Extra Options: the central Points off group is engine-built; here we add
   // "Allow skip" (default OFF -> the student must answer before Next advances)
   // and "Lives" (0..10, 0 = Unlimited).
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
-    const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Navigation"));
-    const row = el("div", "aw-opt-row");
-    row.append(mkCheck(draft.allowSkip === true, "Allow skip (move on without answering)",
-      v => draft.allowSkip = v));
-    g.append(row);
-    panel.append(g);
-
+  // Đợt 140 — rebuilt on the shared panel builders (mkSliderCell/addCheck) so
+  // these two options are cells of the SAME grid as the engine's, instead of
+  // two more full-width groups with their own uppercase headings. Values,
+  // ranges and draft fields are untouched; only the markup changed.
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     // LIVES — a slider 0..10 (0 = Unlimited), teacher's spec 4/8/2026. A wrong
     // answer costs a heart; hitting 0 ends the game right away. Same control and
     // rendering pattern as True/false and Type the answer.
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-quiz-livesrow");
-    const curLives = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
-    const livesVal = el("span", "aw-quiz-livesval", curLives === 0 ? "Unlimited" : String(curLives));
-    const livesInput = el("input", "aw-quiz-livesslider");
-    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
-    livesInput.value = String(curLives);
-    livesInput.oninput = () => {
-      const v = parseInt(livesInput.value, 10);
-      draft.lives = v;   // 0 stored = unlimited
-      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
-    };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
+    // "∞" rather than the word: the value chip is a fixed 52px in every cell
+    // (that fixed width is WHY the chips form a column), and "Unlimited" needs
+    // 84px — a wider chip here would shorten this slider and break the column.
+    const cur = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
+    const lives = mkSliderCell({
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "∞" : String(v)),
+      onInput: v => { draft.lives = v; }        // 0 stored = unlimited
+    });
+    lives.cell.title = "0 = unlimited lives";
+    panel.append(lives.cell);
+
+    addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
+      { title: "Allow skip (move on without answering)" });
   },
 
   mount(root, activity, ui) {

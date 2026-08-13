@@ -81,59 +81,37 @@ const ttaTemplate = {
   },
 
   // Extra Options group (engine's generic "cửa mở rộng" — see CONG THUC MAU.md §5).
-  buildExtraOptions({ panel, draft, el, mkCheck }) {
-    const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Type the answer"));
-    const row = el("div", "aw-opt-row");
-
+  // Đợt 140 — shared panel builders.
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     // Slider (0..5): how many points a wrong answer deducts. 0 = off — the
     // slider alone decides now, no separate "Minus points" checkbox (teacher,
     // 3/8/2026: fewer controls to keep in sync).
     if (draft.minusAmount == null) draft.minusAmount = 0;
-    const sliderWrap = el("div", "aw-tta-opt-minus");
-    sliderWrap.append(el("span", "aw-tta-opt-minus-cap", "Points off per wrong"));
-    const slider = el("input", "aw-tta-opt-slider");
-    slider.type = "range"; slider.min = "0"; slider.max = "5"; slider.step = "1";
-    slider.value = String(draft.minusAmount);
-    const sliderVal = el("span", "aw-tta-opt-minus-val", slider.value === "0" ? "Off" : `−${slider.value}`);
-    slider.oninput = () => {
-      draft.minusAmount = +slider.value;
-      sliderVal.textContent = slider.value === "0" ? "Off" : `−${slider.value}`;
-    };
-    sliderWrap.append(slider, sliderVal);
-
-    row.append(
-      mkCheck(draft.showAnswerWhenWrong !== false, "Show answer when wrong",
-        v => draft.showAnswerWhenWrong = v),
-      // Default OFF -> Next stays disabled (until answered) instead of letting the
-      // student jump ahead without answering. Once answered, the game auto-advances
-      // regardless of this box (see submitAnswer) — this only gates the MANUAL skip.
-      mkCheck(draft.allowSkip === true, "Allow skip (move on without answering)",
-        v => draft.allowSkip = v)
+    panel.append(
+      mkSliderCell({
+        label: "Points off", sub: "per wrong", min: 0, max: 5, step: 1,
+        value: draft.minusAmount, offAt: 0,
+        fmt: v => (v === 0 ? "Off" : "-" + v),
+        onInput: v => { draft.minusAmount = v; }
+      }).cell,
+      // Lives — 0..10 (0 = Unlimited). New, 3/8/2026: a wrong answer costs a
+      // heart (top bar, left of the score); hitting 0 ends the game right away.
+      mkSliderCell({
+        label: "Lives", min: 0, max: MAX_LIVES, step: 1,
+        value: Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0,
+        tone: "blue", offAt: 0,
+        fmt: v => (v === 0 ? "∞" : String(v)),
+        onInput: v => { draft.lives = v; }   // 0 stored = unlimited
+      }).cell
     );
-    g.append(row);
-    g.append(sliderWrap);
-    panel.append(g);
 
-    // Lives — a slider 0..10 (0 = Unlimited). New, 3/8/2026: a wrong answer costs
-    // a heart (top bar, left of the score); hitting 0 ends the game right away.
-    // Same control/rendering pattern as True/false's hearts (ui.livesSlot).
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-tta-livesrow");
-    const curLives = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
-    const livesVal = el("span", "aw-tta-livesval", curLives === 0 ? "Unlimited" : String(curLives));
-    const livesInput = el("input", "aw-tta-livesslider");
-    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
-    livesInput.value = String(curLives);
-    livesInput.oninput = () => {
-      const v = parseInt(livesInput.value, 10);
-      draft.lives = v;   // 0 stored = unlimited
-      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
-    };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
+    addCheck("Show answer when wrong", draft.showAnswerWhenWrong !== false,
+      v => draft.showAnswerWhenWrong = v);
+    // Default OFF -> Next stays disabled (until answered) instead of letting the
+    // student jump ahead without answering. Once answered, the game auto-advances
+    // regardless of this box (see submitAnswer) — this only gates the MANUAL skip.
+    addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
+      { title: "Allow skip (move on without answering)" });
   },
 
   mount(root, activity, ui) {

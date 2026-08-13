@@ -599,32 +599,26 @@
 .aw-anagram-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
 .aw-anagram-ed-addrow:disabled { opacity: .4; cursor: default; }
 
-/* Options panel — the 3 mode-dependent penalty groups (Points off / Bonus
-   multiplier) collapse smoothly instead of snapping via display:none (Đợt
-   134, teacher: "animation mượt"). Two layers, see buildExtraOptions in
-   anagram.js: the OUTER .aw-opt-group (already core-styled) just gains this
-   margin-bottom transition; the INNER .aw-anagram-pencontent wrapper is what
-   actually collapses (max-height + opacity), sized off its own measured
-   scrollHeight so it works for any content length. */
-.aw-anagram-pengroup { transition: margin-bottom .28s cubic-bezier(.22,.9,.3,1); }
-.aw-anagram-pencontent {
-  max-height: 0; opacity: 0;
-  /* ⚠️⚠️ Đợt 137 — THIẾU 2 DÒNG NÀY LÀ NGUỒN GỐC LỖI "KÉO KHÔNG ĐƯỢC THANH
-     POINTS OFF" (thầy báo 13/8/2026). `max-height:0` chỉ ép chiều cao Ô về 0;
-     nếu không có `overflow:hidden` thì NỘI DUNG bên trong vẫn nằm nguyên chỗ
-     cũ và vẫn ăn chuột — chỉ là mắt không thấy vì `opacity:0`. Tệ hơn:
-     `opacity` < 1 ĐẺ RA STACKING CONTEXT, nên khối vô hình này được vẽ ở lớp
-     TRÊN nội dung bình thường của nhóm kế tiếp ⇒ thanh trượt vô hình nằm đè
-     đúng lên thanh trượt thật ngay dưới nó và nuốt hết mọi cú kéo.
-     Đo thật trước khi vá (elementFromPoint tại 5 điểm dọc mỗi thanh):
-       • mode "Bonus and minus" → "Points off (wrong letter)" bị thanh
-         "Points off (wrong answer)" ĐANG ẨN che 5/5 điểm  ← thầy gặp cái này
-       • mode "Letters with bonus" và "On submit" → thanh LIVES bị thanh
-         "Bonus x" ĐANG ẨN che 5/5 điểm (lỗi cùng gốc, chưa ai báo)
-     `pointer-events` là lớp chặn thứ hai: kể cả sau này có ai đổi bố cục làm
-     `overflow` hết tác dụng, ô đang ẩn vẫn không bao giờ cướp được cú chạm. */
+/* Options panel — the mode-dependent Points off / Bonus x cells collapse
+   smoothly instead of snapping (Đợt 134, teacher: "animation mượt").
+   Đợt 140: ONE wrapper around a nested 2-column grid, instead of the previous
+   three separately-collapsing groups — the cells inside are switched with
+   display:none, only this wrapper animates, so the panel's outer grid never
+   sees a half-open row.
+
+   ⚠️⚠️ `overflow:hidden` HERE IS THE WHOLE LESSON OF Đợt 137 — "kéo không
+   được thanh Points off" (thầy báo 13/8/2026). `max-height:0` chỉ ép chiều
+   cao Ô về 0; thiếu `overflow:hidden` thì NỘI DUNG bên trong vẫn nằm nguyên
+   chỗ cũ và vẫn ăn chuột — mắt không thấy vì `opacity:0`. Tệ hơn: `opacity`
+   < 1 ĐẺ RA STACKING CONTEXT nên khối vô hình đó được vẽ TRÊN nội dung ngay
+   dưới ⇒ một thanh trượt tàng hình đè khít lên thanh thật, nuốt hết cú kéo.
+   Đo thật trước khi vá (elementFromPoint 5 điểm dọc mỗi thanh): mode "Bonus
+   and minus" → thanh "wrong letter" bị thanh "wrong answer" ĐANG ẨN che 5/5;
+   hai mode kia → thanh LIVES bị thanh "Bonus x" ĐANG ẨN che 5/5.
+   `pointer-events` là lớp chặn thứ hai, giữ nguyên: dù sau này ai đổi bố cục
+   làm `overflow` hết tác dụng, khối đang đóng vẫn không cướp được cú chạm. */
+.aw-anagram-penwrap {
   overflow: hidden;
-  pointer-events: none;
-  transition: max-height .28s cubic-bezier(.22,.9,.3,1), opacity .2s ease;
+  transition: max-height .28s cubic-bezier(.22,.9,.3,1);
 }
-.aw-anagram-pencontent.is-open { opacity: 1; pointer-events: auto; }
+.aw-anagram-penwrap.is-closed { pointer-events: none; }

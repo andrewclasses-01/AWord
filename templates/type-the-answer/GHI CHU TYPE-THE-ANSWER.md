@@ -748,3 +748,18 @@ Submit-trong-bàn-phím) làm bàn phím DÙNG CHUNG cho mọi act, rồi áp lu
     như TTA. 0 lỗi console.
 - File đụng: **core/keyboard.js** (mới), **core/app.css** (thêm CSS `.aw-kbd-*`, cuối file),
   **core/HUONG DAN CORE.md** (thêm mục lục), `type-the-answer.js`+`.css`, `crossword.js`+`.css`.
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **400px → 274px**.

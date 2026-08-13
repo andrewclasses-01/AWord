@@ -24,7 +24,7 @@
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
+import { makeHStepper } from "../../core/numberstepper.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { bpSound } from "./balloon-pop-sound.js";
@@ -107,34 +107,33 @@ const balloonPopTemplate = {
       .map(it => ({ clue: it.definition, answer: it.keyword }));
   },
 
-  buildExtraOptions({ panel, draft, mkCheck }) {
-    const num = (label, key, def, min, max, suffix) => {
-      const g = el("div", "aw-opt-group");
-      g.append(el("div", "aw-opt-label", label));
-      const row = el("div", "aw-opt-row");
-      const wrap = el("span", "aw-opt-time");
-      const stepper = makeNumberStepper(
-        typeof draft[key] === "number" ? draft[key] : def, min, max,
-        v => draft[key] = v
-      );
-      wrap.append(stepper.el);
-      if (suffix) wrap.append(document.createTextNode(suffix));
-      row.append(wrap);
-      g.append(row);
-      panel.append(g);
-    };
-    num("Round time (seconds)", "bpTimerSeconds", 60, 15, 300, "s");
-    num("Balloon speed (1–10)", "bpSpeed", 5, 1, 10, "");
-    num("Levels", "bpLevels", 10, 1, 100, "");
+  // Đợt 140 — shared panel builders. Three ▲/▼ steppers (69px each) become
+  // three one-line cells; the bonus checkboxes join the shared switch block.
+  buildExtraOptions({ panel, draft, mkCell, mkSliderCell, addCheck }) {
+    // Round time keeps a stepper: 15..300s is too fine a range for a slider.
+    const cTime = mkCell({ label: "Round time" });
+    const stTime = makeHStepper(typeof draft.bpTimerSeconds === "number" ? draft.bpTimerSeconds : 60,
+      15, 300, v => { draft.bpTimerSeconds = v; }, { step: 5, format: v => v + "s" });
+    cTime.ctl.append(stTime.el);
 
-    const bg = el("div", "aw-opt-group");
-    bg.append(el("div", "aw-opt-label", "Bonus balloons"));
-    const brow = el("div", "aw-opt-row aw-opt-col");
-    brow.append(mkCheck(draft.bpBonusTime === true, "Extra time", v => draft.bpBonusTime = v));
-    brow.append(mkCheck(draft.bpBonusPoints === true, "Points", v => draft.bpBonusPoints = v));
-    brow.append(mkCheck(draft.bpBonusX2 === true, "x2 score", v => draft.bpBonusX2 = v));
-    bg.append(brow);
-    panel.append(bg);
+    const cLevels = mkCell({ label: "Levels" });
+    const stLevels = makeHStepper(typeof draft.bpLevels === "number" ? draft.bpLevels : 10,
+      1, 100, v => { draft.bpLevels = v; }, { format: v => String(v) });
+    cLevels.ctl.append(stLevels.el);
+
+    panel.append(
+      cTime.cell,
+      mkSliderCell({
+        label: "Balloon speed", min: 1, max: 10, step: 1,
+        value: typeof draft.bpSpeed === "number" ? draft.bpSpeed : 5, tone: "blue",
+        onInput: v => { draft.bpSpeed = v; }
+      }).cell,
+      cLevels.cell
+    );
+
+    addCheck("Bonus: extra time", draft.bpBonusTime === true, v => draft.bpBonusTime = v);
+    addCheck("Bonus: points", draft.bpBonusPoints === true, v => draft.bpBonusPoints = v);
+    addCheck("Bonus: x2 score", draft.bpBonusX2 === true, v => draft.bpBonusX2 = v);
   },
 
   mount(root, activity, ui) {

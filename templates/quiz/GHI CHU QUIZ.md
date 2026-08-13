@@ -264,3 +264,18 @@ lives 8 → `8♥`→`7♥` · đúng hết → 3 tim nguyên 6/6 · Submit answ
   `scoreNow()`) + **Allow skip** (mặc định TẮT: phải trả lời mới Next được).
 - **Đợt 12 (30/7/2026)** — bỏ `text-transform:uppercase` ở `.aw-quiz-tile` (hết ép HOA đáp án; ALL CAPS
   chỉ còn ở Anagram).
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **605px → 344px**.

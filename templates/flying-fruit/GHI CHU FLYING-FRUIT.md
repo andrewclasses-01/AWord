@@ -118,3 +118,18 @@ Làm ĐÚNG 4 chỗ này (đối chiếu cách `anagram` đã làm), rồi `curl
 - **Tự test** (devserver `aword` :5510, ép `activity.options.retry = true` để bắt kịp cửa sổ 320ms, đo qua
   `javascript_tool`): quả đang ở `matrix(0.990268, -0.139173, ...)` (góc xoay thật ≈ **−8.00°**) → chạm sai →
   `--wrong-from` đọc lại đúng **"−8.00deg"** — khớp chính xác, không còn ép về 0. 0 lỗi console.
+
+---
+
+## Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: tuỳ chọn riêng của template này chuyển sang lưới chung
+✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. Thầy yêu cầu thiết kế lại toàn bộ bảng Options (*"rất rối, khó nhìn, không thẳng
+hàng"*); chi tiết đo đạc + 5 luật mới nằm ở `../../GHI CHU DU AN.md` Đợt 140 và
+`../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
+
+**Đổi ở template này**: `buildExtraOptions` viết lại bằng 4 hàm dựng chung engine truyền vào —
+`mkCell` · `mkSeg` (thay hàng radio) · `mkSliderCell` (thanh trượt + chip giá trị 52px) ·
+`addCheck` (đẩy ô tick vào khối switch dùng chung ở đáy panel).
+**KHÔNG đổi**: tên trường trong `draft`/`activity.options`, khoảng giá trị, mặc định, hay bất kỳ hành
+vi nào lúc chơi. Act cũ mở lên vẫn đúng y như trước.
+
+**Đo thật panel của template này (1280×720, cùng phép đo trước/sau)**: **525px → 333px**.

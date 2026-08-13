@@ -114,6 +114,11 @@ const speakingCardsTemplate = {
   // ./assets/ chứ không phải ./img/ nên engine quét CSS không thấy.
   preloadImages: [BG_URL],
   hideLettersOption: true,   // no lettered answers here — engine skips that Options group
+  // Đợt 140 — the three things buildExtraOptions used to achieve by deleting
+  // nodes out of the finished panel (see its comment below), declared instead:
+  hideShowAnswers: true,     // open-ended game: there are no answers to show
+  hideShuffleAnswers: true,  // ...and no answer choices to shuffle either
+  shuffleLabel: "Shuffle item order",   // it deals CARDS, not questions
 
   // Engine hooks it auto-calls: `play` on the PLAY button (the intro sound — the
   // camera pan is timed to it), restart on "Start again", a warning as the
@@ -574,45 +579,21 @@ const speakingCardsTemplate = {
   },
 
   // ---- Options panel: prune the Quiz-only controls, add Number of deal places ----
-  buildExtraOptions({ panel, draft, el: makeEl }) {
-    // Trim the controls that mean nothing for an open-ended game: the whole
-    // "End of game" group ("Show answers") and "Shuffle answer order"; rename
-    // "Shuffle question order" -> "Shuffle item order".
-    // NOTE: the engine appends "End of game" LAST — after this hook runs — so a
-    // single pass here would miss it. Run once now (catches the Random group)
-    // and again after the panel is fully assembled (catches End of game).
-    const prune = () => {
-      try {
-        panel.querySelectorAll(".aw-opt-group").forEach(g => {
-          const label = g.querySelector(".aw-opt-label")?.textContent?.trim();
-          if (label === "End of game") { g.remove(); return; }   // "Show answers" — no answers here
-          if (label === "Random") {
-            g.querySelectorAll(".aw-opt-choice").forEach(ch => {
-              const t = ch.textContent.trim().toLowerCase();
-              if (t.includes("answer")) ch.remove();               // drop "Shuffle answer order"
-              else if (t.includes("question")) {                   // rename to "Shuffle item order"
-                ch.childNodes.forEach(n => { if (n.nodeType === 3 && /question/i.test(n.textContent)) n.textContent = "Shuffle item order"; });
-              }
-            });
-          }
-        });
-      } catch { /* pruning is cosmetic — never let it break the panel */ }
-    };
-    prune();
-    requestAnimationFrame(prune);
-
+  // Đợt 140 — shared panel builders.
+  // ⚠️ The `prune()` block that used to open this function is GONE. It reached
+  // into the built panel to delete the "End of game" group and the "Shuffle
+  // answer order" choice, and to rewrite a text node — twice, because the
+  // engine appends "End of game" AFTER this hook runs, so it also had to fire
+  // again inside a requestAnimationFrame. All three intents are declared flags
+  // now (hideShowAnswers · hideShuffleAnswers · shuffleLabel, see the header
+  // above): the engine simply never builds what this game doesn't want.
+  buildExtraOptions({ panel, draft, mkSliderCell }) {
     // Number of deal places — a real 1..10 slider (matches True/false's controls).
-    const g = makeEl("div", "aw-opt-group");
-    g.append(makeEl("div", "aw-opt-label", "Number of deal places"));
-    const row = makeEl("div", "aw-opt-row aw-sc-dealrow");
-    const cur = Math.max(1, Math.min(10, Number(draft.dealPlaces) || 1));
-    const slider = makeEl("input", "aw-sc-dealslider");
-    slider.type = "range"; slider.min = "1"; slider.max = "10"; slider.step = "1"; slider.value = String(cur);
-    const val = makeEl("span", "aw-sc-dealval", String(cur));
-    slider.oninput = () => { const v = parseInt(slider.value, 10); draft.dealPlaces = v; val.textContent = String(v); };
-    row.append(slider, val);
-    g.append(row);
-    panel.append(g);
+    panel.append(mkSliderCell({
+      label: "Deal places", min: 1, max: 10, step: 1,
+      value: Math.max(1, Math.min(10, Number(draft.dealPlaces) || 1)), tone: "blue",
+      onInput: v => { draft.dealPlaces = v; }
+    }).cell);
   },
 
   // Changing how many cards are on the table (or the timer) has to rebuild the

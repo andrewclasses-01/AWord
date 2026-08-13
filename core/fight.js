@@ -792,65 +792,52 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
 
   // ----- the fight settings, shown inside the normal Options panel -----
-  function buildOptions({ panel, draft, mkCheck, mkRadioChoice }) {
-    const g = el("div", "aw-opt-group");
-    g.append(el("div", "aw-opt-label", "Fight mode"));
-    const rowContent = el("div", "aw-opt-row");
+  // Đợt 140 — rebuilt on the shared panel builders (mkCell/mkSeg/
+  // mkSliderCell/addCheck) like the rest of the panel. This matters MORE here
+  // than anywhere else: in fight mode the two boards push the toolbar up, so
+  // the room above it measured only 471px at 1280x720 (vs 645 in single mode)
+  // while these three groups alone were ~146px of full-width rows. As narrow
+  // cells they pair up with the engine's own and stop forcing a scrollbar.
+  // The seg labels are SHORT with the full sentence on the tooltip — the
+  // group label above each one already says what is being chosen.
+  function buildOptions({ panel, draft, mkCell, mkSeg, mkSliderCell, addCheck }) {
     const cur = fightOptionsFrom(draft);
+
     // Đợt 133 (teacher): "Same word, same letters" is GONE — dropped
     // entirely, not just re-labelled. A legacy act that still carries
     // `fightContent:"same"` (nothing migrates existing acts, see
-    // FIGHT_DEFAULTS) shows "Same words, mix letters" selected here instead
-    // — visually the nearest of the two remaining choices — but its OWN
-    // value on disk stays "same" unless the teacher actually touches this
-    // row; `ctl.shareLetters` above still reads it correctly either way.
-    rowContent.append(
-      mkRadioChoice("aw-fight-content", "scramble", "Same words, mix letters",
-        cur.fightContent === "scramble" || cur.fightContent === "same", v => draft.fightContent = v),
-      mkRadioChoice("aw-fight-content", "different", "Different words", cur.fightContent === "different", v => draft.fightContent = v)
-    );
-    g.append(rowContent);
-    panel.append(g);
+    // FIGHT_DEFAULTS) shows "Same words" selected here instead — visually the
+    // nearest of the two remaining choices — but its OWN value on disk stays
+    // "same" unless the teacher actually touches this control;
+    // `ctl.shareLetters` above still reads it correctly either way.
+    const cContent = mkCell({ label: "Fight content" });
+    cContent.ctl.append(mkSeg([
+      { value: "scramble", label: "Same words", title: "Same words, mix letters" },
+      { value: "different", label: "Different", title: "Different words" }
+    ], cur.fightContent === "different" ? "different" : "scramble",
+      v => { draft.fightContent = v; }));
 
-    // Đợt 134 (teacher: "tách... thành 1 cụm riêng, cân đối khoảng cách" —
-    // these 3 controls used to be crammed into the SAME group as "Same/
-    // Different words" above with nothing but a row-gap between any of the
-    // 4 rows, reading as one dense, unevenly-spaced block). Own group, own
-    // label, same margin-bottom rhythm as every other group in this panel.
-    const gRule = el("div", "aw-opt-group");
-    gRule.append(el("div", "aw-opt-label", "Round rule"));
-    const rowRule = el("div", "aw-opt-row");
-    rowRule.append(
-      mkRadioChoice("aw-fight-rule", "lock", "First team wins the word", cur.fightFirstRule === "lock", v => draft.fightFirstRule = v),
-      mkRadioChoice("aw-fight-rule", "finish", "Let the other team finish", cur.fightFirstRule === "finish", v => draft.fightFirstRule = v)
-    );
-    gRule.append(rowRule);
+    const cRule = mkCell({ label: "Round rule" });
+    cRule.ctl.append(mkSeg([
+      { value: "lock", label: "First wins", title: "First team wins the word" },
+      { value: "finish", label: "Both finish", title: "Let the other team finish" }
+    ], cur.fightFirstRule === "finish" ? "finish" : "lock",
+      v => { draft.fightFirstRule = v; }));
 
-    const rowBonus = el("div", "aw-opt-row");
-    const slider = el("input", "aw-opt-slider");
-    slider.type = "range"; slider.min = "0"; slider.max = "20"; slider.step = "1";
-    slider.value = String(cur.fightSpeedBonus);
-    const val = el("span", "aw-opt-slidval", cur.fightSpeedBonus === 0 ? "Off" : "+" + cur.fightSpeedBonus);
-    slider.oninput = () => {
-      const v = Math.max(0, Math.min(20, +slider.value | 0));
-      draft.fightSpeedBonus = v;
-      val.textContent = v === 0 ? "Off" : "+" + v;
-    };
-    rowBonus.append(el("span", "aw-opt-sublabel", "Bonus for finishing first"), slider, val);
-    gRule.append(rowBonus);
-    panel.append(gRule);
+    const cBonus = mkSliderCell({
+      label: "Speed bonus", sub: "finish first",
+      min: 0, max: 20, step: 1, value: cur.fightSpeedBonus, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "Off" : "+" + v),
+      onInput: v => { draft.fightSpeedBonus = v; }
+    });
 
-    // "The slower team still keeps its points" stays OUTSIDE the new "Round
-    // rule" group — it's about what happens AFTER a round ends, not about
-    // the round rule itself — but still gets its own group (rather than
-    // dangling with no label/spacing of its own) so the panel's rhythm
-    // stays even throughout: group, group, group, not group + 3 loose rows.
-    const gLate = el("div", "aw-opt-group");
-    const rowLate = el("div", "aw-opt-row");
-    rowLate.append(mkCheck(cur.fightLateScores !== false, "The slower team still keeps its points",
-      v => draft.fightLateScores = v));
-    gLate.append(rowLate);
-    panel.append(gLate);
+    panel.append(cContent.cell, cRule.cell, cBonus.cell);
+
+    // What happens AFTER a round ends, not part of the round rule — it is a
+    // switch like the others, so it joins the shared checkbox block.
+    addCheck("Slower team keeps points", cur.fightLateScores !== false,
+      v => { draft.fightLateScores = v; },
+      { title: "The slower team still keeps its points" });
   }
 
   // ----- build the two plays -----

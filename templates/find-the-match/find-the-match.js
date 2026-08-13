@@ -116,65 +116,45 @@ const ftmTemplate = {
   },
 
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
-  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
+  // Đợt 140 — rebuilt on the shared panel builders (mkSliderCell/mkSeg/
+  // addCheck): same options, same draft fields, now cells of the panel's grid
+  // so they line up with the engine's own instead of being four more
+  // full-width groups. "∞"/"Off" keep the value chip inside its fixed 52px —
+  // that fixed width is what makes the chips form a column.
+  buildExtraOptions({ panel, draft, mkSliderCell, mkSeg, mkCell, addCheck }) {
     // LIVES — a slider 0..10 (0 = Unlimited), hearts shown next to the score
     // (same as True/false — teacher's request, 1/8).
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-ftm-livesrow");
     const curLives = (draft.lives === 0 || draft.lives === null) ? 0
       : (Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(1, draft.lives)) : DEFAULT_LIVES);
-    const livesVal = el("span", "aw-ftm-livesval", curLives === 0 ? "Unlimited" : String(curLives));
-    const livesInput = el("input", "aw-ftm-livesslider");
-    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
-    livesInput.value = String(curLives);
-    livesInput.oninput = () => {
-      const v = parseInt(livesInput.value, 10);
-      draft.lives = v;   // 0 stored = unlimited
-      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
-    };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
+    const lives = mkSliderCell({
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "∞" : String(v)),
+      onInput: v => { draft.lives = v; }   // 0 stored = unlimited
+    });
+    lives.cell.title = "0 = unlimited lives";
 
     // SPEED — a real slider (teacher's explicit request), not a dropdown.
-    const gSpeed = el("div", "aw-opt-group");
-    gSpeed.append(el("div", "aw-opt-label", "Speed"));
-    const rowSpeed = el("div", "aw-opt-row aw-ftm-speedrow");
-    const initSpeed = Number.isInteger(draft.speed) ? draft.speed : 0;
-    const speedVal = el("span", "aw-ftm-speedval", initSpeed === 0 ? "0 — wait for answer" : String(initSpeed));
-    const speedInput = el("input", "aw-ftm-speedslider");
-    speedInput.type = "range"; speedInput.min = "0"; speedInput.max = "10"; speedInput.step = "1";
-    speedInput.value = String(initSpeed);
-    speedInput.oninput = () => {
-      const v = parseInt(speedInput.value, 10);
-      draft.speed = v;
-      speedVal.textContent = v === 0 ? "0 — wait for answer" : String(v);
-    };
-    rowSpeed.append(speedInput, speedVal);
-    gSpeed.append(rowSpeed);
-    panel.append(gSpeed);
+    const speed = mkSliderCell({
+      label: "Speed", sub: "0 = wait", min: 0, max: 10, step: 1,
+      value: Number.isInteger(draft.speed) ? draft.speed : 0, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "Off" : String(v)),
+      onInput: v => { draft.speed = v; }
+    });
+    speed.cell.title = "0 = wait for the answer, no time limit per question";
 
     // What happens to a pair that wasn't matched in time (only matters
     // when Speed > 0, or when it was tapped wrong).
-    const gRepeat = el("div", "aw-opt-group");
-    gRepeat.append(el("div", "aw-opt-label", "Unanswered questions"));
-    const rowRepeat = el("div", "aw-opt-row");
-    const repeatOn = draft.repeatUntilCorrect === true;
-    rowRepeat.append(
-      mkRadioChoice("aw-ftm-repeat", "once", "Show each question once", !repeatOn, () => { draft.repeatUntilCorrect = false; }),
-      mkRadioChoice("aw-ftm-repeat", "repeat", "Repeat questions until correct", repeatOn, () => { draft.repeatUntilCorrect = true; })
-    );
-    gRepeat.append(rowRepeat);
-    panel.append(gRepeat);
+    const repeat = mkCell({ label: "Unanswered" });
+    repeat.ctl.append(mkSeg([
+      { value: "once", label: "Ask once", title: "Show each question once" },
+      { value: "repeat", label: "Repeat", title: "Repeat questions until correct" }
+    ], draft.repeatUntilCorrect === true ? "repeat" : "once",
+      v => { draft.repeatUntilCorrect = v === "repeat"; }));
+
+    panel.append(lives.cell, speed.cell, repeat.cell);
 
     // Whether a correctly-matched tile disappears or stays (locked).
-    const gRemove = el("div", "aw-opt-group");
-    gRemove.append(el("div", "aw-opt-label", "Answers"));
-    const rowRemove = el("div", "aw-opt-row");
-    rowRemove.append(mkCheck(draft.removeCorrects !== false, "Remove corrects", v => { draft.removeCorrects = v; }));
-    gRemove.append(rowRemove);
-    panel.append(gRemove);
+    addCheck("Remove corrects", draft.removeCorrects !== false, v => { draft.removeCorrects = v; });
   },
 
   mount(root, activity, ui) {

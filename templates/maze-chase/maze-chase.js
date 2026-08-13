@@ -28,7 +28,6 @@ import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
-import { makeNumberStepper } from "../../core/numberstepper.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { mcSound } from "./mc-sound.js";
 import { openMazeChaseEditor } from "./maze-chase-editor.js";
@@ -220,24 +219,23 @@ const mazeChaseTemplate = {
   },
 
   // Options panel extras (engine calls this — see CONG THUC MAU §5): Lives + Difficulty.
-  buildExtraOptions({ panel, draft, el, mkRadioChoice }) {
-    const gL = el("div", "aw-opt-group");
-    gL.append(el("div", "aw-opt-label", "Lives"));
-    const rowL = el("div", "aw-opt-row");
-    const lv = typeof draft.lives === "number" ? draft.lives : 5;
-    const box = el("span", "aw-opt-time");
-    const st = makeNumberStepper(lv, 1, 9, v => draft.lives = v);
-    box.append(st.el, document.createTextNode(" lives"));
-    rowL.append(box); gL.append(rowL); panel.append(gL);
-
-    const gD = el("div", "aw-opt-group");
-    gD.append(el("div", "aw-opt-label", "Difficulty (enemies)"));
-    const rowD = el("div", "aw-opt-row");
-    const dv = typeof draft.difficulty === "number" ? draft.difficulty : 6;
-    const boxD = el("span", "aw-opt-time");
-    const stD = makeNumberStepper(dv, 1, 10, v => draft.difficulty = v);
-    boxD.append(stD.el, document.createTextNode(" / 10"));
-    rowD.append(boxD); gD.append(rowD); panel.append(gD);
+  // Đợt 140 — shared panel builders. Both were ▲/▼ steppers (69px tall inside
+  // a 12px row); as sliders with a value chip they match every other numeric
+  // option in the panel and cost one 51px cell each.
+  buildExtraOptions({ panel, draft, mkSliderCell }) {
+    panel.append(
+      mkSliderCell({
+        label: "Lives", min: 1, max: 9, step: 1,
+        value: typeof draft.lives === "number" ? draft.lives : 5, tone: "blue",
+        onInput: v => { draft.lives = v; }
+      }).cell,
+      mkSliderCell({
+        label: "Difficulty", sub: "enemies", min: 1, max: 10, step: 1,
+        value: typeof draft.difficulty === "number" ? draft.difficulty : 6, tone: "blue",
+        fmt: v => v + "/10",
+        onInput: v => { draft.difficulty = v; }
+      }).cell
+    );
   },
 
   mount(root, activity, ui) {

@@ -88,57 +88,39 @@ const tfTemplate = {
   },
 
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
-  buildExtraOptions({ panel, draft, mkRadioChoice }) {
+  // Đợt 140 — rebuilt on the shared panel builders; same options, same draft
+  // fields, now grid cells instead of three full-width groups.
+  buildExtraOptions({ panel, draft, mkSliderCell, mkSeg, mkCell }) {
     // SPEED — a real slider (matches Find the match's control).
-    const gSpeed = el("div", "aw-opt-group");
-    gSpeed.append(el("div", "aw-opt-label", "Speed"));
-    const rowSpeed = el("div", "aw-opt-row aw-tf-speedrow");
-    const initSpeed = Number.isInteger(draft.speed) ? draft.speed : 0;
-    const speedVal = el("span", "aw-tf-speedval", initSpeed === 0 ? "0 — wait for answer" : String(initSpeed));
-    const speedInput = el("input", "aw-tf-speedslider");
-    speedInput.type = "range"; speedInput.min = "0"; speedInput.max = "10"; speedInput.step = "1";
-    speedInput.value = String(initSpeed);
-    speedInput.oninput = () => {
-      const v = parseInt(speedInput.value, 10);
-      draft.speed = v;
-      speedVal.textContent = v === 0 ? "0 — wait for answer" : String(v);
-    };
-    rowSpeed.append(speedInput, speedVal);
-    gSpeed.append(rowSpeed);
-    panel.append(gSpeed);
+    const speed = mkSliderCell({
+      label: "Speed", sub: "0 = wait", min: 0, max: 10, step: 1,
+      value: Number.isInteger(draft.speed) ? draft.speed : 0, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "Off" : String(v)),
+      onInput: v => { draft.speed = v; }
+    });
+    speed.cell.title = "0 = wait for the answer, no time limit per statement";
 
     // LIVES — a slider 0..10 (0 = Unlimited). Teacher's spec (1/8/2026):
     // adjustable number of hearts, shown next to the score.
-    const gLives = el("div", "aw-opt-group");
-    gLives.append(el("div", "aw-opt-label", "Lives"));
-    const rowLives = el("div", "aw-opt-row aw-tf-livesrow");
     const curLives = (draft.lives === 0 || draft.lives === null) ? 0
       : (Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(1, draft.lives)) : DEFAULT_LIVES);
-    const livesVal = el("span", "aw-tf-livesval", curLives === 0 ? "Unlimited" : String(curLives));
-    const livesInput = el("input", "aw-tf-livesslider");
-    livesInput.type = "range"; livesInput.min = "0"; livesInput.max = String(MAX_LIVES); livesInput.step = "1";
-    livesInput.value = String(curLives);
-    livesInput.oninput = () => {
-      const v = parseInt(livesInput.value, 10);
-      draft.lives = v;   // 0 stored = unlimited
-      livesVal.textContent = v === 0 ? "Unlimited" : String(v);
-    };
-    rowLives.append(livesInput, livesVal);
-    gLives.append(rowLives);
-    panel.append(gLives);
+    const lives = mkSliderCell({
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      fmt: v => (v === 0 ? "∞" : String(v)),
+      onInput: v => { draft.lives = v; }   // 0 stored = unlimited
+    });
+    lives.cell.title = "0 = unlimited lives";
 
     // What happens to a statement that wasn't answered in time (only matters
     // when Speed > 0).
-    const gRepeat = el("div", "aw-opt-group");
-    gRepeat.append(el("div", "aw-opt-label", "Unanswered questions"));
-    const rowRepeat = el("div", "aw-opt-row");
-    const repeatOn = draft.repeatUntilCorrect === true;
-    rowRepeat.append(
-      mkRadioChoice("aw-tf-repeat", "once", "Show each statement once", !repeatOn, () => { draft.repeatUntilCorrect = false; }),
-      mkRadioChoice("aw-tf-repeat", "repeat", "Repeat until answered", repeatOn, () => { draft.repeatUntilCorrect = true; })
-    );
-    gRepeat.append(rowRepeat);
-    panel.append(gRepeat);
+    const repeat = mkCell({ label: "Unanswered" });
+    repeat.ctl.append(mkSeg([
+      { value: "once", label: "Ask once", title: "Show each statement once" },
+      { value: "repeat", label: "Repeat", title: "Repeat until answered" }
+    ], draft.repeatUntilCorrect === true ? "repeat" : "once",
+      v => { draft.repeatUntilCorrect = v === "repeat"; }));
+
+    panel.append(speed.cell, lives.cell, repeat.cell);
   },
 
   mount(root, activity, ui) {

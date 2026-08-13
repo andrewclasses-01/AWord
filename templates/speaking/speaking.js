@@ -139,36 +139,25 @@ const spkTemplate = {
       .map(it => ({ clue: it.clue || "Say this word out loud:", answer: it.word }));
   },
 
-  buildExtraOptions({ panel, draft, el: mkEl, mkCheck }) {
-    const g = mkEl("div", "aw-opt-group");
-    g.append(mkEl("div", "aw-opt-label", "Speaking"));
-
+  // Đợt 140 — shared panel builders. Note the 0.5 step: the shared slider
+  // builder clamps with Number(), not a bitwise op, precisely so half stars
+  // survive.
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     // Pass bar in STARS (half-star steps), teacher 11/8/2026 — replaces the
     // old percentage slider. `passStarsOf` seeds it from an old percentage if
     // this activity was made before Đợt 108.
     if (draft.passStars == null) draft.passStars = passStarsOf(draft);
-    const sliderWrap = mkEl("div", "aw-spk-opt-slider");
-    sliderWrap.append(mkEl("span", "aw-spk-opt-slidercap", "Stars needed to pass"));
-    const slider = mkEl("input");
-    slider.type = "range"; slider.min = "1"; slider.max = String(MAX_STARS); slider.step = "0.5";
-    slider.value = String(draft.passStars);
-    const sliderVal = mkEl("span", "aw-spk-opt-sliderval", `${draft.passStars} ★`);
-    slider.oninput = () => {
-      draft.passStars = +slider.value;
-      sliderVal.textContent = `${slider.value} ★`;
-    };
-    sliderWrap.append(slider, sliderVal);
-    g.append(sliderWrap);
+    panel.append(mkSliderCell({
+      label: "Stars to pass", min: 1, max: MAX_STARS, step: 0.5,
+      value: draft.passStars, tone: "amber",
+      fmt: v => v + " ★",
+      onInput: v => { draft.passStars = v; }
+    }).cell);
 
-    const row = mkEl("div", "aw-opt-row");
-    row.append(
-      mkCheck(draft.playReference !== false, "Play correct pronunciation first",
-        v => draft.playReference = v),
-      mkCheck(draft.allowRetry !== false, "Allow trying again after a low score",
-        v => draft.allowRetry = v)
-    );
-    g.append(row);
-    panel.append(g);
+    addCheck("Play example first", draft.playReference !== false,
+      v => draft.playReference = v, { title: "Play correct pronunciation first" });
+    addCheck("Allow trying again", draft.allowRetry !== false,
+      v => draft.allowRetry = v, { title: "Allow trying again after a low score" });
   },
 
   mount(root, activity, ui) {
