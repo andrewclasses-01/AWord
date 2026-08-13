@@ -2,7 +2,7 @@
 
 ## Đợt 142 (13/8/2026) — LUẬT MIX GIỌNG RỜI KHỎI FILE NÀY, LÊN `core/voice-mix.js`
 
-🟢 **CHỜ THẦY DUYỆT.** Editor **không đổi 1 pixel giao diện, không đổi 1 hành vi** — chỉ đổi chỗ ở
+✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH.** Editor **không đổi 1 pixel giao diện, không đổi 1 hành vi** — chỉ đổi chỗ ở
 của mấy hàm quyết định, vì **popup Import** (`main.js`) nay cũng có Mix voice và **không được phép
 import từ template**. Giữ 2 bản luật là đúng loại lỗi đã cắn ở Đợt 118.
 

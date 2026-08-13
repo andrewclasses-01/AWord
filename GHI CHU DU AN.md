@@ -7,7 +7,22 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 142 (13/8/2026) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ CÓ ĐỦ GIỌNG
 ⭐ CÓ SỬA CORE (`core/voice-mix.js` **MỚI** + `core/app.css`) + `main.js` + `templates/anagram/anagram-editor.js`.
-🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH.**
+
+⚠️ **SỰ CỐ HẠ TẦNG GITHUB lúc đẩy (14:37–14:39 UTC 13/8/2026) — ghi lại vì phiên sau có thể gặp:**
+`git push origin main` bị **từ chối 3 lần liên tiếp với "Internal Server Error"** (HTTP 500 từ
+GitHub), trong khi `githubstatus.com` báo **All Systems Operational**. Cách tự chẩn: **đẩy CÙNG
+commit đó sang một nhánh mới** (`_probe-142`) → **THÀNH CÔNG** ⇒ đối tượng git không hỏng, mạng không
+hỏng, quyền không thiếu; chỉ **cập nhật ref `main`** là lỗi. Thử lại lần thứ 3 thì `main` nhận
+(`3aca46e..7faf500`). Nhưng **build GitHub Pages cho commit đó FAIL** (`deployments/5890116592`,
+`failure` lúc 14:39:10) — trùng đúng cửa sổ lỗi. Cách kiểm build không cần quyền admin (gh CLI là tài
+khoản `andrewclasses-code` KHÔNG có quyền, xem [[github-accounts]]):
+```
+curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments?per_page=3"
+curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments/<id>/statuses"
+```
+Cách chữa đã dùng: **đẩy thêm 1 commit nữa vào `main`** (chính commit hồ sơ này) để Pages build lại —
+rẻ hơn nhiều so với đường cứu hộ POST `pages/builds` ở mục 0-TER (đường đó cần token có quyền push).
 
 ### 1. Thầy đặt hàng
 > "Generate voice trong edit đã hoàn thiện (có tích chế độ mix giọng...), nhưng khi import file chưa

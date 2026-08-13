@@ -25,7 +25,9 @@
 > voices: …") · **70/70 từ nhận đúng giọng đã hoạch định qua 2 act** · editor không hồi quy (5 tick +
 > 4 mặc định + optgroup y cũ) · 1280×800 panel 441px, không cuộn.
 > ⬜ Chưa chạy TTS THẬT (cần model 86MB + đăng nhập) — thầy nghe thử khi import file thật.
-> 🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+> ✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH.** ⚠️ Lần đẩy này dính **sự cố hạ tầng GitHub**: push `main`
+> bị 500 ba lần (đẩy cùng commit sang nhánh khác thì được ⇒ lỗi ở cập nhật ref), rồi **build Pages FAIL**;
+> chữa bằng cách đẩy thêm 1 commit để build lại — cách chẩn đoán ghi ở `GHI CHU DU AN.md` Đợt 142.
 >
 > Trước đó: **13/8/2026 (Đợt 141) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ
 > **CHỮ EXCEL ĐANG HIỆN**.** Thầy báo đáp án `8:30` vào act thành `0.3541666666666667`. Gốc: trong
@@ -1858,7 +1860,7 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 **5 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **142** | ⭐ **Import có đủ bộ chọn giọng như editor** (Mix 4 giọng · Random UK/US), luật mix lên `core/voice-mix.js` dùng chung 2 đường + **huy hiệu loa xanh** trên thẻ act đã đủ 100% giọng | 🟢 **chưa commit** |
+| **142** | ⭐ **Import có đủ bộ chọn giọng như editor** (Mix 4 giọng · Random UK/US), luật mix lên `core/voice-mix.js` dùng chung 2 đường + **huy hiệu loa xanh** trên thẻ act đã đủ 100% giọng | `7faf500` |
 | **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | `0f67311` |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
