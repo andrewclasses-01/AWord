@@ -113,11 +113,9 @@ const speakingCardsTemplate = {
   // Đợt 122 — ảnh nền gán bằng JS (`bg.style.backgroundImage`), lại nằm trong
   // ./assets/ chứ không phải ./img/ nên engine quét CSS không thấy.
   preloadImages: [BG_URL],
-  hideLettersOption: true,   // no lettered answers here — engine skips that Options group
   // Đợt 140 — the three things buildExtraOptions used to achieve by deleting
   // nodes out of the finished panel (see its comment below), declared instead:
   hideShowAnswers: true,     // open-ended game: there are no answers to show
-  hideShuffleAnswers: true,  // ...and no answer choices to shuffle either
   shuffleLabel: "Shuffle item order",   // it deals CARDS, not questions
 
   // Engine hooks it auto-calls: `play` on the PLAY button (the intro sound — the
@@ -584,9 +582,10 @@ const speakingCardsTemplate = {
   // into the built panel to delete the "End of game" group and the "Shuffle
   // answer order" choice, and to rewrite a text node — twice, because the
   // engine appends "End of game" AFTER this hook runs, so it also had to fire
-  // again inside a requestAnimationFrame. All three intents are declared flags
-  // now (hideShowAnswers · hideShuffleAnswers · shuffleLabel, see the header
-  // above): the engine simply never builds what this game doesn't want.
+  // again inside a requestAnimationFrame. All three intents are declared now
+  // (hideShowAnswers · shuffleLabel in the header above, and since Đợt 143
+  // "Shuffle answers" is opt-in, so simply not declaring it is enough): the
+  // panel never builds what this game doesn't want.
   buildExtraOptions({ panel, draft, mkSliderCell }) {
     // Number of deal places — a real 1..10 slider (matches True/false's controls).
     panel.append(mkSliderCell({

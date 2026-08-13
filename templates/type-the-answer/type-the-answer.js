@@ -27,6 +27,10 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+// Dot 143 - every penalty in the app is on ONE scale now (0..100, step 1).
+// Importing the numbers rather than repeating them is what stops this
+// game's slider and its mount() clamp drifting apart again.
+import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
@@ -53,6 +57,8 @@ function normLives(v) {
 const ttaTemplate = {
   type: "type_the_answer",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -60,11 +66,8 @@ const ttaTemplate = {
   hidePointsOff: true,   // ships its own "Minus points" control -> hide the central Points off
   name: "Type the answer",
   edit: openTypeTheAnswerEditor,
-  hideLettersOption: true,     // no lettered answer boxes here — hide that Options group entirely
-  hideShuffleAnswers: true,    // no answer choices to shuffle — hide "Shuffle answer order"
   hasKeyboardToggle: true,     // ask engine.js for a slot next to Menu for our keyboard show/hide button
   hasLivesSlot: true,          // hearts render in the top bar, left of the score (same slot as True/false)
-  hideAutoSwitch: true,        // always auto-advances a graded question itself now — the checkbox would be dead
   // Real Wordwall "Type the answer" (Classic) mp3 pack — the engine plays these
   // at Play / Start again / game complete. Per-key typing "tock" is separate
   // (synthesized ui.sound.keyClick()); correct/wrong are called inline.
@@ -89,7 +92,7 @@ const ttaTemplate = {
     if (draft.minusAmount == null) draft.minusAmount = 0;
     panel.append(
       mkSliderCell({
-        label: "Points off", sub: "per wrong", min: 0, max: 5, step: 1,
+        label: "Points off", sub: "per wrong", min: 0, max: POINTS_MAX, step: POINTS_STEP,
         value: draft.minusAmount, offAt: 0,
         fmt: v => (v === 0 ? "Off" : "-" + v),
         onInput: v => { draft.minusAmount = v; }
@@ -99,7 +102,7 @@ const ttaTemplate = {
       mkSliderCell({
         label: "Lives", min: 0, max: MAX_LIVES, step: 1,
         value: Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0,
-        tone: "blue", offAt: 0,
+        tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }   // 0 stored = unlimited
       }).cell
@@ -258,8 +261,24 @@ const ttaTemplate = {
     ui.onSubmit(finish, () => state.filter(s => s.graded).length);   // block "Submit answers" at 0 answered
     root.append(card);
     loadQuestion(0, false);
-    showScore(livePoints);
+    showScore(scoreNow());
     renderLives();
+
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // that is: the game over, the mount thrown away, the input disabled while a
+    // graded answer plays out its mark/fly animation, and a clip still speaking
+    // — nobody can type a word they are still being read.
+    // ⚠️ setScorePainter, not just setScoreProvider: this game draws its own
+    // "7 / 20" chip straight into .aw-top-score, so the engine's count-down
+    // would otherwise overwrite that whole chip with a bare number.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setScorePainter?.(v => showScore(v));
+    ui.setIdleGuard?.(() => {
+      if (finished || dead || voicePlayer.isPlaying()) return true;
+      const inp = root.querySelector(".aw-tta-input");
+      return !!(inp && inp.disabled);
+    });
 
     // Fit on first layout, when the web font is ready, and on resize.
     let rafFit = 0;
@@ -514,7 +533,7 @@ const ttaTemplate = {
       const scoreEl = document.querySelector(".aw-top-score");
       const size = Math.max(34, inputEl.getBoundingClientRect().height * 0.72);   // bigger than before
 
-      const penalty = Math.max(0, Math.min(5, Number(opt.minusAmount) || 0));
+      const penalty = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
       const wrongMinus = !correct && penalty > 0;
       const mark = el("div", "aw-tta-flymark" + (correct ? "" : " is-cross") + (wrongMinus ? " is-penalty" : ""),
         correct ? icons.check : (wrongMinus ? `−${penalty}` : icons.cross));
@@ -578,7 +597,10 @@ const ttaTemplate = {
           cleanupMark();
           const oldPts = livePoints;
           livePoints = correct ? livePoints + 1 : livePoints - penalty;   // may go negative
-          pulseScoreTo(oldPts, livePoints);
+          // Both ends of the pulse are SHOWN values (tally minus the idle clock),
+          // not raw tallies — otherwise every gained point would repaint the chip
+          // without the Time cost deduction and quietly undo it.
+          pulseScoreTo(oldPts - timeCostSoFar(), scoreNow());
         };
         fly.onfinish = land;
         setTimeout(land, dur + 150);
@@ -632,6 +654,12 @@ const ttaTemplate = {
     // the normal dark text colour. Numerator, slash and total are separate
     // flex items, so `.aw-top-score`'s own `gap` spaces them evenly
     // (numerator↔slash == slash↔total).
+    // TIME COST (Đợt 143): `livePoints` stays this game's own tally (the fly/
+    // pulse animations read and write it); the idle clock's total comes off on
+    // the way to the SCREEN so it can never be folded into that tally twice.
+    function timeCostSoFar() { return ui.timeCostTotal ? ui.timeCostTotal() : 0; }
+    function scoreNow() { return livePoints - timeCostSoFar(); }
+
     function scoreHTML(v) {
       const cls = v < 0 ? "aw-tta-score-neg" : "aw-tta-score-pos";
       return `${icons.check}`
@@ -690,6 +718,10 @@ const ttaTemplate = {
     }
     function insertChar(inp, ch) {
       if (!inp || inp.disabled) return;
+      // TIME COST (Đợt 143): typing IS this game's progress. Grading only
+      // happens on Submit, so waiting for that would charge a class for the
+      // whole time they spend spelling the answer out — which is the work.
+      ui.noteActivity?.();
       const start = inp.selectionStart ?? inp.value.length;
       const end = inp.selectionEnd ?? inp.value.length;
       inp.value = inp.value.slice(0, start) + ch + inp.value.slice(end);
@@ -701,6 +733,7 @@ const ttaTemplate = {
     }
     function backspace(inp) {
       if (!inp || inp.disabled) return;
+      ui.noteActivity?.();   // TIME COST (Đợt 143): correcting a letter is progress too
       const start = inp.selectionStart ?? inp.value.length;
       const end = inp.selectionEnd ?? inp.value.length;
       if (start === end) {
@@ -772,7 +805,7 @@ const ttaTemplate = {
       // later). Without any of this, the score silently defaulted to `correct`
       // and "Points off per wrong" had zero effect on the final result.
       const wrongGraded = state.filter(s => s.graded && s.correct === false).length;
-      const penalty = Math.max(0, Math.min(5, Number(opt.minusAmount) || 0));
+      const penalty = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
       ui.finish({
         correct, incorrect: total - correct, total, perQuestion, review, answered,
         score: correct - penalty * wrongGraded

@@ -39,6 +39,9 @@ import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { fitOnce } from "../../core/fit.js";
+// Dot 143 - the shared [-][value][+] control, so "Time each team" is the same
+// kind of thing as the countdown in the shared Timer option.
+import { makeHStepper } from "../../core/numberstepper.js";
 import { openRunningWordEditor } from "./running-word-editor.js";
 import { rwSound } from "./rw-sound.js";
 import { printRunningSheets } from "./rw-print.js";
@@ -78,11 +81,6 @@ const SLOGAN = "RUNNING WORD IN ANDREW CLASSES";
 // (same reasoning the poolSizeHint pattern relies on).
 let rwEndData = null;
 
-// The 10 quick-pick notches on the "Time each team" slider (seconds), 0:30 up
-// to 5:00 in half-minute steps. Slider position 0 is "Custom" — not in this
-// list, handled separately in buildExtraOptions.
-const CLOCK_STEPS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300];
-
 function clampInt(v, lo, hi, dflt) {
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return dflt;
@@ -108,9 +106,6 @@ const rwTemplate = {
   edit: openRunningWordEditor,
 
   hideTimerOption: true,     // the game owns two clocks; a whole-game clock would fight them
-  hideLettersOption: true,   // no lettered answer tiles
-  hideShuffleAnswers: true,  // nothing to shuffle — the split is its own feature
-  hideAutoSwitch: true,      // turns swap on a correct word, never on a checkbox
   hidePointsOff: true,       // wrong costs TIME here, not points
   manualTimerStart: true,    // the engine clock starts when the match does, not at mount
   // Real Fullscreen API tested unusable on iPad Chrome for THIS game (5/8/2026,
@@ -165,126 +160,78 @@ const rwTemplate = {
     panel.append(items);
   },
 
-  buildExtraOptions({ panel, draft, el: E, mkCheck }) {
-    const group = (label) => {
-      const g = E("div", "aw-opt-group");
-      g.append(E("div", "aw-opt-label", label));
-      return g;
-    };
-    // One labelled slider + live value read-out. `fmt` turns the raw number into
-    // what the teacher reads ("5:00", "Off", "All"…).
-    const slider = (parent, caption, key, min, max, step, dflt, fmt) => {
+  // Đợt 143 — REBUILT ON THE SHARED PANEL BUILDERS (teacher: "đổi phong cách
+  // options của running word cho đồng bộ"). This was the last template still
+  // appending the old `.aw-opt-group` markup: four uppercase group headings and
+  // its OWN slider/row/number CSS (`.aw-rw-opt-*`), which the Đợt 140 grid then
+  // had to bridge by spanning both columns. So the one game with the most
+  // options was also the one that looked least like the other sixteen.
+  //
+  // WHAT CHANGED, AND WHAT DID NOT: every field name, range, default and format
+  // string below is the same as before — a saved act plays identically. Only the
+  // controls change. The one real simplification is "Time each team": it was a
+  // stepped slider whose notch 0 revealed a hidden Min/Sec pair (the "Custom"
+  // mode, with three functions and a documented bug-fix keeping the slider and
+  // the boxes in step). A horizontal stepper does everything both halves did —
+  // ANY value in range, typed as one number — so CLOCK_STEPS and the custom box
+  // are gone, and it is the same control the shared Timer option already uses.
+  buildExtraOptions({ panel, draft, el: E, mkCell, mkSliderCell }) {
+    // One slider cell straight into the grid. `fmt` turns the raw number into
+    // what the teacher reads ("+5s", "Off", "3×"…), exactly as before.
+    const slider = (label, sub, key, min, max, step, dflt, fmt, tone) => {
       if (draft[key] == null) draft[key] = dflt;
-      const row = E("div", "aw-rw-opt-row");
-      row.append(E("span", "aw-rw-opt-cap", caption));
-      const input = E("input", "aw-rw-opt-slider");
-      input.type = "range"; input.min = String(min); input.max = String(max); input.step = String(step);
-      input.value = String(clampInt(draft[key], min, max, dflt));
-      const val = E("span", "aw-rw-opt-val", fmt(+input.value));
-      input.oninput = () => { draft[key] = +input.value; val.textContent = fmt(+input.value); };
-      row.append(input, val);
-      parent.append(row);
+      panel.append(mkSliderCell({
+        label, sub, min, max, step, tone,
+        value: clampInt(draft[key], min, max, dflt),
+        offAt: 0, fmt,
+        onInput: v => { draft[key] = v; }
+      }).cell);
     };
 
     // ---- team names ----
-    const gNames = group("Teams");
+    // The only control in the whole app that is a text box, so it is built here
+    // rather than added to the shared kit for one caller. It still goes INSIDE a
+    // shared cell, so it lines up with everything else and obeys the rule that a
+    // template only ever fills its OWN cell, never touches the panel's DOM.
     TEAMS.forEach(t => {
       const key = t === "a" ? "teamAName" : "teamBName";
       if (!draft[key]) draft[key] = t === "a" ? "TEAM A" : "TEAM B";
-      const row = E("div", "aw-rw-opt-row");
-      row.append(E("span", "aw-rw-opt-cap", t === "a" ? "Team A name" : "Team B name"));
-      const input = E("input", "aw-rw-opt-text");
+      const c = mkCell({ label: t === "a" ? "Team A" : "Team B", sub: "name" });
+      const input = E("input", "aw-optc-text");
       input.type = "text"; input.maxLength = 18; input.value = draft[key];
       input.oninput = () => { draft[key] = input.value; };
-      row.append(input);
-      gNames.append(row);
+      c.ctl.append(input);
+      panel.append(c.cell);
     });
-    panel.append(gNames);
 
-    // ---- the clock ----
-    const gClock = group("Chess clock");
-
-    // "Time each team" is a STEPPED slider: notch 0 is "Custom" (reveals a
-    // Min/Sec pair), notches 1..10 are the fixed picks 0:30 up to 5:00. Typed
-    // Min/Sec always wins the slider's position on redraw — an old activity
-    // saved with some other value (e.g. the plain 30-1800s slider this
-    // replaces) just opens on "Custom" showing that exact time, no data lost.
+    // ---- the chess clock ----
+    // 10s..30:00. Same range the old Custom boxes allowed (they clamped to a 10s
+    // floor and 29min59s), so no saved value can fall outside it. Stepping by 5s
+    // with a 15s-per-tick hold and a 3px drag is the same sizing the shared
+    // countdown uses — see makeHStepper's opts in core/options-panel.js.
     if (draft.clockSeconds == null) draft.clockSeconds = 300;
-    const clockStepOf = secs => { const i = CLOCK_STEPS.indexOf(secs); return i === -1 ? 0 : i + 1; };
-    const rowClock = E("div", "aw-rw-opt-row");
-    rowClock.append(E("span", "aw-rw-opt-cap", "Time each team"));
-    const clockCol = E("div", "aw-rw-clockcol");
-    const clockSlider = E("input", "aw-rw-opt-slider");
-    clockSlider.type = "range"; clockSlider.min = "0"; clockSlider.max = String(CLOCK_STEPS.length); clockSlider.step = "1";
-    const clockVal = E("span", "aw-rw-opt-val", "");
-    const customBox = E("div", "aw-rw-custom-time");
-    const minInput = E("input", "aw-rw-opt-num");
-    minInput.type = "number"; minInput.min = "0"; minInput.max = "29"; minInput.inputMode = "numeric";
-    const secInput = E("input", "aw-rw-opt-num");
-    secInput.type = "number"; secInput.min = "0"; secInput.max = "59"; secInput.inputMode = "numeric";
-    customBox.append(minInput, E("span", "aw-rw-opt-numlab", "min"), secInput, E("span", "aw-rw-opt-numlab", "sec"));
-    // Showing/hiding the two halves never touches clockSlider.value — only the
-    // initial draw and a FIXED pick move the slider itself. Doing it the other
-    // way (deriving the slider's position from draft.clockSeconds on every
-    // redraw) is the bug this replaced: dragging onto notch 0 left
-    // draft.clockSeconds unchanged, so re-deriving the step from it snapped
-    // the slider straight back to wherever it used to be.
-    function showCustom() {
-      minInput.value = String(Math.floor(draft.clockSeconds / 60));
-      secInput.value = String(draft.clockSeconds % 60);
-      customBox.style.display = "inline-flex";
-      clockVal.style.display = "none";
-    }
-    function showFixed() {
-      customBox.style.display = "none";
-      clockVal.style.display = "";
-      clockVal.textContent = fmtClock(draft.clockSeconds * 1000);
-    }
-    function refreshClockUI() {   // full sync — only on first draw, from the saved value
-      clockSlider.value = String(clockStepOf(draft.clockSeconds));
-      if (clockStepOf(draft.clockSeconds) === 0) showCustom(); else showFixed();
-    }
-    clockSlider.oninput = () => {
-      const step = +clockSlider.value;
-      if (step === 0) { showCustom(); return; }    // slider is already at 0 — just reveal Min/Sec
-      draft.clockSeconds = CLOCK_STEPS[step - 1];
-      showFixed();
-    };
-    const applyCustomTime = () => {
-      const m = clampInt(minInput.value, 0, 29, 0);
-      const s = clampInt(secInput.value, 0, 59, 0);
-      draft.clockSeconds = Math.max(10, m * 60 + s);    // a floor so 0:00 can't be set
-      clockVal.textContent = fmtClock(draft.clockSeconds * 1000);
-    };
-    minInput.oninput = applyCustomTime;
-    secInput.oninput = applyCustomTime;
-    refreshClockUI();
-    clockCol.append(clockSlider, clockVal, customBox);
-    rowClock.append(clockCol);
-    gClock.append(rowClock);
+    const cClock = mkCell({ label: "Time each team" });
+    const clockStep = makeHStepper(clampInt(draft.clockSeconds, 10, 1800, 300), 10, 1800,
+      v => { draft.clockSeconds = v; },
+      { step: 5, holdMax: 15, dragPxPerStep: 3, format: v => fmtClock(v * 1000) });
+    cClock.ctl.append(clockStep.el);
+    panel.append(cClock.cell);
 
-    slider(gClock, "Bonus per correct word", "incrementSeconds", 0, 15, 1, 0, v => (v ? `+${v}s` : "Off"));
-    slider(gClock, "Hurry-up warning", "warnSeconds", 0, 60, 5, 15, v => (v ? `last ${v}s` : "Off"));
-    panel.append(gClock);
+    slider("Bonus", "per correct word", "incrementSeconds", 0, 15, 1, 0, v => (v ? `+${v}s` : "Off"), "green");
+    slider("Hurry-up", "warning", "warnSeconds", 0, 60, 5, 15, v => (v ? `${v}s` : "Off"), "amber");
 
     // ---- the round ----
     // "Words per team" was removed 5/8/2026: the split is now fully automatic
     // from the pool size (see rw-sets.js buildSets — max 50 a side), so there
     // is nothing left for the teacher to tune here.
-    const gRound = group("Round");
-    slider(gRound, "Andrew help per team", "andrewUses", 1, 5, 1, 1, v => `${v}×`);
-    panel.append(gRound);
+    slider("Andrew help", "per team", "andrewUses", 1, 5, 1, 1, v => `${v}×`, "blue");
 
     // ---- pass ----
-    // A 0..5 slider replaces the old on/off checkbox (teacher's request,
-    // 7/8/2026): 0 = no passes at all, 1..5 = how many times each team may skip
-    // a word. The penalty slider still trims that team's clock on every pass.
-    const gPass = group("Pass");
-    slider(gPass, "Passes per team", "passUses", 0, 5, 1, 3,
-      v => (v ? `${v}×` : "Off"));
-    slider(gPass, "Time penalty for a pass", "passPenaltySeconds", 0, 60, 5, 10,
-      v => (v ? `−${v}s` : "Free"));
-    panel.append(gPass);
+    // A 0..5 slider replaced the old on/off checkbox (teacher, 7/8/2026): 0 = no
+    // passes at all, 1..5 = how many times each team may skip a word. The
+    // penalty slider trims that team's clock on every pass.
+    slider("Passes", "per team", "passUses", 0, 5, 1, 3, v => (v ? `${v}×` : "Off"), "blue");
+    slider("Pass penalty", "time off", "passPenaltySeconds", 0, 60, 5, 10, v => (v ? `−${v}s` : "Free"));
   },
 
   // =============================================================

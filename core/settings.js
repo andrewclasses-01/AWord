@@ -6,29 +6,47 @@
 //   • getDefaultOptions(type)  -> the options a new act of `type` should start
 //                                 with (stored defaults, else built-ins).
 //   • saveDefaultOptions(type, options)
-//   • buildOptionsControls(options, onChange) -> a DOM node with the option
-//     controls (Timer / Letters / shuffle / show answers). Reused by the
-//     Settings dialog. It edits the `options` object in place and calls
-//     onChange() after each change.
+//   • buildOptionsControls(tpl, options) -> a DOM node with the FULL options
+//     UI for that template. Edits `options` in place; the caller saves.
 //
-// The option SHAPE matches Quiz today (the reference template). When another
-// template needs a different shape we can branch here by type.
+// ⭐ Đợt 143 — WHAT CHANGED AND WHY
+// This file used to build its own options form, and it was quiz-shaped: a
+// <select> for Timer, a <select> for Letters on answers, and three checkboxes.
+// That was the whole of "Default activity options" — for all 17 games. So the
+// teacher set a default in one UI and then met a completely different UI, with
+// different controls and different values, the moment they opened Options in a
+// game. Anything template-specific (Anagram's mode, Lives, Bonus x, Speed,
+// Punishment, Time cost, ...) simply could not be defaulted at all.
+//
+// The teacher's ask: "đưa toàn bộ các tính năng đầy đủ của options (cả thiết
+// kế) của tất cả các act vào trong phần cài đặt/default activity options".
+// So this file no longer builds anything of its own — it calls the SAME
+// builder the in-game panel calls (core/options-panel.js). Two UIs cannot be
+// kept identical by discipline; they drift the moment anyone adds an option.
+//
+// ⚠️ SCOPE OF A DEFAULT (teacher's explicit choice, Đợt 143): defaults apply to
+// acts created FROM NOW ON. An act already in the library keeps the options
+// saved on it — changing a default here never reaches back and rewrites acts
+// the teacher has already tuned by hand.
 // =============================================================
 
 import { el } from "./utils.js";
-import { makeNumberStepper } from "./numberstepper.js";
+import { buildOptionsBody } from "./options-panel.js";
 
 const KEY = "aword-settings";
 
 // The factory defaults every brand-new act inherits until the teacher changes
-// them in Settings. Same values the old editor used to seed a blank quiz.
+// them in Settings. Deliberately SMALL: these are only the fields that mean the
+// same thing in every game. Anything template-specific is left unset here and
+// falls through to that template's own default inside its buildExtraOptions —
+// listing them all here would be a second place to keep in step with 17 files.
+// `lettersOnAnswers` was dropped in Đợt 143 along with the option itself.
 export const BUILTIN_DEFAULTS = {
   timer: "countUp",
   timerTotalSeconds: 120,
   shuffleQuestions: true,
   shuffleAnswers: true,
-  showAnswers: true,
-  lettersOnAnswers: "none"
+  showAnswers: true
 };
 
 function readAll() {
@@ -55,63 +73,31 @@ export function saveDefaultOptions(type, options) {
   writeAll(s);
 }
 
-// ---- reusable options-controls builder (quiz-shaped) ----
-export function buildOptionsControls(options, onChange = () => {}) {
-  const wrap = el("div", "aw-optform");
-
-  // Timer  (None / Count up / Count down + mm:ss)
-  const timerField = el("div", "aw-optform-field");
-  timerField.append(el("label", "aw-optform-label", "Timer"));
-  const timerRow = el("div", "aw-optform-row");
-  const timerSel = el("select", "aw-ed-input aw-ed-select");
-  [["none", "No timer"], ["countUp", "Count up"], ["countDown", "Count down"]].forEach(([v, l]) => {
-    const o = el("option", null, l); o.value = v;
-    if ((options.timer || "countUp") === v) o.selected = true;
-    timerSel.append(o);
+/**
+ * The full options UI for one template, for the Settings dialog.
+ *
+ * @param {object} tpl      the registered template (caller must ensureTemplate first —
+ *                          its buildExtraOptions is where most of the controls come from)
+ * @param {object} options  edited IN PLACE; the caller decides when to save
+ * @returns {Element}
+ */
+export function buildOptionsControls(tpl, options) {
+  const wrap = el("div", "aw-set-opts");
+  if (!tpl) {
+    // A template that failed to load would otherwise throw here and take the
+    // whole Settings dialog with it. Say so instead.
+    wrap.append(el("div", "aw-set-hint", "This game's options could not be loaded."));
+    return wrap;
+  }
+  // `fight: null` — a match only exists mid-game, so its options are not
+  // defaultable. `contentSwitch` is shown ALWAYS here, unlike in a game: in a
+  // game it depends on whether THAT act carries spoken clips, but a default has
+  // no act yet, so the teacher must be able to say which way new ones start.
+  buildOptionsBody(wrap, {
+    tpl,
+    draft: options,
+    contentSwitch: { shown: options.contentMode === "voice" ? "voice" : "text" },
+    fight: null
   });
-  const timeFields = el("span", "aw-ed-time");
-  const total = options.timerTotalSeconds ?? 120;
-  const mm = makeNumberStepper(Math.floor(total / 60), 0, 59, v => { options.timerTotalSeconds = v * 60 + ss.get(); onChange(); });
-  const ss = makeNumberStepper(total % 60, 0, 59, v => { options.timerTotalSeconds = mm.get() * 60 + v; onChange(); });
-  timeFields.append(mm.el, document.createTextNode("m"), ss.el, document.createTextNode("s"));
-  timeFields.style.display = (options.timer || "countUp") === "countDown" ? "inline-flex" : "none";
-  timerSel.onchange = () => {
-    options.timer = timerSel.value;
-    timeFields.style.display = timerSel.value === "countDown" ? "inline-flex" : "none";
-    onChange();
-  };
-  timerRow.append(timerSel, timeFields);
-  timerField.append(timerRow);
-  wrap.append(timerField);
-
-  // Letters on answers
-  const letField = el("div", "aw-optform-field");
-  letField.append(el("label", "aw-optform-label", "Letters on answers"));
-  const letSel = el("select", "aw-ed-input aw-ed-select");
-  [["none", "None"], ["abc", "A, B, C"]].forEach(([v, l]) => {
-    const o = el("option", null, l); o.value = v;
-    if ((options.lettersOnAnswers || "none") === v) o.selected = true;
-    letSel.append(o);
-  });
-  letSel.onchange = () => { options.lettersOnAnswers = letSel.value; onChange(); };
-  letField.append(letSel);
-  wrap.append(letField);
-
-  // Checkboxes
-  const checks = el("div", "aw-optform-checks");
-  checks.append(
-    checkbox("Shuffle question order", options.shuffleQuestions !== false, v => { options.shuffleQuestions = v; onChange(); }),
-    checkbox("Shuffle answer order", options.shuffleAnswers !== false, v => { options.shuffleAnswers = v; onChange(); }),
-    checkbox("Show answers at the end", options.showAnswers !== false, v => { options.showAnswers = v; onChange(); })
-  );
-  wrap.append(checks);
-  return wrap;
-}
-
-function checkbox(label, checked, onChange) {
-  const wrap = el("label", "aw-ed-check");
-  const c = el("input"); c.type = "checkbox"; c.checked = checked;
-  c.onchange = () => onChange(c.checked);
-  wrap.append(c, document.createTextNode(label));
   return wrap;
 }

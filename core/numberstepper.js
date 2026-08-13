@@ -96,6 +96,16 @@ export function makeNumberStepper(value, min, max, onChange) {
 export function makeHStepper(value, min, max, onChange, opts = {}) {
   const step = opts.step || 1;
   const format = opts.format || (v => String(v).padStart(2, "0"));
+  // Đợt 143 — the countdown's step went 5s -> 1s (teacher: "nấc thời gian
+  // countdown chỉnh thành 1 giây"). A single tap must move exactly one second,
+  // but the SAME control also has to cross a 5..3599 range, and at 1 step per
+  // press-tick that is unusable: measured on the old numbers, going 2:00 -> 5:00
+  // took a 2160px drag. So the two COARSE gestures are sized independently of
+  // the fine one — the hold ramps to `holdMax` per tick, and the drag covers one
+  // step every `dragPxPerStep` pixels. Callers that don't pass them get exactly
+  // the old behaviour (max ×3 on hold, 12px per step).
+  const holdMax = Math.max(1, opts.holdMax || 3);
+  const PX_PER_STEP = Math.max(1, opts.dragPxPerStep || 12);
   let current = clamp(value);
   function clamp(v) { return Math.max(min, Math.min(max, v)); }
   function apply(v, fire) {
@@ -125,7 +135,9 @@ export function makeHStepper(value, min, max, onChange, opts = {}) {
       delayT = setTimeout(() => {
         repT = setInterval(() => {
           tick++;
-          const mult = tick > 22 ? 3 : tick > 10 ? 2 : 1;
+          // same three-stage ramp as before, but the top of it is now the
+          // caller's `holdMax` instead of a hard-coded 3
+          const mult = tick > 22 ? holdMax : tick > 10 ? Math.max(1, Math.ceil(holdMax / 2)) : 1;
           apply(current + dir * step * mult, true);
         }, 55);
       }, 320);
@@ -142,7 +154,6 @@ export function makeHStepper(value, min, max, onChange, opts = {}) {
 
   // drag straight on the number — HORIZONTAL here (right = up), matching the
   // control's own axis so the gesture reads the same way it looks.
-  const PX_PER_STEP = 12;
   let dragging = false, startX = 0, startVal = 0;
   valEl.addEventListener("pointerdown", ev => {
     dragging = true; startX = ev.clientX; startVal = current;

@@ -258,6 +258,9 @@ let otbPauseHandlers = null;
 const otbTemplate = {
   type: "open_the_box",
   scorable: true,   // every play is scored now that Simple mode is gone
+  usesShuffleAnswers: true,   // Đợt 143 (opt-in) — this game really does read options.shuffleAnswers
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -343,10 +346,10 @@ function mountQuestions(root, activity, ui) {
   const questionSeconds = typeof opt.questionTimeSeconds === "number" && opt.questionTimeSeconds > 0
     ? opt.questionTimeSeconds : 15;
   // Penalty (teacher's option, engine Options panel): subtract this many
-  // points on each WRONG answer, clamped 0..5. 0 = no penalty (default), so
+  // points on each WRONG answer, clamped 0..100 (Dot 143). 0 = no penalty (default), so
   // behaviour is identical to before this option existed. Negative scores are
   // allowed (not clamped to 0) — ui.setScore renders them red without a minus.
-  const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+  const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
 
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
@@ -597,6 +600,20 @@ function mountQuestions(root, activity, ui) {
     if (isFirst) { otbSound.tileAppear(); hasPlayedEntrance = true; }
   }
 
+  // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+  // The guard answers ONE question: "could the student act right now?" Here that
+  // is: the game over, and the read-gate between a box opening and its answers
+  // becoming tappable (`answersUnlocked` — the class is being read the question
+  // and physically cannot answer yet). `answersUnlocked` is false while the
+  // BOARD is showing too, which would be wrong — picking a box is an action — so
+  // it only counts while a box is actually open.
+  // ⚠️ `activeIndex` is null (not -1) when no box is open, and `null >= 0` is
+  // TRUE in JavaScript. Writing this test the obvious way would have frozen the
+  // idle clock for the whole time the board sits there untouched — i.e. exactly
+  // when this option is meant to be charging.
+  ui.setScoreProvider?.(scoreNow);
+  ui.setIdleGuard?.(() => ended || (activeIndex != null && !answersUnlocked));
+
   function renderGrid() {
     const { card, grid } = buildBoxGrid();
     root.append(card);
@@ -608,6 +625,8 @@ function mountQuestions(root, activity, ui) {
 
   function openBox(i) {
     if (ended || boxState[i] !== "unplayed") return;
+    ui.noteActivity?.();   // TIME COST (Đợt 143): choosing a box is progress too, not just answering
+
     const boxEl = root.querySelectorAll(".aw-otb-box")[i];
     if (boxEl) lastBoxRect = relRect(boxEl, root);
     otbSound.openBox();
@@ -843,7 +862,11 @@ function mountQuestions(root, activity, ui) {
     body.append(qTile);
 
     const row = el("div", "aw-otb-q-answers");
-    const showLetters = opt.lettersOnAnswers === "abc";
+    // Đợt 143 — "Letters on answers" is gone from Options app-wide (teacher's
+    // call; see the same note in templates/quiz/quiz.js). Open the box was the
+    // other of the two games that honoured it, and now behaves as permanently
+    // "None". The flag stays so the feature is one line away from returning.
+    const showLetters = false;
     it.answers.forEach((ans, k) => {
       const tile = el("button", "aw-otb-qtile");
       tile.type = "button";
@@ -965,6 +988,8 @@ function mountQuestions(root, activity, ui) {
 
   function answer(i, k, tile, row) {
     if (activeIndex !== i || ended || !answersUnlocked) return;   // point 4: ignore taps until the read-gate opens
+    // TIME COST (Đợt 143): answering IS this game's progress, right or wrong.
+    ui.noteActivity?.();
     const it = items[i];
     const correct = !!it.answers[k].correct;
 
@@ -1012,8 +1037,13 @@ function mountQuestions(root, activity, ui) {
     }, correct ? 900 : 1400);
   }
 
+  // TIME COST (Đợt 143): the idle clock's total is taken off HERE, on the way to
+  // the screen, rather than out of `score` itself — the game's own tally stays
+  // its own, so the deduction can never be folded into it twice.
+  function scoreNow() { return score - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
+
   function updateProgress() {
-    ui.setScore(score);
+    ui.setScore(scoreNow());
     // đợt 25 (teacher's request): the nav slot shows the BRAND LINE instead of
     // "x of N". The arrows have been gone since đợt 24 (this game is "tap any
     // box", there is no previous/next), and the count they sat next to was

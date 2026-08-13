@@ -61,6 +61,8 @@ let ffPauseHandlers = null;
 const flyingFruitTemplate = {
   type: "flying_fruit",
   scorable: true,
+  // TIME COST (Dot 143) - opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -68,7 +70,6 @@ const flyingFruitTemplate = {
   name: "Flying fruit",
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,     // gives us ui.topbarMid — we draw the LIVES (hearts) there
-  hideLettersOption: true,  // no lettered answer boxes here
 
   edit: openFlyingFruitEditor,
 
@@ -90,7 +91,7 @@ const flyingFruitTemplate = {
     panel.append(
       mkSliderCell({
         label: "Lives", min: 1, max: 10, step: 1,
-        value: Number.isInteger(draft.lives) ? draft.lives : 6, tone: "blue",
+        value: Number.isInteger(draft.lives) ? draft.lives : 6, tone: "green",
         onInput: v => { draft.lives = v; }
       }).cell,
       mkSliderCell({
@@ -111,7 +112,7 @@ const flyingFruitTemplate = {
     const maxLives = Number.isInteger(opt.lives) ? Math.max(1, Math.min(10, opt.lives)) : 6;
     const speed = Number.isInteger(opt.speed) ? Math.max(1, Math.min(10, opt.speed)) : 7;
     const retry = opt.retry === true;
-    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+    const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
     const timerMode = opt.timer ?? "countUp";
 
     // ---------- content ----------
@@ -315,9 +316,17 @@ const flyingFruitTemplate = {
       activeFruits.clear();
     }
 
+    // TIME COST (Dot 143): the idle clock's total comes off HERE rather than out
+    // of `score` itself, so the game's own tally stays the game's own tally and
+    // the deduction can never be counted into it twice.
+    function scoreNow() { return score - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
+
     // ---------- tapping ----------
     function onTap(f) {
       if (ended || f.gone) return;
+      // TIME COST (Dot 143): tapping a fruit IS this game's progress, right or
+      // wrong - hunting for the correct one is not sitting idle.
+      ui.noteActivity?.();
       f.gone = true;
       const { cx, cy } = scenePct(f.fruitEl);
 
@@ -327,7 +336,7 @@ const flyingFruitTemplate = {
         floatMark(cx, cy, true);
         ffSound.correct();
         removeFruit(f);
-        score++; ui.setScore(score);
+        score++; ui.setScore(scoreNow());
         results[index] = "correct";
         advance();
       } else {
@@ -341,7 +350,7 @@ const flyingFruitTemplate = {
         if (f.removeT) clearTimer(f.removeT);
         later(() => removeFruit(f), 320);
         lives = Math.max(0, lives - 1); wrong++; updateHearts();
-        if (pointsOff) { score -= pointsOff; ui.setScore(score); }   // penalty (negative allowed, not clamped)
+        if (pointsOff) { score -= pointsOff; ui.setScore(scoreNow()); }   // penalty (negative allowed, not clamped)
         if (lives <= 0) { if (!results[index]) results[index] = "failed"; endGame("gameover"); return; }
         if (!retry) { results[index] = "failed"; advance(); }
       }
@@ -402,6 +411,14 @@ const flyingFruitTemplate = {
       node.classList.remove("is-pulse"); void node.offsetWidth; node.classList.add("is-pulse");
       later(() => node.classList.remove("is-pulse"), 700);
     }
+
+    // ----- TIME COST wiring (Dot 143) - see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // the only such states are the game being over and a clip still speaking:
+    // fruit flies past continuously, so there is never a real "nothing to tap"
+    // pause to exclude.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() => ended || voicePlayer.isPlaying());
 
     // ---------- end of game ----------
     ui.onSubmit(() => endGame(timerMode === "countDown" ? "time" : "submit"));

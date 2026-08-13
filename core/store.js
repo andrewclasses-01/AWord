@@ -33,6 +33,10 @@
 // =============================================================
 
 import { db, fs, currentUser } from "./firebase.js";
+// Đợt 143 — old penalty scales are converted on the way OUT of the library, at
+// the single point every reader goes through (readAll). Leaf module: it only
+// touches the plain object it is handed.
+import { migrateActivityOptions } from "./options-migrate.js";
 
 export const ROOTS = ["activities", "results"];
 
@@ -85,6 +89,15 @@ async function readAll() {
   const snap = await getDocs(collection(d, itemsPath(uid)));
   const map = {};
   snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
+  // Đợt 143 — every act the library hands out arrives on the CURRENT option
+  // scales. Doing it at this one choke point (rather than in each of the ~10
+  // exported readers) is what guarantees no path can serve an un-migrated act;
+  // and because the converted value sits in `cache`, the very next save of that
+  // act — for ANY reason — persists it. Folders have no `options` and are
+  // skipped. Idempotent: `optVer` lets a value convert once and once only.
+  for (const node of Object.values(map)) {
+    if (node && node.kind === "act") migrateActivityOptions(node);
+  }
   cache = map; cacheUid = uid;
   return cache;
 }

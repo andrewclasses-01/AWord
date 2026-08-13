@@ -1802,6 +1802,7 @@ function openSettingsFlow() {
     showMenu();
 
     function showMenu() {
+      body.closest(".aw-modal")?.classList.remove("is-optswide");
       setTitle("Settings", null);
       body.innerHTML = "";
       const list = el("div", "aw-set-menu");
@@ -1989,6 +1990,7 @@ function openSettingsFlow() {
     }
 
     function showTemplates() {
+      body.closest(".aw-modal")?.classList.remove("is-optswide");
       setTitle("Default activity options", showMenu);
       body.innerHTML = "";
       body.append(el("div", "aw-set-hint", "Choose a template to set its default options."));
@@ -2004,13 +2006,30 @@ function openSettingsFlow() {
       body.append(grid);
     }
 
-    function showOptions(t) {
+    // Đợt 143 — this screen now shows the FULL Options panel for the chosen
+    // game, built by the very same function the in-game panel uses. It used to
+    // show a quiz-shaped form of four controls whatever the game was.
+    // `async` because most of those controls come from the template's own
+    // buildExtraOptions, so the template module has to be loaded first — the
+    // Settings dialog is reachable without ever having played anything.
+    async function showOptions(t) {
       setTitle(`${t.label} defaults`, showTemplates);
       body.innerHTML = "";
       body.append(el("div", "aw-set-hint",
         `New ${t.label} activities will start with these options.`));
+      // The full panel is a 2-column grid; the 440px Settings dialog is too
+      // narrow for a 3-choice segmented control in half of that (measured in
+      // Đợt 140: under ~186px a column can't hold one). Widen to the same width
+      // the in-game panel uses, and drop the class again on every other screen
+      // of this dialog so only THIS one is wide.
+      const modalEl = body.closest(".aw-modal");
+      if (modalEl) modalEl.classList.add("is-optswide");
       const draft = getDefaultOptions(t.type);   // working copy; saved only on Save
-      body.append(buildOptionsControls(draft, () => {}));
+      let tpl = null;
+      try { tpl = await ensureTemplate(t.type); } catch (e) { tpl = null; }
+      // The teacher can close the dialog while the module is still loading.
+      if (!body.isConnected) return;
+      body.append(buildOptionsControls(tpl, draft));
       const actions = el("div", "aw-modal-actions");
       const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
       const save = el("button", "aw-btn aw-btn-primary", "Save"); save.type = "button";

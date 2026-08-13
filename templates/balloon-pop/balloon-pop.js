@@ -87,6 +87,8 @@ const ENGINE_SVG = `<svg viewBox="0 0 260 170" xmlns="http://www.w3.org/2000/svg
 const balloonPopTemplate = {
   type: "balloon_pop",
   scorable: true,
+  // TIME COST (Dot 143) - opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -143,8 +145,8 @@ const balloonPopTemplate = {
 
 function mountBalloonPop(root, activity, ui) {
   const opt = activity.options || {};
-  // Penalty: points removed on each wrong pop (0..5; 0 = off, byte-identical to old behavior).
-  const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+  // Penalty: points removed on each wrong pop (0..100 since Dot 143; 0 = off).
+  const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
 
   // ---- content ----
   let pool = [...(activity.content?.items || [])]
@@ -231,6 +233,17 @@ function mountBalloonPop(root, activity, ui) {
   loadLevel(0);
   updateScore();
   rafId = requestAnimationFrame(tick);
+
+  // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+  // The guard answers ONE question: "could the student act right now?" If not,
+  // the idle clock must not charge them. Here that is: the round already over,
+  // the mount thrown away (`dead`), and a clip still speaking — nobody can pick
+  // the right balloon for a word they are still being read.
+  // Deliberately NO "no balloons on screen" case: blimps drift in continuously,
+  // so a gap with nothing poppable lasts a fraction of a second — it is not a
+  // state, and guarding it would only add a flag that can go stale.
+  ui.setScoreProvider?.(scoreNow);
+  ui.setIdleGuard?.(() => ended || dead || voicePlayer.isPlaying());
 
   // =========================================================
   // level / definition handling
@@ -375,6 +388,9 @@ function mountBalloonPop(root, activity, ui) {
 
   function popBlimp(b) {
     if (ended || b.popped) return;
+    // TIME COST (Dot 143): popping a balloon IS the progress this game measures,
+    // right or wrong - a class hunting the correct balloon is not idle.
+    ui.noteActivity?.();
     b.popped = true;
     b.el.disabled = true;
     bpSound.pop();
@@ -526,7 +542,12 @@ function mountBalloonPop(root, activity, ui) {
   // topbar / score / progress
   // =========================================================
   function updateClock() { if (clockEl) clockEl.textContent = formatClock(timeLeft); }
-  function updateScore() { ui.setScore(score); }
+  // TIME COST (Dot 143): the idle clock's running total is subtracted HERE, at
+  // the single place this game paints its score. `score` itself stays the game's
+  // own tally (bonuses read and add to it), so the deduction is applied on the
+  // way OUT and can never be double-counted into the running total.
+  function scoreNow() { return score - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
+  function updateScore() { ui.setScore(scoreNow()); }
   function updateProgress() {
     if (progFillEl) progFillEl.style.width = Math.round((levelIndex / totalLevels) * 100) + "%";
     ui.setNav({ index: Math.min(levelIndex + 1, totalLevels), total: totalLevels, onPrev: null, onNext: null });

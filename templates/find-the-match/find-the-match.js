@@ -93,6 +93,10 @@ function crawlMsFor(speed) {
 const ftmTemplate = {
   type: "find_the_match",
   scorable: true,
+  // TIME COST (Dot 143) - opt in to the shared "-N per idle second" option.
+  // Everything visible belongs to the engine; this template's whole share is
+  // subtracting ui.timeCostTotal() in scoreNow() plus the wiring in mount().
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -127,7 +131,7 @@ const ftmTemplate = {
     const curLives = (draft.lives === 0 || draft.lives === null) ? 0
       : (Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(1, draft.lives)) : DEFAULT_LIVES);
     const lives = mkSliderCell({
-      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "green", offAt: 0,
       fmt: v => (v === 0 ? "∞" : String(v)),
       onInput: v => { draft.lives = v; }   // 0 stored = unlimited
     });
@@ -163,9 +167,9 @@ const ftmTemplate = {
     const repeatUntilCorrect = opt.repeatUntilCorrect === true;
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
     const crawlMs = crawlMsFor(speed);
-    // Penalty subtracted from the live score on each WRONG tap (0..5, 0 = off).
+    // Penalty subtracted from the live score on each WRONG tap (0..100, 0 = off).
     // When 0, the whole feature is inert and play is byte-identical to before.
-    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+    const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
     const timerMode = opt.timer ?? "countUp";
     const timerTotal = opt.timerTotalSeconds ?? 120;
 
@@ -230,6 +234,23 @@ const ftmTemplate = {
     window.addEventListener("keydown", onKey);
     renderShell();
 
+    // ----- TIME COST wiring (Dot 143) - see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" If not,
+    // the idle clock must not charge them. Here that is: the game finished, the
+    // 3-2-1 prep before the first prompt, the gap while one prompt flies off and
+    // the next slides in, and a clip still speaking - nobody can match a prompt
+    // they are still being read.
+    // The gap is read off the TILES' own disabled state rather than a flag of our
+    // own: lockTiles()/unlockTiles() already are the single source of truth for
+    // "can this be answered", and a parallel flag is the kind of thing that
+    // drifts out of step with them later.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() => {
+      if (finished || prepTimer || voicePlayer.isPlaying()) return true;
+      const tile = root.querySelector(".aw-ftm-tile");
+      return !!(tile && tile.disabled);
+    });
+
     if (timerMode === "countUp") {
       runPrepCountdown();          // starts the clock (ui.startTimer) only after the 3-2-1
     } else {
@@ -242,7 +263,13 @@ const ftmTemplate = {
     // Live score = pairs matched minus points docked for wrong taps. Negatives
     // are allowed (the top-bar renders them red without a minus). With the
     // feature off (penalty always 0) this equals the plain matched-count.
-    function scoreNow() { return state.filter(s => s.solved).length - penalty; }
+    // TIME COST (Dot 143): the idle clock's running total comes off HERE, the
+    // one place this game decides what the score is - every ui.setScore() in
+    // this file already goes through scoreNow(), so an ordinary score update
+    // can never repaint the deduction away.
+    function scoreNow() {
+      return state.filter(s => s.solved).length - penalty - (ui.timeCostTotal ? ui.timeCostTotal() : 0);
+    }
 
     function armFallback(fn, ms) {
       if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -760,6 +787,10 @@ const ftmTemplate = {
     function choose(idx, tile) {
       if (finished || !queue.length) return;
       const target = queue[0];
+      // TIME COST (Dot 143): tapping a tile IS the progress this game measures,
+      // so it resets the idle clock whether the tap was right or wrong - charging
+      // a class for honest wrong guesses would measure luck, not attention.
+      ui.noteActivity?.();
       // Lock all tiles right away so the NEXT prompt can't be answered "blind"
       // while this one is still flying off / sliding out — startCycle re-arms
       // the 50%-in unlock for the incoming prompt (teacher 1/8, like True/false).

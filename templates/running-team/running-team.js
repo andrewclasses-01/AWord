@@ -133,9 +133,6 @@ const rtTemplate = {
   edit: openRunningTeamEditor,
 
   hideTimerOption: true,     // the game owns two clocks; a whole-game clock would fight them
-  hideLettersOption: true,   // no A/B/C letters on the tiles
-  hideShuffleAnswers: true,  // the six tiles are dealt fresh and shuffled every round
-  hideAutoSwitch: true,      // questions advance on an answer, never on a checkbox
   hidePointsOff: true,       // a wrong answer costs a HEART here, not points
   manualTimerStart: true,    // nothing starts until START RUNNING is pressed
   // Real Fullscreen API measured unusable on iPad Chrome for this shape of game
@@ -220,7 +217,7 @@ const rtTemplate = {
     const cur = normLives(draft.lives);
     const cL = mkSliderCell({
       label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur === null ? 0 : cur,
-      tone: "blue", offAt: 0,
+      tone: "green", offAt: 0,
       fmt: v => (v === 0 ? "∞" : String(v)),
       onInput: v => { draft.lives = v; }      // 0 stored = unlimited
     });

@@ -18,7 +18,7 @@ export const activity = {
     showAnswers: true,
     lives: 5,               // maze-chase extra
     difficulty: 6,          // maze-chase extra (1–10: more/faster enemies)
-    pointsOff: 0            // maze-chase extra (0–5: points off per wrong answer; 0 = off)
+    pointsOff: 0            // maze-chase extra (0–100: points off per wrong answer; 0 = off)
   },
   content: {
     questions: [

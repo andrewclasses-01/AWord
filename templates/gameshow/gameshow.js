@@ -56,11 +56,12 @@ const gameshowTemplate = {
 
   edit: openGameshowEditor,
 
+  usesShuffleAnswers: true,   // Đợt 143 (opt-in) — this game really does read options.shuffleAnswers
+
   // The whole-game Timer control is hidden — Gameshow runs its OWN per-question
-  // countdown (see core/engine.js buildOptionsPanel). Letters always show on the
-  // answer tiles (A/B/C/D), so that option is hidden too.
+  // countdown (see core/options-panel.js). Letters A/B/C/D are permanent here,
+  // and since Đợt 143 there is no "Letters on answers" option anywhere at all.
   hideTimerOption: true,
-  hideLettersOption: true,
   // Put the per-question countdown bar on the same top row as the score.
   inlineTimerBar: true,
 
@@ -101,7 +102,7 @@ const gameshowTemplate = {
       // Lives (0 = Unlimited)
       mkSliderCell({
         label: "Lives", min: 0, max: 9, step: 1,
-        value: typeof draft.lives === "number" ? draft.lives : 0, tone: "blue", offAt: 0,
+        value: typeof draft.lives === "number" ? draft.lives : 0, tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }
       }).cell,

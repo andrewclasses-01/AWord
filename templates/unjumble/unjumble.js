@@ -34,6 +34,10 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+// Dot 143 - every penalty in the app is on ONE scale now (0..100, step 1).
+// Importing the numbers rather than repeating them is what stops this
+// game's slider and its mount() clamp drifting apart again.
+import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -99,11 +103,16 @@ function normLives(v) {
 const unjumbleTemplate = {
   type: "unjumble",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
   hidePointsOff: true,   // ships its own "Points off when wrong" control
+  // Đợt 143 (opt-in) — really reads options.autoSwitch now: a graded sentence
+  // walks on to the next one by itself instead of waiting for ▷.
+  usesAutoSwitch: true,
   name: "Unjumble",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
 
@@ -145,7 +154,7 @@ const unjumbleTemplate = {
       // On-submit mode: how many points a WRONG sentence costs (0–5).
       mkSliderCell({
         label: "Points off", sub: "wrong sentence", min: 0, max: 5, step: 1,
-        value: Math.max(0, Math.min(5, draft.pointsOff == null ? 1 : draft.pointsOff)), offAt: 0,
+        value: Math.max(0, Math.min(POINTS_MAX, draft.pointsOff == null ? 20 : draft.pointsOff)), offAt: 0,
         fmt: v => (v === 0 ? "Off" : "-" + v),
         onInput: v => { draft.pointsOff = v; }
       }).cell,
@@ -153,7 +162,7 @@ const unjumbleTemplate = {
       mkSliderCell({
         label: "Lives", min: 0, max: 10, step: 1,
         value: (draft.lives == null || draft.lives === 0) ? 0 : Math.min(10, Math.max(1, Math.round(draft.lives))),
-        tone: "blue", offAt: 0,
+        tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }
       }).cell
@@ -182,7 +191,7 @@ const unjumbleTemplate = {
     const align = opt.align === "center" ? "center" : "left";
     const allowSkip = opt.allowSkip !== false;
     const showAnswerWhenWrong = opt.showAnswerWhenWrong !== false;   // submit mode reveal (default on)
-    const pointsOff = Math.max(0, Math.min(5, opt.pointsOff == null ? 1 : opt.pointsOff));   // submit wrong penalty
+    const pointsOff = Math.max(0, Math.min(POINTS_MAX, opt.pointsOff == null ? 20 : opt.pointsOff));   // submit wrong penalty (0..100 since Dot 143)
     const startLives = normLives(opt.lives);   // null = unlimited
     let livesLeft = startLives;
 
@@ -338,7 +347,25 @@ const unjumbleTemplate = {
     else ui.startTimer();
 
     function doneCheck(s) { return mode === "submit" ? s.graded === true : s.correct === true; }
-    function scoreNow() { return state.reduce((sum, s) => sum + (s.points || 0), 0); }
+    // TIME COST (Đợt 143): one place decides what the score is. Every showScore()
+    // in this file is fed from here, so an ordinary score update can never
+    // repaint the idle clock's deduction away.
+    function scoreNow() {
+      return state.reduce((sum, s) => sum + (s.points || 0), 0)
+        - (ui.timeCostTotal ? ui.timeCostTotal() : 0);
+    }
+
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // that is: the game over, the mount thrown away, the whiteboard INTRO (3.3s
+    // during which the words aren't even draggable yet), and the grading/reveal
+    // animation (`busy`).
+    // ⚠️ setScorePainter, not just setScoreProvider: this game writes its own
+    // "N / max" chip into .aw-top-score, so the engine's count-down would
+    // otherwise replace that whole chip with a bare number.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setScorePainter?.(v => showScore(v));
+    ui.setIdleGuard?.(() => finished || dead || busy || introActive);
 
     // ---------- full render (real boundaries only) ----------
     // `transition === "cross"` keeps the outgoing card on screen and crossfades to
@@ -469,6 +496,11 @@ const unjumbleTemplate = {
       tile.addEventListener("pointerdown", e => {
         const st = state[index];
         if (busy || st.graded) return;
+        // TIME COST (Đợt 143): picking a word up IS this game's progress. In
+        // "On submit" mode nothing is graded until Submit, so waiting for that
+        // would charge a class for the whole time they spend building the
+        // sentence — which is the work.
+        ui.noteActivity?.();
         dragging = true;
         const r = tile.getBoundingClientRect();
         const cs = getComputedStyle(tile);
@@ -661,9 +693,9 @@ const unjumbleTemplate = {
         setTimeout(() => flyToScore(movesRect || boardEl, "BONUS", 1,
           () => { st.points = 2; return scoreNow(); }), 420);
       }
-      if (state.every(doneCheck)) {
-        autoTimer = setTimeout(finish, perfect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 700 : FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 300);
-      }
+      const doneDelay = perfect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 700 : FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 300;
+      if (state.every(doneCheck)) autoTimer = setTimeout(finish, doneDelay);
+      else maybeAutoNext(doneDelay);   // Đợt 143 — "Auto next question"
     }
 
     // ---------- submit mode ----------
@@ -715,6 +747,7 @@ const unjumbleTemplate = {
         }
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
+        else maybeAutoNext(FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);   // Đợt 143 — "Auto next question"
       }, n * STAGGER_MS + 300);
     }
 
@@ -868,6 +901,22 @@ const unjumbleTemplate = {
     // background never flashes bare between questions (teacher, Đợt 36).
     function goPrev() { if (busy) return; if (index > 0) { index--; render("cross"); } }
     function goNext() { if (busy) return; if (index < total - 1) { index++; render("cross"); } }
+
+    // AUTO NEXT QUESTION (Đợt 143) — options.autoSwitch. Called from both places
+    // a sentence can finish (the drag-to-solve path and doSubmit's grading), with
+    // whatever wait that caller already computed for its own celebration, so the
+    // flying ✓ / BONUS chip still lands before the board moves.
+    // `index === from` is the guard that lets a teacher pressing ▷ during the
+    // wait win: this template's goPrev/goNext don't clear autoTimer, so without
+    // it the pending timer would advance a SECOND time on top of the manual move.
+    function maybeAutoNext(delay) {
+      if (opt.autoSwitch !== true || index >= total - 1) return;
+      const from = index;
+      autoTimer = setTimeout(() => {
+        autoTimer = null;
+        if (index === from) goNext();
+      }, delay);
+    }
 
     function finish(reason) {
       if (finished) return;

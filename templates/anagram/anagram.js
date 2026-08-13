@@ -61,6 +61,9 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+// Dot 143 - the app-wide penalty scale (0..100, step 1). Anagram's two
+// penalties used to run on ranges of their own; see MAX_SUBMIT_PENALTY below.
+import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -150,9 +153,17 @@ function normLives(v) {
 // the meaning/range differs per mode; these are the shared clamp rules used
 // by BOTH buildExtraOptions() (the slider UI) and mount() (reading the
 // saved value), kept in one place so they can't drift apart.
-const MAX_SUBMIT_PENALTY = 10;      // "On submit" — once per wrong WORD
-const MAX_LETTER_PENALTY = 100;     // "Bonus and minus" — once per wrong LETTER TAP
-const LETTER_PENALTY_STEP = 5;
+// Đợt 143 — both of Anagram's penalties joined the app-wide 0..100 / step 1
+// scale (teacher: "đưa về 1 thang chung là 0-100, nấc 1 điểm"). Before this the
+// SAME on-screen label "Points off" meant 0..10 in "On submit" and 0..100 in
+// steps of 5 in "Bonus and minus", so switching mode silently changed what a
+// number was worth. Acts saved under the old 0..10 are multiplied by 10 once,
+// on load, by core/options-migrate.js — the two constants stay separate names
+// because they still mean different EVENTS (a wrong word vs a wrong letter tap),
+// even though they now share a range.
+const MAX_SUBMIT_PENALTY = POINTS_MAX;    // "On submit" — once per wrong WORD
+const MAX_LETTER_PENALTY = POINTS_MAX;    // "Bonus and minus" — once per wrong LETTER TAP
+const LETTER_PENALTY_STEP = POINTS_STEP;
 // Đợt 139 (teacher): the ceiling went 5x -> 10x. Every place that reads the
 // range — the slider's `max`, clampBonusMult below, the "Nx PERFECT" burst —
 // derives from these constants, so this one number is the whole change. Acts
@@ -228,6 +239,10 @@ const anagramTemplate = {
   // and live in a fixed slot the engine knows nothing about.
   timeCost: true,
   hidePointsOff: true,  // ships its own mode-dependent "Points off" control(s) — see buildExtraOptions (10/8/2026)
+  // Đợt 143 (opt-in) — this game now really does read options.autoSwitch: with
+  // it on, a solved/graded word walks on to the next one by itself instead of
+  // waiting for ▷. See advance() in mount().
+  usesAutoSwitch: true,
   compactOptionsOnOverflow: true,  // Options panel shrinks its own text/spacing instead of scrolling when it overflows — Đợt 134, see core/engine.js's openToolPanel
 
   toPrintItems(activity) {
@@ -276,7 +291,7 @@ const anagramTemplate = {
 
     const cSubmit = mkSliderCell({
       label: "Points off", sub: "wrong answer",
-      min: 0, max: MAX_SUBMIT_PENALTY, step: 1,
+      min: 0, max: MAX_SUBMIT_PENALTY, step: POINTS_STEP,
       value: clampSubmitPenalty(draft.pointsOff || 0), offAt: 0,
       fmt: v => (v === 0 ? "Off" : "-" + v),
       onInput: v => { draft.pointsOff = v; }
@@ -343,7 +358,7 @@ const anagramTemplate = {
     const curLives = (draft.lives === 0 || draft.lives == null) ? 0
       : Math.min(MAX_LIVES, Math.max(1, Math.round(draft.lives)));
     const lives = mkSliderCell({
-      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "green", offAt: 0,
       fmt: v => (v === 0 ? "∞" : String(v)),
       onInput: v => { draft.lives = v; }        // 0 stored = unlimited
     });
@@ -1085,6 +1100,7 @@ const anagramTemplate = {
       // In a fight the controller drives the last word too (it ends the match
       // once both boards are done), so don't race it with a local finish().
       else if (!fightCtl && state.every(doneCheck)) autoTimer = setTimeout(finish, finishDelay);
+      else maybeAutoNext(finishDelay);   // Đợt 143 — "Auto next question"
     }
 
     // ----- interaction: submit mode -----
@@ -1597,6 +1613,10 @@ const anagramTemplate = {
           autoTimer = setTimeout(() => finish({ gameover: true }), 1500);   // always the wrong-word branch (outOfLives implies !allCorrect)
         } else if (state.every(doneCheck)) {
           autoTimer = setTimeout(finish, allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
+        } else {
+          // Đợt 143 — "Auto next question", same wait as the finish above so the
+          // flying score / big ✗ still plays out before the board moves on.
+          maybeAutoNext(allCorrect ? FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 250 : 1500);
         }
       }, n * STAGGER_MS + 300);
     }
@@ -2149,6 +2169,29 @@ const anagramTemplate = {
       const target = index + 1;
       if (fightCtl) fightCtl.boardMoved(fightSide, target);
       fadeSwap(() => { index = target; render(); });
+    }
+
+    // AUTO NEXT QUESTION (Đợt 143) — options.autoSwitch. Called from BOTH places
+    // a word can finish: finalizeBonusWord() (the bonus family) and doSubmit()'s
+    // reveal (submit mode). `delay` is whatever that caller already worked out
+    // as "the celebration is over" — reusing it means the PERFECT burst, the
+    // flying points and the count-up all still land before the board moves.
+    //
+    // Two guards, both learned the hard way in this file:
+    //  · `dead` — Đợt 114: these timers outlive a play that has been left.
+    //  · `index === from` — the teacher pressing ▷ (or a fight round turning
+    //    over) during the wait must WIN. Anagram's goPrev/goNext never clear
+    //    autoTimer, so checking that we are still on the word we scheduled for
+    //    is what stops a double advance, without touching navigation at all.
+    // FIGHT MODE never auto-advances: there the match controller moves both
+    // boards together and one walking off alone would desynchronise them.
+    function maybeAutoNext(delay) {
+      if (fightCtl || opt.autoSwitch !== true || index >= total - 1) return;
+      const from = index;
+      autoTimer = setTimeout(() => {
+        autoTimer = null;
+        if (!dead && index === from) goNext();
+      }, delay);
     }
 
     // ----- FIGHT MODE: the match controller drives both boards through this -----

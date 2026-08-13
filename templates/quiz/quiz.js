@@ -79,6 +79,14 @@ const quizTemplate = {
   // engine's; this template's whole share is subtracting ui.timeCostTotal()
   // in scoreNow() plus the three one-liners in mount(). See core/engine.js.
   timeCost: true,
+  // Đợt 143 — the two shared switches this game genuinely obeys, now DECLARED
+  // rather than assumed. They used to be built for every template and hidden by
+  // exception, which had rotted: "Auto next question" was on screen in 13 games
+  // and read by none of them, "Shuffle answers" in 12 and read by 3. Opt-in
+  // fails the safe way round — a forgotten flag hides a control the teacher can
+  // SEE is missing, instead of shipping one that silently does nothing.
+  usesShuffleAnswers: true,
+  usesAutoSwitch: true,
 
   // Content editor for this game (opened by the home page and the in-game Edit
   // button). Each template supplies its own editor the same way.
@@ -128,7 +136,7 @@ const quizTemplate = {
     // 84px — a wider chip here would shorten this slider and break the column.
     const cur = Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(0, draft.lives)) : 0;
     const lives = mkSliderCell({
-      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur, tone: "blue", offAt: 0,
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: cur, tone: "green", offAt: 0,
       fmt: v => (v === 0 ? "∞" : String(v)),
       onInput: v => { draft.lives = v; }        // 0 stored = unlimited
     });
@@ -141,7 +149,7 @@ const quizTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const pointsOff = Math.max(0, Math.min(5, Number(opt.pointsOff) || 0));  // deduct per wrong (0 = off)
+    const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));  // deduct per wrong (0..100 since Dot 143; 0 = off)
     const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
 
     // ----- FIGHT MODE (12/8/2026, trial) — this play is one of two boards
@@ -321,7 +329,14 @@ const quizTemplate = {
       answersRow.style.setProperty("--per-row", nAns <= 4 ? nAns : Math.ceil(nAns / 2));
 
       syncTiles(nAns);
-      const showLetters = opt.lettersOnAnswers === "abc";   // read live (safe: doesn't affect scoring)
+      // Đợt 143 — "Letters on answers" was removed from Options everywhere
+      // (teacher: "bỏ hẳn Letters On Answer cho mọi options của các template").
+      // It was built for 7 games and honoured by 2, so five of them carried a
+      // control that did nothing. Quiz was one of the two that DID honour it,
+      // and the teacher's call — made with that consequence stated — is that it
+      // now behaves as permanently "None". The A/B/C markup below stays wired
+      // to this one flag so turning the feature back on is a one-line change.
+      const showLetters = false;
 
       q.answers.forEach((ans, k) => {
         const { tile, textEl, letterEl } = tiles[k];
@@ -501,6 +516,23 @@ const quizTemplate = {
       // Anagram's finalizeBonusWord()).
       if (!fightCtl && state.every(s => s.chosen !== null)) {
         autoTimer = setTimeout(() => finish("complete"), st.correct ? 1000 : 1500);
+        return;
+      }
+
+      // AUTO NEXT QUESTION (Đợt 143) — options.autoSwitch. The checkbox had
+      // existed since 1/8/2026 and NO template had ever read it; the teacher
+      // asked to keep the option ("tôi vẫn cần tới nó trong một số tình huống
+      // trong tương lai"), so it is wired for real here instead.
+      // The wait is the SAME one the auto-finish above uses, and for the same
+      // reason: the ✓/✗ has to land before the screen moves, or the class never
+      // sees whether they were right. Parked in `autoTimer` on purpose — every
+      // manual navigation already calls clearAutoTimer(), so a teacher who
+      // reaches for ▷ or ◁ during the wait cancels the automatic move instead
+      // of racing it. FIGHT MODE is excluded: there the match controller moves
+      // both boards together (jumpTo), and a board walking off on its own would
+      // desynchronise the two frames.
+      if (!fightCtl && opt.autoSwitch === true && index < total - 1) {
+        autoTimer = setTimeout(() => { autoTimer = null; goNext(); }, st.correct ? 1000 : 1500);
       }
     }
 

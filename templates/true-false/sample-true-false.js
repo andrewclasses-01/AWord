@@ -18,7 +18,7 @@ export const activity = {
     showAnswers: true,
     speed: 0,               // 0 = the statement waits at the centre until answered
     repeatUntilCorrect: false,
-    pointsOff: 0            // points deducted per wrong answer (0..5); 0 = no penalty
+    pointsOff: 0            // points deducted per wrong answer (0..100); 0 = no penalty
   },
   content: {
     statements: [

@@ -1141,6 +1141,36 @@ suýt bị lưu đè vào thư viện của thầy.
 giờ mới còn câu dang dở. Balloon-pop coi **mọi từ chưa lên tới đều là chưa làm** (`yourCorrect: i <
 levelIndex`) nên ván mistakes gồm cả từ chưa từng xuất hiện.
 
+### ⭐⭐ LUẬT OPT-IN CHO Ô OPTIONS DÙNG CHUNG (Đợt 143, 13/8/2026)
+
+**Một ô Options dùng chung chỉ được HIỆN khi template KHAI BÁO là mình có đọc nó.**
+Không khai = không hiện. Đây là luật, không phải quy ước.
+
+Vì sao đổi: trước Đợt 143 cơ chế là **opt-OUT** — panel dựng ô cho mọi template, template nào không
+muốn thì gắn cờ `hideXxx`. Đo lại cả 17 game thì cơ chế ấy **đã mục đúng như kiểu mục của opt-out**:
+
+| Ô | Được dựng ở | Thật sự có game đọc | Chết ở |
+|---|---|---|---|
+| `autoSwitch` ("Auto next question") | 13 game | **0** | 13 |
+| `shuffleAnswers` ("Shuffle answers") | 12 game | 3 | 9 |
+| `lettersOnAnswers` ("Letters on answers") | 7 game | 2 | 5 |
+
+**Lý do chọn opt-in, viết ra để đừng ai đảo ngược lại:** quên một cờ opt-OUT thì app **ship ra một nút
+CHẾT** — thầy tích vào, không có gì xảy ra, không lỗi console, không dấu hiệu nào trên màn hình, và
+chuyện đó sống được nhiều đợt. Quên một cờ opt-IN thì app **thiếu một ô thầy nhìn phát ra ngay**.
+Hai kiểu hỏng không ngang nhau: **chọn kiểu hỏng nhìn thấy được.**
+
+| Cờ opt-in | Ô nó bật | Game đang khai |
+|---|---|---|
+| `tpl.usesShuffleAnswers` | "Shuffle answers" | quiz · open-the-box · gameshow |
+| `tpl.usesAutoSwitch` | "Auto next question" | quiz · anagram · unjumble · crossword |
+
+⚠️ **Khai cờ là ký hợp đồng phải ĐỌC option đó thật.** `usesAutoSwitch` được giữ lại (thầy: "vẫn cần
+tới nó trong tương lai") **kèm điều kiện là nối dây thật** — 4 game trên đều tự sang câu sau khi câu
+hiện tại đã có kết quả. Đừng khai cờ cho game thứ 5 mà không viết phần xử lý.
+
+⚠️ **Template thứ 18 khi thêm**: mặc định là **không có** hai ô trên. Muốn có thì khai — và viết code đọc.
+
 ### Cờ template ẩn nhóm Options không hợp lệ
 
 - `tpl.reviewStyle:"stacked"` — (thêm 2/8/2026 cho Unjumble) đổi màn **Show answers** từ lưới 3 cột
@@ -1156,7 +1186,8 @@ levelIndex`) nên ván mistakes gồm cả từ chưa từng xuất hiện.
   `panelItem(label, fn)` từ core; dữ liệu riêng thì tự stash ở biến cấp module trước khi gọi `ui.finish`
   (mount chỉ 1 act 1 lúc). CSS bảng nằm ở template — LƯU Ý panel ở backdrop NGOÀI khung `.aw-<tpl>-card`
   nên biến CSS `--*` scope theo card KHÔNG tới; dùng màu literal. Mẫu: `templates/running-word/running-word.js`.
-- `tpl.hideLettersOption:true` — ẩn nhóm "Letters on answers" (game không có ô đáp án chữ cái).
+- ⛔ `tpl.hideLettersOption` — **KHÔNG CÒN** (Đợt 143). Cả tuỳ chọn "Letters on answers" đã bị xoá
+  khỏi app; Quiz + Open the box (2 game từng đọc nó) nay cố định "None".
 - `tpl.hideTimerOption:true` — ẩn nhóm "Timer" (toàn ván) khi game TỰ QUẢN đồng hồ (vd Gameshow đếm
   ngược TỪNG CÂU; nếu để engine chạy đồng hồ toàn ván sẽ đá nhau). Nhớ đặt `options.timer="none"` cho
   game đó (sample + editor) để engine không dựng đồng hồ toàn ván. Có thể mượn `ui.topbarMid` (bật
@@ -1524,10 +1555,122 @@ Và time cost phải đi **kênh riêng `ctl.onTimeCost(side, total)`**, không 
 đóng băng (luật "đội chậm không được điểm") có mọi báo cáo điểm bị `holdFreeze()` huỷ **vĩnh viễn**,
 sẽ nuốt luôn khoản trừ. `totalOf = game + bonus + freezeAdj − cost` (trừ NGOÀI phần bị ghim).
 
-**Bố cục Options**: thanh Time cost nằm CÙNG HÀNG với "Points off" trong lưới 2 cột `.aw-opt-2up`
-(thầy chốt) — panel Anagram khi đấu vốn đã sát mức phải cuộn, nên tuỳ chọn mới phải tốn **0 chiều cao**.
-Template tự dựng points-off riêng (Anagram) nhận hàm dựng ô qua `buildExtraOptions({ timeCostCell })`
-và tự đặt chỗ; template không dùng thì engine tự ghép cạnh points-off của nó (Quiz).
+**Bố cục Options**: từ Đợt 140 Time cost chỉ là **một ô bình thường của lưới 2 cột** (`.aw-optc`),
+ghép cạnh ô hẹp nào đứng bên nó. Template tự dựng points-off riêng (Anagram) nhận hàm dựng ô qua
+`buildExtraOptions({ timeCostCell })` và tự đặt chỗ; template không dùng thì panel tự ghép (Quiz).
+
+#### Đợt 143 — Time cost nay có ở **13 game**, và vì sao KHÔNG phải 17
+Bật thêm 11 game: True/false · Find the match · Type the answer · Open the box · Maze chase ·
+Whack-a-mole · Flying fruit · Balloon pop · Crossword · Unjumble · Speaking (Anagram + Quiz có từ Đợt 139).
+**4 game KHÔNG có, mỗi game một lý do thật:**
+- **Gameshow** — chấm điểm theo TỐC ĐỘ, có đồng hồ riêng từng câu (thầy chốt loại).
+- **Speaking cards** — `scorable:false`, không có điểm nào để trừ.
+- **Running team · Running word** — ⚠️ **KHÔNG THỂ**, không phải quên: cả hai đặt `hideTimerOption` +
+  `options.timer:"none"` vì mỗi game **tự chạy 2 đồng hồ riêng**; mà `timeCostPer()` trong `engine.js`
+  trả **0** khi `timerMode()==="none"`. Gắn cờ vào chỉ **đẻ ra một thanh trượt không làm gì** — đúng
+  loại nút chết mà Đợt 143 đi dọn. Muốn có thì phải cho 2 game đó một hệ điểm/đồng hồ mà engine nhìn thấy.
+
+#### ⚠️ Bật Time cost là **4 điểm nối**, không phải 1 cờ
+1. `timeCost: true`
+2. `ui.setScoreProvider(scoreNow)` — engine hỏi "điểm THẬT bây giờ là bao nhiêu".
+3. `ui.setIdleGuard(fn)` — `true` = **học sinh KHÔNG THỂ thao tác lúc này**, cấm tính tiền.
+4. `ui.noteActivity()` ở **mọi** điểm tiến độ.
+Và **trừ `ui.timeCostTotal()` ở ĐÚNG MỘT chỗ** — cái chỗ duy nhất game quyết định điểm là bao nhiêu.
+Trừ ở nhiều chỗ, hoặc trừ thẳng vào biến `score` của game, thì **lần vẽ điểm thường tiếp theo xoá sạch
+khoản trừ** (và nếu trừ vào `score` thì hỏng cả tổng của chính game).
+
+⭐ **`ui.setScorePainter(fn)` (MỚI, Đợt 143)** — game **tự vẽ ô điểm** thì phải khai. Crossword và
+Type the answer ghi thẳng `"7 / 20"` vào `.aw-top-score` (tự tô màu theo dấu) chứ không gọi
+`ui.setScore`; không khai thì vòng đếm giảm của Time cost **thay cả ô điểm bằng một con số trần** rồi
+để nguyên như thế — đúng họ với bẫy "số đổi mà màu không đổi" ở trên, chỉ to tiếng hơn.
+
+#### "Tiến độ" là gì thì MỖI GAME MỘT KHÁC — phần này phải nghĩ, không chép được
+| Game | Cái gì reset đồng hồ trống | Vì sao |
+|---|---|---|
+| Crossword · Type the answer | **gõ từng chữ cái** | chấm mãi tới lúc Submit; đợi đến đó là tính tiền cả lúc HS đang làm bài |
+| Maze chase | **bẻ lái** | không có nút trả lời — HS *lái* tới ô đáp án |
+| Speaking | **chạm micro**, và **cấm tính tiền suốt lúc đang thu âm** | lúc HS làm việc nặng nhất mà engine không nhìn thấy gì |
+| Unjumble | **nhấc một từ lên** | mode "On submit" không chấm gì cho tới khi bấm Submit |
+| Balloon pop · Flying fruit · Whack-a-mole | **mỗi cú chạm, trúng hay trượt** | đi săn đáp án đúng không phải là ngồi không |
+
+⚠️ **Chạm SAI vẫn phải reset** (luật Đợt 139, áp cho mọi game mới): chỉ reset khi đúng thì một tràng
+đoán sai thành thà tính tiền — hoá ra đo may rủi chứ không đo sự chú ý.
+
+### ⭐⭐ MỘT NHÀ DỰNG PANEL OPTIONS — `core/options-panel.js` (Đợt 143, 13/8/2026)
+
+**Thân bảng Options do ĐÚNG MỘT hàm dựng: `buildOptionsBody(host, {tpl, draft, contentSwitch, fight})`.**
+Hai nơi gọi nó:
+
+| Nơi gọi | Phần nó tự lo |
+|---|---|
+| `core/engine.js` — panel trong game | draft · nút Apply · fight mode · ghi vào thư viện của thầy |
+| `core/settings.js` — "Default activity options" | draft · Save vào localStorage (chỉ áp cho act MỚI) |
+
+Vì sao gộp: trước Đợt 143, Settings có **form RIÊNG hình dạng quiz** — 1 `<select>` Timer, 1 `<select>`
+Letters, 3 checkbox — **dùng cho cả 17 game**. Thầy đặt mặc định ở một giao diện rồi vào game gặp một
+giao diện hoàn toàn khác, và **mọi option riêng của template (Anagram mode, Lives, Bonus x, Speed,
+Punishment, Time cost…) không có đường nào đặt mặc định**. Hai giao diện **không thể giữ giống nhau
+bằng kỷ luật** — chúng trôi khỏi nhau ngay lần ai đó thêm một option.
+
+⚠️ **LUẬT CŨ VẪN NGUYÊN GIÁ TRỊ (Đợt 140): TEMPLATE KHÔNG BAO GIỜ THAO TÁC DOM CỦA PANEL.** Template
+khai cờ, panel dựng. Hai template từng tự cắt DOM panel (whack-a-mole · speaking-cards) và cả hai
+**hỏng im lặng** ngay khi markup đổi.
+Từ Đợt 143 **cả 17 template đều dựng cùng một loại ô** (`mkCell`/`mkSeg`/`mkSliderCell`/`addCheck`) —
+running-word là template cuối cùng chuyển sang, nên **cầu nối legacy `.aw-opt-group` của Đợt 140 đã
+được gỡ** cùng toàn bộ CSS `.aw-opt-group/-label/-row/-slider/-slidval/-time/-cd/-hint/-2up/-cell/-idle`.
+Thêm template mới mà lại append markup cũ thì **nay không còn gì đỡ nữa**.
+
+**Thang điểm dùng chung**: `POINTS_MAX = 100`, `POINTS_STEP = 1` xuất từ file này. Template có
+points-off riêng **import 2 hằng đó**, đừng chép số — chép là thanh trượt với chỗ đọc giá trị trôi khỏi nhau.
+
+---
+
+### ⭐⭐ ĐỔI THANG MỘT OPTION ĐÃ LƯU — `core/options-migrate.js` (Đợt 143)
+
+Đổi ý nghĩa một con số **đã nằm trong act của thầy** là việc nguy hiểm nhất trong đợt này. Hai bẫy,
+cả hai đều **im lặng**:
+
+**1. Nhân hai lần.** Nhân lúc nạp thì lần nạp sau nhân tiếp: `-5 → -100 → -2000`. Chặn bằng
+`act.optVer` — mỗi act quy đổi **đúng một lần trong đời**.
+⚠️ **MỌI đường thoát sớm vẫn phải ĐÓNG DẤU.** Act chưa có `options` mà bỏ qua không đóng dấu thì hôm
+sau thầy đặt một giá trị **MỚI theo thang mới**, lần nạp kế tiếp sẽ "quy đổi" nó như đồ cũ.
+
+**2. Một ý nghĩa, HAI TÊN FIELD.** "Points off" ghi vào `pointsOff` ở phần lớn game, nhưng ghi vào
+`minusAmount` ở **Crossword · Type the answer · Whack-a-mole** — trong khi **nhãn trên màn hình giống
+hệt nhau**. Bản quy đổi chỉ đụng `pointsOff` sẽ để 3 game đó nhẹ đi 20 lần, không báo gì cả.
+👉 Trước khi đổi thang bất cứ option nào: **grep theo GIÁ TRỊ và theo mọi TÊN FIELD, đừng tin cái nhãn.**
+
+Cũng phải quy đổi `act.templateOptions[type]` (options nhớ theo từng template) — **theo type của CHÍNH
+nó**, không theo type của act; nếu không thì cả một bộ giá trị thứ hai kẹt ở thang cũ, vô hình cho tới
+lúc thầy đổi template.
+
+Gọi ở **2 chỗ** (cả hai đều idempotent): `store.js` `readAll()` — cửa duy nhất mọi act thư viện đi qua,
+nên bản quy đổi được lưu lại ở lần save kế tiếp; và `engine.js` `startGame()` — act mẫu, bundle import,
+bản `conv_`/`mist_` **không bao giờ đi qua thư viện**.
+
+---
+
+### ⛔ BẪY: HAI `function` TRÙNG TÊN TRONG CÙNG MỘT SCOPE (cắn thật, Đợt 143)
+
+Thêm `function scoreNow()` vào `crossword.js` mà **cuối file đã có một `function scoreNow()` khác**
+(hàm chết, không ai gọi). JavaScript **không báo gì cả** — hai *function declaration* cùng tên thì
+**cái khai SAU lặng lẽ thắng**. Kết quả: Crossword thành game duy nhất trong 13 game đưa cho engine
+con số **chưa trừ Time cost**. Không lỗi console, không dấu hiệu nào trên màn hình.
+
+**Bắt được bằng cách nào**: không phải bằng mắt, mà bằng cách **đo giá trị `setScoreProvider` thực sự
+trả về** cho từng game (ép `ui.timeCostTotal()` trả 35 rồi xem provider có ra `-35` không) — 12 game
+đúng, Crossword ra `0`.
+
+**Luật rút ra:**
+- Thêm một hàm vào file template dài (nhiều file ở đây trên 2000 dòng): **grep tên hàm đó trước khi khai**.
+- Kiểm một thứ được "nối dây" thì phải đo **giá trị nó thật sự trả về**, đừng chỉ kiểm là mình có gọi
+  hàm đăng ký hay không. Ở đây `setScoreProvider` **đã được gọi đúng** — cái sai nằm ở hàm nó truyền vào.
+- Lệnh quét cả bộ (chạy lại sau mỗi đợt đụng nhiều template):
+  ```
+  grep -oE "^\s*function [A-Za-z_$][\w$]*" templates/*/*.js | sort | uniq -d
+  ```
+
+---
 
 ### ⭐⭐ OPTIONS PANEL v2 — MỘT LƯỚI, MỘT KHUÔN HÀNG (Đợt 140, 13/8/2026)
 

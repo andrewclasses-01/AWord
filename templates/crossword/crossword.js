@@ -41,9 +41,10 @@
 //      Wrong, Show-answer-when-wrong OFF -> the cells get a grey ✕, then board.
 //
 //  • Options: Timer (engine), Show answers (engine review), plus this template's
-//    "Show answer when wrong" and "Change the crossword". No Shuffle / Letters
-//    (a crossword grid is fixed) — the Letters group is hidden via
-//    hideLettersOption.
+//    "Show answer when wrong" and "Change the crossword". No Shuffle answers /
+//    Letters (a crossword grid is fixed): since Đợt 143 "Shuffle answers" is
+//    opt-in and this game doesn't declare it, and "Letters on answers" no
+//    longer exists anywhere in the app.
 //
 //  • PAGINATION (teacher 4/8/2026): up to 120 answers total. ≤30 words plays
 //    exactly as before (single board, no nav row at all). >30 splits into
@@ -57,6 +58,10 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+// Dot 143 - every penalty in the app is on ONE scale now (0..100, step 1).
+// Importing the numbers rather than repeating them is what stops this
+// game's slider and its mount() clamp drifting apart again.
+import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -203,14 +208,18 @@ function buildCrossword(words) {
 const crosswordTemplate = {
   type: "crossword",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "words",
   hidePointsOff: true,   // ships its own "Points off when wrong" control
+  // Đợt 143 (opt-in) — really reads options.autoSwitch now: a solved word moves
+  // the cursor on to the next clue by itself.
+  usesAutoSwitch: true,
   name: "Crossword",
   edit: openCrosswordEditor,
-  hideLettersOption: true,     // a crossword has no lettered answer boxes
 
   sounds: {
     play: crosswordSound.play,
@@ -228,11 +237,11 @@ const crosswordTemplate = {
   // This template's own extra options.
   // Đợt 140 — shared panel builders.
   buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
-    // "Points off when wrong" (0..5). 0 = no penalty (drag it to 0 to turn
-    // Minus mode off) — no separate checkbox.
+    // "Points off when wrong" (0..100 since Dot 143). 0 = no penalty (drag it
+    // to 0 to turn Minus mode off) — no separate checkbox.
     if (draft.minusAmount == null) draft.minusAmount = 0;
     panel.append(mkSliderCell({
-      label: "Points off", sub: "wrong answer", min: 0, max: 5, step: 1,
+      label: "Points off", sub: "wrong answer", min: 0, max: POINTS_MAX, step: POINTS_STEP,
       value: draft.minusAmount || 0, offAt: 0,
       fmt: v => (v === 0 ? "Off" : "-" + v),
       onInput: v => { draft.minusAmount = v; }
@@ -247,9 +256,9 @@ const crosswordTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const canExit = opt.changeCrossword !== false;   // tap the clue to bail out
-    // "Points off when wrong": 0..5. 0 = no penalty (Minus mode off) — the slider
+    // "Points off when wrong": 0..100. 0 = no penalty (Minus mode off) — the slider
     // dragged to 0 IS the off switch, so there is no separate checkbox.
-    const penalty = Math.max(0, Math.min(5, opt.minusAmount || 0));
+    const penalty = Math.max(0, Math.min(POINTS_MAX, opt.minusAmount || 0));
     const minusOn = penalty > 0;
     const PAGE_SIZE = 30;   // more than this and the board splits into pages (teacher 4/8/2026)
     const words = [...(activity.content?.words || [])].filter(w => w && String(w.answer || "").trim());
@@ -409,11 +418,20 @@ const crosswordTemplate = {
     // colour alone, same change as core's ui.setScore()); the slash + total
     // stay normal. Same look as Type the answer (its CSS isn't loaded here,
     // hence the .aw-cw-prefixed classes styled in crossword.css).
-    function showScore() {
+    // TIME COST (Đợt 143): the idle clock's total is subtracted on the way to the
+    // SCREEN. `livePoints` stays the game's own tally — everything else in this
+    // file reads and writes it — so the deduction can never be folded into it.
+    function scoreNow() { return livePoints - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
+
+    // `n` (Đợt 143) lets the engine's Time cost count-down drive this chip
+    // frame by frame through ui.setScorePainter, instead of ui.setScore
+    // replacing the whole "7 / 20" markup with a bare number.
+    function showScore(n) {
       if (!ui.scoreEl) return;
-      const cls = livePoints < 0 ? "aw-cw-score-neg" : "aw-cw-score-pos";
+      const shown = n == null ? scoreNow() : Math.round(n);
+      const cls = shown < 0 ? "aw-cw-score-neg" : "aw-cw-score-pos";
       ui.scoreEl.innerHTML = `${icons.check}`
-        + `<span class="aw-cw-score-num ${cls}">${livePoints}</span>`
+        + `<span class="aw-cw-score-num ${cls}">${shown}</span>`
         + `<span class="aw-cw-score-sep">/</span>`
         + `<span class="aw-cw-score-total">${total}</span>`;
       ui.scoreEl.classList.remove("aw-cw-score-pulse");
@@ -572,6 +590,7 @@ const crosswordTemplate = {
     }
 
     function selectWord(i) {
+      ui.noteActivity?.();   // TIME COST (Đợt 143): picking a clue off the board is an action
       // Wrap within the CURRENT page's clue count — `total` is now the grand
       // total across every page, not this page's count (teacher 4/8/2026).
       const n = clues.length;
@@ -730,6 +749,10 @@ const crosswordTemplate = {
       if (finished || curWord < 0) return;
       const w = clues[curWord];
       if (wordState[curWord].done) return;
+      // TIME COST (Đợt 143): typing a letter IS this game's progress. Grading
+      // only happens at Submit, so waiting for that would charge a class the
+      // whole time they were spelling a long word out — which is the work.
+      ui.noteActivity?.();
       const [r, c] = w.cells[curCell] || w.cells[0];
       const rc = r + "," + c;
       const cs = cellStatus.get(rc);
@@ -768,6 +791,7 @@ const crosswordTemplate = {
 
     function backspace() {
       if (finished || curWord < 0 || wordState[curWord].done) return;
+      ui.noteActivity?.();   // TIME COST (Đợt 143): correcting a letter is progress too
       const w = clues[curWord];
       // clear the current cell if it holds an editable letter…
       let [r, c] = w.cells[curCell] || w.cells[0];
@@ -987,11 +1011,50 @@ const crosswordTemplate = {
       setTimeout(() => stars.forEach(s => s.remove()), maxEnd + 150);
     }
 
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // that is: the game finished, and the reveal/grading sequence a submitted
+    // word runs through (up to ~3.5s of cell-by-cell animation during which no
+    // key does anything). Sitting on the BOARD with no word open is NOT guarded
+    // — "nobody has picked a clue yet" is precisely the stall this option exists
+    // to charge for.
+    // "Being graded" is read off state that already exists rather than a new
+    // flag: a word is open (curWord >= 0) AND that word is already marked done,
+    // which is true for exactly the window between Submit and the return to the
+    // board. A separate boolean would be one more thing to keep in step.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setScorePainter?.(v => showScore(v));
+    ui.setIdleGuard?.(() =>
+      finished || (curWord >= 0 && !!wordState[curWord] && wordState[curWord].done));
+
     // After the brief end-state, finish the game if every word is done, else
     // zoom back to the board (keyboard hides) so the next word is picked by hand.
     function endWord(ms) {
+      // Captured NOW, not inside the timer: returnToBoard() below sets curWord
+      // to -1, and the search for "the next clue after this one" needs to know
+      // which one we actually just finished.
+      const endedWord = curWord;
       pushTimer(() => {
-        if (!wordState.every(s => s.done)) { returnToBoard(); return; }
+        if (!wordState.every(s => s.done)) {
+          // AUTO NEXT QUESTION (Đợt 143) — options.autoSwitch. A crossword has
+          // no ▷ button: finishing a word normally drops the class back to the
+          // whole board so someone can pick the next clue. With this on, the
+          // next UNSOLVED clue opens by itself instead — searched forward from
+          // the one just finished and wrapping round, so the game walks the grid
+          // in clue order rather than jumping back to the top every time.
+          // returnToBoard() first, and unconditionally: it is what clears the
+          // pending per-cell reveal timers and the Andrew glow. Skipping it
+          // would carry a half-played reveal into the next word.
+          returnToBoard();
+          if (opt.autoSwitch === true) {
+            const n = clues.length, from = endedWord >= 0 ? endedWord : 0;
+            for (let k = 1; k <= n; k++) {
+              const i = (from + k) % n;
+              if (!wordState[i].done) { selectWord(i); break; }
+            }
+          }
+          return;
+        }
         // This PAGE is fully done: auto-advance to the next one (a fresh
         // board, own grid) or finish the whole game on the last page.
         if (curPageIdx < PAGE_COUNT - 1) loadPage(curPageIdx + 1);
@@ -999,7 +1062,15 @@ const crosswordTemplate = {
       }, ms);
     }
 
-    function scoreNow() { return wordState.filter(s => s.correct).length; }
+    // ⚠️ A SECOND `function scoreNow()` used to sit here — `wordState.filter(
+    // s => s.correct).length`, with no caller anywhere in the file. Two function
+    // DECLARATIONS of the same name in one scope don't clash: the later one just
+    // silently wins. So when Đợt 143 added the real scoreNow() up beside
+    // showScore(), this dead one quietly replaced it, and Crossword became the
+    // one game of thirteen whose score provider handed the engine a number with
+    // no Time cost taken off — no error, nothing on screen, caught only by
+    // measuring what setScoreProvider actually returns. Deleted; do not
+    // reintroduce a same-named helper without checking for an existing one.
 
     // -------------------------------------------------------------------
     // physical keyboard (typing + Enter=Submit; no arrows/tab navigation)

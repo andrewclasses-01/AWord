@@ -65,6 +65,11 @@ function normLives(v) {
 const tfTemplate = {
   type: "true_false",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  // Everything visible (the slider, the flying number, the count-down) belongs
+  // to the engine; this template's whole share is subtracting ui.timeCostTotal()
+  // in liveScore() plus the wiring in mount(). See core/engine.js.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -105,7 +110,7 @@ const tfTemplate = {
     const curLives = (draft.lives === 0 || draft.lives === null) ? 0
       : (Number.isInteger(draft.lives) ? Math.min(MAX_LIVES, Math.max(1, draft.lives)) : DEFAULT_LIVES);
     const lives = mkSliderCell({
-      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "blue", offAt: 0,
+      label: "Lives", min: 0, max: MAX_LIVES, step: 1, value: curLives, tone: "green", offAt: 0,
       fmt: v => (v === 0 ? "∞" : String(v)),
       onInput: v => { draft.lives = v; }   // 0 stored = unlimited
     });
@@ -126,8 +131,8 @@ const tfTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const repeatUntilCorrect = opt.repeatUntilCorrect === true;
-    // Points deducted per WRONG answer (0..5). 0 = no penalty (behaviour unchanged).
-    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+    // Points deducted per WRONG answer (0..100 since Dot 143). 0 = no penalty.
+    const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
     const speed = Number.isInteger(opt.speed) ? Math.max(0, Math.min(10, opt.speed)) : 0;
     const crawlMs = crawlMsFor(speed);
     const timerMode = opt.timer ?? "countUp";
@@ -175,6 +180,23 @@ const tfTemplate = {
     window.addEventListener("resize", rebalance);
     renderShell();
 
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" If not,
+    // the idle clock must not charge them. For True/false that is: the game
+    // finished, the 3-2-1 prep before the first statement, the gap while one
+    // statement flies off and the next slides in, and a clip still speaking —
+    // nobody can judge a statement they are still being read.
+    // The gap is read off the BUTTONS' own disabled state rather than a second
+    // flag of our own: lockButtons()/unlockButtons() already are the single
+    // source of truth for "can this be answered", and a parallel flag is exactly
+    // the kind of thing that drifts out of step with them later.
+    ui.setScoreProvider?.(liveScore);
+    ui.setIdleGuard?.(() => {
+      if (finished || prepTimer || voicePlayer.isPlaying()) return true;
+      const btn = root.querySelector(".aw-tf-btn");
+      return !!(btn && btn.disabled);
+    });
+
     if (timerMode === "countUp") {
       runPrepCountdown();          // starts the clock (ui.startTimer) after 3-2-1
     } else {
@@ -188,7 +210,11 @@ const tfTemplate = {
     // The value actually shown/ranked: correct count minus wrong-answer penalty
     // (negatives allowed, never clamped). When pointsOff===0, penalty stays 0 so
     // liveScore() === scoreNow() and everything is byte-identical to before.
-    function liveScore() { return scoreNow() - penalty; }
+    // TIME COST (Đợt 143) — the idle clock's running total comes off HERE, at the
+    // one place this game decides what the score is. That is what makes it safe:
+    // every ui.setScore() in this file already goes through liveScore(), so an
+    // ordinary score update can never repaint the deduction away.
+    function liveScore() { return scoreNow() - penalty - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
 
     function armFallback(fn, ms) {
       if (fallbackTimer) clearTimeout(fallbackTimer);
@@ -532,6 +558,12 @@ const tfTemplate = {
       const idx = queue[0];
       const st = statements[idx];
       const isRight = value === !!st.answer;
+      // TIME COST (Đợt 143): judging a statement IS the progress this game
+      // measures, so it resets the idle clock — right or wrong. A WRONG answer
+      // has to count too: if only correct ones reset it, a class could be charged
+      // for a run of honest wrong guesses, and the option would be measuring luck
+      // instead of attention (the Đợt 139 rule, applied here).
+      ui.noteActivity?.();
 
       queue.shift();
       state[idx].answered = true;

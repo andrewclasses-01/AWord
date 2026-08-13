@@ -32,6 +32,10 @@
 // =============================================================
 
 import { registerTemplate } from "../../core/registry.js";
+// Dot 143 - every penalty in the app is on ONE scale now (0..100, step 1).
+// Importing the numbers rather than repeating them is what stops this
+// game's slider and its mount() clamp drifting apart again.
+import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
@@ -137,16 +141,16 @@ let wamPauseHandlers = null;
 const wamTemplate = {
   type: "whack_a_mole",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   hidePointsOff: true,   // ships its own "Points off per wrong hit" control
   name: "Whack-a-mole",
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,    // our own timer bar + hearts sit on the score row (ui.topbarMid)
-  hideLettersOption: true, // no lettered answer boxes here
   // Đợt 140 — these two were done by deleting nodes out of the built panel
   // (see buildExtraOptions below for why that had to stop). Same effect,
   // declared instead of surgical: no "Auto switch" switch at all, and the
   // Timer offers only Count up / Count down (this game must be on a clock).
-  hideAutoSwitch: true,
   hideTimerNone: true,
   manualTimerStart: true,  // we drive our OWN countdown (bonus time can extend it) — the engine
                            // timer must NOT run, or it would auto-submit at the original length
@@ -186,8 +190,9 @@ const wamTemplate = {
   // (deleting the group whose label matched /auto switch/, deleting the radio
   // named "aw-timer" with value "none"). That kind of surgery breaks silently
   // the moment the panel's markup changes, which is exactly what happened
-  // here. Both are now declared flags the engine honours: `hideAutoSwitch` and
-  // `hideTimerNone` (see the template header below).
+  // here. Both are declared now: `hideTimerNone` in the header below, and since
+  // Đợt 143 "Auto next question" is opt-in (`usesAutoSwitch`), this game gets
+  // rid of it by simply not asking for it.
   buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
     panel.append(
       // SPEED 1..10
@@ -200,14 +205,16 @@ const wamTemplate = {
       mkSliderCell({
         label: "Lives", min: 0, max: MAX_LIVES, step: 1,
         value: (draft.lives == null) ? 0 : Math.min(MAX_LIVES, Math.max(0, draft.lives)),
-        tone: "blue", offAt: 0,
+        tone: "green", offAt: 0,
         fmt: v => (v === 0 ? "∞" : String(v)),
         onInput: v => { draft.lives = v; }
       }).cell,
-      // PENALTY 0..5 (0 = off) — points lost per wrong hit
+      // PENALTY 0..100 (0 = off) — points lost per wrong hit. Dot 143 moved
+      // this onto the app-wide scale; its old default of 1-out-of-5 is 20 here,
+      // which is the same share of a point as before.
       mkSliderCell({
-        label: "Points off", sub: "wrong hit", min: 0, max: 5, step: 1,
-        value: typeof draft.minusAmount === "number" ? Math.max(0, Math.min(5, draft.minusAmount)) : 1,
+        label: "Points off", sub: "wrong hit", min: 0, max: POINTS_MAX, step: POINTS_STEP,
+        value: typeof draft.minusAmount === "number" ? Math.max(0, Math.min(POINTS_MAX, draft.minusAmount)) : 20,
         offAt: 0, fmt: v => (v === 0 ? "Off" : "-" + v),
         onInput: v => { draft.minusAmount = v; }
       }).cell,
@@ -246,7 +253,7 @@ const wamTemplate = {
     // lives + penalty
     const startLives = normLives(opt.lives);
     let livesLeft = startLives;
-    const penalty = (typeof opt.minusAmount === "number") ? Math.max(0, Math.min(5, opt.minusAmount)) : 1;
+    const penalty = (typeof opt.minusAmount === "number") ? Math.max(0, Math.min(POINTS_MAX, opt.minusAmount)) : 20;
     // Punishment = the freeze after a wrong hit, in seconds (Options slider, 0 = none)
     const freezeMs = Math.round(1000 * ((typeof opt.punishSeconds === "number")
       ? Math.max(0, Math.min(MAX_PUNISH, opt.punishSeconds)) : PUNISH_DEFAULT));
@@ -720,9 +727,18 @@ const wamTemplate = {
       h.bubbleText.textContent = "";
     }
 
+    // TIME COST (Đợt 143): the idle clock's total is taken off on the way to the
+    // SCREEN, not out of `score` itself — `score` is clamped at 0 by the wrong-hit
+    // penalty and is what bonuses read, so folding the clock into it would both
+    // corrupt the game's own tally and let the clamp swallow the deduction.
+    function scoreNow() { return score - (ui.timeCostTotal ? ui.timeCostTotal() : 0); }
+
     // ---------- whacking ----------
     function onWhack(h) {
       if (ended || (h.status !== "up" && h.status !== "rising")) return;
+      // TIME COST (Đợt 143): swinging at a mole IS this game's progress, hit or
+      // miss — a class reading the sign and picking wrong is not sitting idle.
+      ui.noteActivity?.();
       clearTimer(h.duckT); h.duckT = null;
       h.status = "hit";
       h.hole.classList.add("is-hit");
@@ -746,7 +762,7 @@ const wamTemplate = {
         if (combo >= COMBO_THRESHOLD) { comboBonus = Math.min(5, combo - COMBO_THRESHOLD + 1); wamSound.combo(); floatText(h, "COMBO x" + combo, "is-combo"); }
         pts += comboBonus;
         score += pts;
-        ui.setScore(score);
+        ui.setScore(scoreNow());
         floatText(h, "+" + pts, "is-plus");
         if (mode === "quiz") { onQuizCorrect(); }
         else {
@@ -769,7 +785,7 @@ const wamTemplate = {
         // 6/8/2026) — independent of the dizzy wobble threshold below, so even a
         // very short punishment still flashes red. CSS: .is-wrong .aw-wam-bubble.
         h.hole.classList.add("is-wrong");
-        if (penalty > 0) { score = Math.max(0, score - penalty); ui.setScore(score); floatText(h, "–" + penalty, "is-minus"); }
+        if (penalty > 0) { score = Math.max(0, score - penalty); ui.setScore(scoreNow()); floatText(h, "–" + penalty, "is-minus"); }
         const outOfLives = loseLife();
         if (outOfLives) {
           later(() => endGame("gameover"), 600);
@@ -800,7 +816,7 @@ const wamTemplate = {
       popZap(h);
       const t = h.crateType;
       if (t === "time") { addTime(5); wamSound.crateTime(); floatText(h, "+5s", "is-combo"); }
-      else if (t === "loot") { score += 5; ui.setScore(score); wamSound.crateLoot(); floatText(h, "+5", "is-plus"); }
+      else if (t === "loot") { score += 5; ui.setScore(scoreNow()); wamSound.crateLoot(); floatText(h, "+5", "is-plus"); }
       else if (t === "power") { powerUntil = performance.now() + POWER_MS; wamSound.cratePower(); floatText(h, "POWER!", "is-combo"); scene.classList.add("is-power"); later(() => { if (performance.now() >= powerUntil) scene.classList.remove("is-power"); }, POWER_MS + 60); }
       h.freeT = later(() => { h.hole.classList.remove("is-crate"); later(() => freeHole(h), 300); }, 520);
     }
@@ -860,6 +876,15 @@ const wamTemplate = {
 
     // ---------- end of game ----------
     let endReason = "time";
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // that is: the game over, the mount thrown away, the wrong-hit PUNISHMENT
+    // freeze (the whole point of which is that nobody may act), and a clip still
+    // speaking. Charging during the freeze would have been a double punishment
+    // for one mistake — and one the class can do nothing about.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() => ended || dead || frozen || voicePlayer.isPlaying());
+
     ui.onSubmit(() => endGame("submit"));   // menu "Submit answers" ends early too
     function endGame(reason) {
       if (ended) return;

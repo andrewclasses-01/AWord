@@ -5,6 +5,142 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 143 (13/8/2026) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN), MỘT THANG ĐIỂM 0–100 CHO CẢ APP, TIME COST CHO 13 GAME, VÀ SETTINGS DÙNG CHUNG ĐÚNG PANEL VỚI TRONG GAME
+⭐ CÓ SỬA CORE (**2 file MỚI**: `core/options-panel.js` + `core/options-migrate.js`; sửa `engine.js`,
+`app.css`, `settings.js`, `store.js`, `numberstepper.js`) + `main.js` + **16/17 template**.
+
+### 1. Bắt đầu từ một tấm ảnh
+Thầy gửi ảnh chụp bảng Options của Anagram và hỏi *"bạn thấy có vấn đề gì không?"*.
+Soi code thì vấn đề nặng nhất **không phải bố cục** — mà là **3 ô trong chính tấm ảnh bấm xong không
+làm gì cả**. Anagram chỉ đọc đúng 9 field (`anagramMode` · `pointsOff` · `letterPenalty` · `bonusMult`
+· `lives` · `allCaps` · `allowSkip` · `shuffleQuestions` · `changeCase`), 3 ô kia không nằm trong đó.
+**Đo trên cả 17 game:**
+
+| Ô | Hiện ở | Thật sự có game nào đọc | Chết ở |
+|---|---|---|---|
+| **Auto next question** (`autoSwitch`) | 13 game | **KHÔNG MỘT GAME NÀO** — toàn repo chỉ 2 dòng nhắc tới nó, cả 2 là chính đoạn dựng cái checkbox | **13** |
+| **Shuffle answers** (`shuffleAnswers`) | 12 game | 3 (quiz · open-the-box · gameshow) | **9** |
+| **Letters on answers** (`lettersOnAnswers`) | 7 game | 2 (quiz · open-the-box) | **5** |
+
+Cơ chế cờ `hideXxx` của Đợt 140 chạy đúng — chỉ là **chưa ai đi gắn cờ cho hết**. Mà kiểu opt-OUT thì
+quên một cái là **đẻ ra nút chết im lặng**: thầy tích, không có gì xảy ra, nhìn màn hình không có
+đường nào biết.
+
+### 2. Thầy chốt bằng 8 câu AskUserQuestion (2 vòng)
+Vòng 1: **đảo sang opt-in** · Points off về **1 thang 0–100 nấc 1** · **Lives đổi xanh lá** ·
+**giữ lưới phẳng** — kèm 6 mục thầy đặt thêm (số sát thanh trượt · animation mượt · countdown nấc 1
+giây · đưa options đầy đủ vào Settings · running-word đổi phong cách · bỏ hẳn Letters + thêm Time cost).
+Vòng 2 (4 chỗ mà chọn khác nhau là ra 2 công việc khác hẳn): default **chỉ áp cho act mới** ·
+Letters **xoá hẳn, cố định None** · Time cost **15 game tính điểm có đồng hồ** ·
+act cũ **tự quy đổi giữ độ nặng**.
+Sau đó thầy sửa 1 điểm: **giữ Auto next question** ("tôi vẫn cần tới nó trong tương lai").
+⇒ **Không xoá mà NỐI DÂY THẬT** cho nó ở 4 game có bước sang câu thủ công (Quiz · Anagram ·
+Unjumble · Crossword).
+
+### 3. Panel Options tách thành `core/options-panel.js` (file MỚI) — dùng chung với Settings
+`buildOptionsPanel()` trong `engine.js` vừa dựng giao diện vừa lo draft/Apply/lưu thư viện. Trong khi
+đó Settings > "Default activity options" có **một form RIÊNG, hình dạng quiz**: 1 `<select>` Timer,
+1 `<select>` Letters, 3 checkbox — **cho cả 17 game**. Thầy đặt mặc định ở một giao diện rồi vào game
+gặp một giao diện hoàn toàn khác, và **mọi option riêng của template (Anagram mode, Lives, Bonus x,
+Speed, Punishment, Time cost…) không có cách nào đặt mặc định**.
+Nay **một nhà duy nhất** dựng thân panel; `engine.js` giữ nửa còn lại (draft · Apply · fight · ghi vào
+thư viện), `settings.js` giữ nửa của nó (draft · Save vào localStorage).
+
+| Cờ template | Việc |
+|---|---|
+| `usesShuffleAnswers` · `usesAutoSwitch` | **MỚI, OPT-IN** — chỉ game thật sự đọc mới khai |
+| `hideTimerOption` · `hideTimerNone` · `hidePointsOff` · `hideShowAnswers` · `shuffleLabel` · `scorable` · `timeCost` | giữ nguyên |
+| ~~`hideLettersOption`~~ · ~~`hideShuffleAnswers`~~ · ~~`hideAutoSwitch`~~ | **XOÁ** (gỡ 19 dòng cờ ở 10 template) |
+
+**LUẬT MỚI ghi vào file:** cờ opt-OUT hỏng thì đẻ nút chết **im lặng**; cờ opt-IN hỏng thì **thiếu một
+ô thầy nhìn thấy ngay**. Chọn kiểu hỏng nhìn thấy được.
+
+### 4. Một thang điểm 0–100 nấc 1 cho cả app + quy đổi act cũ
+Trước đây **cùng chữ "Points off" mang 3 thang khác nhau**: 0–5 (thang chung, 11 game + Unjumble),
+0–10 (Anagram "On submit"), 0–100 nấc 5 (Anagram "Bonus and minus"). Nhìn `-80` không biết nặng hay nhẹ.
+⚠️ **BẪY BẮT ĐƯỢC KHI SOI: có HAI TÊN FIELD, không phải một.** Crossword · Type the answer ·
+Whack-a-mole ghi vào `minusAmount`, mà nhãn vẫn là "Points off". Quy đổi chỉ đụng `pointsOff` là
+**3 game đó nhẹ đi 20 lần mà không có gì trên màn hình báo**.
+⚠️ **BẪY THỨ HAI — NHÂN HAI LẦN.** Nhân lúc nạp thì lần nạp sau nhân tiếp: -5 → -100 → -2000.
+`core/options-migrate.js` (file MỚI) đóng dấu `act.optVer`, **mỗi act chỉ quy đổi đúng một lần trong
+đời**. Mọi đường thoát sớm **vẫn phải đóng dấu** — act chưa có options mà không đóng dấu thì hôm sau
+thầy đặt giá trị MỚI theo thang mới, lần nạp kế tiếp sẽ "quy đổi" nó như đồ cũ.
+Quy đổi cả `act.templateOptions[type]` — **theo type của CHÍNH nó**, không theo type của act.
+Gọi ở **2 chỗ**: `store.js` `readAll()` (mọi act thư viện đi qua đúng 1 cửa) + `engine.js` `startGame`
+(act mẫu / bundle import / bản `conv_`-`mist_` không đi qua thư viện bao giờ).
+
+### 5. Time cost — 13 game (không phải 15)
+Thầy chốt "15 game tính điểm có đồng hồ". Làm được 13. **2 game còn lại KHÔNG làm được, và đây là lý do
+kỹ thuật chứ không phải bỏ sót**: `running-team` và `running-word` đều đặt `hideTimerOption` +
+`options.timer:"none"` vì **mỗi game tự chạy 2 đồng hồ riêng**; mà `engine.timeCostPer()` trả **0** khi
+`timerMode()==="none"`. Gắn cờ vào chỉ để **đẻ đúng loại nút chết mà cả đợt này đang đi dọn**.
+(Gameshow + Speaking cards là 2 game thầy đã chốt loại từ đầu.)
+Mỗi game phải nối **4 điểm, không phải chỉ bật 1 cờ**: `timeCost: true` · `ui.setScoreProvider` ·
+`ui.setIdleGuard` · `ui.noteActivity` ở mọi điểm tiến độ; và trừ `ui.timeCostTotal()` **ở đúng MỘT chỗ**
+tính điểm (không thì lần vẽ điểm thường tiếp theo xoá sạch khoản trừ).
+⭐ **Thêm vào core: `ui.setScorePainter(fn)`** — Crossword và Type the answer **tự vẽ ô điểm**
+(`"7 / 20"`, tự tô màu theo dấu) chứ không gọi `ui.setScore`, nên đồng hồ đếm ngược của Time cost sẽ
+**thay cả ô điểm bằng một con số trần** rồi để nguyên như thế.
+**"Tiến độ" là gì thì mỗi game một khác** — phần này phải nghĩ, không chép được:
+Crossword / Type the answer = **gõ từng chữ** (chấm mãi lúc Submit; đợi đến đó là tính tiền cả lúc HS
+đang làm bài) · Maze chase = **bẻ lái** (không có nút trả lời, HS *lái* tới ô) · Speaking = **chạm
+micro**, và **cấm tính tiền suốt lúc đang thu âm** — đó là lúc HS làm việc nặng nhất mà engine không
+nhìn thấy gì · Unjumble = **nhấc từ lên**.
+
+### 6. Giao diện (6 mục thầy đặt thêm)
+- **Số sát thanh trượt**: chip đổi canh phải → **canh trái**, bề rộng 52→44px. Vẫn thẳng cột (thẳng ở
+  mép TRÁI thay vì mép phải). Bỏ hẳn bề rộng cố định thì số sát hơn nữa nhưng cột lại so le như trước Đợt 140.
+- **Animation**: thanh segmented có **thumb trắng trượt** (như nút TEXT/VOICE) thay vì pill nhảy; dấu
+  tick **vẽ ra / xoá đi** thay vì hiện tắt phụt. Thumb định vị bằng `--n`/`--i`, **không đo pixel** —
+  panel hay bị dựng lúc còn `display:none` / đang ResizeObserver / đang bị `.is-compact-opts` thu nhỏ.
+  Có `prefers-reduced-motion`.
+- **Lives xanh lá** (11 thanh): xanh dương cũ **trùng đúng màu "đang được chọn"** của segmented + checkbox.
+- **Countdown nấc 1 giây**: nhưng nấc 1 trên dải 5..3599 thì kéo 2:00→5:00 mất **2160px**. Nên
+  `makeHStepper` thêm `holdMax` + `dragPxPerStep`: **bấm 1 phát vẫn đúng 1 giây**, giữ nút lên 15s/nhịp,
+  vuốt 3px/giây.
+- **running-word về khuôn chung** — template CUỐI CÙNG còn dùng markup cũ. Xoá 11 luật CSS riêng
+  (`.aw-rw-opt-*`) và cả **cầu nối legacy** của Đợt 140 (comment của chính nó ghi "giữ chừng nào còn
+  template dùng markup cũ" — nay hết). "Time each team" bỏ hẳn kiểu trượt-nấc-kèm-chế-độ-Custom
+  (3 hàm + 1 bug đã vá) → **1 stepper ngang**, làm được mọi việc cả hai nửa cũ làm.
+- **Settings đầy đủ**: Anagram từ 4 điều khiển → **9 ô + 2 segmented + 5 tick**; hộp thoại nới 440→560px.
+
+### 7. Tự test — và 1 LỖI THẬT bắt được nhờ đo
+🟢 **Quét 17/17 template** (1280×720): 0 lỗi console · 0 game tràn/cuộn · cao nhất 363px (trần 645) ·
+**mọi thanh trượt hiện ra đều đúng 178px**, khoảng cách tới số đều **9px** · 0 game còn "Letters on
+answers" · 0 game còn markup cũ · Auto next đúng 4 game · Shuffle answers đúng 3 game · Time cost đúng 13.
+🟢 **ĐỐI CHỨNG NGƯỢC** (bắt buộc theo luật dự án): cố tình dựng template giả dùng markup cũ / giả cho
+Letters quay lại / giả nhồi 24 thanh trượt → bản quét **báo lỗi ngay cả 3 lần**. Vậy kết quả sạch ở
+trên là có nghĩa.
+🟢 **Chạy engine thật**: panel 304px không cuộn · Points off 0..100 nấc 1, chip `-60` · Lives
+`rgb(22,163,74)` · **draft đúng hợp đồng** (trước Apply act rỗng `{}`, sau Apply đủ 3 field) ·
+**Auto next question chạy thật**: bật → `1 of 4` thành `2 of 4`; tắt → **đứng yên** · `noteActivity`
+bắn thật khi bấm, ở 4 game kiểm tra.
+🟢 **Quy đổi trên đường chạy thật**: `3/5 → 60/100`, `templateOptions.anagram 4/10 → 40/100`,
+**chạy lại 4 lần vẫn đứng yên**; 18/18 phép thử đơn vị đạt.
+⭐ **LỖI THẬT — Crossword là game duy nhất trong 13 game KHÔNG trừ đồng hồ.** Em khai
+`function scoreNow()` mới, **trùng tên với một hàm đã có ở cuối file** (`wordState.filter(...)`,
+**không ai gọi**). Hai *function declaration* cùng tên trong một scope **không báo lỗi** — cái khai sau
+lặng lẽ thắng. Nên `setScoreProvider` đưa cho engine con số **chưa trừ Time cost**: không lỗi console,
+không dấu hiệu trên màn hình. Bắt được **chỉ nhờ đo giá trị `setScoreProvider` thực sự trả về** cho
+từng game (12 game ra `-35`, riêng Crossword ra `0`). Đã xoá hàm chết + quét lại **cả 17 template
+không còn hàm trùng tên nào**. Đo lại: **13/13 đều `-35`**.
+⚠️ **BẪY MÔI TRƯỜNG (đã ghi ở Đợt 139, lần này cắn lại)**: pane test bị ẩn nên Chromium **đóng băng
+CSS transition + rAF + đồng hồ engine**. Lần đầu đo ra thumb "không trượt" và tick "không đổi" —
+**cả hai đều là kết luận GIẢ**, do đọc đúng lúc transition vừa bắt đầu. Đo lại với `transition:none`
+thì thumb ra 0/172/344 và **nằm khít trên nút được chọn, lệch 0px cả 3 vị trí**.
+⬜ **CHƯA xem được Time cost trừ điểm bằng mắt** — đồng hồ engine đứng im trong pane ẩn. Đối chứng:
+**Quiz (có Time cost từ Đợt 139, đợt này KHÔNG đụng vào) cũng trừ 0** ⇒ là môi trường, không phải phần
+nối dây. Phần nối dây đã chứng minh bằng đường khác (đo `setScoreProvider`, 13/13).
+⬜ Chưa chạm tay thật trên màn TOMKO.
+
+### VIỆC ĐANG CHỜ (Đợt 143)
+- Chạy thử Time cost bằng mắt trên cửa sổ THẬT (13 game), nhất là Speaking (cấm tính tiền lúc thu âm)
+  và Maze chase (bẻ lái = tiến độ).
+- Chạm tay trên màn TOMKO: thumb segmented + dấu tick + kéo stepper countdown nấc 1 giây.
+- Template thứ 18 khi thêm: nhớ `usesShuffleAnswers` / `usesAutoSwitch` — **không khai là không hiện**.
+
+---
+
 ## Đợt 142 (13/8/2026) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ CÓ ĐỦ GIỌNG
 ⭐ CÓ SỬA CORE (`core/voice-mix.js` **MỚI** + `core/app.css`) + `main.js` + `templates/anagram/anagram-editor.js`.
 ✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH.**

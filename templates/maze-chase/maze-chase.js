@@ -179,6 +179,8 @@ let mazePauseHandlers = null;
 const mazeChaseTemplate = {
   type: "maze_chase",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   // "Start with mistakes" (Đợt 84): which array in activity.content holds the
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
@@ -197,7 +199,6 @@ const mazeChaseTemplate = {
     "bigplanet.webp", "greenplanet.webp", "sun.webp",
     "floor-correct.png", "floor-incorrect.png"
   ].map(imgUrl),
-  hideLettersOption: true,   // answers ride on maze pads, not lettered boxes
 
   edit: openMazeChaseEditor,
 
@@ -226,7 +227,7 @@ const mazeChaseTemplate = {
     panel.append(
       mkSliderCell({
         label: "Lives", min: 1, max: 9, step: 1,
-        value: typeof draft.lives === "number" ? draft.lives : 5, tone: "blue",
+        value: typeof draft.lives === "number" ? draft.lives : 5, tone: "green",
         onInput: v => { draft.lives = v; }
       }).cell,
       mkSliderCell({
@@ -242,7 +243,7 @@ const mazeChaseTemplate = {
     const opt = activity.options || {};
     // Optional penalty: points deducted from the live score on each WRONG answer
     // (0..5). 0 → disabled, behaviour identical to before this option existed.
-    const pointsOff = Math.max(0, Math.min(5, Number(activity.options && activity.options.pointsOff) || 0));
+    const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
     let items = (activity.content?.questions || [])
       .filter(q => q && Array.isArray(q.answers) && q.answers.some(a => a && a.correct) && q.answers.length >= 2);
     if (opt.shuffleQuestions) items = shuffle(items);
@@ -332,6 +333,17 @@ const mazeChaseTemplate = {
 
     ui.onSubmit(finish, () => state.filter(s => s.correct || s.wrong.length > 0).length);   // block "Submit answers" at 0 answered
     ui.setScore(0);
+
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" Here
+    // that is: the game over, the between-questions lock (`questionLock`, while
+    // the maze resets its pads), and a clip still speaking.
+    // ⭐ What counts as PROGRESS is different in this game from every other one:
+    // there is no tap to answer — the class DRIVES to a pad. So steering counts.
+    // If only reaching a pad reset the idle clock, a class threading a long maze
+    // under a chaser would be charged the whole way for playing it properly.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() => finished || questionLock || voicePlayer.isPlaying());
     window.addEventListener("keydown", onKey);
     // swipe on the field
     let sx = 0, sy = 0, sTracking = false;
@@ -513,6 +525,12 @@ const mazeChaseTemplate = {
       checkEnemyCollision();
     }
 
+    // TIME COST (Đợt 143): one place decides what the score is, so the idle
+    // clock's total can never be repainted away by an ordinary score update.
+    function scoreNow() {
+      return state.filter(s => s.correct).length - penalty - (ui.timeCostTotal ? ui.timeCostTotal() : 0);
+    }
+
     function checkPad() {
       const pad = pads.find(p => !p.resolved && p.r === player.r && p.c === player.c);
       if (!pad) return;
@@ -524,8 +542,7 @@ const mazeChaseTemplate = {
         pad.el.style.backgroundImage = `url(${imgUrl("floor-correct.png")})`;
         pad.el.querySelector(".aw-mc-pad-mark").textContent = "✓";
         st.correct = true; st.done = true; st.answeredWith = pad.text;
-        const gained = state.filter(s => s.correct).length;
-        ui.setScore(gained - penalty);
+        ui.setScore(scoreNow());
         mcSound.correct();
         lockAndNext(true);
       } else {
@@ -535,7 +552,7 @@ const mazeChaseTemplate = {
         st.wrong.push(pad.text); st.answeredWith = pad.text;
         if (pointsOff) {   // choosing a WRONG answer costs points (negative allowed, no clamp)
           penalty += pointsOff;
-          ui.setScore(state.filter(s => s.correct).length - penalty);
+          ui.setScore(scoreNow());
         }
         mcSound.wrong();
         loseLife("wrong");
@@ -615,6 +632,7 @@ const mazeChaseTemplate = {
     }
     function setDir(k) {
       if (!DIRS[k] || finished) return;
+      ui.noteActivity?.();   // TIME COST (Đợt 143): steering IS this game's progress — see the wiring note above
       queuedDir = k;
       // let a standing player set off immediately if that way is open
       if (!questionLock && grid && grid[player.r][player.c][k]) player.dir = k;

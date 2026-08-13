@@ -90,11 +90,11 @@ function passStarsOf(opt) {
 const spkTemplate = {
   type: "speaking",
   scorable: true,
+  // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
+  timeCost: true,
   itemsKey: "items",          // "Start with mistakes" support (see core/HUONG DAN CORE.md)
   name: "Speaking",
   edit: openSpeakingEditor,
-  hideLettersOption: true,    // no lettered answer choices here
-  hideShuffleAnswers: true,   // no answer options to shuffle, only question order
   hidePointsOff: true,        // scoring is a star rating, not a per-wrong-answer penalty
   // Classic Wordwall pack (see speaking-sound.js) — replaces the engine
   // defaults, including the "Oh my god" wrong sound (teacher, 11/8/2026).
@@ -190,6 +190,11 @@ const spkTemplate = {
     // "idle" -> "recording" -> "processing" -> "done"; "done" on a FAIL with
     // allowRetry goes back to "idle" so the mic button works again.
     let micState = "idle";
+    // TIME COST (Đợt 143): one place decides what the score is, so an ordinary
+    // score update can never repaint the idle clock's deduction away.
+    function scoreNow() {
+      return state.filter(s => s.correct).length - (ui.timeCostTotal ? ui.timeCostTotal() : 0);
+    }
     let mediaStream = null, mediaRecorder = null, chunks = [], recordStartedAt = 0, autoStopTimer = null;
     let audioCtx = null, levelTimer = null;
 
@@ -288,10 +293,24 @@ const spkTemplate = {
 
     // ===== recording =====
     function onMicClick() {
+      // TIME COST (Đợt 143): touching the mic IS this game's progress — both
+      // starting an attempt and stopping one.
+      ui.noteActivity?.();
       if (micState === "recording") { stopRecording(); return; }   // manual stop still works
       if (micState !== "idle") return;   // busy processing, or already passed
       startRecording();
     }
+
+    // ----- TIME COST wiring (Đợt 143) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" This
+    // game is the one where that matters most: while a student is RECORDING they
+    // are doing the single most active thing the app asks of anyone — and the
+    // engine cannot see it, because speaking makes no taps. Charging through a
+    // recording, and through the scoring that follows it, would punish exactly
+    // the class doing the work. `micState !== "idle"` covers recording,
+    // processing and the passed-and-moving-on hold in one honest test.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() => finished || micState !== "idle");
 
     async function startRecording() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -478,7 +497,7 @@ const spkTemplate = {
       setStatus("");
       showResult(st, true);
       if (st.correct) spkSound.correct(); else spkSound.wrong();   // classic pack — NOT ui.sound.wrong() ("Oh my god")
-      ui.setScore(state.filter(s => s.correct).length);
+      ui.setScore(scoreNow());
       updateNav();
       clearAutoTimer();
       if (st.correct) {

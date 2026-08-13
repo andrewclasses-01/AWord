@@ -780,9 +780,8 @@ body {
   background: #fff; border-radius: 16px;
   box-shadow: 0 20px 50px rgba(15,20,30,.35);
   /* Đợt 132 (teacher): wide enough that the Timer row (None / Count up /
-     Count down + mm:ss steppers, forced onto one line — see .aw-opt-row-
-     nowrap) and Anagram's 3-choice mode row never need to wrap or scroll
-     sideways. Padding trimmed a little (was 18/22/20) to buy the TALL panels
+     Count down + its countdown stepper) and Anagram's 3-choice mode row never
+     need to wrap or scroll sideways. Padding trimmed a little (was 18/22/20) to buy the TALL panels
      (Options with many groups) a bit more room before their own maxHeight
      (set in JS, core/engine.js's openToolPanel) forces internal scrolling. */
   padding: 14px 20px 16px;
@@ -805,22 +804,16 @@ body {
   text-transform: uppercase; margin-bottom: 12px;
 }
 
-/* Options panel controls — spacing trimmed a little Đợt 132 (was 14px/7px;
-   teacher: shrink the gaps between options so the whole panel fits without
-   ever needing to scroll) — still comfortable, just not padded as generously. */
-.aw-opt-group { margin-bottom: 10px; }
-.aw-opt-group:last-child { margin-bottom: 0; }
-.aw-opt-label {
-  font-size: 11.5px; font-weight: 800; letter-spacing: .05em; color: #8b93a1;
-  text-transform: uppercase; margin-bottom: 5px;
-}
-.aw-opt-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-/* Đợt 132 — rows that must NEVER wrap onto a second line regardless of panel
-   width (the Timer row, Anagram's mode row): opt-in per row rather than
-   changing the base .aw-opt-row, since a row with genuinely many choices
-   (a template with a long list of extra options) should still be free to
-   wrap rather than force the whole panel wider than this file's max-width. */
-.aw-opt-row-nowrap { flex-wrap: nowrap; }
+/* Đợt 143 — the PRE-v2 options markup is gone. `.aw-opt-group` / `-label` /
+   `-row` / `-row-nowrap`, and further down `-slider` / `-slidval` / `-time` /
+   `-cd` / `-hint` / `-2up` / `-cell` / `-idle`, were the shape every template
+   used before the Đợt 140 grid. Running word was the last caller and it moved
+   onto the shared cells this đợt, so nothing in the app builds any of them any
+   more — checked class by class, not assumed. They are deleted rather than kept
+   "just in case": dead CSS under a plausible name is how someone later spends an
+   afternoon on a rule that never applied to anything.
+   `.aw-opt-choice` stays — mkRadioChoice() still exports it for a template that
+   hand-rolls a radio, even though none currently does. */
 .aw-opt-choice {
   display: inline-flex; align-items: center; gap: 6px;
   font-size: 14px; font-weight: 600; color: #23303e; cursor: pointer;
@@ -864,40 +857,12 @@ body {
   transition: color .18s ease;
 }
 .aw-opt-switch-btn.is-active { color: #2f7bff; }
-/* Shared numeric slider for central options (e.g. "Points off"). Template-local
-   sliders keep their own prefixed classes; this is only for engine-built groups.
-   Red (teacher, 3/8/2026) — it's specifically a wrong-answer deduction, same red
-   as the per-template Lives sliders (e.g. true-false.css's #ef4444). */
-.aw-opt-slider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; cursor: pointer; }
-.aw-opt-slidval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #ef4444; }
-.aw-opt-time { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #57667a; transition: opacity .15s ease; }
-/* Đợt 132 (teacher): the mm:ss steppers stay on screen at all times now
-   (see the timerRow comment in core/engine.js) instead of display:none —
-   dimmed and non-interactive whenever "Count down" isn't the picked mode. */
-.aw-opt-time.is-dim { opacity: .38; pointer-events: none; }
-/* "Count down" + its m/s time fields kept together on one line so the fields
-   sit to the RIGHT of the button instead of wrapping onto the next row. */
-.aw-opt-cd { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
-.aw-opt-hint { font-size: 12px; color: #8b93a1; margin-top: 10px; font-style: italic; }
-
-/* Đợt 139 (teacher: "gộp Time cost vào chung hàng với Points off") — TWO
-   half-width option cells on one row. The point is purely vertical: Anagram's
-   Options panel in fight mode was already at the edge of needing a scrollbar
-   (the open item from Đợt 132/134), so a brand-new option had to arrive
-   costing 0 extra height. A cell left on its own spans the full width instead
-   of sitting in a half-empty grid. */
-.aw-opt-2up { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 18px; align-items: start; }
-.aw-opt-2up > .aw-opt-cell:only-child { grid-column: 1 / -1; }
-/* Half the width means the slider must be free to shrink: a range input's own
-   intrinsic width (~130px in Chrome) would otherwise push the row wider than
-   its column and force the panel past its max-width. */
-.aw-opt-cell .aw-opt-row { flex-wrap: nowrap; }
-.aw-opt-cell .aw-opt-slider { min-width: 70px; }
-/* "after [n]s" — the idle grace beside the Time cost slider. Dimmed (same rule
-   and look as the countdown's mm:ss fields) whenever the cost is Off, since a
-   grace period on a 0-point cost means nothing. */
-.aw-opt-idle { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #57667a; white-space: nowrap; transition: opacity .15s ease; }
-.aw-opt-idle.is-dim { opacity: .38; pointer-events: none; }
+/* (Đợt 143 — `.aw-opt-slider` / `-slidval` / `-time` / `-cd` / `-hint` / `-2up`
+   / `-cell` / `-idle` were deleted here. They dressed the pre-Đợt-140 panel:
+   the 220px shared slider, the mm:ss dim rule, the Đợt 139 two-up row that put
+   Time cost beside Points off. The v2 grid replaced every one of them
+   (`.aw-optc*`), and with Running word moved over this đợt nothing built them
+   any more. See the note above the `.aw-opt-choice` rule.) */
 
 /* The "-N" the idle clock takes off, flying from the score into the clock
    (core/timecost.js sets left/top/font-size inline — this is only the look).
@@ -933,10 +898,10 @@ body {
    two-column grid, and every cell has the same two parts (label line,
    control line). Alignment then comes from the grid instead of from each
    control agreeing to line up by accident.
-   LEGACY BRIDGE: a template that still appends the old `.aw-opt-group`
-   markup lands in this grid too — the rule at the end of this block makes
-   such a group span BOTH columns, i.e. it keeps looking exactly like it
-   does today. Nothing breaks while templates are upgraded one at a time.
+   Đợt 140 shipped this with a LEGACY BRIDGE so a not-yet-converted template's
+   old `.aw-opt-group` markup could still land in the grid, spanning both
+   columns. Đợt 143 converted the last such template (Running word) and removed
+   the bridge — all 17 games now build the same cells.
    ===================================================================== */
 /* The OPTIONS panel gets a fixed comfortable width (every other tool panel
    still sizes to its content). Two `1fr` columns have no intrinsic width of
@@ -976,25 +941,48 @@ body {
 /* ---- SEGMENTED control — replaces radio rows (Đợt 140) ----
    Same visual language as the Text/Voice switch above, which was the one
    modern control in the old panel. Also a real touch win at zero height
-   cost: a 15px radio dot becomes a 30px-tall button. */
+   cost: a 15px radio dot becomes a 30px-tall button.
+
+   Đợt 143 — the white "selected" pill became a SLIDING THUMB (teacher: "mọi
+   thao tác điều chỉnh, chuyển đổi... trong options đều phải dùng animation
+   mượt"). It used to be painted straight onto the button, so picking a choice
+   made one pill blink out and another blink in; now one thumb travels, exactly
+   like the Text/Voice switch right above it — one motion language for the whole
+   panel instead of two.
+   ⚠️ The thumb is positioned from `--n` (how many choices) and `--i` (which one
+   is on), NOT from measured pixels. Measurement would have been wrong in the
+   three states this panel actually lives in: built while still display:none,
+   mid-ResizeObserver, and scaled down by .is-compact-opts. */
 .aw-seg {
+  position: relative;
   display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   gap: 2px; width: 100%; height: 30px;
   background: #eef2f7; border-radius: 9px; padding: 3px;
   flex: 1 1 auto; min-width: 0;
 }
+/* width = the track minus its 3px padding either side and the (n-1) 2px gaps,
+   split n ways; the travel per step is therefore its own width + one gap. */
+.aw-seg-thumb {
+  position: absolute; top: 3px; bottom: 3px; left: 3px;
+  width: calc((100% - 6px - (var(--n, 1) - 1) * 2px) / var(--n, 1));
+  transform: translateX(calc(var(--i, 0) * (100% + 2px)));
+  background: #fff; border-radius: 7px;
+  box-shadow: 0 2px 6px rgba(31,42,68,.14);
+  transition: transform .22s cubic-bezier(.22,.61,.36,1);
+  pointer-events: none;   /* the buttons must still get every tap */
+}
 .aw-seg-btn {
+  position: relative; z-index: 1;   /* above the thumb, which slides underneath */
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; padding: 0 8px;
   font-family: inherit; font-size: 12.5px; font-weight: 700;
   color: #6b7688; border-radius: 7px; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  transition: color .16s ease;
+  transition: color .18s ease;
 }
-.aw-seg-btn.is-on {
-  background: #fff; color: #2f7bff;
-  box-shadow: 0 2px 6px rgba(31,42,68,.14);
-}
+/* No background/shadow here any more — the thumb draws those. Leaving them on
+   the button as well would show a second pill jumping ahead of the sliding one. */
+.aw-seg-btn.is-on { color: #2f7bff; }
 
 /* ---- HORIZONTAL stepper (core/numberstepper.js makeHStepper) ---- */
 .aw-hstep {
@@ -1031,17 +1019,47 @@ body {
 }
 .aw-optc-slider.is-amber { accent-color: #f5a623; }
 .aw-optc-slider.is-blue  { accent-color: #2f7bff; }
-/* Fixed basis + right-aligned = every chip in a column ends on the SAME x,
-   whatever the number inside is. Never give one cell a wider chip: that
-   shortens its slider and the column stops lining up (measured while
-   drafting this: a wider chip cost the Time cost slider 98px). */
+/* Đợt 143 (teacher: "đổi mọi thanh lives của các act thành màu xanh lá").
+   Lives was on the same blue as the segmented control's selected state and the
+   ticked checkboxes, so at a glance it read as "this one is switched on" rather
+   than as a value. Green is the only role-colour in the panel that means a
+   RESOURCE the class still has, and nothing else in the panel uses it. */
+.aw-optc-slider.is-green { accent-color: #16a34a; }
+/* Fixed basis = every chip in a column starts on the SAME x, whatever the
+   number inside is. Never give one cell a wider chip: that shortens its slider
+   and the column stops lining up (measured while drafting Đợt 140: a wider chip
+   cost the Time cost slider 98px).
+   Đợt 143 (teacher: "đưa các số của thanh trượt lại gần ngay bên cạnh phải
+   thanh trượt... hiện tại giá trị thanh trượt cách quá xa"). The chip was
+   right-aligned inside its 52px, so a short value like "-8" floated ~30px away
+   from the slider it belonged to. Aligning LEFT puts the number right beside
+   the slider while keeping the fixed basis — i.e. the column still lines up,
+   now on the numbers' left edge instead of their right. 44px is the width of
+   the widest value the panel can now show ("-100") at this size. */
 .aw-optc-chip {
-  flex: 0 0 52px; text-align: right;
+  flex: 0 0 44px; text-align: left;
   font-size: 13.5px; font-weight: 800; color: #ef4444;
   font-variant-numeric: tabular-nums; white-space: nowrap;
+  transition: color .18s ease;
+}
+/* Text box inside a cell (Đợt 143) — Running word's two team names are the only
+   typed option in the app. Shared here rather than kept in that template's own
+   CSS: it was the last game still styling its own Options controls, which is
+   exactly why its panel looked unlike the other sixteen. */
+.aw-optc-text {
+  flex: 1 1 auto; min-width: 0; height: 30px;
+  font-family: inherit; font-size: 13px; font-weight: 700;
+  padding: 0 9px; border-radius: 9px;
+  border: 1px solid #e6ebf2; background: #fff; color: #23303e;
+  transition: border-color .16s ease, box-shadow .16s ease;
+}
+.aw-optc-text:focus {
+  outline: none; border-color: #2f7bff;
+  box-shadow: 0 0 0 3px rgba(47,123,255,.18);
 }
 .aw-optc-chip.is-amber { color: #f5a623; }
 .aw-optc-chip.is-blue  { color: #2f7bff; }
+.aw-optc-chip.is-green { color: #16a34a; }
 .aw-optc-chip.is-off   { color: #b3bcc9; }   /* "Off" must not shout in red */
 
 /* ---- CHECKBOX block — every loose tick in the panel, gathered ----
@@ -1068,18 +1086,34 @@ body {
   transition: background .14s ease, border-color .14s ease;
 }
 .aw-check-in:checked + .aw-check-box { background: #2f7bff; border-color: #2f7bff; }
-.aw-check-in:checked + .aw-check-box::after {
+/* Đợt 143 — the tick is always in the DOM and always transitions; ticking a box
+   draws it on rather than snapping it in. It is built on the UNCHECKED state
+   (scale 0) so the animation runs both ways: unticking wipes it off again.
+   `transform-origin: bottom left` is what makes it read as a stroke being drawn
+   from the corner of the box rather than a check being zoomed at from nowhere. */
+.aw-check-box::after {
   content: ""; position: absolute; left: 4.5px; top: 1px;
   width: 5px; height: 9px; border: solid #fff; border-width: 0 2.5px 2.5px 0;
-  transform: rotate(43deg);
+  transform: rotate(43deg) scale(0); transform-origin: bottom left; opacity: 0;
+  transition: transform .17s cubic-bezier(.34,1.4,.64,1), opacity .12s ease;
 }
+.aw-check-in:checked + .aw-check-box::after { transform: rotate(43deg) scale(1); opacity: 1; }
 .aw-check-in:focus-visible + .aw-check-box { box-shadow: 0 0 0 3px rgba(47,123,255,.35); }
 .aw-optc-sep { grid-column: 1 / -1; height: 1px; background: #e6ebf2; margin: 3px 0 1px; }
 
-/* LEGACY BRIDGE — a not-yet-upgraded template appends `.aw-opt-group` into
-   this grid; spanning both columns makes it render exactly as it does today.
-   Keep this rule as long as ANY template still ships old-style groups. */
-.aw-opt-grid > .aw-opt-group { grid-column: 1 / -1; margin-bottom: 0; }
+/* Đợt 143 — a class that has asked their machine for less motion still gets the
+   full panel, just without the travel. Keeping ONE rule at the end of the block
+   (rather than a media query around each animation) means anything added here
+   later is covered by default instead of having to remember. */
+@media (prefers-reduced-motion: reduce) {
+  .aw-seg-thumb, .aw-opt-switch-thumb, .aw-check-box::after,
+  .aw-optc-chip, .aw-seg-btn, .aw-hstep { transition-duration: .01ms; }
+}
+
+/* The Đợt 140 LEGACY BRIDGE (`.aw-opt-grid > .aw-opt-group { grid-column: 1/-1 }`)
+   was removed in Đợt 143. Its own comment said to keep it only as long as some
+   template still shipped old-style groups; Running word was the last one and it
+   is now on the shared cells, so the bridge had nothing left to carry. */
 
 /* Đợt 134 (teacher: "Options khi thay đổi mode và hiện thêm các dòng sẽ tự
    động rộng ra hoặc chỉnh kích thước nội dung bên trong nhỏ lại để hiển thị
@@ -1094,18 +1128,10 @@ body {
    ones above — enough to routinely clear the ~364px overflow the teacher
    measured (Đợt 132) without the text going illegibly small. */
 .aw-tool-panel.is-compact-opts { padding: 8px 15px 10px; }
-.aw-tool-panel.is-compact-opts .aw-opt-group { margin-bottom: 5px; }
-.aw-tool-panel.is-compact-opts .aw-opt-label { font-size: 9.5px; margin-bottom: 2px; }
-.aw-tool-panel.is-compact-opts .aw-opt-row { gap: 8px; row-gap: 4px; }
 .aw-tool-panel.is-compact-opts .aw-opt-choice { font-size: 12px; gap: 4px; }
 .aw-tool-panel.is-compact-opts .aw-opt-choice input { width: 12px; height: 12px; }
 .aw-tool-panel.is-compact-opts .aw-opt-switch { margin-bottom: 8px; padding: 3px; }
 .aw-tool-panel.is-compact-opts .aw-opt-switch-btn { padding: 5px 0; font-size: 11px; }
-.aw-tool-panel.is-compact-opts .aw-opt-slidval { font-size: 12px; }
-.aw-tool-panel.is-compact-opts .aw-opt-time { font-size: 11px; gap: 4px; }
-.aw-tool-panel.is-compact-opts .aw-opt-idle { font-size: 11px; gap: 3px; }
-.aw-tool-panel.is-compact-opts .aw-opt-2up { gap: 3px 12px; }
-.aw-tool-panel.is-compact-opts .aw-opt-hint { font-size: 10px; margin-top: 5px; }
 /* Đợt 140 — the same emergency shrink applied to the v2 grid. It should now
    almost never fire (the redesign measured 36% shorter), but fight mode plus a
    template with many extras can still get there, and a panel that silently
@@ -1565,11 +1591,21 @@ body {
 .aw-set-addrow { display: flex; gap: 8px; align-items: center; margin: 4px 0 12px; }
 .aw-set-addrow .aw-ed-input { flex: 1 1 auto; min-width: 0; }
 .aw-set-addrow .aw-btn { flex: 0 0 auto; }
-.aw-optform { display: flex; flex-direction: column; gap: 14px; }
-.aw-optform-field { display: flex; flex-direction: column; gap: 5px; }
-.aw-optform-label { font-size: .82rem; font-weight: 700; color: #55657a; }
-.aw-optform-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.aw-optform-checks { display: flex; flex-direction: column; gap: 10px; }
+/* ---------- Settings > Default activity options (Đợt 143) ----------
+   This screen now shows the REAL Options panel for the chosen game, built by
+   core/options-panel.js — the same function the in-game panel uses. So there is
+   almost nothing left to style here: every control already gets its look from
+   the OPTIONS PANEL v2 block above, which is the whole point. (It replaces
+   `.aw-optform*` — a second, quiz-shaped form of a Timer select, a Letters
+   select and three checkboxes, which looked nothing like what the teacher then
+   met when they opened Options in a game. Those five rules are deleted.)
+   The dialog widens to the in-game panel's own width while this screen is up:
+   at 440px a 2-column grid leaves ~186px a column, which Đợt 140 measured as
+   too little to hold a 3-choice segmented control. */
+.aw-modal.is-optswide { width: min(560px, 100%); }
+/* The panel's top control (Text/Voice) carries a bottom margin sized for a
+   popover, not for a dialog that already spaces its own children. */
+.aw-set-opts .aw-opt-switch { margin-bottom: 10px; }
 
 /* ---------- Library toast ---------- */
 .aw-lib-toast {

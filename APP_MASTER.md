@@ -8,7 +8,44 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 142) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR
+> Cập nhật lần cuối: **13/8/2026 (Đợt 143) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN),
+> MỘT THANG ĐIỂM 0–100 CHO CẢ APP, TIME COST CHO 13 GAME, SETTINGS DÙNG CHUNG ĐÚNG PANEL VỚI TRONG GAME.**
+> ⭐ CÓ SỬA CORE — **2 file MỚI**: `core/options-panel.js` (thân panel Options, dùng chung cho
+> trong-game và Settings) + `core/options-migrate.js` (quy đổi thang điểm cũ, đóng dấu `act.optVer`);
+> sửa `engine.js` · `app.css` · `settings.js` · `store.js` · `numberstepper.js` + `main.js` + **16/17 template**.
+> **Gốc chuyện**: thầy gửi ảnh bảng Options của Anagram và hỏi có vấn đề gì. Vấn đề nặng nhất không
+> phải bố cục mà là **3 ô trong ảnh bấm xong không làm gì** — đo cả 17 game: **"Auto next question"
+> hiện ở 13 game và KHÔNG game nào đọc**, "Shuffle answers" hiện 12 / đọc 3, "Letters on answers"
+> hiện 7 / đọc 2. Cờ `hideXxx` opt-OUT của Đợt 140 chạy đúng, chỉ là quên gắn — mà quên opt-OUT thì
+> **đẻ nút chết im lặng**, quên opt-IN thì **thiếu một ô nhìn thấy ngay**. ⇒ **LUẬT MỚI: OPT-IN**
+> (`usesShuffleAnswers` · `usesAutoSwitch`); xoá 3 cờ `hideLettersOption`/`hideShuffleAnswers`/`hideAutoSwitch`.
+> **"Letters on answers" xoá hẳn khỏi app** (thầy chốt, Quiz + Open the box từ nay cố định None).
+> **"Auto next question" GIỮ nhưng NỐI DÂY THẬT** (thầy: "vẫn cần tới nó") — Quiz · Anagram · Unjumble · Crossword.
+> **Một thang 0–100 nấc 1 cho mọi hình phạt** (trước đây cùng chữ "Points off" mang 3 thang: 0–5, 0–10,
+> 0–100 nấc 5). Act cũ **tự quy đổi giữ độ nặng** (×20 / ×10) — ⚠️ 2 bẫy: **có HAI tên field**
+> (`pointsOff` VÀ `minusAmount` ở Crossword/Type-the-answer/Whack-a-mole) và **nhân hai lần** (-5 → -100
+> → -2000), chặn bằng `act.optVer`, đóng dấu ở MỌI đường thoát sớm.
+> **Time cost thêm 11 game (tổng 13)** — không phải 15: `running-team`/`running-word` đặt
+> `timer:"none"` nên `timeCostPer()` trả 0, gắn cờ vào chỉ đẻ thêm nút chết. Thêm `ui.setScorePainter`
+> cho 2 game tự vẽ ô điểm ("7 / 20").
+> **Giao diện**: số **canh trái sát thanh trượt** · segmented có **thumb trượt** (định vị bằng `--n`/`--i`,
+> KHÔNG đo pixel) · dấu tick vẽ ra/xoá đi · **Lives xanh lá** (xanh dương cũ trùng màu "đang chọn") ·
+> countdown **nấc 1 giây** (giữ nút 15s/nhịp, vuốt 3px/giây) · **running-word về khuôn chung** —
+> template CUỐI CÙNG còn markup cũ, nên **gỡ luôn cầu nối legacy** của Đợt 140 · **Settings hiện panel
+> ĐẦY ĐỦ** (Anagram: 4 điều khiển → 9 ô + 2 segmented + 5 tick), chỉ áp cho act MỚI.
+> 🟢 ĐÃ TỰ TEST: 17/17 template mở panel sạch (0 lỗi console · 0 tràn/cuộn · cao nhất 363/645 · mọi
+> thanh trượt đúng 178px · khoảng cách tới số đều 9px) · **có ĐỐI CHỨNG NGƯỢC** (giả markup cũ / giả
+> Letters quay lại / giả nhồi 24 thanh → bản quét báo lỗi cả 3 lần) · chạy engine thật: draft đúng
+> hợp đồng, **Auto next chạy thật** (bật `1 of 4`→`2 of 4`, tắt đứng yên) · quy đổi 18/18 phép đạt,
+> chạy lại 4 lần vẫn đứng yên.
+> ⭐ **LỖI THẬT bắt được nhờ đo**: Crossword khai `function scoreNow()` **trùng tên hàm chết ở cuối
+> file** — hai declaration cùng tên KHÔNG báo lỗi, cái sau lặng lẽ thắng ⇒ game duy nhất trong 13 game
+> không trừ Time cost, không dấu hiệu gì trên màn hình. Bắt được vì **đo giá trị `setScoreProvider`
+> thực trả về** cho từng game. Đã xoá + quét cả 17 template không còn hàm trùng tên.
+> ⬜ CHƯA xem được Time cost trừ điểm bằng mắt (pane test bị ẩn → Chromium đóng băng transition/rAF/đồng
+> hồ; đối chứng: Quiz vốn chạy từ Đợt 139 cũng trừ 0 ⇒ lỗi môi trường). Chưa chạm tay trên màn TOMKO.
+>
+> Trước đó: **13/8/2026 (Đợt 142) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR
 > (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ ĐỦ GIỌNG.**
 > Luật mix (cân bằng nam/nữ ±1, không giọng nào bị dùng trội) trước nay nằm TRONG template
 > `anagram-editor.js` — popup Import không được import từ template, nên luật chuyển lên **`core/voice-mix.js`

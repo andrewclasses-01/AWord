@@ -929,32 +929,19 @@
 .aw-rw-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
 
 /* =============================================================
-   OPTIONS PANEL — outside the container-query stage, so px, not cqw.
+   OPTIONS PANEL — nothing here any more (Đợt 143).
+   This game used to ship its OWN options styling: .aw-rw-opt-row / -cap /
+   -slider / -val / -text, plus .aw-rw-clockcol + .aw-rw-custom-time +
+   .aw-rw-opt-num/-numlab for the "Custom" Min/Sec pair. It was the last
+   template not on the shared grid, so it was also the only one whose Options
+   looked different from the other sixteen — different label weight, a 172px
+   caption column, an 86px value column, its own blue.
+   All 11 rules are deleted rather than left "just in case": running-word.js now
+   builds the same cells every other template does (core/options-panel.js), and
+   dead CSS with a plausible name is how the next person ends up debugging a
+   rule that never applied. The text box it still needs is `.aw-optc-text` in
+   core/app.css, shared.
    ============================================================= */
-.aw-rw-opt-row { display: flex; align-items: center; gap: 10px; margin-top: 7px; font-size: 14px; color: var(--aw-text); }
-.aw-rw-opt-cap { font-weight: 600; flex: 0 0 172px; }
-.aw-rw-opt-slider { flex: 1 1 auto; max-width: 190px; accent-color: #3b82f6; cursor: pointer; }
-.aw-rw-opt-val { min-width: 86px; font-weight: 800; color: #3b82f6; font-size: .85rem; }
-.aw-rw-opt-text {
-  flex: 1 1 auto; max-width: 190px;
-  font-family: inherit; font-size: 14px; font-weight: 700;
-  padding: 5px 8px; border-radius: 8px;
-  border: 1.5px solid rgba(23,34,47,.2); background: #fff; color: var(--aw-text);
-}
-.aw-rw-opt-text:focus { outline: none; border-color: #3b82f6; }
-
-/* ---- "Time each team": stepped slider + the Custom Min/Sec pair it can
-   reveal (buildExtraOptions in running-word.js) ---- */
-.aw-rw-clockcol { flex: 1 1 auto; display: flex; align-items: center; gap: 10px; }
-.aw-rw-custom-time { display: none; align-items: center; gap: 5px; }
-.aw-rw-opt-num {
-  width: 46px;
-  font-family: inherit; font-size: 14px; font-weight: 700; text-align: center;
-  padding: 5px 4px; border-radius: 8px;
-  border: 1.5px solid rgba(23,34,47,.2); background: #fff; color: var(--aw-text);
-}
-.aw-rw-opt-num:focus { outline: none; border-color: #3b82f6; }
-.aw-rw-opt-numlab { font-size: 12px; font-weight: 700; color: var(--aw-muted); }
 
 /* =============================================================
    EDITOR — also outside the stage, so px. One WORD per row, an IPA box next
