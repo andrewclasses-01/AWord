@@ -14,7 +14,8 @@
 > hàm `awEmit()` sẵn có (cơ chế phát `MYACT:AW:TPL/OPT/STYLE` từ v0.9.28). 🟢 ĐÃ TỰ TEST qua
 > `templates/anagram/test.html` (devserver, không cần đăng nhập): bấm MODE → "Start fight" → console
 > ra đúng `MYACT:AW:FIGHT:on`; bấm MODE → "Back to single" → ra đúng `MYACT:AW:FIGHT:off`; 2 khung đấu
-> dựng đúng, 0 lỗi console. ✅ THẦY DUYỆT ("nếu cần thiết thì cứ push") → COMMIT + PUSH + **LIVE**.
+> dựng đúng, 0 lỗi console. ✅ THẦY DUYỆT ("nếu cần thiết thì cứ push") → COMMIT `9577523` + PUSH +
+> **LIVE**.
 > Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 135. Việc kế = phía myActivity dùng tín hiệu này để hoàn
 > thiện nút bật Fight Mode trong "chế độ khung act" (xem hồ sơ app myActivity, mục cùng ngày 13/8).
 >
