@@ -5,6 +5,80 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 138 (13/8/2026) — 📘 GHI THÀNH LUẬT: "HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" (chỉ tài liệu, 0 dòng code)
+
+**KHÔNG đụng một dòng code nào.** Chỉ thêm 1 mục lớn vào `core/HUONG DAN CORE.md` + con trỏ dẫn
+đường ở `APP_MASTER.md`. Không cần test.
+
+**Thầy yêu cầu**: *"ghi hồ sơ dự án để các dự án sau có kinh nghiệm và ko bị dính lại lỗi"* — ngay sau
+khi vá xong lỗi bên myActivity v2.0.0 (bấm nút tùy chỉnh ở 2/3/4/5 cột thì panel bị tấm che đè, bấm
+không ăn, chạm vào là tự đóng).
+
+### ⚠️⚠️ VÌ SAO PHẢI NÂNG LÊN THÀNH LUẬT: **3 LẦN TRONG 4 NGÀY**, cùng MỘT khái niệm CSS
+Rà lại hồ sơ mới thấy đây không phải 2 sự cố rời rạc mà là **một họ lỗi đang tái phát đều đặn** —
+tất cả đều là **"một phần tử đẻ ra STACKING CONTEXT rồi nhốt/đẩy sai thứ tự vẽ"**:
+
+| Lần | Ở đâu | Thứ đẻ ra stacking context | Triệu chứng thầy thấy |
+|---|---|---|---|
+| **Đợt 130** (12/8) | AWord `core/app.css` | `transform: translateY(-50%)` trên `.aw-fight-bottom .aw-below` | Đang đấu, mở panel thì màn tối sầm, **panel hiện ra nhưng bấm gì cũng không ăn** |
+| **Đợt 137** (13/8) | AWord `templates/anagram/anagram.css` | `opacity: 0` trên `.aw-anagram-pencontent` (thiếu `overflow:hidden`) | **Không kéo được thanh "Points off"** — một thanh trượt tàng hình đè khít lên thanh thật |
+| **myActivity v1.9.2 → lộ ở v2.0.0** (13/8) | CSS mà **app khác** bơm vào AWord | `transform: scale()` trên `.aw-below` | **Mọi panel ở mọi chế độ 2/3/4/5 cột** bị tấm che đè, bấm không ăn |
+
+⇒ 3 lần, 3 file khác nhau, 2 dự án khác nhau, 2 thuộc tính khác nhau (`transform` và `opacity`), nhưng
+**cùng một gốc**. Chữa từng ca một sẽ còn tái phát; nên đợt này chốt thành **hợp đồng viết ra giấy**.
+
+### Nội dung mục mới trong `core/HUONG DAN CORE.md`
+- **Luật một câu**: cấm đặt `transform` (và 8 họ hàng) lên `.aw-below` hay bất kỳ tổ tiên nào của
+  `.aw-below-center` — kể cả khi lệnh đó đến từ **app khác nhúng AWord vào và bơm CSS từ ngoài**.
+- Bảng 3 tầng z-index của hệ popup + giải thích **vì sao nó là hệ PHẲNG tính ở GỐC tài liệu**
+  (`.aw-tool-dim` 40 là con TRỰC TIẾP của `body` — đó là lý do 41/42 phải cùng ở gốc mới so được).
+- **9 thuộc tính đẻ stacking context** để thuộc lòng: `transform` · `filter` · `backdrop-filter` ·
+  `opacity`<1 · `perspective` · `mix-blend-mode` · `isolation` · `will-change` · `contain`.
+- **Vì sao lớp lỗi này khó đọc ra**: panel **VẪN ĐƯỢC VẼ RA** nên báo lỗi luôn có dạng "panel hỏng"/
+  "nút hỏng", không ai nghĩ tới xếp lớp; tệ hơn, tấm che có `onclick = đóng panel` nên chạm vào panel
+  là nó **tự đóng**.
+- **Cách bắt trong 5 giây** bằng `elementFromPoint(tâm panel)` — ra `aw-tool-dim` là dính bẫy. Kèm
+  luật **luôn làm đối chứng ngược** (gỡ ra / bật lại, phải lật đúng 2 chiều) trước khi kết luận.
+- ⚠️ **Phải tìm stacking context NGOÀI CÙNG** (gần `body` nhất), KHÔNG phải cái gần panel nhất —
+  `.aw-below-center` có z 41 nên nhìn riêng nó thì lúc nào cũng tưởng an toàn dù đã bị nhốt. Đây là
+  chỗ dễ viết sai nhất khi làm công cụ tự kiểm.
+- **Cấm thu nhỏ `.aw-below` từ bên ngoài**: AWord đã tự co THẬT theo viewport từ Đợt 132
+  (`.aw-toolbtn` `clamp(30px,5.5vw,44px)` — sàn 30px là cỡ chạm tối thiểu **có chủ đích**;
+  `.aw-below-title` `clamp(13px,3.6vw,24px)`). Đo thật ở 960/640/480/384px: **tràn ngang 0px, khoảng
+  cách luôn +10px, không bao giờ đè nhau**. Thêm tầng thu nhỏ nữa là 2 cơ chế đánh nhau — mà tầng
+  ngoài còn yếu hơn vì nó chỉ co bằng HÌNH ẢNH, trong khi việc chữ bị cắt (`ellipsis`) được quyết
+  định ở bước **BỐ CỤC**, xảy ra TRƯỚC khi thu nhỏ hình ảnh.
+- **5 luật rút ra dùng cho MỌI APP SAU NÀY** (không riêng AWord): hệ z-index nhiều tầng phải được ghi
+  ra như một hợp đồng · trước khi thêm `transform`/`filter`/`opacity` phải tự hỏi "bên trong có gì cần
+  nổi trên tấm phủ toàn màn không" · overlay toàn màn nên là con TRỰC TIẾP của `body` · app nhúng app
+  khác thì mỗi bố cục MỚI của app khách phải được rà lại + nên cài lưới kiểm tra chạy thật · lỗi loại
+  này chỉ lộ khi ĐO, và luôn phải đối chứng ngược.
+
+### ⚠️⚠️ BÀI HỌC LỚN NHẤT CỦA ĐỢT NÀY — vì sao ghi chú thôi thì KHÔNG ĐỦ
+Đợt 130 **đã ghi cảnh báo to tướng ngay trong `core/app.css`**, đúng chỗ, đúng nội dung. Vậy mà 1 ngày
+sau vẫn có người đặt lại `transform` lên đúng phần tử đó — **vì người đó đang ngồi ở DỰ ÁN KHÁC
+(myActivity)** và không có lý do gì để mở file CSS của AWord ra đọc.
+
+⇒ **Ghi chú không bảo vệ được ranh giới giữa 2 dự án. Chỉ code chạy thật mới bảo vệ được.**
+Vì vậy myActivity v2.0.0 nay mang sẵn **lưới an toàn `guardToolPanel()`** trong đoạn JS mà nó bơm vào
+AWord: chỉ chạy khi có panel đang mở, chỉ đọc tổ tiên của đúng panel đó, tự tìm stacking context ngoài
+cùng, **tự vá** (nâng tổ tiên đó lên trên tấm che, GIỮ NGUYÊN `transform` của người ta) và bắn
+`MYACT:AW:SCTRAP:<class>|<lý do>` ra console.
+**Thấy dòng đó trong log = có người vừa đặt lại thứ cấm; lưới chỉ đỡ tạm, phải vào sửa tận gốc.**
+
+Đây là mẫu nên dùng lại: **hợp đồng ngầm giữa 2 dự án thì phải có một bên cài lưới kiểm tra chạy
+thật, đừng trông vào việc bên kia đọc tài liệu của mình.**
+
+### File đã đổi (chỉ tài liệu)
+- `core/HUONG DAN CORE.md` — thêm mục "⛔⛔ HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" trong phần "Thanh công cụ
+  NGOÀI khung".
+- `APP_MASTER.md` — Đợt 138 + thêm mục mới vào dòng "ĐỌC TRƯỚC KHI SỬA CODE" ở đầu file.
+
+Hồ sơ phía myActivity: `E:\LAP TRINH APP\myActivity` — `GHI CHU DU AN.md` mục **v2.0.0**,
+`BAN GIAO.md` **bẫy 8c**, commit `e4bb532` (đã push).
+
+---
+
 ## Đợt 137 (13/8/2026) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (do Đợt 134 gây ra)
 KHÔNG đụng core — sửa ĐÚNG 1 file `templates/anagram/anagram.css`, thêm 2 dòng CSS.
 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (kéo chuột THẬT, đo `elementFromPoint` 5 điểm/thanh, cả đơn lẫn

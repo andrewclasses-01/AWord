@@ -1674,6 +1674,86 @@ xem `core/engine.js`):
 - **Phải** (`.aw-below-right`) — 3 icon nhỏ **Edit / Set assignment / Print**, hiện tại chỉ là
   toast "coming soon" (chuẩn bị hạ tầng cho các tính năng sẽ làm sau — editor, giao bài, in).
 
+### ⛔⛔ HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP — bẫy ĐẮT NHẤT, đã cắn **2 lần trong 2 ngày, ở 2 dự án**
+
+> **Luật một câu: KHÔNG được đặt `transform` (hay 8 họ hàng của nó) lên `.aw-below`, hay lên BẤT KỲ
+> tổ tiên nào của `.aw-below-center`.** Kể cả từ app khác nhúng AWord vào và bơm CSS từ bên ngoài.
+
+Hệ popup dùng một hệ z-index **PHẲNG, tính ở GỐC tài liệu** — 3 con số này chỉ so được với nhau khi
+cả 3 cùng nằm ở gốc:
+
+| Phần tử | z-index | Nằm ở đâu |
+|---|---|---|
+| `.aw-tool-dim` (tấm che tối cả màn) | **40** | con **TRỰC TIẾP của `body`** |
+| `.aw-below-center` (cụm nút công cụ) | **41** | trong `.aw-below` |
+| `.aw-tool-panel` (panel Options/Template/Style/MODE) | **42** | append vào `.aw-below-center` |
+
+Bọc 41 + 42 vào một phần tử **đẻ ra STACKING CONTEXT** mà phần tử đó lại `z-index:auto` ⇒ cả 41 lẫn
+42 bị **nhốt** vào trong, hộp đó xếp ở mức 0 tại gốc ⇒ **tấm che (40) leo lên TRÊN cả panel lẫn cụm
+nút**.
+
+**9 thuộc tính đẻ stacking context** (thuộc lòng): `transform` · `filter` · `backdrop-filter` ·
+`opacity` < 1 · `perspective` · `mix-blend-mode` · `isolation` · `will-change` · `contain`.
+
+**⚠️ Vì sao lớp lỗi này khó đọc ra**: panel **VẪN ĐƯỢC VẼ RA** — người dùng nhìn thấy nó (chỉ hơi mờ
+đi vì nằm dưới lớp che + blur) nên báo lỗi sẽ là *"panel hiện ra nhưng bấm không được gì"* hoặc
+*"panel bị che"*, chứ không ai nghĩ tới xếp lớp. Tệ hơn: tấm che có `onclick = đóng panel`, nên chạm
+vào panel là **panel tự đóng** — rất giống triệu chứng "panel hỏng"/"nút hỏng".
+
+**Cách bắt trong 5 giây** (đừng đọc code suông, sẽ không thấy):
+```js
+const p = document.querySelector('.aw-tool-panel'), r = p.getBoundingClientRect();
+document.elementFromPoint(r.left + r.width/2, r.top + r.height/2);
+// ra `aw-tool-dim`  => DÍNH BẪY.   ra ruột panel (vd `aw-opt-label`) => bình thường.
+```
+Rồi **đối chứng ngược**: tiêm `transform:none` cho phần tử nghi ngờ, đo lại; bật lại, đo lại. Lật
+đúng 2 chiều mới được kết luận.
+
+**⚠️ Khi tự dò, phải tìm stacking context NGOÀI CÙNG (gần `body` nhất), KHÔNG phải cái gần panel
+nhất.** `.aw-below-center` có z 41 ≥ 40 nên nhìn riêng nó thì **lúc nào cũng tưởng an toàn**, trong
+khi con số 41 đó đã bị `.aw-below` bên ngoài nhốt lại và hoàn toàn vô nghĩa. Đây là chỗ viết sai
+nhiều nhất khi làm công cụ tự kiểm.
+
+**2 lần đã cắn**:
+1. **AWord Đợt 130 (12/8/2026)** — gộp hàng nút vào hàng ô điểm Fight Mode, căn giữa bằng
+   `transform: translateY(-50%)` trên `.aw-fight-bottom .aw-below`. Chữa: bỏ `transform`, phủ kín
+   hàng rồi căn giữa bằng flex (`inset:0` + `align-items:center`). Cảnh báo đã ghi tại chỗ trong
+   `core/app.css`.
+2. **myActivity v1.9.2 → lộ ra ở v2.0.0 (13/8/2026)** — app nhúng bơm
+   `@media(...){.aw-below{transform:scale(...)}}` để thu nhỏ hàng dưới khi chia 2–5 cột. Hỏng **mọi
+   panel ở mọi chế độ nhiều cột**. Chữa: xoá hẳn (xem mục dưới) + dựng lưới an toàn chạy thật.
+
+**⚠️⚠️ BÀI HỌC LỚN NHẤT — vì sao lần 2 vẫn xảy ra dù lần 1 đã ghi cảnh báo**: cảnh báo lần 1 nằm
+trong `core/app.css` của AWord, còn người gây lỗi lần 2 đang ngồi ở **DỰ ÁN KHÁC** (myActivity) và
+không có lý do gì để mở file đó ra đọc. **Ghi chú không bảo vệ được ranh giới giữa 2 dự án — chỉ có
+code chạy thật mới bảo vệ được.** Vì vậy myActivity nay mang sẵn một **lưới an toàn** trong CSS/JS mà
+nó bơm vào AWord (`guardToolPanel()` trong `wordwall.js`): chỉ chạy khi có panel mở, tự tìm stacking
+context ngoài cùng, **tự vá** (nâng tổ tiên đó lên trên tấm che, GIỮ nguyên `transform` của người ta)
+và bắn `MYACT:AW:SCTRAP:<class>|<lý do>` ra console. **Thấy dòng đó trong log nghĩa là có người vừa
+đặt lại thứ cấm — lưới chỉ đỡ tạm, phải vào sửa tận gốc.**
+
+**⚠️ ĐỪNG tự thu nhỏ `.aw-below` từ bên ngoài.** AWord **đã tự co thật theo viewport** rồi (Đợt 132):
+`.aw-toolbtn` dùng `width: clamp(30px, 5.5vw, 44px)` (sàn 30px là **cỡ chạm tối thiểu có chủ đích**,
+không phải số đẹp) và `.aw-below-title` dùng `font-size: clamp(13px, 3.6vw, 24px)`. Đo thật ở
+960/640/480/384px: **tràn ngang 0px, khoảng cách giữa các cột luôn +10px, không bao giờ đè nhau**.
+Thêm một tầng thu nhỏ nữa ở ngoài là **2 cơ chế đánh nhau** — và cơ chế ngoài còn yếu hơn: nó chỉ co
+bằng HÌNH ẢNH, trong khi việc chữ bị cắt (`ellipsis`) được quyết định ở bước **BỐ CỤC**, xảy ra
+TRƯỚC khi thu nhỏ hình ảnh, nên `scale(0.55)` vẫn cắt đúng ngần ấy chữ, chỉ là cắt ở cỡ nhỏ hơn.
+
+**Luật rút ra dùng cho MỌI APP SAU NÀY** (không riêng AWord):
+1. Hệ `z-index` nhiều tầng chỉ đúng khi **mọi phần tử trong hệ cùng nằm trong MỘT stacking context**.
+   Đã thiết kế một hệ như vậy thì phải **ghi rõ ra** và coi nó là **hợp đồng**, không phải chi tiết vặt.
+2. Trước khi thêm `transform`/`filter`/`opacity` để "căn giữa" hay "thu nhỏ", tự hỏi: **bên trong
+   phần tử này có thứ gì cần nổi lên trên một tấm phủ toàn màn không?** Nếu có → đổi cách làm
+   (flex/grid để căn giữa; `clamp()`/thay đổi kích thước thật để thu nhỏ).
+3. **Overlay toàn màn (`position:fixed; inset:0`) nên là con TRỰC TIẾP của `body`** — và mọi thứ cần
+   nổi trên nó cũng vậy, hoặc phải nằm trong một tổ tiên có z-index cao hơn overlay.
+4. App **nhúng** app khác (bơm CSS/JS vào trang khách) thì mọi luật bố cục của app khách đều có thể
+   bị đè — **mỗi bố cục MỚI của app khách phải được rà lại**, và nên cài **lưới kiểm tra chạy thật**
+   thay vì tin vào ghi chú (xem `myActivity/BAN GIAO.md` bẫy 8b + 8c).
+5. Lỗi loại này **chỉ lộ ra khi ĐO** (`elementFromPoint`, `getComputedStyle`), đọc code suông không
+   thấy. Và **luôn làm đối chứng ngược** trước khi kết luận đã tìm đúng thủ phạm.
+
 **Bẫy khi dùng CSS Grid `1fr auto 1fr` để căn giữa 1 cụm**: nếu 2 cột `1fr` hai bên có nội dung
 với **min-content khác nhau nhiều** (vd 1 bên là tiêu đề dài, bên kia là vài icon nhỏ), cụm giữa sẽ
 **lệch tâm** dù cả hai đều "1fr" — vì mặc định `min-width:auto` của grid item buộc track phải to ít

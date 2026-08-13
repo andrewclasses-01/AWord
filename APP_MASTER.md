@@ -3,9 +3,34 @@
 > **FILE ĐỌC ĐẦU TIÊN khi tiếp nhận dự án.** Đọc xong file này là đủ hiểu toàn bộ để build tiếp.
 > Lịch sử chi tiết từng version: `GHI CHU DU AN.md`. Hợp đồng engine↔template + mọi luật kỹ thuật:
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
-> nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
+> nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi;
+> và mục **"⛔⛔ HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP"** — BẮT BUỘC đọc trước khi đụng vào `.aw-below` /
+> `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
+> bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 137) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" TRONG
+> Cập nhật lần cuối: **13/8/2026 (Đợt 138) — 📘 CHỈ GHI HỒ SƠ, KHÔNG ĐỔI MỘT DÒNG CODE NÀO:
+> ghi lại thành LUẬT bài học đắt nhất của dự án — "HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" trong
+> `core/HUONG DAN CORE.md`.**
+> Lý do: bẫy này đã cắn **2 lần trong 2 ngày, ở 2 DỰ ÁN KHÁC NHAU** — AWord Đợt 130
+> (`transform:translateY` trên `.aw-fight-bottom .aw-below`) và myActivity v1.9.2
+> (`transform:scale` trên `.aw-below`, lộ ra + vá ở myActivity **v2.0.0** ngày 13/8: thầy báo bấm
+> Options/Template/Style ở chế độ 2/3/4/5 cột thì panel hiện ra mà bấm không ăn, chạm vào là tự đóng).
+> **Gốc chung**: hệ z-index của popup là hệ PHẲNG tính ở GỐC tài liệu (`.aw-tool-dim` 40, con trực tiếp
+> của `body` < `.aw-below-center` 41 < `.aw-tool-panel` 42); bọc 41+42 vào một phần tử **đẻ ra stacking
+> context** mà nó `z-index:auto` là **nhốt cả hệ** xuống mức 0 ⇒ tấm che leo lên trên ⇒ panel vẫn VẼ RA
+> (nên trông như "bị che mờ") nhưng mọi cú chạm rơi vào tấm che, mà tấm che có `onclick = đóng panel`.
+> ⚠️ **Bài học lớn nhất**: lần 2 vẫn xảy ra **DÙ Đợt 130 đã ghi cảnh báo to tướng trong `core/app.css`**
+> — chỉ vì người gây lỗi đang ngồi ở **dự án khác** nên không có lý do gì mở file đó ra đọc.
+> **Ghi chú không bảo vệ được ranh giới giữa 2 dự án; chỉ code chạy thật mới bảo vệ được** ⇒ myActivity
+> nay mang sẵn lưới an toàn `guardToolPanel()` tự phát hiện + tự vá + bắn `MYACT:AW:SCTRAP:` ra console.
+> Mục mới ghi đủ: bảng 3 tầng z-index · 9 thuộc tính đẻ stacking context · cách bắt bằng
+> `elementFromPoint` trong 5 giây · ⚠️ phải tìm stacking context **NGOÀI CÙNG** chứ không phải cái gần
+> panel nhất (`.aw-below-center` z41 lúc nào cũng trông "an toàn" dù đã bị nhốt) · **cấm thu nhỏ
+> `.aw-below` từ bên ngoài** vì AWord đã tự co thật bằng `clamp()` từ Đợt 132 (đo ở 960/640/480/384px:
+> tràn 0px, luôn cách +10px, không bao giờ đè nhau) · và **5 luật rút ra dùng cho MỌI APP SAU NÀY**.
+> 🟢 KHÔNG cần test: đợt này không đụng code, chỉ thêm chữ vào tài liệu.
+>
+> Trước đó: **13/8/2026 (Đợt 137) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" TRONG
 > OPTIONS (Anagram). Gốc lỗi do chính Đợt 134 gây ra: khối thu gọn `.aw-anagram-pencontent` dùng
 > `max-height:0` + `opacity:0` mà **thiếu `overflow:hidden`** ⇒ ruột vẫn nằm nguyên chỗ và vẫn ăn
 > chuột, lại còn được vẽ ở lớp TRÊN (vì `opacity`<1 đẻ stacking context) ⇒ **thanh trượt tàng hình đè
