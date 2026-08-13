@@ -730,6 +730,15 @@ body {
      fits a narrow embedding pane without any two ever overlapping — a real
      floor, not just "small", since these stay tap targets on touch screens. */
   width: clamp(30px, 5.5vw, 44px); height: clamp(30px, 5.5vw, 44px);
+  /* ⚠️ Đợt 136 — `padding: 0` is what actually makes the glyph bigger, and it
+     is NOT cosmetic. A <button> carries the UA default `padding: 1px 6px`, so
+     on a 44px button the content box was only 30 × 40, and the svg's `width:
+     62%` resolved against THAT: a 18.6px-wide glyph (42% of the button), in a
+     18.6 × 24.8 box — i.e. the percentages were also silently NON-SQUARE, so
+     the drawing sat off-centre inside its own slot. Zeroing the padding makes
+     the content box a true 42 × 42, so the same 62% is finally 62% of what the
+     teacher actually sees. Measured after: 26 × 26 square. */
+  padding: 0;
   border-radius: 13px;
   border: 1.5px solid #e2e9f2;
   background: #fff;
@@ -741,7 +750,11 @@ body {
 }
 /* % of the button's OWN (now-responsive) size, not a second clamp() to keep
    in sync by hand — 22/44 = 50%, the exact ratio this always was. */
-.aw-toolbtn svg { width: 50%; height: 50%; }
+/* Đợt 136 (teacher, 13/8/2026: "các hình bên trong các nút tùy chỉnh và chức năng… nhỏ quá so với
+   nút"): the glyph now fills 62% of the button instead of 50% — same button size and same tap
+   target, just a bigger drawing inside it, which is what reads from across a classroom on the 86"
+   panel. Kept under ~2/3 so the rounded button still shows a ring of white around the glyph. */
+.aw-toolbtn svg { width: 62%; height: 62%; }
 .aw-toolbtn:hover { color: #2f7bff; border-color: #bcd6fb; }
 .aw-toolbtn:active { transform: scale(.94); }
 /* "glow" when its panel is open */
@@ -750,7 +763,9 @@ body {
   box-shadow: 0 0 0 5px rgba(47,123,255,.20), 0 0 22px 2px rgba(47,123,255,.45);
 }
 .aw-toolbtn-sm { width: clamp(26px, 4.8vw, 38px); height: clamp(26px, 4.8vw, 38px); border-radius: 11px; }
-.aw-toolbtn-sm svg { width: 47%; height: 47%; }
+/* Đợt 136: scaled by the same factor as .aw-toolbtn above (47 × 62/50 ≈ 58), so the small buttons
+   keep looking like a matched set with the big ones rather than drifting apart. */
+.aw-toolbtn-sm svg { width: 58%; height: 58%; }
 
 /* ---------- Popover system: dim the whole screen, panel centered under the cluster ---------- */
 .aw-tool-dim {
@@ -2267,10 +2282,19 @@ body {
   width: 100%;
   /* Đợt 134 (teacher: "tăng size cho số") — was clamp(16px,3vw,24px); the box
      itself (.aw-fight-hand above) stays toolbar-button-sized on purpose, so
-     only the digits themselves grew, not their footprint. */
-  font-size: clamp(18px, 3.4vw, 27px);
-  line-height: 1.2;
-  height: 1.2em;
+     only the digits themselves grew, not their footprint.
+     Đợt 136 (teacher: plain AWord digits instead of 7-segment bars, "tăng size
+     số bên trong lên để dễ nhìn hơn"): another ~30% on top, and weight 800 +
+     tabular-nums so these read like the team scores on the strip above.
+     ⚠️ line-height dropped 1.2 → 1.1 in the SAME change, and it has to be: the
+     box is 44px tall with 1.5px borders = 41px of room, and 35px × 1.2 = 42px
+     would be clipped by .aw-fight-handnum's own overflow:hidden. At 1.1 it is
+     38.5px — measured, fits with room to spare at every clamp step. */
+  font-size: clamp(23px, 4.4vw, 35px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+  height: 1.1em;
 }
 .aw-fight-handvalue {
   position: absolute;
@@ -2284,30 +2308,10 @@ body {
 }
 .aw-fight-handvalue.is-neg { color: #e03131; }
 
-/* 7-segment digits (Đợt 134, teacher: "dùng phong cách số 7 nét") — pure CSS,
-   see fight.js's sevenSegHtml(). Every digit box always renders all 7 bars;
-   the ones OFF for that particular digit sit at low opacity instead of
-   vanishing, which is what reads as an authentic "unlit LED segment" rather
-   than random gaps. Segments use `currentColor` so .is-neg's red (above)
-   colors them for free — one value to change, never two. */
-.aw-seg-digit { position: relative; display: inline-block; width: .62em; height: 1em; margin: 0 .045em; vertical-align: middle; }
-.aw-seg { position: absolute; background: currentColor; opacity: .1; transition: opacity .12s ease; }
-.aw-seg.on { opacity: 1; }
-.aw-seg-a, .aw-seg-d, .aw-seg-g {
-  left: 12%; width: 76%; height: 11%;
-  clip-path: polygon(8% 0, 92% 0, 100% 50%, 92% 100%, 8% 100%, 0% 50%);
-}
-.aw-seg-a { top: 0; }
-.aw-seg-g { top: 44.5%; }
-.aw-seg-d { bottom: 0; }
-.aw-seg-f, .aw-seg-b, .aw-seg-e, .aw-seg-c {
-  width: 13%; height: 41%;
-  clip-path: polygon(50% 0, 100% 12%, 100% 88%, 50% 100%, 0 88%, 0 12%);
-}
-.aw-seg-f, .aw-seg-b { top: 6.5%; }
-.aw-seg-e, .aw-seg-c { bottom: 6.5%; }
-.aw-seg-f, .aw-seg-e { left: 0; }
-.aw-seg-b, .aw-seg-c { right: 0; }
+/* ⚠️ Đợt 136: the 7-segment digit block (.aw-seg-*, Đợt 134) is DELETED, not
+   disabled — the teacher found the bars too thin to read ("quá khó nhìn do
+   mảnh quá"), so the digits went back to plain Baloo 2 text (see
+   .aw-fight-handnum above) and fight.js's sevenSegHtml() is gone with it. */
 
 /* the winning team's box pulses once when it takes a word */
 .aw-fight-team.is-won .aw-fight-score { animation: aw-fight-pop .5s ease; }

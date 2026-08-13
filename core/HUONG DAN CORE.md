@@ -324,6 +324,16 @@ vào ô điểm ẩn đó và Anagram còn **đọc ngược lại** để đế
 **Điểm THỦ CÔNG của thầy** (2 ô cạnh đồng hồ): chạm/vuốt lên +1, vuốt xuống −1; dương xanh dương, âm
 đỏ **không có dấu trừ**. Tách hẳn khỏi điểm game và giữ ở **biến cấp module** trong `fight.js` ⇒ sống
 qua Start again và đổi template, chỉ mất khi tải lại trang.
+⚠️ **Đợt 136**: số ở đây là **text thuần bằng Baloo 2** (weight 800, tabular-nums, `clamp(23px,4.4vw,
+35px)`). Bản 7 nét của Đợt 134 **đã xoá hẳn** (quá mảnh, thầy không đọc được từ xa). Nếu sau này chỉnh
+cỡ số, nhớ `line-height` phải giữ **≤1.1**: ô cao 44px trừ viền còn 41px, mà `.aw-fight-handnum` có
+`overflow:hidden` nên số cao hơn thế là **bị cắt ngang, không có cảnh báo nào**.
+
+⚠️⚠️ **BẪY `%` TRÊN `<button>` — "62%" không phải 62% (Đợt 136, đo mới ra).**
+`<button>` mang **`padding: 1px 6px` mặc định của trình duyệt**. Đặt `svg{width:62%;height:62%}` trong
+`.aw-toolbtn` 44×44 thì % tính trên hộp NỘI DUNG (30×40) chứ không phải trên nút ⇒ hình chỉ **18,6px =
+42% nút**, và vì padding ngang ≠ dọc nên hộp svg còn **méo (18,6×24,8)**, hình vẽ nằm lệch trong slot.
+→ **Luật: nút icon phải khai `padding: 0` thì phần trăm mới có nghĩa.** Áp dụng cho mọi nút icon mới.
 
 **Một bên bấm PLAY là bên kia chạy theo** — `bigPlay.onclick` gọi `ctl.playPressed(side)`, trọng tài
 bấm hộ nút PLAY của bàn kia. Bắt buộc phải vậy: mỗi ván có đồng hồ RIÊNG, khởi động lệch nhau là

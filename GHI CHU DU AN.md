@@ -5,6 +5,51 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 136 (13/8/2026) — ICON TRONG NÚT TO HẲN + BỎ SỐ 7 NÉT, TRẢ VỀ FONT SỐ CỦA AWORD
+⭐ CÓ SỬA CORE (`core/app.css`, `core/fight.js`). KHÔNG đụng template nào.
+🟢 ĐÃ TỰ TEST qua trình duyệt thật (đo DOM trực tiếp, 0 lỗi JS).
+
+**Thầy chốt (2 việc, qua AskUserQuestion):**
+1. "Tăng size các hình bên trong các nút tùy chỉnh và chức năng, tôi thấy chúng nhỏ quá so với nút"
+   → thầy chọn mức **62%**.
+2. "Số dạng thanh 7 nút trong nút tùy chỉnh điểm quá khó nhìn do mảnh quá => hãy đổi sang font số bình
+   thường của AWord và tăng size số bên trong lên để dễ nhìn hơn" → thầy chọn **tăng ~30%, giữ nguyên
+   cỡ ô**.
+
+### ⚠️ ĐÂY LÀ ĐẢO NGƯỢC Đợt 134 (cùng ngày) — đã nói thẳng với thầy và GỠ HẲN
+Đợt 134 (sáng nay) làm số điểm tay theo **kiểu 7 nét** đúng yêu cầu lúc đó của thầy. Nhưng mỗi thanh chỉ
+cao **11%** chiều cao chữ số ⇒ nhìn từ xa là những nét tóc mảnh — **ngược hẳn** mục tiêu "cho to, dễ
+nhìn". Theo luật của dự án khi 2 yêu cầu mâu thuẫn: theo yêu cầu MỚI và **gỡ hẳn cơ chế cũ**, không để
+2 cơ chế nằm cạnh nhau. Đã XOÁ: `SEVEN_SEG`, `sevenSegHtml()` (fight.js) và **toàn bộ khối `.aw-seg-*`**
+(app.css). Chỉ còn lại comment ghi lý do.
+
+### ⭐ PHÁT HIỆN KHI ĐO — "62%" trong CSS KHÔNG hề là 62% thứ thầy nhìn thấy
+Đặt `svg{width:62%}` xong đo lại vẫn thấy hình bé: **18,6px trong nút 44px = 42%**. Gốc: `<button>` mang
+**`padding: 1px 6px` mặc định của trình duyệt**, nên hộp nội dung chỉ còn **30 × 40** chứ không phải 44 ×
+44 — và vì padding ngang ≠ padding dọc nên `width:62%`/`height:62%` cho ra hộp **18,6 × 24,8 KHÔNG VUÔNG**
+(hình vẽ vuông nằm lệch trong slot của nó). Vá bằng **`padding: 0`** trên `.aw-toolbtn` ⇒ hộp nội dung
+thành 42 × 42 thật.
+**Số đo trước/sau (nút 44px):** hình **15px (34%) → 26px (59%), vuông** = **to hơn 73%**.
+Nút nhỏ `.aw-toolbtn-sm` (38px): **11,3px (30%) → 20,9px (55%)**, svg 47% → **58%** (giữ đúng tỉ lệ với
+nút lớn: 47 × 62/50 ≈ 58) để 2 cỡ nút vẫn trông cùng một bộ.
+
+### Số điểm tay — sau khi bỏ 7 nét
+`.aw-fight-handnum`: `font-size` clamp(18px,3.4vw,27px) → **clamp(23px,4.4vw,35px)** (+30% đúng mức thầy
+chọn) + **`font-weight:800`** + **`font-variant-numeric:tabular-nums`** ⇒ đọc như số điểm đội trên dải
+trên. Chữ số dùng chính **Baloo 2** của app.
+⚠️ **`line-height` phải hạ 1.2 → 1.1 TRONG CÙNG thay đổi này, không phải làm đẹp**: ô cao 44px, viền
+1,5px ⇒ chỗ thật chỉ **41px**; 35px × 1.2 = **42px** sẽ bị `overflow:hidden` của `.aw-fight-handnum` **cắt
+mất**. Ở 1.1 là 38,5px — đo thật ra **39px ≤ 41px**, vừa với biên an toàn ở mọi mức clamp.
+
+**Đã test (đo DOM thật)**: hình trong nút **26×26 vuông** (59% nút) và **20,9×20,9** (55%) ✓ · số điểm tay
+là **text thuần "0"**, font **Baloo 2 / weight 800 / tabular-nums / 35px**, khung số **39px không bị cắt**,
+ô vẫn **44×44** (bằng nút công cụ, không xô lệch hàng) ✓ · `.aw-seg-digit` **không còn tồn tại** ✓ · chạm
+tăng điểm 3 lần: đánh thức → +1 → +1 ra đúng "2", **hoạt cảnh trượt số vẫn chạy và dọn sạch bản sao**,
+**0 lỗi JS** ✓ · `node --check` sạch `fight.js`/`engine.js`, ngoặc `app.css` khớp **796/796**.
+**CHỜ TEST TOMKO**: nhìn bằng mắt trên màn 86" xem cỡ icon 59% và số 35px đã đủ rõ chưa.
+
+---
+
 ## Đợt 135 (13/8/2026) — TÍN HIỆU FIGHT MODE CHO myActivity (`MYACT:AW:FIGHT:on/off`)
 ⭐ CÓ SỬA CORE (`core/engine.js`, đúng 3 dòng). KHÔNG đổi hành vi nào của AWord khi chạy độc lập
 (chuẩn standalone/học sinh) — chỉ thêm 1 dòng `console.log` khi chạy NHÚNG trong myActivity.

@@ -136,33 +136,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // too (either side of the clock) but moved DOWN below each board, dead
   // centre under it, at the teacher's request (12/8/2026, third pass) — see
   // `handsRow` below.
-  // Đợt 134 (teacher: "tăng size... dùng phong cách số 7 nét" for the manual
-  // hand-points box) — a real segmented display, not just a bigger/bolder
-  // digit font: each character becomes a small box of 7 bars (a..g, standard
-  // 7-segment naming), the ones this digit doesn't use rendered at low
-  // opacity instead of hidden entirely (reads as an unlit LED segment, the
-  // authentic look, rather than empty space). Pure CSS/HTML — no font file
-  // to source or embed, matches this app's "self-contained, works offline"
-  // rule everywhere else (core/app.css's own @font-face is the only font,
-  // and that one IS bundled locally). `el()`'s 3rd argument is innerHTML
-  // (core/utils.js), so this can just return a string. Declared up here
-  // (not just above makeHand(), which is defined further down) because
-  // `hands = [makeHand(0), makeHand(1)]` below calls it immediately — a
-  // `const` after that point would be a temporal-dead-zone ReferenceError.
-  const SEVEN_SEG = {
-    "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc",
-    "5": "afgcd", "6": "afgecd", "7": "abc", "8": "abcdefg", "9": "abcdfg"
-  };
-  function sevenSegHtml(text) {
-    return [...text].map(ch => {
-      const on = SEVEN_SEG[ch] || "";
-      const segs = "abcdefg".split("")
-        .map(s => `<i class="aw-seg aw-seg-${s}${on.includes(s) ? " on" : ""}"></i>`)
-        .join("");
-      return `<span class="aw-seg-digit">${segs}</span>`;
-    }).join("");
-  }
-
+  // ⚠️ Đợt 136 REVERSES Đợt 134's 7-segment hand-points display (teacher, same
+  // day: "số dạng thanh 7 nút… quá khó nhìn do mảnh quá => hãy đổi sang font số
+  // bình thường của AWord và tăng size"). The segment bars were only ~11% of a
+  // digit's height, which reads as thin hairlines from the back of a room —
+  // exactly the opposite of the "bigger" the request was aiming at. The digits
+  // are plain text again in the app's own Baloo 2, bumped ~30% and bolded (see
+  // .aw-fight-handnum in core/app.css). Đợt 134's SEVEN_SEG map, sevenSegHtml()
+  // and the .aw-seg-* CSS block are all DELETED rather than left dormant — a
+  // half-removed mechanism is what makes a later reader think it's still live.
   const teams = [makeTeam(0), makeTeam(1)];
   const half0 = el("div", "aw-fight-half");
   const half1 = el("div", "aw-fight-half");
@@ -223,7 +205,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     box.tabIndex = 0;
     box.title = "Teacher points — tap or swipe up to add, swipe down to take off";
     const numWrap = el("div", "aw-fight-handnum");
-    const value = el("div", "aw-fight-handvalue", sevenSegHtml("0"));
+    const value = el("div", "aw-fight-handvalue", "0");
     numWrap.append(value);
     box.append(numWrap);
 
@@ -287,7 +269,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // nhìn"). Away from zero the box is ALWAYS bright; only 0 can dim.
     h.el.classList.toggle("is-dim", v === 0 && !handAwake[side]);
     if (dir) { animateHandSlide(side, text, isNeg, dir); return; }
-    h.value.innerHTML = sevenSegHtml(text);
+    h.value.textContent = text;
     h.value.classList.toggle("is-neg", isNeg);
   }
 
@@ -300,7 +282,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function animateHandSlide(side, text, isNeg, dir) {
     const h = hands[side];
     const oldEl = h.value;
-    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), sevenSegHtml(text));
+    const newEl = el("div", "aw-fight-handvalue" + (isNeg ? " is-neg" : ""), text);
     newEl.style.transform = `translateY(${dir > 0 ? "100%" : "-100%"})`;
     h.numWrap.append(newEl);
     const outAnim = oldEl.animate(

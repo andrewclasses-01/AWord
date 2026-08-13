@@ -5,7 +5,19 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 135) — TÍN HIỆU FIGHT MODE CHO myActivity: `core/engine.js`
+> Cập nhật lần cuối: **13/8/2026 (Đợt 136) — ICON TRONG NÚT TO HẲN (15px → 26px, +73%) + BỎ SỐ 7 NÉT,
+> TRẢ SỐ ĐIỂM TAY VỀ FONT BALOO 2 CỦA APP (+30% cỡ, weight 800, tabular-nums).**
+> ⭐ CÓ SỬA CORE (`core/app.css`, `core/fight.js`). ⚠️ **ĐẢO NGƯỢC Đợt 134 cùng ngày** (số 7 nét quá
+> mảnh, ngược mục tiêu "cho to dễ nhìn") — `SEVEN_SEG`, `sevenSegHtml()` và khối `.aw-seg-*` đã **XOÁ
+> HẲN**, không để lại cơ chế ngủ đông.
+> ⚠️ BẪY MỚI đáng nhớ: **`svg{width:62%}` KHÔNG cho ra 62% thứ người dùng thấy** — `<button>` mang
+> `padding:1px 6px` mặc định của trình duyệt nên % tính trên hộp nội dung 30×40, ra hình 18,6px (42%
+> nút) và **méo hộp** (18,6×24,8, padding ngang ≠ dọc). Phải `padding:0` thì % mới đúng nghĩa. Kèm:
+> hạ `line-height` 1.2 → 1.1 cho số điểm tay là BẮT BUỘC (35px×1.2 = 42px > 41px chỗ thật trong ô ⇒
+> bị `overflow:hidden` cắt). 🟢 ĐÃ TỰ TEST (đo DOM thật, 0 lỗi JS).
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 136.
+>
+> Trước đó: **13/8/2026 (Đợt 135) — TÍN HIỆU FIGHT MODE CHO myActivity: `core/engine.js`
 > phát `MYACT:AW:FIGHT:on`/`off` đúng lúc trận Fight THẬT SỰ bắt đầu/kết thúc (sau khi thầy xác nhận
 > trong khung, không phải lúc mới mở hộp hỏi) — app myActivity (trình duyệt game lớp học của thầy)
 > dùng tín hiệu này để tự bật/tắt "chế độ khung act" của chính nó khi vào/ra trận.**
