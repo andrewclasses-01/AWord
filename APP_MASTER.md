@@ -22,7 +22,7 @@
 > chuột** (mắt không thấy vì opacity đã giấu, chỉ lộ khi có thứ tương tác nằm ngay dưới), và
 > **`opacity`<1 đẻ ra stacking context** — cùng họ với BẪY Đợt 130 (`transform` đẻ stacking context),
 > **bẫy stacking-context thứ HAI cắn dự án trong 4 ngày**.
-> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**. Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 137,
+> ✅ THẦY DUYỆT → COMMIT `912016b` + PUSH + **LIVE**. Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 137,
 > `templates/anagram/GHI CHU ANAGRAM.md` Đợt 137.
 >
 > Trước đó: **13/8/2026 (Đợt 136) — ICON TRONG NÚT TO HẲN (15px → 26px, +73%) + BỎ SỐ 7 NÉT,
@@ -1739,7 +1739,7 @@ cả 2, không chỉ Anagram.
 **4 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | *(đợt này)* |
+| **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | `912016b` |
 | **136** | Icon trong nút to hẳn (15px→26px) + bỏ số 7 nét, trả số điểm tay về font Baloo 2 của app (**đảo ngược** việc 10 của Đợt 134) | `05b73b5` |
 | **135** | `core/engine.js` phát `MYACT:AW:FIGHT:on/off` cho myActivity | `9577523` |
 | **134** | **12 cải tiến UI/UX Anagram đơn+đấu** (slogan lên chung thanh trên, cụm loa 5 cột nhạy hơn, Options tự thu nhỏ khi tràn, animation popup mượt toàn app, "TEAM LEFT/RIGHT WINS"...) + ⭐ vá lỗi thật "2 loa lệch màu" (PULL voice state) | `0a24c62` |

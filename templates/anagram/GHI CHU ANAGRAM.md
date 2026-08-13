@@ -2,7 +2,7 @@
 
 ## ⭐ Đợt 137 (13/8/2026) — LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (hồi quy từ Đợt 134)
 
-✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** KHÔNG đụng core — sửa ĐÚNG 1 file `anagram.css`, 2 dòng.
+✅ **THẦY DUYỆT → COMMIT `912016b` + PUSH + LIVE.** KHÔNG đụng core — sửa ĐÚNG 1 file `anagram.css`, 2 dòng.
 Chi tiết đầy đủ + 6 bài học: `../../GHI CHU DU AN.md` Đợt 137.
 
 **Thầy báo**: "thanh points off trong options bị lỗi không kéo được."

@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 137 (13/8/2026) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (do Đợt 134 gây ra)
 KHÔNG đụng core — sửa ĐÚNG 1 file `templates/anagram/anagram.css`, thêm 2 dòng CSS.
 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (kéo chuột THẬT, đo `elementFromPoint` 5 điểm/thanh, cả đơn lẫn
-đấu, có đối chứng "gỡ bản vá ra thì lỗi tái hiện"). ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+đấu, có đối chứng "gỡ bản vá ra thì lỗi tái hiện"). ✅ THẦY DUYỆT → COMMIT `912016b` + PUSH + **LIVE**.
 
 **Thầy báo**: "thanh points off trong options bị lỗi không kéo được. Hãy tìm hiểu nguyên nhân và fix
 riêng phần nhỏ đó."
