@@ -5,6 +5,33 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 135 (13/8/2026) — TÍN HIỆU FIGHT MODE CHO myActivity (`MYACT:AW:FIGHT:on/off`)
+⭐ CÓ SỬA CORE (`core/engine.js`, đúng 3 dòng). KHÔNG đổi hành vi nào của AWord khi chạy độc lập
+(chuẩn standalone/học sinh) — chỉ thêm 1 dòng `console.log` khi chạy NHÚNG trong myActivity.
+🟢 ĐÃ TỰ TEST qua `templates/anagram/test.html` (devserver, không cần đăng nhập) — bấm MODE → "Start
+fight" → console ra đúng `MYACT:AW:FIGHT:on`; bấm MODE → "Back to single" → ra đúng
+`MYACT:AW:FIGHT:off`; 2 khung đấu dựng đúng, 0 lỗi console, quay về đơn sạch.
+
+**Thầy chốt / Bối cảnh**: myActivity (app trình duyệt game lớp học của thầy) đang chuẩn bị thêm nút
+bấm hộ MODE cho lúc "chế độ khung act" ẩn hàng nút gốc, và muốn TỰ ĐỘNG bật/tắt bảng khung act của
+chính nó ngay lúc trận Fight thật sự bắt đầu/kết thúc. Muốn vậy myActivity cần BIẾT đúng thời điểm đó
+— quyết định qua AskUserQuestion bên phiên myActivity.
+
+**FIX/Đã làm**: `goBtn.onclick` trong `buildModeConfirmPanel()` (dòng ~348) gọi `awEmit("FIGHT", "on")`
+ngay sau khi `startFight(...)` chạy (nhánh vào trận) và `awEmit("FIGHT", "off")` ngay khi
+`fight.ctl.exitFight()` chạy (nhánh thoát trận) — dùng ĐÚNG hàm `awEmit()` sẵn có (cùng cơ chế phát
+`MYACT:AW:TPL/OPT/STYLE` đã có từ v0.9.28), không thêm biến/hàm mới. Cố tình đặt SAU dòng gọi hành
+động thật (không phải lúc mở hộp xác nhận) — myActivity chỉ nên phản ứng khi trận THẬT SỰ đổi trạng
+thái, không phải lúc thầy mới chạm vào nút MODE rồi đổi ý bấm Cancel.
+
+**Đã test**: xem đầu mục — console log đúng cả 2 chiều, đúng thứ tự, không sớm không muộn (test 1 vòng
+đủ vào → ra). `node --input-type=module --check` sạch `core/engine.js`.
+**CHỜ TEST TOMKO**: không có — thay đổi này chỉ phát thêm 1 log, không đổi UI/UX AWord, rủi ro thấp.
+Phần cần thầy test thật nằm bên myActivity (xem `GHI CHU DU AN.md`/`CLAUDE.md` myActivity, mục cùng
+ngày).
+
+---
+
 ## Đợt 134 (13/8/2026) — 12 CẢI TIẾN UI/UX ANAGRAM ĐƠN+ĐẤU + VÁ LỖI THẬT "2 LOA LỆCH MÀU"
 ⭐ CÓ SỬA CORE (`core/engine.js`, `core/app.css`, `core/fight.js`, `core/sound.js`) + Anagram
 (`anagram.js`/`.css`). Ảnh hưởng TOÀN BỘ 17 game (animation mở/đóng popup mượt hơn — dùng chung

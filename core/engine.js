@@ -348,7 +348,10 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     goBtn.onclick = async () => {
       sound.click();
       closeToolPanel(false);
-      if (fight) { fight.ctl.exitFight(); return; }
+      // myActivity marker (2026-08-13): fires only once the teacher has
+      // actually CONFIRMED here, not when the popover merely opens — host
+      // uses it to auto show/hide its own "act-gap" panel around the match.
+      if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
       exitAnyFullscreen();
       cleanupAll();
       try {
@@ -358,6 +361,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
         // in single mode (entering a fight from an already-converted act is
         // the case that needs it).
         startFight(root, activity, { onExit, base: originAct });
+        awEmit("FIGHT", "on");
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
         startGame(root, activity, { onExit, base });

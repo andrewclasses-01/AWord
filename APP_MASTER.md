@@ -5,7 +5,20 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 134) — 12 CẢI TIẾN UI/UX ANAGRAM ĐƠN+ĐẤU: slogan lên chung
+> Cập nhật lần cuối: **13/8/2026 (Đợt 135) — TÍN HIỆU FIGHT MODE CHO myActivity: `core/engine.js`
+> phát `MYACT:AW:FIGHT:on`/`off` đúng lúc trận Fight THẬT SỰ bắt đầu/kết thúc (sau khi thầy xác nhận
+> trong khung, không phải lúc mới mở hộp hỏi) — app myActivity (trình duyệt game lớp học của thầy)
+> dùng tín hiệu này để tự bật/tắt "chế độ khung act" của chính nó khi vào/ra trận.**
+> ⭐ CÓ SỬA CORE (`core/engine.js`, đúng 3 dòng) — KHÔNG đổi hành vi AWord khi chạy độc lập (chuẩn
+> standalone/học sinh), chỉ thêm 1 dòng `console.log` khi chạy NHÚNG trong myActivity, dùng lại đúng
+> hàm `awEmit()` sẵn có (cơ chế phát `MYACT:AW:TPL/OPT/STYLE` từ v0.9.28). 🟢 ĐÃ TỰ TEST qua
+> `templates/anagram/test.html` (devserver, không cần đăng nhập): bấm MODE → "Start fight" → console
+> ra đúng `MYACT:AW:FIGHT:on`; bấm MODE → "Back to single" → ra đúng `MYACT:AW:FIGHT:off`; 2 khung đấu
+> dựng đúng, 0 lỗi console. ✅ THẦY DUYỆT ("nếu cần thiết thì cứ push") → COMMIT + PUSH + **LIVE**.
+> Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 135. Việc kế = phía myActivity dùng tín hiệu này để hoàn
+> thiện nút bật Fight Mode trong "chế độ khung act" (xem hồ sơ app myActivity, mục cùng ngày 13/8).
+>
+> Trước đó: **13/8/2026 (Đợt 134) — 12 CẢI TIẾN UI/UX ANAGRAM ĐƠN+ĐẤU: slogan lên chung
 > thanh trên cùng (đơn) + tự ẩn khi đấu (miễn phí nhờ topbar đã collapse sẵn) · cụm loa +1 cột sóng,
 > nhạy hơn, canh lề icon↔sóng cân đối tuyệt đối · panel Options tự thu nhỏ khi tràn (ResizeObserver,
 > không dao động lặp) · animation mở/đóng MỌI popup mượt hơn (áp cho cả 17 game) · animation mượt cho
