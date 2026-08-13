@@ -25,9 +25,12 @@
 > voices: …") · **70/70 từ nhận đúng giọng đã hoạch định qua 2 act** · editor không hồi quy (5 tick +
 > 4 mặc định + optgroup y cũ) · 1280×800 panel 441px, không cuộn.
 > ⬜ Chưa chạy TTS THẬT (cần model 86MB + đăng nhập) — thầy nghe thử khi import file thật.
-> ✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH.** ⚠️ Lần đẩy này dính **sự cố hạ tầng GitHub**: push `main`
-> bị 500 ba lần (đẩy cùng commit sang nhánh khác thì được ⇒ lỗi ở cập nhật ref), rồi **build Pages FAIL**;
-> chữa bằng cách đẩy thêm 1 commit để build lại — cách chẩn đoán ghi ở `GHI CHU DU AN.md` Đợt 142.
+> ✅ **THẦY DUYỆT → COMMIT `7faf500` + `84dd067` + PUSH + LIVE** (curl 4 dấu mốc; **chạy lại phép đo bằng
+> chính module trên live**: 200 mẻ × 35 từ lệch nam/nữ tối đa 1, random UK 8 giọng không lọt giọng Mỹ).
+> ⚠️ Lần đẩy này dính **sự cố hạ tầng GitHub**: push `main` bị 500 nhiều lần (đẩy cùng commit sang nhánh
+> khác thì ĐƯỢC ⇒ lỗi ở cập nhật ref), **build Pages FAIL**, chữa bằng đẩy thêm 1 commit. Kèm bài học:
+> **kiểm push bằng `git ls-remote`, đừng grep chữ trong output** (dòng từ chối cũng chứa `main -> main`).
+> Cách chẩn đoán đầy đủ: `GHI CHU DU AN.md` Đợt 142.
 >
 > Trước đó: **13/8/2026 (Đợt 141) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ
 > **CHỮ EXCEL ĐANG HIỆN**.** Thầy báo đáp án `8:30` vào act thành `0.3541666666666667`. Gốc: trong

@@ -21,8 +21,20 @@ khoản `andrewclasses-code` KHÔNG có quyền, xem [[github-accounts]]):
 curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments?per_page=3"
 curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments/<id>/statuses"
 ```
-Cách chữa đã dùng: **đẩy thêm 1 commit nữa vào `main`** (chính commit hồ sơ này) để Pages build lại —
-rẻ hơn nhiều so với đường cứu hộ POST `pages/builds` ở mục 0-TER (đường đó cần token có quyền push).
+Cách chữa đã dùng: **đẩy thêm 1 commit nữa vào `main`** (chính commit hồ sơ này, `84dd067`) để Pages
+build lại — rẻ hơn nhiều so với đường cứu hộ POST `pages/builds` ở mục 0-TER (đường đó cần token có
+quyền push). Build mới `5890205657` chạy **success lúc 14:46:37**, bản live lên ngay sau đó.
+⚠️ **BẪY TỰ CẮN, GHI KẺO PHIÊN SAU LẶP LẠI**: vòng lặp đẩy-lại của em nhận biết thành công bằng
+`git push ... | grep "main -> main"` — nhưng **dòng TỪ CHỐI cũng chứa đúng chuỗi đó**
+(`! [remote rejected] main -> main (Internal Server Error)`), nên nó thoát sớm và em đã **báo "PUSH OK"
+khi thực tế chưa lên**. Luật: **kiểm bằng TRẠNG THÁI, không kiểm bằng chữ trong output** —
+`[ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$(git rev-parse HEAD)" ]`.
+✅ **LIVE** tại `https://aword.andrewclasses.com/` — `curl` xác nhận 4 dấu mốc (`planFor`/`buildVoicePlan`/
+`MIX_DEFAULTS` trong `core/voice-mix.js` mới · `aw-imp-voice-mix`+`actFullyVoiced` trong `main.js` ·
+`aw-cp-voice` trong `app.css` · `core/voice-mix.js` trong `anagram-editor.js`), **và chạy lại phép đo
+bằng CHÍNH MODULE TRÊN LIVE**: 200 mẻ × 35 từ → lệch nam/nữ lớn nhất **1**, 4 giọng chia
+1744/1759/1747/1750, random UK ra **8 giọng, 0 giọng Mỹ lọt**, `describeChoice` đúng câu, optgroup
+UK 8 · US 20 — và Đợt 141 vẫn nguyên trên live (câu 27 ra `8:30 | 7:30 | 8:00 | 9:15 | 6:45 | 9:30`).
 
 ### 1. Thầy đặt hàng
 > "Generate voice trong edit đã hoàn thiện (có tích chế độ mix giọng...), nhưng khi import file chưa
