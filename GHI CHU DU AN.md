@@ -8,6 +8,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 143 (13/8/2026) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN), MỘT THANG ĐIỂM 0–100 CHO CẢ APP, TIME COST CHO 13 GAME, VÀ SETTINGS DÙNG CHUNG ĐÚNG PANEL VỚI TRONG GAME
 ⭐ CÓ SỬA CORE (**2 file MỚI**: `core/options-panel.js` + `core/options-migrate.js`; sửa `engine.js`,
 `app.css`, `settings.js`, `store.js`, `numberstepper.js`) + `main.js` + **16/17 template**.
+✅ **THẦY DUYỆT → COMMIT `8a42521` + PUSH + LIVE.**
+Push kiểm bằng **trạng thái ref** (`git ls-remote` = `git rev-parse HEAD`), không grep chữ trong
+output — bài học Đợt 142. Pages build `5892029904` → **success**.
+✅ **LIVE** tại `https://aword.andrewclasses.com/` — `curl` xác nhận **16/16 dấu mốc** (2 file core mới ·
+`usesAutoSwitch`/`usesShuffleAnswers` · `aw-seg-thumb` · `is-green` · chip canh trái 44px ·
+`dragPxPerStep` · `setScorePainter` · `timeCost` ở game mới · `settings.js` gọi `buildOptionsBody`),
+**và 4 thứ đã XOÁ thì xác nhận là đã sạch** (`hideLettersOption` · `.aw-opt-2up` · form `aw-optform` cũ).
+🟢 **CHẠY LẠI PHÉP ĐO BẰNG CHÍNH MODULE TRÊN LIVE**: 17/17 template dựng panel sạch · **0 lỗi console** ·
+0 game tràn/cuộn (cao nhất **365**/645) · mọi thanh trượt hiện ra đều **178px**, khoảng cách tới số đều
+**9px** · thang live đúng **100 nấc 1, optVer 2** · Auto next đúng 4 game (quiz · anagram · crossword ·
+unjumble) · Shuffle answers đúng 3 game (quiz · open-the-box · gameshow) · Time cost đúng **13 game** ·
+quy đổi trên live `3/5→60`, `templateOptions.anagram 4/10→40`, `crossword minusAmount 2/5→40`,
+**chạy lại 5 lần vẫn đứng yên**.
 
 ### 1. Bắt đầu từ một tấm ảnh
 Thầy gửi ảnh chụp bảng Options của Anagram và hỏi *"bạn thấy có vấn đề gì không?"*.

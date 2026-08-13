@@ -42,6 +42,11 @@
 > file** — hai declaration cùng tên KHÔNG báo lỗi, cái sau lặng lẽ thắng ⇒ game duy nhất trong 13 game
 > không trừ Time cost, không dấu hiệu gì trên màn hình. Bắt được vì **đo giá trị `setScoreProvider`
 > thực trả về** cho từng game. Đã xoá + quét cả 17 template không còn hàm trùng tên.
+> ✅ **THẦY DUYỆT → COMMIT `8a42521` + PUSH + LIVE** (Pages build `5892029904` success; `curl` xác nhận
+> **16/16 dấu mốc** + 4 thứ đã xoá đúng là đã sạch; **chạy lại phép đo bằng chính module trên live**:
+> 17/17 panel sạch, 0 lỗi console, cao nhất 365/645, thanh trượt đều 178px, khoảng cách số đều 9px,
+> Auto next đúng 4 game, Shuffle answers đúng 3 game, Time cost đúng 13 game, quy đổi 3/5→60 ·
+> anagram 4/10→40 · minusAmount 2/5→40, chạy lại 5 lần vẫn đứng yên).
 > ⬜ CHƯA xem được Time cost trừ điểm bằng mắt (pane test bị ẩn → Chromium đóng băng transition/rAF/đồng
 > hồ; đối chứng: Quiz vốn chạy từ Đợt 139 cũng trừ 0 ⇒ lỗi môi trường). Chưa chạm tay trên màn TOMKO.
 >
