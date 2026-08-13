@@ -9,6 +9,36 @@ các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `..
 
 ---
 
+## ⭐ ĐỢT 139 (13/8/2026) — TIME COST (trừ điểm mỗi giây TRỐNG)
+
+🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ: `../../GHI CHU DU AN.md` Đợt 139.
+Hợp đồng dùng chung: `../../core/HUONG DAN CORE.md` mục "TIME COST".
+
+Quiz là template thứ 2 nhận tính năng này, và là **ca chứng minh giá trị của việc để hiệu ứng nằm ở
+core**: Quiz vốn KHÔNG có hoạt cảnh điểm nào của riêng nó (chỉ gọi `ui.setScore`), vậy mà vẫn được
+nguyên bộ "số đỏ bay vào đồng hồ + điểm chạy giảm" mà không phải viết một dòng hoạt cảnh nào.
+
+**Quiz phải làm gì — đúng 5 chỗ:**
+1. `timeCost: true` trong object template.
+2. `scoreNow()` trừ thêm `ui.timeCostTotal()`.
+3. `ui.setScoreProvider(scoreNow)` + `ui.setIdleGuard(...)` ngay sau `ui.onSubmit(...)`.
+   Guard = `animating || ending || finished || fightLocked() || state[index].chosen !== null ||
+   voicePlayer.isPlaying()`.
+   ⚠️ **`chosen !== null`** là vế quan trọng nhất: câu đã trả lời thì không rút lại được, ngồi nhìn nó
+   không phải là chần chừ. Đo thật: trả lời xong rồi để yên 4s+ → **không bị trừ đồng nào**.
+4. `ui.noteActivity()` trong `choose()` (chọn đáp án = tiến triển của game này) **và trong `doSwap()`
+   ngay sau `applyQuestion(i)`** — thiếu chỗ thứ hai thì câu mới vừa hiện đã bị trừ ngay, vì thời gian
+   trống nợ từ câu trước vẫn còn nguyên.
+5. `raw.score` ở `finish()`: điều kiện mở rộng thành `pointsOff || ui.timeCostTotal()` (2 thứ đều tắt
+   thì `scoreNow()` = số câu đúng = đúng mặc định của `computeResult` ⇒ zero-diff).
+
+**Đã đo**: đơn → -20/giây đúng nhịp, trả lời xong thì đứng im, bấm Next sang câu mới trừ lại ngay;
+bảng tổng kết hiện **Score -169/6** (khoản trừ vào cả điểm xếp hạng + leaderboard).
+**Đấu Quiz**: 2 đội bị trừ độc lập; ca "A trả lời rồi, vòng còn mở" → A đứng im còn **B vẫn bị trừ**,
+đúng luật Đợt 128 (B vẫn đang chơi được và vẫn thắng vòng được).
+
+---
+
 ## ⭐ ĐỢT 129 (12/8/2026) — GIẤU ✓/✗ TỚI KHI CẢ 2 ĐỘI XONG + NEXT/BACK ĐỒNG BỘ TỪNG KHUNG HÌNH
 
 ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Luật chung: `../../GHI CHU DU AN.md` Đợt 129 +

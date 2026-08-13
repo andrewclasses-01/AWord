@@ -5,6 +5,135 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 139 (13/8/2026) — ⭐ TÍNH NĂNG MỚI: "TIME COST" — MỖI GIÂY **TRỐNG** TRÔI QUA LÀ TRỪ ĐIỂM + BONUS X LÊN 10X
+⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js`, + file mới `core/timecost.js`)
++ Anagram + Quiz. 🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (đơn + đấu, cả 2 template, có đo đối chứng
+zero-diff). 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+
+### Thầy yêu cầu
+1. Thêm thanh kéo **Time cost** (0–100, mỗi nấc 1 điểm) cho cả Anagram và Quiz. Ban đầu thầy nói "cứ
+   1 giây trên đồng hồ trôi qua là trừ", **sau đó đổi lại ngay trong cùng phiên**: chỉ **giây TRỐNG**
+   (không làm gì) mới bị trừ — "bấm chữ trước cách chữ sau 0,9s thì reset lại và ko bị trừ".
+   Số bị trừ hiện thành **số đỏ có dấu trừ bay từ ô điểm vào đồng hồ rồi tan biến**, kèm hiệu ứng
+   **điểm chạy giảm** tới đúng số mới. Áp cho cả đơn lẫn đấu; tương lai lan sang template khác.
+2. **Bonus x** của Anagram: trần 5x → **10x**.
+
+### Thầy chốt qua AskUserQuestion (8 câu, 2 vòng)
+| Câu | Thầy chọn |
+|---|---|
+| Âm thanh mỗi lần trừ | **Im lặng hoàn toàn** (sẽ kêu mỗi giây suốt tiết học) |
+| Hiện ở game nào | **Chỉ Anagram + Quiz** (2 game thật sự trừ điểm) |
+| Đội đang bị "đóng băng điểm" khi đấu | **Vẫn trừ bình thường** |
+| Chỗ đặt thanh trong panel | **Gộp chung hàng với Points off** |
+| Chạm SAI có reset không | **KHÔNG** — chỉ hành động ĐÚNG mới reset |
+| Lúc HS không thao tác được | **Ngưng đếm hết** |
+| Đứng im 3 giây | **Trừ 3 lần** — mỗi giây trống 1 lần |
+| Ngưỡng trống | **Cho thầy chỉnh 1–5s** (ô số cạnh thanh trượt) |
+
+### ⚠️ TIẾP QUẢN VIỆC DỞ DANG CỦA MỘT PHIÊN CLAUDE KHÁC
+Lúc bắt tay vào code, `git status` cho thấy **một phiên song song đang làm cùng việc trong chính thư
+mục này**: nó đã tạo `core/timecost.js` (2:42 PM) và sửa `core/engine.js` (+64 dòng, 2:43 PM, **chưa
+commit**), làm theo yêu cầu **CŨ** ("mỗi giây đồng hồ"), tự đánh số Đợt 139, và mới xong một nửa
+(chưa đụng anagram/quiz/fight/app.css). Đã **báo thầy và hỏi trước khi động vào** — thầy chọn *"em
+tiếp quản, dùng lại phần đã có"*. Đã sao lưu nguyên trạng vào scratchpad trước khi sửa.
+→ **Bài học quy trình**: `git status` đầu phiên phải soi cả **file chưa commit + file lạ chưa track**,
+không chỉ so với origin. Origin lúc đó cũng vừa mọc thêm Đợt 138 (chỉ hồ sơ) của phiên khác.
+
+### Kiến trúc — ai làm gì
+| Nơi | Việc |
+|---|---|
+| `core/timecost.js` (**mới**) | CHỈ hiệu ứng: số `-N` đỏ bay từ ô điểm → vào đồng hồ → tan, + vòng đếm giảm điểm |
+| `core/engine.js` | Thanh trượt + ô ngưỡng trong Options · bộ đếm giây trống · `ui.timeCostTotal/noteActivity/setIdleGuard/setScoreProvider` |
+| `core/fight.js` | `cost[2]` riêng từng đội + `ctl.onTimeCost()` + `ctl.clockTarget()` |
+| `core/app.css` | `.aw-opt-2up` (hàng 2 cột) · `.aw-opt-idle` · `.aw-timecost-fly` |
+| `core/voice-playback.js` | thêm `isPlaying()` cho chốt chặn (đang phát giọng đọc = không tính trống) |
+| `anagram.js` / `quiz.js` | trừ `ui.timeCostTotal()` trong `scoreNow()` + 3 dòng nối dây + gọi `noteActivity()` |
+
+**Luật vàng giữ được**: điểm vẫn do TEMPLATE sở hữu, engine chỉ đếm giây + vẽ hiệu ứng (đúng khuôn
+"Points off" chung có từ v0.9.28). Template không khai `tpl.timeCost` thì **không thấy gì, không chạy gì**.
+
+### Cách đếm "giây trống"
+- Bộ đo riêng `setInterval(idleTick, 100)` — **chỉ sinh ra khi Time cost > 0**, và **được dọn trong
+  `stopTimer()`** (mọi đường tháo ván đều đi qua đó ⇒ không đẻ đồng hồ ma như Đợt 112/131).
+- Cộng dồn `idleMs += dt`; thời gian bị "chốt chặn" thì **vứt bỏ dt** (không dồn trả sau).
+- Trừ khi `idleMs >= ngưỡng + n×1000` — dùng `while` chứ không `if`: tab bị bóp xung nhịp có thể trả
+  về dt vài giây một lần, và HS thật sự đã trống ngần ấy.
+- `noteActivity()` đưa `idleMs` và số lần đã trừ về 0.
+
+**Cái gì RESET (hành động đúng)**: đặt đúng 1 chữ (Anagram bonus) · đặt 1 chữ vào ô (mode On submit) ·
+đảo chỗ chữ đã đặt · chọn 1 đáp án (Quiz) · **sang từ/câu mới** (bắt trong `render()` của Anagram và
+`doSwap()` của Quiz — thiếu cái này thì từ mới vừa hiện đã bị trừ ngay vì còn nợ thời gian của từ cũ).
+**Cái gì KHÔNG reset**: chạm sai / chạm bị từ chối, trả chữ về hàng gốc (undo).
+
+**Chốt chặn `ui.setIdleGuard(fn)`** — trả `true` = HS không thể thao tác ⇒ không tính trống:
+`busy` (hoạt cảnh) · `fightLocked()` · **từ/câu đã xong** (`doneCheck`/`chosen!==null`) · đang phát
+giọng đọc · và ở engine: **đang mở ☰ Menu hoặc panel Options/Template/Style**.
+Hỏng theo hướng AN TOÀN: guard kẹt ON = không trừ, chứ không trừ oan.
+
+### ⭐ LỖI THẬT BẮT ĐƯỢC KHI TEST: ĐẤU BỊ TRỪ **2 LẦN** (-40/giây trong khi thanh đặt 20)
+Đo trong trận thật: 2 đội đều tụt **-40/giây**. Gốc: `scoreNow()` của template **đã** trừ time cost
+rồi, mà `ui.setScore()` lại đẩy con số đó vào `fight.ctl.onScore()` ⇒ `game[side]` đã mang sẵn khoản
+trừ, rồi `totalOf()` trừ thêm `cost[side]` lần nữa.
+**Sửa**: `onScore()` cộng ngược `+ cost[side]` để `game[side]` luôn là điểm **chưa tính đồng hồ** ⇒
+đồng hồ chỉ được áp đúng MỘT chỗ (`totalOf`). Đo lại: đúng **-20/giây** mỗi đội.
+→ **Bài học**: khi một khoản trừ đi qua 2 đường (kênh riêng + con số điểm), phải chọn dứt khoát con số
+nào là "chưa trừ" — nếu không thì cộng dồn 2 lần mà nhìn code không ai thấy sai.
+
+### Vì sao `cost` phải là kênh RIÊNG, không đi qua `onScore`
+Đội thua vòng (luật "đội chậm không được điểm") bị `holdFreeze()` **huỷ mọi báo cáo điểm** trong lúc
+đóng băng, và huỷ **vĩnh viễn** (`freezeAdj` giữ lại phần đã huỷ). Nếu time cost đi chung đường đó thì
+khoản trừ bị nuốt mất. Nay `totalOf = game + bonus + freezeAdj − cost`: đóng băng chỉ ghim phần điểm
+của TỪ, còn đồng hồ vẫn trừ (đúng ý thầy).
+
+### Bố cục Options — thêm 1 tuỳ chọn mà KHÔNG cao thêm
+`.aw-opt-2up` = lưới 2 cột. Anagram tự đặt ô Time cost cạnh **cột trái là 3 nhóm points-off sẵn có**
+(engine truyền hàm dựng ô qua `buildExtraOptions({ timeCostCell })`); Quiz thì engine tự ghép cạnh
+"Points off" của chính nó.
+⚠️ **KHÔNG đụng ruột accordion** của Đợt 134/137 — 3 nhóm được append y nguyên, chỉ đổi chỗ đứng.
+Đo thật: hàng 2 cột cao **86px cố định ở cả 3 mode**; mode "Bonus and minus" (2 nhóm bên trái) và "On
+submit" (1 nhóm) **không cao thêm một pixel**; chỉ mode "Letters with bonus" (vốn trống chỗ đó) là +1
+hàng. Không mode nào phải cuộn (543px nội dung / 645px chỗ cho phép).
+
+### Đã test (đo thật, không suy đoán)
+- **Trừ đúng nhịp**: đơn, cost 20, ngưỡng 1s → 0 · -20 · -40 · -60 · -80 · -100 · -120 đúng từng giây.
+- **Reset thật sự**: ngưỡng 3s, chạm đúng mỗi 1s trong 5s liền → điểm **đứng im tuyệt đối** ở -360;
+  ngừng chạm thì nhịp trừ quay lại đúng ~3s sau cú chạm cuối. Chạm dày 100ms (giải nguyên từ) → **0 điểm bị trừ**.
+- **Chạm SAI không reset**: 5 cú sai cách nhau 1s → vẫn tụt đều ~20/giây (-837 → -939).
+- **Chốt chặn**: giải xong 1 từ → suốt 3,65s hoạt cảnh + từ đã xong **không bị trừ nhịp nào**, điểm chỉ
+  chạy TĂNG 0 → 8 → 14. Quiz: trả lời xong → đứng im 4s+ không trừ; bấm Next sang câu mới → trừ lại ngay.
+- **Đấu Anagram**: 2 đội mỗi đội -20/giây, **2 số `-20` bay cùng lúc** vào đồng hồ chung; khoảng chờ
+  giữa 2 vòng (2,1s) **không ai bị trừ**; sang từ mới cả 2 trừ lại.
+- **Đấu Quiz**: y hệt; và ca "đội A trả lời rồi, vòng còn mở" → **A đứng im, B vẫn bị trừ** (đúng luật
+  Đợt 128: xong trước ≠ thắng, B vẫn đang chơi được).
+- **Zero-diff khi tắt** (thanh = Off): engine **không tạo bộ đo nào** (đếm `setInterval` của engine ra
+  đúng `[500]` thay vì `[500,100]`), điểm đứng yên suốt 4s, 0 node bay.
+- **Không đẻ đồng hồ ma**: đang chơi `[500,100]` → ☰ Menu > Start again → **`[]`** → chơi lại → `[500,100]`
+  (không nhân đôi).
+- **Bonus 10x**: thanh `min=1 max=10 step=1`, hiện "10x", giải ELEPHANT hoàn hảo ăn **đúng 80 điểm**
+  (8 chữ × 10), burst in "10x PERFECT".
+- **Điểm cuối ván**: bảng tổng kết Quiz hiện **Score -169/6** (khoản trừ vào cả điểm xếp hạng), Total 1/6.
+- **0 lỗi console** suốt phiên. Marker `MYACT:AW:OPT` tự mang theo `timeCost`/`timeCostIdle`
+  (myActivity đồng bộ sang bảng khác miễn phí). `play.html` (trang HS) vẫn nạp sạch — `timecost.js`
+  chỉ import `utils.js` nên không phạm ranh giới bảo mật.
+
+### ⚠️ BẪY TEST (mất kha khá thời gian, ghi lại để lần sau khỏi dính)
+1. **Pane trình duyệt bị ẩn thì Chromium đóng băng CSS transition và giết hẳn `requestAnimationFrame`.**
+   Số đo accordion đầu tiên ra "mở mà cao 0px" khiến em tưởng lưới 2 cột làm hỏng bố cục — thực ra là
+   **ảnh chụp giữa chừng một transition đang bị đóng băng**. Cách chữa: đo trong CÙNG một lệnh JS
+   (trang được đánh thức), và **tiêm `*{transition:none!important}`** trước khi đo hình học.
+   Muốn đo được hiệu ứng đếm điểm thì phải **thay `requestAnimationFrame` bằng shim chạy `setTimeout`**.
+2. `elementFromPoint` trả về **phần tử CHA** là chuyện BÌNH THƯỜNG với ô đang thu gọn (`pointer-events:none`
+   của bản vá Đợt 137) — phải lọc "chỉ soi thứ đang thật sự hiện" rồi mới kết luận, kẻo báo động giả.
+3. Ô chỉnh số (`core/numberstepper.js`) nghe **`pointerdown`**, `.click()` không ăn.
+
+### ⬜ CHƯA kiểm được (cần thầy)
+- **Nhìn bằng mắt hiệu ứng số đỏ bay** (pane test bị ẩn nên WAAPI không chạy — em chỉ chứng minh được
+  node sinh ra đúng nội dung, đúng số lượng, và được dọn sạch).
+- Chạm tay thật trên màn TOMKO (kéo 2 thanh trong hàng 2 cột, bấm ô ngưỡng 1–5s).
+- Cảm giác cân bằng: 20 điểm/giây là nặng hay nhẹ với lớp — thầy chỉnh thanh khi dạy thật.
+
+---
+
 ## Đợt 138 (13/8/2026) — 📘 GHI THÀNH LUẬT: "HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" (chỉ tài liệu, 0 dòng code)
 
 **KHÔNG đụng một dòng code nào.** Chỉ thêm 1 mục lớn vào `core/HUONG DAN CORE.md` + con trỏ dẫn

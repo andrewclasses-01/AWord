@@ -153,7 +153,12 @@ function normLives(v) {
 const MAX_SUBMIT_PENALTY = 10;      // "On submit" — once per wrong WORD
 const MAX_LETTER_PENALTY = 100;     // "Bonus and minus" — once per wrong LETTER TAP
 const LETTER_PENALTY_STEP = 5;
-const MIN_BONUS_MULT = 1, MAX_BONUS_MULT = 5, DEFAULT_BONUS_MULT = 2;   // 2x matches the old fixed "double" bonus
+// Đợt 139 (teacher): the ceiling went 5x -> 10x. Every place that reads the
+// range — the slider's `max`, clampBonusMult below, the "Nx PERFECT" burst —
+// derives from these constants, so this one number is the whole change. Acts
+// already saved with a lower multiplier are untouched, and the default is
+// still 2x.
+const MIN_BONUS_MULT = 1, MAX_BONUS_MULT = 10, DEFAULT_BONUS_MULT = 2;   // 2x matches the old fixed "double" bonus
 function clampSubmitPenalty(v) { return Math.max(0, Math.min(MAX_SUBMIT_PENALTY, Math.round(v) || 0)); }
 function clampLetterPenalty(v) {
   return Math.max(0, Math.min(MAX_LETTER_PENALTY, Math.round((v || 0) / LETTER_PENALTY_STEP) * LETTER_PENALTY_STEP));
@@ -217,6 +222,11 @@ const anagramTemplate = {
   // means this template knows how to run as one of two boards racing (see the
   // `_fight` branches in mount()). The first template to opt in.
   fightMode: true,
+  // TIME COST (Đợt 139) — opt in to the shared "-N per idle second" option.
+  // Anagram also PLACES the slider itself (see buildExtraOptions's
+  // `timeCostCell`), because its own Points off controls are mode-dependent
+  // and live in a fixed slot the engine knows nothing about.
+  timeCost: true,
   hidePointsOff: true,  // ships its own mode-dependent "Points off" control(s) — see buildExtraOptions (10/8/2026)
   compactOptionsOnOverflow: true,  // Options panel shrinks its own text/spacing instead of scrolling when it overflows — Đợt 134, see core/engine.js's openToolPanel
 
@@ -231,7 +241,7 @@ const anagramTemplate = {
   edit: openAnagramEditor,
 
   // Options panel extra controls (engine.js calls this — see core/HUONG DAN CORE.md).
-  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice }) {
+  buildExtraOptions({ panel, draft, mkCheck, mkRadioChoice, timeCostCell }) {
     const gMode = el("div", "aw-opt-group");
     gMode.append(el("div", "aw-opt-label", "Anagram mode"));
     // nowrap (Đợt 132, teacher: "mở rộng đủ để hiện các mode ANAGRAM mà ko
@@ -370,7 +380,22 @@ const anagramTemplate = {
       mkRadioChoice("aw-anagram-mode", "bonusMinus", "Bonus and minus", curMode === "bonusMinus", v => { draft.anagramMode = v; syncPenaltyGroups(v); })
     );
     gMode.append(rowMode);
-    panel.append(gMode, gPenSubmit, gPenLetter, gBonusMult);
+    // Đợt 139 — the 3 points-off groups above now sit in the LEFT half of a
+    // 2-column row, with the shared Time cost cell in the RIGHT half (teacher:
+    // "gộp Time cost vào chung hàng với Points off"). Why it is worth the
+    // wrapper: the left column is 2 groups tall in "Bonus and minus", 1 in "On
+    // submit" and 0 in "Letters with bonus", so standing Time cost beside them
+    // adds NO height at all in the first two modes — and the panel here is the
+    // one that already had to scroll in fight mode (open item since Đợt 132).
+    // ⚠️ The collapsing accordion inside each group is NOT touched: those
+    // groups are appended unchanged, just into a column instead of the panel.
+    // That machinery is what Đợt 137 had to fix; it stays exactly as it is.
+    const penCol = el("div", "aw-opt-cell aw-anagram-pencol");
+    penCol.append(gPenSubmit, gPenLetter, gBonusMult);
+    const penRow = el("div", "aw-opt-group aw-opt-2up");
+    penRow.append(penCol);
+    if (timeCostCell) penRow.append(timeCostCell());
+    panel.append(gMode, penRow);
 
     // LIVES — a slider 0..10 (0 = Unlimited), same shape/convention as
     // true-false.js's Lives control (teacher, 3/8/2026).
@@ -707,6 +732,23 @@ const anagramTemplate = {
     // fight" comes for free with no separate branch here.
 
     ui.onSubmit(finish, () => state.filter(s => doneCheck(s)).length);   // block "Submit answers" at 0 answered
+
+    // ----- TIME COST wiring (Đợt 139) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" If
+    // not, the idle clock must not charge them. For Anagram that is:
+    //  • `busy`        — a swap/reveal animation owns the board
+    //  • fightLocked() — the other team took the word, or the match is over
+    //  • doneCheck()   — this word is already solved/submitted; the ~1.8-2.4s of
+    //                    PERFECT + "+N" flight + count-up that follows is time
+    //                    NOBODY could have used, so charging for it would be
+    //                    pure theft (this one is the reason the guard exists at
+    //                    all — `busy` alone does not cover that stretch)
+    //  • a clip still sounding — you cannot spell a word you are still hearing
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() =>
+      busy || finished || fightLocked() || doneCheck(state[index]) ||
+      !!(voiceAudioEl && !voiceAudioEl.paused));
+
     renderLives();
     render();
 
@@ -716,7 +758,11 @@ const anagramTemplate = {
       const base = isBonusFamily
         ? state.reduce((sum, s) => sum + (s.points || 0), 0)
         : state.filter(s => s.correct === true).length;
-      return base - penalty;   // points-off (may drive the total negative -> shown red)
+      // Đợt 139 — the idle clock's take is subtracted here, in the ONE function
+      // that owns this game's number (the engine only counts and animates it).
+      // Option off => timeCostTotal() is 0 => byte-identical to before.
+      const clock = ui.timeCostTotal ? ui.timeCostTotal() : 0;
+      return base - penalty - clock;   // points-off (may drive the total negative -> shown red)
     }
 
     // Hearts live in the top bar (ui.livesSlot), just left of the score — same
@@ -761,6 +807,11 @@ const anagramTemplate = {
     }
 
     function render() {
+      // TIME COST (Đợt 139) — render() runs at a real word boundary and nowhere
+      // else (see this function's own note below), which makes it exactly the
+      // right place to zero the idle clock: a NEW word deserves its full
+      // thinking grace, not whatever was banked staring at the last one.
+      ui.noteActivity?.();
       if (fitter) { fitter.destroy(); fitter = null; }
       root.innerHTML = "";
       submitBtnEl = null;
@@ -1021,6 +1072,12 @@ const anagramTemplate = {
         return false;
       }
       anagramSound.place();
+      // TIME COST (Đợt 139) — a letter placed CORRECTLY is the progress this
+      // game measures, so it resets the idle clock. The wrong-tap branch above
+      // deliberately does NOT (teacher's call): in "Letters with bonus" a wrong
+      // tap costs nothing, so if it counted as activity, drumming on the board
+      // would make the whole option free to ignore.
+      ui.noteActivity?.();
       // State advances THE INSTANT a correct tap is validated — not when its fly
       // animation finishes — so a second/third... correct tap registers right
       // away too, its flight simply overlapping the previous one's. Only the
@@ -1119,6 +1176,9 @@ const anagramTemplate = {
       if (slotIdx == null || slotIdx < 0 || st.placed[slotIdx] != null) return false;
       const it = items[index];
       anagramSound.place();   // same "drop" as bonus mode's correct pick — both modes tap the origin row alike
+      // TIME COST (Đợt 139): in "On submit" nothing is graded until Submit, so
+      // the progress that resets the idle clock is simply FILLING A SLOT.
+      ui.noteActivity?.();
       // Same decoupling as bonusPick: the slot is claimed and the tile locked
       // RIGHT NOW (not in the fly's onDone) so a fast second tap reads the
       // updated `placed` array and can't double-claim the same empty slot, and
@@ -1186,6 +1246,12 @@ const anagramTemplate = {
     function moveResultTile(fromPos, toPos, draggedFromRect) {
       const st = state[index];
       if (st.graded || busy || fromPos === toPos) return;
+      // TIME COST (Đợt 139): reordering placed letters is real work on the
+      // answer in "On submit" mode, so it counts as progress like a fresh
+      // placement does. (Sending a tile BACK to the origin row does not — that
+      // is undoing, and it is the one move a stalling student could repeat
+      // forever for free.)
+      ui.noteActivity?.();
       const lo = Math.min(fromPos, toPos), hi = Math.max(fromPos, toPos);
 
       // Snapshot each affected slot's TRUE (untransformed) layout rect
@@ -2249,7 +2315,9 @@ const anagramTemplate = {
         // exactly and that secondary row could never appear even when a penalty
         // had been applied.
         correct, incorrect: total - correctWords, total: finishTotal, perQuestion, review, answered,
-        score: correct - penalty,
+        // Đợt 139 — the idle clock's take comes off the ranked score too, the
+        // same way `penalty` does. 0 when the option is off, so unchanged.
+        score: correct - penalty - (ui.timeCostTotal ? ui.timeCostTotal() : 0),
         title: opts?.gameover ? "Game over" : undefined
       });
     }

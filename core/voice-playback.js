@@ -173,5 +173,12 @@ export function createVoicePlayer() {
     delayTimer = setTimeout(() => { delayTimer = null; play(clipId, btn); }, delayMs);
   }
 
-  return { play, playDelayed, toggle, stop };
+  // Đợt 139 — "is a clip sounding right now?", for the TIME COST idle guard
+  // (core/engine.js): a student listening to the word is NOT idling, so the
+  // clock must not charge them for it. A clip that is merely QUEUED (the
+  // first question's intro delay) counts as speaking too — it is about to,
+  // and the student can only wait. Purely additive: nothing else reads it.
+  function isPlaying() { return !!delayTimer || !!(audioEl && !audioEl.paused); }
+
+  return { play, playDelayed, toggle, stop, isPlaying };
 }

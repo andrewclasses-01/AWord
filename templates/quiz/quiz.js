@@ -74,6 +74,11 @@ const quizTemplate = {
   // (which flies its "+N" to a spot it has to ask fight.ctl.scoreTarget() for),
   // Quiz needed no scoring plumbing of its own, only round/lock bookkeeping.
   fightMode: true,
+  // TIME COST (Đợt 139) — opt in to the shared "-N per idle second" option.
+  // Everything visible (the slider, the flying number, the count-down) is the
+  // engine's; this template's whole share is subtracting ui.timeCostTotal()
+  // in scoreNow() plus the three one-liners in mount(). See core/engine.js.
+  timeCost: true,
 
   // Content editor for this game (opened by the home page and the in-game Edit
   // button). Each template supplies its own editor the same way.
@@ -215,6 +220,18 @@ const quizTemplate = {
     ui.onSubmit(finish, () => state.filter(s => s.chosen !== null).length);   // block "Submit answers" at 0 answered
     window.addEventListener("keydown", onKey);
 
+    // ----- TIME COST wiring (Đợt 139) — see core/engine.js's ui.setIdleGuard.
+    // The guard answers ONE question: "could the student act right now?" If not,
+    // the idle clock must not charge them. For Quiz that is: the slide between
+    // questions, the run-out-of-lives wait, the end of the game, being locked
+    // out in a fight, a question already answered (a tap can't be taken back),
+    // and a clip still speaking — nobody can answer a question they are still
+    // being read.
+    ui.setScoreProvider?.(scoreNow);
+    ui.setIdleGuard?.(() =>
+      animating || ending || finished || fightLocked() ||
+      state[index].chosen !== null || voicePlayer.isPlaying());
+
     applyQuestion(0);   // first question, no animation
     ui.setScore(scoreNow());
     updateNav();
@@ -230,11 +247,16 @@ const quizTemplate = {
     // Live score = correct answers, minus `pointsOff` per WRONG answer. With the
     // feature off (pointsOff 0) this is byte-identical to the old correct-count.
     // May go negative — the engine shows a negative score in red with no minus.
+    // TIME COST (Đợt 139) is subtracted here too — one number, one owner: the
+    // engine only counts the idle seconds and animates them, the score itself
+    // is still entirely this function's. Off (or a template/engine without the
+    // option) => timeCostTotal() is 0 => byte-identical to before.
     function scoreNow() {
       const correct = state.filter(s => s.correct === true).length;
-      if (!pointsOff) return correct;
+      const clock = ui.timeCostTotal ? ui.timeCostTotal() : 0;
+      if (!pointsOff) return correct - clock;
       const wrong = state.filter(s => s.chosen !== null && s.correct === false).length;
-      return correct - pointsOff * wrong;
+      return correct - pointsOff * wrong - clock;
     }
     // Next is blocked until the current question is answered, unless Allow skip is on.
     function canAdvance() { return allowSkip || state[index].chosen !== null; }
@@ -424,6 +446,7 @@ const quizTemplate = {
       if (st.chosen !== null || finished || ending || fightLocked()) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
+      ui.noteActivity?.();   // TIME COST (Đợt 139): answering IS the progress this game measures
 
       tiles.forEach(t => (t.tile.disabled = true));
 
@@ -578,6 +601,10 @@ const quizTemplate = {
         outAnims.forEach(a => { try { a.cancel(); } catch (_) {} });   // drop the "forwards" hold
         index = i;
         applyQuestion(i);
+        // TIME COST (Đợt 139) — a NEW question is a fresh start: without this
+        // the idle time banked on the previous question would still be sitting
+        // there and the student would be charged the instant this one appears.
+        ui.noteActivity?.();
         fitNow();
         updateNav();
         const inA = questionEl.animate(
@@ -681,7 +708,10 @@ const quizTemplate = {
       // are still out of `total`, and since 7/8/2026 the summary shows
       // `result.score`/total by itself — so passing scoreText here would turn
       // the teacher's "4/10" back into a bare "4".
-      if (pointsOff) raw.score = scoreNow();
+      // (Đợt 139: `scoreNow()` now also carries the Time cost, so the condition
+      // widened to "either deduction is in play". With both off it still equals
+      // `correct`, which is what computeResult defaults to anyway — zero-diff.)
+      if (pointsOff || (ui.timeCostTotal && ui.timeCostTotal())) raw.score = scoreNow();
       // Out of lives -> the celebration screen reads "Game over" instead of
       // "Game complete" (engine reads raw.title; undefined = default).
       if (reason === "gameover") raw.title = "Game over";

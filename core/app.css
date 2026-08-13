@@ -880,6 +880,40 @@ body {
 .aw-opt-cd { display: inline-flex; align-items: center; gap: 10px; flex-wrap: nowrap; }
 .aw-opt-hint { font-size: 12px; color: #8b93a1; margin-top: 10px; font-style: italic; }
 
+/* Đợt 139 (teacher: "gộp Time cost vào chung hàng với Points off") — TWO
+   half-width option cells on one row. The point is purely vertical: Anagram's
+   Options panel in fight mode was already at the edge of needing a scrollbar
+   (the open item from Đợt 132/134), so a brand-new option had to arrive
+   costing 0 extra height. A cell left on its own spans the full width instead
+   of sitting in a half-empty grid. */
+.aw-opt-2up { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 4px 18px; align-items: start; }
+.aw-opt-2up > .aw-opt-cell:only-child { grid-column: 1 / -1; }
+/* Half the width means the slider must be free to shrink: a range input's own
+   intrinsic width (~130px in Chrome) would otherwise push the row wider than
+   its column and force the panel past its max-width. */
+.aw-opt-cell .aw-opt-row { flex-wrap: nowrap; }
+.aw-opt-cell .aw-opt-slider { min-width: 70px; }
+/* "after [n]s" — the idle grace beside the Time cost slider. Dimmed (same rule
+   and look as the countdown's mm:ss fields) whenever the cost is Off, since a
+   grace period on a 0-point cost means nothing. */
+.aw-opt-idle { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #57667a; white-space: nowrap; transition: opacity .15s ease; }
+.aw-opt-idle.is-dim { opacity: .38; pointer-events: none; }
+
+/* The "-N" the idle clock takes off, flying from the score into the clock
+   (core/timecost.js sets left/top/font-size inline — this is only the look).
+   Red like Anagram's own deduction mark, so a LOSS can never read as a gain;
+   z-index 60 matches the template fly effects, i.e. above the game, and it is
+   never on screen at the same time as a tool panel (an open panel guards the
+   idle clock — see idleTick in core/engine.js). */
+.aw-timecost-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800; color: #ff5c5c;
+  -webkit-text-stroke: 0.07em #4a0d0d; paint-order: stroke fill;
+  pointer-events: none; z-index: 60; white-space: nowrap;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
+}
+
 /* Đợt 134 (teacher: "Options khi thay đổi mode và hiện thêm các dòng sẽ tự
    động rộng ra hoặc chỉnh kích thước nội dung bên trong nhỏ lại để hiển thị
    được đầy đủ mà không cần scroll"). Opt-in — core/engine.js's openToolPanel
@@ -902,6 +936,8 @@ body {
 .aw-tool-panel.is-compact-opts .aw-opt-switch-btn { padding: 5px 0; font-size: 11px; }
 .aw-tool-panel.is-compact-opts .aw-opt-slidval { font-size: 12px; }
 .aw-tool-panel.is-compact-opts .aw-opt-time { font-size: 11px; gap: 4px; }
+.aw-tool-panel.is-compact-opts .aw-opt-idle { font-size: 11px; gap: 3px; }
+.aw-tool-panel.is-compact-opts .aw-opt-2up { gap: 3px 12px; }
 .aw-tool-panel.is-compact-opts .aw-opt-hint { font-size: 10px; margin-top: 5px; }
 .aw-tool-panel.is-compact-opts .aw-panel-items { gap: 5px; }
 

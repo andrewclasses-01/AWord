@@ -34,6 +34,11 @@ import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
 import { makeNumberStepper } from "./numberstepper.js";
 import { openPrintPopup } from "./print.js";
+// Time cost (Đợt 139) — leaf module, no dependency of its own beyond utils, so
+// importing it statically is safe on the STUDENT page too (the ⛔ boundary is
+// only about code that can reach the teacher's library: store.js / assignment-
+// ui.js / fight.js).
+import { flyTimeCost } from "./timecost.js";
 // NOTE: assignment-ui.js reaches into the teacher's library (core/store.js), so
 // it is imported LAZILY and only on teacher paths — that keeps the student page
 // (play.html) free of any code that can touch the library.
@@ -698,6 +703,117 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // for a steady width/centering), unlike the single-digit-minutes chip.
     if (fight) fight.ctl.onTimer(fight.side, secondsNow);
   }
+  // ----- TIME COST (Đợt 139, teacher 13/8/2026) -----
+  // "Mỗi giây TRỐNG trôi qua mà không làm gì thì mới bị trừ" — the teacher
+  // replaced his own first wording ("every second on the clock") with this
+  // before any of it shipped. So this is NOT a clock tax: it is an IDLE tax.
+  //   • `Time cost` slider 0..100 in Options (0 = Off)
+  //   • `Idle` stepper 1..5s — the grace the student gets before the FIRST
+  //     charge ("cho suy nghĩ 3 giây mới bắt đầu trừ"); after that it charges
+  //     once per further idle SECOND, for as long as the stall lasts.
+  //   • Any real progress calls ui.noteActivity() and puts both back to zero.
+  //
+  // DIVISION OF LABOUR (deliberately the same as the shared "Points off"
+  // option, see core/HUONG DAN CORE.md): the engine owns the clock, the
+  // accumulator and the effect; the TEMPLATE owns the score number and
+  // subtracts `ui.timeCostTotal()` inside its own scoreNow(). The engine never
+  // invents a score of its own — that is what keeps one number, one owner.
+  //
+  // Opt-in per template (`tpl.timeCost`, like `fightMode`): the slider only
+  // shows for templates that really subtract it (Anagram + Quiz today), so it
+  // can never sit in the panel doing nothing on the other 15 games.
+  //
+  // ⚠️ TWO THINGS A WRONG TAP MUST NOT DO (teacher's calls, both deliberate):
+  //   1. reset the idle clock — in "Letters with bonus" a wrong tap costs
+  //      nothing, so if it counted as activity a student could just drum on the
+  //      board forever and never pay a point. Only PROGRESS resets.
+  //   2. be charged for at all while the student CAN'T act. The template says
+  //      when that is, via ui.setIdleGuard(): its own animation, the wait
+  //      between fight rounds, being locked out after losing a round, a word
+  //      already solved, a clip still speaking. A guard that gets stuck ON just
+  //      means "no charge" — the safe direction to fail in.
+  let timeCostTotal = 0;        // points the idle clock has taken so far, this play
+  let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
+  let idleGuard = null;         // template's "the student cannot act right now", via ui.setIdleGuard
+  let idleMs = 0;               // idle time accumulated since the last real action
+  let idleCharges = 0;          // how many times THIS stall has already been charged
+  let idleLastTick = 0;         // previous idle sample, for the delta
+  let idleId = null;            // the 100ms watcher — only ever exists while the option is ON
+  const costNodes = new Set();  // "-N" nodes still in the air (binned on teardown)
+  function timeCostPer() {
+    if (!tpl.timeCost || timerMode() === "none") return 0;
+    const v = Math.round(Number(activity.options?.timeCost) || 0);
+    return Math.max(0, Math.min(100, v));
+  }
+  function idleGraceMs() {
+    const v = Math.round(Number(activity.options?.timeCostIdle) || 0);
+    return Math.max(1, Math.min(5, v || 1)) * 1000;
+  }
+  // The student just did something real. Called by the template (see
+  // ui.noteActivity) — never by the engine on raw pointer/key events: "moved
+  // the mouse" is not progress, and counting it would quietly defeat the whole
+  // option on a touchscreen where a stray palm keeps waking it.
+  function noteActivity() { idleMs = 0; idleCharges = 0; idleLastTick = performance.now(); }
+  function idleTick() {
+    const per = timeCostPer();
+    const now = performance.now();
+    const dt = now - idleLastTick;
+    idleLastTick = now;
+    if (torndown || !per) return;
+    // Frozen time is DISCARDED, not deferred: dt is simply dropped, so a 2.4s
+    // reveal animation or a menu pause leaves the idle counter exactly where it
+    // was rather than paying it all out in one lump the moment play resumes.
+    // `menuEl`/`toolPanelEl` are declared further down this same closure — safe
+    // to read here because idleTick can only ever run after PLAY, long after
+    // the whole of startGame() has finished executing. Both mean the game is
+    // covered by a dim and cannot be touched: ☰ Menu already freezes the clock
+    // (Đợt 91), and an open Options/Template/Style panel blocks every tap.
+    if (menuEl || toolPanelEl || (idleGuard && idleGuard())) return;
+    idleMs += dt;
+    const grace = idleGraceMs();
+    // Charge every whole second past the grace. A `while` (not an `if`): a tab
+    // that was throttled or backgrounded can hand us a dt of several seconds,
+    // and the student really was idle for all of them.
+    while (idleMs >= grace + idleCharges * 1000) {
+      idleCharges++;
+      chargeIdleSecond(per);
+      if (torndown) return;
+    }
+  }
+  function chargeIdleSecond(points) {
+    timeCostTotal += points;
+    // FIGHT MODE: tell the match FIRST, and through a channel of its OWN. It
+    // must not go in as a score report: a team frozen by the "slower team keeps
+    // nothing" rule has every score report cancelled by holdFreeze(), which
+    // would swallow the deduction permanently. The teacher's call is that the
+    // clock charges both teams regardless of who won the word.
+    if (fight) fight.ctl.onTimeCost(fight.side, timeCostTotal);
+    flyTimeCost({
+      // Fight mode has no chip inside the frame — this team's number lives on
+      // the strip above its board, and the one clock lives between the two.
+      fromEl: fight ? fight.ctl.scoreTarget(fight.side) : scoreEl,
+      toEl: fight ? fight.ctl.clockTarget() : timerEl,
+      readEl: scoreEl,     // always this board's OWN chip — see flyTimeCost's doc
+      points,
+      target: scoreProvider,
+      paint: v => ui.setScore(v),
+      alive: () => !torndown,
+      nodes: costNodes
+    });
+  }
+  // ⚠️ GHOST CLOCK: this is a SECOND interval on top of the 500ms clock, so it
+  // needs the same discipline (Đợt 112/131 — a forgotten interval kept charging
+  // an invisible game). It is created ONLY when the option is really on (so a
+  // game with Time cost off allocates nothing at all and behaves byte for byte
+  // as before), and stopTimer() — which every teardown path already goes
+  // through — is what clears it.
+  function startIdleWatch() {
+    if (idleId || !timeCostPer()) return;
+    noteActivity();
+    idleId = setInterval(idleTick, 100);
+  }
+  function stopIdleWatch() { if (idleId) clearInterval(idleId); idleId = null; }
+
   function startTimerNow() {
     if (timerStarted) return;
     // Đợt 114 — SAME hole as Đợt 112, different door. A `manualTimerStart`
@@ -717,6 +833,10 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       timerEl.textContent = formatTime(initialSeconds);
       if (fight) fight.ctl.onTimer(fight.side, initialSeconds);
       timerId = setInterval(tickTimer, 500);
+      // TIME COST (Đợt 139) — the idle clock starts with the real one, never
+      // before PLAY. `timerMode() === "none"` never reaches here, which is also
+      // exactly when timeCostPer() returns 0.
+      startIdleWatch();
     }
   }
 
@@ -726,7 +846,12 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     if (!tpl.manualTimerStart) startTimerNow();
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
   }
-  const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; };
+  // ⚠️ Also kills the TIME COST watcher (Đợt 139). Every teardown path in this
+  // file already funnels through stopTimer() — cleanupAll(), the countDown
+  // hitting 0, ui.finish() — so hanging the second interval off it is what
+  // guarantees the idle clock can never outlive its own play (the Đợt 112/131
+  // ghost-clock lesson, applied up front this time instead of after the bug).
+  const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; stopIdleWatch(); };
 
   // ----- Menu pause (Đợt 91, 8/8/2026) — freeze the shared clock while the ☰
   // Menu popup is open, so the visible time (and any countDown auto-submit)
@@ -879,6 +1004,44 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     const base = activity.options || {};
     const draft = { ...base };
 
+    // TIME COST cell (Đợt 139) — declared up here, before buildExtraOptions()
+    // runs, because a template may CLAIM it (Anagram does, so it can stand the
+    // cell beside its own mode-dependent Points off groups instead of letting
+    // the panel grow a whole extra row). `let` in a closure read by a function
+    // called earlier in the same body is exactly the TDZ trap that silently
+    // broke startFight() in Đợt 134 — so both live at the very top.
+    let timeCostUsed = false;
+    const buildTimeCostCell = () => {
+      timeCostUsed = true;
+      const clampCost = v => Math.max(0, Math.min(100, v | 0));
+      const clampIdle = v => Math.max(1, Math.min(5, Math.round(v) || 1));
+      const cell = el("div", "aw-opt-cell");
+      cell.append(el("div", "aw-opt-label", "Time cost (per idle second)"));
+      const row = el("div", "aw-opt-row aw-opt-row-nowrap");
+      const cur = clampCost(draft.timeCost || 0);
+      const slider = el("input", "aw-opt-slider");
+      slider.type = "range"; slider.min = "0"; slider.max = "100"; slider.step = "1";
+      slider.value = String(cur);
+      const val = el("span", "aw-opt-slidval", cur === 0 ? "Off" : "-" + cur);
+      // How long the student may think before the FIRST charge. Same stepper
+      // control as the countdown's mm:ss, and dimmed the same way when the
+      // thing it qualifies is switched off — "1s grace on a 0-point cost" is
+      // noise, not a setting.
+      const idleWrap = el("span", "aw-opt-idle");
+      const idleStep = makeNumberStepper(clampIdle(draft.timeCostIdle ?? 1), 1, 5, v => { draft.timeCostIdle = v; });
+      idleWrap.append(document.createTextNode("after"), idleStep.el, document.createTextNode("s"));
+      idleWrap.classList.toggle("is-dim", cur === 0);
+      slider.oninput = () => {
+        const v = clampCost(+slider.value);
+        draft.timeCost = v;
+        val.textContent = v === 0 ? "Off" : "-" + v;
+        idleWrap.classList.toggle("is-dim", v === 0);
+      };
+      row.append(slider, val, idleWrap);
+      cell.append(row);
+      return cell;
+    };
+
     // Đợt 132 (teacher): the "OPTIONS" heading is gone — for EVERY template,
     // not just acts with a Content switch (below) to replace it — the panel
     // now just starts with its first real group. One line, one place: no
@@ -1023,7 +1186,11 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // object Apply writes back into activity.options, so template controls just
     // mutate fields on it directly; `mkCheck`/`mkRadioChoice` keep the same look.
     if (typeof tpl.buildExtraOptions === "function") {
-      tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice });
+      // `timeCostCell` (Đợt 139) is null for a template that hasn't opted into
+      // Time cost. A template that DOES opt in may either call it — and own
+      // where the cell sits — or ignore it, in which case the block further
+      // down places the cell itself (that is Quiz's path).
+      tpl.buildExtraOptions({ panel, draft, el, mkCheck, mkRadioChoice, timeCostCell: tpl.timeCost ? buildTimeCostCell : null });
     }
 
     // FIGHT MODE settings (content of the two boards, who scores a word, speed
@@ -1039,10 +1206,16 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // answer, Unjumble, Crossword, Whack-a-mole) and Gameshow (speed-based scoring).
     // A template honours it by reading activity.options.pointsOff in mount() and
     // subtracting on a wrong answer (score may go negative -> shown red, no minus).
+    //
+    // Đợt 139: Points off and Time cost share ONE row, two half-width cells
+    // (teacher: "gộp Time cost vào chung hàng với Points off"). The panel was
+    // already one group away from having to scroll in fight mode, so the new
+    // option had to cost zero extra height — side by side, it does.
+    const gPair = el("div", "aw-opt-group aw-opt-2up");
     if (tpl.scorable !== false && !tpl.hidePointsOff) {
       const clampPen = v => Math.max(0, Math.min(5, v | 0));
-      const gPen = el("div", "aw-opt-group");
-      gPen.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
+      const cellPen = el("div", "aw-opt-cell");
+      cellPen.append(el("div", "aw-opt-label", "Points off (wrong answer)"));
       const rowPen = el("div", "aw-opt-row");
       const penSlider = el("input", "aw-opt-slider");
       penSlider.type = "range"; penSlider.min = "0"; penSlider.max = "5"; penSlider.step = "1";
@@ -1054,9 +1227,12 @@ export function startGame(root, activity, { onExit, session = null, base = null,
         penVal.textContent = v === 0 ? "Off" : "-" + v;
       };
       rowPen.append(penSlider, penVal);
-      gPen.append(rowPen);
-      panel.append(gPen);
+      cellPen.append(rowPen);
+      gPair.append(cellPen);
     }
+    // Only if the template didn't already place the cell itself (Anagram does).
+    if (tpl.timeCost && !timeCostUsed) gPair.append(buildTimeCostCell());
+    if (gPair.children.length) panel.append(gPair);
 
     // END OF GAME — kept LAST (after the template's own extra options), per the
     // teacher's request (1/8/2026): "Show answers" sits at the very bottom.
@@ -1400,7 +1576,17 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // match controller's teardown() calling the very same function back via
   // registerCleanup — the second call must be a safe no-op, not a second run
   // of closeMenu/stopTimer/cleanup().
-  function cleanupAll() { if (torndown) return; torndown = true; closeMenu(); stopTimer(); closeToolPanel(false); cleanup(); }
+  // ⚠️ The `costNodes` sweep (Đợt 139) is the same rule every template with a
+  // fly effect already follows: those "-N" divs live on document.body, NOT
+  // inside `root`, so nothing removes them when the play's DOM goes — leaving
+  // the game mid-flight would strand one hanging over the next screen.
+  function cleanupAll() {
+    if (torndown) return;
+    torndown = true;
+    closeMenu(); stopTimer(); closeToolPanel(false);
+    costNodes.forEach(n => n.remove()); costNodes.clear();
+    cleanup();
+  }
 
   // ----- Small toast message -----
   function toast(msg) {
@@ -1495,6 +1681,21 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     sloganSlot,  // null unless tpl.hasSloganSlot is true — a centered span between timer and score (Anagram)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
+    // ----- TIME COST (Đợt 139) — three one-liners a template opts in with.
+    // Nothing here is required: a template that ignores all three behaves
+    // exactly as it did before this option existed.
+    //  • timeCostTotal()      subtract it in your own scoreNow()
+    //  • noteActivity()       "the student just made real PROGRESS" (not: tapped
+    //                         anything — a refused/wrong tap must NOT reset it)
+    //  • setIdleGuard(fn)     fn() === true while the student CANNOT act
+    //  • setScoreProvider(fn) fn() === your authoritative score right now, so
+    //                         the count-down animates to the real number instead
+    //                         of doing arithmetic on whatever the chip shows
+    //                         (which may be mid-flight from your own effect)
+    timeCostTotal: () => timeCostTotal,
+    noteActivity,
+    setIdleGuard(fn) { idleGuard = typeof fn === "function" ? fn : null; },
+    setScoreProvider(fn) { scoreProvider = typeof fn === "function" ? fn : null; },
     setScore(n) {
       // Positive score = GREEN, negative = RED WITH a leading "-" (teacher,
       // 11/8/2026 — previously the chip dropped the sign and relied on

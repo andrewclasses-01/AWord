@@ -8,7 +8,29 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 138) — 📘 CHỈ GHI HỒ SƠ, KHÔNG ĐỔI MỘT DÒNG CODE NÀO:
+> Cập nhật lần cuối: **13/8/2026 (Đợt 139) — ⭐ TÍNH NĂNG MỚI "TIME COST": MỖI GIÂY **TRỐNG**
+> (HS ngồi không làm gì) TRÔI QUA LÀ TỔNG ĐIỂM BỊ TRỪ, số `-N` ĐỎ BAY TỪ Ô ĐIỂM VÀO ĐỒNG HỒ +
+> ĐIỂM CHẠY GIẢM. KÈM: BONUS X CỦA ANAGRAM LÊN 10X.**
+> ⭐ CÓ SỬA CORE (`engine.js`, `fight.js`, `app.css`, `voice-playback.js` + **file mới `core/timecost.js`**)
+> + Anagram + Quiz. 🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> Thanh trượt 0–100 (0 = Off) + ô **ngưỡng trống 1–5s**, nằm **chung hàng 2 cột với "Points off"** nên
+> panel Options **không cao thêm pixel nào** ở 2/3 mode Anagram. Chỉ Anagram + Quiz có (thầy chốt),
+> template khác thêm sau chỉ tốn 1 cờ + 4 dòng — hợp đồng ở `core/HUONG DAN CORE.md` mục "TIME COST".
+> ⚠️ Thầy **đổi yêu cầu giữa chừng**: bản đầu là "mỗi giây đồng hồ trôi qua là trừ", bản chốt là
+> **"mỗi giây TRỐNG"** — chạm đúng chữ/chọn đáp án/sang từ mới thì reset đồng hồ trống; **chạm SAI
+> KHÔNG reset** (kẻo gõ bừa là né được sạch); và **ngưng đếm hoàn toàn** khi HS không thể thao tác
+> (hoạt cảnh, từ/câu đã xong, chờ giữa 2 vòng đấu, bị khoá, đang phát giọng đọc, đang mở Menu/panel).
+> ⭐ **LỖI THẬT bắt được khi tự test**: chế độ ĐẤU trừ **2 lần** (-40/giây khi thanh đặt 20) vì khoản
+> trừ vừa nằm trong điểm template báo lên vừa nằm trong kênh riêng ⇒ `fight.js` nay giữ `game[side]` là
+> điểm **chưa tính đồng hồ**.
+> 🟢 ĐÃ TỰ TEST rất kỹ (đơn + đấu, cả Anagram lẫn Quiz): trừ đúng nhịp từng giây · chạm đều 1s trong 5s
+> thì điểm **đứng im tuyệt đối** · chạm sai vẫn tụt đều · giải xong 1 từ không bị trừ oan nhịp nào ·
+> **zero-diff khi tắt** (không đẻ ra bộ đo nào, đếm `setInterval` của engine ra đúng `[500]`) ·
+> không đẻ đồng hồ ma (Start again → 0 interval) · 10x ăn đúng 80 điểm cho từ 8 chữ · 0 lỗi console.
+> ⬜ **Chưa nhìn được bằng mắt hiệu ứng số bay** (pane test bị ẩn nên WAAPI/rAF chết hẳn — xem bẫy test
+> ghi ở `GHI CHU DU AN.md` Đợt 139) và chưa chạm tay thật trên màn TOMKO.
+>
+> Trước đó: **13/8/2026 (Đợt 138) — 📘 CHỈ GHI HỒ SƠ, KHÔNG ĐỔI MỘT DÒNG CODE NÀO:
 > ghi lại thành LUẬT bài học đắt nhất của dự án — "HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" trong
 > `core/HUONG DAN CORE.md`.**
 > Lý do: bẫy này đã cắn **2 lần trong 2 ngày, ở 2 DỰ ÁN KHÁC NHAU** — AWord Đợt 130
@@ -1724,7 +1746,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 137 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 139 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -1761,9 +1783,15 @@ running_word · running_team · speaking`
 tham gia: Anagram và Quiz** (`tpl.fightMode: true`) — mọi thay đổi ở `core/fight.js` từ giờ PHẢI tự test
 cả 2, không chỉ Anagram.
 
-**4 đợt gần nhất (đều đã LIVE):**
+**TIME COST** (Đợt 139) — tuỳ chọn CHUNG mới: trừ điểm mỗi **giây trống**. Hiện có ở **Anagram + Quiz**
+(`tpl.timeCost: true`). Thêm cho template khác = 1 cờ + 4 dòng, hợp đồng ở `core/HUONG DAN CORE.md`
+mục "TIME COST". Hiệu ứng dùng chung nằm ở `core/timecost.js`.
+
+**4 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | 🟢 **CHỜ DUYỆT** |
+| **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
 | **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | `912016b` |
 | **136** | Icon trong nút to hẳn (15px→26px) + bỏ số 7 nét, trả số điểm tay về font Baloo 2 của app (**đảo ngược** việc 10 của Đợt 134) | `05b73b5` |
 | **135** | `core/engine.js` phát `MYACT:AW:FIGHT:on/off` cho myActivity | `9577523` |
@@ -1778,6 +1806,13 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 **⭐ MỚI nhất — CHỜ TEST TOMKO (không ai tự kiểm được qua code):**
+- **(Đợt 139)** ⭐ **Nhìn bằng mắt hiệu ứng số `-N` đỏ bay từ ô điểm vào đồng hồ** — pane test của phiên
+  tự động bị ẩn nên `requestAnimationFrame` + WAAPI **chết hẳn**, em chỉ chứng minh được node sinh ra
+  đúng số/đúng nội dung/được dọn sạch, KHÔNG thấy được nó bay đẹp hay xấu.
+- **(Đợt 139)** Kéo thanh **Time cost** + bấm ô **ngưỡng 1–5s** bằng tay trên màn cảm ứng (2 thanh giờ
+  nằm chung 1 hàng 2 cột — chuột đã đo `elementFromPoint` 5/5 điểm ở mọi mode).
+- **(Đợt 139)** **Cân bằng số**: 20 điểm/giây là nặng hay nhẹ với lớp? Ngưỡng mặc định 1s có gắt quá
+  với HS yếu không? (thầy chỉnh thanh khi dạy thật rồi bảo em đổi mặc định nếu cần)
 - **(Đợt 137)** Kéo thanh **Points off** và thanh **Lives** trong Options bằng **tay trên màn cảm ứng**
   — kéo bằng chuột đã chắc chắn OK (đo thật `Off`→`-75`), cảm ứng đi cùng đường `pointer-events` nên
   rủi ro thấp nhưng chưa ai chạm tay thật.

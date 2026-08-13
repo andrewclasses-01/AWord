@@ -314,6 +314,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // in here — they live in `handPoints` at module level and are shown in their
   // own box, so they outlive the match.
   const game = [0, 0], bonus = [0, 0];
+  // TIME COST (Đợt 139) — what each board's IDLE clock has taken off this team,
+  // as a running total sent by that board's engine (absolute, not a delta, so a
+  // repeat or a missed report can never make it drift). Deliberately its own
+  // slot rather than folded into `game`: the freeze below cancels word points,
+  // and the teacher's rule is that the clock keeps charging a frozen team all
+  // the same. Nothing else in this file may touch it.
+  const cost = [0, 0];
   // "The slower team keeps nothing" (fightLateScores:false). It cannot be done
   // by subtracting what the word earned at the moment the team finishes: the
   // template hands its points over ~1.76s LATER, when its "+12" finishes flying
@@ -367,7 +374,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // through an entire clip because the push landed in that gap).
   let lastVoiceState = null;
 
-  function totalOf(side) { return game[side] + bonus[side] + freezeAdj[side]; }
+  // ⚠️ `- cost[side]` sits OUTSIDE the frozen part on purpose (Đợt 139).
+  // holdFreeze() pins `game + bonus` to whatever it was when the team lost the
+  // round; the idle cost is subtracted after that pinning, so it still lands on
+  // a frozen team's number instead of being cancelled with the word's points.
+  function totalOf(side) { return game[side] + bonus[side] + freezeAdj[side] - cost[side]; }
   // Called on every score report while a freeze is on: keep the total pinned to
   // what it was when the freeze started.
   function holdFreeze(side) {
@@ -664,7 +675,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     },
 
     // --- what the ENGINE reports (see startGame's `fight` option) ---
-    onScore(side, value) { game[side] = Number(value) || 0; holdFreeze(side); paintScore(side); },
+    // ⚠️ `+ cost[side]` (Đợt 139) — measured bug, caught in a real match: the
+    // team numbers fell TWICE as fast as the slider said (-40/s at a setting of
+    // 20). A template's scoreNow() already has the idle cost subtracted (that
+    // is where the deduction lives, by design), so storing the reported value
+    // raw put the cost inside `game` AND again in `cost` below. `game` must
+    // hold this board's score WITHOUT the clock, so the clock is applied in
+    // exactly one place — totalOf().
+    onScore(side, value) { game[side] = (Number(value) || 0) + cost[side]; holdFreeze(side); paintScore(side); },
+    // TIME COST (Đợt 139) — a channel of its OWN, never onScore(): a score
+    // report goes through holdFreeze(), which would cancel the deduction for a
+    // team currently frozen by the "slower team keeps nothing" rule and leave
+    // it cancelled for good (freezeAdj keeps what it cancelled). `total` is
+    // that board's cumulative timeCostTotal, so this is idempotent.
+    onTimeCost(side, total) { cost[side] = Math.max(0, Number(total) || 0); paintScore(side); },
+    // Where a board's "-N" flies TO: the one clock between the two frames (each
+    // board's own in-frame clock is visibility:hidden in a match).
+    clockTarget() { return clockEl; },
     // `seconds` is the RAW count (engine.js sends the number, not its own
     // single-digit-minutes chip text) — the strip pads both halves to 2
     // digits ("05:07", not "5:07") so the width never shifts and the ":"

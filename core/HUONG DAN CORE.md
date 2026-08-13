@@ -1474,6 +1474,61 @@ window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(
   để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
   (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.
 
+### ⭐⭐ TIME COST — trừ điểm mỗi giây **TRỐNG** (Đợt 139, 13/8/2026)
+
+Thanh **Time cost** (0–100, 0 = Off) + ô **ngưỡng trống 1–5s** trong Options. Cứ mỗi giây học sinh
+**không làm gì** (quá ngưỡng) là tổng điểm bị trừ chừng đó, kèm một số **`-N` đỏ bay từ ô điểm vào
+đồng hồ** và **vòng đếm giảm điểm**. KHÔNG có âm thanh (thầy chốt: nó nổ mỗi giây, cả tiết học).
+
+**Đây KHÔNG phải thuế theo đồng hồ** — thầy đổi ý ngay trong phiên đầu: chỉ giây TRỐNG mới tính.
+"Bấm chữ trước cách chữ sau 0,9s" ⇒ không mất gì.
+
+**Chia việc (y hệt khuôn `pointsOff` ở trên)**: engine sở hữu đồng hồ + bộ đếm + hiệu ứng
+(`core/engine.js` + `core/timecost.js`); **template sở hữu con số điểm** và tự trừ. Engine không bao
+giờ tự bịa ra một điểm số của riêng nó.
+
+Template tham gia bằng **1 cờ + 4 dòng**:
+```js
+timeCost: true,                       // thiếu cờ này thì thanh trượt KHÔNG hiện (15 game kia sạch trơn)
+// trong mount():
+scoreNow() { ...; return base - penalty - ui.timeCostTotal(); }   // (1) trừ ở ĐÚNG 1 nơi
+ui.setScoreProvider(scoreNow);        // (2) vòng đếm giảm chạy tới con số THẬT, không tự làm toán
+ui.setIdleGuard(() => ...);           // (3) true = HS KHÔNG THỂ thao tác lúc này ⇒ đừng tính trống
+ui.noteActivity();                    // (4) gọi khi HS có TIẾN TRIỂN thật
+ui.finish({ score: ... - ui.timeCostTotal() });                   // đưa vào điểm xếp hạng
+```
+
+⚠️ **`noteActivity()` chỉ dành cho TIẾN TRIỂN, không phải cho "có chạm"** — thầy chốt: chạm sai/bị từ
+chối **không** reset. Ở mode "Letters with bonus" chạm sai không mất gì, nên nếu nó cũng reset thì HS
+chỉ việc đập tay liên tục là vô hiệu hoá cả tính năng. Engine cố ý **KHÔNG** tự nghe
+`pointerdown`/`keydown` toàn trang vì đúng lý do đó (và vì bàn tay đặt lên màn cảm ứng sẽ tự đánh thức).
+
+⚠️ **`setIdleGuard` bắt buộc phải phủ "từ/câu ĐÃ XONG"**, không chỉ cờ animation của template. Anagram
+giải xong một từ còn ~1,8–2,4s hoạt cảnh mà `busy` KHÔNG bật — thiếu vế `doneCheck` là mỗi từ tự ăn 2
+nhịp trừ oan. Guard cũng phải phủ: đang phát giọng đọc, và (engine tự lo) ☰ Menu / panel đang mở.
+Guard kẹt ON chỉ có nghĩa "không trừ" — hỏng về phía an toàn.
+
+**Cách đếm**: `setInterval(idleTick, 100)` **chỉ sinh ra khi Time cost > 0**, cộng dồn `idleMs += dt`,
+**vứt bỏ** dt của quãng bị guard (không dồn trả sau), rồi trừ khi `idleMs >= ngưỡng + n×1000` bằng
+`while` (tab bị bóp xung nhịp trả về dt vài giây một lần).
+⚠️ Nó là **đồng hồ THỨ HAI** bên cạnh đồng hồ 500ms ⇒ phải chịu đúng kỷ luật Đợt 112/131: nó được dọn
+trong **`stopTimer()`**, thứ mà mọi đường tháo ván đều đi qua. Node `-N` sống trên `document.body` nên
+`cleanupAll()` phải quét `costNodes`.
+
+⚠️⚠️ **FIGHT MODE — bẫy TRỪ 2 LẦN (lỗi thật, đo được: -40/giây khi thanh đặt 20).**
+`scoreNow()` của template **đã** trừ time cost, mà `ui.setScore()` lại chuyển tiếp con số đó vào
+`fight.ctl.onScore()`. Nếu trọng tài lưu thẳng con số ấy thì khoản trừ nằm trong `game[side]` **và**
+trong `cost[side]` ⇒ trừ đôi. Luật: **`game[side]` phải là điểm CHƯA tính đồng hồ**
+(`onScore` cộng ngược `+ cost[side]`), đồng hồ chỉ được áp đúng một chỗ là `totalOf()`.
+Và time cost phải đi **kênh riêng `ctl.onTimeCost(side, total)`**, không đi qua `onScore`: đội đang bị
+đóng băng (luật "đội chậm không được điểm") có mọi báo cáo điểm bị `holdFreeze()` huỷ **vĩnh viễn**,
+sẽ nuốt luôn khoản trừ. `totalOf = game + bonus + freezeAdj − cost` (trừ NGOÀI phần bị ghim).
+
+**Bố cục Options**: thanh Time cost nằm CÙNG HÀNG với "Points off" trong lưới 2 cột `.aw-opt-2up`
+(thầy chốt) — panel Anagram khi đấu vốn đã sát mức phải cuộn, nên tuỳ chọn mới phải tốn **0 chiều cao**.
+Template tự dựng points-off riêng (Anagram) nhận hàm dựng ô qua `buildExtraOptions({ timeCostCell })`
+và tự đặt chỗ; template không dùng thì engine tự ghép cạnh points-off của nó (Quiz).
+
 ### Cầu đồng bộ myActivity — `window.__awordBridge` + marker (v0.9.28)
 
 Khi chạy NHÚNG trong myActivity (2–4 bảng), pane 0 đổi Template/Options/Style phải lan sang bảng khác.

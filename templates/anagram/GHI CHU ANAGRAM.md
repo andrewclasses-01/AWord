@@ -1,5 +1,36 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 139 (13/8/2026) — TIME COST (trừ điểm mỗi giây TRỐNG) + BONUS X LÊN 10X
+
+🟢 **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ + toàn bộ số đo: `../../GHI CHU DU AN.md` Đợt 139.
+Hợp đồng `tpl.timeCost` dùng chung: `../../core/HUONG DAN CORE.md` mục "TIME COST".
+
+**Anagram phải làm gì (rất ít — engine lo phần còn lại):**
+- `timeCost: true` trong object template.
+- `scoreNow()` trừ thêm `ui.timeCostTotal()`, và `ui.finish({score})` cũng trừ.
+- `ui.setScoreProvider(scoreNow)` — để vòng đếm giảm của engine chạy tới đúng con số THẬT của mình
+  (đừng để nó tự làm toán trên số đang hiện: số đó có thể đang bay dở giữa hiệu ứng "+N" của chính file này).
+- `ui.setIdleGuard(...)` = `busy || finished || fightLocked() || doneCheck(state[index]) || đang phát giọng đọc`.
+  ⚠️ **`doneCheck` mới là mấu chốt**, không phải `busy`: sau khi giải xong 1 từ còn ~1,8-2,4s hoạt cảnh
+  (PERFECT → "+N" bay → đếm điểm) mà `busy` KHÔNG bật, HS thì chẳng bấm được gì — thiếu vế này là mỗi
+  từ giải xong tự ăn thêm 2 nhịp trừ oan.
+- `ui.noteActivity()` ở 4 chỗ: đặt đúng 1 chữ (`bonusPick`, nhánh ĐÚNG) · đặt chữ vào ô (`submitPickAt`) ·
+  đảo chỗ chữ đã đặt (`moveResultTile`) · **đầu `render()`** (từ mới = trả lại toàn bộ thời gian suy nghĩ).
+  ⚠️ Nhánh chạm SAI **cố ý không gọi** — thầy chốt: mode "Letters with bonus" chạm sai không mất gì,
+  nếu chạm sai cũng reset thì gõ bừa liên tục là vô hiệu hoá cả tính năng.
+
+**Bonus x**: đúng 1 số — `MAX_BONUS_MULT` 5 → **10**. Thanh trượt, `clampBonusMult` và chữ "Nx PERFECT"
+đều suy ra từ hằng số này nên không phải sửa chỗ nào khác. Act cũ giữ nguyên hệ số đã lưu, mặc định vẫn 2x.
+Đo thật: ELEPHANT (8 chữ) hoàn hảo ở 10x = **80 điểm**, burst in "10x PERFECT".
+
+**Options — hàng 2 cột**: 3 nhóm points-off nay nằm trong `.aw-opt-cell.aw-anagram-pencol` (cột trái),
+ô Time cost của engine ở cột phải (engine truyền hàm dựng qua `buildExtraOptions({ timeCostCell })`).
+⚠️ **Ruột accordion Đợt 134/137 KHÔNG bị đụng tới** — 3 nhóm được append y nguyên, chỉ đổi chỗ đứng.
+Nhờ vậy mode "Bonus and minus" và "On submit" **không cao thêm pixel nào**; cả 3 mode panel vẫn không
+phải cuộn, và `elementFromPoint` cho mọi thanh đang mở đạt **5/5 điểm**.
+
+---
+
 ## ⭐ Đợt 137 (13/8/2026) — LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (hồi quy từ Đợt 134)
 
 ✅ **THẦY DUYỆT → COMMIT `912016b` + PUSH + LIVE.** KHÔNG đụng core — sửa ĐÚNG 1 file `anagram.css`, 2 dòng.
