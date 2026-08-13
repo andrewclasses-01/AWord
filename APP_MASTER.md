@@ -5,7 +5,27 @@
 > `core/HUONG DAN CORE.md` (ĐỌC TRƯỚC KHI SỬA CODE — mục mới "BẪY 'SNAP KHỰC MỘT CÁI'" đặc biệt quan trọng
 > nếu bạn sắp viết hiệu ứng entrance/exit/fade/pop cho template MỚI, đọc TRƯỚC KHI VIẾT chứ đừng đợi lỗi).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 136) — ICON TRONG NÚT TO HẲN (15px → 26px, +73%) + BỎ SỐ 7 NÉT,
+> Cập nhật lần cuối: **13/8/2026 (Đợt 137) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" TRONG
+> OPTIONS (Anagram). Gốc lỗi do chính Đợt 134 gây ra: khối thu gọn `.aw-anagram-pencontent` dùng
+> `max-height:0` + `opacity:0` mà **thiếu `overflow:hidden`** ⇒ ruột vẫn nằm nguyên chỗ và vẫn ăn
+> chuột, lại còn được vẽ ở lớp TRÊN (vì `opacity`<1 đẻ stacking context) ⇒ **thanh trượt tàng hình đè
+> khít lên thanh trượt thật, nuốt hết mọi cú kéo**.**
+> KHÔNG đụng core — sửa ĐÚNG 1 file `templates/anagram/anagram.css`, thêm 2 dòng
+> (`overflow:hidden` + `pointer-events:none`, `auto` khi mở).
+> ⚠️ **Rộng hơn thầy báo — 3 ca, không phải 1**: mode "Bonus and minus" chết thanh *Points off (wrong
+> letter)* (ca thầy gặp), còn mode "Letters with bonus" và "On submit" chết thanh **LIVES** — 2 ca này
+> **chưa ai từng báo**, chỉ lộ ra nhờ quét cả panel.
+> 🟢 ĐÃ TỰ TEST kỹ: kéo chuột THẬT `Off`→`-75`; **đối chứng ngược** (tiêm CSS gỡ bản vá rồi kéo y hệt)
+> thanh nhìn thấy đứng im còn thanh tàng hình bị kéo lén sang `7` — tái hiện đúng triệu chứng thầy báo;
+> sau vá quét lại 3 mode + chế độ ĐẤU đều OK 5/5 điểm; animation mượt Đợt 134 còn nguyên; 0 lỗi console.
+> ⚠️ BẪY MỚI đáng nhớ: **accordion kiểu `max-height` mà thiếu `overflow:hidden` = bẫy vô hình ăn
+> chuột** (mắt không thấy vì opacity đã giấu, chỉ lộ khi có thứ tương tác nằm ngay dưới), và
+> **`opacity`<1 đẻ ra stacking context** — cùng họ với BẪY Đợt 130 (`transform` đẻ stacking context),
+> **bẫy stacking-context thứ HAI cắn dự án trong 4 ngày**.
+> ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**. Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 137,
+> `templates/anagram/GHI CHU ANAGRAM.md` Đợt 137.
+>
+> Trước đó: **13/8/2026 (Đợt 136) — ICON TRONG NÚT TO HẲN (15px → 26px, +73%) + BỎ SỐ 7 NÉT,
 > TRẢ SỐ ĐIỂM TAY VỀ FONT BALOO 2 CỦA APP (+30% cỡ, weight 800, tabular-nums).**
 > ⭐ CÓ SỬA CORE (`core/app.css`, `core/fight.js`). ⚠️ **ĐẢO NGƯỢC Đợt 134 cùng ngày** (số 7 nét quá
 > mảnh, ngược mục tiêu "cho to dễ nhìn") — `SEVEN_SEG`, `sevenSegHtml()` và khối `.aw-seg-*` đã **XOÁ
@@ -1679,7 +1699,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 134 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 137 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -1716,23 +1736,32 @@ running_word · running_team · speaking`
 tham gia: Anagram và Quiz** (`tpl.fightMode: true`) — mọi thay đổi ở `core/fight.js` từ giờ PHẢI tự test
 cả 2, không chỉ Anagram.
 
-**3 đợt gần nhất (đều đã LIVE):**
+**4 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **134** | **12 cải tiến UI/UX Anagram đơn+đấu** (slogan lên chung thanh trên, cụm loa 5 cột nhạy hơn, Options tự thu nhỏ khi tràn, animation popup mượt toàn app, số điểm tay 7-segment, "TEAM LEFT/RIGHT WINS"...) + ⭐ vá lỗi thật "2 loa lệch màu" (PULL voice state) | `0a24c62` |
-| **133** | FIGHT MODE: cửa sổ hòa 0,1s, điểm rơi khi bị từ chối, bỏ "Same letters", voice dùng chung 1 bản | `1222b23` |
-| **132** | 6 cải tiến Anagram: Mix voice, loa+equalizer thật, slogan trở lại, ẩn loa khi Text, khung dưới co giãn, Options rộng hơn | `b4df0d0` |
+| **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | *(đợt này)* |
+| **136** | Icon trong nút to hẳn (15px→26px) + bỏ số 7 nét, trả số điểm tay về font Baloo 2 của app (**đảo ngược** việc 10 của Đợt 134) | `05b73b5` |
+| **135** | `core/engine.js` phát `MYACT:AW:FIGHT:on/off` cho myActivity | `9577523` |
+| **134** | **12 cải tiến UI/UX Anagram đơn+đấu** (slogan lên chung thanh trên, cụm loa 5 cột nhạy hơn, Options tự thu nhỏ khi tràn, animation popup mượt toàn app, "TEAM LEFT/RIGHT WINS"...) + ⭐ vá lỗi thật "2 loa lệch màu" (PULL voice state) | `0a24c62` |
+
+⚠️ **Đợt 134 tới nay đã bị đảo/vá 2 lần** (Đợt 136 bỏ số 7 nét · Đợt 137 vá accordion nó tạo ra) — đợt
+đó gom 12 việc một lượt nên diện va chạm rộng. Sắp đụng vào phần Anagram nào của Đợt 134 thì **đọc Đợt
+136 + 137 trước** để khỏi khôi phục nhầm thứ đã bị bỏ.
 
 Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`) — dữ liệu bền cấp app,
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
-**⭐ MỚI nhất — CHỜ TEST TOMKO (Đợt 134, không ai tự kiểm được qua code):**
-- Nghe cụm loa 5 cột qua loa ngoài thật (chỉ đo được bằng số `--h` qua code, chưa nghe bằng tai)
-- Cảm giác chạm cụm loa/nút loa đã dài hơn — có thoải mái trên màn cảm ứng không
-- Số điểm tay kiểu 7 nét (LED) — nhìn trên màn 86" có rõ/đẹp không (mới lần đầu dùng kiểu chữ này ở AWord)
-- Animation mở/đóng popup (Options/Menu...) mượt tới đâu khi bấm tay thật — code đo được KHÔNG lỗi
-  nhưng "cảm giác mượt" chỉ thầy đánh giá được
+**⭐ MỚI nhất — CHỜ TEST TOMKO (không ai tự kiểm được qua code):**
+- **(Đợt 137)** Kéo thanh **Points off** và thanh **Lives** trong Options bằng **tay trên màn cảm ứng**
+  — kéo bằng chuột đã chắc chắn OK (đo thật `Off`→`-75`), cảm ứng đi cùng đường `pointer-events` nên
+  rủi ro thấp nhưng chưa ai chạm tay thật.
+- **(Đợt 136)** Icon trong nút to hơn + số điểm tay font thường — nhìn trên màn 86" đã đủ rõ chưa
+- **(Đợt 134)** Nghe cụm loa 5 cột qua loa ngoài thật (chỉ đo được bằng số `--h` qua code, chưa nghe bằng tai)
+- **(Đợt 134)** Cảm giác chạm cụm loa/nút loa đã dài hơn — có thoải mái trên màn cảm ứng không
+- **(Đợt 134)** Animation mở/đóng popup (Options/Menu...) mượt tới đâu khi bấm tay thật — code đo được
+  KHÔNG lỗi nhưng "cảm giác mượt" chỉ thầy đánh giá được
+- ~~Số điểm tay kiểu 7 nét (LED)~~ — **HẾT HIỆU LỰC**, Đợt 136 đã bỏ hẳn kiểu số này
 
 **Còn tồn đọng từ các đợt trước (chưa ai xử lý):**
 - **Đợt 131 #2 CHƯA sửa**: đôi khi bấm ô chữ đầu từ mới trong FIGHT MODE không nhận ngay, next sang ô

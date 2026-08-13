@@ -1,5 +1,44 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## ⭐ Đợt 137 (13/8/2026) — LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (hồi quy từ Đợt 134)
+
+✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** KHÔNG đụng core — sửa ĐÚNG 1 file `anagram.css`, 2 dòng.
+Chi tiết đầy đủ + 6 bài học: `../../GHI CHU DU AN.md` Đợt 137.
+
+**Thầy báo**: "thanh points off trong options bị lỗi không kéo được."
+
+**Gốc lỗi**: Đợt 134 việc 5 (animation mượt khi đổi mode) bọc mỗi nhóm penalty trong
+`.aw-anagram-pencontent` đóng/mở bằng `max-height:0` + `opacity:0` — **quên `overflow:hidden`**.
+`max-height:0` chỉ ép chiều cao CÁI HỘP; **ruột vẫn nằm nguyên chỗ cũ và vẫn ăn chuột**, mắt không
+thấy chỉ vì `opacity:0`. Cộng thêm **`opacity`<1 đẻ ra stacking context** ⇒ khối vô hình được vẽ ở lớp
+TRÊN nội dung thường của nhóm kế tiếp ⇒ **thanh trượt tàng hình đè khít lên thanh trượt thật ngay
+dưới, nuốt sạch mọi cú kéo**.
+
+**3 ca dính (rộng hơn thầy báo)** — đo bằng `elementFromPoint` 5 điểm/thanh:
+
+| Anagram mode | Thanh nhìn thấy nhưng chết | Thủ phạm (đang ẩn) |
+|---|---|---|
+| Bonus and minus | Points off (wrong letter) | Points off (wrong answer) ← thầy gặp |
+| Letters with bonus | **LIVES** | Bonus x |
+| On submit | **LIVES** | Bonus x |
+
+**FIX** (`anagram.css`, `.aw-anagram-pencontent`): `overflow: hidden` (dòng khiến `max-height` có
+nghĩa thật) + `pointer-events: none` / `auto` khi `.is-open` (chốt chặn lớp 2). Comment dài ngay tại
+chỗ đã ghi rõ vì sao — **đừng gỡ 2 dòng này**.
+
+**Đã test**: kéo chuột THẬT `Off`→`-75`; đối chứng ngược (tiêm CSS gỡ vá) tái hiện đúng lỗi + lộ tác
+hại ngầm (thanh tàng hình bị kéo lén sang `7`, tức **âm thầm đổi một cài đặt khác**); sau vá cả 3 mode
++ chế độ ĐẤU đều OK 5/5; animation Đợt 134 còn nguyên (3,6→41,4→45px); mở ra không bị cắt
+(`clientHeight` 45 = `scrollHeight` 45); 0 lỗi console.
+
+⚠️ **KHÔNG phải lỗi mới**: khi đấu, thanh *Lives* và *Round rule* nằm **ngoài vùng cuộn** panel (669px
+nội dung so với 342px chỗ hiện) — chính là việc treo cũ "Options khi đấu vẫn phải cuộn" (Đợt 132/134),
+cuộn xuống là bấm/kéo bình thường.
+
+**CHỜ TEST TOMKO**: kéo thử Points off + Lives trên màn cảm ứng thật (chuột đã chắc chắn OK).
+
+---
+
 ## ⭐ Đợt 134 (13/8/2026) — 12 CẢI TIẾN UI/UX ĐƠN+ĐẤU + VÁ LỖI THẬT "2 LOA LỆCH MÀU"
 
 ✅ **THẦY DUYỆT ("ok build") → ĐÃ TỰ TEST kỹ qua trình duyệt thật (single + fight, cả Quiz fight để

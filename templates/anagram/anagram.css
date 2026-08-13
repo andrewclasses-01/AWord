@@ -602,6 +602,22 @@
 .aw-anagram-pengroup { transition: margin-bottom .28s cubic-bezier(.22,.9,.3,1); }
 .aw-anagram-pencontent {
   max-height: 0; opacity: 0;
+  /* ⚠️⚠️ Đợt 137 — THIẾU 2 DÒNG NÀY LÀ NGUỒN GỐC LỖI "KÉO KHÔNG ĐƯỢC THANH
+     POINTS OFF" (thầy báo 13/8/2026). `max-height:0` chỉ ép chiều cao Ô về 0;
+     nếu không có `overflow:hidden` thì NỘI DUNG bên trong vẫn nằm nguyên chỗ
+     cũ và vẫn ăn chuột — chỉ là mắt không thấy vì `opacity:0`. Tệ hơn:
+     `opacity` < 1 ĐẺ RA STACKING CONTEXT, nên khối vô hình này được vẽ ở lớp
+     TRÊN nội dung bình thường của nhóm kế tiếp ⇒ thanh trượt vô hình nằm đè
+     đúng lên thanh trượt thật ngay dưới nó và nuốt hết mọi cú kéo.
+     Đo thật trước khi vá (elementFromPoint tại 5 điểm dọc mỗi thanh):
+       • mode "Bonus and minus" → "Points off (wrong letter)" bị thanh
+         "Points off (wrong answer)" ĐANG ẨN che 5/5 điểm  ← thầy gặp cái này
+       • mode "Letters with bonus" và "On submit" → thanh LIVES bị thanh
+         "Bonus x" ĐANG ẨN che 5/5 điểm (lỗi cùng gốc, chưa ai báo)
+     `pointer-events` là lớp chặn thứ hai: kể cả sau này có ai đổi bố cục làm
+     `overflow` hết tác dụng, ô đang ẩn vẫn không bao giờ cướp được cú chạm. */
+  overflow: hidden;
+  pointer-events: none;
   transition: max-height .28s cubic-bezier(.22,.9,.3,1), opacity .2s ease;
 }
-.aw-anagram-pencontent.is-open { opacity: 1; }
+.aw-anagram-pencontent.is-open { opacity: 1; pointer-events: auto; }

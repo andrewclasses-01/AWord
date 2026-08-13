@@ -5,6 +5,86 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 137 (13/8/2026) — ⭐ LỖI THẬT: KHÔNG KÉO ĐƯỢC THANH "POINTS OFF" (do Đợt 134 gây ra)
+KHÔNG đụng core — sửa ĐÚNG 1 file `templates/anagram/anagram.css`, thêm 2 dòng CSS.
+🟢 ĐÃ TỰ TEST kỹ qua trình duyệt thật (kéo chuột THẬT, đo `elementFromPoint` 5 điểm/thanh, cả đơn lẫn
+đấu, có đối chứng "gỡ bản vá ra thì lỗi tái hiện"). ✅ THẦY DUYỆT → COMMIT + PUSH + **LIVE**.
+
+**Thầy báo**: "thanh points off trong options bị lỗi không kéo được. Hãy tìm hiểu nguyên nhân và fix
+riêng phần nhỏ đó."
+
+### Gốc lỗi — do chính Đợt 134 (hôm trước, cùng ngày) gây ra
+Đợt 134 việc 5 làm 3 nhóm tuỳ chọn (Points off wrong answer / Points off wrong letter / Bonus x) thu
+gọn **mượt** thay vì `display:none` đột ngột, bằng `max-height: 0` + `opacity: 0` trên khối bọc
+`.aw-anagram-pencontent` — **nhưng quên `overflow: hidden`**. Hậu quả kép:
+1. `max-height:0` chỉ ép chiều cao **CÁI HỘP** về 0. **Ruột bên trong vẫn nằm nguyên vị trí cũ và vẫn
+   ăn chuột**, chỉ là mắt không thấy vì `opacity:0`.
+2. Tệ hơn: **`opacity` < 1 ĐẺ RA STACKING CONTEXT** ⇒ khối vô hình này được vẽ ở **lớp TRÊN** nội dung
+   thường của nhóm kế tiếp (nội dung thường vẽ ở bước sớm hơn trong thứ tự vẽ của CSS).
+
+⇒ Một **thanh trượt TÀNG HÌNH nằm đè khít lên thanh trượt THẬT ngay dưới nó**, nuốt sạch mọi cú kéo.
+
+### ⚠️ Lỗi rộng hơn thầy báo — 3 chỗ, không phải 1
+Quét toàn panel bằng `elementFromPoint` tại 5 điểm dọc mỗi thanh trượt:
+
+| Anagram mode | Thanh thầy NHÌN THẤY nhưng chết | Thủ phạm (đang ẩn) |
+|---|---|---|
+| Bonus and minus | Points off (wrong letter) | Points off (wrong answer) ← **thầy gặp cái này** |
+| Letters with bonus | **LIVES** | Bonus x |
+| On submit | **LIVES** | Bonus x |
+
+Tức 2/3 ca là thanh **Lives** chết mà **chưa ai từng báo** — chỉ lộ ra nhờ quét cả panel thay vì chỉ
+kiểm đúng chỗ thầy chỉ.
+
+### FIX
+`templates/anagram/anagram.css`'s `.aw-anagram-pencontent` thêm đúng 2 dòng:
+- `overflow: hidden` — **đây mới là dòng khiến `max-height` có nghĩa thật**; thiếu nó thì accordion
+  kiểu max-height chỉ là "giả vờ gọn".
+- `pointer-events: none` (+ `auto` ở `.is-open`) — chốt chặn lớp 2: sau này ai đổi bố cục làm
+  `overflow` mất tác dụng thì ô đang ẩn **vẫn** không bao giờ cướp được cú chạm.
+
+### Đã test (đo thật, không suy đoán)
+- **Kéo chuột THẬT** thanh "Points off (wrong letter)": `Off` → **-75** ✅
+- **Đối chứng ngược** (tiêm CSS gỡ bản vá rồi kéo Y HỆT): thanh nhìn thấy **đứng im ở `Off`**, còn
+  thanh **TÀNG HÌNH "wrong answer" bị kéo lén sang `7`** — tái hiện chính xác triệu chứng thầy báo,
+  và lộ thêm tác hại ngầm: **nó âm thầm đổi một cài đặt KHÁC mà thầy không biết**.
+- Quét lại cả 3 mode sau vá: mọi thanh trượt **OK 5/5 điểm**, kể cả Lives.
+- **Chế độ ĐẤU** (2 khung): OK hết. 2 thanh ban đầu báo "bị che" (Lives, Round rule) hoá ra chỉ **nằm
+  ngoài vùng cuộn** của panel (panel cao 669px so với 342px chỗ hiện) — cuộn xuống là OK 5/5. Đây
+  đúng là **việc treo cũ** "Options khi đấu vẫn phải cuộn" (Đợt 132/134), KHÔNG phải lỗi mới.
+- Animation mượt của Đợt 134 **vẫn nguyên**: đo giữa chừng 3,6px → 41,4px, khi xong 0/45/45px.
+- Mở ra **không bị cắt xén**: `clientHeight` 45 = `scrollHeight` 45 ở mọi nhóm mở.
+- 0 lỗi console. Cảnh báo `ResizeObserver loop completed...` **có sẵn từ trước** — đã đối chứng bằng
+  cách chạy lại y hệt trên bản CHƯA vá (vẫn hiện, thậm chí 2 lần).
+
+**BẪY / BÀI HỌC** (đáng thêm vào `core/HUONG DAN CORE.md`):
+1. ⭐⭐ **Accordion kiểu `max-height` mà thiếu `overflow:hidden` = một tấm bẫy vô hình ăn chuột.** Nó
+   KHÔNG lộ ra khi nhìn (opacity đã giấu), chỉ lộ khi có thứ tương tác nằm ngay dưới. Luật: hễ dùng
+   `max-height` để đóng/mở thì **`overflow:hidden` là bắt buộc, không phải tuỳ chọn**.
+2. ⭐ **`opacity` < 1 đẻ ra stacking context** ⇒ khối "đã ẩn" được vẽ TRÊN nội dung thường của anh em
+   kế bên. Cùng họ với BẪY Đợt 130 (`transform` đẻ stacking context làm panel không bấm được) —
+   **đây là bẫy stacking-context thứ HAI cắn dự án này trong 4 ngày**.
+3. **Khi thầy báo 1 chỗ hỏng, hãy quét CẢ nhóm cùng cơ chế.** Ở đây quét cả panel mới lòi thêm 2 ca
+   Lives chết mà không ai biết.
+4. **Cách đo chuẩn cho lỗi "bấm/kéo không ăn"**: `document.elementFromPoint(x,y)` tại **nhiều điểm**
+   dọc phần tử rồi so với chính phần tử đó — nhanh và chắc hơn mọi suy luận từ CSS.
+5. **Mẹo đối chứng rẻ**: tiêm 1 thẻ `<style>` phủ `!important` để **tạm gỡ bản vá ngay trong trình
+   duyệt** rồi lặp lại đúng thao tác. Chứng minh được "trước sai / sau đúng" mà không cần
+   revert/rebuild gì.
+6. ⚠️ **Toạ độ của công cụ chuột tự động KHÔNG trùng toạ độ trang** (ảnh 800×1100 ↔ khung 1280×720,
+   tỉ lệ 2 trục còn KHÁC nhau: x ×1,60 · y ×0,646). Đừng nhẩm từ ảnh chụp — gắn
+   `document.addEventListener('pointerdown', ...)` bắt `clientX/clientY` thật rồi giải ra phép quy
+   đổi. Em đã mất 3 lần bấm trượt (2 lần làm panel tự đóng) trước khi làm thế.
+
+**CHỜ TEST TOMKO**: thầy kéo thử thanh Points off + thanh Lives trên màn cảm ứng thật (chuột đã chắc
+chắn OK; cảm ứng dùng cùng đường `pointer-events` nên rủi ro thấp, nhưng chưa ai chạm tay thật).
+
+⚠️ **Ghi chú phối hợp**: đợt này làm song song với **Đợt 136** của một phiên Claude khác (phiên đó
+commit `05b73b5` giữa lúc em đang test). Không đụng file nhau — Đợt 136 sửa `core/app.css` +
+`core/fight.js`, đợt này chỉ sửa `templates/anagram/anagram.css`.
+
+---
+
 ## Đợt 136 (13/8/2026) — ICON TRONG NÚT TO HẲN + BỎ SỐ 7 NÉT, TRẢ VỀ FONT SỐ CỦA AWORD
 ⭐ CÓ SỬA CORE (`core/app.css`, `core/fight.js`). KHÔNG đụng template nào.
 🟢 ĐÃ TỰ TEST qua trình duyệt thật (đo DOM trực tiếp, 0 lỗi JS).

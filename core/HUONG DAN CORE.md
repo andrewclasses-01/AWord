@@ -1189,6 +1189,37 @@ Cách canh giữa AN TOÀN: phủ kín (`left/right/top/bottom: 0`) rồi `displ
 **Cách soi nhanh khi nghi ngờ**: `document.elementFromPoint(tâm panel)` — ra `aw-tool-dim` là dính bẫy
 này, ra phần tử trong panel là lành.
 
+### 0-BIS. ⚠️⚠️ BẪY ANH EM: ACCORDION `max-height` THIẾU `overflow:hidden` = TẤM BẪY VÔ HÌNH ĂN CHUỘT (Đợt 137)
+
+Cùng họ stacking-context với bẫy 0 ở trên — **bẫy thứ HAI cắn dự án trong 4 ngày**, nên đọc luôn cả 2.
+
+Khuôn "đóng/mở mượt" hay dùng trong app này (`.aw-as-answers`, `.aw-anagram-pencontent`…):
+```css
+.khoi { max-height: 0; opacity: 0; transition: max-height .28s …, opacity .2s ease; }
+.khoi.is-open { opacity: 1; }
+```
+Thiếu `overflow: hidden` là **HỎNG NGẦM**, và hỏng theo kiểu khó ngờ nhất:
+1. `max-height:0` chỉ ép chiều cao **CÁI HỘP** về 0. **Ruột bên trong vẫn nằm nguyên vị trí cũ và vẫn
+   ăn chuột** — mắt không thấy chỉ vì `opacity:0`.
+2. Mà **`opacity` < 1 ĐẺ RA STACKING CONTEXT** ⇒ khối "đã ẩn" được vẽ ở **lớp TRÊN** nội dung thường
+   của phần tử anh em ngay dưới nó (nội dung thường vẽ ở bước sớm hơn trong thứ tự vẽ CSS).
+
+⇒ Kết quả: **một bản sao vô hình của nút/thanh trượt nằm đè khít lên nút/thanh trượt THẬT**, nuốt sạch
+mọi cú bấm/kéo. Người dùng chỉ thấy "kéo không ăn", không có lỗi console, không có gì đỏ.
+
+Đã cắn thật ở Đợt 134→137 (Anagram Options): thanh **Points off** và cả thanh **Lives** chết trong 3
+tổ hợp mode khác nhau. Tệ hơn: cú kéo **vẫn ăn — nhưng ăn vào thanh TÀNG HÌNH**, tức âm thầm đổi một
+cài đặt khác mà giáo viên không biết.
+
+**LUẬT**: hễ dùng `max-height` để đóng/mở thì **`overflow: hidden` là BẮT BUỘC**, không phải tuỳ chọn.
+Nên kèm luôn `pointer-events: none` (và `auto` ở `.is-open`) làm chốt chặn lớp 2 — miễn phí, và cứu
+được cả trường hợp sau này ai đó đổi bố cục làm `overflow` mất tác dụng.
+
+**Cách soi nhanh** (dùng chung với bẫy 0): `document.elementFromPoint()` tại **vài điểm dọc** phần tử
+rồi so với chính phần tử đó — không trùng là có kẻ nằm đè. Nhanh và chắc hơn mọi suy luận đọc CSS.
+**Mẹo đối chứng rẻ**: tiêm 1 thẻ `<style>` phủ `!important` để **tạm gỡ bản vá ngay trong trình duyệt**
+rồi lặp lại đúng thao tác — chứng minh được "trước sai / sau đúng" mà không phải revert hay build lại.
+
 ### 1. `.aw-stage-dim` — CHỈ tối khung game, KHÁC `.aw-tool-dim`
 
 `.aw-tool-dim` (Options/Template/Style) làm tối **toàn màn hình** kể cả thanh dưới khung (title +
