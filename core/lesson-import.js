@@ -112,11 +112,24 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // means "no data" — treat it the same as blank. Without this, empty rows were
   // imported as junk acts full of "0" (teacher hit this: 100 real words became
   // 150, Speaking cards dealt blank "0" cards).
+  // ⭐ 13/8/2026 — READ WHAT EXCEL SHOWS, NOT WHAT IT STORES. SheetJS gives every
+  // cell two faces: `v` = the raw stored value, `w` = the exact text Excel paints
+  // on screen after its number format. A quiz answer typed as "8:30" is NOT text
+  // in Excel — it's the number 0.3541666666666667 wearing an `h:mm` format, so
+  // reading `v` imported "0.3541666666666667" as the answer (teacher hit this in
+  // LSA2-S2.T4.P3-4-5.xlsm, Quiz1/Quiz2 row 27). Taking `w` first makes the rule
+  // hold for EVERY format — times, dates, percentages, currency, rounded numbers:
+  // whatever the teacher sees in the cell is what lands in the act. `v` stays as
+  // the fallback for the rare cell SheetJS hands over without formatted text.
+  // Error cells (`#VALUE!`, `#N/A`…) are not content at all — their `v` is an
+  // internal error CODE (15 for #VALUE!), which used to import as a one-word act
+  // literally called "15", so they now read as blank.
   const cell = (ws, row1, col1) => {
     if (!ws) return "";
     const c = ws[XLSX.utils.encode_cell({ r: row1 - 1, c: col1 - 1 })];
     if (!c) return "";
-    const v = c.v != null ? c.v : c.w;
+    if (c.t === "e") return "";
+    const v = c.w != null ? c.w : c.v;
     const s = v == null ? "" : String(v).trim();
     return s === "0" ? "" : s;
   };

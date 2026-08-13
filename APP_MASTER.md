@@ -8,7 +8,21 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 140) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"):
+> Cập nhật lần cuối: **13/8/2026 (Đợt 141) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ
+> **CHỮ EXCEL ĐANG HIỆN**.** Thầy báo đáp án `8:30` vào act thành `0.3541666666666667`. Gốc: trong
+> Excel `8:30` là **số 0.3541666666666667** khoác định dạng `h:mm`; SheetJS cho 2 mặt (`v` thô ·
+> `w` = đúng chữ đang hiện) mà `cell()` trong `core/lesson-import.js` lấy **`v` trước**. Vá **2 dòng**:
+> lấy `w` trước (áp được cho MỌI định dạng — giờ, ngày, %, tiền tệ, số làm tròn) + coi ô lỗi
+> `#VALUE!` là ô trống (trước đây `v` của nó = mã lỗi **15** nên đẻ ra 5 act rác mỗi act 1 "từ" tên
+> là `15`). **Đo trên cả 102 file bài học ở ổ D**: chỉ **5 file** đổi kết quả (3 file × 69 ô giờ về
+> đúng chữ · 2 file bỏ act rác), **0 file mất nội dung thật**; test lại trong trình duyệt thật:
+> câu 27 ra `*8:30 | 7:30 | 8:00 | 9:15 | 6:45 | 9:30`, 0 lỗi console.
+> ⬜ Kèm **4 phát hiện phụ** thầy chốt CHƯA làm (43 file mất hẳn bộ quiz đầu vì sheet tên `Quiz`
+> không số · 3 kiểu bố cục sheet quiz · 1 file mất format ngay trong Excel · popup Import hiện
+> "· 0" cho Running word/team) — chi tiết ở `GHI CHU DU AN.md` Đợt 141 mục 5.
+> 🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+>
+> Trước đó: **13/8/2026 (Đợt 140) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"):
 > MỘT LƯỚI 2 CỘT, MỘT KHUÔN HÀNG DUY NHẤT, DÙNG CHUNG CHO CẢ 17 TEMPLATE.**
 > ⭐ CÓ SỬA CORE (`engine.js`, `app.css`, `fight.js`, `numberstepper.js`) + **16/17 template**.
 > Thầy báo: *"bảng options đang rất rối, khó nhìn, không thẳng hàng, không ngăn nắp và không thẩm mỹ"*.
@@ -1774,7 +1788,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 140 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 141 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -1821,9 +1835,10 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 "OPTIONS PANEL v2". 16/17 template đã chuyển; **running-word còn dùng nhóm kiểu cũ** (panel bespoke:
 ô nhập tên đội + đồng hồ tuỳ chỉnh) và vẫn hiện y như trước nhờ "cầu tương thích" trong `app.css`.
 
-**5 đợt gần nhất (đều đã LIVE):**
+**5 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | 🟢 **chưa commit** |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
 | **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
@@ -1840,7 +1855,17 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
-**⭐ MỚI nhất — CHỜ TEST TOMKO (không ai tự kiểm được qua code):**
+**⭐ IMPORT EXCEL (Đợt 141) — thầy đã xem báo cáo, chốt CHƯA làm, đừng tự làm:**
+- **43/102 file bài học có sheet tên `Quiz` (không có số)** → importer chỉ dò `QUIZ1`/`QUIZ2` nên
+  **bộ quiz đầu 30–35 câu bị bỏ im lặng**. Sửa được nhưng phải kèm việc dưới, không thì vẫn ra act rỗng.
+- **3 kiểu bố cục sheet quiz** đang sống song song (A=hỏi · C=hỏi · B=hỏi) — importer chỉ hiểu 1 kiểu:
+  kiểu cũ đẻ **act QUIZ2 rỗng 0 câu**, kiểu IELTS đẻ **30 câu sai hoàn toàn** (câu hỏi = "1","2"…).
+- `main.js:1022` đếm số câu thiếu khoá `words` ⇒ hàng **Running word/Running team trong popup Import
+  luôn hiện "· 0"** (cùng họ lỗi đã vá cho anagram ở Đợt 51).
+- Skill **`taoact`/`taoactaw`** (openpyxl, ngoài AWord) **dính y hệt lỗi giờ của Đợt 141** — chưa sửa.
+- ⬜ Thầy import lại `LSA2-S2.T4.P3-4-5.xlsm` trên bản live sau khi push, xác nhận câu 27 ra `8:30`.
+
+**⭐ CHỜ TEST TOMKO (không ai tự kiểm được qua code):**
 - **(Đợt 139)** ⭐ **Nhìn bằng mắt hiệu ứng số `-N` đỏ bay từ ô điểm vào đồng hồ** — pane test của phiên
   tự động bị ẩn nên `requestAnimationFrame` + WAAPI **chết hẳn**, em chỉ chứng minh được node sinh ra
   đúng số/đúng nội dung/được dọn sạch, KHÔNG thấy được nó bay đẹp hay xấu.

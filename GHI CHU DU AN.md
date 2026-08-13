@@ -5,6 +5,92 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 141 (13/8/2026) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ **CHỮ EXCEL ĐANG HIỆN** — ĐÁP ÁN "8:30" VÀO ACT THÀNH `0.3541666666666667`
+⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`, **1 hàm, 2 dòng lệnh**. KHÔNG cần đăng nhập để test.
+🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+
+### 1. Thầy báo
+Import file bài học xong, **câu 27** của act QUIZ hiện 6 đáp án là số chia:
+`0.3541666666666667 · 0.3125 · 0.3333333333333333 · 0.3854166666666667 · 0.28125 · 0.3958333333333333`
+— trong khi Excel hiện đúng `8:30 · 7:30 · 8:00 · 9:15 · 6:45 · 9:30`.
+Thầy chốt luôn thành **luật**: *"Excel hiển thị gì thì đưa vào chuẩn nhìn như thế, bất kể định dạng
+gì ở Excel."*
+
+⚠️ Đường dẫn thầy gửi (`LSA2-S3.T1\LSA2-S3.T1.P3-4-5.xlsm`) **không chứa câu này** — quét cả cây
+`D:\4. LISTENING` mới ra file thật: **`LSA2-S2.T4\LSA2-S2.T4.P3-4-5.xlsm`, sheet `Quiz1`+`Quiz2`, dòng 27**.
+Bài học: gặp báo lỗi kèm ảnh thì **đi tìm ô thật rồi mới kết luận**, đừng tin đường dẫn.
+
+### 2. Gốc lỗi (đã soi tận ô, không suy đoán)
+Trong Excel, `8:30` **không phải chữ** — nó là **số `0.3541666666666667`** (phần của 1 ngày) khoác
+định dạng `h:mm`. SheetJS trả về **2 mặt** của mỗi ô:
+- `c.v` = giá trị **thô** đang lưu (`0.3541666666666667`)
+- `c.w` = **đúng chuỗi Excel đang vẽ ra màn hình** (`"8:30"`)
+
+Hàm `cell()` trong `core/lesson-import.js` lấy **`v` trước**, chỉ rơi về `w` khi `v` rỗng:
+```js
+const v = c.v != null ? c.v : c.w;   // ← gần như KHÔNG BAO GIỜ tới được w
+```
+Ô thật đo được: `t=n  v=0.3541666666666667  w="8:30"  z="h:mm"`.
+
+### 3. Bản vá
+```js
+if (c.t === "e") return "";          // ô lỗi #VALUE!/#N/A — không phải nội dung
+const v = c.w != null ? c.w : c.v;   // w = ĐÚNG chữ Excel hiển thị
+```
+Đảo thứ tự ưu tiên là **áp được luật của thầy cho MỌI định dạng**, không riêng giờ: ngày tháng, phần
+trăm, tiền tệ, số bị làm tròn theo format — nhìn thấy gì trong ô thì act nhận đúng thứ đó. `v` giữ
+nguyên vai trò dự phòng cho ô hiếm hoi SheetJS không kèm chữ hiển thị.
+Bộ lọc rác `"0"` cũ **không đổi hành vi**: ô công thức trả 0 thì `w` cũng là `"0"`.
+
+⭐ **Vế thứ 2 — ô lỗi**: `v` của ô `#VALUE!` là **mã lỗi nội bộ = 15**, nên trước đây file có
+WORDTABLE lỗi bị import thành **5 act rác, mỗi act đúng 1 "từ" tên là `15`** (ENG1/ENG2/VI1/VI2/IPA).
+Nay ô lỗi = ô trống, act rác biến mất.
+
+### 4. Kiểm chứng — đo trên **TOÀN BỘ 102 file bài học** ở ổ D, không phải 1 file
+Harness Node chạy **song song 2 bản parser** (bản HEAD lấy bằng `git show HEAD:` vs bản đã vá) trên
+mọi `.xlsm/.xlsx` trong `D:\4. LISTENING` + `D:\3. READING`, rồi so **từng chuỗi** của từng act.
+
+| Kết quả | Số liệu |
+|---|---|
+| File có kết quả import **đổi** | **5 / 102** |
+| 3 file: ô giờ về đúng chữ | 69 ô — `0.3541666666666667`→`8:30`, `0.125`→`3:00`, `0.5`→`12:00`… |
+| 2 file: bỏ act **rác** (`#VALUE!`) | `LSA2-S4.T4.P3-4-5_CHUA SOAN` và `IEL-S15.T1.P1`: 7 act → 2 act (5 act rác "15" biến mất, 2 act quiz thật giữ nguyên từng ký tự) |
+| File **mất nội dung thật** | **0** |
+
+**Test trong TRÌNH DUYỆT thật** (devserver :5511, trang tạm `_test-import.html` + bản sao file thật
+trong web root — **cả 2 đã XOÁ sau khi xong**, đúng quy ước Đợt 96): parse 112ms → **7 act**, câu 27
+ra `*8:30 | 7:30 | 8:00 | 9:15 | 6:45 | 9:30` (dấu `*` = đáp án đúng, đúng cột B), quét toàn bộ 100
+câu của 2 act quiz: **0 chuỗi dạng `0.xxxxxx` còn sót**, **0 lỗi console**.
+Chạy trong trình duyệt là bắt buộc chứ không chỉ Node: phải chắc `XLSX.read(ab, {type:"array"})` —
+đúng tuỳ chọn app đang dùng — vẫn sinh ra `w`. Đã đo: `w` có mặt.
+
+### 5. ⬜ 4 phát hiện phụ khi quét 102 file — ĐÃ BÁO THẦY, THẦY CHỐT **CHƯA LÀM** đợt này
+1. ⭐ **43/102 file có sheet tên `Quiz` (không có số)** — importer chỉ dò `QUIZ1`/`QUIZ2` nên **cả bộ
+   quiz đầu (30–35 câu) bị bỏ IM LẶNG**. 43/43 file đó **không** có sheet `Quiz1` nào khác.
+2. ⭐ Kho bài học đang có **3 kiểu bố cục sheet quiz**, importer chỉ hiểu 1:
+   - *kiểu mới* (hiểu đúng): A=câu hỏi · B=đáp án đúng · C–G=sai
+   - *kiểu cũ* (43 file): A=STT · B=trống · **C=câu hỏi** · D=đúng · E–I=sai → sheet `Quiz2` khớp
+     tên nhưng **lệch cột** ⇒ đẻ ra **act QUIZ2 RỖNG 0 câu** (`rows.length` đếm theo cột A có số,
+     nhưng `quiz()` vứt hết vì cột B trống)
+   - *kiểu IELTS*: A=STT · **B=câu hỏi** · C=đúng · D–H=sai → đẻ ra **30 câu SAI HOÀN TOÀN**: câu hỏi
+     thành `"1"`, `"2"`… còn "đáp án đúng" lại là chính câu hỏi
+3. `LSA2-S1.T1.P1-2-3.xlsm` sheet `Quiz2` dòng 3: các ô giờ **mất định dạng `h:mm` ngay trong Excel**
+   (Excel cũng đang hiện `0.260416667`) → bản vá nhập đúng chuỗi đó, **không tự đoán ra "6:15"**.
+   Muốn đẹp phải định dạng lại ô trong Excel. Đây là **đúng luật thầy đặt**, không phải lỗi còn sót.
+4. `main.js` dòng 1022 đếm số câu thiếu khoá `words` ⇒ hàng **RUNNING WORD / RUNNING TEAM trong popup
+   Import luôn hiện "· 0"** dù có 35 từ. Đúng họ lỗi đã vá cho anagram (`items`) ở Đợt 51.
+
+### 6. Ghi chú để lại
+⚠️ Skill **`taoact`/`taoactaw`** (tạo act trên Wordwall, đọc Excel bằng openpyxl) cũng đọc **giá trị
+thô** ⇒ **dính y hệt lỗi giờ này**. Nằm ngoài AWord nên không tự đổi theo — sửa thì phải sửa riêng.
+⚠️ Nhắc lại: comment đầu `lesson-import.js` khai "mirrors the taoactaw skill's mapping exactly" —
+2 bên **đã lệch có chủ ý** từ Đợt 123 (AWord 1 act ENG1, skill 2 act).
+
+**VIỆC ĐANG CHỜ**: thầy import lại chính file `LSA2-S2.T4.P3-4-5.xlsm` trên bản live sau khi push,
+xem câu 27 ra `8:30`; và chốt có làm tiếp 4 phát hiện phụ mục 5 không.
+
+---
+
 ## Đợt 140 (13/8/2026) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"): MỘT LƯỚI 2 CỘT DÙNG CHUNG CHO 17 TEMPLATE
 ⭐ CÓ SỬA CORE (`engine.js`, `app.css`, `fight.js`, `numberstepper.js`) + **16/17 template**.
 ✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** — đã `curl` xác nhận **6 dấu mốc** trên bản live (`aw-opt-grid` trong `app.css` · `mkSliderCell` trong `engine.js` · `makeHStepper` trong `numberstepper.js` · `Fight content` trong `fight.js` · `aw-anagram-penwrap` trong `anagram.js` · `hideTimerNone` trong `whack-a-mole.js`), **và mở panel CHẠY THẲNG TRÊN BẢN LIVE** đo lại đúng số: Anagram 397px · 2 mép trái (20/288) · 4 thanh trượt đều 190px · không cuộn · không nén chữ.
