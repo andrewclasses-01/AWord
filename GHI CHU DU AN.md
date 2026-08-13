@@ -7,7 +7,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 140 (13/8/2026) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"): MỘT LƯỚI 2 CỘT DÙNG CHUNG CHO 17 TEMPLATE
 ⭐ CÓ SỬA CORE (`engine.js`, `app.css`, `fight.js`, `numberstepper.js`) + **16/17 template**.
-✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE** (đã tự test đo thật cả 17 template, đơn + đấu, có đối chứng ngược).
+✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** — đã `curl` xác nhận **6 dấu mốc** trên bản live (`aw-opt-grid` trong `app.css` · `mkSliderCell` trong `engine.js` · `makeHStepper` trong `numberstepper.js` · `Fight content` trong `fight.js` · `aw-anagram-penwrap` trong `anagram.js` · `hideTimerNone` trong `whack-a-mole.js`), **và mở panel CHẠY THẲNG TRÊN BẢN LIVE** đo lại đúng số: Anagram 397px · 2 mép trái (20/288) · 4 thanh trượt đều 190px · không cuộn · không nén chữ.
+(Đã tự test đo thật cả 17 template, đơn + đấu, có đối chứng ngược — chi tiết bên dưới.)
 
 ### Thầy yêu cầu
 Thầy gửi ảnh chụp bảng Options của Anagram: *"Tôi cần thiết kế lại bảng options vì nó đang rất rối,

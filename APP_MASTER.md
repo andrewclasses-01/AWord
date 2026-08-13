@@ -33,6 +33,7 @@
 > 🟢 ĐÃ TỰ TEST: 17/17 template mở panel sạch (0 lỗi console, 0 điều khiển bị che — có **đối chứng
 > ngược** tái tạo đúng lỗi Đợt 137 để chứng minh phép đo lật được 2 chiều) · Apply ghi đúng giá trị
 > đầu-cuối (đồng hồ đếm ngược chạy đúng 2:05 sau khi chỉnh) · `play.html` vẫn không nạp code thư viện GV.
+> ✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** (curl xác nhận 6 dấu mốc; mở panel chạy thẳng trên bản live đo lại đúng: Anagram 397px, 2 mép trái, thanh trượt đều 190px, không cuộn).
 > ⬜ Chưa chạm tay thật trên màn TOMKO.
 >
 > Trước đó: **13/8/2026 (Đợt 139) — ⭐ TÍNH NĂNG MỚI "TIME COST": MỖI GIÂY **TRỐNG**
@@ -1823,7 +1824,7 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 **5 đợt gần nhất (đều đã LIVE):**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | HASH140 |
+| **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
 | **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
 | **137** | ⭐ **VÁ LỖI THẬT "không kéo được thanh Points off"** — hồi quy do Đợt 134: accordion `max-height` thiếu `overflow:hidden` ⇒ thanh trượt tàng hình đè lên thanh thật. Dính 3 ca (kèm 2 ca **Lives** chưa ai báo). Chỉ sửa `templates/anagram/anagram.css`, 2 dòng | `912016b` |

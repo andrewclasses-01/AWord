@@ -2,7 +2,7 @@
 
 ## ⭐ Đợt 140 (13/8/2026) — BẢNG OPTIONS v2: Anagram là ca nặng nhất, viết lại toàn bộ `buildExtraOptions`
 
-✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** Số đo đầy đủ + 5 luật mới: `../../GHI CHU DU AN.md` Đợt 140 và
+✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** (đã đo lại trên chính bản live: 397px, không cuộn). Số đo đầy đủ + 5 luật mới: `../../GHI CHU DU AN.md` Đợt 140 và
 `../../core/HUONG DAN CORE.md` mục **"OPTIONS PANEL v2"**.
 
 **Vì sao Anagram là ca nặng nhất**: panel của nó chính là panel thầy chụp màn hình gửi kèm lời phàn
