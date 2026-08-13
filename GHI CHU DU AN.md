@@ -7,7 +7,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 141 (13/8/2026) — ⭐ LỖI THẬT: IMPORT EXCEL ĐỌC **GIÁ TRỊ THÔ** THAY VÌ **CHỮ EXCEL ĐANG HIỆN** — ĐÁP ÁN "8:30" VÀO ACT THÀNH `0.3541666666666667`
 ⭐ CÓ SỬA CORE — chỉ `core/lesson-import.js`, **1 hàm, 2 dòng lệnh**. KHÔNG cần đăng nhập để test.
-🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+✅ **THẦY DUYỆT → COMMIT `0f67311` + PUSH + LIVE** tại `https://aword.andrewclasses.com/`
+(`curl` xác nhận **3 dấu mốc** chỉ có ở bản mới sống trên live: `READ WHAT EXCEL SHOWS` dòng 115 ·
+`if (c.t === "e") return "";` dòng 131 · `const v = c.w != null ? c.w : c.v;` dòng 132 — Pages lên
+sau **15 giây**, không dính bẫy cache lần này). ⭐ **Và CHẠY LẠI phép kiểm bằng CHÍNH MODULE TRÊN
+LIVE**, không phải bản local: trang tạm ở devserver `import("https://aword.andrewclasses.com/core/
+lesson-import.js")` (Pages trả `Access-Control-Allow-Origin: *` nên import chéo được) rồi parse
+đúng file thật của thầy → **7 act**, `QUIZ1` câu 27 = `*8:30 | 7:30 | 8:00 | 9:15 | 6:45 | 9:30`,
+`QUIZ2` câu 27 y hệt, **0 chuỗi `0.xxxxxx` còn sót**. File tạm đã xoá, `git status` sạch.
 
 ### 1. Thầy báo
 Import file bài học xong, **câu 27** của act QUIZ hiện 6 đáp án là số chia:

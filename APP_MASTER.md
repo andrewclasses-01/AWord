@@ -20,7 +20,8 @@
 > ⬜ Kèm **4 phát hiện phụ** thầy chốt CHƯA làm (43 file mất hẳn bộ quiz đầu vì sheet tên `Quiz`
 > không số · 3 kiểu bố cục sheet quiz · 1 file mất format ngay trong Excel · popup Import hiện
 > "· 0" cho Running word/team) — chi tiết ở `GHI CHU DU AN.md` Đợt 141 mục 5.
-> 🟢 **CHỜ THẦY DUYỆT** (chưa commit).
+> ✅ **THẦY DUYỆT → COMMIT `0f67311` + PUSH + LIVE** (curl xác nhận 3 dấu mốc; **chạy lại phép kiểm
+> bằng chính module trên live** → câu 27 ra `*8:30 | 7:30 | 8:00 | 9:15 | 6:45 | 9:30`, 0 số sót).
 >
 > Trước đó: **13/8/2026 (Đợt 140) — ⭐ THIẾT KẾ LẠI TOÀN BỘ BẢNG OPTIONS ("panel v2"):
 > MỘT LƯỚI 2 CỘT, MỘT KHUÔN HÀNG DUY NHẤT, DÙNG CHUNG CHO CẢ 17 TEMPLATE.**
@@ -1838,7 +1839,7 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 **5 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | 🟢 **chưa commit** |
+| **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | `0f67311` |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
 | **139** | ⭐ **TIME COST** (trừ điểm mỗi giây TRỐNG, số đỏ bay vào đồng hồ) + **Bonus x lên 10x**. Kèm 1 lỗi thật tự bắt: đấu trừ 2 lần | `c840baf` |
 | **138** | 📘 Chỉ hồ sơ: ghi thành luật "Hợp đồng xếp lớp của hệ popup" | `1030313` |
