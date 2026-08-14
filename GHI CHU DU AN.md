@@ -5,6 +5,324 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 157 (14/8/2026) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN, ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC
+⭐ CÓ SỬA CORE (`showdown-setup.js` dựng lại phần panel, `app.css`).
+⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** Chạy thử thật, 0 lỗi console.
+
+### 1. Thầy giao (kèm ảnh chụp bảng)
+> "Trong danh sách các lớp, **tối đa chỉ là 20 học sinh**. Vì vậy hãy **tăng tối đa size các ô tên**
+> để dễ nhìn, dễ thao tác hơn. Thiết kế đang **chưa được cân đối**, hãy điều chỉnh cho cân đối hơn
+> trong **tất cả các step**. Thêm **hiệu ứng âm thanh mỗi thao tác**. Mỗi bước chuyển, mỗi thao tác
+> trong toàn bộ Showdown đều phải có **animation mượt**."
+
+### 2. Ô tên to hẳn — vì trần là 20 chứ không phải 60
+`core/classes.js` cho tới 60 HS/lớp, nên bản trước co ô tên lại phòng xa. Thầy chốt **thực tế tối đa
+20** ⇒ có chỗ để làm ô tên đúng cỡ chạm được: **13px → 15px**, đệm 5/12 → 7/14, ô cao **28 → 36px**
+(đo: ô "Nguyễn Ngọc Ẳnh" nay **170×36**). Ô ở màn A và ô ở màn B dùng **chung một cỡ** (khai chung
+một luật) để hai màn không lệch nhau.
+
+### 3. Cân đối lại — và một lỗi bề rộng đo được
+- **Panel 580 → 660px**, thân bảng 620×410.
+  ⚠️ **Lỗi thật**: `.aw-tool-panel.is-sd` chỉ khai `width`, mà luật gốc `.aw-tool-panel` có
+  **`max-width: min(94vw, 580px)`** ⇒ bề rộng bị **kẹp lại 580 trong im lặng**, bảng hẹp hơn 80px so
+  với con số nó tự khai. Phải khai **cả `max-width`**.
+- ⚠️ **Bỏ hẳn bề rộng cứng trên thân bảng.** Trước: panel khai bề rộng của nó, thân bảng khai
+  `560px` — **hai nguồn cho một con số**; khi panel hẹp hơn (nó bị kẹp theo màn hình) thì thân bảng
+  **tràn ra và `overflow-x:hidden` xén mất điều khiển bên phải**. Nay **panel giữ bề rộng, thân bảng
+  `width:100%`** ⇒ hai bên không thể lệch nhau ở bất kỳ cỡ màn nào nữa. (Ảnh thầy gửi trông như bị
+  xén ô TEAMS; em **không tái hiện được** ở 600px lẫn 1869px — có thể chỉ là ảnh crop — nhưng đường
+  hỏng đó có thật nên đã bịt luôn.)
+- **Hàng chọn lớp/số đội** đổi từ flex sang **lưới `1fr 152px`**: tên lớp dài còn số đội chỉ 1 ký tự,
+  để tự co thì một ô nuốt hẳn ô kia. Cả hai cao **46px**.
+- **Ô danh sách rỗng nay canh GIỮA** (`.is-empty`) thay vì chữ nằm nép góc trên-trái của một khung
+  rỗng to đùng — đúng chỗ ảnh thầy gửi trông trống trải nhất.
+- **410px là số ĐO, không phải số chọn**: lớp 20 em ở cỡ ô mới cần **320px** danh sách; 410 − hàng
+  chọn 70 − khe 14 = **326** ⇒ **vừa khít, không cuộn** (ở 360 phải cuộn 44px, ở 400 vẫn cuộn 4px).
+  Panel cao 532px, còn xa mức ~645px engine cho phép.
+- Màn B với **20 em / 4 đội**: pool cuộn dọc trong 132px, 4 cột rộng 130–165px **theo nội dung**,
+  không cuộn ngang, không cuộn dọc trong cột, panel không cuộn.
+
+### 4. Âm thanh + chuyển cảnh
+- **Bộ tiếng riêng của Showdown** (`sfx` trong `showdown-setup.js`) ghép từ `sound.glide/click/tick`
+  của `core/sound.js`, **KHÔNG thêm vào core**: đó là core dùng chung cho cả 17 game, phình nó vì một
+  nơi gọi là bắt 16 game kia gánh theo. `sound.glide` vốn đã tôn trọng nút tắt tiếng.
+  Tiếng đi theo **nghĩa**, không phải theo nút: tiến lên/lùi lại có hướng cao–thấp ngược nhau, ô tên
+  bay vào là tiếng **lên**, gỡ ra là tiếng **xuống**, tick đội là tiếng chốt, READY là tiếng mừng.
+  Đo: **11/11 thao tác đều phát tiếng**.
+- **Chuyển màn** nay là hai **lớp chồng nhau**: lớp cũ mờ+trượt đi, lớp mới trượt vào (`SCREEN_MS`
+  240ms, hướng theo tiến/lùi). Thân bảng cỡ cố định nên **dissolve thuần sẽ đọc thành nháy**, phải cho
+  cái này trượt qua cái kia mới ra "một bước". Đo: giữa chừng có **2 lớp**, xong còn **1** (dọn sạch).
+- **Sửa trong màn** thì **không trượt** (`repaint()`) — trượt mỗi lần xoá một cái tên sẽ chóng mặt.
+- Xoá thành viên: ô **thu nhỏ + mờ đi rồi mới biến mất**, chứ không nháy tắt (trước không nhìn ra ô nào
+  vừa đi). Thêm thành viên: ô mới **nảy lên** (`is-pop`) — với 20 ô trên màn, một ô lặng lẽ nối vào
+  đuôi thì không ai thấy. Tick đội: cột **phóng nhẹ** một nhịp. Ô bay: thêm chặng **phình 1.07 ở giữa
+  đường** cho có sức nặng.
+- ⚠️ **MỌI `element.animate()` ở đây đều có `setTimeout` dự phòng** (gom vào `whenDone()`): tab ẩn thì
+  Chromium đóng băng rAF, `onfinish` **không bao giờ bắn**, và một lớp mờ dở — hay một ô bay còn treo —
+  sẽ nằm đè lên bảng nuốt hết mọi cú chạm sau đó.
+- ⚠️ Mọi hoạt cảnh đều nằm **BÊN TRONG `.aw-tool-panel`**. Tuyệt đối không đặt `transform` lên
+  `.aw-below-center` hay tổ tiên của nó — đúng bẫy xếp lớp đã cắn 3 lần.
+
+### 5. Đo thật (localhost, Chrome, 0 lỗi console)
+Panel 660 · thân 620×410 · ô tên 170×36 (15px) · lớp 20 em **không cuộn** · 20 em/4 đội mọi thứ vừa
+khung · chuyển màn 2→1 lớp cả chiều tiến lẫn lùi · xoá 20→19, thêm 19→20 có `is-pop`, tên chuẩn hoá
+khoảng trắng · **11/11 thao tác có tiếng** · 0 ô bay còn sót · đầu-cuối: ghi Firestore + claim, nút
+MODE ẩn, màn START hiện `TEAM 1 · <5 tên>`, mở lại ra màn C cao 96px.
+⚠️ Đo panel **phải tắt animation của `.aw-tool-panel`** trước, nếu không đọc ra đúng **0,9 lần** số
+thật (bẫy `aw-pop-cx` đã ghi từ Đợt 140).
+
+### VIỆC ĐANG CHỜ (Đợt 157)
+1. **Thầy tự NHÌN**: pane preview không compositing nên em **không chụp được ảnh** — cỡ chữ, độ cân
+   đối và độ mượt của hoạt cảnh phải do mắt thầy chấm.
+2. **Thầy tự NGHE**: em chỉ đếm được số lần gọi hàm phát tiếng, **không nghe được** — cần thầy xác nhận
+   bộ tiếng có dễ chịu không, có chỗ nào chối tai hay thừa không.
+3. Vẫn còn nguyên từ Đợt 156: thử **2 máy/2 cột thật** (luật giành đội) và **myActivity nhiều cột**.
+4. Chốt xong mới commit + push.
+
+---
+
+## Đợt 156 (14/8/2026) — ⭐⭐ SHOWDOWN BẢN THẦY CHỐT: 3 MÀN, KÉO TÊN VÀO ĐỘI, VÀ **GIÀNH ĐỘI** GIỮA CÁC TRÌNH DUYỆT
+⭐ CÓ SỬA CORE (`engine.js`, `showdown.js`, `showdown-setup.js` viết lại, `options-panel.js`, `app.css`).
+⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** Chạy thử thật trên trình duyệt, 0 lỗi console.
+
+### 1. Thầy giao (sau khi chơi thử Đợt 155)
+Bảng Showdown làm lại theo đúng thiết kế của thầy:
+> "Pop-up Showdown chỉ có ô chọn lớp và chọn số đội, 2 ô đều to rõ ràng. Sau khi chọn lớp thì hiện tên
+> học sinh, xoá được và thêm được bằng tay. Bấm NEXT mới sang màn build đội… các ô tên ở trên cùng
+> theo hàng, các team theo cột dọc, chạm tên team là đang chọn team đó, bấm tên nào thì ô đó **bay**
+> vào đội. Bấm READY về màn START, hiển thị thêm 'Tên team: các thành viên'… Options đổi TEXT-VOICE
+> thì Showdown đồng bộ luôn. Đã setup thì **ẩn nút Mode**, và trong nút Showdown có RESET team + SINGLE MODE."
+> **Size các bảng đều to bằng nhau dù nội dung ít hơn.**
+
+### 2. ⭐ Điều thầy chốt thêm — CƠ CHẾ GIÀNH ĐỘI
+Bảng mới **không còn bước tick đội** như Đợt 155, nên em hỏi lại. Thầy chốt:
+> "Thêm 1 ô tích đội. **Khi đội được tích thì các trình duyệt khác không hiện đội đó nữa**."
+Và màn START **chỉ hiện đội của màn hình này** (không liệt kê mọi đội).
+
+Nghĩa là "1 trình duyệt 1 đội" nay được **cưỡng chế bằng dữ liệu chung**, không còn dựa vào thầy nhớ:
+- Document `sd_main` thêm `claims: { [teamId]: {by, at} }`, `by` = **id của trình duyệt** (mới:
+  `browserId()` trong `core/showdown.js`, cũng nằm `sessionStorage` — cùng lý do với pick).
+- Bảng **đọc mới toàn** mỗi lần mở (`loadSetup({fresh:true})`) **và theo dõi trực tiếp** bằng
+  `onSnapshot` suốt lúc mở ⇒ cột khác giành đội thì đội đó **biến mất ngay dưới tay thầy**; nhả ra
+  thì **hiện lại ngay** (đã đo cả hai chiều).
+- ⚠️ **CLAIM PHẢI HẾT HẠN** (`CLAIM_TTL_MS` = 12 giờ). Id trình duyệt sống trong `sessionStorage`, nên
+  **đóng hẳn trình duyệt là không ai nhả được nữa** — không có hạn thì đội đó chết vĩnh viễn và cách
+  duy nhất là xây lại bảng. 12 giờ = đủ dài cho một buổi dạy (trận đang chạy qua giờ ra chơi không bị
+  cướp), đủ ngắn để claim hôm qua không chặn buổi sáng nay.
+- SINGLE MODE và RESET team **đều nhả claim** trước khi đi.
+
+### 3. Ba màn (một khung cỡ CỐ ĐỊNH)
+`.aw-sd-body` khai cứng `560px × min-height 300px` cho **mọi màn** — đúng yêu cầu "size các bảng đều
+to bằng nhau". Đây **không phải chỗ để dọn cho gọn về `auto`**: một popover tự đổi kích thước giữa
+các bước ngay dưới tay thầy chính là thứ nó sinh ra để tránh. Ngoại lệ duy nhất: màn C (`.is-mini`)
+chỉ có 2 nút, kéo dài ra 300px thì trông như hỏng.
+
+- **A — SETUP**: 2 ô to (lớp `44px`, số đội stepper `44px`). Chọn lớp xong hiện danh sách HS dạng thẻ,
+  mỗi thẻ có nút ✕ xoá; nút **+ Add member** mở ô nhập ngay tại chỗ. ⚠️ **Không dùng `prompt()`** —
+  nó bị chặn trong WebContentsView của myActivity và sẽ hỏng **im lặng** đúng chỗ thầy hay dùng.
+- **B — BUILD**: pool ô tên ở trên (`justify-content:center` để hàng cuối ngắn nằm cân giữa chứ không
+  lệch trái), các team là **cột dọc**, bề ngang **theo nội dung** (`flex:0 1 auto` + `min-width:108px`
+  để cột rỗng vẫn đủ to mà chạm) — đo thật: 3 cột ra 143/160/201px theo độ dài tên.
+  Chạm tên team = chọn cột nhận; chạm ô tên = **bay** vào cột đó; chạm ô tên trong cột = bay ngược ra.
+  Nút ✓ trên đầu cột = **đội màn hình này chơi**.
+- **C — ĐANG CHẠY**: tên đội + thành viên, 2 nút **Single mode** / **Reset team**.
+
+**Hiệu ứng bay** dùng FLIP: đo vị trí cũ → vẽ lại 2 danh sách → đo vị trí mới → cho một **bản sao**
+bay qua khoảng đó (`position:fixed`, `pointer-events:none`). Phải là bản sao vì ô thật đã bị xoá lúc
+vẽ lại. Kèm `setTimeout(settle, 420)` dự phòng — tab ẩn thì `onfinish` **không bao giờ bắn** và một
+bóng ma nằm đè lên trang sẽ nuốt mọi cú chạm sau đó.
+
+### 4. Hai việc nhỏ theo yêu cầu
+- **Ẩn nút MODE khi đã setup đội** (`!showdownPick` trong điều kiện dựng `modeBtn`). Hai chế độ vốn
+  loại trừ nhau, nên nút đó chỉ có thể ném đội hình của cả buổi đi; đường về single là SINGLE MODE
+  trong bảng Showdown, và nó còn **nhả claim** hộ.
+- **Options đồng bộ**: hàng TEXT|VOICE **rời khỏi** bảng Showdown (thầy chốt bảng chỉ có lớp + số đội).
+  Apply của Options kết thúc bằng `replayCurrent()` → vào lại `startGame()` → **đọc lại pick** ⇒
+  Showdown vẫn chạy với nội dung mới. Không phải thêm dòng nào, nhưng **đây là hành vi thầy yêu cầu**,
+  nên ai dời Apply khỏi `replayCurrent()` là phá nó.
+
+### 5. ⭐⭐ BA LỖI THẬT ĐO ĐƯỢC (cả ba đều im lặng)
+**(a) Chuyển hết học sinh mà nút READY vẫn mờ vĩnh viễn.** `sendToTeam()` vẽ lại pool và cột nhưng
+**quên vẽ lại chân bảng** ⇒ dòng gợi ý vẫn nói "9 pupils left" khi pool đã rỗng, READY xám, **chế độ
+không vào được và trên màn hình không có gì giải thích**. Luật: chân bảng là **trạng thái suy ra** —
+thứ gì đổi `pool` hay đổi claim thì phải vẽ lại nó.
+
+**(b) Listener Firestore RÒ RỈ mỗi lần đóng bảng.** Thầy chạm ra ngoài để đóng popover — đường đó
+chạy **hoàn toàn trong `engine.js`**, không gọi ngược về đây, nên `onSnapshot` sống tiếp suốt đời
+trang, mỗi lần mở-đóng thêm một cái. Đo: `subsAfterClose = 1` sau đúng một lần đóng. Guard trong
+callback **không đủ** (nó chỉ chạy khi có snapshot tới, mà có thể không bao giờ). Chữa bằng
+`MutationObserver` trên `.aw-below-center`: `body` rời DOM là dọn. Đo lại: **0 sau 3 lần mở-đóng.**
+
+**(c) ⛔⛔ `panel.isConnected` LÀ PHÉP THỬ SAI — và chỉ hỏng với MẠNG THẬT.**
+`engine.js` mở panel công cụ theo **hai đường**: mở nguội thì `panel` chính là `.aw-tool-panel`; mở
+khi **đang có panel khác** thì nó **cross-fade** (`swapContents`) và `panel` là một lớp tạm
+`.aw-swap-in` bị **XOÁ ở `SWAP_MS + 40` = 300ms** sau khi con của nó đã được chuyển vào hộp thật.
+⇒ `panel` thành rác trong khi giao diện nó dựng ra **vẫn sống trên màn hình**, và mọi `await` dài hơn
+300ms quay lại sẽ thấy "đã đóng" rồi **bỏ ngang, để lại chữ 'Loading…' vĩnh viễn**.
+**300ms là con số bình thường của một lượt Firestore trên mạng lớp học** — mà backend giả ở máy trả
+lời trong vài mili-giây nên **phép thử ban đầu BÁO ĐẠT oan**. Bắt được bằng cách **cho backend giả
+chậm 900ms**; đo mốc thời gian xác nhận cơ chế:
+```
+t=150ms  .aw-swap-in còn trong DOM, body nằm trong nó
+t=320ms  .aw-swap-in ĐÃ BỊ XOÁ   ← body.isConnected vẫn true
+```
+👉 **Luật: thứ để kiểm "panel còn sống không" phải là phần tử mà swap CHUYỂN ĐI (`body`), không phải
+phần tử được truyền vào (`panel`).** Áp cho mọi panel công cụ có `await` về sau.
+
+### 6. Đo thật (localhost, Chrome, 0 lỗi console)
+Dựng **trang thử có backend giả** ở `scratch/` (thư mục đã gitignore nên không vào repo — phiên sau
+muốn dùng phải tạo lại): `showdown-test.html` + `fake-firebase.js` + `fake-classes.js`, nối bằng
+**import map** trỏ `/core/firebase.js` và `/core/classes.js` sang bản giả. Nhờ đó chạy được **toàn bộ**
+đường Firestore mà **không cần đăng nhập Google** — thứ Đợt 155 đã phải bỏ trống.
+- Màn A: chọn lớp → 9 HS; xoá 1 em; thêm tay `"  Ngô  Bảo  Châu "` → lưu thành `"Ngô Bảo Châu"`
+  (chuẩn hoá khoảng trắng); đổi 2→3 đội, gợi ý cập nhật.
+- Màn B: 9 ô bay vào 3 cột, **0 bóng ma còn sót**; cột rộng 143/160/201px theo tên; khung vẫn
+  **560×300** ở cả 3 đội lẫn **8 đội** (8 đội thì cột cuộn ngang, pool cuộn dọc, panel không cuộn).
+- Chân bảng bám đúng 3 trạng thái: còn HS → tick đội → trả 1 em ra thì READY mờ lại.
+- READY: ghi Firestore 3 đội × 3 người + `claims.sdt_2`, `sessionStorage` có pick đúng 3 tên,
+  **nút MODE biến mất**, màn START hiện `TEAM 2 · Lê Minh Đức · Vũ Thị Hường · Đỗ Gia Bảo`.
+- Giành đội: đội bị máy khác giành → **ẩn**; claim 13 giờ tuổi → **hết hạn, hiện lại**; máy kia nhả →
+  **hiện lại ngay** khi bảng đang mở.
+- Options > Apply giữa lúc Showdown chạy: **vẫn Showdown**, tên vẫn đúng, MODE vẫn ẩn.
+- Chơi trọn ván + Show answers: gom đúng theo em.
+- ⚠️ Đo panel **phải tắt animation trước** (bẫy đã ghi): đo lúc `aw-pop-cx` đang chạy ra
+  **504×270 = đúng 0,9 lần** số thật 560×300 — y hệt con số của Đợt 140.
+
+### VIỆC ĐANG CHỜ (Đợt 156)
+1. **Thầy tự thử với TÀI KHOẢN THẬT**: lớp thật, và **quan trọng nhất — mở 2 máy/2 cột cùng lúc** xem
+   luật giành đội có đúng như đo trên backend giả không. Backend giả không thay được Firestore thật.
+2. **Thử trong myActivity chia 2–4 cột** — mục đích gốc của cả chế độ.
+3. **Thầy tự NHÌN**: hiệu ứng ô tên bay, và màn START có cân đối không (em đo được 35px dưới tên game,
+   133px trống phía dưới, không đè nhau — nhưng pane preview không compositing nên **không chụp được ảnh**).
+4. Chốt xong mới commit + push.
+
+---
+
+## Đợt 155 (14/8/2026) — ⭐⭐ CHẾ ĐỘ MỚI **SHOWDOWN**: MỖI TRÌNH DUYỆT MỘT ĐỘI, MỖI CÂU MỘT HỌC SINH
+⭐ CÓ SỬA CORE (`engine.js`, `options-panel.js`, `store.js`, `app.css`, `icons.js`) + 2 FILE MỚI.
+⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT, CHƯA PUSH.** Đã chạy thử thật trên trình duyệt (localhost),
+0 lỗi console. Phần cần **thầy đăng nhập mới thử được** liệt kê ở mục VIỆC ĐANG CHỜ cuối đợt.
+
+### 1. Thầy giao
+> "Thêm vào dãy 4 nút ở chế độ Single 1 nút nữa, chèn vào giữa nút Style và Mode, chế độ tên là
+> Showdown… trong bảng này có: lựa chọn TEXT-VOICE và các mục con; chọn 1 trong các lớp đã setup
+> trong cài đặt; chọn số đội; mỗi đội điều chỉnh được thứ tự thành viên… danh sách đội lưu hẳn
+> trong tổng game, đồng bộ và hiển thị được ở các trình duyệt khác. Ở chế độ này dòng Slogan sẽ
+> được thay bằng tên học sinh cho mỗi câu… Kết quả của mỗi người được ghi lại và show trong Show
+> answer ở cuối game."
+
+### 2. Bốn điều chốt TRƯỚC khi viết code (hỏi thầy, 14/8/2026)
+Bốn chỗ trong mô tả đọc được theo nhiều nghĩa, mỗi nghĩa ra một kiến trúc khác hẳn:
+
+| Hỏi | Thầy chốt |
+|---|---|
+| Template nào có nút? | **Anagram + Quiz trước** (hạ tầng ở core, mở rộng sau = 1 dòng/template) |
+| Thứ tự lượt giữa các đội? | **KHÔNG đan xen.** Bảng đội chỉ để chia sẻ; **1 trình duyệt chơi ĐÚNG 1 đội**, vòng tròn trong đội đó. Mục đích: myActivity chia 2-4 cột, mỗi cột một đội |
+| Rank theo gì? | **Chỉ đội được chọn.** Bắt buộc tích 1 đội trước khi Apply; Apply xong là ấn định đội đó cho trình duyệt đó |
+| Lưu đội ở đâu? | **Một danh sách chung** toàn app |
+
+⚠️ Câu 2 là câu đổi kiến trúc nhiều nhất: Showdown **KHÔNG phải** biến thể của Fight (2 bàn 1 màn).
+Nó vẫn là **một bàn duy nhất**, chỉ thêm "câu này của em nào".
+
+### 3. ⚠️⚠️ BẪY LỚN NHẤT — CHỖ LƯU "ĐỘI CỦA TRÌNH DUYỆT NÀY"
+Hai chỗ tưởng là hiển nhiên, **cả hai đều SAI, và sai trong im lặng**:
+
+1. **`localStorage`** — 4 cột của myActivity là 4 `WebContentsView` **cùng origin, cùng partition**
+   ⇒ **dùng chung một `localStorage`**. Cả 4 cột đọc ra cùng một đội, tức đúng cái ngược lại với
+   mục đích của chế độ này.
+2. **`activity.options`** — `window.__awordBridge` **CỐ Ý nhân bản** `applyOptions` từ cột 0 sang
+   các cột khác. Chọn đội ở cột 0 là 3 cột kia bị kéo theo.
+
+→ Chỗ đúng **duy nhất**: **`sessionStorage`** (riêng từng tab / từng WebContentsView) và **không đi
+qua bridge**. Giá phải trả (chấp nhận): tắt hẳn trình duyệt là mất lựa chọn đội — bảng đội vẫn còn
+nguyên trên Firestore, chỉ phải tick lại "tôi là đội nào".
+
+### 4. Kiến trúc — 2 tầng dữ liệu, 2 file mới
+| Tầng | Ở đâu | Nội dung |
+|---|---|---|
+| Bảng đội (chung, đồng bộ) | Firestore, **1 document** `users/{uid}/items/sd_main`, `kind:"showdown"` | `{classId, className, teams:[{id,name,members:[{id,name}]}]}` |
+| Đội của trình duyệt này | **`sessionStorage`** khoá `aword-showdown-pick` | ảnh chụp đội đã tick |
+
+- **`core/showdown.js` — THUẦN, không chạm Firestore.** `engine.js` import **TĨNH** được vì trang HS
+  nạp nó cũng vô hại. Chứa: đọc/ghi `sessionStorage` · **luật chia lượt `memberAt()`** · đóng dấu
+  tên vào review · **bảng Show answers mới**.
+- **`core/showdown-setup.js`** — Firestore + bảng Showdown. **Chỉ `await import`** từ nút SHOWDOWN
+  (đường của thầy), y hệt kỷ luật của `fight.js` và `store.js`.
+
+⚠️ Nằm chung `items` với class roll **vì luật Firestore chỉ mở đúng một đường** cho dữ liệu của thầy
+— tạo collection mới sẽ bị TỪ CHỐI cho tới khi ai đó vào Firebase console sửa tay (đúng lý do
+`core/classes.js` đã ghi dài dòng). Kèm theo: **vá `core/store.js`** — `ensureNumbers` và `getByNum`
+trước lọc `kind !== "class"`, nay lọc qua `APP_DATA_KINDS = {class, showdown}`. Quên là node
+Showdown **ăn mất một số link** và một `?a=57` trả về document cài đặt.
+
+### 5. Phía engine — template KHÔNG phải sửa gì (trừ 1 dòng cờ)
+- Nút **SHOWDOWN** chèn **giữa Style và MODE** (đúng lời thầy). Ẩn trong trận Fight.
+- **Showdown và Fight loại trừ nhau** — cả hai cùng định nghĩa "câu này của ai" và cùng giành dòng
+  giữa topbar. Vào Fight là `clearPick()`.
+- **Dòng tên**: topbar nay có **hai node** trong một ô giữa — slogan của template và tên HS — và CSS
+  ẩn cái không dùng. ⚠️ **Ẩn chứ KHÔNG ghi đè**: `anagram.js` viết lại `ui.sloganSlot.textContent`
+  **mỗi lần `render()`**, nên tên nhét chung node đó sẽ bị xoá lúc sang từ mới — âm thầm, và chỉ ở
+  đúng một game có slogan. Hai node = không bên nào đè bên nào.
+- **Biết câu nào của ai**: bám vào **`ui.setNav({index})`** — mọi template đã gửi sẵn, kể cả khi thầy
+  bấm ‹ › lùi lại. Và đó **đúng là chỉ số** mà mỗi template dựng mảng `review` của nó, nên tên trên
+  khung và tên trong Show answers **không thể lệch nhau**.
+- **Show answers mới**: gom theo học sinh, mỗi em một khối (tên · ✓/✗ mấy câu · từng câu em trả lời
+  gì, đáp án đúng là gì). Chỉ hiện **đội đã chọn**.
+
+### 6. Hai lần gom code dùng chung (để không đẻ bản thứ hai)
+- **`buildContentSwitchRow()`** tách khỏi `buildOptionsBody()` (`core/options-panel.js`) — bảng
+  Showdown hiện **đúng hàng TEXT|VOICE + bộ con** mà panel Options vẫn dùng. Lý do y như Đợt 143 gom
+  form Settings về đây: **hai bản không thể giữ giống nhau bằng kỷ luật**.
+- **`applySubActSelection()`** tách khỏi Apply của Options (`core/engine.js`) — nhánh act ĐÃ ĐỔI
+  TEMPLATE (phải ghi lựa chọn lên act GỐC rồi dựng lại bản chuyển đổi) nay dùng chung cho cả hai chỗ.
+
+### 7. ⭐⭐ LỖI THẬT ĐO ĐƯỢC TRONG LÚC LÀM (cả hai đều im lặng)
+**(a) Đỉnh chữ Ẳ bị XÉN 5px ở dòng tên học sinh** — chữ to nhất, được nhìn nhiều nhất màn hình.
+`line-height: 1.35` đã đúng luật, nhưng phần tử **cao ĐÚNG BẰNG hộp dòng của nó** và mang
+`overflow:hidden`, mà ở 1.35 ink của Ẳ **vẫn thò lên trên hộp dòng 0,111em** — đúng phần dư
+`HUONG DAN CORE.md` đã cảnh báo. **Mọi phép kiểm rẻ tiền đều BÁO SẠCH**: không tràn cuộn, không
+ellipsis, không thò ra ngoài topbar, "line-height 1.35 rồi còn gì". **Chỉ công thức ink bắt được**:
+`inkTop = rangeTop + fontAscent − ink(Ẳ)` → dư **−5,0px**.
+→ Chữa bằng **padding** (không nâng `line-height` lên 1,57 — khối chữ cao thêm ~40%).
+
+**(b) …và `padding` một mình làm TOPBAR PHÌNH 47px → 66px, đẩy play area xuống 24px.**
+Giả định "padding đối xứng trên khung flex căn giữa là miễn phí" **sai ở chỗ CHA co theo con**:
+`.aw-topbar` tự co theo nội dung nên con cao lên là hàng cao lên, và game bên dưới **mất 24px chiều
+cao chỉ trong chế độ Showdown**. → Chữa bằng **`margin` âm bù đúng `padding`**: hộp clip vẫn to,
+chỗ chiếm trong dòng chảy giữ nguyên. Đo lại: topbar về **47px**, dư ink **+4,7px**.
+
+> **Bài học tái dùng được:** khi bù ink bằng padding, **luôn đo lại chiều cao của CHA** ngay sau đó.
+> Và ink thò ra chỉ thành lỗi khi **sát mép một khung có clip** — 3 phần tử khác trong bảng kết quả
+> cũng có ink âm nhưng **không** `overflow:hidden` nên vô hại; kiểm 22 dòng chữ trong bảng: **0 ca
+> chồng lấn thật**. (Lần đo đầu báo 1 ca "đâm dòng trên" — **dương tính giả**, vì em lấy nhầm "phần
+> tử trước" là ô SỐ nằm **cạnh** chứ không phải trên. Phải đối chứng cả trục X mới kết luận.)
+
+### 8. Đo thật (localhost, Chrome, 14/8/2026)
+- Dãy nút: `Options · Template · Style · **Showdown** · Mode` — đúng vị trí thầy yêu cầu.
+- Vòng lượt 3 em / 6 câu: **1,2,3,1,2,3**; bấm ‹ lùi: tên bám đúng theo số câu, không phải đếm lượt.
+- Quiz (KHÔNG có `hasSloganSlot`) chạy y hệt ⇒ ô tên đúng là của engine, không mượn của Anagram.
+- Show answers (Quiz): tổng **4/6**, ba khối `1✓1✗ · 1✓1✗ · 2✓0✗` cộng lại = 4 ✔; câu sai hiện
+  `✗ beatiful` rồi `✓ beautiful`.
+- Template KHÔNG opt-in (type-the-answer): đúng **3 nút**, không có ô tên, **dù sessionStorage vẫn
+  còn pick** ⇒ cổng opt-in đúng.
+- Turn off: xoá pick, mất ô tên, nút hết sáng, bàn về single bình thường.
+- Panel Options sau khi tách `buildContentSwitchRow`: vẫn dựng đủ 5 ô + Apply; gọi thẳng hàm vừa
+  tách: TEXT hiện 4 bộ (VI1 sáng) → lật VOICE gom còn 2 bộ (ENG2 sáng), và **chỉ ghi `sel` khi thầy
+  thật sự bấm** (giữ nguyên hành vi AUTO của act cũ).
+- **0 lỗi console** ở mọi bước.
+
+### VIỆC ĐANG CHỜ (Đợt 155)
+1. **Thầy tự thử phần cần ĐĂNG NHẬP** — em không có tài khoản của thầy nên **chưa thử được**:
+   chọn lớp thật · chia đội · đổi số đội · ▲▼ đổi thứ tự · chạm số đội để chuyển em sang đội khác ·
+   Apply (ghi Firestore) · **mở trên máy/trình duyệt thứ hai xem bảng đội có hiện đúng không**.
+2. **Thử thật trong myActivity chia 2-4 cột**: mỗi cột tick một đội khác nhau, xác nhận **4 cột không
+   giẫm chân nhau** (đây là mục đích gốc của chế độ, và là chỗ `sessionStorage` phải chứng minh mình).
+3. **Thầy tự NHÌN** dòng tên + bảng Show answers trên màn TOMKO: em đo được không xén, nhưng pane
+   preview không compositing nên **không chụp được ảnh** — thứ gì dịch pixel thì phải nhìn.
+4. Chốt xong mới commit + push. Chưa đụng `docs/`.
+
+---
+
 ## Đợt 154 (14/8/2026) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`... / WORDS - ENG1`) + ACT TÍCH HỢP GIỮ NGUYÊN TEXT-VOICE VÀ CÁC ACT CON KHI ĐỔI SANG TEMPLATE KHÁC
 ⭐ CÓ SỬA CORE (`core/engine.js`). ✅ **THẦY DUYỆT** (thầy nhắn "commit và push cả hai đợt lên live", 14/8/2026) **→ COMMIT + PUSH + LIVE.**
 📌 **Commit `58e996a`** (chung với Đợt 153) — **ĐÃ LÊN LIVE, đã đối chiếu**: mã băm

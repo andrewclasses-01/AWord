@@ -22,6 +22,11 @@ export const icons = {
   // divider down the middle still reads at 22px, where a trophy or crossed
   // swords turn to mush.
   mode: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="8" height="12" rx="1.6"/><rect x="13.5" y="6" width="8" height="12" rx="1.6"/><path d="M12 3.5v17"/></svg>`,
+  // SHOWDOWN (Đợt 155) — a winner's podium. It has to be legible at 22px AND
+  // instantly distinct from `mode` right beside it: MODE is two panels side by
+  // side, this is three blocks of DIFFERENT heights, which reads as ranking even
+  // when the shape is too small to count.
+  showdown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="5.5" width="6" height="15" rx="1.2"/><rect x="2.5" y="11" width="6.5" height="9.5" rx="1.2"/><rect x="15" y="9" width="6.5" height="11.5" rx="1.2"/></svg>`,
   edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 15v5z"/><path d="M13.5 6.5l4 4"/></svg>`,
   assignment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="1.8"/><path d="M9 3.5h6a1 1 0 0 1 1 1V6H8V4.5a1 1 0 0 1 1-1z"/><path d="M8.5 11.5l2 2 4-4.2M8.5 17h7"/></svg>`,
   print: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8.5V4h11v4.5"/><rect x="4.5" y="8.5" width="15" height="7.5" rx="1.6"/><rect x="6.5" y="13" width="11" height="7" rx="1"/></svg>`,

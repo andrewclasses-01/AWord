@@ -8,7 +8,69 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/8/2026 (Đợt 154) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`… / WORDS - ENG1`)
+> Cập nhật lần cuối: **14/8/2026 (Đợt 157) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN,
+> ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC.** ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.**
+> ⭐ CÓ SỬA CORE (`showdown-setup.js` dựng lại phần panel · `app.css`).
+> Trần thật của lớp là **20 HS** (không phải 60) ⇒ ô tên **13→15px, cao 28→36px**; panel **580→660**,
+> thân **620×410** (**410 là số ĐO**: 20 em cần 320px danh sách, ở 360 phải cuộn 44px). Hàng chọn
+> lớp/số đội đổi sang **lưới `1fr 152px`**; ô danh sách rỗng **canh giữa**.
+> ⚠️ **Hai lỗi bề rộng**: `.is-sd` chỉ khai `width` nên bị `max-width:580px` của luật gốc **kẹp lại
+> trong im lặng**; và thân bảng từng khai bề rộng CỨNG song song với panel — hai nguồn cho một con
+> số, panel hẹp hơn là thân tràn ra rồi bị `overflow-x:hidden` **xén mất điều khiển bên phải**. Nay
+> panel giữ bề rộng, thân `width:100%`.
+> 🔊 Bộ tiếng riêng của Showdown ghép từ `sound.glide/click/tick` — **KHÔNG thêm vào core/sound.js**
+> (core dùng chung 17 game). Chuyển màn = **hai lớp chồng trượt qua nhau** 240ms; sửa trong màn thì
+> KHÔNG trượt. Xoá ô thì thu nhỏ+mờ, thêm ô thì nảy. **Mọi `animate()` đều có `setTimeout` dự phòng**
+> (tab ẩn ⇒ `onfinish` không bắn ⇒ lớp mờ dở nằm đè nuốt mọi cú chạm).
+> 🟢 ĐÃ TỰ TEST: 20 em **không cuộn**; 20 em/4 đội mọi thứ vừa khung; chuyển màn 2→1 lớp cả 2 chiều;
+> **11/11 thao tác có tiếng**; 0 ô bay sót; đầu-cuối vẫn đúng. 0 lỗi console.
+> ⬜ Chờ thầy **nhìn** (không chụp được ảnh) và **nghe** (em chỉ đếm được số lần gọi).
+>
+> Trước đó: **14/8/2026 (Đợt 156) — ⭐⭐ SHOWDOWN BẢN THẦY CHỐT: 3 MÀN + GIÀNH ĐỘI.**
+> ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** ⭐ CÓ SỬA CORE (`engine.js` · `showdown-setup.js` viết lại ·
+> `showdown.js` · `options-panel.js` · `app.css`).
+> Bảng: **A** lớp + số đội (2 ô to, sửa được danh sách HS) → **B** pool ô tên trên, team là cột dọc,
+> chạm tên team rồi chạm ô tên thì ô **bay** vào cột, nút ✓ = đội màn hình này chơi → **C** Single
+> mode / Reset team. **Một khung cỡ CỐ ĐỊNH cho cả 3 màn** (thầy chốt). Màn START hiện thêm
+> "Tên team: các thành viên". **Ẩn nút MODE khi đã setup đội.** Options > Apply **giữ nguyên**
+> Showdown (nó kết thúc bằng `replayCurrent()`).
+> ⭐ **GIÀNH ĐỘI**: `claims` trong `sd_main` + `browserId()`; đội đã tích **không hiện** ở trình duyệt
+> khác, theo dõi `onSnapshot` nên thấy ngay hai chiều; **claim hết hạn sau 12 giờ** (id ở
+> `sessionStorage` nên đóng trình duyệt là không ai nhả được).
+> ⛔⛔ **BẪY LỚN NHẤT ĐỢT NÀY — `panel.isConnected` LÀ PHÉP THỬ SAI**: mở panel khi đang có panel khác
+> thì engine cross-fade và `panel` là lớp tạm **bị xoá ở 300ms**, trong khi giao diện vẫn sống ⇒ mọi
+> `await` dài hơn thế sẽ bỏ ngang, để lại 'Loading…' vĩnh viễn. **Chỉ hỏng với mạng THẬT** — backend
+> giả trả lời vài ms nên báo ĐẠT oan. Luật + cách đo: `HUONG DAN CORE.md`.
+> 🟢 ĐÃ TỰ TEST đầy đủ bằng **trang thử có backend giả** (`scratch/`, import map trỏ firebase/classes
+> sang bản giả) — chạy được TOÀN BỘ đường Firestore mà không cần đăng nhập: 3 màn, xoá/thêm HS,
+> ô tên bay (0 bóng ma sót), 8 đội vẫn đúng khung 560×300, giành/nhả/hết-hạn claim, Options giữ
+> Showdown, chơi trọn ván + Show answers. 0 lỗi console.
+> ⬜ Chờ thầy: **2 máy/2 cột thật** (backend giả không thay được Firestore thật), myActivity nhiều
+> cột, và **tự nhìn** hiệu ứng bay + màn START.
+>
+> Trước đó: **14/8/2026 (Đợt 155) — ⭐⭐ CHẾ ĐỘ MỚI **SHOWDOWN**: MỖI TRÌNH DUYỆT MỘT ĐỘI,
+> MỖI CÂU MỘT HỌC SINH.** ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** ⭐ CÓ SỬA CORE (`engine.js` ·
+> `options-panel.js` · `store.js` · `app.css` · `icons.js`) + **2 file mới** `core/showdown.js`
+> (thuần) và `core/showdown-setup.js` (Firestore + bảng, chỉ nạp trì hoãn).
+> Nút **SHOWDOWN** giữa Style và MODE. **KHÔNG phải biến thể của Fight** — vẫn MỘT bàn, chỉ thêm "câu
+> này của em nào": bảng đội dùng chung trên Firestore, còn **mỗi trình duyệt tick đúng 1 đội** rồi
+> chơi vòng tròn trong đội đó (mục đích: myActivity 2-4 cột, mỗi cột một đội). Dòng slogan thành
+> **TÊN HỌC SINH**, cuối game Show answers gom **theo từng em**.
+> ⚠️ **Đội của trình duyệt PHẢI ở `sessionStorage`**: `localStorage` bị 4 cột myActivity dùng chung
+> (cùng partition) và `activity.options` thì bị `__awordBridge` **cố ý nhân bản** sang các cột khác —
+> cả hai đều làm mọi cột đọc ra cùng một đội, im lặng.
+> ⚠️ **Hai lỗi chữ Việt đo được ngay trong đợt**: ink chữ **Ẳ bị xén 5px** ở dòng tên (mọi phép kiểm
+> rẻ tiền đều báo sạch, chỉ công thức ink bắt được) — và **vá bằng `padding` một mình làm topbar
+> phình 47→66px**, đẩy game xuống 24px; phải kèm **`margin` âm**. Luật đầy đủ: `HUONG DAN CORE.md`
+> mục SHOWDOWN MODE.
+> 🟢 ĐÃ TỰ TEST (localhost, 0 lỗi console): thứ tự nút đúng · vòng lượt 1,2,3,1,2,3 và bám đúng khi
+> bấm ‹ lùi · Quiz (không có slogan) chạy y hệt ⇒ ô tên là của engine · Show answers 4/6 cộng khớp,
+> câu sai hiện cả 2 dòng · template không opt-in **không đổi gì** dù còn pick · Turn off sạch ·
+> Options sau refactor vẫn nguyên. ⬜ **CHƯA test được phần cần ĐĂNG NHẬP** (chọn lớp thật, chia đội,
+> Apply ghi Firestore, đồng bộ sang máy thứ hai) và **chưa thử myActivity nhiều cột** — xem VIỆC ĐANG
+> CHỜ ở `GHI CHU DU AN.md` Đợt 155.
+>
+> Trước đó: **14/8/2026 (Đợt 154) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`… / WORDS - ENG1`)
 > + ACT TÍCH HỢP GIỮ NGUYÊN TEXT-VOICE VÀ CÁC ACT CON KHI ĐỔI SANG TEMPLATE KHÁC.**
 > ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** ⭐ CÓ SỬA CORE (`engine.js`).
 > **(1)** `subActLabel()` ghép **nửa** rồi **bộ gợi ý** vào tiêu đề màn START (`QUIZ - HOMEWORK`,
@@ -2740,6 +2802,13 @@ E:\LAP TRINH APP\AWord\
 │  │                             thùng rác (trashRootId), Move/Duplicate/Rename — ĐỀU async, key `aword-lib`
 │  │                             (tự migrate từ v0.5.0), Firebase sau không đổi nơi gọi
 │  ├─ icons.js                ← SVG dùng chung (thêm: options/template/style/edit/assignment/print...)
+│  ├─ showdown.js             ← (Đợt 155) SHOWDOWN — phần THUẦN: đội của trình duyệt này trong
+│  │                             sessionStorage (KHÔNG phải localStorage — 4 cột myActivity dùng chung
+│  │                             nó) + luật chia lượt memberAt() + bảng Show answers gom theo học sinh.
+│  │                             Không chạm Firestore ⇒ engine.js import TĨNH được
+│  ├─ showdown-setup.js       ← (Đợt 155) SHOWDOWN — bảng chia đội + đồng bộ Firestore (1 document
+│  │                             `sd_main`, kind "showdown", nằm chung `items` như class roll).
+│  │                             CHỈ `await import` từ nút SHOWDOWN — trang HS không bao giờ tải
 │  ├─ fit.js                  ← autoFit() (co chữ, theo dõi resize) + fitOnce() (co chữ 1 lần)
 │  ├─ numberstepper.js        ← makeNumberStepper() — ô số VUỐT lên/xuống + nút ▲▼
 │  ├─ themes/                 ← classic.css · basic.css · classroom.css · beach.css + manifest.js

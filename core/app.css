@@ -3120,3 +3120,315 @@ body {
 /* The controls row keeps its own line at the bottom of the picture. */
 .aw-fight.is-fs .aw-fight-controls { flex: 0 0 auto; margin-top: 0; }
 .aw-fight.is-fs .aw-fight-top { flex: 0 0 auto; }
+
+/* =============================================================
+   SHOWDOWN (Đợt 155) — one team per browser, one pupil per question.
+   See core/showdown.js for what the mode is; this block is the three places it
+   shows on screen: the NAME over the frame, the SETUP TABLE in the tool
+   popover, and the per-pupil SHOW ANSWERS.
+   ============================================================= */
+
+/* ----- 1. the name over the frame -----
+   The centre of the top row now holds two children: the template's own caption
+   (Anagram's slogan) and the pupil's name. Only one is ever visible, and they
+   are two NODES rather than one shared node on purpose — Anagram rewrites its
+   caption on every render(), so a name sharing that node would be wiped the
+   next time the word changed. See the note in core/engine.js. */
+.aw-top-centre { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
+.aw-top-centre.is-showdown > .aw-top-slogan { display: none; }
+.aw-top-showdown {
+  min-width: 0;
+  text-align: center;
+  /* Loud on purpose: this is the cue the whole class reads to know whose turn
+     it is, from the back of the room. Roughly 3x the slogan it replaces. */
+  font-size: 3.6cqw;
+  font-weight: 800;
+  color: var(--aw-fg, #23303e);
+  /* ⚠️ Vietnamese names carry marks above AND below (Ẳ reaches 1.063em up, Ạ
+     0.234em down) — core/HUONG DAN CORE.md's >= 1.35 rule. */
+  line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* ⚠️⚠️ MEASURED, NOT PRECAUTIONARY (14/8/2026, real browser, this very rule):
+     at line-height 1.35 the ink of Ẳ still stands ~0.111em ABOVE the line box —
+     the leftover HUONG DAN CORE.md warns about — and this element is exactly as
+     tall as its own line box with `overflow: hidden` on it. The top of the
+     diacritic was being SHAVED BY 5px, on the biggest and most-looked-at piece
+     of text on the screen. Every cheaper check passed first: no scroll overflow,
+     no ellipsis, nothing outside the topbar, "line-height is 1.35 so it's fine".
+     Only the ink formula (inkTop = rangeTop + fontAscent − ink(Ẳ)) caught it.
+     The fix is padding, NOT a taller line-height: 1.57 would clear the ink but
+     grows the block ~40% and unbalances the row. SYMMETRIC padding is what makes
+     it free — the element is centred in a flex parent, so equal padding grows
+     the CLIP BOX both ways and leaves the text exactly where it was: the glyph
+     does not move a pixel, it just stops being cut. Every ancestor up to
+     `.aw-stage` is `overflow: visible` (checked), so the taller box is never
+     re-clipped. Re-measure this if the font-size here ever changes.
+     ⚠️ AND THE NEGATIVE MARGIN IS NOT OPTIONAL. Padding alone was measured
+     growing `.aw-topbar` from 47px to 66px and shoving the play area 24px down —
+     the row is content-sized, so a taller child simply makes it taller, and the
+     game below quietly lost 24px of height in Showdown mode only. The margin
+     cancels the padding in the FLOW while the padding box (what `overflow`
+     clips to) stays big: bigger clip region, identical layout. */
+  padding: 1cqw 0;
+  margin: -1cqw 0;
+}
+.aw-top-showdown:empty { display: none; }
+
+/* ----- 2. the setup panel, three screens (inside .aw-tool-panel, so PX) -----
+   ⚠️ ONE FIXED FOOTPRINT FOR EVERY SCREEN (teacher, 14/8/2026: "size của các
+   bảng đều to bằng nhau, dù nội dung có ít hơn"). `.aw-sd-body` states its own
+   width and min-height so stepping SETUP → BUILD → READY never resizes the
+   popover under the teacher's finger. Do not "tidy" these into `auto`. */
+/* ----- 2. the setup panel, three screens (inside .aw-tool-panel, so PX) -----
+   ⚠️ ONE FIXED FOOTPRINT FOR EVERY SCREEN (teacher, 14/8/2026: "size các bảng
+   đều to bằng nhau, dù nội dung có ít hơn"). Stepping SETUP → BUILD → READY must
+   never resize the popover under the teacher's finger.
+   ⚠️ THE FIXED SIZE LIVES ON THE PANEL, NOT ON THE BODY (Đợt 157). The body used
+   to state `width: 560px` while the panel stated its own — two sources for one
+   number, and whenever the panel came out narrower (it is capped against the
+   viewport) the body simply overflowed and `overflow-x: hidden` sliced the
+   right-hand control off. Now the panel owns the width and the body fills it, so
+   the two can no longer disagree at any viewport. */
+/* ⚠️ `max-width` TOO, not just `width`: the base `.aw-tool-panel` rule caps every
+   panel at `min(94vw, 580px)`, so setting only `width` here was silently clamped
+   back to 580 and the table came out 80px narrower than it asked for. Measured. */
+.aw-tool-panel.is-sd { width: min(94vw, 660px); max-width: min(94vw, 660px); }
+.aw-sd-loading { font-size: 13px; color: #8b93a1; padding: 6px 0 2px; }
+/* 410px is measured, not picked: a full class (20 pupils — the teacher's stated
+   maximum) at the new chip size needs 320px of roster, and 410 − the 70px pick
+   row − the 14px gap leaves 326. At 360 that worst case scrolled by 44px, which
+   is exactly the "chưa cân đối" this redesign answers; at 400 it still scrolled
+   by 4. The panel is 522px tall then, well inside the ~645px of room the engine
+   measures above the toolbar, so nothing else has to give.
+   Longer names than the test roll will still wrap to another row and scroll —
+   that is what `overflow-y: auto` on the roster is for, not a reason to keep
+   growing this number. */
+.aw-sd-body { position: relative; width: 100%; min-height: 410px; }
+/* Screens are absolutely stacked LAYERS so the outgoing one can still be on
+   screen while the incoming one slides over it. */
+.aw-sd-layer {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; gap: 14px;
+}
+/* The one exception: the short "already running" panel has nothing to fill
+   360px with, and stretching two buttons over it would look broken. */
+.aw-sd-body.is-mini { min-height: 96px; }
+
+.aw-sd-foot { position: relative; min-height: 46px; margin-top: 14px; }
+.aw-sd-footlayer { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; }
+.aw-sd-hint {
+  flex: 1 1 auto; min-width: 0;
+  font-size: 12px; color: #8b93a1; line-height: 1.35; padding: 2px 0; margin: -2px 0;
+}
+/* Two classes, same reason .aw-opt-apply gives further up: .aw-btn is sized in
+   cqw for buttons INSIDE the 16:9 stage, and this popover lives outside it. */
+.aw-sd-footlayer .aw-btn { flex: 0 0 auto; padding: 10px 26px; font-size: 15px; }
+.aw-sd-footlayer .aw-btn.is-dim { opacity: .45; }
+.aw-btn.aw-sd-ghost { background: #eef2f7; color: #5b677a; padding: 10px 18px; font-size: 14px; }
+
+/* ---- screen A: class + team count + roster ---- */
+/* The two controls are the whole of this step, so they get real size AND a
+   stated share of the row: the class name is long and the team count is two
+   characters, so letting them auto-size made one dwarf the other. */
+.aw-sd-pickrow { display: grid; grid-template-columns: 1fr 152px; gap: 16px; align-items: end; }
+.aw-sd-field { min-width: 0; }
+.aw-sd-flab {
+  font-size: 11px; font-weight: 800; letter-spacing: .06em;
+  color: #8b93a1; text-transform: uppercase; margin-bottom: 6px;
+}
+.aw-sd-select.is-big {
+  width: 100%; height: 46px; padding: 0 12px;
+  border: 2px solid #d9e0ea; border-radius: 11px;
+  background: #fff; color: #23303e; font: inherit; font-size: 16px; font-weight: 700;
+  line-height: 1.35;                    /* class names are the teacher's Vietnamese */
+}
+.aw-sd-select.is-big:disabled { color: #98a2b2; background: #f4f7fa; }
+.aw-hstep.is-big { height: 46px; width: 100%; border-radius: 11px; }
+.aw-hstep.is-big .aw-hstep-val { font-size: 21px; min-width: 46px; }
+.aw-hstep.is-big .aw-hstep-btn { width: 44px; font-size: 21px; }
+
+.aw-sd-roster {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px;
+  border: 1.5px solid #eef2f7; border-radius: 12px; padding: 10px;
+}
+/* Nothing to list yet: centre the note in the box instead of parking it in the
+   top-left corner of a large empty rectangle (teacher: "chưa được cân đối"). */
+.aw-sd-roster.is-empty { align-content: center; justify-content: center; }
+.aw-sd-empty-note { font-size: 13px; color: #a9b2c0; font-style: italic; padding: 4px; width: 100%; text-align: center; }
+
+/* ---- name chips: ONE size everywhere, and a big one ----
+   A class is at most 20 pupils (teacher, 14/8/2026), so there is room to make
+   these properly readable and tappable rather than squeezing 60 in. */
+.aw-sd-rmember, .aw-sd-chip {
+  font-size: 15px; font-weight: 700; line-height: 1.35;
+  border-radius: 999px;
+}
+.aw-sd-rmember {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: #f4f7fa; border: 1.5px solid #e3e9f1;
+  padding: 5px 6px 5px 14px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.aw-sd-rmember:hover { border-color: #cfd8e4; background: #eef3f9; }
+.aw-sd-rname { color: #23303e; padding: 2px 0; margin: -2px 0; }
+.aw-sd-x {
+  width: 24px; height: 24px; padding: 0; border: none; border-radius: 50%;
+  background: transparent; color: #98a2b2; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s ease, color .15s ease;
+}
+.aw-sd-x svg { width: 66%; height: 66%; }
+.aw-sd-x:hover { background: #e5451f; color: #fff; }
+.aw-sd-rmember.is-new { padding: 4px 6px 4px 10px; }
+.aw-sd-rinput {
+  border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 700;
+  width: 140px; color: #23303e; line-height: 1.35; padding: 3px 0;
+}
+.aw-sd-rinput:focus { outline: none; }
+.aw-sd-add {
+  border: 1.5px dashed #cfd8e4; border-radius: 999px; background: transparent;
+  color: #5b677a; font: inherit; font-size: 14px; font-weight: 700;
+  padding: 6px 16px; cursor: pointer; line-height: 1.35;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.aw-sd-add:hover { border-color: #2f6fed; color: #2f6fed; background: #f2f7ff; }
+@keyframes aw-sd-pop { 0% { transform: scale(.8); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+.aw-sd-rmember.is-pop, .aw-sd-chip.is-pop { animation: aw-sd-pop .22s ease-out; }
+
+/* ---- screen B: pool on top, teams as columns ---- */
+.aw-sd-chip {
+  border: 1.5px solid #dbe3ee; background: #fff; color: #23303e;
+  /* Vertical padding doubles as the ink headroom Vietnamese names need — the
+     clipped-Ẳ trap documented on .aw-top-showdown. */
+  padding: 7px 14px;
+  cursor: pointer; white-space: nowrap; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.aw-sd-chip:hover { border-color: #2f6fed; color: #2f6fed; }
+.aw-sd-chip:active { transform: scale(.96); }
+.aw-sd-chip.is-in { background: #f2f7ff; border-color: #cfe0ff; }
+.aw-sd-pool {
+  flex: 0 0 auto; max-height: 132px; overflow-y: auto;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  /* "sắp xếp cân đối" — centred, so a short last row sits under the middle of
+     the rows above instead of hanging off the left edge. */
+  justify-content: center; align-content: flex-start;
+  border: 1.5px solid #eef2f7; border-radius: 12px; padding: 10px;
+}
+.aw-sd-pool.is-empty { align-content: center; min-height: 62px; }
+.aw-sd-cols {
+  flex: 1 1 auto; min-height: 0; overflow: auto;
+  display: flex; gap: 10px; align-items: stretch; justify-content: center;
+}
+/* Column width follows its CONTENT (teacher: "bề ngang vừa đủ để chứa vừa các ô
+   tên"), with a floor so an empty team is still a target big enough to tap. */
+.aw-sd-col {
+  flex: 0 1 auto; min-width: 130px;
+  display: flex; flex-direction: column;
+  border: 1.5px solid #e3e9f1; border-radius: 12px; background: #fbfcfe; padding: 8px;
+  transition: border-color .15s ease, background .15s ease;
+}
+.aw-sd-col.is-sel { border-color: #2f6fed; background: #f2f7ff; }
+.aw-sd-col.is-claimed { border-color: #2ec27e; background: #f1fbf6; }
+.aw-sd-colhead { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.aw-sd-colname {
+  flex: 1 1 auto; min-width: 0; border: none; background: transparent;
+  font: inherit; font-size: 14px; font-weight: 800; color: #23303e;
+  letter-spacing: .04em; text-align: left; cursor: pointer;
+  line-height: 1.35; padding: 3px 3px; margin: -3px 0; border-radius: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sd-col.is-sel .aw-sd-colname { color: #2f6fed; }
+/* ⚠️ `padding: 0` is REQUIRED on an icon button, not tidiness: a <button> carries
+   the browser's default `padding: 1px 6px`, so a percentage-sized svg is measured
+   against the CONTENT box and comes out small AND non-square (Đợt 136). */
+.aw-sd-tick {
+  flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+  border: 1.5px solid #dfe6ef; border-radius: 8px; background: #fff;
+  color: #b9c2cf; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+.aw-sd-tick svg { width: 66%; height: 66%; }
+.aw-sd-tick:hover { border-color: #2ec27e; color: #2ec27e; }
+.aw-sd-tick.is-on { background: #2ec27e; border-color: #2ec27e; color: #fff; }
+.aw-sd-colmembers { display: flex; flex-direction: column; gap: 6px; }
+
+/* The flying clone. Fixed to the viewport because it travels BETWEEN two
+   scrollable boxes; `pointer-events:none` so a tap during the flight still
+   reaches whatever is underneath. */
+.aw-sd-ghost-chip {
+  position: fixed; z-index: 60; pointer-events: none; margin: 0;
+  box-shadow: 0 8px 22px rgba(15,20,30,.24);
+}
+
+/* ---- screen C: already running ---- */
+.aw-sd-running { text-align: center; padding: 10px 0 2px; }
+.aw-sd-running-team {
+  font-size: 20px; font-weight: 800; color: #2f6fed; line-height: 1.35;
+  padding: 2px 0; margin: -2px 0;
+}
+.aw-sd-running-who { font-size: 14px; color: #5b677a; line-height: 1.35; margin-top: 6px; }
+
+/* ---- the team line on the READY screen (inside the stage, so cqw) ----
+   Sits under the game name, quieter than it: the headline is still WHAT is being
+   played, this says WHO is playing it. */
+.aw-ready-team {
+  display: flex; align-items: baseline; justify-content: center;
+  flex-wrap: wrap; gap: 0.4cqw 1.2cqw;
+  margin-top: 1.4cqw; max-width: 74cqw;
+}
+.aw-ready-teamname {
+  font-size: 2.1cqw; font-weight: 800; letter-spacing: .06em;
+  color: var(--aw-accent, #6ea8fe); text-transform: uppercase;
+  line-height: 1.35; padding: 0.2cqw 0; margin: -0.2cqw 0;
+}
+.aw-ready-teamwho {
+  font-size: 1.6cqw; color: #d7e0ec; opacity: .85;
+  line-height: 1.35; padding: 0.2cqw 0; margin: -0.2cqw 0;
+  text-align: center;
+}
+
+/* ----- 3. Show answers, grouped by pupil (inside .aw-review, so cqw) ----- */
+/* `padding-top` measured, not decorative: this is a scrolling box, so it clips
+   at its own edge, and the team name is its first child. Its ink top landed
+   EXACTLY on that edge (0.0px of headroom) — fine for these names, one taller
+   diacritic away from being shaved. */
+.aw-sd-rv { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1cqw; padding-top: 0.4cqw; }
+.aw-sd-rv-head {
+  flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 0.25cqw solid #e3e9f1; padding-bottom: 0.6cqw;
+}
+.aw-sd-rv-team { font-size: 2cqw; font-weight: 800; color: #2f6fed; letter-spacing: .08em; line-height: 1.35; }
+.aw-sd-rv-total { font-size: 2cqw; font-weight: 800; color: #23303e; }
+.aw-sd-rv-name {
+  display: flex; align-items: baseline; gap: 1cqw;
+  background: #eef2f7; border-radius: 0.8cqw; padding: 0.45cqw 1cqw; margin-bottom: 0.5cqw;
+}
+.aw-sd-rv-who { font-size: 1.75cqw; font-weight: 800; color: #23303e; line-height: 1.35; }
+.aw-sd-rv-tally { display: flex; gap: 0.9cqw; font-size: 1.5cqw; font-weight: 800; }
+.aw-sd-rv-tally .is-ok { color: #2ec27e; }
+.aw-sd-rv-tally .is-bad { color: #e03131; }
+.aw-sd-rv-tally svg { width: 1.4cqw; height: 1.4cqw; vertical-align: -0.2cqw; }
+.aw-sd-rv-q { display: flex; gap: 0.7cqw; padding: 0.3cqw 0 0.3cqw 1cqw; }
+.aw-sd-rv-num { flex: 0 0 2.2cqw; font-size: 1.3cqw; font-weight: 800; color: #a9b2c0; line-height: 1.6; }
+.aw-sd-rv-body { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.6cqw; align-items: center; }
+.aw-sd-rv-clue { font-size: 1.35cqw; color: #3d4852; line-height: 1.35; }
+.aw-sd-rv-ans { display: flex; gap: 0.5cqw; min-width: 0; }
+.aw-sd-rv-mk {
+  flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 0.4cqw;
+  border-radius: 0.7cqw; padding: 0.3cqw 0.7cqw; color: #fff; font-weight: 700;
+}
+.aw-sd-rv-mk.is-ok { background: #2ec27e; }
+.aw-sd-rv-mk.is-bad { background: #3d4852; }
+.aw-sd-rv-mkicon { flex: 0 0 auto; display: inline-flex; }
+.aw-sd-rv-mkicon svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-sd-rv-mktxt {
+  min-width: 0; font-size: 1.3cqw; line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* Answers are the teacher's own words, Vietnamese included — same clipped-ink
+     leftover as .aw-top-showdown, same padding + cancelling-margin fix. */
+  padding: 0.25cqw 0; margin: -0.25cqw 0;
+}

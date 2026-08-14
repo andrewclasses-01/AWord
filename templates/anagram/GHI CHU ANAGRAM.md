@@ -1,5 +1,25 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 155 (14/8/2026) — ⭐ THAM GIA CHẾ ĐỘ MỚI **SHOWDOWN** (thêm ĐÚNG 1 DÒNG)
+
+⬜ **CHƯA THẦY DUYỆT.** `anagram.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.
+
+Toàn bộ hạ tầng ở `core/showdown.js` + `core/showdown-setup.js` + `core/engine.js` (xem
+`core/HUONG DAN CORE.md` mục **SHOWDOWN MODE**, và `../../GHI CHU DU AN.md` Đợt 155).
+Anagram không phải làm gì vì engine lấy sẵn hai thứ file này VỐN ĐÃ có:
+- **câu này của em nào** ← `ui.setNav({index})` (đúng cả khi thầy bấm ‹ › lùi lại);
+- **ai đúng ai sai** ← mảng `review` mà `finish()` vốn đã dựng.
+
+⚠️ **Slogan "ANAGRAM IN ANDREW CLASSES" KHÔNG bị đụng.** Engine **ẨN** nó bằng CSS rồi hiện tên học
+sinh ở **một node KHÁC** trong cùng ô giữa topbar. Cố ý: `render()` của file này **ghi đè
+`ui.sloganSlot.textContent` mỗi lần vẽ**, nên tên nhét chung node đó sẽ bị xoá lúc sang từ mới —
+âm thầm, và chỉ ở đúng game này. Ai sau này đổi cách viết slogan thì giữ luật "mỗi thứ một node".
+
+🟢 Đo thật (localhost): 3 em / 6 câu ⇒ tên chạy **1,2,3,1,2,3**; bấm ‹ lùi tên bám đúng số câu;
+Show answers gom đúng theo em (Ẳnh → câu 1,4 · Hạnh → 2,5 · Vy → 3,6). 0 lỗi console.
+
+---
+
 ## Đợt 148 (14/8/2026) — ⭐ NHỊP THỨ HAI CỦA CÚ ĐÓNG: KHOẢNG CÁCH HÀNG CHUYỂN TỪ LƯỚI XUỐNG TỪNG Ô
 
 ✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Sửa `syncPen()` + `anagram.css`, và **có sửa core** (`core/app.css`).

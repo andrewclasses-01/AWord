@@ -32,6 +32,12 @@ import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
+// SHOWDOWN (Đợt 155) — this import is SAFE to take statically: core/showdown.js
+// is deliberately pure (sessionStorage + the turn rule + the review renderer, no
+// Firestore, no library). Everything that talks to Firestore lives in
+// core/showdown-setup.js, which is `await import`-ed from the teacher's button
+// only — same discipline as fight.js and store.js below.
+import { readPick, clearPick, memberAt, stampReview, buildShowdownReview } from "./showdown.js";
 // store.js (the teacher's library) is imported LAZILY for the same reason as
 // assignment-ui.js: the student page must not even load code that can reach it.
 import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
@@ -249,6 +255,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // additive: no other template's CSS reads an `.act-*` class today.
   stage.classList.add(`act-${activity.type}`);
 
+  // ⭐⭐ SHOWDOWN (Đợt 155) — read core/showdown.js's header for the whole idea.
+  // `readPick()` is a SYNCHRONOUS sessionStorage read of a snapshot the setup
+  // panel left behind, which is what lets the first pupil's name be on screen in
+  // the very first frame — a name that arrives a beat late reads as a bug on a
+  // classroom projector, and an `await` here would guarantee it every time.
+  //
+  // ⚠️ `!fight`: Showdown and Fight are MUTUALLY EXCLUSIVE. Both redefine the
+  // same two things — who the current question belongs to, and what the middle
+  // of the top row says — so "both at once" has no meaning to define. The MODE
+  // button drops Showdown on its way in (see buildModeConfirmPanel), and this
+  // guard is the other half of that: a board inside a match never reads a pick.
+  //
+  // ⚠️ `!session`: a pupil playing an assignment is one named person already.
+  // `const`: nothing ever reassigns this. Turning Showdown on or off writes
+  // sessionStorage and re-enters startGame(), so the live value is always the
+  // one THIS mount read — there is deliberately no second way to change it.
+  const showdownPick = (tpl.showdownMode && !session && !fight) ? readPick() : null;
+
   // ---- myActivity multi-pane sync bridge (a NO-OP when running standalone) ----
   // When embedded in myActivity's 2-4 pane view, pane 0's Template / Options /
   // Style changes are mirrored to the other panes. We log a console marker on
@@ -357,21 +381,52 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // affected. Automatically invisible in fight mode for free — a board's own
   // `.aw-topbar` collapses to 0 height there (see app.css), same as the timer
   // and score already do.
-  const sloganSlot = tpl.hasSloganSlot ? el("span", "aw-top-slogan") : null;
+  // ⭐ Đợt 155 — the centre of the row can now carry TWO things, so both live in
+  // one wrapper that takes the single centre seat the layout already had. In
+  // Showdown the wrapper gets `.is-showdown` and CSS hides the template's own
+  // caption while showing the pupil's name.
+  //   ⚠️ HIDDEN, not replaced. Anagram rewrites `ui.sloganSlot.textContent` on
+  //   every render(), so a name written into that same node would be wiped the
+  //   next time the word changed — silently, and only in the one game that has a
+  //   slogan. Two nodes and a CSS class means NEITHER side can clobber the
+  //   other, and no template needed a single line changed for Showdown.
+  const sloganSlot = (tpl.hasSloganSlot || showdownPick) ? el("span", "aw-top-slogan") : null;
+  const showdownSlot = showdownPick ? el("span", "aw-top-showdown") : null;
+  let centreSlot = null;
+  if (sloganSlot) {
+    centreSlot = el("span", "aw-top-centre" + (showdownSlot ? " is-showdown" : ""));
+    centreSlot.append(sloganSlot);
+    if (showdownSlot) centreSlot.append(showdownSlot);
+  }
   if (topbarMid) {
     if (tpl.timerBesideMenu) topbar.append(topbarMid, scoreEl);
     else topbar.append(timerEl, topbarMid, scoreEl);
-  } else if (livesSlot && sloganSlot) {
+  } else if (livesSlot && centreSlot) {
     const topRight = el("div", "aw-top-right");
     topRight.append(livesSlot, scoreEl);
-    topbar.append(timerEl, sloganSlot, topRight);
-  } else if (sloganSlot) {
-    topbar.append(timerEl, sloganSlot, scoreEl);
+    topbar.append(timerEl, centreSlot, topRight);
+  } else if (centreSlot) {
+    topbar.append(timerEl, centreSlot, scoreEl);
   } else if (livesSlot) {
     const topRight = el("div", "aw-top-right");
     topRight.append(livesSlot, scoreEl);
     topbar.append(timerEl, topRight);
   } else topbar.append(timerEl, scoreEl);
+
+  // SHOWDOWN (Đợt 155) — whose question is this? `index0` is the item's
+  // ZERO-BASED position in the play order. Every template already reports it,
+  // as `index + 1`, through ui.setNav (that is where this is called from), and
+  // it is the same index each template builds its own `review` array on — so
+  // the name over the frame and the name in Show answers cannot drift apart.
+  // The rule itself lives in core/showdown.js's memberAt(), used by both.
+  function paintShowdownName(index0) {
+    if (!showdownSlot || !showdownPick) return;
+    const m = memberAt(showdownPick.members, index0);
+    // textContent, not el()'s 3rd argument: that one is innerHTML, and this is
+    // a name the teacher typed.
+    showdownSlot.textContent = m ? m.name : "";
+  }
+  paintShowdownName(0);   // never let the slot sit empty behind the READY screen
 
   // ----- Play area -----
   const playArea = el("div", "aw-playarea");
@@ -431,7 +486,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // assignment never sees this row at all. core/fight.js is DYNAMIC-imported so
   // the student page never downloads it, and so this file doesn't take a static
   // dependency on a module that imports it straight back.
-  const modeBtn = (tpl.fightMode && !session) ? toolBtn(icons.mode, "Mode: single / fight") : null;
+  // ⭐ Đợt 156 — hidden once a Showdown team is set up (teacher: "khi đang ở chế
+  // độ showdown và đã setup bảng đội, ẩn nút mode"). The two modes are mutually
+  // exclusive anyway, so the button could only ever have thrown the lesson's
+  // team line-up away; the way back to a single board is SINGLE MODE inside the
+  // Showdown panel, which also releases this browser's claim on its team.
+  const modeBtn = (tpl.fightMode && !session && !showdownPick) ? toolBtn(icons.mode, "Mode: single / fight") : null;
   if (modeBtn) {
     if (fight) modeBtn.classList.add("is-active");
     // MODE never switches on the bare click any more (teacher, 12/8/2026) — a
@@ -440,13 +500,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // (openToolPanel), just with a Yes/Cancel question instead of controls.
     modeBtn.onclick = () => openToolPanel(modeBtn, buildModeConfirmPanel);
   }
+  // SHOWDOWN (Đợt 155) — one team per browser, one pupil per question. Teacher
+  // path only, same as MODE, and hidden INSIDE a match: Showdown and Fight are
+  // mutually exclusive (see the `showdownPick` note near the top of this file),
+  // so offering it there would be offering a button that can only refuse.
+  // core/showdown-setup.js is DYNAMIC-imported for the usual reason — it reaches
+  // Firestore and core/classes.js, which the student page must never download.
+  const showdownBtn = (tpl.showdownMode && !session && !fight) ? toolBtn(icons.showdown, "Showdown") : null;
+  if (showdownBtn) {
+    if (showdownPick) showdownBtn.classList.add("is-active");
+    showdownBtn.onclick = () => openToolPanel(showdownBtn, buildShowdownPanelHost);
+  }
   // DURING A MATCH the row is 5 wide (…/MODE/Fullscreen) and MODE swaps places
   // with Style so it lands dead centre (teacher, 12/8/2026) — it is the button
   // that governs the whole match, so it gets the middle seat. Outside a match
-  // the row is its usual Options/Template/Style, with MODE simply appended.
+  // the row is its usual Options/Template/Style, then SHOWDOWN, then MODE
+  // (teacher, 14/8/2026: "chèn vào giữa nút Style và Mode").
   if (fight && modeBtn) belowCenter.append(optionsBtn, templateBtn, modeBtn, styleBtn);
-  else if (modeBtn) belowCenter.append(optionsBtn, templateBtn, styleBtn, modeBtn);
-  else belowCenter.append(optionsBtn, templateBtn, styleBtn);
+  else belowCenter.append(optionsBtn, templateBtn, styleBtn,
+                          ...(showdownBtn ? [showdownBtn] : []),
+                          ...(modeBtn ? [modeBtn] : []));
   function buildModeConfirmPanel(panel) {
     const toFight = !fight;
     panel.append(el("div", "aw-tool-panel-head", toFight ? "Switch to Fight mode?" : "Switch to Single mode?"));
@@ -471,6 +544,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // uses it to auto show/hide its own "act-gap" panel around the match.
       if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
       exitAnyFullscreen();
+      // Đợt 155 — entering a match ENDS Showdown for this browser. The two modes
+      // both decide whose question this is, so they cannot both be on; dropping
+      // the pick here (rather than merely ignoring it) means leaving the match
+      // later comes back to a plain single board, which is what "Back to single"
+      // says on the tin. The shared team TABLE on Firestore is untouched — only
+      // this screen's choice of team goes.
+      clearPick();
       cleanupAll();
       try {
         const { startFight } = await import("./fight.js");
@@ -613,6 +693,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // room, BEFORE pressing Play (Đợt 84).
   const gameName = (tpl.name || activity.type) + (activity._mistakes ? " with mistakes" : "");
   readyCenter.append(el("div", "aw-ready-game", escapeText(gameName).toUpperCase()));
+  // ⭐ Đợt 156 — SHOWDOWN: the team this screen is about to play, and who is in
+  // it, so the class can see the line-up before anything starts (teacher: "hiển
+  // thị thêm 'Tên team: các thành viên'"). Only THIS screen's team — the other
+  // teams are being played on other screens and their results never come here.
+  // Built as two nodes so the team name can carry its own weight/colour without
+  // the members' list inheriting them.
+  if (showdownPick) {
+    const line = el("div", "aw-ready-team");
+    const nameEl = el("span", "aw-ready-teamname");
+    nameEl.textContent = showdownPick.teamName;      // teacher's own text
+    const whoEl = el("span", "aw-ready-teamwho");
+    whoEl.textContent = showdownPick.members.map(m => m.name).join(" · ");
+    line.append(nameEl, whoEl);
+    readyCenter.append(line);
+  }
   playOverlay.append(readyCenter);
   inner.append(playOverlay);
 
@@ -1256,6 +1351,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // (an accordion reading scrollHeight) reads the final width.
     toolPanelEl.classList.toggle("is-opts", buildContent === buildOptionsPanel);
     toolPanelEl.classList.toggle("is-tpl", buildContent === buildTemplatePanel);
+    // Đợt 156 — the Showdown table states its own width for the same reason
+    // `is-opts` does: its body is a fixed 560px, and the panel's default
+    // `max-width: 580px` (with 40px of padding inside it) would squeeze it.
+    toolPanelEl.classList.toggle("is-sd", buildContent === buildShowdownPanelHost);
     toolPanelEl.classList.remove("is-compact-opts");
     panelCompactObs?.disconnect(); panelCompactObs = null;
     // `host` is the cross-fade layer during a swap, the panel itself otherwise.
@@ -1331,6 +1430,118 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   optionsBtn.onclick = () => openToolPanel(optionsBtn, buildOptionsPanel);
   templateBtn.onclick = () => openToolPanel(templateBtn, buildTemplatePanel);
   styleBtn.onclick = () => openToolPanel(styleBtn, buildStylePanel);
+
+  // "Which sub-acts does this act have, and which one is lit up" — the input the
+  // Options panel's TEXT|VOICE row is built from.
+  // (Đợt 155 lifted this out of buildOptionsPanel so the Showdown table could
+  // draw the same row; Đợt 156 took that row back OUT of Showdown at the
+  // teacher's request, so Options is once again the only caller. Left as its own
+  // function because it is the whole of one idea, not because it is shared.)
+  // `src`, not `libAct`: on a CONVERTED act the clue sets live on the origin —
+  // see subActSource(). For every act that is not converted, and for the whole
+  // pre-Đợt-145 library, `src === libAct` and this is byte-for-byte Đợt 154's.
+  // ⚠️ Reads `selState` (the panel's stable selector object), never a draft: the
+  // row is built once and outlives every re-render (Đợt 149).
+  // ⚠️ Returns null unless the act really has clue sets or real clips — an act
+  // with neither gets no row at all, not a dead one (the OPT-IN rule of Đợt 143).
+  function makeContentSwitch(selState) {
+    const src = subActSource();
+    const variants = variantsOf(src.content);
+    if (!variants && !hasAnyVoice(src.content || {})) return null;
+    return {
+      shown: selState.contentMode || (hasHiddenText(src.content) ? "voice" : "text"),
+      variants,
+      voiceVariants: voiceVariantsOf(src.content),
+      labelOf: key => variantLabel(src.content, key),
+      variant: selState.contentVariant || activeVariant({ ...src, options: { ...selState, contentMode: "text" } }),
+      voiceVariant: selState.voiceVariant || activeVariant({ ...src, options: { ...selState, contentMode: "voice" } })
+    };
+  }
+
+  // ⭐⭐ THE SUB-ACT HALF OF "APPLY" (lifted out of the Options panel in Đợt 155).
+  //
+  // ON A CONVERTED ACT THE SUB-ACT CANNOT SIMPLY BE STORED. Every other option
+  // is read at play time, so writing it into `activity.options` is enough. This
+  // one is not: convert.js BAKED one clue set (its text AND its clips) into the
+  // temp act's content at conversion time. Storing "now it's VI1" on an act
+  // whose content is already ENG1 changes nothing on screen — the row would move
+  // and the game would not, which is worse than not offering the row at all. So
+  // the choice is written onto the ORIGIN (the act convert.js reads) and the
+  // conversion is rebuilt from there.
+  //
+  // Comparing VIEW KEYS rather than raw keys means an Apply that didn't touch
+  // the sub-act never pays for a rebuild, and a first-ever Apply (nothing stored
+  // yet, so the act is on its default set) doesn't count as a change.
+  // `viewKeyOf` is null for an act with neither clue sets nor halves — i.e. the
+  // entire pre-Đợt-145 library — so both sides are null and this never fires.
+  //
+  // @returns {boolean} TRUE when it has TAKEN OVER the restart. The caller must
+  //          then do nothing else: a second restart on top of doSwitchTemplate()
+  //          would race the conversion it just started.
+  function applySubActSelection(selState) {
+    // subActSource() only hands back the origin for an act converted FROM it, so
+    // this inequality IS the converted case.
+    const convSrc = subActSource();
+    if (convSrc === libAct) return false;
+    const beforeKey = viewKeyOf(convSrc);
+    const afterKey = viewKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
+    if (beforeKey === afterKey) return false;
+    if (!convSrc.options) convSrc.options = {};
+    VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) convSrc.options[k] = selState[k]; });
+    closeToolPanel(false);
+    doSwitchTemplate(activity.type);   // re-converts from the origin, then restarts
+    return true;
+  }
+
+  // ----- SHOWDOWN panel (Đợt 155) -----
+  // A thin host: the head is drawn at once and the real table arrives when
+  // core/showdown-setup.js has loaded (dynamic import — it reaches Firestore and
+  // core/classes.js, which the student page must never download).
+  function buildShowdownPanelHost(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Showdown"));
+    const loading = el("div", "aw-sd-loading", "Loading...");
+    panel.append(loading);
+    import("./showdown-setup.js").then(mod => {
+      // The teacher may well have closed the popover while this was in flight;
+      // building into a detached node would leave a panel nobody can reach and
+      // an Apply that fires into a play that has moved on.
+      if (!panel.isConnected) return;
+      loading.remove();
+      mod.buildShowdownPanel(panel, {
+        isOn: !!showdownPick,
+        currentTeam: showdownPick,
+        toast,
+        // ⭐ Đợt 156 — the panel no longer carries the TEXT/VOICE row (teacher:
+        // the pop-up holds only the class and the number of teams). Content is
+        // chosen in Options, and an Options > Apply while Showdown is running
+        // keeps it running: Apply ends in replayCurrent(), which re-enters
+        // startGame(), which re-reads the pick. Nothing had to be added for
+        // that — but it IS the behaviour the teacher asked for, so it is worth
+        // knowing that moving Apply off replayCurrent() would break it.
+        onApply(/* pick */) {
+          // The panel already wrote the pick into sessionStorage, so the restart
+          // re-reads it at the top of startGame() and the play comes back
+          // wearing the new team. Nothing here pokes `showdownPick`: the one
+          // that matters is the one the NEXT mount reads, and pretending
+          // otherwise is how a second source of truth starts.
+          closeToolPanel(false);
+          replayCurrent();
+        },
+        onTurnOff() {
+          // clearPick() already ran in the panel; replaying re-reads an empty
+          // pick and the board comes back as an ordinary single play.
+          closeToolPanel(false);
+          replayCurrent();
+        }
+      });
+      // The table is taller than the head-plus-spinner it replaced, so the cap
+      // has to be recomputed or the panel keeps the height it opened at.
+      if (toolPanelEl === panel) capPanelHeight(buildShowdownPanelHost);
+    }).catch(e => {
+      console.warn("AWord: showdown setup failed to load", e);
+      loading.textContent = "Could not open Showdown.";
+    });
+  }
 
   // ----- OPTIONS panel: real controls, DRAFT model -----
   // Edits go into a local `draft` copy first. Nothing is saved to
@@ -1442,19 +1653,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // the origin (see subActSource). For every act that is NOT converted, and
     // for the whole pre-Đợt-145 library, `src === libAct` and every line here is
     // byte-for-byte what it was.
-    const variants = variantsOf(src.content);
-    const contentSwitch = (variants || hasAnyVoice(src.content || {}))
-      ? {
-          // read `selState`, not `draft` — the rows are built once and own the
-          // selector state from then on (Đợt 149)
-          shown: selState.contentMode || (hasHiddenText(src.content) ? "voice" : "text"),
-          variants,
-          voiceVariants: voiceVariantsOf(src.content),
-          labelOf: key => variantLabel(src.content, key),
-          variant: selState.contentVariant || activeVariant({ ...src, options: { ...selState, contentMode: "text" } }),
-          voiceVariant: selState.voiceVariant || activeVariant({ ...src, options: { ...selState, contentMode: "voice" } })
-        }
-      : null;
+    // ⭐ Đợt 155 — assembled by makeContentSwitch() further down, because the
+    // SHOWDOWN table shows the very same row and must describe the act with the
+    // same words. Two descriptions of one act is how the two panels would start
+    // lighting up different buttons for it.
+    const contentSwitch = makeContentSwitch(selState);
     // ⭐ Đợt 146 — the PRACTICE/HOMEWORK row, above the Text/Voice one. It is
     // about WHICH CONTENT is played and nothing else; the options a class gets
     // when the act is assigned are decided at assignment time (teacher: "rời
@@ -1536,34 +1739,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           import("./store.js").then(m => m.saveActivity(target)).catch(() => {});
         }
       }
-      // ⭐⭐ Đợt 154 — ON A CONVERTED ACT THE SUB-ACT CANNOT SIMPLY BE STORED.
-      // Every other option is read at play time, so writing it into
-      // `activity.options` is enough. The sub-act is not: convert.js BAKED one
-      // clue set (its text AND its voice clips) into this temp act's content at
-      // conversion time. Storing "now it's VI1" on an act whose content is
-      // already ENG1 changes nothing on screen — the row would move and the game
-      // would not, which is worse than not offering the row at all.
-      // So: write the choice onto the ORIGIN (the act convert.js reads) and
-      // rebuild the conversion from there. Comparing VIEW KEYS rather than raw
-      // keys means an Apply that didn't touch the sub-act never pays for a
-      // rebuild, and a first-ever Apply (no selector stored yet, so the act is
-      // on its default set) doesn't count as a change.
-      // `viewKeyOf` is null for an act with neither clue sets nor halves, so for
-      // the entire pre-Đợt-145 library both sides are null and this never fires.
-      // `convSrc !== libAct` IS the converted case — subActSource() only hands
-      // back the origin for an act that was converted from it.
-      const convSrc = subActSource();
-      if (convSrc !== libAct) {
-        const beforeKey = viewKeyOf(convSrc);
-        const afterKey = viewKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
-        if (beforeKey !== afterKey) {
-          if (!convSrc.options) convSrc.options = {};
-          VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) convSrc.options[k] = selState[k]; });
-          closeToolPanel(false);
-          doSwitchTemplate(activity.type);   // re-converts from the origin, then restarts
-          return;
-        }
-      }
+      // Đợt 154's converted-act rebuild — moved into applySubActSelection() in
+      // Đợt 155 so the Showdown table, which offers the same choice, goes
+      // through exactly the same path. It returns true when it has taken the
+      // restart over, and then there is nothing left for this Apply to do.
+      if (applySubActSelection(selState)) return;
       // Applying ANY option restarts the current game so it always runs under
       // the new settings (teacher's call, 1/8/2026 — every template). If the
       // game hasn't started yet (Play overlay still up), there's nothing to
@@ -1990,6 +2170,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Purely additive: leave it out and the text is exactly as before.
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null, label = null }) {
       navLabel.textContent = label != null ? label : `${index} of ${total}`;
+      // SHOWDOWN (Đợt 155) — the one place the engine learns which item is on
+      // screen, including when the teacher walks back with ‹ ›, so the name
+      // follows the question rather than counting turns of its own. Guarded on
+      // the type because a template may send `label` instead of an index (Find
+      // the match) — none of those opt into Showdown today, but a counter that
+      // silently jumps to NaN would be a horrible way to find that out.
+      if (typeof index === "number") paintShowdownName(index - 1);
       wireNav(navPrev, onPrev);
       wireNav(navNext, onNext);
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
@@ -2019,6 +2206,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       const result = computeResult(raw, timeMs / 1000);
       result.timeMs = timeMs;
       reviewData = raw.review || [];   // kept in memory for "Show answers"
+      // SHOWDOWN (Đợt 155) — tag each row with the pupil whose turn it was, so
+      // the review can be grouped by name. Done HERE, once, rather than inside
+      // the review renderer: core/mistakes.js reads these same rows, and a
+      // "Start with mistakes" round should carry the names of who got them
+      // wrong. Templates were not asked to record any of this — the rotation is
+      // a pure function of the item's index (see core/showdown.js).
+      if (showdownPick) stampReview(reviewData, showdownPick.members);
       // Don't add to the leaderboard if the player answered NO question.
       const answered = raw.answered != null ? raw.answered : reviewData.filter(r => r.answered).length;
       let entryId = null;
@@ -2277,11 +2471,27 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (backdrop) backdrop.innerHTML = "";   // hide the panel behind
     const rv = el("div", "aw-review");
     const head = el("div", "aw-rv-head");
-    head.append(el("div", "aw-rv-title", "ANSWERS"));
+    head.append(el("div", "aw-rv-title", showdownPick ? "SHOWDOWN" : "ANSWERS"));
     const closeBtn = iconBtn("aw-rv-close", icons.close, "Close");
     closeBtn.onclick = () => { rv.remove(); showSummary(result, entryId); };
     head.append(closeBtn);
     rv.append(head);
+
+    // ⭐ SHOWDOWN (Đợt 155) — a flat list of questions says nothing about WHO
+    // answered what, which is the one thing this mode exists to record. The
+    // Showdown review groups the same rows by pupil, in the team's own order,
+    // and shows only the team this browser played (teacher, 14/8/2026: "Kết quả
+    // chỉ show đội được chọn đó") — no other team was ever on this screen, so
+    // there is nothing else in memory to show.
+    if (showdownPick) {
+      buildShowdownReview(rv, {
+        members: showdownPick.members,
+        teamName: showdownPick.teamName,
+        review: reviewData
+      });
+      inner.append(rv);
+      return;
+    }
 
     // Opt-in STACKED layout (tpl.reviewStyle === "stacked"): each item is one or
     // two FULL-WIDTH lines (number · sentence · ✓/✗), so long sentences stay big

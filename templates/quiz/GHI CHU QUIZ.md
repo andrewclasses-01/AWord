@@ -1,5 +1,21 @@
 # GHI CHÚ QUIZ
 
+## Đợt 155 (14/8/2026) — ⭐ THAM GIA CHẾ ĐỘ MỚI **SHOWDOWN** (thêm ĐÚNG 1 DÒNG)
+
+⬜ **CHƯA THẦY DUYỆT.** `quiz.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.
+
+Giống hệt lý do ở Anagram: engine đọc `ui.setNav({index})` và mảng `review` mà file này vốn đã có.
+Chi tiết: `core/HUONG DAN CORE.md` mục **SHOWDOWN MODE**, `../../GHI CHU DU AN.md` Đợt 155.
+
+⭐ **Quiz là bằng chứng ô tên thuộc về ENGINE, không phải mượn của Anagram**: Quiz **không khai**
+`hasSloganSlot`, vậy mà dòng tên vẫn hiện đủ — engine tự dựng ô giữa khi Showdown bật.
+
+🟢 Đo thật (localhost): vòng lượt đúng **1,2,3,1,2,3**; Show answers ra **4/6**, ba khối
+`1✓1✗ · 1✓1✗ · 2✓0✗` cộng lại đúng 4; câu sai hiện cả hai dòng (`✗ beatiful` rồi `✓ beautiful`).
+0 lỗi console.
+
+---
+
 ## Đợt 146 (14/8/2026) — EDITOR CÓ TAB **PRACTICE | HOMEWORK**, SỬA ĐƯỢC CẢ 2 NỬA
 
 ✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Chỉ sửa `quiz-editor.js`; **file game không đụng một dòng** (nó nhận act

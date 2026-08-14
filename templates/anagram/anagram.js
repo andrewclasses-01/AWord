@@ -233,6 +233,14 @@ const anagramTemplate = {
   // means this template knows how to run as one of two boards racing (see the
   // `_fight` branches in mount()). The first template to opt in.
   fightMode: true,
+  // SHOWDOWN (Đợt 155) — makes the SHOWDOWN button appear under the frame. This
+  // flag is the WHOLE opt-in: the pupil rotation, the name over the frame and
+  // the grouped Show answers all belong to the engine (see core/showdown.js),
+  // driven by the `index` this template already reports through ui.setNav and
+  // the `review` array it already builds. Not one other line of anagram.js
+  // changed for it — including the slogan, which the engine HIDES rather than
+  // overwrites so render() can keep writing to it untouched.
+  showdownMode: true,
   // TIME COST (Đợt 139) — opt in to the shared "-N per idle second" option.
   // Anagram also PLACES the slider itself (see buildExtraOptions's
   // `timeCostCell`), because its own Points off controls are mode-dependent

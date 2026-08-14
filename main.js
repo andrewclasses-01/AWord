@@ -35,6 +35,10 @@ import {
   listClasses, createClass, renameClass, setStudents, deleteClass,
   parseStudentNames, mergeStudents, resetClassesCache, MAX_STUDENTS
 } from "./core/classes.js";
+// SHOWDOWN (Đợt 155) — the home page needs only the two account-change hooks;
+// the mode itself is driven entirely from inside a game (core/engine.js).
+import { resetShowdownCache } from "./core/showdown-setup.js";
+import { clearPick as clearShowdownPick } from "./core/showdown.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyVoiced } from "./core/content-view.js";
 import {
@@ -204,6 +208,11 @@ function renderLogin(errorMsg) {
       resetCache();
       resetClassesCache();   // classes keep their own cache — drop it too, or the
                              // previous account's class rolls would linger
+      // Đợt 155 — and the same for Showdown: its team table is another account's
+      // data, and the team THIS browser had ticked names pupils who are not in
+      // the new account's classes at all.
+      resetShowdownCache();
+      clearShowdownPick();
       await init();
     } catch (e) {
       btn.disabled = false;
@@ -1779,6 +1788,8 @@ async function doSignOut() {
   try { await signOutNow(); } catch { /* ignore */ }
   resetCache();
   resetClassesCache();
+  resetShowdownCache();
+  clearShowdownPick();     // Đợt 155 — see the matching pair in the sign-in path
   state.user = null;
   state.view = "top"; state.root = null; state.folderId = null; state.query = "";
   renderLogin();

@@ -74,6 +74,11 @@ const quizTemplate = {
   // (which flies its "+N" to a spot it has to ask fight.ctl.scoreTarget() for),
   // Quiz needed no scoring plumbing of its own, only round/lock bookkeeping.
   fightMode: true,
+  // SHOWDOWN (Đợt 155) — second template to opt in, alongside Anagram. Like
+  // Fight it needs nothing else from this file: the rotation keys off the
+  // `index` already sent through ui.setNav, and the per-pupil results off the
+  // `review` array finish() already builds. See core/showdown.js.
+  showdownMode: true,
   // TIME COST (Đợt 139) — opt in to the shared "-N per idle second" option.
   // Everything visible (the slider, the flying number, the count-down) is the
   // engine's; this template's whole share is subtracting ui.timeCostTotal()

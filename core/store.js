@@ -141,12 +141,24 @@ function nextNum(map) {
 
 // One-time backfill: hand numbers to items created before v0.8.0, oldest first
 // so the numbering matches the order the teacher made them in.
+// ---- APP DATA THAT SHARES THIS COLLECTION BUT IS NOT LIBRARY CONTENT --------
+// Class rolls (kind "class", core/classes.js) and the Showdown team table (kind
+// "showdown", core/showdown-setup.js) are stored in `users/{uid}/items` because
+// the Firestore rules open exactly ONE path for the teacher's own data — a new
+// top-level collection would be denied until somebody edited the rules in the
+// Firebase console by hand. Both files explain that at length.
+// Neither is a LINKABLE thing, so both must stay clear of the ?f= / ?a= link
+// numbers. They are already invisible to every listing (those filter on
+// `n.root === root`, and ROOTS is only activities/results); these two functions
+// are the pair that would otherwise still reach them.
+// ⚠️ ADD ANY FUTURE `kind` OF APP DATA HERE. Forgetting costs a silently eaten
+// link number and, worse, a ?a=57 that resolves to a settings document.
+const APP_DATA_KINDS = new Set(["class", "showdown"]);
+function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
+
 export async function ensureNumbers() {
   const map = await readAll();
-  // Class rolls (kind "class", root "classes" — see core/classes.js) live in
-  // this same collection but are NOT linkable things, so they never take a link
-  // number. Without this filter every class would silently eat a number here.
-  const missing = Object.values(map).filter(n => n.kind !== "class" && typeof n.num !== "number");
+  const missing = Object.values(map).filter(n => !isAppData(n) && typeof n.num !== "number");
   if (!missing.length) return 0;
   let next = nextNum(map);
   missing.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
@@ -159,9 +171,9 @@ export async function ensureNumbers() {
 export async function getByNum(num) {
   const n = Number(num);
   if (!Number.isFinite(n)) return null;
-  // `kind !== "class"` for the same reason as in ensureNumbers(): a class roll
-  // is not something a ?f= / ?a= link may ever resolve to.
-  const hits = Object.values(await readAll()).filter(x => x.kind !== "class" && x.num === n);
+  // `isAppData` for the same reason as in ensureNumbers(): a class roll or the
+  // Showdown table is not something a ?f= / ?a= link may ever resolve to.
+  const hits = Object.values(await readAll()).filter(x => !isAppData(x) && x.num === n);
   return hits.find(x => !x.trashed) || hits[0] || null;
 }
 

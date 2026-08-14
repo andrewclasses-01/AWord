@@ -453,6 +453,158 @@ chip đơn) — `tickTimer()` gửi SỐ GIÂY THÔ cho `fight.ctl.onTimer()`, `
 dùng `width` CỐ ĐỊNH (không phải `min-width`) để 2 ô điểm tay hai bên đồng hồ luôn bằng nhau bất kể số
 chữ số — đây chính là điều giữ đồng hồ (và dấu `:`) luôn đúng tâm dải dù điểm tay lệch số.
 
+## ⭐⭐ SHOWDOWN MODE — MỖI TRÌNH DUYỆT MỘT ĐỘI, MỖI CÂU MỘT HỌC SINH (`core/showdown.js`, Đợt 155, 14/8/2026)
+
+Nút **SHOWDOWN** dưới khung (giữa Style và MODE) mở bảng chia đội. **KHÔNG phải biến thể của Fight**:
+vẫn **một bàn duy nhất**, chỉ thêm "câu này của em nào". Fight chia MÀN HÌNH; Showdown chia LỚP.
+
+**Ý tưởng gốc của thầy:** bảng đội dùng chung trên mây, còn **mỗi trình duyệt tick đúng MỘT đội** rồi
+chơi vòng tròn trong đội đó. Mục đích là **myActivity chia 2-4 cột**: cột 1 đội 1, cột 2 đội 2… mấy
+đội cùng đua một act, mỗi cột một vòng lượt riêng.
+
+```
+┌──────────────────────────────┐
+│  0:12      Nguyễn Ngọc Ẳnh   ✓3│   <- dòng giữa topbar = TÊN EM ĐANG TỚI LƯỢT
+│           (khung game)        │
+└──────────────────────────────┘
+   Options · Template · Style · SHOWDOWN · MODE
+```
+
+### Hai tầng dữ liệu — đừng trộn
+
+| Tầng | Ở đâu | Vì sao |
+|---|---|---|
+| **Bảng đội** (chung, đồng bộ mọi máy) | Firestore `users/{uid}/items/sd_main`, `kind:"showdown"` | thầy chốt "một danh sách chung" |
+| **Đội của trình duyệt này** | **`sessionStorage`** khoá `aword-showdown-pick` | xem 2 bẫy dưới |
+
+⚠️⚠️ **HAI CHỖ LƯU TƯỞNG LÀ HIỂN NHIÊN, CẢ HAI ĐỀU SAI VÀ SAI TRONG IM LẶNG:**
+1. **`localStorage`** — 4 cột myActivity là 4 `WebContentsView` **cùng origin, cùng partition** ⇒
+   **chung một `localStorage`**. Cả 4 cột đọc ra cùng một đội = đúng cái ngược lại với mục đích.
+2. **`activity.options`** — `window.__awordBridge` **CỐ Ý nhân bản** `applyOptions` từ cột 0 sang các
+   cột khác. Chọn đội ở cột 0 là kéo theo 3 cột kia.
+
+`sessionStorage` là kho **duy nhất** riêng theo từng tab/WebContentsView. Giá phải trả (thầy chấp
+nhận): tắt hẳn trình duyệt là phải tick lại đội — bảng đội vẫn nguyên trên Firestore.
+
+### Hai file, và vì sao phải là hai
+
+- **`core/showdown.js` — THUẦN**: `sessionStorage` + luật chia lượt + đóng dấu review + bảng Show
+  answers. **Không Firestore, không thư viện** ⇒ `core/engine.js` import **TĨNH** được mà không phá
+  luật 2 của v0.9.0 (trang HS không được nạp code chạm thư viện).
+- **`core/showdown-setup.js`**: Firestore + bảng Showdown. **CHỈ `await import`** từ nút SHOWDOWN.
+  ⚠️ Đừng gộp hai file lại: gộp là kéo Firestore vào `play.html`.
+
+⚠️ Node `kind:"showdown"` nằm chung `items` với class roll **vì luật Firestore chỉ mở đúng một đường**
+(xem `core/classes.js`). Kèm theo: `core/store.js` có `APP_DATA_KINDS = {class, showdown}` —
+**thêm bất kỳ `kind` dữ liệu-ứng-dụng nào về sau PHẢI khai vào đó**, không thì nó ăn mất một số link
+và một `?a=57` trả về document cài đặt.
+
+### Hợp đồng cho template (opt-in — hiện Anagram + Quiz)
+
+```js
+showdownMode: true,     // HẾT. Không có dòng nào khác.
+```
+
+Thật sự chỉ có thế, vì engine lấy mọi thứ từ những gì template **đã** làm sẵn:
+- **Câu nào của ai** ← `ui.setNav({index})` mọi template đã gửi (kể cả khi thầy bấm ‹ › lùi lại).
+- **Ai đúng ai sai** ← mảng `review` template đã dựng ở `finish()`.
+- Luật chia lượt nằm ở **`memberAt(members, index0)`** — vòng tròn, quay lại từ đầu khi hết đội.
+  ⚠️ **Chỉ MỘT luật này**: bảng Show answers cũng gọi lại chính nó để gom câu theo em, chứ không tự
+  tính `i % n` lần nữa. Hai bản là hai thứ tự do trôi khỏi nhau.
+
+⚠️ **Showdown và Fight LOẠI TRỪ NHAU** — cả hai cùng định nghĩa "câu này của ai" và cùng giành dòng
+giữa topbar. Vào Fight thì `clearPick()`; `showdownPick` có `!fight` trong điều kiện.
+
+⚠️ **DÒNG GIỮA TOPBAR NAY CÓ HAI NODE** (`.aw-top-centre` bọc `.aw-top-slogan` + `.aw-top-showdown`),
+CSS ẩn cái không dùng. **Ẩn chứ KHÔNG ghi đè**: `anagram.js` viết lại `ui.sloganSlot.textContent`
+**mỗi lần `render()`**, nên tên HS nhét chung node đó sẽ bị xoá lúc sang từ mới — âm thầm, và chỉ ở
+đúng một game có slogan. Ai thêm thứ thứ ba vào ô giữa: giữ đúng khuôn "mỗi thứ một node".
+
+### ⛔⛔ BẪY CHỮ VIỆT ĐÃ CẮN THẬT Ở ĐỢT NÀY — ĐỌC TRƯỚC KHI ĐẶT CHỮ TO VÀO KHUNG CÓ CLIP
+
+**(a) Đỉnh chữ Ẳ bị XÉN 5px** ở dòng tên học sinh — chữ TO NHẤT màn hình. `line-height: 1.35` đã
+đúng luật, nhưng phần tử **cao ĐÚNG BẰNG hộp dòng của nó** và mang `overflow:hidden`, mà ở 1.35 ink
+của Ẳ **vẫn thò lên trên hộp dòng 0,111em** (phần dư mục `line-height` phía trên đã cảnh báo).
+**Mọi phép kiểm rẻ tiền đều BÁO SẠCH**: không tràn cuộn, không ellipsis, không thò ngoài topbar.
+**Chỉ công thức ink bắt được** — và phải dùng đúng công thức ở mục "BẪY ĐO ĐẠC" phía trên.
+
+**(b) Chữa bằng `padding` một mình lại làm TOPBAR PHÌNH 47px → 66px**, đẩy play area xuống 24px:
+`.aw-topbar` **tự co theo nội dung**, con cao lên là hàng cao lên, và game bên dưới mất 24px chiều
+cao **chỉ trong Showdown**. → Cách đúng: **`padding` + `margin` âm bù đúng bằng nó**. Hộp clip (thứ
+`overflow` cắt theo) vẫn to ra, còn chỗ chiếm trong dòng chảy **y nguyên**, và chữ **không dịch một
+pixel** vì padding đối xứng trên khung flex căn giữa.
+
+> **LUẬT RÚT RA (dùng cho mọi chỗ sau này):**
+> 1. Chữ Việt + `overflow:hidden` + hộp cao bằng hộp dòng ⇒ **PHẢI đo ink**, đừng tin `line-height`.
+> 2. Bù ink bằng `padding` thì **ĐO LẠI CHIỀU CAO CỦA CHA NGAY SAU ĐÓ**, và bù `margin` âm.
+> 3. Ink thò ra **chỉ thành lỗi khi sát mép một khung CÓ CLIP**. 3 phần tử khác trong bảng kết quả
+>    cũng ink âm nhưng không `overflow:hidden` ⇒ vô hại. Đừng vá bừa cả loạt.
+> 4. Kiểm chồng dòng phải **đối chứng cả trục X**: lần đo đầu báo "đâm dòng trên" là **dương tính
+>    giả** — "phần tử trước" hoá ra là ô SỐ nằm **cạnh**, không phải trên.
+
+### ⭐ BA MÀN CỦA BẢNG SHOWDOWN, VÀ LUẬT GIÀNH ĐỘI (Đợt 156)
+
+Bảng nay có **ba màn**, và **một khung cỡ CỐ ĐỊNH** cho cả ba (panel 660px, `.aw-sd-body` min-height 410px —
+thầy chốt "size các bảng đều to bằng nhau dù nội dung ít hơn"). ⚠️ **BỀ RỘNG PHẢI Ở ĐÚNG MỘT NƠI — TRÊN PANEL.** Đợt 157 sửa hai lỗi cùng họ: `.aw-tool-panel.is-sd`
+chỉ khai `width` nên bị `max-width: min(94vw,580px)` của luật gốc **kẹp lại trong im lặng**; và thân
+bảng từng khai bề rộng CỨNG song song với panel — panel hẹp hơn (nó bị kẹp theo màn hình) là thân
+tràn ra rồi `overflow-x:hidden` **xén mất điều khiển bên phải**. Khai `width` + `max-width` trên
+PANEL, thân `width:100%`.
+
+**Đừng dọn về `auto`**: popover tự
+đổi cỡ giữa các bước ngay dưới tay thầy chính là thứ luật này sinh ra để tránh.
+  **A SETUP** chọn lớp + số đội (2 ô to), sửa được danh sách HS (xoá / thêm tay) → NEXT
+  **B BUILD** pool ô tên trên cùng · team là cột dọc · chạm tên team = chọn cột nhận · chạm ô tên =
+             **bay** vào cột · nút ✓ = đội màn hình này chơi → READY
+  **C ĐANG CHẠY** Single mode / Reset team
+
+⚠️ **KHÔNG dùng `prompt()`** để nhập tên: nó bị chặn trong WebContentsView của myActivity và sẽ
+hỏng **im lặng** đúng chỗ thầy hay dùng. Ô nhập tại chỗ, như hiện nay.
+
+⚠️ **Hàng TEXT|VOICE KHÔNG còn trong bảng này** (Đợt 156, thầy chốt bảng chỉ có lớp + số đội). Nội
+dung chọn ở Options, và **Apply của Options giữ nguyên Showdown** vì nó kết thúc bằng
+`replayCurrent()` → vào lại `startGame()` → đọc lại pick. Ai dời Apply khỏi `replayCurrent()` là
+phá đúng hành vi thầy yêu cầu.
+
+⭐ **GIÀNH ĐỘI** — "1 trình duyệt 1 đội" nay được **cưỡng chế bằng dữ liệu chung**, không dựa vào trí
+nhớ: `claims: { [teamId]: {by, at} }` trong `sd_main`, `by` = `browserId()` (cũng
+`sessionStorage`). Đội đã bị giành **không hiện** ở trình duyệt khác. Bảng đọc mới toàn khi mở **và**
+theo dõi `onSnapshot` suốt lúc mở, nên giành/nhả đội thấy ngay hai chiều.
+⚠️ **CLAIM PHẢI HẾT HẠN** (`CLAIM_TTL_MS` = 12 giờ): id nằm ở `sessionStorage` nên **đóng hẳn trình
+duyệt là không ai nhả được nữa** — không có hạn thì đội đó chết vĩnh viễn.
+
+⚠️ **Ẩn nút MODE khi đã setup đội.** Hai chế độ loại trừ nhau, nút đó chỉ có thể ném đội hình của cả
+buổi đi. Đường về single là SINGLE MODE trong bảng — nó còn **nhả claim** hộ.
+
+### ⛔⛔ `panel.isConnected` LÀ PHÉP THỬ SAI CHO PANEL CÔNG CỤ (Đợt 156 — cắn thật)
+
+`core/engine.js` mở panel công cụ theo **HAI đường**:
+- mở nguội ⇒ `panel` chính là `.aw-tool-panel`;
+- mở khi **đang có panel khác** ⇒ nó **cross-fade** (`swapContents`), và `panel` là một lớp tạm
+  `.aw-swap-in` bị **XOÁ ở `SWAP_MS + 40` = 300ms**, sau khi con của nó đã được chuyển vào hộp thật.
+
+⇒ `panel` thành rác **trong khi giao diện nó dựng ra vẫn sống trên màn hình**. Mọi `await` dài hơn
+300ms quay lại sẽ thấy "đã đóng", bỏ ngang, **để lại 'Loading…' vĩnh viễn**.
+**300ms là con số bình thường của một lượt Firestore trên mạng lớp học** — mà backend giả ở máy trả
+lời trong vài mili-giây nên **phép thử sẽ BÁO ĐẠT OAN**. Bắt được bằng cách cho backend giả chậm
+900ms; đo mốc: `t=150ms` lớp swap còn, `t=320ms` **đã bị xoá** mà `body.isConnected` vẫn true.
+
+> 👉 **LUẬT: kiểm "panel còn sống không" bằng phần tử mà swap CHUYỂN ĐI (một node con mình tự tạo),
+> KHÔNG phải `panel` được truyền vào.** Và đóng popover bằng cách chạm ra ngoài chạy **hoàn toàn
+> trong engine**, không gọi ngược về builder — nên thứ gì cần dọn (listener, interval) phải **tự phát
+> hiện mình đã rời DOM** (`MutationObserver` trên `.aw-below-center`). Đã đo: một lần đóng để lại
+> **1 listener Firestore sống**, mỗi lần mở-đóng thêm một cái.
+
+### Gom code dùng chung (đừng đẻ bản thứ hai)
+- **`buildContentSwitchRow()`** (`core/options-panel.js`) — hàng `TEXT|VOICE` + bộ con. ⚠️ **Đợt 156
+  đã BỎ hàng này khỏi bảng Showdown** (thầy chốt bảng chỉ có lớp + số đội), nên panel Options lại là
+  nơi gọi duy nhất; hàm vẫn tách riêng vì nó là trọn một ý ~90 dòng, không phải vì đang dùng chung.
+- **`applySubActSelection()`** (`core/engine.js`) — nhánh act ĐÃ ĐỔI TEMPLATE (ghi lựa chọn lên act
+  GỐC rồi dựng lại bản chuyển đổi). ⚠️ Cũng chỉ còn Apply của Options gọi, vì lý do trên.
+- **`makeContentSwitch()` / `seedSelectors()`** — một câu trả lời duy nhất cho "act này có act con
+  nào, đang sáng cái nào". Hai nơi tự suy ra sẽ có ngày sáng hai nút khác nhau cho cùng một act.
+
+
 ### ⭐⭐ MỘT ACT MANG CẢ CHỮ LẪN GIỌNG — `voiceView()` (Đợt 123, 12/8/2026)
 
 Trước đây mỗi bộ từ có HAI act (`ENG1` chơi bằng chữ · `ENG1 VOICE` chơi bằng giọng) tuy nội dung chữ
