@@ -604,6 +604,79 @@ lúc cả hàng mất, tức lúc `display:none` chạy. Đó chính là nhịp 
 Đo trước/sau: **mở 281px cả hai cách** (0 panel nào xê dịch), **đóng còn 227px** — bằng đúng cách cũ.
 ⚠️ Đổi kiểu này thì nhớ **cộng bù cho mọi phần tử có margin riêng** trong lưới (`.aw-optc-sep`).
 
+### ⭐⭐⭐ ACT ĐÃ ĐỔI TEMPLATE **KHÔNG CÒN ACT CON** — HỎI ACT GỐC, VÀ ĐỔI ACT CON PHẢI **CHUYỂN ĐỔI LẠI** (Đợt 154)
+
+`core/convert.js` gọi **`resolveActivity()` TRƯỚC khi chuyển đổi**, nên act tạm ("Change template")
+**đã bị bẹp xuống một bộ gợi ý**: không `variants`, không nửa nào. Hậu quả cũ: mở Options trên
+template khác là **mất sạch hàng TEXT-VOICE và danh sách act con** (thầy báo 14/8/2026). Anagram thoát
+chỉ vì act `WORDS` **vốn là act anagram** nên chơi Anagram là chơi chính act gốc.
+
+- **MỘT nguồn sự thật**: `subActSource()` trong `core/engine.js` — act đang chơi nếu nó còn
+  `variants`/`contentSets`, ngược lại là **`originAct`** khi act đang chơi là bản `_converted`.
+  Panel Options, nhãn màn START và nhánh dựng-lại ở Apply **đều đi qua đúng hàm này**.
+- ⛔ **CHỈ act `_converted`, và KHÔNG BAO GIỜ act `_mistakes`**: act "Start with mistakes" cũng là bản
+  bẹp không còn variants và cũng chạy kèm `base`, nên thiếu chặn là Apply **dựng lại act gốc và ném
+  mất mấy từ lớp đang ôn**.
+- ⭐⭐ **Act con KHÔNG phải một option bình thường.** Mọi option khác được đọc lúc chơi ⇒ ghi vào
+  `activity.options` là đủ. Act con thì **nội dung (chữ VÀ clip giọng) đã nướng cứng lúc chuyển đổi**
+  ⇒ phải ghi lựa chọn lên **act gốc** (thứ `convert.js` đọc) rồi **`doSwitchTemplate(activity.type)`**
+  để dựng lại. Lưu suông = **hàng nút nhúc nhích mà game không đổi**, tệ hơn không cho chọn.
+- **So bằng `viewKeyOf`, đừng so từng khoá**: Apply không đụng act con thì không phải dựng lại, và
+  lần Apply đầu (chưa có khoá nào, act đang ở bộ mặc định) không bị tính là đổi. Act thường ⇒
+  `viewKeyOf` null cả hai vế ⇒ nhánh này **không bao giờ chạy** (zero-diff cho toàn thư viện cũ).
+- **Nhãn act con trên màn START** (`subActLabel`) ghép **nửa** rồi **bộ gợi ý**, đúng thứ tự hai hàng
+  trong Options. ⚠️ Phải **dựng lại được** (`refreshReadyTitle`) vì **Apply ở màn READY cố ý không
+  restart** — act con đổi ngay khi chữ đó đang trên màn hình (cùng họ bẫy Đợt 145).
+
+### ⭐⭐⭐ HỘP ĐANG ĐỔI KÍCH THƯỚC: **CẢ HAI LỚP SWAP PHẢI LÀ ẢNH TĨNH**, VÀ LỚP MỚI PHẢI **PHỦ KÍN** (Đợt 153 — cắn thật)
+
+Thầy: *"Options↔Templates rất mượt, nhưng sang **Styles** và **Fight** thì cuối animation có một
+**frame thừa của một pop-up khác nảy nhanh ra**."* Đúng hai cái đó vì `.aw-tool-panel` là
+`width:max-content`, mà **Options và Template cùng bị ghim 560px** (`is-opts`/`is-tpl`) ⇒ chỉ hai cú
+kia mới thật sự **đổi bề rộng**. Từ Đợt 152 bề rộng chạy animation, và **hai lớp swap bị bề rộng đó
+dàn lại từng khung hình** — đo được, 21 mốc, Options→Style: nội dung CŨ cao **340→372→389→453→487**
+(lưới 2 cột sập thành 1 cột, nhảy bậc = "nảy"), và **tới 201px nội dung cũ hở nguyên độ mờ 1** dưới
+panel mới cho tới khi hộp khép hết. Chiều ngược lại (và Options→Template) không lộ **chỉ vì** nội dung
+mới cao hơn hộp nên **phủ kín từ khung đầu**.
+
+**BA điều bắt buộc, áp cho mọi hiệu ứng đổi-nội-dung-kèm-đổi-kích-thước về sau:**
+1. **Lớp CŨ = ảnh chụp**. Ghim `width` = bề rộng hộp lúc bắt đầu (JS), CSS **không được** `right:0`.
+   Hộp hẹp lại thì **CẮT** nó (`overflow:hidden`), tuyệt đối không dàn lại.
+2. **Lớp MỚI = bố cục ĐÍCH ngay khung hình đầu**. Ghim `width` = bề rộng trong lúc nghỉ. Thứ thầy
+   đang nhìn hiện dần phải **đứng yên**; cái hộp mới là thứ chuyển động.
+3. **Lớp MỚI phải PHỦ KÍN hộp suốt cú chuyển** — `min-height` chạy **cùng đường cong, cùng thời
+   lượng** với chiều cao hộp. Không thì cú **thu nhỏ** phơi nguyên nội dung cũ ở phần dư.
+   (Không mâu thuẫn Đợt 151: lớp cũ **vẫn không mờ đi**, chỉ là nền đục của lớp mới nay che tới đáy.)
+- Phép nghiệm thu: tái tạo tĩnh ~20 mốc, mỗi mốc gán tay `width/height/min-height` rồi đo **bố cục
+  con của từng lớp**. ĐẠT = **đúng 1 bố cục** cho lớp cũ, **đúng 1 bố cục** cho lớp mới,
+  **phần hở ≤ 0 ở mọi mốc**, và **ghim khớp chỗ yên vị 0.00px**.
+
+### ⛔⛔ ĐO ĐÍCH PHẢI ĐO DƯỚI **LUẬT `overflow` LÚC NGHỈ** (Đợt 153 — 15px, họ hàng với Đợt 152)
+
+Đo trong lúc `.aw-swapbox` đang bật là đo dưới `overflow:hidden` ⇒ panel nào **cao quá `maxHeight`**
+(Options trong **fight mode**) cho bề rộng trong **thừa đúng 15px** vì không trừ thanh cuộn lúc nghỉ.
+- **Cách đo đúng**: **gỡ `.aw-swapbox`** rồi mới đo — và **phải giấu lớp cũ** (`display:none`) trong
+  lúc đó: nó absolute nên không có phiếu về kích thước, nhưng khi `overflow-y:auto` được trả lại thì
+  nó **đẻ ra thanh cuộn ảo**. Tất cả chạy đồng bộ, không khung hình nào bị vẽ ⇒ không lóe.
+- Đo thật trong fight mode: ghim **505 = 505** (đo kiểu cũ ra 520 ⇒ tụt 15px ở cuối).
+
+### ⛔⛔ SỐ ĐO CHỈ ĐÚNG KHI THỨ ĐƯỢC ĐO ĐÃ **ỔN ĐỊNH** — FONT NẠP MUỘN LÀ CÚ NHẢY CUỐI ANIMATION (Đợt 153)
+
+Dòng chữ của popover MODE là **chữ đầu tiên của cả app dùng Baloo 2 weight 400**; mọi `@font-face`
+đều `font-display: swap`, nên trang vừa mở thì weight đó **chưa nạp** đúng lúc cú swap bắt đầu ⇒
+`max-width: 30ch` tính theo **font dự phòng** ⇒ ghim panel **260px** trong khi sự thật là **267.36px**
+⇒ **nhảy 7.36px đúng lúc gỡ ghim**. `swapContents` **không thể** tự chống: nó đo đúng sự thật của
+khung hình đó, sự thật đổi sau lưng nó.
+- **Chữa (đã làm)**: `core/engine.js` gọi `document.fonts.load()` cho **cả 4 weight** ngay khi engine
+  nạp. Kiểm: `document.fonts.check('400 13px "Baloo 2"')` phải `true` trước khi thầy bấm được.
+- **LUẬT**: thứ gì tham gia **đo kích thước panel** (font, ảnh, nội dung nạp sau) phải ổn định số đo
+  **TRƯỚC** khi mở được panel. Thêm chữ vào panel bằng một weight/size mới ⇒ **thêm vào danh sách
+  hâm nóng**.
+- ⚠️ Cùng họ: **đừng đo khi `@keyframes` entrance còn chạy**. `aw-pop-cx` bắt đầu ở `scale(.9)`, nên
+  bấm công cụ thứ hai trong 220ms đầu là mọi `getBoundingClientRect` **bị scale 0.9**. `swapContents`
+  nay `finish()` **chỉ các `CSSAnimation`** trước khi đo — `finish()` một **transition** đang chạy là
+  quăng cái hộp thẳng tới đích của lượt trước.
+
 ### ⛔⛔ CHÚ THÍCH CSS HỎNG **NUỐT RULE ĐỨNG SAU, KHÔNG BÁO LỖI** (Đợt 152 — cắn thật)
 
 Chú thích Đợt 151 viết **thiếu `/*` mở** (chữ trần + `*/` lạc). CSS không văng lỗi — nó phục hồi bằng

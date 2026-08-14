@@ -924,8 +924,15 @@ body {
    change AT ALL mid-swap — and only what really differs dissolves. The
    outgoing layer is removed once the incoming one fully covers it, so
    nothing pops. */
+/* ⭐ Đợt 153 — NO `right` HERE. The outgoing layer's width is pinned in JS to
+   the width the box had when the swap began (core/engine.js swapContents), so
+   the old content is a SNAPSHOT and the narrowing box CLIPS it. Stretching to
+   `right:0` is what made every Options→Style / →Mode swap re-lay-out the old
+   two-column grid in visible steps (its content went 340→372→389→453→487px
+   while the box shrank) — the "frame thừa của một pop-up khác nảy nhanh ra".
+   Options↔Template never showed it only because those two are both 560px. */
 .aw-swap-out {
-  position: absolute; top: 0; left: 0; right: 0;
+  position: absolute; top: 0; left: 0;
   /* ⛔ Đợt 152 — `padding: inherit` is NOT decoration. An absolute layer at
      top:0/left:0 sits at the box's PADDING edge, so on the panel (padding
      14px 20px) the parked old content jumped up-left by exactly that much on
@@ -935,9 +942,19 @@ body {
   padding: inherit;
   opacity: 1; pointer-events: none;
 }
+/* ⭐ Đợt 153 — `min-height` TRAVELS WITH THE BOX (values set in JS, same .26s
+   curve as .aw-swapbox's height so the cover's bottom edge sits exactly on the
+   box's inner edge every frame). This layer's opaque background is what the old
+   content dissolves INTO; left at its content height it covered only the top of
+   a shrinking box, so Options(310px of content)→Style(109px) left up to 201px
+   of old content standing uncovered at full opacity until the box wiped it —
+   while Options→Template(401px) covered everything from frame one. Same reason
+   `width` is pinned in JS: the incoming content is laid out at its DESTINATION
+   width from the start, so it never re-flows on the way either. */
 .aw-swap-in {
   position: relative; z-index: 1; background: #fff;
-  opacity: 0; transition: opacity .22s ease;
+  opacity: 0;
+  transition: opacity .22s ease, min-height .26s cubic-bezier(.22,.9,.3,1);
 }
 .aw-swap-in.is-in { opacity: 1; }
 /* ⭐ Đợt 150 — CONSTANT formatting context, so starting a swap cannot move the

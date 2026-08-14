@@ -56,6 +56,27 @@ import { flyTimeCost } from "./timecost.js";
 // it is imported LAZILY and only on teacher paths — that keeps the student page
 // (play.html) free of any code that can touch the library.
 
+// ⭐⭐ Đợt 153 — WARM ALL FOUR Baloo 2 WEIGHTS THE MOMENT THE ENGINE LOADS.
+// Every @font-face here is `font-display: swap` (core/app.css), and a weight's
+// file is only fetched when something first NEEDS it. The MODE popover's
+// explanation line is the first text in the whole app at weight 400: measured
+// on a fresh page, `document.fonts.check('400 13px "Baloo 2"')` was still false
+// when the swap to Mode began, so `max-width: 30ch` resolved against the
+// FALLBACK font and swapContents pinned the panel 260px wide — the real width
+// is 267.36px, so the box jumped 7.36px wider the instant the pin came off, at
+// the very end of the animation. Nothing in swapContents can defend against
+// this: it measures the truth of that frame, and the truth changed underneath
+// it a few milliseconds later.
+// 👉 LUẬT: anything a panel's size is measured from must be metric-stable
+// BEFORE the teacher can open it. Fire-and-forget, a few KB each, and they
+// would be fetched anyway.
+if (typeof document !== "undefined" && document.fonts?.load) {
+  [400, 600, 700, 800].forEach(w => {
+    try { document.fonts.load(`${w} 13px "Baloo 2"`).catch(() => { /* offline: fallback font, nothing to do */ }); }
+    catch { /* ignore */ }
+  });
+}
+
 // The full list of games (for the Template panel). Only entries whose `type`
 // matches a template already built (registered) are clickable; the rest show
 // "coming soon". Update this list as templates/<name>/ get built.
@@ -157,6 +178,43 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // options are persisted onto THIS act (never onto the throwaway converted copy),
   // and a converted act's options are remembered in originAct.templateOptions[type].
   const originAct = base || libAct;
+
+  // ⭐⭐ Đợt 154 — THE ACT THAT OWNS THE SUB-ACTS (clue sets · PRACTICE/HOMEWORK).
+  // Normally that is the act being played. But a "Change template" play is a
+  // CONVERSION, and convert.js resolves the act down to ONE clue set before it
+  // converts — so the temp act carries no `variants` and no halves, and asking
+  // it what sub-acts exist answers "none". The origin still knows, so ask it.
+  // Everything downstream (the Options rows, the READY title, the re-convert on
+  // Apply) goes through this one function, so there is a single answer to
+  // "which act is the teacher choosing sub-acts OF".
+  // For every act that isn't converted — and for the entire pre-Đợt-145 library
+  // — this returns `libAct` and nothing anywhere behaves differently.
+  // ⚠️ ONLY a converted act borrows the origin's sub-acts, and never a "start
+  // with mistakes" run. A mistakes act is ALSO a flattened cut-down copy with
+  // no variants, and it is played with the same `base` — so without this guard
+  // it would answer "the origin owns my sub-acts" too, and Apply would rebuild
+  // the origin from scratch, silently throwing the 3 words the class was
+  // reviewing away.
+  function subActSource() {
+    if (variantsOf(libAct.content) || contentSetsOf(libAct.content)) return libAct;
+    if (libAct._converted && !libAct._mistakes && originAct !== libAct &&
+        (variantsOf(originAct.content) || contentSetsOf(originAct.content))) return originAct;
+    return libAct;
+  }
+
+  // The sub-act currently on screen, as it reads in Options: "ENG1", "HOMEWORK".
+  // Teacher, 14/8/2026: the READY screen must say WHICH one is about to be
+  // played — "DS-S2.I1.W3 / WORDS" is not enough when one act carries four.
+  // The half comes first and the clue set second, the order the two rows sit in
+  // the Options panel, so the screen reads the way the panel does.
+  function subActLabel() {
+    const src = subActSource();
+    const parts = [];
+    const sets = contentSetsOf(src.content);
+    if (sets) parts.push(setLabel(src.content, activeContentSet(src)));
+    if (variantsOf(src.content)) parts.push(variantLabel(src.content, activeVariant(src)));
+    return parts.filter(Boolean).join(" - ");
+  }
 
   // Đợt 143 — bring old penalty values onto the current 0..100 scale before ANY
   // of them is read. Belt-and-braces with core/store.js (which migrates
@@ -532,7 +590,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const playOverlay = el("div", "aw-play-overlay");
   playOverlay.append(el("div", "aw-ready-type", "ANDREW CLASSES"));   // brand on top
   const readyCenter = el("div", "aw-ready-center");
-  if (activity.title) readyCenter.append(el("div", "aw-ready-title", escapeText(activity.title).toUpperCase()));
+  // ⭐ Đợt 154 — the title carries the SUB-ACT: "DS-S2.I1.W3 / WORDS - ENG1".
+  // One act now holds four clue sets and/or two halves, so the act's own name no
+  // longer says what is about to be played.
+  // ⚠️ Rebuilt through `readyTitleEl`, not written once: Options > Apply on the
+  // READY screen deliberately does NOT restart (the options take effect on
+  // Play), so the sub-act can change while this very element is on screen — the
+  // same trap Đợt 145 hit with the clue baked into `content`.
+  const readyTitleEl = activity.title ? el("div", "aw-ready-title") : null;
+  function refreshReadyTitle() {
+    if (!readyTitleEl) return;
+    const sub = subActLabel();
+    readyTitleEl.textContent = (activity.title + (sub ? " - " + sub : "")).toUpperCase();
+  }
+  if (readyTitleEl) { refreshReadyTitle(); readyCenter.append(readyTitleEl); }
   const bigPlay = el("button", "aw-bigplay", icons.playBig);
   bigPlay.type = "button"; bigPlay.title = "Play"; bigPlay.setAttribute("aria-label", "Play");
   readyCenter.append(bigPlay);
@@ -1057,7 +1128,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // identical content shimmer; with an opaque base, a pixel that is the same
   // in both layers never changes at all. (Đợt 148's version was worse still:
   // it emptied the box before rebuilding — a moment with nothing in it.)
-  const SWAP_MS = 240;
+  // Must not be SHORTER than .aw-swapbox's height/width transition in app.css:
+  // the pin has to outlive the travel, or the last frames run un-pinned.
+  const SWAP_MS = 260;
   let swapToken = 0;
   function swapContents(box, build, done) {
     // A second swap can start while this one is still running — the teacher
@@ -1065,6 +1138,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Every stage checks it is still the LATEST swap, so an older one's cleanup
     // can never unpin the height out from under the newer one.
     const mine = ++swapToken;
+    // ⭐ Đợt 153 — MEASURE THE BOX AT REST, never mid-entrance. `.aw-tool-panel`
+    // opens with a 220ms `aw-pop-cx` keyframe that starts at `scale(.9)`;
+    // clicking a second tool inside that window leaves the panel scaled, and
+    // every getBoundingClientRect below is scaled with it — we would pin 0.9×
+    // the real target and the box would pop to full size the instant the pin
+    // came off. Finishing the entrance first costs nothing (it is on its way to
+    // exactly this state anyway).
+    // ⚠️ @keyframes animations ONLY. A running TRANSITION on this box is the
+    // PREVIOUS swap still travelling; finishing that would teleport the box to
+    // the old target before we read r0, i.e. the jump we are here to remove.
+    if (typeof CSSAnimation !== "undefined") {
+      box.getAnimations?.().forEach(a => {
+        if (a instanceof CSSAnimation) { try { a.finish(); } catch { /* ignore */ } }
+      });
+    }
     const r0 = box.getBoundingClientRect();
     // The compact-on-overflow watcher measures the panel on EVERY resize, and
     // an animated height resizes it every frame — each callback strips a class,
@@ -1077,6 +1165,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const incoming = el("div", "aw-swap-in");
     build(incoming);
     box.append(outgoing, incoming);
+    // ⭐⭐ Đợt 153 — NEITHER LAYER MAY BE RE-LAID-OUT WHILE THE BOX TRAVELS.
+    // Đợt 152 gave the box a travelling WIDTH, and both layers were sized by
+    // that width every frame: the old content re-flowed all the way down
+    // (Options 560→295 measured its content 340px → 372 → 389 → 453 → 487, a
+    // two-column grid collapsing into one in visible steps) and the new content
+    // re-flowed all the way up. Only Options↔Template escaped, because those
+    // two are the same 560px wide — exactly the teacher's report: Options↔
+    // Template smooth, but "chuyển sang Styles và Fight thì cuối animation
+    // xuất hiện frame thừa của một pop-up khác nảy nhanh ra".
+    // So: the OUTGOING layer is pinned at the width it was laid out in — it is
+    // a SNAPSHOT of what the teacher was already looking at, and the narrowing
+    // box simply clips it (see .aw-swap-out).
+    outgoing.style.width = r0.width + "px";
     // ⭐ Đợt 152 — measure the TARGET by letting the box take it for a moment,
     // not by measuring the incoming layer. The layer's own height MISSES the
     // box's padding: on the panel (padding 14/16, border-box) that pinned the
@@ -1089,15 +1190,49 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // animated for the same reason (Options↔Style really do differ in width).
     // Everything up to the setTimeout runs before a single frame is painted,
     // so the momentary un-pin is never visible.
+    // ⚠️ Đợt 153 — measure under the box's RESTING rules, not the swap's. With
+    // `.aw-swapbox` on, overflow is hidden, so a panel tall enough to scroll at
+    // rest measures 15px too wide INSIDE (no scrollbar taken off) — pinning the
+    // incoming layer to that width would make it snap 15px narrower at unwrap,
+    // the very same "extra frame" in a new place (this is the 15px of Đợt 152,
+    // met from the other side). The outgoing layer steps out for the reading:
+    // it is absolute, so it never voted on the box's size, but with the
+    // resting `overflow-y:auto` back on it WOULD add scrollable overflow and
+    // conjure a scrollbar that isn't real. All of it is synchronous — no frame
+    // is painted between hiding it and putting it back.
+    outgoing.style.display = "none";
+    box.classList.remove("aw-swapbox");
     box.style.height = ""; box.style.width = "";
     const r1 = box.getBoundingClientRect();
+    const inW = incoming.getBoundingClientRect().width;   // width the new content really settles at
     box.style.height = r0.height + "px"; box.style.width = r0.width + "px";
+    box.classList.add("aw-swapbox");
+    outgoing.style.display = "";
+    // ⭐ Đợt 153 (part two) — the INCOMING layer is laid out at its DESTINATION
+    // width from the very first frame, so the content the teacher is watching
+    // fade in never re-flows either: the box opens or closes AROUND finished
+    // content instead of reshuffling it on the way.
+    incoming.style.width = inW + "px";
+    // ⭐ Đợt 153 (part three) — and its opaque background COVERS THE WHOLE BOX
+    // for the whole ride. Shrinking Options (310px of content) into Style
+    // (109px) left up to 201px of old content standing there uncovered at full
+    // opacity, wiped away only by the closing box — while growing into Template
+    // (401px) covered it from frame one, which is why only one of the two
+    // directions ever looked wrong. The cover travels on the SAME curve and
+    // duration as the box (see .aw-swap-in), so its bottom edge sits exactly on
+    // the box's inner edge at every frame; the old content now dissolves under
+    // it everywhere, exactly as it already did in the growing direction.
+    // Đợt 151's rule is untouched: the outgoing layer still never fades, and a
+    // pixel that is the same in both layers still never changes.
+    const padV = (cs => parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom))(getComputedStyle(box));
+    incoming.style.minHeight = Math.max(0, r0.height - padV) + "px";
     // One tick so the browser registers the starting opacities/size before
     // they change — the transition has nothing to run from otherwise.
     setTimeout(() => {
       if (mine !== swapToken) return;
       incoming.classList.add("is-in");   // the outgoing layer never fades — see .aw-swap-out
       box.style.height = r1.height + "px"; box.style.width = r1.width + "px";
+      incoming.style.minHeight = Math.max(0, r1.height - padV) + "px";
       setTimeout(() => {
         if (mine !== swapToken) return;
         outgoing.remove();
@@ -1108,7 +1243,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         box.style.height = ""; box.style.width = "";
         box.classList.remove("aw-swapbox");
         done?.();
-      }, SWAP_MS + 30);
+      }, SWAP_MS + 40);
     }, 20);
   }
 
@@ -1212,6 +1347,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function buildOptionsPanel(panel) {
     const base = activity.options || {};
     let draft = { ...base };
+    // ⭐⭐ Đợt 154 — WHERE THE SUB-ACTS LIVE WHEN THE TEMPLATE HAS BEEN CHANGED.
+    // A "Change template" act is a CONVERSION, and convert.js resolves the act
+    // down to one clue set before converting — so the temp act on screen has no
+    // `variants` and no halves at all. That is why picking any game other than
+    // the act's own used to hide the Text/Voice row AND the sub-act list
+    // (teacher, 14/8/2026: "với act tích hợp, khi chọn các template khác ngoài
+    // ANAGRAM, cho phép chọn các lựa chọn TEXT-VOICE và các act con").
+    // The choice belongs to the ORIGIN act, so the panel reads it from there —
+    // and Apply rebuilds the conversion from the origin (see subActSource /
+    // the re-convert branch in Apply).
+    const src = subActSource();
+    const selSrc = src === libAct ? base : (src.options || {});
 
     // ⭐ Đợt 147 — ONE SET OF OPTIONS PER VIEW. Picking ENG2, or VI1, or the
     // homework half, now also swaps every other control in this panel to that
@@ -1242,7 +1389,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // FIRST draft for ever, so their choice goes into `selState` instead: one
     // stable object, merged into whichever draft is current.
     const selState = {};
-    VIEW_SELECTOR_KEYS.forEach(k => { if (base[k] !== undefined) selState[k] = base[k]; });
+    // Đợt 154 — seeded from the act that OWNS the sub-acts. On a converted act
+    // `base` can still carry a stale `contentVariant` (remembered per template
+    // in originAct.templateOptions), and it means nothing there: that act's
+    // content was baked from ONE set already. The origin's options are the only
+    // record of which one the teacher is actually on.
+    VIEW_SELECTOR_KEYS.forEach(k => { if (selSrc[k] !== undefined) selState[k] = selSrc[k]; });
     const switchHost = el("div", "aw-opt-switches");
     const bodyHost = el("div", "aw-opt-bodyhost");
     panel.append(switchHost, bodyHost);
@@ -1286,17 +1438,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // teacher picks between them. A variant act always shows the switch (even
     // before any voice is generated) because the right-hand half of the row —
     // the list of clue sets — is the reason the row exists.
-    const variants = variantsOf(libAct.content);
-    const contentSwitch = (variants || hasAnyVoice(libAct.content || {}))
+    // ⭐ Đợt 154 — `src`, not `libAct`: on a converted act the clue sets live on
+    // the origin (see subActSource). For every act that is NOT converted, and
+    // for the whole pre-Đợt-145 library, `src === libAct` and every line here is
+    // byte-for-byte what it was.
+    const variants = variantsOf(src.content);
+    const contentSwitch = (variants || hasAnyVoice(src.content || {}))
       ? {
           // read `selState`, not `draft` — the rows are built once and own the
           // selector state from then on (Đợt 149)
-          shown: selState.contentMode || (hasHiddenText(libAct.content) ? "voice" : "text"),
+          shown: selState.contentMode || (hasHiddenText(src.content) ? "voice" : "text"),
           variants,
-          voiceVariants: voiceVariantsOf(libAct.content),
-          labelOf: key => variantLabel(libAct.content, key),
-          variant: selState.contentVariant || activeVariant({ ...libAct, options: { ...selState, contentMode: "text" } }),
-          voiceVariant: selState.voiceVariant || activeVariant({ ...libAct, options: { ...selState, contentMode: "voice" } })
+          voiceVariants: voiceVariantsOf(src.content),
+          labelOf: key => variantLabel(src.content, key),
+          variant: selState.contentVariant || activeVariant({ ...src, options: { ...selState, contentMode: "text" } }),
+          voiceVariant: selState.voiceVariant || activeVariant({ ...src, options: { ...selState, contentMode: "voice" } })
         }
       : null;
     // ⭐ Đợt 146 — the PRACTICE/HOMEWORK row, above the Text/Voice one. It is
@@ -1304,12 +1460,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // when the act is assigned are decided at assignment time (teacher: "rời
     // nhau — HAI công tắc"). Null for every act without a second half, which
     // hides the row entirely.
-    const sets = contentSetsOf(libAct.content);
+    const sets = contentSetsOf(src.content);
     const contentSetSwitch = sets
       ? {
           sets,
-          labelOf: key => setLabel(libAct.content, key),
-          current: selState.contentSet || activeContentSet(libAct)
+          labelOf: key => setLabel(src.content, key),
+          current: selState.contentSet || activeContentSet(src)
         }
       : null;
       buildOptionsBody(host, {
@@ -1380,12 +1536,43 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           import("./store.js").then(m => m.saveActivity(target)).catch(() => {});
         }
       }
+      // ⭐⭐ Đợt 154 — ON A CONVERTED ACT THE SUB-ACT CANNOT SIMPLY BE STORED.
+      // Every other option is read at play time, so writing it into
+      // `activity.options` is enough. The sub-act is not: convert.js BAKED one
+      // clue set (its text AND its voice clips) into this temp act's content at
+      // conversion time. Storing "now it's VI1" on an act whose content is
+      // already ENG1 changes nothing on screen — the row would move and the game
+      // would not, which is worse than not offering the row at all.
+      // So: write the choice onto the ORIGIN (the act convert.js reads) and
+      // rebuild the conversion from there. Comparing VIEW KEYS rather than raw
+      // keys means an Apply that didn't touch the sub-act never pays for a
+      // rebuild, and a first-ever Apply (no selector stored yet, so the act is
+      // on its default set) doesn't count as a change.
+      // `viewKeyOf` is null for an act with neither clue sets nor halves, so for
+      // the entire pre-Đợt-145 library both sides are null and this never fires.
+      // `convSrc !== libAct` IS the converted case — subActSource() only hands
+      // back the origin for an act that was converted from it.
+      const convSrc = subActSource();
+      if (convSrc !== libAct) {
+        const beforeKey = viewKeyOf(convSrc);
+        const afterKey = viewKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
+        if (beforeKey !== afterKey) {
+          if (!convSrc.options) convSrc.options = {};
+          VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) convSrc.options[k] = selState[k]; });
+          closeToolPanel(false);
+          doSwitchTemplate(activity.type);   // re-converts from the origin, then restarts
+          return;
+        }
+      }
       // Applying ANY option restarts the current game so it always runs under
       // the new settings (teacher's call, 1/8/2026 — every template). If the
       // game hasn't started yet (Play overlay still up), there's nothing to
       // restart — just apply and close; the options take effect on Play.
       const playing = !playOverlay.isConnected;
       if (playing) { closeToolPanel(false); replayCurrent(); return; }
+      // Đợt 154 — still on the READY screen: nothing restarts, so the title has
+      // to be told that the sub-act under it may have just changed.
+      refreshReadyTitle();
       toast("Options applied");
       closeToolPanel(true);
     };

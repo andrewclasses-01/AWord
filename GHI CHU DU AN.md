@@ -5,6 +5,164 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 154 (14/8/2026) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`... / WORDS - ENG1`) + ACT TÍCH HỢP GIỮ NGUYÊN TEXT-VOICE VÀ CÁC ACT CON KHI ĐỔI SANG TEMPLATE KHÁC
+⭐ CÓ SỬA CORE (`core/engine.js`). ✅ **THẦY DUYỆT** (thầy nhắn "commit và push cả hai đợt lên live", 14/8/2026) **→ COMMIT + PUSH + LIVE.**
+
+### 1. Thầy giao
+> "(1) Thêm tiêu đề cụ thể của loại act trong màn hình start… thay vì chỉ có `DS-S2.I1.W3 / WORDS`
+> thì bây giờ sẽ là `DS-S2.I1.W3 / WORDS - ENG1`.
+> (2) Với act tích hợp, khi chọn các template khác ngoài ANAGRAM, cho phép chọn các lựa chọn
+> TEXT-VOICE và các act con."
+
+### 2. Việc (1) — tên act con trên màn START
+`subActLabel()` (mới, `core/engine.js`) ghép **nửa** rồi **bộ gợi ý**, đúng thứ tự hai hàng trong
+Options: `QUIZ - HOMEWORK`, `WORDS - ENG1`, act có cả hai thì `... - HOMEWORK - ENG1`.
+- ⚠️ **Không viết một lần rồi thôi**: `refreshReadyTitle()` dựng lại chữ, vì **Apply ở màn READY cố ý
+  KHÔNG restart** (options có hiệu lực khi bấm Play) — act con đổi ngay khi phần tử đó đang trên màn
+  hình. Đúng họ với bẫy Đợt 145 ("thứ tính sẵn vào content phải tính lại ở `begin()`").
+- Ở chế độ VOICE thì nhãn lấy theo **bộ giọng** đang chọn (`activeVariant` tự đọc `voiceVariant`).
+- Act không có bộ gợi ý/nửa nào ⇒ **không thêm gì** (cả thư viện cũ y nguyên).
+- Hàng chữ dưới khung (`.aw-below-title`) **giữ nguyên tên act** — thầy chỉ yêu cầu màn start.
+
+### 3. ⭐ Việc (2) — vì sao act tích hợp MẤT hàng TEXT-VOICE khi đổi template
+Truy ra gốc: `core/convert.js` gọi **`resolveActivity()` TRƯỚC khi chuyển đổi** — tức act tạm được
+**bẹp xuống còn MỘT bộ gợi ý** rồi mới đổi hình. Nên act đang chơi (`libAct`) **không còn `variants`,
+không còn nửa nào**, và panel Options hỏi nó "có act con nào không" thì nó trả lời "không" ⇒ ẩn cả
+hàng. Anagram không dính chỉ vì act WORDS **vốn là act anagram** (`lesson-import.js` đặt
+`type:"anagram"`), nên chơi Anagram là chơi **chính act gốc**, không qua chuyển đổi.
+
+**Chữa — 2 mảnh, đều gom về MỘT hàm `subActSource()`:**
+1. **Hỏi đúng act**: act đã đổi template thì act con nằm ở **act GỐC** (`originAct`), panel đọc từ đó
+   (`variants`, `voiceVariants`, nhãn, và **lựa chọn hiện tại** — `selState` cũng seed từ options của
+   act gốc, vì options của act tạm có thể còn `contentVariant` cũ nhớ theo template, **vô nghĩa** trên
+   một act đã bẹp).
+2. **Apply phải DỰNG LẠI, không lưu suông**: mọi option khác chỉ cần ghi vào `activity.options` là
+   xong, riêng act con thì **nội dung (chữ VÀ clip giọng) đã được nướng cứng lúc chuyển đổi**. Ghi
+   "giờ là VI1" lên một act mà nội dung đang là ENG1 thì **hàng nút nhúc nhích còn game thì không** —
+   còn tệ hơn không cho chọn. Nay Apply ghi lựa chọn lên **act gốc** (thứ `convert.js` đọc) rồi gọi
+   `doSwitchTemplate(activity.type)` để **chuyển đổi lại từ đầu**.
+   - So bằng **VIEW KEY** (`viewKeyOf`) chứ không so từng khoá: Apply không đụng act con thì **không
+     phải dựng lại**, và lần Apply đầu tiên (chưa có khoá nào, act đang ở bộ mặc định) **không bị coi
+     là đổi**. Act không có bộ gợi ý/nửa ⇒ `viewKeyOf` = null cả hai vế ⇒ **không bao giờ chạy vào**.
+   - ⚠️ **Chặn "Start with mistakes"**: act mistakes **cũng** là bản bẹp không còn variants **và**
+     cũng đi kèm `base` — thiếu chặn là Apply sẽ dựng lại act gốc, **ném mất mấy từ lớp đang ôn**.
+     `subActSource()` chỉ nhường cho act gốc khi `libAct._converted && !libAct._mistakes`.
+- 🟢 Đi kèm miễn phí: `convert.js` **vốn đã** chuyển `voice`/`voiceId`/`hideText` sang mọi template
+  (10/8/2026) và **vốn đã** mang `contentMode` theo (12/8/2026), nên chọn VOICE trên template khác là
+  có clip thật — chỉ thiếu đúng cái hàng để bấm.
+
+### 4. 🟢 ĐÃ TỰ TEST (devserver + trình duyệt thật, 2 harness tạm: act WORDS 4 bộ + act QUIZ 2 nửa)
+- **Màn START**: `DS-S2.I1.W3 / WORDS - ENG1`; chọn VI1 **chưa Apply thì chữ chưa đổi** (đúng luật
+  bản nháp), Apply xong thành `- VI1`, bấm Play ra **gợi ý tiếng Việt** ("chiếc lá") — chữ và thứ
+  đang chơi khớp nhau. Act 2 nửa: `QUIZ - PRACTICE` → `QUIZ - HOMEWORK`, câu hỏi ra đúng nửa homework.
+- **Đổi template (act WORDS → QUIZ)**: hàng `TEXT|VOICE` + `ENG1|ENG2|VI1|VI2` **còn nguyên**, đúng ô
+  đang chọn (`is-on`, thumb `--i`), gạt sang VOICE thì nửa phải **thu còn 2 bộ nói được** (Đợt 150
+  vẫn chạy). Chọn VI1 → Apply ⇒ **câu hỏi quiz thành tiếng Việt**; chọn ENG2 ⇒ ra **đúng câu ENG2**
+  (khác hẳn ENG1) ⇒ chứng minh act được **chuyển đổi lại thật**, không phải lưu suông. VOICE giữ được
+  qua lần dựng lại. Act 2 nửa đổi sang Anagram: hàng `PRACTICE|HOMEWORK` còn nguyên, đổi nửa ⇒ dựng lại.
+- **ĐỐI CHỨNG ZERO-DIFF** (act quiz thường, không bộ nào): tiêu đề **không thêm gì**, panel **0 hàng
+  act con**, Apply **không dựng lại** — và y hệt vậy **sau khi đã đổi template**.
+- **Không hồi quy**: Đợt 153 vẫn đạt trên panel đã có thêm hàng (3 hướng đổi công cụ **0.00/0.00px**,
+  0 lớp sót); đổi nửa trong Options trên act GỐC vẫn swap thân panel (2 lớp, ghim 520/252, dọn sạch,
+  **hàng công tắc không bị dựng lại**); tiêu đề dài 60 ký tự vẫn **xuống dòng gọn trong khung**.
+- **0 lỗi console** suốt buổi.
+- ⚠️ Ghi nhận có chủ ý: trên act **đã đổi template**, đổi act con **không** kéo theo bộ options riêng
+  của từng view (`viewOptions` chỉ sống trên act gốc) — act tạm nhớ options **theo template**
+  (`originAct.templateOptions[type]`). Chồng thêm trục thứ hai ở đây là phức tạp mà chưa ai cần.
+
+### 5. ⬜ CÒN LẠI
+- ⬜ **Mắt thầy**: chữ `- ENG1` trên màn start nhìn đã thuận mắt chưa, có muốn hàng dưới khung
+  (`.aw-below-title`) cũng mang tên act con không.
+- ⬜ Chưa thử **Firestore thật** · **Đợt C** · **Đợt D**.
+
+---
+
+## Đợt 153 (14/8/2026) — ⭐ "FRAME THỪA CỦA MỘT POP-UP KHÁC NẢY RA Ở CUỐI" KHI SANG STYLE/FIGHT: HAI LỚP SWAP BỊ **DÀN LẠI TỪNG KHUNG HÌNH**, CỘNG HAI CÚ GIẬT CUỐI CÙNG (SCROLLBAR 15px · FONT CHƯA NẠP 7px)
+⭐ CÓ SỬA CORE (`core/engine.js` · `core/app.css`). ✅ **THẦY DUYỆT** (thầy nhắn "commit và push cả hai đợt lên live", 14/8/2026) **→ COMMIT + PUSH + LIVE.**
+
+### 1. Thầy báo
+> "Chuyển qua lại giữa Options và Templates đang rất mượt, không phát hiện frame thừa. Nhưng khi
+> chuyển sang pop-up **Styles** và **Fight** thì ở **cuối animation trước khi xong** vẫn xuất hiện
+> **một frame thừa của một pop-up khác nảy nhanh ra**, vẫn nhìn ra được."
+
+### 2. ⭐ Vì sao ĐÚNG hai cái đó — con số nói thẳng
+`.aw-tool-panel` mặc định `width: max-content`, riêng **Options và Template cùng mang `is-opts`/
+`is-tpl` = 560px**. Nên Options↔Template là cú đổi **KHÔNG đổi bề rộng**, còn Style (295px) và Mode
+(267px) thì đổi rất nhiều. Đợt 152 cho bề rộng chạy animation — và **cả hai lớp swap đều bị bề rộng
+đó dàn lại từng khung hình**:
+
+| Đo trong lúc chuyển (tái tạo tĩnh, 21 mốc) | Options→Style | Options→Template |
+|---|---|---|
+| Bề cao **nội dung CŨ** (lưới 2 cột bị bóp) | **340 → 372 → 389 → 453 → 487** | 340 (đứng yên) |
+| Bề rộng lớp cũ | 560 → 295 | 560 (đứng yên) |
+| **Nội dung cũ HỞ RA** dưới lớp mới | **201px → 0** | **−91 → 0 (luôn bị phủ kín)** |
+
+Tức là: cú sang Style/Mode vừa **bóp lưới Options 2 cột thành 1 cột theo từng khung hình** (nhảy bậc,
+đúng chữ "nảy" của thầy), vừa để **tới 201px nội dung Options phơi nguyên độ mờ 1** ngay dưới panel
+mới cho tới khi cái hộp khép hết — mắt đọc thành "một pop-up khác nảy ra rồi biến mất ở cuối".
+Chiều ngược lại (Style→Options) không lộ vì nội dung mới cao hơn hộp ⇒ **phủ kín từ khung đầu** —
+cũng chính là lý do Options↔Template xưa nay mượt.
+
+### 3. Cách chữa — **CẢ HAI LỚP PHẢI LÀ ẢNH TĨNH, VÀ LỚP MỚI PHẢI PHỦ KÍN**
+1. **Lớp CŨ ghim đúng bề rộng lúc bắt đầu** (`outgoing.style.width = r0.width`, bỏ `right:0` trong
+   CSS). Nó là **ảnh chụp** thứ thầy đang nhìn; hộp hẹp lại thì **CẮT** nó chứ không dàn lại.
+2. **Lớp MỚI ghim đúng bề rộng ĐÍCH ngay từ khung hình đầu** (`incoming.style.width = inW`). Nội dung
+   thầy đang nhìn hiện dần **đã ở bố cục cuối cùng**, hộp chỉ mở/khép quanh nó.
+3. **Lớp MỚI phủ kín hộp suốt cú chuyển**: `min-height` chạy cùng đường cong .26s với hộp
+   (`r0.height − padding` → `r1.height − padding`). Nội dung cũ nay **dissolve dưới nền đục** ở
+   **mọi chỗ**, đúng như chiều đang mượt sẵn. Luật Đợt 151 giữ nguyên: lớp cũ **không hề mờ đi**,
+   điểm ảnh giống nhau vẫn `c·a + c·(1−a) = c`.
+
+### 4. ⭐ Hai cú giật CUỐI CÙNG tự bắt được khi nghiệm thu (không phải suy đoán)
+**(a) 15px — panel có thanh cuộn.** Phép đo đích của Đợt 152 chạy **khi `.aw-swapbox` đang bật**, mà
+class đó ép `overflow:hidden` ⇒ panel cao quá `maxHeight` (Options trong **fight mode**) đo ra bề rộng
+trong **thừa đúng 15px** (không trừ thanh cuộn lúc nghỉ). Ghim lớp mới theo số đó là **cuối cú chuyển
+nội dung tụt 15px** — vẫn là "frame thừa", chỉ đổi chỗ. **Chữa**: lúc đo thì **gỡ `.aw-swapbox` +
+giấu lớp cũ** (lớp cũ absolute vốn không có phiếu về kích thước, nhưng với `overflow-y:auto` trả lại
+thì nó **đẻ ra thanh cuộn ảo**). Đo thật trong fight mode: ghim **505 = 505** (kiểu cũ sẽ ghim 520).
+**(b) 7px — FONT CHƯA NẠP.** Dòng giải thích của popover MODE là **chữ ĐẦU TIÊN của cả app dùng
+Baloo 2 weight 400**, mà mọi `@font-face` đều `font-display: swap` ⇒ trang mới mở,
+`document.fonts.check('400 13px "Baloo 2"')` còn **false** đúng lúc cú swap bắt đầu ⇒ `max-width:30ch`
+tính theo **font dự phòng** ⇒ ghim panel **260px**, vài mili giây sau font về, bề rộng thật là
+**267.36px** ⇒ **nhảy 7.36px đúng lúc gỡ ghim**. Không phép đo nào trong `swapContents` chống được:
+nó đo đúng sự thật của khung hình đó, sự thật đổi sau lưng nó.
+**Chữa**: `core/engine.js` **hâm nóng cả 4 weight (400/600/700/800) ngay khi engine nạp**.
+Đo lại trên trang vừa mở: 4/4 weight `ready` trước khi thầy kịp bấm, `Options→Mode` ghim
+**267.359 = 267.36 (0.00px)**.
+👉 **LUẬT MỚI**: thứ gì được dùng để **đo kích thước panel** thì phải **ổn định số đo TRƯỚC** khi thầy
+mở được panel. Font nạp muộn = số đo sai = cú nhảy ở cuối animation.
+
+### 5. Việc phụ
+- `SWAP_MS` **240 → 260** cho **khớp đúng** transition .26s của `.aw-swapbox` (dọn dẹp ở
+  `SWAP_MS + 40`): trước đây cái ghim có thể **hết hạn trước khi hộp đi xong** vài mili giây.
+- Cú swap nay **kết thúc `@keyframes` entrance còn đang chạy** trước khi đo. `aw-pop-cx` bắt đầu ở
+  `scale(.9)`; bấm công cụ thứ hai trong 220ms đầu là **mọi `getBoundingClientRect` đều bị scale**,
+  ghim 0.9× rồi bung ở cuối. ⚠️ **CHỈ `CSSAnimation`** — `finish()` một *transition* đang chạy là
+  quăng cái hộp tới đích của lượt trước, đúng cú nhảy đang phải xoá.
+
+### 6. 🟢 ĐÃ TỰ TEST (devserver + trình duyệt thật, `templates/anagram/test.html` + harness tạm 2 nửa)
+- **8/8 hướng đổi công cụ** (Options/Template/Style/Mode, đủ cả 2 chiều) **ĐẠT**: nội dung cũ **đúng
+  1 bố cục** suốt 21 mốc, nội dung mới **đúng 1 bố cục**, **nội dung cũ hở ra ≤ 0px ở mọi mốc**,
+  ghim khớp chỗ yên vị **0.00px cả 2 trục**, **0 lớp/0 style sót**.
+- **Fight mode** (panel vừa `is-compact-opts` vừa có thanh cuộn, maxHeight 360): 4/4 hướng
+  **0.00/0.00**, bộ đo compact **tự bật lại đúng** sau mỗi cú chuyển.
+- **Đường thứ hai của `swapContents`** (thân Options, `padding:0`) qua harness act 2 nửa: đổi
+  PRACTICE→HOMEWORK ⇒ 1 bố cục cũ / 1 bố cục mới / hở 0px / dọn sạch / **hàng công tắc KHÔNG bị dựng
+  lại** (luật Đợt 149 còn nguyên) / tab HOMEWORK ăn đúng.
+- **Không hồi quy**: accordion "Points off" vẫn trượt (340→400), **Apply** vẫn lưu và đóng panel,
+  đóng/mở panel sạch, **2 cú swap chồng nhau** kết thúc đúng ở panel cuối cùng, bấm công cụ thứ hai
+  **trong lúc entrance đang chạy** ra đúng 294.75×139 với `transform` scale 1.
+- **0 lỗi console** suốt buổi. Quét cân bằng chú thích CSS (luật Đợt 152): **261/261, 0 đoạn trần**.
+- 🔎 **Bẫy đo (lại dính, ghi để đừng mất thì giờ lần sau)**: pane test bị ẩn ⇒ transition đứng yên
+  **và** `aw-pop-cx` **kẹt ở khung đầu `scale(.9)`** — mọi `getBoundingClientRect` ra **0.9×** số thật.
+  Dùng `offsetWidth/offsetHeight` (miễn nhiễm transform) hoặc tắt animation trước khi đo.
+
+### 7. ⬜ CÒN LẠI
+- ⬜ **Mắt thầy trên Chrome/TOMKO thật**: sang Style và sang Fight đã hết "frame thừa" chưa.
+- ⬜ Chưa thử **Firestore thật** · **Đợt C** · **Đợt D**.
+
+---
+
 ## Đợt 152 (14/8/2026) — ⭐ "GIẬT LỘN XỘN + THANH SCROLL" KHI ĐỔI CÔNG CỤ: BA LỖI HÌNH HỌC CHỒNG NHAU, TRONG ĐÓ MỘT CHÚ THÍCH CSS HỎNG NUỐT MẤT CẢ RULE + TEMPLATE LÊN 3 CỘT
 ⭐ CÓ SỬA CORE (`core/engine.js` · `core/app.css`). ✅ **THẦY DUYỆT** (thầy yêu cầu "commit + push live" trực tiếp qua chat, 14/8/2026) **→ COMMIT + PUSH + LIVE.**
 

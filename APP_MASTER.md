@@ -8,7 +8,44 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/8/2026 (Đợt 152) — ⭐ "GIẬT LỘN XỘN + THANH SCROLL" KHI ĐỔI CÔNG CỤ: BA
+> Cập nhật lần cuối: **14/8/2026 (Đợt 154) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`… / WORDS - ENG1`)
+> + ACT TÍCH HỢP GIỮ NGUYÊN TEXT-VOICE VÀ CÁC ACT CON KHI ĐỔI SANG TEMPLATE KHÁC.**
+> ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** ⭐ CÓ SỬA CORE (`engine.js`).
+> **(1)** `subActLabel()` ghép **nửa** rồi **bộ gợi ý** vào tiêu đề màn START (`QUIZ - HOMEWORK`,
+> `WORDS - ENG1`) — phải **dựng lại được** vì Apply ở màn READY cố ý không restart.
+> **(2)** Gốc của việc mất hàng TEXT-VOICE: `convert.js` **bẹp act TRƯỚC khi chuyển đổi**, nên act tạm
+> không còn `variants`/nửa nào để panel hỏi; Anagram thoát chỉ vì act `WORDS` **vốn là act anagram**.
+> Chữa bằng **một** hàm `subActSource()` (act đang chơi, hoặc **act GỐC** nếu bản đang chơi là
+> `_converted`) + Apply **CHUYỂN ĐỔI LẠI** thay vì lưu suông (nội dung và clip giọng đã nướng cứng lúc
+> chuyển đổi — lưu suông thì nút nhúc nhích mà game không đổi). So bằng `viewKeyOf` nên act thường
+> không bao giờ chạy vào; chặn riêng act `_mistakes` kẻo ném mất mấy từ lớp đang ôn.
+> 🟢 ĐÃ TỰ TEST: màn START đúng nhãn và **khớp thứ đang chơi** (VI1 ⇒ gợi ý tiếng Việt) · đổi sang
+> QUIZ vẫn còn đủ 2 hàng, chọn VI1/ENG2 ⇒ **câu hỏi đổi thật** · act 2 nửa đổi sang Anagram cũng vậy ·
+> **zero-diff** act thường (0 hàng, 0 chữ thêm, Apply không dựng lại) · Đợt 153 không hồi quy
+> (0.00/0.00px) · 0 lỗi console. ⬜ Mắt thầy. Chi tiết: `GHI CHU DU AN.md` Đợt 154 + mục mới
+> `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 153) — ⭐ HẾT "FRAME THỪA CỦA MỘT POP-UP KHÁC NẢY RA Ở CUỐI"
+> KHI SANG STYLE/FIGHT: HAI LỚP SWAP BỊ DÀN LẠI TỪNG KHUNG HÌNH + 15px SCROLLBAR + 7px FONT CHƯA
+> NẠP.** ✅ **THẦY DUYỆT → COMMIT + PUSH + LIVE.** ⭐ CÓ SỬA CORE (`engine.js` · `app.css`).
+> Chỉ Style/Mode lộ vì `.aw-tool-panel` là `max-content` còn **Options và Template cùng ghim 560px**
+> ⇒ chỉ hai cú kia mới đổi bề rộng, mà từ Đợt 152 bề rộng chạy animation ⇒ **cả hai lớp swap bị dàn
+> lại mỗi khung hình**: nội dung CŨ cao **340→372→389→453→487** (lưới 2 cột sập thành 1, nhảy bậc =
+> "nảy") và **tới 201px nội dung cũ hở nguyên độ mờ 1** dưới panel mới cho tới lúc hộp khép hết.
+> 👉 **BA LUẬT MỚI**: lớp cũ **ghim bề rộng ban đầu** (ảnh chụp — hộp hẹp lại thì CẮT, không dàn) ·
+> lớp mới **ghim bề rộng ĐÍCH** ngay khung hình đầu · lớp mới **`min-height` phủ kín hộp**, chạy cùng
+> đường cong với chiều cao. Kèm 2 cú giật cuối tự bắt được khi nghiệm thu: **(a)** đo đích lúc
+> `.aw-swapbox` bật = đo dưới `overflow:hidden` ⇒ panel có thanh cuộn (Options trong fight mode) thừa
+> **15px** — nay **gỡ class + giấu lớp cũ** rồi mới đo (ghim 505 = 505); **(b)** popover MODE là chữ
+> **đầu tiên** của cả app dùng Baloo 2 **weight 400**, mà `font-display:swap` ⇒ trang vừa mở đo bằng
+> font dự phòng, ghim 260 rồi **nhảy 7.36px** khi font về — nay engine **hâm nóng cả 4 weight** lúc nạp.
+> 🟢 ĐÃ TỰ TEST: **8/8 hướng** đổi công cụ — mỗi lớp **đúng 1 bố cục** suốt 21 mốc, **hở ≤ 0px ở mọi
+> mốc**, ghim khớp yên vị **0.00px**, 0 lớp sót · **fight mode** (vừa compact vừa có thanh cuộn) 4/4 ·
+> thân Options (PRACTICE→HOMEWORK) không hồi quy, hàng công tắc không bị dựng lại · Apply + accordion
+> + 2 swap chồng nhau + bấm công cụ trong lúc entrance: đúng · 0 lỗi console · chú thích CSS 261/261.
+> ⬜ Mắt thầy trên Chrome thật. Chi tiết: `GHI CHU DU AN.md` Đợt 153 + 3 mục mới `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 152) — ⭐ "GIẬT LỘN XỘN + THANH SCROLL" KHI ĐỔI CÔNG CỤ: BA
 > LỖI HÌNH HỌC CHỒNG NHAU, TRONG ĐÓ MỘT CHÚ THÍCH CSS HỎNG NUỐT MẤT CẢ RULE + TEMPLATE LÊN 3 CỘT.**
 > ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. ⭐ CÓ SỬA CORE (`engine.js` · `app.css`).
 > Cả 3 lỗi chỉ phát tác khi hộp swap là PANEL (có padding) — nên phần trong Options mượt còn
@@ -2099,7 +2136,7 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–152)
+### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–154)
 
 > ⭐⭐ **VIỆC LỚN ĐANG DANG DỞ: KẾ HOẠCH 4 ĐỢT A–D CỦA THẦY.** Đọc mục này trước khi hỏi thầy làm gì.
 > Thầy giao 3 việc lớn (14/8/2026), em chia 4 đợt và thầy chốt:
@@ -2167,6 +2204,8 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | ⬜ *chờ duyệt* |
+| **153** | ⭐ Hết "frame thừa ở cuối" khi sang **Style/Fight**: hai lớp swap **ghim bề rộng** (cũ = ảnh chụp, mới = bố cục đích) + lớp mới **phủ kín hộp**; kèm **15px scrollbar** trong phép đo và **7px font weight 400 chưa nạp** | ⬜ *chờ duyệt* |
 | **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | *đợt này* |
 | **151** | ⭐ **Panel rơi khỏi neo** (`.aw-swapbox` khai `position` đè `absolute` của panel) + **dissolve trên nền đục** hết "nháy nhẹ" | *đợt này* |
 | **150** | ⭐ Cú **nâng 9px "trừ nút Apply"** (margin-collapse đổi trạng thái khi ghim chiều cao) + **cụm nút thở** (flex-grow 1→0) | *đợt này* |
@@ -2196,7 +2235,13 @@ act nào gọi tên HS thì đọc từ đó.
 **⭐⭐ VIỆC KẾ TIẾP = ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi **ĐỢT D** (xoá sạch dữ liệu cũ).
 Thiết kế thầy đã chốt sẵn cho cả hai nằm ở **mục 3 ngay trên** — đọc ở đó, đừng hỏi lại thầy từ đầu.
 
-**⭐ HAI TRỤC NỘI DUNG (Đợt 145–147) — phần máy không tự kiểm được:**
+**⭐ HAI TRỤC NỘI DUNG (Đợt 145–147, 154) — phần máy không tự kiểm được:**
+- ⬜ **(Đợt 154)** Màn START nay ghi **tên act con** (`… / WORDS - ENG1`, `… / QUIZ - HOMEWORK`):
+  nhìn trên màn 86" đã thuận mắt chưa, và thầy có muốn hàng chữ **dưới khung** (`.aw-below-title`,
+  hiện vẫn chỉ có tên act) cũng mang tên act con không.
+- ⬜ **(Đợt 154)** Act tích hợp đổi sang template khác (Quiz/Flying fruit/…) rồi **đổi bộ gợi ý** trên
+  bản live: mỗi lần đổi là **dựng lại act** (chuyển đổi lại từ act gốc) nên có một nhịp nạp — trên máy
+  thầy có thấy chậm không.
 - ⬜ **Import 1 file `.xlsm` thật trên bản live** → phải ra **9 act** (`WORDS · PRONUNCIATION · IPA ·
   RUNNING WORD · RUNNING TEAM · QUIZ · 1. TRUE FALSE · 2. FILLING · 3. READING QUIZ`); mở act `WORDS`
   gạt TEXT/VOICE + ENG1/ENG2/VI1/VI2, mở act `QUIZ` gạt PRACTICE/HOMEWORK.
@@ -2208,7 +2253,11 @@ Thiết kế thầy đã chốt sẵn cho cả hai nằm ở **mục 3 ngay trê
 - ⚠️ **Act cũ trong thư viện KHÔNG tự đổi** — vẫn là ENG1/ENG2/VI1/VI2 rời. Thầy đã chốt **xoá sạch ở
   Đợt D** chứ không chuyển đổi.
 
-**⭐ CHUỖI ANIMATION (Đợt 148–152) — chỉ còn "cảm giác", phải mắt/tay thầy:**
+**⭐ CHUỖI ANIMATION (Đợt 148–153) — chỉ còn "cảm giác", phải mắt/tay thầy:**
+- ⬜ **(Đợt 153, mới nhất — thứ cần nhìn TRƯỚC TIÊN)** Sang **Style** và sang **Fight (MODE)**: cái
+  "frame thừa của một pop-up khác nảy nhanh ra ở cuối" đã hết hẳn chưa. Máy đã đo sạch (mỗi lớp đúng
+  1 bố cục, nội dung cũ không còn hở ra ở bất kỳ mốc nào, ghim khớp 0.00px) nhưng pane test không vẽ
+  được khung hình nào ⇒ **cảm giác vẫn phải mắt thầy**.
 - ⬜ Đổi công cụ **Options → Template/Style** trên Chrome/TOMKO thật: đã thành một cú trượt sạch chưa.
 - ⬜ Gạt **TEXT↔VOICE** và **ENG1↔ENG2**: nửa phải "gom vào dãn ra" đã mượt chưa, còn nháy không.
 - ⬜ Accordion **"Points off"** của Anagram (On submit ↔ Letters with bonus): đã liền một mạch chưa.
