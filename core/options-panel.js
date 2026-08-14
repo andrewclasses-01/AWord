@@ -131,6 +131,17 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
   const paint = v => {
     chip.textContent = print(v);
     chip.classList.toggle("is-off", offAt != null && v === offAt);
+    // Đợt 143b — how much of the bar is coloured in. The browser used to draw
+    // this itself from `accent-color`, but Chrome DERIVES the unfilled track's
+    // colour from the accent by a rule of its own: measured on the real panel,
+    // red gave a light grey track while amber and green gave a near-BLACK one.
+    // The bar is painted in app.css now, and this is the one number it needs.
+    // Guard the divide: a slider whose min equals its max (a range that happens
+    // to have one legal value) would otherwise set the fill to NaN% and the bar
+    // would lose its colour entirely.
+    const span = max - min;
+    s.style.setProperty("--aw-slider-fill",
+      (span > 0 ? Math.max(0, Math.min(100, ((v - min) / span) * 100)) : 0) + "%");
   };
   paint(cur);
   s.oninput = () => { const v = clamp(s.value); paint(v); onInput(v); };

@@ -492,17 +492,6 @@
 }
 
 /* ---------- options-panel sliders (popup below the stage — plain px units) ---------- */
-.aw-wam-sliderrow { display: flex; align-items: center; gap: 10px; }
-.aw-wam-slider { flex: 1 1 auto; max-width: 220px; }
-.aw-wam-slider.is-speed { accent-color: #2f7bff; }
-.aw-wam-slider.is-lives { accent-color: #ef4444; }
-.aw-wam-slider.is-pen   { accent-color: #e0774a; }
-.aw-wam-slider.is-punish { accent-color: #22c55e; }   /* teacher asked for green */
-.aw-wam-sliderval { min-width: 86px; font-weight: 700; font-size: .85rem; }
-.aw-wam-sliderval.is-speed { color: #2f7bff; }
-.aw-wam-sliderval.is-lives { color: #ef4444; }
-.aw-wam-sliderval.is-pen   { color: #e0774a; }
-.aw-wam-sliderval.is-punish { color: #22c55e; }
 
 /* (The end-of-game tally used to be a huge number floating over the desert —
    `.aw-wam-tally`. Since 4/8/2026 the score is shown ON THE SIGN instead, see
@@ -551,3 +540,8 @@
 .aw-wam-tf-addrow { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: .7rem; margin-top: 4px; border: 1.5px dashed #cfdaea; border-radius: 11px; background: #f7fafd; color: #2f7bff; font-weight: 700; font-size: .95rem; cursor: pointer; }
 .aw-wam-tf-addrow:hover:not(:disabled) { background: #eaf1ff; }
 .aw-wam-tf-addrow:disabled { opacity: .4; cursor: default; }
+
+/* (Đợt 143b — luật CSS cho thanh kéo riêng của game này đã XOÁ. Từ Đợt 140 mọi
+   thanh kéo do core/options-panel.js dựng với class .aw-optc-slider, nên các
+   class ở đây không còn được JS nào gán; giữ lại chỉ khiến người sau sửa một
+   luật không bao giờ có tác dụng. Kiểu dáng thật nằm ở core/app.css.) */

@@ -937,6 +937,17 @@ body {
 .aw-optc-ctl { display: flex; align-items: center; gap: 10px; min-height: 30px; }
 /* pushes a trailing control (the Time cost grace stepper) to the label's right edge */
 .aw-optc-lab .aw-hstep { margin-left: auto; }
+/* ⭐ Đợt 143b (teacher: "nhìn thanh timecost: hơi thấp hơn thanh lives một chút.
+   Tôi cần mọi thanh kéo đều được sắp xếp thẳng hàng"). Measured: the Time cost
+   label line was 19px tall against every other cell's 14px, because the small
+   grace stepper (21px) sits ON that line — so its control line, and its slider
+   with it, started 4.5px lower than the Lives slider beside it.
+   The negative block margin takes the stepper OUT of the line's height
+   calculation (21 − 8 = 13px, under the label's own 14px), so the label line is
+   the same height as every other one and the sliders line up exactly. The
+   stepper still draws at full size — it just stops pushing the row taller,
+   which is the teacher's "đẩy nút bấm thời gian lên một chút". */
+.aw-optc-lab .aw-hstep.is-sm { margin-block: -4px; }
 
 /* ---- SEGMENTED control — replaces radio rows (Đợt 140) ----
    Same visual language as the Text/Voice switch above, which was the one
@@ -1012,19 +1023,72 @@ body {
 /* ---- SLIDER + value chip, one shape for every numeric option ----
    `margin: 0` is not decoration: <input type=range> ships a 2px default
    margin, and that alone put the sliders 2px right of every label — one of
-   the four ragged left edges measured above. */
+   the four ragged left edges measured above.
+
+   ⭐ Đợt 143b (teacher: "hãy chỉnh để mọi thanh kéo đều đồng nhất nền trắng, ở
+   tất cả mọi nơi"). These used to be styled with `accent-color` alone, i.e. the
+   browser drew the bar. Chrome DERIVES the unfilled track's colour from the
+   accent, and its rule is not one we control: measured on the real panel, red
+   #ef4444 produced a light grey track while amber #f5a623 and green #16a34a
+   produced a near-BLACK one. Same panel, same markup, three different bars.
+   So the bar is painted here now, and the accent is carried in a variable
+   instead: the unfilled part is ALWAYS the same neutral, and the coloured part
+   is a gradient stop driven by `--aw-slider-fill`, which mkSliderCell() keeps in
+   step with the value (core/options-panel.js).
+   ⚠️ `appearance: none` is what takes the drawing away from the browser — with
+   it, `accent-color` no longer applies to this control at all, which is exactly
+   the point. Don't "restore" accent-color here: it would do nothing on Chrome
+   and would bring the inconsistency back on any engine that still honours it. */
 .aw-optc-slider {
+  -webkit-appearance: none; appearance: none;
   flex: 1 1 auto; min-width: 0; margin: 0; height: 18px;
-  accent-color: #ef4444; cursor: pointer;
+  background: transparent; cursor: pointer;
+  --aw-slider-accent: #ef4444;
+  --aw-slider-fill: 0%;
 }
-.aw-optc-slider.is-amber { accent-color: #f5a623; }
-.aw-optc-slider.is-blue  { accent-color: #2f7bff; }
+.aw-optc-slider.is-amber { --aw-slider-accent: #f5a623; }
+.aw-optc-slider.is-blue  { --aw-slider-accent: #2f7bff; }
 /* Đợt 143 (teacher: "đổi mọi thanh lives của các act thành màu xanh lá").
    Lives was on the same blue as the segmented control's selected state and the
    ticked checkboxes, so at a glance it read as "this one is switched on" rather
    than as a value. Green is the only role-colour in the panel that means a
    RESOURCE the class still has, and nothing else in the panel uses it. */
-.aw-optc-slider.is-green { accent-color: #16a34a; }
+.aw-optc-slider.is-green { --aw-slider-accent: #16a34a; }
+
+/* The bar itself. One gradient does both halves, so the filled part can never
+   drift out of step with the track the way two separate elements would. */
+.aw-optc-slider::-webkit-slider-runnable-track {
+  height: 6px; border-radius: 999px;
+  background: linear-gradient(to right,
+    var(--aw-slider-accent) 0 var(--aw-slider-fill),
+    #e9eef6 var(--aw-slider-fill) 100%);
+}
+.aw-optc-slider::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--aw-slider-accent);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgba(20,30,45,.28);
+  margin-top: -5px;           /* centre the 16px thumb on the 6px track */
+  transition: box-shadow .16s ease;
+}
+/* Firefox draws the filled part itself (::-moz-range-progress), so there the
+   track stays a flat neutral and the progress carries the colour. */
+.aw-optc-slider::-moz-range-track { height: 6px; border-radius: 999px; background: #e9eef6; }
+.aw-optc-slider::-moz-range-progress { height: 6px; border-radius: 999px; background: var(--aw-slider-accent); }
+.aw-optc-slider::-moz-range-thumb {
+  width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%;
+  background: var(--aw-slider-accent); box-shadow: 0 1px 3px rgba(20,30,45,.28);
+}
+/* Keyboard focus: a ring on the THUMB. The browser's own focus box drew a hard
+   black rectangle around the whole control once `appearance: none` was set. */
+.aw-optc-slider:focus { outline: none; }
+.aw-optc-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 1px 3px rgba(20,30,45,.28), 0 0 0 4px rgba(47,123,255,.32);
+}
+.aw-optc-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 1px 3px rgba(20,30,45,.28), 0 0 0 4px rgba(47,123,255,.32);
+}
 /* Fixed basis = every chip in a column starts on the SAME x, whatever the
    number inside is. Never give one cell a wider chip: that shortens its slider
    and the column stops lining up (measured while drafting Đợt 140: a wider chip
@@ -1089,12 +1153,22 @@ body {
 /* Đợt 143 — the tick is always in the DOM and always transitions; ticking a box
    draws it on rather than snapping it in. It is built on the UNCHECKED state
    (scale 0) so the animation runs both ways: unticking wipes it off again.
-   `transform-origin: bottom left` is what makes it read as a stroke being drawn
-   from the corner of the box rather than a check being zoomed at from nowhere. */
+   ⚠️ Đợt 143b — the first version of this also set `transform-origin: bottom
+   left`, meaning to make the tick read as a stroke drawn from the corner. It
+   changed where the SHAPE LANDS: `left/top` place an unrotated box and the
+   rotation then swings it about whatever origin is given, so moving the origin
+   moved the finished tick down-left, half of it outside the blue box — on screen
+   it stopped looking like a ✓ and became a white wedge cutting the corner off.
+   That shipped in Đợt 143 and was only caught by LOOKING at a screenshot; every
+   numeric check passed, because opacity and scale were both correct.
+   The origin stays at its default (centre) so `rotate(43deg) scale(1)` is
+   byte-identical to the pre-Đợt-143 `rotate(43deg)`. Only the growing-in is new.
+   Rule: a transform-origin change is a POSITION change, not a decoration —
+   measure it with your eyes, not with getComputedStyle. */
 .aw-check-box::after {
   content: ""; position: absolute; left: 4.5px; top: 1px;
   width: 5px; height: 9px; border: solid #fff; border-width: 0 2.5px 2.5px 0;
-  transform: rotate(43deg) scale(0); transform-origin: bottom left; opacity: 0;
+  transform: rotate(43deg) scale(0); opacity: 0;
   transition: transform .17s cubic-bezier(.34,1.4,.64,1), opacity .12s ease;
 }
 .aw-check-in:checked + .aw-check-box::after { transform: rotate(43deg) scale(1); opacity: 1; }

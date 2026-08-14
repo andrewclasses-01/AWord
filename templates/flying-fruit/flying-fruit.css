@@ -212,7 +212,6 @@
 
 /* ---------- Options panel extras (sliders) ---------- */
 .aw-ff-optrow { display: flex; align-items: center; gap: 10px; }
-.aw-ff-slider { flex: 1; accent-color: #60a5fa; }
 .aw-ff-optval {
   min-width: 26px; text-align: center; font-weight: 800;
   color: var(--aw-text, #223);

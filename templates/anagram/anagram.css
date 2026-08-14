@@ -447,14 +447,12 @@
 /* ---------- Lives slider (Options panel) — v0.9.29, same look as
    true-false.css's aw-tf-lives* (red = "this costs you something"). ---------- */
 .aw-anagram-livesrow { display: flex; align-items: center; gap: 10px; }
-.aw-anagram-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; }
 .aw-anagram-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
 
 /* "Bonus and minus" mode's "Bonus x" multiplier slider (Options panel,
    teacher, 10/8/2026) — same shape as the Lives slider above, but gold/
    amber (a GAIN dial) to read as the opposite of the red penalty sliders
    (.aw-opt-slider, reused as-is for both "Points off" variants). */
-.aw-anagram-multslider { flex: 1 1 auto; max-width: 220px; accent-color: #f5a623; cursor: pointer; }
 .aw-anagram-multval { min-width: 3ch; font-size: 14px; font-weight: 800; color: #f5a623; }
 /* Đợt 139 — the points-off/bonus sliders now live in the LEFT half of a
    2-column row (Time cost took the right half), so they must be free to shrink
@@ -462,7 +460,6 @@
    its max-width. Scoped with the anagram class on the RIGHT of the selector,
    never a bare rule on a core class: template CSS is never removed from the
    document, so a bare `.aw-opt-cell` rule here would reach every other game. */
-.aw-opt-cell .aw-anagram-multslider { min-width: 70px; }
 
 /* =============================================================
    CONTENT EDITOR (anagram-editor.js) — Word/Clue table, Wordwall-style.

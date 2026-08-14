@@ -124,11 +124,9 @@
    rem/px here — NOT cqw, same as Find the match's panel).
    ============================================================= */
 .aw-tf-speedrow { display: flex; align-items: center; gap: 10px; }
-.aw-tf-speedslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
 .aw-tf-speedval { min-width: 108px; font-weight: 700; color: #2f7bff; font-size: .85rem; }
 /* Lives slider 0..10 (0 = Unlimited), same look as the Speed slider. */
 .aw-tf-livesrow { display: flex; align-items: center; gap: 10px; }
-.aw-tf-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; }
 .aw-tf-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
 
 /* =============================================================

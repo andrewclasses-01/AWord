@@ -513,9 +513,6 @@
    swapped for touch-friendly sliders to match lives) so the panel reads as
    one family of controls instead of three different widgets.
    ============================================================= */
-.aw-rt-sliderrow { display: flex; align-items: center; gap: 10px; }
-.aw-rt-slider { flex: 1 1 auto; min-width: 120px; accent-color: #e0524c; }
-.aw-rt-sliderval { flex: 0 0 auto; min-width: 68px; font-weight: 800; font-size: .9rem; }
 
 /* =============================================================
    EDITOR

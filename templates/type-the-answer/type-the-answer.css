@@ -287,11 +287,9 @@
   font-size: 14px; color: var(--aw-text);
 }
 .aw-tta-opt-minus-cap { font-weight: 600; }
-.aw-tta-opt-slider { flex: 0 0 160px; max-width: 55%; accent-color: var(--aw-accent, #3b82f6); cursor: pointer; }
 .aw-tta-opt-minus-val {
   min-width: 2.2em; text-align: center;
   font-weight: 800; color: #ef4444;
 }
 .aw-tta-livesrow { display: flex; align-items: center; gap: 10px; }
-.aw-tta-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; cursor: pointer; }
 .aw-tta-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }

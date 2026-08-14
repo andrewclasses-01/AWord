@@ -336,7 +336,6 @@
 
 /* --- Options: Number of deal places slider (1..10) --- */
 .aw-sc-dealrow { display: flex; align-items: center; gap: 10px; }
-.aw-sc-dealslider { flex: 1 1 auto; max-width: 220px; accent-color: #2f7bff; }
 .aw-sc-dealval { min-width: 24px; font-weight: 700; color: #2f7bff; font-size: .9rem; text-align: center; }
 
 /* =============================================================

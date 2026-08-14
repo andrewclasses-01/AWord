@@ -121,7 +121,6 @@
    the 16:9 stage, so plain px/rem is right here — cqw would be meaningless.
    Same look as True/false's and Type the answer's Lives control. */
 .aw-quiz-livesrow { display: flex; align-items: center; gap: 10px; }
-.aw-quiz-livesslider { flex: 1 1 auto; max-width: 220px; accent-color: #ef4444; cursor: pointer; }
 .aw-quiz-livesval { min-width: 84px; font-weight: 700; color: #ef4444; font-size: .85rem; }
 
 /* empty / malformed activity */
