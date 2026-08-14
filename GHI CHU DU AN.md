@@ -9,6 +9,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`core/app.css`, `core/options-panel.js`) + dọn CSS chết ở 10 template.
 ✅ **THẦY DUYỆT → COMMIT `c8e4b14` + PUSH + LIVE** (Pages build `5899396997` success; `curl` 9/9 dấu mốc,
 kể cả 4 thứ đã xoá xác nhận là đã sạch).
+✅ **THẦY ĐÃ TEST TOÀN BỘ TRÊN MÀN CẢM ỨNG TOMKO (13/8/2026) VÀ BÁO CHẠY NGON.** Đây là lần đầu bảng
+Options v2 được **chạm tay thật** kể từ khi dựng ở Đợt 140 — nên nó đóng luôn mục "chưa chạm tay trên
+TOMKO" treo suốt **Đợt 139 · 140 · 143 · 143b**: thumb segmented, dấu tick, kéo thanh trượt, và ô chỉnh
+số `−/+` nấc 1 giây đều ăn tay trên màn cảm ứng.
 
 ### 1. Thầy soi ảnh và bắt được 2 chỗ
 > *"Hãy nhìn thanh timecost: hơi thấp hơn thanh lives một chút… Thanh live và bonus có nền dưới màu đen,
@@ -200,15 +204,15 @@ không còn hàm trùng tên nào**. Đo lại: **13/13 đều `-35`**.
 CSS transition + rAF + đồng hồ engine**. Lần đầu đo ra thumb "không trượt" và tick "không đổi" —
 **cả hai đều là kết luận GIẢ**, do đọc đúng lúc transition vừa bắt đầu. Đo lại với `transition:none`
 thì thumb ra 0/172/344 và **nằm khít trên nút được chọn, lệch 0px cả 3 vị trí**.
-⬜ **CHƯA xem được Time cost trừ điểm bằng mắt** — đồng hồ engine đứng im trong pane ẩn. Đối chứng:
-**Quiz (có Time cost từ Đợt 139, đợt này KHÔNG đụng vào) cũng trừ 0** ⇒ là môi trường, không phải phần
-nối dây. Phần nối dây đã chứng minh bằng đường khác (đo `setScoreProvider`, 13/13).
-⬜ Chưa chạm tay thật trên màn TOMKO.
+🟢 **Lúc tự test em CHƯA xem được Time cost trừ điểm bằng mắt** — đồng hồ engine đứng im trong pane ẩn.
+Đối chứng khi đó: **Quiz (có Time cost từ Đợt 139, đợt này KHÔNG đụng vào) cũng trừ 0** ⇒ là môi trường,
+không phải phần nối dây; phần nối dây đã chứng minh bằng đường khác (đo `setScoreProvider`, 13/13).
+✅ **THẦY ĐÃ TEST TOÀN BỘ TRÊN MÀN TOMKO (13/8/2026) VÀ BÁO CHẠY NGON** ⇒ **2 mục treo của đợt này đóng lại**.
 
 ### VIỆC ĐANG CHỜ (Đợt 143)
-- Chạy thử Time cost bằng mắt trên cửa sổ THẬT (13 game), nhất là Speaking (cấm tính tiền lúc thu âm)
-  và Maze chase (bẻ lái = tiến độ).
-- Chạm tay trên màn TOMKO: thumb segmented + dấu tick + kéo stepper countdown nấc 1 giây.
+✅ ~~Chạy thử Time cost bằng mắt trên cửa sổ THẬT~~ — thầy đã chạy, tốt.
+✅ ~~Chạm tay trên màn TOMKO: thumb segmented + dấu tick + kéo stepper countdown nấc 1 giây~~ — thầy đã
+chạm thật, tốt. **Đóng luôn mục TOMKO treo từ Đợt 140** (cùng đúng một bảng Options ấy) **và Đợt 139**.
 - Template thứ 18 khi thêm: nhớ `usesShuffleAnswers` / `usesAutoSwitch` — **không khai là không hiện**.
 
 ---
@@ -526,8 +530,10 @@ segmented / ô tick) báo **0 lỗi** ở cả 3 mode Anagram. Chưa đủ ⇒ *
   (ranh giới bảo mật còn nguyên), 0 lỗi console.
 
 ### ⬜ CHƯA kiểm được (cần thầy)
-- **Chạm tay thật trên màn TOMKO**: kéo thanh trượt, bấm nút segmented, bấm `−/+` của stepper ngang.
-  (Segmented 30px và ô tick 18px đều TO HƠN radio/checkbox 15px cũ, nhưng chưa ai chạm bằng ngón tay.)
+- ✅ ~~**Chạm tay thật trên màn TOMKO**: kéo thanh trượt, bấm nút segmented, bấm `−/+` của stepper
+  ngang~~ — **THẦY ĐÃ CHẠM THẬT VÀ BÁO NGON (13/8/2026, trong lượt test Đợt 143b)**. Vậy là phán đoán
+  của đợt này đúng: segmented 30px và ô tick 18px (thay cho radio/checkbox 15px cũ) ăn tay trên màn
+  cảm ứng.
 - **Ý thầy về vài chữ đã rút gọn**: `∞` thay "Unlimited" (chip phải vừa 52px, không thì gãy cột) ·
   "Allow skip" thay "Allow skip (Next can move on early)" · fight mode rút còn "Same words / Different"
   và "First wins / Both finish" (câu đầy đủ nằm ở tooltip).
@@ -663,7 +669,7 @@ hàng. Không mode nào phải cuộn (543px nội dung / 645px chỗ cho phép)
 ### ⬜ CHƯA kiểm được (cần thầy)
 - **Nhìn bằng mắt hiệu ứng số đỏ bay** (pane test bị ẩn nên WAAPI không chạy — em chỉ chứng minh được
   node sinh ra đúng nội dung, đúng số lượng, và được dọn sạch).
-- Chạm tay thật trên màn TOMKO (kéo 2 thanh trong hàng 2 cột, bấm ô ngưỡng 1–5s).
+- ✅ ~~Chạm tay thật trên màn TOMKO (kéo 2 thanh trong hàng 2 cột, bấm ô ngưỡng 1–5s)~~ — **thầy đã chạm thật và báo ngon (13/8/2026, trong lượt test Đợt 143b)**.
 - Cảm giác cân bằng: 20 điểm/giây là nặng hay nhẹ với lớp — thầy chỉnh thanh khi dạy thật.
 
 ---

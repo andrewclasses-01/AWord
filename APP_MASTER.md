@@ -67,8 +67,11 @@
 > 17/17 panel sạch, 0 lỗi console, cao nhất 365/645, thanh trượt đều 178px, khoảng cách số đều 9px,
 > Auto next đúng 4 game, Shuffle answers đúng 3 game, Time cost đúng 13 game, quy đổi 3/5→60 ·
 > anagram 4/10→40 · minusAmount 2/5→40, chạy lại 5 lần vẫn đứng yên).
-> ⬜ CHƯA xem được Time cost trừ điểm bằng mắt (pane test bị ẩn → Chromium đóng băng transition/rAF/đồng
-> hồ; đối chứng: Quiz vốn chạy từ Đợt 139 cũng trừ 0 ⇒ lỗi môi trường). Chưa chạm tay trên màn TOMKO.
+> ✅ **THẦY ĐÃ TEST TOÀN BỘ TRÊN MÀN TOMKO (13/8/2026) VÀ BÁO CHẠY NGON** — đóng cả 2 mục treo của đợt
+> này (Time cost nhìn bằng mắt · chạm tay TOMKO), **và đóng luôn mục "chưa chạm tay trên TOMKO" treo từ
+> Đợt 139 + Đợt 140** vì đó cùng đúng một bảng Options. Lúc em tự test thì chưa xem được Time cost trừ
+> điểm bằng mắt (pane test bị ẩn → Chromium đóng băng transition/rAF/đồng hồ; đối chứng: Quiz vốn chạy
+> từ Đợt 139 cũng trừ 0 ⇒ lỗi môi trường, không phải phần nối dây).
 >
 > Trước đó: **13/8/2026 (Đợt 142) — ⭐ POPUP IMPORT CÓ ĐỦ BỘ CHỌN GIỌNG NHƯ EDITOR
 > (MIX VOICE + RANDOM THEO GIỌNG VÙNG) + ICON LOA XANH TRÊN THẺ ACT ĐÃ ĐỦ GIỌNG.**
@@ -135,7 +138,7 @@
 > ngược** tái tạo đúng lỗi Đợt 137 để chứng minh phép đo lật được 2 chiều) · Apply ghi đúng giá trị
 > đầu-cuối (đồng hồ đếm ngược chạy đúng 2:05 sau khi chỉnh) · `play.html` vẫn không nạp code thư viện GV.
 > ✅ **THẦY DUYỆT → COMMIT `eea0ecd` + PUSH + LIVE** (curl xác nhận 6 dấu mốc; mở panel chạy thẳng trên bản live đo lại đúng: Anagram 397px, 2 mép trái, thanh trượt đều 190px, không cuộn).
-> ⬜ Chưa chạm tay thật trên màn TOMKO.
+> ✅ Đã chạm tay thật trên màn TOMKO (13/8/2026, cùng lượt test Đợt 143b) — chạy tốt.
 >
 > Trước đó: **13/8/2026 (Đợt 139) — ⭐ TÍNH NĂNG MỚI "TIME COST": MỖI GIÂY **TRỐNG**
 > (HS ngồi không làm gì) TRÔI QUA LÀ TỔNG ĐIỂM BỊ TRỪ, số `-N` ĐỎ BAY TỪ Ô ĐIỂM VÀO ĐỒNG HỒ +
@@ -157,7 +160,8 @@
 > **zero-diff khi tắt** (không đẻ ra bộ đo nào, đếm `setInterval` của engine ra đúng `[500]`) ·
 > không đẻ đồng hồ ma (Start again → 0 interval) · 10x ăn đúng 80 điểm cho từ 8 chữ · 0 lỗi console.
 > ⬜ **Chưa nhìn được bằng mắt hiệu ứng số bay** (pane test bị ẩn nên WAAPI/rAF chết hẳn — xem bẫy test
-> ghi ở `GHI CHU DU AN.md` Đợt 139) và chưa chạm tay thật trên màn TOMKO.
+> ghi ở `GHI CHU DU AN.md` Đợt 139).
+> ✅ Chạm tay trên màn TOMKO: **thầy đã test 13/8/2026** (cùng lượt test Đợt 143b) — chạy tốt.
 >
 > Trước đó: **13/8/2026 (Đợt 138) — 📘 CHỈ GHI HỒ SƠ, KHÔNG ĐỔI MỘT DÒNG CODE NÀO:
 > ghi lại thành LUẬT bài học đắt nhất của dự án — "HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP" trong
