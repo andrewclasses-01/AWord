@@ -2,7 +2,7 @@
 
 ## Đợt 155 (14/8/2026) — ⭐ THAM GIA CHẾ ĐỘ MỚI **SHOWDOWN** (thêm ĐÚNG 1 DÒNG)
 
-⬜ **CHƯA THẦY DUYỆT.** `quiz.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.
+✅ **COMMIT `57677cf` + PUSH + LIVE** (14/8/2026). `quiz.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.
 
 Giống hệt lý do ở Anagram: engine đọc `ui.setNav({index})` và mảng `review` mà file này vốn đã có.
 Chi tiết: `core/HUONG DAN CORE.md` mục **SHOWDOWN MODE**, `../../GHI CHU DU AN.md` Đợt 155.

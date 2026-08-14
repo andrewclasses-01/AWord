@@ -7,7 +7,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 157 (14/8/2026) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN, ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC
 ⭐ CÓ SỬA CORE (`showdown-setup.js` dựng lại phần panel, `app.css`).
-⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** Chạy thử thật, 0 lỗi console.
+✅ **THẦY CHỐT COMMIT + PUSH** (14/8/2026) **→ COMMIT + PUSH + LIVE.**
+📌 **Commit `57677cf`** (gộp Đợt 155-156-157) — **ĐÃ LÊN LIVE, đã đối chiếu**: 10/10 file đổi có
+mã băm **trùng khít nội dung trong commit** trên `aword.andrewclasses.com` (~15 giây sau push), và
+**chạy lại phép thử TRÊN CHÍNH BẢN LIVE**: nút SHOWDOWN đúng vị trí, bảng mở ra **660×410** không kẹt
+'Loading', luật chia lượt trả `An,Bình,Vy,An,Bình,Vy`, `browserId()` chạy, **0 lỗi console**.
+Chạy thử thật, 0 lỗi console.
 
 ### 1. Thầy giao (kèm ảnh chụp bảng)
 > "Trong danh sách các lớp, **tối đa chỉ là 20 học sinh**. Vì vậy hãy **tăng tối đa size các ô tên**
@@ -83,7 +88,12 @@ thật (bẫy `aw-pop-cx` đã ghi từ Đợt 140).
 
 ## Đợt 156 (14/8/2026) — ⭐⭐ SHOWDOWN BẢN THẦY CHỐT: 3 MÀN, KÉO TÊN VÀO ĐỘI, VÀ **GIÀNH ĐỘI** GIỮA CÁC TRÌNH DUYỆT
 ⭐ CÓ SỬA CORE (`engine.js`, `showdown.js`, `showdown-setup.js` viết lại, `options-panel.js`, `app.css`).
-⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** Chạy thử thật trên trình duyệt, 0 lỗi console.
+✅ **THẦY CHỐT COMMIT + PUSH** (14/8/2026) **→ COMMIT + PUSH + LIVE.**
+📌 **Commit `57677cf`** (gộp Đợt 155-156-157) — **ĐÃ LÊN LIVE, đã đối chiếu**: 10/10 file đổi có
+mã băm **trùng khít nội dung trong commit** trên `aword.andrewclasses.com` (~15 giây sau push), và
+**chạy lại phép thử TRÊN CHÍNH BẢN LIVE**: nút SHOWDOWN đúng vị trí, bảng mở ra **660×410** không kẹt
+'Loading', luật chia lượt trả `An,Bình,Vy,An,Bình,Vy`, `browserId()` chạy, **0 lỗi console**.
+Chạy thử thật trên trình duyệt, 0 lỗi console.
 
 ### 1. Thầy giao (sau khi chơi thử Đợt 155)
 Bảng Showdown làm lại theo đúng thiết kế của thầy:
@@ -200,8 +210,12 @@ muốn dùng phải tạo lại): `showdown-test.html` + `fake-firebase.js` + `f
 
 ## Đợt 155 (14/8/2026) — ⭐⭐ CHẾ ĐỘ MỚI **SHOWDOWN**: MỖI TRÌNH DUYỆT MỘT ĐỘI, MỖI CÂU MỘT HỌC SINH
 ⭐ CÓ SỬA CORE (`engine.js`, `options-panel.js`, `store.js`, `app.css`, `icons.js`) + 2 FILE MỚI.
-⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT, CHƯA PUSH.** Đã chạy thử thật trên trình duyệt (localhost),
-0 lỗi console. Phần cần **thầy đăng nhập mới thử được** liệt kê ở mục VIỆC ĐANG CHỜ cuối đợt.
+✅ **THẦY CHỐT COMMIT + PUSH** (14/8/2026) **→ COMMIT + PUSH + LIVE.**
+📌 **Commit `57677cf`** (gộp Đợt 155-156-157) — **ĐÃ LÊN LIVE, đã đối chiếu**: 10/10 file đổi có
+mã băm **trùng khít nội dung trong commit** trên `aword.andrewclasses.com` (~15 giây sau push), và
+**chạy lại phép thử TRÊN CHÍNH BẢN LIVE**: nút SHOWDOWN đúng vị trí, bảng mở ra **660×410** không kẹt
+'Loading', luật chia lượt trả `An,Bình,Vy,An,Bình,Vy`, `browserId()` chạy, **0 lỗi console**.
+Đã chạy thử thật trên trình duyệt (localhost), 0 lỗi console. Phần cần **thầy đăng nhập mới thử được** liệt kê ở mục VIỆC ĐANG CHỜ cuối đợt.
 
 ### 1. Thầy giao
 > "Thêm vào dãy 4 nút ở chế độ Single 1 nút nữa, chèn vào giữa nút Style và Mode, chế độ tên là

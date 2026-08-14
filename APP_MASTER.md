@@ -9,7 +9,10 @@
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **14/8/2026 (Đợt 157) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN,
-> ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC.** ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.**
+> ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC.**
+> ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `57677cf` (gộp Đợt 155-156-157) + PUSH + LIVE, đã đối chiếu**
+> **10/10 file trùng mã băm** trên `aword.andrewclasses.com` (~15s sau push) và **chạy lại phép thử**
+> **TRÊN CHÍNH BẢN LIVE** (nút đúng chỗ, bảng 660×410, luật chia lượt đúng, 0 lỗi console).
 > ⭐ CÓ SỬA CORE (`showdown-setup.js` dựng lại phần panel · `app.css`).
 > Trần thật của lớp là **20 HS** (không phải 60) ⇒ ô tên **13→15px, cao 28→36px**; panel **580→660**,
 > thân **620×410** (**410 là số ĐO**: 20 em cần 320px danh sách, ở 360 phải cuộn 44px). Hàng chọn
@@ -26,8 +29,7 @@
 > **11/11 thao tác có tiếng**; 0 ô bay sót; đầu-cuối vẫn đúng. 0 lỗi console.
 > ⬜ Chờ thầy **nhìn** (không chụp được ảnh) và **nghe** (em chỉ đếm được số lần gọi).
 >
-> Trước đó: **14/8/2026 (Đợt 156) — ⭐⭐ SHOWDOWN BẢN THẦY CHỐT: 3 MÀN + GIÀNH ĐỘI.**
-> ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** ⭐ CÓ SỬA CORE (`engine.js` · `showdown-setup.js` viết lại ·
+> Trước đó: **14/8/2026 (Đợt 156) — ⭐⭐ SHOWDOWN BẢN THẦY CHỐT: 3 MÀN + GIÀNH ĐỘI.** (cùng commit `57677cf`) ⭐ CÓ SỬA CORE (`engine.js` · `showdown-setup.js` viết lại ·
 > `showdown.js` · `options-panel.js` · `app.css`).
 > Bảng: **A** lớp + số đội (2 ô to, sửa được danh sách HS) → **B** pool ô tên trên, team là cột dọc,
 > chạm tên team rồi chạm ô tên thì ô **bay** vào cột, nút ✓ = đội màn hình này chơi → **C** Single
@@ -49,7 +51,7 @@
 > cột, và **tự nhìn** hiệu ứng bay + màn START.
 >
 > Trước đó: **14/8/2026 (Đợt 155) — ⭐⭐ CHẾ ĐỘ MỚI **SHOWDOWN**: MỖI TRÌNH DUYỆT MỘT ĐỘI,
-> MỖI CÂU MỘT HỌC SINH.** ⬜ **CHƯA THẦY DUYỆT — CHƯA COMMIT.** ⭐ CÓ SỬA CORE (`engine.js` ·
+> MỖI CÂU MỘT HỌC SINH.** (cùng commit `57677cf`) ⭐ CÓ SỬA CORE (`engine.js` ·
 > `options-panel.js` · `store.js` · `app.css` · `icons.js`) + **2 file mới** `core/showdown.js`
 > (thuần) và `core/showdown-setup.js` (Firestore + bảng, chỉ nạp trì hoãn).
 > Nút **SHOWDOWN** giữa Style và MODE. **KHÔNG phải biến thể của Fight** — vẫn MỘT bàn, chỉ thêm "câu
@@ -2200,6 +2202,15 @@ vừa xảy ra.
 
 ### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–154)
 
+> ⭐ **SHOWDOWN (Đợt 155-157) — ĐÃ LIVE, commit `57677cf`.** Chế độ mới, KHÔNG nằm trong kế hoạch
+> A–D bên dưới. Xong và đã chạy trên bản live. **Còn 4 việc CHỈ THẦY LÀM ĐƯỢC, chưa ai làm:**
+> 1. Thử với **tài khoản thật + 2 máy/2 cột cùng lúc** → nghiệm luật GIÀNH ĐỘI trên Firestore thật
+>    (backend giả không thay được).
+> 2. Thử trong **myActivity chia 2–4 cột** — đây là mục đích gốc của cả chế độ.
+> 3. **Nhìn bằng mắt**: cỡ chữ, độ cân đối 3 màn, độ mượt hoạt cảnh (pane preview không compositing
+>    nên phiên trước không chụp được ảnh).
+> 4. **Nghe**: bộ tiếng của Showdown mới chỉ ĐẾM được số lần gọi, chưa ai nghe.
+>
 > ⭐⭐ **VIỆC LỚN ĐANG DANG DỞ: KẾ HOẠCH 4 ĐỢT A–D CỦA THẦY.** Đọc mục này trước khi hỏi thầy làm gì.
 > Thầy giao 3 việc lớn (14/8/2026), em chia 4 đợt và thầy chốt:
 >

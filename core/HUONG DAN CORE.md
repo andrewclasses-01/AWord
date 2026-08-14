@@ -576,6 +576,30 @@ duyệt là không ai nhả được nữa** — không có hạn thì đội đ
 ⚠️ **Ẩn nút MODE khi đã setup đội.** Hai chế độ loại trừ nhau, nút đó chỉ có thể ném đội hình của cả
 buổi đi. Đường về single là SINGLE MODE trong bảng — nó còn **nhả claim** hộ.
 
+### ⭐ TEST ĐƯỜNG FIRESTORE **KHÔNG CẦN ĐĂNG NHẬP** — dựng lại bộ giả (Đợt 156)
+
+Mọi thứ của Showdown (và Classes, và store) đều nằm sau đăng nhập Google, mà popup đó **không tự động
+hoá được** — nên nhiều đợt trước phải để trống mảng này và ghi "chờ thầy tự thử". Cách gỡ:
+**import map** trỏ 2 module cần đăng nhập sang bản giả. Thư mục `scratch/` **đã gitignore** nên bộ này
+KHÔNG đi theo repo — phiên/máy sau phải **tạo lại 3 file** (mất ~5 phút, rất đáng):
+
+```
+scratch/showdown-test.html   <script type="importmap">{"imports":{
+                               "/core/firebase.js":"/scratch/fake-firebase.js",
+                               "/core/classes.js" :"/scratch/fake-classes.js"}}</script>
+                             rồi import core/engine.js + 1 template + sample như test.html thường
+scratch/fake-firebase.js     xuất currentUser/db/fs; `fs()` trả doc/getDoc/setDoc/onSnapshot chạy trên
+                             một object trong RAM; xuất `globalThis.__fakeFs` để test tự gieo dữ liệu.
+                             ⭐ THÊM `delayMs` cho getDoc — xem dưới.
+scratch/fake-classes.js      xuất `listClasses()` trả lớp giả. Đặt TÊN TIẾNG VIỆT CÓ DẤU (Ẳ, Ạ) và ít
+                             nhất một lớp ĐỦ 20 HS: đó là ca bắt lỗi xén dấu và ca bố cục xấu nhất.
+```
+
+⚠️⚠️ **BẮT BUỘC có núm `delayMs` và BẮT BUỘC thử với nó.** Backend giả trả lời trong vài mili-giây,
+nên nó **BÁO ĐẠT OAN** cho mọi lỗi phụ thuộc thời gian. Lỗi `panel.isConnected` ở mục ngay dưới đây
+**chỉ lộ ra khi đặt `delayMs = 900`** — với Firestore thật trên mạng lớp học thì nó xảy ra thường
+xuyên. Test xong đường "nhanh" thì **luôn chạy lại một lượt ở 900ms**.
+
 ### ⛔⛔ `panel.isConnected` LÀ PHÉP THỬ SAI CHO PANEL CÔNG CỤ (Đợt 156 — cắn thật)
 
 `core/engine.js` mở panel công cụ theo **HAI đường**:
