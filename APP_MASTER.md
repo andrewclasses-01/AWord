@@ -8,7 +8,27 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 143) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN),
+> Cập nhật lần cuối: **13/8/2026 (Đợt 143b) — ⭐ MỌI THANH KÉO CHUNG MỘT NỀN TRẮNG + THẲNG HÀNG
+> TUYỆT ĐỐI; VÁ LỖI HỒI QUY DẤU TICK CỦA ĐỢT 143.** (commit `c8e4b14`, PUSH + LIVE, build `5899396997`).
+> Thầy soi ảnh bắt 2 chỗ. (1) **Lệch hàng**: nhãn Time cost cao 19px vs 14px của mọi ô khác, vì ô chỉnh
+> giây nằm TRÊN dòng nhãn ⇒ thanh kéo tụt **4,5px**; chữa bằng `margin-block:-4px` cho `.aw-hstep.is-sm`
+> (ô chỉnh giây thôi tham gia tính chiều cao dòng nhưng vẫn vẽ nguyên cỡ) → **0,0px ở cả 17 template**.
+> (2) **Nền đen**: thanh kéo trước nay chỉ khai `accent-color`, tức **để Chrome tự vẽ**, mà Chrome **TỰ
+> SUY** màu phần chưa tô từ accent — đo thật: đỏ ra nền xám nhạt, hổ phách + xanh lá ra nền **gần ĐEN**.
+> Nay **tự vẽ**: `appearance:none` + `::-webkit-slider-runnable-track` là một gradient, màu đi qua
+> `--aw-slider-accent`, phần đã tô qua `--aw-slider-fill` do `mkSliderCell()` bám theo giá trị.
+> ⚠️ ĐỪNG khôi phục `accent-color` — với `appearance:none` nó vô tác dụng và sẽ mang lại đúng sự lệch này.
+> ⭐ **LỖI HỒI QUY của Đợt 143 đã lên live**: `transform-origin: bottom left` thêm vào để "vẽ dấu tick ra
+> từ góc" đã **ĐỔI CHỖ ĐỨNG** của hình đã xoay — dấu ✓ trôi xuống dưới-trái, nửa nằm ngoài ô, đọc thành
+> **cái nêm trắng khoét góc**. Đợt 143 **đã kiểm và báo ĐẠT** vì chỉ đo `opacity`+`scale` (cả hai đúng);
+> cái sai là **VỊ TRÍ**, chỉ lộ khi NHÌN. **Luật: đổi `transform-origin` là đổi vị trí, nghiệm bằng mắt.**
+> Cũng xoá **30 luật CSS thanh kéo chết** ở 10 template (không JS nào gán từ Đợt 140) — cả app nay còn
+> **đúng MỘT** thanh kéo `.aw-optc-slider`, nên "đồng nhất mọi nơi" là kiểm được chứ không phải ý định.
+> 🟢 ĐÃ NHÌN BẰNG MẮT trên **Chrome thật** (pane preview không compositing) và chụp lại **trên bản live**:
+> 4 thanh chung một nền, Lives ↔ Time cost cùng đường, dấu tick là ✓ trở lại. 17/17: lệch 0,0px, cùng bề
+> rộng, 0 lỗi console.
+>
+> Trước đó: **13/8/2026 (Đợt 143) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN),
 > MỘT THANG ĐIỂM 0–100 CHO CẢ APP, TIME COST CHO 13 GAME, SETTINGS DÙNG CHUNG ĐÚNG PANEL VỚI TRONG GAME.**
 > ⭐ CÓ SỬA CORE — **2 file MỚI**: `core/options-panel.js` (thân panel Options, dùng chung cho
 > trong-game và Settings) + `core/options-migrate.js` (quy đổi thang điểm cũ, đóng dấu `act.optVer`);

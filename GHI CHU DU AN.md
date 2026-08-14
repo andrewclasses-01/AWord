@@ -5,6 +5,65 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 143b (13/8/2026) — ⭐ MỌI THANH KÉO CHUNG MỘT NỀN TRẮNG + THẲNG HÀNG TUYỆT ĐỐI; VÁ LỖI HỒI QUY DẤU TICK CỦA ĐỢT 143
+⭐ CÓ SỬA CORE (`core/app.css`, `core/options-panel.js`) + dọn CSS chết ở 10 template.
+✅ **THẦY DUYỆT → COMMIT `c8e4b14` + PUSH + LIVE** (Pages build `5899396997` success; `curl` 9/9 dấu mốc,
+kể cả 4 thứ đã xoá xác nhận là đã sạch).
+
+### 1. Thầy soi ảnh và bắt được 2 chỗ
+> *"Hãy nhìn thanh timecost: hơi thấp hơn thanh lives một chút… Thanh live và bonus có nền dưới màu đen,
+> hãy chỉnh để mọi thanh kéo đều đồng nhất nền trắng, ở tất cả mọi nơi."*
+
+### 2. Lệch hàng — ĐO ĐƯỢC, không phải cảm giác
+Nhãn Time cost cao **19px** trong khi mọi ô khác **14px**, vì ô chỉnh giây (`− 1S +`, cao 21px) **nằm
+TRÊN dòng nhãn**. Dòng nhãn dày thêm 5px ⇒ dòng điều khiển, và thanh kéo trong đó, **tụt 4,5px** so với
+thanh Lives ngay cạnh.
+Chữa: `margin-block: -4px` cho `.aw-hstep.is-sm` trong dòng nhãn — ô chỉnh giây **thôi tham gia vào phép
+tính chiều cao dòng** (21−8 = 13px, dưới 14px của chữ) nhưng **vẫn vẽ nguyên cỡ**. Đúng ý thầy "đẩy nút
+bấm thời gian lên một chút". Đo lại: **0,0px lệch, ở cả 17 template, mọi hàng có 2 thanh cạnh nhau.**
+
+### 3. Nền đen — thủ phạm là CHROME, không phải CSS của mình
+Trước nay thanh kéo chỉ khai `accent-color`, tức **để trình duyệt tự vẽ cả cái thanh**. Chrome **TỰ SUY**
+màu phần chưa tô từ màu accent, theo luật riêng của nó mà mình không điều khiển được — đo trên panel
+thật: đỏ `#ef4444` ra nền **xám nhạt**, còn hổ phách `#f5a623` và xanh lá `#16a34a` ra nền **gần ĐEN**.
+Cùng một panel, cùng một markup, ba cái thanh khác nhau.
+Chữa: **tự vẽ**. `appearance: none` (lấy quyền vẽ khỏi trình duyệt) + `::-webkit-slider-runnable-track`
+là **một gradient** làm cả 2 nửa, màu accent chuyển vào biến `--aw-slider-accent`, phần đã tô là
+`--aw-slider-fill` do `mkSliderCell()` bám theo giá trị. Firefox thì `::-moz-range-progress` tự lo phần
+tô nên track để phẳng. Kèm vòng focus sạch trên núm — vì `appearance:none` làm trình duyệt vẽ một
+**khung chữ nhật đen** quanh cả control.
+⚠️ **ĐỪNG "khôi phục" `accent-color`**: với `appearance:none` nó vô tác dụng trên Chrome, và sẽ mang
+đúng sự không đồng nhất này quay lại trên engine nào còn nghe nó.
+
+### 4. ⭐ LỖI HỒI QUY CỦA CHÍNH ĐỢT 143 — DẤU TICK KHÔNG CÒN LÀ DẤU TICK
+Đợt 143 thêm `transform-origin: bottom left` để dấu tick "vẽ ra từ góc ô". Nhưng `left/top` đặt một ô
+**chưa xoay**, rồi phép xoay mới quay quanh cái origin được cho — nên **đổi origin là ĐỔI CHỖ ĐỨNG của
+hình đã xoay**: dấu tick trôi xuống dưới-trái, **một nửa nằm ngoài ô xanh**, trên màn hình đọc ra thành
+**cái nêm trắng khoét mất góc ô** chứ không còn là ✓.
+⚠️ **Bài học đắt**: Đợt 143 **đã kiểm dấu tick và báo ĐẠT** — vì chỉ đo `opacity` và `scale`, mà **cả
+hai đều đúng**. Cái sai nằm ở **vị trí**, thứ chỉ lộ ra khi **NHÌN**. Luật: **đổi `transform-origin` là
+đổi VỊ TRÍ, không phải trang trí — phải nghiệm bằng mắt, đừng nghiệm bằng `getComputedStyle`.**
+Chữa: bỏ hẳn `transform-origin`, về mặc định (tâm) ⇒ `rotate(43deg) scale(1)` **giống hệt từng byte**
+với `rotate(43deg)` trước Đợt 143; chỉ phần lớn dần khi tích là mới.
+
+### 5. "Ở tất cả mọi nơi" — hoá ra cả app chỉ có ĐÚNG MỘT thanh kéo
+Rà lại: chỉ **một chỗ duy nhất** trong toàn app tạo `input[type=range]` — `core/options-panel.js`.
+Còn **30 luật CSS thanh kéo nằm rải ở 10 file template** (`.aw-*-slider`, `.aw-*-sliderval`,
+`.aw-cw-opt-*`, `.aw-opt-cell`) đều là **xác chết từ Đợt 140**, không JS nào gán những class đó nữa —
+kiểm từng class một, không đoán. **Đã xoá cả 30**. Nhờ vậy "đồng nhất ở mọi nơi" là **sự thật kiểm được**
+chứ không phải ý định: cả app còn đúng một `.aw-optc-slider`.
+
+### 6. Tự test
+🟢 **NHÌN BẰNG MẮT TRÊN CHROME THẬT** (pane preview không compositing nên không chụp được — phải mở
+cửa sổ Chrome thật): 4 thanh trên panel Anagram **chung một nền xám nhạt**, Lives ↔ Time cost **cùng một
+đường**, dấu tick **là dấu ✓ trở lại**. Chụp lại lần nữa **trên chính bản live** sau khi đẩy: y hệt.
+🟢 **17/17 template**: lệch **0,0px**, mọi thanh kéo hiện ra **cùng bề rộng**, mọi thanh đều có đủ
+`--aw-slider-fill` + `--aw-slider-accent` + `appearance:none`, **0 lỗi console**, cao nhất 358px.
+🟢 Dấu tick đo lại: tắt = `opacity 0, scale 0`; bật = `opacity 1`, ma trận xoay 43°, **dịch chuyển
+e=0 f=0** (không bị đẩy đi đâu cả).
+
+---
+
 ## Đợt 143 (13/8/2026) — ⭐ ĐẠI TU OPTIONS: DỌN Ô CHẾT (LUẬT OPT-IN), MỘT THANG ĐIỂM 0–100 CHO CẢ APP, TIME COST CHO 13 GAME, VÀ SETTINGS DÙNG CHUNG ĐÚNG PANEL VỚI TRONG GAME
 ⭐ CÓ SỬA CORE (**2 file MỚI**: `core/options-panel.js` + `core/options-migrate.js`; sửa `engine.js`,
 `app.css`, `settings.js`, `store.js`, `numberstepper.js`) + `main.js` + **16/17 template**.

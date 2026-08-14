@@ -1596,6 +1596,55 @@ Type the answer ghi thẳng `"7 / 20"` vào `.aw-top-score` (tự tô màu theo 
 ⚠️ **Chạm SAI vẫn phải reset** (luật Đợt 139, áp cho mọi game mới): chỉ reset khi đúng thì một tràng
 đoán sai thành thà tính tiền — hoá ra đo may rủi chứ không đo sự chú ý.
 
+### ⭐⭐ THANH KÉO: TỰ VẼ, ĐỪNG GIAO CHO `accent-color` (Đợt 143b, 13/8/2026)
+
+**Cả app chỉ có ĐÚNG MỘT thanh kéo: `.aw-optc-slider`, do `core/options-panel.js` dựng.** (30 luật CSS
+thanh kéo rải ở 10 file template đã xoá ở đợt này — không JS nào gán chúng từ Đợt 140.) Muốn đổi dáng
+thanh kéo ở "mọi nơi" thì sửa đúng một chỗ: khối SLIDER trong `core/app.css`.
+
+⚠️ **KHÔNG dùng `accent-color` một mình cho thanh kéo.** Nó nghĩa là **để trình duyệt vẽ cả cái thanh**,
+mà **Chrome TỰ SUY màu phần chưa tô từ màu accent** theo luật riêng của nó. Đo trên panel thật (Đợt 143b):
+
+| accent | nền phần chưa tô mà Chrome vẽ ra |
+|---|---|
+| đỏ `#ef4444` | xám nhạt |
+| hổ phách `#f5a623` | **gần ĐEN** |
+| xanh lá `#16a34a` | **gần ĐEN** |
+
+Cùng một panel, cùng một markup, ba cái thanh trông khác nhau — và không có dòng CSS nào của mình gây ra.
+**Cách đúng**: `appearance: none` (lấy quyền vẽ khỏi trình duyệt) + tự vẽ `::-webkit-slider-runnable-track`
+bằng **một gradient** làm cả hai nửa, với 2 biến:
+- `--aw-slider-accent` — màu (các lớp `.is-amber/.is-blue/.is-green` chỉ đổi biến này)
+- `--aw-slider-fill` — phần trăm đã tô, do `mkSliderCell()` cập nhật mỗi lần giá trị đổi
+Firefox có `::-moz-range-progress` nên ở đó track để phẳng, progress mang màu.
+⚠️ Đặt `appearance:none` rồi thì **`accent-color` vô tác dụng** — đừng "khôi phục" nó, chỉ mang sự lệch
+quay lại trên engine nào còn nghe.
+⚠️ `appearance:none` cũng làm trình duyệt vẽ **khung chữ nhật đen** khi control có focus ⇒ phải tự cho
+vòng focus lên **núm** (`:focus-visible::-webkit-slider-thumb`).
+⚠️ **Không đọc được style của pseudo `::-webkit-slider-*` bằng `getComputedStyle`** (Chrome trả
+`none`/`transparent`). Muốn nghiệm thì **NHÌN** — xem mục dưới.
+
+---
+
+### ⛔ `transform-origin` LÀ VỊ TRÍ, KHÔNG PHẢI TRANG TRÍ (cắn thật, Đợt 143 → vá 143b)
+
+Đợt 143 thêm `transform-origin: bottom left` cho dấu tick của checkbox, ý là để nó "vẽ ra từ góc ô".
+Nhưng `left`/`top` đặt một hộp **CHƯA XOAY**, rồi phép `rotate()` mới quay quanh cái origin được cho —
+nên **đổi origin là đổi CHỖ ĐỨNG của hình sau khi xoay**. Dấu tick trôi xuống dưới-trái, một nửa nằm
+ngoài ô xanh, trên màn hình đọc ra thành **cái nêm trắng khoét mất góc ô** chứ không còn là ✓. **Đã lên
+live** trước khi ai nhận ra.
+
+⚠️ **Vì sao phép kiểm của Đợt 143 KHÔNG bắt được**: nó đo `opacity` và `scale` — **cả hai đều đúng**.
+Cái sai là **VỊ TRÍ**. Luật rút ra, áp cho mọi thứ dính `transform`:
+- Đổi `transform-origin` / thêm `translate` vào một phần tử đã `rotate`/`scale` = **đổi vị trí**. Phải
+  **NHÌN**, không nghiệm bằng số.
+- Cần nhìn mà pane preview không compositing (`screenshot` báo "not displayed") thì **mở Chrome thật**
+  (`mcp__claude-in-chrome__*`) rồi chụp — đó là cách Đợt 143b bắt được lỗi này.
+- Muốn chụp cho rõ chi tiết nhỏ: `panel.style.transform = "scale(2.2)"` + `transformOrigin: "top left"`
+  rồi chụp bình thường (phóng bằng `zoom` của công cụ hay `body.zoom` đều cho ảnh sai/nhoè).
+
+---
+
 ### ⭐⭐ MỘT NHÀ DỰNG PANEL OPTIONS — `core/options-panel.js` (Đợt 143, 13/8/2026)
 
 **Thân bảng Options do ĐÚNG MỘT hàm dựng: `buildOptionsBody(host, {tpl, draft, contentSwitch, fight})`.**
