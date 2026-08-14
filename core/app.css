@@ -1472,6 +1472,44 @@ body {
 .aw-mode-confirm-row { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
 .aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; }
 
+/* ⭐⭐ MODE PICKER (Đợt 158) — the one button that replaced MODE + SHOWDOWN opens
+   this: icon tiles, ONE PER MODE, and no words ("dùng icon thật to, không dùng
+   chữ").
+   ⚠️ SIZE, second pass (teacher, same day): the first build made the panel as big
+   as the Showdown table (660×440, 193px icons) and that was "quá to" — "pop-up
+   nhỏ vừa đủ nhìn thôi". So the tiles now state a FIXED size and the panel simply
+   takes its own `width: max-content` around them: 2 tiles ≈ 348px, 3 ≈ 508px,
+   both inside the 580px cap every other tool panel lives under. Do NOT give this
+   panel a stated width — that is what tied it to the team table's 660 before. */
+.aw-mp-grid {
+  display: grid;
+  grid-auto-flow: column;                 /* 2 tiles normally, 3 while Showdown runs */
+  grid-auto-columns: 148px;
+  gap: 12px;
+}
+.aw-mp-tile {
+  display: flex; align-items: center; justify-content: center;
+  height: 132px;
+  padding: 0;                             /* a <button>'s default padding would
+                                             shrink the %-sized svg (Đợt 136) */
+  border: 1.5px solid #dfe6ef; border-radius: 14px; background: #fff;
+  color: #40506a; cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease, transform .12s ease;
+}
+.aw-mp-tile:hover { border-color: #2f6fed; background: #f2f7ff; color: #2f6fed; }
+.aw-mp-tile:active { transform: scale(.985); }
+/* The mode already running (only Showdown ever shows its own tile — it is the
+   way back into the team table). Lit border, no words, same green the ticked
+   team column wears so "this is mine" reads the same in both places. */
+.aw-mp-tile.is-cur { border-color: #2ec27e; background: #f1fbf6; color: #23a06a; }
+.aw-mp-tile.is-cur:hover { border-color: #2ec27e; background: #e7f7f0; }
+.aw-mp-icon { display: flex; width: 100%; align-items: center; justify-content: center; }
+/* `stroke-width` is set on the ICON here, not left at the 2.1 the icon strings
+   carry: those are drawn for a 22px toolbar button, so at 4x that weight becomes
+   a slab. At this size 1.5 keeps the line looking like the toolbar's — the value
+   travels WITH the icon size, so anyone resizing the tiles must revisit it. */
+.aw-mp-icon svg { width: 76px; height: auto; stroke-width: 1.5; }
+
 /* Template panel */
 /* Đợt 148 — the picker is now as wide as the Options panel (see
    `.aw-tool-panel.is-opts, .is-tpl` above) and every game carries its icon, so
@@ -3136,6 +3174,26 @@ body {
    next time the word changed. See the note in core/engine.js. */
 .aw-top-centre { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; }
 .aw-top-centre.is-showdown > .aw-top-slogan { display: none; }
+/* ⭐⭐ Đợt 159 — THE NAME IS CENTRED ON THE FRAME, NOT ON WHAT IS LEFT OVER.
+   As a flex child it sat in the space BETWEEN the clock and the score, so every
+   time the clock changed width — 0:09 → 0:10, or a count-down showing 10:00 —
+   the name shifted a few pixels sideways (teacher, 15/8/2026: "phần tên đang bị
+   phụ thuộc vị trí vào đồng hồ… cần xử lý để tên hiện độc lập"). Taken out of
+   the flow it is centred on the topbar itself and nothing else can move it.
+   ⚠️ SHOWDOWN ONLY. A template's own slogan keeps the old in-flow behaviour: it
+   is long, low-contrast text that is SUPPOSED to yield to its neighbours, while
+   this is one short name that must not.
+   ⚠️ `left/right` insets, NOT `transform: translateX(-50%)` — the popup stacking
+   contract (HUONG DAN CORE.md) bans transforms around the toolbar, and although
+   the topbar is inside the stage and not an ancestor of `.aw-below-center`, the
+   habit is worth keeping where an inset does the same job for free.
+   The 22% insets keep a long name clear of the clock and the score; past that it
+   ellipsises, as it always did. */
+.aw-topbar { position: relative; }
+.aw-top-centre.is-showdown {
+  position: absolute; left: 22%; right: 22%; top: 0; bottom: 0;
+  pointer-events: none;      /* nothing here is clickable; the row below is */
+}
 .aw-top-showdown {
   min-width: 0;
   text-align: center;
@@ -3192,7 +3250,20 @@ body {
 /* ⚠️ `max-width` TOO, not just `width`: the base `.aw-tool-panel` rule caps every
    panel at `min(94vw, 580px)`, so setting only `width` here was silently clamped
    back to 580 and the table came out 80px narrower than it asked for. Measured. */
-.aw-tool-panel.is-sd { width: min(94vw, 660px); max-width: min(94vw, 660px); }
+/* ⭐ Đợt 159 — 660 → 860. FIVE teams is now the ceiling (was 8) and the teacher
+   asked that the widest case never scroll sideways: 5 columns × 156px + 4 × 10px
+   of gap = 820, plus the panel's own 20px padding either side = 860 exactly.
+   ONE width for every team count, deliberately — the same "size các bảng đều to
+   bằng nhau" rule the three screens already follow; a popover that changes width
+   when the Teams stepper moves is what that rule exists to prevent. */
+/* ⭐ Đợt 159b — the real width is `--sd-panel-w`, set from the APP FRAME's own
+   width in core/showdown-setup.js (teacher: "dãn chiều ngang lớn hết cỡ bằng
+   khung app"). The 860 below is only the fallback for the moment before that
+   runs, and for anything that opens this panel outside a normal play. */
+.aw-tool-panel.is-sd {
+  width: var(--sd-panel-w, min(94vw, 860px));
+  max-width: var(--sd-panel-w, min(94vw, 860px));
+}
 .aw-sd-loading { font-size: 13px; color: #8b93a1; padding: 6px 0 2px; }
 /* 410px is measured, not picked: a full class (20 pupils — the teacher's stated
    maximum) at the new chip size needs 320px of roster, and 410 − the 70px pick
@@ -3203,16 +3274,71 @@ body {
    Longer names than the test roll will still wrap to another row and scroll —
    that is what `overflow-y: auto` on the roster is for, not a reason to keep
    growing this number. */
-.aw-sd-body { position: relative; width: 100%; min-height: 410px; }
+/* ⭐ Đợt 159 — 410 → 560, measured against the NEW worst case the teacher set:
+   "tối đa 10 người 1 team", so a column can hold ten chips.
+   ⚠️ The tall case is TWO teams, not five: 20 pupils ÷ 2 = 10 each AT THE LARGEST
+   chip font (the font shrinks as teams multiply, so 5 × 10 = 50 pupils would need
+   a bigger class than the teacher has). With the compact in-column chips:
+   10 × 33 + 9 × 4 = 366, + 34 head + 19 padding/border = 419 of column, and the
+   pool above still holding the ten not yet placed (~110) + 14 gap = 543.
+   Rounded to 560 so a name long enough to wrap the pool onto a third row still
+   pushes nothing. Do not shrink it back without re-running that count. */
+/* ⭐ Đợt 159b — the height is now PER LAYOUT (`--sd-body-h`, set in
+   core/showdown-setup.js): the side-by-side layout has to fit a column of ten,
+   the top layout only four or five ("các cột có thể ngắn đi vì lúc này chỉ có
+   tối đa 5 người/đội thôi"). Transitioned, because the only moment it changes is
+   the step between the two screens. */
+.aw-sd-body {
+  position: relative; width: 100%;
+  min-height: var(--sd-body-h, 560px);
+  transition: min-height .24s cubic-bezier(.22,.9,.3,1);
+}
 /* Screens are absolutely stacked LAYERS so the outgoing one can still be on
    screen while the incoming one slides over it. */
 .aw-sd-layer {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; gap: 14px;
 }
-/* The one exception: the short "already running" panel has nothing to fill
-   360px with, and stretching two buttons over it would look broken. */
-.aw-sd-body.is-mini { min-height: 96px; }
+
+/* ---- the tool icons, now in the BOTTOM row (Đợt 159b) ---- */
+.aw-sd-htool {
+  width: 32px; height: 32px; padding: 0;      /* padding:0 — see .aw-sd-tick */
+  border: 1.5px solid #dfe6ef; border-radius: 9px; background: #fff;
+  color: #8b93a1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: border-color .15s ease, color .15s ease, background .15s ease;
+}
+.aw-sd-htool svg { width: 62%; height: 62%; }
+.aw-sd-htool:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
+.aw-sd-foottools { flex: 0 0 auto; display: inline-flex; gap: 8px; }
+/* The title moved down here from a row of its own, and sits between the tools
+   and Ready (teacher, 15/8/2026) — so it costs the table no height at all. */
+.aw-sd-foottitle {
+  flex: 1 1 auto; min-width: 0; text-align: center;
+  font-size: 12.5px; font-weight: 800; letter-spacing: .06em; color: #8b93a1;
+  text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* A touch smaller than the app's default primary button (teacher: "thu nhỏ hơn
+   nút Ready đi một chút") — it is the only button on the row now, so it does not
+   need to shout to be found. */
+.aw-btn.aw-sd-ready { padding: 8px 22px; font-size: 14px; }
+
+/* ---- the confirm question, laid OVER the screen it is asking about ---- */
+.aw-sd-confirm {
+  position: absolute; inset: 0; z-index: 5;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.82);
+  border-radius: 12px;
+}
+.aw-sd-confirmbox {
+  max-width: 340px; text-align: center;
+  background: #fff; border: 1.5px solid #e3e9f1; border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(15,20,30,.16);
+  padding: 18px 20px 16px;
+}
+.aw-sd-confirmtext { font-size: 14px; line-height: 1.45; color: #3b4757; }
+.aw-sd-confirmrow { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
 
 .aw-sd-foot { position: relative; min-height: 46px; margin-top: 14px; }
 .aw-sd-footlayer { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; }
@@ -3260,9 +3386,15 @@ body {
 /* ---- name chips: ONE size everywhere, and a big one ----
    A class is at most 20 pupils (teacher, 14/8/2026), so there is room to make
    these properly readable and tappable rather than squeezing 60 in. */
+/* ⭐ Đợt 159 — ROUNDED RECTANGLE, not a pill (teacher: "đổi style các nút tên
+   thành dạng hình chữ nhật có góc bo tròn"). 10px reads as a rectangle at every
+   chip size below; 999px was the pill.
+   `--sd-chip-fs` lets the columns screen shrink its chips as team count grows
+   (set in core/showdown-setup.js, see renderBuild) — everywhere else it is
+   simply absent and the 15px default applies. */
 .aw-sd-rmember, .aw-sd-chip {
-  font-size: 15px; font-weight: 700; line-height: 1.35;
-  border-radius: 999px;
+  font-size: var(--sd-chip-fs, 15px); font-weight: 700; line-height: 1.35;
+  border-radius: 10px;
 }
 .aw-sd-rmember {
   display: inline-flex; align-items: center; gap: 5px;
@@ -3310,7 +3442,13 @@ body {
 .aw-sd-chip:active { transform: scale(.96); }
 .aw-sd-chip.is-in { background: #f2f7ff; border-color: #cfe0ff; }
 .aw-sd-pool {
-  flex: 0 0 auto; max-height: 132px; overflow-y: auto;
+  /* 104, down from 132 (Đợt 159): every pixel here is a pixel the columns below
+     do not have, and they now have a ten-chip worst case to fit. 104 is exactly
+     TWO rows of chips — the state that coexists with a full column (ten placed,
+     ten still waiting). Before that, with the whole class still in here, the pool
+     scrolls: it is a staging area, and the no-scroll promise the teacher asked
+     for is about the COLUMNS. */
+  flex: 0 0 auto; max-height: 104px; overflow-y: auto;
   display: flex; flex-wrap: wrap; gap: 8px;
   /* "sắp xếp cân đối" — centred, so a short last row sits under the middle of
      the rows above instead of hanging off the left edge. */
@@ -3319,18 +3457,62 @@ body {
 }
 .aw-sd-pool.is-empty { align-content: center; min-height: 62px; }
 .aw-sd-cols {
-  flex: 1 1 auto; min-height: 0; overflow: auto;
+  flex: 1 1 auto; min-height: 0; min-width: 0;
   display: flex; gap: 10px; align-items: stretch; justify-content: center;
 }
-/* Column width follows its CONTENT (teacher: "bề ngang vừa đủ để chứa vừa các ô
-   tên"), with a floor so an empty team is still a target big enough to tap. */
+
+/* ⭐⭐ Đợt 159b — TWO LAYOUTS FOR THE DIVIDING SCREEN, picked by team count in
+   core/showdown-setup.js (renderBuild). The teacher's own reasoning: few teams
+   means tall columns and spare width, many teams means the opposite.
+     .is-side  2-3 teams — pool stands on the RIGHT, columns run tall on the left
+     .is-top   4-5 teams — pool lies along the TOP, columns are short and wide
+   ⚠️ NEITHER may scroll in either direction. The horizontal scrollbar the
+   teacher photographed came from columns with a stated `width`; they now SHARE
+   what there is (`flex: 1 1 0`), so no team count can push the table sideways. */
+.aw-sd-layer.aw-sd-build.is-side { flex-direction: row; gap: 12px; }
+.aw-sd-build.is-side > .aw-sd-cols { flex: 1 1 auto; min-width: 0; }
+/* ⚠️ TWO names per row, not one. As a single stack, twenty pupils came to ~660px
+   and the pool scrolled by 325 (measured) — the whole point of standing it on
+   its side was that nothing has to scroll. Two columns of ten is ~350px, inside
+   the body's 560. */
+.aw-sd-build.is-side > .aw-sd-pool {
+  /* 360, not 336: at 336 the widest test name ("Nguyễn Ngọc Ẳnh") wanted 154px
+     inside a 152px chip and lost its last 2px to the ellipsis. A name is never
+     cut — that is the teacher's rule — so the box is sized from the longest
+     name, with a little air. */
+  flex: 0 0 360px;
+  max-height: none;                 /* it is a tall panel of its own now */
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  align-content: flex-start;
+}
+.aw-sd-build.is-side > .aw-sd-pool.is-empty { display: flex; }
+/* Along the top: wide and shallow. Four rows of the whole class fit at the frame
+   widths this panel gets; past that it scrolls, which is fine for a staging area
+   that empties as the teacher works. */
+.aw-sd-build.is-top > .aw-sd-pool { flex: 0 0 auto; max-height: 170px; }
+.aw-sd-build > .aw-sd-cols > .aw-sd-col { flex: 1 1 0; width: auto; min-width: 0; }
+/* ⭐ Đợt 159 — the column width is now STATED (`--sd-col`, set per team count in
+   core/showdown-setup.js) rather than following its content. Content-width was
+   fine at 2 teams and unpredictable at 5: the panel has a fixed 820px of room,
+   so the columns have to be told how to share it, not left to discover it.
+   The whole column is a tap target for "send pupils here" (teacher: "bấm vào
+   vùng trống bất kỳ trong cột team cũng cho phép chọn cột team"). */
 .aw-sd-col {
-  flex: 0 1 auto; min-width: 130px;
+  flex: 0 0 auto; width: var(--sd-col, 190px);
   display: flex; flex-direction: column;
   border: 1.5px solid #e3e9f1; border-radius: 12px; background: #fbfcfe; padding: 8px;
-  transition: border-color .15s ease, background .15s ease;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, opacity .15s ease;
 }
 .aw-sd-col.is-sel { border-color: #2f6fed; background: #f2f7ff; }
+/* Taken on another screen (Đợt 159): still drawn — the teacher wants to see the
+   whole line-up — but visibly out of reach and inert. `pointer-events:none`
+   rather than only disabling the buttons, so the column-wide select cannot fire
+   either. */
+.aw-sd-col.is-taken {
+  opacity: .42; cursor: default; pointer-events: none;
+  background: #f6f7f9; border-color: #e8ebf0;
+}
 .aw-sd-col.is-claimed { border-color: #2ec27e; background: #f1fbf6; }
 .aw-sd-colhead { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
 .aw-sd-colname {
@@ -3354,7 +3536,16 @@ body {
 .aw-sd-tick svg { width: 66%; height: 66%; }
 .aw-sd-tick:hover { border-color: #2ec27e; color: #2ec27e; }
 .aw-sd-tick.is-on { background: #2ec27e; border-color: #2ec27e; color: #fff; }
-.aw-sd-colmembers { display: flex; flex-direction: column; gap: 6px; }
+/* ⭐ Đợt 159 — chips INSIDE a column are more compact than the loose ones in the
+   pool, and that is arithmetic rather than taste: a column has to hold TEN
+   (MAX_PER_TEAM) without scrolling. Measured at the 2-team size, which is the
+   tall case (20 pupils ÷ 2 = 10 each, at the largest chip font):
+   10 × 33px + 9 × 4px of gap = 366, + 34px head + 19px padding/border = 419,
+   inside the 425px the body leaves for the columns. At the pool's own 7/14
+   padding the same column came to 458 and overflowed by 32px — measured, that
+   is what this rule fixes. */
+.aw-sd-colmembers { display: flex; flex-direction: column; gap: 3px; }
+.aw-sd-colmembers .aw-sd-chip { padding: 5px 10px; }
 
 /* The flying clone. Fixed to the viewport because it travels BETWEEN two
    scrollable boxes; `pointer-events:none` so a tap during the flight still

@@ -143,6 +143,14 @@ const THEME_SWATCH = {
   beach:     "linear-gradient(135deg, #fdf8ec 50%, #17a3b8 50%)"
 };
 
+// ⭐ Đợt 158 — a one-shot handover across a RESTART. Leaving a match to set up
+// Showdown means the board the teacher is looking at is thrown away and rebuilt
+// by fight.js, taking the popover with it; this flag is how the new board knows
+// to open the team table by itself. Module scope (not a closure) precisely
+// because it has to outlive the play that set it — and it is read-and-cleared,
+// so it can only ever fire for the next mount, never a later one.
+let openShowdownOnMount = false;
+
 // `session` (optional) turns the page into STUDENT MODE — used by play.html:
 //   session.endOptions   { leaderboard, showAnswers, startAgain } — what the
 //                        teacher ticked when setting the assignment
@@ -419,12 +427,50 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // it is the same index each template builds its own `review` array on — so
   // the name over the frame and the name in Show answers cannot drift apart.
   // The rule itself lives in core/showdown.js's memberAt(), used by both.
-  function paintShowdownName(index0) {
+  // ⭐ Đợt 159 — THE NAME NOW CHANGES WITH THE QUESTION, not after it.
+  // `sdNameIndex` is which pupil the slot is showing OR travelling towards. Two
+  // callers set it and they must not fight: `ui.itemChanging` (the template, at
+  // the START of its own out-animation) and `ui.setNav` (the same template, at
+  // the swap). Whoever gets there first owns that index; the other sees it
+  // already claimed and does nothing. Without this the setNav call would slam
+  // the new name in at full opacity halfway through the fall.
+  let sdNameIndex = -1;
+  function paintShowdownName(index0, anim) {
     if (!showdownSlot || !showdownPick) return;
+    if (index0 === sdNameIndex) return;
+    sdNameIndex = index0;
     const m = memberAt(showdownPick.members, index0);
     // textContent, not el()'s 3rd argument: that one is innerHTML, and this is
     // a name the teacher typed.
-    showdownSlot.textContent = m ? m.name : "";
+    const text = m ? m.name : "";
+    if (!anim) { showdownSlot.textContent = text; return; }
+    // Teacher, 15/8/2026: "tên cũ hạ thấp và biến mất dần, tên mới chạy từ trên
+    // xuống… đồng bộ với thời gian ẩn câu cũ và xuất hiện câu mới". The template
+    // hands us ITS OWN two durations, so the two motions cannot drift apart even
+    // if a template later retimes its transition.
+    const outMs = Math.max(60, anim.outMs || 130);
+    const inMs = Math.max(60, anim.inMs || 190);
+    // ⚠️ Every animate() gets a setTimeout fallback (core rule): a hidden or
+    // backgrounded tab freezes rAF, `onfinish` never comes, and without this the
+    // name would sit invisible at the bottom of its fall for the rest of the
+    // lesson — the whole cue the class reads, gone.
+    let swapped = false;
+    const swap = () => {
+      if (swapped) return;
+      swapped = true;
+      showdownSlot.textContent = text;
+      const inA = showdownSlot.animate(
+        [{ transform: "translateY(-70%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
+        { duration: inMs, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+      const done = () => { try { inA.cancel(); } catch { /* already gone */ } };
+      inA.onfinish = done;
+      setTimeout(done, inMs + 120);
+    };
+    const outA = showdownSlot.animate(
+      [{ transform: "translateY(0)", opacity: 1 }, { transform: "translateY(60%)", opacity: 0 }],
+      { duration: outMs, easing: "ease-in", fill: "forwards" });
+    outA.onfinish = () => { try { outA.cancel(); } catch { /* already gone */ } swap(); };
+    setTimeout(swap, outMs + 80);
   }
   paintShowdownName(0);   // never let the slot sit empty behind the READY screen
 
@@ -481,76 +527,173 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const optionsBtn = toolBtn(icons.options, "Options");
   const templateBtn = toolBtn(icons.template, "Template");
   const styleBtn = toolBtn(icons.style, "Style");
-  // MODE (Đợt 124) — SINGLE MODE <-> FIGHT MODE, for templates that opt in with
-  // `tpl.fightMode` (Anagram so far). Teacher path only: a pupil playing an
-  // assignment never sees this row at all. core/fight.js is DYNAMIC-imported so
-  // the student page never downloads it, and so this file doesn't take a static
-  // dependency on a module that imports it straight back.
-  // ⭐ Đợt 156 — hidden once a Showdown team is set up (teacher: "khi đang ở chế
-  // độ showdown và đã setup bảng đội, ẩn nút mode"). The two modes are mutually
-  // exclusive anyway, so the button could only ever have thrown the lesson's
-  // team line-up away; the way back to a single board is SINGLE MODE inside the
-  // Showdown panel, which also releases this browser's claim on its team.
-  const modeBtn = (tpl.fightMode && !session && !showdownPick) ? toolBtn(icons.mode, "Mode: single / fight") : null;
+  // ⭐⭐ MODE (Đợt 158) — ONE button for all three modes (teacher, 14/8/2026:
+  // "tích hợp cả single mode / fight mode / showdown mode vào chung 1 nút bấm
+  // thôi, tránh việc quá nhiều nút bấm"). It replaces the two buttons this row
+  // used to carry — MODE (Đợt 124, single ↔ fight) and SHOWDOWN (Đợt 155) — and
+  // opens a PICKER of big icon tiles, each leading on to the screen that mode
+  // already had. Nothing about the modes themselves changed.
+  //
+  // Teacher path only (`!session`): a pupil playing an assignment never sees
+  // this row at all. Both core/fight.js and core/showdown-setup.js stay
+  // DYNAMIC-imported from here — the student page must download neither, and
+  // this file must not take a static dependency on a module that imports it
+  // straight back.
+  const canFight = !!tpl.fightMode && !session;
+  const canShowdown = !!tpl.showdownMode && !session;
+  const modeBtn = (canFight || canShowdown) ? toolBtn(icons.modes, "Mode") : null;
   if (modeBtn) {
-    if (fight) modeBtn.classList.add("is-active");
-    // MODE never switches on the bare click any more (teacher, 12/8/2026) — a
-    // stray tap used to drop a running match straight back to single mode with
-    // no way back. Same popover mechanism as Options/Template/Style
-    // (openToolPanel), just with a Yes/Cancel question instead of controls.
-    modeBtn.onclick = () => openToolPanel(modeBtn, buildModeConfirmPanel);
-  }
-  // SHOWDOWN (Đợt 155) — one team per browser, one pupil per question. Teacher
-  // path only, same as MODE, and hidden INSIDE a match: Showdown and Fight are
-  // mutually exclusive (see the `showdownPick` note near the top of this file),
-  // so offering it there would be offering a button that can only refuse.
-  // core/showdown-setup.js is DYNAMIC-imported for the usual reason — it reaches
-  // Firestore and core/classes.js, which the student page must never download.
-  const showdownBtn = (tpl.showdownMode && !session && !fight) ? toolBtn(icons.showdown, "Showdown") : null;
-  if (showdownBtn) {
-    if (showdownPick) showdownBtn.classList.add("is-active");
-    showdownBtn.onclick = () => openToolPanel(showdownBtn, buildShowdownPanelHost);
+    // Glows whenever anything other than plain single mode is running. With one
+    // button standing for three modes this is the only at-a-glance "something
+    // is on" the toolbar has left.
+    if (fight || showdownPick) modeBtn.classList.add("is-active");
+    // Never switches on the bare click (teacher, 12/8/2026): a stray tap used to
+    // drop a running match straight back to single mode with no way back. Same
+    // popover mechanism as Options/Template/Style, and now every route out of it
+    // ends in either a confirm screen or the Showdown table.
+    modeBtn.onclick = () => openToolPanel(modeBtn, buildModePickPanel);
   }
   // DURING A MATCH the row is 5 wide (…/MODE/Fullscreen) and MODE swaps places
   // with Style so it lands dead centre (teacher, 12/8/2026) — it is the button
-  // that governs the whole match, so it gets the middle seat. Outside a match
-  // the row is its usual Options/Template/Style, then SHOWDOWN, then MODE
-  // (teacher, 14/8/2026: "chèn vào giữa nút Style và Mode").
+  // that governs the whole match, so it gets the middle seat. Outside a match it
+  // sits last, in the seat SHOWDOWN and MODE used to share.
   if (fight && modeBtn) belowCenter.append(optionsBtn, templateBtn, modeBtn, styleBtn);
-  else belowCenter.append(optionsBtn, templateBtn, styleBtn,
-                          ...(showdownBtn ? [showdownBtn] : []),
-                          ...(modeBtn ? [modeBtn] : []));
-  function buildModeConfirmPanel(panel) {
-    const toFight = !fight;
+  else belowCenter.append(optionsBtn, templateBtn, styleBtn, ...(modeBtn ? [modeBtn] : []));
+  // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
+  // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
+  // somehow landed back in a match) still consumes the flag instead of leaving
+  // it armed for whatever the teacher opens next.
+  if (openShowdownOnMount) {
+    openShowdownOnMount = false;
+    if (modeBtn && !fight && canShowdown) {
+      // Next tick: let this mount finish first — openToolPanel measures the
+      // toolbar it is about to hang the panel under.
+      setTimeout(() => { if (modeBtn.isConnected) openToolPanel(modeBtn, buildShowdownPanelHost); }, 0);
+    }
+  }
+
+  // ---- THE PICKER (teacher's design, 14/8/2026) ----------------------------
+  // Same footprint as the Showdown table ("bảng to như bảng đội"), and the tiles
+  // are ICONS ONLY — no words ("dùng icon thật to, không dùng chữ"). The mode you
+  // are already in is not offered ("đang ở chế độ nào thì hiện 2 cái kia")…
+  // ⚠️ …with ONE exception the teacher chose after seeing the gap: Showdown's own
+  // tile STAYS while Showdown is running, wearing a lit border, because tapping
+  // it is the only way back into the team table to re-pick teams (screen C's
+  // "Reset team"). Fight and Single have no such second screen, so they really
+  // do just disappear. Take the exception out and Reset team becomes unreachable.
+  function buildModePickPanel(panel) {
+    const cur = fight ? "fight" : (showdownPick ? "showdown" : "single");
+    const tiles = [];
+    if (cur !== "single") tiles.push(["single", icons.single, "Single mode", buildSingleConfirmPanel]);
+    if (canFight && cur !== "fight") tiles.push(["fight", icons.mode, "Fight mode", buildFightConfirmPanel]);
+    if (canShowdown) tiles.push(["showdown", icons.showdown,
+      cur === "showdown" ? "Showdown — set the teams again" : "Showdown",
+      // ⚠️ FROM INSIDE A MATCH the table cannot simply open: this board would set
+      // up teams, press READY, and `replayCurrent()` would restart it STILL
+      // inside the fight, where `showdownPick` is ignored (`!fight`, see the top
+      // of this file). The teacher would have built a line-up that does nothing
+      // and nothing on screen would say so. So in a match the tile leads to a
+      // confirm that LEAVES the match first, and the table opens by itself on
+      // the single board that comes back.
+      fight ? buildToShowdownConfirmPanel : buildShowdownPanelHost]);
+    const grid = el("div", "aw-mp-grid");
+    tiles.forEach(([key, icon, label, next]) => {
+      // The label never shows on screen (that is the point) — it is the hover
+      // tooltip and the accessible name, both of which cost nothing.
+      const tile = el("button", "aw-mp-tile" + (key === cur ? " is-cur" : ""), `<span class="aw-mp-icon">${icon}</span>`);
+      tile.type = "button"; tile.title = label; tile.setAttribute("aria-label", label);
+      tile.onclick = () => { sound.click(); switchToolPanel(next); };
+      grid.append(tile);
+    });
+    panel.append(grid);
+  }
+
+  // Two named wrappers rather than one parameterised builder: `mountPanelContent`
+  // and `capPanelHeight` both identify panels BY FUNCTION IDENTITY, and a fresh
+  // closure per call would quietly never match.
+  function buildFightConfirmPanel(panel) { buildModeConfirmPanel(panel, "fight"); }
+  function buildSingleConfirmPanel(panel) { buildModeConfirmPanel(panel, "single"); }
+
+  // Fight → Showdown, the one hop that cannot be done in place (see the tile).
+  function buildToShowdownConfirmPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Switch to Showdown?"));
+    panel.append(el("div", "aw-mode-confirm-text",
+      "Leave the match first. The team table opens on its own."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildModePickPanel); };
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Set up teams");
+    goBtn.type = "button";
+    goBtn.onclick = () => {
+      sound.click();
+      closeToolPanel(false);
+      // Read and cleared by the startGame() that `exitFight()` is about to run —
+      // exactly once, so a failed exit can never leave it armed for a later act.
+      openShowdownOnMount = true;
+      fight.ctl.exitFight();
+      awEmit("FIGHT", "off");
+    };
+    row.append(cancelBtn, goBtn);
+    panel.append(row);
+  }
+
+  // Đợt 155 — Fight and Showdown ENDS the other for this browser: both decide
+  // whose question this is, so they cannot both be on.
+  // ⭐ Đợt 158 — and leaving Showdown now HANDS THE TEAM BACK. Dropping only the
+  // local pick (all this did before) left the CLAIM standing on Firestore, so
+  // this screen's team stayed invisible on every other screen until the 12-hour
+  // TTL expired — invisible damage, on a machine nobody was looking at.
+  // Fire-and-forget: the write is a courtesy to the other screens, and the
+  // teacher must never wait on a classroom network to change mode.
+  // The shared team TABLE itself is untouched — only this screen's hold on it.
+  function dropShowdown() {
+    if (!showdownPick) return;
+    clearPick();
+    import("./showdown-setup.js")
+      .then(m => m.releaseMyClaim())
+      .catch(e => console.warn("AWord: could not release the Showdown team", e));
+  }
+
+  function buildModeConfirmPanel(panel, target) {
+    const toFight = target === "fight";
+    const leavingShowdown = !fight && !!showdownPick;
     panel.append(el("div", "aw-tool-panel-head", toFight ? "Switch to Fight mode?" : "Switch to Single mode?"));
     panel.append(el("div", "aw-mode-confirm-text", toFight
       ? "Two teams play the same act side by side, racing for points."
-      : "Leave the match and go back to one board."));
+      : leavingShowdown
+        ? "Leave Showdown. This screen's team goes back to the other screens."
+        : "Leave the match and go back to one board."));
     const row = el("div", "aw-mode-confirm-row");
     // NOT panelItem(): that helper is styled for the dark in-stage .aw-panel
     // (white text, cqw sizing) — invisible/oversized out here in the light
     // below-stage popover, same trap the "Apply" button comment warns about.
     const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
     cancelBtn.type = "button";
-    cancelBtn.onclick = () => { sound.click(); closeToolPanel(true); };
+    // Đợt 158 — Cancel steps BACK to the picker instead of closing the popover:
+    // with a chooser in front of it this is the second screen of a two-screen
+    // flow, and "I tapped the wrong tile" is the likeliest reason to press it.
+    cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildModePickPanel); };
     row.append(cancelBtn);
     const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", toFight ? "Start fight" : "Back to single");
     goBtn.type = "button";
     goBtn.onclick = async () => {
       sound.click();
       closeToolPanel(false);
-      // myActivity marker (2026-08-13): fires only once the teacher has
-      // actually CONFIRMED here, not when the popover merely opens — host
-      // uses it to auto show/hide its own "act-gap" panel around the match.
-      if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
+      if (!toFight) {
+        // myActivity marker (2026-08-13): fires only once the teacher has
+        // actually CONFIRMED here, not when the popover merely opens — host
+        // uses it to auto show/hide its own "act-gap" panel around the match.
+        if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
+        // Leaving Showdown: the restart re-reads an empty pick and the board
+        // comes back as an ordinary single play (same path as the Showdown
+        // panel's own "Single mode" button).
+        dropShowdown();
+        replayCurrent();
+        return;
+      }
       exitAnyFullscreen();
-      // Đợt 155 — entering a match ENDS Showdown for this browser. The two modes
-      // both decide whose question this is, so they cannot both be on; dropping
-      // the pick here (rather than merely ignoring it) means leaving the match
-      // later comes back to a plain single board, which is what "Back to single"
-      // says on the tin. The shared team TABLE on Firestore is untouched — only
-      // this screen's choice of team goes.
-      clearPick();
+      dropShowdown();
       cleanupAll();
       try {
         const { startFight } = await import("./fight.js");
@@ -1354,6 +1497,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Đợt 156 — the Showdown table states its own width for the same reason
     // `is-opts` does: its body is a fixed 560px, and the panel's default
     // `max-width: 580px` (with 40px of padding inside it) would squeeze it.
+    // ⚠️ Đợt 158 — the MODE PICKER is deliberately NOT in here. It briefly was
+    // (the first build made it as wide as the team table, and the teacher said
+    // too big): it states no width at all now and the panel sizes itself around
+    // the tiles, like Style and the confirm screens do.
     toolPanelEl.classList.toggle("is-sd", buildContent === buildShowdownPanelHost);
     toolPanelEl.classList.remove("is-compact-opts");
     panelCompactObs?.disconnect(); panelCompactObs = null;
@@ -1389,6 +1536,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     btn.classList.add("is-active");
     activeToolBtn = btn;
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
+  }
+
+  // ⭐ Đợt 158 — swap the OPEN panel to DIFFERENT CONTENT without changing which
+  // button is active. `openToolPanel` cannot do this: called with the button that
+  // is already active it CLOSES the panel, because that is the "tap the open
+  // button again" gesture. The mode picker needs it, since one button now leads
+  // to three different screens (picker → confirm → back to picker, or picker →
+  // the Showdown table). Reuses the same dissolve as tool-to-tool switching, so
+  // the box travels between the picker's size and the next screen's instead of
+  // blinking out and back in.
+  function switchToolPanel(buildContent) {
+    const panel = toolPanelEl;
+    if (!panel) return;   // teacher dismissed the popover mid-tap
+    swapContents(panel, host => mountPanelContent(buildContent, host), () => {
+      if (toolPanelEl === panel) capPanelHeight(buildContent);
+    });
   }
 
   function capPanelHeight(buildContent) {
@@ -1498,17 +1661,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // core/showdown-setup.js has loaded (dynamic import — it reaches Firestore and
   // core/classes.js, which the student page must never download).
   function buildShowdownPanelHost(panel) {
-    panel.append(el("div", "aw-tool-panel-head", "Showdown"));
+    // ⭐ Đợt 159 — this head is a PLACEHOLDER only. The table draws its own head
+    // row (title + the Reset / Single-mode icons the teacher moved up there), so
+    // both of these come out again the moment the real panel is built. Drawing
+    // one here anyway means the popover never opens as a bare 'Loading…' box.
+    const head = el("div", "aw-tool-panel-head", "Showdown");
     const loading = el("div", "aw-sd-loading", "Loading...");
-    panel.append(loading);
+    panel.append(head, loading);
     import("./showdown-setup.js").then(mod => {
-      // The teacher may well have closed the popover while this was in flight;
-      // building into a detached node would leave a panel nobody can reach and
-      // an Apply that fires into a play that has moved on.
-      if (!panel.isConnected) return;
+      // ⛔⛔ Đợt 158 — `panel.isConnected` WOULD BE THE WRONG TEST HERE, and this
+      // is the very trap HUONG DAN CORE.md records from Đợt 156, met on a new
+      // path. Opened over an existing panel, `panel` is the temporary
+      // `.aw-swap-in` layer that swapContents REMOVES at SWAP_MS + 40 = 300ms,
+      // after moving its children into the real box. An import slower than that
+      // would come back, see a "closed" panel, and leave 'Loading…' on screen
+      // for ever — while the popover the teacher is looking at is perfectly
+      // alive. Đợt 158 made this the NORMAL route (the mode picker always swaps
+      // into this panel), so what used to need a cold cache AND a slow network
+      // now only needs the slow network.
+      //   `loading` is a child WE made, so the swap carries it along: it is
+      // connected exactly while this panel's UI is on screen. And the thing to
+      // build into is its live PARENT — after the unwrap that is the real box,
+      // not `panel`.
+      if (!loading.isConnected) return;
+      const host = loading.parentNode;
       loading.remove();
-      mod.buildShowdownPanel(panel, {
-        isOn: !!showdownPick,
+      head.remove();
+      mod.buildShowdownPanel(host, {
         currentTeam: showdownPick,
         toast,
         // ⭐ Đợt 156 — the panel no longer carries the TEXT/VOICE row (teacher:
@@ -1536,7 +1715,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       });
       // The table is taller than the head-plus-spinner it replaced, so the cap
       // has to be recomputed or the panel keeps the height it opened at.
-      if (toolPanelEl === panel) capPanelHeight(buildShowdownPanelHost);
+      // ⚠️ Same correction as the liveness test above: `toolPanelEl === panel`
+      // is false whenever this arrived through a swap, so the cap was silently
+      // skipped on exactly the path Đợt 158 made normal. Ask whether the open
+      // panel CONTAINS what we just built instead.
+      if (toolPanelEl && toolPanelEl.contains(host)) capPanelHeight(buildShowdownPanelHost);
     }).catch(e => {
       console.warn("AWord: showdown setup failed to load", e);
       loading.textContent = "Could not open Showdown.";
@@ -2181,6 +2364,23 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       wireNav(navNext, onNext);
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
       navNext.classList.toggle("is-finish", !!nextLabel);
+    },
+    /**
+     * ⭐ Đợt 159 — "I am ABOUT to move to item `index0`, and here is how long my
+     * own out/in take." Optional, and additive: a template that never calls it
+     * behaves exactly as before (the name then changes instantly at setNav).
+     *
+     * It exists because setNav arrives too LATE to move with the question. Quiz
+     * fades its question out over 130ms, swaps, then fades in over 190ms — and
+     * setNav is called at the swap, i.e. 130ms after the motion the teacher sees
+     * begins. Told beforehand, the engine starts the name's fall in the same
+     * frame as the question's, using the template's own numbers.
+     *
+     * ⚠️ `index0` is ZERO-BASED here, unlike setNav's 1-based `index`. Every
+     * template's internal `index` already is.
+     */
+    itemChanging(index0, { outMs, inMs } = {}) {
+      if (typeof index0 === "number") paintShowdownName(index0, { outMs, inMs });
     },
     onSubmit(fn, countFn) { submitHandler = fn; answeredCounter = typeof countFn === "function" ? countFn : null; },
     sound,

@@ -614,6 +614,12 @@ const quizTemplate = {
       // back from that board is a no-op: the controller drops a boardMoved for
       // the index it just set.
       if (fightCtl) fightCtl.boardMoved(fightSide, i);
+      // ⭐ Đợt 159 — SHOWDOWN's pupil name rides on THIS moment, for exactly the
+      // reason the note above gives about the other board: updateNav() runs
+      // inside doSwap, i.e. after the 130ms fade-out, so a name driven from there
+      // started moving a beat late. Same two numbers as the animations below —
+      // change one, change the other.
+      ui.itemChanging?.(i, { outMs: 130, inMs: 190 });
       const outX = dir >= 0 ? -6 : 6;
       const inX = dir >= 0 ? 6 : -6;
       animating = true;

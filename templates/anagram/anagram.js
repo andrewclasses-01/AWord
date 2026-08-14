@@ -2201,16 +2201,23 @@ const anagramTemplate = {
     // "2 bên đều đồng bộ 100% và có hiệu ứng giống hệt nhau"). The controller
     // hands the target straight to the other board, so both fades start in the
     // same frame and run the identical `fadeSwap` + `render`.
+    // ⭐ Đợt 159 — and SHOWDOWN's pupil name for the same reason: `render()` (and
+    // the ui.setNav inside it) only runs once the card has finished fading, so a
+    // name driven from there started 160ms after the card. `fadeSwap`'s own two
+    // numbers, handed over so the two motions cannot drift apart.
+    const NAME_MOVE = { outMs: 160, inMs: 190 };
     function goPrev() {
       if (busy || index === 0) return;
       const target = index - 1;
       if (fightCtl) fightCtl.boardMoved(fightSide, target);
+      ui.itemChanging?.(target, NAME_MOVE);
       fadeSwap(() => { index = target; render(); });
     }
     function goNext() {
       if (busy || index >= total - 1) return;
       const target = index + 1;
       if (fightCtl) fightCtl.boardMoved(fightSide, target);
+      ui.itemChanging?.(target, NAME_MOVE);
       fadeSwap(() => { index = target; render(); });
     }
 

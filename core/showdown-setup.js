@@ -54,7 +54,7 @@ import { sound } from "./sound.js";
 import { icons } from "./icons.js";
 import { db, fs, currentUser } from "./firebase.js";
 import { makeHStepper } from "./numberstepper.js";
-import { MIN_TEAMS, MAX_TEAMS, browserId, writePick, clearPick } from "./showdown.js";
+import { MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick } from "./showdown.js";
 
 const DOC_ID = "sd_main";
 // A claim older than this is treated as abandoned. Long enough to cover a whole
@@ -121,8 +121,14 @@ export function claimIsLive(claim, now = Date.now()) {
   return !!claim && now - claim.at < CLAIM_TTL_MS;
 }
 
-/** Teams this browser may see: unclaimed, expired, or claimed by us. */
-export function visibleTeams(setup, me, now = Date.now()) {
+/**
+ * Teams this browser may TAKE: unclaimed, expired, or already ours.
+ * ⚠️ Đợt 159 — this no longer decides what is DRAWN. Teams held elsewhere used
+ * to be filtered out of the table entirely; the teacher's new rule is that every
+ * team stays on screen and the taken ones are dimmed and inert, so the panel
+ * asks `claimIsLive()` per column and this helper is only about permission.
+ */
+export function takeableTeams(setup, me, now = Date.now()) {
   return setup.teams.filter(t => {
     const c = setup.claims[t.id];
     return !claimIsLive(c, now) || c.by === me;
@@ -170,6 +176,31 @@ export function subscribeSetup(onChange) {
     } catch { /* signed out: nothing to watch */ }
   })();
   return () => { dead = true; if (stop) { try { stop(); } catch { /* already gone */ } } };
+}
+
+/**
+ * Give back every team THIS browser is holding (Đợt 158).
+ *
+ * ⚠️ This used to exist only as a closure inside the panel, which meant the two
+ * ways of leaving Showdown that do NOT go through the panel — the mode picker's
+ * "Single mode", and entering Fight — dropped the local pick and left the CLAIM
+ * standing on Firestore. Nothing looked wrong on this screen; the damage was on
+ * the OTHER screens, where that team stayed invisible for the rest of the 12h
+ * TTL. Anything that ends Showdown must call this.
+ *
+ * Never throws: signed out or offline, the TTL is still the backstop, and a
+ * failure here must not stop the teacher from leaving the mode.
+ */
+export async function releaseMyClaim() {
+  const me = browserId();
+  try {
+    const fresh = await loadSetup({ fresh: true });
+    let touched = false;
+    Object.entries(fresh.claims).forEach(([tid, c]) => {
+      if (c.by === me) { delete fresh.claims[tid]; touched = true; }
+    });
+    if (touched) await saveSetup(fresh);
+  } catch { /* signed out or offline — the TTL will clear it */ }
 }
 
 // ---------------------------------------------------------------
@@ -246,21 +277,47 @@ function whenDone(anim, after, ms) {
 /**
  * @param {Element} panel  the tool popover to fill
  * @param {object} ctx
- *   isOn      is Showdown already running in this browser (→ screen C)
+ *   currentTeam  the pick this browser is playing, or null (decides where the
+ *                panel lands and which team starts out ticked)
  *   onApply   (pick) => void  — engine restarts the play; pick already stored
  *   onTurnOff () => void
  *   toast     the engine's toast
  */
 export function buildShowdownPanel(panel, ctx) {
-  const { isOn, onApply, onTurnOff, toast } = ctx;
+  const { onApply, onTurnOff, toast } = ctx;
   const me = browserId();
 
   // One fixed-size body for EVERY screen (see the header note) plus a footer.
   // Nothing below ever replaces `body` or `foot` themselves — screens render
   // into a LAYER inside them, which is what makes the cross-fade possible.
+  // ⚠️ Đợt 159b — THERE IS NO HEAD ROW. It briefly carried the title and the two
+  // mode icons; the teacher then asked for that whole strip back as table height
+  // ("bỏ hẳn không gian cho khu vực chữ showdown ở góc trên"), with the title and
+  // the icons moving into the bottom row. Everything this panel is, is now the
+  // body plus that one row.
   const body = el("div", "aw-sd-body");
   const foot = el("div", "aw-sd-foot");
   panel.append(body, foot);
+
+  // ⭐ Đợt 159b — AS WIDE AS THE APP FRAME (teacher: "dãn chiều ngang lớn hết cỡ
+  // bằng khung app để không phải scroll ngang"). A stated 860 was wider than the
+  // frame on the teacher's own screen, which is exactly where the sideways
+  // scrollbar came from.
+  // ⚠️ Measured from `.aw-below` in the DOCUMENT, not from the panel: during a
+  // cold open the panel has not been appended yet (core/engine.js builds its
+  // contents first), so `panel.closest(...)` would be null. Showdown never runs
+  // inside a fight, so there is only ever one of these.
+  // ⚠️⚠️ A CUSTOM PROPERTY, not `style.width`. core/engine.js's swapContents
+  // measures the panel's natural size by CLEARING `style.width` mid-swap and
+  // clears it again when it unwraps — an inline width set here would simply
+  // vanish the first time the teacher opened this panel over another one.
+  // `--sd-panel-w` is not touched by any of that; `.aw-tool-panel.is-sd` reads it
+  // and falls back to the stated width when it is absent.
+  const frame = document.querySelector(".aw-below");
+  if (frame?.clientWidth) {
+    const panelEl = panel.closest(".aw-tool-panel") || panel;
+    panelEl.style.setProperty("--sd-panel-w", Math.round(frame.clientWidth) + "px");
+  }
 
   // ⚠️⚠️ LIVENESS IS `body.isConnected`, NEVER `panel.isConnected`.
   // core/engine.js opens a tool panel two different ways. Opened cold, `panel`
@@ -281,7 +338,11 @@ export function buildShowdownPanel(panel, ctx) {
   let classes = null;
   let classErr = "";
   let roster = [];          // pupils on screen A (editable: delete / add by hand)
-  let teamCount = MIN_TEAMS;
+  // Opens on TWO, not on MIN_TEAMS: 1 is now legal (the whole class as one team)
+  // but it is the special case, and a stepper that starts there would make the
+  // ordinary Showdown — several teams racing — the one you have to go looking
+  // for. A saved table overrides this in boot().
+  let teamCount = Math.min(MAX_TEAMS, 2);
   let selectedTeam = null;  // which column receives the next tapped chip
   let claimedTeam = null;   // which team THIS browser will play
   let pool = [];            // pupils not yet in a team (screen B)
@@ -361,54 +422,77 @@ export function buildShowdownPanel(panel, ctx) {
     b.onclick = () => onClick();
     return b;
   }
+
+  /**
+   * A question laid OVER the current screen — not a screen of its own, so the
+   * popover never changes size to ask something, and the teacher can still see
+   * what they are about to throw away behind it.
+   */
+  function askConfirm(text, okLabel, onOk) {
+    if (body.querySelector(".aw-sd-confirm")) return;      // one at a time
+    const layer = el("div", "aw-sd-confirm");
+    const box = el("div", "aw-sd-confirmbox");
+    const msg = el("div", "aw-sd-confirmtext");
+    msg.textContent = text;
+    const row = el("div", "aw-sd-confirmrow");
+    const close = () => {
+      const a = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
+      whenDone(a, () => layer.remove(), 240);
+    };
+    row.append(
+      btn("Cancel", "aw-sd-ghost", () => { sfx.back(); close(); }),
+      btn(okLabel, "aw-btn-primary", () => { close(); onOk(); })
+    );
+    box.append(msg, row);
+    layer.append(box);
+    body.append(layer);
+    layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+    box.animate([{ transform: "scale(.94)" }, { transform: "scale(1)" }], { duration: 200, easing: "cubic-bezier(.22,.9,.3,1)" });
+  }
   function hintEl(text) {
     const h = el("div", "aw-sd-hint");
     h.textContent = text;
     return h;
   }
 
-  // ---------------------------------------------------------------
-  // SCREEN C — already running
-  // ---------------------------------------------------------------
-  function renderRunning(host, ft) {
-    stopWatch();
-    body.classList.add("is-mini");
-    const t = ctx.currentTeam;
-    const box = el("div", "aw-sd-running");
-    const nm = el("div", "aw-sd-running-team");
-    nm.textContent = t ? t.teamName : "Showdown";
-    const who = el("div", "aw-sd-running-who");
-    who.textContent = t ? t.members.map(m => m.name).join(" · ") : "";
-    box.append(nm, who);
-    host.append(box);
-
-    ft.append(
-      btn("Single mode", "aw-sd-ghost", () => { sfx.back(); clearPick(); releaseMine(); onTurnOff(); }),
-      btn("Reset team", "aw-btn-primary", async () => {
-        sfx.forward();
-        clearPick();
-        await releaseMine();
-        body.classList.remove("is-mini");
-        await boot({ rebuild: true });
-      })
-    );
+  /** Held by ANOTHER screen — drawn, but dimmed and untouchable (Đợt 159). */
+  function isTaken(t) {
+    const c = setup.claims[t.id];
+    return claimIsLive(c) && c.by !== me;
   }
 
-  async function releaseMine() {
-    try {
-      const fresh = await loadSetup({ fresh: true });
-      let touched = false;
-      Object.entries(fresh.claims).forEach(([tid, c]) => {
-        if (c.by === me) { delete fresh.claims[tid]; touched = true; }
-      });
-      if (touched) await saveSetup(fresh);
-    } catch { /* signed out or offline — the TTL will clear it */ }
+  /**
+   * How many pupils a team may hold — an EVEN SPLIT of the class, which is what
+   * the teacher's own numbers work out to (Đợt 159b): a class of 20 gives
+   * 2 teams → 10, 3 → 7, 4 → 5, 5 → 4. Derived rather than tabulated, so a class
+   * of 12 or 30 gets the same fair division without another table to maintain.
+   * It is also what the panel's HEIGHT is measured against, per layout.
+   */
+  function capPerTeam() {
+    const n = setup.teams.length || 1;
+    return Math.max(1, Math.ceil((roster.length || n) / n));
   }
+
+  // ⛔ SCREEN C IS GONE (Đợt 159). A running Showdown used to open onto a little
+  // "Single mode / Reset team" card of its own; the teacher asked for those two
+  // as icons on the columns screen instead ("không cần bảng riêng"), so the
+  // columns are now the home screen in every state. See paintHeadTools().
+
+  // One implementation, two callers (Đợt 158): the panel's own buttons and the
+  // mode picker in core/engine.js. `me` here IS browserId(), the same id the
+  // exported function reads, so this is a rename and not a second rule.
+  // (A function declaration, not `const releaseMine = releaseMyClaim`: the
+  // screens above are defined before this point and a const would sit in the
+  // temporal dead zone for anything that ran early.)
+  function releaseMine() { return releaseMyClaim(); }
 
   // ---------------------------------------------------------------
   // SCREEN A — class + team count + the roster
   // ---------------------------------------------------------------
   function renderSetup(host, ft) {
+    // The class list needs the full height back after a trip to the (shorter)
+    // dividing screen — Reset comes back here.
+    body.style.setProperty("--sd-body-h", "470px");
     const row = el("div", "aw-sd-pickrow");
 
     const cClass = el("div", "aw-sd-field");
@@ -515,19 +599,30 @@ export function buildShowdownPanel(panel, ctx) {
 
     function paintFoot() {
       ft.innerHTML = "";
-      const canNext = !!setup.classId && roster.length >= teamCount;
+      // ⭐ Đợt 159 — ONE TEAM IS THE WHOLE CLASS, so there is nothing to divide:
+      // the button says READY and starts the mode from this screen (teacher:
+      // "nếu chọn 1 team thì không next nữa mà hiện READY luôn"). Everything
+      // about the dividing screen — the pool, the columns, the claim — belongs
+      // to the 2+ case only.
+      const solo = teamCount === 1;
+      const canGo = !!setup.classId && roster.length >= teamCount;
       ft.append(
         hintEl(!setup.classId
           ? "Pick a class first."
           : roster.length < teamCount
             ? `${roster.length} pupil${roster.length === 1 ? "" : "s"} for ${teamCount} teams — add more, or use fewer teams.`
-            : `${roster.length} pupils · ${teamCount} teams`),
-        btn("Next", "aw-btn-primary" + (canNext ? "" : " is-dim"), () => {
-          if (!canNext) {
+            : solo
+              // Said plainly, because it is the one mode that behaves differently
+              // from every other screen in this panel.
+              ? `${roster.length} pupils · one team · this screen only`
+              : `${roster.length} pupils · ${teamCount} teams`),
+        btn(solo ? "Ready" : "Next", "aw-btn-primary" + (canGo ? "" : " is-dim"), () => {
+          if (!canGo) {
             sfx.remove();
             toast(setup.classId ? "Not enough pupils for that many teams" : "Choose a class first");
             return;
           }
+          if (solo) { sfx.ready(); applySolo(); return; }
           sfx.forward();
           // Keep any team the table already had (ids + names), only re-deal.
           setup.teams = splitIntoTeams([], teamCount, setup.teams);
@@ -539,13 +634,63 @@ export function buildShowdownPanel(panel, ctx) {
     }
   }
 
+  /**
+   * ONE TEAM = the whole class, on THIS screen only (Đợt 159, teacher's rule:
+   * "nếu chỉ có 1 team thì không lưu firebase nữa mà chỉ dùng ở trình duyệt
+   * hiện tại thôi, không đồng bộ cho trình duyệt khác").
+   *
+   * So: no `saveSetup`, no claim, no team table. The pick alone — which lives in
+   * sessionStorage — is the entire state of this mode.
+   * ⚠️ It DOES release a claim this browser was holding: leaving a real team
+   * behind without handing it back would hide it from the other screens for the
+   * full 12h TTL. That write is cleanup of the PREVIOUS mode, not a sync of this
+   * one.
+   */
+  function applySolo() {
+    const pick = {
+      teamId: SOLO_TEAM_ID,
+      // The class's own name (teacher chose this over "Team 1"): with everyone
+      // in one team, a team name that is not the class's tells nobody anything.
+      teamName: setup.className || "Class",
+      classId: setup.classId, className: setup.className,
+      members: roster.map(m => ({ id: m.id, name: m.name }))
+    };
+    writePick(pick);
+    releaseMine();               // fire-and-forget; see the note above
+    stopWatch();
+    onApply(pick);
+  }
+
   // ---------------------------------------------------------------
   // SCREEN B — build the teams
   // ---------------------------------------------------------------
   function renderBuild(host, ft) {
+    // ⭐⭐ Đợt 159b — TWO LAYOUTS, chosen by how many pupils a column can hold.
+    // (Teacher, 15/8/2026, after seeing the first build scroll sideways.)
+    //   2-3 teams → the pool stands on the RIGHT and the columns run tall down
+    //               the left: a team of 10 (20 ÷ 2) or 7 (20 ÷ 3) needs height,
+    //               and there is width to spare with so few columns.
+    //   4-5 teams → the pool lies along the TOP, columns are short: 20 ÷ 4 = 5
+    //               and 20 ÷ 5 = 4 per team, so height is cheap and width is not.
+    // The columns SHARE whatever width the panel has (`flex: 1 1 0`), so no team
+    // count can push the table sideways — the horizontal scrollbar the teacher
+    // photographed came from columns with a stated px width.
+    const n = setup.teams.length || MIN_TEAMS;
+    const sideBySide = n <= 3;
+    host.classList.add("aw-sd-build", sideBySide ? "is-side" : "is-top");
+    // Each layout is only as tall as its own worst case — measured, see app.css.
+    // ⚠️ On the BODY, not the layer: the layer is `inset: 0` inside it, so it is
+    // the body that decides how tall the popover is. renderSetup puts it back.
+    body.style.setProperty("--sd-body-h", sideBySide ? "470px" : "400px");
+    // Chip text shrinks a little as the columns multiply so a full Vietnamese
+    // name always fits — the teacher's rule is that a name is never cut.
+    host.style.setProperty("--sd-chip-fs", (n >= 4 ? 13 : 14.5) + "px");
+
     const poolBox = el("div", "aw-sd-pool");
     const colsBox = el("div", "aw-sd-cols");
-    host.append(poolBox, colsBox);
+    // DOM order follows the layout: pool first when it is on top, columns first
+    // when it stands to the right (so tab order matches what the eye reads).
+    host.append(...(sideBySide ? [colsBox, poolBox] : [poolBox, colsBox]));
 
     paintPool();
     paintCols();
@@ -568,36 +713,46 @@ export function buildShowdownPanel(panel, ctx) {
 
     function paintCols() {
       colsBox.innerHTML = "";
-      // Only the teams this browser may touch: one claimed elsewhere is not
-      // shown at all (the teacher's rule), so it can neither be edited nor taken.
-      const mine = visibleTeams(setup, me);
-      if (!mine.length) {
-        colsBox.append(el("div", "aw-sd-empty-note", "Every team is already taken on another screen."));
-        return;
-      }
-      mine.forEach(t => {
-        const col = el("div", "aw-sd-col" + (t.id === selectedTeam ? " is-sel" : "") + (t.id === claimedTeam ? " is-claimed" : ""));
+      // ⭐ Đợt 159 — EVERY team is drawn, including the ones another screen has
+      // taken; those are DIMMED and inert (teacher: "đội đã được chọn và Ready
+      // rồi sẽ có màu nhạt để thể hiện không chọn được nữa"). This REVERSES the
+      // Đợt 156 rule that hid them: a second screen opening the panel now sees
+      // the whole line-up and simply cannot touch what is spoken for — which is
+      // also the only way it can see WHICH teams are left without guessing.
+      setup.teams.forEach(t => {
+        const c = setup.claims[t.id];
+        const taken = claimIsLive(c) && c.by !== me;
+        const col = el("div", "aw-sd-col"
+          + (t.id === selectedTeam && !taken ? " is-sel" : "")
+          + (t.id === claimedTeam ? " is-claimed" : "")
+          + (taken ? " is-taken" : ""));
         col.dataset.tid = t.id;
+        // Tapping ANYWHERE in the column selects it (teacher: "bấm vào vùng
+        // trống bất kỳ trong cột team cũng cho phép chọn cột team"). The tick
+        // and the name chips stop the click before it gets here.
+        if (!taken) col.onclick = () => { if (selectedTeam !== t.id) { selectedTeam = t.id; sfx.tap(); paintCols(); } };
 
         const head = el("div", "aw-sd-colhead");
         const nameBtn = el("button", "aw-sd-colname");
         nameBtn.type = "button";
         nameBtn.textContent = t.name;
-        nameBtn.title = "Tap to send pupils here";
-        nameBtn.onclick = () => { selectedTeam = t.id; sfx.tap(); paintCols(); };
+        nameBtn.title = taken ? "Taken on another screen" : "Tap to send pupils here";
+        nameBtn.disabled = taken;
 
-        const tick = el("button", "aw-sd-tick" + (t.id === claimedTeam ? " is-on" : ""), icons.check);
+        const tick = el("button", "aw-sd-tick" + (t.id === claimedTeam ? " is-on" : ""), taken ? icons.close : icons.check);
         tick.type = "button";
-        tick.title = "This screen plays this team";
-        tick.onclick = () => {
+        tick.title = taken ? "Taken on another screen" : "This screen plays this team";
+        tick.disabled = taken;
+        tick.onclick = ev => {
+          ev.stopPropagation();                 // not "select the column" as well
           const taking = claimedTeam !== t.id;
           claimedTeam = taking ? t.id : null;
           selectedTeam = t.id;
           taking ? sfx.claim() : sfx.lift();
           paintCols(); paintFoot();
           if (taking) {
-            const c = colsBox.querySelector(`[data-tid="${CSS.escape(t.id)}"]`);
-            c?.animate([{ transform: "scale(1)" }, { transform: "scale(1.035)" }, { transform: "scale(1)" }],
+            const c2 = colsBox.querySelector(`[data-tid="${CSS.escape(t.id)}"]`);
+            c2?.animate([{ transform: "scale(1)" }, { transform: "scale(1.035)" }, { transform: "scale(1)" }],
               { duration: 260, easing: "ease-out" });
           }
         };
@@ -609,8 +764,9 @@ export function buildShowdownPanel(panel, ctx) {
           const chip = mkChip(m.name);
           chip.dataset.mid = m.id;
           chip.classList.add("is-in");
-          chip.title = "Tap to send back";
-          chip.onclick = () => backToPool(t, m, chip);
+          chip.title = taken ? "" : "Tap to send back";
+          chip.disabled = taken;
+          chip.onclick = ev => { ev.stopPropagation(); backToPool(t, m, chip); };
           list.append(chip);
         });
         col.append(list);
@@ -618,17 +774,57 @@ export function buildShowdownPanel(panel, ctx) {
       });
     }
 
+    // ⭐ Đợt 159b — THE BOTTOM ROW IS THE WHOLE CHROME NOW (teacher): the tools on
+    // the left, the title in the middle, Ready on the right, and NO instruction
+    // line ("bỏ mấy câu hướng dẫn đi"). The head row above the table is gone with
+    // it, which is where the height for a taller table came from.
     function paintFoot() {
       ft.innerHTML = "";
       const ready = !pool.length && !!claimedTeam;
-      ft.append(
-        hintEl(pool.length
-          ? `${pool.length} pupil${pool.length === 1 ? "" : "s"} left — tap a team name, then tap a pupil.`
-          : !claimedTeam
-            ? "Tick the team THIS screen plays."
-            : `This screen plays ${(setup.teams.find(t => t.id === claimedTeam) || {}).name}.`),
-        btn("Back", "aw-sd-ghost", () => { sfx.back(); goto(renderSetup, -1); }),
-        btn("Ready", "aw-btn-primary" + (ready ? "" : " is-dim"), () => {
+      const tools = el("div", "aw-sd-foottools");
+      const mk = (svg, title, onClick) => {
+        const b = el("button", "aw-sd-htool", svg);
+        b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+        b.onclick = onClick;
+        tools.append(b);
+        return b;
+      };
+      mk(icons.single, "Single mode", () => {
+        sfx.tap();
+        askConfirm("Leave Showdown? This screen's team goes back to the others.", "Single mode", () => {
+          sfx.back();
+          clearPick();
+          releaseMine();          // fire-and-forget: the play restarts either way
+          onTurnOff();
+        });
+      });
+      mk(icons.refresh, "Reset teams", () => {
+        sfx.tap();
+        askConfirm("Divide the class again? The teams built here are dropped.", "Reset", async () => {
+          sfx.forward();
+          clearPick();
+          await releaseMine();
+          await boot({ rebuild: true });
+        });
+      });
+      // ONE seat, TWO jobs (teacher): deal the class out while anybody is still
+      // waiting, call everybody back once nobody is. The two can never both apply,
+      // so they share a button rather than one of them sitting dead.
+      if (pool.length) {
+        mk(icons.wand, "Random teams", () => { sfx.forward(); randomDeal(); });
+      } else {
+        mk(icons.duplicate, "Send everyone back", () => {
+          sfx.tap();
+          askConfirm("Send every pupil back to the class list?", "Send back", () => { sfx.back(); flyBackAll(); });
+        });
+      }
+      const title = el("div", "aw-sd-foottitle", "Showdown");
+      ft.append(tools, title,
+        // ⚠️ NO "Back" (teacher, Đợt 159): once the class has been divided, the
+        // way to the first screen is RESET — because going back silently was a
+        // one-tap route to re-dealing a line-up the other screens had already
+        // claimed teams from.
+        btn("Ready", "aw-sd-ready aw-btn-primary" + (ready ? "" : " is-dim"), () => {
           if (!ready) {
             sfx.remove();
             toast(pool.length ? "Put every pupil in a team" : "Tick the team this screen plays");
@@ -640,6 +836,81 @@ export function buildShowdownPanel(panel, ctx) {
       );
     }
 
+    /** Everyone still waiting, dealt out evenly and in a random order. */
+    function randomDeal() {
+      const cap = capPerTeam();
+      // Fisher-Yates on a copy: `pool` itself is spliced below, and shuffling in
+      // place while reading it is how a "random" deal quietly stops being one.
+      const bag = pool.slice();
+      for (let i = bag.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bag[i], bag[j]] = [bag[j], bag[i]];
+      }
+      bulkMove(() => {
+        // Deal round-robin starting from the emptiest team, so a half-built
+        // table is levelled up rather than having the rest piled on the end.
+        const order = setup.teams.filter(t => !isTaken(t)).sort((a, b) => a.members.length - b.members.length);
+        if (!order.length) return;
+        let placed = 0;
+        for (const m of bag) {
+          const target = order.filter(t => t.members.length < cap).sort((a, b) => a.members.length - b.members.length)[0];
+          if (!target) break;                     // every team full — leave the rest waiting
+          target.members.push(m);
+          pool = pool.filter(x => x !== m);
+          placed++;
+        }
+        if (!placed) toast("Every team is full");
+      });
+    }
+
+    /** Everybody out of the columns and back into the class list. */
+    function flyBackAll() {
+      bulkMove(() => {
+        setup.teams.forEach(t => {
+          if (isTaken(t)) return;                 // not ours to empty
+          pool.push(...t.members);
+          t.members = [];
+        });
+      });
+    }
+
+    /**
+     * Move a lot of chips at once and let the eye follow them.
+     * FLIP again (same idea as `fly`), but for the whole board: measure every
+     * chip, mutate, repaint, then fly a ghost per chip that actually moved.
+     * ⚠️ The real chip is HIDDEN until its ghost lands — with one chip the
+     * duplicate is unnoticeable, with twenty it reads as the board doubling.
+     */
+    function bulkMove(mutate) {
+      const before = new Map();
+      host.querySelectorAll("[data-mid]").forEach(c => before.set(c.dataset.mid, c.getBoundingClientRect()));
+      mutate();
+      paintPool(); paintCols(); paintFoot();
+      const moved = [];
+      host.querySelectorAll("[data-mid]").forEach(c => {
+        const from = before.get(c.dataset.mid);
+        if (!from) return;
+        const to = c.getBoundingClientRect();
+        if (Math.abs(from.left - to.left) < 2 && Math.abs(from.top - to.top) < 2) return;
+        moved.push({ c, from, to });
+      });
+      if (!moved.length) return;
+      moved.forEach(({ c, from, to }, i) => {
+        c.style.visibility = "hidden";
+        // A small stagger so twenty chips read as a flock, not a jump cut. Capped
+        // so a big class never turns it into a slow parade.
+        const delay = Math.min(i * 16, 260);
+        setTimeout(() => {
+          fly(from, to, c.textContent);
+          // Reveal exactly when the ghost arrives (fly's own duration), with the
+          // usual belt-and-braces timeout — a hidden tab must not leave the board
+          // half invisible.
+          setTimeout(() => { c.style.visibility = ""; }, 280);
+        }, delay);
+      });
+      sfx.land();
+    }
+
     // ---- the flying chip ----
     // FLIP: measure where the chip is now, rebuild the lists, measure where its
     // replacement landed, then animate a CLONE across the gap. Animating the
@@ -648,6 +919,10 @@ export function buildShowdownPanel(panel, ctx) {
       if (!fromRect || !toRect) return;
       const ghost = mkChip(label);
       ghost.classList.add("aw-sd-ghost-chip");
+      // ⚠️ The ghost is appended to <body>, OUTSIDE the layer that defines
+      // `--sd-chip-fs`, so it would fly at the 15px default while the chips it
+      // is standing in for are smaller. Carry the size across by hand.
+      ghost.style.fontSize = getComputedStyle(host).getPropertyValue("--sd-chip-fs") || "";
       ghost.style.left = fromRect.left + "px";
       ghost.style.top = fromRect.top + "px";
       ghost.style.width = fromRect.width + "px";
@@ -667,7 +942,16 @@ export function buildShowdownPanel(panel, ctx) {
 
     function sendToTeam(m, chipEl) {
       const team = setup.teams.find(t => t.id === selectedTeam);
-      if (!team) { sfx.remove(); toast("Tap a team name first"); return; }
+      if (!team) { sfx.remove(); toast("Tap a team first"); return; }
+      // The cap is not decoration: each layout's height is measured for exactly
+      // an even split of the class, so letting one more in is what would put a
+      // scrollbar back (Đợt 159b — see capPerTeam).
+      const cap = capPerTeam();
+      if (team.members.length >= cap) {
+        sfx.remove();
+        toast(`A team holds at most ${cap} pupils`);
+        return;
+      }
       const from = chipEl.getBoundingClientRect();
       pool = pool.filter(x => x !== m);
       team.members.push(m);
@@ -730,8 +1014,6 @@ export function buildShowdownPanel(panel, ctx) {
   // BOOT
   // ---------------------------------------------------------------
   async function boot({ rebuild = false } = {}) {
-    if (isOn && !rebuild) { goto(renderRunning, +1); return; }
-
     goto(renderSetup, rebuild ? -1 : +1);   // draws the "Loading…" state at once
 
     let loaded = null;
@@ -747,7 +1029,12 @@ export function buildShowdownPanel(panel, ctx) {
 
     if (loaded) {
       setup = loaded;
-      teamCount = Math.max(MIN_TEAMS, Math.min(MAX_TEAMS, loaded.teams.length || MIN_TEAMS));
+      // ⚠️ Only a table that ACTUALLY HAS teams overrides the opening default.
+      // `loadSetup()` answers with a normalized EMPTY table when the document
+      // does not exist, so `loaded.teams.length || MIN_TEAMS` used to hand back
+      // MIN_TEAMS for a brand-new teacher — harmless while that was 2, and from
+      // Đợt 159 it silently opened every fresh setup on one-team mode.
+      if (loaded.teams.length) teamCount = Math.max(MIN_TEAMS, Math.min(MAX_TEAMS, loaded.teams.length));
       const c = (classes || []).find(x => x.id === loaded.classId);
       if (c) roster = c.students.map(s => ({ id: s.id, name: s.name }));
       // A table built earlier already knows its people; prefer THOSE (the
@@ -755,7 +1042,46 @@ export function buildShowdownPanel(panel, ctx) {
       const saved = loaded.teams.flatMap(t => t.members);
       if (saved.length) roster = saved.map(m => ({ id: m.id, name: m.name }));
     }
-    repaint();
+
+    // ⭐ Đợt 159 — WHERE THIS PANEL LANDS.
+    // Once a table has been built, the COLUMNS are the home screen — for the
+    // browser that built it and, just as importantly, for every other one
+    // (teacher: "khi các tab khác mở ra sẽ hiển thị luôn các cột đội"). The
+    // first screen is reached again only through RESET, which asks first.
+    // Two exceptions land on the first screen instead:
+    //   · `rebuild` — Reset itself, which is a deliberate trip back;
+    //   · a SOLO pick — one-team mode never built a table, and its own screen
+    //     (class + a Teams stepper reading 1) is where it is changed.
+    const solo = ctx.currentTeam?.teamId === SOLO_TEAM_ID;
+    if (solo) {
+      // One-team mode never writes to Firestore, so `loaded` knows nothing about
+      // it — the PICK is the only record of which class is playing. Reopening
+      // the panel without this showed "— choose a class —" and an empty roster
+      // over a mode that was very much running (measured, Đợt 159).
+      teamCount = 1;
+      if (ctx.currentTeam.classId) {
+        setup.classId = ctx.currentTeam.classId;
+        setup.className = ctx.currentTeam.className || setup.className;
+      }
+      if (ctx.currentTeam.members?.length) {
+        roster = ctx.currentTeam.members.map(m => ({ id: m.id, name: m.name }));
+      }
+    }
+    const built = setup.teams.length > 0 && setup.teams.some(t => t.members.length);
+    if (!rebuild && built && !solo) {
+      // Everyone is already placed, so there is no pool to rebuild; the claim is
+      // whichever team this browser holds — from the live pick if it has one,
+      // otherwise from the shared table (a browser can hold a team it has not
+      // pressed Ready on yet).
+      pool = [];
+      claimedTeam = (ctx.currentTeam && setup.teams.some(t => t.id === ctx.currentTeam.teamId))
+        ? ctx.currentTeam.teamId
+        : (Object.entries(setup.claims).find(([, c]) => c.by === me && claimIsLive(c)) || [null])[0];
+      selectedTeam = null;
+      goto(renderBuild, +1);
+    } else {
+      repaint();
+    }
 
     // Watch for claims made on other screens while this panel is open.
     watchForClose();

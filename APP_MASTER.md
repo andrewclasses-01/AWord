@@ -8,7 +8,62 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **14/8/2026 (Đợt 157) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN,
+> Cập nhật lần cuối: **15/8/2026 (Đợt 159) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI · MỘT ĐỘI = CẢ LỚP (KHÔNG
+> LÊN MÂY) · BẢNG CÒN 2 MÀN · DÒNG TÊN TỰ ĐỨNG.**
+> ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT** (cùng với Đợt 158). ⭐ CÓ SỬA CORE (`showdown.js` ·
+> `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game** (`quiz.js` · `anagram.js`).
+> **Bảng đội**: số đội **2–8 → 1–5**; **màn C bị xoá**, Single mode + Reset thành **2 icon ở hàng tiêu
+> đề** (cả hai hỏi xác nhận), **bỏ hẳn nút Back**; ô tên **bo góc chữ nhật**; chạm **bất kỳ đâu trong
+> cột** cũng chọn được cột; **tab thứ hai vào thẳng màn cột** và đội máy khác đã lấy thì **hiện mờ, bấm
+> không được** (đảo lại luật "ẩn hẳn" của Đợt 156).
+> ⭐ **MỘT ĐỘI = CẢ LỚP**: bấm READY ngay ở màn đầu, tên đội = **tên lớp**, id riêng `sd_solo`, và
+> **KHÔNG ghi Firestore một dòng nào** (đo: kho rỗng sau khi Ready). Vẫn nhả claim cũ — đó là dọn dẹp
+> chế độ trước.
+> ⭐ **BỐ CỤC (bản 159b — thầy xem rồi sửa tiếp ngay trong ngày)**: bảng rộng **đúng bằng khung app**,
+> **cột chia nhau** phần có (`flex:1 1 0`) ⇒ **không số đội nào đẩy tràn ngang được nữa**. **Hai bố
+> cục**: ≤3 đội thì **ô chờ bên phải, cột cao** (thân 470px) · ≥4 đội thì **ô chờ lên trên, cột ngắn**
+> (thân 400px). Sức chứa mỗi đội **suy ra** `ceil(sĩ số/số đội)` — lớp 20 ra đúng 10/7/5/4.
+> Hàng dưới gom hết: `[Single][Reset][Random/Flyback]` — SHOWDOWN — `[Ready]`, **bỏ hàng tiêu đề trên
+> và mọi câu hướng dẫn**. **Nút Random** chia đều ngẫu nhiên; đầy rồi thì thành **Flyback** (hỏi xác
+> nhận, mọi ô tên bay về).
+> ⚠️ **Bề rộng phải truyền bằng `--sd-panel-w`, KHÔNG phải `style.width`** — `swapContents` xoá
+> `style.width` giữa chừng để đo, inline width sẽ biến mất ngay lần mở đè bảng khác.
+> Đo lại 4 ca (2 · 3 · 5 đội · cả lớp còn chờ): **0 cuộn ngang · 0 cuộn dọc · 0 tên bị cắt · panel
+> cũng không cuộn**.
+> ⭐ **DÒNG TÊN**: ra khỏi dòng chảy ⇒ đồng hồ đổi bề rộng thì tên **lệch 0px** (trước đây bị đẩy theo);
+> và hook mới **`ui.itemChanging(index0,{outMs,inMs})`** để tên cũ tụt-mờ / tên mới rơi **đúng khung
+> hình** với câu hỏi — `setNav` báo quá muộn (nó nằm GIỮA hai nhịp của template).
+> 🟢 ĐÃ TỰ TEST cả **0ms và 900ms mạng chậm**, 0 lỗi console. ⬜ Chờ thầy nhìn trên màn 86".
+>
+> Trước đó: **14/8/2026 (Đợt 158) — ⭐⭐ BA CHẾ ĐỘ GỘP VỀ MỘT NÚT: SINGLE · FIGHT · SHOWDOWN.**
+> ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.** ⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` ·
+> `showdown-setup.js` thêm 1 hàm xuất).
+> Hàng nút dưới khung còn **4** (trước 5): Options · Template · Style · **MODE**. Bấm MODE ra **bảng
+> chọn ô icon, KHÔNG CHỮ** → chạm ô nào thì **đi tiếp** sang màn hỏi lại (Fight, Single) hoặc bảng đội
+> (Showdown). **Đang ở chế độ nào thì ẩn ô đó** — trừ **Showdown vẫn hiện, viền xanh lá**, vì đó là
+> đường DUY NHẤT vào lại "Reset team".
+> ⚠️ **Cỡ bảng đã sửa 1 lần trong ngày**: bản đầu to bằng bảng đội (660×440, icon 193px) và thầy bác
+> — *"pop-up nhỏ vừa đủ nhìn thôi"*. Nay ô **148×132**, icon **76px**, panel tự ôm: **2 ô = 348×162,
+> 3 ô = 508×162**. Bảng này **không khai bề rộng** (đừng buộc nó vào `.is-sd` lần nữa).
+> ⭐ **2 lỗi thật tự bắt được, cả hai đều hỏng Ở CHỖ KHÁC nên không tự thấy:**
+> **(1)** hai đường thoát Showdown không đi qua bảng đội chỉ xoá pick mà **để nguyên claim trên
+> Firestore** ⇒ đội đó **biến mất khỏi mọi màn hình khác 12 giờ** (sai từ Đợt 155). Nay
+> `releaseMyClaim()` là hàm xuất, mọi đường kết thúc Showdown đều gọi.
+> **(2)** trong trận bấm Showdown mà mở thẳng bảng đội thì xếp xong 20 em, bấm READY, bàn dựng lại
+> **vẫn trong trận** ⇒ `showdownPick` bị bỏ qua, **công xếp đội bay sạch không một lời báo**. Nay phải
+> thoát trận trước, bàn đơn mới **tự mở** bảng đội (cờ `openShowdownOnMount`, đọc-xong-xoá-ngay).
+> ⛔⛔ **Bẫy `panel.isConnected` CẮN LẠI, lần này trong `core/engine.js`** — Đợt 156 chỉ chữa bên
+> `showdown-setup.js`. Đợt này biến swap thành đường bình thường nên nó hết "may": kiểm
+> `loading.isConnected` và dựng vào `loading.parentNode`. Đo được: t=360ms lớp swap chết mà con của nó
+> vẫn sống trong bảng thật.
+> 🟢 ĐÃ TỰ TEST bằng trang thử backend giả (`scratch/`, có **núm `__fakeDelay`** như luật core đòi):
+> chạy lại **toàn bộ ở 900ms mạng chậm** — bảng đội không kẹt 'Loading', claim nhả đúng dù bàn dựng lại
+> giữa chừng; 3 trạng thái ô đúng; Cancel quay về bảng chọn; Apply vẫn giữ Showdown; `FIGHT:on/off`
+> đúng lúc; Crossword (không opt-in) không có nút MODE. **0 lỗi console.**
+> ⬜ Chờ thầy **nhìn trên màn 86"** (icon to thế vừa chưa, 3 ô có chật không) và quyết có cần **tiếng
+> riêng** cho bảng chọn không (hiện dùng `sound.click()` sẵn có).
+>
+> Trước đó: **14/8/2026 (Đợt 157) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN,
 > ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC.**
 > ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `57677cf` (gộp Đợt 155-156-157) + PUSH + LIVE, đã đối chiếu**
 > **10/10 file trùng mã băm** trên `aword.andrewclasses.com` (~15s sau push) và **chạy lại phép thử**
@@ -2200,8 +2255,15 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–154)
+### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–158)
 
+> ⭐⭐ **ĐỢT 158 — MỘT NÚT CHO BA CHẾ ĐỘ. ⬜ CHƯA COMMIT, ĐANG CHỜ THẦY DUYỆT.**
+> Hàng nút dưới khung còn 4 (Options · Template · Style · **MODE**); nút MODE mở **bảng chọn ô icon to
+> không chữ**. Hai nút cũ (MODE của Đợt 124, SHOWDOWN của Đợt 155) **không còn**, và hai luật ẩn nút
+> kèm theo chúng cũng hết hiệu lực. Chi tiết + 2 lỗi thật tự bắt được: khối trích dẫn đầu file này,
+> nhật ký Đợt 158, và `core/HUONG DAN CORE.md` mục **"MỘT NÚT CHO BA CHẾ ĐỘ"**.
+> **Việc còn lại của đợt này chỉ là mắt/tay thầy** — máy đã đo hết những gì đo được.
+>
 > ⭐ **SHOWDOWN (Đợt 155-157) — ĐÃ LIVE, commit `57677cf`.** Chế độ mới, KHÔNG nằm trong kế hoạch
 > A–D bên dưới. Xong và đã chạy trên bản live. **Còn 4 việc CHỈ THẦY LÀM ĐƯỢC, chưa ai làm:**
 > 1. Thử với **tài khoản thật + 2 máy/2 cột cùng lúc** → nghiệm luật GIÀNH ĐỘI trên Firestore thật
@@ -2252,9 +2314,10 @@ riêng, và `play.html` (trang HS) chơi được cả 17:
 maze_chase · whack_a_mole · flying_fruit · balloon_pop · crossword · unjumble · speaking_cards ·
 running_word · running_team · speaking`
 
-**FIGHT MODE** (nút MODE lật 1 khung ↔ 2 khung đấu nhau, `core/fight.js`, từ Đợt 124) nay có **2 template
+**FIGHT MODE** (1 khung ↔ 2 khung đấu nhau, `core/fight.js`, từ Đợt 124) nay có **2 template
 tham gia: Anagram và Quiz** (`tpl.fightMode: true`) — mọi thay đổi ở `core/fight.js` từ giờ PHẢI tự test
-cả 2, không chỉ Anagram.
+cả 2, không chỉ Anagram. ⭐ **Từ Đợt 158 vào Fight bằng nút MODE gộp** (ô Fight trong bảng chọn), không
+còn nút riêng.
 
 **TIME COST** (Đợt 139) — tuỳ chọn CHUNG mới: trừ điểm mỗi **giây trống**. Hiện có ở **Anagram + Quiz**
 (`tpl.timeCost: true`). Thêm cho template khác = 1 cờ + 4 dòng, hợp đồng ở `core/HUONG DAN CORE.md`
@@ -2277,6 +2340,8 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **159** | ⭐⭐ **SHOWDOWN LÀM LẠI**: 1–5 đội · **1 đội = cả lớp, không lên mây** · bỏ màn C, Single/Reset thành icon · đội bị lấy **hiện mờ** thay vì ẩn · panel 860×560 đo cho 5 cột × 10 em · **dòng tên tự đứng + hook `ui.itemChanging`** | ⬜ chưa commit |
+| **158** | ⭐⭐ **BA CHẾ ĐỘ VỀ MỘT NÚT** (bảng chọn ô icon to, không chữ) + 2 lỗi thật: **claim đội không được nhả** (đội chết 12h ở máy khác) · **xếp đội trong trận là công cốc**; kèm bẫy `panel.isConnected` **cắn lại** trong `engine.js` | ⬜ chưa commit |
 | **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | `58e996a` |
 | **153** | ⭐ Hết "frame thừa ở cuối" khi sang **Style/Fight**: hai lớp swap **ghim bề rộng** (cũ = ảnh chụp, mới = bố cục đích) + lớp mới **phủ kín hộp**; kèm **15px scrollbar** trong phép đo và **7px font weight 400 chưa nạp** | `58e996a` |
 | **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | `0c1bfda` |
@@ -2305,6 +2370,19 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐ **NGAY TRƯỚC MẮT (Đợt 158 + 159, đều CHƯA COMMIT)** — cây làm việc có 6 file code đang sửa
+> (`engine.js` · `icons.js` · `app.css` · `showdown.js` · `showdown-setup.js` · `quiz.js` ·
+> `anagram.js`). Đoạn "trạng thái sạch" ngay dưới nói về mốc Đợt 154, **không còn đúng**.
+> Thầy cần **nhìn trên màn 86"**:
+> - (158) bảng chọn 3 chế độ: cỡ icon, và khi Showdown chạy thì **3 ô** có chật không;
+> - (159b) bảng đội **rộng bằng khung app**: hai bố cục (ô chờ bên phải khi 2-3 đội · lên trên khi 4-5
+>   đội) có thuận mắt không · **nút Random / Flyback** bay có mượt không · cỡ chữ đọc được từ xa chưa;
+> - (159) **dòng tên rơi/tụt** trên khung nhìn có mượt không;
+> - (159b) trong **myActivity chia cột** (khung hẹp hơn nhiều): bảng nay co theo khung nên **không tràn
+>   ngang**, nhưng cột sẽ rất hẹp — thầy thử xem có đọc được tên không, hay cần bản riêng cho cột hẹp;
+> - cả hai đợt vẫn dùng **`sound.click()` chung**, chưa có tiếng riêng.
+
 > **Trạng thái sạch tính đến hết 14/8/2026**: mọi thứ tới **Đợt 154** đã **commit + push + LIVE**
 > (`58e996a` cho Đợt 153–154, `0c1bfda` cho Đợt 145–152), kho **không còn gì chưa commit**, bản live
 > đã đối chiếu mã băm và chạy lại phép thử. Không có việc dở dang nào trong code — việc kế tiếp là

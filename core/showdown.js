@@ -56,8 +56,29 @@ import { icons } from "./icons.js";
 const PICK_KEY = "aword-showdown-pick";
 const BID_KEY = "aword-showdown-bid";
 
-export const MIN_TEAMS = 2;
-export const MAX_TEAMS = 8;
+// ⭐ Đợt 159 (teacher, 15/8/2026): 1..5, was 2..8.
+// **1 is a real mode, not a degenerate one**: it means THE WHOLE CLASS is one
+// team — no dividing step, no shared table, no claims (see SOLO_TEAM_ID).
+// **5 is a hard ceiling that the LAYOUT depends on**: five columns of ten names
+// is the widest the panel can be and still fit a myActivity column without
+// scrolling sideways, and the chip sizes in app.css are measured against it.
+// Raising it means re-measuring that, not just editing this number.
+// ⚠️ `normalize()` SLICES to MAX_TEAMS, so a table saved earlier with 6-8 teams
+// loses the extras on the next read. Nobody had one when this changed.
+export const MIN_TEAMS = 1;
+export const MAX_TEAMS = 5;
+
+// ⭐ Đợt 159 — at most ten pupils in a team (teacher: "nếu 2 team trở lên thì
+// tối đa 10 người 1 team"). This is the number `.aw-sd-body`'s height is
+// measured against: ten chips is the tallest a column can get, and the panel is
+// built so that case never scrolls. It does NOT apply to one-team mode, which
+// is the whole class by definition.
+export const MAX_PER_TEAM = 10;
+
+// The id a one-team (whole class) pick carries. It is deliberately NOT one of
+// the `sdt_N` ids the shared table uses: a solo pick never goes to Firestore and
+// must never be mistaken for a claim on a real team.
+export const SOLO_TEAM_ID = "sd_solo";
 
 // ---------------------------------------------------------------
 // WHO THIS BROWSER IS

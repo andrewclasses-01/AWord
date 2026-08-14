@@ -8,6 +8,249 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 159 (15/8/2026) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI, MỘT ĐỘI = CẢ LỚP (KHÔNG LÊN MÂY), BẢNG CÒN 2 MÀN, VÀ DÒNG TÊN TỰ ĐỨNG
+⭐ CÓ SỬA CORE (`showdown.js` · `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game**
+(`quiz.js` · `anagram.js` — thêm 1 hook mới của hợp đồng engine↔template).
+🟢 ĐÃ TỰ TEST đầy đủ (0 lỗi console), chạy lại cả ở **900ms mạng chậm**.
+⬜ **CHỜ THẦY DUYỆT, CHƯA COMMIT** (gộp cùng Đợt 158 chưa commit).
+
+### 1. Thầy giao (15/8/2026)
+> "Đổi style các nút tên thành dạng hình chữ nhật có góc bo tròn · tối thiểu 1 team, tối đa 5 team ·
+> nếu 2 team trở lên thì tối đa 10 người 1 team, build luôn size để không cần scroll dọc · nếu chỉ có
+> 1 team thì cả lớp là 1 team, hiện READY luôn, **không lưu firebase**, không đồng bộ · build size cho
+> 5 team để không cần scroll ngang · bấm vào vùng trống trong cột cũng chọn được cột · tab khác mở ra
+> hiện luôn các cột, đội đã Ready thì **màu nhạt** không chọn được · **Single mode + Reset thành icon
+> góc trên phải cùng hàng title**, bỏ hẳn nút Back · phần tên đang **bị phụ thuộc vị trí vào đồng hồ**,
+> cần độc lập; tên cũ hạ thấp mờ dần, tên mới chạy từ trên xuống, **đồng bộ với nhịp ẩn/hiện câu hỏi**."
+
+### 2. Bảng đội: 3 màn → 2 màn
+| | Trước | Sau |
+|---|---|---|
+| Số đội | 2–8 | **1–5** |
+| Màn | A chọn lớp · B chia đội · **C đang chạy** | A chọn lớp · B chia đội (**C bỏ hẳn**) |
+| Single mode / Reset | ở màn C | **2 icon góc trên phải**, cùng hàng title, **cả hai hỏi xác nhận** |
+| Back ở màn B | có | **bỏ** — muốn về màn đầu phải Reset (có xác nhận) |
+| Đội máy khác đã lấy | **ẩn hẳn** | **hiện mờ 42%, bấm không được** (`pointer-events:none`) |
+| Tab thứ hai mở bảng | vào màn A | **vào thẳng màn cột** |
+| Chọn cột nhận HS | chỉ chạm tên đội | **chạm bất kỳ đâu trong cột** |
+| Ô tên | viên thuốc (999px) | **chữ nhật bo góc 10px** |
+
+⚠️ Luật "ẩn đội đã bị giành" là **thầy chốt ở Đợt 156**, nay **đảo lại** theo yêu cầu mới. Lý do mới
+hợp lý hơn: tab thứ hai giờ nhìn thấy **toàn bộ đội hình** và biết còn đội nào trống, thay vì đoán.
+
+### 3. ⭐ MỘT ĐỘI = CẢ LỚP, VÀ **KHÔNG CHẠM FIREBASE**
+Chọn 1 đội thì nút thành **READY** ngay ở màn đầu — không có bước chia. Pick mang **tên lớp** làm tên
+đội (thầy chốt), `teamId` là hằng số riêng **`sd_solo`** (cố ý KHÔNG phải `sdt_N`: một pick solo không
+bao giờ được nhầm thành claim trên một đội thật).
+- **Không `saveSetup`, không claim, không `subscribeSetup`** ⇒ đo được: sau khi bấm Ready,
+  `__fakeStore` **rỗng hoàn toàn** (`[]`).
+- ⚠️ **Vẫn nhả claim cũ** nếu trước đó máy này đang giữ một đội thật — đó là dọn dẹp chế độ TRƯỚC, không
+  phải đồng bộ chế độ này. Bỏ đi là đội đó chết 12 giờ ở máy khác.
+- ⚠️ **Lỗi tự bắt**: mở lại bảng khi đang chạy solo thì **quên sạch lớp** ("— choose a class —", danh
+  sách rỗng) — vì solo không ghi Firestore nên `loadSetup` chẳng biết gì. Chữa: khi pick là solo thì
+  lấy lớp + danh sách **từ chính pick**.
+
+### 4. ⭐ SỐ ĐO — vì sao "không cuộn" là một bài toán số học
+Panel **660 → 860** (5 cột × 156 + 4 × 10 gap = 820 + 2 × 20 padding). **Một bề rộng cho MỌI số đội**,
+đúng luật "các bảng đều to bằng nhau" đã có.
+Thang cỡ theo số đội (`--sd-col` / `--sd-chip-fs`, đặt trên LỚP của màn B nên màn A giữ nguyên 15px):
+
+| Đội | Cột | Chữ |
+|---|---|---|
+| 1–2 | 190px | 15px |
+| 3 | 182px | 14.5px |
+| 4 | 168px | 13.5px |
+| 5 | 156px | **12.5px** |
+
+Đo thật ở 5 đội: cuộn ngang **0px**, ô tên dài nhất 138px, **0 ô bị cắt chữ**.
+
+**Chiều dọc — ca cao nhất là 2 ĐỘI chứ không phải 5** (20 HS ÷ 2 = 10 mỗi đội, ở cỡ chữ TO nhất):
+- lần đo 1: cột 10 ô **tràn 32px** ⇒ ô tên trong cột phải nén riêng (`padding 5/10`, gap 3) — ô trong
+  cột **khác** ô trong vùng chờ, đó là số học chứ không phải thẩm mỹ;
+- ô chờ `max-height` 132 → **104** (đúng 2 hàng = trạng thái tồn tại cùng lúc với một cột đầy);
+- thân bảng **410 → 560** (đo: cột 444 + chờ 103 + gap 14 = 561).
+⇒ Đo lại lần cuối: **cuộn dọc trong cột = 0**, `MAX_PER_TEAM = 10` chặn thật (thử nhét 12 em: vào 10,
+**từ chối 2**, có toast).
+
+⚠️ **Cả bảng thì vẫn có thể cuộn**: nó cần ~694px, mà engine chỉ cấp bằng chỗ trống phía trên thanh
+công cụ (~645–675px ở cửa sổ 1280×800–1000). Trên màn 86" thật thì dư; trong myActivity chia cột thì
+chắc chắn cuộn. Vì thế **hàng tiêu đề được ghim `sticky`** — nó nay mang 2 nút điều khiển, cuộn mất là
+mất luôn đường ra.
+
+### 5. ⭐ DÒNG TÊN: ĐỨNG ĐỘC LẬP, VÀ ĐỔI ĐÚNG NHỊP CÂU HỎI
+**(a) Vị trí.** Ô tên là con flex nằm **giữa đồng hồ và điểm**, nên đồng hồ đổi bề rộng (`0:09` → `0:10`)
+là tên **xê dịch theo**. Nay `.aw-top-centre.is-showdown` **ra khỏi dòng chảy** (`position:absolute`,
+chèn 22% hai bên) ⇒ căn giữa theo KHUNG. Đo: bơm đồng hồ thành `00:00:00`, tâm chữ **lệch 0px** (trước
+đó lệch theo). ⚠️ Chỉ áp cho Showdown — slogan của template vẫn in-flow như cũ (đã đo: `position:static`).
+
+**(b) Hiệu ứng + đồng bộ.** Vấn đề thật: template báo `ui.setNav` **ở GIỮA** hai nhịp của nó (Quiz ẩn
+câu 130ms → swap → hiện 190ms; setNav gọi lúc swap) ⇒ tên luôn đi **trễ một nhịp**. Thêm hook mới
+**`ui.itemChanging(index0, {outMs, inMs})`** — template gọi **TRƯỚC** khi bắt đầu ẩn, kèm **chính hai
+con số của nó**. Engine chạy: tên cũ tụt xuống + mờ (outMs), đổi chữ, tên mới rơi từ trên xuống (inMs).
+⚠️ `index0` **đếm từ 0** (khác `setNav` đếm từ 1) và có `sdNameIndex` để hai đường không giẫm chân nhau
+— thiếu nó thì setNav sẽ **dập chữ mới vào giữa lúc đang rơi**.
+Đo mẫu thật (Anagram): t=140ms tên cũ mờ 0.20 ở y=+31 · thẻ bài mờ 0.01 → t=188 tên mới y=−29 op 0.37 ·
+thẻ 0.06 → t=334 cả hai về 1.0. Quiz y hệt. **Hai thứ đi cùng nhau từng khung hình.**
+
+### 6b. ⭐⭐ THẦY XEM BẢN DỰNG RỒI SỬA TIẾP NGAY TRONG NGÀY (ảnh chụp: **vẫn cuộn ngang**)
+> "Dãn chiều ngang lớn hết cỡ **bằng khung app** · đưa Single/Reset **xuống hàng dưới bên trái**, bỏ
+> mấy câu hướng dẫn · thêm nút **Random** (đầy rồi thì thành **flyback**) · **thu nhỏ nút Ready** ·
+> **bỏ hẳn khu vực chữ Showdown ở trên**, đưa title xuống giữa hàng dưới · **luôn hiện full tên** ·
+> 2-3 đội thì **bảng tên bên phải, cột bên trái** (cột dài ra được); 4-5 đội thì bảng tên **lên trên**,
+> cột ngắn lại."
+
+**(a) Gốc của cuộn ngang: cột khai bề rộng CỨNG.** Bản trước tính "5 × 156 + gap = 820 ⇒ panel 860".
+Nhưng panel bị `max-width: 94vw` **kẹp theo màn hình thầy**, còn cột thì vẫn đòi đủ 820 ⇒ **tràn**.
+Nay: panel rộng **đúng bằng `.aw-below`** (khung app, đo lúc dựng) và **cột CHIA NHAU** phần có
+(`flex: 1 1 0`) ⇒ **không số đội nào đẩy bảng rộng ra được nữa**.
+⚠️ **Phải truyền bề rộng bằng CUSTOM PROPERTY `--sd-panel-w`, không phải `style.width`**: `swapContents`
+của engine **xoá `style.width`** giữa chừng để đo cỡ tự nhiên, rồi xoá lần nữa lúc tháo lớp — đặt
+`style.width` ở đây là mất ngay lần đầu mở bảng đè lên bảng khác.
+
+**(b) Hai bố cục theo số đội** (`.is-side` / `.is-top`), đúng lý lẽ của thầy:
+| Đội | Sức chứa 1 đội (lớp 20) | Bố cục | Thân bảng |
+|---|---|---|---|
+| 2 | 10 | **ô chờ BÊN PHẢI**, cột cao | 470px |
+| 3 | 7 | như trên | 470px |
+| 4 | 5 | **ô chờ LÊN TRÊN**, cột ngắn | 400px |
+| 5 | 4 | như trên | 400px |
+Sức chứa nay **suy ra** (`Math.ceil(sĩ số / số đội)`) chứ không tra bảng — lớp 12 hay 30 em đều chia
+đều đúng. Bỏ hằng `MAX_PER_TEAM` cứng.
+⚠️ **Ô chờ ở bố cục dọc phải xếp 2 CỘT chữ**: xếp 1 cột thì 20 em cao ~660px, **cuộn 325px** (đo được)
+— đúng thứ mà việc dựng đứng nó sinh ra để tránh.
+
+**(c) Nút Random / Flyback — một chỗ ngồi, hai việc.** Còn em ở ô chờ ⇒ **Random**: xáo Fisher-Yates
+rồi chia **vòng tròn từ đội ít người nhất**. Hết em ⇒ **Flyback** (có hỏi xác nhận): mọi ô tên **bay
+về** ô cả lớp.
+⚠️ **Ô thật phải ẩn tới khi bóng bay tới nơi**: 1 ô thì không ai để ý, 20 ô cùng lúc thì **nhìn như
+bảng bị nhân đôi**. Và ô bay (`fly`) nằm ngoài lớp có `--sd-chip-fs` nên **phải chép cỡ chữ sang tay**,
+không thì nó bay ở 15px trong khi ô thật nhỏ hơn.
+
+**(d) Hàng dưới là toàn bộ phần khung còn lại**: `[Single][Reset][Random/Flyback]` — **SHOWDOWN** —
+`[Ready]` (nút Ready nhỏ lại). Hàng tiêu đề phía trên **xoá hẳn** ⇒ trả chiều cao đó cho bảng.
+
+**Đo lại sau khi sửa (lớp 20 em, khung app 968px):**
+| Ca | Cuộn ngang | Cuộn dọc cột | Cuộn ô chờ | Tên bị cắt | Cả panel cuộn |
+|---|---|---|---|---|---|
+| 2 đội (10/10) | 0 | 0 | 0 | 0 | **không** |
+| 3 đội (7/7/6) | 0 | 0 | 0 | 0 | **không** |
+| 5 đội (4×5) | 0 | 0 | 0 | 0 | **không** |
+| 2 đội, cả lớp còn chờ | 0 | 0 | 0 | 0 | **không** |
+⚠️ Ô chờ dọc để **360px** chứ không phải 336: ở 336 thì "Nguyễn Ngọc Ẳnh" cần 154px trong ô 152px và
+**mất 2px cuối vào dấu …**. Luật của thầy là **không bao giờ cắt tên**, nên hộp phải đo theo tên dài nhất.
+
+### 6. Đã tự test
+Trang thử `scratch/test-mode.html` (backend giả, có núm `__fakeDelay`), chạy **cả 0ms và 900ms**:
+- 1 đội: hint "one team · this screen only", Ready ngay, pick tên lớp + 20 em, **Firestore rỗng**;
+  mở lại nhớ đúng lớp.
+- 2 đội × 10: không cuộn; 5 đội: không cuộn ngang, không cắt chữ; nhét 11 em bị chặn.
+- Tab thứ hai (claim của máy khác): vào thẳng màn cột, Team 1 **mờ 0.42 + pointer-events none**,
+  Team 2/3 chọn được.
+- Reset: hỏi xác nhận → về màn A; Single mode: hỏi xác nhận; tiêu đề ghim khi cuộn.
+- Dòng tên: lệch 0px khi đồng hồ đổi cỡ; hiệu ứng khớp cả Anagram lẫn Quiz.
+- Template không Showdown: topbar **y như cũ** (`position: static`).
+- 900ms: bảng không kẹt 'Loading', Ready ghi claim + 10/10, không mất nhịp nào.
+
+---
+
+## Đợt 158 (14/8/2026) — ⭐⭐ BA CHẾ ĐỘ GỘP VỀ **MỘT NÚT**: SINGLE · FIGHT · SHOWDOWN
+⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `showdown-setup.js` thêm 1 hàm xuất).
+🟢 ĐÃ TỰ TEST đầy đủ bằng trang thử có backend giả — ⬜ **CHỜ THẦY DUYỆT, CHƯA COMMIT.**
+
+### 1. Thầy giao
+> "Tôi muốn tích hợp cả single mode / fight mode / showdown mode vào chung **1 nút bấm** thôi. Khi bấm
+> vào thì chọn 1 trong 3, **tránh việc quá nhiều nút bấm**."
+
+Bốn điểm thầy chốt qua AskUserQuestion + 1 lỗ hổng thầy chốt sau khi xem bản vẽ:
+1. **Chạm là đi tiếp, giữ bước hỏi lại** (không đổi chế độ ngay khi chạm).
+2. **Đang ở chế độ nào thì hiện 2 cái kia**, dùng **icon to, KHÔNG dùng chữ**.
+3. ~~Bảng to bằng bảng đội (660px)~~ → **THẦY ĐỔI Ý NGAY TRONG NGÀY sau khi nhìn bản dựng**:
+   *"icon khi bấm vào nút mode đang bị quá to. Hãy cho chúng nhỏ xuống và pop-up nhỏ vừa đủ nhìn thôi."*
+   ⇒ bảng **KHÔNG khai bề rộng nữa**, ô cố định **148×132**, icon **76px**; panel tự ôm lấy ô:
+   **2 ô = 348px · 3 ô = 508px**, cao **162px** (trước: 660×440, icon 193px). Bài học: cỡ "to bằng
+   bảng đội" nghe hợp lý trên giấy nhưng **bảng đội to vì phải chứa 20 ô tên**, còn bảng này chỉ có
+   2-3 icon — to bằng nhau chỉ tổ trống trải.
+4. **Icon nút mới** do em vẽ.
+5. *(hỏi thêm khi phát hiện lỗ hổng)* đang chạy Showdown thì **hiện 3 ô, ô Showdown viền sáng** —
+   vì nếu chỉ hiện 2 ô kia thì **không còn đường nào vào "Reset team"**.
+
+### 2. Trước và sau
+| | Trước (Đợt 155-157) | Sau (Đợt 158) |
+|---|---|---|
+| Hàng nút | Options · Template · Style · **SHOWDOWN** · **MODE** | Options · Template · Style · **MODE** |
+| Vào Fight | nút MODE → hỏi lại | nút MODE → **ô Fight** → hỏi lại |
+| Vào Showdown | nút SHOWDOWN → bảng đội | nút MODE → **ô Showdown** → bảng đội |
+| Về Single | nằm rải 2 chỗ (popup MODE **và** màn C của bảng đội) | **ô Single** (màn C vẫn giữ nút cũ) |
+| Nút ẩn nhau | MODE ẩn khi có đội · SHOWDOWN ẩn trong trận | **không ẩn gì** — một nút, luôn ở đó |
+
+Hai bảng cũ **giữ nguyên không viết lại**: `buildModeConfirmPanel` (hỏi lại Fight) và
+`buildShowdownPanelHost` (bảng đội 3 màn). Đợt này chỉ **thêm một màn chọn đứng trước** và một
+đường đi giữa chúng.
+
+### 3. Cỗ máy trượt/nở: dùng lại, không viết mới
+Bảng chọn (348 hoặc 508 × 162) → bảng hỏi lại (267px) → bảng đội (660×410) là **ba cỡ khác nhau trong
+cùng một popover**. Không viết hiệu ứng mới: tái dùng `swapContents()` của Đợt 148-153 (ghim bề rộng +
+chiều cao, lớp cũ là ảnh chụp, lớp mới phủ kín hộp).
+
+⚠️ **`openToolPanel()` KHÔNG làm được việc này** — gọi nó với **đúng nút đang mở** là nó **ĐÓNG**
+bảng (đó là cử chỉ "bấm lại nút đang mở"). Nên có `switchToolPanel(buildContent)`: cùng nút, đổi
+ruột. Đo được: 508 → 267 → 508 và 508 → 660 mượt cả hai chiều (lấy mẫu bề rộng: 508 · 641 · 659 · 660
+— đúng đường cong `cubic-bezier(.22,.9,.3,1)` chung của app), `scrollHeight ≤ height`, không thanh cuộn.
+
+### 4. ⭐ LỖI THẬT TỰ BẮT ĐƯỢC #1 — đội bị **khoá 12 tiếng** ở máy khác
+Hàm nhả đội (`releaseMine`) **nằm kín bên trong bảng đội**, nên hai đường thoát Showdown **không đi
+qua bảng** chỉ xoá lựa chọn ở máy này mà **để nguyên claim trên Firestore**:
+- vào Fight từ Showdown (đường này có từ Đợt 155, **đã sai từ đó**),
+- và "Single mode" của bảng chọn mới.
+
+Máy này nhìn thì **hoàn toàn bình thường** — hỏng ở **màn hình khác**, nơi đội đó biến mất cho tới khi
+TTL 12 giờ hết hạn. Chữa: nâng `releaseMyClaim()` thành **hàm xuất cấp module** của
+`core/showdown-setup.js`; mọi đường kết thúc Showdown đều phải gọi. Đo trên backend giả:
+`claims` từ `{sdt_1:{by:bw_…}}` → `{}` ở **cả hai** đường, còn **bảng đội thì nguyên vẹn**
+(Team 1:12 · Team 2:8) — chỉ trả lại chỗ giữ, không phá danh sách.
+
+⚠️ Viết là `function releaseMine() { return releaseMyClaim(); }` chứ **không** `const releaseMine =`:
+các màn phía trên khai trước điểm đó, `const` sẽ nằm trong vùng chết tạm thời.
+
+### 5. ⭐ LỖI THẬT TỰ BẮT ĐƯỢC #2 — trong trận bấm Showdown = xếp đội cho vui
+Nút cũ **tự ẩn trong trận** nên chuyện này chưa từng xảy ra. Một nút thì ô Showdown vẫn còn, và nếu
+mở thẳng bảng đội: thầy xếp đủ 20 em, bấm READY, `replayCurrent()` dựng lại bàn **VẪN TRONG TRẬN**,
+mà trong trận thì `showdownPick` bị bỏ qua (`!fight`) ⇒ **công xếp đội bay sạch, không một lời báo**.
+
+Chữa: trong trận, ô Showdown dẫn tới **màn hỏi lại riêng** ("Leave the match first. The team table
+opens on its own") → thoát trận → **bàn đơn mới TỰ MỞ bảng đội**. Bắc cầu qua cú dựng lại bằng
+`openShowdownOnMount` — cờ **cấp module** (phải sống lâu hơn bàn đã sinh ra nó) và **đọc-xong-xoá
+ngay**, nên chỉ bắn được đúng một lần cho lần mount kế tiếp. Đo: 2 khung → 1 khung + bảng đội mở sẵn.
+
+### 6. Vì sao icon phải khai lại độ dày nét
+Icon vẽ cho nút 22px mang `stroke-width: 2.1`; phóng to thì nét đó thành slab (ở bản 193px đầu tiên là
+**17px**). Ô icon khai đè — nay **76px + `stroke-width: 1.5`** — để nét trông bằng cảm giác nét ở thanh
+công cụ. ⚠️ **Hai số này đi kèm nhau**: ai đổi cỡ ô sau này phải chỉnh lại độ dày nét, không thì icon
+hoặc quá mảnh hoặc quá thô. Icon nút gộp là **cái mới**
+(`icons.modes` — 3 khung bằng nhau + chấm ở khung giữa): cố ý **không** dùng lại `mode` (2 khung =
+đấu) hay `showdown` (3 cột cao thấp = xếp hạng), vì nút nay **không còn nghĩa là một trong hai**.
+
+### 7. Đã tự test (trang thử `scratch/test-mode.html`, backend giả, 0 lỗi console)
+Import map trỏ `/core/firebase.js` + `/core/classes.js` sang bản giả ⇒ chạy **trọn đường Firestore**
+(bảng đội, claim, onSnapshot) mà **không cần đăng nhập** — phiên tự động không đăng nhập Google được.
+- Anagram + Quiz: hàng nút còn **4** (trước 5) · Crossword (không opt-in): còn **3**, không có nút MODE.
+- Bảng chọn **348×162** (2 ô) và **508×162** (3 ô), ô 148×132, icon 76px, **không cuộn**;
+  `elementFromPoint` giữa bảng ra `aw-mp-grid` (**không** ra `aw-tool-dim` ⇒ hợp đồng xếp lớp của hệ
+  popup còn nguyên).
+- Đang Single → 2 ô · đang Fight → 2 ô (Single/Showdown) · **đang Showdown → 3 ô**, ô Showdown viền
+  xanh lá, chạm vào ra đúng **màn C** (Team 1 · 12 tên · Single mode/Reset team).
+- Chạm ô → hỏi lại → **Cancel quay về bảng chọn** (không đóng sập popover).
+- Showdown → Fight: 2 khung, pick xoá, claim nhả. Fight → Showdown: thoát trận, bảng đội tự mở.
+- Showdown → Single: về 1 khung, nút hết sáng, dòng tên biến mất, claim nhả, **bảng đội còn nguyên**.
+- Options > **Apply vẫn giữ nguyên Showdown** (tên em vẫn trên topbar sau khi Apply).
+- `MYACT:AW:FIGHT:on/off` bắn **đúng lúc** thoát/vào trận, không sớm không muộn.
+- `core/fight.js` và `core/showdown-setup.js` **vẫn chỉ `await import`** ⇒ trang HS không tải.
+
+⬜ **Chờ thầy**: nhìn bằng mắt trên màn 86" (icon to thế đã vừa chưa, 3 ô có chật không), và
+**nghe** — bảng chọn hiện dùng `sound.click()` sẵn có, chưa có tiếng riêng.
+
+---
+
 ## Ghi thêm (14/8/2026, ngay sau Đợt 155-157) — ⚠️ **BUILD PAGES FAIL LẦN 2**, và cách bắt được
 
 Commit **app** `57677cf` build **success**, lên live sau ~15 giây, đối chiếu 10/10 file trùng mã băm.

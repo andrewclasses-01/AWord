@@ -515,6 +515,31 @@ Thật sự chỉ có thế, vì engine lấy mọi thứ từ những gì templ
 ⚠️ **Showdown và Fight LOẠI TRỪ NHAU** — cả hai cùng định nghĩa "câu này của ai" và cùng giành dòng
 giữa topbar. Vào Fight thì `clearPick()`; `showdownPick` có `!fight` trong điều kiện.
 
+### ⭐⭐ DÒNG TÊN: VỊ TRÍ ĐỘC LẬP + ĐỔI ĐÚNG NHỊP CÂU HỎI (Đợt 159)
+
+**(a) Vị trí.** `.aw-top-centre.is-showdown` **ra khỏi dòng chảy** (`position:absolute`, chèn 22% hai
+bên trong `.aw-topbar` đã `position:relative`). Là con flex, nó bị căn giữa **phần còn lại** giữa đồng
+hồ và điểm, nên `0:09 → 0:10` là tên **dịch theo** (thầy báo 15/8/2026). Đo sau khi sửa: bơm đồng hồ
+thành `00:00:00`, tâm chữ **lệch 0px**.
+⚠️ **Chỉ Showdown**. Slogan của template vẫn in-flow: nó là chữ dài, nhạt, *nên* nhường chỗ; còn đây là
+một cái tên ngắn không được phép nhúc nhích. Đã đo template thường: `position: static`, y như cũ.
+⚠️ Dùng `left/right` chứ **không** `transform: translateX(-50%)` — giữ thói quen của hợp đồng xếp lớp
+popup (dù `.aw-topbar` nằm trong stage, không phải tổ tiên của `.aw-below-center`).
+
+**(b) `ui.itemChanging(index0, {outMs, inMs})` — HOOK MỚI CỦA HỢP ĐỒNG, tuỳ chọn.**
+Template gọi **TRƯỚC** khi bắt đầu ẩn item cũ, kèm **đúng hai con số animation của chính nó**:
+```js
+ui.itemChanging?.(i, { outMs: 130, inMs: 190 });   // quiz.js, ngay đầu showQuestion()
+```
+Vì sao cần: `ui.setNav` được gọi **ở GIỮA** hai nhịp (Quiz: ẩn 130ms → swap → hiện 190ms; setNav ở
+swap), nên tên chạy theo setNav luôn **trễ một nhịp**. Có hook thì tên rơi cùng khung hình với câu hỏi.
+- ⚠️ `index0` **đếm từ 0**, khác `setNav` đếm từ 1.
+- ⚠️ Engine giữ `sdNameIndex`: ai tới trước thì sở hữu index đó. Thiếu nó, `setNav` sẽ **dập chữ mới vào
+  giữa lúc đang rơi**.
+- Template **không gọi cũng chạy y như cũ** (đổi tên tức thì ở setNav) — thuần bổ sung.
+- Hiện có: `quiz.js` (130/190) · `anagram.js` (160/190). Đo mẫu: t=140ms tên cũ mờ 0.20 ở y=+31 trong
+  khi thẻ bài 0.01 → t=188 tên mới y=−29 → t=334 cả hai về 1.0.
+
 ⚠️ **DÒNG GIỮA TOPBAR NAY CÓ HAI NODE** (`.aw-top-centre` bọc `.aw-top-slogan` + `.aw-top-showdown`),
 CSS ẩn cái không dùng. **Ẩn chứ KHÔNG ghi đè**: `anagram.js` viết lại `ui.sloganSlot.textContent`
 **mỗi lần `render()`**, nên tên HS nhét chung node đó sẽ bị xoá lúc sang từ mới — âm thầm, và chỉ ở
@@ -542,7 +567,52 @@ pixel** vì padding đối xứng trên khung flex căn giữa.
 > 4. Kiểm chồng dòng phải **đối chứng cả trục X**: lần đo đầu báo "đâm dòng trên" là **dương tính
 >    giả** — "phần tử trước" hoá ra là ô SỐ nằm **cạnh**, không phải trên.
 
-### ⭐ BA MÀN CỦA BẢNG SHOWDOWN, VÀ LUẬT GIÀNH ĐỘI (Đợt 156)
+### ⭐⭐ BẢNG SHOWDOWN BẢN ĐỢT 159 — ĐỌC MỤC NÀY THAY CHO MỤC "BA MÀN" BÊN DƯỚI
+
+Mục "BA MÀN" ngay sau đây là bản Đợt 156; phần **cỡ bảng, số đội, màn C và luật ẩn đội** trong đó
+**đã bị thay**. Giữ lại vì mọi luật khác (hai tầng dữ liệu, claim, TTL, `prompt()`) vẫn đúng nguyên.
+
+| | Đợt 156-157 | **Đợt 159 (hiện hành)** |
+|---|---|---|
+| Số đội | 2–8 | **1–5** (`MIN_TEAMS`/`MAX_TEAMS`) |
+| Màn | A · B · **C đang chạy** | A · B (**C xoá hẳn**) |
+| Single mode / Reset | nút ở màn C | **2 icon ở hàng tiêu đề**, cả hai **hỏi xác nhận** |
+| Nút Back ở màn B | có | **bỏ** — đường về màn A là Reset |
+| Đội máy khác giành | **ẩn** | **hiện mờ + `pointer-events:none`** |
+| Panel | 660 × 410 | **860 × 560** |
+
+**⭐ MỘT ĐỘI = CẢ LỚP, VÀ KHÔNG CHẠM FIRESTORE.** `teamCount === 1` là một chế độ thật: màn A hiện
+**READY** thay cho Next, pick lấy **tên lớp** làm tên đội và mang id hằng **`SOLO_TEAM_ID`**
+(`sd_solo`, cố ý không phải `sdt_N`). Không `saveSetup`, không claim, không `onSnapshot`.
+⚠️ **Vẫn phải `releaseMyClaim()`** khi vào chế độ này — đó là dọn claim của chế độ TRƯỚC.
+⚠️ Và vì không có gì trên mây, mở lại bảng phải lấy **lớp + danh sách từ chính pick** (`ctx.currentTeam`),
+không thì bảng hiện "— choose a class —" đè lên một chế độ đang chạy.
+
+**⭐⭐ SỐ ĐO (bản 159b — thầy sửa tiếp ngay trong ngày sau khi nhìn bản dựng):**
+- **Bề rộng = đúng bằng `.aw-below`** (khung app), truyền vào qua **`--sd-panel-w`**.
+  ⚠️⚠️ **PHẢI là custom property, KHÔNG được `style.width`**: `swapContents` **xoá `style.width`** giữa
+  chừng để đo cỡ tự nhiên và xoá lại lúc tháo lớp ⇒ inline width biến mất ngay lần mở đè bảng khác.
+- ⚠️ **CỘT KHÔNG ĐƯỢC KHAI BỀ RỘNG** — `flex: 1 1 0`, chia nhau phần đang có. Bề rộng cứng (bản trước:
+  5 × 156 = 820) gặp panel bị `94vw` kẹp lại là **tràn ngang**, đúng cái ảnh thầy chụp.
+- **Hai bố cục** (`.is-side` ≤3 đội / `.is-top` ≥4 đội) và **thân bảng khác nhau** (`--sd-body-h`):
+  470px cho side (cột chứa 10) · 400px cho top (cột chứa 4–5).
+- **Sức chứa mỗi đội = `Math.ceil(sĩ số / số đội)`** (`capPerTeam()`), không tra bảng: lớp 20 ra đúng
+  10/7/5/4 như thầy tính, lớp khác cũng chia đều.
+- ⚠️ **Ô chờ ở bố cục dọc phải 2 CỘT chữ** (`grid 1fr 1fr`, rộng **360px**): xếp 1 cột thì 20 em
+  **cuộn 325px**; và ở 336px thì tên dài nhất **mất 2px vào dấu …** — luật là không bao giờ cắt tên.
+- ⚠️ **Ô tên trong CỘT nén hơn ô trong ô chờ** (`padding 5/10`, gap 3): ở cỡ của ô chờ, cột 10 ô
+  **tràn 32px** (đo được).
+- Đo lại cả 4 ca (2 · 3 · 5 đội · và 2 đội khi cả lớp còn chờ): **0 cuộn ngang, 0 cuộn dọc, 0 tên bị
+  cắt, cả panel cũng không cuộn**.
+
+**⭐ HÀNG DƯỚI LÀ TOÀN BỘ PHẦN KHUNG CÒN LẠI** (159b): `[Single][Reset][Random/Flyback]` — **SHOWDOWN**
+— `[Ready]`. Không còn hàng tiêu đề phía trên, không còn câu hướng dẫn.
+**Random ↔ Flyback dùng CHUNG một chỗ ngồi**: còn em ở ô chờ thì là Random (xáo Fisher-Yates rồi chia
+vòng tròn **từ đội ít người nhất**), hết em thì thành Flyback (có xác nhận).
+⚠️ Khi bay hàng loạt, **ô thật phải ẩn tới lúc bóng bay tới** — 20 ô cùng lúc mà không ẩn thì nhìn như
+bảng bị nhân đôi. Và ô bay nằm **ngoài** lớp có `--sd-chip-fs` ⇒ **chép cỡ chữ sang tay**.
+
+### ⭐ BA MÀN CỦA BẢNG SHOWDOWN, VÀ LUẬT GIÀNH ĐỘI (Đợt 156 — xem bảng đối chiếu ngay trên)
 
 Bảng nay có **ba màn**, và **một khung cỡ CỐ ĐỊNH** cho cả ba (panel 660px, `.aw-sd-body` min-height 410px —
 thầy chốt "size các bảng đều to bằng nhau dù nội dung ít hơn"). ⚠️ **BỀ RỘNG PHẢI Ở ĐÚNG MỘT NƠI — TRÊN PANEL.** Đợt 157 sửa hai lỗi cùng họ: `.aw-tool-panel.is-sd`
@@ -573,8 +643,50 @@ theo dõi `onSnapshot` suốt lúc mở, nên giành/nhả đội thấy ngay ha
 ⚠️ **CLAIM PHẢI HẾT HẠN** (`CLAIM_TTL_MS` = 12 giờ): id nằm ở `sessionStorage` nên **đóng hẳn trình
 duyệt là không ai nhả được nữa** — không có hạn thì đội đó chết vĩnh viễn.
 
-⚠️ **Ẩn nút MODE khi đã setup đội.** Hai chế độ loại trừ nhau, nút đó chỉ có thể ném đội hình của cả
-buổi đi. Đường về single là SINGLE MODE trong bảng — nó còn **nhả claim** hộ.
+⚠️ ~~**Ẩn nút MODE khi đã setup đội.**~~ **HẾT HIỆU LỰC TỪ ĐỢT 158** — không còn nút MODE riêng để mà
+ẩn. Xem mục "MỘT NÚT CHO BA CHẾ ĐỘ" ngay dưới.
+
+### ⭐⭐ MỘT NÚT CHO BA CHẾ ĐỘ — BẢNG CHỌN (Đợt 158, 14/8/2026)
+
+Thầy chốt: gộp **SINGLE · FIGHT · SHOWDOWN** vào **một nút** (`icons.modes`), "tránh việc quá nhiều
+nút bấm". Hàng dưới khung nay là **Options · Template · Style · MODE**.
+
+```
+MODE ──► BẢNG CHỌN (ô icon, KHÔNG CHỮ — 2 ô = 348×162, 3 ô = 508×162)
+          ├─ ô Single   ──► hỏi lại ──► về 1 khung
+          ├─ ô Fight    ──► hỏi lại ──► startFight()
+          └─ ô Showdown ──► bảng đội 3 màn   (trong trận: hỏi lại → thoát trận → bảng tự mở)
+```
+
+**Luật hiển thị ô** (thầy chốt): đang ở chế độ nào thì **không hiện ô đó**… **TRỪ Showdown**: khi
+Showdown đang chạy, ô Showdown **vẫn hiện, viền xanh lá** (`.is-cur`) và chạm vào là **đường DUY NHẤT**
+vào lại màn C (Reset team). ⛔ Bỏ ngoại lệ này là **Reset team thành không có cửa nào tới**.
+
+⚠️ **`openToolPanel()` KHÔNG đổi được ruột bảng đang mở**: gọi nó với đúng nút đang mở là nó **ĐÓNG**
+(cử chỉ "bấm lại nút đang mở"). Dùng **`switchToolPanel(buildContent)`** — cùng nút, swap ruột. Và
+`mountPanelContent`/`capPanelHeight` **nhận diện bảng BẰNG DANH TÍNH HÀM**, nên builder phải là **hàm
+đặt tên**, không được là closure sinh mới mỗi lần gọi (`panel => build(panel, "fight")`) — nó sẽ
+**không bao giờ khớp** và bảng mất bề rộng của mình trong im lặng.
+
+⚠️ **Trong trận, ô Showdown KHÔNG được mở thẳng bảng đội.** Xếp đủ 20 em, bấm READY, `replayCurrent()`
+dựng lại bàn **vẫn trong trận**, mà trong trận `showdownPick` bị bỏ qua (`!fight`) ⇒ **công xếp đội
+bay sạch, không một lời báo**. Phải thoát trận TRƯỚC; bắc cầu qua cú dựng lại bằng cờ **cấp module**
+`openShowdownOnMount` (đọc-xong-xoá-ngay, chỉ bắn đúng một lần cho lần mount kế tiếp).
+
+⛔⛔ **MỌI ĐƯỜNG KẾT THÚC SHOWDOWN PHẢI GỌI `releaseMyClaim()`** (hàm xuất của `showdown-setup.js` từ
+Đợt 158). Trước đó hàm nhả đội nằm kín trong bảng, nên 2 đường không đi qua bảng (vào Fight từ
+Showdown; "Single mode" ở bảng chọn) chỉ xoá pick ở máy này mà **để nguyên claim** ⇒ đội đó **biến mất
+khỏi mọi màn hình khác tới 12 giờ**. Máy gây lỗi nhìn hoàn toàn bình thường — hỏng ở chỗ khác, nên
+đừng trông chờ tự thấy.
+
+⚠️ **BẢNG NÀY KHÔNG ĐƯỢC KHAI BỀ RỘNG.** Bản đầu cho nó dùng chung `.is-sd` (660px, "to bằng bảng
+đội") và thầy bác ngay: *"pop-up nhỏ vừa đủ nhìn thôi"*. Bảng đội to vì phải chứa **20 ô tên**; bảng
+này chỉ có 2-3 icon. Nay ô cố định **148×132**, icon **76px**, panel tự ôm lấy ô bằng `width:
+max-content` sẵn có của `.aw-tool-panel`.
+
+⚠️ **Icon phóng to phải khai lại `stroke-width`** (và hai số đi kèm nhau): icon vẽ cho nút 22px mang
+`2.1`; phóng lên là thành slab (ở bản 193px đầu tiên: **17px**). Nay `.aw-mp-icon svg` = 76px +
+`stroke-width: 1.5`. Đổi cỡ ô thì **phải chỉnh lại độ dày nét**.
 
 ### ⭐ TEST ĐƯỜNG FIRESTORE **KHÔNG CẦN ĐĂNG NHẬP** — dựng lại bộ giả (Đợt 156)
 
@@ -618,6 +730,20 @@ lời trong vài mili-giây nên **phép thử sẽ BÁO ĐẠT OAN**. Bắt đ�
 > trong engine**, không gọi ngược về builder — nên thứ gì cần dọn (listener, interval) phải **tự phát
 > hiện mình đã rời DOM** (`MutationObserver` trên `.aw-below-center`). Đã đo: một lần đóng để lại
 > **1 listener Firestore sống**, mỗi lần mở-đóng thêm một cái.
+
+⭐ **ĐỢT 158 — CẮN LẠI Ở CHỖ THỨ HAI, TRONG CHÍNH `core/engine.js`.** `buildShowdownPanelHost` vẫn
+kiểm `panel.isConnected` (Đợt 156 chỉ chữa bên trong `showdown-setup.js`). Nó **sống sót được tới giờ
+chỉ vì may**: hồi đó nút SHOWDOWN thường được bấm khi **chưa có bảng nào mở** (đường nguội, `panel`
+đúng là bảng thật). Đợt 158 biến swap thành đường **BÌNH THƯỜNG** (bảng chọn luôn swap sang bảng đội)
+⇒ chỉ cần mạng chậm là kẹt 'Loading…'. Chữa: kiểm `loading.isConnected`, và **dựng vào
+`loading.parentNode`** — sau khi swap tháo lớp, cha đó mới là hộp thật, chứ `panel` thì không.
+Kèm theo `if (toolPanelEl === panel)` cũng sai cùng kiểu (bỏ qua việc tính lại chiều cao trên đúng
+đường mới) → đổi thành `toolPanelEl.contains(host)`.
+
+> 👉 **Đo lại được trong 10 giây, dùng cho mọi builder có `await`:** bấm Options (mở nguội) rồi bấm
+> Template (swap), giữ tham chiếu tới `.aw-swap-in` và một con của nó. Đã đo Đợt 158:
+> `t=60ms` lớp còn + con còn · `t=360ms` **lớp `isConnected:false`** trong khi **con vẫn true** và cha
+> của con đã là `.aw-tool-panel`. Đó là toàn bộ nội dung của luật này, hiện ra bằng số.
 
 ### Gom code dùng chung (đừng đẻ bản thứ hai)
 - **`buildContentSwitchRow()`** (`core/options-panel.js`) — hàng `TEXT|VOICE` + bộ con. ⚠️ **Đợt 156
