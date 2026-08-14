@@ -83,8 +83,14 @@ submit) trong khi đồng hồ riêng của act cũng đang chạy — chưa có
 DOM tĩnh. Chi tiết đầy đủ hơn (kèm code trước/sau) ghi ở `templates/open-the-box/GHI CHU OPEN-THE-BOX.md`.
 
 ### 6. Commit + push + live
-✅ **COMMIT `<PENDING>` + PUSH + LIVE** — hash thật, kết quả Pages build và curl xác nhận dấu mốc điền ngay
-sau khi đẩy (xem đúng đoạn này, sẽ được viết đè lại bằng giá trị thật trong cùng phiên).
+✅ **COMMIT `1999ace` + PUSH + LIVE.** Push kiểm bằng trạng thái ref (`git ls-remote origin refs/heads/main`
+= `git rev-parse HEAD` = `1999ace8b843dc9448e64c4c78bd5f8f5adfd0dc`), không grep chữ trong output — bài
+học Đợt 142. Pages build `31770946259` → **success**. `curl` thẳng vào `https://aword.andrewclasses.com/`
+xác nhận **cả 4 file đã đổi đều lên đúng bản mới**: `core/options-panel.js` (`hideTimerCountUp` ở cả phần
+comment đầu file lẫn filter + default), `core/engine.js` (`timerBesideMenu` ở cả 3 chỗ: dựng `topbar`,
+nhánh `topbarMid`, và `leftGroup.append`), `core/app.css` (`.aw-timer-external`), và
+`templates/open-the-box/open-the-box.js` (2 cờ `hideTimerCountUp: true` · `timerBesideMenu: true` trên
+`otbTemplate`) — không dính cache CDN cũ.
 
 ---
 
