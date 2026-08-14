@@ -10,8 +10,13 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **15/8/2026 (Đợt 159) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI · MỘT ĐỘI = CẢ LỚP (KHÔNG
 > LÊN MÂY) · BẢNG CÒN 2 MÀN · DÒNG TÊN TỰ ĐỨNG.**
-> ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT** (cùng với Đợt 158). ⭐ CÓ SỬA CORE (`showdown.js` ·
-> `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game** (`quiz.js` · `anagram.js`).
+> ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `23327b3` (gộp Đợt 158 + 159) + PUSH + LIVE**, đã đối chiếu
+> **10/10 file trùng mã băm** trên `aword.andrewclasses.com` (~15 giây sau push) và **chạy lại phép thử
+> TRÊN CHÍNH BẢN LIVE**: `MIN/MAX_TEAMS` = 1/5, `SOLO_TEAM_ID` có, `releaseMyClaim` xuất được,
+> `visibleTeams`→`takeableTeams`, 5 icon mới có đủ, CSS mang `--sd-panel-w` + 2 bố cục + dòng tên tuyệt
+> đối, **0 lỗi console**.
+> ⭐ CÓ SỬA CORE (`showdown.js` · `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game**
+> (`quiz.js` · `anagram.js`).
 > **Bảng đội**: số đội **2–8 → 1–5**; **màn C bị xoá**, Single mode + Reset thành **2 icon ở hàng tiêu
 > đề** (cả hai hỏi xác nhận), **bỏ hẳn nút Back**; ô tên **bo góc chữ nhật**; chạm **bất kỳ đâu trong
 > cột** cũng chọn được cột; **tab thứ hai vào thẳng màn cột** và đội máy khác đã lấy thì **hiện mờ, bấm
@@ -2340,8 +2345,8 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **159** | ⭐⭐ **SHOWDOWN LÀM LẠI**: 1–5 đội · **1 đội = cả lớp, không lên mây** · bỏ màn C, Single/Reset thành icon · đội bị lấy **hiện mờ** thay vì ẩn · panel 860×560 đo cho 5 cột × 10 em · **dòng tên tự đứng + hook `ui.itemChanging`** | ⬜ chưa commit |
-| **158** | ⭐⭐ **BA CHẾ ĐỘ VỀ MỘT NÚT** (bảng chọn ô icon to, không chữ) + 2 lỗi thật: **claim đội không được nhả** (đội chết 12h ở máy khác) · **xếp đội trong trận là công cốc**; kèm bẫy `panel.isConnected` **cắn lại** trong `engine.js` | ⬜ chưa commit |
+| **159** | ⭐⭐ **SHOWDOWN LÀM LẠI**: 1–5 đội · **1 đội = cả lớp, không lên mây** · bỏ màn C, Single/Reset/Random xuống hàng dưới · đội bị lấy **hiện mờ** thay vì ẩn · **2 bố cục** + bảng rộng bằng khung app · **dòng tên tự đứng + hook `ui.itemChanging`** | `23327b3` |
+| **158** | ⭐⭐ **BA CHẾ ĐỘ VỀ MỘT NÚT** (bảng chọn ô icon, không chữ) + 2 lỗi thật: **claim đội không được nhả** (đội chết 12h ở máy khác) · **xếp đội trong trận là công cốc**; kèm bẫy `panel.isConnected` **cắn lại** trong `engine.js` | `23327b3` |
 | **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | `58e996a` |
 | **153** | ⭐ Hết "frame thừa ở cuối" khi sang **Style/Fight**: hai lớp swap **ghim bề rộng** (cũ = ảnh chụp, mới = bố cục đích) + lớp mới **phủ kín hộp**; kèm **15px scrollbar** trong phép đo và **7px font weight 400 chưa nạp** | `58e996a` |
 | **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | `0c1bfda` |
@@ -2371,10 +2376,12 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐ **NGAY TRƯỚC MẮT (Đợt 158 + 159, đều CHƯA COMMIT)** — cây làm việc có 6 file code đang sửa
-> (`engine.js` · `icons.js` · `app.css` · `showdown.js` · `showdown-setup.js` · `quiz.js` ·
-> `anagram.js`). Đoạn "trạng thái sạch" ngay dưới nói về mốc Đợt 154, **không còn đúng**.
-> Thầy cần **nhìn trên màn 86"**:
+> ⭐⭐ **TRẠNG THÁI SẠCH (15/8/2026)**: Đợt 158 + 159 **đã commit `23327b3` + push + LIVE + đối chiếu mã
+> băm**, kho **không còn gì chưa commit**. Đoạn "trạng thái sạch" ở khối dưới nói về mốc Đợt 154 và đã
+> bị khối này thay thế.
+> **Việc kế tiếp theo kế hoạch A–D của thầy vẫn là ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi
+> **ĐỢT D** (xoá sạch dữ liệu cũ) — thiết kế thầy chốt sẵn ở mục 3.
+> Riêng Showdown thì chỉ còn **mắt/tay thầy trên màn 86"**:
 > - (158) bảng chọn 3 chế độ: cỡ icon, và khi Showdown chạy thì **3 ô** có chật không;
 > - (159b) bảng đội **rộng bằng khung app**: hai bố cục (ô chờ bên phải khi 2-3 đội · lên trên khi 4-5
 >   đội) có thuận mắt không · **nút Random / Flyback** bay có mượt không · cỡ chữ đọc được từ xa chưa;

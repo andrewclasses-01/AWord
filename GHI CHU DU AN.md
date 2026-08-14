@@ -12,7 +12,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`showdown.js` · `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game**
 (`quiz.js` · `anagram.js` — thêm 1 hook mới của hợp đồng engine↔template).
 🟢 ĐÃ TỰ TEST đầy đủ (0 lỗi console), chạy lại cả ở **900ms mạng chậm**.
-⬜ **CHỜ THẦY DUYỆT, CHƯA COMMIT** (gộp cùng Đợt 158 chưa commit).
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `23327b3` (gộp Đợt 158 + 159) + PUSH + LIVE.**
+📌 Đã đối chiếu **10/10 file trùng mã băm** trên `aword.andrewclasses.com` (~15 giây sau push, Pages
+build thành công ngay lần đầu — không dính sự cố như 2 lần trước), và **chạy lại phép thử TRÊN CHÍNH
+BẢN LIVE**: `MIN/MAX_TEAMS` = 1/5 · `SOLO_TEAM_ID` có · `releaseMyClaim` xuất được ·
+`visibleTeams`→`takeableTeams` · 5 icon mới đủ · CSS mang `--sd-panel-w`, 2 bố cục, dòng tên tuyệt đối ·
+**0 lỗi console**.
 
 ### 1. Thầy giao (15/8/2026)
 > "Đổi style các nút tên thành dạng hình chữ nhật có góc bo tròn · tối thiểu 1 team, tối đa 5 team ·
@@ -155,7 +160,9 @@ Trang thử `scratch/test-mode.html` (backend giả, có núm `__fakeDelay`), ch
 
 ## Đợt 158 (14/8/2026) — ⭐⭐ BA CHẾ ĐỘ GỘP VỀ **MỘT NÚT**: SINGLE · FIGHT · SHOWDOWN
 ⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `showdown-setup.js` thêm 1 hàm xuất).
-🟢 ĐÃ TỰ TEST đầy đủ bằng trang thử có backend giả — ⬜ **CHỜ THẦY DUYỆT, CHƯA COMMIT.**
+🟢 ĐÃ TỰ TEST đầy đủ bằng trang thử có backend giả.
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `23327b3` (gộp với Đợt 159) + PUSH + LIVE**, đã đối
+chiếu 10/10 file trùng mã băm và chạy lại phép thử trên chính bản live.
 
 ### 1. Thầy giao
 > "Tôi muốn tích hợp cả single mode / fight mode / showdown mode vào chung **1 nút bấm** thôi. Khi bấm
