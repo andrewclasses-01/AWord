@@ -250,7 +250,13 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // separate row below it. Templates that don't set the flag get the exact
   // same 2-child flex row as before — nothing else about `.aw-topbar` changes
   // for them.
-  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : ""));
+  // `tpl.timerBesideMenu` (opt-in, currently only Open the box, Đợt 92) — the
+  // engine's own whole-game timer (`timerEl`) does NOT sit in this row at all;
+  // it moves down to the bottom bar, next to Menu — see the leftGroup setup
+  // below and the long comment on `.has-inline` in core/app.css for why (this
+  // row already carries the template's OWN per-box clock via `topbarMid`, and
+  // the two used to visually collide once Timer was set to anything but None).
+  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : "") + (tpl.timerBesideMenu ? " aw-timer-external" : ""));
   const timerEl = el("span", "aw-top-timer", "0:00");
   const scoreEl = el("span", "aw-top-score", `${icons.check} 0`);
   const topbarMid = tpl.inlineTimerBar ? el("div", "aw-topbar-mid") : null;
@@ -271,7 +277,8 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // and score already do.
   const sloganSlot = tpl.hasSloganSlot ? el("span", "aw-top-slogan") : null;
   if (topbarMid) {
-    topbar.append(timerEl, topbarMid, scoreEl);
+    if (tpl.timerBesideMenu) topbar.append(topbarMid, scoreEl);
+    else topbar.append(timerEl, topbarMid, scoreEl);
   } else if (livesSlot && sloganSlot) {
     const topRight = el("div", "aw-top-right");
     topRight.append(livesSlot, scoreEl);
@@ -308,6 +315,13 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // the middle nav truly centered) even when the optional slot below is added.
   const leftGroup = el("div", "aw-bottombar-left");
   leftGroup.append(menuBtn);
+  // `tpl.timerBesideMenu` (Đợt 92) — `timerEl` was never appended to the
+  // topbar above for this template (see the `if (tpl.timerBesideMenu)` branch
+  // there), so it's still a detached node here; this is the only place it
+  // gets mounted. Its own visibility (Timer option = None vs Count down) is
+  // still driven exactly as before, from the SAME `timerEl.style.visibility =`
+  // lines elsewhere in this file — only WHERE it lives in the DOM changed.
+  if (tpl.timerBesideMenu) leftGroup.append(timerEl);
   // Optional opt-in slot right next to Menu — a template can put its own icon
   // button here (currently only Type the answer's on-screen-keyboard toggle).
   // `null` unless the template asks for it, so every other template's bottom
@@ -682,7 +696,10 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // Count down auto-submits the game when it reaches 0.
   let timerId = null, startedAt = 0, cleanup = () => {};
   let timeWarned = false;   // fires the "5 seconds left" hook (below) once per play
-  function timerMode() { return activity.options?.timer ?? "countUp"; }
+  // `tpl.hideTimerCountUp` (Đợt 92) — a game that already shows its own
+  // elapsed/remaining time (Open the box's per-box clock/bar) never falls
+  // back to "Count up" on a fresh act; see the same flag in options-panel.js.
+  function timerMode() { return activity.options?.timer ?? (tpl.hideTimerCountUp ? "none" : "countUp"); }
   function timerTotal() { return activity.options?.timerTotalSeconds ?? 120; }
   timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
 

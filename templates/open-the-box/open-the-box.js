@@ -272,6 +272,22 @@ const otbTemplate = {
   // see core/engine.js / core/app.css ".has-inline" (30/7/2026, teacher's
   // call, scoped so no other template's topbar layout changes).
   inlineTimerBar: true,
+  // Đợt 92 (14/8/2026, teacher-reported bug): this template already has ITS
+  // OWN clock — the shared per-box countdown above, drawn into `topbarMid`.
+  // The engine ALSO offers its own separate whole-game Timer option (Count
+  // up/Count down), and once switched on it used to render right on top of
+  // this template's own clock in the same row (a 0-width grid track doesn't
+  // clip its content). Two flags fix this — see core/options-panel.js +
+  // core/engine.js for what each does:
+  //   hideTimerCountUp — drop "Count up" (this game already shows elapsed
+  //     time via its own bar; a second always-on clock would be redundant,
+  //     not useful) and default a fresh act to "None" instead of "Count up".
+  //   timerBesideMenu  — the only remaining non-off state ("Count down", a
+  //     hard whole-game time LIMIT — a genuinely different idea from the
+  //     per-box countdown) moves out of this row entirely and sits next to
+  //     the ☰ Menu button in the bottom bar instead, where nothing else is.
+  hideTimerCountUp: true,
+  timerBesideMenu: true,
 
   // Only the Intro chime plays on Play (30/7/2026, đợt 9 — the teacher
   // heard 2 sounds at once and asked for just the one; the earlier

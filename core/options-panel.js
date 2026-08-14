@@ -32,6 +32,11 @@
 // TEMPLATE FLAGS THIS FILE READS
 //   hideTimerOption   — game runs its own clock (Gameshow's per-question one)
 //   hideTimerNone     — game must always be on a clock (Whack-a-mole)
+//   hideTimerCountUp  — game already shows elapsed time itself, so the shared
+//                        whole-game clock only ever makes sense as a hard
+//                        Count down limit, never a redundant Count up
+//                        (Đợt 92, 14/8/2026 — Open the box: its own per-box
+//                        clock/bar already fills that role, see open-the-box.js)
 //   hidePointsOff     — game ships its own Points off control (Anagram, ...)
 //   hideShowAnswers   — open-ended game, no answers to show (Speaking cards)
 //   shuffleLabel      — game deals CARDS, not questions (Speaking cards)
@@ -283,7 +288,12 @@ export function buildOptionsBody(host, { tpl, draft, contentSwitch = null, fight
     // (Whack-a-mole) drops the "None" choice and snaps a legacy act that was
     // saved with timer:"none" onto Count down.
     if (tpl.hideTimerNone && (!draft.timer || draft.timer === "none")) draft.timer = "countDown";
-    const cur = draft.timer ?? "countUp";
+    // `tpl.hideTimerCountUp` (Đợt 92) — mirror image: a game that already
+    // shows its own elapsed/remaining time drops "Count up" (it would just be
+    // a second, redundant, always-running clock) and snaps a legacy act that
+    // was saved with timer:"countUp" onto "None" instead.
+    if (tpl.hideTimerCountUp && draft.timer === "countUp") draft.timer = "none";
+    const cur = draft.timer ?? (tpl.hideTimerCountUp ? "none" : "countUp");
     const total = Math.max(5, Math.min(3599, draft.timerTotalSeconds ?? 120));
     // Đợt 143 (teacher: "nấc thời gian countdown chỉnh thành 1 giây"). Step 5
     // became step 1 — but a 1-second step over a 5..3599 range would make the
@@ -304,7 +314,8 @@ export function buildOptionsBody(host, { tpl, draft, contentSwitch = null, fight
       { value: "none", label: "None" },
       { value: "countUp", label: "Count up" },
       { value: "countDown", label: "Count down" }
-    ].filter(x => !(tpl.hideTimerNone && x.value === "none"));
+    ].filter(x => !(tpl.hideTimerNone && x.value === "none"))
+     .filter(x => !(tpl.hideTimerCountUp && x.value === "countUp"));
     c.ctl.append(
       mkSeg(timerChoices, cur,
         v => { draft.timer = v; stepper.el.classList.toggle("is-dim", v !== "countDown"); }),

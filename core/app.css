@@ -324,23 +324,40 @@ body {
    Column 1 is a FIXED `0` (not `auto`) — the teacher's request (31/7/2026,
    đợt 11) is that the CLOCK's outer-left edge sit exactly as far from the
    FRAME's left edge as the SCORE's outer-right edge sits from the frame's
-   right edge (both then equal `.aw-stage-inner`'s own 2.2cqw padding).
-   Column 1's own content (the engine's own timer, ALWAYS hidden for Open the
-   box since it never sets a whole-game timer) is invisible either way, so
-   collapsing its track to 0 has no visible effect on it — it just overflows
-   its own (zero-width, invisible) box, which grid tracks allow without
-   affecting sibling columns. This SUPERSEDES đợt 10's earlier `1.6cqw`
-   column, which instead aligned the clock's left edge with the question
-   tile's own left edge — the teacher's new frame-edge symmetry request wins
-   over that older goal. `column-gap:0` so nothing pads that left edge back
-   out — the small gap before the score on the right is `.aw-topbar-mid`'s
-   own `padding-right` instead (see open-the-box.css), which doesn't touch
-   the left edge at all. */
+   right edge (both then equal `.aw-stage-inner`'s own 2.2cqw padding). This
+   SUPERSEDES đợt 10's earlier `1.6cqw` column, which instead aligned the
+   clock's left edge with the question tile's own left edge — the teacher's
+   frame-edge symmetry request wins over that older goal. `column-gap:0` so
+   nothing pads that left edge back out — the small gap before the score on
+   the right is `.aw-otb-q-topbar`'s own `padding-right` instead (see
+   open-the-box.css), which doesn't touch the left edge at all.
+
+   ⚠️ Đợt 92 (14/8/2026, teacher-reported bug): the OLD comment here claimed
+   column 1's own content (the engine's own whole-game timer, `timerEl`) was
+   "ALWAYS hidden for Open the box" — that was already stale. Nothing ever
+   forced Open the box's Timer option to "None": a fresh act defaulted to
+   "Count up" like every other template, and once visible, `timerEl` sitting
+   in a 0-WIDTH grid track doesn't get clipped, it just overflows sideways —
+   landing directly on top of this template's own per-box clock/bar in column
+   2 ("đồng hồ đếm ngược của act bị đồng hồ chính đè vào"). Real fix is two
+   parts: (1) `tpl.hideTimerCountUp` (options-panel.js + core/engine.js's
+   `timerMode()`) drops "Count up" from the choices and defaults a fresh act
+   to "None"; (2) `tpl.timerBesideMenu` moves `timerEl` OUT of this row
+   entirely when it's ever switched to "Count down" — see `.aw-timer-external`
+   right below and `.aw-bottombar-left .aw-top-timer` further down. Column 1
+   stays as the general-purpose default for any FUTURE `inlineTimerBar`
+   template that doesn't also opt into `timerBesideMenu`. */
 .aw-topbar.has-inline {
   display: grid;
   grid-template-columns: 0 1fr auto;
   column-gap: 0;
   align-items: center;
+}
+/* `tpl.timerBesideMenu` templates never append `timerEl` into this row at all
+   (see core/engine.js) — DOM order here is just topbarMid | score, 2 tracks
+   not 3, so column 1 above is dropped rather than left as a phantom track. */
+.aw-topbar.has-inline.aw-timer-external {
+  grid-template-columns: 1fr auto;
 }
 .aw-topbar-mid { width: 100%; }
 
@@ -433,6 +450,22 @@ body {
    template adds its own icon button next to Menu, e.g. Type the answer's
    keyboard toggle — see `.aw-bottombar-extra` in that template's own CSS). */
 .aw-bottombar-left { display: flex; align-items: center; gap: 0.4cqw; }
+/* Opt-in (tpl.timerBesideMenu, currently only Open the box, Đợt 92): the
+   engine's own whole-game timer lands here, right after Menu, instead of the
+   top bar (see the long `.has-inline` comment above + core/engine.js) —
+   teacher's request. Height pinned to `.aw-iconbtn`'s own 4cqw so the clock
+   is exactly as tall as the Menu button beside it; no new gap value was
+   needed either — `.aw-bottombar-left`'s `gap:0.4cqw` right above is already
+   the SAME value `.aw-tools` uses below for its own sound/fullscreen pair, so
+   the spacing next to Menu matches that on the opposite corner for free.
+   Visibility is untouched — still the SAME `timerEl.style.visibility =
+   timerMode() === "none" ? "hidden" : "visible"` lines in core/engine.js;
+   only WHERE the element lives in the DOM changed. */
+.aw-bottombar-left .aw-top-timer {
+  height: 4cqw;
+  display: inline-flex;
+  align-items: center;
+}
 
 /* ---------- Menu pause overlay (Đợt 91) ----------
    Dims + softly blurs the STAGE ONLY (topbar/playarea/bottombar) while the ☰

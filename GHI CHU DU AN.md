@@ -5,6 +5,89 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 144 (14/8/2026) — OPEN THE BOX: TÁCH 2 ĐỒNG HỒ RA KHỎI NHAU — BỎ "COUNT UP", DỜI "COUNT DOWN" XUỐNG CẠNH NÚT MENU
+⭐ CÓ SỬA CORE (`core/options-panel.js`, `core/engine.js`, `core/app.css`) + `templates/open-the-box/open-the-box.js` (2 cờ opt-in mới trên `otbTemplate`).
+✅ **THẦY DUYỆT** (yêu cầu commit + push + live trực tiếp qua chat, 14/8/2026 — KHÔNG qua bước tự chơi thử
+trên màn cảm ứng TOMKO trước, giống cách đợt 30/7/2026 từng làm) **→ COMMIT + PUSH + LIVE** — xem mục 6
+dưới cho hash + xác nhận Pages build/curl cụ thể. Tự test trước đó qua devserver `aword` :5510 + trình
+duyệt thật trong pane, đo DOM/CSS trực tiếp.
+
+### 1. Thầy báo lỗi
+> "Act có 2 đồng hồ: 1 là đồng hồ đếm ngược của mỗi ô và reset khi chọn đúng, 2 là đồng hồ tổng thể của cả
+> game. Hiện đồng hồ đếm ngược của act bị đồng hồ chính đè vào khi không chọn None (chọn count up - count
+> down)."
+
+### 2. Điều tra — lỗi CÓ THẬT, và đã âm thầm tồn tại từ trước (không phải hồi quy của phiên này)
+Open the box có 2 đồng hồ hoàn toàn độc lập với nhau:
+1. **Đồng hồ RIÊNG của act** (`sharedClockEl`/`sharedFillEl` trong `open-the-box.js`) — đếm giây MỖI Ô,
+   reset khi trả lời đúng, vẽ trong `ui.topbarMid` (opt-in `inlineTimerBar`, đã có từ 30/7/2026).
+2. **Đồng hồ TOÀN GAME của engine** (`timerEl`, `core/engine.js`) — lựa chọn None/Count up/Count down
+   trong Options, dùng CHUNG cho cả 17 game (một mốc giới hạn thời gian cho CẢ ván, khác hẳn ý nghĩa với
+   đồng hồ đếm-lùi-từng-ô ở trên).
+
+`otbTemplate` trước nay KHÔNG khai `hideTimerOption`, nên nhóm Timer của engine vẫn hiện trong Options —
+và mặc định `timerMode()` khi chưa từng đụng vào Options là `"countUp"`. Nghĩa là **MỌI act Open the box
+MỚI TẠO đã bật sẵn đồng hồ toàn game từ đầu**, không cần thầy tự tay chọn gì. `core/app.css` (khối
+`.has-inline`, dựng cho `inlineTimerBar`) đặt `timerEl` vào CỘT 1 của một hàng lưới, rộng CỐ ĐỊNH `0px` —
+hợp lý khi nó đang ẩn (`visibility:hidden`, không có gì để tràn), nhưng khi nó HIỆN (Count up/Count down)
+thì nội dung của một cột rộng 0 không hề bị cắt — nó **tràn ngang, đè thẳng lên cột 2**, đúng vị trí đồng
+hồ riêng của act. Comment cũ ngay tại đó ghi *"the engine's own timer, ALWAYS hidden for Open the box
+since it never sets a whole-game timer"* — **câu đó đã sai** từ lâu, không có gì thật sự ép nó luôn ẩn cả.
+
+### 3. Sửa — 2 cờ opt-in mới trên `otbTemplate`, không đụng game nào khác (đúng LUẬT Đợt 140: template khai
+### cờ, panel/engine tự dựng — xem `core/options-panel.js` mục đầu file)
+
+**`hideTimerCountUp`** (`core/options-panel.js` filter danh sách lựa chọn Timer + `timerMode()` trong
+`core/engine.js`): bỏ hẳn lựa chọn **"Count up"** khỏi Options cho template này — act đã tự hiện thời gian
+trôi qua bằng đồng hồ riêng của nó rồi, thêm một đồng hồ đếm-lên toàn game nữa chỉ là **dư, không phải hữu
+ích**. Đồng thời đổi mặc định của một act MỚI từ `"countUp"` sang `"none"`. Đối xứng đúng với
+`hideTimerNone` (Whack-a-mole) đã có sẵn từ Đợt 140 — act CŨ lỡ lưu `timer:"countUp"` sẽ tự quy về
+`"none"` ngay lần đầu mở lại bảng Options (giống hệt cơ chế snap-default của `hideTimerNone`, chỉ đảo
+chiều: đây là bỏ "countUp" thay vì bỏ "none").
+
+**`timerBesideMenu`** (`core/engine.js` + `core/app.css`): trạng thái CÒN LẠI duy nhất khác None —
+"Count down" — không còn nằm chung hàng với `topbarMid` (đồng hồ riêng của act) nữa. `timerEl` không được
+gắn vào `.aw-topbar` cho template này nữa (cột 1 bị bỏ hẳn: lớp mới `.aw-timer-external` đổi
+`grid-template-columns` từ `0 1fr auto` (3 cột) về `1fr auto` (2 cột) đúng khớp DOM chỉ còn `topbarMid` +
+`score`), mà được gắn thẳng vào `.aw-bottombar-left`, ngay SAU nút ☰ Menu. Không cần bịa khoảng cách mới:
+`.aw-bottombar-left` vốn đã dùng CÙNG giá trị `gap:0.4cqw` với `.aw-tools` (cụm loa/phóng-to bên phải) —
+đo lại đúng **3.864px cả hai bên**. Chiều cao ghim `4cqw` — đúng bằng `.aw-iconbtn` (chính là nút Menu) —
+đo lại đúng **38.625px cả hai**, cùng một hàng `y`.
+⚠️ **Không đụng gì tới các dòng `timerEl.style.visibility = timerMode()==="none"?"hidden":"visible"` rải
+rác nhiều chỗ trong `engine.js`** (đây là một hàm `timerMode()` DÙNG CHUNG, không phải logic lặp lại nhiều
+nơi — sửa một chỗ là đủ) — logic ẩn/hiện giữ NGUYÊN 100%, chỉ đổi NƠI phần tử đó nằm trong DOM. Nhờ đó,
+sau khi bỏ "Count up", trạng thái CÒN LẠI khác None chỉ có "Count down" — nên "đồng hồ chỉ xuất hiện khi
+chọn Count down" (đúng ý thầy) tự động đúng, không cần thêm điều kiện nào khác.
+
+### 4. Tự test (devserver `aword` :5510, `templates/open-the-box/test.html`, trình duyệt thật trong pane —
+### đo DOM/CSS trực tiếp bằng `javascript_tool`, không phải cảm giác)
+- **Act mới, chưa đụng Options**: `timerEl` cha là `.aw-bottombar-left` (không còn ở `.aw-topbar`),
+  `visibility:hidden`; `.aw-topbar` chỉ còn ĐÚNG 2 con (`topbarMid`, `score`), mang lớp
+  `has-inline aw-timer-external`, `grid-template-columns` đo lại `1fr auto` (883.578px + 39.9219px, KHÔNG
+  còn cột 0 tràn đè lên `topbarMid`).
+- **Mở Options**: đúng 2 lựa chọn hiện ra là **None / Count down** — không còn Count up trong danh sách.
+- **Chọn Count down → Apply → Play**: `timerEl.visibility:"visible"`; chiều cao đo được **38.625px = đúng
+  bằng** chiều cao nút Menu (`38.625px`); khoảng cách tới nút Menu đo được **3.859px ≈ 3.864px = đúng
+  bằng** `gap` của `.aw-tools` (`3.864px`) — cùng một giá trị CSS `0.4cqw`, không phải trùng hợp; đồng hồ
+  riêng của act (`.aw-otb-q-clock`, hiện `"0:15"`) vẫn nằm nguyên ở thanh trên, hoạt động bình thường,
+  KHÔNG chồng lấn với đồng hồ toàn game nữa (2 đồng hồ đo được ở 2 toạ độ `y` khác hẳn nhau: 32px so với
+  596px) — đúng ý thầy "tách 2 đồng hồ ra khỏi nhau".
+- Mở ☰ Menu (pause) trong lúc đồng hồ toàn game đang chạy đếm ngược: không lỗi.
+- **0 lỗi console** ở mọi bước trên (act mới, mở Options, Apply, Play, mở Menu).
+
+### 5. Việc còn treo
+Chưa test tay trên màn cảm ứng thật (TOMKO) — pane preview không compositing nên không chụp ảnh/xem hoạt
+ảnh trôi thời gian bằng mắt được (đúng bẫy đã ghi nhiều lần trước đây), phép đo ở trên chỉ xác nhận đúng
+qua DOM/CSS. Thầy tự chơi thử trên TOMKO khi tiện, đặc biệt để mắt vào lúc "Count down" chạy về 0 (auto
+submit) trong khi đồng hồ riêng của act cũng đang chạy — chưa có cách nào tự đo hành vi ĐỒNG THỜI đó qua
+DOM tĩnh. Chi tiết đầy đủ hơn (kèm code trước/sau) ghi ở `templates/open-the-box/GHI CHU OPEN-THE-BOX.md`.
+
+### 6. Commit + push + live
+✅ **COMMIT `<PENDING>` + PUSH + LIVE** — hash thật, kết quả Pages build và curl xác nhận dấu mốc điền ngay
+sau khi đẩy (xem đúng đoạn này, sẽ được viết đè lại bằng giá trị thật trong cùng phiên).
+
+---
+
 ## Đợt 143b (13/8/2026) — ⭐ MỌI THANH KÉO CHUNG MỘT NỀN TRẮNG + THẲNG HÀNG TUYỆT ĐỐI; VÁ LỖI HỒI QUY DẤU TICK CỦA ĐỢT 143
 ⭐ CÓ SỬA CORE (`core/app.css`, `core/options-panel.js`) + dọn CSS chết ở 10 template.
 ✅ **THẦY DUYỆT → COMMIT `c8e4b14` + PUSH + LIVE** (Pages build `5899396997` success; `curl` 9/9 dấu mốc,
