@@ -75,12 +75,15 @@ chọn Count down" (đúng ý thầy) tự động đúng, không cần thêm đ
 - Mở ☰ Menu (pause) trong lúc đồng hồ toàn game đang chạy đếm ngược: không lỗi.
 - **0 lỗi console** ở mọi bước trên (act mới, mở Options, Apply, Play, mở Menu).
 
-### 5. Việc còn treo
-Chưa test tay trên màn cảm ứng thật (TOMKO) — pane preview không compositing nên không chụp ảnh/xem hoạt
-ảnh trôi thời gian bằng mắt được (đúng bẫy đã ghi nhiều lần trước đây), phép đo ở trên chỉ xác nhận đúng
-qua DOM/CSS. Thầy tự chơi thử trên TOMKO khi tiện, đặc biệt để mắt vào lúc "Count down" chạy về 0 (auto
-submit) trong khi đồng hồ riêng của act cũng đang chạy — chưa có cách nào tự đo hành vi ĐỒNG THỜI đó qua
-DOM tĩnh. Chi tiết đầy đủ hơn (kèm code trước/sau) ghi ở `templates/open-the-box/GHI CHU OPEN-THE-BOX.md`.
+### 5. Thầy đã tự test trên TOMKO — ✅ ĐẠT, y hệt máy 1/2
+Thầy xác nhận đã chơi thử trên màn cảm ứng thật, chạy đúng như đo trên máy 1/2. **Thầy chốt một quy tắc
+MỚI cho cả dự án từ đây về sau**: AWord là web app thuần trình duyệt (không phải Electron/GPU-riêng như
+myTeam/myActivity/mySpeaking — xem [[ba-may-dong-bo]] về lý do 3 máy đó KHÔNG suy ra lẫn nhau được) — hễ
+chạy đúng trên máy 1 và máy 2 (2 trình duyệt, 2 GPU khác nhau) thì **TOMKO cũng chạy đúng y hệt**, không
+còn ca lệch nào giữa 3 máy đo được trên AWord. **Từ Đợt 145 trở đi: chỉ cần tự test/báo cáo trên máy 1 +
+máy 2 là đủ — KHÔNG cần nhắc tới TOMKO/màn cảm ứng nữa** trong mục "Việc kế"/"Tự test" của mọi đợt AWord
+sau này (khác hẳn với các app Electron kia, nơi TOMKO vẫn phải tự test riêng vì GPU T2000 khác hẳn 5060
+Ti/4060). Chi tiết code Đợt 144: `templates/open-the-box/GHI CHU OPEN-THE-BOX.md`.
 
 ### 6. Commit + push + live
 ✅ **COMMIT `1999ace` + PUSH + LIVE.** Push kiểm bằng trạng thái ref (`git ls-remote origin refs/heads/main`

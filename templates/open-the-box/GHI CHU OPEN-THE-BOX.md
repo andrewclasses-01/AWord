@@ -9,6 +9,9 @@ down dời xuống cạnh nút ☰ Menu ở thanh dưới, cao bằng nút Menu,
 CƠ CHẾ nằm ở CORE (`core/options-panel.js`, `core/engine.js`, `core/app.css`), không phải file này, vì
 đây là 2 cờ dùng-chung mà bất kỳ template nào có đồng hồ riêng trong tương lai cũng có thể khai theo.
 Chi tiết đầy đủ (điều tra lỗi cũ + số đo tự test): `GHI CHU DU AN.md` mục "Đợt 144".
+✅ **Thầy đã tự chơi thử trên TOMKO — chạy đúng y hệt máy 1/2.** Và thầy chốt luôn quy tắc mới cho CẢ DỰ
+ÁN từ đây: AWord chạy thuần trình duyệt nên máy 1 + máy 2 đúng là TOMKO cũng đúng — từ Đợt 145 trở đi
+không cần tự test/nhắc riêng TOMKO nữa (xem `GHI CHU DU AN.md` mục "Đợt 144" phần 5 để biết đầy đủ lý do).
 
 ## Đợt 91 dự án (8/8/2026, v0.9.65) — nối `onPause` cho MENU PAUSE toàn hệ thống. ✅ THẦY DUYỆT → COMMIT `be7cd55` + PUSH + LIVE.
 
