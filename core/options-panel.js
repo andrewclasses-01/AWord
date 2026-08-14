@@ -200,7 +200,28 @@ export function mkRadioChoice(name, value, label, checked, onChange) {
  * @param {object|null} fight the running match, if the panel was opened mid-fight
  * @returns {{grid: Element}}
  */
-export function buildOptionsBody(host, { tpl, draft, contentSwitch = null, fight = null }) {
+/**
+ * ⭐ Đợt 149 — `switchHost` / `renderSwitches`.
+ * The Content rows (PRACTICE|HOMEWORK, TEXT|VOICE + clue sets) must NOT be
+ * inside the part that gets rebuilt when the teacher picks a different view:
+ * measured, they were, so the very button under their finger faded out and came
+ * back as a new element with its thumb reset — "rất giật". They now live in
+ * their own host that is built ONCE and stays put, while only the grid below is
+ * swapped. Settings passes neither and keeps building everything into `host`.
+ * @param {Element|null} switchHost  where the Content rows go (null = `host`)
+ * @param {boolean} renderSwitches   false on a re-render: the rows already exist
+ * @param {object|null} selectors    stable object the Content rows write their
+ *                                   choice into. It has to be separate from
+ *                                   `draft`, because a re-render hands the
+ *                                   panel a NEW draft while these rows — which
+ *                                   are never rebuilt — still hold the old one.
+ */
+export function buildOptionsBody(host, {
+  tpl, draft, contentSwitch = null, contentSetSwitch = null, fight = null,
+  onViewChange = null, switchHost = null, renderSwitches = true, selectors = null
+}) {
+  const swHost = switchHost || host;
+  const sel = selectors || draft;   // Settings has no separate selector state
   const grid = el("div", "aw-opt-grid");
   // Every loose checkbox in the panel — this file's AND (via addCheck) the
   // template's — collects HERE and renders as one block near the bottom. The
@@ -258,24 +279,143 @@ export function buildOptionsBody(host, { tpl, draft, contentSwitch = null, fight
   // untouched-old-act AUTO case, live in ONE place: voiceView() in
   // core/voice-playback.js. Nothing here is template-specific — all 14 games
   // with a listen button obey it.
-  if (contentSwitch) {
+  // ⭐ Đợt 145 — the row is now TWO HALVES (teacher's design, 14/8/2026):
+  //   left   TEXT | VOICE, exactly the switch that has been here since Đợt 123
+  //   right  the CLUE SETS of whichever half is active — ENG1/ENG2/VI1/VI2 under
+  //          TEXT, ENG1/ENG2 under VOICE — with the other half's list hidden.
+  // Each side remembers its OWN choice (`contentVariant` / `voiceVariant`), so
+  // flipping TEXT→VOICE→TEXT comes back to the set the teacher was reading.
+  // An act with no clue sets (every act in the library before this đợt, and
+  // Settings, which has no act at all) gets the bare switch, full width, byte
+  // for byte as before.
+  // ⭐ Đợt 146 — PRACTICE | HOMEWORK, the TOP row, above Text/Voice (teacher's
+  // design, 14/8/2026). It chooses WHICH HALF of a comprehension act is played
+  // — QUIZ1 vs QUIZ2, reading act v1 vs v2 — and nothing else. Same visual
+  // language as the Text/Voice switch below it so the panel keeps one motion
+  // idiom, but positioned from `--i`/`--n` like mkSeg so it is not stuck at two
+  // choices for ever.
+  // Hidden when the act has fewer than two halves: a lone button that cannot be
+  // turned off is the dead control the OPT-IN rule of Đợt 143 exists to prevent.
+  if (renderSwitches && contentSetSwitch && (contentSetSwitch.sets || []).length > 1) {
+    const sets = contentSetSwitch.sets;
+    const labelOf = contentSetSwitch.labelOf || (k => String(k || "").toUpperCase());
+    const startIdx = Math.max(0, sets.indexOf(contentSetSwitch.current));
+    const sw = el("div", "aw-opt-setswitch");
+    sw.style.setProperty("--n", String(sets.length));
+    sw.style.setProperty("--i", String(startIdx));
+    sw.append(el("div", "aw-opt-switch-thumb"));
+    const btns = sets.map((key, i) => {
+      const b = el("button", "aw-opt-switch-btn" + (i === startIdx ? " is-active" : ""), labelOf(key));
+      b.type = "button";
+      b.onclick = () => {
+        if (b.classList.contains("is-active")) return;
+        btns.forEach(x => x.classList.remove("is-active"));
+        b.classList.add("is-active");
+        sw.style.setProperty("--i", String(i));
+        sel.contentSet = key;
+        sound.click();
+        // Đợt 147 — each view keeps its OWN options, so the caller reloads the
+        // rest of the panel with this half's settings. Called LAST, after the
+        // selector is written, because the caller works out the new view key
+        // from the draft.
+        onViewChange?.();
+      };
+      return b;
+    });
+    sw.append(...btns);
+    swHost.append(sw);
+  }
+
+  if (renderSwitches && contentSwitch) {
     const shown = contentSwitch.shown === "voice" ? "voice" : "text";
+    const variants = contentSwitch.variants || null;
+    const voiceVariants = contentSwitch.voiceVariants || variants;
+    const labelOf = contentSwitch.labelOf || (k => String(k || "").toUpperCase());
+    let mode = shown;
+    let pickedText = contentSwitch.variant || (variants ? variants[0] : null);
+    let pickedVoice = contentSwitch.voiceVariant || (voiceVariants ? voiceVariants[0] : null);
+
+    const row = el("div", "aw-opt-content" + (variants ? " has-variants" : ""));
     const switchEl = el("div", "aw-opt-switch" + (shown === "voice" ? " is-voice" : ""));
     switchEl.append(el("div", "aw-opt-switch-thumb"));
     const textBtn = el("button", "aw-opt-switch-btn" + (shown === "text" ? " is-active" : ""), "Text");
     const voiceBtn = el("button", "aw-opt-switch-btn" + (shown === "voice" ? " is-active" : ""), "Voice");
     textBtn.type = "button"; voiceBtn.type = "button";
+    switchEl.append(textBtn, voiceBtn);
+
+    const half = el("div", "aw-opt-variants");
+    // ⭐ Đợt 150 — ONE seg holding EVERY clue set, built once and never torn
+    // down. Đợt 149's version emptied `half` and built a fresh mkSeg on every
+    // TEXT↔VOICE flip — 4 buttons replaced by 2 in a single frame, no
+    // transition possible (teacher: "việc chuyển qua lại giữa 2 trạng thái này
+    // cũng cần hiệu ứng gom vào dãn ra mượt mà"). Now the buttons that don't
+    // belong to the active half collapse to zero width (flex-grow 0, see
+    // .aw-seg-anim in app.css) while the rest widen to fill the track — the
+    // row BREATHES between its two shapes. The thumb's `--n`/`--i` are the
+    // VISIBLE count/index, so its width and travel animate on the same curve.
+    let seg = null;
+    const segBtns = new Map();
+    if (variants) {
+      const union = [...variants];
+      (voiceVariants || []).forEach(k => { if (!union.includes(k)) union.push(k); });
+      seg = el("div", "aw-seg aw-seg-anim");
+      seg.append(el("div", "aw-seg-thumb"));
+      union.forEach(k => {
+        const b = el("button", "aw-seg-btn", labelOf(k));
+        b.type = "button";
+        b.onclick = () => {
+          if (b.classList.contains("is-gone") || b.classList.contains("is-on")) return;
+          if (mode === "voice") { pickedVoice = k; sel.voiceVariant = k; }
+          else { pickedText = k; sel.contentVariant = k; }
+          sound.click();
+          paintHalf();
+          onViewChange?.();   // Đợt 147 — each clue set keeps its own options
+        };
+        seg.append(b);
+        segBtns.set(k, b);
+      });
+      half.append(seg);
+    }
+    const paintHalf = () => {
+      if (!seg) return;
+      const list = (mode === "voice" ? voiceVariants : variants) || [];
+      // One choice is not a choice (the Đợt 143 OPT-IN rule): under 2 sets the
+      // whole half fades out instead of showing a lone dead button.
+      half.classList.toggle("is-empty", list.length < 2);
+      const picked = mode === "voice" ? pickedVoice : pickedText;
+      const current = list.includes(picked) ? picked : list[0];
+      seg.style.setProperty("--n", String(Math.max(1, list.length)));
+      seg.style.setProperty("--i", String(Math.max(0, list.indexOf(current))));
+      segBtns.forEach((b, k) => {
+        b.classList.toggle("is-gone", !list.includes(k));
+        b.classList.toggle("is-on", k === current);
+      });
+    };
+
     const pick = value => {
-      draft.contentMode = value;
+      sel.contentMode = value;
+      mode = value;
       switchEl.classList.toggle("is-voice", value === "voice");
       textBtn.classList.toggle("is-active", value === "text");
       voiceBtn.classList.toggle("is-active", value === "voice");
+      // ⚠️ Picking VOICE must also STATE which set it plays. Leaving
+      // `voiceVariant` unwritten would let a stored value from another act's
+      // shape (or none at all) decide, and the teacher would hear a clue set
+      // that isn't the one lit up in front of them.
+      if (variants) {
+        if (value === "voice" && pickedVoice) sel.voiceVariant = pickedVoice;
+        if (value === "text" && pickedText) sel.contentVariant = pickedText;
+      }
+      paintHalf();
       sound.click();
+      onViewChange?.();   // Đợt 147 — TEXT and VOICE are separate views too
     };
     textBtn.onclick = () => pick("text");
     voiceBtn.onclick = () => pick("voice");
-    switchEl.append(textBtn, voiceBtn);
-    host.append(switchEl);
+
+    paintHalf();
+    row.append(switchEl, half);
+    swHost.append(row);
   }
 
   host.append(grid);

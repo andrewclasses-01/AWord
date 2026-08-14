@@ -23,6 +23,9 @@
 
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+// Đợt 146 — a reading act holds BOTH halves of the same exercise (READINGACT1 =
+// practice, READINGACT2 = homework). No-ops for an act without halves.
+import { makeSetTabs, foldEditedSet, expandSetsForEditing, activeContentSet } from "../../core/content-view.js";
 
 const MIN_ITEMS = 3;
 const MAX_ITEMS = 40;
@@ -77,6 +80,20 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
 
   // ===== STATEMENTS (two columns) =====
   body.append(el("div", "aw-ed-sectionhead", "Statements"));
+  // PRACTICE | HOMEWORK tabs (Đợt 146). This editor's on-screen model is two
+  // columns of plain strings, not the stored `statements` array — hence the
+  // read/load pair, which converts in both directions.
+  const setTabs = makeSetTabs(data.content, {
+    current: activeContentSet(data),
+    read: () => toStatements(data.trueTexts, data.falseTexts),
+    load: items => {
+      const split = fromStatements(items);
+      data.trueTexts = split.trueTexts;
+      data.falseTexts = split.falseTexts;
+      renderCols();
+    }
+  });
+  if (setTabs.el) body.append(setTabs.el);
   body.append(buildBulkBar());
   body.append(el("div", "aw-ed-tip",
     "Put each statement in the correct column: TRUE statements on the left, FALSE statements on the right. " +
@@ -225,7 +242,11 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
       instruction: (data.instruction || "").trim(),
       theme: "classic",
       options: data.options || {},
+      // Đợt 146 — start from the draft's own content so `contentSets` /
+      // `itemsKey` / the other half travel through Save, then overwrite just
+      // the statements with what is on screen.
       content: {
+        ...JSON.parse(JSON.stringify(data.content || {})),
         statements: [
           ...trueTexts.map(text => ({ text, answer: true })),
           ...falseTexts.map(text => ({ text, answer: false }))
@@ -236,6 +257,7 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
 
     const err = validate(clean, trueTexts.length, falseTexts.length);
     if (err) { showError(err); return; }
+    foldEditedSet(clean.content, setTabs.currentKey());
 
     saveBtn.disabled = true;
     const label = saveBtn.textContent;
@@ -292,23 +314,42 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
 // ===== data helpers =====
 // Split the stored {text, answer} statements back into two string lists. New
 // activities start with two blank rows on each side.
-function normalize(activity) {
-  const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
-  const title = a.title || "";
-  const instruction = a.instruction || "";
-  const options = a.options || {};
-  const statements = Array.isArray(a.content?.statements) ? a.content.statements : [];
-
-  const trueTexts = [];
-  const falseTexts = [];
-  statements.forEach(s => {
+// The stored shape ([{text, answer}]) <-> this editor's two columns of plain
+// strings. Đợt 146 made these two named functions rather than inline loops
+// because the PRACTICE|HOMEWORK tabs have to convert BOTH ways on every switch.
+export function fromStatements(statements) {
+  const trueTexts = [], falseTexts = [];
+  (Array.isArray(statements) ? statements : []).forEach(s => {
     if (!s || typeof s.text !== "string") return;
     (s.answer === true ? trueTexts : falseTexts).push(s.text);
   });
   while (trueTexts.length < 2) trueTexts.push("");
   while (falseTexts.length < 2) falseTexts.push("");
+  return { trueTexts, falseTexts };
+}
+function toStatements(trueTexts, falseTexts) {
+  return [
+    ...trueTexts.map(t => (t || "").trim()).filter(Boolean).map(text => ({ text, answer: true })),
+    ...falseTexts.map(t => (t || "").trim()).filter(Boolean).map(text => ({ text, answer: false }))
+  ];
+}
 
-  return { title, instruction, options, trueTexts, falseTexts };
+function normalize(activity) {
+  const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
+  const title = a.title || "";
+  const instruction = a.instruction || "";
+  const options = a.options || {};
+  // Đợt 146 — the draft carries `content` now, so the halves (and the keys that
+  // describe them) survive a Save. Before this, save() rebuilt `content` from
+  // scratch, which would have thrown the homework half away silently.
+  const content = a.content && typeof a.content === "object" ? a.content : {};
+  const setKey = activeContentSet({ content, options });
+  expandSetsForEditing(content);
+  const statements = setKey
+    ? (content.sets[setKey] || [])
+    : (Array.isArray(content.statements) ? content.statements : []);
+  const { trueTexts, falseTexts } = fromStatements(statements);
+  return { title, instruction, options, content, trueTexts, falseTexts };
 }
 
 function validate(d, trueCount, falseCount) {

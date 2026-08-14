@@ -21,6 +21,7 @@
 
 import { templateEntry } from "./catalog.js";
 import { shuffle } from "./utils.js";
+import { resolveActivity } from "./content-view.js";
 
 // ---- Các loại đích theo từng "kind" nguồn -------------------------------
 // (whack_a_mole nằm ở CẢ 2: nguồn/đích quiz-mode cho qa, tf-mode cho tf.)
@@ -48,7 +49,15 @@ const NEED_CLUE = new Set([
 // =============================================================
 // 1) ĐỌC act hiện tại -> { kind, records }
 // =============================================================
-export function toRecords(activity) {
+export function toRecords(activityIn) {
+  // ⭐ Đợt 145 — flatten the chosen CLUE SET first. Change Template is normally
+  // handed the ORIGINAL library act (engine.js switchList(): converting must
+  // never read a throwaway converted copy), and for a vocabulary act that
+  // object still holds all four clue sets with `.clue` mirroring the DEFAULT
+  // one. Without this line a class reading the Vietnamese clues would switch
+  // game and silently get the English ones back. Identity — literally the same
+  // object — for every act without clue sets, i.e. everything else.
+  const activity = resolveActivity(activityIn);
   const type = activity?.type;
   const c = activity?.content || {};
   const opt = activity?.options || {};

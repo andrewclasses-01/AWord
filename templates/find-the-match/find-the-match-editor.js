@@ -21,6 +21,9 @@
 
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
+// Đợt 146 — a reading act holds BOTH halves of the same exercise (READINGACT1 =
+// practice, READINGACT2 = homework). No-ops for an act without halves.
+import { makeSetTabs, foldEditedSet, expandSetsForEditing, activeContentSet } from "../../core/content-view.js";
 
 const MIN_ITEMS = 3;
 const MAX_ITEMS = 40;
@@ -68,6 +71,14 @@ export function openFtmEditor(container, activity, { onSave, onCancel, header, f
 
   // ===== PAIRS =====
   body.append(el("div", "aw-ed-sectionhead", "Pairs"));
+  // PRACTICE | HOMEWORK tabs (Đợt 146) — above the bulk bar, because they
+  // change WHICH list the bulk buttons act on.
+  const setTabs = makeSetTabs(data.content, {
+    current: activeContentSet(data),
+    read: () => data.content.pairs,
+    load: items => { data.content.pairs = items; renderItems(); }
+  });
+  if (setTabs.el) body.append(setTabs.el);
   body.append(buildBulkBar());
   body.append(el("div", "aw-ed-tip",
     "Tip: in Excel, copy a block of cells (Keyword in the first column, its Definition in the second), " +
@@ -241,8 +252,11 @@ export function openFtmEditor(container, activity, { onSave, onCancel, header, f
       .map(it => ({ keyword: (it.keyword || "").trim(), definition: (it.definition || "").trim() }))
       .filter(it => it.keyword !== "" || it.definition !== "");
 
+    // Validate what is ON SCREEN first, so an error points at rows the teacher
+    // can actually see — then fold that half back into storage form.
     const err = validate(clean);
     if (err) { showError(err); return; }
+    foldEditedSet(clean.content, setTabs.currentKey());
 
     saveBtn.disabled = true;
     const label = saveBtn.textContent;
@@ -306,11 +320,22 @@ function normalize(activity) {
   a.theme = "classic";                 // theme is always Classic now
   a.options = a.options || {};
   a.content = a.content || {};
-  let pairs = Array.isArray(a.content.pairs) ? a.content.pairs : [];
-  if (pairs.length < MIN_ITEMS) {
+  const shape = list => {
+    const pairs = Array.isArray(list) ? [...list] : [];
     while (pairs.length < MIN_ITEMS) pairs.push(blankItem());
+    return pairs.map(it => ({ keyword: it.keyword || "", definition: it.definition || "" }));
+  };
+  // Đợt 146 — open on the half the act is set to play, in EDITING form so
+  // switching tabs cannot overwrite the other half. EVERY half is shaped, not
+  // just the one on screen, so the other tab is ready to render when picked.
+  const setKey = activeContentSet(a);
+  if (setKey) {
+    expandSetsForEditing(a.content);
+    Object.keys(a.content.sets).forEach(k => { a.content.sets[k] = shape(a.content.sets[k]); });
+    a.content.pairs = a.content.sets[setKey];   // ONE array, so edits land in both
+  } else {
+    a.content.pairs = shape(a.content.pairs);
   }
-  a.content.pairs = pairs.map(it => ({ keyword: it.keyword || "", definition: it.definition || "" }));
   return a;
 }
 function blankItem() { return { keyword: "", definition: "" }; }

@@ -483,6 +483,255 @@ y hệt nhau. Nay **một act mang cả hai**, và `activity.options.contentMode
 - **Ngoại lệ cố ý: `templates/speaking/speaking.js` không theo luật này** — nút loa ở đó đọc từ mẫu
   cho HS bắt chước, chữ bắt buộc phải hiện; nó có option riêng `playReference`.
 
+### ⭐⭐ MỘT ACT MANG NHIỀU BỘ GỢI Ý — `core/content-view.js` (Đợt 145, 14/8/2026)
+
+Đợt 123 gộp **chữ + giọng** vào 1 act. Đợt 145 gộp tiếp **các BỘ GỢI Ý**: `ENG1 · ENG2 · VI1 · VI2`
+của cùng một danh sách từ nay là **một act `WORDS`** (cột D/H/L/P của `WORDTABLE` chứa y hệt một từ,
+đo 100/100 dòng — chỉ khác gợi ý).
+
+| Khoá | Ở đâu | Nghĩa |
+|---|---|---|
+| `content.variants` | act | các bộ gợi ý, theo thứ tự hiện trong Options |
+| `content.voiceVariants` | act | bộ được phép có clip (chỉ ENG — giọng Kokoro đọc sai tiếng Việt/IPA) |
+| `items[i].clues` | từng từ | `{eng1,eng2,vi1,vi2}` |
+| `items[i].voices` | từng từ | `{eng1:{voice,voiceId}, …}` |
+| `items[i].clue` | từng từ | **bản sao** của bộ mặc định, cho mọi chỗ đọc `.clue` (thẻ thư viện, bản in) |
+| `options.contentVariant` | options | bộ của nửa **TEXT** |
+| `options.voiceVariant` | options | bộ của nửa **VOICE** |
+
+**`resolveActivity(act)`** bẹp act đã lưu xuống act 1-gợi-ý bình thường. **Template không biết gì cả** —
+0/17 file game phải sửa.
+
+> ⛔⛔ **HAI TÍNH CHẤT PHẢI GIỮ, PHÁ LÀ HỎNG NGẦM:**
+> 1. **Không có `variants` ⇒ trả về ĐÚNG object đã nhận** (không copy). Đây là thứ khiến cả thư viện cũ
+>    zero-diff. Đổi thành "luôn copy" là mọi act cũ bỗng chạy trên bản sao.
+> 2. **Chạy 2 lần = 1 lần** (bản đã bẹp bị xoá `variants`). `core/fight.js` xẻ 1 act ra 2 bàn phải
+>    **dùng chung ĐÚNG object item** rồi gọi `startGame()` cho từng bàn — mà `startGame()` bẹp lần nữa.
+>    Mất tính chất 2 thì mỗi bàn ôm một bản copy và "same letters" trôi khỏi nhau **trong im lặng**.
+
+> ⚠️⚠️ **`libAct` KHÁC `activity` trong `core/engine.js`.** `libAct` = act của thư viện (còn đủ mọi bộ);
+> `activity` = bản đã bẹp để chơi. **Mọi đường GHI dùng `libAct`**: Edit · Set assignment · lưu Options
+> đã Apply · mọi lần vào lại `startGame()`. Ghi nhầm bản đã bẹp = **lưu đè act mất 3/4 nội dung, không
+> một lời cảnh báo**. Hai bản **dùng chung object `options`** (spread chép tham chiếu) nên nút Apply vẫn
+> ghi trúng act thật.
+
+> ⛔ **BẨY THẬT (cắn ngay trong đợt tạo ra nó)**: thứ gì được **tính sẵn vào `content`** thì phải tính
+> lại trong **`begin()`**, KHÔNG phải một lần ở `startGame()`. Lý do: Apply ở màn READY (chưa bấm Play)
+> **cố ý không restart** — nó đóng panel và hứa "có hiệu lực khi bấm Play". Mọi option khác đọc thẳng
+> `activity.options` nên lời hứa đó đúng miễn phí; bộ gợi ý thì đã **nướng cứng vào `content`**, nên
+> chọn VI1 → Apply → Play vẫn ra ENG1. Đã vá bằng cách bẹp lại trong `begin()`.
+
+- Panel Options: **một hàng, hai nửa** — trái `TEXT|VOICE`, phải là các con của nửa đang chọn, nửa kia
+  ẩn. **Mỗi nửa nhớ lựa chọn riêng.** Dựng ở `core/options-panel.js`, dữ liệu do `engine.js` truyền vào
+  qua `contentSwitch` (`variants` · `voiceVariants` · `labelOf` · lựa chọn hiện tại).
+- **Dưới 2 bộ thì KHÔNG hiện nửa phải** — một lựa chọn không phải là lựa chọn (luật opt-in Đợt 143).
+- `core/convert.js` **bẹp trong `toRecords()`**: đang chơi VI1 mà Đổi template thì game mới vẫn VI1.
+- Editor chỉ sửa **bộ đang chơi**, và **phải mang 3 bộ kia đi cùng object của hàng** — `normalize()` kiểu
+  cũ (dựng lại hàng từ 5 khoá cố định) sẽ **xoá sạch chúng ngay lần Save đầu**.
+
+### ⭐⭐ MỘT ACT MANG 2 NỬA — PRACTICE / HOMEWORK (Đợt 146, 14/8/2026)
+
+Trục **THỨ HAI**, độc lập với bộ gợi ý ở mục trên. Mọi bài đọc hiểu trong file bài học có **2 bản diễn
+đạt lại của nhau** (`QUIZ1`↔`QUIZ2`, `READINGACT1`↔`READINGACT2`); nay là **một act mang cả hai nửa**.
+
+| Khoá | Nghĩa |
+|---|---|
+| `content.contentSets` | `["practice","homework"]`, thứ tự hiện trong Options |
+| `content.itemsKey` | mảng nào chứa nội dung: `questions` · `statements` · `pairs` |
+| `content.sets` | **CHỈ các nửa SAU nửa đầu** |
+| `content[itemsKey]` | nửa ĐẦU — vừa là mirror mọi chỗ cũ vẫn đọc, vừa là **bản duy nhất** của nó |
+| `options.contentSet` | nửa đang chơi |
+
+> ⛔ **NỬA ĐẦU KHÔNG ĐƯỢC CHÉP VÀO `sets`.** Lưu 2 chỗ = ghi 30 câu hỏi lên Firestore **hai lần** (JSON
+> không có khái niệm "cùng một mảng"), rồi 2 bản đó phải tự tay giữ khớp mãi mãi. `itemsOfSet()` có
+> đường lùi về mirror nên nửa đầu vẫn đọc được qua cùng một lời gọi.
+
+> ⚠️⚠️ **DẠNG LƯU ≠ DẠNG ĐANG SỬA.** Trong editor, `sets` giữ **MỌI nửa** và `content[itemsKey]` chỉ là
+> **chỗ nháp của tab đang mở**. Không tách ra thì mở tab HOMEWORK = ghi câu hỏi homework thẳng vào mảng
+> mà cả app đọc như nửa practice ⇒ **mất sạch nửa practice**. `expandSetsForEditing()` đi một chiều,
+> **`foldEditedSet()` đi chiều ngược lại và PHẢI gọi trước khi Save**.
+
+- Hàng `PRACTICE | HOMEWORK` là **phần tử đầu tiên** của panel Options, trên hàng Text/Voice.
+  **Dưới 2 nửa thì không hiện** (luật opt-in Đợt 143).
+- Đổi tab trong editor **KHÔNG đụng `options.contentSet`** — sửa nửa homework không được phép âm thầm
+  khiến lớp sau mở act ra gặp đề homework.
+- Tabs do **lõi dựng** (`makeSetTabs`), hợp đồng là 2 hàm gọi ngược **`read()` / `load(items)`**, vì mô
+  hình trên màn của 3 editor khác nhau (true/false giữ **2 cột chuỗi**, phải quy đổi cả 2 chiều).
+- ⚠️ Editor phải **nắn CẢ HAI nửa** lúc normalize, không chỉ nửa đang mở — nếu không, bấm sang tab kia
+  là bộ dựng hàng nhận đúng hình dạng file import để lại, và một nửa rỗng mở ra **không có hàng nào để gõ**.
+- ⚠️ `true-false-editor.js` từng **dựng lại `content` từ đầu lúc Save** — kiểu đó làm nửa homework biến
+  mất im lặng ngay lần Save đầu. Mọi editor phải giữ lại `content` của bản nháp rồi chỉ ghi đè phần nội dung.
+- Đường này **trao thẳng mảng đã lưu** (không copy), nên 2 bàn Fight dùng chung đúng object item.
+
+### ⭐⭐ MỖI LỰA CHỌN MỘT BỘ OPTIONS RIÊNG (Đợt 147, 14/8/2026)
+
+Thầy chốt: chọn bộ gợi ý nào / nửa nào thì **cả bảng Options nhảy theo cái đó và lưu độc lập**.
+Act `WORDS` có **6 bộ** (TEXT ×4 + VOICE ×2), act `QUIZ`/reading có **2 bộ**.
+
+| Khoá | Nghĩa |
+|---|---|
+| `act.options` | bộ ĐANG CHẠY. **Ngoài `content-view.js` không chỗ nào phải đổi** — engine, 17 template, Đổi template, bản chụp bài giao vẫn đọc đúng khoá này |
+| `act.viewOptions[key]` | bộ đã lưu của từng lựa chọn |
+| `key` | `"practice"` · `"text:eng1"` · `"voice:eng2"` · `"practice\|text:eng1"`; **null** cho act không có bộ gợi ý lẫn nửa |
+
+> ⛔ **`contentMode`/`contentVariant`/`voiceVariant`/`contentSet` KHÔNG BAO GIỜ nằm trong bộ của một
+> view** (`VIEW_SELECTOR_KEYS`) — chúng định danh chính cái view; nhét vào là view tự trỏ vào chính nó.
+> **`optVer` cũng không bao giờ bị bỏ** (`VIEW_ACT_KEYS`): mất con dấu quy đổi của Đợt 143 là lần nạp
+> sau quy đổi lại giá trị đã đúng thang — **-5 → -100 → -2000**.
+
+- Bấm đổi lựa chọn ⇒ **dựng lại toàn bộ thân panel**. Bản nháp giữ **theo từng view** (`pending`), nên
+  đổi qua đổi lại trong một lần mở không mất thứ vừa gõ; bấm ra ngoài không Apply thì mất TẤT CẢ.
+- Apply ghi **mọi view đã đụng tới**, và **XOÁ** khỏi `act.options` những khoá bộ mới không có (view lấy
+  từ Settings có thể thiếu khoá mà view cũ có; giữ lại là để một thiết lập **không gì trên màn giải
+  thích được**). ⚠️ Phải **sửa `act.options` TẠI CHỖ, không gán mới** — `libAct`, act "chơi lại lỗi
+  sai" và 2 bàn đấu giữ **cùng một object**.
+- View chưa từng vào thì lấy **mặc định trong Settings** (`getDefaultOptions`), nạp sẵn lúc mở panel để
+  cú bấm không phải chờ.
+- `snapshotOf` **không chép `viewOptions`** — bài đã giao nhận đúng bộ đang chạy lúc giao. Đúng ý muốn.
+
+### ⛔⛔ MUỐN MỘT Ô CỦA LƯỚI CO CHO TỚI KHI BIẾN MẤT: KHOẢNG CÁCH PHẢI THUỘC VỀ **Ô**, KHÔNG PHẢI **LƯỚI** (Đợt 148 — cắn thật, ngay sau Đợt 147)
+
+Vá xong Đợt 147, thầy vẫn thấy **hai nhịp**: *"khối trên hạ xuống một chút nhưng vẫn còn chút khoảng
+trống nữa. Sau đó lại hạ xuống một nhịp ngắn nữa hết khoảng trống thừa đó."*
+
+**Đo**: co ruột về 0 ⇒ lưới **235px**; bỏ hẳn ô khỏi bố cục ⇒ **227px**. 8–9px đó là **`row-gap`**.
+`gap` là thuộc tính **của LƯỚI**, nên **không animation nào đặt trên Ô xoá được nó** — nó chỉ mất đúng
+lúc cả hàng mất, tức lúc `display:none` chạy. Đó chính là nhịp hai.
+⚠️ **`margin-bottom` ÂM trên ô KHÔNG chữa được** (đo thật: 235 → 235 — track vốn đã kẹp sàn ở 0).
+
+**Cách chữa**: `row-gap: 0` trên `.aw-opt-grid`, mỗi ô mang `margin-bottom: 9px`, lưới mang
+`margin-bottom: -9px` bù hàng cuối. Ô nay **co khoảng cách của chính nó cùng lúc với chiều cao**.
+Đo trước/sau: **mở 281px cả hai cách** (0 panel nào xê dịch), **đóng còn 227px** — bằng đúng cách cũ.
+⚠️ Đổi kiểu này thì nhớ **cộng bù cho mọi phần tử có margin riêng** trong lưới (`.aw-optc-sep`).
+
+### ⛔⛔ CHÚ THÍCH CSS HỎNG **NUỐT RULE ĐỨNG SAU, KHÔNG BÁO LỖI** (Đợt 152 — cắn thật)
+
+Chú thích Đợt 151 viết **thiếu `/*` mở** (chữ trần + `*/` lạc). CSS không văng lỗi — nó phục hồi bằng
+cách đọc đoạn rác **liền với selector kế tiếp** thành một selector hỏng ⇒ **cả rule `.aw-swapbox` bị
+vứt**: mất `overflow:hidden` lúc swap (⇒ thanh cuộn dọc 15px hiện, cộng 15px vào phép đo kích thước
+đích) và mất **toàn bộ transition** (⇒ mọi cú đổi panel nhảy phựt — thầy báo "giật lung tung").
+- **Luật**: sửa chú thích CSS xong PHẢI quét cân bằng `/*`/`*/` cả file (script python 10 dòng, xem
+  GHI CHU Đợt 152). Nạn nhân là rule **đứng sau chú thích**, có thể chẳng liên quan chỗ vừa sửa.
+- 🔎 Manh mối đã dẫn tới nó: đo đích lệch **ĐÚNG 15.00px** — tròn bất thường ⇒ scrollbar; truy
+  `getComputedStyle(...).overflow` ra `"hidden auto"` (rule !important "đang có" mà không áp) +
+  `offsetWidth − clientWidth = 15`.
+
+### ⭐⭐ SWAP KÍCH THƯỚC HỘP: ĐO **ĐÍCH THẬT** BẰNG THẢ-NEO-TẠM, VÀ LỚP CŨ PHẢI `padding:inherit` (Đợt 152)
+
+Hai lỗi hình học chỉ phát tác khi hộp swap CÓ PADDING (panel: 14/20/16 — bodyHost padding 0 nên phần
+trong Options không dính):
+1. **Đừng đo lớp trong rồi gán cho hộp** — chiều cao lớp trong THIẾU padding của hộp (app border-box)
+  ⇒ ghim thiếu 30px, cuối cú bung. **Đo đích thật**: gỡ `height`/`width` inline → đo hộp (nó tự về
+  kích thước sẽ yên vị dưới đúng padding/width-class/max-height; lớp cũ absolute không có phiếu) →
+  ghim lại. Chạy đồng bộ trước khung hình đầu ⇒ không lóe. Ghim + transition **cả width** để
+  Options↔Style trượt.
+2. **Lớp cũ absolute `top:0;left:0` neo vào PADDING BOX** — thiếu `padding:inherit` là nội dung cũ
+  nhảy chéo lên-trái đúng bằng padding của hộp ngay khung hình đầu.
+- Panel neo đáy ⇒ khi hộp đổi chiều cao, nội dung (cả cũ lẫn mới) **cùng trượt với mép trên** — đó là
+  cú trượt đồng bộ, không phải lỗi; phép nghiệm đúng là "cũ và mới dịch CÙNG một lượng".
+
+### ⛔⛔ CLASS TIỆN ÍCH DÙNG CHUNG **CẤM KHAI `position`** (Đợt 151 — cắn thật, panel rơi khỏi neo)
+
+`.aw-swapbox` từng khai `position:relative` (cho lớp cũ absolute có chỗ neo). Nó nằm **sau**
+`.aw-tool-panel` trong file, cùng độ ưu tiên ⇒ khi gắn lên panel lúc đổi công cụ, nó **đè mất
+`position:absolute`** — panel rơi khỏi neo, rớt vào dòng chảy flex của hàng nút (đo:
+panel `(95,93)→(334,495)`, nút Options `x=278→26`), hết swap lại bật về. Thầy: *"hàng tùy chỉnh nhảy
+sang bên trái, pop-up nhảy xuống dưới ở bên phải, sau đó mới nhảy về vị trí chuẩn."*
+- **Luật**: class tiện ích gắn-tháo động **không được khai `position`** — mỗi đích tự lo chỗ neo của
+  mình (panel vốn `absolute`; `.aw-opt-bodyhost` mang `position:relative` thường trực).
+- Loại lỗi này **chỉ lộ đúng khung hình animation chạy** — tự test kiểu "đo sau khi yên vị" không bắt
+  được; phải **lấy mẫu trong lúc chuyển** (interval 40ms đọc `getComputedStyle(...).position` + toạ độ).
+
+### ⭐⭐ DISSOLVE TRÊN NỀN ĐỤC, KHÔNG CROSS-FADE HAI CHIỀU (Đợt 151)
+
+Cross-fade hai chiều (cũ mờ đi `1→0` + mới hiện `0→1`) làm tổng độ phủ **tụt giữa chừng** (~75% ở điểm
+giữa) ⇒ cả phần nội dung **giống hệt nhau** cũng hụt sáng một nhịp — chính là "hơi nháy nhẹ" khi
+eng1→eng2. Cách đúng: lớp cũ nằm DƯỚI **đứng nguyên độ mờ 1**, chỉ lớp mới mờ dần vào Ở TRÊN
+(`z-index:1`, mang nền của panel). Điểm ảnh giống nhau: `c·a + c·(1−a) = c` — **không đổi giữa chừng**;
+chỉ chỗ khác mới dissolve; lớp cũ gỡ khi đã bị phủ kín. Phép nghiệm: `out.opacity` phải `=1` ở **mọi
+mẫu** trong cú chuyển.
+
+### ⛔⛔ HỘP SẼ BỊ GHIM CHIỀU CAO THÌ PHẢI LÀ BFC THƯỜNG TRỰC (Đợt 150 — cắn thật, 9px "trừ nút Apply")
+
+Thầy (Chrome thật): *"Toàn bộ nội dung nâng cao lên vài pixel (trừ nút APPLY) rồi mới hạ xuống."*
+Đo tĩnh: ghim chiều cao vào `bodyHost` ⇒ `panelTop 93.2 → 84.2` (nâng đúng **9px**). Gốc: lưới options
+kết thúc bằng `margin-bottom:-9px` (khoản bù Đợt 148); lúc nghỉ margin âm **thấm xuyên qua đáy** div
+trần (margin collapse), **ghim chiều cao là hết thấm** ⇒ panel neo đáy cao thêm 9px, cả khối nâng lên.
+- **Chữa**: `display:flow-root` **thường trực** cho hộp ĐÓ **và cả 2 lớp swap** (lớp đang vào là thứ
+  được đo lấy chiều cao đích — phải ôm margin y hệt thân đã yên vị, không thì cú tháo lớp lệch 9px).
+- **Luật**: hộp nào tham gia animation ghim-chiều-cao thì trạng thái margin-collapse của nó **không
+  được đổi theo hiệu ứng**. Đo nghiệm: 3 mốc (nghỉ / ghim / gỡ) phải cho cùng một `panelTop`.
+
+### ⭐⭐ ĐIỀU KHIỂN ĐỔI HÌNH THÌ CHO NÓ **THỞ**, ĐỪNG DỰNG LẠI (Đợt 150)
+
+Nửa phải của hàng Content đổi giữa `ENG1|ENG2|VI1|VI2` (TEXT) và `ENG1|ENG2` (VOICE). Bản cũ xoá trắng
++ dựng `mkSeg` mới ⇒ đổi hình trong 1 khung hình. Nay: **một cụm mang đủ mọi bộ** (`.aw-seg-anim`,
+dựng một lần); nút rời nửa đang chọn co `flex-grow 1→0` + `padding→0` + `margin-left:-2px` (nuốt đúng
+gap của nó, về tròn **0px**), nút ở lại nở ra choán chỗ cùng đường cong; thumb nhận `--n`/`--i` của
+số nút **đang hiện**, bề rộng vào chung transition.
+- **Vì sao flex chứ không grid**: track `1fr` của grid **không animate được**, `flex-grow` thì có.
+- Dưới 2 bộ ⇒ cả nửa mờ dần (`.is-empty`), không hiện 1 nút chết (luật opt-in Đợt 143).
+- Nút gone: `pointer-events:none` **và** chặn trong onclick (2 lớp, thói quen từ Đợt 137).
+
+### ⛔⛔ ĐỪNG DỰNG LẠI CHÍNH CÁI ĐIỀU KHIỂN VỪA ĐƯỢC BẤM (Đợt 149 — cắn thật)
+
+Đợt 147 dựng lại **cả thân panel** khi đổi view; hàng công tắc Content nằm trong đó. Kết quả: **nút thầy
+vừa chạm bị mờ đi, bị xoá, rồi hiện lại thành nút KHÁC** — con trượt nhảy về chỗ mới, cả hàng chớp.
+Thầy tả: *"tất cả các cú chuyển từ text-voice và các con của chúng đều rất giật"*.
+
+**Phép đo bắt ra lỗi** (và cũng là phép nghiệm thu, lật được 2 chiều):
+```js
+const before = panel.querySelector('.aw-opt-content');
+/* bấm đổi lựa chọn */
+before === panel.querySelector('.aw-opt-content')   // false = ĐANG BỊ LỖI
+```
+
+- **Luật**: cái điều khiển gây ra thay đổi phải **ở NGOÀI vùng bị dựng lại**. Panel Options nay có
+  `.aw-opt-switches` (dựng MỘT LẦN, đứng yên) và `.aw-opt-bodyhost` (phần duy nhất được thay).
+- ⚠️ **Bẫy đi kèm — phải xử cùng lúc**: điều khiển không bao giờ được dựng lại thì nó **ghi mãi vào bản
+  nháp ĐẦU TIÊN**, trong khi mỗi lần đổi view sinh bản nháp MỚI. Lựa chọn phải ghi vào một **object
+  BỀN** (`selState`), trộn vào bản nháp hiện hành **lúc Apply** — làm ở Apply còn lo được ca act có
+  công tắc Text/Voice nhưng không có bộ gợi ý (cú bấm không đổi view key ⇒ `onViewChange` không chạy).
+- `buildOptionsBody` nhận `switchHost` · `renderSwitches` · `selectors`; Settings không truyền gì nên
+  chạy y như cũ.
+
+### ⭐⭐ ĐỔI NỘI DUNG MỘT HỘP CHO MƯỢT — `swapContents()` (Đợt 148, sửa lại ở Đợt 149)
+
+⭐ **Phải là CROSS-FADE thật, không phải mờ-đi-rồi-hiện-lại.** Bản Đợt 148 dọn rỗng hộp trước rồi mới
+dựng nội dung mới ⇒ có một khoảnh khắc **trong hộp không có gì**, đọc thành cú xóc dù ngắn tới đâu.
+Nay nội dung cũ được nhấc khỏi dòng chảy (`position:absolute`, `pointer-events:none`) để nội dung mới
+vào chỗ ngay, hai lớp **mờ xuyên qua nhau** trong lúc hộp chạy tới chiều cao mới.
+⚠️ Bộ đo `is-compact-opts` phải **NGHỈ trong lúc chuyển**: nó đo lại panel mỗi lần panel đổi kích
+thước, mà chiều cao đang chạy thì đổi mỗi khung hình — mỗi lượt lại ép tính lại bố cục, không thu được
+gì hữu ích từ một cái hộp đang bay.
+
+Ghim chiều cao cũ → mờ đi → dựng nội dung mới → chạy tới chiều cao mới trong lúc hiện dần. Dùng cho
+**đổi panel công cụ** (Options → Template/Style/Mode) và **đổi lựa chọn trong Options**.
+- ⭐ Đổi panel nay **GIỮ NGUYÊN cái hộp và biến hình nó**. `openToolPanel` trước đây **huỷ panel cũ rồi
+  dựng panel mới** ⇒ cả khung nháy một cái (thầy báo).
+- ⛔ **KHÔNG dùng `requestAnimationFrame`** trong loại hiệu ứng này: tab ẩn/chạy nền không bao giờ gọi
+  nó và hộp **kẹt vĩnh viễn ở chiều cao cũ**. Dùng `setTimeout` — cùng lý do `closeToolPanel()` đã phải
+  có timeout dự phòng.
+- Phải có **thẻ chống chồng lượt** (`swapToken`): bấm 2 công cụ liên tiếp thì lượt cũ không được gỡ
+  ghim chiều cao của lượt mới.
+- 🔎 **Bẫy ĐO** (dính thật): pane test bị ẩn ⇒ **mọi thuộc tính đang có transition bị kẹt ở giá trị
+  ĐẦU**, đọc `getComputedStyle` ra số vô nghĩa. Phải **tắt hẳn transition** (`transition:none
+  !important`) rồi mới đo bố cục cuối.
+
+### ⛔⛔ ACCORDION `max-height`: `display:none` PHẢI RƠI **SAU** TRANSITION (Đợt 147 — cắn thật)
+
+Thầy báo *"chuyển từ On submit về Letters with bonus thì animation bị khựng 1 nhịp"*. Đo bằng
+`MutationObserver`: **3 thao tác rơi cùng MỘT khung hình (+0,9ms)** — `display:none` lên ô, thêm
+`is-closed`, `max-height:0`. Ô **biến mất trong 1 khung hình**, rồi **cái hộp RỖNG** mới trượt 280ms.
+
+- **ĐÓNG**: ruột **ở lại trong khung suốt cú trượt**, chỉ bỏ ra sau (`setTimeout` = thời gian
+  transition + 1 khung hình). Mắt bám theo chính nội dung trôi lên dưới `overflow:hidden`.
+- **MỞ**: **hiện ruột TRƯỚC rồi mới đo `scrollHeight`**, kẻo hộp trượt tới chiều cao của lưới rỗng.
+- Cùng họ với bẫy Đợt 137 trên **đúng accordion này** (`overflow:hidden`): lần đó sai **thuộc tính**,
+  lần này sai **thời điểm**. Sắp viết accordion mới thì đọc cả hai.
+- 🔎 **Mẹo đo khi pane test bị ẩn**: transition/rAF chết hẳn, nhưng **`MutationObserver` vẫn chạy
+  chuẩn** — đo được **thứ tự và mốc thời gian** của các thao tác DOM, đủ để chứng minh loại lỗi này.
+
 ### ⭐ BỘ ĐỆM CLIP GIỌNG — 3 TẦNG, HẠN 1 NGÀY (Đợt 122, 12/8/2026)
 
 `getVoiceClip()` của `core/voice-clips.js` nay đi qua **RAM → Cache Storage (`aword-voice-v1`) →

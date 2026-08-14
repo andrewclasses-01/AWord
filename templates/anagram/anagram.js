@@ -283,7 +283,7 @@ const anagramTemplate = {
     // ⚠️ `overflow:hidden` on the animating wrapper is NOT optional — Đợt 137
     // was an entire session spent on an invisible slider eating the mouse
     // because a max-height accordion lacked exactly that. See anagram.css.
-    const penHost = el("div", "aw-optc aw-optc-wide");
+    const penHost = el("div", "aw-optc aw-optc-wide aw-anagram-penhost");
     const penWrap = el("div", "aw-anagram-penwrap");
     const penGrid = el("div", "aw-opt-grid");
     penWrap.append(penGrid);
@@ -315,30 +315,65 @@ const anagramTemplate = {
     // Which cells a mode shows. `openPen` also drives the wrapper's height, so
     // the two can never disagree.
     let penHideT = null;
-    function syncPen(m, animate) {
-      clearTimeout(penHideT);
+    const showCells = m => {
       cSubmit.cell.style.display = m === "submit" ? "" : "none";
       cLetter.cell.style.display = m === "bonusMinus" ? "" : "none";
       cMult.cell.style.display = m === "bonusMinus" ? "" : "none";
+    };
+    function syncPen(m, animate) {
+      clearTimeout(penHideT);
       const open = m !== "bonus";
       // second guard, kept from Đợt 137: a closed wrapper must never take a
       // pointer even if a future layout change defeats `overflow:hidden`
       penWrap.classList.toggle("is-closed", !open);
-      if (open) penHost.style.display = "";
       if (!animate) {
         // FIRST paint: this runs BEFORE the panel is in the document, so
         // scrollHeight would read 0 for everything. "none" is correct and
         // instant; one tick later (below) it becomes a real px number so the
         // teacher's first click has something to transition FROM.
+        showCells(m);
+        penHost.style.marginBottom = open ? "" : "0px";
         penWrap.style.maxHeight = open ? "none" : "0px";
-        if (!open) penHost.style.display = "none";
         return;
       }
-      penWrap.style.maxHeight = open ? penGrid.scrollHeight + "px" : "0px";
-      // An empty wrapper still costs the grid one row-gap, so drop it out of
-      // the layout once it has finished closing (never before, or the collapse
-      // would snap instead of animate).
-      if (!open) penHideT = setTimeout(() => { penHost.style.display = "none"; }, 240);
+      if (open) {
+        // Opening: the rows have to be in the layout BEFORE the height is
+        // measured, or the wrapper animates to the height of an empty grid.
+        showCells(m);
+        penHost.style.marginBottom = "";
+        penWrap.style.maxHeight = penGrid.scrollHeight + "px";
+        return;
+      }
+      // ⭐ CLOSING (Đợt 147 — teacher: "chuyển từ On submit về Letters with
+      // bonus (ẩn đi thanh Points off) thì animation bị khựng 1 nhịp"). The
+      // rows now STAY in the layout for the whole collapse and are dropped
+      // only afterwards, so what the eye follows is the slider itself sliding
+      // up under `overflow:hidden`.
+      // What it used to do, measured with a MutationObserver: `display:none`
+      // on the cell, `is-closed`, and `max-height:0` ALL landed in the same
+      // frame (+0.9ms). So the slider vanished in ONE frame and an EMPTY 51px
+      // box then slid closed — a jump followed by a slide, which is precisely
+      // what "khựng 1 nhịp" looks like.
+      // The wrapper already carries a px max-height here (from a previous
+      // open, or from the tick-0 conversion below), so there is a real value
+      // to transition FROM.
+      penWrap.style.maxHeight = "0px";
+      // ⭐ Đợt 148 — and the ROW SPACING goes with it, in the SAME motion.
+      // Teacher after the first fix: "nhịp đầu tiên... vẫn còn chút khoảng
+      // trống nữa. Sau đó lại hạ xuống một nhịp ngắn nữa hết khoảng trống thừa
+      // đó." That leftover was the grid's `row-gap` (measured: 8-9px), which no
+      // animation on this cell could ever remove — a gap belongs to the grid,
+      // so it could only vanish the instant the row did, which is exactly the
+      // second beat. `core/app.css` now hands that spacing to the CELLS as
+      // `margin-bottom`, so zeroing it here collapses height AND spacing
+      // together and the close is one continuous movement.
+      // Nothing is `display:none`d any more: at height 0 with no margin the
+      // cell already occupies nothing at all.
+      penHost.style.marginBottom = "0px";
+      // The rows themselves stay put for the whole slide and are only swapped
+      // out afterwards — 300ms is the 280ms transition plus a frame. Never
+      // less, or they blink out early and the jump is back.
+      penHideT = setTimeout(() => showCells(m), 300);
     }
     syncPen(curMode, false);
     setTimeout(() => {

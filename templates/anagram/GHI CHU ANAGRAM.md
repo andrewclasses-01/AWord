@@ -1,5 +1,78 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 148 (14/8/2026) — ⭐ NHỊP THỨ HAI CỦA CÚ ĐÓNG: KHOẢNG CÁCH HÀNG CHUYỂN TỪ LƯỚI XUỐNG TỪNG Ô
+
+✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Sửa `syncPen()` + `anagram.css`, và **có sửa core** (`core/app.css`).
+
+Đợt 147 mới chữa được **nhịp đầu**. Thầy báo tiếp: *"khối trên hạ xuống một chút nhưng vẫn còn chút
+khoảng trống nữa. Sau đó lại hạ xuống một nhịp ngắn nữa hết khoảng trống thừa đó."*
+
+**Đo**: co ruột về 0 ⇒ lưới **235px**; bỏ hẳn ô khỏi bố cục ⇒ **227px**. **8–9px chênh đó là `row-gap`
+của lưới** — mà `gap` là của **LƯỚI**, nên không animation nào đặt trên **Ô** xoá được nó; nó chỉ mất
+đúng lúc `display:none` chạy ở +300ms. Đó là nhịp hai.
+⚠️ **Đã thử `margin-bottom` âm: KHÔNG ăn thua** (đo: 235 → 235).
+
+**Cách chữa** (ở `core/app.css`, nên áp cho cả 17 template): `row-gap` của `.aw-opt-grid` về **0**, mỗi
+ô mang `margin-bottom: 9px`, lưới mang `-9px` bù hàng cuối. Ô nay **co khoảng cách của chính nó cùng
+lúc với chiều cao** ⇒ `syncPen` chỉ cần thêm `penHost.style.marginBottom = "0px"` khi đóng và bỏ trống
+khi mở. **Không còn `display:none`** — cao 0 + lề 0 là đã không chiếm gì.
+
+🟢 Đo lại: `open=289 → đóng(khung đầu)=235 → sau dọn dẹp=235` ⇒ **nhịp hai biến mất**; panel co
+**414 → 360**, mép trên hạ **54px** liền mạch. Mở/đóng qua lại 3 chế độ vẫn đúng số ô, panel
+**504px · 400/400 · không cuộn · không phải nén chữ** — y như trước đợt này.
+⬜ Vẫn cần **mắt thầy**: pane test bị ẩn nên Chromium không vẽ khung hình nào.
+
+## Đợt 147 (14/8/2026) — ⭐ VÁ LỖI THẬT: "ANIMATION KHỰNG 1 NHỊP" KHI ẨN THANH POINTS OFF
+
+✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Sửa đúng `syncPen()` trong `anagram.js`, **không đụng core**.
+
+Thầy báo: *"chuyển từ On Submit về Letters with bonus (ẩn đi thanh Points off) thì animation bị khựng
+1 nhịp"*.
+
+**Đo bằng `MutationObserver`** (pane test bị ẩn nên transition/rAF chết hẳn, nhưng observer vẫn chạy
+chuẩn — đo được **thứ tự + mốc thời gian** thao tác DOM, đủ để bắt loại lỗi này):
+cả **3 thao tác rơi vào CÙNG một khung hình, mốc +0,9ms** — `display:none` lên ô Points off · thêm
+`is-closed` · `max-height:0`. Nên thanh trượt **biến mất trong 1 khung hình**, rồi mới có **cái hộp
+RỖNG cao 51px trượt lên trong 280ms**: giật một cái xong mới trượt.
+
+**Vá**:
+- **ĐÓNG**: ô **ở lại trong khung suốt cú trượt**, chỉ `display:none` sau đó (`300ms` = 280ms
+  transition + 1 khung hình). Mắt bám theo chính thanh trượt trôi lên dưới `overflow:hidden`.
+- **MỞ**: đảo lại — **hiện ô TRƯỚC rồi mới đo `scrollHeight`**, kẻo hộp trượt tới chiều cao lưới rỗng.
+- Tách `showCells(m)` ra thành hàm riêng vì hai chiều nay gọi nó ở **hai thời điểm khác nhau**.
+
+🟢 Đo lại sau vá: trượt bắt đầu ở **+0,6ms**, ô rời khung ở **+312,0ms**. Quét cả 3 chế độ qua lại 5
+lượt: `max-height` luôn khớp `scrollHeight` (51px), **không cắt xén**, đúng ô hiện ở mỗi chế độ,
+0 lỗi console.
+
+⚠️ **BẪY GHI LẠI THÀNH LUẬT**: accordion kiểu `max-height` thì **`display:none` phải rơi SAU khi
+transition xong, không được cùng khung hình với nó**. Cùng họ với bẫy Đợt 137 trên **đúng accordion
+này** (`overflow:hidden`) — lần đó sai **thuộc tính**, lần này sai **thời điểm**.
+⬜ Chưa nhìn được bằng mắt (pane ẩn) — chỗ này cần mắt thầy.
+
+## Đợt 145 (14/8/2026) — EDITOR BIẾT ĐẾN "BỘ GỢI Ý": SỬA ĐÚNG BỘ ĐANG CHƠI, KHÔNG XOÁ 3 BỘ KIA
+
+✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Chỉ sửa `anagram-editor.js`; **`anagram.js` không đụng một dòng**
+(nó nhận act đã được lõi bẹp sẵn xuống 1 gợi ý — xem `core/HUONG DAN CORE.md` mục "MỘT ACT MANG NHIỀU
+BỘ GỢI Ý"). Act bộ từ nhập từ Excel nay là **một act `WORDS`** mang cả `ENG1 · ENG2 · VI1 · VI2`.
+
+**Việc thật sự nguy hiểm ở đây, và vì sao phải sửa:** `normalize()` cũ **dựng lại mỗi hàng từ 5 khoá cố
+định** (`word · clue · voice · voiceId · hideText`). Mở một act `WORDS` bằng editor đó rồi bấm Save là
+**3 bộ gợi ý còn lại biến mất sạch, không một lời cảnh báo** — hàng vẫn đủ 100 từ nên nhìn không ra.
+Nay `clues` / `voices` **đi kèm chính object của hàng**, nên thêm hàng · xoá hàng · kéo-thả đổi thứ tự ·
+Swap columns · dán từ Excel đều mang cả 4 bộ đi cùng.
+
+- Editor vẫn **MỘT cột Clue** — là **bộ act đang chơi** (`activeVariant()`), tức mở Edit từ trong game
+  thì sửa đúng bộ vừa nhìn thấy. Muốn sửa bộ khác: đổi ở **Options > Content** rồi mở Edit lại.
+- Có **chip "Clue set: ENG2"** ở cuối thanh công cụ bulk (`margin-left:auto`, là NHÃN chứ không phải nút
+  nên đẩy hẳn ra mép, không chen vào giữa 4 icon thầy hay bấm). Thiếu nó thì sửa nhầm bộ là chuyện sớm
+  muộn — cột Clue trông y hệt nhau ở cả 4 bộ.
+- Lúc Save: chữ trong cột Clue **gấp lại vào đúng bộ đó**; bản sao `.clue` của hàng **đọc lại từ bộ mặc
+  định** (nó là thứ thẻ thư viện và bản in dùng). Xoá giọng thì **xoá hẳn khoá** thay vì lưu cặp rỗng.
+- "Generate all voices" trong editor vẫn chạy y cũ và rơi đúng vào bộ đang sửa.
+- 🟢 Test thật trong trình duyệt: mở trên ENG2 → chip đúng, hàng 1 hiện đúng câu ENG2, sửa rồi Save →
+  **chỉ `clues.eng2` đổi**, `eng1/vi1/vi2` y nguyên, `voices` không sinh rác; làm lại trên VI2 cũng vậy.
+
 ## Đợt 142 (13/8/2026) — LUẬT MIX GIỌNG RỜI KHỎI FILE NÀY, LÊN `core/voice-mix.js`
 
 ✅ **THẦY DUYỆT → COMMIT `7faf500` + PUSH + LIVE.** Editor **không đổi 1 pixel giao diện, không đổi 1 hành vi** — chỉ đổi chỗ ở

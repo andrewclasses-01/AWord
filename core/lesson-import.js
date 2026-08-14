@@ -30,6 +30,9 @@ const OPT_QUIZ = { timer: "countUp", shuffleQuestions: true, shuffleAnswers: tru
 // the teacher flips it to Voice in Options when the lesson calls for listening.
 // This is what makes one act able to replace the old ENG1 / ENG1 VOICE pair.
 const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: true, showAnswers: true, contentMode: "text" };
+// Which clue set a freshly imported vocabulary act opens on, and the one whose
+// text is mirrored into each item's plain `.clue` (see core/content-view.js).
+const DEFAULT_VARIANT = "eng1";
 // Running word runs its OWN two clocks, so the engine's whole-game timer is off.
 // wordsPerTeam 0 = "give each team the whole pool"; the teacher normally drops it
 // to ~50 in the Options panel, which is what makes the two lists overlap.
@@ -81,6 +84,41 @@ const quiz = (title, rows) => {
     questions.push({ question: q, answers });
   });
   return { type: "quiz", title, theme: "classic", options: OPT_QUIZ, content: { questions } };
+};
+
+// ⭐ Đợt 146 — TWO HALVES, ONE ACT. Every comprehension exercise ships twice in
+// the lesson file: QUIZ1/QUIZ2 are 30 paraphrased pairs of each other, and so
+// are READINGACT1/READINGACT2. They used to import as separate acts (the second
+// lot wearing an " HW" suffix in an ACT/HOMEWORK folder); now one act holds
+// both and Options picks the half. `make(title, rows)` is the ordinary
+// single-set builder — reused as-is so the option presets and per-item shaping
+// stay in ONE place — and this only lifts what it built into `content.sets`.
+// A file that fills in only one half simply gets a one-half act, whose Options
+// row then hides itself (one choice is not a choice).
+const twoSetAct = (make, title, itemsKey, halves) => {
+  const built = halves
+    .filter(h => h.rows.length)
+    .map(h => ({ key: h.key, act: make(title, h.rows) }))
+    .filter(h => (h.act.content[itemsKey] || []).length);
+  if (!built.length) return null;
+  const base = built[0].act;
+  // Only the halves AFTER the first go into `sets` — the first one IS
+  // `content[itemsKey]`, which is both the mirror every older reader uses and
+  // the only copy of it (see itemsOfSet in core/content-view.js: storing it
+  // twice would write those questions to Firestore twice over).
+  const sets = {};
+  built.slice(1).forEach(h => { sets[h.key] = h.act.content[itemsKey]; });
+  return {
+    ...base,
+    options: { ...base.options, contentSet: built[0].key },
+    content: {
+      ...base.content,
+      contentSets: built.map(h => h.key),
+      itemsKey,
+      sets,
+      [itemsKey]: built[0].act.content[itemsKey]
+    }
+  };
 };
 
 // The "source" code that names the folder + prefixes titles (same rule as taoact).
@@ -142,35 +180,75 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   const acts = [];
 
   // ---- WORDTABLE vocab (cols D/E, H/I, L/M, P/Q, S) ----
+  // ⭐ 14/8/2026 (Đợt 145) — ONE act, FOUR clue sets. Columns D/H/L/P hold the
+  // SAME word — measured across the teacher's lesson files, 100 rows out of 100
+  // identical — and only the CLUE differs: an English definition (E), an easier
+  // English one (I), a Vietnamese meaning (M), a Vietnamese example sentence
+  // (Q). So one ROW of the sheet is one word wearing four clues, and it now
+  // imports as ONE act whose Options row picks the set being played
+  // (core/content-view.js). Before this it was four near-identical acts, and
+  // six once voices were generated.
+  const VARIANT_COLS = [
+    { key: "eng1", word: 4,  clue: 5  },
+    { key: "eng2", word: 8,  clue: 9  },
+    { key: "vi1",  word: 12, clue: 13 },
+    { key: "vi2",  word: 16, clue: 17 }
+  ];
   const wt = sheet("WORDTABLE");
-  const ENG1 = [], ENG2 = [], VI1 = [], VI2 = [], IPA = [];
+  const WORDS = [], IPA = [];
   if (wt) {
     const rows = maxRow(wt);
     for (let r = 1; r <= rows; r++) {
-      const d = cell(wt, r, 4); if (d) ENG1.push([d, cell(wt, r, 5)]);
-      const h = cell(wt, r, 8); if (h) ENG2.push([h, cell(wt, r, 9)]);
-      const l = cell(wt, r, 12); if (l) VI1.push([l, cell(wt, r, 13)]);
-      const p = cell(wt, r, 16); if (p) VI2.push([p, cell(wt, r, 17)]);
+      // Read the row across all four blocks. The word is taken from the first
+      // block that has one, so a lesson file that fills only some of the four
+      // still imports every word it does have.
+      const clues = {};
+      let word = "";
+      for (const v of VARIANT_COLS) {
+        const w = cell(wt, r, v.word);
+        if (!w) continue;
+        if (!word) word = w;
+        clues[v.key] = cell(wt, r, v.clue);
+      }
+      if (word) WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
       const s = cell(wt, r, 19); if (s) IPA.push(s);
     }
   }
-  // ENG1/ENG2 clues are English, so they're the only two variants offered
-  // for auto-TTS in the Import dialog's voice panel (teacher confirmed
-  // 10/8/2026). VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a
-  // raw IPA symbol — an English Kokoro voice would misread both, so they
-  // stay un-tagged and import exactly as before, text-only.
-  // ⭐ 12/8/2026 — ONE act, not two. The "ENG1" + "ENG1 VOICE" PAIR (added
-  // 11/8/2026, Đợt 118) held byte-identical words; the only difference was the
-  // clips + `hideText` hanging off the second one. A single act now carries
-  // both sides and Options > Content picks which one the class plays with
-  // (see voiceView() in core/voice-playback.js), so the library stops holding
-  // two copies of every vocabulary list. `ttsEligible` still marks it for the
-  // Import dialog's voice panel; leaving that box unticked simply imports the
-  // act text-only, exactly like the old plain sibling did.
-  if (ENG1.length) acts.push({ ...anagram(`${source} / ENG1`, ENG1), ttsEligible: true });
-  if (ENG2.length) acts.push({ ...anagram(`${source} / ENG2`, ENG2), ttsEligible: true });
-  if (VI1.length)  acts.push(anagram(`${source} / VI1`, VI1));
-  if (VI2.length)  acts.push(anagram(`${source} / VI2`, VI2));
+  // Only offer a variant BUTTON for a clue set this file actually filled in —
+  // the OPT-IN rule from Đợt 143: a control that is there but does nothing is
+  // worse than a missing one, because nothing on screen says so.
+  const presentVariants = VARIANT_COLS.map(v => v.key)
+    .filter(k => WORDS.some(it => (it.clues[k] || "").trim()));
+  // ENG1/ENG2 clues are English, so they're the only two sets offered for
+  // auto-TTS in the Import dialog's voice panel (teacher confirmed 10/8/2026).
+  // VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a raw IPA symbol —
+  // an English Kokoro voice would misread both, so they stay text-only.
+  // ⭐ 12/8/2026 — text and voice already share ONE act: the "ENG1" + "ENG1
+  // VOICE" pair held byte-identical words and differed only by the clips
+  // hanging off the second, so `options.contentMode` picks the side instead
+  // (voiceView() in core/voice-playback.js). Đợt 145 extends that same idea
+  // sideways: contentMode picks TEXT vs VOICE, contentVariant/voiceVariant pick
+  // WHICH clue set within the chosen side.
+  const voiceVariants = presentVariants.filter(k => k === "eng1" || k === "eng2");
+  if (WORDS.length) {
+    acts.push({
+      type: "anagram", title: `${source} / WORDS`, theme: "classic",
+      options: {
+        ...OPT_ANA,
+        contentVariant: presentVariants[0] || DEFAULT_VARIANT,
+        voiceVariant: voiceVariants[0] || DEFAULT_VARIANT
+      },
+      content: {
+        withClues: WORDS.some(it => it.clue),
+        variants: presentVariants,
+        voiceVariants,
+        items: WORDS
+      },
+      // Import-only flags, stripped before the act is saved (see main.js).
+      ttsEligible: voiceVariants.length > 0,
+      ttsVariants: voiceVariants
+    });
+  }
   // PRONUNCIATION: unscramble the word with its IPA as the clue — split the IPA
   // column's "WORD /ipa/" into word + pronunciation.
   const PRON = [];
@@ -182,34 +260,46 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // keyed upper-case so it matches ENG1's words regardless of case.
   const ipaByWord = new Map();
   PRON.forEach(([w, ipa]) => ipaByWord.set(w.toUpperCase(), ipa));
+  // The bare word list the two racing games need — column D's words, which is
+  // what `WORDS` was built from (Đợt 145 merged the four columns, so this is
+  // where the old `ENG1` array now comes from).
+  const WORDLIST = WORDS.map(it => it.word);
   // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
   // word list, so it reuses ENG1's words (column D = the same pool the teacher's
   // hand-made `RunningW` sheet drew its two 50-word lists from). No clues, no
   // answers: the explainer supplies the meaning out loud. IPA is matched in
   // from ipaByWord above when the sheet has one for that word; a word with
   // none just imports with a blank IPA, same as before this existed.
-  if (ENG1.length >= 2) {
+  if (WORDLIST.length >= 2) {
     acts.push(runningWord(`${source} / RUNNING WORD`,
-      ENG1.map(([w]) => ({ word: w, ipa: ipaByWord.get(w.toUpperCase()) || "" }))));
+      WORDLIST.map(w => ({ word: w, ipa: ipaByWord.get(w.toUpperCase()) || "" }))));
   }
   // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
   // picked out of the pool itself by look-alike score, so no clues are needed.
   // Six is the floor because every round puts six words on screen.
-  if (ENG1.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM`, ENG1.map(([w]) => w)));
+  if (WORDLIST.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM`, WORDLIST));
 
   // ---- comprehension Quiz1 / Quiz2 (listening files) ----
-  for (const tag of ["QUIZ1", "QUIZ2"]) {
+  // ⭐ Đợt 146 — ONE act named "QUIZ" holding both: QUIZ1 is the PRACTICE half,
+  // QUIZ2 the HOMEWORK half. The sheet names keep their numbers (that is the
+  // teacher's spreadsheet, not ours); everything the teacher sees inside AWord
+  // says PRACTICE / HOMEWORK.
+  const readQuizSheet = tag => {
     const wq = sheet(tag);
     const rows = [];
-    if (wq) {
-      const rmax = maxRow(wq);
-      for (let r = 1; r <= rmax; r++) {
-        const q = cell(wq, r, 1);
-        if (q) rows.push([q, cell(wq, r, 2), [3, 4, 5, 6, 7].map(c => cell(wq, r, c)).filter(Boolean)]);
-      }
+    if (!wq) return rows;
+    const rmax = maxRow(wq);
+    for (let r = 1; r <= rmax; r++) {
+      const q = cell(wq, r, 1);
+      if (q) rows.push([q, cell(wq, r, 2), [3, 4, 5, 6, 7].map(c => cell(wq, r, c)).filter(Boolean)]);
     }
-    if (rows.length) acts.push({ ...quiz(`${source} / ${tag}`, rows), subfolder: "ACT" });
-  }
+    return rows;
+  };
+  const quizAct = twoSetAct(quiz, `${source} / QUIZ`, "questions", [
+    { key: "practice", rows: readQuizSheet("QUIZ1") },
+    { key: "homework", rows: readQuizSheet("QUIZ2") }
+  ]);
+  if (quizAct) acts.push({ ...quizAct, subfolder: "ACT" });
 
   // ---- reading acts READINGACT1 (v1) / READINGACT2 (v2) ----
   const readRa = ws => {
@@ -223,15 +313,24 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     }
     return { TF, FILL, RQ };
   };
-  const versions = [
-    { cands: ["READINGACT1", "READINGACTS", "READINGACT"], suffix: "", sub: "ACT" },
-    { cands: ["READINGACT2"], suffix: " HW", sub: "ACT/HOMEWORK" }
+  // ⭐ Đợt 146 — THREE acts, each holding BOTH halves. READINGACT1 is the
+  // PRACTICE half and READINGACT2 the HOMEWORK half of the same three
+  // exercises, so the old " HW" titles and the whole `ACT/HOMEWORK` subfolder
+  // are gone: one "1. TRUE FALSE" that can be played either way beats two acts
+  // the teacher has to find separately.
+  const P = readRa(sheet("READINGACT1", "READINGACTS", "READINGACT"));
+  const H = readRa(sheet("READINGACT2"));
+  const readingActs = [
+    { make: trueFalse, title: "1. TRUE FALSE",  itemsKey: "statements", p: P.TF,   h: H.TF },
+    { make: ftm,       title: "2. FILLING",     itemsKey: "pairs",      p: P.FILL, h: H.FILL },
+    { make: quiz,      title: "3. READING QUIZ", itemsKey: "questions", p: P.RQ,   h: H.RQ }
   ];
-  for (const { cands, suffix, sub } of versions) {
-    const { TF, FILL, RQ } = readRa(sheet(...cands));
-    if (TF.length)   acts.push({ ...trueFalse(`${source}${suffix} / 1. TRUE FALSE`, TF), subfolder: sub });
-    if (FILL.length) acts.push({ ...ftm(`${source}${suffix} / 2. FILLING`, FILL), subfolder: sub });
-    if (RQ.length)   acts.push({ ...quiz(`${source}${suffix} / 3. READING QUIZ`, RQ), subfolder: sub });
+  for (const ra of readingActs) {
+    const act = twoSetAct(ra.make, `${source} / ${ra.title}`, ra.itemsKey, [
+      { key: "practice", rows: ra.p },
+      { key: "homework", rows: ra.h }
+    ]);
+    if (act) acts.push({ ...act, subfolder: "ACT" });
   }
 
   return { folder: folder || source, activities: acts };

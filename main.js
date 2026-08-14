@@ -23,7 +23,7 @@ import { startGame } from "./core/engine.js";
 import { el, copyText } from "./core/utils.js";
 import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
-import { TEMPLATES, templateLabel } from "./core/catalog.js";
+import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
@@ -36,6 +36,7 @@ import {
   parseStudentNames, mergeStudents, resetClassesCache, MAX_STUDENTS
 } from "./core/classes.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
+import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyVoiced } from "./core/content-view.js";
 import {
   listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
   restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults
@@ -627,6 +628,12 @@ function previewPick(node) {
 // check covers an Anagram act and anything it was converted into.
 function actFullyVoiced(node) {
   const c = node.content || {};
+  // Đợt 145 — a vocabulary act keeps one clip set PER clue set, so it only
+  // earns the badge when every set that can be spoken really is. Half-voiced
+  // (ENG1 done, ENG2 not) must not read as finished: the teacher's whole use
+  // for the badge is spotting at a glance what still needs generating.
+  const voiceVariants = voiceVariantsOf(c);
+  if (voiceVariants) return voiceVariants.every(k => variantFullyVoiced(c, k));
   const list = c.questions || c.items || c.words || c.statements || c.cards || c.pairs || [];
   return list.length > 0 && list.every(it => it && it.voice);
 }
@@ -961,12 +968,10 @@ async function emptyBinFlow() {
 // SheetJS (~1 MB) loads only when a spreadsheet is actually read.
 const IMP_UPLOAD_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V5M8 9l4-4 4 4"/><path d="M5 15v3a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3"/></svg>`;
 const IMP_DOC_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>`;
-const IMP_ACT_ICON = {
-  find_the_match: icons.link, balloon_pop: icons.link,
-  quiz: icons.fmtQuiz, gameshow: icons.fmtQuiz, maze_chase: icons.fmtQuiz, open_the_box: icons.fmtQuiz,
-  speaking_cards: icons.mic, true_false: icons.check, whack_a_mole: icons.check,
-  anagram: icons.fmtAnagram, flying_fruit: icons.fmtAnagram, crossword: icons.fmtCrossword, unjumble: icons.fmtUnjumble
-};
+// Đợt 148 — the per-type icons moved to `core/catalog.js` (TEMPLATE_ICON), the
+// one place that already lists every type, because the in-game Template picker
+// needed exactly the same map. The private copy that used to sit here could
+// only ever drift from it.
 // The "ACT" folder (core/lesson-import.js's QUIZ1/QUIZ2/READINGACT subfolder
 // target) is meant to hold only these lesson-comprehension types — Quiz
 // covers both QUIZ1/QUIZ2 and "3. READING QUIZ" (same `type`), find_the_match
@@ -1043,10 +1048,16 @@ function importFlow(initialFile) {
         const cb = el("input"); cb.type = "checkbox"; cb.checked = true;
         const c = a.content || {};
         const n = (c.pairs || c.cards || c.statements || c.questions || c.items || []).length;
+        // Đợt 146 — a comprehension act holds BOTH halves of its exercise, but
+        // the count above is one half (that IS the number of questions a class
+        // answers in a round). "30 ×2" says both things at once; without it the
+        // row for a merged QUIZ reads exactly like the old single-half one.
+        const halves = (c.contentSets || []).length;
+        const nText = halves > 1 ? `${n} ×${halves}` : String(n);
         row.append(cb,
-          el("span", "aw-imp-ricon", IMP_ACT_ICON[a.type] || IMP_DOC_SVG),
+          el("span", "aw-imp-ricon", templateIcon(icons, a.type) || IMP_DOC_SVG),
           el("span", "aw-imp-rtitle", escapeText(a.title)),
-          el("span", "aw-imp-rmeta", `${templateLabel(a.type)} · ${n}${a.subfolder ? " · " + escapeText(a.subfolder) : ""}`));
+          el("span", "aw-imp-rmeta", `${templateLabel(a.type)} · ${nText}${a.subfolder ? " · " + escapeText(a.subfolder) : ""}`));
         cb.onchange = () => { row.classList.toggle("is-off", !cb.checked); refresh(); };
         return { el: row, cb };
       }
@@ -1072,6 +1083,7 @@ function importFlow(initialFile) {
         vbox.append(el("div", "aw-imp-voice-title", "Voice (TTS)"));
         vbox.append(el("div", "aw-imp-voice-hint",
           "Reads each word's Clue and saves it — same as Anagram's “Generate all voices”, including Mix voice. " +
+          "A vocabulary act is voiced for BOTH English clue sets (ENG1 and ENG2), so 100 words means 200 clips. " +
           "Runs AFTER the acts are created, and needs you signed in."));
         const vrows = el("div", "aw-imp-voice-rows");
         acts.filter(a => a.ttsEligible).forEach(a => {
@@ -1320,7 +1332,7 @@ function importFlow(initialFile) {
         // and runVoiceBatch() walks it with a running offset.
         let voicePlan = null, voiceId = null;
         if (wantVoice) {
-          const wordCount = voiceEligible.reduce((s, a) => s + ((a.content.items || []).length), 0);
+          const wordCount = voiceEligible.reduce((s, a) => s + voiceJobsOf(a).count, 0);
           const choice = readVoiceChoice();
           const resolved = ttsMod.planFor(choice, wordCount);
           voicePlan = resolved.plan; voiceId = choice.singleId;
@@ -1379,7 +1391,7 @@ function confirmVoiceGeneration(wordCount, voiceWhat) {
   return new Promise(resolve => {
     openModal("Generate voices?", (body, close) => {
       body.append(el("div", "aw-modal-text",
-        `Will generate voice for <b>${wordCount}</b> word${wordCount === 1 ? "" : "s"} using <b>${escapeText(voiceWhat)}</b>. ` +
+        `Will generate <b>${wordCount}</b> clip${wordCount === 1 ? "" : "s"} using <b>${escapeText(voiceWhat)}</b>. ` +
         `Runs after the import finishes — you'll need to be signed in to save the clips.`));
       const actions = el("div", "aw-modal-actions");
       const no = el("button", "aw-btn", "Skip voices"); no.type = "button";
@@ -1405,6 +1417,18 @@ function confirmVoiceGeneration(wordCount, voiceWhat) {
 // for the WHOLE import (null when the teacher picked a single voice), and the
 // acts here are walked in the same order the plan was sized against, so each
 // act reads its own slice through a running offset.
+// How much work an act's voices are. Đợt 145: a vocabulary act holds several
+// clue sets and each spoken one needs its OWN clip per word, so a 100-word act
+// with ENG1 + ENG2 is 200 clips, not 100. `[null]` means "the act has no clue
+// sets" — the plain, pre-Đợt-145 path, one clip per item read off `.clue`.
+function voiceJobsOf(act) {
+  const items = (act.content && act.content.items) || [];
+  const variants = (act.ttsVariants && act.ttsVariants.length)
+    ? act.ttsVariants
+    : (voiceVariantsOf(act.content) || [null]);
+  return { items, variants, count: items.length * variants.length };
+}
+
 function runVoiceBatch(acts, choice, ttsMod) {
   const GENERIC_CLUE_TEXT = "Unscramble the word";
   const overlay = el("div", "aw-modal-overlay");
@@ -1418,7 +1442,7 @@ function runVoiceBatch(acts, choice, ttsMod) {
   document.body.append(overlay);
   function closeOverlay() { overlay.remove(); }
 
-  const totalWords = acts.reduce((s, a) => s + ((a.content.items || []).length), 0);
+  const totalWords = acts.reduce((s, a) => s + voiceJobsOf(a).count, 0);
   const status = el("div", "aw-voice-status", `Generating 0 / ${totalWords}…`);
   const progressWrap = el("div", "aw-voice-progress");
   const progressFill = el("div", "aw-voice-progressfill");
@@ -1437,28 +1461,49 @@ function runVoiceBatch(acts, choice, ttsMod) {
     let planOffset = 0;   // how many words of `choice.plan` earlier acts already used
     for (const act of acts) {
       if (cancelled) break;
-      const items = act.content.items || [];
-      // generateVoicesBatch's `index` is this item's position in THIS act's
-      // array, so the shared plan is read at offset + index.
-      const base = planOffset;
-      const voiceFor = choice.plan ? ((it, i) => choice.plan[base + i]) : choice.voiceId;
-      planOffset += items.length;
-      const res = await ttsMod.generateVoicesBatch(items, voiceFor, {
-        textFor: it => (it.clue || "").trim() || GENERIC_CLUE_TEXT,
-        isCancelled: () => cancelled,
-        onProgress: (done, failed) => {
-          status.textContent = `Generating ${doneWords + done + failedWords + failed} / ${totalWords}… (${act.title})`;
-          progressFill.style.width = `${Math.round(((doneWords + done + failedWords + failed) / totalWords) * 100)}%`;
-        }
-      });
-      doneWords += res.done; failedWords += res.failed;
-      if (res.done) {
-        // Strip the import-only `ttsEligible` flag before persisting — it
-        // has no place in the saved activity document.
-        const { ttsEligible, ...actToSave } = act;
+      const { items, variants } = voiceJobsOf(act);
+      let anyDone = false;
+      // Đợt 145 — one pass per SPOKEN CLUE SET. generateVoicesBatch works on a
+      // flat list of `{clue, voice, voiceId}` rows and writes its results back
+      // into those same objects, so each pass hands it a PROJECTION of this
+      // variant and copies the answers into `item.voices[variant]` afterwards.
+      // That keeps core/voice-batch.js (shared with the Anagram editor)
+      // completely unaware that clue sets exist. Carrying the existing clip id
+      // into the projection is what makes a re-run overwrite the same clip
+      // instead of orphaning it — the same contract as "Regenerate".
+      for (const variant of variants) {
+        if (cancelled) break;
+        const rows = variant
+          ? items.map(it => ({ ...voiceOf(it, variant), clue: clueOf(it, variant) }))
+          : items;
+        // generateVoicesBatch's `index` is this row's position in THIS list,
+        // so the shared plan is read at offset + index.
+        const base = planOffset;
+        const voiceFor = choice.plan ? ((it, i) => choice.plan[base + i]) : choice.voiceId;
+        planOffset += rows.length;
+        const label = variant ? `${act.title} · ${variant.toUpperCase()}` : act.title;
+        const res = await ttsMod.generateVoicesBatch(rows, voiceFor, {
+          textFor: it => (it.clue || "").trim() || GENERIC_CLUE_TEXT,
+          isCancelled: () => cancelled,
+          onProgress: (done, failed) => {
+            status.textContent = `Generating ${doneWords + done + failedWords + failed} / ${totalWords}… (${label})`;
+            progressFill.style.width = `${Math.round(((doneWords + done + failedWords + failed) / totalWords) * 100)}%`;
+          }
+        });
+        if (variant) rows.forEach((r, i) => { if (r.voice) setVoiceOf(items[i], variant, r); });
+        doneWords += res.done; failedWords += res.failed;
+        if (res.done) anyDone = true;
+        if (res.signedOut) { signedOut = true; break; }
+      }
+      // Saved ONCE per act, after all of its sets — a cancel or a sign-out
+      // partway through still keeps whatever was generated before it.
+      if (anyDone) {
+        // Strip the import-only flags before persisting — they have no place
+        // in the saved activity document.
+        const { ttsEligible, ttsVariants, ...actToSave } = act;
         try { await saveActivity(actToSave, {}); } catch { /* left text-only; teacher can retry per-row in Edit */ }
       }
-      if (res.signedOut) { signedOut = true; break; }
+      if (signedOut) break;
     }
     running = false;
     runCancelBtn.style.display = "none";

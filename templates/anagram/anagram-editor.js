@@ -38,6 +38,7 @@ import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-c
 // This file keeps its own MARKUP (a popover anchored under the button);
 // only the decisions are shared.
 import { MIX_DEFAULTS, fillVoiceOptions, planFor } from "../../core/voice-mix.js";
+import { activeVariant, variantsOf, clueOf, voiceOf, setClueOf, setVoiceOf, variantLabel } from "../../core/content-view.js";
 
 const MAX_ITEMS = 100;
 
@@ -48,7 +49,14 @@ const GENERIC_CLUE_TEXT = "Unscramble the word";
 
 export function openAnagramEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
-  const data = normalize(activity);
+  // Which CLUE SET this editing session works on, and which one the plain
+  // `.clue` mirror belongs to (Đợt 145). Both null for an ordinary act — that
+  // is every act this editor has ever opened until now, and it takes exactly
+  // the same path it always did.
+  const editKey = activeVariant(activity);
+  const variantKeys = variantsOf(activity && activity.content);
+  const defaultKey = variantKeys ? variantKeys[0] : null;
+  const data = normalize(activity, editKey);
   let draggingIndex = null;   // module-scoped to this editor instance's drag session
   // Voice popover state — declared up here (not next to the functions that
   // use it, further down) because renderItems() calls closeVoicePopover()
@@ -994,11 +1002,27 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     clean.instruction = (clean.instruction || "").trim();
     clean.theme = "classic";
     clean.content.items = clean.content.items
-      .map(it => ({
-        word: (it.word || "").trim(), clue: (it.clue || "").trim(),
-        voice: it.voice || "", voiceId: it.voiceId || "",
-        hideText: !!(it.voice && it.hideText)
-      }))
+      .map(it => {
+        const word = (it.word || "").trim();
+        const clue = (it.clue || "").trim();
+        const voice = it.voice || "", voiceId = it.voiceId || "";
+        // Ordinary act — unchanged since the editor was written.
+        if (!editKey) return { word, clue, voice, voiceId, hideText: !!(voice && it.hideText) };
+        // Đợt 145 — fold this session's single clue column back into the set it
+        // came from, leaving the other sets exactly as they arrived. `clue`
+        // stays on the row as the MIRROR of the default set (what the library
+        // card, the print sheet and any not-yet-variant-aware reader show), so
+        // it is re-read from `clues` rather than kept as whatever was typed.
+        const row = { word, clue, voice, voiceId, clues: { ...(it.clues || {}) }, voices: { ...(it.voices || {}) } };
+        setClueOf(row, editKey, clue, defaultKey);
+        setVoiceOf(row, editKey, row);
+        return {
+          word,
+          clue: row.clues[defaultKey] != null ? row.clues[defaultKey] : clue,
+          clues: row.clues,
+          voices: row.voices
+        };
+      })
       .filter(it => it.word !== "");
 
     const err = validate(clean);
@@ -1065,6 +1089,18 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     clearBtn.onclick = () => toggleBulkPopover(clearBtn, "deleteWords");
     bar.append(clearBtn);
 
+    // Đợt 145 — say WHICH clue set the single Clue column is showing. Without
+    // this the teacher edits ENG2, saves, plays, and sees the ENG1 clue they
+    // never touched: the column looks the same either way. Which set it is
+    // follows the act's own Content option, so the way to edit a different one
+    // is to switch it in Options first.
+    if (editKey) {
+      const chip = el("div", "aw-ed-variantchip",
+        `Clue set: ${variantLabel(activity && activity.content, editKey)}`);
+      chip.title = "The Clue column below is this set. Change it in Options > Content.";
+      bar.append(chip);
+    }
+
     return bar;
   }
   function bulkIconBtn(svg, title, extraClass) {
@@ -1084,7 +1120,16 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 }
 
 // ===== data helpers =====
-function normalize(activity) {
+// ⭐ Đợt 145 — a vocabulary act carries several CLUE SETS (core/content-view.js).
+// The editor still shows ONE clue column, and `editKey` says which set that
+// column is: the one the act is currently set to play, so Edit always opens on
+// what the class was just looking at.
+// The rule that matters: the OTHER sets ride along on each row object untouched
+// (`clues` / `voices` are copied, never rebuilt), so adding, deleting, sorting
+// and drag-reordering rows carry all four sets together. Before this, normalize()
+// rebuilt every row from five fixed keys — which, on a merged act, would have
+// thrown three quarters of its content away the first time anyone pressed Save.
+function normalize(activity, editKey) {
   const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
   a.type = "anagram";
   a.schemaVersion = a.schemaVersion || 1;
@@ -1095,10 +1140,17 @@ function normalize(activity) {
   a.content = a.content || {};
   let items = Array.isArray(a.content.items) ? a.content.items : [];
   if (items.length === 0) items = [blankItem()];
-  a.content.items = items.map(it => ({
-    word: it.word || "", clue: it.clue || "", voice: it.voice || "", voiceId: it.voiceId || "",
-    hideText: !!(it.voice && it.hideText)   // hideText only ever means anything alongside a voice
-  }));
+  a.content.items = items.map(it => {
+    const clip = editKey ? voiceOf(it, editKey) : { voice: it.voice || "", voiceId: it.voiceId || "" };
+    const row = {
+      word: it.word || "",
+      clue: editKey ? clueOf(it, editKey) : (it.clue || ""),
+      voice: clip.voice, voiceId: clip.voiceId,
+      hideText: !!(clip.voice && it.hideText)   // hideText only ever means anything alongside a voice
+    };
+    if (editKey) { row.clues = it.clues || {}; row.voices = it.voices || {}; }
+    return row;
+  });
   return a;
 }
 function blankItem() { return { word: "", clue: "", voice: "", voiceId: "", hideText: false }; }

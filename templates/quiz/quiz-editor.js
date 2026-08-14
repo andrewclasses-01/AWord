@@ -21,6 +21,10 @@
 // =============================================================
 
 import { el } from "../../core/utils.js";
+// Đợt 146 — a comprehension act can hold BOTH halves of the same exercise
+// (QUIZ1 = practice, QUIZ2 = homework). These four turn that into "tabs above
+// the list"; for an act without halves every one of them is a no-op.
+import { makeSetTabs, foldEditedSet, expandSetsForEditing, activeContentSet } from "../../core/content-view.js";
 
 const MIN_ANSWERS = 2;
 const MAX_ANSWERS = 6;
@@ -68,6 +72,14 @@ export function openQuizEditor(container, activity, { onSave, onCancel, header, 
 
   // ===== QUESTIONS =====
   body.append(el("div", "aw-ed-sectionhead", "Questions"));
+  // PRACTICE | HOMEWORK tabs (Đợt 146) — above the bulk bar, because they
+  // change WHICH list the bulk buttons act on.
+  const setTabs = makeSetTabs(data.content, {
+    current: activeContentSet(data),
+    read: () => data.content.questions,
+    load: items => { data.content.questions = items; renderQuestions(); }
+  });
+  if (setTabs.el) body.append(setTabs.el);
   body.append(buildBulkBar());
   body.append(el("div", "aw-ed-tip",
     "Tip: in Excel, copy a block of cells (the question in the first column, its answers in the next columns), " +
@@ -230,8 +242,11 @@ export function openQuizEditor(container, activity, { onSave, onCancel, header, 
     // (no question text AND no answers) — e.g. a stray "+ Add question".
     clean.content.questions = clean.content.questions.filter(q => !(q.question === "" && q.answers.length === 0));
 
+    // Validate what is ON SCREEN first, so an error points at rows the teacher
+    // can actually see — then fold that half back into storage form.
     const err = validate(clean);
     if (err) { showError(err); return; }
+    foldEditedSet(clean.content, setTabs.currentKey());
 
     saveBtn.disabled = true;
     const label = saveBtn.textContent;
@@ -330,14 +345,27 @@ function normalize(activity) {
   a.theme = "classic";                 // theme is always Classic now
   a.options = a.options || {};
   a.content = a.content || {};
-  let qs = Array.isArray(a.content.questions) ? a.content.questions : [];
-  if (qs.length === 0) qs = [blankQuestion()];
-  a.content.questions = qs.map(q => {
+  // Đợt 146 — open on the half the act is set to play, and put the content into
+  // EDITING form so switching tabs cannot overwrite the other half.
+  const shape = list => (Array.isArray(list) && list.length ? list : [blankQuestion()]).map(q => {
     let answers = (Array.isArray(q.answers) && q.answers.length ? q.answers : blankAnswers())
       .map(ans => ({ text: ans.text || "", correct: !!ans.correct }));
     if (!answers.some(a => a.correct)) answers[0].correct = true;   // always exactly-one default
     return { question: q.question || "", answers };
   });
+  const setKey = activeContentSet(a);
+  if (setKey) {
+    // EVERY half is shaped, not just the one on screen — otherwise switching to
+    // the homework tab would hand the row renderer whatever shape the import
+    // left behind, and an empty half would arrive with no row to type into.
+    expandSetsForEditing(a.content);
+    Object.keys(a.content.sets).forEach(k => { a.content.sets[k] = shape(a.content.sets[k]); });
+    // The scratch array and the half it came from stay ONE array, so edits land
+    // in both and a tab switch has nothing to reconcile.
+    a.content.questions = a.content.sets[setKey];
+  } else {
+    a.content.questions = shape(a.content.questions);
+  }
   return a;
 }
 function blankQuestion() { return { question: "", answers: blankAnswers() }; }

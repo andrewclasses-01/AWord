@@ -395,7 +395,10 @@ export async function importBundle(bundle, opts = {}) {
     try {
       const node = await saveActivity(activity, { root, parentId });
       result.created++;
-      result.createdActs.push({ ...node, ttsEligible: !!raw.ttsEligible });
+      // `ttsEligible` / `ttsVariants` (Đợt 145) ride along on the RETURNED act
+      // only — they tell the Import dialog what to generate voices for. Neither
+      // can leak into Firestore: `activity` above is built key by key.
+      result.createdActs.push({ ...node, ttsEligible: !!raw.ttsEligible, ttsVariants: raw.ttsVariants || null });
     } catch (e) {
       if (e && e.code === "aw/duplicate-name") result.skipped++;
       else result.errors.push(`${activity.title}: ${e?.message || e}`);

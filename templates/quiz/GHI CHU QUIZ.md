@@ -1,5 +1,27 @@
 # GHI CHÚ QUIZ
 
+## Đợt 146 (14/8/2026) — EDITOR CÓ TAB **PRACTICE | HOMEWORK**, SỬA ĐƯỢC CẢ 2 NỬA
+
+✅ **THẦY DUYỆT** ("commit + push live", 14/8/2026) **→ COMMIT + PUSH + LIVE.** Chỉ sửa `quiz-editor.js`; **file game không đụng một dòng** (nó nhận act
+đã được lõi bẹp sẵn xuống 1 nửa — hợp đồng ở `core/HUONG DAN CORE.md` mục "MỘT ACT MANG 2 NỬA").
+
+Bài đọc hiểu nhập từ Excel nay là **MỘT act mang cả 2 nửa** (QUIZ1 = PRACTICE, QUIZ2 = HOMEWORK), thay vì 2 act rời có đuôi `" HW"`.
+Editor mở ra ở **nửa act đang chơi**, có tabs `PRACTICE | HOMEWORK` ngay trên thanh bulk (đặt trên vì
+tab đổi **danh sách mà mấy nút bulk tác động vào**).
+
+- ⚠️ **Chỗ nguy hiểm**: trong editor, `sets` giữ **mọi nửa** còn `content[itemsKey]` chỉ là **chỗ nháp
+  của tab đang mở**. Không tách ra thì mở tab HOMEWORK = ghi thẳng vào mảng mà cả app đọc như nửa
+  practice ⇒ **mất sạch nửa practice**. Phải gọi **`foldEditedSet()` trước khi Save**.
+- Đổi tab **KHÔNG đụng `options.contentSet`** — sửa nửa homework không được phép âm thầm khiến lớp sau
+  mở act ra gặp đề homework.
+- **Nắn cả HAI nửa** lúc normalize, không chỉ nửa đang mở: nếu không, bấm sang tab kia là bộ dựng hàng
+  nhận đúng hình dạng file import để lại, và nửa rỗng sẽ mở ra không có hàng nào để gõ.
+- Validate chạy trên **hàng đang thấy** rồi mới fold, để báo lỗi trỏ đúng thứ thầy nhìn thấy.
+- 🟢 Test thật trong trình duyệt: tabs đúng, bấm sang HOMEWORK thấy đúng hàng của nửa kia, sửa rồi Save
+  thì **mỗi nửa giữ đúng phần sửa của mình**, dạng lưu đúng (nửa đầu không bị nhân bản vào `sets`).
+  Đối chứng: act **không có nửa 2** thì **0 tab** và Save ra `content` y như trước.
+
+
 **TRẠNG THÁI: ✅ ĐÃ CHỐT + LIVE** (Quiz là template GỐC của dự án — công thức rút ra từ nó nằm ở
 `../CONG THUC MAU.md`, nên trước nay Quiz không có file ghi chú riêng. File này mở từ 4/8/2026 để
 các đợt sửa Quiz về sau có chỗ ghi, khỏi phải đọc ngược `../../GHI CHU DU AN.md`.)

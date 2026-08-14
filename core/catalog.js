@@ -129,3 +129,29 @@ export function templateLabel(type) {
   const t = templateEntry(type);
   return t ? t.label : (type || "Activity");
 }
+
+// ⭐ Đợt 148 — ONE icon per act type, in the one place that already lists the
+// types. Both the in-game Template picker (core/engine.js) and the Import
+// dialog's rows (main.js) read this; before, main.js kept a private map of its
+// own and the Template picker had no icons at all, so a new template could show
+// up iconless in one place and lettered in the other.
+// A few games deliberately SHARE an icon: Gameshow and Maze chase are quizzes
+// with a different skin, Flying fruit unscrambles like Anagram, Speaking cards
+// and Speaking both put a microphone in front of the class. Sharing is fine;
+// having none is not.
+export const TEMPLATE_ICON = {
+  quiz: "fmtQuiz", gameshow: "fmtQuiz",
+  anagram: "fmtAnagram", flying_fruit: "fmtFruit",
+  find_the_match: "link", balloon_pop: "fmtBalloon",
+  type_the_answer: "keyboard", crossword: "fmtCrossword", unjumble: "fmtUnjumble",
+  open_the_box: "fmtBox", maze_chase: "fmtMaze", whack_a_mole: "fmtMole",
+  true_false: "check",
+  speaking_cards: "mic", speaking: "mic",
+  running_word: "fmtRace", running_team: "fmtRace"
+};
+
+// The icon MARKUP for a type. `icons` is passed in rather than imported so this
+// module stays the plain data list it has always been.
+export function templateIcon(icons, type) {
+  return icons[TEMPLATE_ICON[type]] || icons.template;
+}

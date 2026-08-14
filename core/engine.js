@@ -18,6 +18,11 @@ import { getTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./regi
 import { whenAllPacksPrimed } from "./sfx.js";
 import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";
 import { hasAnyVoice, hasHiddenText } from "./voice-playback.js";
+import {
+  resolveActivity, variantsOf, voiceVariantsOf, variantLabel, activeVariant,
+  contentSetsOf, activeContentSet, setLabel,
+  viewKeyOf, splitViewOptions, optionsForView, storeViewOptions, VIEW_SELECTOR_KEYS
+} from "./content-view.js";
 import { switchTargets, convertActivity } from "./convert.js";
 import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
@@ -29,7 +34,7 @@ import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // store.js (the teacher's library) is imported LAZILY for the same reason as
 // assignment-ui.js: the student page must not even load code that can reach it.
-import { TEMPLATES, templateLabel } from "./catalog.js";
+import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
 import { fitOnce } from "./fit.js";
 import { THEMES, loadTheme } from "./themes/manifest.js";
 import { openPrintPopup } from "./print.js";
@@ -125,14 +130,33 @@ const THEME_SWATCH = {
 // myActivity bridge seat and out of the assignment strips, and (b) reports
 // score / clock / finish to the match controller so the shared strip on top can
 // show them. A play without it behaves exactly as it always has.
-export function startGame(root, activity, { onExit, session = null, base = null, fight = null } = {}) {
+export function startGame(root, libAct, { onExit, session = null, base = null, fight = null } = {}) {
   root.innerHTML = "";
 
-  // The ORIGINAL library act behind this play. For a normal play it's `activity`
+  // ⭐ Đợt 145 — TWO NAMES FOR ONE ACT, and the difference matters.
+  //   `libAct`   the object that came from the library. For a vocabulary act it
+  //              still holds ALL its clue sets. Everything that WRITES — Edit,
+  //              Set assignment, saving applied Options, re-entering this
+  //              function — must use this one.
+  //   `activity` what this play actually runs: the same act with the chosen
+  //              clue set flattened down to a plain `.clue` per item, so all 17
+  //              templates keep working without knowing variants exist.
+  // For every act that has no variants (i.e. the entire existing library)
+  // resolveActivity() hands back the SAME object, so the two names are one
+  // thing and this đợt changes nothing at all. See core/content-view.js.
+  // ⚠️ The two SHARE their `options` object by reference, which is what keeps
+  // Options → Apply (Object.assign into activity.options) landing on the real
+  // act; only `content` differs.
+  // ⚠️ `let`, not `const`, and re-read in begin() — see the note there. Applying
+  // Options BEFORE pressing Play does not re-enter startGame(), so a clue set
+  // chosen on the READY screen would otherwise never reach the game.
+  let activity = resolveActivity(libAct);
+
+  // The ORIGINAL library act behind this play. For a normal play it's `libAct`
   // itself; for a "Change template" play it's the act we converted FROM. Applied
   // options are persisted onto THIS act (never onto the throwaway converted copy),
   // and a converted act's options are remembered in originAct.templateOptions[type].
-  const originAct = base || activity;
+  const originAct = base || libAct;
 
   // Đợt 143 — bring old penalty values onto the current 0..100 scale before ANY
   // of them is read. Belt-and-braces with core/store.js (which migrates
@@ -140,8 +164,8 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // copies and "start with mistakes" acts are built on the fly and never come
   // through the library at all. Idempotent — `act.optVer` makes sure a value
   // can only ever be converted once, however many times this runs.
-  migrateActivityOptions(activity);
-  if (originAct !== activity) migrateActivityOptions(originAct);
+  migrateActivityOptions(libAct);
+  if (originAct !== libAct) migrateActivityOptions(originAct);
 
   // FIGHT MODE (Đợt 131, 12/8/2026 — teacher heard the "time's up" cue with
   // 2 minutes left on the visible clock): hand this board's REAL teardown to
@@ -400,7 +424,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
         awEmit("FIGHT", "on");
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
-        startGame(root, activity, { onExit, base });
+        startGame(root, libAct, { onExit, base });
       }
     };
     row.append(goBtn);
@@ -438,20 +462,25 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // new content; Cancel -> replay the original untouched.
     exitAnyFullscreen();
     cleanupAll();
-    tpl.edit(root, activity, {
+    // ⚠️ Đợt 145 — the EDITOR gets `libAct`, never the resolved copy: the copy
+    // has the other clue sets stripped out, so saving it would delete three
+    // quarters of a vocabulary act's content without a word of warning.
+    tpl.edit(root, libAct, {
       onSave: async updated => {
         const { saveActivity } = await import("./store.js");
         const saved = await saveActivity(updated);
         startGame(root, saved, { onExit });
       },
-      onCancel: () => startGame(root, activity, { onExit })
+      onCancel: () => startGame(root, libAct, { onExit })
     });
   };
   // Set assignment -> the setup form; a new assignment appears as a strip below.
   assignBtn.onclick = async () => {
     sound.click();
     const ui = await import("./assignment-ui.js");
-    ui.openAssignmentSetup(activity, { onCreated: loadAssignmentBars });
+    // `libAct` again (Đợt 145): the assignment snapshot must keep every clue
+    // set, so the teacher can still switch the given act between them later.
+    ui.openAssignmentSetup(libAct, { onCreated: loadAssignmentBars });
   };
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).
@@ -574,10 +603,18 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // của pack; ảnh: cache HTTP của trình duyệt; mô hình: `_asrP`).
   const PREP_BAR_DELAY_MS = 250;
   const PREP_TIMEOUT_MS = 12000;
+  let preparedVariant = null;   // Đợt 145/146 — see prepareBeforePlay()/begin()
+  // "Which content is this act set to right now", across both axes — the clue
+  // set and the practice/homework half. Only used to spot a change.
+  const contentKeyOf = act => `${activeVariant(act) || "-"}|${activeContentSet(act) || "-"}`;
   prepareBeforePlay();
 
   function prepareBeforePlay() {
     const steps = [];
+    // Which content this preload is for (Đợt 145/146) — begin() compares
+    // against this to notice a clue set OR a half chosen after this screen was
+    // built. One string covers both axes.
+    preparedVariant = contentKeyOf(libAct);
 
     // 1. giọng đọc từng từ. Mode "Text" KHÔNG tự đọc gì (voiceView), nên tải
     //    trước cả kho clip là phí đường truyền lớp học — act 100 từ ≈ 1,2MB.
@@ -876,6 +913,29 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   }
 
   function begin() {
+    // ⭐ Đợt 145 — RE-READ the chosen clue set at the moment play starts, not
+    // when this screen was built. Options → Apply on the READY screen (before
+    // Play) deliberately does NOT restart anything: it closes the panel and
+    // says "the options take effect on Play". Every other option is read live
+    // out of `activity.options`, so that promise held for free — but the clue
+    // set is baked into `content` by the resolver, so it has to be re-baked
+    // here. Caught by testing: picking VI1, Apply, Play still showed ENG1.
+    // Identity for every act without clue sets, so this costs those nothing.
+    activity = resolveActivity(libAct);
+    // Top up the clip cache when the set changed under us — the READY gate
+    // preloaded whichever one was current when it ran. Fire-and-forget on
+    // purpose: it only fills core/voice-clips.js's cache, plays nothing, and a
+    // slow or failed fetch must never hold up the game — the listen button
+    // falls back to fetching its own clip, exactly as it did before the
+    // preload gate existed (Đợt 122).
+    const nowVariant = contentKeyOf(libAct);
+    if (nowVariant !== preparedVariant) {
+      preparedVariant = nowVariant;
+      if ((activity.options || {}).contentMode !== "text") {
+        const ids = [...collectVoiceIds(activity.content || {})];
+        if (ids.length) preloadVoiceClips(ids).catch(() => {});
+      }
+    }
     startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (!tpl.manualTimerStart) startTimerNow();
@@ -979,20 +1039,125 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     if (belowCenter.contains(ev.target)) return;   // the 3 buttons themselves toggle via their own onclick
     closeToolPanel(true);
   }
-  function openToolPanel(btn, buildContent) {
-    if (activeToolBtn === btn) { closeToolPanel(true); return; }   // clicking the open one again closes it
-    closeToolPanel(false);   // switching tools: drop the old one instantly, new one fades in
-    sound.click();
-    toolDim = el("div", "aw-tool-dim");
-    toolDim.onclick = () => closeToolPanel(true);
-    document.body.append(toolDim);
+  // ⭐ Đợt 148 — SWAP THE CONTENTS OF A BOX, smoothly: fade the old out, build
+  // the new, then let the box travel to its new height while the new content
+  // fades in. Used by BOTH things the teacher asked to stop flashing — going
+  // Options → Template/Style/Mode (the panel box stays put and morphs) and
+  // switching clue set / half inside Options (only the body below the switches
+  // is rebuilt).
+  // ⚠️ No `requestAnimationFrame` anywhere in here. A hidden or backgrounded
+  // tab never fires it, and the box would stay pinned at its old height for
+  // ever — the same class of trap as the animation-event stall that
+  // closeToolPanel() already guards with a timeout.
+  // ⭐ Đợt 149/151 — swap a box's contents as a DISSOLVE. The outgoing content
+  // is parked in an absolutely-positioned layer BENEATH, at full opacity for
+  // the whole ride; the incoming content takes the flow and fades in ABOVE it,
+  // carrying the panel's background (see .aw-swap-in). Đợt 149 faded both
+  // layers at once, which dipped the combined coverage mid-swap and made even
+  // identical content shimmer; with an opaque base, a pixel that is the same
+  // in both layers never changes at all. (Đợt 148's version was worse still:
+  // it emptied the box before rebuilding — a moment with nothing in it.)
+  const SWAP_MS = 240;
+  let swapToken = 0;
+  function swapContents(box, build, done) {
+    // A second swap can start while this one is still running — the teacher
+    // clicking Template then Style straight away, or tapping through clue sets.
+    // Every stage checks it is still the LATEST swap, so an older one's cleanup
+    // can never unpin the height out from under the newer one.
+    const mine = ++swapToken;
+    const r0 = box.getBoundingClientRect();
+    // The compact-on-overflow watcher measures the panel on EVERY resize, and
+    // an animated height resizes it every frame — each callback strips a class,
+    // reads scrollHeight (a forced reflow) and puts it back. Nothing useful can
+    // come of measuring a box that is mid-flight, so it sits out the swap.
+    panelCompactObs?.disconnect();
+    const outgoing = el("div", "aw-swap-out");
+    while (box.firstChild) outgoing.append(box.firstChild);
+    box.classList.add("aw-swapbox");
+    const incoming = el("div", "aw-swap-in");
+    build(incoming);
+    box.append(outgoing, incoming);
+    // ⭐ Đợt 152 — measure the TARGET by letting the box take it for a moment,
+    // not by measuring the incoming layer. The layer's own height MISSES the
+    // box's padding: on the panel (padding 14/16, border-box) that pinned the
+    // travel 30px SHORT, the content squashed and clipped, and the box then
+    // popped to its true size when the pin came off — the teacher's "co pop-up
+    // lại nhỏ... rồi mới hoàn thiện trong nhịp tiếp theo". Un-pinned, the box
+    // sizes itself from the in-flow incoming content under its OWN padding,
+    // width class and max-height — by definition the size it will settle at.
+    // The outgoing layer is absolute, so it doesn't vote. Width is pinned and
+    // animated for the same reason (Options↔Style really do differ in width).
+    // Everything up to the setTimeout runs before a single frame is painted,
+    // so the momentary un-pin is never visible.
+    box.style.height = ""; box.style.width = "";
+    const r1 = box.getBoundingClientRect();
+    box.style.height = r0.height + "px"; box.style.width = r0.width + "px";
+    // One tick so the browser registers the starting opacities/size before
+    // they change — the transition has nothing to run from otherwise.
+    setTimeout(() => {
+      if (mine !== swapToken) return;
+      incoming.classList.add("is-in");   // the outgoing layer never fades — see .aw-swap-out
+      box.style.height = r1.height + "px"; box.style.width = r1.width + "px";
+      setTimeout(() => {
+        if (mine !== swapToken) return;
+        outgoing.remove();
+        // unwrap: the box's children become the real content again, so nothing
+        // downstream ever sees the temporary layer
+        while (incoming.firstChild) box.insertBefore(incoming.firstChild, incoming);
+        incoming.remove();
+        box.style.height = ""; box.style.width = "";
+        box.classList.remove("aw-swapbox");
+        done?.();
+      }, SWAP_MS + 30);
+    }, 20);
+  }
+
+  // Everything that has to happen for a set of panel contents, whether the
+  // panel is brand new or is being swapped in place.
+  function mountPanelContent(buildContent, host) {
     // `is-opts` (Đợt 140) gives the Options panel a stated width so its two
     // grid columns are always the same comfortable size — see app.css. Set
     // BEFORE buildContent so anything that measures itself while building
     // (an accordion reading scrollHeight) reads the final width.
-    toolPanelEl = el("div", "aw-tool-panel" + (buildContent === buildOptionsPanel ? " is-opts" : ""));
-    buildContent(toolPanelEl);
+    toolPanelEl.classList.toggle("is-opts", buildContent === buildOptionsPanel);
+    toolPanelEl.classList.toggle("is-tpl", buildContent === buildTemplatePanel);
+    toolPanelEl.classList.remove("is-compact-opts");
+    panelCompactObs?.disconnect(); panelCompactObs = null;
+    // `host` is the cross-fade layer during a swap, the panel itself otherwise.
+    buildContent(host || toolPanelEl);
+  }
+
+  function openToolPanel(btn, buildContent) {
+    if (activeToolBtn === btn) { closeToolPanel(true); return; }   // clicking the open one again closes it
+    sound.click();
+    // ⭐ Đợt 148 (teacher: "khi bấm từ options sang templates bị 1 nhịp nháy do
+    // options đóng và templates mở nhanh gây ra") — with a panel already open,
+    // REUSE the box and morph it. Dropping it and building another is what made
+    // the whole panel blink out and back in.
+    if (toolPanelEl && activeToolBtn) {
+      activeToolBtn.classList.remove("is-active");
+      activeToolBtn = btn;
+      btn.classList.add("is-active");
+      const panel = toolPanelEl;
+      swapContents(panel, host => mountPanelContent(buildContent, host), () => {
+        if (toolPanelEl === panel) capPanelHeight(buildContent);
+      });
+      return;
+    }
+    closeToolPanel(false);
+    toolDim = el("div", "aw-tool-dim");
+    toolDim.onclick = () => closeToolPanel(true);
+    document.body.append(toolDim);
+    toolPanelEl = el("div", "aw-tool-panel");
+    mountPanelContent(buildContent);
     belowCenter.append(toolPanelEl);
+    capPanelHeight(buildContent);
+    btn.classList.add("is-active");
+    activeToolBtn = btn;
+    setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
+  }
+
+  function capPanelHeight(buildContent) {
     // Cap the panel's height so it never runs off the top of the screen, and
     // let it scroll internally past that — but the cap itself is the ACTUAL
     // room above the toolbar (viewport top to `belowCenter`), not the stage's
@@ -1026,9 +1191,6 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       panelCompactObs = new ResizeObserver(recheck);
       panelCompactObs.observe(toolPanelEl);
     }
-    btn.classList.add("is-active");
-    activeToolBtn = btn;
-    setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
   }
 
   optionsBtn.onclick = () => openToolPanel(optionsBtn, buildOptionsPanel);
@@ -1049,7 +1211,69 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   // draft model, Apply, fight mode, and persisting into the teacher's library.
   function buildOptionsPanel(panel) {
     const base = activity.options || {};
-    const draft = { ...base };
+    let draft = { ...base };
+
+    // ⭐ Đợt 147 — ONE SET OF OPTIONS PER VIEW. Picking ENG2, or VI1, or the
+    // homework half, now also swaps every other control in this panel to that
+    // view's own settings (teacher, 14/8/2026 — reading Vietnamese clues is a
+    // different exercise from listening to English ones, and wants its own
+    // clock, lives and penalties). `viewKeyOf` is null for an act with neither
+    // clue sets nor halves, i.e. the entire library before Đợt 145, and then
+    // every line below is inert and this panel behaves exactly as it did.
+    let curKey = viewKeyOf(libAct);
+    // Edits per view, held until Apply — so switching away and back inside one
+    // sitting does not lose what was typed, and closing without Apply still
+    // discards ALL of it (the draft rule this panel has always had).
+    const pending = {};
+    if (curKey) pending[curKey] = draft;
+    // A view being visited for the FIRST time starts from the Settings
+    // defaults (teacher's choice). Loaded up front so the switch itself never
+    // has to wait; if it somehow has not arrived, the fallback is to carry the
+    // current settings over, which is the least surprising thing to do.
+    let settingsMod = null;
+    if (curKey) import("./settings.js").then(m => { settingsMod = m; }).catch(() => {});
+
+    // ⭐ Đợt 149 — the Content rows live in their OWN host, built once and left
+    // alone; only `bodyHost` is rebuilt when the view changes. Teacher: "chuyển
+    // giữa TEXT-VOICE và chuyển qua lại giữa các con của chúng rất giật" —
+    // measured, those rows were inside the part being rebuilt, so the button
+    // under their finger was destroyed and recreated on every tap.
+    // Because those rows are never rebuilt they would keep writing into the
+    // FIRST draft for ever, so their choice goes into `selState` instead: one
+    // stable object, merged into whichever draft is current.
+    const selState = {};
+    VIEW_SELECTOR_KEYS.forEach(k => { if (base[k] !== undefined) selState[k] = base[k]; });
+    const switchHost = el("div", "aw-opt-switches");
+    const bodyHost = el("div", "aw-opt-bodyhost");
+    panel.append(switchHost, bodyHost);
+    let switchesBuilt = false;
+    renderBody();
+
+    function onViewChange() {
+      const nextKey = viewKeyOf({ ...libAct, options: { ...draft, ...selState } });
+      if (!nextKey || nextKey === curKey) return;
+      pending[curKey] = draft;                       // park the view we are leaving
+      const seed = pending[nextKey] || optionsForView(libAct, nextKey)
+        || (settingsMod ? settingsMod.getDefaultOptions(libAct.type) : draft);
+      draft = { ...splitViewOptions(seed).view, ...selState };
+      curKey = nextKey;
+      pending[curKey] = draft;
+      // Đợt 148 (teacher: "mọi lựa chọn (cả text-voice hay các act con) cũng
+      // cần hiệu ứng animation mượt") — the body carries a different set of
+      // values now, so it fades across and the panel travels to its new height
+      // instead of snapping.
+      // The done-callback re-arms the compact watcher swapContents stood down
+      // (Đợt 150 — before this, only tool-to-tool swaps re-armed it, so the
+      // first view change left the panel unwatched for the rest of the sitting).
+      swapContents(bodyHost, buildBody, () => { if (toolPanelEl) capPanelHeight(buildOptionsPanel); });
+    }
+
+    function renderBody() {
+      bodyHost.innerHTML = "";
+      buildBody(bodyHost);
+    }
+
+    function buildBody(host) {
 
     // CONTENT (Text / Voice) — only for acts that actually carry spoken clips.
     // An act saved BEFORE this option existed has no contentMode, and its items
@@ -1057,10 +1281,43 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // buttons but DON'T write it into the draft — leaving contentMode unset
     // keeps the per-item AUTO behaviour byte-for-byte until the teacher really
     // picks one. (Settings passes a switch too, since there it IS a default.)
-    const contentSwitch = hasAnyVoice(activity.content || {})
-      ? { shown: draft.contentMode || (hasHiddenText(activity.content) ? "voice" : "text") }
+    // ⭐ Đợt 145 — read the LIBRARY act here, not the resolved one: the clue
+    // sets and every variant's clips live on it, and the panel is where the
+    // teacher picks between them. A variant act always shows the switch (even
+    // before any voice is generated) because the right-hand half of the row —
+    // the list of clue sets — is the reason the row exists.
+    const variants = variantsOf(libAct.content);
+    const contentSwitch = (variants || hasAnyVoice(libAct.content || {}))
+      ? {
+          // read `selState`, not `draft` — the rows are built once and own the
+          // selector state from then on (Đợt 149)
+          shown: selState.contentMode || (hasHiddenText(libAct.content) ? "voice" : "text"),
+          variants,
+          voiceVariants: voiceVariantsOf(libAct.content),
+          labelOf: key => variantLabel(libAct.content, key),
+          variant: selState.contentVariant || activeVariant({ ...libAct, options: { ...selState, contentMode: "text" } }),
+          voiceVariant: selState.voiceVariant || activeVariant({ ...libAct, options: { ...selState, contentMode: "voice" } })
+        }
       : null;
-    buildOptionsBody(panel, { tpl, draft, contentSwitch, fight });
+    // ⭐ Đợt 146 — the PRACTICE/HOMEWORK row, above the Text/Voice one. It is
+    // about WHICH CONTENT is played and nothing else; the options a class gets
+    // when the act is assigned are decided at assignment time (teacher: "rời
+    // nhau — HAI công tắc"). Null for every act without a second half, which
+    // hides the row entirely.
+    const sets = contentSetsOf(libAct.content);
+    const contentSetSwitch = sets
+      ? {
+          sets,
+          labelOf: key => setLabel(libAct.content, key),
+          current: selState.contentSet || activeContentSet(libAct)
+        }
+      : null;
+      buildOptionsBody(host, {
+        tpl, draft, contentSwitch, contentSetSwitch, fight, onViewChange,
+        switchHost, selectors: selState, renderSwitches: !switchesBuilt
+      });
+      switchesBuilt = true;
+    }
 
     // APPLY — only now does the draft get written into activity.options.
     // Clicking outside without pressing this discards every change above.
@@ -1070,6 +1327,25 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     applyBtn.onclick = () => {
       sound.click();
       if (!activity.options) activity.options = {};
+      // Đợt 149 — the Content rows write into `selState`, which is merged back
+      // in here. Doing it at Apply (rather than on every tap) also covers the
+      // act that has a Text/Voice switch but NO clue sets: its taps change no
+      // view key, so onViewChange never runs and this is the only place the
+      // choice could arrive from.
+      draft = { ...draft, ...selState };
+      // Đợt 147 — write back EVERY view touched in this sitting, not just the
+      // one on screen, and make the act's effective options exactly this
+      // view's. The keys are REMOVED rather than merged over: a view seeded
+      // from the Settings defaults may simply not have a key the previous view
+      // had, and a leftover `lives: 3` from a view the teacher is no longer
+      // looking at is a setting nothing on screen explains.
+      // ⚠️ `activity.options` must be MUTATED, never replaced — libAct, the
+      // mistakes act and the fight boards all hold the same object.
+      if (curKey) {
+        pending[curKey] = draft;
+        Object.entries(pending).forEach(([k, o]) => storeViewOptions(libAct, k, o));
+        Object.keys(activity.options).forEach(k => { if (!(k in draft)) delete activity.options[k]; });
+      }
       Object.assign(activity.options, draft);
       // FIGHT MODE: each board plays a COPY of the act (its own frozen word
       // order), so writing into this copy's options would leave the real act —
@@ -1091,7 +1367,9 @@ export function startGame(root, activity, { onExit, session = null, base = null,
         // 3-word act into the teacher's library. `activity.options` is the SAME
         // object as the base act's (buildMistakesActivity spreads shallowly),
         // so the Object.assign above already updated the real act in memory.
-        const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : activity;
+        // `libAct` (Đợt 145) — saving the resolved copy would write an act with
+        // its other clue sets stripped out back over the real one.
+        const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : libAct;
         const isConv = !!realAct._converted;
         if (isConv) {
           if (!originAct.templateOptions) originAct.templateOptions = {};
@@ -1147,7 +1425,11 @@ export function startGame(root, activity, { onExit, session = null, base = null,
       const isCurrent = t.type === activity.type;
       const enabled = !isCurrent && canSwitch.has(t.type);
       const cls = isCurrent ? " is-current" : (enabled ? "" : " is-soon");
-      const item = el("div", "aw-tpl-item" + cls, escapeText(t.label));
+      // Đợt 148 — icon + name, so a 560px-wide picker reads as a list of games
+      // rather than two columns of stranded words (teacher's request).
+      const item = el("div", "aw-tpl-item" + cls);
+      item.append(el("span", "aw-tpl-icon", templateIcon(icons, t.type)),
+                  el("span", "aw-tpl-name", escapeText(t.label)));
       if (enabled) {
         item.onclick = () => { closeToolPanel(false); doSwitchTemplate(t.type); };
       } else if (!isCurrent) {
@@ -1320,7 +1602,7 @@ export function startGame(root, activity, { onExit, session = null, base = null,
     // its own score chip, and no more reporting to the scoreboard above it.
     if (fight) { cleanupAll(); fight.ctl.restartMatch(); return; }
     cleanupAll();
-    const target = activity._mistakes ? activity._mistakesBase : activity;
+    const target = activity._mistakes ? activity._mistakesBase : libAct;
     startGame(root, target, { onExit, session, base: originAct });
   }
 
@@ -1331,7 +1613,10 @@ export function startGame(root, activity, { onExit, session = null, base = null,
   function replayCurrent() {
     cleanupAll();
     if (fight) { fight.ctl.restartMatch(); return; }   // same reason as restart() above
-    startGame(root, activity, { onExit, session, base: originAct });
+    // `libAct`, not the resolved copy — replaying is exactly when a just-applied
+    // change of clue set has to be re-resolved (Đợt 145). A mistakes round is
+    // already a cut-down plain act, so it replays itself.
+    startGame(root, activity._mistakes ? activity : libAct, { onExit, session, base: originAct });
   }
 
   // Is there a "Start with mistakes" round to offer? Needs a template that

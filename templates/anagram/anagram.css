@@ -619,3 +619,7 @@
   transition: max-height .28s cubic-bezier(.22,.9,.3,1);
 }
 .aw-anagram-penwrap.is-closed { pointer-events: none; }
+/* Đợt 148 — the cell's own bottom spacing (the grid's old row-gap, moved onto
+   the cells in core/app.css) collapses on the SAME curve as the height, so the
+   close reads as ONE movement instead of a slide followed by a snap. */
+.aw-anagram-penhost { transition: margin-bottom .28s cubic-bezier(.22,.9,.3,1); }

@@ -8,7 +8,202 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **13/8/2026 (Đợt 143b) — ⭐ MỌI THANH KÉO CHUNG MỘT NỀN TRẮNG + THẲNG HÀNG
+> Cập nhật lần cuối: **14/8/2026 (Đợt 152) — ⭐ "GIẬT LỘN XỘN + THANH SCROLL" KHI ĐỔI CÔNG CỤ: BA
+> LỖI HÌNH HỌC CHỒNG NHAU, TRONG ĐÓ MỘT CHÚ THÍCH CSS HỎNG NUỐT MẤT CẢ RULE + TEMPLATE LÊN 3 CỘT.**
+> ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE. ⭐ CÓ SỬA CORE (`engine.js` · `app.css`).
+> Cả 3 lỗi chỉ phát tác khi hộp swap là PANEL (có padding) — nên phần trong Options mượt còn
+> panel-sang-panel thì loạn: **(a)** đích chiều cao đo từ LỚP TRONG nên **thiếu đúng 30px padding** ⇒
+> "co pop-up lại nhỏ" rồi bung cuối cú — chữa bằng **đo đích thật** (thả neo tạm → đo hộp → ghim lại,
+> trước khung hình đầu nên không lóe), kèm ghim + transition **cả width** (Options↔Style 560↔295 nay
+> trượt); **(b)** lớp cũ absolute `top:0;left:0` neo vào **padding box** ⇒ nội dung cũ nhảy chéo
+> lên-trái (20,14)px — chữa bằng `.aw-swap-out{padding:inherit}`; **(c)** ⭐ chú thích CSS Đợt 151
+> **thiếu `/*` mở** ⇒ CSS âm thầm **vứt cả rule `.aw-swapbox`**: mất `overflow:hidden` (⇒ **thanh cuộn
+> 15px** thầy thấy + đo đích dư 15px) và mất **toàn bộ transition** (⇒ giật phựt). Bắt được nhờ chênh
+> **ĐÚNG 15.00px** quá tròn ⇒ scrollbar ⇒ computed `overflow` ra `"hidden auto"`.
+> 👉 **2 LUẬT MỚI**: sửa chú thích CSS xong PHẢI quét cân bằng `/* */` cả file (nạn nhân là rule đứng
+> sau, không báo lỗi); swap kích thước hộp thì **đo đích trên chính cái hộp**, đừng đo lớp trong.
+> Kèm: **Template lên 3 CỘT** (thầy yêu cầu), ô to hơn, icon 20→24px, chữ 13→14px — 0/17 tên bị cắt,
+> panel 560×431 không cuộn.
+> 🟢 ĐÃ TỰ TEST: cả 3 hướng đổi công cụ **đích ghim khớp yên vị 0.00px cả 2 trục** · nội dung cũ giữ
+> nguyên x suốt cú chuyển, cũ+mới cùng trượt một lượng với mép trên (panel neo đáy — trượt đồng bộ,
+> không phải lỗi) · rule swapbox sống thật (`overflow:hidden`, `transition: height, width`) · đổi view
+> trong Options sạch · 27/27 + 58/58 đạt · 0 lỗi script. ⬜ Mắt thầy trên Chrome thật.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 152 + 2 mục mới `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 151) — ⭐ LỖI NGHIÊM TRỌNG: PANEL RƠI KHỎI NEO KHI ĐỔI CÔNG CỤ
+> + HẾT "NHÁY NHẸ" ENG1→ENG2 (DISSOLVE TRÊN NỀN ĐỤC).** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE (`app.css` · `engine.js`).
+> **(1) Panel nhảy chỗ** (thầy: "hàng tùy chỉnh nhảy sang trái, pop-up nhảy xuống dưới bên phải"):
+> `.aw-swapbox` khai `position:relative`, đứng SAU `.aw-tool-panel` cùng độ ưu tiên ⇒ trong cú swap nó
+> **đè mất `position:absolute`** — panel rơi khỏi neo vào dòng chảy flex của hàng nút (đo:
+> `(95,93)→(334,495)`, nút Options `x=278→26`). Chữa: `.aw-swapbox` **không đụng `position`**; đích
+> swap tự lo chỗ neo (`.aw-opt-bodyhost` mang `relative` thường trực). Đo lại tĩnh + **lấy mẫu 40ms
+> trong cú swap thật**: `absolute` mọi mẫu, panel và hàng nút đứng yên tuyệt đối.
+> 👉 **LUẬT: class tiện ích gắn-tháo động CẤM khai `position`** — và loại lỗi này chỉ lộ đúng khung
+> hình animation, phải lấy mẫu TRONG lúc chuyển chứ đừng đo sau khi yên vị.
+> **(2) "Nháy nhẹ"**: cross-fade HAI CHIỀU làm tổng độ phủ tụt (~75% điểm giữa) ⇒ nội dung giống hệt
+> cũng hụt sáng. Chữa: **dissolve trên nền đục** — lớp cũ đứng nguyên độ mờ 1 ở dưới, chỉ lớp mới mờ
+> dần vào ở trên mang nền panel; điểm ảnh giống nhau `c·a + c·(1−a) = c`, **không đổi giữa chừng**.
+> Đo: `out.opacity=1` mọi mẫu, 0 lớp sót.
+> 🟢 ĐÃ TỰ TEST: 8 mẫu live Options→Template đứng yên · dissolve sạch · không hồi quy (cú nâng 9px vẫn
+> hết `257.3→257.3`, options theo view đúng, act thường không sinh gì, 27/27 + 58/58 đạt, 0 lỗi script).
+> ⬜ Mắt thầy trên Chrome thật. Chi tiết: `GHI CHU DU AN.md` Đợt 151 + 2 mục mới `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 150) — ⭐ HAI LỖI THẬT CUỐI CỦA CHUỖI ANIMATION: CÚ NÂNG 9px
+> "TRỪ NÚT APPLY" + NỬA PHẢI ĐỔI HÌNH KHÔNG CHUYỂN TIẾP.** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE (`app.css` · `options-panel.js` · `engine.js`).
+> **(b) Cú nâng — đo tĩnh ra đúng 9px**: lưới options kết thúc bằng `margin-bottom:-9px` (khoản bù
+> Đợt 148); lúc nghỉ nó **thấm xuyên qua đáy** bodyHost (margin collapse), `swapContents` **ghim chiều
+> cao là hết thấm** ⇒ panel neo đáy cao thêm 9px, cả khối nâng lên trừ Apply, gỡ ghim thì hạ — đúng
+> từng chữ thầy tả (`panelTop 93.2→84.2`). Chữa: **`flow-root` thường trực** cho bodyHost + 2 lớp swap
+> (lớp đang vào là thứ được đo lấy chiều cao đích). Đo lại `93.2→93.2→93.2`, nghỉ không đổi 1px.
+> 👉 **LUẬT: hộp bị ghim chiều cao lúc animation phải là BFC thường trực.**
+> **(a) Nửa phải** (ENG1-ENG2-VI1-VI2 ↔ ENG1-ENG2): bản cũ xoá trắng + dựng mkSeg mới trong 1 khung
+> hình. Nay **một cụm mang đủ mọi bộ, dựng một lần** (`.aw-seg-anim`): nút rời nửa co `flex-grow 1→0` +
+> `padding→0` + `margin-left:-2px` (nuốt gap, về tròn **0px**), nút ở lại nở ra cùng đường cong — vì
+> **track grid không animate được còn flex-grow thì có**; thumb đổi bề rộng cùng nhịp. Dưới 2 bộ thì cả
+> nửa mờ dần thay vì 1 nút chết. Đo: `4×61px ↔ 2×124px`, tổng 255px đứng yên, **cùng phần tử suốt
+> phiên**, nút gone trơ.
+> Kèm: đường đổi-lựa-chọn nay **nối lại** bộ đo `is-compact-opts` sau swap (trước chỉ đường đổi-panel
+> có) · bỏ delay lớp vào · `.aw-opt-variants` vào reduced-motion.
+> 🟢 ĐÃ TỰ TEST: 3 mốc ghim/gỡ bằng nhau · cụm nút thở đúng hình học + transition gắn thật · options
+> theo view còn nguyên (Apply ghi đúng 3 bộ) · hàng công tắc vẫn sống qua đổi view · act thường không
+> sinh gì · 27/27 + 58/58 vẫn đạt · **0 lỗi console**. ⬜ Mắt + tay thầy trên Chrome thật.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 150 + 2 mục mới ở `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 149) — ⭐ LỖI THẬT: ĐỔI TEXT/VOICE VÀ ĐỔI BỘ GỢI Ý "RẤT GIẬT"
+> — VÌ CHÍNH NÚT ĐANG BẤM BỊ DỰNG LẠI.** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE (`engine.js` · `options-panel.js` · `app.css`).
+> **Gốc chuyện, đo được chứ không đoán**: Đợt 147 dựng lại **cả thân panel** khi đổi view, mà **hàng
+> công tắc Content nằm TRONG đó** ⇒ `switchRowSameElement: false` — **nút thầy vừa chạm bị mờ đi, bị
+> xoá, rồi hiện lại thành nút KHÁC**, con trượt nhảy về chỗ mới. Hiệu ứng Đợt 148 không cứu được vì nó
+> đang làm mượt đúng cái đáng lẽ không được động vào.
+> **Chữa**: (a) hàng công tắc ra khối RIÊNG `.aw-opt-switches`, **dựng một lần, không bao giờ dựng
+> lại**; chỉ `.aw-opt-bodyhost` được thay. ⚠️ Bẫy đi kèm: điều khiển không dựng lại thì **ghi mãi vào
+> bản nháp ĐẦU** ⇒ lựa chọn nay ghi vào **`selState`** (object bền), trộn vào bản nháp **lúc Apply** —
+> làm ở Apply còn lo được ca act có Text/Voice nhưng không có bộ gợi ý.
+> (b) **CROSS-FADE thật**: Đợt 148 dọn rỗng hộp trước ⇒ có khoảnh khắc **trong hộp không có gì**, đọc
+> thành cú xóc; nay lớp cũ nhấc khỏi dòng chảy để lớp mới vào ngay, hai lớp mờ xuyên qua nhau.
+> (c) bộ đo `is-compact-opts` **nghỉ trong lúc chuyển** (nó ép tính lại bố cục mỗi khung hình).
+> 👉 **LUẬT: cái điều khiển gây ra thay đổi phải ở NGOÀI vùng bị dựng lại.**
+> 🟢 ĐÃ TỰ TEST: **`SWITCH ROW SURVIVED: true`** (phép đo lật được 2 chiều) · giữa chừng đủ 2 lớp, xong
+> thì sạch tuyệt đối · options-theo-view vẫn đúng · ca **không có bộ gợi ý** vẫn Apply được và không
+> sinh `viewOptions` · PRACTICE/HOMEWORK ok · đổi panel cùng một hộp, bấm dồn 3 công cụ vẫn sạch ·
+> **không hồi quy Đợt 148** (accordion `289→235→235`) · 2 bộ kiểm tự động vẫn đạt · **0 lỗi console**.
+> ⚠️ Ghi lại: **bộ đệm console của công cụ test giữ lỗi CŨ qua nhiều lần tải lại** — phải mở **tab mới**
+> mới kết luận được là sạch. ⬜ Vẫn cần **tay thầy** cảm nhận độ mượt.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 149 + mục mới ở `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 148) — ⭐ HẾT HẲN "KHỰNG 1 NHỊP" + MỌI LẦN ĐỔI PANEL ĐỀU MƯỢT
+> + KHUNG TEMPLATE BẰNG KHUNG OPTIONS, MỖI GAME MỘT ICON.** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE (`app.css` · `engine.js` · `icons.js` · `catalog.js`) + `anagram.js`/`.css` + `main.js`.
+> **(1) Nhịp thứ hai** — Đợt 147 mới chữa nhịp đầu. Đo: co ruột về 0 ⇒ lưới 235px, bỏ ô khỏi bố cục ⇒
+> 227px. **8–9px đó là `row-gap`**, mà `gap` thuộc về **LƯỚI** nên **không animation nào trên Ô xoá
+> được** — nó chỉ mất đúng lúc cả hàng mất. **`margin` âm KHÔNG chữa được** (đo: 235→235).
+> ⇒ **Chuyển khoảng cách hàng từ lưới xuống từng ô** (`row-gap:0` + `.aw-opt-grid > * {margin-bottom}`
+> + lưới `-9px` bù hàng cuối). Đo trước/sau: **mở 281px cả hai cách** (0/17 panel xê dịch), **đóng còn
+> 227px**; cú đóng nay `235→235` — **nhịp hai biến mất**, panel 414→360 liền một mạch.
+> 👉 **LUẬT: muốn ô của lưới co mượt tới khi biến mất thì khoảng cách phải thuộc về Ô, không phải LƯỚI.**
+> **(2) Mọi lần đổi đều mượt** — `swapContents()` mới: ghim chiều cao → mờ đi → dựng lại → chạy tới
+> chiều cao mới. Áp cho đổi bộ gợi ý/TEXT↔VOICE/PRACTICE↔HOMEWORK **và** Options→Template/Style/Mode —
+> chỗ sau nay **giữ nguyên cái hộp và biến hình** thay vì huỷ panel cũ dựng panel mới (nguồn của cú
+> nháy thầy báo). ⛔ **Không `requestAnimationFrame`** (tab ẩn không gọi ⇒ hộp kẹt chiều cao vĩnh viễn);
+> có thẻ chống chồng lượt khi bấm dồn.
+> **(3) Template = Options về bề rộng** (`.is-tpl` dùng chung 560px) + **mỗi game một icon**, ô là
+> icon + tên đọc từ trái sang. Bản đồ icon dọn về `core/catalog.js` (`TEMPLATE_ICON`) — trước đó
+> `main.js` giữ bản riêng còn picker **không có icon nào**. Thêm **6 icon mới**.
+> 🟢 ĐÃ TỰ TEST: nhịp hai `235→235` GONE · panel 504px 400/400 không cuộn · Options→Template **dùng lại
+> đúng 1 hộp**, DOM luôn 1 panel, xong thì gỡ ghim + `overflow-y:auto` trở lại · 3 loại công tắc đều có
+> chuyển tiếp · bấm dồn 40ms không kẹt · **17/17 ô có icon** · options-theo-view của Đợt 147 nguyên vẹn ·
+> 2 bộ kiểm tự động vẫn đạt · **0 lỗi console**.
+> ⬜ **Chưa nhìn bằng mắt** (pane ẩn ⇒ Chromium không vẽ khung hình) — cả 4 việc đều là chuyện cảm giác.
+> ⚠️ Bẫy đo ghi lại: pane ẩn thì **thuộc tính đang transition kẹt ở giá trị đầu**, phải tắt hẳn
+> transition rồi mới đọc bố cục. Chi tiết: `GHI CHU DU AN.md` Đợt 148 + 2 mục mới ở `HUONG DAN CORE.md`.
+>
+> Trước đó: **14/8/2026 (Đợt 147) — ⭐ MỖI LỰA CHỌN MỘT BỘ OPTIONS RIÊNG + VÁ LỖI THẬT
+> "ANIMATION KHỰNG 1 NHỊP".** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE (`content-view.js` · `engine.js` · `options-panel.js`) + `anagram.js`.
+> **Thầy yêu cầu**: *"Options của mỗi act đều độc lập — TEXT ENG1 khác TEXT ENG2 khác TEXT VI1 khác
+> TEXT VI2, VOICE ENG1 khác VOICE ENG2"*; chốt thêm: áp cho **CẢ hai trục**, view mới lấy **mặc định
+> Settings**, **không cần** nút "Apply to all". ⇒ act `WORDS` có **6 bộ options**, `QUIZ`/reading có **2**.
+> `act.options` vẫn là bộ ĐANG CHẠY (**không chỗ nào ngoài `content-view.js` phải đổi**), `act.viewOptions[key]`
+> giữ từng bộ. ⛔ 4 khoá **chọn-lựa-chọn** (`contentMode`/`contentVariant`/`voiceVariant`/`contentSet`)
+> và **`optVer`** không bao giờ nằm trong bộ của một view — mất `optVer` là quy đổi lại thang điểm đã
+> đúng (**-5 → -100 → -2000**, đúng bẫy Đợt 143).
+> Panel **dựng lại thân** khi đổi lựa chọn, giữ nháp **theo từng view**, Apply ghi **mọi view đã đụng**
+> và **xoá** khoá bộ mới không có. ⚠️ `act.options` phải **sửa tại chỗ, không gán mới** (libAct + act
+> mistakes + 2 bàn đấu dùng chung một object).
+> ⭐ **LỖI THẬT**: đo bằng `MutationObserver` — `display:none`, `is-closed` và `max-height:0` **rơi cùng
+> MỘT khung hình (+0,9ms)**, nên ô Points off **biến mất trong 1 khung** rồi **cái hộp RỖNG** mới trượt
+> 280ms. Nay ruột **ở lại suốt cú trượt**, rời khung ở **+312ms**. **LUẬT: accordion `max-height` thì
+> `display:none` phải rơi SAU transition** — cùng họ bẫy Đợt 137 trên đúng accordion này (lần đó sai
+> thuộc tính, lần này sai thời điểm). 🔎 Mẹo: pane test ẩn thì transition/rAF chết nhưng
+> **`MutationObserver` vẫn chuẩn**, đủ để đo thứ tự thao tác DOM.
+> 🟢 ĐÃ TỰ TEST: nháp theo view (ENG1 sửa dở → VI1 ra mặc định → quay lại ENG1 còn nguyên) ·
+> lưu độc lập đo trên act thật (`text:eng1=countDown` · `text:vi1=none` · `voice:eng1=none`) ·
+> trục PRACTICE/HOMEWORK (`practice=countUp` · `homework=countDown`) · **tới được game thật** (timer
+> `none` ⇒ đồng hồ ẩn) · **đối chứng zero-diff** (act thường KHÔNG sinh `viewOptions`, `lives` không bị
+> bước xoá-khoá đụng) · 2 bộ kiểm của Đợt 145+146 vẫn đạt · **0 lỗi console**.
+> ⬜ Chưa **nhìn bằng mắt** cú trượt đã hết khựng chưa · chưa thử **Firestore thật**.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 147; hợp đồng ở `core/HUONG DAN CORE.md` 2 mục mới.
+>
+> Trước đó: **14/8/2026 (Đợt 146) — ⭐ QUIZ1+QUIZ2 VÀ HAI BẢN READING ACT GỘP LÀM MỘT:
+> MỖI ACT MANG 2 NỬA **PRACTICE** / **HOMEWORK**.** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (đi cùng Đợt 145).
+> ⭐ CÓ SỬA CORE (`content-view.js` · `lesson-import.js` · `engine.js` · `options-panel.js` ·
+> `app.css`) + `main.js` + **3 editor**; **0/17 file game phải sửa**. Đây là **Đợt B** trong kế hoạch
+> 4 đợt (A ✅ · **B ✅** · C options HOMEWORK khi giao bài · D xoá sạch dữ liệu cũ).
+> **Gốc chuyện**: `QUIZ1`↔`QUIZ2` là 30 cặp câu **diễn đạt lại của nhau**, `READINGACT1`↔`READINGACT2`
+> cũng vậy. Nay **một act mang cả hai nửa**; đuôi `" HW"` và thư mục `ACT/HOMEWORK` **biến mất**.
+> **1 file `.xlsm` từ 16 act xuống đúng 9.** Trong app không còn gọi QUIZ1/QUIZ2 mà gọi
+> **PRACTICE / HOMEWORK**; hàng chọn nằm **TRÊN hàng TEXT-VOICE**, act không có nửa 2 thì **ẩn hẳn**.
+> ⚠️ **HAI CÔNG TẮC RỜI NHAU** (thầy chốt): hàng này chỉ chọn **NỘI DUNG**; bộ options lớp nhận khi
+> được giao bài quyết định lúc giao bài — **Đợt C**, không phải đợt này.
+> **Kiến trúc**: trục thứ hai trong `core/content-view.js`, `resolveActivity()` xử lý **cả hai trục độc
+> lập** và giữ nguyên 2 tính chất của Đợt 145. ⛔ **Nửa ĐẦU không được chép vào `sets`** — lưu 2 chỗ là
+> ghi 30 câu lên Firestore hai lần rồi phải tự tay giữ khớp mãi mãi.
+> ⚠️⚠️ **DẠNG LƯU ≠ DẠNG ĐANG SỬA**: trong editor `sets` giữ MỌI nửa, `content[itemsKey]` chỉ là chỗ
+> nháp của tab đang mở; không tách là mở tab HOMEWORK **ăn mất nửa practice**.
+> `expandSetsForEditing()` ↔ **`foldEditedSet()` (bắt buộc gọi trước khi Save)**.
+> 🟢 ĐÃ TỰ TEST: **58/58 phép kiểm trên chính file .xlsm của thầy** (ra đúng 9 act, 2 nửa thật sự khác
+> nhau, nửa đầu không bị nhân bản) · vòng đời editor expand→sửa→fold đúng ở cả 2 chiều · trình duyệt
+> thật: hàng PRACTICE|HOMEWORK là phần tử đầu panel, **hit-test 2/2**, **396/396px không cuộn**, bấm
+> HOMEWORK→Apply→Play ra **đúng câu homework**, **cả 3 editor** giữ đúng phần sửa của từng nửa ·
+> **đối chứng zero-diff** (act thường: 0 hàng set, 0 tab, `content` chỉ còn `questions`) · **0 lỗi console**.
+> ⬜ Chưa nhìn được **bằng mắt** · chưa thử trên **Firestore thật**.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 146, hợp đồng ở `core/HUONG DAN CORE.md` mục "MỘT ACT MANG 2 NỬA".
+>
+> Trước đó: **14/8/2026 (Đợt 145) — ⭐ MỘT ACT MANG CẢ 4 BỘ GỢI Ý: ENG1 · ENG2 · VI1 · VI2
+> GỘP THÀNH MỘT ACT `WORDS`, CHỌN TRONG OPTIONS.** ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE.
+> ⭐ CÓ SỬA CORE — **file MỚI `core/content-view.js`** + `lesson-import.js` · `engine.js` ·
+> `options-panel.js` · `convert.js` · `store.js` · `app.css` + `main.js` + `anagram-editor.js`;
+> **0/17 file game phải sửa**. Đây là **Đợt A** trong kế hoạch 4 đợt thầy chốt (A bộ từ · B quiz +
+> reading 2 nửa PRACTICE/HOMEWORK · C options HOMEWORK khi giao bài · D xoá sạch dữ liệu cũ).
+> **Gốc chuyện**: đo trên chính file bài học của thầy — trong `WORDTABLE`, **cột D/H/L/P chứa Y HỆT
+> một từ, 100/100 dòng lệch 0**, chỉ khác GỢI Ý. Nên 4 act cũ (6 khi có giọng) thực chất là **một
+> danh sách từ đeo 4 kiểu gợi ý**. Nay: **1 act**, 1 file `.xlsm` từ **16 act xuống 13** (Đợt B sẽ
+> xuống 9). **IPA + PRONUNCIATION vẫn tách riêng** (thầy chốt).
+> **Options** (thầy vẽ): một hàng **hai nửa** — trái `TEXT|VOICE`, phải là **các con của nửa đang
+> chọn** (TEXT→`ENG1|ENG2|VI1|VI2`, VOICE→`ENG1|ENG2`), bên kia **ẩn**; **mỗi nửa nhớ lựa chọn riêng**.
+> **Kiến trúc**: `resolveActivity()` bẹp act xuống act 1-gợi-ý ngay trước khi chơi ⇒ template không
+> biết chuyện này tồn tại. **HAI TÍNH CHẤT phải giữ**: không có variants ⇒ **trả về đúng object đó**
+> (nền tảng của zero-diff), và **chạy 2 lần = 1 lần** (`core/fight.js` sống nhờ nó — 2 bàn phải dùng
+> chung ĐÚNG object item, mất tính chất này là "same letters" trôi khỏi nhau trong im lặng).
+> ⚠️ `core/engine.js` nay phân biệt **`libAct`** (act thư viện, còn đủ 4 bộ) với **`activity`** (bản đã
+> bẹp để chơi): **mọi đường GHI dùng `libAct`** — Edit · Set assignment · lưu Options · vào lại
+> `startGame`. Ghi nhầm bản đã bẹp = **lưu đè act mất 3/4 nội dung, không một lời cảnh báo**.
+> ⭐ **LỖI THẬT tự bắt được**: chọn VI1 → Apply → Play mà màn hình **vẫn ENG1**, vì act chỉ bẹp một lần
+> lúc dựng màn còn Apply ở màn READY **cố ý không restart**. **Luật rút ra: thứ gì tính sẵn vào
+> `content` phải tính lại trong `begin()`, không phải `startGame()`.**
+> 🟢 ĐÃ TỰ TEST: **27/27 phép kiểm tự động chạy trên chính file .xlsm của thầy bằng đúng module thật** ·
+> trình duyệt thật với tap **THẬT** (`PointerEvent` + `elementFromPoint` 6/6, bẫy Đợt 137) · **đối
+> chứng zero-diff** (act cũ không giọng = **không có hàng Content**, act cũ có giọng = công tắc full
+> width không nửa phải, mở panel **không ghi `contentMode`**) · panel **400/645px không cuộn** ·
+> editor sửa ENG2 xong Save thì **3 bộ kia y nguyên** · **0 lỗi console**.
+> ⬜ Chưa nhìn được **bằng mắt** (pane test bị ẩn ⇒ Chromium không vẽ khung hình) · chưa chạy **TTS
+> thật** cho 2 bộ · chưa thử trên **Firestore thật**. Chi tiết đầy đủ: `GHI CHU DU AN.md` Đợt 145,
+> hợp đồng ở `core/HUONG DAN CORE.md` mục "MỘT ACT MANG NHIỀU BỘ GỢI Ý".
+>
+> Trước đó: **13/8/2026 (Đợt 143b) — ⭐ MỌI THANH KÉO CHUNG MỘT NỀN TRẮNG + THẲNG HÀNG
 > TUYỆT ĐỐI; VÁ LỖI HỒI QUY DẤU TICK CỦA ĐỢT 143.** (commit `c8e4b14`, PUSH + LIVE, build `5899396997`).
 > Thầy soi ảnh bắt 2 chỗ. (1) **Lệch hàng**: nhãn Time cost cao 19px vs 14px của mọi ô khác, vì ô chỉnh
 > giây nằm TRÊN dòng nhãn ⇒ thanh kéo tụt **4,5px**; chữa bằng `margin-block:-4px` cho `.aw-hstep.is-sm`
@@ -1904,7 +2099,42 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (13/8/2026)
+### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–152)
+
+> ⭐⭐ **VIỆC LỚN ĐANG DANG DỞ: KẾ HOẠCH 4 ĐỢT A–D CỦA THẦY.** Đọc mục này trước khi hỏi thầy làm gì.
+> Thầy giao 3 việc lớn (14/8/2026), em chia 4 đợt và thầy chốt:
+>
+> | Đợt | Việc | Trạng thái |
+> |---|---|---|
+> | **A** | Gộp ENG1/ENG2/VI1/VI2 thành **một act `WORDS`**, chọn bộ gợi ý trong Options | ✅ **XONG** (Đợt 145) |
+> | **B** | QUIZ1+QUIZ2 và 2 bản reading act gộp, mỗi act mang **2 nửa PRACTICE/HOMEWORK** | ✅ **XONG** (Đợt 146) |
+> | **C** | **Bộ options HOMEWORK khi GIAO BÀI** + mặc định trong Settings | ⬜ **CHƯA LÀM — việc kế tiếp** |
+> | **D** | **XOÁ SẠCH dữ liệu cũ**: Activities + Results + clip giọng trên Firebase | ⬜ **CHƯA LÀM — làm CUỐI CÙNG** |
+>
+> **Đợt C — thầy đã chốt sẵn thiết kế, cứ thế mà làm:**
+> - Thêm **"Default homework options"** trong Settings (bên cạnh "Default activity options" đang có).
+> - Màn **"Set assignment"** hiện luôn bảng Options (dùng lại `buildOptionsBody`), nạp sẵn bộ mặc định
+>   đó để thầy chỉnh riêng cho bài này; **`createAssignment` chụp options đã chỉnh** chứ không phải
+>   `act.options`.
+> - Màn **"Edit assignment"** (đã có sẵn, sửa tên/hạn/kết thúc game) thêm bảng Options y hệt, patch vào
+>   `assignment.activity.options`. ✅ Đã kiểm: **luật Firestore cho phép** (`allow update: if isTeacher()`).
+> - ⚠️ **HAI CÔNG TẮC RỜI NHAU** (thầy chốt): hàng PRACTICE/HOMEWORK trong Options chỉ chọn **NỘI DUNG**;
+>   bộ options khi giao bài là chuyện **riêng**, quyết định lúc giao. Đừng gộp hai thứ này.
+> - `snapshotOf` **không chép `viewOptions`** — bài đã giao nhận đúng bộ đang chạy lúc giao. Giữ nguyên.
+>
+> **Đợt D — thầy đã chốt phạm vi: "Activities + Results + clip giọng"** (câu trả lời AskUserQuestion
+> 14/8/2026). ⛔ **KHÔNG HOÀN TÁC ĐƯỢC** — làm sau cùng, và **hỏi lại thầy lần nữa ngay trước khi bấm**.
+> Tiền lệ dựng trang dọn một lần: `tools-voice-cleanup.html`.
+>
+> **⬜ Việc thầy cần nghiệm bằng mắt/tay (máy không tự làm được)** — pane test của phiên tự động bị ẩn
+> nên Chromium **không vẽ khung hình nào**, mọi thứ thuộc "cảm giác" đều chưa ai nhìn:
+> - Import **1 file `.xlsm` thật** trên bản live → act `WORDS` mở ra, gạt TEXT/VOICE + ENG1/ENG2/VI1/VI2.
+> - **Nghe giọng thật**: act WORDS cần **2 bộ clip** (ENG1 + ENG2) ⇒ 100 từ = **200 clip**, thời gian
+>   tạo gấp đôi. Popup Import đã ghi rõ con số trước khi chạy.
+> - Chuỗi **animation Đợt 148–152** trên Chrome/TOMKO thật: đổi công cụ (Options→Template/Style),
+>   gạt TEXT/VOICE, accordion "Points off" của Anagram, lưới Template 3 cột.
+> - Act `WORDS`/`QUIZ` **lưu lên Firestore rồi mở lại** (phiên tự động không đăng nhập được).
+
 **17 template, tất cả `built:true` trong `core/catalog.js`, tất cả LIVE**, mỗi loại có content editor
 riêng, và `play.html` (trang HS) chơi được cả 17:
 
@@ -1926,9 +2156,25 @@ truyền cho template: `mkCell` · `mkSeg` · `mkSliderCell` · `addCheck`. Hợ
 "OPTIONS PANEL v2". 16/17 template đã chuyển; **running-word còn dùng nhóm kiểu cũ** (panel bespoke:
 ô nhập tên đội + đồng hồ tuỳ chỉnh) và vẫn hiện y như trước nhờ "cầu tương thích" trong `app.css`.
 
-**5 đợt gần nhất:**
+**⭐ HAI TRỤC NỘI DUNG MỚI (Đợt 145–146)** — hợp đồng đầy đủ ở `core/HUONG DAN CORE.md`, file lõi mới
+`core/content-view.js`. Một act nay có thể mang **nhiều BỘ GỢI Ý** (`variants`: eng1/eng2/vi1/vi2) và/hoặc
+**2 NỬA** (`contentSets`: practice/homework); `resolveActivity()` bẹp xuống act thường ngay trước khi
+chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn có bộ options RIÊNG** (`viewOptions`,
+Đợt 147). ⚠️ `core/engine.js` phân biệt **`libAct`** (act thư viện, còn đủ mọi bộ) với **`activity`**
+(bản đã bẹp để chơi) — **mọi đường GHI dùng `libAct`**, ghi nhầm là lưu đè act mất 3/4 nội dung.
+**1 file `.xlsm` nay ra 9 act** (trước 16).
+
+**10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | *đợt này* |
+| **151** | ⭐ **Panel rơi khỏi neo** (`.aw-swapbox` khai `position` đè `absolute` của panel) + **dissolve trên nền đục** hết "nháy nhẹ" | *đợt này* |
+| **150** | ⭐ Cú **nâng 9px "trừ nút Apply"** (margin-collapse đổi trạng thái khi ghim chiều cao) + **cụm nút thở** (flex-grow 1→0) | *đợt này* |
+| **149** | ⭐ **Chính nút đang bấm bị dựng lại** ⇒ giật; tách hàng công tắc ra khối riêng dựng-một-lần + `selState` | *đợt này* |
+| **148** | ⭐ Nhịp 2 của accordion: **khoảng cách hàng chuyển từ lưới xuống từng ô** + `swapContents()` + Template = Options về bề rộng, **mỗi game một icon** | *đợt này* |
+| **147** | ⭐ **Mỗi lựa chọn một bộ options riêng** (`viewOptions`) + vá "khựng 1 nhịp" (accordion) | *đợt này* |
+| **146** | ⭐ **ĐỢT B**: QUIZ1+QUIZ2 và 2 bản reading act gộp — mỗi act **2 nửa PRACTICE/HOMEWORK** + tabs trong 3 editor | *đợt này* |
+| **145** | ⭐ **ĐỢT A**: ENG1/ENG2/VI1/VI2 gộp thành act **`WORDS`** — file lõi mới `core/content-view.js` | *đợt này* |
 | **142** | ⭐ **Import có đủ bộ chọn giọng như editor** (Mix 4 giọng · Random UK/US), luật mix lên `core/voice-mix.js` dùng chung 2 đường + **huy hiệu loa xanh** trên thẻ act đã đủ 100% giọng | `7faf500` |
 | **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | `0f67311` |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
@@ -1947,6 +2193,31 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+**⭐⭐ VIỆC KẾ TIẾP = ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi **ĐỢT D** (xoá sạch dữ liệu cũ).
+Thiết kế thầy đã chốt sẵn cho cả hai nằm ở **mục 3 ngay trên** — đọc ở đó, đừng hỏi lại thầy từ đầu.
+
+**⭐ HAI TRỤC NỘI DUNG (Đợt 145–147) — phần máy không tự kiểm được:**
+- ⬜ **Import 1 file `.xlsm` thật trên bản live** → phải ra **9 act** (`WORDS · PRONUNCIATION · IPA ·
+  RUNNING WORD · RUNNING TEAM · QUIZ · 1. TRUE FALSE · 2. FILLING · 3. READING QUIZ`); mở act `WORDS`
+  gạt TEXT/VOICE + ENG1/ENG2/VI1/VI2, mở act `QUIZ` gạt PRACTICE/HOMEWORK.
+- ⬜ **Nghe giọng thật**: act `WORDS` cần **2 bộ clip** (ENG1 + ENG2) ⇒ 100 từ = **200 clip**, thời gian
+  tạo **gấp đôi** trước đây. Popup Import đã ghi rõ con số trước khi chạy. Firebase đang gói **Spark
+  miễn phí** — nếu thấy nặng, cân nhắc chỉ sinh giọng cho 1 bộ.
+- ⬜ **Firestore thật**: act `WORDS`/`QUIZ` lưu rồi mở lại còn đủ mọi bộ; `viewOptions` sống qua lưu/nạp.
+  (Phiên tự động không đăng nhập Google được — chưa ai kiểm đường này.)
+- ⚠️ **Act cũ trong thư viện KHÔNG tự đổi** — vẫn là ENG1/ENG2/VI1/VI2 rời. Thầy đã chốt **xoá sạch ở
+  Đợt D** chứ không chuyển đổi.
+
+**⭐ CHUỖI ANIMATION (Đợt 148–152) — chỉ còn "cảm giác", phải mắt/tay thầy:**
+- ⬜ Đổi công cụ **Options → Template/Style** trên Chrome/TOMKO thật: đã thành một cú trượt sạch chưa.
+- ⬜ Gạt **TEXT↔VOICE** và **ENG1↔ENG2**: nửa phải "gom vào dãn ra" đã mượt chưa, còn nháy không.
+- ⬜ Accordion **"Points off"** của Anagram (On submit ↔ Letters with bonus): đã liền một mạch chưa.
+- ⬜ Lưới **Template 3 cột**: cỡ ô/icon/chữ đã cân đối chưa.
+- 🔎 **Bẫy đo đã ghi thành luật** (đọc `core/HUONG DAN CORE.md` trước khi tự test animation): pane test
+  bị ẩn ⇒ **transition/rAF chết, thuộc tính đang transition kẹt ở giá trị ĐẦU** — phải tắt hẳn
+  transition rồi mới đọc bố cục; và **lỗi loại này chỉ lộ trong lúc animation chạy**, phải **lấy mẫu
+  40ms/lần TRONG cú chuyển** chứ đo sau khi yên vị là không thấy gì (Đợt 149 đã trả giá).
+
 **⭐ GIỌNG ĐỌC (Đợt 142) — chỉ còn phần máy không tự làm được:**
 - Thầy **import 1 file thật rồi nghe** 2-3 từ đầu ở chế độ Mix xem giọng có luân phiên đúng không
   (phiên tự động không chạy TTS thật được: cần tải model 86MB + đăng nhập để lưu clip).

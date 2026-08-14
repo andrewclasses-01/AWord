@@ -890,6 +890,110 @@ body {
   transition: color .18s ease;
 }
 .aw-opt-switch-btn.is-active { color: #2f7bff; }
+
+/* ⭐ Đợt 148 — SWAPPING WHAT IS INSIDE A BOX, smoothly (core/engine.js
+   swapContents). Two things use it: going Options → Template/Style/Mode, where
+   the panel box now STAYS and morphs instead of blinking out and back in; and
+   picking another clue set / half inside Options, where only the body below the
+   switches is rebuilt. The box holds its old height, fades out, takes the new
+   contents, then travels to the new height while they fade back in.
+   `overflow:hidden` only while it travels — the panel's own `overflow-y:auto`
+   has to come back afterwards or a tall panel could never scroll again.
+   ⭐ Đợt 149 — a real CROSS-FADE. The outgoing content is lifted out of the
+   flow (absolute) so the incoming content takes its place immediately and the
+   two pass through each other; Đợt 148 emptied the box first, which left a
+   moment with NOTHING in it and read as a jolt. The outgoing layer takes no
+   pointer events — it is on its way out and must not swallow a tap.
+   ⛔ Đợt 151 — `.aw-swapbox` MUST NOT SET `position`. It used to say
+   `position:relative` (for the absolute outgoing layer), and being later in
+   this file than `.aw-tool-panel` at equal specificity, it OVERRODE the
+   panel's `position:absolute` for the duration of every tool-to-tool swap:
+   the panel fell out of its anchoring into the toolbar's flex flow. Measured:
+   panel (95,93) → (334,495), the Options button shoved from x=278 to x=26 —
+   exactly the teacher's "hàng tùy chỉnh nhảy sang bên trái, pop-up nhảy xuống
+   dưới ở bên phải". The two swap targets are each positioned on their own
+   instead: the panel already is (absolute), the body host below. */
+.aw-swapbox { overflow: hidden !important; transition: height .26s cubic-bezier(.22,.9,.3,1), width .26s cubic-bezier(.22,.9,.3,1); }
+/* ⭐ Đợt 151 — DISSOLVE OVER AN OPAQUE BASE, not a mutual cross-fade. Both
+   layers fading at once dips the combined coverage mid-swap (~75% at the
+   midpoint), so even IDENTICAL content shimmered — the teacher's "hơi nháy
+   nhẹ một nhịp" when eng1→eng2 differ by two slider values. Now the outgoing
+   layer sits beneath at FULL opacity the whole time and only the incoming
+   layer fades in above it, carrying the panel's own background: any pixel
+   that is the same in both layers blends c·a + c·(1-a) = c — it does not
+   change AT ALL mid-swap — and only what really differs dissolves. The
+   outgoing layer is removed once the incoming one fully covers it, so
+   nothing pops. */
+.aw-swap-out {
+  position: absolute; top: 0; left: 0; right: 0;
+  /* ⛔ Đợt 152 — `padding: inherit` is NOT decoration. An absolute layer at
+     top:0/left:0 sits at the box's PADDING edge, so on the panel (padding
+     14px 20px) the parked old content jumped up-left by exactly that much on
+     the swap's first frame — the "các mục giật lộn xộn". Inheriting the box's
+     own padding puts the layer's content back on the very pixels it occupied
+     in the flow. The body host has no padding, so this is a no-op there. */
+  padding: inherit;
+  opacity: 1; pointer-events: none;
+}
+.aw-swap-in {
+  position: relative; z-index: 1; background: #fff;
+  opacity: 0; transition: opacity .22s ease;
+}
+.aw-swap-in.is-in { opacity: 1; }
+/* ⭐ Đợt 150 — CONSTANT formatting context, so starting a swap cannot move the
+   layout. Measured (teacher: "toàn bộ nội dung nâng cao lên vài pixel, trừ nút
+   APPLY, rồi mới hạ xuống"): the options grid ends with `margin-bottom:-9px`
+   (the Đợt-148 row-gap compensation). At rest that margin COLLAPSES THROUGH the
+   body's bottom edge and pulls everything after it up 9px; the moment
+   swapContents pins an explicit height, collapsing stops, the 9px comes back,
+   and the bottom-anchored panel grows upward — panelTop 93.2 → 84.2, Apply
+   pinned at the bottom, exactly the lift-then-settle reported. `flow-root`
+   contains the margin at ALL times (resting bodyH 261 → 252, apply position
+   unchanged), so pinning the height changes nothing any more. The two swap
+   layers get it too: the incoming layer is measured for the box's target
+   height, so it must contain margins the same way the settled body does, or
+   the unwrap at the end lands 9px off. */
+.aw-opt-bodyhost, .aw-swap-out, .aw-swap-in { display: flow-root; }
+/* the body host is the one swap target that isn't otherwise positioned — the
+   outgoing layer needs a containing block, and this must NOT come from
+   .aw-swapbox (see the ⛔ above) */
+.aw-opt-bodyhost { position: relative; }
+
+/* PRACTICE | HOMEWORK, Đợt 146 — the panel's TOP row, above Text/Voice. Same
+   look as `.aw-opt-switch` (it reuses `.aw-opt-switch-thumb` and
+   `.aw-opt-switch-btn` verbatim), but the thumb is driven by `--i`/`--n` the
+   way `.aw-seg` does it, so it is not welded to exactly two choices — and so
+   the fixed `.is-voice { translateX(100%) }` rule of the Text/Voice switch
+   stays untouched. That is the whole reason this is its own class instead of a
+   modifier on that one. */
+.aw-opt-setswitch {
+  position: relative;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  background: #eef2f7; border-radius: 12px; padding: 4px; margin-bottom: 10px;
+}
+.aw-opt-setswitch .aw-opt-switch-thumb {
+  width: calc((100% - 8px) / var(--n, 2));
+  transform: translateX(calc(var(--i, 0) * 100%));
+}
+
+/* CONTENT row, Đợt 145 — TEXT|VOICE on the left, the CLUE SETS of whichever
+   half is active on the right (ENG1/ENG2/VI1/VI2 under Text, ENG1/ENG2 under
+   Voice). Without `.has-variants` this is only a wrapper and the switch keeps
+   the full width it has had since Đợt 123 — which covers every act in the
+   library that predates clue sets, plus the Settings copy of this panel.
+   The two halves are CENTRED on each other rather than stretched: the switch is
+   ~44px tall (its buttons carry the touch target) while `.aw-seg` is a fixed
+   30px everywhere else in the app, and stretching this one to 44 would make it
+   the only odd-sized segmented control in the panel — the exact raggedness the
+   one-row-shape contract of Đợt 140 exists to prevent. */
+.aw-opt-content { margin-bottom: 14px; }
+.aw-opt-content .aw-opt-switch { margin-bottom: 0; }
+.aw-opt-content.has-variants {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;
+}
+.aw-opt-variants { min-width: 0; display: flex; }
+.aw-opt-variants .aw-seg { width: 100%; }
+
 /* (Đợt 143 — `.aw-opt-slider` / `-slidval` / `-time` / `-cd` / `-hint` / `-2up`
    / `-cell` / `-idle` were deleted here. They dressed the pre-Đợt-140 panel:
    the 220px shared slider, the mm:ss dim rule, the Đợt 139 two-up row that put
@@ -943,13 +1047,38 @@ body {
    per column, which is not enough for a 3-choice segmented control. A stated
    width also means the teacher sees the SAME panel shape in every game
    instead of one that changes size per template. */
-.aw-tool-panel.is-opts { width: min(94vw, 560px); }
+/* Đợt 148 (teacher: "điều chỉnh cả khung Template cũng có size bằng khung
+   Options") — the Template picker takes the SAME stated width as Options, so
+   switching between the two tools no longer resizes the box under the cursor.
+   Style and Mode keep sizing to their own content: they hold 3 swatches and 2
+   buttons, and stretching them to 560px would be a lot of white space. */
+.aw-tool-panel.is-opts,
+.aw-tool-panel.is-tpl { width: min(94vw, 560px); }
+/* ⭐ Đợt 148 — THE ROW GAP LIVES ON THE CELLS, not on the grid.
+   Teacher, on the Anagram accordion: "nhịp đầu tiên, points off ẩn, khối trên
+   hạ xuống một chút nhưng vẫn còn chút khoảng trống nữa. Sau đó lại hạ xuống
+   một nhịp ngắn nữa hết khoảng trống thừa đó."
+   Measured: collapsing the wrapper to height 0 left the grid 235px; dropping
+   the cell out of the layout took it to 227px. That 8-9px IS `row-gap` — a gap
+   belongs to the GRID, so no animation on the ITEM can ever remove it, and it
+   could only go the instant the row itself went. Hence two beats.
+   A negative margin on the item does NOT help (measured: 235 -> 235; the track
+   is already floored at 0). Moving the gap onto each cell as `margin-bottom`
+   does: the cell then animates its own spacing away with its own height, and
+   the whole close is ONE motion.
+   Measured before/after on the real panel: open 281px both ways (nothing about
+   any existing panel moves), collapsed 227px — exactly what removing the row
+   used to give. `> *` and not `> .aw-optc` so a separator or anything a
+   template appends is covered too; `margin-bottom` on the grid cancels the
+   last row's, so the block's outer size is unchanged. */
 .aw-opt-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 9px 16px;
+  column-gap: 16px; row-gap: 0;
+  margin-bottom: -9px;
   align-items: start;
 }
+.aw-opt-grid > * { margin-bottom: 9px; }
 .aw-optc { min-width: 0; }              /* one option = one cell */
 .aw-optc-wide { grid-column: 1 / -1; }  /* controls too wide for half a panel */
 /* Label line. `min-height` (not a fixed height) keeps two cells side by side
@@ -1027,6 +1156,34 @@ body {
 /* No background/shadow here any more — the thumb draws those. Leaving them on
    the button as well would show a second pill jumping ahead of the sliding one. */
 .aw-seg-btn.is-on { color: #2f7bff; }
+
+/* ⭐ Đợt 150 — a seg that BREATHES between two shapes (the Options clue-set
+   row: ENG1|ENG2|VI1|VI2 under Text, ENG1|ENG2 under Voice). Flex instead of
+   the grid the plain seg uses, because equal grid tracks cannot animate; a
+   button leaving the active half collapses flex-grow 1→0 (animatable) with its
+   padding, and `margin-left:-2px` eats its own flex gap, so it ends at exactly
+   0px and the survivors share the freed width on the same curve. The thumb's
+   --n/--i are set to the VISIBLE count/index by the JS, and its width joins
+   the transition so it re-shapes in step with the buttons. */
+.aw-seg-anim { display: flex; }
+.aw-seg-anim .aw-seg-btn {
+  flex: 1 1 0; min-width: 0;
+  transition: color .18s ease, opacity .14s ease,
+    flex-grow .26s cubic-bezier(.22,.9,.3,1),
+    padding .26s cubic-bezier(.22,.9,.3,1),
+    margin .26s cubic-bezier(.22,.9,.3,1);
+}
+.aw-seg-anim .aw-seg-btn.is-gone {
+  flex-grow: 0; padding: 0; margin-left: -2px;
+  opacity: 0; pointer-events: none;
+}
+.aw-seg-anim .aw-seg-thumb {
+  transition: transform .22s cubic-bezier(.22,.61,.36,1),
+    width .26s cubic-bezier(.22,.9,.3,1);
+}
+/* under 2 usable sets the whole half bows out instead of showing a dead button */
+.aw-opt-variants { transition: opacity .18s ease; }
+.aw-opt-variants.is-empty { opacity: 0; pointer-events: none; }
 
 /* ---- HORIZONTAL stepper (core/numberstepper.js makeHStepper) ---- */
 .aw-hstep {
@@ -1206,7 +1363,10 @@ body {
 }
 .aw-check-in:checked + .aw-check-box::after { transform: rotate(43deg) scale(1); opacity: 1; }
 .aw-check-in:focus-visible + .aw-check-box { box-shadow: 0 0 0 3px rgba(47,123,255,.35); }
-.aw-optc-sep { grid-column: 1 / -1; height: 1px; background: #e6ebf2; margin: 3px 0 1px; }
+/* bottom margin = its own 1px + the 9px that used to be the grid's row-gap
+   (Đợt 148 moved that gap onto the cells — see `.aw-opt-grid` above), so the
+   separator sits exactly where it always has. */
+.aw-optc-sep { grid-column: 1 / -1; height: 1px; background: #e6ebf2; margin: 3px 0 10px; }
 
 /* Đợt 143 — a class that has asked their machine for less motion still gets the
    full panel, just without the travel. Keeping ONE rule at the end of the block
@@ -1214,7 +1374,10 @@ body {
    later is covered by default instead of having to remember. */
 @media (prefers-reduced-motion: reduce) {
   .aw-seg-thumb, .aw-opt-switch-thumb, .aw-check-box::after,
-  .aw-optc-chip, .aw-seg-btn, .aw-hstep { transition-duration: .01ms; }
+  .aw-optc-chip, .aw-seg-btn, .aw-hstep,
+  /* Đợt 148 — the panel/body swap and the Anagram accordion's spacing */
+  .aw-swapbox, .aw-swap-out, .aw-swap-in, .aw-opt-variants,
+  .aw-ed-settabs-thumb, .aw-anagram-penhost { transition-duration: .01ms; }
 }
 
 /* The Đợt 140 LEGACY BRIDGE (`.aw-opt-grid > .aw-opt-group { grid-column: 1/-1 }`)
@@ -1243,7 +1406,9 @@ body {
    almost never fire (the redesign measured 36% shorter), but fight mode plus a
    template with many extras can still get there, and a panel that silently
    scrolls is worse than one that shrinks. */
-.aw-tool-panel.is-compact-opts .aw-opt-grid { gap: 6px 12px; }
+/* same split as the full-size grid (Đợt 148): the row gap rides on the cells */
+.aw-tool-panel.is-compact-opts .aw-opt-grid { column-gap: 12px; row-gap: 0; margin-bottom: -6px; }
+.aw-tool-panel.is-compact-opts .aw-opt-grid > * { margin-bottom: 6px; }
 .aw-tool-panel.is-compact-opts .aw-optc-lab { font-size: 9.5px; margin-bottom: 2px; min-height: 13px; }
 .aw-tool-panel.is-compact-opts .aw-optc-sub { font-size: 9.5px; }
 .aw-tool-panel.is-compact-opts .aw-optc-ctl { min-height: 24px; gap: 8px; }
@@ -1291,12 +1456,22 @@ body {
 .aw-btn.aw-mode-confirm-btn { padding: 9px 20px; font-size: 14px; }
 
 /* Template panel */
-.aw-tpl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+/* Đợt 148 — the picker is now as wide as the Options panel (see
+   `.aw-tool-panel.is-opts, .is-tpl` above) and every game carries its icon, so
+   a cell is an icon + a name reading left to right instead of one short word
+   marooned in the middle of 265px. */
+.aw-tpl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
 .aw-tpl-item {
-  border: 1.6px solid #e2e9f2; border-radius: 12px; padding: 12px 8px;
-  text-align: center; font-weight: 700; font-size: 13px; color: #57667a;
+  display: flex; align-items: center; gap: 10px;
+  border: 1.6px solid #e2e9f2; border-radius: 13px; padding: 14px 12px;
+  text-align: left; font-weight: 700; font-size: 14px; color: #57667a;
   background: #fff; cursor: pointer; transition: border-color .12s ease, color .12s ease;
 }
+.aw-tpl-icon { flex: 0 0 24px; width: 24px; height: 24px; color: #93a2b6; transition: color .12s ease; }
+.aw-tpl-icon svg { width: 100%; height: 100%; display: block; }
+.aw-tpl-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw-tpl-item:hover:not(.is-current):not(.is-soon) .aw-tpl-icon,
+.aw-tpl-item.is-current .aw-tpl-icon { color: currentColor; }
 .aw-tpl-item:hover:not(.is-current):not(.is-soon) { border-color: #2f7bff; color: #2f7bff; }
 .aw-tpl-item.is-current { border-color: #2f7bff; color: #2f7bff; background: #eef5ff; cursor: default; }
 .aw-tpl-item.is-soon { opacity: .5; cursor: not-allowed; }
@@ -1577,6 +1752,44 @@ body {
 .aw-ed-bulkgroup { display: inline-flex; align-items: center; gap: 6px; }
 .aw-ed-bulklabel { font-size: .82rem; font-weight: 700; color: #55657a; }
 .aw-ed-lettersel { width: auto; padding: .35rem .5rem; font-size: .9rem; font-weight: 700; }
+/* Đợt 146 — PRACTICE | HOMEWORK tabs in the three comprehension editors
+   (core/content-view.js makeSetTabs). Deliberately NOT the same control as the
+   Options panel's row: this one sits in an editing page, above a list, so it
+   reads as TABS over that list rather than as a setting. It still borrows the
+   sliding-thumb motion the rest of the app uses. */
+.aw-ed-settabs {
+  position: relative;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+  width: min(340px, 100%); margin: 0 0 12px;
+  background: #eef2f7; border-radius: 12px; padding: 4px;
+}
+.aw-ed-settabs-thumb {
+  position: absolute; top: 4px; bottom: 4px; left: 4px;
+  width: calc((100% - 8px) / var(--n, 2));
+  transform: translateX(calc(var(--i, 0) * 100%));
+  background: #fff; border-radius: 9px;
+  box-shadow: 0 2px 8px rgba(31,42,68,.14);
+  transition: transform .24s cubic-bezier(.22,.9,.3,1);
+  pointer-events: none;
+}
+.aw-ed-settab {
+  position: relative; z-index: 1;
+  border: none; background: transparent; padding: 9px 0;
+  font-family: inherit; font-size: 12.5px; font-weight: 800;
+  letter-spacing: .05em; text-transform: uppercase;
+  color: #8b93a1; border-radius: 9px; cursor: pointer;
+  transition: color .18s ease;
+}
+.aw-ed-settab.is-active { color: #2f7bff; }
+
+/* Đợt 145 — "Clue set: ENG1" in the editor's bulk bar. Pushed to the far end
+   (margin-left:auto) so it never sits between two icon buttons the teacher is
+   aiming for; it is a label, not a control. */
+.aw-ed-variantchip {
+  margin-left: auto; font-size: .8rem; font-weight: 800; letter-spacing: .03em;
+  color: #2f7bff; background: #eef4fc; border: 1px solid #dbe7f7;
+  border-radius: 999px; padding: .3rem .7rem; white-space: nowrap;
+}
 .aw-ed-bulkdanger { color: #d33; }
 .aw-ed-bulkdanger:hover { background: #fdeaea; }
 .aw-ed-tip {
