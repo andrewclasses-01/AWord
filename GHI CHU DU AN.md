@@ -7,6 +7,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 154 (14/8/2026) — ⭐ MÀN START GỌI ĐÚNG TÊN ACT CON (`... / WORDS - ENG1`) + ACT TÍCH HỢP GIỮ NGUYÊN TEXT-VOICE VÀ CÁC ACT CON KHI ĐỔI SANG TEMPLATE KHÁC
 ⭐ CÓ SỬA CORE (`core/engine.js`). ✅ **THẦY DUYỆT** (thầy nhắn "commit và push cả hai đợt lên live", 14/8/2026) **→ COMMIT + PUSH + LIVE.**
+📌 **Commit `58e996a`** (chung với Đợt 153) — **ĐÃ LÊN LIVE, đã đối chiếu**: mã băm
+`core/engine.js` + `core/app.css` trên `aword.andrewclasses.com` **trùng khít HEAD** (~25 giây sau
+push), và **chạy lại phép thử TRÊN CHÍNH BẢN LIVE**: 4/4 hướng đổi công cụ mỗi lớp **đúng 1 bố cục**,
+**hở 0px**, ghim khớp **0.00/0.00px**, 0 lớp sót, 4/4 weight font `ready`.
 
 ### 1. Thầy giao
 > "(1) Thêm tiêu đề cụ thể của loại act trong màn hình start… thay vì chỉ có `DS-S2.I1.W3 / WORDS`
@@ -79,6 +83,8 @@ hàng. Anagram không dính chỉ vì act WORDS **vốn là act anagram** (`less
 
 ## Đợt 153 (14/8/2026) — ⭐ "FRAME THỪA CỦA MỘT POP-UP KHÁC NẢY RA Ở CUỐI" KHI SANG STYLE/FIGHT: HAI LỚP SWAP BỊ **DÀN LẠI TỪNG KHUNG HÌNH**, CỘNG HAI CÚ GIẬT CUỐI CÙNG (SCROLLBAR 15px · FONT CHƯA NẠP 7px)
 ⭐ CÓ SỬA CORE (`core/engine.js` · `core/app.css`). ✅ **THẦY DUYỆT** (thầy nhắn "commit và push cả hai đợt lên live", 14/8/2026) **→ COMMIT + PUSH + LIVE.**
+📌 **Commit `58e996a`** (chung với Đợt 154) — **ĐÃ LÊN LIVE, đã đối chiếu mã băm + chạy lại phép thử
+trên chính bản live** (chi tiết ở đầu mục Đợt 154).
 
 ### 1. Thầy báo
 > "Chuyển qua lại giữa Options và Templates đang rất mượt, không phát hiện frame thừa. Nhưng khi

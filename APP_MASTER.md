@@ -2204,16 +2204,16 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | ⬜ *chờ duyệt* |
-| **153** | ⭐ Hết "frame thừa ở cuối" khi sang **Style/Fight**: hai lớp swap **ghim bề rộng** (cũ = ảnh chụp, mới = bố cục đích) + lớp mới **phủ kín hộp**; kèm **15px scrollbar** trong phép đo và **7px font weight 400 chưa nạp** | ⬜ *chờ duyệt* |
-| **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | *đợt này* |
-| **151** | ⭐ **Panel rơi khỏi neo** (`.aw-swapbox` khai `position` đè `absolute` của panel) + **dissolve trên nền đục** hết "nháy nhẹ" | *đợt này* |
-| **150** | ⭐ Cú **nâng 9px "trừ nút Apply"** (margin-collapse đổi trạng thái khi ghim chiều cao) + **cụm nút thở** (flex-grow 1→0) | *đợt này* |
-| **149** | ⭐ **Chính nút đang bấm bị dựng lại** ⇒ giật; tách hàng công tắc ra khối riêng dựng-một-lần + `selState` | *đợt này* |
-| **148** | ⭐ Nhịp 2 của accordion: **khoảng cách hàng chuyển từ lưới xuống từng ô** + `swapContents()` + Template = Options về bề rộng, **mỗi game một icon** | *đợt này* |
-| **147** | ⭐ **Mỗi lựa chọn một bộ options riêng** (`viewOptions`) + vá "khựng 1 nhịp" (accordion) | *đợt này* |
-| **146** | ⭐ **ĐỢT B**: QUIZ1+QUIZ2 và 2 bản reading act gộp — mỗi act **2 nửa PRACTICE/HOMEWORK** + tabs trong 3 editor | *đợt này* |
-| **145** | ⭐ **ĐỢT A**: ENG1/ENG2/VI1/VI2 gộp thành act **`WORDS`** — file lõi mới `core/content-view.js` | *đợt này* |
+| **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | `58e996a` |
+| **153** | ⭐ Hết "frame thừa ở cuối" khi sang **Style/Fight**: hai lớp swap **ghim bề rộng** (cũ = ảnh chụp, mới = bố cục đích) + lớp mới **phủ kín hộp**; kèm **15px scrollbar** trong phép đo và **7px font weight 400 chưa nạp** | `58e996a` |
+| **152** | ⭐ 3 lỗi hình học khi đổi công cụ (đích thiếu 30px padding · lớp cũ lệch padding-box · **chú thích CSS hỏng nuốt cả rule** ⇒ mất `overflow:hidden` + transition) + **Template 3 cột** | `0c1bfda` |
+| **151** | ⭐ **Panel rơi khỏi neo** (`.aw-swapbox` khai `position` đè `absolute` của panel) + **dissolve trên nền đục** hết "nháy nhẹ" | `0c1bfda` |
+| **150** | ⭐ Cú **nâng 9px "trừ nút Apply"** (margin-collapse đổi trạng thái khi ghim chiều cao) + **cụm nút thở** (flex-grow 1→0) | `0c1bfda` |
+| **149** | ⭐ **Chính nút đang bấm bị dựng lại** ⇒ giật; tách hàng công tắc ra khối riêng dựng-một-lần + `selState` | `0c1bfda` |
+| **148** | ⭐ Nhịp 2 của accordion: **khoảng cách hàng chuyển từ lưới xuống từng ô** + `swapContents()` + Template = Options về bề rộng, **mỗi game một icon** | `0c1bfda` |
+| **147** | ⭐ **Mỗi lựa chọn một bộ options riêng** (`viewOptions`) + vá "khựng 1 nhịp" (accordion) | `0c1bfda` |
+| **146** | ⭐ **ĐỢT B**: QUIZ1+QUIZ2 và 2 bản reading act gộp — mỗi act **2 nửa PRACTICE/HOMEWORK** + tabs trong 3 editor | `0c1bfda` |
+| **145** | ⭐ **ĐỢT A**: ENG1/ENG2/VI1/VI2 gộp thành act **`WORDS`** — file lõi mới `core/content-view.js` | `0c1bfda` |
 | **142** | ⭐ **Import có đủ bộ chọn giọng như editor** (Mix 4 giọng · Random UK/US), luật mix lên `core/voice-mix.js` dùng chung 2 đường + **huy hiệu loa xanh** trên thẻ act đã đủ 100% giọng | `7faf500` |
 | **141** | ⭐ **VÁ LỖI THẬT IMPORT EXCEL**: đọc `w` (chữ Excel hiển thị) thay vì `v` (giá trị thô) ⇒ `8:30` hết thành `0.3541666666666667`; ô lỗi `#VALUE!` hết đẻ act rác. Đo cả 102 file: 5 file đổi, 0 file mất nội dung | `0f67311` |
 | **140** | ⭐ **THIẾT KẾ LẠI BẢNG OPTIONS** — lưới 2 cột dùng chung, trung bình **−36% chiều cao**, 0/17 phải cuộn. Kèm: gỡ 2 chỗ template cắt DOM panel bằng tay | `eea0ecd` |
@@ -2232,6 +2232,11 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+> **Trạng thái sạch tính đến hết 14/8/2026**: mọi thứ tới **Đợt 154** đã **commit + push + LIVE**
+> (`58e996a` cho Đợt 153–154, `0c1bfda` cho Đợt 145–152), kho **không còn gì chưa commit**, bản live
+> đã đối chiếu mã băm và chạy lại phép thử. Không có việc dở dang nào trong code — việc kế tiếp là
+> **Đợt C**, và mọi mục ⬜ dưới đây là thứ **chỉ mắt/tay thầy** hoặc **Firestore thật** mới kiểm được.
+
 **⭐⭐ VIỆC KẾ TIẾP = ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi **ĐỢT D** (xoá sạch dữ liệu cũ).
 Thiết kế thầy đã chốt sẵn cho cả hai nằm ở **mục 3 ngay trên** — đọc ở đó, đừng hỏi lại thầy từ đầu.
 
