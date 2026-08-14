@@ -5,6 +5,38 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+
+---
+
+## Ghi thêm (14/8/2026, ngay sau Đợt 155-157) — ⚠️ **BUILD PAGES FAIL LẦN 2**, và cách bắt được
+
+Commit **app** `57677cf` build **success**, lên live sau ~15 giây, đối chiếu 10/10 file trùng mã băm.
+Nhưng commit **nhật ký** `d40935c` đẩy ngay sau đó thì **build FAIL** — `git push` báo thành công,
+GitHub nhận commit (`ls-remote` khớp `HEAD`), mà bản live **vẫn là nội dung của commit TRƯỚC**.
+
+⚠️ **Phép thử "file có HTTP 200 không" KHÔNG bắt được ca này**: `APP_MASTER.md` vẫn trả **200** — chỉ là
+nội dung CŨ. Phải **so mã băm bản live với `git show <commit>:<file>`** mới lộ ra; so với 3 commit gần
+nhất thì thấy live khớp **đúng commit trước đó**.
+
+**Cách chẩn đoán (không cần quyền admin, tái dùng được):**
+
+```
+curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments?per_page=3"
+curl -s "https://api.github.com/repos/andrewclasses-01/AWord/deployments/<ID>/statuses"
+```
+⇒ đọc thẳng ra `success` hay `failure` cho TỪNG commit. Đây là lần thứ 2 (lần đầu: Đợt 142, 13/8) —
+**hạ tầng GitHub Pages chập chờn, không phải lỗi code**. Chữa: **đẩy thêm 1 commit** để Pages build lại
+(chính commit đang ghi dòng này).
+
+👉 **LUẬT: sau khi push, đừng chỉ curl mã 200 — phải so MÃ BĂM với nội dung trong commit. Và nếu bản
+live vẫn cũ sau ~10 phút thì tra deployments API xem build có FAIL không, chứ đừng ngồi đợi tiếp.**
+
+⚠️ **BẪY CỦA CHÍNH PHIÊN NÀY (cắn 2 lần, nhớ cho lần sau):** viết văn bản có dấu backtick bằng
+`node -e "..."` trong Git Bash thì **bash nuốt mọi thứ trong backtick** (coi là lệnh) — lần đầu làm
+mất sạch chữ trong 2 file ghi chú template, lần này mất chữ `git push` và **cả khối lệnh curl ngay
+phía trên**. Chỉ lộ ra khi ĐỌC LẠI file đã ghi. **Luật: ghi văn bản dài có backtick thì viết ra FILE
+SCRIPT rồi `node file.js`, đừng dùng `node -e` trong nháy kép.**
+
 ## Đợt 157 (14/8/2026) — ⭐ SHOWDOWN: Ô TÊN TO HẲN, BỐ CỤC CÂN LẠI CẢ 3 MÀN, ÂM THANH + CHUYỂN CẢNH CHO MỌI THAO TÁC
 ⭐ CÓ SỬA CORE (`showdown-setup.js` dựng lại phần panel, `app.css`).
 ✅ **THẦY CHỐT COMMIT + PUSH** (14/8/2026) **→ COMMIT + PUSH + LIVE.**
