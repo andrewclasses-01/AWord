@@ -62,6 +62,58 @@ const DOC_ID = "sd_main";
 // enough that yesterday's claims never block this morning's lesson.
 const CLAIM_TTL_MS = 12 * 60 * 60 * 1000;
 
+// ---------------------------------------------------------------
+// SIZING (Đợt 166, 15/8/2026) — the panel's width and the columns screen's
+// font/spacing both now adapt to whatever room is REAL, instead of the fixed
+// per-team-count tiers Đợt 159/159b tried. Two complaints drove this, from the
+// same teacher's-eye test in myActivity's multi-column view:
+//   • 1-2 teams, one column (or the plain single-window case): the panel used
+//     to claim the whole frame width, so a column with one flex share of it
+//     became a long, mostly-empty rectangle around a short name.
+//   • 4-5 teams inside a narrow myActivity column: BOTH the frame's width AND
+//     the real room above the toolbar shrink together, and the flat chip size
+//     tuned for a normal window no longer fit ten rows — the panel scrolled
+//     and, because Đợt 159b moved Ready/Reset/Random off a sticky header, that
+//     scroll could hide the only way out of the popover.
+// `SD_COL_MAXW` doubles as the ceiling in `.aw-sd-col`'s CSS (keep the two in
+// sync) and the unit `updatePanelWidth` multiplies by team count.
+const SD_COL_MAXW = 200;
+const SD_COL_GAP = 10;
+const SD_PANEL_PAD = 40;    // `.aw-tool-panel`'s own left+right padding (20+20)
+const SD_PANEL_MIN = 460;   // screen A's class/Teams row needs at least this
+// The is-side layout's pool (app.css, ≤3 teams): a FIXED 2-column grid, sized
+// at Đợt 159b for the longest test name. `SD_SIDE_GAP` is the row gap between
+// it and the columns (`.aw-sd-layer.aw-sd-build.is-side`'s own `gap:12px`).
+const SD_SIDE_POOL_W = 360;
+const SD_SIDE_GAP = 12;
+// Below this, even the pool alone (its CSS is a flat 360px, not something this
+// file may shrink without reopening the Đợt 159b "longest name" math) will not
+// fit next to any column at all — fitBuildScreen() switches the pool to a
+// PROPORTIONAL width instead of the fixed 360 once the frame is this tight.
+const SD_SIDE_POOL_MIN = 170;
+// How far `fitBuildScreen()` may shrink the columns screen before giving up
+// and letting `.aw-tool-panel`'s own `overflow-y:auto` take over (which, per
+// the note above, would rather never happen). 1 = the Đợt 159 comfortable
+// sizes below; every ordinary desktop window still resolves to 1 unchanged.
+const SD_FIT_MIN = 0.6;
+// The Đợt 159 numbers, now the t=1 END of the fit range rather than the only
+// values that exist.
+const SD_FIT_MAX = {
+  chipFs: 14.5, chipFsWide: 13,       // 14.5 at ≤3 teams, 13 at 4-5 (Đợt 159)
+  colGap: 3, colchipPadV: 5, colchipPadH: 10, colheadMb: 8, colPad: 8,
+  // is-top's pool (see app.css) — at the comfortable default it can claim the
+  // WHOLE height budget in a cramped column on its own, leaving nothing for
+  // the columns underneath no matter how far everything else shrinks.
+  poolMaxh: 170
+};
+const SD_FIT_MIN_PX = {
+  // Floors, not zero: below these the chip stops being tappable/readable, and
+  // that is the point where a name should abbreviate instead of the whole
+  // column keep shrinking (see shrinkOverflowingNames()).
+  chipFs: 10.5, colGap: 1, colchipPadV: 2, colchipPadH: 5, colheadMb: 3, colPad: 4,
+  poolMaxh: 60   // enough for ~2 rows of the smallest chip — still a usable staging area
+};
+
 // ---- Firestore plumbing (mirrors core/classes.js; same collection, own cache)
 let cache = null;
 let cacheUid = null;
@@ -203,6 +255,33 @@ export async function releaseMyClaim() {
   } catch { /* signed out or offline — the TTL will clear it */ }
 }
 
+/**
+ * Đợt 168 — wipe the ENTIRE shared table: every team, every claim, the class
+ * itself. "Reset teams" calls this instead of `releaseMyClaim()` — the
+ * teacher's own words: "reset mọi thứ liên quan tới bảng showdown luôn...
+ * mọi trình duyệt đều được xóa, không bị vướng vào việc đang mắc ở 1 đội nào
+ * đó" (reset everything about the table right away; no browser stays stuck
+ * holding a team). `releaseMyClaim()` only ever touched rows where
+ * `c.by === me`; this touches the whole document, so it is not "release mine,
+ * then also clear the rest" — it is the one write that replaces it.
+ *
+ * ⚠️ Reach: a browser with the SETUP PANEL open right now sees this live —
+ * `boot()`'s `subscribeSetup` callback now syncs `setup.teams` too (not just
+ * `claims`), and bounces itself back to screen A when the table it was
+ * looking at is suddenly empty. A browser that is mid-GAME (panel closed, its
+ * pick sitting only in its own `sessionStorage`) has no channel this can
+ * reach — cross-tab `sessionStorage` writes do not exist — so that play just
+ * finishes normally; the shared team it would have returned a claim to is
+ * simply gone by then, the same outcome as any claim that outlived its TTL.
+ *
+ * Never throws, same reason as releaseMyClaim(): signed out or offline must
+ * not stop the teacher from leaving the reset confirm.
+ */
+export async function wipeSetup() {
+  try { await saveSetup({ classId: "", className: "", teams: [], claims: {} }); }
+  catch { /* signed out or offline — nothing was shared yet, nothing to wipe */ }
+}
+
 // ---------------------------------------------------------------
 // SPLITTING A ROLL INTO TEAMS
 // ---------------------------------------------------------------
@@ -224,6 +303,27 @@ export function splitIntoTeams(students, count, existing = []) {
 
 let seq = 0;
 function localId(prefix) { return `${prefix}_${Date.now().toString(36)}_${(seq++).toString(36)}`; }
+
+// ---------------------------------------------------------------
+// NAME ABBREVIATION (Đợt 166) — the LAST resort for a chip that still does not
+// fit its column after fitBuildScreen() has shrunk the whole screen as far as
+// it goes (see SD_FIT_MIN). Teacher, 15/8/2026: "có thể sử dụng tên viết tắt
+// để đều hơn bố cục bảng, ví dụ Nguyễn Bảo Anh có thể thành N.B.Anh".
+// Keeps the LAST word — the part a Vietnamese name is actually called by —
+// in full, and reduces every word before it to an initial. A one-word name
+// (roll added by hand, or a foreign pupil's name) is returned unchanged: there
+// is nothing to abbreviate, and initials-only would make it unreadable.
+// ⚠️ This is a display transform ONLY — every id/name a claim, a review row,
+// or Firestore ever sees is still the pupil's real name from `roster`/`setup`;
+// only the chip's `.textContent` (and only when it does not fit) is swapped,
+// with the full name kept as its `title` tooltip.
+export function shortenName(full) {
+  const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return full;
+  const last = parts[parts.length - 1];
+  const initials = parts.slice(0, -1).map(w => w[0]).join(".");
+  return `${initials}.${last}`;
+}
 
 // ---------------------------------------------------------------
 // THE PANEL
@@ -299,10 +399,21 @@ export function buildShowdownPanel(panel, ctx) {
   const foot = el("div", "aw-sd-foot");
   panel.append(body, foot);
 
-  // ⭐ Đợt 159b — AS WIDE AS THE APP FRAME (teacher: "dãn chiều ngang lớn hết cỡ
-  // bằng khung app để không phải scroll ngang"). A stated 860 was wider than the
-  // frame on the teacher's own screen, which is exactly where the sideways
-  // scrollbar came from.
+  // ⭐ Đợt 159b — AT MOST AS WIDE AS THE APP FRAME (teacher: "dãn chiều ngang lớn
+  // hết cỡ bằng khung app để không phải scroll ngang"). A stated 860 was wider
+  // than the frame on the teacher's own screen, which is exactly where the
+  // sideways scrollbar came from.
+  // ⭐ Đợt 166 — but "at most", not "always exactly": with 1-2 teams a wide frame
+  // used to stretch the panel to its full width anyway, and a column that is one
+  // flex share of that is a name in a very long, mostly-empty rectangle
+  // (teacher, 15/8/2026: "bảng rộng phần ngang quá nên ô tên rất dài gây mất
+  // thẩm mỹ"). `updatePanelWidth(n)` now targets a comfortable width FOR `n`
+  // teams (n × the column's own max-width, see `.aw-sd-col` in app.css, plus
+  // gaps and the panel's own padding) and only falls back to the frame's own
+  // width when that would be narrower — which is exactly the myActivity
+  // multi-column case this file's other Đợt 166 change (fitBuildScreen) exists
+  // for. Never below `SD_PANEL_MIN`: screen A's class/Teams row needs that much
+  // regardless of team count.
   // ⚠️ Measured from `.aw-below` in the DOCUMENT, not from the panel: during a
   // cold open the panel has not been appended yet (core/engine.js builds its
   // contents first), so `panel.closest(...)` would be null. Showdown never runs
@@ -314,9 +425,34 @@ export function buildShowdownPanel(panel, ctx) {
   // `--sd-panel-w` is not touched by any of that; `.aw-tool-panel.is-sd` reads it
   // and falls back to the stated width when it is absent.
   const frame = document.querySelector(".aw-below");
-  if (frame?.clientWidth) {
-    const panelEl = panel.closest(".aw-tool-panel") || panel;
-    panelEl.style.setProperty("--sd-panel-w", Math.round(frame.clientWidth) + "px");
+  const frameW = frame?.clientWidth || 0;
+  const panelEl = panel.closest(".aw-tool-panel") || panel;
+  function updatePanelWidth(n) {
+    if (!frameW) return;
+    const teams = Math.max(1, Math.min(MAX_TEAMS, Math.round(n) || 1));
+    // ⚠️ At ≤3 teams renderBuild lands on the is-side layout, whose pool is a
+    // FIXED 360px 2-column grid (app.css, sized for the longest test name —
+    // not something this function may shrink without reopening that math).
+    // Measured the bug omitting this caused: capping the panel to just the
+    // COLUMNS' own width (for 2 teams, ~460px) left only ~48px total for both
+    // columns once the pool's fixed 360 + its 12px gap came out of it — a
+    // "too narrow" bug exactly as bad as the "too wide" one this function
+    // exists to fix. `.aw-sd-col`'s own `max-width:200px` (app.css) is what
+    // actually answers the teacher's "column too wide" complaint at 1-2 teams
+    // — the panel here just needs to be wide enough that both the pool and
+    // MAX_TEAMS×200px-capped columns have room, not narrower than that.
+    const sideBySide = teams <= 3;
+    const poolReserve = sideBySide ? SD_SIDE_POOL_W + SD_SIDE_GAP : 0;
+    const ideal = SD_PANEL_PAD + poolReserve + teams * SD_COL_MAXW + (teams - 1) * SD_COL_GAP;
+    // ⚠️ ORDER MATTERS: the floor (SD_PANEL_MIN) applies to `ideal` FIRST, and
+    // the frame is the LAST word — never the other way round. Measured the bug
+    // this fixes: `max(MIN, min(frameW, ideal))` still forced the panel past a
+    // narrow myActivity column's own width (a 308px column came out 460px
+    // wide), because the floor was allowed to override the one constraint that
+    // must never lose — there is no "at least this wide" that beats "the
+    // column is only this many pixels".
+    const w = Math.min(frameW, Math.max(SD_PANEL_MIN, ideal));
+    panelEl.style.setProperty("--sd-panel-w", Math.round(w) + "px");
   }
 
   // ⚠️⚠️ LIVENESS IS `body.isConnected`, NEVER `panel.isConnected`.
@@ -347,6 +483,7 @@ export function buildShowdownPanel(panel, ctx) {
   let claimedTeam = null;   // which team THIS browser will play
   let pool = [];            // pupils not yet in a team (screen B)
   let unsub = null;
+  updatePanelWidth(teamCount);   // the opening default; boot()/the stepper refine it
 
   // ⚠️ The teacher can dismiss this popover by tapping anywhere outside it, and
   // that path runs entirely inside core/engine.js — nothing calls back here. A
@@ -528,7 +665,10 @@ export function buildShowdownPanel(panel, ctx) {
     const cCount = el("div", "aw-sd-field is-narrow");
     cCount.append(el("div", "aw-sd-flab", "Teams"));
     const stepper = makeHStepper(teamCount, MIN_TEAMS, MAX_TEAMS,
-      v => { teamCount = v; sfx.tap(); paintFoot(); }, { format: v => String(v) });
+      // Đợt 166 — the panel's own width now tracks the stepper live (teacher:
+      // "kích thước pop-up linh hoạt ... theo số team được chọn"), which is
+      // also a preview of the width renderBuild will actually use on NEXT.
+      v => { teamCount = v; sfx.tap(); updatePanelWidth(v); paintFoot(); }, { format: v => String(v) });
     stepper.el.classList.add("is-big");
     cCount.append(stepper.el);
 
@@ -678,13 +818,15 @@ export function buildShowdownPanel(panel, ctx) {
     const n = setup.teams.length || MIN_TEAMS;
     const sideBySide = n <= 3;
     host.classList.add("aw-sd-build", sideBySide ? "is-side" : "is-top");
-    // Each layout is only as tall as its own worst case — measured, see app.css.
-    // ⚠️ On the BODY, not the layer: the layer is `inset: 0` inside it, so it is
-    // the body that decides how tall the popover is. renderSetup puts it back.
-    body.style.setProperty("--sd-body-h", sideBySide ? "470px" : "400px");
-    // Chip text shrinks a little as the columns multiply so a full Vietnamese
-    // name always fits — the teacher's rule is that a name is never cut.
-    host.style.setProperty("--sd-chip-fs", (n >= 4 ? 13 : 14.5) + "px");
+    updatePanelWidth(n);
+    // Each layout's COMFORTABLE height — measured, see app.css — is now a
+    // ceiling, not a fixed value: fitBuildScreen() below clamps it to whatever
+    // room is actually real (Đợt 166) before shrinking anything else.
+    const idealBodyH = sideBySide ? 470 : 400;
+    // Chip text's own comfortable ceiling (Đợt 159: 14.5 at ≤3 teams, 13 at
+    // 4-5) — also now the t=1 end of fitBuildScreen()'s range rather than the
+    // only two values that exist.
+    const chipFsMax = n >= 4 ? SD_FIT_MAX.chipFsWide : SD_FIT_MAX.chipFs;
 
     const poolBox = el("div", "aw-sd-pool");
     const colsBox = el("div", "aw-sd-cols");
@@ -692,9 +834,160 @@ export function buildShowdownPanel(panel, ctx) {
     // when it stands to the right (so tab order matches what the eye reads).
     host.append(...(sideBySide ? [colsBox, poolBox] : [poolBox, colsBox]));
 
-    paintPool();
-    paintCols();
-    paintFoot();
+    repaintAll();
+
+    /** paint everything, THEN fit it to the real room, THEN abbreviate
+     * whatever still does not fit. Every mutator below (sendToTeam, drag a
+     * chip back, Random, Send everyone back) goes through this — not the
+     * three paints alone — so a chip move that makes some OTHER column the
+     * tallest one re-measures instead of trusting a fit computed for the
+     * shape the screen had a moment ago. */
+    function repaintAll() {
+      paintPool();
+      paintCols();
+      paintFoot();
+      fitBuildScreen();
+      shrinkOverflowingNames();
+    }
+
+    /**
+     * Đợt 166 — clamp `--sd-body-h` to the REAL room above the toolbar (not
+     * just the layout's comfortable ideal), then binary-search ONE scale
+     * across chip font/padding/gaps (`applyFit`) until the tallest column
+     * actually fits inside whatever that comes out to. Same technique as
+     * core/fit.js's autoFit — measured DOM, not arithmetic — because the room
+     * here is no longer one fixed number the way it was at Đợt 159: it is
+     * different on every myActivity column split.
+     */
+    function fitBuildScreen() {
+      // Đợt 166 — the is-side pool's width, BEFORE anything below: everything
+      // else here fits HEIGHT into a budget, but a myActivity column can also
+      // be too NARROW for the pool's usual fixed 360 (see app.css's own note
+      // on `--sd-side-pool-w`). `host.clientWidth` is the real inner width
+      // pool+gap+columns must share — measured, not the panel's stated width,
+      // since border/padding already came out of it by the time it reaches here.
+      if (sideBySide) {
+        const avail = host.clientWidth;
+        // Leave at least 40px per column — a sliver, but enough for a couple
+        // of abbreviated characters plus the ellipsis rather than nothing.
+        const poolW = Math.max(SD_SIDE_POOL_MIN, Math.min(SD_SIDE_POOL_W, avail - SD_SIDE_GAP - n * 40));
+        host.style.setProperty("--sd-side-pool-w", Math.round(poolW) + "px");
+      }
+      // capPanelHeight (core/engine.js) already wrote the real budget onto
+      // the panel element before this ever runs — see updatePanelWidth's own
+      // header note for why that ordering is safe to rely on. Reading it back
+      // rather than re-deriving it means this can never disagree with what
+      // the panel is actually capped to.
+      const maxH = parseFloat(panelEl.style.maxHeight) || Infinity;
+      // `.aw-tool-panel`'s own padding (14+16=30) plus `.aw-sd-foot`'s
+      // footprint (46 min-height + 14 margin-top = 60) — see app.css. What is
+      // left is what `.aw-sd-body` may use before the PANEL ITSELF has to
+      // scroll, which is the failure this whole function exists to prevent
+      // (Đợt 159b moved Ready/Reset/Random off a sticky header, so a panel
+      // scroll can hide the only way out of the popover).
+      // ⚠️ The floor here is a sanity minimum ONLY (never literally 0/negative
+      // if `maxH` came back tiny or unset) — it must NOT be a "comfortable"
+      // number. Measured the bug a too-generous floor causes: at a real
+      // myActivity-column budget of ~122px, a floor of 180 forced `bodyH` to
+      // 180 anyway, guaranteeing the exact ~58px panel overflow this function
+      // exists to prevent. Below this floor there is genuinely no room left to
+      // negotiate — `.aw-tool-panel`'s own `overflow-y:auto` is the honest
+      // fallback for a column split too narrow for any 16:9 game frame to be
+      // worth showing in the first place, not a case to keep chasing.
+      const budget = Math.max(60, maxH - 30 - 60);
+      const bodyH = Math.min(idealBodyH, budget);
+      body.style.setProperty("--sd-body-h", bodyH + "px");
+
+      const need = () => sideBySide
+        ? Math.max(measurePoolH(), measureColH())
+        // Not side-by-side: the pool sits ABOVE the columns inside the same
+        // body, so its footprint plus the layer's own 14px gap (app.css) eats
+        // into what the columns have.
+        : measurePoolH() + 14 + measureColH();
+
+      applyFit(1);
+      if (need() <= bodyH + 1) return;        // the common case: nothing to shrink
+      let lo = SD_FIT_MIN, hi = 1, best = SD_FIT_MIN;
+      for (let i = 0; i < 10; i++) {
+        const mid = (lo + hi) / 2;
+        applyFit(mid);
+        if (need() > bodyH + 1) hi = mid; else { best = mid; lo = mid; }
+      }
+      applyFit(best);
+    }
+
+    /** t=1 is the Đợt 159 comfortable size, t=SD_FIT_MIN the tightest this
+     * screen will ever get before a name abbreviates instead (see
+     * shrinkOverflowingNames). Six properties move together so the column
+     * shrinks as ONE proportional thing rather than font and spacing
+     * disagreeing with each other. */
+    function applyFit(t) {
+      const lerp = (min, max) => (min + (max - min) * t).toFixed(2);
+      host.style.setProperty("--sd-chip-fs", lerp(SD_FIT_MIN_PX.chipFs, chipFsMax) + "px");
+      host.style.setProperty("--sd-col-gap", lerp(SD_FIT_MIN_PX.colGap, SD_FIT_MAX.colGap) + "px");
+      host.style.setProperty("--sd-colchip-pad-v", lerp(SD_FIT_MIN_PX.colchipPadV, SD_FIT_MAX.colchipPadV) + "px");
+      host.style.setProperty("--sd-colchip-pad-h", lerp(SD_FIT_MIN_PX.colchipPadH, SD_FIT_MAX.colchipPadH) + "px");
+      host.style.setProperty("--sd-colhead-mb", lerp(SD_FIT_MIN_PX.colheadMb, SD_FIT_MAX.colheadMb) + "px");
+      host.style.setProperty("--sd-col-pad", lerp(SD_FIT_MIN_PX.colPad, SD_FIT_MAX.colPad) + "px");
+      host.style.setProperty("--sd-pool-maxh", lerp(SD_FIT_MIN_PX.poolMaxh, SD_FIT_MAX.poolMaxh) + "px");
+    }
+
+    // Natural (unstretched) height of the BUSIEST column. `.aw-sd-col` itself
+    // IS stretched (`align-items:stretch` against its siblings/container —
+    // the same stretched-ancestor trap core/fit.js's header warns about, so
+    // `col.scrollHeight` cannot be trusted), but its two children — the head
+    // row and the member list — carry no `height:100%`/`flex-grow` of their
+    // own, so their `offsetHeight` is real, content-driven size.
+    function measureColH() {
+      let max = 0;
+      colsBox.querySelectorAll(".aw-sd-col").forEach(col => {
+        const head = col.querySelector(".aw-sd-colhead");
+        const list = col.querySelector(".aw-sd-colmembers");
+        const cs = getComputedStyle(col);
+        const h = (head?.offsetHeight || 0) + (list?.offsetHeight || 0)
+          + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom)
+          + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+        if (h > max) max = h;
+      });
+      return max;
+    }
+
+    // The pool is NOT stretched in either layout (`flex:0 0 auto` / `0 0
+    // var(--sd-side-pool-w)`), so its own rendered height already IS the real
+    // number — capped by its own `max-height` in the is-top layout, which is
+    // fine: that cap is a deliberate internal scroll for a staging area, not
+    // part of the "never scroll" promise this function exists to keep (see
+    // .aw-sd-pool's own comment in app.css).
+    // ⚠️ `offsetHeight`, NOT `getBoundingClientRect()` — measured the two
+    // disagree by as much as 10% while the popover's own OPEN animation
+    // (`.aw-tool-panel`'s `aw-pop-cx`, a scale-in) is still resolving: `rect`
+    // reports the partway-scaled visual size, `offsetHeight` the real layout
+    // box the fit search needs. `measureColH()` was never at risk of this (it
+    // was always offsetHeight-based); this is the same fix applied here too.
+    function measurePoolH() { return poolBox.offsetHeight; }
+
+    /**
+     * Đợt 166 — LAST resort, run after fitBuildScreen() has already shrunk
+     * the whole screen as far as it goes (SD_FIT_MIN): a name that STILL does
+     * not fit its chip's rendered width gets swapped to its abbreviated form
+     * (core/showdown-setup.js's shortenName) instead of being left to
+     * `.aw-sd-chip`'s ellipsis, which was silently cutting names — the
+     * teacher's own rule is that a name is never cut.
+     * ⚠️ Always re-derives from `dataset.fullName` and only ever SHRINKS from
+     * there: every chip here was just created fresh by paintPool()/paintCols()
+     * this same repaint (mkChip sets `.textContent` to the full name), so
+     * there is no stale abbreviation to undo — a column that regained room
+     * simply never gets touched.
+     */
+    function shrinkOverflowingNames() {
+      host.querySelectorAll(".aw-sd-chip[data-mid]").forEach(chip => {
+        const full = chip.dataset.fullName;
+        if (!full || chip.scrollWidth <= chip.clientWidth + 1) return;   // fits as-is
+        chip.textContent = shortenName(full);
+        chip.classList.add("is-short");
+        chip.title = full;   // the visible text is compressed; the full name is one hover away
+      });
+    }
 
     function paintPool() {
       poolBox.innerHTML = "";
@@ -800,10 +1093,17 @@ export function buildShowdownPanel(panel, ctx) {
       });
       mk(icons.refresh, "Reset teams", () => {
         sfx.tap();
-        askConfirm("Divide the class again? The teams built here are dropped.", "Reset", async () => {
+        // ⭐ Đợt 168 (teacher, 15/8/2026) — this used to be "give back only MY
+        // claim" (releaseMine): the shared table itself, and every OTHER
+        // browser's claim on it, survived untouched. Reset now wipes the
+        // WHOLE table (wipeSetup) — the teacher's own words: "reset mọi thứ
+        // liên quan tới bảng showdown luôn... không bị vướng vào việc đang
+        // mắc ở 1 đội nào đó". See wipeSetup()'s own header for what this
+        // does and does not reach.
+        askConfirm("Reset the whole team table? Every screen loses its team, right away.", "Reset", async () => {
           sfx.forward();
           clearPick();
-          await releaseMine();
+          await wipeSetup();
           await boot({ rebuild: true });
         });
       });
@@ -885,7 +1185,7 @@ export function buildShowdownPanel(panel, ctx) {
       const before = new Map();
       host.querySelectorAll("[data-mid]").forEach(c => before.set(c.dataset.mid, c.getBoundingClientRect()));
       mutate();
-      paintPool(); paintCols(); paintFoot();
+      repaintAll();
       const moved = [];
       host.querySelectorAll("[data-mid]").forEach(c => {
         const from = before.get(c.dataset.mid);
@@ -961,7 +1261,7 @@ export function buildShowdownPanel(panel, ctx) {
       // READY greyed out — the mode was unreachable and nothing said why. The
       // footer is derived state; anything that changes `pool` or the claim has
       // to repaint it.
-      paintPool(); paintCols(); paintFoot();
+      repaintAll();
       const landed = findChip(colsBox, m.id);
       fly(from, landed?.getBoundingClientRect(), m.name);
     }
@@ -971,7 +1271,7 @@ export function buildShowdownPanel(panel, ctx) {
       team.members = team.members.filter(x => x !== m);
       pool.push(m);
       sfx.lift();
-      paintPool(); paintCols(); paintFoot();
+      repaintAll();
       const landed = findChip(poolBox, m.id);
       fly(from, landed?.getBoundingClientRect(), m.name);
     }
@@ -981,6 +1281,10 @@ export function buildShowdownPanel(panel, ctx) {
     const c = el("button", "aw-sd-chip");
     c.type = "button";
     c.textContent = label;          // pupil name — never innerHTML
+    // Đợt 166 — the TRUE name, kept regardless of what shrinkOverflowingNames()
+    // later does to .textContent, so a re-check always starts from the full
+    // name rather than compounding an old abbreviation onto a new one.
+    c.dataset.fullName = label;
     return c;
   }
 
@@ -1014,6 +1318,13 @@ export function buildShowdownPanel(panel, ctx) {
   // BOOT
   // ---------------------------------------------------------------
   async function boot({ rebuild = false } = {}) {
+    // Đợt 168 — `boot()` can now run a SECOND time on the same panel (Reset
+    // teams calls it again after wipeSetup()); the live-table listener from
+    // the FIRST run was never torn down before, just silently overwritten by
+    // `unsub = subscribeSetup(...)` at the bottom — a leaked listener for the
+    // rest of the panel's life. Harmless before (nothing ever called boot()
+    // twice), worth closing now that Reset does.
+    if (unsub) { unsub(); unsub = null; }
     goto(renderSetup, rebuild ? -1 : +1);   // draws the "Loading…" state at once
 
     let loaded = null;
@@ -1080,6 +1391,11 @@ export function buildShowdownPanel(panel, ctx) {
       selectedTeam = null;
       goto(renderBuild, +1);
     } else {
+      // renderBuild computes its own width from setup.teams.length when it
+      // runs, but landing back on renderSetup (solo, or Reset) needs it here:
+      // `teamCount` may just have changed above (loaded table / solo pick)
+      // and the width set at this function's top is for the OPENING default.
+      updatePanelWidth(teamCount);
       repaint();
     }
 
@@ -1087,13 +1403,34 @@ export function buildShowdownPanel(panel, ctx) {
     watchForClose();
     unsub = subscribeSetup(next => {
       if (!alive()) { stopWatch(); return; }
+      // ⭐ Đợt 168 — `teams`/`classId`/`className` now sync too, not just
+      // `claims`. Reset teams (wipeSetup) empties the WHOLE table from
+      // wherever it is pressed; a screen sitting on renderBuild elsewhere
+      // needs to find out its own columns are gone, not just that nobody
+      // claims them — syncing only `claims` (the old behaviour) left it
+      // repainting a columns screen for a team table that no longer existed.
+      const hadTeams = setup.teams.length > 0;
       setup.claims = next.claims;
+      setup.teams = next.teams;
+      setup.classId = next.classId;
+      setup.className = next.className;
       // Someone else took the team we had selected/ticked — drop it rather than
       // let the teacher press Ready on a team that is no longer theirs.
       const taken = id => { const c = setup.claims[id]; return claimIsLive(c) && c.by !== me; };
       if (selectedTeam && taken(selectedTeam)) selectedTeam = null;
       if (claimedTeam && taken(claimedTeam)) { claimedTeam = null; toast("That team was taken on another screen"); }
-      if (current === renderBuild) repaint();
+      if (current === renderBuild) {
+        if (hadTeams && !setup.teams.length) {
+          // The table was reset on another screen — bounce back to the class
+          // picker rather than repaint a columns screen for a team table that
+          // no longer exists (teacher: "build lại các đội từ đầu luôn").
+          pool = []; claimedTeam = null; selectedTeam = null;
+          toast("The team table was reset on another screen");
+          goto(renderSetup, -1);
+        } else {
+          repaint();
+        }
+      }
     });
   }
 

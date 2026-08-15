@@ -8,6 +8,174 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 168 (15/8/2026) — ⭐ SHOWDOWN: RESET XOÁ SẠCH BẢNG CHUNG NGAY LẬP TỨC + XÁC NHẬN ĐỔI TEMPLATE GIỮ NGUYÊN ĐỘI
+⭐ CÓ SỬA CORE (`core/showdown-setup.js`: `wipeSetup()` mới, nút Reset dùng hàm này thay vì
+`releaseMyClaim()`, `boot()` đồng bộ thêm `teams`/`classId` từ live snapshot + tự dọn listener cũ).
+🟢 ĐÃ TỰ TEST qua `scratch/showdown-test.html`, đọc thẳng `globalThis.__fakeFs` để xác nhận đúng những
+gì Firestore thật sẽ nhận.
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026)** → xem commit + đối chiếu LIVE ở cuối mục này.
+
+### 1. Thầy giao (15/8/2026)
+> "Sau khi chọn showdown mode và build team, chọn team rồi, có thể thay đổi template mà vẫn giữ
+> nguyên showdown mode với danh sách đội đã chọn. Khi bấm reset trong bảng showdown mode và xác nhận
+> là ngay lập tức xóa sạch, reset mọi thứ liên quan tới bảng showdown luôn. Khi bật lại là build lại
+> các đội từ đầu luôn và mọi trình duyệt đều được xóa, không bị vướng vào việc đang mắc ở 1 đội nào đó."
+
+### 2. Việc 1 — đổi template mà vẫn giữ Showdown: KIỂM TRA THẤY ĐÃ CHẠY ĐÚNG cho Anagram ↔ Quiz
+Đọc lại toàn bộ đường đi (`doSwitchTemplate` trong `core/engine.js`) rồi **đo thật** bằng cách dựng
+1 lớp Showdown 2 đội trên Anagram, bấm Ready, rồi mở Template → chọn Quiz:
+- `showdownPick` (đọc từ `sessionStorage`, key `aword-showdown-pick`) **không hề bị đụng tới** trên
+  đường chuyển template — `clearPick()` chỉ được gọi ở 2 chỗ (rời Showdown qua nút Mode, hoặc Reset/
+  Single mode trong chính bảng Showdown), không chỗ nào trong `doSwitchTemplate`.
+- `startGame()` tính lại `showdownPick` MỚI mỗi lần dựng (`tpl.showdownMode && !session && !fight ?
+  readPick() : null` — dòng cổng duy nhất quyết định điều này), và `tpl` lúc đó là **template ĐÍCH**
+  (Quiz), không phải Anagram — nên hễ đích cũng khai `showdownMode:true` thì pick sống sót nguyên vẹn.
+- Đo trên bản dựng thật: sau khi bấm Quiz trong Template panel, `.aw-top-showdown` **vẫn hiện đúng
+  tên em đầu tiên** ("Nguyễn Ngọc Ẳnh"), màn READY **vẫn hiện đúng "Team 1" + đủ 10 tên**, và
+  `sessionStorage` vẫn còn nguyên pick — **0 dòng code phải sửa cho riêng cặp Anagram↔Quiz**.
+- ⚠️ **Chỉ đúng cho 2 template ĐÃ khai `showdownMode:true`** — hiện tại grep toàn bộ `templates/**/*.js`
+  chỉ có `templates/anagram/anagram.js` và `templates/quiz/quiz.js`. Đổi sang bất kỳ template nào
+  trong 15 template còn lại (Open the box, Gameshow, Maze chase, True/false, Find the match...) vẫn sẽ
+  **mất Showdown** — không phải lỗi, mà vì các template đó chưa từng cài móc lượt chơi
+  (`ui.itemChanging`) mà cơ chế Showdown dựa vào để biết "câu nào của em nào".
+- **Thầy đã chọn phạm vi**: mở rộng Showdown sang cả 17 template (không chỉ Anagram/Quiz). Đây là
+  việc LỚN — mỗi template cần đọc hiểu đúng nhịp chuyển câu riêng của nó rồi cài + tự test riêng, nên
+  **KHÔNG làm gộp trong đợt này** — sẽ làm dần thành nhiều đợt riêng sau, ghi tiến độ ở mục VIỆC ĐANG
+  CHỜ đầu file.
+
+### 3. Việc 2 — Reset giờ xoá SẠCH bảng chung, không chỉ nhả claim của riêng máy mình
+**Trước**: nút Reset chỉ gọi `releaseMyClaim()` — nhả đúng những claim mà CHÍNH máy này đang giữ
+(`c.by === me`), rồi lùi về màn A **CỦA RIÊNG MÁY NÀY**. Bảng đội dùng chung trên Firestore
+(`users/{uid}/items/sd_main`) — `teams`, `classId`, và claim của MÁY KHÁC — **không hề bị đụng tới**.
+Một máy khác đang mở bảng thì vẫn thấy y nguyên đội cũ, kể cả khi máy vừa Reset đã dựng lại đội mới.
+
+**Sau — hàm mới `wipeSetup()`**: viết thẳng `{classId:"", className:"", teams:[], claims:{}}` lên
+Firestore ngay khi xác nhận Reset — đây là **một bản ghi duy nhất thay thế toàn bộ tài liệu**, không
+phải "nhả claim của tôi rồi nhả thêm phần còn lại". `releaseMyClaim()` vẫn giữ nguyên, dùng cho 2 chỗ
+khác (Single mode, chọn Solo) — 2 đường đó CHỈ nên nhả phần của riêng mình, không được xoá cả bảng của
+những máy khác đang chơi bình thường.
+- **Bảng đang mở ở máy khác cũng tự biết**: `boot()`'s `subscribeSetup` trước chỉ đồng bộ `claims`
+  (`setup.claims = next.claims`) — nếu bảng bị xoá trắng từ máy khác, màn cột vẫn đứng yên với `teams`
+  CŨ, chỉ có ô claim đổi màu. Nay đồng bộ thêm `teams`/`classId`/`className`, và nếu đang đứng ở màn
+  cột (`renderBuild`) mà `teams` vừa rỗng đi thì **tự lùi về màn A** kèm toast báo — đúng ý thầy "khi
+  bật lại là build lại từ đầu", ngay cả với những máy KHÔNG PHẢI máy vừa bấm Reset.
+- ⚠️ **Giới hạn thật, không giấu**: `sessionStorage` (nơi giữ pick của một máy ĐANG CHƠI, panel đã
+  đóng) không có đường nào để một máy khác ghi vào từ xa — trình duyệt không cho — nên một máy đang
+  giữa ván không bị "đá" ngay lập tức. Ván đó chơi hết bình thường; đội chung nó sẽ trả claim về sau
+  thì đã không còn tồn tại nữa (giống hệt một claim hết hạn TTL 12 giờ). "Mọi trình duyệt đều được
+  xoá" ở đây đúng cho: bảng CHUNG (Firestore) và bất kỳ PANEL nào đang mở xem bảng đó — không phải một
+  lệnh kick từ xa vào giữa ván đang chơi (chưa có hạ tầng cho việc đó, ngoài phạm vi yêu cầu lần này).
+- **Dọn theo 1 lỗi rò rỉ nhỏ tự bắt được**: `boot()` không hề gỡ `unsub` (listener theo dõi bảng
+  sống) của lần chạy TRƯỚC trước khi gán cái mới — vô hại khi `boot()` chỉ chạy 1 lần/panel, nhưng
+  Reset giờ gọi lại `boot({rebuild:true})` nên đã thành rò rỉ thật. Thêm `if (unsub) unsub()` ở đầu
+  `boot()`.
+
+### 4. Đã tự test (đọc thẳng `globalThis.__fakeFs`, không đoán)
+- Dựng 2 đội, tick + Ready đội 1 → `sd_main` có đủ `teams`/`claims` như mong đợi.
+- Mở lại bảng (vào thẳng màn cột, `subCount=1`) → bấm Reset → xác nhận → `sd_main` ngay lập tức
+  **`teams:[], claims:{}, classId:"", className:""`**, `subCount` VẪN LÀ 1 (không rò rỉ thêm listener),
+  màn hiện tại lùi về A với ô chọn lớp **trống trơn** (không tự điền lại lớp cũ).
+- Chọn lại lớp + Next → 2 cột trống dựng lại bình thường, không lỗi.
+- **Mô phỏng "máy khác" Reset trong lúc bảng này đang mở ở màn cột** (ghi thẳng vào
+  `globalThis.__fakeFs` như `saveSetup` sẽ làm) → panel đang mở **tự lùi về màn A trống** đúng như
+  thiết kế mục 3.
+- Anagram → Quiz giữ nguyên Showdown: xem mục 2, đã đo trực tiếp trên bản dựng thật.
+- 0 lỗi console trong toàn bộ quá trình.
+
+### 5. Commit + push + đối chiếu LIVE
+
+---
+
+## Đợt 167 (15/8/2026) — ⭐⭐ SHOWDOWN: KÍCH THƯỚC PANEL TỰ CO THEO KHUNG THẬT + SỐ ĐỘI, VIẾT TẮT TÊN KHI HẾT CHỖ
+⭐ CÓ SỬA CORE (`core/showdown-setup.js`, `core/app.css`). 🟢 ĐÃ TỰ TEST kỹ qua
+`scratch/showdown-test.html` (Browser pane, đo DOM thật ở nhiều cỡ khung).
+✅ **THẦY CHỐT COMMIT chung với Đợt 168 (15/8/2026)** — xem mục "THẦY DUYỆT" ở Đợt 168.
+
+### 1. Thầy báo (15/8/2026, kèm 3 ảnh chụp myActivity chia cột)
+> "Khi tôi chạy thử trên màn TOMKO với app myActivity chia mode 4 đội, lúc này bảng mode Showdown
+> bị cuộn khá bất tiện. Tôi muốn nó co nhỏ cả size các nội dung bên trong vào, co nhỏ bảng vào để
+> không bao giờ bị scroll dọc hay ngang dù có chia bảng 4 hay 5. Khi ở chế độ bảng đơn hoặc đôi,
+> bảng rộng phần ngang quá nên ô tên rất dài gây mất thẩm mỹ. Hãy tìm phương án phù hợp nhất...
+> có thể điều chỉnh size pop-up linh hoạt theo size màn hình, theo số team được chọn... Có thể sử
+> dụng tên viết tắt để đều hơn bố cục bảng, ví dụ Nguyễn Bảo Anh có thể thành N.B.Anh chẳng hạn."
+
+Đọc lại đúng câu ⚠️ thầy đã tự ghi ở Đợt 159b: "trong myActivity chia cột thì **chắc chắn cuộn**" —
+lúc đó chấp nhận vì hàng tiêu đề còn ghim (`sticky`) giữ đường ra; Đợt 159b NGAY SAU ĐÓ xoá hàng ghim
+đó ("bỏ hẳn không gian cho khu vực chữ showdown ở góc trên"), nên khi cuộn thật sự xảy ra thì
+Ready/Reset/Random cũng cuộn mất theo — đúng thứ thầy vừa chụp màn hình.
+
+### 2. Bỏ hẳn các mốc cố định theo bậc thang, thay bằng ĐO THẬT + CO VỪA
+Trước: `--sd-chip-fs` chỉ 2 mốc (13/14.5px theo ≤3 hay ≥4 đội), `--sd-body-h` chỉ 2 mốc (470/400px),
+`--sd-panel-w` LUÔN bằng đúng bề rộng khung app bất kể mấy đội. Cả 3 đều không biết gì về khoảng
+trống THẬT của khung app đang chạy trong.
+- **`updatePanelWidth(n)`** (mới): bề rộng lý tưởng = đủ chỗ cho `n` cột (mỗi cột tối đa 200px, khớp
+  `max-width` mới của `.aw-sd-col`) + với is-side (≤3 đội) còn phải dành riêng 360+12px cho khối pool
+  cố định của nó — rồi **kẹp trong khung thật** (`Math.min(frameW, ...)`, khung LUÔN thắng, không có
+  "tối thiểu" nào được phép vượt qua nó) và không dưới `SD_PANEL_MIN=460` (khung đủ rộng thì mới áp).
+  Gọi lại mỗi khi đổi stepper Teams (bảng co giãn ngay trước mắt) và mỗi khi vào renderBuild.
+- **`fitBuildScreen()`** (mới, dùng lại đúng kỹ thuật `core/fit.js`'s autoFit — đo DOM thật, không đoán
+  số học): đọc `maxH` từ `panelEl.style.maxHeight` (đúng con số `capPanelHeight` của engine.js đã ghi
+  sẵn trước đó, không tự tính lại lần hai) → trừ phần đệm panel (30) + hàng chân (60) → `--sd-body-h`
+  kẹp trong khoảng trống thật đó → nhị phân dò một hệ số `t` (0.6→1) nhân đồng thời vào 7 biến CSS
+  (`--sd-chip-fs`, `--sd-col-gap`, `--sd-colchip-pad-v/h`, `--sd-colhead-mb`, `--sd-col-pad`,
+  `--sd-pool-maxh`) cho tới khi cột cao nhất (đo qua `head.offsetHeight + list.offsetHeight`, KHÔNG
+  dùng `getBoundingClientRect` — xem mục 4) vừa đúng ngân sách. Chạy lại ở **mọi lần vẽ lại** màn B
+  (kéo-thả, Random, Send back...), không chỉ lúc mở bảng — gộp `paintPool();paintCols();paintFoot();`
+  cũ thành một hàm `repaintAll()` duy nhất chạy kèm fit + viết tắt.
+- **`shrinkOverflowingNames()`** (mới): sau khi fit xong, đo `chip.scrollWidth > chip.clientWidth` cho
+  từng ô — ô nào vẫn không đủ chỗ mới đổi chữ hiện sang `shortenName()` (giữ nguyên chữ CUỐI — đúng
+  "tên gọi" trong tiếng Việt, rút các chữ trước thành chữ cái đầu): "Nguyễn Bảo Anh" → "N.B.Anh", đúng
+  y hệt ví dụ thầy đưa. Luôn đo lại từ `dataset.fullName` (không đoán tiếp từ chữ đã rút gọn trước đó)
+  nên một ô lại đủ chỗ ở lượt vẽ sau thì tự trả về tên đầy đủ. Tên 1 từ (không dấu cách) giữ nguyên.
+
+### 3. ⚠️⚠️ 3 LỖI THẬT TỰ BẮT ĐƯỢC khi đo — không lỗi nào đoán được nếu không đo DOM thật
+1. **`transition` trên một thuộc tính đọc `var(--x, fallback)` có thể "kẹt cứng"** khi bị
+   `setProperty()` nhiều lần liên tục trong cùng một nhịp đồng bộ — đo trực tiếp: `--sd-panel-w` đổi
+   thành 700px nhưng `getComputedStyle(panel).width` vẫn báo `860px` (giá trị fallback) MÃI MÃI, chỉ
+   hết khi `transition:none`. `.aw-sd-body`'s `transition: min-height` (có từ Đợt 159b, vô hại lúc đó
+   vì chỉ đổi 1 lần/màn) dính y hệt — và vì `fitBuildScreen()` giờ gọi lại ở MỌI lần vẽ, bẫy này lộ ra
+   thật, làm toàn bộ cơ chế "kẹp vào khoảng trống thật" bị vô hiệu hoá ÂM THẦM (panel vẫn hiện ở size
+   560/470/400 cũ bất kể ngân sách thật là bao nhiêu). **Bỏ hẳn `transition` ở cả 2 chỗ** (width/max-width
+   của `.aw-tool-panel.is-sd`, min-height của `.aw-sd-body`) — mất hiệu ứng chuyển cỡ mượt, đổi lấy đúng
+   chức năng; hiệu ứng trượt/mờ giữa 2 màn A→B (`goto()`) vẫn còn nguyên, không bị mất cảm giác "đổi màn".
+2. **Thứ tự `Math.max`/`Math.min` sai làm sàn đè lên trần**: viết `Math.max(SD_PANEL_MIN, Math.min(frameW,
+   ideal))` — sàn 460 tính SAU cùng, đè luôn cả trần khung thật. Đo được: khung myActivity 308px hoá ra
+   panel rộng 460px (vượt khung 152px). Sửa: `Math.min(frameW, Math.max(SD_PANEL_MIN, ideal))` — khung
+   luôn là tiếng nói CUỐI CÙNG.
+3. **`getBoundingClientRect()` nói dối giữa lúc animation/CSS-animation của popover đang chạy** (đo được
+   lệch tới ~10%, ví dụ `.aw-sd-layer` rect 703.8px trong khi `clientWidth` đúng là 782px, cùng lúc
+   `document.hidden === true` — trùng đúng bẫy throttle đã ghi ở memory "electron-test-throttle").
+   `measureColH()` từ đầu đã dùng `offsetHeight` nên an toàn; `measurePoolH()` ban đầu viết bằng
+   `getBoundingClientRect().height` — **đã sửa sang `offsetHeight`**, khớp kỹ thuật với `measureColH()`.
+
+### 4. Đã tự test — ma trận (số đội) × (bề rộng khung), lớp giả C3E (20 em, có "Nguyễn Ngọc Ẳnh")
+Đo bằng `javascript_tool` thật trên DOM đã render (`scrollWidth`/`offsetHeight`, không đoán):
+
+| Đội | Khung 1280×800 (bình thường) | Khung ~480×820 (~4 cột myActivity) | Khung ~340×640 (~5 cột, cực hẹp) |
+|---|---|---|---|
+| 1 (solo) | width 612px, hint đúng, Ready → topbar hiện tên | (chưa cần đo hẹp — solo không dựng bảng đội) | — |
+| 2 | **cuộn 0**, cột kẹp đúng 200px (hết "ô tên dài"), 0 tên phải viết tắt | ⚠️ **còn cuộn ~39px** (ca khó nhất đã biết từ Đợt 159: 20 em/2 đội = 10 em/cột) — panel vẫn tự cuộn được tới Ready, không mất hẳn như trước | chưa đo riêng |
+| 3 | cuộn 0 | cuộn 0 | chưa đo riêng |
+| 4 | cuộn 0 | cuộn 0, 0 tên phải viết tắt | chưa đo riêng |
+| 5 | cuộn 0, width 968px (bằng khung) | cuộn 0 | **cuộn 0** (khung 308px thật), mọi tên đều viết tắt đúng dạng `N.N.Ẳnh`, cột chỉ 41px |
+
+Cũng test: đổi Teams stepper ở màn A → panel rộng ra/co lại NGAY trước mắt (đúng ý "linh hoạt theo số
+team"); Reset → về màn A, chọn lại lớp, dựng lại đúng; Single mode giữ nguyên đường thoát cũ.
+
+### 5. ⬜ CÒN LẠI
+- ⬜ **Ca 2 đội trong khung rất hẹp VÀ rất thấp vẫn còn cuộn nhẹ** (~39px, tới được Ready bằng 1 lần
+  cuộn tay, không mất hẳn như bug gốc). Chưa tìm cách xoá hẳn phần này mà không hy sinh cỡ chữ xuống
+  dưới ngưỡng đọc được — 20 em chia 2 đội (10 em/cột, is-side) vốn đã là ca khó nhất theo chính số đo
+  Đợt 159. Nếu thầy thấy vẫn khó chịu khi thử thật, báo lại để tìm hướng khác (vd: buộc layout is-top
+  sớm hơn — từ 2 đội thay vì từ 4 — khi khung quá thấp).
+- ⬜ **Nhìn bằng mắt trên myActivity/TOMKO thật** — mọi phép đo trên đều qua Browser pane (`document.hidden
+  === true`, không chụp được ảnh, xem mục 3.3), cần thầy xác nhận lại trên máy thật, đặc biệt cỡ chữ
+  viết tắt ở 5 đội (41px/cột) có còn ĐỌC ĐƯỢC không hay cần nới `SD_COL_MAXW`/để 5 đội bớt chật hơn.
+- ✅ Đã commit + push cùng Đợt 168 (thầy giao tiếp 2 việc mới rồi chốt "commit + push live" luôn,
+  không tách riêng đợi duyệt lại lần nữa) — xem đối chiếu LIVE ở đầu Đợt 168.
+
+---
+
 ## Đợt 166 (15/8/2026) — ⭐ ĐÁP ÁN NHIỄU "TRÔNG GIỐNG" KHI ĐỔI TEMPLATE (Anagram/Crossword/...→Quiz/Open the box/Gameshow/Maze chase/Whack-a-mole)
 ⭐ CÓ SỬA CORE (`core/convert.js`, hàm `buildMc()` + hàm mới `rankByLookalike()`).
 🟢 ĐÃ TỰ TEST qua `devserver.py` (cổng 5510) + `templates/anagram/test.html`, gọi thẳng

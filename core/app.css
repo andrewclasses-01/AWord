@@ -3320,6 +3320,21 @@ body {
    width in core/showdown-setup.js (teacher: "dãn chiều ngang lớn hết cỡ bằng
    khung app"). The 860 below is only the fallback for the moment before that
    runs, and for anything that opens this panel outside a normal play. */
+/* ⭐ Đợt 166 — width now tracks the TEAM COUNT too (core/showdown-setup.js's
+   `updatePanelWidth`), not just the frame: 1-2 teams no longer claim the whole
+   frame width (teacher, 15/8/2026: "bảng rộng phần ngang quá nên ô tên rất dài
+   gây mất thẩm mỹ" on a single-column window).
+   ⚠️ NO `transition` on width/max-width here — tried it (a Teams-stepper drag
+   sliding the panel wider felt nicer than a jump cut), but measured it making
+   `var(--sd-panel-w, …)` resolve to the FALLBACK forever, on the real panel,
+   even long after the transition should have settled: repeated
+   `getComputedStyle(panel).width` kept reporting 860 no matter what
+   `--sd-panel-w` was set to, and only went away with `transition:none`. Root
+   cause not chased further (Chromium's custom-property-driven `width`
+   transition doing something wrong with a `min(94vw, …)` fallback was the
+   working theory) — not worth it for a cosmetic nicety that broke the actual
+   sizing. If revisited, transition `--sd-panel-w` itself via `@property`
+   (making the CUSTOM PROPERTY the transitioned value, not `width`) instead. */
 .aw-tool-panel.is-sd {
   width: var(--sd-panel-w, min(94vw, 860px));
   max-width: var(--sd-panel-w, min(94vw, 860px));
@@ -3346,12 +3361,25 @@ body {
 /* ⭐ Đợt 159b — the height is now PER LAYOUT (`--sd-body-h`, set in
    core/showdown-setup.js): the side-by-side layout has to fit a column of ten,
    the top layout only four or five ("các cột có thể ngắn đi vì lúc này chỉ có
-   tối đa 5 người/đội thôi"). Transitioned, because the only moment it changes is
-   the step between the two screens. */
+   tối đa 5 người/đội thôi").
+   ⚠️ Đợt 166 — the `transition: min-height` this line USED to carry is gone.
+   Measured: a `transition`-ed property whose value is `var(--x, fallback)`
+   can get "stuck" — a later `setProperty("--sd-body-h", …)` in the same
+   script keeps computing to whatever it FIRST resolved to (the 560 fallback
+   above, in one repro) rather than the new value, and staying stuck even
+   seconds later. Harmless at Đợt 159b, where this only ever changed once per
+   screen (A→B); Đợt 166's `fitBuildScreen()` now sets it on every repaint
+   (any chip move, Random, Reset), which hit the stuck case for real and
+   silently defeated the whole "clamp to the real room" mechanism — the body
+   rendered at the OLD/fallback height regardless of what the fit search
+   decided. Same root cause, same fix, as `.aw-tool-panel.is-sd`'s own
+   transition removal above; see that note for the isolated repro. Losing the
+   height-morph here is a small cosmetic step back — the A→B slide/fade
+   (`goto()` in core/showdown-setup.js) still carries the "this is a new
+   screen" read on its own. */
 .aw-sd-body {
   position: relative; width: 100%;
   min-height: var(--sd-body-h, 560px);
-  transition: min-height .24s cubic-bezier(.22,.9,.3,1);
 }
 /* Screens are absolutely stacked LAYERS so the outgoing one can still be on
    screen while the incoming one slides over it. */
@@ -3498,6 +3526,12 @@ body {
   overflow: hidden; text-overflow: ellipsis;
   transition: border-color .15s ease, color .15s ease, background .15s ease;
 }
+/* ⭐ Đợt 166 — a name that STILL overflows at the smallest column width gets
+   swapped to its abbreviated form (core/showdown-setup.js's `shortenName`,
+   e.g. "Nguyễn Bảo Anh" -> "N.B.Anh") rather than left to the ellipsis above,
+   which was silently cutting names the teacher's own rule forbids cutting.
+   The full name survives as the tooltip. */
+.aw-sd-chip.is-short { letter-spacing: .01em; }
 .aw-sd-chip:hover { border-color: #2f6fed; color: #2f6fed; }
 .aw-sd-chip:active { transform: scale(.96); }
 .aw-sd-chip.is-in { background: #f2f7ff; border-color: #cfe0ff; }
@@ -3539,8 +3573,15 @@ body {
   /* 360, not 336: at 336 the widest test name ("Nguyễn Ngọc Ẳnh") wanted 154px
      inside a 152px chip and lost its last 2px to the ellipsis. A name is never
      cut — that is the teacher's rule — so the box is sized from the longest
-     name, with a little air. */
-  flex: 0 0 360px;
+     name, with a little air.
+     ⭐ Đợt 166 — `--sd-side-pool-w`: `updatePanelWidth` reserves room for this
+     360 in its own width math, but a myActivity column narrower than that
+     reservation still has to give SOMETHING back — fitBuildScreen() shrinks
+     this toward SD_SIDE_POOL_MIN instead of leaving the columns with nothing
+     (measured: without this, 2 teams in a ~300px-wide column left ~17px total
+     for BOTH columns, because the pool's flat 360 ate the rest regardless of
+     how narrow the frame actually was). */
+  flex: 0 0 var(--sd-side-pool-w, 360px);
   max-height: none;                 /* it is a tall panel of its own now */
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
   align-content: flex-start;
@@ -3548,19 +3589,31 @@ body {
 .aw-sd-build.is-side > .aw-sd-pool.is-empty { display: flex; }
 /* Along the top: wide and shallow. Four rows of the whole class fit at the frame
    widths this panel gets; past that it scrolls, which is fine for a staging area
-   that empties as the teacher works. */
-.aw-sd-build.is-top > .aw-sd-pool { flex: 0 0 auto; max-height: 170px; }
-.aw-sd-build > .aw-sd-cols > .aw-sd-col { flex: 1 1 0; width: auto; min-width: 0; }
-/* ⭐ Đợt 159 — the column width is now STATED (`--sd-col`, set per team count in
-   core/showdown-setup.js) rather than following its content. Content-width was
-   fine at 2 teams and unpredictable at 5: the panel has a fixed 820px of room,
-   so the columns have to be told how to share it, not left to discover it.
-   The whole column is a tap target for "send pupils here" (teacher: "bấm vào
-   vùng trống bất kỳ trong cột team cũng cho phép chọn cột team"). */
+   that empties as the teacher works.
+   ⭐ Đợt 166 — `--sd-pool-maxh`: at the comfortable 170px default this was
+   allowed to eat the ENTIRE height budget on its own in a cramped myActivity
+   column (measured: a 5-team panel with ~210px total to work with left
+   nothing for the columns underneath, no matter how far fitBuildScreen()
+   shrunk the chips). fitBuildScreen() now shrinks this too, in step with the
+   rest of the screen. */
+.aw-sd-build.is-top > .aw-sd-pool { flex: 0 0 auto; max-height: var(--sd-pool-maxh, 170px); }
+/* ⭐ Đợt 166 — `max-width` added (was: share the panel with no ceiling). With
+   1-2 teams the panel now stops well short of a wide frame on its own (see
+   `.aw-tool-panel.is-sd`), but the cap here is the second line of defence —
+   e.g. a teacher who drags a browser window very wide — so a column is never
+   a long, mostly-empty rectangle around a short name (teacher: "ô tên rất dài
+   gây mất thẩm mỹ"). `flex:1 1 0` still lets columns shrink BELOW this at 4-5
+   teams in a narrow frame; only growth is capped. */
+.aw-sd-build > .aw-sd-cols > .aw-sd-col { flex: 1 1 0; width: auto; min-width: 0; max-width: 200px; }
 .aw-sd-col {
   flex: 0 0 auto; width: var(--sd-col, 190px);
   display: flex; flex-direction: column;
-  border: 1.5px solid #e3e9f1; border-radius: 12px; background: #fbfcfe; padding: 8px;
+  border: 1.5px solid #e3e9f1; border-radius: 12px; background: #fbfcfe;
+  /* ⭐ Đợt 166 — was a flat 8px. `core/showdown-setup.js`'s auto-fit shrinks this
+     via `--sd-col-pad` when the real available height (myActivity's narrow
+     columns, measured against `capPanelHeight`'s own budget) is tighter than
+     the comfortable default — see the fit note above `.aw-sd-colmembers`. */
+  padding: var(--sd-col-pad, 8px);
   cursor: pointer;
   transition: border-color .15s ease, background .15s ease, opacity .15s ease;
 }
@@ -3574,7 +3627,9 @@ body {
   background: #f6f7f9; border-color: #e8ebf0;
 }
 .aw-sd-col.is-claimed { border-color: #2ec27e; background: #f1fbf6; }
-.aw-sd-colhead { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+/* `margin-bottom` is Đợt 166's `--sd-colhead-mb` (was a flat 8px) — see the fit
+   note above `.aw-sd-colmembers`. */
+.aw-sd-colhead { display: flex; align-items: center; gap: 6px; margin-bottom: var(--sd-colhead-mb, 8px); }
 .aw-sd-colname {
   flex: 1 1 auto; min-width: 0; border: none; background: transparent;
   font: inherit; font-size: 14px; font-weight: 800; color: #23303e;
@@ -3603,9 +3658,21 @@ body {
    10 × 33px + 9 × 4px of gap = 366, + 34px head + 19px padding/border = 419,
    inside the 425px the body leaves for the columns. At the pool's own 7/14
    padding the same column came to 458 and overflowed by 32px — measured, that
-   is what this rule fixes. */
-.aw-sd-colmembers { display: flex; flex-direction: column; gap: 3px; }
-.aw-sd-colmembers .aw-sd-chip { padding: 5px 10px; }
+   is what this rule fixes.
+   ⭐ Đợt 166 — that arithmetic assumed a NORMAL window. Opened inside a
+   myActivity column (2-5 apps side by side), both the panel's width AND the
+   real room above the toolbar shrink together, and a flat 33px-per-chip no
+   longer fits ten rows. `core/showdown-setup.js`'s `fitBuildScreen()` now
+   MEASURES the real DOM (the same technique as `core/fit.js`'s autoFit — a
+   stretched ancestor makes `scrollHeight` lie, so it sums the column's own
+   unstretched children instead) and binary-searches `--sd-chip-fs` /
+   `--sd-col-gap` / `--sd-colchip-pad-v/h` / `--sd-colhead-mb` / `--sd-col-pad`
+   down together until the tallest column fits whatever room is real. On an
+   ordinary desktop window all of these still resolve to the numbers below —
+   nothing here changes for a teacher who never opens the panel inside a
+   cramped column. */
+.aw-sd-colmembers { display: flex; flex-direction: column; gap: var(--sd-col-gap, 3px); }
+.aw-sd-colmembers .aw-sd-chip { padding: var(--sd-colchip-pad-v, 5px) var(--sd-colchip-pad-h, 10px); }
 
 /* The flying clone. Fixed to the viewport because it travels BETWEEN two
    scrollable boxes; `pointer-events:none` so a tap during the flight still
