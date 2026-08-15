@@ -83,6 +83,11 @@ những máy khác đang chơi bình thường.
 - 0 lỗi console trong toàn bộ quá trình.
 
 ### 5. Commit + push + đối chiếu LIVE
+✅ **COMMIT `73b76d1` + PUSH (15/8/2026)** — thầy giao 2 việc rồi chốt "commit + push live" ngay,
+gộp chung với phần Đợt 167 (kích thước panel) còn đang chờ duyệt từ trước.
+📌 Đã đối chiếu **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`core/showdown-setup.js`,
+`core/app.css`) — Pages build xong cho đúng commit `73b76d1` trước khi so, không dính bẫy "200 OK
+nhưng nội dung cũ".
 
 ---
 
