@@ -13,11 +13,14 @@ KHÔNG sửa core — chỉ `templates/type-the-answer/type-the-answer.js` +
 `templates/type-the-answer/type-the-answer.css` (thêm class `.is-fightlost`). Không đụng
 `core/fight.js`/`core/showdown.js`.
 🟢 ĐÃ TỰ TEST kỹ qua `scratch/tta-fs-test.html` (harness mới, xem mục 5).
-✅ **THẦY CHỐT COMMIT + PUSH TẠM (15/8/2026)** — thầy sẽ tự làm nốt các template còn lại sau, ghi lại
-đây để BẤT KỲ session nào sau cũng tiếp tục được ngay. Đây là **template đầu tiên trong lộ trình mở
-rộng** chốt ở Đợt 168/169 ("mở fight/showdown cho mọi template"); còn 5 template nữa theo ĐÚNG thứ tự
-thầy đã chỉ định: **Open the box → Find the match → True/false → Whack-a-mole → Crossword** (xem mục 6
-— đọc mục này TRƯỚC khi làm template tiếp theo).
+✅ **THẦY CHỐT COMMIT + PUSH TẠM (15/8/2026) → COMMIT `00ccb50` (gộp chung Đợt 169 + 170) + PUSH + LIVE.**
+📌 Đã đối chiếu **3/3 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`core/convert.js`,
+`templates/type-the-answer/type-the-answer.js`, `templates/type-the-answer/type-the-answer.css`) —
+Pages build xong đúng commit `00ccb50` trước khi so.
+Thầy sẽ tự làm nốt các template còn lại sau, ghi lại đây để BẤT KỲ session nào sau cũng tiếp tục được
+ngay. Đây là **template đầu tiên trong lộ trình mở rộng** chốt ở Đợt 168/169 ("mở fight/showdown cho
+mọi template"); còn 5 template nữa theo ĐÚNG thứ tự thầy đã chỉ định: **Open the box → Find the match
+→ True/false → Whack-a-mole → Crossword** (xem mục 6 — đọc mục này TRƯỚC khi làm template tiếp theo).
 
 ### 1. Vì sao chọn "Type the answer" làm template thứ 3
 Đây là template đầu tiên thầy nêu tên trong danh sách 6 template ưu tiên. Về kiến trúc nó **khác hẳn**
@@ -115,7 +118,8 @@ gian fade sẵn có của template) để tên học sinh đổi cùng nhịp c�
 ## Đợt 169 (15/8/2026) — ⭐⭐ VÁ LỖI THẬT: OPTIONS "NHẢY SỐ" SAU KHI ĐỔI TEMPLATE (nặng nhất ở FIGHT MODE)
 ⭐ CÓ SỬA CORE (`core/convert.js` — thêm đúng 1 dòng `optVer`, kèm import `OPT_VER` từ
 `core/options-migrate.js`). 🟢 ĐÃ TỰ TEST qua `scratch/showdown-test.html` (đo cả Fight lẫn single mode).
-⬜ **CHƯA commit** — đang chờ thầy duyệt.
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `00ccb50` (gộp chung Đợt 170) + PUSH + LIVE** — xem
+mục 5 dưới đây và đầu Đợt 170 để biết mã băm đối chiếu.
 ⬜ **VIỆC 2 (mở Fight/Showdown cho mọi template) TÁCH RIÊNG** — xem Đợt 170 trở đi, xem mục 6.
 
 ### 1. Thầy báo (15/8/2026)
@@ -164,6 +168,11 @@ Qua `scratch/showdown-test.html`, dựng lại đúng kịch bản thầy mô t�
 - **0 lỗi console** trong toàn bộ quá trình.
 
 ### 5. Commit + push + đối chiếu LIVE
+✅ **COMMIT `00ccb50` + PUSH (15/8/2026)** — gộp chung với Đợt 170 (Type the answer Fight+Showdown),
+thầy chốt "commit + push live tạm" để các session sau tiếp tục ngay được.
+📌 Đã đối chiếu **3/3 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`core/convert.js`,
+`templates/type-the-answer/type-the-answer.js`, `templates/type-the-answer/type-the-answer.css`) —
+Pages build xong đúng commit `00ccb50` trước khi so, không dính bẫy "200 OK nhưng nội dung cũ".
 
 ### 6. Việc 2 thầy giao cùng lúc — "mở Fight/Showdown cho mọi template" — đã khảo sát, tách sang Đợt sau
 Đã rà toàn bộ 17 template (đọc `core/HUONG DAN CORE.md` phần hợp đồng Fight/Showdown + từng file
