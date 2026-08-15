@@ -2235,7 +2235,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 13/8/2026 sau Đợt 141 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 15/8/2026 sau Đợt 164 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -2260,9 +2260,21 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (14/8/2026 — sau Đợt 145–158)
+### 3. Đứng ở đâu (15/8/2026 — sau Đợt 163–164)
 
-> ⭐⭐ **ĐỢT 158 — MỘT NÚT CHO BA CHẾ ĐỘ. ⬜ CHƯA COMMIT, ĐANG CHỜ THẦY DUYỆT.**
+> ⭐⭐ **ĐỢT 163–164 — ✅ THẦY DUYỆT → COMMIT `df36333` + PUSH + LIVE (đã đối chiếu sha256sum, khớp 100%).**
+> Hai việc: (1) khoá `user-select`/`-webkit-user-drag` cho mọi popup công cụ (`.aw-tool-panel`) + khung
+> act, tránh lỡ bôi chọn chữ/kéo ảnh khi đang bấm chơi nhanh; (2) ô "Timer" đếm ngược trong Options có bộ
+> chỉnh MỚI `makeTimeStepper` (`core/numberstepper.js`, CHỈ riêng ô này, không đụng `makeHStepper` dùng
+> chung 6 chỗ khác): vùng phút/giây tách riêng, giây snap tới bội số 10 gần nhất, chỉ ô đổi số mới trượt
+> hoạt ảnh. Kèm luật mới cho MỌI ô thời gian trong app: step 1 giây/lần bấm (đã sửa Running word "Time
+> each team" + Balloon pop "Round time", trước đó step 5s). Chi tiết đầy đủ + cách tự test không cần
+> đăng nhập (`scratch/test-mode.html`): nhật ký Đợt 163 và 164 (đầu `GHI CHU DU AN.md`).
+> **Không có việc gì treo lại từ đợt này** — thầy đã tự bấm thử và duyệt.
+
+**Trước đó (14/8/2026 — sau Đợt 145–158):**
+
+> ⭐⭐ **ĐỢT 158 — MỘT NÚT CHO BA CHẾ ĐỘ. ✅ ĐÃ DUYỆT, COMMIT `23327b3` + LIVE (xem mục 3 phía trên).**
 > Hàng nút dưới khung còn 4 (Options · Template · Style · **MODE**); nút MODE mở **bảng chọn ô icon to
 > không chữ**. Hai nút cũ (MODE của Đợt 124, SHOWDOWN của Đợt 155) **không còn**, và hai luật ẩn nút
 > kèm theo chúng cũng hết hiệu lực. Chi tiết + 2 lỗi thật tự bắt được: khối trích dẫn đầu file này,
@@ -2382,13 +2394,11 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐ **Đợt 158 + 159 đã commit `23327b3` + push + LIVE + đối chiếu mã băm.** Đoạn "trạng thái sạch" ở
-> khối dưới nói về mốc Đợt 154 và đã bị khối này thay thế.
-> ⬜ **Đợt 160 (ĐỢT C) CHƯA commit** — code xong + tự test qua trình duyệt local, đang **CHỜ THẦY DUYỆT**
-> trước khi commit + push + live (đúng luật làm việc: chỉ commit/push khi thầy chốt).
-> **ĐỢT C đã CODE xong (Đợt 160, 15/8/2026)** — bộ options HOMEWORK khi giao bài, xem mục 3 ở trên +
-> nhật ký Đợt 160. **ĐỢT D đã HUỶ** (thầy tự tay xoá dữ liệu Firebase, không cần code). Kế hoạch A–D
-> coi như **XONG cả 4 mục** (C = code + tự test, D = huỷ theo ý thầy).
+> ⭐⭐ **Cập nhật 15/8/2026 (sau Đợt 164) — dòng ⬜ dưới đây đã LỖI THỜI, sửa lại cho đúng git log:**
+> Đợt 158-159 → `23327b3` · Đợt 160 (ĐỢT C) → `4a6da8e` **ĐÃ COMMIT + PUSH + LIVE** (không còn "chờ
+> thầy duyệt" nữa) · Đợt 161-162 → `4e5ae82` · Đợt 163-164 → `17e8538`/`df36333`. **TẤT CẢ đã LIVE, kho
+> sạch, không còn gì chưa commit tính tới Đợt 164.** Kế hoạch A–D coi như **XONG cả 4 mục** (C = code +
+> commit + live, D = huỷ theo ý thầy 15/8/2026 — thầy tự tay xoá dữ liệu Firebase, không cần code).
 > Riêng Showdown thì chỉ còn **mắt/tay thầy trên màn 86"**:
 > - (158) bảng chọn 3 chế độ: cỡ icon, và khi Showdown chạy thì **3 ô** có chật không;
 > - (159b) bảng đội **rộng bằng khung app**: hai bố cục (ô chờ bên phải khi 2-3 đội · lên trên khi 4-5
