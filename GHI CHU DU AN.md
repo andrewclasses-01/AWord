@@ -12,7 +12,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`engine.js`: `openToolPanel` + `switchToolPanel`, thêm hàm mới `twoBeatPanelSwap`,
 KHÔNG đụng `swapContents` — hàm đó vẫn phục vụ swap nội dung nhỏ hơn trong Options, xem Đợt 148/mục
 "picking another clue set / half"). ✅ **THẦY TỰ TEST TRÊN TRÌNH DUYỆT THẬT (15/8/2026): "Đã test, hết
-giật rồi" → DUYỆT → COMMIT + PUSH.**
+giật rồi" → DUYỆT → COMMIT `4e5ae82` + PUSH + LIVE.**
+📌 Đã đối chiếu file LIVE tại `aword.andrewclasses.com/core/engine.js` với commit `4e5ae82` (~1 phút sau
+push, Pages build OK) — **mã băm trùng khớp 100%** (khác biệt hex duy nhất là do CRLF/LF, vô hại), có
+`twoBeatPanelSwap`. Không lặp lại sự cố Pages build fail đã ghi trước đó.
 
 ### 1. Thầy test Đợt 161 (15/8/2026) — chưa hết
 "Vẫn không có gì thay đổi." Thầy đề xuất luôn cách khác: chia làm 2 NHỊP khi bấm nút mới — nhịp 1 ẩn
