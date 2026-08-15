@@ -20,7 +20,7 @@
 // =============================================================
 
 import { el } from "../../core/utils.js";
-import { cleanWord, readSets, MAX_SETS, MIN_POOL } from "./rt-sets.js";
+import { cleanWord, readSets, MIN_POOL } from "./rt-sets.js";
 
 const MAX_WORDS = 200;      // far above a real lesson pool (~100); a guard, not a target
 
@@ -64,11 +64,6 @@ export function openRunningTeamEditor(container, activity, { onSave, onCancel, h
 
   // ===== word pool =====
   body.append(el("div", "aw-ed-sectionhead", "Word pool"));
-  body.append(el("div", "aw-ed-tip",
-    "One word per line. In Excel, select the WORD column and paste (Ctrl+V) straight into the box — "
-    + "the whole column lands as separate words. Every round is dealt from this pool: one word is the "
-    + "answer and the other five tiles are the words in here that LOOK most like it, so a pool of "
-    + "similar-looking words makes a harder game."));
 
   const bulk = el("div", "aw-ed-bulk");
   const dedupeBtn = el("button", "aw-btn", "Remove duplicates");
@@ -132,11 +127,6 @@ export function openRunningTeamEditor(container, activity, { onSave, onCancel, h
       showInfo("Saved sets deleted — the game will deal a fresh numbering.");
     };
     body.append(box, dropBtn);
-    body.append(el("div", "aw-ed-tip",
-      `A set is one printed numbering of this pool PLUS the class roll it was played with, kept so `
-      + `the same sheet can be reprinted later (up to ${MAX_SETS}). Sets are created from the game's `
-      + `setup screen, not here. If you change the word list above, delete these — a numbering that `
-      + `names a deleted word can no longer be dealt.`));
   }
 
   if (footer) page.append(footer);

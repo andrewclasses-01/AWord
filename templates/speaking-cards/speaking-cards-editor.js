@@ -57,10 +57,6 @@ export function openSpeakingCardsEditor(container, activity, { onSave, onCancel,
   // ===== CARDS =====
   body.append(el("div", "aw-ed-sectionhead", "Cards"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Each card shows one prompt for a student to talk about. " +
-    "Tip: copy a column of prompts from Excel, click a card box and paste (Ctrl+V) to fill the whole list at once. " +
-    "Drag the ⇕ handle to reorder. At least " + MIN_ITEMS + " card is needed."));
 
   const iWrap = el("div", "aw-ed-questions");
   body.append(iWrap);

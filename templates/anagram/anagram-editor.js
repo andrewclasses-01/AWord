@@ -3,7 +3,7 @@
 // activity. Same contract as templates/quiz/quiz-editor.js:
 //   openAnagramEditor(container, activity, { onSave, onCancel, header, footer })
 // Reuses the SHARED editor page chrome from core/app.css (.aw-ed-* header/
-// title field/tip/bulk bar/count). The per-row layout (Word | Clue table,
+// title field/bulk bar/count). The per-row layout (Word | Clue table,
 // icon buttons, drag-to-reorder) is Anagram-specific CSS in anagram.css
 // (.aw-anagram-ed-*), styled after Wordwall's real "Edit Content" table.
 //
@@ -38,7 +38,7 @@ import { saveVoiceClip, getVoiceClip, deleteVoiceClip } from "../../core/voice-c
 // This file keeps its own MARKUP (a popover anchored under the button);
 // only the decisions are shared.
 import { MIX_DEFAULTS, fillVoiceOptions, planFor } from "../../core/voice-mix.js";
-import { activeVariant, variantsOf, clueOf, voiceOf, setClueOf, setVoiceOf, variantLabel } from "../../core/content-view.js";
+import { activeVariant, variantsOf, voiceVariantsOf, clueOf, voiceOf, variantLabel } from "../../core/content-view.js";
 
 const MAX_ITEMS = 100;
 
@@ -49,14 +49,19 @@ const GENERIC_CLUE_TEXT = "Unscramble the word";
 
 export function openAnagramEditor(container, activity, { onSave, onCancel, header, footer } = {}) {
   const isNew = !(activity && activity.id);
-  // Which CLUE SET this editing session works on, and which one the plain
-  // `.clue` mirror belongs to (Đợt 145). Both null for an ordinary act — that
-  // is every act this editor has ever opened until now, and it takes exactly
-  // the same path it always did.
-  const editKey = activeVariant(activity);
+  // Which CLUE SETS this act carries (Đợt 145/165). `variantKeys` null =
+  // an ordinary act — every act this editor opened before Đợt 165, and it
+  // takes exactly the same path it always did (no tabs, single Clue column).
+  // `currentKey` is which set the table is showing RIGHT NOW — starts on
+  // whichever one the act is currently set to play, but (unlike before)
+  // the teacher can now switch it with the tabs in the bulk bar; see
+  // switchTab()/commitCurrentTab()/loadCurrentTab() below. `defaultKey` never
+  // changes — it is always the FIRST set, the one the flat `.clue` mirror
+  // (library card, print sheet, any not-yet-variant-aware reader) shows.
   const variantKeys = variantsOf(activity && activity.content);
   const defaultKey = variantKeys ? variantKeys[0] : null;
-  const data = normalize(activity, editKey);
+  let currentKey = variantKeys ? (activeVariant(activity) || variantKeys[0]) : null;
+  const data = normalize(activity, variantKeys, currentKey);
   let draggingIndex = null;   // module-scoped to this editor instance's drag session
   // Voice popover state — declared up here (not next to the functions that
   // use it, further down) because renderItems() calls closeVoicePopover()
@@ -65,14 +70,6 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   let voicePopEl = null;
   let voiceBackdropEl = null;     // dim+blur overlay behind the Generate-all popover, if open (see buildGenerateAllPopover)
   let voicePreviewAudio = null;   // currently-playing preview, so a second Play doesn't overlap the first
-  // "Hide/Show all text" bulk button (10/8/2026) — built once in buildBulkBar()
-  // but its icon/label must track the CURRENT aggregate state of every row's
-  // hideText, which can change from many places (a single row's toggle, a
-  // single Generate/Remove, any bulk action). refreshHideAllBtn() is the one
-  // place that recomputes it; every mutation site calls it (renderItems()
-  // calls it unconditionally at the end, so anything that already goes
-  // through renderItems() is covered for free — see its own comment).
-  let hideAllBtn = null;
   // Item -> its Clue <input>, so onVoicePopOutside (below) can tell "clicked
   // into the very Clue box this popover's hint is tracking" apart from
   // "clicked away" — the popover must NOT close in the first case, or the
@@ -131,30 +128,18 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
   // ===== WORDS =====
   body.append(el("div", "aw-ed-sectionhead", "Words"));
-  body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Tip: in Excel, copy a block of cells (Word in the first column, an optional Clue in the second), " +
-    "then click a Word or Clue box and paste (Ctrl+V) to fill the whole list at once. Leave a clue blank " +
-    'to show the generic "Unscramble the word" prompt. Drag the ⇕ handle to reorder.'));
+  // The bulk bar is rebuilt (not just re-rendered in place) every time the
+  // active clue-set tab changes — see switchTab() — because which buttons it
+  // shows (Generate/Delete all voices) and which tab is highlighted both
+  // depend on `currentKey`. `bulkBar` always points at whichever bar element
+  // is currently in the DOM, so switchTab() can swap it out with replaceWith.
+  let bulkBar = buildBulkBar();
+  body.append(bulkBar);
 
   const headRow = el("div", "aw-anagram-ed-headrow");
   const headCols = el("div", "aw-anagram-ed-headcols");
   headCols.append(el("span", "aw-anagram-ed-headcol", "Word"), el("span", "aw-anagram-ed-headcol", "Clue"));
-  const swapBtn = el("button", "aw-btn", "Swap Columns");
-  swapBtn.type = "button";
-  swapBtn.title = "Swap the Word and Clue value in every row (fixes a list pasted in the wrong order)";
-  swapBtn.onclick = () => {
-    // Swapping changes what Clue IS, so any voice clip (generated for the
-    // pre-swap clue) is now stale -- same reasoning as the clueInput.oninput
-    // guard in itemRow() below, just applied to every row at once here.
-    data.content.items.forEach(it => {
-      const tmp = it.word; it.word = it.clue; it.clue = tmp;
-      it.voice = ""; it.voiceId = ""; it.hideText = false;
-    });
-    renderItems();
-    showInfo("Word and Clue swapped in every row.");
-  };
-  headRow.append(headCols, swapBtn);
+  headRow.append(headCols);
   body.append(headRow);
 
   const iWrap = el("div", "aw-ed-questions");
@@ -170,33 +155,27 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   function renderItems() {
     closeVoicePopover();   // any full re-render replaces row DOM, invalidating the popover's anchor button
     iWrap.innerHTML = "";
-    data.content.items.forEach((it, ii) => iWrap.append(itemRow(it, ii)));
+    const voiceOk = tabHasVoice();
+    data.content.items.forEach((it, ii) => iWrap.append(itemRow(it, ii, voiceOk)));
     const addI = el("button", "aw-anagram-ed-addrow", null);
     addI.type = "button";
     addI.innerHTML = "+ Add a new word";
     addI.disabled = data.content.items.length >= MAX_ITEMS;
     addI.onclick = () => {
-      if (data.content.items.length < MAX_ITEMS) { data.content.items.push(blankItem()); renderItems(); }
+      if (data.content.items.length < MAX_ITEMS) { data.content.items.push(blankItem(!!variantKeys)); renderItems(); }
     };
     iWrap.append(addI);
     const count = el("div", "aw-ed-qcount", `${data.content.items.length} / ${MAX_ITEMS} words`);
     iWrap.append(count);
-    refreshHideAllBtn();
   }
 
-  // See hideAllBtn's declaration above for why this needs a dedicated
-  // refresh function instead of just living inline in buildBulkBar().
-  function refreshHideAllBtn() {
-    if (!hideAllBtn) return;
-    const voiced = data.content.items.filter(it => it.voice);
-    const allHidden = voiced.length > 0 && voiced.every(it => it.hideText);
-    hideAllBtn.innerHTML = allHidden ? icons.eyeOff : icons.eye;
-    hideAllBtn.disabled = voiced.length === 0;
-    const title = voiced.length === 0
-      ? "Hide all text (needs at least one row with a voice first)"
-      : allHidden ? "Show all text (every voiced row is currently hidden)" : "Hide all text";
-    hideAllBtn.title = title;
-    hideAllBtn.setAttribute("aria-label", title);
+  // Does the ACTIVE tab support a spoken clip? Ordinary (non-variant) acts
+  // always did; a variant act only offers voice on the sets in
+  // `content.voiceVariants` (ENG1/ENG2 — Vietnamese/IPA clues are excluded,
+  // see core/content-view.js) — so VI1/VI2 tabs show no mic, no Generate/
+  // Delete-all-voices buttons.
+  function tabHasVoice() {
+    return !variantKeys || (voiceVariantsOf(data.content) || []).includes(currentKey);
   }
 
   // Paste a copied Excel RANGE: first column -> word, second column
@@ -231,7 +210,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     showInfo(`Pasted ${filled} word(s) from Excel${dropped ? ` (${dropped} skipped — ${MAX_ITEMS} max)` : ""}.`);
   }
 
-  function itemRow(it, ii) {
+  function itemRow(it, ii, voiceOk) {
     const row = el("div", "aw-anagram-ed-row");
 
     row.append(el("div", "aw-anagram-ed-num", String(ii + 1) + "."));
@@ -244,7 +223,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     wordInput.addEventListener("paste", e => onRowPaste(e, ii));
     const clueInput = el("input", "aw-anagram-ed-clue");
     clueInput.value = it.clue;
-    clueInput.placeholder = "Optional clue / definition";
+    clueInput.placeholder = variantKeys
+      ? `${variantLabel(data.content, currentKey)} clue / definition`
+      : "Optional clue / definition";
     clueInput.oninput = () => {
       it.clue = clueInput.value;
       clearError();
@@ -253,8 +234,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       // orphaned Firestore doc, if any, is not deleted here; see
       // core/voice-clips.js's file comment).
       if (it.voice) {
-        it.voice = ""; it.voiceId = ""; it.hideText = false;
-        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); refreshHideAllBtn(); closeVoicePopover();
+        it.voice = ""; it.voiceId = "";
+        if (micBtn) setMicState(micBtn, false);
+        closeVoicePopover();
       } else if (voicePopEl && voicePopEl._forItem === it && voicePopEl._updateHint) {
         // Popover already open for THIS row (no voice yet) -- keep its
         // "Will speak" preview line live instead of making the teacher
@@ -268,29 +250,20 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     row.append(box);
 
     const iconsWrap = el("div", "aw-anagram-ed-icons");
-    const micBtn = iconBtn(it.voice ? icons.soundOn : icons.mic,
-      it.voice ? "Clue voice added — click to preview, change or remove" : "Add a spoken clue");
-    if (it.voice) micBtn.classList.add("is-active");
-    micBtn.onclick = () => toggleVoicePopover(micBtn, hideTextBtn, it);
-    // Hide text (10/8/2026) — needs a voice to mean anything (disabled
-    // without one, see setHideTextState); ON hides the Clue text in-game and
-    // relies on the voice alone (anagram.js shows "Listen for the clue"
-    // instead). Defaults ON the moment a voice is generated (single row or
-    // Generate all) — see genBtn.onclick/buildGenerateAllPopover — and
-    // forced back OFF whenever the voice goes away (Remove voice, Clue
-    // edited, Swap Columns, Delete all voices) so text is never hidden with
-    // nothing spoken to replace it.
-    const hideTextBtn = iconBtn(icons.eye, "");
-    setHideTextState(hideTextBtn, it);
-    hideTextBtn.onclick = () => {
-      if (!it.voice) return;
-      it.hideText = !it.hideText;
-      setHideTextState(hideTextBtn, it);
-      refreshHideAllBtn();
-    };
+    // Vietnamese clue sets (VI1/VI2) carry no spoken clip — an English Kokoro
+    // voice misreads them (see core/content-view.js's voiceVariantsOf) — so
+    // there is nothing for a mic button to do on those tabs.
+    let micBtn = null;
+    if (voiceOk) {
+      micBtn = iconBtn(it.voice ? icons.soundOn : icons.mic,
+        it.voice ? "Clue voice added — click to preview, change or remove" : "Add a spoken clue");
+      if (it.voice) micBtn.classList.add("is-active");
+      micBtn.onclick = () => toggleVoicePopover(micBtn, it);
+      iconsWrap.append(micBtn);
+    }
     const imgBtn = iconBtn(icons.image, "Add image (coming soon)");
     imgBtn.onclick = () => showInfo("Images — coming soon.");
-    iconsWrap.append(micBtn, hideTextBtn, imgBtn, el("span", "aw-anagram-ed-gap"));
+    iconsWrap.append(imgBtn, el("span", "aw-anagram-ed-gap"));
 
     const dragBtn = iconBtn(icons.dragHandle, "Drag to reorder", "is-drag");
     const dupBtn = iconBtn(icons.duplicate, "Duplicate");
@@ -362,25 +335,6 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     micBtn.setAttribute("aria-label", title);
   }
 
-  // Hide-text toggle icon state — disabled (and forced off) without a
-  // voice, since "hide the clue, play voice only" makes no sense with
-  // nothing to play. `it` is read fresh each call rather than passing
-  // separate booleans so every call site (row build, Generate/Regenerate,
-  // Remove voice, bulk Generate/Delete all) stays a one-liner.
-  function setHideTextState(btn, it) {
-    const hidden = !!(it.voice && it.hideText);
-    if (!it.voice) it.hideText = false;   // enforce the invariant even if a caller forgot to
-    btn.innerHTML = hidden ? icons.eyeOff : icons.eye;
-    btn.classList.toggle("is-active", hidden);
-    btn.disabled = !it.voice;
-    const title = !it.voice
-      ? "Hide clue text (needs a voice first)"
-      : hidden ? "Clue text hidden in-game — voice only (click to show text)"
-               : "Clue text visible in-game (click to hide — voice only)";
-    btn.title = title;
-    btn.setAttribute("aria-label", title);
-  }
-
   // What Generate/Regenerate will actually say for this row RIGHT NOW —
   // shared by the popover's live hint line and the genBtn click handler
   // itself, so the two can never drift apart.
@@ -388,9 +342,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     return (it.clue || "").trim() || GENERIC_CLUE_TEXT;
   }
 
-  function toggleVoicePopover(micBtn, hideTextBtn, it) {
+  function toggleVoicePopover(micBtn, it) {
     if (voicePopEl && voicePopEl._forItem === it) { closeVoicePopover(); return; }
-    buildVoicePopover(micBtn, hideTextBtn, it);
+    buildVoicePopover(micBtn, it);
   }
 
   // ---------- waveform visualizer (10/8/2026, redrawn as a FIXED picture of
@@ -468,7 +422,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     draw();
   }
 
-  function buildVoicePopover(micBtn, hideTextBtn, it) {
+  function buildVoicePopover(micBtn, it) {
     closeVoicePopover();
     stopVoicePreview();
 
@@ -550,9 +504,9 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       delBtn.onclick = async () => {
         genBtn.disabled = true; playBtn.disabled = true; delBtn.disabled = true;
         try { await deleteVoiceClip(it.voice); } catch { /* ignore — clip may already be gone */ }
-        it.voice = ""; it.voiceId = ""; it.hideText = false;
-        setMicState(micBtn, false); setHideTextState(hideTextBtn, it); refreshHideAllBtn();
-        buildVoicePopover(micBtn, hideTextBtn, it);
+        it.voice = ""; it.voiceId = "";
+        setMicState(micBtn, false);
+        buildVoicePopover(micBtn, it);
       };
       btnRow.append(delBtn);
     }
@@ -576,9 +530,8 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId: select.value, audioDataUrl: dataUrl });
         it.voice = id;
         it.voiceId = select.value;
-        it.hideText = true;   // default ON the moment a voice exists (teacher's request, 10/8/2026)
-        setMicState(micBtn, true); setHideTextState(hideTextBtn, it); refreshHideAllBtn();
-        buildVoicePopover(micBtn, hideTextBtn, it);
+        setMicState(micBtn, true);
+        buildVoicePopover(micBtn, it);
       } catch (e) {
         status.textContent = e && e.code === "aw/signed-out"
           ? "Please sign in first."
@@ -938,7 +891,7 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     const delAllGo = el("button", "aw-btn aw-ed-bulkdanger", "Delete all");
     delAllGo.type = "button";
     delAllGo.onclick = () => {
-      data.content.items = [blankItem()];
+      data.content.items = [blankItem(!!variantKeys)];
       renderItems();
       showInfo("All words deleted.");
     };
@@ -995,6 +948,11 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 
   saveBtn.onclick = async () => {
     closeVoicePopover(); stopVoicePreview();
+    // Fold the tab currently on screen back into its own set BEFORE cloning —
+    // otherwise only the last-viewed tab's edits would be in `it.clue`/
+    // `it.voice`, and every OTHER tab would save whatever it held before this
+    // session opened (see commitCurrentTab()/switchTab() below).
+    commitCurrentTab();
     // validate on a CLEANED copy (drop fully-blank rows) so the live model
     // the teacher is editing is never mutated by a failed save attempt.
     const clean = JSON.parse(JSON.stringify(data));
@@ -1004,24 +962,19 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     clean.content.items = clean.content.items
       .map(it => {
         const word = (it.word || "").trim();
-        const clue = (it.clue || "").trim();
-        const voice = it.voice || "", voiceId = it.voiceId || "";
         // Ordinary act — unchanged since the editor was written.
-        if (!editKey) return { word, clue, voice, voiceId, hideText: !!(voice && it.hideText) };
-        // Đợt 145 — fold this session's single clue column back into the set it
-        // came from, leaving the other sets exactly as they arrived. `clue`
-        // stays on the row as the MIRROR of the default set (what the library
-        // card, the print sheet and any not-yet-variant-aware reader show), so
-        // it is re-read from `clues` rather than kept as whatever was typed.
-        const row = { word, clue, voice, voiceId, clues: { ...(it.clues || {}) }, voices: { ...(it.voices || {}) } };
-        setClueOf(row, editKey, clue, defaultKey);
-        setVoiceOf(row, editKey, row);
-        return {
-          word,
-          clue: row.clues[defaultKey] != null ? row.clues[defaultKey] : clue,
-          clues: row.clues,
-          voices: row.voices
-        };
+        if (!variantKeys) {
+          const clue = (it.clue || "").trim();
+          return { word, clue, voice: it.voice || "", voiceId: it.voiceId || "", hideText: !!(it.voice && it.hideText) };
+        }
+        // Đợt 165 — every set this row carries rides along together
+        // (`clues`/`voices`, kept in step by commitCurrentTab() on every tab
+        // switch and again here). `clue` stays on the row as the MIRROR of the
+        // DEFAULT set (what the library card, the print sheet and any
+        // not-yet-variant-aware reader show).
+        const clues = {};
+        Object.keys(it.clues || {}).forEach(k => { clues[k] = String(it.clues[k] || "").trim(); });
+        return { word, clue: clues[defaultKey] || "", clues, voices: { ...(it.voices || {}) } };
       })
       .filter(it => it.word !== "");
 
@@ -1060,45 +1013,43 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // ---------- bulk actions bar (above the word table) ----------
   // Icon-only (no text) per the teacher's request, 10/8/2026 — the tooltip/
   // aria-label still carries the full label for hover/screen readers.
-  // Order fixed left-to-right: Generate all voices - Hide/Show all text -
-  // Delete all voices - Delete all words.
+  // Order left-to-right: Generate all voices - Delete all voices - Delete
+  // all words - (right-aligned) the clue-set tabs, when this act has more
+  // than one (Đợt 165).
   function buildBulkBar() {
     const bar = el("div", "aw-ed-bulk");
+    const voiceOk = tabHasVoice();
 
-    const genAllBtn = bulkIconBtn(icons.wand, "Generate all voices", "is-primary");
-    genAllBtn.onclick = () => toggleBulkPopover(genAllBtn, "generate");
-    bar.append(genAllBtn);
+    if (voiceOk) {
+      const genAllBtn = bulkIconBtn(icons.wand, "Generate all voices", "is-primary");
+      genAllBtn.onclick = () => toggleBulkPopover(genAllBtn, "generate");
+      bar.append(genAllBtn);
 
-    hideAllBtn = bulkIconBtn(icons.eye, "Hide all text");
-    hideAllBtn.onclick = () => {
-      const voiced = data.content.items.filter(it => it.voice);
-      if (!voiced.length) return;
-      const next = !voiced.every(it => it.hideText);   // currently all hidden -> show all; otherwise -> hide all
-      voiced.forEach(it => { it.hideText = next; });
-      renderItems();   // touches every row's icon at once — same bulk-action convention as Swap Columns
-      showInfo(next ? "Text hidden for every voiced row." : "Text shown for every voiced row.");
-    };
-    bar.append(hideAllBtn);
-    refreshHideAllBtn();   // initial icon/title for the activity's starting data
-
-    const delAllVoicesBtn = bulkIconBtn(icons.micOff, "Delete all voices", "is-danger");
-    delAllVoicesBtn.onclick = () => toggleBulkPopover(delAllVoicesBtn, "delete");
-    bar.append(delAllVoicesBtn);
+      const delAllVoicesBtn = bulkIconBtn(icons.micOff, "Delete all voices", "is-danger");
+      delAllVoicesBtn.onclick = () => toggleBulkPopover(delAllVoicesBtn, "delete");
+      bar.append(delAllVoicesBtn);
+    }
 
     const clearBtn = bulkIconBtn(icons.trash, "Delete all words", "is-danger");
     clearBtn.onclick = () => toggleBulkPopover(clearBtn, "deleteWords");
     bar.append(clearBtn);
 
-    // Đợt 145 — say WHICH clue set the single Clue column is showing. Without
-    // this the teacher edits ENG2, saves, plays, and sees the ENG1 clue they
-    // never touched: the column looks the same either way. Which set it is
-    // follows the act's own Content option, so the way to edit a different one
-    // is to switch it in Options first.
-    if (editKey) {
-      const chip = el("div", "aw-ed-variantchip",
-        `Clue set: ${variantLabel(activity && activity.content, editKey)}`);
-      chip.title = "The Clue column below is this set. Change it in Options > Content.";
-      bar.append(chip);
+    // Đợt 165 — one tab per clue set this act carries (ENG1/ENG2/VI1/VI2 —
+    // only whichever the act actually has, see variantsOf()). Clicking a tab
+    // switches the whole Word/Clue table to that set; the mic column comes
+    // and goes with it (tabHasVoice()). Word add/remove/reorder always act on
+    // the ONE shared `data.content.items` array, so every set stays lined up
+    // row-for-row no matter which tab a change was made from.
+    if (variantKeys) {
+      const tabs = el("div", "aw-anagram-ed-tabs");
+      variantKeys.forEach(k => {
+        const tab = el("button", "aw-anagram-ed-tab" + (k === currentKey ? " is-active" : ""),
+          variantLabel(data.content, k));
+        tab.type = "button";
+        tab.onclick = () => switchTab(k);
+        tabs.append(tab);
+      });
+      bar.append(tabs);
     }
 
     return bar;
@@ -1111,6 +1062,78 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
     return b;
   }
 
+  // ---------- clue-set tabs (Đợt 165) ----------
+  // `it.clue`/`it.voice`/`it.voiceId` are always the WORKING fields for
+  // whichever tab is active — itemRow()/the voice popovers read and write
+  // them exactly as they did before this act ever had more than one set.
+  // `it.clues`/`it.voices` are the side-band holding every set at once;
+  // commitCurrentTab() is what folds the working fields into it, and
+  // loadCurrentTab() is what pulls the NEW tab's values back out. Both walk
+  // the SAME `data.content.items` array in place — nothing is ever copied
+  // into a second array — so adding, removing or dragging a row (which all
+  // operate on that one array) automatically carries every set along
+  // together, and editing Word (never part of `clues`) is already shared.
+  function commitCurrentTab() {
+    if (!variantKeys) return;
+    data.content.items.forEach(it => {
+      if (!it.clues) it.clues = {};
+      it.clues[currentKey] = it.clue || "";
+      if (it.voice) {
+        if (!it.voices) it.voices = {};
+        it.voices[currentKey] = { voice: it.voice, voiceId: it.voiceId || "" };
+      } else if (it.voices) {
+        delete it.voices[currentKey];
+      }
+    });
+  }
+  function loadCurrentTab() {
+    if (!variantKeys) return;
+    data.content.items.forEach(it => {
+      // NOT clueOf() here — its fallback to `it.clue` when a set is missing
+      // is meant for the ONE-TIME read off freshly-loaded storage (see
+      // normalize() below), where `.clue` is a stable mirror of the default
+      // set. Mid-session `it.clue` is a SCRATCH field that changes on every
+      // tab switch, so reusing that fallback here would leak the tab just
+      // left into a set that was never actually filled in (caught by testing
+      // a fresh row: filled on VI1, switched to ENG1, saw the VI1 text).
+      it.clue = (it.clues && it.clues[currentKey] != null) ? it.clues[currentKey] : "";
+      const clip = voiceOf(it, currentKey);
+      it.voice = clip.voice;
+      it.voiceId = clip.voiceId;
+    });
+  }
+  // Slide the table over to another clue set: fold the outgoing tab's edits
+  // in, swap `currentKey`, pull the incoming tab's values out, then rebuild
+  // the bar (tab highlight + mic column) and the rows. The fade+slide follows
+  // the project's animate()-with-setTimeout-fallback rule (HUONG DAN CORE) —
+  // `swap` is guarded so a hidden tab losing the `finish` event can't leave
+  // the table stuck mid-swap.
+  function switchTab(newKey) {
+    if (!variantKeys || newKey === currentKey) return;
+    closeVoicePopover(); stopVoicePreview();
+    const dir = variantKeys.indexOf(newKey) > variantKeys.indexOf(currentKey) ? 1 : -1;
+    const dx = 16 * dir;
+    let done = false;
+    const swap = () => {
+      if (done) return; done = true;
+      commitCurrentTab();
+      currentKey = newKey;
+      loadCurrentTab();
+      const newBar = buildBulkBar();
+      bulkBar.replaceWith(newBar);
+      bulkBar = newBar;
+      renderItems();
+      iWrap.animate(
+        [{ opacity: 0, transform: `translateX(${-dx}px)` }, { opacity: 1, transform: "translateX(0)" }],
+        { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
+    };
+    const out = iWrap.animate(
+      [{ opacity: 1, transform: "translateX(0)" }, { opacity: 0, transform: `translateX(${dx}px)` }],
+      { duration: 130, easing: "ease-in", fill: "forwards" });
+    out.onfinish = swap;
+    setTimeout(swap, 160);
+  }
+
   // ---------- small helpers ----------
   function field(labelText, control) {
     const f = el("div", "aw-ed-field");
@@ -1120,16 +1143,16 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
 }
 
 // ===== data helpers =====
-// ⭐ Đợt 145 — a vocabulary act carries several CLUE SETS (core/content-view.js).
-// The editor still shows ONE clue column, and `editKey` says which set that
-// column is: the one the act is currently set to play, so Edit always opens on
-// what the class was just looking at.
-// The rule that matters: the OTHER sets ride along on each row object untouched
-// (`clues` / `voices` are copied, never rebuilt), so adding, deleting, sorting
-// and drag-reordering rows carry all four sets together. Before this, normalize()
-// rebuilt every row from five fixed keys — which, on a merged act, would have
-// thrown three quarters of its content away the first time anyone pressed Save.
-function normalize(activity, editKey) {
+// ⭐ Đợt 145/165 — a vocabulary act carries several CLUE SETS
+// (core/content-view.js). `variantKeys` says which ones this act has;
+// `currentKey` is which one the table is showing right now (switchable via
+// the tabs — see switchTab() above). Every row keeps ALL its sets on
+// `clues`/`voices` regardless of which tab is active, so adding, deleting,
+// sorting and drag-reordering rows always carry every set together. Before
+// Đợt 145, normalize() rebuilt every row from five fixed keys — which, on a
+// merged act, would have thrown three quarters of its content away the first
+// time anyone pressed Save.
+function normalize(activity, variantKeys, currentKey) {
   const a = activity ? JSON.parse(JSON.stringify(activity)) : {};
   a.type = "anagram";
   a.schemaVersion = a.schemaVersion || 1;
@@ -1139,21 +1162,30 @@ function normalize(activity, editKey) {
   a.options = a.options || {};
   a.content = a.content || {};
   let items = Array.isArray(a.content.items) ? a.content.items : [];
-  if (items.length === 0) items = [blankItem()];
+  if (items.length === 0) items = [blankItem(!!variantKeys)];
   a.content.items = items.map(it => {
-    const clip = editKey ? voiceOf(it, editKey) : { voice: it.voice || "", voiceId: it.voiceId || "" };
-    const row = {
+    if (!variantKeys) {
+      return {
+        word: it.word || "", clue: it.clue || "",
+        voice: it.voice || "", voiceId: it.voiceId || "",
+        hideText: !!(it.voice && it.hideText)   // hideText only ever means anything alongside a voice
+      };
+    }
+    const clip = voiceOf(it, currentKey);
+    return {
       word: it.word || "",
-      clue: editKey ? clueOf(it, editKey) : (it.clue || ""),
+      clue: clueOf(it, currentKey),
       voice: clip.voice, voiceId: clip.voiceId,
-      hideText: !!(clip.voice && it.hideText)   // hideText only ever means anything alongside a voice
+      clues: { ...(it.clues || {}) }, voices: { ...(it.voices || {}) }
     };
-    if (editKey) { row.clues = it.clues || {}; row.voices = it.voices || {}; }
-    return row;
   });
   return a;
 }
-function blankItem() { return { word: "", clue: "", voice: "", voiceId: "", hideText: false }; }
+function blankItem(withVariants) {
+  return withVariants
+    ? { word: "", clue: "", voice: "", voiceId: "", clues: {}, voices: {} }
+    : { word: "", clue: "", voice: "", voiceId: "", hideText: false };
+}
 
 function validate(d) {
   if (!d.title) return "Please enter an activity title.";

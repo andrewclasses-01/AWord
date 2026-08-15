@@ -72,10 +72,6 @@ export function openOtbEditor(container, activity, { onSave, onCancel, header, f
   // ===== BOXES =====
   body.append(el("div", "aw-ed-sectionhead", "Boxes"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Tip: in Excel, copy a block of cells (the question in the first column, its answers in the next columns), " +
-    "then click a box and paste (Ctrl+V) to fill the whole list at once. Every box needs at least "
-    + MIN_ANSWERS + " answers, with one marked correct."));
   const qWrap = el("div", "aw-ed-questions");
   body.append(qWrap);
   renderItems();

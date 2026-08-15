@@ -156,9 +156,6 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     };
     bar.append(clearBtn);
     section.append(bar);
-    section.append(el("div", "aw-ed-tip",
-      "The sign tells players which moles to hit. Put TRUE statements in the left column, FALSE ones in the right. " +
-      "Tip: copy a block from Excel (statement in column 1, True/False in column 2), click a box and paste — each row lands on the correct side."));
 
     const cols = el("div", "aw-wam-tf-cols");
     const trueCol = el("div", "aw-wam-tf-col is-true");
@@ -263,9 +260,6 @@ export function openWamEditor(container, activity, { onSave, onCancel, header, f
     };
     bar.append(clearBtn);
     section.append(bar);
-    section.append(el("div", "aw-ed-tip",
-      "The sign shows one question at a time; moles carry the answers. Players hit the CORRECT one to move on. " +
-      "Tip: copy from Excel (question in column 1, answers in the next columns), click a question box and paste."));
 
     const wrap = el("div", "aw-ed-questions");
     section.append(wrap);

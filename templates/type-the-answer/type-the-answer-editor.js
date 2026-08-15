@@ -73,10 +73,6 @@ export function openTypeTheAnswerEditor(container, activity, { onSave, onCancel,
   // ===== QUESTIONS =====
   body.append(el("div", "aw-ed-sectionhead", "Questions"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Tip: in Excel, copy a block of cells — question in the left column, one accepted answer per row " +
-    "in the right column (leave the left cell blank on extra-answer rows), then click a question or " +
-    "answer box and paste (Ctrl+V) to fill the whole list at once."));
   const qWrap = el("div", "aw-ed-questions");
   body.append(qWrap);
   renderQuestions();

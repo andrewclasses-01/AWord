@@ -80,10 +80,6 @@ export function openFtmEditor(container, activity, { onSave, onCancel, header, f
   });
   if (setTabs.el) body.append(setTabs.el);
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Tip: in Excel, copy a block of cells (Keyword in the first column, its Definition in the second), " +
-    "then click a Keyword or Definition box and paste (Ctrl+V) to fill the whole list at once. " +
-    "Drag the ⇕ handle to reorder."));
 
   const headRow = el("div", "aw-ftm-ed-headrow");
   const headCols = el("div", "aw-ftm-ed-headcols");

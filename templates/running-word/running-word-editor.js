@@ -20,7 +20,7 @@
 
 import { el } from "../../core/utils.js";
 import { icons } from "../../core/icons.js";
-import { cleanWord, readSets, MAX_SETS } from "./rw-sets.js";
+import { cleanWord, readSets } from "./rw-sets.js";
 
 const MAX_WORDS = 200;      // far above a real lesson pool (~100); a guard, not a target
 const MIN_WORDS = 2;
@@ -67,12 +67,6 @@ export function openRunningWordEditor(container, activity, { onSave, onCancel, h
   // ===== word pool =====
   body.append(el("div", "aw-ed-sectionhead", "Word pool"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "In Excel, copy a block of cells (WORD in the first column, an optional IPA in the second), " +
-    "then click a Word or IPA box and paste (Ctrl+V) to fill the whole list at once. IPA is optional — " +
-    "leave it blank and the printed sheets and in-game reveal just skip it. Drag the ⇕ handle to reorder " +
-    "(both teams' lists are drawn from this pool when you start the game, so put EVERY word either team " +
-    "should get in here)."));
 
   const headRow = el("div", "aw-rw-ed-headrow");
   const headCols = el("div", "aw-rw-ed-headcols");
@@ -109,10 +103,6 @@ export function openRunningWordEditor(container, activity, { onSave, onCancel, h
       showInfo("Saved sets deleted — the game will shuffle a fresh split.");
     };
     body.append(box, dropBtn);
-    body.append(el("div", "aw-ed-tip",
-      `A set is one A / B split of this pool, kept so the game can be replayed against sheets ` +
-      `you already printed (up to ${MAX_SETS}). Sets are created from the game's setup screen, not here. ` +
-      `If you change the word list above, delete these — a split that names a deleted word can no longer be dealt.`));
   }
 
   if (footer) page.append(footer);

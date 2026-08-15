@@ -61,10 +61,6 @@ export function openBalloonPopEditor(container, activity, { onSave, onCancel, he
   // ===== ITEMS =====
   body.append(el("div", "aw-ed-sectionhead", "Keywords & definitions"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Tip: in Excel, copy a block of cells (Keyword in the first column, its definition in the second), " +
-    "then click a Keyword or Definition box and paste (Ctrl+V) to fill the whole list at once. " +
-    "Drag the ⇕ handle to reorder. At least " + MIN_ITEMS + " items are needed."));
 
   const headRow = el("div", "aw-bp-ed-headrow");
   const headCols = el("div", "aw-bp-ed-headcols");

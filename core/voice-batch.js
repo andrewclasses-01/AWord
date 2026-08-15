@@ -36,9 +36,9 @@ import { createPool, recommendedPoolSize } from "./tts-pool.js";
 // below, which — since `items` here is already whatever list the caller
 // built — is stable and matches the plan the caller computed it against.
 //
-// Mutates each generated item in place (`voice`/`voiceId`/`hideText`) and
-// returns { done, failed, signedOut } — the caller decides what "signed
-// out" or a partial run means for its own UI/persistence.
+// Mutates each generated item in place (`voice`/`voiceId`) and returns
+// { done, failed, signedOut } — the caller decides what "signed out" or a
+// partial run means for its own UI/persistence.
 export async function generateVoicesBatch(items, voiceId, { textFor, onProgress, isCancelled }) {
   // Don't spin up more Workers (each loading its own ~86MB model) than
   // there are items to hand them — a 2-word regenerate on a wasm fallback
@@ -58,7 +58,7 @@ export async function generateVoicesBatch(items, voiceId, { textFor, onProgress,
       try {
         const dataUrl = await pool.run(text, thisVoiceId);
         const id = await saveVoiceClip({ id: it.voice || undefined, text, voiceId: thisVoiceId, audioDataUrl: dataUrl });
-        it.voice = id; it.voiceId = thisVoiceId; it.hideText = true;
+        it.voice = id; it.voiceId = thisVoiceId;
         done++;
       } catch (e) {
         if (e && e.code === "aw/signed-out") { signedOut = true; return; }

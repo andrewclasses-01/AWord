@@ -65,11 +65,6 @@ export function openCrosswordEditor(container, activity, { onSave, onCancel, hea
   // ===== WORDS =====
   body.append(el("div", "aw-ed-sectionhead", "Words"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Each row is one word in the puzzle: the ANSWER (letters only — spaces and " +
-    "punctuation are ignored in the grid) and its CLUE. The grid is built " +
-    "automatically so the words cross each other. Tip: in Excel, copy two " +
-    "columns (answer | clue), click a box and paste (Ctrl+V) to fill the list."));
   const wWrap = el("div", "aw-ed-questions");
   body.append(wWrap);
   renderWords();

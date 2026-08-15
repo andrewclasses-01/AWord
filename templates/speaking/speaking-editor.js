@@ -75,10 +75,6 @@ export function openSpeakingEditor(container, activity, { onSave, onCancel, head
   // ===== WORDS =====
   body.append(el("div", "aw-ed-sectionhead", "Words"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Every word needs its pronunciation generated before students can play it — use “Generate phonemes” " +
-    "below (one click does the whole list). “Generate voice” is optional — it lets a student hear the " +
-    "correct pronunciation before recording their own."));
   const wWrap = el("div", "aw-ed-questions");
   body.append(wWrap);
   renderWords();

@@ -95,11 +95,6 @@ export function openTfEditor(container, activity, { onSave, onCancel, header, fo
   });
   if (setTabs.el) body.append(setTabs.el);
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Put each statement in the correct column: TRUE statements on the left, FALSE statements on the right. " +
-    "Tip: in Excel you can copy a block of statements (one per row) and paste (Ctrl+V) into a column to fill it. " +
-    "If your Excel block has a second column saying True/False, paste it into either column and each statement " +
-    "will be sorted into the right side automatically."));
 
   const cols = el("div", "aw-tf-ed-cols");
   const trueCol = el("div", "aw-tf-ed-col is-true");

@@ -486,6 +486,20 @@
 .aw-anagram-ed-bulkicon.is-primary { background: #2f7bff; color: #fff; }
 .aw-anagram-ed-bulkicon.is-danger { background: #fdeaea; color: #d33; }
 .aw-anagram-ed-bulkicon.is-danger:hover:not(:disabled) { background: #fbdada; }
+
+/* Clue-set tabs (Đợt 165) — ENG1/ENG2/VI1/VI2, one per set this act carries.
+   Sit at the RIGHT of the same bulk-actions row as Generate/Delete voices/
+   Delete all words (margin-left:auto pushes them there); the table itself
+   fades+slides between sets via switchTab()'s WAAPI animation, not CSS. */
+.aw-anagram-ed-tabs { display: flex; gap: 4px; margin-left: auto; flex: 0 0 auto; }
+.aw-anagram-ed-tab {
+  border: none; border-radius: 9px; padding: .5rem .9rem; font-size: .82rem; font-weight: 700;
+  background: #eef2f7; color: #55657a; cursor: pointer; letter-spacing: .01em;
+}
+.aw-anagram-ed-tab:hover { filter: brightness(.96); }
+.aw-anagram-ed-tab:active { transform: scale(.97); }
+.aw-anagram-ed-tab.is-active { background: #2f7bff; color: #fff; }
+
 .aw-anagram-ed-headrow { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .aw-anagram-ed-headcols { display: flex; flex: 1; gap: 8px; padding-left: 34px; margin-right: 152px; }
 .aw-anagram-ed-headcol { flex: 1; font-size: .82rem; font-weight: 700; color: #55657a; }

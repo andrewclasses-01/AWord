@@ -58,10 +58,6 @@ export function openUnjumbleEditor(container, activity, { onSave, onCancel, head
   // ===== SENTENCES =====
   body.append(el("div", "aw-ed-sectionhead", "Sentences"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Type each CORRECT sentence — the game splits it into words and shuffles the WORD order for students to " +
-    "rearrange. Tip: in Excel, copy a block (Sentence in the first column, an optional Clue in the second), " +
-    "then click a Sentence or Clue box and paste (Ctrl+V) to fill the whole list at once. Drag the ⇕ handle to reorder."));
 
   const headRow = el("div", "aw-unj-ed-headrow");
   const headCols = el("div", "aw-unj-ed-headcols");

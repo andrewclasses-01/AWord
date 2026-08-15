@@ -65,11 +65,6 @@ export function openFlyingFruitEditor(container, activity, { onSave, onCancel, h
   // ===== ANSWERS =====
   body.append(el("div", "aw-ed-sectionhead", "Answers"));
   body.append(buildBulkBar());
-  body.append(el("div", "aw-ed-tip",
-    "Each row is one answer: the WORD flies on a fruit and the CLUE is the question shown at the top. " +
-    "The wrong fruits are filled in automatically with random words from the other rows, so you don't type " +
-    "distractors. Tip: in Excel, copy a block (Word in the first column, Clue in the second), then click a " +
-    "box and paste (Ctrl+V) to fill the whole list. Drag the ⇕ handle to reorder."));
 
   const headRow = el("div", "aw-ff-ed-headrow");
   const headCols = el("div", "aw-ff-ed-headcols");
