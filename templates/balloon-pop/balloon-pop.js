@@ -113,9 +113,11 @@ const balloonPopTemplate = {
   // three one-line cells; the bonus checkboxes join the shared switch block.
   buildExtraOptions({ panel, draft, mkCell, mkSliderCell, addCheck }) {
     // Round time keeps a stepper: 15..300s is too fine a range for a slider.
+    // Đợt 164 (teacher): every time-related field steps 1 second at a time —
+    // step went 5s -> 1s (hold-to-repeat still ramps up for a fast change).
     const cTime = mkCell({ label: "Round time" });
     const stTime = makeHStepper(typeof draft.bpTimerSeconds === "number" ? draft.bpTimerSeconds : 60,
-      15, 300, v => { draft.bpTimerSeconds = v; }, { step: 5, format: v => v + "s" });
+      15, 300, v => { draft.bpTimerSeconds = v; }, { step: 1, format: v => v + "s" });
     cTime.ctl.append(stTime.el);
 
     const cLevels = mkCell({ label: "Levels" });

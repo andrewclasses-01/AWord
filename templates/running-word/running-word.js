@@ -206,14 +206,15 @@ const rwTemplate = {
 
     // ---- the chess clock ----
     // 10s..30:00. Same range the old Custom boxes allowed (they clamped to a 10s
-    // floor and 29min59s), so no saved value can fall outside it. Stepping by 5s
-    // with a 15s-per-tick hold and a 3px drag is the same sizing the shared
-    // countdown uses — see makeHStepper's opts in core/options-panel.js.
+    // floor and 29min59s), so no saved value can fall outside it. Đợt 164
+    // (teacher: "mọi phần liên quan tới time... chỉnh từng giây một, không
+    // nhảy 1 nấc nhiều giây") — step went 5s -> 1s; the 15s-per-tick hold and
+    // 3px drag stay, same sizing the shared countdown uses (core/numberstepper.js).
     if (draft.clockSeconds == null) draft.clockSeconds = 300;
     const cClock = mkCell({ label: "Time each team" });
     const clockStep = makeHStepper(clampInt(draft.clockSeconds, 10, 1800, 300), 10, 1800,
       v => { draft.clockSeconds = v; },
-      { step: 5, holdMax: 15, dragPxPerStep: 3, format: v => fmtClock(v * 1000) });
+      { step: 1, holdMax: 15, dragPxPerStep: 3, format: v => fmtClock(v * 1000) });
     cClock.ctl.append(clockStep.el);
     panel.append(cClock.cell);
 

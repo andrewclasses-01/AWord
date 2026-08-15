@@ -171,3 +171,178 @@ export function makeHStepper(value, min, max, onChange, opts = {}) {
   wrap.append(downBtn, valEl, upBtn);
   return { el: wrap, get: () => current, set: v => apply(v, false) };
 }
+
+// -------------------------------------------------------------------------
+// TIME stepper — [−] MM : SS [+], where MM and SS are each their own
+// tap/swipe zone (Đợt 163, 15/8/2026, teacher's design). ONLY the shared
+// Timer option's countdown field uses this — every other seconds field in
+// the app (Question time, Round time, Time each team, Time cost's grace...)
+// keeps the plain makeHStepper above; splitting minutes/seconds only makes
+// sense for a control that actually SHOWS minutes.
+//
+// Interaction per zone (teacher's spec, refined Đợt 164):
+//   · minutes zone: a tap, OR a swipe UP → +1 min; a swipe DOWN → −1 min.
+//   · seconds zone: a tap, OR a swipe UP → snaps UP to the next multiple of
+//     10 (11 → 20, 20 → 30 — a round value still moves a full 10, no dead
+//     zone); a swipe DOWN → snaps DOWN the same way (11 → 10, 20 → 10).
+// A tap has no direction, so it reads as "not a down-swipe" → same branch as
+// swipe-up. One gesture (pointerdown→pointerup) moves the value by exactly
+// one step — this is a wheel-pick gesture, not a continuous drag.
+// The flanking [−]/[+] buttons are untouched from makeHStepper: click = ±1s
+// flat (no rounding), hold ramps up to `holdMax` per tick, same acceleration
+// curve. ⭐ Đợt 164: only the zone whose DIGITS actually changed slides —
+// nudging seconds no longer replays the minutes animation, and vice versa.
+export function makeTimeStepper(value, min, max, onChange, opts = {}) {
+  const holdMax = Math.max(1, opts.holdMax || 15);
+  const SWIPE_DOWN_PX = 10;   // how far a downward drag must go to count as "down", not a tap
+  // Đợt 143's reduced-motion rule (app.css) only reaches CSS `transition`s; the
+  // digit slide runs on WAAPI instead, so it needs its own check to honour the
+  // same OS setting.
+  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const SLIDE_MS = reduceMotion ? 1 : 180;
+  let current = clamp(value);
+  function clamp(v) { return Math.max(min, Math.min(max, Math.round(v))); }
+  function mm() { return Math.floor(current / 60); }
+  function ss() { return current % 60; }
+
+  const wrap = el("div", "aw-tstep");
+  const downBtn = el("button", "aw-tstep-btn", "−");
+  downBtn.type = "button"; downBtn.setAttribute("aria-label", "Decrease");
+  const mid = el("div", "aw-tstep-mid");
+  const minZone = el("div", "aw-tstep-zone");
+  minZone.title = "Tap or swipe up: +1 min · swipe down: -1 min";
+  let minDigit = el("span", "aw-tstep-digit", String(mm()).padStart(2, "0"));
+  minZone.append(minDigit);
+  const colon = el("span", "aw-tstep-colon", ":");
+  const secZone = el("div", "aw-tstep-zone");
+  secZone.title = "Tap or swipe up: round up to next :10 · swipe down: round down to previous :10";
+  let secDigit = el("span", "aw-tstep-digit", String(ss()).padStart(2, "0"));
+  secZone.append(secDigit);
+  mid.append(minZone, colon, secZone);
+  const upBtn = el("button", "aw-tstep-btn", "+");
+  upBtn.type = "button"; upBtn.setAttribute("aria-label", "Increase");
+
+  // Slide the OLD digit out and the NEW one in, in the direction of change —
+  // the "odometer wipe". `dir` is +1 (value went up, digits scroll upward,
+  // i.e. old leaves toward the top) or -1 (value went down, old leaves toward
+  // the bottom). Runs on WAAPI so it never fights layout mid-drag.
+  //
+  // ⚠️ `onfinish` alone is not enough to trust: measured while building this,
+  // a WAAPI animation's `finish` event can simply never fire while the
+  // document is hidden/backgrounded (tab switched away, minimized) mid-slide
+  // — the animation itself still completes (fill:"forwards" holds correctly),
+  // but the cleanup callback that removes the OLD span is skipped, so a stale
+  // digit is left stacked underneath forever. A `setTimeout` safety net
+  // guarantees the removal runs regardless of whether the event ever lands;
+  // `cleaned` stops it from double-firing on top of a normal `onfinish`.
+  function slideZone(zoneEl, digitEl, text, dir) {
+    const fresh = el("span", "aw-tstep-digit", text);
+    fresh.style.transform = `translateY(${dir > 0 ? 100 : -100}%)`;
+    zoneEl.append(fresh);
+    let cleaned = false;
+    const cleanup = () => { if (cleaned) return; cleaned = true; digitEl.remove(); };
+    const outAnim = digitEl.animate(
+      [{ transform: "translateY(0%)" }, { transform: `translateY(${dir > 0 ? -100 : 100}%)` }],
+      { duration: SLIDE_MS, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" }
+    );
+    const inAnim = fresh.animate(
+      [{ transform: `translateY(${dir > 0 ? 100 : -100}%)` }, { transform: "translateY(0%)" }],
+      { duration: SLIDE_MS, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" }
+    );
+    outAnim.onfinish = cleanup;
+    outAnim.oncancel = cleanup;
+    inAnim.onfinish = () => fresh.style.transform = "";
+    setTimeout(cleanup, SLIDE_MS + 300);
+    return fresh;
+  }
+
+  // Đợt 164 (teacher, 15/8/2026): "tăng/giảm cái nào thì trượt cái đó thôi" —
+  // slide ONLY the zone whose DISPLAYED digits actually changed, not both.
+  // A flanking ±1s button crossing a minute boundary (e.g. 1:00 → 0:59)
+  // legitimately changes both, so this compares old vs new rather than
+  // hard-coding "the zone that was touched".
+  function applyDelta(delta, dir, fire) {
+    const next = clamp(current + delta);
+    if (next === current) return;   // at the min/max edge — nothing to animate
+    const oldMM = mm(), oldSS = ss();
+    current = next;
+    const newMM = mm(), newSS = ss();
+    if (newMM !== oldMM) minDigit = slideZone(minZone, minDigit, String(newMM).padStart(2, "0"), dir);
+    if (newSS !== oldSS) secDigit = slideZone(secZone, secDigit, String(newSS).padStart(2, "0"), dir);
+    if (fire) onChange(current);
+  }
+
+  // Đợt 164: the SECONDS zone no longer moves by a flat ±10 — it snaps to the
+  // nearest ROUND multiple of 10 in the gesture's direction (teacher: "số giây
+  // đang là 11, bấm 1 cái sẽ thành 20 chứ không phải 21"). A value already ON
+  // a multiple of 10 still moves a full 10 (no dead zone): 20 → 30 going up,
+  // 20 → 10 going down.
+  function secondsSnapDelta(dir) {
+    const s = ss();
+    const target = dir > 0 ? (Math.floor(s / 10) + 1) * 10 : (Math.ceil(s / 10) - 1) * 10;
+    return target - s;
+  }
+
+  // MINUTE / SECOND zones: one pointerdown→pointerup gesture = one step.
+  // "not a clear downward drag" (a tap, a swipe up, or noise) counts as +1;
+  // only a real downward drag counts as −1. See header comment for why.
+  function zoneGesture(zoneEl, deltaFor) {
+    let startY = 0, active = false;
+    zoneEl.addEventListener("pointerdown", ev => {
+      active = true; startY = ev.clientY;
+      try { zoneEl.setPointerCapture(ev.pointerId); } catch {}
+      zoneEl.classList.add("is-active");
+    });
+    zoneEl.addEventListener("pointerup", ev => {
+      if (!active) return;
+      active = false;
+      zoneEl.classList.remove("is-active");
+      const dy = ev.clientY - startY;   // positive = dragged DOWN
+      const dir = dy > SWIPE_DOWN_PX ? -1 : +1;
+      applyDelta(deltaFor(dir), dir, true);
+    });
+    zoneEl.addEventListener("pointercancel", () => { active = false; zoneEl.classList.remove("is-active"); });
+    zoneEl.addEventListener("keydown", ev => {
+      if (ev.key === "ArrowUp" || ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); applyDelta(deltaFor(+1), +1, true); }
+      else if (ev.key === "ArrowDown") { ev.preventDefault(); applyDelta(deltaFor(-1), -1, true); }
+    });
+    zoneEl.tabIndex = 0;
+  }
+  zoneGesture(minZone, dir => dir * 60);
+  zoneGesture(secZone, secondsSnapDelta);
+
+  // flanking buttons: identical shape to makeHStepper's ±1, hold-ramp-to-holdMax.
+  // Always a flat ±1 second per tick — no rounding, unaffected by the seconds
+  // zone's snap-to-10 above.
+  function holdRepeat(btn, dir) {
+    let delayT = null, repT = null, tick = 0;
+    const stop = () => { clearTimeout(delayT); clearInterval(repT); delayT = repT = null; tick = 0; };
+    btn.addEventListener("pointerdown", ev => {
+      ev.preventDefault();
+      try { btn.setPointerCapture(ev.pointerId); } catch {}
+      applyDelta(dir, dir, true);
+      delayT = setTimeout(() => {
+        repT = setInterval(() => {
+          tick++;
+          const mult = tick > 22 ? holdMax : tick > 10 ? Math.max(1, Math.ceil(holdMax / 2)) : 1;
+          applyDelta(dir * mult, dir, true);
+        }, 55);
+      }, 320);
+    });
+    btn.addEventListener("pointerup", stop);
+    btn.addEventListener("pointerleave", stop);
+    btn.addEventListener("pointercancel", stop);
+    btn.addEventListener("keydown", ev => {
+      if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); applyDelta(dir, dir, true); }
+    });
+  }
+  holdRepeat(downBtn, -1);
+  holdRepeat(upBtn, +1);
+
+  wrap.append(downBtn, mid, upBtn);
+  return {
+    el: wrap,
+    get: () => current,
+    set: v => { current = clamp(v); minDigit.textContent = String(mm()).padStart(2, "0"); secDigit.textContent = String(ss()).padStart(2, "0"); }
+  };
+}

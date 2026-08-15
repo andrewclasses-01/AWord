@@ -8,6 +8,78 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 164 (15/8/2026) — 3 CHỈNH SỬA TIẾP THEO CHO BỘ CHỈNH GIỜ ĐỢT 163
+⭐ CÓ SỬA CORE (`numberstepper.js`: viết lại `applyUnit`→`applyDelta` + hàm mới `secondsSnapDelta` ·
+`running-word.js`/`balloon-pop.js`: đổi `step: 5`→`step: 1`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html`.
+**CHỜ THẦY DUYỆT trước khi commit/push** (gộp chung với Đợt 163 vì chưa commit đợt trước).
+
+### 1. Thầy báo sau khi xem lại Đợt 163
+1. Bấm số phút để tăng thì số GIÂY cũng bị trượt theo (dù giá trị không đổi) — chỉ cái nào đổi mới nên trượt.
+2. Số giây tăng/giảm phải LUÔN TRÒN CHỤC: giây=11, bấm 1 cái → 20 (không phải 21).
+3. Mọi ô liên quan tới thời gian của MỌI template (kể cả Timer, Round time...) đều phải chỉnh từng giây một — không có ô nào một nấc nhảy nhiều giây.
+
+### 2. Sửa mục 1 — chỉ trượt đúng ô đổi
+`applyUnit` cũ luôn gọi trượt cho CẢ 2 ô (phút và giây) mỗi lần bất kỳ ô nào đổi. Viết lại thành
+`applyDelta`: so `mm()`/`ss()` TRƯỚC và SAU khi cập nhật `current`, ô nào có số hiển thị thật sự khác thì
+mới trượt ô đó. Vẫn đúng khi bấm nút [-]/[+] hai bên làm giây tràn qua phút (vd 1:00 → 0:59) — lúc đó CẢ
+HAI ô đổi thật nên CẢ HAI cùng trượt, đúng bản chất.
+
+### 3. Sửa mục 2 — giây luôn tròn chục
+Hàm mới `secondsSnapDelta(dir)`: tăng thì nhảy tới bội số 10 KẾ TIẾP lớn hơn (11→20, kể cả đang đúng
+20→30, không có "vùng chết"); giảm thì nhảy tới bội số 10 liền trước (11→10, 20→10). Chỉ áp dụng cho
+vùng bấm/vuốt giây; nút [-]/[+] hai bên vẫn ±1 giây phẳng như cũ, không tròn.
+
+### 4. Sửa mục 3 — step 1 giây cho mọi ô thời gian còn lại
+Quét toàn bộ `makeHStepper(...)` trong app, chỉ 2 chỗ có `step` khác 1 VÀ là trường thời gian thật:
+`running-word.js` "Time each team" (5s→1s) và `balloon-pop.js` "Round time" (5s→1s). Giữ nguyên
+`holdMax`/`dragPxPerStep` — giữ vẫn tăng tốc khi GIỮ nút, chỉ đổi bước MỘT LẦN BẤM. Các ô khác (Question
+time của Gameshow/Open the box, ô khoan hồng Time cost) vốn đã step 1 sẵn, không phải sửa. Các ô KHÔNG
+phải thời gian (Levels, số đội Showdown...) giữ nguyên, không đụng.
+
+### 5. 🟢 Đã tự test được gì
+Qua `scratch/test-mode.html` (Quiz, Running word, Balloon pop):
+- Ghi đè tạm `Element.prototype.animate` để đo: bấm riêng ô phút → chỉ span phút được gọi `animate()`;
+  bấm riêng ô giây → chỉ span giây được gọi. Xác nhận đúng mục 1.
+- Test ĐÚNG ví dụ thầy đưa: giây=11, bấm 1 cái → ra đúng "20". Xác nhận đúng mục 2.
+- "Time each team" của Running word: 5:00 → bấm 1 cái → 5:01 (trước đây sẽ ra 5:05). "Round time" của
+  Balloon pop: 60s → bấm 1 cái → 61s (trước đây sẽ ra 65s). Xác nhận đúng mục 3.
+- 0 lỗi console suốt quá trình.
+🟡 Hạn chế giống các đợt trước: không xem/quay được cảm giác trượt số có mượt thật hay không
+(`document.hidden` trong phiên tự động) — cần thầy tự bấm thử trên máy thật.
+
+---
+
+## Đợt 163 (15/8/2026) — KHÓA CHỌN TEXT/ẢNH TRONG POP-UP + TÁCH RIÊNG BỘ CHỈNH PHÚT/GIÂY CHO Ô TIMER
+⭐ CÓ SỬA CORE (`numberstepper.js`: hàm mới `makeTimeStepper`, không đụng `makeHStepper` cũ · `options-panel.js`: 1 chỗ gọi ở nhóm Timer · `app.css`: khóa chọn ở `.aw-tool-panel` + `-webkit-user-drag` cho ảnh + CSS mới `.aw-tstep-*`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html` (không cần đăng nhập Google). **CHỜ THẦY DUYỆT trước khi commit/push.**
+
+### 1. Thầy yêu cầu (15/8/2026)
+Hai việc, thầy trả lời qua AskUserQuestion:
+1. Khóa toàn bộ chọn text/kéo ảnh của trình duyệt trong MỌI pop-up nút tùy chỉnh (Options/Template/Style/Mode/Showdown) + khung act — tránh việc đang bấm chơi thì lỡ thành bôi chọn chữ.
+2. Đổi cách chỉnh ô "Timer" (đếm ngược) trong Options: tách số PHÚT và số GIÂY thành 2 vùng bấm/vuốt riêng — phút: bấm 1 cái hoặc vuốt lên = +1, vuốt xuống = -1; giây: bấm 1 cái hoặc vuốt lên = +10, vuốt xuống = -10; có hiệu ứng số trượt lên xuống. Nút [-]/[+] hai bên vẫn ±1 giây như cũ. Kéo ngang trên số (tính năng cũ) bỏ hẳn. Thầy xác nhận CHỈ áp dụng cho đúng ô Timer chung trong Options — các ô đếm giờ RIÊNG của từng game (Running word "Time each team", Gameshow/Open the box "Question time", Balloon pop "Round time") giữ nguyên như cũ.
+
+### 2. Khóa chọn text/ảnh
+`.aw-stage` đã khóa từ trước (1/8/2026) — chỉ thiếu `.aw-tool-panel` (mọi pop-up dùng chung class này) và khóa kéo ảnh (`-webkit-user-drag`, trước đó CHƯA app nào có). Thêm cả hai, giữ đúng ngoại lệ input/textarea/contenteditable vẫn chọn/gõ được bình thường (mirror luật `.aw-stage input` đã có).
+
+### 3. Bộ chỉnh phút/giây mới — vì sao KHÔNG sửa `makeHStepper`
+`makeHStepper` đang dùng chung ở **7 chỗ** trong app (Timer, Time cost, Running word, Gameshow, Open the box, Balloon pop, Showdown số đội) — sửa thẳng vào đó sẽ đổi luôn 6 chỗ thầy không hề nhắc tới. Nên viết hàm MỚI `makeTimeStepper` trong `numberstepper.js`, chỉ gọi đúng 1 lần ở nhóm Timer của `options-panel.js`; `makeHStepper` giữ nguyên 100%, đã kiểm tra sống lại Anagram/Balloon pop vẫn ra đúng `.aw-hstep` cũ cho các ô của riêng chúng.
+
+Cơ chế mỗi vùng phút/giây: 1 lượt chạm xuống→nhấc lên = đúng 1 nấc (không phải kéo liên tục theo pixel) — nhấc lên mà KHÔNG rê xuống quá 10px thì tính là "+1" (gộp chung tap và vuốt lên vào một nhánh, đúng như thầy mô tả "bấm 1 lần HOẶC vuốt lên"); rê xuống quá 10px thì tính "-1". Hiệu ứng trượt dùng WAAPI (`element.animate`), số cũ trượt ra hướng ngược với số mới trượt vào — cùng easing `cubic-bezier(.22,.9,.3,1)` toàn app đang dùng.
+
+⚠️ **Bẫy đã bắt được khi tự test:** dọn dẹp span số CŨ sau khi trượt xong dựa vào `onfinish` của animation — đo được là **`onfinish` không bắn ra khi tab bị ẩn/không hiển thị** (`document.hidden`), y hệt hạn chế Đợt 161/162 đã ghi. animation vẫn CHẠY ĐÚNG (đo bằng `.finish()` ép chạy: vị trí cuối đúng, giá trị lưu đúng), chỉ có dọn dẹp DOM (xoá span cũ) bị treo — số cũ nằm chồng lên mãi. Đã vá bằng lưới an toàn `setTimeout(cleanup, SLIDE_MS+300)`, không chỉ dựa vào `onfinish`. Đây là lý do NÊN đọc kỹ mục "Hạn chế đã tự test" của Đợt 161/162 trước khi tự tin animation mới "chạy được" — event có thể im lặng không bắn dù animation không lỗi.
+
+### 4. 🟢 Đã tự test được gì
+Chạy `scratch/test-mode.html?t=quiz` và `?t=anagram` và `?t=balloon_pop` (không cần đăng nhập, dùng Firestore giả):
+- Bấm/vuốt từng vùng phút/giây: +1 phút, +10 giây, -1 phút, -10 giây đều ra đúng số giây tổng (đo trực tiếp giá trị, không chỉ nhìn chữ).
+- Chặn đúng biên: xuống tới `0:05` (sàn) và lên tới `59:59` (trần) dù bấm liên tục vượt quá.
+- Nút [-]/[+] hai bên vẫn đúng ±1 giây/lần bấm như cũ.
+- Sau khi vá lưới an toàn: đúng 1 số hiển thị mỗi vùng (không còn số cũ đè lên).
+- Quét cả 3 template: CHỈ ô Timer chung ra `.aw-tstep` mới; `.aw-hstep` cũ của Anagram/Balloon pop (Round time, Levels, Time cost...) không đổi gì — đúng phạm vi thầy chốt.
+- `getComputedStyle` xác nhận `.aw-tool-panel` và `.aw-stage` đều `user-select: none`.
+- 0 lỗi console suốt quá trình.
+🟡 **Hạn chế giống Đợt 160-162:** không đăng nhập Google được ở phiên tự động (dùng bench giả lập thay), và không tự mắt xem/quay được hiệu ứng trượt số có mượt thật hay không (`document.hidden`) — cần thầy tự bấm thử trên máy thật để xác nhận cảm giác vuốt/trượt.
+
+---
+
 ## Đợt 162 (15/8/2026) — ĐỔI HẲN CÁCH CHUYỂN POP-UP SANG "2 NHỊP" (thầy chốt sau khi test Đợt 161 vẫn giật)
 ⭐ CÓ SỬA CORE (`engine.js`: `openToolPanel` + `switchToolPanel`, thêm hàm mới `twoBeatPanelSwap`,
 KHÔNG đụng `swapContents` — hàm đó vẫn phục vụ swap nội dung nhỏ hơn trong Options, xem Đợt 148/mục

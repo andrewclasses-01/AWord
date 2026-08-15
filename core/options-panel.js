@@ -62,7 +62,7 @@
 // =============================================================
 
 import { el } from "./utils.js";
-import { makeHStepper } from "./numberstepper.js";
+import { makeHStepper, makeTimeStepper } from "./numberstepper.js";
 import { sound } from "./sound.js";
 
 // ---- POINTS OFF / TIME COST: ONE scale for the whole app (Đợt 143) ----
@@ -351,13 +351,13 @@ export function buildOptionsBody(host, {
     const total = Math.max(5, Math.min(3599, draft.timerTotalSeconds ?? 120));
     // Đợt 143 (teacher: "nấc thời gian countdown chỉnh thành 1 giây"). Step 5
     // became step 1 — but a 1-second step over a 5..3599 range would make the
-    // control unusable for anything but a nudge, so the two coarse gestures are
-    // sized for the range instead: a HELD button ramps to 15s a tick, and the
-    // drag covers 1s every 3px (a 3-minute change is a ~9cm swipe, not a 65cm
-    // one). Single taps still move exactly 1 second, which is what was asked.
-    const stepper = makeHStepper(total, 5, 3599, v => { draft.timerTotalSeconds = v; },
-      { step: 1, holdMax: 15, dragPxPerStep: 3,
-        format: v => Math.floor(v / 60) + ":" + String(v % 60).padStart(2, "0") });
+    // control unusable for anything but a nudge, so a HELD button ramps to 15s
+    // a tick. Đợt 163 (teacher, 15/8/2026) replaced the single draggable M:SS
+    // box with two tap/swipe zones — minutes and seconds — each its own
+    // gesture (see makeTimeStepper's header comment); the flanking [−]/[+]
+    // buttons still move exactly 1 second per tap, unchanged.
+    const stepper = makeTimeStepper(total, 5, 3599, v => { draft.timerTotalSeconds = v; },
+      { holdMax: 15 });
     // Đợt 132 (teacher): the countdown field stays VISIBLE at all times —
     // dimmed + non-interactive when another timer mode is picked, never
     // display:none (a field popping in and out used to reflow the row).
