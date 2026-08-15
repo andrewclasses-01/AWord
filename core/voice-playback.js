@@ -58,14 +58,18 @@ export const DEFAULT_INTRO_DELAY_MS = 650;
 // class actually plays with (teacher, 12/8/2026). Before this there were
 // two separate acts ("ENG1" and "ENG1 VOICE") holding identical words.
 //
-//   "text"      show the clue, never speak on its own. The small listen
-//               button stays, so a pupil can still ask for the sound.
+//   "text"      show the clue, no listen button at all — never speak on its
+//               own, and never offer to (teacher, 15/8/2026: "bỏ hẳn nút loa
+//               này đi, tôi không muốn nhìn thấy nó" — Text mode means text
+//               only, full stop, not "text plus an optional voice button").
 //   "voice"     hide the clue, big listen button in the middle, speak it
 //               automatically when the item opens.
 //   undefined   AUTO = exactly how every act behaved before this option
 //               existed: obey the per-item `hideText` flag that the editor
-//               and the bulk generator set. Old acts therefore do not
-//               change by one pixel until the teacher picks a mode.
+//               and the bulk generator set (hideText:false keeps the small
+//               button — a pupil could still ask for the sound). Old acts
+//               therefore do not change by one pixel until the teacher picks
+//               a mode; only the EXPLICIT "text" mode above drops the button.
 //
 // EVERY template that shows a voice button must go through this function
 // rather than reading `item.hideText` directly, or its game would ignore
@@ -75,7 +79,7 @@ export function voiceView(activity, item) {
   const hasVoice = !!(item && item.voice);
   if (!hasVoice) return { hasVoice: false, hideText: false, autoPlay: false };
   const mode = activity && activity.options ? activity.options.contentMode : null;
-  if (mode === "text") return { hasVoice: true, hideText: false, autoPlay: false };
+  if (mode === "text") return { hasVoice: false, hideText: false, autoPlay: false };
   if (mode === "voice") return { hasVoice: true, hideText: true, autoPlay: true };
   return { hasVoice: true, hideText: !!item.hideText, autoPlay: true };
 }

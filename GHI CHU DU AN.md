@@ -8,6 +8,158 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 172 (15/8/2026) — ⭐⭐ LỖI THẬT NẶNG NHẤT TỪ TRƯỚC TỚI NAY: "Change template" LÀM RƠI SẠCH options — vá + 2 hệ quả (voice tự phát dù chọn Text, shuffle như không hoạt động) + bỏ hẳn nút loa khi Text
+Sửa `core/convert.js` (gốc rễ) + `core/voice-playback.js` (bỏ nút loa theo yêu cầu). KHÔNG sửa
+`core/showdown.js` hay bất kỳ trong 17 file template — vì lỗi nằm ở TẦNG DƯỚI, sửa 1 chỗ tự khỏi hết cho
+mọi template, mọi lần "Change template", không chỉ Showdown.
+🟢 ĐÃ TỰ TEST cả 3 vấn đề qua 2 trang mới `scratch/voicebug-test.html` + `scratch/convertbug-test.html`
+(có `scratch/fake-voice-clips.js` + `scratch/spy-voice-playback.js` đi kèm — xem mục 4).
+⏳ **CHƯA COMMIT** — chờ thầy tự test lại trên máy thật.
+
+### 1. Thầy báo (chơi Showdown, đổi Anagram → Type the answer): 3 vấn đề
+- Chọn Options > Content = Text nhưng vẫn TỰ PHÁT giọng đọc.
+- Bật Shuffle questions nhưng các bảng myActivity chạy cùng lúc vẫn ra câu THEO ĐÚNG THỨ TỰ GIỐNG NHAU.
+- Ở Text mode, góc câu hỏi vẫn còn nút loa nhỏ — thầy muốn BỎ HẲN, không chỉ tắt tự phát.
+Hỏi lại thầy: lúc thấy bug shuffle, myActivity đang bật Showdown (xác nhận: đúng).
+
+### 2. GỐC RỄ DUY NHẤT của 2 lỗi đầu — một dòng bị RƠI MẤT ở chính Đợt 169 (commit hôm qua)
+`git show 00ccb508 -- core/convert.js` cho thấy rõ: khi Đợt 169 chèn khối comment + `optVer: OPT_VER,`
+vào object trả về của `convertActivity()`, dòng `options,` NGAY TRƯỚC ĐÓ bị đổi thành comment và
+**KHÔNG có dòng nào thêm nó trở lại** — object trả về từ đó tới giờ hoàn toàn KHÔNG có khoá `options`.
+Nghĩa là **MỌI lần "Change template" (mọi act, mọi lúc, không chỉ Showdown) đều trả về 1 act KHÔNG CÓ
+options nào cả** — toàn bộ khối tính toán 30 dòng phía trên (kể cả chính dòng "CONTENT MODE follows the
+WORDS across the switch" mà comment đó tự nhắc) tính xong rồi vứt đi. Hai hệ quả:
+- **`contentMode` mất** → act mới rơi vào nhánh AUTO của `voiceView()` (`core/voice-playback.js`) →
+  AUTO đọc `item.hideText`, mà `resolveItem()` (`core/content-view.js`) LUÔN đóng dấu `hideText:false`
+  cho MỌI act có `variants` (đúng thiết kế — act dạng đó phải đọc mode qua `options.contentMode`, không
+  qua cờ từng item) → text vẫn hiện (trông như đúng) NHƯNG AUTO vẫn `autoPlay:true` vô điều kiện → tự
+  phát giọng dù thầy đã chọn Text. Bắt được bằng cách gọi thẳng `convertActivity(...)` trong
+  `scratch/`, log `.options` ra `undefined`.
+- **`shuffleQuestions` cũng mất** (cùng nguyên nhân — toàn bộ options mất, không riêng contentMode) →
+  `templates/type-the-answer/type-the-answer.js` dòng 160 `if (opt.shuffleQuestions) items =
+  shuffle(items);` không bao giờ chạy → MỌI bảng myActivity hiện câu THEO ĐÚNG THỨ TỰ GỐC LƯU TRONG ACT
+  (giống hệt nhau vì cùng 1 act, không phải vì có cơ chế random dùng chung seed) — trông như "shuffle
+  không hoạt động" dù thầy đã bật. KHÔNG PHẢI lỗi thiết kế Showdown ("một bàn chung") như nghi ban đầu —
+  `shuffle()` (`core/utils.js`) dùng `Math.random()` trần, mỗi bảng myActivity là 1 tiến trình JS riêng
+  nên tự random độc lập SẴN, chỉ là option bật shuffle chưa từng tới được nơi đọc nó.
+**Vá**: thêm lại đúng dòng `options,` vào object trả về, ngay cạnh `optVer`. MỘT DÒNG, sửa cả 2 lỗi.
+⚠️ Ghi riêng ra đây vì đây là dạng lỗi ĐẶC BIỆT NGUY HIỂM — "Change template" trông vẫn chạy được, act
+mới vẫn chơi được, không throw, không lỗi console; chỉ options bị lặng lẽ bay hết. Bài học: khi sửa 1
+object trả về nhiều field, xoá 1 dòng "tưởng đã dọn" (comment hoá) mà không xác nhận field đó VẪN CÒN
+Ở CHỖ KHÁC là mất trắng, không cách nào tự phát hiện qua test không kiểm tra ĐÚNG field đó.
+
+### 3. Nút loa khi Text mode — thay đổi THIẾT KẾ theo yêu cầu, không phải lỗi
+Trước đây (từ khi có contentMode, ~12/8/2026): Text mode CỐ Ý giữ nút loa nhỏ ("a pupil can still ask
+for the sound"). Thầy đổi ý: Text nghĩa là chỉ có chữ, không muốn thấy nút loa nào cả. Sửa 1 chỗ —
+`voiceView()` trong `core/voice-playback.js`, nhánh `mode === "text"` nay trả `hasVoice:false` (trước là
+`true` kèm `autoPlay:false`). **13/17 template dùng chung hàm này** (grep xác nhận, mỗi nơi đều đúng 1
+khuôn `const hasVoice = vv.hasVoice; if (hasVoice) { dựng nút }` — không nơi nào dùng `hasVoice` cho việc
+gì khác) nên sửa ĐÚNG 1 CHỖ tự bỏ nút ở cả 13 nơi. Anagram (dùng `voiceView` nhưng tự vẽ nút riêng, không
+qua `createVoicePlayer` chung) và AUTO mode giữ nguyên hành vi cũ, không đụng.
+
+### 4. Đã tự test — 2 trang mới trong `scratch/`
+- `scratch/voicebug-test.html`: act `type_the_answer` THẲNG (không qua convert), voice items, contentMode
+  mặc định "voice". Bấm Play → nghe/đo (`window.__fakeVoicePlays` qua `fake-voice-clips.js` giả lập clip
+  luôn "có") → có phát. Options > Text > Apply > Play lại → `fakeVoicePlays` KHÔNG tăng thêm (0 lần phát
+  mới), `.aw-tta-listenbtn` = 0 (trước khi vá là 1). Đổi lại Voice → nút quay lại (1).
+- `scratch/convertbug-test.html`: act `anagram` có `variants:["eng1"]` + `voiceVariants:["eng1"]`, mọi
+  item có `.voices.eng1.voice` + `hideText:true`, `options.contentMode:"voice"` — đúng hình dạng act
+  WORDS thật. Đổi Template → Type the answer → Play: **TRƯỚC KHI VÁ** — `voiceView()` log qua
+  `scratch/spy-voice-playback.js` cho thấy `contentMode: undefined` (đúng dự đoán), `autoPlay:true`.
+  **SAU KHI VÁ** — convert giữ nguyên `contentMode:"voice"` (autoPlay đúng); rồi vào Options chọn Text >
+  Apply > Play lại: `contentMode:"text"`, `hideText:false`, `autoPlay:false`, `listenBtn:0` — cả 3 vấn đề
+  cùng hết trong 1 lượt test. Xáo câu: 3 lần "Start again" liên tiếp cho thứ tự câu đầu tiên khác nhau
+  (`clip_went` → `clip_cold` → `clip_cold`) — xác nhận `shuffle()` đã chạy trở lại (trước khi vá, thứ tự
+  luôn y hệt act gốc vì `shuffleQuestions` bị rơi mất).
+- 0 lỗi console trong mọi bước.
+- ⚠️ Không tái hiện được ĐÚNG y hệt "5 cột myActivity thật + Showdown thật" — bài test trên xác nhận ĐÚNG
+  cơ chế gây lỗi (convertActivity mất options) chứ không phải chạy lại chính xác kịch bản của thầy.
+
+### 5. VIỆC ĐANG CHỜ
+- ⬜⬜ Thầy tự test lại trên myActivity thật: đổi Anagram → Type the answer (hoặc bất kỳ cặp template
+  nào khác) trong Showdown lẫn ngoài Showdown, xác nhận: Text hết tự phát + hết nút loa, Voice vẫn phát +
+  còn nút to; bật Shuffle rồi so các cột — giờ phải ra thứ tự KHÁC NHAU giữa các cột (đúng ý thầy muốn).
+- ⬜ Vì đây là lỗi tầng convert dùng chung cho MỌI act/MỌI template (không riêng Type the answer), nên
+  nếu trước đó (từ commit `00ccb508`, tức từ hôm qua) thầy đã "Change template" bất kỳ act nào khác và
+  Apply Options trên đó, act tạm lúc đó cũng bị mất options tương tự — không ảnh hưởng THƯ VIỆN THẬT
+  (chỉ act tạm `conv_...` không lưu), nhưng nếu thầy nhớ có buổi dạy nào bị tương tự thì đây là lý do.
+- Sau khi thầy xác nhận, commit CHUNG với Đợt 171 (cả hai đều chưa lên git) — hoặc tách riêng nếu thầy
+  muốn track rõ 2 đợt.
+
+---
+
+## Đợt 171 (15/8/2026) — ⭐ VÁ 2 LỖI THẦY BÁO KHI TEST SHOWDOWN: POPUP CO GIÃN RỒI ĐÓNG, VÀ OPTIONS KHÔNG ĐỒNG BỘ myActivity
+Sửa `core/showdown-setup.js` (bug 1) + `core/engine.js` (bug 2). Không đụng file nào khác.
+🟢 ĐÃ TỰ TEST cả 2 qua `scratch/showdown-test.html` — xem mục 3.
+⏳ **CHƯA COMMIT** — chờ thầy tự chơi thử trên myActivity thật (xem VIỆC ĐANG CHỜ) rồi mới chốt.
+
+### 1. Bug "bấm Teams tới 3 thì giãn pop-up, bấm lên 4 thì đóng mất, không bấm được gì nữa"
+`updatePanelWidth(n)` (Đợt 166) retarget `--sd-panel-w` LIVE trên mỗi lần bấm nút Teams ở màn A — mục
+đích ban đầu là bảng khỏi rộng lố với 1-2 team. Nhưng từ 3→4 team, công thức đổi nhánh
+(`sideBySide = teams<=3`) nên bề rộng lý tưởng NHẢY một bước lớn NGAY GIỮA lúc tay thầy còn đang bấm —
+đúng loại lỗi mà chính comment của `.aw-tool-panel.is-sd` trong `app.css` đã cảnh báo từ Đợt 166/167
+("một biến CSS bị ghi liên tục giữa chừng có thể kẹt cứng"). Không đuổi tiếp gốc rễ chính xác vì
+đằng nào cũng không cần: thầy tự nói đúng hướng sửa — "cố định pop-up, không co giãn nữa".
+**Sửa**: bỏ hẳn việc bám theo SỐ TEAM hiện tại — `updatePanelWidth()` giờ tính MỘT bề rộng DUY NHẤT,
+theo trường hợp NẶNG NHẤT (5 team, layout "is-top"), chỉ còn co theo khung app (myActivity) như cũ.
+Tính lại: `ideal` ở 5 team = 1080, là số LỚN NHẤT trong mọi mức 1-5 team (kế đó là 1032 ở 3 team) —
+nên dùng cố định 1080 (hoặc hẹp hơn nếu khung app hẹp) vẫn đủ chỗ cho MỌI số team, không tái phạm cái
+bẫy "quá hẹp" mà chính hàm này từng vá (comment cũ dòng ~433-443 vẫn giữ nguyên trong file, vẫn đúng).
+Trở lại đúng luật gốc Đợt 157/159 "size các bảng đều to bằng nhau" — cái mà Đợt 166 đã âm thầm phá vì
+lý do thẩm mỹ (bảng rộng lố với 1-2 team). Không mất gì: `.aw-sd-col { max-width:200px }` đã lo phần
+"cột quá rộng" đó rồi, đây là NGUYÊN NHÂN Đợt 166 nêu ra để cần co bảng theo team, nhưng comment dòng
+440-441 xác nhận `max-width` mới là thứ thực sự trả lời khiếu nại đó — bảng rộng dư chỉ là khoảng trống,
+không phải chữ bị kéo dài.
+Bỏ luôn lời gọi `updatePanelWidth(n)` ở 3 chỗ khác (stepper's onChange, `renderBuild`, `boot()`) — vì
+giờ chỉ cần gọi ĐÚNG MỘT LẦN lúc panel mở.
+
+### 2. Bug "đổi Options (đặc biệt Text/Voice) ở 1 bảng myActivity lúc đang Showdown không lan sang bảng khác — lúc được lúc không"
+Hỏi lại thầy 3 câu để khoanh vùng trước khi sửa (không có myActivity+Firestore thật để tự tái hiện):
+- Lives/Timer/... (option "nhẹ") vẫn lan sang bảng khác BÌNH THƯỜNG lúc đang Showdown.
+- Ngoài Showdown (chơi đơn nhiều cột), Options vẫn đồng bộ ổn định.
+- Riêng Text/Voice: kiểm lại thấy CÓ lan, nhưng "lúc được lúc không" — không ổn định.
+→ Đúng chữ ký của race condition, không phải mất tính năng: Text/Voice là thao tác NẶNG NHẤT trong mọi
+loại Options (đổi `contentMode` kéo theo tải lại giọng đọc qua `prepareBeforePlay()`/`preloadVoiceClips`),
+trong khi Lives/Timer chạy xong ngay tức khắc.
+**Gốc rễ tìm thấy**: cầu nối `window.__awordBridge` (`core/engine.js`, dòng ~284-360) vốn đã có cơ chế
+xếp hàng `inFlight` — nhưng CHỈ `switchTemplate` mới TỰ trở thành `inFlight` để lệnh khác phải chờ;
+`applyOptions`/`setTheme` chỉ biết CHỜ một `switchTemplate` đang chạy, chứ bản thân chúng không chặn
+lẫn nhau. Đây là đúng lỗi mà comment "v0.9.6x fix" ngay phía trên đã từng vá cho `switchTemplate`
+("brand-new object mỗi lần startGame(), Options đến giữa lúc convert đang chạy thì rơi mất") — nhưng
+chưa bao giờ mở rộng ra cho `applyOptions`. Khi 2 lệnh đồng bộ chạm gần nhau trên CÙNG một bảng nhận
+(dễ xảy ra hơn khi Showdown vì mỗi bảng còn có luồng Firestore/claim riêng chạy song song), lệnh sau có
+thể bắt đầu `cleanupAll()+startGame()` NGAY GIỮA lúc lệnh trước còn đang chạy dở — thắng/thua tuỳ nhịp,
+đúng "lúc được lúc không".
+**Sửa**: gộp cả 3 hàm (`switchTemplate`/`applyOptions`/`setTheme`) vào CHUNG một hàng đợi `queued()` —
+hàm nào gọi cũng phải xếp sau hàm đang chạy VÀ tự trở thành hàng chờ cho hàm kế tiếp. Test trực tiếp
+bằng cách bắn 3 lệnh chồng nhau (2 applyOptions xen 1 setTheme) cùng lúc qua `window.__awordBridge` —
+tất cả resolve ĐÚNG THỨ TỰ đã gọi, trạng thái cuối đúng với lệnh SAU CÙNG, 0 lỗi console (xem mục 3).
+
+### 3. Đã tự test — `scratch/showdown-test.html`
+- **Bug 1**: dựng lớp 20 học sinh (C3E), bấm Teams 2→3→4→5 qua nút Increase thật (không giả lập), đo
+  `getComputedStyle(panel).width` sau MỖI lần bấm — đứng yên 968px suốt (968 = 1080 kẹp theo khung
+  1280px của viewport test), popup KHÔNG đóng, mọi nút vẫn bấm được, kể cả bấm Next sang màn xếp đội
+  (layout tự đổi đúng "is-top" cho 5 team, panel vẫn 968px). 0 lỗi console.
+- **Bug 2**: gọi thẳng `window.__awordBridge.applyOptions({lives:2})`,
+  `window.__awordBridge.setTheme('dark')`, `applyOptions({lives:5})` gần như đồng thời (Promise.all
+  không đợi tuần tự) — trước khi sửa đây chính là kịch bản có thể chồng lệnh; sau khi sửa cả 3 resolve
+  đúng thứ tự gọi (`opt1→theme→opt2`), state cuối đúng `lives:5, theme:dark` (giá trị SAU CÙNG thắng,
+  không cái nào bị đè nhầm giữa chừng). 0 lỗi console.
+- ⚠️ Không có môi trường myActivity + Firestore thật ở đây nên KHÔNG tái hiện được đúng y hệt cảnh "2-5
+  cột thật + Showdown thật" — bài test trên mô phỏng đúng cơ chế gây lỗi (bắn nhiều lệnh bridge chồng
+  nhau) chứ không phải chạy lại đúng kịch bản của thầy.
+
+### 4. VIỆC ĐANG CHỜ
+- ⬜⬜ **Thầy tự test lại trên myActivity thật** (2-5 cột, bật Showdown, đổi Text/Voice ở 1 bảng nhiều
+  lần liên tiếp) — xác nhận hết "lúc được lúc không". Nếu còn, báo lại CÓ hiện dấu ✓ đồng bộ ở bảng
+  khác hay không (dấu ✓ hiện mà nội dung vẫn sai thì lỗi nằm ở chỗ khác, không phải race vừa vá).
+- ⬜ Thầy tự nhìn Teams stepper trên myActivity thật (không chỉ trình duyệt test) — bấm nhanh liên tục
+  1→5→1 xem có mượt không (giờ không còn animation resize nữa, chỉ còn animation trượt màn A→B của
+  `goto()`, thay đổi cảm giác so với trước — cần thầy xác nhận vẫn ổn, không hụt hẫng).
+- Sau khi thầy xác nhận cả 2, mới commit + push.
+
+---
+
 ## Đợt 170 (15/8/2026) — ⭐⭐ MỞ FIGHT + SHOWDOWN CHO "TYPE THE ANSWER" (template thứ 3, sau Anagram/Quiz)
 KHÔNG sửa core — chỉ `templates/type-the-answer/type-the-answer.js` +
 `templates/type-the-answer/type-the-answer.css` (thêm class `.is-fightlost`). Không đụng

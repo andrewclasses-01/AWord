@@ -255,6 +255,24 @@ export async function convertActivity(activity, targetType) {
     // hơn vì `libAct`/`activity` được TÁI DÙNG qua các lần restart nên chỉ
     // dính đúng 1 lần rồi tự đóng dấu — nhưng lần đầu đó vẫn sai.
     optVer: OPT_VER,
+    // ⛔⛔ Đợt 172 (15/8/2026) — LỖI THẬT: dòng `options,` này bị XOÁ MẤT khi
+    // Đợt 169 chèn khối comment + `optVer` phía trên (thấy rõ qua
+    // `git show 00ccb508` — diff đổi đúng dòng `options,` thành comment, không
+    // dòng nào thêm nó trở lại). Từ đó MỌI lần "Change template" trả về một act
+    // KHÔNG CÓ `options` — toàn bộ những gì tính ở khối phía trên (kể cả dòng
+    // 227-235 "CONTENT MODE follows the WORDS across the switch" mà chính
+    // comment đó mô tả) bị tính xong rồi vứt đi. Hậu quả đo được: act nguồn có
+    // `variants` (act WORDS thật) đang ở Voice, đổi sang Type the answer rồi
+    // chọn lại Text trong Options — vẫn tự phát giọng, vì act mới không có
+    // `options.contentMode` nào cả nên rơi vào nhánh AUTO của voiceView(), mà
+    // AUTO lại đọc `item.hideText` — và `resolveItem()` (content-view.js) LUÔN
+    // đóng dấu `hideText:false` cho mọi act có variants (đúng thiết kế, vì act
+    // dạng đó phải đọc mode qua contentMode, không qua cờ từng item) — nên AUTO
+    // vẫn hiện chữ (trông như đúng) nhưng vẫn tự đọc (autoPlay:true trong nhánh
+    // AUTO, không điều kiện gì). Bắt được bằng cách log trực tiếp
+    // `convertActivity(...)`'s trả về trong `scratch/` — `.options` là
+    // `undefined`. Vá bằng cách trả `options` lại, giữ nguyên `optVer` bên cạnh.
+    options,
     content,
     _converted: true   // cờ đánh dấu act tạm (không lưu, không có trên thư viện)
   };

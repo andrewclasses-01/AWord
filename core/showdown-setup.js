@@ -403,17 +403,13 @@ export function buildShowdownPanel(panel, ctx) {
   // hết cỡ bằng khung app để không phải scroll ngang"). A stated 860 was wider
   // than the frame on the teacher's own screen, which is exactly where the
   // sideways scrollbar came from.
-  // ⭐ Đợt 166 — but "at most", not "always exactly": with 1-2 teams a wide frame
-  // used to stretch the panel to its full width anyway, and a column that is one
-  // flex share of that is a name in a very long, mostly-empty rectangle
-  // (teacher, 15/8/2026: "bảng rộng phần ngang quá nên ô tên rất dài gây mất
-  // thẩm mỹ"). `updatePanelWidth(n)` now targets a comfortable width FOR `n`
-  // teams (n × the column's own max-width, see `.aw-sd-col` in app.css, plus
-  // gaps and the panel's own padding) and only falls back to the frame's own
-  // width when that would be narrower — which is exactly the myActivity
-  // multi-column case this file's other Đợt 166 change (fitBuildScreen) exists
-  // for. Never below `SD_PANEL_MIN`: screen A's class/Teams row needs that much
-  // regardless of team count.
+  // ⭐ Đợt 166, ⛔ reverted Đợt 171 — briefly targeted a width for the CURRENT
+  // team count (n × the column's own max-width, plus gaps/padding), retargeted
+  // live on every Teams-stepper tap. That let 3→4 visibly resize the popover
+  // mid-tap and, on the teacher's run, leave it looking closed and
+  // unresponsive — see `updatePanelWidth`'s own comment below. It is now ONE
+  // width, sized for MAX_TEAMS and never touched again after boot. Never below
+  // `SD_PANEL_MIN`: screen A's class/Teams row needs that much regardless.
   // ⚠️ Measured from `.aw-below` in the DOCUMENT, not from the panel: during a
   // cold open the panel has not been appended yet (core/engine.js builds its
   // contents first), so `panel.closest(...)` would be null. Showdown never runs
@@ -427,30 +423,27 @@ export function buildShowdownPanel(panel, ctx) {
   const frame = document.querySelector(".aw-below");
   const frameW = frame?.clientWidth || 0;
   const panelEl = panel.closest(".aw-tool-panel") || panel;
-  function updatePanelWidth(n) {
+  // ⛔ Đợt 171 — NO LONGER LIVE PER TEAM COUNT. Đợt 166 retargeted this to the
+  // CURRENT team count on every stepper tap ("kích thước pop-up linh hoạt ...
+  // theo số team được chọn"), but that is what let 3→4 visibly resize the
+  // popover mid-tap and, on the teacher's own run, leave it looking closed and
+  // unresponsive (teacher, 15/8/2026: "bấm đến số 3 thì nó giãn pop-up ra, bấm
+  // + cho ra số 4 thì đóng mất pop-up ko làm được gì nữa"). That is exactly the
+  // class of bug `.aw-tool-panel.is-sd`'s own comment in app.css already warns
+  // about (a `--sd-panel-w` write mid-interaction "getting stuck"), and the
+  // fix is the same one applied there and to `--sd-body-h` at Đợt 167: stop
+  // writing the variable on every intermediate step.
+  // The teacher's own original rule — "size các bảng đều to bằng nhau, dù nội
+  // dung có ít hơn" (Đợt 157, see `.aw-tool-panel.is-sd`'s block comment) — is
+  // restored: ONE width, sized for the WORST case (MAX_TEAMS, which is also
+  // the numeric maximum of `ideal` across every team count — 1080 vs 1032 at 3
+  // teams, the next highest), capped only by the app frame. `.aw-sd-col`'s own
+  // `max-width:200px` already stops a 1-2 team table from stretching its
+  // columns too wide, so nothing is lost by never shrinking for a smaller
+  // count — only the resize-while-choosing bug is.
+  function updatePanelWidth() {
     if (!frameW) return;
-    const teams = Math.max(1, Math.min(MAX_TEAMS, Math.round(n) || 1));
-    // ⚠️ At ≤3 teams renderBuild lands on the is-side layout, whose pool is a
-    // FIXED 360px 2-column grid (app.css, sized for the longest test name —
-    // not something this function may shrink without reopening that math).
-    // Measured the bug omitting this caused: capping the panel to just the
-    // COLUMNS' own width (for 2 teams, ~460px) left only ~48px total for both
-    // columns once the pool's fixed 360 + its 12px gap came out of it — a
-    // "too narrow" bug exactly as bad as the "too wide" one this function
-    // exists to fix. `.aw-sd-col`'s own `max-width:200px` (app.css) is what
-    // actually answers the teacher's "column too wide" complaint at 1-2 teams
-    // — the panel here just needs to be wide enough that both the pool and
-    // MAX_TEAMS×200px-capped columns have room, not narrower than that.
-    const sideBySide = teams <= 3;
-    const poolReserve = sideBySide ? SD_SIDE_POOL_W + SD_SIDE_GAP : 0;
-    const ideal = SD_PANEL_PAD + poolReserve + teams * SD_COL_MAXW + (teams - 1) * SD_COL_GAP;
-    // ⚠️ ORDER MATTERS: the floor (SD_PANEL_MIN) applies to `ideal` FIRST, and
-    // the frame is the LAST word — never the other way round. Measured the bug
-    // this fixes: `max(MIN, min(frameW, ideal))` still forced the panel past a
-    // narrow myActivity column's own width (a 308px column came out 460px
-    // wide), because the floor was allowed to override the one constraint that
-    // must never lose — there is no "at least this wide" that beats "the
-    // column is only this many pixels".
+    const ideal = SD_PANEL_PAD + MAX_TEAMS * SD_COL_MAXW + (MAX_TEAMS - 1) * SD_COL_GAP;
     const w = Math.min(frameW, Math.max(SD_PANEL_MIN, ideal));
     panelEl.style.setProperty("--sd-panel-w", Math.round(w) + "px");
   }
@@ -483,7 +476,7 @@ export function buildShowdownPanel(panel, ctx) {
   let claimedTeam = null;   // which team THIS browser will play
   let pool = [];            // pupils not yet in a team (screen B)
   let unsub = null;
-  updatePanelWidth(teamCount);   // the opening default; boot()/the stepper refine it
+  updatePanelWidth();   // the one and only width — fixed at boot, see the function's own note
 
   // ⚠️ The teacher can dismiss this popover by tapping anywhere outside it, and
   // that path runs entirely inside core/engine.js — nothing calls back here. A
@@ -665,10 +658,10 @@ export function buildShowdownPanel(panel, ctx) {
     const cCount = el("div", "aw-sd-field is-narrow");
     cCount.append(el("div", "aw-sd-flab", "Teams"));
     const stepper = makeHStepper(teamCount, MIN_TEAMS, MAX_TEAMS,
-      // Đợt 166 — the panel's own width now tracks the stepper live (teacher:
-      // "kích thước pop-up linh hoạt ... theo số team được chọn"), which is
-      // also a preview of the width renderBuild will actually use on NEXT.
-      v => { teamCount = v; sfx.tap(); updatePanelWidth(v); paintFoot(); }, { format: v => String(v) });
+      // ⛔ Đợt 166's live `updatePanelWidth(v)` call here is gone (Đợt 171) —
+      // it was the resize-while-tapping bug itself; the panel's width is fixed
+      // once at boot now and this handler only ever touches `teamCount`.
+      v => { teamCount = v; sfx.tap(); paintFoot(); }, { format: v => String(v) });
     stepper.el.classList.add("is-big");
     cCount.append(stepper.el);
 
@@ -818,7 +811,9 @@ export function buildShowdownPanel(panel, ctx) {
     const n = setup.teams.length || MIN_TEAMS;
     const sideBySide = n <= 3;
     host.classList.add("aw-sd-build", sideBySide ? "is-side" : "is-top");
-    updatePanelWidth(n);
+    // ⛔ Đợt 171 — no more `updatePanelWidth(n)` here: the panel's width is set
+    // once at boot and fixed (see that function's own note) so entering this
+    // screen never resizes it.
     // Each layout's COMFORTABLE height — measured, see app.css — is now a
     // ceiling, not a fixed value: fitBuildScreen() below clamps it to whatever
     // room is actually real (Đợt 166) before shrinking anything else.
@@ -1391,11 +1386,9 @@ export function buildShowdownPanel(panel, ctx) {
       selectedTeam = null;
       goto(renderBuild, +1);
     } else {
-      // renderBuild computes its own width from setup.teams.length when it
-      // runs, but landing back on renderSetup (solo, or Reset) needs it here:
-      // `teamCount` may just have changed above (loaded table / solo pick)
-      // and the width set at this function's top is for the OPENING default.
-      updatePanelWidth(teamCount);
+      // ⛔ Đợt 171 — no `updatePanelWidth(teamCount)` here any more: the width
+      // is fixed once at this function's top and no longer depends on team
+      // count, so landing back on renderSetup (solo, or Reset) needs nothing.
       repaint();
     }
 

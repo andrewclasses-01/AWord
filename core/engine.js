@@ -305,23 +305,35 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // change actually applied (used to show a per-pane sync checkmark).
   if (!window.__awordBridge) {
     let current = null;   // delegate of the live mount: {getState,switchTemplate,applyOptions,setTheme}
-    let inFlight = null;  // Promise of an in-flight switchTemplate — others await it first
+    // ⭐ Đợt 171 — ALL THREE mutators share this ONE queue now, not just
+    // switchTemplate. Originally (v0.9.6x fix, see the long note above)
+    // `applyOptions`/`setTheme` only ever WAITED for an in-flight
+    // switchTemplate; neither became `inFlight` itself, so two of THEM
+    // arriving close together had no mutual exclusion at all. That was a
+    // narrow bet — Options/Theme used to be effectively synchronous — but a
+    // Text/Voice content-mode change is exactly as heavy as a template switch
+    // (replayCurrent() re-enters startGame(), which kicks off real voice-clip
+    // preloading; see prepareBeforePlay() below), and two panes' worth of
+    // Showdown/myActivity relayed OPT calls landing on the SAME pane close
+    // together could overlap: the second's cleanupAll()+startGame() would
+    // start tearing the DOM down while the first's async continuations were
+    // still running against it. Teacher, 15/8/2026, after re-testing found it
+    // "lúc được lúc không" (sometimes syncs, sometimes doesn't) for Text/Voice
+    // specifically while Lives/Timer-style options — cheap, no async tail —
+    // synced every time: exactly the signature of a race, not a hole in the
+    // sync itself. Every mutator now both AWAITS and BECOMES `inFlight`, so
+    // whichever call is running has the seat to itself.
+    let inFlight = null;
+    function queued(run) {
+      const p = (inFlight ? inFlight.catch(() => {}) : Promise.resolve()).then(run);
+      inFlight = p;
+      return p.finally(() => { if (inFlight === p) inFlight = null; });
+    }
     window.__awordBridge = {
       getState: () => (current ? current.getState() : null),
-      async switchTemplate(type) {
-        if (!current) return false;
-        const p = Promise.resolve().then(() => current.switchTemplate(type));
-        inFlight = p;
-        try { return await p; } finally { if (inFlight === p) inFlight = null; }
-      },
-      async applyOptions(opts) {
-        if (inFlight) await inFlight.catch(() => {});
-        return current ? current.applyOptions(opts) : false;
-      },
-      async setTheme(id) {
-        if (inFlight) await inFlight.catch(() => {});
-        return current ? current.setTheme(id) : false;
-      },
+      switchTemplate: (type) => queued(() => current ? current.switchTemplate(type) : false),
+      applyOptions: (opts) => queued(() => current ? current.applyOptions(opts) : false),
+      setTheme: (id) => queued(() => current ? current.setTheme(id) : false),
       _setCurrent(delegate) { current = delegate; },
     };
   }
