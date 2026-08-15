@@ -1471,8 +1471,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       incoming.classList.add("is-in");   // the outgoing layer never fades — see .aw-swap-out
       box.style.height = r1.height + "px"; box.style.width = r1.width + "px";
       incoming.style.minHeight = Math.max(0, r1.height - padV) + "px";
-      setTimeout(() => {
-        if (mine !== swapToken) return;
+      // ⭐ Đợt 159 (teacher, 15/8/2026: "gần cuối animation xuất hiện vài frame
+      // không được mượt" — both switching tool-to-tool AND inside the Mode
+      // picker) — WAIT FOR THE BOX'S OWN TRANSITION TO REALLY FINISH, don't
+      // guess its duration. The old code cleaned up on a flat `setTimeout(SWAP_MS
+      // + 40)`, betting the .26s height/width transition (app.css's
+      // `.aw-swapbox`) always settles within 300ms of real time. Animating
+      // height/width forces a full layout recalculation on every single frame
+      // (unlike a transform/opacity fade, which the compositor can run on its
+      // own) — so any main-thread contention right then (building the incoming
+      // panel's markup, the game's own timer/sound ticking underneath the dim)
+      // could make the real transition run past the guess. When it did, this
+      // cleanup fired MID-transition, clearing the animated height/width and
+      // deleting the class that drives it — an in-flight CSS transition
+      // cancelled that way jumps straight to its end value with no further
+      // easing, which reads as a rough snap in exactly the animation's last
+      // frames. `transitionend` on the box (height and width share the same
+      // duration and start together, so the first to land is enough) removes
+      // that guess. The timeout stays as a fallback ONLY, mirroring
+      // closeToolPanel()'s same guard: a hidden/backgrounded tab can stall
+      // transition events entirely, and the box must not stay pinned forever.
+      let fallback = null;
+      const onEnd = ev => { if (ev.target === box) finish(); };
+      const finish = () => {
+        box.removeEventListener("transitionend", onEnd);
+        clearTimeout(fallback);
+        if (mine !== swapToken) return;   // a newer swap already took over the box
         outgoing.remove();
         // unwrap: the box's children become the real content again, so nothing
         // downstream ever sees the temporary layer
@@ -1481,7 +1505,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         box.style.height = ""; box.style.width = "";
         box.classList.remove("aw-swapbox");
         done?.();
-      }, SWAP_MS + 40);
+      };
+      box.addEventListener("transitionend", onEnd);
+      fallback = setTimeout(finish, SWAP_MS + 120);
     }, 20);
   }
 
@@ -1508,23 +1534,67 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     buildContent(host || toolPanelEl);
   }
 
+  // ⭐⭐ Đợt 162 (teacher, 15/8/2026: tested Đợt 161 live, still choppy in the
+  // final frames — asked for a different shape entirely) — TWO BEATS instead
+  // of one box morphing its own height/width. Beat 1 fades+shrinks the OLD
+  // panel away; once that is genuinely done, beat 2 drops it and builds the
+  // NEW panel fresh (which gets the ordinary `aw-pop-cx` entrance for free —
+  // the same rise-and-scale-in every fresh-opened popover already plays).
+  // Đợt 148-153 chased the single-box morph through many rounds (pin the
+  // outgoing snapshot's width, pin the incoming layer's width, cover it with
+  // an opaque layer, wait for the real transitionend instead of a guessed
+  // timeout…) because animating a box's actual `height`/`width` forces the
+  // browser to redo LAYOUT on every frame — the one CSS property pairing a
+  // GPU compositor can't run on its own. Two fades of `opacity`/`transform`
+  // are exactly what the compositor CAN run independently of the main
+  // thread, so this sidesteps the whole class of jank rather than tuning it
+  // further. `toolDim` (the screen-dimming backdrop) is deliberately touched
+  // by NEITHER beat — removing/re-adding it is what the very first version of
+  // this popover (Đợt 148, before the morph existed) did, and it was the dim
+  // flickering off and back on that read as a flash; staying up the whole
+  // two-beat ride keeps the game underneath dark throughout, exactly as the
+  // teacher asked when requesting this shape.
+  // `btn` is omitted by switchToolPanel() (Đợt 158's mode-picker navigation):
+  // that call is switching CONTENT under the SAME already-lit Mode button,
+  // not switching WHICH button is lit, so activeToolBtn is left alone.
+  function twoBeatPanelSwap(buildContent, btn) {
+    const mine = ++swapToken;
+    const oldPanel = toolPanelEl;
+    panelCompactObs?.disconnect(); panelCompactObs = null;
+    const openNew = () => {
+      if (mine !== swapToken) return;   // a newer switch already took over
+      oldPanel?.remove();
+      toolPanelEl = el("div", "aw-tool-panel");
+      mountPanelContent(buildContent);
+      belowCenter.append(toolPanelEl);
+      capPanelHeight(buildContent);
+      if (btn) {
+        activeToolBtn?.classList.remove("is-active");
+        btn.classList.add("is-active");
+        activeToolBtn = btn;
+      }
+    };
+    if (!oldPanel) { openNew(); return; }   // nothing was open — straight to beat 2
+    // Mirrors closeToolPanel()'s own exit fade (same keyframes, same
+    // centering-safe `translateX(-50%)` on every stop) — WAAPI, not the CSS
+    // `aw-pop-cx` class, for the same reason closeToolPanel uses WAAPI: it
+    // needs a real finish signal to chain beat 2 off of.
+    const fadeOpts = { duration: 150, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" };
+    const exit = oldPanel.animate(
+      [{ opacity: 1, transform: "translateX(-50%) translateY(0) scale(1)" },
+       { opacity: 0, transform: "translateX(-50%) translateY(6px) scale(.94)" }],
+      fadeOpts
+    );
+    let started = false;
+    const startBeat2 = () => { if (started) return; started = true; openNew(); };
+    exit.onfinish = startBeat2;
+    setTimeout(startBeat2, 150 + 60);   // fallback — a hidden/backgrounded tab can stall the finish event
+  }
+
   function openToolPanel(btn, buildContent) {
     if (activeToolBtn === btn) { closeToolPanel(true); return; }   // clicking the open one again closes it
     sound.click();
-    // ⭐ Đợt 148 (teacher: "khi bấm từ options sang templates bị 1 nhịp nháy do
-    // options đóng và templates mở nhanh gây ra") — with a panel already open,
-    // REUSE the box and morph it. Dropping it and building another is what made
-    // the whole panel blink out and back in.
-    if (toolPanelEl && activeToolBtn) {
-      activeToolBtn.classList.remove("is-active");
-      activeToolBtn = btn;
-      btn.classList.add("is-active");
-      const panel = toolPanelEl;
-      swapContents(panel, host => mountPanelContent(buildContent, host), () => {
-        if (toolPanelEl === panel) capPanelHeight(buildContent);
-      });
-      return;
-    }
+    if (toolPanelEl && activeToolBtn) { twoBeatPanelSwap(buildContent, btn); return; }
     closeToolPanel(false);
     toolDim = el("div", "aw-tool-dim");
     toolDim.onclick = () => closeToolPanel(true);
@@ -1538,20 +1608,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
   }
 
-  // ⭐ Đợt 158 — swap the OPEN panel to DIFFERENT CONTENT without changing which
+  // Đợt 158 — swap the OPEN panel to DIFFERENT CONTENT without changing which
   // button is active. `openToolPanel` cannot do this: called with the button that
   // is already active it CLOSES the panel, because that is the "tap the open
   // button again" gesture. The mode picker needs it, since one button now leads
   // to three different screens (picker → confirm → back to picker, or picker →
-  // the Showdown table). Reuses the same dissolve as tool-to-tool switching, so
-  // the box travels between the picker's size and the next screen's instead of
-  // blinking out and back in.
+  // the Showdown table). Đợt 162 — now the same two-beat swap as tool-to-tool
+  // switching, for the same reason (see twoBeatPanelSwap above).
   function switchToolPanel(buildContent) {
-    const panel = toolPanelEl;
-    if (!panel) return;   // teacher dismissed the popover mid-tap
-    swapContents(panel, host => mountPanelContent(buildContent, host), () => {
-      if (toolPanelEl === panel) capPanelHeight(buildContent);
-    });
+    if (!toolPanelEl) return;   // teacher dismissed the popover mid-tap
+    twoBeatPanelSwap(buildContent);
   }
 
   function capPanelHeight(buildContent) {

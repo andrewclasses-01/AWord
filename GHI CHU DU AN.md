@@ -8,6 +8,76 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 162 (15/8/2026) — ĐỔI HẲN CÁCH CHUYỂN POP-UP SANG "2 NHỊP" (thầy chốt sau khi test Đợt 161 vẫn giật)
+⭐ CÓ SỬA CORE (`engine.js`: `openToolPanel` + `switchToolPanel`, thêm hàm mới `twoBeatPanelSwap`,
+KHÔNG đụng `swapContents` — hàm đó vẫn phục vụ swap nội dung nhỏ hơn trong Options, xem Đợt 148/mục
+"picking another clue set / half"). ✅ **THẦY TỰ TEST TRÊN TRÌNH DUYỆT THẬT (15/8/2026): "Đã test, hết
+giật rồi" → DUYỆT → COMMIT + PUSH.**
+
+### 1. Thầy test Đợt 161 (15/8/2026) — chưa hết
+"Vẫn không có gì thay đổi." Thầy đề xuất luôn cách khác: chia làm 2 NHỊP khi bấm nút mới — nhịp 1 ẩn
+pop-up cũ, nhịp 2 mới hiện pop-up mới — thay vì để pop-up cũ "biến hình" thẳng thành pop-up mới như hiện
+tại. Điều kiện: giữ nguyên lớp làm tối màn hình (dim) suốt 2 nhịp để không bị nhấp nháy nền game phía
+sau.
+
+### 2. Vì sao đổi hẳn cách làm, không vá thêm Đợt 148-161
+Suốt từ Đợt 148, cả khung pop-up TỰ NÓ co giãn (animate đúng chiều cao/chiều rộng thật) trong lúc đổi
+nội dung — đây là kiểu animation NẶNG nhất cho trình duyệt: mỗi khung hình phải tính lại toàn bộ bố cục
+trang, không giao được cho phần cứng đồ họa (GPU) tự chạy như hiệu ứng mờ dần/phóng to thu nhỏ thông
+thường. Đợt 161 mới chỉ sửa CHỖ DỌN DẸP (chờ animation thật xong thay vì đoán giờ) — không sửa được cái
+animation TỰ NÓ vẫn nặng và dễ rớt khung hình. Theo đúng hướng thầy chỉ, giờ đổi hẳn: pop-up cũ mờ dần +
+thu nhỏ lại (150ms) rồi biến mất hẳn, xong mới DỰNG MỘT POP-UP MỚI HOÀN TOÀN và cho nó hiện lên bằng
+đúng hiệu ứng "mở lần đầu" sẵn có (mờ dần + phóng to nhẹ, ~220ms) — cả hai đều chỉ là hiệu ứng mờ/phóng
+to, phần nhẹ nhất cho trình duyệt, không còn animate chiều cao/chiều rộng thật nữa. Lớp làm tối màn hình
+(dim) đứng yên suốt từ đầu tới cuối, không bị gỡ ra rồi gắn lại — nền game không nhấp nháy.
+
+Áp dụng ở CẢ 2 chỗ thầy báo: bấm thẳng giữa Options/Template/Style/Mode (`openToolPanel`), VÀ chọn icon
+bên trong pop-up Mode để chuyển màn hình con (`switchToolPanel`) — cả hai giờ dùng chung 1 hàm mới
+`twoBeatPanelSwap`.
+
+### 3. 🟡 Đã tự test được gì
+Chạy `templates/quiz/test.html`, bấm nối tiếp qua lại cả 4 pop-up nhiều lần và đo bằng script: pop-up cũ
+luôn biến mất đúng lúc, pop-up mới luôn dựng đúng nội dung/kích thước, 0 lỗi console, không kẹt. **Vẫn
+hạn chế y như Đợt 161**: phiên trình duyệt tự động ở đây không hiển thị hình lên màn hình thật được
+(`document.hidden = true`) nên không tự xem/quay được animation có thật sự mượt hay không — cần thầy tự
+mắt xem trên máy thật.
+
+---
+
+## Đợt 161 (15/8/2026) — FIX GIẬT VÀI FRAME CUỐI KHI CHUYỂN POP-UP OPTIONS/TEMPLATE/STYLE/MODE (chưa hết, xem Đợt 162)
+⭐ CÓ SỬA CORE (`engine.js`, 1 hàm `swapContents`). 🟡 ĐÃ TỰ TEST MỘT PHẦN (xem mục 3 — không chụp/quay
+được animation thật trong phiên tự động, xem hạn chế bên dưới). ❌ **THẦY TEST 15/8/2026: "vẫn không có
+gì thay đổi"** — chưa đủ, xem Đợt 162 ngay trên cho hướng sửa tiếp theo.
+
+### 1. Thầy báo (15/8/2026)
+Khi đang mở 1 pop-up (Options/Template/Style/Mode) mà bấm thẳng sang nút khác, animation "biến hình"
+của khung bị giật vài khung hình ở GẦN CUỐI — không mượt tới cùng. Xảy ra cả khi đang ở pop-up Mode,
+chọn 1 icon mode bên trong để chuyển màn hình con.
+
+### 2. Nguyên nhân tìm được (đọc code, không phải đoán)
+`swapContents()` cho khung co/giãn bằng CSS trong đúng 0.26 giây, nhưng phần dọn dẹp sau đó lại dùng
+`setTimeout(fn, SWAP_MS + 40)` — tức là **ĐOÁN** animation xong sau 300ms, không CHỜ XÁC NHẬN THẬT. Nếu
+lúc đó máy đang bận việc khác cùng lúc (dựng nội dung pop-up mới, đồng hồ đếm giờ của game, âm thanh…),
+animation thật có thể chạy chậm hơn — code vẫn cứ dọn dẹp đúng giờ đã đoán, cắt ngang animation đang
+chạy dở và khung NHẢY thẳng về kích thước cuối thay vì trượt êm tới đó. Đây chính là "vài frame cuối
+không mượt". Ảnh hưởng CẢ 4 nút (dùng chung 1 hàm) và cả bên trong Mode (dùng lại đúng hàm này qua
+`switchToolPanel`).
+
+### 3. Sửa: chờ animation THẬT xong, không đoán nữa
+Thay `setTimeout` đoán giờ bằng lắng nghe sự kiện `transitionend` thật của khung (đúng kỹ thuật mà hàm
+đóng pop-up `closeToolPanel` ngay trong file này đã dùng) — dọn dẹp chỉ chạy SAU KHI trình duyệt xác
+nhận animation co/giãn đã thật sự xong. Vẫn giữ một `setTimeout` dự phòng (300 + 120 = 420ms) làm lưới
+an toàn, phòng trường hợp tab bị ẩn/chuyển nền khiến sự kiện animation không bao giờ bắn ra (y hệt lý do
+`closeToolPanel` cũng có lưới an toàn tương tự).
+
+🟡 **Hạn chế đã tự test được:** chạy `templates/quiz/test.html`, bấm chuyển qua lại cả 4 pop-up nhiều
+lần (Options→Template→Style→Mode→Options→Style→Template) — mọi lần khung đều dừng ĐÚNG kích thước cuối
+cùng, 0 lỗi console, không bị kẹt/treo. NHƯNG phiên trình duyệt tự động ở đây không hiển thị hình lên
+màn hình thật được (`document.hidden = true`) nên **không tự quay/chụp được animation có thật sự mượt
+hơn hay không** — cần thầy tự bấm thử trên trình duyệt thật (máy thầy) để xác nhận hết giật.
+
+---
+
 ## Đợt 160 (15/8/2026) — ⭐ ĐỢT C: BỘ OPTIONS HOMEWORK KHI GIAO BÀI
 ⭐ CÓ SỬA CORE (`settings.js` · `assignments.js` · `assignment-ui.js` · `app.css`) + 1 dòng ở `main.js`
 (mục Settings). 🟢 ĐÃ TỰ TEST qua trình duyệt local (xem mục 4 — đăng nhập Google không chạy được ở
