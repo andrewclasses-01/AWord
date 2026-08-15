@@ -8,6 +8,106 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 165 (15/8/2026) — ⭐ EDIT SỬA ĐƯỢC CẢ 4 BỘ ENG1/ENG2/VI1/VI2 (TAB TRƯỢT) + DỌN CHUẨN EDIT TOÀN APP
+⭐ CÓ SỬA CORE (`core/voice-batch.js`: bỏ dòng tự đặt `hideText = true` khi tạo giọng hàng loạt — dùng
+chung cho cả Anagram editor lẫn panel nhập Excel) + **16 file editor template** (bỏ hộp Tip) +
+`templates/anagram/anagram-editor.js` + `templates/anagram/anagram.css` (viết lại phần lớn).
+🟢 ĐÃ TỰ TEST qua `scratch/test-anagram-editor.html` (bench mới, xem mục 4).
+✅ **THẦY DUYỆT (15/8/2026) → COMMIT `52fbed5` + PUSH + LIVE.**
+📌 Đã đối chiếu 7 file LIVE tại `aword.andrewclasses.com` (`core/voice-batch.js`,
+`templates/anagram/anagram-editor.js`, `templates/anagram/anagram.css`, `templates/quiz/quiz-editor.js`,
+`templates/true-false/true-false-editor.js`, `templates/running-team/running-team-editor.js`,
+`templates/whack-a-mole/whack-a-mole-editor.js`) với commit `52fbed5` (~1 phút sau push, Pages build OK)
+bằng `sha256sum` sau khi bỏ CRLF — **tất cả trùng khớp 100%**.
+
+### 1. Thầy báo (15/8/2026)
+Test Edit của 1 act tích hợp ENG1/ENG2/VI1/VI2/ENG1 VOICE/ENG2 VOICE (Đợt 145) thì chỉ sửa được ENG1 —
+không có cách nào sửa 3 bộ còn lại từ trong Edit. Thầy giao 7 việc:
+1. Bỏ hộp Tip ở MỌI trang Edit (thừa thãi).
+2. Bỏ nút + tính năng "Hide all Text" (đã có công tắc TEXT/VOICE trong Options > Content của act rồi).
+3. Thêm tab ENG1/ENG2/VI1/VI2 ngay hàng với Generate all voices/Delete all voices/Delete all words —
+   bấm tab nào thì bảng Word/Clue TRƯỢT sang đúng bộ đó. ENG VOICE đi kèm sẵn trong tab ENG (không cần
+   tab voice riêng).
+4. Bỏ nút + tính năng "Swap Columns" (không hữu dụng).
+5. Kéo-thả sắp xếp 1 dòng ở tab này → mọi tab khác cũng đổi theo.
+6. Thêm/xoá 1 dòng ở tab này → mọi tab khác cũng thêm/xoá đúng dòng đó.
+7. Sửa cột WORD ở tab này → đúng vị trí đó ở mọi tab khác cũng đổi theo (Word vốn CHUNG cho cả 4 bộ).
+
+### 2. Bỏ hộp Tip — làm cho TOÀN BỘ 16 editor, không chỉ Anagram
+`aw-ed-tip` xuất hiện ở 18 chỗ/16 file (whack-a-mole, running-team, running-word có 2 chỗ mỗi file —
+2 chỗ sau ở running-team/running-word là ghi chú "SET" đã lưu, không phải mẹo Excel, cũng bỏ theo đúng
+yêu cầu "mọi edit"). `maze-chase` dùng lại nguyên `quiz-editor.js` nên tự động sạch theo Quiz, không phải
+sửa riêng. Tiện tay dọn theo: import `MAX_SETS` không còn dùng ở `running-team-editor.js`/
+`running-word-editor.js` (chỉ còn nằm trong 1 dòng comment) — bỏ khỏi import cho sạch.
+
+### 3. Việc 2+4 — bỏ Hide all Text + Swap Columns (chỉ Anagram, đây là 2 tính năng riêng của Anagram)
+- **Swap Columns**: xoá hẳn nút + `swapBtn.onclick`, `headRow` giờ chỉ còn `headCols`.
+- **Hide all Text**: xoá nút bulk (`hideAllBtn`/`refreshHideAllBtn`), xoá nút mắt trên từng dòng
+  (`hideTextBtn`/`setHideTextState`), xoá dòng tự bật `it.hideText = true` mỗi khi tạo giọng mới (cả
+  đường 1-dòng trong popover LẪN đường hàng loạt `core/voice-batch.js` — dùng chung nên sửa 1 chỗ áp
+  cho cả 2). **Vẫn giữ field `hideText` chảy qua bình thường** cho act KHÔNG tích hợp (act Anagram
+  thường, chưa từng đụng Options > Content) — không có UI đổi nữa nhưng dữ liệu cũ không bị xoá, đúng
+  đường AUTO của `core/voice-playback.js#voiceView()` (act nào bật/tắt TEXT/VOICE rõ ràng trong Options
+  thì bỏ qua field này hoàn toàn, act nào chưa từng đụng thì đọc field này y như trước).
+
+### 4. Việc 3+5+6+7 — tab ENG1/ENG2/VI1/VI2, đồng bộ Word/dòng/kéo-thả
+**Điểm mấu chốt (vì sao việc 5/6/7 "tự nhiên đúng" mà không cần code riêng)**: mỗi từ vẫn là **1 object
+DUY NHẤT** trong **1 mảng DUY NHẤT** `data.content.items` — object đó mang `word` (1 field DÙNG CHUNG cả
+4 bộ, không đổi) + `clues{eng1,eng2,vi1,vi2}` + `voices{eng1,eng2}` (đủ cả 4/2 bộ CÙNG LÚC). Thêm dòng,
+xoá dòng, kéo-thả đổi thứ tự đều chỉ thao tác trên MỘT mảng đó — nên tự động đúng ở MỌI tab, không phải
+viết logic đồng bộ riêng. Việc 7 (Word chung) cũng vậy — Word chưa từng thuộc về bộ nào.
+- Bảng đang hiện luôn đọc/ghi qua 2 field "làm việc" `it.clue`/`it.voice`/`it.voiceId` (y hệt code cũ,
+  `itemRow()` không đổi cách đọc) — cái mới là 2 hàm gấp/mở:
+  - `commitCurrentTab()` — gấp `it.clue`/`it.voice` hiện trên màn hình VÀO `it.clues[bộ đang xem]`/
+    `it.voices[bộ đang xem]`, chạy TRƯỚC khi đổi tab và trước khi Save.
+  - `loadCurrentTab()` — mở `it.clues[bộ mới]`/`it.voices[bộ mới]` RA `it.clue`/`it.voice` để bảng vẽ
+    lại đúng bộ vừa chuyển sang.
+- **Lỗi thật bắt được khi tự test** (không phải suy đoán): `loadCurrentTab()` bản đầu dùng thẳng hàm
+  dùng chung `clueOf()` — hàm này có nhánh dự phòng "nếu bộ đó chưa có chữ thì trả về `.clue`" (viết cho
+  lúc NẠP LẦN ĐẦU từ dữ liệu đã lưu, `.clue` khi đó là bản sao ổn định của bộ mặc định). Nhưng giữa
+  phiên sửa, `.clue` là **field NHÁP đổi theo mọi lần chuyển tab** — dùng lại nhánh dự phòng đó khiến
+  1 dòng MỚI THÊM, gõ chữ ở tab VI1 rồi bấm sang tab ENG1, bị "dính" nguyên chữ tiếng Việt sang ô ENG1.
+  Sửa: `loadCurrentTab()` đọc thẳng `it.clues[bộ]`, không có chữ thì ra `""`, không dùng `clueOf()` nữa
+  (hàm `normalize()` nạp lần đầu từ storage vẫn dùng `clueOf()` như cũ — đúng chỗ của nó).
+- Tab chỉ hiện nút mic/Generate/Delete all voices khi bộ đang xem thật sự CÓ giọng
+  (`content.voiceVariants` — vốn chỉ ENG1/ENG2, VI1/VI2 không có vì giọng máy đọc sai tiếng Việt, xem
+  `core/content-view.js`) — `tabHasVoice()` quyết định, dùng lại ở cả `renderItems()` lẫn `buildBulkBar()`.
+- Hiệu ứng trượt: `switchTab()` animate mờ+trượt-ra (130ms) → gấp/mở dữ liệu + vẽ lại bảng → animate
+  mờ+trượt-vào (180ms), có `setTimeout` dự phòng (`HUONG DAN CORE` mục animate — tab ẩn có thể không bắn
+  `onfinish`).
+- CSS mới `templates/anagram/anagram.css`: `.aw-anagram-ed-tabs`/`.aw-anagram-ed-tab` (đẩy phải bằng
+  `margin-left:auto` trong `.aw-ed-bulk`, tab đang xem tô xanh `#2f7bff`).
+- Bỏ luôn chip "Clue set: ENG2" cũ (Đợt 145) — tab tự thay thế, rõ hơn hẳn vì bấm được chứ không chỉ đọc.
+
+### 5. 🟢 ĐÃ TỰ TEST — bench mới `scratch/test-anagram-editor.html`
+Dựng thẳng `openAnagramEditor()` với 1 act WORDS giả (4 bộ, SEED có sẵn giọng ENG1) và 1 act Anagram
+thường — không cần đăng nhập Google. Chạy qua devserver cổng 5513 (thêm cấu hình `aword-3` vào
+`.claude/launch.json` vì cổng 5510/5511 đang bận 2 phiên khác), đo bằng `javascript_tool` (pane ẩn nên
+không tự chụp màn hình được, xem hạn chế quen thuộc các đợt trước):
+- Act WORDS: 4 tab ENG1/ENG2/VI1/VI2 hiện đủ, không hộp Tip, không Swap Columns, không Hide all Text.
+- ENG1/ENG2: đúng chữ từng bộ, có mic; VI1/VI2: đúng chữ tiếng Việt, KHÔNG có mic, KHÔNG có nút
+  Generate/Delete all voices.
+- Sửa Word + thêm 1 dòng MỚI ("LEAF") ngay trên tab VI1, gõ chữ VI1 cho dòng đó → chuyển sang ENG1: Word
+  "LEAF" hiện đúng ở CẢ 2 tab (dùng chung), ô Clue ENG1 của dòng mới ra ĐÚNG rỗng (không dính chữ Việt —
+  xác nhận đã vá lỗi ở mục 4).
+- Bấm Save: object trả về đủ `clues`/`voices` cho SEED (giữ nguyên giọng `clip_seed_eng1`) và ROOT (4
+  bộ chữ, không giọng), dòng LEAF chỉ có đúng `vi1`/`eng1` (2 bộ đã từng mở), TRUNK tương tự — không bộ
+  nào bị đè mất, không có cặp giọng rỗng thừa.
+- Act Anagram thường (không tích hợp): mở ra KHÔNG có tab, placeholder Clue vẫn "Optional clue /
+  definition" như cũ, Save ra đúng hình dạng cũ (`word/clue/voice/voiceId/hideText`) — xác nhận **0 khác
+  biệt** với hành vi trước Đợt 165 cho mọi act không tích hợp.
+- **0 lỗi console** suốt toàn bộ quá trình test.
+
+### 6. ⬜ CÒN LẠI (chỉ thầy làm được — máy không tự kiểm)
+- ⬜ **Nhìn bằng mắt** trên bản LIVE thật — pane test ở đây không chụp/quay được (`document.hidden`), y
+  hệt hạn chế nhiều đợt trước. Mở 1 act WORDS thật, bấm Edit, thử cả 4 tab, kéo-thả 1 dòng rồi xem tab
+  khác có theo đúng thứ tự không, xem tab trượt có mượt không.
+- ⬜ **Firestore thật** (phiên tự động không đăng nhập được): mở 1 act WORDS thật đã có sẵn giọng, sửa
+  ENG2/VI1, Save, mở lại xem lưu đúng — nhất là giọng ENG1/ENG2 cũ có còn nguyên sau khi chỉ sửa VI1/VI2
+  không (bench giả đã xác nhận đường này đúng, nhưng chưa ai thử với Firestore thật).
+
+---
+
 ## Đợt 164 (15/8/2026) — 3 CHỈNH SỬA TIẾP THEO CHO BỘ CHỈNH GIỜ ĐỢT 163
 ⭐ CÓ SỬA CORE (`numberstepper.js`: viết lại `applyUnit`→`applyDelta` + hàm mới `secondsSnapDelta` ·
 `running-word.js`/`balloon-pop.js`: đổi `step: 5`→`step: 1`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html`.

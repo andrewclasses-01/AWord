@@ -1,5 +1,16 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 165 (15/8/2026) — ⭐ EDITOR: TAB ENG1/ENG2/VI1/VI2 + bỏ Hide all Text/Swap Columns/Tip
+
+✅ **THẦY DUYỆT → COMMIT `52fbed5` + PUSH + LIVE** (15/8/2026, đã đối chiếu sha256sum, khớp 100%) — chi
+tiết đầy đủ ở `../../GHI CHU DU AN.md` Đợt 165. Tóm tắt:
+`anagram-editor.js` giờ cho sửa CẢ 4 bộ gợi ý (ENG1/ENG2/VI1/VI2, Đợt 145) ngay trong Edit qua tab
+trượt, thay vì chỉ sửa được bộ đang chơi + 1 nhãn đọc. Bỏ 2 tính năng cũ (Hide all Text — dư vì đã có
+Options > Content; Swap Columns — thầy thấy không hữu dụng) + hộp Tip (bỏ luôn ở 15 editor khác, không
+riêng Anagram). Bench test mới: `../../scratch/test-anagram-editor.html`.
+
+---
+
 ## Đợt 155 (14/8/2026) — ⭐ THAM GIA CHẾ ĐỘ MỚI **SHOWDOWN** (thêm ĐÚNG 1 DÒNG)
 
 ✅ **COMMIT `57677cf` + PUSH + LIVE** (14/8/2026). `anagram.js` chỉ thêm **`showdownMode: true`** — không một dòng nào khác.

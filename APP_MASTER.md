@@ -2235,7 +2235,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 15/8/2026 sau Đợt 164 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 15/8/2026 sau Đợt 165 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -2260,7 +2260,26 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (15/8/2026 — sau Đợt 163–164)
+### 3. Đứng ở đâu (15/8/2026 — sau Đợt 165)
+
+> ⭐⭐ **ĐỢT 165 — EDIT SỬA ĐƯỢC CẢ 4 BỘ ENG1/ENG2/VI1/VI2. ✅ THẦY DUYỆT → COMMIT `52fbed5` + PUSH + LIVE
+> (đã đối chiếu sha256sum 7 file, khớp 100%).**
+> Trước đợt này, Edit của act `WORDS` (Đợt 145) chỉ sửa được ĐÚNG bộ đang chơi — không có cách sửa 3 bộ
+> gợi ý còn lại từ trong Edit. Nay `templates/anagram/anagram-editor.js` có **4 tab ENG1/ENG2/VI1/VI2**
+> (cùng hàng với Generate/Delete voices/Delete words), bấm tab nào bảng Word/Clue **trượt** sang đúng bộ
+> đó; ENG1/ENG2 có mic tạo giọng, VI1/VI2 không (giọng máy đọc sai tiếng Việt). Thêm/xoá/kéo-thả dòng và
+> sửa cột Word tự đồng bộ MỌI tab — vì mỗi từ vẫn là 1 object DUY NHẤT mang cả 4 bộ, không phải 4 mảng
+> tách rời. Kèm dọn 2 tính năng cũ trong Anagram editor (bỏ "Hide all Text" — dư vì đã có Options >
+> Content; bỏ "Swap Columns" — thầy thấy không hữu dụng), và bỏ hộp Tip ở **cả 16 editor** (không riêng
+> Anagram). 1 lỗi thật tự bắt: dòng mới gõ ở tab VI1 rồi chuyển ENG1 bị dính chữ Việt — do dùng nhầm
+> `clueOf()` (hàm viết cho lúc nạp lần đầu từ storage) ở chỗ đọc dữ liệu MỖI LẦN đổi tab; đã vá bằng đọc
+> thẳng `it.clues[key]`. Chi tiết đầy đủ + cách tự test không cần đăng nhập (`scratch/test-anagram-
+> editor.html`, bench mới): nhật ký Đợt 165 (đầu `GHI CHU DU AN.md`) + `templates/anagram/GHI CHU
+> ANAGRAM.md`.
+> **Còn lại chỉ mắt/tay thầy + Firestore thật** (xem mục 4 dưới): nhìn tab trượt trên máy thật, và mở 1
+> act WORDS thật đã có giọng, sửa ENG2/VI1, Save, mở lại xem giọng ENG1/ENG2 cũ có còn nguyên không.
+
+**Trước đó (15/8/2026 — sau Đợt 163–164):**
 
 > ⭐⭐ **ĐỢT 163–164 — ✅ THẦY DUYỆT → COMMIT `df36333` + PUSH + LIVE (đã đối chiếu sha256sum, khớp 100%).**
 > Hai việc: (1) khoá `user-select`/`-webkit-user-drag` cho mọi popup công cụ (`.aw-tool-panel`) + khung
@@ -2363,6 +2382,7 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
+| **163–165** | ⭐⭐ **165**: Edit sửa được cả 4 bộ ENG1/ENG2/VI1/VI2 (tab trượt) + dọn Hide all Text/Swap Columns/Tip khỏi toàn app · **163–164**: khoá chọn text/ảnh trong pop-up + bộ chỉnh phút/giây riêng cho Timer | `52fbed5` (165) · `17e8538`/`df36333` (163–164) |
 | **159** | ⭐⭐ **SHOWDOWN LÀM LẠI**: 1–5 đội · **1 đội = cả lớp, không lên mây** · bỏ màn C, Single/Reset/Random xuống hàng dưới · đội bị lấy **hiện mờ** thay vì ẩn · **2 bố cục** + bảng rộng bằng khung app · **dòng tên tự đứng + hook `ui.itemChanging`** | `23327b3` |
 | **158** | ⭐⭐ **BA CHẾ ĐỘ VỀ MỘT NÚT** (bảng chọn ô icon, không chữ) + 2 lỗi thật: **claim đội không được nhả** (đội chết 12h ở máy khác) · **xếp đội trong trận là công cốc**; kèm bẫy `panel.isConnected` **cắn lại** trong `engine.js` | `23327b3` |
 | **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | `58e996a` |
@@ -2394,11 +2414,11 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐ **Cập nhật 15/8/2026 (sau Đợt 164) — dòng ⬜ dưới đây đã LỖI THỜI, sửa lại cho đúng git log:**
-> Đợt 158-159 → `23327b3` · Đợt 160 (ĐỢT C) → `4a6da8e` **ĐÃ COMMIT + PUSH + LIVE** (không còn "chờ
-> thầy duyệt" nữa) · Đợt 161-162 → `4e5ae82` · Đợt 163-164 → `17e8538`/`df36333`. **TẤT CẢ đã LIVE, kho
-> sạch, không còn gì chưa commit tính tới Đợt 164.** Kế hoạch A–D coi như **XONG cả 4 mục** (C = code +
-> commit + live, D = huỷ theo ý thầy 15/8/2026 — thầy tự tay xoá dữ liệu Firebase, không cần code).
+> ⭐⭐ **Cập nhật 15/8/2026 (sau Đợt 165) — dòng ⬜ dưới đây đã LỖI THỜI, sửa lại cho đúng git log:**
+> Đợt 158-159 → `23327b3` · Đợt 160 (ĐỢT C) → `4a6da8e` · Đợt 161-162 → `4e5ae82` · Đợt 163-164 →
+> `17e8538`/`df36333` · **Đợt 165 → `52fbed5`**. **TẤT CẢ đã LIVE, kho sạch, không còn gì chưa commit
+> tính tới Đợt 165.** Kế hoạch A–D coi như **XONG cả 4 mục** (C = code + commit + live, D = huỷ theo ý
+> thầy 15/8/2026 — thầy tự tay xoá dữ liệu Firebase, không cần code).
 > Riêng Showdown thì chỉ còn **mắt/tay thầy trên màn 86"**:
 > - (158) bảng chọn 3 chế độ: cỡ icon, và khi Showdown chạy thì **3 ô** có chật không;
 > - (159b) bảng đội **rộng bằng khung app**: hai bố cục (ô chờ bên phải khi 2-3 đội · lên trên khi 4-5
@@ -2416,6 +2436,14 @@ act nào gọi tên HS thì đọc từ đó.
 **⭐⭐ ĐỢT C đã CODE + TỰ TEST xong (Đợt 160)** — CHỜ THẦY DUYỆT + tự thử bằng tài khoản thật (mục 3 ngay
 trên có đủ danh sách "việc chỉ thầy làm được"). **ĐỢT D đã HUỶ.** Không còn việc lớn nào dang dở theo kế
 hoạch A–D nữa — phiên tiếp theo hỏi thầy muốn làm gì mới.
+
+**⭐⭐ ĐỢT 165 đã CODE + TỰ TEST + THẦY DUYỆT + LIVE (`52fbed5`)** — chỉ còn **mắt/tay thầy + Firestore
+thật**, chưa ai làm:
+- ⬜ Mở 1 act `WORDS` thật, bấm Edit, thử cả 4 tab ENG1/ENG2/VI1/VI2 trên máy thật: tab trượt có mượt
+  không, kéo-thả 1 dòng rồi đổi tab xem thứ tự có theo đúng không.
+- ⬜ **Firestore thật**: mở 1 act `WORDS` thật đã có sẵn giọng ENG1/ENG2, sửa chữ ở ENG2/VI1, Save, mở
+  lại — giọng ENG1/ENG2 cũ có còn nguyên không, chữ 4 bộ có đúng không (bench giả `scratch/test-anagram-
+  editor.html` đã xác nhận đường này đúng, nhưng chưa ai thử với Firestore thật/đăng nhập thật).
 
 **⭐ HAI TRỤC NỘI DUNG (Đợt 145–147, 154) — phần máy không tự kiểm được:**
 - ⬜ **(Đợt 154)** Màn START nay ghi **tên act con** (`… / WORDS - ENG1`, `… / QUIZ - HOMEWORK`):
