@@ -8,6 +8,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 166 (15/8/2026) — ⭐ ĐÁP ÁN NHIỄU "TRÔNG GIỐNG" KHI ĐỔI TEMPLATE (Anagram/Crossword/...→Quiz/Open the box/Gameshow/Maze chase/Whack-a-mole)
+⭐ CÓ SỬA CORE (`core/convert.js`, hàm `buildMc()` + hàm mới `rankByLookalike()`).
+🟢 ĐÃ TỰ TEST qua `devserver.py` (cổng 5510) + `templates/anagram/test.html`, gọi thẳng
+`convertActivity()` thật (đúng hàm `engine.js` dùng khi bấm Template) qua console — KHÔNG chỉ đọc code.
+⬜ **CHƯA xin thầy duyệt, CHƯA commit/push.**
+
+### 1. Thầy giao
+> Khi từ Anagram chuyển sang các act khác có chọn đáp án (VD Quiz, Open the box...), ưu tiên chọn các
+> đáp án có chữ cái đầu và lượng chữ cái tương đương nhằm mục đích gây nhiễu, thay vì dùng các đáp án
+> hoàn toàn khác biệt.
+
+### 2. Việc đã làm
+Trong `buildMc()` (dùng chung cho **mọi** đích trắc nghiệm — Quiz, Gameshow, Maze chase, Open the box,
+Whack-a-mole quiz-mode — vì `buildContent()` gọi đúng 1 hàm này cho cả 5 case), khi cần bù thêm nhiễu
+cho đủ 3 đáp án sai, thay vì bốc random từ pool các term còn lại trong bộ, nay xếp hạng bằng hàm mới
+`rankByLookalike(term, pool)`:
+- Điểm phạt: khác chữ cái đầu (không phân biệt hoa/thường) = +100, cộng thêm chênh lệch độ dài tuyệt
+  đối. Điểm càng thấp càng được bốc trước → vét hết ứng viên cùng chữ cái đầu (gần độ dài nhất) rồi
+  mới rơi xuống nhóm khác chữ cái đầu.
+- Vẫn `shuffle()` pool trước khi sort, để các ứng viên đồng điểm không luôn ra cùng thứ tự mỗi lần đổi.
+- Nhiễu do nguồn "vốn là trắc nghiệm" mang theo (`r.distractors`, vd act Quiz cũ) **vẫn ưu tiên giữ
+  nguyên như cũ** — thuật toán mới chỉ áp dụng cho phần BÙ THÊM khi thiếu, không đụng dòng đó.
+- Bộ từ ít lựa chọn giống (không đủ 3 từ cùng chữ cái đầu) vẫn luôn đủ 3 nhiễu — thuật toán chỉ rơi
+  dần xuống nhóm khác chữ cái đầu nhưng gần độ dài nhất, không bao giờ bỏ trống.
+
+### 3. Đã test qua console thật (gọi `convertActivity()`, không phải hàm giả lập)
+- Bộ {cat, car, can, dog, dot, doll, sun, sum, elephant} đổi Anagram→Quiz: "cat" ra nhiễu
+  `[dot, car, can]` — 2/3 cùng chữ "c" cùng độ dài 3 (car, can), phần còn thiếu bốc từ nhóm gần độ dài
+  nhất (dot). "elephant" (không có từ nào chung chữ "e") rơi hẳn xuống nhóm gần độ dài nhất, đúng dự
+  tính.
+- Bộ {bat, bag, ball, fish, fin, fire} đổi Anagram→Open the box: cùng đúng quy luật (vd "bat" ra
+  `[bag, fin, ball]` — 2 từ "b" được ưu tiên, bù thêm 1 từ gần độ dài).
+- **0 lỗi console** cả 2 lần gọi.
+
+### VIỆC ĐANG CHỜ (Đợt 166)
+1. Thầy tự nhìn thử trên bàn chơi thật (Options > Template > Quiz/Open the box từ 1 act Anagram có
+   nhiều từ gần giống nhau) xem đáp án nhiễu có "vừa mắt" không — phép đo trên chỉ qua console, chưa
+   chụp UI (pane preview không compositing được lúc làm đợt này).
+2. Cân nhắc thêm nếu thầy muốn: hiện chỉ so chữ cái ĐẦU + độ dài, chưa so vần/âm ở giữa hay cuối từ.
+3. Chốt xong mới commit + push.
+
+---
+
 ## Đợt 165 (15/8/2026) — ⭐ EDIT SỬA ĐƯỢC CẢ 4 BỘ ENG1/ENG2/VI1/VI2 (TAB TRƯỢT) + DỌN CHUẨN EDIT TOÀN APP
 ⭐ CÓ SỬA CORE (`core/voice-batch.js`: bỏ dòng tự đặt `hideText = true` khi tạo giọng hàng loạt — dùng
 chung cho cả Anagram editor lẫn panel nhập Excel) + **16 file editor template** (bỏ hộp Tip) +

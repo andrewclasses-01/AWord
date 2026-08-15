@@ -349,14 +349,17 @@ function cardText(r, kind) {
 }
 
 // Dựng 1 câu trắc nghiệm: đáp án đúng = term, đáp án nhiễu = distractors
-// gốc (nếu nguồn vốn là trắc nghiệm) bù thêm từ các term khác trong bộ.
+// gốc (nếu nguồn vốn là trắc nghiệm) bù thêm từ các term khác trong bộ —
+// ưu tiên chữ TRÔNG GIỐNG đáp án đúng (cùng chữ cái đầu, độ dài xấp xỉ) để
+// gây nhiễu thật, thay vì random hoàn toàn (thầy yêu cầu 15/8/2026, áp dụng
+// mọi đích trắc nghiệm: Quiz, Open the box, Gameshow, Maze chase, Whack-a-mole).
 function buildMc(r, all, kind) {
   const correct = termOf(r, kind);
   const distr = (r.distractors || []).filter(d => d && d !== correct).slice(0, 3);
   if (distr.length < 3) {
-    const pool = shuffle(all.map(x => termOf(x, kind))
-      .filter(t => t && t !== correct && !distr.includes(t)));
-    for (const t of pool) {
+    const pool = all.map(x => termOf(x, kind))
+      .filter(t => t && t !== correct && !distr.includes(t));
+    for (const t of rankByLookalike(correct, pool)) {
       if (distr.length >= 3) break;
       if (!distr.includes(t)) distr.push(t);
     }
@@ -369,4 +372,20 @@ function buildMc(r, all, kind) {
     question: (r.clue && r.clue.trim()) ? r.clue : correct, answers,
     voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
   };
+}
+
+// Điểm càng THẤP càng "giống" đáp án đúng: lệch chữ cái đầu bị phạt nặng
+// (x100) nên luôn vét hết ứng viên cùng chữ cái đầu (xếp theo độ dài gần
+// nhất) trước, hết mới rơi xuống nhóm khác chữ cái đầu — bộ ít từ vẫn luôn
+// đủ 3 nhiễu, chỉ là kém giống dần chứ không bao giờ bỏ trống. Shuffle
+// trước khi sort để các ứng viên đồng điểm không luôn ra cùng thứ tự.
+function rankByLookalike(term, pool) {
+  const t = String(term || "");
+  const firstChar = t.charAt(0).toLowerCase();
+  const len = t.length;
+  function confusionScore(s) {
+    const sameFirst = s.charAt(0).toLowerCase() === firstChar;
+    return (sameFirst ? 0 : 100) + Math.abs(s.length - len);
+  }
+  return shuffle(pool).sort((a, b) => confusionScore(a) - confusionScore(b));
 }
