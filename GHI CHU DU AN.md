@@ -19,6 +19,9 @@ chung cho cả Anagram editor lẫn panel nhập Excel) + **16 file editor templ
 `templates/true-false/true-false-editor.js`, `templates/running-team/running-team-editor.js`,
 `templates/whack-a-mole/whack-a-mole-editor.js`) với commit `52fbed5` (~1 phút sau push, Pages build OK)
 bằng `sha256sum` sau khi bỏ CRLF — **tất cả trùng khớp 100%**.
+⚠️ **VÁ LỖI THẬT sau khi LIVE** — thầy chụp màn hình báo đổi tab (ENG1→ENG2) thì bảng **nháy hiện rồi mất
+ngay** (chỉ còn dòng tiêu đề rỗng). ✅ Đã sửa + **COMMIT `42f90d5` + PUSH + LIVE** (đối chiếu sha256sum
+`anagram-editor.js`, khớp 100%). Xem mục 7 bên dưới.
 
 ### 1. Thầy báo (15/8/2026)
 Test Edit của 1 act tích hợp ENG1/ENG2/VI1/VI2/ENG1 VOICE/ENG2 VOICE (Đợt 145) thì chỉ sửa được ENG1 —
@@ -101,10 +104,44 @@ không tự chụp màn hình được, xem hạn chế quen thuộc các đợt
 ### 6. ⬜ CÒN LẠI (chỉ thầy làm được — máy không tự kiểm)
 - ⬜ **Nhìn bằng mắt** trên bản LIVE thật — pane test ở đây không chụp/quay được (`document.hidden`), y
   hệt hạn chế nhiều đợt trước. Mở 1 act WORDS thật, bấm Edit, thử cả 4 tab, kéo-thả 1 dòng rồi xem tab
-  khác có theo đúng thứ tự không, xem tab trượt có mượt không.
+  khác có theo đúng thứ tự không, xem tab trượt có mượt không (**mục 7 dưới đây đã vá 1 lỗi thật ở đúng
+  chỗ này — cần thầy xác nhận lại đã hết chưa**).
 - ⬜ **Firestore thật** (phiên tự động không đăng nhập được): mở 1 act WORDS thật đã có sẵn giọng, sửa
   ENG2/VI1, Save, mở lại xem lưu đúng — nhất là giọng ENG1/ENG2 cũ có còn nguyên sau khi chỉ sửa VI1/VI2
   không (bench giả đã xác nhận đường này đúng, nhưng chưa ai thử với Firestore thật).
+
+### 7. ⭐ VÁ LỖI THẬT (thầy chụp màn hình báo, ngay sau khi LIVE) — "nội dung nháy hiện rồi biến mất"
+✅ **COMMIT `42f90d5` + PUSH + LIVE** (15/8/2026, đối chiếu sha256sum `anagram-editor.js`, khớp 100%).
+
+**Triệu chứng đúng như ảnh thầy chụp**: mở act tích hợp, tab ENG1 hiện đủ Word/Clue bình thường lúc vừa
+mở — nhưng bấm sang ENG2 (hay bất kỳ tab nào khác) thì bảng hiện đủ dòng **MỘT CÁI RỒI MẤT NGAY**, chỉ
+còn dòng tiêu đề "Word / Clue" trống trơn.
+
+**Nguyên nhân (đọc code, không phải đoán)**: `switchTab()` chạy 2 animation nối tiếp trên cùng `iWrap`
+(mờ-ra rồi hiện-vào). Animation MỜ-RA (`out`) khai `fill:"forwards"` — theo đúng chủ đích, để bảng cũ
+đứng yên ở opacity 0 trong lúc đang gấp dữ liệu + vẽ lại DOM. Animation HIỆN-VÀO chạy SAU đó lại
+**không khai `fill`** — mặc định `fill:"none"`. Hậu quả theo đúng quy tắc WAAPI: animation hiện-vào chạy
+đủ 180ms xong là **tự bị gỡ khỏi hàng hiệu ứng** (vì không có `fill` để giữ), để lộ lại animation MỜ-RA
+kia — nó vẫn còn đó, vẫn đang ép `opacity:0` (đúng nghĩa đen của `fill:"forwards"` là "giữ mãi") — nên
+bảng vừa hiện xong (trong lúc animation hiện-vào còn đang CHẠY) lại lập tức bị animation mờ-ra cũ đè lại
+về opacity 0 ngay khi animation hiện-vào kết thúc. Đây là bẫy quen thuộc của WAAPI khi 2 animation
+`fill:forwards` chồng lên nhau trên cùng 1 phần tử mà không có animation nào bị `.cancel()`.
+
+**Sửa đúng luật đã ghi sẵn trong `templates/CONG THUC MAU.md` mục 3.4** (bản thân đợt 165 lúc viết code
+ĐÃ ĐỌC luật này nhưng áp dụng thiếu — chỉ thêm `setTimeout` dự phòng, quên phần `.cancel()` bắt buộc):
+mọi animation `fill:"forwards"` phải được `.cancel()` + dọn sạch `style.opacity`/`style.transform` inline
+ở đúng bước nó hoàn thành nhiệm vụ, không được để nó "treo" vô thời hạn cạnh 1 animation khác trên cùng
+thuộc tính. `switchTab()` nay: `out.cancel()` ngay khi bắt đầu `swap()` (trước khi vẽ lại DOM) + animation
+hiện-vào (`inAnim`) tự `.cancel()` + dọn style ở bước `finishIn()` của chính nó (có cả `onfinish` lẫn
+`setTimeout` dự phòng, đúng luật 2 lớp bảo hiểm).
+
+**🟢 ĐÃ TỰ TEST lại** qua `scratch/test-anagram-editor.html`:
+- Đổi tab thường (ENG1→ENG2), đợi 1 giây: `getComputedStyle(iWrap).opacity === "1"`, không còn
+  `style.opacity`/`style.transform` inline, `iWrap.getAnimations().length === 0`, đủ 3 dòng.
+- **Bấm tab liên tiếp thật nhanh** (tab mới bấm ngay khi tab trước CHƯA hết hiệu ứng — ca nặng nhất):
+  VI1→VI2 (50ms)→ENG1 (250ms)→ENG2 (450ms), đợi 2 giây — trạng thái cuối vẫn đúng y hệt: opacity 1,
+  0 animation còn treo, đúng tab ENG2 đang tô sáng, đúng 3 từ SEED/ROOT/TRUNK.
+- **0 lỗi console** trong mọi test.
 
 ---
 

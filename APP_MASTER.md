@@ -2263,7 +2263,10 @@ vừa xảy ra.
 ### 3. Đứng ở đâu (15/8/2026 — sau Đợt 165)
 
 > ⭐⭐ **ĐỢT 165 — EDIT SỬA ĐƯỢC CẢ 4 BỘ ENG1/ENG2/VI1/VI2. ✅ THẦY DUYỆT → COMMIT `52fbed5` + PUSH + LIVE
-> (đã đối chiếu sha256sum 7 file, khớp 100%).**
+> (đã đối chiếu sha256sum 7 file, khớp 100%). ⚠️ Sau khi LIVE, thầy chụp màn hình báo đổi tab thì bảng
+> "nháy hiện rồi mất ngay" — 2 animation `fill:forwards` chồng nhau trên `iWrap`, animation sau không
+> `.cancel()` animation trước. **Đã vá → COMMIT `42f90d5` + PUSH + LIVE** (đối chiếu sha256sum, khớp
+> 100%). Chi tiết đầy đủ: nhật ký Đợt 165 mục 7 (đầu `GHI CHU DU AN.md`).**
 > Trước đợt này, Edit của act `WORDS` (Đợt 145) chỉ sửa được ĐÚNG bộ đang chơi — không có cách sửa 3 bộ
 > gợi ý còn lại từ trong Edit. Nay `templates/anagram/anagram-editor.js` có **4 tab ENG1/ENG2/VI1/VI2**
 > (cùng hàng với Generate/Delete voices/Delete words), bấm tab nào bảng Word/Clue **trượt** sang đúng bộ
@@ -2382,7 +2385,7 @@ chơi ⇒ **0/17 file game phải biết chuyện này**. **Mỗi lựa chọn c
 **10 đợt gần nhất:**
 | Đợt | Việc | Commit |
 |---|---|---|
-| **163–165** | ⭐⭐ **165**: Edit sửa được cả 4 bộ ENG1/ENG2/VI1/VI2 (tab trượt) + dọn Hide all Text/Swap Columns/Tip khỏi toàn app · **163–164**: khoá chọn text/ảnh trong pop-up + bộ chỉnh phút/giây riêng cho Timer | `52fbed5` (165) · `17e8538`/`df36333` (163–164) |
+| **163–165** | ⭐⭐ **165**: Edit sửa được cả 4 bộ ENG1/ENG2/VI1/VI2 (tab trượt) + dọn Hide all Text/Swap Columns/Tip khỏi toàn app, kèm vá lỗi thật "nháy hiện rồi mất" khi đổi tab (2 animation `fill:forwards` chồng nhau) · **163–164**: khoá chọn text/ảnh trong pop-up + bộ chỉnh phút/giây riêng cho Timer | `52fbed5`+`42f90d5` (165) · `17e8538`/`df36333` (163–164) |
 | **159** | ⭐⭐ **SHOWDOWN LÀM LẠI**: 1–5 đội · **1 đội = cả lớp, không lên mây** · bỏ màn C, Single/Reset/Random xuống hàng dưới · đội bị lấy **hiện mờ** thay vì ẩn · **2 bố cục** + bảng rộng bằng khung app · **dòng tên tự đứng + hook `ui.itemChanging`** | `23327b3` |
 | **158** | ⭐⭐ **BA CHẾ ĐỘ VỀ MỘT NÚT** (bảng chọn ô icon, không chữ) + 2 lỗi thật: **claim đội không được nhả** (đội chết 12h ở máy khác) · **xếp đội trong trận là công cốc**; kèm bẫy `panel.isConnected` **cắn lại** trong `engine.js` | `23327b3` |
 | **154** | ⭐ Màn START gọi đúng **tên act con** (`WORDS - ENG1`) + act tích hợp **giữ TEXT-VOICE và act con khi đổi template** (`subActSource()`, Apply **chuyển đổi lại** thay vì lưu suông) | `58e996a` |
@@ -2437,10 +2440,12 @@ act nào gọi tên HS thì đọc từ đó.
 trên có đủ danh sách "việc chỉ thầy làm được"). **ĐỢT D đã HUỶ.** Không còn việc lớn nào dang dở theo kế
 hoạch A–D nữa — phiên tiếp theo hỏi thầy muốn làm gì mới.
 
-**⭐⭐ ĐỢT 165 đã CODE + TỰ TEST + THẦY DUYỆT + LIVE (`52fbed5`)** — chỉ còn **mắt/tay thầy + Firestore
-thật**, chưa ai làm:
+**⭐⭐ ĐỢT 165 đã CODE + TỰ TEST + THẦY DUYỆT + LIVE (`52fbed5`, vá lỗi thật `42f90d5`)** — chỉ còn
+**mắt/tay thầy + Firestore thật**, chưa ai làm:
 - ⬜ Mở 1 act `WORDS` thật, bấm Edit, thử cả 4 tab ENG1/ENG2/VI1/VI2 trên máy thật: tab trượt có mượt
-  không, kéo-thả 1 dòng rồi đổi tab xem thứ tự có theo đúng không.
+  không, kéo-thả 1 dòng rồi đổi tab xem thứ tự có theo đúng không. **Thầy đã báo 1 lần "nháy hiện rồi
+  mất" — đã vá (`42f90d5`) và tự test lại kỹ (kể cả bấm tab liên tiếp thật nhanh), cần thầy xác nhận lại
+  trên máy thật đã hết hẳn chưa.**
 - ⬜ **Firestore thật**: mở 1 act `WORDS` thật đã có sẵn giọng ENG1/ENG2, sửa chữ ở ENG2/VI1, Save, mở
   lại — giọng ENG1/ENG2 cũ có còn nguyên không, chữ 4 bộ có đúng không (bench giả `scratch/test-anagram-
   editor.html` đã xác nhận đường này đúng, nhưng chưa ai thử với Firestore thật/đăng nhập thật).
