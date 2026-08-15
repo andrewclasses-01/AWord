@@ -8,6 +8,52 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 173 (15/8/2026) — ⭐ VÁ LỖI THẬT: BẢNG OPTIONS TRONG FIGHT MODE HIỆN SAI TRẠNG THÁI SHUFFLE QUESTIONS (và mọi option khác nếu có cờ tương tự) — KHÔNG PHẢI mất lưu, chỉ hiện sai
+Sửa `core/fight.js` (thêm accessor) + `core/engine.js` (dùng accessor đó khi đang Fight). Không đụng file
+nào khác. 🟢 ĐÃ TỰ TEST qua `scratch/tta-fs-test.html` (Fight thật, round-trip tích/bỏ tích + Apply +
+mở lại 2 lượt). ⏳ **CHƯA COMMIT**.
+
+### 1. Thầy báo: mở Fight mode, chỉnh Options (đặc biệt Shuffle questions) rồi Apply — mở lại kiểm tra
+thì bị đổi lại (mất tích). Đôi khi kéo vài thanh khác + Apply cũng thấy mất. Đổi template nào cũng vậy.
+
+### 2. Gốc rễ — bảng Options ĐỌC NHẦM VẬT, không phải GHI nhầm chỗ
+Mỗi bàn trong Fight chỉ chơi với một **bản sao đông cứng** của act (`actFor(side)` trong `core/fight.js`)
+— thứ tự câu đã cố định 1 lần cho cả 2 bàn cùng thấy, nên bản sao đó CỐ Ý ép `options.shuffleQuestions:
+false` để template không tự xáo thêm lần nữa (double-shuffle sẽ làm 2 bàn lệch nhau) — đúng thiết kế,
+ghi rõ trong `core/HUONG DAN CORE.md`. Vấn đề: **bảng Options (mở từ bàn 0, vì bàn 0 giữ thanh công cụ
+chung) đọc giá trị khởi tạo checkbox từ CHÍNH bản sao đông cứng đó** (`core/engine.js`'s
+`buildOptionsPanel`, dòng `const base = activity.options || {}`) — nên nút Shuffle questions LUÔN vẽ
+"chưa tích" mỗi lần mở bảng trong lúc đang Fight, BẤT KỂ giá trị thật đã lưu là gì.
+⚠️ Phần GHI hoàn toàn KHÔNG có lỗi: `fight.ctl.applyOptions()` (được gọi khi Apply trong Fight) vẫn ghi
+đúng và lưu đúng vào act THẬT của trận (không phải bản sao đông cứng) — nên bấm Apply xong, nếu KHÔNG
+dùng UI để kiểm mà đọc thẳng dữ liệu thì thấy hoàn toàn đúng. Cái thầy thấy "mất" chỉ là CÁCH BẢNG HIỆN
+RA, không phải dữ liệu thật sự mất — dù trải nghiệm với thầy là y hệt (không tin được bảng Options nữa).
+Không riêng shuffleQuestions: bất kỳ option nào SAU NÀY bị `actFor()` ép giá trị riêng cho bản sao đông
+cứng (hiện chỉ có đúng 1 trường hợp) đều dính lỗi hiện-sai này, không phải lỗi từng-option-một.
+
+### 3. Vá — cho bảng Options một đường đọc THẬT, tách khỏi đường TEMPLATE đọc
+`core/fight.js`: thêm `ctl.matchOptions()` — trả `activity.options` (biến `activity` NGOÀI CÙNG của
+`startFight()`, chính là act thật của trận, cùng object mà `applyOptions()` ghi vào) — KHÔNG đụng gì tới
+`actFor()`, bản sao đông cứng vẫn ép `shuffleQuestions:false` y như cũ (bắt buộc, để 2 bàn không lệch).
+`core/engine.js`'s `buildOptionsPanel`: `const base = (fight ? fight.ctl.matchOptions() : activity.options)
+|| {}` — chỉ đổi NGUỒN đọc lúc mở bảng trong Fight, mọi thứ khác trong bảng (draft, Apply, curKey/pending
+cho contentMode...) giữ nguyên logic cũ, không đổi.
+
+### 4. Đã tự test — `scratch/tta-fs-test.html`, Fight thật (không mô phỏng)
+Bật Fight → Options → đọc checkbox Shuffle questions (mặc định true theo sample) → bỏ tích → Apply →
+mở lại Options → đọc `false` (đúng) → tích lại → Apply → mở lại Options → đọc `true` (đúng) — round-trip
+2 chiều đều đúng. Kèm kiểm KHÔNG hồi quy: đổi Timer sang "Count down" → Apply → mở lại → vẫn "Count down"
+(option khác, chưa từng bị ép, vẫn đúng như trước khi vá — xác nhận sửa không đụng gì ngoài shuffle path).
+0 lỗi console.
+
+### 5. VIỆC ĐANG CHỜ
+- ⬜ Thầy tự test lại trên myActivity/trình duyệt thật: mở Fight, chỉnh Shuffle questions + vài option
+  khác, Apply, mở lại — xác nhận bảng hiện ĐÚNG trạng thái đã lưu, không còn tự "bỏ tích" khi mở lại.
+- ⬜ Thử luôn "Change template" giữa lúc đang Fight rồi mở Options lại — thầy báo lỗi xảy ra ở MỌI
+  template nên cần xác nhận đã hết trên vài template khác (không chỉ Type the answer).
+
+---
+
 ## Đợt 172 (15/8/2026) — ⭐⭐ LỖI THẬT NẶNG NHẤT TỪ TRƯỚC TỚI NAY: "Change template" LÀM RƠI SẠCH options — vá + 2 hệ quả (voice tự phát dù chọn Text, shuffle như không hoạt động) + bỏ hẳn nút loa khi Text
 Sửa `core/convert.js` (gốc rễ) + `core/voice-playback.js` (bỏ nút loa theo yêu cầu). KHÔNG sửa
 `core/showdown.js` hay bất kỳ trong 17 file template — vì lỗi nằm ở TẦNG DƯỚI, sửa 1 chỗ tự khỏi hết cho

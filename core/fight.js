@@ -710,6 +710,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Options panel: pane 0's engine hands us its draft so the fight settings
     // live in the SAME panel as everything else (see engine.buildOptionsPanel).
     buildOptions,
+    // ⭐⭐ Đợt 173 (15/8/2026) — THE REAL OPTIONS, not either board's copy. Every
+    // board only ever mounts `actFor(side)`'s FROZEN copy, which deliberately
+    // lies about `shuffleQuestions` (forces it `false` — see actFor's own
+    // comment) so the template's own shuffle check doesn't re-shuffle a word
+    // order the match already fixed once for both boards. That copy is also
+    // exactly what board 0's `startGame()` reads to SEED the Options panel
+    // (`buildOptionsPanel`'s `base`) — so the Shuffle-questions checkbox was
+    // reading the LIE every time the panel opened during a fight, and always
+    // drew unchecked no matter what the teacher had actually saved (teacher,
+    // 15/8/2026: "tích xong apply rồi mở lại kiểm tra thì đã mất rồi"). The
+    // Apply side was never broken — `applyOptions` below always wrote onto and
+    // saved THIS `activity`, the match's real one; only the panel's OWN
+    // opening draft was reading the wrong object. core/engine.js calls this
+    // instead of `activity.options` directly whenever `fight` is set.
+    matchOptions() { return activity.options || {}; },
     // Options > Apply, from either board. The real act is ours, not the board's
     // copy, so the settings are written (and saved) here and the whole match is
     // rebuilt — both boards, one word order, new rules.

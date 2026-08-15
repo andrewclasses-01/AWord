@@ -1817,7 +1817,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // What stays HERE is everything this caller owns and Settings does not: the
   // draft model, Apply, fight mode, and persisting into the teacher's library.
   function buildOptionsPanel(panel) {
-    const base = activity.options || {};
+    // ⭐⭐ Đợt 173 — `fight.ctl.matchOptions()`, NOT `activity.options`, while
+    // fighting. `activity` in THIS closure is board 0's own FROZEN copy
+    // (core/fight.js's `actFor`), which deliberately forces
+    // `shuffleQuestions:false` so the template's own shuffle check doesn't
+    // re-shuffle a word order the match already fixed once for both boards —
+    // exactly right for what the template reads, but wrong for what the panel
+    // should show, since it made the checkbox draw unchecked every single time
+    // the panel opened during a fight (teacher, 15/8/2026: "apply rồi mở lại
+    // thì đã mất rồi"). `matchOptions()` returns the match's REAL, un-frozen
+    // options object — the same one `fight.ctl.applyOptions()` writes onto and
+    // saves — so the draft this panel seeds from now matches what Apply
+    // actually persists.
+    const base = (fight ? fight.ctl.matchOptions() : activity.options) || {};
     let draft = { ...base };
     // ⭐⭐ Đợt 154 — WHERE THE SUB-ACTS LIVE WHEN THE TEMPLATE HAS BEEN CHANGED.
     // A "Change template" act is a CONVERSION, and convert.js resolves the act
