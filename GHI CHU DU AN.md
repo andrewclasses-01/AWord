@@ -8,6 +8,190 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 170 (15/8/2026) — ⭐⭐ MỞ FIGHT + SHOWDOWN CHO "TYPE THE ANSWER" (template thứ 3, sau Anagram/Quiz)
+KHÔNG sửa core — chỉ `templates/type-the-answer/type-the-answer.js` +
+`templates/type-the-answer/type-the-answer.css` (thêm class `.is-fightlost`). Không đụng
+`core/fight.js`/`core/showdown.js`.
+🟢 ĐÃ TỰ TEST kỹ qua `scratch/tta-fs-test.html` (harness mới, xem mục 5).
+✅ **THẦY CHỐT COMMIT + PUSH TẠM (15/8/2026)** — thầy sẽ tự làm nốt các template còn lại sau, ghi lại
+đây để BẤT KỲ session nào sau cũng tiếp tục được ngay. Đây là **template đầu tiên trong lộ trình mở
+rộng** chốt ở Đợt 168/169 ("mở fight/showdown cho mọi template"); còn 5 template nữa theo ĐÚNG thứ tự
+thầy đã chỉ định: **Open the box → Find the match → True/false → Whack-a-mole → Crossword** (xem mục 6
+— đọc mục này TRƯỚC khi làm template tiếp theo).
+
+### 1. Vì sao chọn "Type the answer" làm template thứ 3
+Đây là template đầu tiên thầy nêu tên trong danh sách 6 template ưu tiên. Về kiến trúc nó **khác hẳn**
+Anagram/Quiz — không có ô đáp án để bấm mà là 1 ô gõ chữ tự do — nên không thể sao chép y nguyên,
+phải thiết kế lại cách "giấu đáp án" cho đúng với hình dạng riêng của nó (xem mục 3).
+
+### 2. Lỗi thật bắt được TRƯỚC KHI thêm Fight — đúng bẫy `HUONG DAN CORE.md` đã cảnh báo
+Y hệt kiểu lỗi vừa vá ở Đợt 169: `flyMark()`, `showScore()`, `pulseScoreTo()` cả 3 hàm đều tự
+`document.querySelector(".aw-top-score")` — quét CẢ TRANG thay vì đọc đúng ô điểm CỦA BÀN MÌNH. Trong
+Fight (2 bàn cùng lúc) điều này sẽ ghi/bay điểm vào bàn SAI. Sửa cả 3 chỗ dùng `ui.scoreEl`/
+`scoreTargetEl()` (giống `anagram.js`'s pattern). Vì template này TỰ vẽ ô điểm riêng (không gọi
+`ui.setScore()`) nên còn phải tự gọi `fightCtl.onScore()` bằng tay trong `showScore()` — không có nó
+thì điểm sẽ đúng ở ô riêng của bàn (bị ẩn khi đấu) nhưng KHÔNG BAO GIỜ lên được bảng điểm chung.
+
+### 3. Thiết kế riêng cho việc "giấu đáp án khi vòng còn mở" — không sao chép máy móc Quiz
+Quiz giấu bằng cách không tô ✓/✗ lên các Ô ĐÁP ÁN. "Type the answer" không có ô đáp án — học sinh gõ
+chữ TỰ DO vào 1 ô input. Quyết định thiết kế (không có sẵn trong `HUONG DAN CORE.md`, phải tự cân nhắc):
+- **Chữ học sinh tự gõ** thì KHÔNG giấu được (và không cần giấu) — bản chất trò chơi gõ chữ là chữ đó
+  đã hiện ngay khi gõ, giấu ô input sau khi nộp không có tác dụng gì (bàn kia nhìn được từ lúc đang gõ).
+- **Nhưng ĐÁP ÁN ĐÚNG (`revealText`) thì PHẢI giấu** — đây là thông tin THÊM, hoàn toàn tránh được, và
+  chính là thứ Quiz/Anagram cũng giấu. Cũng giấu luôn is-correct/is-wrong + dấu bay điểm — gộp tất cả
+  vào 1 hàm `applyGradeVisuals()` dùng chung, gọi ngay lúc nộp bài (chơi đơn) hoặc hoãn tới `reveal()`
+  (đang đấu).
+- **"Andrew help" bị TẮT HẲN suốt trận đấu** (không chỉ lúc bị khoá) — nút này vốn để in thẳng đáp án
+  đúng vào ô input cho học sinh chép, dùng lúc đang đấu là lộ đáp án tức thì cho đội bên cạnh (2 bàn
+  ngồi cạnh nhau, nhìn thấy nhau). Đây là quyết định riêng của đợt này — không có tiền lệ trong
+  Anagram/Quiz vì cả 2 không có tính năng tương tự.
+- Bài học sai đúng: nộp SAI trong trận chỉ khoá bàn đó, vòng vẫn mở cho bàn kia (đo được: bàn 0 nộp sai
+  → input khoá + `.aw-tta-answer-area.is-fightlost` xám, `revealText` RỖNG; bàn 1 vẫn gõ được bình
+  thường, không xám) — đúng luật "XONG TRƯỚC ≠ THẮNG".
+
+### 4. Showdown — đúng như hợp đồng nói, không cần sửa gì thêm ngoài khai `showdownMode:true`
+`updateNav()` đã gọi `ui.setNav({index})` sẵn, `finish()` đã dựng đúng hình dạng `review[]`
+(`question`/`answered`/`yourText`/`yourCorrect`/`correctText`/`src`) — khớp thẳng với những gì
+`core/showdown.js` cần. Có thêm `ui.itemChanging?.(i, {outMs:120, inMs:190})` (khớp đúng 2 mốc thời
+gian fade sẵn có của template) để tên học sinh đổi cùng nhịp câu hỏi, không trễ.
+
+### 5. Đã tự test — `scratch/tta-fs-test.html` (harness mới, có importmap Firestore giả)
+- **Chơi đơn**: không đổi gì so với trước — nộp đúng/sai, điểm, reveal đều như cũ.
+- **Fight**: 2 bàn cùng câu hỏi → bàn 0 nộp SAI: khoá + xám, KHÔNG lộ đáp án, bàn 1 vẫn chơi bình
+  thường → bàn 1 nộp ĐÚNG: vòng ngã ngũ, CẢ HAI bàn cùng lộ đáp án (bàn 0 hiện "cold" — đúng chữ đã
+  giấu), bảng điểm CHUNG (`.aw-fight-team.side-1`) tăng đúng lên 1, cả 2 bàn cùng nhảy sang câu 2.
+  Nút Andrew đo được `disabled:true` suốt trận dù chưa dùng lần nào.
+- **Showdown**: 1 đội = cả lớp B2D (An, Bình) → câu 1 hiện "An", nộp bài, tự chuyển câu 2 → tên đổi
+  đúng thành "Bình" (đúng vòng tròn chia lượt).
+- **0 lỗi console** trong mọi test.
+- ⚠️ **Phát hiện phụ, KHÔNG PHẢI lỗi của đợt này**: màn "Game complete" đôi khi không tự chuyển màn kết
+  quả trong chính pane test này — đã xác nhận bằng `git stash` dựng lại bản CHƯA sửa gì và thấy y hệt,
+  nên đây là hạn chế môi trường test (`document.hidden` làm animation màn kết quả đứng lại), không phải
+  bug của Fight/Showdown vừa thêm. Không chặn việc đánh giá đợt này.
+
+### 6. ⭐⭐ VIỆC ĐANG CHỜ — ĐỌC MỤC NÀY TRƯỚC KHI LÀM TEMPLATE TIẾP THEO (session sau, máy khác cũng vậy)
+- ⬜ Thầy tự chơi thử thật (đơn/Fight/Showdown) trên trình duyệt thật để xác nhận màn kết quả chuyển
+  bình thường (mục 5 lưu ý ở trên — nghi là hạn chế môi trường test, chưa chắc là lỗi thật).
+- ⬜⬜ **5 template còn lại, ĐÚNG THỨ TỰ thầy chốt**: Open the box → Find the match → True/false →
+  Whack-a-mole → Crossword. Làm dần TỪNG CÁI MỘT, tự test kỹ (single + Fight + Showdown) rồi mới sang
+  cái sau — đừng dồn nhiều template vào 1 đợt.
+  1. **Open the box** — chưa phát hiện bẫy `.aw-top-score` nào (lúc khảo sát Đợt 168). Kiến trúc gần
+     giống Quiz (câu hỏi rời rạc), nên là cái DỄ NHẤT trong 5 cái còn lại — làm trước để giữ đà.
+  2. **Find the match** — ⚠️ CŨNG DÍNH lỗi `document.querySelector(".aw-top-score")` (bắt được lúc
+     khảo sát Đợt 168, CHƯA vá) — vá TRƯỚC khi cài Fight, y hệt cách đã vá ở Đợt 170 mục 2. Lưới phân
+     trang + băng chuyền câu hỏi — cần tự cân nhắc "1 lượt" nghĩa là gì (có thể là 1 định nghĩa, không
+     phải 1 trang).
+  3. **True/false** — ⚠️ CŨNG DÍNH lỗi `.aw-top-score` như trên, vá trước.
+  4. **Whack-a-mole** — ⚠️⚠️ CHƯA có `itemsKey`/`ui.setNav` gì cả (chuột chũi bật lên hoàn toàn theo
+     hẹn giờ, không có khái niệm "câu hỏi thứ mấy"). PHẢI tự thiết kế khái niệm "1 lượt" trước khi cài
+     bất kỳ hook nào — đừng chỉ sao chép mẫu Type the answer/Quiz, kiến trúc gốc quá khác.
+  5. **Crossword** — ⚠️⚠️ Bản thân game công khai "không có Next/Prev" (ô chữ điền tự do, không thứ tự).
+     Cũng cần một buổi thiết kế riêng cho "lượt" nghĩa là gì trước khi viết code.
+- **Mẫu để làm theo** (đã dùng cho Anagram/Quiz/Type the answer, xem `core/HUONG DAN CORE.md` mục Fight
+  + Showdown để nắm hợp đồng gốc):
+  - Đọc `templates/quiz/quiz.js` VÀ `templates/type-the-answer/type-the-answer.js` làm 2 ví dụ đối
+    chiếu — Quiz cho khuôn "có ô đáp án bấm được", Type the answer cho khuôn "input tự do, tự vẽ ô
+    điểm riêng".
+  - Khai `itemsKey` (nếu chưa có) + `fightMode:true` + `showdownMode:true` trên object template.
+  - Trong `mount()`: đọc `activity._fight`, dựng `fightLocked()`/`fightPendingReveal`, gọi
+    `fightCtl.attach(side, {total, goToIndex, lock(on), reveal})` sau khi các hàm nó cần đã tồn tại.
+  - Giấu MỌI THỨ chỉ ra đúng/sai (không riêng ô đáp án nhiều lựa chọn) cho tới `reveal()` — nhưng vẫn
+    gọi `wordDone()` NGAY LẬP TỨC (trọng tài cần biết đúng/sai ngay, chỉ hình vẽ trên màn hình mới hoãn).
+  - `lock()` KHÔNG BAO GIỜ được dựng lại DOM (`core/HUONG DAN CORE.md`, "BẪY THỨ 5") — chỉ vá `disabled`
+    + 1 class CSS xám (`.is-fightlost`, opacity .55, theo đúng mẫu Quiz/Anagram/Type the answer).
+  - `document.querySelector(".aw-top-score")` là **CẤM TUYỆT ĐỐI** — luôn dùng `ui.scoreEl` (đơn) hay
+    `fightCtl.scoreTarget(side)` (đấu, khi tự vẽ hoạt cảnh bay điểm) — kiểm tra kỹ TRƯỚC khi thêm Fight
+    cho bất kỳ template nào, vì lỗi này đã cắn 2 lần rồi (Đợt 169 + Đợt 170 mục 2).
+  - Showdown thường KHÔNG cần sửa gì ngoài khai `showdownMode:true`, MIỄN LÀ template đã gọi
+    `ui.setNav({index})` khi chuyển câu và dựng đúng hình dạng `review[]`
+    (`question`/`answered`/`yourText`/`yourCorrect`/`correctText`). Thêm `ui.itemChanging?.(i,{outMs,
+    inMs})` cho mượt (tuỳ chọn, không bắt buộc).
+  - Dựng harness test riêng theo mẫu `scratch/tta-fs-test.html` (import map trỏ `core/firebase.js`/
+    `core/classes.js` sang `scratch/fake-firebase.js`/`fake-classes.js`) cho từng template — scratch/
+    không commit (đã trong `.gitignore`), tạo lại mỗi khi cần.
+
+---
+
+## Đợt 169 (15/8/2026) — ⭐⭐ VÁ LỖI THẬT: OPTIONS "NHẢY SỐ" SAU KHI ĐỔI TEMPLATE (nặng nhất ở FIGHT MODE)
+⭐ CÓ SỬA CORE (`core/convert.js` — thêm đúng 1 dòng `optVer`, kèm import `OPT_VER` từ
+`core/options-migrate.js`). 🟢 ĐÃ TỰ TEST qua `scratch/showdown-test.html` (đo cả Fight lẫn single mode).
+⬜ **CHƯA commit** — đang chờ thầy duyệt.
+⬜ **VIỆC 2 (mở Fight/Showdown cho mọi template) TÁCH RIÊNG** — xem Đợt 170 trở đi, xem mục 6.
+
+### 1. Thầy báo (15/8/2026)
+> "Trong 1 game khi tôi chơi ở mode Fight, chuyển từ act chính là Anagram sang game Quiz, khi chỉnh
+> tùy chỉnh trong Options xong thì options lại không giữ như vậy mà tự động nhảy sang số khác. Cần
+> điều tra xem bị như vậy ở những đâu để xử lý triệt để."
+
+### 2. Nguyên nhân thật (đọc code, không đoán) — `optVer` bị rớt mất khi đổi template
+`core/options-migrate.js` (Đợt 143) quy đổi các penalty cũ (thang 0-5 hay 0-10) về thang chung 0-100,
+và chỉ chạy **đúng 1 lần cho mỗi act** nhờ cờ `optVer` đóng dấu lên act sau khi chạy — không có cờ này
+thì hàm coi act là "cũ chưa quy đổi" và NHÂN THANG LẠI, `⚠️` chính file này đã tự cảnh báo: "-5 → -100
+→ -2000 → ...".
+
+`core/convert.js`'s `convertActivity()` — hàm dựng act TẠM khi đổi template (Template panel) — dựng
+`options` đúng thang hiện tại (lấy từ sample của game đích hoặc từ `templateOptions` đã nhớ, cả 2 đều
+đã qua migrate từ trước) nhưng **QUÊN đóng dấu `optVer`** lên act tạm đó. Hậu quả: **mọi lần
+`startGame()` sau đó** (hàm `migrateActivityOptions()` chạy ở đầu MỌI lần mount, `core/engine.js` dòng
+239) đều coi act tạm là "cũ" và nhân thang lại — dù giá trị vốn đã đúng.
+- **Single mode**: chỉ lộ ĐÚNG 1 LẦN, vì `activity`/`libAct` được TÁI DÙNG qua các lần restart
+  (Start again, Apply...) nên lần mount thứ 2 trở đi tự đóng dấu đúng rồi dừng — nhưng lần ĐẦU sau khi
+  đổi template thì giá trị copy từ `templateOptions` đã sai ngay từ đó.
+- **Fight mode nặng hơn hẳn**: `core/fight.js`'s `actFor()` **dựng LẠI object mới cho mỗi bàn ở MỖI
+  LẦN restart** (`{...activity, options:{...}, ...}`) từ MỘT `activity` cấp module dùng chung suốt
+  trận — act đó không bao giờ được đóng dấu `optVer` nên **MỖI LẦN Apply/Start again đều nhân thang
+  lại một lần nữa**, đúng thứ thầy thấy: chỉnh xong, Apply, mở lại thấy khác — vì mỗi lần Apply chính
+  là một lần restart. "Points off" là control đầu tiên một giáo viên hay đụng tới ngay sau khi đổi
+  sang Quiz nên bắt gặp lỗi này đầu tiên, dễ hiểu vì sao thầy phát hiện đúng combo này.
+
+### 3. Đã rà "mọi nơi lỗi này xảy ra" theo đúng yêu cầu thầy
+- `core/convert.js` — nguồn gốc, ĐÃ SỬA (đóng dấu `optVer: OPT_VER` ngay khi dựng act tạm).
+- `core/fight.js`'s `actFor()`/`restartMatch()` — không phải nơi gây lỗi, mà là nơi làm lỗi LẶP LẠI;
+  sửa ở nguồn (`convert.js`) là đủ vì `actFor()` chỉ trải phẳng (`{...activity}`) act đã đóng dấu đúng.
+- `core/mistakes.js`'s `buildMistakesActivity()` (đường "Xem lỗi sai") — **kiểm tra thấy AN TOÀN**:
+  dùng `{...base, ...}` giữ nguyên `optVer` của act gốc, không tự dựng `options` mới, không dính lỗi
+  này.
+- Không tìm thấy nơi thứ 3 nào khác tự dựng act tạm mà quên `optVer` (đã rà toàn bộ chỗ gọi
+  `convertActivity()`).
+
+### 4. Đã tự test (đo trực tiếp giá trị hiện trên UI, không đoán)
+Qua `scratch/showdown-test.html`, dựng lại đúng kịch bản thầy mô tả:
+- **Fight mode**: bật Fight (Anagram), đổi Template → Quiz (cả 2 bàn cùng đổi), mở Options, kéo
+  "Points off" thành **-30**, Apply → mở lại Options: **vẫn -30**. Apply thêm lần 2 (không đổi gì) →
+  mở lại Options: **vẫn -30**, không hề nhân lên -600 hay tương tự.
+- **Single mode**: đổi Template Anagram → Quiz (không Fight), kéo "Points off" thành **-45**, Apply →
+  mở lại Options: **vẫn -45** (trước đây sẽ sai ngay từ lần đầu).
+- **0 lỗi console** trong toàn bộ quá trình.
+
+### 5. Commit + push + đối chiếu LIVE
+
+### 6. Việc 2 thầy giao cùng lúc — "mở Fight/Showdown cho mọi template" — đã khảo sát, tách sang Đợt sau
+Đã rà toàn bộ 17 template (đọc `core/HUONG DAN CORE.md` phần hợp đồng Fight/Showdown + từng file
+template) để lên lộ trình AN TOÀN thay vì cài ẩu cả 17 cùng lúc:
+- **Hiện chỉ Anagram + Quiz có cả 2 chế độ.**
+- **Bắt được thêm 1 quả bom nổ chậm**: 4 template (`find-the-match`, `true-false`, `type-the-answer`,
+  `unjumble`) đang tự `document.querySelector(".aw-top-score")` thay vì dùng `ui.scoreEl` — đúng bẫy
+  `core/fight.js` đã tự cảnh báo trong header ("quét cả trang thì bàn phải ghi điểm vào bàn trái") —
+  PHẢI vá xong bẫy này TRƯỚC khi mở Fight cho 3 trong số đó (đợt sau).
+- **Lộ trình đề xuất** (chi tiết đầy đủ sẽ vào từng đợt riêng khi làm):
+  1. Batch A (giống hệt khuôn Anagram/Quiz, rủi ro thấp nhất): **Gameshow** (cùng khuôn dữ liệu với
+     Quiz), **Open the box**, **Speaking**.
+  2. Batch B (giống Batch A nhưng phải vá quả bom `.aw-top-score` trước): **True/false**,
+     **Type the answer**, **Unjumble**.
+  3. Batch C (có "phân tâm" chuyển động thời gian thực chồng lên câu hỏi rời rạc, cần quyết định
+     thiết kế riêng cho `lock()`/`reveal()`): **Balloon pop**, **Flying fruit**, **Find the match**
+     (cũng dính quả bom trên).
+  4. Batch D (không có ranh giới "hết lượt" rõ ràng — Maze chase di chuyển thời gian thực, Whack-a-mole
+     chưa có `itemsKey`/`setNav` gì cả, Crossword cố tình "không có Next/Prev" — cần một buổi thiết kế
+     riêng trước khi viết dòng code nào): **Maze chase**, **Whack-a-mole**, **Crossword**.
+  5. Batch E (⚠️ cần thầy quyết định có nên ép vào không): **Running team**/**Running word** đã có sẵn
+     cơ chế chia đội/đua 2 đội RIÊNG của chính nó rồi (dễ thành "trò chơi lồng trò chơi" rối mắt) —
+     **Speaking cards** thì không chấm điểm/không có đáp án đúng nên "Fight ai thắng" hay "Showdown lượt
+     của ai" gần như không có nghĩa. Ba game này có thể nên MIỄN, không ép theo "mọi template" theo
+     nghĩa đen.
+
+---
+
 ## Đợt 168 (15/8/2026) — ⭐ SHOWDOWN: RESET XOÁ SẠCH BẢNG CHUNG NGAY LẬP TỨC + XÁC NHẬN ĐỔI TEMPLATE GIỮ NGUYÊN ĐỘI
 ⭐ CÓ SỬA CORE (`core/showdown-setup.js`: `wipeSetup()` mới, nút Reset dùng hàm này thay vì
 `releaseMyClaim()`, `boot()` đồng bộ thêm `teams`/`classId` từ live snapshot + tự dọn listener cũ).

@@ -112,6 +112,10 @@
      No CSS transition here: it must land at the exact spot immediately (a
      transition also froze under a non-compositing/background tab). */
 }
+/* FIGHT MODE (Đợt 170) — this board's go is over but its verdict is still
+   withheld (see type-the-answer.js's syncFightLock). Same opacity as
+   quiz.js's/anagram.js's own .is-fightlost. */
+.aw-tta-answer-area.is-fightlost { opacity: .55; }
 
 /* "Correct answer" reveal, ABOVE the input — grid-rows 0fr->1fr is a smooth,
    pure-CSS way to animate height (from nothing to its natural content size)

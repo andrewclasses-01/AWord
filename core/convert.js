@@ -22,6 +22,7 @@
 import { templateEntry } from "./catalog.js";
 import { shuffle } from "./utils.js";
 import { resolveActivity } from "./content-view.js";
+import { OPT_VER } from "./options-migrate.js";
 
 // ---- Các loại đích theo từng "kind" nguồn -------------------------------
 // (whack_a_mole nằm ở CẢ 2: nguồn/đích quiz-mode cho qa, tf-mode cho tf.)
@@ -240,7 +241,20 @@ export async function convertActivity(activity, targetType) {
     title: activity.title || "",
     instruction,
     theme: activity.theme || "classic",
-    options,
+    // ⚠️ Đợt 169 (15/8/2026) — BẮT BUỘC phải có, cùng lý do content-view.js's
+    // VIEW_ACT_KEYS đã ghi cho đường xem-riêng-bộ: `options` ở trên luôn lấy
+    // từ sample của game ĐÍCH hoặc từ `templateOptions` đã nhớ — cả hai đều
+    // đã ở đúng thang hiện tại — nhưng thiếu `optVer` thì act tạm này trông
+    // như "act cũ chưa quy đổi" với MỌI `migrateActivityOptions()` sau đó
+    // (core/engine.js gọi hàm này ở đầu MỌI startGame(), tức MỌI lần mount).
+    // Lỗi thật thầy báo (15/8/2026): đổi Anagram→Quiz trong Fight mode, chỉnh
+    // "Points off" xong không giữ mà tự nhảy số — vì core/fight.js's actFor()
+    // dựng lại object cho mỗi bàn từ MỘT `activity` optVer-rỗng duy nhất mỗi
+    // lần restart (Apply, Start again...), nên giá trị bị nhân lại (×20) MỖI
+    // LẦN thay vì đúng 1 lần: -5 → -100 → -2000 → ... In single mode ít lộ
+    // hơn vì `libAct`/`activity` được TÁI DÙNG qua các lần restart nên chỉ
+    // dính đúng 1 lần rồi tự đóng dấu — nhưng lần đầu đó vẫn sai.
+    optVer: OPT_VER,
     content,
     _converted: true   // cờ đánh dấu act tạm (không lưu, không có trên thư viện)
   };

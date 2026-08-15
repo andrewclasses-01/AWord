@@ -65,6 +65,17 @@ const ttaTemplate = {
   itemsKey: "items",
   hidePointsOff: true,   // ships its own "Minus points" control -> hide the central Points off
   name: "Type the answer",
+  // FIGHT MODE (Đợt 170, 15/8/2026) — mirrors templates/quiz/quiz.js's pattern;
+  // see core/HUONG DAN CORE.md's Fight contract. The one thing this template
+  // does that Quiz doesn't: it draws its OWN score chip (`showScore`/
+  // `pulseScoreTo` below) instead of calling `ui.setScore()`, so it has to
+  // forward to `fightCtl.onScore()` itself — see showScore's own note.
+  fightMode: true,
+  // SHOWDOWN (Đợt 170) — nothing else needed: the turn rotation keys off the
+  // `index` already sent through ui.setNav (updateNav, below) and the
+  // per-pupil results off the `review` array finish() already builds. See
+  // core/showdown.js.
+  showdownMode: true,
   edit: openTypeTheAnswerEditor,
   hasKeyboardToggle: true,     // ask engine.js for a slot next to Menu for our keyboard show/hide button
   hasLivesSlot: true,          // hearts render in the top bar, left of the score (same slot as True/false)
@@ -120,6 +131,29 @@ const ttaTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const allowSkip = opt.allowSkip === true;   // move on without answering (default off)
+
+    // ----- FIGHT MODE (Đợt 170) — this play may be one of two boards racing.
+    // `_fight` is put here by core/fight.js; everything below falls back to
+    // ordinary single-board behaviour when it is absent. Mirrors
+    // templates/quiz/quiz.js's own `_fight` branches.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;   // set by the match controller between rounds
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    // FIGHT MODE — this board has answered but its verdict (is-correct/is-wrong
+    // + the answer-key reveal text) is still WITHHELD because the other team is
+    // still typing: printing the correct spelling right next to their board
+    // would hand it straight over. The word the STUDENT typed is unavoidably
+    // visible the moment they type it — this game has no "tiles" to keep
+    // blank — but the ANSWER KEY is extra information Fight's "no leak while
+    // the round is open" rule can and must still hold back. Cleared by
+    // reveal(), which the match calls once the round is settled for both.
+    let fightPendingReveal = false;
+    // Where a flying mark should travel to: this board's own chip normally,
+    // or (fighting) the shared team chip above both boards — same pattern as
+    // anagram.js's scoreTargetEl().
+    const scoreTargetEl = () => (fightCtl ? fightCtl.scoreTarget(fightSide) : ui.scoreEl);
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && it.prompt && Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length);
@@ -210,13 +244,18 @@ const ttaTemplate = {
       onBackspace: () => backspace(input),
       submit: {
         onClick: () => submitAnswer(input.value),
-        isDisabled: () => state[index].graded || !input.value.trim()
+        isDisabled: () => state[index].graded || !input.value.trim() || fightLocked()
       },
       extraKey: {
         label: "Andrew",
         className: "aw-tta-key-andrew",
         getState: () => !andrewUsed ? "ready" : (andrewGlowing ? "glowing" : "used"),
-        isDisabled: () => andrewUsed || state[index].graded,
+        // FIGHT MODE (Đợt 170): disabled for the WHOLE match, not just while
+        // locked — "Andrew help" prints the correct spelling straight into
+        // this board's input for the student to copy, and the two boards sit
+        // side by side on one screen, so an early hint here is an early leak
+        // to the other team too.
+        isDisabled: () => andrewUsed || state[index].graded || !!fightCtl,
         onClick: useAndrew
       }
     });
@@ -400,10 +439,11 @@ const ttaTemplate = {
       }
     }
     // The Submit controls (outside button + the keyboard's blue Submit key) are
-    // disabled while the box is empty or the question is already graded.
+    // disabled while the box is empty, the question is already graded, or (Đợt
+    // 170) this board has been locked out of the current fight round.
     function syncSubmitEnabled() {
       const st = state[index];
-      submitBtn.disabled = st.graded || !input.value.trim();
+      submitBtn.disabled = st.graded || !input.value.trim() || fightLocked();
       kbd.refresh();   // re-syncs the keyboard's own Submit key + the Andrew key
     }
 
@@ -411,13 +451,30 @@ const ttaTemplate = {
     // The answer block + keyboard update INSTANTLY in place (so Submit never
     // flickers); only the question text crossfades when navigating.
     function loadQuestion(i, withFade) {
+      // ⚠️ FIGHT MODE (Đợt 170): tell the match BEFORE anything else runs, not
+      // after — reporting late leaves the other board starting its own slide
+      // a beat behind (measured 130-160ms on quiz.js, the same trap). The
+      // controller echoes this back to the OTHER board via its own goToIndex,
+      // which lands here too; fight.js's own `index === roundIndex` guard
+      // absorbs that echo, so this is safe to call unconditionally.
+      // `withFade` is exactly "this is a navigation, not the first paint" —
+      // the same flag Quiz's `ui.itemChanging` call keys off.
+      if (withFade && fightCtl) fightCtl.boardMoved(fightSide, i);
+      // SHOWDOWN (Đợt 170) — the pupil-name swap rides on this same moment,
+      // for the same reason. Optional; a template that never calls it just
+      // gets the name change instantly at setNav instead.
+      if (withFade) ui.itemChanging?.(i, { outMs: 120, inMs: 160 });
+
       index = i;
       const it = items[index];
       const st = state[index];
+      // A withheld reveal belongs to the question that was on screen; moving
+      // to another one clears it (same reset point as quiz.js's applyQuestion).
+      fightPendingReveal = false;
 
       // --- answer block, in place ---
       input.value = st.typed || "";
-      input.disabled = st.graded;
+      input.disabled = st.graded || fightLocked();
       input.classList.remove("is-correct", "is-wrong");
       if (st.graded) input.classList.add(st.correct ? "is-correct" : "is-wrong");
       const wrongShown = st.graded && !st.correct && opt.showAnswerWhenWrong !== false;
@@ -429,6 +486,11 @@ const ttaTemplate = {
       syncSubmitEnabled();   // Submit off if this question's box is empty (also refreshes the keyboard)
       updateNav();
       fitLayout();
+      // The card's grey "lost the round" wash (see syncFightLock) has to be
+      // re-evaluated on every question too, same reasoning as quiz.js's own
+      // syncFightLock call here — otherwise a lost round could leave the NEXT
+      // question's answer block wrongly greyed (or wrongly not).
+      if (fightCtl) syncFightLock();
 
       // --- question text ---
       const setPrompt = () => {
@@ -470,25 +532,17 @@ const ttaTemplate = {
     function submitAnswer(typed) {
       const it = items[index];
       const st = state[index];
-      if (st.graded || finished) return;
+      if (st.graded || finished || fightLocked()) return;
       if (!String(typed).trim()) return;   // can't submit an empty box
       st.typed = typed;
       st.graded = true;
       st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
 
       input.disabled = true;
-      input.classList.add(st.correct ? "is-correct" : "is-wrong");
       syncSubmitEnabled();   // graded -> Submit off (outside + keyboard)
       updateNav();   // re-sync Next NOW (with Allow skip off, Next was disabled until this
                       // question was graded — without this it stayed stuck disabled until
                       // some unrelated Prev/Next call happened to refresh it)
-
-      const revealShown = !st.correct && opt.showAnswerWhenWrong !== false;
-      if (revealShown) {
-        revealText.textContent = it.acceptedAnswers[0];
-        revealWrap.classList.add("is-open");
-        scheduleRevealRefit();
-      }
 
       if (andrewGlowing) {
         andrewGlowing = false;
@@ -496,9 +550,37 @@ const ttaTemplate = {
         kbd.refresh();   // Andrew key -> "used" now that glowing has ended
       }
 
-      if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
-      flyMark(st.correct, input);
+      const revealShown = !st.correct && opt.showAnswerWhenWrong !== false;
+
+      // FIGHT MODE (Đợt 170): withhold the is-correct/is-wrong verdict, the
+      // answer-key reveal, and the flying mark — everything that says HOW
+      // this board did — until the match calls reveal() once both boards are
+      // settled (core/HUONG DAN CORE.md, "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ"). The
+      // board still visibly stops right now (grey, via syncFightLock below),
+      // and the referee hears the verdict immediately (wordDone, below) —
+      // only what's drawn on screen waits.
+      if (fightCtl) {
+        fightPendingReveal = true;
+        syncFightLock();
+      } else {
+        applyGradeVisuals(st, it, revealShown);
+      }
+
       const outOfLives = st.correct ? false : loseLife();
+
+      if (fightCtl) {
+        // The referee needs the verdict NOW, not once the visuals catch up —
+        // it decides who won the round. `correct:false` only ends THIS
+        // board's go; the round stays open for the other team (core/HUONG DAN
+        // CORE.md, "XONG TRƯỚC ≠ THẮNG").
+        fightCtl.wordDone(fightSide, { index, correct: st.correct === true });
+        if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), 1500);
+        // No auto-advance here: the match controller moves BOTH boards
+        // together once the round settles (advanceRound()/jumpTo) — a board
+        // walking off on its own would desynchronise the two frames, same
+        // reasoning as quiz.js's own fight branch.
+        return;
+      }
 
       // Every graded question moves the game on shortly after, regardless of
       // Allow skip (that option only gates the MANUAL Next before answering) —
@@ -523,6 +605,63 @@ const ttaTemplate = {
     }
     function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
 
+    // The visuals a graded question earns: is-correct/is-wrong on the input,
+    // the answer-key reveal (if wrong and the option allows it), the sound,
+    // and the flying mark. Pulled out of submitAnswer() so FIGHT MODE can
+    // defer this whole bundle to revealFightMarks() instead of running it
+    // immediately — see submitAnswer's own note on why.
+    function applyGradeVisuals(st, it, revealShown) {
+      input.classList.add(st.correct ? "is-correct" : "is-wrong");
+      if (revealShown) {
+        revealText.textContent = it.acceptedAnswers[0];
+        revealWrap.classList.add("is-open");
+        scheduleRevealRefit();
+      }
+      if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
+      flyMark(st.correct, input);
+    }
+
+    // FIGHT MODE — the match says the round is settled for both teams, so the
+    // verdict withheld above can finally go up. Also runs on a board that
+    // never got to answer (the other team took the word first), so IT is
+    // shown the correct answer too — same pattern as quiz.js's
+    // revealFightMarks / anagram.js's revealFightResult.
+    function revealFightMarks() {
+      const st = state[index], it = items[index];
+      if (!it) { syncFightLock(); return; }
+      if (fightPendingReveal) {
+        fightPendingReveal = false;
+        const revealShown = !st.correct && opt.showAnswerWhenWrong !== false;
+        applyGradeVisuals(st, it, revealShown);
+      } else if (!st.graded) {
+        revealText.textContent = it.acceptedAnswers[0];
+        revealWrap.classList.add("is-open");
+      }
+      syncFightLock();
+    }
+
+    // Apply a lock change WITHOUT rebuilding anything — the fight controller
+    // calls lock(on) at the exact moment the OTHER board just finished, and a
+    // rebuild right then (loadQuestion) would restart this question's voice
+    // clip and replay its entrance animation: a flash on the board that just
+    // lost (core/HUONG DAN CORE.md's "BẪY THỨ 5", the same trap quiz.js's own
+    // syncFightLock exists to avoid).
+    function syncFightLock() {
+      const locked = fightLocked();
+      const st = state[index];
+      // An already-graded question keeps the input disabled regardless — it
+      // was disabled the instant it was graded, and the lock must not hand it
+      // back once the round moves on.
+      if (!st.graded) input.disabled = locked;
+      syncSubmitEnabled();   // folds fightLocked() in too — see its own definition
+      // Grey while this board's go is over but its result isn't on show yet:
+      // either it never got to play ("too slow" — the other team took the
+      // question) or it HAS answered but the verdict is still withheld while
+      // the other team finishes. Once revealed, an answered board drops the
+      // grey so its own verdict reads in full colour.
+      answerBlock.classList.toggle("is-fightlost", locked && (!st.graded || fightPendingReveal));
+    }
+
     // The mark (big, thick ✓ / ✗ / "−N") is born ON the input's row (an absolute
     // child of the input row, so it always stays aligned with the box even after
     // the reveal opens), SHAKES a little, THEN flies to the score. Correct -> +1;
@@ -530,7 +669,13 @@ const ttaTemplate = {
     // wrong without Minus -> a cross that just fades in place.
     function flyMark(correct, inputEl) {
       if (!inputEl) return;
-      const scoreEl = document.querySelector(".aw-top-score");
+      // ⚠️ Đợt 170 — was `document.querySelector(".aw-top-score")`, forbidden by
+      // the Fight contract (core/HUONG DAN CORE.md): that scans the WHOLE page,
+      // so in a match it would fly this board's mark into whichever board's
+      // score chip happens to sit first in the DOM, regardless of which one
+      // actually answered. `scoreTargetEl()` reads THIS board's own chip, or
+      // (fighting) the shared team chip this board owns.
+      const scoreEl = scoreTargetEl();
       const size = Math.max(34, inputEl.getBoundingClientRect().height * 0.72);   // bigger than before
 
       const penalty = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
@@ -669,14 +814,23 @@ const ttaTemplate = {
     }
     function showScore(n) {
       if (dead) return;   // Đợt 114 — live lookup; on a dead play this is the NEXT game's badge
-      const scoreEl = document.querySelector(".aw-top-score");
+      // ⚠️ Đợt 170 — was `document.querySelector(".aw-top-score")`, forbidden
+      // by the Fight contract for the same reason as flyMark above. `ui.scoreEl`
+      // is THIS board's own chip specifically.
+      const scoreEl = ui.scoreEl;
       if (scoreEl) scoreEl.innerHTML = scoreHTML(n);
+      // This template draws its own chip instead of calling ui.setScore(), so
+      // it never gets that function's automatic `fight.ctl.onScore()` forward
+      // (core/engine.js's own note on setScorePainter explains why) — done by
+      // hand here instead. The shared team chip is what actually shows during
+      // a match (this board's in-frame chip is visibility:hidden then).
+      if (fightCtl) fightCtl.onScore(fightSide, n);
     }
 
     // Animate `.aw-top-score` from oldValue to newValue with a small bounce.
     function pulseScoreTo(oldValue, newValue) {
       if (dead) return;   // Đợt 114 — see showScore
-      const scoreEl = document.querySelector(".aw-top-score");
+      const scoreEl = ui.scoreEl;   // Đợt 170 — was document.querySelector(".aw-top-score")
       if (!scoreEl) return;
       if (oldValue === newValue) { showScore(newValue); return; }
       scoreEl.classList.remove("aw-score-pulse"); void scoreEl.offsetWidth;
@@ -706,7 +860,10 @@ const ttaTemplate = {
     // light the Andrew key up. Consumes the one game-wide use immediately.
     function useAndrew() {
       const st = state[index];
-      if (andrewUsed || st.graded) return;
+      // Đợt 170 — belt and braces: the keyboard's own key is already disabled
+      // for the whole match (see createKeyboard's extraKey.isDisabled above),
+      // this just makes sure nothing else can reach it either.
+      if (andrewUsed || st.graded || fightCtl) return;
       andrewUsed = true;
       andrewGlowing = true;
       const it = items[index];
@@ -773,6 +930,34 @@ const ttaTemplate = {
     // or ending the game while they're mid-review. See submitAnswer.
     function goPrev() { if (index > 0) { clearAutoTimer(); ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index - 1, true); } }
     function goNext() { if (!canAdvance()) return; if (index < total - 1) { clearAutoTimer(); ui.sound.keyClick?.(); andrewGlowing = false; loadQuestion(index + 1, true); } }
+
+    // FIGHT MODE — the match controller moving THIS board, because the OTHER
+    // one navigated or the round advanced. Runs the same loadQuestion the
+    // initiating board ran, so the two frames stay visually identical (same
+    // pattern as quiz.js's jumpTo). No canAdvance()/gating here on purpose —
+    // the controller is authoritative.
+    function jumpTo(i) {
+      const target = Math.max(0, Math.min(total - 1, i | 0));
+      if (target === index) return;
+      clearAutoTimer();
+      andrewGlowing = false;
+      loadQuestion(target, true);
+    }
+
+    // ----- FIGHT MODE: the match controller drives this board through here.
+    // Registered after everything it references exists (jumpTo, syncFightLock,
+    // revealFightMarks) — same placement reasoning as quiz.js.
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total,
+        goToIndex: jumpTo,
+        lock(on) {
+          fightBoardLock = !!on;
+          syncFightLock();
+        },
+        reveal: revealFightMarks
+      });
+    }
 
     function finish(reason = "complete") {
       if (finished) return;
