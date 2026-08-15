@@ -1108,14 +1108,26 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
   // the project's animate()-with-setTimeout-fallback rule (HUONG DAN CORE) —
   // `swap` is guarded so a hidden tab losing the `finish` event can't leave
   // the table stuck mid-swap.
+  //
+  // ⚠️ LỖI THẬT (thầy báo, 15/8/2026) — nội dung nháy hiện rồi biến mất ngay
+  // sau khi đổi tab. Nguyên nhân: `out` giữ `fill:"forwards"` (bám mãi ở
+  // opacity 0 sau khi xong), còn animation "hiện vào" bên dưới KHÔNG có
+  // `fill` — nó chạy xong là bị gỡ khỏi hàng hiệu ứng, để lộ lại đúng
+  // `out` vẫn đang ép opacity 0 phía dưới ⇒ bảng vừa hiện xong lại mất.
+  // Sửa theo đúng luật CONG THUC MAU §3.4: MỌI animation `fill:forwards`
+  // phải được `.cancel()` + dọn style inline ở bước kết thúc, không được để
+  // 2 animation forwards chồng nhau trên cùng phần tử.
   function switchTab(newKey) {
     if (!variantKeys || newKey === currentKey) return;
     closeVoicePopover(); stopVoicePreview();
     const dir = variantKeys.indexOf(newKey) > variantKeys.indexOf(currentKey) ? 1 : -1;
     const dx = 16 * dir;
-    let done = false;
+    let doneOut = false;
     const swap = () => {
-      if (done) return; done = true;
+      if (doneOut) return; doneOut = true;
+      try { out.cancel(); } catch { /* ignore */ }
+      iWrap.style.opacity = ""; iWrap.style.transform = "";   // rest at the real (no-animation) state first
+
       commitCurrentTab();
       currentKey = newKey;
       loadCurrentTab();
@@ -1123,9 +1135,18 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
       bulkBar.replaceWith(newBar);
       bulkBar = newBar;
       renderItems();
-      iWrap.animate(
+
+      let doneIn = false;
+      const finishIn = () => {
+        if (doneIn) return; doneIn = true;
+        try { inAnim.cancel(); } catch { /* ignore */ }
+        iWrap.style.opacity = ""; iWrap.style.transform = "";
+      };
+      const inAnim = iWrap.animate(
         [{ opacity: 0, transform: `translateX(${-dx}px)` }, { opacity: 1, transform: "translateX(0)" }],
-        { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
+        { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+      inAnim.onfinish = finishIn;
+      setTimeout(finishIn, 220);
     };
     const out = iWrap.animate(
       [{ opacity: 1, transform: "translateX(0)" }, { opacity: 0, transform: `translateX(${dx}px)` }],
