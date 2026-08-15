@@ -1863,7 +1863,9 @@ function openSettingsFlow() {
       body.innerHTML = "";
       const list = el("div", "aw-set-menu");
       list.append(menuRow("Default activity options",
-        "Set the options new activities start with", showTemplates));
+        "Set the options new activities start with", () => showTemplates("activity")));
+      list.append(menuRow("Default homework options",
+        "Set the options a new assignment starts with", () => showTemplates("homework")));
       list.append(menuRow("Classes",
         "Class rolls used by activities that call pupils by name", showClasses));
       // placeholder rows for features coming later
@@ -2045,9 +2047,13 @@ function openSettingsFlow() {
       toast(msg);
     }
 
-    function showTemplates() {
+    // `kind`: "activity" (Default activity options, unchanged since Đợt 143) or
+    // "homework" (Đợt C, 15/8/2026 — what a NEW "Set assignment" form starts
+    // with). Same screens, same builder, a separate bucket in localStorage —
+    // see settings.js's bucketKey().
+    function showTemplates(kind) {
       body.closest(".aw-modal")?.classList.remove("is-optswide");
-      setTitle("Default activity options", showMenu);
+      setTitle(kind === "homework" ? "Default homework options" : "Default activity options", showMenu);
       body.innerHTML = "";
       body.append(el("div", "aw-set-hint", "Choose a template to set its default options."));
       const grid = el("div", "aw-pick-grid");
@@ -2056,7 +2062,7 @@ function openSettingsFlow() {
         card.type = "button";
         card.append(el("div", "aw-pick-name", t.label), el("div", "aw-pick-blurb", t.blurb || ""));
         if (!t.built) card.append(el("span", "aw-pick-soon", "Coming soon"));
-        card.onclick = () => { if (!t.built) { toast(`${t.label} — coming soon`); return; } showOptions(t); };
+        card.onclick = () => { if (!t.built) { toast(`${t.label} — coming soon`); return; } showOptions(t, kind); };
         grid.append(card);
       });
       body.append(grid);
@@ -2068,11 +2074,13 @@ function openSettingsFlow() {
     // `async` because most of those controls come from the template's own
     // buildExtraOptions, so the template module has to be loaded first — the
     // Settings dialog is reachable without ever having played anything.
-    async function showOptions(t) {
-      setTitle(`${t.label} defaults`, showTemplates);
+    async function showOptions(t, kind) {
+      const isHw = kind === "homework";
+      setTitle(`${t.label} ${isHw ? "homework " : ""}defaults`, () => showTemplates(kind));
       body.innerHTML = "";
-      body.append(el("div", "aw-set-hint",
-        `New ${t.label} activities will start with these options.`));
+      body.append(el("div", "aw-set-hint", isHw
+        ? `A new "Set assignment" form for ${t.label} will start with these options.`
+        : `New ${t.label} activities will start with these options.`));
       // The full panel is a 2-column grid; the 440px Settings dialog is too
       // narrow for a 3-choice segmented control in half of that (measured in
       // Đợt 140: under ~186px a column can't hold one). Widen to the same width
@@ -2080,7 +2088,7 @@ function openSettingsFlow() {
       // of this dialog so only THIS one is wide.
       const modalEl = body.closest(".aw-modal");
       if (modalEl) modalEl.classList.add("is-optswide");
-      const draft = getDefaultOptions(t.type);   // working copy; saved only on Save
+      const draft = getDefaultOptions(t.type, kind);   // working copy; saved only on Save
       let tpl = null;
       try { tpl = await ensureTemplate(t.type); } catch (e) { tpl = null; }
       // The teacher can close the dialog while the module is still loading.
@@ -2089,7 +2097,7 @@ function openSettingsFlow() {
       const actions = el("div", "aw-modal-actions");
       const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
       const save = el("button", "aw-btn aw-btn-primary", "Save"); save.type = "button";
-      save.onclick = () => { saveDefaultOptions(t.type, draft); close(); toast("Settings saved"); };
+      save.onclick = () => { saveDefaultOptions(t.type, draft, kind); close(); toast("Settings saved"); };
       actions.append(cancel, save);
       body.append(actions);
     }

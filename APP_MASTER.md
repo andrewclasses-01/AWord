@@ -2285,23 +2285,29 @@ vừa xảy ra.
 > |---|---|---|
 > | **A** | Gộp ENG1/ENG2/VI1/VI2 thành **một act `WORDS`**, chọn bộ gợi ý trong Options | ✅ **XONG** (Đợt 145) |
 > | **B** | QUIZ1+QUIZ2 và 2 bản reading act gộp, mỗi act mang **2 nửa PRACTICE/HOMEWORK** | ✅ **XONG** (Đợt 146) |
-> | **C** | **Bộ options HOMEWORK khi GIAO BÀI** + mặc định trong Settings | ⬜ **CHƯA LÀM — việc kế tiếp** |
-> | **D** | **XOÁ SẠCH dữ liệu cũ**: Activities + Results + clip giọng trên Firebase | ⬜ **CHƯA LÀM — làm CUỐI CÙNG** |
+> | **C** | **Bộ options HOMEWORK khi GIAO BÀI** + mặc định trong Settings | ✅ **XONG** (Đợt 160, code
+>   xong + tự test qua trình duyệt — **CHỜ THẦY DUYỆT + đăng nhập thật để thử hết**) |
+> | **D** | ~~XOÁ SẠCH dữ liệu cũ trên Firebase~~ | ⛔ **HUỶ KHỎI KẾ HOẠCH CODE (15/8/2026, thầy chốt)** —
+>   **thầy tự tay xoá**, không cần dựng trang dọn tự động nữa |
 >
-> **Đợt C — thầy đã chốt sẵn thiết kế, cứ thế mà làm:**
-> - Thêm **"Default homework options"** trong Settings (bên cạnh "Default activity options" đang có).
-> - Màn **"Set assignment"** hiện luôn bảng Options (dùng lại `buildOptionsBody`), nạp sẵn bộ mặc định
->   đó để thầy chỉnh riêng cho bài này; **`createAssignment` chụp options đã chỉnh** chứ không phải
->   `act.options`.
-> - Màn **"Edit assignment"** (đã có sẵn, sửa tên/hạn/kết thúc game) thêm bảng Options y hệt, patch vào
->   `assignment.activity.options`. ✅ Đã kiểm: **luật Firestore cho phép** (`allow update: if isTeacher()`).
+> **Đợt C — ✅ ĐÃ CODE (Đợt 160, 15/8/2026), chi tiết + kết quả tự test ở nhật ký Đợt 160:**
+> - **"Default homework options"** trong Settings, bucket RIÊNG (`homeworkOptionsByType` trong
+>   `localStorage`, xem `core/settings.js`) — không đụng bucket "Default activity options" cũ.
+> - Màn **"Set assignment"** hiện luôn bảng Options (dùng lại `buildOptionsControls`/`buildOptionsBody`),
+>   nạp sẵn bộ mặc định homework để thầy chỉnh riêng cho bài này; **`createAssignment` chụp options đã
+>   chỉnh** (tham số `options` mới) chứ không phải `act.options`.
+> - Màn **"Edit assignment"** thêm bảng Options y hệt, nạp từ CHÍNH `assignment.activity.options` đang
+>   có (không phải default), Save patch bằng dot-path vào `assignment.activity.options`. ✅ Đã kiểm:
+>   **luật Firestore cho phép** (`allow update: if isTeacher()`).
 > - ⚠️ **HAI CÔNG TẮC RỜI NHAU** (thầy chốt): hàng PRACTICE/HOMEWORK trong Options chỉ chọn **NỘI DUNG**;
->   bộ options khi giao bài là chuyện **riêng**, quyết định lúc giao. Đừng gộp hai thứ này.
+>   bộ options khi giao bài là chuyện **riêng**, quyết định lúc giao. Không gộp hai thứ này.
 > - `snapshotOf` **không chép `viewOptions`** — bài đã giao nhận đúng bộ đang chạy lúc giao. Giữ nguyên.
+> - ⬜ **Việc chỉ thầy làm được** (đăng nhập thật + Firestore thật): tạo 1 bài giao thật rồi chỉnh
+>   Options riêng, mở lại "Edit assignment" xem lưu đúng chưa, nhìn modal rộng hơn (620px) trên màn thật.
 >
-> **Đợt D — thầy đã chốt phạm vi: "Activities + Results + clip giọng"** (câu trả lời AskUserQuestion
-> 14/8/2026). ⛔ **KHÔNG HOÀN TÁC ĐƯỢC** — làm sau cùng, và **hỏi lại thầy lần nữa ngay trước khi bấm**.
-> Tiền lệ dựng trang dọn một lần: `tools-voice-cleanup.html`.
+> **Đợt D — ⛔ HUỶ (15/8/2026, thầy chốt)**: thầy tự tay xoá Activities + Results + clip giọng trên
+> Firebase, không cần Claude dựng trang dọn tự động (`tools-voice-cleanup.html` vẫn còn đó nếu cần
+> tham khảo, nhưng không phải làm gì thêm nữa).
 >
 > **⬜ Việc thầy cần nghiệm bằng mắt/tay (máy không tự làm được)** — pane test của phiên tự động bị ẩn
 > nên Chromium **không vẽ khung hình nào**, mọi thứ thuộc "cảm giác" đều chưa ai nhìn:
@@ -2376,11 +2382,13 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐ **TRẠNG THÁI SẠCH (15/8/2026)**: Đợt 158 + 159 **đã commit `23327b3` + push + LIVE + đối chiếu mã
-> băm**, kho **không còn gì chưa commit**. Đoạn "trạng thái sạch" ở khối dưới nói về mốc Đợt 154 và đã
-> bị khối này thay thế.
-> **Việc kế tiếp theo kế hoạch A–D của thầy vẫn là ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi
-> **ĐỢT D** (xoá sạch dữ liệu cũ) — thiết kế thầy chốt sẵn ở mục 3.
+> ⭐⭐ **Đợt 158 + 159 đã commit `23327b3` + push + LIVE + đối chiếu mã băm.** Đoạn "trạng thái sạch" ở
+> khối dưới nói về mốc Đợt 154 và đã bị khối này thay thế.
+> ⬜ **Đợt 160 (ĐỢT C) CHƯA commit** — code xong + tự test qua trình duyệt local, đang **CHỜ THẦY DUYỆT**
+> trước khi commit + push + live (đúng luật làm việc: chỉ commit/push khi thầy chốt).
+> **ĐỢT C đã CODE xong (Đợt 160, 15/8/2026)** — bộ options HOMEWORK khi giao bài, xem mục 3 ở trên +
+> nhật ký Đợt 160. **ĐỢT D đã HUỶ** (thầy tự tay xoá dữ liệu Firebase, không cần code). Kế hoạch A–D
+> coi như **XONG cả 4 mục** (C = code + tự test, D = huỷ theo ý thầy).
 > Riêng Showdown thì chỉ còn **mắt/tay thầy trên màn 86"**:
 > - (158) bảng chọn 3 chế độ: cỡ icon, và khi Showdown chạy thì **3 ô** có chật không;
 > - (159b) bảng đội **rộng bằng khung app**: hai bố cục (ô chờ bên phải khi 2-3 đội · lên trên khi 4-5
@@ -2395,8 +2403,9 @@ act nào gọi tên HS thì đọc từ đó.
 > đã đối chiếu mã băm và chạy lại phép thử. Không có việc dở dang nào trong code — việc kế tiếp là
 > **Đợt C**, và mọi mục ⬜ dưới đây là thứ **chỉ mắt/tay thầy** hoặc **Firestore thật** mới kiểm được.
 
-**⭐⭐ VIỆC KẾ TIẾP = ĐỢT C** (bộ options HOMEWORK khi giao bài) rồi **ĐỢT D** (xoá sạch dữ liệu cũ).
-Thiết kế thầy đã chốt sẵn cho cả hai nằm ở **mục 3 ngay trên** — đọc ở đó, đừng hỏi lại thầy từ đầu.
+**⭐⭐ ĐỢT C đã CODE + TỰ TEST xong (Đợt 160)** — CHỜ THẦY DUYỆT + tự thử bằng tài khoản thật (mục 3 ngay
+trên có đủ danh sách "việc chỉ thầy làm được"). **ĐỢT D đã HUỶ.** Không còn việc lớn nào dang dở theo kế
+hoạch A–D nữa — phiên tiếp theo hỏi thầy muốn làm gì mới.
 
 **⭐ HAI TRỤC NỘI DUNG (Đợt 145–147, 154) — phần máy không tự kiểm được:**
 - ⬜ **(Đợt 154)** Màn START nay ghi **tên act con** (`… / WORDS - ENG1`, `… / QUIZ - HOMEWORK`):

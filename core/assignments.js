@@ -45,7 +45,11 @@ function clean(value) {
 
 // The playable part of an act — deliberately WITHOUT the library fields
 // (parentId, trashed, num...) so nothing about the teacher's folders leaks.
-function snapshotOf(act) {
+// `optionsOverride` (Đợt C, 15/8/2026) — the HOMEWORK options the teacher set
+// on the "Set assignment" form, kept apart from the PRACTICE/HOMEWORK content
+// switch. When omitted, falls back to the act's own options (every caller
+// before Đợt C, and student-side reads that never pass one).
+function snapshotOf(act, optionsOverride) {
   return clean({
     id: act.id,
     schemaVersion: act.schemaVersion ?? 1,
@@ -53,7 +57,7 @@ function snapshotOf(act) {
     title: act.title || "",
     instruction: act.instruction || "",
     theme: act.theme || "classic",
-    options: act.options || {},
+    options: optionsOverride || act.options || {},
     content: act.content || {}
   });
 }
@@ -62,7 +66,7 @@ function snapshotOf(act) {
 
 // Create a new assignment for `act`. Returns the stored assignment.
 // `folderId` = a folder of the RESULTS root to file it under (null = top level).
-export async function createAssignment(act, { title, deadline = null, endOptions = {}, folderId = null } = {}) {
+export async function createAssignment(act, { title, deadline = null, endOptions = {}, folderId = null, options = null } = {}) {
   const user = await currentUser();
   if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
   const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
@@ -82,7 +86,10 @@ export async function createAssignment(act, { title, deadline = null, endOptions
     activityNum: typeof act.num === "number" ? act.num : null,
     activityType: act.type,
     activityTitle: act.title || "",
-    activity: snapshotOf(act),
+    // `options` (Đợt C) — the options CHOSEN on the Set assignment form, not
+    // `act.options`: a snapshot must freeze what the teacher actually picked
+    // for this assignment, never silently drift if the act is tuned later.
+    activity: snapshotOf(act, options),
     deadline: deadline ?? null,          // ms since epoch, or null for no deadline
     endOptions: {
       leaderboard: endOptions.leaderboard !== false,

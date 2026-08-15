@@ -58,18 +58,27 @@ function readAll() {
 }
 function writeAll(s) { localStorage.setItem(KEY, JSON.stringify(s)); }
 
+// ⭐ Đợt C (15/8/2026) — a SECOND bucket of defaults, for the options a
+// "Set assignment" form starts with, kept apart from "Default activity
+// options" above. `kind` picks which bucket: "activity" (default, unchanged
+// behaviour for every existing caller) or "homework". The two never mix — a
+// teacher may want a strict countdown for homework but not for classwork.
+function bucketKey(kind) { return kind === "homework" ? "homeworkOptionsByType" : "optionsByType"; }
+
 // The stored default options for a type, merged over the built-ins so a missing
 // field always has a sane value. Returns a fresh copy (safe to mutate).
-export function getDefaultOptions(type = "quiz") {
+export function getDefaultOptions(type = "quiz", kind = "activity") {
   const s = readAll();
-  const saved = (s.optionsByType && s.optionsByType[type]) || {};
+  const bucket = s[bucketKey(kind)] || {};
+  const saved = bucket[type] || {};
   return { ...BUILTIN_DEFAULTS, ...saved };
 }
 
-export function saveDefaultOptions(type, options) {
+export function saveDefaultOptions(type, options, kind = "activity") {
   const s = readAll();
-  s.optionsByType = s.optionsByType || {};
-  s.optionsByType[type] = { ...options };
+  const key = bucketKey(kind);
+  s[key] = s[key] || {};
+  s[key][type] = { ...options };
   writeAll(s);
 }
 

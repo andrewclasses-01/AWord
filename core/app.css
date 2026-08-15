@@ -2473,6 +2473,11 @@ body {
   box-shadow: 0 24px 60px rgba(10,18,30,.4); padding: 20px 22px 18px;
 }
 .aw-as-wide { width: min(1080px, 100%); }
+/* Đợt C (15/8/2026) — Set/Edit assignment now embeds the full 2-column Options
+   grid (core/options-panel.js); the base 520px is too narrow for a 3-choice
+   segmented control in half of that (same measurement as .aw-modal.is-optswide
+   in main.js, Đợt 140). */
+.aw-as-optswide { width: min(620px, 100%); }
 
 .aw-as-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
 .aw-as-title { flex: 1 1 auto; min-width: 0; font-size: 1.3rem; font-weight: 800; color: #23303e; }

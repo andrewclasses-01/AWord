@@ -8,6 +8,60 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 160 (15/8/2026) — ⭐ ĐỢT C: BỘ OPTIONS HOMEWORK KHI GIAO BÀI
+⭐ CÓ SỬA CORE (`settings.js` · `assignments.js` · `assignment-ui.js` · `app.css`) + 1 dòng ở `main.js`
+(mục Settings). 🟢 ĐÃ TỰ TEST qua trình duyệt local (xem mục 4 — đăng nhập Google không chạy được ở
+phiên tự động, đây vẫn là hạn chế cũ). **CHỜ THẦY DUYỆT trước khi commit/push.**
+
+### 1. Thầy chốt (14/8/2026, mục 0a phần 3 của APP_MASTER.md)
+Thêm bộ tuỳ chọn (Options) riêng cho lúc GIAO BÀI, tách khỏi Options đang lưu trên chính act.
+
+### 2. Settings — "Default homework options" (bucket riêng, không đụng bucket cũ)
+`core/settings.js`: `getDefaultOptions`/`saveDefaultOptions` nay nhận thêm tham số `kind` ("activity"
+mặc định = y như cũ, hoặc "homework" = bucket MỚI `homeworkOptionsByType` trong `localStorage`). Test
+qua console: lưu default homework của Quiz (`timer: countDown, 90s`) — bucket "activity" của Quiz vẫn y
+nguyên `countUp 120s`. `main.js` thêm 1 hàng menu "Default homework options" ngay dưới "Default activity
+options", dùng lại y hệt `showTemplates`/`showOptions` (chỉ truyền thêm `kind`).
+
+### 3. Set assignment / Edit assignment — bảng Options hiện luôn
+`core/assignment-ui.js` thêm `buildHomeworkOptionsField()` — gọi lại ĐÚNG `buildOptionsControls` mà
+Settings dùng (0 UI thứ hai, 0 rủi ro trôi).
+- **Set assignment**: nạp sẵn "Default homework options" của act.type, thầy chỉnh riêng cho bài này.
+  `createAssignment` nay nhận thêm `options` — snapshot chụp ĐÚNG bộ đã chỉnh, không còn phải là
+  `act.options` (`assignments.js`: `snapshotOf(act, optionsOverride)`).
+- **Edit assignment**: nạp từ CHÍNH `assignment.activity.options` đang có (không phải default) — sửa
+  một bài đã giao không bị kéo về mặc định. Save ghi bằng **dot-path** `"activity.options"` (Firestore
+  chỉ đè đúng field này, giữ nguyên `content`/`theme`/...); luật `allow update: if isTeacher()` cho
+  phép, đã đọc lại `docs/08-FIREBASE-SETUP.md` để chắc.
+- ⚠️ **HAI CÔNG TẮC RỜI NHAU** (thầy chốt): hàng PRACTICE/HOMEWORK trong Options của MỘT ACT chọn NỘI
+  DUNG; bảng Options khi giao bài là chuyện KHÁC, không đụng nhau, không code chung.
+- `app.css`: modal Set/Edit assignment rộng thêm cho vừa lưới 2 cột (520px → 620px, class mới
+  `.aw-as-optswide`) — cùng lý do đã đo ở Đợt 140 (dưới ~186px một cột không chứa nổi 1 công tắc 3 lựa
+  chọn).
+
+### 4. 🟢 ĐÃ TỰ TEST (qua trình duyệt local, KHÔNG đăng nhập được)
+- Mở "Set assignment" với act giả: bảng Options hiện đầy đủ (Timer/Lives/Points off/Time cost/Shuffle/…
+  đúng bộ của Quiz), 0 lỗi console.
+- Đổi Timer → Count down 90s trong Settings > Default homework options (qua console) → mở lại "Set
+  assignment" → bảng Options nạp ĐÚNG Count down 1:30 (không phải Count up 2:00 của activity default).
+- Mở "Edit assignment" với bài giả có `activity.options.timer = "none"` → bảng Options nạp ĐÚNG "None"
+  (không bị kéo về default) — xác nhận đọc từ bài, không đọc từ Settings.
+- Bấm START/SAVE khi chưa đăng nhập → báo "Please sign in first." gọn gàng (hành vi cũ, không phải lỗi
+  mới), không crash, không lỗi console ở bất kỳ bước nào.
+
+### 5. ⬜ Việc CHỈ THẦY làm được (Firestore thật, đăng nhập thật)
+- Tạo 1 bài giao thật, chỉnh Options riêng cho bài đó, xem học sinh chơi có đúng luật đã chỉnh không.
+- Mở lại "Edit assignment" của bài vừa tạo, đổi Options, Save, mở lại lần nữa — xem có lưu đúng và
+  không làm mất nội dung/theme của bài không.
+- Nhìn bảng Options rộng hơn (620px) trên màn hình thật có ổn mắt không, có cần cuộn không.
+
+### 6. ⛔ ĐỢT D — HUỶ KHỎI KẾ HOẠCH CODE (thầy chốt 15/8/2026)
+Thầy sẽ **tự tay xoá** dữ liệu Firebase cũ (Activities + Results + clip giọng), không cần dựng trang
+dọn tự động nữa. Xem mục 0a của `APP_MASTER.md` — bảng kế hoạch A–D đã sửa lại D thành "huỷ, thầy tự
+làm".
+
+---
+
 ## Đợt 159 (15/8/2026) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI, MỘT ĐỘI = CẢ LỚP (KHÔNG LÊN MÂY), BẢNG CÒN 2 MÀN, VÀ DÒNG TÊN TỰ ĐỨNG
 ⭐ CÓ SỬA CORE (`showdown.js` · `showdown-setup.js` · `engine.js` · `app.css`) **+ 2 file game**
 (`quiz.js` · `anagram.js` — thêm 1 hook mới của hợp đồng engine↔template).

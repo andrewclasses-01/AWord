@@ -21,6 +21,31 @@ import {
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
 import { listFolders, pathTo, createFolder } from "./store.js";
+import { ensureTemplate } from "./registry.js";
+import { getDefaultOptions, buildOptionsControls } from "./settings.js";
+
+// =============================================================
+// HOMEWORK OPTIONS (Đợt C, 15/8/2026) — the bảng Options shown on both the
+// "Set assignment" and "Edit assignment" forms. `draft` is edited IN PLACE
+// (same contract as core/settings.js's buildOptionsControls); the caller
+// reads it back when the form is submitted. Deliberately its OWN block, apart
+// from the act's own PRACTICE/HOMEWORK content switch — the teacher's rule
+// (APP_MASTER mục 0a, Đợt C): "HAI CÔNG TẮC RỜI NHAU".
+function buildHomeworkOptionsField(body, activityType, draft) {
+  body.append(el("label", "aw-as-label", "Options"));
+  const host = el("div", "aw-as-optshost");
+  host.append(el("div", "aw-as-note", "Loading options…"));
+  body.append(host);
+  ensureTemplate(activityType).then(tpl => {
+    if (!host.isConnected) return;   // the form was closed while this loaded
+    host.innerHTML = "";
+    host.append(buildOptionsControls(tpl, draft));
+  }).catch(() => {
+    if (!host.isConnected) return;
+    host.innerHTML = "";
+    host.append(el("div", "aw-as-note", "This game's options could not be loaded."));
+  });
+}
 
 // ---- tiny shared helpers ---------------------------------------------------
 function escapeText(s) {
@@ -140,7 +165,7 @@ function iconButton(icon, title, onClick) {
 // 1. SET ASSIGNMENT — the setup form
 // =============================================================
 export function openAssignmentSetup(act, { onCreated } = {}) {
-  openModal("", (modal, close) => {
+  openModal("optswide", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
     const err = el("div", "aw-as-err", "");
@@ -206,6 +231,11 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     const cbAgain = mk("Start again", true);
     body.append(opts);
 
+    // --- homework options (Đợt C) — starts from the teacher's own "Default
+    // homework options" (Settings), editable just for this one assignment.
+    const hwDraft = getDefaultOptions(act.type, "homework");
+    buildHomeworkOptionsField(body, act.type, hwDraft);
+
     // --- where it will be filed in Results (worked out from the title)
     const filed = el("div", "aw-as-note", "");
     body.append(filed);
@@ -259,7 +289,8 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
             leaderboard: cbLeader.checked,
             showAnswers: cbAnswers.checked,
             startAgain: cbAgain.checked
-          }
+          },
+          options: hwDraft
         });
         try { await archiveOlderSiblings(folderId, assignment); }
         catch (e) { console.warn("AWord: could not move older assignments into DONE:", e.message); }
@@ -333,7 +364,7 @@ export function openAssignmentShare(assignment) {
 // there is only ONE assignment document behind them.
 // =============================================================
 export function openAssignmentEdit(assignment, { onSaved } = {}) {
-  openModal("", (modal, close) => {
+  openModal("optswide", (modal, close) => {
     modal.append(headRow("Edit assignment", close));
     const body = el("div", "aw-as-body");
 
@@ -375,6 +406,12 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     const cbAgain = mk("Start again", end.startAgain !== false);
     body.append(opts);
 
+    // --- homework options (Đợt C) — starts from what THIS assignment already
+    // carries (never the Settings default: an assignment already out to
+    // students keeps its own choice until the teacher changes it here).
+    const hwDraft = { ...(assignment.activity?.options || {}) };
+    buildHomeworkOptionsField(body, assignment.activityType, hwDraft);
+
     body.append(el("label", "aw-as-label", "Status"));
     const closedWrap = el("label", "aw-as-check");
     const cbClosed = el("input"); cbClosed.type = "checkbox"; cbClosed.checked = !!assignment.closed;
@@ -403,10 +440,19 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
           title,
           deadline: noDlBox.checked || !dlInput.value ? null : new Date(dlInput.value).getTime(),
           endOptions: { leaderboard: cbLeader.checked, showAnswers: cbAnswers.checked, startAgain: cbAgain.checked },
-          closed: cbClosed.checked
+          closed: cbClosed.checked,
+          // Dot-path (Đợt C): rewrites ONLY `activity.options`, leaving the rest
+          // of the frozen snapshot (content, theme, ...) untouched. Confirmed
+          // against the published rules: `allow update: if isTeacher()` covers
+          // any field — see docs/08-FIREBASE-SETUP.md.
+          "activity.options": hwDraft
         };
         await updateAssignment(assignment.code, patch);
-        Object.assign(assignment, patch);      // keep the open popups in step
+        // keep the open popups in step — `Object.assign` cannot resolve the
+        // dot-path key above onto the nested `assignment.activity` itself.
+        Object.assign(assignment, { title: patch.title, deadline: patch.deadline,
+          endOptions: patch.endOptions, closed: patch.closed });
+        assignment.activity = { ...(assignment.activity || {}), options: hwDraft };
         close();
         flash("Assignment updated");
         onSaved?.(assignment);
