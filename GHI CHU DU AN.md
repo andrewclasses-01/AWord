@@ -11,7 +11,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 164 (15/8/2026) — 3 CHỈNH SỬA TIẾP THEO CHO BỘ CHỈNH GIỜ ĐỢT 163
 ⭐ CÓ SỬA CORE (`numberstepper.js`: viết lại `applyUnit`→`applyDelta` + hàm mới `secondsSnapDelta` ·
 `running-word.js`/`balloon-pop.js`: đổi `step: 5`→`step: 1`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html`.
-**CHỜ THẦY DUYỆT trước khi commit/push** (gộp chung với Đợt 163 vì chưa commit đợt trước).
+✅ **THẦY DUYỆT (15/8/2026) → COMMIT `17e8538` (gộp chung với Đợt 163) + PUSH + LIVE.**
+📌 Đã đối chiếu 5 file LIVE tại `aword.andrewclasses.com` (`core/numberstepper.js`, `core/options-panel.js`,
+`core/app.css`, `templates/balloon-pop/balloon-pop.js`, `templates/running-word/running-word.js`) với
+commit `17e8538` (~70 giây sau push, Pages build OK) bằng `sha256sum` sau khi bỏ CRLF — **cả 5 file trùng
+khớp 100%**.
 
 ### 1. Thầy báo sau khi xem lại Đợt 163
 1. Bấm số phút để tăng thì số GIÂY cũng bị trượt theo (dù giá trị không đổi) — chỉ cái nào đổi mới nên trượt.
@@ -50,7 +54,8 @@ Qua `scratch/test-mode.html` (Quiz, Running word, Balloon pop):
 ---
 
 ## Đợt 163 (15/8/2026) — KHÓA CHỌN TEXT/ẢNH TRONG POP-UP + TÁCH RIÊNG BỘ CHỈNH PHÚT/GIÂY CHO Ô TIMER
-⭐ CÓ SỬA CORE (`numberstepper.js`: hàm mới `makeTimeStepper`, không đụng `makeHStepper` cũ · `options-panel.js`: 1 chỗ gọi ở nhóm Timer · `app.css`: khóa chọn ở `.aw-tool-panel` + `-webkit-user-drag` cho ảnh + CSS mới `.aw-tstep-*`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html` (không cần đăng nhập Google). **CHỜ THẦY DUYỆT trước khi commit/push.**
+⭐ CÓ SỬA CORE (`numberstepper.js`: hàm mới `makeTimeStepper`, không đụng `makeHStepper` cũ · `options-panel.js`: 1 chỗ gọi ở nhóm Timer · `app.css`: khóa chọn ở `.aw-tool-panel` + `-webkit-user-drag` cho ảnh + CSS mới `.aw-tstep-*`). 🟢 ĐÃ TỰ TEST qua `scratch/test-mode.html` (không cần đăng nhập Google).
+✅ **THẦY DUYỆT (15/8/2026) → COMMIT `17e8538` (gộp chung với Đợt 164, thầy chốt luôn sau khi xem cả 2 đợt) + PUSH + LIVE.** Xem xác nhận LIVE ở đầu mục Đợt 164 ngay trên.
 
 ### 1. Thầy yêu cầu (15/8/2026)
 Hai việc, thầy trả lời qua AskUserQuestion:
