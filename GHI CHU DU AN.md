@@ -12,7 +12,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`core/convert.js`, hàm `buildMc()` + hàm mới `rankByLookalike()`).
 🟢 ĐÃ TỰ TEST qua `devserver.py` (cổng 5510) + `templates/anagram/test.html`, gọi thẳng
 `convertActivity()` thật (đúng hàm `engine.js` dùng khi bấm Template) qua console — KHÔNG chỉ đọc code.
-⬜ **CHƯA xin thầy duyệt, CHƯA commit/push.**
+✅ **THẦY DUYỆT (15/8/2026, thầy nhắn "commit + push live") → COMMIT `10dae2f` + PUSH + LIVE.**
+📌 Đã đối chiếu `core/convert.js` + `GHI CHU DU AN.md` trên `aword.andrewclasses.com` với commit
+`10dae2f` (~50 giây sau push, Pages build `success`) bằng sha256sum sau khi bỏ CRLF — **trùng khớp
+100%** (`c7319ef2…` / `282eddc0…`).
+⚠️ **Ghi chú song song (đọc trước khi đặt "Đợt 167")**: lúc phiên này bắt đầu, `core/app.css` +
+`core/showdown-setup.js` đã có sửa đổi **CHƯA COMMIT** (chưa xin duyệt, chưa ghi vào file này) từ một
+phiên/máy khác — việc đó tự đặt tên "Đợt 166" ngay trong comment code (resize panel Showdown theo số
+đội + `shrinkOverflowingNames`/`shortenName`, teacher 15/8/2026: "bảng rộng phần ngang quá… ô tên rất
+dài"). **Trùng số với đợt này** vì cả hai phiên cùng thấy Đợt 165 là mới nhất khi bắt đầu. Phiên này
+CHỈ commit đúng 2 file của mình (`core/convert.js`, `GHI CHU DU AN.md`), không đụng 2 file kia — việc
+Showdown vẫn nằm nguyên, chưa commit, trong working tree. **Phiên sau xử lý việc Showdown đó phải đặt
+tên Đợt 167** (167 trở lên), và nhớ đối chiếu lại xem file `core/app.css`/`core/showdown-setup.js` ở
+đúng máy đó còn hay đã bị máy khác commit trước — xem [[check-git-sync-truoc-khi-sua-app]].
 
 ### 1. Thầy giao
 > Khi từ Anagram chuyển sang các act khác có chọn đáp án (VD Quiz, Open the box...), ưu tiên chọn các
@@ -47,7 +59,7 @@ cho đủ 3 đáp án sai, thay vì bốc random từ pool các term còn lại 
    nhiều từ gần giống nhau) xem đáp án nhiễu có "vừa mắt" không — phép đo trên chỉ qua console, chưa
    chụp UI (pane preview không compositing được lúc làm đợt này).
 2. Cân nhắc thêm nếu thầy muốn: hiện chỉ so chữ cái ĐẦU + độ dài, chưa so vần/âm ở giữa hay cuối từ.
-3. Chốt xong mới commit + push.
+3. ~~Chốt xong mới commit + push.~~ ✅ Đã commit `10dae2f` + push + đối chiếu LIVE (15/8/2026).
 
 ---
 
