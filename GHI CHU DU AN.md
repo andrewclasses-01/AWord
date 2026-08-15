@@ -14,7 +14,13 @@ Sửa `core/convert.js` (gốc rễ) + `core/voice-playback.js` (bỏ nút loa t
 mọi template, mọi lần "Change template", không chỉ Showdown.
 🟢 ĐÃ TỰ TEST cả 3 vấn đề qua 2 trang mới `scratch/voicebug-test.html` + `scratch/convertbug-test.html`
 (có `scratch/fake-voice-clips.js` + `scratch/spy-voice-playback.js` đi kèm — xem mục 4).
-⏳ **CHƯA COMMIT** — chờ thầy tự test lại trên máy thật.
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `768a099` (gộp chung Đợt 171 + 172) + PUSH + LIVE.**
+📌 Đã đối chiếu **4/4 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`core/convert.js`,
+`core/voice-playback.js`, `core/engine.js`, `core/showdown-setup.js`) — Pages build xong đúng commit
+`768a099` trước khi so (deployment id `5921334290`, state `success`). ⚠️ Lần đầu so bị lệch 100% vì
+`curl` không theo redirect `github.io` → `aword.andrewclasses.com` (301, mọi file trả về CÙNG 1 trang lỗi
+nên hash giống hệt nhau — dấu hiệu nhận biết bẫy này) VÀ vì Windows checkout ra CRLF trong khi Pages phục
+vụ LF — phải `sed 's/\r$//'` cả hai phía trước khi so hash, đừng hoảng khi thấy "DIFF" ở lần so đầu.
 
 ### 1. Thầy báo (chơi Showdown, đổi Anagram → Type the answer): 3 vấn đề
 - Chọn Options > Content = Text nhưng vẫn TỰ PHÁT giọng đọc.
@@ -76,22 +82,26 @@ qua `createVoicePlayer` chung) và AUTO mode giữ nguyên hành vi cũ, không 
   cơ chế gây lỗi (convertActivity mất options) chứ không phải chạy lại chính xác kịch bản của thầy.
 
 ### 5. VIỆC ĐANG CHỜ
-- ⬜⬜ Thầy tự test lại trên myActivity thật: đổi Anagram → Type the answer (hoặc bất kỳ cặp template
-  nào khác) trong Showdown lẫn ngoài Showdown, xác nhận: Text hết tự phát + hết nút loa, Voice vẫn phát +
-  còn nút to; bật Shuffle rồi so các cột — giờ phải ra thứ tự KHÁC NHAU giữa các cột (đúng ý thầy muốn).
-- ⬜ Vì đây là lỗi tầng convert dùng chung cho MỌI act/MỌI template (không riêng Type the answer), nên
-  nếu trước đó (từ commit `00ccb508`, tức từ hôm qua) thầy đã "Change template" bất kỳ act nào khác và
-  Apply Options trên đó, act tạm lúc đó cũng bị mất options tương tự — không ảnh hưởng THƯ VIỆN THẬT
-  (chỉ act tạm `conv_...` không lưu), nhưng nếu thầy nhớ có buổi dạy nào bị tương tự thì đây là lý do.
-- Sau khi thầy xác nhận, commit CHUNG với Đợt 171 (cả hai đều chưa lên git) — hoặc tách riêng nếu thầy
-  muốn track rõ 2 đợt.
+- ⬜⬜ Thầy tự test lại trên myActivity thật (bản LIVE, không phải scratch/ mô phỏng nữa): đổi Anagram →
+  Type the answer (hoặc bất kỳ cặp template nào khác) trong Showdown lẫn ngoài Showdown, xác nhận: Text
+  hết tự phát + hết nút loa, Voice vẫn phát + còn nút to; bật Shuffle rồi so các cột — giờ phải ra thứ tự
+  KHÁC NHAU giữa các cột (đúng ý thầy muốn). Đây là việc DUY NHẤT còn treo — code đã lên live.
+- Vì đây là lỗi tầng convert dùng chung cho MỌI act/MỌI template (không riêng Type the answer), nếu trước
+  đó (từ commit `00ccb508`, tức hôm qua) thầy đã "Change template" bất kỳ act nào khác và Apply Options
+  trên đó, act tạm lúc đó cũng bị mất options tương tự — không ảnh hưởng THƯ VIỆN THẬT (chỉ act tạm
+  `conv_...` không lưu), nhưng nếu thầy nhớ có buổi dạy nào bị tương tự thì đây là lý do.
+- Cũng cần thầy tự NHÌN + NGHE thật (pane test ở đây không nghe được, chỉ đếm số lần gọi qua
+  `fake-voice-clips.js`) — đặc biệt cỡ/vị trí sau khi bỏ nút loa ở Text mode có để lại khoảng trống xấu
+  không, 13 template dùng chung `voiceView()` chưa chắc template nào cũng test bằng mắt.
 
 ---
 
 ## Đợt 171 (15/8/2026) — ⭐ VÁ 2 LỖI THẦY BÁO KHI TEST SHOWDOWN: POPUP CO GIÃN RỒI ĐÓNG, VÀ OPTIONS KHÔNG ĐỒNG BỘ myActivity
 Sửa `core/showdown-setup.js` (bug 1) + `core/engine.js` (bug 2). Không đụng file nào khác.
 🟢 ĐÃ TỰ TEST cả 2 qua `scratch/showdown-test.html` — xem mục 3.
-⏳ **CHƯA COMMIT** — chờ thầy tự chơi thử trên myActivity thật (xem VIỆC ĐANG CHỜ) rồi mới chốt.
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `768a099` (gộp chung Đợt 171 + 172, xem mục đó) + PUSH
++ LIVE.** Việc "thầy tự chơi thử trên myActivity thật" ở mục VIỆC ĐANG CHỜ dưới đây vẫn còn treo — code
+đã lên live rồi nhưng CHƯA có xác nhận chơi thử thật.
 
 ### 1. Bug "bấm Teams tới 3 thì giãn pop-up, bấm lên 4 thì đóng mất, không bấm được gì nữa"
 `updatePanelWidth(n)` (Đợt 166) retarget `--sd-panel-w` LIVE trên mỗi lần bấm nút Teams ở màn A — mục
