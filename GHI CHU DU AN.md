@@ -11,7 +11,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 173 (15/8/2026) — ⭐ VÁ LỖI THẬT: BẢNG OPTIONS TRONG FIGHT MODE HIỆN SAI TRẠNG THÁI SHUFFLE QUESTIONS (và mọi option khác nếu có cờ tương tự) — KHÔNG PHẢI mất lưu, chỉ hiện sai
 Sửa `core/fight.js` (thêm accessor) + `core/engine.js` (dùng accessor đó khi đang Fight). Không đụng file
 nào khác. 🟢 ĐÃ TỰ TEST qua `scratch/tta-fs-test.html` (Fight thật, round-trip tích/bỏ tích + Apply +
-mở lại 2 lượt). ⏳ **CHƯA COMMIT**.
+mở lại 2 lượt).
+✅ **THẦY CHỐT COMMIT + PUSH (15/8/2026) → COMMIT `5c8e6f5` + PUSH + LIVE.**
+📌 Đã đối chiếu **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`core/engine.js`,
+`core/fight.js`) — Pages build xong đúng commit `5c8e6f5` trước khi so (deployment id `5921474849`,
+state `success`). Vẫn nhớ chuẩn hoá CRLF/LF (`sed 's/\r$//'`) cả 2 phía trước khi so hash.
 
 ### 1. Thầy báo: mở Fight mode, chỉnh Options (đặc biệt Shuffle questions) rồi Apply — mở lại kiểm tra
 thì bị đổi lại (mất tích). Đôi khi kéo vài thanh khác + Apply cũng thấy mất. Đổi template nào cũng vậy.
