@@ -89,6 +89,23 @@ gộp chung với phần Đợt 167 (kích thước panel) còn đang chờ duy�
 `core/app.css`) — Pages build xong cho đúng commit `73b76d1` trước khi so, không dính bẫy "200 OK
 nhưng nội dung cũ".
 
+### VIỆC ĐANG CHỜ (Đợt 167+168)
+1. ⬜ **Nhìn bằng mắt trên myActivity/TOMKO thật** — mọi phép đo cỡ panel/chip ở Đợt 167 đều qua
+   Browser pane (`document.hidden === true`, không chụp được ảnh), cần thầy xác nhận lại trên máy
+   thật, đặc biệt cỡ chữ viết tắt ở 5 đội (~41px/cột) có còn đọc được thoải mái không.
+2. ⬜ **Ca 2 đội trong khung vừa hẹp vừa thấp vẫn còn cuộn nhẹ ~39px** (xem Đợt 167 mục "CÒN LẠI") —
+   tới được Ready bằng 1 lần cuộn tay, chưa mất hẳn, nhưng chưa xoá hết. Báo lại nếu thử thật thấy
+   khó chịu.
+3. ⬜⬜ **VIỆC LỚN — mở rộng Showdown sang 17 template** (thầy đã chốt phạm vi ở Đợt 168 mục 2): hiện
+   chỉ Anagram + Quiz có `showdownMode:true`. Còn 15 template (Open the box, Gameshow, Maze chase,
+   True/false, Find the match, Type the answer, Whack-a-mole, Flying fruit, Balloon pop, Crossword,
+   Unjumble, Speaking cards, Running word, Running team, Speaking) chưa cài móc `ui.itemChanging` —
+   đổi sang các template đó khi đang Showdown vẫn sẽ mất chế độ. Mỗi template cần đọc đúng nhịp
+   chuyển câu/lượt riêng của nó rồi cài + tự test riêng — làm dần thành nhiều đợt sau, KHÔNG dồn 1 lần.
+   Vài template (Speaking, Speaking cards, Crossword, Whack-a-mole, Balloon pop) không có khái niệm
+   "1 câu = 1 lượt" rõ ràng như Anagram/Quiz — cần xem xét thiết kế riêng cho từng nhóm trước khi cài,
+   không chỉ đơn thuần sao chép móc cũ.
+
 ---
 
 ## Đợt 167 (15/8/2026) — ⭐⭐ SHOWDOWN: KÍCH THƯỚC PANEL TỰ CO THEO KHUNG THẬT + SỐ ĐỘI, VIẾT TẮT TÊN KHI HẾT CHỖ
