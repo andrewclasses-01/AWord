@@ -13,7 +13,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 🟢 ĐÃ TỰ TEST qua **3 lưới MỚI** — `scratch/otb-fight-test.html` **24/24** · `scratch/ftm-fight-test.html`
 **18/18** · `scratch/cw-fight-test.html` **11/11**, tất cả **bấm nút thật**; cộng Showdown chạy trên
 `scratch/showdown-all-test.html` cho cả 3 game. Không hồi quy: `tf-fight-test.html` vẫn 20/20.
-✅ **COMMIT `e58d0ea` (Đợt 183) + `6f6f1c7` (Đợt 184–186) + PUSH.**
+✅ **COMMIT `e58d0ea` (Đợt 183) + `6f6f1c7` (Đợt 184–186) + PUSH + LIVE** — Pages build **đúng commit**
+(`6be5212`, `status: built`), đối chiếu **9/9 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`,
+và **hỏi lại trên chính bản live** (import `registry.js` + `ensureTemplate()` thẳng từ tên miền): **7
+template báo `fightMode`**, **11 báo `showdownMode`**, `fightPick` đúng 2 chỗ — `open_the_box:"wait"` và
+`crossword:"lock"`.
 
 ### 1. Thầy giao
 > "Tôi muốn mở Fight và cả Showdown với các template sau: True/false, **Open the box, Crossword,
@@ -82,7 +86,7 @@ Open the box khi đang ở lưới thì trỏ vào hàng của **ô sắp mở**
 **Showdown: 11/17** (8 cũ + Open the box · Find the match · Crossword).
 
 ### 9. VIỆC ĐANG CHỜ
-1. Xác nhận LIVE (mã băm) cho `6f6f1c7`.
+1. ✅ XONG — LIVE đã xác nhận (build đúng commit, 9/9 mã băm, và đo lại cờ trên chính bản live).
 2. **Thầy chơi thử trên myActivity thật**, nhất là luật lượt chọn ô trên màn TOMKO: hai đội chạm tay thật.
 3. Chưa mở Fight/Showdown: Balloon pop · Flying fruit · Gameshow · Maze chase · Speaking · Unjumble ·
    Whack-a-mole · Running word · Running team · Speaking cards (lý do từng cái ở Đợt 178 và Đợt 181).

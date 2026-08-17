@@ -9,7 +9,9 @@
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **17/8/2026 (Đợt 183–186) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT &
-> SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD.** ✅ **COMMIT `e58d0ea` + `6f6f1c7` + PUSH.**
+> SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD.** ✅ **COMMIT `e58d0ea` + `6f6f1c7` + PUSH +
+> LIVE** (build đúng commit, **9/9 mã băm SHA-256**, và hỏi lại trên chính bản live: 7 template báo
+> `fightMode`, 11 báo `showdownMode`, `fightPick` đúng `open_the_box:"wait"` + `crossword:"lock"`).
 > Hiện trạng: **Fight 7/17 · Showdown 11/17**. `core/fight.js` nay biết HAI kiểu vòng — vòng thường và
 > **vòng LƯỢT CHỌN** (`tpl.fightPick: "wait"|"lock"`): hai bàn cùng một lưới, bên chưa tới lượt **mờ 50%**
 > và bấm không ăn, bên tới lượt chạm ô nào thì **trọng tài mở ô đó trên CẢ HAI bàn**; `"wait"` (Open the
