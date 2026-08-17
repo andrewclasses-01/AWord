@@ -338,6 +338,14 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
 
+**AI ĐANG BẬT FIGHT (cập nhật Đợt 182)**: Anagram · Quiz · Type the answer · **True/false** — 4/17.
+⚠️ **Bài học Đợt 182, kiểm TRƯỚC KHI bật cờ cho template thứ 5**: template nào **tự xáo thứ tự câu của
+riêng nó** (True/false gọi `shuffle()` vô điều kiện) thì trong trận **mỗi bàn xáo một kiểu** ⇒ cùng một
+số vòng lại là hai câu khác nhau ở hai bàn, mà nhìn riêng từng bàn thì bàn nào cũng bình thường. Trong
+Fight phải dùng thẳng thứ tự `core/fight.js` đã chốt (`shuffleQuestions` bị trận ép `false`, mảng item
+là chung). Cùng họ: game **ít lựa chọn** (True/false chỉ có 2 nút) thì **một dấu ✗ là lộ trọn đáp án** —
+giấu dấu tới `reveal()` là bắt buộc, không phải trang trí.
+
 **Hợp đồng cho template muốn tham gia** (opt-in — Anagram Đợt 124, Quiz thêm ở Đợt 125 làm thử
 nghiệm; template cần khai sẵn `itemsKey`, xem cảnh báo dưới):
 ```js

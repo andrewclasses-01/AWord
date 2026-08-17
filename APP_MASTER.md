@@ -8,7 +8,18 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 181) — 🐞 VÀO FIGHT MODE LÀ MẤT SẠCH ACT CON.**
+> Cập nhật lần cuối: **17/8/2026 (Đợt 182) — ⭐⭐ FIGHT MODE CHO TRUE/FALSE (4/17) + CHỐT LUẬT "LƯỢT
+> CHỌN Ô".** ✅ **COMMIT `68b2fa4` + PUSH + LIVE** (build đúng commit, 2/2 mã băm). Thầy giao mở Fight +
+> Showdown cho **True/false · Open the box · Crossword · Find the match**. True/false xong trong đợt này
+> (Showdown của nó đã bật từ Đợt 178); 3 game kia để học sinh **tự chọn thứ tự** nên phải có luật mới,
+> **thầy đã chốt luật "lượt chọn ô"** — chép nguyên văn + máy trạng thái suy ra trong `GHI CHU DU AN.md`
+> mục Đợt 182.6, **đọc mục đó trước khi code**. Hai thứ phải sửa ngoài phần nối dây, cả hai im lặng:
+> `order` của True/false **xáo riêng từng bàn** (⇒ cùng số vòng mà hai câu khác nhau) và **dấu ✗ là lộ
+> trọn đáp án** trong game 2 lựa chọn (⇒ giấu tới `reveal()`). Lưới mới `scratch/tf-fight-test.html`
+> **20/20**, đối chứng ngược trên code cũ **8/20**; 1 lỗi **chỉ ảnh chụp bắt được** (dấu ✓ 26% đè lên chữ
+> "True", trắng-trên-xám đọc nhạt → đĩa trắng 17% mang dấu màu ở góc nút).
+>
+> Trước đó: **17/8/2026 (Đợt 181) — 🐞 VÀO FIGHT MODE LÀ MẤT SẠCH ACT CON.**
 > ✅ **COMMIT `977ec67` + PUSH + LIVE** (Pages build đúng commit — deployment `5945023320`, `built` —
 > và **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`). Thầy hỏi "chuyển template ở đơn/fight/showdown đã chọn tự do được
 > TEXT-VOICE và các act con chưa?" — đo ra: **đơn RỒI, showdown RỒI, fight CHƯA**, và chưa cả khi

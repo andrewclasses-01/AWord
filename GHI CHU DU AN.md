@@ -8,6 +8,114 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 182 (17/8/2026) — ⭐⭐ MỞ FIGHT MODE CHO TRUE/FALSE (template thứ 4) + CHỐT LUẬT "LƯỢT CHỌN Ô" CHO 3 GAME CÒN LẠI
+KHÔNG sửa core. Đúng 2 file (`templates/true-false/true-false.js` · `.css`).
+🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/tf-fight-test.html` — **20/20**, bấm nút thật trên trận thật, và có
+**ĐỐI CHỨNG NGƯỢC** đo trên chính code cũ (`git stash` 2 file rồi chạy lại y hệt lưới): **8/20**.
+✅ **COMMIT `68b2fa4` + PUSH + LIVE** — Pages build đúng commit (`status: built`, sha `68b2fa4…`), đối
+chiếu **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`.
+
+### 1. Thầy giao (17/8/2026)
+> "Tôi muốn mở Fight và cả Showdown với các template sau: **True/false, Open the box, Crossword,
+> Find the match**."
+
+Chia làm 2 nhóm, vì mức việc khác hẳn nhau:
+- **True/false** — chơi từng câu một, đã có `curRow` từ Đợt 178 ⇒ đi đúng khuôn Anagram/Quiz.
+  Showdown đã bật sẵn từ Đợt 178. **Làm xong trong đợt này.**
+- **Open the box · Crossword · Find the match** — cả 3 để **học sinh tự chọn thứ tự**, tức không có
+  "câu hiện tại" nào để 2 bàn cùng đứng vào ⇒ phải có luật mới. Thầy đã chốt luật (mục 6).
+
+### 2. Hai thứ phải sửa ngoài phần nối dây — cả hai hỏng TRONG IM LẶNG
+1. **`order` của True/false luôn `shuffle()` mỗi lần chơi.** Trong một trận, mỗi bàn tự xáo riêng ⇒
+   **vòng 3 ở bàn trái là một câu KHÁC vòng 3 ở bàn phải**, mà nhìn từng bàn thì bàn nào cũng bình
+   thường. Nay trong Fight dùng đúng thứ tự `core/fight.js` đã chốt sẵn cho cả 2 bàn (`shuffleQuestions`
+   đã bị trận ép `false`, và mảng `statements` là chung).
+2. **Dấu ✗ trên nút vừa bấm LÀ LỘ ĐÁP ÁN** — game chỉ có 2 lựa chọn, đánh dấu một nút chính là chỉ ra
+   nút kia. Nay mọi dấu bị **giữ lại** cho tới khi trọng tài báo vòng ngã ngũ (`revealFightMarks`, đúng
+   khuôn `quiz.js`). Bàn xong trước chỉ **xám đi** (`is-fightlost`) — đủ để đội đó biết mình hết lượt.
+   ⚠️ Âm thanh và **trái tim bị mất KHÔNG giấu**: cả hai chỉ nói "đội này làm sao", không chỉ ra nút nào.
+3. Nhân tiện gỡ `document.querySelector(".aw-top-score")` (quả bom Đợt 169 đã soi ra): quét cả trang thì
+   bàn phải ghi điểm vào ô của bàn trái. Đường đó nay chỉ chạy ở single mode, nhưng vẫn phải xoá vì nó
+   **đúng hình dạng** của con lỗi đó.
+
+### 3. Luật vòng áp cho True/false (không đẻ luật mới, dùng nguyên luật Đợt 128/133)
+| Tình huống | Kết quả |
+|---|---|
+| Bấm ĐÚNG trước | ăn điểm, **khoá** bàn kia, cả 2 lộ đáp án, 2,1s sau sang câu mới |
+| Bấm SAI trước | **chỉ khoá chính mình**; vòng **vẫn mở**, bàn kia chơi tiếp và vẫn thắng được |
+| Hai bên cùng đúng trong 0,1s | **cả hai** ăn điểm (cửa sổ hoà `TIE_WINDOW_MS`) |
+| Câu trôi hết giờ (Speed > 0) | báo `wordDone(correct:false)` — hết lượt của bàn đó, không cướp câu của bàn kia |
+
+### 4. Lỗi CHỈ ẢNH CHỤP BẮT ĐƯỢC (mọi số đo báo ĐẠT)
+Bản dấu ✓/✗ đầu tiên: `width:26%` + trắng, đặt `top:6% right:4%`. Đo thì hoàn hảo (có node, đúng cỡ,
+**nằm trong nút**) — nhưng 26% **bề ngang** cao hơn phần nút cho phép nên nó **tràn xuống đè lên chữ
+"True"**, và trắng-trên-xám (khung bị khoá thì xám) đọc rất nhạt. Vá: **đĩa trắng 17% mang dấu MÀU**
+(✓ xanh `#16a34a` · ✗ đỏ `#dc2626`) ở góc nút — đọc được trên cả nút xanh, nút đỏ lẫn nút xám.
+📌 Đúng luật [[transform-origin-là-vị-trí]] mở rộng: **thứ gì chiếm chỗ trên màn thì phải NHÌN**.
+
+### 5. Đã tự test — 20 phép, có ĐỐI CHỨNG NGƯỢC
+`scratch/tf-fight-test.html` (scratch gitignored ⇒ phiên/máy sau phải tạo lại): dựng trận thật bằng
+`startFight()`, bấm PLAY thật, bấm nút True/False thật.
+
+| | Code CŨ | Code VÁ |
+|---|---|---|
+| 2 bàn cùng một câu ở mọi vòng | 🔴 lệch từ vòng 2 | ✔ 4/4 vòng |
+| bàn thua bị khoá | 🔴 không | ✔ |
+| giấu đáp án khi bàn kia còn chọn | (không có dấu nào để mà giấu) | ✔ 0 dấu, có xám |
+| lộ đáp án khi vòng ngã ngũ | 🔴 không bao giờ | ✔ bàn sai 2 dấu (✓+✗), bàn thắng 1 dấu (✓) |
+| bấm SAI trước không cướp câu | ✔ (vì chẳng có luật vòng nào) | ✔ |
+| hoà trong 0,1s cả hai ăn điểm | 🔴 1-2 | ✔ 2-2 |
+| khoá bàn KHÔNG vẽ lại (không nháy) | ✔ | ✔ (đối chiếu ĐÚNG node `.aw-tf-prompt`) |
+| hết câu thì kết thúc trận | 🔴 không có bảng kết quả | ✔ |
+| **Tổng** | **8/20** | **20/20** |
+
+Kèm **kiểm hồi quy Showdown của True/false** (đã bật từ Đợt 178, phải không hỏng): chơi 4 lượt trên
+`scratch/showdown-all-test.html?tpl=true_false&off=5` ⇒ tên **3 em xoay đúng mỗi câu một em**.
+
+### 6. ⭐⭐ LUẬT THẦY CHỐT CHO 3 GAME CÒN LẠI — "LƯỢT CHỌN Ô" (chưa build, đây là ĐẦU VÀO của đợt sau)
+Nguyên văn thầy (17/8/2026), **Open the box + Find the match**:
+> "Các ô có thứ tự câu hỏi giống hệt nhau, nhưng thứ tự câu trả lời thì không. Khi mở ô câu hỏi, mỗi bên
+> 1 lượt chọn câu, bên nào đến lượt chọn thì các ô có màu bình thường, bên nào chưa đến lượt chọn thì ô
+> màu nhạt đi 50%. Khi 1 bên chọn 1 ô (VD ô 5) thì cả 2 bên cùng mở ô 5 cùng 1 lúc, ai chọn câu trả lời
+> nhanh hơn thì có điểm và được setup thời gian lại, nhưng vẫn chờ ở câu hỏi đó cho đến khi đội còn lại
+> chọn. Nếu đội sau chọn đúng thì reset thời gian và không có điểm, sau đó cả 2 đội quay về bảng chọn ô.
+> Nếu đội sau chọn sai thì thời gian vẫn tiếp tục chạy và đội sau sai sẽ luôn được tiếp tục chọn ô câu
+> hỏi tiếp theo mà không đảo lượt (chỉ khi cả 2 cùng đúng thì mới theo lượt chọn đảo lần lượt)."
+
+Nguyên văn thầy, **Crossword**:
+> "Các ô có cấu trúc giống hệt nhau. Khi mở ô, mỗi bên 1 lượt chọn câu, bên nào đến lượt chọn thì các ô
+> có màu bình thường, bên nào chưa đến lượt chọn thì ô màu nhạt đi 50%. Khi 1 bên chọn 1 cột/hàng thì cả
+> 2 bên cùng mở cột/hàng đó, ai viết câu trả lời nhanh hơn thì có điểm, đội bên kia sẽ bị coi như khóa,
+> câu trả lời vẫn hiện ra nhưng coi như bị sai."
+
+**Suy ra thành máy trạng thái** (chỗ nào thầy chưa nói rõ thì ghi 🟡 để hỏi/chốt trước khi code):
+| Bước | Open the box · Find the match | Crossword |
+|---|---|---|
+| Màn CHỌN | bên đến lượt: ô màu bình thường; bên kia: **mờ 50%** và không bấm được | y hệt, "ô" = một từ (hàng/cột) |
+| Một bên chọn ô N | **cả 2 bàn cùng mở ô N** | cả 2 bàn cùng mở từ đó |
+| Trả lời ĐÚNG trước | **ăn điểm** + **reset đồng hồ**, nhưng **vòng vẫn chờ** đội kia | **ăn điểm**, đội kia **bị khoá ngay** |
+| Đội sau ĐÚNG | không điểm, reset đồng hồ, cả 2 về màn chọn, **đảo lượt** | (không có — đã khoá) |
+| Đội sau SAI | **không** reset đồng hồ; **chính đội sai được chọn ô tiếp**, KHÔNG đảo lượt | đáp án **vẫn hiện ra** nhưng tính là **SAI** |
+| Cả hai cùng đúng | mới **đảo lượt** lần lượt | — |
+🟡 Cần thầy chốt trước khi code: (a) **cả hai cùng sai** thì ai chọn tiếp? (em đề xuất: đội trả lời SAU,
+tức đúng câu chữ "đội sau sai được chọn tiếp"); (b) "reset thời gian" ở Find the match là đồng hồ nào —
+FTM **không có đồng hồ từng ô** như Open the box; (c) trong Crossword, đội bị khoá có **mất điểm** không
+hay chỉ là "không được điểm".
+⚠️ Ghi chú kỹ thuật cho người làm: luật này **KHÔNG khớp** khuôn vòng hiện tại của `core/fight.js`
+(vòng = một chỉ số, do trọng tài đẩy). Cần thêm cho fight một kiểu vòng **"do đội chọn"**: trọng tài giữ
+`pickTurn` (đội nào được chọn), nhận `boardPicked(side, index)` từ template, rồi mới `goToIndex` cả 2
+bàn — chứ đừng để template tự quyết, vì 2 bàn phải mở CÙNG một ô trong cùng một khung hình.
+
+### 7. VIỆC ĐANG CHỜ (Đợt 182)
+1. ✅ XONG — LIVE đã xác nhận (build đúng commit, 2/2 mã băm khớp, xem đầu đợt).
+2. Thầy chơi thử True/false Fight trên myActivity thật (2 đội bấm tay trên TOMKO).
+3. **Việc kế tiếp**: build "lượt chọn ô" — thứ tự đề xuất **Open the box → Find the match → Crossword**
+   (Open the box có sẵn khái niệm ô + đồng hồ từng ô, nên nó là nơi đẻ ra cơ chế dùng chung).
+4. 3 game đó còn cần **Showdown**: `review` phải xuất theo **thứ tự chơi thật** (hiện xuất theo thứ tự
+   lưới/hộp), nếu không tên học sinh sẽ gắn vào câu em đó chưa từng làm — lý do đã ghi ở Đợt 178.
+
+---
+
 ## Đợt 181 (17/8/2026) — 🐞 VÀO FIGHT MODE LÀ MẤT SẠCH ACT CON: KHÔNG CÒN ENG1/ENG2/VI1/VI2, KHÔNG CÒN PRACTICE/HOMEWORK
 ⭐ CÓ SỬA CORE (`core/engine.js` · `core/fight.js`). Không đụng template nào.
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/subact-modes-test.html` — **20/20 đạt**, và có **ĐỐI CHỨNG NGƯỢC
