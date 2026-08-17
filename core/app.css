@@ -4085,3 +4085,14 @@ body {
 .aw-sd-pod-ok { color: #2ec27e; }
 .aw-sd-pod-bad { color: #e03131; }
 .aw-sd-pod-time { color: #2563eb; }
+/* ⭐ Đợt 180 — % câu đúng trong ô rank (thầy, 17/8/2026). Dùng ĐÚNG 5 dải màu
+   của danh sách (pctBand, core/showdown.js) chứ không đặt bảng màu thứ hai:
+   cùng một con số thì phễu và danh sách phải cùng một màu. Ô huy chương vàng
+   có nền khá sáng nên riêng dải vàng bị ghì tối một nấc trong ô đó để không
+   chìm — chỉ ở đó, mọi chỗ khác giữ nguyên. */
+.aw-sd-pod-pct.is-p0 { color: #dc2626; }
+.aw-sd-pod-pct.is-p1 { color: #ca8a04; }
+.aw-sd-pod-pct.is-p2 { color: #ea580c; }
+.aw-sd-pod-pct.is-p3 { color: #2563eb; }
+.aw-sd-pod-pct.is-p4 { color: #16a34a; }
+.aw-sd-pod-box.is-m1 .aw-sd-pod-pct.is-p1 { color: #a16207; }

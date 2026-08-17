@@ -375,8 +375,24 @@ function normalizeResults(raw) {
  * their own team's Show answers in full; only the class board is short.
  */
 export async function saveTeamResult({ pick, roundKey, actName = "", students }) {
-  const uid = await requireUid();
   if (!pick?.teamId) return null;
+  // ⭐⭐ Đợt 180 — A SOLO PICK NEVER PUBLISHES. One-team mode is the whole class
+  // in ONE browser and is documented at SOLO_TEAM_ID / applySolo() as never
+  // touching Firestore at all — but core/engine.js's finish() only ever asked
+  // "is there a pick?", so it published `sd_solo` like any other team.
+  //
+  // What that cost (measured 17/8/2026, teacher's own class of 15):
+  // a solo play earlier in the day left a `sd_solo` row holding ALL FIFTEEN
+  // pupils. Later the same act was played properly as 3 teams of 5, and the
+  // class board added that row to the three real ones — 5 (ours, from memory)
+  // + 5 + 5 + 15 = **30 pupils, every child listed exactly twice**. Nothing on
+  // screen could explain it: each team's own board was right, and the stale row
+  // wore the class's own name.
+  //
+  // Guarded BEFORE `requireUid()` on purpose: solo is the one mode that is
+  // meant to work signed out, and it must not throw on its way to doing nothing.
+  if (pick.teamId === SOLO_TEAM_ID) return null;
+  const uid = await requireUid();
   const entry = {
     teamId: String(pick.teamId),
     teamName: String(pick.teamName || "Team"),
@@ -425,6 +441,13 @@ export async function loadTeamResults(roundKey) {
   const teams = normalizeResults(snap.exists() ? snap.data() : {});
   const key = String(roundKey || "");
   return Object.values(teams)
+    // ⭐ Đợt 180 — and never a SOLO row. saveTeamResult() no longer writes one,
+    // but every document written before today may still hold one, and it is the
+    // whole class on its own: left in, it doubles every pupil on the board (see
+    // that function's own note). Dropped on READ as well as on write so the bad
+    // row disappears from the teacher's screen immediately, with no Reset teams
+    // and no trip to the Firebase console.
+    .filter(t => t.teamId !== SOLO_TEAM_ID)
     // An entry with no key at all is from a build older than this one; it is
     // still this teacher's own class, so let it through rather than hide a
     // result the teacher can see was recorded.

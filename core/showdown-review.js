@@ -197,10 +197,27 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
   }
 
   function paintTitle() {
-    scopeEl.textContent = scopeText();
+    const txt = scopeText();
+    // ⭐ Đợt 180 (teacher, 17/8/2026: "GAMESHOW A1A • A1A ⇒ GAMESHOW A1A") — say
+    // the class's name ONCE. One-team mode names its team after the class
+    // (applySolo in core/showdown-setup.js: with everybody in one team, "Team 1"
+    // would tell nobody anything), so its team scope read "A1A • A1A" — a bullet
+    // separating a word from itself.
+    // ⚠️ Collapse on what is WRITTEN, not on `teamId === SOLO_TEAM_ID`: a
+    // teacher who names a real team after the class deserves the same tidying,
+    // and this file is deliberately free of the mode's ids.
+    const norm = s => String(s || "").trim().toLowerCase();
+    const twice = !!pick.className && norm(txt) === norm(pick.className);
+    scopeEl.textContent = twice ? "" : txt;
+    // `display` rather than removing the nodes: `swapScope()` animates `scopeEl`
+    // by reference and clearStatus/paintTitle both keep writing to it, so it has
+    // to stay in the tree. A `display:none` element simply animates nothing.
+    dot.style.display = twice ? "none" : "";
+    scopeEl.style.display = twice ? "none" : "";
     // Green marks WHAT IS ON SCREEN: the team in team scope, the class (name and
-    // count together) in class scope.
-    clsEl.classList.toggle("is-on", scope === "class");
+    // count together) in class scope — and, when the two have been folded into
+    // one word, that word, whichever scope it is standing for.
+    clsEl.classList.toggle("is-on", scope === "class" || twice);
     scopeEl.classList.toggle("is-on", true);
     title.classList.toggle("is-pod", podium);
     const b = blocks();
@@ -269,13 +286,47 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
     const out = teamBlocks.map(b => ({ ...b, teamName: pick.teamName || "" }));
     (entries || []).forEach(entry => {
       if (!entry || entry.teamId === pick.teamId) return;
-      (entry.students || []).forEach(s => out.push({ ...s, teamName: entry.teamName || "" }));
+      (entry.students || []).forEach(s => out.push({ ...s, teamName: entry.teamName || "", _at: Number(entry.at) || 0 }));
     });
+    // ⭐⭐ Đợt 180 — ONE ROW PER CHILD, whatever the table throws at us
+    // (teacher, 17/8/2026: "lớp có bao nhiêu học sinh thì chỉ hiển thị đúng
+    // từng ấy học sinh"). The published rows are a MAP KEYED BY TEAM, so
+    // nothing in the storage layer can stop the same pupil arriving from two
+    // teams at once — and there are at least two ordinary ways it happens:
+    //   • the `sd_solo` row (fixed at its source this same đợt, and this is the
+    //     belt to that braces);
+    //   • a pupil MOVED between teams — the team they left published its result
+    //     before the move and that row keeps their name for as long as it lives.
+    // Both were measured doubling a real class before this; the second one is
+    // not fixable upstream at all, because both rows are honest records of a
+    // game that really was played.
+    //
+    // ⚠️ IDENTITY IS THE PUPIL'S ID, name only as the fallback. Two different
+    // children in one class really can share a full name (Vietnamese classes
+    // regularly do), and merging THEM would hide a pupil — the very bug being
+    // fixed, pointed the other way. Every id here comes from the one shared team
+    // table, so the same child carries the same id on every screen.
+    //
+    // WHICH COPY SURVIVES: ours first — `teamBlocks` is the play this screen
+    // just watched and is authoritative even when the write to the table failed
+    // — then the most RECENTLY published row, which is the game that actually
+    // happened last. `_at` is only ever read here and never rendered.
+    const byPupil = new Map();
+    out.forEach(b => {
+      const key = String(b.key || "").trim() || String(b.name || "").trim().toLowerCase();
+      const prev = byPupil.get(key);
+      if (!prev) { byPupil.set(key, b); return; }
+      const prevIsOurs = prev._at === undefined;      // came from `teamBlocks`
+      if (prevIsOurs) return;                          // ours always wins
+      if (b._at === undefined || (b._at || 0) > (prev._at || 0)) byPupil.set(key, b);
+    });
+    const merged = [...byPupil.values()];
     // `ord` is the tie-breaker of last resort (core/showdown.js's rankBlocks) and
     // has to be unique across the merged list, not per team — two pupils tied on
-    // everything must still have a stable order.
-    out.forEach((b, i) => { b.ord = i; });
-    return out;
+    // everything must still have a stable order. Assigned AFTER the dedupe, so
+    // the numbers stay contiguous.
+    merged.forEach((b, i) => { b.ord = i; });
+    return merged;
   }
 
   /** Re-read the shared table. Returns true if the class list was rebuilt. */
@@ -450,6 +501,17 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
         el("span", "aw-sd-pod-ok", `${icons.check} ${b.right}`),
         el("span", "aw-sd-pod-bad", `${icons.cross} ${b.wrong}`)
       );
+      // ⭐ Đợt 180 (teacher, 17/8/2026: "% tỷ lệ đúng trong ô rank") — the same
+      // number, the same bands and the same denominator as the list view: OF THE
+      // QUESTIONS ACTUALLY ATTEMPTED, never of the ones the pupil never reached.
+      // Asking pctBand() rather than re-picking colours here is what stops the
+      // funnel and the list ever disagreeing about what "green" means.
+      // ⚠️ Omitted entirely when nothing was attempted — a pupil the game never
+      // reached shows no percentage rather than a red 0%.
+      if (b.attempted) {
+        const pct = Math.round((b.right / b.attempted) * 100);
+        stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
+      }
       // Only when the round clock was on — a Showdown played without it shows
       // the two tallies alone rather than a column of dashes.
       if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));

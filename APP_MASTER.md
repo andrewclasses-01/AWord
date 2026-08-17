@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 179) — 🐞 VÁ LỖI CÓ SẴN CỦA TRUE/FALSE.** Bật Options →
+> Cập nhật lần cuối: **17/8/2026 (Đợt 180) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO LỚP 15 EM.** 🟡 CHƯA
+> COMMIT, chờ thầy duyệt. Chế độ **solo (1 đội = cả lớp)** được khai ở 2 chỗ trong `showdown-setup.js` là
+> "không bao giờ ghi Firebase", nhưng `engine.js` lúc kết thúc ván chỉ hỏi *"có pick không?"* và
+> `saveTeamResult()` chỉ chặn `!pick.teamId` — mà `sd_solo` **có** teamId. Một ván solo chạy thử để lại
+> hàng `sd_solo` chứa **cả 15 em**; chơi lại theo 3 đội thì bảng lớp cộng 5+5+5+**15** = **30**, mỗi em
+> 2 lần, im lặng hoàn toàn (bảng từng đội vẫn đúng, hàng bẩn mang chính tên lớp). Vá 3 lớp: chặn ở
+> **nguồn** (không ghi solo) + chặn ở **chỗ đọc** (bỏ hàng solo cũ, để màn hình sạch ngay mà không phải
+> Reset teams) + **gộp trùng theo học sinh** trong `buildClass()` (khoá là ID, chỉ lấy tên khi thiếu id
+> — lớp trùng đủ họ tên là có thật, gộp nhầm 2 em là đúng con lỗi này lộn ngược). Có một đường **không
+> thể vá ở thượng nguồn**: em chuyển đội, hai bản ghi đều là ghi chép thật. Kèm 2 cải tiến của thầy:
+> **% trong ô rank** (gọi chính `pctBand`, cùng mẫu số với danh sách) và **title hết lặp tên lớp**
+> (`A1A • A1A` → `A1A`, gập theo CHỮ ĐƯỢC VIẾT chứ không theo id mode). Lưới mới
+> `scratch/showdown-dupe-test.html` **19/19**, có đối chứng ngược đo trên code cũ (30 khối → 15).
+> **Bài học**: một hằng số khai là "không bao giờ đi ra ngoài" phải có chốt chặn ở đúng **cửa ra** —
+> `SOLO_TEAM_ID` đã được import vào file đó từ Đợt 159 mà chưa hề dùng để chặn đường ghi.
+>
+> Trước đó: **17/8/2026 (Đợt 179) — 🐞 VÁ LỖI CÓ SẴN CỦA TRUE/FALSE.** Bật Options →
 > Unanswered = **Repeat** thì **mỗi câu trả lời sai làm biến mất một câu khỏi ván**, im lặng: câu bị
 > nuốt vẫn nằm trong Show answers dưới dạng "chưa làm", không gì nói rằng cả lớp chưa từng thấy nó.
 > Gốc: `requeueRandom()` tự `queue.shift()`, nhưng hai nơi gọi **không thống nhất** — `dropOrRequeue()`

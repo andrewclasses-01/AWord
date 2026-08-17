@@ -8,6 +8,121 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 180 (17/8/2026) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO MỘT LỚP 15 EM (mỗi em lặp 2 lần) + % TRONG Ô RANK + TITLE HẾT LẶP TÊN LỚP
+⭐ CÓ SỬA CORE (`showdown-setup.js` · `showdown-review.js` · `app.css`). Không đụng template nào.
+🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/showdown-dupe-test.html` — **19/19 đạt**, và có **ĐỐI CHỨNG NGƯỢC
+đo trên chính code cũ trước khi vá**.
+🟡 **CHƯA COMMIT — chờ thầy duyệt.**
+
+### 1. Thầy báo (17/8/2026)
+> "Lớp 15 bạn (3 đội, mỗi đội 5 bạn). Show answers của **1 đội** đúng 5 bạn, nhưng chuyển sang xem
+> **cả lớp** thì lại hiển thị **30 bạn** (mỗi bạn lặp thêm 1 lần). Tôi muốn lớp có bao nhiêu học sinh
+> thì chỉ hiển thị đúng từng ấy."
+
+Kèm 2 yêu cầu cải tiến: thêm **% tỷ lệ đúng trong ô rank** (nhấn giữ ra bảng phễu), và **chỉ hiện tên
+lớp 1 lần** (`GAMESHOW A1A • A1A` → `GAMESHOW A1A`).
+
+### 2. ⭐ Đã TÁI HIỆN ĐÚNG CON SỐ 30 trước khi sửa một dòng nào
+Dựng `scratch/showdown-dupe-test.html`: lớp A1A 15 em, 3 đội × 5, gắn màn bằng **CHÍNH** hàm engine gọi
+(`mountShowdownReview`), bắn **chuỗi pointer thật** chứ không gọi thẳng callback. Chạy trên code CŨ:
+
+| Phép đo | Code CŨ | Code ĐÃ VÁ |
+|---|---|---|
+| Đội mình (bộ nhớ) | 5 khối ✔ | 5 khối ✔ |
+| **Cả lớp** | **30 khối** 🔴 | **15 khối** ✔ |
+| Tên bị lặp | **15 tên lặp** 🔴 | 0 ✔ |
+| Em chuyển đội, bản ghi đội cũ còn | **hiện 3 lần** 🔴 | 1 lần ✔ |
+| Ô phễu có % | **0/5 ô** 🔴 | 5/5 ô ✔ |
+| Title solo | `SHOWDOWN A1A • A1A` 🔴 | `SHOWDOWN A1A` ✔ |
+
+Kịch bản 2 của lưới (3 đội **không có** hàng solo) ra đúng 15 ngay cả trên code cũ — đó chính là thứ
+chỉ thẳng vào thủ phạm, chứ không phải đoán.
+
+### 3. 🔴 THỦ PHẠM — CHẾ ĐỘ SOLO VẪN ĐẨY KẾT QUẢ LÊN BẢNG CHUNG
+`core/showdown-setup.js` khai rất rõ ở 2 chỗ (`SOLO_TEAM_ID`, `applySolo()`): 1 đội = cả lớp thì
+**"không lưu firebase nữa mà chỉ dùng ở trình duyệt hiện tại"**, và id `sd_solo` **"không bao giờ được
+nhầm thành một claim trên đội thật"**.
+
+Nhưng `core/engine.js` lúc kết thúc ván chỉ hỏi đúng một câu — *"có pick không?"*:
+```js
+if (showdownPick && answered > 0 && !activity._mistakes) { … saveTeamResult({ pick: showdownPick, … }) }
+```
+mà `saveTeamResult()` cũng chỉ chặn `if (!pick?.teamId) return null` — **`sd_solo` CÓ teamId**. Nên một
+ván solo chạy thử lúc sáng đã ghi lên `sd_results` một hàng `sd_solo` **chứa cả 15 em**. Buổi chiều
+chơi lại đúng act đó theo 3 đội, bảng lớp cộng: 5 (đội mình, từ bộ nhớ) + 5 + 5 + **15** = **30**, mỗi
+em đúng 2 lần. Im lặng tuyệt đối: bảng của từng đội vẫn đúng, và hàng bẩn thì **mang chính tên lớp**.
+
+**Bài học ghi lại kẻo lặp**: một hằng số được khai là "không bao giờ đi ra ngoài" thì phải có **chốt
+chặn ở đúng cửa ra**, chứ tài liệu và tên biến không chặn được gì. `SOLO_TEAM_ID` được `import` vào
+`showdown-setup.js` từ Đợt 159 nhưng **chưa hề được dùng để chặn đường ghi**.
+
+### 4. Vá — hai lớp, cố ý không dồn vào một chỗ
+1. **Chặn ở nguồn** — `saveTeamResult()` từ chối thẳng pick solo. Chốt đặt **TRƯỚC `requireUid()`**:
+   solo là chế độ được phép chạy lúc chưa đăng nhập, không được ném lỗi trên đường đi làm-không-gì.
+2. **Chặn ở chỗ đọc** — `loadTeamResults()` bỏ qua mọi hàng `sd_solo`. Lý do bắt buộc phải có: tài
+   liệu **đã ghi bẩn từ trước hôm nay** vẫn nằm đó; chặn cả ở đây thì màn hình thầy sạch **ngay**, không
+   phải Reset teams (vốn xoá luôn cả bảng đội) và không phải vào Firebase console.
+3. **Gộp trùng ở bảng lớp** — `buildClass()` nay **một em một dòng**. Đây không phải "làm cho chắc":
+   dữ liệu là **map theo ĐỘI**, nên không tầng lưu trữ nào ngăn được cùng một em đến từ hai đội — và
+   có một đường **không thể vá ở thượng nguồn**: em **chuyển đội**, đội cũ đã công bố kết quả trước khi
+   chuyển, cả hai bản ghi đều là ghi chép **thật** của những ván **đã thật sự diễn ra**. Đo được: hiện
+   3 lần trước khi vá.
+   - **Khoá là ID học sinh, chỉ lấy TÊN khi không có id.** Lớp Việt Nam trùng họ tên đầy đủ là chuyện
+     có thật, gộp nhầm 2 em thành 1 chính là **đúng con lỗi này lộn ngược đầu**.
+   - **Bản nào thắng**: đội MÌNH trước (lấy từ bộ nhớ, là ván màn hình này vừa xem, đúng kể cả khi lệnh
+     ghi hỏng), sau đó là bản **công bố gần nhất** (`at` lớn hơn) — ván thật sự diễn ra sau cùng.
+   - `ord` đánh lại **SAU** khi gộp, để tie-break cuối cùng vẫn liền mạch.
+
+### 5. Hai việc cải tiến
+- **% trong ô rank** (`renderPodium`): gọi **chính `pctBand()`** của danh sách, **cùng mẫu số** (số câu
+  ĐÃ LÀM). Không đặt bảng màu thứ hai — cùng một con số thì phễu và danh sách phải cùng một màu. Ô nào
+  chưa làm câu nào thì **không hiện %** (chứ không phải 0% đỏ). Riêng dải vàng trong ô huy chương vàng
+  bị ghì tối một nấc (`#a16207`) cho khỏi chìm vào nền.
+- **Title hết lặp** (`paintTitle`): gập khi chữ scope **trùng tên lớp** — gập theo **CHỮ ĐƯỢC VIẾT**,
+  KHÔNG theo `teamId === SOLO_TEAM_ID` (thầy đặt tên đội trùng tên lớp cũng đáng được gọn như vậy, và
+  `showdown-review.js` cố ý không biết gì về id của mode). Ẩn bằng `display`, **không gỡ nút khỏi cây**:
+  `swapScope()` giữ tham chiếu tới chính `scopeEl` để chạy animation. Tên lớp lúc đó **nhận màu xanh**
+  vì nó đang đóng vai chữ scope. Chạm sang cả lớp thì chữ thành `15 STS` ≠ tên lớp ⇒ dấu • hiện lại.
+
+### 6. ⚠️ HAI CÁI BẪY CỦA CHÍNH LƯỚI ĐO (suýt báo oan cho code)
+- **Đo title quá sớm.** Chạm chỉ chốt sau `TAP_MS`=250ms, rồi `swapScope()` còn gập chữ 160ms nữa mới
+  gọi `paintTitle()` — trong khi `paintBody()` chạy **ngay**. Đo ở mốc 420ms thì danh sách đã đổi mà
+  title thì chưa: lưới tố cáo một lỗi không hề có. Nâng lên 700ms.
+- **Tự nghĩ ra công thức rồi tưởng là luật của app.** Lưới đối chiếu % bằng `✓/(✓+✗)` và báo sai 1 ô.
+  Thật ra **dấu ✗ đếm cả câu CHƯA LÀM** (luật có sẵn, `showdown.js`), còn % chỉ tính trên câu **đã
+  làm** — nên một em bỏ trắng 1 câu ra `✓1 ✗1 100%`, **đúng thiết kế** (đã có từ Đợt 176 ở danh sách).
+  Sửa lưới thành đối chiếu **phễu ↔ danh sách từng em**, tức là bằng chính luật của app.
+  ⚠️ **Việc để hỏi thầy**: `✓1 ✗1` nằm cạnh `100%` đọc lên hơi nghịch mắt — có muốn đổi cách hiển thị không?
+
+### 7. Đo hình học thay cho ảnh chụp (pane không compositing được)
+Không chụp được ảnh (pane không hiện ⇒ trình duyệt không dựng khung hình). Thứ cần bắt ở đây là
+**tràn/che nhau** khi nhét thêm một phần tử vào hàng flex — cái đó đo chính xác được: 16 ô phễu, cả
+khung rộng 1080px lẫn **khung hẹp 430px (1 cột myActivity)**, ô cuối co còn 181px — **0 lỗi** trên cả 7
+phép: stats không tràn, không lòi ra ngoài ô, tên không đè stats, % không đè thời gian, chữ % không bị
+cắt, số thứ hạng không đè vào ô.
+⚠️ Vẫn nên để thầy liếc mắt một lần trên máy thật — đây là đo, không phải nhìn.
+
+### 8. File đụng vào
+| File | Sửa gì |
+|---|---|
+| `core/showdown-setup.js` | `saveTeamResult()` từ chối pick solo (chặn trước `requireUid`); `loadTeamResults()` bỏ hàng `sd_solo` |
+| `core/showdown-review.js` | `buildClass()` gộp trùng theo học sinh; `renderPodium()` thêm %; `paintTitle()` gập tên lớp trùng |
+| `core/app.css` | `.aw-sd-pod-pct` 5 dải màu + ghì tối dải vàng trong ô huy chương vàng |
+| `scratch/showdown-dupe-test.html` | **MỚI** — lưới 19 phép cho đúng lớp 15 em/3 đội của thầy |
+
+### 9. VIỆC ĐANG CHỜ (Đợt 180)
+1. **Thầy duyệt → commit + push + đối chiếu mã băm trên live.** Chưa commit gì.
+2. Thầy chơi lại đúng lớp 15 em đó trên myActivity thật: xem cả lớp phải ra **đúng 15**.
+3. Trả lời câu ở mục 6: có đổi cách hiển thị `✓1 ✗1 100%` không.
+4. **Vẫn treo từ Đợt 177**: chưa từng test trên **Firestore THẬT** (mọi lưới đều dùng `fake-firebase.js`).
+5. Còn tồn đọng đã soi ra nhưng CHƯA sửa (chờ thầy quyết): xếp hạng dùng **số câu đúng tuyệt đối** chứ
+   không dùng %, nên em được nhiều lượt hơn thì lợi hơn; bảng kết quả **không có khái niệm buổi/ngày**
+   nên chơi lại act cũ ở lớp sau vẫn thấy kết quả tiết trước; `sd_results` **không có realtime**, phải
+   chạm đúp mới thấy đội vừa xong; `MAX_PER_TEAM = 10` được import vào `showdown-setup.js` nhưng **không
+   dùng ở đâu** (giới hạn thật là `capPerTeam()`).
+
+---
+
 ## Đợt 179 (17/8/2026) — 🐞 VÁ LỖI CÓ SẴN CỦA TRUE/FALSE: BẬT "REPEAT UNTIL ANSWERED" THÌ MỖI CÂU SAI NUỐT MẤT MỘT CÂU
 KHÔNG sửa core. Đúng **1 file** (`templates/true-false/true-false.js`), đổi 2 hàm nhỏ.
 🟢 ĐÃ TỰ TEST qua `scratch/showdown-all-test.html` (thêm 3 tham số `repeat`/`lives`/`speed`), **có đối
