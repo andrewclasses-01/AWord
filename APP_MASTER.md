@@ -10,7 +10,10 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **17/8/2026 (Đợt 174) — ⭐⭐ SHOWDOWN: NÚT ✗ ĐỎ TRẢ ĐỘI VỀ · ⭐⭐⭐ TÍNH NĂNG MỚI
 > "TIME EACH ROUND" (đồng hồ từng lượt học sinh) · RÀ XONG ĐƯỜNG ĐỒNG BỘ TEMPLATE/STYLE CỦA myActivity.**
-> ⬜ **CHƯA COMMIT — chờ thầy chốt.** Chi tiết: `GHI CHU DU AN.md` mục "Đợt 174"; hợp đồng kỹ thuật:
+> ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `4a3c0df` + PUSH + LIVE**, đã đối chiếu **8/8 file code trùng mã
+> băm SHA-256** trên `aword.andrewclasses.com` (deployment `5939155018`, state `success`) và **chạy lại
+> phép thử TRÊN CHÍNH BẢN LIVE** qua `scratch/round-live.html` (import module thẳng từ tên miền live) —
+> 0 lỗi console. Chi tiết: `GHI CHU DU AN.md` mục "Đợt 174"; hợp đồng kỹ thuật:
 > `core/HUONG DAN CORE.md` mục **"TIME EACH ROUND"**.
 > Tóm tắt: cột đội máy mình nay đeo **✗ đỏ** (hỏi xác nhận) để **nhả đội về cho máy khác** — trước đây
 > bỏ tích chỉ là chuyện nội bộ, claim vẫn nằm trên Firestore suốt 12h TTL. **Time each round** (None ·

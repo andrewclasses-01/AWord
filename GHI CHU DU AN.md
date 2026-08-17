@@ -13,7 +13,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 **+ 3 file game** (`quiz.js` · `type-the-answer.js` · `anagram.js`).
 🟢 ĐÃ TỰ TEST TRÊN TRÌNH DUYỆT THẬT (bàn thử mới `scratch/round-test.html` + Firestore giả) **và đã
 NHÌN BẰNG MẮT trên Chrome thật** — ảnh chụp bắt được 1 lỗi mà mọi phép đo báo "đạt" (xem mục 5).
-⬜ CHƯA COMMIT — chờ thầy chốt.
+✅ **THẦY CHỐT COMMIT + PUSH (17/8/2026) → COMMIT `4a3c0df` + PUSH + LIVE.**
+📌 Đã đối chiếu **8/8 file code trùng mã băm SHA-256** trên `aword.andrewclasses.com` (Pages build xong
+đúng commit này trước khi so — deployment id `5939155018`, state `success`). Vẫn nhớ `sed 's/\r$//'` cả
+hai phía trước khi so (Windows checkout ra CRLF, Pages phục vụ LF) và `curl -L` để đi theo redirect.
+📌 **ĐÃ CHẠY LẠI PHÉP THỬ TRÊN CHÍNH BẢN LIVE**, không phải bản local: trang `scratch/round-live.html`
+(mới) `import` thẳng `engine.js` / `quiz.js` / `showdown.js` / `showdown-setup.js` từ
+`https://aword.andrewclasses.com` — Pages trả `Access-Control-Allow-Origin: *` nên nạp được. Kết quả
+trên live: hàng chung `[số giây][thanh][điểm]` (3 tâm hàng đều = 49), tên trong `.aw-navstack` cỡ
+**34.78px** (đúng bằng chế độ None), đồng hồ tổng cạnh Menu, đếm ngược 5s → khoá ô + hiện đáp án đúng,
+xếp hạng đúng (4s trước 9s, em chưa đo giờ xuống cuối), thời gian từng câu là **phần tử CUỐI của hàng**,
+`fmtRoundMs(62400)` ra `1:02.4s`, hàng tiêu đề phụ cũ đã biến mất, `releaseMyClaim` xuất được,
+**0 lỗi console**.
 
 ### 1. Thầy giao 3 việc (17/8/2026)
 1. Bảng cột đội: đội đã chọn rồi vẫn phải **chọn lại đội khác chưa ai lấy**; và **thêm dấu X đỏ ở góc
