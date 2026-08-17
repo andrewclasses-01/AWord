@@ -10,6 +10,8 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **17/8/2026 (Đợt 178) — ⭐⭐ MỞ SHOWDOWN RA 8/17 TEMPLATE (3 → 8) + VÁ LỖI CORE
 > LÀM TÊN HỌC SINH TÀNG HÌNH.**
+> ✅ **COMMIT `60f85d4` + PUSH + LIVE** — đối chiếu **12/12 file trùng mã băm SHA-256**, và chạy lại
+> trên chính bản live: 8 template báo `showdownMode:true`, 9 template báo tắt, đúng danh sách chốt.
 > ⭐ CÓ SỬA CORE (`engine.js` · `app.css`) + 5 file game + 2 CSS game.
 > **Mở thêm 5**: Balloon pop · Gameshow · Speaking · Unjumble · True/false.
 > **Chưa mở 9, có lý do rõ**: Flying fruit + Maze chase (plumbing ĐÚNG, chỉ **hết chỗ đặt tên** — chờ

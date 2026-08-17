@@ -13,6 +13,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 `unjumble` · `true-false`) + 2 file CSS game + 2 file game chỉ thêm ghi chú vì sao CHƯA bật.
 🟢 ĐÃ TỰ TEST qua `scratch/showdown-all-test.html` (lưới MỚI, chạy Showdown trên **bất kỳ** template),
 **có 2 đối chứng ngược**, và **NHÌN BẰNG MẮT** trên Chrome thật — 3 lỗi dưới đây chỉ ảnh chụp mới bắt được.
+✅ **COMMIT `60f85d4` + PUSH + LIVE (17/8/2026).** Pages build đúng commit (`status: built`), đối chiếu
+**12/12 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`. Chạy lại phép thử **trên chính bản
+live** (import `registry.js` + `ensureTemplate()` thẳng từ tên miền): **8 template báo
+`showdownMode: true`** (quiz · anagram · type_the_answer · balloon_pop · gameshow · speaking ·
+unjumble · true_false) và **9 template báo tắt**, đúng danh sách chốt; `z-index: 6` có trong khối
+`.aw-top-centre.is-showdown` của `app.css` live; Gameshow chữ trắng và Speaking ẩn slogan đều đã lên.
 
 ### 1. Thầy giao: "mở rộng showdown cho 14 template còn lại"
 
