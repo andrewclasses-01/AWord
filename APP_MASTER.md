@@ -8,7 +8,18 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 178) — ⭐⭐ MỞ SHOWDOWN RA 8/17 TEMPLATE (3 → 8) + VÁ LỖI CORE
+> Cập nhật lần cuối: **17/8/2026 (Đợt 179) — 🐞 VÁ LỖI CÓ SẴN CỦA TRUE/FALSE.** Bật Options →
+> Unanswered = **Repeat** thì **mỗi câu trả lời sai làm biến mất một câu khỏi ván**, im lặng: câu bị
+> nuốt vẫn nằm trong Show answers dưới dạng "chưa làm", không gì nói rằng cả lớp chưa từng thấy nó.
+> Gốc: `requeueRandom()` tự `queue.shift()`, nhưng hai nơi gọi **không thống nhất** — `dropOrRequeue()`
+> (hết giờ) chưa lấy gì nên shift là đúng, còn `choose()` (bấm sai) đã shift ngay lúc bấm nên cú shift
+> thứ hai ném đi câu KẾ TIẾP. Vá bằng cách tách hẳn hai việc: `requeueRandom()` **chỉ trả câu về**,
+> lấy khỏi đầu hàng đợi là việc của bên gọi. KHÔNG sửa core, đúng 1 file.
+> Đo được: code cũ **6/8** câu từng được hiện (2 câu bị nuốt) · code vá **8/8**, 0 câu bị nuốt.
+> Lưới thử `scratch/showdown-all-test.html` nay có `?repeat=1&lives=0&speed=0` + phơi `window.__act`
+> để bài test tra đáp án đúng.
+>
+> Trước đó: **17/8/2026 (Đợt 178) — ⭐⭐ MỞ SHOWDOWN RA 8/17 TEMPLATE (3 → 8) + VÁ LỖI CORE
 > LÀM TÊN HỌC SINH TÀNG HÌNH.**
 > ✅ **COMMIT `60f85d4` + PUSH + LIVE** — đối chiếu **12/12 file trùng mã băm SHA-256**, và chạy lại
 > trên chính bản live: 8 template báo `showdownMode:true`, 9 template báo tắt, đúng danh sách chốt.

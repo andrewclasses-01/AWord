@@ -8,6 +8,46 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 179 (17/8/2026) — 🐞 VÁ LỖI CÓ SẴN CỦA TRUE/FALSE: BẬT "REPEAT UNTIL ANSWERED" THÌ MỖI CÂU SAI NUỐT MẤT MỘT CÂU
+KHÔNG sửa core. Đúng **1 file** (`templates/true-false/true-false.js`), đổi 2 hàm nhỏ.
+🟢 ĐÃ TỰ TEST qua `scratch/showdown-all-test.html` (thêm 3 tham số `repeat`/`lives`/`speed`), **có đối
+chứng ngược**.
+
+### 1. Lỗi (có sẵn từ lâu, phát hiện lúc làm Đợt 178, cố ý tách riêng ra khỏi đợt đó)
+`requeueRandom(idx)` mở đầu bằng `queue.shift()`. Nó có **hai nơi gọi, và hai nơi đó không thống nhất**
+về việc câu đã bị lấy khỏi đầu hàng đợi hay chưa:
+- `dropOrRequeue()` (đường **hết giờ**) chưa lấy gì ⇒ cú `shift()` trong đó là ĐÚNG;
+- `choose()` (đường **bấm sai**) đã `queue.shift()` ngay lúc bấm ⇒ cú `shift()` thứ hai **ném đi câu
+  đang đứng KẾ TIẾP**.
+
+Hệ quả khi bật Options → Unanswered = **Repeat**: **mỗi câu trả lời sai làm biến mất một câu khỏi ván**.
+Im lặng hoàn toàn — `state` của câu bị nuốt vẫn là `{answered:false, correct:false}`, nên Show answers
+chỉ liệt kê nó như "chưa làm", không có gì nói rằng **cả lớp chưa từng được nhìn thấy câu đó**.
+Tắt Repeat (mặc định) thì không sao.
+
+### 2. Cách vá — tách hẳn hai việc, để không ai lặp lại được
+`requeueRandom()` nay **CHỈ trả câu về** (splice vào vị trí ngẫu nhiên, vẫn tránh ô số 0 nên câu bị lỡ
+không quay lại ngay lập tức). Việc **lấy khỏi đầu hàng đợi là của bên gọi**, và `dropOrRequeue()` — nơi
+duy nhất còn thiếu — nay tự `queue.shift()` cho cả hai nhánh của nó.
+Một hàm gỡ ra, một hàm trả về: đọc tên hàm là biết ai làm gì, không còn chỗ cho hiểu nhầm.
+
+### 3. Đã tự test — và ĐỐI CHỨNG NGƯỢC
+Lưới `scratch/showdown-all-test.html` thêm `?repeat=1&lives=0&speed=0` (đúng kịch bản của lỗi: phải bật
+Repeat thì đường này mới chạy, phải sống vô hạn thì ván mới đủ dài để thấy câu bị mất) và phơi
+`window.__act` để bài test **tra đáp án đúng** của từng câu. Kịch bản: cố tình sai 2 câu đầu, còn lại
+trả lời đúng hết, rồi đếm xem có câu nào không bao giờ hiện.
+
+| | Code CŨ | Code ĐÃ VÁ |
+|---|---|---|
+| Số lượt chơi | 8 | **10** (8 + 2 câu quay lại) |
+| Số câu từng được hiện | **6/8** | **8/8** |
+| Câu bị nuốt | **2** (`Germinating…`, `A young plant…`) | **0** |
+
+📌 Nhân tiện xác nhận luôn luật của Đợt 178: câu quay lại về **đúng em đã sở hữu nó** (Ẳnh→Ẳnh,
+Hạnh→Hạnh), vì `index` là **HÀNG trong `review`** chứ không phải "lượt thứ mấy".
+
+---
+
 ## Đợt 178 (17/8/2026) — ⭐⭐ MỞ SHOWDOWN CHO CÁC TEMPLATE CÒN LẠI: 3 → 8 GAME, + VÁ LỖI CORE LÀM TÊN HỌC SINH TÀNG HÌNH
 ⭐ CÓ SỬA CORE (`engine.js` · `app.css`) + **5 file game** (`balloon-pop` · `gameshow` · `speaking` ·
 `unjumble` · `true-false`) + 2 file CSS game + 2 file game chỉ thêm ghi chú vì sao CHƯA bật.
@@ -588,8 +628,8 @@ chỉ tồn tại trong trang act. Cột đang ở **thư viện** AWord thì ch
   Đây là việc riêng một đợt, không phải bật cờ.
 - ⬜ **ĐỢT 178 — thử 5 game mới trên màn TOMKO + myActivity nhiều cột**; riêng Maze chase (nếu bật sau)
   chú ý `ANSWER_HOLD_MS` 900ms có đủ cho em kế tiếp bước tới bảng không.
-- ⬜ **Lỗi CÓ SẴN của True/false** (đã tách việc riêng): `requeueRandom()` shift hai lần ⇒ bật "Repeat
-  until answered" thì mỗi câu sai nuốt mất một câu.
+- ✅ ~~Lỗi CÓ SẴN của True/false: `requeueRandom()` shift hai lần~~ → **ĐÃ VÁ ở Đợt 179** (đo được:
+  code cũ 6/8 câu, code vá 8/8 câu, 0 câu bị nuốt).
 - ✅ ~~ĐỢT 177 chưa commit~~ → **ĐÃ COMMIT `dc7a72e` + PUSH + LIVE (17/8/2026), 7/7 file trùng hash.**
 - ⬜ **Thử ĐỢT 177 trên Firestore THẬT + myActivity nhiều cột THẬT** (lưới test dùng Firestore giả nên
   2 thứ này chưa từng chạy thật): (a) cột 1 và cột 2 chơi 2 đội, xong cả hai → mở Show answers ở 1 cột,

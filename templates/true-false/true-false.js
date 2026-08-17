@@ -456,17 +456,33 @@ const tfTemplate = {
 
     // Puts a statement back in the running — at a RANDOM spot in the queue
     // (not just at the back), so a missed one doesn't return predictably.
+    //
+    // ⚠️⚠️ THIS ONLY PUTS BACK. TAKING OFF THE FRONT IS THE CALLER'S JOB (Đợt 179).
+    // It used to `queue.shift()` here as well, which was right for one of its two
+    // callers and quietly wrong for the other:
+    //   · `dropOrRequeue()` (time-out) had not removed anything yet — correct;
+    //   · `choose()` (wrong tap) shifts the moment the button is tapped, so the
+    //     second shift in here threw away the statement that was NEXT IN LINE.
+    // Net effect with "Repeat until answered" on: ONE STATEMENT VANISHED FROM THE
+    // ROUND PER WRONG ANSWER. Silently — its `state` row stays
+    // `{answered:false, correct:false}`, so Show answers just lists it as
+    // unanswered and nothing says the class was never shown it.
+    // Splitting the two jobs is what makes that impossible to get wrong again:
+    // one function removes, the other returns.
     function requeueRandom(idx) {
-      queue.shift();
       if (!queue.length) { queue.push(idx); return; }
+      // `1 +` keeps it out of slot 0, so a missed statement never comes straight
+      // back as the very next one.
       const pos = 1 + Math.floor(Math.random() * queue.length);
       queue.splice(pos, 0, idx);
     }
 
-    // A statement that timed out unanswered.
+    // A statement that timed out unanswered. Nothing has been taken off the front
+    // yet on this path (unlike `choose()`), so that happens here.
     function dropOrRequeue(idx) {
+      queue.shift();
       if (repeatUntilCorrect) requeueRandom(idx);
-      else { queue.shift(); state[idx].answered = true; state[idx].correct = false; }
+      else { state[idx].answered = true; state[idx].correct = false; }
     }
 
     function onTimeUp() {
