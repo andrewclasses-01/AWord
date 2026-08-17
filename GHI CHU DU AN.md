@@ -12,6 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `app.css`). Cùng commit với Đợt 175.
 🟢 ĐÃ TỰ TEST qua `scratch/round-test.html` (Quiz countUp/countDown/none + TTA countDown + Anagram
 countUp submit): số đo vị trí tên, chuỗi đồng hồ, bảng Show answers, dải màu %, 0 lỗi console.
+✅ **COMMIT `1c570a9` (chung với Đợt 175) + PUSH + LIVE** — Pages build đúng commit (deployment
+`5940800996`, state `success`), đối chiếu **8/8 file trùng mã băm SHA-256** trên
+`aword.andrewclasses.com` (`sed 's/\r$//'` cả 2 phía + `curl -L`), và chạy lại phép thử TRÊN CHÍNH
+BẢN LIVE (import `press.js` + `showdown.js` thẳng từ tên miền): `pctBand` 8 mốc biên đúng 5 dải,
+`fmtRoundMs(62400)` = `1:02,40`, `press()` bắn đúng 1 lần tại pointerdown và tôn trọng `disabled`.
 
 ### 1. Thầy giao 3 việc (17/8/2026, ngay sau Đợt 175)
 1. Time each round ≠ None: **nâng tên học sinh lên** cho cân đối — Quiz: chính giữa từ mép trên cụm
@@ -74,7 +79,9 @@ số lẻ giây trên màn 86" có rối mắt không; dải màu % đọc từ 
 
 ## Đợt 175 (17/8/2026) — ⭐⭐⭐ HẾT TRỄ + HẾT BẤT CÔNG CẢM ỨNG TRÊN TOMKO: MỌI BỀ MẶT CHƠI KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js` MỚI) — CHỮA TẬN GỐC LỖI FIGHT MODE "A BẤM TRƯỚC KHÔNG NHẬN, B BẤM SAU LẠI NHẬN TRƯỚC"
 ⭐ CÓ SỬA CORE (**`core/press.js` MỚI** · `engine.js` · `fight.js` · `keyboard.js` · `app.css`)
-**+ 17 file game** (mọi template). ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+**+ 17 file game** (mọi template).
+✅ **THẦY CHỐT LÀM TIẾP ĐỢT 176 RỒI COMMIT MỘT THỂ → COMMIT `1c570a9` + PUSH + LIVE** (xác nhận
+build + mã băm + phép thử live ghi ở Đợt 176).
 🟢 ĐÃ TỰ TEST: harness riêng `scratch/press-test.html` (bấm THẬT qua pane, không phải sự kiện giả) +
 17 trang test template + **2 trận Fight thật (Anagram + Quiz) chạy trọn vòng bằng toàn chạm
 non-primary** — 0 lỗi console ở mọi trang.

@@ -9,7 +9,10 @@
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **17/8/2026 (Đợt 176) — SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA
-> KHOẢNG TRỐNG (đo bằng `placeShowdownName()`, sàn `margin-bottom:5.4cqw` chống đè bàn phím TTA) ·
+> KHOẢNG TRỐNG (đo bằng `placeShowdownName()`, sàn `margin-bottom:5.4cqw` chống đè bàn phím TTA) ·**
+> ✅ **COMMIT `1c570a9` (chung Đợt 175+176) + PUSH + LIVE** — deployment `5940800996` success, đối
+> chiếu 8/8 file trùng mã băm SHA-256, phép thử chạy lại trên chính bản live đều đạt.
+> **Nội dung 176:
 > SHOW ANSWERS có **% câu đúng/số câu ĐÃ LÀM** dạng `1:00 - 50%` (time xanh dương; % theo dải
 > `pctBand()`: ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá) · đồng hồ LƯỢT có
 > **phần lẻ giây** `30,18` (ticker 50ms, dec nhỏ; `fmtRoundMs` tính từ ms NGUYÊN kẻo float ăn 1
@@ -20,7 +23,8 @@
 > rơi đè chết transform nền.
 >
 > Trước đó: **17/8/2026 (Đợt 175) — ⭐⭐⭐ HẾT TRỄ + HẾT BẤT CÔNG CẢM ỨNG TOMKO: MỌI BỀ MẶT
-> CHƠI KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js` MỚI).**
+> CHƠI KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js` MỚI).** ✅ **COMMIT `1c570a9` (chung với Đợt 176) +
+> PUSH + LIVE.**
 > ⭐ CÓ SỬA CORE (`press.js` MỚI · `engine.js` · `fight.js` · `keyboard.js` · `app.css`) + **17 file game**.
 > Gốc rễ lỗi Fight thầy báo ("A bấm trước không nhận, B bấm sau nhận trước"): mọi ô đáp án dùng
 > `.onclick`, mà `click` (1) CHỈ sinh từ con trỏ CHÍNH — ngón chạm sau trên màn đa điểm bị vứt trắng,
