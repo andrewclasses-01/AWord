@@ -53,6 +53,7 @@ import { startGame } from "./engine.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { getTemplate } from "./registry.js";
+import { resolveActivity, variantsOf, contentSetsOf } from "./content-view.js";
 
 // How long the winning word stays on screen before both boards move on.
 // ⚠️ Must outlast the template's own score animation, measured at 1760ms for a
@@ -118,6 +119,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   root.innerHTML = "";
   const fo = fightOptionsFrom(activity.options || {});
   const originAct = base || activity;
+
+  // ⭐⭐ Đợt 181 (17/8/2026) — `activity` IS THE LIBRARY ACT, NOT A RESOLVED COPY.
+  // Until now core/engine.js handed the match its already-resolved `activity`
+  // (core/content-view.js's flattened view: ONE clue set baked in, `variants`
+  // and `contentSets` stripped off). Two things came of that, both measured:
+  //   • the Options panel inside a match could not offer the sub-acts at all —
+  //     no ENG1/ENG2/VI1/VI2, no PRACTICE/HOMEWORK — because the only act the
+  //     boards could see no longer knew it had any (teacher, 17/8/2026);
+  //   • Options > Apply SAVED that stripped copy over the real act (see
+  //     applyOptions below), i.e. a match could quietly delete the other three
+  //     clue sets from the teacher's library.
+  // The match now holds the library act and resolves it ITSELF, here, once per
+  // build. Picking a different clue set is therefore just applyOptions() +
+  // restartMatch(): the rebuild resolves again and both boards land on it.
+  // ⚠️ `playAct` is what the BOARDS play; `activity` is what OPTIONS write to
+  // and what gets saved. Never swap the two.
+  const playAct = resolveActivity(activity);
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -725,12 +743,28 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // saved THIS `activity`, the match's real one; only the panel's OWN
     // opening draft was reading the wrong object. core/engine.js calls this
     // instead of `activity.options` directly whenever `fight` is set.
-    matchOptions() { return activity.options || {}; },
+    matchOptions() { return ctl.matchAct().options || {}; },
+    // ⭐⭐ Đợt 181 — THE MATCH'S OWN ACT, the way `libAct` is the engine's own in
+    // single mode: the library object, NOT resolved, still carrying its clue
+    // sets and halves. A board can never answer this for itself (it only ever
+    // holds the frozen resolved copy `actFor` made it), so everything that has
+    // to talk about "the act the teacher is choosing sub-acts of" — the Options
+    // panel's TEXT|VOICE + PRACTICE|HOMEWORK rows, and the per-view options of
+    // Đợt 147 — comes through here. See engine.js's subActSource().
+    matchAct() { return activity; },
     // Options > Apply, from either board. The real act is ours, not the board's
     // copy, so the settings are written (and saved) here and the whole match is
     // rebuilt — both boards, one word order, new rules.
-    applyOptions(opts) {
+    //
+    // `replace` (Đợt 181) mirrors the engine's own Apply: when the act has
+    // SUB-ACTS, each one keeps its own complete set of options, so the incoming
+    // set REPLACES rather than merges — otherwise a `lives: 3` left behind by
+    // the clue set the teacher just moved away from survives into one that
+    // never had it, with nothing on screen explaining it. Off for an act with
+    // no sub-acts, exactly like the engine's `if (curKey)` guard.
+    applyOptions(opts, { replace = false } = {}) {
       if (!activity.options) activity.options = {};
+      if (replace) Object.keys(activity.options).forEach(k => { if (!(k in opts)) delete activity.options[k]; });
       Object.assign(activity.options, opts);
       // Same rule as the engine's own Apply: remember it on the real act, never
       // on a throwaway "conv_"/"mist_" copy.
@@ -865,8 +899,14 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // tpl.itemsKey, the same field core/mistakes.js reads). Hardcoding ".items"
   // here worked only by accident while Anagram was the sole fightMode
   // template; Quiz joining (12/8/2026, trial) is what surfaced it.
+  // ⚠️ Đợt 181 — `playAct`, not `activity`: on a variant / two-halves act the
+  // items the boards play are the RESOLVED ones (one clue set flattened onto
+  // `.clue`, the chosen half flattened onto `content[itemsKey]`). Both boards
+  // share these very objects, which is what `_fightOrder` ("same letters")
+  // relies on — resolveActivity() is called ONCE, above, precisely so there is
+  // one set of them for the whole match.
   const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
-  const srcItems = (activity.content && activity.content[itemsKey]) || [];
+  const srcItems = (playAct.content && playAct.content[itemsKey]) || [];
   const orderA = fo.fightContent === "different" && (activity.options || {}).shuffleQuestions !== false
     ? shuffle([...srcItems]) : [...srcItems];
   const orderB = fo.fightContent === "different"
@@ -879,10 +919,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   function actFor(side) {
     const items = fo.fightContent === "different" ? (side === 0 ? orderA : orderB) : baseOrder;
+    // Built from `playAct` (Đợt 181): a board is handed the RESOLVED act, so
+    // resolving it again inside startGame() is the identity case documented in
+    // core/content-view.js and the two boards keep sharing one set of items.
     return {
-      ...activity,
+      ...playAct,
       options: { ...(activity.options || {}), shuffleQuestions: false },
-      content: { ...(activity.content || {}), [itemsKey]: items },
+      content: { ...(playAct.content || {}), [itemsKey]: items },
       _fight: { side, ctl }
     };
   }

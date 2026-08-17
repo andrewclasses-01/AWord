@@ -214,11 +214,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // it would answer "the origin owns my sub-acts" too, and Apply would rebuild
   // the origin from scratch, silently throwing the 3 words the class was
   // reviewing away.
+  // ⭐⭐ Đợt 181 — IN A MATCH, ASK THE MATCH. A fight board is never given the
+  // act the teacher is choosing sub-acts of: core/fight.js hands each board a
+  // FROZEN, ALREADY-RESOLVED copy (fixed word order, `shuffleQuestions:false`,
+  // clue sets and halves stripped by resolveActivity), and passes no `base` —
+  // so `libAct` and `originAct` in this closure are both that copy, and the two
+  // rules below answered "this act has no sub-acts" every time. The match holds
+  // the real pair, so both names are taken from it while fighting. Outside a
+  // match `own`/`org` ARE `libAct`/`originAct` and every line is byte-for-byte
+  // Đợt 154's.
+  // "This play's own act" — `libAct` normally, the MATCH's act while fighting.
+  // One definition, because three places need the same answer (subActSource,
+  // applySubActSelection's "is this a conversion" test, and the Options panel's
+  // per-view key) and two of them would be silently wrong with `libAct`.
+  function subActOwner() { return fight ? fight.ctl.matchAct() : libAct; }
+
   function subActSource() {
-    if (variantsOf(libAct.content) || contentSetsOf(libAct.content)) return libAct;
-    if (libAct._converted && !libAct._mistakes && originAct !== libAct &&
-        (variantsOf(originAct.content) || contentSetsOf(originAct.content))) return originAct;
-    return libAct;
+    const own = subActOwner();
+    const org = fight ? fight.ctl.sourceActivity() : originAct;
+    if (variantsOf(own.content) || contentSetsOf(own.content)) return own;
+    if (own._converted && !own._mistakes && org !== own &&
+        (variantsOf(org.content) || contentSetsOf(org.content))) return org;
+    return own;
   }
 
   // The sub-act currently on screen, as it reads in Options: "ENG1", "HOMEWORK".
@@ -876,7 +893,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // still converts from the teacher's original act, exactly as it does
         // in single mode (entering a fight from an already-converted act is
         // the case that needs it).
-        startFight(root, activity, { onExit, base: originAct });
+        // ⭐⭐ Đợt 181 — `libAct`, NOT the resolved `activity`. The match is a
+        // second home for the act, so it must be handed the same object single
+        // mode works from: the LIBRARY one, still carrying its clue sets and
+        // halves. Handing over the resolved copy left the two boards playing an
+        // act that no longer knew it had sub-acts, so Options inside a match
+        // could not offer them (measured: no ENG1/ENG2/VI1/VI2 row, no
+        // PRACTICE/HOMEWORK row) — and a fight's Apply saved that stripped copy
+        // back over the real act. core/fight.js resolves it itself now.
+        startFight(root, libAct, { onExit, base: originAct });
         awEmit("FIGHT", "on");
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
@@ -2019,7 +2044,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // subActSource() only hands back the origin for an act converted FROM it, so
     // this inequality IS the converted case.
     const convSrc = subActSource();
-    if (convSrc === libAct) return false;
+    if (convSrc === subActOwner()) return false;
     const beforeKey = viewKeyOf(convSrc);
     const afterKey = viewKeyOf({ ...convSrc, options: { ...(convSrc.options || {}), ...selState } });
     if (beforeKey === afterKey) return false;
@@ -2138,7 +2163,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // and Apply rebuilds the conversion from the origin (see subActSource /
     // the re-convert branch in Apply).
     const src = subActSource();
-    const selSrc = src === libAct ? base : (src.options || {});
+    // ⭐ Đợt 181 — THE ACT THE PER-VIEW OPTIONS BELONG TO (Đợt 147's `viewOptions`).
+    // In single mode that is `libAct`, exactly as before. In a match `libAct` is
+    // this board's frozen resolved copy, whose view key is always null — so
+    // picking VI1 inside a fight would change the clue set but NOT bring VI1's
+    // own clock/lives/penalty with it, and nothing applied in a match would ever
+    // be stored per view. `matchAct()` is the match's `libAct`, which makes a
+    // fight behave exactly like single mode here: a real act with sub-acts gets
+    // per-view options, a converted one (no sub-acts of its own) does not.
+    const viewAct = subActOwner();
+    const selSrc = src === viewAct ? base : (src.options || {});
 
     // ⭐ Đợt 147 — ONE SET OF OPTIONS PER VIEW. Picking ENG2, or VI1, or the
     // homework half, now also swaps every other control in this panel to that
@@ -2147,7 +2181,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // clock, lives and penalties). `viewKeyOf` is null for an act with neither
     // clue sets nor halves, i.e. the entire library before Đợt 145, and then
     // every line below is inert and this panel behaves exactly as it did.
-    let curKey = viewKeyOf(libAct);
+    let curKey = viewKeyOf(viewAct);   // Đợt 181 — `viewAct`, see its own note above
     // Edits per view, held until Apply — so switching away and back inside one
     // sitting does not lose what was typed, and closing without Apply still
     // discards ALL of it (the draft rule this panel has always had).
@@ -2182,11 +2216,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     renderBody();
 
     function onViewChange() {
-      const nextKey = viewKeyOf({ ...libAct, options: { ...draft, ...selState } });
+      const nextKey = viewKeyOf({ ...viewAct, options: { ...draft, ...selState } });
       if (!nextKey || nextKey === curKey) return;
       pending[curKey] = draft;                       // park the view we are leaving
-      const seed = pending[nextKey] || optionsForView(libAct, nextKey)
-        || (settingsMod ? settingsMod.getDefaultOptions(libAct.type) : draft);
+      const seed = pending[nextKey] || optionsForView(viewAct, nextKey)
+        || (settingsMod ? settingsMod.getDefaultOptions(viewAct.type) : draft);
       draft = { ...splitViewOptions(seed).view, ...selState };
       curKey = nextKey;
       pending[curKey] = draft;
@@ -2276,7 +2310,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // mistakes act and the fight boards all hold the same object.
       if (curKey) {
         pending[curKey] = draft;
-        Object.entries(pending).forEach(([k, o]) => storeViewOptions(libAct, k, o));
+        Object.entries(pending).forEach(([k, o]) => storeViewOptions(viewAct, k, o));
         Object.keys(activity.options).forEach(k => { if (!(k in draft)) delete activity.options[k]; });
       }
       Object.assign(activity.options, draft);
@@ -2284,7 +2318,23 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // order), so writing into this copy's options would leave the real act —
       // and the other board — untouched. Hand the whole draft to the match,
       // which owns the real act, saves it, and rebuilds BOTH boards.
-      if (fight) { fight.ctl.applyOptions({ ...draft }); closeToolPanel(false); return; }
+      if (fight) {
+        // ⭐ Đợt 181 — a CONVERTED match act cannot simply STORE the sub-act:
+        // convert.js baked one clue set into its content, so "now it's VI1"
+        // would move the row and leave the game where it was. Exactly the case
+        // applySubActSelection() exists for in single mode — it writes the
+        // choice onto the ORIGIN and re-converts from there, which in a match
+        // goes through doSwitchTemplate()'s own fight branch and rebuilds both
+        // boards. It returns false (and nothing is lost) for a match act that
+        // owns its sub-acts, which just needs the re-resolve Apply gives it.
+        if (applySubActSelection(selState)) return;
+        // `replace: !!curKey` — the same rule the `if (curKey)` block above
+        // applies in single mode: an act WITH sub-acts gets each view's set
+        // written whole, so nothing survives from the view the teacher left.
+        fight.ctl.applyOptions({ ...draft }, { replace: !!curKey });
+        closeToolPanel(false);
+        return;
+      }
       awEmit("OPT", JSON.stringify(activity.options));   // mirror applied Options to other myActivity panes
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist the applied options PERMANENTLY (teacher only — students never
