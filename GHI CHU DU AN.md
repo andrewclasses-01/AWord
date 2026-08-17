@@ -12,7 +12,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`showdown-setup.js` · `showdown-review.js` · `app.css`). Không đụng template nào.
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/showdown-dupe-test.html` — **19/19 đạt**, và có **ĐỐI CHỨNG NGƯỢC
 đo trên chính code cũ trước khi vá**.
-🟡 **CHƯA COMMIT — chờ thầy duyệt.**
+✅ **COMMIT `981b86d` + PUSH + LIVE** (thầy duyệt 17/8/2026). Pages build **đúng commit** (deployment
+`5944156550`, state `success` — không tin mỗi mã 200, vì Pages trả 200 kèm nội dung CŨ khi build hỏng),
+đối chiếu **3/3 file code trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`sed 's/\r$//'` cả hai
+phía vì Windows checkout ra CRLF còn Pages phục vụ LF), và **chạy lại phép thử TRÊN CHÍNH BẢN LIVE**
+(import `showdown-review.js` + `showdown.js` thẳng từ tên miền — Pages trả `Access-Control-Allow-Origin: *`):
+đúng kịch bản lớp 15 em + hàng `sd_solo` bẩn → **đội mình 5 · cả lớp 15 · 0 tên lặp · title `15 STS` ·
+15/15 ô phễu có % · `pctBand` đúng 5 dải**; và pick solo trên live cho title đúng **`SHOWDOWN A1A`**
+(dấu • và chữ scope `display:none`, tên lớp `rgb(22,163,74)`).
 
 ### 1. Thầy báo (17/8/2026)
 > "Lớp 15 bạn (3 đội, mỗi đội 5 bạn). Show answers của **1 đội** đúng 5 bạn, nhưng chuyển sang xem
@@ -111,7 +118,8 @@ cắt, số thứ hạng không đè vào ô.
 | `scratch/showdown-dupe-test.html` | **MỚI** — lưới 19 phép cho đúng lớp 15 em/3 đội của thầy |
 
 ### 9. VIỆC ĐANG CHỜ (Đợt 180)
-1. **Thầy duyệt → commit + push + đối chiếu mã băm trên live.** Chưa commit gì.
+1. ✅ XONG — commit `981b86d`, push, Pages build đúng commit, 3/3 mã băm khớp, phép thử chạy lại trên
+   chính bản live đều đạt (xem đầu đợt).
 2. Thầy chơi lại đúng lớp 15 em đó trên myActivity thật: xem cả lớp phải ra **đúng 15**.
 3. Trả lời câu ở mục 6: có đổi cách hiển thị `✓1 ✗1 100%` không.
 4. **Vẫn treo từ Đợt 177**: chưa từng test trên **Firestore THẬT** (mọi lưới đều dùng `fake-firebase.js`).

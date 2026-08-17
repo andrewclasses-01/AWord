@@ -8,8 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 180) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO LỚP 15 EM.** 🟡 CHƯA
-> COMMIT, chờ thầy duyệt. Chế độ **solo (1 đội = cả lớp)** được khai ở 2 chỗ trong `showdown-setup.js` là
+> Cập nhật lần cuối: **17/8/2026 (Đợt 180) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO LỚP 15 EM.**
+> ✅ **COMMIT `981b86d` + PUSH + LIVE** — Pages build đúng commit (deployment `5944156550`, `success`),
+> **3/3 file trùng mã băm SHA-256**, và chạy lại phép thử **trên chính bản live**: lớp 15 em + hàng
+> `sd_solo` bẩn → đội mình 5 · cả lớp **15** · 0 tên lặp · 15/15 ô phễu có % · title solo ra
+> **`SHOWDOWN A1A`**. Chế độ **solo (1 đội = cả lớp)** được khai ở 2 chỗ trong `showdown-setup.js` là
 > "không bao giờ ghi Firebase", nhưng `engine.js` lúc kết thúc ván chỉ hỏi *"có pick không?"* và
 > `saveTeamResult()` chỉ chặn `!pick.teamId` — mà `sd_solo` **có** teamId. Một ván solo chạy thử để lại
 > hàng `sd_solo` chứa **cả 15 em**; chơi lại theo 3 đội thì bảng lớp cộng 5+5+5+**15** = **30**, mỗi em
