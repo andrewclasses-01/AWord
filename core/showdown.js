@@ -48,8 +48,11 @@
 //   the teacher's SHOWDOWN button only.
 // =============================================================
 
-import { el } from "./utils.js";
-import { icons } from "./icons.js";
+// ⚠️ NO IMPORTS AT ALL, and keep it that way. Đợt 177 moved the review's DOM
+// out to core/showdown-review.js, which took `el`/`icons` with it — what is left
+// here is the mode's RULES (who plays which question, how a play is tallied, how
+// pupils rank), all of it pure data-in/data-out. That is what makes this file
+// safe for core/engine.js to import statically on the student page.
 
 // Per-tab / per-WebContentsView. See the header note above for why this is not
 // localStorage — it is the whole reason several teams can play at once.
@@ -179,128 +182,84 @@ export function stampReview(review, members) {
 }
 
 // ---------------------------------------------------------------
-// SHOW ANSWERS, SHOWDOWN EDITION
+// ONE PUPIL'S PLAY — the shape everything downstream reads
 // ---------------------------------------------------------------
-// The standard review is a flat list of questions, which says nothing about who
-// answered what — the one thing this mode exists to record. This groups the
-// same rows by pupil, in the team's own order, and gives each pupil their own
-// tally. Only the team this browser played is here; there is nothing else in
-// memory, because no other team was ever on this screen.
+// ⭐ Đợt 177 (17/8/2026) — this used to be an anonymous `.map()` inside the
+// review renderer. It is now a named, exported shape because THREE different
+// consumers must agree on it to the last digit:
+//   1. Show answers, team scope   (core/showdown-review.js, from memory)
+//   2. Show answers, class scope  (the same, from what other teams SYNCED)
+//   3. the payload this browser WRITES to Firestore when its game ends
+//      (core/engine.js → core/showdown-setup.js's saveTeamResult)
+// If (3) were computed anywhere else, one team's row on the class board could
+// count differently from the same team's own screen — a disagreement nobody
+// would spot until a pupil argued with the projector.
 //
-// `host` is the same `.aw-review` node the normal review fills, so the close
-// button and the 16:9 overlay behave identically.
-// ⚠️ `el(tag, cls, html)` sets **innerHTML** (core/utils.js) — every call site in
-// this app that prints the teacher's or a pupil's own words wraps them in
-// engine.js's `escapeText` first. That helper is not exported, so everything
-// below writes text through `.textContent` instead and passes only trusted icon
-// markup as HTML. A pupil named `<b>An` must never be able to reshape the page.
-export function buildShowdownReview(host, { members, teamName, review }) {
-  const list = el("div", "aw-sd-rv");
+// A block is deliberately PLAIN DATA (no DOM nodes, no member object): it is
+// JSON-serialisable exactly as it stands, which is what lets the same object be
+// rendered locally and shipped to the other screens without a second mapper.
+//
+//   { key, name, ord, teamName, total, attempted, right, wrong, hasTime, ms,
+//     rows: [{ n, question, yourText, correctText, answered, correct, roundMs }] }
+//
+// ⚠️ `wrong` counts NEVER-ANSWERED questions too (`total - right`), which is
+// what the ✗ tally has always shown. `attempted` is the separate, smaller
+// number the percentage is taken of — see pctBand's own note.
+export function groupByMember(review, members) {
   const rows = review || [];
-
-  // ⭐ Đợt 174c (teacher, 17/8/2026) — the team's own header line is GONE from
-  // here: the class and the team now ride on the panel's SHOWDOWN title
-  // ("SHOWDOWN - B2A / TEAM 1", built in core/engine.js's showReview), and the
-  // team total sits beside it. Two headers, one under the other, said the same
-  // thing twice and ate the height the bigger text below needs.
-
-  // ⭐ Đợt 174c — RANKED, not in team order (teacher: "có tổng số câu đúng nhiều
-  // hơn đứng trên, có tổng số câu đúng bằng nhau thì thời gian làm ngắn hơn
-  // đứng trên"). Everything each pupil owns is gathered FIRST, then sorted, then
-  // drawn — so the ✓ count and the time the sort reads are the very numbers
-  // printed on that pupil's line and cannot disagree with the order.
-  // ⚠️ A pupil with no timed rounds sorts as if they took no time at all, which
-  // would put them above a faster-but-timed pupil on a tie. `hasTime` keeps them
-  // BELOW instead: no measurement is not a good measurement.
-  const blocks = members.map(m => {
+  const list = members || [];
+  return list.map((m, mi) => {
     // Every question that fell to this member — decided by `memberAt`, the SAME
     // call the engine used to put a name over the frame during the game. Asking
     // one rule twice is what keeps the review from ever disagreeing with what
     // the class actually saw; re-deriving `i % members.length` here would be a
     // second copy of the turn rule, free to drift.
     const mine = [];
-    rows.forEach((r, i) => { if (memberAt(members, i) === m) mine.push({ r, n: i + 1 }); });
-    const timed = mine.filter(x => typeof x.r.roundMs === "number");
+    rows.forEach((r, i) => {
+      if (memberAt(list, i) !== m) return;
+      mine.push({
+        n: i + 1,
+        question: String(r.question || ""),
+        yourText: String(r.yourText || ""),
+        correctText: String(r.correctText || ""),
+        answered: !!r.answered,
+        correct: !!(r.answered && r.yourCorrect),
+        roundMs: typeof r.roundMs === "number" ? Math.round(r.roundMs) : null
+      });
+    });
+    const timed = mine.filter(x => x.roundMs != null);
+    const right = mine.filter(x => x.correct).length;
     return {
-      m, mine,
-      right: mine.filter(x => x.r.answered && x.r.yourCorrect).length,
+      key: String(m.id || m.name || mi), name: String(m.name || ""), ord: mi, teamName: "",
+      rows: mine,
+      total: mine.length,
+      attempted: mine.filter(x => x.answered).length,
+      right,
+      wrong: mine.length - right,
       hasTime: timed.length > 0,
-      ms: timed.reduce((a, x) => a + x.r.roundMs, 0)
+      ms: timed.reduce((a, x) => a + x.roundMs, 0)
     };
-  }).filter(b => b.mine.length);
+  }).filter(b => b.total);
+}
 
-  blocks.sort((a, b) => {
+// ---------------------------------------------------------------
+// THE RANKING — one comparator, every screen
+// ---------------------------------------------------------------
+// ⭐ Đợt 174c (teacher: "có tổng số câu đúng nhiều hơn đứng trên, có tổng số câu
+// đúng bằng nhau thì thời gian làm ngắn hơn đứng trên").
+// ⚠️ A pupil with no timed rounds sorts as if they took no time at all, which
+// would put them above a faster-but-timed pupil on a tie. `hasTime` keeps them
+// BELOW instead: no measurement is not a good measurement.
+// Sorts a COPY: the class board holds one array that both the list and the
+// podium read, and a comparator that reordered it in place would silently
+// change what "the team's own order" means on the next tie.
+export function rankBlocks(blocks) {
+  return (blocks || []).slice().sort((a, b) => {
     if (b.right !== a.right) return b.right - a.right;          // more correct first
     if (a.hasTime !== b.hasTime) return a.hasTime ? -1 : 1;      // a measured time beats none
     if (a.hasTime && a.ms !== b.ms) return a.ms - b.ms;          // then the quicker of the two
-    return members.indexOf(a.m) - members.indexOf(b.m);          // still tied: the team's own order
+    return (a.ord || 0) - (b.ord || 0);                          // still tied: the team's own order
   });
-
-  blocks.forEach(({ m, mine, right, hasTime, ms }) => {
-    const block = el("div", "aw-sd-rv-block");
-
-    const who = el("span", "aw-sd-rv-who");
-    who.textContent = m.name;
-    const tally = el("span", "aw-sd-rv-tally");
-    // ⭐ Đợt 174 — this pupil's TOTAL time, when the round clock was running
-    // (core/engine.js stamps `roundMs` per row, exactly the way the names above
-    // are stamped). It is the same number the ranking above sorted on — one
-    // measurement, printed and sorted from the same place. Absent when the option
-    // was off, so a Showdown played without it looks as it did before.
-    // ⭐ Đợt 176 — "1:00 - 50%": time in blue (CSS), then % correct of the
-    // questions this pupil ACTUALLY answered, banded red→…→green (see pctBand).
-    // The two halves are independent: time only exists with the round clock on,
-    // the percentage only with at least one attempted question — the "-" joins
-    // them only when both are there.
-    const attempted = mine.filter(x => x.r.answered).length;
-    if (hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(ms)));
-    if (attempted) {
-      const pct = Math.round((right / attempted) * 100);
-      if (hasTime) tally.append(el("span", "aw-sd-rv-sep", "-"));
-      tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
-    }
-    tally.append(
-      el("span", "is-ok", `${icons.check} ${right}`),
-      el("span", "is-bad", `${icons.cross} ${mine.length - right}`)
-    );
-    const bhead = el("div", "aw-sd-rv-name");
-    bhead.append(who, tally);
-    block.append(bhead);
-
-    mine.forEach(({ r, n }) => {
-      const line = el("div", "aw-sd-rv-q");
-      line.append(el("span", "aw-sd-rv-num", String(n)));
-      const body = el("div", "aw-sd-rv-body");
-      const clue = el("div", "aw-sd-rv-clue");
-      clue.textContent = r.question || "";
-      body.append(clue);
-      const ans = el("div", "aw-sd-rv-ans");
-      if (r.answered && r.yourCorrect) {
-        ans.append(mark("is-ok", icons.check, r.correctText));
-      } else {
-        // Wrong (or never attempted) shows BOTH lines: what the pupil put, then
-        // what it should have been — same reading order as the normal review.
-        ans.append(mark("is-bad", icons.cross, r.answered ? r.yourText : "No answer"));
-        ans.append(mark("is-ok", icons.check, r.correctText));
-      }
-      body.append(ans);
-      line.append(body);
-      // ⭐ Đợt 174c — how long THIS question took, at the FAR RIGHT of the row,
-      // just past the answer blocks (teacher: "chuyển thời gian làm của câu ra
-      // đứng ngay bên cạnh phải của cụm ô kết quả"). It was riding on the clue
-      // before, where it read as part of the question. A third flex child of the
-      // row, NOT a third grid track of `.aw-sd-rv-body`: the body's 1.4fr/1fr
-      // split is measured for clue-vs-answers and must not move, and a row with
-      // no time simply leaves this column empty.
-      line.append(el("span", "aw-sd-rv-qtime",
-        typeof r.roundMs === "number" ? fmtRoundMs(r.roundMs) : ""));
-      block.append(line);
-    });
-
-    list.append(block);
-  });
-
-  host.append(list);
 }
 
 /**
@@ -336,12 +295,4 @@ export function pctBand(pct) {
   if (pct <= 84) return "is-p2";
   if (pct < 95) return "is-p3";
   return "is-p4";
-}
-
-function mark(cls, glyph, text) {
-  const box = el("div", "aw-sd-rv-mk " + cls);
-  const txt = el("span", "aw-sd-rv-mktxt");
-  txt.textContent = String(text || "");
-  box.append(el("span", "aw-sd-rv-mkicon", glyph), txt);
-  return box;
 }

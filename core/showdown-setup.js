@@ -280,6 +280,166 @@ export async function releaseMyClaim() {
 export async function wipeSetup() {
   try { await saveSetup({ classId: "", className: "", teams: [], claims: {} }); }
   catch { /* signed out or offline — nothing was shared yet, nothing to wipe */ }
+  // ⭐ Đợt 177 — the RESULT board goes with the team table. Leaving it would let
+  // a freshly rebuilt set of teams open a class board still holding yesterday's
+  // line-up: the same team ids (`sdt_1`…) are handed out again by
+  // splitIntoTeams(), so the stale rows would not even look foreign.
+  try { await wipeResults(); } catch { /* same reason as above */ }
+}
+
+// ---------------------------------------------------------------
+// THE SHARED RESULT BOARD (Đợt 177, 17/8/2026)
+// ---------------------------------------------------------------
+// Teacher: "khi hoàn thành game của 1 đội, kết quả đội đó tự đồng bộ vào kết quả
+// các đội và sẵn sàng cho các đội khác đọc." So a finished play PUSHES its team's
+// tally here, and any screen's Show answers can PULL the whole class back.
+//
+// Its own document — `users/{uid}/items/sd_results`, beside `sd_main` for the
+// same rules reason (see this file's header). Keeping it out of `sd_main` is
+// deliberate: the team table is read on every panel open and is edited by hand,
+// while this can carry every question of every pupil of five teams. One does not
+// belong inside the other.
+//
+//   { teams: { [teamId]: { teamId, teamName, roundKey, actName, classId,
+//                          className, at, students: [ <block> ] } } }
+//
+// ⚠️ WHY `roundKey` AND NOT `activity.id`
+//   core/convert.js gives a "Change template" play a RANDOM id, so two columns
+//   that both switched to Quiz would each invent their own — the boards would
+//   never find each other. The engine therefore keys on the ORIGIN act (the
+//   library act every column opened), which is the one id they all share.
+//   Reading filters on it, so a team still playing last lesson's act is simply
+//   not on this board rather than silently added to its totals.
+//
+// ⚠️ WHY THE WRITE IS A `merge`, NOT read-modify-write
+//   Two columns finishing seconds apart would both read the document, both add
+//   their own team, and the second write would drop the first team's row —
+//   invisibly, because each screen would still show its own result correctly.
+//   A merged write of ONE map key is settled by the server per field, so no
+//   round trip of ours can lose another's. (Arrays are replaced wholesale by
+//   merge, which is exactly right for `students`: a replay must not leave a
+//   longer previous line-up half-standing underneath.)
+const RESULTS_DOC = "sd_results";
+// Questions and answers are the teacher's own text and can be a whole sentence;
+// five teams of ten pupils would still sit far inside Firestore's 1MB document
+// limit, but the cap keeps one pathological act from ever reaching it.
+const TEXT_CAP = 180;
+
+const cut = s => String(s || "").slice(0, TEXT_CAP);
+
+function normalizeResults(raw) {
+  const teams = {};
+  const rawTeams = (raw && typeof raw.teams === "object" && raw.teams) || {};
+  for (const [teamId, t] of Object.entries(rawTeams)) {
+    if (!t || typeof t !== "object") continue;
+    teams[teamId] = {
+      teamId: String(t.teamId || teamId),
+      teamName: String(t.teamName || "").trim() || "Team",
+      roundKey: String(t.roundKey || ""),
+      actName: String(t.actName || ""),
+      classId: String(t.classId || ""),
+      className: String(t.className || "").trim(),
+      at: Number(t.at) || 0,
+      students: (Array.isArray(t.students) ? t.students : []).map(s => ({
+        key: String(s?.key || ""),
+        name: String(s?.name || "").trim(),
+        ord: Number(s?.ord) || 0,
+        teamName: String(s?.teamName || ""),
+        total: Number(s?.total) || 0,
+        attempted: Number(s?.attempted) || 0,
+        right: Number(s?.right) || 0,
+        wrong: Number(s?.wrong) || 0,
+        hasTime: !!s?.hasTime,
+        ms: Number(s?.ms) || 0,
+        rows: (Array.isArray(s?.rows) ? s.rows : []).map(r => ({
+          n: Number(r?.n) || 0,
+          question: String(r?.question || ""),
+          yourText: String(r?.yourText || ""),
+          correctText: String(r?.correctText || ""),
+          answered: !!r?.answered,
+          correct: !!r?.correct,
+          roundMs: typeof r?.roundMs === "number" ? r.roundMs : null
+        }))
+      })).filter(s => s.name)
+    };
+  }
+  return teams;
+}
+
+/**
+ * Publish THIS browser's team result. Called by core/engine.js the moment a
+ * Showdown play finishes.
+ *
+ * ⚠️ Throws when signed out — the caller (engine.js's finish) treats that as a
+ * warning in the console and nothing more. A teacher playing offline still sees
+ * their own team's Show answers in full; only the class board is short.
+ */
+export async function saveTeamResult({ pick, roundKey, actName = "", students }) {
+  const uid = await requireUid();
+  if (!pick?.teamId) return null;
+  const entry = {
+    teamId: String(pick.teamId),
+    teamName: String(pick.teamName || "Team"),
+    roundKey: String(roundKey || ""),
+    actName: cut(actName),
+    classId: String(pick.classId || ""),
+    className: String(pick.className || ""),
+    at: Date.now(),
+    students: (students || []).map(s => ({
+      key: String(s.key || ""), name: String(s.name || ""), ord: Number(s.ord) || 0,
+      total: Number(s.total) || 0, attempted: Number(s.attempted) || 0,
+      right: Number(s.right) || 0, wrong: Number(s.wrong) || 0,
+      hasTime: !!s.hasTime, ms: Math.round(Number(s.ms) || 0),
+      rows: (s.rows || []).map(r => ({
+        n: Number(r.n) || 0,
+        question: cut(r.question), yourText: cut(r.yourText), correctText: cut(r.correctText),
+        answered: !!r.answered, correct: !!r.correct,
+        roundMs: typeof r.roundMs === "number" ? Math.round(r.roundMs) : null
+      }))
+    }))
+  };
+  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+  await setDoc(
+    doc(d, `users/${uid}/items`, RESULTS_DOC),
+    clean({
+      kind: "showdown-results", root: "showdown", parentId: null, trashed: false,
+      teams: { [entry.teamId]: entry },
+      updatedAt: entry.at
+    }),
+    { merge: true }
+  );
+  return entry;
+}
+
+/**
+ * Every team that has published a result for THIS act — the caller's own team
+ * included (core/showdown-review.js drops it and uses its live copy instead).
+ * Always read FRESH: the whole point of the button that calls this is that
+ * another team has just finished, so a cache would be answering the wrong
+ * question.
+ */
+export async function loadTeamResults(roundKey) {
+  const uid = await requireUid();
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const snap = await getDoc(doc(d, `users/${uid}/items`, RESULTS_DOC));
+  const teams = normalizeResults(snap.exists() ? snap.data() : {});
+  const key = String(roundKey || "");
+  return Object.values(teams)
+    // An entry with no key at all is from a build older than this one; it is
+    // still this teacher's own class, so let it through rather than hide a
+    // result the teacher can see was recorded.
+    .filter(t => !key || !t.roundKey || t.roundKey === key)
+    .sort((a, b) => a.teamName.localeCompare(b.teamName));
+}
+
+/** Drop every published result (Reset teams — see wipeSetup). */
+export async function wipeResults() {
+  const uid = await requireUid();
+  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+  await setDoc(doc(d, `users/${uid}/items`, RESULTS_DOC), {
+    kind: "showdown-results", root: "showdown", parentId: null, trashed: false,
+    teams: {}, updatedAt: Date.now()
+  });
 }
 
 // ---------------------------------------------------------------

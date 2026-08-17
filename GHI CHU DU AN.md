@@ -8,6 +8,133 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 177 (17/8/2026) — ⭐⭐ SHOWDOWN: KẾT QUẢ CÁC ĐỘI TỰ ĐỒNG BỘ · TITLE SHOW ANSWERS THÀNH NÚT 3 CỬ CHỈ · BẢNG XẾP HẠNG HÌNH PHỄU
+⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `showdown-setup.js` · `icons.js` · `app.css`)
+➕ **FILE CORE MỚI**: `core/showdown-review.js` (cả màn Show answers của Showdown tách khỏi `showdown.js`).
+🟢 ĐÃ TỰ TEST bằng 2 lưới trong `scratch/` (xem mục 6) — **có đối chứng ngược** cho phép kiểm quan trọng nhất.
+⬜ **CHƯA COMMIT — chờ thầy chạy thử thật rồi mới đẩy** (xem VIỆC ĐANG CHỜ).
+
+### 1. Thầy giao (17/8/2026)
+1. **Kết quả liên đội**: xong game của 1 đội thì kết quả đội đó **tự đồng bộ** vào kết quả các đội,
+   sẵn sàng cho các đội khác đọc.
+2. **Title đổi dạng**: `SHOWDOWN - A1-C / TEAM 3` → **`SHOWDOWN A1C • TEAM 3`**. Chữ đen hết, riêng
+   `A1C` và `TEAM 3` đổi màu.
+   - Mặc định: `TEAM 3` **xanh lá** (đang xem riêng đội 3).
+   - **Chạm 1 lần** vào chữ SHOWDOWN: `TEAM 3` ẩn (thu gọn vào chữ `A1C`), **tổng số HS đẩy ra từ**
+     `A1C`, cả hai xanh lá, bên dưới hiện toàn bộ HS đã có kết quả — `SHOWDOWN A1C • 16 STS`.
+     Chạm lần nữa thì về như cũ. Số HS là **số em đã có dữ liệu** (có thể có đội chưa xong).
+   - **Chạm 2 lần**: hiện icon loading xoay bên cạnh title, xong thì hiện chữ `updated` vài giây rồi
+     fade mất.
+   - **Nhấn giữ** (ở cả trạng thái TEAM lẫn cả lớp): title chuyển **vàng có hào quang lấp lánh**, bên
+     dưới đổi sang **bảng xếp hạng**: mỗi em một ô chữ nhật to (TÊN · SỐ CÂU ĐÚNG/SAI · TỔNG THỜI
+     GIAN), 3 em đầu có **cúp vàng/bạc/đồng** bên phải tên (vẫn trong ô), một cột duy nhất, ô trên to
+     nhất chiếm 80% chiều ngang rồi hẹp dần thành **hình nón ngược**, **chiều cao bằng nhau**, khoảng
+     cách rất nhỏ, **số thứ hạng ở cạnh bên trái mỗi ô**, ô ở giữa tâm khung, cuộn được.
+
+### 2. Việc 1 — bảng kết quả chung (`showdown-setup.js` + `engine.js`)
+Tài liệu **mới** `users/{uid}/items/sd_results`, `kind:"showdown-results"`, hình dạng
+`{ teams: { [teamId]: { teamId, teamName, roundKey, at, students:[…] } } }`. Nằm riêng khỏi `sd_main`
+vì `sd_main` được đọc mỗi lần mở bảng và thầy sửa tay, còn cái này có thể chứa từng câu của từng em
+của 5 đội — không thứ nào nên nằm trong thứ nào.
+
+- **ĐẨY**: `finish()` trong engine gọi `saveTeamResult()` kiểu **bắn-rồi-quên** (màn ăn mừng và bảng
+  tổng kết không bao giờ được chờ mạng lớp học). Bỏ qua đúng 2 ca như leaderboard: không trả lời câu
+  nào, và ván "Start with mistakes".
+- **ĐỌC**: chỉ khi thầy chạm title (`loadTeamResults(roundKey)`), luôn đọc tươi.
+
+⚠️⚠️ **HAI BẪY ĐÃ NHÌN THẤY TRƯỚC VÀ ĐÃ CHỨNG MINH BẰNG LƯỚI TEST:**
+
+**(a) Khoá đối chiếu KHÔNG được là `activity.id`.** `core/convert.js` dòng 238 đóng dấu act đã "Change
+template" bằng id **NGẪU NHIÊN** (`conv_<type>_<random>`) ⇒ 2 cột myActivity cùng đổi sang Quiz sẽ tự
+đẻ 2 khoá khác nhau và **không đời nào thấy kết quả của nhau**, mà màn hình không có gì nói lý do.
+Đã thêm `showdownRoundKey()` trong engine trả **`originAct?.id || activity.id`** — act GỐC là thứ mọi
+cột cùng mở, nên là thứ duy nhất tất cả cùng đồng ý.
+
+**(b) Lệnh ghi phải là `setDoc(..., {merge:true})` một khoá map, CẤM đọc-sửa-ghi.** Hai cột kết thúc
+cách nhau vài giây sẽ cùng đọc tài liệu, cùng thêm đội mình, lệnh ghi sau **xoá sạch đội của lệnh
+trước** — và không ai phát hiện, vì mỗi màn vẫn hiện kết quả của chính nó rất đúng. Mảng `students`
+được thay nguyên (đúng luật merge của Firestore) — cần đúng thế để một đội chơi lại không để sót nửa
+đội hình cũ nằm dưới.
+
+**Reset teams xoá cả hai bảng**: `wipeSetup()` nay gọi luôn `wipeResults()`. Không thì
+`splitIntoTeams()` cấp lại đúng các id `sdt_1…` và kết quả hôm qua sẽ đội lốt đội hình hôm nay.
+
+### 3. Việc 2 — title thành nút, và tách file core mới
+`core/showdown.js` đang phình ra chứa cả một MÀN HÌNH trong khi việc của nó là LUẬT. Đã tách:
+- `showdown.js` giữ luật, và nay **không còn một dòng `import` nào** — thêm `groupByMember()` (gom câu
+  về từng em, trả **dữ liệu thuần JSON-hoá được**) và `rankBlocks()` (bộ so sánh xếp hạng).
+- `core/showdown-review.js` **mới**: cả màn Show answers. DOM thuần, không Firestore — thứ cần mạng đi
+  vào bằng callback `loadTeams` do engine truyền.
+
+⚠️ `groupByMember()` phải là **một** hàm vì có **3 nơi** đọc kết quả và cả 3 phải khớp tới từng con số:
+bảng đội (từ bộ nhớ), bảng lớp (từ thứ đội khác đã đồng bộ), và **payload ghi lên Firestore**. Nếu
+payload được tính ở chỗ khác thì một đội có thể được đếm khác nhau giữa bảng lớp và màn của chính nó —
+không ai phát hiện cho tới lúc học sinh cãi nhau với cái máy chiếu.
+
+⚠️⚠️ **KHÔNG dùng `press()`, cũng KHÔNG dùng `onclick`/`ondblclick`.** `press()` bắn NGAY lúc chạm —
+đúng cho bề mặt chơi (Đợt 175), sai ở đây: một cú chạm chưa được quyết định khi chưa biết nó có phải
+nửa đầu của cú chạm đúp hay không. Còn `click` thì chính header của `core/press.js` đã chép lại lý do
+không tin được trên màn hồng ngoại TOMKO. Nên file tự nghe thẳng luồng pointer, **`setPointerCapture`**
+(ngón trượt ra ngoài chữ vẫn báo lúc nhấc — không có nó thì `pointerup` không bao giờ tới và cú chạm
+kế tiếp bị đọc nhầm thành chạm đúp), và **nuốt** cú `click` tương thích sinh ra sau đó.
+
+Hoạt hình đổi phạm vi là **`scaleX` thuần với `transform-origin:left`** — thu về phía chữ `A1C` rồi mọc
+ra từ đó, bố cục hàng trước sau y hệt, chỉ có nét chữ co lại. Mọi `element.animate()` đều kèm
+`setTimeout` dự phòng: cột myActivity bị che thì Chromium đóng băng rAF, `onfinish` không bao giờ bắn,
+và chữ sẽ kẹt ở `scaleX(0)` — một cái title tàng hình không có đường về.
+
+### 4. Việc 2 (nhấn giữ) — bảng xếp hạng hình phễu (`showdown-review.js` + `app.css`)
+Bề ngang mỗi ô nội suy tuyến tính **80% → 46%** theo số người, KHÔNG phải bước cố định: với bước cố
+định thì lớp 20 em sẽ tóp lại thành sợi chỉ còn đội 4 em gần như không tóp — hình phễu phải đọc ra
+giống nhau ở cả hai. Số thứ hạng đặt **ngoài** ô bằng
+`right: calc(50% + var(--w)/2 + 0.9cqw)`, nên dãy số bám theo mép nghiêng của phễu thay vì đứng thành
+một cột thẳng.
+
+Hào quang vàng dùng **`text-shadow`**, cố ý KHÔNG dùng `filter`: `filter` sẽ đẻ stacking context ngay
+trên hàng title — đúng loại lỗi đã ngốn 3 ngày của dự án này (xem ghi chú bẫy popup). Hai đốm `✦` neo
+vào **góc của chính khối chữ** (`.aw-sd-ttl-word::before/::after`), không neo bằng con số cqw đoán
+chừng: bản đầu đo bằng `left:9.5cqw` và **đốm rơi đúng giữa chữ SHOWDOWN** — nhìn ảnh chụp mới thấy.
+
+### 5. Đã sửa gì
+| File | Việc |
+|---|---|
+| `core/showdown.js` | +`groupByMember()` +`rankBlocks()`; bỏ `buildShowdownReview()`+`mark()`; **bỏ sạch import** |
+| `core/showdown-review.js` | **MỚI** — title 3 cử chỉ, bộ nhận diện cử chỉ tự viết, danh sách, phễu |
+| `core/showdown-setup.js` | +`saveTeamResult()` +`loadTeamResults()` +`wipeResults()`; `wipeSetup()` xoá cả kết quả |
+| `core/engine.js` | +`showdownRoundKey()`; đẩy kết quả trong `finish()`; `showReview()` giao title cho file mới |
+| `core/icons.js` | +`trophy` +`spinner` |
+| `core/app.css` | title Showdown, thẻ đội, spinner/UPDATED, vàng + lấp lánh, cả khối phễu |
+
+### 6. Đã tự test — 2 lưới, và MỘT ĐỐI CHỨNG NGƯỢC
+`scratch/showdown-review-test.html` — dựng đúng `.aw-stage` thật (nên mọi `cqw` đo đúng), gắn màn bằng
+CHÍNH hàm engine gọi, `loadTeams` giả có độ trễ 700ms (không có trễ thì spinner chớp qua 1 frame và
+không kiểm được là nó có hiện hay không):
+- Bảng đội: tổng `8/14`, thứ tự An→Khôi→Huy→Vy→Dương — **khớp từng con số khi tính tay** theo luật
+  "đúng nhiều hơn đứng trên, hoà thì nhanh hơn đứng trên".
+- Chạm 1 lần (**chuột thật**): sang `A1C • 16 STS`, `24/47`, 16 em của 3 đội, đội mình lấy từ bộ nhớ
+  chứ không lấy bản trên Firestore (đúng thiết kế: lệnh ghi có thể đã hỏng).
+- Chạm 2 lần: spinner khi đang tải → `UPDATED` → tự mờ; **và phạm vi KHÔNG đổi** — đó chính là bằng
+  chứng cú chạm lẻ đã bị huỷ đúng.
+- Nhấn giữ: 5 ô cao **bằng nhau 77.8px**, ngang **822→473px** (80%→46%), cúp `#e0a30c`/`#97a4b2`/
+  `#c1793a`, title vàng. Chạm 1 lần lúc đang ở phễu thì **giữ phễu** và đổi sang cả lớp (16 ô).
+- Khung **hẹp 430px** (1 cột myActivity): phễu nguyên vẹn, số thứ hạng không bị cắt.
+- Lỗi mạng: toast + vẫn vào được bảng lớp với đội mình (`5 STS`).
+
+`scratch/showdown-sync-test.html` — chạy CHÍNH `core/showdown-setup.js`, chỉ tráo `core/firebase.js`
+bằng bản giả qua import map. **Đã nâng `scratch/fake-firebase.js` để mô phỏng ĐÚNG `{merge:true}`**
+(map trộn đệ quy, mảng thay nguyên) — bản cũ thay nguyên tài liệu nên sẽ nói dối về đúng thứ lưới này
+được dựng để chứng minh. 8/8 đạt: 3 đội ghi song song không đội nào bị đè · đội chơi lại thay nguyên bộ
+HS · act khác không lẫn vào · cắt chữ 180 · reset xoá sạch.
+🔴 **ĐỐI CHỨNG NGƯỢC** (`?break=1` bỏ ngữ nghĩa merge): chỉ còn `["Team 3"]` sống sót — lưới thật sự
+bắt được lỗi, chứ không phải đạt vì chẳng kiểm gì.
+
+Ngoài ra: `node --input-type=module --check` sạch 5 file; nạp `index.html` thật rồi `import()` thẳng
+`core/engine.js` → đồ thị import (kể cả file core mới) phân giải sạch, **0 lỗi console**.
+
+⚠️ **CHƯA test được**: Firestore THẬT (lưới dùng bản giả), và myActivity nhiều cột THẬT. Xem VIỆC ĐANG CHỜ.
+
+---
+
 ## Đợt 176 (17/8/2026) — ⭐⭐ SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA KHOẢNG TRỐNG · SHOW ANSWERS CÓ % CÂU ĐÚNG THEO DẢI MÀU · ĐỒNG HỒ LƯỢT CÓ PHẦN LẺ GIÂY
 ⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `app.css`). Cùng commit với Đợt 175.
 🟢 ĐÃ TỰ TEST qua `scratch/round-test.html` (Quiz countUp/countDown/none + TTA countDown + Anagram
@@ -339,6 +466,17 @@ Không phải viết mới. Đường dây có đủ **cả hai phía** và đ�
 chỉ tồn tại trong trang act. Cột đang ở **thư viện** AWord thì chờ 6 giây rồi bỏ qua, im lặng.
 
 ### 8. VIỆC ĐANG CHỜ
+- 🔴 **ĐỢT 177 CHƯA COMMIT.** Chờ thầy chạy thử thật rồi mới đẩy — xem 3 gạch đầu dòng ngay dưới.
+- ⬜ **Thử ĐỢT 177 trên Firestore THẬT + myActivity nhiều cột THẬT** (lưới test dùng Firestore giả nên
+  2 thứ này chưa từng chạy thật): (a) cột 1 và cột 2 chơi 2 đội, xong cả hai → mở Show answers ở 1 cột,
+  chạm chữ SHOWDOWN xem có đủ cả 2 đội không; (b) đội thứ 3 xong sau → **chạm 2 lần** xem có hiện thêm
+  không; (c) Reset teams rồi mở lại xem bảng kết quả đã sạch chưa.
+- ⬜ **Thử 3 cử chỉ trên màn TOMKO thật** — đây là chỗ đáng ngờ nhất của Đợt 177: bộ nhận diện tap /
+  chạm đúp / nhấn giữ tự viết, chưa từng chạm ngón tay thật trên màn hồng ngoại. Nếu nhấn giữ khó ăn
+  thì chỉnh `HOLD_MS` (đang 520ms), nếu chạm đúp khó ăn thì chỉnh `TAP_MS` (đang 250ms) —
+  cả hai nằm đầu `core/showdown-review.js`.
+- ⬜ **Thử ĐỢT 177 với lớp 20 em / 5 đội**: phễu lúc đó dài 20 ô — xem cuộn có mượt và ô cuối (46%) có
+  còn đọc được tên dài không.
 - ⬜ **Thầy tự chơi thử thật trên myActivity nhiều cột**: (a) X đỏ ở cột 1 → cột 2 phải thấy đội đó
   sáng lên và lấy được; (b) Time each round cả 2 kiểu, nhất là **đếm ngược trên màn 86"** — xem cỡ chữ
   đồng hồ và độ dày thanh thời gian có hợp không; (c) đổi Template/Style ở 1 cột xem 3 cột kia có theo.

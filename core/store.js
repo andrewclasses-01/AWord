@@ -142,18 +142,21 @@ function nextNum(map) {
 // One-time backfill: hand numbers to items created before v0.8.0, oldest first
 // so the numbering matches the order the teacher made them in.
 // ---- APP DATA THAT SHARES THIS COLLECTION BUT IS NOT LIBRARY CONTENT --------
-// Class rolls (kind "class", core/classes.js) and the Showdown team table (kind
-// "showdown", core/showdown-setup.js) are stored in `users/{uid}/items` because
-// the Firestore rules open exactly ONE path for the teacher's own data — a new
-// top-level collection would be denied until somebody edited the rules in the
-// Firebase console by hand. Both files explain that at length.
-// Neither is a LINKABLE thing, so both must stay clear of the ?f= / ?a= link
+// Class rolls (kind "class", core/classes.js), the Showdown team table (kind
+// "showdown") and the Showdown result board (kind "showdown-results", both in
+// core/showdown-setup.js) are stored in `users/{uid}/items` because the Firestore
+// rules open exactly ONE path for the teacher's own data — a new top-level
+// collection would be denied until somebody edited the rules in the Firebase
+// console by hand. Those files explain that at length.
+// None of them is a LINKABLE thing, so all must stay clear of the ?f= / ?a= link
 // numbers. They are already invisible to every listing (those filter on
 // `n.root === root`, and ROOTS is only activities/results); these two functions
 // are the pair that would otherwise still reach them.
 // ⚠️ ADD ANY FUTURE `kind` OF APP DATA HERE. Forgetting costs a silently eaten
 // link number and, worse, a ?a=57 that resolves to a settings document.
-const APP_DATA_KINDS = new Set(["class", "showdown"]);
+// (Đợt 177 nearly paid exactly that: "showdown-results" was added to Firestore
+// before this line was, and only the warning above caught it.)
+const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

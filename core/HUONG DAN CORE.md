@@ -507,6 +507,7 @@ chơi vòng tròn trong đội đó. Mục đích là **myActivity chia 2-4 cộ
 |---|---|---|
 | **Bảng đội** (chung, đồng bộ mọi máy) | Firestore `users/{uid}/items/sd_main`, `kind:"showdown"` | thầy chốt "một danh sách chung" |
 | **Đội của trình duyệt này** | **`sessionStorage`** khoá `aword-showdown-pick` | xem 2 bẫy dưới |
+| **Bảng KẾT QUẢ** (chung, Đợt 177) | Firestore `users/{uid}/items/sd_results`, `kind:"showdown-results"` | xem mục "Bảng kết quả chung" |
 
 ⚠️⚠️ **HAI CHỖ LƯU TƯỞNG LÀ HIỂN NHIÊN, CẢ HAI ĐỀU SAI VÀ SAI TRONG IM LẶNG:**
 1. **`localStorage`** — 4 cột myActivity là 4 `WebContentsView` **cùng origin, cùng partition** ⇒
@@ -517,13 +518,65 @@ chơi vòng tròn trong đội đó. Mục đích là **myActivity chia 2-4 cộ
 `sessionStorage` là kho **duy nhất** riêng theo từng tab/WebContentsView. Giá phải trả (thầy chấp
 nhận): tắt hẳn trình duyệt là phải tick lại đội — bảng đội vẫn nguyên trên Firestore.
 
-### Hai file, và vì sao phải là hai
+### Ba file, và vì sao phải là ba (Đợt 177 tách file thứ ba)
 
-- **`core/showdown.js` — THUẦN**: `sessionStorage` + luật chia lượt + đóng dấu review + bảng Show
-  answers. **Không Firestore, không thư viện** ⇒ `core/engine.js` import **TĨNH** được mà không phá
-  luật 2 của v0.9.0 (trang HS không được nạp code chạm thư viện).
-- **`core/showdown-setup.js`**: Firestore + bảng Showdown. **CHỈ `await import`** từ nút SHOWDOWN.
-  ⚠️ Đừng gộp hai file lại: gộp là kéo Firestore vào `play.html`.
+- **`core/showdown.js` — THUẦN, KHÔNG MỘT DÒNG `import`**: `sessionStorage` + luật chia lượt
+  (`memberAt`) + đóng dấu review (`stampReview`) + **gom nhóm & xếp hạng** (`groupByMember`,
+  `rankBlocks`) + `fmtRoundMs`/`pctBand`. Toàn bộ là **dữ liệu vào — dữ liệu ra**.
+- **`core/showdown-review.js` — THUẦN DOM** (Đợt 177): cả màn Show answers của Showdown (title
+  3 cử chỉ, danh sách, bảng xếp hạng hình phễu). Không Firestore, không thư viện — thứ cần mạng đi
+  vào bằng **callback `loadTeams` do engine truyền**.
+- **`core/showdown-setup.js`**: Firestore + bảng Showdown + bảng kết quả. **CHỈ `await import`** từ
+  nút SHOWDOWN (và từ `finish()` lúc đẩy kết quả).
+  ⚠️ Đừng gộp lại: gộp là kéo Firestore vào `play.html`, phá luật 2 của v0.9.0.
+
+⚠️ Hai file đầu được `core/engine.js` import **TĨNH**. Thêm bất cứ `import` nào chạm Firestore hay
+thư viện vào chúng là làm hỏng trang học sinh — và hỏng **im lặng** ở máy đã có cache.
+
+### Bảng kết quả chung — mỗi đội xong là tự đồng bộ (Đợt 177)
+
+Thầy chốt 17/8/2026: *"khi hoàn thành game của 1 đội, kết quả đội đó tự đồng bộ vào kết quả các đội và
+sẵn sàng cho các đội khác đọc."*
+
+- **ĐẨY**: `core/engine.js` `finish()` gọi `saveTeamResult()` (bắn-rồi-quên). Bỏ qua đúng 2 trường hợp
+  y như leaderboard: không ai trả lời câu nào, và ván "Start with mistakes".
+- **ĐỌC**: Show answers gọi `loadTeamResults(roundKey)` — chỉ khi thầy chạm vào title.
+
+⚠️⚠️ **KHOÁ ĐỐI CHIẾU LÀ `originAct.id`, KHÔNG PHẢI `activity.id`.** `core/convert.js` đóng dấu act đã
+"Change template" bằng id **NGẪU NHIÊN** (`conv_quiz_5817…`) ⇒ hai cột cùng đổi sang Quiz sẽ tự đẻ hai
+khoá khác nhau và **không đời nào thấy kết quả của nhau**, mà trên màn hình không có gì giải thích.
+`showdownRoundKey()` trong engine trả `originAct?.id || activity.id`.
+
+⚠️⚠️ **LỆNH GHI PHẢI LÀ `setDoc(..., {merge:true})` MỘT KHOÁ MAP, KHÔNG ĐƯỢC đọc-sửa-ghi.** Hai cột kết
+thúc cách nhau vài giây sẽ cùng đọc tài liệu, cùng thêm đội mình, và lệnh ghi sau **xoá sạch đội của
+lệnh trước** — mà mỗi màn vẫn hiện kết quả của chính nó rất đúng, nên không ai phát hiện.
+🟢 Đã dựng lưới `scratch/showdown-sync-test.html` bắn 3 lệnh ghi song song để chứng minh, **và đối
+chứng ngược** bằng `?break=1` (bỏ merge ⇒ chỉ còn 1 đội sống sót).
+
+⚠️ Mảng `students` bị **thay nguyên** chứ không trộn (đúng luật Firestore) — cần đúng như vậy để một
+đội chơi lại không để sót nửa đội hình cũ nằm dưới.
+
+⚠️ **Reset teams xoá cả hai bảng**: `wipeSetup()` gọi luôn `wipeResults()`. Không thì `splitIntoTeams()`
+cấp lại đúng các id `sdt_1`… và kết quả hôm qua sẽ đội lốt đội hình hôm nay.
+
+### Title của Show answers LÀ MỘT NÚT (Đợt 177)
+
+`SHOWDOWN A1C • TEAM 3` — chữ **SHOWDOWN** mang 3 cử chỉ, XANH LÁ luôn có nghĩa "đang xem cái này":
+
+| Cử chỉ | Việc |
+|---|---|
+| Chạm 1 lần | đổi giữa **đội này** và **cả lớp**; "TEAM 3" thu vào "A1C" rồi số HS đẩy ra (`scaleX`, `transform-origin:left`) |
+| Chạm 2 lần | đọc lại bảng kết quả: spinner → "UPDATED" → tự mờ |
+| Nhấn giữ | **bảng xếp hạng hình phễu**, title chuyển vàng lấp lánh |
+
+⚠️ **KHÔNG dùng `press()` và KHÔNG dùng `onclick`/`ondblclick` ở đây.** `press()` bắn ngay lúc chạm —
+đúng cho bề mặt chơi, sai ở đây (một cú chạm chưa được quyết định khi chưa biết nó có phải nửa đầu của
+cú chạm đúp hay không). Còn `click` thì chính `core/press.js` đã chép lại lý do không tin được trên màn
+hồng ngoại. File tự nghe thẳng luồng pointer, **`setPointerCapture`** để ngón trượt ra ngoài vẫn báo lúc
+nhấc, và **nuốt** cú `click` tương thích sinh ra sau đó.
+
+⚠️ Số HS ở chế độ cả lớp là **số em ĐÃ CÓ DỮ LIỆU**, không phải sĩ số lớp — đội chưa chơi xong thì chưa
+có mặt trên bảng (thầy: *"vì có thể có đội chưa xong"*).
 
 ⚠️ Node `kind:"showdown"` nằm chung `items` với class roll **vì luật Firestore chỉ mở đúng một đường**
 (xem `core/classes.js`). Kèm theo: `core/store.js` có `APP_DATA_KINDS = {class, showdown}` —
@@ -1539,7 +1592,13 @@ core/
 │                        ⭐ prime() NẠP TRƯỚC cả pack — xem mục "ÂM THANH" bên dưới
 ├─ icons.js           ← bộ icon SVG dùng chung (menu, prev, next, sound, fullscreen, check, cross,
 │                        close, options, template, style, edit, assignment, print, playBig,
-│                        markCheck, markCross)
+│                        markCheck, markCross, trophy, spinner)
+├─ showdown.js        ← LUẬT của Showdown, THUẦN (không một dòng import): pick trong sessionStorage,
+│                        memberAt/stampReview, groupByMember/rankBlocks, fmtRoundMs/pctBand
+├─ showdown-review.js ← màn Show answers của Showdown (Đợt 177): title 3 cử chỉ, danh sách theo em,
+│                        bảng xếp hạng hình phễu. DOM thuần — mạng đi vào qua callback loadTeams
+├─ showdown-setup.js  ← Firestore của Showdown: bảng đội (sd_main) + bảng kết quả (sd_results).
+│                        CHỈ được nạp bằng await import
 ├─ print.js           ← Print DÙNG CHUNG: popup chọn định dạng (Anagram/Crossword/Quiz/Unjumble) +
 │                        luật khả dụng + render worksheet ra giấy (đọc template.toPrintItems)
 ├─ fit.js             ← autoFit() (co chữ theo dõi resize) + fitOnce() (co chữ 1 lần, cho ô nhỏ)

@@ -38,7 +38,11 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, buildShowdownReview } from "./showdown.js";
+import { readPick, clearPick, memberAt, stampReview, groupByMember } from "./showdown.js";
+// The Showdown "Show answers" screen. Static like the line above and for the
+// same reason — it is DOM only, with no Firestore and no library layer; the one
+// thing it needs from the network arrives as the `loadTeams` callback below.
+import { mountShowdownReview } from "./showdown-review.js";
 // store.js (the teacher's library) is imported LAZILY for the same reason as
 // assignment-ui.js: the student page must not even load code that can reach it.
 import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
@@ -281,6 +285,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // sessionStorage and re-enters startGame(), so the live value is always the
   // one THIS mount read — there is deliberately no second way to change it.
   const showdownPick = (tpl.showdownMode && !session && !fight) ? readPick() : null;
+
+  /**
+   * ⭐ Đợt 177 — WHICH PLAY THE SHARED RESULT BOARD IS ABOUT.
+   *
+   * Every column of myActivity opens the SAME library act, so the origin act's
+   * id is the one string all of them agree on — which is exactly what a board
+   * that merges several browsers' results needs as its key.
+   *
+   * ⚠️ NOT `activity.id`. A "Change template" play is a throwaway conversion and
+   * core/convert.js stamps it with a RANDOM id (`conv_quiz_5817…`), so two
+   * columns that both switched to Quiz would each invent a different key and
+   * neither would ever see the other's result — with nothing on screen to
+   * explain why. `originAct` is `base || libAct` (see its own note above), i.e.
+   * the act the teacher actually opened, and it survives conversion untouched.
+   */
+  function showdownRoundKey() {
+    return String(originAct?.id || activity.id || "");
+  }
 
   // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — a SECOND clock, one that
   // belongs to the pupil whose turn it is rather than to the game.
@@ -2822,6 +2844,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // every round, so scoring it would build a one-row board per round that
       // always reads "YOU'RE 1ST" — noise on top of a table meant for comparing
       // real, full plays against each other.
+      // ⭐⭐ Đợt 177 — PUBLISH THIS TEAM'S RESULT (teacher, 17/8/2026: "khi hoàn
+      // thành game của 1 đội, kết quả đội đó tự đồng bộ vào kết quả các đội và
+      // sẵn sàng cho các đội khác đọc"). Every other column can then open its own
+      // Show answers, tap SHOWDOWN, and read the whole class off one screen.
+      //
+      // Fire-and-forget on purpose: the celebration and the summary panel must
+      // never wait on a classroom network, and a failed publish costs only the
+      // class board — this screen's own Show answers is built from memory and is
+      // complete either way.
+      //
+      // Same two exclusions as the leaderboard directly below, for the same
+      // reasons: a play where nobody answered anything has nothing to report, and
+      // a "Start with mistakes" round is practice, not a scored play.
+      if (showdownPick && answered > 0 && !activity._mistakes) {
+        const students = groupByMember(reviewData, showdownPick.members);
+        import("./showdown-setup.js")
+          .then(m => m.saveTeamResult({
+            pick: showdownPick, roundKey: showdownRoundKey(),
+            actName: originAct?.name || "", students
+          }))
+          .catch(e => console.warn("AWord: could not publish this team's result", e));
+      }
       if (answered > 0 && !activity._mistakes) {
         // stored (incl. review) so it can sync later and students can compete.
         entryId = addEntry(activity.id, {
@@ -3063,38 +3107,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (backdrop) backdrop.innerHTML = "";   // hide the panel behind
     const rv = el("div", "aw-review");
     const head = el("div", "aw-rv-head");
-    // ⭐ Đợt 174c (teacher) — the header says WHOSE result this is:
-    // "SHOWDOWN - B2A / TEAM 1". It used to be the bare word SHOWDOWN with the
-    // class nowhere and the team on a second header line inside the list; on a
-    // projector, a screenshot of the results then had nothing on it naming the
-    // class. `escapeText`: both halves are names the teacher typed.
-    const rvTitle = showdownPick
-      ? "SHOWDOWN" + (showdownPick.className ? ` - ${showdownPick.className}` : "") +
-        ` / ${String(showdownPick.teamName || "Team").toUpperCase()}`
-      : "ANSWERS";
-    head.append(el("div", "aw-rv-title", escapeText(rvTitle)));
-    // The team's score moves up here with it (it was the right-hand half of the
-    // header line that has just been removed from core/showdown.js).
-    if (showdownPick) {
-      const right = reviewData.filter(r => r.answered && r.yourCorrect).length;
-      head.append(el("div", "aw-rv-sdtotal", `${right}/${reviewData.length}`));
-    }
     const closeBtn = iconBtn("aw-rv-close", icons.close, "Close");
     closeBtn.onclick = () => { rv.remove(); showSummary(result, entryId); };
+    // ⭐ Đợt 177 — Showdown builds its OWN title, because there it is a control
+    // and not a label: "SHOWDOWN A1C • TEAM 3", where the word SHOWDOWN carries
+    // tap / double-tap / press-and-hold (this team ↔ the whole class · refresh
+    // the other teams · the ranking board). Everything about it, markup
+    // included, lives in core/showdown-review.js — see its header.
+    if (!showdownPick) head.append(el("div", "aw-rv-title", "ANSWERS"));
     head.append(closeBtn);
     rv.append(head);
 
     // ⭐ SHOWDOWN (Đợt 155) — a flat list of questions says nothing about WHO
     // answered what, which is the one thing this mode exists to record. The
-    // Showdown review groups the same rows by pupil, in the team's own order,
-    // and shows only the team this browser played (teacher, 14/8/2026: "Kết quả
-    // chỉ show đội được chọn đó") — no other team was ever on this screen, so
-    // there is nothing else in memory to show.
+    // Showdown review groups the same rows by pupil and ranks them.
+    // ⭐ Đợt 177 — and can now widen from "the team this browser played" to the
+    // WHOLE CLASS, by reading what the other columns published when their own
+    // games finished (see the publish in finish() above). The network call is
+    // handed in from here so that file never has to import Firestore.
     if (showdownPick) {
-      buildShowdownReview(rv, {
-        members: showdownPick.members,
-        teamName: showdownPick.teamName,
-        review: reviewData
+      mountShowdownReview({
+        head, before: closeBtn, host: rv,
+        pick: showdownPick,
+        review: reviewData,
+        loadTeams: () => import("./showdown-setup.js")
+          .then(m => m.loadTeamResults(showdownRoundKey())),
+        toast
       });
       inner.append(rv);
       return;

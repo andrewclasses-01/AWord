@@ -3931,3 +3931,143 @@ body {
      leftover as .aw-top-showdown, same padding + cancelling-margin fix. */
   padding: 0.25cqw 0; margin: -0.25cqw 0;
 }
+/* ⭐ Đợt 177 — whose team this pupil is, on the CLASS board only. On a team
+   board every line would carry the same word and the title already says it. */
+.aw-sd-rv-team {
+  flex: 0 0 auto; font-size: 1.6cqw; font-weight: 800; color: #6b7a90;
+  background: #fff; border-radius: 0.5cqw; padding: 0.15cqw 0.7cqw;
+}
+
+/* ----- 4. Đợt 177 — THE SHOWDOWN TITLE IS A CONTROL, NOT A LABEL -----
+   "SHOWDOWN  A1C • TEAM 3", where the word SHOWDOWN takes three gestures (tap /
+   double tap / press-and-hold — see core/showdown-review.js). GREEN always means
+   "this is the scope you are looking at": the team in team scope, the class name
+   and its pupil count together in class scope. */
+.aw-rv-title.is-sd { position: relative; display: flex; align-items: baseline; gap: 0.9cqw; }
+.aw-sd-ttl-word {
+  /* `relative` so the podium sparks can hang off this box's own corners. */
+  position: relative;
+  border: none; background: transparent; font: inherit; letter-spacing: inherit;
+  color: #23303e; cursor: pointer; border-radius: 0.6cqw;
+  /* The padding is what gives a finger something to hit on a projector-sized
+     title; the equal negative margin keeps the row's baseline exactly where it
+     was before this became a button. */
+  padding: 0.25cqw 0.6cqw; margin: -0.25cqw -0.6cqw;
+  /* A press-and-hold must not start selecting the word, and `manipulation` drops
+     the 300ms double-tap-to-zoom delay that would otherwise sit in front of
+     every one of these gestures on a touch screen. */
+  -webkit-user-select: none; user-select: none; touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.aw-sd-ttl-word:hover { background: #eef3f9; }
+.aw-sd-ttl-word:active { background: #e4ecf5; }
+.aw-sd-ttl-class, .aw-sd-ttl-scope { font-weight: 800; text-transform: uppercase; color: #7c8ba1; }
+/* `inline-block` + a LEFT origin is the whole animation: the scope word folds
+   away towards the class name and the next one grows back out of it (teacher:
+   "thu gọn vào chữ A1C … được đẩy ra từ chữ A1C"). It is a pure scaleX, so the
+   row's layout is identical before and after — only the ink moves. */
+.aw-sd-ttl-scope { display: inline-block; transform-origin: left center; }
+.aw-sd-ttl-class.is-on, .aw-sd-ttl-scope.is-on { color: #16a34a; }
+.aw-sd-ttl-dot { color: #c2ccd9; font-weight: 800; }
+.aw-sd-ttl-status { display: inline-flex; align-items: center; margin-left: 0.4cqw; }
+.aw-sd-ttl-status.is-spin svg {
+  width: 2.1cqw; height: 2.1cqw; color: #2563eb;
+  animation: aw-sd-spin .8s linear infinite;
+}
+.aw-sd-ttl-status.is-done {
+  font-size: 1.6cqw; font-weight: 800; letter-spacing: 0.12cqw; color: #16a34a;
+}
+@keyframes aw-sd-spin { to { transform: rotate(360deg); } }
+
+/* PODIUM MODE — the title goes gold and sparkles (teacher: "đổi màu cả title
+   thành màu vàng có hào quang lấp lánh"). The glow is a text-shadow rather than
+   a `filter`, deliberately: a filter on this row would make it a stacking
+   context, which is the exact class of bug that has already cost this project
+   three days elsewhere (see the popup notes in GHI CHU DU AN.md). */
+.aw-rv-title.is-pod .aw-sd-ttl-word,
+.aw-rv-title.is-pod .aw-sd-ttl-class,
+.aw-rv-title.is-pod .aw-sd-ttl-dot,
+.aw-rv-title.is-pod .aw-sd-ttl-scope {
+  color: #c9880c;
+  animation: aw-sd-gold 2.1s ease-in-out infinite;
+}
+@keyframes aw-sd-gold {
+  0%, 100% { text-shadow: 0 0 0.35cqw rgba(250, 204, 21, .5), 0 0 1.1cqw rgba(245, 176, 30, .28); }
+  50%      { text-shadow: 0 0 0.7cqw rgba(253, 224, 71, .95), 0 0 2.1cqw rgba(245, 176, 30, .55); }
+}
+/* Two sparks off the OPPOSITE CORNERS OF THE WORD ITSELF — anchored to the
+   button's own box, never to a cqw guess at how wide "SHOWDOWN" renders (a
+   measured offset put the second one squarely in the middle of the word).
+   Out of the text flow entirely, so they can never nudge a baseline, and
+   `pointer-events:none` because the top-left one sits over the hit area. */
+.aw-rv-title.is-pod .aw-sd-ttl-word::before,
+.aw-rv-title.is-pod .aw-sd-ttl-word::after {
+  content: "✦"; position: absolute; pointer-events: none; line-height: 1;
+  color: #fde047; text-shadow: 0 0 0.8cqw rgba(250, 204, 21, .95);
+}
+.aw-rv-title.is-pod .aw-sd-ttl-word::before {
+  left: -0.35cqw; top: -0.35cqw; font-size: 1.8cqw;
+  animation: aw-sd-spark 1.7s ease-in-out infinite;
+}
+.aw-rv-title.is-pod .aw-sd-ttl-word::after {
+  right: -0.25cqw; bottom: -0.2cqw; font-size: 1.3cqw;
+  animation: aw-sd-spark 1.7s ease-in-out .85s infinite;
+}
+@keyframes aw-sd-spark {
+  0%, 100% { opacity: 0; transform: scale(.4) rotate(0deg); }
+  45%      { opacity: 1; transform: scale(1) rotate(90deg); }
+}
+
+/* ----- 5. Đợt 177 — THE RANKING BOARD (press and hold SHOWDOWN) -----
+   One column, every box the same HEIGHT and each a little narrower than the one
+   above, so the board tapers downwards into a funnel (teacher: "ô trên to
+   nhất… giảm dần theo từng người để tạo thành 1 hình nón ngược… chiều cao của
+   các ô đều bằng nhau"). The per-row width arrives as `--w` from
+   core/showdown-review.js, which is also what positions the rank number: it
+   hangs OUTSIDE the box on its left, so the numbers trace the taper instead of
+   sitting in a straight gutter. */
+.aw-sd-pod {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 0.35cqw;   /* "khoảng cách rất nhỏ" */
+  padding: 0.6cqw 0 1cqw;
+}
+.aw-sd-pod-row { position: relative; display: flex; justify-content: center; align-items: center; }
+.aw-sd-pod-rank {
+  position: absolute; right: calc(50% + var(--w) / 2 + 0.9cqw);
+  font-size: 2.3cqw; font-weight: 800; color: #a9b2c0; line-height: 1;
+}
+.aw-sd-pod-box {
+  width: var(--w); box-sizing: border-box; min-height: 7.2cqw;
+  display: flex; align-items: center; justify-content: space-between; gap: 1cqw;
+  padding: 0.7cqw 1.5cqw; border-radius: 1.1cqw;
+  background: #f3f6fa; border: 0.18cqw solid #e3e9f1;
+}
+/* Gold, silver, bronze — the box itself, not just the cup, so the top three read
+   from across the room. */
+.aw-sd-pod-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
+.aw-sd-pod-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
+.aw-sd-pod-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
+.aw-sd-pod-who { display: flex; align-items: center; gap: 0.8cqw; min-width: 0; }
+.aw-sd-pod-name {
+  font-size: 2.6cqw; font-weight: 800; color: #23303e; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* Vietnamese diacritics again — same clipped-ink guard as .aw-sd-rv-mktxt. */
+  padding: 0.25cqw 0; margin: -0.25cqw 0;
+}
+.aw-sd-pod-cup { flex: 0 0 auto; display: inline-flex; }
+.aw-sd-pod-cup svg { width: 2.7cqw; height: 2.7cqw; }
+.aw-sd-pod-box.is-m1 .aw-sd-pod-cup { color: #e0a30c; }
+.aw-sd-pod-box.is-m2 .aw-sd-pod-cup { color: #97a4b2; }
+.aw-sd-pod-box.is-m3 .aw-sd-pod-cup { color: #c1793a; }
+.aw-sd-pod-team {
+  flex: 0 0 auto; font-size: 1.5cqw; font-weight: 800; color: #6b7a90;
+  background: rgba(255, 255, 255, .75); border-radius: 0.5cqw; padding: 0.15cqw 0.6cqw;
+}
+.aw-sd-pod-stats {
+  flex: 0 0 auto; display: flex; align-items: center; gap: 1.1cqw;
+  font-size: 2.1cqw; font-weight: 800; white-space: nowrap;
+}
+.aw-sd-pod-stats svg { width: 1.9cqw; height: 1.9cqw; vertical-align: -0.22cqw; }
+.aw-sd-pod-ok { color: #2ec27e; }
+.aw-sd-pod-bad { color: #e03131; }
+.aw-sd-pod-time { color: #2563eb; }

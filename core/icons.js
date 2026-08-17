@@ -69,6 +69,16 @@ export const icons = {
   folder: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`,
 
+  // ----- Showdown's ranking board (Đợt 177) -----
+  // A cup with handles, stem and base. FILLED, not stroked: at podium size a
+  // hairline outline vanishes on a projector, and the whole point of these three
+  // is the gold/silver/bronze COLOUR, which `currentColor` inherits from the
+  // wrapper app.css tints per place.
+  trophy: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 3.2H5.6v1.1H2.2v2.1c0 2.6 1.9 4.7 4.4 5.1a5.9 5.9 0 0 0 4 3.3v3H8.1a1.9 1.9 0 0 0-1.9 1.9v1.1h11.6v-1.1a1.9 1.9 0 0 0-1.9-1.9h-2.5v-3a5.9 5.9 0 0 0 4-3.3c2.5-.4 4.4-2.5 4.4-5.1V4.3h-3.4V3.2zM4.1 6.4V6.2h1.5v3.2A3.4 3.4 0 0 1 4.1 6.4zm15.8 0a3.4 3.4 0 0 1-1.5 3V6.2h1.5v.2z"/></svg>`,
+  // The refresh spinner. A faint full ring with one bright arc over it — app.css
+  // rotates the whole svg, and the arc is what makes the rotation readable.
+  spinner: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.6" opacity=".25"/><path d="M12 3.4a8.6 8.6 0 0 1 8.6 8.6"/></svg>`,
+
   // ----- Assignment report toolbar (v0.9.4) -----
   refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14.5-4.5M20 12a8 8 0 0 1-14.5 4.5"/><path d="M18.5 3.8v4h-4M5.5 20.2v-4h4"/></svg>`,
   link: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 13.5a3.6 3.6 0 0 0 5.1 0l3-3a3.6 3.6 0 0 0-5.1-5.1l-1.4 1.4"/><path d="M13.5 10.5a3.6 3.6 0 0 0-5.1 0l-3 3a3.6 3.6 0 0 0 5.1 5.1l1.4-1.4"/></svg>`,
