@@ -81,6 +81,16 @@ const tfTemplate = {
   // reported from `startCycle()` — the single funnel every statement passes
   // through. See `rowOf` for why a ROW and not a turn count.
   showdownMode: true,
+  // ⭐⭐ Đợt 182 — FIGHT MODE (teacher, 17/8/2026). Contract: core/fight.js's
+  // header; this file's half is every `fightCtl` branch in mount(). Two things
+  // had to change beyond plain wiring, and both fail SILENTLY if missed:
+  //  • `order` is normally shuffled on EVERY play — in a match that puts a
+  //    different statement behind the same round number on the two boards, so a
+  //    fight uses the order core/fight.js already fixed for both;
+  //  • the ✗ on a tapped button is a total giveaway in a TWO-choice game (it
+  //    names the other button as the right one), so every mark is withheld until
+  //    the match says the round is settled — see revealFightMarks().
+  fightMode: true,
   name: "True or false",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score
   manualTimerStart: true,   // the clock starts only after our 3-2-1 prep countdown
@@ -155,11 +165,29 @@ const tfTemplate = {
       return () => {};
     }
 
+    // ----- FIGHT MODE (Đợt 182) — `_fight` is put here by core/fight.js.
+    // Everything below degrades to normal single play when it is absent, which
+    // is what keeps this template byte-identical outside a match.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;                  // set by the match between rounds
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    // TRUE while this board owes the class a ✓/✗ it is holding back because the
+    // other team is still choosing. Cleared by revealFightMarks(), and by
+    // startCycle() when a new statement arrives wearing no debt.
+    let fightPendingReveal = false;
+
     // `order` = the fixed sequence used for scoring/review (never mutated).
     // `queue` = the LIVE working sequence — front = current statement. Always
     // shuffled: the two-column editor no longer carries a play order, so every
     // play mixes the True/False statements (teacher's spec, 1/8/2026).
-    let order = shuffle(statements.map((_, i) => i));
+    // ⚠️ EXCEPT IN A FIGHT (Đợt 182): core/fight.js hands both boards the SAME
+    // pre-shuffled `statements` array precisely so round 3 is the same statement
+    // on both screens. Shuffling again here — once per board, independently —
+    // would put two different statements behind one round number, and nothing on
+    // screen would say so: each board looks perfectly normal on its own.
+    let order = fightCtl ? statements.map((_, i) => i) : shuffle(statements.map((_, i) => i));
     const queue = [...order];
     // ⭐⭐ Đợt 178 — SHOWDOWN needs "which ROW of `review` is on screen".
     // `review` is built as `order.map(idx => …)` (see finish), so row j holds
@@ -372,6 +400,9 @@ const tfTemplate = {
       promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
       voicePlayer.stop();                       // silence the PREVIOUS statement's clip, if any
       promptEl.className = "aw-tf-prompt";       // drop any stale voiceonly class from the last statement
+      // FIGHT MODE: a withheld ✓/✗ belongs to the statement that was on screen —
+      // the new one must not arrive wearing the last round's grey or its marks.
+      if (fightCtl) { fightPendingReveal = false; clearFightMarks(); }
       const st = statements[queue[0]];
       // ⭐ Đợt 178 — the statement on screen, and with it whose turn this is. The
       // two numbers are this game's own slide-out / slide-in, so the name leaves
@@ -392,7 +423,12 @@ const tfTemplate = {
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
         press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); });
         promptEl.append(vBtn);
-        if (vv.autoPlay) voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        // FIGHT MODE: both boards show the same statement, so only board 0 reads
+        // it out — two copies of one clip a few ms apart is an echo, not a
+        // reading (`ctl.speaks`, same guard quiz.js uses).
+        if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
+          voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        }
       }
       firstStatementSpoken = true;
       const off = offscreenPx();
@@ -487,6 +523,19 @@ const tfTemplate = {
 
     function onTimeUp() {
       if (finished || !queue.length) return;
+      // FIGHT MODE: a statement that glided off unanswered ends THIS board's go
+      // — reported honestly as a wrong finish, which (teacher's rule, Đợt 128)
+      // leaves the round open for the other team instead of taking it away. No
+      // re-queueing and no advancing: the match decides what comes next.
+      if (fightCtl) {
+        const idx = queue[0];
+        if (!state[idx].answered) { state[idx].answered = true; state[idx].correct = false; }
+        fightPendingReveal = true;
+        lockButtons();
+        syncFightLock();
+        fightCtl.wordDone(fightSide, { index: curRow, correct: false });
+        return;
+      }
       dropOrRequeue(queue[0]);
       startCycle();
     }
@@ -527,7 +576,12 @@ const tfTemplate = {
     // in fullscreen; they use px/viewport coords (NOT cqw, which wouldn't
     // resolve outside the stage container).
     function flyStatementToScore(promptEl, cb) {
-      const scoreEl = ui.scoreEl || document.querySelector(".aw-top-score");
+      // ⚠️ Đợt 182 — was `ui.scoreEl || document.querySelector(".aw-top-score")`.
+      // A page-wide query is forbidden by core/fight.js's header (in a match it
+      // finds the LEFT board's chip from the right board). This path is single
+      // mode only now — a fight never flies the statement, see choose() — but
+      // the query had to go all the same: it is the exact shape of that bug.
+      const scoreEl = ui.scoreEl;
       const host = document.fullscreenElement || document.body;
       let called = false;
       const done = () => { if (called) return; called = true; if (!finished) cb(); };
@@ -598,6 +652,7 @@ const tfTemplate = {
 
     function choose(value, btn) {
       if (finished || !queue.length) return;
+      if (fightLocked()) return;    // the other team took this round, or the match is over
       const idx = queue[0];
       const st = statements[idx];
       const isRight = value === !!st.answer;
@@ -615,6 +670,36 @@ const tfTemplate = {
       // current one is still flying off / sliding out — startCycle re-arms the
       // 50%-in unlock for the incoming statement (item, 1/8).
       lockButtons();
+
+      // ⭐⭐ FIGHT MODE (Đợt 182) — this board's go is over, and that is ALL the
+      // other team may learn from this screen.
+      //  • no ✗ on the tapped button, no ✓, no statement flying to the score:
+      //    with only two buttons, marking one is naming the other;
+      //  • the board still visibly changes — it goes neutral grey through
+      //    syncFightLock, which is the "your go is over" cue the teacher asked
+      //    for so a team knows why tapping stopped working;
+      //  • SOUND is not withheld (says how THIS team did, points at no button),
+      //    and neither is a lost heart (same reason) — both match quiz.js;
+      //  • nothing advances here: the MATCH owns the sequence and moves both
+      //    boards together through goToIndex (see fightGoTo).
+      if (fightCtl) {
+        state[idx].correct = isRight;
+        if (isRight) tfSound.correct();
+        else {
+          tfSound.wrong();
+          if (pointsOff) penalty += pointsOff;
+        }
+        const outOfLives = isRight ? false : loseLife();
+        ui.setScore(liveScore());   // engine forwards this to the match scoreboard
+        updateNav();
+        fightPendingReveal = true;
+        syncFightLock();
+        // `curRow` is the row this statement occupies in `review`, i.e. exactly
+        // the round number the match is on — the same number goToIndex is given.
+        fightCtl.wordDone(fightSide, { index: curRow, correct: isRight });
+        if (outOfLives) armFallback(() => finish("gameover"), 1200);
+        return;
+      }
 
       if (isRight) {
         state[idx].correct = true;
@@ -647,6 +732,75 @@ const tfTemplate = {
           else startCycle();
         });
       }
+    }
+
+    // ================= FIGHT MODE (Đợt 182) =========================
+    // Everything below is dead code outside a match (`fightCtl` is null).
+
+    function tfButtons() {
+      return {
+        yes: root.querySelector(".aw-tf-btn.is-true"),
+        no: root.querySelector(".aw-tf-btn.is-false")
+      };
+    }
+    function clearFightMarks() {
+      root.querySelectorAll(".aw-tf-fightmark").forEach(n => n.remove());
+    }
+
+    // Apply a lock change WITHOUT rebuilding anything (the ⚠️ rule in
+    // core/HUONG DAN CORE.md: a re-render at this exact moment replays the
+    // statement's slide-in and reads as a flash on the losing board). Only the
+    // buttons' `disabled` and one class move here; the colours are CSS.
+    function syncFightLock() {
+      if (!fightCtl) return;
+      const locked = fightLocked();
+      const answered = !!state[order[curRow]]?.answered;
+      // An answered statement keeps its buttons dead either way — choose()
+      // locked them and a lock release must not hand them back.
+      if (!answered) { if (locked) lockButtons(); else unlockButtons(); }
+      const card = root.querySelector(".aw-tf-card");
+      // Grey while this board's go is over but its result is still withheld:
+      // either it never got to answer ("too slow" — the other team took the
+      // round) or it HAS answered and the marks are still being held back.
+      card?.classList.toggle("is-fightlost", locked && (!answered || fightPendingReveal));
+    }
+
+    // The match says the round is settled for BOTH teams, so the ✓/✗ held back
+    // in choose() can finally go up. Also runs on the board that never got to
+    // answer — it needs to be shown the right answer too.
+    function revealFightMarks() {
+      if (!fightCtl) return;
+      fightPendingReveal = false;
+      const idx = order[curRow];
+      const st = statements[idx], s = state[idx];
+      if (!st) return;
+      clearFightMarks();
+      const { yes, no } = tfButtons();
+      const rightBtn = st.answer ? yes : no;
+      if (rightBtn) rightBtn.append(el("span", "aw-tf-fightmark", icons.markCheck));
+      // Only a board that actually answered WRONG gets a cross, and only on the
+      // button it pressed. A board that never answered is shown the right one
+      // and nothing else — it has nothing to be marked wrong for.
+      if (s && s.answered && s.correct === false && s.chosen != null) {
+        const wrongBtn = s.chosen ? yes : no;
+        if (wrongBtn && wrongBtn !== rightBtn) wrongBtn.append(el("span", "aw-tf-fightmark is-cross", icons.markCross));
+      }
+      syncFightLock();
+    }
+
+    // The match moves BOTH boards to round `i` — the row in `review`, which is
+    // also this game's own `order` index (see `rowOf`). The queue is reduced to
+    // that one statement: in a fight the MATCH owns the sequence, so this
+    // game's queue, its shuffle and its "repeat until answered" re-queueing all
+    // stand down — two boards must never disagree about what round 3 is.
+    function fightGoTo(i) {
+      if (finished) return;
+      const idx = order[i];
+      if (idx === undefined) return;
+      queue.length = 0;
+      queue.push(idx);
+      haltPromptAnim();
+      startCycle();          // sets curRow = rowOf[idx] = i, and clears the marks
     }
 
     function updateNav() {
@@ -697,6 +851,23 @@ const tfTemplate = {
       if (Math.abs(delta) < 0.5) return;
       const cur = parseFloat(getComputedStyle(divider).marginBottom) || 0;
       divider.style.marginBottom = Math.max(0, cur + delta) + "px";
+    }
+
+    // ----- FIGHT MODE: the match controller drives this board through here.
+    // Registered after everything it reaches for exists (fightGoTo, syncFightLock,
+    // revealFightMarks) — same placement reasoning as quiz.js. Board 1 mounts
+    // later than board 0, so `attach` may immediately jump it to the round the
+    // match is already on.
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total,
+        goToIndex: fightGoTo,
+        lock(on) {
+          fightBoardLock = !!on;
+          syncFightLock();
+        },
+        reveal: revealFightMarks
+      });
     }
 
     // Keyboard: T / ArrowLeft = True, F / ArrowRight = False (statements only

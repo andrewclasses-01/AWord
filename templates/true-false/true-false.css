@@ -108,6 +108,53 @@
 }
 .aw-tf-btn:disabled { cursor: default; }
 
+/* =============================================================
+   FIGHT MODE (Đợt 182) — "your go is over", and the withheld marks.
+
+   The grey says the round is done for THIS board while the other team is
+   still choosing. Both `background` AND `box-shadow` are overridden, not a
+   colour variable: unlike quiz's tiles these buttons name their colours
+   directly, so leaving the shadow alone would keep a green/red 3D rim glowing
+   under a grey face. `opacity` matches every other template's .is-fightlost
+   (.55) — CAREFUL, no `filter` here: it would open a stacking context around
+   the play area, the trap recorded in core/HUONG DAN CORE.md.
+   ============================================================= */
+.aw-tf-card.is-fightlost .aw-tf-track { opacity: .55; }
+.aw-tf-card.is-fightlost .aw-tf-buttons { opacity: .55; }
+.aw-tf-card.is-fightlost .aw-tf-btn.is-true,
+.aw-tf-card.is-fightlost .aw-tf-btn.is-false {
+  background: #b3bac3;
+  box-shadow: 0 0.7cqw 0 #98a0aa;
+}
+
+/* The ✓/✗ that were held back until the match settled the round. Sits in the
+   button's own corner (the buttons are `position: relative` already) rather
+   than flying like the single-mode mark: by the time this appears both teams
+   are looking at BOTH boards, and a mark that animates away would be gone
+   before the class had read it.
+
+   ⚠️ Đợt 182 — the first version was a 26%-wide WHITE GLYPH at top:6%, and it
+   passed every measurement (present, sized, inside its button) while SITTING ON
+   TOP OF THE WORD "True": 26% of the button's WIDTH is taller than its short
+   height leaves room for, so the glyph overflowed down across the text — and
+   white-on-grey (a locked board IS grey) read washed out. Only the screenshot
+   showed it. It is now a small white DISC carrying a coloured glyph, which
+   reads on the green button, the red one and the grey one alike. */
+.aw-tf-fightmark {
+  position: absolute;
+  top: 7%; right: 4%;
+  width: 17%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.35cqw;
+  border-radius: 50%;
+  background: #fff;
+  color: #16a34a;
+  box-shadow: 0 0.15cqw 0.4cqw rgba(0, 0, 0, .28);
+  pointer-events: none;
+}
+.aw-tf-fightmark svg { width: 100%; height: 100%; }
+.aw-tf-fightmark.is-cross { color: #dc2626; }
+
 .aw-tf-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
