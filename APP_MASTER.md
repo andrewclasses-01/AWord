@@ -8,7 +8,37 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 176) — SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA
+> Cập nhật lần cuối: **17/8/2026 (Đợt 177) — ⭐⭐ SHOWDOWN: KẾT QUẢ CÁC ĐỘI TỰ ĐỒNG BỘ · TITLE
+> SHOW ANSWERS THÀNH NÚT 3 CỬ CHỈ · BẢNG XẾP HẠNG HÌNH PHỄU.**
+> ✅ **COMMIT `dc7a72e` + PUSH + LIVE** — Pages build đúng commit (`status: built`), đối chiếu **7/7
+> file trùng mã băm SHA-256**, và dựng **cả màn Show answers bằng module live trên CSS live** đều đạt.
+> ⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `showdown-setup.js` · `icons.js` · `store.js` ·
+> `app.css`) **+ 1 FILE CORE MỚI `core/showdown-review.js`**.
+> **Nội dung 177:**
+> 1. **Kết quả liên đội** — tài liệu mới `users/{uid}/items/sd_results` (`kind:"showdown-results"`).
+>    Đội nào xong game là `finish()` tự đẩy kết quả (bắn-rồi-quên); máy khác chạm title là đọc cả lớp.
+> 2. **Title là một NÚT**: `SHOWDOWN A1C • TEAM 3`, xanh lá = "đang xem cái này". Chạm 1 lần đổi
+>    đội ↔ cả lớp (`TEAM 3` thu vào `A1C`, số HS mọc ra — là **số em ĐÃ CÓ DỮ LIỆU**, không phải sĩ
+>    số); chạm 2 lần đọc lại (spinner → `UPDATED` → tự mờ); nhấn giữ ra **bảng xếp hạng hình phễu**
+>    (80%→46%, cao bằng nhau, số hạng ngoài ô bám mép nghiêng, cúp vàng/bạc/đồng, title vàng lấp lánh).
+> 3. **Tách file**: `showdown.js` về đúng việc LUẬT và nay **không còn một dòng `import` nào**;
+>    `showdown-review.js` giữ toàn bộ DOM, mạng đi vào qua callback `loadTeams` do engine truyền.
+>    `groupByMember()`/`rankBlocks()` là NGUỒN DUY NHẤT cho cả 3 nơi đọc kết quả (bảng đội · bảng lớp ·
+>    payload ghi Firestore) — tính ở chỗ khác là để một đội bị đếm khác nhau giữa 2 màn.
+> ⚠️⚠️ **3 BẪY ĐÃ BẮT TRƯỚC KHI CẮN, cả 3 đều hỏng TRONG IM LẶNG** (chi tiết: `core/HUONG DAN CORE.md`
+> mục "Bảng kết quả chung"):
+> **(a)** khoá đối chiếu phải là id act **GỐC** (`originAct`) — `convert.js` cấp id NGẪU NHIÊN cho act
+> đã "Change template", 2 cột cùng đổi sang Quiz sẽ không bao giờ thấy kết quả của nhau;
+> **(b)** lệnh ghi phải là `setDoc(merge:true)` **một khoá map**, cấm đọc-sửa-ghi — 2 cột xong cách
+> nhau vài giây sẽ đè mất đội của nhau mà mỗi màn vẫn hiện đúng kết quả của chính nó;
+> **(c)** `kind` mới **phải khai vào `APP_DATA_KINDS`** của `store.js`, không thì nó ăn mất một số link
+> và `?a=57` trả về tài liệu kết quả. (Chính lời cảnh báo sẵn trong `store.js` đã cứu.)
+> ⚠️ Cử chỉ title **KHÔNG** dùng `press()` (bắn ngay lúc chạm nên không phân biệt được nửa đầu của
+> chạm đúp) và **không** dùng `click` (không tin được trên màn hồng ngoại) — tự nghe luồng pointer +
+> `setPointerCapture`. Ngưỡng `HOLD_MS`(520) / `TAP_MS`(250) ở đầu `core/showdown-review.js`.
+> ⬜ **CÒN NỢ**: chưa thử Firestore THẬT + myActivity nhiều cột THẬT + 3 cử chỉ trên màn TOMKO THẬT.
+>
+> Trước đó: **17/8/2026 (Đợt 176) — SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA
 > KHOẢNG TRỐNG (đo bằng `placeShowdownName()`, sàn `margin-bottom:5.4cqw` chống đè bàn phím TTA) ·**
 > ✅ **COMMIT `1c570a9` (chung Đợt 175+176) + PUSH + LIVE** — deployment `5940800996` success, đối
 > chiếu 8/8 file trùng mã băm SHA-256, phép thử chạy lại trên chính bản live đều đạt.

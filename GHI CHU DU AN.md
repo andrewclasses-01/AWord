@@ -12,7 +12,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `showdown-setup.js` · `icons.js` · `app.css`)
 ➕ **FILE CORE MỚI**: `core/showdown-review.js` (cả màn Show answers của Showdown tách khỏi `showdown.js`).
 🟢 ĐÃ TỰ TEST bằng 2 lưới trong `scratch/` (xem mục 6) — **có đối chứng ngược** cho phép kiểm quan trọng nhất.
-⬜ **CHƯA COMMIT — chờ thầy chạy thử thật rồi mới đẩy** (xem VIỆC ĐANG CHỜ).
+✅ **THẦY CHỐT COMMIT + PUSH (17/8/2026) → COMMIT `dc7a72e` + PUSH + LIVE.**
+📌 Pages build xong **đúng commit `dc7a72e`** (`status: built`, tra API `pages/builds` TRƯỚC khi so —
+`curl 200` không chứng minh được gì, xem bẫy đã ghi). Đối chiếu **7/7 file trùng mã băm SHA-256** trên
+`aword.andrewclasses.com` (`sed 's/\r$//'` cả 2 phía): `showdown.js`, `showdown-review.js`,
+`showdown-setup.js`, `engine.js`, `icons.js`, `store.js`, `app.css`.
+📌 Và đã chạy phép thử **TRÊN CHÍNH BẢN LIVE** (import module thẳng từ tên miền):
+- 4 hàm mới đều có mặt: `mountShowdownReview` · `saveTeamResult` · `loadTeamResults` · `wipeResults`.
+- `groupByMember()` đếm đúng: câu **chưa làm** vẫn vào `total` và `wrong` nhưng KHÔNG vào `attempted`.
+- `rankBlocks()` xếp đúng; `fmtRoundMs(62400)` = `1:02,40`, `(30180)` = `30,18`; `pctBand` 8 mốc biên
+  ra đúng 5 dải.
+- Dựng **cả màn Show answers bằng module live trên CSS live**: bảng đội → chạm 1 lần ra cả lớp (3 em
+  của mình + 2 em đội khác, tổng `9/15`) → nhấn giữ ra phễu 5 ô, title vàng, cúp đúng 3 màu.
+
+💡 **THU HOẠCH BẤT NGỜ TỪ PHÉP THỬ LIVE**: tab Chrome lúc đó **không được hiển thị** ⇒ Chromium bóp
+`setTimeout` xuống ~1s. Title vẫn đổi đúng, chỉ **chậm hơn** — tức là cái `setTimeout` dự phòng của
+`whenDone()` đã làm đúng việc của nó, và chữ KHÔNG bị kẹt ở `scaleX(0)`. Đây chính là ca mà bẫy
+"throttle khi cửa sổ bị che" cảnh báo, và lần này nó được chứng minh là đã chặn được.
 
 ### 1. Thầy giao (17/8/2026)
 1. **Kết quả liên đội**: xong game của 1 đội thì kết quả đội đó **tự đồng bộ** vào kết quả các đội,
@@ -466,7 +482,7 @@ Không phải viết mới. Đường dây có đủ **cả hai phía** và đ�
 chỉ tồn tại trong trang act. Cột đang ở **thư viện** AWord thì chờ 6 giây rồi bỏ qua, im lặng.
 
 ### 8. VIỆC ĐANG CHỜ
-- 🔴 **ĐỢT 177 CHƯA COMMIT.** Chờ thầy chạy thử thật rồi mới đẩy — xem 3 gạch đầu dòng ngay dưới.
+- ✅ ~~ĐỢT 177 chưa commit~~ → **ĐÃ COMMIT `dc7a72e` + PUSH + LIVE (17/8/2026), 7/7 file trùng hash.**
 - ⬜ **Thử ĐỢT 177 trên Firestore THẬT + myActivity nhiều cột THẬT** (lưới test dùng Firestore giả nên
   2 thứ này chưa từng chạy thật): (a) cột 1 và cột 2 chơi 2 đội, xong cả hai → mở Show answers ở 1 cột,
   chạm chữ SHOWDOWN xem có đủ cả 2 đội không; (b) đội thứ 3 xong sau → **chạm 2 lần** xem có hiện thêm
