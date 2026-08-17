@@ -8,7 +8,25 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 180) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO LỚP 15 EM.**
+> Cập nhật lần cuối: **17/8/2026 (Đợt 181) — 🐞 VÀO FIGHT MODE LÀ MẤT SẠCH ACT CON.**
+> ✅ **COMMIT `977ec67` + PUSH + LIVE** (Pages build đúng commit — deployment `5945023320`, `built` —
+> và **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`). Thầy hỏi "chuyển template ở đơn/fight/showdown đã chọn tự do được
+> TEXT-VOICE và các act con chưa?" — đo ra: **đơn RỒI, showdown RỒI, fight CHƯA**, và chưa cả khi
+> *không* đổi template: trong trận đấu Options **không có** ENG1/ENG2/VI1/VI2, **không có** hàng
+> PRACTICE/HOMEWORK, nên trận bị khoá cứng vào act con đang chọn lúc bấm vào Fight. Gốc: `engine.js`
+> trao cho `startFight()` bản act **đã `resolveActivity()`** (đã tước `variants`/`contentSets`), còn
+> `fight.js` dựng 2 bàn **không kèm `base`** ⇒ `subActSource()` (Đợt 154) không còn cửa nào hỏi ngược về
+> act gốc. Soi ra thêm một lỗi ngầm chưa ai gặp: Apply trong trận gọi `saveActivity()` trên **chính bản
+> đã bẹp**, tức **ghi đè act thật trong thư viện, mất 3 bộ gợi ý còn lại**. Vá: trận nhận `libAct` và
+> **tự resolve một lần** (`playAct` = thứ 2 bàn CHƠI · `activity` = thứ Options GHI VÀO/LƯU); thêm
+> `ctl.matchAct()` + `subActOwner()` trong engine (một định nghĩa duy nhất cho "act của ván này"), nên
+> options riêng từng act con (Đợt 147) cũng chạy trong trận, và act đã convert thì Apply đi qua
+> `applySubActSelection()` → ghi lên act GỐC rồi convert lại. Lưới mới `scratch/subact-modes-test.html`
+> **20/20**, có **đối chứng ngược** đo trên code cũ (hỏng đúng 7 phép); nhóm C bấm chọn act con → Apply →
+> Play → đọc chữ trên **cả hai khung** ("VI1 + VI1", "HOMEWORK + HOMEWORK"). **Bài học**: một chế độ thứ
+> hai phải hỏi đúng người giữ act của chế độ đó — bản sao để CHƠI không trả lời được câu nào về act con.
+>
+> Trước đó: **17/8/2026 (Đợt 180) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO LỚP 15 EM.**
 > ✅ **COMMIT `981b86d` + PUSH + LIVE** — Pages build đúng commit (deployment `5944156550`, `success`),
 > **3/3 file trùng mã băm SHA-256**, và chạy lại phép thử **trên chính bản live**: lớp 15 em + hàng
 > `sd_solo` bẩn → đội mình 5 · cả lớp **15** · 0 tên lặp · 15/15 ô phễu có % · title solo ra

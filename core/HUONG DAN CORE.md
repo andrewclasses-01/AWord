@@ -304,6 +304,29 @@ khai lại, trừ khi cần `none` cho cử chỉ kéo riêng.
 Nút **MODE** dưới khung lật act giữa SINGLE MODE và FIGHT MODE: 2 ván THẬT cạnh nhau, một dải
 SCOREBOARD 1 · ĐỒNG HỒ · SCOREBOARD 2 ở trên, MỘT thanh công cụ dùng chung ở dưới.
 
+⭐⭐ **TRẬN ĐẤU CẦM ACT THẬT, KHÔNG CẦM BẢN ĐÃ RESOLVE (Đợt 181, 17/8/2026).**
+`engine.js` trao cho `startFight()` **`libAct`** — act thư viện, còn nguyên `variants`/`contentSets` —
+và **`fight.js` tự `resolveActivity()` MỘT lần** để dựng 2 bàn. Hai tên, cấm đổi chỗ:
+| tên trong `fight.js` | là gì | dùng cho |
+|---|---|---|
+| `playAct` | bản đã resolve (1 bộ gợi ý / 1 nửa được nướng cứng) | thứ 2 bàn CHƠI (`actFor`, `srcItems`) |
+| `activity` | act thư viện | thứ Options GHI VÀO, và thứ `saveActivity()` LƯU |
+
+Trước Đợt 181 trận nhận thẳng bản đã resolve, và hậu quả **im lặng** (đo được, không lỗi nào nổ):
+- Options trong trận **không có** hàng act con — không ENG1/ENG2/VI1/VI2, không PRACTICE/HOMEWORK — vì
+  act trong tay 2 bàn không còn biết mình có act con; hàng TEXT|VOICE thì vẫn hiện mà **rỗng ruột**;
+- options riêng từng act con (Đợt 147) không chạy trong trận (`viewKeyOf` luôn ra null);
+- Apply trong trận **lưu đè act thật bằng bản đã bị tước 3 bộ gợi ý kia**.
+
+⭐ Vì một bàn KHÔNG BAO GIỜ tự trả lời được "act con thuộc về act nào", `core/engine.js` có
+**`subActOwner()`** — một định nghĩa duy nhất cho "act của chính ván này" = `libAct` khi chơi đơn,
+**`fight.ctl.matchAct()`** khi đang đấu. `subActSource()`, `applySubActSelection()` và `viewAct` của
+panel Options đều đi qua nó. Thêm chế độ mới sau này thì **liệt kê hết các câu engine hỏi `libAct`** rồi
+tự trả lời "trong chế độ đó, ai là `libAct`" — đó chính là chỗ Đợt 181 hụt.
+⚠️ Act **đã convert** trong trận: đổi act con phải đi qua `applySubActSelection()` (ghi lựa chọn lên act
+GỐC rồi convert lại), vì nội dung act convert đã nướng cứng một bộ gợi ý — chỉ "lưu là VI1" thì hàng nút
+nhảy còn game đứng yên.
+
 **Chạy được là nhờ `startGame()` giữ mọi trạng thái trong closure** → gọi 2 lần vào 2 div là xong.
 Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ danh sách này khi thêm bất cứ thứ gì dùng chung:
 

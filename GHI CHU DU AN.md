@@ -8,6 +8,109 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 181 (17/8/2026) — 🐞 VÀO FIGHT MODE LÀ MẤT SẠCH ACT CON: KHÔNG CÒN ENG1/ENG2/VI1/VI2, KHÔNG CÒN PRACTICE/HOMEWORK
+⭐ CÓ SỬA CORE (`core/engine.js` · `core/fight.js`). Không đụng template nào.
+🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/subact-modes-test.html` — **20/20 đạt**, và có **ĐỐI CHỨNG NGƯỢC
+đo trên chính code cũ** (cất bản vá bằng `git stash`, chạy lại y hệt lưới đó: code cũ **hỏng đúng 7
+phép**).
+✅ **COMMIT `977ec67` + PUSH + LIVE.** Pages build **đúng commit** (deployment `5945023320`, latest build
+`status: built`, sha `977ec67…` — không tin mỗi mã 200, vì Pages trả 200 kèm nội dung CŨ khi build hỏng),
+và đối chiếu **2/2 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`sed 's/\r$//'` cả hai phía
+vì Windows checkout ra CRLF còn Pages phục vụ LF): `engine.js` `93b3b1cc…`, `fight.js` `d54abccb…` ⇒ code
+đang chạy trên live **giống từng byte** với code vừa đo 20/20.
+
+### 1. Thầy hỏi (17/8/2026)
+> "Kiểm tra xem việc chuyển template trong chế độ đơn/fight/showdown đã cho phép chuyển tự do cho cả
+> TEXT-VOICE và các con của chúng trong options trong mọi template chưa? VD từ Anagram có full mọi act,
+> chuyển tạm sang Type the answer thì bấm options có chọn được 2 act voice và 4 act text không."
+
+### 2. Đo trước khi sửa — và câu trả lời KHÔNG như nhau cho 3 chế độ
+Dựng lưới `scratch/subact-modes-test.html`: một act WORDS thật (4 bộ gợi ý `variants` ENG1/ENG2/VI1/VI2,
+2 bộ có clip `voiceVariants` ENG1/ENG2) + một act QUIZ mang 2 nửa `contentSets` PRACTICE/HOMEWORK. Lưới
+**bấm nút thật** (MODE → Fight → Start fight, Template → Type the answer, Options → Text/Voice) rồi đếm
+nút trong panel, chứ không gọi thẳng hàm nào.
+
+| Phép đo (code CŨ) | Hàng PRACTICE/HOMEWORK | Con của TEXT | Con của VOICE |
+|---|---|---|---|
+| A1 đơn · anagram | — | ENG1,ENG2,VI1,VI2 ✔ | ENG1,ENG2 ✔ |
+| A2 đơn · → Type the answer | — | ENG1,ENG2,VI1,VI2 ✔ | ENG1,ENG2 ✔ |
+| **A3 fight · anagram** | — | **trống** 🔴 | **trống** 🔴 |
+| **A4 fight · → Type the answer** | — | **trống** 🔴 | **trống** 🔴 |
+| A5/A6 showdown (cả 2) | — | ENG1,ENG2,VI1,VI2 ✔ | ENG1,ENG2 ✔ |
+| B1/B2 đơn · quiz 2 nửa | PRACTICE/HOMEWORK ✔ | — | — |
+| **B3/B4 fight · quiz 2 nửa** | **mất hẳn hàng** 🔴 | — | — |
+| B5 showdown · quiz 2 nửa | PRACTICE/HOMEWORK ✔ | — | — |
+| C2/C4/C6/C7 fight · CHỌN act con rồi Apply | **không có nút để mà chọn** 🔴 | | |
+
+⇒ **Đơn: RỒI. Showdown: RỒI. Fight: CHƯA** — và chưa cả khi **không** đổi template, tức trận đấu bị khoá
+cứng vào đúng act con đang chọn lúc bấm vào Fight. Tệ thêm: hàng **TEXT|VOICE vẫn hiện trong Fight nhưng
+rỗng ruột** — đúng cái "nút chết" mà LUẬT OPT-IN Đợt 143 sinh ra để chặn.
+
+### 3. Gốc lỗi — trận đấu chỉ cầm bản act ĐÃ BẸP
+Hai chỗ, một nguyên nhân:
+1. `engine.js` trao cho `startFight()` biến **`activity`** = `resolveActivity(libAct)` — bản đã **tước
+   `variants`/`contentSets`** (core/content-view.js). Act vào trận không còn biết mình có act con.
+2. `fight.js` gọi `startGame(boardEls[i], actFor(i), { fight })` **không kèm `base`**, nên trong engine
+   mỗi bàn có `libAct === originAct ===` bản sao đông cứng ⇒ `subActSource()` (Đợt 154) **không còn cửa
+   nào** hỏi ngược về act gốc, trả lời "act này không có act con".
+
+⭐ Soi ra thêm **một lỗi ngầm chưa ai gặp**: `ctl.applyOptions()` gọi `saveActivity(activity)` — mà
+`activity` khi ấy là **bản đã bẹp**. Tức mở Options trong một trận đấu rồi Apply là **ghi đè lên act
+thật trong thư viện một bản đã mất 3 bộ gợi ý kia**. Bản vá xoá luôn đường này.
+
+### 4. Cách vá — trận đấu là "nhà thứ hai" của act, nên phải cầm ĐÚNG thứ single mode cầm
+- `engine.js`: `startFight(root, **libAct**, { onExit, base: originAct })`.
+- `fight.js`: trận **tự** `resolveActivity()` **MỘT lần** (`playAct`) để dựng 2 bàn; `activity` giữ
+  nguyên là act thư viện — Apply ghi và LƯU đúng act thật. Hai tên, không được đổi chỗ:
+  **`playAct` = thứ 2 bàn CHƠI · `activity` = thứ Options GHI VÀO**.
+  (Vẫn đúng luật "2 bàn dùng chung một bộ item object" — resolve một lần nên `_fightOrder` của
+  "same letters" vẫn chạy; và bàn resolve lại là ca IDENTITY nên không đẻ bản sao thứ hai.)
+- `ctl.matchAct()` MỚI; engine thêm `subActOwner()` (một định nghĩa duy nhất cho "act của chính ván
+  này"), `subActSource()` và `applySubActSelection()` đều hỏi qua nó ⇒ **ngoài trận không đổi một byte**.
+- Panel Options dùng `viewAct` cho `viewKeyOf`/`optionsForView`/`storeViewOptions` ⇒ **options riêng của
+  từng act con (Đợt 147) nay chạy trong Fight y hệt single**; Apply trong trận có thêm cờ `replace`
+  đúng luật "bộ options của view thay thế chứ không trộn".
+- Act **ĐÃ CONVERT** trong trận: Apply đi qua `applySubActSelection()` → ghi lựa chọn lên **act GỐC** rồi
+  `doSwitchTemplate()` convert lại (nhánh fight sẵn có) → `restartMatch()`. Vì nội dung act convert đã
+  **nướng cứng** một bộ gợi ý, chỉ "lưu là VI1" thì hàng nút nhảy mà game đứng yên.
+
+### 5. Đã tự test — 20 phép, có ĐỐI CHỨNG NGƯỢC
+`scratch/subact-modes-test.html` (không lên git vì `scratch/` nằm trong `.gitignore`). Nhóm C không chỉ
+đếm nút mà **bấm chọn act con → Apply → bấm Play → đọc chữ đang hiện trên CẢ HAI khung**:
+
+| Nhóm | Code CŨ | Code ĐÃ VÁ |
+|---|---|---|
+| A (6 phép, hàng act con) | 2 hỏng (A3, A4) | 6/6 ✔ |
+| B (5 phép, hàng 2 nửa) | 2 hỏng (B3, B4) | 5/5 ✔ |
+| C1 đơn · chọn VI1 | VI1 ✔ (kèm TIMER riêng của VI1 = Count down) | VI1 ✔ |
+| **C2 fight · chọn VI1** | **không có nút VI1** 🔴 | **VI1 + VI1** ✔ (2 khung, kèm TIMER riêng của VI1) |
+| C3 đơn · chọn HOMEWORK | HOMEWORK ✔ | HOMEWORK ✔ |
+| **C4 fight · chọn HOMEWORK** | **không có nút** 🔴 | **HOMEWORK + HOMEWORK** ✔ |
+| C5 đơn · →TTA · chọn VI1 | VI1 ✔ | VI1 ✔ |
+| **C6 fight · →TTA · chọn VI1** | **không có nút** 🔴 | **VI1 + VI1** ✔ |
+| **C7 fight · →TTA · chọn HOMEWORK** | **không có nút** 🔴 | **HOMEWORK + HOMEWORK** ✔ |
+
+Và **NHÌN TẬN MẮT** (`?demo=fight` + ảnh chụp): trong trận, panel Options hiện đủ `TEXT | VOICE` +
+`ENG1 ENG2 VI1 VI2` **cùng lúc** với nhóm FIGHT CONTENT / ROUND RULE / SPEED BONUS, panel không vỡ layout
+(vẫn cuộn trong khung như Đợt 140 đã tính cho chiều cao hẹp của fight). Tiện thể màn READY của trận nay
+cũng đọc đúng `... - ENG1` như single mode (`subActLabel()` sống lại theo).
+
+### 6. BÀI HỌC
+**Một tính năng "mở ra chế độ thứ hai" thì mọi câu hỏi về act phải hỏi đúng NGƯỜI GIỮ act của chế độ
+đó.** Fight đưa cho mỗi bàn một bản sao đã bẹp — hoàn toàn đúng cho việc CHƠI — nhưng bốn thứ khác vẫn
+âm thầm hỏi bản sao ấy những câu chỉ act thật trả lời được (có act con nào? view key là gì? lưu vào
+đâu?). Không có lỗi nào nổ; panel chỉ **thiếu** một hàng, và Apply thì **lưu nhầm**. Chốt: khi thêm một
+chế độ mới, liệt kê hết những câu engine hỏi `libAct` rồi tự trả lời "trong chế độ này, ai là `libAct`".
+
+### 7. VIỆC ĐANG CHỜ (Đợt 181)
+1. Thầy chơi thử trên myActivity thật: vào Fight với act WORDS đủ bộ → Options phải chọn được 4 act text
+   + 2 act voice, và với act QUIZ/READING ACT phải có hàng PRACTICE/HOMEWORK.
+2. ✅ XONG — LIVE đã xác nhận (deployment `5945023320`, 2/2 mã băm khớp, xem đầu đợt).
+3. Còn treo từ trước: 9/17 template chưa mở Showdown (lý do từng cái ghi ở Đợt 178), 14/17 chưa mở
+   Fight; chưa từng test trên Firestore THẬT.
+
+---
+
 ## Đợt 180 (17/8/2026) — 🐞 SHOWDOWN: XEM CẢ LỚP RA 30 EM CHO MỘT LỚP 15 EM (mỗi em lặp 2 lần) + % TRONG Ô RANK + TITLE HẾT LẶP TÊN LỚP
 ⭐ CÓ SỬA CORE (`showdown-setup.js` · `showdown-review.js` · `app.css`). Không đụng template nào.
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/showdown-dupe-test.html` — **19/19 đạt**, và có **ĐỐI CHỨNG NGƯỢC
