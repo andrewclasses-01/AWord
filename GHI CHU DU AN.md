@@ -8,6 +8,159 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 174 (17/8/2026) — ⭐⭐ SHOWDOWN: NÚT X ĐỎ TRẢ ĐỘI VỀ + ⭐⭐⭐ TÍNH NĂNG MỚI "TIME EACH ROUND" (đồng hồ từng lượt học sinh) + RÀ ĐƯỜNG ĐỒNG BỘ TEMPLATE/STYLE CỦA myActivity
+⭐ CÓ SỬA CORE (`showdown-setup.js` · `showdown.js` · `engine.js` · `options-panel.js` · `app.css`)
+**+ 3 file game** (`quiz.js` · `type-the-answer.js` · `anagram.js`).
+🟢 ĐÃ TỰ TEST TRÊN TRÌNH DUYỆT THẬT (bàn thử mới `scratch/round-test.html` + Firestore giả) **và đã
+NHÌN BẰNG MẮT trên Chrome thật** — ảnh chụp bắt được 1 lỗi mà mọi phép đo báo "đạt" (xem mục 5).
+⬜ CHƯA COMMIT — chờ thầy chốt.
+
+### 1. Thầy giao 3 việc (17/8/2026)
+1. Bảng cột đội: đội đã chọn rồi vẫn phải **chọn lại đội khác chưa ai lấy**; và **thêm dấu X đỏ ở góc
+   trên bên phải cột đội của máy mình** để **hủy đội** (có pop-up xác nhận), hủy xong đội đó hiện như
+   chưa ai chọn và máy khác lấy được.
+2. **Time each round** trong Options (chỉ khi đang Showdown — thầy chốt): None / Count up / Count down
+   + ô chỉnh thời gian, bố trí y như thanh Timer. Ngoài None thì **tên học sinh xuống ngay trên cụm
+   ‹ ›**, chỗ tên cũ thành **đồng hồ giây** (1–59 rồi mới 1:00, 1:01…), **đồng hồ tổng dời xuống cạnh
+   nút Menu** (hoặc cạnh nút bàn phím nếu có). Count down thêm **thanh thời gian kiểu Whack-a-mole**;
+   hết giờ = **coi như sai**, báo sai, trừ điểm, và sang câu nếu bật auto next. Thầy chốt thêm: **auto
+   next TẮT thì khóa câu lại, thầy tự bấm ▷**. Thời gian từng lượt phải **ghi vào Show answers**: tổng
+   cạnh tên, và thời gian từng câu ở từng câu.
+3. myActivity: **đồng bộ thêm cả Template và Style** (thầy chưa thử kỹ, muốn chắc chắn là có).
+
+### 2. Việc 1 — nút X đỏ (`core/showdown-setup.js` + `core/app.css`)
+Ô góc trên-phải mỗi cột nay nói **ba** chuyện thay vì một: cột trống = dấu tick rỗng · cột **máy khác
+đã lấy** = dấu ✗ mờ, bấm không được (giữ nguyên từ Đợt 159) · cột **máy này đang giữ** = **✗ ĐỎ** →
+hỏi xác nhận *"Release Team 1? Another screen can take it."* → nhả đội.
+`cancelMyTeam()` làm 3 việc theo đúng thứ tự: (a) xoá claim trong bản sao `setup` để cột **hiện ra là
+trống NGAY** (đợi Firestore vòng về mới vẽ thì dấu ✗ còn nằm trên đội vừa nhả); (b) **xoá luôn pick**
+nếu máy này đang chơi chính đội đó — để lại thì lần "Start again" sau tự vào Showdown với đội đã trả;
+(c) **ghi Firestore** (`releaseMyClaim`, bắn-rồi-quên như mọi đường nhả claim khác).
+⚠️ Trước đợt này, cách duy nhất bỏ tích là **bấm lại dấu tick**: im lặng, tức khắc, và **không đụng tới
+Firestore** — nên đội đã bấm Ready vẫn bị giữ, tức là **tàng hình với mọi máy khác suốt 12 giờ TTL**,
+không màn hình nào nói gì.
+📌 Việc "chọn lại đội khác" **vốn đã chạy** (bấm tick cột khác là `claimedTeam` chuyển, Ready sẽ tự nhả
+claim cũ) — đợt này chỉ kiểm chứng lại, không phải sửa.
+
+### 3. Việc 2 — TIME EACH ROUND (hợp đồng đầy đủ ở `core/HUONG DAN CORE.md`, mục cùng tên)
+Chia việc **y hệt Time cost**: engine giữ đồng hồ + thanh + sổ thời gian; template giữ định nghĩa "xong
+lượt" (`ui.roundDone()`) và "hết giờ mất gì" (`ui.setRoundTimeout(fn)`).
+- **Options**: ô mới `Time each round` (None · Count up · Count down + `makeTimeStepper` 3..599s), chỉ
+  dựng khi `showdown: true` — hệt cách nhóm Fight chỉ hiện khi đang có trận. Ngoài Showdown bảng
+  Options **y như cũ** (đã đo: 4 nhãn cũ, không thừa nút nào).
+- **Bố cục** khi bật: tên xuống `.aw-navstack` trên cụm ‹ ›; đồng hồ tổng xuống `.aw-bottombar-left`
+  **sau nút bàn phím**; thanh `.aw-roundbar` xanh → cam ≤50% → đỏ ≤20% (ngưỡng theo **phần trăm** chứ
+  không phải 30s/10s như Whack-a-mole — vòng chỉ 15–30s thì mốc 30s sẽ cam ngay từ khung hình đầu).
+  ⭐ **SỬA 174b theo thầy (17/8, ngay sau khi xem bản đầu)**: *"cả số giây + thanh thời gian đều cùng
+  nằm trên 1 hàng và cùng hàng với số điểm"*. Bản đầu cho thanh **một hàng riêng full-width** dưới
+  topbar — nhìn ra như một mảng khung thừa và ăn mất ~2cqw chiều cao của game. Nay **Count down** gom
+  `[số giây][thanh][điểm]` vào CHÍNH hàng topbar bằng `.aw-roundrow` (`flex:1 1 auto` để điểm vẫn sát
+  mép phải) — đúng dáng `.aw-wam-topbar` của Whack-a-mole, và **không tốn thêm một pixel chiều cao nào**
+  (đo lại: playArea 477px, 3 tâm hàng của số/thanh/điểm trùng nhau ở y=49). **Count up** không có thanh
+  nên số giây **vẫn nằm giữa** ô định vị tuyệt đối của Đợt 159 (không lệ thuộc bề rộng điểm) như cũ.
+- **Định dạng số đúng lời thầy**: dưới 60 giây in trần ("58"), từ 60 mới "1:00" — đo thật: `1:02 → 1:00
+  → 58`.
+- **Show answers**: tổng thời gian của em đứng **trước** cặp ✓/✗ cạnh tên; thời gian từng câu bám đuôi
+  câu hỏi. Cả hai **tự dựng từ chính các dòng review của em đó** nên không thể lệch nhau.
+- **Hết giờ**: mỗi template một dáng (chi tiết + lý do ở HUONG DAN CORE) — Quiz đứng yên chờ ▷ (đúng ý
+  thầy), Type the answer tự đi tiếp (game này xưa nay tự đi tiếp khi chấm xong), Anagram tách 2 nhánh
+  theo họ chấm điểm.
+
+### 3b. ⭐ SỬA 174c THEO THẦY (17/8, sau khi xem bản 174b) — cỡ chữ + bảng kết quả
+1. **Tên học sinh to bằng chế độ None** (3.6cqw, trước bị thu còn 2.6cqw để tiết kiệm chiều cao —
+   thầy chốt tên là thứ cả lớp nhìn nên phải giữ cỡ). Kèm **đẩy khối nội dung lên**: `.aw-stage-inner`
+   bớt `padding-bottom` còn 0.6cqw và `.aw-playarea` thêm `margin-bottom:1.4cqw` — vùng chơi hụt đi một
+   chút nên nội dung (căn giữa/đáy) **trôi LÊN**, chừa khoảng thở cho dòng tên. Đo: khe từ đáy ô đáp án
+   tới đỉnh tên **39px**. ⚠️ Lần đầu em đặt margin **ÂM** — sai dấu: margin âm làm flex item được cấp
+   THÊM chiều cao, nội dung tụt XUỐNG sát tên hơn (đo được vùng chơi đè lên tên 17px). Cả 2 luật đều
+   gói trong `:has(.aw-navstack)` nên **mọi game khác không đổi một pixel**.
+2. **Bảng Show answers to lên ~35%** (thầy: *"font text cho mọi nội dung lớn, rõ ràng hơn, hiện tại bị
+   bé quá"*): tên 1.75→**2.5cqw**, ✓/✗ 1.5→**2.2cqw**, câu hỏi 1.35→**2cqw**, ô đáp án 1.3→**1.9cqw**,
+   số thứ tự 1.3→**1.8cqw**. Danh sách vốn **tự cuộn** nên chiều cao chưa bao giờ là lý do phải để nhỏ.
+3. **Tên lớp/đội lên tiêu đề**: `SHOWDOWN - A1C / TEAM 1`, điểm đội (`3/6`) sang ngay cạnh, và **xoá
+   hẳn hàng tiêu đề phụ** bên trong danh sách (`.aw-sd-rv-head/-team/-total`) — trước nó lặp lại tên đội
+   lần hai và ăn mất đúng chỗ cần cho chữ to.
+4. **Xếp hạng**: nhiều câu đúng hơn đứng trên; bằng nhau thì **thời gian ngắn hơn đứng trên**. Gom số
+   liệu của từng em TRƯỚC rồi mới sắp rồi mới vẽ, nên thứ tự luôn khớp con số in ra. Em **chưa từng đo
+   thời gian** (chơi lúc tắt đồng hồ) xếp **DƯỚI** em có đo khi bằng điểm — "không đo được" không phải
+   là "làm nhanh". Đã nghiệm bằng dữ liệu giả 3 em cùng 2 đúng: 4s → 9s → chưa đo.
+5. **Thời gian từng câu ra sát phải cụm ô kết quả**, **màu đen đậm** (#10151b) thay xám nhạt, cột rộng
+   cố định để các số thẳng hàng; game tắt đồng hồ thì ô này `:empty` nên **biến mất hẳn**, không chiếm
+   chỗ.
+
+### 4. ⭐ LỖ THẬT BẮT ĐƯỢC LÚC TEST — Apply ở màn READY không dựng lại bố cục
+`roundTimer` là option **CẤU TRÚC**: engine đọc 1 lần lúc mount vì nó quyết định chỗ đứng của tên/đồng
+hồ/thanh. Mà luật cũ ở màn READY là "không restart, options ăn khi bấm Play" — nên chuỗi thao tác THẬT
+của thầy (dựng đội → Ready → engine restart → màn READY → mở Options bật Time each round → Apply →
+bấm Play) sẽ ra **không có đồng hồ lượt nào cả**, im lặng. Vá: ở màn READY, nếu **MODE** đổi thì
+`replayCurrent()` (rơi lại đúng màn READY, chỉ khác là bố cục đã theo lựa chọn mới). Đổi **số giây** thì
+không cần — `roundTotal()` đọc sống.
+
+### 5. ⚠️ LỖI CHỈ ẢNH CHỤP BẮT ĐƯỢC — ô điểm nhảy sang TRÁI
+`.aw-topbar` là `justify-content: space-between`. Rút đồng hồ tổng ra khỏi hàng thì ô điểm còn **một
+mình** và bị đẩy về **mép trái** (chỗ đồng hồ vẫn đứng). Mọi phép đo đều đạt (phần tử có, hiện, đúng
+chữ, đúng class) — chỉ ảnh chụp trên Chrome thật mới lộ. Vá bằng
+`.aw-topbar.aw-timer-external:not(.has-inline){justify-content:flex-end}` (loại trừ Open the box vì
+hàng đó là GRID, `justify-content` mang nghĩa khác). **Đúng lại bài học Đợt 143: thứ gì làm dịch pixel
+thì phải NHÌN.**
+
+### 6. Đã tự test — `scratch/round-test.html` (bàn thử mới, có importmap Firestore/classes giả)
+`?tpl=quiz|anagram|tta &mode=none|countUp|countDown &secs= &off= &auto= &amode= &lives= &pick=0|1`.
+- **Count down (Quiz, 5s)**: 1,2s → "4" + thanh 75,8% · hết giờ → clock 0, thanh 0% đỏ, **4/4 ô khoá**,
+  ô đúng có ✓, 3 ô sai mờ, **không ghim ✗ lên ô nào**, đứng yên ở câu 1, ▷ vẫn bấm được (auto next tắt).
+- **Trả lời trước khi hết giờ** → đồng hồ **đóng băng** và 2,5s sau vẫn y nguyên (đếm ngược không nổ).
+- **Auto next bật** → hết giờ tự sang câu 2, **tên đổi sang em thứ 2**, đồng hồ mở lại từ đầu.
+- **Trừ điểm**: `pointsOff` 5 → điểm **-5**, mất 1 tim. (⚠️ Lần đầu ra **-100** vì act thử thiếu
+  `optVer` nên `options-migrate.js` nhân 20 — không phải lỗi tính năng; bàn thử nay đóng dấu `optVer`.)
+- **Đóng băng khi mở ☰ Menu**: giữ "4" suốt 2,2s rồi Resume → chạy tiếp "3".
+- **Count up**: không có thanh, đếm lên 2 → 5, không khoá gì, đóng băng khi trả lời.
+- **Định dạng phút**: `secs=62` → 1:02 → 1:00 → 58.
+- **Show answers (Quiz)**: tổng theo em `5.4s / 8.0s / 6.0s`, từng câu `1.4s · 4.0s · 4.0s · 4.0s ·
+  3.0s · 3.0s`, câu hết giờ in **"No answer"**, gom đúng theo 3 em.
+- **Type the answer**: hết giờ → ô nhập khoá + `is-wrong`, mở đáp án ("went"), mất tim, tự sang câu; sau
+  3 câu hết giờ điểm **-9/6** (đúng 3 × minusAmount 3). Thứ tự góc dưới-trái đo được:
+  `[☰ Menu][nút bàn phím][đồng hồ tổng]` — đúng yêu cầu.
+- **Anagram**: "On submit" hết giờ → điểm **-2**, mất tim, lộ "ELEPHANT", nút Submit tắt, ▷ bật, chạm ô
+  chữ **không ăn** nữa. "Letters with bonus" hết giờ → **không trừ điểm** (đúng thiết kế), mất tim, khoá
+  ô chữ. Show answers ra "No answer" + đáp án đúng, kèm 4.1s mỗi từ.
+- **Ngoài Showdown (`pick=0`)**: bảng Options **không có** ô Time each round; bố cục y hệt cũ; kể cả act
+  có sẵn `roundTimer:"countDown"` cũng **không có gì chạy** (5,5s sau ô đáp án vẫn mở).
+- **Nút X đỏ**: tick → seat thành `is-cancel` + cột `is-claimed` → Ready → chơi Team 1 → mở lại bảng →
+  ✗ đỏ + tooltip "Release this team…" → bấm → pop-up đúng câu → Release → cột trống trở lại, Ready mờ,
+  **pick bị xoá**, và đọc lại Firestore giả: `claims` **không còn `sdt_1`** → tick Team 2 → Ready → đang
+  chơi Team 2. Cả vòng đúng.
+- **Nhìn bằng mắt (Chrome thật)**: Quiz count down · Type the answer count up · Anagram submit · màn
+  Show answers — dấu tiếng Việt của "Nguyễn Ngọc Ẳnh" ở dòng tên mới **không bị xén**, thanh thời gian
+  không đè lên game, chữ số thời gian trong review đọc được. 0 lỗi console ở mọi bước.
+
+### 7. Việc 3 — myActivity đồng bộ Template/Style: ĐÃ CÓ SẴN, đã chứng minh chạy
+Không phải viết mới. Đường dây có đủ **cả hai phía** và đợt này đo lại từng mắt xích:
+- **AWord phát tín hiệu** (đo bằng cách chặn `console.log` rồi bấm đúng nút trong trang): bấm Style →
+  `MYACT:AW:STYLE:classroom` · Apply trong Options → `MYACT:AW:OPT:{...}` · chọn game trong Template →
+  `MYACT:AW:TPL:quiz`. Đủ **3/3**.
+- **AWord nhận lệnh** (`window.__awordBridge`, thứ myActivity gọi trên các cột kia):
+  `setTheme('forest')` → **true**, `applyOptions({lives:4})` → **true**, `switchTemplate('anagram')` →
+  **true**, và kiểm chứng bằng class thật trên `.aw-stage`: `theme-forest` + `act-anagram`. Lệnh phát
+  lại **không đẻ marker mới** (chống dội `awSyncMute` chạy đúng).
+- **myActivity nhận** (`mirrorAwordState`, `src/renderer/js/browser.js`): map đủ `TPL→switchTemplate`,
+  `STYLE→setTheme`, `OPT→applyOptions`, gửi cho **mọi cột khác** (`othersOf(side)`), và listener
+  `console-message` được gắn cho **mọi cột** (`wvs.forEach((wv, side) => setup(wv, side))`) nên đồng bộ
+  **hai chiều**, cột nào đổi cũng lan.
+- Cũng đã loại trừ nghi vấn "đổi template làm đổi URL rồi myActivity mirror URL đè lên": AWord chỉ đổi
+  địa chỉ khi **mở act** (`main.js` dòng 870), "Change template" không đụng vào address bar.
+⚠️ Giới hạn CÒN LẠI (không phải lỗi, nhưng nên biết): cột nhận **phải đang mở một act AWord** — bridge
+chỉ tồn tại trong trang act. Cột đang ở **thư viện** AWord thì chờ 6 giây rồi bỏ qua, im lặng.
+
+### 8. VIỆC ĐANG CHỜ
+- ⬜ **Thầy tự chơi thử thật trên myActivity nhiều cột**: (a) X đỏ ở cột 1 → cột 2 phải thấy đội đó
+  sáng lên và lấy được; (b) Time each round cả 2 kiểu, nhất là **đếm ngược trên màn 86"** — xem cỡ chữ
+  đồng hồ và độ dày thanh thời gian có hợp không; (c) đổi Template/Style ở 1 cột xem 3 cột kia có theo.
+- ⬜ Nghe thử: hết giờ hiện dùng **đúng âm "sai" của từng game**, chưa có tiếng chuông riêng báo hết
+  giờ — nếu thầy muốn tiếng riêng thì thêm sau (1 chỗ, `roundTimeUp` của engine).
+- ⬜ Chưa thử 20 học sinh 5 đội với Time each round (chỉ thử đội 3 em).
+
+---
+
 ## Đợt 173 (15/8/2026) — ⭐ VÁ LỖI THẬT: BẢNG OPTIONS TRONG FIGHT MODE HIỆN SAI TRẠNG THÁI SHUFFLE QUESTIONS (và mọi option khác nếu có cờ tương tự) — KHÔNG PHẢI mất lưu, chỉ hiện sai
 Sửa `core/fight.js` (thêm accessor) + `core/engine.js` (dùng accessor đó khi đang Fight). Không đụng file
 nào khác. 🟢 ĐÃ TỰ TEST qua `scratch/tta-fs-test.html` (Fight thật, round-trip tích/bỏ tích + Apply +

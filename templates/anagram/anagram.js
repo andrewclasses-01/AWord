@@ -517,6 +517,11 @@ const anagramTemplate = {
       hadMistake: false,
       graded: false,      // submit mode: locked, Submit pressed — reveal may still be mid-stagger
       revealed: false,    // submit mode: the staggered per-position reveal has FINISHED
+      // ⭐ Đợt 174 — the per-round clock ran out on this word. Its OWN flag in
+      // both modes, and it has to be: in the bonus family "this word is done"
+      // means `correct === true`, so recording a timeout any other way would
+      // have counted it as solved.
+      timedOut: false,
       correct: null,
       points: 0
     }));
@@ -735,11 +740,18 @@ const anagramTemplate = {
     ui.setIdleGuard?.(() =>
       busy || finished || fightLocked() || doneCheck(state[index]) ||
       !!(voiceAudioEl && !voiceAudioEl.paused));
+    // ⭐ TIME EACH ROUND (Đợt 174) — what running out of time costs, which only
+    // this template can say. See roundTimeUp() further down.
+    ui.setRoundTimeout?.(roundTimeUp);
 
     renderLives();
     render();
 
-    function doneCheck(s) { return isBonusFamily ? s.correct === true : s.graded === true; }
+    // ⭐ Đợt 174 — `timedOut` counts as DONE in both modes: the word is over, the
+    // pupil cannot go on with it, and every caller of this (the idle guard, Next,
+    // "have we finished the last word?", the review) has to agree on that or the
+    // game would sit waiting for a word nobody can still play.
+    function doneCheck(s) { return s.timedOut === true || (isBonusFamily ? s.correct === true : s.graded === true); }
 
     function scoreNow() {
       const base = isBonusFamily
@@ -1039,7 +1051,9 @@ const anagramTemplate = {
     // to know whether to spring the tile back to the origin row.
     function bonusPick(tileId, tileEl) {
       const st = state[index];
-      if (st.correct === true || st.used[tileId]) return false;
+      // `st.timedOut` (Đợt 174): the word is over, so the letters are dead — the
+      // same lock `st.correct === true` gives a solved word.
+      if (st.correct === true || st.timedOut === true || st.used[tileId]) return false;
       const it = items[index];
       const expected = it.letters[st.nextPos];
       const picked = it.letters[tileId];
@@ -1109,6 +1123,7 @@ const anagramTemplate = {
       const mult = mode === "bonusMinus" ? bonusMult : 2;   // "bonus" keeps the old fixed x2
       const earned = n * (perfect ? mult : 1);
       st.correct = true;               // word is DONE — points deferred, see below
+      ui.roundDone?.();                // TIME EACH ROUND (Đợt 174) — the pupil's turn ends the instant the word is solved
       // No render() here: every origin tile is already .is-used and every
       // result tile already .is-blue via the incremental patches each
       // successful pick applied — a full render() would just replay the
@@ -1146,6 +1161,57 @@ const anagramTemplate = {
       else maybeAutoNext(finishDelay);   // Đợt 143 — "Auto next question"
     }
 
+    /**
+     * ⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 174, teacher 17/8/2026).
+     * Registered with ui.setRoundTimeout(); the engine calls it when the
+     * per-round count down hits 0 with the word still open.
+     *
+     * ⚠️ THIS GAME HAS TWO SCORING FAMILIES AND THE TIMEOUT MEANS A DIFFERENT
+     * THING IN EACH — copying one branch to the other would be wrong twice:
+     *   · "On submit" — a word is graded as a whole. A timeout is exactly a
+     *     wrong submission: `graded`, `correct:false`, one `pointsOff`, one
+     *     life, and the answer line reveals the word.
+     *   · "Letters with bonus" / "…and minus" — points are earned per LETTER as
+     *     they are tapped, and a word can only ever end SOLVED (a wrong tap is
+     *     refused, not counted). So there is nothing to grade wrong: the word
+     *     simply never pays out — `st.points` stays 0, which is the whole loss
+     *     of every letter still unplaced — plus a life, like any imperfect word.
+     *     ⚠️ NO `pointsOff` here: `pointsOff` is 0 outside submit mode by
+     *     construction (see its own line), and "bonusMinus" has already charged
+     *     `letterPenalty` for each wrong tap live. Charging again at the buzzer
+     *     would be the double-deduction the teacher ruled out at Đợt 143.
+     *
+     * ⚠️ No `render()`: the tiles already show what the pupil placed, and a
+     * re-render would replay the whole card's entrance animation (core/HUONG DAN
+     * CORE.md's "BẪY THỨ 5"). The lock comes from `st.timedOut` inside
+     * bonusPick/submitPickAt instead.
+     */
+    function roundTimeUp() {
+      const st = state[index];
+      const it = items[index];
+      if (!it || dead || finished || busy || fightLocked()) return;
+      if (doneCheck(st)) return;                 // already solved/submitted/timed out
+      st.timedOut = true;
+      if (!isBonusFamily) {
+        st.graded = true;
+        st.correct = false;
+        st.revealed = true;
+        if (pointsOff) penalty += pointsOff;
+        // The answer line is this mode's own reveal — patched in place, exactly
+        // as the wrong-word branch of doSubmit() does it.
+        if (revealSlotEl) revealSlotEl.textContent = allCaps ? it.word.toUpperCase() : it.word;
+        updateSubmitButtonState();
+      }
+      const outOfLives = loseLife();
+      ui.setScore(scoreNow());
+      anagramSound.wrongPick();
+      showBigMark(false);
+      updateNav();
+      if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
+      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, 1500);
+      else maybeAutoNext(1500);   // stays put unless "Auto next question" is on — the teacher's choice
+    }
+
     // ----- interaction: submit mode -----
     // Plain tap: always the leftmost empty slot (unchanged behaviour).
     function submitPick(tileId, tileEl) {
@@ -1160,7 +1226,7 @@ const anagramTemplate = {
     // caller springs the tile back to the origin row on false.
     function submitPickAt(tileId, tileEl, slotIdx) {
       const st = state[index];
-      if (st.graded || st.used[tileId]) return false;
+      if (st.graded || st.timedOut === true || st.used[tileId]) return false;   // Đợt 174 — see doneCheck
       if (slotIdx == null || slotIdx < 0 || st.placed[slotIdx] != null) return false;
       const it = items[index];
       anagramSound.place();   // same "drop" as bonus mode's correct pick — both modes tap the origin row alike
@@ -1562,6 +1628,12 @@ const anagramTemplate = {
       const it = items[index];
       busy = true;
       st.graded = true;
+      // TIME EACH ROUND (Đợt 174): the pupil's turn ends at Submit — their clock
+      // freezes on this reading (which is what Show answers prints), and a Count
+      // down can no longer fire over a word already handed in. Called BEFORE the
+      // ~2s staggered reveal below on purpose: the reveal is the game answering,
+      // not the pupil still working.
+      ui.roundDone?.();
       // No render() here: every origin tile is already .is-used (Submit only
       // enables once every slot is filled), so nothing there needs to change.
       // Just disable the button and let Next reflect "graded" — the reveal
@@ -2320,7 +2392,11 @@ const anagramTemplate = {
         const partial = started ? s.placed.map(id => id != null ? it.letters[id] : "_").join("") : null;
         return {
           question: it.clue || "Unscramble the word",
-          answered: doneCheck(s),
+          // Đợt 174 — a word the clock took with NOTHING placed is not an
+          // answer: the review prints "No answer" rather than an empty string.
+          // One the pupil had started still shows how far they got, which is the
+          // more useful reading and matches what the board looked like.
+          answered: doneCheck(s) && (s.correct === true || started),
           yourText: s.correct === true ? it.word : partial,
           yourCorrect: s.correct === true,
           correctText: it.word,

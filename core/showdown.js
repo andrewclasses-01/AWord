@@ -198,14 +198,21 @@ export function buildShowdownReview(host, { members, teamName, review }) {
   const list = el("div", "aw-sd-rv");
   const rows = review || [];
 
-  const teamRight = rows.filter(r => r.answered && r.yourCorrect).length;
-  const head = el("div", "aw-sd-rv-head");
-  const teamEl = el("div", "aw-sd-rv-team");
-  teamEl.textContent = String(teamName || "Team").toUpperCase();
-  head.append(teamEl, el("div", "aw-sd-rv-total", `${teamRight}/${rows.length}`));
-  list.append(head);
+  // ⭐ Đợt 174c (teacher, 17/8/2026) — the team's own header line is GONE from
+  // here: the class and the team now ride on the panel's SHOWDOWN title
+  // ("SHOWDOWN - B2A / TEAM 1", built in core/engine.js's showReview), and the
+  // team total sits beside it. Two headers, one under the other, said the same
+  // thing twice and ate the height the bigger text below needs.
 
-  members.forEach((m, mi) => {
+  // ⭐ Đợt 174c — RANKED, not in team order (teacher: "có tổng số câu đúng nhiều
+  // hơn đứng trên, có tổng số câu đúng bằng nhau thì thời gian làm ngắn hơn
+  // đứng trên"). Everything each pupil owns is gathered FIRST, then sorted, then
+  // drawn — so the ✓ count and the time the sort reads are the very numbers
+  // printed on that pupil's line and cannot disagree with the order.
+  // ⚠️ A pupil with no timed rounds sorts as if they took no time at all, which
+  // would put them above a faster-but-timed pupil on a tie. `hasTime` keeps them
+  // BELOW instead: no measurement is not a good measurement.
+  const blocks = members.map(m => {
     // Every question that fell to this member — decided by `memberAt`, the SAME
     // call the engine used to put a name over the frame during the game. Asking
     // one rule twice is what keeps the review from ever disagreeing with what
@@ -213,14 +220,34 @@ export function buildShowdownReview(host, { members, teamName, review }) {
     // second copy of the turn rule, free to drift.
     const mine = [];
     rows.forEach((r, i) => { if (memberAt(members, i) === m) mine.push({ r, n: i + 1 }); });
-    if (!mine.length) return;
+    const timed = mine.filter(x => typeof x.r.roundMs === "number");
+    return {
+      m, mine,
+      right: mine.filter(x => x.r.answered && x.r.yourCorrect).length,
+      hasTime: timed.length > 0,
+      ms: timed.reduce((a, x) => a + x.r.roundMs, 0)
+    };
+  }).filter(b => b.mine.length);
 
-    const right = mine.filter(x => x.r.answered && x.r.yourCorrect).length;
+  blocks.sort((a, b) => {
+    if (b.right !== a.right) return b.right - a.right;          // more correct first
+    if (a.hasTime !== b.hasTime) return a.hasTime ? -1 : 1;      // a measured time beats none
+    if (a.hasTime && a.ms !== b.ms) return a.ms - b.ms;          // then the quicker of the two
+    return members.indexOf(a.m) - members.indexOf(b.m);          // still tied: the team's own order
+  });
+
+  blocks.forEach(({ m, mine, right, hasTime, ms }) => {
     const block = el("div", "aw-sd-rv-block");
 
     const who = el("span", "aw-sd-rv-who");
     who.textContent = m.name;
     const tally = el("span", "aw-sd-rv-tally");
+    // ⭐ Đợt 174 — this pupil's TOTAL time, when the round clock was running
+    // (core/engine.js stamps `roundMs` per row, exactly the way the names above
+    // are stamped). It is the same number the ranking above sorted on — one
+    // measurement, printed and sorted from the same place. Absent when the option
+    // was off, so a Showdown played without it looks as it did before.
+    if (hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(ms)));
     tally.append(
       el("span", "is-ok", `${icons.check} ${right}`),
       el("span", "is-bad", `${icons.cross} ${mine.length - right}`)
@@ -247,6 +274,15 @@ export function buildShowdownReview(host, { members, teamName, review }) {
       }
       body.append(ans);
       line.append(body);
+      // ⭐ Đợt 174c — how long THIS question took, at the FAR RIGHT of the row,
+      // just past the answer blocks (teacher: "chuyển thời gian làm của câu ra
+      // đứng ngay bên cạnh phải của cụm ô kết quả"). It was riding on the clue
+      // before, where it read as part of the question. A third flex child of the
+      // row, NOT a third grid track of `.aw-sd-rv-body`: the body's 1.4fr/1fr
+      // split is measured for clue-vs-answers and must not move, and a row with
+      // no time simply leaves this column empty.
+      line.append(el("span", "aw-sd-rv-qtime",
+        typeof r.roundMs === "number" ? fmtRoundMs(r.roundMs) : ""));
       block.append(line);
     });
 
@@ -254,6 +290,22 @@ export function buildShowdownReview(host, { members, teamName, review }) {
   });
 
   host.append(list);
+}
+
+/**
+ * ⭐ Đợt 174 — a round's duration, for the review only.
+ * Under a minute it is tenths of a second ("12.4s"): rounds are short and a bare
+ * "12s" hides the difference between the pupil who answered at once and the one
+ * who nearly ran out. Past a minute it becomes m:ss.d, the same shape the
+ * summary screen already uses for the whole game (`fmtSecsParts`, core/utils.js)
+ * — not that helper itself, because this needs one string, not its parts.
+ */
+export function fmtRoundMs(ms) {
+  const s = Math.max(0, Number(ms) || 0) / 1000;
+  if (s < 60) return s.toFixed(1) + "s";
+  const m = Math.floor(s / 60);
+  const rest = s - m * 60;
+  return `${m}:${rest < 10 ? "0" : ""}${rest.toFixed(1)}s`;
 }
 
 function mark(cls, glyph, text) {

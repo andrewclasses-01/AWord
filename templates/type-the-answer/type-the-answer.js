@@ -166,7 +166,11 @@ const ttaTemplate = {
       return () => {};
     }
 
-    const state = items.map(() => ({ typed: null, graded: false, correct: null }));
+    // `timedOut` (Đợt 174): graded WRONG because the per-round clock ran out, not
+    // because the pupil typed something wrong. It scores exactly like any other
+    // wrong answer; the flag exists so the review can print "No answer" instead
+    // of the empty box the pupil left behind.
+    const state = items.map(() => ({ typed: null, graded: false, correct: null, timedOut: false }));
     let index = 0;
     let finished = false;
     let dead = false;   // "this mount was thrown away" — set ONLY by cleanup() (Đợt 114)
@@ -318,6 +322,9 @@ const ttaTemplate = {
       const inp = root.querySelector(".aw-tta-input");
       return !!(inp && inp.disabled);
     });
+    // ⭐ TIME EACH ROUND (Đợt 174) — what "out of time" costs, the one thing the
+    // engine cannot decide for this game. See roundTimeUp() below.
+    ui.setRoundTimeout?.(roundTimeUp);
 
     // Fit on first layout, when the web font is ready, and on resize.
     let rafFit = 0;
@@ -537,6 +544,10 @@ const ttaTemplate = {
       st.typed = typed;
       st.graded = true;
       st.correct = it.acceptedAnswers.some(a => normalize(a) === normalize(typed));
+      // TIME EACH ROUND (Đợt 174): this pupil's turn ends here, so their clock
+      // freezes at this reading — which is both what Show answers prints for the
+      // question and what stops a Count down firing over an answer already in.
+      ui.roundDone?.();
 
       input.disabled = true;
       syncSubmitEnabled();   // graded -> Submit off (outside + keyboard)
@@ -619,6 +630,57 @@ const ttaTemplate = {
       }
       if (st.correct) ttaSound.correct(); else ttaSound.wrong();   // real Wordwall TTA pack
       flyMark(st.correct, input);
+    }
+
+    /**
+     * ⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 174, teacher 17/8/2026).
+     * Registered with ui.setRoundTimeout(); the engine calls it when the
+     * per-round count down reaches 0 with the question still open.
+     *
+     * The teacher's rule is "coi như sai" — count it wrong — so this walks the
+     * SAME path submitAnswer() walks for a wrong answer: graded, input locked,
+     * the ✗ + answer-key reveal, the wrong sound, a life, the minus points, and
+     * the same auto-advance afterwards. Two deliberate differences:
+     *   · `typed` stays empty and `timedOut` is set, so the review prints
+     *     "No answer" instead of an empty box (see finish());
+     *   · the reveal is shown whenever the option allows it, without
+     *     submitAnswer's `!st.correct` half of the test — a timed-out question
+     *     is never correct, and the class still needs to see the answer.
+     *
+     * ⚠️ NO "wait for the teacher to press ▷" here, unlike Quiz. This game has
+     * always moved on by itself the moment a question is graded (teacher's spec,
+     * 3/8/2026 — it has no "Auto next question" option at all), and a timeout is
+     * a grade. Making this one case sit still would be the inconsistency, not
+     * the rule.
+     */
+    function roundTimeUp() {
+      const it = items[index];
+      const st = state[index];
+      if (!it || st.graded || finished || dead || fightLocked()) return;
+      st.typed = "";
+      st.graded = true;
+      st.timedOut = true;
+      st.correct = false;
+      input.disabled = true;
+      syncSubmitEnabled();
+      updateNav();
+      if (andrewGlowing) {
+        andrewGlowing = false;
+        revealWrap.classList.remove("is-andrew");
+        kbd.refresh();
+      }
+      const revealShown = opt.showAnswerWhenWrong !== false;
+      applyGradeVisuals(st, it, revealShown);
+      const outOfLives = loseLife();
+      clearAutoTimer();
+      const delay = revealShown ? 2600 : (outOfLives ? 1500 : 1400);
+      if (outOfLives) {
+        autoTimer = setTimeout(() => finish("gameover"), delay);
+      } else if (state.every(s => s.graded)) {
+        autoTimer = setTimeout(() => finish("complete"), delay);
+      } else if (index < total - 1) {
+        autoTimer = setTimeout(() => { if (!finished) goNext(); }, delay);
+      }
     }
 
     // FIGHT MODE — the match says the round is settled for both teams, so the
@@ -972,8 +1034,12 @@ const ttaTemplate = {
         const s = state[i];
         return {
           question: it.prompt,
-          answered: s.graded,
-          yourText: s.graded ? s.typed : null,
+          // Đợt 174 — a question the clock took is NOT "answered": it still
+          // scores as wrong (see `wrongGraded` below, which asks `s.graded`),
+          // but the review has to read "No answer" rather than show the empty
+          // box the pupil left.
+          answered: s.graded && !s.timedOut,
+          yourText: (s.graded && !s.timedOut) ? s.typed : null,
           yourCorrect: s.correct === true,
           correctText: it.acceptedAnswers[0],
           src: it   // `items` is a shallow copy, so `it` IS the content object

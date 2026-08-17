@@ -1149,6 +1149,66 @@ phát âm, không phải audio. Và phải **duyệt đệ quy `content`**, đ�
 (17 template đặt tên khác nhau: items / questions / words / cards / rounds.bonus.prompts…). Công cụ
 đã viết sẵn: `tools-voice-cleanup.html` (gốc repo, không link từ đâu).
 
+## ⭐⭐ TIME EACH ROUND — ĐỒNG HỒ CỦA TỪNG HỌC SINH (Đợt 174, 17/8/2026)
+
+Đồng hồ THỨ HAI, đo **một lượt của một em**, khác hẳn Timer (đo cả ván).
+**CHỈ CHẠY KHI ĐANG SHOWDOWN** — ngoài Showdown không có khái niệm "lượt của ai", nên ô này thậm chí
+không được dựng trong bảng Options (`buildOptionsBody(..., { showdown })`, `core/options-panel.js`).
+
+**2 khoá options**: `roundTimer` = `"none" | "countUp" | "countDown"` · `roundSeconds` (3..599, mặc định 20).
+
+**Chia việc — GIỐNG HỆT Time cost, cố ý**: ENGINE giữ đồng hồ + thanh thời gian + sổ ghi thời gian;
+TEMPLATE giữ định nghĩa "em ấy xong lượt" và "hết giờ thì mất gì" (chỉ template mới biết thế nào là một
+câu trả lời). Ba API, đều no-op khi tắt nên template nối một lần rồi thôi:
+
+| API | Ai gọi | Nghĩa |
+|---|---|---|
+| `ui.roundDone()` | template | "lượt của em này xong" → đồng hồ ĐÓNG BĂNG ở số đó; số đó là thời gian in trong Show answers, và là thứ chặn đếm ngược nổ trên một câu đã trả lời |
+| `ui.setRoundTimeout(fn)` | template (1 lần lúc mount) | engine gọi `fn()` đúng lúc đếm ngược về 0 mà lượt còn mở |
+| `ui.roundTimerMode()` | template | `"none"/"countUp"/"countDown"` nếu cần biết |
+
+**Engine tự lo** (không template nào phải biết):
+- Mở lượt mới **tại `ui.setNav({index})`** — KHÔNG phải `ui.itemChanging` (cái đó chạy sớm 130ms, lúc câu
+  cũ mới bắt đầu mờ đi; tính giờ từ đó là tính tiền cả đoạn hoạt cảnh). Gọi lại cùng index là no-op, nên
+  template cứ gọi `setNav` thoải mái như xưa.
+- **Cộng dồn theo ITEM, không theo lượt xem**: quay lại câu cũ bằng ‹ thì thời gian cộng thêm, không
+  reset — số in ra là "câu này đã ngốn bao lâu".
+- **Đóng băng khi ☰ Menu hoặc bảng công cụ đang mở** (không thì đếm ngược nổ sau lưng bảng Options).
+- Ghi `r.roundMs` vào từng dòng `review` lúc `finish()` (cùng chỗ, cùng kiểu với `stampReview`).
+
+**Chỗ đứng khi bật** (174b, thầy chốt sau khi xem bản đầu): **Count down** gom `[số giây][thanh][điểm]`
+vào **CHÍNH hàng topbar** (`.aw-roundrow`, `flex:1 1 auto`, đúng dáng `.aw-wam-topbar`) — đừng cho thanh
+một hàng riêng, vừa ra như khung thừa vừa ăn mất chiều cao của game. **Count up** không có thanh nên số
+giây vẫn ở ô giữa tuyệt đối (Đợt 159). Cả hai kiểu: tên học sinh xuống trên cụm ‹ ›, đồng hồ tổng xuống
+cạnh ☰ Menu (sau nút bàn phím nếu template có).
+
+⚠️⚠️ **`roundTimer` là option CẤU TRÚC — engine đọc MỘT LẦN lúc mount.** Nó quyết định chỗ ĐỨNG của 3
+thứ vừa kể. Vì thế Apply ở **màn READY** — nơi luật chung là
+"không restart, options ăn khi bấm Play" — **phải restart** cho riêng option này (`replayCurrent()`), xem
+`applyBtn.onclick` trong `core/engine.js`. Bỏ nhánh đó đi là bấm Play xong **không có đồng hồ lượt nào
+cả** mà màn hình không nói gì. (Chỉ MODE mới cần; đổi số giây thì `roundTotal()` đọc sống.)
+
+⚠️ **"Hết giờ = sai" mỗi template một dáng, đừng chép máy móc** (đã cài cho 3 template có Showdown):
+- **Quiz**: `st.timedOut`, khoá ô, vẽ đáp án đúng qua chính `addBadges` (không ghim ✗ lên ô nào vì em
+  không chọn gì), trừ điểm, mất tim, **ĐỨNG YÊN chờ thầy bấm ▷** trừ khi bật Auto next (thầy chốt).
+- **Type the answer**: chấm sai + mở đáp án + trừ + mất tim, rồi **tự sang câu** — game này XƯA NAY tự đi
+  tiếp mỗi khi một câu được chấm (không có ô Auto next), bắt riêng ca hết giờ đứng lại mới là lệch.
+- **Anagram**: HAI HỌ CHẤM ĐIỂM ⇒ hai nhánh. "On submit" = coi như nộp sai (`pointsOff`, lộ đáp án).
+  "Letters with bonus/minus" = **không có gì để chấm sai**: từ đó đơn giản **không được điểm nào**
+  (`st.points` giữ 0) + mất tim; **KHÔNG trừ thêm** vì bonusMinus đã trừ từng cú chạm sai rồi (luật cấm
+  trừ 2 lần, Đợt 143).
+- Cả 3 đều thêm cờ `timedOut` RIÊNG chứ không mượn giá trị sẵn có: ở Anagram "xong" nghĩa là
+  `correct === true`, mượn là thành **giải đúng**; ở Quiz `chosen` là **chỉ số ô**, nhét `-1` vào là
+  review in ra `undefined`.
+
+⚠️ Dòng review của câu hết giờ để `answered:false` (in "No answer") **nhưng vẫn tính là sai** khi cộng
+điểm — hai thứ đó đọc từ 2 khoá khác nhau, đừng gộp.
+
+⚠️ **BẪY BỐ CỤC ĐÃ CẮN NGAY ĐỢT NÀY (ảnh chụp bắt được, số đo thì không)**: `.aw-topbar` là
+`justify-content: space-between`. Rút đồng hồ ra khỏi hàng thì **ô điểm còn lại một mình và bị đẩy sang
+TRÁI** — mọi phép đo đều "đạt" (phần tử có, hiện, đúng chữ), chỉ có ảnh mới thấy số nằm sai bên. Vá bằng
+`.aw-topbar.aw-timer-external:not(.has-inline) { justify-content: flex-end }`.
+
 ## ⚠️ BẪY CSS (v0.9.1) — làm mờ "mọi thứ trừ một vùng"
 
 Muốn làm nổi 1 vùng và làm mờ phần còn lại thì luật làm-mờ phải dùng **con trực tiếp `>`**, không

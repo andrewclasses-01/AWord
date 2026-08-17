@@ -681,6 +681,12 @@ body {
 }
 .aw-rv-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2cqw; }
 .aw-rv-title { font-size: 2.4cqw; font-weight: 800; letter-spacing: 0.2cqw; color: #23303e; }
+/* ⭐ Đợt 174c — Showdown's team score, in the header line beside the title it
+   belongs to ("SHOWDOWN - B2A / TEAM 1 …… 4/6 ✕"). `flex:1` on the title is what
+   pushes this against the close button; without it `space-between` would strand
+   the score in the middle of the row. */
+.aw-rv-head > .aw-rv-title { flex: 1 1 auto; min-width: 0; }
+.aw-rv-sdtotal { flex: 0 0 auto; font-size: 2.4cqw; font-weight: 800; color: #23303e; margin-right: 1cqw; }
 .aw-rv-close { width: 4cqw; height: 4cqw; border: none; background: transparent; color: #6b7a90; cursor: pointer; border-radius: 1cqw; display: inline-flex; align-items: center; justify-content: center; }
 .aw-rv-close svg { width: 2.6cqw; height: 2.6cqw; }
 .aw-rv-close:hover { background: #eef3f9; color: #23303e; }
@@ -3292,6 +3298,101 @@ body {
 }
 .aw-top-showdown:empty { display: none; }
 
+/* ⭐⭐ TIME EACH ROUND (Đợt 174) — the pupil's own clock.
+   With it on, the top row's centre carries the ROUND clock and the pupil's name
+   drops to its own line directly above ‹ › (teacher's layout, 17/8/2026). The
+   name node is MOVED, not copied, so everything below it here is about the seat
+   it lands in, not about a second element.
+   The clock inherits `.aw-top-centre.is-showdown`'s absolute centring — it is
+   the same seat the name used to hold, so it is centred on the FRAME and cannot
+   be nudged by the score's width changing. */
+/* ⚠️⚠️ MEASURED ON A REAL SCREENSHOT, NOT PREDICTED (Đợt 174). `.aw-topbar` is
+   `justify-content: space-between` over its IN-FLOW children. Move the clock out
+   to the bottom bar and the score is the only one left — and `space-between`
+   duly parks that single child at the LEFT edge, where the clock used to be.
+   Every measurement passed (the score element existed, was visible, held the
+   right text); only the picture showed the number sitting on the wrong side of
+   the frame. `.aw-top-centre.is-showdown` is absolutely positioned, so it is not
+   a flow child and cannot hold the seat for it.
+   `:not(.has-inline)` keeps Open the box out of this: that layout is a GRID with
+   its own tracks (see `.aw-topbar.has-inline.aw-timer-external` above), where
+   justify-content means something else entirely. */
+.aw-topbar.aw-timer-external:not(.has-inline) { justify-content: flex-end; }
+.aw-round-clock {
+  min-width: 0;
+  text-align: center;
+  font-size: 3.6cqw;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;   /* 8→9 must not shift the digits sideways */
+  color: var(--aw-fg, #23303e);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+/* The bottom row's centre seat becomes two stacked lines. `.aw-bottombar`'s
+   `:nth-child(2) { justify-self:center }` still lands on this wrapper, so the
+   nav stays exactly as centred as it was. */
+.aw-navstack { display: flex; flex-direction: column; align-items: center; gap: 0; }
+/* ⭐ Đợt 174c — SAME SIZE AS IN "None" (teacher: "tăng size tên học sinh ở
+   countdown và countup lên bằng size khi ở chế độ Non time each round"). Đợt 174
+   had shrunk it to 2.6cqw down here to save the play area some height; the
+   teacher's call is that the name is the cue the whole class reads, so it keeps
+   its 3.6cqw wherever it stands, and the height comes from somewhere else —
+   see `.aw-stage-inner:has(.aw-navstack)` below.
+   ⚠️ The padding/negative-margin pair on `.aw-top-showdown` MUST stay: it is
+   what stops Ẳ being shaved (that rule's own note). Nothing to re-add here — the
+   size is simply not overridden any more. */
+/* ⭐ Đợt 174c — "đẩy khối nội dung lên một chút để vị trí hiển thị tên này cân
+   đối và đẹp hơn". The name at full size is ~5cqw tall, so the bottom block
+   (name + ‹ ›) is nearly twice the height of the plain nav row, and the game
+   above it looked pushed down into it. Two small moves, measured on screen:
+   the stage's own bottom padding comes off (the name's descender space already
+   separates it from the frame edge), and the play area gives up a sliver of
+   height at the bottom so its centred content rides UP rather than sitting on
+   top of the name.
+   `:has()` scopes both to a round-timer play — every other game keeps the
+   padding and spacing it has always had, byte for byte. */
+.aw-stage-inner:has(.aw-navstack) { padding-bottom: 0.6cqw; }
+.aw-stage-inner:has(.aw-navstack) > .aw-playarea { margin-bottom: 1.4cqw; }
+
+/* COUNT DOWN's time bar. Same green → orange → red idiom as Whack-a-mole's
+   (teacher: "tương tự thanh thời gian phía trên của Whack a mole"), owned here
+   so all three Showdown templates get it without a line of their own.
+   ⭐ Đợt 174b — THE NUMBER AND THE BAR SHARE ONE LINE, AND THAT LINE IS THE
+   SCORE'S (teacher's correction: "cả số giây + thanh thời gian đều cùng nằm
+   trên 1 hàng và cùng hàng với số điểm"). Đợt 174's first build gave the bar a
+   full-width row of its own between the topbar and the play area; it read as a
+   second piece of chrome and cost the game ~2cqw of height for nothing.
+   `.aw-roundrow` takes the slack in the top row so the score still sits hard
+   against the right edge — the same arrangement `.aw-wam-topbar` uses. */
+.aw-roundrow {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; gap: 1cqw;
+  padding-right: 1.6cqw;      /* a clear gap before the score, like .aw-wam-topbar's */
+}
+/* In the row the number is a chip beside the bar, not the centrepiece it is in
+   Count up — sized against the score it now sits level with (2.2cqw), a little
+   bigger because it is the one the class is watching. `min-width` holds the
+   bar's left edge still while the digits change width (2 chars → 1). */
+.aw-roundrow .aw-round-clock {
+  flex: 0 0 auto; font-size: 2.6cqw; min-width: 4.4cqw; text-align: left;
+}
+.aw-roundbar {
+  flex: 1 1 auto; min-width: 0; position: relative;
+  height: 1.2cqw; border-radius: 1cqw;
+  background: rgba(0, 0, 0, .18);
+  overflow: hidden;
+}
+.aw-roundbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 1cqw;
+  background: linear-gradient(90deg, #6cd06a, #3fae5a);
+  /* The width is rewritten every 100ms, so the transition only has to smooth
+     between two ticks — long enough and it would lag the number beside it. */
+  transition: width .1s linear, background .3s ease;
+}
+.aw-roundbar-fill.is-orange { background: linear-gradient(90deg, #ffb24d, #ff8c1a); }
+.aw-roundbar-fill.is-red    { background: linear-gradient(90deg, #ff7a5c, #e0453f); }
+
 /* ----- 2. the setup panel, three screens (inside .aw-tool-panel, so PX) -----
    ⚠️ ONE FIXED FOOTPRINT FOR EVERY SCREEN (teacher, 14/8/2026: "size của các
    bảng đều to bằng nhau, dù nội dung có ít hơn"). `.aw-sd-body` states its own
@@ -3651,6 +3752,17 @@ body {
 .aw-sd-tick svg { width: 66%; height: 66%; }
 .aw-sd-tick:hover { border-color: #2ec27e; color: #2ec27e; }
 .aw-sd-tick.is-on { background: #2ec27e; border-color: #2ec27e; color: #fff; }
+/* ⭐ Đợt 174 — the RELEASE ✗ on the column THIS screen holds. Deliberately NOT
+   filled red at rest: the column it sits in is already the green `.is-claimed`
+   one, and a solid red block in the corner of a green column reads as an error
+   state rather than "tap here to hand this team back". Outlined at rest, filled
+   on hover/press — the same escalation the green hover above already uses, so
+   both seats behave alike and only the colour says which is which.
+   ⚠️ `.is-on` above is now unreachable (a team this screen holds wears
+   `.is-cancel` instead) — kept because it costs one line and an older cached
+   build of showdown-setup.js still asks for it. */
+.aw-sd-tick.is-cancel { border-color: #e5484d; color: #e5484d; background: #fff; }
+.aw-sd-tick.is-cancel:hover { background: #e5484d; border-color: #e5484d; color: #fff; }
 /* ⭐ Đợt 159 — chips INSIDE a column are more compact than the loose ones in the
    pool, and that is arithmetic rather than taste: a column has to hold TEN
    (MAX_PER_TEAM) without scrolling. Measured at the 2-team size, which is the
@@ -3715,25 +3827,46 @@ body {
    EXACTLY on that edge (0.0px of headroom) — fine for these names, one taller
    diacritic away from being shaved. */
 .aw-sd-rv { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1cqw; padding-top: 0.4cqw; }
-.aw-sd-rv-head {
-  flex: 0 0 auto; display: flex; align-items: baseline; justify-content: space-between;
-  border-bottom: 0.25cqw solid #e3e9f1; padding-bottom: 0.6cqw;
-}
-.aw-sd-rv-team { font-size: 2cqw; font-weight: 800; color: #2f6fed; letter-spacing: .08em; line-height: 1.35; }
-.aw-sd-rv-total { font-size: 2cqw; font-weight: 800; color: #23303e; }
+/* ⛔ Đợt 174c — `.aw-sd-rv-head` / `-team` / `-total` REMOVED. The class + team
+   now ride on the panel's own SHOWDOWN title ("SHOWDOWN - B2A / TEAM 1", see
+   `.aw-rv-title` + `.aw-rv-sdtotal` further up) and the team score with them;
+   a second header line under the first repeated the team's name and ate the
+   height the bigger text below needs. */
 .aw-sd-rv-name {
   display: flex; align-items: baseline; gap: 1cqw;
-  background: #eef2f7; border-radius: 0.8cqw; padding: 0.45cqw 1cqw; margin-bottom: 0.5cqw;
+  background: #eef2f7; border-radius: 0.8cqw; padding: 0.5cqw 1cqw; margin-bottom: 0.5cqw;
 }
-.aw-sd-rv-who { font-size: 1.75cqw; font-weight: 800; color: #23303e; line-height: 1.35; }
-.aw-sd-rv-tally { display: flex; gap: 0.9cqw; font-size: 1.5cqw; font-weight: 800; }
+/* ⭐ Đợt 174c — EVERY SIZE IN THIS LIST WENT UP ~30% (teacher: "sử dụng font
+   text cho mọi nội dung lớn, rõ ràng hơn. Hiện tại bị bé quá"). The list scrolls
+   (`.aw-sd-rv` is `overflow-y:auto`), so height was never the constraint that
+   made these small — they were simply sized for a printed table rather than for
+   a class reading them off a projector. */
+.aw-sd-rv-who { font-size: 2.5cqw; font-weight: 800; color: #23303e; line-height: 1.35; }
+.aw-sd-rv-tally { display: flex; gap: 1cqw; font-size: 2.2cqw; font-weight: 800; }
 .aw-sd-rv-tally .is-ok { color: #2ec27e; }
 .aw-sd-rv-tally .is-bad { color: #e03131; }
-.aw-sd-rv-tally svg { width: 1.4cqw; height: 1.4cqw; vertical-align: -0.2cqw; }
-.aw-sd-rv-q { display: flex; gap: 0.7cqw; padding: 0.3cqw 0 0.3cqw 1cqw; }
-.aw-sd-rv-num { flex: 0 0 2.2cqw; font-size: 1.3cqw; font-weight: 800; color: #a9b2c0; line-height: 1.6; }
+.aw-sd-rv-tally svg { width: 2cqw; height: 2cqw; vertical-align: -0.25cqw; }
+/* ⭐ Đợt 174 — the pupil's TOTAL round time, first in the tally row so the two
+   score marks stay where the eye already looks for them. Muted on purpose: it is
+   information, not a verdict, and the ✓/✗ beside it must stay the loud pair.
+   (It is also the number the list is RANKED on when two pupils tie — see
+   core/showdown.js.) */
+.aw-sd-rv-time { color: #7b8794; font-weight: 700; }
+.aw-sd-rv-q { display: flex; align-items: center; gap: 0.7cqw; padding: 0.35cqw 0 0.35cqw 1cqw; }
+.aw-sd-rv-num { flex: 0 0 3cqw; font-size: 1.8cqw; font-weight: 800; color: #a9b2c0; line-height: 1.6; }
 .aw-sd-rv-body { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.6cqw; align-items: center; }
-.aw-sd-rv-clue { font-size: 1.35cqw; color: #3d4852; line-height: 1.35; }
+.aw-sd-rv-clue { font-size: 2cqw; color: #3d4852; line-height: 1.35; }
+/* ⭐ Đợt 174c — that question's own time, at the FAR RIGHT of the row, past the
+   answer boxes (teacher's placement). BLACK, not the grey it was: on a white
+   sheet the grey read as a footnote, and this is a number the class compares.
+   `min-width` gives the column one width for every row so the times line up
+   under each other instead of ragged; `:empty` collapses it entirely for a game
+   played with the round clock off, so nothing reserves space for nothing. */
+.aw-sd-rv-qtime {
+  flex: 0 0 auto; min-width: 6cqw; text-align: right;
+  font-size: 1.9cqw; font-weight: 800; color: #10151b; white-space: nowrap;
+}
+.aw-sd-rv-qtime:empty { display: none; }
 .aw-sd-rv-ans { display: flex; gap: 0.5cqw; min-width: 0; }
 .aw-sd-rv-mk {
   flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: 0.4cqw;
@@ -3742,9 +3875,9 @@ body {
 .aw-sd-rv-mk.is-ok { background: #2ec27e; }
 .aw-sd-rv-mk.is-bad { background: #3d4852; }
 .aw-sd-rv-mkicon { flex: 0 0 auto; display: inline-flex; }
-.aw-sd-rv-mkicon svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-sd-rv-mkicon svg { width: 1.9cqw; height: 1.9cqw; }   /* Đợt 174c */
 .aw-sd-rv-mktxt {
-  min-width: 0; font-size: 1.3cqw; line-height: 1.35;
+  min-width: 0; font-size: 1.9cqw; line-height: 1.35;   /* Đợt 174c — up with the rest of the list */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   /* Answers are the teacher's own words, Vietnamese included — same clipped-ink
      leftover as .aw-top-showdown, same padding + cancelling-margin fix. */

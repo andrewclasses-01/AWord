@@ -281,6 +281,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // one THIS mount read — there is deliberately no second way to change it.
   const showdownPick = (tpl.showdownMode && !session && !fight) ? readPick() : null;
 
+  // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — a SECOND clock, one that
+  // belongs to the pupil whose turn it is rather than to the game.
+  //   options.roundTimer   "none" | "countUp" | "countDown"
+  //   options.roundSeconds the count-down's length (ignored by count up)
+  //
+  // ⚠️ SHOWDOWN ONLY, and that is a deliberate narrowing, not a shortcut
+  // (teacher's answer, 17/8/2026: "chỉ khi chạy showdown"). Outside Showdown
+  // there is no "round belongs to somebody" to time: the option is not even
+  // built into the Options panel (see buildOptionsPanel below), so a saved
+  // `roundTimer` on an act played in single mode reads as "none" here and this
+  // whole feature costs the other 14 templates — and these three outside
+  // Showdown — nothing at all.
+  //
+  // ⚠️ READ ONCE, AT MOUNT. Everything it decides is STRUCTURAL (where the name
+  // lives, where the whole-game clock lives, whether there is a bar under the
+  // top row), and the two things that change options — Options ▸ Apply and the
+  // myActivity bridge — both re-enter startGame() through replayCurrent(), so a
+  // change is picked up by the rebuild rather than by mutating a live layout.
+  const roundMode = showdownPick
+    ? (["countUp", "countDown"].includes(activity.options?.roundTimer) ? activity.options.roundTimer : "none")
+    : "none";
+  const roundOn = roundMode !== "none";
+  // Same clamp as the Options stepper (see core/options-panel.js). A default of
+  // 20s rather than the whole-game clock's 120: this one is one pupil, one
+  // question.
+  const roundTotal = () => Math.max(3, Math.min(599, Math.round(Number(activity.options?.roundSeconds)) || 20));
+
   // ---- myActivity multi-pane sync bridge (a NO-OP when running standalone) ----
   // When embedded in myActivity's 2-4 pane view, pane 0's Template / Options /
   // Style changes are mirrored to the other panes. We log a console marker on
@@ -382,7 +409,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // below and the long comment on `.has-inline` in core/app.css for why (this
   // row already carries the template's OWN per-box clock via `topbarMid`, and
   // the two used to visually collide once Timer was set to anything but None).
-  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : "") + (tpl.timerBesideMenu ? " aw-timer-external" : ""));
+  // ⭐ Đợt 174 — the whole-game clock ALSO leaves this row when a per-round clock
+  // is running (teacher: "Đồng hồ đếm xuôi/ngược tổng… được đưa vào bên cạnh nút
+  // Menu"). Two clocks side by side in one row is exactly the collision
+  // `tpl.timerBesideMenu` was invented for at Đợt 92 — this is the same move,
+  // decided per PLAY instead of per template, so the flag and the mode share one
+  // variable from here on and no `.aw-timer-external` rule has to learn about
+  // Showdown.
+  const timerOutOfTopbar = !!tpl.timerBesideMenu || roundOn;
+  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : "") + (timerOutOfTopbar ? " aw-timer-external" : ""));
   const timerEl = el("span", "aw-top-timer", "0:00");
   const scoreEl = el("span", "aw-top-score", `${icons.check} 0`);
   const topbarMid = tpl.inlineTimerBar ? el("div", "aw-topbar-mid") : null;
@@ -412,14 +447,27 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   //   other, and no template needed a single line changed for Showdown.
   const sloganSlot = (tpl.hasSloganSlot || showdownPick) ? el("span", "aw-top-slogan") : null;
   const showdownSlot = showdownPick ? el("span", "aw-top-showdown") : null;
+  // ⭐ Đợt 174 — the per-round clock takes the centre seat the NAME used to hold,
+  // and the name moves down over the ‹ › cluster (teacher's own layout). Both
+  // stay ONE node each, moved rather than duplicated: `paintShowdownName` keeps
+  // writing to the same `showdownSlot` wherever it ended up, so the name logic
+  // did not need a single line changed for this.
+  const roundClockEl = roundOn ? el("span", "aw-round-clock", "0") : null;
   let centreSlot = null;
   if (sloganSlot) {
     centreSlot = el("span", "aw-top-centre" + (showdownSlot ? " is-showdown" : ""));
     centreSlot.append(sloganSlot);
-    if (showdownSlot) centreSlot.append(showdownSlot);
+    if (showdownSlot && !roundOn) centreSlot.append(showdownSlot);
+    // ⭐ Đợt 174b (teacher, 17/8/2026) — COUNT DOWN keeps its number OUT of this
+    // centre seat: the seconds and the bar belong together on ONE line, sharing
+    // the score's row ("cả số giây + thanh thời gian đều cùng nằm trên 1 hàng và
+    // cùng hàng với số điểm"), so they are built into `.aw-roundrow` below
+    // instead. COUNT UP has no bar and nothing to pair with, so its number stays
+    // here, centred on the frame, where it was.
+    if (roundClockEl && roundMode !== "countDown") centreSlot.append(roundClockEl);
   }
   if (topbarMid) {
-    if (tpl.timerBesideMenu) topbar.append(topbarMid, scoreEl);
+    if (timerOutOfTopbar) topbar.append(topbarMid, scoreEl);
     else topbar.append(timerEl, topbarMid, scoreEl);
   } else if (livesSlot && centreSlot) {
     const topRight = el("div", "aw-top-right");
@@ -524,7 +572,44 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // wrapper level around Menu that no CSS depended on being bare).
   const kbdSlot = tpl.hasKeyboardToggle ? el("span", "aw-bottombar-extra") : null;
   if (kbdSlot) leftGroup.append(kbdSlot);
-  bottombar.append(leftGroup, navWrap, rightTools);
+  // ⭐ Đợt 174 — the whole-game clock, when a per-round clock has taken the top
+  // row. AFTER the keyboard toggle on purpose (teacher: "bên cạnh nút Menu, hoặc
+  // cạnh nút bàn phím nếu có bàn phím") — Type the answer is the one Showdown
+  // template with that button, and putting the clock between Menu and it would
+  // push the toggle away from the corner the teacher reaches for.
+  // `!tpl.timerBesideMenu`: that flag already appended it above; appending the
+  // same node twice would silently MOVE it, not duplicate it, so the guard is
+  // about intent rather than breakage.
+  if (roundOn && !tpl.timerBesideMenu) leftGroup.append(timerEl);
+  // The pupil's name rides directly above ‹ ›, as its own line in the bottom
+  // row's centre seat. A WRAPPER, not a fourth child: `.aw-bottombar` is a
+  // 3-track grid whose `:nth-child(1/2/3)` rules are what keep the nav truly
+  // centred, and a fourth child would silently unpick that (the same reasoning
+  // as `leftGroup` itself, added at Đợt 92).
+  const navHost = (roundOn && showdownSlot) ? el("div", "aw-navstack") : navWrap;
+  if (navHost !== navWrap) navHost.append(showdownSlot, navWrap);
+  bottombar.append(leftGroup, navHost, rightTools);
+
+  // COUNT DOWN only — the time bar, "tương tự thanh thời gian phía trên của
+  // Whack a mole": the same green → orange → red fill, owned by the engine so
+  // all three Showdown templates get it without a line of their own.
+  // ⭐ Đợt 174b — IT LIVES IN THE TOP ROW, beside the number it belongs to and
+  // on the same line as the score (teacher's correction after seeing 174's first
+  // build, which gave the bar a full-width row of its own under the topbar).
+  // That is the same shape Whack-a-mole's own inline bar has — clock, then bar
+  // taking the slack, then the score hard right — and it costs the play area no
+  // height at all, unlike the separate row it replaces.
+  const roundBar = roundMode === "countDown" ? el("div", "aw-roundbar") : null;
+  const roundBarFill = roundBar ? el("div", "aw-roundbar-fill") : null;
+  if (roundBar) roundBar.append(roundBarFill);
+  if (roundBar && roundClockEl) {
+    const roundRow = el("div", "aw-roundrow");
+    roundRow.append(roundClockEl, roundBar);
+    // FIRST in-flow child, whatever the row's shape already is: every branch
+    // above ends with the score (or the score's group) last, and prepending is
+    // the one move that cannot disturb which of those branches ran.
+    topbar.prepend(roundRow);
+  }
 
   inner.append(topbar, playArea, bottombar);
 
@@ -1207,6 +1292,110 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
   function stopIdleWatch() { if (idleId) clearInterval(idleId); idleId = null; }
 
+  // =============================================================
+  // TIME EACH ROUND (Đợt 174) — the pupil's own clock
+  // =============================================================
+  // DIVISION OF LABOUR, deliberately the same as Time cost's (see above): the
+  // ENGINE owns the clock, the bar and the bookkeeping; the TEMPLATE owns what
+  // "the pupil finished" and "the pupil ran out of time" MEAN, because only it
+  // knows what an answer is. Two one-liners are all a template needs:
+  //   • ui.roundDone()          "this pupil's turn is over" → the clock freezes
+  //                             at that reading, and that reading is what Show
+  //                             answers prints for the question
+  //   • ui.setRoundTimeout(fn)  fn() = "count this round wrong, now" (count down
+  //                             only). A template that never registers one
+  //                             simply keeps counting past the limit rather
+  //                             than doing something the engine invented.
+  //
+  // ⚠️ TIME IS BANKED PER ITEM, NOT PER VISIT. `roundMs[i]` accumulates, so
+  // walking back with ‹ and returning adds to that pupil's total instead of
+  // resetting it — the number in Show answers is "how long this question had",
+  // which is the only reading that survives the teacher navigating.
+  let roundIndex = -1;        // item the clock is timing (0-based), -1 = none yet
+  let roundStartedAt = 0;     // performance.now() of the running segment; 0 = not running
+  let roundId = null;         // the 100ms ticker — only ever exists while roundOn
+  let roundOver = false;      // this round is settled (answered, or timed out)
+  const roundMs = [];         // banked ms per item index
+  let roundTimeUp = null;     // template's timeout handler, via ui.setRoundTimeout
+
+  // Teacher's own spec: "chỉ cần hiển thị các số 1-59, khi sang giây tiếp theo
+  // mới hiển thị 1:00, 1:01" — bare seconds under a minute, m:ss from there on.
+  // Deliberately NOT core/utils.js's formatTime (which always prints 0:07): a
+  // round is normally under a minute, and "7" is read across a classroom faster
+  // than "0:07".
+  function roundFmt(secs) {
+    const v = Math.max(0, Math.floor(secs));
+    return v < 60 ? String(v) : `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
+  }
+  function roundLive() {
+    return (roundMs[roundIndex] || 0) + (roundStartedAt ? performance.now() - roundStartedAt : 0);
+  }
+  /** Close the running segment into the bank. Safe to call twice. */
+  function roundBank() {
+    if (!roundStartedAt || roundIndex < 0) { roundStartedAt = 0; return; }
+    roundMs[roundIndex] = (roundMs[roundIndex] || 0) + (performance.now() - roundStartedAt);
+    roundStartedAt = 0;
+  }
+  function roundPaint() {
+    if (!roundOn || !roundClockEl || roundIndex < 0) return;
+    const secs = roundLive() / 1000;
+    if (roundMode === "countUp") { roundClockEl.textContent = roundFmt(secs); return; }
+    const total = roundTotal();
+    const left = Math.max(0, total - secs);
+    // `ceil`: a round with 0.4s left still reads "1". Reaching "0" means the
+    // round really is over, which is the moment the bar empties too.
+    roundClockEl.textContent = roundFmt(Math.ceil(left));
+    if (roundBarFill) {
+      const pct = Math.max(0, Math.min(100, (left / total) * 100));
+      roundBarFill.style.width = pct + "%";
+      // PERCENTAGES, not Whack-a-mole's fixed 30s/10s marks: a round is usually
+      // 15-30 seconds long, so a 30-second "getting close" threshold would paint
+      // the whole bar orange from the first frame.
+      roundBarFill.classList.toggle("is-orange", pct <= 50 && pct > 20);
+      roundBarFill.classList.toggle("is-red", pct <= 20);
+    }
+  }
+  function roundTick() {
+    if (torndown || roundIndex < 0) return;
+    // FROZEN while the game is covered and cannot be played: ☰ Menu (which
+    // already freezes the whole-game clock, Đợt 91) and any open tool panel.
+    // Banking on the way in and restarting on the way out means a pause costs
+    // the pupil nothing at all — the alternative, letting a count down run out
+    // behind an Options panel the teacher opened, would mark the class wrong for
+    // something they could not even see.
+    if (menuEl || toolPanelEl) { roundBank(); return; }
+    if (!roundStartedAt && !roundOver) roundStartedAt = performance.now();
+    roundPaint();
+    if (roundMode !== "countDown" || roundOver) return;
+    if (roundLive() / 1000 < roundTotal()) return;
+    roundOver = true;
+    roundBank();
+    roundPaint();
+    // The template decides what "out of time" costs — see ui.setRoundTimeout.
+    try { roundTimeUp?.(); } catch (e) { console.warn("AWord: round timeout handler failed", e); }
+  }
+  /** A new item is on screen: bank the old round, open a fresh one. */
+  function roundBegin(index0) {
+    if (!roundOn || torndown) return;
+    const i = Math.max(0, Math.floor(Number(index0) || 0));
+    if (i === roundIndex) return;      // same item (templates call setNav a lot)
+    roundBank();
+    roundIndex = i;
+    roundOver = false;
+    roundStartedAt = performance.now();
+    if (roundBarFill) roundBarFill.classList.remove("is-orange", "is-red");
+    roundPaint();
+  }
+  /** The pupil's turn is over (they answered) — freeze the reading. */
+  function roundDone() {
+    if (!roundOn || roundOver || roundIndex < 0) return;
+    roundOver = true;
+    roundBank();
+    roundPaint();
+  }
+  function startRoundWatch() { if (roundOn && !roundId && !torndown) roundId = setInterval(roundTick, 100); }
+  function stopRoundWatch() { if (roundId) clearInterval(roundId); roundId = null; }
+
   function startTimerNow() {
     if (timerStarted) return;
     // Đợt 114 — SAME hole as Đợt 112, different door. A `manualTimerStart`
@@ -1260,6 +1449,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     startedAt = performance.now();   // baseline (kept sane even if a manual-start template never starts the clock)
     timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
     if (!tpl.manualTimerStart) startTimerNow();
+    // TIME EACH ROUND (Đợt 174) — started BEFORE mount(), and INDEPENDENTLY of
+    // the whole-game clock: the two are different options and a teacher may well
+    // run Timer = None with a per-round count down. mount() calls ui.setNav()
+    // for its first item, which is what opens round 1, so the watcher has to be
+    // alive by then.
+    startRoundWatch();
     cleanup = tpl.mount(playArea, activity, ui) || (() => {});
   }
   // ⚠️ Also kills the TIME COST watcher (Đợt 139). Every teardown path in this
@@ -1267,7 +1462,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // hitting 0, ui.finish() — so hanging the second interval off it is what
   // guarantees the idle clock can never outlive its own play (the Đợt 112/131
   // ghost-clock lesson, applied up front this time instead of after the bug).
-  const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; stopIdleWatch(); };
+  // ⚠️ Đợt 174 — and the ROUND watcher too, for the same reason: it is a third
+  // interval, and the Đợt 112/131 ghost-clock lesson says every one of them has
+  // to hang off the single teardown path everything already funnels through.
+  const stopTimer = () => { if (timerId) clearInterval(timerId); timerId = null; stopIdleWatch(); stopRoundWatch(); };
 
   // ----- Menu pause (Đợt 91, 8/8/2026) — freeze the shared clock while the ☰
   // Menu popup is open, so the visible time (and any countDown auto-submit)
@@ -1946,7 +2144,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       : null;
       buildOptionsBody(host, {
         tpl, draft, contentSwitch, contentSetSwitch, fight, onViewChange,
-        switchHost, selectors: selState, renderSwitches: !switchesBuilt
+        switchHost, selectors: selState, renderSwitches: !switchesBuilt,
+        // ⭐ Đợt 174 — "Time each round" is built only while a Showdown is
+        // actually running, the same way the Fight rows above are built only
+        // during a match: outside Showdown nobody owns a round, so the control
+        // would be the dead button the OPT-IN rule of Đợt 143 exists to prevent.
+        showdown: !!showdownPick
       });
       switchesBuilt = true;
     }
@@ -2023,6 +2226,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // restart — just apply and close; the options take effect on Play.
       const playing = !playOverlay.isConnected;
       if (playing) { closeToolPanel(false); replayCurrent(); return; }
+      // ⭐⭐ Đợt 174 — ONE EXCEPTION to "nothing restarts on the READY screen",
+      // and it was a real hole found by testing rather than a precaution.
+      // "Take effect on Play" holds for every option the game READS as it runs.
+      // `roundTimer` is not one: the engine reads it ONCE, at mount, because it
+      // decides where the pupil's name, the whole-game clock and the count-down
+      // bar physically live — and all of that chrome was built before this
+      // READY screen appeared. Applying it here used to leave the old layout AND
+      // a `roundMode` captured as "none", so pressing Play gave no round clock
+      // at all, with nothing on screen saying why. Rebuilding lands back on this
+      // same READY screen, so the only thing the teacher sees is the layout
+      // catching up with what they just chose.
+      // (Only the MODE: the count-down's length is read live by roundTotal(),
+      // so changing the seconds alone never needs this.)
+      if (showdownPick) {
+        const nextMode = ["countUp", "countDown"].includes(activity.options?.roundTimer)
+          ? activity.options.roundTimer : "none";
+        if (nextMode !== roundMode) { closeToolPanel(false); replayCurrent(); return; }
+      }
       // Đợt 154 — still on the READY screen: nothing restarts, so the title has
       // to be told that the sub-act under it may have just changed.
       refreshReadyTitle();
@@ -2425,6 +2646,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // way — the "số đổi mà màu không đổi" trap from core/HUONG DAN CORE.md, in a
     // louder form. Unset = ui.setScore, which is right for every other template.
     setScorePainter(fn) { scorePainter = typeof fn === "function" ? fn : null; },
+    // ----- TIME EACH ROUND (Đợt 174) — see the block above startTimerNow().
+    // All three are no-ops outside Showdown / with the option off, so a template
+    // wires them once and never has to ask which mode it is in.
+    //  • roundTimerMode()      "none" | "countUp" | "countDown"
+    //  • roundDone()           the pupil's turn is over → freeze their reading
+    //  • setRoundTimeout(fn)   fn() = "out of time: count this round wrong"
+    roundTimerMode: () => roundMode,
+    roundDone,
+    setRoundTimeout(fn) { roundTimeUp = typeof fn === "function" ? fn : null; },
     setScore(n) {
       // Positive score = GREEN, negative = RED WITH a leading "-" (teacher,
       // 11/8/2026 — previously the chip dropped the sign and relied on
@@ -2450,6 +2680,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // the match) — none of those opt into Showdown today, but a counter that
       // silently jumps to NaN would be a horrible way to find that out.
       if (typeof index === "number") paintShowdownName(index - 1);
+      // TIME EACH ROUND (Đợt 174) — the round opens HERE, at the swap, not at
+      // ui.itemChanging above it: itemChanging fires when the OLD item starts
+      // fading out (130ms early in Quiz), and a clock that starts before the
+      // question is readable charges the pupil for the animation. Same index,
+      // same source of truth as the name — roundBegin() ignores a repeat, which
+      // matters because templates call setNav on every state change, not only
+      // when they move.
+      if (typeof index === "number") roundBegin(index - 1);
       wireNav(navPrev, onPrev);
       wireNav(navNext, onNext);
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
@@ -2503,6 +2741,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // wrong. Templates were not asked to record any of this — the rotation is
       // a pure function of the item's index (see core/showdown.js).
       if (showdownPick) stampReview(reviewData, showdownPick.members);
+      // ⭐ Đợt 174 — and how long each of those turns took, when the per-round
+      // clock was running (teacher: "từng lượt làm của học sinh sẽ được đếm và
+      // ghi vào kết quả trong show answers"). Written the same way and for the
+      // same reason as the names above: `roundMs` is indexed by item, exactly
+      // like `review`, so this is a merge and not a second measurement. The last
+      // round is still open at this point — bank it first or the question the
+      // game ended on would be the only one with no time against it.
+      if (roundOn) {
+        roundBank();
+        reviewData.forEach((r, i) => { if (roundMs[i] != null) r.roundMs = Math.round(roundMs[i]); });
+      }
       // Don't add to the leaderboard if the player answered NO question.
       const answered = raw.answered != null ? raw.answered : reviewData.filter(r => r.answered).length;
       let entryId = null;
@@ -2761,7 +3010,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (backdrop) backdrop.innerHTML = "";   // hide the panel behind
     const rv = el("div", "aw-review");
     const head = el("div", "aw-rv-head");
-    head.append(el("div", "aw-rv-title", showdownPick ? "SHOWDOWN" : "ANSWERS"));
+    // ⭐ Đợt 174c (teacher) — the header says WHOSE result this is:
+    // "SHOWDOWN - B2A / TEAM 1". It used to be the bare word SHOWDOWN with the
+    // class nowhere and the team on a second header line inside the list; on a
+    // projector, a screenshot of the results then had nothing on it naming the
+    // class. `escapeText`: both halves are names the teacher typed.
+    const rvTitle = showdownPick
+      ? "SHOWDOWN" + (showdownPick.className ? ` - ${showdownPick.className}` : "") +
+        ` / ${String(showdownPick.teamName || "Team").toUpperCase()}`
+      : "ANSWERS";
+    head.append(el("div", "aw-rv-title", escapeText(rvTitle)));
+    // The team's score moves up here with it (it was the right-hand half of the
+    // header line that has just been removed from core/showdown.js).
+    if (showdownPick) {
+      const right = reviewData.filter(r => r.answered && r.yourCorrect).length;
+      head.append(el("div", "aw-rv-sdtotal", `${right}/${reviewData.length}`));
+    }
     const closeBtn = iconBtn("aw-rv-close", icons.close, "Close");
     closeBtn.onclick = () => { rv.remove(); showSummary(result, entryId); };
     head.append(closeBtn);

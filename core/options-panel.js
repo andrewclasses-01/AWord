@@ -218,7 +218,8 @@ export function mkRadioChoice(name, value, label, checked, onChange) {
  */
 export function buildOptionsBody(host, {
   tpl, draft, contentSwitch = null, contentSetSwitch = null, fight = null,
-  onViewChange = null, switchHost = null, renderSwitches = true, selectors = null
+  onViewChange = null, switchHost = null, renderSwitches = true, selectors = null,
+  showdown = false
 }) {
   const swHost = switchHost || host;
   const sel = selectors || draft;   // Settings has no separate selector state
@@ -373,6 +374,42 @@ export function buildOptionsBody(host, {
     c.ctl.append(
       mkSeg(timerChoices, cur,
         v => { draft.timer = v; stepper.el.classList.toggle("is-dim", v !== "countDown"); }),
+      stepper.el
+    );
+    grid.append(c.cell);
+  }
+
+  // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — SHOWDOWN ONLY.
+  // The whole-game Timer above says how long the GAME has; this one says how
+  // long each PUPIL has for the question that fell to them. Same shape on
+  // purpose (teacher: "bố trí tương tự thanh Timer, None - Count up - Count
+  // down + ô chỉnh thời gian"), so the two read as one family — and the length
+  // field is dimmed rather than hidden outside Count down, exactly like the
+  // Timer row's, for the same anti-reflow reason (Đợt 132).
+  //
+  // ⚠️ Built ONLY when the caller says a Showdown is running (`showdown`), not
+  // behind a template flag. Which templates can do this is already decided by
+  // `tpl.showdownMode`; asking a second time here would be a second list to
+  // keep in sync. Settings ▸ Default activity options never passes it: a
+  // default for a mode that has to be set up per lesson would be a control the
+  // teacher meets in one place and cannot see the effect of in the other.
+  //
+  // ⚠️ The ENGINE reads `roundTimer`/`roundSeconds` at MOUNT (structural: it
+  // decides where the name, the whole-game clock and the bar live), so unlike
+  // most options this one only takes effect on the play that Apply restarts.
+  if (showdown) {
+    const cur = ["countUp", "countDown"].includes(draft.roundTimer) ? draft.roundTimer : "none";
+    const secs = Math.max(3, Math.min(599, Math.round(Number(draft.roundSeconds)) || 20));
+    const stepper = makeTimeStepper(secs, 3, 599, v => { draft.roundSeconds = v; }, { holdMax: 10 });
+    stepper.el.classList.toggle("is-dim", cur !== "countDown");
+    stepper.el.title = "How long each pupil has";
+    const c = mkCell({ label: "Time each round", sub: "per pupil", wide: true });
+    c.ctl.append(
+      mkSeg([
+        { value: "none", label: "None" },
+        { value: "countUp", label: "Count up" },
+        { value: "countDown", label: "Count down" }
+      ], cur, v => { draft.roundTimer = v; stepper.el.classList.toggle("is-dim", v !== "countDown"); }),
       stepper.el
     );
     grid.append(c.cell);

@@ -474,6 +474,12 @@ export function buildShowdownPanel(panel, ctx) {
   let teamCount = Math.min(MAX_TEAMS, 2);
   let selectedTeam = null;  // which column receives the next tapped chip
   let claimedTeam = null;   // which team THIS browser will play
+  // Đợt 174 — the team this browser is playing RIGHT NOW (the live pick the
+  // engine handed in), as opposed to the one merely ticked in the table above.
+  // Only cancelMyTeam() reads it, and only to decide whether releasing the team
+  // also has to drop the pick. Held here rather than read off `ctx` each time so
+  // nothing has to mutate the caller's object.
+  let playingTeamId = ctx.currentTeam?.teamId || null;
   let pool = [];            // pupils not yet in a team (screen B)
   let unsub = null;
   updatePanelWidth();   // the one and only width — fixed at boot, see the function's own note
@@ -1027,22 +1033,43 @@ export function buildShowdownPanel(panel, ctx) {
         nameBtn.title = taken ? "Taken on another screen" : "Tap to send pupils here";
         nameBtn.disabled = taken;
 
-        const tick = el("button", "aw-sd-tick" + (t.id === claimedTeam ? " is-on" : ""), taken ? icons.close : icons.check);
+        // ⭐ Đợt 174 (teacher, 17/8/2026) — THE SEAT AT THE TOP-RIGHT OF A COLUMN
+        // now says three different things, and only one of them is a tick:
+        //   · free team        → an empty tick, "this screen plays this team"
+        //   · held ELSEWHERE   → a dimmed ✗, inert (unchanged since Đợt 159)
+        //   · held by THIS one → a RED ✗ that HANDS THE TEAM BACK, behind a
+        //     confirm (teacher: "bấm vào dấu X đỏ ở góc trên bên phải cột đội
+        //     của máy đã chọn để hủy đội… sau đó đội đó sẽ hiển thị dạng chưa
+        //     có ai chọn và có thể chọn lại được").
+        // Before this đợt the ONLY way out of a claim was tapping the tick
+        // again: silent, instant, and purely local — a team this browser had
+        // already pressed Ready on stayed claimed on Firestore, i.e. invisible
+        // to every other screen for the full 12h TTL, with nothing on any
+        // screen saying so. Cancelling now WRITES (see cancelMyTeam).
+        const mine = t.id === claimedTeam;
+        const tick = el("button", "aw-sd-tick" + (mine ? " is-cancel" : ""), (taken || mine) ? icons.close : icons.check);
         tick.type = "button";
-        tick.title = taken ? "Taken on another screen" : "This screen plays this team";
+        tick.title = taken ? "Taken on another screen"
+          : mine ? "Release this team so another screen can take it"
+          : "This screen plays this team";
         tick.disabled = taken;
         tick.onclick = ev => {
           ev.stopPropagation();                 // not "select the column" as well
-          const taking = claimedTeam !== t.id;
-          claimedTeam = taking ? t.id : null;
-          selectedTeam = t.id;
-          taking ? sfx.claim() : sfx.lift();
-          paintCols(); paintFoot();
-          if (taking) {
-            const c2 = colsBox.querySelector(`[data-tid="${CSS.escape(t.id)}"]`);
-            c2?.animate([{ transform: "scale(1)" }, { transform: "scale(1.035)" }, { transform: "scale(1)" }],
-              { duration: 260, easing: "ease-out" });
+          if (mine) {
+            sfx.tap();
+            // Asked, never instant: releasing is visible on every OTHER screen
+            // within one snapshot, so a stray tap would hand a running team
+            // away mid-lesson.
+            askConfirm(`Release ${t.name}? Another screen can take it.`, "Release", () => cancelMyTeam(t));
+            return;
           }
+          claimedTeam = t.id;
+          selectedTeam = t.id;
+          sfx.claim();
+          paintCols(); paintFoot();
+          const c2 = colsBox.querySelector(`[data-tid="${CSS.escape(t.id)}"]`);
+          c2?.animate([{ transform: "scale(1)" }, { transform: "scale(1.035)" }, { transform: "scale(1)" }],
+            { duration: 260, easing: "ease-out" });
         };
         head.append(nameBtn, tick);
         col.append(head);
@@ -1060,6 +1087,41 @@ export function buildShowdownPanel(panel, ctx) {
         col.append(list);
         colsBox.append(col);
       });
+    }
+
+    /**
+     * ⭐ Đợt 174 — HAND THIS SCREEN'S TEAM BACK (the red ✗ above).
+     *
+     * Three things happen, and the order matters:
+     *   1. the column repaints as FREE here at once — `setup.claims` is the
+     *      panel's own copy of the table, and waiting for the Firestore write to
+     *      come back round through onSnapshot would leave the ✗ sitting on a
+     *      team the teacher has just released;
+     *   2. the PICK goes too, but only if this browser is actually playing that
+     *      team. Leaving it in sessionStorage would let the next "Start again"
+     *      re-enter Showdown on a team already handed back — the game would deal
+     *      turns to a line-up another screen now owns;
+     *   3. the write itself, fire-and-forget (`releaseMine`), exactly like every
+     *      other claim release in this file: signed out or offline, the 12h TTL
+     *      is still the backstop and the teacher must never be blocked by it.
+     *
+     * ⚠️ A team merely TICKED here (not yet Ready) has no row on Firestore, so
+     * there is nothing to write — `held` is what tells the two cases apart.
+     * ⚠️ The play on screen is NOT restarted: the teacher is standing in the
+     * table, one tap away from ticking another team and pressing Ready (which
+     * restarts anyway). Closing the panel instead leaves the current game
+     * running to its end with the names it started with, which is the harmless
+     * half of the choice.
+     */
+    function cancelMyTeam(t) {
+      const held = setup.claims[t.id]?.by === me;
+      claimedTeam = null;
+      selectedTeam = t.id;
+      if (held) delete setup.claims[t.id];
+      if (playingTeamId === t.id) { clearPick(); playingTeamId = null; }
+      sfx.lift();
+      paintCols(); paintFoot();
+      if (held) releaseMine();
     }
 
     // ⭐ Đợt 159b — THE BOTTOM ROW IS THE WHOLE CHROME NOW (teacher): the tools on

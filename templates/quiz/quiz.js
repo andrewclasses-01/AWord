@@ -196,7 +196,12 @@ const quizTemplate = {
     }
 
     // Per-question state: chosen = tile index clicked (null = not yet), correct = true/false
-    const state = questions.map(() => ({ chosen: null, correct: null }));
+    // `timedOut` (Đợt 174): the round clock ran out with no tile chosen. Kept
+    // apart from `chosen` rather than faked with a sentinel index — `chosen` is
+    // read as an INDEX into q.answers in three places (badges, the review row,
+    // the idle guard), and a -1 there would have printed `undefined` into the
+    // review instead of "No answer".
+    const state = questions.map(() => ({ chosen: null, correct: null, timedOut: false }));
     let index = 0;
     let finished = false;
     let autoTimer = null;   // pending "auto game complete" timer
@@ -237,7 +242,11 @@ const quizTemplate = {
     ui.setScoreProvider?.(scoreNow);
     ui.setIdleGuard?.(() =>
       animating || ending || finished || fightLocked() ||
-      state[index].chosen !== null || voicePlayer.isPlaying());
+      settled(state[index]) || voicePlayer.isPlaying());
+    // ⭐ TIME EACH ROUND (Đợt 174) — the engine owns the clock and the bar; this
+    // is the one thing only Quiz can answer: what "out of time" costs. See
+    // roundTimeUp() below, and core/engine.js's own block for the contract.
+    ui.setRoundTimeout?.(roundTimeUp);
 
     applyQuestion(0);   // first question, no animation
     ui.setScore(scoreNow());
@@ -262,11 +271,19 @@ const quizTemplate = {
       const correct = state.filter(s => s.correct === true).length;
       const clock = ui.timeCostTotal ? ui.timeCostTotal() : 0;
       if (!pointsOff) return correct - clock;
-      const wrong = state.filter(s => s.chosen !== null && s.correct === false).length;
+      // ⭐ Đợt 174 — `settled(s)`, not `s.chosen !== null`: a question the pupil
+      // ran OUT OF TIME on has no chosen tile but is a wrong answer all the same
+      // (teacher: "hết thời gian… thì coi như sai, báo lỗi sai, phát điểm trừ").
+      // Every "has this question been dealt with?" test in this file goes
+      // through that one helper, so the timeout can never be counted in one
+      // place and forgotten in another.
+      const wrong = state.filter(s => settled(s) && s.correct === false).length;
       return correct - pointsOff * wrong - clock;
     }
+    // Answered, or timed out — the two ways a question stops being open (Đợt 174).
+    function settled(s) { return s.chosen !== null || s.timedOut === true; }
     // Next is blocked until the current question is answered, unless Allow skip is on.
-    function canAdvance() { return allowSkip || state[index].chosen !== null; }
+    function canAdvance() { return allowSkip || settled(state[index]); }
 
     // Make sure answersRow has exactly `n` tile boxes (create/remove as needed).
     // Colours are assigned by POSITION and never change, so a box keeps its
@@ -457,10 +474,15 @@ const quizTemplate = {
     function choose(i) {
       const q = questions[index];
       const st = state[index];
-      if (st.chosen !== null || finished || ending || fightLocked()) return;
+      if (settled(st) || finished || ending || fightLocked()) return;
       st.chosen = i;
       st.correct = !!q.answers[i].correct;
       ui.noteActivity?.();   // TIME COST (Đợt 139): answering IS the progress this game measures
+      // TIME EACH ROUND (Đợt 174): this pupil's turn is over, so their clock
+      // stops HERE — the reading frozen now is the one Show answers prints for
+      // this question, and (in Count down) it is what stops the timeout firing
+      // over an answer already given.
+      ui.roundDone?.();
 
       tiles.forEach(t => (t.tile.disabled = true));
 
@@ -519,7 +541,7 @@ const quizTemplate = {
       // round has been played (advanceRound()/endMatch() in core/fight.js) —
       // a board calling finish() here too would race it (same reasoning as
       // Anagram's finalizeBonusWord()).
-      if (!fightCtl && state.every(s => s.chosen !== null)) {
+      if (!fightCtl && state.every(settled)) {
         autoTimer = setTimeout(() => finish("complete"), st.correct ? 1000 : 1500);
         return;
       }
@@ -538,6 +560,56 @@ const quizTemplate = {
       // desynchronise the two frames.
       if (!fightCtl && opt.autoSwitch === true && index < total - 1) {
         autoTimer = setTimeout(() => { autoTimer = null; goNext(); }, st.correct ? 1000 : 1500);
+      }
+    }
+
+    /**
+     * ⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 174, teacher 17/8/2026).
+     * Registered with ui.setRoundTimeout(); the engine calls it the moment the
+     * per-round count down reaches 0 with the round still open.
+     *
+     * The teacher's rule, in their own words: "nếu hết thời gian này mà không
+     * làm xong thì coi như sai, báo lỗi sai, phát điểm trừ (nếu options trừ điểm
+     * khi sai) và next sang câu tiếp theo (nếu cài đặt auto next)" — plus, when
+     * Auto next is OFF: "khóa câu, coi như sai, bấm next thủ công sang câu khác".
+     * So this is deliberately the SAME path a wrong tap takes (score, sound,
+     * lives, auto-finish, auto-next), with one difference: no tile is marked as
+     * the pupil's, because they never chose one.
+     *
+     * ⚠️ `addBadges` keys the ✗ off `st.chosen`, which stays null here — so
+     * calling the very same function draws the correct answer's ✓ and dims the
+     * wrong tiles WITHOUT pinning a wrong answer on anybody. That is why this
+     * reveals through the existing function instead of hand-drawing marks.
+     * ⚠️ The question is LOCKED (`tile.disabled`) and `settled()` now reports it
+     * as dealt with, which is what lets ▷ move on with Allow skip off.
+     */
+    function roundTimeUp() {
+      const st = state[index];
+      if (settled(st) || finished || ending || fightLocked()) return;   // already resolved
+      const q = questions[index];
+      st.timedOut = true;
+      st.correct = false;
+      tiles.forEach(t => (t.tile.disabled = true));
+      tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
+      quizSound.wrong();
+      ui.setScore(scoreNow());
+      updateNav();
+      // A timeout costs a heart, exactly like a wrong answer — the point of
+      // Lives is "this many mistakes", and sitting the clock out is one.
+      if (loseLife()) {
+        ending = true;
+        tiles.forEach(t => (t.tile.disabled = true));
+        updateNav();
+        clearAutoTimer();
+        autoTimer = setTimeout(() => finish("gameover"), 1500);
+        return;
+      }
+      if (state.every(settled)) { autoTimer = setTimeout(() => finish("complete"), 1500); return; }
+      // AUTO NEXT — the teacher's choice when it is OFF is to STAY here, locked,
+      // until they press ▷ themselves. So there is no `else`: doing nothing is
+      // the specified behaviour, not an oversight.
+      if (opt.autoSwitch === true && index < total - 1) {
+        autoTimer = setTimeout(() => { autoTimer = null; goNext(); }, 1500);
       }
     }
 

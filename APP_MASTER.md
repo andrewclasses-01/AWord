@@ -8,7 +8,22 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **15/8/2026 (Đợt 159) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI · MỘT ĐỘI = CẢ LỚP (KHÔNG
+> Cập nhật lần cuối: **17/8/2026 (Đợt 174) — ⭐⭐ SHOWDOWN: NÚT ✗ ĐỎ TRẢ ĐỘI VỀ · ⭐⭐⭐ TÍNH NĂNG MỚI
+> "TIME EACH ROUND" (đồng hồ từng lượt học sinh) · RÀ XONG ĐƯỜNG ĐỒNG BỘ TEMPLATE/STYLE CỦA myActivity.**
+> ⬜ **CHƯA COMMIT — chờ thầy chốt.** Chi tiết: `GHI CHU DU AN.md` mục "Đợt 174"; hợp đồng kỹ thuật:
+> `core/HUONG DAN CORE.md` mục **"TIME EACH ROUND"**.
+> Tóm tắt: cột đội máy mình nay đeo **✗ đỏ** (hỏi xác nhận) để **nhả đội về cho máy khác** — trước đây
+> bỏ tích chỉ là chuyện nội bộ, claim vẫn nằm trên Firestore suốt 12h TTL. **Time each round** (None ·
+> Count up · Count down + số giây) **chỉ hiện khi đang Showdown**: tên học sinh xuống trên cụm ‹ ›, đồng
+> hồ tổng xuống cạnh ☰ Menu; **Count down gom `[số giây][thanh thời gian][điểm]` vào chung hàng topbar**
+> (174b, thầy chốt), Count up để số giây ở ô giữa; **hết giờ =
+> coi như sai** (trừ điểm, mất tim, khoá câu; sang câu nếu bật Auto next). Thời gian từng lượt in trong
+> **Show answers** (tổng cạnh tên, từng câu ở từng câu). API mới cho template: `ui.roundDone()` ·
+> `ui.setRoundTimeout(fn)` · `ui.roundTimerMode()`.
+> ⚠️ **`roundTimer` là option CẤU TRÚC** (engine đọc 1 lần lúc mount) nên Apply ở màn READY **phải
+> restart** — đây là ngoại lệ DUY NHẤT của luật "READY không restart".
+>
+> Trước đó: **15/8/2026 (Đợt 159) — ⭐⭐ SHOWDOWN LÀM LẠI: 1–5 ĐỘI · MỘT ĐỘI = CẢ LỚP (KHÔNG
 > LÊN MÂY) · BẢNG CÒN 2 MÀN · DÒNG TÊN TỰ ĐỨNG.**
 > ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `23327b3` (gộp Đợt 158 + 159) + PUSH + LIVE**, đã đối chiếu
 > **10/10 file trùng mã băm** trên `aword.andrewclasses.com` (~15 giây sau push) và **chạy lại phép thử
