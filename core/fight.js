@@ -348,7 +348,69 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // of the class. Instead the team's total is FROZEN at what it was before the
   // word, and whatever the template adds afterwards is cancelled as it arrives.
   const freezeAdj = [0, 0];         // permanent, accumulated across rounds
-  const frozenAt = [null, null];    // game+bonus at the moment of freezing, while a freeze is on
+  const frozenAt = [null, null];    // the total a frozen side is pinned to, while a freeze is on
+  // ⭐⭐ Đợt 183 — WHAT A FROZEN TEAM IS PINNED TO: its total at the START of the
+  // round, snapshotted here, NOT its total at the moment it is frozen.
+  //
+  // Measured bug (Open the box, pick mode): the slower team kept the point it
+  // had just been denied. Freezing to "the total right now" only works for a
+  // template whose points arrive LATE — Anagram hands its "+12" over ~1.76s
+  // after the word, so the freeze lands first and cancels it. Open the box and
+  // Quiz call `ui.setScore()` SYNCHRONOUSLY, before they report the finish, so
+  // by the time the freeze ran the point was already inside `game[side]` and it
+  // pinned the team to a total that already included it.
+  // A round-start baseline cannot be caught out by either order, which is the
+  // whole point: nothing about the fix depends on when a template reports.
+  //
+  // ⭐⭐ AND IT IS SNAPSHOTTED IN **TOTAL** SPACE — `+ freezeAdj` — which also
+  // fixes a bug that was in here from the start (measured in the same run):
+  // `holdFreeze` ASSIGNS `freezeAdj = frozen - (game + bonus)`, so pinning a
+  // team to a raw `game + bonus` reading silently GIVES BACK everything an
+  // earlier round had cancelled. Second freeze of a match, and the first
+  // round's denied point quietly reappears on the scoreboard — a team can only
+  // gain from it, so nobody complains, and the arithmetic is invisible on
+  // screen. `freezeAdj` accumulates; the baseline has to live in the same
+  // space it does.
+  const roundBase = [0, 0];
+  function snapRoundBase() {
+    roundBase[0] = game[0] + bonus[0] + freezeAdj[0];
+    roundBase[1] = game[1] + bonus[1] + freezeAdj[1];
+  }
+
+  // ⭐⭐ PICK-TURN ROUNDS (Đợt 183, the teacher's rules of 17/8/2026) — the SECOND
+  // round model this file knows, for the games whose whole point is that the
+  // class chooses what to play next (Open the box · Find the match · Crossword).
+  //
+  //   normal rounds  the referee walks item 0, 1, 2… and both boards follow.
+  //   PICK rounds    both boards sit on their own grid; the team whose TURN it
+  //                  is has a normal-looking grid, the other's is faded and
+  //                  dead. That team taps a box — and the referee opens THAT
+  //                  box on BOTH boards, in the same frame.
+  //
+  // A template opts in with `tpl.fightPick`:
+  //   "wait"  the round waits for BOTH teams (Open the box · Find the match):
+  //           the first correct answer scores, the other team still gets its go,
+  //           and a correct answer arriving second scores nothing.
+  //   "lock"  the first correct answer takes it (Crossword): the other board is
+  //           locked at once, its answer is shown but counts as WRONG.
+  //
+  // NEXT PICKER — the teacher's own catch-up rule: the team that finished LAST
+  // and got it WRONG chooses next ("đội sau sai sẽ luôn được tiếp tục chọn ô câu
+  // hỏi tiếp theo mà không đảo lượt"); only when nobody ended wrong does the turn
+  // alternate. In a "lock" game the locked team IS the wrong one.
+  const pickMode = (getTemplate(activity.type)?.fightPick) || null;
+  let pickTurn = 0;               // which side may choose the next item
+  let pickOpen = !!pickMode;      // true while both boards wait on their grid for a choice
+  let playedRounds = 0;           // items actually played — pick mode counts these, not roundIndex
+  let lastFinisher = null;        // { side, correct } — the LAST board to finish this round
+  // Does a decided round lock the team that did not win it? Outside pick mode
+  // this is the teacher's own Options choice; inside it, the game's own rule.
+  const lockLoser = () => (pickMode ? pickMode === "lock" : fo.fightFirstRule === "lock");
+  // Does a team that finishes correctly AFTER the round is won keep what it
+  // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
+  // điểm"), so pick mode fixes it instead of reading the option.
+  const lateScores = () => (pickMode ? false : fo.fightLateScores !== false);
+
   const boards = [null, null];          // the template's own handles, via ctl.attach
   // Each board's REAL engine teardown (core/engine.js's own cleanupAll —
   // stops that board's 500ms clock interval, closes its menu/panel, runs the
@@ -443,8 +505,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Lock the other side out only if it is still IN the round; one that
     // already answered wrong is locked already, and re-locking it would
     // repaint it as "too slow" on top of its own wrong-answer feedback.
-    if (fo.fightFirstRule === "lock" && !roundDone[other]) boards[other] && boards[other].lock(true);
-    const nobodyLeft = fo.fightFirstRule === "lock" || roundDone[other];
+    if (lockLoser() && !roundDone[other]) boards[other] && boards[other].lock(true);
+    const nobodyLeft = lockLoser() || roundDone[other];
     if (nobodyLeft) revealBoards();
     later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
   }
@@ -467,9 +529,59 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     later(advanceRound, ROUND_HOLD_MS);
   }
 
+  // ----- PICK-TURN rounds (Đợt 183) — see the pickMode block above ----------
+
+  // Tell both boards whose turn it is to choose. The board that is NOT choosing
+  // fades its grid and refuses taps; that is the template's half of the deal
+  // (`setPickTurn`), because only it knows what its own board looks like.
+  function paintPickTurn() {
+    boards.forEach((b, i) => { try { b && b.setPickTurn && b.setPickTurn(pickOpen && i === pickTurn); } catch { /* board already gone */ } });
+  }
+
+  // A round has been settled and held; put both boards back on their grid and
+  // hand the choice to whoever the teacher's catch-up rule says.
+  function endPickRound() {
+    if (matchOver || torndown) return;
+    playedRounds++;
+    // Who chooses next:
+    //  • nobody answered correctly     -> the team that finished LAST (it was wrong)
+    //  • a "lock" game (Crossword)     -> the team that did NOT win, since being
+    //                                     locked counts as answering wrong
+    //  • otherwise                     -> the last finisher IF it was wrong, and
+    //                                     only when both were right does the
+    //                                     turn actually alternate
+    if (roundWinner === null) pickTurn = lastFinisher ? lastFinisher.side : (pickTurn === 0 ? 1 : 0);
+    else if (pickMode === "lock") pickTurn = roundWinner === 0 ? 1 : 0;
+    else if (lastFinisher && lastFinisher.correct === false) pickTurn = lastFinisher.side;
+    else pickTurn = pickTurn === 0 ? 1 : 0;
+
+    roundWinner = null;
+    roundDone = [false, false];
+    lastFinisher = null;
+    teams.forEach(t => t.el.classList.remove("is-won"));
+    frozenAt[0] = frozenAt[1] = null;
+
+    const total = Math.max(boards[0]?.total || 0, boards[1]?.total || 0);
+    if (playedRounds >= total) { endMatch(); return; }
+
+    pickOpen = true;
+    boards.forEach(b => {
+      if (!b) return;
+      try { b.lock(false); } catch { /* gone */ }
+      try { b.backToBoard && b.backToBoard(); } catch { /* gone */ }
+    });
+    paintPickTurn();
+  }
+
   // ----- the round: both boards hold the SAME word index -----
   function advanceRound() {
     if (matchOver || torndown) return;
+    // PICK MODE: "the next round" is not the next index — it is back to the
+    // grid, with the turn handed on. Everything that got us here (the tie
+    // window, the walk-away backstop, the hold after a decided round) is shared
+    // with normal rounds, which is exactly why this branch sits at the top of
+    // advanceRound() rather than beside each of those callers.
+    if (pickMode) { revealBoards(); endPickRound(); return; }
     // Safety net for the walk-away path (the 20s backstop fires straight in
     // here): nobody may leave a round still owing a hidden result, or the
     // board would carry the withheld grey into the next word.
@@ -490,6 +602,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const total = Math.max(boards[0]?.total || 0, boards[1]?.total || 0);
     if (roundIndex + 1 >= total) { endMatch(); return; }
     roundIndex++;
+    snapRoundBase();   // Đợt 183 — what a "slower team" freeze will pin them to
     boards.forEach(b => { if (b) { b.lock(false); b.goToIndex(roundIndex); } });
   }
 
@@ -507,7 +620,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Only board 0 is allowed to speak: both boards show the same word, and two
     // copies of one clip starting a few ms apart is an echo, not a reading.
     speaks(side) { return side === 0; },
-    isLocked(side) { return matchOver || (roundWinner !== null && roundWinner !== side && fo.fightFirstRule === "lock"); },
+    isLocked(side) { return matchOver || (roundWinner !== null && roundWinner !== side && lockLoser()); },
     // The frames have no score chip in fight mode, so a template's "+N" flies
     // all the way out to this team's number on the strip above its board.
     scoreTarget(side) { return teams[side].value; },
@@ -563,8 +676,44 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       boards[side] = api;
       // A board that mounts late (pane 1 always does) must not sit on word 1
       // while the other is already on word 3.
-      if (roundIndex > 0) api.goToIndex(roundIndex);
+      // ⚠️ PICK MODE has no "current index" to catch up to while the grid is
+      // showing — the board is told whose turn it is instead. Jumping it to
+      // `roundIndex` here would re-open the LAST box played.
+      if (pickMode) { api.setPickTurn && api.setPickTurn(pickOpen && side === pickTurn); }
+      else if (roundIndex > 0) api.goToIndex(roundIndex);
       if (ctl.isLocked(side)) api.lock(true);
+    },
+    // PICK MODE — a team tapped a box on ITS OWN board. Nothing has opened yet:
+    // the template only reports the tap, and the referee is what opens the SAME
+    // box on BOTH boards, in one go. Letting each board open its own would put
+    // the two on different items the moment one tap is missed, and the boards
+    // are what the class is comparing.
+    // Returns false when the tap must be ignored (not this team's turn, a round
+    // already running, match over) so the template can stay silent about it.
+    boardPicked(side, index) {
+      if (!pickMode || matchOver || torndown) return false;
+      if (!pickOpen || side !== pickTurn) return false;
+      pickOpen = false;
+      roundIndex = index;
+      roundWinner = null;
+      roundDone = [false, false];
+      lastFinisher = null;
+      if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+      pendingWinner = null;
+      clearTimeout(roundTimer); roundTimer = null;
+      teams.forEach(t => t.el.classList.remove("is-won"));
+      frozenAt[0] = frozenAt[1] = null;
+      snapRoundBase();                       // Đợt 183 — see roundBase's own note
+      paintPickTurn();                       // both grids go neutral — nobody is choosing now
+      boards.forEach(b => {
+        if (!b) return;
+        try { b.lock(false); } catch { /* gone */ }
+        try { b.goToIndex(index); } catch { /* gone */ }
+      });
+      // Nobody may sit on an open box for ever (a team that walks away, a box
+      // nobody answers): the same backstop normal rounds use.
+      later(advanceRound, LATE_LIMIT_MS);
+      return true;
     },
     // A board has finished with the current word — `info.correct === false`
     // means it finished it WRONG.
@@ -594,6 +743,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // don't send the flag.
       const correct = !info || info.correct !== false;
       const other = side === 0 ? 1 : 0;
+      // PICK MODE bookkeeping (Đợt 183): who finished LAST, and how — that is
+      // the whole input to the teacher's "the wrong team chooses next" rule.
+      // Written on every finish, so after the round it holds the later one.
+      if (pickMode) {
+        lastFinisher = { side, correct };
+        // "ai chọn câu trả lời nhanh hơn thì có điểm và được setup thời gian
+        // lại" — a correct answer restarts the per-question clock on BOTH
+        // boards, so the team still choosing gets a fair run at it. A wrong one
+        // deliberately leaves the clock draining ("thời gian vẫn tiếp tục chạy").
+        if (correct) boards.forEach(b => { try { b && b.resetClock && b.resetClock(); } catch { /* gone */ } });
+      }
 
       if (!correct) {
         // Wrong. This board is out of the round — lock it so the mistake
@@ -634,7 +794,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // land, which can never be fooled by timing the way this numeric
         // freeze alone could — see mayScore's own comment. Both stay active
         // together: this covers every OTHER fight-enabled template too.)
-        if (!fo.fightLateScores) { frozenAt[side] = game[side] + bonus[side]; holdFreeze(side); paintScore(side); }
+        if (!lateScores()) { frozenAt[side] = roundBase[side]; holdFreeze(side); paintScore(side); }
         revealBoards();
         later(advanceRound, ROUND_HOLD_MS);
         return;
@@ -675,7 +835,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     mayScore(side) {
       if (roundWinner === null) return true;
       if (roundWinner === side) return true;
-      return fo.fightLateScores !== false;
+      return lateScores();
     },
     // The teacher pressed Next/Previous on either board: both boards move, and
     // the round follows the board that was pressed.
@@ -688,6 +848,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       roundDone = [false, false];
       clearTimeout(roundTimer); roundTimer = null;
       teams.forEach(t => t.el.classList.remove("is-won"));
+      snapRoundBase();   // Đợt 183 — a new round starts here too
       const other = side === 0 ? 1 : 0;
       if (boards[other]) { boards[other].lock(false); boards[other].goToIndex(index); }
       if (boards[side]) boards[side].lock(false);

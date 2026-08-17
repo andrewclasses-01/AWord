@@ -266,6 +266,16 @@ const otbTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
+  // ⭐⭐ Đợt 183 — FIGHT MODE, in the "PICK TURN" round model the teacher
+  // designed for this game (17/8/2026). `fightPick` is what tells core/fight.js
+  // to use that model instead of the referee walking item 0,1,2… — read the
+  // pickMode block in that file for the whole rule set. In short: both teams
+  // face the SAME grid, only the team whose turn it is may tap (the other's grid
+  // is faded and dead), the referee opens the tapped box on BOTH boards at once,
+  // the faster correct answer scores and restarts the clock, the round still
+  // waits for the other team, and whoever ends up WRONG chooses next.
+  fightMode: true,
+  fightPick: "wait",
   name: "Open the box",
 
   // Opt-in: put THIS template's per-question timer bar on the SAME row as
@@ -367,6 +377,17 @@ function mountQuestions(root, activity, ui) {
   // behaviour is identical to before this option existed. Negative scores are
   // allowed (not clamped to 0) — ui.setScore renders them red without a minus.
   const pointsOff = Math.max(0, Math.min(100, Number(activity.options && activity.options.pointsOff) || 0));
+
+  // ----- FIGHT MODE (Đợt 183) — `_fight` is put here by core/fight.js.
+  // Null outside a match, and every branch below degrades to the game exactly
+  // as it was. See `tpl.fightPick` above for the rules.
+  const fight = activity._fight || null;
+  const fightSide = fight ? fight.side : 0;
+  const fightCtl = fight ? fight.ctl : null;
+  let fightMyTurn = false;          // may THIS board choose the next box right now?
+  let fightBoardLock = false;       // the match locked this board out of the open box
+  let fightPendingReveal = null;    // { i, k, correct } — a result held back while the other team plays
+  let fightRefillTimer = null;      // resumes the clock after resetClock()'s refill animation
 
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
@@ -574,7 +595,8 @@ function mountQuestions(root, activity, ui) {
       const locked = boxState[i] === "locked";
       const box = el("button", "aw-otb-box" + ((solved || locked) ? " is-open" : "") + (locked ? " is-locked" : ""));
       box.type = "button";
-      box.disabled = boxState[i] !== "unplayed" || ended;
+      // FIGHT (pick turn): a board may only tap while it is ITS turn to choose.
+      box.disabled = boxState[i] !== "unplayed" || ended || (!!fightCtl && !fightMyTurn);
       const inner = el("div", "aw-otb-box-inner");
       const front = el("div", "aw-otb-face aw-otb-face-front", String(i + 1));
       const back = el("div", "aw-otb-face aw-otb-face-back", "");
@@ -592,11 +614,33 @@ function mountQuestions(root, activity, ui) {
       }
       inner.append(front, back);
       box.append(inner);
-      if (boxState[i] === "unplayed" && !ended) press(box, () => openBox(i));   // instant on touch-down — core/press.js
+      // ⚠️ FIGHT: the tap is REPORTED, it does not open anything. Only the
+      // referee opens a box, and it opens it on BOTH boards in one go — a board
+      // that opened its own would put the two on different questions the moment
+      // one tap went astray, and the two boards are the whole point.
+      if (boxState[i] === "unplayed" && !ended) press(box, () => tapBox(i));   // instant on touch-down — core/press.js
       grid.append(box);
     });
+    if (fightCtl && !fightMyTurn) card.classList.add("is-fightwait");
     card.append(grid);
     return { card, grid };
+  }
+
+  function tapBox(i) {
+    if (!fightCtl) { openBox(i); return; }
+    if (!fightMyTurn) return;                    // faded board: not our turn to choose
+    fightCtl.boardPicked(fightSide, i);          // the referee opens it on both boards
+  }
+
+  // FIGHT: whose turn it is changed (or the round ended). Repaint WITHOUT
+  // rebuilding — a rebuild here would replay the whole grid pop entrance in
+  // the middle of a match (the ⚠️ rule in core/HUONG DAN CORE.md).
+  function applyPickTurn() {
+    const card = root.querySelector(".aw-otb-card");
+    if (card) card.classList.toggle("is-fightwait", !!fightCtl && !fightMyTurn);
+    root.querySelectorAll(".aw-otb-box").forEach((b, i) => {
+      b.disabled = boxState[i] !== "unplayed" || ended || (!!fightCtl && !fightMyTurn);
+    });
   }
 
   // The "pop in" entrance (scale + fade, staggered per box). The FIRST one
@@ -1005,12 +1049,33 @@ function mountQuestions(root, activity, ui) {
 
   function answer(i, k, tile, row) {
     if (activeIndex !== i || ended || !answersUnlocked) return;   // point 4: ignore taps until the read-gate opens
+    if (fightBoardLock) return;                                   // the other team took this box (Crossword-style rules)
     // TIME COST (Đợt 143): answering IS this game's progress, right or wrong.
     ui.noteActivity?.();
     const it = items[i];
     const correct = !!it.answers[k].correct;
 
     [...row.children].forEach(t => t.disabled = true);
+
+    // ⭐⭐ FIGHT — this board's go is over, and that is all the other team may
+    // read off this screen. Every visual that names an answer (the big flying
+    // ✓/✗, the small badge, the dimming of the picked tile) is HELD BACK until
+    // the match says the round is settled; the board just goes neutral grey,
+    // which is the "your go is over" cue. Sound is not withheld: it says how
+    // THIS team did without pointing at any tile.
+    if (fightCtl) {
+      fightPendingReveal = { i, k, correct };
+      if (correct) { otbSound.correct(); score++; }
+      else { otbSound.wrong(); score -= pointsOff; lastWrongText[i] = it.answers[k].text; }
+      // The box is spent either way — and, unlike single play, a later correct
+      // answer must NOT free it again: in a match every box is played exactly
+      // once, by both teams, and the referee counts rounds against `total`.
+      boxState[i] = correct ? "correct" : "locked";
+      updateProgress();
+      root.querySelector(".aw-otb-qcard")?.classList.add("is-fightlost");
+      fightCtl.wordDone(fightSide, { index: i, correct });
+      return;   // the MATCH closes the box (backToBoard), not this board
+    }
     const fly = el("span", "aw-mark-fly" + (correct ? "" : " is-cross"), correct ? icons.markCheck : icons.markCross);
     tile.append(fly);
     setTimeout(() => fly.remove(), correct ? 900 : 1400);
@@ -1069,6 +1134,86 @@ function mountQuestions(root, activity, ui) {
     // this (Find the match's "Page 1 / 2", Running word's slogan); index/total
     // are still passed so the call stays valid if the label is ever dropped.
     ui.setNav({ index: score, total, onPrev: null, onNext: null, label: SLOGAN });
+  }
+
+  // ================= FIGHT MODE (Đợt 183) =========================
+  // All dead code outside a match (`fightCtl` is null).
+
+  // The match says the round is settled for BOTH teams — the ✓/✗ withheld in
+  // answer() can finally go up. Runs on the board that never answered too: it
+  // is shown the right tile and nothing else, so both teams see the answer at
+  // the same moment (core/HUONG DAN CORE.md's reveal rule).
+  function revealFightMarks() {
+    if (!fightCtl) return;
+    const held = fightPendingReveal;
+    fightPendingReveal = null;
+    const row = root.querySelector(".aw-otb-q-answers");
+    const i = activeIndex;
+    if (!row || i === null || !items[i]) return;
+    const it = items[i];
+    [...row.children].forEach((tile, k) => {
+      if (tile.querySelector(".aw-tile-badge")) return;      // already marked
+      const isRight = !!(it.answers[k] && it.answers[k].correct);
+      if (isRight) {
+        tile.append(el("span", "aw-tile-badge", icons.markCheck));
+      } else if (held && held.k === k) {
+        tile.classList.add("is-dimmed");
+        tile.append(el("span", "aw-tile-badge", icons.markCross));
+      }
+    });
+    // Once the marks are up they must read in full colour, so the "your go is
+    // over" grey comes off — same as quiz.js's revealed board.
+    root.querySelector(".aw-otb-qcard")?.classList.remove("is-fightlost");
+  }
+
+  // The match closes the round: back to the grid, ready for the next choice.
+  function fightBackToBoard() {
+    if (!fightCtl || ended) return;
+    fightPendingReveal = null;
+    fightBoardLock = false;
+    // A box the round left unanswered (a team walked away and the 20s backstop
+    // fired) must still count as spent, or the two grids drift apart about what
+    // is still choosable.
+    if (activeIndex !== null && boxState[activeIndex] === "unplayed") boxState[activeIndex] = "locked";
+    if (activeIndex === null) { applyPickTurn(); return; }
+    closeCardThen(() => applyPickTurn());
+  }
+
+  // "…có điểm và được setup thời gian lại": a correct answer refills the clock
+  // on BOTH boards so the team still choosing gets a fair run at it. The refill
+  // is the game's own animation; the countdown picks up again when it lands
+  // (single play resumes on the next box instead — see resetSharedTimer).
+  function fightResetClock() {
+    if (!fightCtl || ended) return;
+    resetSharedTimer();
+    if (fightRefillTimer) clearTimeout(fightRefillTimer);
+    fightRefillTimer = setTimeout(() => {
+      fightRefillTimer = null;
+      if (ended || !pausedForNextBox) return;
+      pausedForNextBox = false;
+      runCountdown(timeLeft);
+    }, REFILL_MS);
+  }
+
+  // Apply a lock WITHOUT rebuilding anything (the no-flash rule).
+  function syncFightLock() {
+    if (!fightCtl) return;
+    const row = root.querySelector(".aw-otb-q-answers");
+    if (fightBoardLock && row) [...row.children].forEach(t => { t.disabled = true; });
+    root.querySelector(".aw-otb-qcard")?.classList.toggle("is-fightlost",
+      fightBoardLock || !!fightPendingReveal);
+  }
+
+  if (fightCtl) {
+    fightCtl.attach(fightSide, {
+      total,
+      goToIndex: openBox,          // the referee opens the chosen box on this board
+      lock(on) { fightBoardLock = !!on; syncFightLock(); },
+      reveal: revealFightMarks,
+      setPickTurn(mine) { fightMyTurn = !!mine; applyPickTurn(); },
+      backToBoard: fightBackToBoard,
+      resetClock: fightResetClock
+    });
   }
 
   // Shrink transform, same math as zoomElFrom but reversed (current
@@ -1247,6 +1392,7 @@ function mountQuestions(root, activity, ui) {
     ro.disconnect();
     clearPending();
     if (gateTimer) { clearTimeout(gateTimer); gateTimer = null; }
+    if (fightRefillTimer) { clearTimeout(fightRefillTimer); fightRefillTimer = null; }   // Đợt 183
     if (fitter) fitter.destroy();
     stopSharedTimer();
     voicePlayer.stop();
