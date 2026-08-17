@@ -102,6 +102,21 @@ const ftmTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "pairs",
+  // ⭐⭐ Đợt 184 — FIGHT MODE, in the ORDINARY round model (`fightMode` alone, no
+  // `fightPick`). The teacher's "each team picks a box in turn" rules were
+  // written for a game whose questions sit in boxes waiting to be opened. Here
+  // the definition COMES TO YOU on the conveyor belt and the tiles are the
+  // ANSWERS — there is no set of questions to choose between, so a pick turn
+  // would have to invent a screen this game does not have. Both boards therefore
+  // run the SAME prompt at the same time and the first team to tap the right
+  // tile wins the round, exactly like True/false and Quiz.
+  fightMode: true,
+  // ⭐⭐ Đợt 186 — SHOWDOWN. Left out in Đợt 178 because `review` came out in the
+  // fixed pair order while the prompts are played in a shuffled, per-page queue
+  // (and, with "repeat until answered", not even once each) — so pupil `n`
+  // would have been named against a definition they never saw. `playOrder` +
+  // `setNav({index: row})` fix exactly that.
+  showdownMode: true,
   name: "Find the match",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
   manualTimerStart: true,   // the visible clock starts only after our 3-2-1 prep (count-up), so the prep isn't counted
@@ -182,6 +197,23 @@ const ftmTemplate = {
       return () => {};
     }
 
+    // ----- FIGHT MODE (Đợt 184) — `_fight` is put here by core/fight.js.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightBoardLock = false;
+    const fightLocked = () => fightBoardLock || !!(fightCtl && fightCtl.isLocked(fightSide));
+    let fightPendingReveal = null;   // { idx, tile, correct } — held back while the other team plays
+    // ⭐ SHOWDOWN (Đợt 186) — the order the prompts were actually SHOWN in. See
+    // updateNav / finish: it is what makes "this definition belongs to pupil N"
+    // and the end-of-game review agree with each other.
+    const playOrder = [];
+    // The row of the prompt ON SCREEN. A repeated pair (Repeat until answered)
+    // keeps the row it already had, so it comes back to the SAME pupil and
+    // still lines up with its one row in Show answers — the rule Đợt 178 wrote
+    // down for True/false, and the only mapping that can stay consistent.
+    let curRow = 0;
+
     // `order` = the fixed sequence used for scoring/review (never mutated).
     let order = pairs.map((_, i) => i);
     if (opt.shuffleQuestions) order = shuffle(order);
@@ -193,14 +225,19 @@ const ftmTemplate = {
     // is ALWAYS visible on the current page. Pages auto-advance as they're
     // cleared; a ‹ Page X/Y › pager also lets you move manually. `choiceOrder`
     // (shuffled) is the tile layout order; chunking it forms the pages.
-    const choiceOrder = shuffle(pairs.map((_, i) => i));
+    // ⚠️ FIGHT (Đợt 184): NOT shuffled. This is the tile LAYOUT, and it is
+    // shuffled unconditionally in single play — so in a match each board would
+    // lay its tiles out differently AND (through the page chunks below) end up
+    // with a different prompt behind the same round number. Both boards must be
+    // the same board; the match already fixed the pair order for both.
+    const choiceOrder = fightCtl ? pairs.map((_, i) => i) : shuffle(pairs.map((_, i) => i));
     const PAGE_COUNT = Math.max(1, Math.ceil(total / MAX_TILES_PER_PAGE));
     const perPage = Math.ceil(total / PAGE_COUNT);
     const pages = [];
     for (let p = 0; p < PAGE_COUNT; p++) pages.push(choiceOrder.slice(p * perPage, (p + 1) * perPage));
     // Per-page prompt queues — front = current prompt for that page; shuffled
     // within the page (when shuffleQuestions is on) for variety.
-    const pageQueues = pages.map(arr => (opt.shuffleQuestions ? shuffle([...arr]) : [...arr]));
+    const pageQueues = pages.map(arr => ((opt.shuffleQuestions && !fightCtl) ? shuffle([...arr]) : [...arr]));
 
     // Grid geometry sized to the LARGEST page so every page lines up identically
     // (5 fixed rows, columns from the tile count). A tile's cell never changes as
@@ -532,6 +569,16 @@ const ftmTemplate = {
       promptEl.style.visibility = "";           // a correct-answer fly may have hidden it
       voicePlayer.stop();                       // silence the PREVIOUS pair's clip, if any
       promptEl.className = "aw-ftm-prompt";      // drop any stale voiceonly class from the last pair
+      // ⭐ SHOWDOWN (Đợt 186) — the prompt on screen, and with it whose turn this
+      // is. Reported here, the one funnel every prompt passes through, with this
+      // game's own slide-out/slide-in times so the name leaves with the old
+      // definition and arrives with the new one.
+      const idx0 = queue[0];
+      if (!playOrder.includes(idx0)) playOrder.push(idx0);
+      curRow = playOrder.indexOf(idx0);
+      ui.itemChanging?.(curRow, { outMs: EXIT_MS, inMs: ENTER_MS });
+      updateNav();
+
       const pr = pairs[queue[0]];
       const vv = voiceView(activity, pr);   // Options > Content decides text/voice
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
@@ -637,6 +684,18 @@ const ftmTemplate = {
 
     function onTimeUp() {
       if (finished || !queue.length) return;
+      // FIGHT: a prompt that glided off unanswered ends THIS board's go — a
+      // wrong finish, which leaves the round open for the other team instead of
+      // taking it away (the Đợt 128 rule). The match decides what comes next.
+      if (fightCtl) {
+        const target = queue[0];
+        state[target].skipped = true;
+        fightPendingReveal = fightPendingReveal || { idx: null, tile: null, correct: false };
+        lockTiles();
+        syncFightLock();
+        fightCtl.wordDone(fightSide, { index: target, correct: false });
+        return;
+      }
       dropOrRequeue(queue[0]);
       startCycle();
     }
@@ -787,7 +846,35 @@ const ftmTemplate = {
 
     function choose(idx, tile) {
       if (finished || !queue.length) return;
+      if (fightLocked()) return;   // the other team took this round, or the match is over
       const target = queue[0];
+
+      // ⭐⭐ FIGHT (Đợt 184) — this board's go is over, and nothing on this screen
+      // may name the answer while the other team is still looking: no ✓ over the
+      // tapped tile, no big centre check, no prompt flying off (a prompt that
+      // leaves says "that tile was right" as loudly as a tick). The board goes
+      // neutral grey instead, and everything held back goes up on reveal().
+      if (fightCtl) {
+        ui.noteActivity?.();
+        lockTiles();
+        const correct = idx === target;
+        fightPendingReveal = { idx, tile, correct };
+        if (correct) {
+          state[target].solved = true;
+          ftmSound.correct();
+        } else {
+          ftmSound.wrong();
+          if (pointsOff) penalty += pointsOff;
+          loseLife();
+        }
+        ui.setScore(scoreNow());
+        updateNav();
+        root.querySelector(".aw-ftm-card")?.classList.add("is-fightlost");
+        // `index` is the ROW in `review` — `order` is identity in a match, so
+        // the prompt's own pair index IS that row (same contract as True/false).
+        fightCtl.wordDone(fightSide, { index: target, correct });
+        return;   // the MATCH decides what happens next
+      }
       // TIME COST (Dot 143): tapping a tile IS the progress this game measures,
       // so it resets the idle clock whether the tap was right or wrong - charging
       // a class for honest wrong guesses would measure luck, not attention.
@@ -857,9 +944,77 @@ const ftmTemplate = {
     // It shows only WHICH PAGE of tiles is on screen, and nothing at all when
     // the whole set fits on one page. (`label` is core's opt-in nav text.)
     function updateNav() {
+      // ⭐⭐ Đợt 186 — `index` is the ROW IN `review` (the engine reads it to pick
+      // the Showdown pupil and to open each round's clock), NOT the page number
+      // it used to carry. The page still reads exactly as before through
+      // `label`, which the engine prefers when it is given — the same trick
+      // True/false used in Đợt 178 to keep its score visible.
       ui.setNav({
-        index: curPage + 1, total: PAGE_COUNT, onPrev: null, onNext: null,
+        index: curRow + 1, total,
+        onPrev: null, onNext: null,
         label: PAGE_COUNT > 1 ? `Page ${curPage + 1} / ${PAGE_COUNT}` : ""
+      });
+    }
+
+    // ================= FIGHT MODE (Đợt 184) =========================
+    // All dead code outside a match (`fightCtl` is null).
+
+    // The match puts BOTH boards on pair `i`. `order` is identity in a match, so
+    // the round number IS the pair index; the page it lives on comes from the
+    // same chunking both boards built, so the two land on the same page too.
+    function fightGoTo(i) {
+      if (finished) return;
+      if (!pairs[i]) return;
+      fightPendingReveal = null;
+      const page = pages.findIndex(arr => arr.includes(i));
+      if (page >= 0 && page !== curPage) { curPage = page; renderShell(); }
+      queue = pageQueues[curPage];
+      queue.length = 0;
+      queue.push(i);
+      haltPromptAnim();
+      root.querySelector(".aw-ftm-card")?.classList.remove("is-fightlost");
+      root.querySelectorAll(".aw-ftm-fightmark").forEach(n => n.remove());
+      startCycle();
+    }
+
+    // The round is settled for both teams: show what was withheld. The correct
+    // tile is marked on BOTH boards (the board that never answered needs to see
+    // it too), and a board that tapped the wrong tile gets its ✗ there.
+    function revealFightMarks() {
+      if (!fightCtl) return;
+      const held = fightPendingReveal;
+      fightPendingReveal = null;
+      const target = queue.length ? queue[0] : null;
+      const tiles = [...root.querySelectorAll(".aw-ftm-tile")];
+      const pageArr = pages[curPage] || [];
+      if (target !== null) {
+        const pos = pageArr.indexOf(target);
+        const rightTile = pos >= 0 ? tiles[pos] : null;
+        if (rightTile && !rightTile.querySelector(".aw-ftm-fightmark")) {
+          rightTile.append(el("span", "aw-ftm-fightmark", icons.markCheck));
+        }
+      }
+      if (held && !held.correct && held.tile && !held.tile.querySelector(".aw-ftm-fightmark")) {
+        held.tile.append(el("span", "aw-ftm-fightmark is-cross", icons.markCross));
+      }
+      root.querySelector(".aw-ftm-card")?.classList.remove("is-fightlost");
+    }
+
+    // Apply a lock WITHOUT rebuilding anything (the no-flash rule).
+    function syncFightLock() {
+      if (!fightCtl) return;
+      const locked = fightLocked();
+      if (locked) lockTiles();
+      root.querySelector(".aw-ftm-card")?.classList.toggle("is-fightlost",
+        locked || !!fightPendingReveal);
+    }
+
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total,
+        goToIndex: fightGoTo,
+        lock(on) { fightBoardLock = !!on; syncFightLock(); },
+        reveal: revealFightMarks
       });
     }
 
@@ -884,9 +1039,14 @@ const ftmTemplate = {
       else if (reason === "timesup") ftmSound.timesUp();
       else ftmSound.gameCompleted();
 
-      const perQuestion = order.map((idx, i) => ({ q: i, correct: state[idx].solved === true }));
+      // ⭐⭐ Đợt 186 — IN PLAY ORDER (see `playOrder`): the prompts arrive in a
+      // shuffled per-page queue, so `order` is not the order the class saw them
+      // in — and Showdown hands row `n` to pupil `n`. Pairs that never came up
+      // are appended in their own order, so nothing is lost from the review.
+      const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
+      const perQuestion = rows.map((idx, i) => ({ q: i, correct: state[idx].solved === true }));
       const correct = perQuestion.filter(p => p.correct).length;
-      const review = order.map(idx => {
+      const review = rows.map(idx => {
         const p = pairs[idx];
         const s = state[idx];
         return {

@@ -83,7 +83,14 @@ function gridKey(str) {
 // its best-scoring valid crossing; a word that can't cross anything is dropped
 // (kept out of the grid but still listed as a clue with "No answer" possible).
 // -------------------------------------------------------------------
-function buildCrossword(words) {
+// ⚠️ `fixed` (Đợt 185) — build the SAME grid every time, for FIGHT MODE. This
+// function is deliberately random in single play (see the two comments below):
+// the layout shifts a little on every Start again. In a match that randomness
+// is a silent disaster — each board builds its own grid, so clue #3 is a
+// different word on the two screens, and the referee's "open clue 3 on both
+// boards" opens two different questions. Nothing looks wrong on either board
+// on its own; the class just sees two teams answering different things.
+function buildCrossword(words, fixed = false) {
   const usable = words
     // `src` = the ORIGINAL content object, carried through BOTH hops of this
     // build (here, then into the placed-clue objects below) so "Start with
@@ -98,9 +105,11 @@ function buildCrossword(words) {
   // length keeps the longest words anchoring the grid but randomises the order
   // of equal-length words — so the interlock (row/column positions) shifts a
   // little each new game instead of being identical every time.
-  for (let i = list.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [list[i], list[j]] = [list[j], list[i]];
+  if (!fixed) {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
   }
   list.sort((a, b) => b.key.length - a.key.length);
 
@@ -153,7 +162,7 @@ function buildCrossword(words) {
           const score = fitScore(w.key, row, col, dir);
           // random tie-break: among equally-good crossings, pick either one so
           // the layout varies between games.
-          if (score > 0 && (!best || score > best.score || (score === best.score && Math.random() < 0.5)))
+          if (score > 0 && (!best || score > best.score || (score === best.score && !fixed && Math.random() < 0.5)))
             best = { row, col, dir, score };
         }
       }
@@ -219,6 +228,19 @@ const crosswordTemplate = {
   // Đợt 143 (opt-in) — really reads options.autoSwitch now: a solved word moves
   // the cursor on to the next clue by itself.
   usesAutoSwitch: true,
+  // ⭐⭐ Đợt 185 — FIGHT MODE in the "PICK TURN + LOCK" model the teacher chose
+  // for this game (17/8/2026): "Khi mở ô, mỗi bên 1 lượt chọn câu… Khi 1 bên
+  // chọn 1 cột/hàng thì cả 2 bên cùng mở cột/hàng đó, ai viết câu trả lời nhanh
+  // hơn thì có điểm, đội bên kia sẽ bị coi như khóa, câu trả lời vẫn hiện ra
+  // nhưng coi như bị sai." `fightPick: "lock"` IS that rule set — see the
+  // pickMode block in core/fight.js.
+  fightMode: true,
+  fightPick: "lock",
+  // ⭐⭐ Đợt 186 — SHOWDOWN. Left out in Đợt 178 for one honest reason: the class
+  // chooses which clue to open, so `review` came out in GRID order and pupil `n`
+  // would have been named against a clue they never touched. `playOrder` +
+  // `setNav({index: row})` fix exactly that.
+  showdownMode: true,
   name: "Crossword",
   edit: openCrosswordEditor,
 
@@ -277,7 +299,10 @@ const crosswordTemplate = {
     const wordPages = [];
     for (let p = 0; p < rawPageCount; p++) wordPages.push(words.slice(p * perPage, (p + 1) * perPage));
     const pageState = wordPages
-      .map(wp => buildCrossword(wp))
+      // `!!activity._fight` — in a match BOTH boards must build the identical
+      // grid, see buildCrossword's own note. (Read straight off the activity:
+      // this runs before the `fightCtl` shorthand below is in scope.)
+      .map(wp => buildCrossword(wp, !!activity._fight))
       .filter(bp => bp.clues.length > 0)   // a page can only end up empty if every one of its words was <2 letters
       .map(bp => ({
         grid: bp.grid, clues: bp.clues, rows: bp.rows, cols: bp.cols,
@@ -295,6 +320,22 @@ const crosswordTemplate = {
 
     let curPageIdx = 0;
     let grid, clues, rows, cols, userGrid, cellStatus, wordState;   // set by loadPage() for the CURRENT page
+
+    // ----- FIGHT MODE (Đợt 185) — `_fight` is put here by core/fight.js.
+    // Null outside a match; every branch below then falls back to the game as
+    // it was. Rules: `tpl.fightPick: "lock"` above.
+    const fight = activity._fight || null;
+    const fightSide = fight ? fight.side : 0;
+    const fightCtl = fight ? fight.ctl : null;
+    let fightMyTurn = false;         // pick phase: may THIS board choose a clue?
+    let fightBoardLock = false;      // the other team answered first — this board is out
+    let fightHeld = null;            // { i, correct } withheld until the match says reveal
+
+    // ⭐ SHOWDOWN (Đợt 186) — {page, i} in the order clues were OPENED, and the
+    // row of the clue on screen. The class chooses the order, so this is the
+    // only order `review` (and "whose clue was this") can honestly be in.
+    const playOrder = [];
+    let curRow = 0;
 
     let curWord = -1;                // -1 = on the board (nothing picked)
     let curCell = 0;
@@ -428,6 +469,13 @@ const crosswordTemplate = {
     // frame by frame through ui.setScorePainter, instead of ui.setScore
     // replacing the whole "7 / 20" markup with a bare number.
     function showScore(n) {
+      // ⭐⭐ FIGHT (Đợt 185) — measured: the team scoreboard stayed on 0 all match.
+      // Crossword paints its OWN score chip ("3/20" with its own colours) and
+      // therefore never calls `ui.setScore()` — which is the one route the
+      // engine forwards to `fight.ctl.onScore()`. So in a match the points have
+      // to be reported here, at this game's single scoring funnel. Same route
+      // type-the-answer uses for the same reason.
+      if (fightCtl) fightCtl.onScore(fightSide, scoreNow());
       if (!ui.scoreEl) return;
       const shown = n == null ? scoreNow() : Math.round(n);
       const cls = shown < 0 ? "aw-cw-score-neg" : "aw-cw-score-pos";
@@ -500,10 +548,15 @@ const crosswordTemplate = {
     // a control (see the navWrap/CSS comments above) — a page only advances
     // once every one of its words is done.
     function updateNav() {
-      if (PAGE_COUNT <= 1) return;
+      // ⭐⭐ Đợt 186 — `index` is the ROW IN `review` (the engine reads it for the
+      // Showdown pupil and the per-round clock), NOT the page number it used to
+      // carry; the page still reads exactly as before through `label`, which the
+      // engine prefers when given. And the call is no longer skipped on a
+      // one-page crossword: the page LABEL was the only thing it used to say, but
+      // the row has to be reported on every game.
       ui.setNav({
-        index: curPageIdx + 1, total: PAGE_COUNT, onPrev: null, onNext: null,
-        label: `Page ${curPageIdx + 1} / ${PAGE_COUNT}`
+        index: curRow + 1, total, onPrev: null, onNext: null,
+        label: PAGE_COUNT > 1 ? `Page ${curPageIdx + 1} / ${PAGE_COUNT}` : ""
       });
     }
 
@@ -592,6 +645,13 @@ const crosswordTemplate = {
 
     function selectWord(i) {
       ui.noteActivity?.();   // TIME COST (Đợt 143): picking a clue off the board is an action
+      // ⭐ SHOWDOWN (Đợt 186) — opening a clue is when a question STARTS here, so
+      // this is where the play order grows and the pupil's name moves on. A clue
+      // re-opened later keeps the row it already had.
+      if (!playOrder.some(k => k.page === curPageIdx && k.i === i)) playOrder.push({ page: curPageIdx, i });
+      curRow = playOrder.findIndex(k => k.page === curPageIdx && k.i === i);
+      ui.itemChanging?.(curRow, { outMs: 140, inMs: 200 });
+      updateNav();
       // Wrap within the CURRENT page's clue count — `total` is now the grand
       // total across every page, not this page's count (teacher 4/8/2026).
       const n = clues.length;
@@ -614,6 +674,14 @@ const crosswordTemplate = {
       // pick an UNANSWERED word through this cell (a done word can't be reopened)
       const pick = through.find(w => !wordState[clues.indexOf(w)].done);
       if (!pick) return;
+      // ⚠️ FIGHT: the tap is only REPORTED. The referee is what opens the word,
+      // and it opens the SAME one on both boards at once; a board that opened
+      // its own would put the two teams on different clues.
+      if (fightCtl) {
+        if (!fightMyTurn) return;             // faded board: not our turn to choose
+        fightCtl.boardPicked(fightSide, clues.indexOf(pick));
+        return;
+      }
       selectWord(clues.indexOf(pick));
     }
 
@@ -748,6 +816,7 @@ const crosswordTemplate = {
 
     function typeLetter(ch) {
       if (finished || curWord < 0) return;
+      if (fightBoardLock) return;   // FIGHT: the other team already took this word
       const w = clues[curWord];
       if (wordState[curWord].done) return;
       // TIME COST (Đợt 143): typing a letter IS this game's progress. Grading
@@ -816,8 +885,90 @@ const crosswordTemplate = {
 
     function submitCurrentWord() {
       if (finished || curWord < 0 || wordState[curWord].done) return;
+      if (fightBoardLock) return;   // FIGHT: locked out of this word
       if (!wordFilled(clues[curWord])) return;
       gradeWord();
+    }
+
+    // ================= FIGHT MODE (Đợt 185) =========================
+    // All dead code outside a match (`fightCtl` is null).
+
+    // The match opens clue `i` on BOTH boards.
+    function fightGoTo(i) {
+      if (finished) return;
+      if (!clues[i]) return;
+      fightHeld = null;
+      fightBoardLock = false;
+      selectWord(i);
+      syncFightLock();
+    }
+
+    // The round is settled: play the reveal that gradeWord() held back. A board
+    // that was LOCKED never answered — the teacher's rule is that it still sees
+    // the answer and still counts as wrong ("câu trả lời vẫn hiện ra nhưng coi
+    // như bị sai"), so it is marked here rather than left half-played.
+    function revealFightWord() {
+      if (!fightCtl || curWord < 0) return;
+      const w = clues[curWord], st = wordState[curWord];
+      const held = fightHeld;
+      fightHeld = null;
+      if (!st.done) {
+        // locked out (or never got to submit): counts as wrong, with the same
+        // penalty a wrong submit would have cost.
+        st.done = true; st.wrong = true; st.correct = false;
+        if (minusOn) { livePoints -= penalty; showScore(); }
+      }
+      if (held && held.correct) {
+        w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
+        paintGrid(); kbd.refresh();
+        revealCorrectSequence(w);
+      } else {
+        // Show the right answer in the cells — for the team that typed a wrong
+        // one AND for the team that was locked out.
+        w.cells.forEach(([r, c]) => {
+          const rc = r + "," + c;
+          if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "wrong");
+        });
+        paintGrid(); kbd.refresh();
+        flipRevealWord(w);
+      }
+      const card = root.querySelector(".aw-cw-wrap") || root.firstElementChild;
+      card?.classList.remove("is-fightlost");
+    }
+
+    // Back to the board, ready for the next choice.
+    function fightBackToBoard() {
+      if (!fightCtl || finished) return;
+      fightHeld = null;
+      fightBoardLock = false;
+      returnToBoard();
+      applyPickTurn();
+    }
+
+    function fightCard() { return root.querySelector(".aw-cw-wrap") || root.firstElementChild; }
+
+    function syncFightLock() {
+      if (!fightCtl) return;
+      if (fightBoardLock) kbd.setHidden(true);
+      fightCard()?.classList.toggle("is-fightlost", fightBoardLock || !!fightHeld);
+    }
+
+    // Pick phase: the board that is not choosing is faded and inert.
+    function applyPickTurn() {
+      if (!fightCtl) return;
+      const card = fightCard();
+      if (card) card.classList.toggle("is-fightwait", !fightMyTurn && curWord < 0);
+    }
+
+    if (fightCtl) {
+      fightCtl.attach(fightSide, {
+        total: clues.length,
+        goToIndex: fightGoTo,
+        lock(on) { fightBoardLock = !!on; syncFightLock(); },
+        reveal: revealFightWord,
+        setPickTurn(mine) { fightMyTurn = !!mine; applyPickTurn(); },
+        backToBoard: fightBackToBoard
+      });
     }
 
     // -------------------------------------------------------------------
@@ -860,6 +1011,24 @@ const crosswordTemplate = {
       consumeAndrewGlow();
       const typed = w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "").join("");
       const ok = typed === w.key;
+
+      // ⭐⭐ FIGHT (Đợt 185) — the whole reveal is HELD BACK. In single play a
+      // graded word walks its cells green (or red, then flips the answer in),
+      // and every one of those is the answer written out in full on a board the
+      // other team can read while it is still typing. The board is greyed
+      // instead, and the match calls reveal() once the round is settled.
+      if (fightCtl) {
+        st.done = true;
+        st.correct = ok;
+        if (!ok) st.wrong = true;
+        if (ok) { crosswordSound.correct(); livePoints += 1; }
+        else { crosswordSound.wrong(); if (minusOn) livePoints -= penalty; }
+        showScore();
+        fightHeld = { i: curWord, correct: ok };
+        syncFightLock();
+        fightCtl.wordDone(fightSide, { index: curWord, correct: ok });
+        return;   // the MATCH decides what happens next (reveal, then backToBoard)
+      }
 
       if (ok) {
         st.done = true; st.correct = true;
@@ -1101,21 +1270,32 @@ const crosswordTemplate = {
       const review = [];
       const perQuestion = [];
       let correct = 0, answered = 0, wrongDone = 0;
-      pageState.forEach(ps => {
-        ps.clues.forEach((w, i) => {
-          const s = ps.wordState[i];
-          const typed = w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("");
-          if (s.correct) correct++;
-          if (s.done) { answered++; if (!s.correct) wrongDone++; }
-          perQuestion.push({ q: perQuestion.length, correct: s.correct === true });
-          review.push({
-            question: w.clue,
-            answered: s.done,
-            yourText: s.done ? typed : null,
-            yourCorrect: s.correct === true,
-            correctText: w.answer || w.key,
-            src: w.src
-          });
+      // ⭐⭐ Đợt 186 — WALKED IN PLAY ORDER, not grid order. The class chooses
+      // which clue to open, so the grid's own order is not the order the
+      // questions were played — and Showdown hands row `n` to pupil `n` (the
+      // reason Đợt 178 left this game out). `playOrder` holds {page, i} in the
+      // order words were opened; anything never opened is appended after it in
+      // grid order, so nothing drops out of Show answers.
+      const seq = [...playOrder];
+      pageState.forEach((ps, p) => ps.clues.forEach((w, i) => {
+        if (!seq.some(k => k.page === p && k.i === i)) seq.push({ page: p, i });
+      }));
+      seq.forEach(({ page, i }) => {
+        const ps = pageState[page];
+        const w = ps && ps.clues[i];
+        if (!w) return;
+        const s = ps.wordState[i];
+        const typed = w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("");
+        if (s.correct) correct++;
+        if (s.done) { answered++; if (!s.correct) wrongDone++; }
+        perQuestion.push({ q: perQuestion.length, correct: s.correct === true });
+        review.push({
+          question: w.clue,
+          answered: s.done,
+          yourText: s.done ? typed : null,
+          yourCorrect: s.correct === true,
+          correctText: w.answer || w.key,
+          src: w.src
         });
       });
       // Deducted score for ranking/summary: +1 per correct word, −penalty per

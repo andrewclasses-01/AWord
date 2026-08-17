@@ -18,7 +18,20 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
+  transition: opacity .18s ease;   /* Đợt 185 — the fight fades below */
 }
+
+/* =============================================================
+   FIGHT MODE (Đợt 185) — the teacher's "pick turn + lock" rules.
+   `.is-fightwait`  it is the OTHER team's turn to choose a clue: this board is
+                    at half strength ("mờ đi 50%") and onCellClick refuses taps.
+   `.is-fightlost`  this board has answered (marks withheld) or was LOCKED out
+                    because the other team got there first.
+   ⚠️ opacity only — a `filter` here would open a stacking context around the
+   whole board, the trap recorded in core/HUONG DAN CORE.md.
+   ============================================================= */
+.aw-cw-wrap.is-fightwait { opacity: .5; }
+.aw-cw-wrap.is-fightlost { opacity: .55; }
 
 /* PAGE INDICATOR (teacher 4/8/2026): a crossword over 30 answers splits into
    pages (crossword.js) — the shared nav row under the stage shows only

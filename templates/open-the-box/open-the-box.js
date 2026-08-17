@@ -276,6 +276,11 @@ const otbTemplate = {
   // waits for the other team, and whoever ends up WRONG chooses next.
   fightMode: true,
   fightPick: "wait",
+  // ⭐⭐ Đợt 186 — SHOWDOWN. Left out in Đợt 178 for one honest reason: the class
+  // chooses which box to open, so `review` came out in GRID order and pupil `n`
+  // would have been named against a question they never saw. `playOrder` +
+  // `setNav({index: row})` fix exactly that; nothing else was in the way.
+  showdownMode: true,
   name: "Open the box",
 
   // Opt-in: put THIS template's per-question timer bar on the SAME row as
@@ -388,6 +393,11 @@ function mountQuestions(root, activity, ui) {
   let fightBoardLock = false;       // the match locked this board out of the open box
   let fightPendingReveal = null;    // { i, k, correct } — a result held back while the other team plays
   let fightRefillTimer = null;      // resumes the clock after resetClock()'s refill animation
+
+  // ⭐ SHOWDOWN (Đợt 186) — the order boxes were actually OPENED. The class
+  // chooses that order, so it is the only order `review` (and therefore "whose
+  // question was this") can honestly be reported in. See finishRound.
+  const playOrder = [];
 
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
   const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
@@ -702,6 +712,8 @@ function mountQuestions(root, activity, ui) {
       runCountdown(timeLeft);
     }
     activeIndex = i;
+    if (!playOrder.includes(i)) playOrder.push(i);   // Đợt 186 — see playOrder
+    updateProgress();                                 // moves the Showdown name on to this box's pupil
     animateOpen(i);
   }
 
@@ -1133,7 +1145,15 @@ function mountQuestions(root, activity, ui) {
     // now carries the slogan. `label` is core/engine.js's own opt-in for exactly
     // this (Find the match's "Page 1 / 2", Running word's slogan); index/total
     // are still passed so the call stays valid if the label is ever dropped.
-    ui.setNav({ index: score, total, onPrev: null, onNext: null, label: SLOGAN });
+    // ⭐⭐ Đợt 186 — `index` IS THE ROW IN `review`, not the score. The engine
+    // reads it to pick the Showdown pupil (and to open each round's clock), so
+    // a score here would move the name every time somebody got a point instead
+    // of when the question changed — exactly the bug Đợt 178 found in
+    // True/false. While the grid is showing (nothing open) it points at the row
+    // the NEXT box will take, so the class can see whose turn it is to choose
+    // BEFORE they choose. `label` keeps the brand line the bar has always shown.
+    const row = activeIndex === null ? playOrder.length : Math.max(0, playOrder.length - 1);
+    ui.setNav({ index: row + 1, total, onPrev: null, onNext: null, label: SLOGAN });
   }
 
   // ================= FIGHT MODE (Đợt 183) =========================
@@ -1353,8 +1373,16 @@ function mountQuestions(root, activity, ui) {
   // Quiz/Anagram get from ui.finish(). `title` is the one bit Open the box
   // needed core/engine.js to support (see GHI CHU OPEN-THE-BOX.md).
   function finishRound(title) {
-    const perQuestion = items.map((it, i) => ({ q: i, correct: boxState[i] === "correct" }));
-    const review = items.map((it, i) => {
+    // ⭐⭐ Đợt 186 — REVIEW IN PLAY ORDER, which is what made Showdown possible
+    // here at all. This game lets the CLASS choose what to open next, so the
+    // grid order is not the order the questions were played — and Showdown
+    // hands question `n` of `review` to pupil `n`. Reported grid-first, every
+    // name would sit against a question that pupil never saw (the reason Đợt
+    // 178 left this game out). Boxes nobody opened come last, in grid order.
+    const rows = [...playOrder, ...items.map((_, i) => i).filter(i => !playOrder.includes(i))];
+    const perQuestion = rows.map(i => ({ q: i, correct: boxState[i] === "correct" }));
+    const review = rows.map(i => {
+      const it = items[i];
       const correctText = (it.answers.find(a => a.correct) || {}).text || "";
       if (boxState[i] === "correct") {
         return { question: it.question, answered: true, yourText: correctText, yourCorrect: true, correctText, src: it.src };

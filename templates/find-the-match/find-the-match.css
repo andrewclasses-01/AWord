@@ -25,6 +25,31 @@
   padding-bottom: 0.2cqw;
 }
 
+/* =============================================================
+   FIGHT MODE (Đợt 184) — "your go is over", and the withheld marks.
+   Same visual language as every other fight-enabled template: .55 opacity
+   while this board's result is being held back, and the ✓/✗ that were held
+   back go up as small white discs in a tile's corner (readable on every tile
+   colour, and on the greyed board too — the lesson of Đợt 182).
+   ⚠️ opacity, never `filter`: a filter would open a stacking context around
+   the play area (core/HUONG DAN CORE.md).
+   ============================================================= */
+.aw-ftm-card.is-fightlost { opacity: .55; }
+.aw-ftm-fightmark {
+  position: absolute;
+  top: 6%; right: 5%;
+  width: 22%; aspect-ratio: 1;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0.3cqw;
+  border-radius: 50%;
+  background: #fff;
+  color: #16a34a;
+  box-shadow: 0 0.15cqw 0.4cqw rgba(0, 0, 0, .28);
+  pointer-events: none;
+}
+.aw-ftm-fightmark svg { width: 100%; height: 100%; }
+.aw-ftm-fightmark.is-cross { color: #dc2626; }
+
 /* Lives now render as hearts in the TOP BAR (ui.livesSlot, .aw-top-heart —
    shared core class), like True/false. No in-card lives row any more. */
 
