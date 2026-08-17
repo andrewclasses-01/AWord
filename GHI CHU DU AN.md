@@ -8,6 +8,97 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 178 (17/8/2026) — ⭐⭐ MỞ SHOWDOWN CHO CÁC TEMPLATE CÒN LẠI: 3 → 8 GAME, + VÁ LỖI CORE LÀM TÊN HỌC SINH TÀNG HÌNH
+⭐ CÓ SỬA CORE (`engine.js` · `app.css`) + **5 file game** (`balloon-pop` · `gameshow` · `speaking` ·
+`unjumble` · `true-false`) + 2 file CSS game + 2 file game chỉ thêm ghi chú vì sao CHƯA bật.
+🟢 ĐÃ TỰ TEST qua `scratch/showdown-all-test.html` (lưới MỚI, chạy Showdown trên **bất kỳ** template),
+**có 2 đối chứng ngược**, và **NHÌN BẰNG MẮT** trên Chrome thật — 3 lỗi dưới đây chỉ ảnh chụp mới bắt được.
+
+### 1. Thầy giao: "mở rộng showdown cho 14 template còn lại"
+
+### 2. Kết quả: **8/17 đang bật** — 5 game mở thêm, 9 game có lý do rõ ràng chưa mở
+Đã rà **từng** template theo 3 điều kiện của hợp đồng (chi tiết + bảng hiện trạng nay nằm ở
+`core/HUONG DAN CORE.md` mục "BA ĐIỀU KIỆN"). Không ép cả 14 theo nghĩa đen, vì ép là ship ra thứ
+hỏng trong im lặng:
+
+| Mở thêm (5) | Chưa mở (9) — lý do |
+|---|---|
+| **Balloon pop** · **Gameshow** · **Speaking** · **Unjumble** · **True/false** | **Flying fruit · Maze chase** — plumbing ĐÚNG hết, chỉ **hết chỗ đặt tên** (xem mục 5) |
+| | **Crossword · Find the match · Open the box** — học sinh **tự chọn thứ tự câu**, `review` xuất theo thứ tự lưới/hộp ⇒ tên sẽ gắn vào hàng em đó chưa từng thấy |
+| | **Whack-a-mole** — nhiều chuột cùng lúc; `review` **không ghi kết quả gì** (mọi hàng `answered:false`) nên em nào cũng 0 đúng |
+| | **Running word · Running team** — đã có cơ chế chia đội RIÊNG; Running team còn xoay vòng theo **đúng sổ lớp** (`roster[turnPtr % roster.length]`), chồng Showdown lên là **hai vòng xoay mâu thuẫn nhau trên cùng màn hình** |
+| | **Speaking cards** — không chấm điểm, không có đáp án đúng |
+
+### 3. ⭐⭐ LỖI CORE NẶNG NHẤT ĐỢT NÀY — TÊN HỌC SINH ĐƯỢC VẼ RỒI VỨT ĐI
+`core/engine.js` dựng topbar: nhánh `if (topbarMid)` gắn `topbarMid` **THAY VÌ** `centreSlot`. Mà
+`centreSlot` chính là chỗ chứa `.aw-top-showdown`. Nghĩa là **mọi template khai `inlineTimerBar`**
+(Balloon pop · Flying fruit · Gameshow · Open the box · Whack-a-mole · Running team) đều: tạo node
+tên → tô tên vào đó mỗi câu → **không bao giờ đưa vào tài liệu**. Không lỗi, không ô trống — cái tín
+hiệu cả lớp nhìn vào đơn giản là KHÔNG TỒN TẠI.
+
+Vì sao chưa ai cắn: 3 template Showdown cũ (Quiz · Anagram · Type the answer) đều dùng `hasLivesSlot`
+nên rơi vào nhánh khác. **Bẫy này nằm chờ đúng cái đợt mở rộng.**
+
+Vá: gắn thêm `centreSlot` trong nhánh đó, **có canh `showdownPick`** — vì chính `showdownPick` làm
+`.aw-top-centre` thành `position:absolute` (`.is-showdown`), tức KHÔNG chiếm một tí bề ngang nào của
+thanh giờ. Gắn bản in-flow vào là bóp chết đúng cái thanh mà nhánh này sinh ra để nhường chỗ.
+🔴 **ĐỐI CHỨNG NGƯỢC**: gỡ đúng dòng vá đó ra ⇒ `balloon_pop`, `flying_fruit`, `gameshow` đều báo
+"khong co .aw-top-showdown" trong khi `quiz` vẫn bình thường.
+
+### 4. Việc thật ở True/false — `index` của `setNav` là ĐIỂM SỐ, không phải số câu
+`updateNav()` gửi `ui.setNav({ index: liveScore() })`. Trước Đợt 178 vô hại vì chẳng ai đọc nó như
+một vị trí; nay engine đọc, để (a) chọn tên học sinh, (b) mở **đồng hồ từng lượt**.
+Đo được với `pointsOff=5`: **10 lần đổi tên cho 8 lượt** — sau mỗi câu SAI, điểm âm bị `Math.max(0,…)`
+kẹp về 0 nên tên nhảy về em số 1 rồi câu sau mới nhảy lại.
+
+Vá: thêm `rowOf[]` (bản đồ ngược của `order`) + biến `curRow`; `startCycle()` báo
+`ui.itemChanging(curRow, {outMs: EXIT_MS, inMs: ENTER_MS})`; `updateNav()` gửi `index: curRow + 1` và
+đẩy điểm sang **`label`** (engine ưu tiên `label`, nên thanh nav đọc y hệt như cũ).
+⚠️ **`curRow` chứ không đọc `queue[0]`**: `choose()` `shift()` hàng đợi **ngay lúc bấm**, trong khi câu
+vừa trả lời còn đang bay ra — đọc hàng đợi ở đó là trao tên cho em kế tiếp sớm nửa giây.
+⚠️ Và là **HÀNG trong `review`**, cố ý không phải "lượt thứ mấy": bật "Repeat until answered" thì câu
+quay lại **đúng em đã sở hữu nó**, và đó cũng là cách duy nhất còn khớp Show answers.
+🔴 **ĐỐI CHỨNG NGƯỢC**: trả `updateNav()` về `index: liveScore()` ⇒ chuỗi tên hỏng đúng như trên
+(`Ẳnh Hạnh Vy Ẳnh Hạnh **Ẳnh** Vy Ẳnh Hạnh **Ẳnh**`); vá lại ⇒ đúng 8 lần, xoay vòng chuẩn.
+
+### 5. ⭐⭐ BA LỖI CHỈ ẢNH CHỤP BẮT ĐƯỢC — số đo báo ĐẠT hết
+Cả 3 đều qua sạch mọi phép kiểm tự động (node có thật · có kích thước · `visibility:visible`):
+1. **BỊ CHE** — Balloon pop vẽ lớp khinh khí cầu đè lên tên. Bắt bằng **`elementFromPoint`** ngay tâm
+   chữ: trả về `.aw-bp-blimps`. Vá chung ở core: `z-index: 6` cho `.aw-top-centre.is-showdown` —
+   trên nền game (auto…5), **dưới mọi lớp phủ** (dim 7 · menu 8 · confetti 11 · play 12 · celebrate 13
+   · review 14). Chỉ nâng ô tên, KHÔNG nâng cả `.aw-topbar` (nâng cả hàng là kéo đồng hồ/điểm lên đè
+   lên art mà template cố ý cho che).
+2. **CHÌM MÀU** — Gameshow: màn hình studio TỐI, mực mặc định `--aw-fg` gần đen ⇒ gần như tàng hình.
+   Vá trong `gameshow.css`: chữ trắng + đổ bóng.
+3. **HẾT CHỖ** — Flying fruit (câu hỏi chiếm dải trên, nền rừng tối) và Maze chase (băng câu hỏi + 5
+   quả tim). Đặt tên vào là **in đè lên chính nội dung game** ⇒ **CHƯA BẬT**, đã ghi rõ lý do ngay
+   trong 2 file đó. Cần thầy chốt chỗ đặt.
+
+Thêm: Speaking và Unjumble tự treo caption thẳng vào `.aw-topbar` (không qua `ui.sloganSlot`), nên
+caption là **anh em ruột** của `.aw-top-centre` và luật ẩn sẵn của engine không với tới — đã tự ẩn bằng
+`.aw-topbar.is-showdown > .aw-spk-slogan|.aw-unj-slogan { display:none }` (class `is-showdown` trên
+hàng topbar là của Đợt 178). 🔴 **ĐỐI CHỨNG NGƯỢC**: chạy `?pick=0` (không Showdown) ⇒ cả hai caption
+`display:block`, hiện lại bình thường.
+
+### 6. Đã tự test
+`scratch/showdown-all-test.html` (MỚI) — chạy Showdown trên **bất kỳ** template, nạp bằng CHÍNH
+`ensureTemplate()` của app, gieo pick vào `sessionStorage` y như bấm READY.
+⚠️ `?off=5` là **bắt buộc** khi thử True/false: act mẫu có `pointsOff=0` nên `updateNav()` gần như
+không chạy, và đối chứng ngược sẽ "đạt" OAN.
+- **8/8 template đang bật**: tên có mặt · **nằm trên cùng** (`elementFromPoint`) · đúng chữ · đúng màu
+  (trắng ở Gameshow, đen ở 7 cái còn lại) · rộng 279px.
+- **True/false chơi trọn ván**: ghi lại từng cặp (TÊN đang hiện, CÂU đang hiện) lúc chơi rồi mở Show
+  answers so lại ⇒ **8/8 cặp khớp, 0 lệch**; tổng `6/8`.
+- **Unjumble đi bằng ‹ ›**: "1 of 6"→Ẳnh · "2 of 6"→Hạnh · … · "6 of 6"→Vy.
+- `node --input-type=module --check` sạch 8 file; 0 lỗi console.
+
+### 7. Bắt được thêm 1 LỖI CÓ SẴN (không phải của đợt này, CỐ Ý không sửa ở đây)
+`true-false.js`: `requeueRandom()` tự `queue.shift()`, mà `choose()` **đã shift trước đó** ⇒ bật
+"Repeat until answered" thì **mỗi câu sai nuốt mất một câu kế tiếp**, im lặng, cả lớp không bao giờ
+thấy câu đó. Đã tách thành việc riêng để không lẫn vào đợt Showdown này.
+
+---
+
 ## Đợt 177 (17/8/2026) — ⭐⭐ SHOWDOWN: KẾT QUẢ CÁC ĐỘI TỰ ĐỒNG BỘ · TITLE SHOW ANSWERS THÀNH NÚT 3 CỬ CHỈ · BẢNG XẾP HẠNG HÌNH PHỄU
 ⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `showdown-setup.js` · `icons.js` · `app.css`)
 ➕ **FILE CORE MỚI**: `core/showdown-review.js` (cả màn Show answers của Showdown tách khỏi `showdown.js`).
@@ -482,6 +573,17 @@ Không phải viết mới. Đường dây có đủ **cả hai phía** và đ�
 chỉ tồn tại trong trang act. Cột đang ở **thư viện** AWord thì chờ 6 giây rồi bỏ qua, im lặng.
 
 ### 8. VIỆC ĐANG CHỜ
+- 🔴 **ĐỢT 178 — THẦY CHỐT CHỖ ĐẶT TÊN CHO GAME VẼ TRÀN KHUNG**: Flying fruit và Maze chase có plumbing
+  ĐÚNG hết, chỉ thiếu chỗ. Hai lựa chọn: (a) đưa tên **xuống dưới khung** (engine đã có sẵn đường
+  `.aw-navstack`, đang dùng khi bật đồng hồ lượt); (b) để game tự nhường dải trên (ẩn/đẩy băng câu hỏi
+  xuống) khi đang Showdown. Thầy chốt là bật được ngay.
+- ⬜ **ĐỢT 178 — 3 game "tự chọn thứ tự câu"** (Crossword · Find the match · Open the box): mở được,
+  nhưng phải **viết lại `finish()`** cho xuất một hàng review cho mỗi LẦN MỞ CÂU thay vì mỗi ô/hộp.
+  Đây là việc riêng một đợt, không phải bật cờ.
+- ⬜ **ĐỢT 178 — thử 5 game mới trên màn TOMKO + myActivity nhiều cột**; riêng Maze chase (nếu bật sau)
+  chú ý `ANSWER_HOLD_MS` 900ms có đủ cho em kế tiếp bước tới bảng không.
+- ⬜ **Lỗi CÓ SẴN của True/false** (đã tách việc riêng): `requeueRandom()` shift hai lần ⇒ bật "Repeat
+  until answered" thì mỗi câu sai nuốt mất một câu.
 - ✅ ~~ĐỢT 177 chưa commit~~ → **ĐÃ COMMIT `dc7a72e` + PUSH + LIVE (17/8/2026), 7/7 file trùng hash.**
 - ⬜ **Thử ĐỢT 177 trên Firestore THẬT + myActivity nhiều cột THẬT** (lưới test dùng Firestore giả nên
   2 thứ này chưa từng chạy thật): (a) cột 1 và cột 2 chơi 2 đội, xong cả hai → mở Show answers ở 1 cột,

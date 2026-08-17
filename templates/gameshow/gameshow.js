@@ -47,6 +47,11 @@ const gameshowTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "questions",
+  // ⭐ Đợt 178 — SHOWDOWN. `index` advances in one place only (`advance()`), the
+  // bonus round never touches it and never adds a review row, and `review` is
+  // `questions.map((q, i) => …)` on that index. See `nextGetReady()` for why the
+  // name is handed over on the "Get ready!" screen rather than at the question.
+  showdownMode: true,
   hidePointsOff: true,   // speed-based scoring, never a flat per-wrong penalty (teacher, 3/8/2026)
   name: "Gameshow quiz",
   // Đợt 122 — ảnh template tự dựng bằng JS (đèn sân khấu, khán giả, 2 cánh cửa
@@ -271,6 +276,13 @@ const gameshowTemplate = {
     // frame "opens" (zooms away) and the full-bleed question screen fades in.
     function nextGetReady() {
       if (finished) return;
+      // ⭐ Đợt 178 — SHOWDOWN: hand the name over ON THE "GET READY" SCREEN, not
+      // 1.65s later when the question appears. `setNav` further down already
+      // carries the right index, so this is not needed for correctness — it is
+      // needed for the CLASSROOM: this interstitial is the whole window the next
+      // pupil has to walk to the board, and it is useless if it does not yet say
+      // whose turn it is. The two numbers are the TV frame's own open/fade.
+      ui.itemChanging?.(index, { outMs: 200, inMs: 300 });
       screen.classList.remove("is-on");            // studio (harlequin) shows behind the frame
       stage.style.visibility = "hidden";           // hide HUD/lifelines during Get ready
       play.innerHTML = "";

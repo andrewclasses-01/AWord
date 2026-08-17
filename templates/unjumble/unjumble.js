@@ -110,6 +110,10 @@ const unjumbleTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
+  // ⭐ Đợt 178 — SHOWDOWN. `render()` is the single funnel (mount · goPrev ·
+  // goNext), `updateNav()` sends `setNav({index: index + 1})`, and `review` is
+  // `items.map((it, i) => …)` on that index.
+  showdownMode: true,
   hidePointsOff: true,   // ships its own "Points off when wrong" control
   // Đợt 143 (opt-in) — really reads options.autoSwitch now: a graded sentence
   // walks on to the next one by itself instead of waiting for ▷.
@@ -372,6 +376,11 @@ const unjumbleTemplate = {
     // `transition === "cross"` keeps the outgoing card on screen and crossfades to
     // the new one so next/back never flashes the bare background (teacher, Đợt 36).
     function render(transition) {
+      // ⭐ Đợt 178 — SHOWDOWN: start the name's fall in the same frame the card
+      // starts its crossfade, rather than at `setNav` inside updateNav() further
+      // down. 200ms both ways is `crossfadeCards`' own duration, so the two
+      // motions cannot drift apart if that is ever retimed.
+      ui.itemChanging?.(index, { outMs: 200, inMs: 200 });
       const oldCard = transition ? root.querySelector(".aw-unj-card") : null;
       if (fitter) { fitter.destroy(); fitter = null; }
       if (!oldCard) root.innerHTML = "";

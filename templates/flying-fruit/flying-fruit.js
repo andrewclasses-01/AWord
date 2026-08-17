@@ -68,6 +68,19 @@ const flyingFruitTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
+  // ⛔ Đợt 178 — SHOWDOWN IS *NOT* TURNED ON HERE, AND THE REASON IS LAYOUT, NOT
+  // PLUMBING. The contract side is perfect: `startItem(i)` is the single funnel,
+  // it already sends `setNav({index: i + 1})`, and `review` is
+  // `items.map((it, i) => …)` on that same index — `showdownMode: true` would be
+  // correct to the last row of Show answers.
+  // What stops it is that THIS game's own clue owns the top strip, on a dark
+  // jungle scene: the pupil's name (3.6cqw, `.aw-top-centre.is-showdown`, insets
+  // 22%) lands exactly on the clue text and unreadably dark against the leaves.
+  // Measured, then SEEN — every automated check passed and the screenshot did
+  // not. Turning the flag on needs a decision about WHERE the name goes on a
+  // full-bleed arcade scene (the engine can already put it in `.aw-navstack`
+  // below the frame when the round clock is on — that is the obvious candidate).
+  // Same story as Maze chase; see its note.
   name: "Flying fruit",
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,     // gives us ui.topbarMid — we draw the LIVES (hearts) there

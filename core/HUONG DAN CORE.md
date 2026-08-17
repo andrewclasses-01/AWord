@@ -583,18 +583,65 @@ có mặt trên bảng (thầy: *"vì có thể có đội chưa xong"*).
 **thêm bất kỳ `kind` dữ liệu-ứng-dụng nào về sau PHẢI khai vào đó**, không thì nó ăn mất một số link
 và một `?a=57` trả về document cài đặt.
 
-### Hợp đồng cho template (opt-in — hiện Anagram + Quiz)
+### Hợp đồng cho template (opt-in — Đợt 178: 8/17 template)
 
 ```js
-showdownMode: true,     // HẾT. Không có dòng nào khác.
+showdownMode: true,     // HẾT — NẾU 3 điều kiện dưới đây đã đúng sẵn.
 ```
 
-Thật sự chỉ có thế, vì engine lấy mọi thứ từ những gì template **đã** làm sẵn:
-- **Câu nào của ai** ← `ui.setNav({index})` mọi template đã gửi (kể cả khi thầy bấm ‹ › lùi lại).
+Engine lấy mọi thứ từ những gì template **đã** làm sẵn:
+- **Câu nào của ai** ← `ui.setNav({index})` (và/hoặc `ui.itemChanging(index0)`).
 - **Ai đúng ai sai** ← mảng `review` template đã dựng ở `finish()`.
 - Luật chia lượt nằm ở **`memberAt(members, index0)`** — vòng tròn, quay lại từ đầu khi hết đội.
   ⚠️ **Chỉ MỘT luật này**: bảng Show answers cũng gọi lại chính nó để gom câu theo em, chứ không tự
   tính `i % n` lần nữa. Hai bản là hai thứ tự do trôi khỏi nhau.
+
+#### ⚠️⚠️ BA ĐIỀU KIỆN — KIỂM ĐỦ 3 RỒI HÃY BẬT CỜ (Đợt 178)
+
+**(1) `index` phải là VỊ TRÍ CỦA CÂU TRONG MẢNG `review`** — không phải "lượt thứ mấy", càng không
+phải điểm số. `stampReview` đóng dấu **theo vị trí mảng**: `review[i]` thuộc về `memberAt(members, i)`.
+- Nói "vị trí trong `review`" chứ không nói "lượt thứ mấy" là có chủ ý: game cho hỏi lại câu cũ
+  (`repeatUntilCorrect`) thì **câu quay về đúng em đã sở hữu nó**, và đó cũng là cách duy nhất còn
+  khớp được với Show answers (một câu có đúng MỘT hàng, dù hỏi mấy lần).
+- 🔴 **Đã cắn thật**: `true-false.js` gửi `index: liveScore()` và `open-the-box.js` gửi
+  `index: score` — **ĐIỂM SỐ**, không ai để ý vì trước Đợt 178 chưa thứ gì đọc nó như một vị trí.
+  Đo được: bật Showdown lên, mỗi câu SAI làm tên nhảy về em số 1 (điểm âm bị `Math.max(0,…)` kẹp),
+  rồi câu sau mới nhảy lại — 10 lần đổi tên cho 8 lượt. Nếu template cần hiện thứ khác trên thanh nav
+  thì dùng **`label`** (engine ưu tiên `label` khi có), còn `index` để yên cho lượt chơi.
+- ⚠️ `index` cũng nuôi **đồng hồ TỪNG LƯỢT** (`roundBegin(index - 1)`), nên sai `index` là sai luôn
+  cả giờ của học sinh.
+
+**(2) `review` phải theo ĐÚNG THỨ TỰ CHƠI.** Game cho học sinh **tự chọn câu** (Crossword bấm ô nào
+cũng được, Open the box mở hộp nào cũng được) thì `review` xuất theo thứ tự lưới/hộp, **không phải
+thứ tự chơi** ⇒ `stampReview` sẽ gắn tên vào những hàng mà em đó chưa từng thấy. Sửa được, nhưng phải
+viết lại `finish()` cho xuất một hàng cho mỗi LẦN MỞ CÂU — không phải chuyện bật một cái cờ.
+
+**(3) PHẢI CÓ CHỖ TRỐNG CHO CÁI TÊN, và phải NHÌN mới biết.** Tên là `.aw-top-centre.is-showdown`,
+`position:absolute`, thụt 22% hai bên trên `.aw-topbar`, cỡ **3.6cqw**. Game vẽ tràn khung (kiểu
+arcade) thường đã chiếm sẵn dải đó bằng câu hỏi / băng / tim của chính nó.
+- 🔴 Đợt 178 gặp cả **ba** kiểu hỏng ở đây, và **mọi phép đo tự động đều báo ĐẠT** (node có thật, có
+  kích thước, `visibility:visible`):
+  - **Bị che**: Balloon pop vẽ lớp khinh khí cầu ĐÈ lên. Bắt bằng `elementFromPoint` ngay tâm chữ —
+    trả về `.aw-bp-blimps`. Đã vá chung ở core bằng `z-index: 6` cho `.aw-top-centre.is-showdown`
+    (trên nền game, dưới mọi lớp phủ của engine — xem chú thích trong `app.css`).
+  - **Chìm màu**: Gameshow có màn hình studio TỐI, mà mực mặc định là `--aw-fg` gần đen ⇒ gần như
+    tàng hình. Template nền tối **phải tự khai màu** cho `.aw-stage.act-<type> .aw-top-showdown`.
+  - **Hết chỗ**: Flying fruit (câu hỏi chiếm dải trên, nền rừng tối) và Maze chase (băng câu hỏi +
+    tim) — **CHƯA BẬT**, vì đặt tên vào đó là in đè lên chính nội dung game. Cần thầy chốt chỗ đặt
+    (engine đã có sẵn đường đưa tên xuống `.aw-navstack` dưới khung khi bật đồng hồ lượt).
+- ⚠️ Template tự treo caption vào `.aw-topbar` (KHÔNG qua `ui.sloganSlot`) thì caption đó là **anh em
+  ruột** của `.aw-top-centre`, nên luật ẩn sẵn của engine không với tới ⇒ phải tự ẩn bằng
+  **`.aw-topbar.is-showdown > .aw-<x>-slogan { display: none; }`** (Speaking và Unjumble đã làm).
+
+#### Bảng hiện trạng 17 template (Đợt 178)
+
+| Đang BẬT (8) | Vì sao chưa bật (9) |
+|---|---|
+| Quiz · Anagram · Type the answer (từ Đợt 155) | **Flying fruit · Maze chase** — plumbing ĐÚNG, chỉ thiếu chỗ đặt tên (xem điều kiện 3) |
+| **Balloon pop** (`z-index` core) | **Crossword · Find the match · Open the box** — học sinh tự chọn thứ tự câu / hỏi lại được ⇒ vi phạm điều kiện 2 |
+| **Gameshow** (+ màu chữ riêng) | **Whack-a-mole** — nhiều chuột cùng lúc, `review` KHÔNG ghi kết quả gì (mọi hàng `answered:false`) |
+| **Speaking · Unjumble** (+ ẩn slogan riêng) | **Running word · Running team** — đã có cơ chế chia đội/xoay lượt RIÊNG; Running team còn xoay vòng theo đúng sổ lớp, chồng thêm là hai vòng mâu thuẫn |
+| **True/false** (đổi `index` từ điểm sang hàng) | **Speaking cards** — không chấm điểm, không có đáp án đúng |
 
 ⚠️ **Showdown và Fight LOẠI TRỪ NHAU** — cả hai cùng định nghĩa "câu này của ai" và cùng giành dòng
 giữa topbar. Vào Fight thì `clearPick()`; `showdownPick` có `!fight` trong điều kiện.

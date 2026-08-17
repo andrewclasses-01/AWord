@@ -94,6 +94,12 @@ const spkTemplate = {
   // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
   timeCost: true,
   itemsKey: "items",          // "Start with mistakes" support (see core/HUONG DAN CORE.md)
+  // ⭐ Đợt 178 — SHOWDOWN. `loadQuestion(i)` is the single funnel for every entry
+  // (mount · goPrev · goNext), so walking back with ‹ › repaints the right pupil
+  // too; `review` is `items.map((it, i) => …)` on the same index. A retry
+  // (`allowRetry`) stays on the SAME index, which is what keeps one question
+  // belonging to one pupil however many attempts it takes.
+  showdownMode: true,
   name: "Speaking",
   edit: openSpeakingEditor,
   hidePointsOff: true,        // scoring is a star rating, not a per-wrong-answer penalty

@@ -3271,6 +3271,20 @@ body {
 .aw-top-centre.is-showdown {
   position: absolute; left: 22%; right: 22%; top: 0; bottom: 0;
   pointer-events: none;      /* nothing here is clickable; the row below is */
+  /* ⭐⭐ Đợt 178 — ABOVE THE GAME'S OWN ART. Templates that paint a full-bleed
+     scene inside the stage (Balloon pop's sky and blimps, and others like it)
+     draw it AFTER the top bar in document order, so the pupil's name was being
+     painted and then covered — measured with `elementFromPoint`, which returned
+     `.aw-bp-blimps` at the exact centre of the name while every size/visibility
+     check still said it was fine.
+     ⚠️ THE BAND MATTERS. 6 is above the play area (auto … 5) and below every
+     engine overlay: dim 7 · menu 8 · confetti 11 · play overlay 12 · celebrate
+     13 · review/backdrop 14. Raising it further would put a pupil's name on top
+     of the Show answers sheet.
+     ⚠️ ONLY this wrapper, not `.aw-topbar` — lifting the whole row would drag
+     the timer and score over art that some templates deliberately let cover
+     them, which is not this đợt's business. */
+  z-index: 6;
 }
 .aw-top-showdown {
   min-width: 0;

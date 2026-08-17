@@ -186,6 +186,19 @@ const mazeChaseTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "questions",
+  // ⛔ Đợt 178 — SHOWDOWN IS *NOT* TURNED ON HERE, AND THE REASON IS LAYOUT, NOT
+  // PLUMBING. The contract side is clean, real-time movement notwithstanding:
+  // the live part happens INSIDE a turn, `index` is mutated in exactly one place
+  // (the correct-pad path, after ANSWER_HOLD_MS), wrong pads and enemy hits never
+  // advance it, and `review` is `items.map((q, i) => …)` on that index.
+  // What stops it is that this game's own question banner AND its hearts already
+  // fill the top strip; the pupil's name (`.aw-top-centre.is-showdown`, insets
+  // 22%) lands on top of both — measured with `elementFromPoint`, which returned
+  // `.aw-mc-question` at the centre of the name.
+  // Turning the flag on needs a decision about WHERE the name goes on a
+  // full-bleed arcade scene (the engine can already put it in `.aw-navstack`
+  // below the frame when the round clock is on — that is the obvious candidate).
+  // Same story as Flying fruit; see its note.
   name: "Maze chase",
   // Đợt 122 — ảnh template TỰ DỰNG BẰNG JS (mảnh mê cung `maze-*`, hành tinh,
   // 2 ô sàn đúng/sai): không có trong CSS nên engine quét CSS không thấy.

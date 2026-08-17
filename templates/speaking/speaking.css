@@ -222,3 +222,13 @@
 .aw-spk-ed-phstatus.is-ready { color: #16a34a; font-weight: 700; }
 .aw-spk-ed-genbtn { flex: 0 0 auto; white-space: nowrap; margin-top: 10px; }
 .aw-spk-ed-phrow .aw-spk-ed-genbtn { margin-top: 0; }
+
+/* ⭐ Đợt 178 — SHOWDOWN: this caption and the pupil's name claim the SAME seat.
+   Both are absolutely centred on the top bar, so without this the 3.6cqw name
+   would sit straight on top of "SPEAKING IN ANDREW CLASSES". The engine's own
+   hide rule (`.aw-top-centre.is-showdown > .aw-top-slogan`) cannot reach this
+   node — it is a sibling of `.aw-top-centre`, not a child, because Speaking
+   appends its caption to the row itself instead of using `ui.sloganSlot`.
+   `.aw-topbar.is-showdown` is set by core/engine.js exactly when a Showdown pick
+   is live. */
+.aw-topbar.is-showdown > .aw-spk-slogan { display: none; }

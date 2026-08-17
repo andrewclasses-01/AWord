@@ -94,6 +94,12 @@ const balloonPopTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
+  // ⭐ Đợt 178 — SHOWDOWN, and this one line is genuinely all of it: the level IS
+  // the item (`loadLevel(i)` is the only mover), `updateProgress()` already
+  // reports it as `setNav({index: levelIndex + 1})`, and `review` is built as
+  // `levelItems.map((it, i) => …)` on that very index — so the name over the
+  // frame and the row in Show answers cannot come apart.
+  showdownMode: true,
   name: "Balloon pop",
   inlineTimerBar: true,   // gives us ui.topbarMid for the countdown clock + level progress bar
 

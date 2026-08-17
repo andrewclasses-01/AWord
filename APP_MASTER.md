@@ -8,7 +8,29 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 177) — ⭐⭐ SHOWDOWN: KẾT QUẢ CÁC ĐỘI TỰ ĐỒNG BỘ · TITLE
+> Cập nhật lần cuối: **17/8/2026 (Đợt 178) — ⭐⭐ MỞ SHOWDOWN RA 8/17 TEMPLATE (3 → 8) + VÁ LỖI CORE
+> LÀM TÊN HỌC SINH TÀNG HÌNH.**
+> ⭐ CÓ SỬA CORE (`engine.js` · `app.css`) + 5 file game + 2 CSS game.
+> **Mở thêm 5**: Balloon pop · Gameshow · Speaking · Unjumble · True/false.
+> **Chưa mở 9, có lý do rõ**: Flying fruit + Maze chase (plumbing ĐÚNG, chỉ **hết chỗ đặt tên** — chờ
+> thầy chốt) · Crossword + Find the match + Open the box (học sinh tự chọn thứ tự câu ⇒ `review` không
+> theo thứ tự chơi) · Whack-a-mole (`review` không ghi kết quả gì) · Running word + Running team (đã có
+> cơ chế chia đội RIÊNG; Running team còn xoay vòng theo đúng sổ lớp) · Speaking cards (không chấm điểm).
+> ⚠️⚠️ **LỖI CORE NẶNG**: nhánh `if (topbarMid)` của `engine.js` gắn `topbarMid` **THAY VÌ**
+> `centreSlot` ⇒ mọi template khai `inlineTimerBar` tạo ô tên, tô tên mỗi câu, rồi **không bao giờ đưa
+> vào tài liệu** — không lỗi, không ô trống, cái tín hiệu cả lớp nhìn đơn giản KHÔNG TỒN TẠI. 3 template
+> Showdown cũ dùng `hasLivesSlot` nên thoát, bẫy nằm chờ đúng đợt mở rộng này.
+> ⚠️⚠️ **HỢP ĐỒNG NAY CÓ 3 ĐIỀU KIỆN, đọc `core/HUONG DAN CORE.md` mục "BA ĐIỀU KIỆN" TRƯỚC KHI bật cờ
+> cho template thứ 9**: (1) `setNav.index` phải là **VỊ TRÍ CỦA CÂU TRONG `review`** — True/false đang
+> gửi ĐIỂM SỐ, Open the box cũng vậy (đo được: 10 lần đổi tên cho 8 lượt); (2) `review` phải theo đúng
+> **thứ tự chơi**; (3) phải **CÓ CHỖ TRỐNG** cho cái tên 3.6cqw — và điều kiện 3 **chỉ NHÌN mới biết**.
+> ⚠️ **3 lỗi của đợt này chỉ ẢNH CHỤP bắt được, mọi số đo báo ĐẠT**: bị che (Balloon pop — bắt bằng
+> `elementFromPoint`, vá bằng `z-index:6` cho `.aw-top-centre.is-showdown`) · chìm màu (Gameshow nền
+> tối, vá bằng chữ trắng trong `gameshow.css`) · hết chỗ (Flying fruit + Maze chase ⇒ CHƯA BẬT).
+> Lưới thử mới: `scratch/showdown-all-test.html` (chạy Showdown trên bất kỳ template; `?off=5` là BẮT
+> BUỘC khi thử True/false, thiếu nó đối chứng ngược "đạt" oan).
+>
+> Trước đó: **17/8/2026 (Đợt 177) — ⭐⭐ SHOWDOWN: KẾT QUẢ CÁC ĐỘI TỰ ĐỒNG BỘ · TITLE
 > SHOW ANSWERS THÀNH NÚT 3 CỬ CHỈ · BẢNG XẾP HẠNG HÌNH PHỄU.**
 > ✅ **COMMIT `dc7a72e` + PUSH + LIVE** — Pages build đúng commit (`status: built`), đối chiếu **7/7
 > file trùng mã băm SHA-256**, và dựng **cả màn Show answers bằng module live trên CSS live** đều đạt.

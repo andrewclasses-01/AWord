@@ -75,6 +75,12 @@ const tfTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "statements",
+  // ⭐ Đợt 178 — SHOWDOWN. This one needed real work, not just the flag: its
+  // `setNav` index was the SCORE (see updateNav), so the name would have followed
+  // points instead of questions. It now carries the statement's row in `review`,
+  // reported from `startCycle()` — the single funnel every statement passes
+  // through. See `rowOf` for why a ROW and not a turn count.
+  showdownMode: true,
   name: "True or false",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score
   manualTimerStart: true,   // the clock starts only after our 3-2-1 prep countdown
@@ -155,6 +161,21 @@ const tfTemplate = {
     // play mixes the True/False statements (teacher's spec, 1/8/2026).
     let order = shuffle(statements.map((_, i) => i));
     const queue = [...order];
+    // ⭐⭐ Đợt 178 — SHOWDOWN needs "which ROW of `review` is on screen".
+    // `review` is built as `order.map(idx => …)` (see finish), so row j holds
+    // statement `order[j]`; this is that lookup the other way round.
+    // ⚠️ It is the ROW, deliberately NOT a count of turns taken. With
+    // `repeatUntilCorrect` a statement comes back later, and the row is what
+    // keeps it coming back TO THE SAME PUPIL — which is also the only mapping
+    // that can still agree with Show answers, since one statement has exactly
+    // one row however many times it is asked.
+    const rowOf = [];
+    order.forEach((idx, j) => { rowOf[idx] = j; });
+    // The row on SCREEN. Not read off `queue[0]`: `choose()` shifts the queue the
+    // instant a button is tapped, while the statement it belongs to is still
+    // flying off — reading the queue there would hand the next pupil their name
+    // half a second early, in the middle of the previous pupil's answer.
+    let curRow = 0;
 
     const state = statements.map(() => ({ answered: false, correct: false, chosen: null }));
     let finished = false;
@@ -352,6 +373,11 @@ const tfTemplate = {
       voicePlayer.stop();                       // silence the PREVIOUS statement's clip, if any
       promptEl.className = "aw-tf-prompt";       // drop any stale voiceonly class from the last statement
       const st = statements[queue[0]];
+      // ⭐ Đợt 178 — the statement on screen, and with it whose turn this is. The
+      // two numbers are this game's own slide-out / slide-in, so the name leaves
+      // with the old statement and arrives with the new one.
+      curRow = rowOf[queue[0]];
+      ui.itemChanging?.(curRow, { outMs: EXIT_MS, inMs: ENTER_MS });
       const vv = voiceView(activity, st);   // Options > Content decides text/voice
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
@@ -608,7 +634,20 @@ const tfTemplate = {
     }
 
     function updateNav() {
-      ui.setNav({ index: liveScore(), total, onPrev: null, onNext: null });
+      // ⭐⭐ Đợt 178 — `index` USED TO BE `liveScore()`, and that was fine only
+      // while nothing read it as a position. The engine does: it drives the
+      // Showdown name (`paintShowdownName(index - 1)`) AND the per-round clock
+      // (`roundBegin(index - 1)`). Left as the score, the pupil's name would have
+      // changed when somebody scored rather than when the question changed —
+      // and gone BACKWARDS on a points-off penalty.
+      // So `index` now carries the row, and `label` carries the score, which is
+      // what the bar has always displayed (the engine prefers `label` when it is
+      // given, so this row reads exactly as it did before).
+      ui.setNav({
+        index: curRow + 1, total,
+        label: `${liveScore()} of ${total}`,
+        onPrev: null, onNext: null
+      });
     }
 
     // Item 5 (teacher 1/8): keep the gap divider->buttons equal to the gap

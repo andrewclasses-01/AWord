@@ -383,3 +383,13 @@
 }
 .aw-unj-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
 .aw-unj-ed-addrow:disabled { opacity: .4; cursor: default; }
+
+/* ⭐ Đợt 178 — SHOWDOWN: same collision as Speaking's caption. This clue line is
+   absolutely centred on the top bar, which is exactly where the pupil's name
+   goes, and it is a SIBLING of `.aw-top-centre` (Unjumble appends it to the row
+   itself rather than using `ui.sloganSlot`), so the engine's own hide rule
+   cannot reach it. `.aw-topbar.is-showdown` is set by core/engine.js exactly
+   when a Showdown pick is live.
+   ⚠️ The clue still exists on the card itself, so nothing is lost — only the
+   duplicate that would print over the name. */
+.aw-topbar.is-showdown > .aw-unj-slogan { display: none; }

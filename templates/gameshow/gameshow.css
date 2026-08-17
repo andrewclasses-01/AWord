@@ -382,3 +382,14 @@
 @keyframes aw-gs-signin { 0% { transform: scale(.4); opacity: 0; } 65% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
 @keyframes aw-gs-open   { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(2.4); opacity: 0; } }
 @keyframes aw-gs-applause { 0%,64% { opacity: 1; } 65%,100% { opacity: .4; } }
+
+/* ⭐ Đợt 178 — SHOWDOWN: the pupil's name sits over this game's DARK studio
+   screen, and the engine's default ink (`--aw-fg`, near-black) was very nearly
+   invisible on it. Only a screenshot caught this: the node was mounted, sized,
+   `visibility:visible`, on top — every measurement said it was fine.
+   White with a soft dark drop keeps it readable from the back of the room over
+   both the navy question screen and the lighter "Get ready!" frame. */
+.aw-stage.act-gameshow .aw-top-showdown {
+  color: #fff;
+  text-shadow: 0 0.15cqw 0.55cqw rgba(6, 12, 30, .75), 0 0 1.4cqw rgba(6, 12, 30, .45);
+}

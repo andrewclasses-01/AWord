@@ -440,7 +440,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // variable from here on and no `.aw-timer-external` rule has to learn about
   // Showdown.
   const timerOutOfTopbar = !!tpl.timerBesideMenu || roundOn;
-  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : "") + (timerOutOfTopbar ? " aw-timer-external" : ""));
+  // ⭐ Đợt 178 — `.is-showdown` on the ROW itself, so a template whose caption is
+  // its OWN node in this row (Speaking's "SPEAKING IN ANDREW CLASSES", Unjumble's
+  // clue) can hide it in one CSS line from its own stylesheet. The engine's
+  // `ui.sloganSlot` is already hidden by `.aw-top-centre.is-showdown >
+  // .aw-top-slogan`, but that selector only reaches the engine's own node — a
+  // template-owned sibling would sit UNDER the 3.6cqw pupil name instead, and
+  // both are absolutely centred on the same seat.
+  const topbar = el("div", "aw-topbar" + (tpl.inlineTimerBar ? " has-inline" : "") + (timerOutOfTopbar ? " aw-timer-external" : "") + (showdownPick ? " is-showdown" : ""));
   const timerEl = el("span", "aw-top-timer", "0:00");
   const scoreEl = el("span", "aw-top-score", `${icons.check} 0`);
   const topbarMid = tpl.inlineTimerBar ? el("div", "aw-topbar-mid") : null;
@@ -492,6 +499,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (topbarMid) {
     if (timerOutOfTopbar) topbar.append(topbarMid, scoreEl);
     else topbar.append(timerEl, topbarMid, scoreEl);
+    // ⭐⭐ Đợt 178 — THE NAME WAS BEING BUILT AND THEN THROWN AWAY HERE.
+    // This branch appended `topbarMid` INSTEAD of `centreSlot`, so any template
+    // with `inlineTimerBar` (Balloon pop · Flying fruit · Gameshow · Open the
+    // box · Whack-a-mole · Running team) created `.aw-top-showdown`, painted the
+    // pupil's name into it on every question — and never put it in the document.
+    // No error, no empty box: the cue the whole class reads simply did not exist.
+    // Nobody had hit it because the only three Showdown templates until now
+    // (Quiz · Anagram · Type the answer) all use `hasLivesSlot` instead, which
+    // takes the branch below.
+    // ⚠️ Guarded on `showdownPick` because THAT is what makes `.aw-top-centre`
+    // `position:absolute` (`.is-showdown` in app.css, added at the same place
+    // this slot is built). Absolute means it costs the inline timer row no width
+    // at all. Appending the IN-FLOW variant — a template that one day sets both
+    // `inlineTimerBar` and `hasSloganSlot` — would take a flex share and squeeze
+    // the very bar this branch exists to make room for.
+    if (centreSlot && showdownPick) topbar.append(centreSlot);
   } else if (livesSlot && centreSlot) {
     const topRight = el("div", "aw-top-right");
     topRight.append(livesSlot, scoreEl);
