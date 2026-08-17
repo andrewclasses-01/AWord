@@ -8,6 +8,175 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 176 (17/8/2026) — ⭐⭐ SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA KHOẢNG TRỐNG · SHOW ANSWERS CÓ % CÂU ĐÚNG THEO DẢI MÀU · ĐỒNG HỒ LƯỢT CÓ PHẦN LẺ GIÂY
+⭐ CÓ SỬA CORE (`engine.js` · `showdown.js` · `app.css`). Cùng commit với Đợt 175.
+🟢 ĐÃ TỰ TEST qua `scratch/round-test.html` (Quiz countUp/countDown/none + TTA countDown + Anagram
+countUp submit): số đo vị trí tên, chuỗi đồng hồ, bảng Show answers, dải màu %, 0 lỗi console.
+
+### 1. Thầy giao 3 việc (17/8/2026, ngay sau Đợt 175)
+1. Time each round ≠ None: **nâng tên học sinh lên** cho cân đối — Quiz: chính giữa từ mép trên cụm
+   ‹ › đến mép dưới các ô đáp án; Type the answer: đến mép dưới bàn phím; template khác tương tự.
+2. Show answers của Showdown: thêm **% câu đúng trên tổng số câu ĐÃ LÀM** (không tính câu chưa làm),
+   dạng `1:00 - 50%` — thời gian màu xanh dương, % theo dải đỏ→vàng→cam→xanh dương→xanh lá
+   (≤60% đỏ, ≥95% xanh lá, khoảng giữa tự chia).
+3. Đồng hồ lượt thêm **phần lẻ giây** (`30,18` — dấu phẩy + số lẻ cỡ nhỏ hơn); thời gian trong Show
+   answers cùng dạng; **đồng hồ tổng giữ nguyên dạng thường**.
+
+### 2. Việc 1 — tên NỔI, canh giữa khoảng trống (`engine.js` + `app.css`)
+- Tên **RA KHỎI LUỒNG**: `.aw-navstack > .aw-top-showdown` nay `position:absolute; bottom:100%`,
+  canh ngang bằng `left:0; right:0; text-align:center` — ⚠️ **CẤM canh bằng `translateX(-50%)`**:
+  `paintShowdownName()` animate `transform` cho hiệu ứng tên rơi, khung hình đầu của animation sẽ
+  đè chết transform nền và tên nhảy ngang.
+- **`placeShowdownName()`** (engine): đo "mép dưới nội dung thấp nhất" = phần tử
+  `button/textarea/input/.aw-kbd` thấp nhất trong `.aw-playarea` (đúng ô đáp án ở Quiz, bàn phím ở
+  TTA, nút Submit/hàng chữ ở Anagram — KHÔNG hard-code theo template, act thứ 4 tự đúng), rồi đặt
+  `bottom: calc(100% + N)` sao cho tên nằm chính giữa khoảng tới mép trên ‹ ›. Chạy lại mỗi 250ms
+  (nhịp thứ 5 của ticker 50ms) + mỗi lần sang câu — phần tử absolute nên **không có vòng
+  ĐO→THU→ĐO** (bài học v1.8.1 myActivity).
+- ⚠️ **BẪY BẮT ĐƯỢC KHI ĐO**: tên rời luồng thì playarea cao thêm ~6.8cqw → bàn phím TTA tụt xuống
+  **ĐÈ LÊN TÊN 17px**. Chữa bằng SÀN: `.aw-stage-inner:has(.aw-navstack) > .aw-playarea`
+  `margin-bottom` 1.4cqw → **5.4cqw** (= đúng hộp tên) — khoảng trống tối thiểu luôn đủ chỗ tên,
+  game nào sẵn trống (Quiz) thì tên nổi giữa khoảng lớn hơn.
+- Đo thật: Quiz gap 87px lệch tâm hộp 10px (đúng bằng cú dời -1cqw margin của luật chống-xén-Ẳ ⇒
+  phần MỰC canh giữa ~0px) · TTA hết đè (hở 10px) · Anagram neo vào nút Submit, offset 20px, không
+  đè · mode None: tên vẫn ở dải trên như cũ, margin 0, không navstack.
+
+### 3. Việc 2 — % câu đúng trong Show answers (`showdown.js` + `app.css`)
+- `attempted = số câu r.answered`; `pct = round(right/attempted×100)`; **attempted = 0 thì KHÔNG
+  hiện %** (em chưa được lượt nào không phải 0% đỏ). Dạng `[thời gian xanh dương] - [%]`; dấu `-`
+  chỉ hiện khi có cả hai vế (không bật time each round thì chỉ có %).
+- Dải màu — `pctBand()` xuất từ `showdown.js` (2 mốc biên của thầy, khoảng giữa tự chia):
+  **≤60 đỏ `#dc2626` · 61–72 vàng `#ca8a04` (vàng sậm cho nền trắng) · 73–84 cam `#ea580c` ·
+  85–94 xanh dương `#2563eb` · ≥95 xanh lá `#16a34a`** (class `is-p0..p4`, màu nằm hết trong CSS).
+- `.aw-sd-rv-time` đổi xám `#7b8794` → **xanh dương `#2563eb`** theo đúng lời thầy.
+
+### 4. Việc 3 — phần lẻ giây (`engine.js` + `showdown.js` + `app.css`)
+- Đồng hồ lượt: `roundPaintClock()` mới thay `roundFmt()` — `30,18` (phần trăm giây), span
+  `.aw-round-dec` cỡ `.62em`. Count down **bỏ `ceil`** (số thật còn lại, `0,00` đúng lúc thanh cạn).
+  Ticker 100ms → **50ms** (10Hz nhìn số lẻ bị giật). **Đồng hồ tổng (formatTime) KHÔNG đổi.**
+- `fmtRoundMs()` (Show answers): cùng dạng `30,18` / `1:02,40`, span `.aw-sd-rv-dec` `.72em`.
+  ⚠️ **Tính từ ms NGUYÊN** (`m%1000/10`), không qua float giây — `62400/1000 − 62 = 0.39999…`
+  từng floor `,40` thành `,39`. Hàm nay trả MARKUP (span) — chỉ numeric nên an toàn với `el(html)`,
+  đã ghi rõ trong comment.
+
+### 5. Kiểm chứng
+Chuỗi đồng hồ `1,50`/`3,08`/`0,00` đúng cả 2 mode, dec nhỏ hơn (21.6px vs 34.8px) · timeout 4s vẫn
+khoá ô + thanh đỏ · Show answers: `1,79 - 50%` (time xanh `rgb(37,99,235)`, 50% đỏ `is-p0`), thời
+gian từng câu `0,90` dạng lẻ · `pctBand` 14 mốc ra đúng 5 dải · `fmtRoundMs(62400)` = `1:02,40` ·
+mode None không đổi gì · `node --input-type=module --check` sạch engine.js + showdown.js · app.css
+1046/1046 ngoặc.
+
+### ⬜ CHỜ TEST TOMKO
+Nhìn bằng mắt vị trí tên trên cả 3 template (số đo đã chuẩn nhưng "cân đối, đẹp" là mắt thầy quyết);
+số lẻ giây trên màn 86" có rối mắt không; dải màu % đọc từ xa có rõ không.
+
+---
+
+## Đợt 175 (17/8/2026) — ⭐⭐⭐ HẾT TRỄ + HẾT BẤT CÔNG CẢM ỨNG TRÊN TOMKO: MỌI BỀ MẶT CHƠI KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js` MỚI) — CHỮA TẬN GỐC LỖI FIGHT MODE "A BẤM TRƯỚC KHÔNG NHẬN, B BẤM SAU LẠI NHẬN TRƯỚC"
+⭐ CÓ SỬA CORE (**`core/press.js` MỚI** · `engine.js` · `fight.js` · `keyboard.js` · `app.css`)
+**+ 17 file game** (mọi template). ⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+🟢 ĐÃ TỰ TEST: harness riêng `scratch/press-test.html` (bấm THẬT qua pane, không phải sự kiện giả) +
+17 trang test template + **2 trận Fight thật (Anagram + Quiz) chạy trọn vòng bằng toàn chạm
+non-primary** — 0 lỗi console ở mọi trang.
+
+### 1. Thầy báo (17/8/2026)
+Fight mode trên màn cảm ứng hồng ngoại TOMKO trễ hơn hẳn bình thường và BẤT CÔNG: có lúc đội A bấm
+trước mà không nhận, đội B bấm sau lại được nhận trước, rồi A phải bấm liên tục mới nhận mà không được
+điểm. Yêu cầu: tra tận gốc rễ và tối ưu độ nhạy — các nút AWord to, chỉ cần nhận MỘT dạng dữ liệu là
+"chọn/nhấn" (chạm, vuốt hay chạm đúp gì cũng tính là nhấn, không cần cử chỉ nào khác).
+
+### 2. GỐC RỄ (3 tầng, soi ra từ mã — khớp toàn bộ triệu chứng)
+1. ⭐⭐ **Sự kiện `click` CHỈ sinh ra từ "con trỏ CHÍNH" (primary pointer).** Toàn bộ ô đáp án/hộp/
+   phím của AWord gắn qua `.onclick` (327 chỗ). Trên màn đa điểm, khi ngón đội A còn nằm trên kính
+   thì cú chạm của đội B là con trỏ PHỤ — trình duyệt **không bao giờ** sinh `click` cho nó: cú bấm
+   mất trắng, không lỗi, không dấu vết. Ai "được làm" con trỏ chính gần như hên xui ⇒ đúng cảnh
+   A-trước-không-nhận-B-sau-nhận-trước thầy tả.
+2. ⭐ **`click` chỉ bắn khi NHẤC TAY** — màn hồng ngoại nhận ra nhấc tay chậm hơn chạm xuống (lưới
+   tia phải thông trở lại), học sinh lại hay đè giữ ⇒ mỗi cú bấm cộng oan cả trăm ms, và đội đè tay
+   lâu hơn bị thiệt dù chạm trước. Riêng Anagram tuy đã dùng pointer nhưng bắn ở **pointerup** (chờ
+   nhấc tay để phân biệt kéo-thả) nên cũng dính y hệt.
+3. Chỉ 4/17 template có `touch-action: manipulation` (bài học Đợt 74 của Running word chưa lan ra) —
+   các game còn lại trình duyệt vẫn giữ chờ phân biệt cử chỉ chạm-đúp.
+   Trọng tài `fight.js` (cửa sổ hòa 100ms, XONG TRƯỚC ≠ THẮNG) hoàn toàn VÔ CAN — bất công nằm 100%
+   ở tầng NHẬN chạm, trước khi trọng tài kịp nhìn thấy gì.
+
+### 3. Chữa = `core/press.js` MỚI — `press(el, handler)` thay `el.onclick = handler` cho MỌI bề mặt chơi
+- Bắn handler **NGAY tại `pointerdown`** (thời điểm chạm). Mỗi ngón là một pointer độc lập ⇒ đa điểm
+  công bằng tuyệt đối: **THỨ TỰ CHẠM = THỨ TỰ KÍCH HOẠT** — đúng thứ trọng tài Fight cần.
+- **Nuốt `click` sinh kèm** để khỏi kích hoạt đúp. Nhận diện KHÔNG dùng đồng hồ: `click` tin cậy
+  (`isTrusted`) với `detail >= 1` chắc chắn do con trỏ sinh ra — mà pointerdown của nó ĐÃ qua tay
+  press (pointerdown nổi bọt) ⇒ nuốt an toàn. Còn **`el.click()` lập trình** (fight bấm hộ PLAY bàn
+  kia, myActivity `openTool`, test-bench — `isTrusted=false`) và **Enter/Space bàn phím cứng**
+  (`detail === 0`) thì VẪN CHẠY qua nhánh fallback.
+- Tự chặn: nút `disabled` (kiểm tay, không tin trình duyệt) · chuột phải/giữa · **chạm DỘI của màn
+  hồng ngoại** (2 pointerdown cùng phần tử cách nhau <90ms = 1 cú chạm bị báo đôi — cú sau bỏ).
+- `e.stopPropagation()` trong handler chạy đúng ở tầng pointerdown ⇒ **nút loa nằm TRONG ô bấm giữ
+  nguyên ranh giới** như thời click (đã đo: bấm loa KHÔNG chọn ô).
+- ⚠️ **CỐ Ý KHÔNG preventDefault pointerdown**: cancel nó là Chromium bỏ `:active` (mất phản hồi
+  nhấn) và bỏ chuỗi mouse-compat mà `keyboard.js` dùng giữ focus (`onmousedown preventDefault`) —
+  đã đo focus vẫn nằm trên ô nhập sau khi gõ phím ảo.
+- `app.css`: `.aw-stage` + `.aw-fight` thêm **`touch-action: manipulation`** (bài học Đợt 74 nay
+  áp toàn hệ) — phần chrome còn đi đường click (toolbar/menu) cũng hết bị giữ chờ chạm-đúp; các
+  phần tử cần `none` (maze-chase, ô điểm tay) giữ luật riêng nghiêm hơn của chúng.
+
+### 4. Diện áp dụng — và những gì CỐ Ý KHÔNG đổi
+- **Đổi sang press()**: ô đáp án Quiz/Gameshow/Find the match/Open the box (cả hộp số) · nút
+  True/False · **toàn bộ phím của `core/keyboard.js`** (Type the answer, Crossword, Running word) ·
+  ô lưới + thanh gợi ý Crossword · khí cầu Balloon pop · ô chữ Running team · PASS/bảng đội/
+  Play-Pause Running word · mic Speaking · bộ nút Speaking cards · Submit (Type the answer, Unjumble,
+  Anagram) · mọi nút loa/listen 15 template · **nút PLAY to (engine)** · nút Start again của Fight ·
+  lifeline + thẻ bonus Gameshow.
+- ⭐ **Anagram — thầy chốt bỏ kéo-thả trên ô chữ**: ô origin = ĐẶT CHỮ NGAY lúc chạm, ô kết quả
+  (chế độ On submit) = TRẢ CHỮ VỀ NGAY lúc chạm. Trước đây phải chờ nhấc tay + ngưỡng 6px để phân
+  biệt kéo; nay chạm/vuốt gì cũng là "nhấn" đúng lời thầy. Bộ máy kéo (moveResultTile /
+  animateReturnHome / hitTestUnder / setDropHighlight) **giữ nguyên trong file, không ai gọi** —
+  khôi phục = đổi lại 2 hàm attach (xem git Đợt 174 trở về trước).
+- **GIỮ NGUYÊN pointer riêng** (vuốt/kéo là tính năng thật): thẻ chữ Unjumble (kéo xếp là lối chơi) ·
+  vuốt điều khiển Maze chase · **ô điểm tay Fight** (chạm +1, vuốt xuống −1) · mole/fruit của
+  Whack-a-mole + Flying fruit (vốn đã pointerdown sẵn).
+- **GIỮ NGUYÊN click** (chrome giáo viên, KHÔNG phải bề mặt thi đấu): toolbar Options/Template/
+  Style/Mode, ☰ Menu, mũi tên ‹ ›, panel item, màn setup Running word/team, showdown-setup. Lý do
+  kỹ thuật quan trọng: 4 listener "bấm-ra-ngoài-thì-đóng" (engine 2 · running-word 1 · running-team
+  1) đều nghe `pointerdown` được vũ trang qua `setTimeout(0)` sau cú click MỞ — đổi nút mở sang
+  pointerdown là bảng tự đóng ngay trong cùng nhịp. Đường `speaking-cards` gọi `engMenu.click()`
+  cũng sống nhờ engine chrome còn là click. ĐỪNG "tiện tay" chuyển nốt các nút này.
+- **gameshow.js**: 2 chỗ teardown `t.onclick = null` đổi thành chỉ `disabled = true` (press tôn
+  trọng disabled; không còn handler ở property để null).
+
+### 5. Kiểm chứng (devserver + pane bấm THẬT — trusted, không phải dispatchEvent)
+- **Harness `scratch/press-test.html`** (giữ lại làm khuôn): bấm thật → kích hoạt **đúng 1 lần từ
+  pointerdown**, click sinh kèm bị nuốt · nút disabled = 0 · `el.click()` lập trình chạy ·
+  **pointer non-primary được nhận** (thứ click cũ vứt bỏ) · chạm dội 30ms bị nuốt, chạm thật 150ms
+  được tính · loa lồng trong ô: loa 1 - ô 0.
+- **Quiz đơn**: bấm thật 1 ô → chọn đúng 1 lần, 4 ô khoá, 2 dấu ✓✗, 0 lỗi. **Type the answer**: gõ
+  thật C-A-T trên phím ảo → `"cat"` (KHÔNG đúp ký tự), focus vẫn trên ô nhập. **Crossword**: chạm ô
+  mở từ, gõ 1 phím ra đúng 1 chữ. **True/False**: khoá-mở theo trượt câu giữ nguyên, ăn điểm đúng.
+  **Open the box**: chạm hộp mở câu hỏi. Còn lại 10 template load + PLAY + 0 lỗi console (blimp/mole
+  không sinh được trong pane ẩn — rAF đóng băng, bẫy môi trường #3, không phải hồi quy).
+- ⭐ **FIGHT Anagram trọn vòng**: 1 cú bấm PLAY → CẢ 2 khung vào trận (relay `btn.click()` sống qua
+  fallback) → giải cả từ ELEPHANT bằng **8 chạm toàn non-primary** (pointerId 100+, `isPrimary:false`
+  — loại chạm bản cũ vứt 100%) → trọng tài chấm đội trái thắng, **16 điểm kèm pulse**, trận tự sang
+  từ mới. **FIGHT Quiz**: đội phải trả lời đúng bằng chạm non-primary → **0–1**, sang câu mới, khung
+  trái mở khoá lại. (Luật "sửa fight.js phải test cả 2 template" — đã đủ.)
+- Cú pháp: `node --input-type=module --check` sạch **21 file** · app.css **1037/1037** ngoặc.
+
+### 6. Hệ quả tốt cần biết + việc liên quan
+- Độ trễ mỗi cú bấm giảm đúng bằng (thời gian đè tay + thời gian màn nhận ra nhấc tay + đường vòng
+  click) — cảm nhận rõ nhất ở bàn phím ảo và Fight.
+- Lỗi treo **Đợt 131 #2** ("bấm ô chữ đầu từ mới trong Fight không nhận ngay") nhiều khả năng cùng
+  chùm triệu chứng với gốc rễ số 1-2 ở trên — SAU khi thầy dùng thật một thời gian mà còn tái hiện
+  thì mới tính tiếp hướng race fadeSwap.
+- myActivity KHÔNG phải sửa gì: `openTool` bấm hộ toolbar (còn click) + mọi tín hiệu `MYACT:AW:*`
+  giữ nguyên.
+
+### ⬜ CHỜ TEST TOMKO (bắt buộc tay thầy — máy không giả lập được chạm vật lý)
+- Fight Anagram + Quiz 2 đội bấm thật: còn cảnh "A trước không nhận" không; cảm giác nhạy hơn bao nhiêu.
+- Bàn phím ảo 2 tay gõ nhanh (Type the answer): có ký tự đúp không (nếu có, tăng `BOUNCE_MS` 90 lên).
+- Anagram: có ai nhớ kéo-thả không (đã bỏ theo lời thầy — khôi phục được nếu cần).
+- Chạm đúp nhanh 2 lần lên 2 ô khác nhau: cả 2 phải ăn.
+
+---
+
 ## Đợt 174 (17/8/2026) — ⭐⭐ SHOWDOWN: NÚT X ĐỎ TRẢ ĐỘI VỀ + ⭐⭐⭐ TÍNH NĂNG MỚI "TIME EACH ROUND" (đồng hồ từng lượt học sinh) + RÀ ĐƯỜNG ĐỒNG BỘ TEMPLATE/STYLE CỦA myActivity
 ⭐ CÓ SỬA CORE (`showdown-setup.js` · `showdown.js` · `engine.js` · `options-panel.js` · `app.css`)
 **+ 3 file game** (`quiz.js` · `type-the-answer.js` · `anagram.js`).

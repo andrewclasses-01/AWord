@@ -1,5 +1,24 @@
 # GHI CHÚ — TEMPLATE ANAGRAM
 
+## Đợt 175 (17/8/2026) — ⭐⭐ Ô CHỮ KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js`) — BỎ KÉO-THẢ
+
+⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Chi tiết đầy đủ + gốc rễ: `../../GHI CHU DU AN.md` Đợt 175.
+Tóm tắt phần chạm vào Anagram:
+- `attachOriginTileInteraction` / `attachResultTileInteraction` viết lại bằng `press()`: ô origin =
+  **đặt chữ ngay tại pointerdown**, ô kết quả (On submit) = **trả chữ về ngay tại pointerdown**.
+  Trước phải chờ NHẤC TAY + ngưỡng 6px để phân biệt kéo — trên màn hồng ngoại TOMKO đó chính là độ
+  trễ + bất công Fight (thứ tự ghi nhận = thứ tự nhả tay, không phải thứ tự chạm).
+- **Kéo-thả (kéo chữ vào ô, kéo chèn trong hàng kết quả) BỎ theo lời thầy 17/8** ("ô chữ chỉ cần
+  nhận 1 dạng dữ liệu là chọn/nhấn"). Bộ máy kéo (`moveResultTile`/`animateReturnHome`/
+  `hitTestUnder`/`setDropHighlight`/`handleOriginDrop`/`isValidOriginDropTarget`) **còn nguyên trong
+  file, không ai gọi** — khôi phục = đổi lại 2 hàm attach theo git Đợt 174 trở về trước. Sửa lại
+  ô nào bị đặt sai: vẫn như cũ, chạm ô kết quả để trả chữ về rồi chạm chữ khác.
+- `listenBtn` + `submitBtn` cũng sang `press()`.
+- Đã test Fight thật: giải trọn ELEPHANT bằng 8 chạm **non-primary** (loại chạm bản click cũ vứt
+  100%) → trọng tài chấm thắng, 16 điểm + pulse, tự sang từ mới. 0 lỗi console.
+
+---
+
 ## Đợt 165 (15/8/2026) — ⭐ EDITOR: TAB ENG1/ENG2/VI1/VI2 + bỏ Hide all Text/Swap Columns/Tip
 
 ✅ **THẦY DUYỆT → COMMIT `52fbed5` + PUSH + LIVE** (15/8/2026, đã đối chiếu sha256sum, khớp 100%) — chi

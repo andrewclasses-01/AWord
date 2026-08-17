@@ -65,6 +65,7 @@ import { registerTemplate } from "../../core/registry.js";
 // penalties used to run on ranges of their own; see MAX_SUBMIT_PENALTY below.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { getVoiceClip } from "../../core/voice-clips.js";
@@ -881,7 +882,7 @@ const anagramTemplate = {
         const eqEl = el("span", "aw-anagram-eq");
         for (let i = 0; i < EQ_BAR_COUNT; i++) eqEl.append(el("span", "aw-anagram-eq-bar"));
         listenBtn.append(eqEl);
-        listenBtn.onclick = () => handleListenTap(it.src.voice, listenBtn);
+        press(listenBtn, () => handleListenTap(it.src.voice, listenBtn));   // instant on touch-down — core/press.js
         currentListenBtn = listenBtn;
         // Đợt 134 (bug fix) — the MIRROR board (never the speaking one, which
         // owns the real playback and has nothing to pull) asks fight.js for
@@ -999,7 +1000,7 @@ const anagramTemplate = {
       if (mode === "submit") {
         const submitBtn = el("button", "aw-anagram-submit", "Submit");
         submitBtn.type = "button";
-        submitBtn.onclick = doSubmit;
+        press(submitBtn, doSubmit);   // instant on touch-down — core/press.js
         card.append(submitBtn);
         submitBtnEl = submitBtn;
       }
@@ -1433,63 +1434,21 @@ const anagramTemplate = {
       setTimeout(finishFly, duration + 150);
     }
 
-    // Drag (pointer events, mouse+touch alike) to INSERT an already-placed
-    // result tile at another slot (pushing everything in between back by
-    // one — see moveResultTile()), OR a plain tap (no real movement) to send
-    // it back to the origin row — only while the word hasn't been submitted yet.
+    // Đợt 175 (17/8/2026, thầy chốt cho màn hồng ngoại TOMKO): result tile =
+    // NHẤN LÀ TRẢ VỀ NGAY tại pointerdown (core/press.js), KHÔNG còn kéo-để-chèn.
+    // Mọi cử chỉ trên ô chữ (chạm/vuốt/chạm đúp) đều được hiểu là MỘT thao tác
+    // "chọn/nhấn" tức thời — ngưỡng 6px + chờ nhấc-tay của bản kéo-thả cũ bắt
+    // cả lớp chờ màn hồng ngoại nhận ra ngón tay rời kính, và trong Fight mode
+    // đội đè tay lâu hơn bị thiệt dù chạm trước. Bộ máy kéo-thả
+    // (moveResultTile / animateReturnHome / hitTestUnder / setDropHighlight)
+    // vẫn nằm nguyên bên dưới, không còn ai gọi — muốn khôi phục drag chỉ cần
+    // đổi lại hàm này (xem git history Đợt 174 trở về trước).
     function attachResultTileInteraction(tileEl, pos) {
-      let dragging = false, moved = false, startX = 0, startY = 0;
-      const THRESHOLD = 6;
-      tileEl.style.touchAction = "none";
-      tileEl.addEventListener("pointerdown", e => {
+      press(tileEl, () => {
         const st = state[index];
         if (busy || st.graded || st.placed[pos] == null) return;
-        dragging = true; moved = false;
-        startX = e.clientX; startY = e.clientY;
-        tileEl.setPointerCapture(e.pointerId);
+        unplace(pos);
       });
-      tileEl.addEventListener("pointermove", e => {
-        if (!dragging) return;
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        if (!moved && (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD)) {
-          moved = true;
-          tileEl.classList.add("is-dragging");
-        }
-        if (moved) {
-          tileEl.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
-          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
-          setDropHighlight(target && target !== tileEl ? target : null);
-        }
-      });
-      const endDrag = e => {
-        if (!dragging) return;
-        dragging = false;
-        clearDropHighlight();
-        if (moved) {
-          // Read the tile's CURRENT on-screen rect — still carrying its drag
-          // transform at this instant — BEFORE anything resets it. This is
-          // the fix for the old "snap back to source slot, then a separate
-          // clone flies" bug: the flight now starts from wherever the hand
-          // actually let go.
-          const draggedRect = tileEl.getBoundingClientRect();
-          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
-          if (target && target !== tileEl && target.dataset.pos != null) {
-            // .is-dragging (elevated z-index) stays on until moveResultTile
-            // actually settles — the real tile keeps sliding in view now
-            // (no more hide-and-fly-a-clone), so it must stay on top of the
-            // other tiles it's crossing over the whole way across.
-            moveResultTile(pos, Number(target.dataset.pos), draggedRect);
-          } else {
-            animateReturnHome(tileEl);   // keeps .is-dragging (elevated z-index) until it has actually settled
-          }
-        } else {
-          tileEl.classList.remove("is-dragging");
-          tileEl.style.transform = "";
-          unplace(pos);
-        }
-      };
-      tileEl.addEventListener("pointerup", endDrag);
-      tileEl.addEventListener("pointercancel", endDrag);
     }
 
     // ----- drag & drop helpers (shared by origin-row placement drags and
@@ -1577,48 +1536,19 @@ const anagramTemplate = {
       else animateReturnHome(tileEl);
     }
 
-    // Lets an origin-row tile be DRAGGED straight onto a result slot (both
-    // modes), on top of the existing plain-tap placement. A tap (no real
-    // pointer movement past THRESHOLD) falls through to the exact same
-    // onTileClick() path as before — drag is purely an alternate input, the
-    // tap behaviour is untouched.
+    // Đợt 175 (17/8/2026, thầy chốt cho màn hồng ngoại TOMKO): origin tile =
+    // ĐẶT CHỮ NGAY tại pointerdown (core/press.js), KHÔNG còn kéo-thẳng-vào-ô.
+    // Đây là bề mặt QUYẾT ĐỊNH THẮNG THUA của Fight mode — bản cũ đợi nhấc tay
+    // (để phân biệt kéo) nghĩa là thứ tự ghi nhận = thứ tự NHẢ TAY chứ không
+    // phải thứ tự CHẠM, mà màn hồng ngoại nhận ra nhả tay chậm và vô chừng.
+    // Nay thứ tự chạm = thứ tự đặt chữ. Kéo-thả gỡ bỏ theo đúng lời thầy:
+    // "chỉ cần nhận 1 dạng dữ liệu là chọn/nhấn". Muốn khôi phục drag: xem
+    // git history Đợt 174 trở về trước (bộ helper vẫn còn nguyên bên trên).
     function attachOriginTileInteraction(tileEl, tileId) {
-      let dragging = false, moved = false, startX = 0, startY = 0;
-      const THRESHOLD = 6;
-      tileEl.style.touchAction = "none";
-      tileEl.addEventListener("pointerdown", e => {
+      press(tileEl, () => {
         if (finished || tileEl.disabled) return;
-        dragging = true; moved = false;
-        startX = e.clientX; startY = e.clientY;
-        tileEl.setPointerCapture(e.pointerId);
+        onTileClick(tileId, tileEl);
       });
-      tileEl.addEventListener("pointermove", e => {
-        if (!dragging) return;
-        const dx = e.clientX - startX, dy = e.clientY - startY;
-        if (!moved && (Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD)) {
-          moved = true;
-          tileEl.classList.add("is-dragging");
-        }
-        if (moved) {
-          tileEl.style.transform = `translate(${dx}px, ${dy}px) scale(1.08)`;
-          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
-          setDropHighlight(isValidOriginDropTarget(target) ? target : null);
-        }
-      });
-      const endDrag = e => {
-        if (!dragging) return;
-        dragging = false;
-        clearDropHighlight();
-        if (moved) {
-          const target = hitTestUnder(tileEl, e.clientX, e.clientY, ".aw-anagram-rtile");
-          handleOriginDrop(tileId, tileEl, target);
-        } else {
-          tileEl.style.transform = "";
-          onTileClick(tileId, tileEl);
-        }
-      };
-      tileEl.addEventListener("pointerup", endDrag);
-      tileEl.addEventListener("pointercancel", endDrag);
     }
 
     function doSubmit() {

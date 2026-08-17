@@ -34,6 +34,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -273,8 +274,8 @@ const tfTemplate = {
       const btnRow = el("div", "aw-tf-buttons");
       const btnTrue = el("button", "aw-tf-btn is-true", "True");
       const btnFalse = el("button", "aw-tf-btn is-false", "False");
-      btnTrue.onclick = () => choose(true, btnTrue);
-      btnFalse.onclick = () => choose(false, btnFalse);
+      press(btnTrue, () => choose(true, btnTrue));    // instant on touch-down — core/press.js
+      press(btnFalse, () => choose(false, btnFalse));
       // Locked until a statement has slid in >=50% (item, 1/8) — this also keeps
       // taps during the 3-2-1 countdown from answering the first statement early.
       btnTrue.disabled = true; btnFalse.disabled = true;
@@ -363,7 +364,7 @@ const tfTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(st.voice, vBtn); });
         promptEl.append(vBtn);
         if (vv.autoPlay) voicePlayer.playDelayed(st.voice, vBtn, firstStatementSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }

@@ -27,6 +27,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
 import { makeHStepper } from "../../core/numberstepper.js";
@@ -591,7 +592,7 @@ function mountQuestions(root, activity, ui) {
       }
       inner.append(front, back);
       box.append(inner);
-      if (boxState[i] === "unplayed" && !ended) box.onclick = () => openBox(i);
+      if (boxState[i] === "unplayed" && !ended) press(box, () => openBox(i));   // instant on touch-down — core/press.js
       grid.append(box);
     });
     card.append(grid);
@@ -871,7 +872,7 @@ function mountQuestions(root, activity, ui) {
       const vBtn = el("button", "aw-otb-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
       vBtn.type = "button";
       vBtn.setAttribute("aria-label", "Listen to pronunciation");
-      vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
+      press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); });
       qTile.append(vBtn);
       if (vv.autoPlay) voicePlayer.play(it.src.voice, vBtn);
     }
@@ -897,7 +898,7 @@ function mountQuestions(root, activity, ui) {
       tile.style.setProperty("--otb-d", col.d);
       if (showLetters) tile.append(el("span", "aw-otb-q-letter", String.fromCharCode(65 + k)));
       tile.append(el("span", "aw-otb-q-text", escapeHtml(ans.text)));
-      tile.onclick = () => answer(i, k, tile, row);
+      press(tile, () => answer(i, k, tile, row));   // instant on touch-down — core/press.js
       row.append(tile);
     });
     if (it.answers.length % 2 === 1) row.lastElementChild.classList.add("aw-otb-qtile-wide");

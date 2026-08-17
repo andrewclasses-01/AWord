@@ -37,6 +37,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -500,7 +501,7 @@ const wamTemplate = {
           const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
           vBtn.type = "button";
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
-          vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
+          press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); });
           qEl.append(vBtn);
           if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
         }

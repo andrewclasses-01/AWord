@@ -32,6 +32,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -236,7 +237,7 @@ const ttaTemplate = {
 
     const submitBtn = el("button", "aw-tta-submit", "Submit Answer");
     submitBtn.type = "button";
-    submitBtn.onclick = () => submitAnswer(input.value);
+    press(submitBtn, () => submitAnswer(input.value));   // instant on touch-down — core/press.js
     answerBlock.append(submitBtn);
 
     slot.append(answerBlock);
@@ -275,14 +276,14 @@ const ttaTemplate = {
       kbdBtn = el("button", "aw-iconbtn", icons.keyboard);
       kbdBtn.type = "button";
       updateKbdBtn();
-      kbdBtn.onclick = () => {
+      press(kbdBtn, () => {
         keyboardVisible = !keyboardVisible;
         kbd.setHidden(!keyboardVisible);   // animates (CSS transition)
         input.inputMode = keyboardVisible ? "none" : "text";   // OS keyboard off while AWord's is up
         syncSubmitVisibility();   // outside "Submit Answer" only shows when kbd hidden
         updateKbdBtn();
         fitLayout();   // block height (outside Submit) + keyboard-top changed -> re-fit & re-centre
-      };
+      });
       ui.kbdSlot.append(kbdBtn);
     }
     function updateKbdBtn() {
@@ -511,7 +512,7 @@ const ttaTemplate = {
           const vBtn = el("button", "aw-tta-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
           vBtn.type = "button";
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
-          vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); };
+          press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); });
           qArea.append(vBtn);
           if (vv.autoPlay) voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
         }

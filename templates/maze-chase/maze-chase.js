@@ -26,6 +26,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el, formatTime } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -394,7 +395,7 @@ const mazeChaseTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.voice, vBtn); });
         qText.append(vBtn);
         if (vv.autoPlay) voicePlayer.playDelayed(q.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }

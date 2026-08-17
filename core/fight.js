@@ -48,6 +48,7 @@
 // =============================================================
 
 import { el, shuffle } from "./utils.js";
+import { press } from "./press.js";
 import { startGame } from "./engine.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
@@ -800,7 +801,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     panel.append(rowEl);
     const again = el("button", "aw-btn aw-btn-primary", "Start again");
     again.type = "button";
-    again.onclick = () => { sound.click(); ctl.restartMatch(); };
+    press(again, () => { sound.click(); ctl.restartMatch(); });   // instant on touch-down — core/press.js
     panel.append(again);
     wrap.append(panel);
     try { sound.fanfare(); } catch { /* ignore */ }

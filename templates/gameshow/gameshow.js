@@ -19,6 +19,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { makeHStepper } from "../../core/numberstepper.js";
@@ -309,7 +310,7 @@ const gameshowTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); });
         qEl0.append(vBtn);
         if (vv.autoPlay) voicePlayer.play(q.src.voice, vBtn);
       }
@@ -322,7 +323,7 @@ const gameshowTemplate = {
         tile.append(el("span", "aw-gs-letter", String.fromCharCode(65 + i)));
         tile.append(el("span", "aw-gs-tiletext", escapeHtml(ans.text)));
         tile.dataset.i = i;
-        tile.onclick = () => resolveQuestion(i);
+        press(tile, () => resolveQuestion(i));   // instant on touch-down — core/press.js
         answers.append(tile);
       });
       card.append(answers);
@@ -408,7 +409,7 @@ const gameshowTemplate = {
       timerWrap.style.visibility = "hidden";
 
       const ts = tiles();
-      ts.forEach(t => { t.disabled = true; t.onclick = null; });
+      ts.forEach(t => { t.disabled = true; });   // press() honours `disabled` — no handler to null out
 
       // mark tiles: correct tile always shows ✓; chosen-wrong shows ✗; others dim
       const correctIdx = q.answers.findIndex(a => a.correct);
@@ -498,7 +499,7 @@ const gameshowTemplate = {
         const b = el("button", "aw-gs-ll" + (used[d.key] ? " is-used" : ""), d.label);
         b.type = "button";
         b.disabled = used[d.key] || !st || st.resolved;
-        b.onclick = () => useLifeline(d.key);
+        press(b, () => useLifeline(d.key));   // instant on touch-down — core/press.js
         llBar.append(b);
       });
     }
@@ -511,7 +512,7 @@ const gameshowTemplate = {
         if (wrongIdx.length < 2) return;
         shuffle(wrongIdx).slice(0, 2).forEach(i => {
           const t = tiles()[i];
-          if (t) { t.classList.add("is-removed"); t.disabled = true; t.onclick = null; }
+          if (t) { t.classList.add("is-removed"); t.disabled = true; }   // press() honours `disabled`
         });
         used.fifty = true; gsSound.useLifeline(); gsSound.lifeline5050();
       } else if (key === "x2") {
@@ -555,7 +556,7 @@ const gameshowTemplate = {
           const front = el("span", "aw-gs-card-face aw-gs-card-front");
           front.append(el("span", "aw-gs-card-plus", "+" + val), el("span", "aw-gs-card-lbl", "Points"));
           c.append(front);
-          c.onclick = () => {
+          press(c, () => {
             if (picked) return; picked = true;
             gsSound.bonusPick();
             [...cardsWrap.children].forEach(x => { if (x !== c) x.classList.add("is-fade"); });
@@ -569,7 +570,7 @@ const gameshowTemplate = {
             let closed = false;
             const close = () => { if (closed) return; closed = true; ov.remove(); done(); };
             later(close, 1900);
-          };
+          });
           cardsWrap.append(c);
         });
         // reveal-appear stagger handled by CSS var --i

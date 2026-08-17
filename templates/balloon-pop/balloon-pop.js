@@ -23,6 +23,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { makeHStepper } from "../../core/numberstepper.js";
 import { autoFit } from "../../core/fit.js";
@@ -270,7 +271,7 @@ function mountBalloonPop(root, activity, ui) {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); });
         cartText.append(vBtn);
         if (vv.autoPlay) voicePlayer.playDelayed(it.src.voice, vBtn, firstLevelSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }
@@ -366,7 +367,7 @@ function mountBalloonPop(root, activity, ui) {
     const b = { el: wrap, x: 104, y: lane, vx: -130, keyword, correct, bonus, popped: false };
     wrap.style.left = b.x + "%";                   // % of the SCENE width/height (containing block)
     wrap.style.top = b.y + "%";
-    wrap.onclick = (e) => { e.preventDefault(); popBlimp(b); };
+    press(wrap, (e) => { e.preventDefault(); popBlimp(b); });   // instant on touch-down — core/press.js
     skyLayer.append(wrap);
     blimps.push(b);
     // shrink the banner text to fit the blimp width

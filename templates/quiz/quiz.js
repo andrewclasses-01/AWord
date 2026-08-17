@@ -28,6 +28,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
 import { openQuizEditor } from "./quiz-editor.js";
@@ -299,7 +300,7 @@ const quizTemplate = {
         const letterEl = el("span", "aw-quiz-letter");
         const textEl = el("span", "aw-tile-text");
         tile.append(letterEl, textEl);
-        tile.onclick = () => choose(i);
+        press(tile, () => choose(i));   // instant on touch-down — core/press.js
         answersRow.append(tile);
         tiles.push({ tile, textEl, letterEl });
       }
@@ -334,7 +335,7 @@ const quizTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(q.src.voice, vBtn); });
         questionEl.append(vBtn);
         // FIGHT MODE: both boards show the same question, so only board 0
         // speaks — two copies of the same clip a few ms apart is an echo, not

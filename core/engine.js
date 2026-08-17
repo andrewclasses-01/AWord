@@ -28,6 +28,7 @@ import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
 import { buildStage } from "./layout.js";
 import { formatTime, el, ordinal, fmtSecsParts } from "./utils.js";
+import { press } from "./press.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { confettiBurst } from "./confetti.js";
@@ -590,6 +591,38 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (navHost !== navWrap) navHost.append(showdownSlot, navWrap);
   bottombar.append(leftGroup, navHost, rightTools);
 
+  // ⭐ Đợt 176 (teacher, 17/8/2026) — the name no longer sits glued to ‹ ›: it
+  // FLOATS, centred in the empty band between the game's lowest content and the
+  // nav row ("trong QUIZ, tên nằm chính giữa khoảng cách từ mép trên nút
+  // NEXT-BACK đến mép dưới các ô đáp án; Type the answer thì tới mép dưới bàn
+  // phím"). The slot is absolutely positioned (CSS: `.aw-navstack >
+  // .aw-top-showdown`), so raising it never reflows the game — no measure→move→
+  // measure loop to fall into (the Đợt v1.8.1 lesson). "Lowest content" is
+  // measured, not hard-coded per template: the bottom-most visible
+  // button/input/keyboard inside the play area IS the tiles row in Quiz, the
+  // keyboard in Type the answer, the Submit/origin row in Anagram — exactly the
+  // teacher's three examples, and correct for template #4 without a new case.
+  // Re-run cheaply from the round ticker (every ~250ms) because the anchor moves
+  // for real reasons: keyboard toggled away, autoFit re-shrinking, a resize.
+  function placeShowdownName() {
+    if (navHost === navWrap || !showdownSlot || !showdownSlot.isConnected) return;
+    const navR = navWrap.getBoundingClientRect();
+    if (!navR.height) return;
+    let contentBottom = -Infinity;
+    playArea.querySelectorAll("button, textarea, input, .aw-kbd").forEach(n => {
+      if (!n.offsetWidth && !n.offsetHeight) return;
+      const b = n.getBoundingClientRect().bottom;
+      // `<= navR.top`: a stray full-height wrapper must not read as "content
+      // reaching the nav row" and pin the name to its old seat forever.
+      if (b > contentBottom && b <= navR.top) contentBottom = b;
+    });
+    let off = 0;
+    if (isFinite(contentBottom)) {
+      off = Math.max(0, (navR.top - contentBottom - showdownSlot.offsetHeight) / 2);
+    }
+    showdownSlot.style.bottom = `calc(100% + ${Math.round(off)}px)`;
+  }
+
   // COUNT DOWN only — the time bar, "tương tự thanh thời gian phía trên của
   // Whack a mole": the same green → orange → red fill, owned by the engine so
   // all three Showdown templates get it without a line of their own.
@@ -1111,7 +1144,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     ]).then(reveal, reveal);
   }
 
-  bigPlay.onclick = () => {
+  // press() = instant on touch-down (core/press.js, Đợt 175). Fight's relay
+  // (`btn.click()` in fight.js playPressed) still lands: press() runs the
+  // handler for untrusted programmatic clicks.
+  press(bigPlay, () => {
     bigPlay.disabled = true;
     // FIGHT MODE: whichever board the teacher presses, the OTHER one starts at
     // the same instant (teacher, 12/8/2026). Both plays run their own clock, so
@@ -1132,7 +1168,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     fade.onfinish = removeOverlay;
     setTimeout(removeOverlay, 350);   // fallback: a backgrounded/hidden tab can stall animation events
     begin();
-  };
+  });
 
   // ----- Timer (starts at PLAY, measured precisely) -----
   // Modes (set via the Options panel): "none" | "countUp" | "countDown".
@@ -1313,19 +1349,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // which is the only reading that survives the teacher navigating.
   let roundIndex = -1;        // item the clock is timing (0-based), -1 = none yet
   let roundStartedAt = 0;     // performance.now() of the running segment; 0 = not running
-  let roundId = null;         // the 100ms ticker — only ever exists while roundOn
+  let roundId = null;         // the 50ms ticker — only ever exists while roundOn
   let roundOver = false;      // this round is settled (answered, or timed out)
   const roundMs = [];         // banked ms per item index
   let roundTimeUp = null;     // template's timeout handler, via ui.setRoundTimeout
+  let sdPlaceTick = 0;        // Đợt 176 — throttles placeShowdownName() to every 5th tick
 
   // Teacher's own spec: "chỉ cần hiển thị các số 1-59, khi sang giây tiếp theo
   // mới hiển thị 1:00, 1:01" — bare seconds under a minute, m:ss from there on.
   // Deliberately NOT core/utils.js's formatTime (which always prints 0:07): a
   // round is normally under a minute, and "7" is read across a classroom faster
   // than "0:07".
-  function roundFmt(secs) {
-    const v = Math.max(0, Math.floor(secs));
-    return v < 60 ? String(v) : `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`;
+  // ⭐ Đợt 176 — the number now carries HUNDREDTHS in smaller type ("30,18",
+  // teacher 17/8/2026). ONLY this per-round clock: the whole-game clock next to
+  // Menu keeps its plain m:ss on purpose (teacher: "đồng hồ tổng không dùng
+  // dạng này"). Comma, not dot — it matches how the class reads decimals.
+  function roundPaintClock(secs) {
+    const v = Math.max(0, secs);
+    const whole = Math.floor(v);
+    const cents = Math.min(99, Math.floor((v - whole) * 100));
+    const main = whole < 60 ? String(whole) : `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+    roundClockEl.textContent = main;
+    roundClockEl.append(el("span", "aw-round-dec", "," + String(cents).padStart(2, "0")));
   }
   function roundLive() {
     return (roundMs[roundIndex] || 0) + (roundStartedAt ? performance.now() - roundStartedAt : 0);
@@ -1339,12 +1384,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function roundPaint() {
     if (!roundOn || !roundClockEl || roundIndex < 0) return;
     const secs = roundLive() / 1000;
-    if (roundMode === "countUp") { roundClockEl.textContent = roundFmt(secs); return; }
+    if (roundMode === "countUp") { roundPaintClock(secs); return; }
     const total = roundTotal();
     const left = Math.max(0, total - secs);
-    // `ceil`: a round with 0.4s left still reads "1". Reaching "0" means the
-    // round really is over, which is the moment the bar empties too.
-    roundClockEl.textContent = roundFmt(Math.ceil(left));
+    // Đợt 176 — the old `ceil` ("0.4s left still reads 1") is gone with the
+    // hundredths: the number now shows the REAL remainder, and "0,00" is the
+    // moment the bar empties too.
+    roundPaintClock(left);
     if (roundBarFill) {
       const pct = Math.max(0, Math.min(100, (left / total) * 100));
       roundBarFill.style.width = pct + "%";
@@ -1357,6 +1403,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
   function roundTick() {
     if (torndown || roundIndex < 0) return;
+    // Đợt 176 — keep the floating name centred as its anchor moves (keyboard
+    // toggled, autoFit, resize). Every 5th tick = 4×/s, layout is usually clean
+    // so the rect reads are effectively free.
+    if ((sdPlaceTick = (sdPlaceTick + 1) % 5) === 0) placeShowdownName();
     // FROZEN while the game is covered and cannot be played: ☰ Menu (which
     // already freezes the whole-game clock, Đợt 91) and any open tool panel.
     // Banking on the way in and restarting on the way out means a pause costs
@@ -1385,6 +1435,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     roundStartedAt = performance.now();
     if (roundBarFill) roundBarFill.classList.remove("is-orange", "is-red");
     roundPaint();
+    placeShowdownName();   // Đợt 176 — a new item can re-lay the content out
   }
   /** The pupil's turn is over (they answered) — freeze the reading. */
   function roundDone() {
@@ -1393,7 +1444,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     roundBank();
     roundPaint();
   }
-  function startRoundWatch() { if (roundOn && !roundId && !torndown) roundId = setInterval(roundTick, 100); }
+  // 50ms, not the original 100 (Đợt 176): the clock paints hundredths now, and
+  // at 10Hz the small digits visibly stutter. 20Hz is still far below rAF cost.
+  function startRoundWatch() { if (roundOn && !roundId && !torndown) roundId = setInterval(roundTick, 50); }
   function stopRoundWatch() { if (roundId) clearInterval(roundId); roundId = null; }
 
   function startTimerNow() {

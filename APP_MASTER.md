@@ -8,7 +8,36 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 174) — ⭐⭐ SHOWDOWN: NÚT ✗ ĐỎ TRẢ ĐỘI VỀ · ⭐⭐⭐ TÍNH NĂNG MỚI
+> Cập nhật lần cuối: **17/8/2026 (Đợt 176) — SHOWDOWN + TIME EACH ROUND: TÊN HỌC SINH NỔI GIỮA
+> KHOẢNG TRỐNG (đo bằng `placeShowdownName()`, sàn `margin-bottom:5.4cqw` chống đè bàn phím TTA) ·
+> SHOW ANSWERS có **% câu đúng/số câu ĐÃ LÀM** dạng `1:00 - 50%` (time xanh dương; % theo dải
+> `pctBand()`: ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá) · đồng hồ LƯỢT có
+> **phần lẻ giây** `30,18` (ticker 50ms, dec nhỏ; `fmtRoundMs` tính từ ms NGUYÊN kẻo float ăn 1
+> phần trăm giây; đồng hồ TỔNG giữ nguyên).** Sửa `engine.js` · `showdown.js` · `app.css`, test qua
+> `scratch/round-test.html` cả 3 template × 3 mode. Chi tiết: `GHI CHU DU AN.md` mục "Đợt 176".
+> ⚠️ 2 bẫy đáng nhớ: tên rời luồng làm playarea cao thêm ⇒ bàn phím TTA từng ĐÈ LÊN TÊN 17px (chữa
+> bằng sàn margin) · canh ngang tên phải bằng `left/right`, CẤM `translateX(-50%)` vì animation tên
+> rơi đè chết transform nền.
+>
+> Trước đó: **17/8/2026 (Đợt 175) — ⭐⭐⭐ HẾT TRỄ + HẾT BẤT CÔNG CẢM ỨNG TOMKO: MỌI BỀ MẶT
+> CHƠI KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js` MỚI).**
+> ⭐ CÓ SỬA CORE (`press.js` MỚI · `engine.js` · `fight.js` · `keyboard.js` · `app.css`) + **17 file game**.
+> Gốc rễ lỗi Fight thầy báo ("A bấm trước không nhận, B bấm sau nhận trước"): mọi ô đáp án dùng
+> `.onclick`, mà `click` (1) CHỈ sinh từ con trỏ CHÍNH — ngón chạm sau trên màn đa điểm bị vứt trắng,
+> và (2) chỉ bắn khi NHẤC TAY — màn hồng ngoại nhận nhấc tay chậm. `press(el, handler)` bắn ngay tại
+> `pointerdown` (thứ tự chạm = thứ tự kích hoạt), nuốt click sinh kèm (nhận diện bằng
+> `isTrusted`/`detail`, giữ đường `el.click()` lập trình + Enter), chặn chạm dội <90ms, tôn trọng
+> `disabled`; `.aw-stage`/`.aw-fight` thêm `touch-action:manipulation`. **Anagram bỏ kéo-thả ô chữ**
+> (thầy chốt: mọi cử chỉ = "nhấn"; máy kéo còn trong file, không ai gọi). **GIỮ click cho chrome
+> giáo viên** (toolbar/menu/setup — 4 listener đóng-khi-bấm-ra-ngoài nghe pointerdown vũ trang qua
+> `setTimeout(0)`, đổi nút mở là bảng tự đóng) và **giữ pointer riêng** cho Unjumble/Maze
+> chase/ô điểm tay. Đã tự test: harness bấm thật + 17 template + **2 trận Fight trọn vòng bằng toàn
+> chạm non-primary** (Anagram 16-0 kèm pulse, Quiz 0-1 sang câu mới), 21 file sạch cú pháp, 0 lỗi
+> console. Chi tiết + luật dùng: `GHI CHU DU AN.md` mục "Đợt 175" và `core/HUONG DAN CORE.md` mục
+> **"PRESS()"**. ⬜ CHỜ TOMKO: 2 đội bấm thật · phím ảo 2 tay có đúp không (`BOUNCE_MS`) · có ai nhớ
+> kéo-thả Anagram không.
+>
+> Trước đó: **17/8/2026 (Đợt 174) — ⭐⭐ SHOWDOWN: NÚT ✗ ĐỎ TRẢ ĐỘI VỀ · ⭐⭐⭐ TÍNH NĂNG MỚI
 > "TIME EACH ROUND" (đồng hồ từng lượt học sinh) · RÀ XONG ĐƯỜNG ĐỒNG BỘ TEMPLATE/STYLE CỦA myActivity.**
 > ✅ **THẦY CHỐT COMMIT + PUSH → COMMIT `4a3c0df` + PUSH + LIVE**, đã đối chiếu **8/8 file code trùng mã
 > băm SHA-256** trên `aword.andrewclasses.com` (deployment `5939155018`, state `success`) và **chạy lại

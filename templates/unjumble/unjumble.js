@@ -39,6 +39,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { unjumbleSound } from "./unjumble-sound.js";
@@ -396,7 +397,7 @@ const unjumbleTemplate = {
         card.append(revealEl);
         submitBtnEl = el("button", "aw-unj-submit", "Submit");
         submitBtnEl.type = "button";
-        submitBtnEl.onclick = doSubmit;
+        press(submitBtnEl, doSubmit);   // instant on touch-down — core/press.js
         card.append(submitBtnEl);
       } else {
         // "N moves for bonus" sits at the BOTTOM of the card, where Submit would be.

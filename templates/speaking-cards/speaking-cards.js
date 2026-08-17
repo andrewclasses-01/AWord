@@ -37,6 +37,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { sound as coreSound } from "../../core/sound.js";
 import { createVoicePlayer, voiceView } from "../../core/voice-playback.js";
@@ -230,10 +231,10 @@ const speakingCardsTemplate = {
     root.append(scene);
 
     // ----- wire up -----
-    deck.onclick = () => deal();
-    dealBtn.onclick = () => deal();
-    shuffleBtn.onclick = () => doShuffle();
-    undoBtn.onclick = () => undo();
+    press(deck, () => deal());          // instant on touch-down — core/press.js
+    press(dealBtn, () => deal());
+    press(shuffleBtn, () => doShuffle());
+    press(undoBtn, () => undo());
     ui.onSubmit(endRound);                        // countdown hitting 0 (or menu "Submit") ends the round
     window.addEventListener("keydown", onKey);
 
@@ -500,7 +501,7 @@ const speakingCardsTemplate = {
         const vBtn = el("button", "aw-sc-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(card.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(card.voice, vBtn); });
         (hideText ? txtWrap : cardEl).append(vBtn);
       }
       return cardEl;

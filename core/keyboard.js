@@ -46,6 +46,7 @@
 //   alone gates it (fixed 4/8/2026 — see the note on fnKey below).
 // =============================================================
 import { el } from "./utils.js";
+import { press } from "./press.js";
 
 const L1 = ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"];
 const L2 = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
@@ -126,7 +127,9 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     b.type = "button";
     b.tabIndex = -1;                          // don't steal focus from the answer field
     b.onmousedown = e => e.preventDefault();  // keep the caller's caret/focus on click
-    b.onclick = e => { if (!silent) sound?.keyClick?.(); onClick?.(e); };
+    // press() = fires on pointerDOWN (instant, multi-touch-fair on the IR screen)
+    // instead of waiting for the finger to lift — see core/press.js (Đợt 175).
+    press(b, e => { if (!silent) sound?.keyClick?.(); onClick?.(e); });
     return b;
   }
   function charKey(ch) { return makeKey(ch, () => onChar?.(ch)); }
@@ -163,7 +166,7 @@ export function createKeyboard({ sound, onChar, onBackspace, submit, extraKey })
     b.tabIndex = -1;
     b.onmousedown = e => e.preventDefault();
     b.append(el("span", "aw-kbd-key-dot"), el("span", "aw-kbd-key-fnlabel", escapeHtml(labelText)));
-    if (onClick) b.onclick = () => { sound?.keyClick?.(); onClick(); };
+    if (onClick) press(b, () => { sound?.keyClick?.(); onClick(); });
     b.disabled = !!disabled;
     return b;
   }

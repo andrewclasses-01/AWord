@@ -45,6 +45,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -354,7 +355,7 @@ const ftmTemplate = {
         // distractor (teacher 6/8/2026: no dim, no permanent badge) so the player
         // can't tell which words are "used up". Tapping a solved tile for a later
         // prompt just counts as a wrong tap (its pair is no longer in the queue).
-        tile.onclick = () => choose(idx, tile);
+        press(tile, () => choose(idx, tile));   // instant on touch-down — core/press.js
         grid.append(tile);
       });
       card.append(grid);
@@ -544,7 +545,7 @@ const ftmTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(pr.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(pr.voice, vBtn); });
         promptEl.append(vBtn);
         if (vv.autoPlay) voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }

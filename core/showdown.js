@@ -247,7 +247,18 @@ export function buildShowdownReview(host, { members, teamName, review }) {
     // are stamped). It is the same number the ranking above sorted on — one
     // measurement, printed and sorted from the same place. Absent when the option
     // was off, so a Showdown played without it looks as it did before.
+    // ⭐ Đợt 176 — "1:00 - 50%": time in blue (CSS), then % correct of the
+    // questions this pupil ACTUALLY answered, banded red→…→green (see pctBand).
+    // The two halves are independent: time only exists with the round clock on,
+    // the percentage only with at least one attempted question — the "-" joins
+    // them only when both are there.
+    const attempted = mine.filter(x => x.r.answered).length;
     if (hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(ms)));
+    if (attempted) {
+      const pct = Math.round((right / attempted) * 100);
+      if (hasTime) tally.append(el("span", "aw-sd-rv-sep", "-"));
+      tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
+    }
     tally.append(
       el("span", "is-ok", `${icons.check} ${right}`),
       el("span", "is-bad", `${icons.cross} ${mine.length - right}`)
@@ -294,18 +305,37 @@ export function buildShowdownReview(host, { members, teamName, review }) {
 
 /**
  * ⭐ Đợt 174 — a round's duration, for the review only.
- * Under a minute it is tenths of a second ("12.4s"): rounds are short and a bare
- * "12s" hides the difference between the pupil who answered at once and the one
- * who nearly ran out. Past a minute it becomes m:ss.d, the same shape the
- * summary screen already uses for the whole game (`fmtSecsParts`, core/utils.js)
- * — not that helper itself, because this needs one string, not its parts.
+ * ⭐ Đợt 176 — reshaped to MATCH THE LIVE ROUND CLOCK (teacher: "Thời gian trong
+ * show answers cũng hiển thị dạng tương tự"): bare seconds under a minute, m:ss
+ * past it, plus HUNDREDTHS after a comma in smaller type — "30,18" / "1:02,40".
+ * Returns markup (the small-type span), so the ONLY safe sinks are `el()`'s
+ * html argument / innerHTML on nodes that never carry user text — every
+ * character here comes from Number() and padStart, nothing else.
  */
 export function fmtRoundMs(ms) {
-  const s = Math.max(0, Number(ms) || 0) / 1000;
-  if (s < 60) return s.toFixed(1) + "s";
-  const m = Math.floor(s / 60);
-  const rest = s - m * 60;
-  return `${m}:${rest < 10 ? "0" : ""}${rest.toFixed(1)}s`;
+  // Integer maths on the ms, not float seconds: 62400/1000 − 62 is 0.39999…,
+  // which floors a clean 400ms into ",39".
+  const m = Math.round(Math.max(0, Number(ms) || 0));
+  const whole = Math.floor(m / 1000);
+  const cents = Math.floor((m % 1000) / 10);
+  const main = whole < 60 ? String(whole) : `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, "0")}`;
+  return `${main}<span class="aw-sd-rv-dec">,${String(cents).padStart(2, "0")}</span>`;
+}
+
+/**
+ * ⭐ Đợt 176 — % correct OF THE QUESTIONS ACTUALLY ATTEMPTED (teacher: "không
+ * tính % cho các câu chưa làm"), banded into the classroom's colour read:
+ * ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá (the two
+ * endpoints are the teacher's own numbers, the middle split is ours).
+ * Returns the band class for CSS; null when nothing was attempted — a pupil
+ * who never got a turn shows no percentage at all rather than a red 0%.
+ */
+export function pctBand(pct) {
+  if (pct <= 60) return "is-p0";
+  if (pct <= 72) return "is-p1";
+  if (pct <= 84) return "is-p2";
+  if (pct < 95) return "is-p3";
+  return "is-p4";
 }
 
 function mark(cls, glyph, text) {

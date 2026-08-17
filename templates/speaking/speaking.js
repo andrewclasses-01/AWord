@@ -37,6 +37,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -211,7 +212,7 @@ const spkTemplate = {
     const micBtn = el("button", "aw-spk-micbtn", icons.mic);
     micBtn.type = "button";
     micBtn.setAttribute("aria-label", "Record your pronunciation");
-    micBtn.onclick = onMicClick;
+    press(micBtn, onMicClick);   // instant on touch-down — core/press.js
 
     // (6) star row + the raw percentage beside it
     const starsRow = el("div", "aw-spk-stars");
@@ -272,7 +273,7 @@ const spkTemplate = {
         const vBtn = el("button", "aw-voicebtn", icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to the correct pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); });
         wordEl.append(vBtn);   // trailing icon INSIDE the word text — inherits its font-size (em-sized)
         if (!state[index].graded) {
           voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);

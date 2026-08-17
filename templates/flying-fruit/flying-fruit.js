@@ -25,6 +25,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { shuffle, el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createVoicePlayer, voiceView, DEFAULT_INTRO_DELAY_MS } from "../../core/voice-playback.js";
@@ -223,7 +224,7 @@ const flyingFruitTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(current.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(current.voice, vBtn); });
         clue.append(vBtn);
         if (vv.autoPlay) voicePlayer.playDelayed(current.voice, vBtn, firstItemSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
       }

@@ -48,6 +48,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { el, shuffle } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { fitOnce } from "../../core/fit.js";
 import { openRunningTeamEditor } from "./running-team-editor.js";
@@ -777,7 +778,7 @@ const rtTemplate = {
         b.style.setProperty("--tile-dark", col.d);
         const span = el("span", "aw-rt-tile-text", escapeHtml(String(t).toUpperCase()));
         b.append(span);
-        b.onclick = () => onTile(b, t, word);
+        press(b, () => onTile(b, t, word));   // instant on touch-down — core/press.js
         tilesEl.append(b);
       });
       // Long entries (SKIN-SCRAPER, CIVILISATION) must not spill out of a tile.

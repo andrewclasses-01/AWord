@@ -63,6 +63,7 @@ import { registerTemplate } from "../../core/registry.js";
 // game's slider and its mount() clamp drifting apart again.
 import { POINTS_MAX, POINTS_STEP } from "../../core/options-panel.js";
 import { el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { autoFit } from "../../core/fit.js";
 import { createKeyboard } from "../../core/keyboard.js";
@@ -349,9 +350,9 @@ const crosswordTemplate = {
     const clueBar = el("div", "aw-cw-cluebar");
     const clueText = el("span", "aw-cw-clue-text", "");
     clueBar.append(clueText);
-    clueBar.onclick = () => {
+    press(clueBar, () => {
       if (curWord >= 0 && !finished && canExit) { ui.sound?.click?.(); returnToBoard(); }
-    };
+    });   // instant on touch-down — core/press.js
     wrap.append(clueBar);
 
     // Grid cells themselves are built by buildGridDom() (called from
@@ -470,7 +471,7 @@ const crosswordTemplate = {
             if (g.num) cell.append(el("span", "aw-cw-cellnum", String(g.num)));
             cell.append(el("span", "aw-cw-letter", ""));
             cell.dataset.rc = r + "," + c;
-            cell.onclick = () => onCellClick(r, c);
+            press(cell, () => onCellClick(r, c));   // instant on touch-down — core/press.js
             cellEls.set(r + "," + c, cell);
           }
           gridEl.append(cell);
@@ -728,7 +729,7 @@ const crosswordTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        vBtn.onclick = e => { e.stopPropagation(); voicePlayer.toggle(w.src.voice, vBtn); };
+        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(w.src.voice, vBtn); });
         clueText.append(vBtn);
         if (vv.autoPlay) voicePlayer.play(w.src.voice, vBtn);
       }

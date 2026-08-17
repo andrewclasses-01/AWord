@@ -36,6 +36,7 @@
 
 import { registerTemplate } from "../../core/registry.js";
 import { el } from "../../core/utils.js";
+import { press } from "../../core/press.js";
 import { icons } from "../../core/icons.js";
 import { createKeyboard } from "../../core/keyboard.js";
 import { fitOnce } from "../../core/fit.js";
@@ -359,7 +360,7 @@ const rwTemplate = {
       const lab = el("span", "aw-rw-passbtn-lab", "PASS");
       const num = el("span", "aw-rw-passbtn-n", String(cfg.passUses));   // passes left
       btn.append(lab, num);
-      btn.onclick = () => { if (turn === t) doPass(); };
+      press(btn, () => { if (turn === t) doPass(); });   // instant on touch-down — core/press.js
       passEls[t] = { btn, num, _n: cfg.passUses };
       return btn;
     }
@@ -383,14 +384,14 @@ const rwTemplate = {
       // Tap a board during "prep" to pick who goes first. You can re-pick the
       // other side any time before the first submit; switching drops the
       // half-typed word so it can't carry over to the other team.
-      board.onclick = () => {
+      press(board, () => {
         if (phase !== "prep") return;
         ui.sound.click?.();
         if (turn !== t) input.value = "";
         turn = t;
         paintAll();
         focusInput();
-      };
+      });
       const rowhead = el("div", "aw-rw-rowhead");
       const headName = el("span", "aw-rw-rowhead-name", "");   // "PART A/B" — set in paintBoard
       rowhead.append(headName);
@@ -507,7 +508,7 @@ const rwTemplate = {
       const playPauseBtn = el("button", "aw-rw-playpause", SVG_PLAY);
       playPauseBtn.type = "button";
       playPauseBtn.title = "Play";
-      playPauseBtn.onclick = onPlayPauseClick;
+      press(playPauseBtn, onPlayPauseClick);   // instant on touch-down — core/press.js
       bar.append(playPauseBtn);
       refUI = { bar, playPauseBtn };
       return bar;

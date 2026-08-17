@@ -243,9 +243,10 @@
 }
 .aw-anagram-rspace { width: calc(var(--aw-ana-tile, 6cqw) * 0.45 * var(--fit)); flex: 0 0 auto; }
 
-/* "on submit" pre-Submit tiles can be tapped (send back) or dragged
-   (swap) — a visible grab cursor hints that. */
-.aw-anagram-result.is-interactive .aw-anagram-rtile.is-filled { cursor: grab; touch-action: none; }
+/* "on submit" pre-Submit tiles: tap to send the letter back — instant on
+   touch-down since Đợt 175 (drag-to-swap removed with it; the .is-dragging /
+   .is-droptarget rules below are orphans kept only for an easy restore). */
+.aw-anagram-result.is-interactive .aw-anagram-rtile.is-filled { cursor: pointer; }
 /* Lifted-while-held cue — a slight scale-up (set inline via JS, together with
    the live translate()) instead of a drop shadow (teacher asked to remove
    tile shadows entirely, 8/8/2026). `transition: none` keeps the tile

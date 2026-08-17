@@ -268,6 +268,37 @@ và **✅ ĐÃ NGHIỆM THU: thầy tự test iPhone + iPad + Windows, nghe tố
 Ghi chú: MP3 chèn ~55ms im lặng ở đầu clip (đo: 1,025s → 1,08s). Vô hại với giọng đọc từ đơn, nhưng
 nhớ nếu sau này dùng TTS cho thứ cần khớp thời điểm chính xác.
 
+## ⭐⭐ PRESS() — KÍCH HOẠT NGAY LÚC CHẠM (`core/press.js`, Đợt 175, 17/8/2026)
+
+**LUẬT: mọi bề mặt CHƠI (ô đáp án, hộp, ô chữ, phím ảo, nút loa, PLAY, Submit) phải gắn qua
+`press(el, handler)` — CẤM quay lại `el.onclick` cho bề mặt chơi.** Lý do sống còn (màn hồng ngoại
+TOMKO): `click` chỉ sinh từ con trỏ CHÍNH (cú chạm thứ hai khi đa điểm bị vứt trắng — gốc lỗi bất
+công Fight thầy báo 17/8/2026) và chỉ bắn khi NHẤC TAY (màn hồng ngoại nhận nhấc tay chậm).
+
+`press()` bắn handler ngay tại `pointerdown`, mỗi ngón một pointer độc lập (thứ tự chạm = thứ tự kích
+hoạt), và tự lo 4 việc: nuốt `click` sinh kèm (chống đúp — nhận diện bằng `isTrusted`/`detail`,
+KHÔNG dùng đồng hồ) · vẫn chạy với `el.click()` lập trình (fight relay PLAY, myActivity, test-bench)
+và Enter/Space bàn phím cứng · chặn chạm dội <90ms cùng phần tử (`BOUNCE_MS`) · tôn trọng `disabled`
+(kiểm tay — đừng tin trình duyệt chặn hộ pointer trên nút disabled).
+
+**5 điều PHẢI biết khi dùng:**
+1. Handler nhận PointerEvent (hoặc MouseEvent ở 2 nhánh fallback). **Nút loa nằm TRONG ô bấm phải gọi
+   `e.stopPropagation()`** y như thời click — chạy đúng ở tầng pointerdown.
+2. **CẤM preventDefault pointerdown** (trong press lẫn trong handler): Chromium sẽ bỏ `:active`
+   (mất phản hồi nhấn) và bỏ chuỗi mouse-compat mà `keyboard.js` dựa vào để giữ focus.
+3. Gỡ kích hoạt = `el.disabled = true` (xem gameshow.js teardown). KHÔNG có cơ chế gỡ listener —
+   phần tử chơi vốn bị vứt/dựng lại theo vòng đời game.
+4. **Phần tử cần PHÂN BIỆT chạm với kéo/vuốt thì KHÔNG dùng press()**: thẻ chữ Unjumble, vuốt Maze
+   chase, ô điểm tay Fight (chạm +1 / vuốt −1) — chúng tự lo pointer + `touch-action:none` riêng.
+5. ⚠️ **Chrome giáo viên (toolbar Options/Template/Style/Mode, ☰ Menu, ‹ ›, panel item, màn setup)
+   CỐ Ý còn là click — ĐỪNG "tiện tay" chuyển.** 4 listener đóng-khi-bấm-ra-ngoài (engine.js ×2,
+   running-word, running-team) nghe `pointerdown` và được vũ trang qua `setTimeout(0)` sau cú click
+   MỞ: đổi nút mở sang press là mở-đóng trong CÙNG nhịp, bảng tự sập ngay. Muốn chuyển thì phải làm
+   lại cơ chế vũ trang đó trước (vd. vũ trang ở pointerup, hoặc lọc `e.target` nằm trong panel).
+
+`touch-action: manipulation` đã áp ở `.aw-stage` + `.aw-fight` (app.css) — template mới KHÔNG cần tự
+khai lại, trừ khi cần `none` cho cử chỉ kéo riêng.
+
 ## ⭐⭐ FIGHT MODE — HAI BÀN, MỘT TRẬN (`core/fight.js`, Đợt 124, 12/8/2026)
 
 Nút **MODE** dưới khung lật act giữa SINGLE MODE và FIGHT MODE: 2 ván THẬT cạnh nhau, một dải
@@ -1181,6 +1212,25 @@ vào **CHÍNH hàng topbar** (`.aw-roundrow`, `flex:1 1 auto`, đúng dáng `.aw
 một hàng riêng, vừa ra như khung thừa vừa ăn mất chiều cao của game. **Count up** không có thanh nên số
 giây vẫn ở ô giữa tuyệt đối (Đợt 159). Cả hai kiểu: tên học sinh xuống trên cụm ‹ ›, đồng hồ tổng xuống
 cạnh ☰ Menu (sau nút bàn phím nếu template có).
+
+⭐ **Đợt 176 — 3 điều chỉnh hiển thị (thầy 17/8/2026), kèm 3 bẫy:**
+- **Tên học sinh NỔI giữa khoảng trống** dưới game: `.aw-navstack > .aw-top-showdown` là `absolute;
+  bottom:100%`, `placeShowdownName()` (engine) đo phần tử `button/textarea/input/.aw-kbd` THẤP NHẤT
+  trong playarea rồi canh tên vào chính giữa tới mép ‹ › — mỗi 250ms + mỗi lần sang câu.
+  ⚠️ Canh ngang bằng `left:0; right:0`, **CẤM `translateX(-50%)`** — animation tên rơi
+  (`paintShowdownName`) animate `transform`, sẽ đè chết transform nền.
+  ⚠️ `.aw-stage-inner:has(.aw-navstack) > .aw-playarea { margin-bottom:5.4cqw }` là **SÀN chống đè**:
+  tên rời luồng thì playarea cao thêm, bàn phím TTA từng tụt xuống nằm SAU tên (đo: 17px). Đừng giảm
+  số này nếu chưa đo lại TTA.
+- **Đồng hồ lượt có phần lẻ giây** `30,18` (`roundPaintClock`, span `.aw-round-dec` cỡ nhỏ), ticker
+  50ms; count down bỏ `ceil` (hiện số thật, `0,00` = thanh cạn). **Đồng hồ TỔNG giữ `formatTime`
+  m:ss như cũ — thầy chốt.**
+- **Show answers**: thời gian dùng `fmtRoundMs` cùng dạng lẻ giây — ⚠️ tính từ **ms NGUYÊN**
+  (`m%1000/10`), float giây từng biến 400ms thành `,39`; hàm trả MARKUP (chỉ numeric) nên chỉ đổ vào
+  sink innerHTML tin cậy. Kèm **% câu đúng / số câu ĐÃ LÀM** (`attempted=0` thì ẨN, không phải 0%
+  đỏ), dải màu qua `pctBand()`: ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá;
+  màu nằm hết trong CSS (`.aw-sd-rv-pct.is-p0..p4`), thời gian tổng của em màu xanh dương
+  (`.aw-sd-rv-time`).
 
 ⚠️⚠️ **`roundTimer` là option CẤU TRÚC — engine đọc MỘT LẦN lúc mount.** Nó quyết định chỗ ĐỨNG của 3
 thứ vừa kể. Vì thế Apply ở **màn READY** — nơi luật chung là

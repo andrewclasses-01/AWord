@@ -141,6 +141,14 @@ body {
      playing on the TOMKO board. Applies to EVERY template's stage. */
   user-select: none;
   -webkit-user-select: none;
+  /* Đợt 175 — no touch gesture inside the stage needs the browser to WAIT
+     (double-tap zoom is the one `manipulation` kills; two-finger pinch stays
+     as the escape hatch). Same rule Running word proved out in Đợt 74, now
+     app-wide: every remaining click-path control (toolbar, menus) gets its
+     tap delivered immediately. Templates that need `none` (maze-chase swipe,
+     fight hand boxes) keep their own stricter value — element-level rules
+     still win for touches that start on them. */
+  touch-action: manipulation;
 }
 /* ...but any real input the student types into (e.g. Type the answer's text
    field) must stay selectable/editable — re-enable selection there. */
@@ -2882,6 +2890,10 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   box-sizing: border-box;
+  /* Đợt 175 — same as .aw-stage: nothing in a match waits on a double-tap,
+     and the strip/toolbar around the two stages must be as instant as the
+     stages themselves. Hand boxes keep their own `touch-action:none`. */
+  touch-action: manipulation;
 }
 
 /* --- the shared strip above the boards ---
@@ -3328,10 +3340,27 @@ body {
   line-height: 1.2;
   white-space: nowrap;
 }
+/* ⭐ Đợt 176 — the hundredths ("...,18") ride along in smaller type (teacher:
+   "dấu , và số lẻ có size nhỏ hơn"). em-based so the same rule fits both the
+   big count-up number and the smaller count-down one in .aw-roundrow. */
+.aw-round-clock .aw-round-dec { font-size: .62em; font-weight: 700; }
 /* The bottom row's centre seat becomes two stacked lines. `.aw-bottombar`'s
    `:nth-child(2) { justify-self:center }` still lands on this wrapper, so the
    nav stays exactly as centred as it was. */
-.aw-navstack { display: flex; flex-direction: column; align-items: center; gap: 0; }
+.aw-navstack { display: flex; flex-direction: column; align-items: center; gap: 0; position: relative; }
+/* ⭐ Đợt 176 — the name is OUT OF THE FLOW, hovering above ‹ ›: engine's
+   placeShowdownName() measures the empty band between the game's lowest content
+   and the nav row and sets `bottom: calc(100% + Npx)` so the name floats dead
+   centre of it (teacher, 17/8/2026). `left:0; right:0` + text-align centres it
+   WITHOUT a transform — paintShowdownName() animates `transform` for the
+   name-change fall, and a translateX(-50%) base here would be wiped by that
+   animation's first frame (nowrap lets a long name paint past the box while
+   staying centred). Being absolute, the bottom bar is back to the plain nav-row
+   height — the play area gets that sliver back. */
+.aw-navstack > .aw-top-showdown {
+  position: absolute; bottom: 100%; left: 0; right: 0;
+  text-align: center; white-space: nowrap;
+}
 /* ⭐ Đợt 174c — SAME SIZE AS IN "None" (teacher: "tăng size tên học sinh ở
    countdown và countup lên bằng size khi ở chế độ Non time each round"). Đợt 174
    had shrunk it to 2.6cqw down here to save the play area some height; the
@@ -3352,7 +3381,14 @@ body {
    `:has()` scopes both to a round-timer play — every other game keeps the
    padding and spacing it has always had, byte for byte. */
 .aw-stage-inner:has(.aw-navstack) { padding-bottom: 0.6cqw; }
-.aw-stage-inner:has(.aw-navstack) > .aw-playarea { margin-bottom: 1.4cqw; }
+/* ⭐ Đợt 176 — this margin is the FLOOR under the floating name. The name left
+   the flow (see .aw-navstack > .aw-top-showdown), which handed its ~6.8cqw back
+   to the play area — and a template whose content runs right down to the edge
+   (Type the answer's keyboard) would then sit UNDER the name (measured: 17px of
+   keyboard behind it at 1.4cqw). 5.4cqw guarantees the band between content and
+   ‹ › is at least the name's own box, so placeShowdownName()'s centring always
+   has room; games with natural slack (Quiz) just get a slightly bigger band. */
+.aw-stage-inner:has(.aw-navstack) > .aw-playarea { margin-bottom: 5.4cqw; }
 
 /* COUNT DOWN's time bar. Same green → orange → red idiom as Whack-a-mole's
    (teacher: "tương tự thanh thời gian phía trên của Whack a mole"), owned here
@@ -3847,11 +3883,23 @@ body {
 .aw-sd-rv-tally .is-bad { color: #e03131; }
 .aw-sd-rv-tally svg { width: 2cqw; height: 2cqw; vertical-align: -0.25cqw; }
 /* ⭐ Đợt 174 — the pupil's TOTAL round time, first in the tally row so the two
-   score marks stay where the eye already looks for them. Muted on purpose: it is
-   information, not a verdict, and the ✓/✗ beside it must stay the loud pair.
-   (It is also the number the list is RANKED on when two pupils tie — see
-   core/showdown.js.) */
-.aw-sd-rv-time { color: #7b8794; font-weight: 700; }
+   score marks stay where the eye already looks for them. (It is also the number
+   the list is RANKED on when two pupils tie — see core/showdown.js.)
+   ⭐ Đợt 176 — BLUE now, teacher's spec for the "1:00 - 50%" pair ("số phút màu
+   xanh dương"), followed by the %-correct-of-attempted in its verdict band:
+   ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá (bands set
+   in core/showdown.js's pctBand — the class names, not the colours, cross the
+   file boundary). The yellow is darkened for white paper; a true #eab308 there
+   is unreadable from the back of the room. */
+.aw-sd-rv-time { color: #2563eb; font-weight: 800; }
+.aw-sd-rv-sep { color: #a9b2c0; font-weight: 700; }
+.aw-sd-rv-pct.is-p0 { color: #dc2626; }
+.aw-sd-rv-pct.is-p1 { color: #ca8a04; }
+.aw-sd-rv-pct.is-p2 { color: #ea580c; }
+.aw-sd-rv-pct.is-p3 { color: #2563eb; }
+.aw-sd-rv-pct.is-p4 { color: #16a34a; }
+/* Đợt 176 — the hundredths of any review time, smaller like the live clock's. */
+.aw-sd-rv-dec { font-size: .72em; }
 .aw-sd-rv-q { display: flex; align-items: center; gap: 0.7cqw; padding: 0.35cqw 0 0.35cqw 1cqw; }
 .aw-sd-rv-num { flex: 0 0 3cqw; font-size: 1.8cqw; font-weight: 800; color: #a9b2c0; line-height: 1.6; }
 .aw-sd-rv-body { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.6cqw; align-items: center; }
