@@ -338,7 +338,32 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
 
-**AI ĐANG BẬT FIGHT (cập nhật Đợt 182)**: Anagram · Quiz · Type the answer · **True/false** — 4/17.
+**AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**
+· **Find the match** · **Crossword** — 7/17.
+
+⭐⭐ **HAI KIỂU VÒNG (Đợt 183) — `tpl.fightPick`.** Ngoài vòng thường (trọng tài đi 0,1,2…), `fight.js`
+có **vòng LƯỢT CHỌN** cho game mà chính lớp chọn câu kế tiếp:
+| | `fightPick` không khai | `"wait"` (Open the box) | `"lock"` (Crossword) |
+|---|---|---|---|
+| ai quyết câu | trọng tài | **đội tới lượt chọn** | **đội tới lượt chọn** |
+| bàn chưa tới lượt | — | **mờ 50%**, bấm không ăn | như trái |
+| mở câu | trọng tài đẩy | đội chọn ô N ⇒ trọng tài mở ô N **cả 2 bàn** | như trái |
+| đúng trước | khoá đội kia | ăn điểm + **reset đồng hồ cả 2 bàn**, vòng **vẫn chờ** đội kia | **khoá** đội kia ngay |
+| đúng sau | tuỳ option | **không có điểm** | (không còn cơ hội) |
+| chọn tiếp | — | đội xong **SAU mà SAI** chọn tiếp, không đảo lượt | đội bị khoá (= coi như sai) chọn tiếp |
+API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `backToBoard()` · `resetClock()`.
+⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
+chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
+
+⚠️⚠️ **BẪY LẶP BA LẦN LIÊN TIẾP (Đợt 182 · 184 · 185) — TEMPLATE TỰ XÁO/TỰ NGẪU NHIÊN.** True/false
+`shuffle(order)`, Find the match `shuffle(choiceOrder)`, Crossword `Math.random()` trong `buildCrossword()`
+— cả ba đều **vô điều kiện**, và cả ba đều làm hai bàn ôm **hai nội dung khác nhau sau cùng một số vòng**,
+không lỗi, không dấu hiệu. **Trước khi bật cờ cho template thứ 8: grep `shuffle(` và `Math.random(` trong
+file đó, mỗi chỗ phải hỏi "trong trận thì ai xáo?"** — câu trả lời luôn là: trận đã chốt thứ tự rồi.
+
+⚠️ **Template tự vẽ ô điểm riêng thì KHÔNG có điểm trong trận** (Crossword, Đợt 185): engine chỉ chuyển
+tiếp sang `fight.ctl.onScore()` khi template gọi **`ui.setScore()`**. Game nào tự sơn `ui.scoreEl` (hoặc
+dùng `ui.setScorePainter`) phải tự gọi `fightCtl.onScore(side, điểm)` ở đúng chỗ nó tính điểm.
 ⚠️ **Bài học Đợt 182, kiểm TRƯỚC KHI bật cờ cho template thứ 5**: template nào **tự xáo thứ tự câu của
 riêng nó** (True/false gọi `shuffle()` vô điều kiện) thì trong trận **mỗi bàn xáo một kiểu** ⇒ cùng một
 số vòng lại là hai câu khác nhau ở hai bàn, mà nhìn riêng từng bàn thì bàn nào cũng bình thường. Trong
@@ -382,6 +407,14 @@ vào ô điểm ẩn đó và Anagram còn **đọc ngược lại** để đế
 điểm lệch tâm (đo: 13px).
 ⚠️ Ẩn tên act / cụm Edit-Assignment-Print-Home cũng phải bằng **`visibility`**: thanh dưới là lưới
 `1fr auto 1fr`, `display:none` làm cụm nút rơi về cột 1 (dạt trái) thay vì nằm giữa.
+
+⚠️⚠️ **"ĐỘI CHẬM KHÔNG GIỮ ĐIỂM" GHIM VÀO **TỔNG ĐẦU VÒNG**, KHÔNG PHẢI TỔNG LÚC ĐÓNG BĂNG (vá Đợt 183).**
+Bản cũ ghim vào giá trị đọc được **lúc đóng băng** — chỉ đúng cho template trả điểm MUỘN (Anagram bay số
+1,76s). Template gọi `ui.setScore()` **ngay** (Open the box, **Quiz**) thì điểm đã nằm trong tổng trước khi
+freeze chạy ⇒ **đội chậm giữ luôn điểm vừa bị từ chối**. Và mốc phải chụp trong **không gian TỔNG**
+(`game + bonus + freezeAdj`): chụp `game+bonus` thô thì lần đóng băng **thứ hai** trong trận **trả lại** số
+điểm vòng trước đã huỷ — đội chỉ được lợi nên không ai kêu, màn hình không có gì để nhìn ra. Xem
+`roundBase`/`snapRoundBase()` trong `core/fight.js`.
 
 **Điểm THỦ CÔNG của thầy** (2 ô cạnh đồng hồ): chạm/vuốt lên +1, vuốt xuống −1; dương xanh dương, âm
 đỏ **không có dấu trừ**. Tách hẳn khỏi điểm game và giữ ở **biến cấp module** trong `fight.js` ⇒ sống

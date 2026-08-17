@@ -8,8 +8,25 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 182) — ⭐⭐ FIGHT MODE CHO TRUE/FALSE (4/17) + CHỐT LUẬT "LƯỢT
-> CHỌN Ô".** ✅ **COMMIT `68b2fa4` + PUSH + LIVE** (build đúng commit, 2/2 mã băm). Thầy giao mở Fight +
+> Cập nhật lần cuối: **17/8/2026 (Đợt 183–186) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT &
+> SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD.** ✅ **COMMIT `e58d0ea` + `6f6f1c7` + PUSH.**
+> Hiện trạng: **Fight 7/17 · Showdown 11/17**. `core/fight.js` nay biết HAI kiểu vòng — vòng thường và
+> **vòng LƯỢT CHỌN** (`tpl.fightPick: "wait"|"lock"`): hai bàn cùng một lưới, bên chưa tới lượt **mờ 50%**
+> và bấm không ăn, bên tới lượt chạm ô nào thì **trọng tài mở ô đó trên CẢ HAI bàn**; `"wait"` (Open the
+> box) đúng trước ăn điểm + reset đồng hồ 2 bàn nhưng **vòng vẫn chờ** đội kia và **đội sau đúng không có
+> điểm**, `"lock"` (Crossword) đúng trước là **khoá** đội kia — đáp án vẫn hiện nhưng **tính là sai**; đội
+> kết thúc **sau mà sai** được chọn tiếp, chỉ khi cả hai cùng đúng mới đảo lượt. **Find the match đi vòng
+> THƯỜNG** (định nghĩa tự chạy đến, ô chữ là đáp án — không có ô câu hỏi nào để chia lượt).
+> 🐞 Ba lỗi thật vá kèm: (1) **"đội chậm không giữ điểm" ghim sai mốc** — phải ghim vào TỔNG ĐẦU VÒNG và
+> trong không gian TỔNG (`+freezeAdj`), bản cũ trả lại điểm đã huỷ ở lần đóng băng thứ hai (ảnh hưởng cả
+> Quiz từ trước); (2) `buildCrossword()` có `Math.random()` ⇒ **2 bàn dựng 2 lưới khác nhau**; (3)
+> Crossword tự vẽ ô điểm nên **không bao giờ gọi `ui.setScore()`** ⇒ bảng điểm trận đứng yên ở 0.
+> Showdown cho 3 game này cần `review` theo **thứ tự chơi thật** (`playOrder`) vì lớp tự chọn thứ tự.
+> Lưới mới: `otb-fight-test` 24/24 · `ftm-fight-test` 18/18 · `cw-fight-test` 11/11, `tf-fight-test` vẫn
+> 20/20. **Bài học lặp 3 lần**: template tự `shuffle`/`Math.random` là hai bàn ôm hai nội dung khác nhau,
+> im lặng — grep hai thứ đó trước khi bật cờ cho template thứ 8.
+>
+> Trước đó: **17/8/2026 (Đợt 182) — ⭐⭐ FIGHT MODE CHO TRUE/FALSE (4/17) + CHỐT LUẬT "LƯỢT CHỌN Ô".** ✅ **COMMIT `68b2fa4` + PUSH + LIVE** (build đúng commit, 2/2 mã băm). Thầy giao mở Fight +
 > Showdown cho **True/false · Open the box · Crossword · Find the match**. True/false xong trong đợt này
 > (Showdown của nó đã bật từ Đợt 178); 3 game kia để học sinh **tự chọn thứ tự** nên phải có luật mới,
 > **thầy đã chốt luật "lượt chọn ô"** — chép nguyên văn + máy trạng thái suy ra trong `GHI CHU DU AN.md`

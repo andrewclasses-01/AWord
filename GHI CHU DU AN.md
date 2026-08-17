@@ -8,6 +8,87 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 183–186 (17/8/2026) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT & SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD
+⭐ CÓ SỬA CORE (`core/fight.js`) + 3 file game + 3 file CSS.
+🟢 ĐÃ TỰ TEST qua **3 lưới MỚI** — `scratch/otb-fight-test.html` **24/24** · `scratch/ftm-fight-test.html`
+**18/18** · `scratch/cw-fight-test.html` **11/11**, tất cả **bấm nút thật**; cộng Showdown chạy trên
+`scratch/showdown-all-test.html` cho cả 3 game. Không hồi quy: `tf-fight-test.html` vẫn 20/20.
+✅ **COMMIT `e58d0ea` (Đợt 183) + `6f6f1c7` (Đợt 184–186) + PUSH.**
+
+### 1. Thầy giao
+> "Tôi muốn mở Fight và cả Showdown với các template sau: True/false, **Open the box, Crossword,
+> Find the match**." — và chốt luật "lượt chọn ô" (chép nguyên văn ở Đợt 182 mục 6), rồi duyệt 3 mặc
+> định cho các chỗ luật còn hở: (a) cả hai cùng sai thì **đội trả lời SAU** chọn tiếp; (b) Find the match
+> **không có đồng hồ từng ô** nên không có gì để reset; (c) Crossword: đội bị khoá **tính là SAI**.
+
+### 2. ⭐⭐ CORE: `core/fight.js` nay biết HAI kiểu vòng
+| | vòng THƯỜNG (từ Đợt 124) | vòng **LƯỢT CHỌN** (mới) |
+|---|---|---|
+| ai quyết câu kế tiếp | trọng tài đi 0, 1, 2… | **đội đang tới lượt CHỌN** |
+| lưới của đội chưa tới lượt | — | **mờ 50%**, bấm không ăn |
+| mở câu | trọng tài đẩy cả 2 bàn | đội chọn ô N ⇒ **trọng tài mở ô N trên CẢ HAI bàn** |
+| ai thắng | đúng trước (khoá đội kia) | `"wait"`: đúng trước ăn điểm + **reset đồng hồ 2 bàn**, vòng **vẫn chờ** đội kia, đội sau đúng **không điểm** · `"lock"`: đúng trước là **khoá** đội kia |
+| chọn tiếp | — | đội kết thúc **SAU mà SAI** được chọn tiếp (**không đảo lượt**); cả hai cùng đúng mới đảo |
+
+Template khai `tpl.fightPick = "wait" | "lock"`; API mới: `ctl.boardPicked(side, i)` và `attach` nhận
+thêm `setPickTurn(mine)` · `backToBoard()` · `resetClock()`. Ai xếp mode nào: **Open the box = "wait"**,
+**Crossword = "lock"** (đúng lời thầy), **Find the match = vòng THƯỜNG** (xem mục 4).
+
+### 3. 🐞 VÁ MỘT LỖI CÓ SẴN CỦA CƠ CHẾ ĐÓNG BĂNG ĐIỂM (đo được ngay trong đợt này)
+Luật "đội chậm không giữ điểm" ghim đội bị phạt vào **giá trị LÚC ĐÓNG BĂNG**. Chỉ đúng với template trả
+điểm **MUỘN** (Anagram bay số ~1,76s). Open the box và **Quiz** gọi `ui.setScore()` **NGAY** trước khi báo
+kết quả ⇒ điểm đã nằm trong tổng rồi, ghim vào đó là **giữ luôn điểm vừa bị từ chối** (đo: 1-1 thay vì
+1-0). Nay ghim vào **TỔNG ĐẦU VÒNG** (`roundBase`, chụp lúc vào vòng) nên không phụ thuộc thứ tự báo của
+template.
+⭐ Và `roundBase` phải chụp trong **không gian TỔNG** (`+ freezeAdj`): ghim vào `game+bonus` thô thì lần
+đóng băng THỨ HAI trong trận **âm thầm trả lại** điểm vòng trước đã huỷ (đo: 3-2 thay vì 3-1). Đội chỉ
+được lợi nên **không ai kêu**, và trên màn hình không có gì để nhìn ra.
+
+### 4. Find the match KHÔNG dùng luật lượt chọn — và vì sao
+Ở game này **định nghĩa tự chạy đến** trên băng chuyền, còn các ô chữ là **ĐÁP ÁN**. Không có "ô câu hỏi"
+nào để chia lượt chọn; ép luật đó vào thì phải bịa thêm một màn hình game này không có. Nên FTM đi **vòng
+thường**: hai bàn cùng một định nghĩa, ai bấm đúng ô trước thì thắng vòng — y hệt True/false.
+⚠️ Bẫy giống hệt True/false Đợt 182: `choiceOrder` (thứ tự xếp ô) **shuffle vô điều kiện** ⇒ trong trận
+mỗi bàn xếp một kiểu **và** (qua cách chia trang) ôm một câu khác sau cùng một số vòng. Trong trận dùng
+thứ tự gốc.
+
+### 5. 🐞 Hai lỗi thật của Crossword bắt được khi đo
+1. **`buildCrossword()` có `Math.random()`** (xáo danh sách + bốc ngẫu nhiên khi hai chỗ đặt ngang điểm)
+   để "mỗi lần chơi lưới đổi một chút". Trong trận, mỗi bàn dựng **một lưới khác nhau** ⇒ "mở câu số 3 ở
+   cả 2 bàn" thành **hai câu khác nhau**, mà nhìn từng bàn thì bàn nào cũng đúng. Thêm cờ `fixed` cho
+   đường fight.
+2. **Bảng điểm của trận đứng yên ở 0 suốt trận**: Crossword **tự vẽ ô điểm riêng** (`"3/20"` có màu
+   riêng) nên **không bao giờ gọi `ui.setScore()`** — mà đó là đường duy nhất engine chuyển tiếp sang
+   `fight.ctl.onScore()`. Nay báo thẳng trong `showScore()`, đúng cửa mà Type the answer đã dùng.
+
+### 6. SHOWDOWN cho cả 3 game — `review` phải theo THỨ TỰ CHƠI
+Đợt 178 để 3 game này ngoài Showdown vì một lý do đúng: lớp **tự chọn** thứ tự, còn `review` xuất theo thứ
+tự **lưới/hộp**, mà Showdown giao hàng thứ `n` của `review` cho em thứ `n` ⇒ tên em sẽ gắn vào câu em đó
+**chưa từng làm**. Nay cả 3 game có `playOrder` (thứ tự THẬT SỰ đã chơi) + `setNav({index: hàng trong
+review})`; câu được mở lại **giữ nguyên hàng cũ** nên quay về **đúng em đã sở hữu nó** (luật Đợt 178).
+Open the box khi đang ở lưới thì trỏ vào hàng của **ô sắp mở**, để cả lớp biết **em nào sắp được chọn**.
+
+### 7. Đã tự test
+| Lưới | Kết quả | Vài phép đáng chú ý |
+|---|---|---|
+| `otb-fight-test.html` | **24/24** | bàn chưa tới lượt **bấm trộm không mở được ô nào** · cả 2 mở đúng ô đó · đội sau đúng **không có điểm** · đội sau **sai được chọn tiếp** |
+| `ftm-fight-test.html` | **18/18** | hai bàn **xếp ô giống hệt** · bấm sai trước không cướp được câu |
+| `cw-fight-test.html` | **11/11** | hai bàn mở **cùng một từ** · đội thua **hết gõ được** nhưng **đáp án vẫn hiện ra** · lượt chọn sang **đội bị khoá** |
+| `showdown-all-test.html` | ✔ | tên xoay đúng mỗi câu một em ở cả 3 game; Show answers của Open the box xếp **đúng thứ tự đã chơi** |
+| `tf-fight-test.html` | 20/20 | không hồi quy sau khi sửa core |
+
+### 8. HIỆN TRẠNG SAU ĐỢT NÀY
+**Fight: 7/17** (Anagram · Quiz · Type the answer · True/false · Open the box · Find the match · Crossword)
+**Showdown: 11/17** (8 cũ + Open the box · Find the match · Crossword).
+
+### 9. VIỆC ĐANG CHỜ
+1. Xác nhận LIVE (mã băm) cho `6f6f1c7`.
+2. **Thầy chơi thử trên myActivity thật**, nhất là luật lượt chọn ô trên màn TOMKO: hai đội chạm tay thật.
+3. Chưa mở Fight/Showdown: Balloon pop · Flying fruit · Gameshow · Maze chase · Speaking · Unjumble ·
+   Whack-a-mole · Running word · Running team · Speaking cards (lý do từng cái ở Đợt 178 và Đợt 181).
+
+---
+
 ## Đợt 182 (17/8/2026) — ⭐⭐ MỞ FIGHT MODE CHO TRUE/FALSE (template thứ 4) + CHỐT LUẬT "LƯỢT CHỌN Ô" CHO 3 GAME CÒN LẠI
 KHÔNG sửa core. Đúng 2 file (`templates/true-false/true-false.js` · `.css`).
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/tf-fight-test.html` — **20/20**, bấm nút thật trên trận thật, và có
