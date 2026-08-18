@@ -8,7 +8,36 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **17/8/2026 (Đợt 183–186) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT &
+> Cập nhật lần cuối: **18/8/2026 (Đợt 187 · 188 · 189) — ⭐⭐⭐ FIGHT MODE: TIME DELAY + THANH CHỜ · THANH
+> TRƯỢT ĐỔI CÁCH BẤM CHO TOÀN APP · TIME COST TRỪ MỖI N GIÂY.** ✅ Cả 3 đợt **COMMIT + PUSH + LIVE**
+> (`8cfc209` · `7bd96a7` · `c53f336`), mỗi đợt đều đối chiếu build đúng commit + mã băm SHA-256 khớp 100%.
+> Kho **sạch, không còn gì chưa commit**.
+>
+> **Đợt 187** — cửa sổ hoà 0,1s cố định của Đợt 133 nay là thanh kéo **TIME DELAY** (`fightTieWindow`,
+> 0,1–3,0s, **0 = ∞ = chờ tối đa 5s rồi khoá đội chưa trả lời**). Mặc định 0,1s ⇒ **mọi act cũ chạy y hệt**.
+> Hoà trong cửa sổ thì cả hai ăn điểm game nhưng **chỉ đội xong TRƯỚC ăn Speed bonus**; Speed bonus
+> 0–20 → **1–100**. Thanh chờ chạy trên cả 2 bàn qua API mới **`ctl.registerWaitBar(side, fn)`**
+> (fight.js bấm giờ — engine vẽ). 2 game `fightPick` (Open the box · Crossword) **niêm phong** khỏi TIME
+> DELAY; Find the match CÓ nhận vì nó đi vòng thường. Cùng đợt: **Time cost — ô "Idle" nay là CẢ CHU KỲ**
+> (Idle 3s trừ ở 3s/6s/9s; 9 giây ngồi im: cũ −70 → mới −30), **Bonus x của Anagram 10x → 20x**, và vá 2
+> lỗi Fight thầy báo: **Open the box mất đồng hồ từng ô** (fight ẩn cả `.aw-topbar`) + **Crossword phủ
+> trắng cả 2 bên** (`applyPickTurn()` chỉ chạy từ `setPickTurn()` ⇒ 2 bàn kẹt `opacity:.5` suốt vòng).
+>
+> **Đợt 188** — **THANH TRƯỢT TOÀN APP đổi cách bấm**: chạm thân thanh = **+1 nấc**, chạm đúp = **−1 nấc**,
+> kịch 2 đầu thì dừng, chạm đúng **nút tròn** rồi kéo vẫn như cũ; bỏ hẳn kiểu "bấm đâu nhảy tới đó".
+> Sửa **đúng 1 chỗ** (`mkSliderCell` — `grep '"range"'` cả kho trả về đúng 1 dòng) nên Options, Settings và
+> cả 17 template đổi cùng lúc. Ô không dùng được thì **MẤT MÀU** (`.is-locked`) chứ không ẩn — ⚠️
+> `pointer-events:none` **chỉ chặn ngón tay**, phải kèm `disabled` kẻo phím mũi tên vẫn đổi số trên thanh
+> đang xám. **Bỏ hẳn nút fullscreen ở Fight và Showdown** (thầy chốt; F11 trình duyệt vẫn được).
+>
+> **Đợt 189** — vá lỗi thiết kế do chính Đợt 188 đẻ ra: `.aw-optc-stack` là 1 ô lưới nhưng cao bằng 2 nên
+> kéo cao cả hàng ⇒ hở **62px** dưới "Round rule" và "Time cost" tụt xuống hàng sau. Vá bằng
+> `grid-row: span 2` (⛔ **không** dùng `grid-auto-flow: dense` — nó được phép đảo thứ tự ô ở bảng Options
+> của cả 17 template).
+>
+> **Hiện trạng: Fight 7/17 · Showdown 11/17** (không đổi từ Đợt 186).
+>
+> **Trước đó: 17/8/2026 (Đợt 183–186) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT &
 > SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD.** ✅ **COMMIT `e58d0ea` + `6f6f1c7` + PUSH +
 > LIVE** (build đúng commit, **9/9 mã băm SHA-256**, và hỏi lại trên chính bản live: 7 template báo
 > `fightMode`, 11 báo `showdownMode`, `fightPick` đúng `open_the_box:"wait"` + `crossword:"lock"`).
@@ -2418,7 +2447,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 15/8/2026 sau Đợt 165 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau Đợt 189 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
@@ -2443,7 +2472,41 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (15/8/2026 — sau Đợt 165)
+### 3. Đứng ở đâu (18/8/2026 — sau Đợt 189)
+
+> ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC DỞ DANG TRONG CODE.** Ba đợt gần nhất (187 · 188 · 189) đều đã
+> **commit + push + LIVE + đối chiếu mã băm**: `8cfc209` · `7bd96a7` · `c53f336`. Chi tiết đầy đủ ở
+> `GHI CHU DU AN.md` (mới nhất TRÊN CÙNG) và khối tóm tắt ở đầu file này.
+>
+> **Mảng đang chạy là FIGHT MODE.** Thầy đang lần lượt tinh chỉnh nó qua từng đợt ngắn. Trạng thái:
+> - **Fight bật ở 7/17 template**: Anagram · Quiz · Type the answer · True/false · Open the box ·
+>   Find the match · Crossword. **Showdown 11/17.** 10 template chưa mở Fight và lý do từng cái:
+>   xem Đợt 178 + 181 trong `GHI CHU DU AN.md`.
+> - **Hai kiểu vòng** trong `core/fight.js`: vòng THƯỜNG và vòng **LƯỢT CHỌN Ô** (`tpl.fightPick =
+>   "wait" | "lock"`). Luật đầy đủ ở `core/HUONG DAN CORE.md` mục FIGHT MODE.
+> - **TIME DELAY** (`fightTieWindow`) là thanh kéo trong Options, chỉ ăn cho game vòng THƯỜNG.
+> - **Thanh chờ** dùng API `ctl.registerWaitBar(side, fn)` — fight.js bấm giờ, engine vẽ.
+> - **Fight và Showdown KHÔNG CÒN nút fullscreen** (Đợt 188, thầy chốt bỏ hẳn).
+>
+> ⚠️ **BA LUẬT MỚI CỦA CORE, ĐỌC TRƯỚC KHI ĐỤNG BẢNG OPTIONS** (đầy đủ ở `core/HUONG DAN CORE.md`):
+> 1. **Thanh trượt**: chạm = +1 nấc · chạm đúp = −1 nấc · nút tròn thì kéo như thường. Chỉ có **một**
+>    chỗ dựng thanh trượt trong cả kho (`mkSliderCell`).
+> 2. **Ô không dùng được thì MẤT MÀU, không ẩn** (`.is-locked`) — và **phải kèm `disabled`**, vì
+>    `pointer-events:none` chỉ chặn ngón tay chứ không chặn bàn phím.
+> 3. **Thêm ô cao bất thường vào lưới Options thì phải quét lỗ hổng CẢ HAI cột** (bài học Đợt 189).
+>
+> 🧪 **BÀN THỬ**: `scratch/fight-bench.html` (thư mục `scratch` **gitignored** ⇒ phiên/máy mới phải
+> dựng lại). Nó dựng một trận THẬT bằng `startFight()` cho bất kỳ template nào:
+> `?t=<type>` · `&single=1` (chế độ đơn) · `&fightTieWindow=` `&fightSpeedBonus=` `&timeCost=`
+> `&timeCostIdle=` `&timer=countUp` … Bấm nút phải bắn **`PointerEvent`** (`press.js` nghe
+> `pointerdown`, `.click()` không tap được).
+> ⚠️⚠️ **HAI BẪY ĐO đã trả giá, đọc kỹ**: (a) pane test bị ẩn ⇒ **transition đứng im ở giá trị ĐẦU**,
+> `getComputedStyle().opacity` trả về 1 dù lớp đã áp — phải chèn `* { transition:none !important }`
+> rồi mới đo; (b) `requestAnimationFrame` cũng chết ⇒ hiệu ứng đếm điểm của `flyTimeCost` **không vẽ
+> lại ô điểm**, nhìn y như "không trừ gì" — phải đo ở **Fight** vì số đội trên dải được ghi thẳng
+> `textContent`, không qua rAF.
+
+#### Trạng thái cũ hơn (15/8/2026 — sau Đợt 165), giữ lại làm nền
 
 > ⭐⭐ **ĐỢT 165 — EDIT SỬA ĐƯỢC CẢ 4 BỘ ENG1/ENG2/VI1/VI2. ✅ THẦY DUYỆT → COMMIT `52fbed5` + PUSH + LIVE
 > (đã đối chiếu sha256sum 7 file, khớp 100%). ⚠️ Sau khi LIVE, thầy chụp màn hình báo đổi tab thì bảng
@@ -2599,6 +2662,32 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐⭐ **CẬP NHẬT 18/8/2026 (sau Đợt 189) — ĐÂY LÀ DANH SÁCH ĐÚNG. Mọi khối ⬜ bên dưới là của các đợt
+> CŨ HƠN, giữ lại vì phần lớn vẫn là "chỉ mắt/tay thầy mới kiểm được".**
+>
+> **KHÔNG có việc code nào dang dở.** Kho sạch, 3 đợt gần nhất đã LIVE và đối chiếu mã băm.
+>
+> **Việc kế tiếp = HỎI THẦY.** Thầy đang đi từng đợt ngắn trên **Fight mode** và tự chỉ hướng mỗi lần
+> ("Điều chỉnh tiếp theo: …"). ⛔ Đừng tự chọn việc lớn; cũng đừng hỏi trống không — đọc mục 3 ở trên
+> rồi hỏi vào đúng mảng đang chạy.
+>
+> ⬜ **CHỈ TAY THẦY TRÊN TOMKO MỚI KIỂM ĐƯỢC** (máy đã đo hết phần đo được):
+> 1. **(Đợt 188) Cửa sổ chạm đúp 320ms của thanh trượt** — chạm chậm quá thành 2 lần +1, nhanh quá thì
+>    khó bấm đúp. Vùng nhận "trúng nút tròn" đang là **nửa nút + 4px**; thầy thấy khó tóm nút để kéo thì
+>    nới ra.
+> 2. **(Đợt 187) Thanh chờ TIME DELAY** cao 1,2cqw màu cam, không có số — nhìn từ cuối lớp có rõ không.
+>    Và ở **Find the match** thanh dừng trước chữ "Page 1 / 2" (vì nếu kéo dài hết hàng thì nó vẽ xuyên
+>    qua chữ đó) — thầy muốn giữ vậy hay muốn đẩy nhãn đi chỗ khác.
+> 3. **(Đợt 187) Cân bằng số**: TIME DELAY bao nhiêu là vừa cho lớp · Speed bonus nay tới **100 điểm** ·
+>    Bonus x của Anagram tới **20x** · **Time cost nay nhẹ đi N lần** ở mức Idle N (cùng số điểm nhưng
+>    thưa hơn N lần) — mức điểm cũ của thầy có còn hợp không.
+> 4. **(Đợt 187) Chơi thử Fight thật trên màn 86"**, nhất là luật **lượt chọn ô** với 2 đội chạm tay
+>    cùng lúc (Open the box · Crossword), và Fight của True/false · Find the match.
+> 5. **(Đợt 188) Fight/Showdown nay không còn đường vào toàn màn hình từ trong app** — thầy dùng thử vài
+>    buổi xem có thiếu không (F11 của trình duyệt vẫn được).
+
+#### Danh sách cũ hơn (giữ lại — phần lớn vẫn là việc chỉ mắt/tay thầy kiểm được)
 
 > ⭐⭐ **Cập nhật 15/8/2026 (sau Đợt 165) — dòng ⬜ dưới đây đã LỖI THỜI, sửa lại cho đúng git log:**
 > Đợt 158-159 → `23327b3` · Đợt 160 (ĐỢT C) → `4a6da8e` · Đợt 161-162 → `4e5ae82` · Đợt 163-164 →
