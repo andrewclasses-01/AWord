@@ -11,6 +11,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 188 (18/8/2026) — ⭐⭐ THANH TRƯỢT ĐỔI CÁCH BẤM CHO TOÀN APP (chạm = 1 nấc) · Ô KHOÁ THÌ MẤT MÀU CHỨ KHÔNG ẨN · TIME DELAY + SPEED BONUS CÙNG MỘT CỘT · BỎ HẲN FULLSCREEN Ở FIGHT VÀ SHOWDOWN
 ⭐ CÓ SỬA CORE (`core/options-panel.js` · `core/fight.js` · `core/engine.js` · `core/app.css`). Không đụng
 template nào.
+✅ **COMMIT `7bd96a7` + PUSH + LIVE** — Pages build **đúng commit** (`status: built`, sha `7bd96a7…`),
+đối chiếu **4/4 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`.
 🟢 ĐÃ TỰ TEST trên `scratch/fight-bench.html` — bấm bằng `PointerEvent` thật ở toạ độ thật trên thanh
 trượt, **0 lỗi console**, và chạy lại phép Đợt 187 để chắc không hồi quy (**8 / 1** y như cũ).
 
