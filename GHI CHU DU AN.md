@@ -71,7 +71,13 @@ bản cũ. **Mở CỔNG MỚI rồi đo lại** là ra ngay 3 trang. Luật: đ
 
 ## Đợt 192 (18/8/2026) — ⭐⭐ SÁU VIỆC THẦY GIAO MỘT LƯỢT: NÚT MODE · SHOWDOWN · GỘP STYLE VÀO TEMPLATE · DỰNG LẠI MÀN CLASSES · THƯ MỤC TRỐNG THÀNH Ô IMPORT
 ⭐ CÓ SỬA CORE (`engine.js` · `press.js` · `icons.js` · `app.css` · `showdown-setup.js`) **+ `main.js`**.
-🟡 **CHƯA COMMIT, CHƯA PUSH** — xem mục 0 ngay dưới, có phiên Claude KHÁC đang sửa cùng kho.
+✅ **THẦY DUYỆT → COMMIT `3a1720a` + PUSH + LIVE.** Pages build đúng commit (deployment
+`5963183381`, `success`), đối chiếu **6/6 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`
+(⚠️ so bằng `git show HEAD:<file>`, KHÔNG so file trên đĩa — máy bật `core.autocrlf`), và hỏi lại
+**chính module live 15 phép**: có `tapOrHold` · `NO_TEMPLATE_TYPES` · `openToolPanelFor` ·
+`hold for Style` · `RUN_LABEL` · `shrinkRosterNames` · `cascade` · lưới roster · `.aw-cls-seg` ·
+`.is-classwide` · icon `boy`/`girl` · `.aw-fm-emptydrop` · `.aw-cls-grid`; **đã biến mất**
+`styleBtn` và CSS chết `.aw-gender-chip`. **15/15 đúng.**
 
 ### 0. ⚠️⚠️ CẢNH BÁO: HAI PHIÊN CLAUDE CÙNG SỬA MỘT KHO
 Đầu phiên (≈18:40) `git status` **sạch tuyệt đối**. Đang làm thì 2 file tự mọc ra thay đổi:
@@ -79,7 +85,10 @@ bản cũ. **Mở CỔNG MỚI rồi đo lại** là ra ngay 3 trang. Luật: đ
 một bản vá **hoàn chỉnh, có chú thích đề ngày 18/8/2026**, chữa lỗi in Running word đẻ trang trắng
 (`line-height` của ô tràn khỏi dòng + thiếu slack 2,5mm ⇒ Chromium đẩy sang trang mới; 3 tờ in ra 6 trang).
 Máy lúc đó có 13 tiến trình `claude`. **Không phải việc của đợt này.**
-- Thầy đã chốt: **làm tiếp, tránh 2 file đó, KHÔNG commit.** Đợt 192 tôn trọng đúng vậy.
+- Thầy đã chốt lúc đó: **làm tiếp, tránh 2 file đó, KHÔNG commit.** Đợt 192 tôn trọng đúng vậy.
+- ✅ **KẾT CỤC**: phiên kia commit + push xong Đợt 193 trước (`5ef9d76` + `fed624e`), nên lúc Đợt 192
+  commit thì cây làm việc **chỉ còn 8 file của 192** — không có gì của ai bị quét nhầm vào. Vẫn
+  `git add` **theo tên file**, không `git add -A`. Nay **kho sạch, cả hai đợt đều LIVE**.
 - ⛔ **Phiên sau đọc mục này TRƯỚC KHI COMMIT**: trong cây làm việc đang có việc của **hai** đợt khác nhau.
   `git add -A` là quét luôn bản vá in ấn của phiên kia vào commit của Đợt 192. Phải commit **theo file**.
 - 🧠 Bài học (đã có trong trí nhớ từ 13/8, nay cắn lần hai): `git status` sạch lúc **bắt đầu** không có
@@ -241,7 +250,27 @@ viện này (mỗi user một collection), sẽ là nói dối với thứ có s
 ⚠️ Bench phải tắt transition/animation (`* { transition: none }`) trước khi đo, kẻo `getComputedStyle` đọc
 đúng lúc đang chạy dở.
 
-### 8. ⬜ CÒN LẠI — CHỈ MẮT THẦY
+### 8. ⭐ SẴN SÀNG CHO PHIÊN SAU — BẮT TAY VÀO ĐÂU
+- **Trạng thái**: kho **sạch**, `main` = `origin/main` = `3a1720a`, bản live đã đối chiếu xong. Không có
+  việc dở dang của Đợt 192.
+- **Muốn sửa tiếp nút MODE / Template / Style** → `core/engine.js`: `modeIcon` · `buildModePickPanel` ·
+  `tplLocked` + `NO_TEMPLATE_TYPES` (module scope) · `openToolPanelFor` · `buildRunningPickPanel`
+  (`RUN_ORDER` + `RUN_LABEL`). Cử chỉ ở `core/press.js` (`tapOrHold`, giữ 420ms).
+  ⚠️ Phép cộng bề ngang bảng chọn mode vẫn là `5×98 + 4×9 + 40 = 566 ≤ 580` (Đợt 191b) — **thêm ô thứ 6
+  là phải tính lại**, ô cuối sẽ bị xén trong im lặng.
+- **Muốn sửa tiếp Showdown** → `core/showdown-setup.js`: `renderSetup` (màn chọn lớp) ·
+  `shrinkRosterNames` · `bulkMove(mutate, {cascade})` · `fly(..., wobble)` · `scrambleChips`.
+- **Muốn sửa tiếp Settings › Classes** → `main.js`: `showClasses` + `addClassTile` (màn 1);
+  `showClassEditor` + `renderRows` · `pupilRow` · `wireReorder` · `onNamePaste` (màn 2). CSS ở
+  `core/app.css` mục "Settings > Classes (Đợt 192)". Hằng số `CLS_COL_ROWS = 10`.
+- **Muốn đo lại bất cứ thứ gì**: dựng lại 2 file bench ở mục 7 rồi mở
+  `http://localhost:5510/scratch/cls192-test.html` (chạy `python devserver.py`). Bench Showdown/engine
+  sẵn có là `scratch/showdown-test.html`.
+- **Ý tưởng thầy có thể nhắc tới tiếp** (chưa làm, không phải cam kết): chưa có cách nào **nhìn thấy**
+  cử chỉ nhấn giữ trên nút Template ngoài chữ mờ "hold for Style" trong panel — nếu thầy thấy khó tìm thì
+  chỗ sửa là `buildTemplatePanel` + `.aw-tool-head-hint`.
+
+### 9. ⬜ CÒN LẠI — CHỈ MẮT THẦY
 - **Không có ảnh chụp nào.** Pane trình duyệt của em vẫn bị ẩn ⇒ Chromium không vẽ khung hình, `screenshot`
   báo timeout (y như Đợt 191). Đã thay bằng **phép dò chạm `elementFromPoint`** trên từng control để bắt cái
   bẫy "nhìn thì ổn mà bấm không ăn", nhưng **màu sắc, cân đối, cỡ chữ trên màn 86" thì phải thầy nhìn**.

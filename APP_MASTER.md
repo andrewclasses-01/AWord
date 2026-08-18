@@ -15,9 +15,15 @@
 > `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
 >
 > ---
-> **Đợt 192 — SÁU VIỆC THẦY GIAO MỘT LƯỢT.** 🟡 **CODE XONG, ĐO XONG, CHƯA COMMIT/PUSH.**
-> ⚠️ Đợt này chạy **song song với Đợt 193** (phiên Claude khác, cùng kho, cùng lúc — 193 đã commit+push,
-> 192 thì chưa). Trước khi commit 192 phải `git status` lại và commit **theo tên file**, đừng `git add -A`.
+> **Đợt 192 — SÁU VIỆC THẦY GIAO MỘT LƯỢT.** ✅ **COMMIT `3a1720a` + PUSH + LIVE** — deployment
+> `5963183381` **success**, đối chiếu **6/6 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`,
+> và hỏi lại chính module live: `tapOrHold` · `NO_TEMPLATE_TYPES` · `openToolPanelFor` · `RUN_LABEL` ·
+> `shrinkRosterNames` · `cascade` · `.aw-cls-seg` · `.is-classwide` · icon `boy`/`girl` ·
+> `.aw-fm-emptydrop` đều CÓ, còn `styleBtn` và CSS chết `.aw-gender-chip` đều đã BIẾN MẤT (15/15 đúng).
+> ⚠️ Đợt này chạy **song song với Đợt 193** (phiên Claude khác, cùng kho, cùng lúc). Cả hai nay đều đã
+> vào `main` và **kho sạch**. Bài học giữ lại: `git status` sạch lúc BẮT ĐẦU không có nghĩa là sạch lúc
+> KẾT THÚC — soi lại `git status` + giờ sửa file (`find -newermt`) ngay trước khi commit, và commit
+> **theo tên file**, đừng `git add -A`.
 > Sáu việc: (1) chế độ RUNNING đảo thứ tự **WORD trước, TEAM sau** + nhãn rút còn **WORD/TEAM**;
 > (2) màn chọn lớp Showdown: ô tên **bằng nhau tuyệt đối** (lưới thay flex bọc dòng — đo: cũ lệch **57,9px**,
 > nay **0**), tên không đủ chỗ thì **viết tắt** chứ không bị ellipsis xén;
@@ -2528,7 +2534,43 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau Đợt 189 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 192 + 193** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> ⭐⭐ **Đợt 192 (18/8/2026) — COMMIT `3a1720a` + PUSH + LIVE (6/6 mã băm).** Sáu việc thầy giao một lượt:
+> RUNNING **WORD trước/TEAM sau** (nhãn rút gọn) · ô tên màn chọn lớp Showdown **bằng nhau tuyệt đối**
+> (đo: cũ lệch 57,9px → nay 0) · shuffle **bay lần lượt, loạn xạ** (rải 1146ms, 96/190 cặp đảo thứ tự) ·
+> ⭐⭐ **BỎ HẲN NÚT STYLE — gộp vào nút Template, mở bằng NHẤN GIỮ 420ms** · ⭐⭐⭐ **dựng lại
+> Settings › Classes** (bỏ textarea, **mỗi em một hàng**: số · tên · nút dài **BOY|GIRL** · xoá · tay kéo;
+> lưới cột-trước 2×10, 20 em **không phải cuộn**) · thư mục trống hiện **ô kéo-thả Import**.
+>
+> ⛔⛔ **BA LUẬT MỚI — ĐỌC TRƯỚC KHI SỬA TIẾP PHẦN NÀY:**
+> 1. **`NO_TEMPLATE_TYPES` (engine.js, MODULE SCOPE) phải đi cùng nhịp với BA stylesheet** ẩn nút
+>    `[title="Template"]`: `core/app.css` (`.mode-ipa`) · `running-word.css` · `running-team.css`.
+>    Style nay treo trên nút Template ⇒ ba luật đó nếu bắt trúng sẽ ẩn **HAI** tính năng, tức **Style biến
+>    mất sạch** ở IPA và cả hai game Running. Vá hiện tại: chỗ không đổi được template thì nút **được dựng
+>    thẳng thành nút Style** (`title="Style"` làm ba selector trượt). **Thêm template mới ẩn nút Template
+>    ⇒ thêm type vào `NO_TEMPLATE_TYPES` CÙNG LÚC.** LUẬT rộng hơn: đừng bao giờ để một tính năng chỉ với
+>    tới được bằng cử chỉ trên một nút mà CSS xung quanh có quyền ẩn.
+> 2. **Kéo-thả trong Settings dùng POINTER EVENTS, KHÔNG dùng HTML5 `draggable`** (cố ý khác Anagram
+>    editor và thẻ thư mục ở `main.js`). Native DnD **không bắn từ ngón tay** ⇒ trên màn hồng ngoại TOMKO
+>    là cái nút không làm gì, mà test bằng chuột thì đạt hoàn hảo. Tay kéo phải `touch-action: none`.
+> 3. **`<input>` KHÔNG có ellipsis** — hết chỗ là **cắt cụt im lặng**, không tự viết tắt được như chip
+>    Showdown (`shortenName`). Ô tên lớp học đã nới chỗ chữ **127 → 177px** (hộp thoại 880px · nút giới
+>    tính 116px · đệm 8px · số 18px) + `title` = tên đầy đủ. Đụng bề ngang hàng học sinh **phải đo lại**.
+>
+> 🐞 Một lỗi của chính Đợt 192, đáng nhớ: khai `const NO_TEMPLATE_TYPES` **bên trong** `startGame()` nhưng
+> **dưới chỗ dùng ~35 dòng** ⇒ `const` không hoisted ⇒ **mọi lần mount ném TDZ và hạ nguyên thanh công cụ**.
+> `node --check` **báo sạch** (cú pháp đúng, lỗi lúc chạy). Bài học: **mở trình duyệt thật**, đừng tin
+> `node --check`.
+>
+> ⭐ **BÀN THỬ MỚI — LẦN ĐẦU CHẠY ĐƯỢC `main.js` THẬT**: `scratch/fake-firebase-full.js` +
+> `scratch/cls192-test.html`. Đợt 191 phải bó tay vì bộ giả Firebase thiếu `writeBatch`; bộ mới đủ
+> `collection · getDocs · query/where · writeBatch · deleteDoc · updateDoc · increment` (+
+> `signIn/signOutNow/TEACHER_EMAIL`) nên **thư viện thật + Settings thật + Classes thật** đều mở lên được,
+> không cần đăng nhập Google. Probe: `window.__t.openClasses()` · `window.__t.wait(fn)`.
+> ⚠️ `scratch/` bị **gitignore** ⇒ **phiên/máy mới phải dựng lại** (mô tả đủ để dựng ở `GHI CHU DU AN.md`
+> Đợt 192 mục 7).
+
 
 > ⭐ **Đợt 193 (18/8/2026) — đã COMMIT `5ef9d76`**: vá lỗi in CÓ SẴN của Running Word (3 tờ ra 6 trang,
 > xen kẽ 3 trang trắng) — `templates/running-word/running-word.css` + `rw-print.js`, **không đụng core**.
@@ -2575,9 +2617,12 @@ vừa xảy ra.
 > **Số hiện trạng sau 2 đợt**: Fight 7/17 · Showdown 11/17 · **PLAY MODE (RUNNING + IPA) mở cho mọi act
 > từ vựng có đủ nội dung** · import **7 act/file** (trước là 9) · nút MODE có **5 ô**.
 >
-> ⬜ **BA VIỆC CHỈ MẮT/TAY THẦY LÀM ĐƯỢC** (máy đã đo hết phần đo được):
-> 1. **Lưới chip Nam/Nữ trong Settings › Classes chưa ai NHÌN thấy** — nó ở `main.js`, màn đó đòi đăng
->    nhập thật; bench bị chặn vì bộ giả Firebase thiếu `writeBatch`. Phần dữ liệu đã có 13 phép thử.
+> ⬜ **VIỆC CHỈ MẮT/TAY THẦY LÀM ĐƯỢC** (máy đã đo hết phần đo được):
+> 1. ✅ **HẾT HẠN sau Đợt 192** — lưới chip Nam/Nữ của Đợt 191 **không còn tồn tại** (thay bằng nút
+>    BOY|GIRL trên từng hàng), và bench nay **mở được màn Classes thật** (`scratch/cls192-test.html`).
+>    Còn lại: nhìn **màu icon bé trai/bé gái + cân đối hàng học sinh** trên màn 86", và thử **cử chỉ nhấn
+>    giữ 420ms** (mở Style từ nút Template) bằng ngón tay thật trên TOMKO — máy chỉ dựng được pointer
+>    event tổng hợp.
 > 2. **Nhìn hàng 5 icon mode trên màn 86"** — pane trình duyệt của phiên tự động bị ẩn nên **không chụp
 >    được khung hình nào**, mọi thứ thuộc "cảm giác" chưa ai xem.
 > 3. **Import 1 file .xlsm thật trên bản live** rồi mở tab PRONUNCIATION trong Edit, và **lưu 1 SET
