@@ -41,7 +41,16 @@ const PAGE_BODY_MM = 297 - 15 - 13;     // 269mm between the top and bottom marg
 // the small tag + subtitle plus a little slack against a rounded border pushing
 // the last row onto a second sheet.
 const HEADING_MM = 12;
-const ROWS_MM = PAGE_BODY_MM - HEADING_MM;
+// ⭐ 18/8/2026 — SLACK, measured rather than guessed. The budget above is a round
+// number for a block that really measures 12.09mm on PART A/B and 12.75mm on
+// CHECK (its extra line), so "rows = 269 − 12" filled the sheet to 269.07mm /
+// 269.73mm — past the 269mm A4 body by a hair, and a hair is all Chromium needs
+// to open a new page. 2.5mm off the rows costs 0.06mm of row height on a 40-word
+// sheet (invisible) and buys a margin no font metric can eat. The other half of
+// that blank-page bug was the row's line box overhanging the row itself — see
+// `line-height` in running-word.css @media print.
+const SAFETY_MM = 2.5;
+const ROWS_MM = PAGE_BODY_MM - HEADING_MM - SAFETY_MM;
 // ⭐ ONE COLUMN, ALWAYS (teacher's request, 5/8/2026). PART A and PART B are a
 // single running list down the page — 50 words means 50 rows in one column, and
 // the row height simply divides the page between them. The earlier version

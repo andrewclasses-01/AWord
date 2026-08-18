@@ -1047,6 +1047,20 @@
     align-items: center;
     height: var(--rw-rowh, 5mm);
     font-size: var(--rw-fs, 2.6mm);
+    /* ⭐ 18/8/2026 — THE LINE THAT STOPPED THE BLANK PAGES. `line-height: normal`
+       gives this font a line box of ~1.58em: at --rw-fs 5.01mm that is 7.94mm
+       of cell inside a 6.42mm row, so with `align-items:center` every cell hung
+       ~0.76mm out of the row, top and bottom. Rows overlap each other happily,
+       but the LAST row's overhang stuck 1.5mm past the bottom of the sheet
+       block — and 1.5mm of overflow is all Chromium needs to push a whole extra
+       (near-blank) page after every sheet: 3 sheets printed as 6 pages, with
+       the footer honestly reporting "1/6".
+       Tying the line box to the row height makes the cell exactly as tall as
+       its row — nothing overhangs, nothing spills. Do NOT "simplify" this to
+       `line-height: 1`: `.aw-rw-ps-c-word` is `overflow: hidden` (for the
+       ellipsis), so a line box smaller than the glyphs would clip descenders
+       off the IPA. */
+    line-height: var(--rw-rowh, 5mm);
     /* an ultra-thin rule, and the row height itself is now maximised (no more
        ROW_MAX_MM ceiling in rw-print.js) so the word sits close to it — both
        teacher's requests, 5/8/2026. */
