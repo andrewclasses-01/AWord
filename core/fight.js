@@ -1070,7 +1070,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // travelled in: leaving a match that had been switched to another template
     // must not let that CONVERTED act become the origin every later switch
     // converts from.
-    exitFight() { teardown(); startGame(root, activity, { onExit, base: originAct }); }
+    exitFight() { teardown(); startGame(root, activity, { onExit, base: originAct }); },
+    // Đợt 195 — STRAIGHT OUT TO THE LIBRARY, not back to a single board. The
+    // engine's Home (now a press-and-hold on the MODE button) reaches this from
+    // inside a match, and it must not simply call board 0's own `cleanupAll()` +
+    // `onExit`: that stops ONE engine and leaves board 1's 500ms clock ticking
+    // behind the library — the ghost-clock bug of Đợt 131, which nobody would see
+    // and everybody would hear. `teardown()` is what stops both, and it is
+    // idempotent, so a board that already tore itself down is safe.
+    exitToLibrary() { teardown(); onExit?.(); }
   };
 
   function flashTeam(side, text) {

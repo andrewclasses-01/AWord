@@ -3072,6 +3072,64 @@ xem `core/engine.js`):
 - **Phải** (`.aw-below-right`) — 3 icon nhỏ **Edit / Set assignment / Print**, hiện tại chỉ là
   toast "coming soon" (chuẩn bị hạ tầng cho các tính năng sẽ làm sau — editor, giao bài, in).
 
+### ⛔ THANH CÔNG CỤ DƯỚI KHUNG ACT — TRẠNG THÁI THẬT (cập nhật Đợt 194)
+
+> Ba đoạn mô tả ngay bên trên là của thời đầu dự án và **đã lạc hậu**. Hình dạng thật hôm nay:
+
+| Cụm | Nút | Cử chỉ |
+|---|---|---|
+| GIỮA `.aw-below-center` | **Options** | **chạm** = bảng Options · **NHẤN GIỮ 420ms** = popup *"Edit content?"* (Đợt 194) |
+| | **Template** | **chạm** = đổi template · **NHẤN GIỮ** = Style (Đợt 192). Chỗ không đổi được template thì nút **được dựng thẳng thành nút Style** (`title="Style"`) |
+| | **Mode** | **chạm** = picker Fight · Showdown · Running · IPA (Đợt 158 + 190 + 191) · **NHẤN GIỮ** = popup *"Go home?"* (Đợt 195). Chỗ không có mode nào thì nút **được dựng thẳng thành nút Home** (`title="Home"`) — **nút này KHÔNG BAO GIỜ được vắng mặt nữa** |
+| PHẢI `.aw-below-right` | **Set assignment · Print** | chạm thường. **KHÔNG còn Edit** (Đợt 194) và **KHÔNG còn Home** (Đợt 195). Cả cụm bị `visibility:hidden` trong trận Fight |
+
+**BA LUẬT BẮT BUỘC BIẾT TRƯỚC KHI ĐỤNG VÀO THANH NÀY:**
+
+1. ⛔ **Ẩn một nút bằng CSS `[title="…"]` nay ẩn HAI TÍNH NĂNG, không phải một.** Cả Options lẫn
+   Template đều mang hai việc. Ba stylesheet đang ẩn `[title="Template"]` (`app.css .mode-ipa` ·
+   `running-word.css` · `running-team.css`) — nếu ẩn trúng thì Style biến mất sạch theo, nên chỗ đó
+   phải dựng thẳng nút Style. **Chưa stylesheet nào ẩn `[title="Options"]`; ai định ẩn thì phải biết
+   là đang ẩn cả Edit content.** Không thứ gì được chỉ với tới bằng một cử chỉ mà CSS xung quanh đã giấu.
+
+2. ⛔ **Builder panel phải là `function` CÓ TÊN khai một lần, cấm arrow tạo mới mỗi lần gọi.**
+   `mountPanelContent()` và `capPanelHeight()` nhận diện panel **BẰNG DANH TÍNH HÀM**
+   (`buildContent === buildOptionsPanel`) để gắn class chiều rộng (`is-opts`, `is-tpl`, `is-sd`) và
+   bật `is-compact-opts`. Một closure mới mỗi lần sẽ **lặng lẽ không bao giờ khớp** — popup nhỏ có thể
+   bị kéo rộng bằng cả lưới Options mà không ai hiểu vì sao.
+
+3. ⛔ **Nút mang hai việc thì phải `openToolPanelFor()`, KHÔNG được `openToolPanel()`.** Gọi
+   `openToolPanel` với chính nút đang sáng thì nó **ĐÓNG** panel — đó là cử chỉ "bấm lại nút đang mở".
+   Nhấn giữ lúc panel kia đang mở sẽ chỉ tắt panel chứ không hiện panel thứ hai. Đợt 192 đã cắn.
+
+4. ⛔ **Cử chỉ KHÔNG được tự ý rời ván đang chạy.** Nhấn giữ chỉ MỞ CÂU HỎI; phải bấm xác nhận mới rời
+   game. Và phần lớn cử chỉ chỉ dành cho **single mode** — `canEditNow()` trong `engine.js` là mẫu:
+   nó hỏi `!session && !fight && !showdownPick && !playMode` **ngay lúc ngón tay nhấc lên**, chứ không
+   quyết một lần lúc dựng nút.
+
+5. ⛔ **Thứ gì GHI vào thư viện thì hỏi act SỞ HỮU, đừng hỏi act đang chiếm màn hình.** Luật này đã
+   phải viết ra ba lần (Đợt 145 → 181 → 194). Trong `core/engine.js` có **đúng một** hình dạng để hỏi,
+   dùng chung cho Options ▸ Apply và cho Edit content:
+   ```js
+   const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : libAct;
+   const target  = realAct._converted ? originAct : realAct;   // conv_… / mist_… không bao giờ được lưu
+   ```
+   Bỏ qua nó thì `saveActivity` **đẻ một act rác ra gốc thư viện** còn act thật không đổi một chữ —
+   im lặng tuyệt đối. Đó đúng là lỗi nút Edit đã mang suốt từ khi có "Change template".
+
+6. ⛔ **Nút nào MANG THÊM VIỆC thì nút đó không được phép VẮNG MẶT.** Trước khi treo một tính năng
+   lên cuối một cử chỉ, hỏi đúng một câu: *"nút này có bao giờ không được dựng không?"* `modeBtn` từng
+   là `null` trong im lặng khi act không có mode nào để chọn (**5/17 template** không khai `fightMode`
+   lẫn `showdownMode`: maze chase · whack-a-mole · speaking cards · hai game Running), và menu ☰ trong
+   game không có đường ra ⇒ treo Home lên đó là để act thành **căn phòng không cửa**. Cách vá chuẩn của
+   dự án, đã dùng hai lần (Đợt 192 và Đợt 195): chỗ không có việc chính thì **dựng thẳng nút thành việc
+   phụ**, đổi luôn icon và `title`.
+
+7. ⛔ **Đường ra khỏi một TRẬN không được đi bằng `cleanupAll()` của một bàn.** Một trận là **hai**
+   engine; `cleanupAll` chỉ thuộc closure của bàn gọi nó, nên đồng hồ 500ms của bàn kia sẽ tiếp tục
+   chạy sau lưng thư viện — ghost-clock Đợt 131, thiệt hại **nghe thấy chứ không nhìn thấy**. Chỉ
+   `fight.ctl` mới nắm cleanup của cả hai bàn: `exitFight()` (về bàn đơn) hoặc `exitToLibrary()`
+   (thẳng ra thư viện, Đợt 195).
+
 ### ⛔⛔ HỢP ĐỒNG XẾP LỚP CỦA HỆ POPUP — bẫy ĐẮT NHẤT, đã cắn **2 lần trong 2 ngày, ở 2 dự án**
 
 > **Luật một câu: KHÔNG được đặt `transform` (hay 8 họ hàng của nó) lên `.aw-below`, hay lên BẤT KỲ

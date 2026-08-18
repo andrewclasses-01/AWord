@@ -181,7 +181,7 @@ const spkTemplate = {
     if (total === 0) {
       root.innerHTML = "";
       root.append(el("div", "aw-spk-empty",
-        "This activity has no ready words yet — open Edit content and generate pronunciations first."));
+        "This activity has no ready words yet — hold the Options button, choose Edit content, and generate pronunciations first."));
       return () => {};
     }
 

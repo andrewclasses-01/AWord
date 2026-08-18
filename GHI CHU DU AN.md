@@ -8,6 +8,287 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 195 (18/8/2026) — ⭐⭐ NÚT TRANG CHỦ RỜI THANH CÔNG CỤ, VỀ **NHẤN GIỮ NÚT MODE** + POPUP XÁC NHẬN
+
+**Thầy giao (18/8/2026, ngay sau Đợt 194)**: *"tích hợp nút trang chủ vào nhấn giữ nút mode, nhấn vào
+thì hiện pop-up hỏi có muốn về trang chủ không, đồng ý thì mới về"*.
+
+Cùng khuôn với Đợt 194 (Edit → nhấn giữ Options) và Đợt 192 (Style → nhấn giữ Template). Diff **2 file
+code**: `core/engine.js` + **một phương thức mới** trong `core/fight.js`. **Không sửa một dòng CSS nào** —
+popup lại dùng nguyên bộ class `.aw-tool-panel-head` / `.aw-mode-confirm-*`.
+
+---
+
+### 1. Việc đã làm
+
+**(a) Gỡ nút Home khỏi cụm phải.** `.aw-below-right` nay còn **2 nút**: *Set assignment · Print*.
+
+**(b) Nút MODE mang hai việc**: **chạm** = picker chọn mode (y như cũ) · **NHẤN GIỮ 420ms** = popup
+*"Go home?"* với hàng `Cancel | Home`. Dây nối dời xuống nằm chung chỗ với Options/Template:
+
+```js
+if (modeAvail) {
+  tapOrHold(modeBtn, { onTap:  () => openToolPanelFor(modeBtn, buildModePickPanel),
+                       onHold: () => openToolPanelFor(modeBtn, buildHomeConfirmPanel) });
+} else {
+  modeBtn.onclick = () => openToolPanelFor(modeBtn, buildHomeConfirmPanel);
+}
+```
+
+**(c) ⚠️⚠️ NÚT MODE NAY LUÔN ĐƯỢC DỰNG — và đây là quyết định quan trọng nhất của đợt.**
+Trước đây nó bị **bỏ hẳn** khi không có mode nào để chọn:
+
+```js
+const modeBtn = (canFight || canShowdown || canRunning || canIpa || playMode) ? toolBtn(...) : null;
+```
+
+**5/17 template không khai `fightMode` lẫn `showdownMode`** — *maze chase · whack-a-mole · speaking
+cards · running word · running team*. Một act thuộc nhóm đó mà đáp án dài quá `WORD_POOL_MAX_LEN` (24
+ký tự, nên không đủ tư cách chạy Running) và **không có phiên âm** (nên không có IPA) thì **KHÔNG CÓ
+nút nào ở chỗ đó cả**. Treo Home lên một cái nút lúc có lúc không là **mất luôn Home** — mà menu ☰
+trong game cũng không có đường ra (chỉ Submit / Start again / Resume / Change template). Act đó sẽ là
+**một căn phòng không cửa**.
+
+**Vá theo đúng khuôn Đợt 192 đã dùng cho Template/Style**: chỗ không có mode nào để chọn thì nút được
+dựng **THẲNG thành nút Home** — icon nhà, `title="Home"`, và **chạm thường** là ra đúng câu hỏi đó.
+Không thứ gì chỉ với tới được bằng một cử chỉ trên cái nút không tồn tại.
+
+**(d) ⭐ Trong TRẬN nay có Home — lần đầu tiên.** Cả cụm `.aw-below-right` bị
+`visibility: hidden` khi đang đánh (`app.css .aw-fight-bottom .aw-below-right`), nên trước đợt này rời
+trận về thư viện phải đi **hai bước**: Mode ▸ Single mode, rồi mới Home. Nay giữ nút Mode là xong.
+
+**(e) Câu chữ trong popup đổi theo mode**, vì thứ bị bỏ lại khác nhau rất nhiều:
+
+| Đang ở | Dòng chữ |
+|---|---|
+| Fight | *Ends the match and goes back to your library.* |
+| Showdown | *Leaves this activity and goes back to your library. **Your team is kept.*** |
+| Running / IPA | *Leaves this mode and goes back to your library.* |
+| Single | *Leaves this activity and goes back to your library.* |
+
+"Home" trên một bàn đang có trận sống phía sau **không được đọc giống** "Home" trên màn READY yên tĩnh.
+
+### 2. ⚠️ BẪY THẬT: MỘT TRẬN LÀ **HAI** ENGINE
+
+Nút Home cũ chạy `cleanupAll(); onExit?.()`. Trong `startGame()`, `cleanupAll` **chỉ thuộc closure của
+bàn này** — bàn 0. Gọi nó từ trong trận là dọn **một** bàn, còn **đồng hồ 500ms của bàn 1 vẫn tiếp tục
+chạy** phía sau thư viện: đúng con **ghost-clock của Đợt 131** (thầy nghe tiếng "hết giờ" trong khi
+đồng hồ trên màn còn 2 phút). Trước đây không ai cắn vì CSS giấu nút Home khỏi trận — đợt này mở cửa
+đó ra, nên phải xử tử tế.
+
+`ctl` của `core/fight.js` **không** phơi ra `teardown()`; nó chỉ có `exitFight()` (teardown rồi dựng
+lại **một bàn đơn**) — không phải thứ ta cần. Thêm **một phương thức**:
+
+```js
+exitToLibrary() { teardown(); onExit?.(); }
+```
+
+`teardown()` là thứ duy nhất nắm cleanup của **cả hai** bàn (`cleanupFns`), và nó idempotent nên bàn
+nào tự dọn rồi vẫn an toàn. Engine gọi:
+
+```js
+if (fight) { fight.ctl.exitToLibrary(); awEmit("FIGHT", "off"); return; }
+cleanupAll(); onExit?.();
+```
+
+`awEmit("FIGHT","off")` để myActivity ở các cột khác biết trận đã tắt — cùng tín hiệu mọi đường ra
+khỏi trận đều gửi.
+
+⚠️ **Pick của Showdown CỐ Ý không bị xoá**: nó nằm ở `sessionStorage` và được thiết kế để sống từ act
+này sang act khác (thầy chơi cả buổi với cùng một đội), và nút Home cũ cũng chưa bao giờ xoá nó.
+
+### 3. Lưới kiểm — `scratch/home195-test.html`, **44/44 ĐẠT, 0 lỗi console**
+
+| Nhóm | Đo được |
+|---|---|
+| ① Single | cụm phải còn `["Set assignment","Print"]` · cụm giữa `["Options","Template","Mode"]` · CHẠM → picker · GIỮ lúc picker đang mở → **đổi** sang *"Go home?"* · CHẠM lại → về picker · Cancel → đóng, game còn, **chưa** về nhà · xác nhận → về nhà **đúng 1 lần**, game bị dọn |
+| ② Act không mode nào | maze chase + đáp án dài + không phiên âm ⇒ cụm giữa `["Options","Template","Home"]`, **chạm thường** ra đúng câu hỏi |
+| ③ Running | câu chữ *"Leaves this mode…"*, xác nhận → về nhà |
+| ④ Showdown | câu chữ có *"Your team is kept."*, và **pick vẫn còn** trong sessionStorage sau khi về nhà |
+| ⑤ **Fight** | cụm phải đúng là `visibility: hidden` · câu chữ *"Ends the match…"* · **bấm PLAY cả 2 bàn cho đồng hồ chạy thật**, đo `setInterval` còn sống: đang trận **> 0**, sau khi Home **về đúng 0** ⇒ **không sót đồng hồ nào** · không còn `.aw-fight-board` · về nhà đúng 1 lần |
+| ⑥ Trang học sinh | không có nút Mode/Home, không có cụm phải |
+| Hình học | popup **260 × 147,4**, nằm trọn trong màn, `scrollHeight ≤ clientHeight`, hai nút hit-test trúng chính nó, `elementFromPoint` giữa popup ra **ruột popup** (không phải `aw-tool-dim`) |
+
+Lưới đo đồng hồ bằng cách **bọc `window.setInterval`/`clearInterval`** rồi đếm id còn sống — đó là
+phép đo trực tiếp của bẫy ghost-clock, không phải suy luận.
+
+⚠️ Lưới Đợt 194 (`scratch/edit194-test.html`) có **một dòng kỳ vọng bị lạc hậu** vì Home rời cụm phải —
+đã sửa, chạy lại **41/41 ĐẠT**.
+
+⬜ **Chưa ai NHÌN bằng mắt**: pane trình duyệt vẫn ẩn ⇒ `screenshot` timeout (lần thứ tư liên tiếp,
+y như Đợt 191–194).
+
+### 4. LUẬT MỚI
+1. ⛔ **Nút nào mang thêm việc thì nút đó KHÔNG được phép vắng mặt.** Trước khi treo tính năng lên một
+   nút, hỏi "nút này có bao giờ không được dựng không?" — `modeBtn` từng là `null` trong im lặng.
+   Cách vá chuẩn của dự án (đã dùng 2 lần): chỗ không có việc chính thì **dựng thẳng nút thành việc phụ**.
+2. ⛔ **Đường ra khỏi một TRẬN không được đi bằng `cleanupAll()` của một bàn.** Trận là hai engine;
+   chỉ `fight.ctl` mới dọn được cả hai.
+
+### 5. VIỆC ĐANG CHỜ (Đợt 195)
+- ⬜ **Thầy nhìn + chạm thật trên TOMKO** (máy không tự chạm được).
+- ⬜ **Chưa commit/push** — Đợt 194 và 195 sẽ đi chung một commit (cùng sửa `core/engine.js`, tách
+  không an toàn).
+- ⬜ `scratch/` bị gitignore ⇒ `home195-test.html` không lên GitHub, phiên sau phải dựng lại.
+
+---
+
+## Đợt 194 (18/8/2026) — ⭐⭐ EDIT CONTENT RỜI KHỎI THANH CÔNG CỤ, VỀ **NHẤN GIỮ NÚT OPTIONS** + POPUP XÁC NHẬN (và vá luôn lỗi Edit đẻ act rác)
+
+**Thầy giao (18/8/2026)**: *"Chuyển tính năng nút edit content trong mọi mode vào việc giữ nút Options
+=> Pop-up nhỏ hỏi có muốn edit content không => xác nhận rồi mới vào edit chứ không bấm trực tiếp nút
+edit ở ngay dưới khung act nữa."*
+
+Đợt này **chỉ đụng 2 file**: `core/engine.js` (chỗ dựng thanh công cụ + chỗ nối dây nút) và một câu
+chữ trong `templates/speaking/speaking.js`. Không đụng CSS — popup dùng lại y nguyên bộ class
+`.aw-tool-panel-head` / `.aw-mode-confirm-text` / `.aw-mode-confirm-row` mà 4 popup xác nhận của nút
+MODE đã dùng từ Đợt 158, nên nó **giống hệt** những popup thầy đã duyệt.
+
+---
+
+### 1. Nghiên cứu trước khi code — hiện trạng thật, không phải trí nhớ
+
+Nút Edit **không hề có ở "mọi mode"** như tên gọi. Đo bằng chính CSS đang chạy:
+
+| Mode | Nút Edit trước Đợt 194 | Vì sao |
+|---|---|---|
+| Single | ✅ có | — |
+| Showdown | ✅ có | không luật nào ẩn |
+| Running word / team | ✅ có | CSS chỉ ẩn *Set assignment · Template · Print* |
+| IPA | ✅ có | `app.css` chỉ ẩn *Template* |
+| **Fight** | ❌ **bị ẩn** | `.aw-fight-bottom .aw-below-right { visibility: hidden }` |
+
+Còn **nút Options thì có mặt ở cả 5 mode**, kể cả trong trận Fight
+(`.aw-fight-bottom .aw-below-center { pointer-events: auto }`). Tức là chỗ treo mới **phủ RỘNG HƠN**
+chỗ cũ — nên phải hỏi thầy chứ không được tự suy.
+
+**Thầy chốt 2 câu hỏi:**
+1. ⛔ **CHỈ CHO EDIT TRONG SINGLE.** Fight · Showdown · Running · IPA đều không. Đây là **THU HẸP có
+   chủ ý** so với hôm qua (Showdown/Running/IPA vốn đang bấm Edit được) — thầy được hỏi rõ và chọn thế.
+2. ⭐ **Edit luôn sửa BẢN GỐC**, không sửa bản tạm.
+
+### 2. Việc đã làm
+
+**(a) Gỡ nút Edit khỏi cụm phải.** `belowRight` còn đúng 3 nút: *Set assignment · Print · Home*.
+
+**(b) Nút Options mang hai việc** — dùng lại `tapOrHold()` của `core/press.js` (Đợt 192 viết cho cặp
+Template/Style), 420ms, có `setPointerCapture` + dung sai trượt 14px + chặn `contextmenu`:
+
+```js
+tapOrHold(optionsBtn, {
+  onTap:  () => openToolPanelFor(optionsBtn, buildOptionsPanel),
+  onHold: () => { if (canEditNow()) openToolPanelFor(optionsBtn, buildEditConfirmPanel); }
+});
+```
+
+⚠️ **`openToolPanelFor`, KHÔNG phải `openToolPanel`** — gọi `openToolPanel` với chính nút đang sáng
+thì nó **ĐÓNG** panel (đó là cử chỉ "bấm lại nút đang mở"), nên nhấn giữ lúc bảng Options đang mở sẽ
+chỉ tắt bảng chứ không hiện câu hỏi. Đợt 192 đã cắn đúng cái bẫy này một lần.
+
+⚠️ **Nhấn giữ KHÔNG edit** — nó chỉ mở câu hỏi. Không thứ gì trên thanh công cụ được phép rời một ván
+đang chạy chỉ bằng một cử chỉ.
+
+**(c) `canEditNow()` — hỏi LÚC GIỮ, không phải lúc dựng nút.**
+
+```js
+function canEditNow() { return !session && !fight && !showdownPick && !playMode; }
+```
+
+`fight` và `playMode` đứng yên suốt một lần mount; `showdownPick` cũng là `const` vì **bật** Showdown
+là re-enter `startGame()` — trừ đúng một ngoại lệ đã ghi trong `core/showdown-setup.js`:
+`cancelMyTeam()` xoá pick mà **KHÔNG** restart ván. Ngoại lệ đó chỉ có thể làm hàm này **CHẶT HƠN**
+(bàn còn đang mang áo Showdown thì vẫn nói không), không bao giờ lỏng hơn — đúng hướng an toàn.
+
+**(d) Popup `buildEditConfirmPanel()`** — tiêu đề *"Edit content?"*, một dòng *"Leaves the game and
+opens the editor for this activity."*, hàng `Cancel | Edit content`. **Cancel chỉ đóng** (không có
+picker nào phía sau để quay về, khác 4 popup của nút MODE).
+
+⚠️ **Phải là hàm CÓ TÊN khai một lần, cấm arrow tạo mới mỗi lần gọi**: `mountPanelContent()` và
+`capPanelHeight()` nhận diện panel **bằng DANH TÍNH HÀM** (`buildContent === buildOptionsPanel`), một
+closure mới mỗi lần sẽ lặng lẽ không bao giờ khớp — và popup có thể bị ăn nhầm class `is-opts` rồi
+kéo rộng bằng cả lưới Options.
+
+### 3. ⭐ LỖI THẬT CÓ SẴN được vá kèm: Edit đẻ ACT RÁC vào thư viện
+
+Handler Edit cũ truyền `libAct`. Nhưng **hai ván ở ngay trong single mode** trao cho closure này một
+`libAct` **VỨT ĐI**:
+
+| Ván | `libAct` thật ra là gì | id |
+|---|---|---|
+| **Change template** | bản convert tạm (`_converted`) | `conv_<type>_<số ngẫu nhiên>` |
+| **Start with mistakes** | bản cắt còn vài từ (`_mistakes`) | `mist_<type>_<số>` |
+
+Nút Edit cũ sửa **CHÍNH BẢN ĐÓ**. `core/store.js` không tìm thấy hai id ấy trong thư viện ⇒
+`saveActivity` coi là **act MỚI** và **thả một act rác ra gốc thư viện**, còn act thật thì không đổi
+một chữ. Im lặng hoàn toàn. (Trong Running/IPA còn tệ hơn: mở editor của *game đang mượn* —
+Running word / Speaking cards — chứ không phải editor của act gốc.)
+
+**Vá**: `openEditor()` hỏi **ai SỞ HỮU nội dung**, đúng bài học `subActOwner()` của Đợt 181, và dùng
+**y nguyên hai dòng** mà đường Options ▸ Apply đã dùng để quyết định lưu cái gì (tìm `_mistakesBase`
+trong file) — hai câu trả lời cho "act thật là act nào" chính là cách chúng bắt đầu lệch nhau:
+
+```js
+const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : libAct;
+const target  = realAct._converted ? originAct : realAct;
+if (!target || (target.id && /^(conv|mist)_/.test(String(target.id)))) { toast("Nothing to edit here"); return; }
+await ensureTemplate(target.type);          // template phải khớp ACT, không phải khớp MÀN HÌNH
+editTpl = getTemplate(target.type);
+```
+
+⚠️ `ensureTemplate` trước `getTemplate` — module của act gốc thường đã nạp (chơi nó mới tới đây) nhưng
+`getTemplate` **NÉM LỖI** khi chưa nạp, và nó chạy trên mọi lần bấm.
+
+### 4. Lưới kiểm — `scratch/edit194-test.html`, **41/41 ĐẠT, 0 lỗi console**
+
+Chạy **THẬT** `core/engine.js` + `core/fight.js` (không mô phỏng lại dòng nào). Cử chỉ được bắn bằng
+`PointerEvent` thật đi đúng đường `core/press.js`: `pointerdown` → chờ 520ms → `pointerup`.
+Gián điệp cắm thẳng vào `getTemplate(type).edit` của registry ⇒ đo được **đúng cái engine cầm**.
+
+| Nhóm | Đo được |
+|---|---|
+| ① Single | cụm phải còn `["Set assignment","Print","Home"]` · CHẠM → `is-opts` · GIỮ lúc Options đang mở → **đổi** sang *"Edit content?"* (không đóng) · CHẠM lại → về Options · Cancel → đóng, game còn nguyên, **chưa** mở editor · Xác nhận → editor nhận `act_real_quiz` + template `quiz` |
+| ② Change template | act trên màn `conv_…` ⇒ editor vẫn nhận **`act_real_quiz`** và template **`quiz`**, **không** phải `anagram` |
+| ③ Start with mistakes | act trên màn **3 câu** (`mist_…`) ⇒ editor nhận act **6 câu** đầy đủ |
+| ④⑤⑥⑦ Showdown · Running · IPA · Fight | GIỮ → **không panel nào** (`panelHead() === null`); CHẠM vẫn mở Options bình thường |
+| ⑧ Trang học sinh | không có nút Options, không có cụm phải |
+| Bẫy xếp lớp | `elementFromPoint` giữa popup ra **`inside-panel`**, không phải `aw-tool-dim`; z-index 40/41/42 đúng thứ tự |
+
+**Đo hình học** (`scratch/edit194-live.html`, khung 1280×720): popup **240,6 × 138,9** tại
+(512,2 · 524,3), **không lọt ra ngoài màn**, `scrollHeight === clientHeight` (không phải cuộn), hai
+nút `Cancel` 73,4×36 và `Edit content` 105,1×36 đều **hit-test trúng chính nó**.
+
+⬜ **CHƯA AI NHÌN BẰNG MẮT**: pane trình duyệt bị ẩn nên `screenshot` timeout (y hệt Đợt 191 + 192).
+Đã thay bằng phép đo hình học + hit-test + `elementFromPoint`, và popup dùng **đúng bộ class** của 4
+popup xác nhận thầy đã duyệt từ Đợt 158 — nhưng cỡ chữ trên màn 86" vẫn phải thầy duyệt.
+
+### 5. Việc nhỏ kèm theo
+Câu gợi ý của Speaking cards (`templates/speaking/speaking.js`) đang chỉ vào cái nút vừa bị gỡ:
+*"open Edit content and generate pronunciations first"* → đổi thành *"hold the Options button, choose
+Edit content, and generate pronunciations first"*.
+Menu ⁝ của act trong thư viện (`main.js`, `["Edit content", …]`) **giữ nguyên** — đó vẫn là đường vào
+editor chính, và cũng là **đường bàn phím duy nhất còn lại** (`tapOrHold` không có cử chỉ giữ bằng
+Enter/Space, y như Style của Đợt 192).
+
+### 6. LUẬT MỚI phải nhớ
+1. **Ẩn nút `[title="Options"]` bằng CSS nay ẩn HAI tính năng**, không phải một — y hệt thứ đã xảy ra
+   với `[title="Template"]` sau Đợt 192. Hiện chưa stylesheet nào ẩn nút Options; template mới muốn ẩn
+   nó thì phải biết là đang ẩn cả Edit content.
+2. **Panel nhận diện bằng danh tính hàm** — mọi builder panel mới phải là `function` khai một lần.
+3. **Thứ gì GHI vào thư viện thì hỏi act SỞ HỮU, đừng hỏi act trên màn.** Lần thứ ba luật này phải
+   viết ra (Đợt 145 → Đợt 181 → Đợt 194). Trong `core/engine.js` nay có **đúng một** hình dạng để hỏi:
+   `_mistakes ? _mistakesBase : libAct`, rồi `_converted ? originAct : …`.
+
+### 7. VIỆC ĐANG CHỜ (Đợt 194)
+- ⬜ **Thầy nhìn bằng mắt trên TOMKO**: nhấn giữ 420ms bằng NGÓN TAY trên màn hồng ngoại (máy không tự
+  chạm được), xem popup có bị lệch/nhỏ chữ trên màn 86" không.
+- ⬜ **Chưa commit/push** — chờ thầy duyệt.
+- ⬜ `scratch/` bị gitignore ⇒ `edit194-test.html` + `edit194-live.html` **không lên GitHub**, phiên sau
+  ở máy khác phải dựng lại.
+- ⬜ Cân nhắc sau: Running/IPA/Showdown nay **không còn** đường vào editor từ trong game (đúng ý thầy).
+  Nếu dùng thực tế thấy vướng thì mở lại chỉ cần đổi `canEditNow()`.
+
+---
+
 ## Đợt 193 (18/8/2026) — ⭐ LỖI THẬT CÓ SẴN: RUNNING WORD IN 3 TỜ RA **6 TRANG** (xen kẽ 3 trang trắng)
 
 > ⚠️ **Số 192 đã bị một phiên song song khác dùng** (phiên đó đang sửa `core/engine.js` — thứ tự ô

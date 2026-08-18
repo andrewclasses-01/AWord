@@ -8,11 +8,68 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **18/8/2026 (Đợt 190 + 191)** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
+> Cập nhật lần cuối: **18/8/2026 (Đợt 194 + 195)** ⬜ **CHƯA COMMIT — chờ thầy duyệt.** Trước đó: **Đợt 190 + 191** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
 > cả hai đợt — chúng cùng sửa `engine.js` và `app.css` nên không tách an toàn được). Pages build đúng
 > commit, **11/11 file trùng mã băm SHA-256**, và đã hỏi lại chính module trên bản live.
 > ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
 > `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
+>
+> ---
+> **Đợt 195 — NÚT TRANG CHỦ VỀ NHẤN GIỮ NÚT MODE.** ⬜ **CHƯA COMMIT — chờ thầy duyệt** (sẽ đi chung
+> một commit với Đợt 194, cùng sửa `core/engine.js`).
+> Thầy: *"tích hợp nút trang chủ vào nhấn giữ nút mode, nhấn vào thì hiện pop-up hỏi có muốn về
+> trang chủ không, đồng ý thì mới về"*. **Nút Home bị gỡ khỏi cụm phải** (còn 2 nút: Set assignment ·
+> Print); **chạm MODE = picker, NHẤN GIỮ 420ms = popup "Go home?"**. Câu chữ trong popup đổi theo mode
+> (trận thì *ends the match*, Showdown thì nói rõ **đội được giữ**). Không sửa một dòng CSS nào.
+> ⚠⚠ **NÚT MODE NAY LUÔN ĐƯỢC DỰNG.** Nó từng bị bỏ hẳn khi không có mode nào để chọn — mà **5/17
+> template** không khai `fightMode` lẫn `showdownMode` (maze chase · whack-a-mole · speaking cards · hai
+> game Running), nên một act nhóm đó có đáp án dài quá 24 ký tự và không phiên âm thì **không có nút nào**
+> ở chỗ đó — treo Home lên là **mất luôn Home**, mà menu ☰ cũng không có đường ra. Vá theo đúng khuôn
+> Đợt 192: chỗ không có mode thì nút được dựng **thẳng thành nút Home** (`title="Home"`, chạm thường là ra
+> câu hỏi).
+> ⭐ **Trong TRẬN nay có Home lần đầu** (cụm phải bị `visibility:hidden` khi đánh, trước đây về thư viện
+> phải đi hai bước Mode ▸ Single rồi mới Home). ⚠️ **MỘT TRẬN LÀ HAI ENGINE**: `cleanupAll()` chỉ dọn
+> bàn 0, đồng hồ 500ms của bàn 1 sẽ tiếp tục chạy sau lưng thư viện — đúng **ghost-clock Đợt 131**. Thêm
+> **một phương thức** vào `core/fight.js`: `exitToLibrary() { teardown(); onExit?.(); }`.
+> ⭐ Lưới `scratch/home195-test.html`: **44/44 ĐẠT, 0 lỗi console**, trong đó phép đo ghost-clock là THẬT
+> (bọc `setInterval`/`clearInterval`, bấm PLAY cả hai bàn rồi đếm id còn sống: đang trận > 0, sau Home = 0).
+> Popup đo được 260×147,4, nằm trọn trong màn, không phải cuộn, hai nút hit-test trúng chính nó.
+> ⚠️ Lưới Đợt 194 có một dòng kỳ vọng lạc hậu (Home rời cụm phải) — đã sửa, chạy lại **41/41 ĐẠT**.
+> ⛔ **LUẬT MỚI**: (1) **nút nào mang thêm việc thì nút đó không được phép vắng mặt** — hỏi "nút này có bao
+> giờ không được dựng không?" trước khi treo; (2) đường ra khỏi một TRẬN không đi bằng `cleanupAll()` của
+> một bàn.
+> ⬜ **Chưa ai NHÌN bằng mắt** (pane ẩn ⇒ `screenshot` timeout, lần thứ tư liên tiếp).
+>
+> ---
+> **Đợt 194 — EDIT CONTENT VỀ NHẤN GIỮ NÚT OPTIONS.** ⬜ **CHƯA COMMIT — chờ thầy duyệt.**
+> Thầy: *"Chuyển tính năng nút edit content trong mọi mode vào việc giữ nút Options => Pop-up nhỏ hỏi
+> có muốn edit content không => xác nhận rồi mới vào edit chứ không bấm trực tiếp nút edit ở ngay dưới
+> khung act nữa."* **Nút Edit bị gỡ hẳn** khỏi cụm phải (còn 3 nút: Set assignment · Print · Home);
+> **chạm nút Options = bảng Options, NHẤN GIỮ 420ms = popup "Edit content?"**, và chỉ khi bấm xác nhận
+> mới rời game vào editor. Popup dùng lại nguyên bộ class của 4 popup xác nhận nút MODE ⇒ **không sửa
+> một dòng CSS nào**. Diff đúng **2 file**: `core/engine.js` + một câu chữ trong
+> `templates/speaking/speaking.js`.
+> ⛔ **CHỈ SINGLE MODE** (thầy chốt sau khi được hỏi): Fight · Showdown · Running · IPA đều **không**
+> cho edit. Đây là **thu hẹp có chủ ý** — trước đợt này chỉ Fight bị ẩn nút Edit (bằng CSS
+> `.aw-fight-bottom .aw-below-right`), còn Showdown/Running/IPA vẫn bấm được.
+> ⭐ **VÁ KÈM MỘT LỖI THẬT CÓ SẴN**: nút Edit cũ truyền `libAct`, mà hai ván **ngay trong single** trao
+> cho engine một `libAct` VỨT ĐI — *Change template* (`conv_…`, `_converted`) và *Start with mistakes*
+> (`mist_…`, `_mistakes`). `core/store.js` không thấy hai id đó trong thư viện ⇒ Save **thả một act rác
+> ra gốc thư viện** còn act thật không đổi một chữ, im lặng hoàn toàn. Nay `openEditor()` hỏi **ai SỞ
+> HỮU nội dung** bằng ĐÚNG hai dòng mà Options ▸ Apply đã dùng (`_mistakesBase` → `originAct`), và mở
+> **template của ACT đó**, không phải template đang chiếm màn hình.
+> ⛔⛔ **BA LUẬT MỚI**: (1) ẩn `[title="Options"]` bằng CSS nay ẩn **HAI** tính năng (y hệt chuyện đã
+> xảy ra với `[title="Template"]` sau Đợt 192); (2) builder panel phải là **`function` có tên khai một
+> lần** — `mountPanelContent`/`capPanelHeight` nhận diện panel bằng **danh tính hàm**, arrow tạo mới mỗi
+> lần sẽ lặng lẽ không khớp và popup bị ăn nhầm class `is-opts`; (3) **thứ gì GHI vào thư viện thì hỏi
+> act SỞ HỮU, đừng hỏi act trên màn** — lần thứ ba luật này phải viết ra (145 → 181 → 194).
+> ⭐ Lưới `scratch/edit194-test.html` chạy **THẬT** `engine.js` + `fight.js`, bắn `PointerEvent` đúng
+> đường `core/press.js`, gián điệp cắm vào `getTemplate(t).edit` của registry: **41/41 ĐẠT, 0 lỗi
+> console**. Đo hình học ở `scratch/edit194-live.html`: popup 240,6×138,9, không lọt ngoài màn, không
+> phải cuộn, hai nút hit-test trúng chính nó, `elementFromPoint` giữa popup ra **ruột popup** (không
+> phải `aw-tool-dim`).
+> ⬜ **Chưa ai NHÌN bằng mắt** (pane trình duyệt ẩn ⇒ `screenshot` timeout, y như Đợt 191 + 192);
+> `scratch/` bị gitignore nên hai file lưới phải dựng lại ở phiên sau.
 >
 > ---
 > **Đợt 192 — SÁU VIỆC THẦY GIAO MỘT LƯỢT.** ✅ **COMMIT `3a1720a` + PUSH + LIVE** — deployment

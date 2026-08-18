@@ -945,19 +945,29 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       : playMode === "running" ? icons.fmtRace
         : playMode === "ipa" ? icons.ipa
           : icons.single;
-  const modeBtn = (canFight || canShowdown || canRunning || canIpa || playMode)
-    ? toolBtn(modeIcon, "Mode") : null;
-  if (modeBtn) {
-    // Glows whenever anything other than plain single mode is running. With one
-    // button standing for every mode this is the only at-a-glance "something
-    // is on" the toolbar has left.
-    if (fight || showdownPick || playMode) modeBtn.classList.add("is-active");
-    // Never switches on the bare click (teacher, 12/8/2026): a stray tap used to
-    // drop a running match straight back to single mode with no way back. Same
-    // popover mechanism as Options/Template/Style, and now every route out of it
-    // ends in either a confirm screen or the Showdown table.
-    modeBtn.onclick = () => openToolPanel(modeBtn, buildModePickPanel);
-  }
+  // ⭐⭐ Đợt 195 — HOME LIVES ON THIS BUTTON NOW (thầy, 18/8/2026: "tích hợp nút
+  // trang chủ vào nhấn giữ nút mode"): tap = the mode picker, PRESS-AND-HOLD = the
+  // "Go home?" question. The wiring itself sits with Options/Template further
+  // down, where all three tool buttons are wired together.
+  //
+  // ⚠⚠ AND THAT IS WHY THIS BUTTON IS NOW ALWAYS BUILT. It used to be dropped
+  // whenever there was no mode to offer — 5 of the 17 templates declare neither
+  // `fightMode` nor `showdownMode` (maze chase · whack-a-mole · speaking cards ·
+  // both Running games), so an act of one of those whose answers are too long for
+  // a Running race and which carries no IPA got NO button here at all. Hanging
+  // Home off a button that is sometimes absent would take Home away with it, and
+  // the in-game ☰ menu has no way out either (Submit / Start again / Resume /
+  // Change template) — the act would be a room with no door.
+  // So where there is no mode to pick, the button is built as a HOME button
+  // OUTRIGHT: its own icon, `title="Home"`, and a plain TAP opens the same
+  // question. Exactly the shape Đợt 192 gave the Template/Style pair: nothing
+  // is reachable only through a gesture on a button that is not there.
+  const modeAvail = !!(canFight || canShowdown || canRunning || canIpa || playMode);
+  const modeBtn = modeAvail ? toolBtn(modeIcon, "Mode") : toolBtn(icons.home, "Home");
+  // Glows whenever anything other than plain single mode is running. With one
+  // button standing for every mode this is the only at-a-glance "something
+  // is on" the toolbar has left. A button that is only Home never glows.
+  if (modeAvail && (fight || showdownPick || playMode)) modeBtn.classList.add("is-active");
   // ⭐ Đợt 191 (thầy: "chuyển vị trí nút mode ra ngoài cùng bên phải trong mọi
   // trạng thái") — MODE now sits LAST everywhere, and that **reverses Đợt 124**,
   // where it swapped places with Style during a match so it landed dead centre
@@ -967,14 +977,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // keeps it findable. Do not restore the centre seat without checking with the
   // teacher — it was their call both times.
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
-  belowCenter.append(optionsBtn, templateBtn, ...(modeBtn ? [modeBtn] : []));
+  belowCenter.append(optionsBtn, templateBtn, modeBtn);
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
   // it armed for whatever the teacher opens next.
   if (openShowdownOnMount) {
     openShowdownOnMount = false;
-    if (modeBtn && !fight && canShowdown) {
+    if (modeAvail && !fight && canShowdown) {
       // Next tick: let this mount finish first — openToolPanel measures the
       // toolbar it is about to hang the panel under.
       setTimeout(() => { if (modeBtn.isConnected) openToolPanel(modeBtn, buildShowdownPanelHost); }, 0);
@@ -1251,34 +1261,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // the strip + this row.
 
   const belowRight = el("div", "aw-below-right");
-  const editBtn = toolBtn(icons.edit, "Edit", true);
+  // ⛔ Đợt 194 — THE EDIT BUTTON IS GONE FROM THIS ROW (thầy, 18/8/2026:
+  // "Chuyển tính năng nút edit content trong mọi mode vào việc giữ nút Options
+  // => Pop-up nhỏ hỏi có muốn edit content không => xác nhận rồi mới vào edit chứ
+  // không bấm trực tiếp nút edit ở ngay dưới khung act nữa"). Editing now hangs off
+  // a PRESS-AND-HOLD of the Options button, behind a confirm popup — see
+  // `canEditNow()` / `buildEditConfirmPanel()` / `openEditor()` down where the
+  // tool buttons are wired.
+  // ⛔ Đợt 195 — AND THE HOME BUTTON IS GONE FROM HERE TOO (thầy, 18/8/2026:
+  // "tích hợp nút trang chủ vào nhấn giữ nút mode, nhấn vào thì hiện pop-up hỏi có
+  // muốn về trang chủ không, đồng ý thì mới về"). Going home now hangs off a
+  // PRESS-AND-HOLD of the MODE button, behind a confirm popup — see `goHome()`
+  // and `buildHomeConfirmPanel()`. TWO buttons left in this cluster.
+  // ⭐ That also GIVES Home to a match for the first time: this whole cluster is
+  // `visibility: hidden` inside a fight (app.css `.aw-fight-bottom
+  // .aw-below-right`), so until now leaving a match for the library took two
+  // steps — Mode ▸ Single mode, and only then Home.
   const assignBtn = toolBtn(icons.assignment, "Set assignment", true);
   const printBtn = toolBtn(icons.print, "Print", true);
-  const homeBtn = toolBtn(icons.home, "Home", true);
-  belowRight.append(editBtn, assignBtn, printBtn, homeBtn);
-  // Leaving the game (Home / Edit) drops fullscreen so the library or editor
-  // shows windowed as before — only "Start again" keeps fullscreen now that the
-  // fullscreen target is the stable root (see the fullscreen helpers up top).
-  homeBtn.onclick = () => { sound.click(); exitAnyFullscreen(); cleanupAll(); onExit?.(); };
-  editBtn.onclick = () => {
-    sound.click();
-    if (!tpl.edit) { toast("Edit — coming soon"); return; }
-    // Leave the game, open this game's editor. Save -> store + replay with the
-    // new content; Cancel -> replay the original untouched.
-    exitAnyFullscreen();
-    cleanupAll();
-    // ⚠️ Đợt 145 — the EDITOR gets `libAct`, never the resolved copy: the copy
-    // has the other clue sets stripped out, so saving it would delete three
-    // quarters of a vocabulary act's content without a word of warning.
-    tpl.edit(root, libAct, {
-      onSave: async updated => {
-        const { saveActivity } = await import("./store.js");
-        const saved = await saveActivity(updated);
-        startGame(root, saved, { onExit });
-      },
-      onCancel: () => startGame(root, libAct, { onExit })
-    });
-  };
+  belowRight.append(assignBtn, printBtn);
   // Set assignment -> the setup form; a new assignment appears as a strip below.
   assignBtn.onclick = async () => {
     sound.click();
@@ -2329,7 +2330,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     }
   }
 
-  optionsBtn.onclick = () => openToolPanel(optionsBtn, buildOptionsPanel);
+  // ⭐⭐ Đợt 194 — ONE BUTTON, TWO JOBS: tap opens Options, PRESS-AND-HOLD asks
+  // whether to edit the content (thầy, 18/8/2026). Same helper, same 420ms and the
+  // same reasons as Đợt 192's Template/Style pair — see core/press.js.
+  // ⚠️ `openToolPanelFor`, NEVER `openToolPanel`: called with the button that is
+  // already lit, `openToolPanel` CLOSES the popover (that is the "tap the open
+  // button again" gesture), so holding while Options was open would just shut the
+  // panel instead of showing the question. Đợt 192 met this exact trap.
+  // ⚠️ The hold does NOT edit — it only opens the question. Nothing on this
+  // toolbar may leave a running game on a gesture alone.
+  tapOrHold(optionsBtn, {
+    onTap: () => openToolPanelFor(optionsBtn, buildOptionsPanel),
+    onHold: () => { if (canEditNow()) openToolPanelFor(optionsBtn, buildEditConfirmPanel); }
+  });
   // Đợt 192 — tap = Template, hold = Style (and where template switching does
   // not apply the button IS Style, so a plain tap must reach it — see tplLocked).
   if (tplLocked) {
@@ -2339,6 +2352,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       onTap: () => openToolPanelFor(templateBtn, buildTemplatePanel),
       onHold: () => openToolPanelFor(templateBtn, buildStylePanel)
     });
+  }
+
+  // ⭐⭐ Đợt 195 — MODE: tap = the picker, PRESS-AND-HOLD = "Go home?".
+  // ⚠️ Never switches mode on the bare tap (teacher, 12/8/2026): a stray tap used
+  // to drop a running match straight back to single mode with no way back. That
+  // is unchanged — every route out of the picker still ends in a confirm screen
+  // or the Showdown table, and Home has now joined them.
+  // ⚠️ `openToolPanelFor` for the same reason Options and Template use it (see
+  // below): `openToolPanel` called with the button already lit CLOSES the popover.
+  if (modeAvail) {
+    tapOrHold(modeBtn, {
+      onTap: () => openToolPanelFor(modeBtn, buildModePickPanel),
+      onHold: () => openToolPanelFor(modeBtn, buildHomeConfirmPanel)
+    });
+  } else {
+    // No mode to pick — the button IS Home (see where it is built), so the plain
+    // tap must reach the question. A hold here would be a gesture with nothing
+    // behind it.
+    modeBtn.onclick = () => openToolPanelFor(modeBtn, buildHomeConfirmPanel);
   }
 
   /**
@@ -2352,6 +2384,147 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function openToolPanelFor(btn, build) {
     if (activeToolBtn === btn && activeToolBuild !== build) { switchToolPanel(build); return; }
     openToolPanel(btn, build);
+  }
+
+  // ⛔ Đợt 194 — EDIT CONTENT IS SINGLE MODE ONLY (thầy chốt, 18/8/2026:
+  // "chỉ cho edit trong single"). Fight · Showdown · Running · IPA all say no, and
+  // that DELIBERATELY NARROWS what was on offer: only Fight used to hide the Edit
+  // button (in CSS, `.aw-fight-bottom .aw-below-right`), so Showdown, Running and
+  // IPA could all reach it until this đợt. The teacher was asked and chose this.
+  // ⚠️ Asked AT THE MOMENT OF THE HOLD, not once while the button is built — the
+  // gesture must answer for the state the board is in when the finger lifts.
+  // `fight` and `playMode` are fixed for the life of a mount; `showdownPick` is a
+  // `const` too, because turning Showdown ON re-enters startGame() (see its
+  // declaration) — with one documented exception, cancelMyTeam() in
+  // core/showdown-setup.js, which clears the pick WITHOUT restarting the play.
+  // That exception can only ever make this STRICTER (a board still wearing its
+  // Showdown chrome keeps saying no), never looser, which is the safe direction.
+  function canEditNow() { return !session && !fight && !showdownPick && !playMode; }
+
+  /**
+   * Đợt 194 — the small popup the hold opens. NOT a mode confirm: Cancel simply
+   * closes it (there is no picker behind this one to go back to).
+   * ⚠️ A NAMED function declared once, never an arrow built per call:
+   * mountPanelContent() and capPanelHeight() identify panels BY FUNCTION IDENTITY
+   * (`buildContent === buildOptionsPanel`), and a fresh closure each time would
+   * quietly never match — the popup could then inherit `is-opts` and be stretched
+   * to the width of the whole Options grid.
+   */
+  function buildEditConfirmPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Edit content?"));
+    panel.append(el("div", "aw-mode-confirm-text",
+      "Leaves the game and opens the editor for this activity."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); closeToolPanel(true); };
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Edit content");
+    goBtn.type = "button";
+    goBtn.onclick = () => { sound.click(); closeToolPanel(false); openEditor(); };
+    row.append(cancelBtn, goBtn);
+    panel.append(row);
+  }
+
+  /**
+   * Đợt 195 — "Go home?", the popup the MODE button's hold opens. Same shape
+   * and the same classes as the Edit one above and as the four mode confirms, and
+   * a NAMED function for the same reason (panels are identified by function
+   * identity — see buildEditConfirmPanel's note).
+   * The line underneath says what is about to be LEFT, because that differs a
+   * great deal by mode: a match ends, a Showdown team survives, a play mode is
+   * simply left. "Home" on a board with a live match behind it must not read the
+   * same as "Home" on a quiet READY screen.
+   */
+  function buildHomeConfirmPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Go home?"));
+    panel.append(el("div", "aw-mode-confirm-text",
+      fight ? "Ends the match and goes back to your library."
+        : showdownPick ? "Leaves this activity and goes back to your library. Your team is kept."
+          : playMode ? "Leaves this mode and goes back to your library."
+            : "Leaves this activity and goes back to your library."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); closeToolPanel(true); };
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Home");
+    goBtn.type = "button";
+    goBtn.onclick = () => { sound.click(); closeToolPanel(false); goHome(); };
+    row.append(cancelBtn, goBtn);
+    panel.append(row);
+  }
+
+  /**
+   * Đợt 195 — what the old Home button did, plus the one thing it never had to
+   * think about, because CSS kept it out of a match: A MATCH IS TWO ENGINES.
+   * `cleanupAll()` belongs to THIS closure and stops board 0 only — board 1's
+   * 500ms clock would go on ticking behind the library, which is precisely the
+   * ghost-clock bug Đợt 131 was opened for (the teacher heard a "time's up" cue
+   * with two minutes left on the visible clock). The match controller is the only
+   * thing holding both boards' teardowns, so it does the stopping.
+   * ⚠️ The Showdown pick is deliberately NOT dropped: it lives in sessionStorage
+   * and is meant to survive from act to act (that is how the teacher plays a whole
+   * lesson as the same team), and the old Home button never dropped it either.
+   */
+  function goHome() {
+    sound.click();
+    exitAnyFullscreen();
+    if (fight) {
+      fight.ctl.exitToLibrary();
+      awEmit("FIGHT", "off");   // same signal every other way out of a match sends
+      return;
+    }
+    cleanupAll();
+    onExit?.();
+  }
+
+  /**
+   * ⭐⭐ Đợt 194 — THE EDITOR ALWAYS GETS THE ACT THE TEACHER OWNS, and that
+   * act's OWN template. In a plain play `libAct` is already it and this is
+   * byte-for-byte the old Edit button. But two single-mode plays hand this
+   * closure a THROWAWAY `libAct`:
+   *   • "Change template"     — a converted copy (`_converted`, id "conv_…")
+   *   • "Start with mistakes" — a cut-down copy of a few words (id "mist_…")
+   * The old button edited THOSE. core/store.js does not find those ids in the
+   * library, so Save filed a JUNK ACT at the library root and left the real act
+   * untouched — silently, and the teacher's real content never changed. Same
+   * lesson as Đợt 181's `subActOwner()`: ask who OWNS the content, never who is
+   * on screen.
+   * ⚠️ The two lines below are deliberately the SAME resolution Options ▸ Apply
+   * already uses to decide what to persist (search `_mistakesBase` in this file).
+   * Two answers to "which act is the real one" is how they drift apart.
+   * ⚠️ The TEMPLATE must match the ACT, not the screen: inside a converted play
+   * `tpl` is the borrowed game's, and its editor cannot read the origin's content.
+   * ⚠️ `ensureTemplate` before `getTemplate` — the origin's module is normally
+   * loaded (it was played to get here) but `getTemplate` THROWS when it is not.
+   */
+  async function openEditor() {
+    const realAct = activity._mistakes ? (activity._mistakesBase || originAct) : libAct;
+    const target = realAct._converted ? originAct : realAct;
+    // Belt and braces, the same test the Options save path applies: a throwaway
+    // id must never reach saveActivity(). If the resolution above ever fails to
+    // land on a real act, say nothing happened rather than breed a junk act.
+    if (!target || (target.id && /^(conv|mist)_/.test(String(target.id)))) {
+      toast("Nothing to edit here"); return;
+    }
+    let editTpl = null;
+    try { await ensureTemplate(target.type); editTpl = getTemplate(target.type); }
+    catch (e) { console.warn("AWord: could not load the editor's template", e); }
+    if (!editTpl?.edit) { toast("Edit — coming soon"); return; }
+    // Leave the game, open the editor. Save -> store + replay with the new
+    // content; Cancel -> replay the act untouched.
+    exitAnyFullscreen();
+    cleanupAll();
+    // ⚠️ Đợt 145 — the EDITOR gets the LIBRARY act, never the resolved copy: the
+    // copy has the other clue sets stripped out, so saving it would delete three
+    // quarters of a vocabulary act's content without a word of warning.
+    editTpl.edit(root, target, {
+      onSave: async updated => {
+        const { saveActivity } = await import("./store.js");
+        const saved = await saveActivity(updated);
+        startGame(root, saved, { onExit });
+      },
+      onCancel: () => startGame(root, target, { onExit })
+    });
   }
 
   // "Which sub-acts does this act have, and which one is lit up" — the input the
