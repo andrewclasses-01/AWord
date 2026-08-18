@@ -1,5 +1,24 @@
 # GHI CHU RUNNING WORD (RUNNINGW)
 
+> **Đợt 193 dự án (18/8/2026) — ⭐ VÁ LỖI IN CÓ SẴN: 3 TỜ IN RA 6 TRANG (xen kẽ 3 trang trắng).**
+> (Số 192 đã bị một phiên song song dùng — nhảy 193, đúng quy ước dự án.) **KHÔNG đụng core**, chỉ
+> `running-word.css` (@media print) + `rw-print.js`.
+> Lỗi lộ ra khi app **myActivity** có màn XEM TRƯỚC BẢN IN mới — in từ Chrome trước giờ cũng ra 6 trang,
+> chỉ là không ai nhìn thấy trước khi giấy chạy ra.
+> **Gốc lỗi (đo trong `media=print`)**: `.aw-rw-ps-row` đặt `height` cố định nhưng để `line-height:
+> normal` (≈1.58em) ⇒ ô cao **7.94mm** trong hàng **6.42mm**, `align-items:center` nên ô thò ra ~0.76mm
+> hai đầu; ô của **hàng cuối** thò **1.5mm qua đáy tờ** ⇒ Chromium mở thêm một trang gần như trắng sau
+> mỗi tờ. Cộng thêm: `HEADING_MM = 12` là số tròn cho khối tiêu đề thật ra cao **12.09mm** (PART A/B) và
+> **12.75mm** (CHECK) nên tờ giấy vốn đã cao 269.07 / 269.73mm > **269mm** thân trang A4.
+> **Sửa**: (1) `line-height: var(--rw-rowh)` cho hàng in — ⚠️ **KHÔNG** rút thành `line-height: 1`, vì
+> `.aw-rw-ps-c-word` có `overflow:hidden` sẽ **cắt đuôi ký tự phiên âm**; (2) `SAFETY_MM = 2.5` trong
+> `rw-print.js` (hàng thấp đi 0.06mm trên tờ 40 từ — mắt không thấy).
+> **Đo lại bằng chính bộ máy in Chromium (printToPDF)**: 20 / 40 / 50 / 60 từ mỗi đội đều ra **đúng 3
+> trang** (trước: 6/6/6/6); không còn phần tử nào thò khỏi khối trang; ảnh chụp cho thấy PART A đủ 40/40
+> từ trên một trang (`1/3`) và tờ CHECK 2 cột phiên âm còn nguyên đuôi.
+> ⚠️ **BẪY**: sửa xong đo vẫn thấy 6 trang vì **cache trình duyệt** — phải mở **CỔNG MỚI** của
+> `python -m http.server` rồi mới đo (bẫy này dự án đã ghi, cắn lại lần nữa).
+
 > **Đợt 116 dự án (11/8/2026) — số Đợt 115 đã bị một phiên song song khác dùng (LOGO + link giao bài,
 > xem đầu `APP_MASTER.md`) khi phiên này đang làm — nhảy sang 116 để không trùng, đúng quy ước dự án.
 > 7 CẢI TIẾN THEO YÊU CẦU THẦY: KHOÁ START/PRINT TỚI KHI SAVE, GOM

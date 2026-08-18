@@ -8,6 +8,67 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 193 (18/8/2026) — ⭐ LỖI THẬT CÓ SẴN: RUNNING WORD IN 3 TỜ RA **6 TRANG** (xen kẽ 3 trang trắng)
+
+> ⚠️ **Số 192 đã bị một phiên song song khác dùng** (phiên đó đang sửa `core/engine.js` — thứ tự ô
+> RUNNING WORD/TEAM + nhãn WORD/TEAM, lúc phiên này làm thì file đó còn **chưa commit**) ⇒ nhảy sang
+> **193** đúng quy ước dự án. Đợt này **KHÔNG đụng core**, chỉ 2 file của template running-word.
+
+**Lỗi lộ ra từ đâu**: hôm nay app **myActivity** được thêm màn XEM TRƯỚC BẢN IN (bấm IN trong trang
+game thì hiện trang xem trước thay vì nhảy thẳng ra máy in). Vừa xem trước là thấy ngay: 3 tờ Running
+Word ra **6 trang**, cứ một tờ có chữ lại một trang trắng, chân trang tự khai `1/6`. Lỗi này **có sẵn
+từ thiết kế đầu tháng 8**, in từ Chrome cũng y hệt — trước giờ không ai thấy vì không có bước xem trước.
+
+### Chẩn đoán (đo, không đoán)
+Đo trong `media=print` bằng Electron + CDP `Emulation.setEmulatedMedia`, act mẫu 40 từ/đội:
+
+| Thứ | Số đo | Nhận xét |
+|---|---|---|
+| Thân trang A4 (297 − lề 15 − 13) | **269mm** | chỗ tối đa được phép cao |
+| Khối `.aw-rw-ps-page` | 269.06mm | vừa khít… trên giấy tờ |
+| **Nội dung thật bên trong** | **270.67mm** | **thừa 1.6mm ⇒ Chromium mở thêm trang** |
+| Khối tiêu đề (PART A/B) | 10.59 + 1.5 lề = **12.09mm** | ngân sách `HEADING_MM` chỉ ghi 12 |
+| Khối tiêu đề (CHECK) | 11.25 + 1.5 = **12.75mm** | vượt ngân sách 0.75mm |
+
+Truy tiếp "ai thò ra ngoài" bằng cách so đáy mọi phần tử với đáy khối trang: thủ phạm là **các ô
+trong HÀNG CUỐI** — `.aw-rw-ps-c-no` / `.aw-rw-ps-c-word` cao **7.94mm** trong khi hàng chỉ cao
+**6.42mm**. Vì `.aw-rw-ps-row` đặt `height` cố định nhưng **`line-height` vẫn là `normal`** (font này
+≈ **1.58em**), mà lại `align-items: center` ⇒ **mọi** ô đều thò ra ~0.76mm trên và dưới. Các hàng giữa
+thò vào nhau nên không ai thấy; riêng hàng cuối thò **1.5mm qua đáy tờ giấy** — và 1.5mm tràn là đủ để
+Chromium đẻ một trang mới.
+
+### Cách sửa (2 chỗ, đều nằm trong template)
+1. **`running-word.css` @media print** — `.aw-rw-ps-row { line-height: var(--rw-rowh, 5mm); }`: hộp
+   dòng cao đúng bằng hàng ⇒ ô cao đúng bằng hàng ⇒ không còn gì thò ra.
+   ⚠️ **KHÔNG được rút gọn thành `line-height: 1`**: `.aw-rw-ps-c-word` có `overflow: hidden` (để cắt
+   chữ dài bằng dấu …), hộp dòng nhỏ hơn chữ là **cắt mất đuôi ký tự phiên âm** (/ʃ/, /ʒ/, /ŋ/).
+2. **`rw-print.js`** — thêm `SAFETY_MM = 2.5`, `ROWS_MM = 269 − HEADING_MM − SAFETY_MM`. Ngân sách
+   tiêu đề 12mm là số tròn cho một khối thật ra cao 12.09 / 12.75mm, nên phép cũ "rows = 269 − 12" tự
+   nó đã đẩy tờ giấy lên 269.07 / 269.73mm — **quá 269mm dù chỉ một sợi tóc là Chromium sang trang**.
+   Giá phải trả: hàng thấp đi **0.06mm** trên tờ 40 từ (mắt không thấy).
+
+### Kiểm chứng (đếm SỐ TRANG của PDF do chính bộ máy in Chromium sinh ra)
+| Số từ mỗi đội | Trước sửa | Sau sửa |
+|---|---|---|
+| 20 | 6 trang | **3** ✅ |
+| 40 | 6 trang | **3** ✅ |
+| 50 | 6 trang | **3** ✅ |
+| 60 | 6 trang | **3** ✅ |
+
+- Đo lại "ai thò ra ngoài": **không còn phần tử nào** vượt đáy khối trang (đáy sâu nhất = đúng đáy khối).
+- Chiều cao nội dung sau sửa: 267.2–268.8mm ⇒ còn dư **0.2–1.8mm** an toàn ở mọi cỡ danh sách.
+- **NHÌN thật** (ảnh chụp cửa sổ xem trước của myActivity): tờ PART A đủ **40/40 từ** trên MỘT trang,
+  chân trang `1/3`; tờ **CHECK 2 cột** đủ 40+40 từ, phiên âm `/ˈhaɪdʒiːn/` `/ˌsɪvəlaɪˈzeɪʃn̩/` hiện
+  **trọn vẹn, không bị cắt đuôi** — đúng chỗ mà `line-height: 1` sẽ làm hỏng.
+
+### ⚠️ BẪY ĐÃ CẮN LẠI TRONG CHÍNH ĐỢT NÀY
+Sửa xong đo lại thấy **y nguyên 6 trang** ⇒ suýt kết luận "sửa không ăn". Thật ra là **cache của
+Chromium**: trang test được phục vụ qua `python -m http.server` ở cổng cũ nên module JS + CSS vẫn là
+bản cũ. **Mở CỔNG MỚI rồi đo lại** là ra ngay 3 trang. Luật: đo lại sau khi sửa file tĩnh thì đổi cổng,
+đừng tin bản đang mở.
+
+---
+
 ## Đợt 191 (18/8/2026) — ⭐⭐ TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN (nhớ HS đã xoá · giới tính · animation xáo)
 ⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `classes.js` · `showdown-setup.js`) **+ `main.js`**.
 ✅ **THẦY DUYỆT → COMMIT `52173f4` (chung với Đợt 190) + PUSH + LIVE.** Pages build đúng commit

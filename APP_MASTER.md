@@ -2493,6 +2493,13 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau Đợt 189 — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ⭐ **Đợt 193 (18/8/2026) — đã COMMIT `5ef9d76`**: vá lỗi in CÓ SẴN của Running Word (3 tờ ra 6 trang,
+> xen kẽ 3 trang trắng) — `templates/running-word/running-word.css` + `rw-print.js`, **không đụng core**.
+> Gốc: hàng in có `height` cố định mà `line-height: normal` ⇒ ô cao hơn hàng, ô hàng cuối thò 1.5mm qua
+> đáy tờ; kèm ngân sách tiêu đề 12mm nhỏ hơn khối thật (12.09 / 12.75mm). Chi tiết + số đo:
+> `GHI CHU DU AN.md` Đợt 193. ⚠️ Số **192** thuộc một phiên song song khác (sửa `core/engine.js`:
+> thứ tự + nhãn ô RUNNING WORD/TEAM) — lúc Đợt 193 commit thì phiên đó **chưa commit**.
+
 > Mục này là **bản đồ để bắt tay vào việc trong 10 phút**. Mục 0b bên dưới là bàn giao rất cũ
 > (31/7) — trạng thái trong đó đã sai, chỉ giữ vì vài bài học kỹ thuật.
 
