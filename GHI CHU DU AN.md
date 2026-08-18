@@ -11,6 +11,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 187 (18/8/2026) — ⭐⭐⭐ TIME DELAY + THANH CHỜ TRONG FIGHT · TIME COST TRỪ MỖI N GIÂY · BONUS x LÊN 20x · 2 LỖI FIGHT (Open the box mất đồng hồ · Crossword trắng cả 2 bên)
 ⭐ CÓ SỬA CORE (`core/fight.js` · `core/engine.js` · `core/options-panel.js` · `core/app.css`) + 2 file game
 (`anagram.js` · `crossword.js`).
+✅ **COMMIT `8cfc209` + PUSH + LIVE** — Pages build **đúng commit** (`status: built`, sha `8cfc209…`),
+đối chiếu **6/6 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`sed 's/$//'` cả hai phía vì
+Windows checkout ra CRLF còn Pages phục vụ LF).
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/fight-bench.html` (scratch gitignored ⇒ phiên/máy sau phải tạo lại) —
 **bấm nút thật** bằng `PointerEvent` trên trận thật, 6/6 việc đạt, **0 lỗi console** trên 6 template Fight
 đã thử, và có **ĐỐI CHỨNG NGƯỢC đo trên chính code cũ** cho việc Time cost.
