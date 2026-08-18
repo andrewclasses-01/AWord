@@ -387,7 +387,12 @@ bảng **nhảy bố cục ngay dưới ngón tay** đang kéo một thanh khác
   thầm xoá con số thầy đã đặt**. Cái quyết định thật phải là phép kiểm lúc CHẠY (`speedBonusApplies()`),
   còn giá trị thì giữ nguyên để sống lại y như cũ khi ô mở lại.
 
-⭐ **`.aw-optc-stack` — hai ô phải nằm CÙNG MỘT CỘT.** Lưới Options chảy theo HÀNG nên 2 ô nối nhau luôn
+⭐ **`.aw-optc-stack` — hai ô phải nằm CÙNG MỘT CỘT.** ⚠️⚠️ **PHẢI KÈM `grid-row: span 2`** (lỗi
+thật, thầy bắt trên ảnh chụp ở Đợt 189): khối này là MỘT ô lưới nhưng cao bằng HAI, nên thiếu span thì nó
+kéo cao cả hàng ⇒ ô bên cạnh hở một mảng chết (đo: **62px** dưới "Round rule") và ô kế tiếp bị đẩy xuống
+hàng sau. ⛔ **Đừng chữa bằng `grid-auto-flow: dense`** — nó được phép đảo thứ tự ô ở bảng Options của cả
+17 template. ⭐ **Bài học đo**: thêm một ô cao bất thường vào lưới thì phải quét lỗ hổng của **CẢ HAI cột**,
+không chỉ kiểm cái ô mình vừa thêm. Lưới Options chảy theo HÀNG nên 2 ô nối nhau luôn
 nằm cạnh nhau. Khối này chiếm đúng 1 ô lưới và xếp con chồng dọc (dùng cho Time delay + Speed bonus, vì ô
 trên quyết định ô dưới có tác dụng hay không). ⚠️ Dùng `row-gap`: con của nó **không còn là con trực tiếp**
 của `.aw-opt-grid` nên luật `> * { margin-bottom }` không với tới.

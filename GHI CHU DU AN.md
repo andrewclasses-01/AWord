@@ -8,6 +8,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 189 (18/8/2026) — 🐞 VÁ LỖI THIẾT KẾ CỦA CHÍNH ĐỢT 188: KHỐI XẾP CHỒNG LÀM "TIME COST" TỤT XUỐNG, HỞ 62px GIỮA BẢNG
+⭐ CÓ SỬA CORE (`core/app.css`, **đúng 1 thuộc tính**). Không đụng file nào khác.
+🟢 ĐÃ ĐO trên `scratch/fight-bench.html` ở **3 cấu hình bảng khác nhau** (Anagram+Fight · Quiz+Fight ·
+Open the box+Fight), quét **mọi** lỗ hổng dọc >20px trong cả hai cột.
+
+### 1. Thầy báo — bằng một ảnh chụp bảng Options
+> "Nguyên do tại sao bạn lại để dòng TIME COST lệch như kia? Hãy xem đây là lỗi thiết kế hay tính năng?"
+
+**Là LỖI THIẾT KẾ, không phải tính năng** — và là lỗi do chính Đợt 188 đẻ ra.
+
+### 2. Nguyên nhân
+`.aw-optc-stack` (Đợt 188, để Time delay + Speed bonus nằm chung một cột) là **MỘT ô lưới nhưng cao bằng
+HAI ô**. Lưới Options xếp theo HÀNG, nên hàng chứa nó bị kéo cao gấp đôi:
+- ô bên cạnh (**Round rule**) neo ở đỉnh hàng ⇒ **hở một mảng chết bên dưới**;
+- ô kế tiếp trong bảng (**Time cost**) phải đợi sang hàng SAU khối xếp chồng ⇒ tụt hẳn xuống.
+
+Đo trên Anagram + Fight: **62px trống** dưới "Round rule", và bảng dài thừa 54px.
+
+### 3. Vá — `grid-row: span 2` trên `.aw-optc-stack`
+Cho khối chiếm đúng **2 hàng** thay vì 1. Thuật toán xếp tự động khi đó để **trống ô cạnh nửa DƯỚI** của
+khối, và ô kế tiếp rơi thẳng vào đó.
+⚠️ **KHÔNG dùng `grid-auto-flow: dense`** dù nó cũng lấp được lỗ: `dense` được phép **đảo thứ tự** các ô
+nhỏ vào những lỗ trước đó, mà lưới này dùng chung cho bảng Options của **cả 17 template** — một luật lấp
+lỗ ở đây có thể lặng lẽ xáo lại thứ tự điều khiển ở những bảng chẳng liên quan gì tới Fight. Ở đây không
+cần: con trỏ xếp tự động vốn đã đi qua ô đó rồi.
+
+| | trước vá | sau vá |
+|---|---|---|
+| Khoảng hở dưới "Round rule" | **62px** 🔴 | **8px** ✔ (đúng khoảng cách hàng thường) |
+| "Time cost" nằm ở đâu | hàng dưới hẳn khối xếp chồng (y=270) | **ngay dưới "Round rule"** (y=216) |
+| Chiều cao cả lưới | 397px | **343px** |
+| Lỗ hổng >20px ở Quiz+Fight | có | **0** |
+| Lỗ hổng >20px ở Open the box+Fight (không có khối xếp chồng) | 0 | **0** (không hồi quy) |
+
+### 4. Bài học — ghi để không lặp
+**Đo "2 ô đã cùng cột chưa" KHÔNG phải là đo bố cục.** Đợt 188 kiểm đúng cái được yêu cầu (hai ô cùng
+`x`, ô dưới nằm dưới) và bỏ qua thứ mà việc đó **gây ra cho phần còn lại của bảng** — trong khi rủi ro
+này đã được nêu ra bằng lời ngay lúc lập kế hoạch ("ô hàng xóm sẽ ngắn hơn nên có một khoảng trống") rồi
+không ai đi kiểm lại. Thêm một ô cao bất thường vào lưới thì phải **quét lỗ hổng của CẢ hai cột**, không
+chỉ nhìn ô mình vừa thêm.
+
+---
+
 ## Đợt 188 (18/8/2026) — ⭐⭐ THANH TRƯỢT ĐỔI CÁCH BẤM CHO TOÀN APP (chạm = 1 nấc) · Ô KHOÁ THÌ MẤT MÀU CHỨ KHÔNG ẨN · TIME DELAY + SPEED BONUS CÙNG MỘT CỘT · BỎ HẲN FULLSCREEN Ở FIGHT VÀ SHOWDOWN
 ⭐ CÓ SỬA CORE (`core/options-panel.js` · `core/fight.js` · `core/engine.js` · `core/app.css`). Không đụng
 template nào.

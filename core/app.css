@@ -1172,7 +1172,21 @@ body {
    ⚠️ `row-gap`, not a margin on the children: the children are no longer direct
    children of `.aw-opt-grid`, so the `> * { margin-bottom: 9px }` rule above
    stops reaching them — this keeps the spacing identical either way. */
-.aw-optc-stack { display: grid; row-gap: 9px; align-content: start; min-width: 0; }
+.aw-optc-stack {
+  display: grid; row-gap: 9px; align-content: start; min-width: 0;
+  /* ⚠️⚠️ `grid-row: span 2` IS THE WHOLE POINT, NOT A TIDY-UP (bug the teacher
+     spotted on a screenshot, 18/8/2026 — "TIME COST lệch"). This wrapper is ONE
+     grid item that stands TWO cells tall, so without the span it makes its own row
+     twice as tall as the cell beside it: that neighbour sits at the top with dead
+     space under it, and the next cell in the panel has to wait for the row AFTER
+     the stack. Measured on Anagram + Fight: 62px of empty panel under "Round rule",
+     with "Time cost" stranded below the stack instead of beside it.
+     Spanning two rows makes auto-placement leave the cell to the stack's LOWER
+     half free, and the next item drops straight into it — no `dense` needed (the
+     placement cursor is already past that point), which matters because `dense`
+     would be free to re-order unrelated cells in every other template's panel. */
+  grid-row: span 2;
+}
 /* ⭐ Đợt 188 — A CONTROL THAT CANNOT BE USED RIGHT NOW IS GREYED, NEVER HIDDEN
    (teacher, 18/8/2026: "chỉ mất màu (thể hiện ko chỉnh được) chứ không ẩn").
    Hiding it makes the panel jump under the teacher's finger and leaves no sign
