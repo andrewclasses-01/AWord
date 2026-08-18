@@ -8,6 +8,152 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 187 (18/8/2026) — ⭐⭐⭐ TIME DELAY + THANH CHỜ TRONG FIGHT · TIME COST TRỪ MỖI N GIÂY · BONUS x LÊN 20x · 2 LỖI FIGHT (Open the box mất đồng hồ · Crossword trắng cả 2 bên)
+⭐ CÓ SỬA CORE (`core/fight.js` · `core/engine.js` · `core/options-panel.js` · `core/app.css`) + 2 file game
+(`anagram.js` · `crossword.js`).
+🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/fight-bench.html` (scratch gitignored ⇒ phiên/máy sau phải tạo lại) —
+**bấm nút thật** bằng `PointerEvent` trên trận thật, 6/6 việc đạt, **0 lỗi console** trên 6 template Fight
+đã thử, và có **ĐỐI CHỨNG NGƯỢC đo trên chính code cũ** cho việc Time cost.
+
+### 1. Thầy giao (18/8/2026)
+> "Trong options ở chế độ Fight của các template: • Thêm 1 thanh kéo là TIME DELAY ở cùng khu vực với speed
+> bonus. Thanh này kéo từ 0,1s đến 3s (nấc 0,1s) và ngay sau 3s là đến nấc unlimited (hình số 8 nằm ngang).
+> Khi là 0,1s thì thanh speed bonus ẩn và ko thưởng đội nhanh hơn (vì đội nhanh hơn có điểm, đội chậm hơn bị
+> khóa rồi, 0,1s chênh coi như bằng nhau), kéo từ 0,2s trở lên thì thanh speed bonus mới hiện ở dưới, kéo từ
+> 1 đến 100 điểm (nấc 1 điểm) • Bonus x tăng lên 20x • Time cost đổi thuật toán: Nếu time cost là 3s thì cứ
+> mỗi 3s không thao tác thì mới trừ điểm 1 lần chứ không riêng 3s đầu. Ví dụ 9s không thao tác thì trừ 3 lần điểm"
+
+Ba chỗ luật còn hở, thầy chốt thêm:
+- **Hoà trong cửa sổ**: chỉ **đội xong TRƯỚC** ăn Speed bonus (cả hai vẫn ăn điểm game).
+- **Nấc ∞**: "chờ tối đa 5s và hiện thanh thời gian (không cần số). Nếu không có nút next-back (trống khu đó)
+  thì thanh này kéo dài ở hàng dưới, nếu có nút next-back, thì thanh ngắn và dài từ nút menu (hoặc nút bàn
+  phím) tới gần nút back. Hết thanh time 5s đó thì khóa trả lời (và next nếu auto next)". Và thanh chờ hiện
+  **ở MỌI mức từ 0,2s trở lên**, chạy đúng bằng độ dài TIME DELAY.
+- **3 game lượt chọn ô**: "Open the box không cần… find the match có cần… crossword không cần" — kèm 2 lỗi
+  thầy nhìn thấy (mục 5, 6).
+
+### 2. TIME DELAY — hằng số `TIE_WINDOW_MS` cũ nay là một thanh kéo
+Không đẻ khái niệm mới: đây chính là **cửa sổ hoà 0,1 giây** thầy chốt ở Đợt 133, tới nay vẫn chốt cứng
+trong `core/fight.js`. Nay là option `fightTieWindow` (đơn vị GIÂY, **0 = ∞** theo đúng quy ước
+"0 = unlimited" mà Lives / Find the match đã dùng).
+
+| Mức | Luật vòng | Speed bonus | Thanh chờ |
+|---|---|---|---|
+| **0,1s** (mặc định) | y hệt hôm nay: đúng trước ăn điểm, đội kia bị khoá | **ẩn hẳn + ép về 0** | không |
+| **0,2s – 3,0s** | đội sau đúng trong cửa sổ **cũng ăn điểm game** | hiện, thang **1–100** | chạy đúng độ dài đó |
+| **∞** (nấc sau 3,0s) | chờ **tối đa 5s** rồi **khoá** đội chưa trả lời | hiện, thang 1–100 | chạy 5s |
+
+- **Mặc định 0,1s ⇒ mọi act cũ chạy y hệt hôm nay**, không act nào tự đổi hành vi. Đo được: ở mặc định thanh
+  chờ **không bật lần nào** (8/8 mẫu `is-on:false`) và đội sau **không** ăn bonus.
+- **Chỉ đội xong TRƯỚC ăn Speed bonus** — `finalizeTie()` trước nay phát cho **CẢ HAI**. Vô hại khi cửa sổ cố
+  định 0,1s (không ai "nhanh hơn" trong một phần mười giây — chính vì thế thầy cho ẩn thanh bonus ở mức đó),
+  nhưng cửa sổ 3 giây mà phát cho cả hai thì **thanh bonus không thưởng gì cả**. Đo thật (delay 1,5s, bonus
+  +7, hai bàn cùng đúng cách nhau 0,3s): **8 / 1** — cả hai ăn 1 điểm game, chỉ bàn trước ăn +7.
+- **Ở nấc ∞, 2 nút cũ bị ẩn**: "Round rule" và "Slower team keeps points". Luật ∞ của thầy kết thúc bằng
+  "khóa trả lời" nên `lockLoser()` bị ép `true`, mà đội đã khoá thì không còn đường về đích muộn ⇒ "slower
+  team keeps points" **không còn gì để quyết**. Để nguyên là đúng cái **nút chết** mà LUẬT OPT-IN Đợt 143
+  sinh ra để chặn. Đo: kéo tới ∞ thì cả 2 `display:none`, kéo về thì hiện lại.
+- **3 game "lượt chọn ô" bị NIÊM PHONG khỏi TIME DELAY** (`pickMode` ghim `tieMs` về 100ms, panel không dựng
+  ô này, Speed bonus giữ nguyên nấc "Off" ở 0). Nếu không, một act mang delay 3s từ hồi còn là Anagram rồi
+  đổi sang Open the box giữa trận sẽ **âm thầm mang delay đó vào luật thầy đã chốt riêng ở Đợt 183**.
+  Find the match **không** thuộc nhóm này (nó đi vòng THƯỜNG, không khai `fightPick`) nên nhận TIME DELAY
+  đúng như thầy muốn — đo thật: **10 / 1** với bonus +9.
+- Thang Speed bonus 0–20 thành **1–100**, và **không còn nấc "Off"** (tắt thưởng nay là kéo TIME DELAY về
+  0,1s). Act cũ lưu `0` không bị ghi đè lúc nạp; chỉ khi bonus **trở nên với tới được** panel mới sửa nó
+  thành **5**, vì thang mới không có giá trị hợp lệ nào để hiển thị số 0.
+
+### 3. THANH CHỜ — engine vẽ, fight.js bấm giờ
+`core/fight.js` giữ ĐỒNG HỒ (đó là cửa sổ của trọng tài), `core/engine.js` giữ PIXEL (chỉ bàn mới biết nút
+Menu / bàn phím / ‹ › của nó nằm đâu). Nối bằng `ctl.registerWaitBar(side, fn)`, cùng khuôn `registerCleanup`.
+Hiện trên **CẢ HAI bàn**: bàn còn chơi cần biết còn bao lâu, bàn vừa xong cần biết vì sao vòng chưa lật.
+- **"TRỐNG KHU ĐÓ" LÀ ĐO CẢ CHỖ NGỒI, KHÔNG PHẢI CHỈ ĐO NÚT ‹ ›.** Bản đầu đo `navPrev.offsetWidth` nên Find
+  the match ra thanh **788px chạy XUYÊN QUA chữ "Page 1 / 2"** (game này ẩn 2 mũi tên nhưng **giữ nhãn**;
+  Crossword y hệt). Vá: đo cả `navWrap`. Đo lại: **316px, dừng trước nhãn 13px** — đúng chữ thầy và đúng
+  luật nhà "thứ gì chiếm chỗ trên màn thì phải NHÌN".
+- Đo vị trí thật (hàng dưới rộng 889px): **Quiz** (có ‹ ›) thanh **259px**, bắt đầu sau nút Menu 13px, kết
+  thúc trước ‹ 13px · **Type the answer** `leftGroup` rộng 78px (Menu + nút bàn phím) nên thanh bắt đầu sau
+  **nút bàn phím**, đúng lời thầy · **Find the match** (không ‹ ›) thanh **316px**.
+- Thanh là **con thứ TƯ** của `.aw-bottombar` nhưng `position:absolute` nên không chiếm track nào; 3 luật
+  `:nth-child(1/2/3)` giữ nav đúng tâm vẫn trỏ đúng 3 phần tử cũ (cùng lý do `leftGroup` phải bọc ở Đợt 92).
+- Đo bằng `offset*`, không `getBoundingClientRect`: offsets bỏ qua transform nên thanh đặt đúng chỗ ngay
+  khung hình đầu kể cả lúc bàn phím đang trượt (luật `positionActive` của Crossword đã theo).
+- `.aw-bottombar` nay `position:relative`. An toàn: `position:relative` + `z-index:auto` **KHÔNG** đẻ stacking
+  context nên không lặp lại bẫy Đợt 130.
+
+### 4. TIME COST — ô "Idle" nay là CẢ CHU KỲ, không phải chỉ ân huệ đầu
+`core/engine.js` `idleTick()`: `idleMs >= grace + idleCharges*1000` đổi thành `idleMs >= grace*(idleCharges+1)`.
+Đổi tên `chargeIdleSecond` thành `chargeIdlePeriod` (tên cũ nay nói sai chuyện). Chữ dưới thanh đổi theo ô
+Idle: "per idle second" (1s) / "per idle 3s"…, cập nhật ngay khi bấm ô Idle.
+**ĐỐI CHỨNG NGƯỢC** (trả đúng 1 dòng đó về code cũ rồi chạy lại y hệt; timeCost=10, Idle=3s, ngồi im):
+
+| Ngồi im | code CŨ | code VÁ |
+|---|---|---|
+| 3s | −10 | −10 |
+| 6s | −40 🔴 | **−20** ✔ |
+| **9s** | **−70** 🔴 | **−30** ✔ (đúng ví dụ của thầy: 3 lần) |
+| 12s | −100 | −40 |
+
+**Tiền phạt nay nhẹ đi N lần ở mức Idle N** (cùng số điểm, thưa hơn N lần) — đúng ý thầy, và là lý do chữ
+dưới thanh phải nói rõ chu kỳ.
+**Bẫy đo**: `flyTimeCost` đếm số bằng `requestAnimationFrame` nên **pane test bị ẩn thì ô điểm KHÔNG vẽ lại**,
+nhìn như "không trừ gì cả". Phải đo ở **Fight**, vì số đội trên dải được `paintScore()` ghi thẳng
+`textContent`, không qua rAF.
+
+### 5. Open the box: mất đồng hồ từng ô trong trận (thầy báo)
+`.aw-fight-board .aw-topbar{visibility:hidden;height:0}` của Đợt 124 giấu **cả** đồng hồ RIÊNG của template.
+Mọi game khai `inlineTimerBar` vẽ đồng hồ + thanh vào `.aw-topbar-mid`, và đó là thứ DUY NHẤT trên hàng đó
+mà trận vẫn cần: dải trên mang điểm TRẬN và đồng hồ TRẬN, **không chỗ nào mang đồng hồ từng HỘP**.
+Vá ở `core/app.css`: trả lại chiều cao cho `.aw-topbar.has-inline`, rồi giấu lại **từng anh em một** bằng
+`visibility` (ô điểm **phải** ở lại DOM — `ui.setScore` ghi vào nó, Anagram còn đọc ngược lại), và **co track
+lưới của chúng về 0** kẻo ô điểm tàng hình vẫn chiếm khoảng 10% hàng và đẩy thanh lệch tâm trước mặt lớp.
+Đo sau khi vá: topbar cao 36px, `.aw-topbar-mid` **rộng trọn 889px**, `elementFromPoint` giữa thanh trả về
+`aw-otb-timerbar-fill` (**thật sự nằm trên cùng**, không bị che), ô điểm còn trong DOM và `visibility:hidden`.
+Ăn sẵn cho Balloon pop · Gameshow · Whack-a-mole ngày chúng vào Fight.
+
+### 6. Crossword: "phủ màu trắng lên trên cả màn hình 2 bên" (thầy báo) — tìm ra bằng đo
+`applyPickTurn()` làm mờ 50% bàn nào **không tới lượt chọn VÀ đang ở bảng chọn** (`!fightMyTurn && curWord<0`)
+nhưng nó **chỉ chạy từ `setPickTurn()`**. Mà `boardPicked()` của `core/fight.js` báo "giờ không ai đang chọn"
+cho **CẢ HAI** bàn **TRƯỚC KHI** mở ô, nên cả hai đều đúng điều kiện; rồi ô mở ra mà **không gì chạy lại**.
+Kết quả: cả 2 bàn nằm ở `opacity:.5` **suốt vòng đấu**, mà nền template này TRẮNG nên nhìn đúng như một lớp
+màng trắng phủ cả trận.
+Vá: gọi `applyPickTurn()` ở **đầu `activate()`** — `curWord` luôn được gán ngay trước mọi lần gọi `activate()`
+nên đó là chỗ DUY NHẤT thấy được mọi lần nó đổi.
+
+| | code CŨ | code VÁ |
+|---|---|---|
+| bảng chọn (bàn 1 chờ) | 1 / .5 ✔ | 1 / .5 ✔ |
+| **đang mở một từ** | **.5 / .5** 🔴 | **1 / 1** ✔ |
+
+**BẪY ĐO SUÝT LÀM KẾT LUẬN SAI**: `getComputedStyle().opacity` trả về **1** ở CẢ hai trạng thái, kể cả trạng
+thái đúng. Vì `.aw-cw-wrap` có transition trên `opacity`, mà **pane test bị ẩn thì transition đứng im ở giá
+trị ĐẦU** (bẫy đã ghi ở mục "Bẫy kỹ thuật lặp lại"). `getAnimations()` tố cáo: một `CSSTransition`
+`playState:"running"` mãi không xong. Phải chèn `* { transition:none !important }` rồi mới đo.
+
+### 7. Đã tự test
+| Phép | Kết quả |
+|---|---|
+| Options ở 6 mức delay (0,1 · 0,2 · 1,5 · 3,0 · ∞ · về 0,1) | **6/6** đúng ẩn/hiện + đúng chip ("0.1s"…"∞") |
+| Hoà trong cửa sổ 1,5s, bonus +7 (Quiz) | **8 / 1** — chỉ đội trước ăn bonus |
+| Find the match, cửa sổ 2s, bonus +9 | **10 / 1** |
+| ∞: mở suốt 0,2s · 2,5s · 4,5s rồi tới mốc 5s | thanh tắt, **đội kia bị KHOÁ**, bonus trao (1 thành 5) |
+| Mặc định 0,1s | thanh chờ **không bật lần nào**, không bonus — act cũ y hệt |
+| Vị trí thanh (Quiz · Type the answer · Find the match) | 259px / sau nút bàn phím / 316px, **không đè gì** |
+| Time cost Idle=3s | 3,0s · 6,0s · 9,0s · 12,1s — mỗi 3 giây một lần |
+| Bonus x qua panel thật (Anagram) | slider **1..20**, mặc định vẫn **2x** |
+| Open the box trong trận | thanh giờ trên **hiện lại**, nằm trên cùng, rộng trọn hàng |
+| Crossword trong trận | 1/.5 ở bảng chọn · **1/1** khi mở từ · 2 bàn vẫn cùng một từ |
+| Boot 6 template Fight (anagram·quiz·type·true_false·open_the_box·crossword) | 2 bàn, playarea có nội dung, **0 lỗi console** |
+| `node --check` 5 file .js | sạch |
+
+### 8. VIỆC ĐANG CHỜ
+1. **Thầy nhìn bằng mắt trên TOMKO**: thanh chờ có dễ thấy từ xa không (cao 1,2cqw, màu cam), và ở Find the
+   match thanh dừng trước chữ "Page 1 / 2" — thầy muốn vậy, hay muốn nó dài hết hàng và đẩy nhãn đi chỗ khác.
+2. **Cân bằng số**: Speed bonus nay tới 100 điểm và Bonus x tới 20x — thầy chỉnh khi dạy thật rồi bảo em đổi
+   mặc định nếu cần. TIME DELAY bao nhiêu là vừa cho lớp cũng chỉ thầy biết.
+3. Time cost nhẹ đi N lần — thầy thử xem mức điểm cũ có còn hợp không.
+
+---
+
 ## Đợt 183–186 (17/8/2026) — ⭐⭐⭐ KIỂU VÒNG "LƯỢT CHỌN Ô" TRONG CORE + FIGHT & SHOWDOWN CHO OPEN THE BOX · FIND THE MATCH · CROSSWORD
 ⭐ CÓ SỬA CORE (`core/fight.js`) + 3 file game + 3 file CSS.
 🟢 ĐÃ TỰ TEST qua **3 lưới MỚI** — `scratch/otb-fight-test.html` **24/24** · `scratch/ftm-fight-test.html`

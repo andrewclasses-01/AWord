@@ -355,6 +355,51 @@ API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `b
 ⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
 chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
 
+⭐⭐ **TIME DELAY — CỬA SỔ HOÀ NAY LÀ MỘT THANH KÉO (Đợt 187, 18/8/2026).** `TIE_WINDOW_MS = 100` của
+Đợt 133 nay chỉ còn là MẶC ĐỊNH; option thật là **`fightTieWindow`**, đơn vị GIÂY, **`0` = ∞** (đúng quy
+ước "0 = unlimited" của Lives/Find the match). Thanh kéo chạy 0.1 → 3.1 nhưng **3.1 KHÔNG phải 3,1 giây** —
+đó là nấc ∞, lưu xuống thành 0 (thầy chốt: "ngay sau 3s là đến nấc unlimited").
+| `fightTieWindow` | luật vòng | Speed bonus | thanh chờ |
+|---|---|---|---|
+| `0.1` (mặc định) | y hệt trước Đợt 187 | **ẩn + ép 0** | không |
+| `0.2` … `3.0` | đội sau đúng trong cửa sổ **cũng ăn điểm game** | hiện, **1–100** | chạy đúng độ dài đó |
+| `0` (∞) | chờ **tối đa 5s** (`TIE_UNLIMITED_MS`) rồi **khoá** | hiện, 1–100 | chạy 5s |
+- ⭐ **Chỉ đội xong TRƯỚC ăn Speed bonus** — `finalizeTie(sideA, sideB)` nay chỉ trao cho `sideA`. Phát cho
+  cả hai (bản cũ) làm chính cái thanh bonus ấy **không thưởng gì cả** khi cửa sổ dài ra.
+- ⭐ **Ở ∞, `lockLoser()` và `lateScores()` bị ÉP** (lock / không giữ điểm) và panel **ẩn** 2 nút
+  "Round rule" + "Slower team keeps points" — ở mức đó chúng không bao giờ chạy tới, để lại là **nút chết**
+  (luật opt-in Đợt 143).
+- ⛔ **3 game `fightPick` bị NIÊM PHONG khỏi TIME DELAY** (`tieMs` ghim về `TIE_WINDOW_MS`, panel không dựng
+  ô đó, Speed bonus giữ nấc "Off" ở 0) — thầy chốt "open the box không cần… crossword không cần". Find the
+  match **có** nhận, vì nó đi vòng THƯỜNG (không khai `fightPick`), nên `!pickMode` là phép thử duy nhất.
+- Thang Speed bonus 0–20 → **1–100** và **không còn "Off"**. Act cũ lưu `0` **không** bị ghi đè lúc nạp; chỉ
+  khi bonus với tới được thì panel mới sửa thành `DEFAULT_SPEED_BONUS` (5).
+
+⭐ **THANH CHỜ — API mới `ctl.registerWaitBar(side, fn)`** (cùng khuôn `registerCleanup`). `core/fight.js`
+giữ ĐỒNG HỒ, `core/engine.js` giữ PIXEL: chỉ bàn mới biết nút Menu / bàn phím / ‹ › của nó nằm đâu.
+`fn(ms)` chạy một thanh cạn dần trong `ms`; `fn(0)` tắt. Hiện trên **CẢ HAI** bàn, và **chỉ** ở vòng thường
+với cửa sổ ≥ `WAIT_BAR_MIN_MS` (200ms).
+- ⚠️⚠️ **"TRỐNG KHU ĐÓ" = ĐO CẢ CHỖ NGỒI `navWrap`, KHÔNG PHẢI CHỈ ĐO NÚT ‹ ›.** Find the match và Crossword
+  **ẩn 2 mũi tên nhưng GIỮ nhãn** ("Page 1 / 2") — đo mỗi `navPrev.offsetWidth` cho ra thanh 788px **vẽ
+  xuyên qua chữ đó**. Đo cả wrapper: 316px, dừng trước nhãn 13px.
+- ⚠️ Thanh là con thứ TƯ của `.aw-bottombar` nhưng `position:absolute` ⇒ không chiếm track, 3 luật
+  `:nth-child(1/2/3)` giữ nav đúng tâm vẫn trỏ đúng 3 phần tử cũ. `.aw-bottombar` nay `position:relative`
+  (an toàn: `z-index:auto` **không** đẻ stacking context — không lặp bẫy Đợt 130).
+- ⚠️ Đo bằng `offset*`, KHÔNG `getBoundingClientRect` — offsets bỏ qua transform nên thanh đúng chỗ ngay
+  khung hình đầu kể cả khi bàn phím đang trượt.
+
+⭐ **`inlineTimerBar` TRONG TRẬN — ĐỒNG HỒ RIÊNG CỦA TEMPLATE PHẢI HIỆN (Đợt 187).** Luật ẩn cả `.aw-topbar`
+của Đợt 124 giấu luôn đồng hồ từng-ô mà chỉ template mới có (Open the box; sau này Balloon pop · Gameshow ·
+Whack-a-mole). `core/app.css` nay trả lại chiều cao cho `.aw-topbar.has-inline` rồi giấu lại **từng anh em
+một** bằng `visibility` — ô điểm **phải** ở lại DOM (`ui.setScore` ghi vào nó, Anagram đọc ngược lại) — và
+**co track lưới của chúng về 0**, kẻo ô điểm tàng hình vẫn chiếm ~10% hàng và đẩy thanh lệch tâm.
+
+⚠️ **`applyPickTurn()` PHẢI CHẠY LẠI MỖI KHI ĐỔI MÀN, KHÔNG CHỈ KHI `setPickTurn()` (bài học Đợt 187).**
+`boardPicked()` báo "giờ không ai đang chọn" cho CẢ HAI bàn **TRƯỚC KHI** mở ô, nên một template chỉ toggle
+lớp mờ trong `setPickTurn` sẽ để **cả hai bàn mờ 50% suốt vòng đấu** — trên nền trắng nhìn đúng như một lớp
+màng trắng phủ cả trận (thầy báo thật ở Crossword). Chỗ đúng là hàm đổi màn của chính template
+(`activate()` của Crossword), vì `curWord` luôn được gán ngay trước nó.
+
 ⚠️⚠️ **BẪY LẶP BA LẦN LIÊN TIẾP (Đợt 182 · 184 · 185) — TEMPLATE TỰ XÁO/TỰ NGẪU NHIÊN.** True/false
 `shuffle(order)`, Find the match `shuffle(choiceOrder)`, Crossword `Math.random()` trong `buildCrossword()`
 — cả ba đều **vô điều kiện**, và cả ba đều làm hai bàn ôm **hai nội dung khác nhau sau cùng một số vòng**,
@@ -2409,7 +2454,7 @@ window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(
   để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
   (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.
 
-### ⭐⭐ TIME COST — trừ điểm mỗi giây **TRỐNG** (Đợt 139, 13/8/2026)
+### ⭐⭐ TIME COST — trừ điểm mỗi CHU KỲ **TRỐNG** (Đợt 139 · thuật toán đổi ở Đợt 187)
 
 Thanh **Time cost** (0–100, 0 = Off) + ô **ngưỡng trống 1–5s** trong Options. Cứ mỗi giây học sinh
 **không làm gì** (quá ngưỡng) là tổng điểm bị trừ chừng đó, kèm một số **`-N` đỏ bay từ ô điểm vào
@@ -2444,8 +2489,18 @@ nhịp trừ oan. Guard cũng phải phủ: đang phát giọng đọc, và (eng
 Guard kẹt ON chỉ có nghĩa "không trừ" — hỏng về phía an toàn.
 
 **Cách đếm**: `setInterval(idleTick, 100)` **chỉ sinh ra khi Time cost > 0**, cộng dồn `idleMs += dt`,
-**vứt bỏ** dt của quãng bị guard (không dồn trả sau), rồi trừ khi `idleMs >= ngưỡng + n×1000` bằng
+**vứt bỏ** dt của quãng bị guard (không dồn trả sau), rồi trừ khi `idleMs >= ngưỡng × (n+1)` bằng
 `while` (tab bị bóp xung nhịp trả về dt vài giây một lần).
+⭐⭐ **Đợt 187 (18/8/2026, thầy) — Ô "Idle" LÀ CẢ CHU KỲ, không phải chỉ ân huệ trước lần trừ ĐẦU.**
+Công thức cũ `ngưỡng + n×1000` chỉ mua được lần trừ đầu, sau đó tính **mỗi GIÂY** ⇒ Idle 3s trừ ở
+3s, 4s, 5s… Thầy chốt: "cứ mỗi 3s không thao tác thì mới trừ điểm 1 lần… 9s không thao tác thì trừ 3
+lần điểm" ⇒ 3s, 6s, 9s. Đối chứng ngược đo thật (timeCost=10, Idle=3s): **9 giây ngồi im — code cũ
+−70, code mới −30**. Hàm đổi tên `chargeIdleSecond` → `chargeIdlePeriod`, và chữ dưới thanh Options
+đổi theo ô Idle ("per idle second" / "per idle 3s") — **tiền phạt nay nhẹ đi N lần ở mức Idle N**, nên
+cái nhãn đó là thứ DUY NHẤT nói cho thầy biết chu kỳ đang là bao nhiêu.
+⚠️ **Bẫy khi tự kiểm**: `flyTimeCost` đếm số bằng `requestAnimationFrame` ⇒ pane test bị ẩn thì **ô
+điểm không vẽ lại**, nhìn y như "không trừ gì". Đo ở **Fight** mới thấy: số đội trên dải do
+`paintScore()` ghi thẳng `textContent`, không qua rAF.
 ⚠️ Nó là **đồng hồ THỨ HAI** bên cạnh đồng hồ 500ms ⇒ phải chịu đúng kỷ luật Đợt 112/131: nó được dọn
 trong **`stopTimer()`**, thứ mà mọi đường tháo ván đều đi qua. Node `-N` sống trên `document.body` nên
 `cleanupAll()` phải quét `costNodes`.

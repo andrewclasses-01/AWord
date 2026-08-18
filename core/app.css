@@ -409,6 +409,40 @@ body {
 .aw-bottombar > :nth-child(1) { justify-self: start; }
 .aw-bottombar > :nth-child(2) { justify-self: center; }
 .aw-bottombar > :nth-child(3) { justify-self: end; }
+
+/* ⭐⭐ FIGHT WAIT BAR (Đợt 187) — the "TIME DELAY" countdown, drawn inside the
+   board's own bottom row. Built and placed by core/engine.js (runWaitBar), timed
+   by core/fight.js. No number on it, by the teacher's own instruction ("hiện
+   thanh thời gian (không cần số)"): the bar is a feeling of "hurry", not a
+   reading, and a second set of digits beside the match clock would be read as a
+   second clock.
+   ⚠️ `position: relative` on the row is what this bar's `left`/`width` are
+   measured against. Safe to add: `position:relative` with `z-index:auto` creates
+   a containing block but NOT a stacking context, so it cannot repeat the Đợt 130
+   trap where a transform swallowed the toolbar's z-index band. */
+.aw-bottombar { position: relative; }
+.aw-waitbar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1.2cqw;
+  border-radius: 1cqw;
+  background: rgba(0, 0, 0, .18);
+  overflow: hidden;
+  pointer-events: none;      /* it sits over the row; nothing under it may go dead */
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.aw-waitbar.is-on { opacity: 1; }
+/* Same green→amber gradient the round bar of Đợt 174 uses, so the app keeps ONE
+   visual language for "time is running out" rather than inventing a second. The
+   width is driven from JS with a single linear transition of the exact window
+   length — there is no per-tick repaint here, so nothing to smooth between. */
+.aw-waitbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 1cqw;
+  background: linear-gradient(90deg, #ffb24d, #ff8c1a);
+}
 .aw-iconbtn, .aw-navbtn {
   display: inline-flex; align-items: center; justify-content: center;
   border: none; background: transparent; color: var(--aw-muted);
@@ -3100,6 +3134,33 @@ body {
    itself stays in the DOM — templates keep writing to the chip (Anagram reads
    it back for its count-up) and hearts still need their slot. */
 .aw-fight-board .aw-topbar { visibility: hidden; height: 0; margin: 0; padding: 0; overflow: hidden; }
+/* ⭐ Đợt 187 (teacher, 18/8/2026: "open the box hiện đang thiếu thanh thời gian
+   bên trên của cả 2 bên, cần hiển thị lại") — the blanket hide above took the
+   TEMPLATE's own per-question clock down with the engine's score and timer.
+   Every `inlineTimerBar` game (Open the box today; Balloon pop · Gameshow ·
+   Whack-a-mole the day they join Fight) draws that clock + bar into
+   `.aw-topbar-mid`, and it is the one thing on this row a match still needs:
+   the strip above the boards carries the MATCH score and the MATCH clock, but
+   nothing up there carries the per-BOX countdown, so without this neither team
+   could see how long the box they are both answering has left.
+   ⚠️ The row gets its height back, then every sibling is hidden again ONE BY
+   ONE with `visibility` — never `display:none`: the score chip has to stay in
+   the DOM and keep being written to (ui.setScore writes it on every score
+   change, and Anagram reads its own chip back to count up from).
+   ⚠️ Their grid tracks collapse to 0 as well, or the invisible score chip would
+   still hold ~10% of the row and push the bar off centre in front of the class. */
+.aw-fight-board .aw-topbar.has-inline {
+  visibility: visible;
+  height: auto;
+  overflow: hidden;
+  grid-template-columns: 0 1fr 0;
+}
+.aw-fight-board .aw-topbar.has-inline.aw-timer-external { grid-template-columns: 1fr 0; }
+.aw-fight-board .aw-topbar.has-inline > :not(.aw-topbar-mid) {
+  visibility: hidden;
+  min-width: 0;
+  overflow: hidden;
+}
 /* Both in-frame Fullscreen buttons go too: one button for the whole match now
    sits with Options/Template/Style/MODE under the boards. */
 .aw-fight-board .aw-fs-always { display: none; }

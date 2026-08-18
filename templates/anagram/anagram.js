@@ -37,7 +37,7 @@
 //                 interaction/feel to "bonus" (same bonusPick(), same tap-
 //                 in-order rules), but with 2 extra dials replacing the
 //                 fixed "double points" rule: a "Bonus x" multiplier
-//                 (1..5, teacher-chosen, replaces the hardcoded x2 for a
+//                 (1..20, teacher-chosen, replaces the hardcoded x2 for a
 //                 PERFECT word — burst text becomes "Nx PERFECT") and a
 //                 "Points off (wrong letter)" slider (0..100, step 5) that
 //                 fires on EVERY wrong tap, not once per word: a big red
@@ -165,12 +165,12 @@ function normLives(v) {
 const MAX_SUBMIT_PENALTY = POINTS_MAX;    // "On submit" — once per wrong WORD
 const MAX_LETTER_PENALTY = POINTS_MAX;    // "Bonus and minus" — once per wrong LETTER TAP
 const LETTER_PENALTY_STEP = POINTS_STEP;
-// Đợt 139 (teacher): the ceiling went 5x -> 10x. Every place that reads the
-// range — the slider's `max`, clampBonusMult below, the "Nx PERFECT" burst —
-// derives from these constants, so this one number is the whole change. Acts
-// already saved with a lower multiplier are untouched, and the default is
-// still 2x.
-const MIN_BONUS_MULT = 1, MAX_BONUS_MULT = 10, DEFAULT_BONUS_MULT = 2;   // 2x matches the old fixed "double" bonus
+// Đợt 139 (teacher): the ceiling went 5x -> 10x, and Đợt 187 (18/8/2026,
+// teacher) took it on again to 20x. Every place that reads the range — the
+// slider's `max`, clampBonusMult below, the "Nx PERFECT" burst — derives from
+// these constants, so this one number is the whole change. Acts already saved
+// with a lower multiplier are untouched, and the default is still 2x.
+const MIN_BONUS_MULT = 1, MAX_BONUS_MULT = 20, DEFAULT_BONUS_MULT = 2;   // 2x matches the old fixed "double" bonus
 function clampSubmitPenalty(v) { return Math.max(0, Math.min(MAX_SUBMIT_PENALTY, Math.round(v) || 0)); }
 function clampLetterPenalty(v) {
   return Math.max(0, Math.min(MAX_LETTER_PENALTY, Math.round((v || 0) / LETTER_PENALTY_STEP) * LETTER_PENALTY_STEP));

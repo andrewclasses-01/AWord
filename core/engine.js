@@ -653,6 +653,80 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (navHost !== navWrap) navHost.append(showdownSlot, navWrap);
   bottombar.append(leftGroup, navHost, rightTools);
 
+  // ⭐⭐ FIGHT WAIT BAR (Đợt 187, teacher 18/8/2026) — while the referee holds the
+  // round open for the team that has not answered yet ("TIME DELAY"), a bar runs
+  // that wait down on BOTH boards, with no number on it: "chờ tối đa 5s và hiện
+  // thanh thời gian (không cần số)". core/fight.js owns the TIMING and calls in
+  // here through ctl.registerWaitBar; this side owns only the pixels, because
+  // only the board knows where its own Menu / keyboard / ‹ › buttons ended up.
+  //
+  // WHERE IT GOES (the teacher's two cases, verbatim): "nếu không có nút
+  // next-back (trống khu đó) thì thanh này kéo dài ở hàng dưới, nếu có nút
+  // next-back, thì thanh ngắn và dài từ nút menu (hoặc nút bàn phím) tới gần nút
+  // back". Both cases are one measurement with a different RIGHT edge — and "no
+  // ‹ ›" is a real, existing state, not a hypothetical: Find the match (the one
+  // ordinary-round game the teacher asked TIME DELAY to cover) hides both arrows
+  // from its own stylesheet, so it takes the long bar while Quiz · Anagram · Type
+  // the answer · True/false take the short one.
+  //
+  // ⚠️ ABSOLUTELY POSITIONED, and appended as a FOURTH child. `.aw-bottombar` is a
+  // 3-track grid whose `:nth-child(1/2/3)` rules are the only thing keeping the
+  // nav truly centred (the same reasoning that made `leftGroup` a wrapper back at
+  // Đợt 92). An out-of-flow child takes no track and shifts no sibling, so those
+  // three rules still address exactly the three elements they always did.
+  // ⚠️ Measured with `offset*`, never getBoundingClientRect: offsets ignore CSS
+  // transforms, so a bar placed while the keyboard is mid-slide still lands in its
+  // final spot on frame one (the rule crossword's positionActive already follows).
+  const waitBar = fight ? el("div", "aw-waitbar") : null;
+  const waitBarFill = waitBar ? el("div", "aw-waitbar-fill") : null;
+  if (waitBar) {
+    waitBar.append(waitBarFill);
+    bottombar.append(waitBar);
+    // Optional call: an older core/fight.js served from a stale cache never asks.
+    if (fight.ctl.registerWaitBar) fight.ctl.registerWaitBar(fight.side, runWaitBar);
+  }
+  function placeWaitBar() {
+    const rowW = bottombar.clientWidth;
+    if (!rowW) return false;
+    const GAP = Math.max(6, Math.round(rowW * 0.015));
+    const left = leftGroup.offsetLeft + leftGroup.offsetWidth + GAP;
+    // ⚠️ THE TEST IS "IS THAT SEAT EMPTY", NOT "ARE THERE ARROWS" — the teacher's
+    // own words are "nếu không có nút next-back (TRỐNG KHU ĐÓ)". Measured while
+    // building this: reading `navPrev.offsetWidth` alone gives Find the match a
+    // bar 788px wide that runs straight THROUGH its "Page 1 / 2" label, which
+    // that game keeps even though it hides both arrows (find-the-match.css, and
+    // crossword.css does the same). A bar drawn over live text breaks the house
+    // rule that anything taking room on screen has to be readable, so the whole
+    // WRAPPER is measured: arrows, label, or both. A seat that is genuinely empty
+    // collapses to 0 width and the bar runs on to the sound/fullscreen cluster.
+    const navSeat = navWrap.offsetWidth > 0 ? navWrap.offsetLeft : rightTools.offsetLeft;
+    const rightEdge = navSeat;
+    const width = Math.round(rightEdge - GAP - left);
+    if (width < 24) return false;          // nothing worth drawing in that gap
+    waitBar.style.left = Math.round(left) + "px";
+    waitBar.style.width = width + "px";
+    return true;
+  }
+  function runWaitBar(ms) {
+    if (!waitBar) return;
+    if (!(ms > 0) || torndown) {
+      waitBar.classList.remove("is-on");
+      waitBarFill.style.transition = "none";
+      waitBarFill.style.width = "100%";
+      return;
+    }
+    if (!placeWaitBar()) return;
+    waitBar.classList.add("is-on");
+    // Start FULL with no transition, force a reflow, then let it empty. Without
+    // that reflow the browser coalesces both writes and the bar snaps straight to
+    // empty — the standard restart-a-CSS-transition dance.
+    waitBarFill.style.transition = "none";
+    waitBarFill.style.width = "100%";
+    void waitBarFill.offsetWidth;
+    waitBarFill.style.transition = "width " + ms + "ms linear";
+    waitBarFill.style.width = "0%";
+  }
+
   // ⭐ Đợt 176 (teacher, 17/8/2026) — the name no longer sits glued to ‹ ›: it
   // FLOATS, centred in the empty band between the game's lowest content and the
   // nav row ("trong QUIZ, tên nằm chính giữa khoảng cách từ mép trên nút
@@ -1291,9 +1365,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // replaced his own first wording ("every second on the clock") with this
   // before any of it shipped. So this is NOT a clock tax: it is an IDLE tax.
   //   • `Time cost` slider 0..100 in Options (0 = Off)
-  //   • `Idle` stepper 1..5s — the grace the student gets before the FIRST
-  //     charge ("cho suy nghĩ 3 giây mới bắt đầu trừ"); after that it charges
-  //     once per further idle SECOND, for as long as the stall lasts.
+  //   • `Idle` stepper 1..5s — the PERIOD, not just the opening grace (Đợt 187):
+  //     the first charge lands after that many idle seconds ("cho suy nghĩ 3 giây
+  //     mới bắt đầu trừ") and every further charge is one full period later, for
+  //     as long as the stall lasts. Idle 3s ⇒ charges at 3s, 6s, 9s.
   //   • Any real progress calls ui.noteActivity() and puts both back to zero.
   //
   // DIVISION OF LABOUR (deliberately the same as the shared "Points off"
@@ -1355,16 +1430,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (menuEl || toolPanelEl || (idleGuard && idleGuard())) return;
     idleMs += dt;
     const grace = idleGraceMs();
-    // Charge every whole second past the grace. A `while` (not an `if`): a tab
-    // that was throttled or backgrounded can hand us a dt of several seconds,
-    // and the student really was idle for all of them.
-    while (idleMs >= grace + idleCharges * 1000) {
+    // ⭐ Đợt 187 (teacher, 18/8/2026) — ONE PERIOD, NOT "grace then every second".
+    // Until now the Idle stepper only bought the FIRST charge: after it, the
+    // clock billed once per SECOND for as long as the stall lasted, so Idle 3s
+    // charged at 3s, 4s, 5s… (9 seconds of sitting still = SEVEN charges). The
+    // teacher's rule is that the number on the stepper is the whole period:
+    // "cứ mỗi 3s không thao tác thì mới trừ điểm 1 lần chứ không riêng 3s đầu…
+    // 9s không thao tác thì trừ 3 lần điểm" ⇒ 3s, 6s, 9s = three charges.
+    // ⚠️ This makes the option ~N times CHEAPER per stall at Idle N (same points,
+    // charged N times less often) — deliberate, and the reason the label under
+    // the slider now names the period ("per idle 3s") instead of "per idle second".
+    // A `while` (not an `if`): a tab that was throttled or backgrounded can hand
+    // us a dt of several periods, and the student really was idle for all of them.
+    while (idleMs >= grace * (idleCharges + 1)) {
       idleCharges++;
-      chargeIdleSecond(per);
+      chargeIdlePeriod(per);
       if (torndown) return;
     }
   }
-  function chargeIdleSecond(points) {
+  function chargeIdlePeriod(points) {
     timeCostTotal += points;
     // FIGHT MODE: tell the match FIRST, and through a channel of its OWN. It
     // must not go in as a score report: a team frozen by the "slower team keeps

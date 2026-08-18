@@ -69,7 +69,24 @@ const LATE_LIMIT_MS = 20000;
 // A clean 0.1s per the teacher's own words; well inside ROUND_HOLD_MS's own
 // margin above the 1760ms flight time, so waiting it out never risks the
 // round turning over before either side's score has actually landed.
+// ⭐⭐ Đợt 187 (teacher, 18/8/2026) — THIS IS NOW A SLIDER, "TIME DELAY". The
+// constant stays as the DEFAULT, so every act ever saved keeps the exact 0.1s
+// behaviour it has today unless the teacher moves the new control.
 const TIE_WINDOW_MS = 100;
+// "∞" on that slider (stored as 0) is not literally forever — a lesson may never
+// hang on a team that walked away. The teacher chose the cap himself: "chờ tối đa
+// 5s và hiện thanh thời gian (không cần số) … hết thanh time 5s đó thì khóa trả
+// lời". So ∞ means "wait a generous, VISIBLE 5 seconds", not "wait for ever".
+const TIE_UNLIMITED_MS = 5000;
+// Below this the wait is over before the eye can read a bar, so no bar is drawn
+// (teacher: the bar shows "ở MỌI mức từ 0,2s trở lên"). 0.1s is exactly the old
+// invisible tie-window, and it stays invisible.
+const WAIT_BAR_MIN_MS = 200;
+// What the Speed bonus slider jumps to the first time it becomes reachable. The
+// old slider was 0..20 with 0 meaning "Off"; the new one is 1..100 with no Off
+// at all (turning the bonus off is what dragging TIME DELAY back to 0.1s does),
+// so an act carrying the old 0 has no legal value to show and is repaired to this.
+const DEFAULT_SPEED_BONUS = 5;
 
 // The teacher's hand-given points, per side. MODULE level on purpose: the
 // teacher asked for a number that survives "Start again" and a template change
@@ -91,15 +108,43 @@ export const FIGHT_DEFAULTS = {
   fightContent: "scramble",  // scramble | different (legacy acts may still carry "same")
   fightFirstRule: "lock",    // lock | finish
   fightSpeedBonus: 0,        // extra points for the team that got there first
-  fightLateScores: true      // the slower team still keeps what it earned
+  fightLateScores: true,     // the slower team still keeps what it earned
+  // ⭐ Đợt 187 — TIME DELAY, in SECONDS. 0.1 … 3.0 in tenths, or **0 = ∞**
+  // (the app's own house convention for "unlimited", the same one Lives and
+  // Find the match already use at the left end of their sliders — see
+  // normLives()). Default 0.1 = the hard-coded tie window this replaces, so an
+  // act that has never seen the new control behaves byte for byte as before.
+  fightTieWindow: 0.1
 };
+
+// 0 means ∞ — everything that needs a real number of milliseconds goes through
+// here, so that one special value is decoded in exactly one place.
+export function tieWindowMsOf(o) {
+  return o.fightTieWindow === 0 ? TIE_UNLIMITED_MS : Math.round(o.fightTieWindow * 1000);
+}
+// Is the speed bonus even on the table? At 0.1s it is not (teacher: "khi là 0,1s
+// thì thanh speed bonus ẩn và ko thưởng đội nhanh hơn — vì đội nhanh hơn có điểm,
+// đội chậm hơn bị khóa rồi, 0,1s chênh coi như bằng nhau"). From 0.2s up the
+// slower team can score too, and the bonus becomes the only thing left that
+// rewards being fast.
+export function speedBonusApplies(o) { return tieWindowMsOf(o) >= WAIT_BAR_MIN_MS; }
 
 export function fightOptionsFrom(options = {}) {
   const o = { ...FIGHT_DEFAULTS };
-  ["fightContent", "fightFirstRule", "fightSpeedBonus", "fightLateScores"].forEach(k => {
+  ["fightContent", "fightFirstRule", "fightSpeedBonus", "fightLateScores", "fightTieWindow"].forEach(k => {
     if (options[k] !== undefined) o[k] = options[k];
   });
-  o.fightSpeedBonus = Math.max(0, Math.min(20, Number(o.fightSpeedBonus) || 0));
+  // ⭐ Đợt 187 — the ceiling went 20 -> 100 (teacher: "kéo từ 1 đến 100 điểm").
+  // Still clamped from 0 so an act saved under the OLD 0..20 slider — including
+  // its "Off" 0 — loads without being rewritten behind the teacher's back; the
+  // panel is where a 0 gets repaired, and only once the delay makes it reachable.
+  o.fightSpeedBonus = Math.max(0, Math.min(100, Number(o.fightSpeedBonus) || 0));
+  // TIME DELAY: 0 stays 0 (∞). Anything else is snapped to a tenth inside
+  // 0.1..3.0 — the exact set of values the slider can produce — so a hand-edited
+  // or corrupted act can never hand the round logic a window of, say, 40 minutes.
+  const tw = Number(o.fightTieWindow);
+  o.fightTieWindow = tw === 0 ? 0
+    : (Number.isFinite(tw) ? Math.max(0.1, Math.min(3, Math.round(tw * 10) / 10)) : 0.1);
   return o;
 }
 
@@ -405,11 +450,46 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   let lastFinisher = null;        // { side, correct } — the LAST board to finish this round
   // Does a decided round lock the team that did not win it? Outside pick mode
   // this is the teacher's own Options choice; inside it, the game's own rule.
-  const lockLoser = () => (pickMode ? pickMode === "lock" : fo.fightFirstRule === "lock");
+  // ⭐⭐ Đợt 187 — TIME DELAY, decoded ONCE for the whole match.
+  // ⚠️ PICK-TURN GAMES ARE SEALED OFF FROM TIME DELAY (teacher, 18/8/2026:
+  // "open the box không cần … crossword không cần"). They are pinned to the old
+  // fixed window, so an act that picked up a 3s delay while it was an Anagram and
+  // was then switched to Open the box mid-match cannot quietly carry that delay
+  // into rules the teacher settled separately at Đợt 183.
+  const tieMs = pickMode ? TIE_WINDOW_MS : tieWindowMsOf(fo);
+  const tieUnlimited = !pickMode && fo.fightTieWindow === 0;
+  // The wait bar is drawn only for the ORDINARY round model. The teacher went
+  // through the three pick-turn games one by one: "open the box không cần …
+  // crossword không cần … find the match có cần" — and Find the match is an
+  // ordinary-round game (it has no `fightPick`), so `!pickMode` is the whole test.
+  const waitBarMs = (!pickMode && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
+  // The bonus is off entirely at 0.1s — see speedBonusApplies(). Resolved once
+  // here so the two award sites can not disagree about it.
+  // In a pick-turn game the bonus is untouched by all this — it keeps the plain
+  // "reward whoever got there first" meaning it has had since Đợt 124, because
+  // the control that would have switched it off (TIME DELAY) is not offered there.
+  const speedBonus = (pickMode || speedBonusApplies(fo)) ? fo.fightSpeedBonus : 0;
+  const lockLoser = () => (pickMode ? pickMode === "lock"
+    : (tieUnlimited ? true : fo.fightFirstRule === "lock"));
   // Does a team that finishes correctly AFTER the round is won keep what it
   // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
   // điểm"), so pick mode fixes it instead of reading the option.
-  const lateScores = () => (pickMode ? false : fo.fightLateScores !== false);
+  // ⚠️ At ∞ both of the older controls are FORCED, and the Options panel hides
+  // them to match (see buildOptions): the teacher's ∞ rule ends the wait with
+  // "khóa trả lời", i.e. lock — which leaves a locked team no way to finish late,
+  // so "slower team keeps points" has nothing left to decide. Leaving them
+  // switchable would have put two live controls in the panel that could not
+  // change anything on screen, the dead-control trap of Đợt 143.
+  const lateScores = () => (pickMode ? false : (tieUnlimited ? false : fo.fightLateScores !== false));
+
+  // ----- the wait bar (Đợt 187) — one per board, drawn by core/engine.js down in
+  // its own bottom row, because that is the only place that knows where this
+  // board's Menu / keyboard / ‹ › buttons ended up. This file owns the TIMING
+  // (it is the referee's window, not the board's), the engine owns the pixels.
+  const waitBarFns = [null, null];
+  function paintWaitBar(ms) {
+    waitBarFns.forEach(fn => { try { fn && fn(ms); } catch { /* board already gone */ } });
+  }
 
   const boards = [null, null];          // the template's own handles, via ctl.attach
   // Each board's REAL engine teardown (core/engine.js's own cleanupAll —
@@ -495,11 +575,12 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // calling it twice for the same round would reveal / fly a score twice.
   function finalizeSingleWinner(side) {
     roundWinner = side;
+    paintWaitBar(0);                 // the window is closed — the bar must not run on
     const other = side === 0 ? 1 : 0;
-    if (fo.fightSpeedBonus > 0) {
-      bonus[side] += fo.fightSpeedBonus;
+    if (speedBonus > 0) {
+      bonus[side] += speedBonus;
       paintScore(side);
-      flashTeam(side, `+${fo.fightSpeedBonus}`);
+      flashTeam(side, `+${speedBonus}`);
     }
     teams[side].el.classList.add("is-won");
     // Lock the other side out only if it is still IN the round; one that
@@ -516,15 +597,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // `roundWinner` deliberately stays null (there is no EXCLUSIVE winner);
   // `ctl.mayScore()` already treats null as "let it count", so a tie needs no
   // extra flag of its own — see mayScore's own comment.
+  // ⚠️⚠️ Đợt 187 — `sideA` IS THE ONE THAT FINISHED FIRST, and only it takes the
+  // speed bonus (teacher, 18/8/2026: "chỉ đội xong TRƯỚC" ăn Speed bonus). Until
+  // now both sides took it, which was harmless while the window was a fixed 0.1s
+  // — nobody can be meaningfully "faster" inside a tenth of a second, which is
+  // exactly why the teacher has the bonus HIDDEN at that setting. The moment the
+  // window can be 3 seconds long, giving both sides the bonus would make the
+  // slider it is attached to reward nothing at all.
+  // Both sides still score the GAME points, and neither is locked or frozen —
+  // that half of Đợt 133 is untouched.
   function finalizeTie(sideA, sideB) {
-    [sideA, sideB].forEach(side => {
-      if (fo.fightSpeedBonus > 0) {
-        bonus[side] += fo.fightSpeedBonus;
-        paintScore(side);
-        flashTeam(side, `+${fo.fightSpeedBonus}`);
-      }
-      teams[side].el.classList.add("is-won");
-    });
+    paintWaitBar(0);
+    if (speedBonus > 0) {
+      bonus[sideA] += speedBonus;
+      paintScore(sideA);
+      flashTeam(sideA, `+${speedBonus}`);
+    }
+    [sideA, sideB].forEach(side => teams[side].el.classList.add("is-won"));
     revealBoards();
     later(advanceRound, ROUND_HOLD_MS);
   }
@@ -581,6 +670,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // window, the walk-away backstop, the hold after a decided round) is shared
     // with normal rounds, which is exactly why this branch sits at the top of
     // advanceRound() rather than beside each of those callers.
+    paintWaitBar(0);
     if (pickMode) { revealBoards(); endPickRound(); return; }
     // Safety net for the walk-away path (the 20s backstop fires straight in
     // here): nobody may leave a round still owing a hidden result, or the
@@ -609,6 +699,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function endMatch() {
     if (matchOver) return;
     matchOver = true;
+    paintWaitBar(0);
     revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
     showResult();
@@ -670,6 +761,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // (the TEMPLATE's own handle) on purpose: a template that never joins
     // the fight contract at all would still leak its clock without this.
     registerCleanup(side, fn) { cleanupFns[side] = fn; },
+    // ⭐ Đợt 187 — same shape as registerCleanup: the ENGINE hands us a way to
+    // drive the wait bar it built in its own bottom row. `fn(ms)` starts a bar
+    // that empties over `ms`; `fn(0)` clears it. A board that never registers
+    // (an older engine, a board torn down mid-round) is simply skipped.
+    registerWaitBar(side, fn) { waitBarFns[side] = fn; },
 
     // --- what the template tells us ---
     attach(side, api) {
@@ -692,6 +788,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // already running, match over) so the template can stay silent about it.
     boardPicked(side, index) {
       if (!pickMode || matchOver || torndown) return false;
+      paintWaitBar(0);
       if (!pickOpen || side !== pickTurn) return false;
       pickOpen = false;
       roundIndex = index;
@@ -804,12 +901,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // First correct answer this round — open the tie-window rather than
         // deciding immediately.
         pendingWinner = side;
+        // ⭐ Đợt 187 — the window is the teacher's TIME DELAY now, and from 0.2s
+        // up a bar runs it down on BOTH boards: the team still playing needs to
+        // see how long it has, and the team that just finished needs to see why
+        // the round has not turned over yet.
+        paintWaitBar(waitBarMs);
         pendingTimer = setTimeout(() => {
           pendingTimer = null;
           if (torndown) return;   // teardown() already cleared this timer -- belt and braces
           const decided = pendingWinner; pendingWinner = null;
           finalizeSingleWinner(decided);
-        }, TIE_WINDOW_MS);
+        }, tieMs);
         return;
       }
 
@@ -841,6 +943,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // the round follows the board that was pressed.
     boardMoved(side, index) {
       if (index === roundIndex || matchOver || torndown) return;
+      paintWaitBar(0);
       roundIndex = index;
       roundWinner = null;
       if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
@@ -1035,20 +1138,90 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     ], cur.fightFirstRule === "finish" ? "finish" : "lock",
       v => { draft.fightFirstRule = v; }));
 
-    const cBonus = mkSliderCell({
-      label: "Speed bonus", sub: "finish first",
-      min: 0, max: 20, step: 1, value: cur.fightSpeedBonus, tone: "blue", offAt: 0,
-      fmt: v => (v === 0 ? "Off" : "+" + v),
-      onInput: v => { draft.fightSpeedBonus = v; }
+    // ⭐⭐ Đợt 187 — TIME DELAY. Sits immediately ABOVE Speed bonus because it
+    // decides whether Speed bonus exists at all (teacher's own layout: "thêm 1
+    // thanh kéo là TIME DELAY ở cùng khu vực với speed bonus … kéo từ 0,2s trở
+    // lên thì thanh speed bonus mới hiện Ở DƯỚI").
+    // ⚠️ The slider runs 0.1 … 3.1 but 3.1 is NOT 3.1 seconds — it is the ∞ stop,
+    // stored as 0. Putting ∞ one step past the top (rather than at 0 on the left,
+    // where Lives keeps its own ∞) is the teacher's order: "ngay sau 3s là đến
+    // nấc unlimited". The stored value keeps the house 0-means-∞ convention all
+    // the same, so nothing downstream needs a second special case.
+    const UNLIM_POS = 3.1;
+    const posOf = w => (w === 0 ? UNLIM_POS : w);
+    const valOf = pos => (pos >= UNLIM_POS - 0.05 ? 0 : Math.round(pos * 10) / 10);
+    const cDelay = mkSliderCell({
+      label: "Time delay", sub: "let the other team finish",
+      min: 0.1, max: UNLIM_POS, step: 0.1, value: posOf(cur.fightTieWindow), tone: "amber",
+      fmt: pos => (pos >= UNLIM_POS - 0.05 ? "∞" : pos.toFixed(1) + "s"),
+      onInput: pos => { const w = valOf(pos); draft.fightTieWindow = w; syncDelay(w); }
     });
+    cDelay.cell.title = "How long a team that answered second still counts as level. ∞ waits a visible 5s.";
 
-    panel.append(cContent.cell, cRule.cell, cBonus.cell);
+    // Same slider, two shapes. In a pick-turn game there is no TIME DELAY to
+    // turn the bonus off with, so it keeps its own "Off" at 0 exactly as before;
+    // everywhere else the range starts at 1 and 0.1s on TIME DELAY is the off
+    // switch. Both got the ceiling the teacher asked for (20 -> 100).
+    const cBonus = pickMode
+      ? mkSliderCell({
+          label: "Speed bonus", sub: "finish first",
+          min: 0, max: 100, step: 1, value: cur.fightSpeedBonus, tone: "blue", offAt: 0,
+          fmt: v => (v === 0 ? "Off" : "+" + v),
+          onInput: v => { draft.fightSpeedBonus = v; }
+        })
+      : mkSliderCell({
+          label: "Speed bonus", sub: "finish first",
+          min: 1, max: 100, step: 1, value: Math.max(1, cur.fightSpeedBonus || DEFAULT_SPEED_BONUS),
+          tone: "blue",
+          fmt: v => "+" + v,
+          onInput: v => { draft.fightSpeedBonus = v; }
+        });
+
+    panel.append(cContent.cell, cRule.cell);
+    if (!pickMode) panel.append(cDelay.cell);
+    panel.append(cBonus.cell);
 
     // What happens AFTER a round ends, not part of the round rule — it is a
     // switch like the others, so it joins the shared checkbox block.
-    addCheck("Slower team keeps points", cur.fightLateScores !== false,
+    const lateChk = addCheck("Slower team keeps points", cur.fightLateScores !== false,
       v => { draft.fightLateScores = v; },
       { title: "The slower team still keeps its points" });
+
+    // ⭐ Which of the other three controls can still DO anything at this delay.
+    // Nothing here is decoration: a control left on screen that cannot change
+    // what happens is the dead-control trap the opt-in rule of Đợt 143 exists to
+    // stop, and all three of these go dead at one end of the slider or the other.
+    //   • 0.1s   the fast team scores and the slow one is locked, so a bonus for
+    //           being fast rewards nothing that is not already rewarded — the
+    //           teacher's own reasoning, and he asked for it HIDDEN, not zeroed.
+    //   • ∞      the wait always ends in a lock (see lockLoser/lateScores above),
+    //           so "Round rule" and "Slower team keeps points" have nothing left
+    //           to decide.
+    // ⚠️ `style.display`, not the `hidden` attribute: `.aw-optc` sets its own
+    // `display`, which wins over `[hidden]` and would leave the cell on screen.
+    function syncDelay(w) {
+      const bonusOn = speedBonusApplies({ fightTieWindow: w });
+      const unlimited = w === 0;
+      cBonus.cell.style.display = bonusOn ? "" : "none";
+      cRule.cell.style.display = unlimited ? "none" : "";
+      lateChk.style.display = unlimited ? "none" : "";
+      // Repair an unreachable value rather than show a lie: the old slider went
+      // 0..20 with 0 = "Off", the new one starts at 1, so an act saved with 0
+      // has nothing legal to show the moment the bonus becomes reachable.
+      if (bonusOn) {
+        if ((Number(draft.fightSpeedBonus) || 0) < 1) {
+          draft.fightSpeedBonus = DEFAULT_SPEED_BONUS;
+          cBonus.slider.value = String(DEFAULT_SPEED_BONUS);
+          cBonus.paint(DEFAULT_SPEED_BONUS);
+        }
+      } else {
+        draft.fightSpeedBonus = 0;   // "ko thưởng đội nhanh hơn" — really off, not just hidden
+      }
+    }
+    // A pick-turn game never shows TIME DELAY, so nothing here may move: running
+    // syncDelay() there would hide the bonus (or zero it) off a value the teacher
+    // has no control on screen to put back.
+    if (!pickMode) syncDelay(cur.fightTieWindow);
   }
 
   // ----- build the two plays -----
@@ -1155,6 +1328,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // which is exactly where a stray throw comes from.
   function teardown() {
     torndown = true;
+    paintWaitBar(0);
     clearTimeout(roundTimer);
     if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }   // Đợt 133 — same reasoning as roundTimer
     FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });

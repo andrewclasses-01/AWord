@@ -254,17 +254,29 @@ export function buildOptionsBody(host, {
     // slider to 78px (the others were 176) and pushed its value chip 160px out
     // of the column — i.e. it would have rebuilt the exact raggedness that
     // redesign existed to remove.
-    const idleStep = makeHStepper(clampIdle(draft.timeCostIdle ?? 1), 1, 5,
-      v => { draft.timeCostIdle = v; }, { format: v => v + "s" });
-    idleStep.el.classList.add("is-sm");
-    idleStep.el.classList.toggle("is-dim", cur === 0);
-    idleStep.el.title = "Seconds of doing nothing before the first charge";
+    // ⭐ Đợt 187 — the stepper is the whole PERIOD now (see chargeIdlePeriod in
+    // core/engine.js), so the caption under the label has to say which period:
+    // "per idle 3s", not the old fixed "per idle second". It is repainted every
+    // time the stepper moves, which is why `cell` is declared before the stepper
+    // gets its callback (the caption node only exists once mkSliderCell has run).
+    let idleSecs = clampIdle(draft.timeCostIdle ?? 1);
+    const idleCaption = v => (v === 1 ? "per idle second" : "per idle " + v + "s");
     const cell = mkSliderCell({
-      label: "Time cost", sub: "per idle second",
+      label: "Time cost", sub: idleCaption(idleSecs),
       min: 0, max: POINTS_MAX, step: POINTS_STEP, value: cur, offAt: 0,
       fmt: v => (v === 0 ? "Off" : "-" + v),
       onInput: v => { draft.timeCost = v; idleStep.el.classList.toggle("is-dim", v === 0); }
     });
+    const idleStep = makeHStepper(idleSecs, 1, 5,
+      v => {
+        draft.timeCostIdle = v;
+        idleSecs = v;
+        const capEl = cell.lab.querySelector(".aw-optc-sub");
+        if (capEl) capEl.textContent = idleCaption(v);
+      }, { format: v => v + "s" });
+    idleStep.el.classList.add("is-sm");
+    idleStep.el.classList.toggle("is-dim", cur === 0);
+    idleStep.el.title = "Seconds of doing nothing between charges (the first one included)";
     cell.lab.append(idleStep.el);
     return cell.cell;
   };

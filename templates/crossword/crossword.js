@@ -608,6 +608,19 @@ const crosswordTemplate = {
     // board <-> word
     // -------------------------------------------------------------------
     function activate() {
+      // ⭐⭐ Đợt 187 — THE 50% FADE HAD TO BE RE-EVALUATED HERE, AND WAS NOT
+      // (teacher, 18/8/2026: "crossword chế độ fight đang bị phủ màu trắng lên
+      // trên cả màn hình 2 bên"). `applyPickTurn` fades a board that is neither
+      // choosing nor looking at an open word, and until now it only ever ran from
+      // `setPickTurn`. But core/fight.js's boardPicked() tells BOTH boards
+      // "nobody is choosing now" BEFORE it opens the word on them, so both
+      // evaluated `!fightMyTurn && curWord < 0` as TRUE — and nothing re-ran it
+      // once the word opened. Both boards then sat at opacity .5 for the whole
+      // round, which on this template's white stage reads as a white film over
+      // the entire match. Measured: grid screen 1 / .5 (right), word open .5 / .5
+      // (wrong, both). `curWord` is always assigned immediately before every
+      // activate() call, so this is the one place that sees every change of it.
+      applyPickTurn();
       if (curWord < 0) {
         gridEl.classList.remove("is-dimmed");
         activeEl.style.display = "none";
