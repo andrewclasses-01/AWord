@@ -615,7 +615,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // fullscreen while the PLAY screen is still up), so this one button sits
   // above the READY overlay instead of behind it.
   const fsBtn = iconBtn("aw-iconbtn aw-fs-always" + (root.classList.contains("aw-zoomed") ? " is-zoomed" : ""), icons.fullscreen, "Fullscreen");
-  rightTools.append(soundBtn, fsBtn);
+  // ⭐⭐ Đợt 188 (teacher, 18/8/2026: "bỏ hẳn nút fullscreen trong chế độ fight và
+  // showdown") — the button is BUILT either way (setZoomed and the handler below
+  // both hold on to it, and a match rebuild may hand the same engine a different
+  // mode) but only reaches the screen in single play. In a match the whole-match
+  // button that used to sit in the shared toolbar is gone too, so from Đợt 188 on
+  // there is no in-app way into full screen in either mode — the teacher's call,
+  // confirmed; the browser's own F11 still works.
+  rightTools.append(soundBtn);
+  if (!fight && !showdownPick) rightTools.append(fsBtn);
   // Menu sits in a small wrapper (not appended bare) so `.aw-bottombar`'s grid
   // still gets exactly 3 children (its CSS targets :nth-child(1/2/3) to keep
   // the middle nav truly centered) even when the optional slot below is added.
@@ -985,20 +993,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     row.append(goBtn);
     panel.append(row);
   }
-  // FIGHT MODE: one Fullscreen for the whole match, in the same row as
-  // Options/Template/Style/MODE (teacher, 12/8/2026). The per-board buttons
-  // inside the two frames are hidden by CSS — two of them made no sense when
-  // both boards go full-screen together as one page.
-  const fightFsBtn = fight ? toolBtn(icons.fullscreen, "Fullscreen") : null;
-  if (fightFsBtn) {
-    // ⚠️ NOT `fsBtn.click()`. This engine's own Fullscreen promotes ITS `root`,
-    // which inside a match is just this ONE board's div — so the match went
-    // full-screen showing a single board, with the other board, the scoreboard
-    // strip and this very toolbar all left outside. The match controller owns
-    // the element that holds all of them (see ctl.toggleFullscreen).
-    fightFsBtn.onclick = () => { sound.click(); fight.ctl.toggleFullscreen(); };
-    belowCenter.append(fightFsBtn);
-  }
+  // ⛔ Đợt 188 — THE MATCH'S OWN FULLSCREEN BUTTON IS GONE (teacher, 18/8/2026).
+  // Đợt 124 put one here, in the shared row beside Options/Template/Style/MODE,
+  // because the per-board buttons could each only promote their own half of the
+  // match. The teacher has now dropped the feature from Fight and Showdown
+  // outright, so the button is not built at all rather than left hidden.
+  // `fight.ctl.toggleFullscreen()` STAYS in core/fight.js: it is still what keeps
+  // the `.is-fs` class honest when the browser goes full screen by its own means
+  // (F11), and it is the only code that knows the match root holds both boards +
+  // the strip + this row.
 
   const belowRight = el("div", "aw-below-right");
   const editBtn = toolBtn(icons.edit, "Edit", true);

@@ -8,6 +8,106 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 188 (18/8/2026) — ⭐⭐ THANH TRƯỢT ĐỔI CÁCH BẤM CHO TOÀN APP (chạm = 1 nấc) · Ô KHOÁ THÌ MẤT MÀU CHỨ KHÔNG ẨN · TIME DELAY + SPEED BONUS CÙNG MỘT CỘT · BỎ HẲN FULLSCREEN Ở FIGHT VÀ SHOWDOWN
+⭐ CÓ SỬA CORE (`core/options-panel.js` · `core/fight.js` · `core/engine.js` · `core/app.css`). Không đụng
+template nào.
+🟢 ĐÃ TỰ TEST trên `scratch/fight-bench.html` — bấm bằng `PointerEvent` thật ở toạ độ thật trên thanh
+trượt, **0 lỗi console**, và chạy lại phép Đợt 187 để chắc không hồi quy (**8 / 1** y như cũ).
+
+### 1. Thầy giao (18/8/2026)
+> "• Time delay và speed bonus luôn cùng 1 cột • khi time delay - 0,1, thanh speed bonus chỉ mất màu
+> (thể hiện ko chỉnh được) chứ không ẩn • trong mọi thanh trượt ở mọi chế độ, bấm bất cứ vị trí nào của
+> thanh cũng tăng 1 nấc • bỏ hẳn nút fullscreen trong chế độ fight và showdown"
+
+Hỏi thêm 3 chỗ, thầy chốt:
+- **Cách giảm**: "tăng giảm thông thường thì trỏ vào điểm kéo như bình thường. Còn 1 chạm thì tăng 1 nấc,
+  chạm đúp thì giảm 1 nấc. Kịch trên và kịch dưới thì đứng lại. Muốn kéo nhiều thì chạm vào nút vị trí và
+  kéo như thông thường".
+- **Round rule + "Slower team keeps points" ở nấc ∞**: "mất màu luôn, cho đồng bộ".
+- **Fullscreen**: "bỏ hẳn, không còn đường nào".
+
+### 2. ⭐⭐ THANH TRƯỢT — CHẠM = 1 NẤC, CHẠM ĐÚP = LÙI 1 NẤC (`core/options-panel.js`)
+Kiểu mặc định của trình duyệt là **bấm đâu thì nút nhảy thẳng tới đó** — trên màn 86" cảm ứng, một cú
+quệt tay là thanh 0..100 nhảy tới bất cứ đâu ngón tay chạm. Nay:
+| Thao tác | Kết quả |
+|---|---|
+| Chạm **thân thanh** (chỗ nào cũng được) | **+1 nấc** |
+| **Chạm đúp** (2 cú trong 320ms) | **−1 nấc** so với trước cặp chạm đó |
+| Chạm **đúng nút tròn** rồi kéo | y hệt trước giờ, kéo bao nhiêu tuỳ ý |
+| Kéo từ thân thanh | **không làm gì** (đường kéo nhiều là nút tròn, đúng lời thầy) |
+| Đang kịch trần / kịch đáy | **đứng lại** |
+⭐ **Sửa ĐÚNG MỘT CHỖ**: `grep '"range"'` cả kho trả về **đúng 1 dòng** — `mkSliderCell`. Nên mọi thanh
+trong Options, trong Settings và trong cả 17 template đều đổi cùng lúc, không có bản thứ hai phải giữ
+đồng bộ và **không template nào phải sửa một dòng**. Đây cũng là đúng thói quen các ô bấm số đã có
+(`makeHStepper`: chạm = ±1, kéo = nhiều), nên bảng Options nay chỉ còn MỘT cách nhích một con số.
+- ⚠️ **Cú chạm đầu đổi số NGAY**, không chờ hết cửa sổ 320ms xem có cú thứ hai không. Chờ thì **mọi** cú
+  chạm đơn (thao tác phổ biến hơn hẳn) phải trả giá 320ms cho cú đúp hiếm gặp. Chạm đúp vì thế nhìn thành
+  "+1 rồi −1" — cũng là bức tranh thật của hai cú chạm đó.
+- ⚠️ **Nhận biết "chạm trúng nút tròn"** bằng toạ độ: nút rộng 16px + 2px viền trắng mỗi bên (xem
+  `::-webkit-slider-thumb`), và trình duyệt thụt hai đầu đường chạy đúng nửa nút. Bấm trúng nút thì
+  **KHÔNG** `preventDefault` — giao thẳng cho trình duyệt kéo như cũ. Bấm chỗ khác thì `preventDefault`
+  **ngay ở `pointerdown`**, trước khi cú nhảy kịp xảy ra, rồi `pointerup` mới quyết là chạm hay kéo.
+  `preventDefault` nuốt luôn focus nên phải `s.focus()` bằng tay.
+- ⚠️ **Số lẻ không được trôi**: `0.1 + 0.1 + …` bằng phép cộng trần sẽ ra `0.30000000000000004`. Snap về
+  lưới bước rồi `toFixed` theo số chữ số thập phân của chính `step`. Đo: chạm 6 lần trên Time delay ra
+  đúng **0.2 · 0.3 · 0.4 · 0.5 · 0.6 · 0.7**.
+
+### 3. Ô KHÔNG CHỈNH ĐƯỢC THÌ **MẤT MÀU**, KHÔNG ẨN
+Đợt 187 ẩn hẳn (`display:none`) 3 ô khi chúng vô tác dụng. Thầy đổi: mờ đi thôi. Lý do đúng — ẩn thì bảng
+**nhảy bố cục ngay dưới ngón tay** đang kéo thanh Time delay, và không còn dấu hiệu nào cho biết cái điều
+khiển đó tồn tại. Lớp mới `.is-locked` (mờ 40% + `pointer-events:none`) áp cho: **Speed bonus** (khi delay
+0,1s) · **Round rule** + **"Slower team keeps points"** (khi delay ∞).
+- ⚠️⚠️ **`pointer-events:none` MỚI CHỈ CHẶN NGÓN TAY.** Ô vẫn nằm trong thứ tự Tab, và một phím mũi tên
+  trên thanh đang focus vẫn đổi số — mà trên màn hình thì nó đang xám. Phải kèm **`disabled`** cho mọi
+  `input`/`button` bên trong (`setLocked()`). Đo cả hai đường: ngón tay chạm vào thanh bị khoá thì
+  `elementFromPoint` trả về **`aw-optc-stack`** (rơi xuyên qua, không trúng thanh), và `slider.disabled`
+  = `true`.
+- ⭐ **BỎ luôn việc ép Speed bonus về 0** khi nó chết. Cái quyết định thật là `speedBonusApplies()` lúc
+  chạy, nên số thầy đặt **sống sót qua lúc bị khoá** và trở lại ngay khi kéo delay rời 0,1s. Ghi 0 vào đó
+  là **âm thầm xoá con số của thầy** — làm mờ một ô rồi lén đổi giá trị bên dưới là điều tệ hơn cả hai.
+
+### 4. TIME DELAY + SPEED BONUS CÙNG MỘT CỘT
+Lưới Options chảy theo HÀNG, nên 2 ô nối nhau luôn nằm **cạnh nhau**. Thêm `.aw-optc-stack`: một khối
+chiếm đúng 1 ô lưới, xếp 2 ô chồng dọc bên trong. Đo: cả hai cùng `x = 960px`, Speed bonus nằm **dưới**
+(y 427 → 481). Game "lượt chọn ô" không có Time delay nên Speed bonus ở đó vẫn là ô rời như cũ.
+⚠️ Dùng `row-gap` chứ không đặt margin cho con: 2 ô nay **không còn là con trực tiếp** của `.aw-opt-grid`
+nên luật `> * { margin-bottom: 9px }` không với tới chúng nữa.
+
+### 5. BỎ HẲN FULLSCREEN Ở FIGHT VÀ SHOWDOWN
+- **Fight**: nút chung ở thanh dưới (Đợt 124) **không còn được dựng**. 2 nút trong khung cũng không được
+  gắn vào. Luật CSS `.aw-fight-board .aw-fs-always{display:none}` **xoá hẳn** — một luật CSS không khớp
+  gì chính là thứ làm người đọc sau tưởng cái nút vẫn còn đâu đó.
+- **Showdown**: nút góc phải trong khung không được gắn.
+- Nút **vẫn được TẠO** (hàm `setZoomed` và handler bên dưới đều giữ tham chiếu tới nó), chỉ là không gắn
+  vào cây DOM. `fight.ctl.toggleFullscreen()` **giữ nguyên** trong `core/fight.js`: nó vẫn là thứ giữ
+  lớp `.is-fs` đúng khi trình duyệt vào toàn màn hình bằng đường riêng (F11).
+- Đo: **đơn** 1 nút và nhìn thấy được · **Fight** 0 nút trong khung + 0 nút trên thanh (thanh còn đúng
+  Options · Template · Mode · Style) · **Showdown** 0 nút.
+
+### 6. Đã tự test
+| Phép | Kết quả |
+|---|---|
+| Chạm đơn 3 lần cách nhau 420ms (Time cost) | 10 → 11 → 12 → 13 |
+| Chạm sát mép PHẢI (95% thanh) | **+1**, không nhảy lên 95 |
+| Chạm đúp ở 90%, xa nút tròn | 20 → **19** |
+| Chạm đơn ngay sau đó | 19 → **20** |
+| Bấm ĐÚNG nút tròn rồi kéo | về 55, **không** bị cộng thêm 1 |
+| Kịch trần 100 chạm thêm · kịch đáy 0 chạm đúp | **đứng lại** 100 / 0 |
+| 6 cú chạm trên thanh bước 0,1 | 0.2 · 0.3 · 0.4 · 0.5 · 0.6 · 0.7 (không trôi số lẻ) |
+| Ô khoá: ngón tay chạm vào | `elementFromPoint` ra `aw-optc-stack` (rơi xuyên), `disabled = true` |
+| 3 mức delay 0,1s / 0,8s / ∞ | khoá đúng ô, và **không ô nào bị ẩn** ở bất kỳ mức nào |
+| Time delay + Speed bonus | cùng `x`, bonus nằm dưới |
+| Fullscreen: đơn / Fight / Showdown | 1 / 0 / 0 |
+| Hồi quy vòng đấu Đợt 187 (delay 1,5s, bonus +7) | **8 / 1**, thanh chờ vẫn bật 2 bàn |
+
+### 7. VIỆC ĐANG CHỜ
+1. **Thầy chạm tay thật trên TOMKO**: cửa sổ chạm đúp 320ms có vừa không (chạm chậm quá thành 2 lần +1;
+   nhanh quá thì khó bấm đúp) — chỉ tay thầy trên màn hồng ngoại mới biết.
+2. Vùng nhận "trúng nút tròn" đang là nửa nút + 4px. Nếu thầy thấy khó tóm nút để kéo thì em nới ra.
+3. Fight/Showdown nay **không có đường nào vào toàn màn hình từ trong app** (F11 của trình duyệt vẫn được).
+
+---
+
 ## Đợt 187 (18/8/2026) — ⭐⭐⭐ TIME DELAY + THANH CHỜ TRONG FIGHT · TIME COST TRỪ MỖI N GIÂY · BONUS x LÊN 20x · 2 LỖI FIGHT (Open the box mất đồng hồ · Crossword trắng cả 2 bên)
 ⭐ CÓ SỬA CORE (`core/fight.js` · `core/engine.js` · `core/options-panel.js` · `core/app.css`) + 2 file game
 (`anagram.js` · `crossword.js`).

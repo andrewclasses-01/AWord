@@ -150,6 +150,92 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
   };
   paint(cur);
   s.oninput = () => { const v = clamp(s.value); paint(v); onInput(v); };
+
+  // ⭐⭐ Đợt 188 (teacher, 18/8/2026) — TAP THE TRACK = ONE NOTCH, DOUBLE TAP = ONE
+  // NOTCH BACK. The browser's own behaviour is "press anywhere and the thumb JUMPS
+  // to that point", which on an 86" touch screen means a stray brush sets a 0..100
+  // slider to whatever the finger landed on. The teacher's rule:
+  //   "tăng giảm thông thường thì trỏ vào điểm kéo như bình thường. Còn 1 chạm thì
+  //    tăng 1 nấc, chạm đúp thì giảm 1 nấc. Kịch trên và kịch dưới thì đứng lại.
+  //    Muốn kéo nhiều thì chạm vào nút vị trí và kéo như thông thường"
+  // This is the same idiom the app's number steppers already use (makeHStepper:
+  // tap = ±1, drag = many), so the panel now has ONE way of nudging a number.
+  //
+  // ⚠️ ONE PLACE ONLY, ON PURPOSE. This is the single slider builder in the whole
+  // app (`grep '"range"'` returns exactly this line), so every slider in Options,
+  // in Settings and in all 17 templates changes together — there is no second
+  // implementation to keep in step, and no template needs a line changed.
+  const stepN = Number(step) || 1;
+  // How many decimals the step implies — 0.1 must not drift to 0.30000000000000004
+  // after a few taps, which is exactly what plain repeated addition does.
+  const DEC = (String(stepN).split(".")[1] || "").length;
+  const snap = v => Number((clamp(Math.round((v - min) / stepN) * stepN + min)).toFixed(DEC));
+  function setValue(v) {
+    const nv = snap(v);
+    if (String(nv) === s.value) return;      // already at the end stop — "kịch thì đứng lại"
+    s.value = String(nv);
+    paint(nv);
+    onInput(nv);
+  }
+  // Where the thumb is right now, in page px. 16px wide + a 2px white ring on
+  // each side (see .aw-optc-slider::-webkit-slider-thumb), and the browser insets
+  // the travel by half a thumb at each end so the thumb never overhangs the track.
+  const THUMB = 20;
+  function thumbCentreX() {
+    const r = s.getBoundingClientRect();
+    const span = max - min;
+    const frac = span > 0 ? (Number(s.value) - min) / span : 0;
+    return r.left + THUMB / 2 + frac * (r.width - THUMB);
+  }
+  const TAP_SLOP_PX = 6;        // more than this and the finger was dragging, not tapping
+  const DOUBLE_TAP_MS = 320;
+  let downAt = null, onThumb = false, dragged = false;
+  let lastTapMs = 0, beforeTap = null;
+  s.addEventListener("pointerdown", ev => {
+    if (ev.pointerType === "mouse" && ev.button !== 0) return;
+    downAt = ev.clientX;
+    dragged = false;
+    // A press that lands ON the thumb is a real drag — hand it straight to the
+    // browser, untouched, so "chạm vào nút vị trí và kéo như thông thường" keeps
+    // working exactly as it always has (including the live oninput above).
+    onThumb = Math.abs(ev.clientX - thumbCentreX()) <= THUMB / 2 + 4;
+    if (onThumb) return;
+    // Anywhere else: kill the default jump-to-position BEFORE it happens. The
+    // value must not move at all until pointerup tells us tap or drag.
+    ev.preventDefault();
+    s.focus({ preventScroll: true });         // preventDefault also swallows focus
+  });
+  s.addEventListener("pointermove", ev => {
+    if (downAt === null || dragged) return;
+    if (Math.abs(ev.clientX - downAt) > TAP_SLOP_PX) dragged = true;
+  });
+  const endPress = ev => {
+    if (downAt === null) return;
+    const wasThumb = onThumb, wasDrag = dragged;
+    downAt = null; onThumb = false; dragged = false;
+    // Thumb drag: the browser already moved it. Track drag: deliberately does
+    // nothing (the teacher's way to move a lot is to grab the thumb).
+    if (wasThumb || wasDrag) return;
+    const now = ev.timeStamp || performance.now();
+    if (beforeTap !== null && now - lastTapMs <= DOUBLE_TAP_MS) {
+      // Second tap of a double: land one notch BELOW where the pair started.
+      lastTapMs = 0;
+      const back = beforeTap; beforeTap = null;
+      setValue(back - stepN);
+      return;
+    }
+    // ⚠️ The first tap moves the number IMMEDIATELY rather than waiting out the
+    // double-tap window. Waiting would make every ordinary single tap feel 320ms
+    // late — the far more common gesture paying for the rarer one. A double tap
+    // therefore reads as +1 then −1, which is also an honest picture of what the
+    // two taps did.
+    beforeTap = Number(s.value);
+    lastTapMs = now;
+    setValue(beforeTap + stepN);
+  };
+  s.addEventListener("pointerup", endPress);
+  s.addEventListener("pointercancel", () => { downAt = null; onThumb = false; dragged = false; });
+
   c.ctl.append(s, chip);
   return { ...c, slider: s, chip, paint };
 }

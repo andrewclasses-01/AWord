@@ -1163,6 +1163,23 @@ body {
 .aw-opt-grid > * { margin-bottom: 9px; }
 .aw-optc { min-width: 0; }              /* one option = one cell */
 .aw-optc-wide { grid-column: 1 / -1; }  /* controls too wide for half a panel */
+/* ⭐ Đợt 188 — TWO CELLS THAT MUST STAY IN ONE COLUMN, stacked. The grid flows
+   row-first, so two cells appended one after the other land SIDE BY SIDE; this
+   wrapper takes one grid slot and stacks its children inside it instead. Used by
+   core/fight.js for Time delay + Speed bonus, which the teacher wants read as one
+   pair ("time delay và speed bonus luôn cùng 1 cột") because the first decides
+   whether the second does anything at all.
+   ⚠️ `row-gap`, not a margin on the children: the children are no longer direct
+   children of `.aw-opt-grid`, so the `> * { margin-bottom: 9px }` rule above
+   stops reaching them — this keeps the spacing identical either way. */
+.aw-optc-stack { display: grid; row-gap: 9px; align-content: start; min-width: 0; }
+/* ⭐ Đợt 188 — A CONTROL THAT CANNOT BE USED RIGHT NOW IS GREYED, NEVER HIDDEN
+   (teacher, 18/8/2026: "chỉ mất màu (thể hiện ko chỉnh được) chứ không ẩn").
+   Hiding it makes the panel jump under the teacher's finger and leaves no sign
+   the control exists at all; greying says "there is a thing here, and something
+   else is switching it off". `pointer-events: none` is what actually makes it
+   un-draggable — the dimming alone would still accept a tap. */
+.aw-optc.is-locked, .aw-check.is-locked { opacity: .4; pointer-events: none; }
 /* Label line. `min-height` (not a fixed height) keeps two cells side by side
    starting their CONTROL line at the same y even when one label wraps and the
    other doesn't — the grid aligns cell tops, this aligns what's inside them. */
@@ -3161,9 +3178,11 @@ body {
   min-width: 0;
   overflow: hidden;
 }
-/* Both in-frame Fullscreen buttons go too: one button for the whole match now
-   sits with Options/Template/Style/MODE under the boards. */
-.aw-fight-board .aw-fs-always { display: none; }
+/* ⛔ Đợt 188 — the rule that used to hide the two in-frame Fullscreen buttons is
+   GONE, and so is the whole-match button that replaced them: core/engine.js no
+   longer BUILDS a Fullscreen button in a match at all (teacher dropped the feature
+   from Fight and Showdown). Nothing to hide, and a CSS rule matching nothing is
+   exactly what makes a later reader think the button is still around somewhere. */
 /* In a match the act's own title, and the Edit/Assignment/Print/Home cluster,
    are noise — the board is the lesson at that moment.
    ⚠️ `visibility`, NOT `display:none`: the bar is a 3-column grid (1fr auto 1fr)

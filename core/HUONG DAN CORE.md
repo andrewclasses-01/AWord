@@ -355,6 +355,48 @@ API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `b
 ⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
 chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
 
+⭐⭐ **THANH TRƯỢT: CHẠM = 1 NẤC, CHẠM ĐÚP = LÙI 1 NẤC (Đợt 188, 18/8/2026, thầy).** Kiểu mặc định của
+trình duyệt ("bấm đâu nút nhảy tới đó") đã BỎ: trên màn 86" cảm ứng một cú quệt tay là thanh 0..100 nhảy
+tới bất cứ đâu. Luật mới, áp cho **MỌI thanh trong app**:
+| Thao tác | Kết quả |
+|---|---|
+| chạm thân thanh (bất kỳ đâu) | **+1 nấc** |
+| chạm đúp (2 cú trong 320ms) | **−1 nấc** so với trước cặp chạm |
+| chạm đúng NÚT TRÒN rồi kéo | y hệt trước giờ (đường "kéo nhiều") |
+| kéo từ thân thanh | không làm gì |
+| kịch trần / kịch đáy | đứng lại |
+⭐ **`grep '"range"'` cả kho trả về ĐÚNG 1 DÒNG** — `mkSliderCell` trong `core/options-panel.js`. Mọi
+thanh ở Options, Settings và cả 17 template đi qua đó, nên **không template nào phải sửa gì**. Cùng thói
+quen với `makeHStepper` (chạm = ±1, kéo = nhiều) ⇒ app chỉ còn MỘT cách nhích một con số.
+- ⚠️ Cú chạm đầu đổi số **NGAY**, không chờ hết cửa sổ 320ms — chờ thì mọi cú chạm đơn (phổ biến hơn hẳn)
+  phải trả giá cho cú đúp hiếm gặp. Chạm đúp vì thế nhìn thành "+1 rồi −1".
+- ⚠️ Bấm trúng nút tròn thì **KHÔNG** `preventDefault` (giao thẳng cho trình duyệt); bấm chỗ khác thì
+  `preventDefault` **ngay ở `pointerdown`**, trước khi cú nhảy kịp xảy ra. Nó nuốt luôn focus ⇒ phải
+  `focus()` bằng tay.
+- ⚠️ **Số lẻ phải snap về lưới bước rồi `toFixed`** theo số thập phân của chính `step`, không cộng trần:
+  `0.1+0.1+…` ra `0.30000000000000004`.
+
+⭐ **Ô KHÔNG DÙNG ĐƯỢC THÌ MẤT MÀU, KHÔNG ẨN — `.is-locked` (Đợt 188, thầy).** Ẩn (`display:none`) làm
+bảng **nhảy bố cục ngay dưới ngón tay** đang kéo một thanh khác, và xoá luôn dấu hiệu cho biết điều khiển
+đó tồn tại. `.aw-optc.is-locked` / `.aw-check.is-locked` = mờ 40% + `pointer-events:none`.
+- ⚠️⚠️ **`pointer-events:none` MỚI CHỈ CHẶN NGÓN TAY.** Ô vẫn trong thứ tự Tab và phím mũi tên vẫn đổi số
+  trên một thanh đang xám. **Bắt buộc kèm `disabled`** cho mọi `input`/`button` bên trong (xem
+  `setLocked()` trong `core/fight.js`). Kiểm bằng 2 đường: `elementFromPoint` phải **rơi xuyên** xuống cha,
+  và `.disabled === true`.
+- ⭐ **Khoá một ô thì ĐỪNG đổi giá trị bên dưới nó.** Bản đầu ép `fightSpeedBonus = 0` khi ô chết ⇒ **âm
+  thầm xoá con số thầy đã đặt**. Cái quyết định thật phải là phép kiểm lúc CHẠY (`speedBonusApplies()`),
+  còn giá trị thì giữ nguyên để sống lại y như cũ khi ô mở lại.
+
+⭐ **`.aw-optc-stack` — hai ô phải nằm CÙNG MỘT CỘT.** Lưới Options chảy theo HÀNG nên 2 ô nối nhau luôn
+nằm cạnh nhau. Khối này chiếm đúng 1 ô lưới và xếp con chồng dọc (dùng cho Time delay + Speed bonus, vì ô
+trên quyết định ô dưới có tác dụng hay không). ⚠️ Dùng `row-gap`: con của nó **không còn là con trực tiếp**
+của `.aw-opt-grid` nên luật `> * { margin-bottom }` không với tới.
+
+⛔ **KHÔNG CÒN FULLSCREEN Ở FIGHT VÀ SHOWDOWN (Đợt 188, thầy: "bỏ hẳn, không còn đường nào").** Nút chung
+của trận (Đợt 124) và nút trong khung đều **không được gắn vào DOM** ở 2 chế độ đó; chế độ đơn giữ nguyên.
+Nút vẫn được TẠO vì `setZoomed()` và handler giữ tham chiếu. **`fight.ctl.toggleFullscreen()` GIỮ NGUYÊN**
+— nó vẫn là thứ giữ lớp `.is-fs` đúng khi trình duyệt vào toàn màn hình bằng F11.
+
 ⭐⭐ **TIME DELAY — CỬA SỔ HOÀ NAY LÀ MỘT THANH KÉO (Đợt 187, 18/8/2026).** `TIE_WINDOW_MS = 100` của
 Đợt 133 nay chỉ còn là MẶC ĐỊNH; option thật là **`fightTieWindow`**, đơn vị GIÂY, **`0` = ∞** (đúng quy
 ước "0 = unlimited" của Lives/Find the match). Thanh kéo chạy 0.1 → 3.1 nhưng **3.1 KHÔNG phải 3,1 giây** —

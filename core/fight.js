@@ -1178,8 +1178,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         });
 
     panel.append(cContent.cell, cRule.cell);
-    if (!pickMode) panel.append(cDelay.cell);
-    panel.append(cBonus.cell);
+    // ⭐ Đợt 188 — Time delay and Speed bonus share ONE column, stacked, because
+    // the first decides whether the second does anything (teacher: "time delay và
+    // speed bonus luôn cùng 1 cột"). Side by side, the greyed-out Speed bonus read
+    // as an unrelated broken control. A pick-turn game has no Time delay, so its
+    // Speed bonus goes back to being an ordinary cell of its own.
+    if (pickMode) panel.append(cBonus.cell);
+    else {
+      const stack = el("div", "aw-optc-stack");
+      stack.append(cDelay.cell, cBonus.cell);
+      panel.append(stack);
+    }
 
     // What happens AFTER a round ends, not part of the round rule — it is a
     // switch like the others, so it joins the shared checkbox block.
@@ -1197,25 +1206,39 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     //   • ∞      the wait always ends in a lock (see lockLoser/lateScores above),
     //           so "Round rule" and "Slower team keeps points" have nothing left
     //           to decide.
-    // ⚠️ `style.display`, not the `hidden` attribute: `.aw-optc` sets its own
-    // `display`, which wins over `[hidden]` and would leave the cell on screen.
+    // ⭐ Đợt 188 — GREYED, NOT HIDDEN (teacher). Hiding these made the panel
+    // re-flow under the finger that was still on the TIME DELAY slider, and left
+    // no sign the controls existed. `.is-locked` dims them and turns off
+    // pointer-events, so they read as "there, but something else decides this".
+    // ⚠️ `.is-locked` (opacity + pointer-events:none) is only half the lock —
+    // pointer-events stops a FINGER, but the control is still in the tab order and
+    // an arrow key on a focused slider would move it with nothing on screen
+    // explaining why a greyed-out control just changed. `disabled` is what
+    // actually closes that door, on the slider, on the segmented buttons and on
+    // the checkbox alike.
+    function setLocked(node, on) {
+      node.classList.toggle("is-locked", on);
+      node.querySelectorAll("input, button, select").forEach(ctlEl => { ctlEl.disabled = on; });
+    }
     function syncDelay(w) {
       const bonusOn = speedBonusApplies({ fightTieWindow: w });
       const unlimited = w === 0;
-      cBonus.cell.style.display = bonusOn ? "" : "none";
-      cRule.cell.style.display = unlimited ? "none" : "";
-      lateChk.style.display = unlimited ? "none" : "";
+      setLocked(cBonus.cell, !bonusOn);
+      setLocked(cRule.cell, unlimited);
+      setLocked(lateChk, unlimited);
       // Repair an unreachable value rather than show a lie: the old slider went
       // 0..20 with 0 = "Off", the new one starts at 1, so an act saved with 0
       // has nothing legal to show the moment the bonus becomes reachable.
-      if (bonusOn) {
-        if ((Number(draft.fightSpeedBonus) || 0) < 1) {
-          draft.fightSpeedBonus = DEFAULT_SPEED_BONUS;
-          cBonus.slider.value = String(DEFAULT_SPEED_BONUS);
-          cBonus.paint(DEFAULT_SPEED_BONUS);
-        }
-      } else {
-        draft.fightSpeedBonus = 0;   // "ko thưởng đội nhanh hơn" — really off, not just hidden
+      // ⚠️ Đợt 188 — the value is NO LONGER zeroed when the bonus goes dead. It is
+      // `speedBonusApplies()` at run time that ignores it (that gate is the actual
+      // rule), so the number the teacher set survives being greyed out and comes
+      // straight back to life the moment TIME DELAY leaves 0.1s. Writing 0 here
+      // used to destroy it silently, and greying a control while quietly changing
+      // the value under it would be the worse of the two lies.
+      if (bonusOn && (Number(draft.fightSpeedBonus) || 0) < 1) {
+        draft.fightSpeedBonus = DEFAULT_SPEED_BONUS;
+        cBonus.slider.value = String(DEFAULT_SPEED_BONUS);
+        cBonus.paint(DEFAULT_SPEED_BONUS);
       }
     }
     // A pick-turn game never shows TIME DELAY, so nothing here may move: running
