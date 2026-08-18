@@ -1615,15 +1615,26 @@ body {
    takes its own `width: max-content` around them: 2 tiles ≈ 348px, 3 ≈ 508px,
    both inside the 580px cap every other tool panel lives under. Do NOT give this
    panel a stated width — that is what tied it to the team table's 660 before. */
+/* ⭐ Đợt 191 (thầy: "giảm size các ô và icon mode") — the tiles were sized when
+   there were two of them; at five they made the popover wider than it needed to
+   be for a choice that is read in a glance. Column 148→112, height 132→98.
+   ⭐⭐ Đợt 191b — SIZED SO ALL FIVE FIT, which is the real constraint and was
+   being missed. Every tool panel is capped at 580px and clips what overflows
+   (`overflow: hidden auto` — no sideways scrollbar to give the game away), so at
+   112px the FIFTH tile was simply cut in half: 5×112 + 4×10 + 40 of padding =
+   640. The teacher caught it on a screenshot with the IPA tile sliced.
+   The arithmetic this must satisfy, and the reason these are not round numbers:
+       5 × 98 + 4 × 9 + 40 = 566 ≤ 580 ✓  (14px of slack)
+   ⚠️ Adding a SIXTH mode means redoing this sum — five is what fits. */
 .aw-mp-grid {
   display: grid;
-  grid-auto-flow: column;                 /* 2 tiles normally, 3 while Showdown runs */
-  grid-auto-columns: 148px;
-  gap: 12px;
+  grid-auto-flow: column;                 /* up to 5 tiles — see buildModePickPanel */
+  grid-auto-columns: 98px;
+  gap: 9px;
 }
 .aw-mp-tile {
   display: flex; align-items: center; justify-content: center;
-  height: 132px;
+  height: 88px;
   padding: 0;                             /* a <button>'s default padding would
                                              shrink the %-sized svg (Đợt 136) */
   border: 1.5px solid #dfe6ef; border-radius: 14px; background: #fff;
@@ -1639,10 +1650,34 @@ body {
 .aw-mp-tile.is-cur:hover { border-color: #2ec27e; background: #e7f7f0; }
 .aw-mp-icon { display: flex; width: 100%; align-items: center; justify-content: center; }
 /* `stroke-width` is set on the ICON here, not left at the 2.1 the icon strings
-   carry: those are drawn for a 22px toolbar button, so at 4x that weight becomes
-   a slab. At this size 1.5 keeps the line looking like the toolbar's — the value
-   travels WITH the icon size, so anyone resizing the tiles must revisit it. */
-.aw-mp-icon svg { width: 76px; height: auto; stroke-width: 1.5; }
+   carry: those are drawn for a 22px toolbar button, so at this size that weight
+   becomes a slab. The value travels WITH the icon size — Đợt 191 shrank the icon
+   76→54 and so had to take the weight back UP (1.5→1.75), or the lines would
+   have thinned to hairlines at the smaller size. Anyone resizing these again
+   must revisit this number in the same breath. */
+.aw-mp-icon svg { width: 48px; height: auto; stroke-width: 1.8; }
+/* The IPA tile is lettering, not linework: it carries no stroke at all, so the
+   rule above would leave it sized by its own font-size and looking small beside
+   the drawn icons. */
+.aw-mp-icon svg text { stroke: none; }
+
+/* Đợt 190 — RUNNING's second screen is the ONE place a mode tile carries words.
+   Its two games share an icon (both are races off one word list, see
+   TEMPLATE_ICON in core/catalog.js), so without a name the choice would be two
+   identical buttons. The tile stacks instead of centring only when it has one. */
+.aw-mp-tile:has(.aw-mp-label) { flex-direction: column; gap: 4px; }
+.aw-mp-label { font-size: 11.5px; font-weight: 700; letter-spacing: .01em; }
+.aw-mp-tile:has(.aw-mp-label) .aw-mp-icon svg { width: 38px; }
+
+/* Đợt 190 — IPA MODE HIDES THE TEMPLATE BUTTON (teacher, 18/8/2026). The act on
+   screen is a borrowed Speaking-cards deck, and changing template from inside it
+   would convert the CONVERSION — a second hop that drops content every time (the
+   reason `base`/`originAct` exists at all). Keyed on the MODE, not on the type:
+   an ordinary Speaking cards act keeps its Template button.
+   Same shape as the rule Running word and Running team already use for this
+   button, which is why the mode class is stamped on `.aw-stage` — the tool row
+   is its SIBLING, not its child. */
+.aw-stage.mode-ipa ~ .aw-below .aw-toolbtn[title="Template"] { display: none; }
 
 /* Template panel */
 /* Đợt 148 — the picker is now as wide as the Options panel (see
@@ -1864,6 +1899,24 @@ body {
 .aw-ed-sectionhead {
   margin: 24px 0 10px; font-size: 1.1rem; font-weight: 800; color: #23303e;
 }
+
+/* ⭐ Đợt 191 — BOYS AND GIRLS grid in the class editor (Settings › Classes).
+   Chips wrap, so a 40-pupil class stays a few tidy rows rather than 40 lines; the
+   mark sits in a fixed-width slot so the names stay aligned whether or not a chip
+   has one, and the chip does not resize as it is tapped through the cycle. */
+.aw-gender-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.aw-gender-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid #dfe6ef; background: #fff; color: #40506a;
+  font-size: 13px; font-weight: 600; line-height: 1.2;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.aw-gender-chip:hover { border-color: #b9c7da; }
+.aw-gender-chip.is-m { border-color: #7aa7f0; background: #eef4ff; color: #2f6fed; }
+.aw-gender-chip.is-f { border-color: #f09ac2; background: #fff0f6; color: #d94a8c; }
+.aw-gender-mark { width: 12px; text-align: center; font-size: 14px; }
+.aw-gender-tally { width: 100%; margin-top: 2px; }
 
 /* Options card */
 .aw-ed-optcard {
@@ -3645,13 +3698,23 @@ body {
 .aw-sd-htool:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
 .aw-sd-foottools { flex: 0 0 auto; display: inline-flex; gap: 8px; }
 /* The title moved down here from a row of its own, and sits between the tools
-   and Ready (teacher, 15/8/2026) — so it costs the table no height at all. */
-.aw-sd-foottitle {
+   and Ready (teacher, 15/8/2026) — so it costs the table no height at all.
+   ⭐ Đợt 191 — `.aw-sd-foottitle` (the bare word "Showdown") is REPLACED by
+   `.aw-sd-footcap`, which carries the branding and the pupil count on BOTH
+   screens. The old class is deleted rather than left dormant: a half-removed
+   mechanism is what makes the next reader think it is still live. */
+.aw-sd-footcap {
   flex: 1 1 auto; min-width: 0; text-align: center;
   font-size: 12.5px; font-weight: 800; letter-spacing: .06em; color: #8b93a1;
   text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* The count is the half that changes, so it gets the ink; the branding stays
+   quiet beside it. Both on one line — `white-space: nowrap` above means a narrow
+   panel ellipsises the sentence rather than wrapping the row taller, which would
+   push the table's height around as pupils are added. */
+.aw-sd-capdot { margin: 0 .5em; opacity: .6; }
+.aw-sd-capnum { color: #5b677a; }
 /* A touch smaller than the app's default primary button (teacher: "thu nhỏ hơn
    nút Ready đi một chút") — it is the only button on the row now, so it does not
    need to shout to be found. */
@@ -3665,13 +3728,19 @@ body {
   border-radius: 12px;
 }
 .aw-sd-confirmbox {
-  max-width: 340px; text-align: center;
+  max-width: 300px; text-align: center;
   background: #fff; border: 1.5px solid #e3e9f1; border-radius: 14px;
   box-shadow: 0 14px 34px rgba(15,20,30,.16);
-  padding: 18px 20px 16px;
+  padding: 16px 18px 14px;
 }
-.aw-sd-confirmtext { font-size: 14px; line-height: 1.45; color: #3b4757; }
+.aw-sd-confirmtext { font-size: 13.5px; line-height: 1.45; color: #3b4757; }
 .aw-sd-confirmrow { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+/* ⭐ Đợt 191 (thầy) — ONE size for BOTH buttons of a confirm question, stated in
+   px because this popover lives OUTSIDE the 16:9 stage (see the note in
+   askConfirm). `min-width` is what makes them read as a matched pair: without
+   it "Cancel" and "Send back" size themselves to their own text and the row
+   comes out visibly lopsided, which is what the teacher was looking at. */
+.aw-btn.aw-sd-confirmbtn { padding: 9px 18px; font-size: 14px; min-width: 104px; }
 
 .aw-sd-foot { position: relative; min-height: 46px; margin-top: 14px; }
 .aw-sd-footlayer { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; }

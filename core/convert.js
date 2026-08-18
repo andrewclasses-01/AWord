@@ -29,7 +29,7 @@ import { OPT_VER } from "./options-migrate.js";
 const QA_TARGETS = [
   "anagram", "flying_fruit", "crossword", "find_the_match", "balloon_pop",
   "quiz", "gameshow", "maze_chase", "open_the_box", "type_the_answer",
-  "whack_a_mole", "speaking_cards", "running_team"
+  "whack_a_mole", "speaking_cards", "running_team", "running_word"
 ];
 // Running team needs SIX words to fill a round (one answer + five look-alike
 // decoys). Hardcoded rather than imported from templates/running-team/rt-sets.js
@@ -37,6 +37,10 @@ const QA_TARGETS = [
 // engine.js can import it statically without dragging template code onto the
 // student page. Keep in step with MIN_POOL there.
 const RUNNING_TEAM_MIN = 6;
+// ⭐ Đợt 190 — Running WORD was missing from this file altogether, so there was
+// no route from a vocabulary act into it at all (Running team had one). RUNNING
+// mode is what needed it. Two words is the floor: below that there is no race.
+const RUNNING_WORD_MIN = 2;
 const TF_TARGETS = ["true_false", "whack_a_mole", "speaking_cards"];
 const SENTENCE_TARGETS = ["speaking_cards", "type_the_answer"];
 
@@ -121,6 +125,15 @@ export function toRecords(activityIn) {
       const ws = c.words || [];
       return { kind: "qa", records: ws.map(w => qaRec(typeof w === "string" ? w : w?.word, "")) };
     }
+    // Running word reads out the same way, and keeps its transcription: its rows
+    // are literally `{word, ipa}`, so `w` goes in as the extra and qaRec picks it
+    // up exactly as it does for a resolved vocabulary item. Added in Đợt 190 so
+    // the two racing games can reach each other — running_word became a TARGET in
+    // this đợt, and a target that cannot also be a source is a one-way door.
+    case "running_word": {
+      const ws = c.words || [];
+      return { kind: "qa", records: ws.map(w => qaRec(typeof w === "string" ? w : w?.word, "", w)) };
+    }
     default:
       return { kind: "unknown", records: [] };
   }
@@ -138,6 +151,11 @@ function qaRec(term, clue, extra) {
     term: t, clue: String(clue || ""), altAnswers: [t], distractors: [],
     voice: (extra && extra.voice) || "",
     voiceId: (extra && extra.voiceId) || "",
+    // ⭐ Đợt 190 — the IPA transcription rides along the same way the clip
+    // already did. core/content-view.js puts it on every resolved vocabulary
+    // item (see resolveItem), so RUNNING mode and IPA mode both read it from
+    // here instead of each inventing its own way back to the original act.
+    ipa: (extra && extra.ipa) || "",
     hideText: !!(extra && extra.voice && extra.hideText)   // only ever true alongside a real voice
   };
 }
@@ -178,6 +196,7 @@ export function switchTargets(activity) {
       // 4/8/2026, crossword.js) — 120 is the hard ceiling here too.
       if (t === "crossword" && (n < 2 || n > 120)) return false;
       if (t === "running_team" && n < RUNNING_TEAM_MIN) return false;
+      if (t === "running_word" && n < RUNNING_WORD_MIN) return false;
       if (NEED_CLUE.has(t) && !cluesPresent) return false;
       return true;
     });
@@ -193,9 +212,24 @@ export function switchTargets(activity) {
 // =============================================================
 // 3) Dựng act MỚI của loại đích (chơi tạm, không đụng thư viện)
 // =============================================================
-export async function convertActivity(activity, targetType) {
+// `style` (Đợt 190) picks between two ways of building the SAME target type,
+// for the one case that has two: Speaking cards from a vocabulary act reads the
+// clue on the ordinary Change-template route and "WORD /ipa/" in IPA mode.
+export async function convertActivity(activity, targetType, { style = "" } = {}) {
   const { kind, records } = toRecords(activity);
-  const content = buildContent(targetType, kind, records);
+  const content = buildContent(targetType, kind, records, style);
+
+  // ⭐ Đợt 190 — CARRY THE SAVED SETS IN. The two racing games keep their printed
+  // numbering on the activity, and RUNNING mode saves it back onto the ORIGIN act
+  // (see ui.saveTarget in core/engine.js). Without this line the round trip only
+  // works one way: the teacher saves SET 1, leaves the mode, comes back — and the
+  // freshly built copy starts with three empty slots while the set sits safely on
+  // the act nobody is reading. Sliced, not shared, so nothing the game does to the
+  // copy touches the library act until a save says so.
+  const carried = (activity.content || {})[targetType === "running_word" ? "printSets" : "gameSets"];
+  if ((targetType === "running_word" || targetType === "running_team") && Array.isArray(carried)) {
+    content[targetType === "running_word" ? "printSets" : "gameSets"] = carried.slice();
+  }
 
   // Options: nếu act này TỪNG được đổi sang đúng template đích và thầy đã Apply
   // chỉnh options, dùng LẠI bộ options đã nhớ (activity.templateOptions[type]).
@@ -290,7 +324,7 @@ function voiceOf(r) { return r.voice || ""; }
 function voiceIdOf(r) { return r.voiceId || ""; }
 function hideTextOf(r) { return !!(r.voice && r.hideText); }
 
-function buildContent(targetType, kind, records) {
+function buildContent(targetType, kind, records, style) {
   switch (targetType) {
     case "anagram":
     case "flying_fruit":
@@ -342,8 +376,15 @@ function buildContent(targetType, kind, records) {
         }))
       };
     case "speaking_cards":
+      // ⭐ Đợt 190 — `style: "ipa"` is what IPA MODE asks for: a card reads
+      // "TROUSER /ˈtraʊzə/", the word beside its transcription, which is what
+      // the standalone IPA act used to show. The ordinary Change-template route
+      // is untouched and still puts the CLUE on the card (a definition is the
+      // richer thing to talk about); the two cannot share one rule, because a
+      // card carrying an English definition is a different exercise entirely.
       return { cards: records.map(r => ({
-        text: cardText(r, kind), voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
+        text: style === "ipa" ? ipaCardText(r, kind) : cardText(r, kind),
+        voice: voiceOf(r), voiceId: voiceIdOf(r), hideText: hideTextOf(r)
       })) };
     // Only the terms travel: the clue (if the source had one) is dropped on
     // purpose, because this game never shows a clue — and with no clue
@@ -351,6 +392,14 @@ function buildContent(targetType, kind, records) {
     // hideText are deliberately NOT carried into Running team.
     case "running_team":
       return { words: records.map(r => termOf(r, kind)).filter(Boolean), gameSets: [] };
+    // Running word is the same bare pool, plus the transcription it prints
+    // beside each word. `printSets` is deliberately absent, exactly as
+    // `gameSets` is above: a saved set pairs a printed numbering with the class
+    // that played it, so it can only be made in the game's own setup screen.
+    case "running_word":
+      return { words: records
+        .map(r => ({ word: termOf(r, kind), ipa: r.ipa || "" }))
+        .filter(w => w.word) };
     default:
       return {};
   }
@@ -378,6 +427,14 @@ function cardText(r, kind) {
   if (kind === "card") return r.text || "";
   // qa: ưu tiên đề/định nghĩa (giàu ý để nói), không có thì lấy chính từ
   return (r.clue && r.clue.trim()) ? r.clue : (r.term || "");
+}
+// IPA MODE's card: the word and its transcription on one face, which is what
+// the standalone IPA act showed. A word with no transcription still gets a card
+// — the class reads it aloud unaided, which beats a hole in the deck.
+function ipaCardText(r, kind) {
+  const word = termOf(r, kind);
+  const ipa = String(r.ipa || "").trim();
+  return ipa ? `${word}  ${ipa}` : word;
 }
 
 // Dựng 1 câu trắc nghiệm: đáp án đúng = term, đáp án nhiễu = distractors

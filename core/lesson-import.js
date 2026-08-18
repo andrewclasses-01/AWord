@@ -22,7 +22,6 @@ async function xlsx() {
 // Option presets — mirror each template's sample-*.js so imported acts play
 // with sensible defaults (kept identical to the taoactaw skill).
 const OPT_FTM  = { timer: "countUp", shuffleQuestions: true, lives: 5, showAnswers: true, speed: 0, repeatUntilCorrect: false, removeCorrects: true };
-const OPT_SC   = { timer: "none", timerTotalSeconds: 120, shuffleQuestions: true, dealPlaces: 1 };
 const OPT_TF   = { timer: "countUp", shuffleQuestions: true, lives: 5, showAnswers: true, speed: 0, repeatUntilCorrect: false };
 const OPT_QUIZ = { timer: "countUp", shuffleQuestions: true, shuffleAnswers: true, lives: null };
 // contentMode "text" (12/8/2026): an imported act may be given voice clips right
@@ -43,17 +42,9 @@ const OPT_RW   = { timer: "none", teamAName: "TEAM A", teamBName: "TEAM B", cloc
 // short one per question. `lives: 0` would mean unlimited; 3 is the default.
 const OPT_RT   = { timer: "none", mainSeconds: 600, questionSeconds: 15, lives: 3 };
 
-const anagram = (title, pairs) => ({
-  type: "anagram", title, theme: "classic", options: OPT_ANA,
-  content: { withClues: pairs.some(p => p[1]), items: pairs.filter(p => p[0]).map(([w, c]) => ({ word: w, clue: c })) }
-});
 const ftm = (title, pairs) => ({
   type: "find_the_match", title, theme: "classic", options: OPT_FTM,
   content: { pairs: pairs.filter(p => p[0]).map(([a, b]) => ({ keyword: a, definition: b })) }
-});
-const speaking = (title, cards) => ({
-  type: "speaking_cards", title, theme: "classic", options: OPT_SC,
-  content: { cards: cards.filter(Boolean).map(t => ({ text: t })) }
 });
 // `words` is an array of {word, ipa} (11/8/2026 — was a plain string array
 // before Running word's editor grew an IPA column; see running-word-editor.js).
@@ -121,6 +112,173 @@ const twoSetAct = (make, title, itemsKey, halves) => {
   };
 };
 
+// =============================================================
+// SHEET SCANNER (Đợt 190, 18/8/2026) — FIND THE DATA BY ITS SHAPE, NOT BY THE
+// SHEET'S NAME OR BY HARD-CODED COLUMN LETTERS.
+//
+// WHY. Measured over the teacher's 121 real lesson workbooks on 18/8/2026 (the
+// whole of D:\4. LISTENING + D:\5. READING), the fixed names and columns this
+// file used to trust are the MINORITY case:
+//   • the four-clue vocabulary table lives on a sheet called `WORDTABLE` in only
+//     53 files. 65 more carry the SAME table under the name `CROSSWORD`, and a
+//     handful use `CROSSWORD ADVANCED` / `VOCABTABLE1` / `WORDTABLE2` / `TABLE1`.
+//     Those 65 files imported NO vocabulary at all.
+//   • of 200 quiz sheets, only 80 are in the `question | correct | wrong…`
+//     shape the old reader assumed. 76 are `No. | (blank) | question | correct |
+//     wrong…` (imported nothing) and 16 are `No. | question | correct | wrong…`
+//     (imported the row NUMBER as the question — junk, silently).
+//   • the three Reading-act sections are NOT at fixed rows. A file whose True/
+//     false block runs long pushes the reading-quiz down, and the old fixed band
+//     41..70 then read fill-in-the-blank rows as quiz questions.
+// Every one of those failures was silent: the act simply came out empty or
+// wrong, and nothing on screen said which sheet had been missed.
+//
+// WHAT REPLACES IT. Each block of the vocabulary table is a run of three
+// columns — /ipa/ · WORD · clue — so the table is found by looking for that
+// TRIPLE anywhere in the sheet. That one rule covers both column layouts seen in
+// the corpus (the common one starting at C/D/E, and the variant that repeats the
+// word in F and pushes everything one to the right), and it labels the blocks by
+// reading them: an English clue makes ENG1/ENG2, a Vietnamese one VI1/VI2.
+// Quiz columns are found as "the text columns, in order" — leading numbering and
+// blank spacer columns drop out on their own. Reading-act sections are cut at
+// their HEADER rows (`No.` / `STT`) instead of at fixed row numbers.
+// =============================================================
+
+// A cell is one of: an IPA transcription, a number, or text (Vietnamese or not).
+const RE_IPA = /^\/[^/]*\/$/;
+const RE_NUM = /^\d+([.,]\d+)?$/;
+const RE_VI = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
+// A clue is a sentence; a word (or short phrase like "SKIN-SCRAPER", "WASH
+// DOWN") is not. 25 characters separates them on every row of the corpus.
+const LONG_AT = 25;
+
+// Column statistics over the non-empty cells of one 0-indexed column.
+function colStats(grid, c) {
+  const s = { n: 0, ipa: 0, num: 0, long: 0, short: 0, vi: 0 };
+  for (const row of grid) {
+    const v = row[c] || "";
+    if (!v) continue;
+    s.n++;
+    if (RE_IPA.test(v)) s.ipa++;
+    else if (RE_NUM.test(v)) s.num++;
+    else if (v.length >= LONG_AT) { s.long++; if (RE_VI.test(v)) s.vi++; }
+    else s.short++;
+  }
+  return s;
+}
+
+// The `/ipa/ · WORD · clue` runs in this sheet, left to right, non-overlapping.
+// Returns 1-indexed column numbers so they read like the spreadsheet does.
+function findVocabBlocks(grid) {
+  const width = grid.reduce((w, r) => Math.max(w, r.length), 0);
+  const out = [];
+  for (let c = 0; c + 2 < width; c++) {
+    const ipa = colStats(grid, c), word = colStats(grid, c + 1), clue = colStats(grid, c + 2);
+    if (ipa.n < 3 || word.n < 3 || clue.n < 3) continue;
+    if (ipa.ipa / ipa.n < 0.6) continue;
+    if (word.short / word.n < 0.6) continue;
+    if (clue.long / clue.n < 0.5) continue;
+    // A clue set is Vietnamese if its sentences carry Vietnamese letters. Read
+    // rather than assumed, so a file that ever ships three English sets or one
+    // Vietnamese one still lands on the right buttons.
+    out.push({ ipa: c + 1, word: c + 2, clue: c + 3, vi: clue.vi / clue.long >= 0.4 });
+    c += 2;                       // a column belongs to at most one block
+  }
+  return out;
+}
+
+// Fallback for a table with no IPA column at all: adjacent `WORD · clue` pairs.
+function findVocabPairs(grid) {
+  const width = grid.reduce((w, r) => Math.max(w, r.length), 0);
+  const out = [];
+  for (let c = 0; c + 1 < width; c++) {
+    const word = colStats(grid, c), clue = colStats(grid, c + 1);
+    if (word.n < 3 || clue.n < 3) continue;
+    if (word.short / word.n < 0.6) continue;
+    if (clue.long / clue.n < 0.5) continue;
+    out.push({ ipa: 0, word: c + 1, clue: c + 2, vi: clue.vi / clue.long >= 0.4 });
+    c += 1;
+  }
+  return out;
+}
+
+// Name the blocks in the order they appear: English ones become ENG1/ENG2,
+// Vietnamese ones VI1/VI2. Extra blocks beyond four are dropped rather than
+// invented into new keys — nothing downstream knows what a fifth set would be.
+function labelBlocks(blocks) {
+  const en = ["eng1", "eng2"], vi = ["vi1", "vi2"];
+  return blocks.map(b => ({ ...b, key: (b.vi ? vi : en).shift() || "" })).filter(b => b.key);
+}
+
+// The columns of a block that actually carry FIELDS, in order. A numbering
+// column (all digits) and a blank spacer column are not fields, so they drop out
+// on their own — which is the whole reason the reader no longer needs to know
+// whether a sheet starts at column A, B or C.
+function textCols(grid) {
+  const width = grid.reduce((w, r) => Math.max(w, r.length), 0);
+  const cols = [];
+  for (let c = 0; c < width; c++) {
+    const s = colStats(grid, c);
+    if (s.n < 2) continue;
+    if ((s.num + s.ipa) / s.n >= 0.5) continue;
+    cols.push(c + 1);
+  }
+  return cols;
+}
+
+// [question, correct, …wrong] for a quiz-shaped sheet.
+function findQuizCols(grid) {
+  const cols = textCols(grid);
+  return cols.length >= 2 ? { q: cols[0], correct: cols[1], wrong: cols.slice(2, 8) } : null;
+}
+
+// Cut a sheet into blocks at its BLANK ROWS. Header rows were the obvious
+// divider and they are the WRONG one: measured on the corpus, 2 of the 13 real
+// Reading-act sheets carry no header at all, and in one of them every row of the
+// fill-in section begins with a WORD in the first column — which reads exactly
+// like a header and produced 30 "headers" in a row.
+function splitBlocks(grid) {
+  const out = [];
+  let cur = [];
+  for (const row of grid) {
+    if (row.some(Boolean)) cur.push(row);
+    else { if (cur.length >= 2) out.push(cur); cur = []; }
+  }
+  if (cur.length >= 2) out.push(cur);
+  return out;
+}
+
+// Drop a block's header row, when it has one. Two independent tells, because
+// neither covers the corpus alone: the rows below a header are NUMBERED while
+// the header is not, and a header is all SHORT labels above rows that carry
+// sentences.
+function stripHeader(rows) {
+  if (rows.length < 3) return rows;
+  const first = rows[0], rest = rows.slice(1);
+  const firstField = first.find(Boolean) || "";
+  if (RE_NUM.test(firstField)) return rows;                 // the first row is data
+  const numbered = rest.filter(r => RE_NUM.test(r.find(Boolean) || "")).length;
+  if (numbered / rest.length >= 0.6) return rest;
+  const firstIsShort = first.every(v => !v || v.length < LONG_AT);
+  const restIsLong = rest.filter(r => r.some(v => v && v.length >= LONG_AT)).length;
+  if (firstIsShort && restIsLong / rest.length >= 0.6) return rest;
+  return rows;
+}
+
+// Which of the three Reading-act exercises this block is — read off its SHAPE,
+// not its position, so a file that ships them in another order (or ships a
+// fourth block, as two files do) still lands each one in the right act:
+//   four fields or more            -> the reading quiz (question + 3-4 answers)
+//   two fields, first one a SENTENCE -> True/false (a true and a false version)
+//   two fields, first one a WORD      -> fill in the blank (answer + sentence)
+function sectionKind(rows) {
+  const cols = textCols(rows);
+  if (cols.length >= 4) return "rq";
+  if (cols.length < 2) return null;
+  const s = colStats(rows, cols[0] - 1);
+  return s.long / s.n >= 0.5 ? "tf" : "fill";
+}
+
 // The "source" code that names the folder + prefixes titles (same rule as taoact).
 function sourceStem(fileName) {
   let stem = (fileName || "").replace(/\.(xlsm|xlsx|xls)$/i, "").trim();
@@ -176,48 +334,98 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     return XLSX.utils.decode_range(ws["!ref"]).e.r + 1;   // 1-indexed
   };
 
+  // A sheet read out as a plain array of rows of strings, for the scanners at
+  // the top of this file. Capped so a sheet with a stray cell far down (these
+  // generated workbooks have plenty) can't turn into a million-cell read.
+  // ⚠️ BLANK ROWS ARE KEPT. It is tempting to drop them — the scanners ignore
+  // empty cells anyway — but `grid[i]` IS sheet row `i+1`, and the Reading-act
+  // reader below depends on that in two places at once: findSections() reports
+  // header rows by position, and the fallback bands (2-16 / 19-38 / 41-70) are
+  // written in real spreadsheet rows. Compacting silently slides one against
+  // the other, which reads the wrong section and still produces a full-looking
+  // act.
+  const SCAN_ROWS = 500, SCAN_COLS = 26;
+  const gridOf = (ws, cols = SCAN_COLS) => {
+    if (!ws) return [];
+    const rows = Math.min(maxRow(ws), SCAN_ROWS);
+    const g = [];
+    for (let r = 1; r <= rows; r++) {
+      const row = [];
+      for (let c = 1; c <= cols; c++) row.push(cell(ws, r, c));
+      g.push(row);
+    }
+    return g;
+  };
+
   const source = sourceStem(fileName);
   const acts = [];
 
-  // ---- WORDTABLE vocab (cols D/E, H/I, L/M, P/Q, S) ----
-  // ⭐ 14/8/2026 (Đợt 145) — ONE act, FOUR clue sets. Columns D/H/L/P hold the
-  // SAME word — measured across the teacher's lesson files, 100 rows out of 100
-  // identical — and only the CLUE differs: an English definition (E), an easier
-  // English one (I), a Vietnamese meaning (M), a Vietnamese example sentence
-  // (Q). So one ROW of the sheet is one word wearing four clues, and it now
-  // imports as ONE act whose Options row picks the set being played
-  // (core/content-view.js). Before this it was four near-identical acts, and
-  // six once voices were generated.
-  const VARIANT_COLS = [
-    { key: "eng1", word: 4,  clue: 5  },
-    { key: "eng2", word: 8,  clue: 9  },
-    { key: "vi1",  word: 12, clue: 13 },
-    { key: "vi2",  word: 16, clue: 17 }
-  ];
-  const wt = sheet("WORDTABLE");
-  const WORDS = [], IPA = [];
-  if (wt) {
-    const rows = maxRow(wt);
-    for (let r = 1; r <= rows; r++) {
-      // Read the row across all four blocks. The word is taken from the first
-      // block that has one, so a lesson file that fills only some of the four
-      // still imports every word it does have.
-      const clues = {};
-      let word = "";
-      for (const v of VARIANT_COLS) {
-        const w = cell(wt, r, v.word);
-        if (!w) continue;
-        if (!word) word = w;
-        clues[v.key] = cell(wt, r, v.clue);
-      }
-      if (word) WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
-      const s = cell(wt, r, 19); if (s) IPA.push(s);
+  // ---- the vocabulary table ----
+  // ⭐ 14/8/2026 (Đợt 145) — ONE act, FOUR clue sets. Each block of the table
+  // repeats the SAME word — measured across the teacher's lesson files, 100 rows
+  // out of 100 identical — and only the CLUE differs: an English definition
+  // (ENG1), an easier English one (ENG2), a Vietnamese meaning (VI1), a
+  // Vietnamese example sentence (VI2). So one ROW of the sheet is one word
+  // wearing four clues, and it imports as ONE act whose Options row picks the
+  // set being played (core/content-view.js).
+  // ⭐ 18/8/2026 (Đợt 190) — the sheet and the columns are now FOUND, not
+  // assumed: `WORDTABLE` was the right name in only 53 of the teacher's 121
+  // lesson files (65 keep the identical table on a sheet called `CROSSWORD`),
+  // and one layout repeats the word in an extra column, shifting every block one
+  // to the right. See the SHEET SCANNER block at the top of this file.
+  // Sheets that are known to hold something else are skipped outright: they can
+  // never win the scan, and reading them is wasted work on every import.
+  const NOT_VOCAB = /^(QUIZ|READINGACT|RUNNING|PARAGRAPH|CUT|FILL|SLIDE|VIDEO|CHART|LOGIC|TRANSLATION)/;
+  let vocabGrid = [], vocabBlocks = [];
+  for (const norm of Object.keys(names)) {
+    if (NOT_VOCAB.test(norm)) continue;
+    const grid = gridOf(wb.Sheets[names[norm]]);
+    if (grid.length < 3) continue;
+    const found = labelBlocks(findVocabBlocks(grid));
+    if (found.length > vocabBlocks.length) { vocabGrid = grid; vocabBlocks = found; }
+  }
+  // No IPA column anywhere: fall back to bare `WORD · clue` pairs, so a table
+  // that never had a transcription still imports its clue sets.
+  if (!vocabBlocks.length) {
+    for (const norm of Object.keys(names)) {
+      if (NOT_VOCAB.test(norm)) continue;
+      const grid = gridOf(wb.Sheets[names[norm]]);
+      if (grid.length < 3) continue;
+      const found = labelBlocks(findVocabPairs(grid));
+      if (found.length > vocabBlocks.length) { vocabGrid = grid; vocabBlocks = found; }
     }
   }
+  const WORDS = [];
+  vocabGrid.forEach(row => {
+    const at = c => (c ? row[c - 1] || "" : "");
+    // Read the row across all blocks. The word is taken from the first block
+    // that has one, so a lesson file that fills only some of them still imports
+    // every word it does have.
+    const clues = {};
+    let word = "";
+    for (const b of vocabBlocks) {
+      const w = at(b.word);
+      if (!w) continue;
+      if (!word) word = w;
+      clues[b.key] = at(b.clue);
+    }
+    if (!word) return;
+    // ⭐ Đợt 190 (teacher, 18/8/2026) — THE TRANSCRIPTION IS A CLUE SET OF ITS
+    // OWN. It used to leave the act altogether, as two standalone acts
+    // (PRONUNCIATION + IPA); it is now a fifth set inside WORDS, which is what
+    // lets Edit correct it on its own tab and what feeds the new IPA mode.
+    // Taken from the block's own /ipa/ column rather than by splitting the old
+    // "WORD /ipa/" summary column: that column is missing from 9 files and sits
+    // one place further right in another, while the per-block column is on every
+    // row of every table in the corpus.
+    const ipa = vocabBlocks.map(b => at(b.ipa)).find(s => RE_IPA.test(s)) || "";
+    if (ipa) clues.pron = ipa;
+    WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
+  });
   // Only offer a variant BUTTON for a clue set this file actually filled in —
   // the OPT-IN rule from Đợt 143: a control that is there but does nothing is
   // worse than a missing one, because nothing on screen says so.
-  const presentVariants = VARIANT_COLS.map(v => v.key)
+  const presentVariants = ["eng1", "eng2", "vi1", "vi2", "pron"]
     .filter(k => WORDS.some(it => (it.clues[k] || "").trim()));
   // ENG1/ENG2 clues are English, so they're the only two sets offered for
   // auto-TTS in the Import dialog's voice panel (teacher confirmed 10/8/2026).
@@ -249,30 +457,26 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
       ttsVariants: voiceVariants
     });
   }
-  // PRONUNCIATION: unscramble the word with its IPA as the clue — split the IPA
-  // column's "WORD /ipa/" into word + pronunciation.
-  const PRON = [];
-  IPA.forEach(t => { const m = t.match(/^(.+?)\s+(\/[^/]*\/)\s*$/); if (m) PRON.push([m[1].trim(), m[2].trim()]); });
-  if (PRON.length) acts.push(anagram(`${source} / PRONUNCIATION`, PRON));
-  if (IPA.length)  acts.push(speaking(`${source} / IPA`, IPA));
-  // word -> IPA lookup for RUNNING WORD below (11/8/2026) — the same
-  // "WORD /ipa/" pairs PRONUNCIATION just parsed out of the IPA column,
-  // keyed upper-case so it matches ENG1's words regardless of case.
-  const ipaByWord = new Map();
-  PRON.forEach(([w, ipa]) => ipaByWord.set(w.toUpperCase(), ipa));
-  // The bare word list the two racing games need — column D's words, which is
-  // what `WORDS` was built from (Đợt 145 merged the four columns, so this is
-  // where the old `ENG1` array now comes from).
+  // ⛔ Đợt 190 — the two standalone acts this file used to build out of the
+  // transcription column are GONE (teacher, 18/8/2026): `PRONUNCIATION` (an
+  // Anagram clued by /ipa/) and `IPA` (Speaking cards showing "WORD /ipa/").
+  // Both said exactly what the WORDS act now says on its own PRONUNCIATION tab,
+  // and both are reachable from it — the first by picking that clue set, the
+  // second through MODE › IPA. Nine acts per lesson file becomes seven.
+  // ⚠️ Acts already imported under the old rule are untouched: they are ordinary
+  // saved acts, and nothing here reaches into the teacher's library.
+
+  // The bare word list the two racing games need.
   const WORDLIST = WORDS.map(it => it.word);
   // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
-  // word list, so it reuses ENG1's words (column D = the same pool the teacher's
-  // hand-made `RunningW` sheet drew its two 50-word lists from). No clues, no
-  // answers: the explainer supplies the meaning out loud. IPA is matched in
-  // from ipaByWord above when the sheet has one for that word; a word with
-  // none just imports with a blank IPA, same as before this existed.
+  // word list (the same pool the teacher's hand-made `RunningW` sheet drew its
+  // two 50-word lists from). No clues, no answers: the explainer supplies the
+  // meaning out loud. The transcription rides along when the row has one — it is
+  // read off the item's own PRONUNCIATION clue now, so it can never fall out of
+  // step with the word beside it.
   if (WORDLIST.length >= 2) {
     acts.push(runningWord(`${source} / RUNNING WORD`,
-      WORDLIST.map(w => ({ word: w, ipa: ipaByWord.get(w.toUpperCase()) || "" }))));
+      WORDS.map(it => ({ word: it.word, ipa: it.clues.pron || "" }))));
   }
   // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
   // picked out of the pool itself by look-alike score, so no clues are needed.
@@ -284,34 +488,65 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // QUIZ2 the HOMEWORK half. The sheet names keep their numbers (that is the
   // teacher's spreadsheet, not ours); everything the teacher sees inside AWord
   // says PRACTICE / HOMEWORK.
-  const readQuizSheet = tag => {
-    const wq = sheet(tag);
+  // ⭐ Đợt 190 — the COLUMNS are found, not assumed. Of 200 quiz sheets in the
+  // teacher's 121 lesson files only 80 start at column A: 76 begin with a
+  // numbering column and a blank spacer (those imported nothing at all), and 16
+  // with a numbering column alone (those imported the row NUMBER as the
+  // question). findQuizCols() takes the text columns in order, so the numbering
+  // and the spacer drop out by themselves. The practice half is `QUIZ1` where
+  // the file has one and plain `QUIZ` where it does not — 53 files name it that.
+  const readQuizSheet = (...tags) => {
+    const wq = sheet(...tags);
+    const grid = gridOf(wq, 12);
+    const cols = grid.length ? findQuizCols(grid) : null;
+    if (!cols) return [];
     const rows = [];
-    if (!wq) return rows;
-    const rmax = maxRow(wq);
-    for (let r = 1; r <= rmax; r++) {
-      const q = cell(wq, r, 1);
-      if (q) rows.push([q, cell(wq, r, 2), [3, 4, 5, 6, 7].map(c => cell(wq, r, c)).filter(Boolean)]);
-    }
+    grid.forEach(row => {
+      const at = c => row[c - 1] || "";
+      const q = at(cols.q);
+      if (q) rows.push([q, at(cols.correct), cols.wrong.map(at).filter(Boolean)]);
+    });
     return rows;
   };
   const quizAct = twoSetAct(quiz, `${source} / QUIZ`, "questions", [
-    { key: "practice", rows: readQuizSheet("QUIZ1") },
+    { key: "practice", rows: readQuizSheet("QUIZ1", "QUIZ") },
     { key: "homework", rows: readQuizSheet("QUIZ2") }
   ]);
   if (quizAct) acts.push({ ...quizAct, subfolder: "ACT" });
 
   // ---- reading acts READINGACT1 (v1) / READINGACT2 (v2) ----
+  // ⭐ Đợt 190 — the three sections are cut at their HEADER rows ("No." / "STT"),
+  // not at fixed row numbers. The bands 2-16 / 19-38 / 41-70 this used to assume
+  // are only true while every section is exactly full: a True/false block that
+  // runs long pushes the reading quiz down, and the old third band then read
+  // fill-in-the-blank rows as quiz questions — a silently wrong act, measured on
+  // DW-S2.W1 (its quiz starts at row 50, not 41).
+  // The row shape itself is unchanged and is the same in all three sections:
+  // column B is the first field, C the second, D-F the extra quiz answers.
   const readRa = ws => {
-    const TF = [], FILL = [], RQ = [];
-    if (!ws) return { TF, FILL, RQ };
-    for (let r = 2; r <= 16; r++) { const b = cell(ws, r, 2); if (b) TF.push([b, cell(ws, r, 3)]); }
-    for (let r = 19; r <= 38; r++) { const b = cell(ws, r, 2); if (b) FILL.push([b, cell(ws, r, 3)]); }
-    for (let r = 41; r <= 70; r++) {
-      const b = cell(ws, r, 2);
-      if (b) RQ.push([b, cell(ws, r, 3), [4, 5, 6].map(c => cell(ws, r, c)).filter(Boolean)]);
+    const out = { TF: [], FILL: [], RQ: [] };
+    const grid = gridOf(ws, 8);
+    if (!grid.length) return out;
+    for (const raw of splitBlocks(grid)) {
+      const rows = stripHeader(raw);
+      const cols = textCols(rows);
+      const kind = sectionKind(rows);
+      if (!kind || cols.length < 2) continue;
+      const at = (r, c) => r[c - 1] || "";
+      // FIRST block of each kind wins. Two files in the corpus carry a FOURTH
+      // block (a second question/answer list) that reads as True/false on
+      // shape alone; without this it would replace the real one.
+      if (kind === "rq" && !out.RQ.length) {
+        out.RQ = rows
+          .map(r => [at(r, cols[0]), at(r, cols[1]), cols.slice(2, 5).map(c => at(r, c)).filter(Boolean)])
+          .filter(x => x[0]);
+      } else if (kind === "tf" && !out.TF.length) {
+        out.TF = rows.map(r => [at(r, cols[0]), at(r, cols[1])]).filter(x => x[0]);
+      } else if (kind === "fill" && !out.FILL.length) {
+        out.FILL = rows.map(r => [at(r, cols[0]), at(r, cols[1])]).filter(x => x[0]);
+      }
     }
-    return { TF, FILL, RQ };
+    return out;
   };
   // ⭐ Đợt 146 — THREE acts, each holding BOTH halves. READINGACT1 is the
   // PRACTICE half and READINGACT2 the HOMEWORK half of the same three

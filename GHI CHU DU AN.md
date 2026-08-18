@@ -8,6 +8,260 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 191 (18/8/2026) — ⭐⭐ TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN (nhớ HS đã xoá · giới tính · animation xáo)
+⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `classes.js` · `showdown-setup.js`) **+ `main.js`**.
+⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Đi liền sau Đợt 190 (cũng chưa commit).
+
+### 1. Nút MODE (thầy)
+- **Ô nhỏ lại**: cột 148→**112px**, cao 132→**98px**, icon 76→**54px**. ⚠️ Nét kẻ phải tăng
+  1.5→**1.75** cùng lúc — chú thích sẵn trong `app.css` đã cảnh báo "giá trị này đi THEO cỡ icon",
+  không tăng thì icon nhỏ lại thành nét tóc.
+- **Thứ tự**: Fight · Showdown · Running · IPA. Ô **Single vẫn đứng đầu** khi có — nó là đường RA chứ
+  không phải một trong bốn, để chỗ mắt nhìn đầu tiên thì không phải đi tìm.
+- **Icon fight**: thanh giữa từ **dài hơn** 2 ô (17 so với 12) thành **ngắn hơn một chút** (11), khe hai
+  bên giãn 1.5→**2.4**. Giờ 2 ô là chủ thể, thanh là thứ ngăn chúng.
+- **Icon IPA = chữ "IPA"** (Baloo 2, weight 800). ⚠️ Phải khai `stroke="none"`: mọi icon khác là nét
+  không nền, chữ mà thừa hưởng cặp đó thì **tàng hình**.
+  ⭐ **Chỉnh lần 2 (thầy: "chữ bé quá và hơi lệch dưới")** — cỡ 10.2 → **14**, baseline 16.4 → **15.8**.
+  ⚠️⚠️ **`getBBox()` của `<text>` trả hộp EM (cả phần thừa trên/dưới của font), KHÔNG phải hộp mực của
+  3 chữ cái** — bản sửa đầu tin vào nó nên vẫn lệch. Phải đo bằng canvas
+  `measureText().actualBoundingBox*`: ở cỡ 14, mực cao 9 trên baseline + 1 dưới. Số đo cuối:
+  **tâm mực y = 11,8** (trước là 12,7; tâm hình học là 12 — cao hơn một chút xíu là phép chỉnh THỊ GIÁC
+  chữ in hoa luôn cần), **rộng 20,76** so với icon fight **19,8×12** nên đứng cùng hàng thấy ngang nhau.
+  Trên nút toolbar 44px: chữ 22,3px trong svg 26px, **không bị cắt**.
+- **Nút MODE mang icon của chế độ đang chạy** — mở app là icon single (đúng trạng thái mặc định), vào
+  chế độ nào thì đổi icon đó. Hào quang giữ nguyên nghĩa: **chỉ single là không sáng**.
+- **Nút MODE ra ngoài cùng bên phải ở MỌI trạng thái** — ⚠️ việc này **đảo Đợt 124** (trong trận nó từng
+  đổi chỗ với Style để nằm giữa, "nút cai quản cả trận thì được ghế giữa"). Thầy đổi ý có chủ đích.
+
+### 1b. ⭐⭐ VÒNG SỬA THỨ HAI CỦA NÚT MODE (thầy gửi ảnh chụp, cùng ngày)
+> "Các icon phải có chiều cao tương đối giống nhau, có độ cao chân và đỉnh tương đương nhau (trừ icon
+> running) · Phải hiển thị toàn bộ 5 nút rõ ràng (như trong ảnh thì có icon IPA bị cắt) · Ở mọi mode đều
+> cần có thể chuyển sang bất kỳ mode khác… (nhưng lấy nội dung của chuẩn chứ không phải của IPA)"
+
+**(a) 5 ô bị cắt — đo ra ngay.** Mọi tool panel bị chặn ở **580px** và **`overflow: hidden auto`** (cắt
+ngang, KHÔNG có thanh cuộn để lộ ra). Ở 112px: `5×112 + 4×10 + 40 = 640` ⇒ ô thứ 5 bị xén đôi. Ảnh của
+thầy chụp đúng lúc có 5 ô (đang ở Showdown nên ô Single hiện thêm).
+Số mới: **98px, gap 9** ⇒ `5×98 + 4×9 + 40 = 566 ≤ 580` (dư 14px). Icon 54→**48**, ô cao 98→**88**.
+⚠️ **Thêm mode thứ 6 là phải tính lại phép cộng này** — 5 là con số vừa đủ.
+
+**(b) Chiều cao icon — đo trước, sửa sau.** Số đo cũ (đơn vị viewBox):
+| icon | đỉnh | chân | cao |
+|---|---|---|---|
+| Single | 5,5 | 18,5 | 13 |
+| Fight | 6 | 18 | 12 |
+| **Showdown** | 5,5 | **20,5** | **15** |
+| IPA | 6,8 | 16,8 | 10 |
+| Running (miễn) | 3,2 | 21 | 17,8 |
+**Showdown thò xuống thấp hơn cả nhóm 2,5 đơn vị** — đó là thứ làm hàng icon nhìn như võng xuống giữa.
+Chuẩn hoá về dải **6→18**: Single đổi `y=5.5 h=13`→`y=6 h=12`; Showdown giữ tỉ lệ bục 15:11,5:9,5 nhân
+0,8. Số đo sau: **Single/Fight/Showdown = 6→18, cao 12 (24px trên ô) — giống hệt nhau.**
+**IPA: 6,5→17,5, cao 11 (22px).** ⚠️ Không thể bằng đúng 12: mực cao 12 cần cỡ chữ 16,8, mà 3 chữ hoa
+ở cỡ đó đo được **~24,9 rộng** — tràn khỏi viewBox 24 nên **mất chữ đầu và chữ cuối**. Hụt nửa đơn vị
+mỗi đầu (~1px) là cái giá đúng để đổi lấy việc không mất chữ. Và **bỏ phép nhích thị giác** của vòng
+trước (baseline 16,3 → **16,5**): thầy đòi chân và đỉnh TƯƠNG ĐƯƠNG nên đối xứng thắng.
+
+**(c) Mọi mode chuyển được sang mọi mode.** Gốc: `canFight`/`canShowdown` hỏi template **đang hiển thị**,
+mà trong RUNNING/IPA đó là Running word / Speaking cards — cả hai không khai 2 cờ đó nên 2 ô biến mất.
+Hỏi **sai act**: thứ đem ra đấu là nội dung của act GỐC. Nay `modeTpl` hỏi template của `originAct`
+(⚠️ `hasTemplate()` trước, `getTemplate()` trần sẽ NÉM LỖI với module chưa nạp — và nó chạy ở mọi lần
+mount, đủ để hạ cả thanh công cụ).
+Hai đường đi kèm, cả hai đều phải mang **nội dung gốc**:
+- **→ Fight**: `startFight` nhận **`originAct`** thay vì `libAct` (trong IPA, `libAct` là bộ thẻ
+  "WORD /ipa/"; trong RUNNING là danh sách từ trơ — đấu bằng thứ đó là đấu sai nội dung, mà Speaking
+  cards còn không chấm điểm). Kèm `ensureTemplate(originAct.type)`.
+- **→ Showdown**: KHÔNG mở bảng đội tại chỗ được — bấm READY sẽ khởi động lại chính act đang hiển thị,
+  mà nó không đọc `showdownPick` ⇒ thầy xếp đội xong mà **không có gì xảy ra**. Dùng lại đúng cơ chế
+  `openShowdownOnMount` của đường Fight→Showdown: về act gốc trước, bảng đội tự mở.
+🟢 **Đo**: từ IPA → Fight ra **2 bàn `act-anagram`** (không phải speaking_cards) · từ RUNNING → Showdown
+về `act-anagram` và **bảng đội tự mở** · 5 ô, panel 566px, **0 ô bị cắt**.
+
+### 2. ⭐⭐ SHOWDOWN NHỚ HỌC SINH ĐÃ XOÁ (thầy)
+Chỗ hổng không nằm ở nút Next — nó **đã** nhớ (danh sách đi vào bảng đội trên Firestore). Chỗ hổng là
+**Reset teams xoá sạch cả tài liệu**, nên mở lại là đọc lại sổ lớp và HS đã xoá quay về đủ.
+- `sd_main` có thêm **`roster` + `rosterClass`** — danh sách của BUỔI HỌC, tách khỏi sổ lớp vĩnh viễn ở
+  Settings và tách khỏi bảng đội, vì nó phải **sống lâu hơn bảng đội**.
+- `wipeSetup({ keepRoster, rosterClass })` — "Reset teams" **giữ** danh sách, chỉ xoá đội.
+- **Nút Reset MỚI ở màn 1**, đối diện Next: đây là thứ DUY NHẤT gọi cả lớp về. Không có nó thì xoá nhầm
+  một em là không bao giờ lấy lại được trừ khi vào Settings sửa lớp.
+- ⚠️ `rosterClass` là chốt chặn: thiếu nó thì chọn lớp B sẽ thừa hưởng danh sách vắng của lớp A — những
+  cái tên chưa từng thuộc lớp B, và màn hình không có gì giải thích.
+🟢 **Đo trọn vòng**: 20 em → xoá 2 → Next → Reset teams → chọn lại lớp = **18** (kho lưu `roster:18`,
+`rosterClass:"cls_test"`, `teams:0`) → bấm Reset ở màn 1 = **20** trở lại.
+
+### 3. Giới tính trong Classes + xáo cân Nam/Nữ (thầy chốt "thêm vào Settings")
+- `core/classes.js`: pupil có thêm **`gender`** ("m"/"f"/""). `normalize()` là **cổng DUY NHẤT** lên
+  Firestore nên mọi giá trị lạ bị chuẩn hoá ở đó. `mergeStudents(old, names, genders)` nhận thêm map.
+- **UI: KHÔNG đụng vào textarea.** Cả màn đó sinh ra để thầy quét cột tên trong Excel rồi dán — thêm cột
+  thứ hai hay cú pháp "TÊN, M" là đặt một định dạng chắn ngang đúng thao tác đó. Thay vào đó là **lưới
+  chip riêng bên dưới**: chạm một tên để đổi vòng – → ♂ → ♀ → –. Không phải gõ gì.
+- Khoá theo **TÊN viết thường**, không theo id, vì chip phải bám theo thứ đang có trong textarea — kể cả
+  cái tên vừa gõ 1 giây trước và chưa có id.
+- **Thuật toán xáo**: xáo riêng 3 làn (nam · nữ · chưa đặt) rồi luôn rút từ **làn còn dài nhất**. Chia
+  luân phiên vào đội vắng nhất (luật cũ, không đụng) ⇒ mỗi đội nhận một dải xen kẽ.
+  🟢 **Đo**: lớp 5♂5♀ + 10 chưa đặt, 2 đội → **3♂2♀ / 2♂3♀** (tối ưu cho số lẻ). Lớp không đặt giới tính
+  nào thì chỉ có 1 làn ⇒ **y hệt cách xáo cũ** — không phải điền gì nó vẫn chạy.
+- 🟢 13 phép thử thuần hàm cho `mergeStudents` + `normalize` (giữ giới tính khi lưu mà không đụng chip ·
+  chip đè được cả về rỗng · id không đổi · em mới không có giới tính · em bị xoá không "sống lại" giới
+  tính theo tên · 8 giá trị lạ đều thành "").
+
+### 4. Animation xáo trước khi bay
+`scrambleChips()` — mỗi chip đang chờ bị hẩy một quãng ngẫu nhiên + nghiêng vài độ rồi về chỗ, 420ms.
+⚠️⚠️ **PHẢI XONG HẲN trước khi `bulkMove` chạy**, nên nó trả về promise và bên gọi `await`. `bulkMove`
+đo `getBoundingClientRect()` để biết ghost bay TỪ đâu — mà rect **có tính transform đang chạy**. Chồng
+hai thứ lên nhau là mọi ghost xuất phát lệch một chút, nhìn như trục trặc chứ không ra lỗi.
+🟢 Đo: 4/4 chip có transform sống giữa lúc xáo, sau 2,6s chia đều 10/10.
+
+### 5. Bốn việc nhỏ còn lại
+- **Pop-up phụ cân đối**: 🐞 nút OK **không hề khai cỡ** nên rơi xuống `.aw-btn` gốc — thứ đo bằng
+  **cqw** cho trong khung 16:9, ra ngoài popover thì phóng to. Cạnh một nút Cancel đã khai cỡ, hàng nút
+  thành **lệch hẳn**. Vá bằng `.aw-sd-confirmbtn` cho **CẢ HAI** + `min-width` để chúng thành một cặp.
+  🟢 Đo: hộp 300px, 2 nút **104×42 bằng nhau**. ⚠️ Đây là **lần thứ ba** cái bẫy cqw này cắn (2 chỗ
+  trước đã có sẵn cảnh báo trong `app.css`).
+- **Icon Random teams** → `shuffle` (2 nét bắt chéo) thay cây đũa thần: đũa nói "có phép màu", nét bắt
+  chéo nói **chuyện gì xảy ra**.
+- **Icon Reset teams** → `back` (mũi tên có thân, không phải chevron — chevron đã là "câu trước" trong
+  game). Việc thật của nút là quay về màn chọn lớp.
+- **READY không còn chờ xếp hết**: còn em trong danh sách chờ nay là **lựa chọn** của thầy ("coi như bạn
+  đó bị phạt không được tham gia"), chỉ còn đòi hỏi **đã tích một đội**. Em ở lại không vào `members` nên
+  không bao giờ tới lượt và không lên bảng kết quả — đúng nghĩa "ngồi ngoài".
+  🟢 Đo: 1 em còn chờ, bấm Ready → pick có **9 thành viên** (đội 10 trừ 1).
+- **Dòng chữ giữa hàng dưới**: `SHOWDOWN IN ANDREW CLASSES • X STUDENTS` ở **cả 2 màn**, thay chữ
+  "Showdown" trơ. Đếm **sĩ số đang dùng** nên không nhảy khi kéo chip. ⚠️ Nó THAY chỗ của dòng nhắc cũ,
+  nên lời nhắc thật ("Pick a class first") vẫn phải đi qua nó — cảnh báo được ưu tiên hơn dòng thương
+  hiệu. 🟢 Đo: 20 → xoá 2 → **18 STUDENTS** ở cả màn 1 lẫn màn 2.
+
+### 6. ⬜ CÒN LẠI — CHỈ MẮT/TAY THẦY
+- **Lưới chip Nam/Nữ trong Settings › Classes chưa ai NHÌN thấy**: nó nằm trong `main.js`, mà màn đó đòi
+  đăng nhập thật (bench dựng thử bị chặn vì bộ giả Firebase thiếu `writeBatch`). Phần **dữ liệu** đã đo
+  bằng 13 phép thử; phần **hình** thì chưa.
+- Nhìn cỡ ô/icon mode mới, icon fight, chữ IPA trên màn 86" — pane trình duyệt của em vẫn bị ẩn nên
+  không chụp được hình nào.
+- Xem animation xáo tên bằng mắt (máy chỉ đếm được là nó có chạy).
+
+---
+
+## Đợt 190 (18/8/2026) — ⭐⭐⭐ HAI CHẾ ĐỘ MỚI **RUNNING** + **IPA**, PHIÊN ÂM VÀO ACT TÍCH HỢP, VÀ BỘ ĐỌC FILE EXCEL TỰ DÒ THEO HÌNH DẠNG
+⭐ CÓ SỬA CORE (`lesson-import.js` · `content-view.js` · `convert.js` · `engine.js` · `app.css`)
+**+ 2 file game** (`running-word.js` · `running-team.js`).
+⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+
+### 1. Thầy giao (18/8/2026)
+> "Thêm 2 chế độ cho nút mode:
+> 1. Chế độ RUNNING. Bấm vào => chọn chế độ running => hiện pop-up chọn RUNNING WORD hoặc RUNNING TEAM…
+>    Khi import file, import cả phần phiên âm vào act WORDS tích hợp, thêm cả 1 tab PRONUNCIATION trong
+>    edit để sửa nếu cần (bên cạnh ENG1, ENG2, VI1, VI2)
+> 2. Chế độ IPA. Đây chính là act IPA (dùng template Speaking card). Lấy chính dữ liệu từ list words và
+>    các phiên âm đã nạp vào act tích hợp để dùng luôn. Khi ở chế độ này thì Options chính là của
+>    Speaking cards, ẩn nút template."
+> Kèm: "thêm cơ chế tự scan các cột words, eng1, eng2, vi1, vi2, quiz, reading acts... nếu đôi khi tên
+> sheet chưa chuẩn."
+
+Thầy chốt 4 điểm trước khi build: **mượn tạm** (thoát là về act WORDS, thư viện không đổi) · bộ số đã in
+**lưu ngược về act gốc** · **bỏ cả 2 act** PRONUNCIATION và IPA khi import · act cũ thì **import lại**.
+
+### 2. ⭐⭐⭐ ĐO TRÊN 121 FILE BÀI HỌC THẬT — BỘ ĐỌC CŨ ĐANG BỎ SÓT HƠN MỘT NỬA
+Quét toàn bộ `D:\4. LISTENING` + `D:\5. READING` (121 file, 119 file đọc được). Con số đo **trên cùng
+một bộ file**, bộ đọc cũ so bộ đọc mới:
+
+| | CŨ | MỚI |
+|---|---|---|
+| tổng số act sinh ra | 326 | **436** |
+| file KHÔNG ra act WORDS | **67** | **16** |
+| file KHÔNG ra act QUIZ | **74** | **31** |
+| file reading sai nội dung | **7/13** | **0/13** |
+
+Ba nguyên nhân, cả ba **hỏng trong im lặng** (act ra rỗng hoặc ra sai, không có lỗi nào nổ):
+1. **Tên sheet.** `WORDTABLE` chỉ đúng ở **53/121** file. **65 file** giữ đúng bảng đó dưới tên
+   **`CROSSWORD`**, còn lại là `CROSSWORD ADVANCED` / `VOCABTABLE1` / `WORDTABLE2` / `TABLE1`.
+2. **Cột của sheet Quiz.** Trong 200 sheet quiz chỉ **80** bắt đầu ở cột A. **76** sheet có cột đánh số +
+   một cột trống rồi mới tới câu hỏi (ra **rỗng**), **16** sheet có cột đánh số (nhập **số thứ tự làm câu
+   hỏi** — rác, không ai thấy).
+3. **Dải dòng của Reading acts.** Ba phần KHÔNG nằm ở dòng cố định. `DW-S2.W1` có phần trắc nghiệm bắt đầu
+   ở dòng **50** chứ không phải 41, nên dải cũ 41-70 đọc **các dòng điền-từ thành câu hỏi trắc nghiệm**.
+   `WORMS` mất 10 câu TF + 12 câu điền + 14 câu quiz.
+
+**Cách vá — dò theo HÌNH DẠNG, không theo tên và không theo chữ cái cột:**
+- Bảng từ vựng: mỗi khối là một bộ ba cột **`/ipa/` · TỪ · gợi ý**. Một luật này ăn cả 2 bố cục đang có
+  (bố cục thường bắt đầu ở C/D/E, và bố cục lặp lại từ ở cột F đẩy mọi khối lệch sang phải 1 cột), và
+  **tự đọc ra tên bộ**: gợi ý tiếng Anh thành ENG1/ENG2, tiếng Việt thành VI1/VI2.
+- Quiz: lấy **các cột CÓ CHỮ theo thứ tự** — cột đánh số và cột trống tự rụng ra.
+- Reading acts: cắt theo **DÒNG TRỐNG**, bỏ dòng tiêu đề của từng khúc, rồi **nhận dạng từng khúc theo
+  hình dạng** (≥4 cột chữ = trắc nghiệm · 2 cột mà cột đầu là CÂU = đúng/sai · 2 cột mà cột đầu là TỪ =
+  điền từ). ⚠️ Khúc đầu tiên của mỗi loại thắng — 2 file có **khúc thứ tư** đọc y như đúng/sai.
+- ⚠️ **BẪY ĐÃ TỰ CẮN LÚC VIẾT**: bản đầu của `gridOf()` bỏ dòng trống cho gọn, làm **số dòng lệch** với
+  dải dự phòng viết theo dòng Excel thật. Đã sửa: **giữ nguyên dòng trống**, `grid[i]` LUÔN là dòng `i+1`.
+
+### 3. ⭐⭐ PHIÊN ÂM THÀNH BỘ GỢI Ý THỨ NĂM (`pron`)
+Cột `/ipa/` của bảng nay chảy thẳng vào `items[i].clues.pron`, nên:
+- **Edit có tab PRONUNCIATION** — không phải viết dòng nào: tab sinh tự động từ `variantsOf()`, và
+  `voiceVariantsOf()` đã loại sẵn nó khỏi phần giọng. **Đo: ENG1/ENG2 có mic (60 nút/12 dòng), VI1/VI2 và
+  PRONUNCIATION không (48 nút)** — đúng như tiếng Việt, vì giọng Anh đọc ký hiệu phiên âm thành vô nghĩa.
+- **Options có nút PRONUNCIATION** ngang hàng ENG1/ENG2/VI1/VI2.
+- ⛔ **Bỏ hẳn 2 act** `PRONUNCIATION` (anagram) và `IPA` (speaking cards) khi import — **9 act/file còn 7**.
+  Act đã import trước đây **không bị đụng tới**.
+- `resolveActivity()` mang phiên âm ra ngoài dưới tên **`item.ipa`** — thuộc về TỪ, không thuộc bộ gợi ý
+  đang chơi. Đó là thứ duy nhất cho `convert.js` (chỉ bao giờ thấy bản đã bẹp) đọc được nó.
+  **Đo: đang chơi VI1 mà thẻ IPA vẫn ra `SALTY /ˈsɔ:lti/`.**
+
+### 4. ⭐⭐ HAI CHẾ ĐỘ MỚI Ở NÚT MODE
+Cả hai là **chuyển đổi tạm** đúng bộ máy của Change template — id `conv_…`, thư viện **không đổi một chữ**,
+thoát = `doSwitchTemplate(originAct.type)` trả lại act THẬT. Dấu `_mode` chỉ thêm **trí nhớ**: không có nó
+thì act đã chuyển đổi không nói được VÌ SAO nó bị chuyển, nên nút MODE không sáng, không có đường về, và
+không biết phải giấu nút Template.
+- **RUNNING** → màn thứ hai chọn **Running word / Running team** (2 game chung 1 icon nên ô này là chỗ
+  DUY NHẤT trong app có chữ dưới icon).
+- **IPA** → Speaking cards, mặt thẻ `WORD  /ipa/`, **ẩn nút Template** (`.aw-stage.mode-ipa ~ .aw-below`,
+  đúng khuôn Running word/team đã dùng sẵn cho nút này).
+- ⚠️⚠️ **`|| playMode` LÀ ĐƯỜNG RA.** Running word và Speaking cards không khai `fightMode` cũng không khai
+  `showdownMode`, nên thiếu vế đó thì nút đưa thầy VÀO chế độ sẽ không được dựng lúc quay RA — chế độ thành
+  căn phòng không cửa, chỉ thoát được bằng tải lại trang.
+- **Cổng vào có 2 lớp**: `switchList()` (Running team ≥6 từ, Running word ≥2) **và** một phép kiểm mới —
+  ≥80% mục phải ngắn ≤24 ký tự. Không có phép thứ hai thì act **QUIZ đọc-hiểu** cũng mời chơi RUNNING, mà
+  đáp án của nó là cả câu. **Đo: act WORDS tỉ lệ 1,00 → mời · act QUIZ 0,67 → không mời.**
+  ⚠️ Chỉ siết ở CHẾ ĐỘ, **không** đụng danh sách của nút Template (giữ nguyên thứ thầy đang dùng).
+- **Loại trừ Fight/Showdown**: trong trận chỉ còn 2 ô (Single · Showdown). **Đo đúng vậy.**
+
+### 5. 🐞 LỖI THẬT TỰ BẮT ĐƯỢC KHI ĐANG TEST — HÀNG BỘ GỢI Ý TRONG CHẾ ĐỘ MỚI
+Bảng Options trong chế độ IPA vẫn hiện hàng `TEXT VOICE ENG1 ENG2 VI1 VI2 PRONUNCIATION`. Nó **không đổi
+được gì** (thẻ luôn dựng từ bộ phiên âm) — mà tệ hơn thế: bấm VI1 rồi Apply sẽ chạy
+`applySubActSelection()`, và cú dựng lại của nó đi qua `doSwitchTemplate()` nên **convert lại KHÔNG kèm
+`style:"ipa"` cũng không kèm `_mode`** ⇒ bộ thẻ âm thầm biến thành **định nghĩa tiếng Anh**, nút Template
+hiện lại, nút MODE thôi sáng. Chế độ tự rã ra mà trên màn hình không có gì giải thích.
+**Vá: `makeContentSwitch()` trả `null` khi đang ở chế độ mới** — bỏ cả hàng, đúng luật opt-in Đợt 143.
+**Đo sau khi vá**: Single ra `TEXT VOICE ENG1…PRONUNCIATION + ANAGRAM MODE…` · IPA ra `TIMER … DEAL PLACES
+1 · Shuffle` · RUNNING ra `ROUND TIME · QUESTION TIME · LIVES`.
+
+### 6. ⭐ BỘ SỐ ĐÃ IN — LƯU NGƯỢC VỀ ACT GỐC (thầy chốt)
+Hai game Running lưu "một bộ" (tờ giấy đã in + sổ lớp hôm đó) lên chính act, và **từ chối thẳng** nếu act
+là bản tạm. Nay bản tạm là đường vào BÌNH THƯỜNG của chúng, nên từ chối = thầy không bao giờ lưu được tờ số.
+API mới **`ui.saveTarget()`** trả về act thư viện đứng sau ván (chính nó khi không có chuyển đổi), nên
+template không cần biết mình đang ở chế độ nào. Bộ số ghi vào **CẢ HAI** đối tượng: bản gốc để lên
+Firestore, bản trên màn hình để `readSets(activity)` đọc lại vẽ lại ngay dòng sau.
+⭐ **Và `convertActivity()` mang bộ số ĐI VÀO** — thiếu vế này thì vòng chỉ chạy một chiều: lưu SET 1, thoát,
+quay lại và thấy 3 ô trống trong khi bộ số nằm yên trên act không ai đọc.
+🟢 **Đo trọn vòng**: lưu → `saveActivity` nhận **`act_words_test` · type anagram · converted:false** (act
+WORDS gốc, không phải bản `conv_`) → thoát ra `act-anagram` → vào lại thấy **SET 1 12+12 12 shared**.
+
+### 7. Cách tự test (bench mới, `scratch/` gitignored nên phiên sau phải dựng lại)
+`scratch/mode190-test.html` — nạp một act WORDS **THẬT** do chính `lesson-import.js` sinh ra từ
+`WORMS.xlsm` (`scratch/words-act.json`), kèm `scratch/fake-store.js` (bản giả của `store.js`, ghi lại
+`saveActivity` nhận act nào). Probe: `__probe()` · `__tapMode()` · `__tapTile(tên)` · `__tapBtn(nhãn)`.
+⚠️ **Pane trình duyệt bị ẩn thì Chromium không vẽ khung hình nào** — phải chèn
+`*{transition:none!important;animation:none!important}` rồi mới đọc `getComputedStyle`.
+🟢 0 lỗi console trong toàn bộ lượt thử. Đối chứng ngược cho bộ đọc file: chạy lại bản HEAD trên cùng
+121 file (bảng ở mục 2).
+
+### 8. ⬜ CÒN LẠI — CHỈ MẮT/TAY THẦY
+- Nhìn 4 ô icon MODE trên màn thật, và màn con RUNNING (ô có chữ — chỗ duy nhất trong app như vậy).
+- Import **1 file .xlsm thật** trên bản live rồi mở tab PRONUNCIATION trong Edit.
+- Lưu một SET trong RUNNING mode với **Firestore thật** (bench dùng bản giả).
+- 3 file còn nội dung mà vẫn không ra act WORDS (`LSB1-S3.T2.P3-4`, `LSB1-S3.T4.P2`, `DR-S2.EP22`): chúng
+  chỉ có **danh sách từ trơ ở cột A sheet WORDS**, không có bảng gợi ý. Bộ đọc cũ cũng không ra gì. Hỏi
+  thầy có muốn nhận danh sách trơ đó thành act WORDS không clue không.
+
+---
+
 ## Đợt 189 (18/8/2026) — 🐞 VÁ LỖI THIẾT KẾ CỦA CHÍNH ĐỢT 188: KHỐI XẾP CHỒNG LÀM "TIME COST" TỤT XUỐNG, HỞ 62px GIỮA BẢNG
 ⭐ CÓ SỬA CORE (`core/app.css`, **đúng 1 thuộc tính**). Không đụng file nào khác.
 🟢 ĐÃ ĐO trên `scratch/fight-bench.html` ở **3 cấu hình bảng khác nhau** (Anagram+Fight · Quiz+Fight ·

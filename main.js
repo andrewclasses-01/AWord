@@ -1988,13 +1988,73 @@ function openSettingsFlow() {
 
       const count = el("div", "aw-ed-qcount");
       body.append(count);
+
+      // ⭐⭐ Đợt 191 — BOYS AND GIRLS (thầy, 18/8/2026), so Showdown's shuffle can
+      // spread them evenly across the teams instead of dealing blind.
+      //
+      // ⚠️ THE TEXTAREA IS LEFT ALONE ON PURPOSE. Its whole point is that the
+      // teacher selects the name column in Excel and pastes — a second column, or
+      // a "NAME, M" syntax, would put a format in the way of the one action this
+      // screen is built around. So gender is a SEPARATE grid of chips underneath:
+      // tap one to cycle – → ♂ → ♀ → –. Nothing has to be typed, and a class whose
+      // genders are never set behaves exactly as it always has.
+      //
+      // Keyed by lowercased NAME, not by pupil id, because the chips must follow
+      // what is in the textarea RIGHT NOW — including a name typed a second ago
+      // that has no id yet. `mergeStudents` resolves the ids at save time and
+      // takes this map as its third argument.
+      const genders = new Map();
+      (cls.students || []).forEach(s => {
+        if (s.gender) genders.set(String(s.name).trim().toLowerCase(), s.gender);
+      });
+      body.append(el("div", "aw-ed-sectionhead", "Boys and girls"));
+      body.append(el("div", "aw-ed-tip",
+        "Optional. Tap a name to mark it ♂ or ♀ — Showdown then spreads boys and girls "
+        + "evenly when it shuffles the teams. Names with no mark are dealt as usual."));
+      const gWrap = el("div", "aw-gender-grid");
+      body.append(gWrap);
+      const NEXT_G = { "": "m", m: "f", f: "" };
+      const G_MARK = { m: "♂", f: "♀", "": "" };
+      const renderGenders = () => {
+        gWrap.innerHTML = "";
+        const names = parseStudentNames(area.value);
+        if (!names.length) {
+          gWrap.append(el("div", "aw-ed-qcount", "Add some pupils first."));
+          return;
+        }
+        // Drop marks for names no longer on the list, so a deleted pupil cannot
+        // leave a gender behind for a later pupil who happens to share the name.
+        const live = new Set(names.map(n => n.trim().toLowerCase()));
+        [...genders.keys()].forEach(k => { if (!live.has(k)) genders.delete(k); });
+        names.forEach(name => {
+          const key = name.trim().toLowerCase();
+          const g = genders.get(key) || "";
+          const chip = el("button", "aw-gender-chip" + (g ? ` is-${g}` : ""),
+            `<span class="aw-gender-name"></span><span class="aw-gender-mark">${G_MARK[g]}</span>`);
+          chip.type = "button";
+          chip.querySelector(".aw-gender-name").textContent = name;
+          chip.title = g === "m" ? "Boy" : g === "f" ? "Girl" : "Not set";
+          chip.onclick = () => {
+            const nextG = NEXT_G[genders.get(key) || ""];
+            if (nextG) genders.set(key, nextG); else genders.delete(key);
+            renderGenders();
+          };
+          gWrap.append(chip);
+        });
+        const m = names.filter(n => genders.get(n.trim().toLowerCase()) === "m").length;
+        const f = names.filter(n => genders.get(n.trim().toLowerCase()) === "f").length;
+        gWrap.append(el("div", "aw-ed-qcount aw-gender-tally",
+          `${m} ♂ · ${f} ♀ · ${names.length - m - f} not set`));
+      };
+
       const updateCount = () => {
         const names = parseStudentNames(area.value);
         count.textContent = `${names.length} / ${MAX_STUDENTS} pupils`;
       };
-      area.oninput = () => { updateCount(); hideErr(); };
+      area.oninput = () => { updateCount(); renderGenders(); hideErr(); };
       nameInput.oninput = hideErr;
       updateCount();
+      renderGenders();
 
       // -- actions --
       const actions = el("div", "aw-modal-actions");
@@ -2024,7 +2084,7 @@ function openSettingsFlow() {
           // mergeStudents keeps the ID of every pupil whose name is unchanged, so
           // a Running team roster already saved against this class still points
           // at the same people after an edit.
-          const students = mergeStudents(cls.students, parseStudentNames(area.value));
+          const students = mergeStudents(cls.students, parseStudentNames(area.value), genders);
           await setStudents(cls.id, students);
           if (newName !== cls.name) await renameClass(cls.id, newName);
           toast("Class saved");

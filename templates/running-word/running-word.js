@@ -714,22 +714,46 @@ const rwTemplate = {
       return next;
     }
 
+    // ⭐ Đợt 190 — WHERE A SAVED SET BELONGS. This game used to be reached only
+    // as itself, so the act on screen was always the act to save. RUNNING mode
+    // makes the normal way in a CONVERSION off a vocabulary act — a throwaway
+    // copy with a "conv_" id — and the old refusal would then mean the printed
+    // numbering could never be kept at all. `ui.saveTarget()` hands back the
+    // library act behind the play (itself, when nothing was converted), so both
+    // routes land on something that has a home in the library.
+    // ⚠️ The set is written to BOTH objects: the host is what reaches Firestore,
+    // and the copy on screen is what `readSets(activity)` reads back one line
+    // later to repaint the setup screen.
+    const saveHost = () => (ui.saveTarget && ui.saveTarget()) || activity;
+    const canSaveSets = () => {
+      const h = saveHost();
+      return !!(h && h.id && !String(h.id).startsWith("conv_"));
+    };
+    async function persistSets(next) {
+      const { saveActivity } = await import("../../core/store.js");
+      const host = saveHost();
+      host.content = host.content || {};
+      host.content.printSets = next;
+      if (host !== activity) {
+        activity.content = activity.content || {};
+        activity.content.printSets = next;
+      }
+      await saveActivity(host);
+    }
+
     // Persist the current split into slot `setIndex`. store.js is imported
     // LAZILY, inside this click handler only: core's rule is that a student page
     // must never load library code, and this button only exists for a teacher.
     async function saveCurrentSet(btn) {
-      if (!activity.id || String(activity.id).startsWith("conv_")) {
+      if (!canSaveSets()) {
         ui.toast?.("Save the activity to your library first.");
         return;
       }
       btn.disabled = true;
       try {
-        const { saveActivity } = await import("../../core/store.js");
         const next = snapshotSlots();
         next[setIndex] = { a: current.a.slice(), b: current.b.slice() };
-        activity.content = activity.content || {};
-        activity.content.printSets = next;
-        await saveActivity(activity);
+        await persistSets(next);
         sets = readSets(activity);
         dirty = false;
         ui.toast?.(`Saved as SET ${setIndex + 1}.`);
@@ -747,17 +771,14 @@ const rwTemplate = {
     // Confirmation now happens in the popover BEFORE this is ever called (see
     // openDeletePopover above) — this function itself no longer asks.
     async function deleteSetNow(i) {
-      if (!activity.id || String(activity.id).startsWith("conv_")) {
+      if (!canSaveSets()) {
         ui.toast?.("Save the activity to your library first.");
         return;
       }
       try {
-        const { saveActivity } = await import("../../core/store.js");
         const next = snapshotSlots();
         next[i] = null;
-        activity.content = activity.content || {};
-        activity.content.printSets = next;
-        await saveActivity(activity);
+        await persistSets(next);
         sets = readSets(activity);
         if (setIndex === i) { current = buildSets(pool); dirty = true; }
         ui.toast?.(`SET ${i + 1} deleted.`);

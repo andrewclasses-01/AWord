@@ -615,13 +615,32 @@ const rtTemplate = {
       if (phase === "setup") renderSetup();
     }
 
-    // ⚠️ A TEMPORARY act (Change template built one from another game — id
-    // "conv_...", `_converted:true`) must NEVER reach saveActivity: core's rule
-    // is absolute, because saving one litters the library with a phantom
-    // activity that has no home folder and no way back. A set is a property of a
-    // REAL saved activity, so this simply refuses and says why.
+    // ⚠️ A TEMPORARY act (id "conv_...", `_converted:true`) must NEVER reach
+    // saveActivity: core's rule is absolute, because saving one litters the
+    // library with a phantom activity that has no home folder and no way back.
+    // ⭐ Đợt 190 — but a conversion is now the NORMAL way into this game (MODE ›
+    // RUNNING off a vocabulary act), so refusing outright would mean the printed
+    // numbering could never be saved. `ui.saveTarget()` hands back the LIBRARY
+    // act behind the play — itself when nothing was converted — so the set lands
+    // on a real activity either way, and the check below still catches the case
+    // where even that has never been saved.
+    const saveHost = () => (ui.saveTarget && ui.saveTarget()) || activity;
     function isTempAct() {
-      return activity?._converted === true || String(activity?.id || "").startsWith("conv_");
+      const h = saveHost();
+      return h?._converted === true || String(h?.id || "").startsWith("conv_") || !h?.id;
+    }
+    // ⚠️ Written to BOTH objects: the host is what reaches Firestore, the copy on
+    // screen is what `readSets(activity)` reads back to repaint the setup screen.
+    async function persistSets(next) {
+      const { saveActivity } = await import("../../core/store.js");
+      const host = saveHost();
+      host.content = host.content || {};
+      host.content.gameSets = next;
+      if (host !== activity) {
+        activity.content = activity.content || {};
+        activity.content.gameSets = next;
+      }
+      await saveActivity(host);
     }
 
     async function saveCurrentSet(btn) {
@@ -639,10 +658,7 @@ const rtTemplate = {
         for (let i = 0; i < MAX_SETS; i++) next[i] = sets[i] || null;
         next[slot] = current;
 
-        const { saveActivity } = await import("../../core/store.js");
-        activity.content = activity.content || {};
-        activity.content.gameSets = next;
-        await saveActivity(activity);
+        await persistSets(next);
 
         sets = readSets(activity);
         setIndex = slot;
@@ -666,10 +682,7 @@ const rtTemplate = {
         for (let k = 0; k < MAX_SETS; k++) next[k] = sets[k] || null;
         next[i] = null;
 
-        const { saveActivity } = await import("../../core/store.js");
-        activity.content = activity.content || {};
-        activity.content.gameSets = next;
-        await saveActivity(activity);
+        await persistSets(next);
 
         sets = readSets(activity);
         if (setIndex === i) {

@@ -156,6 +156,20 @@ function normalize(raw) {
     id: DOC_ID, kind: "showdown", root: "showdown", parentId: null, trashed: false,
     classId: String(raw?.classId || ""),
     className: String(raw?.className || "").trim(),
+    // ⭐⭐ Đợt 191 — WHO IS PLAYING TODAY (teacher, 18/8/2026: deleting a pupil on
+    // the class screen must survive). The register in Settings › Classes is the
+    // permanent roll and is never edited from here; THIS is the shorter list the
+    // teacher trimmed for this lesson — absentees taken out, a visitor typed in.
+    // Kept beside the teams rather than inside them because it has to outlive
+    // them: "Reset teams" throws the table away and must NOT bring the absentees
+    // back (see wipeSetup), and only the Reset button on the class screen itself
+    // clears this.
+    // `rosterClass` remembers which class the list belongs to, so switching to a
+    // different class cannot inherit the previous one's absentees.
+    rosterClass: String(raw?.rosterClass || ""),
+    roster: (Array.isArray(raw?.roster) ? raw.roster : [])
+      .map(m => ({ id: String(m?.id || ""), name: String(m?.name || "").trim() }))
+      .filter(m => m.name),
     teams: teams.slice(0, MAX_TEAMS).map((t, i) => ({
       id: String(t?.id || `sdt_${i + 1}`),
       name: String(t?.name || "").trim() || `Team ${i + 1}`,
@@ -277,9 +291,24 @@ export async function releaseMyClaim() {
  * Never throws, same reason as releaseMyClaim(): signed out or offline must
  * not stop the teacher from leaving the reset confirm.
  */
-export async function wipeSetup() {
-  try { await saveSetup({ classId: "", className: "", teams: [], claims: {} }); }
-  catch { /* signed out or offline — nothing was shared yet, nothing to wipe */ }
+export async function wipeSetup({ keepRoster = null, rosterClass = "" } = {}) {
+  // ⭐⭐ Đợt 191 — "Reset teams" KEEPS TODAY'S CLASS LIST (teacher, 18/8/2026:
+  // "nếu reset team ở màn sau… thì khi chọn lại lớp vẫn chỉ hiện những người
+  // không bị xóa"). Deleting absentees is a decision about the LESSON; throwing
+  // away the team table is a decision about the TEAMS, and making the second undo
+  // the first is what sent the teacher back to re-deleting the same pupils.
+  // The only thing that restores everybody is the Reset button on the class
+  // screen itself, which calls this with no `keepRoster`.
+  // ⚠️ `classId`/`className` are still cleared — the table is genuinely gone —
+  // so the surviving list carries its own `rosterClass` to say whose it is.
+  const keep = Array.isArray(keepRoster) ? keepRoster : [];
+  try {
+    await saveSetup({
+      classId: "", className: "", teams: [], claims: {},
+      roster: keep.map(m => ({ id: m.id, name: m.name })),
+      rosterClass: keep.length ? String(rosterClass || "") : ""
+    });
+  } catch { /* signed out or offline — nothing was shared yet, nothing to wipe */ }
   // ⭐ Đợt 177 — the RESULT board goes with the team table. Leaving it would let
   // a freshly rebuilt set of teams open a class board still holding yesterday's
   // line-up: the same team ids (`sdt_1`…) are handed out again by
@@ -758,9 +787,16 @@ export function buildShowdownPanel(panel, ctx) {
       const a = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
       whenDone(a, () => layer.remove(), 240);
     };
+    // ⚠️⚠️ Đợt 191 — BOTH buttons must carry `aw-sd-confirmbtn` (thầy: "nút cancel
+    // và reset quá to và không cân đối"). Cancel had its own px size while the OK
+    // button carried none, so it fell through to plain `.aw-btn` — which is sized
+    // in **cqw**, for use INSIDE the 16:9 stage. Out here in a below-stage popover
+    // that renders enormous, and beside a correctly sized Cancel it also renders
+    // LOPSIDED. Exactly the trap `.aw-opt-apply` and `.aw-mode-confirm-btn` each
+    // already carry a warning about — this is the third place it has bitten.
     row.append(
-      btn("Cancel", "aw-sd-ghost", () => { sfx.back(); close(); }),
-      btn(okLabel, "aw-btn-primary", () => { close(); onOk(); })
+      btn("Cancel", "aw-sd-ghost aw-sd-confirmbtn", () => { sfx.back(); close(); }),
+      btn(okLabel, "aw-btn-primary aw-sd-confirmbtn", () => { close(); onOk(); })
     );
     box.append(msg, row);
     layer.append(box);
@@ -772,6 +808,28 @@ export function buildShowdownPanel(panel, ctx) {
     const h = el("div", "aw-sd-hint");
     h.textContent = text;
     return h;
+  }
+
+  /**
+   * ⭐ Đợt 191 (thầy) — the branding line that fills the gap in the middle of the
+   * bottom row, on BOTH screens: dead centre between Next and Reset on the class
+   * screen, and between the icon row and Ready on the dividing screen.
+   *
+   * ⚠️ It REPLACES the old hint element, so anything the hint used to say has to
+   * come through here or it is simply lost. `warn` is that channel: a real
+   * problem ("Pick a class first") outranks the branding, because a caption is
+   * decoration and a blocked button needs a reason.
+   * ⚠️ `absolutely centred`, not a flex child — the two sides have different
+   * widths (an icon row against one button), so centring by flex would put this
+   * off-centre by exactly their difference. See `.aw-sd-footcap` in app.css.
+   */
+  function footCaption(n, warn) {
+    if (warn) return hintEl(warn);
+    const cap = el("div", "aw-sd-footcap");
+    cap.append(el("span", "aw-sd-capmain", "SHOWDOWN IN ANDREW CLASSES"));
+    cap.append(el("span", "aw-sd-capdot", "•"));
+    cap.append(el("span", "aw-sd-capnum", `${n} STUDENT${n === 1 ? "" : "S"}`));
+    return cap;
   }
 
   /** Held by ANOTHER screen — drawn, but dimmed and untouchable (Đợt 159). */
@@ -804,6 +862,29 @@ export function buildShowdownPanel(panel, ctx) {
   // screens above are defined before this point and a const would sit in the
   // temporal dead zone for anything that ran early.)
   function releaseMine() { return releaseMyClaim(); }
+
+  /**
+   * ⭐⭐ Đợt 191 — TODAY'S LIST for a class: the trimmed one if this class has
+   * one saved, otherwise the full register from Settings › Classes.
+   *
+   * The saved list is only ever honoured for the class it was saved AGAINST
+   * (`rosterClass`). Without that guard, picking class B would inherit class A's
+   * absentees — names that were never in B at all — and nothing on screen would
+   * explain where they came from.
+   */
+  function rosterFor(cls) {
+    if (!cls) return [];
+    if (setup.rosterClass === cls.id && setup.roster?.length) {
+      return setup.roster.map(m => ({ id: m.id, name: m.name }));
+    }
+    return cls.students.map(s => ({ id: s.id, name: s.name }));
+  }
+
+  /** Everyone on the register for the class on screen — what Reset restores. */
+  function fullRegister() {
+    const c = (classes || []).find(x => x.id === setup.classId);
+    return c ? c.students.map(s => ({ id: s.id, name: s.name })) : [];
+  }
 
   // ---------------------------------------------------------------
   // SCREEN A — class + team count + the roster
@@ -838,7 +919,12 @@ export function buildShowdownPanel(panel, ctx) {
       // A different class means a different set of people; anything typed in by
       // hand for the previous one goes with it, which is the only thing that is
       // not quietly wrong.
-      roster = c ? c.students.map(s => ({ id: s.id, name: s.name })) : [];
+      // ⭐ Đợt 191 — …unless TODAY'S LIST for this very class was saved earlier
+      // (absentees taken out, then Reset teams pressed). Then that is the list
+      // the teacher means, and re-reading the register would hand back exactly
+      // the pupils they had just removed. Guarded on `rosterClass`, so it can
+      // only ever restore the list belonging to the class being chosen.
+      roster = c ? rosterFor(c) : [];
       sfx.add();
       repaint();
     };
@@ -928,16 +1014,32 @@ export function buildShowdownPanel(panel, ctx) {
       // to the 2+ case only.
       const solo = teamCount === 1;
       const canGo = !!setup.classId && roster.length >= teamCount;
+      // ⭐ Đợt 191 (thầy) — RESET sits opposite Next, and it is the ONE control
+      // that brings deleted pupils back. Everything else in the panel now
+      // preserves today's list: Next saves it, "Reset teams" on the dividing
+      // screen keeps it. Without a control that says otherwise, a pupil deleted
+      // by mistake could never be recovered except by editing the class in
+      // Settings.
+      const resetBtn = btn("Reset", "aw-sd-ghost aw-sd-confirmbtn", () => {
+        if (!setup.classId) { sfx.remove(); toast("Choose a class first"); return; }
+        sfx.tap();
+        askConfirm("Bring every pupil back from the class register?", "Reset", async () => {
+          sfx.forward();
+          roster = fullRegister();
+          setup.roster = [];
+          setup.rosterClass = "";
+          try { await saveSetup({ ...setup, roster: [], rosterClass: "" }); }
+          catch { /* signed out or offline — the screen is still right */ }
+          repaint();
+        });
+      });
       ft.append(
-        hintEl(!setup.classId
+        resetBtn,
+        footCaption(roster.length, !setup.classId
           ? "Pick a class first."
           : roster.length < teamCount
             ? `${roster.length} pupil${roster.length === 1 ? "" : "s"} for ${teamCount} teams — add more, or use fewer teams.`
-            : solo
-              // Said plainly, because it is the one mode that behaves differently
-              // from every other screen in this panel.
-              ? `${roster.length} pupils · one team · this screen only`
-              : `${roster.length} pupils · ${teamCount} teams`),
+            : ""),
         btn(solo ? "Ready" : "Next", "aw-btn-primary" + (canGo ? "" : " is-dim"), () => {
           if (!canGo) {
             sfx.remove();
@@ -950,6 +1052,12 @@ export function buildShowdownPanel(panel, ctx) {
           setup.teams = splitIntoTeams([], teamCount, setup.teams);
           pool = roster.slice();
           selectedTeam = setup.teams[0]?.id || null;
+          // ⭐ Đợt 191 — REMEMBER TODAY'S LIST as we leave (teacher: "việc xóa học
+          // sinh… cũng được lưu khi bấm next"). Written on to `setup` so the
+          // save that follows the first team edit carries it, and so "Reset
+          // teams" on the next screen has something to preserve.
+          setup.roster = roster.map(m => ({ id: m.id, name: m.name }));
+          setup.rosterClass = setup.classId;
           goto(renderBuild, +1);
         })
       );
@@ -1313,7 +1421,15 @@ export function buildShowdownPanel(panel, ctx) {
     // it, which is where the height for a taller table came from.
     function paintFoot() {
       ft.innerHTML = "";
-      const ready = !pool.length && !!claimedTeam;
+      // ⭐ Đợt 191 (thầy) — READY NO LONGER WAITS FOR AN EMPTY POOL. A pupil left
+      // on the class list is now a deliberate choice ("coi như bạn đó bị phạt
+      // không được tham gia"), not an unfinished job. The only thing still
+      // required is a TICKED team: without one this screen has nothing to play as,
+      // and Ready would restart the game into no mode at all.
+      // ⚠️ Whoever stays in the pool is simply not in `applyReady`'s members — so
+      // they never come up in the turn order and never appear on the result board,
+      // which is exactly what "sat this one out" should look like.
+      const ready = !!claimedTeam;
       const tools = el("div", "aw-sd-foottools");
       const mk = (svg, title, onClick) => {
         const b = el("button", "aw-sd-htool", svg);
@@ -1331,7 +1447,10 @@ export function buildShowdownPanel(panel, ctx) {
           onTurnOff();
         });
       });
-      mk(icons.refresh, "Reset teams", () => {
+      // ⭐ Đợt 191 (thầy) — a BACK arrow, not a refresh spinner. What this button
+      // really does is send the teacher to the class screen to choose again, and
+      // an arrow says that where a circular arrow said "reload".
+      mk(icons.back, "Reset teams", () => {
         sfx.tap();
         // ⭐ Đợt 168 (teacher, 15/8/2026) — this used to be "give back only MY
         // claim" (releaseMine): the shared table itself, and every OTHER
@@ -1343,7 +1462,13 @@ export function buildShowdownPanel(panel, ctx) {
         askConfirm("Reset the whole team table? Every screen loses its team, right away.", "Reset", async () => {
           sfx.forward();
           clearPick();
-          await wipeSetup();
+          // ⭐ Đợt 191 — the TEAMS go, TODAY'S LIST stays (see wipeSetup). Read
+          // from `setup.roster` first so a table built on this screen keeps the
+          // list it was built from, and fall back to whatever is in `roster` for
+          // a table this browser inherited from another screen.
+          const keep = setup.roster?.length ? setup.roster : roster;
+          const keepClass = setup.rosterClass || setup.classId;
+          await wipeSetup({ keepRoster: keep, rosterClass: keepClass });
           await boot({ rebuild: true });
         });
       });
@@ -1351,14 +1476,21 @@ export function buildShowdownPanel(panel, ctx) {
       // waiting, call everybody back once nobody is. The two can never both apply,
       // so they share a button rather than one of them sitting dead.
       if (pool.length) {
-        mk(icons.wand, "Random teams", () => { sfx.forward(); randomDeal(); });
+        // ⭐ Đợt 191 (thầy) — SHUFFLE, not a magic wand: two crossing paths say
+        // what actually happens to the names, and it is the symbol every music
+        // player has already taught the room.
+        mk(icons.shuffle, "Random teams", () => { sfx.forward(); randomDeal(); });
       } else {
         mk(icons.duplicate, "Send everyone back", () => {
           sfx.tap();
           askConfirm("Send every pupil back to the class list?", "Send back", () => { sfx.back(); flyBackAll(); });
         });
       }
-      const title = el("div", "aw-sd-foottitle", "Showdown");
+      // ⭐ Đợt 191 — the same branding line the class screen carries, in place of
+      // the bare word "Showdown" that used to sit here. Counts the pupils PLAYING
+      // (the teams plus anyone still waiting), so it reads the same on both
+      // screens and does not jump about while chips are dragged.
+      const title = footCaption(setup.teams.reduce((n, t) => n + t.members.length, 0) + pool.length);
       ft.append(tools, title,
         // ⚠️ NO "Back" (teacher, Đợt 159): once the class has been divided, the
         // way to the first screen is RESET — because going back silently was a
@@ -1367,7 +1499,7 @@ export function buildShowdownPanel(panel, ctx) {
         btn("Ready", "aw-sd-ready aw-btn-primary" + (ready ? "" : " is-dim"), () => {
           if (!ready) {
             sfx.remove();
-            toast(pool.length ? "Put every pupil in a team" : "Tick the team this screen plays");
+            toast("Tick the team this screen plays");
             return;
           }
           sfx.ready();
@@ -1376,16 +1508,49 @@ export function buildShowdownPanel(panel, ctx) {
       );
     }
 
-    /** Everyone still waiting, dealt out evenly and in a random order. */
-    function randomDeal() {
+    /**
+     * Everyone still waiting, dealt out evenly and in a random order.
+     *
+     * ⭐⭐ Đợt 191 (thầy) — BOYS AND GIRLS SPREAD EVENLY, and a little jumble of
+     * the names before they fly.
+     *
+     * The balancing is a plain interleave, not a solver: shuffle the boys, the
+     * girls and the unmarked separately, then take from whichever of the three
+     * still has the most left. Dealt round-robin into the emptiest team (the
+     * existing rule, untouched), that hands each team an alternating run —
+     * boy, girl, boy, girl — so 12 boys and 8 girls across 4 teams comes out
+     * 3♂2♀ per team instead of one team of boys and one of girls.
+     * A class with no genders set has one non-empty list, so this is exactly the
+     * old shuffle. That is the point: nothing has to be filled in for it to work.
+     */
+    async function randomDeal() {
       const cap = capPerTeam();
       // Fisher-Yates on a copy: `pool` itself is spliced below, and shuffling in
       // place while reading it is how a "random" deal quietly stops being one.
-      const bag = pool.slice();
-      for (let i = bag.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [bag[i], bag[j]] = [bag[j], bag[i]];
+      const shuffled = list => {
+        const a = list.slice();
+        for (let i = a.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+      };
+      const byId = new Map();
+      (classes || []).forEach(c => c.students.forEach(s => { if (s.gender) byId.set(s.id, s.gender); }));
+      const lanes = [
+        shuffled(pool.filter(m => byId.get(m.id) === "m")),
+        shuffled(pool.filter(m => byId.get(m.id) === "f")),
+        shuffled(pool.filter(m => !byId.get(m.id)))
+      ].filter(l => l.length);
+      const bag = [];
+      while (lanes.some(l => l.length)) {
+        // Always draw from the LONGEST remaining lane. Straight alternation
+        // would exhaust the shorter one early and leave the tail unmixed —
+        // precisely the clumping this is here to prevent.
+        lanes.sort((a, b) => b.length - a.length);
+        bag.push(lanes[0].shift());
       }
+      await scrambleChips();
       bulkMove(() => {
         // Deal round-robin starting from the emptiest team, so a half-built
         // table is levelled up rather than having the rest piled on the end.
@@ -1401,6 +1566,46 @@ export function buildShowdownPanel(panel, ctx) {
         }
         if (!placed) toast("Every team is full");
       });
+    }
+
+    /**
+     * ⭐ Đợt 191 (thầy: "khi bấm shuffle, các tên sẽ có animation xáo vào nhau
+     * một chút trước khi bay về các team").
+     *
+     * A short jostle of the waiting chips — each nudged a little way in a random
+     * direction and tipped a couple of degrees, then set back — so the deal reads
+     * as "these got mixed up" rather than "these teleported".
+     *
+     * ⚠️⚠️ IT MUST BE COMPLETELY OVER BEFORE `bulkMove` RUNS, which is why this
+     * returns a promise the caller awaits. `bulkMove` measures every chip with
+     * `getBoundingClientRect()` to work out where the ghosts fly FROM — and that
+     * rect INCLUDES any live transform. Overlapping the two would take each
+     * chip's mid-jostle position as its home, and every ghost would set off from
+     * slightly the wrong place, in a way that looks like a glitch rather than a
+     * bug.
+     * ⚠️ `fill` is deliberately left alone (the keyframes end where they began)
+     * so nothing has to be cleaned up afterwards, and a chip removed from the DOM
+     * mid-animation cannot strand a transform on a recycled node.
+     * ⚠️ Belt-and-braces timeout, per the app-wide `element.animate()` rule: a
+     * hidden tab never fires `finish`, and the deal must not be lost because the
+     * teacher switched away for a second.
+     */
+    function scrambleChips() {
+      const chips = [...host.querySelectorAll(".aw-sd-pool .aw-sd-chip[data-mid]")];
+      if (!chips.length) return Promise.resolve();
+      const MS = 420;
+      chips.forEach(c => {
+        const dx = (Math.random() * 2 - 1) * 14;
+        const dy = (Math.random() * 2 - 1) * 10;
+        const rot = (Math.random() * 2 - 1) * 7;
+        c.animate([
+          { transform: "translate(0,0) rotate(0deg)" },
+          { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, offset: 0.45 },
+          { transform: `translate(${-dx * 0.4}px, ${-dy * 0.4}px) rotate(${-rot * 0.4}deg)`, offset: 0.78 },
+          { transform: "translate(0,0) rotate(0deg)" }
+        ], { duration: MS, easing: "cubic-bezier(.22,.9,.3,1)" });
+      });
+      return new Promise(resolve => setTimeout(resolve, MS + 20));
     }
 
     /** Everybody out of the columns and back into the class list. */

@@ -14,7 +14,7 @@
 // Results (incl. per-question review) are saved to the local leaderboard.
 // =============================================================
 
-import { getTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./registry.js";
+import { getTemplate, hasTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./registry.js";
 import { whenAllPacksPrimed } from "./sfx.js";
 import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";
 import { hasAnyVoice, hasHiddenText } from "./voice-playback.js";
@@ -23,7 +23,7 @@ import {
   contentSetsOf, activeContentSet, setLabel,
   viewKeyOf, splitViewOptions, optionsForView, storeViewOptions, VIEW_SELECTOR_KEYS
 } from "./content-view.js";
-import { switchTargets, convertActivity } from "./convert.js";
+import { switchTargets, convertActivity, toRecords } from "./convert.js";
 import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
 import { buildStage } from "./layout.js";
@@ -156,6 +156,13 @@ const THEME_SWATCH = {
 // so it can only ever fire for the next mount, never a later one.
 let openShowdownOnMount = false;
 
+// Đợt 190 — the longest a RUNNING-mode entry may be and still count as a "word".
+// 24 characters clears the longest real entries in the teacher's pools
+// ("SKIN-SCRAPER", "COMPETITION", "ANTARCTICA") by a wide margin while excluding
+// the sentence-shaped answers of a comprehension quiz. Same threshold the lesson
+// importer uses to tell a word from a clue, and for the same reason.
+const WORD_POOL_MAX_LEN = 24;
+
 // `session` (optional) turns the page into STUDENT MODE — used by play.html:
 //   session.endOptions   { leaderboard, showAnswers, startAgain } — what the
 //                        teacher ticked when setting the assignment
@@ -284,6 +291,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // markup can never do (that markup doesn't exist until mount()). Purely
   // additive: no other template's CSS reads an `.act-*` class today.
   stage.classList.add(`act-${activity.type}`);
+
+  // ⭐⭐ PLAY MODES (Đợt 190, 18/8/2026) — RUNNING and IPA.
+  // Both are the MODE button leading somewhere the Template button could not:
+  // a vocabulary act borrowed BY another template for a while, with the library
+  // act left exactly as it was. RUNNING opens Running word or Running team off
+  // the same word pool; IPA opens Speaking cards showing "WORD /ipa/", built out
+  // of the PRONUNCIATION clue set (core/lesson-import.js now imports it into the
+  // act instead of making two standalone acts of it).
+  //
+  // ⚠️ They are ordinary Change-template conversions underneath — `conv_…` id,
+  // `_converted:true`, library untouched, exit = doSwitchTemplate(originAct.type)
+  // which restores the REAL act. The ONLY thing the mark adds is memory: without
+  // it a converted act cannot say WHY it was converted, so the MODE button could
+  // not glow, could not offer the way back, and (in IPA mode) could not know to
+  // hide the Template button.
+  // ⚠️ Read off `libAct`, not `activity`: `resolveActivity()` builds a fresh
+  // object whenever the act has clue sets, and a converted act has none — so the
+  // two are the same object here today, but only one of them is guaranteed to be.
+  const playMode = libAct._mode || "";
+  if (playMode) stage.classList.add(`mode-${playMode}`);
 
   // ⭐⭐ SHOWDOWN (Đợt 155) — read core/showdown.js's header for the whole idea.
   // `readPick()` is a SYNCHRONOUS sessionStorage read of a snapshot the setup
@@ -813,26 +840,89 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // DYNAMIC-imported from here — the student page must download neither, and
   // this file must not take a static dependency on a module that imports it
   // straight back.
-  const canFight = !!tpl.fightMode && !session;
-  const canShowdown = !!tpl.showdownMode && !session;
-  const modeBtn = (canFight || canShowdown) ? toolBtn(icons.modes, "Mode") : null;
+  // ⭐⭐ Đợt 191b (thầy: "ở mọi mode đều cần có thể chuyển đội sang bất kỳ các mode
+  // khác một cách linh hoạt") — ASK THE ACT THE TEACHER OWNS, NOT THE ONE BEING
+  // BORROWED. Inside RUNNING or IPA the template on screen is Running word or
+  // Speaking cards, and neither declares `fightMode`/`showdownMode` — so those two
+  // tiles vanished, and the only way to a match from IPA was Single first, then
+  // Fight. The question was being put to the wrong act: what can be fought over is
+  // the ORIGIN's content, which is exactly what those modes will be handed.
+  // ⚠️ `hasTemplate` first, never a bare `getTemplate` — that throws for a module
+  // that has not been imported, and it is reached here on every mount.
+  // In practice the origin's module IS loaded (this mode was entered by playing
+  // it), but a throw here would take the whole toolbar down with it.
+  const modeTpl = (playMode && originAct.type !== activity.type && hasTemplate(originAct.type))
+    ? getTemplate(originAct.type)
+    : tpl;
+  const canFight = !!modeTpl.fightMode && !session;
+  const canShowdown = !!modeTpl.showdownMode && !session;
+  // ⭐ Đợt 190 — RUNNING and IPA are offered by CONTENT, not by a template flag:
+  // they are somewhere this act's words can GO, so the question is whether the
+  // origin act can get there. Running word/team need a word pool (switchList()
+  // already applies each game's own floor — 2 words and 6); IPA needs at least
+  // one transcription, and asks the resolved origin because that is where
+  // core/content-view.js puts it.
+  const runTargets = () => {
+    if (session || fight) return [];
+    const list = switchList().filter(t => t.type === "running_word" || t.type === "running_team");
+    if (!list.length) return [];
+    // ⚠️ A WORD POOL, NOT JUST ANY ANSWERS. Change template has offered Running
+    // team from every "qa" act since it was built, and for a comprehension QUIZ
+    // that means a race whose answers are whole SENTENCES ("She is over there,
+    // making a snowman") — one team's explainer describing a sentence while the
+    // other types it out is not the game. So this mode asks a second question
+    // the Template button does not: do these read like WORDS? Deliberately
+    // scoped to the mode — the Template button's own list is left exactly as it
+    // has always been, because narrowing that would change behaviour the teacher
+    // has been using for weeks.
+    const terms = toRecords(originAct).records.map(r => (r.term || "").trim()).filter(Boolean);
+    if (!terms.length) return [];
+    const wordy = terms.filter(t => t.length <= WORD_POOL_MAX_LEN).length;
+    return wordy / terms.length >= 0.8 ? list : [];
+  };
+  const canRunning = !session && !fight && runTargets().length > 0;
+  const canIpa = (() => {
+    if (session || fight || playMode === "ipa") return false;
+    const items = resolveActivity(originAct).content?.items;
+    return Array.isArray(items) && items.some(it => it && it.ipa);
+  })();
+  // ⚠️⚠️ `|| playMode` IS THE WAY OUT. Running word and Speaking cards declare
+  // neither fightMode nor showdownMode, so without it the button that carried
+  // the teacher INTO the mode would not be built on the way back — the mode
+  // would be a room with no door, and the only escape a page reload.
+  // ⭐ Đợt 191 (thầy) — THE BUTTON WEARS THE MODE IT IS IN. It used to always
+  // show `icons.modes` (three panels = "a choice of modes"), which said what the
+  // button DOES but never what is currently ON. Now single mode shows the single
+  // board — the honest default when the app opens — and each mode swaps the icon
+  // for its own, so the toolbar answers "what are we in?" without being tapped.
+  // The glow is unchanged and still means exactly "not plain single".
+  const modeIcon = fight ? icons.mode
+    : showdownPick ? icons.showdown
+      : playMode === "running" ? icons.fmtRace
+        : playMode === "ipa" ? icons.ipa
+          : icons.single;
+  const modeBtn = (canFight || canShowdown || canRunning || canIpa || playMode)
+    ? toolBtn(modeIcon, "Mode") : null;
   if (modeBtn) {
     // Glows whenever anything other than plain single mode is running. With one
-    // button standing for three modes this is the only at-a-glance "something
+    // button standing for every mode this is the only at-a-glance "something
     // is on" the toolbar has left.
-    if (fight || showdownPick) modeBtn.classList.add("is-active");
+    if (fight || showdownPick || playMode) modeBtn.classList.add("is-active");
     // Never switches on the bare click (teacher, 12/8/2026): a stray tap used to
     // drop a running match straight back to single mode with no way back. Same
     // popover mechanism as Options/Template/Style, and now every route out of it
     // ends in either a confirm screen or the Showdown table.
     modeBtn.onclick = () => openToolPanel(modeBtn, buildModePickPanel);
   }
-  // DURING A MATCH the row is 5 wide (…/MODE/Fullscreen) and MODE swaps places
-  // with Style so it lands dead centre (teacher, 12/8/2026) — it is the button
-  // that governs the whole match, so it gets the middle seat. Outside a match it
-  // sits last, in the seat SHOWDOWN and MODE used to share.
-  if (fight && modeBtn) belowCenter.append(optionsBtn, templateBtn, modeBtn, styleBtn);
-  else belowCenter.append(optionsBtn, templateBtn, styleBtn, ...(modeBtn ? [modeBtn] : []));
+  // ⭐ Đợt 191 (thầy: "chuyển vị trí nút mode ra ngoài cùng bên phải trong mọi
+  // trạng thái") — MODE now sits LAST everywhere, and that **reverses Đợt 124**,
+  // where it swapped places with Style during a match so it landed dead centre
+  // ("nút cai quản cả trận thì được ghế giữa"). Deliberate: a button that moves
+  // depending on the mode is a button the hand has to look for, and now that it
+  // also CHANGES ICON with the mode (see `modeIcon` above) a fixed seat is what
+  // keeps it findable. Do not restore the centre seat without checking with the
+  // teacher — it was their call both times.
+  belowCenter.append(optionsBtn, templateBtn, styleBtn, ...(modeBtn ? [modeBtn] : []));
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
@@ -856,10 +946,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // "Reset team"). Fight and Single have no such second screen, so they really
   // do just disappear. Take the exception out and Reset team becomes unreachable.
   function buildModePickPanel(panel) {
-    const cur = fight ? "fight" : (showdownPick ? "showdown" : "single");
+    const cur = fight ? "fight" : (showdownPick ? "showdown" : (playMode || "single"));
     const tiles = [];
     if (cur !== "single") tiles.push(["single", icons.single, "Single mode", buildSingleConfirmPanel]);
     if (canFight && cur !== "fight") tiles.push(["fight", icons.mode, "Fight mode", buildFightConfirmPanel]);
+    // ⭐ Đợt 191 — ORDER IS FIGHT · SHOWDOWN · RUNNING · IPA (thầy). Single, when
+    // it is offered at all, stays FIRST: it is the way back rather than one of
+    // the four, and putting the exit where the eye starts is what keeps it from
+    // being hunted for.
     if (canShowdown) tiles.push(["showdown", icons.showdown,
       cur === "showdown" ? "Showdown — set the teams again" : "Showdown",
       // ⚠️ FROM INSIDE A MATCH the table cannot simply open: this board would set
@@ -869,7 +963,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // and nothing on screen would say so. So in a match the tile leads to a
       // confirm that LEAVES the match first, and the table opens by itself on
       // the single board that comes back.
-      fight ? buildToShowdownConfirmPanel : buildShowdownPanelHost]);
+      // ⭐ Đợt 191b — A PLAY MODE NEEDS THE SAME HOP A MATCH DOES. The team table
+      // could open here, but pressing READY restarts the act that is on screen —
+      // and in RUNNING/IPA that is Running word or Speaking cards, neither of
+      // which reads `showdownPick` (`tpl.showdownMode` is false, see the top of
+      // this file). The teacher would have built a line-up that does nothing.
+      (fight || playMode) ? buildToShowdownConfirmPanel : buildShowdownPanelHost]);
+    // RUNNING leads to a SECOND tile screen (Running word · Running team) rather
+    // than straight into a game: the two are different lessons off one word list,
+    // and the teacher picks which as the class starts. IPA has no such fork, so
+    // it goes to its confirm directly.
+    if (canRunning) tiles.push(["running", icons.fmtRace, "Running mode", buildRunningPickPanel]);
+    if (canIpa) tiles.push(["ipa", icons.ipa, "IPA mode", buildIpaConfirmPanel]);
     const grid = el("div", "aw-mp-grid");
     tiles.forEach(([key, icon, label, next]) => {
       // The label never shows on screen (that is the point) — it is the hover
@@ -882,17 +987,82 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     panel.append(grid);
   }
 
+  // ---- RUNNING mode: the second tile screen (Đợt 190) ----------------------
+  // Two more icon tiles, same grid and same look as the mode picker itself, so
+  // the fork reads as one flow rather than a different kind of screen. Only the
+  // games this act can actually feed are offered — Running team needs six words
+  // and Running word two, and switchList() has already applied both floors.
+  function buildRunningPickPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Running mode"));
+    const grid = el("div", "aw-mp-grid");
+    runTargets().forEach(t => {
+      const tile = el("button", "aw-mp-tile", `<span class="aw-mp-icon">${icons.fmtRace}</span>` +
+        `<span class="aw-mp-label">${t.label}</span>`);
+      tile.type = "button"; tile.title = t.label; tile.setAttribute("aria-label", t.label);
+      tile.onclick = () => { sound.click(); closeToolPanel(false); enterPlayMode("running", t.type); };
+      grid.append(tile);
+    });
+    panel.append(grid);
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildModePickPanel); };
+    row.append(cancelBtn);
+    panel.append(row);
+  }
+
+  function buildIpaConfirmPanel(panel) {
+    panel.append(el("div", "aw-tool-panel-head", "Switch to IPA mode?"));
+    panel.append(el("div", "aw-mode-confirm-text",
+      "Deal the words as cards, each with its pronunciation. Your activity is not changed."));
+    const row = el("div", "aw-mode-confirm-row");
+    const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
+    cancelBtn.type = "button";
+    cancelBtn.onclick = () => { sound.click(); switchToolPanel(buildModePickPanel); };
+    const goBtn = el("button", "aw-btn aw-btn-primary aw-mode-confirm-btn", "Start IPA");
+    goBtn.type = "button";
+    goBtn.onclick = () => { sound.click(); closeToolPanel(false); enterPlayMode("ipa", "speaking_cards"); };
+    row.append(cancelBtn, goBtn);
+    panel.append(row);
+  }
+
+  // Borrow another template for a while. Deliberately the SAME machinery as
+  // Change template — convert from the ORIGIN act, play the throwaway copy, and
+  // leave the library alone — with `_mode` added so the way back exists.
+  // ⚠️ Convert from `originAct`, never from `activity`: converting a conversion
+  // degrades the content a little more each hop (the rule `base`/`originAct`
+  // exists for), and here it would also mean building a word list out of an
+  // act that had already thrown its clue sets away.
+  async function enterPlayMode(mode, targetType) {
+    exitAnyFullscreen();
+    dropShowdown();
+    try {
+      await ensureTemplate(targetType);
+      const converted = await convertActivity(originAct, targetType,
+        mode === "ipa" ? { style: "ipa" } : {});
+      converted._mode = mode;
+      cleanupAll();
+      startGame(root, converted, { onExit, session, base: originAct });
+    } catch (e) {
+      console.warn("AWord: could not enter " + mode + " mode", e);
+      toast("Could not start that mode");
+    }
+  }
+
   // Two named wrappers rather than one parameterised builder: `mountPanelContent`
   // and `capPanelHeight` both identify panels BY FUNCTION IDENTITY, and a fresh
   // closure per call would quietly never match.
   function buildFightConfirmPanel(panel) { buildModeConfirmPanel(panel, "fight"); }
   function buildSingleConfirmPanel(panel) { buildModeConfirmPanel(panel, "single"); }
 
-  // Fight → Showdown, the one hop that cannot be done in place (see the tile).
+  // Fight → Showdown, and (Đợt 191b) RUNNING/IPA → Showdown: the hops that cannot
+  // be done in place, because the act on screen would ignore the pick. Both leave
+  // first and let the team table open by itself on the board that comes back.
   function buildToShowdownConfirmPanel(panel) {
     panel.append(el("div", "aw-tool-panel-head", "Switch to Showdown?"));
-    panel.append(el("div", "aw-mode-confirm-text",
-      "Leave the match first. The team table opens on its own."));
+    panel.append(el("div", "aw-mode-confirm-text", playMode
+      ? "Go back to your activity first. The team table opens on its own."
+      : "Leave the match first. The team table opens on its own."));
     const row = el("div", "aw-mode-confirm-row");
     const cancelBtn = el("button", "aw-btn aw-mode-confirm-btn", "Cancel");
     cancelBtn.type = "button";
@@ -902,9 +1072,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     goBtn.onclick = () => {
       sound.click();
       closeToolPanel(false);
-      // Read and cleared by the startGame() that `exitFight()` is about to run —
+      // Read and cleared by the startGame() that the exit below is about to run —
       // exactly once, so a failed exit can never leave it armed for a later act.
       openShowdownOnMount = true;
+      // ⭐ Đợt 191b — the same flag serves both exits. Leaving a play mode is a
+      // template switch back to the origin (`doSwitchTemplate`), which lands on a
+      // board that CAN read a pick; leaving a match is `exitFight()`.
+      if (playMode) { doSwitchTemplate(originAct.type); return; }
       fight.ctl.exitFight();
       awEmit("FIGHT", "off");
     };
@@ -935,9 +1109,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     panel.append(el("div", "aw-tool-panel-head", toFight ? "Switch to Fight mode?" : "Switch to Single mode?"));
     panel.append(el("div", "aw-mode-confirm-text", toFight
       ? "Two teams play the same act side by side, racing for points."
-      : leavingShowdown
-        ? "Leave Showdown. This screen's team goes back to the other screens."
-        : "Leave the match and go back to one board."));
+      : playMode
+        ? "Go back to your activity, exactly as it was."
+        : leavingShowdown
+          ? "Leave Showdown. This screen's team goes back to the other screens."
+          : "Leave the match and go back to one board."));
     const row = el("div", "aw-mode-confirm-row");
     // NOT panelItem(): that helper is styled for the dark in-stage .aw-panel
     // (white text, cqw sizing) — invisible/oversized out here in the light
@@ -959,6 +1135,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // actually CONFIRMED here, not when the popover merely opens — host
         // uses it to auto show/hide its own "act-gap" panel around the match.
         if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
+        // ⭐ Đợt 190 — leaving RUNNING or IPA is a template switch BACK to the
+        // origin, which `doSwitchTemplate` already handles as a special case:
+        // it restores the REAL library act (its own id, its own saved options)
+        // instead of converting the conversion. `replayCurrent()` would restart
+        // the throwaway copy — still Running word, still marked, so the mode
+        // would look like it had refused to close.
+        if (playMode) { doSwitchTemplate(originAct.type); return; }
         // Leaving Showdown: the restart re-reads an empty pick and the board
         // comes back as an ordinary single play (same path as the Showdown
         // panel's own "Single mode" button).
@@ -970,6 +1153,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       dropShowdown();
       cleanupAll();
       try {
+        // ⭐⭐ Đợt 191b — FROM A PLAY MODE THE MATCH GETS THE ORIGIN ACT, NOT THE
+        // BORROWED ONE (thầy: chuyển được sang mode khác "nhưng lấy nội dung của
+        // chuẩn chứ không phải của IPA"). In IPA mode `libAct` is a deck of
+        // Speaking cards reading "WORD /ipa/", and in RUNNING mode it is a bare
+        // word pool — fighting over either is fighting over the wrong content,
+        // and Speaking cards is not even scorable. `originAct` is the act the
+        // teacher owns and the one the mode was built out of.
+        // ⚠️ `ensureTemplate` first: that module was loaded when the origin was
+        // played, but startFight() calls startGame() on both boards immediately
+        // and getTemplate() throws for anything not registered.
+        const matchAct = playMode ? originAct : libAct;
+        if (playMode) await ensureTemplate(originAct.type);
         const { startFight } = await import("./fight.js");
         // `base` travels into the match so a Change-template DURING the fight
         // still converts from the teacher's original act, exactly as it does
@@ -983,7 +1178,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // could not offer them (measured: no ENG1/ENG2/VI1/VI2 row, no
         // PRACTICE/HOMEWORK row) — and a fight's Apply saved that stripped copy
         // back over the real act. core/fight.js resolves it itself now.
-        startFight(root, libAct, { onExit, base: originAct });
+        startFight(root, matchAct, { onExit, base: originAct });
         awEmit("FIGHT", "on");
       } catch (e) {
         console.warn("AWord: fight mode failed to load", e);
@@ -2094,6 +2289,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⚠️ Returns null unless the act really has clue sets or real clips — an act
   // with neither gets no row at all, not a dead one (the OPT-IN rule of Đợt 143).
   function makeContentSwitch(selState) {
+    // ⛔⛔ Đợt 190 — NO CLUE-SET ROW INSIDE A PLAY MODE, and this one is not
+    // cosmetic. In both new modes the row is a DEAD control: RUNNING drops clues
+    // altogether (its games race on bare words) and IPA builds every card from
+    // the PRONUNCIATION set whichever button is lit. Worse than dead, it was
+    // actively destructive — picking a set and pressing Apply runs
+    // applySubActSelection, whose rebuild goes through doSwitchTemplate() and so
+    // re-converts with NEITHER the `style:"ipa"` that makes the cards read
+    // "WORD /ipa/" NOR the `_mode` mark. Measured before the guard: the deck
+    // silently turned into English definitions, the Template button came back
+    // and the MODE button stopped glowing — a mode that fell apart with nothing
+    // on screen to say why. The whole row goes, which is also the OPT-IN rule of
+    // Đợt 143 applied honestly.
+    if (playMode) return null;
     const src = subActSource();
     const variants = variantsOf(src.content);
     if (!variants && !hasAnyVoice(src.content || {})) return null;
@@ -2858,6 +3066,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     sloganSlot,  // null unless tpl.hasSloganSlot is true — a centered span between timer and score (Anagram)
     scoreEl,     // the score element itself (read-only) — for effects that fly toward the score
     startTimer: startTimerNow,   // start the clock now (only meaningful with tpl.manualTimerStart)
+    // ⭐ Đợt 190 — WHICH ACT A TEMPLATE'S OWN SAVE SHOULD LAND ON.
+    // Running word and Running team save a "set" — one printed numbering plus
+    // the class roll it was played with — onto the activity, because a teacher
+    // who closes the app mid-lesson has to be able to reprint the very sheet the
+    // class is holding. Both used to refuse outright on a converted act, which
+    // was right while conversions were throwaway; RUNNING mode makes them the
+    // NORMAL way into those games, so refusing would mean the printed numbering
+    // could never be saved at all (teacher's call, 18/8/2026: write it back to
+    // the original).
+    // `originAct` is the library act behind this play — itself for an ordinary
+    // play, the act we converted FROM for a converted one. So a template that
+    // saves through this is correct in BOTH cases and needs no branch of its own.
+    // ⚠️ Still returns a temporary act if the ORIGIN is one (a bundle imported
+    // but never saved), which is why the callers keep their "is this saveable?"
+    // check — this answers WHERE to save, not WHETHER.
+    saveTarget: () => originAct,
     // ----- TIME COST (Đợt 139) — three one-liners a template opts in with.
     // Nothing here is required: a template that ignores all three behaves
     // exactly as it did before this option existed.

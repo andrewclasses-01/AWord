@@ -21,22 +21,75 @@ export const icons = {
   // MODE (Đợt 124) — one screen split into two facing boards. Two panels with a
   // divider down the middle still reads at 22px, where a trophy or crossed
   // swords turn to mush.
-  mode: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="6" width="8" height="12" rx="1.6"/><rect x="13.5" y="6" width="8" height="12" rx="1.6"/><path d="M12 3.5v17"/></svg>`,
+  // ⭐ Đợt 191 (thầy) — the divider used to be the TALLEST thing in the icon
+  // (17 units against boards of 12), which read as a mast rather than a split,
+  // and the boards were nearly touching it. Now the bar is a shade SHORTER than
+  // the boards (11 vs 12) and the gap either side is wider (2.4 vs 1.5): the two
+  // boards read as the subject and the bar as what separates them.
+  mode: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.1" y="6" width="7.5" height="12" rx="1.6"/><rect x="14.4" y="6" width="7.5" height="12" rx="1.6"/><path d="M12 6.5v11"/></svg>`,
   // SHOWDOWN (Đợt 155) — a winner's podium. It has to be legible at 22px AND
   // instantly distinct from `mode` right beside it: MODE is two panels side by
   // side, this is three blocks of DIFFERENT heights, which reads as ranking even
   // when the shape is too small to count.
-  showdown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="5.5" width="6" height="15" rx="1.2"/><rect x="2.5" y="11" width="6.5" height="9.5" rx="1.2"/><rect x="15" y="9" width="6.5" height="11.5" rx="1.2"/></svg>`,
+  // ⭐ Đợt 191b (thầy) — REBASED ON TO THE SHARED BAND 6→18. Measured, this podium
+  // used to run 5.5→20.5: two and a half units lower than every other mode icon,
+  // which is what made the row look like it was sagging in the middle (the
+  // teacher spotted it on a screenshot). The three heights keep their ratio
+  // (15 : 11.5 : 9.5, scaled by 0.8) so it still reads as a ranking.
+  showdown: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="6" width="6" height="12" rx="1.2"/><rect x="2.5" y="10.4" width="6.5" height="7.6" rx="1.2"/><rect x="15" y="8.8" width="6.5" height="9.2" rx="1.2"/></svg>`,
   // SINGLE (Đợt 158) — one board, the plain state. Only ever shown INSIDE the
   // mode picker (as the tile you go back to), never in the toolbar: out there
   // "no mode" is expressed by the merged button simply not glowing.
-  single: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="1.8"/></svg>`,
+  // ⭐ Đợt 191b — 5.5→18.5 became 6→18, the band every mode icon now shares.
+  single: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="1.8"/></svg>`,
   // MODES (Đợt 158) — the MERGED toolbar button that replaced MODE + SHOWDOWN.
   // Three panels of the same size with the middle one marked: "three modes, one
   // of them chosen". Deliberately NOT `mode` (two panels = fight) or `showdown`
   // (three heights = ranking) — the button no longer means either one of them,
   // it means the choice between them.
   modes: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="2.2" y="6" width="5.6" height="12" rx="1.4"/><rect x="9.2" y="6" width="5.6" height="12" rx="1.4"/><rect x="16.2" y="6" width="5.6" height="12" rx="1.4"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>`,
+  // ⭐ Đợt 191 (thầy) — IPA MODE is the one idea in the picker that has no
+  // picture: a mouth, a speech bubble and a microphone all already mean
+  // something else in this app (Speaking, Speaking cards). The three letters ARE
+  // the icon. Drawn as TEXT rather than as outlined letterforms so it stays
+  // crisp at 22px, and given the app's own Baloo 2 at weight 800 so it reads as
+  // a sibling of the drawn icons rather than as a caption.
+  // ⚠️ `stroke="none"` is mandatory: every other icon here is stroke-only with
+  // `fill:none`, and a glyph inheriting that pair would come out invisible.
+  // ⚠️⚠️ SIZE AND BASELINE ARE MEASURED, NOT GUESSED (thầy, 18/8/2026: "chữ hiện
+  // đang bé quá và có vẻ hơi lệch dưới"). Two things make this easy to get wrong:
+  //   · a `<text>` is placed by its BASELINE, so the word hangs ABOVE `y` — y=12
+  //     would put the whole thing in the top half;
+  //   · `getBBox()` on a text node reports the EM box (ascender + descender of
+  //     the font), NOT the ink of these three letters, so it centres the wrong
+  //     rectangle. The first pass trusted it and still sat 0.7 units low.
+  // Measured properly with canvas `measureText().actualBoundingBox*` in the app's
+  // own Baloo 2 at weight 800.
+  // ⭐ Đợt 191b — SIZED TO THE SHARED BAND. The other mode icons run 6→18 (height
+  // 12); at font-size 15.4 this ink runs ~6.5→17.5 (height 11, width ~22.8),
+  // which is as close as the band can be got. It cannot be matched exactly: ink
+  // height 12 needs font-size 16.8, and three capitals at that size measure ~24.9
+  // wide — wider than the 24-unit viewBox, so the word would be clipped at both
+  // ends. Half a unit short top and bottom (~1px on the 48px tile) is the right
+  // trade against losing the first and last letter.
+  // Baseline **16.5** centres the ink on exactly 12, so the half unit it gives up
+  // at the top it also gives up at the bottom (6.5 / 17.5). An earlier pass sat it
+  // a touch high — the optical correction capitals usually want — but the teacher's
+  // rule here is measurable parity of top and bottom across the row, and against
+  // three neighbours that all run 6→18 the symmetric reading is the one that looks
+  // right.
+  // ⚠️ Re-measure if the font, weight or size ever changes: these numbers are for
+  // Baloo 2 at 800, not a general rule.
+  ipa: `<svg viewBox="0 0 24 24" fill="none" stroke="none"><text x="12" y="16.5" text-anchor="middle" font-family="'Baloo 2', system-ui, sans-serif" font-weight="800" font-size="15.4" letter-spacing="-0.3" fill="currentColor">IPA</text></svg>`,
+  // ⭐ Đợt 191 (thầy) — SHUFFLE, replacing the magic wand on "Random teams". A
+  // wand says "something magic happens"; two paths crossing over says WHAT
+  // happens, and it is the symbol every music player has already taught the room.
+  shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.6c1.2 0 2.3.6 3 1.6l4.8 6.8c.7 1 1.8 1.6 3 1.6H21"/><path d="M3 17h3.6c1.2 0 2.3-.6 3-1.6l4.8-6.8c.7-1 1.8-1.6 3-1.6H21"/><path d="M18.2 4.2L21 7l-2.8 2.8M18.2 14.2L21 17l-2.8 2.8"/></svg>`,
+  // ⭐ Đợt 191 (thầy) — BACK, for "Reset teams": that button's real meaning is
+  // "go back to the class screen and choose again", and a circular-arrow refresh
+  // never said that. An arrow with a SHAFT, not a bare chevron — `prev` above is
+  // already the chevron, and it means "the previous question" inside a game.
+  back: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12H5"/><path d="M11 6l-6 6 6 6"/></svg>`,
   edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0 0-3l-1-1a2.1 2.1 0 0 0-3 0L4 15v5z"/><path d="M13.5 6.5l4 4"/></svg>`,
   assignment: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="1.8"/><path d="M9 3.5h6a1 1 0 0 1 1 1V6H8V4.5a1 1 0 0 1 1-1z"/><path d="M8.5 11.5l2 2 4-4.2M8.5 17h7"/></svg>`,
   print: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 8.5V4h11v4.5"/><rect x="4.5" y="8.5" width="15" height="7.5" rx="1.6"/><rect x="6.5" y="13" width="11" height="7" rx="1"/></svg>`,

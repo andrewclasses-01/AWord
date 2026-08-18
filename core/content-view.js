@@ -60,7 +60,15 @@
 // would otherwise be copied into three editor files.
 import { el } from "./utils.js";
 
-export const VARIANT_LABEL = { eng1: "ENG1", eng2: "ENG2", vi1: "VI1", vi2: "VI2" };
+// ⭐ Đợt 190 (18/8/2026) — `pron` is the FIFTH clue set: the word's IPA
+// transcription, which until now left the act altogether as two standalone acts
+// (PRONUNCIATION + IPA). It is a clue set like any other — Edit gets a tab for
+// it, Options a button, and Anagram plays "unscramble the word, the clue is
+// /ˈtraʊzə/" — with one rule of its own: it is never offered a spoken clip,
+// because an English voice reads IPA symbols as nonsense. That rule needs no
+// code here: `voiceVariantsOf` below already answers from `content.voiceVariants`,
+// which the importer fills with the English sets only.
+export const VARIANT_LABEL = { eng1: "ENG1", eng2: "ENG2", vi1: "VI1", vi2: "VI2", pron: "PRONUNCIATION" };
 
 // ---------------------------------------------------------------
 // CONTENT SETS — the SECOND axis (Đợt 146, 14/8/2026)
@@ -410,6 +418,13 @@ function resolveItem(it, key) {
   return {
     ...rest,
     clue: clues && clues[key] != null ? clues[key] : (rest.clue || ""),
+    // ⭐ Đợt 190 — the transcription survives the flattening as a field of the
+    // WORD, not of the clue set being played. It has to: Running word prints it
+    // beside each word and IPA mode is built entirely out of it, and both of
+    // them are reached through core/convert.js, which only ever sees the
+    // RESOLVED act (`clues` is gone by then). Whichever clue set is on screen,
+    // `ipa` says the same thing — which is exactly what makes it safe to carry.
+    ipa: (clues && clues.pron) || rest.ipa || "",
     voice: clip.voice,
     voiceId: clip.voiceId,
     // NEVER the per-item flag here. Whether the clue is hidden is decided by

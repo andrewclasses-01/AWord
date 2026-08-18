@@ -124,7 +124,19 @@ function normalize(node) {
     name: String(node.name || "").trim(),
     students: students
       .map(s => (typeof s === "string" ? { id: newId("st"), name: s } : s))
-      .map(s => ({ id: String(s?.id || newId("st")), name: String(s?.name || "").trim() }))
+      // ⭐ Đợt 191 — `gender` is the THIRD field a pupil may carry, and the first
+      // added since this shape was written. It exists for Showdown's shuffle,
+      // which the teacher asked to spread boys and girls evenly (18/8/2026); it is
+      // set by hand in Settings › Classes and is always optional.
+      // ⚠️ Only "m" / "f" / "" are ever stored. This function is the ONE gate on to
+      // Firestore for a roll, so any other value is normalised away here rather
+      // than left for each reader to second-guess. A roll saved before this đợt
+      // simply carries "" everywhere and behaves exactly as it always did.
+      .map(s => ({
+        id: String(s?.id || newId("st")),
+        name: String(s?.name || "").trim(),
+        gender: (s?.gender === "m" || s?.gender === "f") ? s.gender : ""
+      }))
       .filter(s => s.name)
       .slice(0, MAX_STUDENTS),
     trashed: false
@@ -225,17 +237,27 @@ export function parseStudentNames(text) {
 // team roster names its pupils by id, so re-generating them would orphan a
 // roster the teacher had already printed against. Two pupils really can share a
 // name, so each old id is reused at most once.
-export function mergeStudents(oldList, names) {
+// ⭐ Đợt 191 — `genders` (optional) is a name -> "m"/"f" map from the editor's
+// chip grid, keyed the same lowercased way the id pool is. It is passed in rather
+// than read off `oldList` because the teacher may have RENAMED a pupil in the
+// same edit, and the chips follow the text on screen, not the saved roll.
+// A pupil whose name is not in the map keeps whatever the old roll said, so
+// saving a class without ever touching the chips cannot wipe the genders.
+export function mergeStudents(oldList, names, genders) {
   const pool = new Map();          // lowercased name -> queue of surviving ids
+  const wasGender = new Map();     // lowercased name -> gender on the saved roll
   (oldList || []).forEach(s => {
     const key = String(s?.name || "").trim().toLowerCase();
     if (!key || !s?.id) return;
     if (!pool.has(key)) pool.set(key, []);
     pool.get(key).push(s.id);
+    if (s.gender && !wasGender.has(key)) wasGender.set(key, s.gender);
   });
   return names.map(name => {
-    const queue = pool.get(name.trim().toLowerCase());
+    const key = name.trim().toLowerCase();
+    const queue = pool.get(key);
     const id = queue && queue.length ? queue.shift() : newId("st");
-    return { id, name };
+    const g = genders && genders.has(key) ? genders.get(key) : (wasGender.get(key) || "");
+    return { id, name, gender: g === "m" || g === "f" ? g : "" };
   });
 }

@@ -8,7 +8,47 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **18/8/2026 (Đợt 187 · 188 · 189) — ⭐⭐⭐ FIGHT MODE: TIME DELAY + THANH CHỜ · THANH
+> Cập nhật lần cuối: **18/8/2026 (Đợt 190 + 191)** ⬜ **CẢ HAI CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+>
+> **Đợt 191 — TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN.** Ô mode **98×88, icon 48**, thứ tự
+> **Fight · Showdown · Running · IPA**, icon fight sửa thanh giữa, **icon IPA là chữ "IPA"**, **nút MODE
+> mang icon của chế độ đang chạy** (mở app = icon single, chỉ single không sáng hào quang) và **luôn nằm
+> ngoài cùng bên phải** — ⚠️ việc cuối **đảo Đợt 124**.
+> ⭐ **Vòng sửa thứ 2 (191b)**: ⚠️ tool panel chặn ở **580px + `overflow:hidden`** nên ở 112px thì **ô thứ
+> 5 bị xén** — phép cộng phải thoả `5×98 + 4×9 + 40 = 566`, **thêm mode thứ 6 là phải tính lại**. Mọi icon
+> mode chuẩn hoá về dải **6→18** (Showdown từng thò xuống 20,5 — thủ phạm làm hàng icon võng giữa; IPA
+> 6,5→17,5 vì mực cao 12 sẽ rộng 24,9 > viewBox ⇒ mất chữ đầu/cuối). ⭐⭐ **Ở mọi mode chuyển được sang
+> mọi mode, và luôn lấy NỘI DUNG GỐC**: `canFight`/`canShowdown` hỏi template của `originAct` (⚠️ phải
+> `hasTemplate()` trước), Fight nhận `originAct`, Showdown đi qua `openShowdownOnMount` như đường
+> Fight→Showdown.
+> Showdown: ⭐⭐ **nhớ HS đã xoá** (`roster`+`rosterClass` trong `sd_main`, "Reset teams" giữ lại, **nút
+> Reset MỚI ở màn 1** mới gọi cả lớp về) · ⭐ **giới tính trong Settings › Classes** (lưới chip riêng,
+> KHÔNG đụng textarea dán Excel) + **xáo cân Nam/Nữ** (3 làn, luôn rút làn dài nhất — đo 5♂5♀ ra
+> 3♂2♀/2♂3♀) · **animation xáo tên** trước khi bay (⚠️ phải `await` xong mới `bulkMove`, vì rect có tính
+> transform đang chạy) · **READY chạy được khi còn em chưa xếp** · dòng `SHOWDOWN IN ANDREW CLASSES • X
+> STUDENTS` ở cả 2 màn · icon Random→shuffle, Reset teams→mũi tên back · 🐞 **pop-up phụ lệch vì nút OK
+> rơi xuống `.aw-btn` đo bằng cqw — lần thứ BA cái bẫy này cắn.**
+> ⬜ Lưới chip Nam/Nữ **chưa ai nhìn thấy** (nằm trong `main.js`, đòi đăng nhập thật); phần dữ liệu đã có
+> 13 phép thử thuần hàm.
+>
+> **Đợt 190 — ⭐⭐⭐ HAI CHẾ ĐỘ MỚI RUNNING + IPA · PHIÊN ÂM VÀO ACT TÍCH
+> HỢP (tab PRONUNCIATION) · BỘ ĐỌC FILE EXCEL TỰ DÒ THEO HÌNH DẠNG.**
+>
+> Nút MODE nay có **5 ô**: Single · Fight · Showdown · **RUNNING** (→ chọn tiếp Running word / Running
+> team) · **IPA** (Speaking cards in `WORD /ipa/`, ẩn nút Template). Hai ô mới không phải luật chơi mới —
+> chúng là **act từ vựng được template khác mượn tạm**, thư viện không đổi một chữ, thoát là về act cũ.
+> Phiên âm nay là **bộ gợi ý thứ 5** (`pron`) nằm trong act WORDS ⇒ Edit có tab PRONUNCIATION, Options có
+> nút PRONUNCIATION, và import **bỏ hẳn 2 act** PRONUNCIATION + IPA (9 act/file → **7**).
+> ⭐⭐⭐ **Đo trên 121 file bài học THẬT**: bộ đọc cũ bỏ sót hơn một nửa — **67 file không ra act WORDS**
+> (nay 16), **74 file không ra act QUIZ** (nay 31), **7/13 file reading sai nội dung** (nay 0). Gốc: tên
+> sheet (`WORDTABLE` chỉ đúng 53/121; 65 file gọi nó là `CROSSWORD`), cột quiz lệch (chỉ 80/200 sheet bắt
+> đầu ở cột A), dải dòng reading không cố định. Nay dò theo **HÌNH DẠNG**, chi tiết ở
+> `core/HUONG DAN CORE.md` mục "ĐỌC FILE BÀI HỌC".
+> ⛔ **Hai luật mới bắt buộc biết**: `|| playMode` trong điều kiện dựng nút MODE **là đường ra duy nhất**
+> của chế độ mới; và **cấm hiện hàng bộ gợi ý trong play mode** (bấm một bộ rồi Apply làm bộ thẻ IPA âm
+> thầm quay về định nghĩa tiếng Anh — cắn thật, mục 5 nhật ký Đợt 190).
+>
+> Trước đó: **18/8/2026 (Đợt 187 · 188 · 189) — ⭐⭐⭐ FIGHT MODE: TIME DELAY + THANH CHỜ · THANH
 > TRƯỢT ĐỔI CÁCH BẤM CHO TOÀN APP · TIME COST TRỪ MỖI N GIÂY.** ✅ Cả 3 đợt **COMMIT + PUSH + LIVE**
 > (`8cfc209` · `7bd96a7` · `c53f336`), mỗi đợt đều đối chiếu build đúng commit + mã băm SHA-256 khớp 100%.
 > Kho **sạch, không còn gì chưa commit**.
@@ -2472,8 +2512,19 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (18/8/2026 — sau Đợt 189)
+### 3. Đứng ở đâu (18/8/2026 — sau Đợt 190)
 
+> ⬜⬜ **CÓ VIỆC CHƯA COMMIT: ĐỢT 190 + 191.** Đã tự test hết những gì máy đo được, **chờ thầy duyệt**.
+> **11 file sửa**: `core/lesson-import.js` · `core/content-view.js` · `core/convert.js` · `core/engine.js`
+> · `core/app.css` · `core/icons.js` · `core/classes.js` · `core/showdown-setup.js` · `main.js` ·
+> `templates/running-word/running-word.js` · `templates/running-team/running-team.js`.
+> Đọc nhật ký **Đợt 190** và **191** (đầu `GHI CHU DU AN.md`) + `core/HUONG DAN CORE.md` 2 mục mới
+> ("PLAY MODE" và "ĐỌC FILE BÀI HỌC") trước khi đụng tiếp vào phần này.
+> Bench: `scratch/mode190-test.html` (+ `scratch/words-act.json`, `scratch/fake-store.js`) và
+> `scratch/test-mode.html` cho bảng Showdown — **`scratch` gitignored nên phiên/máy mới phải dựng lại**.
+>
+> Phần dưới đây là trạng thái **trước Đợt 190** và vẫn đúng cho mọi thứ khác:
+>
 > ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC DỞ DANG TRONG CODE.** Ba đợt gần nhất (187 · 188 · 189) đều đã
 > **commit + push + LIVE + đối chiếu mã băm**: `8cfc209` · `7bd96a7` · `c53f336`. Chi tiết đầy đủ ở
 > `GHI CHU DU AN.md` (mới nhất TRÊN CÙNG) và khối tóm tắt ở đầu file này.

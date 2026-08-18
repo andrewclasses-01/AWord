@@ -299,6 +299,78 @@ và Enter/Space bàn phím cứng · chặn chạm dội <90ms cùng phần tử
 `touch-action: manipulation` đã áp ở `.aw-stage` + `.aw-fight` (app.css) — template mới KHÔNG cần tự
 khai lại, trừ khi cần `none` cho cử chỉ kéo riêng.
 
+## ⭐⭐ PLAY MODE — MƯỢN TEMPLATE KHÁC MỘT LÚC (RUNNING · IPA, Đợt 190, 18/8/2026)
+
+Nút **MODE** nay có 5 ô: Single · Fight · Showdown · **RUNNING** · **IPA**. Hai ô mới KHÁC hẳn Fight và
+Showdown ở chỗ chúng **không phải luật chơi mới** — chúng là một act từ vựng được **template khác mượn
+tạm**, còn act trong thư viện thì y nguyên.
+
+| | Fight / Showdown | RUNNING / IPA |
+|---|---|---|
+| act đang chơi | vẫn act đó | **bản chuyển đổi tạm** (`conv_…`) |
+| bật bằng | cờ trên template (`fightMode`…) | **NỘI DUNG act có đi tới đó được không** |
+| đường ra | `exitFight()` / bỏ pick | `doSwitchTemplate(originAct.type)` |
+
+**Máy móc bên dưới CHÍNH LÀ Change template** — `convertActivity(originAct, …)` rồi `startGame` với
+`base: originAct`. Thứ duy nhất thêm vào là dấu **`activity._mode`** (`"running"` | `"ipa"`), và engine
+đọc nó thành `playMode` rồi đóng lên stage một class `mode-<x>`.
+
+⚠️⚠️ **`_mode` KHÔNG PHẢI TRANG TRÍ — nó là TRÍ NHỚ.** Một act đã chuyển đổi không tự nói được VÌ SAO nó
+bị chuyển. Không có dấu này thì: nút MODE không sáng, bảng chọn không biết đang ở đâu để ẩn ô đó, và
+`.mode-ipa` không tồn tại nên nút Template không giấu được.
+
+⚠️⚠️ **`|| playMode` TRONG ĐIỀU KIỆN DỰNG NÚT MODE LÀ ĐƯỜNG RA DUY NHẤT.** Running word và Speaking cards
+không khai `fightMode` cũng không khai `showdownMode`. Điều kiện cũ (`canFight || canShowdown`) sẽ **không
+dựng nút** ngay khi vừa vào chế độ ⇒ chế độ thành **căn phòng không cửa**, chỉ thoát được bằng tải lại
+trang. Thêm chế độ thứ ba sau này thì đây là dòng phải kiểm TRƯỚC.
+
+⛔⛔ **CẤM HIỆN HÀNG BỘ GỢI Ý (`makeContentSwitch`) TRONG PLAY MODE — cắn thật ở Đợt 190.**
+Trong 2 chế độ này hàng ENG1/ENG2/VI1/VI2 **không đổi được gì** (RUNNING bỏ hết clue, IPA luôn dựng thẻ từ
+bộ phiên âm). Tệ hơn: bấm một bộ rồi Apply chạy `applySubActSelection()`, mà cú dựng lại của nó đi qua
+`doSwitchTemplate()` — **không kèm `style` cũng không kèm `_mode`** ⇒ bộ thẻ âm thầm quay về định nghĩa
+tiếng Anh, nút Template hiện lại, nút MODE thôi sáng. **Luật chung suy ra: mọi thứ dựng lại act trong một
+play mode đều phải mang theo CẢ `style` LẪN `_mode`, hoặc phải bị chặn từ đầu.**
+
+⚠️ **`convertActivity(act, type, { style })`** — `style: "ipa"` là cách DUY NHẤT bảo Speaking cards in
+`WORD /ipa/` thay vì clue. Đường Change template thường **không** truyền `style` và giữ nguyên hành vi cũ
+(thẻ mang định nghĩa — thứ giàu ý để nói).
+
+⚠️ **Cổng vào đo NỘI DUNG, hai lớp.** `switchList()` lo mức tối thiểu của từng game (Running team ≥6 từ,
+Running word ≥2); rồi mode kiểm thêm **≥80% mục ngắn ≤`WORD_POOL_MAX_LEN` (24)**. Thiếu lớp thứ hai thì act
+QUIZ đọc-hiểu cũng mời chơi RUNNING, mà "đáp án" của nó là cả câu. **Chỉ siết ở mode** — danh sách của nút
+Template giữ nguyên, vì thu hẹp nó là đổi hành vi thầy đang dùng.
+
+⭐ **`ui.saveTarget()` — TEMPLATE LƯU VÀO ACT NÀO.** Trả về `originAct`: chính nó khi không có chuyển đổi,
+act thư viện đứng sau khi có. Running word/team lưu "bộ số đã in" qua đây nên **không cần biết mình đang ở
+chế độ nào**. Hai luật đi kèm:
+1. Ghi vào **CẢ HAI** đối tượng (bản gốc để lên Firestore, bản trên màn hình để `readSets(activity)` đọc lại).
+2. **`convertActivity` phải mang bộ số ĐI VÀO** (`printSets`/`gameSets`), nếu không vòng chỉ chạy một
+   chiều: lưu xong, thoát, quay lại thấy ô trống trong khi bộ số nằm yên trên act không ai đọc.
+
+## ⭐⭐ ĐỌC FILE BÀI HỌC — DÒ THEO HÌNH DẠNG, KHÔNG THEO TÊN SHEET (`core/lesson-import.js`, Đợt 190)
+
+Đo trên **121 file bài học thật** của thầy: tên sheet và chữ cái cột **không phải là thứ tin được**.
+`WORDTABLE` chỉ đúng ở 53 file (65 file gọi đúng bảng đó là `CROSSWORD`); chỉ 80/200 sheet quiz bắt đầu ở
+cột A; ba phần của Reading acts không nằm ở dòng cố định. Mọi ca hỏng đều **im lặng**.
+
+Ba bộ dò, đều là hàm thuần nhận một `grid` (mảng dòng × cột chuỗi):
+| Cần tìm | Luật |
+|---|---|
+| bảng từ vựng | bộ ba cột **`/ipa/` · TỪ · gợi ý**; tên bộ đọc từ NGÔN NGỮ của gợi ý (Anh → ENG1/ENG2, Việt → VI1/VI2) |
+| cột quiz | **các cột CÓ CHỮ theo thứ tự** — cột đánh số và cột trống tự rụng |
+| phần reading | cắt theo **DÒNG TRỐNG** → bỏ dòng tiêu đề → nhận dạng theo hình dạng (≥4 cột = trắc nghiệm · 2 cột đầu là CÂU = đúng/sai · 2 cột đầu là TỪ = điền từ) |
+
+⚠️⚠️ **`gridOf()` PHẢI GIỮ DÒNG TRỐNG.** `grid[i]` LÀ dòng `i+1` của sheet, và có hai chỗ dựa vào đúng điều
+đó cùng lúc. Nén dòng trống cho gọn là làm chúng trượt khỏi nhau — đọc nhầm phần mà act vẫn trông đầy đủ.
+(Đã tự cắn ngay lúc viết Đợt 190.)
+
+⚠️ **Khúc ĐẦU TIÊN của mỗi loại thắng.** 2 file có khúc thứ tư đọc y như khúc đúng/sai; không có luật này
+thì nó thay mất khúc thật.
+
+⚠️ Sheet biết chắc không phải bảng từ vựng (`QUIZ*`, `READINGACT*`, `RUNNING*`, `PARAGRAPH`, `CUT`,
+`FILL*`, `SLIDE*`, `VIDEO`, `CHART*`, `LOGIC*`, `TRANSLATION*`) bị loại trước — vừa không bao giờ thắng
+được cuộc dò, vừa đỡ đọc thừa mỗi lần import.
+
 ## ⭐⭐ FIGHT MODE — HAI BÀN, MỘT TRẬN (`core/fight.js`, Đợt 124, 12/8/2026)
 
 Nút **MODE** dưới khung lật act giữa SINGLE MODE và FIGHT MODE: 2 ván THẬT cạnh nhau, một dải
