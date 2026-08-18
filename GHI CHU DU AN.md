@@ -127,8 +127,8 @@ y như Đợt 191–194).
 
 ### 5. VIỆC ĐANG CHỜ (Đợt 195)
 - ⬜ **Thầy nhìn + chạm thật trên TOMKO** (máy không tự chạm được).
-- ⬜ **Chưa commit/push** — Đợt 194 và 195 sẽ đi chung một commit (cùng sửa `core/engine.js`, tách
-  không an toàn).
+- ✅ **ĐÃ COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit chung với Đợt 194
+  (cùng sửa `core/engine.js`, tách không an toàn).
 - ⬜ `scratch/` bị gitignore ⇒ `home195-test.html` không lên GitHub, phiên sau phải dựng lại.
 
 ---
@@ -281,7 +281,7 @@ Enter/Space, y như Style của Đợt 192).
 ### 7. VIỆC ĐANG CHỜ (Đợt 194)
 - ⬜ **Thầy nhìn bằng mắt trên TOMKO**: nhấn giữ 420ms bằng NGÓN TAY trên màn hồng ngoại (máy không tự
   chạm được), xem popup có bị lệch/nhỏ chữ trên màn 86" không.
-- ⬜ **Chưa commit/push** — chờ thầy duyệt.
+- ✅ **ĐÃ COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — chung một commit với Đợt 195.
 - ⬜ `scratch/` bị gitignore ⇒ `edit194-test.html` + `edit194-live.html` **không lên GitHub**, phiên sau
   ở máy khác phải dựng lại.
 - ⬜ Cân nhắc sau: Running/IPA/Showdown nay **không còn** đường vào editor từ trong game (đúng ý thầy).
