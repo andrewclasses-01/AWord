@@ -8,7 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **18/8/2026 (Đợt 190 + 191)** ⬜ **CẢ HAI CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+> Cập nhật lần cuối: **18/8/2026 (Đợt 190 + 191)** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
+> cả hai đợt — chúng cùng sửa `engine.js` và `app.css` nên không tách an toàn được). Pages build đúng
+> commit, **11/11 file trùng mã băm SHA-256**, và đã hỏi lại chính module trên bản live.
+> ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
+> `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
 >
 > **Đợt 191 — TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN.** Ô mode **98×88, icon 48**, thứ tự
 > **Fight · Showdown · Running · IPA**, icon fight sửa thanh giữa, **icon IPA là chữ "IPA"**, **nút MODE
@@ -2512,16 +2516,41 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (18/8/2026 — sau Đợt 190)
+### 3. Đứng ở đâu (18/8/2026 — sau Đợt 190 + 191)
 
-> ⬜⬜ **CÓ VIỆC CHƯA COMMIT: ĐỢT 190 + 191.** Đã tự test hết những gì máy đo được, **chờ thầy duyệt**.
-> **11 file sửa**: `core/lesson-import.js` · `core/content-view.js` · `core/convert.js` · `core/engine.js`
-> · `core/app.css` · `core/icons.js` · `core/classes.js` · `core/showdown-setup.js` · `main.js` ·
-> `templates/running-word/running-word.js` · `templates/running-team/running-team.js`.
-> Đọc nhật ký **Đợt 190** và **191** (đầu `GHI CHU DU AN.md`) + `core/HUONG DAN CORE.md` 2 mục mới
-> ("PLAY MODE" và "ĐỌC FILE BÀI HỌC") trước khi đụng tiếp vào phần này.
-> Bench: `scratch/mode190-test.html` (+ `scratch/words-act.json`, `scratch/fake-store.js`) và
-> `scratch/test-mode.html` cho bảng Showdown — **`scratch` gitignored nên phiên/máy mới phải dựng lại**.
+> ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC DỞ DANG.** Đợt 190 + 191 đã **commit `52173f4` + push + LIVE + đối
+> chiếu 11/11 mã băm**. 11 file code đã sửa: `core/lesson-import.js` · `core/content-view.js` ·
+> `core/convert.js` · `core/engine.js` · `core/app.css` · `core/icons.js` · `core/classes.js` ·
+> `core/showdown-setup.js` · `main.js` · `templates/running-word/running-word.js` ·
+> `templates/running-team/running-team.js`.
+>
+> **Mảng đang chạy đã đổi: từ FIGHT MODE sang PLAY MODE + SHOWDOWN.** Đọc nhật ký **Đợt 190** và **191**
+> (đầu `GHI CHU DU AN.md`) + `core/HUONG DAN CORE.md` 2 mục mới ("PLAY MODE" và "ĐỌC FILE BÀI HỌC")
+> trước khi đụng tiếp vào phần này.
+>
+> **Số hiện trạng sau 2 đợt**: Fight 7/17 · Showdown 11/17 · **PLAY MODE (RUNNING + IPA) mở cho mọi act
+> từ vựng có đủ nội dung** · import **7 act/file** (trước là 9) · nút MODE có **5 ô**.
+>
+> ⬜ **BA VIỆC CHỈ MẮT/TAY THẦY LÀM ĐƯỢC** (máy đã đo hết phần đo được):
+> 1. **Lưới chip Nam/Nữ trong Settings › Classes chưa ai NHÌN thấy** — nó ở `main.js`, màn đó đòi đăng
+>    nhập thật; bench bị chặn vì bộ giả Firebase thiếu `writeBatch`. Phần dữ liệu đã có 13 phép thử.
+> 2. **Nhìn hàng 5 icon mode trên màn 86"** — pane trình duyệt của phiên tự động bị ẩn nên **không chụp
+>    được khung hình nào**, mọi thứ thuộc "cảm giác" chưa ai xem.
+> 3. **Import 1 file .xlsm thật trên bản live** rồi mở tab PRONUNCIATION trong Edit, và **lưu 1 SET
+>    trong RUNNING mode với Firestore thật** (bench dùng bản giả).
+>
+> 🧪 **BÀN THỬ** (thư mục `scratch` **gitignored** ⇒ phiên/máy mới phải dựng lại):
+> `scratch/mode190-test.html` (+ `scratch/words-act.json` sinh từ `WORMS.xlsm`, `scratch/fake-store.js`
+> ghi lại `saveActivity` nhận act nào) và `scratch/test-mode.html?t=<type>` cho bảng Showdown.
+> Probe có sẵn: `__probe()` · `__tapMode()` · `__tapTile(tên)` · `__tapBtn(nhãn)`.
+> ⚠️⚠️ **BỐN BẪY ĐO đã trả giá, đọc trước khi tự test**:
+> (a) pane bị ẩn ⇒ transition **đứng im ở giá trị ĐẦU**, phải chèn
+> `*{transition:none!important;animation:none!important}` rồi mới đọc `getComputedStyle`;
+> (b) `getBBox()` của `<text>` trả **hộp EM của font**, KHÔNG phải hộp mực — đo chữ phải dùng canvas
+> `measureText().actualBoundingBox*`;
+> (c) `is-active` trên nút công cụ vừa nghĩa "panel đang mở" vừa nghĩa "chế độ đang chạy" — **đo hào
+> quang thì phải đo TRƯỚC khi bấm**;
+> (d) đối chiếu mã băm với bản live phải dùng **`git show HEAD:<file>`**, không dùng file trên đĩa (CRLF).
 >
 > Phần dưới đây là trạng thái **trước Đợt 190** và vẫn đúng cho mọi thứ khác:
 >

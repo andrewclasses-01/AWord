@@ -10,7 +10,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 191 (18/8/2026) — ⭐⭐ TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN (nhớ HS đã xoá · giới tính · animation xáo)
 ⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `classes.js` · `showdown-setup.js`) **+ `main.js`**.
-⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.** Đi liền sau Đợt 190 (cũng chưa commit).
+✅ **THẦY DUYỆT → COMMIT `52173f4` (chung với Đợt 190) + PUSH + LIVE.** Pages build đúng commit
+(`status: built`), đối chiếu **11/11 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và chạy
+lại phép thử **trên chính module live**: `icons.ipa/shuffle/back` có đủ · `VARIANT_LABEL.pron` =
+`PRONUNCIATION` · `running_word` là đích convert · thẻ IPA ra `TROUSER  /ˈtraʊzə/` · 0 lỗi console.
+⚠️ **BẪY ĐO ĐÃ TRẢ GIÁ KHI ĐỐI CHIẾU**: so `sha256sum` của **file trong thư mục làm việc** với bản live
+báo **7/11 LỆCH** — không phải sai nội dung mà là **CRLF**. Máy này để `core.autocrlf`, nên file trên đĩa
+là CRLF còn thứ git lưu (và Pages phục vụ) là LF. **Phải so với `git show HEAD:<file>`**, không so với
+file trên đĩa. Lần sau đối chiếu mã băm thì dùng đúng lệnh đó.
 
 ### 1. Nút MODE (thầy)
 - **Ô nhỏ lại**: cột 148→**112px**, cao 132→**98px**, icon 76→**54px**. ⚠️ Nét kẻ phải tăng
@@ -144,7 +151,9 @@ hai thứ lên nhau là mọi ghost xuất phát lệch một chút, nhìn như 
 ## Đợt 190 (18/8/2026) — ⭐⭐⭐ HAI CHẾ ĐỘ MỚI **RUNNING** + **IPA**, PHIÊN ÂM VÀO ACT TÍCH HỢP, VÀ BỘ ĐỌC FILE EXCEL TỰ DÒ THEO HÌNH DẠNG
 ⭐ CÓ SỬA CORE (`lesson-import.js` · `content-view.js` · `convert.js` · `engine.js` · `app.css`)
 **+ 2 file game** (`running-word.js` · `running-team.js`).
-⬜ **CHỜ THẦY DUYỆT — CHƯA COMMIT.**
+✅ **THẦY DUYỆT → COMMIT `52173f4` (chung với Đợt 191) + PUSH + LIVE** — chi tiết đối chiếu ở đầu mục
+Đợt 191. Gộp một commit vì cả hai đợt đều sửa `core/engine.js` và `core/app.css`, không tách hunk an
+toàn được.
 
 ### 1. Thầy giao (18/8/2026)
 > "Thêm 2 chế độ cho nút mode:
