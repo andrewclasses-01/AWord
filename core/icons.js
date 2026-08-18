@@ -84,6 +84,19 @@ export const icons = {
   // ⭐ Đợt 191 (thầy) — SHUFFLE, replacing the magic wand on "Random teams". A
   // wand says "something magic happens"; two paths crossing over says WHAT
   // happens, and it is the symbol every music player has already taught the room.
+  // ⭐ Đợt 192 — THE ONLY TWO COLOURED ICONS IN THIS FILE, and deliberately so.
+  // Every other icon here is one-colour linework taking `currentColor` from the
+  // button it sits in, which is what lets the same string serve a lit tile, a
+  // dim toolbar and a hover state. These two cannot: the teacher asked for
+  // "icon bé trai áo xanh" and "icon bé gái áo hồng", and the whole job of the
+  // pair is to be told apart ACROSS the room on an 86" board, where the colour
+  // is read a beat before the word under it. So they carry their own fills and
+  // ignore `currentColor` entirely.
+  // ⚠ Because they are filled, not stroked, the `stroke-width` rules that other
+  // icon sizes rely on (see .aw-mp-icon in app.css) do nothing to them — they
+  // scale cleanly at any size instead, which is the one bonus of the exception.
+  boy: `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6.6" r="3.4" fill="#f3c08b"/><path d="M8.6 5.2a3.4 3.4 0 0 1 6.8 0 6 6 0 0 0-3.4-1 6 6 0 0 0-3.4 1z" fill="#4a3728"/><path d="M6.4 20v-5.2a5.6 5.6 0 0 1 5.6-4.2 5.6 5.6 0 0 1 5.6 4.2V20z" fill="#2f6fed"/></svg>`,
+  girl: `<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6.6" r="3.4" fill="#f3c08b"/><path d="M8.6 5.6a3.4 3.4 0 0 1 6.8 0c0 1.5.6 2.4.6 2.4l-1.6-1.2a5.6 5.6 0 0 0-4.8 0L8 8s.6-.9.6-2.4z" fill="#7b4a2d"/><path d="M12 10.6c2.6 0 3.6 2 4.4 4.2L18 20H6l1.6-5.2c.8-2.2 1.8-4.2 4.4-4.2z" fill="#ec4899"/></svg>`,
   shuffle: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h3.6c1.2 0 2.3.6 3 1.6l4.8 6.8c.7 1 1.8 1.6 3 1.6H21"/><path d="M3 17h3.6c1.2 0 2.3-.6 3-1.6l4.8-6.8c.7-1 1.8-1.6 3-1.6H21"/><path d="M18.2 4.2L21 7l-2.8 2.8M18.2 14.2L21 17l-2.8 2.8"/></svg>`,
   // ⭐ Đợt 191 (thầy) — BACK, for "Reset teams": that button's real meaning is
   // "go back to the class screen and choose again", and a circular-arrow refresh

@@ -79,3 +79,72 @@ export function press(el, handler) {
 
   return el;
 }
+
+// =============================================================
+// TAP HOẶC NHẤN GIỮ — một nút mang HAI việc (Đợt 192, 18/8/2026).
+//
+// Thầy gộp nút Style vào nút Template: chạm = Template, nhấn giữ = Style.
+// VÌ SAO KHÔNG DÙNG `press()` Ở ĐÂY: press() bắn NGAY lúc chạm — đúng cho bề
+// mặt CHƠI (thi đấu đa điểm, ai chạm trước ăn trước), nhưng một nút mang hai
+// việc thì KHÔNG THỂ quyết định lúc chạm: phải đợi xem ngón tay có ở lại
+// đủ lâu không. Đây là thanh công cụ của THẦY, không phải bề mặt đua của học
+// sinh, nên vài trăm ms không ai mất gì.
+//
+// CÙNG MỘT KHUÔN với `gestures()` trong core/showdown-review.js (title Show
+// answers 3 cử chỉ) — hai nơi viết tay vì cả hai đều phải chạy trên màn hồng
+// ngoại TOMKO. Những thứ KHÔNG ĐƯỢC BỎ:
+//   - `setPointerCapture`: ngón tay trượt ra khỏi nút vẫn phải báo `pointerup`
+//     về đây, không thì cử chỉ sau bị hiểu sai.
+//   - dung sai di chuyển: ngón đi xa hơn MOVE_TOL là đang cuộn/trượt, KHÔNG
+//     phải đang nhấn giữ — huỷ đồng hồ giữ.
+//   - `contextmenu` phải chặn: nhấn giữ trên cảm ứng là bật menu chuột phải
+//     đè lên đúng cái panel vừa mở.
+//   - `click` tin cậy có `detail >= 1` đã đi qua chuỗi pointer ở trên ⇒ NUỐT.
+//     Còn `detail === 0` (Enter/Space) và `.click()` lập trình thì KHÔNG có
+//     pointer nào cả ⇒ phải chạy onTap, không thì bàn phím và test-bench chết.
+// =============================================================
+
+const HOLD_MS = 420;      // giữ quá ngần này là "nhấn giữ"
+const MOVE_TOL = 14;      // đi xa hơn ngần này là cuộn/trượt, không phải bấm
+
+export function tapOrHold(el, { onTap, onHold }) {
+  if (!window.PointerEvent) {                 // trình duyệt rất cũ: còn một cử chỉ hơn là không có gì
+    el.addEventListener("click", () => onTap());
+    return el;
+  }
+  let holdTimer = null, held = false, downId = null, sx = 0, sy = 0;
+  const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+
+  el.addEventListener("pointerdown", e => {
+    if (el.disabled || e.button !== 0) return;
+    downId = e.pointerId; held = false; sx = e.clientX; sy = e.clientY;
+    try { el.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    clearHold();
+    holdTimer = setTimeout(() => { holdTimer = null; held = true; onHold(); }, HOLD_MS);
+  });
+
+  el.addEventListener("pointermove", e => {
+    if (downId == null || e.pointerId !== downId) return;
+    if (Math.abs(e.clientX - sx) > MOVE_TOL || Math.abs(e.clientY - sy) > MOVE_TOL) clearHold();
+  });
+
+  el.addEventListener("pointerup", e => {
+    if (downId == null || e.pointerId !== downId) return;
+    downId = null;
+    clearHold();
+    if (held) { held = false; return; }       // cú giữ đã chạy rồi, nhấc tay không còn nghĩa gì
+    onTap();
+  });
+
+  const cancel = () => { downId = null; held = false; clearHold(); };
+  el.addEventListener("pointercancel", cancel);
+  el.addEventListener("lostpointercapture", () => { downId = null; });
+  el.addEventListener("contextmenu", e => e.preventDefault());
+
+  el.addEventListener("click", e => {
+    if (e.isTrusted && e.detail >= 1) { e.preventDefault(); e.stopPropagation(); return; }
+    if (!el.disabled) onTap();                // Enter/Space · .click() lập trình
+  });
+
+  return el;
+}

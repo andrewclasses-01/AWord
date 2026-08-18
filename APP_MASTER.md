@@ -14,6 +14,43 @@
 > ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
 > `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
 >
+> ---
+> **Đợt 192 — SÁU VIỆC THẦY GIAO MỘT LƯỢT.** 🟡 **CODE XONG, ĐO XONG, CHƯA COMMIT/PUSH.**
+> ⚠️ Đợt này chạy **song song với Đợt 193** (phiên Claude khác, cùng kho, cùng lúc — 193 đã commit+push,
+> 192 thì chưa). Trước khi commit 192 phải `git status` lại và commit **theo tên file**, đừng `git add -A`.
+> Sáu việc: (1) chế độ RUNNING đảo thứ tự **WORD trước, TEAM sau** + nhãn rút còn **WORD/TEAM**;
+> (2) màn chọn lớp Showdown: ô tên **bằng nhau tuyệt đối** (lưới thay flex bọc dòng — đo: cũ lệch **57,9px**,
+> nay **0**), tên không đủ chỗ thì **viết tắt** chứ không bị ellipsis xén;
+> (3) shuffle **bay lần lượt, loạn xạ** (thứ tự khởi hành được xáo, nhịp giật ±35%, đường bay cong theo
+> **pháp tuyến** — đo: rải **1146ms** so với trần **260ms** của nếp cũ, **96/190 cặp đảo thứ tự**);
+> (4) ⭐⭐ **BỎ HẲN NÚT STYLE, gộp vào nút Template — chạm = Template, NHẤN GIỮ (420ms) = Style**;
+> (5) ⭐⭐⭐ **dựng lại Settings › Classes**: bỏ textarea, **mỗi em một hàng** (số · tên · nút dài
+> **BOY|GIRL** · xoá · tay kéo), lưới **cột-trước 2×10**, ô "+ Add a new class"/"+ Add a new student" ở
+> cuối, sạch chữ hướng dẫn;
+> (6) thư mục trống hiện **ô kéo-thả file Import** thay cho dòng "This folder is empty."
+>
+> ⛔⛔ **BA LUẬT MỚI BẮT BUỘC BIẾT TRƯỚC KHI SỬA TIẾP:**
+> 1. **`NO_TEMPLATE_TYPES` (engine.js, module scope) phải đi cùng nhịp với BA stylesheet** ẩn nút
+>    `[title="Template"]` (`app.css .mode-ipa` · `running-word.css` · `running-team.css`). Vì Style nay
+>    treo trên nút Template, ba luật đó nếu bắt trúng sẽ ẩn **HAI** tính năng chứ không phải một —
+>    Style biến mất sạch ở IPA và cả hai game Running. Vá bằng cách: chỗ không đổi được template thì nút
+>    **được dựng thẳng thành nút Style** (`title="Style"` làm cả ba selector trượt). Thêm template mới ẩn
+>    nút Template ⇒ **thêm type vào `NO_TEMPLATE_TYPES` cùng lúc.**
+> 2. **Kéo-thả trong Settings dùng POINTER EVENTS, không dùng HTML5 `draggable`** (khác Anagram editor và
+>    thẻ thư mục — cố ý). Native DnD **không bắn từ ngón tay**: trên màn hồng ngoại TOMKO nó là cái nút
+>    không làm gì, mà test bằng chuột thì đạt hoàn hảo. Tay kéo phải `touch-action: none`.
+> 3. **`<input>` không có ellipsis** — hết chỗ là **cắt cụt im lặng**, không viết tắt được như chip
+>    Showdown. Ô tên lớp học đã đo và nới cho vừa tên tiếng Việt dài (chỗ chữ **127 → 177px**); đụng vào
+>    bề ngang hàng học sinh thì phải đo lại.
+>
+> ⭐ **Bench mới `scratch/fake-firebase-full.js` + `scratch/cls192-test.html` — LẦN ĐẦU chạy được `main.js`
+> THẬT** (thư viện thật, Settings thật). Đợt 191 phải bó tay vì bộ giả Firebase thiếu `writeBatch`; bộ mới có
+> đủ `collection · getDocs · query/where · writeBatch · deleteDoc · updateDoc · increment`. `scratch/` bị
+> gitignore ⇒ **phiên sau phải dựng lại**.
+> ⬜ **Chưa ai NHÌN bằng mắt**: pane trình duyệt bị ẩn nên `screenshot` timeout (y như Đợt 191) — đã thay
+> bằng phép dò chạm `elementFromPoint`, nhưng màu/cân đối/cỡ chữ trên màn 86" vẫn phải thầy duyệt.
+> ---
+>
 > **Đợt 191 — TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN.** Ô mode **98×88, icon 48**, thứ tự
 > **Fight · Showdown · Running · IPA**, icon fight sửa thanh giữa, **icon IPA là chữ "IPA"**, **nút MODE
 > mang icon của chế độ đang chạy** (mở app = icon single, chỉ single không sáng hào quang) và **luôn nằm

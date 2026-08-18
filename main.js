@@ -33,7 +33,11 @@ import {
 } from "./core/store.js";
 import {
   listClasses, createClass, renameClass, setStudents, deleteClass,
-  parseStudentNames, mergeStudents, resetClassesCache, MAX_STUDENTS
+  // Dot 192 - mergeStudents is no longer imported: the class editor now holds a
+  // real row (with its pupil id) per pupil, so ids survive an edit without any
+  // name-matching. The helper stays exported from core/classes.js with its own
+  // tests; nothing in the app calls it any more.
+  parseStudentNames, resetClassesCache, MAX_STUDENTS
 } from "./core/classes.js";
 // SHOWDOWN (Đợt 155) — the home page needs only the two account-change hooks;
 // the mode itself is driven entirely from inside a game (core/engine.js).
@@ -325,11 +329,43 @@ async function renderInside() {
   const assignments = state.root === "results" ? await assignmentsForView() : await loadAssignmentsForDots();
 
   if (!items.length && !assignments.length) {
-    body.append(el("div", "aw-fm-empty",
-      state.view === "trash" ? "Recycle bin is empty."
-      : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
-      : state.root === "results" ? "No assignments here yet. Give one out from an activity."
-      : "This folder is empty."));
+    // ⭐ Đợt 192 (thầy: "Với 1 thư mục trống, thay vì hiện dòng This folder is
+    // empty thì hiển thị ô Import file để kéo thẳng file vào được luôn") — an
+    // empty folder is not a fact to report, it is a job waiting to be done, and
+    // the job is almost always "put a lesson in it". The zone is the SAME
+    // `.aw-imp-drop` the Import dialog uses, deliberately: it already carries
+    // the drag-over state and the teacher has learned that shape.
+    // ⚠ ONLY for a real, empty LIBRARY folder. Trash, a search with no hits and
+    // an empty Results folder are all still statements of fact — dropping a
+    // lesson file into the recycle bin means nothing, and offering it there
+    // would be an invitation to a place that cannot accept it.
+    if (state.view === "trash" || state.view === "search" || state.root === "results") {
+      body.append(el("div", "aw-fm-empty",
+        state.view === "trash" ? "Recycle bin is empty."
+        : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
+        : "No assignments here yet. Give one out from an activity."));
+      return;
+    }
+    const drop = el("div", "aw-imp-drop aw-fm-emptydrop",
+      `<div class="aw-imp-drop-icon">${IMP_UPLOAD_SVG}</div>` +
+      `<div class="aw-imp-drop-title">Drag a lesson file here, or <b>click to browse</b></div>` +
+      `<div class="aw-imp-drop-sub">.xlsm · .xlsx · .xls</div>`);
+    // Click opens the ordinary Import dialog (its own drop zone does the
+    // browsing); a file dropped HERE goes straight in as that dialog's
+    // `initialFile`, so the teacher gets the same review-and-pick screen either
+    // way — nothing is ever imported without being shown first.
+    drop.onclick = () => importFlow();
+    ["dragenter", "dragover"].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("is-over"); }));
+    ["dragleave", "dragend"].forEach(ev =>
+      drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("is-over"); }));
+    drop.addEventListener("drop", e => {
+      e.preventDefault();
+      drop.classList.remove("is-over");
+      const f = e.dataTransfer && e.dataTransfer.files[0];
+      if (f) importFlow(f);
+    });
+    body.append(drop);
     return;
   }
 
@@ -1880,67 +1916,99 @@ function openSettingsFlow() {
     // will want the same list. Everything here is async — the rolls live in
     // Firestore next to the library, so every machine signed into the teacher's
     // account sees the same classes.
+    // ⭐ Đợt 192 (thầy: "Bỏ hết các text hướng dẫn đi" · "Thêm 1 ô add a new
+    // class ở cuối cột lớp") — the screen is now nothing but the list itself.
+    // The paragraph explaining what a class is, and the "create" row bolted on
+    // ABOVE the list, are both gone: a new class is made where the eye already
+    // ends up, at the BOTTOM of the list, by the same tile that shows what is
+    // there. One idea per screen, and the screen says it by its shape.
     async function showClasses() {
+      body.closest(".aw-modal")?.classList.remove("is-classwide");
       setTitle("Classes", showMenu);
       body.innerHTML = "";
-      body.append(el("div", "aw-set-hint",
-        "A class is a name and a list of pupils. Activities that call pupils by name "
-        + "(Running team) read these lists."));
 
-      // -- create --
-      const addRow = el("div", "aw-set-addrow");
-      const addInput = el("input", "aw-ed-input");
-      addInput.placeholder = "New class name, e.g. A1C";
-      addInput.maxLength = 40;
-      const addBtn = el("button", "aw-btn aw-btn-primary", "Create");
-      addBtn.type = "button";
-      const doCreate = async () => {
-        const name = addInput.value.trim();
-        if (!name) { addInput.focus(); return; }
-        addBtn.disabled = true;
-        try {
-          const cls = await createClass(name);
-          addInput.value = "";
-          toast(`Class "${cls.name}" created`);
-          await showClassEditor(cls.id);
-        } catch (e) {
-          addBtn.disabled = false;
-          showSetError(e.message || "Could not create the class.");
-        }
-      };
-      addBtn.onclick = doCreate;
-      addInput.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); doCreate(); } };
-      addRow.append(addInput, addBtn);
-      body.append(addRow);
-
-      // -- list --
       const listWrap = el("div", "aw-set-menu");
       body.append(listWrap);
       listWrap.append(el("div", "aw-set-hint", "Loading…"));
       try {
         const classes = await listClasses();
         listWrap.innerHTML = "";
-        if (!classes.length) {
-          listWrap.append(el("div", "aw-set-hint", "No classes yet — create one above."));
-        } else {
-          classes.forEach(c => {
-            const n = c.students.length;
-            listWrap.append(menuRow(c.name,
-              n === 1 ? "1 pupil" : `${n} pupils`,
-              () => showClassEditor(c.id)));
-          });
-        }
+        classes.forEach(c => {
+          const n = c.students.length;
+          listWrap.append(menuRow(c.name,
+            n === 1 ? "1 pupil" : `${n} pupils`,
+            () => showClassEditor(c.id)));
+        });
+        listWrap.append(addClassTile(listWrap));
       } catch (e) {
         listWrap.innerHTML = "";
         listWrap.append(el("div", "aw-set-hint", e.message || "Could not load your classes."));
       }
-      addInput.focus();
     }
 
-    // One class: rename it, edit its pupils, or delete it. Pupils are edited as
-    // ONE name-per-line box rather than a row of boxes — the source is nearly
-    // always a column pasted out of a register, and 25 single-field rows would
-    // be a scroll marathon. (Same reasoning as the Running word pool box.)
+    /**
+     * The last row of the class list: a dashed slot that BECOMES the input.
+     * An inline field rather than prompt(): prompt() is blocked in embedded
+     * views (myActivity's WebContentsView among them) and would fail silently
+     * exactly where the teacher works — the same reason Showdown's own
+     * "Add member" row is built this way.
+     */
+    function addClassTile(listWrap) {
+      const tile = el("button", "aw-set-addtile", "+ Add a new class");
+      tile.type = "button";
+      tile.onclick = () => {
+        const holder = el("div", "aw-set-addtile is-editing");
+        const inp = el("input", "aw-set-addinput");
+        inp.placeholder = "Class name";
+        inp.maxLength = 40;
+        let closed = false;
+        const commit = async () => {
+          if (closed) return;
+          closed = true;
+          const name = inp.value.trim();
+          if (!name) { holder.replaceWith(tile); return; }
+          try {
+            const cls = await createClass(name);
+            toast(`Class "${cls.name}" created`);
+            await showClassEditor(cls.id);
+          } catch (e) {
+            holder.replaceWith(tile);
+            showSetError(e.message || "Could not create the class.");
+          }
+        };
+        inp.onkeydown = ev => {
+          if (ev.key === "Enter") { ev.preventDefault(); commit(); }
+          // Escape must not commit — blur fires on the way out and would
+          // otherwise create a class the teacher had just decided against.
+          if (ev.key === "Escape") { closed = true; holder.replaceWith(tile); }
+        };
+        inp.onblur = commit;
+        holder.append(inp);
+        tile.replaceWith(holder);
+        inp.focus();
+      };
+      return tile;
+    }
+
+    // ⭐⭐ Đợt 192 — ONE BOX PER PUPIL, IN COLUMNS (thầy: "nhập các ô tên học
+    // sinh tương tự bố cục nhập dữ liệu trong Anagram, được chia thành các cột như
+    // vậy · Bố trí tối đa là 20 học sinh để không cần phải scroll").
+    //
+    // This REPLACES the one-name-per-line textarea. What the textarea could not
+    // do is carry anything ALONGSIDE a name: Đợt 191 had to bolt boy/girl on as
+    // a second grid of chips underneath, keyed by lowercased NAME because the
+    // textarea had no row to hang an id on — which quietly got two pupils of
+    // the same name wrong. A real row per pupil ends that: the gender, the
+    // delete and the drag handle all belong to the row, and the row still knows
+    // its pupil id, so ids survive an edit without any name-matching at all
+    // (mergeStudents is no longer needed here — setStudents/normalize takes the
+    // records as they are).
+    // ⚠ THE EXCEL PASTE IS KEPT. It was the whole point of the textarea and the
+    // teacher still pastes a register column out of Excel — pasting into any
+    // name box fills from that row down (onNamePaste), reusing the id of anyone
+    // whose name comes back unchanged. Take this out and the screen becomes 20
+    // pieces of typing.
+    const CLS_COL_ROWS = 10;      // 10 rows × 2 columns = the 20 that must not scroll
     async function showClassEditor(id) {
       setTitle("Class", showClasses);
       body.innerHTML = "";
@@ -1959,104 +2027,33 @@ function openSettingsFlow() {
 
       body.innerHTML = "";
       setTitle(cls.name, showClasses);
+      // Two columns of pupil rows do not fit the 440px dialog every other
+      // settings screen uses. Removed again by showClasses() on the way back.
+      body.closest(".aw-modal")?.classList.add("is-classwide");
 
       const errBar = el("div", "aw-ed-error");
       errBar.style.display = "none";
       body.append(errBar);
 
-      // -- name --
       const nameField = el("div", "aw-ed-field");
       nameField.append(el("label", "aw-ed-label", "Class name"));
       const nameInput = el("input", "aw-ed-input");
       nameInput.value = cls.name;
       nameInput.maxLength = 40;
+      nameInput.oninput = hideErr;
       nameField.append(nameInput);
       body.append(nameField);
 
-      // -- pupils --
-      body.append(el("div", "aw-ed-sectionhead", "Pupils"));
-      body.append(el("div", "aw-ed-tip",
-        "One name per line. In Excel, select the name column and paste (Ctrl+V) straight "
-        + "into the box. Renaming a pupil keeps their place in any saved game roster; "
-        + "deleting a line removes them."));
-      const area = el("textarea", "aw-ed-input");
-      area.rows = 14;
-      area.spellcheck = false;
-      area.placeholder = "MINH ANH\nBAO NAM\nTHUY LINH\n…";
-      area.value = cls.students.map(s => s.name).join("\n");
-      body.append(area);
+      // The working copy. Every row keeps the pupil's REAL id, so reordering,
+      // renaming and deleting all leave the ids of everyone else untouched — a
+      // saved Running team roster names its pupils by id.
+      let rows = (cls.students || []).map(st => ({ id: st.id, name: st.name, gender: st.gender || "" }));
 
-      const count = el("div", "aw-ed-qcount");
-      body.append(count);
+      const grid = el("div", "aw-cls-grid");
+      const addWrap = el("div", "aw-cls-addwrap");
+      body.append(grid, addWrap);
+      renderRows();
 
-      // ⭐⭐ Đợt 191 — BOYS AND GIRLS (thầy, 18/8/2026), so Showdown's shuffle can
-      // spread them evenly across the teams instead of dealing blind.
-      //
-      // ⚠️ THE TEXTAREA IS LEFT ALONE ON PURPOSE. Its whole point is that the
-      // teacher selects the name column in Excel and pastes — a second column, or
-      // a "NAME, M" syntax, would put a format in the way of the one action this
-      // screen is built around. So gender is a SEPARATE grid of chips underneath:
-      // tap one to cycle – → ♂ → ♀ → –. Nothing has to be typed, and a class whose
-      // genders are never set behaves exactly as it always has.
-      //
-      // Keyed by lowercased NAME, not by pupil id, because the chips must follow
-      // what is in the textarea RIGHT NOW — including a name typed a second ago
-      // that has no id yet. `mergeStudents` resolves the ids at save time and
-      // takes this map as its third argument.
-      const genders = new Map();
-      (cls.students || []).forEach(s => {
-        if (s.gender) genders.set(String(s.name).trim().toLowerCase(), s.gender);
-      });
-      body.append(el("div", "aw-ed-sectionhead", "Boys and girls"));
-      body.append(el("div", "aw-ed-tip",
-        "Optional. Tap a name to mark it ♂ or ♀ — Showdown then spreads boys and girls "
-        + "evenly when it shuffles the teams. Names with no mark are dealt as usual."));
-      const gWrap = el("div", "aw-gender-grid");
-      body.append(gWrap);
-      const NEXT_G = { "": "m", m: "f", f: "" };
-      const G_MARK = { m: "♂", f: "♀", "": "" };
-      const renderGenders = () => {
-        gWrap.innerHTML = "";
-        const names = parseStudentNames(area.value);
-        if (!names.length) {
-          gWrap.append(el("div", "aw-ed-qcount", "Add some pupils first."));
-          return;
-        }
-        // Drop marks for names no longer on the list, so a deleted pupil cannot
-        // leave a gender behind for a later pupil who happens to share the name.
-        const live = new Set(names.map(n => n.trim().toLowerCase()));
-        [...genders.keys()].forEach(k => { if (!live.has(k)) genders.delete(k); });
-        names.forEach(name => {
-          const key = name.trim().toLowerCase();
-          const g = genders.get(key) || "";
-          const chip = el("button", "aw-gender-chip" + (g ? ` is-${g}` : ""),
-            `<span class="aw-gender-name"></span><span class="aw-gender-mark">${G_MARK[g]}</span>`);
-          chip.type = "button";
-          chip.querySelector(".aw-gender-name").textContent = name;
-          chip.title = g === "m" ? "Boy" : g === "f" ? "Girl" : "Not set";
-          chip.onclick = () => {
-            const nextG = NEXT_G[genders.get(key) || ""];
-            if (nextG) genders.set(key, nextG); else genders.delete(key);
-            renderGenders();
-          };
-          gWrap.append(chip);
-        });
-        const m = names.filter(n => genders.get(n.trim().toLowerCase()) === "m").length;
-        const f = names.filter(n => genders.get(n.trim().toLowerCase()) === "f").length;
-        gWrap.append(el("div", "aw-ed-qcount aw-gender-tally",
-          `${m} ♂ · ${f} ♀ · ${names.length - m - f} not set`));
-      };
-
-      const updateCount = () => {
-        const names = parseStudentNames(area.value);
-        count.textContent = `${names.length} / ${MAX_STUDENTS} pupils`;
-      };
-      area.oninput = () => { updateCount(); renderGenders(); hideErr(); };
-      nameInput.oninput = hideErr;
-      updateCount();
-      renderGenders();
-
-      // -- actions --
       const actions = el("div", "aw-modal-actions");
       const delBtn = el("button", "aw-btn aw-ed-bulkdanger", "Delete class");
       delBtn.type = "button";
@@ -2081,10 +2078,12 @@ function openSettingsFlow() {
         const label = saveBtn.textContent;
         saveBtn.textContent = "Saving…";
         try {
-          // mergeStudents keeps the ID of every pupil whose name is unchanged, so
-          // a Running team roster already saved against this class still points
-          // at the same people after an edit.
-          const students = mergeStudents(cls.students, parseStudentNames(area.value), genders);
+          // Blank rows simply do not exist — normalize() drops any record with
+          // an empty name, so an untouched "Add a new student" row costs nothing
+          // and the teacher never has to tidy up before saving.
+          const students = rows
+            .map(r => ({ id: r.id || "", name: String(r.name || "").replace(/\s+/g, " ").trim(), gender: r.gender }))
+            .filter(r => r.name);
           await setStudents(cls.id, students);
           if (newName !== cls.name) await renameClass(cls.id, newName);
           toast("Class saved");
@@ -2099,6 +2098,190 @@ function openSettingsFlow() {
       body.append(actions);
       nameInput.focus();
 
+      // ---- the pupil grid --------------------------------------------------
+      function renderRows() {
+        grid.innerHTML = "";
+        // COLUMN-MAJOR, and that is the whole trick: `grid-auto-flow: column`
+        // with a stated row count fills 1-10 down the left column and 11-20 down
+        // the right, which is how a register is read. Left to right instead
+        // would put pupil 2 beside pupil 1 and the numbering would zig-zag.
+        // The row count grows for a class of more than 20 (it then scrolls,
+        // which is honest) but never shrinks below 10, so a class of 4 does not
+        // sit in a box a quarter the height of the one next door.
+        // ⚠ THE ADD TILE IS NOT A CELL OF THIS GRID, and that is measured, not
+        // taste. Counted as a 21st cell it pushed the row count to 11, which
+        // both split the class 11/9 instead of 10/10 and made the dialog 46px
+        // taller — and the teacher's brief for this screen is that TWENTY
+        // pupils fit with no scrolling. Measured: in the grid, 735px of dialog;
+        // below it, 689px, against the 80vh cap (864px on the 1080p classroom
+        // board). Put it back in the grid and both the symmetry and the margin
+        // go with it.
+        const rowCount = Math.max(CLS_COL_ROWS, Math.ceil(rows.length / 2));
+        grid.style.gridTemplateRows = `repeat(${rowCount}, auto)`;
+        rows.forEach((r, i) => grid.append(pupilRow(r, i)));
+        addWrap.innerHTML = "";
+        if (rows.length < MAX_STUDENTS) addWrap.append(addPupilTile());
+      }
+
+      function addPupilTile() {
+        const add = el("button", "aw-cls-add", "+ Add a new student");
+        add.type = "button";
+        add.onclick = () => {
+          rows.push({ id: "", name: "", gender: "" });
+          renderRows();
+          const boxes = grid.querySelectorAll(".aw-cls-name");
+          boxes[boxes.length - 1]?.focus();
+        };
+        return add;
+      }
+
+      function pupilRow(r, i) {
+        const row = el("div", "aw-cls-row");
+        row.dataset.idx = String(i);
+        row.append(el("span", "aw-cls-num", String(i + 1)));
+
+        const inp = el("input", "aw-cls-name");
+        inp.value = r.name;
+        inp.maxLength = 40;
+        inp.placeholder = "Name";
+        // ⚠ A NAME IS NEVER CUT is the house rule (see shortenName in
+        // core/showdown-setup.js), but an <input> cannot honour it the way a
+        // display chip can: it has no ellipsis and no abbreviated form, it just
+        // stops drawing at its right edge. The box is sized for the long
+        // Vietnamese names that actually occur (measured, see app.css), and the
+        // title carries the whole name for the ones that still run past it —
+        // the value itself is never touched, so nothing is ever lost.
+        inp.title = r.name;
+        inp.oninput = () => { r.name = inp.value; inp.title = inp.value; hideErr(); };
+        inp.addEventListener("paste", e => onNamePaste(e, i));
+        row.append(inp);
+
+        // ⭐ The long two-half button (thầy: "Cạnh ô nhập tên có 1 nút dài có 2
+        // nửa BOY và GIRL, bấm vào cái nào thì cái đó sáng").
+        // Tapping the LIT half turns it off again: nothing else on this screen
+        // can undo a mis-tap, and "not set" is a real, common state — it is what
+        // a class that never bothers with this looks like, and Showdown's
+        // shuffle deals those pupils exactly as it always did.
+        const seg = el("div", "aw-cls-seg");
+        [["m", icons.boy, "BOY"], ["f", icons.girl, "GIRL"]].forEach(([g, svg, text]) => {
+          const half = el("button", `aw-cls-half is-${g}` + (r.gender === g ? " is-on" : ""),
+            `<span class="aw-cls-halficon">${svg}</span><span class="aw-cls-halftext">${text}</span>`);
+          half.type = "button";
+          half.dataset.g = g;
+          half.title = text === "BOY" ? "Boy" : "Girl";
+          half.onclick = () => {
+            r.gender = r.gender === g ? "" : g;
+            // Repaint THIS control only. A full renderRows() here would rebuild
+            // every input on the screen and take the caret out of whichever name
+            // the teacher was halfway through typing.
+            seg.querySelectorAll(".aw-cls-half").forEach(x =>
+              x.classList.toggle("is-on", x.dataset.g === r.gender));
+          };
+          seg.append(half);
+        });
+        row.append(seg);
+
+        const del = el("button", "aw-cls-iconbtn aw-cls-del", icons.trash);
+        del.type = "button"; del.title = "Remove";
+        del.onclick = () => { rows.splice(i, 1); renderRows(); };
+        row.append(del);
+
+        const handle = el("button", "aw-cls-iconbtn aw-cls-drag", icons.dragHandle);
+        handle.type = "button"; handle.title = "Drag to reorder";
+        wireReorder(handle, row, i);
+        row.append(handle);
+
+        return row;
+      }
+
+      /**
+       * Drag a row to a new place.
+       * ⚠⚠ POINTER EVENTS, NOT HTML5 DRAG-AND-DROP — and this is the one place
+       * this file deliberately parts company with the anagram editor and the
+       * library's folder cards, which both use `draggable` + dragstart/drop.
+       * Native DnD DOES NOT FIRE FROM A FINGER. The teacher's classroom machine
+       * is an infrared touch panel (TOMKO TK-TT86, the whole reason
+       * core/press.js exists), so a reorder built on `draggable` would be a
+       * control that simply does nothing on the machine it was asked for, while
+       * testing perfectly on a mouse. Pointer events cover both.
+       */
+      function wireReorder(handle, row, from) {
+        let active = false;
+        const clear = () => {
+          grid.querySelectorAll(".aw-cls-row").forEach(r => r.classList.remove("is-droptarget"));
+        };
+        handle.addEventListener("pointerdown", e => {
+          if (e.button !== 0) return;
+          e.preventDefault();               // or the browser starts a text selection instead
+          active = true;
+          row.classList.add("is-dragging");
+          try { handle.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+        });
+        handle.addEventListener("pointermove", e => {
+          if (!active) return;
+          clear();
+          const over = rowUnder(e.clientX, e.clientY);
+          if (over && over !== row) over.classList.add("is-droptarget");
+        });
+        const finish = e => {
+          if (!active) return;
+          active = false;
+          row.classList.remove("is-dragging");
+          const over = rowUnder(e.clientX, e.clientY);
+          clear();
+          if (!over || over === row) return;
+          const to = Number(over.dataset.idx);
+          if (!Number.isInteger(to) || to === from) return;
+          const [moved] = rows.splice(from, 1);
+          rows.splice(to, 0, moved);
+          renderRows();
+        };
+        handle.addEventListener("pointerup", finish);
+        handle.addEventListener("pointercancel", () => { active = false; row.classList.remove("is-dragging"); clear(); });
+      }
+
+      /** Which pupil row is under this point (the dragged row's own handle has
+       *  pointer capture, but elementFromPoint is unaffected by capture). */
+      function rowUnder(x, y) {
+        const hit = document.elementFromPoint(x, y);
+        return hit ? hit.closest(".aw-cls-row") : null;
+      }
+
+      /**
+       * Paste a column copied out of Excel into any name box: it fills from THAT
+       * row downward, exactly as the anagram editor's row paste does.
+       * ⚠ Ids are RE-USED by name for the rows being overwritten — this is what
+       * the old mergeStudents() did and it still matters: pasting the same
+       * register back with one correction must not hand every pupil a new id and
+       * orphan a Running team roster already printed against them.
+       */
+      function onNamePaste(e, at) {
+        const text = (e.clipboardData || window.clipboardData)?.getData("text/plain") || "";
+        if (!/[\r\n\t]/.test(text)) return;         // a single cell — let the ordinary paste happen
+        e.preventDefault();
+        const names = parseStudentNames(text);
+        if (!names.length) return;
+        // Only rows AT or AFTER the paste point may donate an id; the ones above
+        // are staying exactly where they are and still hold theirs.
+        const pool = new Map();
+        rows.slice(at).forEach(r => {
+          const k = String(r.name || "").trim().toLowerCase();
+          if (!k) return;
+          if (!pool.has(k)) pool.set(k, []);
+          pool.get(k).push(r);
+        });
+        const made = names.map(n => {
+          const q = pool.get(n.trim().toLowerCase());
+          const old = q && q.length ? q.shift() : null;
+          return { id: old ? old.id : "", name: n, gender: old ? old.gender : "" };
+        });
+        rows = rows.slice(0, at).concat(made).slice(0, MAX_STUDENTS);
+        renderRows();
+      }
+
+      // `scrollTop = 0` is not decoration: the pupil grid makes this dialog tall,
+      // and an error bar at the very top of a scrolled-down dialog is an error
+      // nobody sees. Carried over from the screen this one replaced.
       function showErr(msg) { errBar.textContent = msg; errBar.style.display = "block"; body.scrollTop = 0; }
       function hideErr() { if (errBar.style.display !== "none") errBar.style.display = "none"; }
     }

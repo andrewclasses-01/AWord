@@ -69,6 +69,187 @@ bản cũ. **Mở CỔNG MỚI rồi đo lại** là ra ngay 3 trang. Luật: đ
 
 ---
 
+## Đợt 192 (18/8/2026) — ⭐⭐ SÁU VIỆC THẦY GIAO MỘT LƯỢT: NÚT MODE · SHOWDOWN · GỘP STYLE VÀO TEMPLATE · DỰNG LẠI MÀN CLASSES · THƯ MỤC TRỐNG THÀNH Ô IMPORT
+⭐ CÓ SỬA CORE (`engine.js` · `press.js` · `icons.js` · `app.css` · `showdown-setup.js`) **+ `main.js`**.
+🟡 **CHƯA COMMIT, CHƯA PUSH** — xem mục 0 ngay dưới, có phiên Claude KHÁC đang sửa cùng kho.
+
+### 0. ⚠️⚠️ CẢNH BÁO: HAI PHIÊN CLAUDE CÙNG SỬA MỘT KHO
+Đầu phiên (≈18:40) `git status` **sạch tuyệt đối**. Đang làm thì 2 file tự mọc ra thay đổi:
+`templates/running-word/rw-print.js` (18:53:52) và `templates/running-word/running-word.css` (18:53:33) —
+một bản vá **hoàn chỉnh, có chú thích đề ngày 18/8/2026**, chữa lỗi in Running word đẻ trang trắng
+(`line-height` của ô tràn khỏi dòng + thiếu slack 2,5mm ⇒ Chromium đẩy sang trang mới; 3 tờ in ra 6 trang).
+Máy lúc đó có 13 tiến trình `claude`. **Không phải việc của đợt này.**
+- Thầy đã chốt: **làm tiếp, tránh 2 file đó, KHÔNG commit.** Đợt 192 tôn trọng đúng vậy.
+- ⛔ **Phiên sau đọc mục này TRƯỚC KHI COMMIT**: trong cây làm việc đang có việc của **hai** đợt khác nhau.
+  `git add -A` là quét luôn bản vá in ấn của phiên kia vào commit của Đợt 192. Phải commit **theo file**.
+- 🧠 Bài học (đã có trong trí nhớ từ 13/8, nay cắn lần hai): `git status` sạch lúc **bắt đầu** không có
+  nghĩa là sạch lúc **kết thúc**. Soi lại `git status` + **giờ sửa file** (`find -newermt`) trước khi commit.
+
+### 1. Nút MODE — chế độ RUNNING (thầy)
+> "Trong mode running, đảo vị trí để RUNNING WORD trước, Running Team sau. Text trong Running Word đổi
+> thành WORD, running Team đổi thành TEAM"
+
+- Thứ tự nay **ghim cứng** bằng `RUN_ORDER`. Trước đó nó là thứ tự `switchList()` trả về — mà hàm đó
+  **đẩy act ĐANG CHƠI lên đầu** khi đang ở bản tạm ⇒ hai ô **đổi chỗ cho nhau** tuỳ thầy đi vào từ đâu.
+  Một bảng chọn mà hai nút tráo ghế là bảng chọn phải đọc lại mỗi lần.
+- Chữ trên ô: **WORD** / **TEAM** (`RUN_LABEL`). Cả hai ô đã nằm dưới tiêu đề "Running mode", nên chữ
+  "Running" bị in **ba lần** trên một màn bé, mà phần KHÁC NHAU lại là chữ cuối — chỗ mắt tới sau cùng.
+  Tên đầy đủ giữ nguyên ở `title` + `aria-label`.
+- 🟢 **Đo trên engine thật** (`scratch/showdown-test.html`): màn Running ra đúng
+  `[{title:"Running word", label:"WORD"}, {title:"Running team", label:"TEAM"}]`.
+
+### 2. Showdown — ô tên học sinh BẰNG NHAU (thầy)
+`.aw-sd-roster` từ **flex bọc dòng** thành **lưới** `repeat(auto-fill, minmax(168px,1fr))`, ô cao cố định 40px.
+- ⚠️ `.aw-sd-rmember` phải đổi `inline-flex` → `flex` + `min-width:0`: `inline-flex` **co lại ôm chữ**, tức
+  là huỷ đúng cái vừa làm.
+- 🟢 **ĐO + ĐỐI CHỨNG NGƯỢC** (lớp 20 em, tên tiếng Việt thật): lưới mới **cả 20 ô đúng 157,3px, lệch 0**;
+  dựng lại đúng bố cục CŨ ngay trên trang đang chạy thì rộng **95,7 → 153,7px, lệch 57,9px**.
+- **Tên KHÔNG BAO GIỜ BỊ CẮT**: thêm `shrinkRosterNames()` — dùng lại đúng luật của màn cột
+  (`shrinkOverflowingNames`): ô nào không đủ chỗ thì đổi sang dạng viết tắt `shortenName()` + `title` là tên
+  đầy đủ, **không** để `text-overflow: ellipsis` xén ngầm. 🟢 Đo: 1 tên rút gọn (`H.P.Uyên`), **0 tên bị cắt**.
+- ⚠️ Dùng `scrollWidth`/`clientWidth` chứ KHÔNG `getBoundingClientRect()` — hàm này chạy lúc popup còn
+  đang phóng to, rect trả về cỡ **đang scale dở** (đúng cái bẫy đã ghi ở `measurePoolH`).
+
+### 3. Showdown — shuffle bay LẦN LƯỢT, loạn xạ (thầy)
+> "khi shuffle thì các ô tên bay lần lượt vào từng ô tên vào các cột chứ không bay đồng loạt, hiệu ứng
+> loạn xạ một chút để có cảm giác xáo trộn random thực sự"
+
+`bulkMove(mutate, { cascade })` — **chỉ ván CHIA ĐỘI** mới cascade; "gọi hết về" (`flyBackAll`) và cú
+chuyển một chip vẫn giữ nếp cũ (đàn chim, giãn 16ms) vì đó là việc khác.
+Ba thứ làm nó ra "xáo thật" chứ không phải "xếp hàng":
+1. **Thứ tự khởi hành được XÁO** (`shuffledIdx`) — chia lần lượt theo đúng thứ tự đang đứng thì vẫn nhìn ra
+   là có thứ tự. Đây chính là chữ "loạn xạ".
+2. **Nhịp giật ±35%**, không phải máy gõ nhịp.
+3. **Đường bay CONG + NGHIÊNG** (`fly(..., wobble)`): độ cong là pháp tuyến của đoạn đường × 12–30px ngẫu
+   nhiên — ⚠️ phải là **pháp tuyến**, lệch x/y cố định thì cú bay ngang không cong còn cú bay dọc cong gấp đôi.
+- Bước giãn **co theo sĩ số** (`1200/n`, kẹp 40–90ms) nên lớp to không thành đám rước.
+- `sfx.land()` kêu **từng chip** trong cascade (nếp cũ kêu một lần): tiếng động mới là thứ nói "từng em một"
+  khi thầy đang nhìn xuống lớp chứ không nhìn màn hình.
+- 🟢 **Đo trên engine thật, lớp 20 em** (đếm ghost bằng `MutationObserver`): **20 ghost**, khởi hành rải
+  **1146ms** (nếp cũ theo công thức `min(i*16,260)` là **tối đa 260ms**), khoảng cách lớn nhất 153ms,
+  **96/190 cặp đảo thứ tự** so với thứ tự đang đứng (xáo hoàn hảo ≈ 95; xếp hàng = 0).
+
+### 4. ⭐⭐ GỘP NÚT STYLE VÀO NÚT TEMPLATE — nhấn giữ (thầy)
+> "Tích hợp thẳng tính năng nút Style vào nút Template, mở bằng cách nhấn giữ. Bỏ hẳn nút style."
+
+Thanh dưới nay **3 nút**: Options · Template · MODE.
+- API mới **`tapOrHold(el, {onTap, onHold})`** trong `core/press.js`. ⚠️ **KHÔNG dùng `press()`**: `press()`
+  bắn NGAY lúc chạm — đúng cho bề mặt CHƠI (đa điểm, ai chạm trước ăn trước) nhưng một nút mang hai việc thì
+  **không thể quyết lúc chạm**, phải đợi xem ngón có ở lại đủ lâu không. Giữ ≥ **420ms** là Style.
+- `openToolPanelFor()` + biến `activeToolBuild`: `openToolPanel()` gọi lại bằng **đúng nút đang sáng** thì nó
+  **ĐÓNG** panel (đó là cử chỉ "bấm lại nút đang mở"). Thiếu lớp này thì đang mở Template mà nhấn giữ là
+  **tắt panel** chứ không ra Style. Nay: cùng nội dung → vẫn đóng (giữ nguyên cử chỉ cũ); khác nội dung → **đổi
+  ruột tại chỗ**.
+- ⚠️⚠️ **CÁI BẪY LỚN NHẤT CỦA ĐỢT NÀY.** Có **BA** stylesheet ẩn nút `[title="Template"]`:
+  `core/app.css` (`.mode-ipa`) · `running-word.css` (`.act-running_word`) · `running-team.css`
+  (`.act-running_team`) — và hai file template **nói thẳng trong chú thích** rằng "Edit/Home/**Style**/Options
+  are left alone". Treo Style lên nút Template thì ba luật đó **thôi ẩn một tính năng và bắt đầu ẩn HAI**:
+  Style **biến mất sạch** ở IPA mode và ở cả hai game Running, không có gì trên màn hình giải thích.
+  **Vá**: chỗ nào không đổi được template thì nút được dựng thẳng thành **nút STYLE** — icon riêng, và
+  `title="Style"` chính là thứ làm cả ba selector **trượt**. Hằng số `NO_TEMPLATE_TYPES` ở **module scope**.
+  ⛔ **LUẬT**: không bao giờ để một tính năng chỉ với tới được bằng cử chỉ trên một nút mà CSS xung quanh có
+  quyền ẩn. Thêm template mới ẩn nút Template ⇒ phải thêm type vào `NO_TEMPLATE_TYPES` **cùng lúc**.
+- 🐞 **Lỗi thật tự bắt được khi chạy**: `NO_TEMPLATE_TYPES` khai bằng `const` **bên trong** `startGame()` cạnh
+  `RUN_ORDER`, tức **~35 dòng DƯỚI** chỗ đọc nó ⇒ `const` không hoisted ⇒ **mọi lần mount ném
+  "Cannot access before initialization" và hạ nguyên thanh công cụ**. `node --check` **báo sạch**
+  (cú pháp đúng, lỗi lúc chạy) — chỉ mở trình duyệt mới thấy. Đã chuyển ra module scope.
+- Một chữ mờ **"hold for Style"** cạnh tiêu đề panel Template — chỗ DUY NHẤT nói rằng Style còn tồn tại.
+  ⚠️ **Không** để trong `title` của nút: ba selector trên khớp `title` theo **đúng từng chữ**.
+- 🟢 **Đo trên engine thật**: chạm → panel Template (có `.aw-tpl-grid`) · nhấn giữ → **đổi sang Style**
+  (`.aw-style-grid`, panel KHÔNG đóng) · nhấn giữ từ trạng thái đóng → ra thẳng Style · chạm lại khi Template
+  đang mở → **đóng** (cử chỉ cũ còn nguyên) · **trong Running word**: thanh công cụ ra
+  `Options · Style · Mode`, nút Style **hiện và mở được 4 theme** — nếu không có nhánh `tplLocked` thì chỗ này
+  mất trắng Style · **trong trận Fight**: 2 bàn, thanh công cụ `Options · Template · Mode`, nhấn giữ ra Style,
+  **0 lỗi runtime**.
+
+### 5. ⭐⭐⭐ DỰNG LẠI MÀN SETTINGS › CLASSES (thầy)
+> "nhập các ô tên học sinh tương tự bố cục nhập dữ liệu trong Anagram, được chia thành các cột như vậy.
+> Cạnh ô nhập tên có 1 nút dài có 2 nửa BOY và GIRL… Bố trí tối đa là 20 học sinh để không cần phải scroll.
+> Bỏ hết các text hướng dẫn đi. Thêm 1 ô add a new class ở cuối cột lớp, add a new student ở cuối cột học
+> sinh. Cạnh một tên/giới tính có icon xóa, kéo"
+
+Thầy chốt trước khi build: **giữ 2 màn** (danh sách lớp → màn sửa lớp), không gộp một màn.
+
+**Màn 1** — bỏ sạch chữ hướng dẫn và bỏ luôn hàng "New class name + Create" ở TRÊN; tạo lớp nay bằng ô
+**"+ Add a new class"** ở **CUỐI** danh sách, chạm là ô đó **biến thành ô nhập**. ⚠️ Ô nhập tại chỗ chứ không
+`prompt()`: `prompt()` bị chặn trong WebContentsView của myActivity — hỏng im lặng đúng chỗ thầy làm việc.
+⚠️ Escape phải chặn `commit` vì `blur` bắn trên đường thoát.
+
+**Màn 2 — BỎ HẲN TEXTAREA "mỗi dòng một tên", thay bằng MỘT HÀNG CHO MỖI EM.**
+Hàng = `số · ô tên · nút BOY|GIRL · icon xoá · tay kéo`, lưới **CỘT-TRƯỚC** (`grid-auto-flow: column` +
+số dòng do JS đặt) nên 1–10 xuống cột trái, 11–20 xuống cột phải — đúng cách đọc một cuốn sổ điểm danh.
+- **Vì sao bỏ textarea**: nó **không mang nổi thứ gì đi kèm cái tên**. Đợt 191 phải bắt vít giới tính thành
+  một lưới chip riêng bên dưới, **khoá theo TÊN viết thường**, nên **hai em trùng tên là sai âm thầm**. Có
+  hàng thật thì giới tính/xoá/kéo đều thuộc về hàng, và hàng vẫn giữ **id thật của em** ⇒ không cần đối chiếu
+  theo tên nữa. `mergeStudents()` **thôi được gọi** (vẫn export + còn 13 phép thử; `setStudents/normalize`
+  nhận thẳng bản ghi).
+- ⚠️ **GIỮ NGUYÊN ĐƯỜNG DÁN TỪ EXCEL** — đó là lý do tồn tại của textarea và thầy vẫn quét cột tên trong
+  Excel rồi dán. Dán vào ô tên nào thì đổ từ hàng đó xuống (`onNamePaste`), và **dùng lại id theo tên** cho
+  các hàng bị ghi đè: dán lại đúng sổ cũ có sửa một tên mà cấp id mới cho cả lớp là **mồ côi tờ số Running
+  team đã in**.
+- **Nút BOY|GIRL**: MỘT control hai nửa, chung viền, một vạch ngăn. Icon bé trai **áo xanh** / bé gái
+  **áo hồng** — ⭐ **hai icon MÀU DUY NHẤT** trong `core/icons.js`, phá lệ có chủ ý (mọi icon khác là nét
+  một màu ăn theo `currentColor`); ở khoảng cách nhìn màn 86" thì **màu đọc được trước cả chữ**. Nửa chưa
+  chọn bị rút màu (`opacity .38`) nên nửa đang sáng là chỗ có màu duy nhất trong hàng.
+  Chạm lại nửa **đang sáng** thì **tắt** — "chưa đặt" là trạng thái thật và là cách duy nhất sửa cú chạm nhầm.
+  ⚠️ Chạm giới tính **chỉ vẽ lại đúng control đó**, không `renderRows()`: vẽ lại cả màn là **cướp con trỏ**
+  khỏi ô tên thầy đang gõ dở. 🟢 Đo: con trỏ còn nguyên sau khi chạm.
+- **Kéo sắp xếp**: ⚠️⚠️ **POINTER EVENTS, KHÔNG PHẢI HTML5 DRAG-AND-DROP** — đây là chỗ file này **cố ý
+  khác** editor Anagram và thẻ thư mục (cả hai dùng `draggable`). **Native DnD KHÔNG BẮN TỪ NGÓN TAY.** Máy
+  lớp học là màn hồng ngoại TOMKO (nguyên do `core/press.js` tồn tại), nên kéo dựng trên `draggable` là cái
+  nút **không làm gì cả trên đúng máy được đặt hàng**, mà test bằng chuột thì đạt hoàn hảo.
+  ⚠️ Tay kéo phải `touch-action: none`, không thì màn cảm ứng cướp cử chỉ để cuộn và luồng `pointermove`
+  **đứt giữa chừng**.
+- 🐞 **Lỗi thật bắt được bằng phép đo, không phải bằng mắt**: `<input>` **KHÔNG có ellipsis** — hết chỗ là nó
+  **cắt cụt, im lặng**. "Hoàng Phương Uyên" mực rộng 136px trong ô chỉ có 127px chữ ⇒ **thò 9px**. Vá bằng
+  cộng dồn: hộp thoại 820→**880px**, đệm ô tên 10→**8px**, số thứ tự 22→**18px**, nút giới tính 128→**116px**
+  ⇒ chỗ cho chữ **127 → 177px**. Kèm `inp.title = giá trị` cho các tên vẫn còn dài hơn.
+  ⚠️ `<input>` không bao giờ tự viết tắt được như chip Showdown — luật "không cắt tên" ở đây được giữ bằng
+  **hộp đủ rộng + title**, chứ không bằng ellipsis.
+- **20 em KHÔNG PHẢI CUỘN**: ⭐ ô "+ Add a new student" **KHÔNG nằm trong lưới** — tính là ô thứ 21 thì số
+  dòng nhảy lên 11, vừa chia lớp **11/9** thay vì **10/10** vừa đội hộp thoại cao thêm 46px. Và
+  `.aw-modal.is-classwide` được **90vh** thay vì 80vh dùng chung.
+  🟢 **Đo ở 1920×1080**: nội dung **747px**, trần 90vh = **972px**, **KHÔNG cuộn**, dư 225px; ở 80vh sẽ đòi
+  màn cao 934px mới đủ, 90vh chỉ đòi **830px** ⇒ mọi màn 900p/1080p đều đủ.
+- 🧹 Xoá CSS chết: `.aw-gender-*` (Đợt 191) và `.aw-set-addrow` — markup của cả hai đã đi theo màn cũ.
+
+**🟢 ĐO TRỌN VÒNG TRÊN `main.js` THẬT** (bench mới, xem mục 7): tạo lớp từ ô cuối · dán 20 tên bằng **một cú
+dán** ra đúng 20 hàng · **2 cột 10/10**, mọi hàng rộng **379px bằng nhau**, **0 tên bị cắt** · BOY/GIRL sáng
+đúng nửa (nền xanh `rgb(232,240,255)` / hồng `rgb(253,234,244)`), chạm lại thì tắt · xoá 1 em → 19 và **đánh
+số lại đúng** · kéo hàng 1 xuống vị trí 5 → thứ tự đúng, không mất ai, không sót vệt đánh dấu · Save → mở lại:
+**19 em, đúng thứ tự đã kéo, đúng giới tính** · dán lại sổ cũ sửa 1 tên → **giữ nguyên 18/19 id**, 0 id đổi
+cho tên không đổi, giới tính đi theo id · **phép dò chạm `elementFromPoint` 19 hàng × 5 control: 0 cái bị che.**
+
+### 6. Thư mục trống → ô kéo file vào (thầy)
+Thay dòng "This folder is empty." bằng **chính `.aw-imp-drop`** của hộp Import (cùng hình dạng thầy đã quen,
+đã có sẵn trạng thái kéo-qua). Chạm → mở hộp Import; **thả file thẳng vào → `importFlow(file)`**, tức vẫn ra
+đúng màn xem-và-chọn, **không có gì được import mà không hiện ra trước**.
+⚠️ **CHỈ cho thư mục thư viện trống thật.** Thùng rác, tìm kiếm không ra, và thư mục Results trống vẫn là
+**câu trả lời**, không phải lời mời — thả file bài học vào thùng rác thì có nghĩa gì.
+🟢 Đo: thư mục mới tạo ra ô rộng 520px **giữa màn**, có icon, chữ đúng, `dragenter` bật `is-over` và
+`dragleave` tắt · chạm ra hộp "Import activities" · **thả file .xlsm ra đúng hộp Import** · thùng rác vẫn ra
+"Recycle bin is empty." và **không có ô kéo thả**.
+
+### 7. ⭐ BENCH MỚI — LẦN ĐẦU CHẠY ĐƯỢC `main.js` THẬT (`scratch/` gitignored, phiên sau phải dựng lại)
+`scratch/fake-firebase-full.js` + `scratch/cls192-test.html`.
+Đợt 191 ghi rõ: *"Lưới chip Nam/Nữ chưa ai NHÌN thấy… bench dựng thử bị chặn vì bộ giả Firebase thiếu
+`writeBatch`"* — nên toàn bộ màn Classes hồi đó ra với thầy mà **chưa từng được mở lên một lần**.
+Bộ giả mới bổ sung `collection · getDocs · query/where · writeBatch · deleteDoc · updateDoc · increment`
+(+ `signIn/signOutNow/TEACHER_EMAIL`), đủ để **`main.js` tự boot**: thư viện thật, Settings thật, Classes thật.
+⚠️ Không phải Firestore emulator — nó là **một map phẳng**, `collection()` = mọi doc trong map. Đúng với thư
+viện này (mỗi user một collection), sẽ là nói dối với thứ có sub-collection.
+⚠️ Bench phải tắt transition/animation (`* { transition: none }`) trước khi đo, kẻo `getComputedStyle` đọc
+đúng lúc đang chạy dở.
+
+### 8. ⬜ CÒN LẠI — CHỈ MẮT THẦY
+- **Không có ảnh chụp nào.** Pane trình duyệt của em vẫn bị ẩn ⇒ Chromium không vẽ khung hình, `screenshot`
+  báo timeout (y như Đợt 191). Đã thay bằng **phép dò chạm `elementFromPoint`** trên từng control để bắt cái
+  bẫy "nhìn thì ổn mà bấm không ăn", nhưng **màu sắc, cân đối, cỡ chữ trên màn 86" thì phải thầy nhìn**.
+- Icon bé trai/bé gái mới vẽ — cần thầy duyệt bằng mắt.
+- Cử chỉ **nhấn giữ 420ms** trên màn hồng ngoại thật: máy chỉ đo được bằng pointer event tổng hợp.
+
+---
+
 ## Đợt 191 (18/8/2026) — ⭐⭐ TINH CHỈNH NÚT MODE + 7 VIỆC TRONG SHOWDOWN (nhớ HS đã xoá · giới tính · animation xáo)
 ⭐ CÓ SỬA CORE (`engine.js` · `icons.js` · `app.css` · `classes.js` · `showdown-setup.js`) **+ `main.js`**.
 ✅ **THẦY DUYỆT → COMMIT `52173f4` (chung với Đợt 190) + PUSH + LIVE.** Pages build đúng commit
@@ -481,7 +662,8 @@ nên luật `> * { margin-bottom: 9px }` không với tới chúng nữa.
 ⭐ CÓ SỬA CORE (`core/fight.js` · `core/engine.js` · `core/options-panel.js` · `core/app.css`) + 2 file game
 (`anagram.js` · `crossword.js`).
 ✅ **COMMIT `8cfc209` + PUSH + LIVE** — Pages build **đúng commit** (`status: built`, sha `8cfc209…`),
-đối chiếu **6/6 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`sed 's/$//'` cả hai phía vì
+đối chiếu **6/6 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` (`sed 's/
+$//'` cả hai phía vì
 Windows checkout ra CRLF còn Pages phục vụ LF).
 🟢 ĐÃ TỰ TEST qua lưới MỚI `scratch/fight-bench.html` (scratch gitignored ⇒ phiên/máy sau phải tạo lại) —
 **bấm nút thật** bằng `PointerEvent` trên trận thật, 6/6 việc đạt, **0 lỗi console** trên 6 template Fight

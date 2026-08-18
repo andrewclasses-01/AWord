@@ -886,6 +886,30 @@ export function buildShowdownPanel(panel, ctx) {
     return c ? c.students.map(s => ({ id: s.id, name: s.name })) : [];
   }
 
+  /**
+   * ⭐ Đợt 192 — the equal-width cells of the class list (app.css's
+   * `.aw-sd-roster` grid) are narrower than the widest Vietnamese names, and the
+   * teacher's standing rule is that A NAME IS NEVER CUT. Same answer the columns
+   * screen already gives (shrinkOverflowingNames): swap the long ones for their
+   * abbreviated form and keep the full name one hover away — an ellipsis would
+   * silently eat the part that tells two pupils apart.
+   * ⚠️ `scrollWidth`/`clientWidth`, not `getBoundingClientRect()`: this runs
+   * while the popover's own scale-in may still be resolving, and rect reports
+   * the partway-scaled visual size (the trap documented on measurePoolH).
+   * ⚠️ Only ever SHRINKS, and always re-derives from `dataset.fullName` — every
+   * row here was just built fresh by renderSetup, so there is no stale
+   * abbreviation to undo.
+   */
+  function shrinkRosterNames(wrap) {
+    wrap.querySelectorAll(".aw-sd-rname").forEach(nm => {
+      const full = nm.dataset.fullName;
+      if (!full || nm.scrollWidth <= nm.clientWidth + 1) return;
+      nm.textContent = shortenName(full);
+      nm.classList.add("is-short");
+      nm.title = full;
+    });
+  }
+
   // ---------------------------------------------------------------
   // SCREEN A — class + team count + the roster
   // ---------------------------------------------------------------
@@ -951,6 +975,7 @@ export function buildShowdownPanel(panel, ctx) {
         const r = el("div", "aw-sd-rmember");
         const nm = el("span", "aw-sd-rname");
         nm.textContent = s.name;
+        nm.dataset.fullName = s.name;     // shrinkRosterNames() re-derives from this, never from the visible text
         const del = el("button", "aw-sd-x", icons.close);
         del.type = "button"; del.title = "Remove";
         del.onclick = () => {
@@ -1003,6 +1028,7 @@ export function buildShowdownPanel(panel, ctx) {
       listWrap.append(add);
     }
     host.append(listWrap);
+    shrinkRosterNames(listWrap);
     paintFoot();
 
     function paintFoot() {
@@ -1551,6 +1577,7 @@ export function buildShowdownPanel(panel, ctx) {
         bag.push(lanes[0].shift());
       }
       await scrambleChips();
+      // ⭐ Đợt 192 (thầy) — the deal CASCADES: see bulkMove's `cascade` option.
       bulkMove(() => {
         // Deal round-robin starting from the emptiest team, so a half-built
         // table is levelled up rather than having the rest piled on the end.
@@ -1565,7 +1592,7 @@ export function buildShowdownPanel(panel, ctx) {
           placed++;
         }
         if (!placed) toast("Every team is full");
-      });
+      }, { cascade: true });
     }
 
     /**
@@ -1626,7 +1653,27 @@ export function buildShowdownPanel(panel, ctx) {
      * ⚠️ The real chip is HIDDEN until its ghost lands — with one chip the
      * duplicate is unnoticeable, with twenty it reads as the board doubling.
      */
-    function bulkMove(mutate) {
+    /**
+     * `cascade` (⭐ Đợt 192, thầy: "khi shuffle thì các ô tên bay LẦN LƯỢT vào
+     * từng ô tên vào các cột chứ không bay đồng loạt, hiệu ứng loạn xạ một chút
+     * để có cảm giác xáo trộn random thực sự").
+     *
+     * The ordinary move keeps its 16ms stagger — that one is a flock, and it is
+     * right for "everybody out" (flyBackAll) and for a single chip. The DEAL is
+     * a different event: it is the moment the teams are decided, and it should
+     * look like cards being dealt, one name at a time into the columns.
+     *
+     * Three things make it read as a real shuffle rather than a queue:
+     *   - the departure ORDER is randomised, so the chips do not leave in the
+     *     tidy top-to-bottom order they happen to sit in. This is the "loạn xạ";
+     *     a sequential deal off an ordered list still looks sorted.
+     *   - the step between them is jittered, so the rhythm is not a metronome.
+     *   - each ghost flies a curved, tilted path (see `fly`'s `wobble`).
+     * `sfx.land()` fires PER CHIP here (the ordinary move plays it once): the
+     * sound is what carries "one at a time" when the teacher is looking at the
+     * class rather than at the screen.
+     */
+    function bulkMove(mutate, { cascade = false } = {}) {
       const before = new Map();
       host.querySelectorAll("[data-mid]").forEach(c => before.set(c.dataset.mid, c.getBoundingClientRect()));
       mutate();
@@ -1640,27 +1687,47 @@ export function buildShowdownPanel(panel, ctx) {
         moved.push({ c, from, to });
       });
       if (!moved.length) return;
-      moved.forEach(({ c, from, to }, i) => {
+      // The whole cascade must still be over in about the time a teacher is
+      // willing to stand and watch, so the step shrinks as the class grows:
+      // 8 chips step 90ms, 20 chips step 60ms, 30 chips step 40ms — the run of
+      // departures never stretches much past ~1.2s however big the class is.
+      const step = cascade ? Math.max(40, Math.min(90, Math.round(1200 / moved.length))) : 16;
+      const order = cascade ? shuffledIdx(moved.length) : moved.map((_, i) => i);
+      order.forEach((mi, slot) => {
+        const { c, from, to } = moved[mi];
         c.style.visibility = "hidden";
-        // A small stagger so twenty chips read as a flock, not a jump cut. Capped
-        // so a big class never turns it into a slow parade.
-        const delay = Math.min(i * 16, 260);
+        // Ordinary move: a small stagger so twenty chips read as a flock, not a
+        // jump cut, capped so a big class never turns it into a slow parade.
+        const delay = cascade
+          ? Math.round(slot * step * (0.65 + Math.random() * 0.7))
+          : Math.min(slot * step, 260);
         setTimeout(() => {
-          fly(from, to, c.textContent);
+          fly(from, to, c.textContent, cascade);
+          if (cascade) sfx.land();
           // Reveal exactly when the ghost arrives (fly's own duration), with the
           // usual belt-and-braces timeout — a hidden tab must not leave the board
           // half invisible.
-          setTimeout(() => { c.style.visibility = ""; }, 280);
+          setTimeout(() => { c.style.visibility = ""; }, cascade ? 340 : 280);
         }, delay);
       });
-      sfx.land();
+      if (!cascade) sfx.land();
+    }
+
+    /** 0..n-1 in a random order (Fisher-Yates) — the cascade's departure order. */
+    function shuffledIdx(n) {
+      const a = Array.from({ length: n }, (_, i) => i);
+      for (let i = n - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
     }
 
     // ---- the flying chip ----
     // FLIP: measure where the chip is now, rebuild the lists, measure where its
     // replacement landed, then animate a CLONE across the gap. Animating the
     // real node is impossible — it is destroyed by the repaint.
-    function fly(fromRect, toRect, label) {
+    function fly(fromRect, toRect, label, wobble = false) {
       if (!fromRect || !toRect) return;
       const ghost = mkChip(label);
       ghost.classList.add("aw-sd-ghost-chip");
@@ -1673,14 +1740,29 @@ export function buildShowdownPanel(panel, ctx) {
       ghost.style.width = fromRect.width + "px";
       ghost.style.height = fromRect.height + "px";
       document.body.append(ghost);
+      const dx = toRect.left - fromRect.left;
+      const dy = toRect.top - fromRect.top;
+      // ⭐ Đợt 192 — the cascade's flight is CURVED and TILTED. A straight line
+      // is what made twenty simultaneous chips read as a machine; one at a time,
+      // along a bowed path with a couple of degrees of tip, reads as thrown.
+      // The bow is PERPENDICULAR to the travel (a normalised normal times a
+      // random 12-30px), so it bends the same amount whichever way the chip is
+      // going — a fixed x/y offset would vanish on a horizontal move and
+      // exaggerate a vertical one.
+      const len = Math.hypot(dx, dy) || 1;
+      const bow = wobble ? (Math.random() * 18 + 12) * (Math.random() < 0.5 ? -1 : 1) : 0;
+      const bx = (-dy / len) * bow;
+      const by = (dx / len) * bow;
+      const tilt = wobble ? (Math.random() * 2 - 1) * 9 : 0;
+      const dur = wobble ? 340 : 280;
       const anim = ghost.animate([
-        { transform: "translate(0,0) scale(1)" },
-        { transform: `translate(${(toRect.left - fromRect.left) * 0.5}px, ${(toRect.top - fromRect.top) * 0.5}px) scale(1.07)`, offset: 0.5 },
-        { transform: `translate(${toRect.left - fromRect.left}px, ${toRect.top - fromRect.top}px) scale(1)` }
-      ], { duration: 280, easing: "cubic-bezier(.22,.75,.3,1)", fill: "forwards" });
+        { transform: "translate(0,0) scale(1) rotate(0deg)" },
+        { transform: `translate(${dx * 0.5 + bx}px, ${dy * 0.5 + by}px) scale(1.07) rotate(${tilt}deg)`, offset: 0.5 },
+        { transform: `translate(${dx}px, ${dy}px) scale(1) rotate(0deg)` }
+      ], { duration: dur, easing: "cubic-bezier(.22,.75,.3,1)", fill: "forwards" });
       // A hidden/backgrounded tab never fires `onfinish` (Chromium freezes rAF),
       // and a ghost left on top of the page would swallow every later tap.
-      whenDone(anim, () => ghost.remove(), 440);
+      whenDone(anim, () => ghost.remove(), dur + 160);
     }
 
     function findChip(box, mid) { return box.querySelector(`[data-mid="${CSS.escape(mid)}"]`); }

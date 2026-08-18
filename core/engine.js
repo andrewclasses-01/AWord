@@ -28,8 +28,21 @@ import { computeResult } from "./scoring.js";
 import { buildMistakesActivity, pickMistakes, minItemsFor } from "./mistakes.js";
 import { buildStage } from "./layout.js";
 import { formatTime, el, ordinal, fmtSecsParts } from "./utils.js";
-import { press } from "./press.js";
+import { press, tapOrHold } from "./press.js";
 import { icons } from "./icons.js";
+
+// ⭐ Đợt 192 — games that never offer "change template", so the toolbar builds
+// its merged Template/Style button as a STYLE button instead (see `tplLocked`).
+// ⚠ KEEP IN SYNC with the two `[title="Template"]` rules in
+// templates/running-word/running-word.css and templates/running-team/running-team.css.
+// Both games print their sheet from their own setup screen and are a fixed
+// lesson shape, so switching template out from under them was never on offer.
+// ⚠ MODULE SCOPE ON PURPOSE. Declared inside startGame() next to RUN_ORDER it
+// sat ~35 lines BELOW the button that reads it, and `const` is not hoisted: every
+// mount threw "Cannot access before initialization" and took the whole toolbar
+// with it. A constant used near the top of a long function does not belong
+// halfway down it.
+const NO_TEMPLATE_TYPES = new Set(["running_word", "running_team"]);
 import { sound } from "./sound.js";
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
@@ -826,8 +839,30 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   const belowCenter = el("div", "aw-below-center");
   const optionsBtn = toolBtn(icons.options, "Options");
-  const templateBtn = toolBtn(icons.template, "Template");
-  const styleBtn = toolBtn(icons.style, "Style");
+  // ⭐⭐ Đợt 192 (thầy: "Tích hợp thẳng tính năng nút Style vào nút Template, mở
+  // bằng cách nhấn giữ. Bỏ hẳn nút style.") — ONE BUTTON, TWO PANELS: tap opens
+  // Template, press-and-hold opens Style. See core/press.js's `tapOrHold`.
+  //
+  // ⚠⚠ THE TRAP THIS HAD TO SOLVE, and why the button has two identities.
+  // THREE stylesheets hide the toolbar button `[title="Template"]`:
+  //     core/app.css                            — `.aw-stage.mode-ipa`
+  //     templates/running-word/running-word.css — `.aw-stage.act-running_word`
+  //     templates/running-team/running-team.css — `.aw-stage.act-running_team`
+  // and both template stylesheets say in as many words that "Edit/Home/STYLE/
+  // Options are left alone". Hang Style off the Template button and those three
+  // rules stop hiding one feature and start hiding TWO — Style would simply
+  // cease to exist in IPA mode and in both Running games, with nothing on screen
+  // to say why. So where template switching does not apply, this is built as a
+  // STYLE button outright: its own icon, and `title="Style"`, which is what
+  // makes all three selectors miss it. Nothing is reachable only by a gesture
+  // that the surrounding CSS has hidden.
+  // ⚠ Keep the title of the OTHER branch exactly "Template" — those three
+  // selectors match on it. The "hold for Style" hint lives inside the panel
+  // (buildTemplatePanel), never in this attribute.
+  const tplLocked = playMode === "ipa" || NO_TEMPLATE_TYPES.has(activity.type);
+  const templateBtn = tplLocked
+    ? toolBtn(icons.style, "Style")
+    : toolBtn(icons.template, "Template");
   // ⭐⭐ MODE (Đợt 158) — ONE button for all three modes (teacher, 14/8/2026:
   // "tích hợp cả single mode / fight mode / showdown mode vào chung 1 nút bấm
   // thôi, tránh việc quá nhiều nút bấm"). It replaces the two buttons this row
@@ -862,9 +897,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // already applies each game's own floor — 2 words and 6); IPA needs at least
   // one transcription, and asks the resolved origin because that is where
   // core/content-view.js puts it.
+  // ⭐ Đợt 192 (thầy) — RUNNING WORD FIRST, RUNNING TEAM SECOND, always. The
+  // order used to be whatever `switchList()` handed back, which is ALL_TEMPLATES
+  // order for an ordinary act but puts the act's OWN type first when a temp act
+  // is playing (see switchList) — so the two tiles could swap places depending
+  // on where the teacher came from. A picker whose two buttons trade seats is a
+  // picker that has to be read every time.
+  const RUN_ORDER = ["running_word", "running_team"];
+  const RUN_LABEL = { running_word: "WORD", running_team: "TEAM" };
   const runTargets = () => {
     if (session || fight) return [];
-    const list = switchList().filter(t => t.type === "running_word" || t.type === "running_team");
+    const list = switchList().filter(t => RUN_ORDER.includes(t.type))
+      .sort((a, b) => RUN_ORDER.indexOf(a.type) - RUN_ORDER.indexOf(b.type));
     if (!list.length) return [];
     // ⚠️ A WORD POOL, NOT JUST ANY ANSWERS. Change template has offered Running
     // team from every "qa" act since it was built, and for a comprehension QUIZ
@@ -922,7 +966,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // also CHANGES ICON with the mode (see `modeIcon` above) a fixed seat is what
   // keeps it findable. Do not restore the centre seat without checking with the
   // teacher — it was their call both times.
-  belowCenter.append(optionsBtn, templateBtn, styleBtn, ...(modeBtn ? [modeBtn] : []));
+  // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
+  belowCenter.append(optionsBtn, templateBtn, ...(modeBtn ? [modeBtn] : []));
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
@@ -996,8 +1041,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     panel.append(el("div", "aw-tool-panel-head", "Running mode"));
     const grid = el("div", "aw-mp-grid");
     runTargets().forEach(t => {
+      // ⭐ Đợt 192 (thầy) — the tile says WORD / TEAM, not "Running word" /
+      // "Running team". Both tiles already sit under the heading "Running mode",
+      // so the word "Running" was printed three times on one small screen and
+      // the only part that DIFFERS was the last word — the part the eye reaches
+      // last. The full name stays as the tooltip and the accessible name, which
+      // is where a screen reader (and a hover) still wants it spelled out.
+      const short = RUN_LABEL[t.type] || t.label;
       const tile = el("button", "aw-mp-tile", `<span class="aw-mp-icon">${icons.fmtRace}</span>` +
-        `<span class="aw-mp-label">${t.label}</span>`);
+        `<span class="aw-mp-label">${escapeText(short)}</span>`);
       tile.type = "button"; tile.title = t.label; tile.setAttribute("aria-label", t.label);
       tile.onclick = () => { sound.click(); closeToolPanel(false); enterPlayMode("running", t.type); };
       grid.append(tile);
@@ -1927,6 +1979,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // (game included) behind it. Click outside (the dim, or elsewhere) closes it.
   // =============================================================
   let toolDim = null, toolPanelEl = null, activeToolBtn = null;
+  // Which BUILDER the open panel is showing (Dot 192) - see openToolPanelFor().
+  let activeToolBuild = null;
   let panelCompactObs = null;   // ResizeObserver for is-compact-opts (Đợt 134) — see openToolPanel
 
   // fade = true -> animate opacity out before removing (a real user-initiated
@@ -1936,7 +1990,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // look like a delay — and on full teardown/restart where no one is watching).
   function closeToolPanel(fade = true) {
     const dim = toolDim, panel = toolPanelEl, btn = activeToolBtn;
-    toolDim = null; toolPanelEl = null; activeToolBtn = null;
+    toolDim = null; toolPanelEl = null; activeToolBtn = null; activeToolBuild = null;
     panelCompactObs?.disconnect(); panelCompactObs = null;
     document.removeEventListener("pointerdown", onToolOutside);
     if (btn) btn.classList.remove("is-active");
@@ -2133,6 +2187,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // grid columns are always the same comfortable size — see app.css. Set
     // BEFORE buildContent so anything that measures itself while building
     // (an accordion reading scrollHeight) reads the final width.
+    // Đợt 192 — WHICH panel is up, not just which button opened it. One button
+    // now leads to two different panels (Template / Style), so "is this already
+    // open?" can no longer be answered by the button alone — openToolPanelFor().
+    activeToolBuild = buildContent;
     toolPanelEl.classList.toggle("is-opts", buildContent === buildOptionsPanel);
     toolPanelEl.classList.toggle("is-tpl", buildContent === buildTemplatePanel);
     // Đợt 156 — the Showdown table states its own width for the same reason
@@ -2272,8 +2330,29 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   optionsBtn.onclick = () => openToolPanel(optionsBtn, buildOptionsPanel);
-  templateBtn.onclick = () => openToolPanel(templateBtn, buildTemplatePanel);
-  styleBtn.onclick = () => openToolPanel(styleBtn, buildStylePanel);
+  // Đợt 192 — tap = Template, hold = Style (and where template switching does
+  // not apply the button IS Style, so a plain tap must reach it — see tplLocked).
+  if (tplLocked) {
+    templateBtn.onclick = () => openToolPanelFor(templateBtn, buildStylePanel);
+  } else {
+    tapOrHold(templateBtn, {
+      onTap: () => openToolPanelFor(templateBtn, buildTemplatePanel),
+      onHold: () => openToolPanelFor(templateBtn, buildStylePanel)
+    });
+  }
+
+  /**
+   * Đợt 192 — `openToolPanel` alone cannot serve a button with two panels:
+   * called with the button that is ALREADY active it CLOSES the popover, because
+   * that is the "tap the open button again" gesture. So holding while Template
+   * was open would just shut the panel instead of showing Style. Same content
+   * still toggles (the gesture is intact); DIFFERENT content swaps in place,
+   * exactly as the mode picker's own screens do.
+   */
+  function openToolPanelFor(btn, build) {
+    if (activeToolBtn === btn && activeToolBuild !== build) { switchToolPanel(build); return; }
+    openToolPanel(btn, build);
+  }
 
   // "Which sub-acts does this act have, and which one is lit up" — the input the
   // Options panel's TEXT|VOICE row is built from.
@@ -2722,7 +2801,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   function buildTemplatePanel(panel) {
-    panel.append(el("div", "aw-tool-panel-head", "Template"));
+    const head = el("div", "aw-tool-panel-head", "Template");
+    // Dot 192 - the ONLY sign that Style still exists. The teacher asked for the
+    // Style button to be folded into this one and opened by press-and-hold, and
+    // a gesture with no affordance anywhere is a feature that is lost the day
+    // the person who asked for it forgets. One faint word on the panel that the
+    // gesture's own button opens is the smallest honest place to say it - it is
+    // NOT on the toolbar button's tooltip, which three stylesheets match on by
+    // exact text (see tplLocked).
+    head.append(el("span", "aw-tool-head-hint", "hold for Style"));
+    panel.append(head);
     const grid = el("div", "aw-tpl-grid");
     const canSwitch = new Set(switchList().map(t => t.type));
     ALL_TEMPLATES.forEach(t => {

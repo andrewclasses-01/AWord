@@ -901,6 +901,13 @@ body {
   font-size: 12.5px; font-weight: 800; letter-spacing: .06em; color: #8b93a1;
   text-transform: uppercase; margin-bottom: 12px;
 }
+/* Dot 192 - the Template panel says how to reach Style, quietly. Lower case and
+   lighter than the heading it rides on, so it reads as a footnote to the title
+   rather than as a second heading. */
+.aw-tool-head-hint {
+  text-transform: none; font-weight: 700; letter-spacing: 0;
+  color: #b3bcc9; font-size: 11.5px; margin-left: 8px;
+}
 
 /* Đợt 143 — the PRE-v2 options markup is gone. `.aw-opt-group` / `-label` /
    `-row` / `-row-nowrap`, and further down `-slider` / `-slidval` / `-time` /
@@ -1900,23 +1907,11 @@ body {
   margin: 24px 0 10px; font-size: 1.1rem; font-weight: 800; color: #23303e;
 }
 
-/* ⭐ Đợt 191 — BOYS AND GIRLS grid in the class editor (Settings › Classes).
-   Chips wrap, so a 40-pupil class stays a few tidy rows rather than 40 lines; the
-   mark sits in a fixed-width slot so the names stay aligned whether or not a chip
-   has one, and the chip does not resize as it is tapped through the cycle. */
-.aw-gender-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.aw-gender-chip {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border-radius: 999px; cursor: pointer;
-  border: 1.5px solid #dfe6ef; background: #fff; color: #40506a;
-  font-size: 13px; font-weight: 600; line-height: 1.2;
-  transition: border-color .15s ease, background .15s ease, color .15s ease;
-}
-.aw-gender-chip:hover { border-color: #b9c7da; }
-.aw-gender-chip.is-m { border-color: #7aa7f0; background: #eef4ff; color: #2f6fed; }
-.aw-gender-chip.is-f { border-color: #f09ac2; background: #fff0f6; color: #d94a8c; }
-.aw-gender-mark { width: 12px; text-align: center; font-size: 14px; }
-.aw-gender-tally { width: 100%; margin-top: 2px; }
+/* Đợt 192 — Đợt 191's `.aw-gender-*` chip grid is DELETED, not left "just in
+   case": its markup went with the textarea it hung under, and dead CSS under a
+   plausible name is how someone later spends an afternoon on a rule that never
+   applied to anything (the same reason the pre-v2 `.aw-opt-*` shapes were cut).
+   Boy/girl now lives on the pupil row itself — `.aw-cls-seg`, further down. */
 
 /* Options card */
 .aw-ed-optcard {
@@ -2150,9 +2145,9 @@ body {
 .aw-set-rowsub { font-size: .8rem; color: #7a8aa0; margin-top: 2px; }
 .aw-set-chev { flex: 0 0 auto; color: #9fb0c4; font-size: 1.4rem; line-height: 1; }
 /* Settings > Classes: the "name + Create" line above the list of classes. */
-.aw-set-addrow { display: flex; gap: 8px; align-items: center; margin: 4px 0 12px; }
-.aw-set-addrow .aw-ed-input { flex: 1 1 auto; min-width: 0; }
-.aw-set-addrow .aw-btn { flex: 0 0 auto; }
+/* Dot 192 - .aw-set-addrow deleted with the "New class name + Create" row it
+   dressed: a class is now made from the tile at the BOTTOM of the list
+   (.aw-set-addtile). Nothing else ever used it - checked class by class. */
 /* ---------- Settings > Default activity options (Đợt 143) ----------
    This screen now shows the REAL Options panel for the chosen game, built by
    core/options-panel.js — the same function the in-game panel uses. So there is
@@ -2165,6 +2160,121 @@ body {
    at 440px a 2-column grid leaves ~186px a column, which Đợt 140 measured as
    too little to hold a 3-choice segmented control. */
 .aw-modal.is-optswide { width: min(560px, 100%); }
+
+/* ---------- Settings > Classes (Đợt 192) ----------
+   Two columns of pupil rows do not fit the 440px every other settings screen
+   uses, and the teacher's brief was that TWENTY pupils must be on screen at
+   once without scrolling — so the dialog widens for this one screen and the
+   grid runs column-major (see renderRows in main.js).
+   The arithmetic the width has to satisfy, per pupil row:
+       24 num + 8 + 1fr name + 8 + 128 seg + 4 + 30 del + 26 drag  =  ~350px
+   two of those plus the 18px column gap and the dialog's 44px of padding is
+   762 — 820 leaves the name boxes room to breathe rather than being the
+   tightest thing that fits. */
+.aw-modal.is-classwide {
+  width: min(880px, 100%);
+  /* 90vh, not the shared 80vh. Measured: 20 pupils make this dialog 747px tall,
+     which at 80vh would need a 934px-tall screen to avoid the scrollbar the
+     teacher asked to be rid of; at 90vh it needs 830px, so every 900p and 1080p
+     screen shows the whole class at once. The classroom board is 1080p (cap
+     972px, 225px of headroom) - this is the margin, not the requirement. */
+  max-height: 90vh;
+}
+
+.aw-cls-grid {
+  display: grid;
+  /* COLUMN-MAJOR — grid-template-rows is written by main.js, because the row
+     count is what decides where the second column starts. Do not add a
+     grid-template-columns here: with `auto-flow: column` the columns are
+     implied by the rows, and stating both is how the two disagree. */
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 6px 18px;
+  margin-top: 4px;
+}
+.aw-cls-row {
+  display: flex; align-items: center; gap: 6px;
+  min-width: 0;                      /* or a long name refuses to let the column shrink */
+  border-radius: 10px; padding: 2px;
+  transition: background .12s ease, box-shadow .12s ease;
+}
+.aw-cls-row.is-dragging { opacity: .45; }
+.aw-cls-row.is-droptarget { background: #eef5ff; box-shadow: inset 0 0 0 1.5px #2f7bff; }
+.aw-cls-num {
+  width: 18px; flex: 0 0 18px; text-align: right;
+  font-size: .8rem; font-weight: 800; color: #a9b2c0;
+}
+.aw-cls-name {
+  flex: 1 1 auto; min-width: 0;
+  border: 1.5px solid #e6edf6; border-radius: 9px; background: #fff;
+  font-family: inherit; font-size: .92rem; font-weight: 700; color: #23303e;
+  /* ⚠ 8px of side padding, not 10: MEASURED. "Hoàng Phương Uyên" inks at
+     136px and an <input> CANNOT abbreviate the way the Showdown chips do
+     (shortenName) — it just cuts, silently, with no ellipsis to admit it. Every
+     px of padding here is a px of name. See the width sum on .aw-modal.is-classwide. */
+  padding: 7px 8px; line-height: 1.35;    /* line-height: ink room for Vietnamese diacritics */
+}
+.aw-cls-name:focus { outline: none; border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+
+/* ---- the long two-half BOY | GIRL button ----
+   ONE control, not two buttons that happen to be adjacent: a shared border and
+   a single divider is what says "these are the two states of one thing". Unlit
+   halves are drained of colour (the icon included, via opacity) so that across
+   a classroom the LIT half is the only colour in the row. */
+.aw-cls-seg {
+  flex: 0 0 116px; display: grid; grid-template-columns: 1fr 1fr;
+  border: 1.5px solid #e6edf6; border-radius: 9px; overflow: hidden; background: #fff;
+}
+.aw-cls-half {
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  border: none; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: .64rem; font-weight: 800; letter-spacing: .04em;
+  color: #97a2b2; padding: 6px 2px; line-height: 1;
+  transition: background .12s ease, color .12s ease;
+}
+.aw-cls-half + .aw-cls-half { border-left: 1.5px solid #e6edf6; }
+.aw-cls-halficon { display: flex; width: 16px; height: 16px; opacity: .38; transition: opacity .12s ease; }
+.aw-cls-halficon svg { width: 100%; height: 100%; }
+.aw-cls-half:hover { background: #f4f8ff; }
+.aw-cls-half.is-on .aw-cls-halficon { opacity: 1; }
+.aw-cls-half.is-m.is-on { background: #e8f0ff; color: #2f6fed; }
+.aw-cls-half.is-f.is-on { background: #fdeaf4; color: #d1257f; }
+
+.aw-cls-iconbtn {
+  flex: 0 0 auto; width: 26px; height: 26px; padding: 0;
+  border: none; background: transparent; border-radius: 7px; cursor: pointer;
+  color: #b3bcc9;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: background .12s ease, color .12s ease;
+}
+.aw-cls-iconbtn svg { width: 15px; height: 15px; }
+.aw-cls-del:hover { background: #fdecea; color: #e5451f; }
+/* `touch-action: none` is REQUIRED, not tidiness: without it the touch panel
+   claims the gesture for scrolling and the pointermove stream stops arriving
+   mid-drag (see wireReorder in main.js — this reorder is pointer-based exactly
+   because the classroom machine is a touch screen). */
+.aw-cls-drag { cursor: grab; touch-action: none; }
+.aw-cls-drag:hover { background: #eef2f7; color: #5b677a; }
+.aw-cls-drag:active { cursor: grabbing; }
+
+/* The last cell of the grid, and the last row of the class list: same dashed
+   slot in both places, so "add one more" looks the same wherever it appears. */
+.aw-cls-add, .aw-set-addtile {
+  border: 1.5px dashed #cfd8e4; border-radius: 10px; background: transparent;
+  color: #5b677a; font-family: inherit; font-size: .84rem; font-weight: 700;
+  padding: 9px 12px; cursor: pointer; line-height: 1.35; text-align: center;
+  transition: border-color .12s ease, color .12s ease, background .12s ease;
+}
+.aw-cls-addwrap { margin-top: 8px; }
+.aw-cls-add { width: 100%; }
+.aw-set-addtile { width: 100%; padding: 12px 14px; font-size: .95rem; }
+.aw-cls-add:hover, .aw-set-addtile:hover { border-color: #2f7bff; color: #2f7bff; background: #f2f7ff; }
+.aw-set-addtile.is-editing { padding: 6px 8px; border-style: solid; border-color: #2f7bff; background: #fff; }
+.aw-set-addinput {
+  width: 100%; border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: .95rem; font-weight: 700; color: #23303e;
+  padding: 6px; line-height: 1.35;
+}
 /* The panel's top control (Text/Voice) carries a bottom margin sized for a
    popover, not for a dialog that already spaces its own children. */
 .aw-set-opts .aw-opt-switch { margin-bottom: 10px; }
@@ -2455,6 +2565,10 @@ body {
   transition: border-color .15s ease, background .15s ease, transform .1s ease;
 }
 .aw-imp-drop:hover { border-color: #2f7bff; background: #eef5ff; }
+/* Dot 192 - the same zone standing in for "This folder is empty". In the dialog
+   it is one control among several; here it is the only thing on a large empty
+   page, so it is centred and given room rather than stretched edge to edge. */
+.aw-fm-emptydrop { max-width: 520px; margin: 40px auto; padding: 46px 24px; }
 .aw-imp-drop.is-over { border-color: #2f7bff; background: #e4efff; transform: scale(1.01); }
 .aw-imp-drop-icon { width: 46px; height: 46px; margin: 0 auto 10px; color: #2f7bff; }
 .aw-imp-drop-icon svg { width: 100%; height: 100%; }
@@ -3775,15 +3889,32 @@ body {
 .aw-hstep.is-big .aw-hstep-val { font-size: 21px; min-width: 46px; }
 .aw-hstep.is-big .aw-hstep-btn { width: 44px; font-size: 21px; }
 
+/* ⭐ Đợt 192 (thầy: "các ô tên của học sinh có size hoàn toàn bằng nhau") —
+   A GRID, NOT WRAPPED FLEX. Wrapped flex sized every chip to its own name, so
+   the class read as a ragged paragraph of words: "AN" a third the width of
+   "NGUYEN THI THUY LINH", and the right-hand edge different on every row. One
+   equal cell per pupil makes the list scan as a register.
+   `auto-fill` + `1fr` rather than a stated column count: the panel is 1080px on
+   the teacher's board but is capped by the app frame on a laptop, and a stated
+   count would either overflow there or waste half the width here. Every column
+   produced is the same width whatever the count comes out at.
+   ⚠️ The cells are a FIXED height too — equal width alone still left a one-line
+   and a two-line chip side by side. The names that no longer fit are handled by
+   shrinkRosterNames() in core/showdown-setup.js, NOT by an ellipsis: the
+   teacher's standing rule is that a name is never cut (see shortenName). */
 .aw-sd-roster {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
-  display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  align-content: flex-start; gap: 8px;
   border: 1.5px solid #eef2f7; border-radius: 12px; padding: 10px;
 }
 /* Nothing to list yet: centre the note in the box instead of parking it in the
    top-left corner of a large empty rectangle (teacher: "chưa được cân đối"). */
 .aw-sd-roster.is-empty { align-content: center; justify-content: center; }
 .aw-sd-empty-note { font-size: 13px; color: #a9b2c0; font-style: italic; padding: 4px; width: 100%; text-align: center; }
+/* The note is the only child then, and a grid would otherwise squeeze it into
+   the first 168px column instead of centring it across the box. */
+.aw-sd-roster .aw-sd-empty-note { grid-column: 1 / -1; }
 
 /* ---- name chips: ONE size everywhere, and a big one ----
    A class is at most 20 pupils (teacher, 14/8/2026), so there is room to make
@@ -3799,13 +3930,22 @@ body {
   border-radius: 10px;
 }
 .aw-sd-rmember {
-  display: inline-flex; align-items: center; gap: 5px;
+  /* `flex`, not `inline-flex`: as a grid cell it must fill the track it was
+     given — inline-flex shrink-wraps the name again and undoes the whole point. */
+  display: flex; align-items: center; gap: 5px;
   background: #f4f7fa; border: 1.5px solid #e3e9f1;
-  padding: 5px 6px 5px 14px;
+  padding: 5px 6px 5px 12px;
+  height: 40px; min-width: 0;             /* min-width:0 — or a long name refuses to let the cell shrink */
   transition: border-color .15s ease, background .15s ease;
 }
 .aw-sd-rmember:hover { border-color: #cfd8e4; background: #eef3f9; }
-.aw-sd-rname { color: #23303e; padding: 2px 0; margin: -2px 0; }
+.aw-sd-rname {
+  color: #23303e; padding: 2px 0; margin: -2px 0;
+  flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden;
+}
+/* The abbreviated form (shrinkRosterNames) — same green-free treatment the
+   columns screen gives it, so a shortened name never looks like a state. */
+.aw-sd-rname.is-short { letter-spacing: -.01em; }
 .aw-sd-x {
   width: 24px; height: 24px; padding: 0; border: none; border-radius: 50%;
   background: transparent; color: #98a2b2; cursor: pointer;
@@ -3817,13 +3957,17 @@ body {
 .aw-sd-rmember.is-new { padding: 4px 6px 4px 10px; }
 .aw-sd-rinput {
   border: none; background: transparent; font: inherit; font-size: 15px; font-weight: 700;
-  width: 140px; color: #23303e; line-height: 1.35; padding: 3px 0;
+  /* Đợt 192 — was a fixed 140px, which burst out of its grid cell. */
+  width: 100%; min-width: 0; color: #23303e; line-height: 1.35; padding: 3px 0;
 }
 .aw-sd-rinput:focus { outline: none; }
+/* Đợt 192 — one more cell of the same grid: same height, same corner, so the
+   register ends on a dashed slot rather than on a pill of a different shape. */
 .aw-sd-add {
-  border: 1.5px dashed #cfd8e4; border-radius: 999px; background: transparent;
+  border: 1.5px dashed #cfd8e4; border-radius: 10px; background: transparent;
   color: #5b677a; font: inherit; font-size: 14px; font-weight: 700;
-  padding: 6px 16px; cursor: pointer; line-height: 1.35;
+  padding: 6px 12px; cursor: pointer; line-height: 1.35;
+  height: 40px; min-width: 0;
   transition: border-color .15s ease, color .15s ease, background .15s ease;
 }
 .aw-sd-add:hover { border-color: #2f6fed; color: #2f6fed; background: #f2f7ff; }
