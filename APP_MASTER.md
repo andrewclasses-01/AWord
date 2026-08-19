@@ -2701,7 +2701,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ⭐⭐ **Đợt 202 (19/8/2026) — IN TURNS: MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Fight mode).** Ô tích mới
+> ⭐⭐ **Đợt 202 (19/8/2026) — ✅ COMMIT `a6d3fe8` + PUSH + LIVE (3/3 mã băm SHA-256, 7/7 phép hỏi
+> module trên bản live) — IN TURNS: MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Fight mode).** Ô tích mới
 > **màu xanh lá** trong Options của trận: bật lên thì bộ câu được **chia bài luân phiên** cho 2 bàn
 > (81 câu ⇒ **41/40**, không câu nào ở cả hai bên, câu lẻ vẫn được chơi). Hai bàn vẫn chạy **ĐỒNG
 > THỜI** (thầy chốt: KHÔNG phải luân phiên từng đội) nên `core/fight.js` **không sinh kiểu vòng thứ
@@ -2720,7 +2721,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > ⚠️ Tồn đọng: act TTA **có giọng** mà bật In turns thì 2 bàn phát 2 clip khác nhau cùng lúc — cùng
 > họ với *"Different words chưa có voice riêng từng bàn"* (Đợt 132), chưa sửa.
-> ⬜ **CHƯA COMMIT** — chờ thầy chơi thử trên TOMKO rồi duyệt.
+> ⬜ **CÒN LẠI**: thầy chơi thử trên TOMKO (cỡ chữ xanh lá nhìn từ cuối lớp có nổi đủ không, cảm giác
+> "hai bàn hai câu khác nhau" có ổn với lớp không), rồi chốt có mở In turns cho template khác hay không
+> (mở thêm = thêm ĐÚNG 1 dòng `fightTurns: true`, `fight.js` không phải sửa gì).
 
 > ⭐ **Đợt 201 (19/8/2026) — HAI TINH CHỈNH TRANG HỌC SINH.** (1) Dòng ai-đang-chơi trên màn
 > READY đổi dấu ngăn `-` thành `•`: `CHẤN PHONG • B2B` (engine.js, khối `.aw-ready-ai`).

@@ -213,7 +213,15 @@ chưa mount gì cả. **Sau `Apply` trong trận phải bấm Play mới đo đ�
 - ⚠️ **GIỌNG ĐỌC**: act TTA có voice mà bật In turns thì hai bàn tự phát hai clip KHÁC nhau cùng lúc
   (`voicePlayer` của TTA không đi qua `ctl.speaks()`). Cùng họ với tồn đọng cũ *"Different words chưa
   có voice riêng từng bàn"* (Đợt 132), **chưa sửa** — act TTA dạng chữ thì không dính.
-- ⬜ Chưa commit/push — chờ thầy duyệt.
+- ✅ **ĐÃ COMMIT `a6d3fe8` + PUSH + LIVE** (19/8/2026). Đối chiếu **3/3 mã băm SHA-256**
+  (`core/fight.js` · `core/app.css` · `templates/type-the-answer/type-the-answer.js`, so sau khi bỏ
+  `` vì bản checkout ngoài này là CRLF còn repo lưu LF) và **7/7 phép hỏi module trên bản live**:
+  `FIGHT_DEFAULTS.fightTurns` có thật và = `false` · `fightOptionsFrom` giữ `true`, ep chuỗi `"false"`
+  về `false`, thiếu khoá thì vẫn `false` · TTA khai `fightTurns`, Quiz **không** · CSS `.aw-check.is-green`
+  có trên live.
+- ⚠ **Phiên SONG SONG khác đã push Đợt 203 (vá in Running Word) vào giữa lúc đợt này đang làm** —
+  commit `a6d3fe8` nằm chồng lên `c5032f4`. Hai bên **không đụng file code nào của nhau**; hai khối ghi
+  chú cùng sống trong file này (203 trên, 202 dưới). Số 202 nhỏ hơn 203 nhưng commit sau — không phải lỗi.
 
 ---
 
