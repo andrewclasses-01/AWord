@@ -8,6 +8,315 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 206 (19/8/2026) — ⭐⭐ myActivity NHIỀU CỘT: **ĐỒNG BỘ CẢ LOẠI ACT** — vá lỗ hổng ✓ BÁO OAN
+
+**Thầy giao:** *"Trong app myActivity khi mở mode nhiều bảng: đồng bộ cả loại act. Ví dụ 1 bảng chọn
+TEXT/ENG1 thì các bảng khác cũng đồng bộ act này luôn."* Thầy tả hiện tượng: **"lúc được lúc không"**.
+
+### 1. Đường ống vốn ĐÃ CÓ — nên việc đầu tiên là tìm xem nó thủng ở đâu
+
+AWord bắn `MYACT:AW:OPT:<toàn bộ activity.options>` khi thầy bấm Apply → myActivity
+(`browser.js`, `mirrorAwordState`) relay thẳng sang `__awordBridge.applyOptions()` của các cột kia.
+Nghĩa là `contentMode` + `contentVariant` **vốn đã nằm trong gói tin**. Vậy tại sao "lúc được lúc không"?
+
+⭐ **KHÔNG ĐOÁN — dựng bàn thử chạy CHÍNH engine thật** (`scratch/mirror206.html`): `startGame()` một
+act 5 bộ gợi ý, mỗi bộ mang dấu riêng (`E1 …`, `V1 …`, `/ipa-…/`), rồi gọi `__awordBridge` **đúng
+như myActivity gọi**, và đọc bộ ĐANG CHẠY **từ chữ trên màn** — không hỏi `options`, vì options là
+thứ mình vừa ghi vào, hỏi nó là tự hỏi tự trả lời.
+
+Kết quả lượt đầu — **8/9, một ca hỏng**:
+
+| Ca | Kết quả |
+|---|---|
+| act thường, đổi sang VI1 | ✅ ăn |
+| act thường, đổi sang PRONUNCIATION | ✅ ăn |
+| hai lệnh bắn sát nhau (OPT rồi TPL của cùng một cú Apply) | ✅ không đua, kết cục đúng |
+| **act ĐÃ ĐỔI TEMPLATE (Change template / RUNNING / IPA), đổi sang VI2** | 🔴 **KHÔNG ĐỔI GÌ — mà vẫn trả `true`** |
+
+### 2. Gốc lỗi, và vì sao nó IM LẶNG
+
+`convert.js` **nướng một bộ gợi ý thẳng vào nội dung** của act đã đổi template. Ghi "giờ là VI2" lên
+bản sao đó thì **không có gì nhúc nhích**: lựa chọn phải đi lên **act GỐC** rồi chuyển đổi lại từ đó
+— đúng việc `applySubActSelection()` sinh ra để làm, và đúng cái Options ▸ Apply **trên chính pane đó
+vẫn luôn làm** (từ Đợt 154/181). **Bridge chưa bao giờ đi qua cánh cửa ấy.**
+
+Và tệ hơn cái sai: `applyOptions` vẫn `return true` ⇒ myActivity vẽ **dấu ✓** lên một cột đang chơi
+thứ khác. Đúng thứ mà myActivity v2.4.0 vừa mới đi vá ở tầng dưới (*"đường truyền nào cũng phải có
+tín hiệu THẤT BẠI"*) — nhưng ở đây tín hiệu THÀNH CÔNG mới là cái nói dối.
+
+⇒ **"Lúc được lúc không" giải thích trọn vẹn**: ăn hay không phụ thuộc act đó có đang chơi qua
+Change template / RUNNING / IPA hay không, chứ không phải may rủi thời điểm.
+
+### 3. Vá — hai việc, cùng nằm ở `core/engine.js`
+
+1. ⭐ **Bridge đi CHUNG một cánh cửa với nút Apply**: `applyOptions()` nay gọi
+   `applySubActSelection(opts)`; hàm này nhận việc thì bridge **không replay nữa** (replay chồng lên
+   là đua với chính cú chuyển đổi vừa khởi động).
+   Kèm theo, `applySubActSelection()` đổi kiểu trả về **`true` → `Promise`** (hoặc `false`): trước đây
+   nó **vứt promise của `doSwitchTemplate()` xuống sàn**, nên bridge không có gì để chờ và dấu ✓ sẽ
+   được vẽ trong lúc cột kia còn đang chuyển đổi. ⚠️ **Hai nơi gọi cũ không phải sửa** — cả hai chỉ
+   hỏi *"có nhận việc không"*, mà Promise là truthy. (Đã **bấm tay thật** để chứng minh, xem mục 4.)
+2. ⭐ **THAY THẾ, KHÔNG GỘP.** `Object.assign` không bao giờ xoá, trong khi Options ▸ Apply bên cột
+   gửi **cố ý XOÁ mọi khoá không thuộc view mới** (luật Đợt 147: mỗi view một bộ options riêng). Gộp
+   suông để lại ở các cột kia một `lives: 3` sót từ view không ai còn nhìn — **hai cột lệch luật chơi,
+   và trên màn không có gì giải thích**. Gói tin là TOÀN BỘ `activity.options` của cột gửi, nên đặt
+   bằng nhau mới là nghĩa của chữ "đồng bộ".
+   ⚠️ **MUTATE, không thay object**: `libAct`, act "mistakes" và hai bàn Fight giữ chung đúng object này.
+
+**`myActivity` KHÔNG phải sửa một dòng nào** — gói tin vốn đã đủ, lỗ hổng nằm ở đầu nhận bên AWord.
+Cũng vì thế đợt này **không có ràng buộc đẩy-cùng-lúc** như cặp Đợt 197 ↔ v2.4.0: bản myActivity cũ
+gặp AWord mới thì chạy đúng hơn trước, không có dấu ✗ oan nào.
+
+### 4. Kiểm chứng — `scratch/mirror206.html`, **18/18 ĐẠT**
+- 4 ca ở bảng mục 1, nay **ca thứ tư ăn**: act đã đổi template, đồng bộ sang VI2 ⇒ *đang chạy = vi2*.
+- **Luật thay thế**: cắm sẵn `lives: 3` rồi gửi gói tin của view không có `lives` ⇒ `lives` **biến mất**
+  (`undefined`), mà bộ gợi ý mới vẫn đúng.
+- ⭐ **ĐƯỜNG BẤM TAY CỦA THẦY, bấm thật chứ không suy luận** (vì mục 3 đổi kiểu trả về của một hàm
+  dùng chung): bấm nút **Options** dưới khung → bảng mở → hàng công tắc **có đúng 3 nút** (Đợt 205
+  chạy trong bảng THẬT, không chỉ trong bàn thử riêng) → bấm **PRONUNCIATION** → bấm **Apply** ⇒
+  *đang chạy = pron*, và **0 lỗi JavaScript** trong suốt lượt.
+
+### 5. Bài học
+- **Tín hiệu THÀNH CÔNG cũng biết nói dối, không riêng gì im lặng.** v2.4.0 đã đi vá "hỏng mà im";
+  đợt này là "hỏng mà báo xong". Hàm nào trả `true`, phải tự hỏi: **true nghĩa là ĐÃ XONG, hay chỉ là
+  "tôi đã gọi xong"?**
+- **Hai đường vào cùng một việc thì sớm muộn cũng lệch nhau.** Nút Apply đi qua
+  `applySubActSelection()`, bridge thì không — hai đường tồn tại song song từ Đợt 154 tới nay. Mở
+  một lối vào mới cho một việc đã có lối thì phải **đi lại đúng lối cũ**, đừng viết lối thứ hai.
+- **Vứt promise xuống sàn là vứt luôn khả năng biết-khi-nào-xong.** Hàm bất đồng bộ mà trả `true`
+  thì người gọi vĩnh viễn không chờ được nó.
+- **Bàn thử phải đọc KẾT QUẢ THẬT, không đọc thứ mình vừa ghi vào.** Ở đây là chữ hiện trên màn, chứ
+  không phải `options` — nếu đọc `options` thì cả 9 ca đều "đạt" và lỗi vẫn nguyên.
+
+### 6. File đã sửa
+| File | Việc |
+|---|---|
+| `core/engine.js` | `__awordBridge.applyOptions()`: thay-thế-không-gộp + đi qua `applySubActSelection()` + chờ chuyển đổi xong mới báo thành công; `applySubActSelection()` trả **Promise** thay cho `true` |
+
+### 7. Còn chờ
+- ⬜ **Thầy test trên máy thật (TOMKO)**: mở 2+ cột cùng một act có nhiều bộ gợi ý, ở một cột chọn
+  TEXT/ENG1 rồi Apply ⇒ các cột kia phải đổi theo **và** hiện dấu ✓. Rồi thử lại **sau khi đã đổi
+  template** ở act đó — đây chính là ca trước nay hỏng trong im lặng.
+- ⬜ **Fight mode vẫn KHÔNG mirror Options** (nhánh `if (fight)` trong nút Apply `return` trước dòng
+  `awEmit("OPT")`). Chưa đụng vì thầy không nêu, và trong trận thì một trang đã chứa hai bàn — nếu
+  thầy muốn các CỘT cũng theo nhau giữa trận thì nói, đó là một đợt riêng.
+
+---
+
+## Đợt 205 (19/8/2026) — ⭐⭐ OPTIONS: **PRONUNCIATION LÊN HÀNG CÔNG TẮC MẸ** — `TEXT | VOICE | PRONUNCIATION`
+
+**Thầy giao:** *"Trong options, đưa tùy chọn PRONUNCIATION sang act mẹ. Lúc này sẽ có
+TEXT-VOICE-PRONUNCIATION. Khi chọn PRONUNCIATION, 3 nút TEXT-VOICE-PRONUNCIATION sẽ trải dài, khi chọn
+TEXT hoặc VOICE mới co lại để hiện các mục con (sử dụng animation mượt)."*
+
+### 1. ⭐⭐ QUYẾT ĐỊNH LỚN NHẤT: **KHÔNG ĐỘNG VÀO THỨ ĐƯỢC LƯU**
+
+PRONUNCIATION từ Đợt 190 là **bộ gợi ý thứ 5** (`pron`), đứng làm chip thứ 5 dưới nút TEXT. Cách làm
+"thẳng thắn" là cho `contentMode` một giá trị thứ ba `"pron"`. **Đã bác bỏ.** Rà ra `contentMode`
+có **sáu nơi đọc**, nơi nào cũng hỏi `=== "text"` hoặc `=== "voice"`:
+
+| Nơi đọc | Nếu gặp giá trị lạ `"pron"` thì sao |
+|---|---|
+| `content-view.js` `activeVariant()` | rơi vào nhánh text — may thì đúng |
+| `content-view.js` `viewKeyOf()` | `mode` ép về `"text"` ⇒ **mất view riêng** |
+| `voice-playback.js` `voiceView()` | không khớp `"text"` ⇒ **hiện nút loa đọc ký hiệu IPA** |
+| `engine.js` (2 chỗ nạp trước clip) | `!== "text"` ⇒ **tải cả kho giọng vô ích** giữa giờ dạy |
+| `anagram.js` `textMode` | `!== "text"` ⇒ nút loa quay lại |
+| `convert.js` | chép mode sang act đã đổi template |
+
+Nên PRONUNCIATION **vẫn được lưu y hệt như chip cũ**: `contentMode:"text"` + `contentVariant:"pron"`.
+Nó chỉ là **cách VẼ khác** của đúng một trạng thái đã tồn tại. Hệ quả:
+- sáu nơi trên **không phải sửa một chữ**;
+- **act cũ tự lên nút mới** — mở act đang chọn chip PRONUNCIATION thì nút PRONUNCIATION sáng sẵn và
+  hàng đã ở dáng trải dài. **Không cần `options-migrate.js`**, không có gì để lỡ;
+- `text:pron` vốn đã là một view key riêng ⇒ options riêng từng view (Đợt 147) chạy nguyên vẹn.
+⛔ **ĐỪNG "dọn dẹp" thành `contentMode:"pron"` về sau** — cái được là hình thức, cái mất là sáu nơi
+đọc cộng với mọi act đã nằm trong thư viện.
+
+### 2. Hình dạng hàng — và HAI LỖI CHỈ PHÉP ĐO MỚI BẮT ĐƯỢC
+
+Công tắc bỏ luật hàn cứng 2 ô (`grid-template-columns: 1fr 1fr` + `.is-voice{translateX(100%)}`),
+chuyển sang `--i`/`--n` — đúng cơ chế `.aw-seg` và `.aw-opt-setswitch` đang dùng.
+Hàng co giãn bằng `grid-template-columns: 1fr 1fr` ↔ `1fr 0fr` (**giữ nguyên SỐ Ô** thì mới nội suy
+được; tụt xuống một ô là nhảy khực).
+
+Dựng bàn thử `scratch/pron205.html` và đo — **hai lỗi lộ ra ngay, đọc code suông không thấy**:
+
+| Lỗi đo được | Vì sao | Cách chữa |
+|---|---|---|
+| Chữ **PRONUNCIATION tràn ra ngoài nút** ở CẢ hai cỡ panel | 13 ký tự so với 4 của "Text", mà ở dáng TEXT công tắc chỉ được nửa hàng | xem dưới |
+| **Panel bị kéo rộng 410px → 580px** (kịch trần) | panel là `width: max-content`, một chữ dài kéo cả hộp | xem dưới |
+
+⭐⭐ **MỘT DÒNG CHỮA CẢ HAI**: `container-type: inline-size` trên chính `.aw-opt-switch`.
+1. nó thành **query container** ⇒ cỡ chữ tính bằng `cqw` = phần trăm **của chính ô công tắc**, đúng
+   cái bề ngang quyết định vừa hay không. (⛔ **`vw` là vô dụng ở đây** — đã thử: `vw` đo CỬA SỔ nên
+   trên màn rộng thì clamp không bao giờ ăn, chữ vẫn tràn.)
+2. kèm theo `contain: inline-size` ⇒ chữ trong nút **thôi nuôi bề ngang tối thiểu của panel**, panel
+   trở lại đúng bề ngang do lưới tùy chọn quyết định. **Đo lại: 580 vs 580, y hệt nhau.**
+⚠️ Thuộc tính này **đẻ stacking context** (`contain: layout`) — an toàn Ở ĐÂY và **chỉ ở đây** vì nó
+là lá nằm TRONG `.aw-tool-panel`, không phải tổ tiên của bảng. Xem hợp đồng xếp lớp popup ở
+`core/HUONG DAN CORE.md` trước khi đặt nó ra ngoài hơn.
+
+### 3. HỆ SỐ CỠ CHỮ LÀ SỐ ĐO, KHÔNG PHẢI SỐ ƯỚC
+
+Đoán đầu tiên (`3.7cqw`, suy ra từ "chữ rộng ≈ 8.7 × cỡ chữ") **vẫn tràn**. Đo bằng thước thật
+(dựng `<span>` cỡ 100px cùng font/weight/tracking rồi cân): **"PRONUNCIATION" rộng 10.118 × cỡ chữ**.
+Từ đó: mỗi nút được 1/3 ô ⇒ cỡ chữ cần `(ô − 20) / 30.35 ≈ 3.29cqw`; lấy **3.15cqw** cho dư chút.
+
+Nhưng ngay cả thế, chia đôi hàng thì chữ tụt xuống **~8px** — nhỏ quá so với 13px của các hàng khác.
+⇒ **Ba nút thì công tắc được nhiều đất hơn**: `.is-3mode { grid-template-columns: 1.7fr 1fr }`.
+Đo lại: cỡ chữ **10.26px** ở panel 580 (act không có PRON vẫn chia đôi 1:1 y như cũ, không đổi gì).
+Dãy chip còn ~196px cho 4 chip — thừa (một chip chỉ ~35px chữ).
+
+⚠️ Panel HẸP (~380px, chỉ gặp khi cửa sổ nhỏ vì panel là `min(94vw,580px)`): 8px cũng không đủ ⇒
+chữ **cắt gọn bằng ellipsis TRONG nút** (`overflow:hidden; text-overflow:ellipsis`). Điều bắt buộc là
+**không có gì tràn ra ngoài hàng** — đo đủ 3 trạng thái × 2 cỡ panel: `340 vs 340`, `540 vs 540`, sạch.
+
+### 4. File đã sửa
+| File | Việc |
+|---|---|
+| `core/options-panel.js` | `buildContentSwitchRow`: dựng 2 **hoặc 3** nút; bỏ `pron` khỏi dãy chip; `paintSwitch()` (`--i`/`--n`); `pick("pron")` ghi `contentMode:"text"` + `contentVariant:"pron"`; lớp `is-3mode` + `is-wide` |
+| `core/app.css` | `.aw-opt-switch` thành query container + con trượt theo `--i`/`--n` (xoá luật `.is-voice`); cỡ chữ `clamp(8px, 3.15cqw, 13px)` + ellipsis; `.is-3mode` 1.7fr:1fr; `.is-wide` 1fr:0fr có transition; thêm vào khối `prefers-reduced-motion`; `.is-compact-opts` giữ sàn cqw |
+
+**KHÔNG đụng** `content-view.js` · `engine.js` · `voice-playback.js` · `convert.js` · `settings.js` ·
+`options-migrate.js` · template nào — đó là toàn bộ ý nghĩa của mục 1.
+
+### 5. Kiểm chứng — `scratch/pron205.html`, **34/34 ĐẠT**
+Bàn thử dựng bằng **chính `buildContentSwitchRow` thật** + **lưới tùy chọn dựng bằng chính
+`mkCell`/`mkSeg`/`mkSliderCell`/`mkCheck` thật** (đo bề ngang panel mà không có lưới thật là đo một
+hoàn cảnh không ai sống trong đó — bài học Đợt 198), ở 5 hoàn cảnh: panel 580 · panel 380 ·
+max-content có pron · max-content không pron · act chỉ một bộ chữ.
+
+Đạt gồm: 3 nút khi act có bộ pron / 2 nút khi không · chip không còn PRONUNCIATION · trải dài ra
+đúng cả hàng (540/540) và nửa chip về **0.0px** · quay lại TEXT thì co lại đúng cũ · con trượt rộng
+đúng 1/3 và đứng đúng dưới nút đang sáng ở cả 3 vị trí · giá trị ghi ra đúng hợp đồng
+(`contentMode=text, contentVariant=pron`) · **về TEXT thì trả lại bộ chữ thật, không dính lại pron** ·
+act cũ lưu sẵn `pron` thì nút sáng sẵn + hàng đã trải dài · **chưa chạm thì không ghi gì** (luật Đợt 145) ·
+panel không rộng thêm · 2 ca biên (dạng gọi của `settings.js` không có bộ gợi ý ⇒ vẫn 2 nút, không dãy
+chip; act **chỉ có** `pron` ⇒ **không mở nút thứ 3**, kẻo nút TEXT sáng mà không có bộ nào để chơi).
+
+**Animation có THẬT SỰ chạy hay không** — hỏi thẳng trình duyệt thay vì tin vào CSS:
+`document.getAnimations()` ngay sau cú bấm có **`grid-template-columns` 240ms** và **`transform` của
+con trượt 240ms** trên đúng phần tử ⇒ Chromium chấp nhận nội suy, không phải nhảy khực.
+
+Mở `templates/anagram/test.html` (trang thật, không cần đăng nhập): app nạp sạch, **0 lỗi console**,
+hàng nút dưới khung còn đủ Options · Template · Mode.
+
+### 6. Bài học
+- **Thêm một giá trị cho một khoá dùng chung là thêm việc cho MỌI nơi đọc khoá đó.** Trước khi thêm,
+  đếm số nơi đọc; nếu trạng thái mới có thể diễn đạt bằng tổ hợp đã có thì đó gần như luôn là đường
+  rẻ hơn — và nó cho **di trú miễn phí**.
+- **`vw` không phải "bề ngang chỗ này"**, nó là bề ngang cửa sổ. Muốn chữ vừa một ô thì đơn vị phải
+  đo chính ô đó (`cqw`).
+- **Hệ số chữ phải CÂN, đừng nhẩm**: nhẩm ra 8.7, thước ra 10.118 — chênh 16%, đủ để tràn.
+- ⛔ **`requestAnimationFrame` treo vô hạn khi khung xem bị ẩn** — bàn thử đứng ở "đang chạy…", không
+  lỗi, không log. Đã ghi trong `BAN GIAO.md` myActivity (bẫy #11) và hôm nay cắn lại. Bàn thử phải
+  dùng `setTimeout`.
+
+### 7. Còn chờ
+- ⬜ **CHƯA AI NHÌN BẰNG MẮT** — pane trình duyệt bị ẩn nên `screenshot` timeout (**lần thứ tám liên
+  tiếp**, Đợt 191→205) và transition bị đóng băng nên không quan sát được lúc đang chạy. Mọi kết luận
+  ở trên là số đo hình học + hỏi trình duyệt, **không phải nhìn**.
+- ⬜ **Thầy nhìn cỡ chữ PRONUNCIATION trên màn 86"**: ở dáng TEXT/VOICE nó là **10.26px** (so với 13px
+  của TEXT/VOICE khi hàng trải dài). Nếu nhìn từ cuối lớp thấy nhỏ, có **hai đường** đã sẵn sàng:
+  nâng `1.7fr` lên (chip còn thừa chỗ), hoặc đổi nhãn nút thành **`IPA`** — chính là tên chế độ
+  MODE ▸ IPA đang dùng cho cùng bộ dữ liệu này, và ở 13px thì thừa chỗ.
+
+---
+
+## Đợt 204 (19/8/2026) — ⭐⭐ IMPORT ĐỌC THÊM SHEET **WORDTABLE2**: một file bài học ra **HAI bộ từ**
+
+**Thầy giao:** *"khi import file trong aword để tạo act, đọc thêm cả sheet WORDTABLE2 (hoặc WORDTABLE 2)
+để tạo ra act tích hợp xxx / WORDS 2 nữa. Cấu trúc của sheet này giống hệt sheet WORDTABLE."*
+Thầy chốt thêm: bảng 2 đẻ **đủ ba act** — `WORDS 2` · `RUNNING WORD 2` · `RUNNING TEAM 2`.
+
+### 1. Lỗi CÓ SẴN lộ ra khi đo — bảng thứ hai đang bị NUỐT IM LẶNG
+
+Từ Đợt 190, bộ dò không tin tên sheet nữa mà **quét mọi sheet rồi giữ lại DUY NHẤT cái nhiều khối
+nhất** (`if (found.length > vocabBlocks.length)`). Nghĩa là file có hai bảng từ vựng thì **một bảng
+biến mất, không có một chữ nào trên màn hình nói ra**.
+
+Quét chính **138 file bài học thật** của thầy (`D:\4. LISTENING` + `D:\5. READING`, bàn thử
+`scratch/wt2-scan.mjs`, bản sao luật quét **0/138 lệch** so với `parseLessonToBundle` thật):
+
+| Sheet đang thắng cuộc quét | Số file |
+|---|---|
+| `CROSSWORD` | 63 |
+| `WORDTABLE` | 52 |
+| `CROSSWORD4+5` | 2 |
+| `DEFINITION` · `SHEET1` | 1 + 1 |
+
+**13 file có từ hai bảng trở lên.** Nặng nhất là `DS-S4.I1.W1 BEAVERS AND DAMS`: bảng bị bỏ tên
+`WORDTABLE 2` chứa **95 từ mà không xuất hiện ở đâu khác** (đánh số 96–190, trong khi bảng 1 là
+1–95) — đúng lý do lâu nay lesson đó phải kèm **một workbook thứ hai** bên cạnh,
+`DS-S4.I1.W1 BEAVERS AND DAMS_WORD 2.xlsm`.
+
+### 2. Vì sao đợt này DÙNG TÊN SHEET, dù Đợt 190 vừa bỏ tên sheet
+
+Hai câu hỏi khác nhau, đừng lẫn:
+- *"Sheet nào LÀ bảng từ vựng?"* → phải theo **HÌNH DẠNG** (65 file gọi nó là `CROSSWORD`). Giữ nguyên.
+- *"Trong hai bảng, cái nào là cái THỨ HAI?"* → hình dạng **không trả lời được**, vì hai bảng giống
+  hệt nhau về cấu trúc. Chỉ có tên thầy tự đặt mới nói được.
+
+⛔ **Đã cân nhắc và BÁC BỎ cách "lấy á quân của cuộc quét"**: trong 13 file có hai bảng thì **12 file
+có á quân KHÔNG PHẢI bộ từ thứ hai** (`WORDADVANCE` 1 khối · `CROSSWORDADVANCED` · `CROSSWORD(2)` ·
+`CROSSWORD4+5` · `CROSSWORD2` · `TABLEMIX2`). Làm theo cách đó là **12 file mọc ra act "WORDS 2" rác**.
+Chỉ sheet thầy **cố ý đặt số 2** mới được tính: `RE_TABLE2 = /^WORDTABLE2$/` (tên đã UPPER + bỏ trắng
+nên `"WORDTABLE 2"` rơi vào đúng khoá này).
+
+### 3. Ba chốt an toàn
+
+1. **ĐÔN LÊN**: file mà bảng từ vựng DUY NHẤT lại tên `WORDTABLE2` thì nó là bộ từ chính, act mang
+   tên `/ WORDS` **không có đuôi 2**. (Ghi chú Đợt 190 có nhắc loại file này; corpus hôm nay không
+   còn cái nào, nhưng chốt này rẻ và đỡ được một cú đổi tên sheet.)
+2. **BẢNG 2 RỖNG thì không đẻ gì**: 2/138 file có sẵn khuôn `WORDTABLE2` trắng (LSFLY-S1.T2.P4-5,
+   DW-S2.W1 SQUID) — không khối nào ⇒ `table2 = null` ⇒ danh sách act **y hệt trước**.
+3. **MỘT BỘ ĐỌC DUY NHẤT**: tách `readVocab()` + `pushVocabActs(WORDS, suffix)` ra dùng chung cho cả
+   hai bảng. Chép luật đọc thành hai bản là hai bản sẽ lệch nhau ngay lần sửa đầu tiên.
+
+### 4. File đã sửa
+| File | Việc |
+|---|---|
+| `core/lesson-import.js` | vòng quét một-người-thắng → gom **mọi ứng viên** rồi tách `table1`/`table2` theo `RE_TABLE2`; tách `readVocab()` + `pushVocabActs()`; gọi hai lần với hậu tố `""` và `" 2"` |
+
+**Không đụng file nào khác.** `main.js` không phải sửa: bảng giọng nói của hộp Import vốn đã chạy trên
+**danh sách** act (`acts.filter(a => a.ttsEligible).forEach`), nên `WORDS 2` tự có thêm một hàng.
+
+### 5. Kiểm chứng (chạy CHÍNH module thật trên CHÍNH file thật của thầy, bằng Node + SheetJS vendored)
+
+**A/B toàn corpus** (`scratch/wt2-ab.mjs` — nạp cùng lúc bản cũ lấy từ `git show HEAD:` và bản mới,
+so chữ ký từng act: tên + loại + số phần tử + bộ gợi ý + bộ có giọng):
+
+> **138 file · GIỐNG HỆT bản cũ: 137 · thay đổi: 1** — và file thay đổi là đúng file có `WORDTABLE 2`
+> có dữ liệu, thêm **đúng 3 act**, không mất act nào:
+> `+ DS-S4.I1.W1 / WORDS 2 [anagram] n=95 v=eng1+eng2+vi1+vi2+pron vv=eng1+eng2`
+> `+ DS-S4.I1.W1 / RUNNING WORD 2 [running_word] n=95` · `+ DS-S4.I1.W1 / RUNNING TEAM 2 [running_team] n=95`
+
+**Kiểm nội dung, không chỉ đếm act** (`scratch/wt2-check.mjs`) — **16/16 ĐẠT**:
+hai bộ từ **không trùng một từ nào** (95 + 95) · `WORDS` mở đầu `DURE`, `WORDS 2` mở đầu `HARSH` ·
+`WORDS 2` đủ 5 bộ gợi ý và mọi từ có `/ipa/` · nhận giọng ENG1+ENG2 · **trùng khớp từng từ với file rời
+`..._WORD 2.xlsm` thầy đang phải dùng** · hai game Running 2 dùng đúng bộ từ bảng 2 và mang theo `/ipa/` ·
+chốt ĐÔN LÊN chạy đúng (dựng lại workbook BEAVERS đã **bỏ sheet WORDTABLE** ⇒ ra `/ WORDS`, không act
+nào có đuôi ` 2`) · `WORDTABLE2` rỗng ⇒ không đẻ act.
+
+### 6. Bài học
+- **Cái "thắng cuộc" thì im lặng nuốt mất cái thua cuộc.** Vòng `if (nhiều hơn) thì thay` không có
+  chỗ nào nói ra thứ vừa bị bỏ. Hễ viết vòng chọn-một-cái-tốt-nhất trên dữ liệu của người dùng thì
+  phải tự hỏi *"cái bị loại có thể là thứ họ cần không?"*.
+- **Bỏ tin vào tên KHÔNG có nghĩa là cấm dùng tên.** Đợt 190 bỏ tên để trả lời "cái này là gì";
+  đợt này dùng tên để trả lời "cái nào là cái thứ hai" — câu mà hình dạng không thể trả lời.
+- **Đo trước khi chọn luật**: chính phép quét 138 file là thứ bác bỏ phương án "lấy á quân", trước
+  khi nó kịp đẻ ra 12 act rác trong thư viện thầy.
+
+### 7. Còn chờ
+- ⬜ **Thầy import thử file `DS-S4.I1.W1 BEAVERS AND DAMS.xlsm`** trên bản live, xác nhận thấy đủ
+  6 act (3 + 3) và bộ từ thứ hai đúng là 95 từ 96–190 ⇒ từ đó **bỏ được file rời `..._WORD 2.xlsm`**.
+- ⬜ Thầy chốt có mở thêm cho các sheet "thứ hai" kiểu khác không (`CROSSWORD2`, `WORDADVANCE`,
+  `CROSSWORDADVANCED`, `TABLEMIX2` — 12 file đang có). Mở thêm = **thêm một nhánh vào `RE_TABLE2`**,
+  không phải sửa gì khác.
+
+---
+
 ## Đợt 203 (19/8/2026) — ⭐ VÁ NỐT LỖI TRANG TRẮNG CỦA RUNNING WORD: bộ **ÍT TỪ** (≤16 từ/đội) vẫn in ra 4 trang
 
 ✅ **ĐÃ COMMIT `13aba93` + PUSH + LIVE** — đối chiếu **mã băm SHA-256 của `rw-print.js`**: bản

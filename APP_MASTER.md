@@ -8,7 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/8/2026 (Đợt 198)** ✅ **COMMIT `70ca0a1` + PUSH + LIVE** — Pages build đúng commit, **3/3 file trùng mã băm SHA-256**, và **25/25 phép hỏi lại trên bản live** đều đúng — xem khối đầu tiên ngay dưới.
+> Cập nhật lần cuối: **19/8/2026 (Đợt 202 + 203)** ✅ **CẢ HAI ĐÃ COMMIT + PUSH + LIVE, thầy duyệt.**
+> • **Đợt 202** (`a6d3fe8`, hồ sơ `87967b4`) — **IN TURNS: một bộ câu chia cho hai đội** trong Fight, mở cho **Type the answer**; 3/3 mã băm SHA-256 + 7/7 phép hỏi module trên bản live.
+> • **Đợt 203** (`13aba93`, hồ sơ `c5032f4`) — **vá nốt lỗi trang trắng Running Word** ở bộ ≤16 từ/đội; mã băm `rw-print.js` repo/live khớp.
+> ⚠️ Hai đợt này là **hai phiên song song** chạy cùng lúc trong CÙNG một thư mục — mỗi bên chỉ nạp vào chỉ mục git đúng file của mình. Xem hai khối đầu tiên ngay dưới.
+> Trước đó **(Đợt 198)** ✅ **COMMIT `70ca0a1` + PUSH + LIVE** — Pages build đúng commit, **3/3 file trùng mã băm SHA-256**, và **25/25 phép hỏi lại trên bản live** đều đúng.
 > Trước đó **(Đợt 196 + 197)** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
 > ⚠️⚠️ **Đợt 197 sửa CẢ myActivity (v2.4.0, commit `fc049f1`) — hai kho đã được đẩy cùng nhau.**
 > Trước đó: **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
@@ -2699,7 +2703,87 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 19/8/2026 sau **Đợt 206** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> ⭐⭐ **Đợt 206 (19/8/2026) — myActivity NHIỀU CỘT: ĐỒNG BỘ CẢ LOẠI ACT.** Thầy tả *"lúc được lúc
+> không"*; đo ra thì **không phải may rủi**: đường ống `MYACT:AW:OPT:` vốn đã mang `contentMode` +
+> `contentVariant`, và nó ăn với act thường — nhưng **act đã đổi template (Change template / RUNNING /
+> IPA) thì không đổi gì cả, mà `applyOptions` VẪN TRẢ `true`** ⇒ myActivity vẽ **dấu ✓ lên một cột
+> đang chơi thứ khác**. Bàn thử `scratch/mirror206.html`: **8/9 → 18/18**.
+> - **Gốc**: `convert.js` nướng bộ gợi ý vào nội dung bản sao, nên lựa chọn phải đi lên **act GỐC**
+>   rồi chuyển đổi lại — việc của `applySubActSelection()`, thứ mà nút **Apply vẫn luôn làm** từ Đợt
+>   154/181 còn **bridge thì chưa bao giờ đi qua**. Hai đường vào cùng một việc, tồn tại song song.
+> - **Vá (chỉ `core/engine.js`)**: (1) `applyOptions()` đi chung cửa với Apply, và **chờ** chuyển đổi
+>   xong mới báo thành công — kèm `applySubActSelection()` đổi trả về **`true` → `Promise`** (trước đó
+>   nó **vứt promise của `doSwitchTemplate()` xuống sàn**). ⚠️ Hai nơi gọi cũ KHÔNG phải sửa: cả hai
+>   chỉ hỏi "có nhận việc không", Promise là truthy — nhưng đã **bấm tay thật** để chứng minh, không
+>   suy luận. (2) ⭐ **THAY THẾ, KHÔNG GỘP**: `Object.assign` không xoá, mà Apply bên cột gửi **cố ý
+>   xoá** mọi khoá không thuộc view mới (Đợt 147) ⇒ gộp suông để lại `lives:3` sót ở cột khác, hai cột
+>   lệch luật chơi mà màn hình không nói gì. ⚠️ **MUTATE**, đừng thay object (libAct + act mistakes +
+>   2 bàn Fight giữ chung nó).
+> - ⚠️ **`myActivity` KHÔNG phải sửa dòng nào** ⇒ đợt này **không có ràng buộc đẩy-cùng-lúc** như cặp
+>   Đợt 197 ↔ v2.4.0. Bản myActivity cũ gặp AWord mới chỉ chạy đúng hơn.
+> - ⛔ **LUẬT MỚI**: hàm trả `true` phải tự hỏi — *true nghĩa là ĐÃ XONG, hay chỉ "tôi đã gọi xong"?*
+>   Và **bàn thử phải đọc KẾT QUẢ THẬT** (chữ trên màn), không đọc `options` — đọc options thì cả 9 ca
+>   đều "đạt" và lỗi vẫn nguyên.
+> ⬜ **CÒN LẠI**: (1) thầy test TOMKO — 2+ cột cùng act, đổi TEXT/ENG1 ở một cột, **rồi thử lại sau khi
+> đã đổi template** (đúng ca trước nay hỏng trong im lặng); (2) **Fight mode vẫn không mirror Options**
+> (nhánh `if (fight)` `return` trước `awEmit("OPT")`) — chưa đụng vì thầy không nêu; muốn thì là một đợt riêng.
+
+> ⭐⭐ **Đợt 205 (19/8/2026) — OPTIONS: `TEXT | VOICE | PRONUNCIATION`.** PRONUNCIATION rời dãy chip
+> dưới nút TEXT, lên thành nút thứ ba của hàng công tắc mẹ. Chọn nó thì **ba nút trải dài hết hàng**
+> (không có bộ con nào để chọn); chọn TEXT/VOICE thì **co lại** trả chỗ cho dãy chip — một chuyển
+> động liên tục 240ms. Bàn thử `scratch/pron205.html` **34/34 đạt**.
+> - ⭐⭐⭐ **KHÔNG ĐỘNG VÀO THỨ ĐƯỢC LƯU, và đó là cả ý tưởng.** PRONUNCIATION vẫn được lưu đúng như
+>   chip cũ: **`contentMode:"text"` + `contentVariant:"pron"`**. `contentMode` có **SÁU nơi đọc**
+>   (`activeVariant` · `viewKeyOf` · `voiceView` · 2 cửa nạp trước clip trong `engine.js` ·
+>   `anagram.js` · `convert.js`), nơi nào cũng hỏi `=== "text"`/`=== "voice"` — thêm giá trị thứ ba
+>   là phải dạy lại cả sáu (và `viewKeyOf` sẽ **mất view riêng**, `voiceView` sẽ **hiện nút loa đọc
+>   ký hiệu IPA**, engine sẽ **tải cả kho giọng vô ích**). Đổi lại: **act cũ tự lên nút mới, không
+>   cần di trú**, `options-migrate.js` không dính dáng gì. ⛔ **Đừng "dọn dẹp" thành
+>   `contentMode:"pron"`** — được hình thức, mất sáu nơi đọc cộng mọi act đã có trong thư viện.
+> - ⭐⭐ **`container-type: inline-size` trên `.aw-opt-switch` chữa MỘT LÚC HAI lỗi đo được**: chữ
+>   "PRONUNCIATION" tràn nút, và panel (`width:max-content`) bị một chữ dài kéo từ **410px lên kịch
+>   trần 580px**. Nó vừa cho cỡ chữ đo bằng `cqw` (**`vw` vô dụng — đo CỬA SỔ, clamp không bao giờ
+>   ăn trên màn rộng**), vừa kèm `contain: inline-size` nên chữ thôi nuôi bề ngang panel (đo lại:
+>   580 vs 580). ⚠️ Nó **đẻ stacking context** — an toàn vì đây là **lá bên trong** `.aw-tool-panel`,
+>   **không phải tổ tiên**; đọc hợp đồng xếp lớp popup ở `core/HUONG DAN CORE.md` trước khi đặt
+>   `container-type`/`contain`/`transform`… ra ngoài hơn.
+> - ⚠️ **HỆ SỐ CỠ CHỮ LÀ SỐ ĐO**: nhẩm ra "chữ rộng 8.7× cỡ chữ" ⇒ vẫn tràn; cân bằng `<span>` cỡ
+>   100px ra **10.118×**. Và chia đôi hàng thì chữ tụt còn ~8px ⇒ ba nút được **`1.7fr : 1fr`**
+>   (`.is-3mode`), cỡ chữ về **10.26px**. Act KHÔNG có bộ pron vẫn chia đôi 1:1 y như cũ.
+> - ⚠️ Hai chốt biên đã cài: dạng gọi của `core/settings.js` (không có bộ gợi ý) ⇒ vẫn 2 nút như cũ;
+>   act **chỉ có** `pron` ⇒ **không mở nút thứ ba** (nút TEXT sẽ sáng mà không có bộ nào để chơi).
+> - ⛔ **Bàn thử CẤM dùng `requestAnimationFrame`** — pane ẩn thì rAF treo vô hạn, trang đứng im
+>   không lỗi không log (đã cắn đúng một lần ở đây; bẫy #11 trong `BAN GIAO.md` của myActivity).
+> ⬜ **CÒN LẠI**: (1) **chưa ai NHÌN bằng mắt** — `screenshot` timeout **lần thứ tám liên tiếp**
+> (Đợt 191→205), và transition bị đóng băng khi pane ẩn nên không quan sát được lúc đang chạy;
+> (2) thầy nhìn cỡ chữ **10.26px** trên màn 86" — nhỏ thì có sẵn hai đường: nâng `1.7fr`, hoặc đổi
+> nhãn thành **`IPA`** (chính tên chế độ MODE ▸ IPA dùng cùng bộ dữ liệu, ở 13px thì thừa chỗ).
+
+> ⭐⭐ **Đợt 204 (19/8/2026) — IMPORT ĐỌC THÊM SHEET `WORDTABLE2`: một file bài học ra HAI bộ từ.**
+> Bảng thứ hai đẻ đủ ba act — `xxx / WORDS 2` · `xxx / RUNNING WORD 2` · `xxx / RUNNING TEAM 2`
+> (thầy chốt). Chỉ sửa **`core/lesson-import.js`**, không đụng file nào khác.
+> - 🔴 **LỖI CÓ SẴN đợt này lộ ra**: từ Đợt 190 vòng quét giữ **DUY NHẤT sheet nhiều khối nhất**, nên
+>   file hai bảng thì **một bảng biến mất trong im lặng**. Đo trên **138 file thật**: **13 file có hai
+>   bảng**; riêng `DS-S4.I1.W1 BEAVERS AND DAMS` mất **95 từ không có ở đâu khác** (số 96–190) — đúng
+>   lý do lesson đó phải kèm workbook rời `..._WORD 2.xlsm`.
+> - ⛔⛔ **DÙNG TÊN, KHÔNG DÙNG "Á QUÂN CỦA CUỘC QUÉT"** — và đây không mâu thuẫn với Đợt 190: hình dạng
+>   trả lời *"sheet này CÓ PHẢI bảng từ vựng không"*, còn *"cái nào là cái THỨ HAI"* thì hình dạng chịu
+>   (hai bảng giống hệt nhau). Đo ra: 12/13 file có á quân **không phải** bộ từ thứ hai (`WORDADVANCE`,
+>   `CROSSWORDADVANCED`, `CROSSWORD(2)`, `CROSSWORD4+5`, `CROSSWORD2`, `TABLEMIX2`) ⇒ lấy á quân là đẻ
+>   **12 act rác**. Luật hiện tại: `RE_TABLE2 = /^WORDTABLE2$/` (tên đã UPPER + bỏ trắng nên
+>   `"WORDTABLE 2"` cũng khớp). **Mở thêm cho sheet khác = thêm 1 nhánh vào regex đó, không sửa gì nữa.**
+> - ⚠️ **BA CHỐT AN TOÀN, đừng gỡ**: (1) **ĐÔN LÊN** — file mà bảng DUY NHẤT tên `WORDTABLE2` vẫn ra
+>   `/ WORDS` không đuôi; (2) **bảng 2 rỗng ⇒ không đẻ act nào** (2/138 file có khuôn trắng sẵn);
+>   (3) **một bộ đọc duy nhất** `readVocab()` + `pushVocabActs(WORDS, suffix)` dùng chung hai bảng —
+>   chép luật đọc thành hai bản là hai bản sẽ lệch nhau ngay lần sửa đầu.
+> - ⭐ **BÀN THỬ chạy CHÍNH module thật bằng Node + SheetJS vendored** (`scratch/`, bị gitignore ⇒ phiên
+>   mới phải dựng lại; công thức đủ ở `GHI CHU DU AN.md` Đợt 204 mục 5). Kỹ thuật đáng giữ: **nạp cùng
+>   lúc bản cũ `git show HEAD:core/lesson-import.js` và bản mới rồi so chữ ký từng act** ⇒
+>   **137/138 file giống hệt**, đúng 1 file thêm đúng 3 act. Kiểm nội dung **16/16 đạt** (hai bộ từ
+>   không trùng một từ nào, `WORDS 2` trùng khớp từng từ với file rời thầy đang dùng).
+> ⬜ **CÒN LẠI**: thầy import thử file BEAVERS trên bản live, xác nhận ra đủ 6 act ⇒ bỏ được file rời.
 
 > ⭐⭐ **Đợt 202 (19/8/2026) — ✅ COMMIT `a6d3fe8` + PUSH + LIVE (3/3 mã băm SHA-256, 7/7 phép hỏi
 > module trên bản live) — IN TURNS: MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Fight mode).** Ô tích mới
