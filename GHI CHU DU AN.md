@@ -8,6 +8,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 201 (19/8/2026) — Dấu ngăn `•` trên màn READY + tên act căn giữa ở trang học sinh
+
+**Thầy giao (qua phiên myLesson):** (1) tên trên màn READY đổi thành dạng `CHẤN PHONG • B2B`;
+(2) mở bài giao ở tab riêng thì *"dòng tên act phải được đặt ở chính giữa vì lúc này đã không còn
+các nút tùy chỉnh hay tính năng nữa"*.
+
+**Đã làm:**
+- `core/engine.js`: dòng `.aw-ready-ai` ghép bằng `" • "` thay `" - "`.
+- `core/app.css`: `.aw-stu .aw-below{grid-template-columns:1fr}` + `.aw-stu .aw-below-left`
+  căn giữa, bỏ lề 6%. `.aw-stu` chỉ có ở `play.html` nên trang thư viện của thầy giữ nguyên.
+
+---
+
 ## Đợt 200 (19/8/2026) — CỜ NHÚNG cho trang bài tập myLesson
 
 **Thầy giao (qua phiên myLesson):** ô act bên trang bài tập phải *"chỉ hiện khung act của AWord,

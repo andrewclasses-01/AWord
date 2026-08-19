@@ -2701,6 +2701,12 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ⭐ **Đợt 201 (19/8/2026) — HAI TINH CHỈNH TRANG HỌC SINH.** (1) Dòng ai-đang-chơi trên màn
+> READY đổi dấu ngăn `-` thành `•`: `CHẤN PHONG • B2B` (engine.js, khối `.aw-ready-ai`).
+> (2) Mở bài giao ở TAB RIÊNG (không nhúng): tên act dưới khung nay CĂN GIỮA — học sinh không có
+> nút công cụ nào ở hàng đó nên không còn lý do dạt trái (app.css, hai rule `.aw-stu .aw-below*`;
+> trang thư viện của thầy không ảnh hưởng vì `.aw-stu` chỉ có ở play.html).
+
 > ⭐ **Đợt 200 (19/8/2026) — CỜ NHÚNG `play.html?g=…&nhung=1`.** Trang bài tập của **myLesson**
 > (andrewclasses.com) nhúng bài giao vào một ô có đúng tỉ lệ khung game 16:10,5, nên trang play
 > phải trả về **đúng khung game, không gì khác**. Cờ này làm ba việc, đều nằm trong

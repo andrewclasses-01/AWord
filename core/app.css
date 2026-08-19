@@ -146,6 +146,13 @@ html.aw-nhung .aw-page { max-width: none; padding: 0; }
 html.aw-nhung .aw-stage { border: 0; border-radius: 0; }
 html.aw-nhung .aw-below { display: none; }
 
+/* Đợt 201 — TRANG HỌC SINH (mở bài giao ở tab riêng, KHÔNG nhúng): học sinh
+   không có nút công cụ nào dưới khung (engine đã gỡ belowCenter/belowRight khi
+   có session), chỉ còn mỗi tên act — thầy chốt: đặt nó CHÍNH GIỮA. `.aw-stu`
+   là lớp riêng của play.html nên trang thư viện của thầy không bị ảnh hưởng. */
+.aw-stu .aw-below { grid-template-columns: 1fr; }
+.aw-stu .aw-below-left { text-align: center; margin-left: 0; }
+
 .aw-stage {
   position: relative;
   width: 100%;

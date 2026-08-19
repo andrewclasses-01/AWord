@@ -1483,8 +1483,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Lớp có thể chưa được truyền sang (link cũ, hoặc bài giao mở tay) ⇒ chỉ ghi
   // mỗi tên, đừng để lòi ra dấu gạch cụt lủn.
   if (session && session.playerName) {
+    // Đợt 201 — thầy chốt dấu ngăn là "•" (CHẤN PHONG • B2B), không phải "-".
     const ai = String(session.playerName).trim() +
-      (session.className ? " - " + String(session.className).trim() : "");
+      (session.className ? " • " + String(session.className).trim() : "");
     readyCenter.append(el("div", "aw-ready-ai", escapeText(ai).toUpperCase()));
   }
   // ⭐ Đợt 156 — SHOWDOWN: the team this screen is about to play, and who is in
