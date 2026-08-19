@@ -8,6 +8,94 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 203 (19/8/2026) — ⭐ VÁ NỐT LỖI TRANG TRẮNG CỦA RUNNING WORD: bộ **ÍT TỪ** (≤16 từ/đội) vẫn in ra 4 trang
+
+> ⚠️ Số **202** thuộc một **phiên song song khác** đang chạy cùng lúc (IN TURNS — chia bộ câu cho hai
+> đội; lúc đợt này làm thì phiên đó còn đang sửa dở `core/app.css`, `core/fight.js`,
+> `templates/type-the-answer/type-the-answer.js` và **chưa commit**). Đợt 203 **KHÔNG đụng core**,
+> chỉ sửa **1 hằng số + 1 dòng** trong `templates/running-word/rw-print.js`, và khi commit chỉ đưa
+> vào đúng phần của mình (dùng chỉ mục git, không quét cả cây).
+
+### Lỗi lộ ra từ đâu
+Hôm nay **myActivity v2.5.0** thay màn xem trước bản in bằng màn tự dựng (pdf.js). Quét thử nhiều cỡ
+bộ từ qua chính bộ máy in Chromium thì lộ: **Đợt 193 vá chưa hết**. Đợt 193 chữa được tờ ĐẦY, nhưng
+bộ ÍT TỪ vẫn đẻ trang trắng:
+
+| Số từ mỗi đội | 8 | 10 | 12 | 14 | 16 | 18 | 20 | 30 | 40 | 50 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Trước Đợt 203 | 4 | 4 | 4 | 4 | 4 | **3** | 3 | 3 | 3 | 3 |
+
+Đọc chữ trong PDF: trang 4 chỉ có **23 ký tự** = đúng tiêu đề chạy + chân trang ⇒ **trang TRẮNG**.
+
+### Chẩn đoán — ĐO, KHÔNG ĐOÁN (thí nghiệm tách hai giả thuyết)
+Giữ nguyên tờ giấy, chỉ sửa CSS var ngay trước khi in, rồi đếm số trang PDF:
+
+| Thí nghiệm (8 từ/đội) | Số trang |
+|---|---|
+| nguyên bản | **4** |
+| **giữ nguyên chiều cao hàng, thu nhỏ CHỮ còn 60%** | **3** ✅ |
+| hạ chiều cao hàng còn 90% (chữ theo tỉ lệ cũ) | 3 |
+| giữ nguyên hàng, chữ 78% (= nguyên bản) | 4 |
+| 16 từ, chữ 60% | 3 ✅ · 16 từ nguyên bản: 4 |
+
+⇒ **Thủ phạm là CHỮ, không phải hộp hàng.** Mọi hộp đo đúng bằng `--rw-rowh` (Đợt 193 đã buộc
+`line-height` = chiều cao hàng), và cả khối tờ giấy đo **266.6mm** nằm gọn trong thân trang 269mm.
+Cái thò ra là **EM BOX của font**: font này có vùng chữ ≈ **1.58em**, còn hộp dòng chỉ là `rowH` =
+1/0.78 = **1.282em** ⇒ chữ đứng cao hơn hộp dòng **(1.58−1.282)/2 = 0.149em** ở CẢ TRÊN LẪN DƯỚI.
+Càng ít từ thì hàng càng cao ⇒ chữ càng to ⇒ phần thò càng lớn, và phần thò của **hàng CUỐI** chọc
+qua đáy tờ giấy — Chromium thấy tràn là đẻ nguyên một trang giấy nữa (trang đó rỗng vì mọi hàng đã
+nằm hết ở trang trước, cộng `break-after: page` của khối).
+
+Khớp với ngưỡng đo được:
+| | cỡ chữ | phần thò ≈ 0.149em | chỗ trống còn lại | kết cục |
+|---|---|---|---|---|
+| 16 từ | 12.28mm | **1.83mm** | 1.75mm (tờ CHECK) | **tràn** |
+| 18 từ | 11.03mm | 1.64mm | 1.75mm | vừa |
+
+### Cách sửa (1 hằng số, đúng 1 dòng công thức, KHÔNG đụng CSS)
+`SAFETY_MM = 2.5` của Đợt 193 là **số mm CỐ ĐỊNH**, mà phần thò lại **tỉ lệ với chiều cao hàng** —
+nên nó không thể đủ cho mọi cỡ bộ từ. Thêm chỗ dành cho đúng một phần thò, tính bằng ĐƠN VỊ HÀNG:
+
+```js
+const OVERHANG_ROWS = 0.16;   // 0.149em chữ = 0.116 hàng (x0.78), lấy dư ~1/3
+const rowH = Math.max(ROW_MIN_MM, ROWS_MM / (Math.max(1, count) + OVERHANG_ROWS));
+```
+
+Giá phải trả ở bộ 50 từ (cỡ hay dùng nhất): hàng **5.09mm → 5.07mm**, tức **0.02mm** — mắt không thấy.
+
+⚠️ **KHÔNG chữa bằng cách hạ tỉ lệ chữ 0.78**: muốn 1.58em nằm lọt hộp dòng thì tỉ lệ phải xuống
+**0.63** — chữ nhỏ đi thấy rõ trên MỌI tờ, chỉ để chữa một lỗi chỉ xảy ra ở hàng cuối. Thầy đã chốt
+7/8/2026 là "chữ to hết mức có thể".
+
+### Kiểm chứng (đếm số trang PDF do CHÍNH bộ máy in Chromium sinh ra, qua màn xem trước myActivity)
+| Số từ mỗi đội | 6 | 8 | 10 | 12 | 14 | 16 | 18 | 20 | 30 | 40 | 50 | 60 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Sau Đợt 203 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 | 3 |
+
+**12/12 cỡ đều đúng 3 trang.** NHÌN thật (ảnh chụp màn xem trước, bộ 8 từ): 3 tờ đủ chữ, hàng đầu
+KHÔNG chạm vào gạch chân của khối tiêu đề, hàng cuối cách đáy tờ giấy một khoảng thấy rõ.
+
+### Đã soát cả anh em: RUNNING TEAM **KHÔNG dính** (đo, không đoán)
+`rt-print.js` cùng khuôn (`height` = `line-height` = `--rt-rowh`, chữ = 0.8 × hàng) nên về lý cũng có
+thể tràn. Đo thật với 6/9/12/18/24/45/60/90 từ: **luôn đúng 1 trang**. Lý do: cỡ chữ của nó còn bị
+**bề ngang cột** chặn (`fsByWidth` trong `metrics()`), nên thực tế không bao giờ to tới mức phần thò
+vượt chỗ trống. **Không sửa gì bên đó.**
+
+### File đã sửa
+| File | Việc |
+|---|---|
+| `templates/running-word/rw-print.js` | thêm `OVERHANG_ROWS` + chia cho `count + OVERHANG_ROWS` trong `metrics()`, kèm chú thích số đo |
+
+### Bài học
+- **Ngân sách chỗ trống phải cùng ĐƠN VỊ với thứ nó chừa chỗ.** `SAFETY_MM` cố định chừa chỗ cho một
+  thứ tỉ lệ với chiều cao hàng ⇒ đúng ở một cỡ, sai ở cỡ khác. Đợt 193 đo ở bộ 20–50 từ nên tưởng xong.
+- **`line-height` chỉ buộc được HỘP, không buộc được CHỮ.** Hộp dòng nhỏ hơn vùng chữ của font thì
+  chữ vẫn tràn ra ngoài — và Chromium tính phần tràn đó khi chia trang.
+- **Vá xong phải quét CẢ DẢI giá trị**, đừng chỉ thử lại đúng ca đã hỏng: Đợt 193 thử 20/40/50/60 từ,
+  bỏ sót cả khoảng 6–16 từ.
+
+---
+
 ## Đợt 201 (19/8/2026) — Dấu ngăn `•` trên màn READY + tên act căn giữa ở trang học sinh
 
 **Thầy giao (qua phiên myLesson):** (1) tên trên màn READY đổi thành dạng `CHẤN PHONG • B2B`;

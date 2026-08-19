@@ -73,9 +73,37 @@ const ROWS_MM = PAGE_BODY_MM - HEADING_MM - SAFETY_MM;
 // biggest type that fits instead of stopping at a fixed size.
 const ROW_MIN_MM = 4.2;
 
+// ⭐ 19/8/2026 — ROOM FOR THE GLYPHS THAT HANG OUT OF THE LINE BOX. Đợt 193 stopped
+// the blank pages for a FULL list but not for a SHORT one: 8..16 words per team
+// still printed 4 pages, the 4th carrying nothing but the running head and foot
+// (measured through Chromium's own print engine: 8/10/12/14/16 words -> 4 pages,
+// 18/20/30/40/50 -> 3).
+//
+// WHY, measured rather than guessed (19/8/2026, myActivity's print preview + CDP):
+// with the SAME row height but the type shrunk to 60%, the 4th page disappears —
+// so it is the LETTERS that spill, not the row boxes (every box measures exactly
+// `--rw-rowh`, and the sheet block measures 266.6mm inside a 269mm page body).
+// Đợt 193 tied `line-height` to the row height, which fixes the box; it cannot fix
+// the em box. This font's content area is ~1.58em while the line box is only
+// `rowH` = 1/0.78 = 1.282em of type, so the glyphs stand (1.58-1.282)/2 = 0.149em
+// PROUD of the line box, top and bottom. Fewer words -> taller rows -> bigger type
+// -> a bigger overhang, and the last row's overhang is what pokes through the
+// bottom of the sheet and buys a whole extra sheet of paper:
+//   16 words: type 12.28mm -> overhang ~1.83mm vs 1.75mm of slack -> SPILLS
+//   18 words: type 11.03mm -> overhang ~1.64mm vs 1.75mm of slack -> fits
+// So the reserve cannot be a fixed number of mm the way `SAFETY_MM` is; it has to
+// scale with the row. 0.149em of type is 0.116 of a row (0.149 x 0.78), and the
+// value below is that with a third to spare. Cost at the 50-word cap: row 5.09mm
+// -> 5.07mm, i.e. 0.02mm — nothing an eye can find.
+// ⚠️ Do NOT "fix" this by shrinking the type ratio (0.78) instead: the teacher
+// asked for the biggest words that fit (7/8/2026), and 1.58em of type would need
+// a ratio of 0.63 — visibly smaller words on every sheet, to cure a fault that
+// only ever shows on the last row.
+const OVERHANG_ROWS = 0.16;
+
 // Row height + font size for `count` rows in one column on ONE page.
 function metrics(count) {
-  const rowH = Math.max(ROW_MIN_MM, ROWS_MM / Math.max(1, count));
+  const rowH = Math.max(ROW_MIN_MM, ROWS_MM / (Math.max(1, count) + OVERHANG_ROWS));
   // Bigger type filling the row (teacher's request, 7/8/2026 — was 0.62): the
   // words sit as large as possible with a minimal gap down to the divider line.
   return { rowH, fs: +(rowH * 0.78).toFixed(2) };

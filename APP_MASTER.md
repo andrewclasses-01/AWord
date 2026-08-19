@@ -2821,6 +2821,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > Đợt 192 mục 7).
 
 
+> ⭐ **Đợt 203 (19/8/2026)**: vá NỐT lỗi trang trắng của Running Word — Đợt 193 chỉ chữa được tờ ĐẦY,
+> bộ **≤16 từ/đội vẫn in ra 4 trang** (trang 4 chỉ có tiêu đề+chân trang). Gốc: `line-height` buộc được
+> HỘP DÒNG nhưng không buộc được CHỮ — vùng chữ của font ≈1.58em trong hộp dòng 1.282em nên chữ thò
+> 0.149em ra ngoài; ít từ ⇒ hàng cao ⇒ chữ to ⇒ phần thò của hàng CUỐI chọc qua đáy tờ. Vá bằng
+> `OVERHANG_ROWS = 0.16` trong `rw-print.js` (chừa chỗ tính theo ĐƠN VỊ HÀNG, vì `SAFETY_MM` cố định
+> không thể đúng cho mọi cỡ). Đo lại 12/12 cỡ 6–60 từ đều 3 trang; Running Team đo ra KHÔNG dính.
+> ⚠️ Số **202** thuộc một phiên song song khác (IN TURNS), lúc Đợt 203 làm thì phiên đó chưa commit.
+
 > ⭐ **Đợt 193 (18/8/2026) — đã COMMIT `5ef9d76`**: vá lỗi in CÓ SẴN của Running Word (3 tờ ra 6 trang,
 > xen kẽ 3 trang trắng) — `templates/running-word/running-word.css` + `rw-print.js`, **không đụng core**.
 > Gốc: hàng in có `height` cố định mà `line-height: normal` ⇒ ô cao hơn hàng, ô hàng cuối thò 1.5mm qua
