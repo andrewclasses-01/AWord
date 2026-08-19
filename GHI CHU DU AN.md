@@ -10,6 +10,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 203 (19/8/2026) — ⭐ VÁ NỐT LỖI TRANG TRẮNG CỦA RUNNING WORD: bộ **ÍT TỪ** (≤16 từ/đội) vẫn in ra 4 trang
 
+✅ **ĐÃ COMMIT `13aba93` + PUSH + LIVE** — đối chiếu **mã băm SHA-256 của `rw-print.js`**: bản
+`git show HEAD:` và bản trên `aword.andrewclasses.com` **khớp nhau** (`b95c3c23a48ebbf6…`), và hỏi
+lại chính file live thì có `OVERHANG_ROWS` (2 lần). Thầy duyệt cùng lúc với myActivity v2.6.0.
+⚠️ Lúc commit, **6 file của phiên song song (Đợt 202) vẫn đang sửa dở và chưa commit** — đợt này chỉ
+nạp vào chỉ mục git đúng 3 file của mình (`rw-print.js`, và phần thêm vào 2 file hồ sơ), giữ nguyên
+cây làm việc của họ.
+
 > ⚠️ Số **202** thuộc một **phiên song song khác** đang chạy cùng lúc (IN TURNS — chia bộ câu cho hai
 > đội; lúc đợt này làm thì phiên đó còn đang sửa dở `core/app.css`, `core/fight.js`,
 > `templates/type-the-answer/type-the-answer.js` và **chưa commit**). Đợt 203 **KHÔNG đụng core**,
