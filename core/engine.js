@@ -571,10 +571,45 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       return Promise.resolve(doSwitchTemplate(type)).then(() => true, () => false)
         .finally(() => { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); });
     },
+    // ⭐⭐ Đợt 206 (19/8/2026, teacher: "mở mode nhiều bảng thì đồng bộ cả LOẠI
+    // act") — this used to be a bare merge-and-replay, and it had a hole that
+    // was MEASURED, not guessed (`scratch/mirror206.html`): on an act that had
+    // been through **Change template** (or a RUNNING / IPA play mode) the clue
+    // set did not follow at all, and worse, this still returned `true`, so
+    // myActivity drew its ✓ over a pane that was playing something else.
+    //   The cause is that convert.js BAKES one clue set into the converted act's
+    // content. Storing "now it's VI1" on that copy moves nothing; the choice has
+    // to go onto the ORIGIN and be re-converted from there — which is exactly
+    // what applySubActSelection() exists for, and what Options ▸ Apply has
+    // always done on this same pane. The bridge simply never went through that
+    // door. Now both doors are the same door.
+    // ⚠️ ORDER MATTERS: applySubActSelection() reads the choice from `opts`, not
+    // from `activity.options`, but the Object.assign above must still happen
+    // first — a converted act keeps its non-selector options on the copy.
+    // ⚠️ The mute is what stops the re-emitted TPL from bouncing back out of
+    // doSwitchTemplate() and around the panes again.
     applyOptions(opts) {
       if (!opts) return false;
       awSyncMute++;
-      try { if (!activity.options) activity.options = {}; Object.assign(activity.options, opts); replayCurrent(); return true; }
+      try {
+        if (!activity.options) activity.options = {};
+        // ⭐ REPLACE, not merge. Each view of an act carries its OWN set of
+        // options (Đợt 147), and Options ▸ Apply on the sending pane DELETES
+        // every key the new view does not have. A merge here left the other
+        // panes carrying a leftover from a view nobody is looking at — a
+        // `lives: 3` that nothing on screen explains. The payload is the whole
+        // of the sender's `activity.options`, so equality is the honest result.
+        // ⚠️ MUTATE, never replace the object: libAct, the mistakes act and the
+        // fight boards all hold this same one.
+        Object.keys(activity.options).forEach(k => { if (!(k in opts)) delete activity.options[k]; });
+        Object.assign(activity.options, opts);
+        // Converted act + a different sub-act ⇒ this takes the rebuild over and
+        // hands back a promise; we report success only once it has landed.
+        const converting = applySubActSelection(opts);
+        if (converting) return converting.then(() => true, () => false);
+        replayCurrent();
+        return true;
+      }
       finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
     },
     setTheme(id) {
@@ -2714,9 +2749,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `viewKeyOf` is null for an act with neither clue sets nor halves — i.e. the
   // entire pre-Đợt-145 library — so both sides are null and this never fires.
   //
-  // @returns {boolean} TRUE when it has TAKEN OVER the restart. The caller must
-  //          then do nothing else: a second restart on top of doSwitchTemplate()
-  //          would race the conversion it just started.
+  // @returns {Promise|false} A PROMISE when it has TAKEN OVER the restart — the
+  //          caller must then do nothing else, because a second restart on top
+  //          of doSwitchTemplate() would race the conversion it just started.
+  //          `false` when there was nothing for it to do.
+  //          ⭐ Đợt 206 — it used to return the bare `true` and drop the promise
+  //          on the floor. Both original callers only ask "did you take over?",
+  //          and a promise is truthy, so they are unchanged; but myActivity's
+  //          bridge needs to be able to WAIT for the rebuild, or its per-pane
+  //          checkmark would be drawn while the pane is still converting.
   function applySubActSelection(selState) {
     // subActSource() only hands back the origin for an act converted FROM it, so
     // this inequality IS the converted case.
@@ -2728,8 +2769,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (!convSrc.options) convSrc.options = {};
     VIEW_SELECTOR_KEYS.forEach(k => { if (selState[k] !== undefined) convSrc.options[k] = selState[k]; });
     closeToolPanel(false);
-    doSwitchTemplate(activity.type);   // re-converts from the origin, then restarts
-    return true;
+    return Promise.resolve(doSwitchTemplate(activity.type));   // re-converts from the origin, then restarts
   }
 
   // ----- SHOWDOWN panel (Đợt 155) -----
