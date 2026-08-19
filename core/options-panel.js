@@ -623,8 +623,32 @@ export function buildOptionsBody(host, {
 
 
 /**
- * The CONTENT row — TEXT | VOICE on the left, the clue sets of whichever half
- * is active on the right (Đợt 145's design, extracted here in Đợt 155).
+ * The CONTENT row — TEXT | VOICE | PRONUNCIATION on the left, the clue sets of
+ * whichever half is active on the right (Đợt 145's design, extracted here in
+ * Đợt 155, third button added in Đợt 205).
+ *
+ * ⭐⭐ Đợt 205 (19/8/2026, teacher) — PRONUNCIATION MOVED UP TO THE PARENT ROW.
+ * It used to be the fifth CHIP under Text (Đợt 190 imported the IPA column as a
+ * clue set); it is now a button beside Text and Voice, because it is not "one
+ * more written clue to choose from" — it is a different way to play the act, the
+ * way Voice is. Picking it makes the three buttons STRETCH across the whole row
+ * (there are no sub-sets to show under it); Text or Voice makes them contract
+ * again to give the clue-set chips their half back.
+ *
+ * ⭐ WHAT IS STORED DID NOT CHANGE ONE BYTE, and that is the point.
+ * PRONUNCIATION is still `contentMode:"text"` + `contentVariant:"pron"` — the
+ * exact pair the fifth chip wrote. So:
+ *   • `activeVariant()`, `viewKeyOf()`, `voiceView()`, the voice preload gate,
+ *     Anagram's Text-mode rule and convert.js all keep working UNTOUCHED — a
+ *     third value of `contentMode` would have had to be taught to six readers,
+ *     each of which tests `=== "text"` or `=== "voice"` today;
+ *   • acts SAVED BEFORE this đợt with the pron chip picked simply light the new
+ *     button up. No migration, nothing to go stale (`core/options-migrate.js`
+ *     is not involved);
+ *   • `text:pron` was already its own view key, so the per-view options of
+ *     Đợt 147 carry over as they are.
+ * ⛔ Do NOT "tidy this up" into `contentMode:"pron"`. The gain would be cosmetic
+ * and the cost is six readers plus every act already in the library.
  *
  * @param {Element} swHost  where the row is appended
  * @param {object}  contentSwitch  { shown, variants, voiceVariants, labelOf,
@@ -643,20 +667,49 @@ export function buildOptionsBody(host, {
  */
 export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
-  const variants = contentSwitch.variants || null;
+  const allVariants = contentSwitch.variants || null;
+  // PRONUNCIATION is a PARENT button now, so it must not also stand in the chip
+  // row underneath — it would be the same choice offered twice, one of them
+  // silently re-lighting the other. `variants` from here on is the TEXT half's
+  // chips only; the stored value "pron" is still a perfectly legal
+  // `contentVariant` and `activeVariant()` still returns it (it reads
+  // `content.variants`, which this does not touch).
+  // ⚠️ ...and only when there is something LEFT under Text once `pron` moves
+  // out. An act whose ONLY clue set is the transcription would otherwise get a
+  // TEXT button standing over an empty list — tapping it could not name a set
+  // to play, so it would light up while the game kept showing IPA. The
+  // importer cannot build such an act (a vocabulary block is found BY its clue
+  // column, so a written set always exists), but a hand-edited one could.
+  const hasPron = !!(allVariants && allVariants.includes("pron") && allVariants.some(k => k !== "pron"));
+  const variants = hasPron ? allVariants.filter(k => k !== "pron") : allVariants;
   const voiceVariants = contentSwitch.voiceVariants || variants;
   const labelOf = contentSwitch.labelOf || (k => String(k || "").toUpperCase());
-  let mode = shown;
-  let pickedText = contentSwitch.variant || (variants ? variants[0] : null);
+  // Which of the three is lit: VOICE wins on contentMode, PRONUNCIATION on the
+  // resolved clue set being `pron`, TEXT otherwise.
+  let mode = shown === "voice" ? "voice" : (hasPron && contentSwitch.variant === "pron" ? "pron" : "text");
+  // The TEXT half never remembers `pron` as "the set I was reading" — coming
+  // back from PRONUNCIATION must land on a real written set, not bounce
+  // straight back to where it came from.
+  const firstText = variants && variants.length ? variants[0] : null;
+  let pickedText = (contentSwitch.variant && contentSwitch.variant !== "pron") ? contentSwitch.variant : firstText;
   let pickedVoice = contentSwitch.voiceVariant || (voiceVariants ? voiceVariants[0] : null);
 
-  const row = el("div", "aw-opt-content" + (variants ? " has-variants" : ""));
-  const switchEl = el("div", "aw-opt-switch" + (shown === "voice" ? " is-voice" : ""));
+  // `is-3mode` — three mode buttons need more of the row than two do, or the
+  // long label is squeezed down to ~8px (measured, Đợt 205). The split lives in
+  // app.css; this only says which shape the row is.
+  const row = el("div", "aw-opt-content" + (allVariants ? " has-variants" : "") + (hasPron ? " is-3mode" : ""));
+  const switchEl = el("div", "aw-opt-switch");
   switchEl.append(el("div", "aw-opt-switch-thumb"));
-  const textBtn = el("button", "aw-opt-switch-btn" + (shown === "text" ? " is-active" : ""), "Text");
-  const voiceBtn = el("button", "aw-opt-switch-btn" + (shown === "voice" ? " is-active" : ""), "Voice");
-  textBtn.type = "button"; voiceBtn.type = "button";
-  switchEl.append(textBtn, voiceBtn);
+  const MODES = hasPron
+    ? [["text", "Text"], ["voice", "Voice"], ["pron", "Pronunciation"]]
+    : [["text", "Text"], ["voice", "Voice"]];
+  const modeBtns = new Map();
+  MODES.forEach(([key, label]) => {
+    const b = el("button", "aw-opt-switch-btn" + (mode === key ? " is-active" : ""), label);
+    b.type = "button";
+    modeBtns.set(key, b);
+    switchEl.append(b);
+  });
 
   const half = el("div", "aw-opt-variants");
   // ⭐ Đợt 150 — ONE seg holding EVERY clue set, built once and never torn
@@ -691,12 +744,30 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     });
     half.append(seg);
   }
+  // The switch's own thumb rides on `--n`/`--i` the way `.aw-seg` does, so it
+  // is not welded to exactly two buttons any more (Đợt 205). Before this the
+  // travel was a fixed `.is-voice { translateX(100%) }` rule in app.css.
+  const paintSwitch = () => {
+    switchEl.style.setProperty("--n", String(MODES.length));
+    switchEl.style.setProperty("--i", String(Math.max(0, MODES.findIndex(([k]) => k === mode))));
+    modeBtns.forEach((b, k) => b.classList.toggle("is-active", k === mode));
+  };
   const paintHalf = () => {
     if (!seg) return;
-    const list = (mode === "voice" ? voiceVariants : variants) || [];
+    // PRONUNCIATION has no sub-sets: the IPA transcription is ONE string per
+    // word, so under that button there is nothing to choose. Hence the empty
+    // list — which is also what makes the row stretch (see below).
+    const list = (mode === "voice" ? voiceVariants : mode === "pron" ? [] : variants) || [];
     // One choice is not a choice (the Đợt 143 OPT-IN rule): under 2 sets the
     // whole half fades out instead of showing a lone dead button.
     half.classList.toggle("is-empty", list.length < 2);
+    // ⭐ Đợt 205 — and when the half has nothing to say, it gives its width
+    // BACK: the row goes to one track and the three mode buttons stretch
+    // across it (`.is-wide` animates `grid-template-columns`, app.css).
+    // ⚠️ This also fires for an act with exactly ONE written clue set, which
+    // used to sit beside a permanently blank half — deliberate: dead space
+    // that never fills is the same problem the OPT-IN rule is about.
+    row.classList.toggle("is-wide", list.length < 2);
     const picked = mode === "voice" ? pickedVoice : pickedText;
     const current = list.includes(picked) ? picked : list[0];
     seg.style.setProperty("--n", String(Math.max(1, list.length)));
@@ -708,26 +779,27 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   };
 
   const pick = value => {
-    sel.contentMode = value;
+    // ⭐ PRONUNCIATION IS STILL TEXT MODE — see the header note. The act plays
+    // its written `pron` clue set; nothing downstream learns a third mode.
+    sel.contentMode = value === "pron" ? "text" : value;
     mode = value;
-    switchEl.classList.toggle("is-voice", value === "voice");
-    textBtn.classList.toggle("is-active", value === "text");
-    voiceBtn.classList.toggle("is-active", value === "voice");
+    paintSwitch();
     // ⚠️ Picking VOICE must also STATE which set it plays. Leaving
     // `voiceVariant` unwritten would let a stored value from another act's
     // shape (or none at all) decide, and the teacher would hear a clue set
     // that isn't the one lit up in front of them.
-    if (variants) {
+    if (allVariants) {
       if (value === "voice" && pickedVoice) sel.voiceVariant = pickedVoice;
       if (value === "text" && pickedText) sel.contentVariant = pickedText;
+      if (value === "pron") sel.contentVariant = "pron";
     }
     paintHalf();
     sound.click();
-    onViewChange?.();   // Đợt 147 — TEXT and VOICE are separate views too
+    onViewChange?.();   // Đợt 147 — TEXT, VOICE and PRONUNCIATION are separate views
   };
-  textBtn.onclick = () => pick("text");
-  voiceBtn.onclick = () => pick("voice");
+  modeBtns.forEach((b, k) => { b.onclick = () => pick(k); });
 
+  paintSwitch();
   paintHalf();
   row.append(switchEl, half);
   swHost.append(row);

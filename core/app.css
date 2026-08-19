@@ -962,35 +962,83 @@ html.aw-nhung .aw-below { display: none; }
 .aw-opt-choice input { accent-color: #2f7bff; width: 15px; height: 15px; cursor: pointer; }
 
 /* Content Text/Voice switch (Đợt 132, teacher: "nút chuyển đẹp và mượt hơn",
-   replaces the old plain radio pair) — two big buttons sharing a track, a
-   sliding white "thumb" underneath marks which one is active. The thumb is a
-   real element (not a background-position trick) so its move is one clean
+   replaces the old plain radio pair) — big buttons sharing a track, a sliding
+   white "thumb" underneath marks which one is active. The thumb is a real
+   element (not a background-position trick) so its move is one clean
    `transform` transition — same easing family as the rest of the app's
    panel/menu motion (cubic-bezier(.22,.9,.3,1), see core/HUONG DAN CORE.md's
-   design-token notes). */
+   design-token notes).
+   ⭐ Đợt 205 — TWO OR THREE buttons, not exactly two: PRONUNCIATION joined
+   Text and Voice. The count and the lit index arrive as `--n` / `--i` from
+   core/options-panel.js (paintSwitch), which is the same mechanism `.aw-seg`
+   and `.aw-opt-setswitch` already use — so the thumb's WIDTH animates on the
+   same curve as its travel when the button count differs between acts.
+   ⛔ The old welded rule `.aw-opt-switch.is-voice .aw-opt-switch-thumb
+   { transform: translateX(100%) }` is GONE. Anything still adding `.is-voice`
+   would now do nothing at all — the class is not read anywhere. */
 .aw-opt-switch {
   position: relative;
-  display: grid; grid-template-columns: 1fr 1fr;
+  display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   background: #eef2f7;
   border-radius: 12px;
   padding: 4px;
   margin-bottom: 14px;
+  /* ⭐⭐ Đợt 205 — THIS ONE LINE FIXES TWO MEASURED FAULTS, and it is the only
+     reason the third button fits at all. Measured on the bench before it went
+     in (`scratch/pron205.html`): "PRONUNCIATION" overflowed its button at BOTH
+     panel widths, and the panel — which is `width: max-content` — was dragged
+     from 410px out to its 580px cap by that one long word.
+     `container-type: inline-size` does both jobs at once:
+       1. it makes this box a QUERY CONTAINER, so the labels below size in
+          `cqw` — a share of THIS TRACK, which is the only width that decides
+          whether they fit. (`vw` was tried first and is worthless here: it
+          measures the WINDOW, so on a wide screen the clamp never engaged.)
+       2. `contain: inline-size` comes with it, so the buttons' text stops
+          feeding the panel's intrinsic width — the panel goes back to being
+          sized by its options grid, exactly as before this đợt.
+     ⚠️ It also creates a STACKING CONTEXT (`contain: layout`). Safe HERE and
+     only here: this is a leaf inside `.aw-tool-panel`, never an ancestor of it
+     — see the ⛔⛔ popover-layering contract in core/HUONG DAN CORE.md before
+     putting this property anywhere further out. */
+  container-type: inline-size;
 }
 .aw-opt-switch-thumb {
   position: absolute; top: 4px; left: 4px;
-  width: calc(50% - 4px); height: calc(100% - 8px);
+  width: calc((100% - 8px) / var(--n, 2)); height: calc(100% - 8px);
   background: #fff;
   border-radius: 9px;
   box-shadow: 0 2px 8px rgba(31,42,68,.14);
-  transition: transform .24s cubic-bezier(.22,.9,.3,1);
+  transform: translateX(calc(var(--i, 0) * 100%));
+  transition: transform .24s cubic-bezier(.22,.9,.3,1), width .24s cubic-bezier(.22,.9,.3,1);
   pointer-events: none;
 }
-.aw-opt-switch.is-voice .aw-opt-switch-thumb { transform: translateX(100%); }
 .aw-opt-switch-btn {
   position: relative; z-index: 1;
+  min-width: 0;
   border: none; background: transparent;
-  padding: 10px 0;
-  font-size: 13px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  padding: 10px 2px;
+  /* PRONUNCIATION is 13 characters against Text's 4, and in the Text/Voice
+     shape this row is only half the panel wide. The letters give way, not the
+     layout: `3.7cqw` is a share of the SWITCH (see its `container-type` above),
+     so it shrinks as the row contracts and grows back — continuously, on the
+     same 240ms the width animates — as it stretches. 3.7 is measured, not
+     guessed: "PRONUNCIATION" at weight 800 + .05em tracking runs ≈ 8.7 × the
+     font size, and each button owns a third of the track.
+     `min-width:0` lets the grid track shrink at all (a grid item's default
+     `auto` minimum is its content).
+     ⚠️ THE NUMBER IS MEASURED, and the first guess was wrong: at weight 800 with
+     .05em tracking the word runs **10.118 ×** the font size (probe on the real
+     panel, not arithmetic). Fitting a third of the track then needs
+     `(track − 20) / 30.35` ≈ 3.29cqw; 3.15 leaves a little air. */
+  font-size: clamp(8px, 3.15cqw, 13px);
+  /* Below ~430px of panel even 8px does not fit (a narrow window: the panel is
+     `min(94vw, 580px)`). 8px is the floor because smaller is not reading, it is
+     decoration — so past that point the WORD gives way, clipped with an ellipsis
+     INSIDE its own button. What must never happen is the button spilling over
+     the track and shoving the row sideways, and that is what these two lines
+     guarantee. */
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
   color: #8b93a1;
   cursor: pointer;
   border-radius: 9px;
@@ -1089,7 +1137,12 @@ html.aw-nhung .aw-below { display: none; }
    way `.aw-seg` does it, so it is not welded to exactly two choices — and so
    the fixed `.is-voice { translateX(100%) }` rule of the Text/Voice switch
    stays untouched. That is the whole reason this is its own class instead of a
-   modifier on that one. */
+   modifier on that one.
+   ⚠️ Đợt 205 — that reason has EXPIRED: `.aw-opt-switch` now drives its own
+   thumb by `--i`/`--n` exactly like this, so the two rules below are simply the
+   same values written twice. Harmless (identical, and this class is never
+   combined with the other), left in place rather than untangling a working
+   Đợt 146 row for no gain — but if these two ever need changing, change BOTH. */
 .aw-opt-setswitch {
   position: relative;
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
@@ -1114,8 +1167,31 @@ html.aw-nhung .aw-below { display: none; }
 .aw-opt-content .aw-opt-switch { margin-bottom: 0; }
 .aw-opt-content.has-variants {
   display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center;
+  /* ⭐ Đợt 205 — THE ROW BREATHES BETWEEN TWO SHAPES (teacher: "khi chọn
+     PRONUNCIATION, 3 nút sẽ trải dài, khi chọn TEXT hoặc VOICE mới co lại để
+     hiện các mục con — animation mượt"). Both shapes keep the SAME NUMBER OF
+     TRACKS, which is what makes `grid-template-columns` interpolable at all:
+     `1fr 1fr` → `1fr 0fr` is one continuous motion, whereas dropping to a
+     one-track template would snap. Same duration/easing as the thumb above, so
+     the buttons widening and the thumb growing read as ONE movement. */
+  transition: grid-template-columns .24s cubic-bezier(.22,.9,.3,1),
+              gap .24s cubic-bezier(.22,.9,.3,1);
 }
-.aw-opt-variants { min-width: 0; display: flex; }
+/* THREE mode buttons need more than half the row, or the longest of them is
+   driven down to ~8px — measured, see GHI CHU DU AN.md Đợt 205. 1.7fr buys
+   "PRONUNCIATION" ~10.5px while still leaving the four clue-set chips ~200px,
+   which is more than they need (a chip is ~35px of text). */
+.aw-opt-content.has-variants.is-3mode { grid-template-columns: 1.7fr 1fr; }
+/* Nothing to choose under the lit button (PRONUNCIATION always; TEXT or VOICE
+   when the act has a single set on that side) — the clue-set half hands its
+   width back and the mode buttons take the whole row.
+   ⚠️ Must stay BELOW `.is-3mode`: the two selectors weigh the same, so this one
+   only wins on a row carrying both classes because it comes later. */
+.aw-opt-content.has-variants.is-wide { grid-template-columns: 1fr 0fr; gap: 0; }
+/* `overflow:hidden` is LOAD-BEARING: at `0fr` the track is zero wide but the
+   chips inside still have their own width, and without this they spill out
+   over the panel's padding while fading. */
+.aw-opt-variants { min-width: 0; display: flex; overflow: hidden; }
 .aw-opt-variants .aw-seg { width: 100%; }
 
 /* (Đợt 143 — `.aw-opt-slider` / `-slidval` / `-time` / `-cd` / `-hint` / `-2up`
@@ -1603,6 +1679,8 @@ html.aw-nhung .aw-below { display: none; }
   .aw-optc-chip, .aw-seg-btn, .aw-hstep,
   /* Đợt 148 — the panel/body swap and the Anagram accordion's spacing */
   .aw-swapbox, .aw-swap-out, .aw-swap-in, .aw-opt-variants,
+  /* Đợt 205 — the content row stretching/contracting between its two shapes */
+  .aw-opt-content.has-variants,
   .aw-ed-settabs-thumb, .aw-anagram-penhost { transition-duration: .01ms; }
 }
 
@@ -1627,7 +1705,10 @@ html.aw-nhung .aw-below { display: none; }
 .aw-tool-panel.is-compact-opts .aw-opt-choice { font-size: 12px; gap: 4px; }
 .aw-tool-panel.is-compact-opts .aw-opt-choice input { width: 12px; height: 12px; }
 .aw-tool-panel.is-compact-opts .aw-opt-switch { margin-bottom: 8px; padding: 3px; }
-.aw-tool-panel.is-compact-opts .aw-opt-switch-btn { padding: 5px 0; font-size: 11px; }
+/* ⚠️ Đợt 205 — the CEILING drops to 11px, but the cqw floor stays: a flat
+   `font-size: 11px` here would put "PRONUNCIATION" back outside its button in
+   the compact panel, which is the narrowest one there is. */
+.aw-tool-panel.is-compact-opts .aw-opt-switch-btn { padding: 5px 0; font-size: clamp(9px, 3.7cqw, 11px); }
 /* Đợt 140 — the same emergency shrink applied to the v2 grid. It should now
    almost never fire (the redesign measured 36% shorter), but fight mode plus a
    template with many extras can still get there, and a panel that silently
