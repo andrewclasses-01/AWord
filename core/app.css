@@ -1579,6 +1579,16 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-check-in:checked + .aw-check-box::after { transform: rotate(43deg) scale(1); opacity: 1; }
 .aw-check-in:focus-visible + .aw-check-box { box-shadow: 0 0 0 3px rgba(47,123,255,.35); }
+/* Đợt 202 — a checkbox that does not adjust the game but CHANGES it (today: the
+   match's "In turns", which deals the question pool out between the two boards)
+   wears the app's own green #16a34a, the same one every other "this is the good
+   one" mark in the app uses. Text bolder as well as green: on the 86" panel from
+   the back of a room colour alone is not a difference (the teacher asked for it
+   "nổi bật"). Modifier only — the box, the tick and the focus ring keep the
+   shared shape, so this stays one line to remove if the idea goes away. */
+.aw-check.is-green .aw-check-t { color: #16a34a; font-weight: 800; }
+.aw-check.is-green .aw-check-in:checked + .aw-check-box { background: #16a34a; border-color: #16a34a; }
+.aw-check.is-green .aw-check-in:focus-visible + .aw-check-box { box-shadow: 0 0 0 3px rgba(22,163,74,.35); }
 /* bottom margin = its own 1px + the 9px that used to be the grid's row-gap
    (Đợt 148 moved that gap onto the cells — see `.aw-opt-grid` above), so the
    separator sits exactly where it always has. */

@@ -114,7 +114,15 @@ export const FIGHT_DEFAULTS = {
   // Find the match already use at the left end of their sliders — see
   // normLives()). Default 0.1 = the hard-coded tie window this replaces, so an
   // act that has never seen the new control behaves byte for byte as before.
-  fightTieWindow: 0.1
+  fightTieWindow: 0.1,
+  // ⭐⭐ Đợt 202 (teacher, 19/8/2026) — IN TURNS. The question pool is DEALT OUT
+  // between the two boards instead of being played by both: each team gets its
+  // own half and no question ever appears on both boards. TWO gates guard it
+  // (see `turnsMode` below): this option AND the template's own `tpl.fightTurns`
+  // opt-in — today Type the answer alone, at the teacher's request ("tạm thời
+  // áp dụng với duy nhất type the answer để tôi thử nghiệm trước").
+  // OFF by default, so every act ever saved keeps the behaviour it has today.
+  fightTurns: false
 };
 
 // 0 means ∞ — everything that needs a real number of milliseconds goes through
@@ -131,7 +139,8 @@ export function speedBonusApplies(o) { return tieWindowMsOf(o) >= WAIT_BAR_MIN_M
 
 export function fightOptionsFrom(options = {}) {
   const o = { ...FIGHT_DEFAULTS };
-  ["fightContent", "fightFirstRule", "fightSpeedBonus", "fightLateScores", "fightTieWindow"].forEach(k => {
+  ["fightContent", "fightFirstRule", "fightSpeedBonus", "fightLateScores", "fightTieWindow",
+   "fightTurns"].forEach(k => {
     if (options[k] !== undefined) o[k] = options[k];
   });
   // ⭐ Đợt 187 — the ceiling went 20 -> 100 (teacher: "kéo từ 1 đến 100 điểm").
@@ -145,6 +154,10 @@ export function fightOptionsFrom(options = {}) {
   const tw = Number(o.fightTieWindow);
   o.fightTieWindow = tw === 0 ? 0
     : (Number.isFinite(tw) ? Math.max(0.1, Math.min(3, Math.round(tw * 10) / 10)) : 0.1);
+  // Đợt 202 — a plain flag, but forced to a real boolean: it is read in three
+  // places that all mean "is this a dealt match", and a stray "false" string off
+  // a hand-edited act would make every one of them silently say yes.
+  o.fightTurns = o.fightTurns === true;
   return o;
 }
 
@@ -181,6 +194,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // ⚠️ `playAct` is what the BOARDS play; `activity` is what OPTIONS write to
   // and what gets saved. Never swap the two.
   const playAct = resolveActivity(activity);
+
+  // ⭐ Đợt 202 — THE ITEM POOL IS READ HERE, AT THE TOP. It used to be read down
+  // beside actFor(), which is still where the two boards' ORDERS are built; only
+  // the pool itself moved up, because IN TURNS has to know how many questions
+  // exist before the round rules below can be decided (a pool of one cannot be
+  // dealt out to two boards). `itemsKey` is the per-template field name that
+  // holds the playable array — "items" for Anagram, "questions" for Quiz — the
+  // same field core/mistakes.js reads.
+  const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
+  const srcItems = (playAct.content && playAct.content[itemsKey]) || [];
 
   // ----- shell -----
   const wrap = el("div", "aw-fight");
@@ -444,6 +467,25 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // hỏi tiếp theo mà không đảo lượt"); only when nobody ended wrong does the turn
   // alternate. In a "lock" game the locked team IS the wrong one.
   const pickMode = (getTemplate(activity.type)?.fightPick) || null;
+  // ⭐⭐ IN TURNS (Đợt 202) — ONE pool, DEALT OUT: each board plays its own half
+  // and no question is ever on both boards at once. Three gates, all of which
+  // must hold, and the last two are why this is a `const` and not just the
+  // option:
+  //   • the teacher ticked it (`fo.fightTurns`);
+  //   • the TEMPLATE opted in (`tpl.fightTurns`) — the opt-in law of Đợt 143.
+  //     Only Type the answer declares it today, so an act that carries the
+  //     option and is then switched to another template quietly plays as a
+  //     normal match instead of dealing a pool the new template never agreed to;
+  //   • there are at least 2 questions to deal — below that, one board would be
+  //     handed an EMPTY list and mount with nothing on it.
+  // ⚠ Pick-turn games are excluded outright: their whole round model is "both
+  // boards open the SAME box", which a dealt pool has nothing to open.
+  // `turnsTpl` = CAN this match offer In turns at all (the last two gates);
+  // it is also exactly what decides whether the checkbox is built in the Options
+  // panel, so the control and the behaviour can never disagree about who is
+  // eligible. `turnsMode` = and is it actually ON.
+  const turnsTpl = !!getTemplate(activity.type)?.fightTurns && !pickMode && srcItems.length >= 2;
+  const turnsMode = turnsTpl && fo.fightTurns === true;
   let pickTurn = 0;               // which side may choose the next item
   let pickOpen = !!pickMode;      // true while both boards wait on their grid for a choice
   let playedRounds = 0;           // items actually played — pick mode counts these, not roundIndex
@@ -456,21 +498,38 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // fixed window, so an act that picked up a 3s delay while it was an Anagram and
   // was then switched to Open the box mid-match cannot quietly carry that delay
   // into rules the teacher settled separately at Đợt 183.
-  const tieMs = pickMode ? TIE_WINDOW_MS : tieWindowMsOf(fo);
-  const tieUnlimited = !pickMode && fo.fightTieWindow === 0;
+  // ⭐⭐ Đợt 202 — IN TURNS IS SEALED OFF FROM ALL FIVE RACE CONTROLS, the same
+  // way pick-turn games are sealed off from TIME DELAY. This is not tidiness: the
+  // two boards hold DIFFERENT questions in a dealt match, so every one of those
+  // rules is about a race that is not being run.
+  //   • Time delay / Speed bonus  "who got to the SAME word first" — there is no
+  //     same word to be first at, so the window is pinned to the old invisible
+  //     0.1s and no wait bar is drawn.
+  //   • Round rule (lock)          locking the slower team takes away ITS OWN
+  //     question, which the other team never had a claim on.
+  //   • Slower team keeps points   for the same reason, a team always keeps what
+  //     its own question earned.
+  //   • Fight content              the deal decides the content outright.
+  // The Options panel greys all five while In turns is ticked (see buildOptions),
+  // so nothing on screen claims to decide something these lines have already
+  // settled — the dead-control trap of Đợt 143.
+  const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
+  const tieUnlimited = !pickMode && !turnsMode && fo.fightTieWindow === 0;
   // The wait bar is drawn only for the ORDINARY round model. The teacher went
   // through the three pick-turn games one by one: "open the box không cần …
   // crossword không cần … find the match có cần" — and Find the match is an
   // ordinary-round game (it has no `fightPick`), so `!pickMode` is the whole test.
-  const waitBarMs = (!pickMode && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
+  const waitBarMs = (!pickMode && !turnsMode && tieMs >= WAIT_BAR_MIN_MS) ? tieMs : 0;
   // The bonus is off entirely at 0.1s — see speedBonusApplies(). Resolved once
   // here so the two award sites can not disagree about it.
   // In a pick-turn game the bonus is untouched by all this — it keeps the plain
   // "reward whoever got there first" meaning it has had since Đợt 124, because
   // the control that would have switched it off (TIME DELAY) is not offered there.
-  const speedBonus = (pickMode || speedBonusApplies(fo)) ? fo.fightSpeedBonus : 0;
-  const lockLoser = () => (pickMode ? pickMode === "lock"
-    : (tieUnlimited ? true : fo.fightFirstRule === "lock"));
+  const speedBonus = turnsMode ? 0
+    : ((pickMode || speedBonusApplies(fo)) ? fo.fightSpeedBonus : 0);
+  const lockLoser = () => (turnsMode ? false
+    : (pickMode ? pickMode === "lock"
+      : (tieUnlimited ? true : fo.fightFirstRule === "lock")));
   // Does a team that finishes correctly AFTER the round is won keep what it
   // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
   // điểm"), so pick mode fixes it instead of reading the option.
@@ -480,7 +539,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // so "slower team keeps points" has nothing left to decide. Leaving them
   // switchable would have put two live controls in the panel that could not
   // change anything on screen, the dead-control trap of Đợt 143.
-  const lateScores = () => (pickMode ? false : (tieUnlimited ? false : fo.fightLateScores !== false));
+  const lateScores = () => (turnsMode ? true
+    : (pickMode ? false : (tieUnlimited ? false : fo.fightLateScores !== false)));
 
   // ----- the wait bar (Đợt 187) — one per board, drawn by core/engine.js down in
   // its own bottom row, because that is the only place that knows where this
@@ -693,7 +753,19 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     if (roundIndex + 1 >= total) { endMatch(); return; }
     roundIndex++;
     snapRoundBase();   // Đợt 183 — what a "slower team" freeze will pin them to
-    boards.forEach(b => { if (b) { b.lock(false); b.goToIndex(roundIndex); } });
+    boards.forEach((b, i) => {
+      if (!b) return;
+      // ⭐ Đợt 202 — an ODD pool leaves one board a question short (81 dealt out is
+      // 41 vs 40) and the teacher's rule is that the spare is PLAYED, not dropped
+      // ("nếu lẻ thì lệch 1 cũng ok, không bỏ") — so the match runs to the LONGER
+      // half (`total` above is already the max) and the short board simply has no
+      // question this round. It stays locked and is marked as having had its go,
+      // or the round would sit waiting out the full 20s walk-away backstop for a
+      // team that has nothing left to answer.
+      if (turnsMode && (b.total || 0) <= roundIndex) { roundDone[i] = true; b.lock(true); return; }
+      b.lock(false);
+      b.goToIndex(roundIndex);
+    });
   }
 
   function endMatch() {
@@ -707,7 +779,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   const ctl = {
     // --- what the template asks about ---
-    shareLetters: fo.fightContent === "same",
+    // Đợt 202 — a dealt match has no shared word, so there are no letters to
+    // share either, whatever an old act's `fightContent` still says on disk.
+    shareLetters: !turnsMode && fo.fightContent === "same",
     // Only board 0 is allowed to speak: both boards show the same word, and two
     // copies of one clip starting a few ms apart is an echo, not a reading.
     speaks(side) { return side === 0; },
@@ -840,6 +914,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // don't send the flag.
       const correct = !info || info.correct !== false;
       const other = side === 0 ? 1 : 0;
+      // ⭐ Đợt 202 — IN TURNS: this board shows its own ✓/✗ AT ONCE. The rule
+      // that withholds it ("GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ", core/HUONG DAN CORE.md)
+      // exists so the team still playing cannot read the answer off the other
+      // board — and in a dealt match the other board is holding a DIFFERENT
+      // question, so there is nothing there to read. Without this the faster
+      // team stares at a grey card until the slower one finishes, for a verdict
+      // that was decided the moment it pressed Submit.
+      if (turnsMode) {
+        try { boards[side] && boards[side].reveal && boards[side].reveal(); } catch { /* board already gone */ }
+      }
       // PICK MODE bookkeeping (Đợt 183): who finished LAST, and how — that is
       // the whole input to the teacher's "the wrong team chooses next" rule.
       // Written on every finish, so after the round it holds the later one.
@@ -1198,6 +1282,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       panel.append(stack);
     }
 
+    // ⭐⭐ Đợt 202 — IN TURNS, first in the checkbox block and GREEN, because it
+    // is not a setting of the match the way the others are: it changes what the
+    // match IS (one pool dealt out, instead of one word raced for). Built ONLY
+    // where it could actually run — `turnsTpl`, the opt-in law of Đợt 143 — so
+    // 6 of the 7 fight templates never see a box that would do nothing for them.
+    // ⚠ `syncTurns` below reads `lateChk`, declared just after this: safe only
+    // because nothing calls it until either the teacher taps this box or the
+    // init line at the very bottom of this builder runs. Do not "tidy" it into
+    // an eager call up here — that is the TDZ crash of Đợt 192.
+    let turnsChk = null;
+    if (turnsTpl) {
+      turnsChk = addCheck("In turns", cur.fightTurns === true,
+        v => { draft.fightTurns = v; syncTurns(v); },
+        { title: "Deal the questions out — each team plays its own half, none on both boards" });
+      turnsChk.classList.add("is-green");
+    }
+
     // What happens AFTER a round ends, not part of the round rule — it is a
     // switch like the others, so it joins the shared checkbox block.
     const lateChk = addCheck("Slower team keeps points", cur.fightLateScores !== false,
@@ -1249,10 +1350,33 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         cBonus.paint(DEFAULT_SPEED_BONUS);
       }
     }
+    // ⭐⭐ Đợt 202 — In turns takes the entire race apart, so all five race
+    // controls go dead TOGETHER (why: see the block above `tieMs`).
+    // • GREYED, never hidden (Đợt 188): hiding would re-flow the panel under the
+    //   finger still resting on this very checkbox, and leave nothing on screen
+    //   to say those five controls exist.
+    // • ⚠⚠ NOTHING HERE WRITES A VALUE. That is the whole of the teacher's "2 cái
+    //   độc lập": unticking In turns must give back the five settings exactly as
+    //   they were, and it does so precisely BECAUSE this only ever touches the
+    //   LOCK and never the value under it (Đợt 188's own rule, learned when an
+    //   earlier version zeroed Speed bonus behind the teacher's back).
+    function syncTurns(on) {
+      [cContent.cell, cRule.cell, cDelay.cell, cBonus.cell, lateChk].forEach(n => setLocked(n, on));
+      // Coming back OFF, hand the other four to whatever TIME DELAY says about
+      // them rather than leaving all five live — at ∞, two of them must stay dead.
+      if (!on && !pickMode) {
+        const w = draft.fightTieWindow === undefined ? cur.fightTieWindow : draft.fightTieWindow;
+        syncDelay(w);
+      }
+    }
+
     // A pick-turn game never shows TIME DELAY, so nothing here may move: running
     // syncDelay() there would hide the bonus (or zero it) off a value the teacher
     // has no control on screen to put back.
     if (!pickMode) syncDelay(cur.fightTieWindow);
+    // … and In turns has the last word: it locks all five, on top of whatever
+    // syncDelay just decided. Order matters, this line must stay after it.
+    if (turnsTpl && cur.fightTurns === true) syncTurns(true);
   }
 
   // ----- build the two plays -----
@@ -1270,8 +1394,6 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // share these very objects, which is what `_fightOrder` ("same letters")
   // relies on — resolveActivity() is called ONCE, above, precisely so there is
   // one set of them for the whole match.
-  const itemsKey = getTemplate(activity.type)?.itemsKey || "items";
-  const srcItems = (playAct.content && playAct.content[itemsKey]) || [];
   const orderA = fo.fightContent === "different" && (activity.options || {}).shuffleQuestions !== false
     ? shuffle([...srcItems]) : [...srcItems];
   const orderB = fo.fightContent === "different"
@@ -1281,9 +1403,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // letting each play shuffle for itself is what made them drift apart.
   const baseOrder = (activity.options || {}).shuffleQuestions !== false && fo.fightContent !== "different"
     ? shuffle([...srcItems]) : orderA;
+  // ⭐⭐ Đợt 202 — IN TURNS: DEAL the pool out ALTERNATELY (items 0,2,4… to the
+  // left board, 1,3,5… to the right) instead of cutting it in half. With Shuffle
+  // questions OFF an act's list is usually written easy → hard, and a straight
+  // half-cut would hand one team every easy question and the other every hard
+  // one; dealing alternately keeps the two halves the same shape whatever order
+  // the pool is in. 81 questions come out 41 / 40, no question on both boards.
+  // ⚠ Dealt from the SAME item objects both boards would otherwise have shared,
+  // so "Start with mistakes" src identity keeps working exactly as before.
+  const dealt = [[], []];
+  if (turnsMode) {
+    const pool = (activity.options || {}).shuffleQuestions !== false
+      ? shuffle([...srcItems]) : [...srcItems];
+    pool.forEach((it, i) => dealt[i % 2].push(it));
+  }
 
   function actFor(side) {
-    const items = fo.fightContent === "different" ? (side === 0 ? orderA : orderB) : baseOrder;
+    const items = turnsMode ? dealt[side]
+      : (fo.fightContent === "different" ? (side === 0 ? orderA : orderB) : baseOrder);
     // Built from `playAct` (Đợt 181): a board is handed the RESOLVED act, so
     // resolving it again inside startGame() is the identity case documented in
     // core/content-view.js and the two boards keep sharing one set of items.

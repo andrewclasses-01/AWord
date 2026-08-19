@@ -72,6 +72,16 @@ const ttaTemplate = {
   // `pulseScoreTo` below) instead of calling `ui.setScore()`, so it has to
   // forward to `fightCtl.onScore()` itself — see showScore's own note.
   fightMode: true,
+  // ⭐⭐ Đợt 202 (teacher, 19/8/2026) — IN TURNS opt-in. With this flag the match's
+  // Options panel grows a green "In turns" checkbox, and ticking it makes
+  // core/fight.js DEAL the question pool out between the two boards (each team
+  // its own half, nothing on both boards) instead of running both through the
+  // same list. ⚠ THIS TEMPLATE ALONE declares it for now — the teacher asked to
+  // try the idea on Type the answer before it spreads ("tạm thời áp dụng với duy
+  // nhất type the answer"). What a template owes the mode is nothing beyond what
+  // Fight already asked of it: fight.js hands each board its own `items`, so
+  // `total`, goToIndex and wordDone keep their existing meanings.
+  fightTurns: true,
   // SHOWDOWN (Đợt 170) — nothing else needed: the turn rotation keys off the
   // `index` already sent through ui.setNav (updateNav, below) and the
   // per-pupil results off the `review` array finish() already builds. See

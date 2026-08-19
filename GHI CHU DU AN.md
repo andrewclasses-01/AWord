@@ -103,6 +103,120 @@ vượt chỗ trống. **Không sửa gì bên đó.**
 
 ---
 
+## Đợt 202 (19/8/2026) — ⭐⭐ IN TURNS: CHIA BỘ CÂU CHO HAI ĐỘI (Fight mode, mở cho Type the answer)
+
+**Thầy giao:** *"Trong options, hãy thêm 1 ô tích nữa, ô này có tính năng In turns (tích in turns
+và bỏ tích in turns thì các options còn lại sẽ thay đổi đi theo loại có in turns hoặc không, 2 cái
+độc lập và text in turns sẽ màu xanh lá nổi bật). Khi tích vào ô này, tính năng act sẽ thay đổi như
+sau: số questions được chia đều cho 2 bên và không trùng nhau (nếu lẻ thì lệch 1 cũng ok, không bỏ).
+VD: có 81 câu thì mỗi bên sẽ được chia 40-41 câu hoàn toàn không trùng nhau cho 2 bên. Tạm thời áp
+dụng với duy nhất type the answer để tôi thử nghiệm trước đã rồi sẽ áp sang các template khác sau.
+Lưu ý chỉ ở mode fight mới có."*
+
+### 1. Hai chỗ phải hỏi lại thầy trước khi code (và câu trả lời)
+
+Tên "In turns" có thể hiểu là **chơi lần lượt** (một bàn sáng, bàn kia mờ), mà yêu cầu lại chỉ mô tả
+**chia câu**. Hai cách hiểu ra hai khối lượng việc khác hẳn nhau nên đã hỏi thẳng:
+
+| Câu hỏi | Thầy chốt |
+|---|---|
+| Hai bàn chơi thế nào khi bật In turns? | **ĐỒNG THỜI**, mỗi bên bộ câu riêng — ai xong câu của mình trước thì thắng vòng. KHÔNG phải luân phiên từng đội. |
+| Panel Options còn giữ ô nào khi In turns bật? | **CHỈ CÒN In turns** — 5 ô luật đua kia đi hết. |
+
+⛔ Vì thầy chốt "chơi lần lượt" là KHÔNG, `core/fight.js` **không sinh thêm kiểu vòng thứ ba**: vẫn
+là vòng THƯỜNG (trọng tài đi 0,1,2… và đẩy cả 2 bàn), chỉ khác là bàn trái ở chỉ số `i` cầm một câu
+khác bàn phải ở chỉ số `i`. Đây là lý do đợt này rẻ đến vậy (~165 dòng, phần lớn là ghi chú).
+
+### 2. Đã làm — 3 file
+
+**`core/fight.js`**
+- `FIGHT_DEFAULTS.fightTurns: false` + vào danh sách khoá của `fightOptionsFrom()`, ép về boolean
+  thật (`o.fightTurns === true`) vì có 3 nơi đọc nó.
+- **Đọc bộ câu LÊN ĐẦU HÀM.** `itemsKey` + `srcItems` trước nằm dưới cạnh `actFor()`; nay chuyển lên
+  ngay sau `resolveActivity()` vì `turnsMode` phải biết pool có bao nhiêu câu TRƯỚC khi khối luật
+  vòng bên dưới được quyết. Khối dựng thứ tự (`orderA/orderB/baseOrder`) vẫn ở nguyên chỗ cũ.
+- **Ba cổng chắn** — thiếu một là không vào chế độ này được:
+  `turnsTpl = tpl.fightTurns && !pickMode && srcItems.length >= 2` · `turnsMode = turnsTpl && fo.fightTurns === true`.
+  `turnsTpl` cũng là thứ quyết định có DỰNG ô tích hay không ⇒ điều khiển và hành vi không bao giờ
+  nói khác nhau về "act này có được dùng In turns không".
+- **CHIA BÀI LUÂN PHIÊN, không cắt đôi**: `pool.forEach((it,i) => dealt[i%2].push(it))`. Lý do có
+  đo: shuffle TẮT thì danh sách act thường viết dễ → khó, cắt đôi là một đội ăn trọn phần dễ. 81 câu
+  ra 41/40. Vẫn chia từ **chính các object item** hai bàn vốn dùng chung ⇒ "Start with mistakes"
+  không đổi gì.
+- **Bịt kín 5 luật đua** (`tieMs` ghim `TIE_WINDOW_MS`, `waitBarMs = 0`, `speedBonus = 0`,
+  `lockLoser() = false`, `lateScores() = true`, `shareLetters = false`). Không phải dọn dẹp: hai bàn
+  đang cầm HAI câu khác nhau nên khoá đội chậm là cướp mất câu **của chính nó**, mà đội kia chưa bao
+  giờ có quyền gì với câu đó.
+- **HIỆN ✓/✗ NGAY** cho bàn vừa trả lời (`boards[side].reveal()` trong `wordDone`). Luật giấu đáp án
+  sinh ra để đội còn đang chơi không chép được bài bàn kia — mà bàn kia đang hiện câu KHÁC, chẳng có
+  gì để chép. Không có dòng này thì đội nhanh ngồi nhìn thẻ xám cho tới khi đội chậm xong.
+- **Pool lẻ**: trận chạy tới nửa DÀI (`total` vốn đã là max). Bàn hết câu thì `roundDone[i] = true`
+  + `lock(true)` ngay trong `advanceRound()`, kẻo vòng cuối ngồi chờ đủ 20s backstop cho một đội
+  không còn gì để trả lời. Câu lẻ **được chơi**, đúng ý thầy.
+- **Panel**: ô tích `In turns` (class `is-green`), đặt **TRƯỚC** "Slower team keeps points";
+  `syncTurns(on)` xám cả 5 ô kia bằng `setLocked()` có sẵn.
+
+**`templates/type-the-answer/type-the-answer.js`** — thêm đúng 1 dòng cờ `fightTurns: true`
+(kèm ghi chú). Template không phải làm gì thêm: `fight.js` trao cho mỗi bàn `items` riêng nên
+`total`, `goToIndex`, `wordDone` giữ nguyên nghĩa cũ.
+
+**`core/app.css`** — 3 dòng `.aw-check.is-green` (chữ `#16a34a` + `font-weight:800`, ô tích và vòng
+focus cùng màu). Modifier thôi, hình dạng ô vẫn dùng chung.
+
+### 3. "2 CÁI ĐỘC LẬP" ĐƯỢC LÀM BẰNG CÁCH **KHÔNG LÀM GÌ**
+
+Thầy muốn tích/bỏ tích thì hai bộ options không dẫm lên nhau. Không cần kho lưu thứ hai:
+`syncTurns()` **chỉ chạm vào KHOÁ, không bao giờ ghi GIÁ TRỊ** — đúng luật Đợt 188 ("khoá một ô thì
+đừng đổi giá trị bên dưới nó", học được hồi bản đầu âm thầm ép `fightSpeedBonus = 0`). Nhờ vậy bỏ
+tích là 5 con số thầy đặt trở lại **nguyên vẹn**, đo thật: Time delay `0.1` → `0.1`, Speed bonus
+`5` → `5`, Round rule giữ nguyên nút đang sáng.
+
+### 4. Bàn thử — `scratch/turns202-test.html` (**37/37 ĐẠT**) + `scratch/turns202-apply.html`
+
+⚠️ `scratch/` bị **gitignore** ⇒ phiên/máy mới phải dựng lại. Khuôn lấy từ `scratch/ftm-fight-test.html`
+(importmap thay `firebase/classes/voice-clips` bằng bản giả, `startFight()` thẳng vào `#app`).
+
+Kỹ thuật đáng giữ: **gián điệp cắm vào `getTemplate("type_the_answer").mount`** — bắt được ĐÚNG bộ
+câu engine trao cho từng bàn, thay vì đoán qua DOM.
+
+Nhóm phép thử: chia 81 câu (41/40 · 0 câu trùng · hợp lại đủ 81 · trái ăn câu chẵn, phải ăn câu lẻ) ·
+In turns TẮT thì hai bàn vẫn nhận đủ 81 và cùng một danh sách (đối chứng ngược) · pool 1 câu tự quay
+về trận thường · ô tích xanh `rgb(22,163,74)` đứng trước "Slower team keeps points" · tích ⇒ 5 ô xám
+**và `disabled` thật** ⇒ bỏ tích ⇒ 5 ô sống lại **đúng giá trị cũ** · Quiz **không** có ô này · chơi
+thật 3 câu chia 2/1: bàn vừa trả lời hiện ✓ ngay và không bị phủ xám, bàn kia vẫn gõ được, sang vòng
+2 bàn hết câu bị khoá, trả nốt câu lẻ là trận kết thúc.
+
+🐞 **Lỗi của bàn thử, không phải của code — đáng nhớ:** phép thử đường Apply báo hỏng
+(`mount mới = []`). Soi bằng `scratch/turns202-apply.html` mới thấy `ctl.applyOptions` CÓ chạy và
+`act.options.fightTurns` CÓ thành `true` — chỉ là **Apply dựng lại trận và trận mới nằm ở màn PLAY**,
+chưa mount gì cả. **Sau `Apply` trong trận phải bấm Play mới đo được bàn.**
+
+### 5. Đo bằng số thay cho mắt (pane trình duyệt bị ẩn, `screenshot` timeout lần thứ 6 liên tiếp)
+
+- Panel Options trong trận: `scrollHeight 451 = clientHeight 451` ⇒ **thêm một hàng vẫn KHÔNG sinh
+  thanh cuộn**; đáy panel 489px trong khung 720px.
+- Chữ "In turns" `scrollWidth 50 = clientWidth 50` ⇒ không bị cắt cụt (`<input>`/`.aw-check-t` không
+  có ellipsis thì cắt im lặng — luật Đợt 192).
+- `elementFromPoint` giữa ô tích rơi trúng chính nó (`aw-check is-green`) ⇒ không có tấm che nào leo
+  lên trên (bẫy stacking context).
+- Tích bằng cách **chạm vào NHÃN** (không phải click thẳng `<input>`) vẫn ăn.
+- Khi tích: cả 5 ô `opacity .4` · mọi `input`/`button` bên trong `.disabled === true` ·
+  `elementFromPoint` **rơi xuyên** xuống cha (`aw-opt-grid` / `aw-optc-stack`) — đúng phép kiểm 2
+  đường mà `HUONG DAN CORE.md` bắt buộc.
+
+### 6. ⬜ VIỆC ĐANG CHỜ sau đợt này
+
+- ⬜ **Thầy chơi thử thật trên TOMKO** — cỡ chữ xanh lá nhìn từ cuối lớp có nổi bật đủ không, và
+  cảm giác "hai bàn hai câu khác nhau" có ổn với lớp không.
+- ⬜ **Chốt xem có mở In turns cho template khác không** (thầy đã nói "sẽ áp sang các template khác
+  sau"). Mở thêm = thêm đúng 1 dòng `fightTurns: true` vào template đó, `fight.js` không phải sửa gì.
+- ⚠️ **GIỌNG ĐỌC**: act TTA có voice mà bật In turns thì hai bàn tự phát hai clip KHÁC nhau cùng lúc
+  (`voicePlayer` của TTA không đi qua `ctl.speaks()`). Cùng họ với tồn đọng cũ *"Different words chưa
+  có voice riêng từng bàn"* (Đợt 132), **chưa sửa** — act TTA dạng chữ thì không dính.
+- ⬜ Chưa commit/push — chờ thầy duyệt.
+
+---
+
 ## Đợt 201 (19/8/2026) — Dấu ngăn `•` trên màn READY + tên act căn giữa ở trang học sinh
 
 **Thầy giao (qua phiên myLesson):** (1) tên trên màn READY đổi thành dạng `CHẤN PHONG • B2B`;

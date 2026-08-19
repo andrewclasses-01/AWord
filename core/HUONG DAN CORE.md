@@ -410,6 +410,8 @@ Mọi thứ vươn RA NGOÀI một ván mới là chỗ phải vá — nhớ dan
 | Giọng đọc | chỉ bàn 0 đọc (`ctl.speaks(side)`) |
 | Nhạc lifecycle (`tpl.sounds.play/restart/timeWarning`) | engine chỉ phát ở bàn 0 |
 
+**AI ĐANG BẬT IN TURNS (Đợt 202)**: **Type the answer** — 1/17, thầy chốt thử một game trước.
+
 **AI ĐANG BẬT FIGHT (cập nhật Đợt 186)**: Anagram · Quiz · Type the answer · True/false · **Open the box**
 · **Find the match** · **Crossword** — 7/17.
 
@@ -426,6 +428,38 @@ có **vòng LƯỢT CHỌN** cho game mà chính lớp chọn câu kế tiếp:
 API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `backToBoard()` · `resetClock()`.
 ⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
 chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
+
+⭐⭐ **IN TURNS — MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Đợt 202, 19/8/2026, thầy).** Ô tích **xanh lá** trong
+Options của trận (`fightTurns`, mặc định TẮT). Bật lên: bộ câu được **chia bài luân phiên** cho 2 bàn
+— `pool.forEach((it,i) => dealt[i%2].push(it))` — nên 81 câu ra **41/40**, không câu nào ở cả hai
+bên, và câu lẻ **vẫn được chơi** (trận chạy tới nửa DÀI).
+- ⛔ **KHÔNG phải "chơi lần lượt"** dù tên nó vậy. Thầy chốt hai bàn vẫn chạy **ĐỒNG THỜI**, ai xong
+  câu CỦA MÌNH trước thì thắng vòng ⇒ **không có kiểu vòng thứ ba** trong `fight.js`: vẫn vòng
+  thường, chỉ khác là chỉ số `i` của hai bàn trỏ tới hai câu khác nhau.
+- ⭐ **Chia LUÂN PHIÊN chứ đừng cắt đôi**: shuffle TẮT thì act thường viết dễ → khó, cắt đôi là một
+  đội ăn trọn phần dễ.
+- **BA cổng chắn**: `turnsTpl = tpl.fightTurns && !pickMode && srcItems.length >= 2` (pool 1 câu chia
+  ra là một bàn RỖNG), rồi `turnsMode = turnsTpl && fo.fightTurns === true`. `turnsTpl` cũng là thứ
+  quyết định có DỰNG ô tích hay không ⇒ điều khiển và hành vi không thể nói khác nhau.
+- **5 luật đua bị bịt kín** khi bật: `tieMs` ghim `TIE_WINDOW_MS` · `waitBarMs = 0` ·
+  `speedBonus = 0` · `lockLoser() = false` · `lateScores() = true` · `shareLetters = false`. Lý do
+  không phải gọn gàng: hai bàn cầm HAI câu khác nhau, khoá đội chậm là cướp câu **của chính nó**.
+  Panel xám cả 5 ô cho khớp (`syncTurns()`), **không ẩn** — luật Đợt 188.
+- ⭐ **Bàn vừa trả lời HIỆN ✓/✗ NGAY** (`boards[side].reveal()` ngay trong `wordDone`). Luật "giấu
+  đáp án khi vòng còn mở" sinh ra để chống chép bài — mà bàn kia đang hiện câu KHÁC.
+- ⚠️ **Bàn HẾT câu (pool lẻ)**: `advanceRound()` đánh `roundDone[i] = true` + `lock(true)` cho nó,
+  kẻo vòng cuối ngồi chờ đủ 20s `LATE_LIMIT_MS` cho một đội không còn gì để trả lời.
+- ⚠️⚠️ **"2 bộ options độc lập" được làm bằng cách KHÔNG LÀM GÌ**: `syncTurns()` chỉ chạm KHOÁ, không
+  bao giờ chạm GIÁ TRỊ (luật Đợt 188), nên bỏ tích là 5 con số cũ trở lại nguyên vẹn. Đừng thêm kho
+  lưu thứ hai, và đừng zero hoá gì cả.
+- **Mở cho template mới = thêm ĐÚNG 1 dòng** `fightTurns: true` vào template đó. Hiện **chỉ Type the
+  answer** (thầy: "tạm thời áp dụng với duy nhất type the answer để tôi thử nghiệm trước").
+- ⚠️ **Giọng đọc chưa xử**: template tự phát clip (TTA `voicePlayer`) mà bật In turns thì 2 bàn phát
+  2 clip khác nhau cùng lúc — cùng họ với tồn đọng "Different words chưa có voice riêng từng bàn".
+
+⚠️ **SAU `Apply` TRONG TRẬN PHẢI BẤM PLAY MỚI ĐO ĐƯỢC BÀN** (bài học Đợt 202, mất một vòng debug):
+`fight.ctl.applyOptions()` → `restartMatch()` dựng lại trận, và **trận mới nằm ở màn PLAY** — chưa
+mount template nào, nên `getTemplate(...).mount` chưa bị gọi và mọi phép đo trên bàn đều ra rỗng.
 
 ⭐⭐ **THANH TRƯỢT: CHẠM = 1 NẤC, CHẠM ĐÚP = LÙI 1 NẤC (Đợt 188, 18/8/2026, thầy).** Kiểu mặc định của
 trình duyệt ("bấm đâu nút nhảy tới đó") đã BỎ: trên màn 86" cảm ứng một cú quệt tay là thanh 0..100 nhảy

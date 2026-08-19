@@ -2701,6 +2701,27 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ⭐⭐ **Đợt 202 (19/8/2026) — IN TURNS: MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Fight mode).** Ô tích mới
+> **màu xanh lá** trong Options của trận: bật lên thì bộ câu được **chia bài luân phiên** cho 2 bàn
+> (81 câu ⇒ **41/40**, không câu nào ở cả hai bên, câu lẻ vẫn được chơi). Hai bàn vẫn chạy **ĐỒNG
+> THỜI** (thầy chốt: KHÔNG phải luân phiên từng đội) nên `core/fight.js` **không sinh kiểu vòng thứ
+> ba** — vẫn vòng thường, chỉ khác là chỉ số `i` của hai bàn trỏ tới hai câu khác nhau.
+> **Chỉ Type the answer** được mở (`tpl.fightTurns: true`, đúng 1 dòng) — thầy muốn thử trước rồi
+> mới lan ra. Bàn thử `scratch/turns202-test.html` **37/37 đạt**.
+>
+> ⛔ **BA LUẬT MỚI:**
+> 1. **Bật In turns là 5 ô luật đua CHẾT HẾT** (Fight content · Round rule · Time delay · Speed bonus
+>    · Slower team keeps points) — chúng nói về cuộc đua trên CÙNG một câu, mà ở đây không có cuộc
+>    đua đó. Xám (`.is-locked` + `disabled`), **không ẩn** (luật Đợt 188).
+> 2. **"2 bộ options độc lập" = KHÔNG GHI GÌ.** `syncTurns()` chỉ chạm KHOÁ, không bao giờ chạm GIÁ
+>    TRỊ, nên bỏ tích là 5 con số cũ trở lại nguyên vẹn. Đừng "dọn dẹp" bằng cách zero hoá chúng.
+> 3. **Sau `Apply` trong trận phải bấm PLAY mới đo được bàn** — Apply dựng lại trận và trận mới nằm
+>    ở màn PLAY, chưa mount template nào. (Đã mất một vòng debug vì tưởng tính năng hỏng.)
+>
+> ⚠️ Tồn đọng: act TTA **có giọng** mà bật In turns thì 2 bàn phát 2 clip khác nhau cùng lúc — cùng
+> họ với *"Different words chưa có voice riêng từng bàn"* (Đợt 132), chưa sửa.
+> ⬜ **CHƯA COMMIT** — chờ thầy chơi thử trên TOMKO rồi duyệt.
+
 > ⭐ **Đợt 201 (19/8/2026) — HAI TINH CHỈNH TRANG HỌC SINH.** (1) Dòng ai-đang-chơi trên màn
 > READY đổi dấu ngăn `-` thành `•`: `CHẤN PHONG • B2B` (engine.js, khối `.aw-ready-ai`).
 > (2) Mở bài giao ở TAB RIÊNG (không nhúng): tên act dưới khung nay CĂN GIỮA — học sinh không có
