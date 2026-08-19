@@ -125,6 +125,27 @@ body {
    correct without touching anything. */
 .aw-page { max-width: 1000px; margin: 0 auto; padding: 16px 16px 40px; }
 
+/* ---------- CHẾ ĐỘ NHÚNG — `play.html?g=…&nhung=1` (Đợt 200, 19/8/2026) ----
+   Trang bài tập của myLesson (andrewclasses.com) nhúng bài giao vào một ô có
+   đúng tỉ lệ khung game 16:10,5. Bình thường trang này còn lề 16/16/40px và
+   dải `.aw-below` (tên act + dòng mô tả + nút công cụ) nằm DƯỚI khung, nên
+   khung game không bao giờ khớp khít ô bên kia — luôn thừa ra một đoạn và
+   học sinh phải cuộn trong ô.
+
+   Cờ `nhung=1` bỏ đúng ba thứ đó. ⛔ Không có cờ thì mọi rule dưới đây tắt,
+   nên link giao bài cũ (QR phát tay, link dán Zalo) KHÔNG đổi gì hết. */
+/* `overflow:hidden` là chốt an toàn cho yêu cầu "không bao giờ phải cuộn":
+   chiều cao ô bên myLesson tính theo `aspect-ratio` nên có thể lẻ 0,1px so với
+   khung game — đủ để trình duyệt mọc thanh cuộn. Mọi nội dung của game đều nằm
+   TRONG khung (luật của `core/layout.js`) nên không có gì cần cuộn ở cấp trang. */
+html.aw-nhung { overflow: hidden; }
+html.aw-nhung, html.aw-nhung body { background: transparent; min-height: 0; }
+html.aw-nhung .aw-page { max-width: none; padding: 0; }
+/* Ô bên myLesson đã có viền + bo góc riêng rồi; giữ thêm ở đây là hai lớp
+   viền chồng nhau. */
+html.aw-nhung .aw-stage { border: 0; border-radius: 0; }
+html.aw-nhung .aw-below { display: none; }
+
 .aw-stage {
   position: relative;
   width: 100%;

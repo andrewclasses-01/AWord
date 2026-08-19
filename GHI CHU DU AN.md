@@ -8,6 +8,30 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 200 (19/8/2026) — CỜ NHÚNG cho trang bài tập myLesson
+
+**Thầy giao (qua phiên myLesson):** ô act bên trang bài tập phải *"chỉ hiện khung act của AWord,
+không hiện dòng tên"*, và *"khớp 100% … không bao giờ cần scroll trong mọi tình huống"*.
+
+**Vì sao trước đây không khớp:** `play.html` là một TRANG bình thường — `.aw-page` có lề
+`16px / 16px / 40px`, và dưới khung game còn dải `.aw-below` (tên act + dòng mô tả + cụm nút công
+cụ). Ô bên myLesson lại là đúng một khung 16:10,5 ⇒ nội dung bên trong luôn cao hơn ô, sinh thanh
+cuộn, mà học sinh thì thấy thừa ra một dòng tên không cần thiết.
+
+**Đã làm:** thêm cờ `&nhung=1`.
+- `play.js` — 3 dòng: có cờ thì `document.documentElement.classList.add("aw-nhung")`.
+- `core/app.css` — khối `html.aw-nhung` ngay dưới rule `.aw-page`: bỏ lề trang · ẩn `.aw-below` ·
+  bỏ viền + bo góc `.aw-stage` (ô bên myLesson đã có viền riêng) · `overflow:hidden`.
+
+**Đo ở máy** (`localhost:5511/play.html?g=jf98bk&n=…&lop=…&nhung=1`, cửa sổ 1280px):
+`.aw-page` cao **830px**, `.aw-stage` cao **830px** — bằng nhau đúng từng pixel; tỉ lệ khung
+**1.5238** = 16/10,5; `.aw-below` `display:none`.
+
+⛔ **Link cũ không đổi gì** — không có cờ thì không rule nào chạy. Màn gõ tên tay, QR phát tay,
+link Zalo… giữ nguyên.
+
+---
+
 ## Đợt 199 (19/8/2026) — MÀN READY HIỆN **TÊN EM + LỚP** (bài giao mở từ myLesson)
 
 **Thầy giao (trong phiên myLesson):** *"Tên đưa vào ANAGRAM sẽ lấy trực tiếp từ tên ID của học sinh

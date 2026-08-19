@@ -2701,6 +2701,17 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ⭐ **Đợt 200 (19/8/2026) — CỜ NHÚNG `play.html?g=…&nhung=1`.** Trang bài tập của **myLesson**
+> (andrewclasses.com) nhúng bài giao vào một ô có đúng tỉ lệ khung game 16:10,5, nên trang play
+> phải trả về **đúng khung game, không gì khác**. Cờ này làm ba việc, đều nằm trong
+> `core/app.css` (khối `html.aw-nhung`, ngay dưới rule `.aw-page`):
+> lề trang `16/16/40` → **0** · `.aw-below` (tên act + mô tả + nút công cụ) → **ẩn** ·
+> viền + bo góc của `.aw-stage` → **bỏ** (ô bên myLesson đã có viền riêng), kèm
+> `overflow:hidden` chốt an toàn cho chiều cao lẻ 0,1px.
+> Đo ở máy: trang cao **830px = đúng chiều cao khung**, tỉ lệ **1.5238** (= 16/10,5), không cuộn.
+> ⛔ **Không có cờ thì mọi rule tắt** — link giao bài cũ (QR phát tay, link Zalo) không đổi gì.
+> `play.js` chỉ thêm 3 dòng: có cờ thì gắn class `aw-nhung` lên `<html>`.
+
 > ⭐ **Đợt 199 (19/8/2026) — MÀN READY HIỆN "TÊN EM - LỚP".** Bài giao mở từ myLesson nay truyền
 > sang **cả tên lẫn lớp** (`play.html?g=…&n=<TÊN>&lop=<LỚP>`); màn READY thêm dòng `.aw-ready-ai`
 > ngay dưới tên template: `TUẤN KHANG - A1A`. Chỉ ở **chế độ học sinh** (có `session`); link cũ

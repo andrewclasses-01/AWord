@@ -27,6 +27,14 @@ const REMEMBER_KEY = "aword-student-name";
 start();
 
 async function start() {
+  // ⭐ Đợt 200 — CHẾ ĐỘ NHÚNG (`&nhung=1`): trang bài tập của myLesson mở bài
+  // giao trong một ô đúng bằng khung game, nên trang này phải bỏ lề và ẩn dải
+  // dưới khung (tên act + nút công cụ) — nếu không, khung không bao giờ khớp ô
+  // bên kia và luôn thò ra một đoạn phải cuộn. Rule nằm ở `core/app.css`
+  // (`html.aw-nhung`), chỉ bật khi CÓ cờ nên link cũ không đổi gì.
+  if (new URLSearchParams(location.search).get("nhung") === "1") {
+    document.documentElement.classList.add("aw-nhung");
+  }
   const code = new URLSearchParams(location.search).get("g");
   if (!code) return showMessage("This link is incomplete", "Ask your teacher for the full link.");
 
