@@ -8,6 +8,45 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 199 (19/8/2026) — MÀN READY HIỆN **TÊN EM + LỚP** (bài giao mở từ myLesson)
+
+**Thầy giao (trong phiên myLesson):** *"Tên đưa vào ANAGRAM sẽ lấy trực tiếp từ tên ID của học sinh
+đó, không cho phép tự gõ tên nữa. Trong màn hình Start ở trạng thái Assignment sẽ hiện luôn tên học
+sinh và lớp ở dưới dòng tên template. Ví dụ TUẤN KHANG - A1A; BÌNH MINH - NTK9"*
+
+### Đổi những gì
+
+| Chỗ | Việc |
+|---|---|
+| `play.js` | Đọc thêm tham số **`&lop=`** từ link, truyền xuống `session.className` |
+| `core/engine.js` | Màn READY: thêm dòng **`aw-ready-ai`** ngay dưới tên template, ghi `TÊN - LỚP` |
+| `core/app.css` | Kiểu `.aw-ready-ai` — nhỏ và nhạt hơn tên template một bậc |
+| (bên myLesson) | `web/js/app.js` ghép thêm `&lop=` vào link bài giao; web lên **v1.7.2** |
+
+- Chỉ hiện ở **chế độ học sinh** (có `session`): màn hình của thầy không có dòng này.
+- **Link cũ không có `lop`** vẫn chạy: chỉ hiện mỗi tên, không lòi ra dấu gạch cụt.
+- Tên vẫn đi qua `session.playerName` như cũ ⇒ **bảng điểm, Firestore, mọi thứ khác không đổi**.
+
+### Nghiệm thu (bàn thử `scratch/dot199-ready.html`)
+
+| Kiểm | Kết quả |
+|---|---|
+| Có lớp | `TUẤN KHANG - A1A` — ĐẠT |
+| Không có lớp (link cũ) | `TUẤN KHANG` — ĐẠT |
+| Chế độ thầy (không session) | không hiện dòng nào — ĐẠT |
+| Vị trí | nằm **dưới** tên template (`ANAGRAM`) — ĐẠT |
+| Cỡ chữ | 20,3px so với 29px của tên template — ĐẠT |
+
+⚠️ **Bàn thử phải `ensureTemplate(act.type)` trước khi `startGame`** — không thì engine ném
+*"Chưa có game loại … trong registry"* (đúng lối `play.js` vẫn làm).
+
+### Còn treo
+
+Thầy còn dặn *"không cho phép tự gõ tên nữa"*. Màn gõ tên hiện **vẫn còn** cho link KHÔNG có `n`
+(QR/link phát tay trong lớp) — bỏ hẳn là các em mở bằng QR không vào được. **Chờ thầy chốt.**
+
+---
+
 ## Đợt 198 (19/8/2026) — ⭐⭐ BẢNG SHOWDOWN: CHUYỂN ĐỘNG MƯỢT KHẮP NƠI · LUẬT CHIA ĐỘI MỚI · BỘ ĐẾM CÂN LẠI
 
 Thầy giao 6 việc một lượt, ngay sau khi Đợt 196 + 197 lên LIVE.

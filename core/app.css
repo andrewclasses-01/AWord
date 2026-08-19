@@ -593,6 +593,13 @@ body {
   font-size: 3cqw; font-weight: 800; color: #e7ebf0;
   letter-spacing: 0.15cqw; text-transform: uppercase;
 }
+/* ⭐ Đợt 199 — "TUẤN KHANG - A1A": ai đang chơi, ngay dưới tên template. Nhạt
+   và nhỏ hơn tên template một bậc để không tranh chỗ với nó. */
+.aw-ready-ai {
+  font-size: 2.1cqw; font-weight: 700; color: #9fb4c6;
+  letter-spacing: 0.22cqw; text-transform: uppercase;
+  margin-top: -0.9cqw;
+}
 
 .aw-bigplay {
   border: none; background: transparent; cursor: pointer;

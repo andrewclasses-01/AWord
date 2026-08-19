@@ -56,10 +56,15 @@ async function start() {
   // A name handed over by myLesson (`play.html?g=<code>&n=<name>`). The student
   // signed in there already, so asking again would only invite typos — and typos
   // are exactly what wrecks a leaderboard. Links without `n` behave as before.
-  const handed = (new URLSearchParams(location.search).get("n") || "").trim().replace(/\s+/g, " ");
+  const q = new URLSearchParams(location.search);
+  const handed = (q.get("n") || "").trim().replace(/\s+/g, " ");
+  // ⭐ Đợt 199 — the CLASS comes over too (`&lop=A1A`), so the READY screen can
+  // say "TUẤN KHANG - A1A". Old links without it still work: the READY screen
+  // then shows the name alone.
+  const lop = (q.get("lop") || "").trim().replace(/\s+/g, " ").slice(0, 12);
   if (handed.length >= 2) {
     try { localStorage.setItem(REMEMBER_KEY, handed); } catch (e) { /* private mode: fine */ }
-    return play(assignment, handed.slice(0, 40));
+    return play(assignment, handed.slice(0, 40), lop);
   }
   showNameScreen(assignment);
 }
@@ -141,7 +146,7 @@ function showNameScreen(assignment) {
 }
 
 // ---------------- the game ----------------
-async function play(assignment, studentName) {
+async function play(assignment, studentName, className) {
   // A fresh copy each time so a replay never inherits the previous play's state.
   const activity = JSON.parse(JSON.stringify(assignment.activity));
 
@@ -160,6 +165,7 @@ async function play(assignment, studentName) {
   startGame(app, activity, {
     session: {
       playerName: studentName,
+      className: className || "",
       endOptions: assignment.endOptions || {},
 
       submit: ({ score, total, timeMs, review }) =>

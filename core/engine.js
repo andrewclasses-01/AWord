@@ -179,7 +179,11 @@ const WORD_POOL_MAX_LEN = 24;
 // `session` (optional) turns the page into STUDENT MODE — used by play.html:
 //   session.endOptions   { leaderboard, showAnswers, startAgain } — what the
 //                        teacher ticked when setting the assignment
-//   session.playerName   the name the student typed
+//   session.playerName   the student's name — Đợt 199: handed over by myLesson
+//                        from the login ID, no longer typed by hand
+//   session.className    the student's class ("A1A"), handed over the same way;
+//                        the READY screen shows "TUẤN KHANG - A1A" under the
+//                        template name so the class can see who is playing
 //   session.submit(r)    hand in one play  -> Promise
 //   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
 // With a session the teacher-only tools (Options/Template/Style, Edit, Set
@@ -1472,6 +1476,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // room, BEFORE pressing Play (Đợt 84).
   const gameName = (tpl.name || activity.type) + (activity._mistakes ? " with mistakes" : "");
   readyCenter.append(el("div", "aw-ready-game", escapeText(gameName).toUpperCase()));
+  // ⭐ Đợt 199 — WHO is about to play, right under the template name:
+  // "TUẤN KHANG - A1A". Only in student mode (an assignment opened from
+  // myLesson), where both name and class come from the login ID — the teacher's
+  // own screen has no session and shows nothing here.
+  // Lớp có thể chưa được truyền sang (link cũ, hoặc bài giao mở tay) ⇒ chỉ ghi
+  // mỗi tên, đừng để lòi ra dấu gạch cụt lủn.
+  if (session && session.playerName) {
+    const ai = String(session.playerName).trim() +
+      (session.className ? " - " + String(session.className).trim() : "");
+    readyCenter.append(el("div", "aw-ready-ai", escapeText(ai).toUpperCase()));
+  }
   // ⭐ Đợt 156 — SHOWDOWN: the team this screen is about to play, and who is in
   // it, so the class can see the line-up before anything starts (teacher: "hiển
   // thị thêm 'Tên team: các thành viên'"). Only THIS screen's team — the other

@@ -2701,6 +2701,13 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 18/8/2026 sau **Đợt 194 + 195** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
+> ⭐ **Đợt 199 (19/8/2026) — MÀN READY HIỆN "TÊN EM - LỚP".** Bài giao mở từ myLesson nay truyền
+> sang **cả tên lẫn lớp** (`play.html?g=…&n=<TÊN>&lop=<LỚP>`); màn READY thêm dòng `.aw-ready-ai`
+> ngay dưới tên template: `TUẤN KHANG - A1A`. Chỉ ở **chế độ học sinh** (có `session`); link cũ
+> không có `lop` thì chỉ hiện tên. `session.className` là trường mới trong hợp đồng session.
+> ⚠️ Màn **gõ tên tay vẫn còn** cho link không có `n` (QR phát tay) — thầy chưa chốt bỏ hẳn.
+> Bàn thử: `scratch/dot199-ready.html` (nhớ `ensureTemplate` trước `startGame`).
+
 > ⭐⭐ **Đợt 194 + 195 (18/8/2026) — ✅ COMMIT `a256012` + PUSH + LIVE (4/4 mã băm SHA-256).** HAI NÚT RỜI THANH CÔNG CỤ, VỀ
 > **CỬ CHỈ NHẤN GIỮ + POPUP XÁC NHẬN**. Đây là hình dạng thanh công cụ **hiện tại** — thuộc nó
 > trước khi sửa bất cứ thứ gì dưới khung act:
