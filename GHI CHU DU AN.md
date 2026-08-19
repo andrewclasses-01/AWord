@@ -482,7 +482,9 @@ câu hỏi xoá khi đổi lớp · `openRecent` · `aw-sd-readout` + `questions
 
 ## Đợt 196 (19/8/2026) — ⭐⭐⭐ SHOWDOWN: BẢNG KẾT QUẢ CẢ LỚP **TỰ ĐỒNG BỘ**, VÀ KHÔNG CÒN IM LẶNG KHI THIẾU
 
-> ⛔ **CHƯA COMMIT** — thầy chốt gộp chung với các việc còn lại rồi mới đẩy một thể.
+> ✅ **COMMIT `44133d0` + PUSH + LIVE** (chung một commit với Đợt 197) — Pages build đúng commit,
+> **10/10 file trùng mã băm SHA-256**, **37/37 phép hỏi lại module trên bản live** đúng.
+> Chi tiết xác nhận LIVE ở **mục 11 của khối Đợt 197** ngay trên.
 
 **Thầy báo (19/8/2026)**: chạy 1 act AWord trên myActivity, **4 bảng cho 4 đội** (trái→phải 1·2·3·4),
 lớp **A1B 18 em**. Chơi xong, mỗi bảng xem đội mình thì đúng. Nhưng bấm xem **cả lớp**: bảng 1·3·4
@@ -589,13 +591,12 @@ xong **dọn luôn hộp thư của cột 2**, lưới báo hỏng oan. Mỗi c�
 
 ### 5. VIỆC ĐANG CHỜ (Đợt 196)
 
-- ⬜ **CHƯA COMMIT/PUSH** (thầy chốt gộp chung đợt sau).
+- ✅ **ĐÃ COMMIT `44133d0` + PUSH + LIVE** (chung commit với Đợt 197).
 - ⬜ Chờ thầy chạy thử thật trên TOMKO 4 bảng.
-- ⚠️ **Cùng họ lỗi, CHƯA sửa** (báo thầy rồi, chờ quyết): (1) myActivity `mirrorAwordState` chờ 6s
-  rồi **bỏ im lặng** nếu cột kia chưa sẵn sàng ⇒ một cột có thể chơi Template/Options khác 3 cột kia,
-  có dấu ✓ khi được mà **không có dấu nào khi hỏng**; (2) `saveSetup` ghi **đè cả tài liệu** ⇒ 2 máy
-  sửa bảng đội cùng lúc thì máy sau xoá việc máy trước; (3) bảng xếp hạng dùng **localStorage chung**
-  cho cả 4 cột ⇒ ghi cùng lúc có thể mất bản ghi.
+- ✅ **Ba lỗi cùng họ ĐÃ VÁ XONG ở Đợt 197** (mục 1 của khối đó): myActivity `mirrorAwordState`
+  chờ 12s + thử lại + **dấu ✗ đỏ** (v2.4.0 `fc049f1`) · `publishTable` giao dịch thay cho `saveSetup`
+  ghi đè cả tài liệu · leaderboard gộp theo id + đọc lại kiểm chứng.
+  ⚠️ **Không còn việc nào ở đây đang treo** — giữ mục này để phiên sau không đi tìm lại ba lỗi đã vá.
 
 ---
 

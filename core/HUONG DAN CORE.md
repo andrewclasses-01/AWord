@@ -3279,3 +3279,82 @@ Bấm ra ngoài (không Apply) = huỷ nháp, dữ liệu gốc giữ nguyên v�
 Có sẵn `makeNumberStepper(value, min, max, onChange)` — trả về `{ el, get, set }`: 1 ô số nhỏ với
 nút ▲/▼ VÀ vuốt dọc (kéo lên = tăng, kéo xuống = giảm) để chỉnh nhanh trên cảm ứng. Dùng cho ô
 phút/giây của Timer trong panel Options; dùng lại được cho các số nhỏ khác sau này (vd số mạng/Lives).
+
+---
+
+## ⭐⭐⭐ LUẬT RÚT RA TỪ ĐỢT 196 · 197 · 198 (19/8/2026) — DỮ LIỆU CHIA SẺ, CHUYỂN ĐỘNG, ĐO ĐẠC
+
+Ba đợt liền nhau, tất cả đều bắt đầu từ MỘT lỗi thầy báo: 4 bảng Showdown, lớp A1B 18 em, ba bảng
+khớp nhau ở 13 em còn bảng thứ tư ngồi riêng với 5 em. Những luật dưới đây là thứ đắt nhất rút ra
+được — đọc TRƯỚC khi viết bất cứ thứ gì đi qua mạng, có chuyển động, hoặc cần đo.
+
+### A. DỮ LIỆU ĐI QUA MẠNG
+
+1. **Thứ gì đi qua mạng thì phải có đường HOÀ HỢP, không được chỉ 1 lần ghi + 1 lần đọc.**
+   Khuôn mẫu chuẩn của dự án nay là: **nghe trực tiếp (`onSnapshot`) + hộp thư gửi lại**. Xem
+   `subscribeResults` / `flushPendingResult` trong `core/showdown-setup.js`.
+2. **CẤM nhớ lại một lần đọc THẤT BẠI.** Không biết thì để `null` và **NÓI RA** trên màn hình; đừng
+   lấp bằng dữ liệu của chính mình. Lấp là cách một bảng hỏng trông y hệt một bảng đã xong.
+3. **CẤM lấy dữ liệu phạm vi HẸP vẽ cho phạm vi RỘNG.** `classBlocks || teamBlocks` từng khiến 5 em
+   của một đội đứng dưới tên cả lớp — không ai phát hiện được bằng mắt.
+4. **Bộ lọc im lặng là bộ lọc nguy hiểm.** Lọc gì thì phải **đếm được và nói được** cái vừa bị lọc
+   (xem `splitResults` trả về cả `otherActs`).
+5. **Ghi lên mây thì đừng mang theo nhiều hơn thứ mình định đổi.** Muốn thêm một khoá thì ghi một
+   khoá (`writeMyClaim`); ghi cả tài liệu là ký tên vào những thứ mình không biết đã đổi.
+   Nhiều bên cùng ghi một tài liệu ⇒ **GIAO DỊCH** (`runTransaction`), không đọc-sửa-ghi.
+6. ⚠️ **Firestore `update()` KHÔNG gộp sâu** — mỗi khoá tầng trên cùng thay hẳn giá trị cũ. Muốn gộp
+   sâu phải `set` + `merge`, hoặc đường dẫn có dấu chấm. (Xoá một khoá con thì `update` với cả map
+   là ĐÚNG; `set+merge` sẽ không bao giờ xoá được.)
+7. **Trước khi thay một hàm ghi bằng hàm ghi hẹp hơn, hỏi: hàm cũ còn làm việc gì khác không?**
+   `applyReady` là chỗ **DUY NHẤT** đẩy bảng đội lên mây — suýt mất hẳn tính năng chia sẻ vì chuyện này.
+8. **Hết chỗ thì giảm chất lượng, đừng để hỏng.** `fitToBudget` bỏ chi tiết từng câu của trận cũ nhất
+   chứ không để Firestore từ chối cả kết quả lớp vừa chơi xong.
+9. **Đổi ý nghĩa của giá trị trả về thì phải soát MỌI người đọc nó.** `false` của bridge từng chỉ là
+   "không làm gì"; myActivity thêm dấu ✗ vào là nó bỗng thành "hỏng", và báo oan.
+
+### B. CHUYỂN ĐỘNG
+
+10. ⭐ **Một `transition` được KHAI không có nghĩa là nó CHẠY.** Nếu phần tử bị **dựng lại** mỗi lần
+    đổi trạng thái thì nó chưa bao giờ chạy lần nào — phần tử vừa sinh ra bắt đầu ngay ở giá trị
+    cuối, **không có gì để chuyển động từ đó**. Muốn mượt thì **đổi class trên node đang sống**
+    (`paintColStates` so với `paintCols`). `.aw-sd-col` đã khai transition từ Đợt 159 mà tới Đợt 198
+    mới thật sự chạy được lần đầu.
+11. **Mọi listener/animation phải có `dispose()` và phải được gọi từ MỌI đường ra** (✕ · Start again ·
+    Home · Change template · vào trận). Đây là ghost-clock Đợt 131 mặc áo khác.
+12. **Hiệu ứng nào GIẤU phần tử đi thì phải có hẹn giờ dự phòng BỎ GIẤU.** Mất một hiệu ứng là chuyện
+    nhỏ; để cả danh sách lớp nằm im `visibility:hidden` là hỏng buổi dạy. (Cộng dồn với luật
+    `element.animate()` đã có ở trên: cột myActivity chạy nền thì rAF đóng băng, `onfinish` không tới.)
+13. **Muốn một vật bay qua nhiều chặng thì dùng MỘT bóng và chỉ đổi `transform`** — chặng sau nối tiếp
+    từ đúng chỗ chặng trước dừng, không có mối nối. Chặng chờ phải `fill: "forwards"`.
+    Dựng lại DOM ở **khe giữa hai chặng**, lúc không ai nhìn thấy (xem `flyOutAndBack`).
+14. **Nhịp (stagger) phải CHẶN TRẦN, không phải cộng dồn theo số phần tử** — 25 em × 26ms là hai phần
+    ba giây chỉ để hiện xong một danh sách.
+
+### C. BỐ CỤC & ĐO ĐẠC
+
+15. **Căn giữa trong flex là chuyện của `flex-grow`, KHÔNG phải `text-align`.** Chỗ nào có bề ngang ép
+    cứng thì phải chỉ định đứa nào nuốt phần thừa, kẻo nó dồn hết về một mép (bộ đếm số đội: 18px
+    thừa dồn phải ⇒ `+` lệch 17px và số lệch tâm 8px).
+16. **Một stylesheet đo bằng `cqw` chỉ dùng lại được khi có container CÙNG CỠ.** Bảng kết quả thật vẽ
+    tên học sinh ra ~5px khi nhét vào cột 200px. Không cùng cỡ thì làm bản thu nhỏ riêng bằng `px`,
+    và ghi rõ vì sao có hai bản.
+17. **ĐO Ở TRẠNG THÁI ĐÃ Ở YÊN.** Khung hình đang tải không phải thứ người dùng nhìn thấy — đo bộ đếm
+    lúc màn còn "Loading…" ra 135 thay vì 150.
+18. **So bề ngang con với `clientWidth` của cha, không phải `getBoundingClientRect()`** (cha có viền).
+19. **Luật chia/xếp phải viết thành hàm THUẦN, EXPORT, và quét TOÀN BỘ miền giá trị.** Nó đúng với 18
+    em mà lệch với 23 em, và không ai phát hiện ra cho tới khi đứng lớp
+    (`outwardIn`/`targetSizes`/`planDeal`, quét ~3.200 tổ hợp).
+20. **Cắt dữ liệu để chơi thì cắt trên BẢN SAO**, và cắt ở **mọi chỗ act được giải lại** — `begin()`
+    giải lại act từ thư viện, thiếu lần gọi thứ hai là phép cắt biến mất đúng lúc bấm Play.
+
+### D. BẪY CỦA CHÍNH LƯỚI THỬ (báo HỎNG oan — đã cắn 5 lần)
+
+21. `goto()` giữ **lớp màn CŨ trong DOM 360ms** để chạy animation ⇒ truy vấn lúc đó trả về phần tử
+    của **cả hai màn**. Luôn đọc lớp **cuối cùng**, luôn đợi **> 360ms**.
+22. ⚠️⚠️ **Khung Browser bị ẩn ⇒ Chromium ĐÓNG BĂNG animation**, `getBoundingClientRect` trả giá trị
+    giữa chừng (đo ra 908×410 thay vì 936×423 = đúng `scale(.97)`). **Ép animation chạy xong trước
+    khi đọc**: `root.getAnimations().forEach(a => a.finish())`.
+23. **Phép hỏi "thứ này đã biến mất chưa" phải hỏi về KHAI BÁO, đừng hỏi về chuỗi ký tự** — một ghi
+    chú tử tế luôn nhắc tên thứ vừa bỏ đi.
+24. **Bộ giả (fake) phải khớp hành vi THẬT.** Bộ Firestore giả từng gộp sâu ở `update()` và báo HỎNG
+    oan cho một đoạn code thật ra đúng.
