@@ -40,10 +40,12 @@ sinh và lớp ở dưới dòng tên template. Ví dụ TUẤN KHANG - A1A; BÌ
 ⚠️ **Bàn thử phải `ensureTemplate(act.type)` trước khi `startGame`** — không thì engine ném
 *"Chưa có game loại … trong registry"* (đúng lối `play.js` vẫn làm).
 
-### Còn treo
+### ✅ Màn gõ tên tay — THẦY ĐÃ CHỐT GIỮ (19/8)
 
-Thầy còn dặn *"không cho phép tự gõ tên nữa"*. Màn gõ tên hiện **vẫn còn** cho link KHÔNG có `n`
-(QR/link phát tay trong lớp) — bỏ hẳn là các em mở bằng QR không vào được. **Chờ thầy chốt.**
+Thầy dặn *"không cho phép tự gõ tên nữa"*, nhưng khi được hỏi thì **chốt GIỮ NGUYÊN** màn gõ tên cho
+link KHÔNG có `n`: bỏ hẳn là các em mở bằng **QR/link phát tay trong lớp** không vào được bài.
+⇒ Luật cuối: **đường đi từ myLesson không bao giờ phải gõ tên** (tên + lớp lấy từ mã đăng nhập);
+đường QR phát tay vẫn gõ như cũ. ⛔ Đừng "dọn dẹp" bằng cách bỏ `showNameScreen`.
 
 ---
 

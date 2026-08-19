@@ -2705,7 +2705,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > sang **cả tên lẫn lớp** (`play.html?g=…&n=<TÊN>&lop=<LỚP>`); màn READY thêm dòng `.aw-ready-ai`
 > ngay dưới tên template: `TUẤN KHANG - A1A`. Chỉ ở **chế độ học sinh** (có `session`); link cũ
 > không có `lop` thì chỉ hiện tên. `session.className` là trường mới trong hợp đồng session.
-> ⚠️ Màn **gõ tên tay vẫn còn** cho link không có `n` (QR phát tay) — thầy chưa chốt bỏ hẳn.
+> ✅ Màn **gõ tên tay GIỮ NGUYÊN** cho link không có `n` (QR phát tay) — thầy chốt 19/8: bỏ hẳn thì
+> các em mở bằng QR không vào được bài. ⛔ Đừng "dọn dẹp" bằng cách bỏ `showNameScreen`.
 > Bàn thử: `scratch/dot199-ready.html` (nhớ `ensureTemplate` trước `startGame`).
 
 > ⭐⭐ **Đợt 194 + 195 (18/8/2026) — ✅ COMMIT `a256012` + PUSH + LIVE (4/4 mã băm SHA-256).** HAI NÚT RỜI THANH CÔNG CỤ, VỀ
