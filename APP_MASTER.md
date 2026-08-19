@@ -8,8 +8,9 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/8/2026 (Đợt 196 + 197 — ⛔ CHƯA COMMIT, xem hai khối ngay dưới; Đợt 197 sửa CẢ myActivity v2.4.0)**. Bản đã lên mây gần nhất:
-> **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
+> Cập nhật lần cuối: **19/8/2026 (Đợt 196 + 197)** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
+> ⚠️⚠️ **Đợt 197 sửa CẢ myActivity (v2.4.0, commit `fc049f1`) — hai kho đã được đẩy cùng nhau.**
+> Trước đó: **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
 > (cùng sửa `core/engine.js`, tách không an toàn). Trước đó: **Đợt 190 + 191** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
 > cả hai đợt — chúng cùng sửa `engine.js` và `app.css` nên không tách an toàn được). Pages build đúng
 > commit, **11/11 file trùng mã băm SHA-256**, và đã hỏi lại chính module trên bản live.
@@ -18,8 +19,10 @@
 >
 > ---
 > **Đợt 197 — LƯU BỀN KẾT QUẢ · BALANCE QUESTIONS · BẢNG CHỌN LỚP DỰNG LẠI · 3 LỖI CÙNG HỌ.**
-> ⛔ **CHƯA COMMIT/PUSH** (gộp cùng Đợt 196). ⚠️⚠️ **ĐỢT NÀY SỬA CẢ myActivity (v2.4.0) — HAI KHO
-> PHẢI ĐẨY CÙNG NHAU**, xem gạch đầu dòng thứ nhất.
+> ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
+> ⚠️⚠️ **ĐỢT NÀY SỬA CẢ myActivity (v2.4.0, commit `fc049f1`) — hai kho đã đẩy cùng nhau.**
+> ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
+> `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF.
 > - **3 lỗi cùng họ với Đợt 196** (đều là "một lần thử, hỏng thì nuốt"): (1) myActivity
 >   `mirrorAwordState` chờ 6s→**12s**, **thử lại 1 lần**, hỏng thì hiện **dấu ✗ đỏ** — ⛔ kèm sửa ở
 >   `engine.js`: bridge `switchTemplate`/`setTheme` nay trả **`true`** khi cột kia **đã đúng sẵn**,
@@ -61,7 +64,7 @@
 > - ⬜ **Chưa ai NHÌN bằng mắt**; `scratch/` bị gitignore ⇒ 6 lưới phải dựng lại ở phiên sau.
 >
 > ---
-> **Đợt 196 — SHOWDOWN: BẢNG CẢ LỚP TỰ ĐỒNG BỘ.** ⛔ **CHƯA COMMIT/PUSH** (thầy chốt gộp chung đợt sau).
+> **Đợt 196 — SHOWDOWN: BẢNG CẢ LỚP TỰ ĐỒNG BỘ.** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng (chung một commit với Đợt 197).
 > Thầy báo: 4 bảng / 4 đội, lớp A1B 18 em — bảng 1·3·4 khớp nhau ở **13 em**, bảng Team 2 chỉ **5 em**
 > và **cả lớp cũng 5 em**, lệch **HAI CHIỀU**. Gốc rễ: đường chia sẻ kết quả chỉ có **1 lần ghi +
 > 1 lần đọc**, **mọi thất bại đều im lặng**, và **kết quả hỏng còn được nhớ lại**.

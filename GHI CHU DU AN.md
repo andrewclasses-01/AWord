@@ -10,7 +10,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 197 (19/8/2026) — ⭐⭐⭐ LƯU BỀN KẾT QUẢ CẢ LỚP · BALANCE QUESTIONS · DỰNG LẠI BẢNG CHỌN LỚP · VÁ 3 LỖI CÙNG HỌ
 
-> ⛔ **CHƯA COMMIT** — thầy chốt gộp chung với Đợt 196 rồi đẩy một thể.
+> ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng (một commit cho cả Đợt 196 + 197 — chúng cùng sửa `engine.js` /
+> `showdown-setup.js` / `showdown-review.js` / `app.css` nên tách không an toàn).
 > ⚠️ **ĐỢT NÀY SỬA CẢ myActivity (v2.4.0)** — hai kho phải đẩy CÙNG NHAU, xem mục 1a.
 
 Thầy giao một lượt 8 việc, ngay sau khi Đợt 196 tìm ra gốc rễ lỗi lệch dữ liệu Showdown.
@@ -234,10 +235,41 @@ không."*
 
 ### 10. VIỆC ĐANG CHỜ (Đợt 197)
 
-- ⛔ **CHƯA COMMIT/PUSH** — gộp cùng Đợt 196 và myActivity v2.4.0. **Ba thứ phải đi cùng nhau.**
+- ✅ **ĐÃ COMMIT `44133d0` + PUSH + LIVE** (cùng Đợt 196), và myActivity **`fc049f1`** đẩy cùng lúc.
+  Đối chiếu **10/10 mã băm SHA-256** + **37/37 phép hỏi lại module trên bản live** — chi tiết ở mục 11.
 - ⬜ Chờ thầy chạy thử thật trên TOMKO: 4 bảng, Recent results, Balance questions.
 - ⬜ `scratch/` bị gitignore ⇒ 6 file lưới + bộ Firestore giả phải dựng lại ở phiên sau.
 - ⬜ Chưa có nút xoá sổ cái từ giao diện (`wipeMatches` đã viết, chưa gắn nút) — chờ thầy có cần không.
+
+---
+
+### 11. XÁC NHẬN LIVE (19/8/2026)
+
+`44133d0` — Pages build **đúng commit**, trạng thái `built`.
+
+**Đối chiếu mã băm SHA-256: 10/10 KHỚP** trên `aword.andrewclasses.com` —
+`showdown-history.js` · `showdown-setup.js` · `showdown-review.js` · `showdown.js` · `engine.js` ·
+`app.css` · `icons.js` · `leaderboard.js` · `numberstepper.js` · `options-panel.js`.
+⚠️ **Dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật `core.autocrlf` nên file trên
+đĩa là CRLF còn Pages phục vụ LF, so nhầm sẽ ra "lệch" oan (bài học Đợt 190).
+
+**Hỏi lại chính module trên bản LIVE: 37/37 ĐÚNG.** Nạp thật `showdown-history.js` /
+`showdown-setup.js` / `showdown-review.js` / `showdown.js` rồi **gọi hàm thật**:
+`nextPlayNo` đếm tăng dần · `matchIdOf("tbl_1","act_A",3)` ra đúng `tbl_1|act_A|3` · `MAX_MATCHES === 5` ·
+`splitResults` trả **cả phần bị loại** · `publishTable` · `writeMyClaim` · `subscribeResults` ·
+`flushPendingResult` · `mergeClassBlocks` · `renderReviewList`/`renderReviewPodium` đã export ·
+pick mang được `maxTeam` + `tableId` qua `writePick`/`readPick`.
+Và soi văn bản nguồn trên live: `applyBalance` có thật và được gọi ở **cả mount lẫn `begin()`** ·
+chia cho `showdownPick.maxTeam` · trả bản sao · ghi vào sổ cái lúc kết thúc ·
+`if (type === activity.type) return true` · `stopShowdownReview()` gọi ở ≥ 3 chỗ ·
+`questionCount: playItemCount()` · ô tích **Balance questions** · `.aw-sd-ttl-teams` · `.aw-sd-warn` ·
+`.aw-sd-footbtn` + `min-width:116px` · `appearance:none` + mũi tên SVG ·
+**`container-type: inline-size` trên `.aw-sd-rec-dbody`** · `.aw-sd-mini-box` · hai hằng `MINUS`/`PLUS` ·
+`mergeById`+`MERGE_TRIES` ở leaderboard · "Back to the class" đã thay câu hỏi Reset cũ ·
+câu hỏi xoá khi đổi lớp · `openRecent` · `aw-sd-readout` + `questionsEach`.
+
+⚠️ **myActivity `fc049f1` đẩy CÙNG LÚC** — hai thay đổi gắn chặt (xem mục 1a); đẩy lẻ một bên là dấu ✗ báo oan.
+⬜ Vẫn **chưa ai NHÌN bằng mắt** — cần thầy chạy thử trên TOMKO.
 
 ---
 
