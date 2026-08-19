@@ -375,113 +375,169 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
   // to the right. See the SHEET SCANNER block at the top of this file.
   // Sheets that are known to hold something else are skipped outright: they can
   // never win the scan, and reading them is wasted work on every import.
+  // ⭐⭐ 19/8/2026 (Đợt 204) — A SECOND VOCABULARY TABLE, `WORDTABLE2` (the
+  // teacher also writes it `WORDTABLE 2`, which normalizes to the same key).
+  // A lesson can carry two word sets; until now the scan kept exactly ONE
+  // table — the sheet with the most blocks — and the other one was dropped
+  // WITHOUT A WORD ON SCREEN. Measured on the teacher's 138 real lesson files
+  // (19/8/2026, `scratch/wt2-scan.mjs`): 13 files hold two vocabulary tables,
+  // and in `DS-S4.I1.W1 BEAVERS AND DAMS` the dropped `WORDTABLE 2` is 95
+  // words that appear NOWHERE ELSE (numbers 96..190, against 1..95 in the
+  // first table) — which is why that lesson has had to keep a second workbook,
+  // `..._WORD 2.xlsm`, beside it.
+  //
+  // ⚠️ WHY BY NAME, when Đợt 190 went to such lengths to stop trusting names.
+  // Đợt 190's rule answers "WHICH SHEET IS A VOCABULARY TABLE" — that must stay
+  // shape-based (65 of the files call it `CROSSWORD`). This asks a different
+  // question: "WHICH OF THE TWO IS THE SECOND ONE", and shape cannot answer it —
+  // both tables are the same shape by construction. Taking "the runner-up of the
+  // scan" instead would be actively wrong: of those 13 files, 12 have a runner-up
+  // that is NOT a second word set (`WORDADVANCE`, `CROSSWORDADVANCED`,
+  // `CROSSWORD(2)`, `CROSSWORD4+5`…), so every one of them would sprout a junk
+  // "WORDS 2" act. Only the sheet the teacher deliberately named `2` counts.
+  // ⚠️ A file whose ONLY vocabulary table happens to be called `WORDTABLE2`
+  // still imports as plain `/ WORDS` (see the promotion below) — the Đợt 190
+  // notes record such files, so the guard is cheap insurance against a rename.
+  // ⚠️ Other "second-ish" sheets stay dropped ON PURPOSE (`CROSSWORD2`,
+  // `WORDADVANCE`, `CROSSWORDADVANCED`, `TABLEMIX2`): nobody has said they are
+  // word sets. Adding one later is one alternative in RE_TABLE2 and nothing else.
   const NOT_VOCAB = /^(QUIZ|READINGACT|RUNNING|PARAGRAPH|CUT|FILL|SLIDE|VIDEO|CHART|LOGIC|TRANSLATION)/;
-  let vocabGrid = [], vocabBlocks = [];
-  for (const norm of Object.keys(names)) {
-    if (NOT_VOCAB.test(norm)) continue;
-    const grid = gridOf(wb.Sheets[names[norm]]);
-    if (grid.length < 3) continue;
-    const found = labelBlocks(findVocabBlocks(grid));
-    if (found.length > vocabBlocks.length) { vocabGrid = grid; vocabBlocks = found; }
-  }
-  // No IPA column anywhere: fall back to bare `WORD · clue` pairs, so a table
-  // that never had a transcription still imports its clue sets.
-  if (!vocabBlocks.length) {
+  const RE_TABLE2 = /^WORDTABLE2$/;   // names are already UPPER + space-stripped
+  // Every sheet that reads as a vocabulary table, in one pass. `find` is the
+  // block finder to use — the IPA triple first, and only if NO sheet in the
+  // whole workbook yields one, the bare `WORD · clue` fallback (a table that
+  // never had a transcription still imports its clue sets).
+  const scanVocab = find => {
+    const out = [];
     for (const norm of Object.keys(names)) {
       if (NOT_VOCAB.test(norm)) continue;
       const grid = gridOf(wb.Sheets[names[norm]]);
       if (grid.length < 3) continue;
-      const found = labelBlocks(findVocabPairs(grid));
-      if (found.length > vocabBlocks.length) { vocabGrid = grid; vocabBlocks = found; }
+      const blocks = labelBlocks(find(grid));
+      if (blocks.length) out.push({ norm, grid, blocks });
     }
-  }
-  const WORDS = [];
-  vocabGrid.forEach(row => {
-    const at = c => (c ? row[c - 1] || "" : "");
-    // Read the row across all blocks. The word is taken from the first block
-    // that has one, so a lesson file that fills only some of them still imports
-    // every word it does have.
-    const clues = {};
-    let word = "";
-    for (const b of vocabBlocks) {
-      const w = at(b.word);
-      if (!w) continue;
-      if (!word) word = w;
-      clues[b.key] = at(b.clue);
-    }
-    if (!word) return;
-    // ⭐ Đợt 190 (teacher, 18/8/2026) — THE TRANSCRIPTION IS A CLUE SET OF ITS
-    // OWN. It used to leave the act altogether, as two standalone acts
-    // (PRONUNCIATION + IPA); it is now a fifth set inside WORDS, which is what
-    // lets Edit correct it on its own tab and what feeds the new IPA mode.
-    // Taken from the block's own /ipa/ column rather than by splitting the old
-    // "WORD /ipa/" summary column: that column is missing from 9 files and sits
-    // one place further right in another, while the per-block column is on every
-    // row of every table in the corpus.
-    const ipa = vocabBlocks.map(b => at(b.ipa)).find(s => RE_IPA.test(s)) || "";
-    if (ipa) clues.pron = ipa;
-    WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
-  });
-  // Only offer a variant BUTTON for a clue set this file actually filled in —
-  // the OPT-IN rule from Đợt 143: a control that is there but does nothing is
-  // worse than a missing one, because nothing on screen says so.
-  const presentVariants = ["eng1", "eng2", "vi1", "vi2", "pron"]
-    .filter(k => WORDS.some(it => (it.clues[k] || "").trim()));
-  // ENG1/ENG2 clues are English, so they're the only two sets offered for
-  // auto-TTS in the Import dialog's voice panel (teacher confirmed 10/8/2026).
-  // VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a raw IPA symbol —
-  // an English Kokoro voice would misread both, so they stay text-only.
-  // ⭐ 12/8/2026 — text and voice already share ONE act: the "ENG1" + "ENG1
-  // VOICE" pair held byte-identical words and differed only by the clips
-  // hanging off the second, so `options.contentMode` picks the side instead
-  // (voiceView() in core/voice-playback.js). Đợt 145 extends that same idea
-  // sideways: contentMode picks TEXT vs VOICE, contentVariant/voiceVariant pick
-  // WHICH clue set within the chosen side.
-  const voiceVariants = presentVariants.filter(k => k === "eng1" || k === "eng2");
-  if (WORDS.length) {
-    acts.push({
-      type: "anagram", title: `${source} / WORDS`, theme: "classic",
-      options: {
-        ...OPT_ANA,
-        contentVariant: presentVariants[0] || DEFAULT_VARIANT,
-        voiceVariant: voiceVariants[0] || DEFAULT_VARIANT
-      },
-      content: {
-        withClues: WORDS.some(it => it.clue),
-        variants: presentVariants,
-        voiceVariants,
-        items: WORDS
-      },
-      // Import-only flags, stripped before the act is saved (see main.js).
-      ttsEligible: voiceVariants.length > 0,
-      ttsVariants: voiceVariants
+    return out;
+  };
+  let cands = scanVocab(findVocabBlocks);
+  if (!cands.length) cands = scanVocab(findVocabPairs);
+  // The winner of each side, by block count — `>` so a tie keeps the sheet the
+  // workbook lists first, exactly as the single-winner loop did before.
+  const best = list => list.reduce((w, c) => (!w || c.blocks.length > w.blocks.length ? c : w), null);
+  let table1 = best(cands.filter(c => !RE_TABLE2.test(c.norm)));
+  let table2 = best(cands.filter(c => RE_TABLE2.test(c.norm)));
+  // Only-table promotion: `WORDTABLE2` alone is this lesson's word set, not its
+  // second one, and must import under the plain title.
+  if (!table1 && table2) { table1 = table2; table2 = null; }
+  // Read ONE table into its list of {word, clue, clues}. Đợt 204 lifted this out
+  // of the top level so the second table goes through byte-for-byte the same
+  // reader — a second copy of these rules would drift the first time one of them
+  // is corrected.
+  const readVocab = (vocabGrid, vocabBlocks) => {
+    const WORDS = [];
+    vocabGrid.forEach(row => {
+      const at = c => (c ? row[c - 1] || "" : "");
+      // Read the row across all blocks. The word is taken from the first block
+      // that has one, so a lesson file that fills only some of them still imports
+      // every word it does have.
+      const clues = {};
+      let word = "";
+      for (const b of vocabBlocks) {
+        const w = at(b.word);
+        if (!w) continue;
+        if (!word) word = w;
+        clues[b.key] = at(b.clue);
+      }
+      if (!word) return;
+      // ⭐ Đợt 190 (teacher, 18/8/2026) — THE TRANSCRIPTION IS A CLUE SET OF ITS
+      // OWN. It used to leave the act altogether, as two standalone acts
+      // (PRONUNCIATION + IPA); it is now a fifth set inside WORDS, which is what
+      // lets Edit correct it on its own tab and what feeds the new IPA mode.
+      // Taken from the block's own /ipa/ column rather than by splitting the old
+      // "WORD /ipa/" summary column: that column is missing from 9 files and sits
+      // one place further right in another, while the per-block column is on every
+      // row of every table in the corpus.
+      const ipa = vocabBlocks.map(b => at(b.ipa)).find(s => RE_IPA.test(s)) || "";
+      if (ipa) clues.pron = ipa;
+      WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
     });
-  }
-  // ⛔ Đợt 190 — the two standalone acts this file used to build out of the
-  // transcription column are GONE (teacher, 18/8/2026): `PRONUNCIATION` (an
-  // Anagram clued by /ipa/) and `IPA` (Speaking cards showing "WORD /ipa/").
-  // Both said exactly what the WORDS act now says on its own PRONUNCIATION tab,
-  // and both are reachable from it — the first by picking that clue set, the
-  // second through MODE › IPA. Nine acts per lesson file becomes seven.
-  // ⚠️ Acts already imported under the old rule are untouched: they are ordinary
-  // saved acts, and nothing here reaches into the teacher's library.
+    return WORDS;
+  };
 
-  // The bare word list the two racing games need.
-  const WORDLIST = WORDS.map(it => it.word);
-  // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
-  // word list (the same pool the teacher's hand-made `RunningW` sheet drew its
-  // two 50-word lists from). No clues, no answers: the explainer supplies the
-  // meaning out loud. The transcription rides along when the row has one — it is
-  // read off the item's own PRONUNCIATION clue now, so it can never fall out of
-  // step with the word beside it.
-  if (WORDLIST.length >= 2) {
-    acts.push(runningWord(`${source} / RUNNING WORD`,
-      WORDS.map(it => ({ word: it.word, ipa: it.clues.pron || "" }))));
-  }
-  // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
-  // picked out of the pool itself by look-alike score, so no clues are needed.
-  // Six is the floor because every round puts six words on screen.
-  if (WORDLIST.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM`, WORDLIST));
+  // Build one table's three acts. `suffix` is "" for the lesson's word set and
+  // " 2" for the second one (`WORDTABLE2`), so the titles read
+  // `xxx / WORDS 2` · `xxx / RUNNING WORD 2` · `xxx / RUNNING TEAM 2`.
+  // ⚠️ Every act here carries the SAME options preset and the SAME shape as the
+  // first table's — a second word set is an ordinary word set, not a variant of
+  // the first, and nothing downstream is allowed to tell them apart.
+  const pushVocabActs = (WORDS, suffix) => {
+    // Only offer a variant BUTTON for a clue set this file actually filled in —
+    // the OPT-IN rule from Đợt 143: a control that is there but does nothing is
+    // worse than a missing one, because nothing on screen says so.
+    const presentVariants = ["eng1", "eng2", "vi1", "vi2", "pron"]
+      .filter(k => WORDS.some(it => (it.clues[k] || "").trim()));
+    // ENG1/ENG2 clues are English, so they're the only two sets offered for
+    // auto-TTS in the Import dialog's voice panel (teacher confirmed 10/8/2026).
+    // VI1/VI2 clues are Vietnamese and PRONUNCIATION's clue is a raw IPA symbol —
+    // an English Kokoro voice would misread both, so they stay text-only.
+    // ⭐ 12/8/2026 — text and voice already share ONE act: the "ENG1" + "ENG1
+    // VOICE" pair held byte-identical words and differed only by the clips
+    // hanging off the second, so `options.contentMode` picks the side instead
+    // (voiceView() in core/voice-playback.js). Đợt 145 extends that same idea
+    // sideways: contentMode picks TEXT vs VOICE, contentVariant/voiceVariant pick
+    // WHICH clue set within the chosen side.
+    const voiceVariants = presentVariants.filter(k => k === "eng1" || k === "eng2");
+    if (WORDS.length) {
+      acts.push({
+        type: "anagram", title: `${source} / WORDS${suffix}`, theme: "classic",
+        options: {
+          ...OPT_ANA,
+          contentVariant: presentVariants[0] || DEFAULT_VARIANT,
+          voiceVariant: voiceVariants[0] || DEFAULT_VARIANT
+        },
+        content: {
+          withClues: WORDS.some(it => it.clue),
+          variants: presentVariants,
+          voiceVariants,
+          items: WORDS
+        },
+        // Import-only flags, stripped before the act is saved (see main.js).
+        ttsEligible: voiceVariants.length > 0,
+        ttsVariants: voiceVariants
+      });
+    }
+    // ⛔ Đợt 190 — the two standalone acts this file used to build out of the
+    // transcription column are GONE (teacher, 18/8/2026): `PRONUNCIATION` (an
+    // Anagram clued by /ipa/) and `IPA` (Speaking cards showing "WORD /ipa/").
+    // Both said exactly what the WORDS act now says on its own PRONUNCIATION tab,
+    // and both are reachable from it — the first by picking that clue set, the
+    // second through MODE › IPA. Nine acts per lesson file becomes seven.
+    // ⚠️ Acts already imported under the old rule are untouched: they are ordinary
+    // saved acts, and nothing here reaches into the teacher's library.
+
+    // The bare word list the two racing games need.
+    const WORDLIST = WORDS.map(it => it.word);
+    // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
+    // word list (the same pool the teacher's hand-made `RunningW` sheet drew its
+    // two 50-word lists from). No clues, no answers: the explainer supplies the
+    // meaning out loud. The transcription rides along when the row has one — it is
+    // read off the item's own PRONUNCIATION clue now, so it can never fall out of
+    // step with the word beside it.
+    if (WORDLIST.length >= 2) {
+      acts.push(runningWord(`${source} / RUNNING WORD${suffix}`,
+        WORDS.map(it => ({ word: it.word, ipa: it.clues.pron || "" }))));
+    }
+    // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
+    // picked out of the pool itself by look-alike score, so no clues are needed.
+    // Six is the floor because every round puts six words on screen.
+    if (WORDLIST.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM${suffix}`, WORDLIST));
+  };
+
+  // The lesson's word set, then the second one if the file carries a filled-in
+  // `WORDTABLE2`. An EMPTY `WORDTABLE2` (a blank template — 2 of the teacher's
+  // 138 files ship one) yields no blocks, so `table2` is null and not one extra
+  // act appears: the acts a file produces never change until it gains real rows.
+  pushVocabActs(readVocab(table1 ? table1.grid : [], table1 ? table1.blocks : []), "");
+  if (table2) pushVocabActs(readVocab(table2.grid, table2.blocks), " 2");
 
   // ---- comprehension Quiz1 / Quiz2 (listening files) ----
   // ⭐ Đợt 146 — ONE act named "QUIZ" holding both: QUIZ1 is the PRACTICE half,
