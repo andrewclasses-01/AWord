@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/8/2026 (Đợt 198)** — xem khối đầu tiên ngay dưới.
+> Cập nhật lần cuối: **19/8/2026 (Đợt 198)** ✅ **COMMIT `70ca0a1` + PUSH + LIVE** — Pages build đúng commit, **3/3 file trùng mã băm SHA-256**, và **25/25 phép hỏi lại trên bản live** đều đúng — xem khối đầu tiên ngay dưới.
 > Trước đó **(Đợt 196 + 197)** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
 > ⚠️⚠️ **Đợt 197 sửa CẢ myActivity (v2.4.0, commit `fc049f1`) — hai kho đã được đẩy cùng nhau.**
 > Trước đó: **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
@@ -20,6 +20,7 @@
 >
 > ---
 > **Đợt 198 — BẢNG SHOWDOWN: MƯỢT KHẮP NƠI · LUẬT CHIA ĐỘI MỚI · BỘ ĐẾM CÂN LẠI.**
+> ✅ **COMMIT `70ca0a1` + PUSH + LIVE** — Pages build đúng commit, **3/3 file trùng mã băm SHA-256**, và **25/25 phép hỏi lại trên bản live** đều đúng.
 > - **Bộ đếm số đội**: ô rộng 152 mà ba con chỉ 134 và **không đứa nào được giãn** ⇒ 18px thừa dồn hết
 >   về mép phải (đo: `+` cách mép 17px, `−` cách 1px, số lệch tâm 8px). Vá bằng
 >   **`.aw-hstep-val{flex:1 1 auto}` + `.aw-hstep-btn{flex:0 0 auto}`** — ô số nuốt phần thừa nên chữa

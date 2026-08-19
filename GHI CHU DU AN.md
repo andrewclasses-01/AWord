@@ -186,6 +186,35 @@ tức thì) — đã sửa, chạy lại 53/53.
 
 ---
 
+### 11. XÁC NHẬN LIVE (19/8/2026)
+
+`70ca0a1` — Pages build **đúng commit**, trạng thái `built`.
+**3/3 mã băm SHA-256 KHỚP** (`app.css` · `numberstepper.js` · `showdown-setup.js`).
+⚠️ Dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa (máy này bật `core.autocrlf`).
+
+**25/25 phép hỏi trên bản LIVE đều đúng.** Nạp thật `showdown-setup.js` rồi **gọi hàm thật**:
+`outwardIn(4)` ra `0,3,1,2` · `outwardIn(5)` ra `0,4,1,3,2` · `targetSizes(18,4)` ra **`5,4,4,5`** (và
+**không còn** `5,5,4,4` của luật cũ) · `planDeal` với 9 nam 9 nữ ra `5,4,4,5`, nam chênh ≤ 1, nữ
+chênh ≤ 1, không mất ai.
+Soi văn bản nguồn trên live: `flyOutAndBack` có thật · chặng 1 giữ bóng ngoài bằng
+`fill:"forwards"` · `mutate()+repaintAll()` nằm ở khe giữa hai chặng · `paintColStates` có thật và
+chọn cột gọi nó chứ không gọi `paintCols` · công tắc Recent results hai chiều · số `LEFT` ·
+`rosterPaintedFor` · `.is-bump` + `void valEl.offsetWidth` · `.aw-hstep-val{flex:1 1 auto}` ·
+`.aw-hstep-btn{flex:0 0 auto}` · hào quang là `text-shadow` và **không dùng `filter`** ·
+`.aw-sd-capnum{max-width:0}` · pool `is-top` là **`display:grid` + `repeat(auto-fill,minmax(96px,1fr))`** ·
+`.aw-sd-ropair` + `.is-left`.
+
+⚠️ **Hai phép hỏi đầu tiên báo HOỪrNG OAN, lỗi ở REGEX của phép hỏi:**
+(1) "`scrambleChips` đã biến mất" — hàm đã bị xoá thật, chỉ còn **một lần nhắc trong GHI CHÚ**
+giải thích thứ đã thay nó; (2) "pool thành lưới" — cửa sổ regex 900 ký tự không đủ dài vì khối
+ghi chú tiếng Việt nằm ngay trong rule. Hỏi lại cho đúng thì cả hai đều **ĐẠT**.
+⇒ **Luật: phép hỏi "thứ này đã biến mất chưa" phải hỏi về **KHAI BÁO**, đừng hỏi về chuỗi ký tự —
+ghi chú tử tế luôn nhắc tên thứ vừa bỏ đi.**
+
+⬜ Vẫn **chưa ai NHÌN bằng mắt** — cần thầy chạy thử trên TOMKO (hiệu ứng bay ra/bay vào ở màn 86").
+
+---
+
 ## Đợt 197 (19/8/2026) — ⭐⭐⭐ LƯU BỀN KẾT QUẢ CẢ LỚP · BALANCE QUESTIONS · DỰNG LẠI BẢNG CHỌN LỚP · VÁ 3 LỖI CÙNG HỌ
 
 > ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng (một commit cho cả Đợt 196 + 197 — chúng cùng sửa `engine.js` /
