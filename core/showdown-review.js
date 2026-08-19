@@ -47,7 +47,7 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { fmtRoundMs, pctBand, groupByMember, rankBlocks } from "./showdown.js";
+import { fmtRoundMs, pctBand, groupByMember, rankBlocks, mergeClassBlocks } from "./showdown.js";
 
 // Long enough that an ordinary tap never reaches it, short enough that the
 // teacher does not think the screen has died. Measured against the same
@@ -66,8 +66,11 @@ const DONE_MS = 1600;
 // after it a little narrower). The bottom is a FLOOR, not a step size: with a
 // step, a class of 20 would taper to nothing while a team of 4 would barely
 // taper at all — the shape has to read the same either way.
-const POD_MAX_W = 80;
-const POD_MIN_W = 46;
+// ⚠️ Đợt 197 — EXPORTED, because the Recent results miniature in
+// core/showdown-setup.js draws the same taper at a tenth of the size. Two
+// copies of these two numbers is two funnels of different shapes a month later.
+export const POD_MAX_W = 80;
+export const POD_MIN_W = 46;
 
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
@@ -149,13 +152,31 @@ function gestures(node, { onTap, onDouble, onHold }) {
  *   host       the `.aw-review` node the list/podium is drawn into
  *   pick       this browser's Showdown pick (team, class, members)
  *   review     this play's review rows, already stamped by core/showdown.js
- *   loadTeams  async () => [{ teamId, teamName, at, students:[block] }] — every
- *              team that has SYNCED a result for this same act, this one
- *              included. Supplied by the engine so this file never imports
- *              Firestore. May reject; the screen keeps what it has.
+ *   loadTeams  async () => { teams:[{teamId,teamName,at,students:[block]}],
+ *                            otherActs:[{teamName,actName}] }
+ *              every team that has SYNCED a result for this same act, this one
+ *              included, plus the rows that were DROPPED because they belong to
+ *              a different act (Đợt 196 — those used to vanish in silence).
+ *              Supplied by the engine so this file never imports Firestore.
+ *              May reject; the screen then SAYS so instead of pretending.
+ *   watchTeams (optional) (onChange, onError) => unsubscribe — the same shape,
+ *              pushed every time the shared row changes. This is what makes the
+ *              four columns agree on their own; without it the screen falls back
+ *              to the one-shot `loadTeams` and the double tap.
+ *   flushPending (optional) async () => boolean — try again to share THIS
+ *              column's own result if the whistle-time write did not land.
+ *   isPending  (optional) () => boolean — true while this column still owes the
+ *              shared row its result.
  *   toast      the engine's toast
+ *
+ * Returns `dispose()` — MUST be called when the review leaves the screen, or the
+ * Firestore listener outlives the panel (the same class of leak as the
+ * ghost-clock of Đợt 131).
  */
-export function mountShowdownReview({ head, before, host, pick, review, loadTeams, toast = () => {} }) {
+export function mountShowdownReview({
+  head, before, host, pick, review, loadTeams,
+  watchTeams = null, flushPending = null, isPending = () => false, toast = () => {}
+}) {
   // THIS team, from memory. Authoritative: it is the play that just happened on
   // this screen, and it is what the class board shows for us even if the write
   // to the shared table failed.
@@ -163,9 +184,19 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
 
   let scope = "team";        // "team" | "class"
   let podium = false;
-  let classBlocks = null;    // built on the first successful load
+  // ⚠️ Đợt 196 — `classBlocks` is set ONLY from a read that WORKED. It used to
+  // be filled from the error path too ("give the class scope something to stand
+  // on"), which meant one stumble pinned the class board to this team's own five
+  // pupils for the rest of the review, with every later tap replaying the same
+  // wrong answer and nothing on screen to say it was wrong. A screen that does
+  // not know must say it does not know.
+  let classBlocks = null;
+  let classTeams = 0;        // how many TEAMS the board is standing on
+  let otherActs = [];        // teams whose row belongs to a DIFFERENT act
+  let classErr = "";         // why the class board is not there, in the teacher's words
   let busy = false;
   let doneTimer = null;
+  let stopWatch = null;      // the live listener's unsubscribe
 
   // ---------------------------------------------------------------
   // TITLE
@@ -179,21 +210,48 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
   const dot = el("span", "aw-sd-ttl-dot", "•");
   const scopeEl = el("span", "aw-sd-ttl-scope");
   const status = el("span", "aw-sd-ttl-status");
+  // ⭐⭐ Đợt 196 — HOW MANY TEAMS THIS BOARD IS STANDING ON. The teacher read a
+  // class board of 13 as "the class" because nothing on it could say a fourth
+  // team was missing. A chip that reads "4 TEAMS" (green) or "3 TEAMS" (amber,
+  // because a team is owed) turns an invisible bug into a number anybody can
+  // check against the number of columns on the wall.
+  const teamsEl = el("span", "aw-sd-ttl-teams");
   title.append(word);
   if (pick.className) title.append(clsEl);
-  title.append(dot, scopeEl, status);
+  title.append(dot, scopeEl, teamsEl, status);
 
   const total = el("div", "aw-rv-sdtotal");
   head.insertBefore(title, before);
   head.insertBefore(total, before);
 
   function scopeText() {
-    return scope === "team"
-      ? String(pick.teamName || "Team")
-      // The count is of pupils WITH A RESULT, not of the class register: teams
-      // still playing simply are not on the board yet (teacher: "tổng số học
-      // sinh là số hs đã có dữ liệu vì có thể có đội chưa xong").
-      : `${blocks().length} STS`;
+    if (scope === "team") return String(pick.teamName || "Team");
+    // ⚠️ Đợt 196 — a class board with no data is NOT "0 STS" and is certainly
+    // not this team's own five: it is a board that has not arrived. Saying so is
+    // the difference between the teacher waiting a second and the teacher
+    // reading five pupils as the whole of A1B.
+    if (!classBlocks) return classErr ? "NOT SYNCED" : "LOADING…";
+    // The count is of pupils WITH A RESULT, not of the class register: teams
+    // still playing simply are not on the board yet (teacher: "tổng số học
+    // sinh là số hs đã có dữ liệu vì có thể có đội chưa xong").
+    return `${classBlocks.length} STS`;
+  }
+
+  /** The little chip after the scope word: how many teams are on this board. */
+  function paintTeamsChip() {
+    const owed = !!isPending();
+    if (scope !== "class" || !classBlocks) {
+      // In team scope the only thing worth saying is "your own result has not
+      // reached the others yet" — that is this column's problem to know about.
+      teamsEl.textContent = owed ? "NOT SHARED" : "";
+      teamsEl.className = "aw-sd-ttl-teams" + (owed ? " is-warn" : "");
+      return;
+    }
+    teamsEl.textContent = `${classTeams} TEAM${classTeams === 1 ? "" : "S"}`;
+    // Amber whenever the board is knowingly short: a team played a different
+    // act, or this column has not managed to publish its own row.
+    const short = owed || otherActs.length > 0;
+    teamsEl.className = "aw-sd-ttl-teams" + (short ? " is-warn" : " is-on");
   }
 
   function paintTitle() {
@@ -220,6 +278,7 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
     clsEl.classList.toggle("is-on", scope === "class" || twice);
     scopeEl.classList.toggle("is-on", true);
     title.classList.toggle("is-pod", podium);
+    paintTeamsChip();
     const b = blocks();
     const right = b.reduce((a, x) => a + x.right, 0);
     const asked = b.reduce((a, x) => a + x.total, 0);
@@ -272,7 +331,13 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
   // ---------------------------------------------------------------
   function blocks() {
     if (scope === "team") return teamBlocks;
-    return classBlocks || teamBlocks;
+    // ⚠️ Đợt 196 — `|| teamBlocks` used to live here, and it is the quietest of
+    // the three bugs this đợt is about: with the read still in flight (or
+    // skipped because `busy`), the class board drew this team's own pupils under
+    // the class's name and its own title counted them as the class. The class
+    // scope now shows the class or nothing at all; `paintBody` puts a line on
+    // screen saying which.
+    return classBlocks || [];
   }
 
   /**
@@ -283,50 +348,35 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
    * worse result than the one it just watched happen.
    */
   function buildClass(entries) {
-    const out = teamBlocks.map(b => ({ ...b, teamName: pick.teamName || "" }));
+    // ⭐ Đợt 197 — the dedupe itself moved to core/showdown.js's mergeClassBlocks
+    // so the durable Recently results board can obey the SAME rule (see its
+    // header for what the rule is and why). This function's job is now only to
+    // say WHICH groups go in, and which one of them is authoritative.
+    const groups = [{ teamName: pick.teamName || "", at: undefined, blocks: teamBlocks }];
     (entries || []).forEach(entry => {
       if (!entry || entry.teamId === pick.teamId) return;
-      (entry.students || []).forEach(s => out.push({ ...s, teamName: entry.teamName || "", _at: Number(entry.at) || 0 }));
+      groups.push({ teamName: entry.teamName || "", at: Number(entry.at) || 0, blocks: entry.students || [] });
     });
-    // ⭐⭐ Đợt 180 — ONE ROW PER CHILD, whatever the table throws at us
-    // (teacher, 17/8/2026: "lớp có bao nhiêu học sinh thì chỉ hiển thị đúng
-    // từng ấy học sinh"). The published rows are a MAP KEYED BY TEAM, so
-    // nothing in the storage layer can stop the same pupil arriving from two
-    // teams at once — and there are at least two ordinary ways it happens:
-    //   • the `sd_solo` row (fixed at its source this same đợt, and this is the
-    //     belt to that braces);
-    //   • a pupil MOVED between teams — the team they left published its result
-    //     before the move and that row keeps their name for as long as it lives.
-    // Both were measured doubling a real class before this; the second one is
-    // not fixable upstream at all, because both rows are honest records of a
-    // game that really was played.
-    //
-    // ⚠️ IDENTITY IS THE PUPIL'S ID, name only as the fallback. Two different
-    // children in one class really can share a full name (Vietnamese classes
-    // regularly do), and merging THEM would hide a pupil — the very bug being
-    // fixed, pointed the other way. Every id here comes from the one shared team
-    // table, so the same child carries the same id on every screen.
-    //
-    // WHICH COPY SURVIVES: ours first — `teamBlocks` is the play this screen
-    // just watched and is authoritative even when the write to the table failed
-    // — then the most RECENTLY published row, which is the game that actually
-    // happened last. `_at` is only ever read here and never rendered.
-    const byPupil = new Map();
-    out.forEach(b => {
-      const key = String(b.key || "").trim() || String(b.name || "").trim().toLowerCase();
-      const prev = byPupil.get(key);
-      if (!prev) { byPupil.set(key, b); return; }
-      const prevIsOurs = prev._at === undefined;      // came from `teamBlocks`
-      if (prevIsOurs) return;                          // ours always wins
-      if (b._at === undefined || (b._at || 0) > (prev._at || 0)) byPupil.set(key, b);
-    });
-    const merged = [...byPupil.values()];
-    // `ord` is the tie-breaker of last resort (core/showdown.js's rankBlocks) and
-    // has to be unique across the merged list, not per team — two pupils tied on
-    // everything must still have a stable order. Assigned AFTER the dedupe, so
-    // the numbers stay contiguous.
-    merged.forEach((b, i) => { b.ord = i; });
-    return merged;
+    return mergeClassBlocks(groups);
+  }
+
+
+  /**
+   * Take one reading of the shared row — from the one-shot read OR from the live
+   * listener; both hand over the same shape, and there is deliberately only one
+   * place that turns it into what is on screen.
+   * Returns true when the team COUNT changed, which is what "UPDATED" is for.
+   */
+  function applyData(data) {
+    const entries = (data && data.teams) || [];
+    otherActs = (data && data.otherActs) || [];
+    classErr = "";
+    classBlocks = buildClass(entries);
+    // Our own team is always on the board (from memory), whether or not our row
+    // ever reached the shared table — so count it once and the others by id.
+    const before = classTeams;
+    classTeams = 1 + entries.filter(t => t && t.teamId !== pick.teamId).length;
+    return classTeams !== before;
   }
 
   /** Re-read the shared table. Returns true if the class list was rebuilt. */
@@ -335,19 +385,64 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
     busy = true;
     showSpinner();
     try {
-      const entries = await loadTeams();
-      classBlocks = buildClass(entries);
+      applyData(await loadTeams());
       return true;
     } catch (e) {
       console.warn("AWord: could not read the other teams", e);
-      // Still give the class scope something to stand on — our own team — so a
-      // teacher with no signal can still switch and see a board.
-      if (!classBlocks) classBlocks = buildClass([]);
-      toast(e?.code === "aw/signed-out" ? "Sign in to see the other teams" : "Could not reach the other teams");
+      // ⚠️ Đợt 196 — the class list is deliberately LEFT ALONE (null on the first
+      // failure, and the last good one on a later failure). Filling it with our
+      // own team here is what made a broken board look like a finished one.
+      classErr = e?.code === "aw/signed-out"
+        ? "Sign in to see the other teams."
+        : "Could not reach the other teams.";
+      toast(classErr);
       return false;
     } finally {
       busy = false;
     }
+  }
+
+  /**
+   * ⭐⭐⭐ Đợt 196 — WATCH, don't ask once.
+   * The listener runs for as long as the review is open, whichever scope is
+   * showing: a teacher looking at the team board when the last column finishes
+   * should find the class board already complete when they tap across.
+   * The one-shot `loadTeams` is still there as the fallback for a browser where
+   * the listener cannot start.
+   */
+  function startWatching() {
+    if (!watchTeams) return;
+    stopWatch = watchTeams(
+      data => {
+        const changed = applyData(data);
+        // Only shout when something actually arrived — a snapshot echo of our
+        // own write must not flash "UPDATED" in the teacher's face.
+        if (changed && !busy) showUpdated();
+        retryOwnPublish();          // the network is clearly alive again
+        paintTitle();
+        paintBody();
+      },
+      e => {
+        console.warn("AWord: lost sight of the other teams", e);
+        // A listener that dies leaves whatever it last delivered on screen; the
+        // double tap (and the retry below) are still there.
+        if (!classBlocks) classErr = "Could not reach the other teams.";
+        paintTitle();
+        paintBody();
+      }
+    );
+  }
+
+  /**
+   * Try again to hand over THIS column's own result. Runs when the review opens
+   * and on every change the listener brings, so a write that failed at the
+   * whistle lands the moment anything works again — the teacher does nothing.
+   */
+  function retryOwnPublish() {
+    if (!flushPending || !isPending()) return;
+    Promise.resolve(flushPending())
+      .then(() => { paintTitle(); paintBody(); })
+      .catch(() => { /* still owed; the next change will try again */ });
   }
 
   // ---------------------------------------------------------------
@@ -390,75 +485,7 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
   // ---------------------------------------------------------------
   // THE LIST — every pupil, their questions under their name
   // ---------------------------------------------------------------
-  function renderList(ranked) {
-    const list = el("div", "aw-sd-rv");
-    ranked.forEach(b => {
-      const block = el("div", "aw-sd-rv-block");
-
-      const who = el("span", "aw-sd-rv-who");
-      who.textContent = b.name;
-      const bhead = el("div", "aw-sd-rv-name");
-      bhead.append(who);
-      // Whose team, on the class board only — on a team board every line would
-      // carry the same word and it is already in the title.
-      if (scope === "class" && b.teamName) {
-        const tag = el("span", "aw-sd-rv-team");
-        tag.textContent = b.teamName;
-        bhead.append(tag);
-      }
-
-      const tally = el("span", "aw-sd-rv-tally");
-      // ⭐ Đợt 174 — this pupil's TOTAL time, when the round clock was running.
-      // ⭐ Đợt 176 — "1:00 - 50%": time in blue (CSS), then % correct of the
-      // questions this pupil ACTUALLY answered, banded red→…→green (pctBand).
-      // The two halves are independent: time only exists with the round clock
-      // on, the percentage only with at least one attempted question — the "-"
-      // joins them only when both are there.
-      if (b.hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(b.ms)));
-      if (b.attempted) {
-        const pct = Math.round((b.right / b.attempted) * 100);
-        if (b.hasTime) tally.append(el("span", "aw-sd-rv-sep", "-"));
-        tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
-      }
-      tally.append(
-        el("span", "is-ok", `${icons.check} ${b.right}`),
-        el("span", "is-bad", `${icons.cross} ${b.wrong}`)
-      );
-      bhead.append(tally);
-      block.append(bhead);
-
-      b.rows.forEach(r => {
-        const line = el("div", "aw-sd-rv-q");
-        line.append(el("span", "aw-sd-rv-num", String(r.n)));
-        const body = el("div", "aw-sd-rv-body");
-        const clue = el("div", "aw-sd-rv-clue");
-        clue.textContent = r.question;
-        body.append(clue);
-        const ans = el("div", "aw-sd-rv-ans");
-        if (r.correct) {
-          ans.append(mark("is-ok", icons.check, r.correctText));
-        } else {
-          // Wrong (or never attempted) shows BOTH lines: what the pupil put,
-          // then what it should have been — same reading order as the normal
-          // review.
-          ans.append(mark("is-bad", icons.cross, r.answered ? r.yourText : "No answer"));
-          ans.append(mark("is-ok", icons.check, r.correctText));
-        }
-        body.append(ans);
-        line.append(body);
-        // ⭐ Đợt 174c — how long THIS question took, at the FAR RIGHT of the row,
-        // past the answer blocks. A third flex child of the row, NOT a third grid
-        // track of `.aw-sd-rv-body`: that 1.4fr/1fr split is measured for
-        // clue-vs-answers and must not move, and a row with no time simply
-        // leaves this column empty.
-        line.append(el("span", "aw-sd-rv-qtime", r.roundMs != null ? fmtRoundMs(r.roundMs) : ""));
-        block.append(line);
-      });
-
-      list.append(block);
-    });
-    return list;
-  }
+  const renderList = ranked => renderReviewList(ranked, { showTeam: scope === "class" });
 
   // ---------------------------------------------------------------
   // THE PODIUM — the ranking as a funnel (teacher's design, 17/8/2026)
@@ -468,69 +495,222 @@ export function mountShowdownReview({ head, before, host, pick, review, loadTeam
   // on screen and the eye runs straight down the taper. The rank number sits
   // OUTSIDE each box on its left, which is what turns the narrowing edges into a
   // visible diagonal instead of a ragged stack.
-  function renderPodium(ranked) {
-    const box = el("div", "aw-sd-pod");
-    const n = ranked.length;
-    ranked.forEach((b, i) => {
-      // Linear from POD_MAX_W down to POD_MIN_W across however many pupils there
-      // are — see the constants' own note for why this is not a fixed step.
-      const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
-      const row = el("div", "aw-sd-pod-row");
-      row.style.setProperty("--w", w.toFixed(2) + "%");
+  const renderPodium = ranked => renderReviewPodium(ranked, { showTeam: scope === "class" });
 
-      const rank = el("span", "aw-sd-pod-rank");
-      rank.textContent = String(i + 1);
-
-      const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
-
-      const left = el("div", "aw-sd-pod-who");
-      const nm = el("span", "aw-sd-pod-name");
-      nm.textContent = b.name;
-      left.append(nm);
-      // Gold, silver and bronze cups for the first three, to the RIGHT of the
-      // name and inside the box (teacher: "bên cạnh phải tên (vẫn trong ô)").
-      if (i < 3) left.append(el("span", "aw-sd-pod-cup", icons.trophy));
-      if (scope === "class" && b.teamName) {
-        const tag = el("span", "aw-sd-pod-team");
-        tag.textContent = b.teamName;
-        left.append(tag);
+  // ---------------------------------------------------------------
+  // ⭐⭐ Đợt 196 — THE BOARD SAYS WHAT IT IS MISSING
+  // ---------------------------------------------------------------
+  // Every silent drop this đợt found now has a line of its own. One sentence
+  // each, in the plainest words: the teacher must be able to read it from the
+  // back of the room and know whether the board in front of them is the class.
+  function warnings() {
+    const lines = [];
+    if (isPending()) {
+      lines.push("This team's result has not reached the other boards yet — still trying.");
+    }
+    if (scope === "class") {
+      if (!classBlocks) {
+        lines.push(classErr
+          ? `${classErr} Tap twice on SHOWDOWN to try again.`
+          : "Reading the other teams…");
+      } else if (otherActs.length) {
+        // THE two-way disappearance the whole đợt started from: a column on a
+        // different act (a duplicate act, a column opened by hand) used to be
+        // invisible to the others and blind to them, with no symptom at all.
+        const who = otherActs.map(o => o.teamName).filter(Boolean).join(", ");
+        lines.push(`${otherActs.length} team${otherActs.length === 1 ? "" : "s"} played a DIFFERENT act`
+          + `${who ? ` (${who})` : ""} — not counted on this board.`);
       }
-
-      const stats = el("div", "aw-sd-pod-stats");
-      stats.append(
-        el("span", "aw-sd-pod-ok", `${icons.check} ${b.right}`),
-        el("span", "aw-sd-pod-bad", `${icons.cross} ${b.wrong}`)
-      );
-      // ⭐ Đợt 180 (teacher, 17/8/2026: "% tỷ lệ đúng trong ô rank") — the same
-      // number, the same bands and the same denominator as the list view: OF THE
-      // QUESTIONS ACTUALLY ATTEMPTED, never of the ones the pupil never reached.
-      // Asking pctBand() rather than re-picking colours here is what stops the
-      // funnel and the list ever disagreeing about what "green" means.
-      // ⚠️ Omitted entirely when nothing was attempted — a pupil the game never
-      // reached shows no percentage rather than a red 0%.
-      if (b.attempted) {
-        const pct = Math.round((b.right / b.attempted) * 100);
-        stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
-      }
-      // Only when the round clock was on — a Showdown played without it shows
-      // the two tallies alone rather than a column of dashes.
-      if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
-
-      card.append(left, stats);
-      row.append(rank, card);
-      box.append(row);
-    });
-    return box;
+    }
+    return lines;
   }
 
   function paintBody() {
-    host.querySelectorAll(".aw-sd-rv, .aw-sd-pod").forEach(n => n.remove());
+    host.querySelectorAll(".aw-sd-rv, .aw-sd-pod, .aw-sd-warn").forEach(n => n.remove());
+    const lines = warnings();
+    if (lines.length) {
+      const box = el("div", "aw-sd-warn");
+      lines.forEach(t => {
+        const row = el("div", "aw-sd-warn-line");
+        row.append(el("span", "aw-sd-warn-icon", icons.alert || "!"));
+        const txt = el("span", "aw-sd-warn-text");
+        txt.textContent = t;                      // may carry the teacher's team names
+        row.append(txt);
+        box.append(row);
+      });
+      host.append(box);
+    }
     const ranked = rankBlocks(blocks());
     host.append(podium ? renderPodium(ranked) : renderList(ranked));
   }
 
   paintTitle();
   paintBody();
+  startWatching();
+  retryOwnPublish();
+
+  /**
+   * ⚠️ MUST be called when the review closes. A Firestore listener left running
+   * behind a screen that is gone is the same bug as Đợt 131's ghost clock: it
+   * costs nothing visible and keeps costing it for the rest of the lesson.
+   */
+  return function dispose() {
+    if (stopWatch) { try { stopWatch(); } catch { /* already gone */ } stopWatch = null; }
+    if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
+  };
+}
+
+
+// =============================================================
+// ⭐⭐ Đợt 197 — THE TWO BOARDS, LIFTED OUT OF THE CLOSURE.
+//
+// They were written inside mountShowdownReview() and read its `scope` variable
+// directly. There is now a SECOND screen that has to draw the very same two
+// boards — Recently results, in core/showdown-setup.js's panel — and drawing a
+// class board two different ways is how two screens start disagreeing about
+// what a class board is.
+//
+// So the only thing they took from the closure, `scope === "class"`, is now the
+// stated `showTeam` option: whether each row carries its team's name. On a team
+// board every line would carry the same word and the title already says it.
+//
+// ⚠️ Still DOM-only and still free of Firestore and of the library layer — this
+// file is imported statically by the engine (see the header, luật 2 of v0.9.0),
+// and the history screen imports it, never the other way round.
+// =============================================================
+
+/** Every pupil, their questions under their name. */
+export function renderReviewList(ranked, { showTeam = false } = {}) {
+  const list = el("div", "aw-sd-rv");
+  ranked.forEach(b => {
+    const block = el("div", "aw-sd-rv-block");
+
+    const who = el("span", "aw-sd-rv-who");
+    who.textContent = b.name;
+    const bhead = el("div", "aw-sd-rv-name");
+    bhead.append(who);
+    // Whose team, on the class board only — on a team board every line would
+    // carry the same word and it is already in the title.
+    if (showTeam && b.teamName) {
+      const tag = el("span", "aw-sd-rv-team");
+      tag.textContent = b.teamName;
+      bhead.append(tag);
+    }
+
+    const tally = el("span", "aw-sd-rv-tally");
+    // ⭐ Đợt 174 — this pupil's TOTAL time, when the round clock was running.
+    // ⭐ Đợt 176 — "1:00 - 50%": time in blue (CSS), then % correct of the
+    // questions this pupil ACTUALLY answered, banded red→…→green (pctBand).
+    // The two halves are independent: time only exists with the round clock
+    // on, the percentage only with at least one attempted question — the "-"
+    // joins them only when both are there.
+    if (b.hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(b.ms)));
+    if (b.attempted) {
+      const pct = Math.round((b.right / b.attempted) * 100);
+      if (b.hasTime) tally.append(el("span", "aw-sd-rv-sep", "-"));
+      tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
+    }
+    tally.append(
+      el("span", "is-ok", `${icons.check} ${b.right}`),
+      el("span", "is-bad", `${icons.cross} ${b.wrong}`)
+    );
+    bhead.append(tally);
+    block.append(bhead);
+
+    b.rows.forEach(r => {
+      const line = el("div", "aw-sd-rv-q");
+      line.append(el("span", "aw-sd-rv-num", String(r.n)));
+      const body = el("div", "aw-sd-rv-body");
+      const clue = el("div", "aw-sd-rv-clue");
+      clue.textContent = r.question;
+      body.append(clue);
+      const ans = el("div", "aw-sd-rv-ans");
+      if (r.correct) {
+        ans.append(mark("is-ok", icons.check, r.correctText));
+      } else {
+        // Wrong (or never attempted) shows BOTH lines: what the pupil put,
+        // then what it should have been — same reading order as the normal
+        // review.
+        ans.append(mark("is-bad", icons.cross, r.answered ? r.yourText : "No answer"));
+        ans.append(mark("is-ok", icons.check, r.correctText));
+      }
+      body.append(ans);
+      line.append(body);
+      // ⭐ Đợt 174c — how long THIS question took, at the FAR RIGHT of the row,
+      // past the answer blocks. A third flex child of the row, NOT a third grid
+      // track of `.aw-sd-rv-body`: that 1.4fr/1fr split is measured for
+      // clue-vs-answers and must not move, and a row with no time simply
+      // leaves this column empty.
+      line.append(el("span", "aw-sd-rv-qtime", r.roundMs != null ? fmtRoundMs(r.roundMs) : ""));
+      block.append(line);
+    });
+
+    list.append(block);
+  });
+  return list;
+}
+
+/**
+ * THE PODIUM — the ranking as a funnel (teacher's design, 17/8/2026).
+ * One column, every box the same HEIGHT and each a little narrower than the one
+ * above, so the board tapers to a point: first place is the widest thing on
+ * screen and the eye runs straight down the taper. The rank number sits OUTSIDE
+ * each box on its left, which is what turns the narrowing edges into a visible
+ * diagonal instead of a ragged stack.
+ */
+export function renderReviewPodium(ranked, { showTeam = false } = {}) {
+  const box = el("div", "aw-sd-pod");
+  const n = ranked.length;
+  ranked.forEach((b, i) => {
+    // Linear from POD_MAX_W down to POD_MIN_W across however many pupils there
+    // are — see the constants' own note for why this is not a fixed step.
+    const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
+    const row = el("div", "aw-sd-pod-row");
+    row.style.setProperty("--w", w.toFixed(2) + "%");
+
+    const rank = el("span", "aw-sd-pod-rank");
+    rank.textContent = String(i + 1);
+
+    const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
+
+    const left = el("div", "aw-sd-pod-who");
+    const nm = el("span", "aw-sd-pod-name");
+    nm.textContent = b.name;
+    left.append(nm);
+    // Gold, silver and bronze cups for the first three, to the RIGHT of the
+    // name and inside the box (teacher: "bên cạnh phải tên (vẫn trong ô)").
+    if (i < 3) left.append(el("span", "aw-sd-pod-cup", icons.trophy));
+    if (showTeam && b.teamName) {
+      const tag = el("span", "aw-sd-pod-team");
+      tag.textContent = b.teamName;
+      left.append(tag);
+    }
+
+    const stats = el("div", "aw-sd-pod-stats");
+    stats.append(
+      el("span", "aw-sd-pod-ok", `${icons.check} ${b.right}`),
+      el("span", "aw-sd-pod-bad", `${icons.cross} ${b.wrong}`)
+    );
+    // ⭐ Đợt 180 (teacher, 17/8/2026: "% tỷ lệ đúng trong ô rank") — the same
+    // number, the same bands and the same denominator as the list view: OF THE
+    // QUESTIONS ACTUALLY ATTEMPTED, never of the ones the pupil never reached.
+    // Asking pctBand() rather than re-picking colours here is what stops the
+    // funnel and the list ever disagreeing about what "green" means.
+    // ⚠️ Omitted entirely when nothing was attempted — a pupil the game never
+    // reached shows no percentage rather than a red 0%.
+    if (b.attempted) {
+      const pct = Math.round((b.right / b.attempted) * 100);
+      stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
+    }
+    // Only when the round clock was on — a Showdown played without it shows
+    // the two tallies alone rather than a column of dashes.
+    if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
+
+    card.append(left, stats);
+    row.append(rank, card);
+    box.append(row);
+  });
+  return box;
 }
 
 function mark(cls, glyph, text) {

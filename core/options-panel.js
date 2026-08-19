@@ -520,6 +520,21 @@ export function buildOptionsBody(host, {
   // (Speaking cards deals CARDS) renames this one switch.
   addCheck(tpl.shuffleLabel || "Shuffle questions", draft.shuffleQuestions !== false,
     v => draft.shuffleQuestions = v, { title: tpl.shuffleLabel || "Shuffle question order" });
+  // ⭐⭐⭐ BALANCE QUESTIONS (Đợt 197, thầy 19/8/2026) — SHOWDOWN ONLY. It lives
+  // among the SWITCHES rather than in a cell of its own because it is one yes/no
+  // with no setting hanging off it (thầy: "ở khu vực các nút tích").
+  // What it does: every child in the CLASS answers the same number of questions,
+  // by shortening each board's act to `(questions ÷ biggest team) × this team`.
+  // The arithmetic is core/engine.js's `applyBalance`; the Showdown class screen
+  // shows the answer in its QUESTIONS box before the teacher picks a team count.
+  // ⚠️ Like "Time each round" above, this is STRUCTURAL — the engine trims the
+  // act at mount, so it takes effect on the play Apply restarts, not on the one
+  // already on screen.
+  if (showdown) {
+    addCheck("Balance questions", draft.balanceQuestions === true,
+      v => draft.balanceQuestions = v,
+      { title: "Every pupil in the class answers the same number of questions" });
+  }
   // OPT-IN (Đợt 143 — see this file's header for why): only a game that really
   // reads options.shuffleAnswers offers the switch. Quiz, Open the box, Gameshow.
   if (tpl.usesShuffleAnswers) {

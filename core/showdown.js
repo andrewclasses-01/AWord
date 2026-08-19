@@ -141,7 +141,18 @@ export function readPick() {
       teamName: String(p.teamName || "").trim() || "Team",
       classId: String(p.classId || ""),
       className: String(p.className || "").trim(),
-      members
+      members,
+      // ⭐ Đợt 197 — two fields the setup panel now stamps on, because only IT can
+      // see the whole table and the engine must not import the file that can.
+      //   `maxTeam`  the biggest team's size — Balance questions divides by it.
+      //   `tableId`  which division of the class this is — the durable result
+      //              history groups one match by it.
+      // ⚠️ Both fall back rather than invalidating the pick: a pick written
+      // before this đợt is still a perfectly good pick, and a Showdown that
+      // refused to start because of a missing optional field would be a far
+      // worse bug than the two features quietly standing down.
+      maxTeam: Math.max(1, Number(p.maxTeam) || members.length),
+      tableId: String(p.tableId || "")
     };
   } catch { return null; }        // private mode / storage disabled / bad JSON
 }
@@ -152,6 +163,42 @@ export function writePick(pick) {
 
 export function clearPick() {
   try { sessionStorage.removeItem(PICK_KEY); } catch { /* storage disabled */ }
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐ Đợt 196 — THE OUTBOX: the result this column still owes the shared board
+// ---------------------------------------------------------------
+// A finished play used to be published ONCE, fire-and-forget: a failure was a
+// console warning nobody reads, and that team was then missing from every other
+// column for the rest of the lesson with no symptom anywhere (the teacher's A1B
+// report, 19/8/2026 — three boards agreed on 13 of 18 pupils and the fourth sat
+// alone with 5, blind in both directions). What cannot be sent now waits HERE
+// until core/showdown-setup.js's flushPendingResult() can get it out.
+//
+// ⚠️ `sessionStorage`, for exactly the reason the pick is there (see the header):
+// four myActivity columns share one localStorage, and column 2's unsent result
+// must never be re-sent by column 3 wearing column 3's name.
+// ⚠️ It lives in THIS file — the pure one core/engine.js imports statically — so
+// the engine can ask "do I still owe a row?" and paint the warning on the first
+// frame, without dragging the Firestore layer on to the student page.
+const PENDING_KEY = "aword-showdown-pending";
+
+/** The finished-but-not-yet-shared result, or null. */
+export function readPendingResult() {
+  try {
+    const raw = sessionStorage.getItem(PENDING_KEY);
+    if (!raw) return null;
+    const e = JSON.parse(raw);
+    return e && e.teamId ? e : null;
+  } catch { return null; }        // private mode / storage disabled / bad JSON
+}
+
+export function writePendingResult(entry) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify(entry)); } catch { /* storage disabled */ }
+}
+
+export function clearPendingResult() {
+  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* storage disabled */ }
 }
 
 // ---------------------------------------------------------------
@@ -240,6 +287,54 @@ export function groupByMember(review, members) {
       ms: timed.reduce((a, x) => a + x.roundMs, 0)
     };
   }).filter(b => b.total);
+}
+
+/**
+ * ⭐⭐ Đợt 197 — ONE ROW PER CHILD, out of several teams' worth of blocks.
+ *
+ * Lifted here (from an anonymous body inside core/showdown-review.js's
+ * `buildClass`) because there are now TWO screens that have to answer "who is in
+ * this class board" and they must answer it identically to the last pupil: the
+ * live Show answers, and the durable Recently results of the setup panel. Two
+ * copies of a dedupe rule is two rules the day after.
+ *
+ * `groups` — one per team: `{ teamName, at, blocks }`.
+ *   `at === undefined` marks an AUTHORITATIVE group: the play this very screen
+ *   just watched, held in memory. It always wins, even against a newer published
+ *   row, because a screen must never show a team a worse result than the one the
+ *   class saw happen. Every other group carries the ms it was published at.
+ *
+ * WHY DEDUPE AT ALL: the published rows are a map keyed by TEAM, so nothing in
+ * the storage layer can stop one pupil arriving from two of them — a pupil MOVED
+ * between teams leaves a row behind that keeps their name for as long as it
+ * lives, and both rows are honest records of a game that really was played.
+ *
+ * ⚠️ IDENTITY IS THE PUPIL'S ID, the name only as a fallback. Two different
+ * children in one class really can share a full name (Vietnamese classes
+ * regularly do) and merging THEM would hide a pupil — the same bug pointed the
+ * other way. Every id comes from the one shared team table, so the same child
+ * carries the same id on every screen.
+ *
+ * `ord` is reassigned AFTER the dedupe: it is rankBlocks' tie-breaker of last
+ * resort and has to be unique across the merged list, not per team.
+ */
+export function mergeClassBlocks(groups) {
+  const out = [];
+  (groups || []).forEach(g => {
+    (g?.blocks || []).forEach(b => out.push({ ...b, teamName: g.teamName || "", _at: g.at }));
+  });
+  const byPupil = new Map();
+  out.forEach(b => {
+    const key = String(b.key || "").trim() || String(b.name || "").trim().toLowerCase();
+    const prev = byPupil.get(key);
+    if (!prev) { byPupil.set(key, b); return; }
+    const prevIsOurs = prev._at === undefined;
+    if (prevIsOurs) return;                            // ours always wins
+    if (b._at === undefined || (b._at || 0) > (prev._at || 0)) byPupil.set(key, b);
+  });
+  const merged = [...byPupil.values()];
+  merged.forEach((b, i) => { b.ord = i; });
+  return merged;
 }
 
 // ---------------------------------------------------------------

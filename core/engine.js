@@ -51,7 +51,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, groupByMember } from "./showdown.js";
+import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -361,6 +361,111 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     return String(originAct?.id || activity.id || "");
   }
 
+  // ⭐⭐ Đợt 196 — the two things the Showdown review needs from this closure.
+  //   `sdReviewStop`  the live Firestore listener's unsubscribe, so closing the
+  //                   review (or tearing the play down) does not leave it
+  //                   running behind a screen that is gone — the exact shape of
+  //                   the ghost-clock bug of Đợt 131.
+  //   `sdPending`     whether this column still owes the shared board its own
+  //                   result. Read SYNCHRONOUSLY from sessionStorage (it lives
+  //                   in the pure core/showdown.js) so the warning can be on the
+  //                   very first frame of the review, and re-read after every
+  //                   publish attempt.
+  // ⚠️ One-team (solo) mode never publishes to the LIVE class board (see
+  // saveTeamResult's own note), so a row left in the outbox by some EARLIER play
+  // must not make a solo review accuse itself of not sharing something it was
+  // never going to share. It DOES write to the durable history — Đợt 197.
+  const sdCanPublish = !!showdownPick && showdownPick.teamId !== SOLO_TEAM_ID;
+
+  /**
+   * ⭐⭐ Đợt 197 — WHICH ARRAY OF THE ACT IS THE PLAYABLE ONE, AND HOW LONG IT IS.
+   *
+   * Two callers need this and they must agree to the item: the Showdown class
+   * screen's QUESTIONS read-out ("how many will each pupil get?") and Balance
+   * questions itself, which trims that very array. ONE function, so the number
+   * the teacher was shown is the number they get.
+   *
+   * ⚠️ `tpl.itemsKey` is opt-in — a template that never joined Fight or "start
+   * with mistakes" has none. The fallbacks are the names actually used across
+   * the 17 templates; an act whose shape matches none of them answers 0, and
+   * both callers read 0 as "cannot divide this", never as "nought each".
+   */
+  const ITEM_KEYS = ["items", "questions", "cards", "words"];
+  function playItemsKey(act = activity) {
+    if (tpl.itemsKey && Array.isArray(act?.content?.[tpl.itemsKey])) return tpl.itemsKey;
+    return ITEM_KEYS.find(k => Array.isArray(act?.content?.[k])) || null;
+  }
+  function playItemCount(act = activity) {
+    const k = playItemsKey(act);
+    return k ? (act.content[k] || []).length : 0;
+  }
+
+  /**
+   * ⭐⭐⭐ BALANCE QUESTIONS (Đợt 197, thầy 19/8/2026) — EVERY CHILD IN THE CLASS
+   * ANSWERS THE SAME NUMBER OF QUESTIONS.
+   *
+   * The teacher's own worked example: 50 questions, 3 teams of 5 / 6 / 6 (17
+   * pupils) ⇒ board 1 shows 40, boards 2 and 3 show 48, so everybody gets 8.
+   *
+   * ⚠️ THE DIVISOR IS THE **BIGGEST TEAM**, NOT THIS ONE. Every board plays the
+   * same act, so a team of 6 can only go round `50 / 6` = 8 times — and the
+   * whole point is that the team of 5 goes round exactly as often, not the 10 it
+   * could manage alone. This board then plays `8 × its own size`.
+   * The biggest team travels in the PICK (`maxTeam`, written by the setup panel,
+   * which is the only place that can see the whole table); a pick from before
+   * this đợt has none, and falls back to this team's own size — i.e. no trim,
+   * which is exactly the old behaviour.
+   *
+   * ⚠️ RETURNS A COPY. `resolveActivity` may hand back `libAct` ITSELF, and
+   * trimming that array in place would delete questions from the teacher's
+   * library. The copy shares `options` by reference, which is what keeps
+   * Options ▸ Apply landing on the real act (see the note at `let activity`).
+   *
+   * ⚠️ Called from BOTH the mount and `begin()`. begin() re-resolves the act
+   * from the library — so without the second call the trim would silently vanish
+   * the moment the teacher pressed Play.
+   */
+  function applyBalance(act) {
+    if (!showdownPick || act?.options?.balanceQuestions !== true) return act;
+    const key = playItemsKey(act);
+    if (!key) return act;
+    const all = act.content[key] || [];
+    const mine = showdownPick.members?.length || 0;
+    const biggest = Math.max(1, Number(showdownPick.maxTeam) || mine);
+    if (!all.length || !mine) return act;
+    const each = Math.floor(all.length / biggest);
+    const cap = each * mine;
+    // `each < 1` = more pupils in the biggest team than the act has questions.
+    // Trimming to 0 would be a game with nothing in it, so the option simply
+    // stands down and every board plays the whole act, as it does when it is off.
+    if (each < 1 || cap <= 0 || cap >= all.length) return act;
+    // Which questions get dropped follows the act's OWN shuffle setting: a
+    // shuffled act takes a random `cap` of them (so two boards do not sit through
+    // the same 40 of 50), an unshuffled one keeps the teacher's order and takes
+    // the first `cap` — cutting a deliberately ordered lesson in the middle would
+    // be worse than short.
+    let kept;
+    if (act.options?.shuffleQuestions === false) {
+      kept = all.slice(0, cap);
+    } else {
+      const a = all.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      kept = a.slice(0, cap);
+    }
+    return { ...act, content: { ...act.content, [key]: kept } };
+  }
+  let sdReviewStop = null;
+  let sdPending = sdCanPublish && !!readPendingResult();
+  function refreshSdPending() { sdPending = sdCanPublish && !!readPendingResult(); }
+
+  // ⭐ Đợt 197 — trim the play NOW, before anything measures it. Everything
+  // downstream (the nav's "x of N", the review, the leaderboard total) reads
+  // `activity`, so the balance has to land before the first of them looks.
+  activity = applyBalance(activity);
+
   // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — a SECOND clock, one that
   // belongs to the pupil whose turn it is rather than to the game.
   //   options.roundTimer   "none" | "countUp" | "countDown"
@@ -452,7 +557,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (!fight || fight.side === 0) window.__awordBridge._setCurrent({
     getState: () => ({ type: activity.type, options: { ...(activity.options || {}) }, theme: activity.theme || null }),
     switchTemplate(type) {
-      if (!type || type === activity.type) return false;
+      if (!type) return false;
+      // ⭐ Đợt 197 — "ĐÃ Ở ĐÚNG TRẠNG THÁI RỒI" LÀ THÀNH CÔNG, KHÔNG PHẢI THẤT BẠI.
+      // myActivity dùng giá trị này để chấm cột kia đã đồng bộ chưa, và từ v2.3.0 nó
+      // còn hiện **dấu ✗ đỏ khi thất bại** — nên trả `false` cho một cột vốn đã đúng
+      // sẽ là một lời báo động sai, ngay trên màn hình lớp học.
+      if (type === activity.type) return true;
       awSyncMute++;
       return Promise.resolve(doSwitchTemplate(type)).then(() => true, () => false)
         .finally(() => { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); });
@@ -464,7 +574,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
     },
     setTheme(id) {
-      if (!id || id === activity.theme) return false;
+      if (!id) return false;
+      if (id === activity.theme) return true;      // đã đúng rồi — xem ghi chú ở switchTemplate
       awSyncMute++;
       try {
         loadTheme(id);
@@ -1889,7 +2000,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // set is baked into `content` by the resolver, so it has to be re-baked
     // here. Caught by testing: picking VI1, Apply, Play still showed ENG1.
     // Identity for every act without clue sets, so this costs those nothing.
-    activity = resolveActivity(libAct);
+    // ⚠️ Đợt 197 — `applyBalance` again, not just `resolveActivity`: this line
+    // re-reads the act from the library, which would quietly undo the Balance
+    // questions trim the mount had already applied. One re-resolve, one re-trim.
+    activity = applyBalance(resolveActivity(libAct));
     // Top up the clip cache when the set changed under us — the READY gate
     // preloaded whichever one was current when it ran. Fire-and-forget on
     // purpose: it only fills core/voice-clips.js's cache, plays nothing, and a
@@ -2636,6 +2750,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       mod.buildShowdownPanel(host, {
         currentTeam: showdownPick,
         toast,
+        // ⭐ Đợt 197 — HOW MANY QUESTIONS THIS ACT HAS, so the class screen can show
+        // the teacher what each pupil will get BEFORE they commit to a number of
+        // teams (the QUESTIONS box beside Teams). Counted here rather than in the
+        // panel because only the engine knows which array of the act's content is
+        // the playable one — see `playItemCount`.
+        questionCount: playItemCount(),
         // ⭐ Đợt 156 — the panel no longer carries the TEXT/VOICE row (teacher:
         // the pop-up holds only the class and the number of teams). Content is
         // chosen in Options, and an Options > Apply while Showdown is running
@@ -3229,9 +3349,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function cleanupAll() {
     if (torndown) return;
     torndown = true;
+    stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
     closeMenu(); stopTimer(); closeToolPanel(false);
     costNodes.forEach(n => n.remove()); costNodes.clear();
     cleanup();
+  }
+
+  /**
+   * ⭐ Đợt 196 — close the Showdown review's Firestore listener, wherever the
+   * review is being left from: the ✕, Start again, Home, Change template, a
+   * match, a mode switch. One function, called from every one of those, because
+   * a listener behind a dead screen is invisible and permanent (Đợt 131's
+   * ghost-clock, in a different costume).
+   */
+  function stopShowdownReview() {
+    if (!sdReviewStop) return;
+    const stop = sdReviewStop;
+    sdReviewStop = null;
+    try { stop(); } catch { /* already gone */ }
   }
 
   // ----- Small toast message -----
@@ -3502,14 +3637,44 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Same two exclusions as the leaderboard directly below, for the same
       // reasons: a play where nobody answered anything has nothing to report, and
       // a "Start with mistakes" round is practice, not a scored play.
+      // ⭐⭐ Đợt 196 — still fire-and-forget FROM HERE (the celebration must never
+      // wait on a classroom network), but no longer fire-and-FORGET: what does
+      // not land is kept in the outbox (core/showdown.js), retried by
+      // showdown-setup's sendEntry, and — if it is still owed when the teacher
+      // opens Show answers — said out loud on the board itself. `sdPending` is
+      // set BEFORE the import so the very first frame of a review opened during
+      // a bad minute already carries the warning.
       if (showdownPick && answered > 0 && !activity._mistakes) {
         const students = groupByMember(reviewData, showdownPick.members);
+        const roundKey = showdownRoundKey();
+        const actName = originAct?.name || "";
+        sdPending = sdCanPublish;
         import("./showdown-setup.js")
-          .then(m => m.saveTeamResult({
-            pick: showdownPick, roundKey: showdownRoundKey(),
-            actName: originAct?.name || "", students
-          }))
-          .catch(e => console.warn("AWord: could not publish this team's result", e));
+          .then(m => m.saveTeamResult({ pick: showdownPick, roundKey, actName, students }))
+          .catch(e => console.warn("AWord: could not publish this team's result", e))
+          .finally(refreshSdPending);
+        // ⭐⭐⭐ Đợt 197 — AND FILE IT IN THE CLASS'S LEDGER (thầy: "lưu bền kể cả
+        // khi tắt máy"). A SECOND, independent write, on purpose:
+        //   • the live board above is overwritten by the next play and wiped by
+        //     Reset teams; this one is never overwritten and never wiped;
+        //   • one-team mode writes HERE but deliberately not there (see
+        //     saveMatchResult's own note on the stale `sd_solo` row);
+        //   • if either write fails the other still lands, and a lesson with a
+        //     bad minute of network keeps at least one record of what happened.
+        // ⚠️ `nextPlayNo` is called EXACTLY ONCE per finished play — it is what
+        // makes a replay a new column rather than an overwrite (thầy's rule), so
+        // it must not move into a retry or a `.then` that could run twice.
+        if (showdownPick.classId) {
+          import("./showdown-history.js")
+            .then(h => h.saveMatchResult({
+              classId: showdownPick.classId, className: showdownPick.className,
+              tableId: showdownPick.tableId || "", roundKey,
+              playNo: h.nextPlayNo(showdownPick.tableId || "", roundKey),
+              actName,
+              teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
+            }))
+            .catch(e => console.warn("AWord: could not file this result in the class history", e));
+        }
       }
       if (answered > 0 && !activity._mistakes) {
         // stored (incl. review) so it can sync later and students can compete.
@@ -3749,11 +3914,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // SHOW ANSWERS — full 16:9 review: question | your answer | correct answer
   // =============================================================
   function showReview(result, entryId) {
+    // ⚠️ Đợt 196 — the teacher can open Show answers, close it and open it again
+    // as often as they like; each open MOUNTS A NEW review, so the previous
+    // one's live listener has to go first or they stack up one per open.
+    stopShowdownReview();
     if (backdrop) backdrop.innerHTML = "";   // hide the panel behind
     const rv = el("div", "aw-review");
     const head = el("div", "aw-rv-head");
     const closeBtn = iconBtn("aw-rv-close", icons.close, "Close");
-    closeBtn.onclick = () => { rv.remove(); showSummary(result, entryId); };
+    closeBtn.onclick = () => { stopShowdownReview(); rv.remove(); showSummary(result, entryId); };
     // ⭐ Đợt 177 — Showdown builds its OWN title, because there it is a control
     // and not a label: "SHOWDOWN A1C • TEAM 3", where the word SHOWDOWN carries
     // tap / double-tap / press-and-hold (this team ↔ the whole class · refresh
@@ -3771,12 +3940,37 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // games finished (see the publish in finish() above). The network call is
     // handed in from here so that file never has to import Firestore.
     if (showdownPick) {
-      mountShowdownReview({
+      // ⭐⭐⭐ Đợt 196 — the review no longer ASKS ONCE, it WATCHES. Four
+      // callbacks instead of one, all of them thin wrappers so that file still
+      // never imports Firestore (its own header, luật 2 of v0.9.0):
+      //   loadTeams    the one-shot read, still the fallback
+      //   watchTeams   the live listener — this is what makes four columns agree
+      //   flushPending re-send this column's own row if the whistle-time write
+      //                did not land (core/showdown-setup.js keeps it in an outbox)
+      //   isPending    whether this column still owes the shared row
+      // ⚠️ `watchTeams` is SYNCHRONOUS on purpose — it must hand back an
+      // unsubscribe the review can hold. The dynamic import is done INSIDE it and
+      // the real unsubscribe is chained on afterwards.
+      const sd = () => import("./showdown-setup.js");
+      sdReviewStop = mountShowdownReview({
         head, before: closeBtn, host: rv,
         pick: showdownPick,
         review: reviewData,
-        loadTeams: () => import("./showdown-setup.js")
-          .then(m => m.loadTeamResults(showdownRoundKey())),
+        loadTeams: () => sd().then(m => m.loadTeamResults(showdownRoundKey())),
+        watchTeams: (onChange, onError) => {
+          let off = null, dead = false;
+          sd().then(m => {
+            if (dead) return;
+            off = m.subscribeResults(showdownRoundKey(), onChange, onError);
+          }).catch(onError);
+          return () => { dead = true; if (off) { try { off(); } catch { /* already gone */ } } };
+        },
+        flushPending: () => sd().then(m => m.flushPendingResult())
+          .then(ok => { refreshSdPending(); return ok; },
+                e => { refreshSdPending(); throw e; }),
+        // Synchronous, so the title can be painted on the very first frame: the
+        // outbox is sessionStorage, and reading it must not wait on a module.
+        isPending: () => !!sdPending,
         toast
       });
       inner.append(rv);

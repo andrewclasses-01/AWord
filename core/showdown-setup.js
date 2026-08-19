@@ -54,7 +54,16 @@ import { sound } from "./sound.js";
 import { icons } from "./icons.js";
 import { db, fs, currentUser } from "./firebase.js";
 import { makeHStepper } from "./numberstepper.js";
-import { MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick } from "./showdown.js";
+// ⭐ Đợt 197 — the Recent results screen draws the SAME two boards the live
+// Show answers does. Both come from core/showdown-review.js, which is DOM-only
+// and free of Firestore, so importing it here does not breach the rule that
+// keeps THIS file behind a dynamic import (see the header).
+import { renderReviewList, renderReviewPodium, POD_MAX_W, POD_MIN_W } from "./showdown-review.js";
+import {
+  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
+  readPendingResult, writePendingResult, clearPendingResult,
+  mergeClassBlocks, rankBlocks
+} from "./showdown.js";
 
 const DOC_ID = "sd_main";
 // A claim older than this is treated as abandoned. Long enough to cover a whole
@@ -156,6 +165,14 @@ function normalize(raw) {
     id: DOC_ID, kind: "showdown", root: "showdown", parentId: null, trashed: false,
     classId: String(raw?.classId || ""),
     className: String(raw?.className || "").trim(),
+    // ⭐⭐ Đợt 197 — WHICH DIVISION OF THE CLASS THIS IS. Minted once, by the
+    // browser that presses Next, and carried by every board that plays off this
+    // table. Two jobs, both new this đợt:
+    //   • the durable result history groups a class's boards into ONE match by
+    //     (tableId + act + play number) — see core/showdown-history.js;
+    //   • `publishTable` uses it to tell "I am replacing the table" apart from
+    //     "I am writing a stale copy of the table somebody else just edited".
+    tableId: String(raw?.tableId || ""),
     // ⭐⭐ Đợt 191 — WHO IS PLAYING TODAY (teacher, 18/8/2026: deleting a pupil on
     // the class screen must survive). The register in Settings › Classes is the
     // permanent roll and is never edited from here; THIS is the shorter list the
@@ -221,6 +238,107 @@ export async function saveSetup(setup) {
 }
 
 /**
+ * ⭐⭐⭐ Đợt 197 (19/8/2026) — TÍCH MỘT ĐỘI KHÔNG ĐƯỢC GHI ĐÈ CẢ BẢNG.
+ *
+ * Pressing READY only ever wanted to add ONE key to `claims`. It did it by
+ * writing the WHOLE document from this browser's own snapshot — so a second
+ * machine that had edited the teams a second earlier had its edit silently
+ * replaced by whatever this browser happened to be holding. Nothing on either
+ * screen said a word; the losing machine simply found its line-up changed back.
+ * (Found while investigating the A1B result split — same family: a write that
+ * carries more than it means to, and loses somebody else's work in silence.)
+ *
+ * This writes ONLY the claims map, inside a TRANSACTION, so:
+ *   • the teams, roster, class and tableId in the document are untouched — they
+ *     stay whatever the server has, which is by definition the newest;
+ *   • claims are re-derived from the SERVER's copy, so two machines pressing
+ *     Ready in the same second both end up holding their own team instead of
+ *     one of them quietly losing it.
+ *
+ * `mine` is the team this browser is taking, or null to just let go of whatever
+ * it holds (Single mode / release / leaving Showdown).
+ * Returns the claims map as it now stands on the server.
+ */
+/**
+ * ⭐⭐⭐ Đợt 197 — PUBLISH THIS SCREEN'S TABLE **AND** ITS CLAIM, IN ONE
+ * TRANSACTION, WITHOUT EVER DELETING ANOTHER SCREEN'S WORK.
+ *
+ * Pressing READY is the only moment a built table reaches Firestore, so it has
+ * to write the teams — but it must not do what it used to, which was to stamp
+ * this panel's whole snapshot over whatever was there. Three cases, decided on
+ * the SERVER's copy inside the transaction:
+ *
+ *   1. we minted a different `tableId`  → we are DELIBERATELY replacing the
+ *      table (the teacher pressed Next and divided the class again). Ours wins.
+ *   2. same table, and the server has moved on since we loaded → another screen
+ *      edited these very teams while this panel was open. The SERVER's teams
+ *      win, we contribute only our claim, and the caller is told so it can say
+ *      so out loud. Losing a chip-drag is annoying; losing it silently is the
+ *      bug this đợt exists to close.
+ *   3. otherwise → ours, which is the ordinary single-screen case.
+ *
+ * Claims are ALWAYS merged from the server (ours dropped everywhere, then set
+ * on `claimTeamId`), so two machines pressing Ready in the same second both
+ * keep their team.
+ *
+ * @returns {{ node: object, superseded: boolean }}
+ */
+export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {}) {
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, DOC_ID);
+  let superseded = false;
+  const node = await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const server = normalize(snap.exists() ? snap.data() : {});
+    const ours = normalize(setup);
+    const replacing = !!ours.tableId && ours.tableId !== server.tableId;
+    superseded = !replacing && server.teams.length > 0 && (server.updatedAt || 0) > (baseAt || 0);
+    const base = superseded ? server : ours;
+    const claims = {};
+    Object.entries(server.claims).forEach(([tid, c]) => { if (c.by !== me) claims[tid] = c; });
+    if (claimTeamId) claims[claimTeamId] = { by: me, at: Date.now() };
+    const next = normalize({
+      ...base,
+      claims,
+      tableId: base.tableId || ours.tableId || server.tableId,
+      updatedAt: Date.now()
+    });
+    tx.set(ref, clean(next));
+    return next;
+  });
+  cache = node; cacheUid = uid;
+  return { node, superseded };
+}
+
+export async function writeMyClaim(mine) {
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, DOC_ID);
+  const claims = await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const server = normalize(snap.exists() ? snap.data() : {});
+    const next = { ...server.claims };
+    // One browser holds at most one team, so drop ours everywhere first — a
+    // stale self-claim would hide a team from every other screen until the TTL.
+    Object.entries(next).forEach(([tid, c]) => { if (c.by === me) delete next[tid]; });
+    if (mine) next[mine] = { by: me, at: Date.now() };
+    // ⚠️ `update`, not `set`: a `set` — even a merged one — would let this
+    // function reintroduce fields from a stale snapshot, which is the very bug
+    // it exists to close. If the document does not exist yet there is no table
+    // to claim a team in, so there is nothing to write either.
+    if (snap.exists()) tx.update(ref, { claims: clean(next), updatedAt: Date.now() });
+    return next;
+  });
+  // Keep the local copy in step so the panel does not have to wait for the
+  // listener to come back round before it can repaint.
+  if (cache && cacheUid === uid) cache = { ...cache, claims };
+  return claims;
+}
+
+/**
  * Watch the table while the panel is open, so a team claimed by another column
  * disappears here without the teacher having to close and reopen.
  * Returns an unsubscribe function (a no-op if the listener could not start —
@@ -258,15 +376,12 @@ export function subscribeSetup(onChange) {
  * failure here must not stop the teacher from leaving the mode.
  */
 export async function releaseMyClaim() {
-  const me = browserId();
-  try {
-    const fresh = await loadSetup({ fresh: true });
-    let touched = false;
-    Object.entries(fresh.claims).forEach(([tid, c]) => {
-      if (c.by === me) { delete fresh.claims[tid]; touched = true; }
-    });
-    if (touched) await saveSetup(fresh);
-  } catch { /* signed out or offline — the TTL will clear it */ }
+  // ⭐ Đợt 197 — was read-the-whole-table / edit / write-the-whole-table, which
+  // meant simply LEAVING Showdown could stamp a stale copy of the teams over a
+  // line-up another machine had just built. Now it touches `claims` and nothing
+  // else, inside a transaction. See writeMyClaim's own note.
+  try { await writeMyClaim(null); }
+  catch { /* signed out or offline — the TTL will clear it */ }
 }
 
 /**
@@ -395,13 +510,137 @@ function normalizeResults(raw) {
   return teams;
 }
 
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 196 (19/8/2026) — THE BOARD MUST CONVERGE BY ITSELF
+// ---------------------------------------------------------------
+// The teacher's report: four columns, four teams, class A1B (18 pupils). Teams
+// 1/3/4 all agreed on the same 13 pupils; team 2's column showed 5 and nothing
+// else, in BOTH directions — it could not see them and they could not see it.
+//
+// Everything about the old design made that possible and then hid it:
+//   • ONE fire-and-forget write at the end of the play. A failure was a
+//     `console.warn` on a screen nobody reads, never retried — that team is then
+//     missing from every other board for the rest of the lesson.
+//   • ONE read, on the FIRST tap of the title. A board that peeked before the
+//     others finished kept its answer; a plain tap never re-read (only the
+//     double tap did, and nothing on screen says so).
+//   • The `roundKey` filter dropped rows in SILENCE. Two columns on two acts
+//     that look identical (a duplicate act, a column opened by hand) are
+//     invisible to each other with no symptom at all — exactly the two-way
+//     isolation the teacher photographed.
+//
+// So the three parts below, and they are the whole fix:
+//   1. `subscribeResults` — the board WATCHES the shared row instead of asking
+//      once. A team that finishes appears on every other screen by itself.
+//   2. `saveTeamResult` retries, and what it could not send is kept in
+//      `sessionStorage` (the same per-column store the pick lives in) so
+//      `flushPendingResult()` can send it later — after the network came back,
+//      or after that column was reloaded.
+//   3. `splitResults` hands back the rows it DROPPED as well as the ones it
+//      kept, so core/showdown-review.js can say "2 teams played a different
+//      act" instead of quietly showing a short class.
+// ⚠️ None of it may live in core/showdown-review.js: that file is imported
+// statically by the engine and must stay clear of Firestore (see its header).
+
+/**
+ * Sort the published rows into the ones this play may show and the ones it may
+ * not. `teamsMap` is normalizeResults()'s output.
+ *
+ *   { teams: [entry…], otherActs: [{ teamName, actName }…] }
+ *
+ * `otherActs` is the half that used to disappear without trace.
+ */
+export function splitResults(teamsMap, roundKey) {
+  const key = String(roundKey || "");
+  const teams = [];
+  const otherActs = [];
+  Object.values(teamsMap || {}).forEach(t => {
+    // ⭐ Đợt 180 — never a SOLO row. saveTeamResult() no longer writes one, but
+    // every document written before that đợt may still hold one, and it is the
+    // whole class on its own: left in, it doubles every pupil on the board (see
+    // that function's own note). Dropped on READ as well as on write so the bad
+    // row disappears from the teacher's screen immediately, with no Reset teams
+    // and no trip to the Firebase console.
+    if (t.teamId === SOLO_TEAM_ID) return;
+    // An entry with no key at all is from a build older than this one; it is
+    // still this teacher's own class, so let it through rather than hide a
+    // result the teacher can see was recorded.
+    if (!key || !t.roundKey || t.roundKey === key) { teams.push(t); return; }
+    otherActs.push({ teamName: t.teamName, actName: t.actName || "" });
+  });
+  teams.sort((a, b) => a.teamName.localeCompare(b.teamName));
+  return { teams, otherActs };
+}
+
+// ---- the outbox: what this column owes the shared row ----------------------
+// The store itself lives in core/showdown.js (`readPendingResult` and friends),
+// beside the pick and the browser id, because the ENGINE has to be able to ask
+// "do I still owe a row?" without importing this file — see that block's note.
+// Three goes, spread far enough apart to outlive a classroom wifi stumble but
+// not so far that the teacher has closed the summary before the last one.
+const SEND_TRIES = 3;
+const SEND_BACKOFF = [400, 1400, 3600];
+
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+/** One attempt at the merged write. Throws exactly what Firestore throws. */
+async function writeEntry(entry) {
+  const uid = await requireUid();
+  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+  await setDoc(
+    doc(d, `users/${uid}/items`, RESULTS_DOC),
+    clean({
+      kind: "showdown-results", root: "showdown", parentId: null, trashed: false,
+      teams: { [entry.teamId]: entry },
+      updatedAt: entry.at
+    }),
+    { merge: true }
+  );
+}
+
+/**
+ * Send `entry`, retrying, and keep it in the outbox until it lands.
+ * Resolves true when the shared row has it, false when it is still owed — it
+ * NEVER throws, because every caller is somewhere the teacher is looking at a
+ * game and must not be interrupted.
+ */
+async function sendEntry(entry) {
+  writePendingResult(entry);          // written BEFORE the first try: a column that
+                                   // is reloaded mid-write still owes the row
+  let last = null;
+  for (let i = 0; i < SEND_TRIES; i++) {
+    if (i) await wait(SEND_BACKOFF[i - 1]);
+    try {
+      await writeEntry(entry);
+      clearPendingResult();
+      return true;
+    } catch (e) { last = e; }
+  }
+  console.warn("AWord: this team's result is still not shared", last);
+  return false;
+}
+
+/**
+ * Try again to send whatever this column still owes. Called by the engine when
+ * the Showdown review opens and every time the shared row changes, so a result
+ * that failed at the whistle lands as soon as anything at all is working again.
+ * Resolves true if there was nothing owed or it went through.
+ */
+export async function flushPendingResult() {
+  const entry = readPendingResult();
+  if (!entry) return true;
+  return sendEntry(entry);
+}
+
 /**
  * Publish THIS browser's team result. Called by core/engine.js the moment a
  * Showdown play finishes.
  *
- * ⚠️ Throws when signed out — the caller (engine.js's finish) treats that as a
- * warning in the console and nothing more. A teacher playing offline still sees
- * their own team's Show answers in full; only the class board is short.
+ * ⚠️ Never throws (Đợt 196). It used to throw when signed out and the caller
+ * turned that into a console warning — which is how a whole team went missing
+ * from the class board with nothing on any screen to say so. What cannot be
+ * sent now stays in the outbox above and is retried; `readPendingResult()` (core/showdown.js) is what
+ * the review screen reads to put a warning in front of the teacher.
  */
 export async function saveTeamResult({ pick, roundKey, actName = "", students }) {
   if (!pick?.teamId) return null;
@@ -421,7 +660,6 @@ export async function saveTeamResult({ pick, roundKey, actName = "", students })
   // Guarded BEFORE `requireUid()` on purpose: solo is the one mode that is
   // meant to work signed out, and it must not throw on its way to doing nothing.
   if (pick.teamId === SOLO_TEAM_ID) return null;
-  const uid = await requireUid();
   const entry = {
     teamId: String(pick.teamId),
     teamName: String(pick.teamName || "Team"),
@@ -443,22 +681,17 @@ export async function saveTeamResult({ pick, roundKey, actName = "", students })
       }))
     }))
   };
-  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
-  await setDoc(
-    doc(d, `users/${uid}/items`, RESULTS_DOC),
-    clean({
-      kind: "showdown-results", root: "showdown", parentId: null, trashed: false,
-      teams: { [entry.teamId]: entry },
-      updatedAt: entry.at
-    }),
-    { merge: true }
-  );
+  await sendEntry(entry);
   return entry;
 }
 
 /**
  * Every team that has published a result for THIS act — the caller's own team
- * included (core/showdown-review.js drops it and uses its live copy instead).
+ * included (core/showdown-review.js drops it and uses its live copy instead) —
+ * PLUS the rows this play may not show (Đợt 196; see splitResults).
+ *
+ *   { teams: [entry…], otherActs: [{teamName, actName}…] }
+ *
  * Always read FRESH: the whole point of the button that calls this is that
  * another team has just finished, so a cache would be answering the wrong
  * question.
@@ -467,25 +700,47 @@ export async function loadTeamResults(roundKey) {
   const uid = await requireUid();
   const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
   const snap = await getDoc(doc(d, `users/${uid}/items`, RESULTS_DOC));
-  const teams = normalizeResults(snap.exists() ? snap.data() : {});
-  const key = String(roundKey || "");
-  return Object.values(teams)
-    // ⭐ Đợt 180 — and never a SOLO row. saveTeamResult() no longer writes one,
-    // but every document written before today may still hold one, and it is the
-    // whole class on its own: left in, it doubles every pupil on the board (see
-    // that function's own note). Dropped on READ as well as on write so the bad
-    // row disappears from the teacher's screen immediately, with no Reset teams
-    // and no trip to the Firebase console.
-    .filter(t => t.teamId !== SOLO_TEAM_ID)
-    // An entry with no key at all is from a build older than this one; it is
-    // still this teacher's own class, so let it through rather than hide a
-    // result the teacher can see was recorded.
-    .filter(t => !key || !t.roundKey || t.roundKey === key)
-    .sort((a, b) => a.teamName.localeCompare(b.teamName));
+  return splitResults(normalizeResults(snap.exists() ? snap.data() : {}), roundKey);
+}
+
+/**
+ * ⭐⭐⭐ Đợt 196 — WATCH the shared row for as long as the review is on screen.
+ * This is the part that makes four boards agree without anybody being told to
+ * chạm đúp: the moment another team's game ends, its row lands here and every
+ * other column repaints itself.
+ *
+ * `onChange({ teams, otherActs })` — the same shape loadTeamResults() returns.
+ * Returns an unsubscribe function (a no-op if the listener could not start, in
+ * which case the one-shot read the review already did is still what is shown).
+ *
+ * ⚠️ Errors are handed to `onError` rather than swallowed: a review that cannot
+ * watch must SAY it is not live, which is the whole lesson of this đợt.
+ */
+export function subscribeResults(roundKey, onChange, onError = () => {}) {
+  let stop = null, dead = false;
+  (async () => {
+    try {
+      const uid = await requireUid();
+      const [d, { doc, onSnapshot }] = await Promise.all([db(), fs()]);
+      if (dead) return;
+      stop = onSnapshot(
+        doc(d, `users/${uid}/items`, RESULTS_DOC),
+        snap => {
+          if (dead) return;
+          onChange(splitResults(normalizeResults(snap.exists() ? snap.data() : {}), roundKey));
+        },
+        err => { if (!dead) onError(err); }
+      );
+    } catch (e) { if (!dead) onError(e); }
+  })();
+  return () => { dead = true; if (stop) { try { stop(); } catch { /* already gone */ } } };
 }
 
 /** Drop every published result (Reset teams — see wipeSetup). */
 export async function wipeResults() {
+  // ⚠️ Đợt 196 — and drop what this column still OWES, or the retry would put
+  // yesterday's team straight back into the row the teacher has just emptied.
+  clearPendingResult();
   const uid = await requireUid();
   const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
   await setDoc(doc(d, `users/${uid}/items`, RESULTS_DOC), {
@@ -693,6 +948,18 @@ export function buildShowdownPanel(panel, ctx) {
   // nothing has to mutate the caller's object.
   let playingTeamId = ctx.currentTeam?.teamId || null;
   let pool = [];            // pupils not yet in a team (screen B)
+  // ⭐ Đợt 197 — the `updatedAt` of the table snapshot this panel is working
+  // from. `publishTable` compares it against the server's to tell "nobody has
+  // touched this since I loaded it" from "another screen edited it while I was
+  // dragging chips". Kept in step by boot() and by the live listener.
+  let baseAt = 0;
+  // ⭐ Đợt 197 — which class the CURRENT table belongs to. `setup.classId` cannot
+  // answer that: the class <select> writes straight into it, so the moment the
+  // teacher picks a different class the table's own class is gone. This is what
+  // lets Next ask "there is a table for 5A — throw it away?" instead of either
+  // asking every time or silently overwriting.
+  let tableClassId = "";
+  let tableClassName = "";
   let unsub = null;
   updatePanelWidth();   // the one and only width — fixed at boot, see the function's own note
 
@@ -825,11 +1092,183 @@ export function buildShowdownPanel(panel, ctx) {
    */
   function footCaption(n, warn) {
     if (warn) return hintEl(warn);
-    const cap = el("div", "aw-sd-footcap");
+    // ⭐⭐⭐ Đợt 197 (thầy) — THIS LINE IS NOW THE DOOR TO **RECENT RESULTS**.
+    // "Gán tính năng recently results vào chữ SHOWDOWN IN ANDREW CLASSES… Khi
+    // đang chọn 1 lớp, bấm 1 lần vào chữ này sẽ hiện pop-up Recently result của
+    // lớp đang được chọn."
+    // ⚠️ A <button> only when there IS a class. A caption that is sometimes a
+    // control has to LOOK like one exactly when it is one, or the teacher taps it
+    // once on the wrong screen, nothing happens, and they never try again.
+    const live = !!setup.classId;
+    const cap = el(live ? "button" : "div", "aw-sd-footcap" + (live ? " is-btn" : ""));
+    if (live) {
+      cap.type = "button";
+      cap.title = `Recent results — ${setup.className || "this class"}`;
+      cap.onclick = () => { sfx.tap(); openRecent(setup.classId, setup.className); };
+    }
     cap.append(el("span", "aw-sd-capmain", "SHOWDOWN IN ANDREW CLASSES"));
     cap.append(el("span", "aw-sd-capdot", "•"));
     cap.append(el("span", "aw-sd-capnum", `${n} STUDENT${n === 1 ? "" : "S"}`));
     return cap;
+  }
+
+  // ---------------------------------------------------------------
+  // ⭐⭐⭐ RECENT RESULTS (Đợt 197) — the class's last five matches
+  // ---------------------------------------------------------------
+  // Five columns, newest on the left, each the WHOLE CLASS of that match drawn
+  // as the inverted funnel. Tapping one opens it OVER the other four (thầy: "mở
+  // rộng pop-up trùm lên các cột khác… để xem chi tiết nhất và ưu tiên xem").
+  //
+  // ⚠️ TWO DIFFERENT BOARDS, ON PURPOSE — the one design decision here worth
+  // knowing. The real boards (core/showdown-review.js) are sized in `cqw`, i.e.
+  // percentages of their container: right inside the 16:9 stage, useless in a
+  // 200px column, where that same stylesheet renders a pupil's name at about
+  // 5px. So a COLUMN draws a purpose-built miniature in px (`.aw-sd-mini-*`),
+  // and the EXPANDED view — which fills the whole panel and is therefore a
+  // container of stage-like width — reuses the real renderers unchanged.
+  // One board to read, one board to glance at.
+  const when = ms => {
+    const d = new Date(Number(ms) || 0);
+    const p = x => String(x).padStart(2, "0");
+    return `${p(d.getHours())}:${p(d.getMinutes())} · ${d.getDate()}/${d.getMonth() + 1}`;
+  };
+
+  /** One match's whole class, deduped and ranked — the ONE rule, from showdown.js. */
+  function matchBlocks(match) {
+    const groups = Object.values(match?.teams || {})
+      .map(t => ({ teamName: t.teamName || "", at: Number(t.at) || 0, blocks: t.students || [] }));
+    return rankBlocks(mergeClassBlocks(groups));
+  }
+
+  function openRecent(classId, className) {
+    if (body.querySelector(".aw-sd-recent")) return;          // one at a time
+    const layer = el("div", "aw-sd-recent");
+    const head = el("div", "aw-sd-rec-head");
+    const title = el("div", "aw-sd-rec-title");
+    title.append(el("span", "aw-sd-rec-word", "RECENT RESULTS"));
+    const clsEl = el("span", "aw-sd-rec-class");
+    clsEl.textContent = className || "";                       // teacher's own text
+    title.append(clsEl);
+    const closeBtn = el("button", "aw-sd-rec-close", icons.close);
+    closeBtn.type = "button"; closeBtn.title = "Close";
+    const close = () => {
+      const a = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
+      whenDone(a, () => layer.remove(), 240);
+    };
+    closeBtn.onclick = () => { sfx.back(); close(); };
+    head.append(title, closeBtn);
+    const cols = el("div", "aw-sd-rec-cols");
+    layer.append(head, cols);
+    body.append(layer);
+    layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+
+    cols.append(el("div", "aw-sd-rec-note", "Loading…"));
+    import("./showdown-history.js")
+      .then(h => h.loadMatches(classId))
+      .then(matches => { if (layer.isConnected) paintCols(matches); })
+      .catch(e => {
+        if (!layer.isConnected) return;                        // closed while we waited
+        cols.innerHTML = "";
+        cols.append(el("div", "aw-sd-rec-note",
+          e?.code === "aw/signed-out" ? "Sign in to see past results." : "Could not read past results."));
+      });
+
+    function paintCols(matches) {
+      cols.innerHTML = "";
+      if (!matches.length) {
+        cols.append(el("div", "aw-sd-rec-note", "No results kept for this class yet."));
+        return;
+      }
+      matches.forEach(m => {
+        const ranked = matchBlocks(m);
+        const col = el("button", "aw-sd-rec-col");
+        col.type = "button";
+        const ch = el("div", "aw-sd-rec-colhead");
+        const act = el("div", "aw-sd-rec-act");
+        act.textContent = m.actName || "Showdown";             // teacher's own text
+        const sub = el("div", "aw-sd-rec-sub");
+        // How many teams filed a row, so a match one board missed reads AS that
+        // rather than as a short class — Đợt 196's lesson, applied to the ledger.
+        const teams = Object.keys(m.teams || {}).length;
+        sub.textContent = `${when(m.at)} · ${ranked.length} sts · ${teams} team${teams === 1 ? "" : "s"}`;
+        ch.append(act, sub);
+        col.append(ch, renderMini(ranked));
+        col.onclick = () => { sfx.forward(); openDetail(m, ranked); };
+        cols.append(col);
+      });
+    }
+
+    /** The miniature funnel — see the note above for why this is not `.aw-sd-pod`. */
+    function renderMini(ranked) {
+      const box = el("div", "aw-sd-mini");
+      const n = ranked.length;
+      if (!n) { box.append(el("div", "aw-sd-rec-note", "No pupils")); return box; }
+      ranked.forEach((b, i) => {
+        // The same linear taper as the real podium, off the same two constants,
+        // so the shape the teacher recognises really is the same shape.
+        const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
+        const row = el("div", "aw-sd-mini-row");
+        row.style.setProperty("--w", w.toFixed(2) + "%");
+        row.append(el("span", "aw-sd-mini-rank", String(i + 1)));
+        const card = el("div", "aw-sd-mini-box" + (i < 3 ? ` is-m${i + 1}` : ""));
+        const nm = el("span", "aw-sd-mini-name");
+        nm.textContent = shortenName(b.name);                  // never innerHTML
+        nm.title = b.name;
+        card.append(nm, el("span", "aw-sd-mini-score", String(b.right)));
+        row.append(card);
+        box.append(row);
+      });
+      return box;
+    }
+
+    /**
+     * The expanded match, laid OVER the five columns (thầy: "trùm lên các cột
+     * khác"). This box fills the panel, so it uses the REAL renderers.
+     */
+    function openDetail(m, ranked) {
+      if (layer.querySelector(".aw-sd-rec-detail")) return;
+      const det = el("div", "aw-sd-rec-detail");
+      const dh = el("div", "aw-sd-rec-head");
+      const dt = el("div", "aw-sd-rec-title");
+      const dact = el("span", "aw-sd-rec-word");
+      dact.textContent = m.actName || "Showdown";
+      const dsub = el("span", "aw-sd-rec-class");
+      dsub.textContent = `${className || ""} · ${when(m.at)}`;
+      dt.append(dact, dsub);
+      // Ranking or answers, on a plain toggle rather than the live board's
+      // press-and-hold: this popover is a reading screen, not a game surface, and
+      // a hidden gesture on it would simply never be found.
+      let podium = false;
+      const toggle = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
+      toggle.type = "button"; toggle.title = "Ranking / answers";
+      const back = el("button", "aw-sd-rec-close", icons.close);
+      back.type = "button"; back.title = "Back to the five matches";
+      back.onclick = () => { sfx.back(); det.remove(); };
+      dh.append(dt, toggle, back);
+      const dbody = el("div", "aw-sd-rec-dbody");
+      det.append(dh, dbody);
+      // A match whose per-question detail was dropped to keep the document under
+      // Firestore's limit (fitToBudget) has nothing to put in the list, and an
+      // empty list would read as "nobody answered anything".
+      const hasRows = ranked.some(b => (b.rows || []).length);
+      const paint = () => {
+        dbody.innerHTML = "";
+        if (!hasRows && !podium) {
+          dbody.append(el("div", "aw-sd-rec-note",
+            "The answers for this match were not kept — here is the ranking."));
+          dbody.append(renderReviewPodium(ranked, { showTeam: true }));
+          return;
+        }
+        dbody.append(podium
+          ? renderReviewPodium(ranked, { showTeam: true })
+          : renderReviewList(ranked, { showTeam: true }));
+      };
+      toggle.onclick = () => { podium = !podium; toggle.classList.toggle("is-on", podium); sfx.tap(); paint(); };
+      paint();
+      layer.append(det);
+      det.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
+        { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
+    }
   }
 
   /** Held by ANOTHER screen — drawn, but dimmed and untouchable (Đợt 159). */
@@ -954,18 +1393,55 @@ export function buildShowdownPanel(panel, ctx) {
     };
     cClass.append(sel);
 
-    const cCount = el("div", "aw-sd-field is-narrow");
+    const cCount = el("div", "aw-sd-field is-teams");
     cCount.append(el("div", "aw-sd-flab", "Teams"));
     const stepper = makeHStepper(teamCount, MIN_TEAMS, MAX_TEAMS,
       // ⛔ Đợt 166's live `updatePanelWidth(v)` call here is gone (Đợt 171) —
       // it was the resize-while-tapping bug itself; the panel's width is fixed
       // once at boot now and this handler only ever touches `teamCount`.
-      v => { teamCount = v; sfx.tap(); paintFoot(); }, { format: v => String(v) });
+      v => { teamCount = v; sfx.tap(); paintQuest(); paintFoot(); }, { format: v => String(v) });
     stepper.el.classList.add("is-big");
     cCount.append(stepper.el);
 
-    row.append(cClass, cCount);
+    // ⭐⭐ Đợt 197 (thầy) — QUESTIONS: how many questions each pupil will actually
+    // get, worked out HERE, while the number of teams is still being chosen —
+    // "để biết mỗi người sẽ được bao nhiêu câu khi chọn balance questions".
+    const cQuest = el("div", "aw-sd-field is-quest");
+    cQuest.append(el("div", "aw-sd-flab", "Questions"));
+    const questEl = el("div", "aw-sd-readout is-big");
+    questEl.title = "Questions each pupil gets with Balance questions on";
+    cQuest.append(questEl);
+
+    row.append(cClass, cCount, cQuest);
     host.append(row);
+    paintQuest();
+
+    /**
+     * The same arithmetic core/engine.js runs when Balance questions is ON, done
+     * a step earlier — before the teams exist — so the teacher can see what a
+     * team count will cost before committing to it.
+     *
+     * ⚠️ THE DIVISOR IS THE BIGGEST TEAM, not the class. Every board plays the
+     * same act of Q questions, so a team of 6 can only go round `Q / 6` times,
+     * and the whole point of balancing is that the team of 5 goes round exactly
+     * as often. `splitIntoTeams` deals round-robin, so the biggest team is
+     * `ceil(pupils / teams)` — the teacher's own worked example (50 questions,
+     * 17 pupils, 3 teams) comes out at 8 each, which is what he asked for.
+     */
+    function questionsEach() {
+      const q = Math.max(0, Number(ctx.questionCount) || 0);
+      const n = roster.length;
+      if (!setup.classId || !q || !n) return 0;
+      const biggest = Math.max(1, Math.ceil(n / Math.max(1, teamCount)));
+      return Math.floor(q / biggest);
+    }
+    function paintQuest() {
+      const each = questionsEach();
+      questEl.innerHTML = "";
+      questEl.classList.toggle("is-none", !each);
+      questEl.append(el("span", "aw-sd-ronum", each ? String(each) : "—"));
+      questEl.append(el("span", "aw-sd-rosub", "each"));
+    }
 
     const listWrap = el("div", "aw-sd-roster" + (setup.classId ? "" : " is-empty"));
     if (!setup.classId) {
@@ -1031,6 +1507,64 @@ export function buildShowdownPanel(panel, ctx) {
     shrinkRosterNames(listWrap);
     paintFoot();
 
+    /**
+     * ⭐⭐ Đợt 197 — GO TO THE COLUMNS SCREEN.
+     *
+     * `fresh` = the teacher confirmed throwing the previous class's table away.
+     *
+     * ⚠️ THE HARD PART IS **NOT** RE-DEALING. Before this đợt, Next always ran
+     * `splitIntoTeams` — which empties every team back into the pool. That was
+     * harmless while the only way here was from a standing start, but the new
+     * Back arrow means the teacher can step back to look at the class and come
+     * forward again, and re-dealing there would destroy the very line-up they
+     * stepped back to check ("back về chọn lớp nhưng dữ liệu vẫn còn"). So a
+     * table that is already built, for this same class, with this same number of
+     * teams, is walked back INTO rather than rebuilt.
+     */
+    async function toBuild(fresh) {
+      if (fresh) {
+        // The previous class's table and its published results go together —
+        // leaving the results behind would let the new teams (which are handed
+        // the same `sdt_1…` ids) open a class board holding another class's rows.
+        clearPick();
+        claimedTeam = null;
+        try {
+          await wipeSetup({ keepRoster: roster.map(m => ({ id: m.id, name: m.name })), rosterClass: setup.classId });
+        } catch { /* signed out or offline — the local rebuild below is still right */ }
+        setup.claims = {};
+        setup.teams = [];
+        setup.tableId = "";
+        baseAt = 0;
+      }
+      const built = setup.teams.length > 0 && setup.teams.some(t => t.members.length);
+      const keepIt = !fresh && built
+        && tableClassId === setup.classId
+        && setup.teams.length === teamCount;
+      if (keepIt) {
+        // Whoever is not in a team is still waiting — recomputed rather than
+        // remembered, because the roster may have been edited while we were away.
+        const placed = new Set(setup.teams.flatMap(t => t.members.map(m => m.id)));
+        pool = roster.filter(m => !placed.has(m.id));
+        selectedTeam = selectedTeam || setup.teams[0]?.id || null;
+      } else {
+        // A new division of the class deserves a new `tableId`: it is what the
+        // durable history groups a match by, so yesterday's teams and today's
+        // must not share one. Kept when merely walking back in (above).
+        setup.tableId = localId("tbl");
+        setup.teams = splitIntoTeams([], teamCount, fresh ? [] : setup.teams);
+        pool = roster.slice();
+        selectedTeam = setup.teams[0]?.id || null;
+      }
+      // ⭐ Đợt 191 — REMEMBER TODAY'S LIST as we leave (teacher: "việc xóa học
+      // sinh… cũng được lưu khi bấm next"). Written on to `setup` so the save
+      // that follows carries it.
+      setup.roster = roster.map(m => ({ id: m.id, name: m.name }));
+      setup.rosterClass = setup.classId;
+      tableClassId = setup.classId;
+      tableClassName = setup.className;
+      goto(renderBuild, +1);
+    }
+
     function paintFoot() {
       ft.innerHTML = "";
       // ⭐ Đợt 159 — ONE TEAM IS THE WHOLE CLASS, so there is nothing to divide:
@@ -1046,7 +1580,7 @@ export function buildShowdownPanel(panel, ctx) {
       // screen keeps it. Without a control that says otherwise, a pupil deleted
       // by mistake could never be recovered except by editing the class in
       // Settings.
-      const resetBtn = btn("Reset", "aw-sd-ghost aw-sd-confirmbtn", () => {
+      const resetBtn = btn("Reset", "aw-sd-ghost aw-sd-footbtn", () => {
         if (!setup.classId) { sfx.remove(); toast("Choose a class first"); return; }
         sfx.tap();
         askConfirm("Bring every pupil back from the class register?", "Reset", async () => {
@@ -1066,25 +1600,26 @@ export function buildShowdownPanel(panel, ctx) {
           : roster.length < teamCount
             ? `${roster.length} pupil${roster.length === 1 ? "" : "s"} for ${teamCount} teams — add more, or use fewer teams.`
             : ""),
-        btn(solo ? "Ready" : "Next", "aw-btn-primary" + (canGo ? "" : " is-dim"), () => {
+        btn(solo ? "Ready" : "Next", "aw-btn-primary aw-sd-footbtn" + (canGo ? "" : " is-dim"), () => {
           if (!canGo) {
             sfx.remove();
             toast(setup.classId ? "Not enough pupils for that many teams" : "Choose a class first");
             return;
           }
           if (solo) { sfx.ready(); applySolo(); return; }
-          sfx.forward();
-          // Keep any team the table already had (ids + names), only re-deal.
-          setup.teams = splitIntoTeams([], teamCount, setup.teams);
-          pool = roster.slice();
-          selectedTeam = setup.teams[0]?.id || null;
-          // ⭐ Đợt 191 — REMEMBER TODAY'S LIST as we leave (teacher: "việc xóa học
-          // sinh… cũng được lưu khi bấm next"). Written on to `setup` so the
-          // save that follows the first team edit carries it, and so "Reset
-          // teams" on the next screen has something to preserve.
-          setup.roster = roster.map(m => ({ id: m.id, name: m.name }));
-          setup.rosterClass = setup.classId;
-          goto(renderBuild, +1);
+          // ⭐⭐⭐ Đợt 197 (thầy) — THE DESTRUCTIVE QUESTION LIVES HERE NOW.
+          // "Chỉ khi chọn 1 lớp khác, bấm next thì mới hỏi là có dữ liệu lớp
+          // trước, có muốn xóa không. Ok thì mới sang trang cột build team."
+          // Same class → straight through, table untouched (this is also what
+          // the new Back arrow relies on: step back, look, step forward again,
+          // and nothing has happened).
+          const clash = setup.teams.length > 0 && !!tableClassId && tableClassId !== setup.classId;
+          if (!clash) { sfx.forward(); toBuild(false); return; }
+          sfx.tap();
+          askConfirm(
+            `${tableClassName || "Another class"} already has a team table and its results. `
+            + `Delete it and divide ${setup.className}?`,
+            "Delete", () => { sfx.forward(); toBuild(true); });
         })
       );
     }
@@ -1109,7 +1644,15 @@ export function buildShowdownPanel(panel, ctx) {
       // in one team, a team name that is not the class's tells nobody anything.
       teamName: setup.className || "Class",
       classId: setup.classId, className: setup.className,
-      members: roster.map(m => ({ id: m.id, name: m.name }))
+      members: roster.map(m => ({ id: m.id, name: m.name })),
+      // One team IS the biggest team, so Balance questions is a no-op here —
+      // stated rather than left to the fallback so the field always means the
+      // same thing wherever a pick comes from.
+      maxTeam: Math.max(1, roster.length),
+      // ⭐ Đợt 197 — solo now KEEPS DURABLE RESULTS too (thầy: "cả lớp chỉ có 1
+      // đội vẫn lưu và ghi bền dữ liệu"), and the history groups a match by table.
+      // Solo never writes to the shared table, so it mints its own id here.
+      tableId: setup.tableId || localId("tbl")
     };
     writePick(pick);
     releaseMine();               // fire-and-forget; see the note above
@@ -1473,30 +2016,21 @@ export function buildShowdownPanel(panel, ctx) {
           onTurnOff();
         });
       });
-      // ⭐ Đợt 191 (thầy) — a BACK arrow, not a refresh spinner. What this button
-      // really does is send the teacher to the class screen to choose again, and
-      // an arrow says that where a circular arrow said "reload".
-      mk(icons.back, "Reset teams", () => {
-        sfx.tap();
-        // ⭐ Đợt 168 (teacher, 15/8/2026) — this used to be "give back only MY
-        // claim" (releaseMine): the shared table itself, and every OTHER
-        // browser's claim on it, survived untouched. Reset now wipes the
-        // WHOLE table (wipeSetup) — the teacher's own words: "reset mọi thứ
-        // liên quan tới bảng showdown luôn... không bị vướng vào việc đang
-        // mắc ở 1 đội nào đó". See wipeSetup()'s own header for what this
-        // does and does not reach.
-        askConfirm("Reset the whole team table? Every screen loses its team, right away.", "Reset", async () => {
-          sfx.forward();
-          clearPick();
-          // ⭐ Đợt 191 — the TEAMS go, TODAY'S LIST stays (see wipeSetup). Read
-          // from `setup.roster` first so a table built on this screen keeps the
-          // list it was built from, and fall back to whatever is in `roster` for
-          // a table this browser inherited from another screen.
-          const keep = setup.roster?.length ? setup.roster : roster;
-          const keepClass = setup.rosterClass || setup.classId;
-          await wipeSetup({ keepRoster: keep, rosterClass: keepClass });
-          await boot({ rebuild: true });
-        });
+      // ⭐⭐⭐ Đợt 197 (thầy, 19/8/2026) — THIS ARROW IS NOW **BACK**, NOT RESET.
+      // "Khi bấm nút Reset teams sẽ không RESET ngay nữa, đổi thành chức năng
+      // back… lúc này back về chọn lớp nhưng dữ liệu vẫn còn."
+      //
+      // So it destroys NOTHING: no wipeSetup, no confirm, no lost claims, no
+      // lost pick. It is a step backwards through the panel, which is what the
+      // arrow has looked like since Đợt 191 and never actually did.
+      // The destructive question moved to where it belongs — Next, and only when
+      // the teacher has actually chosen a DIFFERENT class (see renderSetup).
+      // ⚠️ `goto`, not `boot({rebuild:true})`: booting re-reads the table from
+      // Firestore and would throw away exactly the unsaved chip-dragging the
+      // teacher is stepping back to reconsider.
+      mk(icons.back, "Back to the class", () => {
+        sfx.back();
+        goto(renderSetup, -1);
       });
       // ONE seat, TWO jobs (teacher): deal the class out while anybody is still
       // waiting, call everybody back once nobody is. The two can never both apply,
@@ -1522,7 +2056,7 @@ export function buildShowdownPanel(panel, ctx) {
         // way to the first screen is RESET — because going back silently was a
         // one-tap route to re-dealing a line-up the other screens had already
         // claimed teams from.
-        btn("Ready", "aw-sd-ready aw-btn-primary" + (ready ? "" : " is-dim"), () => {
+        btn("Ready", "aw-sd-ready aw-sd-footbtn aw-btn-primary" + (ready ? "" : " is-dim"), () => {
           if (!ready) {
             sfx.remove();
             toast("Tick the team this screen plays");
@@ -1821,19 +2355,32 @@ export function buildShowdownPanel(panel, ctx) {
     const pick = {
       teamId: team.id, teamName: team.name,
       classId: setup.classId, className: setup.className,
-      members: team.members.map(m => ({ id: m.id, name: m.name }))
+      members: team.members.map(m => ({ id: m.id, name: m.name })),
+      // ⭐⭐ Đợt 197 — THE BIGGEST TEAM IN THE WHOLE TABLE, carried in the pick.
+      // Balance questions divides the act by it (core/engine.js's applyBalance),
+      // and the ENGINE cannot see the table: it is behind the dynamic-import wall
+      // this panel lives on. This screen is the one place that holds every team
+      // at once, so it is the one place the number can be read.
+      // ⚠️ A SNAPSHOT, like the members beside it. A table edited on another
+      // machine after this Ready lands here on the next open of the panel — the
+      // same contract every other field of the pick already has.
+      maxTeam: Math.max(1, ...setup.teams.map(t => t.members.length || 0)),
+      tableId: setup.tableId || ""
     };
     // Store the pick FIRST: it is what the restart reads, and the lesson has to
     // start even if the network is having a bad day.
     writePick(pick);
     try {
-      const next = { ...setup, claims: { ...setup.claims } };
-      // Drop any claim of ours elsewhere before taking this one — a browser
-      // holds at most one team, and a stale self-claim would hide a team from
-      // everybody until the TTL ran out.
-      Object.entries(next.claims).forEach(([tid, c]) => { if (c.by === me) delete next.claims[tid]; });
-      next.claims[team.id] = { by: me, at: Date.now() };
-      await saveSetup(next);
+      // ⭐ Đợt 197 — was a plain whole-document `saveSetup`, which meant pressing
+      // Ready stamped this panel's snapshot over any edit another machine had
+      // made in the meantime, silently. `publishTable` decides on the SERVER's
+      // copy which teams win and always merges the claims — see its own note.
+      const { node, superseded } = await publishTable(setup, { claimTeamId: team.id, baseAt });
+      setup.claims = node.claims;
+      setup.teams = node.teams;
+      setup.tableId = node.tableId;
+      baseAt = node.updatedAt;
+      if (superseded) toast("Another screen had changed the teams — kept theirs");
     } catch (e) {
       toast(e?.code === "aw/signed-out" ? "Signed out — table not shared" : "Could not share the table");
     }
@@ -1844,15 +2391,14 @@ export function buildShowdownPanel(panel, ctx) {
   // ---------------------------------------------------------------
   // BOOT
   // ---------------------------------------------------------------
-  async function boot({ rebuild = false } = {}) {
-    // Đợt 168 — `boot()` can now run a SECOND time on the same panel (Reset
-    // teams calls it again after wipeSetup()); the live-table listener from
-    // the FIRST run was never torn down before, just silently overwritten by
-    // `unsub = subscribeSetup(...)` at the bottom — a leaked listener for the
-    // rest of the panel's life. Harmless before (nothing ever called boot()
-    // twice), worth closing now that Reset does.
+  async function boot() {
+    // Đợt 168 — tear the live-table listener down before starting another.
+    // ⚠️ Đợt 197: nothing calls boot() twice any more (Reset teams became Back),
+    // so this is belt and braces rather than a live path — kept because the cost
+    // is one line and the failure mode it guards is a listener that repaints a
+    // detached DOM for the rest of the page's life.
     if (unsub) { unsub(); unsub = null; }
-    goto(renderSetup, rebuild ? -1 : +1);   // draws the "Loading…" state at once
+    goto(renderSetup, +1);                  // draws the "Loading…" state at once
 
     let loaded = null;
     try { loaded = await loadSetup({ fresh: true }); } catch { /* reported via the class list */ }
@@ -1867,6 +2413,8 @@ export function buildShowdownPanel(panel, ctx) {
 
     if (loaded) {
       setup = loaded;
+      baseAt = loaded.updatedAt || 0;
+      if (loaded.teams.length) { tableClassId = loaded.classId; tableClassName = loaded.className; }
       // ⚠️ Only a table that ACTUALLY HAS teams overrides the opening default.
       // `loadSetup()` answers with a normalized EMPTY table when the document
       // does not exist, so `loaded.teams.length || MIN_TEAMS` used to hand back
@@ -1886,8 +2434,10 @@ export function buildShowdownPanel(panel, ctx) {
     // browser that built it and, just as importantly, for every other one
     // (teacher: "khi các tab khác mở ra sẽ hiển thị luôn các cột đội"). The
     // first screen is reached again only through RESET, which asks first.
-    // Two exceptions land on the first screen instead:
-    //   · `rebuild` — Reset itself, which is a deliberate trip back;
+    // ⛔ Đợt 197 — the `rebuild` exception is GONE with the button that used it:
+    // "Reset teams" is now a plain Back arrow that calls `goto()` directly and
+    // never re-boots, precisely so the unsaved line-up survives the trip. One
+    // exception is left:
     //   · a SOLO pick — one-team mode never built a table, and its own screen
     //     (class + a Teams stepper reading 1) is where it is changed.
     const solo = ctx.currentTeam?.teamId === SOLO_TEAM_ID;
@@ -1906,7 +2456,7 @@ export function buildShowdownPanel(panel, ctx) {
       }
     }
     const built = setup.teams.length > 0 && setup.teams.some(t => t.members.length);
-    if (!rebuild && built && !solo) {
+    if (built && !solo) {
       // Everyone is already placed, so there is no pool to rebuild; the claim is
       // whichever team this browser holds — from the live pick if it has one,
       // otherwise from the shared table (a browser can hold a team it has not
@@ -1937,8 +2487,19 @@ export function buildShowdownPanel(panel, ctx) {
       const hadTeams = setup.teams.length > 0;
       setup.claims = next.claims;
       setup.teams = next.teams;
-      setup.classId = next.classId;
-      setup.className = next.className;
+      setup.tableId = next.tableId;
+      baseAt = next.updatedAt || baseAt;
+      if (next.teams.length) { tableClassId = next.classId; tableClassName = next.className; }
+      else { tableClassId = ""; tableClassName = ""; }
+      // ⚠️ Đợt 197 — the class the TEACHER is choosing on screen A is no longer
+      // overwritten from the table while they are choosing it. `setup.classId` is
+      // now two things at once (the table's class, and the one being picked), and
+      // the listener must only ever own the first — see `tableClassId`. On the
+      // columns screen there is no picker, so the table's class is the truth.
+      if (current !== renderSetup) {
+        setup.classId = next.classId;
+        setup.className = next.className;
+      }
       // Someone else took the team we had selected/ticked — drop it rather than
       // let the teacher press Ready on a team that is no longer theirs.
       const taken = id => { const c = setup.claims[id]; return claimIsLive(c) && c.by !== me; };

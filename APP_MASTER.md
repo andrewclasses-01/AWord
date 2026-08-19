@@ -8,12 +8,82 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
+> Cập nhật lần cuối: **19/8/2026 (Đợt 196 + 197 — ⛔ CHƯA COMMIT, xem hai khối ngay dưới; Đợt 197 sửa CẢ myActivity v2.4.0)**. Bản đã lên mây gần nhất:
+> **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
 > (cùng sửa `core/engine.js`, tách không an toàn). Trước đó: **Đợt 190 + 191** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
 > cả hai đợt — chúng cùng sửa `engine.js` và `app.css` nên không tách an toàn được). Pages build đúng
 > commit, **11/11 file trùng mã băm SHA-256**, và đã hỏi lại chính module trên bản live.
 > ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
 > `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
+>
+> ---
+> **Đợt 197 — LƯU BỀN KẾT QUẢ · BALANCE QUESTIONS · BẢNG CHỌN LỚP DỰNG LẠI · 3 LỖI CÙNG HỌ.**
+> ⛔ **CHƯA COMMIT/PUSH** (gộp cùng Đợt 196). ⚠️⚠️ **ĐỢT NÀY SỬA CẢ myActivity (v2.4.0) — HAI KHO
+> PHẢI ĐẨY CÙNG NHAU**, xem gạch đầu dòng thứ nhất.
+> - **3 lỗi cùng họ với Đợt 196** (đều là "một lần thử, hỏng thì nuốt"): (1) myActivity
+>   `mirrorAwordState` chờ 6s→**12s**, **thử lại 1 lần**, hỏng thì hiện **dấu ✗ đỏ** — ⛔ kèm sửa ở
+>   `engine.js`: bridge `switchTemplate`/`setTheme` nay trả **`true`** khi cột kia **đã đúng sẵn**,
+>   thiếu vế này là báo động ✗ **oan**; (2) **`publishTable`** — giao dịch, quyết định trên bản
+>   SERVER, `claims` luôn gộp ⇒ bấm READY không còn xoá việc máy khác, và bị đè thì **nói ra**
+>   (`superseded`); **`writeMyClaim`** là đường ghi hẹp cho release/huỷ đội; (3) leaderboard
+>   **gộp theo id + đọc lại kiểm chứng** (4 cột chung một localStorage).
+> - ⭐⭐⭐ **`core/showdown-history.js` (FILE MỚI) — SỔ CÁI, khác hẳn `sd_results`**: không bao giờ bị
+>   ghi đè, không bị Reset teams xoá. **Một trận = `tableId | roundKey | playNo`**, thầy chốt
+>   **"chơi lại = trận MỚI"**. `playNo` **đếm riêng từng cột** và cố ý không thoả thuận giữa các máy —
+>   lần-kết-thúc-thứ-nhất của mọi bảng, theo định nghĩa, là cùng một vòng. **Một tài liệu MỖI LỚP**
+>   (Firestore chặn 1MB/tài liệu); `fitToBudget` vượt 700KB thì bỏ chi tiết từng câu của trận cũ nhất
+>   chứ không để ghi hỏng. **Solo NAY CÓ LƯU** (thầy yêu cầu) nhưng vẫn KHÔNG vào `sd_results`.
+> - ⭐⭐ **RECENT RESULTS** trên chữ *SHOWDOWN IN ANDREW CLASSES*: 5 cột, mới nhất bên trái, mỗi cột là
+>   cả lớp dạng phễu; bấm một cột thì **trùm lên 4 cột kia** với chi tiết từng câu + nút bật bảng xếp
+>   hạng. ⛔⛔ **HAI BẢNG KHÁC NHAU CÓ CHỦ Ý**: bảng thật đo bằng `cqw` nên trong cột 200px sẽ vẽ tên
+>   ra ~5px ⇒ cột dùng phễu px riêng (`.aw-sd-mini-*`), bản mở rộng dùng lại bộ vẽ thật; ⚠️⚠️
+>   **`container-type: inline-size` trên `.aw-sd-rec-dbody` là thứ CHỊU LỰC**, gỡ ra là chữ nổ tung.
+> - ⭐⭐ **BALANCE QUESTIONS** (ô tích, chỉ Showdown): ⚠️ **chia cho ĐỘI ĐÔNG NHẤT, không phải đội
+>   mình** (`maxTeam` đi trong pick). ⚠️ `applyBalance` **phải gọi hai chỗ** — mount **và** `begin()`,
+>   vì `begin()` giải lại act từ thư viện. ⚠️ **trả về BẢN SAO** (cắt tại chỗ là xoá câu khỏi thư viện
+>   thầy) nhưng **dùng chung `options`** để Apply còn ăn vào act thật.
+> - **Ô QUESTIONS** cạnh TEAMS (cùng cỡ, dạt phải, CLASS ngắn còn ≤360px): `số câu ÷ ceil(sĩ số ÷ số
+>   đội)` — **cùng phép tính** với `applyBalance`, hiện trước khi thầy chốt số đội.
+> - **RESET/NEXT/READY bằng nhau** (`.aw-sd-footbtn`, `min-width` mới là thứ làm chúng bằng nhau);
+>   **icon − + thành SVG** (hình học, không phải chữ nghĩa); **mũi tên `<select>` tự vẽ**
+>   (`appearance:none` + background SVG — hai nửa không tách rời được).
+> - **"Reset teams" → BACK**: không phá gì cả, chỉ `goto(renderSetup,-1)` (⚠️ **không** `boot()`).
+>   Câu hỏi xoá dời sang **Next** và chỉ khi lớp đã đổi thật. ⚠️ **Phần khó là ĐỪNG CHIA ĐỘI LẠI** khi
+>   bước lui rồi bước tới (`keepIt`); biến mới **`tableClassId`** vì `<select>` ghi thẳng vào
+>   `setup.classId`.
+> - ⭐ **Lưới 154/154 ĐẠT, 0 lỗi console** (6 lưới: `sd196-pure` 14 · `sd196-sync` 21 ·
+>   `sd197-history` 34 · `sd196-review` 16 · **`sd197-panel` 53 chạy panel THẬT** ·
+>   **`sd197-balance` 16 chạy engine THẬT**). Lưới bắt được 3 lỗi đọc code không thấy, trong đó có
+>   **thứ tự 5 cột sai khi `at` trùng mili-giây** và **Firestore `update()` KHÔNG gộp sâu**.
+> - ⚠️ **Hai bẫy môi trường lại cắn**: `goto()` giữ lớp màn CŨ 360ms (đọc nhầm nút của màn cũ), và
+>   **pane ẩn ⇒ Chromium đóng băng animation** nên phải `getAnimations().forEach(a => a.finish())`
+>   TRƯỚC KHI đo (đo ra 908×410 thay vì 936×423 = đúng `scale(.97)`).
+> - ⬜ **Chưa ai NHÌN bằng mắt**; `scratch/` bị gitignore ⇒ 6 lưới phải dựng lại ở phiên sau.
+>
+> ---
+> **Đợt 196 — SHOWDOWN: BẢNG CẢ LỚP TỰ ĐỒNG BỘ.** ⛔ **CHƯA COMMIT/PUSH** (thầy chốt gộp chung đợt sau).
+> Thầy báo: 4 bảng / 4 đội, lớp A1B 18 em — bảng 1·3·4 khớp nhau ở **13 em**, bảng Team 2 chỉ **5 em**
+> và **cả lớp cũng 5 em**, lệch **HAI CHIỀU**. Gốc rễ: đường chia sẻ kết quả chỉ có **1 lần ghi +
+> 1 lần đọc**, **mọi thất bại đều im lặng**, và **kết quả hỏng còn được nhớ lại**.
+> Sửa: (1) ⭐⭐ `subscribeResults` — **nghe trực tiếp** `sd_results`, đội nào xong là mọi bảng tự cập
+> nhật, hết cảnh phải chạm đúp; (2) **hộp thư** trong `sessionStorage` + **thử lại 3 lần**, gửi hụt thì
+> `flushPendingResult()` gửi lại khi mở Show answers và mỗi lần có thay đổi; (3) **cấm nhớ lại lần đọc
+> hỏng**, và `blocks()` bỏ `|| teamBlocks` (đội mình từng bị vẽ dưới tên LỚP); (4) `splitResults` trả
+> về **cả phần bị loại** ⇒ màn hình nói được *"1 đội chơi act khác (Team 4)"*; (5) ô chữ **"4 TEAMS"**
+> xanh/vàng bên tên lớp + khối cảnh báo vàng. 5 file: `showdown.js` · `showdown-setup.js` ·
+> `showdown-review.js` · `engine.js` · `icons.js`+`app.css`.
+> ⭐ Lưới **51/51 ĐẠT, 0 lỗi console** (`scratch/sd196-pure.mjs` 14 · `sd196-sync.mjs` 21 chạy code
+> THẬT với Firestore giả gộp sâu · `sd196-review.html` 16 chạy màn thật ở cổng 5561). Dựng lại được
+> đúng con số 13 của thầy, rồi chữa về 18.
+> ⛔ **NĂM LUẬT MỚI**: (1) thứ gì qua mạng phải có đường **hoà hợp**, không chỉ 1 ghi + 1 đọc;
+> (2) **cấm nhớ lại lần đọc thất bại** — không biết thì để trống và NÓI RA; (3) cấm lấy dữ liệu phạm
+> vi HẸP vẽ cho phạm vi RỘNG; (4) **bộ lọc im lặng là bộ lọc nguy hiểm** — lọc gì phải đếm và nói
+> được; (5) mọi listener phải có `dispose()` gọi từ **mọi** đường ra (ghost-clock Đợt 131).
+> ⚠️ **Cùng họ lỗi, CHƯA sửa, đã báo thầy**: myActivity `mirrorAwordState` chờ 6s rồi bỏ **im lặng**
+> (một cột chơi Options khác 3 cột kia) · `saveSetup` ghi **đè cả tài liệu** (2 máy sửa bảng đội cùng
+> lúc thì mất việc của máy trước) · leaderboard dùng **localStorage chung** cho 4 cột.
+> ⬜ **Chưa ai NHÌN bằng mắt** (pane ẩn ⇒ `screenshot` timeout, lần thứ năm liên tiếp); `scratch/` bị
+> gitignore nên 4 file lưới phải dựng lại ở phiên sau.
 >
 > ---
 > **Đợt 195 — NÚT TRANG CHỦ VỀ NHẤN GIỮ NÚT MODE.** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — chung một

@@ -1315,7 +1315,16 @@ body {
   border: none; background: transparent; cursor: pointer;
   width: 26px; height: 100%; padding: 0;
   font-family: inherit; font-size: 15px; font-weight: 800; color: #94a0b2;
+  /* ⭐ Đợt 197 — the glyphs are SVG now (core/numberstepper.js explains why).
+     `display:flex` + centre on both axes is what makes − and + land on exactly
+     the same point; a button's default content centring is close but not equal,
+     and at 44px on a projector "close" reads as crooked. */
+  display: inline-flex; align-items: center; justify-content: center; line-height: 1;
 }
+/* Sized as a FRACTION OF THE BUTTON, not in px: one rule then serves the 19px
+   `.is-sm` in Options, the 26px default, and the 44px `.is-big` in the Showdown
+   table, and the two signs stay the same size as each other at all three. */
+.aw-hstep-btn svg { width: 46%; height: 46%; display: block; }
 .aw-hstep-btn:hover { color: #2f7bff; background: #f4f7fb; }
 .aw-hstep-val {
   min-width: 46px; text-align: center; cursor: ew-resize;
@@ -3829,10 +3838,136 @@ body {
    push the table's height around as pupils are added. */
 .aw-sd-capdot { margin: 0 .5em; opacity: .6; }
 .aw-sd-capnum { color: #5b677a; }
+/* ⭐ Đợt 197 — the caption is a BUTTON once a class is chosen (Recent results).
+   It has to say so without shouting: it sits between Reset and Next and must not
+   start competing with them. A hairline box that only appears under the finger. */
+.aw-sd-footcap.is-btn {
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  font-family: inherit; cursor: pointer; padding: 5px 10px; margin: -5px 0;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
+}
+.aw-sd-footcap.is-btn:hover { background: #f2f6fb; border-color: #dde5ef; color: #5b677a; }
+.aw-sd-footcap.is-btn:active { background: #e8eff8; }
+
+/* ---- ⭐⭐⭐ Đợt 197 — RECENT RESULTS: the class's last five matches ----
+   Laid over the panel body exactly like `.aw-sd-confirm`, for the same reason:
+   the popover must not change size to show this, and the teacher can still see
+   what they came from behind it. */
+.aw-sd-recent {
+  position: absolute; inset: 0; z-index: 6;
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff; border-radius: 12px; padding: 14px 16px 16px;
+}
+.aw-sd-rec-head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
+.aw-sd-rec-title { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+.aw-sd-rec-word {
+  font-size: 15px; font-weight: 800; letter-spacing: .06em; color: #23303e; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sd-rec-class {
+  font-size: 12.5px; font-weight: 800; letter-spacing: .05em; color: #8b93a1; text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sd-rec-close {
+  flex: 0 0 auto; width: 32px; height: 32px; padding: 0;
+  border: 1px solid #e3e9f1; border-radius: 9px; background: #fff; color: #6b7a90; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-sd-rec-close svg { width: 17px; height: 17px; }
+.aw-sd-rec-close:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
+.aw-sd-rec-close.is-toggle.is-on { border-color: #efc03c; color: #e0a30c; background: #fffaeb; }
+.aw-sd-rec-note {
+  flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; color: #8b93a1; text-align: center; padding: 20px;
+}
+
+/* FIVE EQUAL COLUMNS — `1fr` each rather than auto, so four matches do not each
+   grow a fifth wider than five would be: the board has to look the same shape
+   whatever a class happens to have played. */
+.aw-sd-rec-cols {
+  flex: 1 1 auto; min-height: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+}
+.aw-sd-rec-col {
+  min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 8px;
+  border: 1.5px solid #e3e9f1; border-radius: 12px; background: #fbfcfe;
+  padding: 10px 9px; text-align: left; font-family: inherit; cursor: pointer;
+  transition: border-color .14s ease, background .14s ease, transform .14s ease;
+}
+.aw-sd-rec-col:hover { border-color: #2f6fed; background: #f6f9ff; transform: translateY(-2px); }
+.aw-sd-rec-colhead { flex: 0 0 auto; min-width: 0; }
+.aw-sd-rec-act {
+  font-size: 12.5px; font-weight: 800; color: #23303e; line-height: 1.25;
+  /* Two lines then ellipsis: act names are the teacher's own and can be long,
+     and a head that grows with the name would make five columns five heights. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.aw-sd-rec-sub { font-size: 10.5px; font-weight: 700; color: #98a2b2; margin-top: 3px; }
+
+/* THE MINIATURE FUNNEL. Sized in px, NOT in cqw like the real podium — see the
+   long note in core/showdown-setup.js's openRecent for why the real stylesheet
+   cannot be reused at this size. */
+.aw-sd-mini {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.aw-sd-mini-row { position: relative; display: flex; justify-content: center; align-items: center; }
+.aw-sd-mini-rank {
+  position: absolute; right: calc(50% + var(--w) / 2 + 4px);
+  font-size: 9px; font-weight: 800; color: #b3bcc9; line-height: 1;
+}
+.aw-sd-mini-box {
+  width: var(--w); box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between; gap: 5px;
+  padding: 3px 6px; border-radius: 5px;
+  background: #f1f4f9; border: 1px solid #e3e9f1;
+}
+.aw-sd-mini-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
+.aw-sd-mini-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
+.aw-sd-mini-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
+.aw-sd-mini-name {
+  min-width: 0; font-size: 10px; font-weight: 800; color: #23303e;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sd-mini-score { flex: 0 0 auto; font-size: 10px; font-weight: 800; color: #2ec27e; }
+
+/* THE EXPANDED MATCH — over the five columns (thầy: "trùm lên các cột khác").
+   ⚠️⚠️ `container-type: inline-size` ON `.aw-sd-rec-dbody` IS LOAD-BEARING. The
+   real boards are sized in `cqw`; with no query container above them those units
+   resolve against the VIEWPORT, and a pupil's name would come out at 2.6% of a
+   4K screen. Naming this box a container is what makes `renderReviewList` /
+   `renderReviewPodium` render here at the same proportions they do on the stage.
+   Take this line out and the detail view explodes. */
+.aw-sd-rec-detail {
+  position: absolute; inset: 0; z-index: 7;
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff; border-radius: 12px; padding: 14px 16px 16px;
+  box-shadow: 0 18px 44px rgba(15, 20, 30, .18);
+}
+.aw-sd-rec-dbody {
+  container-type: inline-size;
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column;
+}
 /* A touch smaller than the app's default primary button (teacher: "thu nhỏ hơn
    nút Ready đi một chút") — it is the only button on the row now, so it does not
    need to shout to be found. */
-.aw-btn.aw-sd-ready { padding: 8px 22px; font-size: 14px; }
+/* ⛔ Đợt 197 — `.aw-sd-ready`'s own size is GONE, folded into `.aw-sd-footbtn`
+   below (thầy: "Nút RESET và NEXT và READY cần có size bằng nhau"). Kept as an
+   empty hook only because paintFoot still hangs it on the button for anyone
+   grepping for "the Ready button"; every dimension now comes from the one rule. */
+
+/* ⭐ Đợt 197 — ONE SIZE FOR THE THREE BOTTOM-ROW BUTTONS.
+   They had three different sizes for three different historical reasons: Reset
+   borrowed `.aw-sd-confirmbtn` (min-width 104), Next fell through to the generic
+   `.aw-sd-footlayer .aw-btn` (padding 10/26, 15px), and Ready had its own
+   deliberately-smaller 8/22 at 14px from the đợt when it was the only button on
+   its row. Standing them in one row made that history visible.
+   `min-width` is what actually equalises them — padding alone sizes each button
+   to its own word, so "Reset" and "Ready" would still come out different. */
+.aw-sd-footlayer .aw-btn.aw-sd-footbtn {
+  min-width: 116px; padding: 10px 22px; font-size: 15px;
+}
 
 /* ---- the confirm question, laid OVER the screen it is asking about ---- */
 .aw-sd-confirm {
@@ -3872,8 +4007,20 @@ body {
 /* The two controls are the whole of this step, so they get real size AND a
    stated share of the row: the class name is long and the team count is two
    characters, so letting them auto-size made one dwarf the other. */
-.aw-sd-pickrow { display: grid; grid-template-columns: 1fr 152px; gap: 16px; align-items: end; }
+/* ⭐ Đợt 197 (thầy: "kéo ngắn ô chọn CLASS xuống, ô này đang quá dài, đẩy dịch
+   team về bên phải, tạo thêm 1 ô tương tự size với ô TEAM nhưng tên là QUESTIONS")
+   — FOUR tracks, three of them used: the class is capped instead of eating the
+   whole row, an elastic gap does the pushing, and Teams + Questions ride the
+   right-hand edge as a matched pair. The gap is a real grid track rather than
+   `margin-left:auto`, so the two right-hand boxes stay exactly the same width as
+   each other whatever the panel's width turns out to be. */
+.aw-sd-pickrow {
+  display: grid; grid-template-columns: minmax(0, 360px) 1fr 152px 152px;
+  gap: 16px; align-items: end;
+}
 .aw-sd-field { min-width: 0; }
+.aw-sd-field.is-teams { grid-column: 3; }
+.aw-sd-field.is-quest { grid-column: 4; }
 .aw-sd-flab {
   font-size: 11px; font-weight: 800; letter-spacing: .06em;
   color: #8b93a1; text-transform: uppercase; margin-bottom: 6px;
@@ -3883,8 +4030,39 @@ body {
   border: 2px solid #d9e0ea; border-radius: 11px;
   background: #fff; color: #23303e; font: inherit; font-size: 16px; font-weight: 700;
   line-height: 1.35;                    /* class names are the teacher's Vietnamese */
+  /* ⭐ Đợt 197 (thầy: "icon sổ xuống của chọn CLASS … đang lệch và không được đẹp")
+     — the native Windows caret is drawn by the OS, sits hard against the right
+     edge and takes no notice of this box's 11px radius or its 2px border. Drawing
+     our own puts it on a stated centre line, in the same grey as the label, and
+     gives it the same 14px breathing room the text has on the left.
+     ⚠️ `appearance:none` on a <select> ALSO removes the caret, so the two halves
+     of this rule cannot be separated — take the background out and the control
+     loses every sign that it opens. */
+  appearance: none; -webkit-appearance: none; -moz-appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9.5 12 15.5 18 9.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  background-size: 18px 18px;
 }
-.aw-sd-select.is-big:disabled { color: #98a2b2; background: #f4f7fa; }
+.aw-sd-select.is-big:disabled { color: #98a2b2; background-color: #f4f7fa; }
+
+/* ⭐ Đợt 197 — QUESTIONS: a READ-OUT, not a control. Same box, same height, same
+   radius and the same number size as the Teams stepper beside it (thầy: "1 ô
+   tương tự size với ô TEAM"), but with no buttons and no border-highlight, so the
+   pair reads as "this one you set, this one it works out". */
+.aw-sd-readout.is-big {
+  height: 46px; width: 100%; border-radius: 11px;
+  border: 1px solid #e6ebf2; background: #f7f9fc;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.aw-sd-readout .aw-sd-ronum {
+  font-size: 21px; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
+}
+.aw-sd-readout .aw-sd-rosub { font-size: 11px; font-weight: 800; color: #98a2b2; text-transform: uppercase; }
+/* Nothing to divide yet (no class chosen, or the act has no questions) — a dash
+   rather than a 0, which would read as "everybody gets none". */
+.aw-sd-readout.is-none .aw-sd-ronum { color: #b8c1cf; }
 .aw-hstep.is-big { height: 46px; width: 100%; border-radius: 11px; }
 .aw-hstep.is-big .aw-hstep-val { font-size: 21px; min-width: 46px; }
 .aw-hstep.is-big .aw-hstep-btn { width: 44px; font-size: 21px; }
@@ -4290,6 +4468,38 @@ body {
 .aw-sd-ttl-scope { display: inline-block; transform-origin: left center; }
 .aw-sd-ttl-class.is-on, .aw-sd-ttl-scope.is-on { color: #16a34a; }
 .aw-sd-ttl-dot { color: #c2ccd9; font-weight: 800; }
+
+/* ⭐⭐ Đợt 196 — HOW MANY TEAMS THIS BOARD STANDS ON, and a warning row for what
+   it is missing. The teacher read a class board of 13 pupils as "the class"
+   because a fourth team had failed to publish and NOTHING on screen could say
+   so; these two rules ARE that missing symptom.
+   Green = every team that has finished is on the board. Amber = the board knows
+   it is short (its own row is still owed, or a team played a different act).
+   ⚠️ `:empty` hides the chip completely — the title row is a flex with a gap, so
+   an empty box would leave a hole between the class name and the spinner. */
+.aw-sd-ttl-teams {
+  font-size: 1.5cqw; font-weight: 800; letter-spacing: 0.08cqw; text-transform: uppercase;
+  padding: 0.1cqw 0.6cqw; border-radius: 0.5cqw; color: #6b7a90; background: #eef2f7;
+}
+.aw-sd-ttl-teams:empty { display: none; }
+.aw-sd-ttl-teams.is-on { color: #15803d; background: #dcfce7; }
+.aw-sd-ttl-teams.is-warn { color: #92400e; background: #fef3c7; }
+/* The warning rows sit ABOVE the list/podium, inside `.aw-review`, so they are
+   the first thing read and they scroll away with the board they describe. */
+.aw-sd-warn {
+  /* ⚠️ `flex: 0 0 auto` — `.aw-review` is a flex COLUMN whose list child takes
+     `flex: 1 1 auto`, so a default-shrinkable warning would be squeezed flat by
+     a long board and the teacher would never read the one line that matters. */
+  flex: 0 0 auto;
+  display: flex; flex-direction: column; gap: 0.4cqw;
+  margin: 0 0 0.8cqw; padding: 0.7cqw 1cqw;
+  background: #fef3c7; border-left: 0.5cqw solid #f59e0b; border-radius: 0.6cqw;
+}
+.aw-sd-warn-line { display: flex; align-items: center; gap: 0.7cqw; color: #7c2d12; }
+.aw-sd-warn-icon { flex: 0 0 auto; display: inline-flex; }
+.aw-sd-warn-icon svg { width: 2cqw; height: 2cqw; color: #b45309; }
+.aw-sd-warn-text { font-size: 1.7cqw; font-weight: 700; line-height: 1.25; }
+
 .aw-sd-ttl-status { display: inline-flex; align-items: center; margin-left: 0.4cqw; }
 .aw-sd-ttl-status.is-spin svg {
   width: 2.1cqw; height: 2.1cqw; color: #2563eb;

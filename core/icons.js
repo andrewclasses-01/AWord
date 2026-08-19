@@ -144,6 +144,11 @@ export const icons = {
   // The refresh spinner. A faint full ring with one bright arc over it — app.css
   // rotates the whole svg, and the arc is what makes the rotation readable.
   spinner: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.6" opacity=".25"/><path d="M12 3.4a8.6 8.6 0 0 1 8.6 8.6"/></svg>`,
+  // ⭐ Đợt 196 — the warning triangle the Showdown class board uses to say what
+  // it is MISSING (a team that has not published, a team on a different act).
+  // Drawn in the same 24-box and the same 6→18 ink band as the mode icons, so it
+  // sits level with a line of text without making the row lurch.
+  alert: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.2 20.8 18.8H3.2Z"/><path d="M12 10.4v3.6"/><path d="M12 16.6h.01"/></svg>`,
 
   // ----- Assignment report toolbar (v0.9.4) -----
   refresh: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 14.5-4.5M20 12a8 8 0 0 1-14.5 4.5"/><path d="M18.5 3.8v4h-4M5.5 20.2v-4h4"/></svg>`,

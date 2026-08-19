@@ -8,6 +8,358 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 197 (19/8/2026) — ⭐⭐⭐ LƯU BỀN KẾT QUẢ CẢ LỚP · BALANCE QUESTIONS · DỰNG LẠI BẢNG CHỌN LỚP · VÁ 3 LỖI CÙNG HỌ
+
+> ⛔ **CHƯA COMMIT** — thầy chốt gộp chung với Đợt 196 rồi đẩy một thể.
+> ⚠️ **ĐỢT NÀY SỬA CẢ myActivity (v2.4.0)** — hai kho phải đẩy CÙNG NHAU, xem mục 1a.
+
+Thầy giao một lượt 8 việc, ngay sau khi Đợt 196 tìm ra gốc rễ lỗi lệch dữ liệu Showdown.
+
+---
+
+### 1. BA LỖI CÙNG HỌ (thầy: "sửa luôn 3 lỗi cùng họ vừa phát hiện ra")
+
+Cả ba cùng một hình dạng với lỗi Đợt 196: **một đường truyền chỉ có một lần thử, hỏng thì nuốt.**
+
+#### 1a. myActivity: đồng bộ Template/Options giữa các cột — hỏng thì im lặng
+`mirrorAwordState` chờ 6s cho `window.__awordBridge` rồi bỏ, có dấu ✓ khi được mà **không có dấu nào
+khi hỏng** ⇒ một cột chơi cả buổi với tuỳ chọn khác 3 cột kia, không ai biết.
+Vá bên myActivity **v2.4.0**: chờ 6s → **12s**, **thử lại 1 lần**, hỏng thì hiện **dấu ✗ đỏ 2,6s**.
+⛔⛔ **KÈM MỘT SỬA Ở ĐÂY, VÀ HAI BÊN PHẢI ĐẨY CÙNG NHAU**: `switchTemplate`/`setTheme` của bridge nay
+trả **`true`** khi cột kia **đã ở đúng trạng thái rồi** (trước trả `false`). Thiếu vế này thì mọi cột
+vốn đã đúng sẽ ăn một dấu ✗ **oan**.
+
+#### 1b. `saveSetup` ghi đè cả tài liệu ⇒ hai máy sửa bảng đội thì máy sau xoá việc máy trước
+Bấm READY chỉ muốn thêm **một khoá** vào `claims`, nhưng nó ghi **CẢ tài liệu** từ ảnh chụp của
+chính trình duyệt mình.
+⭐ **`publishTable(setup, {claimTeamId, baseAt})`** — một GIAO DỊCH, quyết định trên bản của SERVER:
+
+| Tình huống | Ai thắng |
+|---|---|
+| ta có `tableId` khác (vừa chia đội lại) | **ta** — đây là thay bảng có chủ đích |
+| cùng bảng, server mới hơn `baseAt` | **server**, và trả `superseded:true` để màn hình **nói ra** |
+| còn lại | ta (ca một máy, bình thường) |
+
+`claims` thì **luôn gộp** từ server ⇒ hai máy bấm Ready cùng giây vẫn giữ được đội của mình.
+⭐ **`writeMyClaim(mine)`** — đường ghi HẸP chỉ đụng `claims`, dùng cho release / Single mode / huỷ đội.
+⛔ **BẪY SUÝT MẤT TÍNH NĂNG**: ban đầu em thay `saveSetup` bằng `writeMyClaim` cho cả `applyReady` —
+mà **applyReady là chỗ DUY NHẤT đẩy bảng đội lên mây**. Làm thế là bảng đội không bao giờ được chia
+sẻ nữa. Lưới `sd197-history.mjs` mục 8 sinh ra chính vì chuyện này.
+
+#### 1c. Bảng xếp hạng dùng chung localStorage cho cả 4 cột
+4 cột = 4 tiến trình renderer, cùng một origin ⇒ `load → push → save` là **lost update** kinh điển.
+Vá: **gộp theo id + đọc lại để kiểm chứng, thử tối đa 4 lần**; id thêm 6 chữ số ngẫu nhiên (4 bảng có
+thể kết thúc trong cùng một mili-giây, và hai dòng trùng id là cách một phép gộp làm mất một dòng).
+
+---
+
+### 2. ⭐⭐⭐ LƯU BỀN KẾT QUẢ — `core/showdown-history.js` (file MỚI)
+
+Thầy: *"lưu bền kể cả khi tắt máy… gán cho 1 lần thi đấu của cả lớp… Mỗi lớp lưu tối đa 5 cột, khi
+tạo cột số 6 thì cột đầu tiên sẽ bị xóa."*
+
+**⚠️ KHÁC HẲN `sd_results`, đọc kỹ kẻo sửa nhầm file:**
+
+| | `sd_results` (Đợt 177/196) | `sd_hist_<classId>` (đợt này) |
+|---|---|---|
+| là gì | **bảng LIVE** của ván đang chơi | **sổ cái** |
+| bị ghi đè | mỗi ván | không bao giờ |
+| bị Reset teams xoá | có | **không** |
+| trả lời câu hỏi | "đội nào xong rồi?" | "5 trận gần nhất lớp 5B ra sao?" |
+
+**Một trận = `tableId | roundKey | playNo`** (thầy chốt **"chơi lại = trận MỚI"**).
+
+⚠️⚠️ **`playNo` đếm RIÊNG TỪNG CỘT, và không cần thoả thuận.** Bốn bảng ở bốn máy kết thúc ở bốn thời
+điểm; không có lúc nào chúng thống nhất được "đây là vòng 2" mà không cần một đứa làm chủ — và
+Showdown không có đứa nào làm chủ. Nhưng **không cần thống nhất**: lần-kết-thúc-thứ-nhất của bảng 1
+và của bảng 3 **theo định nghĩa** là cùng một vòng (cả hai bắt đầu khi thầy bấm Ready trên bảng đó).
+
+**Một tài liệu MỖI LỚP** (`sd_hist_<classId>`), không phải một tài liệu cho tất cả: một trận chứa
+từng câu của từng em, mà Firestore chặn cứng **1MB/tài liệu**. Đo hình dạng thật: ~150 byte/dòng,
+18 em × 10 dòng ≈ **27KB/trận**, 5 trận ≈ 135KB — thoải mái; gộp mọi lớp thì không.
+`fitToBudget()` là lưới an toàn: vượt 700KB thì **bỏ phần chi tiết từng câu của trận CŨ NHẤT trước**,
+không bao giờ bỏ cả trận và không bao giờ bỏ một học sinh — bảng xếp hạng vẫn còn, chỉ mất khả năng
+mở ra xem từng câu. Năm trận trước, "ai nhất" vẫn cần, "AN trả lời câu 7 là gì" thì không.
+
+⚠️ **MỌI LẦN GHI LÀ MỘT GIAO DỊCH.** Bốn cột ghi vào CÙNG một trận của CÙNG một tài liệu — đọc-sửa-ghi
+sẽ mất cột nào ghi sau, đúng con bug Đợt 196 mất một ngày để tìm.
+
+⭐ **Cả lớp 1 đội (solo) NAY CÓ LƯU** (thầy yêu cầu). Vẫn **KHÔNG** ghi vào `sd_results` — xem ghi chú
+dài ở `saveTeamResult` về hàng `sd_solo` cũ đã nhân đôi cả lớp 15 em. An toàn vì sổ cái khoá theo
+`tableId`, nên một ván solo và một ván 4 đội không bao giờ rơi vào cùng một cột.
+
+---
+
+### 3. ⭐⭐ MÀN **RECENT RESULTS** — gắn vào chữ SHOWDOWN IN ANDREW CLASSES
+
+Chọn lớp xong, **bấm một lần** vào dòng chữ đó ⇒ pop-up 5 cột, mới nhất bên trái. Mỗi cột là **cả
+lớp** của trận đó dưới dạng phễu chóp nón ngược. **Bấm vào một cột** ⇒ mở rộng **trùm lên 4 cột kia**
+(thầy: *"như game show… để xem chi tiết nhất và ưu tiên xem"*), hiện đủ từng câu như Show answers,
+kèm nút bật/tắt sang bảng xếp hạng.
+
+⛔⛔ **HAI BẢNG KHÁC NHAU, CÓ CHỦ Ý — ĐÂY LÀ QUYẾT ĐỊNH THIẾT KẾ ĐÁNG NHỚ NHẤT CỦA ĐỢT.**
+Bảng thật (`core/showdown-review.js`) đo bằng **`cqw`** = phần trăm bề ngang của container. Đúng
+trong sân khấu 16:9, **vô dụng trong một cột 200px**: chính stylesheet ấy vẽ tên học sinh ra **~5px**.
+Nên:
+- **CỘT** dùng phễu thu nhỏ RIÊNG, đo bằng **px** (`.aw-sd-mini-*`);
+- **BẢN MỞ RỘNG** phủ cả bảng ⇒ là container rộng cỡ sân khấu ⇒ **dùng lại y nguyên** hai bộ vẽ thật;
+- ⚠️⚠️ **`container-type: inline-size` trên `.aw-sd-rec-dbody` là thứ CHỊU LỰC.** Gỡ dòng đó ra thì
+  `cqw` rơi về khung nhìn và chữ nổ tung. Lưới có một phép đo canh đúng chuyện này.
+
+⭐ **Gom một luật gộp học sinh dùng chung**: `mergeClassBlocks()` chuyển lên `core/showdown.js`, cho
+CẢ Show answers lẫn sổ cái dùng — hai màn cùng trả lời "ai trong bảng cả lớp" thì phải trả lời giống
+nhau đến từng em. Hai bộ vẽ `renderReviewList` / `renderReviewPodium` cũng được nhấc ra khỏi closure
+và export, chỉ nhận thêm `showTeam` thay cho biến `scope` chúng vẫn đọc lén.
+
+---
+
+### 4. ⭐⭐ BALANCE QUESTIONS (tuỳ chọn mới, khu vực các nút tích, chỉ Showdown)
+
+Thầy: 50 câu, 3 đội 5/6/6 (17 em) ⇒ bảng 1 hiện **40**, bảng 2 và 3 hiện **48**, ai cũng làm **8** câu.
+
+⚠️ **CHIA CHO ĐỘI ĐÔNG NHẤT, KHÔNG PHẢI ĐỘI MÌNH.** Mọi bảng chơi cùng một act 50 câu, nên đội 6
+người chỉ đi được `50/6` = 8 vòng — và điểm mấu chốt là đội 5 người cũng chỉ đi đúng 8 vòng, chứ
+không phải 10 vòng nó thừa sức. Bảng này rồi chơi `8 × sĩ số của chính nó`.
+Đội đông nhất đi theo **PICK** (`maxTeam`, do bảng chọn lớp ghi vào — engine không nhìn thấy bảng đội
+vì bảng đội nằm sau bức tường dynamic-import).
+
+⚠️ **`applyBalance` PHẢI GỌI HAI CHỖ**: ở mount **và** trong `begin()`. `begin()` giải lại act từ thư
+viện (`activity = resolveActivity(libAct)`), nên thiếu lần gọi thứ hai là phép cắt **biến mất đúng
+lúc thầy bấm Play**. Lưới `sd197-balance.html` bấm Play thật chính vì chuyện này.
+⚠️ **TRẢ VỀ BẢN SAO**: `resolveActivity` có thể trả về CHÍNH `libAct`, cắt tại chỗ là xoá câu hỏi khỏi
+thư viện của thầy. Bản sao vẫn **dùng chung `options` theo tham chiếu** để Options ▸ Apply còn ăn vào
+act thật.
+Cắt cái nào: act **có xáo câu** thì lấy ngẫu nhiên (hai bảng không ngồi cùng 40/50 câu giống hệt),
+act **không xáo** thì giữ đúng thứ tự thầy soạn và lấy từ đầu.
+
+---
+
+### 5. Ô **QUESTIONS** trên màn chọn lớp
+
+Hàng trên nay là **CLASS (ngắn lại, tối đa 360px) · khoảng đàn hồi · TEAMS · QUESTIONS**, hai ô phải
+bằng nhau tuyệt đối (ba cột lưới, không phải `margin-left:auto`).
+Số hiển thị = `số câu ÷ ceil(sĩ số ÷ số đội)` — **cùng một phép tính** với `applyBalance`, tính sớm
+hơn một bước, để thầy thấy giá của một lựa chọn số đội TRƯỚC khi chọn. Chưa chọn lớp thì hiện **—**
+chứ không phải **0** (0 đọc ra là "mỗi em không được câu nào").
+`ctx.questionCount` do engine đưa sang qua `playItemCount()`.
+
+---
+
+### 6. Nút RESET / NEXT / READY bằng nhau · icon − + · mũi tên sổ xuống
+
+- **`.aw-sd-footbtn`**: ba nút từng có ba cỡ vì ba lý do lịch sử khác nhau (Reset mượn
+  `.aw-sd-confirmbtn` min-width 104; Next rơi vào `.aw-btn` chung 10/26 cỡ 15; Ready có 8/22 cỡ 14 từ
+  cái đợt nó là nút duy nhất trên hàng). Đứng chung một hàng thì lịch sử đó lộ ra. **`min-width` mới
+  là thứ làm chúng bằng nhau** — chỉ padding thì mỗi nút vẫn co theo chữ của nó.
+- **Icon − và + thành SVG**: đây là chuyện **HÌNH HỌC, không phải CHỮ NGHĨA**. Trước đây là hai ký tự
+  `−` (U+2212) và `+`; không có cách căn nào làm dấu trừ và dấu cộng của một font bằng nhau về nét,
+  bề ngang và chiều cao — chúng là hai glyph do người thiết kế font vẽ cho chữ chạy. Nay hai SVG trên
+  cùng một khung 24, cùng nét, cùng tâm. Cỡ đặt theo **% của nút** nên một luật phục vụ cả `.is-sm`
+  19px trong Options lẫn `.is-big` 44px ở đây.
+- **Mũi tên `<select>`**: mũi tên của Windows do hệ điều hành vẽ, dính sát mép phải và không biết gì
+  về bo góc 11px hay viền 2px của ô. Nay tự vẽ bằng `appearance:none` + background SVG.
+  ⚠️ Hai nửa của luật này **không tách rời được**: `appearance:none` cũng xoá luôn mũi tên, bỏ
+  background đi là ô mất hết dấu hiệu nó mở được.
+
+---
+
+### 7. Nút "Reset teams" → **BACK** (thầy)
+
+*"bấm nút Reset teams sẽ không RESET ngay nữa, đổi thành chức năng back… back về chọn lớp nhưng dữ
+liệu vẫn còn. Chỉ khi chọn 1 lớp khác, bấm next thì mới hỏi là có dữ liệu lớp trước, có muốn xóa
+không."*
+
+- Mũi tên nay **không phá gì cả**: không `wipeSetup`, không hỏi, không mất claim, không mất pick.
+  Chỉ `goto(renderSetup, -1)` — ⚠️ **không phải `boot()`**, vì boot đọc lại bảng từ Firestore và sẽ
+  vứt đúng phần kéo-thả chưa lưu mà thầy quay lại để xem.
+- Câu hỏi phá huỷ dời sang **Next**, và chỉ khi lớp **đã đổi thật** (`tableClassId !== setup.classId`).
+- ⚠️ **PHẦN KHÓ KHÔNG PHẢI LÀ CÁI POP-UP, MÀ LÀ ĐỪNG CHIA ĐỘI LẠI.** Trước đây Next luôn chạy
+  `splitIntoTeams`, tức đổ sạch mọi đội về hàng chờ. Vô hại khi đường vào đây chỉ có một chiều, nhưng
+  với nút Back mới thì thầy bước lui rồi bước tới sẽ **mất đúng cái đội vừa xếp**. Nay một bảng đã
+  dựng, cùng lớp, cùng số đội thì **đi ngược vào chứ không dựng lại** (`keepIt` trong `toBuild`).
+- ⭐ **`tableClassId` là biến mới cần thiết**: `setup.classId` không trả lời được "bảng này của lớp
+  nào", vì cái `<select>` ghi thẳng vào đó — vừa chọn lớp khác là lớp của bảng đã mất.
+- ⛔ Tham số `rebuild` của `boot()` **xoá hẳn** cùng nút cũ (không để lại cơ chế nửa vời).
+
+---
+
+### 8. Lưới kiểm — **154/154 ĐẠT, 0 lỗi console**
+
+| Lưới | Chạy gì | Kết quả |
+|---|---|---|
+| `scratch/sd196-pure.mjs` | hộp thư + lọc act (Đợt 196, chạy lại sau khi gom `mergeClassBlocks`) | **14/14** |
+| `scratch/sd196-sync.mjs` | đường mạng Showdown (Đợt 196, chạy lại) | **21/21** |
+| `scratch/sd197-history.mjs` | **sổ cái + `publishTable`/`writeMyClaim`**, code thật + Firestore giả có giao dịch | **34/34** |
+| `scratch/sd196-review.html` | màn Show answers thật (Đợt 196, chạy lại sau khi nhấc 2 bộ vẽ ra) | **16/16** |
+| `scratch/sd197-panel.html` | **bảng chọn lớp THẬT** (importmap tráo `firebase.js`) | **53/53** |
+| `scratch/sd197-balance.html` | **engine THẬT** + một template giả cắm vào registry | **16/16** |
+
+**Ba lỗi lưới BẮT ĐƯỢC mà đọc code không thấy:**
+1. ⭐ **Thứ tự 5 cột sai khi trùng mili-giây.** `loadMatches` sắp giảm dần theo `at`; các trận tạo
+   trong cùng một tick có `at` bằng nhau ⇒ sort ổn định giữ nguyên thứ tự lưu (**cũ trước**) ⇒ cột mới
+   nhất nằm bên phải. Vá: lấy **chỉ số lưu làm khoá phụ**.
+2. **Firestore `update()` KHÔNG gộp sâu** — mỗi khoá tầng trên cùng thay hẳn giá trị cũ (muốn gộp sâu
+   phải `set` + `merge`, hoặc đường dẫn có dấu chấm). Bộ giả ban đầu làm gộp sâu ⇒ báo HỎNG oan cho
+   một đoạn code THẬT ra đúng. Đã sửa **bộ giả** cho khớp Firestore thật.
+3. **Suýt mất tính năng chia sẻ bảng đội** — xem mục 1b.
+
+**Hai bẫy môi trường lại cắn (ghi để lần sau đừng mất thì giờ):**
+- ⚠️ `goto()` giữ **lớp màn CŨ trong DOM 360ms** để chạy animation ⇒ `$$(".aw-sd-footlayer .aw-btn")`
+  trong lúc đó trả về nút của **cả hai màn**, và `[1]` trỏ nhầm sang nút Reset. Luôn đọc lớp **cuối
+  cùng**, luôn đợi **> 360ms**.
+- ⚠️⚠️ **Khung Browser bị ẩn ⇒ Chromium ĐÓNG BĂNG animation**, `getBoundingClientRect` trả giá trị
+  giữa chừng: hộp chi tiết đo ra **908×410** thay vì 936×423 — đúng bằng `scale(.97)` của khung hình
+  đầu tiên. **Hễ đo thứ gì có animation thì ép chạy xong trước khi đọc**
+  (`root.getAnimations().forEach(a => a.finish())`). Lần thứ ba dự án này cắn cái bẫy đó.
+
+⬜ **Chưa ai NHÌN bằng mắt** — `screenshot` vẫn timeout (pane ẩn), lần thứ sáu liên tiếp.
+
+---
+
+### 9. LUẬT MỚI
+
+1. **Ghi lên mây thì đừng mang theo nhiều hơn thứ mình định đổi.** Muốn thêm một khoá thì ghi một
+   khoá; ghi cả tài liệu là ký tên vào những thứ mình không biết đã đổi.
+2. **Đổi ý nghĩa của giá trị trả về thì phải soát MỌI người đọc nó.** `false` ở bridge từng chỉ là
+   "không làm gì"; thêm dấu ✗ vào là nó bỗng thành "hỏng" — và báo oan.
+3. **Trước khi thay một hàm ghi bằng hàm ghi hẹp hơn, hỏi: hàm cũ còn làm việc gì khác không?**
+   `applyReady` là chỗ DUY NHẤT đẩy bảng đội lên mây.
+4. **Một stylesheet đo bằng `cqw` chỉ dùng lại được khi có container cùng cỡ.** Không thì làm bản
+   thu nhỏ riêng, và ghi rõ vì sao có hai bản.
+5. **Cắt dữ liệu để chơi thì cắt trên BẢN SAO**, và cắt ở mọi chỗ act được giải lại.
+6. **Hết chỗ thì giảm chất lượng, đừng để hỏng.** `fitToBudget` bỏ chi tiết trận cũ chứ không để
+   Firestore từ chối cả kết quả lớp vừa chơi xong.
+
+---
+
+### 10. VIỆC ĐANG CHỜ (Đợt 197)
+
+- ⛔ **CHƯA COMMIT/PUSH** — gộp cùng Đợt 196 và myActivity v2.4.0. **Ba thứ phải đi cùng nhau.**
+- ⬜ Chờ thầy chạy thử thật trên TOMKO: 4 bảng, Recent results, Balance questions.
+- ⬜ `scratch/` bị gitignore ⇒ 6 file lưới + bộ Firestore giả phải dựng lại ở phiên sau.
+- ⬜ Chưa có nút xoá sổ cái từ giao diện (`wipeMatches` đã viết, chưa gắn nút) — chờ thầy có cần không.
+
+---
+
+## Đợt 196 (19/8/2026) — ⭐⭐⭐ SHOWDOWN: BẢNG KẾT QUẢ CẢ LỚP **TỰ ĐỒNG BỘ**, VÀ KHÔNG CÒN IM LẶNG KHI THIẾU
+
+> ⛔ **CHƯA COMMIT** — thầy chốt gộp chung với các việc còn lại rồi mới đẩy một thể.
+
+**Thầy báo (19/8/2026)**: chạy 1 act AWord trên myActivity, **4 bảng cho 4 đội** (trái→phải 1·2·3·4),
+lớp **A1B 18 em**. Chơi xong, mỗi bảng xem đội mình thì đúng. Nhưng bấm xem **cả lớp**: bảng 1·3·4
+khớp nhau, đều hiện **13 em giống hệt nhau**; riêng bảng **Team 2 hiện 5 em**, bấm sang cả lớp
+**cũng chỉ 5 em** — *"dường như tách biệt hẳn với 3 bảng kia"*. 13 + 5 = 18: đội 2 **vô hình với 3
+bảng kia, và 3 bảng kia cũng vô hình với nó** — lệch **hai chiều**.
+
+---
+
+### 1. Nghiên cứu: đường đồng bộ cũ chỉ có ĐÚNG 1 lần ghi + 1 lần đọc
+
+| Việc | Xảy ra khi nào | Hỏng thì sao |
+|---|---|---|
+| Đẩy kết quả đội lên `sd_results` | 1 lần, lúc `finish()`, bắn-rồi-quên | `console.warn`, **không thử lại**, không dấu hiệu |
+| Kéo kết quả các đội về | 1 lần, ở **lần ĐẦU** chạm chữ SHOWDOWN | toast rồi tắt; **kết quả hỏng vẫn được nhớ lại** |
+| Lọc theo `roundKey` (= id act gốc) | mọi lần đọc | act khác id ⇒ **bỏ IM LẶNG cả hai chiều** |
+
+Ba lỗ hổng, cả ba đều **im lặng tuyệt đối**, và cả ba đều tạo ra ĐÚNG hiện tượng trên:
+
+1. **`refresh()` nhớ luôn cả lần kéo THẤT BẠI** (`if (!classBlocks) classBlocks = buildClass([])`) —
+   một cú vấp mạng là ghim bảng cả-lớp vào đúng 5 em của đội mình cho hết buổi.
+2. **Chạm 1 lần KHÔNG kéo lại** (chỉ lần đầu mới kéo, sau đó phải **chạm đúp**) — và chẳng có gì
+   trên màn nói ra luật ấy. Bảng nào lỡ xem sớm là đóng băng ở con số cũ.
+3. **`blocks()` trả `classBlocks || teamBlocks`** — đang kéo dở thì màn cả-lớp **vẽ đội mình dưới tên
+   lớp**, tiêu đề đếm 5 em đó thành "5 STS" của cả lớp. Sai mà trông y như đúng.
+
+Cộng thêm khả năng thứ tư, cũng khớp hoàn hảo với hiện tượng đối xứng: **bảng 2 mở một act khác id**
+(bản sao / act trùng tên / cột mở bằng tay chứ không mirror từ cột 1) ⇒ bộ lọc `roundKey` cắt hai
+chiều, không một chữ nào báo.
+
+**⛔ GỐC RỄ (viết lại cho lần sau): không có cơ chế HOÀ HỢP. Một lần ghi + một lần đọc, mọi thất bại
+bị nuốt, và kết quả sai được nhớ lại.**
+
+---
+
+### 2. Việc đã làm — 5 file
+
+**(a) `core/showdown.js` — HỘP THƯ (outbox).** `readPendingResult` / `writePendingResult` /
+`clearPendingResult`, nằm trong `sessionStorage` (⚠️ **per-cột**, y hệt `pick` và `browserId` — 4 cột
+myActivity dùng CHUNG một localStorage, để nhầm ở đó là cột 3 gửi hộ cột 2 dưới tên mình).
+Đặt ở file **thuần** này để `core/engine.js` hỏi được "tôi còn nợ hàng nào không?" **ngay khung hình
+đầu tiên**, mà không kéo tầng Firestore sang trang học sinh.
+
+**(b) `core/showdown-setup.js`**
+- `saveTeamResult` **không còn ném lỗi**: ghi vào hộp thư TRƯỚC khi thử, **thử lại 3 lần**
+  (400 · 1400 · 3600ms), gửi được mới xoá hộp thư.
+- `flushPendingResult()` — gửi lại thứ còn nợ.
+- `splitResults(teamsMap, roundKey)` → `{ teams, otherActs }`: **trả về cả phần bị loại**, để màn
+  hình nói được "có 2 đội chơi act khác" thay vì âm thầm hiện bảng thiếu.
+- ⭐⭐ `subscribeResults(roundKey, onChange, onError)` — **`onSnapshot`**: đội nào chơi xong là mọi
+  bảng khác **tự cập nhật**, không phải chạm đúp nữa.
+- `wipeResults()` dọn luôn hộp thư (kẻo "Reset teams" xong đội cũ tự sống lại).
+
+**(c) `core/showdown-review.js`**
+- Nhận thêm `watchTeams` · `flushPending` · `isPending`, **trả về `dispose()`**.
+- `classBlocks` **chỉ** được đặt từ lần đọc THÀNH CÔNG; `blocks()` bỏ hẳn `|| teamBlocks`.
+- Ô chữ mới sau tên lớp: **"4 TEAMS"** (xanh = đủ) / **"3 TEAMS"** (vàng = biết mình đang thiếu) /
+  **"NOT SHARED"** (cột này chưa gửi được).
+- Khối cảnh báo vàng trên đầu danh sách, mỗi lỗi một dòng: chưa gửi được · chưa đọc được (kèm cách
+  thử lại) · có đội chơi act khác (kèm tên đội).
+- Mở bảng là **tự gửi lại** hàng còn nợ, và gửi lại lần nữa mỗi khi tai nghe báo có thay đổi.
+
+**(d) `core/engine.js`** — nối 4 callback trên; `sdReviewStop` + `stopShowdownReview()` gọi trong
+`cleanupAll()`, ở nút ✕, và ở đầu `showReview()` (mở lại bảng là mount MỚI ⇒ phải gỡ tai nghe cũ).
+`sdCanPublish` để chế độ **1 đội (solo)** không tự tố mình "chưa gửi" — nó vốn không gửi bao giờ.
+
+**(e) `core/icons.js` + `core/app.css`** — icon `alert`, `.aw-sd-ttl-teams`, `.aw-sd-warn`.
+⚠️ `.aw-sd-warn` phải `flex: 0 0 auto` — `.aw-review` là flex COLUMN, để mặc định thì bảng dài sẽ
+**bóp dẹp** đúng cái dòng cần đọc nhất (đã đo ở khung chật 300px: cao 53,47 / cần 53, **không méo**).
+
+---
+
+### 3. Lưới kiểm — **51/51 ĐẠT, 0 lỗi console**
+
+| Lưới | Chạy gì | Kết quả |
+|---|---|---|
+| `scratch/sd196-pure.mjs` | hộp thư + `splitResults` + `groupByMember`/`rankBlocks` (Node) | **14/14** |
+| `scratch/sd196-sync.mjs` | **code thật** + Firestore GIẢ có gộp sâu (`--import sd196-hooks.mjs`) | **21/21** |
+| `scratch/sd196-review.html` | **màn Show answers thật**, DOM thật, cổng 5561 | **16/16** |
+
+Dựng lại đúng cảnh của thầy trong lưới thứ 2: cột 2 gửi hụt cả 3 lần ⇒ 3 bảng kia **đo được đúng 13
+em**; mạng về ⇒ `flushPendingResult()` ⇒ **18 em**. Và 4 cột ghi cùng lúc **không cột nào xoá cột nào**
+(ghi kiểu `merge` là đúng).
+
+⚠️ **BẪY khi dựng lưới (cắn thật)**: lúc đầu 4 "cột" dùng CHUNG một `sessionStorage` giả ⇒ cột 1 gửi
+xong **dọn luôn hộp thư của cột 2**, lưới báo hỏng oan. Mỗi cột phải một kho riêng.
+⬜ **Chưa ai NHÌN bằng mắt** — `screenshot` vẫn timeout (pane ẩn), đã thay bằng đo hình học.
+
+---
+
+### 4. LUẬT MỚI
+
+1. **Thứ gì đi qua mạng thì phải có đường HOÀ HỢP**, không được chỉ 1 ghi + 1 đọc. Nghe trực tiếp
+   (`onSnapshot`) + hộp thư gửi lại là khuôn mẫu cho mọi thứ chia sẻ giữa các cột về sau.
+2. **Cấm nhớ lại một lần đọc THẤT BẠI.** Không biết thì để `null` và **nói ra**, đừng lấp bằng dữ
+   liệu của chính mình — đó là cách một bảng hỏng trông y như bảng xong.
+3. **Cấm lấy dữ liệu phạm vi HẸP để vẽ cho phạm vi RỘNG** (`classBlocks || teamBlocks`): 5 em của
+   một đội mà đứng dưới tên lớp thì không ai phát hiện được.
+4. **Bộ lọc im lặng là bộ lọc nguy hiểm.** Lọc gì thì phải **đếm được và nói được** cái vừa bị lọc.
+5. **Mọi listener phải có `dispose()` và phải được gọi từ MỌI đường ra** (✕ · Start again · Home ·
+   Change template · vào trận) — y hệt bài học ghost-clock Đợt 131.
+
+---
+
+### 5. VIỆC ĐANG CHỜ (Đợt 196)
+
+- ⬜ **CHƯA COMMIT/PUSH** (thầy chốt gộp chung đợt sau).
+- ⬜ Chờ thầy chạy thử thật trên TOMKO 4 bảng.
+- ⚠️ **Cùng họ lỗi, CHƯA sửa** (báo thầy rồi, chờ quyết): (1) myActivity `mirrorAwordState` chờ 6s
+  rồi **bỏ im lặng** nếu cột kia chưa sẵn sàng ⇒ một cột có thể chơi Template/Options khác 3 cột kia,
+  có dấu ✓ khi được mà **không có dấu nào khi hỏng**; (2) `saveSetup` ghi **đè cả tài liệu** ⇒ 2 máy
+  sửa bảng đội cùng lúc thì máy sau xoá việc máy trước; (3) bảng xếp hạng dùng **localStorage chung**
+  cho cả 4 cột ⇒ ghi cùng lúc có thể mất bản ghi.
+
+---
+
 ## Đợt 195 (18/8/2026) — ⭐⭐ NÚT TRANG CHỦ RỜI THANH CÔNG CỤ, VỀ **NHẤN GIỮ NÚT MODE** + POPUP XÁC NHẬN
 
 **Thầy giao (18/8/2026, ngay sau Đợt 194)**: *"tích hợp nút trang chủ vào nhấn giữ nút mode, nhấn vào

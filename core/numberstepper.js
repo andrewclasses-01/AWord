@@ -117,12 +117,23 @@ export function makeHStepper(value, min, max, onChange, opts = {}) {
     if (fire) onChange(current);
   }
 
+  // ⭐ Đợt 197 (thầy: "icon -, + của bảng chọn lớp đang lệch và không được đẹp")
+  // — GEOMETRY, NOT TYPOGRAPHY. The two used to be the characters "−" (U+2212)
+  // and "+", and no amount of centring can make a font's minus and its plus the
+  // same optical weight, width or height: they are two different glyphs drawn by
+  // a type designer for running text, and side by side at 21px on a projector
+  // the difference is exactly what the teacher was looking at.
+  // Two SVGs on ONE 24-box, same stroke, same length, same centre, make them a
+  // matched pair at every size the panel uses — and they scale with the button
+  // instead of with the font (see `.aw-hstep-btn svg` in core/app.css).
+  const MINUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/></svg>`;
+  const PLUS = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 12h12"/><path d="M12 6v12"/></svg>`;
   const wrap = el("div", "aw-hstep");
-  const downBtn = el("button", "aw-hstep-btn", "−");
+  const downBtn = el("button", "aw-hstep-btn", MINUS);
   downBtn.type = "button"; downBtn.setAttribute("aria-label", "Decrease");
   const valEl = el("div", "aw-hstep-val", format(current));
   valEl.title = "Drag left or right to change";
-  const upBtn = el("button", "aw-hstep-btn", "+");
+  const upBtn = el("button", "aw-hstep-btn", PLUS);
   upBtn.type = "button"; upBtn.setAttribute("aria-label", "Increase");
 
   function holdRepeat(btn, dir) {
