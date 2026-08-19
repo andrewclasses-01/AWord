@@ -58,11 +58,13 @@ import { makeHStepper } from "./numberstepper.js";
 // Show answers does. Both come from core/showdown-review.js, which is DOM-only
 // and free of Firestore, so importing it here does not breach the rule that
 // keeps THIS file behind a dynamic import (see the header).
-import { renderReviewList, renderReviewPodium, POD_MAX_W, POD_MIN_W } from "./showdown-review.js";
+import {
+  renderReviewList, renderReviewPodium, fitPodiumNames, POD_MAX_W, POD_MIN_W
+} from "./showdown-review.js";
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks
+  mergeClassBlocks, rankBlocks, shortenName
 } from "./showdown.js";
 
 const DOC_ID = "sd_main";
@@ -902,23 +904,14 @@ function localId(prefix) { return `${prefix}_${Date.now().toString(36)}_${(seq++
 // ---------------------------------------------------------------
 // NAME ABBREVIATION (Đợt 166) — the LAST resort for a chip that still does not
 // fit its column after fitBuildScreen() has shrunk the whole screen as far as
-// it goes (see SD_FIT_MIN). Teacher, 15/8/2026: "có thể sử dụng tên viết tắt
-// để đều hơn bố cục bảng, ví dụ Nguyễn Bảo Anh có thể thành N.B.Anh".
-// Keeps the LAST word — the part a Vietnamese name is actually called by —
-// in full, and reduces every word before it to an initial. A one-word name
-// (roll added by hand, or a foreign pupil's name) is returned unchanged: there
-// is nothing to abbreviate, and initials-only would make it unreadable.
-// ⚠️ This is a display transform ONLY — every id/name a claim, a review row,
-// or Firestore ever sees is still the pupil's real name from `roster`/`setup`;
-// only the chip's `.textContent` (and only when it does not fit) is swapped,
-// with the full name kept as its `title` tooltip.
-export function shortenName(full) {
-  const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
-  if (parts.length <= 1) return full;
-  const last = parts[parts.length - 1];
-  const initials = parts.slice(0, -1).map(w => w[0]).join(".");
-  return `${initials}.${last}`;
-}
+// it goes (see SD_FIT_MIN).
+// ⭐ Đợt 207 — THE RULE ITSELF NOW LIVES IN core/showdown.js (read its note
+// there). It moved because the result boards in core/showdown-review.js need the
+// same last-resort abbreviation, and that file may not import THIS one: it is
+// loaded statically by the engine and must stay clear of Firestore and of the
+// library layer. Re-exported here under its old name so every caller — inside
+// this file and anywhere else — kept working untouched.
+export { shortenName };
 
 // ---------------------------------------------------------------
 // THE PANEL
@@ -1364,7 +1357,15 @@ export function buildShowdownPanel(panel, ctx) {
         cols.append(el("div", "aw-sd-rec-note", "No results kept for this class yet."));
         return;
       }
-      matches.forEach(m => {
+      // ⭐⭐ Đợt 207 (thầy, 20/8/2026: "Ô nào cũ nhất thì xếp về bên trái, càng
+      // mới càng xếp về bên phải") — the REVERSE of Đợt 197's order.
+      // ⚠️ REVERSED HERE, ON SCREEN, AND NOWHERE ELSE. `loadMatches` still hands
+      // back newest-first because it also does the `slice(0, MAX_MATCHES)` — and
+      // that slice has to keep the five NEWEST matches, not the five oldest. Turn
+      // the sort round in that file instead and the ledger quietly starts showing
+      // last month's games. The tie-break for two matches sharing a millisecond
+      // (Đợt 197's own bug, caught by the grid) rides along with it untouched.
+      matches.slice().reverse().forEach(m => {
         const ranked = matchBlocks(m);
         const col = el("button", "aw-sd-rec-col");
         col.type = "button";
@@ -1390,9 +1391,24 @@ export function buildShowdownPanel(panel, ctx) {
            { opacity: 1, transform: "translateY(0) scale(1)" }],
           { duration: 300, delay: i * 55, easing: "cubic-bezier(.22,.9,.3,1)", fill: "backwards" });
       });
+      // ⭐ Đợt 207 — names last, AFTER the columns are in the document: the fit
+      // is a measurement, and a column that is not laid out yet measures zero.
+      // ⚠️ The entrance animation above is `transform` only, so it does not touch
+      // the widths this reads — a scale animation would have to be waited out.
+      fitPodiumNames(cols, ".aw-sd-mini-name");
     }
 
-    /** The miniature funnel — see the note above for why this is not `.aw-sd-pod`. */
+    /**
+     * The miniature funnel — see the note above for why this is not `.aw-sd-pod`.
+     *
+     * ⭐⭐ Đợt 207 (thầy) — it now reads like the real board: the place is INSIDE
+     * the box (a medal for the top three, a numeral after that) and the name is
+     * given IN FULL, shrunk to fit rather than abbreviated on sight or cut off
+     * with an ellipsis.
+     * ⚠️ Still its own stylesheet, and that is still deliberate: the real board's
+     * sizes are `cqw`, which inside a 200px column would draw a pupil's name at
+     * about 5px. Same SHAPE, own SIZES.
+     */
     function renderMini(ranked) {
       const box = el("div", "aw-sd-mini");
       const n = ranked.length;
@@ -1403,12 +1419,19 @@ export function buildShowdownPanel(panel, ctx) {
         const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
         const row = el("div", "aw-sd-mini-row");
         row.style.setProperty("--w", w.toFixed(2) + "%");
-        row.append(el("span", "aw-sd-mini-rank", String(i + 1)));
         const card = el("div", "aw-sd-mini-box" + (i < 3 ? ` is-m${i + 1}` : ""));
+        const badge = el("span", "aw-sd-mini-badge" + (i < 3 ? " is-medal" : ""));
+        if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];    // trusted markup, core/icons.js
+        else badge.textContent = String(i + 1);
         const nm = el("span", "aw-sd-mini-name");
-        nm.textContent = shortenName(b.name);                  // never innerHTML
+        // ⚠️ The FULL name goes in, and `fitPodiumNames` decides afterwards
+        // whether it has to shrink or, in the last resort, abbreviate. Calling
+        // shortenName here (as this did from Đợt 197) abbreviated even the names
+        // that fitted perfectly well.
+        nm.textContent = b.name;                                // never innerHTML
+        nm.dataset.full = b.name;
         nm.title = b.name;
-        card.append(nm, el("span", "aw-sd-mini-score", String(b.right)));
+        card.append(badge, nm, el("span", "aw-sd-mini-score", String(b.right)));
         row.append(card);
         box.append(row);
       });
@@ -1416,8 +1439,29 @@ export function buildShowdownPanel(panel, ctx) {
     }
 
     /**
-     * The expanded match, laid OVER the five columns (thầy: "trùm lên các cột
-     * khác"). This box fills the panel, so it uses the REAL renderers.
+     * The expanded match. This box uses the REAL renderers.
+     *
+     * ⭐⭐ Đợt 207 (thầy, 20/8/2026) — it now asks for FULLSCREEN as it opens:
+     * "bấm vào 1 cột preview sẽ hiện bảng kết quả cụ thể fullscreen luôn (lấp
+     * đầy toàn màn hình) để rộng rãi xem và phân tích. Bấm vào dấu x góc trên
+     * bên phải để đóng." Before this it merely covered the five columns inside a
+     * pop-up that is itself only part of the frame (Đợt 197: "trùm lên các cột
+     * khác") — enough to glance at, too small to teach from.
+     *
+     * ⚠️ THE REQUEST IS ALLOWED TO FAIL, and nothing depends on it succeeding.
+     * A browser can refuse (no user gesture it trusts, a policy, an iframe), and
+     * when it does the box simply stays what it has always been: an overlay over
+     * the five columns, fully usable. No error, no empty screen.
+     *
+     * ⚠️ In myActivity's multi-column view fullscreen fills THAT COLUMN only — a
+     * WebContentsView cannot take the screen. Thầy was told before this was
+     * built; open AWord in its own tab for the 86-inch board.
+     *
+     * ⚠️ `.aw-sd-rec-dbody`'s `container-type: inline-size` (app.css) is what
+     * makes this work at all: the real boards measure themselves in `cqw`, and in
+     * fullscreen that container is now the width of the screen instead of the
+     * width of a pop-up. Take that line out and this view explodes — see its own
+     * warning in the stylesheet.
      */
     function openDetail(m, ranked) {
       if (layer.querySelector(".aw-sd-rec-detail")) return;
@@ -1442,13 +1486,32 @@ export function buildShowdownPanel(panel, ctx) {
       // backgrounded myActivity column freezes rAF, and a detail view stuck at
       // opacity 0 would leave the five columns unreachable behind an invisible
       // sheet that still swallows every tap.
-      back.onclick = () => {
-        sfx.back();
+      // ⚠️ Đợt 207 — the fullscreen bookkeeping lives in ONE place, `closeDetail`,
+      // and every way out goes through it: the ✕, Esc (which the browser turns
+      // into a `fullscreenchange`, not into a click), and the panel closing under
+      // it. Two of those three are not clicks, so a teardown written only into
+      // `back.onclick` would leave a document-level listener behind — the
+      // ghost-clock of Đợt 131 wearing a different hat.
+      let closing = false;
+      const onFsChange = () => {
+        // Left fullscreen by any route other than our own ✕: close the detail,
+        // because the teacher's way back to the five columns is the ✕ that has
+        // just gone off screen with it.
+        if (document.fullscreenElement !== det && !closing) closeDetail();
+      };
+      function closeDetail() {
+        if (closing) return;
+        closing = true;
+        document.removeEventListener("fullscreenchange", onFsChange);
+        if (document.fullscreenElement === det) {
+          try { document.exitFullscreen(); } catch { /* the node going will do it */ }
+        }
         const a = det.animate(
           [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.97)" }],
           { duration: 150, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
         whenDone(a, () => det.remove(), 260);
-      };
+      }
+      back.onclick = () => { sfx.back(); closeDetail(); };
       dh.append(dt, toggle, back);
       const dbody = el("div", "aw-sd-rec-dbody");
       det.append(dh, dbody);
@@ -1456,21 +1519,37 @@ export function buildShowdownPanel(panel, ctx) {
       // Firestore's limit (fitToBudget) has nothing to put in the list, and an
       // empty list would read as "nobody answered anything".
       const hasRows = ranked.some(b => (b.rows || []).length);
+      // ⭐ Đợt 207 — this board gets tick boxes too: a match out of the ledger is
+      // just as good a list to split a class off as the one that has only just
+      // finished, and the marks are the same temporary thing (this Map dies with
+      // the detail view, and nothing about it is ever written down).
+      const picks = new Map();
       const paint = () => {
         dbody.innerHTML = "";
         if (!hasRows && !podium) {
           dbody.append(el("div", "aw-sd-rec-note",
             "The answers for this match were not kept — here is the ranking."));
-          dbody.append(renderReviewPodium(ranked, { showTeam: true }));
-          return;
+          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+        } else {
+          dbody.append(podium
+            ? renderReviewPodium(ranked, { showTeam: true, picks })
+            : renderReviewList(ranked, { showTeam: true }));
         }
-        dbody.append(podium
-          ? renderReviewPodium(ranked, { showTeam: true })
-          : renderReviewList(ranked, { showTeam: true }));
+        // AFTER the append — see fitPodiumNames' own note. Harmless on the list
+        // view, which has no `.aw-sd-pod-name` in it at all.
+        fitPodiumNames(dbody);
       };
       toggle.onclick = () => { podium = !podium; toggle.classList.toggle("is-on", podium); sfx.tap(); paint(); };
       paint();
       layer.append(det);
+      // ⚠️ The request goes out AFTER the node is in the document — an element
+      // outside it cannot be made fullscreen — and it is deliberately not
+      // awaited: the entrance animation below must run either way.
+      document.addEventListener("fullscreenchange", onFsChange);
+      Promise.resolve()
+        .then(() => det.requestFullscreen?.())
+        .then(() => fitPodiumNames(dbody))     // the box just changed width
+        .catch(e => console.warn("AWord: fullscreen refused, showing the detail in the panel", e));
       det.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
         { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
     }
@@ -1629,29 +1708,81 @@ export function buildShowdownPanel(panel, ctx) {
      * ⚠️ THE DIVISOR IS THE BIGGEST TEAM, not the class. Every board plays the
      * same act of Q questions, so a team of 6 can only go round `Q / 6` times,
      * and the whole point of balancing is that the team of 5 goes round exactly
-     * as often. `splitIntoTeams` deals round-robin, so the biggest team is
-     * `ceil(pupils / teams)` — the teacher's own worked example (50 questions,
-     * 17 pupils, 3 teams) comes out at 8 each, which is what he asked for.
+     * as often. The teacher's own worked example (50 questions, 17 pupils, 3
+     * teams) comes out at 8 each, which is what he asked for.
+     *
+     * ⭐⭐ Đợt 207 — TWO fixes, both of them the same idea: ASK THE REAL DEALER.
+     *
+     * 1. The sizes now come from `targetSizes()` — the function that actually
+     *    divides the class (Đợt 198) — instead of `ceil(n / teams)`, which is
+     *    only its answer when nothing is capped. A class bigger than
+     *    MAX_PER_TEAM × teams (25 pupils over 2 teams) really deals 10 and 10,
+     *    not 13, so the old line printed an EACH the class would never see.
+     *    ⚠️ ONE TEAM IS THE EXCEPTION: solo mode is the whole class by
+     *    definition and MAX_PER_TEAM does not apply to it (see core/showdown.js),
+     *    so it is answered here rather than through targetSizes' cap.
+     *
+     * 2. LEFT IS NOW MEASURED AT THE SMALLEST TEAM (thầy, 20/8/2026: "số câu hỏi
+     *    tối đa bị bỏ lại"). It used to be measured at the biggest — i.e. it
+     *    answered "how many questions will NOBODY touch?", which is `q mod
+     *    biggest` and therefore always a small number. With 18 pupils, 95
+     *    questions and 4 teams that read "0 left" while the two teams of four
+     *    were each throwing away 19 questions, and the box could not have said
+     *    19 even in principle. It now answers the question thầy actually asks of
+     *    it: how much does the WORST-OFF board lose?
+     *    ⚠️ Empty teams are left out of "smallest": with fewer pupils than teams
+     *    `targetSizes` returns some zeroes, and a team with nobody in it is not a
+     *    board that loses questions — it is a board that does not exist.
      */
+    function teamSizesFor(n, count) {
+      // ⚠️ See point 1 above — one team means the whole class, uncapped.
+      if (count <= 1) return [Math.max(0, n)];
+      return targetSizes(n, count);
+    }
+    function questionsFor(q, n, count) {
+      const sizes = teamSizesFor(n, count).filter(s => s > 0);
+      if (!sizes.length) return { each: 0, left: 0 };
+      const biggest = Math.max(...sizes);
+      const smallest = Math.min(...sizes);
+      const each = Math.floor(q / biggest);
+      return { each, left: Math.max(0, q - each * smallest) };
+    }
     function questionsEach() {
       const q = Math.max(0, Number(ctx.questionCount) || 0);
       const n = roster.length;
-      if (!setup.classId || !q || !n) return { each: 0, left: 0 };
-      const biggest = Math.max(1, Math.ceil(n / Math.max(1, teamCount)));
-      const each = Math.floor(q / biggest);
-      // ⭐ Đợt 198 (thầy: "Ô questions sẽ hiện 2 thông số, gồm cả questions và
-      // left (left là số câu bị thừa ra)"). The leftover is what Balance
-      // questions has to DROP: the biggest team plays `each × biggest` of the
-      // act's questions and the rest are never dealt. Showing it here is what
-      // lets the teacher nudge the team count until the waste is small — 50
-      // questions over 3 teams wastes 2, over 4 teams wastes none.
-      // ⚠️ Measured against the BIGGEST team, exactly like `each`: that is the
-      // board which gets closest to using the act up.
-      return { each, left: Math.max(0, q - each * biggest) };
+      if (!setup.classId || !q || !n) return { each: 0, left: 0, best: false };
+      const mine = questionsFor(q, n, teamCount);
+      // ⭐⭐ Đợt 207 (thầy) — "trường hợp nào có số câu tối đa bị bỏ lại ít nhất
+      // thì ô QUESTION sáng nhẹ màu xanh lá để tôi biết phương án nào đang tối
+      // ưu nhất". The box only ever shows ONE team count, so the glow is the only
+      // way it can say "and this one is the best of them".
+      // ⚠️ FROM 2 TEAMS UP (thầy: "Trừ khi TEAMS là 1 đội"). One team is not one
+      // of the options being compared — it is a different mode, and it would
+      // usually win this comparison and drown the signal.
+      // ⚠️ A TIE LIGHTS BOTH. Two counts really can waste the same amount (18
+      // pupils / 95 questions: 2 and 3 teams both waste 5), and telling the
+      // teacher only one of them is optimal would be a lie about the other.
+      let best = false;
+      if (teamCount >= 2) {
+        let low = Infinity;
+        for (let t = 2; t <= MAX_TEAMS; t++) low = Math.min(low, questionsFor(q, n, t).left);
+        best = mine.each > 0 && mine.left === low;
+      }
+      return { ...mine, best };
     }
     function paintQuest() {
-      const { each, left } = questionsEach();
-      const same = questEl.dataset.each === String(each) && questEl.dataset.left === String(left);
+      const { each, left, best } = questionsEach();
+      // ⚠️ `best` joins the change test: without it, stepping between two counts
+      // that happen to waste the same amount would light the glow with no
+      // animation to draw the eye to it.
+      const same = questEl.dataset.each === String(each)
+        && questEl.dataset.left === String(left)
+        && questEl.dataset.best === String(!!best);
+      questEl.dataset.best = String(!!best);
+      questEl.classList.toggle("is-best", !!best);
+      questEl.title = best
+        ? "Questions each pupil gets with Balance questions on — fewest questions wasted at this number of teams"
+        : "Questions each pupil gets with Balance questions on";
       questEl.dataset.each = String(each);
       questEl.dataset.left = String(left);
       questEl.innerHTML = "";

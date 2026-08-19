@@ -141,6 +141,28 @@ export const icons = {
   // is the gold/silver/bronze COLOUR, which `currentColor` inherits from the
   // wrapper app.css tints per place.
   trophy: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.4 3.2H5.6v1.1H2.2v2.1c0 2.6 1.9 4.7 4.4 5.1a5.9 5.9 0 0 0 4 3.3v3H8.1a1.9 1.9 0 0 0-1.9 1.9v1.1h11.6v-1.1a1.9 1.9 0 0 0-1.9-1.9h-2.5v-3a5.9 5.9 0 0 0 4-3.3c2.5-.4 4.4-2.5 4.4-5.1V4.3h-3.4V3.2zM4.1 6.4V6.2h1.5v3.2A3.4 3.4 0 0 1 4.1 6.4zm15.8 0a3.4 3.4 0 0 1-1.5 3V6.2h1.5v.2z"/></svg>`,
+  // ⭐⭐ Đợt 207 (thầy, 20/8/2026: "Đổi icon 3 cúp thành icon 3 huy chương, có số
+  // 1, 2, 3") — a ribbon above, a disc below, and the PLACE WRITTEN ON THE DISC.
+  //
+  // ⚠️ THREE SEPARATE ICONS, NOT ONE ICON PLUS A NUMBER LAID OVER IT. The digit
+  // has to sit on the disc's centre at every size the app draws these at (2.7cqw
+  // on the funnel, ~13px in a Recently-results column), and a separately
+  // positioned `<span>` would have to be re-centred by hand at each of them.
+  // Inside the SVG it is part of the drawing and scales with it, for free.
+  //
+  // ⚠️ `fill="currentColor"` on the ribbon+disc, exactly like the cup above, so
+  // app.css keeps tinting place 1/2/3 gold/silver/bronze with the rules it
+  // already has. The digit is punched OUT of the disc (`fill="#fff"`), which is
+  // what keeps it legible against all three tints — a coloured digit on a
+  // coloured disc goes to mud on a projector.
+  //
+  // ⚠️ The digits are drawn as `<path>`, not `<text>`: `<text>` would inherit the
+  // page's font, and a fallback font (or a font that has not loaded yet — the
+  // 7px-weight-400 trap of Đợt 153) changes the glyph's width and knocks it off
+  // the disc's centre. A path is the same shape on every machine.
+  medal1: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 1.6H4l4.1 7.2a8 8 0 0 1 2.9-1.2L7.2 1.6zm9.6 0h-3.2l-3.8 6a8 8 0 0 1 2.9 1.2l4.1-7.2z"/><circle cx="12" cy="15.4" r="7"/><path fill="#fff" d="M12.9 11.3v8.2h-1.8v-6.1l-1.5.5v-1.5l2.4-1.1h.9z"/></svg>`,
+  medal2: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 1.6H4l4.1 7.2a8 8 0 0 1 2.9-1.2L7.2 1.6zm9.6 0h-3.2l-3.8 6a8 8 0 0 1 2.9 1.2l4.1-7.2z"/><circle cx="12" cy="15.4" r="7"/><path fill="#fff" d="M9.3 19.5V18l2.6-2.6c.5-.5.7-.9.7-1.3 0-.6-.4-1-1-1s-1.1.4-1.1 1.2H9.3c0-1.7 1-2.7 2.4-2.7 1.5 0 2.5.9 2.5 2.3 0 .8-.3 1.4-1.1 2.2l-1.6 1.6h2.8v1.5H9.3z"/></svg>`,
+  medal3: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.2 1.6H4l4.1 7.2a8 8 0 0 1 2.9-1.2L7.2 1.6zm9.6 0h-3.2l-3.8 6a8 8 0 0 1 2.9 1.2l4.1-7.2z"/><circle cx="12" cy="15.4" r="7"/><path fill="#fff" d="M11.8 19.7c-1.5 0-2.6-.9-2.6-2.4h1.6c0 .6.4 1 1 1s1-.4 1-1-.4-1-1.1-1h-.4v-1.4h.4c.6 0 1-.3 1-.9s-.4-.9-.9-.9-.9.4-.9 1H9.3c0-1.5 1.1-2.4 2.5-2.4s2.5.9 2.5 2.2c0 .7-.3 1.2-.9 1.5.6.3 1 .9 1 1.7 0 1.5-1.1 2.4-2.6 2.4z"/></svg>`,
   // The refresh spinner. A faint full ring with one bright arc over it — app.css
   // rotates the whole svg, and the arc is what makes the rotation readable.
   spinner: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><circle cx="12" cy="12" r="8.6" opacity=".25"/><path d="M12 3.4a8.6 8.6 0 0 1 8.6 8.6"/></svg>`,

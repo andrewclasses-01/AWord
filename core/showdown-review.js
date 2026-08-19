@@ -47,7 +47,9 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { fmtRoundMs, pctBand, groupByMember, rankBlocks, mergeClassBlocks } from "./showdown.js";
+import {
+  fmtRoundMs, pctBand, pctOf, shortenName, groupByMember, rankBlocks, mergeClassBlocks
+} from "./showdown.js";
 
 // Long enough that an ordinary tap never reaches it, short enough that the
 // teacher does not think the screen has died. Measured against the same
@@ -71,6 +73,19 @@ const DONE_MS = 1600;
 // copies of these two numbers is two funnels of different shapes a month later.
 export const POD_MAX_W = 80;
 export const POD_MIN_W = 46;
+
+// ⭐ Đợt 207 — HOW FAR A NAME MAY SHRINK before it is abbreviated instead
+// (thầy: "không bao giờ để khuyết hiển thị thông tin, nếu tên quá dài và ô quá
+// nhỏ, hãy linh hoạt chỉnh size tên nhỏ hơn"). A share of the size the row would
+// otherwise use, not a fixed px: the whole board is drawn in `cqw`, so a floor in
+// pixels would mean one thing in a myActivity column and another on the 86-inch
+// board. Below this a name stops being readable from the back of the room, and
+// abbreviating ("N.B.Anh") is the better trade — see shortenName in
+// core/showdown.js.
+const NAME_MIN_RATIO = 0.62;
+// Each step of the shrink. 6% is small enough that the result never looks a size
+// too small, and with the floor above it bottoms out in about eight passes.
+const NAME_STEP = 0.94;
 
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
@@ -495,7 +510,57 @@ export function mountShowdownReview({
   // on screen and the eye runs straight down the taper. The rank number sits
   // OUTSIDE each box on its left, which is what turns the narrowing edges into a
   // visible diagonal instead of a ragged stack.
-  const renderPodium = ranked => renderReviewPodium(ranked, { showTeam: scope === "class" });
+  // ⭐ Đợt 207 — the tick marks live HERE, in the review's own closure, not
+  // inside the render. The board is rebuilt on every scope switch and on every
+  // arrival from the live listener, so a Map owned by the renderer would throw
+  // the teacher's team-split away the moment another column finished. Owned by
+  // the screen, it also dies with the screen — which is what "đánh dấu tạm"
+  // means and why nothing here goes near Firestore.
+  const picks = new Map();
+  const renderPodium = ranked => renderReviewPodium(ranked, { showTeam: scope === "class", picks });
+
+  // ---------------------------------------------------------------
+  // ⭐⭐ Đợt 207 — FULLSCREEN (thầy: "nút fullscreen ở góc dưới bên trái hộp
+  // hiển thị này… để tôi có không gian phân tích cho học sinh")
+  // ---------------------------------------------------------------
+  // ⚠️ THE TARGET IS THE REVIEW BOX, not `root` — which is the opposite of the
+  // app's own fullscreen rule (Đợt 12: "nhắm vào root, KHÔNG phải page"). That
+  // rule exists so a game keeps its toolbar and its chrome; here the whole point
+  // is to be rid of them and leave one board on the wall.
+  // ⚠️ app.css puts `container-type` ON `.aw-review` because of this: every size
+  // on this screen is `cqw`, i.e. a share of the nearest container, and that
+  // container used to be `.aw-stage` — which does NOT grow when a descendant
+  // goes fullscreen. Without that line the board would fill the wall and keep
+  // drawing itself at 900px-wide sizes.
+  // ⚠️ In myActivity's multi-column view a fullscreen request fills THAT COLUMN
+  // and nothing more (a WebContentsView cannot take over the screen). Said to
+  // thầy before building; nothing here can change it.
+  const fsBtn = el("button", "aw-sd-fsbtn", icons.fullscreen);   // trusted markup
+  fsBtn.type = "button";
+  fsBtn.title = "Fullscreen";
+  fsBtn.onclick = async () => {
+    sound.click();
+    try {
+      if (document.fullscreenElement === host) await document.exitFullscreen();
+      else await host.requestFullscreen();
+    } catch (e) {
+      console.warn("AWord: fullscreen refused", e);
+      toast("Fullscreen is not available here.");
+    }
+  };
+  host.append(fsBtn);
+  // ⚠️ Listen to the EVENT, never assume the click worked: Esc, the browser's
+  // own chrome and myActivity can all drop out of fullscreen without us. And
+  // re-fit the names on every change — the box just changed width, which is the
+  // one thing the name sizes are measured against.
+  const onFsChange = () => {
+    const on = document.fullscreenElement === host;
+    host.classList.toggle("is-fs", on);
+    fsBtn.classList.toggle("is-on", on);
+    fsBtn.title = on ? "Leave fullscreen" : "Fullscreen";
+    fitPodiumNames(host);
+  };
+  document.addEventListener("fullscreenchange", onFsChange);
 
   // ---------------------------------------------------------------
   // ⭐⭐ Đợt 196 — THE BOARD SAYS WHAT IT IS MISSING
@@ -526,7 +591,11 @@ export function mountShowdownReview({
   }
 
   function paintBody() {
-    host.querySelectorAll(".aw-sd-rv, .aw-sd-pod, .aw-sd-warn").forEach(n => n.remove());
+    // ⚠️ Đợt 207 — `.aw-sd-podwrap` joined this list. The podium's root is now a
+    // wrapper holding the scroller AND the two tick counters; removing only
+    // `.aw-sd-pod` would leave an empty wrapper (and a pair of stale counts)
+    // behind on every repaint.
+    host.querySelectorAll(".aw-sd-rv, .aw-sd-podwrap, .aw-sd-warn").forEach(n => n.remove());
     const lines = warnings();
     if (lines.length) {
       const box = el("div", "aw-sd-warn");
@@ -542,6 +611,9 @@ export function mountShowdownReview({
     }
     const ranked = rankBlocks(blocks());
     host.append(podium ? renderPodium(ranked) : renderList(ranked));
+    // ⚠️ AFTER the append, never before: fitPodiumNames measures, and a board
+    // that is not in the document has no width to measure against.
+    if (podium) fitPodiumNames(host);
   }
 
   paintTitle();
@@ -557,6 +629,15 @@ export function mountShowdownReview({
   return function dispose() {
     if (stopWatch) { try { stopWatch(); } catch { /* already gone */ } stopWatch = null; }
     if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
+    // ⭐ Đợt 207 — the same rule as the listener above, applied to the two things
+    // fullscreen leaves behind: a document-level listener outliving the screen
+    // that made it (ghost-clock, Đợt 131), and a browser still in fullscreen on
+    // a board that no longer exists — which would leave the teacher looking at
+    // an empty white wall with no way back but Esc.
+    document.removeEventListener("fullscreenchange", onFsChange);
+    if (document.fullscreenElement === host) {
+      try { document.exitFullscreen(); } catch { /* the browser will drop it with the node */ }
+    }
   };
 }
 
@@ -599,21 +680,20 @@ export function renderReviewList(ranked, { showTeam = false } = {}) {
 
     const tally = el("span", "aw-sd-rv-tally");
     // ⭐ Đợt 174 — this pupil's TOTAL time, when the round clock was running.
-    // ⭐ Đợt 176 — "1:00 - 50%": time in blue (CSS), then % correct of the
-    // questions this pupil ACTUALLY answered, banded red→…→green (pctBand).
-    // The two halves are independent: time only exists with the round clock
-    // on, the percentage only with at least one attempted question — the "-"
-    // joins them only when both are there.
+    // ⭐⭐ Đợt 207 — the reading order is now the one thầy wrote out: "5 ✓ 5 ✗
+    // 50%". The percentage moved to the END, AFTER the two tallies it is the sum
+    // of, and it is drawn for EVERY pupil (see pctOf in core/showdown.js — it is
+    // out of every question dealt now, so a pupil who never answered reads a
+    // plain red 0% instead of showing nothing at all).
+    // ⚠️ The time is the only optional half left, so the "-" that used to join it
+    // to the percentage went with it: the two are no longer neighbours.
     if (b.hasTime) tally.append(el("span", "aw-sd-rv-time", fmtRoundMs(b.ms)));
-    if (b.attempted) {
-      const pct = Math.round((b.right / b.attempted) * 100);
-      if (b.hasTime) tally.append(el("span", "aw-sd-rv-sep", "-"));
-      tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
-    }
     tally.append(
       el("span", "is-ok", `${icons.check} ${b.right}`),
       el("span", "is-bad", `${icons.cross} ${b.wrong}`)
     );
+    const pct = pctOf(b);
+    if (pct !== null) tally.append(el("span", "aw-sd-rv-pct " + pctBand(pct), pct + "%"));
     bhead.append(tally);
     block.append(bhead);
 
@@ -654,13 +734,64 @@ export function renderReviewList(ranked, { showTeam = false } = {}) {
  * THE PODIUM — the ranking as a funnel (teacher's design, 17/8/2026).
  * One column, every box the same HEIGHT and each a little narrower than the one
  * above, so the board tapers to a point: first place is the widest thing on
- * screen and the eye runs straight down the taper. The rank number sits OUTSIDE
- * each box on its left, which is what turns the narrowing edges into a visible
- * diagonal instead of a ragged stack.
+ * screen and the eye runs straight down the taper.
+ *
+ * ⭐⭐ Đợt 207 — FOUR changes thầy asked for, and one of them is a trade he was
+ * warned about and chose anyway:
+ *   • THE PLACE MOVED INSIDE THE BOX ("Đưa số thứ tự vào trong khung tên"), as
+ *     a medal with 1/2/3 on it for the top three and a plain numeral after that.
+ *     ⚠️ THE TRADE: the numeral used to hang OUTSIDE each box, tracking the
+ *     narrowing left edge, and that diagonal line of numbers is what made the
+ *     taper read as a funnel rather than as a ragged stack. Inside the boxes
+ *     they line up straight and the funnel leans on its own edges alone. This
+ *     was said out loud before building; it is not an oversight to "fix".
+ *   • A NAME IS NEVER CUT — see fitPodiumNames below, which the caller must run
+ *     once the board is on screen.
+ *   • SPARKLES around the top three (thầy: "sparkle và sao nhỏ lấp lánh ẩn hiện
+ *     xung quanh"), pure CSS — see the note on the spark layer below.
+ *   • TWO TICK BOXES per row, for splitting the class into two teams straight
+ *     off the results (see `picks`).
+ *
+ * @param {object}  opts.picks  the caller's OWN Map of `block.key → "l" | "r"`.
+ *   Passed in rather than kept here because this board is re-rendered on every
+ *   scope switch and on every arrival from the live listener; a Map owned by the
+ *   render would drop the teacher's ticks the moment another team finished. The
+ *   caller creating it per screen is also what makes the marks temporary, which
+ *   is what thầy asked for (20/8/2026: "đánh dấu tạm").
+ *   Omit it and the tick boxes are not built at all — that is how the
+ *   miniature/preview callers stay untouched.
  */
-export function renderReviewPodium(ranked, { showTeam = false } = {}) {
+export function renderReviewPodium(ranked, { showTeam = false, picks = null } = {}) {
+  // ⚠️ Đợt 207 — the returned root is now a WRAPPER, not `.aw-sd-pod` itself.
+  // The two counters have to stay put while the list scrolls under them, so they
+  // are siblings of the scroller rather than children of it. Anything that
+  // removes this board by selector must know both names — see paintBody().
+  const wrap = el("div", "aw-sd-podwrap");
   const box = el("div", "aw-sd-pod");
+  wrap.append(box);
   const n = ranked.length;
+  // The two faint tallies of how many pupils have been ticked to each side.
+  // Built even when nothing is ticked yet (CSS hides them at 0/0), so the count
+  // can fade in rather than appear from nowhere on the first tick.
+  const counts = picks ? { l: el("div", "aw-sd-podcount is-l"), r: el("div", "aw-sd-podcount is-r") } : null;
+  if (counts) wrap.append(counts.l, counts.r);
+
+  /** Both counters, from the one Map. Thầy: one side showing means both show. */
+  function paintCounts() {
+    if (!counts) return;
+    let l = 0, r = 0;
+    picks.forEach(v => { if (v === "l") l++; else if (v === "r") r++; });
+    counts.l.textContent = String(l);
+    counts.r.textContent = String(r);
+    // ⚠️ ONE class on the WRAPPER, not one per counter: "khi 1 bên hiện 1 thì
+    // bên còn lại cũng hiện đồng thời (hiện 0)" — they are a pair, and a pair
+    // that could half-appear would read as a bug.
+    wrap.classList.toggle("has-picks", l + r > 0);
+    // Two digits need more room than one, and the room is only the sliver
+    // outside the widest row (see `.aw-sd-podcount` in app.css).
+    wrap.classList.toggle("is-wide-count", String(Math.max(l, r)).length > 1);
+  }
+
   ranked.forEach((b, i) => {
     // Linear from POD_MAX_W down to POD_MIN_W across however many pupils there
     // are — see the constants' own note for why this is not a fixed step.
@@ -668,18 +799,21 @@ export function renderReviewPodium(ranked, { showTeam = false } = {}) {
     const row = el("div", "aw-sd-pod-row");
     row.style.setProperty("--w", w.toFixed(2) + "%");
 
-    const rank = el("span", "aw-sd-pod-rank");
-    rank.textContent = String(i + 1);
-
     const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
 
     const left = el("div", "aw-sd-pod-who");
+    // ⭐ Đợt 207 — the place, INSIDE the box and BEFORE the name. A medal for the
+    // first three (the digit is drawn into the icon itself — see core/icons.js
+    // for why it is not a separate span), a numeral for everybody else.
+    const badge = el("span", "aw-sd-pod-badge" + (i < 3 ? " is-medal" : ""));
+    if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];   // trusted markup, core/icons.js
+    else badge.textContent = String(i + 1);
+    left.append(badge);
     const nm = el("span", "aw-sd-pod-name");
-    nm.textContent = b.name;
+    nm.textContent = b.name;                                // pupil's own name: textContent only
+    nm.dataset.full = b.name;                               // fitPodiumNames needs the original back
+    nm.title = b.name;
     left.append(nm);
-    // Gold, silver and bronze cups for the first three, to the RIGHT of the
-    // name and inside the box (teacher: "bên cạnh phải tên (vẫn trong ô)").
-    if (i < 3) left.append(el("span", "aw-sd-pod-cup", icons.trophy));
     if (showTeam && b.teamName) {
       const tag = el("span", "aw-sd-pod-team");
       tag.textContent = b.teamName;
@@ -687,30 +821,141 @@ export function renderReviewPodium(ranked, { showTeam = false } = {}) {
     }
 
     const stats = el("div", "aw-sd-pod-stats");
+    // ⭐ Đợt 180 (teacher: "% tỷ lệ đúng trong ô rank"), reshaped in Đợt 207 to
+    // thầy's own reading order — "5 ✓ 5 ✗ 50%" — with the percentage last,
+    // after the two numbers it is the sum of. One rule for the figure (pctOf)
+    // and one for its colour (pctBand), both in core/showdown.js, so this board
+    // and the list can never disagree about what a pupil scored or what green
+    // means.
     stats.append(
       el("span", "aw-sd-pod-ok", `${icons.check} ${b.right}`),
       el("span", "aw-sd-pod-bad", `${icons.cross} ${b.wrong}`)
     );
-    // ⭐ Đợt 180 (teacher, 17/8/2026: "% tỷ lệ đúng trong ô rank") — the same
-    // number, the same bands and the same denominator as the list view: OF THE
-    // QUESTIONS ACTUALLY ATTEMPTED, never of the ones the pupil never reached.
-    // Asking pctBand() rather than re-picking colours here is what stops the
-    // funnel and the list ever disagreeing about what "green" means.
-    // ⚠️ Omitted entirely when nothing was attempted — a pupil the game never
-    // reached shows no percentage rather than a red 0%.
-    if (b.attempted) {
-      const pct = Math.round((b.right / b.attempted) * 100);
-      stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
-    }
+    const pct = pctOf(b);
+    if (pct !== null) stats.append(el("span", "aw-sd-pod-pct " + pctBand(pct), pct + "%"));
     // Only when the round clock was on — a Showdown played without it shows
     // the two tallies alone rather than a column of dashes.
     if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
 
     card.append(left, stats);
-    row.append(rank, card);
+    // ⭐ Đợt 207 — SPARKLES on the top three. A layer of its own inside the box,
+    // `pointer-events:none` so it can never eat a tap meant for a tick box, and
+    // animated ENTIRELY in CSS: a backgrounded myActivity column freezes
+    // requestAnimationFrame (bẫy #11 in myActivity's BAN GIAO.md), and a
+    // JS-driven twinkle would simply stop dead there while everything else kept
+    // working.
+    if (i < 3) {
+      const spark = el("span", "aw-sd-pod-spark");
+      spark.setAttribute("aria-hidden", "true");
+      for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
+      card.append(spark);
+    }
+
+    if (picks) {
+      // ⭐⭐ Đợt 207 — SPLITTING THE CLASS OFF THE RESULTS (thầy, 20/8/2026):
+      // "chia đội dựa theo danh sách kết quả, đội nào chọn ai thì tích vào người
+      // đó, tích bên trái thì về bên trái, tích bên phải thì về bên phải."
+      // ⚠️ THE BOXES HUG THE ROW, so they narrow with the funnel and do NOT line
+      // up in two straight columns (thầy asked for exactly this: "các ô tích sẽ
+      // bám sát theo chiều dài ngang của ô, vì vậy các ô tích không thẳng hàng").
+      const tick = side => {
+        const t = el("button", "aw-sd-pod-tick is-" + side);
+        t.type = "button";
+        t.title = side === "l" ? "Left team" : "Right team";
+        t.innerHTML = icons.check;                          // trusted markup
+        t.onclick = e => {
+          e.stopPropagation();
+          const cur = picks.get(b.key);
+          if (cur === side) picks.delete(b.key); else picks.set(b.key, side);
+          sound.tick();
+          paintRow();
+          paintCounts();
+        };
+        return t;
+      };
+      const tl = tick("l"), tr = tick("r");
+      // ⚠️ The unchosen box is hidden with `visibility`, never `display:none`
+      // and never removed: it still holds its width, so the box between them
+      // does not jump sideways the moment a tick lands. A funnel that shuffles
+      // under the teacher's finger is the thing this whole screen is for.
+      const paintRow = () => {
+        const cur = picks.get(b.key) || "";
+        row.classList.toggle("is-picked", !!cur);
+        tl.classList.toggle("is-on", cur === "l");
+        tr.classList.toggle("is-on", cur === "r");
+        tl.classList.toggle("is-off", cur === "r");
+        tr.classList.toggle("is-off", cur === "l");
+      };
+      row.append(tl, card, tr);
+      paintRow();
+    } else {
+      row.append(card);
+    }
     box.append(row);
   });
-  return box;
+  paintCounts();
+  return wrap;
+}
+
+/**
+ * ⭐⭐ Đợt 207 — A NAME IS NEVER CUT (thầy: "không bao giờ để khuyết hiển thị
+ * thông tin, nếu tên quá dài và ô quá nhỏ, hãy linh hoạt chỉnh size tên nhỏ
+ * hơn"). Shrink first, abbreviate only when shrinking has run out of room.
+ *
+ * ⚠️ MUST BE CALLED AFTER THE BOARD IS IN THE DOCUMENT. It measures, and a
+ * detached tree has no width to measure — every caller therefore appends first
+ * and calls this second.
+ *
+ * ⚠️ MEASURE AT REST, AND MEASURE TWICE. Widths depend on the font actually
+ * being loaded (Đợt 153 lost a day to a 7px difference between weight 400
+ * loaded and not), so this re-runs itself once `document.fonts` reports ready.
+ * A second pass on a board that already fits changes nothing.
+ *
+ * ⚠️ NO requestAnimationFrame anywhere in here: in a backgrounded myActivity
+ * column rAF never fires, and a name left at its unshrunk size — or worse, left
+ * mid-shrink — would be the one thing this function exists to prevent.
+ *
+ * @param {string} sel  which names to fit. Defaults to the real board's; the
+ *   Recently-results columns in core/showdown-setup.js pass `.aw-sd-mini-name`,
+ *   because the rule ("shrink, then abbreviate, never cut") is the same one and
+ *   two copies of it would drift the first time either board was touched.
+ */
+export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
+  if (!root || !root.querySelectorAll) return;
+  const fits = nm => nm.scrollWidth <= nm.clientWidth + 0.5;
+  const pass = () => {
+    root.querySelectorAll(sel).forEach(nm => {
+      const full = nm.dataset.full || nm.textContent || "";
+      // Always start from the top: this may be a second pass, or a re-fit after
+      // the box changed size (fullscreen), and shrinking a name that has already
+      // been shrunk would ratchet it down a little further every time.
+      nm.style.fontSize = "";
+      nm.textContent = full;
+      if (fits(nm)) return;
+      const base = parseFloat(getComputedStyle(nm).fontSize) || 0;
+      if (!base) return;
+      const floor = base * NAME_MIN_RATIO;
+      const shrink = () => {
+        let size = base;
+        while (size > floor && !fits(nm)) {
+          size *= NAME_STEP;
+          nm.style.fontSize = size.toFixed(2) + "px";
+        }
+      };
+      shrink();
+      if (fits(nm)) return;
+      // Out of room at the floor — abbreviate, and let the abbreviation have the
+      // full size back before shrinking it in its turn. "N.B.Anh" at full size
+      // reads better across a room than the whole name at 62%.
+      nm.textContent = shortenName(full);
+      nm.style.fontSize = "";
+      shrink();
+    });
+  };
+  pass();
+  // The re-run is scheduled, never awaited: a browser without `document.fonts`
+  // (or one where the promise never settles) still gets the first pass.
+  try { document.fonts?.ready?.then(pass); } catch { /* first pass stands */ }
 }
 
 function mark(cls, glyph, text) {

@@ -8,7 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/8/2026 (Đợt 202 + 203)** ✅ **CẢ HAI ĐÃ COMMIT + PUSH + LIVE, thầy duyệt.**
+> Cập nhật lần cuối: **20/8/2026 (Đợt 207)** ⬜ **CODE XONG, 117/117 ĐẠT trên 3 bàn thử, CHƯA COMMIT — chờ thầy nhìn.**
+>
+> ---
+> **Đợt 207 — SHOWDOWN: Ô QUESTIONS TÍNH LẠI · BẢNG CHÓP NGƯỢC DỰNG LẠI · RECENT RESULTS FULLSCREEN.**
+> 12 việc thầy giao trong hai lượt, đi chung **một commit** (thầy dặn *"commit cùng một thể"*).
+> Sửa 6 file: `core/showdown.js` · `showdown-review.js` · `showdown-setup.js` · `icons.js` · `engine.js` · `app.css`.
+> - ⭐⭐⭐ **Ô QUESTIONS: `LEFT` trước nay TRẢ LỜI SAI CÂU HỎI.** Nó là `q − each × đội ĐÔNG nhất`
+>   (= `q mod biggest`) nên **không thể lớn hơn sĩ số đội đông nhất**: lớp 18 em / 95 câu / 4 đội báo
+>   **"0 left"** trong khi hai đội 4 em **mỗi đội vứt 19 câu**. Nay đo ở **đội ÍT NGƯỜI nhất**
+>   (thầy: *"số câu hỏi tối đa bị bỏ lại"*) ⇒ **19 EACH · 19 LEFT**. Kèm **đèn xanh `.is-best`** cho
+>   phương án bỏ lại ít nhất trong 2..5 đội (⛔ 1 đội không dự thi; **hoà thì cùng sáng** — 18 em/95 câu
+>   thì 2 và 3 đội cùng sáng). ⭐ Vá kèm lỗi có sẵn: ô nhẩm `ceil(n/teams)` thay vì hỏi `targetSizes`,
+>   nên lớp đông hơn `MAX_PER_TEAM × số đội` hiện **EACH sai**.
+> - ⛔⛔ **% ĐẢO NGƯỢC ĐỢT 176**: nay chia cho **TỔNG số câu được chia**, luôn hiện kể cả **0%**, thứ tự
+>   `5 ✓ 5 ✗ 50%`. Hàm mới **`pctOf()`** — một hàm cho **cả ba màn**. ⚠️ **Trận cũ trong sổ cái xem lại
+>   sẽ ra % khác trước** (số đếm lưu không đụng, chỉ phép cộng trên màn đổi).
+> - ⭐⭐ **Tên KHÔNG BAO GIỜ bị cắt** (`fitPodiumNames`): co cỡ chữ trước, hết chỗ mới viết tắt. Đo ở 4
+>   bề ngang khung xuống tới **300px: 0/20 tên bị cắt**. ⚠️ `min-width:0` trên ô tên là thứ **CHỊU LỰC**
+>   — thiếu nó `scrollWidth > clientWidth` không bao giờ đúng và hàm kết luận "mọi tên đều vừa".
+> - **3 cúp → 3 HUY CHƯƠNG mang sẵn số 1/2/3**; **số thứ tự vào TRONG ô** (⚠️ đánh đổi đã báo trước: số
+>   cũ treo ngoài ô chính là đường chéo làm phễu ra hình phễu); **sparkle** quanh 3 bạn đầu (CSS thuần).
+> - ⭐⭐ **HAI Ô TÍCH chia đội + hai số đếm mờ** ngay trên bảng kết quả (thầy dùng để chia đội cho hoạt
+>   động sau). Ô tích **bám mép ô nên cố ý KHÔNG thẳng hàng**; ô không chọn ẩn bằng `visibility` để ô
+>   tên **không nhúc nhích**; hai số **hiện cùng lúc**, **đứng yên khi cuộn**.
+> - ⭐ **Nút FULLSCREEN** góc dưới trái màn Show answers, và **Recent results bấm cột là mở fullscreen**.
+>   ⚠️⚠️ **`container-type: size` trên `.aw-review.is-fs` là thứ chịu lực** (stage KHÔNG to ra khi con
+>   nó fullscreen ⇒ chữ sẽ bé tí trên tường). ⛔ **CHỈ khi `.is-fs`, ĐỪNG khai thường trực** — bản đầu
+>   của chính đợt này khai thường trực và **âm thầm làm nhỏ chữ Show answers của CẢ 17 template 4,8%**
+>   (23,18 → 22,07px), vì cỡ container là HỘP NỘI DUNG, tức đã trừ mất lề 2.4cqw. **Lưới xanh hết vẫn
+>   không bắt được**; phép đo riêng mới bắt (nhật ký Đợt 207 mục 11).
+>   ⚠️⚠️ **Trong myActivity chia cột, fullscreen chỉ phủ kín CỘT đó.**
+> - **Recent results: cũ nhất bên trái** (đảo Đợt 197) — ⚠️ đảo LÚC VẼ, **không** đảo trong `loadMatches`
+>   (hàm đó còn cắt lấy 5 trận MỚI NHẤT).
+> - **"Start with mistakes" ẩn sau nhấn giữ START AGAIN — ⛔ CHỈ trong Showdown.**
+> - 🧪 **3 bàn thử, 117/117 ĐẠT, 0 lỗi console**: `sd207-pod.html` 57 · `sd207-panel.html` 35 ·
+>   `sd207-review.html` 25 (`scratch/` gitignore ⇒ phiên mới phải dựng lại, công thức ở `GHI CHU DU AN.md`).
+> - ⛔ **HAI lần lưới báo hỏng mà lỗi ở CHÍNH LƯỚI**: `elementFromPoint` trả `null` vì nút **ngoài khung
+>   nhìn** (phải `scrollIntoView` trước), và `select.value` gán khi **danh sách lớp chưa nạp xong**.
+> - ⬜ **CÒN LẠI (chỉ mắt/tay thầy)**: (1) **nhìn bằng mắt** — `screenshot` timeout **lần thứ chín liên
+>   tiếp**; (2) **bấm nút fullscreen bằng tay** (`requestFullscreen` đòi cử chỉ THẬT); (3) **chơi trọn
+>   một ván tới bảng cuối** để nghiệm việc 8 trong game thật — pane ẩn không lái nổi ván nào tới đích.
+>
+> ---
+> Trước đó: **19/8/2026 (Đợt 202 + 203)** ✅ **CẢ HAI ĐÃ COMMIT + PUSH + LIVE, thầy duyệt.**
 > • **Đợt 202** (`a6d3fe8`, hồ sơ `87967b4`) — **IN TURNS: một bộ câu chia cho hai đội** trong Fight, mở cho **Type the answer**; 3/3 mã băm SHA-256 + 7/7 phép hỏi module trên bản live.
 > • **Đợt 203** (`13aba93`, hồ sơ `c5032f4`) — **vá nốt lỗi trang trắng Running Word** ở bộ ≤16 từ/đội; mã băm `rw-print.js` repo/live khớp.
 > ⚠️ Hai đợt này là **hai phiên song song** chạy cùng lúc trong CÙNG một thư mục — mỗi bên chỉ nạp vào chỉ mục git đúng file của mình. Xem hai khối đầu tiên ngay dưới.

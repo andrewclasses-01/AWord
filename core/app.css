@@ -722,6 +722,24 @@ html.aw-nhung .aw-below { display: none; }
   transition: color .12s ease, background .12s ease;
 }
 .aw-panel-item:hover { color: #35b1f0; background: rgba(255,255,255,.04); }
+/* ⭐⭐ Đợt 207 (thầy) — "Start with mistakes" hidden until a PRESS-AND-HOLD on
+   "Start again" lets it out. SHOWDOWN ONLY: core/engine.js hangs `.is-held` on
+   the row in no other mode, so every other game's end panel is untouched.
+   ⚠️ `overflow:hidden` is NOT optional on a max-height accordion — Đợt 137 lost
+   a real feature to exactly this (an invisible slider lying over a real one)
+   because a collapsed row was still there to be hit.
+   ⚠️ Every box-model property has to collapse WITH the height (padding, margin,
+   the row's own font leading), or a "hidden" row still holds a visible gap. */
+.aw-panel-item.is-held {
+  max-height: 0; opacity: 0; overflow: hidden;
+  padding-top: 0; padding-bottom: 0; margin: 0; pointer-events: none;
+  transition: max-height .3s cubic-bezier(.22,.9,.3,1), opacity .22s ease,
+              padding .3s cubic-bezier(.22,.9,.3,1);
+}
+.aw-panel-item.is-held.is-on {
+  max-height: 8cqw; opacity: 1;
+  padding-top: 0.9cqw; padding-bottom: 0.9cqw; pointer-events: auto;
+}
 
 /* Change-template picker: the compatible games as a compact 2-column grid
    (the enclosing .aw-panel already scrolls past its max-height if needed). */
@@ -756,6 +774,46 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; flex-direction: column; padding: 2cqw 2.4cqw;
   animation: aw-fadein .2s ease;
 }
+/* ⭐⭐ Đợt 207 — `container-type` ONLY IN FULLSCREEN, and the "only" is the whole
+   point of the rule.
+   WHY IT IS NEEDED: every size on this screen is `cqw`, a share of the nearest
+   query container, and that container is `.aw-stage`. A stage does NOT grow when
+   one of its descendants goes fullscreen — so without this the board would fill
+   the wall while still drawing itself at stage-sized text.
+   ⛔⛔ WHY IT MUST NOT BE ON THE ELEMENT ALL THE TIME — MEASURED, not reasoned:
+   a query container's size is its CONTENT box, and this element has 2.4cqw of
+   padding. Declaring it unconditionally moved every `cqw` on the screen from
+   "share of the stage" (968px) to "share of the stage minus the padding" (920px)
+   and quietly shrank ALL SEVENTEEN templates' Show answers by 4.8% — 23.18px of
+   title text became 22.07px. Nobody asked for that, and nothing on screen would
+   have said it had happened. Hanging it on `.is-fs` leaves the ordinary screen
+   byte-for-byte as it was and only re-bases the units in the one mode that needs
+   re-basing, where there is no old size to be faithful to anyway.
+   ⚠️ `container-type` creates a stacking context and a containing block. Safe
+   here — everything positioned inside this screen is meant to be positioned
+   against it — but read the popup layering contract in core/HUONG DAN CORE.md
+   before copying this line anywhere further out.
+   ⚠️ The padding is restated in viewport units because this element's own
+   padding cannot query itself. */
+.aw-review.is-fs { container-type: size; padding: 1.8vh 2.2vw; }
+
+/* ⭐ Đợt 207 (thầy: "nút fullscreen ở góc dưới bên trái hộp hiển thị này") — out
+   of the flow, in the corner, and OVER the board rather than taking a row from
+   it: the funnel is at its narrowest down there, and the list's last line is the
+   least-read line on the screen. The white plate is what keeps the button
+   legible on the days a long answer does run underneath it. */
+.aw-sd-fsbtn {
+  position: absolute; left: 2cqw; bottom: 1.6cqw; z-index: 3;
+  width: 4.4cqw; height: 4.4cqw; border-radius: 1.1cqw;
+  border: 0.16cqw solid #e3e9f1; background: #fff; color: #6b7a90;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; padding: 0;
+  box-shadow: 0 0.2cqw 0.8cqw rgba(15, 20, 30, .10);
+  transition: color .14s ease, border-color .14s ease, background .14s ease;
+}
+.aw-sd-fsbtn svg { width: 2.5cqw; height: 2.5cqw; }
+.aw-sd-fsbtn:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
+.aw-sd-fsbtn.is-on { border-color: #2ec27e; color: #2ec27e; background: #f0fbf5; }
 .aw-rv-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2cqw; }
 .aw-rv-title { font-size: 2.4cqw; font-weight: 800; letter-spacing: 0.2cqw; color: #23303e; }
 /* ⭐ Đợt 174c — Showdown's team score, in the header line beside the title it
@@ -4084,21 +4142,34 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; flex-direction: column; gap: 2px;
 }
 .aw-sd-mini-row { position: relative; display: flex; justify-content: center; align-items: center; }
-.aw-sd-mini-rank {
-  position: absolute; right: calc(50% + var(--w) / 2 + 4px);
-  font-size: 9px; font-weight: 800; color: #b3bcc9; line-height: 1;
-}
+/* ⭐ Đợt 207 — the place moved INSIDE the box here too, so the preview column and
+   the real board read the same way round (thầy: "các số thứ tự cũng nằm trong
+   ô"). `.aw-sd-mini-rank`, which hung outside on the left, is gone with it. */
 .aw-sd-mini-box {
   width: var(--w); box-sizing: border-box;
-  display: flex; align-items: center; justify-content: space-between; gap: 5px;
-  padding: 3px 6px; border-radius: 5px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 3px 5px; border-radius: 5px;
   background: #f1f4f9; border: 1px solid #e3e9f1;
 }
+.aw-sd-mini-badge {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 9px; font-size: 8.5px; font-weight: 800; color: #b3bcc9; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.aw-sd-mini-badge.is-medal { min-width: 0; }
+.aw-sd-mini-badge svg { width: 11px; height: 11px; }
+.aw-sd-mini-box.is-m1 .aw-sd-mini-badge { color: #e0a30c; }
+.aw-sd-mini-box.is-m2 .aw-sd-mini-badge { color: #97a4b2; }
+.aw-sd-mini-box.is-m3 .aw-sd-mini-badge { color: #c1793a; }
 .aw-sd-mini-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
 .aw-sd-mini-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
 .aw-sd-mini-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
+/* ⚠️ Đợt 207 — `flex:1 1 auto` + `min-width:0` is what lets fitPodiumNames see
+   an overflow here at all (same trap as `.aw-sd-pod-name` — read its note). The
+   ellipsis stays as the very last line of defence; in practice the shrink then
+   the abbreviation get there first, which is the whole point. */
 .aw-sd-mini-name {
-  min-width: 0; font-size: 10px; font-weight: 800; color: #23303e;
+  flex: 1 1 auto; min-width: 0; font-size: 10px; font-weight: 800; color: #23303e;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .aw-sd-mini-score { flex: 0 0 auto; font-size: 10px; font-weight: 800; color: #2ec27e; }
@@ -4120,6 +4191,18 @@ html.aw-nhung .aw-below { display: none; }
   container-type: inline-size;
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column;
+}
+/* ⭐⭐ Đợt 207 (thầy: "bấm vào 1 cột preview sẽ hiện bảng kết quả cụ thể
+   fullscreen luôn — lấp đầy toàn màn hình — để rộng rãi xem và phân tích").
+   The rounded corners and the drop shadow existed to make this read as a sheet
+   ON TOP of the five columns; at full screen there is nothing behind it for them
+   to lift it off, and a rounded corner against the bezel just looks broken.
+   ⚠️ The `container-type` above is what carries this off: the real boards
+   measure in `cqw`, and that container is now the screen instead of a pop-up.
+   ⚠️ The padding is restated in viewport units for the same reason as
+   `.aw-review.is-fs` — this box's own padding cannot query itself. */
+.aw-sd-rec-detail:fullscreen {
+  border-radius: 0; box-shadow: none; padding: 2.2vh 2.6vw;
 }
 /* A touch smaller than the app's default primary button (teacher: "thu nhỏ hơn
    nút Ready đi một chút") — it is the only button on the row now, so it does not
@@ -4244,6 +4327,21 @@ html.aw-nhung .aw-below { display: none; }
 /* Nothing to divide yet (no class chosen, or the act has no questions) — a dash
    rather than a 0, which would read as "everybody gets none". */
 .aw-sd-readout.is-none .aw-sd-ronum { color: #b8c1cf; }
+/* ⭐⭐ Đợt 207 (thầy: "trường hợp nào có số câu tối đa bị bỏ lại ít nhất thì ô
+   QUESTION sáng nhẹ màu xanh lá để tôi biết phương án nào đang tối ưu nhất").
+   The box can only ever show ONE team count, so this glow is the only way it can
+   say "…and this is the best of them". Deliberately QUIET: it is an opinion
+   about a number, not the number itself.
+   ⚠️ A border + background tint, never `filter` or a `box-shadow` spread big
+   enough to bleed — this box sits in the popup layering contract's blast radius
+   (core/HUONG DAN CORE.md), and Đợt 198 already had to undo a `filter` glow on
+   the caption below it. */
+.aw-sd-readout.is-best {
+  border-color: #9ad9b4; background: #f2fbf6;
+  box-shadow: inset 0 0 0 1px rgba(46, 194, 126, .18);
+}
+.aw-sd-readout.is-best .aw-sd-ronum { color: #17714a; }
+.aw-sd-readout.is-best .aw-sd-rosub { color: #64ab88; }
 .aw-hstep.is-big { height: 46px; width: 100%; border-radius: 11px; }
 .aw-hstep.is-big .aw-hstep-val { font-size: 21px; min-width: 46px; }
 .aw-hstep.is-big .aw-hstep-btn { width: 44px; font-size: 21px; }
@@ -4753,42 +4851,145 @@ html.aw-nhung .aw-below { display: none; }
    above, so the board tapers downwards into a funnel (teacher: "ô trên to
    nhất… giảm dần theo từng người để tạo thành 1 hình nón ngược… chiều cao của
    các ô đều bằng nhau"). The per-row width arrives as `--w` from
-   core/showdown-review.js, which is also what positions the rank number: it
-   hangs OUTSIDE the box on its left, so the numbers trace the taper instead of
-   sitting in a straight gutter. */
+   core/showdown-review.js.
+   ⚠️ Đợt 207 — THE RANK NUMBER USED TO HANG OUTSIDE the box, tracking the
+   narrowing left edge, and that diagonal of numerals is what made the taper read
+   as a funnel. Thầy asked for it inside the box (with a medal for the top three),
+   which is a trade he was shown before it was built: the numbers now line up
+   straight and the funnel leans on its own edges alone. The gutters they left
+   behind are where the tick boxes went. */
 .aw-sd-pod {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
   display: flex; flex-direction: column; gap: 0.35cqw;   /* "khoảng cách rất nhỏ" */
   padding: 0.6cqw 0 1cqw;
 }
-.aw-sd-pod-row { position: relative; display: flex; justify-content: center; align-items: center; }
-.aw-sd-pod-rank {
-  position: absolute; right: calc(50% + var(--w) / 2 + 0.9cqw);
-  font-size: 2.3cqw; font-weight: 800; color: #a9b2c0; line-height: 1;
+/* ⭐ Đợt 207 — the scroller and the two tick counters, side by side. The
+   counters must NOT scroll with the list (thầy: "không di chuyển khi cuộn lên
+   xuống"), so they are siblings of `.aw-sd-pod`, not children of it. */
+.aw-sd-podwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
+.aw-sd-podwrap > .aw-sd-pod { flex: 1 1 auto; min-width: 0; }
+/* ⭐⭐ Đợt 207 — HOW MANY ARE TICKED TO EACH SIDE (thầy: "một số mờ, to, nằm
+   giữa chiều cao khung và gần sát viền ngoài… càng to càng tốt, nhưng không
+   được đè lên ô tên và dấu tích của bạn đầu tiên").
+   ⚠️ THE ROOM IS MEASURED, NOT GUESSED. Row 1 is the widest thing on the board:
+   80% of the content box, plus a tick box and a gap on each side
+   (4.8 + 0.9 = 5.7cqw). With `.aw-review`'s 2.4cqw padding that leaves about
+   3.8cqw clear inside each edge, and the counter is allowed to bleed 1.5cqw into
+   the padding — 5.2cqw in all. A single digit at 6.6cqw is about 3.6cqw wide, so
+   it clears; TWO digits would not, which is what `.is-wide-count` is for.
+   ⚠️ `pointer-events:none` — it sits over the leftmost tick boxes of the shorter
+   rows, and a decoration that swallowed a tick would be maddening to diagnose. */
+.aw-sd-podcount {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 5.2cqw; text-align: center;
+  font-size: 6.6cqw; font-weight: 800; line-height: 1;
+  color: rgba(35, 48, 62, .14); font-variant-numeric: tabular-nums;
+  pointer-events: none; opacity: 0;
+  transition: opacity .22s ease, font-size .22s cubic-bezier(.22, .9, .3, 1);
+}
+.aw-sd-podcount.is-l { left: -1.5cqw; }
+.aw-sd-podcount.is-r { right: -1.5cqw; }
+/* Both or neither — thầy: "khi 1 bên hiện 1 thì bên còn lại cũng hiện đồng thời
+   (hiện 0)". One class on the wrapper is what makes that impossible to get wrong. */
+.aw-sd-podwrap.has-picks .aw-sd-podcount { opacity: 1; }
+.aw-sd-podwrap.is-wide-count .aw-sd-podcount { font-size: 4cqw; }
+.aw-sd-pod-row {
+  position: relative; display: flex; justify-content: center; align-items: center;
+  gap: 0.9cqw;      /* only ever seen when the tick boxes are there */
 }
 .aw-sd-pod-box {
+  position: relative;      /* Đợt 207 — the sparkle layer is positioned against it */
   width: var(--w); box-sizing: border-box; min-height: 7.2cqw;
   display: flex; align-items: center; justify-content: space-between; gap: 1cqw;
   padding: 0.7cqw 1.5cqw; border-radius: 1.1cqw;
   background: #f3f6fa; border: 0.18cqw solid #e3e9f1;
 }
-/* Gold, silver, bronze — the box itself, not just the cup, so the top three read
-   from across the room. */
+/* Gold, silver, bronze — the box itself, not just the medal, so the top three
+   read from across the room. */
 .aw-sd-pod-box.is-m1 { background: linear-gradient(100deg, #fff7db, #ffe8a3); border-color: #efc03c; }
 .aw-sd-pod-box.is-m2 { background: linear-gradient(100deg, #f8fafd, #e5ebf2); border-color: #c3ced9; }
 .aw-sd-pod-box.is-m3 { background: linear-gradient(100deg, #fdf0e4, #f6dcc2); border-color: #dda56a; }
-.aw-sd-pod-who { display: flex; align-items: center; gap: 0.8cqw; min-width: 0; }
+.aw-sd-pod-who { display: flex; align-items: center; gap: 0.8cqw; min-width: 0; flex: 1 1 auto; }
 .aw-sd-pod-name {
   font-size: 2.6cqw; font-weight: 800; color: #23303e; line-height: 1.3;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  /* ⚠️ Đợt 207 — `min-width:0` is what lets a flex item shrink below its own
+     text. Without it the name refuses to narrow, the ellipsis never appears —
+     and, worse for us, `scrollWidth > clientWidth` never becomes true, so
+     fitPodiumNames would decide every name already fits and shrink nothing. */
+  min-width: 0;
   /* Vietnamese diacritics again — same clipped-ink guard as .aw-sd-rv-mktxt. */
   padding: 0.25cqw 0; margin: -0.25cqw 0;
 }
-.aw-sd-pod-cup { flex: 0 0 auto; display: inline-flex; }
-.aw-sd-pod-cup svg { width: 2.7cqw; height: 2.7cqw; }
-.aw-sd-pod-box.is-m1 .aw-sd-pod-cup { color: #e0a30c; }
-.aw-sd-pod-box.is-m2 .aw-sd-pod-cup { color: #97a4b2; }
-.aw-sd-pod-box.is-m3 .aw-sd-pod-cup { color: #c1793a; }
+/* ⭐ Đợt 207 — THE PLACE, INSIDE THE BOX: a medal (with its digit drawn into the
+   icon, see core/icons.js) for the top three, a plain numeral after that.
+   `min-width` on the numeral keeps every name starting on the same line whether
+   the place is one digit or two. */
+.aw-sd-pod-badge {
+  flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+  min-width: 3.4cqw; font-size: 2.3cqw; font-weight: 800; color: #a9b2c0; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.aw-sd-pod-badge.is-medal { min-width: 0; }
+.aw-sd-pod-badge svg { width: 3.6cqw; height: 3.6cqw; }
+.aw-sd-pod-box.is-m1 .aw-sd-pod-badge { color: #e0a30c; }
+.aw-sd-pod-box.is-m2 .aw-sd-pod-badge { color: #97a4b2; }
+.aw-sd-pod-box.is-m3 .aw-sd-pod-badge { color: #c1793a; }
+
+/* ⭐⭐ Đợt 207 — THE TWO TICK BOXES (thầy: split the class straight off the
+   results — "tích bên trái thì về bên trái, tích bên phải thì về bên phải").
+   They are flex children of the ROW, so they sit against the box's edges and
+   narrow down the funnel with it — thầy asked for exactly that: "các ô tích sẽ
+   bám sát theo chiều dài ngang của ô, vì vậy các ô tích không thẳng hàng".
+   Square, and 2/3 of the box's height (7.2 × 2/3 = 4.8cqw). */
+.aw-sd-pod-tick {
+  flex: 0 0 auto; width: 4.8cqw; height: 4.8cqw; padding: 0;
+  border: 0.18cqw solid #cfd8e4; border-radius: 1cqw;
+  background: #fff; color: #2ec27e; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  opacity: .28;            /* "mờ nhưng vẫn nhìn được 1 chút" */
+  transition: opacity .16s ease, border-color .16s ease, background .16s ease, transform .12s ease;
+}
+.aw-sd-pod-tick svg { width: 3cqw; height: 3cqw; opacity: 0; transition: opacity .16s ease; }
+.aw-sd-pod-tick:hover { opacity: .62; }
+.aw-sd-pod-tick:active { transform: scale(.94); }
+.aw-sd-pod-tick.is-on { opacity: 1; border-color: #2ec27e; background: #f0fbf5; }
+.aw-sd-pod-tick.is-on svg { opacity: 1; }
+/* ⚠️ `visibility`, NOT `display:none` and never removal: the hidden box keeps
+   its width, so the name box does not jump sideways the moment a tick lands. A
+   funnel that shuffles under the teacher's finger is the thing this is for. */
+.aw-sd-pod-tick.is-off { visibility: hidden; }
+
+/* ⭐ Đợt 207 — SPARKLES on the top three (thầy: "sparkle và sao nhỏ lấp lánh ẩn
+   hiện xung quanh").
+   ⚠️ PURE CSS, no requestAnimationFrame: a backgrounded myActivity column
+   freezes rAF, and a JS twinkle would stop dead there while the rest of the
+   board carried on.
+   ⚠️ `pointer-events:none` — the layer overhangs the box and would otherwise
+   sit on top of the tick boxes beside it. */
+.aw-sd-pod-spark { position: absolute; inset: -1.4cqw; pointer-events: none; color: #f0b429; }
+.aw-sd-pod-box.is-m2 .aw-sd-pod-spark { color: #b9c4d1; }
+.aw-sd-pod-box.is-m3 .aw-sd-pod-spark { color: #d59257; }
+.aw-sd-pod-star {
+  position: absolute; width: 1.1cqw; height: 1.1cqw; background: currentColor;
+  /* A four-pointed sparkle. `clip-path` rather than an SVG child so the whole
+     twinkle costs one element and no markup. */
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  opacity: 0; animation: aw-sd-twinkle 2.6s ease-in-out infinite;
+}
+/* Scattered by hand around the box's rim, with staggered delays and two sizes,
+   so the six of them never blink as a group. */
+.aw-sd-pod-star.s0 { top: -0.2cqw; left: 7%;  animation-delay: 0s; }
+.aw-sd-pod-star.s1 { top: 62%;     left: 2.5%; animation-delay: .75s; width: .8cqw; height: .8cqw; }
+.aw-sd-pod-star.s2 { top: -0.5cqw; left: 34%; animation-delay: 1.5s; width: .8cqw; height: .8cqw; }
+.aw-sd-pod-star.s3 { bottom: -0.3cqw; left: 58%; animation-delay: .35s; }
+.aw-sd-pod-star.s4 { top: 8%;      right: 6%;  animation-delay: 1.15s; width: .8cqw; height: .8cqw; }
+.aw-sd-pod-star.s5 { bottom: 10%;  right: 2.5%; animation-delay: 1.95s; }
+@keyframes aw-sd-twinkle {
+  0%, 100% { opacity: 0; transform: scale(.35) rotate(0deg); }
+  12%      { opacity: .95; transform: scale(1) rotate(25deg); }
+  30%      { opacity: 0; transform: scale(.35) rotate(50deg); }
+}
 .aw-sd-pod-team {
   flex: 0 0 auto; font-size: 1.5cqw; font-weight: 800; color: #6b7a90;
   background: rgba(255, 255, 255, .75); border-radius: 0.5cqw; padding: 0.15cqw 0.6cqw;

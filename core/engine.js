@@ -3860,12 +3860,51 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (reviewData.length && activity.options?.showAnswers !== false) {
         items.append(panelItem("Show answers", () => showReview(result, entryId)));
       }
-      items.append(panelItem("Start again", restart));
+      const again = panelItem("Start again", restart);
+      items.append(again);
       // "Start with mistakes" sits right under "Start again" (teacher's layout).
       // Only for games that opted in with tpl.itemsKey AND only when this play
       // actually left something wrong or blank — a clean sheet gets no button
       // rather than a button that only ever says "No mistakes to practise".
-      if (mistakesAvailable()) items.append(panelItem("Start with mistakes", startWithMistakes));
+      if (mistakesAvailable()) {
+        const mist = panelItem("Start with mistakes", startWithMistakes);
+        // ⭐⭐ Đợt 207 (thầy, 20/8/2026) — "dòng Start with mistakes được ẩn đi,
+        // kích hoạt bằng cách nhấn giữ vào dòng START AGAIN, sau đó thì dòng
+        // START WITH MISTAKES mới hiện và mới bấm vào được".
+        //
+        // ⛔ SHOWDOWN ONLY — thầy's own narrowing when asked, and this end-of-game
+        // panel is shared by ALL 17 templates in every mode. Ordinary single play
+        // keeps the row exactly where it has been since Đợt 84; nothing outside
+        // Showdown changes by one pixel.
+        //
+        // ⚠️ `again.onclick` is CLEARED first. panelItem wires a plain onclick,
+        // and core/press.js's tapOrHold swallows the trusted `click` itself — the
+        // two together would fire restart() twice on a browser that still
+        // delivered one, and half the point of tapOrHold is that `click` cannot
+        // be trusted on the TOMKO infrared screen anyway.
+        //
+        // ⚠️ Hidden with a class, NOT by leaving the node out: it has to be in
+        // the tree for the reveal to animate (`.aw-panel-item.is-held` in
+        // app.css opens a max-height — with `overflow:hidden`, the Đợt 137 trap).
+        // And `disabled` goes with it, because a zero-height row can still be
+        // reached by the keyboard: hidden must mean "cannot be pressed".
+        if (showdownPick) {
+          mist.classList.add("is-held");
+          mist.disabled = true;
+          again.onclick = null;
+          tapOrHold(again, {
+            onTap: () => { sound.click(); restart(); },
+            onHold: () => {
+              if (!mist.disabled) return;             // already out — a second hold does nothing
+              sound.click();
+              mist.disabled = false;
+              mist.classList.add("is-on");
+            }
+          });
+          again.title = "Hold to practise this play's mistakes";
+        }
+        items.append(mist);
+      }
       // "Play a different template" was HERE until Đợt 84 and moved out to make
       // room: a 5th button pushed the panel past its 92% max-height and made it
       // scroll, hiding the last row. The same picker still lives in the ☰ menu

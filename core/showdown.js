@@ -377,12 +377,48 @@ export function fmtRoundMs(ms) {
 }
 
 /**
- * ⭐ Đợt 176 — % correct OF THE QUESTIONS ACTUALLY ATTEMPTED (teacher: "không
- * tính % cho các câu chưa làm"), banded into the classroom's colour read:
+ * ⭐⭐ Đợt 207 (thầy, 20/8/2026) — ONE PERCENTAGE, OUT OF EVERY QUESTION THE
+ * PUPIL WAS DEALT: *"Mọi tên đều được tính %, kể cả 0% hoặc không làm đúng câu
+ * nào… Các câu không làm hoặc không làm kịp vẫn được tính vào % đầy đủ."*
+ *
+ * ⛔⛔ THIS REVERSES ĐỢT 176 ON PURPOSE. That đợt divided by `attempted` (thầy
+ * then: "không tính % cho các câu chưa làm") and HID the figure entirely when a
+ * pupil had attempted nothing, so a child the game never reached showed no
+ * percentage rather than a red 0%. Thầy has now asked for the opposite reading:
+ * a question left undone is a question got wrong, and EVERY name carries a
+ * number. Do not "restore" the old denominator — it is not a bug.
+ *
+ * ⚠️ ONE function, THREE screens (the funnel, the per-question list, and the
+ * Recently results ledger drawn by core/showdown-setup.js). Đợt 176 wrote this
+ * arithmetic out twice and the copies stayed in step only because nothing
+ * underneath them ever changed; a third copy in the history screen is exactly
+ * what this exists to prevent.
+ *
+ * ⚠️ Worth saying out loud: `right + wrong === total` already (see
+ * groupByMember — `wrong` has always counted never-answered rows), so this is
+ * exactly `✓ / (✓ + ✗)`, the two numbers printed beside it. Consequence: OLD
+ * matches in the durable ledger now read a different % than they did before this
+ * đợt. Their stored counts are untouched; only the sum on screen changed, and it
+ * changed on every screen at once.
+ *
+ * Returns null ONLY when the pupil was dealt no question at all — there is no
+ * percentage of nothing, and 0% there would be a lie about a child who never
+ * had a turn.
+ */
+export function pctOf(b) {
+  const total = Math.max(0, Number(b?.total) || 0);
+  if (!total) return null;
+  const right = Math.max(0, Number(b?.right) || 0);
+  return Math.round((right / total) * 100);
+}
+
+/**
+ * ⭐ Đợt 176 — the colour band of a percentage, for the classroom's colour read:
  * ≤60 đỏ · 61-72 vàng · 73-84 cam · 85-94 xanh dương · ≥95 xanh lá (the two
  * endpoints are the teacher's own numbers, the middle split is ours).
- * Returns the band class for CSS; null when nothing was attempted — a pupil
- * who never got a turn shows no percentage at all rather than a red 0%.
+ * ⚠️ Đợt 207 — the NUMBER being banded now comes from `pctOf` above (out of
+ * every question dealt). The bands themselves are untouched, so "green" still
+ * means to the class what it has always meant.
  */
 export function pctBand(pct) {
   if (pct <= 60) return "is-p0";
@@ -390,4 +426,33 @@ export function pctBand(pct) {
   if (pct <= 84) return "is-p2";
   if (pct < 95) return "is-p3";
   return "is-p4";
+}
+
+// ---------------------------------------------------------------
+// NAME ABBREVIATION (Đợt 166, moved here in Đợt 207)
+// ---------------------------------------------------------------
+// The LAST resort for a name that still does not fit after the size it is drawn
+// at has been shrunk as far as it may go. Teacher, 15/8/2026: "có thể sử dụng
+// tên viết tắt để đều hơn bố cục bảng, ví dụ Nguyễn Bảo Anh có thể thành
+// N.B.Anh". Keeps the LAST word — the part a Vietnamese name is actually called
+// by — in full, and reduces every word before it to an initial. A one-word name
+// (a roll typed by hand, a foreign pupil) comes back unchanged: there is nothing
+// to abbreviate, and initials alone would be unreadable.
+//
+// ⚠️ A DISPLAY TRANSFORM ONLY — every id/name a claim, a review row or Firestore
+// ever sees is still the pupil's real name; only `.textContent` is swapped, and
+// only when it does not fit, with the full name kept as the `title` tooltip.
+//
+// ⚠️ Đợt 207 — lifted out of core/showdown-setup.js (where it has lived since
+// Đợt 166) into this pure file, because the RESULT BOARDS now need it too and
+// core/showdown-review.js may not import the setup panel: that file reaches
+// Firestore and the library, and the review is imported STATICALLY by the engine
+// (see this file's header, luật 2 of v0.9.0). showdown-setup.js re-exports it
+// under its old name, so nothing that used to import it from there had to change.
+export function shortenName(full) {
+  const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return full;
+  const last = parts[parts.length - 1];
+  const initials = parts.slice(0, -1).map(w => w[0]).join(".");
+  return `${initials}.${last}`;
 }

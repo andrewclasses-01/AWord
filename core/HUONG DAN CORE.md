@@ -845,6 +845,96 @@ có mặt trên bảng (thầy: *"vì có thể có đội chưa xong"*).
 **thêm bất kỳ `kind` dữ liệu-ứng-dụng nào về sau PHẢI khai vào đó**, không thì nó ăn mất một số link
 và một `?a=57` trả về document cài đặt.
 
+### ⭐⭐⭐ BẢNG KẾT QUẢ BẢN ĐỢT 207 (20/8/2026) — ĐỌC MỤC NÀY TRƯỚC KHI SỬA PHỄU
+
+Bảy luật dưới đây **ghi đè** mô tả cũ ở hai mục Đợt 177/180 ngay trên.
+
+**(a) ⛔⛔ % LÀ `pctOf()` TRONG `core/showdown.js` — CHIA CHO TỔNG SỐ CÂU ĐƯỢC CHIA.**
+Đợt 176 chia cho `attempted` và **giấu hẳn %** khi em đó chưa làm câu nào (thầy khi ấy: *"không tính %
+cho các câu chưa làm"*). Đợt 207 thầy chốt ngược: *"Mọi tên đều được tính %, kể cả 0%… Các câu không
+làm hoặc không làm kịp vẫn được tính vào % đầy đủ."* **Đừng "khôi phục" mẫu số cũ — nó không phải lỗi.**
+- MỘT hàm, BA màn: phễu · danh sách từng câu · Recent results. Trước đó phép tính này có **hai bản**.
+- `right + wrong === total` vốn đúng sẵn ⇒ `% = ✓/(✓+✗)`, khớp hai số in cạnh nó. Thứ tự đọc là
+  **`5 ✓ 5 ✗ 50%`**, % đứng CUỐI.
+- Hệ quả đã biết và chấp nhận: **trận cũ trong sổ cái xem lại ra % khác trước**.
+
+**(b) ⭐ MỘT CÁI TÊN KHÔNG BAO GIỜ ĐƯỢC CẮT — `fitPodiumNames(root, sel)`.**
+Co cỡ chữ trước (sàn **62%**), hết chỗ mới `shortenName`, tên đầy đủ ở `title`.
+- ⚠️ **GỌI SAU KHI ĐÃ APPEND** — nó ĐO, mà cây rời không có bề rộng nào để đo.
+- ⚠️ **`min-width: 0` trên chính ô tên là thứ chịu lực.** Thiếu nó phần tử flex không chịu hẹp,
+  `scrollWidth > clientWidth` **không bao giờ đúng**, và hàm kết luận mọi tên đều vừa — hỏng **im lặng**.
+- ⚠️ Chạy lại một lượt ở `document.fonts.ready`: font chưa nạp là bề rộng khác (Đợt 153).
+- ⛔ **Cấm `requestAnimationFrame`** trong đó — cột myActivity chạy nền là rAF treo.
+- Cột preview của Recent results gọi **chính hàm này** với `sel = ".aw-sd-mini-name"`.
+- ⚠️ `shortenName` đã **chuyển sang `core/showdown.js`** (Đợt 207) để bảng kết quả dùng được;
+  `showdown-setup.js` re-export nó dưới tên cũ, đừng khai bản thứ hai.
+
+**(c) SỐ THỨ TỰ NAY NẰM TRONG Ô, và đó là một ĐÁNH ĐỔI thầy đã chọn.**
+Số cũ treo ngoài ô, bám mép trái đang hẹp dần — **chính đường chéo ấy làm phễu ra hình phễu**. Nay số
+thẳng hàng trong ô (3 hạng đầu là **icon huy chương mang sẵn số 1/2/3**, `icons.medal1..3`), phễu chỉ
+còn dựa vào mép ô. Đã báo trước khi làm; **không phải chỗ sót để dọn dẹp**.
+⚠️ Số trong huy chương vẽ bằng `<path>`, **không `<text>`** — `<text>` đổi bề ngang theo font đang có
+và sẽ lệch khỏi tâm mặt huy chương ở cỡ nhỏ.
+
+**(d) ⭐⭐ HAI Ô TÍCH CHIA ĐỘI + HAI SỐ ĐẾM (`renderReviewPodium(..., { picks })`).**
+Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: tích trái/phải, đếm hai bên.
+- **`picks` là Map do MÀN HÌNH truyền vào**, không phải bộ vẽ tự giữ. Bảng bị dựng lại mỗi lần đổi
+  phạm vi và **mỗi lần một đội khác nộp kết quả** (listener Đợt 196) — Map nằm trong bộ vẽ là công chia
+  đội bay mất giữa chừng. Không truyền `picks` thì không dựng ô tích.
+- ⚠️ **Ô không được chọn ẩn bằng `visibility`, KHÔNG `display:none`/gỡ node** — nó phải giữ chỗ, nếu
+  không ô tên nhảy ngang ngay dưới ngón tay.
+- ⚠️ **Ô tích là con của HÀNG**, nên nó bám mép ô và **hẹp dần theo phễu, cố ý KHÔNG thẳng hàng** (thầy
+  chốt). Đừng "căn cho thẳng".
+- ⚠️ **Chỗ cho hai số đếm là ĐO ĐƯỢC**: hàng 1 = 80% + 2 ô tích (4.8cqw) + 2 khe (0.9cqw) ⇒ còn
+  ~3.8cqw mỗi bên, lấn thêm 1.5cqw vào lề `.aw-review`. Đụng vào `POD_MAX_W`, bề rộng ô tích, hay lề
+  của `.aw-review` thì **phải đo lại con số này** — và nhớ ca **hai chữ số** (`.is-wide-count`).
+- Hai số **hiện cùng lúc** (bên kia hiện `0`) và **đứng yên khi cuộn**: chúng là anh em của khung cuộn
+  `.aw-sd-pod`, không phải con của nó — đó là lý do bộ vẽ trả về **`.aw-sd-podwrap`**, không trả
+  `.aw-sd-pod`. ⚠️ **Ai xoá bảng theo selector phải biết CẢ HAI tên.**
+
+**(e) ⭐⭐ FULLSCREEN CỦA MÀN SHOW ANSWERS — `container-type` LÀ THỨ CHỊU LỰC.**
+Nút ở góc dưới trái, nhắm vào **chính `.aw-review`**, KHÔNG phải `root` (ngược luật Đợt 12 — ở đây mục
+đích là bỏ hết chrome đi).
+- ⚠️ `.aw-review` phải mang **`container-type: size`** — nhưng **CHỈ Ở `.is-fs`**. Mọi cỡ trên màn này
+  là `cqw`, container thường là `.aw-stage`, mà **stage không to ra khi con nó fullscreen** ⇒ không có
+  nó thì bảng phủ kín tường mà chữ vẫn bé bằng lúc trong khung.
+  ⛔⛔ **ĐỪNG KHAI THƯỜNG TRỰC — đã cắn thật ngay trong Đợt 207.** Cỡ của một query container là **HỘP
+  NỘI DUNG**, mà `.aw-review` có lề `2.4cqw`: khai thường trực là đổi mọi `cqw` từ "1% bề ngang stage"
+  (968px) sang "1% bề ngang stage TRỪ LỀ" (920px) ⇒ **chữ Show answers của CẢ 17 template nhỏ đi 4,8%**
+  (23,18 → 22,07px), **im lặng, và mọi lưới vẫn xanh**.
+  ⛔ **LUẬT RỘNG HƠN:** thêm `container-type` vào một phần tử **CÓ LỀ** là đổi ý nghĩa của mọi `cqw`
+  bên trong nó. Trước khi khai, hỏi: *hộp nội dung của tôi có bằng container hiện tại của đám con
+  không?* Không bằng thì mọi cỡ bên trong vừa đổi hết.
+- ⚠️ Lề của chính `.aw-review` phải khai lại bằng `vh/vw` trong `.is-fs` — **không gì tự truy vấn
+  chính nó**.
+- ⚠️ **Mọi đường ra phải dọn**: `dispose()` gỡ `fullscreenchange` và thoát fullscreen. Esc và việc màn
+  bị gỡ **không phải cú click** — teardown viết trong `onclick` là bỏ sót hai đường (ghost-clock 131).
+- ⚠️⚠️ **Trong myActivity chia cột, fullscreen chỉ phủ kín CỘT đó** (WebContentsView). Đã báo thầy.
+- ⚠️ `requestFullscreen` đòi **cử chỉ người dùng thật** — `.click()` lập trình bị từ chối, nên bàn thử
+  chỉ nghiệm được **đường lùi** (bị từ chối thì màn hình vẫn nguyên vẹn, không kẹt, không lỗi).
+
+**(f) RECENT RESULTS: CŨ NHẤT BÊN TRÁI** (đảo Đợt 197).
+⚠️ **Đảo LÚC VẼ, KHÔNG đảo trong `loadMatches`** — hàm đó còn `slice(0, MAX_MATCHES)` và lát đó phải
+giữ **5 trận MỚI NHẤT**; đảo trong đó là sổ cái lặng lẽ hiện trận tháng trước. Luật phá hoà khi hai
+trận trùng mili-giây (lỗi thật của Đợt 197) phải giữ nguyên.
+
+**(g) Ô QUESTIONS ở màn chọn lớp — `left` LÀ CỦA ĐỘI ÍT NGƯỜI NHẤT.**
+`each = q ÷ đội ĐÔNG nhất` (đúng phép chia `applyBalance` của engine — đổi nó là đổi luật chơi);
+`left = q − each × đội ÍT NGƯỜI nhất` (thầy: *"số câu hỏi tối đa bị bỏ lại"*). Bản cũ đo `left` ở đội
+ĐÔNG nhất, tức `q mod biggest`, nên nó **không thể lớn hơn sĩ số đội đông nhất** — 18 em/4 đội/95 câu
+báo "0 left" trong khi hai đội 4 em mỗi đội vứt 19 câu.
+⚠️ Cỡ đội lấy từ **`targetSizes()`**, không nhẩm `ceil(n/teams)`: lớp đông hơn `MAX_PER_TEAM × số đội`
+thì hai cách ra hai số khác nhau và ô sẽ hiện con số lớp không bao giờ thấy. **1 đội là ngoại lệ** —
+solo là cả lớp, cap không áp.
+Đèn xanh `.is-best` = số đội hiện tại bỏ lại ít nhất trong **2..MAX_TEAMS** (⛔ 1 đội không dự thi,
+thầy chốt); **hoà thì mọi phương án hoà đều sáng**.
+
+**(h) Dòng "Start with mistakes" ẩn sau NHẤN GIỮ "Start again" — ⛔ CHỈ TRONG SHOWDOWN.**
+Bảng cuối game dùng chung cho cả 17 template ở mọi chế độ; thầy chỉ thu hẹp cho Showdown.
+⚠️ Phải **xoá `onclick`** mà `panelItem` gắn trước khi treo `tapOrHold` (nó tự nuốt cú `click` thật —
+hai thứ cùng sống là `restart()` chạy hai lần). Ẩn bằng class + **`disabled`**: hàng cao 0 vẫn bấm
+được bằng bàn phím. `overflow:hidden` bắt buộc (bẫy Đợt 137).
+
 ### Hợp đồng cho template (opt-in — Đợt 178: 8/17 template)
 
 ```js

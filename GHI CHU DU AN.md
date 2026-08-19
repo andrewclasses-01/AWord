@@ -8,6 +8,190 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 207 (20/8/2026) — ⭐⭐⭐ SHOWDOWN: **Ô QUESTIONS TÍNH LẠI · BẢNG CHÓP NGƯỢC DỰNG LẠI · RECENT RESULTS FULLSCREEN**
+
+**Trạng thái:** code xong, **117/117 ĐẠT trên 3 bàn thử, 0 lỗi console**. ⬜ **CHƯA COMMIT — chờ thầy
+nhìn bằng mắt** (xem mục 10).
+
+Thầy giao 12 việc trong hai lượt. Lượt 1 là ô QUESTIONS; lượt 2 là 9 việc ở bảng kết quả cuối game +
+3 việc ở Recent results, thầy dặn *"để tí commit cùng với những điều chỉnh tiếp theo một thể"*.
+
+### 1. ⭐⭐⭐ Ô QUESTIONS — "LEFT" TRƯỚC NAY TRẢ LỜI SAI CÂU HỎI
+
+Thầy hỏi: *"Lớp 18 học sinh, BT 95 câu, tôi chọn 4 đội mà pop-up hiện 19 each / không có câu hỏi dư
+nào là đúng hay chưa?"*
+
+Đo bằng **chính hàm chia đội thật** (`targetSizes`, Đợt 198) — 18 em / 4 đội ra **5-4-4-5**:
+
+| | đội 5 em | đội 4 em |
+|---|---|---|
+| số câu thực chơi | 19 × 5 = **95** (trọn bài) | 19 × 4 = **76** |
+| bỏ lại | **0** | **19** |
+
+⇒ **"19 each" đúng, "không có câu dư" chỉ đúng với 2 đội đông.** Hai đội 4 em mỗi đội vứt 19 câu, mà ô
+**không thể nói ra con số 19 kể cả về nguyên tắc**: công thức cũ là `q − each × đội ĐÔNG nhất`, tức
+đúng bằng `q mod biggest`, nên nó **luôn nhỏ hơn sĩ số đội đông nhất**. Nó trả lời *"còn câu nào cả lớp
+không ai đụng tới không?"* — không phải câu thầy hỏi.
+
+**Vá:** `left = q − each × đội ÍT NGƯỜI nhất` (thầy chốt: *"số câu hỏi tối đa bị bỏ lại"*). `each` giữ
+nguyên chia cho đội ĐÔNG nhất — đó đúng là phép chia `applyBalance` trong engine đang chạy; đổi nó là
+đổi luật chơi chứ không phải đổi chữ trên bảng.
+
+⭐ **VÁ KÈM MỘT LỖI CÓ SẴN:** ô này nhẩm `ceil(n / teams)` thay vì hỏi `targetSizes`. Lớp đông hơn
+`MAX_PER_TEAM × số đội` (25 em / 2 đội) thì đội thật bị chặn ở 10, mà ô báo 13 ⇒ **số EACH hiện một
+con số lớp không bao giờ thấy**. Nay dùng chung một hàm chia với bảng đội. ⚠️ **1 đội là ngoại lệ**:
+solo là cả lớp, `MAX_PER_TEAM` không áp — trả `[n]` thẳng, không đi qua cap.
+
+### 2. ⭐⭐ ĐÈN XANH "PHƯƠNG ÁN TỐI ƯU"
+
+Thầy: *"trường hợp nào có số câu tối đa bị bỏ lại ít nhất thì ô QUESTION sáng nhẹ màu xanh lá"*. Ô chỉ
+hiện được MỘT số đội, nên đèn là cách duy nhất nó nói được *"và đây là phương án tốt nhất"*.
+- Quét 2·3·4·5 đội, lấy mức `left` thấp nhất. ⛔ **1 đội không tham gia so sánh** (thầy chốt) — nó là
+  chế độ khác, và nó thường thắng nên sẽ nuốt mất tín hiệu.
+- **HOÀ THÌ CẢ HAI CÙNG SÁNG.** Lớp 18 em / 95 câu: 2 đội và 3 đội cùng bỏ lại 5 — nói chỉ một trong
+  hai là tối ưu là nói dối về cái kia.
+
+Bảng thầy sẽ thấy (18 em, 95 câu): `2 đội 10 EACH·5 LEFT 🟢` · `3 đội 15·5 🟢` · `4 đội 19·19` ·
+`5 đội 23·26`.
+
+### 3. TÊN KHÔNG BAO GIỜ BỊ KHUYẾT (việc 1 + việc 10)
+
+`fitPodiumNames()` trong `core/showdown-review.js`: **co cỡ chữ trước** (sàn 62% cỡ gốc, mỗi nhịp 6%),
+**hết chỗ mới viết tắt** (`shortenName`, giữ tên gọi ở cuối), tên đầy đủ luôn ở tooltip.
+- ⚠️ **`min-width: 0` trên chính ô tên là thứ chịu lực**: thiếu nó phần tử flex không chịu hẹp lại,
+  `scrollWidth > clientWidth` **không bao giờ đúng**, và hàm sẽ kết luận mọi tên đều vừa.
+- ⚠️ Đo **sau khi đã gắn vào tài liệu**, và **chạy lại một lượt khi `document.fonts` báo xong** — font
+  chưa nạp là bề rộng khác (bài học 7px của Đợt 153).
+- ⛔ **KHÔNG rAF** — cột myActivity chạy nền là rAF treo, tên sẽ đứng nguyên cỡ chưa co.
+- Đo thật ở 4 bề ngang khung (960 · 620 · 420 · **300px**): **0/20 tên bị cắt ở mọi cỡ**.
+- Cột preview Recent results dùng **chung một hàm** (`sel = ".aw-sd-mini-name"`) — trước đây nó viết
+  tắt SẴN mọi tên, kể cả tên thừa chỗ.
+
+### 4. HUY CHƯƠNG + SỐ THỨ TỰ VÀO TRONG Ô (việc 5, 6)
+
+3 icon huy chương mới trong `core/icons.js`, **số 1/2/3 vẽ THẲNG vào icon** (`<path>`, không phải
+`<text>`): số phải nằm đúng tâm mặt huy chương ở cả 3.6cqw trên bảng thật lẫn 11px trong cột preview,
+mà `<text>` thì đổi bề ngang theo font đang có.
+
+⚠️ **ĐÁNH ĐỔI ĐÃ BÁO TRƯỚC VÀ THẦY CHỌN:** số thứ tự cũ **treo NGOÀI ô**, bám theo mép trái đang hẹp
+dần — chính đường chéo ấy làm cái phễu ra hình phễu. Nay số thẳng hàng trong ô, phễu chỉ còn dựa vào
+mép ô. **Đây không phải chỗ sót để "dọn dẹp" về sau.** Chỗ trống hai bên mà số để lại chính là chỗ hai
+ô tích dọn vào.
+
+### 5. ⛔⛔ % ĐỔI MẪU SỐ — ĐẢO NGƯỢC ĐỢT 176 (việc 3, 4)
+
+Đợt 176 thầy chốt *"không tính % cho các câu chưa làm"* ⇒ chia cho `attempted`, và **giấu hẳn %** khi
+em đó chưa làm câu nào. Nay thầy chốt ngược: *"Mọi tên đều được tính %, kể cả 0%… Các câu không làm
+hoặc không làm kịp vẫn được tính vào % đầy đủ."*
+- Hàm mới **`pctOf()` trong `core/showdown.js`** — MỘT hàm, BA màn (phễu · danh sách · sổ cái). Đợt 176
+  viết phép tính này ra hai bản; bản thứ ba ở sổ cái là thứ hàm này sinh ra để chặn.
+- `right + wrong === total` vốn đã đúng (`wrong` đếm cả câu chưa làm từ đầu), nên `% = ✓/(✓+✗)` — đúng
+  hai con số in ngay cạnh nó. Thứ tự đọc đổi thành **`5 ✓ 5 ✗ 50%`** (% xuống cuối) ở cả hai bảng.
+- ⚠️ **Trận CŨ trong sổ cái xem lại sẽ ra % khác trước.** Số đếm lưu trên Firestore không đụng gì; chỉ
+  phép cộng trên màn đổi, và nó đổi ở mọi màn cùng một lúc.
+
+### 6. SPARKLE 3 BẠN ĐẦU (việc 7)
+
+6 ngôi sao 4 cánh (`clip-path`), lệch nhịp nhau, màu theo hạng vàng/bạc/đồng. **CSS animation thuần** —
+xem lý do ở mục 3. `pointer-events: none` để không bao giờ ăn mất cú chạm của ô tích bên cạnh.
+
+### 7. ⭐⭐ HAI Ô TÍCH + HAI SỐ ĐẾM (việc 9) — CHIA ĐỘI NGAY TRÊN BẢNG KẾT QUẢ
+
+Thầy: *"chia đội dựa theo danh sách kết quả, đội nào chọn ai thì tích vào người đó, tích bên trái thì
+về bên trái, tích bên phải thì về bên phải."*
+- Ô vuông, cao **2/3** ô tên, mờ 0.28; bấm → tích xanh + ô rõ nét, ô kia **ẩn**; bấm lại → hai ô mờ.
+- ⚠️ **Ô bị ẩn dùng `visibility`, KHÔNG `display:none`** — nó phải giữ chỗ, nếu không ô tên nhảy ngang
+  ngay lúc thầy vừa chạm. Đo: lệch **0.0px**.
+- ⚠️ **Ô tích là con của HÀNG**, nên nó bám mép ô và **hẹp dần theo phễu — cố ý không thẳng hàng**
+  (thầy chốt). Đo hàng 1 vs hàng 10 lệch **31px**.
+- **Hai số đếm** mờ, to, giữa chiều cao, sát viền: hiện **cả hai cùng lúc** (bên kia hiện `0`), đứng
+  yên khi cuộn danh sách (là anh em của khung cuộn, không phải con của nó).
+  ⚠️ **Chỗ cho con số là ĐO ĐƯỢC, không phải đoán**: hàng 1 chiếm 80% + hai ô tích + hai khe ⇒ còn
+  ~3.8cqw mỗi bên, cho phép lấn 1.5cqw vào lề khung. Một chữ số ở 6.6cqw vừa khít; **hai chữ số thì
+  không**, nên có `.is-wide-count` hạ xuống 4cqw. Đo ở 11 người một bên: vẫn không đè.
+- ⭐ **Map dấu tích do MÀN HÌNH giữ, không phải bộ vẽ giữ** — bảng bị dựng lại mỗi lần đổi phạm vi và
+  mỗi lần một đội khác nộp kết quả; Map nằm trong bộ vẽ là công chia đội của thầy bay mất ngay lúc đội
+  bạn xong bài. Nó chết cùng màn hình, đúng nghĩa "đánh dấu tạm" thầy yêu cầu.
+
+### 8. NÚT FULLSCREEN (việc 2) + RECENT RESULTS (việc 11, 12)
+
+- **Nút fullscreen góc dưới trái** màn Show answers. ⚠️ **Nhắm vào chính hộp review, KHÔNG phải
+  `root`** — ngược luật fullscreen của app (Đợt 12), vì ở đây mục đích là bỏ hết chrome đi.
+- ⭐⭐ **`container-type: size` trên `.aw-review` là thứ làm nó có nghĩa**: mọi cỡ trên màn này là
+  `cqw`, mà container cũ là `.aw-stage` — **stage KHÔNG to ra khi con nó fullscreen**, nên bảng sẽ phủ
+  kín tường mà chữ vẫn bé bằng lúc ở trong khung. Ngoài fullscreen thì không đổi gì đo được (review
+  `inset:0` trong stage). Lề phải khai lại bằng `vh/vw` vì **không gì tự truy vấn chính nó**.
+- **Recent results: cũ nhất bên trái** (đảo Đợt 197). ⚠️ **Đảo LÚC VẼ, không đảo trong `loadMatches`**
+  — hàm đó còn `slice(0, MAX_MATCHES)` và lát đó phải giữ **5 trận MỚI NHẤT**; đảo trong đó là sổ cái
+  lặng lẽ hiện trận tháng trước. Luật phá hoà khi hai trận trùng mili-giây (lỗi Đợt 197) đi kèm nguyên
+  vẹn.
+- **Bấm cột → chi tiết FULLSCREEN**, ✕ góc trên phải. ⚠️ **Được phép hỏng**: trình duyệt từ chối (không
+  có cử chỉ thật, chính sách…) thì bảng lùi về đúng hành vi cũ — đè lên 5 cột, dùng bình thường, không
+  báo lỗi. ⚠️ Mọi đường ra đi qua **một** hàm `closeDetail` (✕ · Esc · panel đóng dưới chân nó) — hai
+  trong ba đường đó không phải cú click.
+- ⚠️⚠️ **TRONG myActivity CHIA CỘT, FULLSCREEN CHỈ PHỦ KÍN CỘT ĐÓ** — WebContentsView không chiếm được
+  màn hình. Đã báo thầy trước khi làm; mở AWord ở tab riêng thì mới phủ màn 86".
+
+### 9. DÒNG "START WITH MISTAKES" ẨN SAU NHẤN GIỮ (việc 8)
+
+⛔ **CHỈ TRONG SHOWDOWN** — thầy tự thu hẹp khi được hỏi. Bảng cuối game là bảng **dùng chung cho cả 17
+template ở mọi chế độ**; chơi đơn giữ nguyên như từ Đợt 84.
+- Dùng lại `tapOrHold` của `core/press.js` (cùng nhịp 420ms với nút Options/Template/Mode).
+- ⚠️ **Phải xoá `onclick` của "Start again" trước** khi gắn `tapOrHold`: `panelItem` gắn onclick thường,
+  mà `tapOrHold` tự nuốt cú `click` thật — hai thứ cùng sống là có máy chạy `restart()` hai lần.
+- ⚠️ Ẩn bằng **class + `disabled`**, không phải bỏ nút ra khỏi cây: cần nút ở đó để còn animation mở
+  ra, mà một hàng cao 0 vẫn **bấm được bằng bàn phím** nếu quên `disabled`. `overflow:hidden` là bắt
+  buộc — đúng bẫy Đợt 137.
+
+### 10. BÀN THỬ — 117/117 ĐẠT, 0 LỖI CONSOLE
+
+`scratch/` bị gitignore ⇒ **phiên/máy mới phải dựng lại**; công thức đủ ở đây.
+
+| File | Nội dung | Kết quả |
+|---|---|---|
+| `sd207-pod.html` | bộ vẽ phễu THẬT, lớp 20 em tên tiếng Việt dài (có `Ẳ`), không cần backend giả | **57/57** |
+| `sd207-panel.html` | panel THẬT + Firestore giả (`fake-firebase196.js`), lớp A1B 18 em, sổ cái 5 trận | **35/35** |
+| `sd207-review.html` | `mountShowdownReview` THẬT + `tapOrHold` THẬT của `press.js` | **25/25** |
+
+### 11. 🐞 MỘT HỒI QUY DO CHÍNH ĐỢT NÀY GÂY RA — BẮT ĐƯỢC BẰNG PHÉP ĐO, KHÔNG PHẢI BẰNG MẮT
+
+Bản đầu khai `container-type: size` **thường trực** trên `.aw-review`. Nó chạy đúng cho fullscreen, mọi
+bàn thử đều ĐẠT, và nó **âm thầm làm nhỏ chữ của màn Show answers ở CẢ 17 TEMPLATE đi 4,8%**.
+
+Gốc: **cỡ của một query container là HỘP NỘI DUNG của nó**, mà `.aw-review` có lề `2.4cqw`. Trước đợt
+này `1cqw` là *"1% bề ngang STAGE"* (968px); sau khi khai, nó thành *"1% bề ngang stage TRỪ LỀ"*
+(920px). Đo được: tiêu đề **23,18px → 22,07px**.
+
+**Vá:** treo `container-type` lên **`.aw-review.is-fs`** — chỉ bật khi đang fullscreen. Màn thường trở
+lại **đúng từng pixel** như trước đợt này (đo lại: 23,184px), còn ở fullscreen thì không có "cỡ cũ"
+nào để mà trung thành.
+
+⛔ **LUẬT MỚI:** *thêm `container-type` vào một phần tử CÓ LỀ là đổi ý nghĩa của mọi `cqw` bên trong
+nó.* Trước khi khai, hỏi: **cái gì đang là container của đám con này, và hộp nội dung của tôi có bằng
+hộp đó không?** Ở đây không bằng — và không có gì trên màn hình nói ra điều đó.
+⚠️ Bài học đi kèm: **lưới xanh hết KHÔNG có nghĩa là không có hồi quy** — không phép thử nào của đợt
+này canh cỡ chữ của 16 template kia. Thứ bắt được nó là câu hỏi *"cái mình vừa thêm có đổi cỡ của thứ
+mình KHÔNG đụng tới không?"*, hỏi SAU KHI mọi lưới đã xanh. Nay đã có 2 phép thử canh chỗ này
+(`sd207-review.html` mục 1).
+
+⛔ **HAI LẦN LƯỚI BÁO HỎNG MÀ LỖI Ở CHÍNH LƯỚI** (lần thứ 5 và 6 tính từ Đợt 198):
+1. `elementFromPoint` trả `null` vì nút nằm ở **y=934 trên cửa sổ cao 720** — ngoài khung nhìn thì
+   không có gì để trúng. Phải `scrollIntoView` rồi mới hit-test.
+2. `mount()` xong chưa chờ danh sách lớp nạp ⇒ `select.value = id` **rơi vào khoảng không**, ô đọc ra
+   "— EACH" và lưới kết luận công thức sai.
+
+⬜ **VIỆC CHỈ MẮT/TAY THẦY LÀM ĐƯỢC:**
+1. **Nhìn bằng mắt** — `screenshot` timeout **lần thứ chín liên tiếp** (Đợt 191→207): pane trình duyệt
+   bị ẩn nên Chromium không vẽ khung hình nào. Cỡ chữ hai số đếm, độ mờ ô tích, sparkle có "lấp lánh"
+   như thầy hình dung không — chưa ai xem.
+2. **Bấm nút fullscreen bằng tay** — `requestFullscreen` đòi cử chỉ người dùng THẬT, `.click()` lập
+   trình bị từ chối. Máy chỉ nghiệm được đường lùi.
+3. **Chơi trọn một ván tới bảng cuối** để xem việc 8 chạy trong game thật — bàn thử dựng lại đúng ba
+   dòng engine và cử chỉ thật, nhưng **không lái nổi một ván tới đích trong pane ẩn** (game tiến bằng
+   `setTimeout` + hoạt cảnh, đứng mãi ở "1 of 6").
+
+---
+
 ## Đợt 206 (19/8/2026) — ⭐⭐ myActivity NHIỀU CỘT: **ĐỒNG BỘ CẢ LOẠI ACT** — vá lỗ hổng ✓ BÁO OAN
 
 **Thầy giao:** *"Trong app myActivity khi mở mode nhiều bảng: đồng bộ cả loại act. Ví dụ 1 bảng chọn
