@@ -1313,6 +1313,17 @@ body {
 }
 .aw-hstep-btn {
   border: none; background: transparent; cursor: pointer;
+  /* ⚠️ Đợt 198 — `flex: 0 0 auto` here and `flex: 1 1 auto` on the value below.
+     MEASURED on the Showdown class screen, where this control is stretched to a
+     stated 152px: its three children add up to 134px, and with nothing allowed
+     to grow, the leftover **18px all sat at the right-hand end**. So the − was
+     1px from its edge while the + was 17px from its own, and the number was 8px
+     left of centre — exactly what thầy saw ("dấu + đang bị lệch và số team chưa
+     ở giữa tâm ô"). Letting the VALUE absorb the slack fixes both at once: the
+     number centres itself in what is left, and each button is pinned to its own
+     edge. In Options the control is `inline-flex` with no stated width, so there
+     is no slack to absorb and nothing there moves. */
+  flex: 0 0 auto;
   width: 26px; height: 100%; padding: 0;
   font-family: inherit; font-size: 15px; font-weight: 800; color: #94a0b2;
   /* ⭐ Đợt 197 — the glyphs are SVG now (core/numberstepper.js explains why).
@@ -1327,10 +1338,17 @@ body {
 .aw-hstep-btn svg { width: 46%; height: 46%; display: block; }
 .aw-hstep-btn:hover { color: #2f7bff; background: #f4f7fb; }
 .aw-hstep-val {
+  flex: 1 1 auto;                       /* Đợt 198 — see the note on .aw-hstep-btn */
   min-width: 46px; text-align: center; cursor: ew-resize;
   font-size: 13.5px; font-weight: 800; color: #23303e;
   font-variant-numeric: tabular-nums; touch-action: none;
 }
+/* ⭐ Đợt 198 — the number itself gives a small bump when it changes, so a tap on
+   a projector is visibly answered even when the eye is on the class list below.
+   Driven by a class the stepper adds and removes, not by a transition: the text
+   is replaced outright, and a transition has nothing to travel between. */
+@keyframes aw-hstep-bump { 0% { transform: scale(1); } 42% { transform: scale(1.22); } 100% { transform: scale(1); } }
+.aw-hstep-val.is-bump { animation: aw-hstep-bump .22s cubic-bezier(.22,.9,.3,1); }
 .aw-hstep-val.is-dragging { color: #2f7bff; }
 .aw-hstep.is-sm { height: 21px; border-radius: 7px; }
 .aw-hstep.is-sm .aw-hstep-btn { width: 19px; font-size: 13px; }
@@ -3849,6 +3867,34 @@ body {
 .aw-sd-footcap.is-btn:hover { background: #f2f6fb; border-color: #dde5ef; color: #5b677a; }
 .aw-sd-footcap.is-btn:active { background: #e8eff8; }
 
+/* ⭐⭐ Đợt 198 — WHILE RECENT RESULTS IS OPEN (thầy: "chỉ hiện showdown in andrew
+   classes, dòng chữ này sẽ sáng hiệu ứng hào quang").
+   The "• N STUDENTS" half FOLDS AWAY rather than disappearing: `max-width` and
+   `opacity` can both be transitioned, so the line gathers itself up and lets go
+   again, and — just as importantly — the two spans stay in the tree, so the
+   caption never jumps when the pupil count changes underneath it.
+   ⚠️ The glow is a `text-shadow`, NEVER a `filter`. A filter on this row would
+   make it a stacking context, which is the exact class of bug that has already
+   cost this project three days elsewhere (see the popup notes in
+   GHI CHU DU AN.md, and the same warning on `.aw-rv-title.is-pod`). */
+.aw-sd-capdot, .aw-sd-capnum {
+  display: inline-block; max-width: 14em; overflow: hidden; vertical-align: bottom;
+  transition: max-width .28s cubic-bezier(.22,.9,.3,1), opacity .18s ease, margin .28s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sd-footcap.is-on .aw-sd-capdot,
+.aw-sd-footcap.is-on .aw-sd-capnum { max-width: 0; opacity: 0; margin: 0; }
+.aw-sd-footcap.is-on {
+  color: #b45309; border-color: #f2d08a; background: #fffaeb;
+  text-shadow: 0 0 10px rgba(240, 178, 60, .75), 0 0 22px rgba(240, 178, 60, .38);
+  animation: aw-sd-capglow 2.1s ease-in-out infinite;
+}
+.aw-sd-footcap.is-on:hover { background: #fff4d6; border-color: #e8bf6a; color: #92400e; }
+.aw-sd-footcap.is-on .aw-sd-capmain { color: inherit; }
+@keyframes aw-sd-capglow {
+  0%, 100% { text-shadow: 0 0 8px rgba(240, 178, 60, .55), 0 0 18px rgba(240, 178, 60, .26); }
+  50%      { text-shadow: 0 0 14px rgba(240, 178, 60, .95), 0 0 30px rgba(240, 178, 60, .5); }
+}
+
 /* ---- ⭐⭐⭐ Đợt 197 — RECENT RESULTS: the class's last five matches ----
    Laid over the panel body exactly like `.aw-sd-confirm`, for the same reason:
    the popover must not change size to show this, and the teacher can still see
@@ -4054,12 +4100,21 @@ body {
 .aw-sd-readout.is-big {
   height: 46px; width: 100%; border-radius: 11px;
   border: 1px solid #e6ebf2; background: #f7f9fc;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
+  /* ⭐ Đợt 198 — TWO figures now, "8 EACH · 2 LEFT" (thầy). `space-evenly` rather
+     than a gap: the pair has to stay centred as a group whether there are one or
+     two of them, and with a gap the single-figure case sits off to the left. */
+  display: flex; align-items: center; justify-content: space-evenly;
+  padding: 0 8px; overflow: hidden;
 }
+.aw-sd-ropair { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
 .aw-sd-readout .aw-sd-ronum {
   font-size: 21px; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
 }
 .aw-sd-readout .aw-sd-rosub { font-size: 11px; font-weight: 800; color: #98a2b2; text-transform: uppercase; }
+/* The leftover is the QUIET half — it is a warning about waste, not the answer
+   the teacher came for, so it never competes with the "each" figure beside it. */
+.aw-sd-ropair.is-left .aw-sd-ronum { font-size: 16px; color: #b45309; }
+.aw-sd-ropair.is-left .aw-sd-rosub { color: #c99a5b; }
 /* Nothing to divide yet (no class chosen, or the act has no questions) — a dash
    rather than a 0, which would read as "everybody gets none". */
 .aw-sd-readout.is-none .aw-sd-ronum { color: #b8c1cf; }
@@ -4232,7 +4287,25 @@ body {
    nothing for the columns underneath, no matter how far fitBuildScreen()
    shrunk the chips). fitBuildScreen() now shrinks this too, in step with the
    rest of the screen. */
-.aw-sd-build.is-top > .aw-sd-pool { flex: 0 0 auto; max-height: var(--sd-pool-maxh, 170px); }
+.aw-sd-build.is-top > .aw-sd-pool {
+  flex: 0 0 auto; max-height: var(--sd-pool-maxh, 170px);
+  /* ⭐⭐ Đợt 198 (thầy: "Ở chế độ 4-5 cột thì các ô tên cũng được điều chỉnh
+     chiều ngang bằng nhau (hiện đang bị dài ngắn phụ thuộc vào độ dài tên)").
+     A GRID, not wrapped flex — the same fix and the same reason as the class
+     register on screen A (Đợt 192) and the 2-3 team pool ten lines above, which
+     were both already grids while THIS one was left as the odd one out.
+     Measured before the change: seventeen chips came out anywhere from 43px to
+     68px wide, so the staging area read as a ragged paragraph of words rather
+     than as a class.
+     `auto-fill` + `1fr` rather than a stated column count: this panel is 1080px
+     on the teacher's board but is capped by the app frame on a laptop, and a
+     stated count would either overflow there or waste half the width here.
+     Every column produced is the same width, whatever the count comes out at. */
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 6px; align-content: flex-start;
+}
+/* The empty state is one sentence, not a register — it wants the whole width. */
+.aw-sd-build.is-top > .aw-sd-pool.is-empty { display: flex; }
 /* ⭐ Đợt 166 — `max-width` added (was: share the panel with no ceiling). With
    1-2 teams the panel now stops well short of a wide frame on its own (see
    `.aw-tool-panel.is-sd`), but the cap here is the second line of defence —

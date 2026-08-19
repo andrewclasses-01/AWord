@@ -8,6 +8,184 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 198 (19/8/2026) — ⭐⭐ BẢNG SHOWDOWN: CHUYỂN ĐỘNG MƯỢT KHẮP NƠI · LUẬT CHIA ĐỘI MỚI · BỘ ĐẾM CÂN LẠI
+
+Thầy giao 6 việc một lượt, ngay sau khi Đợt 196 + 197 lên LIVE.
+
+---
+
+### 1. BỘ ĐẾM SỐ ĐỘI — dấu `+` lệch, số không ở tâm
+
+Thầy gửi ảnh chụp `− 2 +`. **ĐO TRƯỚC KHI SỬA** (đây là chỗ đọc code suông sẽ đoán sai):
+`.aw-hstep.is-big` bị kéo rộng đúng **152px**, nhưng ba đứa con chỉ cộng lại **134px**, và **không đứa
+nào được phép giãn** ⇒ **18px thừa nằm dồn hết về mép phải**. Kết quả đo:
+
+| | trước | sau |
+|---|---|---|
+| `−` cách mép trái | 1px | 5px |
+| `+` cách mép phải | **17px** | 5px |
+| số lệch khỏi tâm | **8px** | **0** |
+
+Vá: `.aw-hstep-val { flex: 1 1 auto }` + `.aw-hstep-btn { flex: 0 0 auto }`. Ô SỐ nuốt phần thừa ⇒
+số tự về giữa phần còn lại **và** mỗi nút bị ghim vào mép của nó — một dòng CSS chữa cả hai lỗi.
+⚠️ Trong Options bộ đếm là `inline-flex` không khai bề ngang nên **không có phần thừa nào để nuốt**;
+ở đó không có gì đổi.
+
+⭐ Kèm: số **nảy nhẹ** khi đổi (`.is-bump`). ⚠️ Phải **gỡ class + ép reflow rồi mới gắn lại**, không
+thì lần đổi thứ hai trong vòng 220ms sẽ không chạy lại animation (CSS thấy vẫn đúng class cũ).
+
+---
+
+### 2. Ô QUESTIONS — hai thông số `8 EACH · 2 LEFT`
+
+Thầy: *"Ô questions sẽ hiện 2 thông số, gồm cả questions và left (left là số câu bị thừa ra)"*.
+
+`left = số câu − each × đội đông nhất` — tức là **đúng số câu mà Balance questions sẽ VỨT ĐI**.
+Nhìn thấy nó là thầy nhích được số đội cho đỡ phí: 50 câu chia 3 đội thừa 2, chia 4 đội thừa 0.
+⚠️ `0 LEFT` **không hiện** — một con số 0 nằm thường trực cạnh phép chia đẹp chỉ là nhiễu, mà ô này
+chỉ rộng 152px. Số LEFT nhỏ hơn và màu cam nhạt: nó là lời cảnh báo về lãng phí, không phải câu trả
+lời thầy đến để tìm.
+
+---
+
+### 3. Dòng chữ SHOWDOWN IN ANDREW CLASSES — công tắc BẬT/TẮT có hào quang
+
+Thầy: *"khi ở trang Recent results thì… chỉ hiện showdown in andrew classes, dòng chữ này sẽ sáng
+hiệu ứng hào quang…, bấm lại 1 lần nữa sẽ trở về trang chọn lớp/team"*.
+
+- Nay là **công tắc hai chiều**, không phải nút mở. Một nút chỉ biết mở sẽ để thầy đi tìm đường về
+  trên màn 86 inch mà dấu ✕ nằm tận góc kia.
+- Phần `• X STUDENTS` **GẤP GỌN** chứ không bị xoá: `max-width` + `opacity` đều có thể chuyển động,
+  nên dòng chữ thu mình lại rồi mở ra; và hai thẻ span còn nguyên trong cây nên caption không bao giờ
+  giật khi sĩ số đổi bên dưới. Đo được: `18 STUDENTS` từ **95px → 0px** rồi về lại 95px.
+- ⚠️⚠️ Hào quang là **`text-shadow`, KHÔNG BAO GIỜ là `filter`**. `filter` trên hàng này sẽ tạo
+  stacking context — đúng loại lỗi đã ngốn của dự án ba ngày ở chỗ khác (xem cảnh báo y hệt trên
+  `.aw-rv-title.is-pod`).
+
+---
+
+### 4. Ô tên ở chế độ 4-5 cột — bề ngang bằng nhau
+
+**ĐO TRƯỚC KHI SỬA**: 17 ô tên trong pool rộng từ **43px tới 68px** — 12 bề ngang khác nhau.
+Nguyên nhân: pool của bố cục `is-top` (4-5 đội) là **flex bọc dòng**, trong khi danh sách lớp ở màn 1
+(Đợt 192) **và** pool của bố cục 2-3 đội đã là lưới từ lâu — nó là đứa duy nhất bị bỏ sót.
+Vá: `display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr))`.
+Sau khi sửa: **1 bề ngang duy nhất** cho cả 17 ô.
+
+---
+
+### 5. ⭐⭐⭐ LUẬT CHIA ĐỘI NGẪU NHIÊN — viết lại hẳn
+
+#### 5a. Phần dư dồn về HAI RÌA
+
+Thầy: *"ưu tiên các cột team nhỏ nhất hoặc lớn nhất nhận nhiều hơn, các team ở giữa nhận ít hơn…
+4 team và 18 học sinh thì Team 1 = Team 4 = 5, Team 2 = Team 3 = 4."*
+
+Luật cũ chỉ "đổ vào đội đang ít người nhất", nên mọi em dư đều rơi vào **các cột BÊN TRÁI** — 5/5/4/4.
+Một bảng mà nửa trái to hơn hẳn thì nhìn từ cuối lớp là thấy sai. `outwardIn(n)` = `[0, n-1, 1, n-2, …]`
+là toàn bộ hình dạng của luật này.
+
+#### 5b. Nam/nữ đều nhau hết mức
+
+Đợt 191 đã **đan xen** ba làn trước khi chia — cách đó rải TỐT nhưng không ĐỀU: đan xen là một phép
+xáo, không phải một ràng buộc, nên vẫn có thể trao cho đội này 4 nam còn đội kia 1 nam.
+Nay mỗi em được trao cho đội **đang có ÍT NHẤT giới đó**, rồi mới xét tổng sĩ số, rồi mới tới thứ tự
+rìa. Đó là một ràng buộc, và nó không trôi được.
+
+⚠️ **THUẦN VÀ ĐƯỢC EXPORT ĐỂ ĐO ĐƯỢC** (`outwardIn` · `targetSizes` · `planDeal`). Một luật chia đội
+là đúng thứ nhìn trong code thấy ổn rồi ra lớp 23 em thì lệch — lưới quét **mọi sĩ số 2→40 × mọi số
+đội 1→5** và **mọi tỉ lệ nam/nữ với 4→30 em × 2→5 đội** (~3.200 tổ hợp).
+
+⚠️ Danh sách đội truyền vào phải **ĐÚNG THỨ TỰ TRÊN BẢNG**, không được sắp lại — luật 5a nói về việc
+em dư rơi vào CỘT NÀO. Code cũ sort theo sĩ số ngay tại đó; đó chính là thứ bị thay.
+
+---
+
+### 6. ⭐⭐ HIỆU ỨNG: BAY RA NGOÀI RỒI MỚI BAY VÀO
+
+Thầy: *"các tên bay từ từ ra ngoài pop-up rồi sau đó mới bay vào loạn xạ và từ từ sắp xếp vào các cột"*.
+
+`flyOutAndBack()` thay hẳn `scrambleChips()` + `bulkMove(…, {cascade:true})` cho nút Random:
+- **Chặng 1** mỗi tên bay ra theo **phương của chính nó** tính từ tâm pop-up (có nhiễu ±0,45 rad), vừa
+  bay vừa xoay, mờ dần còn 0,28 — ra hẳn ngoài khung (bán kính = nửa đường chéo + 130px).
+- **Chặng 2** từ ngoài bay vào theo đường cong, **thứ tự đảo lộn**, rồi lắng vào cột.
+
+⚠️ **MỘT BÓNG BAY CẢ HAI CHẶNG.** Nó được dựng tại chỗ ô tên thật, và mọi thứ sau đó đều là
+`transform`, nên chặng 2 nối tiếp từ đúng chỗ chặng 1 dừng — không có mối nối. Đó cũng là lý do chặng
+1 phải `fill: "forwards"`: bóng phải **ở lại ngoài đó** trong lúc bảng được dựng lại bên dưới.
+⚠️ **BẢNG ĐƯỢC DỰNG LẠI TRONG LÚC KHÔNG AI NHÌN THẤY** — `mutate()` + `repaintAll()` chạy ở khe giữa
+hai chặng, nên các cột mà tên sắp bay vào đã tồn tại và đo được. Chính là ý tưởng FLIP của `bulkMove`,
+kéo dài ra quanh một vòng khứ hồi.
+⚠️ Mọi chặng đều có **hẹn giờ dự phòng** bên cạnh `onfinish`: cột myActivity chạy nền thì rAF đóng
+băng, và hỏng ở đây không phải mất một hiệu ứng mà là **cả danh sách lớp nằm im `visibility:hidden`**.
+
+---
+
+### 7. Chuyển động mượt ở những chỗ còn lại (thầy: "mọi điều chỉnh, thao tác…")
+
+- ⭐ **Chọn cột nay gọi `paintColStates()` chứ không `paintCols()`.** Đây là phát hiện đáng nhớ:
+  `.aw-sd-col` **đã khai `transition` từ lâu mà chưa bao giờ chạy được một lần nào** — mỗi lần chọn,
+  cả 4 cột bị dựng lại, mà phần tử vừa sinh ra thì bắt đầu ngay ở màu cuối, **không có gì để chuyển
+  động từ đó**. Chỉ đổi class trên node đang có là biến dòng CSS đó từ trang trí thành thứ nhìn thấy
+  được. (Bấm TÍCH đội thì vẫn dựng lại — nó đổi cả icon chứ không chỉ màu.)
+- Đổi lớp ⇒ danh sách lớp **hiện lên theo nhịp**. ⚠️ Chỉ khi lớp THẬT SỰ đổi (`rosterPaintedFor`), và
+  nhịp bị **chặn trần** — 25 em × 26ms là hai phần ba giây chỉ để hiện xong một danh sách.
+- 5 cột Recent results **chia bài vào** lần lượt; mở Recent results có nhún nhẹ; đóng bảng chi tiết
+  **co lại** thay vì biến mất; ô QUESTIONS đổi số thì **trồi lên**.
+
+---
+
+### 8. Lưới kiểm — **218/218 ĐẠT, 0 lỗi console**
+
+| Lưới | Chạy gì | Kết quả |
+|---|---|---|
+| `scratch/sd196-pure.mjs` | hộp thư + lọc act | **14/14** |
+| `scratch/sd196-sync.mjs` | đường mạng Showdown | **21/21** |
+| `scratch/sd197-history.mjs` | sổ cái + `publishTable` | **34/34** |
+| `scratch/sd198-deal.mjs` | **luật chia đội**, quét ~3.200 tổ hợp | **29/29** |
+| `scratch/sd196-review.html` | màn Show answers thật | **16/16** |
+| `scratch/sd197-panel.html` | bảng chọn lớp thật | **53/53** |
+| `scratch/sd197-balance.html` | engine thật | **16/16** |
+| `scratch/sd198-panel.html` | **6 việc của đợt này, panel thật** | **35/35** |
+
+**Ba lần lưới báo HỎNG mà lỗi nằm ở CHÍNH LƯỚI — ghi lại để lần sau đỡ mất thì giờ:**
+1. Phép kiểm "đội thừa phải ở ngoài hơn đội thiếu" **sai khi hai đội ở rìa ngang nhau** (2 đội thì cả
+   hai đều là rìa; 4 đội thì index 1 và 2 cách rìa bằng nhau). Phép kiểm ĐÚNG: tập đội được +1 phải là
+   **một đoạn đầu của `outwardIn(t)`**.
+2. So bề ngang con với `getBoundingClientRect()` của cha — cha có **viền 1px mỗi bên**, lệch đúng 2px.
+   Phải so với `clientWidth`.
+3. ⭐ **Đo bộ đếm ở khung hình ĐANG TẢI** ("Loading…", chưa có lớp nào) ra 135 thay vì 150 — lúc đó
+   hàng trên chưa được chia lại. **Đo một khoảnh khắc không ai sống trong đó thì kết quả vô nghĩa.**
+   Nay lưới chọn lớp xong mới đo.
+
+Và một kỳ vọng **lạc hậu thật** ở lưới Đợt 197 (bảng chi tiết nay đóng có hiệu ứng nên không biến mất
+tức thì) — đã sửa, chạy lại 53/53.
+
+⬜ **Chưa ai NHÌN bằng mắt** — `screenshot` vẫn timeout (pane ẩn), lần thứ bảy liên tiếp.
+
+---
+
+### 9. LUẬT MỚI
+
+1. **Một `transition` được khai không có nghĩa là nó chạy.** Nếu phần tử bị dựng lại mỗi lần đổi
+   trạng thái thì nó chưa bao giờ chạy lần nào. Muốn mượt thì **đổi class trên node đang sống**.
+2. **Căn giữa trong flex là chuyện của `flex-grow`, không phải của `text-align`.** Chỗ nào có bề ngang
+   ép cứng thì phải chỉ định đứa nào nuốt phần thừa, kẻo nó dồn hết về một mép.
+3. **Luật chia/xếp phải viết thành hàm THUẦN và quét toàn bộ miền giá trị.** Nó đúng với 18 em mà lệch
+   với 23 em, và không ai phát hiện ra cho tới khi đứng lớp.
+4. **Đo ở trạng thái ĐÃ Ở YÊN.** Khung hình đang tải không phải thứ người dùng nhìn thấy.
+5. **Hiệu ứng nào giấu phần tử đi thì phải có hẹn giờ dự phòng bỏ giấu.** Mất một hiệu ứng là chuyện
+   nhỏ; để cả danh sách lớp vô hình là hỏng buổi dạy.
+
+---
+
+### 10. VIỆC ĐANG CHỜ (Đợt 198)
+
+- ⬜ Chờ thầy chạy thử trên TOMKO: nhìn hiệu ứng bay ra/bay vào ở màn 86 inch, và soi lại sĩ số hai rìa.
+- ⬜ `scratch/` bị gitignore ⇒ 8 lưới + bộ Firestore giả phải dựng lại ở phiên sau.
+
+---
+
 ## Đợt 197 (19/8/2026) — ⭐⭐⭐ LƯU BỀN KẾT QUẢ CẢ LỚP · BALANCE QUESTIONS · DỰNG LẠI BẢNG CHỌN LỚP · VÁ 3 LỖI CÙNG HỌ
 
 > ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng (một commit cho cả Đợt 196 + 197 — chúng cùng sửa `engine.js` /

@@ -8,7 +8,8 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **19/8/2026 (Đợt 196 + 197)** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
+> Cập nhật lần cuối: **19/8/2026 (Đợt 198)** — xem khối đầu tiên ngay dưới.
+> Trước đó **(Đợt 196 + 197)** ✅ **COMMIT `44133d0` + PUSH + LIVE** — Pages build đúng commit, **10/10 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, và **37/37 phép hỏi lại chính module trên bản live** đều đúng.
 > ⚠️⚠️ **Đợt 197 sửa CẢ myActivity (v2.4.0, commit `fc049f1`) — hai kho đã được đẩy cùng nhau.**
 > Trước đó: **18/8/2026 (Đợt 194 + 195)** ✅ **COMMIT `a256012` + PUSH + LIVE** (4/4 mã băm SHA-256) — một commit cho cả hai đợt
 > (cùng sửa `core/engine.js`, tách không an toàn). Trước đó: **Đợt 190 + 191** ✅ **COMMIT `52173f4` + PUSH + LIVE** (một commit cho
@@ -16,6 +17,38 @@
 > commit, **11/11 file trùng mã băm SHA-256**, và đã hỏi lại chính module trên bản live.
 > ⚠️ **Đối chiếu mã băm phải dùng `git show HEAD:<file>`, KHÔNG dùng file trên đĩa** — máy này bật
 > `core.autocrlf` nên file trên đĩa là CRLF còn Pages phục vụ LF, so nhầm ra "7/11 lệch" oan.
+>
+> ---
+> **Đợt 198 — BẢNG SHOWDOWN: MƯỢT KHẮP NƠI · LUẬT CHIA ĐỘI MỚI · BỘ ĐẾM CÂN LẠI.**
+> - **Bộ đếm số đội**: ô rộng 152 mà ba con chỉ 134 và **không đứa nào được giãn** ⇒ 18px thừa dồn hết
+>   về mép phải (đo: `+` cách mép 17px, `−` cách 1px, số lệch tâm 8px). Vá bằng
+>   **`.aw-hstep-val{flex:1 1 auto}` + `.aw-hstep-btn{flex:0 0 auto}`** — ô số nuốt phần thừa nên chữa
+>   cả hai lỗi bằng một dòng. Options không đổi (ở đó không có phần thừa nào).
+> - **Ô QUESTIONS hai thông số** `8 EACH · 2 LEFT`; `left = số câu − each × đội đông nhất` = đúng số
+>   câu Balance questions sẽ vứt. `0 LEFT` không hiện.
+> - **Chữ SHOWDOWN IN ANDREW CLASSES thành CÔNG TẮC hai chiều**, có **hào quang** khi mở Recent
+>   results, phần `• X STUDENTS` **gấp gọn** (đo 95px → 0 → 95). ⚠️ hào quang là `text-shadow`,
+>   **không bao giờ `filter`** (stacking context).
+> - **Pool 4-5 cột thành LƯỚI**: 17 ô tên từ 43..68px (12 bề ngang) về **1 bề ngang duy nhất**.
+> - ⭐⭐⭐ **LUẬT CHIA ĐỘI VIẾT LẠI** (`outwardIn` · `targetSizes` · `planDeal`, **thuần + export**):
+>   phần dư dồn về **HAI RÌA** (18 em/4 đội ⇒ **5·4·4·5**, không còn 5·5·4·4), và **nam/nữ chênh nhau
+>   tối đa 1** ở mọi đội. ⚠️ danh sách đội truyền vào phải **ĐÚNG THỨ TỰ TRÊN BẢNG**, cấm sort.
+> - ⭐⭐ **`flyOutAndBack()`**: tên bay **RA HẲN NGOÀI pop-up** rồi mới bay vào loạn xạ và lắng vào cột.
+>   **Một bóng bay cả hai chặng** (chặng 1 `fill:forwards` để nó ở lại ngoài đó); **bảng được dựng lại
+>   ở khe giữa hai chặng**; mọi chặng có hẹn giờ dự phòng — hỏng ở đây là cả lớp nằm im `visibility:hidden`.
+> - ⭐ **`paintColStates()`**: `.aw-sd-col` **đã khai `transition` từ lâu mà chưa từng chạy một lần nào**
+>   — chọn cột dựng lại cả 4 cột, mà phần tử vừa sinh thì bắt đầu ngay ở màu cuối. Nay chỉ đổi class.
+> - ⭐ Lưới **218/218 ĐẠT, 0 lỗi console** (8 lưới; `sd198-deal.mjs` quét ~3.200 tổ hợp chia đội,
+>   `sd198-panel.html` chạy panel thật cho cả 6 việc).
+> - ⛔ **BA LẦN LƯỚI BÁO HỎNG MÀ LỖI Ở CHÍNH LƯỚI**: (1) phép kiểm "ở rìa" sai khi hai đội ở rìa ngang
+>   nhau — phải kiểm "tập đội +1 là đoạn đầu của `outwardIn`"; (2) so bề ngang con với
+>   `getBoundingClientRect()` của cha có **viền 1px mỗi bên** — phải dùng `clientWidth`; (3) ⭐ **đo ở
+>   khung hình ĐANG TẢI** ra 135 thay vì 150 — **đo một khoảnh khắc không ai sống trong đó thì vô nghĩa**.
+> - ⛔ **NĂM LUẬT MỚI**: (1) `transition` được khai ≠ `transition` chạy được — phần tử bị dựng lại thì
+>   không có gì để chuyển động từ đó; (2) căn giữa trong flex là chuyện `flex-grow`, không phải
+>   `text-align`; (3) luật chia/xếp phải là hàm THUẦN và quét toàn miền; (4) đo ở trạng thái ĐÃ Ở YÊN;
+>   (5) hiệu ứng nào giấu phần tử thì phải có hẹn giờ bỏ giấu.
+> - ⬜ **Chưa ai NHÌN bằng mắt** (pane ẩn ⇒ `screenshot` timeout, lần thứ bảy).
 >
 > ---
 > **Đợt 197 — LƯU BỀN KẾT QUẢ · BALANCE QUESTIONS · BẢNG CHỌN LỚP DỰNG LẠI · 3 LỖI CÙNG HỌ.**

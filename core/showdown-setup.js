@@ -768,6 +768,134 @@ export function splitIntoTeams(students, count, existing = []) {
   return teams;
 }
 
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 198 — HOW A RANDOM DEAL DIVIDES THE CLASS
+// ---------------------------------------------------------------
+// Two rules, both the teacher's, both new this đợt:
+//
+//   1. THE ODD ONES OUT GO TO THE EDGES. "Khi số học sinh không chia hết…, ưu
+//      tiên các cột team nhỏ nhất hoặc lớn nhất nhận nhiều hơn, các team ở giữa
+//      nhận ít hơn. Ví dụ có 4 team và có 18 học sinh thì Team 1 = Team 4 = 5
+//      học sinh, Team 2 = Team 3 = 4 học sinh."
+//      The old rule simply topped up whichever team was emptiest, which put
+//      every spare pupil in the LEFTMOST columns — 5/5/4/4 — and a board where
+//      the left half is visibly bigger reads as a mistake from the back of the
+//      room. Spreading the extras to the two ENDS makes the shape symmetrical.
+//
+//   2. BOYS AND GIRLS AS EVEN AS THE NUMBERS ALLOW. "tránh việc một đội có quá
+//      nhiều nam và đội khác thì có quá nhiều nữ."
+//      Đợt 191 already interleaved the three lanes before dealing, which spread
+//      them WELL but not evenly: an interleave is a good shuffle, not a
+//      constraint, and it could still hand one team four boys and another one.
+//      This deals each gender to whichever team currently holds the FEWEST of
+//      it, which is a constraint and cannot drift.
+//
+// ⚠️ PURE, AND EXPORTED, SO IT CAN BE MEASURED. A dealing rule is exactly the
+// kind of thing that looks right in the code and comes out lopsided on a real
+// class of 23; `scratch/sd198-deal.mjs` runs it over every class size from 2 to
+// 40 against every team count. Nothing in here touches the DOM or Firestore.
+
+/** [0, T-1, 1, T-2, …] — the ends first, working inwards. Rule 1's whole shape. */
+export function outwardIn(count) {
+  const out = [];
+  let lo = 0, hi = count - 1;
+  while (lo <= hi) {
+    out.push(lo);
+    if (hi !== lo) out.push(hi);
+    lo++; hi--;
+  }
+  return out;
+}
+
+/**
+ * How many pupils each team should END UP with.
+ * @param {number} total  everybody who will be placed (already-seated + waiting)
+ * @param {number} count  how many teams may be filled
+ * @param {number} cap    MAX_PER_TEAM
+ */
+export function targetSizes(total, count, cap = MAX_PER_TEAM) {
+  const n = Math.max(1, count | 0);
+  const base = Math.floor(total / n);
+  const extra = total % n;
+  const sizes = new Array(n).fill(base);
+  outwardIn(n).slice(0, extra).forEach(i => { sizes[i]++; });
+  return sizes.map(s => Math.min(s, cap));
+}
+
+/**
+ * Work out who goes where. Returns one array of members PER TEAM — the people to
+ * ADD, not the finished team, so a half-built table keeps whoever is already in it.
+ *
+ * @param {object[]} teams     the teams that may be filled, IN BOARD ORDER
+ *                             (index 0 is the leftmost column — rule 1 depends
+ *                             on it, so a caller that filters out claimed teams
+ *                             must not also reorder them)
+ * @param {object[]} pool      the pupils still waiting
+ * @param {function} genderOf  id => "m" | "f" | ""
+ * @param {number}   cap       MAX_PER_TEAM
+ */
+export function planDeal(teams, pool, genderOf = () => "", cap = MAX_PER_TEAM) {
+  const T = (teams || []).length;
+  const waiting = (pool || []).slice();
+  if (!T || !waiting.length) return new Array(Math.max(0, T)).fill(null).map(() => []);
+
+  const seated = teams.map(t => (t.members || []).length);
+  const sizes = targetSizes(seated.reduce((a, b) => a + b, 0) + waiting.length, T, cap);
+  // A team that is ALREADY over its share keeps everybody — this function adds,
+  // it never evicts. The people it therefore cannot place are handed out below.
+  const need = sizes.map((s, i) => Math.max(0, s - seated[i]));
+
+  let short = waiting.length - need.reduce((a, b) => a + b, 0);
+  // ⚠️ `while`, not one pass: a team can reach `cap` while we are still spreading
+  // the remainder, and the pupils it turned away have to go somewhere else.
+  const rank = outwardIn(T);
+  while (short > 0) {
+    const took = rank.find(i => seated[i] + need[i] < cap);
+    if (took === undefined) break;                 // every team full — see randomDeal's toast
+    need[took]++;
+    short--;
+  }
+
+  // Count what each team already holds, per gender, so a partly-built table is
+  // balanced from where it actually is rather than from zero.
+  const have = teams.map(t => {
+    const c = { m: 0, f: 0, "": 0 };
+    (t.members || []).forEach(x => { c[genderOf(x.id) || ""]++; });
+    return c;
+  });
+  const added = new Array(T).fill(0);
+  const out = teams.map(() => []);
+
+  // Biggest group first: it has the least freedom left once the others are down.
+  const groups = [
+    waiting.filter(m => genderOf(m.id) === "m"),
+    waiting.filter(m => genderOf(m.id) === "f"),
+    waiting.filter(m => !genderOf(m.id))
+  ].filter(g => g.length).sort((a, b) => b.length - a.length);
+
+  groups.forEach(group => {
+    const key = genderOf(group[0].id) || "";
+    group.forEach(m => {
+      let best = -1;
+      for (const i of rank) {
+        if (added[i] >= need[i]) continue;                       // this team is done
+        if (best < 0) { best = i; continue; }
+        // Fewest of THIS gender wins; then the team with fewest people overall,
+        // so the sizes stay on target; `rank` order is the final tie-break, which
+        // is what keeps rule 1's symmetry when everything else is level.
+        const a = have[i], b = have[best];
+        if (a[key] !== b[key]) { if (a[key] < b[key]) best = i; continue; }
+        if (seated[i] + added[i] < seated[best] + added[best]) best = i;
+      }
+      if (best < 0) return;                                      // nowhere left
+      out[best].push(m);
+      have[best][key]++;
+      added[best]++;
+    });
+  });
+  return out;
+}
+
 let seq = 0;
 function localId(prefix) { return `${prefix}_${Date.now().toString(36)}_${(seq++).toString(36)}`; }
 
@@ -960,6 +1088,12 @@ export function buildShowdownPanel(panel, ctx) {
   // asking every time or silently overwriting.
   let tableClassId = "";
   let tableClassName = "";
+  // ⭐ Đợt 198 — the Recent results sheet, held at panel scope because the
+  // CAPTION now toggles it (thầy: "bấm lại 1 lần nữa sẽ trở về trang chọn
+  // lớp/team") and the caption is rebuilt by every footer repaint.
+  let recentLayer = null;
+  // Which class the register on screen A was last DEALT IN for — see renderSetup.
+  let rosterPaintedFor = null;
   let unsub = null;
   updatePanelWidth();   // the one and only width — fixed at boot, see the function's own note
 
@@ -1103,13 +1237,42 @@ export function buildShowdownPanel(panel, ctx) {
     const cap = el(live ? "button" : "div", "aw-sd-footcap" + (live ? " is-btn" : ""));
     if (live) {
       cap.type = "button";
-      cap.title = `Recent results — ${setup.className || "this class"}`;
-      cap.onclick = () => { sfx.tap(); openRecent(setup.classId, setup.className); };
+      // ⭐⭐ Đợt 198 (thầy) — ONE WORD, TWO DIRECTIONS: "bấm lại 1 lần nữa sẽ trở
+      // về trang chọn lớp/team". So this is a TOGGLE, not an opener; a control
+      // that only ever opens leaves the teacher hunting for the way back on a
+      // screen whose ✕ is at the far corner of a 86-inch board.
+      cap.onclick = () => {
+        if (recentLayer) { sfx.back(); closeRecent(); return; }
+        sfx.tap();
+        openRecent(setup.classId, setup.className);
+      };
     }
     cap.append(el("span", "aw-sd-capmain", "SHOWDOWN IN ANDREW CLASSES"));
+    // ⭐ Đợt 198 — the count is hidden while Recent results is open ("chỉ hiện
+    // showdown in andrew classes"). It is COLLAPSED, not removed: the two spans
+    // stay in the tree so the width can animate shut and open again, and so the
+    // caption never jumps as the pupil count changes underneath.
     cap.append(el("span", "aw-sd-capdot", "•"));
     cap.append(el("span", "aw-sd-capnum", `${n} STUDENT${n === 1 ? "" : "S"}`));
+    capEl = cap;
+    paintCapState();
     return cap;
+  }
+
+  /**
+   * ⭐ Đợt 198 — the caption's two states, in one place because both the footer's
+   * own repaint and openRecent/closeRecent have to be able to reach it.
+   * `is-on` lights the glow and folds the "• N STUDENTS" half away; the fold is a
+   * CSS transition on max-width/opacity (see `.aw-sd-capnum` in app.css), so it
+   * reads as the line gathering itself up rather than text vanishing.
+   */
+  let capEl = null;
+  function paintCapState() {
+    if (!capEl) return;
+    capEl.classList.toggle("is-on", !!recentLayer);
+    capEl.title = recentLayer
+      ? "Back to the class"
+      : `Recent results — ${setup.className || "this class"}`;
   }
 
   // ---------------------------------------------------------------
@@ -1140,9 +1303,27 @@ export function buildShowdownPanel(panel, ctx) {
     return rankBlocks(mergeClassBlocks(groups));
   }
 
+  /**
+   * ⭐ Đợt 198 — closing lives OUT here because two things now close this screen:
+   * its own ✕ and a second tap on the caption. One exit, one animation, one
+   * place that puts the caption's glow out.
+   */
+  function closeRecent() {
+    const layer = recentLayer;
+    if (!layer) return;
+    recentLayer = null;
+    paintCapState();
+    const a = layer.animate(
+      [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.985)" }],
+      { duration: 170, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+    whenDone(a, () => layer.remove(), 280);
+  }
+
   function openRecent(classId, className) {
-    if (body.querySelector(".aw-sd-recent")) return;          // one at a time
+    if (recentLayer) return;                                  // one at a time
     const layer = el("div", "aw-sd-recent");
+    recentLayer = layer;
+    paintCapState();
     const head = el("div", "aw-sd-rec-head");
     const title = el("div", "aw-sd-rec-title");
     title.append(el("span", "aw-sd-rec-word", "RECENT RESULTS"));
@@ -1151,16 +1332,20 @@ export function buildShowdownPanel(panel, ctx) {
     title.append(clsEl);
     const closeBtn = el("button", "aw-sd-rec-close", icons.close);
     closeBtn.type = "button"; closeBtn.title = "Close";
-    const close = () => {
-      const a = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
-      whenDone(a, () => layer.remove(), 240);
-    };
-    closeBtn.onclick = () => { sfx.back(); close(); };
+    closeBtn.onclick = () => { sfx.back(); closeRecent(); };
     head.append(title, closeBtn);
     const cols = el("div", "aw-sd-rec-cols");
     layer.append(head, cols);
     body.append(layer);
-    layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
+    // ⭐ Đợt 198 — comes in from very slightly BEHIND the panel rather than just
+    // fading: a plain dissolve between two full screens reads as a flicker, the
+    // same reason `goto()` slides instead of cross-fading (see its own note).
+    layer.animate(
+      [{ opacity: 0, transform: "scale(.985)" }, { opacity: 1, transform: "scale(1)" }],
+      { duration: 210, easing: "cubic-bezier(.22,.9,.3,1)" });
+    head.animate(
+      [{ opacity: 0, transform: "translateY(-6px)" }, { opacity: 1, transform: "translateY(0)" }],
+      { duration: 260, easing: "cubic-bezier(.22,.9,.3,1)" });
 
     cols.append(el("div", "aw-sd-rec-note", "Loading…"));
     import("./showdown-history.js")
@@ -1195,6 +1380,15 @@ export function buildShowdownPanel(panel, ctx) {
         col.append(ch, renderMini(ranked));
         col.onclick = () => { sfx.forward(); openDetail(m, ranked); };
         cols.append(col);
+      });
+      // ⭐ Đợt 198 — the five columns DEAL IN, left to right, instead of all
+      // appearing at once. They arrive after a network read, so a hard cut is
+      // the one moment on this screen where the teacher can see the machinery.
+      cols.querySelectorAll(".aw-sd-rec-col").forEach((c, i) => {
+        c.animate(
+          [{ opacity: 0, transform: "translateY(14px) scale(.97)" },
+           { opacity: 1, transform: "translateY(0) scale(1)" }],
+          { duration: 300, delay: i * 55, easing: "cubic-bezier(.22,.9,.3,1)", fill: "backwards" });
       });
     }
 
@@ -1243,7 +1437,18 @@ export function buildShowdownPanel(panel, ctx) {
       toggle.type = "button"; toggle.title = "Ranking / answers";
       const back = el("button", "aw-sd-rec-close", icons.close);
       back.type = "button"; back.title = "Back to the five matches";
-      back.onclick = () => { sfx.back(); det.remove(); };
+      // ⭐ Đợt 198 — shrinks back towards the column it came from instead of
+      // blinking out. `whenDone`'s timeout is the usual belt-and-braces: a
+      // backgrounded myActivity column freezes rAF, and a detail view stuck at
+      // opacity 0 would leave the five columns unreachable behind an invisible
+      // sheet that still swallows every tap.
+      back.onclick = () => {
+        sfx.back();
+        const a = det.animate(
+          [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.97)" }],
+          { duration: 150, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+        whenDone(a, () => det.remove(), 260);
+      };
       dh.append(dt, toggle, back);
       const dbody = el("div", "aw-sd-rec-dbody");
       det.append(dh, dbody);
@@ -1431,16 +1636,47 @@ export function buildShowdownPanel(panel, ctx) {
     function questionsEach() {
       const q = Math.max(0, Number(ctx.questionCount) || 0);
       const n = roster.length;
-      if (!setup.classId || !q || !n) return 0;
+      if (!setup.classId || !q || !n) return { each: 0, left: 0 };
       const biggest = Math.max(1, Math.ceil(n / Math.max(1, teamCount)));
-      return Math.floor(q / biggest);
+      const each = Math.floor(q / biggest);
+      // ⭐ Đợt 198 (thầy: "Ô questions sẽ hiện 2 thông số, gồm cả questions và
+      // left (left là số câu bị thừa ra)"). The leftover is what Balance
+      // questions has to DROP: the biggest team plays `each × biggest` of the
+      // act's questions and the rest are never dealt. Showing it here is what
+      // lets the teacher nudge the team count until the waste is small — 50
+      // questions over 3 teams wastes 2, over 4 teams wastes none.
+      // ⚠️ Measured against the BIGGEST team, exactly like `each`: that is the
+      // board which gets closest to using the act up.
+      return { each, left: Math.max(0, q - each * biggest) };
     }
     function paintQuest() {
-      const each = questionsEach();
+      const { each, left } = questionsEach();
+      const same = questEl.dataset.each === String(each) && questEl.dataset.left === String(left);
+      questEl.dataset.each = String(each);
+      questEl.dataset.left = String(left);
       questEl.innerHTML = "";
       questEl.classList.toggle("is-none", !each);
-      questEl.append(el("span", "aw-sd-ronum", each ? String(each) : "—"));
-      questEl.append(el("span", "aw-sd-rosub", "each"));
+      const pair = (num, label, cls) => {
+        const box = el("span", "aw-sd-ropair" + (cls ? " " + cls : ""));
+        box.append(el("span", "aw-sd-ronum", num));
+        box.append(el("span", "aw-sd-rosub", label));
+        return box;
+      };
+      questEl.append(pair(each ? String(each) : "—", "each"));
+      // The leftover only earns its space when there IS one: a permanent
+      // "0 LEFT" beside a perfect split is noise, and this box is 152px wide.
+      if (each && left) questEl.append(pair(String(left), "left", "is-left"));
+      // ⭐ Đợt 198 — the numbers arrive with a small rise rather than snapping,
+      // so a change made on the Teams stepper is visible even while the eye is
+      // on the stepper. Skipped when nothing actually changed, or every
+      // unrelated repaint (adding a pupil, deleting one) would flicker it.
+      if (!same) {
+        questEl.querySelectorAll(".aw-sd-ropair").forEach((n, i) => {
+          n.animate(
+            [{ opacity: 0, transform: "translateY(5px)" }, { opacity: 1, transform: "translateY(0)" }],
+            { duration: 220, delay: i * 60, easing: "cubic-bezier(.22,.9,.3,1)", fill: "backwards" });
+        });
+      }
     }
 
     const listWrap = el("div", "aw-sd-roster" + (setup.classId ? "" : " is-empty"));
@@ -1505,6 +1741,25 @@ export function buildShowdownPanel(panel, ctx) {
     }
     host.append(listWrap);
     shrinkRosterNames(listWrap);
+    // ⭐ Đợt 198 (thầy: "mọi điều chỉnh, thao tác… đều cần hiệu ứng animation
+    // chuyển động mượt") — a NEW CLASS deals its register in rather than
+    // replacing one block of names with another in a single frame.
+    // ⚠️ Only when the class actually CHANGED. `repaint()` also runs after every
+    // pupil added or deleted, and re-dealing twenty-five names each time would
+    // turn a small edit into a performance.
+    // ⚠️ The stagger is CAPPED, not per-chip: a class of 25 at 26ms each would
+    // take two thirds of a second to finish arriving.
+    if (rosterPaintedFor !== setup.classId) {
+      rosterPaintedFor = setup.classId;
+      const rows = [...listWrap.querySelectorAll(".aw-sd-rmember")];
+      const step = rows.length ? Math.min(26, 420 / rows.length) : 0;
+      rows.forEach((r, i) => {
+        r.animate(
+          [{ opacity: 0, transform: "translateY(7px) scale(.96)" },
+           { opacity: 1, transform: "translateY(0) scale(1)" }],
+          { duration: 240, delay: Math.round(i * step), easing: "cubic-bezier(.22,.9,.3,1)", fill: "backwards" });
+      });
+    }
     paintFoot();
 
     /**
@@ -1865,6 +2120,22 @@ export function buildShowdownPanel(panel, ctx) {
       });
     }
 
+    /**
+     * ⭐ Đợt 198 — move the HIGHLIGHTS without rebuilding the columns, so the
+     * transition stated on `.aw-sd-col` can run. Used by every state change that
+     * does not alter the column's CONTENTS; a claim still goes through
+     * `paintCols()`, because that swaps the tick's icon as well as its colour.
+     */
+    function paintColStates() {
+      colsBox.querySelectorAll(".aw-sd-col").forEach(col => {
+        const tid = col.dataset.tid;
+        const c = setup.claims[tid];
+        const taken = claimIsLive(c) && c.by !== me;
+        col.classList.toggle("is-sel", tid === selectedTeam && !taken);
+        col.classList.toggle("is-claimed", tid === claimedTeam);
+      });
+    }
+
     function paintCols() {
       colsBox.innerHTML = "";
       // ⭐ Đợt 159 — EVERY team is drawn, including the ones another screen has
@@ -1884,7 +2155,14 @@ export function buildShowdownPanel(panel, ctx) {
         // Tapping ANYWHERE in the column selects it (teacher: "bấm vào vùng
         // trống bất kỳ trong cột team cũng cho phép chọn cột team"). The tick
         // and the name chips stop the click before it gets here.
-        if (!taken) col.onclick = () => { if (selectedTeam !== t.id) { selectedTeam = t.id; sfx.tap(); paintCols(); } };
+        // ⚠⚠ Đợt 198 — `paintColStates()`, KHÔNG phải `paintCols()`. Selecting a
+        // column is the most-used gesture on this screen, and rebuilding every
+        // column to move one highlight meant `.aw-sd-col`'s own stated `transition`
+        // COULD NEVER RUN: a brand-new element starts life at its final colours, so
+        // there is nothing for it to travel from. Toggling the class on the node
+        // that is already there is what turns that transition from a line of CSS
+        // nobody had ever seen into something the teacher can actually watch.
+        if (!taken) col.onclick = () => { if (selectedTeam !== t.id) { selectedTeam = t.id; sfx.tap(); paintColStates(); } };
 
         const head = el("div", "aw-sd-colhead");
         const nameBtn = el("button", "aw-sd-colname");
@@ -2085,7 +2363,7 @@ export function buildShowdownPanel(panel, ctx) {
      */
     async function randomDeal() {
       const cap = capPerTeam();
-      // Fisher-Yates on a copy: `pool` itself is spliced below, and shuffling in
+      // Fisher-Yates on a copy: `pool` itself is rebuilt below, and shuffling in
       // place while reading it is how a "random" deal quietly stops being one.
       const shuffled = list => {
         const a = list.slice();
@@ -2097,76 +2375,158 @@ export function buildShowdownPanel(panel, ctx) {
       };
       const byId = new Map();
       (classes || []).forEach(c => c.students.forEach(s => { if (s.gender) byId.set(s.id, s.gender); }));
-      const lanes = [
-        shuffled(pool.filter(m => byId.get(m.id) === "m")),
-        shuffled(pool.filter(m => byId.get(m.id) === "f")),
-        shuffled(pool.filter(m => !byId.get(m.id)))
-      ].filter(l => l.length);
-      const bag = [];
-      while (lanes.some(l => l.length)) {
-        // Always draw from the LONGEST remaining lane. Straight alternation
-        // would exhaust the shorter one early and leave the tail unmixed —
-        // precisely the clumping this is here to prevent.
-        lanes.sort((a, b) => b.length - a.length);
-        bag.push(lanes[0].shift());
-      }
-      await scrambleChips();
-      // ⭐ Đợt 192 (thầy) — the deal CASCADES: see bulkMove's `cascade` option.
-      bulkMove(() => {
-        // Deal round-robin starting from the emptiest team, so a half-built
-        // table is levelled up rather than having the rest piled on the end.
-        const order = setup.teams.filter(t => !isTaken(t)).sort((a, b) => a.members.length - b.members.length);
-        if (!order.length) return;
-        let placed = 0;
-        for (const m of bag) {
-          const target = order.filter(t => t.members.length < cap).sort((a, b) => a.members.length - b.members.length)[0];
-          if (!target) break;                     // every team full — leave the rest waiting
-          target.members.push(m);
-          pool = pool.filter(x => x !== m);
-          placed++;
-        }
-        if (!placed) toast("Every team is full");
-      }, { cascade: true });
+      const genderOf = id => byId.get(id) || "";
+
+      // ⚠️ BOARD ORDER, NOT SORTED. `planDeal`'s first rule is about WHICH COLUMN
+      // a spare pupil lands in, so the array handed to it must be the columns as
+      // the class sees them, left to right. The old code sorted by size here,
+      // which is exactly the behaviour being replaced.
+      const fillable = setup.teams.filter(t => !isTaken(t));
+      if (!fillable.length) { toast("Every team is taken"); return; }
+      const plan = planDeal(fillable, shuffled(pool), genderOf, cap);
+      const placed = plan.reduce((n, g) => n + g.length, 0);
+      if (!placed) { sfx.remove(); toast("Every team is full"); return; }
+
+      // ⭐⭐ Đợt 198 (thầy) — OUT OF THE POPUP FIRST, THEN BACK IN.
+      // "hiệu ứng là các tên bay từ từ ra ngoài pop-up rồi sau đó mới bay vào
+      // loạn xạ và từ từ sắp xếp vào các cột."
+      await flyOutAndBack(() => {
+        const taken = new Set();
+        plan.forEach((group, i) => group.forEach(m => { fillable[i].members.push(m); taken.add(m); }));
+        pool = pool.filter(m => !taken.has(m));
+      });
     }
 
     /**
-     * ⭐ Đợt 191 (thầy: "khi bấm shuffle, các tên sẽ có animation xáo vào nhau
-     * một chút trước khi bay về các team").
+     * ⭐⭐⭐ Đợt 198 (thầy) — THE RANDOM DEAL'S TWO-LEGGED FLIGHT.
      *
-     * A short jostle of the waiting chips — each nudged a little way in a random
-     * direction and tipped a couple of degrees, then set back — so the deal reads
-     * as "these got mixed up" rather than "these teleported".
+     * "hiệu ứng là các tên bay từ từ ra ngoài pop-up rồi sau đó mới bay vào loạn
+     * xạ và từ từ sắp xếp vào các cột."
      *
-     * ⚠️⚠️ IT MUST BE COMPLETELY OVER BEFORE `bulkMove` RUNS, which is why this
-     * returns a promise the caller awaits. `bulkMove` measures every chip with
-     * `getBoundingClientRect()` to work out where the ghosts fly FROM — and that
-     * rect INCLUDES any live transform. Overlapping the two would take each
-     * chip's mid-jostle position as its home, and every ghost would set off from
-     * slightly the wrong place, in a way that looks like a glitch rather than a
-     * bug.
-     * ⚠️ `fill` is deliberately left alone (the keyframes end where they began)
-     * so nothing has to be cleaned up afterwards, and a chip removed from the DOM
-     * mid-animation cannot strand a transform on a recycled node.
-     * ⚠️ Belt-and-braces timeout, per the app-wide `element.animate()` rule: a
-     * hidden tab never fires `finish`, and the deal must not be lost because the
-     * teacher switched away for a second.
+     *   LEG 1  every waiting name lifts off and sails OUT past the edge of the
+     *          popover, each on its own bearing, tumbling as it goes.
+     *   LEG 2  from out there it comes back IN along a bowed path, arriving in a
+     *          scattered order, and settles into its column.
+     *
+     * ⛔ THIS REPLACES `scrambleChips()` + `bulkMove(..., {cascade:true})` for the
+     * random deal — the little in-place jostle of Đợt 191 is gone with it, and so
+     * is the trap its header warned about (measuring a chip mid-jostle and taking
+     * that as its home): here nothing is measured after an animation has started
+     * on the thing being measured.
+     *
+     * ⚠️ ONE GHOST FLIES BOTH LEGS. It is created at the chip's real position and
+     * everything after that is a `transform`, so leg 2 simply continues from
+     * where leg 1 stopped — no second element, no repositioning, and no seam at
+     * the join. That is also why leg 1 uses `fill: "forwards"`: the ghost has to
+     * STAY out there while the board is rebuilt underneath it.
+     *
+     * ⚠️ THE BOARD IS REBUILT WHILE EVERYTHING IS OUT OF SIGHT. `mutate()` and
+     * `repaintAll()` run in the gap between the legs, so the columns the names
+     * fly back into already exist and can be measured — the FLIP idea `bulkMove`
+     * uses, stretched around a round trip.
+     *
+     * ⚠️ EVERY STAGE HAS A TIMEOUT AS WELL AS AN `onfinish`. A backgrounded
+     * myActivity column freezes rAF, so `onfinish` may never come — and the
+     * failure mode here is not a missing flourish but a class list left
+     * `visibility: hidden` with every name invisible. `whenDone` is what makes
+     * the board arrive either way.
      */
-    function scrambleChips() {
+    function flyOutAndBack(mutate) {
       const chips = [...host.querySelectorAll(".aw-sd-pool .aw-sd-chip[data-mid]")];
-      if (!chips.length) return Promise.resolve();
-      const MS = 420;
-      chips.forEach(c => {
-        const dx = (Math.random() * 2 - 1) * 14;
-        const dy = (Math.random() * 2 - 1) * 10;
-        const rot = (Math.random() * 2 - 1) * 7;
-        c.animate([
-          { transform: "translate(0,0) rotate(0deg)" },
-          { transform: `translate(${dx}px, ${dy}px) rotate(${rot}deg)`, offset: 0.45 },
-          { transform: `translate(${-dx * 0.4}px, ${-dy * 0.4}px) rotate(${-rot * 0.4}deg)`, offset: 0.78 },
-          { transform: "translate(0,0) rotate(0deg)" }
-        ], { duration: MS, easing: "cubic-bezier(.22,.9,.3,1)" });
+      if (!chips.length) { mutate(); repaintAll(); return Promise.resolve(); }
+
+      const panelBox = (body.closest(".aw-tool-panel") || body).getBoundingClientRect();
+      const cx = panelBox.left + panelBox.width / 2;
+      const cy = panelBox.top + panelBox.height / 2;
+      // Far enough that the name is genuinely OUTSIDE the popover whichever
+      // corner it started from — half the diagonal, plus a chip's own length.
+      const radius = Math.hypot(panelBox.width, panelBox.height) / 2 + 130;
+
+      const OUT_MS = 560, HANG_MS = 90, IN_MS = 620;
+      const outSpread = 200;                       // stagger of the departures
+      // The whole return has to be over in about the time a teacher will stand
+      // and watch, so the run of arrivals shrinks as the class grows.
+      const inSpread = Math.min(900, Math.max(260, chips.length * 55));
+
+      const fs = getComputedStyle(host).getPropertyValue("--sd-chip-fs") || "";
+      const flights = chips.map(c => {
+        const from = c.getBoundingClientRect();
+        const ghost = mkChip(c.textContent);
+        ghost.classList.add("aw-sd-ghost-chip");
+        // Same reason as `fly()`: the ghost lives on <body>, outside the layer
+        // that defines `--sd-chip-fs`, so it would leave at the 15px default.
+        ghost.style.fontSize = fs;
+        ghost.style.left = from.left + "px";
+        ghost.style.top = from.top + "px";
+        ghost.style.width = from.width + "px";
+        ghost.style.height = from.height + "px";
+        document.body.append(ghost);
+        // Outward along its OWN bearing from the middle of the panel, jittered,
+        // so the names scatter like a handful thrown up rather than a starburst.
+        const ang = Math.atan2((from.top + from.height / 2) - cy, (from.left + from.width / 2) - cx)
+          + (Math.random() * 0.9 - 0.45);
+        const ox = Math.cos(ang) * radius;
+        const oy = Math.sin(ang) * radius;
+        const spin = (Math.random() * 2 - 1) * 42;
+        const delay = Math.round(Math.random() * outSpread);
+        ghost.animate([
+          { transform: "translate(0,0) rotate(0deg) scale(1)", opacity: 1 },
+          { transform: `translate(${ox * 0.35}px, ${oy * 0.35}px) rotate(${spin * 0.3}deg) scale(1.06)`, offset: 0.35, opacity: 1 },
+          { transform: `translate(${ox}px, ${oy}px) rotate(${spin}deg) scale(.82)`, opacity: 0.28 }
+        ], { duration: OUT_MS, delay, easing: "cubic-bezier(.35,0,.7,1)", fill: "forwards" });
+        c.style.visibility = "hidden";
+        return { ghost, mid: c.dataset.mid, from, ox, oy, spin };
       });
-      return new Promise(resolve => setTimeout(resolve, MS + 20));
+      sfx.lift();
+
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // ---- the board changes while nobody can see it ----
+          mutate();
+          repaintAll();
+
+          const order = shuffledIdx(flights.length);   // "loạn xạ" — arrivals scattered
+          const step = inSpread / Math.max(1, flights.length);
+          let last = 0;
+          order.forEach((fi, slot) => {
+            const f = flights[fi];
+            const target = host.querySelector(`[data-mid="${CSS.escape(f.mid)}"]`);
+            if (!target) {                            // pupil no longer on this screen
+              f.ghost.remove();
+              return;
+            }
+            const to = target.getBoundingClientRect();
+            target.style.visibility = "hidden";
+            const dx = to.left - f.from.left;
+            const dy = to.top - f.from.top;
+            // Bowed PERPENDICULAR to the travel, exactly like `fly()`'s cascade,
+            // so the bend is the same size whichever way the name is heading.
+            const len = Math.hypot(dx - f.ox, dy - f.oy) || 1;
+            const bow = (Math.random() * 26 + 14) * (Math.random() < 0.5 ? -1 : 1);
+            const bx = (-(dy - f.oy) / len) * bow;
+            const by = ((dx - f.ox) / len) * bow;
+            const delay = Math.round(slot * step * (0.7 + Math.random() * 0.6));
+            last = Math.max(last, delay);
+            const anim = f.ghost.animate([
+              { transform: `translate(${f.ox}px, ${f.oy}px) rotate(${f.spin}deg) scale(.82)`, opacity: 0.28 },
+              { transform: `translate(${(f.ox + dx) / 2 + bx}px, ${(f.oy + dy) / 2 + by}px) rotate(${f.spin * 0.35}deg) scale(1.06)`, offset: 0.45, opacity: 1 },
+              { transform: `translate(${dx}px, ${dy}px) rotate(0deg) scale(1)`, opacity: 1 }
+            ], { duration: IN_MS, delay, easing: "cubic-bezier(.25,.8,.3,1)", fill: "both" });
+            whenDone(anim, () => {
+              f.ghost.remove();
+              target.style.visibility = "";
+              sfx.land();
+            }, delay + IN_MS + 200);
+          });
+          // Belt and braces for the whole flock: whatever happened to the
+          // individual animations, nothing may stay invisible.
+          setTimeout(() => {
+            host.querySelectorAll("[data-mid]").forEach(n => { n.style.visibility = ""; });
+            document.querySelectorAll(".aw-sd-ghost-chip").forEach(n => n.remove());
+            resolve();
+          }, last + IN_MS + 320);
+        }, OUT_MS + outSpread + HANG_MS);
+      });
     }
 
     /** Everybody out of the columns and back into the class list. */

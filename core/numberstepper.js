@@ -112,8 +112,20 @@ export function makeHStepper(value, min, max, onChange, opts = {}) {
     // Snap to the step GRID rather than to "current ± step", so a value that
     // arrived off-grid (an old act saved with timerTotalSeconds: 137) tidies
     // itself up on the first press instead of staying off-grid forever.
+    const was = current;
     current = clamp(Math.round(v / step) * step);
     valEl.textContent = format(current);
+    // ⭐ Đợt 198 — a small bump when the number ACTUALLY changes, so a tap is
+    // visibly answered. Skipped when the value is already at its limit, or the
+    // control would keep flashing under a held finger that is achieving nothing.
+    // ⚠️ The class has to come OFF and be forced to reflow before it goes back
+    // on, or a second change inside the animation's own 220ms simply does not
+    // restart it — the CSS engine sees the same class it already has.
+    if (current !== was) {
+      valEl.classList.remove("is-bump");
+      void valEl.offsetWidth;
+      valEl.classList.add("is-bump");
+    }
     if (fire) onChange(current);
   }
 
