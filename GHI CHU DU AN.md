@@ -10,6 +10,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 210 (20/8/2026) — ⭐ LÀM LẠI HIỆU ỨNG TÊN 3 BẠN ĐẦU: HÀO QUANG TĨNH, KHÔNG CÒN GÌ CHẠY TRÊN CHỮ
 
+> ✅ **THẦY DUYỆT + CHỐT BẢN 20/8/2026 ("ok xong. chốt bản này") — cho CẢ CHUỖI Đợt 207→210.**
+> Cả 4 commit đã PUSH + LIVE, đối chiếu lần cuối 6/6 file trùng mã băm SHA-256, kho sạch.
+
 **179/179 ĐẠT trên 3 bàn thử, 0 lỗi console.** Sửa đúng 1 file: `core/app.css` (1 khối).
 
 Thầy nhìn bản Đợt 209 thật: *"hiệu ứng lấp lánh của tên 3 bạn top đầu… rất xấu — xóa hoàn toàn hiệu

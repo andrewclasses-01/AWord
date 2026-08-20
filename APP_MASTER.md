@@ -8,7 +8,13 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 210)** — 179/179 ĐẠT trên 3 bàn thử.
+> Cập nhật lần cuối: **20/8/2026 (Đợt 207→210)** ✅ **THẦY DUYỆT, CHỐT BẢN — cả 4 đợt ĐÃ COMMIT + PUSH + LIVE**
+> (`38895e7` → `858fa4c` → `3a2b351` → `3b385c7`; đối chiếu lần cuối **6/6 file trùng mã băm SHA-256**
+> trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
+> Chuỗi 4 đợt này là MỘT mạch việc Showdown thầy giao và duyệt trong cùng ngày 20/8 — phiên sau đọc khối
+> Đợt 210 → 207 bên dưới theo thứ tự NGƯỢC là đủ nắm.
+> ⬜ Ba việc nhỏ còn treo (chỉ mắt thầy, KHÔNG chặn gì): hào quang tên 3 bạn đầu trên màn 86" · chữ vàng
+> bạn số 2 trên ô bạc có rõ không · chơi trọn một ván xem bảng cuối không còn Leaderboard trong Showdown.
 >
 > ---
 > **Đợt 210 — LÀM LẠI HIỆU ỨNG TÊN 3 BẠN ĐẦU: HÀO QUANG TĨNH, KHÔNG CÒN GÌ CHẠY TRÊN CHỮ.**
