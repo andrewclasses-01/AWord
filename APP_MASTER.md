@@ -8,7 +8,9 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 213 + 213b)** — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `30756c6` — **ĐÃ PUSH + LIVE** (đối chiếu **14/14 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
+> Cập nhật lần cuối: **20/8/2026 (Đợt 214)** — **TIME COST RỜI KHỎI Ô TIMER** (thầy "ok build" + cho
+> phép commit/push/ghi hồ sơ không cần hỏi lại). Xem khối Đợt 214 ngay dưới đây.
+> Trước đó **(Đợt 213 + 213b)** — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `30756c6` — **ĐÃ PUSH + LIVE** (đối chiếu **14/14 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
 > Cả hai đợt là MỘT mạch việc **OPTIONS** thầy giao và duyệt trong cùng ngày 20/8; phiên sau đọc khối
 > 213b → 213 bên dưới là đủ nắm. Trước đó **(Đợt 211 + 212)** — ✅ **THẦY ĐÃ DUYỆT CẢ HAI, CHỐT BẢN** (20/8/2026, thầy xem trên máy thật); cả hai đi CHUNG MỘT COMMIT `9076faf` (thầy: “commit + push + ghi hồ sơ dự án một thể”). Trước đó **(Đợt 207→210)** ✅ **THẦY DUYỆT, CHỐT BẢN — cả 4 đợt ĐÃ COMMIT + PUSH + LIVE**
 > (`38895e7` → `858fa4c` → `3a2b351` → `3b385c7`; đối chiếu lần cuối **6/6 file trùng mã băm SHA-256**
@@ -17,6 +19,45 @@
 > Đợt 210 → 207 bên dưới theo thứ tự NGƯỢC là đủ nắm.
 > ⬜ Ba việc nhỏ còn treo (chỉ mắt thầy, KHÔNG chặn gì): hào quang tên 3 bạn đầu trên màn 86" · chữ vàng
 > bạn số 2 trên ô bạc có rõ không · chơi trọn một ván xem bảng cuối không còn Leaderboard trong Showdown.
+>
+> ---
+> **Đợt 214 — TIME COST RỜI KHỎI Ô TIMER: "đã đặt là trừ", Timer=None không còn tắt ngầm.**
+> ✅ Thầy chốt hướng qua 3 câu hỏi + "ok build" (20/8/2026, kèm quyền commit/push/ghi hồ sơ không hỏi
+> lại). Sửa **2 file**: `core/engine.js` (2 chỗ) · `core/timecost.js` (1 chỗ). 0 lỗi console.
+> - 🐞 **LỖI THẦY BÁO**: "thời gian trôi qua nhưng không bị trừ điểm time cost ở các chế độ" (thấy ở
+>   Fight, không số -N nào bay, ngay từ đầu trận, trên MỌI máy). **Nguyên nhân gốc đo được trên thư
+>   viện THẬT** (đọc qua Chrome đã đăng nhập, `store.listChildren` quét 17 act): act
+>   `DS-S4.I1.W1 / WORDS` lưu `timeCost:58 + timer:"none"` (bộ text:eng1) — mà `timeCostPer()` cũ trả
+>   0 khi `timerMode()==="none"` ⇒ **Timer=None là công tắc tắt NGẦM**, panel vẫn cho kéo Time cost
+>   lên thành nút chết. Mọi máy cùng dính vì dữ liệu act dùng chung qua mây.
+> - ⭐⭐ **SỬA**: `timeCostPer()` bỏ vế `timerMode()==="none"` — thanh trượt tự quyết. Và
+>   `startIdleWatch()` dời RA NGOÀI nhánh `timerMode()!=="none"` của `startTimerNow()` (không dời là
+>   Timer=None vẫn không bao giờ khởi động đồng hồ trống dù per > 0). Nó tự no-op khi thanh Off nên
+>   game không dùng không cấp phát gì — y như cũ.
+> - ⭐ **HIỆU ỨNG khi không có đồng hồ nhìn thấy** (`timecost.js`): phần tử `visibility:hidden` vẫn đo
+>   ra rect đầy đủ ⇒ guard `b.w > 0` cũ để số -N bay vào khoảng trống vô hình. Nay kiểm thêm
+>   `visibility !== "hidden"` của đích: đích ẩn (Single + Timer=None) ⇒ -N **đậu trên ô điểm rồi tan
+>   tại chỗ** (cùng nhịp, co về .8); Fight thì đồng hồ dải giữa luôn hiện (đứng 00:00) nên vẫn bay.
+> - ✅ **ĐO TRÊN APP THẬT** (bench `scratch/tc-idle-test.html` mới + `scratch/fight-bench.html`):
+>   Single anagram Timer=None −10/nhịp + tan tại chỗ (4 keyframe, không travel) · Single quiz countUp
+>   bay như cũ · Fight anagram Timer=None trừ CẢ HAI đội (−60/−60) · Fight quiz countUp như cũ (−240
+>   sau 24s = đúng 10/s) · flow thật của thầy (Timer=None, kéo thanh qua panel, Apply, Play) trừ đúng
+>   · Running word (không cờ `timeCost`) không trừ, không watcher thừa.
+> - ⚠️⚠️ **ACT CŨ "SỐNG DẬY"**: `DS-S4.I1.W1 / WORDS` sẽ bắt đầu trừ **58 điểm mỗi 2s trống** ngay khi
+>   bản này lên — 58 trông như giá trị kéo dở tay (đã báo thầy, thầy chưa chốt đổi; **chưa đụng dữ
+>   liệu act**). Act `DS-S2.I1.W3 / WORDS` thì `tc:0 idle:3` — thanh vẫn Off nên không đổi gì.
+> - ⚠️ **BẪY ĐO đã dính trong phiên**: pane trình duyệt bị ẨN ⇒ `requestAnimationFrame` không chạy ⇒
+>   vòng đếm giảm không vẽ, nhìn y như "không trừ" dù `-N` vẫn sinh — đúng bẫy đã ghi trong HUONG DAN
+>   CORE (phải front tab rồi mới đo). Và `visibilityState` là thứ phân xử, đừng tin mắt.
+> - ⬜ Ba việc mắt thầy: (1) -N tan tại chỗ ở Single Timer=None nhìn có "đã" không hay muốn kiểu khác ·
+>   (2) Fight Timer=None: -N bay vào đồng hồ 00:00 bất động có kỳ không · (3) giá trị 58 của
+>   `DS-S4.I1.W1 / WORDS` có phải ý thầy không (thầy tự chỉnh trong Options hoặc bảo phiên sau sửa).
+> - 📌 **PHÁT HIỆN PHỤ chưa xử lý** (không chặn gì, chờ thầy quyết): thanh trượt từ Đợt 188/213 **kéo
+>   mà đặt tay NGOÀI nút = không có tác dụng** (chỉ nắm trúng nút mới kéo; chạm 2 bên = ±1 nấc). Khi
+>   thanh đang Off nút nằm tít mép trái rất khó nắm trên màn cảm ứng — dữ liệu thật cho thấy dấu vết:
+>   act để `tc:0` nhưng `idle:3` (đụng ô mà không kéo được thanh), act khác dính đúng `tc:1` (= 1 lần
+>   chạm phải). Thầy đã chọn **GIỮ NGUYÊN** cử chỉ Đợt 213 khi được hỏi 20/8 — đừng tự đổi; nếu thầy
+>   than khó kéo trên TOMKO thì đây là chỗ cần nhìn lại đầu tiên.
 >
 > ---
 > **Đợt 213b — KHU Ô TÍCH: XẾP THEO CỘT CHO TỪNG TEMPLATE.**

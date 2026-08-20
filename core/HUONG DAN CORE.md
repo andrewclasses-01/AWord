@@ -2754,11 +2754,24 @@ window.clearInterval = function (id) { window.__eng.delete(id); return ci.apply(
   để gate `onNext` (chưa trả lời + tắt skip → `onNext=null` = nút mờ). quiz/type-the-answer mặc định TẮT
   (phải trả lời mới đi tiếp); anagram/unjumble mặc định BẬT (lịch sử). Checkbox đặt trong `buildExtraOptions`.
 
-### ⭐⭐ TIME COST — trừ điểm mỗi CHU KỲ **TRỐNG** (Đợt 139 · thuật toán đổi ở Đợt 187)
+### ⭐⭐ TIME COST — trừ điểm mỗi CHU KỲ **TRỐNG** (Đợt 139 · thuật toán đổi ở Đợt 187 · rời Timer ở Đợt 214)
 
 Thanh **Time cost** (0–100, 0 = Off) + ô **ngưỡng trống 1–5s** trong Options. Cứ mỗi giây học sinh
 **không làm gì** (quá ngưỡng) là tổng điểm bị trừ chừng đó, kèm một số **`-N` đỏ bay từ ô điểm vào
 đồng hồ** và **vòng đếm giảm điểm**. KHÔNG có âm thanh (thầy chốt: nó nổ mỗi giây, cả tiết học).
+
+⭐⭐ **Đợt 214 (20/8/2026, thầy) — TIME COST KHÔNG CÒN PHỤ THUỘC Ô TIMER.** Trước đợt này
+`timeCostPer()` trả **0** khi `timerMode()==="none"` ⇒ Timer=None là một **công tắc tắt NGẦM**: panel
+vẫn cho kéo Time cost lên (đo trên thư viện thật: act lưu `timeCost:58` + `timer:"none"` — thầy đứng
+lớp nhìn thời gian trôi mà không trừ đồng nào, trên MỌI máy vì dữ liệu act dùng chung, không số -N nào
+bay). Thầy chốt: **thanh trượt tự quyết** — đã đặt là trừ, bất kể chế độ đồng hồ. Hai chỗ sửa:
+`timeCostPer()` bỏ vế timer, và `startIdleWatch()` gọi **ngoài** nhánh `timerMode()!=="none"` trong
+`startTimerNow()` (nó tự no-op khi thanh Off nên game không dùng vẫn không cấp phát gì).
+⚠️ **Hiệu ứng khi KHÔNG có đồng hồ nhìn thấy**: phần tử ẩn bằng `visibility:hidden` vẫn đo ra rect
+đầy đủ, nên guard `b.w > 0` cũ sẽ cho số -N **bay vào khoảng trống vô hình**. `flyTimeCost` nay kiểm
+thêm `visibility !== "hidden"` của đích: đích ẩn (Single + Timer=None) ⇒ -N **đậu trên ô điểm rồi tan
+tại chỗ** (cùng nhịp giữ, co nhẹ về .8); trong Fight đồng hồ dải giữa luôn hiện (đứng ở 00:00) nên vẫn
+bay như thường.
 
 **Đây KHÔNG phải thuế theo đồng hồ** — thầy đổi ý ngay trong phiên đầu: chỉ giây TRỐNG mới tính.
 "Bấm chữ trước cách chữ sau 0,9s" ⇒ không mất gì.
@@ -2825,9 +2838,10 @@ Whack-a-mole · Flying fruit · Balloon pop · Crossword · Unjumble · Speaking
 - **Gameshow** — chấm điểm theo TỐC ĐỘ, có đồng hồ riêng từng câu (thầy chốt loại).
 - **Speaking cards** — `scorable:false`, không có điểm nào để trừ.
 - **Running team · Running word** — ⚠️ **KHÔNG THỂ**, không phải quên: cả hai đặt `hideTimerOption` +
-  `options.timer:"none"` vì mỗi game **tự chạy 2 đồng hồ riêng**; mà `timeCostPer()` trong `engine.js`
-  trả **0** khi `timerMode()==="none"`. Gắn cờ vào chỉ **đẻ ra một thanh trượt không làm gì** — đúng
-  loại nút chết mà Đợt 143 đi dọn. Muốn có thì phải cho 2 game đó một hệ điểm/đồng hồ mà engine nhìn thấy.
+  `options.timer:"none"` vì mỗi game **tự chạy 2 đồng hồ riêng**. (Hồi Đợt 143 còn thêm lý do kỹ thuật
+  `timeCostPer()` trả 0 khi timer none — **Đợt 214 đã gỡ ràng buộc đó**, nên nay trở ngại chỉ còn là
+  thiết kế: hai game này chưa từng nối `scoreNow`/`noteActivity`/idle guard với engine. Muốn có thì
+  đi đủ 4 điểm nối bên dưới, không phải chỉ gắn cờ.)
 
 #### ⚠️ Bật Time cost là **4 điểm nối**, không phải 1 cờ
 1. `timeCost: true`

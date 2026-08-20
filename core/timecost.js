@@ -76,7 +76,15 @@ export function flyTimeCost({ fromEl, toEl, readEl, points, target, paint, alive
   // the feature, the flight is the explanation of it.
   if (fromEl && toEl) {
     const a = centerOf(fromEl), b = centerOf(toEl);
-    if (a.w > 0 && b.w > 0) {
+    // ⭐ Đợt 214 — Timer=None no longer disables Time cost (engine.js), so the
+    // clock this flies INTO can now be `visibility:hidden` (single mode hides
+    // timerEl; the fight strip's clock stays visible showing 00:00). A hidden
+    // element still measures a full-size rect, so the old `b.w > 0` guard let
+    // the number fly into apparently empty air. When the destination cannot be
+    // seen, the "-N" holds on the score chip and dissolves in place instead —
+    // same node, same rhythm, no travel to nowhere.
+    const toVisible = b.w > 0 && getComputedStyle(toEl).visibility !== "hidden";
+    if (a.w > 0) {
       // Sized off the score's OWN font-size (read live, so it is right at any
       // fit/zoom level and in fight mode, where the strip's digits are much
       // bigger than a single-mode chip's).
@@ -89,20 +97,34 @@ export function flyTimeCost({ fromEl, toEl, readEl, points, target, paint, alive
       document.body.append(node);
       nodes?.add(node);
 
-      const dx = b.x - a.x, dy = b.y - a.y;
-      // Shrink to roughly the clock's own digit size on arrival, same rule the
-      // template fly effects use (end scale = destination font / start font).
-      const dstFont = parseFloat(getComputedStyle(toEl).fontSize) || size * 0.5;
-      const endScale = Math.max(0.12, Math.min(1, dstFont / size));
       const total = HOLD_MS + FLIGHT_MS;
       const holdFrac = HOLD_MS / total;
-      const anim = node.animate([
-        { transform: "translate(-50%,-50%) scale(.55)", opacity: 0, offset: 0 },
-        { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac * 0.6 },
-        { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac },
-        { transform: `translate(calc(-50% + ${dx * 0.55}px), calc(-50% + ${dy * 0.55}px)) scale(${(1 + endScale) / 2})`, opacity: .95, offset: holdFrac + (1 - holdFrac) * 0.55 },
-        { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, opacity: 0, offset: 1 }
-      ], { duration: total, easing: "cubic-bezier(.3,.5,.35,1)", fill: "forwards" });
+      let frames;
+      if (toVisible) {
+        const dx = b.x - a.x, dy = b.y - a.y;
+        // Shrink to roughly the clock's own digit size on arrival, same rule the
+        // template fly effects use (end scale = destination font / start font).
+        const dstFont = parseFloat(getComputedStyle(toEl).fontSize) || size * 0.5;
+        const endScale = Math.max(0.12, Math.min(1, dstFont / size));
+        frames = [
+          { transform: "translate(-50%,-50%) scale(.55)", opacity: 0, offset: 0 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac * 0.6 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac },
+          { transform: `translate(calc(-50% + ${dx * 0.55}px), calc(-50% + ${dy * 0.55}px)) scale(${(1 + endScale) / 2})`, opacity: .95, offset: holdFrac + (1 - holdFrac) * 0.55 },
+          { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${endScale})`, opacity: 0, offset: 1 }
+        ];
+      } else {
+        // No visible clock to land in: appear on the chip, hold the same beat,
+        // then dissolve where it stands (a slight shrink reads as "spent").
+        frames = [
+          { transform: "translate(-50%,-50%) scale(.55)", opacity: 0, offset: 0 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac * 0.6 },
+          { transform: "translate(-50%,-50%) scale(1)", opacity: 1, offset: holdFrac },
+          { transform: "translate(-50%,-50%) scale(.8)", opacity: 0, offset: 1 }
+        ];
+      }
+      const anim = node.animate(frames,
+        { duration: total, easing: "cubic-bezier(.3,.5,.35,1)", fill: "forwards" });
 
       // ⚠️ onfinish can NEVER fire in a hidden/backgrounded tab (documented trap
       // in core/HUONG DAN CORE.md) — the timeout is what actually guarantees

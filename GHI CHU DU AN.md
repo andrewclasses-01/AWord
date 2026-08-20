@@ -8,6 +8,77 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 214 (20/8/2026) — ⭐⭐ TIME COST RỜI KHỎI Ô TIMER: "ĐÃ ĐẶT LÀ TRỪ"
+
+> ✅ Thầy chốt hướng qua AskUserQuestion + **"ok build"** (kèm quyền commit/push/ghi hồ sơ không cần
+> hỏi lại). Sửa **2 file code**: `core/engine.js` (2 chỗ) · `core/timecost.js` (1 chỗ). 0 lỗi console.
+> Bản gốc: `_backup/dot214-timecost/`. Bench mới: `scratch/tc-idle-test.html`.
+
+### Lỗi thầy báo và nguyên nhân gốc
+
+Thầy: *"time cost có vẻ đang bị lỗi ở các chế độ (thời gian trôi qua nhưng không bị trừ điểm)"* —
+hỏi ra: thấy ở **Fight**, **không số -N nào bay**, **ngay từ đầu trận**, trên **mọi máy**.
+
+Chẩn đoán mất công vì **code lõi hoàn toàn đúng**: dựng bench chạy đủ Single/Fight × Quiz/Anagram ×
+countUp/countDown × đặt-thẳng/qua-panel/giữa-trận — mọi kịch bản đều trừ chuẩn từng chu kỳ. Live =
+local (6/6 file lõi trùng mã băm sau khi `tr -d '\r'` hai đầu).
+
+**Đột phá là đọc THƯ VIỆN THẬT** (qua Chrome đã đăng nhập của thầy, `store.listChildren` quét đủ 17
+act): act `DS-S4.I1.W1 / WORDS` (anagram tích hợp) lưu **`timeCost:58 + timer:"none"`** ở bộ
+`text:eng1`. Mà `timeCostPer()` từ Đợt 139 trả **0 khi `timerMode()==="none"`** ⇒ **Timer=None là
+công tắc tắt NGẦM**: panel vẫn cho kéo Time cost lên 58 thành **nút chết**, không cảnh báo. Mọi máy
+cùng dính vì dữ liệu act dùng chung qua mây — "lỗi ở các chế độ" thực chất là một act chết + các bộ
+nghĩa khác không có Time cost (luật Đợt 147, options riêng từng bộ — thầy chốt GIỮ).
+
+### Sửa gì (thầy chốt: Time cost chạy độc lập, không phụ thuộc Timer)
+
+1. **`core/engine.js` — `timeCostPer()`**: bỏ vế `timerMode() === "none"`. Thanh trượt tự quyết.
+2. **`core/engine.js` — `startTimerNow()`**: `startIdleWatch()` dời **RA NGOÀI** nhánh
+   `timerMode() !== "none"`. ⚠️ Thiếu bước này thì sửa (1) vô nghĩa: Timer=None không tạo đồng hồ
+   thật nên đồng hồ trống cũng không bao giờ được khởi động. Nó tự no-op khi thanh Off
+   (`if (idleId || !timeCostPer()) return`) nên game không dùng vẫn không cấp phát gì.
+3. **`core/timecost.js` — `flyTimeCost()`**: đích bay giờ có thể là đồng hồ **ẩn**
+   (`visibility:hidden` ở Single + Timer=None). ⚠️ Phần tử ẩn kiểu đó **vẫn đo ra rect đầy đủ** nên
+   guard `b.w > 0` cũ để số -N bay vào khoảng trống vô hình. Nay kiểm thêm
+   `getComputedStyle(toEl).visibility !== "hidden"`: đích ẩn ⇒ -N **đậu trên ô điểm rồi tan tại chỗ**
+   (giữ nguyên nhịp HOLD+FLIGHT, co nhẹ về scale .8 khi mờ); Fight thì đồng hồ dải giữa luôn hiện
+   (đứng 00:00 khi Timer=None) nên vẫn bay như thường.
+
+### Đo trên app thật (bench `scratch/tc-idle-test.html` + `scratch/fight-bench.html`)
+
+| Kịch bản | Kết quả |
+|---|---|
+| Single Anagram, Timer=None, tc=10 | ✅ −10/nhịp; -N tan tại chỗ (4 keyframe, không có `calc` travel) |
+| Single Quiz, Count up | ✅ như cũ; -N bay vào đồng hồ (5 keyframe, có travel) |
+| Fight Anagram, Timer=None | ✅ trừ CẢ HAI đội (−60/−60); -N bay vào đồng hồ dải giữa |
+| Fight Quiz, Count up | ✅ như cũ (−240 sau 24s = đúng 10/s, cả sau khi trả lời câu) |
+| Flow thật của thầy: Timer=None → kéo thanh qua panel → Apply → Play | ✅ trừ đúng |
+| Running word (không cờ `timeCost`, timer none cứng) | ✅ không trừ, không watcher thừa, 0 lỗi |
+
+### ⚠️ Hệ quả + việc chờ thầy
+
+- **Act cũ "sống dậy"**: `DS-S4.I1.W1 / WORDS` sẽ trừ **58 điểm mỗi 2s trống** ngay khi bản này lên.
+  58 trông như giá trị kéo dở tay — đã báo, thầy chưa chốt; **chưa đụng dữ liệu act** (thầy tự chỉnh
+  trong Options của act, hoặc dặn phiên sau).
+- ⬜ Mắt thầy: (1) -N tan tại chỗ nhìn ổn chưa · (2) Fight Timer=None: -N bay vào đồng hồ 00:00 bất
+  động có kỳ không · (3) số 58 kia có phải ý thầy không.
+
+### 🐞 Bẫy gặp trong phiên (đừng lặp lại)
+
+- **Pane trình duyệt ẨN ⇒ rAF không chạy ⇒ vòng đếm giảm không vẽ** — nhìn y hệt "không trừ" dù -N
+  vẫn sinh đều (đếm bằng MutationObserver mới thấy). Front tab rồi mới đo; `document.visibilityState`
+  là trọng tài.
+- **Dấu vết dữ liệu tố cáo thanh trượt khó thao tác** (chưa xử lý, thầy chốt GIỮ cử chỉ Đợt 213 khi
+  được hỏi): act để `tc:0` nhưng `idle:3` (đụng ô mà thanh không nhích), act khác dính đúng `tc:1`
+  (= 1 lần chạm phải). Từ Đợt 188: **kéo mà đặt tay NGOÀI nút = không có tác dụng** — khi thanh Off
+  nút nằm tít mép trái, trên màn cảm ứng rất khó nắm trúng. Nếu thầy than khó kéo trên TOMKO, nhìn
+  chỗ này đầu tiên.
+- Đọc thư viện thật khi bench sạch không tái hiện được: đường tắt đáng giá — mở site thật qua Chrome
+  đăng nhập sẵn, `const store = await import("/core/store.js")` rồi quét acts; nhớ ĐÓNG tab sau khi
+  xong.
+
+---
+
 ## Đợt 213b (20/8/2026) — ⭐⭐ KHU Ô TÍCH: XẾP THEO CỘT CHO TỪNG TEMPLATE
 
 > ✅ **THẦY DUYỆT — CHỐT BẢN (20/8/2026)** — **82/82 ĐẠT** trên `scratch/dot213-opts.html` (11 phép mới, nhóm K) +

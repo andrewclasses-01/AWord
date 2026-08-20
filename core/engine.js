@@ -1816,7 +1816,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let idleId = null;            // the 100ms watcher — only ever exists while the option is ON
   const costNodes = new Set();  // "-N" nodes still in the air (binned on teardown)
   function timeCostPer() {
-    if (!tpl.timeCost || timerMode() === "none") return 0;
+    // ⭐⭐ Đợt 214 (thầy, 20/8/2026) — NO LONGER TIED TO THE WHOLE-GAME TIMER.
+    // Until now `timerMode() === "none"` also returned 0, which made Timer=None
+    // a SILENT kill switch: the Options panel still let the teacher drag Time
+    // cost up (measured on the real library: an act saved with timeCost 58 +
+    // timer "none" — he stood in class watching time pass and nothing being
+    // deducted, on every machine, because the act data is shared). The teacher's
+    // call: the slider alone decides, whatever the clock mode. The flight effect
+    // handles the no-visible-clock case itself (see flyTimeCost in timecost.js).
+    if (!tpl.timeCost) return 0;
     const v = Math.round(Number(activity.options?.timeCost) || 0);
     return Math.max(0, Math.min(100, v));
   }
@@ -2038,11 +2046,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       timerEl.textContent = formatTime(initialSeconds);
       if (fight) fight.ctl.onTimer(fight.side, initialSeconds);
       timerId = setInterval(tickTimer, 500);
-      // TIME COST (Đợt 139) — the idle clock starts with the real one, never
-      // before PLAY. `timerMode() === "none"` never reaches here, which is also
-      // exactly when timeCostPer() returns 0.
-      startIdleWatch();
     }
+    // TIME COST (Đợt 139) — the idle clock starts with the real one, never
+    // before PLAY. ⭐ Đợt 214: OUTSIDE the timer-mode branch, because Time cost
+    // no longer needs the visible clock (timeCostPer() stopped returning 0 for
+    // Timer=None). Still a no-op when the slider is Off — startIdleWatch()
+    // checks timeCostPer() itself, so a game without the option allocates
+    // nothing, exactly as before.
+    startIdleWatch();
   }
 
   function begin() {
