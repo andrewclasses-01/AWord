@@ -3483,7 +3483,56 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (18/8/2026 — sau Đợt 190 + 191)
+### 3. Đứng ở đâu (20/8/2026 — sau Đợt 217)
+
+> ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC CODE NÀO DỞ DANG.** Đợt 216 + 217 đi **CHUNG MỘT COMMIT `6244fe0`**
+> (+ hồ sơ `7d00059`, + vá CRLF `c8f9c89`) — **ĐÃ PUSH + LIVE**, đối chiếu **11/11 file trùng mã băm
+> SHA-256** trên `aword.andrewclasses.com` và **12/12 phép hỏi module chạy trên CHÍNH BẢN LIVE**.
+> `main` = `origin/main`, `git status` trống, không còn file `_test-*` nào.
+>
+> **11 file code đã sửa ở chuỗi này**: `core/engine.js` · `core/fight.js` · `core/options-panel.js` ·
+> `core/app.css` · `core/showdown-review.js` · `core/showdown-setup.js` · và 5 stylesheet template
+> (anagram · quiz · true-false · type-the-answer · find-the-match).
+>
+> **Mảng đang chạy: FIGHT MODE + SHOWDOWN + bảng OPTIONS** — thầy đi từng đợt ngắn và tự chỉ hướng mỗi
+> lần. Đọc khối **Đợt 217 → 216 → 215b → 215** ở ĐẦU file này là đủ nắm chuyện vừa xảy ra.
+>
+> **Số hiện trạng**: 17 loại act · Fight 7/17 · Showdown 11/17 · Time delay **0,1 → 10s + nấc ∞ thật** ·
+> chốt sau START **500ms** · thanh trượt **±1 nấc chạy được cả trên cảm ứng**.
+>
+> ⚠️⚠️ **BỐN LUẬT MỚI NHẤT — đọc trước khi đụng vào đúng chỗ đó:**
+> 1. **Tạm dừng có LÝ DO** (`enterPause(reason,{dim})`, `core/engine.js`): `menu` · `panel` · `relay` ·
+>    `stolen`. Phải là TẬP, không được là CỜ. `dim` đi theo NGUỒN. Fight lan sang bàn kia qua
+>    `fight.ctl.registerPause/setPaused`.
+> 2. **Che bài khi Fight**: core gắn `.aw-fight-board.is-concealed`, **template tự khai bằng CSS**.
+>    Thêm template vào Fight thì nhớ khai, không khai là **im lặng hở bài**.
+> 3. **Thanh trượt**: `preventDefault` trên `pointerdown` **KHÔNG cấm được ngón tay** — chốt nằm ở
+>    GIÁ TRỊ (`guardValue`) + `setPointerCapture`. Đừng "dọn dẹp" hai thứ đó.
+> 4. **Showdown claims**: `releaseTeamClaim()` cho phép giành lại đội máy khác; máy bị giành dừng theo
+>    điều kiện **"có người khác đang giữ"**, KHÔNG phải "không còn ai giữ".
+>
+> 🧪 **BÀN THỬ** (`scratch/` **bị gitignore** ⇒ phiên/máy mới phải dựng lại; công thức đủ trong
+> `GHI CHU DU AN.md` Đợt 216 và 217):
+> `dot216-slider.html` + `dot216-run.js` (thanh trượt, nạp **cả module cũ lẫn mới**) ·
+> `dot216-delay.html` (trận Fight thật) · `dot216-start.js` + `dot216-start-old.html` (chốt START) ·
+> `dot217-pod.html` (tên trong phễu) · `dot217-pause.html` (tạm dừng + che bài) ·
+> `dot217-claims.html` (giành team) · `dot217-stolen.html` (bị giành giữa ván).
+> ⚠️ Bộ giả `scratch/fake-firebase.js` nay **có `runTransaction`** (Đợt 217 thêm) — thiếu nó thì
+> `publishTable`/`writeMyClaim`/`releaseTeamClaim` không bench nào chạy qua được.
+>
+> ⚠️⚠️ **BỐN BẪY ĐO của chuỗi này, đọc trước khi tự test** (đầy đủ ở `core/HUONG DAN CORE.md`):
+> (a) **`ResizeObserver` bắn 0 lần khi khung hình đứng** — kể cả lần đầu lúc bắt đầu quan sát; cùng họ
+> với bẫy rAF, nhưng `setTimeout` thì VẪN chạy đúng nhịp ở chính hoàn cảnh đó;
+> (b) trong FIGHT, **hàng nút công cụ là của chung, nằm NGOÀI hai bàn** — bench tìm nút trong
+> `.aw-fight-board` sẽ ra rỗng và treo im lặng;
+> (c) **`browserId()` được tạo lười** — đọc thẳng `sessionStorage` khi chưa ai hỏi thì ra rỗng, và lỗi
+> này **chỉ lộ ra khi chạy trong tab HIỆN**;
+> (d) `visibilityState:"hidden"` **đóng băng CSS transition** ⇒ mọi số ĐỘNG đo lúc đó là rác (Đợt 215b).
+
+> ⬜ **BẢN BÀN GIAO CŨ (Đợt 190 + 191, 18/8/2026)** — giữ lại bên dưới vì các dòng ⬜ của nó vẫn
+> là việc chỉ mắt/tay thầy kiểm được; **số liệu trạng thái trong đó ĐÃ LỖI THỌI**, lấy theo khối trên.
+
+#### (bản cũ) Đứng ở đâu — 18/8/2026, sau Đợt 190 + 191
 
 > ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC DỞ DANG.** Đợt 190 + 191 đã **commit `52173f4` + push + LIVE + đối
 > chiếu 11/11 mã băm**. 11 file code đã sửa: `core/lesson-import.js` · `core/content-view.js` ·
@@ -3713,10 +3762,28 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐ **CẬP NHẬT 18/8/2026 (sau Đợt 189) — ĐÂY LÀ DANH SÁCH ĐÚNG. Mọi khối ⬜ bên dưới là của các đợt
+> ⭐⭐⭐ **CẬP NHẬT 20/8/2026 (sau Đợt 217) — ĐÂY LÀ DANH SÁCH ĐÚNG. Mọi khối ⬜ bên dưới là của các đợt
 > CŨ HƠN, giữ lại vì phần lớn vẫn là "chỉ mắt/tay thầy mới kiểm được".**
 >
-> **KHÔNG có việc code nào dang dở.** Kho sạch, 3 đợt gần nhất đã LIVE và đối chiếu mã băm.
+> **KHÔNG có việc code nào dang dở.** Kho sạch, Đợt 216 + 217 đã LIVE (11/11 mã băm, 12/12 phép hỏi
+> môđun trên bản live). **Việc kế tiếp = HỎI THẦY** — ⛔ đừng tự chọn việc lớn, cũng đừng hỏi trống
+> không: đọc mục 3 ở trên rồi hỏi vào đúng mảng đang chạy.
+>
+> ⬜ **CHÍN VIỆC CHỈ MẮT/TAY THẦY TRÊN TOMKO LÀM ĐƯỢC** (máy đã đo hết phần đo được):
+> 1. ⭐⭐ **(Đợt 216) CHẠM THẬT VÀO THANH TRƯỢT trên màn TOMKO** — phép thử cuối cùng, và là thứ máy này
+>    **không làm được** (không máy build nào có màn cảm ứng). Nếu vẫn nhảy tới chỗ chạm thì hướng dự
+>    phòng đã sẵn: huỷ `touchstart` (`{passive:false}`) cho cú chạm ngoài nút, đổi lại là mất cuộn panel.
+> 2. **(Đợt 217) Nhãn "Picked ✓" nằm ở ĐÁY TRONG CỘT** chứ không dưới mép ngoài như thầy tả — dưới mép
+>    ngoài sẽ bị `.aw-sd-cols` cắt cụt hoặc đè lên hàng nút chân bảng. Thầy xem có chịu không.
+> 3. **(Đợt 217) Hai máy thật giành team của nhau**: máy bị giành có dừng đúng lúc không, lời báo đủ rõ chưa.
+> 4. **(Đợt 217) Che bài trong trận thật**: mờ 12% của quiz/true-false/find-the-match nhìn từ cuối lớp đã
+>    đủ kín chưa, hay còn đoán được.
+> 5. **(Đợt 217) Tên hàng cuối phễu trên màn 86"** bị thu nhỏ tới đâu thì thầy thấy khó đọc.
+> 6. **(Đợt 217) Reset đội nhiều lần liên tiếp trên 2-3 máy** — xác nhận không còn ca nào kẹt người.
+> 7. **(Đợt 216) Chơi thật một trận ở nấc ∞**: thanh chờ đứng-thở-lấp-lánh nhìn từ cuối lớp có hiểu là
+>    "đang đợi đội kia" không · và lớp có chịu được việc vòng không tự sang câu mới không.
+> 8. **(Đợt 216) Chốt 0,5 giây sau START** có thấy "đơ" không — nới/thu chỉ là sửa `START_GUARD_MS`.
+> 9. **(Đợt 216) Bước 0,5s ở vùng trên của Time delay** có đủ tinh không, hay thầy muốn 0,1s suốt cả thanh.
 >
 > **Việc kế tiếp = HỎI THẦY.** Thầy đang đi từng đợt ngắn trên **Fight mode** và tự chỉ hướng mỗi lần
 > ("Điều chỉnh tiếp theo: …"). ⛔ Đừng tự chọn việc lớn; cũng đừng hỏi trống không — đọc mục 3 ở trên
