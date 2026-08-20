@@ -13,7 +13,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > ✅ **THẦY DUYỆT ĐỢT 216 VÀ GIAO TIẾP SÁU VIỆC NÀY**, chốt *"rồi commit + push + ghi nhật ký hồ sơ
 > một thể"* ⇒ **Đợt 216 + 217 đi CHUNG MỘT COMMIT**. Sửa **11 file code** + 3 file hồ sơ.
 > ĐÃ COMMIT `6244fe0` + PUSH + **LIVE** — đối chiếu **11/11 file trùng mã băm SHA-256** trên
-> `aword.andrewclasses.com` (đã `tr -d ''` cả hai đầu theo bẫy CRLF Đợt 213b), và **12/12 phép hỏi
+> `aword.andrewclasses.com` (đã `tr -d '\r'` cả hai đầu theo bẫy CRLF Đợt 213b), và **12/12 phép hỏi
 > module chạy trên CHÍNH BẢN LIVE**: `tieWindowMsOf(0)=∞` · giữ 7s/10s · snap 7,3→7,5 · act cũ 3,0 không
 > nhúc nhích · đáy phễu 52 · có `releaseTeamClaim` · chốt START **522ms** · che bài quiz `0.12` · bảng công
 > cụ dừng đồng hồ rồi chạy lại. Kho sạch, `main` = `origin/main`.
