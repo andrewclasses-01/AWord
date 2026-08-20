@@ -186,7 +186,32 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
       (span > 0 ? Math.max(0, Math.min(100, ((v - min) / span) * 100)) : 0) + "%");
   };
   paint(cur);
-  s.oninput = () => { const v = clamp(s.value); paint(v); onInput(v); };
+  s.oninput = () => {
+    // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — THE TOUCH-PANEL LEAK, PLUGGED HERE.
+    // "chạm vào vị trí nào thì thanh trượt về ngay chỗ đó chứ không nhảy 1 nấc
+    // như khi click chuột". Đợt 213's whole gesture (tap right = +1, tap left =
+    // −1) was being bypassed by every finger on the TOMKO panel, and only by
+    // fingers — with a mouse it has always worked.
+    // ⛔⛔ WHY THE `preventDefault` BELOW WAS NEVER ENOUGH: per the Pointer Events
+    // spec, cancelling `pointerdown` suppresses the compatibility MOUSE events
+    // and nothing else — a touch's own default action is not cancellable there
+    // (that is what `touch-action` and `touchstart` are for). Chromium drives a
+    // range input's touch dragging through that other path, so it kept jumping
+    // the thumb to the finger. Nobody caught it in three đợt because no build
+    // machine here has a touchscreen and a mouse takes the cancellable path.
+    // ⭐ SO THE GUARD IS ON THE VALUE, NOT ON THE EVENT. While an off-thumb press
+    // is in flight, `guardValue` holds what the slider read when the finger
+    // landed, and any move the browser makes by itself is put straight back —
+    // synchronously, inside the same event, so no intermediate frame is ever
+    // painted and there is nothing to see. It cannot be outflanked by whatever a
+    // future engine decides `preventDefault` means, and unlike cancelling
+    // `touchstart` it does not take the panel's own scrolling away with it.
+    // ⚠️ A TRACK DRAG STILL DOES NOTHING, which is Đợt 213's rule unchanged: the
+    // guard simply keeps undoing the native move for as long as the finger is
+    // down, and endPress() below declines to add a notch once it has seen a drag.
+    if (guardValue !== null) { s.value = guardValue; return; }
+    const v = clamp(s.value); paint(v); onInput(v);
+  };
 
   // ⭐⭐ Đợt 213 (thầy, 20/8/2026) — WHICH SIDE OF THE THUMB YOU TAP IS THE SIGN.
   //   "trong các thanh trượt: chạm vào khoảng trống bên phải (nút chưa tới) để
@@ -241,6 +266,9 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
   // count up to the finger, then start counting back down. The side is a fact
   // about where the press LANDED, so it is read once, when it lands.
   let downSign = 0;
+  // Đợt 216 — the value the slider held when an OFF-THUMB press landed, or null
+  // when no such press is in flight. Read by s.oninput above; see its note.
+  let guardValue = null;
   s.addEventListener("pointerdown", ev => {
     if (ev.pointerType === "mouse" && ev.button !== 0) return;
     downAt = ev.clientX;
@@ -254,11 +282,25 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
     // browser, untouched, so "chạm vào nút vị trí và kéo như thông thường" keeps
     // working exactly as it always has (including the live oninput above).
     onThumb = Math.abs(dx) <= THUMB / 2 + 4;
-    if (onThumb) return;
+    if (onThumb) { guardValue = null; return; }
     // Anywhere else: kill the default jump-to-position BEFORE it happens. The
     // value must not move at all until pointerup tells us tap or drag.
+    // ⚠️ Đợt 216 — `preventDefault` is kept because it is the CLEAN stop on a
+    // mouse (no value change happens at all, so nothing has to be undone). It is
+    // simply not the whole answer on a touchscreen — `guardValue` is. Removing
+    // either one leaves half the input devices behaving differently from the
+    // other half, which is exactly the bug this pair closes.
+    guardValue = s.value;
     ev.preventDefault();
     s.focus({ preventScroll: true });         // preventDefault also swallows focus
+    // ⚠️⚠️ CAPTURE, OR THE GUARD CAN GET STUCK ON. `guardValue` is cleared by
+    // pointerup/pointercancel — and without capture neither has to arrive at this
+    // element: lift the finger a few pixels off the slider and the events go to
+    // whatever is under it instead, leaving the guard latched and the slider dead
+    // to every later touch until the panel is rebuilt. Capture makes the whole
+    // press come back here whatever it wanders over. `lostpointercapture` is the
+    // last-resort release for the cases the browser takes the pointer away.
+    try { s.setPointerCapture(ev.pointerId); } catch { /* nothing captured; the handlers below still run */ }
   });
   s.addEventListener("pointermove", ev => {
     if (downAt === null || dragged) return;
@@ -268,6 +310,10 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
     if (downAt === null) return;
     const wasThumb = onThumb, wasDrag = dragged, sign = downSign;
     downAt = null; onThumb = false; dragged = false; downSign = 0;
+    // Đợt 216 — released BEFORE setValue() below, which writes the new value
+    // through paint()/onInput() by hand: leave the guard latched and s.oninput
+    // would still be armed to undo whatever the notch just did.
+    guardValue = null;
     // Thumb drag: the browser already moved it. Track drag: deliberately does
     // nothing (thầy's way to move a lot is to grab the thumb).
     if (wasThumb || wasDrag) return;
@@ -279,9 +325,11 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
     setValue(Number(s.value) + sign * stepN);
   };
   s.addEventListener("pointerup", endPress);
-  s.addEventListener("pointercancel", () => {
-    downAt = null; onThumb = false; dragged = false; downSign = 0;
-  });
+  const abortPress = () => {
+    downAt = null; onThumb = false; dragged = false; downSign = 0; guardValue = null;
+  };
+  s.addEventListener("pointercancel", abortPress);
+  s.addEventListener("lostpointercapture", abortPress);
 
   c.ctl.append(s, chip);
   return { ...c, slider: s, chip, paint };

@@ -72,7 +72,10 @@ const DONE_MS = 1600;
 // core/showdown-setup.js draws the same taper at a tenth of the size. Two
 // copies of these two numbers is two funnels of different shapes a month later.
 export const POD_MAX_W = 80;
-export const POD_MIN_W = 46;
+// ⭐ Đợt 217 — đáy phễu nới từ 46 lên 52 (thầy: *"giãn rộng hơn các ô ra một chút"*).
+// Hàng cuối là hàng chật nhất mà vẫn phải đủ chỗ cho tên + huy hiệu đội + bốn con số;
+// 6 điểm phần trăm ở đáy đủ để một tên dài thôi phải viết tắt, mà vẫn còn thấy rõ độ thuôn.
+export const POD_MIN_W = 52;
 
 // ⭐ Đợt 207 — HOW FAR A NAME MAY SHRINK before it is abbreviated instead
 // (thầy: "không bao giờ để khuyết hiển thị thông tin, nếu tên quá dài và ô quá
@@ -86,6 +89,12 @@ const NAME_MIN_RATIO = 0.62;
 // Each step of the shrink. 6% is small enough that the result never looks a size
 // too small, and with the floor above it bottoms out in about eight passes.
 const NAME_STEP = 0.94;
+// ⭐⭐ Đợt 217 — SÀN CUỐI CÙNG, chỉ dùng SAU khi đã viết tắt mà vẫn không vừa.
+// Thầy: *"để không bao giờ bị thiếu tên nữa"* — nên `NAME_MIN_RATIO` thôi làm hàng rào
+// tuyệt đối: nó vẫn là mức đổi sang viết tắt, nhưng khi cả bản viết tắt cũng tràn thì
+// **chữ nhỏ xíu vẫn hơn chữ bị cắt** — cắt là mất hẳn thông tin, nhỏ là vẫn đọc được khi
+// lại gần. Thực tế đo ở đợt này chưa ca nào chạm tới đây; nó là lưới cuối.
+const NAME_HARD_MIN_RATIO = 0.40;
 
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
@@ -968,7 +977,13 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
 export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
   if (!root || !root.querySelectorAll) return;
   const fits = nm => nm.scrollWidth <= nm.clientWidth + 0.5;
+  // ⭐ Đợt 217 — `pass()` nay TRẢ LỜI "có đo được không", chứ không chỉ làm rồi thôi.
+  // Cả bảng vẽ bằng `cqw`, nên khi vùng chứa chưa có bề ngang thì cỡ chữ tính ra 0 và
+  // hàm này không thể quyết được gì. Trước đợt này nó lặng lẽ trả về và tên ở nguyên
+  // cỡ với dấu "…" — người gọi không có cách nào biết là mình vừa bị bỏ qua.
+  let measured = false;
   const pass = () => {
+    measured = true;
     root.querySelectorAll(sel).forEach(nm => {
       const full = nm.dataset.full || nm.textContent || "";
       // Always start from the top: this may be a second pass, or a re-fit after
@@ -976,9 +991,10 @@ export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
       // been shrunk would ratchet it down a little further every time.
       nm.style.fontSize = "";
       nm.textContent = full;
+      if (!nm.clientWidth) { measured = false; return; }   // Đợt 217 — chưa có gì để đo
       if (fits(nm)) return;
       const base = parseFloat(getComputedStyle(nm).fontSize) || 0;
-      if (!base) return;
+      if (!base) { measured = false; return; }
       const floor = base * NAME_MIN_RATIO;
       const shrink = () => {
         let size = base;
@@ -995,13 +1011,76 @@ export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
       nm.textContent = shortenName(full);
       nm.style.fontSize = "";
       shrink();
+      if (fits(nm)) return;
+      // ⭐⭐ Đợt 217 — LƯỚI CUỐI: viết tắt rồi mà vẫn tràn thì đi tiếp xuống dưới sàn.
+      // `NAME_MIN_RATIO` là mức "thà viết tắt còn hơn nhỏ thêm", KHÔNG phải mức "thà
+      // cắt còn hơn nhỏ thêm" — mà trước đợt này nó bị dùng như cả hai. Chữ nhỏ vẫn
+      // đọc được khi lại gần; chữ bị cắt thì mất hẳn thông tin, và đó đúng là thứ
+      // thầy bảo "không bao giờ" được xảy ra nữa.
+      let size = floor;
+      const hard = base * NAME_HARD_MIN_RATIO;
+      while (size > hard && !fits(nm)) {
+        size *= NAME_STEP;
+        nm.style.fontSize = size.toFixed(2) + "px";
+      }
     });
   };
-  const both = () => { pass(); placePodiumCounts(root); };
+  const both = () => { pass(); placePodiumCounts(root); return measured; };
   both();
   // The re-run is scheduled, never awaited: a browser without `document.fonts`
   // (or one where the promise never settles) still gets the first pass.
   try { document.fonts?.ready?.then(both); } catch { /* first pass stands */ }
+
+  // ⭐⭐ Đợt 217 — THỬ LẠI KHI CHƯA ĐO ĐƯỢC, bằng đồng hồ chứ không bằng khung hình.
+  // ⛔⛔ Vì sao không giao hết cho `ResizeObserver` ở dưới: RO được giao TRONG vòng
+  // dựng khung hình, mà một cột myActivity bị che (hoặc pane trình duyệt bị ẩn) thì
+  // vòng đó ĐỨNG HẲN — đo tại chỗ: **0 lần bắn, kể cả lần bắn đầu lúc bắt đầu quan
+  // sát**. `setTimeout` thì vẫn chạy đúng nhịp ở chính hoàn cảnh đó (đo: mốc 20ms ra
+  // 20/41/61/82…), nên nó là thứ duy nhất với tới được ca "bảng dựng lúc còn ẩn".
+  // ⚠️ CÓ ĐÁY, và TỰ TẮT: bốn lần, dừng ngay khi đo được hoặc khi bảng rời khỏi
+  // trang. Một vòng thử vô hạn ở đây chính là đồng hồ ma của Đợt 112/131.
+  if (!measured) {
+    const RETRY_MS = [60, 180, 500, 1200];
+    let n = 0;
+    const again = () => {
+      if (!root.isConnected) return;      // bảng đã bị thay — thôi
+      if (both()) return;                 // đo được rồi
+      if (n < RETRY_MS.length) setTimeout(again, RETRY_MS[n++]);
+    };
+    setTimeout(again, RETRY_MS[n++]);
+  }
+
+  // ⭐⭐⭐ Đợt 217 — ĐO LẠI MỖI KHI CÓ THỨ MỚI ĐỂ ĐO (thầy: tên vẫn bị "…").
+  // ⛔⛔ HAI CA LÀM HỎNG, CẢ HAI ĐÃ ĐO ĐƯỢC, và không ca nào là lỗi thuật toán —
+  // thuật toán chạy đúng 0/12 tên bị cắt ở cả ba bề ngang khi được gọi lúc bảng
+  // ĐANG hiện:
+  //   1. **Gọi lúc bảng chưa có bề ngang** (panel còn ẩn, cột myActivity chưa dựng
+  //      xong). Cả bảng vẽ bằng `cqw`, nên container rộng 0 ⇒ cỡ chữ tính ra 0 ⇒
+  //      `if (!base) return` bỏ cuộc TRONG IM LẶNG, và tên nằm nguyên cỡ với dấu "…"
+  //      — đúng cái ảnh thầy gửi (đo lại: 3/12 tên bị cắt, font vẫn 14.04px).
+  //   2. **Fit lúc rộng rồi khung hẹp lại** (toàn màn hình tắt đi, cột myActivity bị
+  //      kéo hẹp, xoay màn). Không ai đo lại ⇒ tên tràn (đo: 1/12).
+  // Một `ResizeObserver` đóng cả hai cửa bằng một cơ chế: nó bắn NGAY khi bắt đầu
+  // quan sát (nên ca 1 tự chữa lúc bảng hiện ra) và bắn lại mỗi lần bề ngang đổi.
+  // ⚠️ CHỈ PHẢN ỨNG VỚI BỀ NGANG. `pass()` đổi cỡ chữ ⇒ đổi CHIỀU CAO bảng ⇒ RO bắn
+  // lại: nghe cả hai chiều là một vòng lặp tự nuôi. Thêm cờ `busy` chặn tái nhập.
+  // ⚠️ Gọi lại `fitPodiumNames` trên cùng một gốc thì phải NGẮT cái cũ, không thì
+  // mỗi lần vẽ lại bảng là chồng thêm một observer sống mãi (bài học đồng-hồ-ma của
+  // Đợt 112/131, đúng họ với nó).
+  try {
+    if (root.__awFitRO) root.__awFitRO.disconnect();
+    let lastW = 0, busy = false;
+    const ro = new ResizeObserver(() => {
+      if (busy) return;
+      const w = Math.round(root.clientWidth || 0);
+      if (!w || w === lastW) return;
+      lastW = w;
+      busy = true;
+      try { both(); } finally { busy = false; }
+    });
+    ro.observe(root);
+    root.__awFitRO = ro;
+  } catch { /* không có ResizeObserver: hai lượt ở trên vẫn đứng */ }
 }
 
 /**

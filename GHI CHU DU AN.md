@@ -8,6 +8,433 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 217 (20/8/2026) — ⭐⭐ SÁU VIỆC MỘT LƯỢT: TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG LAN · CHE BÀI KHI FIGHT · RESET SẠCH
+
+> ✅ **THẦY DUYỆT ĐỢT 216 VÀ GIAO TIẾP SÁU VIỆC NÀY**, chốt *"rồi commit + push + ghi nhật ký hồ sơ
+> một thể"* ⇒ **Đợt 216 + 217 đi CHUNG MỘT COMMIT**. Sửa **11 file code** + 3 file hồ sơ.
+> **0 lỗi console.** Bàn thử (`scratch/`, gitignored): `dot217-pod.html` (tên trong phễu) ·
+> `dot217-pause.html` (tạm dừng + che bài) · `dot217-claims.html` (giành team + hồ bơi) ·
+> `dot217-stolen.html` (bị giành giữa ván) · `dot217-conceal.js` (dò selector che bài).
+
+### Thầy giao
+
+1. *"Trong bảng nón ngược vẫn xuất hiện các tên bị … Cần có phương án thu nhỏ text, giãn rộng hơn
+   các ô ra một chút hoặc mặc định viết tắt tên… để không bao giờ bị thiếu tên nữa."*
+2. *"cho phép các máy bất kỳ có thể xóa lưu team của đội khác… Với các đội đã được đội khác chọn,
+   cần có thêm chữ 'Picked ✓' màu xanh… Đội bị lấy mất team cũng sẽ báo… và buộc dừng game."*
+3. *"Khi Fight, 1 bên bấm nút menu thì bên còn lại cũng tạm dừng game cùng"*
+4. *"Trong mọi chế độ, bấm bất cứ nút tùy chỉnh nào mà hiện pop-up thì game đều tạm dừng như khi bấm
+   menu (fight thì dừng cho cả 2)"*
+5. *"Trong chế độ fight, nếu bật delay, đội xong trước… phải có phương án ẩn ngay câu trả lời"*
+6. *"Reset đội trong showdown vẫn chưa sạch… phải reset được triệt để trong mọi tình huống"*
+
+Hai lựa chọn hỏi qua AskUserQuestion, thầy chốt: **chỉ che dấu vết trả lời** (không làm mờ cả bàn) ·
+**chỉ áp dụng từ 0,2s trở lên**.
+
+---
+
+## 1. TÊN TRONG PHỄU — `core/showdown-review.js`
+
+### ⭐ Thuật toán KHÔNG sai; sai ở chỗ NÓ ĐƯỢC GỌI LÚC NÀO
+
+Đo trước khi sửa một dòng nào (`scratch/dot217-pod.html`, dựng bằng **module thật**, 12 tên Việt dài):
+
+| Ca | Số tên bị cắt |
+|---|---|
+| Không gọi `fitPodiumNames` | 3/12 |
+| Gọi bình thường ở 900 / 560 / 380px | **0/12 — thuật toán đúng** |
+| **Gọi lúc bảng đang ẩn** rồi mới hiện ra | **3/12, font NGUYÊN CỠ** ← đúng ảnh thầy gửi |
+| **Fit lúc rộng rồi khung hẹp lại** | 1/12 |
+
+⛔ Cả bảng vẽ bằng `cqw` ⇒ vùng chứa rộng 0 thì cỡ chữ tính ra **0** ⇒ `if (!base) return` **bỏ cuộc
+trong im lặng**, để lại tên nguyên cỡ với dấu "…". Không có tiếng kêu nào.
+
+### ⛔⛔ `ResizeObserver` không đủ một mình — nó ngủ cùng vòng dựng khung hình
+
+Vá đầu tiên của em là một `ResizeObserver`, và nó **không chữa được ca 2**. Đo tại chỗ mới lộ:
+pane ẩn ⇒ RO **bắn 0 lần, kể cả lần bắn đầu lúc bắt đầu quan sát**. Đúng họ với bẫy rAF đã ghi từ
+Đợt 139. `setTimeout` thì vẫn chạy đúng nhịp ở chính hoàn cảnh đó (đo: mốc 20ms ra 20/41/61/82…).
+
+⇒ **Hai lớp**: RO (bắt mọi lần đổi bề ngang khi khung hình có chạy) **+ vòng thử lại 4 lần có đáy**
+(60/180/500/1200ms, tự dừng khi đo được hoặc khi bảng rời khỏi trang) cho ca "dựng lúc còn ẩn".
+⚠️ RO chỉ nghe **BỀ NGANG** — `pass()` đổi cỡ chữ ⇒ đổi chiều cao ⇒ nghe cả hai chiều là vòng lặp tự
+nuôi; và gọi lại trên cùng một gốc thì phải **ngắt** observer cũ (`root.__awFitRO`), không thì mỗi lần
+vẽ lại bảng là chồng thêm một observer sống mãi (đúng họ đồng-hồ-ma Đợt 112/131).
+
+### ⭐ Lưới cuối + nới đáy phễu
+
+`NAME_MIN_RATIO` (0.62) là mức *"thà viết tắt còn hơn nhỏ thêm"* — **không phải** *"thà cắt còn hơn
+nhỏ thêm"*, mà trước đợt này nó bị dùng như cả hai. Nay viết tắt rồi vẫn tràn thì đi tiếp xuống
+`NAME_HARD_MIN_RATIO = 0.40`. Và đáy phễu nới **46% → 52%** theo đúng gợi ý của thầy.
+
+**Đo lại sau khi vá**: ca "dựng lúc ẩn" 0/12 · ca "khung 300px" 0/12 · "dựng lại 5 lần" 0/12.
+✅ **Đã nhìn bằng mắt trong Chrome thật**: 12 hàng, không hàng nào còn "…", kể cả `TRẦN THỊ HOÀNG MAI
+ANH` và `NGUYỄN TRẦN CHẤN PHONG`.
+
+---
+
+## 2 + 3 + 4. TẠM DỪNG NAY CÓ **LÝ DO** — `core/engine.js` + `core/fight.js`
+
+Hai câu thầy giao (menu lan sang bàn kia · mọi bảng công cụ cũng dừng) hoá ra là **một** việc.
+`enterMenuPause/exitMenuPause` tách làm hai tầng: `freezePlay()/thawPlay()` giữ **thân** (đồng hồ ·
+`AudioContext` · mp3 · animation trong sân · `tpl.onPause`), còn `enterPause(reason,{dim})` /
+`exitPause(reason)` giữ **tập lý do** + tấm che + chuyển tiếp.
+
+- ⛔⛔ **PHẢI LÀ TẬP, KHÔNG ĐƯỢC LÀ CỜ.** Mở Options → bấm ☰ Menu → đóng Menu: với một cờ thì chính cú
+  đóng đó **thả đồng hồ chạy lại trong lúc bảng Options vẫn che kín màn**. Đã dựng thành phép đo riêng
+  (nhóm C) chứ không chỉ suy luận.
+- ⛔ **Chỉ `"menu"`/`"panel"` chuyển tiếp**; `"relay"` là do bàn kia gửi, chuyển tiếp ngược lại là vòng
+  lẩn quẩn.
+- ⚠️⚠️ **`dim` ĐI THEO NGUỒN.** ☰ Menu tối một bàn ⇒ bàn kia tự đắp tấm che. Bảng công cụ đã phủ tối cả
+  khung nhìn bằng `.aw-tool-dim` ⇒ bàn kia đắp thêm là **nửa màn hình bên đó tối hơn hẳn nửa bên này**,
+  trông y như lỗi. API mới: `fight.ctl.registerPause(side, fn)` + `setPaused(side, on, dim)`, cùng
+  khuôn `registerWaitBar` (trọng tài giữ luật, engine giữ pixel).
+- ⚠️ `exitPause("panel")` đặt **SAU** `if (!dim && !panel) return;` trong `closeToolPanel` —
+  `openToolPanel` gọi `closeToolPanel(false)` dọn dẹp lúc chưa có bảng nào, gỡ lý do sớm hơn là mỗi
+  lần mở bảng có một nhịp thả-rồi-khoá đồng hồ.
+
+---
+
+## 5. CHE DẤU VẾT TRẢ LỜI KHI FIGHT — `.aw-fight-board.is-concealed`
+
+Cửa sổ chờ nay tới **10 giây** (Đợt 216) — mười giây đội kia được liếc sang bàn bên, thứ mà cửa sổ
+0,1s của Đợt 133 chưa bao giờ cho đủ thời gian.
+
+⭐⭐ **MỘT LỚP CSS, KHÔNG PHẢI MỘT HỢP ĐỒNG MỚI.** `core/fight.js` gắn `.is-concealed` lên vỏ bàn của
+mình; *cái gì* là "dấu vết trả lời" thì **template tự khai** bằng vài dòng CSS. Một hàm `conceal()`
+trong `ctl.attach` sẽ bắt bảy template sửa JS, và template nào quên là **im lặng hở bài** — đúng thứ
+luật tự-chọn-tham-gia của Đợt 143 sinh ra để chặn.
+
+| Template | Che gì |
+|---|---|
+| quiz | `.aw-quiz-answers` mờ còn 12% — không đọc được chữ, cũng không đoán được ô nào vừa chọn |
+| anagram | `.aw-anagram-rtile/-otile/-reveal` → `color: transparent` (thầy: *"không hiện chữ trong ô nữa"*) |
+| type-the-answer | `.aw-tta-answer-area` + input + slot → chữ trong suốt |
+| true-false | `.aw-tf-buttons` mờ (hai nút thì "bấm nút nào" CHÍNH LÀ đáp án) |
+| find-the-match | `.aw-ftm-grid` mờ (chỗ trống của cặp đã ghép cũng là đáp án) |
+
+Crossword và Open the box **không cần**: chúng là `fightPick`, vốn bị niêm phong khỏi Time delay.
+
+- ⚠️ **CHỈ CHE, KHÔNG DỜI** — cấm `display`/`width`/`transform`: bàn kia đang chơi ngay cạnh, một cú
+  nhảy bố cục ở nửa màn hình này đập vào mắt còn to hơn chính đáp án bị lộ.
+- ⚠️ Đặt ngay sau `roundDone[side] = true` — điểm DUY NHẤT mọi kiểu kết thúc của một bàn đều đi qua.
+  `revealBoards()` gỡ che **trước** khi lật bài, đồng bộ cùng nhịp ⇒ ca "xong là đóng vòng luôn"
+  không nháy khung hình nào. **In turns tự miễn nhiễm** không cần điều kiện riêng.
+- ✅ Đã dò từng selector trên **app thật** của cả 5 template: 5/5 trúng phần tử thật và đổi đúng thuộc
+  tính (một tên class gõ sai ở đây là một lệnh không làm gì mà không ai biết).
+
+---
+
+## 2b. GIÀNH LẠI TEAM — `core/showdown-setup.js` + `core/engine.js`
+
+### ⭐ Không cần tầng dữ liệu mới, chỉ cần một hàm ghi dám đụng hàng người khác
+
+`releaseTeamClaim(teamId)` — hàm ghi DUY NHẤT trong file dám xoá hàng của trình duyệt khác. Nó xoá một
+**chỗ đặt gạch**, không xoá dữ liệu; trước đợt này chỗ đặt gạch chỉ mất theo **TTL 12 giờ**, nên một
+máy tắt giữa buổi khoá cứng đội đó tới sáng hôm sau và không màn nào trong lớp gỡ ra được.
+
+⛔ **HAI BƯỚC, KHÔNG PHẢI MỘT**: ✗ chỉ **nhả** đội ra, thầy bấm dấu tích mới **lấy**. Đúng câu thầy
+viết (*"xóa đội đó đi… VÀ chọn team đó"*), và một cú chạm nhầm chỉ nhả ra chứ không kéo cả máy sang
+một đội khác.
+
+### ⚠️⚠️ `opacity` trên cột cha là thứ chặn cả hai tính năng
+
+`.aw-sd-col.is-taken` cũ có `opacity:.42` **và** `pointer-events:none` trên CẢ cột. `opacity` nhân
+xuống toàn bộ cây con và **không có đường lùi** — nhãn "Picked ✓" sẽ mờ theo, dấu ✗ cũng mờ theo và
+không bấm được. Nay độ mờ đắp lên `.aw-sd-colname` + `.aw-sd-colmembers`; cột vẫn trơ vì từng điều
+khiển đã `disabled` sẵn từ trước và cột bị lấy không được gắn `onclick`.
+
+⚠️ Nhãn **"Picked ✓"** nằm TRONG cột, ghim đáy bằng `margin-top:auto`. Đặt ở `top:100%` (dưới mép
+ngoài thật, đúng chữ thầy) thì `.aw-sd-cols` cắt cụt hoặc nó đè lên hàng nút chân bảng — **đây là chỗ
+em làm khác lời thầy một chút, chờ thầy xem có chịu không**.
+
+### ⚠️⚠️ Máy bị giành: điều kiện là "CÓ NGƯỜI KHÁC ĐANG GIỮ", không phải "KHÔNG CÒN AI GIỮ"
+
+Ranh giới này quyết định tính năng dùng được hay không. Một chỗ đặt gạch **không có** có thể chỉ nghĩa
+là hết TTL 12 giờ, là mạng lớp rớt, là bảng chưa từng publish — **dừng ván giữa giờ vì mấy thứ đó tệ
+hơn hẳn cái nó chữa**. Chỉ `c.by !== me` mới là bằng chứng dương tính. Bench có **đối chứng ngược**:
+xoá sạch claim ⇒ ván **vẫn chạy tiếp**; ghi tên máy khác lên ⇒ tấm chặn hiện ra.
+
+⛔ **Tấm chặn `.aw-sd-stolen` KHÔNG CÓ NÚT ĐÓNG** — thầy giao *"buộc dừng game, không cho tiếp tục"*.
+Nút duy nhất **mở bảng Showdown** chứ không gỡ tấm chặn; đóng bảng đi thì ván vẫn đứng nguyên. Đường ra
+hợp lệ là chọn đội rồi Ready (Ready dựng lại ván nên tấm chặn tự mất). Nó phủ khung chơi chứ **không**
+phủ hàng nút dưới khung — nút MODE phải còn bấm được, nếu không thì "chọn team để chơi lại" thành ngõ
+cụt. Lý do dừng mang tên riêng `"stolen"` để cú đóng bảng công cụ không thả đồng hồ chạy sau lưng nó.
+
+⚠️ Bộ nghe **nhập ĐỘNG** và chỉ khi thật sự đang chơi Showdown — trang học sinh tuyệt đối không được
+tải file chạm Firestore (luật 2 của v0.9.0). Gỡ trong `cleanupAll()` cùng chỗ `stopShowdownReview()`.
+
+---
+
+## 6. RESET SẠCH — BA CHỖ, KHÔNG PHẢI MỘT
+
+1. ⛔⛔ **`roster = saved` trong `boot()` — GỐC RỄ, và trông rất vô hại.** Một dòng đặt danh sách lớp
+   thành ĐÚNG những người đang nằm trong một cột nào đó. Hệ quả: ai **không** ở cột nào thì **không
+   còn tồn tại trên màn hình đó nữa** — không có trong hồ bơi để kéo vào đội, không có trong cột nào
+   để nhấc ra. Đúng câu thầy tả: mở bảng lên, thiếu người, và không thao tác nào lôi họ về được.
+   Ba đường sinh ra ca này, không đường nào hiếm: nhấc một bạn khỏi cột rồi đóng bảng · lớp được thêm
+   học sinh sau khi đã chia đội · bảng cũ dựng lúc lớp còn thiếu người. **Nay GỘP** (`saved` đi trước
+   vì thứ tự cột là thứ tự thầy đã sắp; danh sách hôm nay chỉ gộp khi `rosterClass === classId`, đúng
+   cái chốt `rosterFor()` vẫn dùng — nếu không lớp B thừa hưởng người vắng của lớp A).
+2. ⛔ **`pool = []` trong `boot()`** — một giả định ("ai cũng đã được xếp rồi") thay cho một phép tính.
+   Nay `pool = roster − những-người-đã-ở-cột`, đúng phép mà `toBuild()` (nhánh `keepIt`) vẫn dùng.
+   Hai bản sao của cùng một câu hỏi mà trả lời khác nhau.
+3. ⚠️ **TIẾNG VỌNG CỦA CHÍNH CÚ RESET.** `wipeSetup()` ghi bảng RỖNG lên Firestore, và
+   `subscribeSetup` của **chính màn vừa reset** nghe thấy vài trăm ms sau — lúc đó ta đã dựng xong bộ
+   cột mới. Bộ nghe cũ không phân biệt "người khác reset" với "tiếng vọng của mình", nên nó **đè
+   `setup.teams` về rỗng** rồi bắn ta ngược về màn chọn lớp với hồ bơi trống. Một **cuộc đua** — nên
+   chỉ thỉnh thoảng cắn, đúng chữ *"đôi khi"* của thầy. Chốt bằng `justWipedUntil` (cửa sổ **8 giây
+   có hạn**, không phải cờ bật mãi: nếu để cờ thì một cú reset THẬT từ máy khác ngay sau đó bị nuốt).
+
+⭐ Việc 2 cũng chữa một nửa việc 6 theo đường khác: đội bị máy khác giữ **thôi là ngõ cụt**, nên những
+bạn nằm trong đó nay lấy lại được.
+
+---
+
+## ĐO — TOÀN BỘ TRÊN APP THẬT
+
+| Bàn thử | Kết quả |
+|---|---|
+| `dot217-pod.html` — tên trong phễu (module thật, 4 ca + đối chứng) | **0 tên bị cắt** ở mọi ca |
+| `dot217-pause.html` — tạm dừng + che bài (trận Fight quiz 2 bàn) | **18/18** |
+| `dot217-claims.html` — giành team, Picked ✓, hồ bơi | **19/19** |
+| `dot217-stolen.html` — bị giành giữa ván (có đối chứng ngược) | **15/15** |
+| Che bài: dò selector trên app thật 5 template | **5/5 trúng phần tử thật** |
+| Chế độ ĐƠN: bảng công cụ dừng đồng hồ, ☰ Menu vẫn có tấm che | đạt |
+| Chạy lại bench Đợt 216 sau khi sửa | **33/33** · chốt START **542ms** |
+
+⚠️ **BẪY ĐO ĐÃ DÍNH TRONG PHIÊN**:
+- `ResizeObserver` **bắn 0 lần** trong pane ẩn (kể cả lần đầu) — chính nó làm phép vá đầu tiên của em
+  trông như hỏng. Bẫy mới, cùng họ rAF, đã ghi vào `core/HUONG DAN CORE.md`.
+- Bộ giả Firebase **chưa bao giờ có `runTransaction`** (grep: 0 lần) ⇒ `publishTable`/`writeMyClaim`/
+  `releaseMyClaim` **chưa từng có bench nào chạy qua**. Đã bổ sung vào bộ giả trong `scratch/`.
+- Trong FIGHT, hàng nút công cụ là **của chung, nằm NGOÀI hai bàn** — bench tìm nút trong `.aw-fight-board`
+  ra rỗng và treo im lặng.
+- `browserId()` được **tạo lười**: đọc thẳng `sessionStorage` khi chưa ai hỏi thì ra rỗng ⇒ bench tự
+  đặt tên giả và bắt nhầm. **Chỉ lộ ra khi chạy trong tab HIỆN**, tab ẩn giấu mất vì nhịp khác.
+
+---
+
+### ⬜ CÒN LẠI — mắt/tay thầy
+
+1. **Nhãn "Picked ✓" nằm ở ĐÁY TRONG cột** chứ không phải dưới mép ngoài như thầy tả — nhìn thật có ổn
+   không, hay thầy muốn em nới chỗ dưới bảng ra để đẩy hẳn xuống dưới.
+2. **Chạm thật vào thanh trượt trên TOMKO** (còn treo từ Đợt 216).
+3. **Hai máy thật giành team của nhau**: máy bị giành có dừng đúng lúc không, lời báo có đủ rõ không.
+4. **Che bài trong trận thật**: mờ 12% của quiz/true-false/find-the-match nhìn từ cuối lớp đã đủ kín
+   chưa, hay còn đoán được.
+5. **Tên trong phễu trên màn 86"**: hàng cuối bị thu nhỏ tới đâu thì thầy thấy khó đọc.
+6. **Reset đội nhiều lần liên tiếp trên 2-3 máy** — xác nhận không còn ca nào kẹt người.
+
+---
+
+## Đợt 216 (20/8/2026) — ⭐⭐ CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY
+
+> ✅ **THẦY DUYỆT** (20/8/2026: *"Tôi duyệt các điều chỉnh trên"*) — đi **CHUNG MỘT COMMIT với Đợt 217**
+> theo đúng lời thầy (*"rồi commit + push + ghi nhật ký hồ sơ một thể"*). Sửa **4 file**: `core/engine.js` · `core/fight.js` ·
+> `core/options-panel.js` · `core/app.css` (+ hồ sơ `core/HUONG DAN CORE.md`). **0 lỗi console.**
+> Bàn thử (thư mục `scratch`, bị gitignore): `dot216-slider.html` + `dot216-run.js` (thanh trượt,
+> nạp **cả module cũ lẫn mới**) · `dot216-start.js` + `dot216-start-old.html` (chốt START, có bản `HEAD`
+> để đối chứng) · `dot216-delay.html` (trận Fight thật) · `dot216-bar.html` (xem thanh chờ ∞ bằng mắt).
+
+### Thầy giao ba việc một lượt
+
+1. *"Cần một chút delay khi bấm start bắt đầu game. Vì ngay khi start đã bấm được ngay nội dung rồi nên
+   một số pha vừa bấm start xong bấm nhầm ngay nội dung bên dưới."*
+2. *"chỉnh tgian Time delay trong options của các act có phần này: gốc từ 0,1 đến 3s chuyển thành từ 0,1
+   đến 10s (vẫn giữ nấc không giới hạn ở cuối cùng)"*
+3. *"khi chạm vào các thanh trượt bằng màn cảm ứng tomko, chạm vào vị trí nào thì thanh trượt về ngay chỗ
+   đó chứ không nhảy 1 nấc như khi click chuột => cần điều chỉnh để dù có chạm cảm ứng vào thì vẫn nhảy 1
+   nấc chứ không chuyển ngay nút kéo về vị trí đó"*
+
+Bốn lựa chọn được hỏi bằng `AskUserQuestion` và thầy chốt: **0,5 giây** · **nấc ∞ chờ thật sự vô hạn**
+(*"cứ chờ mãi thôi cho đến khi câu đó được hoàn thành"*) · **bước 0,1s tới 3s rồi 0,5s tới 10s** ·
+thanh chờ ở ∞ thì *"đứng đấy, thở nhẹ, nền sáng lấp lánh hào quang nhấp nháy chậm"*.
+
+---
+
+## 1. CHỐT 0,5 GIÂY SAU KHI BẤM START (`core/engine.js`)
+
+### Vì sao trước giờ không thể không lọt
+
+`press()` bắn ngay tại **pointerdown** (Đợt 175 — màn hồng ngoại phải thế, nếu không thì đa điểm không
+công bằng). Handler START cũ tắt `pointer-events` của tấm che ở **câu lệnh ngay sau đó**, còn `begin()`
+mount game ở câu kế tiếp. Tức là bề mặt chơi sống dậy trong lúc ngón tay còn đang trên đường xuống lần hai.
+
+**Đo bản cũ (`git show HEAD:core/engine.js`, dựng thành trang riêng): ô đáp án sống sau ĐÚNG 31ms** — tức
+mẫu ĐẦU TIÊN của phép đo đã thấy nó mở, chưa kịp lấy được một mẫu nào còn chặn.
+
+### Cách vá — không dựng thêm phần tử nào
+
+`.aw-play-overlay` vốn `inset:0` phủ đúng khung game, đúng lớp. Nên chỉ cần **thôi tắt `pointer-events`**
+là đã có tấm chắn sẵn đúng cỡ. Nó vẫn mờ đi đúng 260ms như cũ — chỉ khác là **mờ rồi mà vẫn nuốt cú chạm**
+cho tới mốc `START_GUARD_MS`.
+
+- ⚠️⚠️ **MỘT ĐỒNG HỒ, KHÔNG PHẢI HAI.** Cặp cũ `fade.onfinish` + dự phòng 350ms có lý do đúng đắn (tab ẩn
+  nuốt sự kiện animation) — và chính lý do đó bắt việc gỡ tấm che phải treo **HẲN vào `setTimeout`**, không
+  bao giờ vào animation. Để `onfinish` lại là game hở ra ở mốc 260ms, chốt coi như không tồn tại.
+- ⚠️ **`playStarted` là biến MỚI** thay cho phép hỏi `!playOverlay.isConnected` ở Options ▸ Apply. Hai câu
+  hỏi *"đã bấm PLAY chưa"* và *"tấm che còn trong DOM không"* **trước giờ là một, từ đợt này thì không**.
+  Chỉ có đúng một nơi đọc, và nơi đó hỏi câu thứ nhất.
+- ⚠️ **500ms là số ĐO, không phải số tròn tiện tay**: màn READY mờ hết trong 260ms nên mọi giá trị ≤ đó là
+  **không còn chốt nào** sau khi mắt đã thấy game hiện ra.
+
+### Đo
+
+`document.elementFromPoint` giữa vùng chơi, lấy mẫu 25ms một lần, xem cú chạm rơi vào tấm che hay vào game:
+
+| Bản | quiz | anagram | true-false |
+|---|---|---|---|
+| **CŨ (`HEAD`)** | **31ms** | — | — |
+| **MỚI** | **522ms** | **524ms** | **543ms** |
+
+Mẫu cuối còn chặn: 496–518ms. Tấm che được dọn sạch (`.aw-play-overlay` không còn trong DOM), chơi tiếp
+một câu bình thường, **0 lỗi console**.
+
+---
+
+## 2. TIME DELAY: TRẦN LÊN 10s, VÀ ∞ NAY LÀ ∞ THẬT (`core/fight.js` + `core/engine.js` + `core/app.css`)
+
+### ⚠️⚠️ Thang giá trị không đều, nên thanh kéo phải chạy trên CHỈ SỐ
+
+`DELAY_STEPS` = 0,1…3,0 bước **0,1** (30 nấc) rồi 3,5…10,0 bước **0,5** (14 nấc) = **44 nấc**, cộng nấc ∞
+là **45 vị trí**. `<input type=range>` chỉ có đúng MỘT `step`, nên thanh chạy `min 1 · max 45 · step 1` và
+`DELAY_STEPS` dịch chỉ số ra giây.
+
+⭐ **Đây không phải chuyện làm cho gọn**: thang đều 0,1 tới 10 sẽ là **100 nấc**, mà từ Đợt 213 chạm cạnh
+nút chỉ đi **1 nấc** ⇒ đi từ 1s tới 8s là **bảy chục cú chạm**. Thang không đều làm cú chạm đi *một phần
+mười ở vùng dưới, nửa giây ở vùng trên* — tự nó là câu trả lời cho cử chỉ của thầy.
+
+⚠️⚠️ **TRẦN NẰM Ở HAI NƠI.** `fightOptionsFrom()` cũng chặn (`Math.min(3, …)` cũ → `snapDelay()`). Bỏ sót
+chỗ đó thì thầy kéo lên 7s, lưu được, **mở lại thấy về 3s trong im lặng**.
+
+⭐ **Act cũ không phải di trú**: mọi giá trị 0,1…3,0 đều còn nguyên trên thang mới — đo **30/30 giữ nguyên
+từng phần mười**.
+
+### ⚠️⚠️ Nấc ∞: `setTimeout(fn, Infinity)` KHÔNG phải "chờ mãi", mà là "chạy NGAY"
+
+`tieWindowMsOf()` nay trả `Infinity` ở nấc ∞ (trước là `TIE_UNLIMITED_MS = 5000`, hằng này đã **gỡ hẳn**).
+Đặc tả kẹp mọi delay không hữu hạn về **0**, nên đưa thẳng số đó cho `setTimeout` sẽ biến ∞ thành nấc
+**NHANH NHẤT** của cả thanh. Vì thế `wordDone()` **không đặt đồng hồ nào** ở ∞ — vòng đóng bằng **SỰ KIỆN**:
+bàn kia báo xong (đúng ⇒ hoà, sai ⇒ đội nhanh thắng, cả hai đường đã có sẵn từ trước).
+
+⚠️⚠️ **Ở ∞ PHẢI CÓ AI ĐÓ CÒN CHƠI ĐỂ MÀ CHỜ** — bẫy tự đào ra khi viết. Bàn kia có thể **đã trả lời SAI**
+trước đó: đường sai khoá bàn nhưng **không** đặt `pendingWinner`, nên cú đúng sau đó vẫn mở cửa sổ chờ.
+Cửa sổ hữu hạn thì chờ hụt vài giây rồi thôi; **∞ thì treo cứng cả trận**. Đã cài nhánh
+`tieUnlimited && roundDone[other]` chốt ngay tại chỗ, đi qua **đúng lời gọi mà đường sai vẫn dùng** để hai
+thứ tự không bao giờ lệch nhau. Đo được: chốt sau **2.391ms** thay vì treo.
+
+⛔ **LƯỚI AN TOÀN 20 GIÂY KHÔNG PHỦ CA NÀY — và thầy biết trước khi chốt.** Đội bỏ đi giữa chừng ở nấc ∞
+thì vòng chờ mãi; đường ra là **Menu ▸ Start again**. Đã báo thầy, thầy vẫn chọn ∞ thật.
+
+⭐ **Hai ô "Round rule" + "Slower team keeps points" vẫn bị làm nhạt ở ∞ — LÝ DO đổi, KẾT LUẬN không.**
+Trước: *"chờ 5s rồi khoá nên không ai finish muộn được"*. Nay: *"vòng chỉ có một người thắng khi CẢ HAI
+bàn đã xong, nên không còn kẻ thua để khoá và không còn cú finish muộn nào để tính điểm"*. Ai đọc code
+sau này mà thấy lý do cũ đã hết hiệu lực, xin đừng "sửa lại cho đúng" — kết luận vẫn y nguyên.
+
+### Thanh chờ ở nấc ∞ — trạng thái thứ ba của `runWaitBar(ms)`
+
+Thầy: *"đứng đấy, thở nhẹ, nền sáng lấp lánh hào quang nhấp nháy chậm"*. Thanh **đứng đầy**, mọi chuyển
+động giao hết cho CSS: `.aw-waitbar.is-forever` → thở `aw-waitbreathe` · hào quang `aw-waitglow` · vệt sáng
+chạy `aw-waitshine` (một `::after`, không thêm node nào cho bàn phải dựng/dọn). Chu kỳ 3,2s.
+
+- ⚠️ **`runWaitBar()` phải `return` TRƯỚC dòng `transition`**: `"width " + Infinity + "ms"` là chuỗi vô
+  nghĩa, Chrome bỏ cả khai báo, rồi dòng `width = "0%"` ngay sau **áp dụng KHÔNG có transition** ⇒ nấc ∞
+  hiện một thanh **rỗng tức thì**, đúng ngược nghĩa của nó.
+- ⚠️ **Hào quang đặt trên hộp NGOÀI, vệt sáng đặt bên TRONG**: `.aw-waitbar` có `overflow:hidden` nên cắt
+  cụt quầng sáng nếu vẽ lên con; `box-shadow` của CHÍNH nó thì không bị chính overflow của nó cắt.
+- ⚠️ `transform` của vệt sáng đẻ stacking context — an toàn vì nó là **lá** trong một thanh
+  `pointer-events:none` không có gì xếp lớp bên trên (đọc hợp đồng xếp lớp popup trước khi đẩy ra ngoài hơn).
+- ✅ **ĐÃ NHÌN BẰNG MẮT** trong **Chrome thật** (pane trong app vẫn không chụp được, lần thứ n liên tiếp):
+  hai khung hình cách nhau vài giây cho thấy vệt sáng **đã chạy sang chỗ khác** ⇒ hiệu ứng thật sự chuyển
+  động, không phải ảnh tĩnh. Trang xem: `scratch/dot216-bar.html`.
+
+### Đo — trận Fight THẬT (`scratch/dot216-delay.html`, quiz 2 bàn): **33/33 ĐẠT**
+
+| Nhóm | Nội dung |
+|---|---|
+| A (11) | `fightOptionsFrom` giữ 7s · 10s · snap 7,3→7,5 · 2,44→2,4 · 99→10 · 0 vẫn 0 · act cũ 0,1 và 3,0 không nhúc nhích · `tieWindowMsOf(0)=Infinity` · Speed bonus vẫn áp dụng ở ∞ |
+| B (11) | Thanh trong bảng Options: `1/45/1` · nhãn nấc 1 = `0.1s` · 30 = `3.0s` · 31 = `3.5s` · 44 = `10.0s` · 45 = `∞` · hai ô bị khoá ở ∞ và **sống lại** khi về 2,0s |
+| C (7) | Nấc ∞: thanh chờ đúng chế độ `is-forever` trên **cả hai bàn** · **sau 7,2s vẫn chưa sang câu mới** · bàn kia vẫn bấm được · bàn kia xong thì vòng **đóng ngay** · cả hai sang câu 2 |
+| D (1) | ∞ + đội kia đã trả lời SAI trước ⇒ **chốt sau 2.391ms**, không treo |
+| E (3) | Đối chứng ngược: 7s **vẫn là 7s thật** — sau 4,2s còn chờ, sau 9,6s (7s + 2,1s `ROUND_HOLD_MS`) mới sang câu |
+
+---
+
+## 3. THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY (`core/options-panel.js`)
+
+### ⛔⛔⛔ Cử chỉ ±1 nấc của Đợt 213 CHƯA BAO GIỜ chạy trên màn cảm ứng
+
+Chỗ chặn cú nhảy nằm ở `ev.preventDefault()` trên **`pointerdown`**. Theo đặc tả Pointer Events, huỷ
+`pointerdown` chỉ chặn **chuỗi sự kiện CHUỘT tương thích** — hành vi mặc định của một cú **CHẠM** không huỷ
+được ở đó (đó là việc của `touch-action` và của `touchstart`). Chromium lại điều khiển việc kéo
+`<input type=range>` bằng cảm ứng ở **tầng touch**, nên nó vẫn nhảy nút tới ngón tay như thường.
+
+⭐ **Vì sao ba đợt không ai thấy**: không máy build nào ở đây có màn cảm ứng, mà chuột thì đi đúng đường
+huỷ được. Thanh trượt cũng **không có `touch-action`** nào trong `core/app.css`.
+
+### Cách vá: khoá ở GIÁ TRỊ, không khoá ở SỰ KIỆN
+
+`guardValue` giữ số mà thanh đang có lúc ngón chạm xuống **ngoài** nút tròn; `s.oninput` thấy chốt còn cắm
+thì **đặt trả lại ngay trong chính sự kiện đó** — đồng bộ, nên không khung hình trung gian nào được vẽ và
+mắt không thấy gì nhấp nháy.
+
+- ⭐ Cách này **không phụ thuộc** vào việc trình duyệt hiểu `preventDefault` ra sao, và **không cướp mất
+  cuộn panel** như huỷ `touchstart` sẽ làm. `preventDefault` vẫn giữ vì với chuột nó là đường chặn SẠCH
+  (không có thay đổi nào để mà hoàn nguyên).
+- ⚠️⚠️ **PHẢI `setPointerCapture`**, nếu không chốt có ngày **kẹt vĩnh viễn**: nhấc tay lệch ra ngoài thanh
+  thì `pointerup` bay tới phần tử khác, chốt không ai gỡ, và thanh đó **chết với mọi cú chạm sau** cho tới
+  khi panel dựng lại. Kèm `lostpointercapture` làm đường thoát cuối.
+- ⚠️ Chốt phải được gỡ **TRƯỚC** `setValue()` trong `endPress()` — `setValue` ghi giá trị bằng tay qua
+  `paint()`/`onInput()`, để chốt còn cắm thì `s.oninput` sẽ hoàn nguyên đúng cái nấc vừa cộng.
+- ⚠️ **Vùng "nắm nút" 14px vẫn giao thẳng cho trình duyệt** — nên chạm trong vùng đó trên màn cảm ứng vẫn
+  nhích nút tới ngón một hai nấc. Đó là ĐÚNG: đó là cú "nắm nút để kéo". Cũng vì vậy **không đo được** ca
+  "chạm qua kịch trần" bằng cú chạm: ở kịch phải, toàn bộ mảng còn lại bên phải nút đều nằm trong vùng đó.
+
+### Đo — có ĐỐI CHỨNG NGƯỢC (`scratch/dot216-slider.html`, nạp **module thật**)
+
+Bàn thử dựng lại đúng trình tự Chromium sinh ra khi ngón chạm (pointerdown → tầng native đổi `value` và
+bắn `input` → pointerup), rồi chạy **y hệt bộ 16 phép** trên **bản `HEAD`** và bản mới:
+
+| Module | Kết quả |
+|---|---|
+| **CŨ (`HEAD`)** | **4/16** — và 4 ca đạt đúng là 4 ca **không đi qua tầng touch** (2 ca chuột · 1 ca nắm nút · 1 ca kịch trần) |
+| **MỚI** | **16/16** |
+
+Bốn triệu chứng bản cũ trùng khít lời thầy: chạm ở giữa thanh Lives đang 5 → **51**; đang 90 → **9**; kéo
+trên máng → **90**; vạch màu nhảy theo **ngón tay** chứ không theo giá trị. Bộ phép có cả: hai cú chạm liên
+tiếp (chứng minh chốt không kẹt) · vạch `--aw-slider-fill` · thang nửa nấc 0,5 của Speaking · thang chỉ số
+45 nấc của Time delay · nắm nút rồi kéo phải đi theo ngón.
+
+⭐ **Một chỗ sửa, cả app đổi theo**: `grep '"range"'` cả kho vẫn trả về **đúng một dòng** — mọi thanh ở
+Options, ở Settings và trong cả 17 template đi qua `mkSliderCell`, không template nào phải sửa gì.
+
+### ⚠️ Bẫy đo trong phiên
+
+- Pane trình duyệt **bị ẩn** ⇒ `computer` (chạm/chụp ảnh) **timeout**, nên không dùng được cú chạm THẬT của
+  trình giả lập cảm ứng. Phải chuyển sang dựng lại trình tự sự kiện — và bù lại bằng **đối chứng ngược trên
+  module cũ**, thứ chứng minh bàn đo có biết phản ứng chứ không phải lúc nào cũng báo ĐẠT.
+- `visibilityState: "hidden"` **đóng băng CSS transition** ⇒ đọc `opacity` của thanh chờ ra `0` dù class
+  `is-on` đã gắn. Tắt hẳn transition rồi đọc lại: **1 khi bật · 0 khi tắt** (đúng bẫy đã ghi ở Đợt 215b).
+- `setTimeout` thì **KHÔNG** bị bóp trong pane ẩn (đo: mốc 20ms ra đúng 20/41/61/82…), nên mọi phép đo thời
+  gian trong đợt này tin được.
+- Cổng 5510 và 5513 đang bị **phiên Claude khác** giữ ⇒ dùng chung máy chủ có sẵn ở 5510 (đã đối chiếu mã
+  băm để chắc nó phục vụ đúng thư mục này) thay vì mở cổng mới.
+
+---
+
+### ⬜ CÒN LẠI — chỉ mắt/tay thầy trên TOMKO
+
+1. **Chạm thật vào thanh trượt trên màn TOMKO** — đây là phép thử cuối cùng và là thứ máy này không làm
+   được. Nếu vẫn còn nhảy tới chỗ chạm thì hướng dự phòng đã sẵn: huỷ `touchstart` (`{passive:false}`) cho
+   cú chạm ngoài nút, đổi lại là mất cuộn panel bằng ngón đặt trên thanh.
+2. **Chốt 0,5 giây có thấy "đơ" không** khi bấm START — nới/thu chỉ là sửa `START_GUARD_MS`.
+3. **Nấc ∞ chơi thật một trận**: thanh chờ đứng-thở-lấp-lánh nhìn từ cuối lớp có hiểu là "đang đợi đội kia"
+   không, và lớp có chịu được việc vòng không tự sang câu mới không.
+4. **Thang 0,5s ở vùng trên** có đủ tinh không, hay thầy muốn 0,1s suốt cả thanh.
+
+---
+
 ## Đợt 215b (20/8/2026) — ⭐⭐ CỤM TRÊN CỦA OPTIONS: BỘ MÀU MỚI, TƯƠNG PHẢN MẠNH
 
 > ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026, thầy: *"commit + push live + ghi dữ liệu"*), đi CHUNG MỘT

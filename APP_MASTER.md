@@ -8,7 +8,11 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 215 + 215b)** — **OPTIONS: MỘT THANH POINTS OFF · HAI CỘT CÓ NGHĨA · CỤM TRÊN ĐỔI BỘ MÀU**
+> Cập nhật lần cuối: **20/8/2026 (Đợt 216 + 217)** — **CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s
+> VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY** (216) và **TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG
+> LAN · CHE BÀI KHI FIGHT · RESET SẠCH** (217) — ✅ **THẦY DUYỆT 216**, hai đợt đi **CHUNG MỘT COMMIT**
+> theo đúng lời thầy. Đọc khối Đợt 217 → 216 ngay dưới.
+> Trước đó **(Đợt 215 + 215b)** — **OPTIONS: MỘT THANH POINTS OFF · HAI CỘT CÓ NGHĨA · CỤM TRÊN ĐỔI BỘ MÀU**
 > — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `ad06d16`, **ĐÃ PUSH + LIVE** (3/3 mã băm
 > SHA-256 khớp trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
 > Trước đó **(Đợt 214)** — **TIME COST RỜI KHỎI Ô TIMER** (thầy "ok build" + cho
@@ -22,6 +26,95 @@
 > Đợt 210 → 207 bên dưới theo thứ tự NGƯỢC là đủ nắm.
 > ⬜ Ba việc nhỏ còn treo (chỉ mắt thầy, KHÔNG chặn gì): hào quang tên 3 bạn đầu trên màn 86" · chữ vàng
 > bạn số 2 trên ô bạc có rõ không · chơi trọn một ván xem bảng cuối không còn Leaderboard trong Showdown.
+>
+> **Đợt 217 — SÁU VIỆC MỘT LƯỢT: TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG LAN · CHE BÀI KHI FIGHT · RESET SẠCH.**
+> ✅ Thầy duyệt Đợt 216 rồi giao tiếp sáu việc này, chốt *"rồi commit + push + ghi nhật ký hồ sơ một
+> thể"* ⇒ **216 + 217 đi CHUNG MỘT COMMIT**. Sửa **11 file code**. 0 lỗi console.
+> - ⚠️⚠️ **TÊN TRONG PHỄU: thuật toán KHÔNG sai, sai ở LÚC NÓ ĐƯỢC GỌI.** Đo trước khi sửa: gọi bình
+>   thường thì **0/12 tên bị cắt** ở cả ba bề ngang; **gọi lúc bảng đang ẩn thì 3/12 bị cắt, font
+>   nguyên cỡ** (đúng ảnh thầy gửi) — cả bảng vẽ bằng `cqw` nên vùng chứa rộng 0 ⇒ cỡ chữ ra 0 ⇒
+>   `if (!base) return` **bỏ cuộc trong im lặng**. ⛔⛔ **`ResizeObserver` KHÔNG đủ một mình**: đo tại
+>   chỗ, pane ẩn ⇒ nó **bắn 0 lần, kể cả lần đầu lúc bắt đầu quan sát** (cùng họ bẫy rAF) ⇒ phải kèm
+>   **vòng thử lại 4 lần có đáy** bằng `setTimeout`. ⭐ Thêm sàn cuối `NAME_HARD_MIN_RATIO`
+>   (`NAME_MIN_RATIO` là mức "thà viết tắt còn hơn nhỏ thêm", **không phải** "thà cắt còn hơn"), và
+>   nới đáy phễu **46% → 52%**.
+> - ⭐⭐ **TẠM DỪNG NAY CÓ LÝ DO** (`enterPause(reason,{dim})`): `"menu"` · `"panel"` · `"relay"` ·
+>   `"stolen"`. ⛔⛔ **Phải là TẬP, không được là CỜ** — mở Options rồi bấm ☰ Menu rồi đóng Menu, với
+>   một cờ thì chính cú đóng đó **thả đồng hồ chạy lại trong lúc bảng Options vẫn che kín màn**.
+>   ⚠️⚠️ **`dim` đi theo NGUỒN**: bảng công cụ đã phủ tối cả khung nhìn, bàn kia đắp thêm tấm che nữa
+>   là **nửa màn hình bên đó tối hơn hẳn nửa bên này**. API mới `fight.ctl.registerPause/setPaused`.
+> - ⭐⭐ **CHE DẤU VẾT TRẢ LỜI KHI FIGHT** — `core/fight.js` gắn `.aw-fight-board.is-concealed`, **template
+>   tự khai** cái gì là dấu vết bằng vài dòng CSS (5 template đã khai; crossword/open the box không cần
+>   vì là `fightPick`). ⛔ Một hàm `conceal()` trong `ctl.attach` sẽ bắt 7 template sửa JS và template
+>   nào quên là **im lặng hở bài** — luật tự-chọn-tham-gia Đợt 143. Chỉ từ **0,2s trở lên** (thầy chốt).
+> - ⭐⭐ **GIÀNH LẠI TEAM CỦA MÁY KHÁC**: `releaseTeamClaim()` — hàm ghi duy nhất dám đụng hàng trình
+>   duyệt khác. ⛔ **Hai bước**: ✗ chỉ NHẢ, dấu tích mới LẤY. ⚠️⚠️ `.is-taken` **thôi dùng `opacity` +
+>   `pointer-events:none` trên cả cột** — `opacity` nhân xuống cả cây con **không có đường lùi**, nhãn
+>   "Picked ✓" và dấu ✗ đều mờ theo và bấm không được.
+> - ⚠️⚠️ **MÁY BỊ GIÀNH: điều kiện là "CÓ NGƯỜI KHÁC ĐANG GIỮ", KHÔNG PHẢI "không còn ai giữ"** — claim
+>   biến mất có thể chỉ là hết TTL 12h / mạng rớt / chưa publish, dừng ván giữa giờ vì mấy thứ đó tệ hơn
+>   hẳn cái nó chữa. ⛔ Tấm chặn `.aw-sd-stolen` **không có nút đóng** (thầy: *"buộc dừng game"*), phủ
+>   khung chơi nhưng **không** phủ hàng nút — nút MODE phải còn bấm được.
+> - ⛔⛔ **RESET KHÔNG SẠCH: BA CHỖ.** (1) **`roster = saved` trong `boot()` là GỐC RỄ** — một dòng đặt
+>   danh sách lớp thành đúng những người đang ở trong cột, nên ai **không** ở cột nào thì **không còn
+>   tồn tại trên màn hình**: không có trong hồ bơi, không có trong cột nào để nhấc ra. (2) `pool = []`
+>   là một **giả định** thay cho một phép tính. (3) **Tiếng vọng của chính cú reset** — `wipeSetup()`
+>   ghi bảng rỗng, bộ nghe của **chính màn vừa reset** tưởng người khác reset và **đè bộ cột mới về
+>   rỗng**; một cuộc đua, nên chỉ *"đôi khi"* cắn đúng như thầy tả.
+> - ✅ **ĐO TRÊN APP THẬT**: phễu 0 tên bị cắt ở mọi ca · tạm dừng + che bài **18/18** · giành team
+>   **19/19** · bị giành giữa ván **15/15** (có đối chứng ngược) · 5/5 selector che bài trúng phần tử
+>   thật · chạy lại bench Đợt 216 vẫn **33/33**.
+> - ⬜ **CÒN LẠI (mắt/tay thầy)**: (1) nhãn "Picked ✓" em đặt ở **đáy TRONG cột** chứ không dưới mép
+>   ngoài như thầy tả (dưới mép ngoài sẽ bị cắt cụt hoặc đè hàng nút) — thầy xem có chịu không ·
+>   (2) chạm thật vào thanh trượt trên TOMKO (treo từ Đợt 216) · (3) hai máy thật giành team của nhau ·
+>   (4) mờ 12% nhìn từ cuối lớp đã đủ kín chưa · (5) tên hàng cuối phễu trên màn 86" · (6) reset nhiều
+>   lần liên tiếp trên 2-3 máy.
+>
+> ---
+> **Đợt 216 — CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY.**
+> ✅ **THẦY DUYỆT** (20/8/2026) — đi chung một commit với Đợt 217. Thầy giao 3 việc một lượt, chốt 4 lựa chọn qua
+> AskUserQuestion. Sửa **4 file**: `core/engine.js` · `core/fight.js` · `core/options-panel.js` ·
+> `core/app.css`. 0 lỗi console.
+> - ⭐⭐ **START NAY CHẶN CÚ CHẠM 0,5 GIÂY** (`START_GUARD_MS`). Đo bản cũ: ô đáp án **sống sau 31ms** —
+>   `press()` bắn ở pointerdown (Đợt 175) còn handler tắt `pointer-events` ngay câu lệnh kế. ⭐ Vá bằng
+>   **chính tấm che `.aw-play-overlay`** (đã `inset:0`, đúng lớp), không dựng phần tử mới: nó vẫn mờ đi
+>   260ms nhưng **mờ rồi vẫn nuốt cú chạm**. ⚠️⚠️ **MỘT đồng hồ, không phải hai** — gỡ tấm che treo HẲN
+>   vào `setTimeout`, để `fade.onfinish` lại là game hở ra ở mốc 260ms và chốt coi như không có.
+>   ⚠️ `playStarted` là biến MỚI cho Options ▸ Apply: *"đã bấm PLAY chưa"* và *"tấm che còn trong DOM
+>   không"* **trước giờ là một câu hỏi, từ nay thì không**. Đo: **31ms → 522/524/543ms** (quiz · anagram
+>   · true-false), tấm che được dọn sạch.
+> - ⭐⭐ **TIME DELAY 0,1 → 10s**, thang **không đều** (`DELAY_STEPS`: 0,1…3,0 bước 0,1 rồi 3,5…10,0 bước
+>   0,5 = **44 nấc + ∞**). ⚠️⚠️ Vì thế **thanh kéo chạy trên CHỈ SỐ** (`1 / 45 / 1`) — range chỉ có MỘT
+>   `step`; và thang đều 0,1 sẽ là 100 nấc, mà chạm cạnh nút chỉ đi 1 nấc (Đợt 213) ⇒ 1s→8s là bảy chục
+>   cú chạm. ⚠️⚠️ **TRẦN NẰM Ở HAI NƠI**: quên `fightOptionsFrom()` là kéo lên 7s, lưu được, **mở lại về
+>   3s trong im lặng**. ⭐ Act cũ 0,1…3,0 **giữ nguyên từng phần mười, 30/30**.
+> - ⭐⭐ **NẤC ∞ NAY LÀ ∞ THẬT** (thầy: *"cứ chờ mãi thôi cho đến khi câu đó được hoàn thành"*) —
+>   `TIE_UNLIMITED_MS = 5000` **gỡ hẳn**, `tieWindowMsOf()` trả `Infinity`. ⚠️⚠️ **Cấm đưa số đó cho
+>   `setTimeout`**: đặc tả kẹp delay không hữu hạn về **0**, tức ∞ sẽ thành nấc NHANH NHẤT của thanh —
+>   nên ở ∞ **không đặt đồng hồ nào**, vòng đóng bằng SỰ KIỆN (bàn kia báo xong). ⚠️⚠️ **Phải có ai đó
+>   còn chơi để mà chờ**: bàn kia có thể đã trả lời SAI trước (khoá bàn nhưng không đặt `pendingWinner`)
+>   ⇒ nhánh `tieUnlimited && roundDone[other]` chốt ngay, nếu không là **treo cứng cả trận**.
+>   ⛔ **Lưới an toàn 20s không phủ ca này** — đội bỏ đi ở ∞ thì vòng chờ mãi, đường ra là Menu ▸ Start
+>   again. Đã báo thầy trước khi làm, thầy vẫn chọn ∞ thật.
+> - ⭐ **Thanh chờ ở ∞ = trạng thái thứ ba của `runWaitBar(ms)`**: đứng đầy, thở, hào quang, vệt sáng chạy
+>   (`.is-forever`, tất cả bằng CSS). ⚠️ Phải `return` **TRƯỚC** dòng `transition` — `"width Infinityms"`
+>   là chuỗi vô nghĩa, Chrome bỏ cả khai báo rồi `width="0%"` áp dụng **không transition** ⇒ ∞ hiện thanh
+>   **rỗng tức thì**. ⚠️ Hào quang trên hộp NGOÀI (`overflow:hidden` cắt cụt nếu vẽ lên con). ✅ **Đã nhìn
+>   bằng mắt trong Chrome thật** — 2 khung hình cho thấy vệt sáng đã chạy sang chỗ khác.
+> - ⛔⛔⛔ **CỬ CHỈ ±1 NẤC CỦA ĐỢT 213 CHƯA BAO GIỜ CHẠY TRÊN MÀN CẢM ỨNG.** `preventDefault` trên
+>   `pointerdown` chỉ chặn **chuỗi sự kiện CHUỘT tương thích**; hành vi mặc định của một cú CHẠM không huỷ
+>   được ở đó, mà Chromium điều khiển kéo `<input type=range>` bằng cảm ứng ở **tầng touch**. Không máy
+>   build nào ở đây có màn cảm ứng ⇒ ba đợt không ai thấy. ⭐ Vá bằng **chốt Ở GIÁ TRỊ, không ở sự kiện**
+>   (`guardValue` + hoàn nguyên đồng bộ trong `oninput`) — không phụ thuộc trình duyệt hiểu
+>   `preventDefault` ra sao, và không cướp mất cuộn panel. ⚠️⚠️ **Phải `setPointerCapture`**: nhấc tay
+>   lệch ra ngoài thanh thì chốt **kẹt vĩnh viễn** và thanh chết với mọi cú chạm sau.
+>   **Đối chứng ngược trên chính module cũ: 4/16 → 16/16.**
+> - ✅ **ĐO TRÊN APP THẬT**: trận Fight quiz 2 bàn **33/33** · chốt START trên 3 template · thanh trượt
+>   16/16 với 3 dạng thang (0..100 · nửa nấc 0,5 · chỉ số 45 nấc).
+> - ⬜ **CÒN LẠI (tay/mắt thầy trên TOMKO)**: (1) **chạm thật vào thanh trượt** — phép thử cuối, máy này
+>   không làm được; dự phòng nếu vẫn hỏng là huỷ `touchstart` `{passive:false}`, đổi lại mất cuộn panel ·
+>   (2) chốt 0,5s có thấy "đơ" không · (3) chơi thật một trận ở nấc ∞ · (4) bước 0,5s ở vùng trên có đủ
+>   tinh không.
 >
 > ---
 > **Đợt 215b — CỤM TRÊN CỦA OPTIONS ĐỔI BỘ MÀU: xanh lá ĐẬM, nút tô đặc, chữ trắng.**

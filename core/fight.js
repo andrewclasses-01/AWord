@@ -73,11 +73,23 @@ const LATE_LIMIT_MS = 20000;
 // constant stays as the DEFAULT, so every act ever saved keeps the exact 0.1s
 // behaviour it has today unless the teacher moves the new control.
 const TIE_WINDOW_MS = 100;
-// "∞" on that slider (stored as 0) is not literally forever — a lesson may never
-// hang on a team that walked away. The teacher chose the cap himself: "chờ tối đa
-// 5s và hiện thanh thời gian (không cần số) … hết thanh time 5s đó thì khóa trả
-// lời". So ∞ means "wait a generous, VISIBLE 5 seconds", not "wait for ever".
-const TIE_UNLIMITED_MS = 5000;
+// ⭐⭐ Đợt 216 (thầy, 20/8/2026) — "∞" ON THAT SLIDER IS NOW LITERAL.
+// It used to be a 5-second cap (Đợt 187: "chờ tối đa 5s … hết thanh time 5s đó
+// thì khóa trả lời"). Raising the slider's ceiling to 10s made that cap absurd —
+// ∞ would have waited LESS than the four notches sitting just below it — and the
+// teacher settled it by taking the cap off outright: "nâng nấc đó lên không giới
+// hạn, cứ chờ mãi thôi cho đến khi câu đó được hoàn thành".
+// ⚠️⚠️ SO ∞ HAS NO TIMER AT ALL. The round now ends on an EVENT (the other board
+// reporting its word done, right or wrong), not on a clock. Two consequences,
+// both deliberate and both the teacher's call:
+//   · the 20s walk-away backstop that every other path keeps (LATE_LIMIT_MS) does
+//     NOT cover this one — a team that simply stops playing holds the round open,
+//     and the way out is the teacher's own Menu ▸ Start again;
+//   · nothing may be handed `Infinity` as a duration. `setTimeout(fn, Infinity)`
+//     fires on the NEXT TICK (the spec clamps a non-finite delay to 0), which
+//     would have made ∞ the FASTEST setting on the slider instead of the slowest.
+//     Every site that could receive it is guarded — see `tieUnlimited` below and
+//     runWaitBar() in core/engine.js.
 // Below this the wait is over before the eye can read a bar, so no bar is drawn
 // (teacher: the bar shows "ở MỌI mức từ 0,2s trở lên"). 0.1s is exactly the old
 // invisible tie-window, and it stays invisible.
@@ -109,11 +121,13 @@ export const FIGHT_DEFAULTS = {
   fightFirstRule: "lock",    // lock | finish
   fightSpeedBonus: 0,        // extra points for the team that got there first
   fightLateScores: true,     // the slower team still keeps what it earned
-  // ⭐ Đợt 187 — TIME DELAY, in SECONDS. 0.1 … 3.0 in tenths, or **0 = ∞**
-  // (the app's own house convention for "unlimited", the same one Lives and
-  // Find the match already use at the left end of their sliders — see
-  // normLives()). Default 0.1 = the hard-coded tie window this replaces, so an
-  // act that has never seen the new control behaves byte for byte as before.
+  // ⭐ Đợt 187 — TIME DELAY, in SECONDS, or **0 = ∞** (the app's own house
+  // convention for "unlimited", the same one Lives and Find the match already use
+  // at the left end of their sliders — see normLives()). Default 0.1 = the
+  // hard-coded tie window this replaces, so an act that has never seen the
+  // control behaves byte for byte as before.
+  // ⭐⭐ Đợt 216 — the range is now 0.1 … 10.0 (was 0.1 … 3.0); the legal values
+  // are the DELAY_STEPS ladder below, not "every tenth up to ten".
   fightTieWindow: 0.1,
   // ⭐⭐ Đợt 202 (teacher, 19/8/2026) — IN TURNS. The question pool is DEALT OUT
   // between the two boards instead of being played by both: each team gets its
@@ -125,10 +139,38 @@ export const FIGHT_DEFAULTS = {
   fightTurns: false
 };
 
+// ⭐⭐ Đợt 216 (thầy, 20/8/2026) — WHAT VALUES THE TIME DELAY SLIDER CAN HOLD.
+// The teacher raised the ceiling from 3s to 10s and chose the shape himself out
+// of three offered: "0,1s tới 3s, rồi 0,5s tới 10s".
+// ⚠️ NOT A UNIFORM STEP, ON PURPOSE. A flat 0.1 all the way would have given the
+// slider 100 notches, and since Đợt 213 a tap beside the thumb moves exactly ONE
+// — reaching 8s from 1s would have been seventy taps. Coarsening the half nobody
+// tunes finely keeps it at 44 (+ ∞) while leaving 0.1 … 3.0 exactly as precise as
+// it has always been, which is the half the teacher actually adjusts.
+// ⚠️ Built, not typed out: a hand-written list of 44 numbers is a list that will
+// disagree with the slider's own arithmetic the first time either is edited.
+// ⚠️ `Math.round(x * 10) / 10` at every step — plain accumulation of 0.1 drifts to
+// 0.30000000000000004, and these numbers are compared for equality by posOf().
+const DELAY_STEPS = (() => {
+  const out = [];
+  for (let t = 1; t <= 30; t++) out.push(Math.round(t) / 10);        // 0.1 … 3.0 in tenths
+  for (let t = 35; t <= 100; t += 5) out.push(Math.round(t) / 10);   // 3.5 … 10.0 in halves
+  return out;
+})();
+// The nearest LEGAL delay to any number — used both by the panel (to seat an act
+// saved under the old 0.1-only ladder) and by fightOptionsFrom (to repair a
+// hand-edited act). Every old value 0.1 … 3.0 is still on the ladder, so no act
+// in the library moves by a single tenth.
+function snapDelay(sec) {
+  let best = DELAY_STEPS[0];
+  for (const v of DELAY_STEPS) if (Math.abs(v - sec) < Math.abs(best - sec)) best = v;
+  return best;
+}
+
 // 0 means ∞ — everything that needs a real number of milliseconds goes through
 // here, so that one special value is decoded in exactly one place.
 export function tieWindowMsOf(o) {
-  return o.fightTieWindow === 0 ? TIE_UNLIMITED_MS : Math.round(o.fightTieWindow * 1000);
+  return o.fightTieWindow === 0 ? Infinity : Math.round(o.fightTieWindow * 1000);
 }
 // Is the speed bonus even on the table? At 0.1s it is not (teacher: "khi là 0,1s
 // thì thanh speed bonus ẩn và ko thưởng đội nhanh hơn — vì đội nhanh hơn có điểm,
@@ -148,12 +190,15 @@ export function fightOptionsFrom(options = {}) {
   // its "Off" 0 — loads without being rewritten behind the teacher's back; the
   // panel is where a 0 gets repaired, and only once the delay makes it reachable.
   o.fightSpeedBonus = Math.max(0, Math.min(100, Number(o.fightSpeedBonus) || 0));
-  // TIME DELAY: 0 stays 0 (∞). Anything else is snapped to a tenth inside
-  // 0.1..3.0 — the exact set of values the slider can produce — so a hand-edited
-  // or corrupted act can never hand the round logic a window of, say, 40 minutes.
+  // TIME DELAY: 0 stays 0 (∞). Anything else is snapped onto the DELAY_STEPS
+  // ladder — the exact set of values the slider can produce — so a hand-edited or
+  // corrupted act can never hand the round logic a window of, say, 40 minutes.
+  // ⚠️⚠️ Đợt 216 — THIS LINE IS HALF THE FEATURE, not tidying. It used to clamp to
+  // `Math.min(3, …)`: leaving it alone would have let the teacher drag the new
+  // slider to 7s, watch it save, and find it silently back at 3s the next time the
+  // act was opened — the ceiling lives in TWO places and both have to move.
   const tw = Number(o.fightTieWindow);
-  o.fightTieWindow = tw === 0 ? 0
-    : (Number.isFinite(tw) ? Math.max(0.1, Math.min(3, Math.round(tw * 10) / 10)) : 0.1);
+  o.fightTieWindow = tw === 0 ? 0 : (Number.isFinite(tw) ? snapDelay(tw) : 0.1);
   // Đợt 202 — a plain flag, but forced to a real boolean: it is read in three
   // places that all mean "is this a dealt match", and a stray "false" string off
   // a hand-edited act would make every one of them silently say yes.
@@ -533,12 +578,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // Does a team that finishes correctly AFTER the round is won keep what it
   // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
   // điểm"), so pick mode fixes it instead of reading the option.
-  // ⚠️ At ∞ both of the older controls are FORCED, and the Options panel hides
-  // them to match (see buildOptions): the teacher's ∞ rule ends the wait with
-  // "khóa trả lời", i.e. lock — which leaves a locked team no way to finish late,
-  // so "slower team keeps points" has nothing left to decide. Leaving them
-  // switchable would have put two live controls in the panel that could not
-  // change anything on screen, the dead-control trap of Đợt 143.
+  // ⚠️ At ∞ both of the older controls are FORCED, and the Options panel greys
+  // them to match (see buildOptions). The REASON changed at Đợt 216 while the
+  // answer stayed the same, so read this before "fixing" it: ∞ used to end the
+  // wait by locking after 5s, which left a locked team no way to finish late. It
+  // now ends when the other board finishes — which means by the time this round
+  // has a single winner at all, BOTH boards are already done (see the ∞ branch in
+  // wordDone), so there is no loser left to lock and no late finish left to score.
+  // Either way neither control can change anything on screen, and leaving them
+  // switchable would be the dead-control trap of Đợt 143.
   const lateScores = () => (turnsMode ? true
     : (pickMode ? false : (tieUnlimited ? false : fo.fightLateScores !== false)));
 
@@ -547,8 +595,34 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // board's Menu / keyboard / ‹ › buttons ended up. This file owns the TIMING
   // (it is the referee's window, not the board's), the engine owns the pixels.
   const waitBarFns = [null, null];
+  // Đợt 217 — mỗi bàn để lại đây một cách "hãy dừng / hãy chạy tiếp" (registerPause).
+  const pauseFns = [null, null];
   function paintWaitBar(ms) {
     waitBarFns.forEach(fn => { try { fn && fn(ms); } catch { /* board already gone */ } });
+  }
+
+  // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — CHE DẤU VẾT TRẢ LỜI CỦA BÀN ĐÃ XONG.
+  // *"nếu bật delay, đội xong trước hiện tích đúng/sai và tính điểm xong phải có
+  // phương án ẩn ngay câu trả lời (VD quiz thì nhạt màu hơn các ô đáp án, Anagram thì
+  // không hiện chữ trong ô nữa…)"*. Một cửa sổ chờ 10 giây là mười giây đội kia được
+  // liếc sang bàn bên — thứ mà cửa sổ 0,1s của Đợt 133 chưa bao giờ cho đủ thời gian.
+  //
+  // ⭐⭐ MỘT LỚP CSS, KHÔNG PHẢI MỘT HỢP ĐỒNG MỚI. Trọng tài chỉ gắn `.is-concealed`
+  // lên vỏ bàn của mình; *cái gì* là "dấu vết trả lời" thì CHÍNH TEMPLATE khai, bằng
+  // vài dòng trong stylesheet của nó. Nếu thay bằng một hàm `conceal()` trong
+  // `ctl.attach` thì bảy template phải sửa JS, và template nào quên là im lặng hở bài.
+  // Cách này là **tự chọn tham gia** đúng luật Đợt 143: template không khai gì thì
+  // không che gì, không có nút chết nào sinh ra.
+  //
+  // ⚠️ CHỈ KHI CÓ THANH CHỜ THẬT (thầy chốt: "từ 0,2s trở lên"). Ở 0,1s vòng đóng gần
+  // như tức thì, che rồi hiện lại chỉ là một cú nháy vô nghĩa.
+  // ⚠️ Che theo BÀN, không theo vòng: bàn kia đang chơi thì tuyệt đối không đụng tới.
+  function conceal(side, on) {
+    if (!boardEls[side]) return;
+    boardEls[side].classList.toggle("is-concealed", !!on && waitBarMs >= WAIT_BAR_MIN_MS);
+  }
+  function unconcealAll() {
+    boardEls.forEach(b => b && b.classList.remove("is-concealed"));
   }
 
   const boards = [null, null];          // the template's own handles, via ctl.attach
@@ -624,6 +698,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // play, so there is nothing left to give away. Templates that don't
   // implement `reveal` are unaffected.
   function revealBoards() {
+    // ⚠️ Đợt 217 — GỠ CHE TRƯỚC KHI LẬT BÀI. Lật bài là lúc cả hai đội được nhìn mọi
+    // thứ; để lớp che lại là đúng lúc lớp cần xem đáp án thì nó lại bị giấu.
+    unconcealAll();
     boards.forEach(b => { try { b && b.reveal && b.reveal(); } catch { /* board already gone */ } });
   }
 
@@ -841,6 +918,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // (an older engine, a board torn down mid-round) is simply skipped.
     registerWaitBar(side, fn) { waitBarFns[side] = fn; },
 
+    // ⭐⭐ Đợt 217 (thầy, 20/8/2026) — MỘT BÀN DỪNG THÌ CẢ HAI DỪNG.
+    // *"Khi Fight, 1 bên bấm nút menu thì bên còn lại cũng tạm dừng game cùng"* — và
+    // Đợt 217 mở rộng cho mọi bảng công cụ. Trọng tài chỉ làm đúng việc chuyển tiếp;
+    // *cách* dừng một bàn là của `core/engine.js` (đồng hồ, tiếng, hoạt cảnh, hook
+    // `tpl.onPause`) — cùng cách chia việc như thanh chờ ngay trên.
+    // ⛔ CHỈ GỬI SANG BÀN KIA, không bao giờ gọi lại chính bàn gửi: bàn gửi đã tự dừng
+    // trước khi gọi tới đây, và gọi ngược lại chỉ đẻ ra một vòng lẩn quẩn.
+    registerPause(side, fn) { pauseFns[side] = fn; },
+    // ⚠️ `dim` ĐI THEO nguồn, không tự quyết. ☰ Menu chỉ tối MỘT bàn nên bàn kia cũng
+    // phải tự đắp tấm che của nó; còn bảng công cụ đã phủ tối CẢ khung nhìn bằng
+    // `.aw-tool-dim`, nên bàn kia đắp thêm một lớp nữa là nửa màn hình bên đó tối hơn
+    // hẳn nửa bên này — trông y như lỗi hiển thị.
+    setPaused(side, on, dim = true) {
+      const other = side === 0 ? 1 : 0;
+      const fn = pauseFns[other];
+      if (fn) { try { fn(!!on, !!dim); } catch { /* bàn kia đã bị dỡ */ } }
+    },
+
     // --- what the template tells us ---
     attach(side, api) {
       boards[side] = api;
@@ -865,6 +960,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       paintWaitBar(0);
       if (!pickOpen || side !== pickTurn) return false;
       pickOpen = false;
+      unconcealAll();          // Đợt 217 — vòng mới, không bàn nào còn bị che
       roundIndex = index;
       roundWinner = null;
       roundDone = [false, false];
@@ -924,6 +1020,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (turnsMode) {
         try { boards[side] && boards[side].reveal && boards[side].reveal(); } catch { /* board already gone */ }
       }
+      // ⭐⭐ Đợt 217 — TỪ GIÂY NÀY BÀN NÀY KHÔNG CÒN ĐƯỢC ĐỂ LỘ BÀI (xem conceal()).
+      // Đặt ở đây, ngay sau `roundDone[side] = true`, vì đây là ĐIỂM DUY NHẤT mà mọi
+      // kiểu kết thúc của một bàn đều đi qua — đúng, sai, hết giờ, đều một cửa.
+      // ⚠️ Đặt TRƯỚC mọi nhánh quyết định bên dưới là cố ý: nhánh nào chốt luôn vòng
+      // đều gọi `revealBoards()`, và hàm đó gỡ che ngay trong cùng một nhịp đồng bộ —
+      // nên ca "xong là đóng vòng luôn" không hề nháy một khung hình nào.
+      // ⚠️ In turns tự miễn nhiễm mà không cần điều kiện riêng: chế độ đó ghim cửa sổ
+      // về 0,1s ⇒ `waitBarMs` = 0 ⇒ conceal() thành lệnh rỗng. Hai bàn cầm hai câu
+      // KHÁC nhau nên vốn chẳng có gì để nhìn trộm.
+      conceal(side, true);
       // PICK MODE bookkeeping (Đợt 183): who finished LAST, and how — that is
       // the whole input to the teacher's "the wrong team chooses next" rule.
       // Written on every finish, so after the round it holds the later one.
@@ -982,6 +1088,19 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       }
 
       if (pendingWinner === null) {
+        // ⭐⭐ Đợt 216 — AT ∞, THERE HAS TO BE SOMEBODY LEFT TO WAIT FOR.
+        // The other board can already be finished at this point: it answered
+        // WRONG earlier this round, which locks that board without setting
+        // `pendingWinner`. With a finite delay the referee simply waited the
+        // window out for nobody, which cost a second or two and no more — with
+        // the teacher's ∞ that same wait never ends and the match stops dead.
+        // Settled here through the SAME call the wrong-answer branch above makes
+        // when the two finishes land the other way round, so the two orderings
+        // cannot drift apart.
+        // ⚠️ Deliberately scoped to ∞: a finite window keeps its old behaviour to
+        // the millisecond, because shortening it would change how every existing
+        // act plays for a reason that has nothing to do with what thầy asked for.
+        if (tieUnlimited && roundDone[other]) { finalizeSingleWinner(side); return; }
         // First correct answer this round — open the tie-window rather than
         // deciding immediately.
         pendingWinner = side;
@@ -989,7 +1108,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // up a bar runs it down on BOTH boards: the team still playing needs to
         // see how long it has, and the team that just finished needs to see why
         // the round has not turned over yet.
+        // ⭐⭐ Đợt 216 — at ∞ that same bar stands still and breathes instead of
+        // draining (`Infinity` reaches runWaitBar in core/engine.js, which has its
+        // own branch for it): there is no deadline left for it to show.
         paintWaitBar(waitBarMs);
+        // ⚠️⚠️ NO TIMER AT ∞ — and NOT because `setTimeout(fn, Infinity)` would be
+        // slow, but because it would be INSTANT: a non-finite delay is clamped to
+        // 0 by the spec, so the round would settle on the next tick and ∞ would
+        // behave as the shortest setting on the whole slider. The wait ends on the
+        // other board's own `wordDone` instead — the two paths just above (a
+        // second CORRECT answer ⇒ tie, a WRONG one ⇒ single winner) are what close
+        // this round now, and both already clear a null `pendingTimer` safely.
+        if (tieUnlimited) return;
         pendingTimer = setTimeout(() => {
           pendingTimer = null;
           if (torndown) return;   // teardown() already cleared this timer -- belt and braces
@@ -1234,14 +1364,26 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // decides whether Speed bonus exists at all (teacher's own layout: "thêm 1
     // thanh kéo là TIME DELAY ở cùng khu vực với speed bonus … kéo từ 0,2s trở
     // lên thì thanh speed bonus mới hiện Ở DƯỚI").
-    // ⚠️ The slider runs 0.1 … 3.1 but 3.1 is NOT 3.1 seconds — it is the ∞ stop,
-    // stored as 0. Putting ∞ one step past the top (rather than at 0 on the left,
-    // where Lives keeps its own ∞) is the teacher's order: "ngay sau 3s là đến
-    // nấc unlimited". The stored value keeps the house 0-means-∞ convention all
-    // the same, so nothing downstream needs a second special case.
-    const UNLIM_POS = 3.1;
-    const posOf = w => (w === 0 ? UNLIM_POS : w);
-    const valOf = pos => (pos >= UNLIM_POS - 0.05 ? 0 : Math.round(pos * 10) / 10);
+    // ⚠️ The slider carries an ∞ stop one step past its top (rather than at 0 on
+    // the left, where Lives keeps its own ∞) — the teacher's order: "ngay sau 3s
+    // là đến nấc unlimited", now "ngay sau 10s". The stored value keeps the house
+    // 0-means-∞ convention all the same, so nothing downstream needs a second
+    // special case.
+    // ⭐⭐ Đợt 216 — THE SLIDER NOW MOVES ON AN INDEX INTO `DELAY_STEPS`, NOT ON
+    // SECONDS. It has to: the ladder is 0.1-fine below 3s and 0.5-coarse above it
+    // (see DELAY_STEPS), and a range input has exactly one `step`. Positions run
+    // 1 … 44 for the real delays and 45 for ∞.
+    // ⚠️ This is also what keeps Đợt 213's tap gesture honest — a tap beside the
+    // thumb is "+1 POSITION", so it moves a tenth down low and half a second up
+    // high, which is the whole point of a non-uniform ladder. A seconds-valued
+    // slider could not have expressed that at all.
+    const UNLIM_POS = DELAY_STEPS.length + 1;
+    const posOf = w => {
+      if (w === 0) return UNLIM_POS;
+      const i = DELAY_STEPS.indexOf(snapDelay(w));
+      return i < 0 ? 1 : i + 1;          // snapDelay always lands on the ladder; guard anyway
+    };
+    const valOf = pos => (pos >= UNLIM_POS ? 0 : DELAY_STEPS[pos - 1]);
     const cDelay = mkSliderCell({
       label: "Time delay", sub: "let the other team finish",
       // ⭐ Đợt 213 — BLUE, not amber. thầy's three-colour law is red = a
@@ -1250,11 +1392,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // Speed / Difficulty / Round time already use. It is not cosmetic any
       // more either: core/options-panel.js now reads the tone to decide which
       // side of the panel a slider sits on, so a wrong colour is a wrong place.
-      min: 0.1, max: UNLIM_POS, step: 0.1, value: posOf(cur.fightTieWindow), tone: "blue",
-      fmt: pos => (pos >= UNLIM_POS - 0.05 ? "∞" : pos.toFixed(1) + "s"),
+      min: 1, max: UNLIM_POS, step: 1, value: posOf(cur.fightTieWindow), tone: "blue",
+      fmt: pos => (pos >= UNLIM_POS ? "∞" : DELAY_STEPS[pos - 1].toFixed(1) + "s"),
       onInput: pos => { const w = valOf(pos); draft.fightTieWindow = w; syncDelay(w); }
     });
-    cDelay.cell.title = "How long a team that answered second still counts as level. ∞ waits a visible 5s.";
+    cDelay.cell.title = "How long a team that answered second still counts as level. ∞ waits for as long as it takes.";
 
     // Same slider, two shapes. In a pick-turn game there is no TIME DELAY to
     // turn the bonus off with, so it keeps its own "Off" at 0 exactly as before;

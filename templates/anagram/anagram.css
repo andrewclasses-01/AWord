@@ -637,3 +637,24 @@
    what `.is-locked` does — no invisible layer is ever created, so the trap has
    nothing to come back as. */
 .aw-anagram-penhost { min-width: 0; }
+
+/* ⭐⭐⭐ Đợt 217 — CHE DẤU VẾT TRẢ LỜI KHI FIGHT (thầy, 20/8/2026):
+   *"đội xong trước hiện tích đúng/sai và tính điểm xong phải có phương án ẩn ngay
+   câu trả lời"*. `core/fight.js` gắn `.is-concealed` lên vỏ bàn đã xong và gỡ ra khi
+   lật bài; TEMPLATE khai ở đây *cái gì* là dấu vết trả lời của mình.
+   ⚠️ CHỦ NGỮ CỦA MỌI SELECTOR LÀ CLASS CỦA TEMPLATE NÀY, không phải class lõi — CSS
+   của template không bao giờ bị gỡ khỏi trang, nên một selector trần nhắm class lõi
+   sẽ đi tô cả những game khác (luật trong core/HUONG DAN CORE.md).
+   ⚠️ CHỈ CHE, KHÔNG DỜI: đừng đụng `display`, `width`, `transform` hay bố cục ở đây —
+   bàn kia vẫn đang chơi ngay bên cạnh, và một cú nhảy bố cục ở nửa màn hình này là
+   thứ đập vào mắt còn to hơn chính đáp án bị lộ. */
+/* Thầy nói thẳng: *"Anagram thì không hiện chữ trong ô nữa"*. Ô vẫn còn nguyên chỗ và
+   nguyên màu — chỉ chữ biến mất — nên bàn không nhấp nháy đổi hình.
+   ⚠️ `color: transparent` chứ không phải `visibility`/`display`: chữ phải vẫn chiếm
+   đúng chỗ cũ để bề rộng ô không đổi, và hàng chữ gốc ở dưới cũng không xô lệch. */
+.aw-fight-board.is-concealed .aw-anagram-rtile,
+.aw-fight-board.is-concealed .aw-anagram-otile,
+.aw-fight-board.is-concealed .aw-anagram-reveal { color: transparent; transition: color .18s ease; }
+/* Ô đã điền vốn đổi màu nền theo đúng/sai — cũng là một cách để lộ bài. */
+.aw-fight-board.is-concealed .aw-anagram-rtile.is-filled.is-blue,
+.aw-fight-board.is-concealed .aw-anagram-rtile.is-filled.is-wrongbg { background-color: var(--aw-ana-lost-bg); }

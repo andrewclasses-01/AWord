@@ -128,3 +128,19 @@
   margin: auto; text-align: center; color: var(--aw-muted);
   font-size: 2.2cqw; font-weight: 600;
 }
+
+/* ⭐⭐⭐ Đợt 217 — CHE DẤU VẾT TRẢ LỜI KHI FIGHT (thầy, 20/8/2026):
+   *"đội xong trước hiện tích đúng/sai và tính điểm xong phải có phương án ẩn ngay
+   câu trả lời"*. `core/fight.js` gắn `.is-concealed` lên vỏ bàn đã xong và gỡ ra khi
+   lật bài; TEMPLATE khai ở đây *cái gì* là dấu vết trả lời của mình.
+   ⚠️ CHỦ NGỮ CỦA MỌI SELECTOR LÀ CLASS CỦA TEMPLATE NÀY, không phải class lõi — CSS
+   của template không bao giờ bị gỡ khỏi trang, nên một selector trần nhắm class lõi
+   sẽ đi tô cả những game khác (luật trong core/HUONG DAN CORE.md).
+   ⚠️ CHỈ CHE, KHÔNG DỜI: đừng đụng `display`, `width`, `transform` hay bố cục ở đây —
+   bàn kia vẫn đang chơi ngay bên cạnh, và một cú nhảy bố cục ở nửa màn hình này là
+   thứ đập vào mắt còn to hơn chính đáp án bị lộ. */
+/* Cả hàng đáp án nhạt hẳn đi: nhìn sang không đọc được chữ, và cũng không đoán được
+   ô nào vừa được chọn (thầy: "quiz thì nhạt màu hơn các ô đáp án"). Câu hỏi vẫn rõ. */
+.aw-fight-board.is-concealed .aw-quiz-answers { opacity: .12; filter: saturate(.1); }
+.aw-fight-board.is-concealed .aw-quiz-answers,
+.aw-fight-board.is-concealed .aw-quiz-answers * { transition: opacity .18s ease; }

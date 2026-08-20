@@ -43,6 +43,17 @@ import { icons } from "./icons.js";
 // with it. A constant used near the top of a long function does not belong
 // halfway down it.
 const NO_TEMPLATE_TYPES = new Set(["running_word", "running_team"]);
+
+// ⭐⭐ Đợt 216 (thầy, 20/8/2026) — HOW LONG THE GAME IGNORES TAPS AFTER START.
+// The teacher plays on an infrared touch panel and START fires at pointerDOWN
+// (press(), Đợt 175), so the game surface used to become live under a finger
+// that was still on its way down for a second tap: "một số pha vừa bấm start
+// xong bấm nhầm ngay nội dung bên dưới".
+// ⚠️ 500ms IS A CHOSEN NUMBER, not a round one: the READY overlay fades out over
+// 260ms, so anything at or under that would leave no guard at all once the fade
+// is done — the shield has to outlast what the eye is watching. The teacher
+// picked 0,5s out of 0,3 / 0,5 / 0,8 / 1,0.
+const START_GUARD_MS = 500;
 import { sound } from "./sound.js";
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
@@ -51,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID } from "./showdown.js";
+import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -383,6 +394,40 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // must not make a solo review accuse itself of not sharing something it was
   // never going to share. It DOES write to the durable history — Đợt 197.
   const sdCanPublish = !!showdownPick && showdownPick.teamId !== SOLO_TEAM_ID;
+
+  // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — MÁY BỊ GIÀNH MẤT ĐỘI PHẢI DỪNG LẠI.
+  // *"Đội bị lấy mất team cũng sẽ báo đã bị giành mất team và buộc dừng game, không
+  // cho tiếp tục và yêu cầu phải chọn team để chơi lại."*
+  // ⚠️⚠️ ĐIỀU KIỆN LÀ "CÓ NGƯỜI KHÁC ĐANG GIỮ", KHÔNG PHẢI "KHÔNG CÒN AI GIỮ".
+  // Ranh giới này là thứ quyết định tính năng có dùng được hay không: một chỗ đặt gạch
+  // KHÔNG CÓ có thể chỉ nghĩa là hết hạn TTL 12 giờ, là mạng lớp học rớt, là bảng chưa
+  // từng được publish — dừng ván giữa giờ vì mấy thứ đó thì tệ hơn hẳn cái nó chữa.
+  // Còn `c.by !== me` là bằng chứng dương tính: có một trình duyệt khác vừa ghi tên nó
+  // lên đúng đội này.
+  // ⚠️ NHẬP ĐỘNG, và chỉ khi thật sự đang chơi Showdown: `core/showdown-setup.js` với
+  // tới Firestore + thư viện, mà trang học sinh tuyệt đối không được tải nó (luật 2
+  // của v0.9.0). `showdownPick` chỉ khác null khi `!session`, nên nhánh này không bao
+  // giờ chạy ở play.html.
+  let sdClaimStop = null;
+  if (sdCanPublish) {
+    import("./showdown-setup.js").then(mod => {
+      // `torndown` khai bằng `let` ở dưới xa — an toàn vì lời gọi lại này chỉ chạy sau
+      // khi cả startGame() đã chạy xong (cùng lối lập luận với `menuEl` trong idleTick).
+      if (torndown) return;
+      sdClaimStop = mod.subscribeSetup(next => {
+        if (torndown) return;
+        const c = next && next.claims && next.claims[showdownPick.teamId];
+        if (c && c.by !== browserId()) showTeamStolen();
+      });
+      if (torndown) stopSdClaimWatch();     // ván có thể đã bị dỡ ngay trong lúc chờ nhập
+    }).catch(() => { /* offline / signed out — không có kênh nào để nghe, chơi tiếp */ });
+  }
+  function stopSdClaimWatch() {
+    if (!sdClaimStop) return;
+    const stop = sdClaimStop;
+    sdClaimStop = null;
+    try { stop(); } catch { /* already gone */ }
+  }
 
   /**
    * ⭐⭐ Đợt 197 — WHICH ARRAY OF THE ACT IS THE PLAYABLE ONE, AND HOW LONG IT IS.
@@ -885,6 +930,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     bottombar.append(waitBar);
     // Optional call: an older core/fight.js served from a stale cache never asks.
     if (fight.ctl.registerWaitBar) fight.ctl.registerWaitBar(fight.side, runWaitBar);
+    // ⭐⭐ Đợt 217 — ĐƯỜNG NHẬN TẠM DỪNG TỪ BÀN KIA (thầy: "1 bên bấm nút menu thì bên
+    // còn lại cũng tạm dừng game cùng"). Lý do "relay" KHÔNG chuyển tiếp ngược lại —
+    // xem `enterPause`. Cũng là lời gọi TUỲ CHỌN, cùng lý do với dòng ngay trên: một
+    // core/fight.js cũ lấy từ cache sẽ không bao giờ hỏi tới.
+    if (fight.ctl.registerPause) {
+      fight.ctl.registerPause(fight.side, (on, dim) =>
+        (on ? enterPause("relay", { dim: dim !== false }) : exitPause("relay")));
+    }
   }
   function placeWaitBar() {
     const rowW = bottombar.clientWidth;
@@ -911,7 +964,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   function runWaitBar(ms) {
     if (!waitBar) return;
     if (!(ms > 0) || torndown) {
-      waitBar.classList.remove("is-on");
+      waitBar.classList.remove("is-on", "is-forever");
       waitBarFill.style.transition = "none";
       waitBarFill.style.width = "100%";
       return;
@@ -923,6 +976,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // empty — the standard restart-a-CSS-transition dance.
     waitBarFill.style.transition = "none";
     waitBarFill.style.width = "100%";
+    // ⭐⭐ Đợt 216 — A THIRD STATE: ∞ (`Infinity`). The teacher's ∞ no longer ends
+    // after five seconds, it ends when the other team finishes the word, so there
+    // is no deadline left to count down and a draining bar would be a lie — it
+    // would run out while the round was still open. His own words for what to
+    // show instead: "đứng đấy, thở nhẹ, nền sáng lấp lánh hào quang nhấp nháy
+    // chậm". The bar therefore stays FULL and the motion is handed to CSS
+    // (`.is-forever`, core/app.css); nothing here is timed.
+    // ⚠️ RETURN BEFORE THE TRANSITION LINE. `"width " + Infinity + "ms"` is not a
+    // valid duration, Chrome drops the whole shorthand, and the very next write
+    // ("0%") then applies with NO transition at all — an ∞ wait would have shown
+    // an empty bar instantly, the opposite of what it means.
+    if (!Number.isFinite(ms)) { waitBar.classList.add("is-forever"); return; }
+    waitBar.classList.remove("is-forever");
     void waitBarFill.offsetWidth;
     waitBarFill.style.transition = "width " + ms + "ms linear";
     waitBarFill.style.width = "0%";
@@ -1489,6 +1555,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   // ----- READY screen (template type · big title · PLAY · instruction) -----
   const playOverlay = el("div", "aw-play-overlay");
+  // ⭐ Đợt 216 — "has PLAY been pressed", asked separately from "is the overlay
+  // still in the DOM". They used to be the same question; they stopped being one
+  // the moment the overlay stayed on as an invisible shield for START_GUARD_MS
+  // after the game had already mounted. The one reader (Options ▸ Apply, far
+  // below) means the first, so it now asks for the first.
+  let playStarted = false;
   playOverlay.append(el("div", "aw-ready-type", "ANDREW CLASSES"));   // brand on top
   const readyCenter = el("div", "aw-ready-center");
   // ⭐ Đợt 154 — the title carries the SUB-ACT: "DS-S2.I1.W3 / WORDS - ENG1".
@@ -1721,12 +1793,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // BOTH audible now, which is right for gameplay sounds and wrong for this).
     // The board-0 copy is the match's chime.
     if (!fight || fight.side === 0) (tpl.sounds?.play || sound.start)();
-    playOverlay.style.pointerEvents = "none";   // never block the game, even if the fade stalls
+    playStarted = true;
+    // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — THE OVERLAY STAYS A SHIELD FOR HALF A SECOND.
+    // "ngay khi start đã bấm được ngay nội dung rồi nên một số pha vừa bấm start
+    // xong bấm nhầm ngay nội dung bên dưới". Two things made that unavoidable:
+    // press() fires at pointerDOWN (Đợt 175), so START lands the instant a finger
+    // touches the panel, and this line used to switch the overlay's
+    // `pointer-events` off on the very next statement — with begin() mounting the
+    // game one line further down. A second tap a hundred ms later went straight
+    // into a board that had existed for a hundred ms.
+    // ⭐ NO NEW ELEMENT: `.aw-play-overlay` is already `inset:0` over the whole
+    // frame, so simply NOT switching its pointer-events off leaves a shield that
+    // is already the right size and in the right layer. It fades out on schedule
+    // (260ms) and keeps swallowing taps, invisible, until the guard is up.
+    // ⚠️ ONE TIMER, NOT TWO. The old pair (`fade.onfinish` + a 350ms fallback)
+    // existed because a hidden tab can stall animation events — that reasoning
+    // still stands, and is exactly why removal now hangs off the plain setTimeout
+    // ALONE and never off the animation: an `onfinish` here would uncover the game
+    // at 260ms and quietly undo the guard.
     let removed = false;
     const removeOverlay = () => { if (removed) return; removed = true; playOverlay.remove(); };
-    const fade = playOverlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: "ease", fill: "forwards" });
-    fade.onfinish = removeOverlay;
-    setTimeout(removeOverlay, 350);   // fallback: a backgrounded/hidden tab can stall animation events
+    playOverlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: "ease", fill: "forwards" });
+    setTimeout(removeOverlay, START_GUARD_MS);
     begin();
   });
 
@@ -2175,6 +2263,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     document.removeEventListener("pointerdown", onToolOutside);
     if (btn) btn.classList.remove("is-active");
     if (!dim && !panel) return;
+    // Đợt 217 — SAU dòng trên, để cú `closeToolPanel(false)` dọn dẹp ở đầu
+    // openToolPanel (lúc chưa có bảng nào) không thả đồng hồ chạy rồi khoá lại ngay.
+    exitPause("panel");
     if (!fade) { dim?.remove(); panel?.remove(); return; }
     let done = false;
     const remove = () => { if (done) return; done = true; dim?.remove(); panel?.remove(); };
@@ -2458,6 +2549,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     capPanelHeight(buildContent);
     btn.classList.add("is-active");
     activeToolBtn = btn;
+    // ⭐⭐ Đợt 217 (thầy) — MỌI BẢNG CÔNG CỤ NAY DỪNG VÁN CHƠI, y như ☰ Menu.
+    // ⚠️ `dim:false` — `.aw-tool-dim` vừa được đắp lên cả khung nhìn ở trên; thêm tấm
+    // che sân nữa là tối gấp đôi so với chính nó lúc mở Menu.
+    // ⚠️ Không đặt trong `twoBeatPanelSwap` (đổi Options ▸ Template): ở đó bảng vốn
+    // ĐANG mở nên lý do "panel" đã nằm sẵn trong tập, thêm lần nữa là vô hại nhưng
+    // thừa — `enterPause` tự bỏ qua lý do trùng.
+    enterPause("panel", { dim: false });
     setTimeout(() => document.addEventListener("pointerdown", onToolOutside), 0);
   }
 
@@ -3109,7 +3207,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // the new settings (teacher's call, 1/8/2026 — every template). If the
       // game hasn't started yet (Play overlay still up), there's nothing to
       // restart — just apply and close; the options take effect on Play.
-      const playing = !playOverlay.isConnected;
+      const playing = playStarted;   // Đợt 216 — see playStarted's own note
       if (playing) { closeToolPanel(false); replayCurrent(); return; }
       // ⭐⭐ Đợt 174 — ONE EXCEPTION to "nothing restarts on the READY screen",
       // and it was a real hole found by testing rather than a precaution.
@@ -3239,7 +3337,79 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // clicking outside) picks up exactly where it left off. -----
   let stageDim = null;
   let pausedAnimations = [];
-  function enterMenuPause() {
+  // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — TẠM DỪNG NAY CÓ **LÝ DO**, KHÔNG CÒN LÀ CÔNG TẮC.
+  // Thầy giao hai việc mà hoá ra là cùng một việc:
+  //   · *"Khi Fight, 1 bên bấm nút menu thì bên còn lại cũng tạm dừng game cùng"*
+  //   · *"Trong mọi chế độ, bấm bất cứ nút tùy chỉnh nào mà hiện pop-up thì game đều
+  //      tạm dừng như khi bấm menu (fight thì dừng cho cả 2)"*
+  // Ba nguồn có thể cùng lúc đòi dừng một bàn — ☰ Menu · bảng công cụ (Options /
+  // Template / Style / MODE) · bàn BÊN KIA dừng và chuyển tiếp sang — nên "đang dừng"
+  // phải là một TẬP LÝ DO chứ không phải một cờ.
+  // ⛔⛔ VÌ SAO KHÔNG DÙNG CỜ: mở Options rồi bấm ☰ Menu, đóng Menu — với một cờ thì
+  // cú đóng đó thả đồng hồ chạy lại NGAY TRONG LÚC bảng Options vẫn còn che kín màn.
+  // Đồng hồ chỉ được chạy lại khi lý do CUỐI CÙNG rời đi.
+  // ⚠️ CHỈ "menu" VÀ "panel" MỚI CHUYỂN TIẾP. Lý do "relay" là do bàn kia gửi sang;
+  // chuyển tiếp nó ngược lại là hai bàn gọi qua gọi lại vô tận.
+  const pauseReasons = new Set();
+  function enterPause(reason, { dim = true } = {}) {
+    if (pauseReasons.has(reason)) return;
+    const first = pauseReasons.size === 0;
+    pauseReasons.add(reason);
+    // ⚠️ Tấm che sân KHÔNG phải của riêng ☰ Menu nữa, nhưng bảng công cụ thì KHÔNG
+    // được thêm: `.aw-tool-dim` đã phủ tối cả khung nhìn rồi, chồng thêm một lớp nữa
+    // là sân tối gấp đôi so với chính nó lúc mở Menu.
+    if (dim && !stageDim) { stageDim = el("div", "aw-stage-dim"); }
+    if (first) freezePlay();
+    if (stageDim && !stageDim.isConnected) inner.append(stageDim);
+    // FIGHT: bàn kia dừng theo — nhưng chỉ khi lý do là của CHÍNH bàn này.
+    if (fight && reason !== "relay") fight.ctl.setPaused?.(fight.side, true, dim);
+  }
+  function exitPause(reason) {
+    if (!pauseReasons.delete(reason)) return;
+    if (fight && reason !== "relay") fight.ctl.setPaused?.(fight.side, false);
+    if (pauseReasons.size) return;      // còn lý do khác — chưa được chạy lại
+    stageDim?.remove(); stageDim = null;
+    thawPlay();
+  }
+  // Đợt 217 — thân của "đóng băng ván chơi", tách khỏi việc DỰNG tấm che: nay có ba
+  // lý do có thể gọi tới nó, và chỉ ☰ Menu / bàn-kia mới kèm tấm che.
+  // ⭐⭐⭐ Đợt 217 — "ĐỘI NÀY VỪA BỊ MÁY KHÁC LẤY MẤT" (thầy). Ván dừng hẳn tại chỗ.
+  // ⛔⛔ TẤM CHẶN NÀY KHÔNG CÓ NÚT ĐÓNG, và đó là cả ý nghĩa của nó: thầy giao *"buộc
+  // dừng game, không cho tiếp tục và yêu cầu phải chọn team để chơi lại"*. Nút duy
+  // nhất trên đó MỞ BẢNG SHOWDOWN chứ không gỡ tấm chặn — bỏ bảng đi giữa chừng thì
+  // ván vẫn đứng nguyên, y như trước khi bấm. Đường ra hợp lệ duy nhất là chọn một đội
+  // rồi bấm Ready, mà Ready thì dựng lại ván từ đầu nên tấm chặn tự biến mất cùng nó.
+  // ⚠️ Nó phủ `inner` (khung chơi), KHÔNG phủ hàng nút dưới khung — nút MODE phải còn
+  // bấm được, nếu không thì lời hứa "chọn team để chơi lại" thành ngõ cụt.
+  // ⚠️ Lý do tạm dừng mang tên riêng "stolen": bảng công cụ mở ra rồi đóng lại sẽ gỡ
+  // lý do "panel" của nó, và nếu hai thứ dùng chung một lý do thì đúng cú đóng bảng đó
+  // sẽ thả đồng hồ chạy lại sau lưng tấm chặn.
+  let stolenEl = null;
+  function showTeamStolen() {
+    if (stolenEl || torndown || !showdownPick) return;
+    closeMenu();
+    enterPause("stolen", { dim: false });     // tấm chặn dưới đây đã là một lớp phủ đặc
+    stolenEl = el("div", "aw-sd-stolen");
+    const box = el("div", "aw-sd-stolen-box");
+    box.append(
+      el("div", "aw-sd-stolen-t", "TEAM TAKEN"),
+      el("div", "aw-sd-stolen-s",
+        `${showdownPick.teamName || "This team"} is being played on another screen now.`),
+      el("div", "aw-sd-stolen-s2", "Choose a team to play again.")
+    );
+    const b = el("button", "aw-btn-primary aw-sd-stolen-btn", "Choose a team");
+    b.type = "button";
+    b.onclick = () => {
+      sound.click();
+      clearPick();
+      if (modeBtn && modeBtn.isConnected) openToolPanel(modeBtn, buildShowdownPanelHost);
+    };
+    box.append(b);
+    stolenEl.append(box);
+    inner.append(stolenEl);
+  }
+
+  function freezePlay() {
     pauseClockForMenu();
     sound.pauseContext();   // the shared Web Audio context (crossword/running word/team's own tones)
     if (typeof window !== "undefined" && window.__awSfxPacks) {
@@ -3263,8 +3433,6 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // routed through core) that the steps above can't reach. Templates that
     // don't opt in are unaffected: the stage just dims+freezes visually.
     tpl.onPause?.(true);
-    stageDim = el("div", "aw-stage-dim");
-    inner.append(stageDim);
   }
   // The Menu closes for TWO different reasons and they need opposite endings:
   //   • Resume / click-outside  -> put the play back exactly as it was;
@@ -3275,8 +3443,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // The shared AudioContext is the ONE thing resumed either way: it outlives the
   // play, and leaving it suspended would mute the NEXT game's synthesized tones
   // (crossword / running word / running team).
-  function exitMenuPause() {
-    stageDim?.remove(); stageDim = null;
+  function thawPlay() {
     resumeClockForMenu();
     sound.resumeContext();
     if (typeof window !== "undefined" && window.__awSfxPacks) {
@@ -3312,7 +3479,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Back = drop the picker and resume the running game.
       openSwitchPicker(() => { backdrop?.remove(); backdrop = null; });
     }));
-    enterMenuPause();
+    enterPause("menu");
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)
     setTimeout(() => document.addEventListener("pointerdown", onMenuOutside), 0);
@@ -3322,7 +3489,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const el2 = menuEl;
     menuEl = null;
     document.removeEventListener("pointerdown", onMenuOutside);
-    exitMenuPause();
+    exitPause("menu");
     // Mirrors .aw-menu's entrance (app.css, `aw-pop`) in reverse (Đợt 134) —
     // this popup has no self transform to protect, unlike .aw-tool-panel.
     let done = false;
@@ -3420,6 +3587,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (torndown) return;
     torndown = true;
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
+    stopSdClaimWatch();            // ⭐ Đợt 217 — và bộ nghe "đội có bị giành không"
     closeMenu(); stopTimer(); closeToolPanel(false);
     costNodes.forEach(n => n.remove()); costNodes.clear();
     cleanup();

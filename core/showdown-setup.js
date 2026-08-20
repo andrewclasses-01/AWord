@@ -314,6 +314,41 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
   return { node, superseded };
 }
 
+/**
+ * ⭐⭐ Đợt 217 (thầy, 20/8/2026) — XOÁ CLAIM CỦA **MỘT ĐỘI**, BẤT KỂ AI ĐANG GIỮ.
+ *
+ * *"cho phép các máy bất kỳ có thể xóa lưu team của đội khác"*. Đây là hàm ghi duy
+ * nhất trong file này đụng tới hàng của trình duyệt KHÁC — mọi hàm còn lại
+ * (`writeMyClaim`, `releaseMyClaim`) đều chỉ dám sửa hàng `c.by === me`.
+ *
+ * ⛔⛔ VÌ SAO VIỆC NÀY AN TOÀN, DÙ NGHE NHƯ KHÔNG: cái nó xoá không phải dữ liệu, mà
+ * là một chỗ ĐẶT GẠCH. Trước đợt này chỗ đặt gạch chỉ mất theo TTL 12 giờ, nên một
+ * máy bị tắt giữa buổi khoá cứng đội đó cho tới sáng hôm sau và không màn nào trong
+ * lớp gỡ ra được. Người bấm là chính thầy, đứng trước bảng, sau một câu hỏi xác nhận.
+ *
+ * ⚠️ TRONG MỘT GIAO DỊCH và chỉ chạm `claims`, cùng lý do `writeMyClaim` đã ghi: đọc
+ * cả bảng rồi ghi cả bảng là có ngày đóng dấu một bản sao cũ đè lên đội hình máy khác
+ * vừa dựng.
+ * ⚠️ KHÔNG động tới claim của chính mình — nhả đội người khác không có nghĩa là bỏ
+ * đội của mình.
+ */
+export async function releaseTeamClaim(teamId) {
+  if (!teamId) return {};
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, DOC_ID);
+  const claims = await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const server = normalize(snap.exists() ? snap.data() : {});
+    const next = { ...server.claims };
+    delete next[teamId];
+    if (snap.exists()) tx.update(ref, { claims: clean(next), updatedAt: Date.now() });
+    return next;
+  });
+  if (cache && cacheUid === uid) cache = { ...cache, claims };
+  return claims;
+}
+
 export async function writeMyClaim(mine) {
   const uid = await requireUid();
   const me = browserId();
@@ -1069,6 +1104,9 @@ export function buildShowdownPanel(panel, ctx) {
   // nothing has to mutate the caller's object.
   let playingTeamId = ctx.currentTeam?.teamId || null;
   let pool = [];            // pupils not yet in a team (screen B)
+  // Đợt 217 — tới mốc này thì một bảng RỖNG bay về là tiếng vọng của cú reset do
+  // chính màn này vừa thực hiện, không phải người khác reset. Xem toBuild().
+  let justWipedUntil = 0;
   // ⭐ Đợt 197 — the `updatedAt` of the table snapshot this panel is working
   // from. `publishTable` compares it against the server's to tell "nobody has
   // touched this since I loaded it" from "another screen edited it while I was
@@ -1943,6 +1981,17 @@ export function buildShowdownPanel(panel, ctx) {
      */
     async function toBuild(fresh) {
       if (fresh) {
+        // ⭐⭐⭐ Đợt 217 — ĐÁNH DẤU "CHÍNH TA VỪA XOÁ BẢNG" TRƯỚC KHI XOÁ.
+        // `wipeSetup()` ghi một bảng RỖNG lên Firestore, và `subscribeSetup` của
+        // CHÍNH màn này nghe thấy nó vài trăm mili giây sau — lúc đó ta đã dựng xong
+        // bộ cột mới ở dưới. Bộ nghe cũ không phân biệt được "người khác reset" với
+        // "tiếng vọng của chính mình", nên nó **đè `setup.teams` về rỗng** rồi bắn
+        // ta ngược về màn chọn lớp với hồ bơi trống — đúng cái thầy tả là *"reset rồi
+        // vẫn không build team được"*. Nó lúc được lúc không vì phụ thuộc cú snapshot
+        // về trước hay sau lúc dựng cột: một cuộc đua, nên chỉ thỉnh thoảng cắn.
+        // ⚠️ Cửa sổ có HẠN (8 giây) chứ không phải một cờ bật mãi: nếu để cờ thì một
+        // cú reset THẬT từ máy khác ngay sau đó sẽ bị nuốt mất.
+        justWipedUntil = Date.now() + 8000;
         // The previous class's table and its published results go together —
         // leaving the results behind would let the new teams (which are handed
         // the same `sdt_1…` ids) open a class board holding another class's rows.
@@ -2383,9 +2432,30 @@ export function buildShowdownPanel(panel, ctx) {
         tick.title = taken ? "Taken on another screen"
           : mine ? "Release this team so another screen can take it"
           : "This screen plays this team";
-        tick.disabled = taken;
+        // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — ĐỘI CỦA MÁY KHÁC NAY GIÀNH LẠI ĐƯỢC.
+        // *"cho phép các máy bất kỳ có thể xóa lưu team của đội khác… vẫn có thể xóa
+        // đội đó đi bằng nút X và chọn team đó"*. Trước đợt này ✗ của cột bị người
+        // khác giữ là một hình vẽ chết (`disabled`), và đường ra duy nhất là ngồi đợi
+        // hết TTL 12 giờ — thứ đã khoá cứng cả một buổi dạy khi một máy bị tắt đi mà
+        // chưa kịp nhả đội.
+        // ⛔ HAI BƯỚC, KHÔNG PHẢI MỘT: ✗ chỉ **nhả** đội ra (cột trở thành trống),
+        // rồi thầy bấm dấu tích như mọi cột trống khác mới **lấy**. Đúng câu thầy
+        // viết ("xóa đội đó đi… VÀ chọn team đó"), và quan trọng hơn: một cú chạm
+        // nhầm chỉ nhả ra chứ không kéo luôn cả máy này sang một đội khác.
+        tick.disabled = false;
+        if (taken) {
+          tick.title = `Take ${t.name} from the screen that has it`;
+          tick.classList.add("is-steal");
+        }
         tick.onclick = ev => {
           ev.stopPropagation();                 // not "select the column" as well
+          if (taken) {
+            sfx.tap();
+            askConfirm(
+              `Take ${t.name} from the screen that has it? That screen has to choose a team again.`,
+              "Take", () => stealTeam(t));
+            return;
+          }
           if (mine) {
             sfx.tap();
             // Asked, never instant: releasing is visible on every OTHER screen
@@ -2416,8 +2486,46 @@ export function buildShowdownPanel(panel, ctx) {
           list.append(chip);
         });
         col.append(list);
+        // ⭐⭐ Đợt 217 (thầy) — *"cần có thêm chữ 'Picked ✓' màu xanh ở giữa cột, nằm
+        // bên dưới đáy cột team để dễ dàng nhận dạng"*. Trước đây "đã có người lấy"
+        // chỉ được nói bằng ĐỘ MỜ của cả cột — mà mờ cũng là cách nói của "chưa chọn
+        // được", nên hai trạng thái khác hẳn nhau trông giống nhau từ xa.
+        // ⚠️ Nằm TRONG cột, ghim xuống đáy, chứ không phải lơ lửng dưới mép ngoài:
+        // `.aw-sd-cols` cao đúng bằng chỗ còn lại của bảng, nên chữ đặt ở `top:100%`
+        // sẽ bị cắt cụt hoặc đè lên hàng nút chân bảng. Vẫn đúng ý "ở đáy cột".
+        // ⚠️ Chữ này KHÔNG bị làm mờ theo cột (xem `.aw-sd-col.is-taken` trong
+        // core/app.css: độ mờ nay đắp lên tên + danh sách chip, không đắp lên cả cột)
+        // — nhãn phải xanh rõ, và dấu ✗ giành đội phải bấm được.
+        if (taken) {
+          const pick = el("div", "aw-sd-colpicked");
+          pick.append(el("span", "aw-sd-colpicked-t", "Picked"));
+          pick.insertAdjacentHTML("beforeend", icons.check);   // trusted markup
+          col.append(pick);
+        }
         colsBox.append(col);
       });
+    }
+
+    /**
+     * ⭐⭐ Đợt 217 — GIÀNH LẠI MỘT ĐỘI ĐANG BỊ MÁY KHÁC GIỮ.
+     *
+     * ⭐ KHÔNG CẦN HÀM GHI MỚI: `writeMyClaim(teamId)` vốn đã ghi
+     * `next[teamId] = { by: me }` — tức nó ĐÈ lên chủ cũ. Trước đợt này giao diện
+     * không bao giờ cho gọi nó trên một đội đã có chủ, nên đường ghi đó chưa từng
+     * chạy; nay nó chính là cú giành, không thêm một dòng nào ở tầng dữ liệu.
+     * ⚠️ GHI NGAY, không đợi Ready (khác với cú tích một đội trống, vốn chỉ ghi lúc
+     * bấm Ready): máy bị giành phải biết NGAY để dừng ván đang chơi — đợi tới Ready
+     * là lớp bên kia chơi tiếp một đội không còn là của mình.
+     * ⚠️ Xoá ở bản sao TẠI CHỖ trước, đúng lý do `cancelMyTeam` đã ghi: đợi
+     * Firestore vọng về là dấu ✗ còn nằm trên một cột thầy vừa giành xong.
+     */
+    function stealTeam(t) {
+      delete setup.claims[t.id];
+      claimedTeam = null;               // nhả ra, chưa lấy — thầy bấm dấu tích mới lấy
+      selectedTeam = t.id;
+      sfx.lift();
+      paintCols(); paintFoot();
+      releaseTeamClaim(t.id).catch(() => { /* signed out or offline — TTL is the backstop */ });
     }
 
     /**
@@ -2999,8 +3107,35 @@ export function buildShowdownPanel(panel, ctx) {
       if (c) roster = c.students.map(s => ({ id: s.id, name: s.name }));
       // A table built earlier already knows its people; prefer THOSE (the
       // teacher may have deleted or hand-added some) over the raw register.
+      // ⭐⭐⭐ Đợt 217 — GỘP, KHÔNG THAY (thầy: *"reset rồi vẫn không build team được
+      // vì một số bạn bị lưu giữ trong đội khác mà không thể xếp đội mới được"*).
+      // ⛔⛔ ĐÂY LÀ GỐC RỄ, và nó nằm ở một dòng trông rất vô hại: `roster = saved`
+      // đặt danh sách lớp thành ĐÚNG những người đang nằm trong một cột nào đó. Hệ
+      // quả là ai KHÔNG ở cột nào thì **không còn tồn tại trên màn hình đó nữa** —
+      // không có trong hồ bơi để kéo vào đội, không có trong cột nào để nhấc ra. Với
+      // thầy nó hiện ra đúng như câu thầy tả: mở bảng lên, thiếu người, và không có
+      // thao tác nào lôi họ về được.
+      // ⚠️ Ba đường sinh ra ca này, không đường nào hiếm: (1) thầy nhấc một bạn khỏi
+      // cột rồi đóng bảng; (2) lớp được thêm học sinh sau khi đã chia đội; (3) bảng
+      // cũ dựng lúc lớp còn thiếu người.
+      // ⚠️ `saved` ĐI TRƯỚC: thứ tự trong cột là thứ tự thầy đã sắp, và nó phải thắng.
+      // ⚠️ Danh sách hôm nay chỉ được gộp vào khi nó là danh sách của ĐÚNG lớp này —
+      // cùng cái chốt mà `rosterFor()` đã dùng, nếu không thì lớp B thừa hưởng người
+      // vắng của lớp A.
       const saved = loaded.teams.flatMap(t => t.members);
-      if (saved.length) roster = saved.map(m => ({ id: m.id, name: m.name }));
+      if (saved.length) {
+        const seen = new Set();
+        const merged = [];
+        const push = m => {
+          const id = m && m.id;
+          if (!id || seen.has(id)) return;
+          seen.add(id);
+          merged.push({ id, name: m.name });
+        };
+        saved.forEach(push);
+        if (loaded.rosterClass && loaded.rosterClass === loaded.classId) (loaded.roster || []).forEach(push);
+        roster = merged;
+      }
     }
 
     // ⭐ Đợt 159 — WHERE THIS PANEL LANDS.
@@ -3031,11 +3166,18 @@ export function buildShowdownPanel(panel, ctx) {
     }
     const built = setup.teams.length > 0 && setup.teams.some(t => t.members.length);
     if (built && !solo) {
-      // Everyone is already placed, so there is no pool to rebuild; the claim is
-      // whichever team this browser holds — from the live pick if it has one,
-      // otherwise from the shared table (a browser can hold a team it has not
-      // pressed Ready on yet).
-      pool = [];
+      // ⭐⭐⭐ Đợt 217 (thầy: *"reset rồi vẫn không build team được vì một số bạn bị
+      // lưu giữ trong đội khác"*) — HỒ BƠI ĐƯỢC TÍNH LẠI, KHÔNG ĐƯỢC GIẢ ĐỊNH LÀ RỖNG.
+      // ⛔⛔ Dòng cũ là `pool = []` với lời giải thích "ai cũng đã được xếp rồi" — một
+      // giả định, và nó SAI ở đúng những ca thầy gặp: bảng cũ dựng khi lớp còn thiếu
+      // người · một bạn được thêm vào lớp sau khi chia đội · một bạn bị nhấc khỏi cột
+      // rồi panel bị đóng · bảng của lớp KHÁC còn sót lại. Ở mọi ca đó những bạn không
+      // nằm trong cột nào **biến mất khỏi màn hình**: không có trong hồ bơi để kéo,
+      // không có trong cột nào để nhấc ra ⇒ không cách nào xếp được nữa.
+      // ⭐ `toBuild()` (nhánh `keepIt`) đã tính đúng theo cách này từ lâu; chỗ này chỉ
+      // là bản sao thứ hai của cùng một câu hỏi mà trả lời khác đi. Nay cùng một phép.
+      const placedIds = new Set(setup.teams.flatMap(t => (t.members || []).map(m => m.id)));
+      pool = roster.filter(m => !placedIds.has(m.id));
       claimedTeam = (ctx.currentTeam && setup.teams.some(t => t.id === ctx.currentTeam.teamId))
         ? ctx.currentTeam.teamId
         : (Object.entries(setup.claims).find(([, c]) => c.by === me && claimIsLive(c)) || [null])[0];
@@ -3052,6 +3194,14 @@ export function buildShowdownPanel(panel, ctx) {
     watchForClose();
     unsub = subscribeSetup(next => {
       if (!alive()) { stopWatch(); return; }
+      // ⭐⭐ Đợt 217 — TIẾNG VỌNG CỦA CHÍNH CÚ RESET VỪA RỒI: nhận `claims` (đúng là
+      // đã sạch) nhưng KHÔNG đụng tới `setup.teams` mà ta vừa dựng lại tại chỗ, và
+      // KHÔNG bắn ta về màn chọn lớp. Xem `justWipedUntil` trong toBuild().
+      if (!next.teams.length && Date.now() < justWipedUntil) {
+        setup.claims = next.claims;
+        baseAt = next.updatedAt || baseAt;
+        return;
+      }
       // ⭐ Đợt 168 — `teams`/`classId`/`className` now sync too, not just
       // `claims`. Reset teams (wipeSetup) empties the WHOLE table from
       // wherever it is pressed; a screen sitting on renderBuild elsewhere

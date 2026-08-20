@@ -471,6 +471,52 @@ html.aw-nhung .aw-below { display: none; }
   border-radius: 1cqw;
   background: linear-gradient(90deg, #ffb24d, #ff8c1a);
 }
+
+/* ⭐⭐ Đợt 216 — THE ∞ WAIT (thầy, 20/8/2026: "đứng đấy, thở nhẹ, nền sáng lấp
+   lánh hào quang nhấp nháy chậm"). At ∞ the round ends when the other team
+   finishes, not when a clock runs out, so there is nothing to count DOWN: the bar
+   stays full and says "still waiting" by breathing instead of by draining.
+   ⚠️ Every bit of motion here is CSS, driven by nothing. core/engine.js's
+   runWaitBar() sets width to 100% with `transition:none` and hands over — no JS
+   timer exists in this state, which is the whole point of the teacher's ∞.
+   ⚠️ THE GLOW LIVES ON THE OUTER BOX, NOT THE FILL: `.aw-waitbar` is
+   `overflow:hidden`, which would clip a halo drawn on its child. An element's own
+   box-shadow is not clipped by its own overflow, so the halo goes here and the
+   shimmer — which MUST be clipped to the bar — goes inside. */
+.aw-waitbar.is-forever {
+  animation: aw-waitglow 3.2s ease-in-out infinite;
+}
+.aw-waitbar.is-forever .aw-waitbar-fill {
+  animation: aw-waitbreathe 3.2s ease-in-out infinite;
+}
+/* The travelling highlight. A pseudo-element, so no board has an extra node to
+   build or tear down, and `transform` on it is safe where the same property
+   higher up would not be: this is a LEAF inside a `pointer-events:none` bar that
+   nothing is ever layered over — see the popup stacking contract in
+   core/HUONG DAN CORE.md before moving it outwards. */
+.aw-waitbar.is-forever .aw-waitbar-fill::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; left: 0; width: 55%;
+  background: linear-gradient(100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, .82) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: aw-waitshine 3.2s ease-in-out infinite;
+}
+@keyframes aw-waitbreathe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.22); }
+}
+@keyframes aw-waitglow {
+  0%, 100% { box-shadow: 0 0 0.5cqw rgba(255, 140, 26, .30); }
+  50%      { box-shadow: 0 0 1.6cqw rgba(255, 178, 77, .75); }
+}
+/* -100% → 250%: the highlight is 55% wide, so it has to leave the right-hand end
+   completely before the cycle turns over, or it would jump back mid-view. */
+@keyframes aw-waitshine {
+  0%       { transform: translateX(-100%); }
+  60%, 100% { transform: translateX(250%); }
+}
 .aw-iconbtn, .aw-navbtn {
   display: inline-flex; align-items: center; justify-content: center;
   border: none; background: transparent; color: var(--aw-muted);
@@ -4700,10 +4746,54 @@ html.aw-nhung .aw-below { display: none; }
    whole line-up — but visibly out of reach and inert. `pointer-events:none`
    rather than only disabling the buttons, so the column-wide select cannot fire
    either. */
+/* ⭐⭐⭐ Đợt 217 — ĐỘ MỜ ĐẮP LÊN NỘI DUNG, KHÔNG ĐẮP LÊN CẢ CỘT, và cột thôi
+   `pointer-events:none`. Hai thay đổi này là điều kiện để hai thứ thầy giao chạy được:
+   dấu ✗ giành đội phải BẤM ĐƯỢC, và nhãn "Picked ✓" phải XANH RÕ. `opacity` trên cột
+   cha thì con không có cách nào sáng lại — nó nhân xuống cả cây, không có đường lùi.
+   ⚠️ Thay `pointer-events:none` bằng cách khoá TỪNG điều khiển (`nameBtn.disabled`,
+   `chip.disabled` — showdown-setup.js đã làm sẵn từ trước) cộng với việc cột bị lấy
+   không được gắn `onclick`. Nên vùng trống của cột vẫn trơ y như cũ. */
 .aw-sd-col.is-taken {
-  opacity: .42; cursor: default; pointer-events: none;
+  cursor: default;
   background: #f6f7f9; border-color: #e8ebf0;
 }
+.aw-sd-col.is-taken .aw-sd-colname,
+.aw-sd-col.is-taken .aw-sd-colmembers { opacity: .42; }
+/* Dấu ✗ giành đội: đỏ, đậm, và KHÔNG mờ — nó là lối ra duy nhất khỏi một đội bị máy
+   đã tắt giữ, nên phải nhìn thấy được từ xa. */
+.aw-sd-tick.is-steal { color: #dc2626; border-color: #f3c4c4; background: #fff5f5; opacity: 1; }
+.aw-sd-tick.is-steal:hover { background: #ffe9e9; border-color: #e88; }
+/* "Picked ✓" — thầy: *"màu xanh ở giữa cột, nằm bên dưới đáy cột team"*. Ghim xuống
+   đáy cột bằng `margin-top:auto` (cột là flex dọc), căn giữa ngang. */
+.aw-sd-colpicked {
+  margin-top: auto; padding-top: 8px;
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  font-size: 12.5px; font-weight: 800; letter-spacing: .01em; color: #16a34a;
+  white-space: nowrap; pointer-events: none;
+}
+.aw-sd-colpicked svg { width: 13px; height: 13px; }
+
+/* ⭐⭐⭐ Đợt 217 — "ĐỘI NÀY VỪA BỊ MÁY KHÁC LẤY MẤT". Lớp phủ ĐẶC (không phải một
+   tấm mờ): thầy giao *"buộc dừng game, không cho tiếp tục"*, nên nó phải đọc như một
+   cánh cửa đóng chứ không như một pop-up chờ bấm ra.
+   ⚠️ `inset:0` trong khung chơi, KHÔNG phủ hàng nút dưới khung — nút MODE phải còn
+   bấm được, nếu không thì "chọn team để chơi lại" thành ngõ cụt.
+   ⚠️ z-index 14 — trên tấm che sân (`.aw-stage-dim`) và trên màn READY (12), dưới
+   `.aw-tool-dim`/`.aw-tool-panel` (đắp ở tầng body) để bảng Showdown mở ĐÈ LÊN nó. */
+.aw-sd-stolen {
+  position: absolute; inset: 0; z-index: 14;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(15, 20, 30, .93);
+  padding: 4cqw; text-align: center;
+}
+.aw-sd-stolen-box { display: flex; flex-direction: column; align-items: center; gap: 1.4cqw; max-width: 80%; }
+.aw-sd-stolen-t {
+  font-size: 4.4cqw; font-weight: 900; letter-spacing: .12cqw;
+  color: #ff6b6b; text-transform: uppercase;
+}
+.aw-sd-stolen-s { font-size: 2.5cqw; font-weight: 700; color: #f4f7fb; line-height: 1.35; }
+.aw-sd-stolen-s2 { font-size: 2.1cqw; font-weight: 600; color: #9aa6b6; }
+.aw-sd-stolen-btn { margin-top: 1cqw; font-size: 2.2cqw; padding: 1cqw 2.6cqw; }
 .aw-sd-col.is-claimed { border-color: #2ec27e; background: #f1fbf6; }
 /* `margin-bottom` is Đợt 166's `--sd-colhead-mb` (was a flat 8px) — see the fit
    note above `.aw-sd-colmembers`. */
