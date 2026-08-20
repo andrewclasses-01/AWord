@@ -778,7 +778,21 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
   // The two faint tallies of how many pupils have been ticked to each side.
   // Built even when nothing is ticked yet (CSS hides them at 0/0), so the count
   // can fade in rather than appear from nowhere on the first tick.
-  const counts = picks ? { l: el("div", "aw-sd-podcount is-l"), r: el("div", "aw-sd-podcount is-r") } : null;
+  // ⭐ Đợt 209 — each counter carries its OWN sparkle layer and its own digit
+  // node, because the "everybody is placed" state lights the number and sets
+  // sparkles off around it (see paintCounts). The digit lives in a child rather
+  // than in the counter's textContent so the sparkles are siblings of it and can
+  // sit outside the glyph without being written over on the next repaint.
+  const mkCount = side => {
+    const c = el("div", "aw-sd-podcount is-" + side);
+    c.append(el("span", "aw-sd-podcount-n"));
+    const spark = el("span", "aw-sd-podcount-spark");
+    spark.setAttribute("aria-hidden", "true");
+    for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
+    c.append(spark);
+    return c;
+  };
+  const counts = picks ? { l: mkCount("l"), r: mkCount("r") } : null;
   if (counts) wrap.append(counts.l, counts.r);
 
   /** Both counters, from the one Map. Thầy: one side showing means both show. */
@@ -786,8 +800,8 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     if (!counts) return;
     let l = 0, r = 0;
     picks.forEach(v => { if (v === "l") l++; else if (v === "r") r++; });
-    counts.l.textContent = String(l);
-    counts.r.textContent = String(r);
+    counts.l.querySelector(".aw-sd-podcount-n").textContent = String(l);
+    counts.r.querySelector(".aw-sd-podcount-n").textContent = String(r);
     // ⚠️ ONE class on the WRAPPER, not one per counter: "khi 1 bên hiện 1 thì
     // bên còn lại cũng hiện đồng thời (hiện 0)" — they are a pair, and a pair
     // that could half-appear would read as a bug.
@@ -795,6 +809,14 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     // Two digits need more room than one, and the room is only the sliver
     // outside the widest row (see `.aw-sd-podcount` in app.css).
     wrap.classList.toggle("is-wide-count", String(Math.max(l, r)).length > 1);
+    // ⭐⭐ Đợt 209 (thầy) — "khi 2 bên đã tích toàn bộ học sinh rồi (không còn dư
+    // ai), thì 2 số tổng ô tích 2 bên sẽ chuyển thành màu xanh lá rõ nét và có
+    // sparkle vàng lấp lánh xung quanh số đó."
+    // ⚠️ The test is against the number of pupils ON THIS BOARD (`n`), not the
+    // class register: a team scope shows one team, the class scope shows whoever
+    // has finished. "Nobody left over" has to mean nobody left over on the board
+    // in front of the teacher, or the light would never come on in team scope.
+    wrap.classList.toggle("is-all", n > 0 && l + r === n);
   }
 
   ranked.forEach((b, i) => {

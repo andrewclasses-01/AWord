@@ -8,6 +8,88 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 209 (20/8/2026) — ⭐ BỐN CHỖ THẦY NHÌN THẤY TRÊN BẢN THẬT
+
+**178/178 ĐẠT trên 3 bàn thử, 0 lỗi console.** Cả bốn việc đều là thứ **chỉ nhìn mới ra** — thầy chạy
+bản Đợt 208 rồi báo về. Sửa 2 file: `core/showdown-review.js` + `core/app.css`.
+
+### 1. ⭐⭐ TÍCH HẾT CẢ LỚP ⇒ HAI SỐ CHUYỂN XANH LÁ + SPARKLE VÀNG
+
+Thầy: *"khi 2 bên đã tích toàn bộ học sinh rồi (không còn dư ai), thì 2 số tổng ô tích 2 bên sẽ chuyển
+thành màu xanh lá rõ nét và có sparkle vàng lấp lánh xung quanh số đó."*
+
+Cho tới lúc đó hai con số là **vệt mờ nền**; đúng khoảnh khắc bạn cuối cùng được xếp, nó là **câu trả
+lời** cho việc thầy đang làm — nên nó thôi thì thầm. Xanh `#16a34a` là **xanh "đúng rồi" sẵn có của
+app** (dải cao nhất của `pctBand`), không đẻ thêm màu xanh thứ tư.
+- ⚠️ **So với sĩ số TRÊN BẢNG (`n`), không phải sổ lớp**: bảng đội chỉ có một đội, bảng lớp chỉ có
+  những em đã xong. "Không còn dư ai" phải nghĩa là *không dư ai trên cái bảng thầy đang nhìn*, nếu
+  không thì ở phạm vi ĐỘI đèn sẽ không bao giờ sáng.
+- ⚠️ Con số nay nằm trong `.aw-sd-podcount-n` để **sparkle là anh em của nó**, không bị `textContent`
+  ghi đè mỗi lần vẽ lại.
+- ⚠️ Sao **dừng hẳn** (`animation-play-state: paused`) khi chưa dùng tới — để chạy dưới một lớp
+  `opacity:0` là ngốn một lần vẽ lại mỗi khung hình suốt cả buổi.
+
+### 2. CHẤM TRÒN MỜ HƠN NỮA
+
+`.3` → **`.15`** (rê chuột `.45`). Nó là **dấu hiệu rằng chạm được**, không phải điều khiển đòi được
+dùng — mắt phải rơi vào tên học sinh.
+
+### 3. ⛔⛔ LẤP LÁNH VÀNG KHỰNG Ở CUỐI MỖI VÒNG — GỐC LÀ CÁI DẢI MÀU, KHÔNG PHẢI NHỊP
+
+Thầy: *"khi lặp lại vòng lấp lánh có hiệu ứng khựng/giật bất thình lình khi hết vòng lặp."*
+
+Đợt 208 dùng dải màu **HỮU HẠN** (`background-size: 260%`) rồi chạy `background-position` từ `0%` tới
+`260%`. **`background-position` theo phần trăm KHÔNG dịch ảnh đi ngần ấy phần trăm** — nó **căn điểm
+X% của ảnh vào điểm X% của hộp**. Nên khung cuối chẳng cách khung đầu trọn một ô nào cả, và vòng lặp
+bắt đầu lại bằng một cú giật nhìn thấy được.
+
+**Vá bằng cách đổi CÁI DẢI, không đổi cái nhịp**: `repeating-linear-gradient` chạy **ngang** (`to
+right`), dịch **đúng MỘT chu kỳ** bằng đơn vị độ dài (`4em`). Khung cuối và khung đầu là **cùng một
+bức tranh** ⇒ vòng lặp không còn mối nối.
+- ⚠️ **Ngang là cố ý**: ở góc khác, chu kỳ chiếu lên trục X bằng chu kỳ chia cho một sin — và "đúng
+  một chu kỳ" thôi không còn là con số viết được vào keyframe.
+- ⚠️ Chu kỳ tính bằng **`em`** nên co theo tên (fitPodiumNames có thu nhỏ một số tên); dải màu và
+  keyframe dùng **cùng một `em`** nên liền mạch ở mọi cỡ.
+- Hào quang `aw-sd-goldglow` vốn `ease-in-out` đối xứng 0→50→100 nên tự nó đã không có mối nối — giữ nguyên.
+
+### 4. Ô QUESTIONS: `align-items: baseline` CHÍNH LÀ THỦ PHẠM
+
+Thầy: *"chữ EACH và LEFT đang bố trí hơi xấu vì lệch độ cao với nhau."*
+
+`baseline` đặt hai cụm lên **cùng một ĐƯỜNG CHÂN CHỮ**, mà đường chân chữ là **đáy của mực, không phải
+giữa mực** — nên một con số 21px và một con số 16px treo ở hai độ cao khác nhau ngay khi cỡ khác nhau,
+đúng cái nửa LEFT đang làm. Đổi sang **`center`**: giữa khớp giữa, rồi hai cụm được `align-items:center`
+của ô căn vào giữa ô — **ba cái tâm, một đường thẳng**.
+- ⚠️ Kèm **`line-height: 1`** cho cả hai nửa: với leading mặc định, **giữa HỘP và giữa CHỮ không phải
+  một điểm**, căn sẽ đúng trên giấy mà lệch trên màn. An toàn ở đây vì chữ số và EACH/LEFT không có dấu
+  tiếng Việt (⚠️ ô này CÓ `overflow:hidden`).
+- Đo lại: tâm số ↔ tâm chữ lệch **0px** ở cả hai cụm, và cả bốn thứ cách tâm ô **< 1px**.
+
+### 5. BÀN THỬ — 178/178 ĐẠT
+
+`sd207-pod.html` **89** · `sd207-panel.html` **60** · `sd207-review.html` **29**.
+
+⛔ **BỐN LẦN LƯỚI BÁO HỎNG MÀ LỖI Ở CHÍNH LƯỚI** (lần 9–12 tính từ Đợt 198) — đợt này nhiều nhất từ
+trước tới nay, và đáng ghi lại vì cả bốn đều cùng một họ: **lưới chép cứng thứ vừa bị đổi**.
+1. Chép cứng `opacity 0.3` của chấm — Đợt 209 hạ xuống .15. Nay đọc thẳng từ CSS.
+2. Chép cứng tên keyframe `aw-sd-goldshift` — đã đổi thành `goldsweep`.
+3. **Đo độ mờ của chấm trên một bạn ĐÃ TÍCH** (chấm đó đúng ra phải bằng 0) ⇒ phải đo trên bảng sạch.
+4. **Bấm hai lần vào ô trái của hàng 1 để "bỏ tích"** — mà hàng 1 vốn đã tích TRÁI, nên hai cú bấm là
+   bỏ rồi tích lại, sĩ số về đủ 20 và lưới kết luận "không tắt xanh". Nay tìm đúng bên đang bật rồi
+   bấm một lần.
++ Một lỗi thứ năm không phải kỳ vọng mà là **thiếu hàm**: bàn thử panel không có `R()`/`r1()` nên
+  toàn bộ mục mới **chết lặng giữa chừng** — `__result` không bao giờ được đặt và lưới "treo" chứ không
+  "hỏng". ⚠️ **Bàn thử treo cũng là bàn thử hỏng** — phải đọc phần log dở dang mới thấy nó dừng ở đâu.
+
+⭐ **CHỤP ĐƯỢC MÀN HÌNH thêm 3 lần nữa** trong đợt này (rồi pane lại bị ẩn ở cuối). Trạng thái "tích
+hết" đo được: `is-all=true · 10/10 · rgb(22,163,74)`.
+
+⬜ **CÒN LẠI — CHỈ THẦY**: (1) nhìn xem lấp lánh đã hết khựng thật chưa (máy chứng minh được **về mặt
+hình học** là khung cuối trùng khung đầu, nhưng "mượt" là chuyện của mắt); (2) chữ vàng của bạn số 2
+(ô bạc) có đọc được từ cuối lớp không — việc treo từ Đợt 208.
+
+---
+
 ## Đợt 208 (20/8/2026) — ⭐⭐ SHOWDOWN TINH CHỈNH: **CHẤM TRÒN · TÊN VÀNG · Ô TEAMS SÁNG · RESET XOÁ SỔ CÁI**
 
 **Trạng thái:** code xong, **155/155 ĐẠT trên 3 bàn thử, 0 lỗi console**.

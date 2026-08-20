@@ -881,6 +881,17 @@ Dải vàng chạy ngang chữ (`background-clip: text` + `color: transparent`) 
 - ⛔⛔ **HÀO QUANG LÀ `text-shadow`, KHÔNG BAO GIỜ `filter`** — Đợt 198 đã phải gỡ đúng thứ đó ra khỏi
   dòng chữ ngay dưới nó: `filter` đẻ stacking context. `text-shadow` **vẫn vẽ** khi chữ trong suốt, vì
   bóng đổ theo HÌNH DẠNG chữ chứ không theo màu chữ.
+- ⛔⛔ **Đợt 209 — DẢI MÀU CHẠY VÒNG PHẢI LÀ `repeating-linear-gradient` DỊCH ĐÚNG MỘT CHU KỲ.**
+  Bản Đợt 208 dùng dải HỮU HẠN (`background-size: 260%`) rồi chạy `background-position` từ `0%` tới
+  `260%` — và **`background-position` theo phần trăm KHÔNG dịch ảnh đi ngần ấy phần trăm**: nó **căn
+  điểm X% của ảnh vào điểm X% của hộp**. Khung cuối vì thế chẳng cách khung đầu trọn một ô nào, và mỗi
+  vòng lặp bắt đầu bằng một **cú giật nhìn thấy được** (thầy báo). Nay: dải LẶP, chạy **NGANG**
+  (`to right`), dịch **đúng một chu kỳ bằng đơn vị ĐỘ DÀI** (`4em`).
+  ⚠️ Ngang là cố ý — ở góc khác, chu kỳ chiếu lên trục X bằng chu kỳ chia cho một sin, và "đúng một
+  chu kỳ" thôi không còn là con số viết được vào keyframe.
+  ⚠️ Chu kỳ tính bằng `em` để co theo tên (fitPodiumNames thu nhỏ một số tên); dải và keyframe dùng
+  **cùng một `em`** nên liền mạch ở mọi cỡ. **LUẬT CHUNG: hoạt cảnh nào lặp vô hạn thì khung cuối phải
+  LÀ khung đầu — kiểm bằng con số, đừng kiểm bằng mắt.**
 - ⚠️ **Sparkle phải nằm trong bọc `.aw-sd-pod-nm`, KHÔNG nằm trong `.aw-sd-pod-name`** — ô tên mang
   `overflow:hidden` (chính nó làm cho tên quá dài đo được), nên sparkle đặt bên trong bị cắt đúng ở
   cái mép nó cần đứng lên.
@@ -910,6 +921,12 @@ Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: t�
 - Hai số **hiện cùng lúc** (bên kia hiện `0`) và **đứng yên khi cuộn**: chúng là anh em của khung cuộn
   `.aw-sd-pod`, không phải con của nó — đó là lý do bộ vẽ trả về **`.aw-sd-podwrap`**, không trả
   `.aw-sd-pod`. ⚠️ **Ai xoá bảng theo selector phải biết CẢ HAI tên.**
+- ⭐⭐ **Đợt 209 — TÍCH HẾT THÌ HAI SỐ CHUYỂN XANH LÁ + SPARKLE VÀNG** (`.aw-sd-podwrap.is-all`).
+  ⚠️ **So với sĩ số TRÊN BẢNG (`ranked.length`), KHÔNG phải sổ lớp**: phạm vi ĐỘI chỉ có một đội, phạm
+  vi LỚP chỉ có những em đã xong — so với sổ lớp là đèn không bao giờ sáng ở phạm vi đội.
+  ⚠️ Xanh `#16a34a` là **xanh "đúng rồi" sẵn có** (dải cao nhất của `pctBand`), đừng đẻ màu xanh thứ tư.
+  ⚠️ Sao phải `animation-play-state: paused` khi chưa dùng tới — chạy dưới một lớp `opacity:0` là ngốn
+  một lần vẽ lại mỗi khung hình suốt cả buổi học.
 
 **(e) ⭐⭐ FULLSCREEN CỦA MÀN SHOW ANSWERS — `container-type` LÀ THỨ CHỊU LỰC.**
 Nút ở góc dưới trái, nhắm vào **chính `.aw-review`**, KHÔNG phải `root` (ngược luật Đợt 12 — ở đây mục

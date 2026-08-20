@@ -4316,11 +4316,30 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; align-items: center; justify-content: space-evenly;
   padding: 0 8px; overflow: hidden;
 }
-.aw-sd-ropair { display: inline-flex; align-items: baseline; gap: 5px; min-width: 0; }
+/* ⭐ Đợt 209 (thầy, sau khi nhìn bản thật) — "chữ EACH và LEFT đang bố trí hơi
+   xấu vì lệch độ cao với nhau. Hãy căn lại chiều cao để tâm của: số x/chữ each
+   và số left/chữ left có chiều cao bằng nhau và cùng ở chính giữa độ cao tâm của
+   ô QUESTIONS."
+   ⚠️ `align-items: baseline` WAS THE BUG. It sits both pairs on a common
+   BASELINE, and a baseline is the bottom of the ink, not its middle — so a 21px
+   figure and a 16px one hang at two different heights the moment their sizes
+   differ, which is exactly what the LEFT half does. `center` lines up the
+   MIDDLES, which is what was asked for, and the pairs are then centred in the
+   box by the readout's own `align-items: center` — three centres, one line.
+   ⚠️ `line-height: 1` on both halves so each box is the height of its own ink:
+   with the default leading, the middle of the BOX and the middle of the LETTERS
+   are not the same point, and the alignment would be right on paper and wrong
+   on screen. Safe here — no Vietnamese diacritics in digits or in EACH/LEFT (the
+   readout does clip, see `.aw-sd-readout.is-big`'s `overflow`). */
+.aw-sd-ropair { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
 .aw-sd-readout .aw-sd-ronum {
   font-size: 21px; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
-.aw-sd-readout .aw-sd-rosub { font-size: 11px; font-weight: 800; color: #98a2b2; text-transform: uppercase; }
+.aw-sd-readout .aw-sd-rosub {
+  font-size: 11px; font-weight: 800; color: #98a2b2; text-transform: uppercase;
+  line-height: 1;
+}
 /* The leftover is the QUIET half — it is a warning about waste, not the answer
    the teacher came for, so it never competes with the "each" figure beside it. */
 .aw-sd-ropair.is-left .aw-sd-ronum { font-size: 16px; color: #b45309; }
@@ -4898,11 +4917,29 @@ html.aw-nhung .aw-below { display: none; }
   font-size: 6.6cqw; font-weight: 800; line-height: 1;
   color: rgba(35, 48, 62, .14); font-variant-numeric: tabular-nums;
   pointer-events: none; opacity: 0;
-  transition: opacity .22s ease, font-size .22s cubic-bezier(.22, .9, .3, 1);
+  transition: opacity .22s ease, font-size .22s cubic-bezier(.22, .9, .3, 1),
+              color .28s ease;
 }
 /* The right-hand one is anchored by its RIGHT edge (see placePodiumCounts), so
    it must not be pulled half its own width to the left as well. */
 .aw-sd-podcount.is-r { transform: translate(50%, -50%); }
+/* ⭐⭐ Đợt 209 (thầy) — EVERYBODY PLACED: "2 số tổng ô tích 2 bên sẽ chuyển thành
+   màu xanh lá rõ nét và có sparkle vàng lấp lánh xung quanh số đó". Up to that
+   moment the pair is a faint watermark; the instant the last pupil lands it is
+   the answer to the question the teacher has been working towards, so it stops
+   whispering. Green here is the app's own "this is right" green (`#16a34a`, the
+   same one pctBand's top band uses) — not a fourth green. */
+.aw-sd-podcount-n { position: relative; z-index: 1; }
+.aw-sd-podcount-spark {
+  position: absolute; inset: -0.5cqw -0.9cqw; pointer-events: none;
+  color: #f0b429; opacity: 0; transition: opacity .28s ease;
+}
+.aw-sd-podwrap.is-all .aw-sd-podcount { color: #16a34a; }
+.aw-sd-podwrap.is-all .aw-sd-podcount-spark { opacity: 1; }
+/* ⚠️ The stars only ANIMATE while they are on show. Left running underneath an
+   `opacity:0` layer they would cost a repaint a frame for the whole lesson. */
+.aw-sd-podcount-spark .aw-sd-pod-star { animation-play-state: paused; }
+.aw-sd-podwrap.is-all .aw-sd-podcount-spark .aw-sd-pod-star { animation-play-state: running; }
 /* Both or neither — thầy: "khi 1 bên hiện 1 thì bên còn lại cũng hiện đồng thời
    (hiện 0)". One class on the wrapper is what makes that impossible to get wrong. */
 .aw-sd-podwrap.has-picks .aw-sd-podcount { opacity: 1; }
@@ -4972,10 +5009,13 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-pod-dot {
   width: 2.4cqw; height: 2.4cqw; border-radius: 50%;
-  background: #6b7a90; opacity: .3;      /* "chấm tròn đặc và khá mờ" */
+  /* ⭐ Đợt 209 — thầy sau khi nhìn bản thật: "giảm opacity nữa xuống để ở mức
+     thật mờ". Was .3 in Đợt 208. It is a HINT that a tap does something here,
+     not a control asking to be used — the eye should land on the names. */
+  background: #6b7a90; opacity: .15;
   transition: opacity .16s ease, transform .16s cubic-bezier(.22,.9,.3,1);
 }
-.aw-sd-pod-tick:hover .aw-sd-pod-dot { opacity: .55; }
+.aw-sd-pod-tick:hover .aw-sd-pod-dot { opacity: .45; }
 .aw-sd-pod-tick:active { transform: scale(.9); }
 /* The tick itself: big, thick, blue, and standing on nothing. */
 .aw-sd-pod-tick svg {
@@ -5006,16 +5046,32 @@ html.aw-nhung .aw-below { display: none; }
    is what makes the clip visible — and `text-shadow` still draws, because a
    shadow is cast by the glyph SHAPE, not by its colour. */
 .aw-sd-pod-name.is-top {
-  background: linear-gradient(100deg, #b8860b 0%, #e0a30c 22%, #fff3b0 42%, #f0b429 58%, #b8860b 100%);
-  background-size: 260% 100%;
+  /* ⛔⛔ Đợt 209 — THE OLD SWEEP JUMPED AT EVERY LOOP, and thầy saw it: "khi lặp
+     lại vòng lấp lánh có hiệu ứng khựng/giật bất thình lình khi hết vòng lặp".
+     Đợt 208 used a FINITE gradient (`background-size: 260%`) and animated
+     `background-position` 0% → 260%. Percentage background-position does not
+     translate an image by that percentage — it ALIGNS the image's X% point with
+     the box's X% point — so the end frame is nowhere near a whole tile away from
+     the start, and the loop restarts with a visible snap.
+     THE FIX IS THE GRADIENT, NOT THE TIMING: a `repeating-linear-gradient` that
+     runs LEFT-TO-RIGHT, moved by EXACTLY ONE PERIOD in a length unit. End frame
+     and start frame are then the same picture, so the loop has no seam at all.
+     ⚠️ Horizontal (`to right`) on purpose: at any other angle the period along
+     the X axis is the period divided by a sine, and "exactly one period" stops
+     being a number you can write in a keyframe.
+     ⚠️ The period is in `em`, so it scales with the name — and fitPodiumNames
+     shrinks some names. Both the gradient and the keyframe use the same `em`, so
+     it stays seamless at every size. */
+  background-image: repeating-linear-gradient(to right,
+    #c8901a 0em, #f0b429 1.1em, #fff6c9 2em, #f0b429 2.9em, #c8901a 4em);
   -webkit-background-clip: text; background-clip: text;
   color: transparent; -webkit-text-fill-color: transparent;
   text-shadow: 0 0 1.1cqw rgba(240, 180, 41, .55);
-  animation: aw-sd-goldshift 3.4s linear infinite, aw-sd-goldglow 2.2s ease-in-out infinite;
+  animation: aw-sd-goldsweep 3.2s linear infinite, aw-sd-goldglow 2.2s ease-in-out infinite;
 }
-@keyframes aw-sd-goldshift {
-  from { background-position: 0% 50%; }
-  to   { background-position: 260% 50%; }
+@keyframes aw-sd-goldsweep {
+  from { background-position-x: 0em; }
+  to   { background-position-x: 4em; }     /* exactly one period — no seam */
 }
 @keyframes aw-sd-goldglow {
   0%, 100% { text-shadow: 0 0 0.7cqw rgba(240, 180, 41, .40); }

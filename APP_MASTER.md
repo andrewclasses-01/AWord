@@ -8,7 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 208)** — 155/155 ĐẠT trên 3 bàn thử.
+> Cập nhật lần cuối: **20/8/2026 (Đợt 209)** — 178/178 ĐẠT trên 3 bàn thử.
+>
+> ---
+> **Đợt 209 — BỐN CHỖ THẦY NHÌN THẤY TRÊN BẢN THẬT.** Sửa 2 file: `core/showdown-review.js` + `app.css`.
+> - ⭐⭐ **Tích hết cả lớp ⇒ hai số đếm chuyển XANH LÁ rõ nét + SPARKLE VÀNG** quanh số. ⚠️ So với sĩ số
+>   **TRÊN BẢNG**, không phải sổ lớp — ở phạm vi ĐỘI thì bảng chỉ có một đội, so với sổ lớp là đèn không
+>   bao giờ sáng. ⚠️ Sao **dừng hẳn** khi chưa dùng (chạy dưới lớp `opacity:0` là ngốn một lần vẽ lại
+>   mỗi khung hình suốt buổi).
+> - **Chấm tròn mờ hơn nữa**: `.3` → **`.15`** (hover `.45`).
+> - ⛔⛔ **Lấp lánh vàng KHỰNG cuối mỗi vòng — gốc là CÁI DẢI MÀU, không phải cái nhịp.** Đợt 208 dùng
+>   dải HỮU HẠN (`background-size: 260%`) + `background-position` 0%→260%, mà **`background-position`
+>   theo % KHÔNG dịch ảnh đi ngần ấy %** — nó căn điểm X% của ảnh vào điểm X% của hộp, nên khung cuối
+>   không cách khung đầu trọn một ô nào cả. Nay là **`repeating-linear-gradient` chạy NGANG, dịch đúng
+>   MỘT chu kỳ (`4em`)** ⇒ khung cuối trùng khung đầu, hết mối nối. ⚠️ Ngang là cố ý: ở góc khác thì
+>   "đúng một chu kỳ" không còn là con số viết được vào keyframe.
+> - **Ô QUESTIONS: `align-items: baseline` CHÍNH LÀ THỦ PHẠM** làm EACH/LEFT lệch nhau — đường chân chữ
+>   là **đáy mực, không phải giữa mực**, nên 21px và 16px treo hai độ cao. Đổi sang **`center`** +
+>   **`line-height: 1`** (giữa HỘP ≠ giữa CHỮ khi còn leading). Đo lại: lệch **0px**, cả bốn thứ cách
+>   tâm ô **< 1px**.
+> - 🧪 **178/178 ĐẠT** (pod 89 · panel 60 · review 29). ⛔ **4 lần lưới báo hỏng mà lỗi ở chính lưới**
+>   (nhiều nhất từ trước tới nay), cả bốn cùng một họ: **lưới chép cứng thứ vừa bị đổi**. + 1 lần bàn
+>   thử **TREO** vì thiếu hàm phụ trợ — ⚠️ **bàn thử treo cũng là bàn thử hỏng**.
+> - ⭐ Chụp được màn hình thêm 3 lần trong đợt này.
+>
+> ---
+> Trước đó: **20/8/2026 (Đợt 208)** — 155/155 ĐẠT trên 3 bàn thử.
 >
 > ---
 > **Đợt 208 — SHOWDOWN TINH CHỈNH: CHẤM TRÒN · TÊN VÀNG · Ô TEAMS SÁNG · RESET XOÁ SỔ CÁI.**
