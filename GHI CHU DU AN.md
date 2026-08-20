@@ -8,6 +8,229 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 215b (20/8/2026) — ⭐⭐ CỤM TRÊN CỦA OPTIONS: BỘ MÀU MỚI, TƯƠNG PHẢN MẠNH
+
+> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026, thầy: *"commit + push live + ghi dữ liệu"*), đi CHUNG MỘT
+> COMMIT với Đợt 215. Sửa **1 file**: `core/app.css`. 0 lỗi console. Bản gốc: `_backup/dot215/app.css`.
+> Trang so màu: `scratch/mau215.html` (17 bộ, dựng bằng module thật).
+
+### Thầy nêu
+
+*"khu vực chọn trên cùng gồm TEXT-VOICE và các con, PRACTICE-HOMEWORK, Timer đang có màu xanh lá
+tương phản kém và khó nhìn. Hãy chọn một bộ màu sắc phù hợp, đẹp, nổi bật và tương phản mạnh."*
+
+### ⛔⛔ THỦ PHẠM KHÔNG PHẢI CHỮ, MÀ LÀ CÁI NÚT
+
+Đo bộ màu Đợt 213 trên hàng thật (tỉ lệ tương phản WCAG):
+
+| Đo cái gì | Trước | Chuẩn cần |
+|---|---|---|
+| chữ ĐANG CHỌN trên nút | 4.00 | ≥ 4.5 |
+| chữ KHÔNG chọn trên máng | **2.73** | ≥ 4.5 |
+| **nút ĐANG CHỌN nổi trên máng** | **1.20** | — |
+
+⭐⭐ **1.20:1 nghĩa là NÚT GẦN NHƯ TÀNG HÌNH**: nút xanh nhạt nằm trên máng xanh nhạt, nên hàng công tắc
+thôi trả lời được đúng câu hỏi duy nhất nó sinh ra để trả lời — *đang chọn cái nào?* Mọi cách chữa chỉ
+làm đậm CHỮ đều không đụng tới chỗ hỏng này. ⛔ Vì thế nút phải **TÔ ĐẶC** và chữ trên nó phải **TRẮNG**.
+
+### Thầy chọn qua 17 bộ dựng sẵn
+
+Dựng `scratch/mau215.html`: mỗi thẻ là **hàng thật do chính `buildOptionsBody()` dựng**, chỉ khác bộ
+biến màu, kèm bảng tương phản tính tại chỗ. 10 bộ nguội/trung tính (A–K, có cả kiểu **đảo ngược máng
+tối nút trắng** và kiểu **nút chuyển sắc**) + 7 bộ **nóng ấm** (L–R: cam nắng · đỏ gạch · đỏ mận · nâu
+cà phê · vàng nghệ · chuyển sắc hoàng hôn · nâu ấm trung tính) — thầy xem hai lượt rồi **chọn bộ B —
+Xanh lá đậm**, tức giữ nguyên quyết định Đợt 213 (*cụm trên màu xanh lá*), chỉ **đảo lại độ đậm**.
+
+```
+--aw-grp-track: #d7efdf   máng
+--aw-grp-thumb: #166534   nút ĐANG CHỌN (tô đặc)
+--aw-grp-on:    #ffffff   chữ trên nút đang chọn
+--aw-grp-off:   #2f4a3a   chữ nút chưa chọn   ← biến MỚI
+--aw-grp-edge:  #9ccdae   viền ô đếm giờ      ← biến MỚI
+```
+
+- ⚠️ **`#166534` LÀ SỐ ĐO, KHÔNG PHẢI GU**: chữ trắng trên `#16a34a` (đúng màu xanh thanh Lives đang
+  dùng) chỉ được **3.30:1** — không đạt. Phải xuống hai nấc đậm hơn thì chữ trắng mới gánh nổi. Họ màu
+  không đổi, chỉ đổi độ đậm.
+- ⭐ **HAI BIẾN MỚI là thứ khiến bản vá với tới cả cụm**: chữ nút chưa chọn (`#8b93a1` / `#6b7688`) và
+  viền ô đếm giờ (`#cfe7d8`) trước nay **ghim cứng**. Nay chúng đọc biến, **giá trị dự phòng đúng bằng
+  màu xám cũ** ⇒ mọi seg dưới dòng kẻ không đổi một byte. Đúng mẹo mà ba biến của Đợt 213 đã dùng.
+- ⛔ Vẫn **KHÔNG tô thẳng vào `.aw-seg` / `.aw-opt-switch`** (luật Đợt 213) — hai class đó dùng chung
+  với nửa dưới, đúng nửa thầy bảo để yên.
+
+### Đo sau khi áp (trên bảng Options THẬT, không phải trang so màu)
+
+| Hàng | chữ đang chọn | chữ chưa chọn | nút nổi trên máng |
+|---|---|---|---|
+| PRACTICE \| HOMEWORK | **7.13** | **8.00** | **5.87** |
+| TEXT \| VOICE | 7.13 | 8.00 | 5.87 |
+| dãy bộ con (ENG1/ENG2/VI1/VI2) | 7.13 | 8.00 | 5.87 |
+| ô Timer (None/Count up/Count down) | 7.13 | 8.00 | 5.87 |
+
+- ✅ **ĐỐI CHỨNG NGƯỢC ĐẠT**: seg **dưới** dòng kẻ (Anagram mode) vẫn y như cũ — máng `#eef2f7`, nút
+  **trắng**, chữ chọn `#2f7bff`, chữ tắt `#6b7688`. Màu mới **không lan** xuống nửa dưới.
+- ✅ Bố cục không suy suyển: chạy lại `scratch/opts215-measure.html` → vẫn **35 bảng, 5 ca cố ý** như
+  sau Đợt 215.
+- ✅ **NHÌN TẬN MẮT** (ảnh chụp thật, xem mục bẫy dưới): nút xanh đậm chữ trắng, ô đếm giờ viền xanh nhạt.
+
+### ⭐ Câu hỏi tự đặt ra và đã trả lời: chữ trắng có "bay trên máng nhạt" lúc đang trượt không?
+
+Nút trượt **240ms** (`cubic-bezier(.22,.9,.3,1)`), màu chữ đổi **180ms** (`ease`). Nút đặc rồi thì nếu
+chữ trắng hoá trước khi nền xanh tới, sẽ có khoảnh khắc **mất chữ**. Không đo được bằng animation (xem
+bẫy dưới), nên **giải bằng chính hai đường cong**:
+
+```
+t= 30ms  nút đã đi 46%  · chữ đã trắng 22%   ✓ nền tới trước
+t= 60ms  nút đã đi 75%  · chữ đã trắng 58%   ✓
+t= 90ms  nút đã đi 88%  · chữ đã trắng 80%   ✓
+t=120ms  nút đã đi 95%  · chữ đã trắng 92%   ✓
+t=150ms trở đi chênh 1–2% (vài pixel)
+```
+
+⇒ **Không cần thêm `transition-delay`**. Đường cong của nút "dốc trước" nên nền luôn tới trước chữ.
+⛔ Đừng "phòng xa" bằng cách delay màu chữ: delay quá thì chữ SẪM nằm trên nút xanh đậm (tương phản
+~1.3) — đổi một lỗi lấy một lỗi.
+
+### 🐞 Bẫy gặp trong phiên
+
+- ⛔⛔ **`visibilityState: "hidden"` LÀM ĐÓNG BĂNG CẢ TRANSITION** — đo lúc-đang-trượt ra toàn số chết
+  (nút đứng yên 1 chỗ, mốc thời gian nhảy 116ms → 1114ms). Dính ở **cả pane preview LẪN Chrome thật**
+  khi cửa sổ không hiện. Họ hàng với bẫy rAF đã ghi ở Đợt 214. **Số tĩnh (đọc `getComputedStyle` của
+  phần tử không đang chạy transition) vẫn đúng** — chỉ số ĐỘNG là rác.
+- ⭐⭐ **CHROME THẬT CHỤP ĐƯỢC ẢNH DÙ PANE PREVIEW TREO**: `screenshot` của pane hỏng **lần thứ 9 liên
+  tiếp** (Đợt 191→215), nhưng `mcp__claude-in-chrome` chụp ngon và còn `zoom` được vào đúng khu cần soi.
+  **Đây là đường ra cho mọi việc "phải nhìn bằng mắt"** — mở `localhost` trong Chrome thật, chụp, rồi
+  **đóng tab lại**.
+- ⚠️ Công cụ JS của Chrome thật chạy theo lối REPL: bọc trong `(async () => {...})()` thì trả về `{}`;
+  phải viết `await` ở cấp cao nhất và để **biểu thức cuối** làm giá trị trả về. Và vòng lặp chờ bằng
+  `requestAnimationFrame` **treo hẳn 45 giây** khi trang ẩn — dùng `setTimeout` + đọc lại ở lượt sau.
+
+### ⬜ Việc chờ thầy
+
+1. Nhìn cụm trên trên **màn 86"** — xanh `#166534` có quá đậm không, chữ trắng có chói không.
+2. Chữ nút **chưa chọn** `#2f4a3a` (xanh rêu sẫm) — thầy thấy đủ nhạt để phân biệt với nút đang chọn chưa,
+   hay muốn nhạt thêm.
+3. Trang `scratch/mau215.html` vẫn còn đủ 17 bộ — đổi ý lúc nào cũng chỉ là sửa 5 dòng biến.
+
+---
+
+## Đợt 215 (20/8/2026) — ⭐⭐ OPTIONS: MỘT THANH POINTS OFF, VÀ HAI CỘT CÓ NGHĨA
+
+> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026), đi CHUNG MỘT COMMIT với Đợt 215b. Sửa **2 file code**:
+> `core/options-panel.js` · `templates/anagram/anagram.js`. 0 lỗi console.
+> Bản gốc: `_backup/dot215/`. Bàn thử: `scratch/opts215-measure.html` (đo bố cục 35 bảng) +
+> `scratch/pen215-test.html` (chức năng thanh gộp, **29/29 ĐẠT**).
+
+### Thầy giao hai việc
+
+1. *"gộp các thanh points off (wrong answer) và points off (wrong letters) nếu có vào làm 1 thanh duy
+   nhất. Khi ở chế độ nào phù hợp thì tự đổi chỗ wrong answer thành wrong letter là được."*
+2. *"Ưu tiên các thanh trượt thưởng hoặc cộng điểm về bên trái, các thanh trượt phạt và trừ điểm về
+   bên phải. Ví dụ: options của quiz hiện đang thanh time cost … ở bên trái cùng thanh Lives, trong
+   khi đó ngay bên phải … lại là khoảng trống… Điều tra cả các options của các template/mode khác nữa."*
+
+### Đo TRƯỚC khi sửa — việc 2 không phải một ca lẻ
+
+Dựng `scratch/opts215-measure.html` (nạp module thật, dựng bảng Options của **17 template × 3 chế độ
+= 35 bảng**, đọc cột thật của từng ô bằng rect): **28/35 bảng sai luật thầy** — Time cost nằm cột trái
+ở 8 template, Points off nằm cột trái ở 5, Lives/Bonus nằm cột phải ở 3, và cụm Fight nằm cột phải ở 6.
+
+⭐ **Vì sao phép sắp xếp của Đợt 213 không đủ**: nó trả lời câu *"ô nào đứng TRƯỚC"*, còn lưới thì
+chảy theo HÀNG, nên *"ô nào ở cột nào"* lại do **số ô đứng trước nó** quyết định. Hai câu hỏi khác
+nhau; Đợt 213 mới trả lời câu đầu.
+
+### Ba câu hỏi thầy chốt trước khi build (AskUserQuestion)
+
+| Hỏi | Thầy chọn |
+|---|---|
+| Đẩy thanh phạt sang phải sẽ để lại **ô trống** bên trái ở 8 template — chấp nhận không? | **Chấp nhận ô trống** |
+| 3 bảng có thanh **thưởng** nằm phải vì ô trái là ô cài đặt thường (Gameshow, Running word) — đổi chỗ không? | **Có, thưởng ưu tiên trái** |
+| Cụm **Time delay + Speed bonus** của Fight đang rơi cột phải ở 6 bảng — kéo về trái không? | **Có, kéo về trái** |
+
+### Việc 1 — GỘP THANH POINTS OFF (`templates/anagram/anagram.js`)
+
+Chỉ **Anagram** có hai thanh cùng tên (đo cả 17 template): `Points off / wrong answer` (chế độ *On
+submit*) và `Points off / wrong letter` (chế độ *Bonus and minus*). Đây chính là dòng ⬜ mà Đợt 213
+để lại: đợt đó bỏ ẩn thanh không dùng, cái giá là **hai ô cùng tiêu đề "POINTS OFF"** đứng cạnh nhau.
+
+- ⭐⭐ **GỘP ĐƯỢC LÀ NHỜ ĐỢT 143.** Ngày xưa hai thanh là **hai thang khác nhau** (0..10 và 0..100 nấc
+  5) nên bắt buộc phải là hai thanh; Đợt 143 đưa cả app về **một thang 0..100 nấc 1**, nên hôm nay
+  chúng chỉ còn khác nhau **hai thứ**: chữ dưới tiêu đề, và **ô dữ liệu nó ghi vào**. Cả hai đổi sống
+  được, nên **không cần đụng `mkSliderCell` của core** — chỉ đổi chữ + nạp lại số qua `paint()`.
+  ⛔ Nếu đợt sau lại tách thang ra thì thanh gộp phải chỉnh cả `min/max/step` khi đổi mặt — đã cài
+  `console.warn` tự tố cáo thay vì im lặng vẽ sai thang.
+- ⭐ **KHÔNG ĐỔI THỨ ĐƯỢC LƯU**: `pointsOff` và `letterPenalty` vẫn là **hai trường riêng**, mỗi cái
+  nhớ số của mình ⇒ đổi mode qua lại không mất số, **act cũ không cần di trú**, `mount()` vẫn đọc y
+  như cũ. Gộp là chuyện của **BẢNG**, không phải của dữ liệu.
+- ⚠️ **Đổi mặt đi qua `paint()`, KHÔNG qua `oninput`** — gọi `oninput` lúc đó là ghi số mới vào **cái
+  mode vừa rời khỏi**.
+- Chế độ *Letters with bonus* không dùng thanh nào ⇒ thanh **nhạt** (`.is-locked`, luật Đợt 188) và
+  mang mặt "wrong answer".
+- Lưới lồng trong ô rộng nay còn 2 ô: **Bonus x (trái) · Points off (phải)** — đúng luật cột, và
+  bảng Anagram **thấp đi 59px** (bớt một hàng).
+
+### Việc 2 — HAI CỘT CÓ NGHĨA (`core/options-panel.js`, hàm mới `seatCellsByColumn`)
+
+Ba luật, **đều cục bộ trong MỘT hàng**:
+1. thanh **phạt** đứng cạnh ô không phạt ⇒ phạt sang **phải**;
+2. thanh **thưởng/mạng** đứng bên phải cạnh ô cài đặt thường ⇒ thưởng sang **trái**;
+3. thanh **phạt đứng một mình** một hàng ⇒ sang **phải**, **chừa ô trống bên trái** (thầy chốt).
+
+- ⛔⛔ **CỤC BỘ, KHÔNG CHIA LẠI CỘT TOÀN BẢNG.** Cách "dồn hết thanh trái vào cột 1, thanh phải vào
+  cột 2" nghe hay nhưng **phá 2 bảng thật**: Running word chỉ có **một** thanh phạt (Pass penalty)
+  nên phép chia cột **kéo nó lên hàng 1** đứng cạnh "Team A", và hai ô tên đội tụt xuống đáy. Đổi chỗ
+  trong hàng thì không bao giờ có chuyện đó — không gì vượt qua ranh giới hàng.
+- ⭐⭐ **CỤM FIGHT TÍNH LÀ THƯỞNG** (thầy chốt): nó chứa Speed bonus. Nó là **một ô cao hai hàng**, nên
+  cột của nó quyết ở **hàng đầu**, hàng dưới đi theo — vì thế `swapRow()` đổi luôn hàng kế tiếp, và
+  hàng chứa nửa dưới của cụm **không bị xét riêng**.
+- ⭐ **BIẾT BỐ CỤC MÀ KHÔNG ĐO**: bảng được dựng lúc còn **ngoài màn hình** nên mọi `rect` đều bằng 0
+  (Đợt 156 từng bị `isConnected` nói dối đúng ở panel này). Nên lưới được **MÔ PHỎNG** (auto-placement
+  2 cột, sparse) — rồi đối chứng chính bản mô phỏng ấy với bảng thật bằng `scratch/opts215-measure.html`.
+- ⚠️ **Ô trống làm bằng `grid-column: 2`, không bằng div rỗng**: `.aw-opt-grid > * { margin-bottom: 9px }`
+  sẽ cấp lề cho div rỗng, và một ô vô hình là thêm một thứ mà mọi phép sau phải nhớ bỏ qua.
+- ⚠️ Thanh **xanh dương** (trung tính) **KHÔNG** tính là thưởng: nó không có quyền đòi chỗ của một ô
+  cài đặt đang ngồi đó, và tính nó vào chỉ làm xáo "Round time" của Balloon pop mà chẳng được gì.
+
+### Kết quả đo SAU khi sửa
+
+| Phép đo | Kết quả |
+|---|---|
+| 35 bảng (17 template × 3 mode), bàn `opts215-measure` | **28 bảng sai → còn 5** |
+| 5 bảng còn lại | **cố ý**: hàng đó **cả hai ô đều là thanh phạt** (Points off + Time cost, hoặc Points off + Punishment). Đẩy cả hai sang phải sẽ **đội bảng cao thêm một hàng** và bỏ trống nguyên cột trái |
+| Chiều cao bảng | **không đổi** ở mọi template; riêng Anagram **−59px**, Crossword Fight **−59px** |
+| Bàn thử chức năng `pen215-test.html` | **29/29 ĐẠT** (hai số sống độc lập, đổi mặt không ghi đè, mở lại đúng mặt) |
+| App thật — `test.html` của quiz · anagram · whack-a-mole | Quiz: `Lives │ Points off` rồi `(trống) │ Time cost` ✅ đúng ví dụ thầy nêu |
+| App thật — Apply rồi mở lại Options (anagram) | act nhận **cả hai** số (`pointsOff:9`, `letterPenalty:25`), mỗi mặt hiện đúng số của mình ✅ |
+| **Trận Fight THẬT** (quiz · open the box · crossword · anagram) | cụm sang trái, Points off + Time cost sang phải ✅ |
+| Lỗi console | **0** (tab sạch) |
+
+### 🐞 Bẫy gặp trong phiên (đừng lặp lại)
+
+- ⛔ **`querySelector(".aw-optc-lab")` TRÚT XUỐNG Ô CON**: ô rộng `penHost` không có nhãn riêng nên
+  trả về nhãn của "Bonus x" bên trong ⇒ bàn thử báo HỎNG oan một phép. Phải `:scope > .aw-optc-lab`.
+  **Lưới báo hỏng thì nghi lưới trước** (đúng họ bẫy Đợt 207·208·209·213).
+- ⛔⛔ **BẢN SAO HÌNH DẠNG CỦA FIGHT ĐÃ SAI VỚI 2 TEMPLATE**: bàn đo dựng lại "2 ô + 1 cụm" cho mọi
+  bảng Fight, nhưng `crossword` và `open the box` chạy luật **chọn lượt** (`tpl.fightPick`) — ở đó
+  **không có Time delay**, Speed bonus là ô thường. Phải mở **trận thật** mới đo đúng: cách rẻ nhất là
+  `await import('/core/fight.js')` rồi `startFight()` vào một div ngay trong trang `test.html`
+  (không cần đăng nhập, không cần bấm nút Mode).
+- ⚠️ **Panel công cụ TỰ ĐÓNG giữa hai lần gọi `javascript_tool`** ⇒ mở panel và đo phải nằm trong
+  **CÙNG MỘT** lần gọi, nếu không sẽ đọc `null`.
+- ⚠️ Nút thanh công cụ dùng `press()` (Đợt 175): `.click()` suông có khi không ăn — bắn
+  `pointerdown` + `pointerup` + `click` cho chắc; và **nhấn giữ nút Mode là ra popup "Go home?"**.
+- 📸 `screenshot` **treo lần thứ 9 liên tiếp** (Đợt 191→215): "Browser pane is not displayed".
+  Nghiệm hoàn toàn bằng số đo.
+
+### ⬜ Việc chờ thầy
+
+1. Nhìn **ô trống** bên trái ở 8 template trên màn 86" — có thấy trơ không, hay đúng ý.
+2. Nhìn Gameshow (`Lives │ Question time`) và Running word (`Bonus │ Time each team`) sau khi đổi chỗ.
+3. Anagram: một thanh Points off đổi nhãn theo mode — thầy thử đổi qua lại xem có tự nhiên không.
+4. Chốt xem **5 hàng "hai thanh phạt ngồi cạnh nhau"** (maze chase · whack-a-mole · flying fruit ·
+   crossword) có cần tách nốt không (tách = bảng cao thêm 1 hàng, cột trái bỏ trống hoàn toàn).
+
+---
+
 ## Đợt 214 (20/8/2026) — ⭐⭐ TIME COST RỜI KHỎI Ô TIMER: "ĐÃ ĐẶT LÀ TRỪ"
 
 > ✅ Thầy chốt hướng qua AskUserQuestion + **"ok build"** (kèm quyền commit/push/ghi hồ sơ không cần

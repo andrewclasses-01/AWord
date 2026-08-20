@@ -713,6 +713,11 @@ export function buildOptionsBody(host, {
   // match's. See orderSliderCells() for why it is done here and not by asking
   // seventeen templates to append in a different order.
   orderSliderCells(grid);
+  // ⭐⭐ Đợt 215 — and now the COLUMN each one lands in. Sorting alone could not
+  // do it: the grid flows row-first, so an odd number of cells drops the last
+  // punishment into the LEFT column with a hole beside it (thầy's own example:
+  // Quiz, Time cost bên trái, ô phải trống). See seatCellsByColumn().
+  seatCellsByColumn(grid);
 
   // the gathered checkboxes, with a hairline above them so the block reads as
   // "and these switches" rather than as another option cell
@@ -838,6 +843,147 @@ function orderSliderCells(grid) {
   const seats = cells.map(cell => grid.insertBefore(document.createComment("aw-slot"), cell));
   cells.forEach(cell => cell.remove());
   seats.forEach((seat, n) => { grid.insertBefore(sorted[n], seat); seat.remove(); });
+}
+
+
+/**
+ * ⭐⭐⭐ Đợt 215 (thầy, 20/8/2026) — THE TWO COLUMNS MEAN SOMETHING.
+ *
+ * thầy: *"Ưu tiên các thanh trượt thưởng hoặc cộng điểm về bên trái, các thanh
+ * trượt phạt và trừ điểm về bên phải. Ví dụ: options của quiz hiện đang thanh
+ * time cost … ở bên trái cùng thanh Lives, trong khi đó ngay bên phải … lại là
+ * khoảng trống."*
+ *
+ * ⭐ WHY Đợt 213's SORT WAS NOT ENOUGH, measured before this đợt across all 17
+ * templates × 3 modes (35 panels): 28 of the 35 read backwards. Sorting puts the
+ * cells in the right ORDER, but the grid flows row-first, so the column a cell
+ * lands in is decided by how many cells happen to come before it — and the odd
+ * one out falls into the left column with a hole beside it. Order and COLUMN are
+ * two different questions; Đợt 213 only answered the first.
+ *
+ * THE THREE RULES, all LOCAL to one row (thầy approved each one, 20/8):
+ *   1. a punishment beside a non-punishment → the punishment takes the RIGHT seat.
+ *   2. a reward on the right beside a plain settings cell → the reward takes the
+ *      LEFT seat (Gameshow's Lives, Running word's Bonus — the two panels where a
+ *      non-slider cell had pushed a reward across).
+ *   3. a punishment alone on a row → it MOVES RIGHT and leaves the left seat
+ *      EMPTY. thầy asked for this knowing it makes a hole (8 templates get one);
+ *      the panel does not grow taller, because the row already existed.
+ *
+ * ⛔⛔ LOCAL SWAPS, NEVER A GLOBAL RE-PAIR. Dealing the cells into two columns
+ * from scratch reads well on paper and wrecks two panels in practice: Running
+ * word's "Pass penalty" is its ONLY punishment, so a column-pairing pass hauls it
+ * up to row 1 beside "Team A" and sinks both name boxes to the bottom. A row-local
+ * swap cannot do that — nothing ever crosses a row boundary.
+ *
+ * ⭐⭐ THE STACK COUNTS AS A REWARD (thầy, asked directly). core/fight.js's Time
+ * delay + Speed bonus pair (`.aw-optc-stack`, Đợt 188) was exempt from every sort,
+ * and in 6 Fight panels it sat in the right column — pushing Points off AND Time
+ * cost into the left one. It holds Speed bonus, a reward, so it belongs on the
+ * left, and moving it there hands the right column back to the two penalties.
+ * ⚠️ It is ONE cell standing TWO rows tall, so its column is decided in its HEAD
+ * row and the row below follows. That is why swapRow() also swaps the row beneath
+ * a stack, and why a row holding a stack's lower half is never judged on its own.
+ *
+ * ⭐ HOW THE LAYOUT IS KNOWN WITHOUT MEASURING IT. `getBoundingClientRect` is no
+ * use here: the panel is built while still off-screen, so every rect is 0 (and
+ * Đợt 156 already caught `isConnected` lying about this very panel). The row grid
+ * is SIMULATED instead — plain CSS auto-placement, two columns, sparse — and the
+ * simulation is checked against the real rendered panel by
+ * scratch/opts215-measure.html before it is trusted. ⛔ Do not "simplify" this
+ * into a rect read.
+ *
+ * ⚠️ A hole is made with `grid-column: 2` on the cell, NOT with an empty filler
+ * div: `.aw-opt-grid > * { margin-bottom: 9px }` would give a filler a margin of
+ * its own, and an invisible cell is one more thing every later pass must know to
+ * skip.
+ */
+const isFullRowCell = c => c.classList.contains("aw-optc-wide") || c.classList.contains("aw-optc-dash");
+const isStackCell   = c => c.classList.contains("aw-optc-stack");
+const isPunishCell  = c => c.dataset.awRank === "2";
+// green/amber, plus the Fight stack — see the header note. Blue (a plain
+// quantity) deliberately does NOT count: it has no claim on a seat a settings
+// cell is already sitting in, and counting it only churned Balloon pop's
+// "Round time" for no gain.
+const isRewardCell  = c => c.dataset.awRank === "0" || isStackCell(c);
+
+function seatCellsByColumn(grid) {
+  const kids = Array.from(grid.children);
+  if (!kids.length) return;
+
+  // ---- 1. simulate CSS grid auto-placement (2 columns, sparse) ----
+  const rows = [];                       // rows[r] = [cell|null, cell|null]
+  const ghost = [];                      // ghost[r][c] = this slot is a stack's lower half
+  const at = r => {
+    while (rows.length <= r) { rows.push([null, null]); ghost.push([false, false]); }
+    return rows[r];
+  };
+  let cr = 0, cc = 0;                    // the placement cursor
+  for (const cell of kids) {
+    if (isFullRowCell(cell)) {
+      let r = cc > 0 ? cr + 1 : cr;
+      while (at(r)[0] || at(r)[1]) r++;
+      at(r)[0] = at(r)[1] = cell;
+      rows[r].full = true;
+      cr = r; cc = 1;
+      continue;
+    }
+    const tall = isStackCell(cell);
+    let r = cr, c = cc;
+    for (;;) {
+      if (c > 1) { r++; c = 0; continue; }
+      at(r); at(r + 1);
+      if (!rows[r][c] && !(tall && rows[r + 1][c])) break;
+      c++;
+    }
+    rows[r][c] = cell;
+    if (tall) { rows[r + 1][c] = cell; ghost[r + 1][c] = true; }
+    cr = r; cc = c;
+  }
+
+  // ---- 2. the three rules, one row at a time ----
+  const swapRow = r => {
+    [rows[r][0], rows[r][1]] = [rows[r][1], rows[r][0]];
+    if (rows[r + 1] && (ghost[r + 1][0] || ghost[r + 1][1])) {
+      [rows[r + 1][0], rows[r + 1][1]] = [rows[r + 1][1], rows[r + 1][0]];
+      [ghost[r + 1][0], ghost[r + 1][1]] = [ghost[r + 1][1], ghost[r + 1][0]];
+    }
+  };
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    if (row.full) continue;
+    const [a, b] = row;
+    const ghostRow = ghost[r][0] || ghost[r][1];
+    if (a && b) {
+      if (ghostRow) continue;                                     // decided by the head row
+      if (isPunishCell(a) && !isPunishCell(b)) swapRow(r);         // rule 1
+      else if (isRewardCell(b) && !isRewardCell(a)) swapRow(r);    // rule 2
+    } else if (a && !b && !ghostRow && isPunishCell(a)) {
+      row[0] = null; row[1] = a;                                   // rule 3 — this is the hole
+    } else if (!a && b && !ghostRow && !isPunishCell(b)) {
+      row[0] = b; row[1] = null;                                   // never strand a non-punishment
+    }
+  }
+
+  // ---- 3. write the plan back: DOM order, plus the one forced column ----
+  const seen = new Set();
+  const order = [];
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let c = 0; c < 2; c++) {
+      const cell = row[c];
+      if (!cell || seen.has(cell)) continue;                       // full rows and stacks appear twice
+      seen.add(cell);
+      // Only a cell that has to skip an EMPTY left seat needs telling; everything
+      // else is placed correctly just by flowing in this order, and a stale inline
+      // column would outlive the reason for it.
+      cell.style.gridColumn = (c === 1 && !row[0] && !isFullRowCell(cell)) ? "2" : "";
+      order.push(cell);
+    }
+  }
+  // `append` MOVES nodes that are already children — no clone, no lost listener
+  // (the same property orderChecks() leans on).
+  if (order.length === kids.length) grid.append(...order);
 }
 
 

@@ -1054,13 +1054,46 @@ html.aw-nhung .aw-below { display: none; }
    Thumb DARKER than its track here, the reverse of the grey group's white-on-grey
    (thầy: "máng xanh nhạt + nút chọn xanh đậm hơn"). Built around #16a34a, the
    green Lives has used since Đợt 143, so the panel gains a shade and not a new
-   colour. */
+   colour.
+
+   ⭐⭐⭐ Đợt 215b (thầy, 20/8/2026) — SAME GREEN IDEA, MUCH STRONGER CONTRAST.
+   thầy: *"khu vực chọn trên cùng … đang có màu xanh lá tương phản kém và khó
+   nhìn."* Measured on the real rows before changing anything
+   (scratch/mau215.html, WCAG ratios):
+
+     chữ ĐANG CHỌN trên nút        4.00:1   (under the 4.5 a small label needs)
+     chữ KHÔNG chọn trên máng      2.73:1   (this is the "khó nhìn")
+     ⛔ NÚT ĐANG CHỌN nổi trên máng 1.20:1   ← the real fault
+
+   ⛔⛔ THE FAULT WAS NOT THE TEXT, IT WAS THE PILL. A pale green thumb on a pale
+   green track is 1.20:1 — for practical purposes INVISIBLE, so the row stopped
+   answering the only question it exists to answer: *which one is chosen?* Any
+   fix that only darkens the letters leaves that untouched. ⛔ So do not "tidy"
+   this back towards a tinted pill: the pill must be SOLID and the label on it
+   WHITE, which is what carries the choice from the back of an 86" classroom.
+
+   thầy picked palette B of seventeen shown side by side (10 cool/neutral, 7 warm),
+   the one that KEEPS his Đợt 213 decision that this group is green — only the
+   weights are swapped. After: 7.13 / 8.00 / 5.87 (from 4.00 / 2.73 / 1.20).
+
+   ⚠️ TWO MORE VARIABLES, and they are why the fix reaches the whole group:
+   `--aw-grp-off` (the label of a button NOT chosen) and `--aw-grp-edge` (the
+   countdown box's border) used to be hard-coded greys. They now read the group's
+   values, and their FALLBACKS are the old greys, so every seg below the dashed
+   rule is byte-for-byte what it was — the same trick the three colours above use.
+   ⛔ Still do NOT paint `.aw-seg` / `.aw-opt-switch` directly (Đợt 213's rule).
+
+   ⚠️ #166534 is a MEASURED choice, not a taste: white on #16a34a — the green the
+   Lives slider uses — is only 3.30:1, so the house green had to go two shades
+   darker to carry white text at all. The family is unchanged; the weight is not. */
 .aw-opt-setswitch,
 .aw-opt-content,
 .aw-optc.aw-opt-top {
-  --aw-grp-track: #e6f4ea;
-  --aw-grp-thumb: #bfe6cd;
-  --aw-grp-on:    #0f7a35;
+  --aw-grp-track: #d7efdf;   /* máng: xanh lá rất nhạt */
+  --aw-grp-thumb: #166534;   /* nút ĐANG CHỌN: xanh lá đậm, tô đặc */
+  --aw-grp-on:    #ffffff;   /* chữ trên nút đang chọn */
+  --aw-grp-off:   #2f4a3a;   /* chữ nút chưa chọn — xanh rêu sẫm, 8.00:1 trên máng */
+  --aw-grp-edge:  #9ccdae;   /* viền ô đếm giờ */
 }
 .aw-opt-switch {
   position: relative;
@@ -1125,7 +1158,9 @@ html.aw-nhung .aw-below { display: none; }
      guarantee. */
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-  color: #8b93a1;
+  /* Đợt 215b — the group's OFF colour is a variable too. Fallback = the grey it
+     has always been, so every seg below the dashed rule is untouched. */
+  color: var(--aw-grp-off, #8b93a1);
   cursor: pointer;
   border-radius: 9px;
   transition: color .18s ease;
@@ -1463,7 +1498,7 @@ html.aw-nhung .aw-below { display: none; }
   display: flex; align-items: center; justify-content: center;
   border: none; background: transparent; padding: 0 8px;
   font-family: inherit; font-size: 12.5px; font-weight: 700;
-  color: #6b7688; border-radius: 7px; cursor: pointer;
+  color: var(--aw-grp-off, #6b7688); border-radius: 7px; cursor: pointer;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: color .18s ease;
 }
@@ -1799,7 +1834,7 @@ html.aw-nhung .aw-below { display: none; }
 /* The countdown box belongs to the green group too — a white-bordered box beside
    green buttons reads as a leftover. Tinting only the BORDER (not the fill) keeps
    the typed digits on white where they are easiest to read on the 86" screen. */
-.aw-opt-top .aw-tstep { border-color: #cfe7d8; }
+.aw-opt-top .aw-tstep { border-color: var(--aw-grp-edge, #cfe7d8); }
 
 /* Đợt 143 — a class that has asked their machine for less motion still gets the
    full panel, just without the travel. Keeping ONE rule at the end of the block

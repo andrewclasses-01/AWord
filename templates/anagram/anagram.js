@@ -323,20 +323,59 @@ const anagramTemplate = {
     const penGrid = el("div", "aw-opt-grid");
     penHost.append(penGrid);
 
-    const cSubmit = mkSliderCell({
-      label: "Points off", sub: "wrong answer",
+    // ⭐⭐⭐ Đợt 215 (thầy, 20/8/2026) — ONE "Points off" SLIDER, NOT TWO.
+    //   "gộp các thanh points off (wrong answer) và points off (wrong letters)…
+    //    làm 1 thanh duy nhất. Khi ở chế độ nào phù hợp thì tự đổi chỗ wrong
+    //    answer thành wrong letter là được."
+    // This closes the ⬜ Đợt 213 opened: that đợt stopped hiding the unused
+    // slider, and the price was two cells both titled "POINTS OFF" on screen at
+    // once, telling themselves apart only by a 9px sub-label.
+    //
+    // ⭐⭐ WHY ONE CONTROL CAN SPEAK FOR BOTH — and the condition that makes it
+    // true. The two used to be different SCALES (0..10 vs 0..100 step 5), which
+    // is why they had to be different sliders; Đợt 143 put the whole app on one
+    // 0..100 step-1 scale, so today they differ in exactly two ways: the words
+    // under the title, and WHICH FIELD they write. Both are cheap to swap live.
+    // ⛔ If a later đợt ever splits the scales again, this slider must also
+    // retune min/max/step when it changes face — so it says so out loud rather
+    // than silently drawing a 0..100 track for a 0..10 setting.
+    if (MAX_SUBMIT_PENALTY !== MAX_LETTER_PENALTY || POINTS_STEP !== LETTER_PENALTY_STEP)
+      console.warn("[anagram] Points off: hai thang đã khác nhau — thanh gộp cần chỉnh lại min/max/step khi đổi mặt");
+    //
+    // ⭐ NOTHING SAVED CHANGES. `pointsOff` and `letterPenalty` stay two separate
+    // fields on the act, each remembering its own number, so switching mode back
+    // and forth never loses a setting and no act needs migrating. The merge is a
+    // fact about the PANEL, not about the data — mount() below still reads the
+    // field belonging to the mode it is in (see `pointsOff` / `letterPenalty`).
+    const PEN_FACE = {
+      submit:     { sub: "wrong answer", read: () => clampSubmitPenalty(draft.pointsOff || 0) },
+      bonusMinus: { sub: "wrong letter", read: () => clampLetterPenalty(draft.letterPenalty || 0) }
+    };
+    // "Letters with bonus" uses NEITHER penalty, so it wears the "wrong answer"
+    // face and goes pale — the same honest picture Đợt 213 asked for, now in one
+    // cell instead of two.
+    const faceOf = m => (m === "bonusMinus" ? "bonusMinus" : "submit");
+    let penFace = faceOf(curMode);
+    const cPen = mkSliderCell({
+      label: "Points off", sub: PEN_FACE[penFace].sub,
       min: 0, max: MAX_SUBMIT_PENALTY, step: POINTS_STEP,
-      value: clampSubmitPenalty(draft.pointsOff || 0), offAt: 0,
+      value: PEN_FACE[penFace].read(), offAt: 0,
       fmt: v => (v === 0 ? "Off" : "-" + v),
-      onInput: v => { draft.pointsOff = v; }
+      // ⚠️ Reads `penFace` at the moment of the drag, never a captured copy —
+      // this one callback outlives every mode change the panel will see.
+      onInput: v => { if (penFace === "bonusMinus") draft.letterPenalty = v; else draft.pointsOff = v; }
     });
-    const cLetter = mkSliderCell({
-      label: "Points off", sub: "wrong letter",
-      min: 0, max: MAX_LETTER_PENALTY, step: LETTER_PENALTY_STEP,
-      value: clampLetterPenalty(draft.letterPenalty || 0), offAt: 0,
-      fmt: v => (v === 0 ? "Off" : "-" + v),
-      onInput: v => { draft.letterPenalty = v; }
-    });
+    // Put the other mode's number on the same slider. ⚠️ Goes through `paint()`,
+    // NOT through the oninput path: this is the panel catching up with a mode
+    // change, and firing onInput here would write the mode it just LEFT.
+    function showPenFace(face) {
+      penFace = face;
+      const capEl = cPen.lab.querySelector(".aw-optc-sub");
+      if (capEl) capEl.textContent = PEN_FACE[face].sub;
+      const v = PEN_FACE[face].read();
+      cPen.slider.value = String(v);
+      cPen.paint(v);
+    }
     const cMult = mkSliderCell({
       label: "Bonus x", sub: "perfect word",
       min: MIN_BONUS_MULT, max: MAX_BONUS_MULT, step: 1,
@@ -351,7 +390,11 @@ const anagramTemplate = {
     // Bonus x therefore leads, and the cell beside it is the penalty belonging to
     // the SAME mode ("Bonus and minus"), so each row also reads as one mode's
     // settings rather than a mixture.
-    penGrid.append(cMult.cell, cLetter.cell, cSubmit.cell);
+    // ⭐ Đợt 215 — two cells now, and they land on the right side of thầy's rule
+    // by construction: reward left, punishment right. (This nested grid is inside
+    // one wide cell, so core/options-panel.js's column pass cannot see it — the
+    // same reason Đợt 213 ordered it by hand.)
+    penGrid.append(cMult.cell, cPen.cell);
 
     // Which cells this mode actually uses. Everything else is dimmed, never
     // removed — `.is-locked` is the shared class from Đợt 188 (opacity + a real
@@ -360,8 +403,8 @@ const anagramTemplate = {
     // together. That is the honest picture: the mode scores purely on letters,
     // and thầy asked to be able to see that the controls exist and are off.
     function syncPen(m) {
-      cSubmit.cell.classList.toggle("is-locked", m !== "submit");
-      cLetter.cell.classList.toggle("is-locked", m !== "bonusMinus");
+      showPenFace(faceOf(m));
+      cPen.cell.classList.toggle("is-locked", m !== "submit" && m !== "bonusMinus");
       cMult.cell.classList.toggle("is-locked", m !== "bonusMinus");
     }
     syncPen(curMode);
