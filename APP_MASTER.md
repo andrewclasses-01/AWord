@@ -9,7 +9,8 @@
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **20/8/2026 (Đợt 215 + 215b)** — **OPTIONS: MỘT THANH POINTS OFF · HAI CỘT CÓ NGHĨA · CỤM TRÊN ĐỔI BỘ MÀU**
-> — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT (mã điền ở khối Đợt 215 bên dưới sau khi push).
+> — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `ad06d16`, **ĐÃ PUSH + LIVE** (3/3 mã băm
+> SHA-256 khớp trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
 > Trước đó **(Đợt 214)** — **TIME COST RỜI KHỎI Ô TIMER** (thầy "ok build" + cho
 > phép commit/push/ghi hồ sơ không cần hỏi lại). Xem khối Đợt 214 ngay dưới đây.
 > Trước đó **(Đợt 213 + 213b)** — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `30756c6` — **ĐÃ PUSH + LIVE** (đối chiếu **14/14 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
@@ -24,7 +25,8 @@
 >
 > ---
 > **Đợt 215b — CỤM TRÊN CỦA OPTIONS ĐỔI BỘ MÀU: xanh lá ĐẬM, nút tô đặc, chữ trắng.**
-> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026), ĐI CHUNG MỘT COMMIT với Đợt 215. Sửa **1 file**: `core/app.css`.
+> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026), ĐI CHUNG MỘT COMMIT `ad06d16` với Đợt 215 — **ĐÃ PUSH + LIVE**
+> (3/3 mã băm SHA-256 khớp, 10/10 phép hỏi module trên bản live). Sửa **1 file**: `core/app.css`.
 > - ⛔⛔ **THỦ PHẠM LÀ CÁI NÚT, KHÔNG PHẢI CHỮ.** Đo bộ cũ: chữ đang chọn 4.00 · chữ chưa chọn 2.73 ·
 >   **nút đang chọn nổi trên máng 1.20** ⇒ nút xanh nhạt trên máng xanh nhạt là **gần như tàng hình**,
 >   hàng công tắc thôi trả lời được câu *"đang chọn cái nào?"*. Làm đậm chữ không chữa được chỗ đó.
@@ -48,7 +50,8 @@
 >
 > ---
 > **Đợt 215 — OPTIONS: MỘT THANH POINTS OFF, VÀ HAI CỘT CÓ NGHĨA.**
-> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026). Thầy giao 2 việc, chốt 3 lựa chọn qua
+> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026) · COMMIT `ad06d16` · **ĐÃ PUSH + LIVE** (3/3 mã băm SHA-256,
+> 10/10 phép hỏi module chạy trên chính bản live). Thầy giao 2 việc, chốt 3 lựa chọn qua
 > AskUserQuestion. Sửa **2 file**: `core/options-panel.js` (hàm mới `seatCellsByColumn`) ·
 > `templates/anagram/anagram.js`. 0 lỗi console. Bản gốc: `_backup/dot215/`.
 > - ⭐⭐ **HAI CỘT NAY CÓ NGHĨA: trái = mạng/thưởng, phải = phạt.** Đo trước khi sửa trên **17
@@ -3086,7 +3089,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 20/8/2026 sau **Đợt 213 + 213b** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 20/8/2026 sau **Đợt 215 + 215b** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ⭐⭐⭐ **BẢNG OPTIONS VỪA ĐƯỢC LÀM LẠI GẦN NHƯ TOÀN BỘ (Đợt 213 + 213b, 20/8/2026, thầy đã duyệt).**
 > Nếu việc sắp tới của bạn đụng tới Options — dù chỉ thêm một ô — **ĐỌC HAI KHỐI 213b + 213 ở đầu file
@@ -3105,6 +3108,10 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >    thứ 7 cho một template là bố cục của nó đổi hình — đo lại.
 > 7. ⛔ **Thanh trượt: chạm phải nút = +1, chạm trái nút = −1.** Luật chạm đúp của Đợt 188 **đã bỏ hẳn**;
 >    đừng đắp lại. Vùng chết quanh nút tròn là **14px** (nửa nút + 4px) — thầy đang cân nhắc nới/thu.
+> 9. ⭐⭐ **(Đợt 215b) CỤM TRÊN CÓ NĂM BIẾN MÀU**, khai trên đúng 3 vùng chứa: `--aw-grp-track` ·
+>    `-thumb` · `-on` · `-off` · `-edge`. Nút đang chọn **tô đặc** `#166534`, chữ **trắng**. ⛔ Đừng
+>    quay lại kiểu nút nhạt trên máng nhạt: đo được **1.20:1**, tức nút gần như tàng hình. Muốn đổi
+>    màu thì sửa 5 dòng biến đó, **đừng tô thẳng vào `.aw-seg`/`.aw-opt-switch`** (dùng chung nửa dưới).
 > 8. ⭐⭐ **(Đợt 215) CỘT TRÁI = mạng/thưởng · CỘT PHẢI = phạt** — `seatCellsByColumn()` chạy sau phép
 >    sắp xếp và đổi chỗ **trong từng hàng**. Thêm một thanh mới là phải hỏi *"nó thưởng hay phạt"*,
 >    vì `tone` quyết định **cả màu, cả thứ tự, cả cột**. ⛔ Đừng thay bằng phép chia cột toàn bảng

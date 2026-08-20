@@ -11,7 +11,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 ## Đợt 215b (20/8/2026) — ⭐⭐ CỤM TRÊN CỦA OPTIONS: BỘ MÀU MỚI, TƯƠNG PHẢN MẠNH
 
 > ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026, thầy: *"commit + push live + ghi dữ liệu"*), đi CHUNG MỘT
-> COMMIT với Đợt 215. Sửa **1 file**: `core/app.css`. 0 lỗi console. Bản gốc: `_backup/dot215/app.css`.
+> COMMIT với Đợt 215 — ĐÃ COMMIT `ad06d16` + PUSH + **LIVE** (đối chiếu **3/3 file trùng mã băm SHA-256** trên
+> `aword.andrewclasses.com` sau ~50 giây, và **10/10 phép hỏi module chạy trên CHÍNH BẢN LIVE**:
+> 1 thanh Points off · nhãn `wrong answer` · Points off + Time cost đều ở cột PHẢI · máng `#d7efdf`
+> · nút `#166534` · chữ trắng · khu dưới dòng kẻ vẫn `#eef2f7`). Kho sạch, `main` = `origin/main`. Sửa **1 file**: `core/app.css`. 0 lỗi console. Bản gốc: `_backup/dot215/app.css`.
 > Trang so màu: `scratch/mau215.html` (17 bộ, dựng bằng module thật).
 
 ### Thầy nêu
@@ -116,7 +119,10 @@ t=150ms trở đi chênh 1–2% (vài pixel)
 
 ## Đợt 215 (20/8/2026) — ⭐⭐ OPTIONS: MỘT THANH POINTS OFF, VÀ HAI CỘT CÓ NGHĨA
 
-> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026), đi CHUNG MỘT COMMIT với Đợt 215b. Sửa **2 file code**:
+> ✅ **THẦY DUYỆT — CHỐT BẢN** (20/8/2026), đi CHUNG MỘT COMMIT với Đợt 215b — ĐÃ COMMIT `ad06d16` + PUSH + **LIVE** (đối chiếu **3/3 file trùng mã băm SHA-256** trên
+> `aword.andrewclasses.com` sau ~50 giây, và **10/10 phép hỏi module chạy trên CHÍNH BẢN LIVE**:
+> 1 thanh Points off · nhãn `wrong answer` · Points off + Time cost đều ở cột PHẢI · máng `#d7efdf`
+> · nút `#166534` · chữ trắng · khu dưới dòng kẻ vẫn `#eef2f7`). Kho sạch, `main` = `origin/main`. Sửa **2 file code**:
 > `core/options-panel.js` · `templates/anagram/anagram.js`. 0 lỗi console.
 > Bản gốc: `_backup/dot215/`. Bàn thử: `scratch/opts215-measure.html` (đo bố cục 35 bảng) +
 > `scratch/pen215-test.html` (chức năng thanh gộp, **29/29 ĐẠT**).
