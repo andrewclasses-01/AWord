@@ -11,7 +11,8 @@
 > Cập nhật lần cuối: **20/8/2026 (Đợt 216 + 217)** — **CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s
 > VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY** (216) và **TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG
 > LAN · CHE BÀI KHI FIGHT · RESET SẠCH** (217) — ✅ **THẦY DUYỆT 216**, hai đợt đi **CHUNG MỘT COMMIT**
-> theo đúng lời thầy. Đọc khối Đợt 217 → 216 ngay dưới.
+> theo đúng lời thầy — commit `6244fe0`, **ĐÃ PUSH + LIVE** (11/11 mã băm SHA-256 khớp, 12/12 phép
+> hỏi module trên bản live). Đọc khối Đợt 217 → 216 ngay dưới.
 > Trước đó **(Đợt 215 + 215b)** — **OPTIONS: MỘT THANH POINTS OFF · HAI CỘT CÓ NGHĨA · CỤM TRÊN ĐỔI BỘ MÀU**
 > — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `ad06d16`, **ĐÃ PUSH + LIVE** (3/3 mã băm
 > SHA-256 khớp trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
@@ -30,6 +31,11 @@
 > **Đợt 217 — SÁU VIỆC MỘT LƯỢT: TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG LAN · CHE BÀI KHI FIGHT · RESET SẠCH.**
 > ✅ Thầy duyệt Đợt 216 rồi giao tiếp sáu việc này, chốt *"rồi commit + push + ghi nhật ký hồ sơ một
 > thể"* ⇒ **216 + 217 đi CHUNG MỘT COMMIT**. Sửa **11 file code**. 0 lỗi console.
+> ĐÃ COMMIT `6244fe0` + PUSH + **LIVE** — đối chiếu **11/11 file trùng mã băm SHA-256** trên
+> `aword.andrewclasses.com` (đã `tr -d ''` cả hai đầu theo bẫy CRLF Đợt 213b), và **12/12 phép hỏi
+> module chạy trên CHÍNH BẢN LIVE**: `tieWindowMsOf(0)=∞` · giữ 7s/10s · snap 7,3→7,5 · act cũ 3,0 không
+> nhúc nhích · đáy phễu 52 · có `releaseTeamClaim` · chốt START **522ms** · che bài quiz `0.12` · bảng công
+> cụ dừng đồng hồ rồi chạy lại. Kho sạch, `main` = `origin/main`.
 > - ⚠️⚠️ **TÊN TRONG PHỄU: thuật toán KHÔNG sai, sai ở LÚC NÓ ĐƯỢC GỌI.** Đo trước khi sửa: gọi bình
 >   thường thì **0/12 tên bị cắt** ở cả ba bề ngang; **gọi lúc bảng đang ẩn thì 3/12 bị cắt, font
 >   nguyên cỡ** (đúng ảnh thầy gửi) — cả bảng vẽ bằng `cqw` nên vùng chứa rộng 0 ⇒ cỡ chữ ra 0 ⇒
