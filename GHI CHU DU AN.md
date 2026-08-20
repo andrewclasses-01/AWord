@@ -120,6 +120,26 @@ căn giữa lệch 0px ở cả 1 và 2 cột.
 - ⭐ Đo trên **app thật** cả 17 template mới là bằng chứng chính; bàn thử giữ phần logic.
 - 📸 `screenshot` vẫn timeout ⇒ lại nghiệm bằng số đo.
 
+### 8. ⛔ BẪY MỚI KHI ĐỐI CHIẾU MÃ BĂM VỚI BẢN LIVE — CRLF LÀM PHÉP SO NÓI DỐI
+
+Sau khi push, phép đối chiếu quen thuộc (`sha256sum` file local ↔ `curl` file trên
+`aword.andrewclasses.com`) báo **9/10 khớp, riêng `anagram.css` KHÁC** — trong khi bản live thực ra
+**đã đúng**. Mất mấy phút truy mới ra.
+
+- **Gốc**: file trong thư mục làm việc của máy này bị Git đổi sang **CRLF** (`core.autocrlf`, chính là
+  dòng cảnh báo *"LF will be replaced by CRLF"* hiện ra mỗi lần commit), còn GitHub Pages phục vụ bản
+  **LF**. Nội dung giống hệt nhau từng chữ, mã băm khác hoàn toàn.
+- ⚠️ **Vì sao chỉ 1/10 file dính**: các file kia lúc đó đang là LF trong thư mục làm việc; file nào vừa
+  được sửa bằng công cụ ghi CRLF thì mới lệch. Nên **"đa số khớp" KHÔNG chứng minh phép đo đúng** —
+  đúng cái bẫy đã gặp ở Đợt 207 · 208 · 209 · 213: **lưới báo hỏng mà lỗi ở chính lưới**.
+- ✅ **LUẬT TỪ NAY — chuẩn hoá xuống dòng ở CẢ HAI ĐẦU trước khi băm**:
+  `tr -d '\r' < file | sha256sum` và `curl -s URL | tr -d '\r' | sha256sum`.
+  Làm vậy thì Đợt 213 + 213b ra **14/14 khớp**.
+- 🐞 **Suýt kết luận sai lần thứ hai**: `grep -c "aw-anagram-penwrap"` trên file live trả về **1**, tưởng
+  là bản cũ còn nguyên accordion — hoá ra chuỗi đó nằm trong **CHÍNH DÒNG GHI CHÚ MỚI** giải thích rằng
+  accordion đã bị gỡ. ⛔ **Đừng dò tính năng bằng cách grep tên nó**: ghi chú cũng chứa tên. Muốn chắc thì
+  so với `git show <sha>:<file>`.
+
 ⬜ **CÒN LẠI — mắt/tay thầy**: nhãn *"Change the crossword"* ở cột 168px có bị cắt cụt trên màn 86" không ·
 Gameshow 3 dòng × 3 cột nhìn có chật không · Whack a mole chơi thử xem mất 2 thùng kia có hụt không.
 

@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 213 + 213b)** — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `30756c6`.
+> Cập nhật lần cuối: **20/8/2026 (Đợt 213 + 213b)** — ✅ **THẦY DUYỆT CẢ HAI, CHỐT BẢN**, đi CHUNG MỘT COMMIT `30756c6` — **ĐÃ PUSH + LIVE** (đối chiếu **14/14 file trùng mã băm SHA-256** trên `aword.andrewclasses.com`, kho sạch, `main` = `origin/main`).
 > Cả hai đợt là MỘT mạch việc **OPTIONS** thầy giao và duyệt trong cùng ngày 20/8; phiên sau đọc khối
 > 213b → 213 bên dưới là đủ nắm. Trước đó **(Đợt 211 + 212)** — ✅ **THẦY ĐÃ DUYỆT CẢ HAI, CHỐT BẢN** (20/8/2026, thầy xem trên máy thật); cả hai đi CHUNG MỘT COMMIT `9076faf` (thầy: “commit + push + ghi hồ sơ dự án một thể”). Trước đó **(Đợt 207→210)** ✅ **THẦY DUYỆT, CHỐT BẢN — cả 4 đợt ĐÃ COMMIT + PUSH + LIVE**
 > (`38895e7` → `858fa4c` → `3a2b351` → `3b385c7`; đối chiếu lần cuối **6/6 file trùng mã băm SHA-256**
@@ -51,6 +51,13 @@
 >   `usesAutoSwitch` xuất hiện trong file — hoá ra chỉ nằm trong một dòng **GHI CHÚ**. Đọc lại dòng đó.
 > - ⚠️ Thầy viết crossword "show corrects (thay cho show answers at end)", **vênh** với cột 3 của chính
 >   thầy; hỏi lại thì thầy chốt là thay cho "Show answer when wrong". **Hỏi lại rẻ hơn build nhầm.**
+> ⛔ **BẪY ĐỐI CHIẾU MÃ BĂM (Đợt 213b)**: file trong thư mục làm việc của máy này là **CRLF**
+> (`core.autocrlf` — chính dòng cảnh báo "LF will be replaced by CRLF" lúc commit), bản trên Pages là
+> **LF** ⇒ mã băm khác dù nội dung giống hệt. **Luôn `tr -d '\r'` ở CẢ HAI ĐẦU trước khi băm.** Và ⚠️
+> "đa số file khớp" KHÔNG chứng minh phép đo đúng — chỉ file vừa sửa mới lệch.
+> ⛔ Đừng dò một tính năng bằng cách `grep` tên nó: **dòng ghi chú giải thích việc GỠ nó cũng chứa tên đó**
+> (đã suýt kết luận sai). Muốn chắc thì so với `git show <sha>:<file>`.
+
 > ⬜ **CÒN LẠI (mắt thầy)**: "Change the crossword" ở cột 168px có bị cắt cụt trên màn 86" không ·
 > Gameshow 3 dòng × 3 cột có chật không · Whack a mole mất 2 thùng kia chơi có hụt không.
 
