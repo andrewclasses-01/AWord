@@ -876,7 +876,20 @@ còn dựa vào mép ô. Đã báo trước khi làm; **không phải chỗ sót
 ⚠️ Số trong huy chương vẽ bằng `<path>`, **không `<text>`** — `<text>` đổi bề ngang theo font đang có
 và sẽ lệch khỏi tâm mặt huy chương ở cỡ nhỏ.
 
+**(c-bis) ⭐⭐ Đợt 208 — TÊN 3 BẠN ĐẦU VÀNG LẤP LÁNH, VÀ SPARKLE BÁM QUANH TÊN.**
+Dải vàng chạy ngang chữ (`background-clip: text` + `color: transparent`) và hào quang thở.
+- ⛔⛔ **HÀO QUANG LÀ `text-shadow`, KHÔNG BAO GIỜ `filter`** — Đợt 198 đã phải gỡ đúng thứ đó ra khỏi
+  dòng chữ ngay dưới nó: `filter` đẻ stacking context. `text-shadow` **vẫn vẽ** khi chữ trong suốt, vì
+  bóng đổ theo HÌNH DẠNG chữ chứ không theo màu chữ.
+- ⚠️ **Sparkle phải nằm trong bọc `.aw-sd-pod-nm`, KHÔNG nằm trong `.aw-sd-pod-name`** — ô tên mang
+  `overflow:hidden` (chính nó làm cho tên quá dài đo được), nên sparkle đặt bên trong bị cắt đúng ở
+  cái mép nó cần đứng lên.
+- Cả ba đều VÀNG (thầy chốt), kể cả ô bạc và ô đồng.
+
 **(d) ⭐⭐ HAI Ô TÍCH CHIA ĐỘI + HAI SỐ ĐẾM (`renderReviewPodium(..., { picks })`).**
+⭐ Đợt 208 đổi hình: **chấm tròn đặc mờ**, bấm ra **dấu ✓ to dày xanh dương đứng một mình**, không khung.
+⚠️ **Nút giữ nguyên 4.8cqw** — chấm chỉ là con của nó. Thu nút xuống bằng cái chấm là để lại đích bấm
+to bằng móng tay trên cái bảng người ta chạm từ khoảng cách một cánh tay.
 Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: tích trái/phải, đếm hai bên.
 - **`picks` là Map do MÀN HÌNH truyền vào**, không phải bộ vẽ tự giữ. Bảng bị dựng lại mỗi lần đổi
   phạm vi và **mỗi lần một đội khác nộp kết quả** (listener Đợt 196) — Map nằm trong bộ vẽ là công chia
@@ -885,9 +898,15 @@ Thầy dùng bảng kết quả để **chia đội cho hoạt động sau**: t�
   không ô tên nhảy ngang ngay dưới ngón tay.
 - ⚠️ **Ô tích là con của HÀNG**, nên nó bám mép ô và **hẹp dần theo phễu, cố ý KHÔNG thẳng hàng** (thầy
   chốt). Đừng "căn cho thẳng".
-- ⚠️ **Chỗ cho hai số đếm là ĐO ĐƯỢC**: hàng 1 = 80% + 2 ô tích (4.8cqw) + 2 khe (0.9cqw) ⇒ còn
-  ~3.8cqw mỗi bên, lấn thêm 1.5cqw vào lề `.aw-review`. Đụng vào `POD_MAX_W`, bề rộng ô tích, hay lề
-  của `.aw-review` thì **phải đo lại con số này** — và nhớ ca **hai chữ số** (`.is-wide-count`).
+- ⚠️⚠️ **Đợt 208 — VỊ TRÍ HAI SỐ ĐẾM DO `placePodiumCounts()` ĐO, KHÔNG PHẢI CSS GHIM.** Ngang tâm
+  **ô HS thứ 4** (`offsetTop`, nên không trôi khi cuộn — đúng nghĩa "khi chưa cuộn" thầy nói), và chính
+  giữa mép trong khung ↔ dấu tích của hàng đó, **mép phải đã trừ thanh cuộn**
+  (`offsetWidth − clientWidth`). ⛔ **Đừng ghim lại bằng `top`/`left`/`right` trong CSS**: số đo cứng của
+  Đợt 207 chính là lý do số bên phải nằm dưới thanh cuộn — nó không thể biết hình dạng cái phễu, mà cái
+  phễu đúng là thứ nó phải tránh. CSS chỉ còn giữ phép `translate` căn tâm, để đổi cỡ chữ (1 chữ số →
+  2 chữ số) không đẩy số lệch khỏi tâm đã đo.
+  🐞 Bẫy đại số đã cắn: `left`/`right` là **khoảng cách TỪ MÉP**, không phải toạ độ — viết
+  `right = mép − sb − đích` thay vì `mép − đích` là lệch **đúng bằng bề rộng thanh cuộn**.
 - Hai số **hiện cùng lúc** (bên kia hiện `0`) và **đứng yên khi cuộn**: chúng là anh em của khung cuộn
   `.aw-sd-pod`, không phải con của nó — đó là lý do bộ vẽ trả về **`.aw-sd-podwrap`**, không trả
   `.aw-sd-pod`. ⚠️ **Ai xoá bảng theo selector phải biết CẢ HAI tên.**
@@ -928,6 +947,23 @@ thì hai cách ra hai số khác nhau và ô sẽ hiện con số lớp không b
 solo là cả lớp, cap không áp.
 Đèn xanh `.is-best` = số đội hiện tại bỏ lại ít nhất trong **2..MAX_TEAMS** (⛔ 1 đội không dự thi,
 thầy chốt); **hoà thì mọi phương án hoà đều sáng**.
+
+**(g-bis) ⭐ Đợt 208 — Ô TEAMS CŨNG SÁNG XANH khi lớp chia đều được vào ngần ấy đội.**
+⚠️ "Chia hết" = **`targetSizes()` trả về mọi đội BẰNG NHAU**, không phải `n % teams === 0` — hai cách
+chỉ trùng khi chưa có gì bị `MAX_PER_TEAM` chặn. ⛔ Từ **2 đội** trở lên (một đội thì cả lớp là đội đó,
+luôn "đều", đèn lúc nào cũng sáng thì không nói gì cả).
+⚠️ `paintTeamsBest()` gọi **từ trong `paintQuest()`** — hai ô trả lời cùng một câu hỏi, lệch một nhịp là
+đọc ra như lỗi. Và nó là **`function` có tên**, không phải arrow (bẫy TDZ Đợt 192).
+
+**(g-ter) ⭐⭐ Đợt 208 — NÚT RESET Ở MÀN CHỌN LỚP MANG HAI NGHĨA.**
+Thanh chân vẫn nằm dưới lớp Recent results, nên một nút phải thuộc về **thứ đang được NHÌN**: đang mở
+Recent results thì Reset **xoá sổ cái** của lớp đó (`wipeMatches`, viết từ Đợt 197 và tới đây mới có
+nút); đóng nó đi thì Reset trở lại nghĩa cũ (gọi mọi HS về từ sổ lớp).
+⛔ **Xoá sổ cái KHÔNG hoàn tác được** — sổ lớp lúc nào cũng lấy lại được từ Settings, còn sổ cái là bản
+duy nhất của 5 trận đã đánh. Câu hỏi phải nói ra điều đó.
+⚠️⚠️ **`.aw-sd-confirm` phải nằm TRÊN mọi lớp của panel** — nó từng là `z-index: 5` trong khi
+`.aw-sd-recent` là 6 và `.aw-sd-rec-detail` là 7, tức câu hỏi sẽ nằm **dưới chính thứ nó đang hỏi về**.
+Nay là **9**. Thêm lớp mới vào panel này thì phải kiểm lại con số đó.
 
 **(h) Dòng "Start with mistakes" ẩn sau NHẤN GIỮ "Start again" — ⛔ CHỈ TRONG SHOWDOWN.**
 Bảng cuối game dùng chung cho cả 17 template ở mọi chế độ; thầy chỉ thu hẹp cho Showdown.

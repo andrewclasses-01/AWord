@@ -8,7 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 207)** ⬜ **CODE XONG, 117/117 ĐẠT trên 3 bàn thử, CHƯA COMMIT — chờ thầy nhìn.**
+> Cập nhật lần cuối: **20/8/2026 (Đợt 208)** — 155/155 ĐẠT trên 3 bàn thử.
+>
+> ---
+> **Đợt 208 — SHOWDOWN TINH CHỈNH: CHẤM TRÒN · TÊN VÀNG · Ô TEAMS SÁNG · RESET XOÁ SỔ CÁI.**
+> Thầy giao 9 việc sau khi **gửi ảnh chụp bản thật** của Đợt 207; 8 việc làm, 1 việc bỏ.
+> ⭐⭐⭐ **LẦN ĐẦU SAU 9 ĐỢT CHỤP ĐƯỢC MÀN HÌNH** (pane trình duyệt hiện lên) — đợt này sửa **có nhìn thấy**.
+> Sửa 4 file: `core/showdown-review.js` · `showdown-setup.js` · `engine.js` · `app.css`.
+> - **Ô tích vuông → CHẤM TRÒN đặc mờ**; bấm ra **dấu ✓ to, dày, xanh dương, đứng một mình** (không khung).
+>   ⚠️ Nút vẫn 4.8cqw, chỉ cái vỏ biến mất — chấm là con của nút, thu nút bằng cái chấm là đích bấm bằng móng tay.
+> - ⭐⭐ **Hai số đếm nay ĐO chứ không ĐOÁN** (`placePodiumCounts`): ngang tâm **ô HS thứ 4** (đọc `offsetTop`
+>   nên không trôi khi cuộn), chính giữa mép khung ↔ dấu tích hàng 4, **mép phải đã trừ thanh cuộn**.
+>   ⚠️ Số đo CỨNG của Đợt 207 chính là lý do số bên phải nằm dưới thanh cuộn. 🐞 Bản đầu của đợt này lệch
+>   **đúng bằng bề rộng thanh cuộn** vì viết `right = mép − sb − đích` thay vì `mép − đích` — lưới bắt được.
+> - **Tên 3 bạn đầu VÀNG LẤP LÁNH, tỏa hào quang**; sparkle chuyển từ quanh ô sang **quanh chính cái tên**
+>   (⚠️ phải đẻ bọc `.aw-sd-pod-nm` vì ô tên mang `overflow:hidden` sẽ cắt mất sparkle).
+>   ⛔⛔ Hào quang là **`text-shadow`, KHÔNG BAO GIỜ `filter`** (luật Đợt 198).
+> - **Nút fullscreen = `.aw-iconbtn` của app**, giống hệt nút trong act đơn (đo 38.39×38.39 cả hai).
+>   `.aw-sd-fsbtn` nay **chỉ giữ cái góc** — đừng khai lại cỡ ở đó.
+> - **Ô TEAMS sáng xanh khi chia đều được** (18 em: 2 và 3 đội sáng). ⚠️ Hỏi `targetSizes()`, không nhẩm
+>   `n % teams`; ⛔ từ 2 đội trở lên (1 đội thì luôn "đều", đèn vô nghĩa).
+> - **Ô tên bay giữ màu NƠI XUẤT PHÁT** (thầy chọn 1 trong 3 phương án — đừng đổi sang màu nơi đến).
+>   ⚠️ `bulkMove` chụp `className` TRƯỚC `mutate()`; ô bay phải gỡ `is-pop`.
+> - ⭐⭐ **RESET khi đang mở Recent results = XOÁ SỔ CÁI** của lớp đó (`wipeMatches`, nằm không dùng từ
+>   Đợt 197). Có hỏi xác nhận, và **không hoàn tác được**.
+>   🐞 **Vá kèm một lỗi chưa kịp xảy ra**: `.aw-sd-confirm` z-index **5** mà `.aw-sd-recent` là **6** ⇒
+>   câu hỏi sẽ nằm DƯỚI thứ nó đang hỏi về. Nâng lên **9** — hộp hỏi phải luôn trên mọi lớp của panel.
+> - **Bảng cuối game trong Showdown bỏ Leaderboard + dòng "YOU'RE Xth"** (⚠️ chỉ giấu ĐƯỜNG VÀO,
+>   `finish()` vẫn ghi — tắt Showdown là lịch sử còn nguyên). 16 game khác không đổi.
+> - ⛔ **BỎ HẲN 1 việc**: animation cho danh sách lớp — đó là `<select>` của trình duyệt, danh sách do
+>   **Windows tự vẽ**, CSS/JS không với tới. Thầy chốt *"ko cần animation này nữa"*.
+> - 🧪 **155/155 ĐẠT, 0 lỗi console** (ba bàn thử Đợt 207 cập nhật TẠI CHỖ: pod 74 · review 29 · panel 52).
+>   ⛔ Lại **2 lần lưới báo hỏng mà lỗi ở chính lưới** (đọc `children[1]` sau khi tên có bọc mới; nút đối
+>   chiếu bị **flex bóp** còn 27,9px trong khung đã đầy).
+> - ⬜ **CÒN LẠI**: nhìn trên màn 86" xem chữ vàng của bạn **số 2 (ô bạc)** có đọc được từ cuối lớp không.
+>
+> ---
+> Trước đó: **20/8/2026 (Đợt 207)** — 117/117 ĐẠT trên 3 bàn thử.
 >
 > ---
 > **Đợt 207 — SHOWDOWN: Ô QUESTIONS TÍNH LẠI · BẢNG CHÓP NGƯỢC DỰNG LẠI · RECENT RESULTS FULLSCREEN.**

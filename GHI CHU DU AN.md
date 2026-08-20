@@ -8,6 +8,126 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 208 (20/8/2026) — ⭐⭐ SHOWDOWN TINH CHỈNH: **CHẤM TRÒN · TÊN VÀNG · Ô TEAMS SÁNG · RESET XOÁ SỔ CÁI**
+
+**Trạng thái:** code xong, **155/155 ĐẠT trên 3 bàn thử, 0 lỗi console**.
+⭐⭐⭐ **VÀ LẦN ĐẦU SAU 9 ĐỢT, CHỤP ĐƯỢC MÀN HÌNH** — pane trình duyệt hiện lên, `screenshot` chạy. Thầy
+cũng gửi ảnh chụp bản thật của Đợt 207, nên 8 việc dưới đây là sửa **có nhìn thấy**, không phải sửa mù.
+
+Thầy giao 9 việc; **1 việc bỏ** (xem mục 9).
+
+### 1. Ô TÍCH VUÔNG → CHẤM TRÒN, DẤU ✓ ĐỨNG MỘT MÌNH
+
+Thầy: *"thay các ô vuông để tích bằng chấm tròn đặc nhỏ hơn (nhưng vẫn khá to), chấm tròn đặc và khá
+mờ. Khi bấm vào sẽ biến thành dấu tích ✓ to, dày màu xanh dương và chấm tròn bên kia ẩn. dấu tích chỉ
+đứng một mình, không cần nằm trong khung hay ô gì cả."*
+- Chấm **2.4cqw**, đặc, mờ **0.3**; dấu ✓ **4.6cqw**, nét **3.4**, `#2563eb`, không khung không nền.
+- ⚠️ **NÚT GIỮ NGUYÊN 4.8cqw, chỉ cái vỏ biến mất.** Chấm là con của nút. Thu nút xuống bằng cái chấm
+  là để lại một đích bấm to bằng móng tay trên cái bảng người ta chạm từ khoảng cách một cánh tay.
+- Ô bên kia vẫn ẩn bằng `visibility` (giữ chỗ ⇒ ô tên không nhúc nhích — đo lại: **0.0px**).
+
+### 2. ⭐⭐ HAI SỐ ĐẾM: ĐO CHỨ KHÔNG ĐOÁN — VÀ MỘT LỖI CỦA CHÍNH ĐỢT 207
+
+Thầy: *"nằm cao lên một chút, ở mức chính giữa tâm của ô học sinh thứ 4 khi chưa cuộn… đẩy về giữa một
+chút để nằm chính giữa mép màn hình và vị trí dấu tích của ô tên học sinh thứ 4 (do thanh scroll đang
+đè lên số bên phải)."*
+
+Hàm mới **`placePodiumCounts()`**. Đợt 207 ghim hai số bằng số đo CỨNG trong CSS — và đó chính là lý do
+số bên phải nằm dưới thanh cuộn: **một số đo cứng không thể biết hình dạng cái phễu, mà cái phễu lại
+đúng là thứ nó phải tránh.**
+- **Chiều cao**: `anchor.offsetTop + offsetHeight/2` — `offsetTop` **không đổi khi cuộn**, đúng nghĩa
+  "khi chưa cuộn" của thầy.
+- **Chiều ngang**: chính giữa mép trong khung và dấu tích của hàng 4, **mép phải đã trừ thanh cuộn**
+  (`offsetWidth − clientWidth`).
+- 🐞 **LỖI ĐẠI SỐ TỰ GÂY RA, LƯỚI BẮT ĐƯỢC**: bản đầu viết `rx = wr.right − sb − want` thay vì
+  `rx = wr.right − want`, tức lệch **đúng bằng bề rộng thanh cuộn** ⇒ số bên phải vẫn bị đè **4px**.
+  Bài học: `left`/`right` là **khoảng cách TỪ MÉP**, không phải toạ độ — viết phép trừ ra giấy trước.
+- Lớp dưới 4 em thì neo vào hàng cuối (không có hàng 4 để nhắm, mà nhắm vào hư không là hai số nằm ở góc 0,0).
+
+### 3. TÊN 3 BẠN ĐẦU VÀNG LẤP LÁNH, TỎA HÀO QUANG
+
+Dải màu vàng chạy ngang chữ (`background-clip: text`) + hào quang thở (`text-shadow`), cả hai bằng CSS
+animation.
+- ⛔⛔ **HÀO QUANG LÀ `text-shadow`, KHÔNG BAO GIỜ `filter`** — Đợt 198 đã phải gỡ đúng thứ đó ra khỏi
+  dòng chữ ngay bên dưới: `filter` đẻ stacking context và lặng lẽ xếp lại mọi thứ quanh nó.
+- ⚠️ `color: transparent` là thứ làm dải màu hiện ra; `text-shadow` **vẫn vẽ** vì bóng đổ theo **HÌNH
+  DẠNG** chữ chứ không theo màu chữ.
+- **Cả ba đều VÀNG** đúng lời thầy, kể cả bạn 2 (ô bạc) và bạn 3 (ô đồng).
+
+### 4. SPARKLE CHUYỂN TỪ QUANH Ô SANG QUANH TÊN
+
+⚠️ **Vì sao phải đẻ thêm bọc `.aw-sd-pod-nm`**: `.aw-sd-pod-name` mang `overflow:hidden` (chính nó làm
+cho tên quá dài **đo được**), nên sparkle đặt bên trong sẽ **bị cắt đúng ở cái mép nó cần đứng lên**.
+
+### 5. NÚT FULLSCREEN GIỐNG HỆT NÚT TRONG ACT ĐƠN
+
+Đổi sang class **`.aw-iconbtn`** của app; `.aw-sd-fsbtn` nay **chỉ còn giữ cái góc** nó đứng. Nền
+trắng, viền và bóng đổ của Đợt 207 bỏ hẳn. **Đừng khai lại cỡ ở đây** — hai nút làm một việc thì không
+được trôi thành hai cỡ. Đo: **38.39×38.39** ở cả hai, giống nhau từng phần trăm pixel.
+
+### 6. Ô TEAMS SÁNG XANH KHI CHIA ĐỀU ĐƯỢC
+
+⚠️ **Hỏi hàm chia thật**, y như ô QUESTIONS: "chia hết" là **`targetSizes()` trả về mọi đội BẰNG NHAU**,
+không phải `n % teams === 0` — hai cách chỉ trùng khi chưa có gì bị chặn bởi `MAX_PER_TEAM`.
+⛔ **Từ 2 đội trở lên**: một đội thì cả lớp là đội đó, luôn "đều" — đèn lúc nào cũng sáng thì không nói
+gì cả. Lớp 18 em: **2 và 3 đội sáng**, 4 và 5 đội không.
+⚠️ `paintTeamsBest` gọi **từ trong `paintQuest`** (hai ô trả lời cùng một câu hỏi, lệch một nhịp là đọc
+ra như lỗi) và là **`function` có tên**, không phải arrow — bẫy TDZ của Đợt 192.
+
+### 7. Ô TÊN BAY GIỮ MÀU NƠI XUẤT PHÁT
+
+Gốc: ô trong khung cả lớp **trắng**, ô trong cột đội mang `.is-in` (**nền xanh nhạt**), mà ô bay thì
+**luôn trắng** ⇒ bay ra khỏi đội là trắng ngay, bay vào đội thì đổi màu lúc hạ cánh.
+Nay `fly()` nhận thêm `fromCls` và ô bay **mặc đúng bộ class lúc cất cánh**. Thầy chọn phương án này
+trong ba phương án — **đừng "làm nốt" bằng cách đổi sang màu nơi đến**, đó là phương án 2 thầy đã bỏ.
+⚠️ `bulkMove` phải chụp `className` **TRƯỚC `mutate()`** — sau `repaintAll()` thì node cũ không còn.
+⚠️ Ô bay phải **gỡ `is-pop`**: đó là hoạt cảnh nảy một lần lúc hạ cánh, chép sang ô đang bay là nó nảy
+giữa đường.
+
+### 8. ⭐⭐ RESET KHI ĐANG MỞ RECENT RESULTS = XOÁ SỔ CÁI
+
+Thanh chân vẫn nằm dưới lớp Recent results, nên **một nút phải thuộc về thứ đang được NHÌN**.
+- `wipeMatches()` **đã nằm không dùng từ Đợt 197** ("viết nhưng chưa gắn nút — chờ thầy có cần không").
+  Đây là cái nút đó.
+- ⚠️ **KHÔNG HOÀN TÁC ĐƯỢC**: sổ lớp lúc nào cũng lấy lại được từ Settings, còn sổ cái là **bản duy
+  nhất** của 5 trận đã đánh — nên câu hỏi nói thẳng *"This cannot be undone"*.
+- 🐞 **BẮT ĐƯỢC MỘT LỖI TRƯỚC KHI NÓ KỊP XẢY RA**: `.aw-sd-confirm` có `z-index: 5` mà `.aw-sd-recent`
+  là **6** (và bảng chi tiết là **7**) ⇒ câu hỏi sẽ nằm **DƯỚI chính cái nó đang hỏi về** — một hộp
+  thoại vô hình với cả bảng đứng đơ phía sau. Nâng lên **9**. Ai thêm lớp mới vào panel này: hộp hỏi
+  phải luôn nằm trên tất cả.
+
+### 9. BẢNG CUỐI GAME: BỎ LEADERBOARD TRONG SHOWDOWN
+
+Thầy: *"bỏ dòng leaderboard và dòng you're x on the leaderboard… vì hiện là đấu team nên không cần mấy
+cái này nữa."* Bảng xếp hạng là **một dòng cho mỗi LƯỢT CHƠI trên trình duyệt này**; trong Showdown lượt
+chơi thuộc về một đội thay phiên nhau, nên *"you're 3rd"* là câu không có "you" nào trong đó.
+⚠️ **Chỉ giấu ĐƯỜNG VÀO, không tắt bảng xếp hạng**: `finish()` vẫn ghi như cũ, tắt Showdown là lịch sử
+còn nguyên. Đó là thay đổi nhỏ nhất làm đúng việc được giao.
+
+### 10. ⛔ MỘT VIỆC BỎ HẲN — ANIMATION CHO DANH SÁCH LỚP
+
+Thầy yêu cầu danh sách lớp xổ ra/ẩn có animation. **Không làm được**: đó là `<select>` của trình duyệt,
+danh sách do **Windows tự vẽ**, nằm ngoài trang — CSS/JS không với tới. Muốn có thì phải **thay bằng
+danh sách tự vẽ**, kéo theo tự viết lại bàn phím (↑↓, Enter, Esc, gõ chữ nhảy tới lớp), chạm TOMKO,
+cuộn, đóng đúng lúc, và phải đo để nó không bị pop-up cắt mất phần dưới. Đã báo thầy;
+**thầy chốt: "ko cần animation này nữa vì nó ko quan trọng lắm"**.
+
+### 11. BÀN THỬ — 155/155 ĐẠT, 0 LỖI CONSOLE
+
+Ba bàn thử của Đợt 207 được **cập nhật tại chỗ** (một bàn thử cho một màn, không đẻ bản thứ hai để rồi
+hai bản nói hai kiểu): `sd207-pod.html` **74** · `sd207-review.html` **29** · `sd207-panel.html` **52**.
+
+⛔ **HAI LẦN NỮA LƯỚI BÁO HỎNG MÀ LỖI Ở CHÍNH LƯỚI** (lần 7 và 8 tính từ Đợt 198):
+1. Phép kiểm "huy hiệu đứng trước tên" đọc `children[1]` — mà tên nay nằm trong bọc `.aw-sd-pod-nm`.
+2. Nút đối chiếu `.aw-iconbtn` cắm thẳng vào `.aw-review` (flex column đã đầy) **bị flex bóp** còn
+   27,9px thay vì 38,4 ⇒ báo "hai nút khác cỡ" oan. Nút thật `position:absolute` nên không dính.
+
+⬜ **CÒN LẠI — CHỈ THẦY**: (1) nhìn trên màn 86" xem chữ vàng của bạn **số 2 (ô bạc)** có bị chìm không —
+máy chỉ khẳng định được là nó vàng, không khẳng định được là nó **đọc được từ cuối lớp**; (2) bấm nút
+fullscreen bằng tay; (3) chơi trọn một ván để nghiệm bảng cuối game không còn dòng Leaderboard.
+
+---
+
 ## Đợt 207 (20/8/2026) — ⭐⭐⭐ SHOWDOWN: **Ô QUESTIONS TÍNH LẠI · BẢNG CHÓP NGƯỢC DỰNG LẠI · RECENT RESULTS FULLSCREEN**
 
 **Trạng thái:** code xong, **117/117 ĐẠT trên 3 bàn thử, 0 lỗi console**. ⬜ **CHƯA COMMIT — chờ thầy

@@ -3838,7 +3838,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // No rank line on a "Start with mistakes" run — that play is deliberately
     // not scored (teacher, 7/8/2026), so `entryId` is null and the "you're 1st"
     // line would be meaningless anyway (see finish()).
-    if (!session && !activity._mistakes) {
+    // ⭐ Đợt 208 — AND NONE IN SHOWDOWN (thầy: "bỏ dòng leaderboard và dòng
+    // you're x on the leaderboard… vì hiện là đấu team nên không cần mấy cái
+    // này nữa"). The leaderboard is one row per PLAY on this browser; in Showdown
+    // the play belongs to a team of pupils taking turns, so "you're 3rd" is a
+    // sentence with no "you" in it. The board that does mean something there is
+    // Show answers, which ranks the pupils themselves.
+    if (!session && !activity._mistakes && !showdownPick) {
       const rank = getRank(activity.id, entryId);
       if (rank) panel.append(el("div", "aw-panel-rank", `YOU'RE ${ordinal(rank)} ON THE LEADERBOARD`));
     }
@@ -3856,7 +3862,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       }
       if (end.startAgain !== false) items.append(panelItem("Start again", restart));
     } else {
-      items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
+      // ⭐ Đợt 208 — no Leaderboard row in Showdown (thầy — see the note on the
+      // rank line above). ⚠️ The leaderboard itself is NOT switched off: finish()
+      // still records the play, so turning Showdown off gets the history back
+      // intact. Only the way IN from this panel is hidden, which is the smallest
+      // change that does what was asked.
+      if (!showdownPick) items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
       if (reviewData.length && activity.options?.showAnswers !== false) {
         items.append(panelItem("Show answers", () => showReview(result, entryId)));
       }

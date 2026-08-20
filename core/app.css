@@ -800,20 +800,15 @@ html.aw-nhung .aw-below { display: none; }
 /* ⭐ Đợt 207 (thầy: "nút fullscreen ở góc dưới bên trái hộp hiển thị này") — out
    of the flow, in the corner, and OVER the board rather than taking a row from
    it: the funnel is at its narrowest down there, and the list's last line is the
-   least-read line on the screen. The white plate is what keeps the button
-   legible on the days a long answer does run underneath it. */
-.aw-sd-fsbtn {
-  position: absolute; left: 2cqw; bottom: 1.6cqw; z-index: 3;
-  width: 4.4cqw; height: 4.4cqw; border-radius: 1.1cqw;
-  border: 0.16cqw solid #e3e9f1; background: #fff; color: #6b7a90;
-  display: inline-flex; align-items: center; justify-content: center;
-  cursor: pointer; padding: 0;
-  box-shadow: 0 0.2cqw 0.8cqw rgba(15, 20, 30, .10);
-  transition: color .14s ease, border-color .14s ease, background .14s ease;
-}
-.aw-sd-fsbtn svg { width: 2.5cqw; height: 2.5cqw; }
-.aw-sd-fsbtn:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
-.aw-sd-fsbtn.is-on { border-color: #2ec27e; color: #2ec27e; background: #f0fbf5; }
+   least-read line on the screen.
+   ⭐ Đợt 208 — it now wears `.aw-iconbtn`, the app's own toolbar button (thầy:
+   "cho nhỏ hơn và không cần nền nút… giống hệt nút fullscreen trong một act ở
+   chế độ đơn"). Everything about its LOOK therefore comes from that one class;
+   this rule is only the corner it stands in. Đợt 207's white plate, border and
+   drop shadow are gone on purpose — do not put them back, and do not re-declare
+   a size here: two buttons doing one job must not drift into two sizes. */
+.aw-sd-fsbtn { position: absolute; left: 1.4cqw; bottom: 1.2cqw; z-index: 3; }
+.aw-sd-fsbtn.is-on { color: #2ec27e; }
 .aw-rv-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2cqw; }
 .aw-rv-title { font-size: 2.4cqw; font-weight: 800; letter-spacing: 0.2cqw; color: #23303e; }
 /* ⭐ Đợt 174c — Showdown's team score, in the header line beside the title it
@@ -4224,9 +4219,15 @@ html.aw-nhung .aw-below { display: none; }
   min-width: 116px; padding: 10px 22px; font-size: 15px;
 }
 
-/* ---- the confirm question, laid OVER the screen it is asking about ---- */
+/* ---- the confirm question, laid OVER the screen it is asking about ----
+   ⚠️ Đợt 208 — z-index RAISED from 5 to 9, and it matters: Recent results sits
+   at 6 and its expanded detail at 7, so from the moment Reset learned to delete
+   the ledger (a question asked WHILE Recent results is open) the old 5 would have
+   put the question UNDERNEATH the thing it was asking about — an invisible modal
+   with the panel frozen behind it. Whoever adds the next layer to this panel:
+   this one has to stay on top of all of them. */
 .aw-sd-confirm {
-  position: absolute; inset: 0; z-index: 5;
+  position: absolute; inset: 0; z-index: 9;
   display: flex; align-items: center; justify-content: center;
   background: rgba(255,255,255,.82);
   border-radius: 12px;
@@ -4342,6 +4343,18 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-readout.is-best .aw-sd-ronum { color: #17714a; }
 .aw-sd-readout.is-best .aw-sd-rosub { color: #64ab88; }
+/* ⭐ Đợt 208 (thầy) — the TEAMS stepper lights the SAME green when the class
+   divides evenly into that many teams ("9 học sinh… bấm thành 3 teams, số teams
+   sẽ sáng xanh lá"). Deliberately the same three colours as the QUESTIONS box
+   above: two lights meaning "this number is a good one" must not be two greens.
+   ⚠️ Scoped to `.is-big` — `makeHStepper` builds six other steppers in this app
+   (Time cost, Running word, Gameshow, Open the box, Balloon pop) and none of
+   them has anything to be "best" about. */
+.aw-hstep.is-big.is-best {
+  border-color: #9ad9b4; background: #f2fbf6;
+  box-shadow: inset 0 0 0 1px rgba(46, 194, 126, .18);
+}
+.aw-hstep.is-big.is-best .aw-hstep-val { color: #17714a; }
 .aw-hstep.is-big { height: 46px; width: 100%; border-radius: 11px; }
 .aw-hstep.is-big .aw-hstep-val { font-size: 21px; min-width: 46px; }
 .aw-hstep.is-big .aw-hstep-btn { width: 44px; font-size: 21px; }
@@ -4868,27 +4881,28 @@ html.aw-nhung .aw-below { display: none; }
    xuống"), so they are siblings of `.aw-sd-pod`, not children of it. */
 .aw-sd-podwrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; }
 .aw-sd-podwrap > .aw-sd-pod { flex: 1 1 auto; min-width: 0; }
-/* ⭐⭐ Đợt 207 — HOW MANY ARE TICKED TO EACH SIDE (thầy: "một số mờ, to, nằm
-   giữa chiều cao khung và gần sát viền ngoài… càng to càng tốt, nhưng không
-   được đè lên ô tên và dấu tích của bạn đầu tiên").
-   ⚠️ THE ROOM IS MEASURED, NOT GUESSED. Row 1 is the widest thing on the board:
-   80% of the content box, plus a tick box and a gap on each side
-   (4.8 + 0.9 = 5.7cqw). With `.aw-review`'s 2.4cqw padding that leaves about
-   3.8cqw clear inside each edge, and the counter is allowed to bleed 1.5cqw into
-   the padding — 5.2cqw in all. A single digit at 6.6cqw is about 3.6cqw wide, so
-   it clears; TWO digits would not, which is what `.is-wide-count` is for.
-   ⚠️ `pointer-events:none` — it sits over the leftmost tick boxes of the shorter
-   rows, and a decoration that swallowed a tick would be maddening to diagnose. */
+/* ⭐⭐ Đợt 207 — HOW MANY ARE TICKED TO EACH SIDE. Đợt 208 moved them: the height
+   is now the middle of the FOURTH row and the width is halfway between the
+   frame's inner edge and that row's tick (thầy — see placePodiumCounts() in
+   core/showdown-review.js, which is what sets `top`/`left`/`right`).
+   ⚠️ NO `top`/`left`/`right` HERE ON PURPOSE. Đợt 207 pinned them with fixed
+   offsets and the right-hand one ended up UNDER THE SCROLLBAR: a fixed offset
+   cannot know the funnel's shape, and the funnel is the thing it must avoid.
+   The only geometry left in CSS is the centring transform, so a change of font
+   size (one digit → two) never shifts the number off its measured centre.
+   ⚠️ `pointer-events:none` — it sits over the tick dots of the shorter rows, and
+   a decoration that swallowed a tick would be maddening to diagnose. */
 .aw-sd-podcount {
-  position: absolute; top: 50%; transform: translateY(-50%);
-  width: 5.2cqw; text-align: center;
+  position: absolute; transform: translate(-50%, -50%);
+  text-align: center;
   font-size: 6.6cqw; font-weight: 800; line-height: 1;
   color: rgba(35, 48, 62, .14); font-variant-numeric: tabular-nums;
   pointer-events: none; opacity: 0;
   transition: opacity .22s ease, font-size .22s cubic-bezier(.22, .9, .3, 1);
 }
-.aw-sd-podcount.is-l { left: -1.5cqw; }
-.aw-sd-podcount.is-r { right: -1.5cqw; }
+/* The right-hand one is anchored by its RIGHT edge (see placePodiumCounts), so
+   it must not be pulled half its own width to the left as well. */
+.aw-sd-podcount.is-r { transform: translate(50%, -50%); }
 /* Both or neither — thầy: "khi 1 bên hiện 1 thì bên còn lại cũng hiện đồng thời
    (hiện 0)". One class on the wrapper is what makes that impossible to get wrong. */
 .aw-sd-podwrap.has-picks .aw-sd-podcount { opacity: 1; }
@@ -4942,34 +4956,84 @@ html.aw-nhung .aw-below { display: none; }
    narrow down the funnel with it — thầy asked for exactly that: "các ô tích sẽ
    bám sát theo chiều dài ngang của ô, vì vậy các ô tích không thẳng hàng".
    Square, and 2/3 of the box's height (7.2 × 2/3 = 4.8cqw). */
+/* ⭐ Đợt 208 (thầy) — "thay các ô vuông để tích bằng chấm tròn đặc nhỏ hơn (nhưng
+   vẫn khá to), chấm tròn đặc và khá mờ. Khi bấm vào sẽ biến thành dấu tích ✓ to,
+   dày màu xanh dương… dấu tích chỉ đứng một mình, không cần nằm trong khung hay
+   ô gì cả."
+   ⚠️ THE BUTTON KEEPS ITS 4.8cqw — only its SKIN went away. The visible dot is
+   its child; shrinking the button down to the dot would leave a target the size
+   of a fingernail on a board people tap from arm's length. */
 .aw-sd-pod-tick {
+  position: relative;      /* the tick is laid OVER the dot, not beside it */
   flex: 0 0 auto; width: 4.8cqw; height: 4.8cqw; padding: 0;
-  border: 0.18cqw solid #cfd8e4; border-radius: 1cqw;
-  background: #fff; color: #2ec27e; cursor: pointer;
+  border: none; background: none; cursor: pointer;
   display: inline-flex; align-items: center; justify-content: center;
-  opacity: .28;            /* "mờ nhưng vẫn nhìn được 1 chút" */
-  transition: opacity .16s ease, border-color .16s ease, background .16s ease, transform .12s ease;
+  transition: transform .12s ease;
 }
-.aw-sd-pod-tick svg { width: 3cqw; height: 3cqw; opacity: 0; transition: opacity .16s ease; }
-.aw-sd-pod-tick:hover { opacity: .62; }
-.aw-sd-pod-tick:active { transform: scale(.94); }
-.aw-sd-pod-tick.is-on { opacity: 1; border-color: #2ec27e; background: #f0fbf5; }
-.aw-sd-pod-tick.is-on svg { opacity: 1; }
+.aw-sd-pod-dot {
+  width: 2.4cqw; height: 2.4cqw; border-radius: 50%;
+  background: #6b7a90; opacity: .3;      /* "chấm tròn đặc và khá mờ" */
+  transition: opacity .16s ease, transform .16s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sd-pod-tick:hover .aw-sd-pod-dot { opacity: .55; }
+.aw-sd-pod-tick:active { transform: scale(.9); }
+/* The tick itself: big, thick, blue, and standing on nothing. */
+.aw-sd-pod-tick svg {
+  position: absolute; inset: 0; margin: auto;
+  width: 4.6cqw; height: 4.6cqw;
+  color: #2563eb; stroke-width: 3.4;
+  opacity: 0; transform: scale(.5);
+  transition: opacity .16s ease, transform .18s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sd-pod-tick.is-on .aw-sd-pod-dot { opacity: 0; transform: scale(.4); }
+.aw-sd-pod-tick.is-on svg { opacity: 1; transform: scale(1); }
 /* ⚠️ `visibility`, NOT `display:none` and never removal: the hidden box keeps
    its width, so the name box does not jump sideways the moment a tick lands. A
    funnel that shuffles under the teacher's finger is the thing this is for. */
 .aw-sd-pod-tick.is-off { visibility: hidden; }
 
+/* ⭐⭐ Đợt 208 — THE TOP THREE NAMES ARE GOLD, GLOWING, AND SURROUNDED BY
+   SPARKLES (thầy: "3 tên của 3 bạn số 1, 2, 3 màu vàng lấp lánh tỏa hào quang,
+   các ngôi sao và sparkle lấp lánh xuất hiện liên tục xung quanh chính tên").
+   ⚠️ ALL THREE ARE GOLD, including places 2 and 3 whose boxes are silver and
+   bronze — thầy wrote "màu vàng" for all three. Easy to split per place later if
+   the silver box turns out to fight it.
+   ⛔⛔ THE HALO IS `text-shadow`, NEVER `filter` — Đợt 198 had to undo exactly
+   that on the caption below: `filter` creates a stacking context and quietly
+   re-orders everything around it (the popup layering contract in
+   core/HUONG DAN CORE.md).
+   ⚠️ The shimmer is a moving gradient clipped to the glyphs. `color:transparent`
+   is what makes the clip visible — and `text-shadow` still draws, because a
+   shadow is cast by the glyph SHAPE, not by its colour. */
+.aw-sd-pod-name.is-top {
+  background: linear-gradient(100deg, #b8860b 0%, #e0a30c 22%, #fff3b0 42%, #f0b429 58%, #b8860b 100%);
+  background-size: 260% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  color: transparent; -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 1.1cqw rgba(240, 180, 41, .55);
+  animation: aw-sd-goldshift 3.4s linear infinite, aw-sd-goldglow 2.2s ease-in-out infinite;
+}
+@keyframes aw-sd-goldshift {
+  from { background-position: 0% 50%; }
+  to   { background-position: 260% 50%; }
+}
+@keyframes aw-sd-goldglow {
+  0%, 100% { text-shadow: 0 0 0.7cqw rgba(240, 180, 41, .40); }
+  50%      { text-shadow: 0 0 1.7cqw rgba(255, 214, 92, .85); }
+}
+
 /* ⭐ Đợt 207 — SPARKLES on the top three (thầy: "sparkle và sao nhỏ lấp lánh ẩn
-   hiện xung quanh").
+   hiện xung quanh"). ⭐ Đợt 208 — they moved from round the whole BOX to round
+   the NAME itself, which is why `.aw-sd-pod-nm` exists: `.aw-sd-pod-name` carries
+   `overflow:hidden` (that is what makes a too-long name measurable), so a sparkle
+   placed inside it would be clipped off at exactly the edges it must sit on.
    ⚠️ PURE CSS, no requestAnimationFrame: a backgrounded myActivity column
    freezes rAF, and a JS twinkle would stop dead there while the rest of the
    board carried on.
-   ⚠️ `pointer-events:none` — the layer overhangs the box and would otherwise
-   sit on top of the tick boxes beside it. */
-.aw-sd-pod-spark { position: absolute; inset: -1.4cqw; pointer-events: none; color: #f0b429; }
-.aw-sd-pod-box.is-m2 .aw-sd-pod-spark { color: #b9c4d1; }
-.aw-sd-pod-box.is-m3 .aw-sd-pod-spark { color: #d59257; }
+   ⚠️ `pointer-events:none` — the layer overhangs the name and would otherwise
+   sit on top of whatever is beside it. */
+.aw-sd-pod-nm { position: relative; display: flex; min-width: 0; flex: 0 1 auto; }
+.aw-sd-pod-spark { position: absolute; inset: -1.2cqw -1.6cqw; pointer-events: none; color: #f0b429; }
 .aw-sd-pod-star {
   position: absolute; width: 1.1cqw; height: 1.1cqw; background: currentColor;
   /* A four-pointed sparkle. `clip-path` rather than an SVG child so the whole

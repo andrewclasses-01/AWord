@@ -535,7 +535,12 @@ export function mountShowdownReview({
   // ⚠️ In myActivity's multi-column view a fullscreen request fills THAT COLUMN
   // and nothing more (a WebContentsView cannot take over the screen). Said to
   // thầy before building; nothing here can change it.
-  const fsBtn = el("button", "aw-sd-fsbtn", icons.fullscreen);   // trusted markup
+  // ⭐ Đợt 208 (thầy) — "nút này sẽ giống hệt nút fullscreen trong một act ở chế
+  // độ đơn": it now wears the app's own `.aw-iconbtn` (4cqw, 2.4cqw icon, no
+  // plate, no border), and `.aw-sd-fsbtn` is left holding NOTHING but the corner
+  // it stands in. Two buttons that do the same job should not look like two
+  // different buttons.
+  const fsBtn = el("button", "aw-iconbtn aw-sd-fsbtn", icons.fullscreen);   // trusted markup
   fsBtn.type = "button";
   fsBtn.title = "Fullscreen";
   fsBtn.onclick = async () => {
@@ -809,11 +814,30 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];   // trusted markup, core/icons.js
     else badge.textContent = String(i + 1);
     left.append(badge);
-    const nm = el("span", "aw-sd-pod-name");
+    // ⭐ Đợt 208 — the name sits in a WRAPPER, and the wrapper is what the
+    // sparkles are anchored to (thầy: "sparkle lấp lánh xuất hiện liên tục xung
+    // quanh chính TÊN của các bạn này" — Đợt 207 put them round the whole box).
+    // ⚠️ The wrapper is not decoration: `.aw-sd-pod-name` carries `overflow:hidden`
+    // (that is what makes a too-long name measurable), so a sparkle placed INSIDE
+    // it would be clipped away at exactly the edges it is meant to sit on.
+    const nmWrap = el("span", "aw-sd-pod-nm");
+    const nm = el("span", "aw-sd-pod-name" + (i < 3 ? " is-top" : ""));
     nm.textContent = b.name;                                // pupil's own name: textContent only
     nm.dataset.full = b.name;                               // fitPodiumNames needs the original back
     nm.title = b.name;
-    left.append(nm);
+    nmWrap.append(nm);
+    // ⭐ Đợt 208 — SPARKLES ON THE NAME. A layer of its own, `pointer-events:none`
+    // so it can never eat a tap, and animated ENTIRELY in CSS: a backgrounded
+    // myActivity column freezes requestAnimationFrame (bẫy #11 in myActivity's
+    // BAN GIAO.md), and a JS-driven twinkle would simply stop dead there while
+    // everything else kept working.
+    if (i < 3) {
+      const spark = el("span", "aw-sd-pod-spark");
+      spark.setAttribute("aria-hidden", "true");
+      for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
+      nmWrap.append(spark);
+    }
+    left.append(nmWrap);
     if (showTeam && b.teamName) {
       const tag = el("span", "aw-sd-pod-team");
       tag.textContent = b.teamName;
@@ -838,18 +862,8 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     if (b.hasTime) stats.append(el("span", "aw-sd-pod-time", fmtRoundMs(b.ms)));
 
     card.append(left, stats);
-    // ⭐ Đợt 207 — SPARKLES on the top three. A layer of its own inside the box,
-    // `pointer-events:none` so it can never eat a tap meant for a tick box, and
-    // animated ENTIRELY in CSS: a backgrounded myActivity column freezes
-    // requestAnimationFrame (bẫy #11 in myActivity's BAN GIAO.md), and a
-    // JS-driven twinkle would simply stop dead there while everything else kept
-    // working.
-    if (i < 3) {
-      const spark = el("span", "aw-sd-pod-spark");
-      spark.setAttribute("aria-hidden", "true");
-      for (let s = 0; s < 6; s++) spark.append(el("i", "aw-sd-pod-star s" + s));
-      card.append(spark);
-    }
+    // ⚠️ Đợt 208 — the sparkle layer moved OUT of the card and onto the name
+    // (see `nmWrap` above). Do not put a second one back here.
 
     if (picks) {
       // ⭐⭐ Đợt 207 — SPLITTING THE CLASS OFF THE RESULTS (thầy, 20/8/2026):
@@ -858,11 +872,20 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
       // ⚠️ THE BOXES HUG THE ROW, so they narrow with the funnel and do NOT line
       // up in two straight columns (thầy asked for exactly this: "các ô tích sẽ
       // bám sát theo chiều dài ngang của ô, vì vậy các ô tích không thẳng hàng").
+      // ⭐ Đợt 208 — A DOT, NOT A BOX (thầy): "thay các ô vuông để tích bằng chấm
+      // tròn đặc nhỏ hơn (nhưng vẫn khá to)… Khi bấm vào sẽ biến thành dấu tích ✓
+      // to, dày màu xanh dương… dấu tích chỉ đứng một mình, không cần nằm trong
+      // khung hay ô gì cả."
+      // ⚠️ THE BUTTON KEEPS ITS FULL SIZE, only its skin went away: the dot is a
+      // child, the button around it stays 4.8cqw of invisible hit area. Shrinking
+      // the button to the dot would make a target the size of a fingernail on a
+      // board people tap from arm's length.
       const tick = side => {
         const t = el("button", "aw-sd-pod-tick is-" + side);
         t.type = "button";
         t.title = side === "l" ? "Left team" : "Right team";
-        t.innerHTML = icons.check;                          // trusted markup
+        t.append(el("i", "aw-sd-pod-dot"));
+        t.insertAdjacentHTML("beforeend", icons.check);     // trusted markup
         t.onclick = e => {
           e.stopPropagation();
           const cur = picks.get(b.key);
@@ -952,10 +975,69 @@ export function fitPodiumNames(root, sel = ".aw-sd-pod-name") {
       shrink();
     });
   };
-  pass();
+  const both = () => { pass(); placePodiumCounts(root); };
+  both();
   // The re-run is scheduled, never awaited: a browser without `document.fonts`
   // (or one where the promise never settles) still gets the first pass.
-  try { document.fonts?.ready?.then(pass); } catch { /* first pass stands */ }
+  try { document.fonts?.ready?.then(both); } catch { /* first pass stands */ }
+}
+
+/**
+ * ⭐⭐ Đợt 208 — WHERE THE TWO TICK COUNTS SIT (thầy, 20/8/2026):
+ * *"vị trí số người đã được tích sẽ nằm cao lên một chút, ở mức chính giữa tâm
+ * của ô học sinh thứ 4 khi chưa cuộn. Số 2 bên cũng được đẩy về giữa một chút để
+ * nằm chính giữa mép màn hình và vị trí dấu tích của ô tên học sinh thứ 4 (do
+ * thanh scroll đang đè lên số bên phải, đẩy vào thì ko bị đè nữa)."*
+ *
+ * Đợt 207 pinned them to the middle of the whole board with a fixed CSS offset.
+ * That is why the right-hand one ended up under the scrollbar — a fixed offset
+ * cannot know the funnel's shape, and the funnel is the thing it has to avoid.
+ * So this MEASURES: fourth row for the height, that row's own tick for the width.
+ *
+ * ⚠️ THE ANCHOR IS READ UNSCROLLED, ON PURPOSE. `offsetTop` does not move when
+ * the list scrolls, which is exactly thầy's "khi chưa cuộn" — the counters are
+ * outside the scroller and must not drift when the list is dragged.
+ * ⚠️ THE RIGHT-HAND EDGE EXCLUDES THE SCROLLBAR (`offsetWidth − clientWidth`).
+ * That is the whole reason the right number was being sat on.
+ * ⚠️ A class of fewer than four falls back to its last row — there is no fourth
+ * row to aim at, and aiming at nothing would leave the counters at 0,0.
+ * ⛔ No requestAnimationFrame: a backgrounded myActivity column freezes it, and
+ * counters left unplaced would sit in the corner for the rest of the lesson.
+ */
+export function placePodiumCounts(root) {
+  const wrap = root?.querySelector?.(".aw-sd-podwrap");
+  if (!wrap) return;
+  const cl = wrap.querySelector(".aw-sd-podcount.is-l");
+  const cr = wrap.querySelector(".aw-sd-podcount.is-r");
+  const pod = wrap.querySelector(".aw-sd-pod");
+  const rows = wrap.querySelectorAll(".aw-sd-pod-row");
+  if (!cl || !cr || !pod || !rows.length) return;
+  const anchor = rows[Math.min(3, rows.length - 1)];
+  const ticks = anchor.querySelectorAll(".aw-sd-pod-tick");
+  if (ticks.length < 2) return;
+
+  // ---- height: the middle of the fourth row, measured unscrolled ----
+  const top = anchor.offsetTop + anchor.offsetHeight / 2;
+  cl.style.top = cr.style.top = `${Math.round(top)}px`;
+
+  // ---- width: halfway between the frame's inner edge and that row's tick ----
+  const wr = wrap.getBoundingClientRect();
+  const lt = ticks[0].getBoundingClientRect();
+  const rt = ticks[1].getBoundingClientRect();
+  const sb = Math.max(0, pod.offsetWidth - pod.clientWidth);   // the scrollbar, if any
+  // ⚠️ `left`/`right` are offsets FROM THE WRAP'S EDGES, and the transform then
+  // pulls each number onto that point by half its own width. So the sum to solve
+  // is "wrap edge → wanted centre", nothing more. Getting this wrong by exactly
+  // `sb` is what put the right-hand number back under the scrollbar on the first
+  // build of this đợt — the grid caught it at 4px of overlap.
+  const lWant = (wr.left + lt.left) / 2;                       // midway: frame edge ↔ row-4 tick
+  const rWant = (wr.right - sb + rt.right) / 2;                // …and the same on the right
+  const lx = lWant - wr.left;
+  const rx = wr.right - rWant;
+  cl.style.left = `${Math.round(lx)}px`;
+  cl.style.right = "auto";
+  cr.style.right = `${Math.round(rx)}px`;
+  cr.style.left = "auto";
 }
 
 function mark(cls, glyph, text) {

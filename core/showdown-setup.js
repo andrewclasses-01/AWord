@@ -1687,6 +1687,32 @@ export function buildShowdownPanel(panel, ctx) {
     stepper.el.classList.add("is-big");
     cCount.append(stepper.el);
 
+    /**
+     * ⭐ Đợt 208 (thầy) — "dựa vào số thành viên và số team thì ô TEAMS cũng sáng
+     * lên màu xanh lá… khi số TEAMS chia hết được cho các thành viên. Ví dụ 9 học
+     * sinh thì khi bấm thành 3 teams, số teams sẽ sáng xanh lá."
+     *
+     * ⚠️ ASK THE REAL DEALER, same as the QUESTIONS box does (Đợt 207): "chia hết"
+     * is decided by whether `targetSizes()` comes back with every team the SAME
+     * SIZE, not by `n % teams === 0`. The two only agree while nothing is capped —
+     * a class bigger than MAX_PER_TEAM × teams divides evenly on paper and does
+     * not divide evenly on the board.
+     * ⛔ FROM 2 TEAMS UP. With one team the whole class is that team, so it is
+     * always "even" — a light that is always on says nothing.
+     */
+    function paintTeamsBest() {
+      const n = roster.length;
+      let even = false;
+      if (setup.classId && n && teamCount >= 2) {
+        const sizes = targetSizes(n, teamCount).filter(s => s > 0);
+        even = sizes.length === teamCount && Math.min(...sizes) === Math.max(...sizes);
+      }
+      stepper.el.classList.toggle("is-best", even);
+      cCount.title = even
+        ? `${n} pupils divide evenly into ${teamCount} teams`
+        : "";
+    }
+
     // ⭐⭐ Đợt 197 (thầy) — QUESTIONS: how many questions each pupil will actually
     // get, worked out HERE, while the number of teams is still being chosen —
     // "để biết mỗi người sẽ được bao nhiêu câu khi chọn balance questions".
@@ -1771,6 +1797,14 @@ export function buildShowdownPanel(panel, ctx) {
       return { ...mine, best };
     }
     function paintQuest() {
+      // ⭐ Đợt 208 — the TEAMS box lights on the same beat as this one. Called from
+      // in here rather than added beside every `paintQuest()` call site: the two
+      // readouts answer the same question ("is this a good number of teams?") and
+      // one of them lighting a beat late would read as a bug.
+      // ⚠️ `paintTeamsBest` is a hoisted `function`, declared below — do not turn
+      // either of them into a `const` arrow (Đợt 192 lost a session to exactly
+      // that: `const` is not hoisted, and `node --check` reports it clean).
+      paintTeamsBest();
       const { each, left, best } = questionsEach();
       // ⚠️ `best` joins the change test: without it, stepping between two counts
       // that happen to waste the same amount would light the glow with no
@@ -1969,6 +2003,34 @@ export function buildShowdownPanel(panel, ctx) {
       const resetBtn = btn("Reset", "aw-sd-ghost aw-sd-footbtn", () => {
         if (!setup.classId) { sfx.remove(); toast("Choose a class first"); return; }
         sfx.tap();
+        // ⭐⭐ Đợt 208 (thầy) — "khi ở chế độ hiện RECENT RESULTS, bấm nút RESET
+        // lúc này sẽ thành reset dữ liệu kết quả 5 bản ghi gần nhất của lớp đó,
+        // chứ không phải reset của màn chọn lớp nữa."
+        // The footer stays on screen underneath the Recent results sheet, so this
+        // one button reads as belonging to whatever is being LOOKED AT. What it
+        // resets therefore has to follow the eye.
+        // ⚠️ THIS ONE IS NOT UNDOABLE. The class register can always be brought
+        // back from Settings; the ledger is the only copy of five matches that
+        // have already been played, so the question says so in as many words.
+        // ⚠️ `wipeMatches()` has existed unused since Đợt 197 ("viết nhưng chưa
+        // gắn nút — chờ thầy có cần không"). This is the button.
+        if (recentLayer) {
+          askConfirm(
+            `Delete the last matches kept for ${setup.className || "this class"}? This cannot be undone.`,
+            "Delete", async () => {
+              sfx.forward();
+              try {
+                const h = await import("./showdown-history.js");
+                await h.wipeMatches(setup.classId);
+                closeRecent();
+                toast("Past results deleted");
+              } catch (e) {
+                console.warn("AWord: could not delete the past results", e);
+                toast(e?.code === "aw/signed-out" ? "Sign in first." : "Could not delete the past results.");
+              }
+            });
+          return;
+        }
         askConfirm("Bring every pupil back from the class register?", "Reset", async () => {
           sfx.forward();
           roster = fullRegister();
@@ -2700,16 +2762,21 @@ export function buildShowdownPanel(panel, ctx) {
      */
     function bulkMove(mutate, { cascade = false } = {}) {
       const before = new Map();
-      host.querySelectorAll("[data-mid]").forEach(c => before.set(c.dataset.mid, c.getBoundingClientRect()));
+      // ⭐ Đợt 208 — the CLASSES are recorded alongside the rect, because they are
+      // the chip's colour and they are gone the moment `repaintAll()` rebuilds the
+      // lists. See `fly()`: the clone must fly wearing what it took off in.
+      host.querySelectorAll("[data-mid]").forEach(c =>
+        before.set(c.dataset.mid, { rect: c.getBoundingClientRect(), cls: c.className }));
       mutate();
       repaintAll();
       const moved = [];
       host.querySelectorAll("[data-mid]").forEach(c => {
-        const from = before.get(c.dataset.mid);
-        if (!from) return;
+        const was = before.get(c.dataset.mid);
+        if (!was) return;
+        const from = was.rect;
         const to = c.getBoundingClientRect();
         if (Math.abs(from.left - to.left) < 2 && Math.abs(from.top - to.top) < 2) return;
-        moved.push({ c, from, to });
+        moved.push({ c, from, to, cls: was.cls });
       });
       if (!moved.length) return;
       // The whole cascade must still be over in about the time a teacher is
@@ -2719,7 +2786,7 @@ export function buildShowdownPanel(panel, ctx) {
       const step = cascade ? Math.max(40, Math.min(90, Math.round(1200 / moved.length))) : 16;
       const order = cascade ? shuffledIdx(moved.length) : moved.map((_, i) => i);
       order.forEach((mi, slot) => {
-        const { c, from, to } = moved[mi];
+        const { c, from, to, cls } = moved[mi];
         c.style.visibility = "hidden";
         // Ordinary move: a small stagger so twenty chips read as a flock, not a
         // jump cut, capped so a big class never turns it into a slow parade.
@@ -2727,7 +2794,7 @@ export function buildShowdownPanel(panel, ctx) {
           ? Math.round(slot * step * (0.65 + Math.random() * 0.7))
           : Math.min(slot * step, 260);
         setTimeout(() => {
-          fly(from, to, c.textContent, cascade);
+          fly(from, to, c.textContent, cascade, cls);
           if (cascade) sfx.land();
           // Reveal exactly when the ghost arrives (fly's own duration), with the
           // usual belt-and-braces timeout — a hidden tab must not leave the board
@@ -2752,9 +2819,23 @@ export function buildShowdownPanel(panel, ctx) {
     // FLIP: measure where the chip is now, rebuild the lists, measure where its
     // replacement landed, then animate a CLONE across the gap. Animating the
     // real node is impossible — it is destroyed by the repaint.
-    function fly(fromRect, toRect, label, wobble = false) {
+    function fly(fromRect, toRect, label, wobble = false, fromCls = "") {
       if (!fromRect || !toRect) return;
       const ghost = mkChip(label);
+      // ⭐ Đợt 208 (thầy: "giữ nguyên màu các ô tên khi bay từ khung học sinh cả
+      // lớp sang khung team") — the flying clone now wears the classes the chip
+      // had WHERE IT TOOK OFF, so the colour it leaves with is the colour it
+      // flies in. Before this it was always a bare `.aw-sd-chip` (white), while a
+      // chip sitting in a column wears `.is-in` (a blue tint) — so a name flying
+      // OUT of a team went white the instant it left, and one flying in changed
+      // colour only on landing.
+      // ⚠️ Thầy chose "the colour of where it STARTED" out of three options, so
+      // the landing keeps its own colour change. Do not "finish the job" by
+      // switching this to the destination — that was option 2 and he passed on it.
+      if (fromCls) ghost.className = fromCls;
+      // ⚠️ `is-pop` is a one-shot landing animation. Copied onto the ghost it
+      // would replay the pop mid-flight, on a node that is already moving.
+      ghost.classList.remove("is-pop");
       ghost.classList.add("aw-sd-ghost-chip");
       // ⚠️ The ghost is appended to <body>, OUTSIDE the layer that defines
       // `--sd-chip-fs`, so it would fly at the 15px default while the chips it
@@ -2805,6 +2886,7 @@ export function buildShowdownPanel(panel, ctx) {
         return;
       }
       const from = chipEl.getBoundingClientRect();
+      const fromCls = chipEl.className;      // Đợt 208 — fly in the colour it left in
       pool = pool.filter(x => x !== m);
       team.members.push(m);
       sfx.land();
@@ -2815,17 +2897,18 @@ export function buildShowdownPanel(panel, ctx) {
       // to repaint it.
       repaintAll();
       const landed = findChip(colsBox, m.id);
-      fly(from, landed?.getBoundingClientRect(), m.name);
+      fly(from, landed?.getBoundingClientRect(), m.name, false, fromCls);
     }
 
     function backToPool(team, m, chipEl) {
       const from = chipEl.getBoundingClientRect();
+      const fromCls = chipEl.className;      // Đợt 208 — fly in the colour it left in
       team.members = team.members.filter(x => x !== m);
       pool.push(m);
       sfx.lift();
       repaintAll();
       const landed = findChip(poolBox, m.id);
-      fly(from, landed?.getBoundingClientRect(), m.name);
+      fly(from, landed?.getBoundingClientRect(), m.name, false, fromCls);
     }
   }
 
