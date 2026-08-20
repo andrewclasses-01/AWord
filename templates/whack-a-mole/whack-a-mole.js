@@ -57,16 +57,21 @@ const HOLE_LAYOUT = [
 
 const MOLE_VARIANTS = ["mole01", "mole02", "mole03"];
 
-// Bonus crates — each one has its OWN on/off toggle in Options (time / loot /
-// power). No hazard crate anymore. `time` only makes sense when counting down.
+// ⛔⛔ Đợt 213b (thầy, 20/8/2026) — CHỈ CÒN MỘT LOẠI THÙNG.
+// Thùng "loot" (+5 điểm) và thùng "power up" (nhân đôi điểm 6 giây) bị **gỡ hẳn
+// TÍNH NĂNG**, không phải chỉ giấu công tắc: thầy được hỏi thẳng và chọn
+// "bỏ luôn TÍNH NĂNG — hai thùng đó không còn rơi nữa".
+// ⚠️ Act cũ đã bật hai thùng đó nay CHƠI RA ĐIỂM THẤP HƠN trước — đã báo trước.
+//   Trường `bonusLoot`/`bonusPower` còn nằm trong act đã lưu; không ai đọc nữa,
+//   nên không cần di trú, và muốn khôi phục thì dữ liệu vẫn còn nguyên.
+// ⚠️ Hai file ảnh `crate-loot.webp` / `crate-power.webp` GIỮ LẠI trong kho, phòng
+//   khi thầy muốn dùng lại — chỉ không còn chỗ nào trỏ tới.
+// `time` chỉ có nghĩa khi đồng hồ đang đếm ngược.
 const CRATE_TYPES = [
-  { key: "time",  img: "crate-time.webp",  weight: 3 },
-  { key: "loot",  img: "crate-loot.webp",  weight: 3 },
-  { key: "power", img: "crate-power.webp", weight: 2 }
+  { key: "time",  img: "crate-time.webp",  weight: 3 }
 ];
 
 const COMBO_THRESHOLD = 3;     // consecutive correct hits before a combo bonus kicks in
-const POWER_MS = 6000;         // how long a power crate doubles points
 const CRATE_CHANCE = 0.16;     // chance a spawn is a crate instead of a mole (when enabled)
 const PUNISH_DEFAULT = 4;      // wrong hit: seconds the dizzy mole stays up + everything else pauses.
                                // Teacher-adjustable since 4/8/2026 ("Punishment" slider, 0..10s);
@@ -145,6 +150,15 @@ const wamTemplate = {
   // TIME COST (Đợt 143) — opt in to the shared "-N per idle second" option.
   timeCost: true,
   hidePointsOff: true,   // ships its own "Points off per wrong hit" control
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "showAnswers", "switchAnswers", "bonusTime"],
   name: "Whack-a-mole",
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,    // our own timer bar + hearts sit on the score row (ui.topbarMid)
@@ -231,11 +245,14 @@ const wamTemplate = {
 
     // SWITCH correct / incorrect — flips the sign to "Hit moles that are: FALSE"
     addCheck("Switch right/wrong", draft.switchAnswers === true, v => draft.switchAnswers = v,
-      { title: "Switch correct and incorrect" });
-    // BONUS crates — one switch each
-    addCheck("Crate: extra time", draft.bonusTime !== false, v => draft.bonusTime = v);
-    addCheck("Crate: loot", draft.bonusLoot !== false, v => draft.bonusLoot = v);
-    addCheck("Crate: power up", draft.bonusPower !== false, v => draft.bonusPower = v);
+      { key: "switchAnswers", title: "Switch correct and incorrect" });
+    // ⭐ Đợt 213b — MỘT công tắc thùng duy nhất (hai cái kia đã gỡ hẳn tính năng,
+    // xem CRATE_TYPES). Thầy muốn ô này **màu xanh lá** — cùng cách đánh dấu mà
+    // "In turns" của Fight dùng từ Đợt 202: nó không phải một cài đặt tính điểm
+    // như mấy ô còn lại, nó bật/tắt một thứ RƠI XUỐNG SÂN.
+    addCheck("Crate: extra time", draft.bonusTime !== false, v => draft.bonusTime = v,
+      { key: "bonusTime", title: "Crates that add 5 seconds (count-down games only)" })
+      .classList.add("is-green");
   },
 
   // Any Options change restarts (everything is read fresh at mount()).
@@ -259,12 +276,9 @@ const wamTemplate = {
     const freezeMs = Math.round(1000 * ((typeof opt.punishSeconds === "number")
       ? Math.max(0, Math.min(MAX_PUNISH, opt.punishSeconds)) : PUNISH_DEFAULT));
 
-    // bonus crates — each independent; "time" only helps a count-down game
+    // Đợt 213b — một loại thùng, một công tắc. "time" chỉ giúp khi đếm ngược.
     const bonusTime = opt.bonusTime !== false && timerMode === "countDown";
-    const bonusLoot = opt.bonusLoot !== false;
-    const bonusPower = opt.bonusPower !== false;
-    const enabledCrates = CRATE_TYPES.filter(c =>
-      (c.key === "time" && bonusTime) || (c.key === "loot" && bonusLoot) || (c.key === "power" && bonusPower));
+    const enabledCrates = CRATE_TYPES.filter(c => c.key === "time" && bonusTime);
     const cratesOn = enabledCrates.length > 0;
 
     // ---------- content ----------
@@ -301,7 +315,6 @@ const wamTemplate = {
     // same flag as `ended` ("the round is over"), which endGame() sets before the
     // score tally even starts (Đợt 114).
     let dead = false;
-    let powerUntil = 0;                 // performance.now() ms while a power crate is active
     let spawnTimer = null;
     let clockTimer = null;
     let clockEl = null, fillEl = null, heartsEl = null;  // own topbar UI (built in ensureTimerUI)
@@ -757,8 +770,7 @@ const wamTemplate = {
         popMark(h, true);
         wamSound.correct();
         combo++; bestCombo = Math.max(bestCombo, combo);
-        const power = performance.now() < powerUntil;
-        let pts = power ? 2 : 1;
+        let pts = 1;
         let comboBonus = 0;
         if (combo >= COMBO_THRESHOLD) { comboBonus = Math.min(5, combo - COMBO_THRESHOLD + 1); wamSound.combo(); floatText(h, "COMBO x" + combo, "is-combo"); }
         pts += comboBonus;
@@ -815,10 +827,8 @@ const wamTemplate = {
 
     function hitCrate(h) {
       popZap(h);
-      const t = h.crateType;
-      if (t === "time") { addTime(5); wamSound.crateTime(); floatText(h, "+5s", "is-combo"); }
-      else if (t === "loot") { score += 5; ui.setScore(scoreNow()); wamSound.crateLoot(); floatText(h, "+5", "is-plus"); }
-      else if (t === "power") { powerUntil = performance.now() + POWER_MS; wamSound.cratePower(); floatText(h, "POWER!", "is-combo"); scene.classList.add("is-power"); later(() => { if (performance.now() >= powerUntil) scene.classList.remove("is-power"); }, POWER_MS + 60); }
+      // Đợt 213b — chỉ còn thùng thêm giờ (xem CRATE_TYPES ở đầu file).
+      if (h.crateType === "time") { addTime(5); wamSound.crateTime(); floatText(h, "+5s", "is-combo"); }
       h.freeT = later(() => { h.hole.classList.remove("is-crate"); later(() => freeHole(h), 300); }, 520);
     }
 

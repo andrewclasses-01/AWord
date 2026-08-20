@@ -1033,10 +1033,39 @@ html.aw-nhung .aw-below { display: none; }
    ⛔ The old welded rule `.aw-opt-switch.is-voice .aw-opt-switch-thumb
    { transform: translateX(100%) }` is GONE. Anything still adding `.is-voice`
    would now do nothing at all — the class is not read anywhere. */
+/* ⭐⭐ Đợt 213 (thầy, 20/8/2026) — THE TOP GROUP IS GREEN.
+   "Nền nút của các nút trong timer/text-voice cũng dùng màu nền xanh lá nhạt
+    thay vì màu xám nhạt của các nút ở khu vực bên dưới."
+   The group is everything above the dashed rule: PRACTICE|HOMEWORK · TEXT|VOICE ·
+   the clue-set chips · the Timer (thầy's answer when asked how far it reaches).
+   It says WHAT this act plays and for how long; everything under the rule says
+   how it is scored.
+
+   ⭐ THREE VARIABLES, DECLARED ONCE, INHERITED DOWN. Custom properties inherit,
+   so naming them on the three group containers reaches every switch, seg and
+   thumb inside them — and the base rules below simply read them with the OLD grey
+   as the fallback. That is what keeps the seventeen templates' own segmented
+   controls (Anagram mode, Round rule, …) byte-for-byte grey: they sit outside
+   these three containers, so they never see the variables.
+   ⛔ Do NOT restyle `.aw-seg` / `.aw-opt-switch` directly to get this effect —
+   those classes are shared with the whole panel below the rule, which is exactly
+   the half thầy asked to leave alone.
+
+   Thumb DARKER than its track here, the reverse of the grey group's white-on-grey
+   (thầy: "máng xanh nhạt + nút chọn xanh đậm hơn"). Built around #16a34a, the
+   green Lives has used since Đợt 143, so the panel gains a shade and not a new
+   colour. */
+.aw-opt-setswitch,
+.aw-opt-content,
+.aw-optc.aw-opt-top {
+  --aw-grp-track: #e6f4ea;
+  --aw-grp-thumb: #bfe6cd;
+  --aw-grp-on:    #0f7a35;
+}
 .aw-opt-switch {
   position: relative;
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  background: #eef2f7;
+  background: var(--aw-grp-track, #eef2f7);
   border-radius: 12px;
   padding: 4px;
   margin-bottom: 14px;
@@ -1062,7 +1091,7 @@ html.aw-nhung .aw-below { display: none; }
 .aw-opt-switch-thumb {
   position: absolute; top: 4px; left: 4px;
   width: calc((100% - 8px) / var(--n, 2)); height: calc(100% - 8px);
-  background: #fff;
+  background: var(--aw-grp-thumb, #fff);
   border-radius: 9px;
   box-shadow: 0 2px 8px rgba(31,42,68,.14);
   transform: translateX(calc(var(--i, 0) * 100%));
@@ -1101,7 +1130,7 @@ html.aw-nhung .aw-below { display: none; }
   border-radius: 9px;
   transition: color .18s ease;
 }
-.aw-opt-switch-btn.is-active { color: #2f7bff; }
+.aw-opt-switch-btn.is-active { color: var(--aw-grp-on, #2f7bff); }
 
 /* ⭐ Đợt 148 — SWAPPING WHAT IS INSIDE A BOX, smoothly (core/engine.js
    swapContents). Two things use it: going Options → Template/Style/Mode, where
@@ -1203,7 +1232,7 @@ html.aw-nhung .aw-below { display: none; }
 .aw-opt-setswitch {
   position: relative;
   display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
-  background: #eef2f7; border-radius: 12px; padding: 4px; margin-bottom: 10px;
+  background: var(--aw-grp-track, #eef2f7); border-radius: 12px; padding: 4px; margin-bottom: 10px;
 }
 .aw-opt-setswitch .aw-opt-switch-thumb {
   width: calc((100% - 8px) / var(--n, 2));
@@ -1415,7 +1444,7 @@ html.aw-nhung .aw-below { display: none; }
   position: relative;
   display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr;
   gap: 2px; width: 100%; height: 30px;
-  background: #eef2f7; border-radius: 9px; padding: 3px;
+  background: var(--aw-grp-track, #eef2f7); border-radius: 9px; padding: 3px;
   flex: 1 1 auto; min-width: 0;
 }
 /* width = the track minus its 3px padding either side and the (n-1) 2px gaps,
@@ -1424,7 +1453,7 @@ html.aw-nhung .aw-below { display: none; }
   position: absolute; top: 3px; bottom: 3px; left: 3px;
   width: calc((100% - 6px - (var(--n, 1) - 1) * 2px) / var(--n, 1));
   transform: translateX(calc(var(--i, 0) * (100% + 2px)));
-  background: #fff; border-radius: 7px;
+  background: var(--aw-grp-thumb, #fff); border-radius: 7px;
   box-shadow: 0 2px 6px rgba(31,42,68,.14);
   transition: transform .22s cubic-bezier(.22,.61,.36,1);
   pointer-events: none;   /* the buttons must still get every tap */
@@ -1440,7 +1469,7 @@ html.aw-nhung .aw-below { display: none; }
 }
 /* No background/shadow here any more — the thumb draws those. Leaving them on
    the button as well would show a second pill jumping ahead of the sliding one. */
-.aw-seg-btn.is-on { color: #2f7bff; }
+.aw-seg-btn.is-on { color: var(--aw-grp-on, #2f7bff); }
 
 /* ⭐ Đợt 150 — a seg that BREATHES between two shapes (the Options clue-set
    row: ENG1|ENG2|VI1|VI2 under Text, ENG1|ENG2 under Voice). Flex instead of
@@ -1666,11 +1695,34 @@ html.aw-nhung .aw-below { display: none; }
    The old panel gave four one-checkbox groups their own uppercase heading
    ("AUTO SWITCH", "END OF GAME"...). Gathering them removes 4 headings and
    ~90px of height, and puts like with like. */
-/* auto-fit, not a fixed 1fr 1fr: 7 switches (Anagram in fight mode) become 3
-   columns × 3 rows instead of 2 × 4, which is the last 25px that keeps that
-   panel off a scrollbar. Long labels ellipsis (see .aw-check-t) rather than
-   widening their column — the full sentence is on the tooltip. */
-.aw-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: 6px 14px; }
+/* ⭐⭐ Đợt 213b (thầy, 20/8/2026) — FILLED BY COLUMN, AND CENTRED.
+   thầy laid the block out template by template in terms of COLUMNS ("cột 1 …
+   dòng trên / dòng dưới"), which the old rule could not express: it was
+   `repeat(auto-fill, minmax(158px, 1fr))`, i.e. as many columns as fitted, filled
+   by ROW. Four switches came out as three-then-one, hugging the left — which is
+   what thầy meant by "không để lệch sang 1 bên".
+   Now: the row count is fixed by core/options-panel.js's layoutChecks()
+   (`--aw-check-rows`, 2 normally, 3 for Gameshow's seven), `grid-auto-flow:
+   column` fills column 1 top-to-bottom before starting column 2, and the columns
+   are sized rather than stretched so `justify-content: center` has something to
+   centre. A one- or two-column block therefore sits in the MIDDLE of the panel.
+
+   ⚠️ 168px, and it is a measurement, not a round number: the longest label in the
+   app is "Change the crossword" (Crossword) — 18px box + 8px gap + the text.
+   Anything narrower ellipsises it, and the full sentence is only on the tooltip.
+   ⚠️⚠️ `minmax(0, 168px)` — the `0` floor is what lets a column SHRINK in a
+   narrow window (the panel is `min(94vw, 580px)`) instead of overflowing. Never
+   write a flat `168px` here.
+   ⚠️ 3 columns = 168×3 + 14×2 = 532px, inside the panel's 580px cap. That is why
+   layoutChecks() never allows a 4th column. */
+.aw-checks {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--aw-check-rows, 2), auto);
+  grid-auto-columns: minmax(0, 168px);
+  justify-content: center;
+  gap: 6px 14px;
+}
 .aw-check {
   display: flex; align-items: center; gap: 8px; min-height: 26px; min-width: 0;
   font-size: 13px; font-weight: 600; color: #23303e; cursor: pointer;
@@ -1723,6 +1775,31 @@ html.aw-nhung .aw-below { display: none; }
    (Đợt 148 moved that gap onto the cells — see `.aw-opt-grid` above), so the
    separator sits exactly where it always has. */
 .aw-optc-sep { grid-column: 1 / -1; height: 1px; background: #e6ebf2; margin: 3px 0 10px; }
+
+/* ⭐ Đợt 213 — THE DASHED RULE under the green group (thầy: "1 dòng kẻ đứt mảnh
+   để phân cách"). DASHED, deliberately unlike `.aw-optc-sep` above: two identical
+   hairlines would read as "three equal sections", when what this one says is
+   "above = what gets played, below = how it is scored". A border rather than a
+   background, because only a border can be dashed.
+   ⚠️ `height: 0` — the 1px IS the border, so giving the box a height too would
+   draw the line 1px off the centre of the space it reserves. */
+.aw-optc-dash {
+  grid-column: 1 / -1; height: 0;
+  border-top: 1px dashed #d8e0ea;
+  margin: 2px 0 12px;
+}
+
+/* ⭐ Đợt 213 — the Timer cell, which has no title line at all (see mkCell's
+   `noLabel`). Nothing to reset: the label element is simply never appended, so
+   the control line is the cell's only child and starts at its top edge.
+   The rule exists to hold the group's green variables (declared above with
+   `.aw-optc.aw-opt-top`) and as the place to look when wondering why exactly one
+   cell in the panel has no caption. */
+.aw-optc-nolab { min-width: 0; }
+/* The countdown box belongs to the green group too — a white-bordered box beside
+   green buttons reads as a leftover. Tinting only the BORDER (not the fill) keeps
+   the typed digits on white where they are easiest to read on the 86" screen. */
+.aw-opt-top .aw-tstep { border-color: #cfe7d8; }
 
 /* Đợt 143 — a class that has asked their machine for less motion still gets the
    full panel, just without the travel. Keeping ONE rule at the end of the block

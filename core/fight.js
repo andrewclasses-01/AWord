@@ -1244,7 +1244,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const valOf = pos => (pos >= UNLIM_POS - 0.05 ? 0 : Math.round(pos * 10) / 10);
     const cDelay = mkSliderCell({
       label: "Time delay", sub: "let the other team finish",
-      min: 0.1, max: UNLIM_POS, step: 0.1, value: posOf(cur.fightTieWindow), tone: "amber",
+      // ⭐ Đợt 213 — BLUE, not amber. thầy's three-colour law is red = a
+      // punishment, amber = a REWARD, green = a resource; this is a waiting
+      // window and none of the three, so it takes the plain-quantity blue that
+      // Speed / Difficulty / Round time already use. It is not cosmetic any
+      // more either: core/options-panel.js now reads the tone to decide which
+      // side of the panel a slider sits on, so a wrong colour is a wrong place.
+      min: 0.1, max: UNLIM_POS, step: 0.1, value: posOf(cur.fightTieWindow), tone: "blue",
       fmt: pos => (pos >= UNLIM_POS - 0.05 ? "∞" : pos.toFixed(1) + "s"),
       onInput: pos => { const w = valOf(pos); draft.fightTieWindow = w; syncDelay(w); }
     });
@@ -1257,14 +1263,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const cBonus = pickMode
       ? mkSliderCell({
           label: "Speed bonus", sub: "finish first",
-          min: 0, max: 100, step: 1, value: cur.fightSpeedBonus, tone: "blue", offAt: 0,
+          // Đợt 213 — AMBER: this awards up to +100 points, so by thầy's law
+          // ("các thanh thưởng luôn có màu vàng") it is a reward, and the panel
+          // now seats rewards on the left off the back of that same tone.
+          min: 0, max: 100, step: 1, value: cur.fightSpeedBonus, tone: "amber", offAt: 0,
           fmt: v => (v === 0 ? "Off" : "+" + v),
           onInput: v => { draft.fightSpeedBonus = v; }
         })
       : mkSliderCell({
           label: "Speed bonus", sub: "finish first",
           min: 1, max: 100, step: 1, value: Math.max(1, cur.fightSpeedBonus || DEFAULT_SPEED_BONUS),
-          tone: "blue",
+          tone: "amber",   // Đợt 213 — same slider, same rule as the branch above
           fmt: v => "+" + v,
           onInput: v => { draft.fightSpeedBonus = v; }
         });

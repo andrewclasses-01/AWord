@@ -44,6 +44,9 @@
 //   timeCost          — opt in to the Time cost slider
 //   usesShuffleAnswers (Đợt 143, OPT-IN) — game really reads options.shuffleAnswers
 //   usesAutoSwitch     (Đợt 143, OPT-IN) — game really reads options.autoSwitch
+//   checkOrder        (Đợt 213b) — the order of the switch block, as a list of
+//                        switch KEYS. The block is filled by COLUMN, so the list
+//                        reads straight off as a layout. See orderChecks().
 //
 // ⭐ WHY THOSE LAST TWO ARE OPT-IN AND NOT hideXxx (Đợt 143)
 // The old flags were opt-OUT: the panel showed the control to everyone and a
@@ -78,13 +81,43 @@ export const POINTS_MAX = 100;
 export const POINTS_STEP = 1;
 
 // one option = one cell: a label line and a control line, nothing else
-export function mkCell({ label, sub, wide } = {}) {
-  const cell = el("div", "aw-optc" + (wide ? " aw-optc-wide" : ""));
+//
+// ⭐ Đợt 213 — `noLabel`. Exactly ONE cell in the app uses it: the Timer, which
+// thầy asked to strip of its title so it reads as part of the Text/Voice group
+// above it rather than as the first of the settings below ("Bỏ title timer đi,
+// đưa cụm timer lại gần cụm TEXT-VOICE và coi như chúng là 1 cụm tính năng mặc
+// định và không cần title").
+// ⚠️ The label ELEMENT is still created and still returned as `.lab` — it is
+// simply not put in the cell. Callers that decorate the label line (Time cost
+// hangs its grace stepper there) therefore keep working whatever they are
+// handed, instead of throwing on a null.
+export function mkCell({ label, sub, wide, noLabel } = {}) {
+  const cell = el("div", "aw-optc" + (wide ? " aw-optc-wide" : "") + (noLabel ? " aw-optc-nolab" : ""));
   const lab = el("div", "aw-optc-lab", label || "");
   if (sub) lab.append(el("span", "aw-optc-sub", sub));
   const ctl = el("div", "aw-optc-ctl");
-  cell.append(lab, ctl);
+  if (noLabel) cell.append(ctl); else cell.append(lab, ctl);
   return { cell, lab, ctl };
+}
+
+// ---- WHAT A SLIDER IS FOR, in one word (Đợt 213) --------------------------
+// thầy, 20/8/2026: "các thanh mạng/thưởng thì ưu tiên bên trái, các thanh trừ
+// điểm thì ưu tiên bên phải".
+//
+// ⭐⭐ THE ROLE IS READ OFF `tone`, NOT DECLARED A SECOND TIME. Every slider in
+// the app already states its role by colour — thầy's own three-colour law
+// (Đợt 143, restated 20/8/2026): green = a resource the class still has, amber
+// = a reward, red = a punishment, blue = a plain quantity that is neither.
+// Asking a template to ALSO pass a `role` would be a second list to keep in step
+// with the first, and the day they disagree the panel sorts by one and paints by
+// the other. One source, two uses.
+// ⛔ So a slider whose COLOUR is wrong now sits in the wrong PLACE too — which
+// is exactly why the three mismatched tones were fixed in this same đợt
+// (fight.js's Speed bonus + Time delay, speaking.js's Stars to pass).
+const ROLE_RANK = { green: 0, amber: 0, blue: 1 };   // anything else (red / no tone) = 2
+function rankOfTone(tone) {
+  const r = ROLE_RANK[tone];
+  return r === undefined ? 2 : r;
 }
 
 // Segmented control — replaces a row of radios. `choices` = [{value,label,title}]
@@ -124,6 +157,10 @@ export function mkSeg(choices, current, onPick) {
 // greys out instead of shouting in red). `fmt` prints the number.
 export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, offAt, onInput, wide }) {
   const c = mkCell({ label, sub, wide });
+  // Đợt 213 — what this slider is FOR, so orderSliderCells() below can put
+  // resources and rewards to the left and punishments to the right without
+  // asking a single template to say anything new. See rankOfTone().
+  c.cell.dataset.awRank = String(rankOfTone(tone));
   // Number, not `v | 0`: Speaking's "stars to pass" moves in 0.5 steps and a
   // bitwise clamp would silently floor every half star away.
   const clamp = v => Math.max(min, Math.min(max, Number(v)));
@@ -151,15 +188,23 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
   paint(cur);
   s.oninput = () => { const v = clamp(s.value); paint(v); onInput(v); };
 
-  // ⭐⭐ Đợt 188 (teacher, 18/8/2026) — TAP THE TRACK = ONE NOTCH, DOUBLE TAP = ONE
-  // NOTCH BACK. The browser's own behaviour is "press anywhere and the thumb JUMPS
-  // to that point", which on an 86" touch screen means a stray brush sets a 0..100
-  // slider to whatever the finger landed on. The teacher's rule:
-  //   "tăng giảm thông thường thì trỏ vào điểm kéo như bình thường. Còn 1 chạm thì
-  //    tăng 1 nấc, chạm đúp thì giảm 1 nấc. Kịch trên và kịch dưới thì đứng lại.
-  //    Muốn kéo nhiều thì chạm vào nút vị trí và kéo như thông thường"
-  // This is the same idiom the app's number steppers already use (makeHStepper:
-  // tap = ±1, drag = many), so the panel now has ONE way of nudging a number.
+  // ⭐⭐ Đợt 213 (thầy, 20/8/2026) — WHICH SIDE OF THE THUMB YOU TAP IS THE SIGN.
+  //   "trong các thanh trượt: chạm vào khoảng trống bên phải (nút chưa tới) để
+  //    tăng 1 nấc, chạm vào khoảng đã qua (nút đã chạy qua) thì giảm 1 nấc"
+  // Tap right of the thumb = +1, tap left of it = −1, grab the thumb and drag =
+  // move a lot. The browser's own behaviour — press anywhere and the thumb JUMPS
+  // there — is still what is being prevented; that part is Đợt 188's and unchanged.
+  //
+  // ⛔⛔ THIS REPLACES Đợt 188's DOUBLE TAP, it does not sit beside it (thầy chose
+  // "bỏ hẳn" when asked). Đợt 188 read every tap as +1 and used a 320ms double-tap
+  // window for −1, which cost two things now gone for good:
+  //   · a timer to tune — "chạm chậm quá thành 2 lần +1" was an open ⬜ on thầy's
+  //     TOMKO checklist, and it can no longer happen because nothing is timed;
+  //   · honesty — a double tap had to show +1 and then −1, because the first tap
+  //     could not wait to find out whether a second was coming.
+  // Position carries the sign now, so a tap means one thing the instant it lands.
+  // ⛔ Do NOT reintroduce a double-tap rule on top of this: on the right-hand side
+  // two taps would read +1 then +1, and there is no gesture left for it to mean.
   //
   // ⚠️ ONE PLACE ONLY, ON PURPOSE. This is the single slider builder in the whole
   // app (`grep '"range"'` returns exactly this line), so every slider in Options,
@@ -188,17 +233,27 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
     return r.left + THUMB / 2 + frac * (r.width - THUMB);
   }
   const TAP_SLOP_PX = 6;        // more than this and the finger was dragging, not tapping
-  const DOUBLE_TAP_MS = 320;
   let downAt = null, onThumb = false, dragged = false;
-  let lastTapMs = 0, beforeTap = null;
+  // ⚠️ WHICH SIDE, MEASURED AT POINTERDOWN — never at pointerup. `setValue` can
+  // move the thumb between the two events (a fast repeat tap), and asking again
+  // at the end would then compare the finger against a thumb that has already
+  // walked past it: hold your finger still on the right and the slider would
+  // count up to the finger, then start counting back down. The side is a fact
+  // about where the press LANDED, so it is read once, when it lands.
+  let downSign = 0;
   s.addEventListener("pointerdown", ev => {
     if (ev.pointerType === "mouse" && ev.button !== 0) return;
     downAt = ev.clientX;
     dragged = false;
+    // ONE layout read for both questions below — getBoundingClientRect inside
+    // thumbCentreX() forces a reflow, and asking twice per press is asking for
+    // two different answers if anything around the panel is mid-transition.
+    const dx = ev.clientX - thumbCentreX();
+    downSign = dx >= 0 ? +1 : -1;
     // A press that lands ON the thumb is a real drag — hand it straight to the
     // browser, untouched, so "chạm vào nút vị trí và kéo như thông thường" keeps
     // working exactly as it always has (including the live oninput above).
-    onThumb = Math.abs(ev.clientX - thumbCentreX()) <= THUMB / 2 + 4;
+    onThumb = Math.abs(dx) <= THUMB / 2 + 4;
     if (onThumb) return;
     // Anywhere else: kill the default jump-to-position BEFORE it happens. The
     // value must not move at all until pointerup tells us tap or drag.
@@ -209,32 +264,24 @@ export function mkSliderCell({ label, sub, min, max, step, value, tone, fmt, off
     if (downAt === null || dragged) return;
     if (Math.abs(ev.clientX - downAt) > TAP_SLOP_PX) dragged = true;
   });
-  const endPress = ev => {
+  const endPress = () => {
     if (downAt === null) return;
-    const wasThumb = onThumb, wasDrag = dragged;
-    downAt = null; onThumb = false; dragged = false;
+    const wasThumb = onThumb, wasDrag = dragged, sign = downSign;
+    downAt = null; onThumb = false; dragged = false; downSign = 0;
     // Thumb drag: the browser already moved it. Track drag: deliberately does
-    // nothing (the teacher's way to move a lot is to grab the thumb).
+    // nothing (thầy's way to move a lot is to grab the thumb).
     if (wasThumb || wasDrag) return;
-    const now = ev.timeStamp || performance.now();
-    if (beforeTap !== null && now - lastTapMs <= DOUBLE_TAP_MS) {
-      // Second tap of a double: land one notch BELOW where the pair started.
-      lastTapMs = 0;
-      const back = beforeTap; beforeTap = null;
-      setValue(back - stepN);
-      return;
-    }
-    // ⚠️ The first tap moves the number IMMEDIATELY rather than waiting out the
-    // double-tap window. Waiting would make every ordinary single tap feel 320ms
-    // late — the far more common gesture paying for the rarer one. A double tap
-    // therefore reads as +1 then −1, which is also an honest picture of what the
-    // two taps did.
-    beforeTap = Number(s.value);
-    lastTapMs = now;
-    setValue(beforeTap + stepN);
+    // One notch, in the direction the finger was standing. At either end stop
+    // setValue() is a no-op — "kịch trên và kịch dưới thì đứng lại" (Đợt 188,
+    // still in force). Note that at max there is no track LEFT of the thumb to
+    // tap for +1 anyway, and at min none to its right for −1, so the gesture and
+    // the clamp agree instead of merely not contradicting each other.
+    setValue(Number(s.value) + sign * stepN);
   };
   s.addEventListener("pointerup", endPress);
-  s.addEventListener("pointercancel", () => { downAt = null; onThumb = false; dragged = false; });
+  s.addEventListener("pointercancel", () => {
+    downAt = null; onThumb = false; dragged = false; downSign = 0;
+  });
 
   c.ctl.append(s, chip);
   return { ...c, slider: s, chip, paint };
@@ -319,9 +366,18 @@ export function buildOptionsBody(host, {
   checksHost.append(checksBox);
 
   // add a checkbox to the shared block at the bottom (panel + templates)
+  //
+  // ⭐ Đợt 213b — `opts.key`. A STABLE name for the switch, independent of the
+  // words printed on it, so `tpl.checkOrder` can lay the block out (see
+  // orderChecks below) without breaking the day a label is reworded. Renaming
+  // "Show answer when wrong" to "Show corrects" in this very đợt is exactly the
+  // event an order-by-label list would not have survived — and `shuffleLabel`
+  // already renames "Shuffle questions" per template, so labels were never
+  // unique names to begin with.
   function addCheck(label, checked, onChange, opts = {}) {
     const wrap = mkCheck(checked, label, onChange);
     if (opts.title) wrap.title = opts.title;
+    if (opts.key) wrap.dataset.awCheck = opts.key;
     checksBox.append(wrap);
     return wrap;
   }
@@ -395,6 +451,18 @@ export function buildOptionsBody(host, {
   // choices for ever.
   // Hidden when the act has fewer than two halves: a lone button that cannot be
   // turned off is the dead control the OPT-IN rule of Đợt 143 exists to prevent.
+  // ⭐ Đợt 213 — IS THERE ANYTHING ABOVE THE DASHED LINE? The line divides the
+  // top group ("what this act plays, and for how long") from the settings below,
+  // so it must not be drawn when the group is empty — a rule at the very top of
+  // the panel with nothing over it reads as a mistake. Counted, not assumed:
+  // `contentSwitch` is null for an act with neither clue sets nor clips and in
+  // both play modes (see makeContentSwitch in core/engine.js), and the Timer is
+  // gone entirely for a template running its own clock (Gameshow).
+  // ⚠️ `renderSwitches` is false on a RE-RENDER, when the rows are still on
+  // screen — they live in `swHost`, which is built once and never torn down
+  // (Đợt 149). So the question is "does this panel HAVE these rows", never "is
+  // this pass the one that built them".
+  let topGroup = !!contentSwitch || !!(contentSetSwitch && (contentSetSwitch.sets || []).length > 1);
   if (renderSwitches && contentSetSwitch && (contentSetSwitch.sets || []).length > 1) {
     const sets = contentSetSwitch.sets;
     const labelOf = contentSetSwitch.labelOf || (k => String(k || "").toUpperCase());
@@ -462,7 +530,24 @@ export function buildOptionsBody(host, {
     // display:none (a field popping in and out used to reflow the row).
     stepper.el.classList.toggle("is-dim", cur !== "countDown");
     stepper.el.title = "Countdown length";
-    const c = mkCell({ label: "Timer", wide: true });
+    // ⭐⭐ Đợt 213 (thầy, 20/8/2026) — NO TITLE, AND IT JOINS THE GROUP ABOVE.
+    //   "Bỏ title timer đi, đưa cụm timer lại gần cụm TEXT-VOICE và coi như
+    //    chúng là 1 cụm tính năng mặc định và không cần title."
+    // `aw-opt-top` is what paints it in the group's green (core/app.css); the
+    // title line is dropped by `noLabel` (see mkCell). `title` on the cell keeps
+    // the word "Timer" reachable on hover now that it is not written anywhere.
+    //
+    // ⛔⛔ THE TIMER STAYS IN `grid`, i.e. in the part that IS rebuilt — it only
+    // LOOKS like it moved up into `swHost`. Moving it there for real would be
+    // the obvious reading of thầy's sentence and it would break Đợt 147: every
+    // clue set keeps its own Timer (ENG1 on 2 minutes, VI1 on 5), and `swHost`
+    // is built once and never rebuilt (Đợt 149), so the panel would go on
+    // showing the previous set's clock after every switch — wrong, and silently
+    // so. The seam between the two hosts is invisible, so nothing is lost by
+    // drawing the group across it.
+    const c = mkCell({ wide: true, noLabel: true });
+    c.cell.classList.add("aw-opt-top");
+    c.cell.title = "Timer";
     const timerChoices = [
       { value: "none", label: "None" },
       { value: "countUp", label: "Count up" },
@@ -475,7 +560,17 @@ export function buildOptionsBody(host, {
       stepper.el
     );
     grid.append(c.cell);
+    topGroup = true;
   }
+
+  // ⭐ Đợt 213 — THE DASHED RULE, and everything above it is one group.
+  // thầy: "Giữa cụm timer/text-voice và các khu vực bên dưới có 1 dòng kẻ đứt
+  // mảnh để phân cách." Dashed, not the solid `.aw-optc-sep` used at the foot of
+  // the panel: two identical rules would say "three equal sections" when what
+  // this one means is "above = what is played, below = how it is scored".
+  // ⚠️ Appended HERE, not at the top of the builder — the Timer is the last
+  // member of the group, and the grid flows in append order.
+  if (topGroup) grid.append(el("div", "aw-optc-dash"));
 
   // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — SHOWDOWN ONLY.
   // The whole-game Timer above says how long the GAME has; this one says how
@@ -519,7 +614,8 @@ export function buildOptionsBody(host, {
   // `tpl.shuffleLabel` (Đợt 140) — a game whose items aren't "questions"
   // (Speaking cards deals CARDS) renames this one switch.
   addCheck(tpl.shuffleLabel || "Shuffle questions", draft.shuffleQuestions !== false,
-    v => draft.shuffleQuestions = v, { title: tpl.shuffleLabel || "Shuffle question order" });
+    v => draft.shuffleQuestions = v,
+    { key: "shuffle", title: tpl.shuffleLabel || "Shuffle question order" });
   // ⭐⭐⭐ BALANCE QUESTIONS (Đợt 197, thầy 19/8/2026) — SHOWDOWN ONLY. It lives
   // among the SWITCHES rather than in a cell of its own because it is one yes/no
   // with no setting hanging off it (thầy: "ở khu vực các nút tích").
@@ -533,13 +629,13 @@ export function buildOptionsBody(host, {
   if (showdown) {
     addCheck("Balance questions", draft.balanceQuestions === true,
       v => draft.balanceQuestions = v,
-      { title: "Every pupil in the class answers the same number of questions" });
+      { key: "balance", title: "Every pupil in the class answers the same number of questions" });
   }
   // OPT-IN (Đợt 143 — see this file's header for why): only a game that really
   // reads options.shuffleAnswers offers the switch. Quiz, Open the box, Gameshow.
   if (tpl.usesShuffleAnswers) {
     addCheck("Shuffle answers", draft.shuffleAnswers !== false, v => draft.shuffleAnswers = v,
-      { title: "Shuffle answer order" });
+      { key: "shuffleAnswers", title: "Shuffle answer order" });
   }
   // AUTO SWITCH — advance to the next question automatically once the current
   // one has an answer. OFF by default.
@@ -549,7 +645,7 @@ export function buildOptionsBody(host, {
   // a manual next step (Quiz, Anagram, Unjumble, Crossword) and made opt-in.
   if (tpl.usesAutoSwitch) {
     addCheck("Auto next question", draft.autoSwitch === true, v => draft.autoSwitch = v,
-      { title: "Move to the next question automatically" });
+      { key: "autoNext", title: "Move to the next question automatically" });
   }
 
   // TEMPLATE-SPECIFIC EXTRA OPTIONS (optional hook) — a template appends its own
@@ -609,16 +705,139 @@ export function buildOptionsBody(host, {
   // (Speaking cards) opts out.
   if (!tpl.hideShowAnswers) {
     addCheck("Show answers at end", draft.showAnswers !== false, v => draft.showAnswers = v,
-      { title: "Show answers when the game ends" });
+      { key: "showAnswers", title: "Show answers when the game ends" });
   }
+
+  // ⭐⭐ Đợt 213 — RESOURCES AND REWARDS LEFT, PUNISHMENTS RIGHT. Run LAST, once
+  // every source has put its cells in: this file's, the template's, and the
+  // match's. See orderSliderCells() for why it is done here and not by asking
+  // seventeen templates to append in a different order.
+  orderSliderCells(grid);
 
   // the gathered checkboxes, with a hairline above them so the block reads as
   // "and these switches" rather than as another option cell
+  // ⚠️ Appended AFTER the sort on purpose — the separator and the checkbox block
+  // are the foot of the panel and must stay there whatever the sort does.
   if (checksBox.children.length) {
+    orderChecks(checksBox, tpl.checkOrder);
+    layoutChecks(checksBox);
     grid.append(el("div", "aw-optc-sep"), checksHost);
   }
 
   return { grid };
+}
+
+/**
+ * ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THE SWITCH BLOCK, LAID OUT IN COLUMNS.
+ *
+ * thầy went through the block template by template, naming what each COLUMN
+ * holds top and bottom ("cột 1 shuffle questions/shuffle answers, cột 2 auto
+ * next question/allow skip, cột 3 show answers at end"). Two things had to change
+ * for that to be sayable at all:
+ *
+ * 1. ORDER. The block used to be whatever order the three sources happened to
+ *    append in — this file's own switches, then the template's, then the match's.
+ *    A template now declares `checkOrder`, a list of KEYS (see addCheck's
+ *    `opts.key`), and the block is sorted by it. ⛔ Keys, never labels: this same
+ *    đợt renames "Show answer when wrong" to "Show corrects", and `shuffleLabel`
+ *    already renames "Shuffle questions" for Speaking cards, so labels were never
+ *    stable names.
+ *    ⚠️ A switch whose key is NOT in the list keeps its relative order and goes
+ *    to the END. That is where "In turns" (Fight) and "Balance questions"
+ *    (Showdown) land — modes thầy has not laid out, so they are appended visibly
+ *    rather than guessed at.
+ *    ⚠️ A template with no `checkOrder` is untouched, so nothing here can break a
+ *    template that has not been laid out yet.
+ *
+ * 2. FLOW. `layoutChecks` fixes the ROW COUNT, and the CSS flows the block by
+ *    COLUMN (`grid-auto-flow: column`) — fill column 1 top to bottom, then start
+ *    column 2. The old `repeat(auto-fill, …)` filled by ROW into as many columns
+ *    as fitted, which is why a 4-switch block sat as 3-then-1 hugging the left.
+ *
+ * ⚠️ ROWS = 2, EXCEPT WHEN THAT WOULD NEED A 4th COLUMN. The panel is capped at
+ * 580px and a column needs ~168px, so three columns is the most that fits with
+ * the labels still readable; a 4th would ellipsis every one of them. Gameshow (7
+ * switches) is the only template over the line today and goes to 3 rows. ⛔ Do not
+ * "simplify" this to a constant 2 — measure the type, not the markup (Đợt 212).
+ */
+function orderChecks(box, order) {
+  if (!Array.isArray(order) || !order.length) return;
+  const kids = Array.from(box.children);
+  const rank = c => {
+    const i = order.indexOf(c.dataset.awCheck);
+    return i === -1 ? order.length : i;      // unlisted (Fight / Showdown) → the end
+  };
+  const sorted = kids
+    .map((c, i) => ({ c, i, r: rank(c) }))
+    .sort((a, b) => (a.r - b.r) || (a.i - b.i))   // stable: ties keep append order
+    .map(x => x.c);
+  if (sorted.every((c, i) => c === kids[i])) return;
+  box.append(...sorted);        // re-appending a child MOVES it; no clone, no lost listener
+}
+
+function layoutChecks(box) {
+  const n = box.children.length;
+  box.style.setProperty("--aw-check-rows", String(n > 6 ? 3 : 2));
+}
+
+/**
+ * ⭐⭐ Đợt 213 — put the slider cells in thầy's order without moving anything else.
+ *
+ * thầy, 20/8/2026: "các thanh mạng/thưởng thì ưu tiên bên trái, các thanh trừ
+ * điểm thì ưu tiên bên phải". Measured before this đợt, four templates read
+ * backwards: Type the answer and Unjumble put Points off on the LEFT with Lives
+ * beside it, and Whack-a-mole and True/false pushed Lives out to the right.
+ *
+ * ⭐ WHY IT LIVES HERE AND NOT IN THE TEMPLATES. `.aw-opt-grid` is two columns
+ * flowing row-first, so "left" is nothing but "appended earlier" — the order is
+ * a property of the PANEL, not of any one template. Fixing it template by
+ * template would mean editing seventeen files to state one rule seventeen times,
+ * and the eighteenth template would be written without it. It also would have
+ * broken the law this file opens with: A TEMPLATE NEVER TOUCHES THIS PANEL'S DOM.
+ *
+ * ⭐ "ƯU TIÊN", NOT "LUÔN LUÔN" — thầy's word, and his explicit choice when asked
+ * (the alternative offered was pinning every red slider to column 2 and living
+ * with the holes). Cells are SORTED, then dropped back into the same slots they
+ * already occupied, so the panel can never grow an empty cell: on Whack-a-mole
+ * (1 green + 1 blue + 3 red) a hard rule would have punched two holes in the
+ * left column. Sorting gives Lives · Speed / Points off · Punishment / Time cost.
+ *
+ * ⚠️⚠️ THREE KINDS OF CELL ARE DELIBERATELY LEFT WHERE THEY ARE, and each one is
+ * load-bearing:
+ *   · anything without `data-aw-rank` — segmented controls, text boxes, the
+ *     Anagram mode row. They keep their slots and only the sliders move around
+ *     them, so a template's own reading order survives.
+ *   · `.aw-optc-wide` — a full-width cell is not IN a column, and shuffling one
+ *     into the sequence would drag every cell after it onto a different row.
+ *   · `.aw-optc-stack` — core/fight.js's Time delay + Speed bonus, which thầy
+ *     fixed into one column in Đợt 188 ("time delay và speed bonus luôn cùng 1
+ *     cột") because the first decides whether the second does anything. Its two
+ *     sliders are nested inside it, so they are not direct children here and are
+ *     never seen by this function at all — the pair travels as one, unsorted.
+ *
+ * A STABLE sort: two sliders of the same rank keep the order their template
+ * chose (Whack-a-mole's Points off before Punishment, both red).
+ */
+function orderSliderCells(grid) {
+  const cells = Array.from(grid.children).filter(node =>
+    node.dataset && node.dataset.awRank !== undefined && !node.classList.contains("aw-optc-wide"));
+  if (cells.length < 2) return;
+  const sorted = cells
+    .map((cell, i) => ({ cell, i, rank: Number(cell.dataset.awRank) }))
+    .sort((a, b) => (a.rank - b.rank) || (a.i - b.i))   // `|| a.i - b.i` = the stable tiebreak
+    .map(x => x.cell);
+  if (sorted.every((cell, i) => cell === cells[i])) return;   // already right — touch nothing
+  // ⚠️⚠️ RE-SEAT AGAINST ANCHORS, NEVER AGAINST INDEXES. The obvious version —
+  // remember each cell's index, then `insertBefore(sorted[n], children[idx+1])`
+  // — is wrong the moment two cells swap: the first move shifts every later
+  // index, and worse, the node an index points at may itself be one of the cells
+  // still waiting to be moved. A comment node holds each seat instead, so every
+  // destination is a real node that is guaranteed to stay put.
+  // Comments are invisible to `grid.children` and to CSS grid, which lays out
+  // ELEMENT children only, so the seats cost nothing while they exist.
+  const seats = cells.map(cell => grid.insertBefore(document.createComment("aw-slot"), cell));
+  cells.forEach(cell => cell.remove());
+  seats.forEach((seat, n) => { grid.insertBefore(sorted[n], seat); seat.remove(); });
 }
 
 

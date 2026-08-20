@@ -241,6 +241,15 @@ const crosswordTemplate = {
   // would have been named against a clue they never touched. `playOrder` +
   // `setNav({index: row})` fix exactly that.
   showdownMode: true,
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "showCorrects", "changeCrossword", "autoNext", "showAnswers"],
   name: "Crossword",
   edit: openCrosswordEditor,
 
@@ -270,10 +279,14 @@ const crosswordTemplate = {
       onInput: v => { draft.minusAmount = v; }
     }).cell);
 
-    addCheck("Show answer when wrong", draft.showAnswerWhenWrong !== false,
-      v => draft.showAnswerWhenWrong = v);
+    // ⭐ Đợt 213b (thầy, 20/8/2026) — nhãn đổi thành "Show corrects".
+    // ⚠️ CHỈ đổi CHỮ HIỆN RA; trường lưu vẫn là `showAnswerWhenWrong` nên act cũ
+    // chạy y nguyên, không cần di trú. Mã định danh `showCorrects` mới là thứ
+    // `checkOrder` dùng để xếp chỗ (xem addCheck trong core/options-panel.js).
+    addCheck("Show corrects", draft.showAnswerWhenWrong !== false,
+      v => draft.showAnswerWhenWrong = v, { key: "showCorrects", title: "Show the correct answer after a wrong one" });
     addCheck("Change the crossword", draft.changeCrossword !== false,
-      v => draft.changeCrossword = v);
+      v => draft.changeCrossword = v, { key: "changeCrossword" });
   },
 
   mount(root, activity, ui) {

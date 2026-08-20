@@ -227,6 +227,15 @@ const anagramTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "items",
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "allCaps", "autoNext", "allowSkip", "showAnswers"],
   name: "Anagram",
   hasLivesSlot: true,   // hearts render in the top bar, left of the score (v0.9.29)
   hasSloganSlot: true,  // "ANAGRAM IN ANDREW CLASSES" on the timer/score row (Đợt 134)
@@ -283,20 +292,36 @@ const anagramTemplate = {
     // so this cell spans both columns.
     const modeCell = mkCell({ label: "Anagram mode", wide: true });
 
-    // POINTS OFF — mode-dependent, in ONE wide cell holding a nested 2-column
-    // grid: "On submit" shows 1 slider, "Bonus and minus" shows 2, plain
-    // "Letters with bonus" shows none. Collapsing this ONE wrapper (rather
-    // than three separate groups, as before) is what keeps the outer grid's
-    // rows from jumping while still giving the smooth open/close the teacher
-    // asked for in Đợt 134.
-    // ⚠️ `overflow:hidden` on the animating wrapper is NOT optional — Đợt 137
-    // was an entire session spent on an invisible slider eating the mouse
-    // because a max-height accordion lacked exactly that. See anagram.css.
+    // ⭐⭐⭐ Đợt 213 (thầy, 20/8/2026) — THE THREE SLIDERS ARE ALWAYS ON SCREEN.
+    // Whichever mode is picked, all three stay put; the ones this mode does not
+    // use go PALE instead of vanishing. thầy:
+    //   "Mọi thanh kéo luôn hiện, kể cả khi đang ở chế độ khác chưa dùng tới.
+    //    Lúc này thanh sẽ ở màu nhạt để thể hiện không dùng được chứ không ẩn
+    //    hẳn đi… chỉ cần nhạt màu đi để tôi biết thanh đó không khả dụng."
+    //
+    // ⭐ THIS IS THẦY'S OWN Đợt 188 LAW, ARRIVING HERE LAST. "chỉ mất màu (thể
+    // hiện ko chỉnh được) chứ không ẩn" was settled for Fight's option rows in
+    // Đợt 188 and given a shared class then — `.aw-optc.is-locked` in
+    // core/app.css, opacity .4 + pointer-events:none. Anagram was the ONE place
+    // in all seventeen templates still hiding a slider outright (measured while
+    // planning this đợt), so this is not a new idea; it is the old one finished.
+    //
+    // ⛔⛔ AN ENTIRE ACCORDION WAS REMOVED HERE — Đợt 134 built it, Đợt 137 spent
+    // a whole session on an invisible slider eating the mouse inside it, Đợt 147
+    // and 148 smoothed its collapse. All of that machinery (`penWrap`,
+    // `max-height`, `is-closed`, the deferred `showCells`, the tick-0
+    // scrollHeight conversion) is gone, because nothing collapses any more.
+    // ⛔ Do NOT bring back a max-height wrapper "for the animation": there is no
+    // height change left to animate, and Đợt 137's invisible-slider trap only
+    // exists when something is hidden while still occupying its place.
+    //
+    // ⚠️ WHAT THẦY WILL NOW SEE THAT HE NEVER COULD BEFORE: two cells both
+    // titled "POINTS OFF" at once — they were never on screen together until
+    // today. Asked, thầy chose to keep both titles and let the sub-labels
+    // ("wrong answer" / "wrong letter") do the telling apart.
     const penHost = el("div", "aw-optc aw-optc-wide aw-anagram-penhost");
-    const penWrap = el("div", "aw-anagram-penwrap");
     const penGrid = el("div", "aw-opt-grid");
-    penWrap.append(penGrid);
-    penHost.append(penWrap);
+    penHost.append(penGrid);
 
     const cSubmit = mkSliderCell({
       label: "Points off", sub: "wrong answer",
@@ -319,81 +344,33 @@ const anagramTemplate = {
       fmt: v => v + "x",
       onInput: v => { draft.bonusMult = v; }
     });
-    penGrid.append(cSubmit.cell, cLetter.cell, cMult.cell);
+    // ⭐ ORDER (Đợt 213) — thầy's panel-wide rule is "mạng/thưởng ưu tiên bên
+    // trái, trừ điểm ưu tiên bên phải". core/options-panel.js enforces it for the
+    // panel's own grid, but this is a NESTED grid inside one wide cell, so it is
+    // ordered by hand here — the same rule, applied where the sorter cannot see.
+    // Bonus x therefore leads, and the cell beside it is the penalty belonging to
+    // the SAME mode ("Bonus and minus"), so each row also reads as one mode's
+    // settings rather than a mixture.
+    penGrid.append(cMult.cell, cLetter.cell, cSubmit.cell);
 
-    // Which cells a mode shows. `openPen` also drives the wrapper's height, so
-    // the two can never disagree.
-    let penHideT = null;
-    const showCells = m => {
-      cSubmit.cell.style.display = m === "submit" ? "" : "none";
-      cLetter.cell.style.display = m === "bonusMinus" ? "" : "none";
-      cMult.cell.style.display = m === "bonusMinus" ? "" : "none";
-    };
-    function syncPen(m, animate) {
-      clearTimeout(penHideT);
-      const open = m !== "bonus";
-      // second guard, kept from Đợt 137: a closed wrapper must never take a
-      // pointer even if a future layout change defeats `overflow:hidden`
-      penWrap.classList.toggle("is-closed", !open);
-      if (!animate) {
-        // FIRST paint: this runs BEFORE the panel is in the document, so
-        // scrollHeight would read 0 for everything. "none" is correct and
-        // instant; one tick later (below) it becomes a real px number so the
-        // teacher's first click has something to transition FROM.
-        showCells(m);
-        penHost.style.marginBottom = open ? "" : "0px";
-        penWrap.style.maxHeight = open ? "none" : "0px";
-        return;
-      }
-      if (open) {
-        // Opening: the rows have to be in the layout BEFORE the height is
-        // measured, or the wrapper animates to the height of an empty grid.
-        showCells(m);
-        penHost.style.marginBottom = "";
-        penWrap.style.maxHeight = penGrid.scrollHeight + "px";
-        return;
-      }
-      // ⭐ CLOSING (Đợt 147 — teacher: "chuyển từ On submit về Letters with
-      // bonus (ẩn đi thanh Points off) thì animation bị khựng 1 nhịp"). The
-      // rows now STAY in the layout for the whole collapse and are dropped
-      // only afterwards, so what the eye follows is the slider itself sliding
-      // up under `overflow:hidden`.
-      // What it used to do, measured with a MutationObserver: `display:none`
-      // on the cell, `is-closed`, and `max-height:0` ALL landed in the same
-      // frame (+0.9ms). So the slider vanished in ONE frame and an EMPTY 51px
-      // box then slid closed — a jump followed by a slide, which is precisely
-      // what "khựng 1 nhịp" looks like.
-      // The wrapper already carries a px max-height here (from a previous
-      // open, or from the tick-0 conversion below), so there is a real value
-      // to transition FROM.
-      penWrap.style.maxHeight = "0px";
-      // ⭐ Đợt 148 — and the ROW SPACING goes with it, in the SAME motion.
-      // Teacher after the first fix: "nhịp đầu tiên... vẫn còn chút khoảng
-      // trống nữa. Sau đó lại hạ xuống một nhịp ngắn nữa hết khoảng trống thừa
-      // đó." That leftover was the grid's `row-gap` (measured: 8-9px), which no
-      // animation on this cell could ever remove — a gap belongs to the grid,
-      // so it could only vanish the instant the row did, which is exactly the
-      // second beat. `core/app.css` now hands that spacing to the CELLS as
-      // `margin-bottom`, so zeroing it here collapses height AND spacing
-      // together and the close is one continuous movement.
-      // Nothing is `display:none`d any more: at height 0 with no margin the
-      // cell already occupies nothing at all.
-      penHost.style.marginBottom = "0px";
-      // The rows themselves stay put for the whole slide and are only swapped
-      // out afterwards — 300ms is the 280ms transition plus a frame. Never
-      // less, or they blink out early and the jump is back.
-      penHideT = setTimeout(() => showCells(m), 300);
+    // Which cells this mode actually uses. Everything else is dimmed, never
+    // removed — `.is-locked` is the shared class from Đợt 188 (opacity + a real
+    // `pointer-events: none`, so a pale slider cannot be dragged by accident).
+    // ⚠️ "Letters with bonus" uses NONE of the three, so all three go pale
+    // together. That is the honest picture: the mode scores purely on letters,
+    // and thầy asked to be able to see that the controls exist and are off.
+    function syncPen(m) {
+      cSubmit.cell.classList.toggle("is-locked", m !== "submit");
+      cLetter.cell.classList.toggle("is-locked", m !== "bonusMinus");
+      cMult.cell.classList.toggle("is-locked", m !== "bonusMinus");
     }
-    syncPen(curMode, false);
-    setTimeout(() => {
-      if (penWrap.style.maxHeight === "none") penWrap.style.maxHeight = penGrid.scrollHeight + "px";
-    }, 0);
+    syncPen(curMode);
 
     modeCell.ctl.append(mkSeg([
       { value: "bonus", label: "Letters with bonus" },
       { value: "submit", label: "On submit" },
       { value: "bonusMinus", label: "Bonus and minus" }
-    ], curMode, v => { draft.anagramMode = v; syncPen(v, true); }));
+    ], curMode, v => { draft.anagramMode = v; syncPen(v); }));
 
     // LIVES — 0..10, 0 = Unlimited (teacher, 3/8/2026). "∞" rather than the
     // word: the value chip is a fixed 52px in every cell — that fixed width is
@@ -410,9 +387,9 @@ const anagramTemplate = {
 
     panel.append(modeCell.cell, penHost, lives.cell);
 
-    addCheck("All caps", draft.allCaps === true, v => draft.allCaps = v);
+    addCheck("All caps", draft.allCaps === true, v => draft.allCaps = v, { key: "allCaps" });
     addCheck("Allow skip", draft.allowSkip !== false, v => draft.allowSkip = v,
-      { title: "Allow skip (Next can move on early)" });
+      { key: "allowSkip", title: "Allow skip (Next can move on early)" });
   },
 
 

@@ -103,6 +103,15 @@ let rwPauseHandlers = null;
 const rwTemplate = {
   type: "running_word",
   scorable: true,
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "showAnswers"],
   name: "Running word",
   edit: openRunningWordEditor,
 

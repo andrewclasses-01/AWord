@@ -611,30 +611,29 @@
 .aw-anagram-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
 .aw-anagram-ed-addrow:disabled { opacity: .4; cursor: default; }
 
-/* Options panel — the mode-dependent Points off / Bonus x cells collapse
-   smoothly instead of snapping (Đợt 134, teacher: "animation mượt").
-   Đợt 140: ONE wrapper around a nested 2-column grid, instead of the previous
-   three separately-collapsing groups — the cells inside are switched with
-   display:none, only this wrapper animates, so the panel's outer grid never
-   sees a half-open row.
+/* Options panel — the wide cell holding the nested 2-column grid of Anagram's
+   three mode-dependent sliders (Points off ×2 + Bonus x).
 
-   ⚠️⚠️ `overflow:hidden` HERE IS THE WHOLE LESSON OF Đợt 137 — "kéo không
-   được thanh Points off" (thầy báo 13/8/2026). `max-height:0` chỉ ép chiều
-   cao Ô về 0; thiếu `overflow:hidden` thì NỘI DUNG bên trong vẫn nằm nguyên
-   chỗ cũ và vẫn ăn chuột — mắt không thấy vì `opacity:0`. Tệ hơn: `opacity`
-   < 1 ĐẺ RA STACKING CONTEXT nên khối vô hình đó được vẽ TRÊN nội dung ngay
-   dưới ⇒ một thanh trượt tàng hình đè khít lên thanh thật, nuốt hết cú kéo.
-   Đo thật trước khi vá (elementFromPoint 5 điểm dọc mỗi thanh): mode "Bonus
-   and minus" → thanh "wrong letter" bị thanh "wrong answer" ĐANG ẨN che 5/5;
-   hai mode kia → thanh LIVES bị thanh "Bonus x" ĐANG ẨN che 5/5.
-   `pointer-events` là lớp chặn thứ hai, giữ nguyên: dù sau này ai đổi bố cục
-   làm `overflow` hết tác dụng, khối đang đóng vẫn không cướp được cú chạm. */
-.aw-anagram-penwrap {
-  overflow: hidden;
-  transition: max-height .28s cubic-bezier(.22,.9,.3,1);
-}
-.aw-anagram-penwrap.is-closed { pointer-events: none; }
-/* Đợt 148 — the cell's own bottom spacing (the grid's old row-gap, moved onto
-   the cells in core/app.css) collapses on the SAME curve as the height, so the
-   close reads as ONE movement instead of a slide followed by a snap. */
-.aw-anagram-penhost { transition: margin-bottom .28s cubic-bezier(.22,.9,.3,1); }
+   ⛔⛔ Đợt 213 (thầy, 20/8/2026) — THE ACCORDION IS GONE. `.aw-anagram-penwrap`
+   (overflow:hidden + a max-height transition + `.is-closed`) and the
+   margin-bottom transition that used to live on this host were removed together
+   with the JS driving them: all three sliders now stay on screen in every mode,
+   and the ones the mode does not use are dimmed with the shared
+   `.aw-optc.is-locked` — "Mọi thanh kéo luôn hiện… chỉ cần nhạt màu đi để tôi
+   biết thanh đó không khả dụng". Nothing collapses, so no height is left to
+   animate.
+
+   ⚠️⚠️ THE TRAP OF Đợt 137 GOES WITH IT — AND MUST NOT BE RE-CREATED. That whole
+   session went on "kéo không được thanh Points off" (thầy, 13/8/2026):
+   `max-height:0` squeezes only the BOX, so without `overflow:hidden` the content
+   stayed exactly where it was and went on eating the mouse — invisible only
+   because of `opacity:0`, and painted ON TOP of the real controls because an
+   opacity below 1 creates a stacking context. Measured then, elementFromPoint at
+   5 points down each slider: in "Bonus and minus" the hidden "wrong answer"
+   slider covered the "wrong letter" one 5/5; in the other two modes the hidden
+   "Bonus x" covered LIVES 5/5.
+   ⛔ So never hide a control here by collapsing the box around it. A control that
+   cannot be used is dimmed and given `pointer-events: none`, which is exactly
+   what `.is-locked` does — no invisible layer is ever created, so the trap has
+   nothing to come back as. */
+.aw-anagram-penhost { min-width: 0; }

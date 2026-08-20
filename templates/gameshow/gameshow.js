@@ -53,6 +53,15 @@ const gameshowTemplate = {
   // name is handed over on the "Get ready!" screen rather than at the question.
   showdownMode: true,
   hidePointsOff: true,   // speed-based scoring, never a flat per-wrong penalty (teacher, 3/8/2026)
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "shuffleAnswers", "showAnswers", "ll5050", "llX2", "llTime", "llCheat"],
   name: "Gameshow quiz",
   // Đợt 122 — ảnh template tự dựng bằng JS (đèn sân khấu, khán giả, 2 cánh cửa
   // vòng bonus). Phần nền/khung màn hình khai trong gameshow.css thì engine tự
@@ -123,10 +132,10 @@ const gameshowTemplate = {
 
     // Lifelines — four switches, so they join the shared checkbox block
     const ll = draft.lifelines || (draft.lifelines = { fifty: true, x2: true, time: true, cheat: true });
-    addCheck("50:50", ll.fifty !== false, v => ll.fifty = v, { title: "Lifeline: 50:50" });
-    addCheck("x2 Score", ll.x2 !== false, v => ll.x2 = v, { title: "Lifeline: double score" });
-    addCheck("Extra Time", ll.time !== false, v => ll.time = v, { title: "Lifeline: extra time" });
-    addCheck("Cheat", ll.cheat !== false, v => ll.cheat = v, { title: "Lifeline: cheat" });
+    addCheck("50:50", ll.fifty !== false, v => ll.fifty = v, { key: "ll5050", title: "Lifeline: 50:50" });
+    addCheck("x2 Score", ll.x2 !== false, v => ll.x2 = v, { key: "llX2", title: "Lifeline: double score" });
+    addCheck("Extra Time", ll.time !== false, v => ll.time = v, { key: "llTime", title: "Lifeline: extra time" });
+    addCheck("Cheat", ll.cheat !== false, v => ll.cheat = v, { key: "llCheat", title: "Lifeline: cheat" });
   },
   // Changing any of the above makes the CURRENT play meaningless -> restart.
   optionsNeedRestart() { return true; },

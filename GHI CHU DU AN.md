@@ -8,9 +8,294 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 213b (20/8/2026) — ⭐⭐ KHU Ô TÍCH: XẾP THEO CỘT CHO TỪNG TEMPLATE
+
+> ✅ **THẦY DUYỆT — CHỐT BẢN (20/8/2026)** — **82/82 ĐẠT** trên `scratch/dot213-opts.html` (11 phép mới, nhóm K) +
+> **đo bố cục THẬT của cả 17 template trên app thật**: 17/17 ra đúng cột thầy giao, căn giữa lệch **0px**,
+> bề rộng bảng **không đổi** (550–553px trước và sau). 0 lỗi console.
+> Sửa **20 file**: `core/options-panel.js` · `core/app.css` · **cả 17 template** ·
+> (`find-the-match` và `whack-a-mole` có sửa cả cách chơi). Bản gốc: `_backup/dot214/`.
+> Đi CHUNG COMMIT với Đợt 213 (thầy: *"tôi muốn có thêm một số điều chỉnh thêm trước khi commit cùng một thể"*).
+
+Thầy duyệt Đợt 213 rồi giao tiếp, đọc từng template theo **CỘT**: *"quy ước gọi tên các ô trong phần
+tích là cột 1 dòng trên/dòng dưới"*.
+
+### 1. Hai thứ phải đổi để câu của thầy nói ra được
+
+**(a) THỨ TỰ.** Trước đây khối ô tích là *"nguồn nào thêm trước thì đứng trước"* — ô của bảng, rồi ô của
+template, rồi ô của trận đấu. Không ai xếp được. Nay template khai **`checkOrder`**, một danh sách
+**MÃ ĐỊNH DANH** (`opts.key` của `addCheck`), và bảng tự sắp theo đó.
+
+- ⛔⛔ **MÃ, KHÔNG PHẢI CHỮ HIỆN RA.** Chính đợt này đổi tên *"Show answer when wrong"* → *"Show corrects"*,
+  và `shuffleLabel` từ lâu đã đổi tên *"Shuffle questions"* thành *"Shuffle item order"* cho Speaking cards
+  ⇒ **chữ chưa bao giờ là tên định danh**. Sắp theo chữ là đợt sau đổi nhãn một cái, bố cục vỡ trong im lặng.
+- ⚠️ Mã **không có trong danh sách** thì giữ thứ tự với nhau và **xuống cuối**. Đó là chỗ *"In turns"*
+  (Fight) và *"Balance questions"* (Showdown) rơi vào — hai mode thầy chưa xếp, nên chúng được **đặt lộ
+  ra ở cuối** chứ không đoán mò.
+- ⚠️ Template **chưa khai** `checkOrder` thì **không bị đụng** ⇒ cơ chế này không thể làm hỏng template nào
+  chưa được quy hoạch (bàn thử K3 canh đúng chỗ này).
+- ⭐ Xếp lại bằng `box.append(...sorted)`: thêm lại một node **đang là con** thì trình duyệt **DI CHUYỂN**
+  nó, không nhân bản ⇒ không mất `onchange` đã gắn, không cần node giữ chỗ như bên `orderSliderCells`.
+
+**(b) HƯỚNG ĐỔ.** `.aw-checks` trước là `repeat(auto-fill, minmax(158px, 1fr))` — đổ theo **HÀNG** vào bao
+nhiêu cột thì vừa. Bốn ô ra thành **3 rồi 1**, dồn hết sang trái: đúng thứ thầy gọi là *"lệch sang 1 bên"*.
+Nay `grid-auto-flow: column` + số dòng cố định ⇒ đầy cột 1 từ trên xuống rồi mới sang cột 2, **đọc thẳng
+được thành danh sách của thầy**.
+
+- ⚠️ **2 DÒNG, TRỪ KHI PHẢI ĐẺ RA CỘT THỨ 4.** Bảng chặn ở 580px, mỗi cột cần ~168px ⇒ **3 cột là tối đa**;
+  cột thứ 4 làm mọi nhãn bị cắt cụt. `layoutChecks()` chuyển sang **3 dòng** khi quá 6 ô — hôm nay chỉ
+  **Gameshow (7 ô)** vượt. ⛔ Đừng "gọn hoá" thành hằng số 2.
+- ⚠️ **168px là SỐ ĐO, không phải số tròn**: nhãn dài nhất trong app là *"Change the crossword"*.
+  ⚠️⚠️ **`minmax(0, 168px)` — số 0 là thứ chịu lực**: nó cho cột co lại khi cửa sổ hẹp thay vì tràn.
+  ⛔ Đừng viết `168px` trần.
+- **Căn giữa**: cột được ĐỊNH CỠ (không kéo giãn) nên `justify-content: center` mới có cái để căn.
+  Đo trên app thật: 1 cột lệch **0px** (hở 173px mỗi bên) · 2 cột lệch **0px** (hở 84px) · 3 cột lấp đầy.
+
+### 2. Sáu template thầy chỉ định — đo trên app thật, 6/6 đúng
+
+| | Cột 1 | Cột 2 | Cột 3 |
+|---|---|---|---|
+| QUIZ | Shuffle questions / Shuffle answers | Auto next question / Allow skip | Show answers at end |
+| ANAGRAM | Shuffle questions / All caps | Auto next question / Allow skip | Show answers at end |
+| FIND THE MATCH | Shuffle questions / **Shuffle answers** ⭐ | Remove corrects / Show answers at end | — |
+| TYPE THE ANSWER | Shuffle questions / **Show corrects** | Show answers at end / Allow skip | — |
+| WHACK A MOLE | Shuffle questions / Show answers at end | Switch right/wrong / **Crate: extra time** 🟢 | — |
+| CROSSWORD | Shuffle questions / **Show corrects** | Change the crossword / Auto next question | Show answers at end |
+
+⚠️ **QUY ƯỚC CŨ BỊ ĐẢO**: *"Show answers at end"* thôi đứng cuối ở **Type the answer** (thầy xếp nó lên
+trên *Allow skip*) và ở **Whack a mole** (cột 1 dòng dưới). Quy ước *"Show answers luôn đứng cuối"* thầy
+chốt **1/8/2026** nay chỉ còn đúng ở nơi `checkOrder` xếp thế.
+
+⚠️ **Whack a mole KHÔNG có "Auto next question"** như em tưởng lúc lập kế hoạch — `usesAutoSwitch` chỉ xuất
+hiện trong một dòng **GHI CHÚ** của file đó, không phải cờ thật. Nên "bỏ các ô tích còn lại" đúng bằng hai ô
+Crate. **Bài học: `grep` trúng chữ không có nghĩa là trúng CỜ — đọc lại dòng đó.**
+
+### 3. Mười một template còn lại (thầy giao em tự quy hoạch)
+
+Nguyên tắc rút từ 6 mẫu của thầy: **cột 1 = ô chung của app**, các cột sau = công tắc riêng của game.
+
+`UNJUMBLE` [SQ / Show corrects][Auto next / Show answers] · `OPEN THE BOX` [SQ / Shuffle answers][Show
+answers] · `GAMESHOW` *(3 dòng)* [SQ / Shuffle answers / Show answers][50:50 / x2 Score / Extra Time][Cheat] ·
+`BALLOON POP` [SQ / Show answers][Bonus: extra time / Bonus: points][Bonus: x2 score] ·
+`FLYING FRUIT` [SQ / Retry after wrong][Show answers] · `SPEAKING` [SQ / Show answers][Play example first /
+Allow trying again] · `TRUE-FALSE` · `MAZE CHASE` · `RUNNING WORD` · `RUNNING TEAM` [SQ / Show answers] ·
+`SPEAKING CARDS` [Shuffle item order].
+
+### 4. Ba chỗ sửa vào CÁCH CHƠI, không chỉ bố cục
+
+**(a) FIND THE MATCH — ô "Shuffle answers" mới.** ⭐ Bảng chữ ở game này **VỐN ĐÃ trộn vô điều kiện**, nên
+đây **không thêm hành vi nào**: chỉ cho thầy đường **TẮT** nó. Mặc định BẬT = y hệt mọi act đang có.
+- ⛔⛔ **LUẬT FIGHT ĐỨNG TRÊN CÔNG TẮC**: `fightCtl` được hỏi **TRƯỚC và riêng**, nên bật công tắc thì trận
+  đấu vẫn phát cho hai bàn **cùng một bảng chữ** (luật Đợt 184 — khác bảng là khác cả câu hỏi sau lưng số
+  vòng). ⛔ Đừng gộp hai điều kiện làm một.
+- Đo thật: TẮT ⇒ đúng thứ tự gốc · BẬT ⇒ khác gốc **và khác nhau giữa 2 lần** · trong Fight ⇒ **2 bàn giống
+  hệt nhau**.
+
+**(b) WHACK A MOLE — gỡ HẲN thùng "loot" và thùng "power up".** Thầy được hỏi thẳng và chọn *"bỏ luôn TÍNH
+NĂNG — hai thùng đó không còn rơi nữa"*. Gỡ: bảng `CRATE_TYPES`, hai nhánh lọc, biến `powerUntil`, hằng
+`POWER_MS`, **và cả cơ chế nhân đôi điểm 6 giây**.
+- ⚠️⚠️ **ACT CŨ NAY CHƠI RA ĐIỂM THẤP HƠN** — đã báo thầy trước khi làm.
+- ⚠️ Trường `bonusLoot`/`bonusPower` **còn nguyên trong act đã lưu**, không ai đọc nữa ⇒ không cần di trú,
+  và muốn khôi phục thì dữ liệu vẫn còn. Hai file ảnh `crate-loot.webp`/`crate-power.webp` **giữ lại**.
+- ⚠️ Hai hàm tiếng `wamSound.crateLoot`/`cratePower` và lớp CSS `.is-power` nay **không ai gọi** — cố ý để
+  lại: xoá chúng là đụng thêm 2 file mà không được gì.
+- Ô **"Crate: extra time" tô XANH LÁ** (thầy giao) — dùng lại đúng cách đánh dấu của *"In turns"* (Đợt 202):
+  nó không phải cài đặt tính điểm, nó bật/tắt một thứ **RƠI XUỐNG SÂN**.
+- Chơi thử thật: 46 cú đập, **4 thùng rơi**, game chạy suốt, 0 lỗi console.
+
+**(c) ĐỔI TÊN "Show answer when wrong" → "Show corrects"** ở **Type the answer · Crossword · Unjumble**.
+⚠️ **CHỈ ĐỔI CHỮ HIỆN RA** — trường lưu vẫn là `showAnswerWhenWrong`, nên **mọi act đã lưu chạy y nguyên**.
+Đổi tên trường là phải di trú cả thư viện, đắt mà chẳng được gì.
+⚠️ Thầy viết crossword là *"show corrects (thay cho show answers at end)"*, **vênh** với cột 3 của chính
+thầy (vẫn là *show answers at end*). Hỏi lại thì thầy chốt: giống Type the answer, tức thay cho
+*"Show answer when wrong"*. **Hỏi lại rẻ hơn build nhầm** (bài học lặp lại từ Đợt 212).
+
+### 5. Bàn thử
+
+`scratch/dot213-opts.html` lên **82/82** (thêm nhóm K, 11 phép): sắp theo mã · mã lạ xuống cuối · không khai
+`checkOrder` thì không đụng · đổ theo cột đúng như thầy đọc · số dòng 2/3 · không bao giờ quá 3 cột ·
+căn giữa lệch 0px ở cả 1 và 2 cột.
+- ⭐ **Lưới đọc CỘT từ TOẠ ĐỘ THẬT** (`getBoundingClientRect`), không đọc thứ tự thẻ — vì thứ tự thẻ là thứ
+  đang được kiểm, đọc nó là tự chấm điểm cho chính mình.
+- ⭐ Đo trên **app thật** cả 17 template mới là bằng chứng chính; bàn thử giữ phần logic.
+- 📸 `screenshot` vẫn timeout ⇒ lại nghiệm bằng số đo.
+
+⬜ **CÒN LẠI — mắt/tay thầy**: nhãn *"Change the crossword"* ở cột 168px có bị cắt cụt trên màn 86" không ·
+Gameshow 3 dòng × 3 cột nhìn có chật không · Whack a mole chơi thử xem mất 2 thùng kia có hụt không.
+
+---
+
+## Đợt 213 (20/8/2026) — ⭐⭐ OPTIONS: CỤM TRÊN XANH LÁ · THANH KÉO KHÔNG BAO GIỜ ẨN · TRÁI-PHẢI THEO VAI TRÒ · CHẠM HAI PHÍA
+
+> ✅ **THẦY DUYỆT (20/8/2026)** — **71/71 ĐẠT** trên bàn thử `scratch/dot213-opts.html` (nạp module THẬT, không
+> mô phỏng) + **4 vòng đo trên app thật** (engine thật qua `scratch/test-mode.html` và
+> `scratch/fight-bench.html`: 10 template · Anagram đổi mode · Settings · Fight), **0 lỗi console**.
+> Sửa **6 file**: `core/options-panel.js` · `core/app.css` · `core/fight.js` ·
+> `templates/anagram/anagram.js` · `templates/anagram/anagram.css` · `templates/speaking/speaking.js`.
+> Bản gốc trước khi sửa: `_backup/dot213/`.
+
+Thầy giao 5 việc một lượt (20/8/2026), làm ở **mode Single** và cho lan sang các mode khác để đồng nhất,
+**chỉ chừa phần của riêng từng mode**.
+
+### 1. Cụm trên: Timer bỏ title, gộp với TEXT-VOICE, kẻ đứt phân cách, nút xanh lá
+
+Thầy: *"Bỏ title timer đi, đưa cụm timer lại gần cụm TEXT-VOICE và coi như chúng là 1 cụm tính năng mặc
+định và không cần title. Giữa cụm timer/text-voice và các khu vực bên dưới có 1 dòng kẻ đứt mảnh để phân
+cách. Nền nút của các nút trong timer/text-voice cũng dùng màu nền xanh lá nhạt thay vì màu xám nhạt."*
+
+Phạm vi cụm trên (thầy chốt khi được hỏi): **PRACTICE|HOMEWORK · TEXT|VOICE · dãy chip ENG1/ENG2/VI1/VI2 ·
+Timer**. Màu: **cả hai** — máng xanh rất nhạt `#e6f4ea` + nút đang chọn xanh đậm hơn `#bfe6cd`, chữ nút
+đang chọn `#0f7a35`.
+
+- ⛔⛔ **TIMER VẪN NẰM Ở HỘP DƯỚI, CHỈ NHÌN THÌ TƯỞNG NÓ LÊN TRÊN.** Đây là bẫy lớn nhất của đợt, và là
+  cách đọc *hiển nhiên* của câu thầy viết — nhưng dời thật là **hỏng Đợt 147**: mỗi bộ nghĩa giữ Timer
+  riêng (ENG1 để 2 phút, VI1 để 5 phút), mà `swHost` **dựng MỘT LẦN rồi để yên** (Đợt 149, để nút dưới
+  ngón tay thầy không bị xoá đi dựng lại). Dời Timer vào đó ⇒ đổi ENG1→VI1 **vẫn hiện đồng hồ của bộ cũ**,
+  sai trong im lặng. Đường ráp giữa hai hộp vô hình nên vẽ cụm vắt qua nó không mất gì.
+- **Bỏ title** = `mkCell({ noLabel: true })` — phần tử nhãn **vẫn được tạo** và vẫn trả về ở `.lab`, chỉ
+  không được gắn vào ô. Nhờ vậy chỗ nào trang trí dòng nhãn (Time cost treo nút chỉnh giây ở đó) vẫn chạy
+  bình thường thay vì ném lỗi null. Chữ "Timer" chuyển sang `title` để rê chuột vẫn đọc được.
+- **Dòng kẻ ĐỨT** (`.aw-optc-dash`), cố ý khác dòng kẻ liền `.aw-optc-sep` ở chân bảng: hai đường giống
+  hệt nhau sẽ đọc thành "ba phần bằng nhau", trong khi ý của đường này là *trên = chơi cái gì, dưới =
+  tính điểm thế nào*. Dùng `border-top` chứ không `background` vì chỉ border mới nét đứt được.
+- ⚠️ **KHÔNG vẽ dòng kẻ khi phía trên trống rỗng** (`topGroup`): act không bộ nghĩa/không giọng + template
+  chạy đồng hồ riêng (Gameshow) ⇒ cụm trên rỗng, một đường kẻ mồ côi ở đỉnh bảng đọc như lỗi.
+- ⭐⭐ **BA BIẾN MÀU, KHAI MỘT LẦN, TỰ CHẢY XUỐNG.** `--aw-grp-track/-thumb/-on` khai trên đúng 3 vùng chứa
+  (`.aw-opt-setswitch`, `.aw-opt-content`, `.aw-optc.aw-opt-top`); các rule gốc đọc chúng **kèm màu xám cũ
+  làm dự phòng**. ⛔ **ĐỪNG tô thẳng vào `.aw-seg` / `.aw-opt-switch`** — hai class đó dùng chung với cả
+  khu dưới (Anagram mode, Round rule…), tức đúng nửa mà thầy bảo để yên. Đo lại: máng khu dưới vẫn
+  `rgb(238,242,247)`, nút chọn khu dưới vẫn trắng.
+- Nút chọn **TỐI HƠN** máng ở cụm trên (ngược với khu dưới trắng-trên-xám) — đo độ sáng 220 < 240.
+- Ô chỉnh thời gian đếm ngược chỉ đổi **màu viền** `#cfe7d8`, không tô nền: số vẫn nằm trên nền trắng,
+  dễ đọc nhất trên màn 86".
+
+### 2. Thanh kéo luôn hiện, chỉ nhạt đi
+
+Thầy: *"Mọi thanh kéo luôn hiện, kể cả khi đang ở chế độ khác chưa dùng tới… chỉ cần nhạt màu đi để tôi
+biết thanh đó không khả dụng là được."*
+
+- ⭐ **CHÍNH LÀ LUẬT ĐỢT 188 CỦA THẦY, NAY MỚI TỚI CHỖ CUỐI CÙNG.** *"chỉ mất màu (thể hiện ko chỉnh được)
+  chứ không ẩn"* đã chốt cho Fight từ Đợt 188 và có sẵn class dùng chung `.aw-optc.is-locked`
+  (opacity .4 + `pointer-events:none`). Rà cả **17 template**: **Anagram là chỗ DUY NHẤT còn ẩn thật**.
+- ⛔⛔ **GỠ HẲN MỘT CỖ ACCORDION 4 ĐỢT MỚI DỰNG XONG** — Đợt 134 dựng, Đợt 137 mất nguyên phiên vì thanh
+  trượt tàng hình ăn chuột trong đó, Đợt 147 + 148 mài cho hết khựng. `penWrap` · `max-height` ·
+  `is-closed` · `showCells` hoãn 300ms · phép đổi `scrollHeight` ở tick 0 — bỏ sạch, vì không còn gì co
+  vào nữa. ⛔ **Đừng dựng lại hộp `max-height` "để có animation"**: không còn chiều cao nào đổi để mà
+  animate, và bẫy thanh-trượt-tàng-hình của Đợt 137 **chỉ tồn tại khi có thứ bị giấu mà vẫn chiếm chỗ**.
+- ⚠️ **THỨ THẦY SẼ NHÌN THẤY LẦN ĐẦU**: **hai ô cùng tên "POINTS OFF"** đứng cạnh nhau — trước nay chúng
+  chưa từng cùng lên màn một lúc. Hỏi thì thầy chốt **giữ nguyên cả hai tên**, phân biệt bằng dòng chữ nhỏ
+  sẵn có (`wrong answer` / `wrong letter`).
+- Đo trên app thật: bảng Anagram **409px, đứng yên qua cả 3 mode** (trước đây nhảy theo accordion), trần
+  bảng 675px ⇒ **không tràn, không kích hoạt thu nhỏ chữ** (`compactOptionsOnOverflow` vẫn còn nguyên làm
+  lưới an toàn).
+
+### 3. Ba màu = ba vai trò (rà lại toàn bộ)
+
+| Vai trò | Luật thầy | Kết quả rà |
+|---|---|---|
+| Trừ/phạt điểm | 🔴 đỏ | ✅ đúng sẵn — 6 thanh Points off + Time cost + Punishment (đỏ là màu **mặc định** nên tự đúng) |
+| Số mạng | 🟢 xanh lá | ✅ đúng sẵn cả 11 thanh |
+| Thưởng | 🟡 vàng | ⚠️ **sai 1** — "Speed bonus" (Fight) đang xanh dương |
+
+Sửa 3 chỗ (thầy chốt cả ba):
+- **Speed bonus → vàng** (thưởng tới +100 điểm) — sửa **cả HAI nhánh** (`pickMode` và nhánh đua thường).
+- **Time delay → xanh dương** (khoảng chờ, không thưởng không phạt).
+- **Stars to pass → xanh dương** (ngưỡng đạt, không phát điểm cho ai).
+
+### 4. Mạng/thưởng ưu tiên trái, trừ điểm ưu tiên phải
+
+- ⭐⭐ **VAI TRÒ ĐỌC TỪ `tone`, KHÔNG KHAI LẠI LẦN THỨ HAI.** Mỗi thanh đã tự khai vai trò bằng MÀU rồi;
+  bắt template khai thêm một trường `role` là đẻ ra danh sách thứ hai, và ngày hai bên lệch nhau thì bảng
+  **sắp theo cái này mà tô theo cái kia**. `mkSliderCell` đóng dấu `data-aw-rank` từ `tone`
+  (xanh lá/vàng = 0 · xanh dương = 1 · đỏ/không màu = 2). ⛔ Hệ quả: **thanh nào sai màu thì nay sai luôn
+  chỗ đứng** — chính vì thế mục 3 phải làm trong cùng đợt.
+- ⭐ **LÀM Ở BỘ DỰNG BẢNG, KHÔNG SỬA TEMPLATE NÀO.** Lưới 2 cột chảy theo hàng nên "bên trái" chỉ là
+  "được thêm vào sớm hơn" — đó là tính chất của **BẢNG**, không của template nào cả. Sửa từng template là
+  viết một luật 17 lần, và cái thứ 18 sẽ được viết mà quên mất. Nó cũng phạm luật mở đầu file
+  `options-panel.js`: **template không bao giờ đụng vào DOM của bảng này**.
+- ⭐ **"ƯU TIÊN", KHÔNG PHẢI "LUÔN LUÔN"** — đúng chữ thầy dùng, và là lựa chọn thầy chốt khi được hỏi
+  (phương án kia là ghim cứng mọi thanh đỏ vào cột 2 và chịu ô trống). Cách làm: **sắp xếp rồi thả lại
+  đúng những chỗ ngồi cũ** ⇒ bảng **không bao giờ mọc ra ô trống**. Whack-a-mole (1 xanh + 1 lam + 3 đỏ)
+  nếu ép cứng sẽ thủng 2 ô cột trái.
+- ⚠️⚠️ **BA LOẠI Ô CỐ Ý ĐỨNG YÊN**, mỗi loại đều chịu lực: ô **không có** `data-aw-rank` (seg, ô chữ, hàng
+  Anagram mode) giữ chỗ nên thứ tự đọc của template còn nguyên; ô **`.aw-optc-wide`** không nằm trong cột
+  nào, xáo nó vào là kéo lệch mọi ô phía sau sang hàng khác; cụm **`.aw-optc-stack`** của Fight (Time delay
+  + Speed bonus, thầy ghim cùng cột từ Đợt 188) — hai thanh của nó **lồng bên trong** nên không phải con
+  trực tiếp của lưới, hàm sắp xếp **không nhìn thấy chúng bao giờ**, cả cụm đi nguyên khối.
+- ⭐ **Tính chất hay của cách "thả lại chỗ cũ"**: thanh trượt **không bao giờ nhảy qua khu Fight**, vì nó
+  chỉ được dùng lại đúng những chỗ ngồi vốn có.
+- ⚠️⚠️ **BẪY LÚC ĐẶT LẠI CHỖ**: bản đầu viết "nhớ chỉ số rồi `insertBefore(children[idx+1])`" — **SAI** ngay
+  khi có 2 ô đổi chỗ cho nhau: ô đầu vừa dời là mọi chỉ số sau nó trượt hết, tệ hơn là **cái node mà chỉ số
+  trỏ tới có khi chính là ô đang chờ được dời**. Nay dùng **node ghi chú (comment) giữ chỗ** — vô hình với
+  `children` và với CSS grid (grid chỉ xếp con là PHẦN TỬ) nên giữ chỗ không tốn gì.
+- Sắp xếp **ỔN ĐỊNH**: hai thanh cùng hạng giữ nguyên thứ tự template đặt (Points off trước Punishment).
+- **4 chỗ đang sai, đã vá** (đo trên app thật): Type the answer · Unjumble (Points off TRÁI, Lives PHẢI) ·
+  Whack-a-mole · True/false (Lives bị đẩy sang phải). Đo lại 10 template: **10/10 đúng luật**.
+
+### 5. Chạm bên phải nút = +1, chạm bên trái nút = −1
+
+Thầy: *"chạm vào khoảng trống bên phải (nút chưa tới) để tăng 1 nấc, chạm vào khoảng đã qua (nút đã chạy
+qua) thì giảm 1 nấc."*
+
+- ⛔⛔ **THAY HẲN LUẬT CHẠM ĐÚP CỦA ĐỢT 188** (thầy chốt "bỏ hẳn"), không đứng cạnh nó. Được hai thứ:
+  (1) **hết một con số phải canh** — "chạm chậm quá thành 2 lần +1" là một dòng ⬜ đang treo trong danh
+  sách TOMKO của thầy, nay **không thể xảy ra vì không còn gì bấm giờ**; (2) **thật thà hơn** — luật cũ
+  buộc chạm đúp phải hiện +1 rồi mới −1, vì cú chạm đầu không thể chờ xem có cú thứ hai hay không.
+  ⛔ Đừng đắp lại luật chạm đúp lên trên: ở nửa bên phải, hai cú chạm nay là +1 rồi +1, không còn cử chỉ
+  nào để nó mang nghĩa.
+- ⚠️ **ĐO PHÍA LÚC ĐẶT TAY, KHÔNG PHẢI LÚC NHẢ TAY.** `setValue` làm nút chạy giữa hai sự kiện, nên hỏi lại
+  lúc nhả là so ngón tay với cái nút **đã đi qua nó**: giữ tay yên bên phải thì thanh sẽ đếm lên tới ngón
+  tay rồi **quay đầu đếm xuống**. Bàn thử D4 canh đúng ca này (3 cú chạm vào **một điểm cố định** ⇒ 6,7,8).
+- **Sửa đúng MỘT hàm** ⇒ ăn cho mọi thanh trượt của app: Options + Settings + form giao bài + 17 template
+  + Fight. Không template nào phải sửa một dòng.
+- ⚠️ **Vùng chết quanh nút tròn vẫn là nửa nút + 4px = 14px** (giữ nguyên từ Đợt 188, để còn tóm được nút
+  mà kéo). Nay nó đáng chú ý hơn trước: luật mới khiến chạm **sát ngay cạnh nút** thành cử chỉ tự nhiên
+  nhất, mà trong 14px đó thì không nhích nấc nào. Bàn thử D4b/D4c ghim con số này lại (12px = không nhích,
+  16px = +1). **Thầy thử trên TOMKO rồi bảo nới hay thu.**
+
+### 6. Bàn thử
+
+`scratch/dot213-opts.html` — **71/71 ĐẠT**, nạp module THẬT (`options-panel.js`, `anagram.js`,
+`speaking.js`) chứ không mô phỏng. Nhóm: A cụm trên + kẻ đứt (10) · B màu xanh chỉ ở cụm trên (8) ·
+C thứ tự trái-phải (8) · D chạm thanh trượt (12) · E hạng đọc từ màu (4) · F Anagram luôn hiện (16) ·
+G ba thanh đổi màu (4) · H dựng lại thân bảng (3) · I chiều cao (1) · J Showdown không bị đụng (6).
+
+- ⛔ **KHÔNG dùng `requestAnimationFrame`** trong bàn thử (bẫy Đợt 205: pane ẩn thì rAF treo vô hạn).
+- 🐞 **Một lần lưới báo hỏng mà lỗi ở CHÍNH LƯỚI** (lại đúng họ bẫy đã gặp ở Đợt 207 · 208 · 209): D4 bản
+  đầu đặt điểm chạm cách nút **12px**, mà vùng "trúng nút tròn" là **14px** ⇒ cú chạm bị tính là tóm nút
+  và không nhích nấc nào. Code đúng, phép đo sai. Đã đổi thành điểm cố định xa hẳn, và **giữ lại con số
+  12/16px thành hai phép đo riêng** để lần sau không ai phải phát hiện lại.
+- 📸 `screenshot` **vẫn timeout** (pane trình duyệt không hiện) ⇒ đợt này nghiệm hoàn toàn bằng **số đo**,
+  kể cả màu (đọc `getComputedStyle`) và độ sáng (tự tính luminance để chứng minh nút tối hơn máng).
+
+### 7. ⛔⛔ BÀI HỌC CÔNG CỤ — SUÝT MẤT TRẮNG `APP_MASTER.md` (419 KB)
+
+Lúc ghi hồ sơ, một lệnh Python sửa file kiểu `io.open(p, "w", encoding="utf-8").write(s)` đã **làm rỗng
+`APP_MASTER.md` còn 0 byte**. Cơ chế: **`open(p, "w")` XOÁ SẠCH file NGAY LÚC MỞ**, nội dung mới chỉ được
+ghi ở bước sau — mà bước sau đó **ném `UnicodeEncodeError`** (chuỗi có emoji 🟢 bị ghép nhầm từ **cặp
+surrogate** `chr(55357)+chr(56994)`, thứ Python 3 từ chối encode). Kết quả: nội dung cũ đã mất, nội dung
+mới chưa kịp ghi.
+
+- ✅ **Cứu được nguyên vẹn bằng `git checkout -- APP_MASTER.md`** rồi làm lại — mất đúng 4 dòng sửa đã biết
+  rõ. Đây là lý do **ghi hồ sơ nên làm khi kho đang sạch, hoặc commit sớm**: file 419 KB này chỉ có git là
+  bản sao lưu, `_backup/dot213/` không chép tài liệu.
+- ⛔ **LUẬT TỪ NAY khi sửa file bằng script**: dựng xong chuỗi → **`s.encode("utf-8")` thử trước** → ghi ra
+  **file tạm** → `os.replace()`. Tới lúc chạm vào file thật thì mọi thứ đã chắc chắn ghi được, và phép
+  thay tên là **thao tác nguyên tử**. Xem `scratch/`-style script mẫu trong nhật ký đợt này.
+- ⛔ **Đừng bao giờ dựng emoji bằng `chr()` ghép đôi** — viết thẳng ký tự, hoặc dùng `"\U0001F7E2"`.
+  Chuỗi Python là dãy **điểm mã**, không phải UTF-16, nên cặp surrogate là chuỗi hỏng ngay từ đầu.
+- ⚠️ Cùng họ với bẫy đã ghi trong ghi nhớ myBoard: **"không PowerShell replace file tiếng Việt"**. Mọi
+  đường sửa file hàng loạt đều phải hỏi *"nếu nổ giữa chừng thì file gốc còn không?"*
+
+⬜ **CÒN LẠI — chỉ mắt/tay thầy trên TOMKO**: (1) sắc xanh của cụm trên trên màn 86" có dịu mắt không, chữ
+`#0f7a35` trên nút `#bfe6cd` có đọc được từ cuối lớp không; (2) hai ô cùng tên "POINTS OFF" của Anagram
+nhìn lướt có lẫn không; (3) vùng chết 14px quanh nút tròn — chạm sát nút mà không nhích có khó chịu không.
+
+---
+
 ## Đợt 212 (20/8/2026) — ⛔ GỠ HẲN PRONUNCIATION KHỎI ACT TÍCH HỢP: HÀNG CÔNG TẮC VỀ TEXT | VOICE
 
-> 🟢 **CHỜ THẦY DUYỆT** — **32/32 ĐẠT** trên 3 bàn thử node (một trong đó **import THẬT** một file
+> ✅ **THẦY DUYỆT — CHỐT BẢN (20/8/2026)**, đã COMMIT + PUSH `9076faf` — **32/32 ĐẠT** trên 3 bàn thử node (một trong đó **import THẬT** một file
 > .xlsx tự dựng) + **6 phép đo trên trình duyệt thật**, 0 lỗi console.
 
 Thầy giao (20/8/2026): *"bỏ hẳn phần pronunciation trong options đi và không tích hợp phần
@@ -1220,7 +1505,8 @@ chưa mount gì cả. **Sau `Apply` trong trận phải bấm Play mới đo đ�
   có voice riêng từng bàn"* (Đợt 132), **chưa sửa** — act TTA dạng chữ thì không dính.
 - ✅ **ĐÃ COMMIT `a6d3fe8` + PUSH + LIVE** (19/8/2026). Đối chiếu **3/3 mã băm SHA-256**
   (`core/fight.js` · `core/app.css` · `templates/type-the-answer/type-the-answer.js`, so sau khi bỏ
-  `` vì bản checkout ngoài này là CRLF còn repo lưu LF) và **7/7 phép hỏi module trên bản live**:
+  `
+` vì bản checkout ngoài này là CRLF còn repo lưu LF) và **7/7 phép hỏi module trên bản live**:
   `FIGHT_DEFAULTS.fightTurns` có thật và = `false` · `fightOptionsFrom` giữ `true`, ep chuỗi `"false"`
   về `false`, thiếu khoá thì vẫn `false` · TTA khai `fightTurns`, Quiz **không** · CSS `.aw-check.is-green`
   có trên live.

@@ -66,6 +66,15 @@ const quizTemplate = {
   // playable items. Core filters THAT array by the `src` refs the review rows
   // carry, so a replay keeps the originals untouched. See core/mistakes.js.
   itemsKey: "questions",
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "shuffleAnswers", "autoNext", "allowSkip", "showAnswers"],
   name: "Quiz",
   hasLivesSlot: true,      // hearts render in the top bar, left of the score (same slot as True/false)
   // FIGHT MODE (12/8/2026, trial second template after Anagram) — see the
@@ -150,7 +159,7 @@ const quizTemplate = {
     panel.append(lives.cell);
 
     addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
-      { title: "Allow skip (move on without answering)" });
+      { key: "allowSkip", title: "Allow skip (move on without answering)" });
   },
 
   mount(root, activity, ui) {

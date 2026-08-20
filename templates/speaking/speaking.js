@@ -100,6 +100,15 @@ const spkTemplate = {
   // (`allowRetry`) stays on the SAME index, which is what keeps one question
   // belonging to one pupil however many attempts it takes.
   showdownMode: true,
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "showAnswers", "playExample", "tryAgain"],
   name: "Speaking",
   edit: openSpeakingEditor,
   hidePointsOff: true,        // scoring is a star rating, not a per-wrong-answer penalty
@@ -156,15 +165,19 @@ const spkTemplate = {
     if (draft.passStars == null) draft.passStars = passStarsOf(draft);
     panel.append(mkSliderCell({
       label: "Stars to pass", min: 1, max: MAX_STARS, step: 0.5,
-      value: draft.passStars, tone: "amber",
+      // ⭐ Đợt 213 — BLUE, not amber. Amber means REWARD under thầy's law
+      // (restated 20/8/2026); this is the PASS THRESHOLD, a plain quantity like
+      // Speed or Difficulty, and it hands out nothing. core/options-panel.js
+      // also seats sliders by tone now, so the colour decides the position too.
+      value: draft.passStars, tone: "blue",
       fmt: v => v + " ★",
       onInput: v => { draft.passStars = v; }
     }).cell);
 
     addCheck("Play example first", draft.playReference !== false,
-      v => draft.playReference = v, { title: "Play correct pronunciation first" });
+      v => draft.playReference = v, { key: "playExample", title: "Play correct pronunciation first" });
     addCheck("Allow trying again", draft.allowRetry !== false,
-      v => draft.allowRetry = v, { title: "Allow trying again after a low score" });
+      v => draft.allowRetry = v, { key: "tryAgain", title: "Allow trying again after a low score" });
   },
 
   mount(root, activity, ui) {

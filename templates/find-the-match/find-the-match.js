@@ -117,6 +117,19 @@ const ftmTemplate = {
   // would have been named against a definition they never saw. `playOrder` +
   // `setNav({index: row})` fix exactly that.
   showdownMode: true,
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "shuffleAnswers", "removeCorrects", "showAnswers"],
+  // ⭐ Đợt 213b — mở ô "Shuffle answers" (thầy giao). Bảng chữ ở game này VỐN ĐÃ
+  // trộn vô điều kiện, nên cờ này chỉ cho thầy đường TẮT nó; mặc định vẫn bật.
+  // Chỗ đọc: `choiceOrder` trong mount() — và luật Fight không trộn vẫn đứng trên.
+  usesShuffleAnswers: true,
   name: "Find the match",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
   manualTimerStart: true,   // the visible clock starts only after our 3-2-1 prep (count-up), so the prep isn't counted
@@ -174,7 +187,8 @@ const ftmTemplate = {
     panel.append(lives.cell, speed.cell, repeat.cell);
 
     // Whether a correctly-matched tile disappears or stays (locked).
-    addCheck("Remove corrects", draft.removeCorrects !== false, v => { draft.removeCorrects = v; });
+    addCheck("Remove corrects", draft.removeCorrects !== false, v => { draft.removeCorrects = v; },
+      { key: "removeCorrects" });
   },
 
   mount(root, activity, ui) {
@@ -225,12 +239,22 @@ const ftmTemplate = {
     // is ALWAYS visible on the current page. Pages auto-advance as they're
     // cleared; a ‹ Page X/Y › pager also lets you move manually. `choiceOrder`
     // (shuffled) is the tile layout order; chunking it forms the pages.
-    // ⚠️ FIGHT (Đợt 184): NOT shuffled. This is the tile LAYOUT, and it is
-    // shuffled unconditionally in single play — so in a match each board would
-    // lay its tiles out differently AND (through the page chunks below) end up
-    // with a different prompt behind the same round number. Both boards must be
-    // the same board; the match already fixed the pair order for both.
-    const choiceOrder = fightCtl ? pairs.map((_, i) => i) : shuffle(pairs.map((_, i) => i));
+    // ⚠️ FIGHT (Đợt 184): NOT shuffled. This is the tile LAYOUT — in a match each
+    // board would otherwise lay its tiles out differently AND (through the page
+    // chunks below) end up with a different prompt behind the same round number.
+    // Both boards must be the same board; the match already fixed the pair order.
+    // ⭐ Đợt 213b (thầy, 20/8/2026) — "SHUFFLE ANSWERS" NOW HAS A SWITCH. The tile
+    // layout was already shuffled UNCONDITIONALLY in single play, so this adds no
+    // new behaviour: it only lets thầy turn the shuffling OFF and read the tiles
+    // in the order the act was written. Default ON = byte-for-byte what every act
+    // in the library already does today.
+    // ⛔⛔ THE FIGHT RULE OUTRANKS THE SWITCH. `fightCtl` is tested FIRST and on
+    // its own, so with the switch ON a match still hands both boards the same
+    // layout. Never fold the two into one condition in which the option could
+    // re-enable shuffling inside a match.
+    const choiceOrder = (fightCtl || opt.shuffleAnswers === false)
+      ? pairs.map((_, i) => i)
+      : shuffle(pairs.map((_, i) => i));
     const PAGE_COUNT = Math.max(1, Math.ceil(total / MAX_TILES_PER_PAGE));
     const perPage = Math.ceil(total / PAGE_COUNT);
     const pages = [];

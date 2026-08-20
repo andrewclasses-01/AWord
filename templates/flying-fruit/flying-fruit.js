@@ -81,6 +81,15 @@ const flyingFruitTemplate = {
   // full-bleed arcade scene (the engine can already put it in `.aw-navstack`
   // below the frame when the round clock is on — that is the obvious candidate).
   // Same story as Maze chase; see its note.
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "retryWrong", "showAnswers"],
   name: "Flying fruit",
   preloadImages: JS_IMAGES.map(imgUrl),   // Đợt 122 — xem chú thích ở JS_IMAGES
   inlineTimerBar: true,     // gives us ui.topbarMid — we draw the LIVES (hearts) there
@@ -115,7 +124,7 @@ const flyingFruitTemplate = {
       }).cell
     );
     addCheck("Retry after wrong", draft.retry === true, v => draft.retry = v,
-      { title: "Retry after incorrect answer" });
+      { key: "retryWrong", title: "Retry after incorrect answer" });
   },
 
   // Lives/speed/retry/shuffle are all read once at mount() -> restart to apply.

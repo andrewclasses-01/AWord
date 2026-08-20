@@ -100,6 +100,15 @@ const balloonPopTemplate = {
   // `levelItems.map((it, i) => …)` on that very index — so the name over the
   // frame and the row in Show answers cannot come apart.
   showdownMode: true,
+  // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
+  // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
+  // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên
+  // danh sách này đọc thẳng thành bố cục: 2 mã đầu = cột 1, 2 mã kế = cột 2, …
+  // ⛔ Là MÃ ĐỊNH DANH, không phải chữ hiện ra (chữ có thể đổi — chính đợt này đã
+  // đổi "Show answer when wrong" thành "Show corrects").
+  // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
+  // tự xuống cuối — hai mode đó thầy chưa xếp.
+  checkOrder: ["shuffle", "showAnswers", "bpTime", "bpPoints", "bpX2"],
   name: "Balloon pop",
   inlineTimerBar: true,   // gives us ui.topbarMid for the countdown clock + level progress bar
 
@@ -142,9 +151,9 @@ const balloonPopTemplate = {
       cLevels.cell
     );
 
-    addCheck("Bonus: extra time", draft.bpBonusTime === true, v => draft.bpBonusTime = v);
-    addCheck("Bonus: points", draft.bpBonusPoints === true, v => draft.bpBonusPoints = v);
-    addCheck("Bonus: x2 score", draft.bpBonusX2 === true, v => draft.bpBonusX2 = v);
+    addCheck("Bonus: extra time", draft.bpBonusTime === true, v => draft.bpBonusTime = v, { key: "bpTime" });
+    addCheck("Bonus: points", draft.bpBonusPoints === true, v => draft.bpBonusPoints = v, { key: "bpPoints" });
+    addCheck("Bonus: x2 score", draft.bpBonusX2 === true, v => draft.bpBonusX2 = v, { key: "bpX2" });
   },
 
   mount(root, activity, ui) {
