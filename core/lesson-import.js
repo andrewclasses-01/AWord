@@ -448,17 +448,24 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
         clues[b.key] = at(b.clue);
       }
       if (!word) return;
-      // ⭐ Đợt 190 (teacher, 18/8/2026) — THE TRANSCRIPTION IS A CLUE SET OF ITS
-      // OWN. It used to leave the act altogether, as two standalone acts
-      // (PRONUNCIATION + IPA); it is now a fifth set inside WORDS, which is what
-      // lets Edit correct it on its own tab and what feeds the new IPA mode.
-      // Taken from the block's own /ipa/ column rather than by splitting the old
-      // "WORD /ipa/" summary column: that column is missing from 9 files and sits
-      // one place further right in another, while the per-block column is on every
-      // row of every table in the corpus.
+      // The transcription, taken from the block's own /ipa/ column rather than by
+      // splitting the old "WORD /ipa/" summary column: that column is missing from
+      // 9 files and sits one place further right in another, while the per-block
+      // column is on every row of every table in the corpus.
+      //
+      // ⛔⛔ Đợt 212 (20/8/2026, thầy) — IT IS A FIELD OF THE WORD, NOT A CLUE SET.
+      // Đợt 190 wrote it to `clues.pron`, which made it the fifth clue set: an
+      // Edit tab and an Options button inside the combined act. Thầy: *"Khi import
+      // cũng không import dữ liệu này vào act tích hợp chung này nữa"* — a
+      // PRONUNCIATION act of its own is coming.
+      // ⭐ Written to `ipa` instead of dropped, because two things that are NOT
+      // the retired clue set live off it and thầy kept both: MODE › IPA (through
+      // resolveItem's `rest.ipa`, core/content-view.js) and RUNNING WORD, which
+      // has printed the transcription beside each word since long before Đợt 190.
+      // ⚠️ So the column is still READ — only its destination moved. Stop reading
+      // it and two features die quietly, neither of them the one being retired.
       const ipa = vocabBlocks.map(b => at(b.ipa)).find(s => RE_IPA.test(s)) || "";
-      if (ipa) clues.pron = ipa;
-      WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues });
+      WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues, ipa });
     });
     return WORDS;
   };
@@ -473,7 +480,10 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     // Only offer a variant BUTTON for a clue set this file actually filled in —
     // the OPT-IN rule from Đợt 143: a control that is there but does nothing is
     // worse than a missing one, because nothing on screen says so.
-    const presentVariants = ["eng1", "eng2", "vi1", "vi2", "pron"]
+    // ⛔ Đợt 212 — "pron" is off this list: it is no longer a clue set at all
+    // (see readVocab above). `variantsOf()` would filter it out anyway, but a
+    // file that never writes it is one fewer thing relying on that filter.
+    const presentVariants = ["eng1", "eng2", "vi1", "vi2"]
       .filter(k => WORDS.some(it => (it.clues[k] || "").trim()));
     // ENG1/ENG2 clues are English, so they're the only two sets offered for
     // auto-TTS in the Import dialog's voice panel (teacher confirmed 10/8/2026).
@@ -508,9 +518,11 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     // ⛔ Đợt 190 — the two standalone acts this file used to build out of the
     // transcription column are GONE (teacher, 18/8/2026): `PRONUNCIATION` (an
     // Anagram clued by /ipa/) and `IPA` (Speaking cards showing "WORD /ipa/").
-    // Both said exactly what the WORDS act now says on its own PRONUNCIATION tab,
-    // and both are reachable from it — the first by picking that clue set, the
-    // second through MODE › IPA. Nine acts per lesson file becomes seven.
+    // Nine acts per lesson file becomes seven.
+    // ⚠️ Đợt 212 RETIRED THE CLUE SET BUT DID NOT BRING THESE BACK — thầy is
+    // building one PRONUNCIATION act with more in it than either of them had.
+    // Of the two ways in that Đợt 190 offered, MODE › IPA is the one still
+    // standing; picking the clue set is not.
     // ⚠️ Acts already imported under the old rule are untouched: they are ordinary
     // saved acts, and nothing here reaches into the teacher's library.
 
@@ -519,12 +531,13 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
     // word list (the same pool the teacher's hand-made `RunningW` sheet drew its
     // two 50-word lists from). No clues, no answers: the explainer supplies the
-    // meaning out loud. The transcription rides along when the row has one — it is
-    // read off the item's own PRONUNCIATION clue now, so it can never fall out of
-    // step with the word beside it.
+    // meaning out loud. The transcription rides along when the row has one, read
+    // off the same `ipa` field of the word (Đợt 212 — it used to come out of the
+    // `clues.pron` set, which no longer exists), so it can never fall out of step
+    // with the word beside it.
     if (WORDLIST.length >= 2) {
       acts.push(runningWord(`${source} / RUNNING WORD${suffix}`,
-        WORDS.map(it => ({ word: it.word, ipa: it.clues.pron || "" }))));
+        WORDS.map(it => ({ word: it.word, ipa: it.ipa || "" }))));
     }
     // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
     // picked out of the pool itself by look-alike score, so no clues are needed.

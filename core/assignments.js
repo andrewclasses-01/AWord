@@ -20,6 +20,11 @@
 // =============================================================
 
 import { db, fs, currentUser } from "./firebase.js";
+// Đợt 211 — the migration stamp travels WITH the snapshot; see snapshotOf().
+// A leaf module of its own, so this costs the student page nothing and cannot
+// reach the teacher's library — the ⛔ import boundary at the top of
+// core/engine.js stays intact.
+import { OPT_VER } from "./options-migrate.js";
 
 // No 0/O/1/I/l — teachers read these codes aloud and type them on phones.
 const CODE_ALPHABET = "23456789abcdefghjkmnpqrstuvwxyz";
@@ -49,10 +54,25 @@ function clean(value) {
 // on the "Set assignment" form, kept apart from the PRACTICE/HOMEWORK content
 // switch. When omitted, falls back to the act's own options (every caller
 // before Đợt C, and student-side reads that never pass one).
+//
+// ⭐⭐ Đợt 211 (20/8/2026) — `optVer` IS PART OF THE SNAPSHOT NOW.
+// It is the Đợt 143 stamp that says "these penalties are already on the 0..100
+// scale". Leaving it out made every assignment look like a pre-Đợt-143 act to
+// core/options-migrate.js, which runs again on the pupil's machine
+// (core/engine.js line ~285) — so a homework "Points off 30" was converted a
+// SECOND time and reached the child as 100. Measured before the fix: 30 -> 100.
+// ⚠️ Stamped with the CURRENT version rather than copied from `act.optVer`:
+// the options being frozen here have just come out of today's Options panel,
+// so they are on today's scale by construction — even when the act itself is
+// an old record that store.js has not re-saved yet.
+// ⚠️ Assignments given out BEFORE this đợt are NOT touched. Some of them are
+// older than Đợt 143 and their values genuinely still need converting; stamping
+// them now would freeze a 0..5 penalty as if it were 0..100.
 function snapshotOf(act, optionsOverride) {
   return clean({
     id: act.id,
     schemaVersion: act.schemaVersion ?? 1,
+    optVer: OPT_VER,
     type: act.type,
     title: act.title || "",
     instruction: act.instruction || "",

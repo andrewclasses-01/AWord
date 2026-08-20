@@ -23,6 +23,11 @@ import {
 import { listFolders, pathTo, createFolder } from "./store.js";
 import { ensureTemplate } from "./registry.js";
 import { getDefaultOptions, buildOptionsControls } from "./settings.js";
+// Đợt 211 — splits an options object into the keys that say WHICH CONTENT is
+// played (contentMode / contentVariant / voiceVariant / contentSet, plus the
+// optVer stamp) and the rest. Already the app's own name for that category —
+// see VIEW_SELECTOR_KEYS in core/content-view.js.
+import { splitViewOptions } from "./content-view.js";
 
 // =============================================================
 // HOMEWORK OPTIONS (Đợt C, 15/8/2026) — the bảng Options shown on both the
@@ -233,7 +238,37 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
 
     // --- homework options (Đợt C) — starts from the teacher's own "Default
     // homework options" (Settings), editable just for this one assignment.
-    const hwDraft = getDefaultOptions(act.type, "homework");
+    //
+    // ⭐⭐ Đợt 211 (20/8/2026, thầy) — ...AND THE ACT'S OWN CHOICE OF WHAT TO
+    // PLAY IS LAID OVER THE TOP. Thầy: "trong options chọn text nhưng act vẫn
+    // phát âm thanh và có nút loa để bấm nghe voice ở phía sau."
+    //
+    // Đợt C started this draft from the Settings defaults ALONE, and those hold
+    // five general fields only (BUILTIN_DEFAULTS in core/settings.js) — no
+    // `contentMode` among them. The Text/Voice row then "writes nothing until
+    // the teacher actually taps" (buildContentSwitchRow, core/options-panel.js),
+    // and TEXT is lit from the start, so an untouched form stored NOTHING. The
+    // assignment reached the pupil with `contentMode` unset, which is the AUTO
+    // branch of voiceView() — speaker button AND autoplay, the exact thing Text
+    // mode exists to remove.
+    //
+    // Two more went the same way, silently: the clue set (act on `vi1` was
+    // given out as `eng1`, activeVariant() falling back to the first) and the
+    // PRACTICE/HOMEWORK half (always `practice`, activeContentSet() likewise).
+    // Neither has a control on this form at all, so there was no way to correct
+    // them by hand.
+    //
+    // ⚠️ THIS DOES NOT BREAK "HAI CÔNG TẮC RỜI NHAU" (thầy, Đợt C). That rule
+    // is about the OPTIONS BUNDLE — timer, shuffling, show-answers — which
+    // still starts from the homework bucket and is still decided per
+    // assignment. The four keys taken from the act are the SELECTORS: not
+    // settings at all, but the name of the content being assigned. Handing a
+    // class a different clue set than the one on screen was never a choice
+    // anyone made; it was the absence of one.
+    // ⚠️ Laid OVER the defaults, so the row still shows the truth and the
+    // teacher can still change Text/Voice for this one assignment afterwards.
+    const hwDraft = { ...getDefaultOptions(act.type, "homework"),
+                      ...splitViewOptions(act.options).selectors };
     buildHomeworkOptionsField(body, act.type, hwDraft);
 
     // --- where it will be filed in Results (worked out from the title)

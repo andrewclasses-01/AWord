@@ -60,15 +60,16 @@
 // would otherwise be copied into three editor files.
 import { el } from "./utils.js";
 
-// ⭐ Đợt 190 (18/8/2026) — `pron` is the FIFTH clue set: the word's IPA
-// transcription, which until now left the act altogether as two standalone acts
-// (PRONUNCIATION + IPA). It is a clue set like any other — Edit gets a tab for
-// it, Options a button, and Anagram plays "unscramble the word, the clue is
-// /ˈtraʊzə/" — with one rule of its own: it is never offered a spoken clip,
-// because an English voice reads IPA symbols as nonsense. That rule needs no
-// code here: `voiceVariantsOf` below already answers from `content.voiceVariants`,
-// which the importer fills with the English sets only.
-export const VARIANT_LABEL = { eng1: "ENG1", eng2: "ENG2", vi1: "VI1", vi2: "VI2", pron: "PRONUNCIATION" };
+// ⛔⛔ Đợt 212 (20/8/2026, thầy) — `pron` IS NO LONGER A CLUE SET.
+// Đợt 190 made the IPA transcription the fifth set inside WORDS (Edit tab,
+// Options button, Anagram clueing off /ˈtraʊzə/). Thầy: *"bỏ hẳn phần
+// pronunciation trong options đi và không tích hợp phần pronunciation vào trong
+// act tích hợp nữa… Tôi sẽ build 1 act riêng với nhiều tính năng hơn cho phần
+// PRONUNCIATION này sau."*
+// It is filtered out in `variantsOf()` just below — ONE choke point, which is
+// why acts imported under Đợt 190 lose the button without anyone rewriting
+// them. Its label goes with it: nothing may render a set that cannot be picked.
+export const VARIANT_LABEL = { eng1: "ENG1", eng2: "ENG2", vi1: "VI1", vi2: "VI2" };
 
 // ---------------------------------------------------------------
 // CONTENT SETS — the SECOND axis (Đợt 146, 14/8/2026)
@@ -169,9 +170,28 @@ export function foldEditedSet(content, key) {
 }
 
 // The clue sets this act carries, or null for an ordinary act.
+// ⛔⛔ Đợt 212 — THE ONE PLACE `pron` IS TURNED AWAY.
+// Every reader of the clue sets comes through here: the Options row, the Edit
+// tabs, `activeVariant()`, the act-name label, the voice panel, the Fight gate.
+// So one filter retires the whole feature — including for acts ALREADY in the
+// library, which is what thầy asked for ("biến mất luôn — bỏ hẳn thật").
+//
+// ⚠️ NOT A DELETION. `content.variants` and `item.clues.pron` stay exactly as
+// they are in Firestore; they are simply not offered. The separate
+// PRONUNCIATION act thầy is going to build can read them straight back.
+// ⭐ And MODE › IPA keeps working throughout (thầy chose to keep it): it does
+// not ask this function anything — `resolveItem()` below lifts the
+// transcription onto `item.ipa`, which is where convert.js reads it.
+// ⚠️ An act saved with `contentVariant: "pron"` therefore falls back to its
+// first written set, because `activeVariant()` only keeps a stored value that
+// is still in THIS list. That fallback is the point, not a side effect.
+const RETIRED_VARIANTS = ["pron"];
+
 export function variantsOf(content) {
   const v = content && content.variants;
-  return Array.isArray(v) && v.length ? v : null;
+  if (!Array.isArray(v) || !v.length) return null;
+  const list = v.filter(k => !RETIRED_VARIANTS.includes(k));
+  return list.length ? list : null;
 }
 
 // The subset that may carry spoken clips. Vietnamese clues and raw IPA are
@@ -424,6 +444,12 @@ function resolveItem(it, key) {
     // them are reached through core/convert.js, which only ever sees the
     // RESOLVED act (`clues` is gone by then). Whichever clue set is on screen,
     // `ipa` says the same thing — which is exactly what makes it safe to carry.
+    // ⭐⭐ Đợt 212 — AND THIS IS WHY MODE › IPA SURVIVED the retirement of the
+    // `pron` clue set. Both spellings are read: `clues.pron` for the acts Đợt
+    // 190 imported, `rest.ipa` for everything imported from Đợt 212 on, where
+    // the importer writes the transcription onto the WORD instead of into a
+    // clue set nobody can choose any more. ⛔ Do not "tidy" either half away —
+    // one covers the library as it stands, the other everything to come.
     ipa: (clues && clues.pron) || rest.ipa || "",
     voice: clip.voice,
     voiceId: clip.voiceId,

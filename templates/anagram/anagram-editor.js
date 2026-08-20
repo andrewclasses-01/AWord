@@ -974,7 +974,16 @@ export function openAnagramEditor(container, activity, { onSave, onCancel, heade
         // not-yet-variant-aware reader show).
         const clues = {};
         Object.keys(it.clues || {}).forEach(k => { clues[k] = String(it.clues[k] || "").trim(); });
-        return { word, clue: clues[defaultKey] || "", clues, voices: { ...(it.voices || {}) } };
+        // ⚠️⚠️ Đợt 212 — `ipa` MUST BE LISTED HERE BY HAND. This rebuilds each
+        // row from named fields, so anything not named is dropped on Save. Until
+        // Đợt 212 the transcription lived inside `clues.pron` and rode along
+        // with the rest; now it is a field of the word, and leaving it out would
+        // mean MODE › IPA quietly emptied the first time thầy edited an act —
+        // no error, no warning, just blank cards on the next lesson.
+        // Only written when there IS one, so acts without a transcription stay
+        // byte-for-byte what they were.
+        return { word, clue: clues[defaultKey] || "", clues, voices: { ...(it.voices || {}) },
+                 ...(String(it.ipa || "").trim() ? { ipa: String(it.ipa).trim() } : {}) };
       })
       .filter(it => it.word !== "");
 
@@ -1197,7 +1206,12 @@ function normalize(activity, variantKeys, currentKey) {
       word: it.word || "",
       clue: clueOf(it, currentKey),
       voice: clip.voice, voiceId: clip.voiceId,
-      clues: { ...(it.clues || {}) }, voices: { ...(it.voices || {}) }
+      clues: { ...(it.clues || {}) }, voices: { ...(it.voices || {}) },
+      // Đợt 212 — carried through the draft for the same reason the save path
+      // names it: the editor passes rows by named field, so an unnamed one is
+      // gone before Save is ever pressed. No tab shows it and nothing edits it;
+      // it is a passenger, and the whole job here is not to drop the passenger.
+      ipa: it.ipa || ""
     };
   });
   return a;

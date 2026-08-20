@@ -8,6 +8,278 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 212 (20/8/2026) — ⛔ GỠ HẲN PRONUNCIATION KHỎI ACT TÍCH HỢP: HÀNG CÔNG TẮC VỀ TEXT | VOICE
+
+> 🟢 **CHỜ THẦY DUYỆT** — **32/32 ĐẠT** trên 3 bàn thử node (một trong đó **import THẬT** một file
+> .xlsx tự dựng) + **6 phép đo trên trình duyệt thật**, 0 lỗi console.
+
+Thầy giao (20/8/2026): *"bỏ hẳn phần pronunciation trong options đi và không tích hợp phần
+pronunciation vào trong act tích hợp nữa. Tôi sẽ build 1 act riêng với nhiều tính năng hơn cho phần
+PRONUNCIATION này sau. Đưa nút TEXT-VOICE và các act con về dạng như cũ, không có lựa chọn
+pronunciation nữa. Khi import cũng không import dữ liệu này vào act tích hợp chung này nữa."*
+
+Đây là **đảo ngược Đợt 190 + Đợt 205**. Sửa 6 file: `core/content-view.js` · `core/options-panel.js` ·
+`core/lesson-import.js` · `core/app.css` · `core/engine.js` (chỉ ghi chú) ·
+`templates/anagram/anagram-editor.js`.
+
+### 0. Hai chỗ hỏi thầy trước khi code (vì `pron` nuôi cả thứ KHÁC)
+
+| Hỏi | Thầy chốt |
+|---|---|
+| Chế độ chơi **MODE › IPA** (Speaking cards hiện `WORD /ipa/`) có bỏ luôn không? | **GIỮ** |
+| Act **đã có** trong thư viện đang mang bộ pron thì sao? | **Biến mất luôn — bỏ hẳn thật** (dữ liệu vẫn giữ nguyên trong CSDL) |
+
+⚠️ Câu hỏi thứ hai phải hỏi **lần thứ hai**: lượt đầu thầy chọn "chỉ áp dụng cho act import mới", mà
+điều đó **vênh** với chính câu thầy viết ("bỏ hẳn… về dạng như cũ") — giữ nút cho act cũ nghĩa là toàn
+bộ code pronunciation phải ở lại và hàng nút lúc 2 lúc 3. Nêu chỗ vênh ra thì thầy chốt "biến mất luôn".
+
+### 1. `variantsOf()` — MỘT cửa chặn duy nhất, thay cho việc sửa hàng chục nơi
+
+```js
+const RETIRED_VARIANTS = ["pron"];
+export function variantsOf(content) {
+  const v = content && content.variants;
+  if (!Array.isArray(v) || !v.length) return null;
+  const list = v.filter(k => !RETIRED_VARIANTS.includes(k));
+  return list.length ? list : null;
+}
+```
+
+⭐⭐ **Mọi người đọc bộ nghĩa đều đi qua đây**: hàng Options · tab trong Edit · `activeVariant()` · nhãn
+tên act · bảng sinh giọng · cổng Fight. Nên **một cái lọc là nghỉ hưu cả tính năng**, kể cả cho act
+đã nằm sẵn trong thư viện — đúng thứ thầy chốt.
+
+⚠️ **KHÔNG PHẢI XOÁ.** `content.variants` và `item.clues.pron` **còn nguyên** trong Firestore, chỉ là
+không được mời ra nữa. Act PRONUNCIATION riêng thầy sắp build đọc lại được ngay.
+⚠️ Act từng chọn `contentVariant: "pron"` nay **rơi về bộ chữ đầu tiên**, vì `activeVariant()` chỉ giữ
+giá trị còn nằm trong danh sách này. Rơi về là **có chủ ý**, không phải tác dụng phụ.
+`VARIANT_LABEL.pron` xoá theo — không được để hiện tên một bộ không chọn được.
+
+### 2. Hàng công tắc về đúng 2 nút
+
+`buildContentSwitchRow` bỏ hết `hasPron` · lọc chip · lớp `is-3mode` · nhánh `mode === "pron"` ·
+`sel.contentMode = value === "pron" ? "text" : value`. **−72 dòng, +36 dòng.**
+Giữ lại những thứ Đợt 205 làm mà **không** dính tới nút thứ ba: bộ thumb chạy theo `--n`/`--i`
+(khỏi hàn cứng số nút lần nữa) và `.is-wide` cho act chỉ có MỘT bộ nghĩa ở nửa đang sáng.
+
+### 3. ⚠️⚠️ BẪY NẶNG NHẤT ĐỢT NÀY: CỠ CHỮ, KHÔNG PHẢI CÁI NÚT
+
+Bỏ nút thứ ba xong, lưới báo xanh: "hàng có đúng 2 nút Text/Voice". **Nhưng đo cỡ chữ thì ra 8px.**
+
+`.aw-opt-switch-btn` mang `font-size: clamp(8px, 3.15cqw, 13px)` — công thức Đợt 205 dựng riêng cho
+chữ "PRONUNCIATION" 13 ký tự chen ba nút vào nửa hàng. `cqw` đo theo **cái switch**, mà switch vẫn là
+nửa hàng dù trên nút viết gì, nên khi chữ ngắn lại công thức **không tự nới ra**:
+
+| Bề ngang bảng | Trước khi vá | Sau khi vá | Trước Đợt 205 |
+|---|---|---|---|
+| 330px (bảng Options) | **8px** | **13px** | 13px |
+| 250px (bảng gọn) | **8px** | **13px** | 13px |
+| 600px (rộng rãi) | 8.6px | **13px** | 13px |
+
+⛔⛔ **BÀI HỌC: ĐO CHỮ, ĐỪNG CHỈ ĐẾM THẺ.** Một phép thử hỏi "hàng có mấy nút" sẽ **xanh hết** trong
+khi thầy nhận về hai cái nút chữ 8px. Cùng họ với bẫy Đợt 207 (`container-type` khai thường trực làm
+nhỏ chữ 17 template mà lưới xanh không bắt được). Bảng gọn cũng trả về `11px` phẳng như cũ.
+
+### 4. Import: phiên âm chuyển từ BỘ NGHĨA sang trường của TỪ
+
+```js
+const ipa = vocabBlocks.map(b => at(b.ipa)).find(s => RE_IPA.test(s)) || "";
+WORDS.push({ word, clue: clues[DEFAULT_VARIANT] || "", clues, ipa });   // truoc: clues.pron = ipa
+```
+
+`presentVariants` bỏ `"pron"` ⇒ act mới **không bao giờ** có bộ đó.
+
+⭐⭐ **VẪN ĐỌC CỘT /ipa/, CHỈ ĐỔI CHỖ ĐẶT.** Hai thứ **không phải** bộ nghĩa đang sống nhờ nó và thầy
+giữ cả hai:
+- **MODE › IPA** — qua `resolveItem()`: `ipa: (clues && clues.pron) || rest.ipa || ""`. **Đọc CẢ HAI
+  cách viết**: `clues.pron` cho act Đợt 190 đã import, `rest.ipa` cho mọi act từ Đợt 212 trở đi.
+  ⛔ Đừng "dọn" bên nào — một bên phủ thư viện đang có, một bên phủ mọi thứ sắp tới.
+- **RUNNING WORD** — in phiên âm cạnh mỗi từ, có từ **trước** Đợt 190. Nay đọc `it.ipa`.
+
+⚠️ Ngừng đọc cột đó thì **hai tính năng chết lặng**, mà chẳng cái nào là cái đang bị gỡ.
+
+### 5. ⚠️ BẪY THỨ HAI: TRÌNH SỬA LÀM RƠI HÀNH KHÁCH
+
+`anagram-editor.js` dựng lại từng dòng từ **các trường có tên**:
+
+```js
+return { word, clue: clues[defaultKey] || "", clues, voices: { ...(it.voices || {}) } };
+```
+
+Thời Đợt 190 phiên âm nằm **trong** `clues.pron` nên nó tự đi theo. Nay nó là trường riêng của từ ⇒
+**không có tên trong dòng này là bay mất khi Lưu**. Không lỗi, không cảnh báo — chỉ là MODE › IPA
+rỗng ruột từ lần thầy sửa act đầu tiên. Vá **cả hai đường**: đường NẠP (dựng bản nháp) và đường LƯU.
+Chỉ ghi khi thật sự CÓ phiên âm, nên act không có thì y nguyên từng byte.
+
+### 6. Bàn thử — 32/32 node + 6 phép đo trình duyệt
+
+**`scratch/dot212-import-test.mjs` (7/7) — IMPORT THẬT.** Dựng một file `.xlsx` bằng **chính SheetJS
+của app** (`core/vendor/xlsx.mjs`): sheet `WORDTABLE`, hai khối `/ipa/ · WORD · nghĩa`, khối hai tiếng
+Việt. Rồi cho `parseLessonToBundle()` ăn. Kết quả: 2 act (`WORDS`, `RUNNING WORD`) ·
+`variants = ["eng1","vi1"]` · **0 từ nào còn `clues.pron`** · **5/5 từ có `ipa`** · RUNNING WORD in
+đủ 5 phiên âm · **0 act tên PRONUNCIATION/IPA**.
+
+**`scratch/dot212-old-test.mjs` (12/12) — ACT CŨ.** `variantsOf` lọc sạch pron · act từng chọn `pron`
+rơi về `eng1` và chơi clue tiếng Anh · **MODE › IPA ra đúng `"TROUSERS  /ˈtraʊzə/"` ở CẢ hai đời act**
+· `clues.pron` và `content.variants` **còn nguyên** trong dữ liệu.
+
+**`scratch/dot211-test.mjs` (13/13)** — chạy lại, Đợt 211 không hồi quy (đợt này có sửa `content-view.js`).
+
+**Trên trình duyệt thật** (`scratch/dot212-ui.html`, nạp act cũ có sẵn bộ pron):
+nút chính `["Text","Voice"]` · chip `["ENG1","VI1"]` · không phần tử nào mang `.is-3mode` ·
+tab trong Edit `["ENG1","VI1"]` · **Lưu xong phiên âm còn nguyên** (cả `it.ipa` lẫn `clues.pron` cũ) ·
+cỡ chữ **13px** ở cả 3 bề ngang, **0 nút bị tràn chữ**.
+9/9 module nạp được qua HTTP thật, **0 lỗi console**.
+
+### 7. ⬜ Việc thầy nghiệm bằng mắt
+
+- Mở Options một act WORDS trên máy lớp: chỉ còn **TEXT | VOICE**, chữ **to như cũ**.
+- Import thử một file bài học thật: act WORDS không còn tab PRONUNCIATION, nhưng **MODE › IPA vẫn ra
+  thẻ `WORD /ipa/`** và RUNNING WORD vẫn in phiên âm.
+- Act cũ trong thư viện: nút PRONUNCIATION biến mất, act **không kẹt** — nó chơi bộ chữ đầu tiên.
+
+---
+
+## Đợt 211 (20/8/2026) — ⭐ BÀI GIAO PHẢI CHƠI ĐÚNG NHƯ ACT: HẾT TỰ PHÁT TIẾNG Ở CHẾ ĐỘ TEXT
+
+> ✅ **THẦY DUYỆT 20/8/2026 (“Ok phần đó”)** — **13/13 ĐẠT** trên bàn thử node + đối chiếu trước/sau trên
+> trình duyệt thật, **0 lỗi console**. Đi CHUNG MỘT COMMIT với Đợt 212 (thầy: “commit + push + ghi hồ sơ dự án một thể”).
+
+Thầy báo (20/8/2026): *"Khi chơi ở assignment, tôi thấy trong options chọn text nhưng act vẫn phát âm
+thanh và có nút loa để bấm nghe voice ở phía sau. Ở trong act thường tôi đã chỉnh việc này là text thì
+chỉ hiện text, hoàn toàn không liên quan đến voice rồi nhưng khi chơi ở assignment có vẻ chưa được chỉnh."*
+
+Sửa 2 file: `core/assignment-ui.js` · `core/assignments.js`. **Không đụng** engine, template, CSS,
+luật Firestore.
+
+### 1. Gốc của lỗi — bài giao KHÔNG chép options của act, nó thay bằng bộ khác
+
+Từ **Đợt C**, `openAssignmentSetup` dựng bảng Options của bài giao từ *Default homework options*:
+
+```js
+const hwDraft = getDefaultOptions(act.type, "homework");   // ← bản CŨ
+```
+
+Mà bucket đó chỉ có 5 trường chung (`BUILTIN_DEFAULTS`, `core/settings.js`): `timer` ·
+`timerTotalSeconds` · `shuffleQuestions` · `shuffleAnswers` · `showAnswers`. **Không có `contentMode`.**
+
+Cộng thêm luật ngầm của hàng Text/Voice (`buildContentSwitchRow`, `core/options-panel.js`):
+
+> *"⚠️ Writes nothing until the teacher actually taps."*
+
+Nút **TEXT sáng sẵn từ đầu**, nên thầy mở form thấy "đang là Text" mà **thật ra chưa có gì được ghi
+xuống**. Bài giao ra đời với `contentMode` **rỗng** → rơi vào **nhánh AUTO** của `voiceView()`
+(`core/voice-playback.js`), tức là "y như hồi chưa có tuỳ chọn Text/Voice": **nút loa + tự đọc**.
+
+⚠️ **Đây là hai cái bẫy nhân nhau, không phải một.** Bộ mặc định thiếu `contentMode` thì vô hại nếu
+hàng công tắc ghi giá trị đang sáng xuống; hàng công tắc im lặng cũng vô hại nếu bộ nền đã có sẵn
+`contentMode`. Mỗi cái một mình đều đúng theo thiết kế của nó. Chỉ khi đứng cạnh nhau mới đẻ ra một
+form **hiển thị một đằng, lưu một nẻo**.
+
+### 2. Hai chỗ hỏng kèm theo — không ai báo, vì không có control nào để so
+
+Cùng một gốc "cả bộ options bị thay mới", nên hai **selector** khác cũng bốc hơi. Đo bằng chính hàm của app:
+
+| Thầy đặt trên act | Bài giao thật ra chơi | Hàm rơi về đâu |
+|---|---|---|
+| bộ nghĩa `vi1` | **`eng1`** | `activeVariant()` → `all[0]` |
+| nửa `homework` | **`practice`** | `activeContentSet()` → `sets[0]` |
+
+⚠️ Form Set assignment **không có** hàng chọn bộ nghĩa lẫn hàng PRACTICE/HOMEWORK, nên đây không phải
+"thầy chọn nhầm" — **không có đường nào để chọn cả**.
+
+### 3. Lỗi thứ ba, tìm ra trong lúc dò — "Points off" bị nhân 20 lần
+
+`snapshotOf()` chép id/type/title/theme/options/content nhưng **quên `optVer`** — con dấu Đợt 143 nói
+"mấy con số phạt này đã ở thang 0..100 rồi". Thiếu dấu ⇒ `migrateActivityOptions()` chạy lại trên máy
+HS (`core/engine.js` ~dòng 285) và quy đổi **lần thứ hai**:
+
+```
+Act trong thư viện        -> pointsOff = 30
+Cùng số đó trong bài giao -> pointsOff = 100
+```
+
+⚠️ Chỉ cắn khi thầy có đặt "Points off" trong **Default homework options** — `pointsOff` là một CÀI
+ĐẶT nên nó đi từ bucket homework, không đi từ act. (Bàn thử mục 4 lúc đầu viết sai đúng chỗ này: kỳ
+vọng nó thừa kế từ act. **Bàn thử sai, không phải code sai** — sửa lại kỳ vọng cho đúng luật.)
+
+### 4. Cách sửa
+
+**`core/assignment-ui.js`** — đắp lựa chọn "chơi cái gì" của act lên trên bộ mặc định homework:
+
+```js
+const hwDraft = { ...getDefaultOptions(act.type, "homework"),
+                  ...splitViewOptions(act.options).selectors };
+```
+
+`splitViewOptions` là hàm **có sẵn** trong `core/content-view.js`, tách đúng nhóm `VIEW_SELECTOR_KEYS`
+= `contentMode` · `contentVariant` · `voiceVariant` · `contentSet` (+ `optVer` theo `VIEW_ACT_KEYS`).
+⭐ Không đẻ khái niệm mới — app đã tự đặt tên cho đúng nhóm này từ trước.
+
+**`core/assignments.js`** — `snapshotOf()` đóng dấu `optVer: OPT_VER`.
+
+⚠️ Đóng dấu bằng **phiên bản HIỆN TẠI**, không chép `act.optVer`: bộ options đang bị đóng băng vừa ra
+khỏi bảng Options hôm nay nên đương nhiên ở thang hôm nay, kể cả khi act là bản ghi cũ chưa được
+`store.js` lưu lại.
+
+### 5. ⚠️ VÌ SAO ĐIỀU NÀY KHÔNG PHẠM LUẬT "HAI CÔNG TẮC RỜI NHAU" (thầy chốt Đợt C)
+
+Luật đó nói về **BỘ CÀI ĐẶT** — timer, trộn câu, hiện đáp án — và bộ đó **vẫn** đi từ bucket homework,
+**vẫn** quyết định riêng cho từng bài giao (bàn thử mục 5 canh đúng chỗ này: act để `countDown` mà bài
+giao vẫn `countUp` theo homework).
+
+Bốn khoá lấy từ act là **SELECTOR**: chúng không phải cài đặt, chúng là **TÊN của nội dung đang được
+giao**. Giao cho lớp một bộ nghĩa khác với bộ đang hiện trên màn hình chưa bao giờ là một lựa chọn ai
+đó cân nhắc — nó là **sự vắng mặt của một lựa chọn**.
+
+⭐ Và vì đắp **LÊN TRÊN** chứ không thay thế, hàng Text/Voice vẫn còn trên form: nay nó **hiện đúng sự
+thật**, và thầy vẫn đổi riêng cho một bài giao được nếu muốn.
+
+### 6. Bàn thử — 13/13 ĐẠT
+
+`scratch/dot211-test.mjs` (+ `dot211-asg.mjs`: bản sao `assignments.js` **chỉ** thay dòng import
+firebase bằng stub và export `snapshotOf` — `diff` xác nhận thân hàm y hệt, tránh đúng cái bẫy "lưới
+chép cứng thứ vừa bị đổi" đã cắn 4 lần ở Đợt 209).
+
+| # | Kiểm | Kết quả |
+|---|---|---|
+| 1 | TEXT: không tiếng, không nút loa | act và bài giao **giống nhau** |
+| 2 | bộ nghĩa | cả hai `vi1` |
+| 3 | nửa PRACTICE/HOMEWORK | cả hai `homework` |
+| 4 | Points off | có dấu **30** · bỏ dấu đi thì **100** (dựng lại đúng lỗi cũ) |
+| 5 | luật hai công tắc | timer theo homework, **không** theo act |
+| 6 | act để VOICE | bài giao cũng VOICE + tự đọc |
+| 7 | act CŨ không có `contentMode` | **vẫn AUTO y như trước** — act sao, bài giao vậy |
+| 8 | rò rỉ thư viện | không trường `parentId`/`trashed`/`num`/`viewOptions` nào lọt |
+
+⭐ **Đối chiếu TRƯỚC/SAU trên trình duyệt thật** (`scratch/dot211-form.html` mở **cả hai bản** —
+bản cũ lấy từ `_backup/dot211/`), đọc nút nào đang sáng trên form Set assignment thật:
+
+| act | trước khi sửa | sau khi sửa |
+|---|---|---|
+| Text | Text | Text |
+| **Voice** | **Text** ❌ (nói dối) | **Voice** ✅ |
+| act cũ | Text | Text |
+
+**0 lỗi console** trên cả trang chủ lẫn trang thử; `import()` thật qua HTTP: `assignments.js` 22
+export, `assignment-ui.js` 9 export, `OPT_VER` = 2.
+📸 `screenshot` timeout (pane không hiện) — đợt này nghiệm bằng **số đo**, không bằng mắt.
+
+### 7. ⬜ Việc chỉ thầy làm được / cần biết
+
+- ⛔ **BÀI ĐÃ GIAO RA RỒI KHÔNG TỰ KHỎI.** Bản chụp đã đóng băng. Muốn chữa: mở **Edit assignment**
+  bấm một cái vào nút **TEXT** rồi SAVE, hoặc giao lại bài mới.
+- ⛔ **Cố ý KHÔNG vá bài cũ tự động**: có bài giao ra đời **trước Đợt 143**, số phạt của chúng thật sự
+  vẫn cần quy đổi — đóng dấu bừa bây giờ là **đóng băng một con số thang 0..5 như thể nó là 0..100**.
+- ⚠️ **Act đang để PRONUNCIATION**: bài giao **chơi đúng** IPA (vì `contentVariant:"pron"` được thừa
+  kế), nhưng trên form nút sáng vẫn là **TEXT** — hàng đó chỉ nhận 2 nút vì `buildOptionsControls`
+  không truyền `variants` sang. Lệch phần **nhìn**, không lệch phần **chạy**. Muốn nút PRONUNCIATION
+  hiện luôn trên form thì là một đợt riêng.
+- ⬜ Thầy đăng nhập thật: giao 1 bài từ act đang để Text → mở link HS → nghiệm **không còn nút loa,
+  không tự đọc**, và **đúng bộ nghĩa** thầy chọn.
+
+---
+
 ## Đợt 210 (20/8/2026) — ⭐ LÀM LẠI HIỆU ỨNG TÊN 3 BẠN ĐẦU: HÀO QUANG TĨNH, KHÔNG CÒN GÌ CHẠY TRÊN CHỮ
 
 > ✅ **THẦY DUYỆT + CHỐT BẢN 20/8/2026 ("ok xong. chốt bản này") — cho CẢ CHUỖI Đợt 207→210.**

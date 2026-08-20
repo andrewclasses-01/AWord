@@ -314,8 +314,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // a vocabulary act borrowed BY another template for a while, with the library
   // act left exactly as it was. RUNNING opens Running word or Running team off
   // the same word pool; IPA opens Speaking cards showing "WORD /ipa/", built out
-  // of the PRONUNCIATION clue set (core/lesson-import.js now imports it into the
-  // act instead of making two standalone acts of it).
+  // of each word's own `ipa` field (core/lesson-import.js imports the /ipa/
+  // column onto the word instead of making a standalone act of it).
+  // ⚠️ Đợt 212 retired the PRONUNCIATION clue set that used to hold it; this
+  // mode was deliberately KEPT (thầy) and reads `item.ipa`, which
+  // core/content-view.js fills from either spelling — see resolveItem().
   //
   // ⚠️ They are ordinary Change-template conversions underneath — `conv_…` id,
   // `_converted:true`, library untouched, exit = doSwitchTemplate(originAct.type)
@@ -2709,7 +2712,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // ⛔⛔ Đợt 190 — NO CLUE-SET ROW INSIDE A PLAY MODE, and this one is not
     // cosmetic. In both new modes the row is a DEAD control: RUNNING drops clues
     // altogether (its games race on bare words) and IPA builds every card from
-    // the PRONUNCIATION set whichever button is lit. Worse than dead, it was
+    // the transcription whichever button is lit. Worse than dead, it was
     // actively destructive — picking a set and pressing Apply runs
     // applySubActSelection, whose rebuild goes through doSwitchTemplate() and so
     // re-converts with NEITHER the `style:"ipa"` that makes the cards read
