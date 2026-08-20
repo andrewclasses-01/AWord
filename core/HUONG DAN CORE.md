@@ -881,17 +881,21 @@ Dải vàng chạy ngang chữ (`background-clip: text` + `color: transparent`) 
 - ⛔⛔ **HÀO QUANG LÀ `text-shadow`, KHÔNG BAO GIỜ `filter`** — Đợt 198 đã phải gỡ đúng thứ đó ra khỏi
   dòng chữ ngay dưới nó: `filter` đẻ stacking context. `text-shadow` **vẫn vẽ** khi chữ trong suốt, vì
   bóng đổ theo HÌNH DẠNG chữ chứ không theo màu chữ.
-- ⛔⛔ **Đợt 209 — DẢI MÀU CHẠY VÒNG PHẢI LÀ `repeating-linear-gradient` DỊCH ĐÚNG MỘT CHU KỲ.**
-  Bản Đợt 208 dùng dải HỮU HẠN (`background-size: 260%`) rồi chạy `background-position` từ `0%` tới
-  `260%` — và **`background-position` theo phần trăm KHÔNG dịch ảnh đi ngần ấy phần trăm**: nó **căn
-  điểm X% của ảnh vào điểm X% của hộp**. Khung cuối vì thế chẳng cách khung đầu trọn một ô nào, và mỗi
-  vòng lặp bắt đầu bằng một **cú giật nhìn thấy được** (thầy báo). Nay: dải LẶP, chạy **NGANG**
-  (`to right`), dịch **đúng một chu kỳ bằng đơn vị ĐỘ DÀI** (`4em`).
-  ⚠️ Ngang là cố ý — ở góc khác, chu kỳ chiếu lên trục X bằng chu kỳ chia cho một sin, và "đúng một
-  chu kỳ" thôi không còn là con số viết được vào keyframe.
-  ⚠️ Chu kỳ tính bằng `em` để co theo tên (fitPodiumNames thu nhỏ một số tên); dải và keyframe dùng
-  **cùng một `em`** nên liền mạch ở mọi cỡ. **LUẬT CHUNG: hoạt cảnh nào lặp vô hạn thì khung cuối phải
-  LÀ khung đầu — kiểm bằng con số, đừng kiểm bằng mắt.**
+- ⛔⛔ **Đợt 210 — KHÔNG CÒN GÌ CHẠY TRÊN CHỮ, VÀ ĐÓ LÀ LỆNH CỦA THẦY.** Lịch sử ba đợt của một hiệu
+  ứng, giữ lại vì nó dạy hai bài khác nhau:
+  1. Đợt 208 cho dải sáng chạy ngang chữ (dải HỮU HẠN + `background-position` theo %) → **khựng cuối
+     mỗi vòng**, vì `background-position` theo % KHÔNG dịch ảnh đi ngần ấy % — nó căn điểm X% của ảnh
+     vào điểm X% của hộp, nên khung cuối không trùng khung đầu.
+  2. Đợt 209 chữa đúng kỹ thuật: `repeating-linear-gradient` chạy ngang, dịch đúng MỘT chu kỳ bằng đơn
+     vị độ dài → liền mạch thật.
+  3. **Đợt 210 thầy xoá cả hai**: *"rất xấu… không có gì chạy ở bên trên tên cả."* Mượt cỡ nào cũng
+     vẫn là thứ đang bị chê. Nay chữ **vàng ĐẶC** + hào quang **thở** từ nền chữ: `text-shadow` **hai
+     lớp mỗi khung** (lõi hẹp sáng + quầng rộng mờ — một lớp đơn đọc ra là chữ nhòe, không phải chữ
+     phát sáng), nhịp `ease-in-out` 0→50→100 đối xứng nên không có mối nối theo cấu trúc.
+  ⛔ **Đừng đưa gradient/sheen nào quay lại `.aw-sd-pod-name.is-top`.**
+  **HAI LUẬT CHUNG rút ra:** (a) hoạt cảnh lặp vô hạn thì khung cuối phải LÀ khung đầu — kiểm bằng con
+  số, đừng kiểm bằng mắt; (b) **chữa cho mượt một hiệu ứng đang bị chê là chữa sai đề** — hỏi lại xem
+  thứ bị chê là lỗi kỹ thuật hay bản thân ý tưởng.
 - ⚠️ **Sparkle phải nằm trong bọc `.aw-sd-pod-nm`, KHÔNG nằm trong `.aw-sd-pod-name`** — ô tên mang
   `overflow:hidden` (chính nó làm cho tên quá dài đo được), nên sparkle đặt bên trong bị cắt đúng ở
   cái mép nó cần đứng lên.

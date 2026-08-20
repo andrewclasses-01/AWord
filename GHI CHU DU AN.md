@@ -8,6 +8,41 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 210 (20/8/2026) — ⭐ LÀM LẠI HIỆU ỨNG TÊN 3 BẠN ĐẦU: HÀO QUANG TĨNH, KHÔNG CÒN GÌ CHẠY TRÊN CHỮ
+
+**179/179 ĐẠT trên 3 bàn thử, 0 lỗi console.** Sửa đúng 1 file: `core/app.css` (1 khối).
+
+Thầy nhìn bản Đợt 209 thật: *"hiệu ứng lấp lánh của tên 3 bạn top đầu… rất xấu — xóa hoàn toàn hiệu
+ứng cũ đi (vẫn giữ màu vàng và sparkle quanh tên), thay bằng hiệu ứng hào quang cùng màu vàng tỏa ra
+từ nền của các chữ, không có gì chạy ở bên trên tên cả."*
+
+### Cái gì bỏ, cái gì giữ
+
+| | |
+|---|---|
+| ⛔ **BỎ HẲN** | dải sáng chạy ngang chữ — cả bản Đợt 208 (dải hữu hạn, khựng) LẪN bản Đợt 209 (dải lặp, liền mạch). Đợt 209 chữa đúng cái khựng, nhưng thứ thầy không ưng là **bản thân cái dải chạy** — chữa mượt cỡ nào cũng vẫn là thứ đang bị chê. Kèm theo: `background-clip: text` + `color: transparent` + 2 keyframes `goldshift`/`goldsweep` xoá sạch. |
+| ✅ **GIỮ** | màu vàng (nay là **màu đặc `#dd9d09`**, không còn trong suốt chờ dải màu) · sparkle quanh tên · hào quang. |
+| ⭐ **MỚI** | hào quang **thở** từ nền chữ: `text-shadow` **HAI LỚP mỗi khung** (lõi sáng hẹp + quầng rộng mờ — một lớp đơn nhìn như chữ bị nhòe, không phải như phát sáng), nhịp `ease-in-out` 0→50→100 đối xứng nên vòng lặp **không có mối nối theo cấu trúc** (giữ đúng bài học Đợt 209). |
+
+⚠️ Hào quang vẫn là `text-shadow`, **không bao giờ `filter`** (luật Đợt 198). `text-shadow` vẽ **SAU
+lưng** mực chữ — đúng nghĩa "tỏa ra từ nền của các chữ, không có gì chạy ở bên trên".
+
+⛔ **ĐỪNG "làm cho sinh động hơn" bằng cách đưa bất kỳ gradient/sheen nào quay lại chữ này** — hai đợt
+liền (208, 209) là hai phiên bản của đúng thứ thầy vừa xóa.
+
+### Bàn thử — 179/179 (pod **90** · panel 60 · review 29)
+
+Mục 7e của `sd207-pod.html` viết lại toàn bộ: nay kiểm **không còn gradient/background-clip nào trên
+chữ**, **2 keyframes cũ đã biến khỏi stylesheet**, chữ là **vàng đặc**, text-shadow **≥2 lớp**, và chỉ
+còn **một** animation (`aw-sd-goldglow`). ⚠️ Đây là lần hiếm hoi kỳ vọng của lưới bị đảo 180° trong
+một đợt — kỳ vọng cũ ("PHẢI có repeating-gradient") nay là điều bị CẤM; ai đọc lịch sử lưới đừng tưởng
+lưới sai.
+
+⬜ **CÒN LẠI — CHỈ THẦY**: hào quang mới có "đẹp" trên màn 86" không — máy đo được nó tỏa từ nền chữ
+và thở liền mạch, còn đẹp/xấu là mắt thầy. (Việc "chữ vàng bạn số 2 trên ô bạc" của Đợt 208 vẫn treo.)
+
+---
+
 ## Đợt 209 (20/8/2026) — ⭐ BỐN CHỖ THẦY NHÌN THẤY TRÊN BẢN THẬT
 
 **178/178 ĐẠT trên 3 bàn thử, 0 lỗi console.** Cả bốn việc đều là thứ **chỉ nhìn mới ra** — thầy chạy

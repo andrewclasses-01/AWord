@@ -5046,36 +5046,30 @@ html.aw-nhung .aw-below { display: none; }
    is what makes the clip visible — and `text-shadow` still draws, because a
    shadow is cast by the glyph SHAPE, not by its colour. */
 .aw-sd-pod-name.is-top {
-  /* ⛔⛔ Đợt 209 — THE OLD SWEEP JUMPED AT EVERY LOOP, and thầy saw it: "khi lặp
-     lại vòng lấp lánh có hiệu ứng khựng/giật bất thình lình khi hết vòng lặp".
-     Đợt 208 used a FINITE gradient (`background-size: 260%`) and animated
-     `background-position` 0% → 260%. Percentage background-position does not
-     translate an image by that percentage — it ALIGNS the image's X% point with
-     the box's X% point — so the end frame is nowhere near a whole tile away from
-     the start, and the loop restarts with a visible snap.
-     THE FIX IS THE GRADIENT, NOT THE TIMING: a `repeating-linear-gradient` that
-     runs LEFT-TO-RIGHT, moved by EXACTLY ONE PERIOD in a length unit. End frame
-     and start frame are then the same picture, so the loop has no seam at all.
-     ⚠️ Horizontal (`to right`) on purpose: at any other angle the period along
-     the X axis is the period divided by a sine, and "exactly one period" stops
-     being a number you can write in a keyframe.
-     ⚠️ The period is in `em`, so it scales with the name — and fitPodiumNames
-     shrinks some names. Both the gradient and the keyframe use the same `em`, so
-     it stays seamless at every size. */
-  background-image: repeating-linear-gradient(to right,
-    #c8901a 0em, #f0b429 1.1em, #fff6c9 2em, #f0b429 2.9em, #c8901a 4em);
-  -webkit-background-clip: text; background-clip: text;
-  color: transparent; -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 1.1cqw rgba(240, 180, 41, .55);
-  animation: aw-sd-goldsweep 3.2s linear infinite, aw-sd-goldglow 2.2s ease-in-out infinite;
-}
-@keyframes aw-sd-goldsweep {
-  from { background-position-x: 0em; }
-  to   { background-position-x: 4em; }     /* exactly one period — no seam */
+  /* ⛔⛔ Đợt 210 (thầy, sau khi nhìn bản Đợt 209 thật): "hiệu ứng lấp lánh…
+     rất xấu — xóa hoàn toàn hiệu ứng cũ đi (vẫn giữ màu vàng và sparkle quanh
+     tên), thay bằng hiệu ứng hào quang cùng màu vàng tỏa ra từ nền của các chữ,
+     KHÔNG có gì chạy ở bên trên tên cả."
+     So: the moving sheen (Đợt 208's finite gradient, then Đợt 209's seamless
+     repeating one) is GONE — both of them, on purpose. What remains is a SOLID
+     gold word with a breathing halo BEHIND the glyphs. Do not bring any
+     background-clip/gradient sweep back "to make it fancier": two đợt of sweeps
+     is exactly what thầy just deleted.
+     ⚠️ The halo is `text-shadow` — it radiates from the glyph SHAPES, i.e. "từ
+     nền của các chữ", and it draws BEHIND the ink, never over it. And it is
+     text-shadow, NEVER `filter` (stacking-context law, Đợt 198).
+     ⚠️ TWO shadow layers per frame: a tight bright core plus a wide soft wash —
+     one layer alone reads as blur, not as light.
+     ⚠️ The pulse is `ease-in-out` with symmetric 0/50/100 keyframes, so the loop
+     has no seam by construction (the Đợt 209 lesson, kept: an infinite loop's
+     last frame must BE its first). */
+  color: #dd9d09;
+  text-shadow: 0 0 0.5cqw rgba(240, 180, 41, .45), 0 0 1.4cqw rgba(240, 180, 41, .25);
+  animation: aw-sd-goldglow 2.4s ease-in-out infinite;
 }
 @keyframes aw-sd-goldglow {
-  0%, 100% { text-shadow: 0 0 0.7cqw rgba(240, 180, 41, .40); }
-  50%      { text-shadow: 0 0 1.7cqw rgba(255, 214, 92, .85); }
+  0%, 100% { text-shadow: 0 0 0.5cqw rgba(240, 180, 41, .45), 0 0 1.4cqw rgba(240, 180, 41, .25); }
+  50%      { text-shadow: 0 0 0.9cqw rgba(255, 214, 92, .85), 0 0 2.2cqw rgba(240, 180, 41, .50); }
 }
 
 /* ⭐ Đợt 207 — SPARKLES on the top three (thầy: "sparkle và sao nhỏ lấp lánh ẩn

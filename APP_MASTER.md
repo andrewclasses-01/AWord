@@ -8,7 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 209)** — 178/178 ĐẠT trên 3 bàn thử.
+> Cập nhật lần cuối: **20/8/2026 (Đợt 210)** — 179/179 ĐẠT trên 3 bàn thử.
+>
+> ---
+> **Đợt 210 — LÀM LẠI HIỆU ỨNG TÊN 3 BẠN ĐẦU: HÀO QUANG TĨNH, KHÔNG CÒN GÌ CHẠY TRÊN CHỮ.**
+> Thầy nhìn bản 209 thật: *"rất xấu — xóa hoàn toàn hiệu ứng cũ (vẫn giữ màu vàng và sparkle), thay
+> bằng hào quang cùng màu vàng tỏa ra từ NỀN của các chữ, không có gì chạy ở bên trên tên cả."*
+> Sửa đúng 1 khối trong `core/app.css`.
+> - ⛔ **BỎ HẲN dải sáng chạy ngang chữ** — cả bản 208 (khựng) LẪN bản 209 (đã liền mạch): 209 chữa đúng
+>   cái khựng nhưng thứ thầy không ưng là **bản thân cái dải chạy**. `background-clip:text` +
+>   `color:transparent` + 2 keyframes `goldshift`/`goldsweep` xoá sạch.
+> - ⭐ Nay: chữ **vàng ĐẶC `#dd9d09`** + hào quang **thở** bằng `text-shadow` **hai lớp** (lõi hẹp sáng
+>   + quầng rộng mờ — một lớp đơn nhìn như nhòe chứ không như phát sáng), `ease-in-out` 0→50→100 đối
+>   xứng ⇒ vòng lặp không có mối nối theo cấu trúc. Vẫn `text-shadow`, ⛔ không bao giờ `filter` (Đợt 198).
+> - ⛔ **ĐỪNG đưa bất kỳ gradient/sheen nào quay lại chữ này** — hai đợt liền là hai phiên bản của đúng
+>   thứ thầy vừa xóa.
+> - 🧪 **179/179 ĐẠT** (pod 90 · panel 60 · review 29). ⚠️ Kỳ vọng lưới mục 7e bị đảo 180° có chủ ý:
+>   "PHẢI có repeating-gradient" (209) nay là điều bị CẤM.
+>
+> ---
+> Trước đó: **20/8/2026 (Đợt 209)** — 178/178 ĐẠT trên 3 bàn thử.
 >
 > ---
 > **Đợt 209 — BỐN CHỖ THẦY NHÌN THẤY TRÊN BẢN THẬT.** Sửa 2 file: `core/showdown-review.js` + `app.css`.
