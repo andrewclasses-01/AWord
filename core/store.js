@@ -442,6 +442,76 @@ export async function folderCounts(id) {
   return { folders, acts };
 }
 
+// ---- QUICK ACCESS (Đợt 218) ------------------------------------------------
+// Pinning a folder to the home page's left-hand panel is stored AS A FIELD ON
+// THE FOLDER ITSELF, which looks odd until you read the security rules: the
+// published ones open exactly ONE path for the teacher's own data,
+// `users/{uid}/items/{itemId}` (docs/08-FIREBASE-SETUP.md). A pin list kept in
+// any other collection — `users/{uid}/prefs/...` being the obvious shape —
+// would be REFUSED by Firestore until the teacher opens the console and pastes
+// a new rule, and nothing on screen would say why the pin did not stick.
+//
+// Riding on the node buys two more things for free:
+//   • the pin follows the ACCOUNT, so ghim ở máy nhà là có luôn ở lớp và trên
+//     bảng TOMKO — the teacher never sets the same panel up three times;
+//   • it costs no extra read. readAll() already holds every folder in memory,
+//     so the whole panel is built from the cache the home page just used.
+// ⚠️ A trashed folder must not sit in the panel — listPinned() filters on
+// `!trashed`, so Delete removes it from the panel without a second write, and
+// Restore brings it back still pinned. Do not "helpfully" clear the flag in
+// trashItem(): that would lose the pin on every accidental delete.
+export async function setFolderPinned(id, on) {
+  const map = await readAll();
+  const n = map[id]; if (!n || n.kind !== "folder") return null;
+  if (on) {
+    n.pinned = true;
+    // A new pin goes to the BOTTOM of the panel, never into the middle of an
+    // order the teacher arranged by hand (Đợt 218b — the rows are draggable).
+    const top = Object.values(map)
+      .filter(x => x.root === n.root && x.kind === "folder" && !x.trashed && x.pinned && x.id !== id)
+      .reduce((m, x) => Math.max(m, Number.isFinite(x.pinOrder) ? x.pinOrder : -1), -1);
+    n.pinOrder = top + 1;
+  } else {
+    delete n.pinned;
+    // ⚠️ pinOrder is deliberately LEFT BEHIND. Re-pinning appends (above), so a
+    // stale number changes nothing; wiping it would be one more write for no
+    // visible effect, on a path the teacher may hit by mistake.
+  }
+  n.updatedAt = now();
+  await persist([n]);
+  return n;
+}
+
+// The pinned folders of one root, in the order the teacher dragged them into.
+// `pinOrder` first; anything without one (pinned before Đợt 218b, or written by
+// an older build) falls in behind, by name — never dropped, never shuffled.
+export async function listPinned(root) {
+  const map = await readAll();
+  const rank = n => (Number.isFinite(n.pinOrder) ? n.pinOrder : Number.MAX_SAFE_INTEGER);
+  return Object.values(map)
+    .filter(n => n.root === root && n.kind === "folder" && !n.trashed && n.pinned)
+    .sort((a, b) => rank(a) - rank(b) || byName(a, b));
+}
+
+// Write a whole new order in one batch — `ids` is the panel top to bottom.
+// ⚠️ Renumbers from 0 EVERY time rather than patching the moved row: two rows
+// that ever end up sharing a number would flip places on the next read, and the
+// teacher would have no way to tell which of the two arrangements is saved.
+export async function setPinnedOrder(root, ids) {
+  const map = await readAll();
+  const touched = [];
+  ids.forEach((id, i) => {
+    const n = map[id];
+    if (!n || n.kind !== "folder" || n.root !== root || !n.pinned) return;
+    if (n.pinOrder === i) return;      // already right — do not write it again
+    n.pinOrder = i;
+    n.updatedAt = now();
+    touched.push(n);
+  });
+  if (touched.length) await persist(touched);
+  return touched.length;
+}
+
 // Set (or clear, with null) the icon color of a FOLDER.
 export async function setFolderColor(id, color) {
   const map = await readAll();

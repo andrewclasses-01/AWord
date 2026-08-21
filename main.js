@@ -29,6 +29,7 @@ import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
   emptyTrash, setFolderColor, folderCounts, importBundle, sameName,
+  setFolderPinned, listPinned, setPinnedOrder,
   resetCache
 } from "./core/store.js";
 import {
@@ -100,6 +101,19 @@ async function init() {
   }
 
   window.addEventListener("popstate", () => routeFromLocation());
+  // Đợt 218b — the panel is a grid cell now, so the browser reflows it by
+  // itself; only its ROW SPAN is a number this file computed, and that has to
+  // be recomputed when the column count changes under it (myActivity changes
+  // its column count while the page is open). Cheap and idempotent, so it runs
+  // on every resize rather than trying to guess which ones matter.
+  let qaResizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(qaResizeTimer);
+    qaResizeTimer = setTimeout(() => {
+      const grid = document.querySelector(".aw-fm-grid");
+      if (grid) sizeQuickAccess(grid);
+    }, 120);
+  });
   await routeFromLocation();
 }
 
@@ -306,11 +320,21 @@ function openRoot(root, opts = {}) {
 
 // ---------------- inside a root (folder / search / trash) ----------------
 async function renderInside() {
+  // ⭐⭐ Đợt 218b — the Quick access panel is NOT a column beside the page any
+  // more: it is the FIRST CELL OF THE CARD GRID (thầy 20/8/2026, "vị trí thay
+  // thế cho thư mục đầu tiên về điểm cao nhất … không gian của thư mục còn 3
+  // cột thôi"). So the page keeps its original 1040px and its four columns —
+  // the panel simply takes column 1 and the cards get the other three.
+  //
+  // ⭐ Because the panel is now part of the grid, NOTHING here needs a media
+  // query: `repeat(auto-fill, minmax(200px, 1fr))` already drops a column at a
+  // time as the window narrows, and the panel — being the first item — keeps
+  // its place while the cards fall to the rows below. That IS the teacher's
+  // "ưu tiên hiển thị khung quick access hơn", got for free.
   const wrap = el("div", "aw-lib");
 
   // header: logo (left) + settings/Activities/Results cluster (right)
   wrap.append(topbar(true));
-
   wrap.append(await breadcrumb());
   wrap.append(toolbar());
 
@@ -339,11 +363,18 @@ async function renderInside() {
     // an empty Results folder are all still statements of fact — dropping a
     // lesson file into the recycle bin means nothing, and offering it there
     // would be an invitation to a place that cannot accept it.
+    // Đợt 218b — an empty view still shows the panel. It is the one thing on
+    // this screen that can take the teacher somewhere; hiding it exactly when
+    // there is nothing else here would be backwards.
     if (state.view === "trash" || state.view === "search" || state.root === "results") {
-      body.append(el("div", "aw-fm-empty",
+      const emptyGrid = el("div", "aw-fm-grid");
+      emptyGrid.append(await quickAccess());
+      emptyGrid.append(el("div", "aw-fm-empty aw-fm-empty-cell",
         state.view === "trash" ? "Recycle bin is empty."
         : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
         : "No assignments here yet. Give one out from an activity."));
+      body.append(emptyGrid);
+      sizeQuickAccess(emptyGrid);
       return;
     }
     const drop = el("div", "aw-imp-drop aw-fm-emptydrop",
@@ -365,7 +396,12 @@ async function renderInside() {
       const f = e.dataTransfer && e.dataTransfer.files[0];
       if (f) importFlow(f);
     });
-    body.append(drop);
+    const emptyGrid = el("div", "aw-fm-grid");
+    emptyGrid.append(await quickAccess());
+    drop.classList.add("aw-fm-empty-cell");
+    emptyGrid.append(drop);
+    body.append(emptyGrid);
+    sizeQuickAccess(emptyGrid);
     return;
   }
 
@@ -373,6 +409,10 @@ async function renderInside() {
   const resultFolders = state.root === "results" ? await listFolders("results") : [];
 
   const list = el("div", state.mode === "grid" ? "aw-fm-grid" : "aw-fm-list");
+  // The panel is the FIRST item of the grid, so it lands in cell (1,1) with no
+  // positioning of its own; in LIST view there are no columns to give away, so
+  // the wrapper below puts it beside the list instead.
+  list.append(await quickAccess());
   for (const node of items) {
     let card;
     if (state.view === "trash") card = trashCard(node);
@@ -385,7 +425,17 @@ async function renderInside() {
   if (state.root === "results") {
     assignments.forEach(a => list.append(state.view === "trash" ? trashAssignmentCard(a) : assignmentCard(a)));
   }
-  body.append(list);
+  if (state.mode === "grid") {
+    body.append(list);
+    sizeQuickAccess(list);
+  } else {
+    // LIST view has no columns to donate, so the panel sits beside the rows at
+    // the same width it has in the grid (core/app.css `.aw-fm-listwrap`).
+    const wrapRow = el("div", "aw-fm-listwrap");
+    wrapRow.append(list.firstChild);   // the panel
+    wrapRow.append(list);
+    body.append(wrapRow);
+  }
 }
 
 // In ACTIVITIES we do not show assignments, but we still want the "new results"
@@ -444,6 +494,306 @@ async function assignmentsForView() {
 function assignmentCountIn(folderId) {
   if (state.root !== "results") return 0;
   return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === folderId).length;
+}
+
+// ---------------- QUICK ACCESS (Đợt 218 · reshaped in 218b) ----------------
+// The left-hand panel of pinned folders, shaped like Windows Explorer's "Quick
+// access": ONLY the folders the teacher pinned, plus their children under an
+// arrow — never the whole tree (thầy chốt 20/8/2026).
+//
+// ⭐⭐ Đợt 218b — IT IS A CELL OF THE CARD GRID, not a column beside the page.
+// Being the grid's first item puts it exactly where the first folder card used
+// to be, at the top, one column wide; the cards take the remaining three. Three
+// things follow from that, and all three are the point:
+//   • the page keeps its original 1040px — nothing was widened to make room;
+//   • narrowing the window drops card columns one at a time, and because the
+//     panel is item ONE it keeps its place while cards fall to the rows below —
+//     the teacher's "vẫn ưu tiên hiển thị khung quick access hơn", for free;
+//   • no @media rule is involved anywhere.
+//
+// A folder gets in through its ⁝ menu, and the pin lives ON THE FOLDER NODE, so
+// the same panel comes up on all three machines (core/store.js setFolderPinned).
+// ⚠️ Costs NO extra Firestore read: listPinned() and listFolders() both read the
+// in-memory cache the library page has already loaded.
+const QA_OPEN_KEY = "aword-qa-open";   // which branches are unfolded — per MACHINE (a screen belongs to a machine, not to an account)
+
+function qaOpenSet() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(QA_OPEN_KEY));
+    return new Set(Array.isArray(raw) ? raw : []);
+  } catch { return new Set(); }
+}
+function qaSaveOpen(set) {
+  try { localStorage.setItem(QA_OPEN_KEY, JSON.stringify([...set])); } catch { /* a panel is not worth an error */ }
+}
+
+// How tall the panel may be, in whole grid rows. Its natural height follows the
+// number of pinned folders (thầy: "dài nhiều hay ít dựa vào số thư mục được
+// ghim"), with a floor of TWO card rows.
+//
+// ⚠️ WHY THIS IS MEASURED AND NOT WRITTEN IN THE STYLESHEET. A grid item can
+// only span WHOLE rows, and the row height is whatever a card happens to be —
+// 183px today, but that is the sum of a preview, a foot, a border and a font,
+// any one of which a later đợt may change. Reading one real card keeps the
+// floor at "two folders tall" instead of at a number that silently stops being
+// two folders tall.
+// ⚠️ And the span must be set, not left to `auto`: an auto-placed item occupies
+// ONE row, so a taller panel would stretch that single row and drag every card
+// beside it to the same height.
+function sizeQuickAccess(grid) {
+  const qa = grid.querySelector(".aw-qa");
+  if (!qa) return;
+  const gridCs = getComputedStyle(grid);
+  const gap = parseFloat(gridCs.rowGap) || 16;
+  // Đợt 218c — the separator hairline only means something while cards sit
+  // BESIDE the panel. Down to one column they sit below it instead, and the
+  // line would be pointing at the page margin. This is the one place that
+  // already reads the column count, so the flag is set from here.
+  qa.classList.toggle("is-alone", gridCs.gridTemplateColumns.split(" ").length < 2);
+
+  // ⛔⛔ THIS FUNCTION MUST NOT READ ITS OWN OUTPUT — measured, cost a real bug.
+  // First version took both numbers off `getBoundingClientRect()`:
+  //   rowH  = a card's box   — but a grid item STRETCHES to its row, and the
+  //           panel is what sets that row's height, so a tall panel made the
+  //           cards read tall;
+  //   need  = the panel's box — but the panel is stretched to the rows it was
+  //           given LAST time, so it read back whatever it had just been told.
+  // Both are feedback, and together they RATCHET: at 820px a 3-pin panel came
+  // out `span 3`, 480px high, and every recalculation grew it again. Nothing
+  // errored; it just got taller.
+  // The fix is to measure only things nothing here can inflate:
+  //   • the card's INTRINSIC height — `align-self: start` for the length of one
+  //     read drops it out of the row's stretch, so what comes back is the card's
+  //     own content and not whatever the tallest thing in its row happens to be;
+  //   • the panel's content by SUMMING ITS ROWS, never its own box.
+  //
+  // ⚠️ A FOLDER card by preference, and this is not fussiness: thầy's floor is
+  // "2 lần thư mục A1C", and an ACT card is taller (it carries a question
+  // preview). Measuring whichever card came first made the floor 383px on a
+  // screen where two folders are 342px — and that surplus then stretched the
+  // very rows it was measured against. Ask for the thing the rule names.
+  const card = grid.querySelector(".aw-card-folder") || grid.querySelector(".aw-card");
+  let rowH = 0;
+  if (card) {
+    const keep = card.style.alignSelf;
+    card.style.alignSelf = "start";                  // synchronous: this reflow happens before paint
+    rowH = card.getBoundingClientRect().height;
+    card.style.alignSelf = keep;
+  }
+  // No card to measure (an empty folder): one "row" is simply the floor itself,
+  // which keeps the panel exactly two folders tall — the only honest answer
+  // when there is no folder on screen to be two of.
+  if (!rowH) { qa.style.minHeight = ""; qa.style.gridRow = ""; return; }
+
+  const floor = rowH * 2 + gap;                      // thầy: "tối thiểu bằng 2 lần thư mục A1C"
+  const head = qa.querySelector(".aw-qa-head");
+  const list = qa.querySelector(".aw-qa-list");
+  const cs = getComputedStyle(qa);
+  let chrome = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) +
+               parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+  if (head) chrome += head.getBoundingClientRect().height + (parseFloat(getComputedStyle(head).marginBottom) || 0);
+  const content = list ? [...list.children].reduce((h, n) => h + n.getBoundingClientRect().height, 0) : 0;
+
+  const need = Math.max(chrome + content, floor);
+  const rows = Math.max(2, Math.ceil((need + gap) / (rowH + gap)));
+  qa.style.minHeight = floor + "px";
+  qa.style.gridRow = "span " + rows;
+}
+
+async function quickAccess() {
+  const aside = el("aside", "aw-qa");
+  aside.append(el("div", "aw-qa-head", '<span class="aw-qa-title">Quick access</span>'));
+
+  const list = el("div", "aw-qa-list");
+  aside.append(list);
+
+  const pinned = await listPinned(state.root);
+  if (!pinned.length) {
+    // An empty panel must SAY how to fill it — the pin lives in a folder card's
+    // ⁝ menu, which is not a place anyone would guess at.
+    list.append(el("div", "aw-qa-empty",
+      "No folders pinned yet.<br>Open a folder's ⁝ menu and choose <b>Pin to Quick access</b>."));
+    return aside;
+  }
+
+  // Everything below is built from ONE snapshot of the folder table.
+  const all = await listFolders(state.root);
+  const kidsOf = new Map();
+  all.forEach(f => {
+    const k = f.parentId ?? null;
+    if (!kidsOf.has(k)) kidsOf.set(k, []);
+    kidsOf.get(k).push(f);
+  });
+
+  // The chain from a pinned folder down to the one the teacher is standing in.
+  // Those branches open by themselves, so the panel always shows WHERE YOU ARE
+  // instead of making the teacher re-open the path after every click.
+  const byId = new Map(all.map(f => [f.id, f]));
+  const trail = new Set();
+  for (let n = state.folderId ? byId.get(state.folderId) : null; n; n = n.parentId ? byId.get(n.parentId) : null) {
+    trail.add(n.id);
+  }
+
+  const open = qaOpenSet();
+  const ctx = { kidsOf, trail, open, pinnedRoot: true, list };
+  pinned.forEach(node => list.append(qaBranch(node, 0, ctx)));
+  return aside;
+}
+
+// One folder in the panel: its row, plus a container for its children that is
+// filled the FIRST time the branch is unfolded. Building every descendant up
+// front would walk the teacher's whole tree on every render, for rows nobody
+// has asked to see.
+function qaBranch(node, depth, ctx) {
+  const branch = el("div", "aw-qa-branch");
+  branch.dataset.id = node.id;
+  const kidNodes = ctx.kidsOf.get(node.id) || [];
+  const row = el("div", "aw-qa-row" + (node.id === state.folderId ? " is-current" : ""));
+  row.style.paddingLeft = (6 + depth * 14) + "px";
+
+  const arrow = el("button", "aw-qa-arrow", kidNodes.length ? icons.next : "");
+  arrow.type = "button";
+  if (kidNodes.length) {
+    arrow.title = "Show sub-folders";
+    arrow.setAttribute("aria-label", arrow.title);
+  } else {
+    // A leaf keeps the SPACE of an arrow, so every name in the panel starts on
+    // the same vertical line as its siblings.
+    arrow.disabled = true;
+    arrow.classList.add("is-blank");
+  }
+
+  const label = el("button", "aw-qa-label");
+  label.type = "button";
+  const ic = el("span", "aw-qa-ficon", FOLDER_SVG);
+  ic.style.color = node.color || FOLDER_DEFAULT_COLOR;
+  label.append(ic, el("span", "aw-qa-name", escapeText(itemName(node))));
+  label.onclick = () => enterFolder(node.root, node.id);
+
+  row.append(arrow, label);
+  if (ctx.pinnedRoot) {
+    // Unpin sits on the row itself: the panel is where a stale pin gets
+    // noticed, and sending the teacher back to the folder card to undo it
+    // would be a trip for nothing.
+    const unpin = el("button", "aw-qa-unpin", icons.pin);
+    unpin.type = "button"; unpin.title = "Remove from Quick access";
+    unpin.setAttribute("aria-label", unpin.title);
+    unpin.onclick = async e => {
+      e.stopPropagation();
+      await setFolderPinned(node.id, false);
+      render();
+    };
+    row.append(unpin);
+    makePinDraggable(row, branch, ctx.list);
+  }
+  // Drag a card (or an assignment) onto a row to move it into that folder —
+  // the SAME helper the cards and the breadcrumb already use, so the guard
+  // against moving a folder into its own subtree holds here too.
+  makeDropTarget(row, () => node.id, node);
+  branch.append(row);
+
+  const kids = el("div", "aw-qa-kids");
+  branch.append(kids);
+  let built = false;
+  const fill = () => {
+    if (built) return;
+    built = true;
+    kidNodes.forEach(k => kids.append(qaBranch(k, depth + 1, { ...ctx, pinnedRoot: false })));
+  };
+  const setOpen = on => {
+    row.classList.toggle("is-open", on);
+    if (on) fill();
+    kids.style.display = on ? "" : "none";
+  };
+  setOpen(kidNodes.length > 0 && (ctx.open.has(node.id) || ctx.trail.has(node.id)));
+  arrow.onclick = e => {
+    e.stopPropagation();
+    const nowOpen = !row.classList.contains("is-open");
+    setOpen(nowOpen);
+    // Only the teacher's OWN folding is remembered. A branch that opened just
+    // because the current folder sits inside it is not a preference, and
+    // writing it down would slowly unfold the whole panel by itself.
+    if (nowOpen) ctx.open.add(node.id); else ctx.open.delete(node.id);
+    qaSaveOpen(ctx.open);
+    // The panel just changed height, so its row span may be stale.
+    const grid = row.closest(".aw-fm-grid");
+    if (grid) sizeQuickAccess(grid);
+  };
+  return branch;
+}
+
+// ---- dragging a PINNED row up and down (Đợt 218b) ---------------------------
+// ⛔⛔ POINTER EVENTS, NOT HTML5 DRAG. Every other drag in this app
+// (`makeDraggable`) uses `draggable=true` + dragstart, and that whole API is
+// MOUSE ONLY: Chromium never synthesises it from touch, so on the teacher's 86"
+// TOMKO screen an HTML5-drag reorder would be a feature that simply does not
+// exist — exactly the trap the panel's unpin button avoids by refusing to be a
+// hover-reveal. Pointer events cover mouse, pen and finger with one path.
+//
+// ⚠️ `touch-action: none` on the row (core/app.css) is REQUIRED, not tidiness:
+// without it the browser claims the gesture for scrolling and pointermove stops
+// firing mid-drag. Đợt 216 learned the matching lesson on the slider — a
+// `preventDefault` on pointerdown does NOT hold a finger.
+//
+// ⚠️ The two drags cannot collide: this one never touches `draggingId`, so the
+// makeDropTarget listeners on the same row see no HTML5 drag in flight and do
+// nothing.
+const QA_DRAG_SLOP = 6;   // px of travel before a press becomes a drag, not a tap
+
+function makePinDraggable(row, branch, list) {
+  let startY = 0, pointerId = null, dragging = false;
+
+  const onMove = e => {
+    if (!dragging) {
+      if (Math.abs(e.clientY - startY) < QA_DRAG_SLOP) return;
+      dragging = true;
+      try { row.setPointerCapture(pointerId); } catch { /* pointer already gone */ }
+      branch.classList.add("is-dragging");
+    }
+    moveTo(e.clientY);
+  };
+
+  // Re-home the branch as the pointer crosses a sibling's midpoint. The real
+  // element moves — no ghost, no placeholder — so what the teacher sees during
+  // the drag IS the order that will be saved.
+  const moveTo = y => {
+    const sibs = [...list.children].filter(n => n !== branch && n.classList.contains("aw-qa-branch"));
+    for (const sib of sibs) {
+      const r = sib.getBoundingClientRect();
+      const mid = r.top + r.height / 2;
+      const branchIsAfter = !!(sib.compareDocumentPosition(branch) & Node.DOCUMENT_POSITION_FOLLOWING);
+      if (y < mid && branchIsAfter) { list.insertBefore(branch, sib); return; }
+      if (y > mid && !branchIsAfter) { list.insertBefore(branch, sib.nextSibling); return; }
+    }
+  };
+
+  const onUp = () => {
+    row.removeEventListener("pointermove", onMove);
+    row.removeEventListener("pointerup", onUp);
+    row.removeEventListener("pointercancel", onUp);
+    if (!dragging) return;
+    dragging = false;
+    try { row.releasePointerCapture(pointerId); } catch { /* already released */ }
+    branch.classList.remove("is-dragging");
+    // A pointerup at the end of a drag is still followed by a click, and that
+    // click would open the folder the teacher was only rearranging. Swallow
+    // exactly one, in the capture phase, before the label's handler sees it.
+    row.addEventListener("click", ev => { ev.stopPropagation(); ev.preventDefault(); },
+                         { capture: true, once: true });
+    const ids = [...list.children].filter(n => n.classList.contains("aw-qa-branch")).map(n => n.dataset.id);
+    // No re-render: the DOM already IS the new order, and rebuilding it here
+    // would take the panel out from under the finger that just let go.
+    setPinnedOrder(state.root, ids).catch(() => toastMsg("Could not save the new order."));
+  };
+
+  row.addEventListener("pointerdown", e => {
+    if (e.button != null && e.button !== 0) return;          // right-click is not a drag
+    if (e.target.closest(".aw-qa-arrow, .aw-qa-unpin")) return;  // those are buttons, not a handle
+    startY = e.clientY; pointerId = e.pointerId; dragging = false;
+    row.addEventListener("pointermove", onMove);
+    row.addEventListener("pointerup", onUp);
+    row.addEventListener("pointercancel", onUp);
+  });
 }
 
 async function breadcrumb() {
@@ -865,6 +1215,7 @@ function folderMenuItems(node) {
   return [
     ["Open in new tab", () => openInNewTab(node)],
     ["Copy link", () => copyLinkFlow(node)],
+    [node.pinned ? "Remove from Quick access" : "Pin to Quick access", () => pinFlow(node)],
     ["Rename", () => renameFlow(node)],
     ["Color", () => colorFlow(node)],
     ["Move", () => moveFlow(node)],
@@ -1589,6 +1940,17 @@ function colorFlow(node) {
     body.append(actions);
   });
 }
+// Đợt 218 — pin/unpin a folder to the Quick access panel. Turning a pin ON
+// also makes sure the panel is SHOWING: a teacher who pins something and sees
+// nothing happen has been told the feature is broken.
+async function pinFlow(node) {
+  const on = !node.pinned;
+  await setFolderPinned(node.id, on);
+  toast(on ? `Pinned “${itemName(node)}” to Quick access`
+           : `Removed “${itemName(node)}” from Quick access`);
+  render();
+}
+
 async function duplicateFlow(node) {
   // duplicateItem counts the name up ("... (2)") rather than refusing.
   try { await duplicateItem(node.id); } catch (e) { toastMsg(e.message || "Could not duplicate."); }

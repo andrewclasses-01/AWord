@@ -8,7 +8,15 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 216 + 217)** — **CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s
+> Cập nhật lần cuối: **20/8/2026 (Đợt 218 + 218b + 218c)** — ⭐⭐ **KHUNG QUICK ACCESS Ở TRANG CHỦ**:
+> 218 dựng nó (thư mục ghim + con của nó, mũi tên xổ, kéo-thả vào được), **218b đổi hình** theo lời
+> thầy — nay là **Ô ĐẦU TIÊN CỦA LƯỚI** (luôn hiện, chiếm cột 1, card còn 3 cột, cao tối thiểu 2 card
+> thư mục), và **kéo sắp xếp được thứ tự mục ghim bằng POINTER events** (chạy cả trên ngón tay).
+> **218c** thêm **vạch kẻ mảnh trong khe** ngăn khung với các thư mục (ẩn khi lưới còn 1 cột).
+> Sửa `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`.
+> ✅ **THẦY DUYỆT** (*"ok ngon rồi"*) — ba đợt đi **CHUNG MỘT COMMIT**, đã **PUSH + LIVE**.
+> Đọc khối **Đợt 218c → 218b → 218** đầu `GHI CHU DU AN.md`.
+> Trước đó: **(Đợt 216 + 217)** — **CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s
 > VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY** (216) và **TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG
 > LAN · CHE BÀI KHI FIGHT · RESET SẠCH** (217) — ✅ **THẦY DUYỆT 216**, hai đợt đi **CHUNG MỘT COMMIT**
 > theo đúng lời thầy — commit `6244fe0`, **ĐÃ PUSH + LIVE** (11/11 mã băm SHA-256 khớp, 12/12 phép
@@ -3483,7 +3491,32 @@ Vanilla JS, **zero-build**, chạy trên GitHub Pages.
 Khối trích dẫn dài ở **đầu file này** luôn là tóm tắt 3-4 đợt gần nhất — đọc nó là biết chuyện gì
 vừa xảy ra.
 
-### 3. Đứng ở đâu (20/8/2026 — sau Đợt 217)
+### 3. Đứng ở đâu (20/8/2026 — sau Đợt 218 + 218b + 218c)
+
+> ⚠️⚠️ **CÓ VIỆC CHƯA COMMIT — ĐỌC TRƯỚC KHI LÀM BẤT CỨ GÌ.** **Đợt 218 + 218b** (khung **Quick
+> access** ở trang chủ) đã **code xong + đo xong trên app thật** (12/12 phép kiểm), nhưng **CHƯA
+> commit, CHƯA push, CHƯA lên bản live** — đang **chờ thầy duyệt**. Bốn file đang khác `origin/main`:
+> `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`, cộng bàn thử
+> `scratch/dot218-qa.html` (scratch bị gitignore).
+> Toàn bộ con số nằm ở khối **Đợt 218b → 218** đầu `GHI CHU DU AN.md`. **Bốn luật rút ra:**
+> 1. Cờ ghim nằm **trên chính node thư mục** vì luật Firestore chỉ mở `users/{uid}/items/{itemId}` —
+>    collection mới sẽ bị từ chối **trong im lặng**.
+> 2. ⛔⛔ **`sizeQuickAccess()` KHÔNG ĐƯỢC ĐỌC KẾT QUẢ CỦA CHÍNH NÓ.** Ô lưới bị kéo giãn theo hàng, mà
+>    hàng cao bao nhiêu lại do chính nó quyết ⇒ đo bằng `getBoundingClientRect()` là **phình dần**
+>    (`span 3`, 480px, mỗi lần tính lại to thêm). Phải đo chiều cao **RUỘT** của **card THƯ MỤC**
+>    (`align-self: start` một nhịp) và cộng các dòng, đừng đọc hộp của khung.
+>    🔎 Bắt bằng cách chạy lại 4-5 lần rồi so — lần 5 phải bằng lần 1.
+> 3. ⛔⛔ **HTML5 drag CHỈ CÓ CHUỘT.** Kéo sắp xếp mục ghim dùng **pointer events** + `touch-action:
+>    none`, nếu không thì trên TOMKO tính năng **không tồn tại**. Kéo xong phải **nuốt đúng 1 click**.
+> 4. `core/app.css` **không có luật `@media` bố cục nào** — 218b đã gỡ cái duy nhất từng có. Lưới
+>    `auto-fill` tự rụng cột, khung là phần tử số 1 nên tự được ưu tiên.
+>
+> ⬜ **Chờ mắt/tay thầy**: khung trông thế nào trên màn 86" (pane test bị ẩn ⇒ **không chụp được ảnh
+> nào**) · dòng khung cao **29px** có quá nhỏ cho ngón tay không · **kéo sắp xếp bằng NGÓN TAY thật**
+> (máy chỉ dựng được pointer event tổng hợp) · ghim/gỡ trên **Firestore thật** và xác nhận ghim ở máy
+> này hiện luôn ở máy kia.
+>
+> Bên dưới là trạng thái tính tới **Đợt 217**, vẫn đúng cho mọi mảng khác:
 
 > ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC CODE NÀO DỞ DANG.** Đợt 216 + 217 đi **CHUNG MỘT COMMIT `6244fe0`**
 > (+ hồ sơ `7d00059`, + vá CRLF `c8f9c89`) — **ĐÃ PUSH + LIVE**, đối chiếu **11/11 file trùng mã băm
@@ -3761,6 +3794,22 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐⭐ **MỚI NHẤT (Đợt 218 + 218b, 20/8/2026) — KHUNG QUICK ACCESS, CHỜ THẦY DUYỆT:**
+> 1. ⬜ **Nhìn khung trên màn 86"** — máy này **không chụp được khung hình nào** (pane bị ẩn ⇒ không
+>    compositing), nên mọi thứ thuộc "thuận mắt" chưa ai xem.
+> 2. ⬜ ⭐ **KÉO SẮP XẾP BẰNG NGÓN TAY THẬT trên TOMKO** — máy chỉ dựng được pointer event tổng hợp.
+>    Ngưỡng nhận kéo đang là **6px**; chạm hụt thành kéo thì nới, kéo mà không ăn thì thu.
+> 3. ⬜ **Dòng khung cao 29px** — gọn đúng kiểu Explorer nhưng hơi nhỏ cho ngón tay. Nới là đổi
+>    `padding` của `.aw-qa-label`; chưa tự đổi vì thầy nói *"tương tự Explorer"*.
+> 4. ⬜ **Ghim/gỡ + đổi thứ tự với Firestore THẬT** (bàn thử dùng `scratch/fake-firebase-full.js`), và
+>    xác nhận ghim ở máy này **hiện luôn ở máy kia** — đó là cả lý do cờ nằm trên node.
+> 5. ⬜ **Mở AWord trong myActivity chia 3-4 cột**: xem lưới rụng còn 1-2 cột thì khung có còn dễ dùng
+>    không, và card bị đẩy xuống có phiền không.
+> 6. ⬜ **(218c) Vạch kẻ ngăn cách nhìn từ cuối lớp** có rõ không — đang là `#d7e0ec`; nhạt quá thì
+>    đổi sang `#c7d3e2`. ⚠️ Vạch vẽ RA NGOÀI hộp khung, nên đừng trả `overflow: hidden` về `.aw-qa`:
+>    làm vậy là **cắt mất nó mà không báo gì**.
+> 7. ⬜ Thầy chốt xong thì mới **commit + push** — hiện 4 file đang khác `origin/main`.
 
 > ⭐⭐⭐ **CẬP NHẬT 20/8/2026 (sau Đợt 217) — ĐÂY LÀ DANH SÁCH ĐÚNG. Mọi khối ⬜ bên dưới là của các đợt
 > CŨ HƠN, giữ lại vì phần lớn vẫn là "chỉ mắt/tay thầy mới kiểm được".**

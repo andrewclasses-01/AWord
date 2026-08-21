@@ -8,6 +8,281 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 218c (20/8/2026) — VẠCH KẺ MẢNH NGĂN QUICK ACCESS VỚI CÁC THƯ MỤC
+
+> 🗣️ **THẦY GIAO**: *"Thêm 1 vạch kẻ mảnh giữa quick access và các thư mục để phân tách 2 mục này"*.
+> Sửa `core/app.css` + 3 dòng `main.js`. ✅ **THẦY DUYỆT** (*"ok ngon rồi"*) — đi CHUNG MỘT COMMIT với 218 + 218b.
+
+### Việc đã làm
+
+Vạch là `.aw-qa::after`, **nằm TRONG KHE giữa hai bên**, không phải viền của bên nào. Lý do: khung
+vốn đã có viền card 1px quanh mình — làm dày viền phải của nó lên thì mắt đọc ra *"cái hộp này có
+cạnh phải nặng hơn"*, chứ không đọc ra *"đây là hai vùng khác nhau"*.
+
+- `right: -8.5px` đặt vạch 1px vào **đúng giữa khe 16px**: mép phải phần tử ra ngoài 8,5px ⇒ mép trái
+  của nó nằm ở 7,5px = nửa khe. **Đo thật: 7,5px / khe 16px** ✔
+- Màu `#d7e0ec` — cùng họ với viền card `#e6edf6` nhưng đậm hơn một nấc để nhìn ra là vạch chia,
+  không phải viền lạc.
+- **Thụt 6px trên và dưới** (`top: 6px; bottom: 6px`): kéo hết từ góc tới góc thì nó đọc như **dấu
+  cắt giấy** cạnh card bên kia, chứ không như đường phân vùng.
+
+⚠️ **Đã gỡ `overflow: hidden` khỏi `.aw-qa`** (thêm ở 218b cho chắc): vạch được vẽ **ra ngoài** hộp
+nên `overflow: hidden` sẽ **cắt mất nó mà không báo gì**. Bỏ đi vẫn an toàn — các dòng nằm gọn trong
+padding, và `.aw-qa-list` tự clip phần của nó. Đổi lại `.aw-qa` nay có `position: relative` để vạch
+có chỗ neo.
+
+⚠️ **Còn 1 cột thì GIẤU VẠCH** (`.aw-qa.is-alone`). Khi cửa sổ hẹp tới mức lưới chỉ còn một cột, card
+nằm **BÊN DƯỚI** khung chứ không nằm cạnh ⇒ không có ranh giới nào để vạch, và nó sẽ lơ lửng ở lề
+trang chỉ vào chỗ trống. Cờ này đặt trong `sizeQuickAccess()` — nơi **vốn đã** đọc số cột, nên không
+đẻ thêm chỗ thứ hai phải giữ cho khớp. (Vẫn **không có `@media`** nào.)
+
+### ĐO
+
+| Phép đo | Kết quả |
+|---|---|
+| Vạch tồn tại, rộng đúng 1px | `width: 1px`, `display: block` ✔ |
+| Nằm **giữa khe** | mép trái cách khung **7,5px**, khe **16px** ✔ |
+| Quét cột 3 → 3 → 2 → **1** → **1** | vạch `block · block · block · none · none` — **ẩn đúng lúc và chỉ đúng lúc còn 1 cột** ✔ |
+| Chế độ LIST | vẫn có vạch, khe vẫn 16px ✔ |
+| Khung **không bị vạch làm xê dịch** | 11/11 phép kiểm của 218b chạy lại vẫn ĐẠT (ô đầu lưới · rộng 1 cột · sàn 342 · `span 2` · card không bị giãn · kéo sắp xếp · không phình dần) ✔ |
+| Console | sạch ✔ |
+
+⚠️ Vẫn **không chụp được ảnh** (pane bị ẩn ⇒ không compositing). Vạch **đậm nhạt thế nào trên màn 86"
+nhìn từ xa** là thứ chỉ mắt thầy phán được — nhạt quá thì đổi `#d7e0ec` sang `#c7d3e2`.
+
+---
+
+## Đợt 218b (20/8/2026) — ⭐⭐ QUICK ACCESS THÀNH **Ô ĐẦU TIÊN CỦA LƯỚI**, LUÔN HIỆN, KÉO SẮP XẾP ĐƯỢC
+
+> 🗣️ **THẦY GIAO 4 ĐIỀU** (ngay sau Đợt 218): *"Quick access luôn hiện, vị trí thay thế cho thư mục
+> đầu tiên về điểm cao nhất, độ rộng ngang nhưng kéo dài thẳng xuống (dài nhiều hay ít dựa vào số thư
+> mục được ghim, nhưng cho độ cao tối thiểu bằng 2 lần thư mục A1C hiện tại)"* · *"Không gian của thư
+> mục còn 3 cột thôi, nhường 1 cột đầu cho quick access"* · *"Khi cửa sổ quá hẹp sẽ ép còn ít cột thư
+> mục và đẩy thư mục xuống khi ít cột hơn và vẫn ưu tiên hiển thị khung quick access hơn"* · *"thêm
+> khả năng kéo để di chuyển vị trí lên xuống của các thư mục chính được pin"*.
+> Sửa `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`. ✅ **THẦY DUYỆT** — commit chung với 218 + 218c.
+
+### Việc đã làm
+
+**1. Khung là MỘT Ô CỦA LƯỚI, không còn là cột cạnh trang**
+
+Đợt 218 dựng khung thành cột riêng bên cạnh và **nới trang từ 1040 lên 1268** để trả chỗ. Đợt 218b
+**gỡ bỏ toàn bộ chuyện đó**: trang về đúng 1040 như cũ, khung là **phần tử ĐẦU TIÊN của
+`.aw-fm-grid`** nên nó rơi đúng vào ô (1,1) — chỗ card thư mục đầu tiên vẫn đứng — rộng đúng 1 cột,
+và 3 cột còn lại là của card.
+
+⭐ **Kéo theo một món quà**: **không còn một luật `@media` nào**, và cũng không cần. `.aw-fm-grid` vốn
+là `repeat(auto-fill, minmax(200px,1fr))` nên hẹp lại là **tự rụng từng cột**, còn khung — vì là phần
+tử SỐ MỘT — giữ nguyên chỗ trong khi card rơi xuống các hàng dưới. Đó **chính là** *"vẫn ưu tiên hiển
+thị khung quick access hơn"* của thầy, có sẵn, không phải viết. Cả `@media` lẫn ngăn kéo lẫn nút
+ẩn/hiện của Đợt 218 **đã xoá hết** (icon `panelLeft` cũng gỡ theo vì hết chỗ dùng).
+
+**2. Cao bao nhiêu — `sizeQuickAccess()`**
+
+Một ô lưới chỉ chiếm được **số hàng NGUYÊN**, nên chiều cao khung = `grid-row: span N` với N tính từ
+số mục ghim, sàn là **2 hàng**. `min-height` sàn = `chiều cao card thư mục × 2 + gap`.
+
+> ⛔⛔ **BẪY LỚN NHẤT ĐỢT NÀY: HÀM ĐO CHÍNH KẾT QUẢ CỦA MÌNH — CẮN THẬT, HAI LẦN.**
+>
+> **Lần 1 — vòng lặp tự phình.** Bản đầu lấy cả hai số bằng `getBoundingClientRect()`:
+> `rowH` = hộp của một card, `need` = hộp của chính khung. Nhưng **ô lưới bị KÉO GIÃN theo hàng**, mà
+> hàng cao bao nhiêu lại **do chính khung quyết**. Nên: khung cao ⇒ card đọc ra cao ⇒ cần nhiều hàng
+> hơn ⇒ khung cao hơn nữa. Đo thật ở 820px: khung 3 mục ghim ra **`span 3`, cao 480px**, và **mỗi lần
+> tính lại nó lại to thêm**. Không có lỗi nào văng ra — nó chỉ lớn dần.
+> **Chữa**: chỉ đo những thứ hàm này không thể thổi phồng — chiều cao **RUỘT** của card, và nội dung
+> khung bằng cách **CỘNG CÁC DÒNG**, tuyệt đối không đọc hộp của chính nó.
+>
+> **Lần 2 — đo đúng cách nhưng SAI THỨ.** Cách chữa đầu là *giấu khung đi (`display:none`) rồi đo
+> card*. Nghe hợp lý, nhưng giấu khung xong **card ACT dồn lên hàng 1**, và act card **cao hơn card
+> thư mục** (nó có ô xem trước câu hỏi) ⇒ đọc ra **183px** thay vì **163px**, sàn thành **383px**
+> trong khi hai thư mục chỉ là **342px** — và 41px thừa đó **kéo giãn đúng những hàng vừa dùng để đo**.
+> **Chữa**: hỏi đúng thứ mà luật của thầy gọi tên — `\.aw-card-folder` — và bỏ nó ra khỏi
+> stretch **một nhịp** bằng `align-self: start` để lấy chiều cao ruột. Không giấu gì, không reflow lạ.
+>
+> 🔎 **Manh mối bắt được cả hai**: chạy `sizeQuickAccess()` **nhiều lần liên tiếp** rồi so kết quả.
+> Một hàm bố cục đúng thì **lần thứ 5 phải bằng lần thứ 1**. Phép thử này nay nằm trong bàn thử.
+
+**3. Kéo sắp xếp thứ tự mục ghim — `makePinDraggable()` + `setPinnedOrder()`**
+
+Thứ tự lưu bằng `pinOrder` trên node; ghim mới **luôn xuống đáy**, không chen vào giữa thứ tự thầy đã
+xếp. `listPinned()` sắp theo `pinOrder`, ai chưa có số (ghim từ trước Đợt 218b) thì xếp sau theo tên —
+không bao giờ bị rơi mất. `setPinnedOrder()` **đánh số lại từ 0 toàn bộ** chứ không vá riêng dòng vừa
+kéo: hai dòng trùng số sẽ đảo chỗ nhau ở lần đọc sau, và thầy sẽ không có cách nào biết bản nào mới đúng.
+
+> ⛔⛔ **DÙNG POINTER EVENTS, KHÔNG DÙNG HTML5 DRAG.** Mọi cú kéo khác trong app (`makeDraggable`) đều
+> là `draggable=true` + `dragstart`, và **toàn bộ API đó CHỈ CÓ CHUỘT** — Chromium không hề dựng nó ra
+> từ cú chạm. Làm theo thói quen ấy thì trên **màn TOMKO 86" của thầy, tính năng này đơn giản là KHÔNG
+> TỒN TẠI** — đúng họ với cái bẫy mà nút gỡ ghim đã né (không làm kiểu hiện-khi-rê-chuột).
+> ⚠️ `touch-action: none` trên dòng là **BẮT BUỘC**, không phải cho gọn: thiếu nó thì trình duyệt giành
+> cử chỉ để cuộn và `pointermove` **tắt giữa chừng**. Cùng bài học với thanh trượt Đợt 216.
+> ⚠️ Sau một cú kéo thật, trình duyệt **vẫn bắn một `click`** — không nuốt đúng MỘT cái đó (bắt ở pha
+> capture, `once`) thì kéo xong là **mở luôn thư mục** vừa được sắp xếp.
+> ⚠️ Hai cú kéo không đụng nhau: đường này **không hề chạm `draggingId`**, nên các listener HTML5 của
+> `makeDropTarget` trên cùng dòng đó nhìn vào thấy không có cú kéo nào ⇒ đứng yên.
+
+**4. Chỗ khác phải theo**
+
+- **Thư mục rỗng / tìm không ra / thùng rác rỗng**: vẫn có khung, ô thông báo (hoặc ô kéo-thả import)
+  nhận `grid-column: 2 / -1`. Giấu khung đúng lúc màn hình không còn gì khác là **ngược đời** — nó là
+  thứ DUY NHẤT trên màn lúc đó đưa thầy đi được chỗ khác.
+- **Chế độ LIST**: không có cột nào để nhường, nên khung nằm cạnh danh sách ở đúng bề rộng 238px
+  (`.aw-fm-listwrap`).
+- **`resize`**: chỉ còn tính lại `span` (debounce 120ms) — trình duyệt tự lo phần còn lại.
+
+### ĐO — TOÀN BỘ TRÊN APP THẬT (`scratch/dot218-qa.html`)
+
+**12/12 phép kiểm ĐẠT** trong một lượt chạy liền mạch:
+
+| Phép đo | Kết quả |
+|---|---|
+| Khung là **ô đầu tiên** của `.aw-fm-grid` | `inGrid` + `isFirstChild` ✔ |
+| Đỉnh khung **trùng đỉnh card đầu** | cùng `top = 213` ✔ |
+| Rộng **đúng 1 cột** | `238px` = `gridTemplateColumns[0]` ✔ |
+| **4 cột, card còn 3** | `238 238 238 238` ✔ |
+| Trang **về lại 1040px** (Đợt 218 từng nới lên 1268) | `max-width: 1040px` ✔ |
+| Sàn = **2 lần card thư mục** | `minHeight 342px` = `163×2 + 16` ✔ |
+| Card **không bị khung kéo giãn** | card thư mục vẫn `163px` ✔ |
+| 3 mục ghim → `span 2` · **11 mục ghim → `span 3`** (cao 521 = đúng 3 hàng) | ✔ |
+| **Không còn nút ẩn/hiện** nào trong toolbar | ✔ |
+| Kéo dòng ghim xuống 1 nấc | thứ tự đổi đúng ✔ |
+| Thứ tự **sống qua render lại** (tức đã tới store) | ✔ |
+| **Không phình dần**: tính lại 4 lần | `span 2/362` cả 4 lần ✔ (bản lỗi: `span 3/480` và lớn dần) |
+
+Ngoài ra, đo riêng:
+
+| | |
+|---|---|
+| Quét bề ngang 1040 → 340px | cột rụng dần **4 → 3 → 2 → 1**; khung **luôn ở cột 1 và luôn trên cùng**; card bị đẩy xuống 2 → 3 → 4 hàng; **không tràn ngang** ở bất kỳ mức nào ✔ |
+| Chạm (không di) vào dòng | vẫn mở thư mục ✔ |
+| Kéo thật rồi click | **không** mở thư mục (nuốt đúng 1 click) ✔ |
+| Click kế tiếp sau đó | mở lại bình thường ✔ (chỉ nuốt 1, không nuốt tiếp) |
+| Ghim mới | xuống **đáy** danh sách ✔ |
+| Chế độ LIST | khung 238px nằm **bên trái** danh sách ✔ |
+| Thư mục rỗng | khung còn nguyên, ô kéo-thả import chiếm `grid-column: 2 / -1` ✔ |
+| Kéo card thả vào dòng trong khung | vẫn chuyển đúng (đường HTML5 cũ không bị cú kéo mới phá) ✔ |
+
+⚠️ **Vẫn không chụp được ảnh nào** — pane trình duyệt của phiên tự động bị ẩn nên không compositing.
+Mọi con số trên là thật; phần "nhìn có thuận mắt không" vẫn phải mắt thầy.
+
+---
+
+## Đợt 218 (20/8/2026) — ⭐⭐ KHUNG **QUICK ACCESS** BÊN TRÁI TRANG CHỦ (ACTIVITIES + RESULTS)
+
+> 🗣️ **THẦY GIAO**: *"Tôi muốn có một khung ... để truy cập nhanh các thư mục hay dùng, tương tự cột
+> quick access trong window explore, có khả năng bấm vào mũi tên để mở các thư mục con, có thể gán
+> thêm các thư mục khác vào cột này"*, rồi chốt tiếp: **"Chỉ thư mục đã ghim + con của nó"** và
+> **"thay đổi thành mục quick access sang bên trái"**.
+> Sửa **3 file code** (`core/store.js` · `core/icons.js` · `main.js`) + **1 file CSS** (`core/app.css`).
+> ✅ **THẦY DUYỆT** — ba đợt 218 + 218b + 218c đi **CHUNG MỘT COMMIT** (thầy: *"commit bản này + push live + ghi nhật ký"*).
+
+### Việc đã làm
+
+**1. Chỗ ghim — `core/store.js`: `setFolderPinned(id, on)` + `listPinned(root)`**
+
+Cờ `pinned` nằm **NGAY TRÊN NODE THƯ MỤC**, không phải một collection riêng. Lý do là **luật bảo mật**:
+`docs/08-FIREBASE-SETUP.md` chỉ mở đúng MỘT đường cho dữ liệu riêng của thầy —
+`users/{uid}/items/{itemId}`. Một danh sách ghim để ở `users/{uid}/prefs/...` (hình dạng ai cũng nghĩ
+tới đầu tiên) sẽ **bị Firestore TỪ CHỐI** cho tới khi thầy tự mở Console dán luật mới, và **màn hình
+sẽ không nói gì cả** — ghim xong tưởng xong, mở máy khác là mất.
+
+Đi kèm node còn được thêm hai thứ miễn phí:
+- Ghim theo **TÀI KHOẢN** ⇒ ghim ở máy nhà là có luôn ở lớp và trên bảng TOMKO, không phải dựng lại
+  cột ba lần;
+- **Không tốn thêm một lượt đọc nào** — `readAll()` vốn đã giữ toàn bộ thư mục trong bộ nhớ.
+
+⚠️ Thư mục đã xoá **không được** còn trong cột: `listPinned()` lọc `!trashed`, nên Delete gỡ nó khỏi
+cột mà không cần ghi thêm lần nào, và Restore trả nó về **vẫn còn ghim**. ⛔ Đừng "dọn dẹp hộ" bằng
+cách xoá cờ trong `trashItem()` — làm vậy là mất ghim sau mỗi lần lỡ tay xoá.
+
+**2. Cột — `main.js`: `quickAccess()` + `qaBranch()`**
+
+- **CHỈ thư mục đã ghim + con cháu của nó**, không phải cả cây (thầy chốt). Vào cột bằng
+  `⁝ › Pin to Quick access` trên card thư mục; gỡ bằng nút ghim ngay trên dòng, hoặc bằng chính
+  mục ⁝ đó (nhãn tự đảo thành *Remove from Quick access*).
+- Mũi tên xổ con: **dựng LƯỜI** — con cháu chỉ được tạo ở lần mở đầu tiên. Dựng sẵn hết là đi bộ
+  khắp cây của thầy ở **mỗi lần render**, cho những dòng chưa ai đòi xem.
+- Nhánh chứa thư mục **đang đứng** thì tự mở, và dòng đó mang `.is-current` — nhưng ⚠️ **chỉ cái xổ
+  do CHÍNH TAY thầy mới được nhớ** (`aword-qa-open`). Nhớ cả cái tự mở thì cột sẽ tự bung dần ra
+  hết cây sau vài buổi dùng.
+- Kéo-thả: dùng **nguyên xi** `makeDropTarget()` — cùng hàm mà card và breadcrumb đang dùng, nên luật
+  cấm thả thư mục vào chính cây con của nó vẫn còn hiệu lực ở đây, không phải viết lại.
+- Cột là **theo ROOT**: đứng trong ACTIVITIES thì thấy pin của ACTIVITIES, sang RESULTS thấy pin của
+  RESULTS (đo thật: 2 pin bên này, 1 pin bên kia, không lẫn).
+
+**3. Bố cục — `core/app.css`: cột được trả bằng cách NỚI TRANG, không lấn vào chỗ card**
+
+`.aw-lib` rộng 1040px từ v0.6.0 và lưới card được chỉnh theo đúng con số đó. Nên cột 210px được cộng
+THÊM vào bề ngang trang (`1040 + 210 + 18 = 1268`), chứ không cắt bớt cột làm việc.
+
+> ⛔⛔ **ĐÃ CẮN THẬT NGAY PHÉP ĐO ĐẦU TIÊN.** Viết `.aw-lib-inside { max-width: 1268px }` thì
+> `getComputedStyle` trả về **1040px** và cột làm việc **tụt từ 1040 xuống 772**, lưới card từ 4 ô còn
+> 3. Nguyên nhân: `.aw-lib` và `.aw-lib-inside` **cùng độ ưu tiên (0,1,0)** và `.aw-lib` nằm SAU trong
+> file ⇒ nó thắng. Vá bằng cách nâng độ ưu tiên `.aw-lib.aw-lib-inside`, **không** bằng cách đổi thứ tự
+> — thứ tự file là thứ người sau vô tình phá.
+> 🔎 Manh mối bắt được nó: `libMaxWidth` báo `1040px` trong khi luật vừa viết là `1268px`.
+
+**4. Màn hẹp — `QA_NARROW = 820`, cột thành NGĂN KÉO**
+
+AWord được duyệt **bên trong myActivity**, app này chia cửa sổ tới **4 cột** (`paneCount` trong
+`src/renderer/js/browser.js`) và phần đỡ bố cục của nó **cố ý chừa thư viện ra** ("thư viện giữ
+nguyên"). Một cột 210px trong khung 1/4 màn sẽ để lưới card (`minmax(200px,1fr)`) còn **1 ô mỗi hàng**.
+
+Nên dưới 820px cột **thôi làm cột**: nó thành ngăn kéo nổi trên trang, có tấm che, và **tự đóng khi
+thầy chọn một thư mục** (để nguyên là nó che mất đúng cái thư mục vừa mở).
+
+⚠️ Ngăn kéo **bắt đầu ĐÓNG và KHÔNG được nhớ**: `aword-qa-off` là ý thầy về **bố cục RỘNG**; đem áp
+vào đây là mỗi lần một cột hẹp nạp xong lại có ngăn kéo bung ra đè lên card. `qaDrawerOpen` là biến
+module, reset mỗi lần nạp trang, cố ý.
+
+⚠️ `@media (max-width: 819px)` này là **luật bố cục @media ĐẦU TIÊN** của `core/app.css` — trước đó
+file chỉ có `prefers-reduced-motion` và `@media print`. Đừng cho rằng có sẵn hệ breakpoint nào khác.
+
+⚠️ Kèm một lớp chặn: `.aw-qa:not(.is-drawer) { display: none }` trong media. Giữa lúc cửa sổ đổi cỡ và
+lúc render trả lời được, có **một khung hình** còn giữ cái cột dựng cho bố cục rộng — không chặn thì nó
+loé thành một thanh ngang full chiều rộng nằm trên đống card.
+
+**5. Nút gỡ ghim KHÔNG phải kiểu hiện-khi-rê-chuột**
+
+Thầy làm việc trên **màn cảm ứng 86"**, ở đó **không có hover**. Một nút chỉ hiện lúc rê chuột là một
+nút **không tồn tại**. Nên nó luôn hiện, chỉ nhạt đi (`opacity: .75`) cho tới khi được trỏ vào.
+
+### ĐO — TOÀN BỘ TRÊN APP THẬT (`scratch/dot218-qa.html`, main.js thật + store.js thật)
+
+Bàn thử nạp **chính `main.js`**, chỉ đổi `core/firebase.js` sang bộ giả `fake-firebase-full.js`, và
+gieo cây thư mục bằng **chính `createFolder()` thật**.
+
+| Phép đo | Kết quả |
+|---|---|
+| Cột nằm bên TRÁI | `qa.left = 86`, `main.left = 314` ✔ |
+| Cột làm việc **không đổi** khi bật/tắt cột | **1000px** cả hai trạng thái, lưới `238×4` cả hai ✔ |
+| `max-width` theo trạng thái | bật `1268px` · tắt `1040px` ✔ |
+| Chỉ thư mục ĐÃ GHIM ở gốc cột | 2/2 pin hiện · thư mục không ghim **không** lọt vào (đối chứng ngược) ✔ |
+| Mũi tên xổ + thụt lề theo tầng | `6px → 20px → 34px`, mũi tên xoay `matrix(0,1,-1,0,0,0)` = 90° ✔ |
+| Dòng lá vẫn giữ chỗ mũi tên | `.is-blank` ✔ (tên các dòng thẳng hàng) |
+| Nhớ nhánh đã xổ | `aword-qa-open` = 2 id ✔ |
+| Bấm tên → vào thư mục, dòng thành `.is-current` | breadcrumb `Home › Activities › DAILY SCIENCE` ✔ |
+| ⁝ menu đảo nhãn | *Pin to Quick access* ⇄ *Remove from Quick access* ✔ |
+| Kéo act thả vào dòng cột | dòng sáng `.is-dropok` ✔ · act **thật sự nằm trong** DAILY SCIENCE ✔ |
+| Cột theo root | ACTIVITIES 2 pin · RESULTS 1 pin, không lẫn ✔ |
+| Trang chủ (2 thẻ gốc) **không đụng tới** | không có cột, `max-width` vẫn `1040px` ✔ |
+| Thùng rác + Tìm kiếm vẫn có cột | ✔ |
+| `line-height` chữ Việt | `18.576 / 13.76 = 1.35` — đúng sàn của CORE ✔ |
+| **Nạp ở 480px** (đúng cỡ 1 cột của myActivity chia 4) | **không có cột nào dựng**, lưới vẫn `212×2`, `scrollWidth = clientWidth = 480` (không tràn ngang) ✔ |
+| Ngăn kéo ở 480px | `position: fixed`, `left 0`, rộng 232px, `z` 61 trên tấm che 60, `elementFromPoint` trúng **chính ngăn kéo** ✔ |
+| Cột làm việc lúc ngăn kéo mở | **440px — không đổi**, tức nó NỔI LÊN chứ không đẩy ✔ |
+| Chọn thư mục → ngăn kéo tự đóng | ✔ (cả tấm che) |
+| Vượt ngưỡng qua lại 4 lần | hẹp → mất cột · rộng → có lại · không sót `.is-drawer` ✔ |
+
+⚠️ **Một điều KHÔNG đo được:** pane trình duyệt của phiên tự động **bị ẩn nên không compositing** ⇒
+**không chụp được khung hình nào** (đúng cái bẫy đã ghi ở APP_MASTER). Mọi con số trên là thật, nhưng
+**"nhìn có thuận mắt không" thì vẫn phải mắt thầy**.
+
+⬜ **Số cần thầy phán**: dòng cột đang cao **29px** — đúng tinh thần Explorer (rất gọn), nhưng **hơi
+nhỏ cho ngón tay** trên TOMKO. Nới lên ~40px là đổi đúng `padding` của `.aw-qa-label`; em chưa tự đổi
+vì thầy nói *"tương tự cột quick access trong window explore"*.
+
+---
+
 ## Đợt 217 (20/8/2026) — ⭐⭐ SÁU VIỆC MỘT LƯỢT: TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG LAN · CHE BÀI KHI FIGHT · RESET SẠCH
 
 > ✅ **THẦY DUYỆT ĐỢT 216 VÀ GIAO TIẾP SÁU VIỆC NÀY**, chốt *"rồi commit + push + ghi nhật ký hồ sơ

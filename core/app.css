@@ -2185,6 +2185,121 @@ html.aw-nhung .aw-below { display: none; }
    in cqw for use inside the stage.
    ============================================================= */
 
+/* ---------- Home: QUICK ACCESS panel (Đợt 218, reshaped in 218b) ----------
+   The panel is the FIRST CELL OF THE CARD GRID, not a column beside the page:
+   it lands where the first folder card used to be, one column wide, and the
+   cards take the remaining three (thầy 20/8/2026).
+
+   Two consequences worth knowing before editing anything here:
+
+   1. THERE IS NO @media RULE, AND NONE IS WANTED. `.aw-fm-grid` is already
+      `repeat(auto-fill, minmax(200px, 1fr))`, so a narrowing window drops one
+      card column at a time on its own; the panel, being grid item ONE, holds
+      its place while cards fall to the rows below. That is the teacher's
+      "vẫn ưu tiên hiển thị khung quick access hơn" with no breakpoint to keep
+      in step with anything.
+   2. `min-height` AND `grid-row` ARE SET FROM JS (`sizeQuickAccess()` in
+      main.js), not from here — the floor is "two folder cards tall", and a card
+      is 183px only until some later đợt changes a padding. Writing 382px into
+      this file would be writing down today's accident.                        */
+.aw-qa {
+  display: flex; flex-direction: column; min-width: 0;
+  background: #fff; border: 1px solid #e6edf6; border-radius: 15px;
+  box-shadow: 0 2px 8px rgba(35,48,62,.05);
+  padding: 10px 8px 12px;
+  /* the divider below is drawn OUTSIDE this box, so no `overflow: hidden` here.
+     Nothing spills anyway: the rows sit inside the padding and `.aw-qa-list`
+     does its own clipping. */
+  position: relative;
+}
+/* ⭐ Đợt 218c — the hairline that separates Quick access from the folders
+   (thầy 20/8/2026). It lives in the GAP, not on either side's edge: the panel
+   already has a 1px card border and thickening that would read as "this box has
+   a heavier right side", not as "these are two areas".
+   `right: -8.5px` centres a 1px line in the 16px grid gap — the element's right
+   edge lands 8.5px out, so its left edge is at 7.5px, i.e. half the gap.
+   ⚠️ Inset 6px top and bottom on purpose: run it corner to corner and it reads
+   as a crop mark on the card next to it.                                     */
+.aw-qa::after {
+  content: ""; position: absolute; top: 6px; bottom: 6px; right: -8.5px;
+  width: 1px; background: #d7e0ec;
+}
+/* ⚠️ One column left (a very narrow window): the cards are BELOW the panel, not
+   beside it, so there is no boundary for the line to mark — it would hang in
+   the page margin pointing at nothing. `is-alone` is set from sizeQuickAccess(),
+   which is already the one place that knows the column count. */
+.aw-qa.is-alone::after { display: none; }
+.aw-qa-head {
+  padding: 2px 4px 8px; border-bottom: 1px solid #eef3f9; margin-bottom: 6px;
+}
+.aw-qa-title {
+  font-size: .74rem; font-weight: 800; letter-spacing: .6px;
+  text-transform: uppercase; color: #7a8aa0;
+}
+/* The rows scroll INSIDE the panel once there are more pins than the span can
+   hold. Without this a long list would push the panel past the rows it was
+   given and overlap the cards below it. */
+.aw-qa-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+.aw-qa-empty {
+  font-size: .82rem; line-height: 1.5; font-weight: 600;
+  color: #8b9aae; padding: 8px 6px;
+}
+.aw-qa-row {
+  display: flex; align-items: center; gap: 2px;
+  border-radius: 9px; padding-right: 2px;
+  /* ⚠️ REQUIRED for the drag-to-reorder gesture, not tidiness: without it the
+     browser claims a finger drag for scrolling and pointermove stops firing
+     mid-gesture (same family as the Đợt 216 slider lesson).                  */
+  touch-action: none;
+}
+.aw-qa-row:hover { background: #f2f7fd; }
+.aw-qa-row.is-current { background: #eaf1ff; }
+.aw-qa-row.is-dropok { background: #dbe9ff; box-shadow: inset 0 0 0 2px #2f7bff; }
+.aw-qa-branch.is-dragging { opacity: .6; }
+.aw-qa-branch.is-dragging > .aw-qa-row { background: #dbe9ff; box-shadow: inset 0 0 0 2px #2f7bff; }
+.aw-qa-arrow {
+  flex: 0 0 18px; width: 18px; height: 27px; padding: 0;
+  border: none; background: none; color: #9fb0c4; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-qa-arrow svg { width: 13px; height: 13px; transition: transform .15s ease; }
+.aw-qa-arrow.is-blank { cursor: default; }
+.aw-qa-row.is-open > .aw-qa-arrow svg { transform: rotate(90deg); }
+.aw-qa-label {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px;
+  border: none; background: none; padding: 5px 2px; cursor: pointer;
+  font-family: inherit; font-size: .86rem; font-weight: 700;
+  color: #23303e; text-align: left;
+}
+.aw-qa-ficon { flex: 0 0 17px; width: 17px; height: 17px; display: inline-flex; }
+.aw-qa-ficon svg { width: 100%; height: 100%; }
+/* line-height 1.35 is the app-wide floor for Vietnamese diacritics — see
+   `core/HUONG DAN CORE.md`. Folder names are the teacher's own words. */
+.aw-qa-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.35;
+}
+/* ⚠️ NOT a hover-reveal. The teacher works on an 86" TOUCH screen where hover
+   does not exist, so a control that only appears on hover is a control that is
+   not there. It is always visible, just pale until pointed at.               */
+.aw-qa-unpin {
+  flex: 0 0 auto; border: none; background: none; padding: 3px;
+  border-radius: 7px; color: #c8d3e0; cursor: pointer;
+  display: inline-flex; opacity: .75;
+}
+.aw-qa-unpin svg { width: 14px; height: 14px; }
+.aw-qa-unpin:hover { background: #eef3f9; color: #33455c; opacity: 1; }
+
+/* An empty view still shows the panel, so its message/drop-zone takes the rest
+   of the row instead of sitting in a lone 238px column. */
+.aw-fm-empty-cell { grid-column: 2 / -1; }
+.aw-fm-grid > .aw-fm-empty-cell { padding: 0; display: flex; align-items: center; justify-content: center; }
+
+/* LIST view has no columns to donate, so the panel sits beside the rows at the
+   width it would have had in the grid. */
+.aw-fm-listwrap { display: flex; align-items: flex-start; gap: 16px; }
+.aw-fm-listwrap > .aw-qa { flex: 0 0 238px; }
+.aw-fm-listwrap > .aw-fm-list { flex: 1 1 auto; min-width: 0; }
+
 /* ---------- Home: the teacher's game library ---------- */
 .aw-lib {
   max-width: 1040px; margin: 0 auto; padding: 28px 20px 10px;

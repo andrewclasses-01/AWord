@@ -202,6 +202,10 @@ export const icons = {
     <path d="M4.5 12.5l5 5L19.5 6.5" stroke="#3d4852" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
     <path d="M4.5 12.5l5 5L19.5 6.5" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`,
+  // QUICK ACCESS (Đợt 218) — the home page's left-hand panel of pinned folders.
+  // Marks a pinned row, and names the action in a folder's ⁝ menu.
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 3.5h5l-.7 5.2 3.2 2.6v2.2H7v-2.2l3.2-2.6z"/><path d="M12 13.5V21"/></svg>`,
+
   // Big WHITE cross with dark outline (flies up on a wrong answer)
   markCross: `<svg viewBox="0 0 24 24" fill="none">
     <path d="M6 6l12 12M18 6L6 18" stroke="#3d4852" stroke-width="7.5" stroke-linecap="round"/>
