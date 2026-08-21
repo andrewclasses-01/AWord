@@ -124,11 +124,23 @@ người đúng số câu QUA TAY CHƠI THẬT · Free cắt vòng trọn vẹn 
 4. **`ui.keepItemOrder()`** — Quiz/TTA hỏi engine TRƯỚC cú shuffle của mình. ⛔⛔ KHÔNG ép
    `shuffleQuestions:false` vào options như fight.js: fight cầm act ĐÔNG LẠNH riêng từng bàn, còn đây
    là act thật — copy options ra sửa là Apply ghi vào bản sao, act thư viện không bao giờ nhận.
-5. **Options panel**: dải + khoá chéo qua `syncSdDealLocks()`. ⚠️ Hai ô tích (balance·shuffle) dựng
+5. 🐞 **VÁ 22/8/2026 (commit `397c417`) — KHOÁ PHẢI MỘT CHIỀU.** Thầy báo *"tôi đã setup như thế
+   này rồi nhưng QUESTIONS EACH vẫn không mở khoá là sao"* — ảnh chụp cho thấy **Balance questions
+   đang tích**, và bản đầu Đợt 220 có thêm một dòng khoá NGƯỢC: Balance bật ⇒ khoá cả dải này.
+   ⛔⛔ **HẬU QUẢ: ĐIỀU KHIỂN MỚI BỊ ĐIỀU KHIỂN CŨ CHẶN ĐƯỜNG**, mà Balance đã tích sẵn trong hàng
+   loạt act cũ ⇒ với thầy dải mới trông như **hỏng**: nằm mờ vĩnh viễn, chạm không được, và không có
+   một chữ nào trên màn nói vì sao. Nay bỏ hẳn chiều đó: **dải LUÔN chạm được**; chọn Free/Count thì
+   Balance + Shuffle mờ đi (thầy NHÌN THẤY hai ô vừa tắt nên hiểu ngay quan hệ — đúng idiom In turns
+   Đợt 202). ⚠️ Vẫn **chỉ chạm KHOÁ, không chạm GIÁ TRỊ**: dấu tích Balance còn nguyên, quay về
+   Normal là sống lại (đo D7). Lưới lên **24/24**.
+   ⛔ **LUẬT RÚT RA cho mọi khoá chéo sau này**: khi hai điều khiển loại trừ nhau, **cái MỚI/mạnh hơn
+   phải luôn chạm được**, cái cũ mờ đi theo. Khoá hai chiều = có một trạng thái mà thầy không thoát
+   ra được nếu không đoán đúng ô nào đang chặn.
+6. **Options panel**: dải + khoá chéo qua `syncSdDealLocks()`. ⚠️ Hai ô tích (balance·shuffle) dựng
    SAU dải ⇒ tìm LÚC GỌI qua `[data-aw-check=…]`, và phải gọi thêm một lần cuối builder (sau
    `layoutChecks`) — giữ ref lúc dựng dải chỉ tóm được null. Settings không truyền `showdown` ⇒ dải
    không mọc ở đó (đúng luật Đợt 174).
-6. ⛔ **Open the box · Crossword · Find the match CẤM vĩnh viễn** (mảng câu là cái bàn chơi — nối dài
+7. ⛔ **Open the box · Crossword · Find the match CẤM vĩnh viễn** (mảng câu là cái bàn chơi — nối dài
    là ô chữ có một từ hai lần); Balloon pop phải đo riêng nếu muốn mở.
 
 ⬜ **CHỜ TAY/MẮT THẦY TRÊN LỚP** (máy đã đo hết phần đo được):
