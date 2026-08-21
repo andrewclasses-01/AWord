@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 222 (21/8/2026) — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI, KHÔNG PHẢI MỘT BÀN CHẾT CÂM** (5 game Fight) · **FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU · TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*)
+## Đợt 222 (21/8/2026) — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI, KHÔNG PHẢI MỘT BÀN CHẾT CÂM** (5 game Fight) · **FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU · TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `acd381c`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `acd381c` trạng thái `success` (tra `gh api …/deployments/{id}/statuses`, **không tin mã 200**) · **7/7 mã băm SHA-256 khớp** · **24/24 phép hỏi CHẠY CHÍNH CODE TRÊN BẢN LIVE**
 
 Thầy giao 5 việc (2 việc Fight cho Quiz + Anagram, 3 việc Find the match), chốt 3 quyết định
 qua AskUserQuestion. Sửa **8 file**: `core/fight.js` · `templates/quiz/quiz.js` ·
@@ -145,6 +145,7 @@ việc này chỉ thấy ở **chơi thường / Showdown**. Quiz không dính v
 | hồi quy `scratch/dot220-nav.html` | **15/15** |
 | hồi quy `scratch/dot220-deal.html` | **24/24** |
 | hồi quy `scratch/dot216-delay.html` | **33/33** |
+| ⭐ `scratch/dot222-live.html` — **chạy CHÍNH module của bản live** | **24/24** |
 
 **Ba đối chứng NGƯỢC đã cài** (thiếu chúng thì phép đo chỉ chứng minh "có chạy", không chứng
 minh "chạy đúng lúc"):
@@ -162,6 +163,24 @@ minh "chạy đúng lúc"):
    cho nó rồi trả lại. (Phép đo đúng thứ hai: soi mọi tổ tiên xem còn ai `overflow != visible`.)
 3. **`optVer` nằm trên ACT, không nằm trong `options`** — đặt nhầm chỗ là bộ di trú chạy lại và
    nhân `pointsOff` 20 → 100, phép đo báo "trừ -100" và tưởng app sai.
+
+### ✅ ĐÃ LIVE — cách kiểm chứng đã dùng (làm lại y hệt ở đợt sau)
+
+- **Đợt triển khai Pages**: `gh api repos/andrewclasses-01/AWord/deployments --jq '.[0]'` lấy id + sha,
+  rồi `…/deployments/{id}/statuses --jq '.[0].state'` phải ra `success` **và** sha phải đúng commit vừa
+  push. ⚠️ Lần tra ĐẦU TIÊN lại trả về đợt CŨ (`042fc7c`) — y như Đợt 221 đã ghi. **Phải vòng lặp chờ
+  tới khi sha khớp**, không thì báo LIVE oan.
+- ⛔⛔ **ĐỪNG BĂM FILE TRÊN MÁY RỒI SO VỚI LIVE** — kho lưu LF, thư mục làm việc CRLF. Băm **nội dung
+  trong commit**: `git show HEAD:<file> | sha256sum` đối với `curl` bản live ⇒ **7/7 khớp**.
+- ⭐⭐ **CÁCH KIỂM MỚI, MẠNH HƠN HẲN GREP — CHẠY THẲNG MODULE CỦA BẢN LIVE.**
+  Pages trả **`Access-Control-Allow-Origin: *`** cho mọi file `.js`, nên một trang bàn thử ở
+  `localhost` **import được thẳng `https://aword.andrewclasses.com/core/fight.js`** và chơi thật.
+  `scratch/dot222-live.html` làm đúng vậy: 24 phép, gồm cả đối chứng ngược "Round rule finish".
+  ⚠️ Bộ giả Firebase vẫn cắm được — khoá của `importmap` phải là **URL LIVE ĐẦY ĐỦ**
+  (`"https://aword.andrewclasses.com/core/firebase.js": "/scratch/fake-firebase.js"`), không phải
+  đường dẫn tương đối.
+  ⚠️ **Lần nạp đầu có thể dính CORS OAN**: Chrome giữ lại một bản trả lời hỏng của
+  `options-migrate.js` (curl kiểm lại thì header CÓ đủ). Nạp lại trang là hết — đừng vội sửa code.
 
 ### ⬜ CHỜ MẮT/TAY THẦY
 1. **Chơi thật một trận Quiz/Anagram trên TOMKO**: hết delay mà đội chậm bị chấm sai — lớp có

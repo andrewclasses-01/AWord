@@ -12,7 +12,12 @@
 > KHÔNG PHẢI MỘT BÀN CHẾT CÂM (5 game Fight) · FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU ·
 > TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG**. Thầy giao 5 việc, chốt 3
 > quyết định qua AskUserQuestion. Sửa **8 file**: `core/fight.js` · 5 template Fight vòng
-> thường · `find-the-match.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*).
+> thường · `find-the-match.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — commit
+> **`acd381c`**, **ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `acd381c` trạng thái `success`
+> (tra builds/deployments API, **không tin mã 200**; ⚠️ lần tra đầu ra đợt CŨ — phải chờ tới khi sha
+> khớp) · **7/7 mã băm SHA-256 khớp** (băm **nội dung trong commit**, không băm file trên máy — CRLF)
+> · **24/24 phép hỏi CHẠY CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot222-live.html` import thẳng
+> `https://aword.andrewclasses.com/core/fight.js` — Pages trả `Access-Control-Allow-Origin: *`).
 > Đọc khối **Đợt 222** đầu `GHI CHU DU AN.md` — tóm tắt:
 > - **(1) Gốc rễ MỘT chỗ, và hai ca thầy tả là cùng một lỗi.** `finalizeSingleWinner()` khoá
 >   bàn đội thua bằng đúng một dòng `lock(true)` trần trụi (Đợt 124), công tắc là ô **Round
@@ -37,8 +42,8 @@
 >   theo lớp** — `z-index` không cứu được.
 > - ✅ **ĐO**: 4 bàn thử mới **55/55** (`dot222-verify` 20 · `dot222-tf-tta` 14 · `dot222-ftm`
 >   12 · `dot222-ftm2` 9) + hồi quy **96/96** (`dot219-fight` 24 · `dot220-nav` 15 ·
->   `dot220-deal` 24 · `dot216-delay` 33). Ba đối chứng ngược đã cài (trả lời kịp ⇒ không bị
->   chấm oan · Round rule "finish" ⇒ không đụng gì · hai bàn vẫn cùng một lời nhắc).
+>   `dot220-deal` 24 · `dot216-delay` 33) + **24/24 trên CHÍNH BẢN LIVE**. Ba đối chứng ngược đã cài
+>   (trả lời kịp ⇒ không bị chấm oan · Round rule "finish" ⇒ không đụng gì · hai bàn vẫn cùng một lời nhắc).
 > - ⬜ **Chờ mắt/tay thầy**: ván thật trên TOMKO (delay bao nhiêu là công bằng) · nhịp giữ 2,1s
 >   · hai bàn FTM xáo khác nhau trên 86" · cỡ chữ ở mức thu nhỏ nhất 0,52 · act nào muốn nết cũ
 >   thì đổi Round rule sang **"finish"**.
@@ -3961,13 +3966,10 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 222, 21/8/2026) — CODE XONG, ĐO XONG, ⬜ CHƯA COMMIT / CHƯA PUSH.**
-> **Kho KHÔNG sạch**: 8 file đã sửa đang nằm trong thư mục làm việc, chờ thầy duyệt.
-> ⛔ **Phiên/máy sau mở ra mà thấy `git status` có 8 file này thì ĐỪNG dọn** — đó là Đợt 222:
-> `core/fight.js` · `templates/quiz/quiz.js` · `anagram/anagram.js` ·
-> `type-the-answer/type-the-answer.js` · `true-false/true-false.js` ·
-> `find-the-match/find-the-match.js` · `find-the-match/find-the-match.css`
-> (+ `APP_MASTER.md` · `GHI CHU DU AN.md`).
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 222, 21/8/2026) — ĐÃ LIVE `acd381c`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Kho sạch, `main` = `origin/main`. **7 file code đã sửa**: `core/fight.js` ·
+> `templates/quiz/quiz.js` · `anagram/anagram.js` · `type-the-answer/type-the-answer.js` ·
+> `true-false/true-false.js` · `find-the-match/find-the-match.js` · `find-the-match/find-the-match.css`.
 > Năm việc chờ **mắt/tay thầy** nằm ở cuối khối **Đợt 222** trong `GHI CHU DU AN.md`:
 > 1. ⬜ **Chơi thật một trận Quiz/Anagram trên TOMKO** — hết delay mà đội chậm bị chấm sai,
 >    lớp có thấy công bằng không, hay cần nới Time delay (thanh trượt tới 10s, hoặc nấc ∞).
