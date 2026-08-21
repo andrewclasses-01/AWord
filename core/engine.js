@@ -961,8 +961,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     waitBar.style.width = width + "px";
     return true;
   }
-  function runWaitBar(ms) {
+  function runWaitBar(ms, mode) {
     if (!waitBar) return;
+    // ⭐⭐ Đợt 219 — HAI NHỊP MỚI, cho việc "tạm dừng là dừng TẤT CẢ" (thầy, 21/8/2026).
+    // Thanh này là một `transition` CSS ở hàng nút dưới, KHÔNG nằm trong sân, nên
+    // `freezePlay()` — vốn chỉ quét `stage.getAnimations({subtree:true})` — không bao
+    // giờ với tới nó. Không có hai nhịp này thì mở ☰ Menu giữa cửa sổ Time delay là
+    // thanh cứ cạn hết trong lúc trọng tài đã đứng im: bàn hứa một đằng, luật làm một nẻo.
+    // ⚠️ `"hold"` GIỮ NGUYÊN BỀ RỘNG ĐANG CÓ — đọc bằng `getComputedStyle`, tức giá trị
+    // ĐANG CHẠY GIỮA CHỪNG của transition (px), không phải cái "0%" đã ghi vào style.
+    // ⚠️ `"go"` chạy nốt phần còn lại TỪ CHỖ ĐANG ĐỨNG, tuyệt đối không kéo về 100%:
+    // kéo về đầy là tặng không cho đội chậm cả một cửa sổ nữa.
+    // ⚠️ Cả hai đều bỏ qua khi thanh chưa bật, và bỏ qua ở nấc ∞ (`.is-forever` không
+    // đếm gì để mà dừng — nó chỉ thở bằng CSS).
+    if (mode === "hold" || mode === "go") {
+      if (!waitBar.classList.contains("is-on") || waitBar.classList.contains("is-forever")) return;
+      if (mode === "hold") {
+        waitBarFill.style.width = getComputedStyle(waitBarFill).width;
+        waitBarFill.style.transition = "none";
+        return;
+      }
+      if (!Number.isFinite(ms) || !(ms > 0)) return;
+      void waitBarFill.offsetWidth;                       // cùng điệu khởi động lại transition như dưới
+      waitBarFill.style.transition = "width " + ms + "ms linear";
+      waitBarFill.style.width = "0%";
+      return;
+    }
     if (!(ms > 0) || torndown) {
       waitBar.classList.remove("is-on", "is-forever");
       waitBarFill.style.transition = "none";
@@ -1934,12 +1958,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Frozen time is DISCARDED, not deferred: dt is simply dropped, so a 2.4s
     // reveal animation or a menu pause leaves the idle counter exactly where it
     // was rather than paying it all out in one lump the moment play resumes.
-    // `menuEl`/`toolPanelEl` are declared further down this same closure — safe
-    // to read here because idleTick can only ever run after PLAY, long after
-    // the whole of startGame() has finished executing. Both mean the game is
-    // covered by a dim and cannot be touched: ☰ Menu already freezes the clock
-    // (Đợt 91), and an open Options/Template/Style panel blocks every tap.
-    if (menuEl || toolPanelEl || (idleGuard && idleGuard())) return;
+    // ⭐ Đợt 219 — hỏi `playPaused()` (khai further down this same closure — safe to
+    // read here because idleTick can only ever run after PLAY, long after the whole
+    // of startGame() has finished executing). Nó gộp CẢ BỐN lý do tạm dừng, không
+    // riêng pop-up của bàn này — xem chính hàm đó để biết vì sao.
+    if (playPaused() || (idleGuard && idleGuard())) return;
     idleMs += dt;
     const grace = idleGraceMs();
     // ⭐ Đợt 187 (teacher, 18/8/2026) — ONE PERIOD, NOT "grace then every second".
@@ -2079,7 +2102,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // the pupil nothing at all — the alternative, letting a count down run out
     // behind an Options panel the teacher opened, would mark the class wrong for
     // something they could not even see.
-    if (menuEl || toolPanelEl) { roundBank(); return; }
+    // ⭐ Đợt 219 — nay là `playPaused()`: bàn kia bấm Menu trong Fight cũng phải
+    // đóng băng đồng hồ CÂU của bàn này, nếu không thì đội bị dừng oan mất mấy giây
+    // và ở chế độ đếm ngược là mất luôn câu đó.
+    if (playPaused()) { roundBank(); return; }
     if (!roundStartedAt && !roundOver) roundStartedAt = performance.now();
     roundPaint();
     if (roundMode !== "countDown" || roundOver) return;
@@ -3351,6 +3377,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⚠️ CHỈ "menu" VÀ "panel" MỚI CHUYỂN TIẾP. Lý do "relay" là do bàn kia gửi sang;
   // chuyển tiếp nó ngược lại là hai bàn gọi qua gọi lại vô tận.
   const pauseReasons = new Set();
+  // ⭐⭐⭐ Đợt 219 (thầy, 21/8/2026) — *"Khi nhấn menu hoặc các pop-up tùy chỉnh thì
+  // game đã dừng nhưng time cost vẫn chạy, cần dừng lại tất cả mọi thứ."*
+  // MỘT CÂU HỎI DUY NHẤT cho mọi đồng hồ trong file này: "ván này có đang bị dừng
+  // không?". Trước đợt này `idleTick` và `roundTick` mỗi cái tự hỏi lấy, và cùng hỏi
+  // sai một kiểu — `menuEl || toolPanelEl` chỉ biết pop-up của CHÍNH bàn mình:
+  //   · Fight, bàn kia bấm ☰ Menu ⇒ bàn này nhận lý do `"relay"` (Đợt 217), sân đã
+  //     phủ tối, chạm không được — mà Time cost vẫn trừ điểm đều mỗi 3 giây;
+  //   · bị máy khác giành team ⇒ lý do `"stolen"`, tấm chặn phủ kín, vẫn trừ;
+  //   · và ai đó thêm một lý do thứ năm ở đợt sau sẽ lại thủng đúng chỗ này.
+  // ⚠️ VẪN GIỮ `menuEl || toolPanelEl` bên trong, chứ không đổi hẳn sang tập lý do:
+  // hai biến đó là SỰ THẬT TRÊN MÀN HÌNH (pop-up có đang che hay không), còn tập lý
+  // do là bản ghi chép về nó. Hỏi cả hai thì một ngày nào đó chúng lệch nhau, câu trả
+  // lời vẫn ngả về phía AN TOÀN — không trừ điểm.
+  function playPaused() {
+    return pauseReasons.size > 0 || !!menuEl || !!toolPanelEl;
+  }
   function enterPause(reason, { dim = true } = {}) {
     if (pauseReasons.has(reason)) return;
     const first = pauseReasons.size === 0;
@@ -3362,11 +3404,29 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     if (first) freezePlay();
     if (stageDim && !stageDim.isConnected) inner.append(stageDim);
     // FIGHT: bàn kia dừng theo — nhưng chỉ khi lý do là của CHÍNH bàn này.
-    if (fight && reason !== "relay") fight.ctl.setPaused?.(fight.side, true, dim);
+    syncRelay(dim);
+  }
+  // ⭐⭐⭐ Đợt 219 — LỖ RÒ CỦA ĐỢT 217, vá ở đây.
+  // Đợt 217 gửi tin sang bàn kia trên MỖI lần thêm/bớt lý do. Thêm thì vô hại (bàn
+  // kia bỏ qua lý do trùng), nhưng BỚT thì không: mở Options rồi bấm ☰ Menu rồi đóng
+  // Menu — cú đóng đó xoá đúng một lý do, ván NÀY vẫn đứng (còn "panel"), mà bàn KIA
+  // đã nhận lệnh "chạy tiếp" và chạy thật, sau lưng tấm che vẫn phủ kín bên này.
+  // Đó chính là cái bẫy mà chú thích của Đợt 217 mô tả — nhưng nó chỉ được bịt ở
+  // NỬA TRONG (tập lý do của bàn mình), còn nửa gửi đi thì chưa.
+  // ⚠️ "Của chính bàn này" = có lý do nào KHÁC `"relay"` hay không. Chỉ gửi khi câu
+  // trả lời ĐỔI, nên chuyển tiếp không bao giờ dội qua dội lại.
+  let relaySent = false;
+  function syncRelay(dim = true) {
+    if (!fight) return;
+    let own = false;
+    pauseReasons.forEach(r => { if (r !== "relay") own = true; });
+    if (own === relaySent) return;
+    relaySent = own;
+    fight.ctl.setPaused?.(fight.side, own, dim);
   }
   function exitPause(reason) {
     if (!pauseReasons.delete(reason)) return;
-    if (fight && reason !== "relay") fight.ctl.setPaused?.(fight.side, false);
+    syncRelay();
     if (pauseReasons.size) return;      // còn lý do khác — chưa được chạy lại
     stageDim?.remove(); stageDim = null;
     thawPlay();
@@ -3427,6 +3487,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // + blur despite every style being computed "correctly". (Caught live,
     // 8/8/2026: teacher saw the clock freeze but no dim/blur at all.)
     pausedAnimations = stage.getAnimations({ subtree: true }).filter(a => a.playState === "running");
+    // ⛔ Đợt 219 — ĐÃ CÂN NHẮC RỒI BỎ: gom nốt những số "-N" đang bay (chúng là con của
+    // `document.body`, không phải của sân, nên `stage.getAnimations()` không thấy).
+    // Dừng được, nhưng KHÔNG NÊN: mỗi số tự có một `setTimeout` dọn xác (flyTimeCost,
+    // vì `onfinish` không bao giờ bắn trong tab bị ẩn), nên đóng băng nó chỉ đổi
+    // "con số bay nốt 0,6 giây rồi tan" thành "con số đứng chết giữa màn rồi biến
+    // mất" — xấu hơn, mà rủi ro hơn. Từ đợt này ván đang dừng KHÔNG trừ điểm nữa, nên
+    // cửa sổ để có một số đang bay lúc bấm Menu chỉ còn đúng 0,7 giây.
     pausedAnimations.forEach(a => { try { a.pause(); } catch { /* ignore */ } });
     // Optional per-template hook — for timers a template manages ITSELF
     // (its own setInterval game clock, spawn scheduling, background music not

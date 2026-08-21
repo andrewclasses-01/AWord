@@ -804,6 +804,18 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
   const counts = picks ? { l: mkCount("l"), r: mkCount("r") } : null;
   if (counts) wrap.append(counts.l, counts.r);
 
+  // ⭐⭐ Đợt 219 — MỖI HÀNG ĐỂ LẠI ĐÂY CÁCH TỰ VẼ CỦA NÓ, và một cú tích vẽ LẠI CẢ
+  // BẢNG chứ không chỉ hàng vừa bấm.
+  // ⚠️ VÌ SAO KHÔNG PHẢI LÀ THỪA: `picks` được đánh theo KHOÁ HỌC SINH, nên hai hàng
+  // dùng chung một khoá là hai hàng dùng chung một ô nhớ. Chỉ vẽ hàng vừa bấm thì
+  // hàng KIA giữ nguyên dấu tích cũ của mình — trên màn là "tích bên này mà bên kia
+  // vẫn còn chấm", đúng thứ thầy tả, mà bộ đếm lại nói khác. Vẽ cả bảng thì dù khoá
+  // có đụng nhau, cái nhìn thấy vẫn luôn khớp với cái được ghi.
+  // ⚠️ Rẻ: một lớp phễu là 6–20 hàng, mỗi hàng ba lần `classList.toggle` không đổi
+  // bố cục ⇒ trình duyệt không phải tính lại layout.
+  const rowPaints = [];
+  const paintAll = () => rowPaints.forEach(fn => fn());
+
   /** Both counters, from the one Map. Thầy: one side showing means both show. */
   function paintCounts() {
     if (!counts) return;
@@ -834,6 +846,17 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
     const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
     const row = el("div", "aw-sd-pod-row");
     row.style.setProperty("--w", w.toFixed(2) + "%");
+    // ⭐ Đợt 219 — KHOÁ CỦA MỘT LẦN TÍCH, và nó KHÔNG được là `b.key` trần.
+    // `b.key` tới từ hai đường khác nhau: bảng Show answers dựng nó từ `m.id` (luôn
+    // có), còn Recent results đọc nó ra khỏi SỔ CÁI, nơi `normStudent` viết
+    // `String(s?.key || "")` — một trận cũ thiếu trường đó cho ra chuỗi RỖNG cho
+    // MỌI em, tức cả lớp dùng chung một ô nhớ. Đây đúng là bậc thang duy nhất em tìm
+    // được giữa hai bảng, và cũng là lý do lỗi chỉ xuất hiện ở một bên.
+    // ⚠️ Bậc lùi lấy đúng luật `mergeClassBlocks` (core/showdown.js) đã dùng để gộp
+    // lớp — tên viết thường. Hai chỗ hỏi "ai là ai" phải hỏi cùng một câu.
+    const pk = String(b.key || "").trim()
+      || String(b.name || "").trim().toLowerCase()
+      || `#${i}`;
 
     const card = el("div", "aw-sd-pod-box" + (i < 3 ? ` is-m${i + 1}` : ""));
 
@@ -917,13 +940,26 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
         t.title = side === "l" ? "Left team" : "Right team";
         t.append(el("i", "aw-sd-pod-dot"));
         t.insertAdjacentHTML("beforeend", icons.check);     // trusted markup
+        // ⭐⭐ Đợt 219 — BA CÁI CHỐT PHÒNG THỦ, viết vào đây sau khi thầy báo
+        // "tích một bên thì chấm bên kia chưa ẩn" ở Recent results (20/8/2026).
+        // Lỗi KHÔNG tái hiện được trên lưới chạy (18/18 phép đo đều ẩn đúng, đúng
+        // đường thật: bảng Showdown ▸ Recent results ▸ bấm cột ▸ nút cúp), nên ba
+        // chốt này bịt ba đường mà nó CÓ THỂ đi, chứ không phải vá một chỗ đã bắt
+        // được quả tang. Cả ba đều rẻ và không đổi hình bảng một pixel nào.
+        //
+        // ⚠️ 1. VẼ TRƯỚC, KÊU SAU. `sound.tick()` đứng TRƯỚC hai lời gọi vẽ thì một
+        //    cú ném từ tầng âm thanh (AudioContext bị treo, thiết bị ra rồi vào) sẽ
+        //    nuốt luôn cả việc vẽ lại — dấu tích không hiện, chấm bên kia không ẩn,
+        //    và không có gì trên màn nói vì sao. Tiếng động là trang trí; nó phải
+        //    đứng sau, và trong `try`.
+        // ⚠️ 2. VẼ CẢ BẢNG, KHÔNG VẼ MỘT HÀNG. Xem `paintAll` bên dưới.
         t.onclick = e => {
           e.stopPropagation();
-          const cur = picks.get(b.key);
-          if (cur === side) picks.delete(b.key); else picks.set(b.key, side);
-          sound.tick();
-          paintRow();
+          const cur = picks.get(pk);
+          if (cur === side) picks.delete(pk); else picks.set(pk, side);
+          paintAll();
           paintCounts();
+          try { sound.tick(); } catch { /* âm thanh là trang trí, không được chặn việc vẽ */ }
         };
         return t;
       };
@@ -933,13 +969,14 @@ export function renderReviewPodium(ranked, { showTeam = false, picks = null } = 
       // does not jump sideways the moment a tick lands. A funnel that shuffles
       // under the teacher's finger is the thing this whole screen is for.
       const paintRow = () => {
-        const cur = picks.get(b.key) || "";
+        const cur = picks.get(pk) || "";
         row.classList.toggle("is-picked", !!cur);
         tl.classList.toggle("is-on", cur === "l");
         tr.classList.toggle("is-on", cur === "r");
         tl.classList.toggle("is-off", cur === "r");
         tr.classList.toggle("is-off", cur === "l");
       };
+      rowPaints.push(paintRow);
       row.append(tl, card, tr);
       paintRow();
     } else {

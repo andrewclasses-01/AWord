@@ -597,8 +597,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const waitBarFns = [null, null];
   // Đợt 217 — mỗi bàn để lại đây một cách "hãy dừng / hãy chạy tiếp" (registerPause).
   const pauseFns = [null, null];
-  function paintWaitBar(ms) {
-    waitBarFns.forEach(fn => { try { fn && fn(ms); } catch { /* board already gone */ } });
+  // ⭐ Đợt 219 — `mode` đi kèm: `"hold"` = đứng yên tại chỗ đang chạy tới,
+  // `"go"` = chạy tiếp NỐT `ms` còn lại (không kéo về đầy). Không truyền gì thì
+  // đúng như cũ. Nửa bên kia nằm ở `runWaitBar` trong core/engine.js.
+  function paintWaitBar(ms, mode) {
+    waitBarFns.forEach(fn => { try { fn && fn(ms, mode); } catch { /* board already gone */ } });
   }
 
   // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — CHE DẤU VẾT TRẢ LỜI CỦA BÀN ĐÃ XONG.
@@ -686,9 +689,77 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     teams[side].value.classList.toggle("is-neg", v < 0);
   }
 
+  // ⭐⭐⭐ Đợt 219 (thầy, 21/8/2026) — HAI ĐỒNG HỒ CỦA TRỌNG TÀI NAY DỪNG ĐƯỢC.
+  // Thầy: *"game đã dừng nhưng time cost vẫn chạy, cần dừng lại tất cả mọi thứ."*
+  // Time cost và đồng hồ câu nằm ở core/engine.js; hai cái CÒN LẠI nằm đây, và
+  // chúng là hai cái tệ nhất nếu bỏ sót — chúng không trừ điểm, chúng SANG CÂU:
+  //   · `roundTimer`   nhịp giữ 2,1s sau khi vòng chốt, và lưới an toàn 20 giây;
+  //   · `pendingTimer` cửa sổ TIME DELAY (tới 10 giây từ Đợt 216).
+  // Mở ☰ Menu giữa cửa sổ Time delay, bản trước đợt này: thanh chờ vẫn cạn, vòng
+  // vẫn chốt, bảng vẫn sang câu sau — SAU LƯNG pop-up. Thầy quay lại thì đã mất câu.
+  //
+  // ⚠️ CÁCH LÀM: HUỶ RỒI ĐẶT LẠI, chứ `setTimeout` không có nút tạm dừng. Mỗi đồng
+  // hồ nhớ ba thứ — việc phải làm (`fire`), còn bao nhiêu mili giây (`left`), và
+  // mốc đến hạn (`endAt`) để lúc dừng còn trừ ra được phần đã trôi.
+  // ⛔⛔ MỌI CHỖ HUỶ ĐỒNG HỒ PHẢI ĐI QUA `cancelRound()`/`cancelPending()`. Một dòng
+  // `clearTimeout(x); x = null` sót lại sẽ xoá cái ĐỒNG HỒ mà để nguyên VIỆC PHẢI
+  // LÀM, và cú thôi-tạm-dừng kế tiếp sẽ dựng dậy một vòng đã bị bỏ từ lâu — sang
+  // câu một mình, không ai bấm gì.
+  let roundDue = null;             // { fire, left, endAt } — nhịp giữ / lưới 20s
+  let pendingDue = null;           // { fire, left, endAt } — cửa sổ Time delay
+  let refPaused = false;           // trọng tài đang bị dừng?
+  const pausedSides = new Set();   // bàn nào đang đòi dừng
+
+  function armRound() {
+    if (!roundDue || roundTimer || refPaused || torndown) return;
+    roundDue.endAt = performance.now() + roundDue.left;
+    roundTimer = setTimeout(roundDue.fire, roundDue.left);
+  }
+  function armPending() {
+    if (!pendingDue || pendingTimer || refPaused || torndown) return;
+    pendingDue.endAt = performance.now() + pendingDue.left;
+    pendingTimer = setTimeout(pendingDue.fire, pendingDue.left);
+  }
+  function cancelRound() { clearTimeout(roundTimer); roundTimer = null; roundDue = null; }
+  function cancelPending() { clearTimeout(pendingTimer); pendingTimer = null; pendingDue = null; }
+
+  /**
+   * Một bàn vào/ra trạng thái tạm dừng. Trọng tài dừng khi CÓ ÍT NHẤT MỘT bàn dừng
+   * và chỉ chạy lại khi KHÔNG CÒN bàn nào — cùng lý lẽ với tập `pauseReasons` bên
+   * engine: hai bàn là hai nguồn độc lập, một cờ đúng/sai sẽ để bàn A đóng Menu là
+   * thả đồng hồ chạy trong lúc bàn B vẫn đang mở Options.
+   */
+  function setRefPaused(side, on) {
+    if (on) pausedSides.add(side); else pausedSides.delete(side);
+    const want = pausedSides.size > 0;
+    if (want === refPaused) return;
+    refPaused = want;
+    const t = performance.now();
+    if (refPaused) {
+      // ⚠️ HUỶ ĐỒNG HỒ NHƯNG GIỮ VIỆC PHẢI LÀM — cố ý KHÔNG gọi `cancelRound()`/
+      // `cancelPending()` ở đây: hai hàm đó vứt luôn cả `roundDue`/`pendingDue`, mà
+      // đó chính là thứ cú chạy-tiếp cần để dựng lại đúng phần còn dở.
+      if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; roundDue.left = Math.max(0, roundDue.endAt - t); }
+      if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; pendingDue.left = Math.max(0, pendingDue.endAt - t); }
+      // ⚠️ Thanh chờ phải đứng lại CÙNG LÚC. Nó là một `transition` CSS ở hàng nút
+      // dưới — KHÔNG nằm trong sân, nên `freezePlay()` của engine (chỉ quét
+      // `stage.getAnimations`) không bao giờ với tới; để nguyên thì thanh cạn hết
+      // trong lúc đồng hồ đứng im, và bàn hiện ra một lời hứa sai.
+      paintWaitBar(0, "hold");
+    } else {
+      armRound();
+      armPending();
+      if (pendingDue) paintWaitBar(pendingDue.left, "go");
+    }
+  }
+
   function later(fn, ms) {
-    clearTimeout(roundTimer);
-    roundTimer = setTimeout(() => { roundTimer = null; if (!torndown) fn(); }, ms);
+    cancelRound();
+    roundDue = {
+      fire: () => { roundTimer = null; roundDue = null; if (!torndown) fn(); },
+      left: Math.max(0, Number(ms) || 0), endAt: 0
+    };
+    armRound();
   }
 
   // The round is settled for BOTH teams — let each board finally show the ✓/✗
@@ -698,9 +769,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // play, so there is nothing left to give away. Templates that don't
   // implement `reveal` are unaffected.
   function revealBoards() {
-    // ⚠️ Đợt 217 — GỠ CHE TRƯỚC KHI LẬT BÀI. Lật bài là lúc cả hai đội được nhìn mọi
-    // thứ; để lớp che lại là đúng lúc lớp cần xem đáp án thì nó lại bị giấu.
-    unconcealAll();
+    // ⛔⛔⛔ Đợt 219 (thầy, 21/8/2026) — `unconcealAll()` ĐÃ RỜI KHỎI ĐÂY, và đó là cả
+    // nội dung việc thứ ba thầy giao: *"Sau đó đội chậm hơn làm xong thì đội làm
+    // trước cũng không cần hiện lại, chuyển thẳng sang câu sau cùng với đội chậm
+    // luôn."*
+    // Đợt 217 gỡ che ngay tại đây, tức ĐÚNG lúc vòng chốt — nên bàn nhanh sáng bài
+    // trở lại rồi đứng đó phơi ra suốt nhịp giữ 2,1 giây trước khi sang câu. Với
+    // Anagram thì hai giây đó là cả từ, viết sẵn, nằm cạnh bàn đội kia.
+    // Che nay được giữ tới tận lúc SANG CÂU (`advanceRound`) hoặc HẾT TRẬN
+    // (`endMatch`) — hai chỗ duy nhất mà thứ đang bị che sắp bị thay bằng thứ khác.
+    // ⚠️ `reveal()` vẫn được gọi như cũ: bàn vẫn ghi ✓/✗ của nó vào DOM, chỉ là lớp
+    // che đang phủ lên. Không có trạng thái mới nào sinh ra, nên không có gì phải gỡ
+    // ra sau — sang câu là `render()` vẽ lại từ đầu.
     boards.forEach(b => { try { b && b.reveal && b.reveal(); } catch { /* board already gone */ } });
   }
 
@@ -802,6 +882,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // ----- the round: both boards hold the SAME word index -----
   function advanceRound() {
     if (matchOver || torndown) return;
+    // ⭐⭐ Đợt 219 — GỠ CHE Ở ĐÂY, không ở `revealBoards()` nữa (xem chú thích dài
+    // trong hàm đó). Đặt trên cùng nên nó phủ CẢ HAI nhánh bên dưới — vòng thường và
+    // pick mode — và nằm cùng một nhịp đồng bộ với `goToIndex()` phía dưới, nên
+    // trình duyệt không bao giờ vẽ ra một khung hình có bài cũ đã sáng lại.
+    unconcealAll();
     // PICK MODE: "the next round" is not the next index — it is back to the
     // grid, with the turn handed on. Everything that got us here (the tie
     // window, the walk-away backstop, the hold after a decided round) is shared
@@ -817,7 +902,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // A pending tie-window can't outlive its own round — boardMoved() (Next/
     // Previous) and this natural round-turnover both jump straight past
     // whatever it was waiting to decide.
-    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+    cancelPending();
     pendingWinner = null;
     roundDone = [false, false];
     // The winner's glow belongs to the word that was just won, not to the next
@@ -849,6 +934,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     if (matchOver) return;
     matchOver = true;
     paintWaitBar(0);
+    // ⚠️ Đợt 219 — HẾT TRẬN THÌ PHẢI SÁNG LẠI. Không có câu sau để chuyển sang, nên
+    // đây là chỗ cuối cùng lớp còn nhìn được câu vừa rồi; giữ che ở đây là kết thúc
+    // một trận bằng một bàn trắng trơn.
+    unconcealAll();
     revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
     showResult();
@@ -931,6 +1020,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // `.aw-tool-dim`, nên bàn kia đắp thêm một lớp nữa là nửa màn hình bên đó tối hơn
     // hẳn nửa bên này — trông y như lỗi hiển thị.
     setPaused(side, on, dim = true) {
+      // ⭐ Đợt 219 — TRỌNG TÀI TRƯỚC, BÀN KIA SAU. Đặt trước là cố ý: bàn kia nhận
+      // được tin sẽ tự đóng băng phần của nó, còn hai đồng hồ chung thì chỉ có ở đây
+      // mới dừng được, và chúng là thứ có thể sang câu sau lưng cả hai bàn.
+      setRefPaused(side, !!on);
       const other = side === 0 ? 1 : 0;
       const fn = pauseFns[other];
       if (fn) { try { fn(!!on, !!dim); } catch { /* bàn kia đã bị dỡ */ } }
@@ -965,9 +1058,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       roundWinner = null;
       roundDone = [false, false];
       lastFinisher = null;
-      if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+      cancelPending();
       pendingWinner = null;
-      clearTimeout(roundTimer); roundTimer = null;
+      cancelRound();
       teams.forEach(t => t.el.classList.remove("is-won"));
       frozenAt[0] = frozenAt[1] = null;
       snapRoundBase();                       // Đợt 183 — see roundBase's own note
@@ -1055,7 +1148,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           // right now through the SAME path the timer would have used rather
           // than let both fire (revealBoards()/advanceRound must only ever
           // run once per round).
-          clearTimeout(pendingTimer); pendingTimer = null;
+          cancelPending();
           const decided = pendingWinner; pendingWinner = null;
           finalizeSingleWinner(decided);
           return;
@@ -1120,12 +1213,16 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // second CORRECT answer ⇒ tie, a WRONG one ⇒ single winner) are what close
         // this round now, and both already clear a null `pendingTimer` safely.
         if (tieUnlimited) return;
-        pendingTimer = setTimeout(() => {
-          pendingTimer = null;
-          if (torndown) return;   // teardown() already cleared this timer -- belt and braces
-          const decided = pendingWinner; pendingWinner = null;
-          finalizeSingleWinner(decided);
-        }, tieMs);
+        pendingDue = {
+          fire: () => {
+            pendingTimer = null; pendingDue = null;
+            if (torndown) return;   // teardown() already cleared this timer -- belt and braces
+            const decided = pendingWinner; pendingWinner = null;
+            finalizeSingleWinner(decided);
+          },
+          left: tieMs, endAt: 0
+        };
+        armPending();   // Đợt 219 — không đặt nếu trọng tài đang bị dừng; nối lại lúc chạy tiếp
         return;
       }
 
@@ -1133,7 +1230,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // landed WITHIN the window: JS is single-threaded, so nothing else could
       // have run between the window opening and this call, meaning the timer
       // above hasn't fired yet. That makes it a tie.
-      clearTimeout(pendingTimer); pendingTimer = null;
+      cancelPending();
       const firstSide = pendingWinner; pendingWinner = null;
       finalizeTie(firstSide, side);
     },
@@ -1158,12 +1255,17 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     boardMoved(side, index) {
       if (index === roundIndex || matchOver || torndown) return;
       paintWaitBar(0);
+      // ⚠️ Đợt 219 — CÂU MỚI THÌ KHÔNG BÀN NÀO CÒN BỊ CHE. Lỗ này có từ Đợt 217 (lúc
+      // đó `revealBoards()` là chỗ duy nhất gỡ che, mà đường ‹ › này không đi qua đó),
+      // nhưng từ đợt này lớp che sống lâu hơn hẳn nên nó sẽ cắn thật: thầy bấm Next
+      // giữa lúc một bàn đang bị che là bàn đó sang câu mới với chữ vẫn tàng hình.
+      unconcealAll();
       roundIndex = index;
       roundWinner = null;
-      if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }
+      cancelPending();
       pendingWinner = null;
       roundDone = [false, false];
-      clearTimeout(roundTimer); roundTimer = null;
+      cancelRound();
       teams.forEach(t => t.el.classList.remove("is-won"));
       snapRoundBase();   // Đợt 183 — a new round starts here too
       const other = side === 0 ? 1 : 0;
@@ -1648,8 +1750,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function teardown() {
     torndown = true;
     paintWaitBar(0);
-    clearTimeout(roundTimer);
-    if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; }   // Đợt 133 — same reasoning as roundTimer
+    cancelRound();
+    cancelPending();   // Đợt 133 — same reasoning as roundTimer
     FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });
     boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
     // Đợt 131: the actual fix for the ghost-clock bug — stop BOTH boards'

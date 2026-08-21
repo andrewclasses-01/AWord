@@ -8,6 +8,231 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 219 (21/8/2026) — ⭐⭐ CHẤM TÍCH KHÔNG BAO GIỜ SÓT · TẠM DỪNG LÀ DỪNG **TẤT CẢ** · ANAGRAM CHE LÀ **XOÁ HẲN CHỮ**
+
+> 🗣️ **THẦY GIAO 3 VIỆC**:
+> 1. *"Khi xem bảng showdown trong recent result, bảng xếp hạng học sinh chóp nón ngược có 1 lỗi:
+>    khi tích vào chấm tròn ở 1 bên của 1 ô học sinh thì ô tròn bên kia chưa ẩn (có ẩn trong bảng
+>    xếp hạng chóp nón ngược trong show answer ở cuối game nhưng ở đây ko có)"*
+> 2. *"Khi nhấn menu hoặc các pop-up tùy chỉnh thì game đã dừng nhưng time cost vẫn chạy, cần dừng
+>    lại tất cả mọi thứ"*
+> 3. *"Trong game Anagram, ở chế độ fight mode, khi bật delay và có 1 đội trước xong thì các ô chữ
+>    trong anagram ẩn chưa đủ tốt nên đội bên kia vẫn xem được. Hãy thay đổi cách ẩn như sau: đội
+>    xong trước loại bỏ hẳn các chữ trong ô anagram, chỉ để ô trống. Sau đó đội chậm hơn làm xong
+>    thì đội làm trước cũng không cần hiện lại, chuyển thẳng sang câu sau cùng với đội chậm luôn"*
+>
+> Sửa **5 file**: `core/showdown-review.js` · `core/app.css` · `core/engine.js` · `core/fight.js` ·
+> `templates/anagram/anagram.css`. 0 lỗi console. ✅ **THẦY DUYỆT** (*"ok build"*) — commit
+> `__HASH__`, **ĐÃ PUSH**. Xem mục **ĐÃ LIVE** ở cuối khối này.
+>
+> ⚠️ **Hai lựa chọn thầy chốt qua AskUserQuestion**: (a) việc 3 nửa sau áp dụng cho **CẢ 5 template**
+> có che bài, không riêng Anagram; (b) *"dừng tất cả"* bao gồm **cả đồng hồ trọng tài** của Fight.
+
+---
+
+### VIỆC 1 — CHẤM TRÒN BÊN KIA PHẢI ẨN (Recent results)
+
+⚠️⚠️ **KHÔNG TÁI HIỆN ĐƯỢC — và đã nói thẳng với thầy trước khi vá.** Em dựng lưới chạy đi đúng
+đường thật (`scratch/dot219-recent.html`: bộ giả Firestore → `buildShowdownPanel` → bấm chữ
+SHOWDOWN IN ANDREW CLASSES → bấm cột → bung chi tiết → nút cúp), quét **6 hàng × 3 thao tác** (tích
+trái · tích phải · bỏ tích): **18/18 lần chấm bên kia ẩn đúng**. Hai bảng gọi **CHUNG một hàm**
+`renderReviewPodium`, và mã băm `core/showdown-setup.js` trên bản live **trùng khít** bản ở máy —
+nên không có chuyện thầy đang chạy bản cũ. Thầy chốt *"cứ vá phòng thủ luôn"*.
+
+**Ba chốt, bịt ba đường mà lỗi CÓ THỂ đi:**
+
+**1. Khoá của một lần tích thôi bám `b.key` trần** — đây là **bậc thang duy nhất em tìm được giữa
+hai bảng**, và nó giải thích được đúng cái thầy tả:
+
+- Bảng **Show answers** dựng khối bằng `groupByMember()` → `key: String(m.id || m.name || mi)`, luôn
+  có giá trị.
+- Bảng **Recent results** đọc khối ra khỏi **SỔ CÁI**, nơi `normStudent()` viết
+  `key: String(s?.key || "")` — một trận cũ thiếu trường đó cho ra **chuỗi rỗng cho MỌI em**, tức cả
+  lớp dùng chung một ô nhớ trong `picks`.
+- Hậu quả **đúng hình dạng lời thầy**: tích hàng 0 bên trái (ghi `""→"l"`), rồi tích hàng 1 bên phải
+  (ghi đè `""→"r"`) — **hàng 1 vẽ lại đúng, hàng 0 KHÔNG được vẽ lại** nên vẫn còn dấu tích cũ và
+  vẫn còn chấm bên kia. Trên màn: "tích một bên mà bên kia chưa ẩn".
+
+Nay khoá là `b.key || tên viết thường || "#i"` — **đúng luật `mergeClassBlocks()` (core/showdown.js)
+đã dùng để gộp lớp**. Hai chỗ hỏi "ai là ai" phải hỏi cùng một câu.
+
+**2. Một cú tích vẽ lại CẢ BẢNG, không chỉ hàng vừa bấm** (`rowPaints[]` + `paintAll()`). Dù khoá có
+đụng nhau vì lý do nào khác, cái NHÌN THẤY luôn khớp với cái ĐƯỢC GHI. Rẻ: 6–20 hàng × 3 lần
+`classList.toggle` không đổi bố cục.
+
+**3. Vẽ trước, kêu sau.** `sound.tick()` vốn đứng **TRƯỚC** hai lời gọi vẽ; một cú ném từ tầng âm
+thanh (AudioContext bị treo, thiết bị ra/vào) là nuốt luôn cả việc vẽ. Nay nó đứng **sau** và nằm
+trong `try`.
+
+**Và ở CSS**: `.aw-sd-pod-tick.is-off` nay ẩn bằng **ba cách cùng lúc** —
+`visibility: hidden; opacity: 0; pointer-events: none`.
+⚠️ Lý do thật, không phải cho chắc: **`visibility` là thứ DUY NHẤT trong ba cái đó mà CON CHÁU gỡ ra
+được** — một dòng `visibility: visible` trên chấm hay trên dấu ✓ (cả hai đều là con của nút) sẽ hiện
+lại chính nó dù cha đã ẩn. `opacity: 0` đóng đúng đường đó.
+⚠️ `pointer-events: none` là nửa còn lại: nút vô hình mà vẫn ăn cú chạm là **bẫy Đợt 137** — ở đây nó
+sẽ nhận cú chạm hụt và **ĐẢO đội** của em vừa xếp.
+⛔ Vẫn **KHÔNG** `display: none`: mất bề rộng là phễu giật sang ngang.
+
+**ĐO** (`scratch/dot219-recent.html` + đối chứng ngược khoá đụng nhau):
+
+| Phép đo | Kết quả |
+|---|---|
+| 6 hàng × 3 thao tác, đúng đường Recent results thật | **18/18** — `visibility/opacity/pointer-events` = `hidden/0/none` ✔ |
+| Sổ cái **thiếu key** (4 em, `key:""`) | 4 khoá riêng (`quyên`,`hiếu`,…), bộ đếm `1/1`, mỗi hàng độc lập ✔ |
+| **Đối chứng ngược**: ép khoá đụng nhau HOÀN TOÀN (cùng `key:""` **và** cùng tên) | cả 4 hàng đi cùng nhau, **không còn hàng nào giữ dấu tích cũ** ✔ (bản cũ để hàng 0 kẹt ở `ON`) |
+
+⬜ **Vẫn cần mắt thầy**: em chưa đo được ca **FULLSCREEN** — pane thử nghiệm bị Chrome từ chối
+`requestFullscreen` (*"API can only be initiated by a user gesture"*), mà bảng chi tiết Recent
+results thì **luôn xin fullscreen** từ Đợt 207. Nếu sau bản này thầy vẫn thấy lỗi thì gần như chắc
+chắn nó nằm ở đó.
+
+---
+
+### VIỆC 2 — TẠM DỪNG LÀ DỪNG **TẤT CẢ**
+
+**GỐC RỄ**: Đợt 217 đã dựng **tập lý do** `pauseReasons` (`menu` · `panel` · `relay` · `stolen`)
+nhưng **hai đồng hồ chưa bao giờ được nối vào đó**. Cả hai tự hỏi lấy, và cùng hỏi sai một kiểu:
+
+```js
+if (menuEl || toolPanelEl || …) return;   // idleTick  — Time cost
+if (menuEl || toolPanelEl) { roundBank(); return; }   // roundTick — đồng hồ CÂU
+```
+
+`menuEl`/`toolPanelEl` chỉ biết pop-up của **CHÍNH bàn mình** ⇒ Fight, bàn kia bấm ☰ Menu thì bàn này
+nhận lý do `"relay"`, sân đã phủ tối, chạm không được — **mà vẫn trừ điểm đều mỗi 3 giây**; bị máy
+khác giành team (`"stolen"`) cũng thế.
+
+⭐ Nay cả hai hỏi **một câu duy nhất**: `playPaused()` = `pauseReasons.size > 0 || menuEl || toolPanelEl`.
+⚠️ Vẫn giữ hai biến kia bên trong chứ không đổi hẳn sang tập lý do: chúng là **sự thật trên màn
+hình**, tập lý do là **bản ghi chép** về nó — hỏi cả hai thì ngày nào chúng lệch nhau, câu trả lời
+vẫn ngả về phía **an toàn** (không trừ điểm).
+
+#### ⛔⛔ LỖ RÒ CỦA CHÍNH ĐỢT 217, tìm ra trong lúc làm việc này
+
+Đợt 217 gửi tin sang bàn kia trên **MỖI lần thêm/bớt lý do**. Thêm thì vô hại. **Bớt thì không**:
+
+> Mở Options (lý do `panel`) → bấm ☰ Menu (lý do `menu`) → **đóng Menu**.
+> `exitPause("menu")` xoá đúng một lý do ⇒ ván **NÀY** vẫn đứng (còn `panel`) — nhưng nó đã kịp bắn
+> `setPaused(side, false)` và **bàn KIA chạy lại thật**, sau lưng tấm che vẫn phủ kín bên này.
+
+Đó **chính là cái bẫy mà chú thích của Đợt 217 mô tả**, nhưng nó chỉ được bịt ở **nửa TRONG** (tập lý
+do của bàn mình), còn **nửa GỬI ĐI** thì chưa. Nay có `syncRelay()`: chỉ bắn khi câu trả lời
+*"bàn này có lý do nào KHÁC `relay` không"* **ĐỔI** — nên cũng không bao giờ dội qua dội lại.
+
+#### ⭐⭐ VÀ ĐỒNG HỒ TRỌNG TÀI (thầy chọn "dừng luôn cả trọng tài")
+
+Hai đồng hồ còn lại nằm ở `core/fight.js`, và chúng là hai cái **tệ nhất nếu bỏ sót — chúng không
+trừ điểm, chúng SANG CÂU**:
+
+- `roundTimer` — nhịp giữ 2,1s sau khi vòng chốt, và lưới an toàn 20 giây;
+- `pendingTimer` — **cửa sổ TIME DELAY** (tới 10 giây từ Đợt 216).
+
+Bản trước: mở ☰ Menu giữa cửa sổ Time delay thì thanh chờ vẫn cạn, vòng vẫn chốt, bảng vẫn **sang câu
+sau lưng pop-up** — thầy quay lại là đã mất câu.
+
+⚠️ **Cách làm: HUỶ RỒI ĐẶT LẠI** — `setTimeout` không có nút tạm dừng. Mỗi đồng hồ nhớ ba thứ: việc
+phải làm (`fire`), còn bao nhiêu mili giây (`left`), mốc đến hạn (`endAt`).
+⛔⛔ **MỌI chỗ huỷ đồng hồ phải đi qua `cancelRound()`/`cancelPending()`.** Một dòng
+`clearTimeout(x); x = null` sót lại sẽ xoá **cái đồng hồ** mà để nguyên **việc phải làm**, và cú
+thôi-tạm-dừng kế tiếp **dựng dậy một vòng đã bị bỏ từ lâu** — sang câu một mình, không ai bấm gì.
+(Đã cắn ngay trong lúc viết: một lệnh thay chuỗi hàng loạt biến chính thân `cancelRound()` thành
+`function cancelRound() { cancelRound(); … }` — **đệ quy vô hạn**. Bắt được vì đọc lại diff.)
+
+⚠️ **Trọng tài dừng khi CÓ ÍT NHẤT MỘT bàn dừng, chạy lại khi KHÔNG CÒN bàn nào** (`pausedSides`) —
+cùng lý lẽ với tập `pauseReasons`: một cờ đúng/sai sẽ để bàn A đóng Menu là thả đồng hồ chạy trong
+lúc bàn B vẫn mở Options.
+
+⚠️ **Thanh chờ phải đứng lại CÙNG LÚC.** Nó là một `transition` CSS ở **hàng nút dưới — KHÔNG nằm
+trong sân**, nên `freezePlay()` (chỉ quét `stage.getAnimations({subtree:true})`) **không bao giờ với
+tới**. `runWaitBar` nay có hai nhịp mới:
+- `"hold"` — ghim bề rộng **đang chạy giữa chừng**, đọc bằng `getComputedStyle` (px), chứ không phải
+  cái `"0%"` đã ghi vào `style`;
+- `"go"` — chạy nốt phần còn lại **TỪ CHỖ ĐANG ĐỨNG**. ⛔ Tuyệt đối không kéo về 100%: đó là tặng
+  không cho đội chậm cả một cửa sổ nữa.
+- Cả hai bỏ qua ở nấc **∞** (`.is-forever` không đếm gì để mà dừng — nó chỉ thở bằng CSS).
+
+⛔ **Đã cân nhắc rồi BỎ**: gom nốt những số `-N` đang bay (chúng là con của `document.body` nên
+`stage.getAnimations()` không thấy). Đóng băng được, nhưng mỗi số tự có một `setTimeout` dọn xác nên
+chỉ đổi *"bay nốt 0,6 giây rồi tan"* thành *"đứng chết giữa màn rồi biến mất"* — xấu hơn mà rủi ro
+hơn. Từ đợt này ván đang dừng **không trừ điểm nữa**, nên cửa sổ để có một số đang bay lúc bấm Menu
+chỉ còn đúng **0,7 giây**.
+
+---
+
+### VIỆC 3 — ANAGRAM: CHE LÀ **XOÁ HẲN MỰC**, VÀ **KHÔNG HIỆN LẠI**
+
+#### ⛔⛔⛔ GỐC RỄ: `color: transparent` KHÔNG XOÁ ĐƯỢC BÓNG ĐỔ CỦA CHỮ
+
+`.aw-anagram-rtile.is-filled` và `.aw-anagram-otile` đều mang
+`text-shadow: 0 .1cqw .2cqw rgba(0,0,0,.18)`. **Bóng được vẽ theo ĐÚNG HÌNH CHỮ và vẽ ĐỘC LẬP với
+`color`** ⇒ chữ trong suốt vẫn để lại **một chữ xám nhoè nằm nguyên chỗ cũ**. Trên tấm 86 inch, cách
+một sải tay, đó là một chữ **đọc được**. Che bằng `color` mà quên `text-shadow` là **che một nửa**.
+
+Đo được, không đoán: `textShadow` trước khi che = `rgba(0, 0, 0, 0.18) 0px 0.618312px 1.23662px`.
+
+Nay: `color: transparent; text-shadow: none` — ô còn nguyên chỗ, nguyên màu, **không còn một nét mực
+nào**, đúng *"chỉ để ô trống"*. Thêm `.aw-anagram-revealmark { opacity: 0 }`: dấu ✓/✗ **to nằm ngay
+trong ô chữ** nói thẳng từng vị trí nào đúng — với một anagram thì đó gần như là cả đáp án, và nó là
+**ảnh SVG** nên `color` ở trên không đụng tới được.
+
+⚠️ **Cùng họ với bẫy này**: `-webkit-text-stroke`, `background-image` hình chữ, `::after` có
+`content`. Template này không dùng cái nào — nhưng ai thêm vào sau này thì **phải quay lại đây**, vì
+`color` sẽ lại che hụt y như lần này.
+
+#### ⭐⭐ `unconcealAll()` RỜI KHỎI `revealBoards()`
+
+Thầy: *"đội làm trước cũng không cần hiện lại, chuyển thẳng sang câu sau cùng với đội chậm luôn."*
+
+Đợt 217 gỡ che **ngay lúc vòng chốt**, nên bàn nhanh **sáng bài trở lại rồi đứng phơi ra suốt nhịp
+giữ 2,1 giây**. Với Anagram thì hai giây đó là **cả từ, viết sẵn, nằm cạnh bàn đội kia**.
+
+Nay che được giữ tới tận lúc **SANG CÂU** (`advanceRound`, đặt trên cùng nên phủ cả vòng thường lẫn
+pick mode) hoặc **HẾT TRẬN** (`endMatch` — không có câu sau để chuyển sang, giữ che ở đó là kết thúc
+một trận bằng một bàn trắng trơn).
+⚠️ `reveal()` **vẫn được gọi như cũ**: bàn vẫn ghi ✓/✗ của nó vào DOM, chỉ là lớp che đang phủ lên —
+không sinh trạng thái mới nào nên không có gì phải gỡ ra sau.
+⚠️ **Áp dụng cho cả 5 template có che bài** (anagram · quiz · true-false · find-the-match ·
+type-the-answer) — thầy chốt. Làm riêng cho Anagram sẽ phải đẻ một **cờ khai báo mới cho template**,
+trái hẳn nguyên tắc *"một lớp CSS, không thêm hợp đồng"* của Đợt 217.
+
+⚠️ **Vá kèm một lỗ có từ Đợt 217**: `boardMoved()` (thầy bấm ‹ ›) **không đi qua `revealBoards()`**,
+nên nó chưa bao giờ gỡ che. Trước đây hiếm khi cắn vì lớp che sống rất ngắn; từ đợt này nó sống lâu
+hơn hẳn ⇒ bấm Next giữa lúc một bàn đang bị che là bàn đó **sang câu mới với chữ vẫn tàng hình**.
+
+---
+
+### ĐO (`scratch/dot219-fight.html` — **24/24 ĐẠT**, 0 lỗi console)
+
+| Mục | Phép đo | Kết quả |
+|---|---|---|
+| A | trước khi che: ô chữ **có** bóng đổ (chính là gốc rễ) | `rgba(0,0,0,.18) 0 .618px 1.237px` ✔ |
+| A | che rồi: chữ trong suốt · **bóng đổ biến mất** | `rgba(0,0,0,0)` · `none` ✔ |
+| A | gỡ che: bóng đổ trở lại nguyên vẹn | trùng khít giá trị cũ ✔ |
+| A | che rồi: dấu ✓/✗ to trong ô cũng tắt | `opacity 0` ✔ |
+| B | bàn 0 xong ⇒ **chỉ** bàn 0 bị che | `[true,false]` ✔ |
+| B | **vòng đã chốt mà bàn 0 VẪN bị che** (bản cũ đã sáng lại) | `[true,false]` ✔ |
+| B | sang câu mới ⇒ hết che ở **cả hai** bàn | `[false,false]` ✔ |
+| C | bàn 0 mở Menu ⇒ **CẢ HAI** bàn ngừng trừ Time cost | `[-80,-80]` đứng yên 3,2s ✔ |
+| C | đóng Menu ⇒ trừ lại bình thường | ✔ |
+| D | đang dừng ⇒ **chưa sang câu** | ✔ |
+| D | mốc **T+9,2s** vẫn chưa sang câu (**bản cũ sang từ T+8,1s**) | ✔ |
+| D | hết nốt phần còn lại mới sang câu | ✔ |
+| E | đóng Menu mà còn Options ⇒ **bàn 1 VẪN dừng** (lỗ rò được vá) | điểm đứng yên ✔ |
+| E | đóng nốt Options ⇒ **cả hai** chạy lại | ✔ |
+
+⚠️ **Chưa đo được, cần mắt/tay thầy**:
+1. **Bề rộng thanh chờ lúc "hold"/"go"** — pane thử nghiệm bị ẩn nên Chromium **đóng băng
+   transition** (bẫy đã ghi trong bộ nhớ), và chính lưới chạy lại đặt `*{transition:none}`. Logic
+   đúng thì đã chứng minh gián tiếp bằng **thời điểm sang câu** (T+9,2s vs T+8,1s).
+2. Ca **fullscreen** của Recent results (xem việc 1).
+3. Nhìn thật một ván Anagram Fight trên màn 86" xem "ô trống" có đọc ra là ô trống không.
+
+📌 **Ghi lại một chi tiết đo được, KHÔNG sửa ở đợt này**: mở **cả** ☰ Menu **lẫn** Options rồi đóng
+Menu thì bàn 0 **giữ lại tấm che sân** của Menu (đúng luật — nó vẫn đang bị dừng), nên nửa màn bên 0
+tối hơn nửa bên 1. Là chuyện đã có từ Đợt 217, không phải thứ thầy báo.
+
+---
+
 ## Đợt 218c (20/8/2026) — VẠCH KẺ MẢNH NGĂN QUICK ACCESS VỚI CÁC THƯ MỤC
 
 > 🗣️ **THẦY GIAO**: *"Thêm 1 vạch kẻ mảnh giữa quick access và các thư mục để phân tách 2 mục này"*.

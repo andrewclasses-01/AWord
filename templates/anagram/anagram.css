@@ -651,10 +651,31 @@
 /* Thầy nói thẳng: *"Anagram thì không hiện chữ trong ô nữa"*. Ô vẫn còn nguyên chỗ và
    nguyên màu — chỉ chữ biến mất — nên bàn không nhấp nháy đổi hình.
    ⚠️ `color: transparent` chứ không phải `visibility`/`display`: chữ phải vẫn chiếm
-   đúng chỗ cũ để bề rộng ô không đổi, và hàng chữ gốc ở dưới cũng không xô lệch. */
+   đúng chỗ cũ để bề rộng ô không đổi, và hàng chữ gốc ở dưới cũng không xô lệch.
+
+   ⛔⛔⛔ Đợt 219 (thầy, 21/8/2026) — *"các ô chữ trong anagram ẩn chưa đủ tốt nên đội
+   bên kia vẫn xem được… đội xong trước loại bỏ hẳn các chữ trong ô anagram, chỉ để ô
+   trống."* GỐC RỄ: **`color: transparent` KHÔNG XOÁ ĐƯỢC BÓNG ĐỔ CỦA CHỮ.**
+   `.aw-anagram-rtile.is-filled` và `.aw-anagram-otile` đều mang
+   `text-shadow: 0 .1cqw .2cqw rgba(0,0,0,.18)` (xem hai khối của chúng ở trên) — bóng
+   được vẽ theo ĐÚNG HÌNH CHỮ và vẽ ĐỘC LẬP với `color`, nên chữ trong suốt vẫn để lại
+   một chữ xám nhoè nằm nguyên chỗ cũ. Trên tấm 86 inch, cách nhau một sải tay, đó là
+   một chữ đọc được. Che bằng `color` mà quên `text-shadow` là che một nửa.
+   ⚠️ Vì thế `text-shadow: none` là dòng LÀM VIỆC ở đây, không phải dọn dẹp.
+   ⚠️ Cùng họ với nó: `-webkit-text-stroke`, `background-image` hình chữ, `::after`
+   chứa `content`. Template này không dùng cái nào — nhưng ai thêm vào một trong số đó
+   sau này thì phải quay lại đây, vì `color` sẽ lại che hụt y như lần này. */
 .aw-fight-board.is-concealed .aw-anagram-rtile,
 .aw-fight-board.is-concealed .aw-anagram-otile,
-.aw-fight-board.is-concealed .aw-anagram-reveal { color: transparent; transition: color .18s ease; }
+.aw-fight-board.is-concealed .aw-anagram-reveal {
+  color: transparent; text-shadow: none; transition: color .18s ease;
+}
 /* Ô đã điền vốn đổi màu nền theo đúng/sai — cũng là một cách để lộ bài. */
 .aw-fight-board.is-concealed .aw-anagram-rtile.is-filled.is-blue,
 .aw-fight-board.is-concealed .aw-anagram-rtile.is-filled.is-wrongbg { background-color: var(--aw-ana-lost-bg); }
+/* Dấu ✓/✗ TO nằm ngay trong ô chữ (`.aw-anagram-revealmark`, dựng ở anagram.js) nói
+   thẳng ra từng vị trí nào đúng — với một anagram thì đó gần như là cả đáp án. Nó là
+   ảnh SVG nên `color: transparent` ở trên không đụng tới được.
+   ⚠️ `opacity`, không phải `display`: nó `position: absolute; inset: 12%` nên không
+   chiếm chỗ của ai, và gỡ khỏi luồng vẽ chỉ tổ làm trình duyệt tính lại. */
+.aw-fight-board.is-concealed .aw-anagram-revealmark { opacity: 0; }

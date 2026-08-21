@@ -8,7 +8,41 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **20/8/2026 (Đợt 218 + 218b + 218c)** — ⭐⭐ **KHUNG QUICK ACCESS Ở TRANG CHỦ**:
+> Cập nhật lần cuối: **21/8/2026 (Đợt 219)** — ⭐⭐ **CHẤM TÍCH KHÔNG SÓT · TẠM DỪNG LÀ DỪNG TẤT CẢ ·
+> ANAGRAM CHE LÀ XOÁ HẲN CHỮ**. Thầy giao 3 việc. Sửa **5 file**: `core/showdown-review.js` ·
+> `core/app.css` · `core/engine.js` · `core/fight.js` · `templates/anagram/anagram.css`.
+> ✅ **THẦY DUYỆT** (*"ok build"*) — commit `__HASH__`, **ĐÃ PUSH + LIVE**.
+> Đọc khối **Đợt 219** đầu `GHI CHU DU AN.md`.
+> - **(1) Chấm tròn bên kia phải ẩn ở Recent results.** ⚠️⚠️ **KHÔNG tái hiện được** (đo **18/18** đúng
+>   đường thật; mã băm `showdown-setup.js` live trùng khít bản máy) ⇒ thầy chốt *"cứ vá phòng thủ"*.
+>   ⭐ Bậc thang DUY NHẤT tìm được giữa hai bảng: **khoá `b.key` của SỔ CÁI có thể RỖNG**
+>   (`normStudent` viết `String(s?.key || "")`), mà Show answers thì luôn có (`m.id`) — cả lớp dùng
+>   chung một ô nhớ thì hàng tích trước **không được vẽ lại**, y hình thầy tả. Nay khoá có bậc lùi
+>   *tên viết thường* (đúng luật `mergeClassBlocks`), một cú tích **vẽ lại CẢ BẢNG**, và `sound.tick()`
+>   xuống đứng **sau** việc vẽ trong `try`. CSS `.is-off` ẩn bằng **ba cách**: ⚠️ `visibility` là thứ
+>   DUY NHẤT **con cháu gỡ ra được**. ⬜ Chưa đo được ca **FULLSCREEN**.
+> - **(2) Tạm dừng là dừng TẤT CẢ.** ⛔ Gốc rễ: Đợt 217 dựng tập `pauseReasons` nhưng **hai đồng hồ
+>   chưa bao giờ nối vào đó** — `idleTick`/`roundTick` chỉ hỏi `menuEl || toolPanelEl`, tức **chỉ biết
+>   pop-up của CHÍNH bàn mình** ⇒ bàn kia bấm Menu là bàn này **vẫn trừ Time cost**. Nay hỏi
+>   `playPaused()`. ⛔⛔ **VÁ LỖ RÒ CỦA CHÍNH ĐỢT 217**: nó bắn tin sang bàn kia trên MỖI lần bớt lý do,
+>   nên đóng Menu trong lúc Options còn mở là **bàn kia chạy lại thật** sau lưng tấm che — nay
+>   `syncRelay()` chỉ bắn khi câu trả lời ĐỔI. ⭐⭐ Và **đồng hồ TRỌNG TÀI** (`roundTimer` ·
+>   `pendingTimer`) nay dừng được — chúng không trừ điểm, chúng **SANG CÂU**. ⚠️ `setTimeout` không có
+>   nút dừng ⇒ **huỷ rồi đặt lại**, mỗi đồng hồ nhớ `fire`/`left`/`endAt`; ⛔⛔ mọi chỗ huỷ **phải** đi
+>   qua `cancelRound()`/`cancelPending()`. Thanh chờ có hai nhịp mới `"hold"`/`"go"` (nó là
+>   `transition` CSS **ngoài sân** nên `freezePlay()` không với tới).
+> - **(3) Anagram che là XOÁ HẲN MỰC.** ⛔⛔⛔ Gốc rễ: **`color: transparent` KHÔNG xoá được
+>   `text-shadow`** — bóng vẽ theo đúng hình chữ, độc lập với `color`, để lại một chữ xám đọc được từ
+>   xa. Nay `text-shadow: none` + tắt `.aw-anagram-revealmark`. ⭐⭐ Và `unconcealAll()` **rời khỏi
+>   `revealBoards()`**: che giữ tới tận lúc **SANG CÂU** / **HẾT TRẬN** (thầy chốt áp dụng **cả 5
+>   template** có che bài). ⚠️ Vá kèm lỗ Đợt 217: `boardMoved()` (‹ ›) chưa bao giờ gỡ che.
+> - ✅ **ĐO**: `scratch/dot219-fight.html` **24/24** · `scratch/dot219-recent.html` **18/18** + đối chứng
+>   ngược khoá đụng nhau · lưới Đợt 217 cũ trượt **đúng 2 phép** mã hoá hành vi cũ (đã cập nhật theo
+>   luật mới), 16/18 còn lại nguyên vẹn. ⬜ **Cần mắt/tay thầy**: bề rộng thanh chờ lúc hold/go (pane
+>   ẩn đóng băng transition) · ca fullscreen của Recent results · nhìn thật ván Anagram Fight trên 86".
+>
+> ---
+> Trước đó: **20/8/2026 (Đợt 218 + 218b + 218c)** — ⭐⭐ **KHUNG QUICK ACCESS Ở TRANG CHỦ**:
 > 218 dựng nó (thư mục ghim + con của nó, mũi tên xổ, kéo-thả vào được), **218b đổi hình** theo lời
 > thầy — nay là **Ô ĐẦU TIÊN CỦA LƯỚI** (luôn hiện, chiếm cột 1, card còn 3 cột, cao tối thiểu 2 card
 > thư mục), và **kéo sắp xếp được thứ tự mục ghim bằng POINTER events** (chạy cả trên ngón tay).

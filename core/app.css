@@ -5347,8 +5347,21 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-pod-tick.is-on svg { opacity: 1; transform: scale(1); }
 /* ⚠️ `visibility`, NOT `display:none` and never removal: the hidden box keeps
    its width, so the name box does not jump sideways the moment a tick lands. A
-   funnel that shuffles under the teacher's finger is the thing this is for. */
-.aw-sd-pod-tick.is-off { visibility: hidden; }
+   funnel that shuffles under the teacher's finger is the thing this is for.
+   ⭐ Đợt 219 — BA CÁCH BIẾN MẤT CÙNG LÚC, sau khi thầy báo chấm bên kia vẫn hiện ở
+   Recent results (20/8/2026).
+   ⚠️ `visibility` là thứ DUY NHẤT trong ba cái này có thể bị con cháu GỠ RA:
+   `visibility: visible` trên một phần tử bên trong sẽ hiện lại chính nó dù cha đã
+   ẩn — đó là điểm khác giữa nó và `opacity`/`display`. Chấm và dấu ✓ đều là con của
+   nút này, nên một dòng như thế ở bất cứ đâu (kể cả một đợt sau viết vào) là đủ để
+   chấm sống lại. `opacity: 0` đóng đúng đường đó và không đổi bố cục một pixel nào.
+   ⚠️ `pointer-events: none` là nửa còn lại: một nút vô hình mà vẫn ăn được cú chạm
+   là cái bẫy Đợt 137 (xem `.aw-anagram-penhost` trong anagram.css) — ở đây nó sẽ
+   nhận cú chạm hụt và ĐẢO đội của em vừa được xếp.
+   ⛔ Vẫn KHÔNG được dùng `display: none`: mất bề rộng là phễu giật sang ngang. */
+.aw-sd-pod-tick.is-off {
+  visibility: hidden; opacity: 0; pointer-events: none;
+}
 
 /* ⭐⭐ Đợt 208 — THE TOP THREE NAMES ARE GOLD, GLOWING, AND SURROUNDED BY
    SPARKLES (thầy: "3 tên của 3 bạn số 1, 2, 3 màu vàng lấp lánh tỏa hào quang,

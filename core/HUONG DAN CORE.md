@@ -2368,8 +2368,26 @@ Cửa sổ chờ nay tới **10 giây** (Đợt 216) — mười giây đội ki
   vòng đóng gần như tức thì, che rồi hiện lại chỉ là một cú nháy. **In turns tự miễn nhiễm** mà không
   cần điều kiện riêng (nó ghim cửa sổ về 0,1s, và hai bàn vốn cầm hai câu KHÁC nhau).
 - ⚠️ Đặt ngay sau `roundDone[side] = true` trong `wordDone()` — điểm DUY NHẤT mọi kiểu kết thúc của
-  một bàn đều đi qua. `revealBoards()` gỡ che **trước** khi lật bài, đồng bộ trong cùng một nhịp, nên
-  ca "xong là đóng vòng luôn" không nháy khung hình nào.
+  một bàn đều đi qua.
+- ⭐⭐ **Đợt 219 ĐỔI TUỔI THỌ CỦA LỚP CHE.** Trước: `revealBoards()` gỡ che ngay lúc vòng chốt. Nay:
+  che **sống tới tận lúc SANG CÂU** (`advanceRound`, đặt trên cùng nên phủ cả vòng thường lẫn pick
+  mode) hoặc **HẾT TRẬN** (`endMatch`). Thầy: *"đội làm trước cũng không cần hiện lại, chuyển thẳng
+  sang câu sau cùng với đội chậm luôn"* — bản cũ để bàn nhanh **sáng bài rồi phơi ra suốt nhịp giữ
+  2,1 giây**, mà với Anagram thì đó là cả từ, viết sẵn, nằm cạnh bàn đội kia.
+  ⚠️ `revealBoards()` vẫn gọi `reveal()` như cũ — bàn vẫn ghi ✓/✗ vào DOM, chỉ là lớp che đang phủ
+  lên; sang câu là `render()` vẽ lại từ đầu nên không có trạng thái nào phải gỡ.
+  ⚠️ **Kèm theo đó, `boardMoved()` (thầy bấm ‹ ›) nay cũng phải `unconcealAll()`** — nó không đi qua
+  `revealBoards()`, nên trước Đợt 219 nó **chưa bao giờ** gỡ che; lớp che sống lâu hơn thì lỗ đó cắn
+  thật: sang câu mới với chữ vẫn tàng hình.
+- ⛔⛔⛔ **`color: transparent` KHÔNG XOÁ ĐƯỢC `text-shadow` — bẫy Đợt 219, cắn thật ở Anagram.**
+  Bóng chữ được vẽ theo **đúng hình chữ** và **độc lập với `color`**, nên "chữ trong suốt" vẫn để lại
+  một chữ xám nhoè nằm nguyên chỗ cũ — trên tấm 86 inch là **đọc được**. Che bằng `color` mà quên
+  `text-shadow` là **che một nửa**. Cùng họ: `-webkit-text-stroke`, `background-image` hình chữ,
+  `::after { content }`, và mọi **ảnh SVG** (Anagram phải tắt riêng `.aw-anagram-revealmark` — dấu
+  ✓/✗ to trong ô chỉ ra từng vị trí nào đúng, gần như là cả đáp án).
+  ⭐ Bản sao bay (`.aw-anagram-flytile`) nằm ở `document.body`, **ngoài vỏ bàn**, nên lớp che không
+  với tới — đã kiểm: chữ bay chỉ tồn tại TRƯỚC khi từ hoàn tất, mà `wordDone()` chỉ được báo SAU khi
+  ô cuối đã điền, nên không có ca nào hở.
 - 5 template đã khai (đo được cả 5 selector đều trúng phần tử thật): quiz `.aw-quiz-answers` ·
   anagram `.aw-anagram-rtile/-otile/-reveal` · type-the-answer `.aw-tta-answer-area` ·
   true-false `.aw-tf-buttons` · find-the-match `.aw-ftm-grid`. Crossword và Open the box **không cần**
