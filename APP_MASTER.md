@@ -8,7 +8,36 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **21/8/2026 (Đợt 222)** — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI,
+> Cập nhật lần cuối: **21/8/2026 (Đợt 223)** — ⭐⭐⭐ **BỎ HẲN "ROUND RULE" + "SLOWER TEAM KEEPS
+> POINTS" (TIME DELAY một mình quyết định) · KHOÁ IM LẶNG + MẤT MÀU Ở NẤC KHÔNG DELAY · FIX CHỜ
+> VÔ ÍCH KHI BÀN KIA ĐÃ XONG · SHOW ANSWERS Ở BẢNG CUỐI TRẬN FIGHT**. Thầy tả 4 vấn đề gặp ở
+> Fight, chốt 3 quyết định qua AskUserQuestion. Sửa **7 file**: `core/fight.js` · `core/app.css` ·
+> 5 template Fight vòng thường. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — commit
+> **`297a4e2`**, **ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `297a4e2` trạng thái `built`
+> (tra `pages/builds/latest`, không tin mã 200) · **7/7 mã băm SHA-256 khớp** · **17/17 phép hỏi
+> CHẠY CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot223-live.html`) + **52/52 phép hỏi cục bộ**
+> (`scratch/dot223-verify.html` + `scratch/dot223-smoke-others.html`, cả 5 game Fight, 0 lỗi console).
+> Đọc khối **Đợt 223** đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **(1) Bỏ hẳn "Round rule"/"Slower team keeps points".** Thầy: *"đã được điều khiển ở chế độ
+>   có TIME DELAY hay không rồi"*. `lockLoser()`/`lateScores()` giờ đọc thẳng `fightTieWindow`:
+>   đúng nấc **0,1s** (thấp nhất) mới khoá; mọi nấc cao hơn — kể cả ∞ — không khoá và LUÔN giữ
+>   điểm. Hai ô Options biến mất, hai field `fightFirstRule`/`fightLateScores` không còn ai đọc.
+> - **(2) Khoá im lặng + "mất màu" (đen trắng) ở nấc không delay.** Thầy: *"một số template còn
+>   màu và báo âm thanh sai bên đội thua trùng với âm thanh đúng bên đội nhanh, gây khó chịu"*.
+>   `finalizeSingleWinner()` không còn gọi `board.timeUp()` (đã XOÁ HẲN khỏi cả 5 template) —
+>   chỉ khoá trần trụi + `silentLose()`: MỘT lớp CSS chung `is-fight-silentlost` trên
+>   `.aw-fight-board` (`filter:grayscale(1)`, chuyển mượt .4s, trả lại màu khi sang câu).
+> - **(3) Fix chờ vô ích**: đội chậm trả lời SAI trước (đã khoá, `roundDone[other]`=true), rồi
+>   đội nhanh trả lời ĐÚNG sau — trước đây vẫn mở một cửa sổ chờ MỚI dù chẳng còn ai để đợi (bug
+>   này Đợt 216 từng vá nhưng chỉ cho riêng ∞). Nay chốt ngay ở MỌI mức delay.
+> - **(4) Show answers Fight**: hợp đồng mới `ctl.attach(side, { review })` — mỗi template tách
+>   phần dựng review ra `buildReview()`, gọi được bất cứ lúc nào (Fight không gọi `ui.finish()`).
+>   `showResult()` đọc cả hai bàn, hiện nút "Show answers" nếu có gì để xem → hai cột song song.
+> - ⬜ **Chờ mắt thầy**: mất màu nhìn từ cuối lớp TOMKO có rõ/mượt không · bố cục Options (cột
+>   "Fight content" nay đứng một mình) có ổn không.
+>
+> ---
+> Trước đó: **21/8/2026 (Đợt 222)** — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI,
 > KHÔNG PHẢI MỘT BÀN CHẾT CÂM (5 game Fight) · FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU ·
 > TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG**. Thầy giao 5 việc, chốt 3
 > quyết định qua AskUserQuestion. Sửa **8 file**: `core/fight.js` · 5 template Fight vòng

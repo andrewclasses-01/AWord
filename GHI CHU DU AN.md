@@ -8,6 +8,57 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 223 (21/8/2026) — ⭐⭐⭐ **BỎ HẲN "ROUND RULE" + "SLOWER TEAM KEEPS POINTS" (TIME DELAY một mình quyết định) · KHOÁ IM LẶNG + MẤT MÀU (đen trắng mượt) Ở NẤC KHÔNG DELAY · FIX CHỜ VÔ ÍCH KHI BÀN KIA ĐÃ XONG · SHOW ANSWERS Ở BẢNG CUỐI TRẬN FIGHT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `297a4e2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `297a4e2` trạng thái `built` (`gh api repos/.../pages/builds/latest`, không tin mã 200) · **7/7 mã băm SHA-256 khớp** (băm nội dung trong commit so với nội dung live, không băm file trên máy — CRLF) · **17/17 phép hỏi CHẠY CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot223-live.html` import thẳng `https://aword.andrewclasses.com/core/fight.js`) + **52/52 phép hỏi cục bộ trước đó** (`scratch/dot223-verify.html` + `scratch/dot223-smoke-others.html`, cả 5 game Fight vòng thường).
+
+Thầy tả 4 vấn đề gặp ở Fight, chốt 3 quyết định qua AskUserQuestion (không trừ điểm ở nấc không-delay · mất màu = đen trắng chuyển mượt, trả lại màu khi sang câu · Show answers = hai cột song song đủ câu+đáp án). Sửa **7 file**: `core/fight.js` (lõi dùng chung) · `core/app.css` · 5 template Fight vòng thường (`quiz.js` · `anagram.js` · `type-the-answer.js` · `true-false.js` · `find-the-match.js`).
+
+### (1) Bỏ hẳn "Round rule" (First wins/Both finish) và "Slower team keeps points"
+
+**Lời thầy:** *"nó đã được điều khiển ở chế độ có TIME DELAY hay không rồi (0,1 time delay thì không cho đội chậm làm, lớn hơn thì cho làm tức là đã có both finish rồi)"*.
+
+⭐ **Sửa**: hai ô đó biến mất khỏi Options; `lockLoser()`/`lateScores()` trong `core/fight.js` giờ đọc THẲNG `fightTieWindow` (không còn `fightFirstRule`/`fightLateScores` trong `FIGHT_DEFAULTS`/`fightOptionsFrom`):
+- **Đúng nấc "không delay" (0,1s, nấc thấp nhất)** → `lockLoser()` = true → khoá ngay ("First wins" cũ).
+- **Mọi nấc cao hơn — kể cả ∞** → `lockLoser()` = false → không khoá, đội chậm chơi tới khi tự xong ("Both finish" cũ) và **`lateScores()` LUÔN true** — đội chậm luôn giữ điểm mình kiếm được ("Slower team keeps points" cũ, nay không còn cách tắt vì nó chỉ có ý nghĩa ở đúng chế độ không-khoá).
+⚠️ Pick-turn (Open the box · Crossword) không đụng gì — hai ô đó chưa từng hiện ở nhóm này.
+
+### (2) Khoá im lặng + "mất màu" ở nấc không delay
+
+**Lời thầy:** *"khi fight ở mọi template ở chế độ không time delay, đội chậm hơn sẽ bị mất màu và không có âm thanh gì. Hiện tại một số template còn màu và báo âm thanh sai bên đội thua trùng với âm thanh đúng bên đội nhanh nên gây khó chịu"*.
+
+⛔ **Gốc rễ**: Đợt 222 cho mọi khoá-vì-thua đi qua `board.timeUp()` (tiếng sai + trừ điểm + dấu ✗) — đúng cho lúc "hết giờ thật" (delay dài, đội có cơ hội công bằng), nhưng SAI cho nấc 0,1s: cửa sổ đóng trong **dưới 130ms**, gần như trùng khoảnh khắc đội kia vừa reo tiếng đúng ⇒ hai tiếng chồng lên nhau.
+
+⭐⭐ **Sửa** (`finalizeSingleWinner()`): với Đợt 223, khối `if (lockLoser() && !roundDone[other])` **CHỈ CÒN CHẠY Ở ĐÚNG NẤC KHÔNG DELAY** (xem mục 1) — nên nó không còn gọi `timeUp()` nữa, chỉ `board.lock(true)` trần trụi + `silentLose(other)`: MỘT lớp CSS chung `is-fight-silentlost` trên chính `.aw-fight-board` (`core/app.css`, `filter:grayscale(1); transition:filter .4s ease`) — ăn xuống MỌI phần tử bên trong, không cần template nào tự khai CSS riêng như `.is-concealed` phải làm. Trả lại màu ở đúng 4 chỗ vòng/câu đổi (`advanceRound` · `endMatch` · `boardPicked` · `boardMoved`), cùng chỗ `unconcealAll()` đã gỡ che.
+⛔⛔ **`board.timeUp()` bị XOÁ HẲN khỏi cả 5 template** (không còn ai gọi nó nữa — do 1). `roundTimeUp(o)`/`fromMatch` ở Quiz/Anagram/Type the answer quay lại đúng nết TRƯỚC Đợt 222 (chỉ phục vụ "Time each round" một-người-chơi); True/false + Find the match xoá hẳn method `timeUp()` inline trong `fightCtl.attach`.
+
+### (3) Fix: chờ vô ích khi bàn kia ĐÃ xong (đội chậm sai trước, đội nhanh đúng sau)
+
+**Lời thầy:** *"một số act có 2 đội cùng chọn xong rồi (1 đội nhanh có điểm, đội chậm ko có điểm) mà vẫn chạy time delay cho đến khi hết"*.
+
+⛔ **Gốc rễ**: nhánh `wordDone()` mở cửa sổ chờ mới (`pendingWinner = side`) **bất cứ khi nào có một câu trả lời ĐÚNG đầu tiên** — kể cả khi đội KIA đã trả lời SAI và bị khoá TỪ TRƯỚC (`roundDone[other]` đã true), tức chẳng còn ai để chờ. Đợt 216 từng vá ĐÚNG lỗi này nhưng chỉ cho riêng `∞` (`if (tieUnlimited && roundDone[other])`), để lại nguyên hình cho mọi mức delay hữu hạn.
+⭐ **Sửa**: bỏ chữ `tieUnlimited &&`, chỉ còn `if (roundDone[other]) { finalizeSingleWinner(side); return; }` — áp dụng cho MỌI mức Time delay, không riêng ∞.
+
+### (4) Show answers ở bảng cuối trận Fight
+
+**Lời thầy:** *"sẽ hiện ra kết quả của 2 bên để xem đúng sai thế nào"*, chốt: **hai cột song song** (Team Left | Team Right), đủ câu hỏi + câu trả lời từng đội — giống màn Show answers một-người-chơi có sẵn, nhân đôi.
+
+⭐⭐ **Hợp đồng mới** (`TEMPLATE CONTRACT`, thay chỗ `timeUp()` vừa bỏ): `ctl.attach(side, { …, review })` — `review()` tuỳ chọn, trả về mảng review CÙNG HÌNH DẠNG với `ui.finish()`'s `review` (`{question, answered, yourText, yourCorrect, correctText}`), gọi được **bất cứ lúc nào**, không cần đợi `finished` (vì Fight không bao giờ gọi `ui.finish()` — trận tự kết ở `endMatch()`). Mỗi template tách phần dựng review trong `finish()` cũ ra thành hàm riêng `buildReview()`, dùng lại ở cả hai nơi.
+`core/fight.js`'s `showResult()` đọc `boards[0].review()`/`boards[1].review()` lúc hết trận; nếu ít nhất một bàn có gì để xem thì hiện nút **Show answers** cạnh Start again (luật tự-chọn-tham-gia Đợt 143 — template chưa khai `review()` thì không có nút chết). Bấm vào ẩn `.aw-fight-result` (không xoá, chỉ `display:none`), vẽ chồng `.aw-fight-review` full-screen với hai cột `.aw-fight-rv-col`, đóng thì gỡ panel + hiện lại kết quả.
+
+### ✅ ĐO
+
+Hai bàn thử mới, cả hai chạy `startFight()` THẬT trên trình duyệt thật (không mock DOM), qua `devserver.py`:
+- `scratch/dot223-verify.html` (Quiz) **23/23**: Options panel không còn "Round rule"/"First wins"/"Both finish"/"Slower team keeps points" · nấc 0,1s khoá im lặng + mất màu + không trừ điểm · nấc 2s không khoá + không trừ điểm + đội chậm tự trả lời xong vẫn giữ điểm · fix mục (3) đo trực tiếp (đội phải sai trước → đội trái đúng sau → chốt gần như ngay, không đợi hết 3s) · Show answers 2 cột đủ 3 dòng.
+- `scratch/dot223-smoke-others.html` (Anagram · Type the answer · True/false · Find the match) **29/29**: cùng bộ phép hỏi (mất màu/im lặng/không trừ điểm ở nấc 0,1s + Show answers cuối trận), **0 lỗi console** ở cả 4 game.
+- **Tổng 52/52 đạt.**
+
+### ⬜ CHỜ THẦY
+
+- Chơi thử thật trên TOMKO: hiệu ứng mất màu (đen trắng) nhìn từ cuối lớp có rõ không, chuyển màu có mượt như mong muốn không.
+- Cột "Fight content" giờ đứng một mình một hàng (mất `cRule` bên cạnh) — coi bố cục panel Options có ổn không, hay cần ghép lại với ô khác.
+- Test đường dây cũ: act nào đã lưu sẵn `fightFirstRule`/`fightLateScores` trên đĩa (từ trước Đợt 223) — hai field đó nay bị NGỜ hoàn toàn, không migrate, không xoá khỏi dữ liệu cũ (vô hại, chỉ là rác nằm im).
+
+---
+
 ## Đợt 222 (21/8/2026) — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI, KHÔNG PHẢI MỘT BÀN CHẾT CÂM** (5 game Fight) · **FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU · TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `acd381c`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `acd381c` trạng thái `success` (tra `gh api …/deployments/{id}/statuses`, **không tin mã 200**) · **7/7 mã băm SHA-256 khớp** · **24/24 phép hỏi CHẠY CHÍNH CODE TRÊN BẢN LIVE**
 
 Thầy giao 5 việc (2 việc Fight cho Quiz + Anagram, 3 việc Find the match), chốt 3 quyết định
