@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 220 (21/8/2026) — ⭐⭐⭐ CHẶN ‹ › KHI BÀN KIA CÒN LÀM · ALLOW SKIP TẮT HỒI TỐ · **DẢI NORMAL·FREE·COUNT CHO SHOWDOWN** — ✅ **COMMIT `4b722d2` + PUSH + LIVE (thầy lệnh commit để test trên lớp; nội dung tính năng thầy sẽ duyệt sau khi chơi thật)**
+## Đợt 220 (21/8/2026) — ⭐⭐⭐ CHẶN ‹ › KHI BÀN KIA CÒN LÀM · ALLOW SKIP TẮT HỒI TỐ · **DẢI NORMAL·FREE·COUNT CHO SHOWDOWN** — ✅ **COMMIT `4b722d2` + hồ sơ `52ed539`, PUSH + LIVE ĐÃ KIỂM CHỨNG: Pages build đúng `52ed539` (status `built`) · 10/10 mã băm SHA-256 khớp · 20/20 phép hỏi MÔĐUN TRÊN CHÍNH BẢN LIVE (import sống dealQuestions + di trú, soi khuôn câu lệnh 6 file). Thầy lệnh push để test trên lớp; nội dung tính năng thầy sẽ duyệt sau khi chơi thật**
 
 > **PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC.** Code Đợt 220 = commit **`4b722d2`** (10 file). Mọi phần có lưới
 > đo đạt: **21/21** (`scratch/dot220-deal.html`) · **15/15** (`scratch/dot220-nav.html`) · **24/24**

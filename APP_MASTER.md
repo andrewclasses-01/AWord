@@ -13,8 +13,10 @@
 > SHOWDOWN (Quiz + Type the answer)**. Thầy giao 2 mảng + chốt 8 quyết định qua AskUserQuestion.
 > Sửa **10 file**: `core/fight.js` · `engine.js` · `options-panel.js` · `options-migrate.js` ·
 > `showdown.js` · `lesson-import.js` · `templates/quiz` · `type-the-answer` · `anagram` · `unjumble`.
-> ✅ Commit **`4b722d2`** + hồ sơ, **ĐÃ PUSH + LIVE** (thầy lệnh push để test trên lớp; nội dung
-> tính năng CHƯA duyệt — chờ thầy chơi thật). Đọc khối **Đợt 220** đầu `GHI CHU DU AN.md` — tóm tắt:
+> ✅ Commit **`4b722d2`** + hồ sơ `52ed539`, **ĐÃ PUSH + LIVE KIỂM CHỨNG** — Pages build đúng
+> `52ed539` (tra builds API, không tin mã 200) · **10/10 mã băm SHA-256 khớp** · **20/20 phép hỏi
+> môđun trên CHÍNH BẢN LIVE** (import sống `dealQuestions`/di trú qua CORS của Pages + soi khuôn
+> câu lệnh 6 file). Thầy lệnh push để test trên lớp; nội dung tính năng CHƯA duyệt — chờ thầy chơi thật. Đọc khối **Đợt 220** đầu `GHI CHU DU AN.md` — tóm tắt:
 > - **(1) Fight: một bàn không được sang câu khi bàn kia còn làm dở.** Chặn TỪ NGUỒN trong `setNav`
 >   (phễu duy nhất 15 template có nav đều đi qua) + `registerNavGate` để trọng tài chủ động vẽ lại
 >   hai mũi tên khi BÀN KIA xong (⚠️ bẫy đo được: chỉ chặn trong `setNav` là nút mờ vĩnh viễn).
