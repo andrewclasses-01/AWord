@@ -384,11 +384,20 @@ export async function importBundle(bundle, opts = {}) {
     return parentId;
   }
 
-  const baseSegs = [];
+  // ⭐ Đợt 221 — a bundle may name a whole PATH (`folderPath: ["LISTENING",
+  // "2. LISTENING FOR A2", …]`), which the lesson importer reads off the file
+  // name. Every segment is resolved by the same reuse-or-create loop above, so
+  // an import lands in the teacher's existing tree instead of beside it.
+  // ⚠️ `folder` (one name) is still honoured on its own — hand-written .json
+  // bundles have only that, and so does an import whose folder the teacher
+  // retyped in the confirm screen.
   const wanted = (bundle?.folder || "").toString().trim();
-  if (wanted) baseSegs.push(wanted);
+  const baseSegs = (Array.isArray(bundle?.folderPath) ? bundle.folderPath : [wanted])
+    .map(s => (s || "").toString().trim())
+    .filter(Boolean);
 
-  const result = { folderId: baseParent, folderName: wanted || null, created: 0, skipped: 0, errors: [], createdActs: [] };
+  const result = { folderId: baseParent, folderName: baseSegs[baseSegs.length - 1] || null,
+                   created: 0, skipped: 0, errors: [], createdActs: [] };
   for (const raw of activities) {
     if (!raw || typeof raw.type !== "string" || !raw.content || typeof raw.content !== "object") {
       result.skipped++; result.errors.push("An entry with no type/content was skipped."); continue;
@@ -419,7 +428,12 @@ export async function importBundle(bundle, opts = {}) {
       else result.errors.push(`${activity.title}: ${e?.message || e}`);
     }
   }
-  if (baseSegs.length && cache.has(wanted)) result.folderId = cache.get(wanted);
+  // The folder the dialog opens afterwards is the DEEPEST one made, so its cache
+  // key is the whole path — not the first segment. ⚠️ Đợt 221 bug avoided: with
+  // a multi-segment path, `cache.get(baseSegs[0])` would open `LISTENING` and
+  // leave the teacher four levels above the acts just imported.
+  const deepest = baseSegs.join("/");
+  if (baseSegs.length && cache.has(deepest)) result.folderId = cache.get(deepest);
   return result;
 }
 

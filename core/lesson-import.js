@@ -279,11 +279,108 @@ function sectionKind(rows) {
   return s.long / s.n >= 0.5 ? "tf" : "fill";
 }
 
-// The "source" code that names the folder + prefixes titles (same rule as taoact).
+// The "source" code that PREFIXES ACT TITLES (same rule as taoact). Deliberately
+// the bare code with the lesson's name cut off — `DS-S4.I1.W1 / WORDS` is what
+// fits on a card, and the name is already spelled out by the folder the act
+// sits in (see lessonFolderPath below).
 function sourceStem(fileName) {
   let stem = (fileName || "").replace(/\.(xlsm|xlsx|xls)$/i, "").trim();
   const m = stem.match(/^([A-Za-z0-9]+-S\d+(?:\.[A-Za-z0-9+\-]+)+)/);
   return m ? m[1] : stem;
+}
+
+// =============================================================
+// THE FOLDER PATH A LESSON FILE BELONGS IN (Đợt 221, 21/8/2026 — thầy)
+//
+// Measured over all 137 real lesson workbooks in D:\4. LISTENING + D:\5. READING
+// (21/8/2026), the teacher's file names carry the whole tree inside them, and
+// ONE rule reads it: EVERY DOT IN THE CODE IS A FOLDER LEVEL, and each level is
+// named by the code SO FAR.
+//
+//   LSA2-S2.T1.P1-2   ->  LSA2-S2 / LSA2-S2.T1 / LSA2-S2.T1.P1-2
+//   DS-S4.I1.W1       ->  DS-S4   / DS-S4.I1   / DS-S4.I1.W1
+//   DW-S2.W1          ->  DW-S2   / DW-S2.W1
+//
+// which is, level for level, the tree on the teacher's own disk. Above that sit
+// two more folders read off the letters BEFORE `-S`: the subject (LISTENING /
+// READING) and the numbered category the teacher files that series under.
+//
+// ⚠️ THE PREFIX IS AN EXACT KEY, NOT A "starts-with" TEST — and that is the
+// whole reason `-S` is the split point. `IE` is a leading substring of `IEL`, so
+// a starts-with scan would file `IEL-S15` (IELTS listening) under whichever of
+// the two it happened to try first. Cutting at `-S` yields `IEL` or `IE`
+// exactly, and the table below is looked up, never searched.
+//
+// ⚠️ NO ALIAS TABLE, ON PURPOSE (thầy chốt 21/8/2026: *"theo mã, tự động"*).
+// Two places on disk disagree with their own file names — `LSFLY-S2` holds files
+// called `FLY-S2.T…`, and `DORAEMON 1` holds `DR-S1.EP…` — so AWord will build
+// `FLY-S2` and `DR-S1` instead. That is deliberate: a new season then needs no
+// code change, and the confirm screen shows the path before anything is made.
+//
+// ⚠️ A prefix that is NOT in this table gets NO tree at all (one folder, named
+// after the file — exactly what import did before this đợt). Inventing a tree
+// out of an unrecognised code would file a lesson somewhere the teacher would
+// have to go hunting for. Teaching AWord a new series is one line here.
+// =============================================================
+const LESSON_TREE = {
+  LSFLY: ["LISTENING", "1. LISTENING FOR FLYER"],
+  FLY:   ["LISTENING", "1. LISTENING FOR FLYER"],
+  LSA2:  ["LISTENING", "2. LISTENING FOR A2"],
+  LSB1:  ["LISTENING", "3. LISTENING FOR B1"],
+  IEL:   ["LISTENING", "4. LISTENING FOR IELTS"],
+  IE:    ["LISTENING", "4. LISTENING FOR IELTS"],
+  DR:    ["READING", "1. DORAEMON"],
+  DW:    ["READING", "2. DAILY WARM-UP"],
+  DS:    ["READING", "3. DAILY SCIENCE"],
+  IER:   ["READING", "4. READING FOR IELTS"]
+};
+// `LSA2` · `-S` · `2` · `.T1.P1-2`. The prefix cannot contain `-`, so it always
+// stops right before `-S`; the tail takes as many `.PART` groups as it can, and
+// stops on its own at `. ` (a dot followed by a SPACE), which is how the
+// Doraemon and Daily warm-up files separate their code from the episode name.
+const RE_LESSON_CODE = /^([A-Za-z0-9]+)-S(\d+)((?:\.[A-Za-z0-9+\-]+)*)/;
+// ⛔ MEASURED, NOT IMAGINED (scratch/dot221-path.mjs over all 137 files):
+// Google Drive resolves a sync conflict by inserting " (1)" INTO THE MIDDLE of
+// the name — `LSB1-S2 (1).T3.P2`, `IEL-S15 (1) (1).T3.P1`. That space stops the
+// code dead at `LSB1-S2`, so 6 real files came out with their `.T3` level
+// missing: one folder instead of three, filed at the wrong depth and nothing on
+// screen to say so. Stripping the marker BEFORE reading the code puts them back
+// in the right place. ⚠️ Only the tree levels are cleaned — the deepest folder
+// keeps the file's own name, `(1)` and all, so a Drive duplicate is still
+// visibly a duplicate instead of quietly merging with the real lesson.
+const RE_DRIVE_DUP = /\s*\((\d+)\)/g;
+// And a plain typo, also measured: `IER-S15..T1.P2_DRIVERLESS CAR.xlsm` has TWO
+// dots. A doubled dot stops the code just as dead as the Drive marker does — one
+// folder instead of three — for something no one would ever call a different
+// lesson. Same treatment: repaired for reading the tree, left alone in the
+// deepest folder's name so the typo is still visible where it can be fixed.
+const RE_DOUBLE_DOT = /\.{2,}/g;
+// A folder name may not carry a path separator: `importBundle()` keys its cache
+// on segments joined with "/", so a name containing one would collide with a
+// real two-level path. Windows file names cannot contain either character, so
+// this only ever fires on a hand-typed name.
+const cleanSeg = s => String(s || "").replace(/[/\\]/g, " ").trim();
+
+// -> { segments: [...], leaf, known }.  `known` false means "no tree was
+// recognised" — the caller says so on screen rather than pretending.
+export function lessonFolderPath(fileName) {
+  const stem = (fileName || "").replace(/\.(xlsm|xlsx|xls)$/i, "").trim();
+  const m = stem.replace(RE_DRIVE_DUP, "").replace(RE_DOUBLE_DOT, ".").match(RE_LESSON_CODE);
+  const place = m ? LESSON_TREE[m[1].toUpperCase()] : null;
+  if (!m || !place) return { segments: [cleanSeg(stem)].filter(Boolean), leaf: stem, known: false };
+
+  // The code's own levels, each named by everything up to that dot.
+  const parts = `${m[1]}-S${m[2]}${m[3]}`.split(".");
+  const chain = parts.map((_, i) => parts.slice(0, i + 1).join("."));
+  // ⭐ THE DEEPEST LEVEL KEEPS THE LESSON'S NAME (thầy chốt 21/8/2026). It is the
+  // whole file stem, not code + " " + name, so whatever the file used to join
+  // them survives byte for byte: `DR-S1.EP1. All The Way…` keeps its ". ".
+  // ⭐ This also fixes a collision that has been silent since Đợt 190:
+  // `DS-S4.I1.W1 BEAVERS AND DAMS.xlsm` and `DS-S4.I1.W1 SLIDE INSTRUCTION.xlsm`
+  // used to import into ONE folder called `DS-S4.I1.W1` and overwrite each other.
+  chain[chain.length - 1] = stem;
+  const segments = [...place, ...chain].map(cleanSeg).filter(Boolean);
+  return { segments, leaf: stem, known: true };
 }
 
 // Parse a workbook ArrayBuffer -> bundle. `fileName` gives the source code;
@@ -637,7 +734,16 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     if (act) acts.push({ ...act, subfolder: "ACT" });
   }
 
-  return { folder: folder || source, activities: acts };
+  // ⭐ Đợt 221 — the bundle now carries a PATH, not a folder name. `folder` is
+  // kept beside it (the deepest segment) because a hand-written .json bundle
+  // still only has that, and `importBundle()` falls back to it.
+  const path = lessonFolderPath(fileName);
+  return {
+    folder: folder || path.leaf || source,
+    folderPath: folder ? [folder] : path.segments,
+    folderPathKnown: folder ? false : path.known,
+    activities: acts
+  };
 }
 
 // Is this a spreadsheet we can read directly (vs a .json bundle)?

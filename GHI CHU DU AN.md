@@ -8,6 +8,143 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 221 (21/8/2026) — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN FILE + MÀN CHỐT THƯ MỤC** · **QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*)
+
+Thầy giao 2 mảng, chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**:
+`core/lesson-import.js` · `core/store.js` · `main.js` · `core/app.css`.
+(⚠️ `store.js` và `app.css` là file DÙNG CHUNG — đụng là ảnh hưởng cả app.)
+
+### (1) IMPORT — cây thư mục đọc thẳng từ tên file
+
+**Luật:** *mỗi dấu chấm trong mã = một cấp thư mục, tên cấp là mã cộng dồn.*
+
+```
+LSA2-S2.T1.P1-2.xlsm
+  → LISTENING / 2. LISTENING FOR A2 / LSA2-S2 / LSA2-S2.T1 / LSA2-S2.T1.P1-2
+DS-S4.I1.W1 BEAVERS AND DAMS.xlsm
+  → READING / 3. DAILY SCIENCE / DS-S4 / DS-S4.I1 / DS-S4.I1.W1 BEAVERS AND DAMS
+```
+
+Hai cấp trên cùng suy từ chữ cái ĐỨNG TRƯỚC `-S`, tra bảng `LESSON_TREE`
+(`lesson-import.js`). Thêm bộ mới sau này = **thêm 1 dòng** vào bảng đó.
+
+- ⚠️ **Mã là KHOÁ TRA CHÍNH XÁC, không phải phép "bắt đầu bằng"** — và đó là lý do
+  cắt ở `-S`. `IE` là phần đầu của `IEL`, nên quét kiểu "bắt đầu bằng" sẽ ném
+  `IEL-S15` vào bộ nào gặp trước. Cắt ở `-S` cho ra đúng `IEL` hoặc `IE`.
+- ⚠️ **KHÔNG có bảng đổi tên** (thầy chốt *"theo mã, tự động"*): ổ D có 2 chỗ tên
+  thư mục lệch tên file (`LSFLY-S2` chứa file `FLY-S2.T…`; `DORAEMON 1` chứa
+  `DR-S1.EP…`), nên AWord dựng `FLY-S2` và `DR-S1`. Đổi lại = thêm bảng alias.
+- ⭐ **Thư mục lá GIỮ TÊN BÀI** (thầy chốt): lấy nguyên `stem` của file, nên dấu
+  nối gốc còn nguyên (`DR-S1.EP1. All The Way…` giữ cả `". "`). **Vá luôn một lỗi
+  im lặng từ Đợt 190**: `…W1 BEAVERS AND DAMS.xlsm` và `…W1 SLIDE INSTRUCTION.xlsm`
+  trước đây dồn chung một thư mục `DS-S4.I1.W1` rồi đè nhau.
+- ⛔⛔ **HAI LỖI THẬT PHÉP ĐO BẮT ĐƯỢC** (`scratch/dot221-path.mjs`, quét **137 file
+  thật** ở `D:\4. LISTENING` + `D:\5. READING`) — cả hai đều **gãy cây mà không báo gì**:
+  - **Bản trùng của Google Drive chèn `" (1)"` vào GIỮA tên** (`LSB1-S2 (1).T3.P2`,
+    `IEL-S15 (1) (1).T3.P1`). Dấu cách chặn mã ngay tại `LSB1-S2` ⇒ **6 file** mất
+    hẳn cấp `.T3`: một thư mục thay vì ba. Nay bóc `(n)` TRƯỚC khi đọc mã.
+  - **Lỗi gõ HAI dấu chấm**: `IER-S15..T1.P2_DRIVERLESS CAR.xlsm`. Cũng gãy y hệt.
+  ⚠️ Chỉ **cấp cây** được làm sạch — thư mục lá vẫn giữ nguyên tên file, để bản
+  trùng còn nhìn ra là bản trùng và lỗi gõ còn thấy chỗ mà sửa.
+- **Mã lạ ⇒ KHÔNG dựng cây** (1 thư mục, y như trước Đợt 221). Bịa cây từ mã không
+  nhận ra là cất bài vào chỗ thầy phải đi tìm.
+- `core/store.js`: `importBundle` nay nhận `folderPath: [...]` — mọi cấp đi qua đúng
+  vòng lặp reuse-or-create cũ. ⚠️ `result.folderId` phải lấy **khoá CẢ ĐƯỜNG DẪN**;
+  lấy `cache.get(segs[0])` là mở `LISTENING` rồi bỏ thầy đứng cách act 4 cấp.
+
+**Chỗ tạo** (đúng lời thầy):
+
+| Đang ở | Máy làm |
+|---|---|
+| Gốc ACTIVITIES | dựng trọn cây |
+| Trong thư mục con | **tự bỏ cấp trùng** (đứng ở `LSA2-S2` ⇒ chỉ còn `LSA2-S2.T1 › …P1-2`) |
+| Thả file lên Quick Access | `fromRoot` — dựng từ gốc, kệ đang đứng đâu |
+| Thư mục không khớp cấp nào | chỉ 1 thư mục lá |
+
+⚠️ `trimPath()` lấy lần khớp **CUỐI**, không phải đầu — đường dẫn lỡ lặp tên thì
+phải rụng được nhiều nhất có thể.
+
+**Màn chốt thư mục (bước 2)** thay hẳn ô "Make a new folder" cũ (ô đó chỉ tả nổi
+MỘT cấp, importer nay đề nghị năm). Mỗi cấp một dòng sửa/xoá được, `✓` = đã có ·
+`+` = sắp tạo, thụt vào 14px mỗi cấp cho ra hình cái cây, có nút "+ Add a level".
+- ⚠️ **Bước 1 bị ẨN chứ không xoá** — `readVoiceChoice()` đọc giá trị sống trong ô
+  giọng, dựng lại là mất sạch lựa chọn của thầy khi bấm Back.
+- ⛔ **Khung bước 2 dựng MỘT LẦN, ngoài `buildPanel()`** — hàm đó chạy lại mỗi lần
+  thầy thả file mới vào hộp thoại đang mở, và màn thứ hai sẽ chồng lên màn thứ nhất
+  mà **không có gì trên màn hình nói là có hai cái**.
+- ⭐ **`folderDup` BỎ HẲN**: nó tô đỏ khi thư mục mới trùng tên thư mục cũ. Cây tự
+  động **CỐ Ý tái dùng** thư mục sẵn có (`LISTENING`, cấp phân loại) nên giữ lại là
+  đỏ rực màn hình ở **mọi lần import đúng**. Phép kiểm còn ý nghĩa là **trùng tên
+  ACT trong cùng thư mục** — vẫn chạy, vẫn chặn.
+
+### (2) QUICK ACCESS — cột riêng + khu Recent
+
+- ⛔⛔ **Thầy: *"Thư mục không bao giờ nằm cùng không gian cột của QUICK ACCESS"*.**
+  Gốc rễ lỗi: Đợt 218b đặt khung làm **ô đầu tiên của lưới**, mà **ô lưới chiếm
+  NGUYÊN HÀNG** — hết hàng là thẻ cuộn ngược lên **ngồi vào đúng cột của khung**.
+  Nay là **flex rail**: thẻ nằm trong hộp ANH EM, **không có đường nào vào được**.
+- ⭐ **XOÁ HẲN `sizeQuickAccess()`** — chỗ duy nhất trong app có hàm **tự đọc kết quả
+  của chính nó** (khung 3 ghim phình dần mỗi lần tính lại). Không còn gì để đo ⇒
+  **listener `resize` cũng xoá**. Lớp `.is-alone` (Đợt 218c) theo luôn: nó chỉ tồn
+  tại cho ca thẻ rơi xuống DƯỚI khung, mà rail làm ca đó thành bất khả.
+- ⚠️ **Vẫn KHÔNG có @media, rail KHÔNG BAO GIỜ gập** (thầy: *"luôn giữ cột bên trái"*).
+  Đo 4 bề rộng **380 / 520 / 760 / 1040px**: rail luôn 238px bên trái, **0 thẻ đè**,
+  **không cuộn ngang**, cột thẻ rụng 3→2→1 tự nhiên.
+- **Khu Recent** = **thư mục vừa MỞ** (thầy chốt, hơn "vừa đổi"), 5 dòng, có nút xoá
+  sạch. Lưu `localStorage` **theo từng máy** — mở thư mục là việc xảy ra ở một màn
+  hình, và ghi lên Firestore thì **mỗi cú bấm trong thư viện tốn một lượt ghi**.
+  ⚠️ **Nhớ 16, hiện 5**: thư mục đã xoá bị lọc ra lúc vẽ, giữ đúng 5 thì danh sách
+  rơi dần còn 4 rồi 3. Ghi ở **đúng một chỗ** — `enterFolder()`, cái phễu mà mọi
+  đường vào thư mục đều đi qua.
+- ⚠️ **Recent KHÔNG chia đôi khung**: 5 dòng ghim xuống đáy một khung cao sẽ để lủng
+  một lỗ ở giữa, còn khung thấp thì nửa cứng bóp nát cả hai. Danh sách ghim lấy chỗ
+  nó cần, Recent nằm dưới (`margin-top:auto`).
+- **Thả file lên khung** ⇒ mở Import. ⚠️ **Không đụng nhau với kéo thẻ**:
+  `makeDropTarget` thoát ngay khi `draggingId` null (luôn null với file từ ngoài),
+  còn hàm này thoát trừ khi cú kéo **thật sự mang Files**. Loại trừ nhau **bằng phép
+  thử, không bằng may rủi**. ⚠️ Listener của dòng **cố ý không chặn nổi bọt**, nếu
+  không thì các dòng ghim thành mảng chết giữa vùng thả.
+
+### ✅ ĐO ĐƯỢC (0 lỗi console)
+
+- **`scratch/dot221-path.mjs`** — quét **137 file .xlsm thật**: 119 nhận ra cây,
+  **80 khớp CHÍNH XÁC** cây trên ổ D. 39 khác biệt đều **đã phân loại và giải thích
+  hết**: 6 `FLY-S#` · 13 `DR-S#` (thầy chốt theo mã) · 4 file nằm trong `OTHERS` ·
+  14 cấp giữa chỉ có mã (tên file **chưa bao giờ mang** tên của cấp trên nó) ·
+  2 thư mục ổ D đặt tay (`P1 - NUTMEG`).
+  ⚠️ **Phép đo lần đầu KÊU OAN 18 ca** vì so sai: file LISTENING nằm rời trong thư
+  mục đề, file READING đã nằm sẵn trong thư mục mang tên nó ⇒ **hai cây kết thúc
+  khác nhau**, phải so cho đúng loại.
+- **`scratch/dot221-bench.html`** (+ `scratch/fake-firebase221.js`) — **33/33 ĐẠT**
+  trên trình duyệt thật: đọc đường dẫn · `importBundle` đi hết đường dẫn + **mở đúng
+  thư mục sâu nhất** + **tái dùng `LISTENING` không nhân đôi** · rail (**0/13 thẻ đè**,
+  và đo đúng ca 218b làm hỏng: **khung THẤP HƠN cột thẻ**) · Recent.
+- **Chạy tay hết đường THẬT** với file `LSA2-S2.T1.P1-2.xlsm` **thật**: ra 4 act →
+  màn chốt hiện `✓✓✓✓ +` → Import → act nằm đúng
+  `LISTENING/2. LISTENING FOR A2/LSA2-S2/LSA2-S2.T1/LSA2-S2.T1.P1-2`, `QUIZ` vào
+  `ACT/`, `LISTENING` vẫn chỉ có 1. Import lại khi đứng trong `LSA2-S2` ⇒ đúng 2 cấp,
+  4 act tô đỏ trùng tên, **Import bị chặn**. Thả file READING lên khung Quick Access
+  khi đang đứng trong LISTENING ⇒ dựng từ gốc `READING / 3. DAILY SCIENCE / …`.
+- ⚠️ **`fake-firebase.js` cũ THIẾU `writeBatch` + `getDocs` thật** ⇒ thư viện không
+  chạy nổi, ra màn đăng nhập kèm lỗi. Làm **bản mới `fake-firebase221.js`**, giữ
+  nguyên bản cũ cho `test-mode.html` / `fight-bench.html` / các trang Showdown.
+- ⛔ **Bàn thử KHÔNG được `location.reload()`**: kho của bản giả là một `Map` trong
+  môđun, nạp lại là mất sạch và trang trông y như seed hỏng. Vẽ lại tại chỗ bằng
+  `popstate` — đường công khai duy nhất quay lại `routeFromLocation()`.
+
+### ⬜ CHỜ MẮT/TAY THẦY
+
+1. **Nhìn rail trên màn 86"** — máy này pane bị ẩn nên **không chụp được khung hình nào**.
+2. **Mở AWord trong myActivity chia 3-4 cột**: ở 380px cột thẻ chỉ còn ~126px. Thầy
+   chốt "luôn giữ cột bên trái" nên máy giữ đúng vậy — xem có chật quá không.
+3. **Cây thật trên thư viện thật**: nếu thầy ĐÃ có sẵn thư mục `DS-S4.I1 PLANTS,
+   ANIMALS, AND THEIR ENVIRONMENT` thì import sẽ tạo **thêm** `DS-S4.I1` bên cạnh
+   (tên file không mang tên của cấp trên). Sửa tay ở màn chốt là được.
+4. **`FLY-S2` / `DR-S1`** khác tên ổ D — thầy muốn khớp thì nói, thêm 1 dòng alias.
+5. **Nút xoá lịch sử Recent** đặt ở góc phải tiêu đề — với ngón tay có đủ to không.
+
+---
+
 ## Đợt 220 (21/8/2026) — ⭐⭐⭐ CHẶN ‹ › KHI BÀN KIA CÒN LÀM · ALLOW SKIP TẮT HỒI TỐ · **DẢI NORMAL·FREE·COUNT CHO SHOWDOWN** — ✅ **COMMIT `4b722d2` + hồ sơ `52ed539`, PUSH + LIVE ĐÃ KIỂM CHỨNG: Pages build đúng `52ed539` (status `built`) · 10/10 mã băm SHA-256 khớp · 20/20 phép hỏi MÔĐUN TRÊN CHÍNH BẢN LIVE (import sống dealQuestions + di trú, soi khuôn câu lệnh 6 file). Thầy lệnh push để test trên lớp; nội dung tính năng thầy sẽ duyệt sau khi chơi thật**
 
 > **PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC.** Code Đợt 220 = commit **`4b722d2`** (10 file). Mọi phần có lưới

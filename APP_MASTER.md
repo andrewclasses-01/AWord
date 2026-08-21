@@ -8,7 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **21/8/2026 (Đợt 220)** — ⭐⭐⭐ **CHẶN ‹ › KHI BÀN KIA CÒN LÀM (Fight) ·
+> Cập nhật lần cuối: **21/8/2026 (Đợt 221)** — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN
+> FILE + MÀN CHỐT THƯ MỤC · QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT**. Thầy giao 2 mảng,
+> chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**: `core/lesson-import.js` ·
+> `core/store.js` · `main.js` · `core/app.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*).
+> Đọc khối **Đợt 221** đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **(1) Một luật đọc hết 137 file bài học**: *mỗi dấu chấm trong mã = một cấp thư mục,
+>   tên cấp là mã cộng dồn*. `LSA2-S2.T1.P1-2.xlsm` → `LISTENING / 2. LISTENING FOR A2 /
+>   LSA2-S2 / LSA2-S2.T1 / LSA2-S2.T1.P1-2`. Hai cấp trên cùng tra bảng `LESSON_TREE`
+>   theo chữ cái ĐỨNG TRƯỚC `-S` (⚠️ khoá tra CHÍNH XÁC, không phải "bắt đầu bằng" — `IE`
+>   là phần đầu của `IEL`). Bộ mới = **thêm 1 dòng** vào bảng. **Thư mục lá giữ TÊN BÀI**
+>   ⇒ vá lỗi im lặng từ Đợt 190 (`…W1 BEAVERS AND DAMS` và `…W1 SLIDE INSTRUCTION` từng
+>   dồn chung một thư mục rồi đè nhau). ⛔⛔ Phép đo bắt được **2 lỗi thật gãy cây không
+>   báo gì**: bản trùng Drive chèn `" (1)"` vào GIỮA tên (6 file mất hẳn 1 cấp) và lỗi gõ
+>   HAI dấu chấm — nay bóc sạch TRƯỚC khi đọc mã, nhưng **chỉ ở cấp cây**, thư mục lá giữ
+>   nguyên tên file để bản trùng còn nhìn ra được. **Mã lạ ⇒ KHÔNG dựng cây.**
+> - **Chỗ tạo**: gốc ACTIVITIES = trọn cây · trong thư mục con = **tự bỏ cấp trùng** ·
+>   thả lên Quick Access = `fromRoot`. **Màn chốt (bước 2)** thay hẳn ô "Make a new
+>   folder": mỗi cấp một dòng sửa/xoá được, `✓` đã có · `+` sắp tạo. ⛔ Khung bước 2 dựng
+>   MỘT LẦN ngoài `buildPanel()` (hàm đó chạy lại mỗi lần thả file mới). ⭐ `folderDup` bỏ
+>   hẳn — cây tự động CỐ Ý tái dùng thư mục sẵn có.
+> - **(2) Quick Access = flex rail**, không còn là ô của lưới. ⛔⛔ Gốc rễ: ô lưới chiếm
+>   NGUYÊN HÀNG, hết hàng là thẻ cuộn ngược lên ngồi vào cột của khung. ⭐ **XOÁ HẲN
+>   `sizeQuickAccess()`** (chỗ duy nhất trong app tự đọc kết quả của chính nó) + listener
+>   `resize` + lớp `.is-alone`. Vẫn KHÔNG @media, rail không bao giờ gập. **Khu Recent** =
+>   thư mục vừa MỞ, 5 dòng, localStorage theo máy, ghi ở đúng `enterFolder()`; ⚠️ nhớ 16
+>   hiện 5 vì thư mục đã xoá bị lọc lúc vẽ. Thả file lên khung ⇒ mở Import.
+> - ✅ **ĐO**: `scratch/dot221-path.mjs` **137 file thật** (119 nhận cây · 80 khớp CHÍNH
+>   XÁC ổ D · 39 khác biệt phân loại hết) · `scratch/dot221-bench.html` **33/33** trên
+>   trình duyệt thật (kèm `scratch/fake-firebase221.js` MỚI — bản cũ thiếu `writeBatch`)
+>   · chạy tay hết đường thật với 1 file `.xlsm` THẬT · rail đo ở **380/520/760/1040px**,
+>   0 thẻ đè, không cuộn ngang. 0 lỗi console.
+> - ⬜ **Chờ mắt/tay thầy**: rail trên màn 86" · AWord trong myActivity chia cột (380px
+>   thì cột thẻ còn ~126px) · thư viện thật đã có thư mục `DS-S4.I1 <TÊN>` thì import đẻ
+>   thêm `DS-S4.I1` bên cạnh · `FLY-S2`/`DR-S1` khác tên ổ D (muốn khớp = thêm alias).
+>
+> ---
+> Trước đó: **21/8/2026 (Đợt 220)** — ⭐⭐⭐ **CHẶN ‹ › KHI BÀN KIA CÒN LÀM (Fight) ·
 > ALLOW SKIP MẶC ĐỊNH TẮT (hồi tố, di trú optVer v3) · DẢI `NORMAL · FREE · COUNT` CHIA BÀI CHO
 > SHOWDOWN (Quiz + Type the answer)**. Thầy giao 2 mảng + chốt 8 quyết định qua AskUserQuestion.
 > Sửa **10 file**: `core/fight.js` · `engine.js` · `options-panel.js` · `options-migrate.js` ·
@@ -3907,7 +3943,17 @@ act nào gọi tên HS thì đọc từ đó.
 >    làm vậy là **cắt mất nó mà không báo gì**.
 > 7. ✅ **XONG** — đã commit `4642d4b` + push + LIVE (4/4 mã băm, 14/14 phép hỏi môđun).
 >
-> ⭐⭐ **VIỆC KẾ TIẾP THẦY ĐÃ NHẮM TỚI: CẢI TIẾN IMPORT.** Trước Đợt 218 thầy bảo đọc dự án + quét
+> ⭐⭐⭐ **CẬP NHẬT SAU ĐỢT 221 — MỤC "CẢI TIẾN IMPORT" NGAY DƯỚI ĐÂY ĐÃ LÀM MỘT PHẦN.**
+> Đã xong: **cây thư mục tự dựng theo tên file** (kèm màn chốt) và **`sourceStem()` cắt mất
+> tên bài** — thư mục lá nay giữ nguyên tên bài nên `BEAVERS AND DAMS` và `SLIDE INSTRUCTION`
+> hết đâm nhau. **CÒN NGUYÊN, chưa ai đụng**:
+> - **5 sheet lớn importer CHƯA ĐỌC** (đo trên 138 file): `LOGIC-QUEST` 127 ·
+>   `TRANSLATION-QUEST` 120 · `FILL PARAGRAPH(S)` 122 · `DEFINITION` 90 · `TABLEMIX` 67;
+>   và `PARAGRAPH` 130 giữ **nguyên văn bài đọc** ở ô A1 — AWord chưa có chỗ chứa nó.
+> - **Import vẫn chỉ nhận 1 file/lần** — chưa có đường kéo cả thư mục để dựng lại cả cây.
+> ⛔ Đừng tự chọn hướng — hỏi thầy muốn làm mục nào trước.
+>
+> ⭐⭐ **(LỊCH SỬ) VIỆC THẦY ĐÃ NHẮM TỚI TRƯỚC ĐỢT 221: CẢI TIẾN IMPORT.** Trước Đợt 218 thầy bảo đọc dự án + quét
 > `D:. LISTENING` và `D:. READING` "để chuẩn bị áp dụng một số thay đổi". **Đã quét xong 138
 > workbook, số liệu để sẵn đây** — phiên sau khỏi quét lại:
 > - **Cây nội dung rất đều**: `<cấp độ>/<bộ LSA2-S1>/<đề .T1>/<file .P1-2-3.xlsm>` (LISTENING) và

@@ -2185,23 +2185,15 @@ html.aw-nhung .aw-below { display: none; }
    in cqw for use inside the stage.
    ============================================================= */
 
-/* ---------- Home: QUICK ACCESS panel (Đợt 218, reshaped in 218b) ----------
-   The panel is the FIRST CELL OF THE CARD GRID, not a column beside the page:
-   it lands where the first folder card used to be, one column wide, and the
-   cards take the remaining three (thầy 20/8/2026).
+/* ---------- Home: QUICK ACCESS panel (Đợt 218 · reshaped 218b · 221) --------
+   ⭐⭐ Đợt 221 — THE PANEL IS A COLUMN OF ITS OWN (see `.aw-fm-withqa` below),
+   no longer a cell of the card grid, and it now holds TWO lists: the folders
+   thầy pinned, then RECENT underneath.
 
-   Two consequences worth knowing before editing anything here:
-
-   1. THERE IS NO @media RULE, AND NONE IS WANTED. `.aw-fm-grid` is already
-      `repeat(auto-fill, minmax(200px, 1fr))`, so a narrowing window drops one
-      card column at a time on its own; the panel, being grid item ONE, holds
-      its place while cards fall to the rows below. That is the teacher's
-      "vẫn ưu tiên hiển thị khung quick access hơn" with no breakpoint to keep
-      in step with anything.
-   2. `min-height` AND `grid-row` ARE SET FROM JS (`sizeQuickAccess()` in
-      main.js), not from here — the floor is "two folder cards tall", and a card
-      is 183px only until some later đợt changes a padding. Writing 382px into
-      this file would be writing down today's accident.                        */
+   ⚠️ The `min-height` / `grid-row` that JS used to write here are GONE with
+   `sizeQuickAccess()`. Nothing measures this panel any more — its height is
+   simply its content, capped by `max-height` so a long pin list scrolls inside
+   itself instead of running off the bottom of the page.                       */
 .aw-qa {
   display: flex; flex-direction: column; min-width: 0;
   background: #fff; border: 1px solid #e6edf6; border-radius: 15px;
@@ -2211,12 +2203,17 @@ html.aw-nhung .aw-below { display: none; }
      Nothing spills anyway: the rows sit inside the padding and `.aw-qa-list`
      does its own clipping. */
   position: relative;
+  /* ⚠️ A CAP, NOT A HEIGHT. Thầy's rule is "dài nhiều hay ít dựa vào số thư mục
+     được ghim", so the panel grows with the pins — but an unfolded branch or
+     twenty pins would otherwise push it past the fold, taking Recent with it.
+     At the cap `.aw-qa-list` starts scrolling and Recent stays visible.       */
+  max-height: calc(100vh - 130px);
 }
 /* ⭐ Đợt 218c — the hairline that separates Quick access from the folders
    (thầy 20/8/2026). It lives in the GAP, not on either side's edge: the panel
    already has a 1px card border and thickening that would read as "this box has
    a heavier right side", not as "these are two areas".
-   `right: -8.5px` centres a 1px line in the 16px grid gap — the element's right
+   `right: -8.5px` centres a 1px line in the 16px rail gap — the element's right
    edge lands 8.5px out, so its left edge is at 7.5px, i.e. half the gap.
    ⚠️ Inset 6px top and bottom on purpose: run it corner to corner and it reads
    as a crop mark on the card next to it.                                     */
@@ -2224,11 +2221,10 @@ html.aw-nhung .aw-below { display: none; }
   content: ""; position: absolute; top: 6px; bottom: 6px; right: -8.5px;
   width: 1px; background: #d7e0ec;
 }
-/* ⚠️ One column left (a very narrow window): the cards are BELOW the panel, not
-   beside it, so there is no boundary for the line to mark — it would hang in
-   the page margin pointing at nothing. `is-alone` is set from sizeQuickAccess(),
-   which is already the one place that knows the column count. */
-.aw-qa.is-alone::after { display: none; }
+/* ⭐ Đợt 221 — the `.is-alone` escape hatch is gone with `sizeQuickAccess()`.
+   It existed for the one case where the cards wrapped BELOW the panel and the
+   line pointed at the page margin; the rail makes that case impossible, so the
+   boundary the line marks is now always real. */
 .aw-qa-head {
   padding: 2px 4px 8px; border-bottom: 1px solid #eef3f9; margin-bottom: 6px;
 }
@@ -2289,16 +2285,59 @@ html.aw-nhung .aw-below { display: none; }
 .aw-qa-unpin svg { width: 14px; height: 14px; }
 .aw-qa-unpin:hover { background: #eef3f9; color: #33455c; opacity: 1; }
 
-/* An empty view still shows the panel, so its message/drop-zone takes the rest
-   of the row instead of sitting in a lone 238px column. */
-.aw-fm-empty-cell { grid-column: 2 / -1; }
-.aw-fm-grid > .aw-fm-empty-cell { padding: 0; display: flex; align-items: center; justify-content: center; }
+/* ---- the bottom half: RECENT (Đợt 221) ------------------------------------
+   Thầy: *"QUICK ACCESS cần chia nửa dưới để làm khu recent folder"*.
+   ⚠️ NOT a 50/50 split, on purpose. Five rows pinned to the bottom edge of a
+   tall panel would leave a hole in the middle of it, and on a short panel a
+   hard half would crush both lists. The pinned list takes the room it needs;
+   this sits under it, `flex: 0 0 auto`, never taller than its five rows.
+   ⚠️ `margin-top: auto` is what keeps it AT THE BOTTOM once the panel is being
+   stretched by something (a very long card list beside it) — without it the
+   two lists would float together at the top with a gap underneath.           */
+.aw-qa-recent {
+  flex: 0 0 auto; margin-top: auto; padding-top: 8px;
+  border-top: 1px solid #eef3f9;
+}
+.aw-qa-rhead { display: flex; align-items: center; justify-content: space-between; padding: 2px 4px 4px; }
+/* Same reasoning as `.aw-qa-unpin`: always visible, never a hover-reveal — the
+   teacher's 86" screen has no hover. */
+.aw-qa-rclear {
+  border: none; background: none; padding: 3px; border-radius: 7px;
+  color: #c8d3e0; cursor: pointer; display: inline-flex; opacity: .75;
+}
+.aw-qa-rclear svg { width: 14px; height: 14px; }
+.aw-qa-rclear:hover { background: #eef3f9; color: #33455c; opacity: 1; }
+.aw-qa-rlist { display: flex; flex-direction: column; }
 
-/* LIST view has no columns to donate, so the panel sits beside the rows at the
-   width it would have had in the grid. */
-.aw-fm-listwrap { display: flex; align-items: flex-start; gap: 16px; }
-.aw-fm-listwrap > .aw-qa { flex: 0 0 238px; }
-.aw-fm-listwrap > .aw-fm-list { flex: 1 1 auto; min-width: 0; }
+/* A lesson file being dragged over the panel (Đợt 221). Same blue as every
+   other drop target in the app, drawn INSIDE the border so it cannot disturb
+   the rail's width mid-drag. */
+.aw-qa.is-fileover {
+  border-color: #2f7bff; background: #f2f7ff;
+  box-shadow: inset 0 0 0 2px #2f7bff;
+}
+
+/* ⭐ Đợt 221 — THE RAIL. One layout for grid view, list view and every empty
+   state: Quick access in a fixed column on the left, everything else in a box
+   of its own on the right.
+
+   ⛔⛔ THE POINT IS THE PROMISE THIS SHAPE CAN MAKE AND A GRID CANNOT. Đợt 218b
+   put the panel in the card grid as item one; a grid item spans WHOLE ROWS, so
+   the moment the panel ran out of rows the cards wrapped back under it and sat
+   in its column. Thầy 21/8/2026: *"Thư mục không bao giờ nằm cùng không gian
+   cột của QUICK ACCESS"*. Here the cards live in a SIBLING box and are
+   physically unable to enter this one — nothing to compute, nothing to keep in
+   step, and `sizeQuickAccess()` deleted outright.
+
+   ⚠️ NO @media RULE, AND THE RAIL NEVER FOLDS AWAY (thầy: *"luôn giữ cột bên
+   trái"*). In a narrow myActivity column the card side just drops to one
+   column; `min-width: 0` on it is what lets it do that instead of forcing the
+   whole row wider than the page.
+   ⚠️ `align-items: flex-start` so the rail keeps its own height — stretch it
+   and an empty folder would give Quick access the height of a drop zone.     */
+.aw-fm-withqa { display: flex; align-items: flex-start; gap: 16px; }
+.aw-fm-withqa > .aw-qa { flex: 0 0 238px; }
+.aw-fm-withqa > .aw-fm-qamain { flex: 1 1 auto; min-width: 0; }
 
 /* ---------- Home: the teacher's game library ---------- */
 .aw-lib {
@@ -3075,13 +3114,41 @@ html.aw-nhung .aw-below { display: none; }
 .aw-imp-rtitle { flex: 1 1 auto; min-width: 0; font-weight: 600; color: #23303e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .aw-imp-rmeta { flex: none; font-size: .76rem; color: #8493a8; font-weight: 600; }
 
-.aw-imp-folder { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.aw-imp-folder > label { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #23303e; cursor: pointer; user-select: none; }
-.aw-imp-folder input[type=checkbox] { width: 18px; height: 18px; accent-color: #2f7bff; cursor: pointer; }
-.aw-imp-folder input[type=checkbox]:disabled { cursor: default; opacity: .5; }
-.aw-imp-folder .aw-ed-input { flex: 1 1 140px; min-width: 0; }
-.aw-imp-folder.is-dup .aw-ed-input { border-color: #e5484d; background: #fdeceb; }
-.aw-imp-folder-hint { flex-basis: 100%; font-size: .78rem; color: #8493a8; line-height: 1.35; }
+/* ---- STEP 2: the folder screen (Đợt 221) ---------------------------------
+   One row per level of the path the file name asked for, each one renameable
+   and removable, so what the teacher approves here is exactly what gets made.
+   ⚠️ Indented one step per level (the `margin-left` main.js sets on each row):
+   the rows ARE a tree, and a flat list of near-identical codes — `LSA2-S2` ·
+   `LSA2-S2.T1` · `LSA2-S2.T1.P1-2` — reads as three separate names rather than
+   as one path.                                                              */
+.aw-imp-folder { display: flex; flex-direction: column; gap: 8px; }
+.aw-imp-folder-base { font-size: .86rem; color: #5b6b80; line-height: 1.4; }
+.aw-imp-folder-base b { color: #23303e; }
+.aw-imp-path { display: flex; flex-direction: column; gap: 6px; }
+.aw-imp-path-row { display: flex; align-items: center; gap: 8px; }
+.aw-imp-path-row .aw-ed-input { flex: 1 1 auto; min-width: 0; }
+/* ✓ already there · + about to be created. A fixed box so the inputs beside
+   them line up whichever mark a row is wearing. */
+.aw-imp-path-mark {
+  flex: 0 0 20px; text-align: center; font-weight: 800; font-size: .95rem;
+  color: #1e9e5a; user-select: none;
+}
+.aw-imp-path-row.is-new .aw-imp-path-mark { color: #2f7bff; }
+.aw-imp-path-row.is-new .aw-ed-input { border-color: #b9d4ff; background: #f5f9ff; }
+.aw-imp-path-del {
+  flex: 0 0 auto; border: none; background: none; padding: 5px; border-radius: 8px;
+  color: #c8d3e0; cursor: pointer; display: inline-flex;
+}
+.aw-imp-path-del svg { width: 14px; height: 14px; }
+.aw-imp-path-del:hover { background: #fdeceb; color: #c53030; }
+.aw-imp-path-add {
+  align-self: flex-start; border: 1px dashed #c8d3e0; background: none;
+  border-radius: 9px; padding: 5px 12px; cursor: pointer;
+  font-family: inherit; font-size: .82rem; font-weight: 700; color: #5b6b80;
+}
+.aw-imp-path-add:hover { border-color: #2f7bff; color: #2f7bff; }
+.aw-imp-path-none { font-size: .84rem; font-weight: 600; color: #8493a8; padding: 4px 0; }
+.aw-imp-folder-hint { font-size: .78rem; color: #8493a8; line-height: 1.35; }
 .aw-imp-note { font-size: .82rem; color: #7c8aa0; }
 .aw-imp-done { font-weight: 700; color: #1e9e5a; }
 
