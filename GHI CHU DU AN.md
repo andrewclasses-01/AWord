@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 221 (21/8/2026) — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN FILE + MÀN CHỐT THƯ MỤC** · **QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*)
+## Đợt 221 (21/8/2026) — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN FILE + MÀN CHỐT THƯ MỤC** · **QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) · **COMMIT `97306a2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `97306a2` trạng thái `success` (tra `gh api …/deployments/{id}/statuses`, **không tin mã 200**) · **7/7 mã băm SHA-256 khớp** · **24/24 phép hỏi MÔĐUN TRÊN CHÍNH BẢN LIVE** (kéo `lesson-import.js` từ tên miền live về rồi CHẠY, + soi khuôn câu lệnh 3 file kia)
 
 Thầy giao 2 mảng, chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**:
 `core/lesson-import.js` · `core/store.js` · `main.js` · `core/app.css`.
@@ -131,6 +131,25 @@ MỘT cấp, importer nay đề nghị năm). Mỗi cấp một dòng sửa/xoá
 - ⛔ **Bàn thử KHÔNG được `location.reload()`**: kho của bản giả là một `Map` trong
   môđun, nạp lại là mất sạch và trang trông y như seed hỏng. Vẽ lại tại chỗ bằng
   `popstate` — đường công khai duy nhất quay lại `routeFromLocation()`.
+
+### ✅ ĐÃ LIVE — cách kiểm chứng đã dùng (làm lại y hệt ở đợt sau)
+
+- **Đợt triển khai Pages**: `gh api repos/andrewclasses-01/AWord/deployments --jq '.[0]'` lấy
+  id + sha, rồi `…/deployments/{id}/statuses --jq '.[0].state'` phải ra `success` **và** sha
+  phải đúng commit vừa push. ⚠️ Lần tra ĐẦU TIÊN trả về đợt triển khai **CŨ** (`e5ccc23`) —
+  GitHub chưa kịp tạo đợt mới. Phải **vòng lặp chờ tới khi sha khớp**, không thì báo LIVE oan.
+- ⛔⛔ **ĐỪNG BĂM FILE TRÊN MÁY RỒI SO VỚI LIVE — 4/4 báo LỆCH OAN.** Kho git lưu **LF**, thư
+  mục làm việc trên máy này là **CRLF** (`git add` báo *"LF will be replaced by CRLF"*), nên
+  cùng một nội dung ra hai mã băm khác nhau. Cách so ĐÚNG là băm **nội dung trong commit**:
+  `git show HEAD:<file> | sha256sum` đối với `curl` bản live ⇒ **7/7 khớp**.
+- **24/24 phép hỏi môđun trên CHÍNH BẢN LIVE**
+  (`scratchpad/live221.mjs`): kéo `lesson-import.js` **từ tên miền live** về rồi CHẠY nó
+  (10 phép đọc đường dẫn), + soi khuôn câu lệnh `main.js`/`store.js`/`app.css` cho 14 mục —
+  gồm cả 4 mục kiểm **thứ đã bị XOÁ** (`sizeQuickAccess` · `folderDup` · `.aw-fm-listwrap` ·
+  `.is-alone`), vì "thêm được" và "bỏ được" là hai câu hỏi khác nhau.
+  ⚠️ **Node không `import()` thẳng `https:` được** (`ERR_UNSUPPORTED_ESM_URL_SCHEME`) —
+  `fetch` về rồi `import("data:text/javascript;base64," + …)`, vẫn là code của bản live.
+  ⚠️ **Bỏ dòng chú thích trước khi grep** (bài học Đợt 219: grep trúng luôn chú thích).
 
 ### ⬜ CHỜ MẮT/TAY THẦY
 

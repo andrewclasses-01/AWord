@@ -11,7 +11,12 @@
 > Cập nhật lần cuối: **21/8/2026 (Đợt 221)** — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN
 > FILE + MÀN CHỐT THƯ MỤC · QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT**. Thầy giao 2 mảng,
 > chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**: `core/lesson-import.js` ·
-> `core/store.js` · `main.js` · `core/app.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*).
+> `core/store.js` · `main.js` · `core/app.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*)
+> — commit **`97306a2`**, **ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `97306a2` trạng
+> thái `success` (tra builds API, **không tin mã 200**; ⚠️ lần tra đầu ra đợt CŨ — phải chờ tới
+> khi sha khớp) · **7/7 mã băm SHA-256 khớp** · **24/24 phép hỏi môđun TRÊN CHÍNH BẢN LIVE**.
+> ⛔⛔ **Băm file TRÊN MÁY rồi so live là báo LỆCH OAN 4/4** — kho lưu LF, thư mục làm việc
+> CRLF; phải băm **nội dung trong commit** (`git show HEAD:<file> | sha256sum`).
 > Đọc khối **Đợt 221** đầu `GHI CHU DU AN.md` — tóm tắt:
 > - **(1) Một luật đọc hết 137 file bài học**: *mỗi dấu chấm trong mã = một cấp thư mục,
 >   tên cấp là mã cộng dồn*. `LSA2-S2.T1.P1-2.xlsm` → `LISTENING / 2. LISTENING FOR A2 /
@@ -3920,14 +3925,37 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐ **MỚI NHẤT (Đợt 220, 21/8/2026) — thầy SẼ TEST TRÊN LỚP rồi yêu cầu sửa ở session sau.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 221, 21/8/2026) — ĐÃ LIVE `97306a2`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Kho sạch, `main` = `origin/main`. Năm việc chờ **mắt/tay thầy** (đủ chi tiết ở cuối khối
+> Đợt 221 trong `GHI CHU DU AN.md`):
+> 1. ⬜ **Nhìn cột Quick Access trên màn 86"** — máy này pane bị ẩn ⇒ **không chụp được khung
+>    hình nào**, nên mọi thứ "thuận mắt" chưa ai xem.
+> 2. ⬜ **Mở AWord trong myActivity chia 3-4 cột**: ở 380px cột thẻ chỉ còn ~126px. Thầy chốt
+>    *"luôn giữ cột bên trái"* nên máy giữ đúng vậy — xem có chật quá không.
+> 3. ⬜ ⚠️ **Thư viện THẬT**: nếu thầy đã có sẵn thư mục `DS-S4.I1 PLANTS, ANIMALS…` thì import
+>    đẻ **thêm** `DS-S4.I1` bên cạnh — tên file chưa bao giờ mang tên của cấp TRÊN nó. Sửa tay
+>    ở màn chốt là được; muốn máy tự khớp thì phải có nguồn tên khác (chưa có).
+> 4. ⬜ **`FLY-S2` / `DR-S1`** khác tên ổ D (`LSFLY-S2` / `DORAEMON 1`) — đúng lời thầy chốt
+>    *"theo mã, tự động"*. Muốn khớp ổ D = thêm 1 bảng alias trong `LESSON_TREE`.
+> 5. ⬜ **Nút xoá lịch sử Recent** ở góc phải tiêu đề — với ngón tay có đủ to không.
+>
+> ⛔ **TRƯỚC KHI SỬA HAI MẢNG NÀY, đọc "Cách làm + bẫy" của khối Đợt 221** — nhất là:
+> `sizeQuickAccess()` **đã bị xoá** (đừng dựng lại: nó tự đọc kết quả của chính nó) · rail phải
+> là **flex**, quay về ô lưới là thẻ lại lọt vào cột Quick Access · khung bước 2 của Import dựng
+> **MỘT LẦN ngoài `buildPanel()`** · làm sạch tên chỉ ở **cấp cây**, thư mục lá giữ nguyên.
+>
+> ⭐⭐⭐ **Trước đó (Đợt 220, 21/8/2026) — thầy SẼ TEST TRÊN LỚP rồi yêu cầu sửa ở session sau.**
 > Bốn việc chờ tay thầy nằm cuối khối Đợt 220 trong `GHI CHU DU AN.md` (ván Count thật trên TOMKO ·
 > Submit giữa chừng ở Free · cỡ chữ dải "Questions each" trên 86" · act cũ nào muốn nết Allow skip
 > cũ thì bật lại trong Options). ⛔ Trước khi sửa theo lời thầy, đọc phần "Cách làm + bẫy đã cắn"
 > của khối đó — nhất là: options theo THAM CHIẾU (cấm copy), `registerNavGate` (cấm chặn chỉ trong
 > `setNav`), và cắt review Free TRƯỚC `computeResult`.
 
-> ⭐⭐⭐ **MỚI NHẤT (Đợt 218 + 218b, 20/8/2026) — KHUNG QUICK ACCESS, CHỜ THẦY DUYỆT:**
+> ⚠️ **KHỐI ĐỢT 218 NGAY DƯỚI ĐÂY ĐÃ LỖI THỜI MỘT PHẦN (Đợt 221 làm lại bố cục).** Mục 5 và
+> mục 6 **không còn đúng**: khung nay là **cột riêng**, thẻ không bao giờ rơi xuống dưới nó nữa,
+> và vạch kẻ 218c luôn nằm giữa hai vùng (lớp `.is-alone` đã xoá). Mục 1-4 vẫn còn nguyên giá trị.
+>
+> ⭐⭐⭐ **(Đợt 218 + 218b, 20/8/2026) — KHUNG QUICK ACCESS:**
 > 1. ⬜ **Nhìn khung trên màn 86"** — máy này **không chụp được khung hình nào** (pane bị ẩn ⇒ không
 >    compositing), nên mọi thứ thuộc "thuận mắt" chưa ai xem.
 > 2. ⬜ ⭐ **KÉO SẮP XẾP BẰNG NGÓN TAY THẬT trên TOMKO** — máy chỉ dựng được pointer event tổng hợp.
