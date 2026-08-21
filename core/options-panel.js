@@ -704,11 +704,24 @@ export function buildOptionsBody(host, {
     grid.append(c.cell);
     // ⚠️ Hai ô tích bị khoá được TÌM LÚC GỌI, không giữ ref: chúng dựng SAU dải
     // này (khu ô tích nằm cuối builder), giữ ref lúc này chỉ tóm được null.
+    // ⛔⛔ KHOÁ MỘT CHIỀU, KHÔNG PHẢI HAI CHIỀU (vá 22/8/2026 — thầy báo *"tôi đã
+    // setup như thế này rồi nhưng QUESTIONS EACH vẫn không mở khoá là sao"*).
+    // Bản đầu Đợt 220 còn một dòng nữa: Balance đang tích thì khoá luôn CẢ DẢI này.
+    // Nghe thì "loại trừ nhau", nhưng hậu quả là **điều khiển MỚI bị điều khiển CŨ
+    // chặn đường** — mà Balance thì đã tích sẵn trong hàng loạt act cũ, nên với thầy
+    // dải này trông như hỏng: nằm mờ vĩnh viễn, không cách nào chạm tới, và **không
+    // có gì trên màn nói vì sao**.
+    // ⭐ Luật đúng: dải này LUÔN chạm được. Chọn Free/Count thì Balance + Shuffle mờ
+    // đi — thầy NHÌN THẤY hai ô vừa tắt nên hiểu ngay quan hệ, đúng idiom In turns
+    // của Đợt 202 mà thầy đã quen.
+    // ⚠️ CHỈ CHẠM KHOÁ, KHÔNG BAO GIỜ CHẠM GIÁ TRỊ (luật Đợt 202): ô Balance vẫn giữ
+    // nguyên dấu tích, quay về Normal là nó sống lại y như cũ. Trong lúc Free/Count
+    // cầm bài thì `applyBalance()` bên engine tự đứng xuống, nên dấu tích còn đó
+    // không hại gì.
     syncSdDealLocks = () => {
       const dealOn = draft.sdDeal === "free" || draft.sdDeal === "count";
       host.querySelector('[data-aw-check="balance"]')?.classList.toggle("is-locked", dealOn);
       host.querySelector('[data-aw-check="shuffle"]')?.classList.toggle("is-locked", dealOn);
-      c.cell.classList.toggle("is-locked", !dealOn && draft.balanceQuestions === true);
     };
   }
 
