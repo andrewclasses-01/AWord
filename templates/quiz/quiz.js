@@ -598,10 +598,22 @@ const quizTemplate = {
      * reveals through the existing function instead of hand-drawing marks.
      * ⚠️ The question is LOCKED (`tile.disabled`) and `settled()` now reports it
      * as dealt with, which is what lets ▷ move on with Allow skip off.
+     *
+     * ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CÙNG ĐƯỜNG NÀY CÒN LÀ "HẾT TIME DELAY TRONG
+     * TRẬN". Thầy: *"khi hết time delay, cần báo hiệu giống hệt như chọn sai (âm
+     * thanh, trừ điểm như chọn sai)"* — mà đó đúng là câu Đợt 174 đã viết cho ô
+     * Time each round. Một luật, một chỗ: trọng tài gọi `timeUp()` (xem
+     * `fightCtl.attach` bên dưới), `timeUp()` gọi thẳng vào đây.
+     * ⚠️⚠️ HAI KHÁC BIỆT KHI TRỌNG TÀI GỌI, cả hai đều bắt buộc:
+     *   1. BỎ QUA `fightLocked()`. Lúc trọng tài gọi thì `roundWinner` ĐÃ được đặt
+     *      ⇒ `ctl.isLocked()` trả true ⇒ hàm này thoát ở dòng đầu và không bao giờ
+     *      chạy. (Đã cắn thật khi dựng: bàn im lặng y như cũ.)
+     *   2. KHÔNG tự sang câu / tự kết thúc — trận đấu là thứ dời cả hai bàn.
      */
-    function roundTimeUp() {
+    function roundTimeUp(o) {
+      const fromMatch = !!(o && o.fromMatch === true);
       const st = state[index];
-      if (settled(st) || finished || ending || fightLocked()) return;   // already resolved
+      if (settled(st) || finished || ending || (!fromMatch && fightLocked())) return;   // already resolved
       const q = questions[index];
       st.timedOut = true;
       st.correct = false;
@@ -620,6 +632,11 @@ const quizTemplate = {
         autoTimer = setTimeout(() => finish("gameover"), 1500);
         return;
       }
+      // ⛔ Đợt 222 — TRONG TRẬN THÌ DỪNG Ở ĐÂY. `advanceRound()` của trọng tài mới
+      // là thứ dời câu, và nó dời CẢ HAI bàn cùng lúc; để hàng dưới chạy là bàn này
+      // tự bỏ đi một mình rồi hai khung lệch câu (đúng lý do `choose()` cũng chặn
+      // hai nhánh y hệt bằng `!fightCtl`).
+      if (fromMatch) return;
       if (state.every(settled)) { autoTimer = setTimeout(() => finish("complete"), 1500); return; }
       // AUTO NEXT — the teacher's choice when it is OFF is to STAY here, locked,
       // until they press ▷ themselves. So there is no `else`: doing nothing is
@@ -790,7 +807,10 @@ const quizTemplate = {
           fightBoardLock = !!on;
           syncFightLock();
         },
-        reveal: revealFightMarks
+        reveal: revealFightMarks,
+        // ⭐⭐ Đợt 222 — cửa sổ Time delay vừa cạn mà bàn này chưa trả lời: đúng
+        // đường "hết giờ = sai" của Đợt 174, không phải một luật thứ hai.
+        timeUp() { roundTimeUp({ fromMatch: true }); }
       });
     }
 

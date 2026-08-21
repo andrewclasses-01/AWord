@@ -252,6 +252,10 @@ const ftmTemplate = {
     // its own, so with the switch ON a match still hands both boards the same
     // layout. Never fold the two into one condition in which the option could
     // re-enable shuffling inside a match.
+    // ⭐⭐ ĐỌC TIẾP KHỐI "Đợt 222" NGAY DƯỚI TRƯỚC KHI TIN DÒNG NÀY: từ Đợt 222 hai
+    // bàn CÓ xáo chỗ ngồi khác nhau — nhưng vẫn qua đúng cửa này, tức thứ tự gốc
+    // (và do đó PHÉP CHIA TRANG) vẫn chung cho hai bàn. Đây vẫn là chỗ duy nhất
+    // được phép quyết định "cả bộ xếp theo thứ tự nào".
     const choiceOrder = (fightCtl || opt.shuffleAnswers === false)
       ? pairs.map((_, i) => i)
       : shuffle(pairs.map((_, i) => i));
@@ -261,7 +265,33 @@ const ftmTemplate = {
     for (let p = 0; p < PAGE_COUNT; p++) pages.push(choiceOrder.slice(p * perPage, (p + 1) * perPage));
     // Per-page prompt queues — front = current prompt for that page; shuffled
     // within the page (when shuffleQuestions is on) for variety.
+    // ⚠️⚠️ Đợt 222 — DỰNG TRƯỚC CÚ XÁO BỐ CỤC NGAY DƯỚI, và thứ tự hai khối này là
+    // cả phần an toàn của tính năng: hàng chờ lời nhắc phải sinh ra từ thứ tự
+    // CHUNG, không phải từ mảng đã xáo riêng cho bàn này.
     const pageQueues = pages.map(arr => ((opt.shuffleQuestions && !fightCtl) ? shuffle([...arr]) : [...arr]));
+
+    // ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — TRONG TRẬN, HAI BÀN PHẢI XẾP Ô KHÁC NHAU.
+    // Thầy: *"vị trí các ô trả lời chưa được xáo trộn (kể cả khi đã tích Shuffle cả
+    // questions và answers), các đáp án được xếp theo thứ tự lần lượt từ trái sang
+    // phải, từ trên xuống dưới nên có thể chọn lần lượt mà không cần đọc câu hỏi"*.
+    // ⛔ ĐO ĐƯỢC (scratch/dot222-ftm.html, 24 ô): hai bàn giống hệt nhau 24/24 ô, và
+    // vì lời nhắc cũng chạy đúng thứ tự bộ câu nên ô thứ k CHÍNH LÀ đáp án của vòng
+    // thứ k. Cả trận đọc được bằng cách bấm từ trái sang phải.
+    // ⭐ VÌ SAO XÁO TRONG TỪNG TRANG chứ không xáo cả bộ: `fightGoTo()` tìm trang
+    // bằng `pages.findIndex(arr => arr.includes(i))`, nên PHÉP CHIA TRANG phải giống
+    // hệt nhau ở hai bàn — khác đi là hai bàn đứng ở hai trang khác nhau giữa cùng
+    // một vòng. Xáo TRONG trang giữ nguyên "trang nào chứa từ nào", chỉ đổi CHỖ ĐỨNG.
+    // ⚠️ Luật Đợt 184 *"cả hai bàn phải là cùng một bàn"* vẫn còn nguyên phần lõi của
+    // nó: thứ tự VÒNG ĐẤU chung, phép chia trang chung. Cái được thả ra chỉ là chỗ
+    // ngồi của các ô — thứ mà Đợt 184 khoá kèm chỉ vì hồi đó nó dính chung một mảng.
+    // ⚠️ `revealFightMarks()` tra ô đúng bằng `pages[curPage].indexOf(target)` nên nó
+    // tự đi theo bố cục mới, không phải sửa gì.
+    // ⚠️ Xáo hai lần cho tới khi KHÁC nhau là việc của xác suất, không làm được ở đây
+    // (mỗi bàn là một lần `mount` riêng, không bàn nào thấy bàn kia). Trang 5 ô thì
+    // xác suất trùng là 1/120 — chấp nhận được; trang 20 ô thì coi như không bao giờ.
+    if (fightCtl && opt.shuffleAnswers !== false) {
+      for (let p = 0; p < pages.length; p++) pages[p] = shuffle(pages[p]);
+    }
 
     // Grid geometry sized to the LARGEST page so every page lines up identically
     // (5 fixed rows, columns from the tile count). A tile's cell never changes as
@@ -421,6 +451,20 @@ const ftmTemplate = {
       });
       card.append(grid);
 
+      // ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — LỚP RIÊNG CHO DẤU ✓/✗ BAY.
+      // Thầy: *"dấu X và V bay ra khi có 1 câu đúng cần ở layer trên cùng, nếu có bay
+      // vào phạm vi ô khác thì phải ở layer trên chứ không được bị các ô khác đè lên"*.
+      // ⛔⛔ GỐC RỄ: dấu được `append` vào CHÍNH Ô, mà ô có `overflow: hidden` (và
+      // `.aw-ftm-grid` cũng vậy). `z-index: 6` của `.aw-mark-fly` KHÔNG cứu được —
+      // overflow cắt theo HỘP, không theo lớp. Mà keyframe `aw-fly` bay tới
+      // `translateY(-170%)`, tức phần lớn quãng đường nằm NGOÀI ô ⇒ bị xén sạch.
+      // ⭐ Cách sửa: một lớp phủ trống nằm ĐÈ LÊN lưới, dấu vẽ vào đó theo toạ độ
+      // pixel của ô vừa bấm (flyMarkOnTile). Nó là ANH EM của lưới nên không bị
+      // `overflow` nào của lưới/ô chạm tới, và nằm sau lưới trong DOM nên đè lên mọi ô.
+      // ⚠️ KHÔNG gỡ `overflow: hidden` của ô để chữa việc này: chữ dài cần nó (xem
+      // khối Đợt 222 trong find-the-match.css) — hai việc khác nhau, hai chỗ khác nhau.
+      card.append(el("div", "aw-ftm-marks"));
+
       // The page indicator lives DOWN in the shared nav row under the stage (see
       // updateNav) — no in-board pager any more, so every bit of the board's
       // height goes to the tiles themselves (teacher 4/8/2026).
@@ -479,14 +523,42 @@ const ftmTemplate = {
       if (tileFitRaf) cancelAnimationFrame(tileFitRaf);
       tileFitRaf = requestAnimationFrame(() => { tileFitRaf = 0; fitTiles(); });
     }
+    /**
+     * ⭐⭐ Đợt 222 — CÁCH ĐO BỀ NGANG ĐỔI, VÌ `scrollWidth` NÓI DỐI Ở ĐÂY.
+     * Ô là hộp flex `justify-content: center`, mà phần chữ thò ra BÊN TRÁI của một
+     * hộp căn giữa thì `scrollWidth` KHÔNG tính vào (luật cuộn: chỉ đo phía cuối).
+     * Đo được ở Đợt 222: `congratulations` rộng 132px trong lòng ô 131px mà
+     * `scrollWidth === clientWidth`, nên vòng lặp cũ nghĩ là vừa và để nguyên `1`.
+     * Nay đo BỀ RỘNG DÒNG CHỮ THẬT bằng Range — đúng thứ mắt thầy nhìn thấy.
+     * ⚠️ Lấy `getClientRects()` rồi max từng DÒNG, không lấy `getBoundingClientRect()`:
+     * với cụm nhiều từ đã xuống dòng thì hộp bao là hợp của các dòng, tức luôn bằng
+     * bề ngang lòng ô ⇒ đo kiểu đó là không bao giờ thấy tràn.
+     * ⚠️ Chiều cao vẫn đo bằng `scrollHeight` — chiều dọc không có bẫy căn giữa
+     * tương ứng (`align-items:center` cũng cắt hai đầu, nhưng chữ chỉ tràn dọc khi
+     * xuống dòng, và lúc đó `scrollHeight` báo đúng).
+     */
+    function textOverflows(t) {
+      if (t.scrollHeight > t.clientHeight + 1) return true;
+      const node = [...t.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+      if (!node) return false;
+      const r = document.createRange();
+      r.selectNodeContents(node);
+      const rects = [...r.getClientRects()];
+      if (!rects.length) return false;
+      const widest = Math.max(...rects.map(x => x.width));
+      const cs = getComputedStyle(t);
+      const inner = t.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      return widest > inner + 0.5;
+    }
     function fitTiles() {
       root.querySelectorAll(".aw-ftm-tile").forEach(t => {
         t.style.setProperty("--tfit", "1");
         let scale = 1, guard = 0;
-        while (guard++ < 12 &&
-               (t.scrollWidth > t.clientWidth + 1 || t.scrollHeight > t.clientHeight + 1) &&
-               scale > 0.4) {
-          scale -= 0.08;
+        // Nấc 0,06 và sàn 0,34 (cũ: 0,08 / 0,40): từ khoá một-từ nay phải nằm TRỌN
+        // trên một dòng nên nó cần đi xuống sâu hơn cái cũ — đo thật:
+        // `antidisestablishmentarianism` (28 chữ cái) dừng ở 0,52.
+        while (guard++ < 14 && textOverflows(t) && scale > 0.34) {
+          scale -= 0.06;
           t.style.setProperty("--tfit", scale.toFixed(3));
         }
       });
@@ -724,6 +796,37 @@ const ftmTemplate = {
       startCycle();
     }
 
+    /**
+     * ⭐⭐⭐ Đợt 222 — DẤU ✓/✗ BAY, VẼ TRÊN LỚP PHỦ CHỨ KHÔNG VẼ TRONG Ô.
+     * Xem khối chú thích ở `renderShell()` để biết vì sao (ô `overflow: hidden` xén
+     * mất gần hết quãng bay `translateY(-170%)` của keyframe `aw-fly`).
+     * ⚠️ ĐO BẰNG PIXEL, KHÔNG DÙNG `%`: lớp phủ trùm cả thẻ bài, còn `.aw-mark-fly`
+     * của core được viết để nằm TRONG ô (`left:50% top:50% width:52%` là 52% của Ô).
+     * Đặt nguyên nó lên lớp phủ là dấu to bằng nửa màn hình, nằm giữa thẻ bài. Nên
+     * ba giá trị đó bị ghi đè bằng px lấy từ chính ô vừa bấm.
+     * ⚠️ `transform: translate(-50%,-50%)` của core GIỮ NGUYÊN (mọi keyframe của
+     * `aw-fly`/`aw-fly-cross` đều mở đầu bằng đúng nó) nên toạ độ trên là TÂM ô —
+     * đây đúng là luật số 12 của dự án: phần tử định vị bằng transform thì chỉ được
+     * đụng vào thứ khác, đừng đụng vào transform.
+     * ⚠️ Dự phòng: không thấy lớp phủ thì vẽ vào ô như cũ, còn hơn mất hẳn dấu.
+     */
+    function flyMarkOnTile(tile, ok) {
+      const fly = el("span", "aw-mark-fly" + (ok ? "" : " is-cross"),
+                     ok ? icons.markCheck : icons.markCross);
+      const layer = root.querySelector(".aw-ftm-marks");
+      if (!layer || !tile) {
+        (tile || root).append(fly);
+      } else {
+        const lr = layer.getBoundingClientRect();
+        const tr = tile.getBoundingClientRect();
+        fly.style.left = (tr.left - lr.left + tr.width / 2) + "px";
+        fly.style.top = (tr.top - lr.top + tr.height / 2) + "px";
+        fly.style.width = (tr.width * 0.52) + "px";
+        layer.append(fly);
+      }
+      pendingMarks.push(setTimeout(() => fly.remove(), 900));
+    }
+
     function removeTile(tile) {
       if (!tile) return;
       // Teacher's spec (1/8): tiles must NEVER change position. A matched tile
@@ -911,9 +1014,7 @@ const ftmTemplate = {
         queue.shift();
         state[target].solved = true;
 
-        const fly = el("span", "aw-mark-fly", icons.markCheck);
-        tile.append(fly);
-        pendingMarks.push(setTimeout(() => fly.remove(), 900));
+        flyMarkOnTile(tile, true);   // Đợt 222 — vẽ trên lớp phủ, xem hàm đó
         if (removeCorrects) {
           removeTile(tile);
         }
@@ -942,9 +1043,7 @@ const ftmTemplate = {
         // correct), and the prompt glides off to the right just like a correct
         // tap. Lose a life if lives are enabled — running out ends the game.
         ftmSound.wrong();
-        const fly = el("span", "aw-mark-fly is-cross", icons.markCross);
-        tile.append(fly);
-        pendingMarks.push(setTimeout(() => fly.remove(), 900));
+        flyMarkOnTile(tile, false);   // Đợt 222 — vẽ trên lớp phủ, xem hàm đó
 
         // Dock points for the wrong tap (no clamp — the score may go negative).
         // Guarded by pointsOff so play is byte-identical when the feature is off.
@@ -1038,7 +1137,32 @@ const ftmTemplate = {
         total,
         goToIndex: fightGoTo,
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
-        reveal: revealFightMarks
+        reveal: revealFightMarks,
+        // ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CỬA SỔ TIME DELAY CẠN MÀ BÀN NÀY CHƯA
+        // CHẠM Ô NÀO: *"báo hiệu giống hệt như chọn sai (âm thanh, trừ điểm như chọn
+        // sai)"*. Đúng nhánh sai của `choose()`, BỎ hai thứ: `fightCtl.wordDone()`
+        // (trọng tài đã đặt `roundDone` trước khi gọi xuống đây) và mọi lệnh sang câu.
+        // ⚠️ KHÔNG gộp vào `onTimeUp()` — ca "lời nhắc trôi hết băng chuyền" tới nay
+        // KHÔNG trừ điểm, gộp vào là lặng lẽ đổi luật của một tính năng khác.
+        // ⚠️ Không có ô nào để đính dấu ✗ (đội này chưa chạm gì), nên dấu duy nhất
+        // là dấu ✓ mà `revealFightMarks()` đặt lên ô ĐÚNG ngay sau đó — cùng cách
+        // Quiz xử ca hết giờ không chọn ô nào (Đợt 174).
+        timeUp() {
+          if (finished || !queue.length) return;
+          const target = queue[0];
+          if (state[target].solved || state[target].skipped) return;
+          state[target].skipped = true;
+          ftmSound.wrong();
+          if (pointsOff) {
+            penalty += pointsOff;
+            ui.setScore(scoreNow());
+          }
+          loseLife();
+          updateNav();
+          fightPendingReveal = fightPendingReveal || { idx: null, tile: null, correct: false };
+          lockTiles();
+          syncFightLock();
+        }
       });
     }
 

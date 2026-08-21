@@ -14,8 +14,21 @@
    template (uniform scaling inside the 16:9 stage).
    ============================================================= */
 
+/* ⭐⭐⭐ Đợt 222 — LỚP PHỦ CHO DẤU ✓/✗ BAY (xem renderShell + flyMarkOnTile).
+   Trùm đúng thẻ bài, không nhận chuột, và là CON CUỐI của thẻ nên đè lên lưới ô.
+   ⚠️ `overflow` để mặc (visible) — cả lý do lớp này tồn tại là để KHÔNG xén.
+   ⚠️ `position: relative` trên `.aw-ftm-card` là gốc toạ độ của lớp này; nó KHÔNG
+   đẻ stacking context (z-index vẫn auto) nên không đụng tới hợp đồng xếp lớp của
+   hệ popup trong core/HUONG DAN CORE.md. */
+.aw-ftm-marks {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 6;
+}
+
 .aw-ftm-card {
   --fit: 1;
+  position: relative;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
   /* Small bottom pad so the answer grid (flex:1, align-content:center) sits
@@ -142,7 +155,22 @@
   /* --tfit = per-tile shrink factor (fitTiles); --fit = whole-stage scale. */
   font-size: calc(1.85cqw * var(--fit) * var(--tfit, 1));
   line-height: 1.35;
-  overflow-wrap: anywhere; word-break: break-word;
+  /* ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — MỘT TỪ KHÔNG BAO GIỜ BỊ BẺ ĐÔI.
+     Thầy: *"với một số từ dài, do ô câu trả lời nhỏ nên từ bị cắt vài chữ xuống dòng
+     dưới nên không đọc được từ nữa => cần thu nhỏ size chữ để nhét vừa chứ không
+     phải cắt từ ra"*.
+     ⛔⛔ GỐC RỄ, và nó nằm ở ĐÚNG hai từ khoá cũ: `overflow-wrap: anywhere` +
+     `word-break: break-word` cho phép bẻ giữa từ, mà bẻ xong thì ô HẾT TRÀN — nên
+     `fitTiles()` (đo `scrollWidth`/`scrollHeight`) nhìn thấy "vừa rồi" và KHÔNG thu
+     chữ một nấc nào. Đo được ở Đợt 222: `congratulations` trong ô rộng 93px nằm 2
+     dòng với `--tfit` vẫn nguyên **1**. Tức hai luật này không phải là "phòng xa" —
+     chúng chính là thứ vô hiệu hoá bộ thu chữ.
+     ⭐ `normal/normal` = chỉ được xuống dòng ở DẤU CÁCH. Từ khoá một-từ dài sẽ tràn
+     ngang ⇒ tràn ĐO ĐƯỢC ⇒ `fitTiles` thu chữ tới khi vừa. Cụm nhiều từ ("polar
+     bear") vẫn xuống dòng ở khoảng trắng y như trước.
+     ⚠️ `overflow: hidden` ở trên GIỮ NGUYÊN — nó là lưới an toàn cho ca từ dài tới
+     mức chạm sàn thu nhỏ, chứ không còn là thứ che giấu lỗi. */
+  overflow-wrap: normal; word-break: normal;
   text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
   padding: calc(0.5cqw * var(--fit)) calc(0.7cqw * var(--fit));
   cursor: pointer;

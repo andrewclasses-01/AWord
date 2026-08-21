@@ -8,7 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **21/8/2026 (Đợt 221)** — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN
+> Cập nhật lần cuối: **21/8/2026 (Đợt 222)** — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI,
+> KHÔNG PHẢI MỘT BÀN CHẾT CÂM (5 game Fight) · FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU ·
+> TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG**. Thầy giao 5 việc, chốt 3
+> quyết định qua AskUserQuestion. Sửa **8 file**: `core/fight.js` · 5 template Fight vòng
+> thường · `find-the-match.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*).
+> Đọc khối **Đợt 222** đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **(1) Gốc rễ MỘT chỗ, và hai ca thầy tả là cùng một lỗi.** `finalizeSingleWinner()` khoá
+>   bàn đội thua bằng đúng một dòng `lock(true)` trần trụi (Đợt 124), công tắc là ô **Round
+>   rule = "lock"** — **MẶC ĐỊNH**. Đo được: ở Time delay mặc định **0,1s** bàn đội chậm chết
+>   sau **126ms** (⇒ "chết ngay"), ở 3s thì **3021ms** (⇒ "chết sau khi hết delay"). Chết xong
+>   im lặng tuyệt đối rồi còn đợi **2,1s** mới sang câu. ⚠️ **TRONG cửa sổ delay thì đội chậm
+>   VẪN bấm được** — chỗ chết luôn ở giây cửa sổ CẠN.
+> - **(2) Sửa: cửa sổ cạn = hết giờ của đội chậm**, mà "hết giờ" thì app **đã có luật từ Đợt
+>   174** (*"coi như sai, báo lỗi sai, phát điểm trừ"*). Trọng tài chỉ gọi vào đúng đường cũ
+>   qua hàm TUỲ CHỌN mới **`timeUp()`** trong `ctl.attach`. Nối cho **cả 5 game Fight vòng
+>   thường** (Quiz · Anagram · Type the answer · True/false · Find the match). ⛔ Pick-turn
+>   (Open the box · Crossword) miễn — chúng vốn bị bịt khỏi Time delay từ Đợt 187.
+>   ⛔⛔ `roundDone[other] = true` **phải đặt TRƯỚC** lời gọi (TF/FTM tự báo `wordDone()` ở cuối
+>   đường hết-giờ ⇒ trọng tài tái nhập vào giữa chính mình) · ⛔ cờ `{fromMatch:true}` phải bỏ
+>   qua chốt `fightLocked()` (lúc gọi thì `roundWinner` ĐÃ đặt ⇒ giữ chốt là hàm không bao giờ
+>   chạy) và chốt `busy` của Anagram · ⛔ mọi đường hết-giờ phải DỪNG trước phần tự-sang-câu.
+> - **(3) Find the match**: xáo ô **TRONG TỪNG TRANG**, mỗi bàn một lần xáo riêng (giữ nguyên
+>   phép chia trang chung — `fightGoTo` tìm trang bằng `includes`) · từ dài **`overflow-wrap:
+>   normal`** + đo bề rộng chữ bằng **`Range.getClientRects()`** vì ⛔⛔ **`scrollWidth` NÓI DỐI
+>   trong hộp flex căn giữa** (chữ 132px trong ô 131px mà `scrollWidth === clientWidth`) ·
+>   dấu ✓/✗ bay lên **lớp phủ `.aw-ftm-marks`** vì ⛔ **`overflow:hidden` cắt theo HỘP, không
+>   theo lớp** — `z-index` không cứu được.
+> - ✅ **ĐO**: 4 bàn thử mới **55/55** (`dot222-verify` 20 · `dot222-tf-tta` 14 · `dot222-ftm`
+>   12 · `dot222-ftm2` 9) + hồi quy **96/96** (`dot219-fight` 24 · `dot220-nav` 15 ·
+>   `dot220-deal` 24 · `dot216-delay` 33). Ba đối chứng ngược đã cài (trả lời kịp ⇒ không bị
+>   chấm oan · Round rule "finish" ⇒ không đụng gì · hai bàn vẫn cùng một lời nhắc).
+> - ⬜ **Chờ mắt/tay thầy**: ván thật trên TOMKO (delay bao nhiêu là công bằng) · nhịp giữ 2,1s
+>   · hai bàn FTM xáo khác nhau trên 86" · cỡ chữ ở mức thu nhỏ nhất 0,52 · act nào muốn nết cũ
+>   thì đổi Round rule sang **"finish"**.
+>
+> ---
+> Trước đó: **21/8/2026 (Đợt 221)** — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN
 > FILE + MÀN CHỐT THƯ MỤC · QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT**. Thầy giao 2 mảng,
 > chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**: `core/lesson-import.js` ·
 > `core/store.js` · `main.js` · `core/app.css`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*)
@@ -3925,7 +3961,32 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 221, 21/8/2026) — ĐÃ LIVE `97306a2`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 222, 21/8/2026) — CODE XONG, ĐO XONG, ⬜ CHƯA COMMIT / CHƯA PUSH.**
+> **Kho KHÔNG sạch**: 8 file đã sửa đang nằm trong thư mục làm việc, chờ thầy duyệt.
+> ⛔ **Phiên/máy sau mở ra mà thấy `git status` có 8 file này thì ĐỪNG dọn** — đó là Đợt 222:
+> `core/fight.js` · `templates/quiz/quiz.js` · `anagram/anagram.js` ·
+> `type-the-answer/type-the-answer.js` · `true-false/true-false.js` ·
+> `find-the-match/find-the-match.js` · `find-the-match/find-the-match.css`
+> (+ `APP_MASTER.md` · `GHI CHU DU AN.md`).
+> Năm việc chờ **mắt/tay thầy** nằm ở cuối khối **Đợt 222** trong `GHI CHU DU AN.md`:
+> 1. ⬜ **Chơi thật một trận Quiz/Anagram trên TOMKO** — hết delay mà đội chậm bị chấm sai,
+>    lớp có thấy công bằng không, hay cần nới Time delay (thanh trượt tới 10s, hoặc nấc ∞).
+> 2. ⬜ **Nhịp giữ 2,1 giây** sau khi chấm sai: đủ để cả lớp nhìn đáp án chưa, hay dài quá.
+> 3. ⬜ **Find the match trên 86"**: hai bàn xáo khác nhau nhìn có rối không; cỡ chữ ở mức thu
+>    nhỏ nhất (**0,52**) đọc được từ cuối lớp không.
+> 4. ⬜ **Dấu ✓/✗ bay** ở Find the match chơi thường: nay bay trọn ra ngoài ô — có che ô nào
+>    lúc đang bay không.
+> 5. ⬜ Act nào thầy muốn giữ nết cũ (đội chậm được làm nốt, không bị chấm sai) thì đổi ô
+>    **Round rule** sang **"finish"** — đã đối chứng ngược là nhánh đó không đụng gì.
+>
+> ⛔ **TRƯỚC KHI SỬA TIẾP MẢNG NÀY, đọc "bẫy" của khối Đợt 222** — nhất là: `roundDone[other]`
+> phải đặt TRƯỚC `timeUp()` · cờ `fromMatch` phải bỏ qua `fightLocked()` (và `busy` của
+> Anagram) · `scrollWidth` nói dối trong hộp flex căn giữa · `overflow:hidden` cắt theo HỘP
+> nên `z-index` không cứu được dấu bay · **`elementFromPoint` không bao giờ trả về phần tử
+> `pointer-events:none`** · **`optVer` nằm trên ACT, không nằm trong `options`**.
+>
+> ---
+> ⭐⭐⭐ **Trước đó (Đợt 221, 21/8/2026) — ĐÃ LIVE `97306a2`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
 > Kho sạch, `main` = `origin/main`. Năm việc chờ **mắt/tay thầy** (đủ chi tiết ở cuối khối
 > Đợt 221 trong `GHI CHU DU AN.md`):
 > 1. ⬜ **Nhìn cột Quick Access trên màn 86"** — máy này pane bị ẩn ⇒ **không chụp được khung

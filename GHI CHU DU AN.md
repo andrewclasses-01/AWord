@@ -8,6 +8,174 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 222 (21/8/2026) — ⭐⭐⭐ **HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI, KHÔNG PHẢI MỘT BÀN CHẾT CÂM** (5 game Fight) · **FIND THE MATCH: HAI BÀN XÁO Ô KHÁC NHAU · TỪ DÀI THU CHỮ CHỨ KHÔNG BẺ ĐÔI · DẤU ✓/✗ LÊN LỚP TRÊN CÙNG** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*)
+
+Thầy giao 5 việc (2 việc Fight cho Quiz + Anagram, 3 việc Find the match), chốt 3 quyết định
+qua AskUserQuestion. Sửa **8 file**: `core/fight.js` · `templates/quiz/quiz.js` ·
+`anagram/anagram.js` · `type-the-answer/type-the-answer.js` · `true-false/true-false.js` ·
+`find-the-match/find-the-match.js` · `find-the-match/find-the-match.css`.
+(⚠️ `core/fight.js` là file DÙNG CHUNG của cả 7 game Fight.)
+
+---
+
+### (1)+(2) FIGHT — "đội chậm bỗng dưng không bấm được nữa"
+
+**Lời thầy:** *"đôi khi gặp trường hợp đội nhanh hơn làm xong, đội chậm hơn không bấm, không
+thao tác được tiếp mà phải đợi hết thời gian delay chuyển sang câu tiếp theo mới thao tác
+được"* + *"khi hết time delay, cần báo hiệu giống hệt như chọn sai (âm thanh, trừ điểm như
+chọn sai)"*. Thầy xác nhận gặp **CẢ HAI** ca (chết ngay · chết sau khi hết delay).
+
+**⛔⛔ GỐC RỄ — MỘT CHỖ DUY NHẤT, VÀ HAI CA THẦY TẢ LÀ CÙNG MỘT LỖI.**
+`finalizeSingleWinner()` trong `core/fight.js` khoá bàn đội thua bằng đúng một dòng
+`lock(true)` trần trụi (có từ Đợt 124, hồi cửa sổ chờ mới có 0,1s và không ai kịp nhận ra
+mình vừa bị cắt). Công tắc là ô **Round rule = "lock"** — **MẶC ĐỊNH của app**.
+Đo được (`scratch/dot222-when.html`, dò 20ms/lần từ giây đội nhanh bấm đúng):
+
+| Time delay | Bàn đội chậm chết sau |
+|---|---|
+| **0,1s (mặc định)** | **126 ms** ⇒ thầy thấy là "chết ngay" |
+| 1,0s | 1020 ms |
+| 3,0s | 3021 ms ⇒ thầy thấy là "chết sau khi hết delay" |
+
+Chết xong thì **im lặng tuyệt đối**: không tiếng, không dấu, không trừ điểm, và còn phải đợi
+**2,1 giây** (`ROUND_HOLD_MS`) nữa mới sang câu. Cả lớp chỉ thấy một bàn đột nhiên không ăn tay.
+⚠️ **TRONG cửa sổ delay thì đội chậm VẪN bấm được** — đo cả Quiz lẫn Anagram, cả trước và sau
+khi sửa. Chỗ chết luôn nằm ở giây cửa sổ CẠN.
+
+**Cách sửa (thầy chốt: "chấm SAI rồi sang câu"):** cửa sổ cạn = **hết giờ của đội chậm**, và
+"hết giờ" thì app **đã có sẵn luật từ Đợt 174** (ô Time each round): *"coi như sai, báo lỗi
+sai, phát điểm trừ"*. Nên đợt này **không đẻ luật thứ hai** — trọng tài chỉ gọi vào đúng
+đường cũ:
+
+- `core/fight.js` — hợp đồng thêm **một hàm TUỲ CHỌN** `timeUp()` trong `ctl.attach`.
+  Template không khai thì bàn vẫn bị khoá y như trước (đúng luật tự-chọn-tham-gia của Đợt 143).
+- ⚠️⚠️ **`roundDone[other] = true` PHẢI ĐẶT TRƯỚC lời gọi.** True/false và Find the match tự
+  báo `wordDone()` ở cuối đường hết-giờ của chúng ⇒ trọng tài sẽ **tái nhập vào giữa chính
+  mình**. Cờ này là cái chốt cửa: `wordDone` thoát ngay dòng đầu.
+- ⛔ **CHỈ VÒNG THƯỜNG.** Pick-turn (Open the box · Crossword) bị bịt khỏi Time delay từ Đợt
+  187 theo lệnh thầy ⇒ ở đó không có "hết giờ" nào để báo, giữ nguyên nết cũ.
+- Nối cho **cả 5 game Fight vòng thường**, không chỉ 2 game thầy nêu — cùng một trận, hai game
+  xử khác nhau thì lớp không đoán được luật:
+
+| Game | Hết delay thì đội chậm nhận gì |
+|---|---|
+| Quiz | tiếng sai · trừ `pointsOff` · hiện ✓ trên ô đúng + làm mờ ô sai |
+| Anagram | tiếng sai · mất một mạng · (On submit) trừ `pointsOff` + **lộ nguyên từ** ở dòng đáp án |
+| Type the answer | tiếng sai · trừ `minusAmount` · lộ đáp án · khoá ô gõ |
+| True/false | tiếng sai · trừ `pointsOff` · mất một mạng · bàn xám lại |
+| Find the match | tiếng sai · trừ `pointsOff` · mất một mạng · `revealFightMarks` chỉ ra ô ĐÚNG |
+
+**⚠️ BA BẪY ĐÃ CẮN THẬT KHI DỰNG — đừng dựng lại:**
+1. ⛔⛔ **`fightLocked()` ở đầu mỗi hàm hết-giờ làm hàm đó không bao giờ chạy.** Lúc trọng tài
+   gọi thì `roundWinner` **ĐÃ được đặt** ⇒ `ctl.isLocked(other)` trả `true` ⇒ thoát ngay dòng
+   đầu, bàn im lặng y như cũ. Nên có cờ `{ fromMatch: true }`, và nó bỏ qua ĐÚNG chốt đó.
+2. ⛔ **Anagram còn một chốt thứ hai: `busy`.** Đội chậm đang thả dở một chữ là `busy = true`
+   ⇒ lại im lặng. Bỏ qua nó khi trọng tài gọi, đúng lý do `goToIndex` của chính file đó đã
+   viết: *"a round change outranks a half-finished animation"*.
+3. ⛔ **Mọi đường hết-giờ đều phải DỪNG trước phần tự-sang-câu / tự-kết-thúc của nó**
+   (`if (fromMatch) return;`). Không chặn là bàn đó bỏ đi một mình ⇒ hai khung lệch câu.
+
+**🐞 Một kết luận SAI của chính đợt này, ghi lại để đừng cắn lần nữa:** đo thấy Type the answer
+"không trừ điểm khi hết giờ" nên đã thêm `showScore()` vào đường hết-giờ — **sai**. Game này
+chỉ đổi `livePoints` bên trong `land()` của cú BAY dấu ✗ (~630ms sau), rồi `pulseScoreTo`
+(530ms) mới ghi số ⇒ điểm trừ **có tới**, chỉ chậm hơn các game khác ~1,2 giây. Vẽ điểm ngay
+lúc hết giờ là vẽ lại đúng con số CŨ. Đã gỡ, và **để lại lời cảnh báo ngay tại dòng đó**.
+⚠️ Luật rút ra: **đo TTA phải chờ qua mốc 1,2s**, đo sớm là kết luận oan.
+
+---
+
+### (3) FIND THE MATCH — ba việc
+
+**3a. Hai bàn phải xáo ô khác nhau** (*"có thể chọn lần lượt mà không cần đọc câu hỏi"*).
+⛔ Gốc rễ: `choiceOrder` **cố tình không xáo** trong trận (luật Đợt 184 *"cả hai bàn phải là
+cùng một bàn"*), mà lời nhắc cũng chạy đúng thứ tự bộ câu ⇒ **ô thứ k CHÍNH LÀ đáp án của vòng
+thứ k**. Đo được: hai bàn **giống hệt nhau 24/24 ô**.
+⭐ Cách sửa: **xáo TRONG TỪNG TRANG**, mỗi bàn một lần xáo riêng. Giữ nguyên phần lõi của luật
+Đợt 184 (thứ tự vòng đấu chung, **phép chia trang chung**) vì `fightGoTo()` tìm trang bằng
+`pages.findIndex(arr => arr.includes(i))` — hai bàn chia trang khác nhau là đứng hai trang khác
+nhau giữa cùng một vòng.
+⚠️ `pageQueues` (hàng chờ lời nhắc) phải dựng **TRƯỚC** cú xáo bố cục — thứ tự hai khối đó là
+cả phần an toàn của tính năng.
+⚠️ `revealFightMarks()` tra ô đúng bằng `pages[curPage].indexOf(target)` nên tự đi theo bố cục
+mới, không phải sửa gì.
+✅ Thầy chốt qua AskUserQuestion: **cùng bộ từ, khác chỗ đứng** (không phải khác cả bộ từ).
+
+**3b. Từ dài bị bẻ đôi** (*"cần thu nhỏ size chữ để nhét vừa chứ không phải cắt từ ra"*).
+⛔⛔ Gốc rễ nằm ở đúng hai từ khoá CSS: `overflow-wrap: anywhere` + `word-break: break-word`
+cho phép bẻ giữa từ — mà **bẻ xong thì ô HẾT TRÀN**, nên `fitTiles()` nhìn thấy "vừa rồi" và
+**không thu chữ một nấc nào**. Đo được: `congratulations` nằm 2 dòng với `--tfit` vẫn nguyên **1**.
+Tức hai luật CSS đó chính là thứ vô hiệu hoá bộ thu chữ.
+⭐ Sửa: `overflow-wrap: normal; word-break: normal` (chỉ xuống dòng ở DẤU CÁCH — cụm nhiều từ
+như "polar bear" vẫn xuống dòng bình thường).
+⭐⭐ **Và phải sửa cả CÁCH ĐO**: `scrollWidth` **nói dối** trong hộp flex `justify-content:center`
+— phần chữ thò ra BÊN TRÁI không được tính vào. Đo được: chữ rộng 132px trong lòng ô 131px mà
+`scrollWidth === clientWidth`. Nay đo **bề rộng dòng chữ thật** bằng `Range.getClientRects()`
+rồi lấy max từng DÒNG (⚠️ không lấy `getBoundingClientRect()`: với cụm đã xuống dòng thì hộp bao
+luôn bằng lòng ô ⇒ không bao giờ thấy tràn). Nấc thu 0,08→**0,06**, sàn 0,40→**0,34**.
+✅ Đo sau khi sửa: `antidisestablishmentarianism` (28 chữ) → `--tfit 0.52`, **1 dòng**;
+`incomprehensibilities` → 0,70; `congratulations` → 0,94. **0 từ bị bẻ, 0 ô còn tràn.**
+
+**3c. Dấu ✓/✗ bay phải ở lớp trên cùng.**
+⛔⛔ Gốc rễ: dấu được `append` vào **CHÍNH Ô**, mà ô có `overflow: hidden` (và `.aw-ftm-grid`
+cũng vậy). `z-index: 6` của `.aw-mark-fly` **KHÔNG cứu được — overflow cắt theo HỘP, không theo
+lớp**. Mà keyframe `aw-fly` bay tới `translateY(-170%)`, tức gần hết quãng đường nằm NGOÀI ô.
+⭐ Sửa: thêm lớp phủ `.aw-ftm-marks` (`position:absolute; inset:0; pointer-events:none;
+z-index:6`) là **con cuối của thẻ bài**, dấu vẽ vào đó theo **toạ độ pixel** của ô vừa bấm
+(`flyMarkOnTile`).
+⚠️ **Đo bằng px, không dùng `%`**: `.aw-mark-fly` của core viết để nằm TRONG ô (`left:50%
+top:50% width:52%` là 52% của Ô) — bê nguyên lên lớp phủ là dấu to bằng nửa màn hình.
+⚠️ `transform: translate(-50%,-50%)` của core **giữ nguyên** (mọi keyframe đều mở đầu bằng đúng
+nó) — luật số 12 của dự án.
+⚠️ **KHÔNG gỡ `overflow: hidden` của ô** để chữa việc này: chữ dài cần nó làm lưới an toàn.
+⚠️ Trong FIGHT thì dấu bay vốn **bị giấu cố ý** (Đợt 184 — marking one is naming the other), nên
+việc này chỉ thấy ở **chơi thường / Showdown**. Quiz không dính vì ô quiz không `overflow:hidden`.
+
+---
+
+### ✅ ĐO ĐƯỢC (0 lỗi console) — 55 phép mới + 96 phép hồi quy
+
+| Bàn thử | Kết quả |
+|---|---|
+| `scratch/dot222-verify.html` — Quiz + Anagram, hết delay = sai | **20/20** |
+| `scratch/dot222-tf-tta.html` — True/false + Type the answer | **14/14** |
+| `scratch/dot222-ftm.html` — FTM trong trận (xáo ô + hết delay) | **12/12** |
+| `scratch/dot222-ftm2.html` — FTM chơi thường (từ dài + lớp dấu) | **9/9** |
+| `scratch/dot222-when.html` — đo bàn chết vào giây thứ mấy | số liệu bảng trên |
+| hồi quy `scratch/dot219-fight.html` | **24/24** |
+| hồi quy `scratch/dot220-nav.html` | **15/15** |
+| hồi quy `scratch/dot220-deal.html` | **24/24** |
+| hồi quy `scratch/dot216-delay.html` | **33/33** |
+
+**Ba đối chứng NGƯỢC đã cài** (thiếu chúng thì phép đo chỉ chứng minh "có chạy", không chứng
+minh "chạy đúng lúc"):
+- đội chậm **trả lời KỊP** trong cửa sổ ⇒ **không** bị chấm sai oan, **không** bị trừ;
+- **Round rule = "finish"** ⇒ **không** tiếng, **không** trừ, bàn **vẫn bấm được** sau khi cửa
+  sổ cạn (đúng nghĩa "cho đội chậm làm nốt");
+- FTM: hai bàn vẫn **cùng một lời nhắc** ở mọi vòng dù bố cục khác nhau.
+
+**⛔⛔ HAI BẪY THƯỚC ĐO của đợt này (đã cắn thật, ghi để phiên sau khỏi mất giờ):**
+1. **Anagram bắt gõ ĐÚNG THỨ TỰ chữ** ⇒ bàn thử bấm một ô bất kỳ là bị TỪ CHỐI, và phép đo báo
+   "không bấm được" cho một bàn hoàn toàn khoẻ mạnh. Phải bấm đúng chữ kế tiếp. Kèm: chữ **BAY**
+   sang ô đích rồi mới gắn `.is-used` ⇒ phải DÒ tới 2 giây, đọc một phát là báo oan.
+2. **`elementFromPoint` KHÔNG BAO GIỜ trả về `.aw-mark-fly`** vì nó có `pointer-events:none` —
+   nó trả về ô nằm dưới rồi báo "bị đè lên" OAN. Muốn hỏi thứ tự VẼ thì phải **tạm mở hit-test**
+   cho nó rồi trả lại. (Phép đo đúng thứ hai: soi mọi tổ tiên xem còn ai `overflow != visible`.)
+3. **`optVer` nằm trên ACT, không nằm trong `options`** — đặt nhầm chỗ là bộ di trú chạy lại và
+   nhân `pointsOff` 20 → 100, phép đo báo "trừ -100" và tưởng app sai.
+
+### ⬜ CHỜ MẮT/TAY THẦY
+1. **Chơi thật một trận Quiz/Anagram trên TOMKO**: hết delay mà đội chậm bị chấm sai — lớp có
+   thấy công bằng không, hay cần nới Time delay lên (thanh trượt tới 10s, hoặc nấc ∞).
+2. **Nhịp giữ 2,1 giây** sau khi chấm sai: đủ để cả lớp nhìn đáp án chưa, hay dài quá.
+3. **Find the match trên màn 86"**: hai bàn xáo khác nhau nhìn có rối không; và cỡ chữ ở mức
+   thu nhỏ nhất (0,52) đọc được từ cuối lớp không.
+4. **Dấu ✓/✗ bay** ở Find the match chơi thường: nay bay trọn ra ngoài ô, có che mất ô nào lúc
+   đang bay không.
+5. Nếu act nào thầy muốn giữ nết cũ (đội chậm được làm nốt, không bị chấm sai) thì đổi ô
+   **Round rule** trong Options sang **"finish"** — đã đối chứng là hoàn toàn không đụng tới.
+
+---
+
 ## Đợt 221 (21/8/2026) — ⭐⭐⭐ **IMPORT TỰ DỰNG CÂY THƯ MỤC THEO TÊN FILE + MÀN CHỐT THƯ MỤC** · **QUICK ACCESS THÀNH CỘT RIÊNG + KHU RECENT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) · **COMMIT `97306a2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `97306a2` trạng thái `success` (tra `gh api …/deployments/{id}/statuses`, **không tin mã 200**) · **7/7 mã băm SHA-256 khớp** · **24/24 phép hỏi MÔĐUN TRÊN CHÍNH BẢN LIVE** (kéo `lesson-import.js` từ tên miền live về rồi CHẠY, + soi khuôn câu lệnh 3 file kia)
 
 Thầy giao 2 mảng, chốt 7 quyết định qua AskUserQuestion. Sửa **4 file**:

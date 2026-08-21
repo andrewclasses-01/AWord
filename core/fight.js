@@ -37,6 +37,10 @@
 //   A template joins fight mode by setting `tpl.fightMode = true` (that is what
 //   makes the MODE button appear at all) and talking to `activity._fight`:
 //     ctl.attach(side, { goToIndex, lock, total })   register the board
+//        + optional `timeUp()` (Đợt 222) = "cửa sổ Time delay vừa cạn mà bàn này
+//        chưa xong": chạy đúng đường HẾT GIỜ = SAI của template (tiếng sai, trừ
+//        điểm, dấu ✗), rồi để trọng tài khoá bàn và sang câu. Không khai thì bàn
+//        vẫn bị khoá y như trước — im lặng, đúng nết cũ.
 //     ctl.wordDone(side, { index, correct })         this board finished a word
 //        `correct:false` = finished it WRONG, which ends only THIS board's go:
 //        the round stays open and the other team plays on (see wordDone).
@@ -844,7 +848,32 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Lock the other side out only if it is still IN the round; one that
     // already answered wrong is locked already, and re-locking it would
     // repaint it as "too slow" on top of its own wrong-answer feedback.
-    if (lockLoser() && !roundDone[other]) boards[other] && boards[other].lock(true);
+    // ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI,
+    // KHÔNG PHẢI MỘT BÀN CHẾT CÂM. Thầy: *"đội chậm hơn không bấm, không thao tác
+    // được tiếp mà phải đợi hết thời gian delay chuyển sang câu tiếp theo mới thao
+    // tác được"* + *"khi hết time delay, cần báo hiệu giống hệt như chọn sai (âm
+    // thanh, trừ điểm như chọn sai)"*. Hai câu đó là CÙNG MỘT khoảnh khắc: giây mà
+    // cửa sổ chờ cạn.
+    // ⛔ Nết cũ KHÔNG phải "quên làm" — nó là `lock(true)` trần trụi từ Đợt 124, hồi
+    // cửa sổ chờ mới có 0,1s và không ai kịp nhận ra mình vừa bị cắt. Đo Đợt 222:
+    // ở mức MẶC ĐỊNH 0,1s bàn đội chậm chết sau **126ms** (và 1020ms/3021ms ở nấc
+    // 1s/3s) — im lặng tuyệt đối: không tiếng, không dấu, không trừ điểm. Cả lớp
+    // chỉ thấy một bàn đột nhiên không ăn tay nữa.
+    // ⚠️⚠️ `roundDone[other] = true` PHẢI ĐẶT TRƯỚC lời gọi: `timeUp()` chạy đúng
+    // đường "hết giờ = sai" của template, mà vài template (True/false · Find the
+    // match) tự báo `wordDone()` ở cuối đường đó ⇒ trọng tài sẽ TÁI NHẬP vào giữa
+    // chính mình. Cờ này là cái chốt cửa: `wordDone` thoát ngay ở dòng đầu.
+    // ⛔ CHỈ VÒNG THƯỜNG. Pick-turn (Open the box · Crossword) bị bịt khỏi Time
+    // delay từ Đợt 187 theo lệnh thầy, nên ở đó không có "hết giờ" nào để báo — bàn
+    // kia bị khoá theo luật RIÊNG của trò chơi, giữ nguyên nết cũ.
+    if (lockLoser() && !roundDone[other]) {
+      const board = boards[other];
+      if (board && !pickMode && typeof board.timeUp === "function") {
+        roundDone[other] = true;
+        try { board.timeUp(); } catch (e) { console.warn("AWord: timeUp() của bàn kia lỗi", e); }
+      }
+      board && board.lock(true);
+    }
     const nobodyLeft = lockLoser() || roundDone[other];
     if (nobodyLeft) revealBoards();
     later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);

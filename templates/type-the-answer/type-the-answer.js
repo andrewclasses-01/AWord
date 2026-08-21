@@ -680,11 +680,18 @@ const ttaTemplate = {
      * 3/8/2026 — it has no "Auto next question" option at all), and a timeout is
      * a grade. Making this one case sit still would be the inconsistency, not
      * the rule.
+     *
+     * ⭐⭐ Đợt 222 (thầy, 21/8/2026) — ĐƯỜNG NÀY CÒN LÀ "HẾT TIME DELAY TRONG TRẬN".
+     * Trọng tài gọi `timeUp()` (xem `fightCtl.attach`) khi cửa sổ chờ cạn mà bàn này
+     * chưa nộp. Hai khác biệt bắt buộc: BỎ QUA `fightLocked()` (lúc gọi thì
+     * `roundWinner` đã đặt ⇒ chốt đó làm hàm thoát ngay dòng đầu) và KHÔNG tự sang
+     * câu — trận đấu dời cả hai bàn.
      */
-    function roundTimeUp() {
+    function roundTimeUp(o) {
+      const fromMatch = !!(o && o.fromMatch === true);
       const it = items[index];
       const st = state[index];
-      if (!it || st.graded || finished || dead || fightLocked()) return;
+      if (!it || st.graded || finished || dead || (!fromMatch && fightLocked())) return;
       st.typed = "";
       st.graded = true;
       st.timedOut = true;
@@ -700,7 +707,13 @@ const ttaTemplate = {
       const revealShown = opt.showAnswerWhenWrong !== false;
       applyGradeVisuals(st, it, revealShown);
       const outOfLives = loseLife();
+      // ⚠️ Đợt 222 — ĐỪNG THÊM `showScore()` Ở ĐÂY. Đã thử và đã sai: game này chỉ
+      // đổi `livePoints` bên trong `land()` của cú BAY dấu ✗ (~630ms sau), nên vẽ
+      // điểm ngay lúc này là vẽ lại đúng con số CŨ. Điểm trừ vẫn tới, chỉ chậm hơn
+      // các game khác ~1,2s (bay 480+150ms rồi `pulseScoreTo` 530ms) — đo đủ thì
+      // phải chờ qua mốc đó, đo sớm là kết luận oan "không trừ điểm".
       clearAutoTimer();
+      if (fromMatch) return;   // Đợt 222 — trọng tài mới là thứ dời cả hai bàn
       const delay = revealShown ? 2600 : (outOfLives ? 1500 : 1400);
       if (outOfLives) {
         autoTimer = setTimeout(() => finish("gameover"), delay);
@@ -1045,7 +1058,10 @@ const ttaTemplate = {
           fightBoardLock = !!on;
           syncFightLock();
         },
-        reveal: revealFightMarks
+        reveal: revealFightMarks,
+        // ⭐⭐ Đợt 222 — cửa sổ Time delay cạn mà bàn này chưa nộp: đúng đường
+        // "hết giờ = sai" của Đợt 174 (tiếng sai + trừ minusAmount + lộ đáp án).
+        timeUp() { roundTimeUp({ fromMatch: true }); }
       });
     }
 

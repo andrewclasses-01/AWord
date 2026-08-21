@@ -875,7 +875,32 @@ const tfTemplate = {
           fightBoardLock = !!on;
           syncFightLock();
         },
-        reveal: revealFightMarks
+        reveal: revealFightMarks,
+        // ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CỬA SỔ TIME DELAY CẠN MÀ BÀN NÀY CHƯA
+        // TRẢ LỜI: *"báo hiệu giống hệt như chọn sai (âm thanh, trừ điểm như chọn
+        // sai)"*. Đây đúng là nhánh Fight của `choose()` ở trên, BỎ hai thứ:
+        //   · `fightCtl.wordDone()` — trọng tài đã tự đặt `roundDone` TRƯỚC khi gọi
+        //     xuống đây (không thì nó tái nhập vào giữa chính nó);
+        //   · mọi lệnh sang câu — trận đấu dời cả hai bàn cùng lúc.
+        // ⚠️ KHÔNG gộp vào `onTimeUp()` (lời nhắc trôi hết băng chuyền mà không ai
+        // bấm): ca đó tới nay KHÔNG trừ điểm, gộp vào là lặng lẽ đổi luật của một
+        // tính năng thầy không hề nhắc tới.
+        timeUp() {
+          if (finished || !queue.length) return;
+          const idx = queue[0];
+          if (state[idx].answered) return;
+          queue.shift();
+          state[idx].answered = true;
+          state[idx].correct = false;
+          tfSound.wrong();
+          if (pointsOff) penalty += pointsOff;
+          loseLife();
+          ui.setScore(liveScore());
+          updateNav();
+          fightPendingReveal = true;
+          lockButtons();
+          syncFightLock();
+        }
       });
     }
 

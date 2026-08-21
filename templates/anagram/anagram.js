@@ -1214,11 +1214,25 @@ const anagramTemplate = {
      * re-render would replay the whole card's entrance animation (core/HUONG DAN
      * CORE.md's "BẪY THỨ 5"). The lock comes from `st.timedOut` inside
      * bonusPick/submitPickAt instead.
+     *
+     * ⭐⭐ Đợt 222 (thầy, 21/8/2026) — ĐƯỜNG NÀY CÒN LÀ "HẾT TIME DELAY TRONG TRẬN".
+     * Trọng tài gọi `timeUp()` (xem `fightCtl.attach`) khi cửa sổ chờ cạn mà bàn
+     * này chưa xong. Một luật, một chỗ — không đẻ luật "hết giờ" thứ hai.
+     * ⚠️⚠️ BA KHÁC BIỆT KHI TRỌNG TÀI GỌI:
+     *   1. BỎ QUA `fightLocked()` — lúc gọi thì `roundWinner` ĐÃ đặt nên
+     *      `ctl.isLocked()` là true, giữ chốt đó thì hàm thoát ngay dòng đầu.
+     *   2. BỎ QUA `busy` — y hệt lý do `goToIndex` của chính file này đã viết:
+     *      *"a round change outranks a half-finished animation"*. Lời phán của
+     *      trọng tài cũng vậy; giữ `busy` thì đúng ca đội chậm đang thả dở một chữ
+     *      là lại im lặng như cũ.
+     *   3. KHÔNG tự sang từ / tự kết thúc — trận đấu dời cả hai bàn.
      */
-    function roundTimeUp() {
+    function roundTimeUp(o) {
+      const fromMatch = !!(o && o.fromMatch === true);
       const st = state[index];
       const it = items[index];
-      if (!it || dead || finished || busy || fightLocked()) return;
+      if (!it || dead || finished || (!fromMatch && (busy || fightLocked()))) return;
+      if (fromMatch && busy) busy = false;
       if (doneCheck(st)) return;                 // already solved/submitted/timed out
       st.timedOut = true;
       if (!isBonusFamily) {
@@ -1236,6 +1250,9 @@ const anagramTemplate = {
       anagramSound.wrongPick();
       showBigMark(false);
       updateNav();
+      // ⛔ Đợt 222 — trong trận thì dừng ở đây: `advanceRound()` của trọng tài là
+      // thứ dời câu, và nó dời CẢ HAI bàn cùng lúc.
+      if (fromMatch) return;
       if (outOfLives) autoTimer = setTimeout(() => finish({ gameover: true }), 1500);
       else if (state.every(doneCheck)) autoTimer = setTimeout(finish, 1500);
       else maybeAutoNext(1500);   // stays put unless "Auto next question" is on — the teacher's choice
@@ -2305,6 +2322,13 @@ const anagramTemplate = {
           syncFightLock();
         },
         reveal: revealFightResult,
+        // ⭐⭐ Đợt 222 — cửa sổ Time delay vừa cạn mà bàn này chưa xong từ: đúng
+        // đường "hết giờ = sai" của Đợt 174 (tiếng sai + mất một mạng + lộ đáp án
+        // ở chế độ On submit), không phải một luật thứ hai.
+        // ⚠️ Ở họ BONUS thì hết giờ KHÔNG trừ điểm — không phải bỏ sót: `pointsOff`
+        // vốn bằng 0 ngoài chế độ On submit, và "bonusMinus" đã trừ `letterPenalty`
+        // ngay lúc gõ sai rồi. Trừ thêm ở đây là cú trừ hai lần thầy đã cấm ở Đợt 143.
+        timeUp() { roundTimeUp({ fromMatch: true }); },
         // Đợt 133 (teacher: "chỉ phát 1 voice duy nhất cho cả 2 đội") — the
         // MATCH's own relay for shared voice playback. Only ever called on
         // the SPEAKING board (fightCtl.speaks) — a tap on the OTHER board's
