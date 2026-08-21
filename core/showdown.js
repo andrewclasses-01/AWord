@@ -202,6 +202,140 @@ export function clearPendingResult() {
 }
 
 // ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 220 — THE DEALER: Free / Count chia bài cho từng học sinh
+// ---------------------------------------------------------------
+// Thầy (21/8/2026): ngoài lối chơi gốc (mỗi câu xuất hiện đúng một lần), Options
+// có thêm dải `Normal · Free · Count`. Free = chơi tự do tới khi bấm Submit
+// answers (trần SD_FREE_CAP câu mỗi em); Count = mỗi em đúng N câu. Cả hai đều
+// hoạt động bằng MỘT cách: NỐI DÀI mảng câu của act trước khi template nhìn thấy
+// nó (core/engine.js applySdDeal — anh em của applyBalance), vì luật chia lượt
+// `memberAt` là `index % số em` nên slot s của mảng đã thuộc sẵn về em s % M —
+// không sửa một dòng nào của luật chia lượt.
+//
+// HAI RÀNG BUỘC (thầy chốt qua AskUserQuestion):
+//   🔒 CỨNG — một em KHÔNG BAO GIỜ gặp lại đúng câu chính mình đã làm
+//             (chừng nào còn câu khác; Free chơi quá K câu thì buộc phải lặp,
+//             khi đó mở vòng mới nhưng vẫn cấm lặp NGAY câu vừa làm).
+//   🔓 MỀM — một câu không rơi vào hai em khác nhau chừng nào bộ câu CHƯA dùng
+//             hết; hết bộ mới được lặp (deck: mỗi cửa sổ K slot dùng mỗi câu
+//             đúng một lần).
+//
+// ⛔⛔ VÌ SAO KHÔNG PHẢI `shuffle()` RỒI CẦU MAY: có ca shuffle KHÔNG BAO GIỜ
+// thoả — 10 câu · 5 em · quay vòng đều thì em nào cũng chỉ gặp đi gặp lại đúng
+// 2 câu (gcd(5,10)=5), chính cái bẫy tính năng này sinh ra để tránh. Nên mỗi
+// deck là một phép GHÉP CẶP ĐÔI (Kuhn) giữa slot và câu-còn-được-phép, kèm hai
+// nấc lùi khi Hall không thoả: (A) chấp nhận vỡ ràng buộc MỀM (câu dùng lần hai
+// trong deck) nhưng giữ CỨNG; (B) em đã thấy đủ K câu thì mở vòng mới, gieo lại
+// `seen` bằng đúng câu vừa làm để không lặp ngay tức khắc.
+//
+// ⚠️ THUẦN + XUẤT RA ĐƯỢC, đúng cách planDeal của Đợt 198: `rand` tiêm từ ngoài
+// để lưới thử gieo hạt tái lập được. File này engine nhập TĨNH — cấm import.
+
+// Trần của Free: 100 câu mỗi em (thầy chốt). Mảng dài nhất = 100 × 10 em = 1000
+// slot — template dựng DOM một lần rồi thay nội dung nên chỉ tốn một mảng state.
+export const SD_FREE_CAP = 100;
+
+/**
+ * Chia bài: trả về mảng L = perPupil × members CHỈ SỐ CÂU (0..count-1);
+ * slot s thuộc về em `s % members` — đúng hợp đồng memberAt.
+ */
+export function dealQuestions({ count, members, perPupil, rand = Math.random }) {
+  const K = Math.max(1, Math.floor(Number(count) || 0));
+  const M = Math.max(1, Math.floor(Number(members) || 0));
+  const N = Math.max(1, Math.floor(Number(perPupil) || 0));
+  const L = N * M;
+  const seen = Array.from({ length: M }, () => new Set());
+  const lastQ = new Array(M).fill(-1);
+  // Số lần mỗi câu đã được phát TOÀN VÁN — hai nấc lùi chọn câu ít dùng nhất
+  // theo bảng này, kẻo `order.find(...)` thiên vị hệ thống về câu đứng đầu danh
+  // sách (đo được: Free K=5 M=3 lệch tới 8 lần giữa câu nhiều nhất và ít nhất).
+  const used = new Array(K).fill(0);
+  const out = [];
+
+  const shuffledQs = () => {
+    const a = Array.from({ length: K }, (_, i) => i);
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  for (let start = 0; start < L; start += K) {
+    const slots = [];
+    for (let s = start; s < Math.min(start + K, L); s++) slots.push(s % M);
+    // Em đã thấy đủ bộ (chỉ xảy ra ở Free khi N > K): mở vòng mới. Gieo lại
+    // bằng câu vừa làm — đó là cách rẻ nhất để "không lặp ngay tức khắc" mà
+    // không cần một nhánh riêng nào trong phép ghép. K = 1 thì không gieo được
+    // (sẽ rỗng allowed vĩnh viễn) — em đó buộc lặp câu duy nhất, chấp nhận.
+    for (const m of new Set(slots)) {
+      if (seen[m].size >= K) {
+        seen[m].clear();
+        if (K > 1 && lastQ[m] >= 0) seen[m].add(lastQ[m]);
+      }
+    }
+    // Xáo rồi SẮP ỔN ĐỊNH theo số lần đã dùng: deck trọn vẹn thì mọi câu dùng
+    // đều nhau nên phép sắp là vô hại, còn khi nấc lùi B đã làm lệch (Free, K
+    // bé) thì câu ít dùng được thử trước — kéo phân phối về đều (đo được:
+    // Free K=3 M=10 lệch 4 → hết lệch). Hoà nhau thì thứ tự xáo giữ nguyên.
+    const order = shuffledQs().sort((a, b) => used[a] - used[b]);
+    // Kuhn: slot -> câu, mỗi câu tối đa một lần trong deck.
+    const qOwner = new Array(K).fill(-1);
+    const assign = new Array(slots.length).fill(-1);
+    const tryMatch = (si, visited) => {
+      const m = slots[si];
+      for (const q of order) {
+        if (visited[q] || seen[m].has(q)) continue;
+        visited[q] = true;
+        if (qOwner[q] < 0 || tryMatch(qOwner[q], visited)) {
+          qOwner[q] = si;
+          assign[si] = q;
+          return true;
+        }
+      }
+      return false;
+    };
+    for (let si = 0; si < slots.length; si++) {
+      if (assign[si] < 0) tryMatch(si, new Array(K).fill(false));
+    }
+    // Nấc lùi cho slot chưa ghép được. `deckMine` = câu các slot CÙNG EM đã nhận
+    // trong deck này — ràng buộc cứng phải nhìn cả phần chưa commit.
+    const deckMine = Array.from({ length: M }, () => new Set());
+    assign.forEach((q, si) => { if (q >= 0) deckMine[slots[si]].add(q); });
+    for (let si = 0; si < slots.length; si++) {
+      if (assign[si] >= 0) continue;
+      const m = slots[si];
+      // Ít dùng nhất thắng; hoà thì theo `order` (đã xáo) — không thiên vị.
+      const leastUsed = pool => {
+        let best;
+        for (const x of pool) if (best === undefined || used[x] < used[best]) best = x;
+        return best;
+      };
+      // (A) vỡ MỀM, giữ CỨNG: câu chưa qua tay em này (kể cả phần deck).
+      let q = leastUsed(order.filter(x => !seen[m].has(x) && !deckMine[m].has(x)));
+      if (q === undefined) {
+        // (B) em này hết sạch: mở vòng mới tại chỗ, vẫn tránh lặp tức khắc.
+        seen[m].clear();
+        q = leastUsed(order.filter(x => !deckMine[m].has(x) && x !== lastQ[m]));
+        if (q === undefined) q = leastUsed(order.filter(x => !deckMine[m].has(x)));
+        if (q === undefined) q = order[0];   // K = 1: không còn gì để tránh
+      }
+      assign[si] = q;
+      deckMine[m].add(q);
+    }
+    // Commit theo đúng thứ tự slot — thứ tự chơi thật.
+    for (let si = 0; si < slots.length; si++) {
+      const m = slots[si];
+      out.push(assign[si]);
+      seen[m].add(assign[si]);
+      lastQ[m] = assign[si];
+      used[assign[si]]++;
+    }
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------
 // THE TURN RULE — the one place that decides whose question this is
 // ---------------------------------------------------------------
 // Round-robin over the saved member order, wrapping past the end. `index0` is

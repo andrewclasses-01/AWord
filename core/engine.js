@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId } from "./showdown.js";
+import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -479,6 +479,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
    */
   function applyBalance(act) {
     if (!showdownPick || act?.options?.balanceQuestions !== true) return act;
+    // ⭐ Đợt 220 — Free/Count đang cầm bài thì Balance đứng xuống (Options đã khoá
+    // chéo hai bên; guard này đỡ act cũ lỡ lưu cả hai cờ).
+    if (tpl.sdDeal && ["free", "count"].includes(act?.options?.sdDeal)) return act;
     const key = playItemsKey(act);
     if (!key) return act;
     const all = act.content[key] || [];
@@ -513,10 +516,55 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let sdPending = sdCanPublish && !!readPendingResult();
   function refreshSdPending() { sdPending = sdCanPublish && !!readPendingResult(); }
 
+  // ⭐⭐⭐ Đợt 220 (thầy, 21/8/2026) — FREE / COUNT: CHIA BÀI CHO TỪNG HỌC SINH.
+  //   options.sdDeal       "normal" | "free" | "count"   (Showdown only)
+  //   options.sdDealCount  N câu mỗi em (chỉ Count; ô số chặn cứng ở tổng số câu)
+  //
+  // Cùng họ với applyBalance ngay trên: NỐI DÀI mảng câu trước khi bất cứ thứ gì
+  // đo nó. `memberAt` là `index % số em` nên slot s của mảng đã thuộc sẵn về em
+  // s % M — luật chia lượt, tên trên khung, review, mistakes: không sửa dòng nào.
+  //
+  // ⚠️ ĐỌC MỘT LẦN, LÚC MOUNT — structural y như `roundMode` bên dưới: Apply đi
+  // qua replayCurrent() nên đổi lựa chọn là dựng lại cả ván, không mutate ván sống.
+  // ⚠️ Chỉ template khai `tpl.sdDeal` (Quiz · Type the answer — thầy chốt thử hai
+  // game trước). 3 game bàn-chơi (Open the box · Crossword · Find the match) CẤM
+  // vĩnh viễn: mảng câu của chúng CHÍNH LÀ cái bàn — nối dài là ô chữ có một từ
+  // hai lần. Mở thêm template = thêm đúng 1 dòng cờ, như fightTurns của Đợt 202.
+  // ⚠️ `!_mistakes`: vòng "Start with mistakes" (ẩn sau nhấn giữ START AGAIN, chỉ
+  // Showdown) là vòng ÔN TẬP vài câu sai — nối nó thành 100 câu/em là biến một
+  // phút ôn thành một ván marathon. Vòng ôn chơi mảng sai nguyên trạng.
+  const sdDealMode = (showdownPick && tpl.sdDeal && !activity._mistakes
+      && ["free", "count"].includes(activity.options?.sdDeal))
+    ? activity.options.sdDeal
+    : "none";
+  // Câu số cao nhất ván này đã ĐI TỚI (0-based) — mẫu số của Free lúc Submit.
+  // Nuôi bởi setNav, cùng nguồn với tên học sinh trên khung (một sự thật, một chỗ).
+  let sdMaxIndex0 = 0;
+  function applySdDeal(act) {
+    if (sdDealMode === "none") return act;
+    const key = playItemsKey(act);
+    if (!key) return act;
+    const all = act.content[key] || [];
+    const M = showdownPick.members?.length || 0;
+    if (all.length < 2 || !M) return act;   // 1 câu thì không có gì để chia
+    const N = sdDealMode === "count"
+      ? Math.max(1, Math.min(all.length, Math.round(Number(act.options?.sdDealCount)) || 1))
+      : SD_FREE_CAP;
+    const idx = dealQuestions({ count: all.length, members: M, perPupil: N });
+    // ⚠️ CÙNG OBJECT NGUỒN, không clone từng câu: core/mistakes.js gom câu sai
+    // bằng Set các object `src`, nên một câu sai hai lần vẫn ra MỘT mục ôn tập.
+    // ⚠️ `options` giữ nguyên THAM CHIẾU (spread nông) — hợp đồng của applyBalance:
+    // Apply mutate tại chỗ vào đúng object này.
+    return { ...act, content: { ...act.content, [key]: idx.map(i => all[i]) } };
+  }
+
   // ⭐ Đợt 197 — trim the play NOW, before anything measures it. Everything
   // downstream (the nav's "x of N", the review, the leaderboard total) reads
   // `activity`, so the balance has to land before the first of them looks.
-  activity = applyBalance(activity);
+  // ⭐ Đợt 220 — Free/Count chia bài SAU phép cắt Balance (hai cái loại trừ nhau
+  // trong Options; act cũ lỡ mang cả hai thì Free/Count thắng vì applyBalance
+  // tự đứng xuống — xem guard của nó).
+  activity = applySdDeal(applyBalance(activity));
 
   // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — a SECOND clock, one that
   // belongs to the pupil whose turn it is rather than to the game.
@@ -846,6 +894,38 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const navLabel = el("span", "aw-nav-label", "");
   const navNext = iconBtn("aw-navbtn", icons.next, "Next");
   navWrap.append(navPrev, navLabel, navNext);
+  // ⭐⭐⭐ Đợt 220 (thầy, 21/8/2026) — HAI MŨI TÊN BỊ KHOÁ KHI BÀN KIA CÒN ĐANG LÀM.
+  // Thầy: *"đội trước bấm next làm đội sau không chơi được nữa"*. Đọc
+  // `nobodyElseIsPlaying()` trong core/fight.js để biết vì sao chặn phải nằm ở NGUỒN.
+  //
+  // ⭐ ĐẶT Ở `setNav` VÌ ĐÓ LÀ CÁI PHỄU DUY NHẤT: cả 15 template có nav đều đi qua đây,
+  // nên một chốt ở đây là chốt cho tất cả, kể cả template viết sau này — không template
+  // nào phải sửa một dòng, và không template nào có thể QUÊN.
+  //
+  // ⚠️⚠️ PHẢI NHỚ HAI HÀM XỬ LÝ. Trạng thái "bàn kia còn đang làm không" đổi vì việc của
+  // BÀN KIA, mà `setNav` thì chỉ chạy khi CHÍNH bàn này có gì đó đổi — nên nếu chỉ chặn
+  // trong `setNav` thì hai mũi tên sẽ nằm mờ cho tới khi template tình cờ vẽ lại nav,
+  // có thể là không bao giờ. Trọng tài gọi `paintNavGate()` qua `registerNavGate`, và
+  // hàm đó cần lại đúng hai handler cũ ⇒ phải giữ chúng ở đây.
+  let navHandlers = { prev: null, next: null };
+  /**
+   * Bàn này có được rời vòng hiện tại không?
+   * ⭐ Ô **Allow skip** là công tắc của chính luật này (thầy chốt 21/8/2026): bật lên là
+   * thầy CỐ Ý cho phép cắt ngang, nên chốt mở. Tắt (mặc định từ Đợt 220, cả 4 template
+   * có ô này) thì phải đợi bàn kia xong.
+   * ⚠️ Ngoài Fight thì luôn `true` — chỉ trong trận mới có "bàn kia" để mà chờ.
+   */
+  function mayLeaveRound() {
+    if (!fight || typeof fight.ctl.mayLeaveRound !== "function") return true;
+    if (activity.options?.allowSkip === true) return true;
+    return fight.ctl.mayLeaveRound(fight.side);
+  }
+  /** Nối/cắt dây hai mũi tên theo câu trả lời hiện tại, từ handler đã nhớ. */
+  function paintNavGate() {
+    const open = mayLeaveRound();
+    wireNav(navPrev, open ? navHandlers.prev : null);
+    wireNav(navNext, open ? navHandlers.next : null);
+  }
   const rightTools = el("div", "aw-tools");
   const soundBtn = iconBtn("aw-iconbtn", sound.isMuted() ? icons.soundOff : icons.soundOn, "Sound");
   soundBtn.classList.toggle("is-off", sound.isMuted());
@@ -938,6 +1018,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       fight.ctl.registerPause(fight.side, (on, dim) =>
         (on ? enterPause("relay", { dim: dim !== false }) : exitPause("relay")));
     }
+    // ⭐⭐⭐ Đợt 220 — ĐƯỜNG TRỌNG TÀI BÁO "TRẠNG THÁI VÒNG VỪA ĐỔI, VẼ LẠI ‹ ›".
+    // Lời gọi TUỲ CHỌN, cùng lý do với hai dòng trên: một core/fight.js cũ lấy từ cache
+    // không có hàm này, và khi đó nav chỉ đơn giản là không bao giờ bị chặn — đúng nết cũ.
+    if (fight.ctl.registerNavGate) fight.ctl.registerNavGate(fight.side, paintNavGate);
   }
   function placeWaitBar() {
     const rowW = bottombar.clientWidth;
@@ -2182,7 +2266,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // ⚠️ Đợt 197 — `applyBalance` again, not just `resolveActivity`: this line
     // re-reads the act from the library, which would quietly undo the Balance
     // questions trim the mount had already applied. One re-resolve, one re-trim.
-    activity = applyBalance(resolveActivity(libAct));
+    // ⭐ Đợt 220 — và applySdDeal, cùng lý do: begin() đọc lại act từ thư viện,
+    // không chia lại là Start again chơi mảng gốc trần trụi. Mỗi lần chia là một
+    // bộ bài mới — Start again đổi bài, đúng nết shuffle xưa nay.
+    activity = applySdDeal(applyBalance(resolveActivity(libAct)));
     // Top up the clip cache when the set changed under us — the READY gate
     // preloaded whichever one was current when it ran. Fire-and-forget on
     // purpose: it only fills core/voice-clips.js's cache, plays nothing, and a
@@ -3142,7 +3229,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // actually running, the same way the Fight rows above are built only
         // during a match: outside Showdown nobody owns a round, so the control
         // would be the dead button the OPT-IN rule of Đợt 143 exists to prevent.
-        showdown: !!showdownPick
+        showdown: !!showdownPick,
+        // ⭐ Đợt 220 — trần cứng của ô số Count. ⚠️ Đếm trên ACT GỐC trong thư
+        // viện chứ không phải `activity`: ván đang chạy có thể ĐÃ bị nối dài
+        // (500 slot) hoặc bị Balance cắt ngắn — đưa con số đó vào là trần sai.
+        sdItemCount: playItemCount(resolveActivity(libAct))
       });
       switchesBuilt = true;
     }
@@ -3815,6 +3906,27 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     roundTimerMode: () => roundMode,
     roundDone,
     setRoundTimeout(fn) { roundTimeUp = typeof fn === "function" ? fn : null; },
+    /**
+     * ⭐⭐⭐ Đợt 220 — "tôi có được sang câu khác lúc này không?" cho những đường KHÔNG
+     * đi qua nút bấm: phím ← →, cử chỉ, hay bất cứ lối tắt nào template tự nghĩ ra.
+     * ⚠️ MỘT LUẬT, HAI CỬA — engine sở hữu cái NÚT (làm mờ nó), template sở hữu cái
+     * PHÍM; cả hai hỏi đúng hàm `mayLeaveRound()` này, nên không thể đẻ ra bản sao thứ
+     * hai của luật rồi lệch nhau. ⛔ ĐỪNG cho template tự đọc `options.allowSkip` —
+     * đó chính là cách hai bản sao ra đời.
+     * ⚠️ KHÔNG dùng cho đường trọng tài đẩy bàn (`goToIndex`/`jumpTo`): trọng tài là
+     * người có quyền, chặn nó là hai bàn lệch câu.
+     */
+    mayLeaveRound() { return mayLeaveRound(); },
+    /**
+     * ⭐⭐ Đợt 220 — "mảng câu ĐÃ được chia bài, đừng tự xáo lại." Template hỏi câu
+     * này TRƯỚC cú shuffle của chính nó (Quiz · Type the answer).
+     * ⛔⛔ VÌ SAO KHÔNG ép `shuffleQuestions:false` vào options như fight.js làm:
+     * applyBalance/applySdDeal giữ `options` theo THAM CHIẾU là hợp đồng sống —
+     * Apply mutate thẳng vào object đó (Object.assign phía dưới), copy options ra
+     * để sửa là Apply ghi vào bản sao và act thư viện KHÔNG BAO GIỜ nhận được nữa.
+     * fight.js thoát vì nó cầm act ĐÃ đông lạnh riêng cho từng bàn; ở đây là act thật.
+     */
+    keepItemOrder() { return sdDealMode !== "none"; },
     setScore(n) {
       // Positive score = GREEN, negative = RED WITH a leading "-" (teacher,
       // 11/8/2026 — previously the chip dropped the sign and relied on
@@ -3832,7 +3944,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // game that has no per-question progress, or "" to show nothing at all.
     // Purely additive: leave it out and the text is exactly as before.
     setNav({ index, total, onPrev = null, onNext = null, nextLabel = null, label = null }) {
-      navLabel.textContent = label != null ? label : `${index} of ${total}`;
+      // ⭐ Đợt 220 — FREE: một con số duy nhất tăng dần từ 1 (thầy chốt). Tổng của
+      // mảng đã nối dài (500…) là con số kỹ thuật, lớp nhìn thấy chỉ hoảng.
+      navLabel.textContent = label != null ? label
+        : (sdDealMode === "free" ? String(index) : `${index} of ${total}`);
+      // Đợt 220 — mốc xa nhất ván đã đi tới, mẫu số của Free lúc Submit.
+      if (typeof index === "number" && index - 1 > sdMaxIndex0) sdMaxIndex0 = index - 1;
       // SHOWDOWN (Đợt 155) — the one place the engine learns which item is on
       // screen, including when the teacher walks back with ‹ ›, so the name
       // follows the question rather than counting turns of its own. Guarded on
@@ -3848,8 +3965,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // matters because templates call setNav on every state change, not only
       // when they move.
       if (typeof index === "number") roundBegin(index - 1);
-      wireNav(navPrev, onPrev);
-      wireNav(navNext, onNext);
+      // ⭐⭐⭐ Đợt 220 — NHỚ hai handler rồi mới nối dây, và nối qua `paintNavGate()`
+      // chứ không nối thẳng: trọng tài có thể phải vẽ lại đúng hai nút này về sau, lúc
+      // template không hề gọi `setNav` (xem chú thích dài ở chỗ khai `navHandlers`).
+      navHandlers = { prev: onPrev, next: onNext };
+      paintNavGate();
       navNext.innerHTML = nextLabel ? nextLabel : icons.next;
       navNext.classList.toggle("is-finish", !!nextLabel);
     },
@@ -3891,6 +4011,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (fight) { fight.ctl.onFinish(fight.side, raw); return; }
       endTitle = raw.title || "Game complete";
       const timeMs = Math.round(performance.now() - startedAt);
+      // ⭐⭐⭐ Đợt 220 — FREE: CẮT KẾT QUẢ VỀ VÒNG TRỌN VẸN CUỐI TRƯỚC KHI TÍNH GÌ.
+      // ⛔⛔ Vì sao BẮT BUỘC: template dựng `review` cho TOÀN BỘ mảng đã nối dài
+      // (500 hàng), kể cả câu chưa ai chạm tới — mà từ Đợt 207 câu không làm là
+      // câu SAI (`pctOf = right/total`). Không cắt thì thầy Submit ở câu 30 và cả
+      // lớp về gần 0%, không một dòng lỗi nào.
+      // ⭐ "Vòng trọn vẹn cuối" là lựa chọn của thầy (AskUserQuestion): mọi em cùng
+      // mẫu số. Mẫu là `sdMaxIndex0` — cùng nguồn nuôi tên học sinh trên khung,
+      // nên "câu đã phát" ở đây và tên từng hiện trên bảng không thể lệch nhau.
+      // ⚠️ Chưa xong vòng đầu thì giữ nguyên số câu đã phát (cắt về 0 là một ván
+      // không có ai — tệ hơn mẫu số lệch nhau một câu).
+      // ⚠️ Đếm lại BỐN con số từ chính các hàng giữ lại, đừng trừ suy diễn:
+      // computeResult đọc raw.correct/total trước khi nhìn perQuestion.
+      if (sdDealMode === "free" && Array.isArray(raw.review) && showdownPick) {
+        const M = Math.max(1, showdownPick.members.length);
+        const dealt = Math.min(raw.review.length, sdMaxIndex0 + 1);
+        const rounds = Math.floor(dealt / M);
+        const keep = rounds >= 1 ? rounds * M : dealt;
+        if (keep < raw.review.length) {
+          raw.review = raw.review.slice(0, keep);
+          if (Array.isArray(raw.perQuestion)) raw.perQuestion = raw.perQuestion.slice(0, keep);
+          raw.total = raw.review.length;
+          raw.answered = raw.review.filter(r => r.answered).length;
+          raw.correct = raw.review.filter(r => r.answered && r.yourCorrect).length;
+          raw.incorrect = raw.total - raw.correct;
+          if (raw.score != null) raw.score = raw.correct;   // điểm mặc định = số câu đúng
+        }
+      }
       const result = computeResult(raw, timeMs / 1000);
       result.timeMs = timeMs;
       reviewData = raw.review || [];   // kept in memory for "Show answers"

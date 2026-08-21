@@ -81,6 +81,8 @@ const ttaTemplate = {
   // `pulseScoreTo` below) instead of calling `ui.setScore()`, so it has to
   // forward to `fightCtl.onScore()` itself — see showScore's own note.
   fightMode: true,
+  // ⭐ Đợt 220 — như Quiz: nhận dải Normal/Free/Count của Showdown.
+  sdDeal: true,
   // ⭐⭐ Đợt 202 (teacher, 19/8/2026) — IN TURNS opt-in. With this flag the match's
   // Options panel grows a green "In turns" checkbox, and ticking it makes
   // core/fight.js DEAL the question pool out between the two boards (each team
@@ -181,7 +183,9 @@ const ttaTemplate = {
 
     let items = [...(activity.content?.items || [])]
       .filter(it => it && it.prompt && Array.isArray(it.acceptedAnswers) && it.acceptedAnswers.length);
-    if (opt.shuffleQuestions) items = shuffle(items);
+    // ⭐ Đợt 220 — mảng đã chia bài (Showdown Free/Count) thì cấm tự xáo — xem
+    // ghi chú cùng dòng bên quiz.js.
+    if (opt.shuffleQuestions && !ui.keepItemOrder?.()) items = shuffle(items);
 
     const total = items.length;
     if (total === 0) {

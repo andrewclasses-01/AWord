@@ -431,7 +431,15 @@ const anagramTemplate = {
     panel.append(modeCell.cell, penHost, lives.cell);
 
     addCheck("All caps", draft.allCaps === true, v => draft.allCaps = v, { key: "allCaps" });
-    addCheck("Allow skip", draft.allowSkip !== false, v => draft.allowSkip = v,
+    // ⭐⭐ Đợt 220 (thầy, 21/8/2026) — MẶC ĐỊNH TẮT, THỐNG NHẤT CẢ BỐN TEMPLATE.
+    // Trước đợt này Anagram + Unjumble mặc định BẬT (`!== false`) còn Quiz + Type the
+    // answer mặc định TẮT (`=== true`) — cùng một ô tích, hai nết trái ngược, và thầy
+    // không có cách nào biết mình đang ở nết nào ngoài việc mở Options ra soi.
+    // ⚠️ ĐÂY LÀ THAY ĐỔI HỒI TỐ và đó là điều thầy chọn: mọi act Anagram/Unjumble trong
+    // thư viện chưa từng đụng tới ô này sẽ chuyển sang CHẶN ngay lần chơi sau.
+    // ⭐ Từ Đợt 220 ô này còn là CÔNG TẮC của luật chặn ‹ › trong Fight (xem
+    // `mayLeaveRound()` trong core/engine.js): bật lên là cố ý cho phép cắt ngang đội kia.
+    addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
       { key: "allowSkip", title: "Allow skip (Next can move on early)" });
   },
 
@@ -472,7 +480,7 @@ const anagramTemplate = {
     // bonusPick() (see the header comment for the full breakdown).
     const isBonusFamily = mode === "bonus" || mode === "bonusMinus";
     const allCaps = opt.allCaps != null ? !!opt.allCaps : opt.changeCase === "upper";
-    const allowSkip = opt.allowSkip !== false;
+    const allowSkip = opt.allowSkip === true;   // Đợt 220 — mặc định TẮT, thống nhất 4 template
     // Points off: "submit" = once per wrong WORD (0..10); "bonusMinus" = once
     // per wrong LETTER TAP (0..100, step 5), applied live in bonusPick() via
     // flyLetterPenalty() rather than aggregated here. Plain "bonus" uses

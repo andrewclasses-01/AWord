@@ -84,6 +84,9 @@ const quizTemplate = {
   // (which flies its "+N" to a spot it has to ask fight.ctl.scoreTarget() for),
   // Quiz needed no scoring plumbing of its own, only round/lock bookkeeping.
   fightMode: true,
+  // ⭐ Đợt 220 — Quiz nhận dải Normal/Free/Count của Showdown (thầy chốt thử Quiz
+  // + Type the answer trước; mở template khác = thêm đúng dòng cờ này).
+  sdDeal: true,
   // SHOWDOWN (Đợt 155) — second template to opt in, alongside Anagram. Like
   // Fight it needs nothing else from this file: the rotation keys off the
   // `index` already sent through ui.setNav, and the per-pupil results off the
@@ -190,7 +193,10 @@ const quizTemplate = {
     // Guard against missing/empty data so a malformed activity never crashes.
     let questions = [...(activity.content?.questions || [])]
       .filter(q => q && Array.isArray(q.answers) && q.answers.length > 0);
-    if (opt.shuffleQuestions) questions = shuffle(questions);
+    // ⭐ Đợt 220 — mảng đã được CHIA BÀI (Showdown Free/Count) thì cấm tự xáo:
+    // slot s thuộc về em s % M, xáo là phá tan bài đã chia. Hỏi engine chứ
+    // không đọc options — một luật một chỗ, xem ui.keepItemOrder trong engine.js.
+    if (opt.shuffleQuestions && !ui.keepItemOrder?.()) questions = shuffle(questions);
     questions = questions.map(q => ({
       question: q.question || "",
       answers: (opt.shuffleAnswers ? shuffle(q.answers) : [...q.answers])
@@ -747,8 +753,16 @@ const quizTemplate = {
     // must NOT auto-end under them (same fix as Type-the-answer, Đợt 56). The
     // auto-finish still fires when they answer everything and simply stop.
     function clearAutoTimer() { if (autoTimer) { clearTimeout(autoTimer); autoTimer = null; } }
-    function goPrev() { if (!animating && !ending && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
-    function goNext() { if (!animating && !ending && canAdvance() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
+    // ⭐⭐ Đợt 220 — QUIZ LÀ TEMPLATE DUY NHẤT CÓ PHÍM ← →, nên nó là template duy nhất
+    // cần chốt này. Engine đã làm mờ hai NÚT ‹ › khi bàn kia còn đang làm, nhưng phím
+    // thì không đi qua nút — chặn ở đây là bịt nốt cửa đó.
+    // ⚠️ Đặt trong `goPrev`/`goNext` chứ không đặt trong `onKey`: hai hàm này là cửa duy
+    // nhất mà NGƯỜI CHƠI khởi hành, còn `jumpTo` (trọng tài đẩy bàn) cố ý đi lối khác và
+    // KHÔNG được chặn — chặn trọng tài là hai bàn lệch câu.
+    // ⚠️ `!== false` chứ không phải `=== true`: engine cũ lấy từ cache không có hàm này.
+    function mayLeave() { return ui.mayLeaveRound?.() !== false; }
+    function goPrev() { if (!animating && !ending && mayLeave() && index > 0) { clearAutoTimer(); showQuestion(index - 1, -1); } }
+    function goNext() { if (!animating && !ending && canAdvance() && mayLeave() && index < total - 1) { clearAutoTimer(); showQuestion(index + 1, 1); } }
 
     // FIGHT MODE: the match controller moving THIS board — because the OTHER
     // one navigated, or because the round advanced. Runs the SAME slide the
@@ -786,6 +800,7 @@ const quizTemplate = {
       if (e.key === "ArrowLeft") { goPrev(); return; }
       if (e.key === "ArrowRight") {
         if (!canAdvance()) return;   // same gate as the Next button
+        if (!mayLeave()) return;     // Đợt 220 — và cùng chốt vòng đấu với nút ›
         (index === total - 1 ? () => finish("complete") : goNext)();
         return;
       }

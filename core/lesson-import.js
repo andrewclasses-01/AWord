@@ -28,7 +28,7 @@ const OPT_QUIZ = { timer: "countUp", shuffleQuestions: true, shuffleAnswers: tru
 // here in the Import dialog, but it still OPENS as an ordinary written-clue act —
 // the teacher flips it to Voice in Options when the lesson calls for listening.
 // This is what makes one act able to replace the old ENG1 / ENG1 VOICE pair.
-const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: true, showAnswers: true, contentMode: "text" };
+const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus", allCaps: true, allowSkip: false, showAnswers: true, contentMode: "text" };
 // Which clue set a freshly imported vocabulary act opens on, and the one whose
 // text is mirrored into each item's plain `.clue` (see core/content-view.js).
 const DEFAULT_VARIANT = "eng1";

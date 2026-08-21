@@ -597,6 +597,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const waitBarFns = [null, null];
   // Đợt 217 — mỗi bàn để lại đây một cách "hãy dừng / hãy chạy tiếp" (registerPause).
   const pauseFns = [null, null];
+  // ⭐⭐⭐ Đợt 220 — mỗi bàn để lại đây một cách "vẽ lại hai mũi tên ‹ › của tôi"
+  // (registerNavGate). Xem `nobodyElseIsPlaying()` bên dưới để biết vì sao trọng tài
+  // phải CHỦ ĐỘNG gọi: trạng thái "bàn kia còn đang làm không" đổi vì việc của BÀN
+  // KIA, mà `ui.setNav` thì chỉ chạy khi CHÍNH bàn này có gì đó đổi.
+  const navFns = [null, null];
   // ⭐ Đợt 219 — `mode` đi kèm: `"hold"` = đứng yên tại chỗ đang chạy tới,
   // `"go"` = chạy tiếp NỐT `ms` còn lại (không kéo về đầy). Không truyền gì thì
   // đúng như cũ. Nửa bên kia nằm ở `runWaitBar` trong core/engine.js.
@@ -626,6 +631,42 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
   function unconcealAll() {
     boardEls.forEach(b => b && b.classList.remove("is-concealed"));
+  }
+
+  // ---------------------------------------------------------------
+  // ⭐⭐⭐ Đợt 220 (thầy, 21/8/2026) — MỘT BÀN KHÔNG ĐƯỢC TỰ SANG CÂU KHI BÀN KIA
+  // CÒN ĐANG LÀM DỞ.
+  // ---------------------------------------------------------------
+  // Thầy: *"khi bật delay, đội chơi trước xong và đang chờ, đội sau đang làm tiếp thì
+  // đội trước bấm next làm đội sau không chơi được nữa mà phải chuyển sang câu sau
+  // luôn."*
+  //
+  // ⛔⛔ GỐC RỄ NẰM Ở `boardMoved()`, VÀ NÓ KHÔNG PHẢI LỖI — nó được viết cho MỘT
+  // NGƯỜI ĐIỀU KHIỂN. Chú thích của chính nó nói *"The teacher pressed Next/Previous
+  // on either board"*: hồi Đợt 124 chỉ có thầy đứng bấm, nên "bàn nào bấm thì cả hai
+  // cùng đi" là đúng. Lớp học thật thì HAI ĐỘI tự bấm lấy, và đội xong trước có đủ cả
+  // ba thứ để cướp câu: nút sáng hợp lệ, tay rảnh, và mười giây chờ để sốt ruột.
+  //
+  // ⛔⛔ VÌ SAO KHÔNG CHẶN Ở TRONG `boardMoved()` — đã cân nhắc và LOẠI: template gọi
+  // `boardMoved()` SAU KHI (Quiz: ngay lúc bắt đầu trượt) nó đã tự dời mình rồi. Trọng
+  // tài từ chối ở đó thì bàn bấm đã đi, bàn kia đứng lại ⇒ **hai bàn lệch câu**, tệ hơn
+  // hẳn thứ đang chữa. Cửa duy nhất đúng là chặn TỪ NGUỒN: đừng để bàn đó khởi hành.
+  // Nên hàm này chỉ TRẢ LỜI, người hỏi là `core/engine.js` (làm mờ nút) và template
+  // (chặn phím ‹ ›).
+  //
+  // ⚠️ "Còn đang làm" KHÔNG chỉ là `roundDone`. Một bàn bị khoá vì luật "Slower team
+  // keeps points = off" cũng hết đường trả lời dù nó chưa hề xong — bỏ sót ca đó là
+  // hai mũi tên nằm mờ suốt cả nhịp giữ, chờ một đội không bao giờ bấm nữa.
+  function nobodyElseIsPlaying(side) {
+    if (matchOver || torndown) return true;      // hết trận thì không còn gì để bảo vệ
+    const other = side === 0 ? 1 : 0;
+    if (!boards[other]) return true;             // bàn kia chưa mount / đã bị dỡ
+    return roundDone[other] || (roundWinner !== null && lockLoser());
+  }
+
+  /** Bảo cả hai bàn hỏi lại câu trên và vẽ lại hai mũi tên của mình. */
+  function syncNavGates() {
+    navFns.forEach(fn => { try { fn && fn(); } catch { /* bàn đã bị dỡ */ } });
   }
 
   const boards = [null, null];          // the template's own handles, via ctl.attach
@@ -807,6 +848,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const nobodyLeft = lockLoser() || roundDone[other];
     if (nobodyLeft) revealBoards();
     later(advanceRound, nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+    syncNavGates();   // Đợt 220 — khoá đội thua cũng là "hết người đang làm"
   }
 
   // Đợt 133 (teacher): two correct finishes within TIE_WINDOW_MS of each
@@ -833,6 +875,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     [sideA, sideB].forEach(side => teams[side].el.classList.add("is-won"));
     revealBoards();
     later(advanceRound, ROUND_HOLD_MS);
+    syncNavGates();   // Đợt 220
   }
 
   // ----- PICK-TURN rounds (Đợt 183) — see the pickMode block above ----------
@@ -877,6 +920,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       try { b.backToBoard && b.backToBoard(); } catch { /* gone */ }
     });
     paintPickTurn();
+    syncNavGates();   // Đợt 220 — vòng chọn mới cũng là một vòng mở
   }
 
   // ----- the round: both boards hold the SAME word index -----
@@ -928,6 +972,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       b.lock(false);
       b.goToIndex(roundIndex);
     });
+    // Đợt 220 — câu mới, vòng mở lại ⇒ hai mũi tên của CẢ HAI bàn phải mờ trở lại.
+    // ⚠️ Đặt SAU `goToIndex` là cố ý: template sẽ gọi `ui.setNav` trong lúc dời câu, và
+    // lệnh vẽ cuối cùng phải là lệnh biết vòng đã mở lại.
+    syncNavGates();
   }
 
   function endMatch() {
@@ -940,6 +988,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     unconcealAll();
     revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
+    syncNavGates();   // Đợt 220 — hết trận thì không còn gì để chặn
     showResult();
   }
 
@@ -1015,6 +1064,22 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // ⛔ CHỈ GỬI SANG BÀN KIA, không bao giờ gọi lại chính bàn gửi: bàn gửi đã tự dừng
     // trước khi gọi tới đây, và gọi ngược lại chỉ đẻ ra một vòng lẩn quẩn.
     registerPause(side, fn) { pauseFns[side] = fn; },
+
+    // ⭐⭐⭐ Đợt 220 — CÙNG KHUÔN VỚI `registerWaitBar`/`registerPause`: engine trao
+    // cho trọng tài một cách vẽ lại hai mũi tên ‹ › của bàn nó, vì chỉ trọng tài mới
+    // biết lúc nào câu trả lời đổi (bàn KIA vừa xong / vòng vừa chốt / sang câu mới).
+    // Bàn nào không đăng ký (engine cũ lấy từ cache) thì đơn giản là bị bỏ qua.
+    registerNavGate(side, fn) { navFns[side] = fn; },
+
+    /**
+     * ⭐⭐⭐ Đợt 220 — "BÀN NÀY CÓ ĐƯỢC RỜI VÒNG NÀY KHÔNG?"
+     * `false` = bàn kia còn đang làm dở ⇒ hai mũi tên phải mờ, phím ‹ › phải câm.
+     * Đọc `nobodyElseIsPlaying()` ngay trên để biết vì sao việc chặn bắt buộc phải
+     * nằm ở NGUỒN chứ không nằm trong `boardMoved()`.
+     * ⚠️ Hàm này KHÔNG biết gì về ô "Allow skip" — đó là options của act, và options
+     * là chuyện của `core/engine.js`. Trọng tài chỉ trả lời đúng câu nó biết.
+     */
+    mayLeaveRound(side) { return nobodyElseIsPlaying(side); },
     // ⚠️ `dim` ĐI THEO nguồn, không tự quyết. ☰ Menu chỉ tối MỘT bàn nên bàn kia cũng
     // phải tự đắp tấm che của nó; còn bảng công cụ đã phủ tối CẢ khung nhìn bằng
     // `.aw-tool-dim`, nên bàn kia đắp thêm một lớp nữa là nửa màn hình bên đó tối hơn
@@ -1122,7 +1187,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // ⚠️ In turns tự miễn nhiễm mà không cần điều kiện riêng: chế độ đó ghim cửa sổ
       // về 0,1s ⇒ `waitBarMs` = 0 ⇒ conceal() thành lệnh rỗng. Hai bàn cầm hai câu
       // KHÁC nhau nên vốn chẳng có gì để nhìn trộm.
-      conceal(side, true);
+      // ⭐⭐ Đợt 220 (thầy, 21/8/2026) — CHE ĐỘI XONG **TRƯỚC**, KHÔNG CHE ĐỘI XONG **SAU**.
+      // *"chỉ cần ẩn đội chơi trước, đội chơi sau không ẩn chữ mà vẫn hiển thị như bình
+      // thường để cả lớp cùng quan sát kỹ kết quả trước khi auto next sang câu tiếp theo"*.
+      // ⭐ KHÔNG mâu thuẫn với Đợt 219, mà là NỬA CÒN LẠI của cùng một luật: Đợt 219 chốt
+      // *"đội làm trước cũng không cần hiện lại"* (⇒ che GIỮ tới lúc sang câu, đừng gỡ
+      // trong `revealBoards()`), đợt này chốt *"đội xong sau không che"*. Ghép lại:
+      // **che đúng MỘT bàn — bàn đã xong khi vẫn còn người đang làm.**
+      // ⛔ Vì sao an toàn: che sinh ra để bàn còn đang làm không liếc sang chép bài. Bàn
+      // xong SAU CÙNG thì không còn ai để chép nữa — che nó chỉ tổ bịt mắt cả lớp đúng
+      // lúc lớp cần nhìn nhất, tức là ngay trước khi câu bị thay mất.
+      // ⚠️ Hỏi `roundDone[other]` NGAY TẠI ĐÂY là cố ý: `roundDone[side] = true` vừa chạy
+      // ở trên cho CHÍNH bàn này, nên `roundDone[other]` vẫn là câu trả lời trung thực cho
+      // "trước tôi đã có ai xong chưa". Ca bàn kia bị KHOÁ mà chưa xong (Slower team keeps
+      // points = off) thì nó không đi qua `wordDone` nên chẳng bao giờ bị che — đúng ý.
+      conceal(side, !roundDone[other]);
+      // Đợt 220 — bàn này vừa xong ⇒ câu trả lời của `nobodyElseIsPlaying()` đổi cho CẢ
+      // HAI bàn. Bàn kia sẽ không tự biết: `ui.setNav` của nó chỉ chạy khi chính nó đổi.
+      syncNavGates();
       // PICK MODE bookkeeping (Đợt 183): who finished LAST, and how — that is
       // the whole input to the teacher's "the wrong team chooses next" rule.
       // Written on every finish, so after the round it holds the later one.
@@ -1271,6 +1353,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       const other = side === 0 ? 1 : 0;
       if (boards[other]) { boards[other].lock(false); boards[other].goToIndex(index); }
       if (boards[side]) boards[side].lock(false);
+      syncNavGates();   // Đợt 220 — vòng mới mở ⇒ mờ lại hai mũi tên trên cả hai bàn
     },
 
     // --- what the ENGINE reports (see startGame's `fight` option) ---

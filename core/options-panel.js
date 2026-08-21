@@ -400,7 +400,11 @@ export function mkRadioChoice(name, value, label, checked, onChange) {
 export function buildOptionsBody(host, {
   tpl, draft, contentSwitch = null, contentSetSwitch = null, fight = null,
   onViewChange = null, switchHost = null, renderSwitches = true, selectors = null,
-  showdown = false
+  showdown = false,
+  // ⭐ Đợt 220 — tổng số câu của act đang chơi: trần cứng của ô số Count (thầy
+  // chốt "chặn ô số ở mức tối đa"). Chỉ engine biết con số này; Settings không
+  // truyền (nó cũng không truyền `showdown` nên dải không được dựng ở đó).
+  sdItemCount = 0
 }) {
   const swHost = switchHost || host;
   const sel = selectors || draft;   // Settings has no separate selector state
@@ -656,6 +660,58 @@ export function buildOptionsBody(host, {
     grid.append(c.cell);
   }
 
+  // ⭐⭐⭐ QUESTIONS EACH — NORMAL · FREE · COUNT (Đợt 220, thầy 21/8/2026) —
+  // SHOWDOWN ONLY, và chỉ template khai `tpl.sdDeal` (Quiz · Type the answer,
+  // thầy chốt thử hai game trước — đúng đường fightTurns của Đợt 202 đã đi).
+  // Cùng hình dạng "Time each round" ngay trên: dải 3 nút + ô số, ô số làm NHẠT
+  // chứ không ẩn khi không ở Count (luật chống reflow của Đợt 132).
+  //   Normal  chơi như gốc — mỗi câu một lần, hết là hết.
+  //   Free    chơi tự do tới khi Submit answers (trần 100 câu/em); % lùi về vòng
+  //           trọn vẹn cuối để mọi em cùng mẫu số.
+  //   Count   mỗi em đúng N câu; ô số chặn cứng ở tổng số câu của bài.
+  // Chia bài: core/showdown.js dealQuestions() — engine nối dài mảng lúc mount
+  // (applySdDeal), nên như Time each round, chọn xong phải Apply mới ăn.
+  //
+  // ⭐ KHOÁ CHÉO (thầy chốt "loại trừ nhau"): Free/Count ⇒ khoá "Balance
+  // questions" (nó chia theo đội đông nhất — Count làm việc đó tốt hơn và cho
+  // MỌI đội) và khoá "Shuffle questions" (việc xáo nay là của bộ chia bài; để
+  // template tự xáo là phá tan bài đã chia — engine chặn qua ui.keepItemOrder()).
+  // Ngược lại Balance đang bật thì cả dải này nằm nhạt. Nhạt, KHÔNG ẩn — Đợt 188.
+  let syncSdDealLocks = () => {};
+  if (showdown && tpl.sdDeal) {
+    const DEALS = ["normal", "free", "count"];
+    const cur = DEALS.includes(draft.sdDeal) ? draft.sdDeal : "normal";
+    const maxN = Math.max(1, Math.round(Number(sdItemCount)) || 1);
+    const curN = Math.max(1, Math.min(maxN, Math.round(Number(draft.sdDealCount)) || 1));
+    const stepper = makeHStepper(curN, 1, maxN, v => { draft.sdDealCount = v; },
+      { format: v => String(v), holdMax: 5 });
+    stepper.el.classList.toggle("is-dim", cur !== "count");
+    stepper.el.title = "How many questions each pupil gets (Count)";
+    const c = mkCell({ label: "Questions each", sub: "per pupil", wide: true });
+    c.cell.title = "Normal: every question once · Free: play until Submit answers · Count: exactly N questions per pupil";
+    c.ctl.append(
+      mkSeg([
+        { value: "normal", label: "Normal" },
+        { value: "free", label: "Free" },
+        { value: "count", label: "Count" }
+      ], cur, v => {
+        draft.sdDeal = v;
+        stepper.el.classList.toggle("is-dim", v !== "count");
+        syncSdDealLocks();
+      }),
+      stepper.el
+    );
+    grid.append(c.cell);
+    // ⚠️ Hai ô tích bị khoá được TÌM LÚC GỌI, không giữ ref: chúng dựng SAU dải
+    // này (khu ô tích nằm cuối builder), giữ ref lúc này chỉ tóm được null.
+    syncSdDealLocks = () => {
+      const dealOn = draft.sdDeal === "free" || draft.sdDeal === "count";
+      host.querySelector('[data-aw-check="balance"]')?.classList.toggle("is-locked", dealOn);
+      host.querySelector('[data-aw-check="shuffle"]')?.classList.toggle("is-locked", dealOn);
+      c.cell.classList.toggle("is-locked", !dealOn && draft.balanceQuestions === true);
+    };
+  }
+
   // SHUFFLE / AUTO SWITCH — the same KIND of control, so they live together in
   // the checkbox block at the bottom (Đợt 140). Labels shortened to fit two per
   // row; the full sentence survives as the tooltip.
@@ -676,7 +732,7 @@ export function buildOptionsBody(host, {
   // already on screen.
   if (showdown) {
     addCheck("Balance questions", draft.balanceQuestions === true,
-      v => draft.balanceQuestions = v,
+      v => { draft.balanceQuestions = v; syncSdDealLocks(); },
       { key: "balance", title: "Every pupil in the class answers the same number of questions" });
   }
   // OPT-IN (Đợt 143 — see this file's header for why): only a game that really
@@ -774,6 +830,7 @@ export function buildOptionsBody(host, {
   if (checksBox.children.length) {
     orderChecks(checksBox, tpl.checkOrder);
     layoutChecks(checksBox);
+    syncSdDealLocks();   // Đợt 220 — hai ô tích giờ mới tồn tại để mà khoá
     grid.append(el("div", "aw-optc-sep"), checksHost);
   }
 

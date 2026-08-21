@@ -45,7 +45,8 @@
 
 // Bump this ONLY when a new conversion step is added below, and add that step
 // guarded by the version it upgrades FROM.
-export const OPT_VER = 2;
+// v3 (Đợt 220, 21/8/2026) — allowSkip của Anagram/Unjumble lật true → false, xem allowSkipOff().
+export const OPT_VER = 3;
 
 // How much an old `pointsOff` must be multiplied by to mean the same thing on
 // the 0..100 scale, per act type. Anything not listed used the shared 0..5
@@ -55,6 +56,27 @@ const DEFAULT_POINTS_OFF_FACTOR = 20;   // 0..5 -> 0..100
 
 function factorFor(type) {
   return POINTS_OFF_FACTOR[type] || DEFAULT_POINTS_OFF_FACTOR;
+}
+
+// ⭐⭐ v2 → v3 (Đợt 220, 21/8/2026) — "ALLOW SKIP" THỐNG NHẤT MẶC ĐỊNH **TẮT**, HỒI TỐ.
+// Thầy chốt "Thống nhất TẮT hết" — và từ Đợt 220 ô này còn là công tắc của luật chặn
+// ‹ › trong Fight, nên một act cũ mang `true` là một act vẫn cho đội xong trước cắt
+// ngang đội kia, đúng cái thầy đang chặn.
+//
+// ⛔⛔ CHỈ LẬT CHO **ANAGRAM + UNJUMBLE**, và ranh giới này là cả nội dung của bước:
+//   · Ở hai game này ô tích trước Đợt 220 vẽ theo `!== false` — tức MẶC ĐỊNH ĐÃ TÍCH —
+//     nên bất kỳ cú Apply nào (chỉnh timer, chỉnh lives, bất cứ gì) đều nướng `true`
+//     vào options mà thầy không hề đụng tới ô đó. `lesson-import.js` (OPT_ANA) còn ghi
+//     thẳng `allowSkip: true` vào MỌI act Anagram import. Một chữ `true` ở đây gần như
+//     chắc chắn KHÔNG phải lựa chọn — nó là cặn của cái mặc định cũ.
+//   · Quiz + Type the answer thì NGƯỢC LẠI: mặc định của chúng vốn là tắt (`=== true`),
+//     nên `true` được lưu nghĩa là thầy đã CỐ Ý tích. Lật chỗ đó là xoá một lựa chọn
+//     có chủ ý — đúng loại "dọn dẹp" mà hồ sơ dự án cấm.
+function allowSkipOff(options, type) {
+  if (!options || typeof options !== "object") return;
+  if (type === "anagram" || type === "unjumble") {
+    if (options.allowSkip === true) options.allowSkip = false;
+  }
 }
 
 // Convert ONE options object, given the act type it belongs to.
@@ -80,9 +102,15 @@ function upgradeOptions(options, type) {
  */
 export function migrateActivityOptions(act) {
   if (!act || typeof act !== "object") return act;
-  if (Number(act.optVer) >= OPT_VER) return act;
+  const from = Number(act.optVer) || 0;
+  if (from >= OPT_VER) return act;
 
-  upgradeOptions(act.options, act.type);
+  // ⚠️⚠️ TỪNG BƯỚC MỘT CHỐT RIÊNG THEO PHIÊN BẢN NÂNG **TỪ** — đây chính là cái bẫy
+  // "-5 → -100 → -2000" đầu file: act đã ở v2 mà chạy lại phép nhân thang điểm là
+  // điểm phạt bị nhân lần thứ hai. Bước v3 (allowSkip) tự nó chạy lại vô hại, nhưng
+  // vẫn đi qua chốt cho cùng một khuôn — bước v4 sau này chỉ việc chép theo.
+  if (from < 2) upgradeOptions(act.options, act.type);
+  if (from < 3) allowSkipOff(act.options, act.type);
 
   // `templateOptions` (v0.9.27) remembers the options the teacher set for this
   // act under a DIFFERENT template — "change template, tweak, come back later
@@ -92,7 +120,10 @@ export function migrateActivityOptions(act) {
   // scale, invisible until the teacher switched template.
   const per = act.templateOptions;
   if (per && typeof per === "object") {
-    for (const type of Object.keys(per)) upgradeOptions(per[type], type);
+    for (const type of Object.keys(per)) {
+      if (from < 2) upgradeOptions(per[type], type);
+      if (from < 3) allowSkipOff(per[type], type);
+    }
   }
 
   act.optVer = OPT_VER;

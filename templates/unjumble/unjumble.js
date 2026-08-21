@@ -126,7 +126,7 @@ const unjumbleTemplate = {
   // đổi "Show answer when wrong" thành "Show corrects").
   // ⚠️ Mã không có trong danh sách (Fight "In turns", Showdown "Balance questions")
   // tự xuống cuối — hai mode đó thầy chưa xếp.
-  checkOrder: ["shuffle", "showCorrects", "autoNext", "showAnswers"],
+  checkOrder: ["shuffle", "showCorrects", "autoNext", "allowSkip", "showAnswers"],
   name: "Unjumble",
   hasLivesSlot: true,       // hearts render in the top bar, left of the score (like True/false)
 
@@ -189,6 +189,19 @@ const unjumbleTemplate = {
     // `checkOrder` dùng để xếp chỗ (xem addCheck trong core/options-panel.js).
     addCheck("Show corrects", draft.showAnswerWhenWrong !== false,
       v => { draft.showAnswerWhenWrong = v; }, { key: "showCorrects", title: "Show the correct answer after a wrong one" });
+    // ⭐⭐ Đợt 220 (thầy, 21/8/2026) — MẶC ĐỊNH TẮT, THỐNG NHẤT CẢ BỐN TEMPLATE.
+    // Trước đợt này Anagram + Unjumble mặc định BẬT (`!== false`) còn Quiz + Type the
+    // answer mặc định TẮT (`=== true`) — cùng một ô tích, hai nết trái ngược, và thầy
+    // không có cách nào biết mình đang ở nết nào ngoài việc mở Options ra soi.
+    // ⚠️ ĐÂY LÀ THAY ĐỔI HỒI TỐ và đó là điều thầy chọn: mọi act Anagram/Unjumble trong
+    // thư viện chưa từng đụng tới ô này sẽ chuyển sang CHẶN ngay lần chơi sau.
+    // ⭐ Từ Đợt 220 ô này còn là CÔNG TẮC của luật chặn ‹ › trong Fight (xem
+    // `mayLeaveRound()` trong core/engine.js): bật lên là cố ý cho phép cắt ngang đội kia.
+    // ⛔ Ô NÀY TRƯỚC ĐÂY KHÔNG HỀ TỒN TẠI Ở UNJUMBLE, dù `mount()` vẫn đọc `opt.allowSkip`
+    // — tức là một tuỳ chọn có thật, luôn BẬT, và không có đường nào tắt. Nay mặc định
+    // TẮT thì bắt buộc phải có ô để bật lại, kẻo là tước mất một lối chơi.
+    addCheck("Allow skip", draft.allowSkip === true, v => draft.allowSkip = v,
+      { key: "allowSkip", title: "Allow skip (Next can move on early)" });
   },
 
   // Any Options change restarts the act (the 3 marking models are not
@@ -207,7 +220,7 @@ const unjumbleTemplate = {
     const opt = activity.options || {};
     const mode = opt.unjumbleMode === "submit" ? "submit" : "bonus";
     const align = opt.align === "center" ? "center" : "left";
-    const allowSkip = opt.allowSkip !== false;
+    const allowSkip = opt.allowSkip === true;   // Đợt 220 — mặc định TẮT, thống nhất 4 template
     const showAnswerWhenWrong = opt.showAnswerWhenWrong !== false;   // submit mode reveal (default on)
     const pointsOff = Math.max(0, Math.min(POINTS_MAX, opt.pointsOff == null ? 20 : opt.pointsOff));   // submit wrong penalty (0..100 since Dot 143)
     const startLives = normLives(opt.lives);   // null = unlimited
