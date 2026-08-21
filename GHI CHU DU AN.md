@@ -8,6 +8,138 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 220 (21/8/2026) — ⭐⭐⭐ CHẶN ‹ › KHI BÀN KIA CÒN LÀM · ALLOW SKIP TẮT HỒI TỐ · **DẢI NORMAL·FREE·COUNT CHO SHOWDOWN** — ✅ **COMMIT `4b722d2` + PUSH + LIVE (thầy lệnh commit để test trên lớp; nội dung tính năng thầy sẽ duyệt sau khi chơi thật)**
+
+> **PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC.** Code Đợt 220 = commit **`4b722d2`** (10 file). Mọi phần có lưới
+> đo đạt: **21/21** (`scratch/dot220-deal.html`) · **15/15** (`scratch/dot220-nav.html`) · **24/24**
+> (`dot219-fight.html`, hồi quy) · **8/8** (di trú optVer v3, Node) · **5904/5904** (lưới thuật toán
+> chia bài, Node). ⚠️ `scratch/` bị gitignore — 3 file lưới dot220 chỉ có ở MÁY 1; phiên máy khác cần
+> thì dựng lại theo mô tả trong khối này. **Thầy CHƯA chơi thật trên lớp** — mục ⬜ cuối khối là danh
+> sách chờ tay thầy; thầy sẽ yêu cầu sửa ở session sau, đọc kỹ phần "Cách làm + bẫy" trước khi sửa.
+
+**Thầy giao 2 mảng việc, chốt đi CHUNG MỘT ĐỢT, làm lần lượt từng phần, xong phần nào test phần đó.**
+
+### ✅ PHẦN 1–3 — XONG + ĐO ĐẠT (`scratch/dot220-nav.html` **15/15**; `dot219-fight.html` **24/24**, không hồi quy)
+
+File đã sửa: `core/fight.js` · `core/engine.js` · `templates/quiz/quiz.js` ·
+`templates/anagram/anagram.js` · `templates/unjumble/unjumble.js` · `core/lesson-import.js`.
+
+**1. CHẶN ‹ › KHI BÀN KIA CÒN ĐANG LÀM (Fight).** Thầy: *"đội chơi trước xong và đang chờ, đội sau
+đang làm tiếp thì đội trước bấm next làm đội sau không chơi được nữa"*.
+- ⛔⛔ **TẮT "ALLOW SKIP" KHÔNG CHỮA ĐƯỢC CA NÀY** — đội xong trước có `doneCheck = true` nên nút sáng
+  **hợp lệ**. Gốc rễ là `boardMoved()`, và nó **không phải lỗi**: chú thích của chính nó ghi
+  *"The teacher pressed Next"* — viết cho MỘT người điều khiển, không lường hai đội tự bấm.
+- ⛔⛔ **ĐÃ CÂN NHẮC VÀ LOẠI phương án chặn trong `boardMoved()`**: template gọi nó **SAU KHI** tự dời
+  mình (Quiz gọi ngay lúc bắt đầu trượt) ⇒ từ chối ở đó là **hai bàn lệch câu**, tệ hơn thứ đang chữa.
+  Phải chặn **TỪ NGUỒN**: đừng để bàn đó khởi hành.
+- **Cách làm**: `fight.js` thêm `nobodyElseIsPlaying(side)` + `ctl.mayLeaveRound(side)`; `engine.js`
+  chặn ngay trong **`setNav`** — cái phễu DUY NHẤT mà cả 15 template có nav đều đi qua.
+- ⚠️⚠️ **BẪY ĐÃ ĐO ĐƯỢC (phép A4)**: trạng thái *"bàn kia còn đang làm không"* đổi vì việc của **BÀN
+  KIA**, mà `setNav` chỉ chạy khi CHÍNH bàn này đổi ⇒ chỉ chặn trong `setNav` là hai mũi tên **nằm mờ
+  vĩnh viễn**. Phải có `registerNavGate` (cùng khuôn `registerWaitBar`/`registerPause`) để trọng tài
+  **chủ động** gọi vẽ lại, và engine phải **nhớ hai handler** (`navHandlers`).
+- **Quiz là template DUY NHẤT có phím ← →** ⇒ thêm chốt trong `goPrev`/`goNext` của nó, hỏi qua
+  `ui.mayLeaveRound()`. **MỘT LUẬT, HAI CỬA**: engine sở hữu cái NÚT, template sở hữu cái PHÍM.
+  ⛔ TUYỆT ĐỐI ĐỪNG cho template tự đọc `options.allowSkip` — đó là cách đẻ ra bản sao thứ hai.
+- ⚠️ `jumpTo`/`goToIndex` (trọng tài đẩy bàn) **KHÔNG bị chặn** — trọng tài là người có quyền.
+- **Công tắc là ô "Allow skip"** (thầy chốt): bật = cố ý cho phép cắt ngang, tắt = phải đợi.
+
+**2. CHE BÀI: ĐỘI XONG *SAU* KHÔNG BỊ CHE.** Thầy: *"chỉ cần ẩn đội chơi trước, đội chơi sau không ẩn
+chữ… để cả lớp cùng quan sát kỹ kết quả trước khi auto next"*.
+- ⭐ **KHÔNG MÂU THUẪN VỚI ĐỢT 219**, mà là **nửa còn lại của cùng một luật**: 219 chốt *"đội làm trước
+  cũng không cần hiện lại"* (⇒ che GIỮ tới lúc sang câu), 220 chốt *"đội xong sau không che"*. Ghép
+  lại: **che đúng MỘT bàn — bàn đã xong khi vẫn còn người đang làm.**
+- Sửa **đúng một biểu thức**: `conceal(side, true)` → `conceal(side, !roundDone[other])`.
+  `revealBoards()` **không động tới** ⇒ Đợt 219 nguyên vẹn (đo lại 24/24).
+
+**3. THỐNG NHẤT MẶC ĐỊNH `allowSkip` = TẮT (cả 4 template).** Trước đó Anagram + Unjumble mặc định
+**BẬT** (`!== false`), Quiz + Type the answer mặc định **TẮT** (`=== true`) — cùng một ô tích, hai nết
+trái ngược. **HỒI TỐ theo ý thầy**: act cũ chưa từng đụng ô này sẽ đổi nết ngay lần chơi sau.
+- ⛔ **Unjumble trước đây KHÔNG HỀ CÓ Ô NÀY** dù `mount()` vẫn đọc `opt.allowSkip` ⇒ đã **thêm ô**
+  (+ mã `allowSkip` vào `checkOrder`), kẻo mặc định tắt là tước mất một lối chơi không có đường bật
+  lại. Đếm lại số ô tích: 6 ở Showdown ⇒ vẫn 2 dòng (`layoutChecks` chỉ đổi khi **> 6**), y như Anagram.
+- ⚠️ **TỒN ĐỌNG PHẢI BÁO THẦY**: `lesson-import.js` (`OPT_ANA`) trước nay ghi **`allowSkip: true`
+  TƯỜNG MINH** vào mọi act Anagram import. Nay đã đổi thành `false` cho act import MỚI, nhưng **mọi
+  act Anagram đã import trước hôm nay vẫn mang `true`** ⇒ vẫn cho cắt ngang, cho tới khi thầy bỏ tích
+  tay hoặc import lại. ⇒ Muốn chặn tuyệt đối thì **bỏ `allowSkip` khỏi điều kiện `mayLeaveRound()`**
+  (lúc đó luật chặn Fight không còn công tắc nào) — **1 dòng**, chờ thầy chốt.
+
+### ✅ PHẦN 3b — TỒN ĐỌNG TRÊN ĐÃ TỰ ĐÓNG (thầy giao "chọn hướng tốt nhất"): DI TRÚ `optVer` v3
+
+Đo **8/8** bằng Node (chạy thẳng `core/options-migrate.js`).
+- **Hướng chọn**: bước di trú v2→v3 trong `core/options-migrate.js` — act **Anagram/Unjumble** đang
+  mang `allowSkip: true` thì lật về `false` ngay lần thư viện đọc tới. ⛔ **KHÔNG lật Quiz/TTA**: ở
+  hai game đó mặc định vốn TẮT nên `true` được lưu là thầy CỐ Ý tích; còn ở Anagram/Unjumble ô tích
+  cũ vẽ theo `!== false` (mặc định ĐÃ tích) nên mọi cú Apply đều nướng `true` vào dù thầy không đụng
+  ô — cộng `lesson-import` ghi `true` mù quáng. Một chữ `true` ở đó là cặn mặc định, không phải lựa chọn.
+- ⛔⛔ **BẪY SUÝT CẮN — ĐÚNG BẪY "-5 → -100 → -2000" ĐẦU FILE ĐÓ**: chỉ nâng `OPT_VER` lên 3 là act
+  đã ở v2 chạy LẠI phép nhân thang điểm. Phải thêm chốt *"nâng TỪ phiên bản nào"* cho TỪNG bước:
+  `if (from < 2) upgradeOptions(...)` · `if (from < 3) allowSkipOff(...)` — cả ở `templateOptions`.
+  Bước v4 sau này cứ chép khuôn đó.
+
+### ✅ PHẦN 4 — DẢI `NORMAL · FREE · COUNT` (Showdown) — XONG + ĐO ĐẠT
+
+Đặc tả 8 quyết định thầy chốt qua AskUserQuestion vẫn đúng nguyên (bảng dưới). Đo: **5904/5904**
+lưới thuật toán (Node) + **21/21** đầu-cuối trình duyệt (`scratch/dot220-deal.html`: Count chia đúng
+người đúng số câu QUA TAY CHƠI THẬT · Free cắt vòng trọn vẹn · nav một số · khoá chéo Options).
+
+| Mục | Chốt |
+|---|---|
+| Hình dạng | Ô `wide` "**Questions each** / per pupil" dưới "Time each round": `mkSeg` Normal·Free·Count + `makeHStepper`, ô số NHẠT khi không ở Count (Đợt 132) |
+| Free — % | **Lùi về vòng trọn vẹn cuối** (mọi em cùng mẫu số); chưa xong vòng đầu thì giữ nguyên số câu đã phát |
+| Free — nav | **Một số duy nhất tăng dần từ 1**, không có tổng |
+| Free — trần | `SD_FREE_CAP = 100` câu/em; chạm trần thì ván tự hết như hết câu |
+| Count — ô số | Chặn cứng ở tổng số câu (`sdItemCount` — đếm trên **act gốc thư viện**, ⚠️ đừng đếm `activity`: nó có thể đã nối dài/bị Balance cắt) |
+| Chia bài | Mỗi đội tự xáo, độc lập cột khác |
+| Ràng buộc | 🔒 CỨNG: không em nào gặp lại câu của mình (0 vi phạm / 5904 lượt) · 🔓 MỀM: không trùng giữa hai em tới khi hết bộ |
+| Khoá chéo | Free/Count ⇔ Balance loại trừ + khoá Shuffle — nhạt, không ẩn (Đợt 188) |
+| Phạm vi | Cờ `tpl.sdDeal: true` ở **Quiz + Type the answer**; mở thêm = 1 dòng cờ (đường fightTurns Đợt 202) |
+| Lưu | `options.sdDeal` ("normal"/"free"/"count") + `options.sdDealCount` |
+
+**Cách làm + bẫy đã cắn/đã né trong đợt:**
+1. **`dealQuestions()` nằm trong `core/showdown.js`** (file THUẦN — đúng chỗ, không import gì). Trả
+   mảng L = N×M **chỉ số câu**; slot s thuộc em `s % M` ⇒ **`memberAt`/tên trên khung/review/mistakes
+   không sửa MỘT DÒNG NÀO** — cả tính năng là "nối dài mảng trước khi template nhìn thấy".
+   Mỗi cửa sổ K slot là một **deck**: ghép cặp đôi (Kuhn) slot↔câu, mỗi câu 1 lần/deck (MỀM), câu đã
+   qua tay em thì không ghép lại (CỨNG). Nấc lùi: (A) vỡ mềm giữ cứng; (B) em thấy đủ K câu (chỉ
+   Free) → mở vòng mới, **gieo lại `seen` bằng câu vừa làm** để không lặp tức khắc (K=1 thì chịu).
+   ⛔ KHÔNG phải shuffle-cầu-may: 10 câu · 5 em quay vòng đều ⇒ mỗi em chỉ gặp 2 câu (gcd=5) — lưới
+   có 30 seed riêng cho ca này, sạch.
+   ⚠️⚠️ **HAI BẪY PHÂN PHỐI ĐO RA TRONG ĐỢT**: (1) nấc lùi `order.find(...)` = câu ĐẦU danh sách ⇒
+   thiên vị hệ thống (Free K=5 lệch 8 lần) — vá bằng bảng `used[]` toàn ván, nấc lùi chọn câu ÍT DÙNG
+   NHẤT; (2) vẫn lệch 4 ở K=3 ⇒ `order` = xáo rồi **sắp ổn định theo `used`** (hoà giữ thứ tự xáo).
+   ⚠️ CHẤP NHẬN CÓ SỐ ĐO: 22/5850 lượt count còn 1-2 vi phạm MỀM (thiếu hụt Hall cấu trúc — Kuhn đã
+   tối đa; hệ quả: hai em chung một câu, đúng thứ thầy duyệt là mềm).
+2. **`applySdDeal()` trong engine — anh em `applyBalance`**, gọi ở CẢ mount lẫn `begin()` (begin đọc
+   lại act từ thư viện — quên là Start again chơi mảng gốc; mỗi lần chia là bộ bài mới). Structural,
+   đọc một lần lúc mount như `roundMode`. ⚠️ **CÙNG OBJECT NGUỒN, KHÔNG CLONE** (mistakes gom bằng
+   Set `src`) · **`options` giữ THAM CHIẾU** (Apply mutate thẳng vào nó — hợp đồng applyBalance).
+   `applyBalance` tự đứng xuống khi Free/Count cầm bài. ⚠️ **`!activity._mistakes`**: vòng ôn
+   "Start with mistakes" mà bị chia là 3 câu sai nối thành 100 câu/em.
+3. **FREE trong engine**: nav hiện **một số duy nhất** (sửa ngay `setNav`); `sdMaxIndex0` nuôi bởi
+   chính `setNav` (cùng nguồn tên HS trên khung — một sự thật một chỗ); lúc Submit **cắt review về
+   vòng trọn vẹn cuối TRƯỚC `computeResult`** — ⛔ không cắt thì Đợt 207 (`pct=right/total`) cho cả
+   lớp về ~0%. **Đếm lại 4 con số từ chính hàng giữ lại**, không trừ suy diễn. `restart` đi lại
+   `startGame` trọn vẹn nên `sdMaxIndex0` tự về 0, không cần reset tay.
+4. **`ui.keepItemOrder()`** — Quiz/TTA hỏi engine TRƯỚC cú shuffle của mình. ⛔⛔ KHÔNG ép
+   `shuffleQuestions:false` vào options như fight.js: fight cầm act ĐÔNG LẠNH riêng từng bàn, còn đây
+   là act thật — copy options ra sửa là Apply ghi vào bản sao, act thư viện không bao giờ nhận.
+5. **Options panel**: dải + khoá chéo qua `syncSdDealLocks()`. ⚠️ Hai ô tích (balance·shuffle) dựng
+   SAU dải ⇒ tìm LÚC GỌI qua `[data-aw-check=…]`, và phải gọi thêm một lần cuối builder (sau
+   `layoutChecks`) — giữ ref lúc dựng dải chỉ tóm được null. Settings không truyền `showdown` ⇒ dải
+   không mọc ở đó (đúng luật Đợt 174).
+6. ⛔ **Open the box · Crossword · Find the match CẤM vĩnh viễn** (mảng câu là cái bàn chơi — nối dài
+   là ô chữ có một từ hai lần); Balloon pop phải đo riêng nếu muốn mở.
+
+⬜ **CHỜ TAY/MẮT THẦY TRÊN LỚP** (máy đã đo hết phần đo được):
+1. Ván **Count** thật trên TOMKO: nhịp "một câu quen quay lại cho em khác" có ổn với lớp không.
+2. **Free**: Submit answers giữa chừng — % trên phễu có đúng cảm giác "vòng trọn vẹn cuối" không.
+3. Dải "Questions each" trên màn 86": chữ 3 nút + ô số có đủ to không.
+4. Anagram/Unjumble act cũ: NEXT nay chặn khi chưa xong từ — act nào thầy MUỐN nết cũ thì bật lại
+   "Allow skip" trong Options của act đó.
+
+---
+
 ## Đợt 219 (21/8/2026) — ⭐⭐ CHẤM TÍCH KHÔNG BAO GIỜ SÓT · TẠM DỪNG LÀ DỪNG **TẤT CẢ** · ANAGRAM CHE LÀ **XOÁ HẲN CHỮ**
 
 > 🗣️ **THẦY GIAO 3 VIỆC**:

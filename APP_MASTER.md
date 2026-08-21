@@ -8,7 +8,40 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **21/8/2026 (Đợt 219)** — ⭐⭐ **CHẤM TÍCH KHÔNG SÓT · TẠM DỪNG LÀ DỪNG TẤT CẢ ·
+> Cập nhật lần cuối: **21/8/2026 (Đợt 220)** — ⭐⭐⭐ **CHẶN ‹ › KHI BÀN KIA CÒN LÀM (Fight) ·
+> ALLOW SKIP MẶC ĐỊNH TẮT (hồi tố, di trú optVer v3) · DẢI `NORMAL · FREE · COUNT` CHIA BÀI CHO
+> SHOWDOWN (Quiz + Type the answer)**. Thầy giao 2 mảng + chốt 8 quyết định qua AskUserQuestion.
+> Sửa **10 file**: `core/fight.js` · `engine.js` · `options-panel.js` · `options-migrate.js` ·
+> `showdown.js` · `lesson-import.js` · `templates/quiz` · `type-the-answer` · `anagram` · `unjumble`.
+> ✅ Commit **`4b722d2`** + hồ sơ, **ĐÃ PUSH + LIVE** (thầy lệnh push để test trên lớp; nội dung
+> tính năng CHƯA duyệt — chờ thầy chơi thật). Đọc khối **Đợt 220** đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **(1) Fight: một bàn không được sang câu khi bàn kia còn làm dở.** Chặn TỪ NGUỒN trong `setNav`
+>   (phễu duy nhất 15 template có nav đều đi qua) + `registerNavGate` để trọng tài chủ động vẽ lại
+>   hai mũi tên khi BÀN KIA xong (⚠️ bẫy đo được: chỉ chặn trong `setNav` là nút mờ vĩnh viễn).
+>   ⛔ KHÔNG chặn trong `boardMoved()` — template gọi nó SAU khi tự dời ⇒ hai bàn lệch câu.
+>   Công tắc là ô **Allow skip** (bật = cố ý cho cắt ngang). Quiz thêm chốt phím ← → qua
+>   `ui.mayLeaveRound()`. Che bài: che đúng MỘT bàn — bàn xong khi còn người đang làm (nửa còn lại
+>   của luật Đợt 219, sửa đúng 1 biểu thức `conceal(side, !roundDone[other])`).
+> - **(2) Allow skip thống nhất mặc định TẮT cả 4 game** (trước: Anagram+Unjumble bật, Quiz+TTA tắt).
+>   Unjumble được THÊM ô (trước không có đường tắt). **Di trú optVer v2→v3**: act Anagram/Unjumble
+>   mang `true` (cặn mặc định cũ + import) tự lật `false`; Quiz/TTA giữ (thầy cố ý tích). ⛔ Bẫy
+>   "-5→-100→-2000": mỗi bước di trú phải chốt "nâng TỪ phiên bản nào".
+> - **(3) Showdown: dải `Normal · Free · Count`** ("Questions each", dưới "Time each round").
+>   Free = chơi tới Submit answers (trần 100 câu/em, nav MỘT SỐ duy nhất, % cắt về VÒNG TRỌN VẸN
+>   CUỐI trước `computeResult` — không cắt là Đợt 207 cho cả lớp ~0%). Count = mỗi em đúng N câu
+>   (ô số chặn cứng ở tổng số câu). Chia bài = `dealQuestions()` trong `core/showdown.js` (thuần):
+>   ghép cặp đôi Kuhn theo deck — 🔒 không em nào gặp lại câu mình (0/5904 lượt) · 🔓 không trùng
+>   giữa hai em tới khi hết bộ. Engine `applySdDeal` (anh em applyBalance, cùng object nguồn,
+>   options theo THAM CHIẾU, miễn vòng mistakes); template hỏi `ui.keepItemOrder()` trước cú shuffle.
+>   Khoá chéo với Balance + Shuffle (nhạt, không ẩn). ⛔ Open the box · Crossword · Find the match
+>   cấm vĩnh viễn (mảng câu là cái bàn chơi). Mở template mới = 1 dòng `sdDeal: true`.
+> - ✅ **ĐO**: `scratch/dot220-deal.html` **21/21** · `dot220-nav.html` **15/15** · hồi quy
+>   `dot219-fight.html` **24/24** · di trú **8/8** (Node) · lưới thuật toán **5904/5904** (Node).
+> - ⬜ **Chờ tay thầy trên lớp**: ván Count thật trên TOMKO · Submit giữa chừng ở Free (cảm giác %)
+>   · cỡ chữ dải trên màn 86" · act Anagram/Unjumble cũ nào muốn nết cũ thì bật lại Allow skip.
+>
+> ---
+> Trước đó: **21/8/2026 (Đợt 219)** — ⭐⭐ **CHẤM TÍCH KHÔNG SÓT · TẠM DỪNG LÀ DỪNG TẤT CẢ ·
 > ANAGRAM CHE LÀ XOÁ HẲN CHỮ**. Thầy giao 3 việc. Sửa **5 file**: `core/showdown-review.js` ·
 > `core/app.css` · `core/engine.js` · `core/fight.js` · `templates/anagram/anagram.css`.
 > ✅ **THẦY DUYỆT** (*"ok build"*) — commit `d1d39c1`, **ĐÃ PUSH + LIVE**.
@@ -3848,6 +3881,13 @@ Ngoài ra: Settings có mục **Classes** (lớp + học sinh, `core/classes.js`
 act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
+
+> ⭐⭐⭐ **MỚI NHẤT (Đợt 220, 21/8/2026) — thầy SẼ TEST TRÊN LỚP rồi yêu cầu sửa ở session sau.**
+> Bốn việc chờ tay thầy nằm cuối khối Đợt 220 trong `GHI CHU DU AN.md` (ván Count thật trên TOMKO ·
+> Submit giữa chừng ở Free · cỡ chữ dải "Questions each" trên 86" · act cũ nào muốn nết Allow skip
+> cũ thì bật lại trong Options). ⛔ Trước khi sửa theo lời thầy, đọc phần "Cách làm + bẫy đã cắn"
+> của khối đó — nhất là: options theo THAM CHIẾU (cấm copy), `registerNavGate` (cấm chặn chỉ trong
+> `setNav`), và cắt review Free TRƯỚC `computeResult`.
 
 > ⭐⭐⭐ **MỚI NHẤT (Đợt 218 + 218b, 20/8/2026) — KHUNG QUICK ACCESS, CHỜ THẦY DUYỆT:**
 > 1. ⬜ **Nhìn khung trên màn 86"** — máy này **không chụp được khung hình nào** (pane bị ẩn ⇒ không
