@@ -14,7 +14,8 @@
 > thư mục), và **kéo sắp xếp được thứ tự mục ghim bằng POINTER events** (chạy cả trên ngón tay).
 > **218c** thêm **vạch kẻ mảnh trong khe** ngăn khung với các thư mục (ẩn khi lưới còn 1 cột).
 > Sửa `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`.
-> ✅ **THẦY DUYỆT** (*"ok ngon rồi"*) — ba đợt đi **CHUNG MỘT COMMIT**, đã **PUSH + LIVE**.
+> ✅ **THẦY DUYỆT** (*"ok ngon rồi"*) — ba đợt đi **CHUNG MỘT COMMIT `4642d4b`**, **ĐÃ PUSH + LIVE**
+> (4/4 mã băm SHA-256 khớp, 14/14 phép hỏi môđun trên bản live, kho sạch).
 > Đọc khối **Đợt 218c → 218b → 218** đầu `GHI CHU DU AN.md`.
 > Trước đó: **(Đợt 216 + 217)** — **CHỐT NỬA GIÂY SAU START · TIME DELAY LÊN 10s
 > VỚI ∞ THẬT · THANH TRƯỢT CHỊU ĐƯỢC NGÓN TAY** (216) và **TÊN TRONG PHỄU · GIÀNH TEAM · TẠM DỪNG
@@ -3493,12 +3494,22 @@ vừa xảy ra.
 
 ### 3. Đứng ở đâu (20/8/2026 — sau Đợt 218 + 218b + 218c)
 
-> ⚠️⚠️ **CÓ VIỆC CHƯA COMMIT — ĐỌC TRƯỚC KHI LÀM BẤT CỨ GÌ.** **Đợt 218 + 218b** (khung **Quick
-> access** ở trang chủ) đã **code xong + đo xong trên app thật** (12/12 phép kiểm), nhưng **CHƯA
-> commit, CHƯA push, CHƯA lên bản live** — đang **chờ thầy duyệt**. Bốn file đang khác `origin/main`:
-> `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`, cộng bàn thử
-> `scratch/dot218-qa.html` (scratch bị gitignore).
-> Toàn bộ con số nằm ở khối **Đợt 218b → 218** đầu `GHI CHU DU AN.md`. **Bốn luật rút ra:**
+> ⭐⭐⭐ **KHO SẠCH, KHÔNG CÓ VIỆC CODE NÀO DỞ DANG.** **Đợt 218 + 218b + 218c** (khung **Quick
+> access** ở trang chủ) đi **CHUNG MỘT COMMIT `4642d4b`** — ✅ **THẦY DUYỆT, ĐÃ PUSH + LIVE**, đối
+> chiếu **4/4 file trùng mã băm SHA-256** trên `aword.andrewclasses.com` và **14/14 phép hỏi môđun
+> chạy trên CHÍNH BẢN LIVE**. `main` = `origin/main`, `git status` trống.
+>
+> **4 file code đã sửa**: `core/store.js` · `core/icons.js` · `main.js` · `core/app.css`.
+> 🧪 **Bàn thử**: `scratch/dot218-qa.html` (**scratch/ bị gitignore** ⇒ phiên/máy mới phải dựng lại;
+> công thức đủ trong `GHI CHU DU AN.md` Đợt 218b — nạp `main.js` THẬT, chỉ đổi `core/firebase.js`
+> sang `scratch/fake-firebase-full.js`, rồi gieo cây thư mục bằng chính `createFolder()` thật).
+>
+> **Mảng đang chạy: TRANG CHỦ (thư viện)** — thầy đi từng đợt ngắn và tự chỉ hướng mỗi lần. Trước
+> chuỗi này thầy vừa **đọc dự án + quét 2 ổ nội dung** `D:. LISTENING` + `D:. READING` (138
+> workbook) để chuẩn bị **cải tiến IMPORT** — xem mục ⬜ VIỆC ĐANG CHỜ, có sẵn danh sách khoảng hở đã
+> đo của importer.
+>
+> Toàn bộ con số nằm ở khối **Đợt 218c → 218b → 218** đầu `GHI CHU DU AN.md`. **Bốn luật rút ra:**
 > 1. Cờ ghim nằm **trên chính node thư mục** vì luật Firestore chỉ mở `users/{uid}/items/{itemId}` —
 >    collection mới sẽ bị từ chối **trong im lặng**.
 > 2. ⛔⛔ **`sizeQuickAccess()` KHÔNG ĐƯỢC ĐỌC KẾT QUẢ CỦA CHÍNH NÓ.** Ô lưới bị kéo giãn theo hàng, mà
@@ -3809,7 +3820,22 @@ act nào gọi tên HS thì đọc từ đó.
 > 6. ⬜ **(218c) Vạch kẻ ngăn cách nhìn từ cuối lớp** có rõ không — đang là `#d7e0ec`; nhạt quá thì
 >    đổi sang `#c7d3e2`. ⚠️ Vạch vẽ RA NGOÀI hộp khung, nên đừng trả `overflow: hidden` về `.aw-qa`:
 >    làm vậy là **cắt mất nó mà không báo gì**.
-> 7. ⬜ Thầy chốt xong thì mới **commit + push** — hiện 4 file đang khác `origin/main`.
+> 7. ✅ **XONG** — đã commit `4642d4b` + push + LIVE (4/4 mã băm, 14/14 phép hỏi môđun).
+>
+> ⭐⭐ **VIỆC KẾ TIẾP THẦY ĐÃ NHẮM TỚI: CẢI TIẾN IMPORT.** Trước Đợt 218 thầy bảo đọc dự án + quét
+> `D:. LISTENING` và `D:. READING` "để chuẩn bị áp dụng một số thay đổi". **Đã quét xong 138
+> workbook, số liệu để sẵn đây** — phiên sau khỏi quét lại:
+> - **Cây nội dung rất đều**: `<cấp độ>/<bộ LSA2-S1>/<đề .T1>/<file .P1-2-3.xlsm>` (LISTENING) và
+>   `<loạt>/<mùa DS-S4>/<chủ đề .I1>/<bài .W1>/<file>` (READING); mỗi thư mục lá còn `AUDIO/` và
+>   `SITE/<LỚP>/<LỚP>_<ngày>_<WORDS|DICTS|RD> <mã bài>.gsite`.
+> - **5 sheet lớn importer CHƯA ĐỌC** (đo trên 138 file): `LOGIC-QUEST` 127 · `TRANSLATION-QUEST` 120 ·
+>   `FILL PARAGRAPH(S)` 122 · `DEFINITION` 90 · `TABLEMIX` 67. Ngoài ra `PARAGRAPH` 130 giữ **nguyên
+>   văn bài đọc/transcript** ở ô A1 — AWord chưa có chỗ nào chứa nó.
+> - **`sourceStem()` cắt mất tên bài** (đã chạy thử trên tên thật): `DS-S4.I1.W1 BEAVERS AND DAMS.xlsm`
+>   → thư mục `DS-S4.I1.W1`; và `DS-S4.I1.W1 SLIDE INSTRUCTION.xlsm` ra **CÙNG một tên** ⇒ hai file
+>   đâm nhau. Bản trùng của Drive giữ nguyên rác: `IEL-S15 (1) (1) (1).T3.P1`.
+> - **Import chỉ nhận 1 file/lần**, chưa có đường dựng lại cả cây.
+> ⛔ Đừng tự chọn hướng — hỏi thầy muốn làm mục nào trước.
 
 > ⭐⭐⭐ **CẬP NHẬT 20/8/2026 (sau Đợt 217) — ĐÂY LÀ DANH SÁCH ĐÚNG. Mọi khối ⬜ bên dưới là của các đợt
 > CŨ HƠN, giữ lại vì phần lớn vẫn là "chỉ mắt/tay thầy mới kiểm được".**

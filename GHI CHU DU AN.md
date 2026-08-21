@@ -175,6 +175,15 @@ Mọi con số trên là thật; phần "nhìn có thuận mắt không" vẫn p
 > Sửa **3 file code** (`core/store.js` · `core/icons.js` · `main.js`) + **1 file CSS** (`core/app.css`).
 > ✅ **THẦY DUYỆT** — ba đợt 218 + 218b + 218c đi **CHUNG MỘT COMMIT** (thầy: *"commit bản này + push live + ghi nhật ký"*).
 
+> ✅✅ **ĐÃ COMMIT + PUSH + LIVE** — commit `4642d4b` (`4bfda36..4642d4b`), 6 file, +881/-6.
+> Đối chiếu trên `aword.andrewclasses.com`: **4/4 file code trùng mã băm SHA-256** (`main.js` ·
+> `core/app.css` · `core/store.js` · `core/icons.js`) và **14/14 phép hỏi môđun chạy trên CHÍNH BẢN
+> LIVE** — 6 ký hiệu mới có mặt ở `main.js`, 4 ở `store.js`, 4 rule mới ở `app.css`; và **5 thứ đã gỡ
+> đều về 0** (`aw-lib-inside` · `aw-lib-cols` · `is-drawer` · `aw-qa-dim` · `panelLeft`).
+> CSS live chỉ còn `prefers-reduced-motion` + `print` — **không còn luật `@media` bố cục nào**.
+> `main` = `origin/main`, kho sạch.
+
+
 ### Việc đã làm
 
 **1. Chỗ ghim — `core/store.js`: `setFolderPinned(id, on)` + `listPinned(root)`**
