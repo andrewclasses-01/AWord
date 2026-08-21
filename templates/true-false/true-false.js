@@ -876,31 +876,16 @@ const tfTemplate = {
           syncFightLock();
         },
         reveal: revealFightMarks,
-        // ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CỬA SỔ TIME DELAY CẠN MÀ BÀN NÀY CHƯA
-        // TRẢ LỜI: *"báo hiệu giống hệt như chọn sai (âm thanh, trừ điểm như chọn
-        // sai)"*. Đây đúng là nhánh Fight của `choose()` ở trên, BỎ hai thứ:
-        //   · `fightCtl.wordDone()` — trọng tài đã tự đặt `roundDone` TRƯỚC khi gọi
-        //     xuống đây (không thì nó tái nhập vào giữa chính nó);
-        //   · mọi lệnh sang câu — trận đấu dời cả hai bàn cùng lúc.
-        // ⚠️ KHÔNG gộp vào `onTimeUp()` (lời nhắc trôi hết băng chuyền mà không ai
-        // bấm): ca đó tới nay KHÔNG trừ điểm, gộp vào là lặng lẽ đổi luật của một
-        // tính năng thầy không hề nhắc tới.
-        timeUp() {
-          if (finished || !queue.length) return;
-          const idx = queue[0];
-          if (state[idx].answered) return;
-          queue.shift();
-          state[idx].answered = true;
-          state[idx].correct = false;
-          tfSound.wrong();
-          if (pointsOff) penalty += pointsOff;
-          loseLife();
-          ui.setScore(liveScore());
-          updateNav();
-          fightPendingReveal = true;
-          lockButtons();
-          syncFightLock();
-        }
+        // ⚠️ FIGHT MODE NEVER CALLS A "TIME'S UP" HOOK. Đợt 222 briefly gave
+        // this board a `timeUp()` here so the referee could route "Time delay
+        // window shut" into a treat-as-wrong reaction; Đợt 223 removed "Round
+        // rule" from Options and with it the only case that lock needed one —
+        // the referee now locks that board silently (see core/fight.js's
+        // finalizeSingleWinner/silentLose).
+        // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
+        // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
+        // dựng cho single mode, chỉ gọi sớm hơn.
+        review: buildReview
       });
     }
 
@@ -916,6 +901,25 @@ const tfTemplate = {
         e.preventDefault();
         root.querySelector(".aw-tf-btn.is-false")?.click();
       }
+    }
+
+    // Đợt 223 — per-statement detail for the "Show answers" review screen,
+    // pulled out of finish() so fightCtl.attach's `review` can hand the SAME
+    // array to the Fight end panel mid-match (before `finished` is ever true).
+    function buildReview() {
+      return order.map(idx => {
+        const st = statements[idx];
+        const s = state[idx];
+        const correctText = st.answer ? "True" : "False";
+        return {
+          question: st.text,
+          answered: s.answered,
+          yourText: s.chosen == null ? null : (s.chosen ? "True" : "False"),
+          yourCorrect: s.correct,
+          correctText,
+          src: st   // `statements` is a shallow copy, so `st` IS the content object
+        };
+      });
     }
 
     function finish(reason) {
@@ -935,19 +939,7 @@ const tfTemplate = {
 
       const perQuestion = order.map((idx, i) => ({ q: i, correct: state[idx].correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;
-      const review = order.map(idx => {
-        const st = statements[idx];
-        const s = state[idx];
-        const correctText = st.answer ? "True" : "False";
-        return {
-          question: st.text,
-          answered: s.answered,
-          yourText: s.chosen == null ? null : (s.chosen ? "True" : "False"),
-          yourCorrect: s.correct,
-          correctText,
-          src: st   // `statements` is a shallow copy, so `st` IS the content object
-        };
-      });
+      const review = buildReview();
       // Ranking score = correct count minus wrong-answer penalty. When pointsOff===0
       // penalty is 0, so score === correct, which equals the engine's default.
       ui.finish({ score: correct - penalty, correct, incorrect: total - correct, total, perQuestion, review, answered: state.filter(s => s.answered).length });

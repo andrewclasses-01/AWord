@@ -1138,31 +1138,16 @@ const ftmTemplate = {
         goToIndex: fightGoTo,
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightMarks,
-        // ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CỬA SỔ TIME DELAY CẠN MÀ BÀN NÀY CHƯA
-        // CHẠM Ô NÀO: *"báo hiệu giống hệt như chọn sai (âm thanh, trừ điểm như chọn
-        // sai)"*. Đúng nhánh sai của `choose()`, BỎ hai thứ: `fightCtl.wordDone()`
-        // (trọng tài đã đặt `roundDone` trước khi gọi xuống đây) và mọi lệnh sang câu.
-        // ⚠️ KHÔNG gộp vào `onTimeUp()` — ca "lời nhắc trôi hết băng chuyền" tới nay
-        // KHÔNG trừ điểm, gộp vào là lặng lẽ đổi luật của một tính năng khác.
-        // ⚠️ Không có ô nào để đính dấu ✗ (đội này chưa chạm gì), nên dấu duy nhất
-        // là dấu ✓ mà `revealFightMarks()` đặt lên ô ĐÚNG ngay sau đó — cùng cách
-        // Quiz xử ca hết giờ không chọn ô nào (Đợt 174).
-        timeUp() {
-          if (finished || !queue.length) return;
-          const target = queue[0];
-          if (state[target].solved || state[target].skipped) return;
-          state[target].skipped = true;
-          ftmSound.wrong();
-          if (pointsOff) {
-            penalty += pointsOff;
-            ui.setScore(scoreNow());
-          }
-          loseLife();
-          updateNav();
-          fightPendingReveal = fightPendingReveal || { idx: null, tile: null, correct: false };
-          lockTiles();
-          syncFightLock();
-        }
+        // ⚠️ FIGHT MODE NEVER CALLS A "TIME'S UP" HOOK. Đợt 222 briefly gave
+        // this board a `timeUp()` here so the referee could route "Time delay
+        // window shut" into a treat-as-wrong reaction; Đợt 223 removed "Round
+        // rule" from Options and with it the only case that lock needed one —
+        // the referee now locks that board silently (see core/fight.js's
+        // finalizeSingleWinner/silentLose).
+        // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
+        // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
+        // dựng cho single mode, chỉ gọi sớm hơn.
+        review: buildReview
       });
     }
 
@@ -1176,25 +1161,16 @@ const ftmTemplate = {
       }
     }
 
-    function finish(reason) {
-      if (finished) return;
-      finished = true;
-      haltPromptAnim();
-      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
-      if (prepTimer) { clearTimeout(prepTimer); prepTimer = null; }
-      tickTimers.forEach(clearTimeout);
-      if (reason === "gameover") ftmSound.gameOver();
-      else if (reason === "timesup") ftmSound.timesUp();
-      else ftmSound.gameCompleted();
-
-      // ⭐⭐ Đợt 186 — IN PLAY ORDER (see `playOrder`): the prompts arrive in a
-      // shuffled per-page queue, so `order` is not the order the class saw them
-      // in — and Showdown hands row `n` to pupil `n`. Pairs that never came up
-      // are appended in their own order, so nothing is lost from the review.
+    // Đợt 223 — per-pair detail for the "Show answers" review screen, pulled
+    // out of finish() so fightCtl.attach's `review` can hand the SAME array to
+    // the Fight end panel mid-match (before `finished` is ever true).
+    // ⭐⭐ Đợt 186 — IN PLAY ORDER (see `playOrder`): the prompts arrive in a
+    // shuffled per-page queue, so `order` is not the order the class saw them
+    // in — and Showdown hands row `n` to pupil `n`. Pairs that never came up
+    // are appended in their own order, so nothing is lost from the review.
+    function buildReview() {
       const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
-      const perQuestion = rows.map((idx, i) => ({ q: i, correct: state[idx].solved === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
-      const review = rows.map(idx => {
+      return rows.map(idx => {
         const p = pairs[idx];
         const s = state[idx];
         return {
@@ -1206,6 +1182,23 @@ const ftmTemplate = {
           src: p   // `pairs` is a shallow copy, so `p` IS the content object
         };
       });
+    }
+
+    function finish(reason) {
+      if (finished) return;
+      finished = true;
+      haltPromptAnim();
+      if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      if (prepTimer) { clearTimeout(prepTimer); prepTimer = null; }
+      tickTimers.forEach(clearTimeout);
+      if (reason === "gameover") ftmSound.gameOver();
+      else if (reason === "timesup") ftmSound.timesUp();
+      else ftmSound.gameCompleted();
+
+      const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
+      const perQuestion = rows.map((idx, i) => ({ q: i, correct: state[idx].solved === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const review = buildReview();
       // Out of lives shows "GAME OVER" (celebration cover + menu panel both
       // read this title); everything else keeps the default "Game complete".
       // Report the SAME live value shown top-right (matched minus points off).

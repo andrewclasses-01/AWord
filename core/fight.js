@@ -37,10 +37,11 @@
 //   A template joins fight mode by setting `tpl.fightMode = true` (that is what
 //   makes the MODE button appear at all) and talking to `activity._fight`:
 //     ctl.attach(side, { goToIndex, lock, total })   register the board
-//        + optional `timeUp()` (Đợt 222) = "cửa sổ Time delay vừa cạn mà bàn này
-//        chưa xong": chạy đúng đường HẾT GIỜ = SAI của template (tiếng sai, trừ
-//        điểm, dấu ✗), rồi để trọng tài khoá bàn và sang câu. Không khai thì bàn
-//        vẫn bị khoá y như trước — im lặng, đúng nết cũ.
+//        + optional `review()` (Đợt 223) = "hand back this board's own review
+//        array right now" — same shape as ui.finish()'s `review` (see
+//        core/engine.js's showReview), read only once, at endMatch(), to build
+//        the "Show answers" panel of the end-of-match result. Not knowing it
+//        just means that board's side of the panel stays empty.
 //     ctl.wordDone(side, { index, correct })         this board finished a word
 //        `correct:false` = finished it WRONG, which ends only THIS board's go:
 //        the round stays open and the other team plays on (see wordDone).
@@ -49,6 +50,12 @@
 //     ctl.shareLetters / ctl.speaks(side)            keep the two boards fair
 //   A template that does none of this still works — it just runs twice with no
 //   round logic, which is why the flag is opt-in rather than automatic.
+//   ⚠️ Đợt 222 had also added an optional `timeUp()` (fight referee calls it
+//   when the Time delay window shuts with a board still unanswered, so it can
+//   run its own HẾT GIỜ = SAI path). Đợt 223 removed the only call site —
+//   removing "Round rule" made that lock silent by design (see finalizeSingleWinner) —
+//   so the 5 templates that implemented it had the method deleted too; don't
+//   re-add it without a caller.
 // =============================================================
 
 import { el, shuffle } from "./utils.js";
@@ -58,6 +65,13 @@ import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import { getTemplate } from "./registry.js";
 import { resolveActivity, variantsOf, contentSetsOf } from "./content-view.js";
+
+// Đợt 223 — same two-line escaper core/engine.js keeps locally for its own
+// review list; `el()`'s third argument is innerHTML, so question/answer text
+// must go through this before it lands there.
+function escapeText(s) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 // How long the winning word stays on screen before both boards move on.
 // ⚠️ Must outlast the template's own score animation, measured at 1760ms for a
@@ -122,9 +136,7 @@ export const FIGHT_DEFAULTS = {
   // acts), so a match started from one keeps working exactly as it did —
   // this default only decides what a never-configured act starts on.
   fightContent: "scramble",  // scramble | different (legacy acts may still carry "same")
-  fightFirstRule: "lock",    // lock | finish
   fightSpeedBonus: 0,        // extra points for the team that got there first
-  fightLateScores: true,     // the slower team still keeps what it earned
   // ⭐ Đợt 187 — TIME DELAY, in SECONDS, or **0 = ∞** (the app's own house
   // convention for "unlimited", the same one Lives and Find the match already use
   // at the left end of their sliders — see normLives()). Default 0.1 = the
@@ -185,8 +197,7 @@ export function speedBonusApplies(o) { return tieWindowMsOf(o) >= WAIT_BAR_MIN_M
 
 export function fightOptionsFrom(options = {}) {
   const o = { ...FIGHT_DEFAULTS };
-  ["fightContent", "fightFirstRule", "fightSpeedBonus", "fightLateScores", "fightTieWindow",
-   "fightTurns"].forEach(k => {
+  ["fightContent", "fightSpeedBonus", "fightTieWindow", "fightTurns"].forEach(k => {
     if (options[k] !== undefined) o[k] = options[k];
   });
   // ⭐ Đợt 187 — the ceiling went 20 -> 100 (teacher: "kéo từ 1 đến 100 điểm").
@@ -539,27 +550,36 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   let pickOpen = !!pickMode;      // true while both boards wait on their grid for a choice
   let playedRounds = 0;           // items actually played — pick mode counts these, not roundIndex
   let lastFinisher = null;        // { side, correct } — the LAST board to finish this round
+  // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — "ROUND RULE" VÀ "SLOWER TEAM KEEPS POINTS"
+  // BỊ BỎ HẲN KHỎI OPTIONS. TIME DELAY một mình quyết định luôn cả hai câu hỏi
+  // đó, đúng lời thầy: *"0,1 time delay thì không cho đội chậm làm, lớn hơn thì
+  // cho làm tức là đã có both finish rồi"*.
+  //   • ĐÚNG nấc KHÔNG CÓ DELAY (fightTieWindow === 0.1, nấc thấp nhất) — đội
+  //     chậm bị khoá NGAY khi đội kia thắng ("First wins" cũ, xem lockLoser()).
+  //   • BẤT KỲ nấc nào cao hơn (kể cả ∞) — đội chậm KHÔNG bị khoá, được chơi
+  //     tiếp tới khi tự xong ("Both finish" cũ) và LUÔN giữ điểm mình kiếm
+  //     được ("Slower team keeps points" cũ giờ luôn bật — nó chỉ có ý nghĩa ở
+  //     đúng chế độ không-khoá này, xem lateScores()).
   // Does a decided round lock the team that did not win it? Outside pick mode
-  // this is the teacher's own Options choice; inside it, the game's own rule.
+  // this is now derived from TIME DELAY alone; inside it, the game's own rule.
   // ⭐⭐ Đợt 187 — TIME DELAY, decoded ONCE for the whole match.
   // ⚠️ PICK-TURN GAMES ARE SEALED OFF FROM TIME DELAY (teacher, 18/8/2026:
   // "open the box không cần … crossword không cần"). They are pinned to the old
   // fixed window, so an act that picked up a 3s delay while it was an Anagram and
   // was then switched to Open the box mid-match cannot quietly carry that delay
   // into rules the teacher settled separately at Đợt 183.
-  // ⭐⭐ Đợt 202 — IN TURNS IS SEALED OFF FROM ALL FIVE RACE CONTROLS, the same
+  // ⭐⭐ Đợt 202 — IN TURNS IS SEALED OFF FROM ALL THREE RACE CONTROLS, the same
   // way pick-turn games are sealed off from TIME DELAY. This is not tidiness: the
   // two boards hold DIFFERENT questions in a dealt match, so every one of those
   // rules is about a race that is not being run.
   //   • Time delay / Speed bonus  "who got to the SAME word first" — there is no
   //     same word to be first at, so the window is pinned to the old invisible
-  //     0.1s and no wait bar is drawn.
-  //   • Round rule (lock)          locking the slower team takes away ITS OWN
-  //     question, which the other team never had a claim on.
-  //   • Slower team keeps points   for the same reason, a team always keeps what
-  //     its own question earned.
+  //     0.1s and no wait bar is drawn (and lockLoser()/lateScores() read
+  //     `turnsMode` FIRST, before ever looking at fightTieWindow, for exactly
+  //     this reason — locking the slower team would take away ITS OWN
+  //     question, which the other team never had a claim on).
   //   • Fight content              the deal decides the content outright.
-  // The Options panel greys all five while In turns is ticked (see buildOptions),
+  // The Options panel greys all three while In turns is ticked (see buildOptions),
   // so nothing on screen claims to decide something these lines have already
   // settled — the dead-control trap of Đợt 143.
   const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
@@ -576,23 +596,22 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // the control that would have switched it off (TIME DELAY) is not offered there.
   const speedBonus = turnsMode ? 0
     : ((pickMode || speedBonusApplies(fo)) ? fo.fightSpeedBonus : 0);
+  // ⭐⭐⭐ Đợt 223 — CHỈ CÒN ĐỌC TIME DELAY. Đúng nấc "không delay" (0.1s, nấc
+  // thấp nhất trên thanh trượt) mới khoá đội chậm; mọi nấc khác — kể cả ∞ —
+  // không khoá. ∞ vốn đã không còn ai để khoá vào lúc vòng chốt (xem nhánh ∞
+  // trong wordDone: cả hai bàn đều đã xong trước khi có một người thắng), nên
+  // giá trị ở đây không đổi gì trên màn hình dù là gì.
   const lockLoser = () => (turnsMode ? false
-    : (pickMode ? pickMode === "lock"
-      : (tieUnlimited ? true : fo.fightFirstRule === "lock")));
+    : (pickMode ? pickMode === "lock" : fo.fightTieWindow === 0.1));
   // Does a team that finishes correctly AFTER the round is won keep what it
   // earned? The teacher's pick rules say no ("đội sau chọn đúng thì … không có
-  // điểm"), so pick mode fixes it instead of reading the option.
-  // ⚠️ At ∞ both of the older controls are FORCED, and the Options panel greys
-  // them to match (see buildOptions). The REASON changed at Đợt 216 while the
-  // answer stayed the same, so read this before "fixing" it: ∞ used to end the
-  // wait by locking after 5s, which left a locked team no way to finish late. It
-  // now ends when the other board finishes — which means by the time this round
-  // has a single winner at all, BOTH boards are already done (see the ∞ branch in
-  // wordDone), so there is no loser left to lock and no late finish left to score.
-  // Either way neither control can change anything on screen, and leaving them
-  // switchable would be the dead-control trap of Đợt 143.
-  const lateScores = () => (turnsMode ? true
-    : (pickMode ? false : (tieUnlimited ? false : fo.fightLateScores !== false)));
+  // điểm"), so pick mode fixes it instead. Outside pick mode this is now
+  // ALWAYS true (Đợt 223 — "Slower team keeps points" removed, its old
+  // meaning kept as the only behaviour left): a team is only ever still
+  // playing after roundWinner is set when lockLoser() was false in the first
+  // place, i.e. it was never locked out, so whatever it earns on its own time
+  // is its own to keep.
+  const lateScores = () => (turnsMode ? true : (pickMode ? false : true));
 
   // ----- the wait bar (Đợt 187) — one per board, drawn by core/engine.js down in
   // its own bottom row, because that is the only place that knows where this
@@ -635,6 +654,22 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   }
   function unconcealAll() {
     boardEls.forEach(b => b && b.classList.remove("is-concealed"));
+  }
+
+  // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — KHOÁ IM LẶNG Ở NẤC "KHÔNG DELAY".
+  // Thầy: *"đội chậm hơn sẽ bị mất màu và không có âm thanh gì"* — ở đúng nấc
+  // 0,1s, đội chậm thua trong chưa đầy một phần mười giây, không hề có cơ hội
+  // công bằng để phản ứng, nên khoá nó KHÔNG đi qua `timeUp()` nữa (không tiếng
+  // sai, không dấu ✗, không trừ điểm — xem finalizeSingleWinner). Cái duy nhất
+  // báo cho lớp biết bàn đó vừa thua là một lớp CSS chung, `filter:grayscale`
+  // trên CHÍNH `.aw-fight-board` (core/app.css) — một chỗ, mọi template ăn
+  // theo, không cần template nào tự khai CSS riêng như `.is-concealed`.
+  function silentLose(side) {
+    if (!boardEls[side]) return;
+    boardEls[side].classList.add("is-fight-silentlost");
+  }
+  function clearSilentLose() {
+    boardEls.forEach(b => b && b.classList.remove("is-fight-silentlost"));
   }
 
   // ---------------------------------------------------------------
@@ -848,31 +883,23 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // Lock the other side out only if it is still IN the round; one that
     // already answered wrong is locked already, and re-locking it would
     // repaint it as "too slow" on top of its own wrong-answer feedback.
-    // ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — HẾT TIME DELAY LÀ MỘT CÂU TRẢ LỜI SAI,
-    // KHÔNG PHẢI MỘT BÀN CHẾT CÂM. Thầy: *"đội chậm hơn không bấm, không thao tác
-    // được tiếp mà phải đợi hết thời gian delay chuyển sang câu tiếp theo mới thao
-    // tác được"* + *"khi hết time delay, cần báo hiệu giống hệt như chọn sai (âm
-    // thanh, trừ điểm như chọn sai)"*. Hai câu đó là CÙNG MỘT khoảnh khắc: giây mà
-    // cửa sổ chờ cạn.
-    // ⛔ Nết cũ KHÔNG phải "quên làm" — nó là `lock(true)` trần trụi từ Đợt 124, hồi
-    // cửa sổ chờ mới có 0,1s và không ai kịp nhận ra mình vừa bị cắt. Đo Đợt 222:
-    // ở mức MẶC ĐỊNH 0,1s bàn đội chậm chết sau **126ms** (và 1020ms/3021ms ở nấc
-    // 1s/3s) — im lặng tuyệt đối: không tiếng, không dấu, không trừ điểm. Cả lớp
-    // chỉ thấy một bàn đột nhiên không ăn tay nữa.
-    // ⚠️⚠️ `roundDone[other] = true` PHẢI ĐẶT TRƯỚC lời gọi: `timeUp()` chạy đúng
-    // đường "hết giờ = sai" của template, mà vài template (True/false · Find the
-    // match) tự báo `wordDone()` ở cuối đường đó ⇒ trọng tài sẽ TÁI NHẬP vào giữa
-    // chính mình. Cờ này là cái chốt cửa: `wordDone` thoát ngay ở dòng đầu.
-    // ⛔ CHỈ VÒNG THƯỜNG. Pick-turn (Open the box · Crossword) bị bịt khỏi Time
-    // delay từ Đợt 187 theo lệnh thầy, nên ở đó không có "hết giờ" nào để báo — bàn
-    // kia bị khoá theo luật RIÊNG của trò chơi, giữ nguyên nết cũ.
+    // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — KHOÁ Ở ĐÂY GIỜ LUÔN IM LẶNG.
+    // Đợt 222 từng bắt trọng tài gọi `board.timeUp()` ở đây — đi đúng đường
+    // "hết giờ = sai" của template (tiếng sai, trừ điểm, dấu ✗) — vì lockLoser()
+    // khi đó có thể true ở BẤT KỲ mức Time delay nào (tuỳ ô Round rule cũ).
+    // Đợt 223 bỏ hẳn Round rule: lockLoser() giờ CHỈ true ở đúng nấc "không
+    // delay" (0,1s — xem định nghĩa của nó phía trên) hoặc ở luật riêng của
+    // pick-turn "lock" (Crossword). Cả hai ca đó đội thua đều KHÔNG hề có một
+    // cơ hội công bằng nào để phản ứng — cửa sổ đóng trong dưới 130ms, gần như
+    // trùng khoảnh khắc đội kia vừa reo tiếng đúng — nên thầy chốt: không tiếng,
+    // không dấu ✗, không trừ điểm, chỉ khoá TRẦN TRỤI như nết gốc Đợt 124.
+    // Dấu hiệu duy nhất cho lớp biết bàn đó vừa thua là `silentLose()`: MỘT lớp
+    // CSS chung (`is-fight-silentlost`, core/app.css) làm cả khung ngả đen
+    // trắng — "mất màu" đúng nghĩa đen, không cần động tới JS của template nào.
     if (lockLoser() && !roundDone[other]) {
-      const board = boards[other];
-      if (board && !pickMode && typeof board.timeUp === "function") {
-        roundDone[other] = true;
-        try { board.timeUp(); } catch (e) { console.warn("AWord: timeUp() của bàn kia lỗi", e); }
-      }
-      board && board.lock(true);
+      roundDone[other] = true;
+      silentLose(other);
+      boards[other] && boards[other].lock(true);
     }
     const nobodyLeft = lockLoser() || roundDone[other];
     if (nobodyLeft) revealBoards();
@@ -960,6 +987,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // pick mode — và nằm cùng một nhịp đồng bộ với `goToIndex()` phía dưới, nên
     // trình duyệt không bao giờ vẽ ra một khung hình có bài cũ đã sáng lại.
     unconcealAll();
+    clearSilentLose();   // Đợt 223 — câu mới thì màu cũng phải trở lại
     // PICK MODE: "the next round" is not the next index — it is back to the
     // grid, with the turn handed on. Everything that got us here (the tie
     // window, the walk-away backstop, the hold after a decided round) is shared
@@ -1015,6 +1043,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // đây là chỗ cuối cùng lớp còn nhìn được câu vừa rồi; giữ che ở đây là kết thúc
     // một trận bằng một bàn trắng trơn.
     unconcealAll();
+    clearSilentLose();   // Đợt 223 — hết trận thì trả lại màu, đừng để trắng đen mãi
     revealBoards();   // never end a match with the last word's result still hidden
     boards.forEach(b => b && b.lock(true));
     syncNavGates();   // Đợt 220 — hết trận thì không còn gì để chặn
@@ -1148,6 +1177,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (!pickOpen || side !== pickTurn) return false;
       pickOpen = false;
       unconcealAll();          // Đợt 217 — vòng mới, không bàn nào còn bị che
+      clearSilentLose();       // Đợt 223 — vòng mới thì màu cũng trở lại
       roundIndex = index;
       roundWinner = null;
       roundDone = [false, false];
@@ -1278,9 +1308,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (roundWinner !== null) {
         // Round already has an EXCLUSIVE winner (the tie-window, if there
         // ever was one, is long closed) — old "late correct" path, unchanged:
-        // with `fightLateScores:false` only the winner scores it, so this
-        // team's number is frozen where it is and the points still on their
-        // way in are cancelled as they land. (Anagram additionally self-
+        // when `lateScores()` is false (pick mode only, Đợt 223) only the
+        // winner scores it, so this team's number is frozen where it is and
+        // the points still on their way in are cancelled as they land.
+        // (Anagram additionally self-
         // rejects via ctl.mayScore() at the exact moment its flight would
         // land, which can never be fooled by timing the way this numeric
         // freeze alone could — see mayScore's own comment. Both stay active
@@ -1292,19 +1323,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       }
 
       if (pendingWinner === null) {
-        // ⭐⭐ Đợt 216 — AT ∞, THERE HAS TO BE SOMEBODY LEFT TO WAIT FOR.
-        // The other board can already be finished at this point: it answered
-        // WRONG earlier this round, which locks that board without setting
-        // `pendingWinner`. With a finite delay the referee simply waited the
-        // window out for nobody, which cost a second or two and no more — with
-        // the teacher's ∞ that same wait never ends and the match stops dead.
-        // Settled here through the SAME call the wrong-answer branch above makes
-        // when the two finishes land the other way round, so the two orderings
-        // cannot drift apart.
-        // ⚠️ Deliberately scoped to ∞: a finite window keeps its old behaviour to
-        // the millisecond, because shortening it would change how every existing
-        // act plays for a reason that has nothing to do with what thầy asked for.
-        if (tieUnlimited && roundDone[other]) { finalizeSingleWinner(side); return; }
+        // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — KHÔNG CÒN AI ĐỂ CHỜ THÌ CHỐT NGAY, Ở
+        // MỌI MỨC TIME DELAY. Thầy: *"một số act có 2 đội cùng chọn xong rồi (1
+        // đội nhanh có điểm, đội chậm ko có điểm) mà vẫn chạy time delay cho đến
+        // khi hết"*. Ca đó là: đội chậm trả lời SAI trước (khoá rồi, không đặt
+        // `pendingWinner`), rồi đội nhanh mới trả lời ĐÚNG — nhánh này mở một cửa
+        // sổ chờ MỚI dù chẳng còn ai để chờ, và trận đứng lại đúng bằng độ dài
+        // Time delay một cách vô ích.
+        // ⭐⭐ Đợt 216 từng chỉ vá cho riêng ∞ (comment gốc: "a finite window
+        // keeps its old behaviour to the millisecond") — cùng lỗi, cùng cách vá,
+        // Đợt 223 chỉ bỏ chữ `tieUnlimited &&` để áp dụng cho MỌI mức, kể cả
+        // finite: nếu bàn kia đã xong (`roundDone[other]`) thì không có gì để
+        // đợi nữa, chốt luôn qua đúng đường finalizeSingleWinner mà nhánh SAI ở
+        // trên cũng dùng khi hai lượt đến ngược thứ tự — hai chiều không bao giờ
+        // lệch nhau.
+        if (roundDone[other]) { finalizeSingleWinner(side); return; }
         // First correct answer this round — open the tie-window rather than
         // deciding immediately.
         pendingWinner = side;
@@ -1371,6 +1404,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // nhưng từ đợt này lớp che sống lâu hơn hẳn nên nó sẽ cắn thật: thầy bấm Next
       // giữa lúc một bàn đang bị che là bàn đó sang câu mới với chữ vẫn tàng hình.
       unconcealAll();
+      clearSilentLose();   // Đợt 223 — thầy bấm ‹ › giữa lúc mất màu cũng phải trả lại
       roundIndex = index;
       roundWinner = null;
       cancelPending();
@@ -1533,12 +1567,74 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       el("div", "aw-fight-result-score" + (b >= a ? " is-top" : ""), String(b))
     );
     panel.append(rowEl);
+    const btnRow = el("div", "aw-fight-result-btns");
+    // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — SHOW ANSWERS Ở BẢNG CUỐI TRẬN FIGHT.
+    // Thầy: *"sẽ hiện ra kết quả của 2 bên để xem đúng sai thế nào"*, chốt qua
+    // AskUserQuestion: HAI CỘT SONG SONG, đủ câu hỏi + đáp án từng đội — đúng
+    // hình dạng màn Show answers một-người-chơi sẵn có (core/engine.js's
+    // showReview), nhân đôi. Chỉ hiện nút khi ÍT NHẤT MỘT bàn có gì để xem —
+    // một template chưa khai `review()` (xem TEMPLATE CONTRACT đầu file) thì
+    // không vờ có nút chẳng làm gì (luật tự-chọn-tham-gia của Đợt 143).
+    const rvA = boards[0] && typeof boards[0].review === "function" ? (boards[0].review() || []) : [];
+    const rvB = boards[1] && typeof boards[1].review === "function" ? (boards[1].review() || []) : [];
+    if (rvA.length || rvB.length) {
+      const showBtn = el("button", "aw-btn", "Show answers");
+      showBtn.type = "button";
+      press(showBtn, () => { sound.click(); showFightReview(rvA, rvB, panel); });
+      btnRow.append(showBtn);
+    }
     const again = el("button", "aw-btn aw-btn-primary", "Start again");
     again.type = "button";
     press(again, () => { sound.click(); ctl.restartMatch(); });   // instant on touch-down — core/press.js
-    panel.append(again);
+    btnRow.append(again);
+    panel.append(btnRow);
     wrap.append(panel);
     try { sound.fanfare(); } catch { /* ignore */ }
+  }
+
+  // Đợt 223 — the two-column "Show answers": one call reads BOTH boards'
+  // `review()` at once (see showResult above), so there is nothing left to
+  // resolve here — build the two columns and toggle them over the result
+  // panel, exactly the way core/engine.js's own showReview swaps in over its
+  // summary panel (`rv.remove()` on Close is enough; `panel` never left the
+  // DOM, it was only hidden).
+  function showFightReview(rvA, rvB, resultPanel) {
+    resultPanel.style.display = "none";
+    const rv = el("div", "aw-fight-review");
+    const head = el("div", "aw-fight-rv-head");
+    head.append(el("div", "aw-fight-rv-title", "ANSWERS"));
+    const closeBtn = el("button", "aw-fight-rv-close", icons.close);
+    closeBtn.type = "button";
+    press(closeBtn, () => { sound.click(); rv.remove(); resultPanel.style.display = ""; });
+    head.append(closeBtn);
+    rv.append(head);
+    const cols = el("div", "aw-fight-rv-cols");
+    cols.append(reviewColumn("TEAM LEFT", rvA), reviewColumn("TEAM RIGHT", rvB));
+    rv.append(cols);
+    wrap.append(rv);
+  }
+
+  function reviewColumn(label, rows) {
+    const col = el("div", "aw-fight-rv-col");
+    col.append(el("div", "aw-fight-rv-col-title", label));
+    const list = el("div", "aw-fight-rv-list");
+    if (!rows.length) {
+      list.append(el("div", "aw-fight-rv-empty", "No answers yet"));
+    } else {
+      rows.forEach((r, i) => {
+        const rowEl = el("div", "aw-fight-rv-row");
+        rowEl.append(el("div", "aw-fight-rv-q", `${i + 1}. ${escapeText(r.question)}`));
+        if (r.answered && r.yourCorrect) {
+          rowEl.append(el("div", "aw-fight-rv-a is-correct", escapeText(r.correctText)));
+        } else {
+          rowEl.append(el("div", "aw-fight-rv-a is-wrong", escapeText(r.answered ? r.yourText : "No answer")));
+          rowEl.append(el("div", "aw-fight-rv-a is-correct", escapeText(r.correctText)));
+        }
+        list.append(rowEl);
+      });
+    }
+    col.append(list);
+    return col;
   }
 
   // ----- the fight settings, shown inside the normal Options panel -----
@@ -1567,12 +1663,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     ], cur.fightContent === "different" ? "different" : "scramble",
       v => { draft.fightContent = v; }));
 
-    const cRule = mkCell({ label: "Round rule" });
-    cRule.ctl.append(mkSeg([
-      { value: "lock", label: "First wins", title: "First team wins the word" },
-      { value: "finish", label: "Both finish", title: "Let the other team finish" }
-    ], cur.fightFirstRule === "finish" ? "finish" : "lock",
-      v => { draft.fightFirstRule = v; }));
+    // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — "ROUND RULE" (First wins/Both finish) VÀ
+    // "SLOWER TEAM KEEPS POINTS" BỊ BỎ HẲN, không còn ô nào ở đây nữa. Thầy:
+    // *"nó đã được điều khiển ở chế độ có TIME DELAY hay không rồi"* — TIME
+    // DELAY một mình quyết định cả hai: đúng nấc 0,1s (thấp nhất) = khoá ngay
+    // ("First wins" cũ); mọi nấc cao hơn = không khoá, đội chậm chơi tới khi tự
+    // xong và luôn giữ điểm ("Both finish" + "Slower team keeps points" cũ, xem
+    // lockLoser()/lateScores() ở trên).
 
     // ⭐⭐ Đợt 187 — TIME DELAY. Sits immediately ABOVE Speed bonus because it
     // decides whether Speed bonus exists at all (teacher's own layout: "thêm 1
@@ -1610,7 +1707,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       fmt: pos => (pos >= UNLIM_POS ? "∞" : DELAY_STEPS[pos - 1].toFixed(1) + "s"),
       onInput: pos => { const w = valOf(pos); draft.fightTieWindow = w; syncDelay(w); }
     });
-    cDelay.cell.title = "How long a team that answered second still counts as level. ∞ waits for as long as it takes.";
+    cDelay.cell.title = "How long a team that answered second still counts as level. At the minimum, the slower team is locked out at once; above it, they keep playing until they finish and always keep what they earn. ∞ waits for as long as it takes.";
 
     // Same slider, two shapes. In a pick-turn game there is no TIME DELAY to
     // turn the bonus off with, so it keeps its own "Off" at 0 exactly as before;
@@ -1634,7 +1731,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           onInput: v => { draft.fightSpeedBonus = v; }
         });
 
-    panel.append(cContent.cell, cRule.cell);
+    panel.append(cContent.cell);
     // ⭐ Đợt 188 — Time delay and Speed bonus share ONE column, stacked, because
     // the first decides whether the second does anything (teacher: "time delay và
     // speed bonus luôn cùng 1 cột"). Side by side, the greyed-out Speed bonus read
@@ -1664,22 +1761,12 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       turnsChk.classList.add("is-green");
     }
 
-    // What happens AFTER a round ends, not part of the round rule — it is a
-    // switch like the others, so it joins the shared checkbox block.
-    const lateChk = addCheck("Slower team keeps points", cur.fightLateScores !== false,
-      v => { draft.fightLateScores = v; },
-      { title: "The slower team still keeps its points" });
-
-    // ⭐ Which of the other three controls can still DO anything at this delay.
-    // Nothing here is decoration: a control left on screen that cannot change
-    // what happens is the dead-control trap the opt-in rule of Đợt 143 exists to
-    // stop, and all three of these go dead at one end of the slider or the other.
+    // ⭐ Which other control can still DO anything at this delay. Nothing here
+    // is decoration: a control left on screen that cannot change what happens
+    // is the dead-control trap the opt-in rule of Đợt 143 exists to stop.
     //   • 0.1s   the fast team scores and the slow one is locked, so a bonus for
     //           being fast rewards nothing that is not already rewarded — the
     //           teacher's own reasoning, and he asked for it HIDDEN, not zeroed.
-    //   • ∞      the wait always ends in a lock (see lockLoser/lateScores above),
-    //           so "Round rule" and "Slower team keeps points" have nothing left
-    //           to decide.
     // ⭐ Đợt 188 — GREYED, NOT HIDDEN (teacher). Hiding these made the panel
     // re-flow under the finger that was still on the TIME DELAY slider, and left
     // no sign the controls existed. `.is-locked` dims them and turns off
@@ -1696,10 +1783,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     }
     function syncDelay(w) {
       const bonusOn = speedBonusApplies({ fightTieWindow: w });
-      const unlimited = w === 0;
       setLocked(cBonus.cell, !bonusOn);
-      setLocked(cRule.cell, unlimited);
-      setLocked(lateChk, unlimited);
       // Repair an unreachable value rather than show a lie: the old slider went
       // 0..20 with 0 = "Off", the new one starts at 1, so an act saved with 0
       // has nothing legal to show the moment the bonus becomes reachable.
@@ -1715,20 +1799,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         cBonus.paint(DEFAULT_SPEED_BONUS);
       }
     }
-    // ⭐⭐ Đợt 202 — In turns takes the entire race apart, so all five race
+    // ⭐⭐ Đợt 202 — In turns takes the entire race apart, so all three race
     // controls go dead TOGETHER (why: see the block above `tieMs`).
     // • GREYED, never hidden (Đợt 188): hiding would re-flow the panel under the
     //   finger still resting on this very checkbox, and leave nothing on screen
-    //   to say those five controls exist.
+    //   to say those three controls exist.
     // • ⚠⚠ NOTHING HERE WRITES A VALUE. That is the whole of the teacher's "2 cái
-    //   độc lập": unticking In turns must give back the five settings exactly as
+    //   độc lập": unticking In turns must give back the settings exactly as
     //   they were, and it does so precisely BECAUSE this only ever touches the
     //   LOCK and never the value under it (Đợt 188's own rule, learned when an
     //   earlier version zeroed Speed bonus behind the teacher's back).
     function syncTurns(on) {
-      [cContent.cell, cRule.cell, cDelay.cell, cBonus.cell, lateChk].forEach(n => setLocked(n, on));
-      // Coming back OFF, hand the other four to whatever TIME DELAY says about
-      // them rather than leaving all five live — at ∞, two of them must stay dead.
+      [cContent.cell, cDelay.cell, cBonus.cell].forEach(n => setLocked(n, on));
+      // Coming back OFF, hand Speed bonus to whatever TIME DELAY says about it
+      // rather than leaving it live at every setting.
       if (!on && !pickMode) {
         const w = draft.fightTieWindow === undefined ? cur.fightTieWindow : draft.fightTieWindow;
         syncDelay(w);
@@ -1739,7 +1823,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // syncDelay() there would hide the bonus (or zero it) off a value the teacher
     // has no control on screen to put back.
     if (!pickMode) syncDelay(cur.fightTieWindow);
-    // … and In turns has the last word: it locks all five, on top of whatever
+    // … and In turns has the last word: it locks all three, on top of whatever
     // syncDelay just decided. Order matters, this line must stay after it.
     if (turnsTpl && cur.fightTurns === true) syncTurns(true);
   }

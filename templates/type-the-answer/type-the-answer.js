@@ -681,17 +681,17 @@ const ttaTemplate = {
      * a grade. Making this one case sit still would be the inconsistency, not
      * the rule.
      *
-     * ⭐⭐ Đợt 222 (thầy, 21/8/2026) — ĐƯỜNG NÀY CÒN LÀ "HẾT TIME DELAY TRONG TRẬN".
-     * Trọng tài gọi `timeUp()` (xem `fightCtl.attach`) khi cửa sổ chờ cạn mà bàn này
-     * chưa nộp. Hai khác biệt bắt buộc: BỎ QUA `fightLocked()` (lúc gọi thì
-     * `roundWinner` đã đặt ⇒ chốt đó làm hàm thoát ngay dòng đầu) và KHÔNG tự sang
-     * câu — trận đấu dời cả hai bàn.
+     * ⚠️ FIGHT MODE NEVER CALLS THIS. Đợt 222 briefly routed the referee's
+     * "Time delay window shut" signal through here (a `timeUp()` in
+     * `fightCtl.attach` below); Đợt 223 removed "Round rule" from Options and
+     * with it the only case that lock needed a "treat as wrong" reaction — the
+     * referee now locks that board silently (see core/fight.js's
+     * finalizeSingleWinner/silentLose). This function is single-mode only again.
      */
-    function roundTimeUp(o) {
-      const fromMatch = !!(o && o.fromMatch === true);
+    function roundTimeUp() {
       const it = items[index];
       const st = state[index];
-      if (!it || st.graded || finished || dead || (!fromMatch && fightLocked())) return;
+      if (!it || st.graded || finished || dead || fightLocked()) return;
       st.typed = "";
       st.graded = true;
       st.timedOut = true;
@@ -713,7 +713,6 @@ const ttaTemplate = {
       // các game khác ~1,2s (bay 480+150ms rồi `pulseScoreTo` 530ms) — đo đủ thì
       // phải chờ qua mốc đó, đo sớm là kết luận oan "không trừ điểm".
       clearAutoTimer();
-      if (fromMatch) return;   // Đợt 222 — trọng tài mới là thứ dời cả hai bàn
       const delay = revealShown ? 2600 : (outOfLives ? 1500 : 1400);
       if (outOfLives) {
         autoTimer = setTimeout(() => finish("gameover"), delay);
@@ -1059,22 +1058,18 @@ const ttaTemplate = {
           syncFightLock();
         },
         reveal: revealFightMarks,
-        // ⭐⭐ Đợt 222 — cửa sổ Time delay cạn mà bàn này chưa nộp: đúng đường
-        // "hết giờ = sai" của Đợt 174 (tiếng sai + trừ minusAmount + lộ đáp án).
-        timeUp() { roundTimeUp({ fromMatch: true }); }
+        // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
+        // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
+        // dựng cho single mode, chỉ gọi sớm hơn.
+        review: buildReview
       });
     }
 
-    function finish(reason = "complete") {
-      if (finished) return;
-      const answeredNow = state.filter(s => s.graded).length;
-      if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
-      finished = true;
-      clearAutoTimer();
-      if (reason === "gameover") ttaSound.gameOver(); else ttaSound.complete();
-      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
-      const review = items.map((it, i) => {
+    // Đợt 223 — per-question detail for the "Show answers" review screen,
+    // pulled out of finish() so fightCtl.attach's `review` can hand the SAME
+    // array to the Fight end panel mid-match (before `finished` is ever true).
+    function buildReview() {
+      return items.map((it, i) => {
         const s = state[i];
         return {
           question: it.prompt,
@@ -1089,6 +1084,18 @@ const ttaTemplate = {
           src: it   // `items` is a shallow copy, so `it` IS the content object
         };
       });
+    }
+
+    function finish(reason = "complete") {
+      if (finished) return;
+      const answeredNow = state.filter(s => s.graded).length;
+      if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
+      finished = true;
+      clearAutoTimer();
+      if (reason === "gameover") ttaSound.gameOver(); else ttaSound.complete();
+      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const review = buildReview();
       const answered = state.filter(s => s.graded).length;
       // Deducted score for ranking/summary: +1 per correct, −minusAmount per
       // wrong-and-graded question. Computed HERE from `state` (set synchronously

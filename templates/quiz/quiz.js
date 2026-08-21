@@ -599,21 +599,16 @@ const quizTemplate = {
      * ⚠️ The question is LOCKED (`tile.disabled`) and `settled()` now reports it
      * as dealt with, which is what lets ▷ move on with Allow skip off.
      *
-     * ⭐⭐ Đợt 222 (thầy, 21/8/2026) — CÙNG ĐƯỜNG NÀY CÒN LÀ "HẾT TIME DELAY TRONG
-     * TRẬN". Thầy: *"khi hết time delay, cần báo hiệu giống hệt như chọn sai (âm
-     * thanh, trừ điểm như chọn sai)"* — mà đó đúng là câu Đợt 174 đã viết cho ô
-     * Time each round. Một luật, một chỗ: trọng tài gọi `timeUp()` (xem
-     * `fightCtl.attach` bên dưới), `timeUp()` gọi thẳng vào đây.
-     * ⚠️⚠️ HAI KHÁC BIỆT KHI TRỌNG TÀI GỌI, cả hai đều bắt buộc:
-     *   1. BỎ QUA `fightLocked()`. Lúc trọng tài gọi thì `roundWinner` ĐÃ được đặt
-     *      ⇒ `ctl.isLocked()` trả true ⇒ hàm này thoát ở dòng đầu và không bao giờ
-     *      chạy. (Đã cắn thật khi dựng: bàn im lặng y như cũ.)
-     *   2. KHÔNG tự sang câu / tự kết thúc — trận đấu là thứ dời cả hai bàn.
+     * ⚠️ FIGHT MODE NEVER CALLS THIS. Đợt 222 briefly routed the referee's
+     * "Time delay window shut" signal through here (a `timeUp()` in
+     * `fightCtl.attach` below); Đợt 223 removed "Round rule" from Options and
+     * with it the only case that lock needed a "treat as wrong" reaction — the
+     * referee now locks that board silently (see core/fight.js's
+     * finalizeSingleWinner/silentLose). This function is single-mode only again.
      */
-    function roundTimeUp(o) {
-      const fromMatch = !!(o && o.fromMatch === true);
+    function roundTimeUp() {
       const st = state[index];
-      if (settled(st) || finished || ending || (!fromMatch && fightLocked())) return;   // already resolved
+      if (settled(st) || finished || ending || fightLocked()) return;   // already resolved
       const q = questions[index];
       st.timedOut = true;
       st.correct = false;
@@ -632,11 +627,6 @@ const quizTemplate = {
         autoTimer = setTimeout(() => finish("gameover"), 1500);
         return;
       }
-      // ⛔ Đợt 222 — TRONG TRẬN THÌ DỪNG Ở ĐÂY. `advanceRound()` của trọng tài mới
-      // là thứ dời câu, và nó dời CẢ HAI bàn cùng lúc; để hàng dưới chạy là bàn này
-      // tự bỏ đi một mình rồi hai khung lệch câu (đúng lý do `choose()` cũng chặn
-      // hai nhánh y hệt bằng `!fightCtl`).
-      if (fromMatch) return;
       if (state.every(settled)) { autoTimer = setTimeout(() => finish("complete"), 1500); return; }
       // AUTO NEXT — the teacher's choice when it is OFF is to STAY here, locked,
       // until they press ▷ themselves. So there is no `else`: doing nothing is
@@ -808,9 +798,10 @@ const quizTemplate = {
           syncFightLock();
         },
         reveal: revealFightMarks,
-        // ⭐⭐ Đợt 222 — cửa sổ Time delay vừa cạn mà bàn này chưa trả lời: đúng
-        // đường "hết giờ = sai" của Đợt 174, không phải một luật thứ hai.
-        timeUp() { roundTimeUp({ fromMatch: true }); }
+        // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
+        // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
+        // dựng cho single mode, chỉ gọi sớm hơn.
+        review: buildReview
       });
     }
 
@@ -831,18 +822,11 @@ const quizTemplate = {
       }
     }
 
-    // `reason` is "complete" (everything answered / Submit answers / the ✓ button)
-    // or "gameover" (ran out of lives). It picks the end SOUND and the title on
-    // the celebration screen; everything else is identical.
-    function finish(reason = "complete") {
-      if (finished) return;
-      finished = true;
-      clearAutoTimer();
-      if (reason === "gameover") quizSound.gameOver(); else quizSound.complete();
-      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
-      // per-question detail for the "Show answers" review screen
-      const review = questions.map((q, i) => {
+    // Đợt 223 — per-question detail for the "Show answers" review screen,
+    // pulled out of finish() so fightCtl.attach's `review` can hand the SAME
+    // array to the Fight end panel mid-match (before `finished` is ever true).
+    function buildReview() {
+      return questions.map((q, i) => {
         const s = state[i];
         const correctAns = q.answers.find(a => a.correct);
         return {
@@ -854,6 +838,19 @@ const quizTemplate = {
           src: q.src
         };
       });
+    }
+
+    // `reason` is "complete" (everything answered / Submit answers / the ✓ button)
+    // or "gameover" (ran out of lives). It picks the end SOUND and the title on
+    // the celebration screen; everything else is identical.
+    function finish(reason = "complete") {
+      if (finished) return;
+      finished = true;
+      clearAutoTimer();
+      if (reason === "gameover") quizSound.gameOver(); else quizSound.complete();
+      const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const review = buildReview();
       const answered = state.filter(s => s.chosen !== null).length;
       const raw = { correct, incorrect: total - correct, total, perQuestion, review, answered };
       // With Points off on, rank + summary use the penalised score (may be negative).
