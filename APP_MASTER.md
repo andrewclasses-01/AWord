@@ -11,7 +11,7 @@
 > Cập nhật lần cuối: **21/8/2026 (Đợt 219)** — ⭐⭐ **CHẤM TÍCH KHÔNG SÓT · TẠM DỪNG LÀ DỪNG TẤT CẢ ·
 > ANAGRAM CHE LÀ XOÁ HẲN CHỮ**. Thầy giao 3 việc. Sửa **5 file**: `core/showdown-review.js` ·
 > `core/app.css` · `core/engine.js` · `core/fight.js` · `templates/anagram/anagram.css`.
-> ✅ **THẦY DUYỆT** (*"ok build"*) — commit `__HASH__`, **ĐÃ PUSH + LIVE**.
+> ✅ **THẦY DUYỆT** (*"ok build"*) — commit `d1d39c1`, **ĐÃ PUSH + LIVE**.
 > Đọc khối **Đợt 219** đầu `GHI CHU DU AN.md`.
 > - **(1) Chấm tròn bên kia phải ẩn ở Recent results.** ⚠️⚠️ **KHÔNG tái hiện được** (đo **18/18** đúng
 >   đường thật; mã băm `showdown-setup.js` live trùng khít bản máy) ⇒ thầy chốt *"cứ vá phòng thủ"*.
@@ -40,6 +40,15 @@
 >   ngược khoá đụng nhau · lưới Đợt 217 cũ trượt **đúng 2 phép** mã hoá hành vi cũ (đã cập nhật theo
 >   luật mới), 16/18 còn lại nguyên vẹn. ⬜ **Cần mắt/tay thầy**: bề rộng thanh chờ lúc hold/go (pane
 >   ẩn đóng băng transition) · ca fullscreen của Recent results · nhìn thật ván Anagram Fight trên 86".
+> - ✅ **ĐÃ LIVE**: **5/5 mã băm SHA-256 khớp** + **20/20 phép hỏi trên CHÍNH BẢN LIVE**; triển khai
+>   Pages `d1d39c1` trạng thái **success** (tra `gh api …/deployments/{id}/statuses`, không tin mã 200).
+>   ⚠️⚠️ **Hai phép hỏi đầu báo TRƯỢT OAN, cả hai là lỗi của PHÉP ĐO** — sẽ cắn lại y hệt ở đợt sau:
+>   (a) **đọc `color` ngay sau khi gắn `.is-concealed` ra MÀU CŨ**, vì luật che khai
+>   `transition: color .18s` mà **pane ẩn thì Chromium ĐÓNG BĂNG transition**, còn `text-shadow`
+>   không có transition nên tắt ngay ⇒ **hai nửa của CÙNG MỘT LUẬT báo hai kết quả trái ngược**;
+>   cách đo đúng là **dựng phần tử SINH RA ĐÃ mang trạng thái cần đo**. (b) **grep mã nguồn trúng luôn
+>   CHÚ THÍCH** (chú thích trong `revealBoards()` có nhắc tên `unconcealAll()`) — phải bỏ dòng `//`
+>   trước khi tìm, hoặc khớp đúng khuôn một câu lệnh.
 >
 > ---
 > Trước đó: **20/8/2026 (Đợt 218 + 218b + 218c)** — ⭐⭐ **KHUNG QUICK ACCESS Ở TRANG CHỦ**:

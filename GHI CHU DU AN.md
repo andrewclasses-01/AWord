@@ -23,7 +23,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 >
 > Sửa **5 file**: `core/showdown-review.js` · `core/app.css` · `core/engine.js` · `core/fight.js` ·
 > `templates/anagram/anagram.css`. 0 lỗi console. ✅ **THẦY DUYỆT** (*"ok build"*) — commit
-> `__HASH__`, **ĐÃ PUSH**. Xem mục **ĐÃ LIVE** ở cuối khối này.
+> `d1d39c1`, **ĐÃ PUSH**. Xem mục **ĐÃ LIVE** ở cuối khối này.
 >
 > ⚠️ **Hai lựa chọn thầy chốt qua AskUserQuestion**: (a) việc 3 nửa sau áp dụng cho **CẢ 5 template**
 > có che bài, không riêng Anagram; (b) *"dừng tất cả"* bao gồm **cả đồng hồ trọng tài** của Fight.
@@ -226,6 +226,40 @@ hơn hẳn ⇒ bấm Next giữa lúc một bàn đang bị che là bàn đó **
    đúng thì đã chứng minh gián tiếp bằng **thời điểm sang câu** (T+9,2s vs T+8,1s).
 2. Ca **fullscreen** của Recent results (xem việc 1).
 3. Nhìn thật một ván Anagram Fight trên màn 86" xem "ô trống" có đọc ra là ô trống không.
+
+### ✅ ĐÃ LIVE — commit `d1d39c1`, đối chiếu trên `aword.andrewclasses.com`
+
+Triển khai Pages: `d1d39c1` · trạng thái **success** (tra bằng `gh api …/deployments/{id}/statuses`,
+không tin mã 200 — bẫy đã ghi ở Đợt 214).
+
+- **5/5 mã băm SHA-256 khớp** (đã `tr -d '\r'` cả hai đầu theo bẫy CRLF Đợt 213b):
+  `showdown-review.js` `2c55440ffd51` · `app.css` `27e3aabaa648` · `engine.js` `fea9aa8a4cdb` ·
+  `fight.js` `c61cb414a0e3` · `anagram.css` `e18df1852d53`.
+- **20/20 phép hỏi chạy trên CHÍNH BẢN LIVE**: phễu dựng từ mô đun live — tích trái ⇒ chấm phải ẩn
+  bằng **cả ba cách** (`hidden/0/none`), khoá rỗng ⇒ bậc lùi **tên viết thường** cho hai khoá riêng,
+  hàng 0 không bị hàng 1 làm sai lệch · CSS Anagram live — ô gốc **và** ô đã điền đều
+  `rgba(0,0,0,0)` + `text-shadow: none` khi che, dấu ✓/✗ to `opacity 0`, và **không che thì vẫn
+  trắng + vẫn có bóng** (đối chứng ngược) · mã nguồn live — thân `revealBoards()` **không còn** lệnh
+  gỡ che, còn `advanceRound()` · `endMatch()` · `boardMoved()` thì **có**; `fight.js` có
+  `setRefPaused`/`cancelPending`/`armPending`; `engine.js` có `playPaused`/`syncRelay`, cả `idleTick`
+  lẫn `roundTick` đều hỏi `playPaused()`, `runWaitBar` có hai nhịp `hold`/`go`.
+
+#### ⚠️ HAI PHÉP HỎI ĐẦU TIÊN BÁO "TRƯỢT" OAN — cả hai là lỗi của PHÉP ĐO, không phải của bản live
+
+Ghi lại vì cả hai sẽ cắn lại y hệt ở đợt sau:
+
+1. ⛔⛔ **Đọc `color` ngay sau khi gắn `.is-concealed` thì ra MÀU CŨ.** Chính luật che khai
+   `transition: color .18s ease`, mà **pane thử nghiệm bị ẩn thì Chromium ĐÓNG BĂNG transition** —
+   nên `getComputedStyle` trả về **giá trị ĐẦU** (trắng) và đứng đó mãi, kể cả chờ 0,4 giây.
+   `text-shadow` không có transition nên nó tắt ngay ⇒ **hai nửa của CÙNG MỘT LUẬT báo hai kết quả
+   trái ngược**, trông y như CSS hỏng. ⭐ Cách đo đúng: **dựng phần tử ĐÃ mang sẵn trạng thái cần
+   đo** (sinh ra đã bị che) — không có transition nào để mà đóng băng.
+2. ⚠️ **Grep chuỗi thô trên mã nguồn trúng luôn CHÚ THÍCH.** Phép hỏi *"`revealBoards()` không còn
+   `unconcealAll()` chứ?"* báo TRƯỢT vì chú thích em vừa viết **trong chính hàm đó** có nhắc tên hàm
+   ("`unconcealAll()` ĐÃ RỜI KHỎI ĐÂY"). Phải **bỏ dòng `//` trước rồi mới tìm**, hoặc tìm đúng khuôn
+   một câu lệnh (`/^\s*unconcealAll\(\);\s*$/m`).
+
+---
 
 📌 **Ghi lại một chi tiết đo được, KHÔNG sửa ở đợt này**: mở **cả** ☰ Menu **lẫn** Options rồi đóng
 Menu thì bàn 0 **giữ lại tấm che sân** của Menu (đúng luật — nó vẫn đang bị dừng), nên nửa màn bên 0
