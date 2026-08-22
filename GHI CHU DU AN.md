@@ -5,6 +5,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 232 (22/8/2026) — ⭐ BỐ CỤC MỚI CHO PDF ĐÁP ÁN: MỖI CÂU 1 DÒNG + THỜI GIAN, BỎ TEAM X — 🟢 CHỜ THẦY XEM
+
+Thầy gửi ảnh chụp bố cục màn hình xem trực tiếp (`renderReviewList`, `core/showdown-review.js`) và
+nói đó là bố cục thầy muốn cho PDF đáp án (`buildDetailsContent`, `core/showdown-export.js`) — vốn
+trước giờ vẽ khác hẳn: câu hỏi một dòng, đáp án xuống dòng dưới.
+
+**Sửa `buildDetailsContent`:**
+- **Đầu mỗi HS** — bỏ hẳn `Team X`; 4 dòng thống kê có NHÃN CHỮ (khác màn hình chỉ có icon + số,
+  vì giấy in không có chú giải màu): *"Tổng thời gian xử lý: ⟨mm:ss,cc⟩"* (chỉ hiện khi `b.hasTime`,
+  y hệt luật ẩn của tally trên màn) · *"Tổng số câu đúng/sai: ⟨right⟩/⟨wrong⟩"* · *"Tỷ lệ xử lý đúng:
+  ⟨pct⟩%"* (`pctOf(b)`, ẩn khi null) · **MỚI HẲN — "Xếp hạng: x/y"**: `ranked` truyền vào hàm này
+  ĐÃ LÀ CẢ TRẬN (`matchBlocks()` gộp mọi đội rồi `rankBlocks()` sắp hạng — xem
+  `core/showdown-setup.js`), nên `x = i+1`, `y = ranked.length`, không cần tính hay tra thêm gì.
+- **Mỗi câu hỏi = 1 dòng** — dựng lại theo đúng khuôn `.aw-sd-rv-q`/`.aw-sd-rv-body` trên màn: số thứ
+  tự bên trái, `display:grid;grid-template-columns:1.5fr 1fr` để câu hỏi (trái) và nhãn đáp án ✓/✗
+  (phải) đứng cùng hàng, rồi **thời gian riêng của câu đó ở tận cùng bên phải** (`r.roundMs`, ẩn nếu
+  null — cùng luật `:empty` như `.aw-sd-rv-qtime`). Không còn cảnh câu hỏi một dòng, đáp án dòng dưới.
+- Hàm mới `statEl(label, valueHtml)` ghép nhãn tiếng Việt (chữ thường, `textContent`-an toàn vì là
+  chữ tĩnh) với giá trị tô màu qua `innerHTML` — `valueHtml` LUÔN chỉ là số/`fmtRoundMs()`, không bao
+  giờ chứa tên HS hay câu hỏi (giữ đúng luật `textContent`-only ghi ở đầu file cho nội dung của
+  thầy/HS).
+- Import thêm `fmtRoundMs` từ `core/showdown.js` (đã có sẵn, dùng chung với màn hình).
+
+**Đã thử bằng bản in thật** (Chrome print preview, localhost bản sửa, dữ liệu giả 25 câu +
+`roundMs` ngẫu nhiên): tiêu đề "1. AN NHIÊN", dòng thống kê đủ 4 mục có nhãn, mỗi câu một dòng đúng
+như ảnh thầy gửi, thời gian câu lẻ hiện đúng cột bên phải.
+
+**Hai điểm hỏi lại thầy qua AskUserQuestion trước khi đẩy — cả hai đều ĐÃ ĐÚNG BẢN CODE, không sửa
+gì thêm:** (1) trận không bật đồng hồ thì ẨN HẲN dòng/cột thời gian, không in dấu "-"; (2) "xếp hạng"
+tính theo CẢ TRẬN (gộp hai đội), không tách riêng từng đội.
+
+---
+
 ## Đợt 231 (22/8/2026) — 🐞 VÁ LỖI: XUẤT PDF ĐÁP ÁN (DETAILS) RA FILE TOÀN TRANG TRẮNG — 🟢 CHỜ THẦY BẤM TAY THẬT
 
 Thầy báo: xuất PDF phần answers ở Showdown thì Nitro Pro nói *"could not be opened because it's

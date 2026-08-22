@@ -30,7 +30,7 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { pctOf, pctBand, shortenName } from "./showdown.js";
+import { pctOf, pctBand, shortenName, fmtRoundMs } from "./showdown.js";
 import { fitPodiumNames } from "./showdown-review.js";
 
 const PCT_COLOR = { "is-p0": "#dc2626", "is-p1": "#ca8a04", "is-p2": "#ea580c", "is-p3": "#2563eb", "is-p4": "#16a34a" };
@@ -212,6 +212,15 @@ function buildRankSheet(ranked, titleText) {
 // this sheet uses a flat 9mm, several times that share of the page, on purpose.
 const DETAIL_BLOCK_GAP_MM = 9;
 
+/** One "label: value" pair in a pupil's stats line. `valueHtml` is always
+ *  either a plain number or a number wrapped in a colour `<span>` — never
+ *  teacher/pupil text — so `innerHTML` here carries no untrusted content. */
+function statEl(label, valueHtml) {
+  const s = el("span");
+  s.innerHTML = `${label} <b>${valueHtml}</b>`;
+  return s;
+}
+
 function buildDetailsContent(ranked, titleText) {
   const root = el("div");
   root.style.cssText = "width:100%;box-sizing:border-box;font-family:'Baloo 2','Segoe UI',Arial,sans-serif;color:#23303e;";
@@ -221,6 +230,18 @@ function buildDetailsContent(ranked, titleText) {
     "margin-bottom:7mm;overflow-wrap:break-word;";
   title.textContent = titleText;                                 // teacher's own words: textContent only
   root.append(title);
+
+  // ⭐ Đợt 232 (teacher, 22/8/2026) — the printed sheet now reads the header the
+  // same way the on-screen review does (core/showdown-review.js's
+  // renderReviewList): no more "Team X" tag, and every number spelled out with
+  // its own Vietnamese label instead of a bare icon — paper has no colour
+  // legend to lean on the way the projector screen does.
+  // "Xếp hạng" is this pupil's place in `ranked` itself: the array handed to
+  // this function is already the WHOLE CLASS, already sorted by
+  // core/showdown.js's rankBlocks() (matchBlocks() in core/showdown-setup.js
+  // merges every team before ranking), so `i` IS the rank and `ranked.length`
+  // IS the class size — nothing further to compute or look up.
+  const classSize = ranked.length;
 
   ranked.forEach((b, i) => {
     const block = el("div");
@@ -232,43 +253,49 @@ function buildDetailsContent(ranked, titleText) {
     block.style.breakInside = "avoid";
 
     const head = el("div");
-    head.style.cssText = "display:flex;align-items:baseline;justify-content:space-between;gap:6mm;margin-bottom:2.6mm;";
-    const who = el("span");
-    who.style.cssText = "font-weight:800;font-size:12.5px;min-width:0;overflow-wrap:break-word;";
+    head.style.cssText = "margin-bottom:2.2mm;";
+
+    const who = el("div");
+    who.style.cssText = "font-weight:800;font-size:12.5px;overflow-wrap:break-word;margin-bottom:1.4mm;";
     who.textContent = `${i + 1}. ${b.name}`;                      // pupil's own name: textContent only
-    const tally = el("span");
-    tally.style.cssText = "font-weight:800;font-size:10.5px;white-space:nowrap;display:inline-flex;gap:6px;align-items:center;flex:0 0 auto;";
-    const ok = el("span");
-    ok.style.color = "#2ec27e";
-    ok.textContent = `${b.right} ✓`;
-    const bad = el("span");
-    bad.style.color = "#e03131";
-    bad.textContent = `${b.wrong} ✗`;
-    tally.append(ok, bad);
+    head.append(who);
+
+    const stats = el("div");
+    stats.style.cssText = "display:flex;flex-wrap:wrap;gap:1mm 5mm;font-size:9px;color:#6b7a90;font-weight:700;";
+    // No round clock this game (`!b.hasTime`) ⇒ no time line — same rule the
+    // on-screen tally uses, rather than printing "0:00" for a number that was
+    // never actually measured.
+    if (b.hasTime) {
+      stats.append(statEl("Tổng thời gian xử lý:", `<span style="color:#2563eb">${fmtRoundMs(b.ms)}</span>`));
+    }
+    stats.append(statEl("Tổng số câu đúng/sai:",
+      `<span style="color:#2ec27e">${b.right}</span>/<span style="color:#e03131">${b.wrong}</span>`));
     const pct = pctOf(b);
     if (pct !== null) {
-      const pc = el("span");
-      pc.style.color = pctColor(pct);
-      pc.textContent = pct + "%";
-      tally.append(pc);
+      stats.append(statEl("Tỷ lệ xử lý đúng:", `<span style="color:${pctColor(pct)}">${pct}%</span>`));
     }
-    head.append(who, tally);
+    stats.append(statEl("Xếp hạng:", `${i + 1}/${classSize}`));
+    head.append(stats);
     block.append(head);
 
+    // ⭐ Đợt 232 — one row PER QUESTION, answer(s) at the tail of the SAME row
+    // (same grid split as `.aw-sd-rv-q`/`.aw-sd-rv-body` on screen: clue on the
+    // left, answer mark(s) on the right, this question's own time past both),
+    // replacing the old stacked "question line, then a line of marks below it".
     (b.rows || []).forEach(r => {
       const line = el("div");
-      line.style.cssText = "display:flex;gap:3mm;font-size:9.5px;line-height:1.5;margin-bottom:1.6mm;";
+      line.style.cssText = "display:flex;align-items:center;gap:3mm;font-size:9.5px;line-height:1.4;margin-bottom:2mm;";
       const num = el("span");
       num.style.cssText = "flex:0 0 auto;width:5.5mm;color:#8b93a1;font-weight:700;";
       num.textContent = String(r.n);
       const body = el("div");
-      body.style.cssText = "flex:1 1 auto;min-width:0;";
+      body.style.cssText = "flex:1 1 auto;min-width:0;display:grid;grid-template-columns:1.5fr 1fr;gap:3mm;align-items:center;";
       const clue = el("div");
-      clue.style.cssText = "font-weight:700;margin-bottom:0.8mm;";
+      clue.style.cssText = "font-weight:700;";
       clue.textContent = r.question;                             // the act's own text: textContent only
       body.append(clue);
       const ans = el("div");
-      ans.style.cssText = "display:flex;flex-wrap:wrap;gap:2.4mm;";
+      ans.style.cssText = "display:flex;flex-wrap:wrap;gap:1.6mm;";
       if (r.correct) {
         ans.append(mark("is-ok", icons.check, r.correctText));
       } else {
@@ -277,6 +304,15 @@ function buildDetailsContent(ranked, titleText) {
       }
       body.append(ans);
       line.append(num, body);
+      // A game played with the round clock off has no `roundMs` on any row —
+      // leave the column out rather than print a false "0:00" for it (same
+      // `:empty` idea as `.aw-sd-rv-qtime` on screen).
+      if (r.roundMs != null) {
+        const qtime = el("span");
+        qtime.style.cssText = "flex:0 0 auto;min-width:11mm;text-align:right;font-weight:800;color:#10151b;";
+        qtime.innerHTML = fmtRoundMs(r.roundMs);
+        line.append(qtime);
+      }
       block.append(line);
     });
 
