@@ -129,13 +129,15 @@
 .aw-stage.act-running_word,
 .aw-zoomed:has(.aw-stage.act-running_word) { touch-action: manipulation; }
 
-/* Below-stage toolbar: Assignment/Template/Print don't apply to a live 2-team
-   match (Print happens from the game's own setup screen — rw-print.js) —
-   hidden from the very first paint too, same `.act-running_word` trick, so
-   they never flash on before disappearing. Edit/Home/Style/Options are left
-   alone. */
+/* Below-stage toolbar: Assignment/Print don't apply to a live 2-team match
+   (Print happens from the game's own setup screen — rw-print.js) — hidden
+   from the very first paint too, same `.act-running_word` trick, so they
+   never flash on before disappearing. Edit/Home/Style/Options are left alone.
+   (Đợt 228 — Template used to be listed here too, but core/engine.js's
+   `templateSwitchAvailable` already keeps this mode's Options panel from
+   building a "current template" button at all, so there is nothing left for
+   this stylesheet to hide.) */
 .aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Set assignment"],
-.aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Template"],
 .aw-stage.act-running_word ~ .aw-below .aw-toolbtn[title="Print"] { display: none; }
 
 /* The slogan rides the CENTRE of the bottom bar — the same row as the Menu

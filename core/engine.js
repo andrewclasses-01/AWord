@@ -31,12 +31,12 @@ import { formatTime, el, ordinal, fmtSecsParts } from "./utils.js";
 import { press, tapOrHold } from "./press.js";
 import { icons } from "./icons.js";
 
-// ⭐ Đợt 192 — games that never offer "change template", so the toolbar builds
-// its merged Template/Style button as a STYLE button instead (see `tplLocked`).
-// ⚠ KEEP IN SYNC with the two `[title="Template"]` rules in
-// templates/running-word/running-word.css and templates/running-team/running-team.css.
-// Both games print their sheet from their own setup screen and are a fixed
-// lesson shape, so switching template out from under them was never on offer.
+// ⭐ Đợt 192, revised Đợt 228 — games that never offer "change template". Read
+// by `templateSwitchAvailable` (see where it is computed, and where
+// buildOptionsPanel's footer button reads it) to decide whether that button
+// offers the game picker (tap) + Style (hold), or is Style outright. Both
+// games print their sheet from their own setup screen and are a fixed lesson
+// shape, so switching template out from under them was never on offer.
 // ⚠ MODULE SCOPE ON PURPOSE. Declared inside startGame() next to RUN_ORDER it
 // sat ~35 lines BELOW the button that reads it, and `const` is not hoisted: every
 // mount threw "Cannot access before initialization" and took the whole toolbar
@@ -179,6 +179,14 @@ const THEME_SWATCH = {
 // because it has to outlive the play that set it — and it is read-and-cleared,
 // so it can only ever fire for the next mount, never a later one.
 let openShowdownOnMount = false;
+
+// ⭐ Đợt 228 — the same one-shot handover, for picking a new game from INSIDE
+// the Options panel's inline Template picker. That switch tears the whole
+// mount down (doSwitchTemplate() ends in cleanupAll()+startGame()), so this is
+// how the fresh mount knows to open its OWN Options panel right away instead
+// of quietly landing on the READY screen — thầy, 22/8/2026: "chọn Template
+// xong thì Options không đóng mà chuyển sang options của template mới".
+let openOptionsOnMount = false;
 
 // Đợt 190 — the longest a RUNNING-mode entry may be and still count as a "word".
 // 24 characters clears the longest real entries in the teacher's pools
@@ -1157,8 +1165,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   inner.append(topbar, playArea, bottombar);
 
-  // ----- Below the stage: TITLE (left) · Options/Template/Style (center) ·
-  // Edit/Assignment/Print (right) -----
+  // ----- Below the stage: TITLE (left) · Options/Style/Mode (center) ·
+  // Edit/Assignment/Print (right) — Đợt 228 dropped the standalone Template
+  // button from this row; Change Template now lives inside the Options panel. -----
   // The specific game title sits on the SAME row as the tool buttons (the
   // instruction line under the stage was removed per the teacher's request).
   const belowLeft = el("div", "aw-below-left");
@@ -1166,30 +1175,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   const belowCenter = el("div", "aw-below-center");
   const optionsBtn = toolBtn(icons.options, "Options");
-  // ⭐⭐ Đợt 192 (thầy: "Tích hợp thẳng tính năng nút Style vào nút Template, mở
-  // bằng cách nhấn giữ. Bỏ hẳn nút style.") — ONE BUTTON, TWO PANELS: tap opens
-  // Template, press-and-hold opens Style. See core/press.js's `tapOrHold`.
-  //
-  // ⚠⚠ THE TRAP THIS HAD TO SOLVE, and why the button has two identities.
-  // THREE stylesheets hide the toolbar button `[title="Template"]`:
-  //     core/app.css                            — `.aw-stage.mode-ipa`
-  //     templates/running-word/running-word.css — `.aw-stage.act-running_word`
-  //     templates/running-team/running-team.css — `.aw-stage.act-running_team`
-  // and both template stylesheets say in as many words that "Edit/Home/STYLE/
-  // Options are left alone". Hang Style off the Template button and those three
-  // rules stop hiding one feature and start hiding TWO — Style would simply
-  // cease to exist in IPA mode and in both Running games, with nothing on screen
-  // to say why. So where template switching does not apply, this is built as a
-  // STYLE button outright: its own icon, and `title="Style"`, which is what
-  // makes all three selectors miss it. Nothing is reachable only by a gesture
-  // that the surrounding CSS has hidden.
-  // ⚠ Keep the title of the OTHER branch exactly "Template" — those three
-  // selectors match on it. The "hold for Style" hint lives inside the panel
-  // (buildTemplatePanel), never in this attribute.
-  const tplLocked = playMode === "ipa" || NO_TEMPLATE_TYPES.has(activity.type);
-  const templateBtn = tplLocked
-    ? toolBtn(icons.style, "Style")
-    : toolBtn(icons.template, "Template");
+  // ⭐⭐ Đợt 228, revised same đợt (thầy, 22/8/2026: "bỏ luôn nút Template cũ bên
+  // ngoài" rồi "style cũng đưa luôn vào trong nút Template bên trong options, mở
+  // bằng cách nhấn giữ") — BOTH Template-switching AND Style moved inside the
+  // Options panel, onto its "current template" button (see buildOptionsPanel
+  // below: tap = the game picker, hold = Style — the exact tap/hold pair this
+  // toolbar used to carry, Đợt 192, just relocated). So there is no separate
+  // Template button OR Style button out here any more — only Options and Mode.
+  // ⚠️ `templateSwitchAvailable` (renamed from the old `tplLocked`, inverted) is
+  // read further down by buildOptionsPanel to decide WHICH GESTURE that inline
+  // button offers, never whether Style is reachable: Style must survive in
+  // EVERY mode (IPA, Running word, Running team included) exactly as it did
+  // before, so the button still gets built there when this is false — it just
+  // shows "Style" outright, plain tap, no picker to hold FOR. See where it is
+  // built for the actual branch.
+  const templateSwitchAvailable = !(playMode === "ipa" || NO_TEMPLATE_TYPES.has(activity.type));
   // ⭐⭐ MODE (Đợt 158) — ONE button for all three modes (teacher, 14/8/2026:
   // "tích hợp cả single mode / fight mode / showdown mode vào chung 1 nút bấm
   // thôi, tránh việc quá nhiều nút bấm"). It replaces the two buttons this row
@@ -1304,7 +1304,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // keeps it findable. Do not restore the centre seat without checking with the
   // teacher — it was their call both times.
   // Đợt 192 — THREE buttons now, not four: Style folded into Template above.
-  belowCenter.append(optionsBtn, templateBtn, modeBtn);
+  belowCenter.append(optionsBtn, modeBtn);
   // The other half of the Fight → Showdown handover (see `openShowdownOnMount`).
   // Read-and-clear FIRST, so a board that cannot honour it (no button, or we
   // somehow landed back in a match) still consumes the flag instead of leaving
@@ -1316,6 +1316,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // toolbar it is about to hang the panel under.
       setTimeout(() => { if (modeBtn.isConnected) openToolPanel(modeBtn, buildShowdownPanelHost); }, 0);
     }
+  }
+
+  // The other half of the inline-picker handover (see `openOptionsOnMount`) —
+  // read-and-clear FIRST for the same reason as above: a mount that cannot
+  // honour it (button missing) must still consume it rather than leave it
+  // armed for whatever the teacher opens next.
+  if (openOptionsOnMount) {
+    openOptionsOnMount = false;
+    setTimeout(() => { if (optionsBtn.isConnected) openToolPanelFor(optionsBtn, buildOptionsPanel); }, 0);
   }
 
   // ---- THE PICKER (teacher's design, 14/8/2026) ----------------------------
@@ -2582,12 +2591,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // grid columns are always the same comfortable size — see app.css. Set
     // BEFORE buildContent so anything that measures itself while building
     // (an accordion reading scrollHeight) reads the final width.
-    // Đợt 192 — WHICH panel is up, not just which button opened it. One button
-    // now leads to two different panels (Template / Style), so "is this already
-    // open?" can no longer be answered by the button alone — openToolPanelFor().
+    // Đợt 192 — WHICH panel is up, not just which button opened it. The Mode
+    // button still leads to more than one screen (picker / confirm), so "is
+    // this already open?" can't be answered by the button alone — see
+    // openToolPanelFor(). (Đợt 228 — Template no longer has a panel of its own
+    // to disambiguate against: picking a game now happens INSIDE Options.)
     activeToolBuild = buildContent;
     toolPanelEl.classList.toggle("is-opts", buildContent === buildOptionsPanel);
-    toolPanelEl.classList.toggle("is-tpl", buildContent === buildTemplatePanel);
     // Đợt 156 — the Showdown table states its own width for the same reason
     // `is-opts` does: its body is a fixed 560px, and the panel's default
     // `max-width: 580px` (with 40px of padding inside it) would squeeze it.
@@ -2744,17 +2754,6 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     onTap: () => openToolPanelFor(optionsBtn, buildOptionsPanel),
     onHold: () => { if (canEditNow()) openToolPanelFor(optionsBtn, buildEditConfirmPanel); }
   });
-  // Đợt 192 — tap = Template, hold = Style (and where template switching does
-  // not apply the button IS Style, so a plain tap must reach it — see tplLocked).
-  if (tplLocked) {
-    templateBtn.onclick = () => openToolPanelFor(templateBtn, buildStylePanel);
-  } else {
-    tapOrHold(templateBtn, {
-      onTap: () => openToolPanelFor(templateBtn, buildTemplatePanel),
-      onHold: () => openToolPanelFor(templateBtn, buildStylePanel)
-    });
-  }
-
   // ⭐⭐ Đợt 195 — MODE: tap = the picker, PRESS-AND-HOLD = "Go home?".
   // ⚠️ Never switches mode on the bare tap (teacher, 12/8/2026): a stray tap used
   // to drop a running match straight back to single mode with no way back. That
@@ -3249,9 +3248,56 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       switchesBuilt = true;
     }
 
+    // ----- FOOTER: "current template" button (Đợt 228) + Apply -----
+    // Merged in from the old standalone Template toolbar panel (thầy,
+    // 22/8/2026: "bỏ luôn nút Template cũ bên ngoài", then "style cũng đưa luôn
+    // vào trong nút Template bên trong options, mở bằng cách nhấn giữ"). One
+    // button now carries the exact tap/hold pair the toolbar's merged
+    // Template+Style button carried before Đợt 228 (see core/press.js's
+    // `tapOrHold`, same helper): TAP swaps this panel's body for the game
+    // picker, HOLD swaps it for Style — same panel, same popover, never
+    // closed. Picking a game there hands off to doSwitchTemplate() without
+    // this footer doing anything else; picking a theme in Style applies live,
+    // same as it always has.
+    // `bodyView` tracks which of the three bodies is showing so a second tap
+    // (or the picker/Style's own close button) knows to swap back to
+    // `buildBody` rather than just toggling blindly.
+    let bodyView = "options", switching = false, tplBtn = null;
+    function showBody(view) {
+      if (bodyView === view) return;
+      bodyView = view;
+      if (tplBtn) tplBtn.classList.toggle("is-open", view !== "options");
+      const builder = view === "template" ? buildTemplatePickerBody
+                     : view === "style" ? buildStyleBody
+                     : buildBody;
+      swapContents(bodyHost, builder, () => { if (toolPanelEl) capPanelHeight(buildOptionsPanel); });
+    }
+    const footWrap = el("div", "aw-opt-foot");
+    // ⚠️ ALWAYS built, unlike the old `if (templateSwitchAvailable)` gate —
+    // Style must stay reachable in EVERY mode (IPA, Running word, Running
+    // team included), exactly as the toolbar button guaranteed before. When
+    // Change Template does not apply here, this button IS Style outright:
+    // its own icon, plain tap, nothing to hold for — the same fallback
+    // `tplLocked` used to give the toolbar button, just relocated.
+    tplBtn = el("button", "aw-opt-tplbtn");
+    tplBtn.type = "button";
+    if (templateSwitchAvailable) {
+      tplBtn.append(
+        el("span", "aw-opt-tplbtn-icon", templateIcon(icons, activity.type)),
+        el("span", "aw-opt-tplbtn-name", escapeText(templateLabel(activity.type)))
+      );
+      tplBtn.title = "Tap to change template · hold for Style";
+      tapOrHold(tplBtn, {
+        onTap: () => { sound.click(); showBody(bodyView === "template" ? "options" : "template"); },
+        onHold: () => { sound.click(); showBody("style"); }
+      });
+    } else {
+      tplBtn.append(el("span", "aw-opt-tplbtn-icon", icons.style), el("span", "aw-opt-tplbtn-name", "Style"));
+      tplBtn.onclick = () => { sound.click(); showBody(bodyView === "style" ? "options" : "style"); };
+    }
+    footWrap.append(tplBtn);
     // APPLY — only now does the draft get written into activity.options.
     // Clicking outside without pressing this discards every change above.
-    const applyWrap = el("div", "aw-opt-apply-wrap");
     const applyBtn = el("button", "aw-btn aw-btn-primary aw-opt-apply", "Apply");
     applyBtn.type = "button";
     applyBtn.onclick = () => {
@@ -3361,25 +3407,143 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       toast("Options applied");
       closeToolPanel(true);
     };
-    applyWrap.append(applyBtn);
-    panel.append(applyWrap);
+    footWrap.append(applyBtn);
+    panel.append(footWrap);
+
+    // ----- INLINE TEMPLATE PICKER (Đợt 228) — swaps INTO `bodyHost`, so it
+    // lives exactly "above the Template + Apply row" the teacher asked for,
+    // and never spills outside the Options popover: it IS this panel's body,
+    // for as long as the picker stays open. Same grid the old standalone
+    // Template panel drew (icon + name, is-current / is-soon) — only where it
+    // lives changed, not how it looks or which games are offered. Nested
+    // INSIDE buildOptionsPanel (not a sibling like switchList() above) because
+    // it reads `bodyView`/`tplBtn`/`showBody`, which belong to one sitting of
+    // this one panel.
+    function buildTemplatePickerBody(host) {
+      const head = el("div", "aw-tool-panel-head aw-opt-subhead");
+      const title = el("span", "", "Choose a template");
+      title.append(el("span", "aw-tool-head-hint", "hold the button below for Style"));
+      head.append(title);
+      const close = el("button", "aw-opt-subhead-close", icons.close);
+      close.type = "button"; close.title = "Back to options";
+      close.onclick = () => { sound.click(); showBody("options"); };
+      head.append(close);
+      host.append(head);
+      // Đợt 228 — thầy: "hiển thị được toàn bộ template mà không cần scroll".
+      // This grid is swapped INTO the panel's own body rather than laid over
+      // it, so the popover's height simply grows to fit every tile (same
+      // trick every clue-set switch already uses) instead of being cropped to
+      // whatever room the normal options body happened to leave —
+      // capPanelHeight()'s scroll cap still exists underneath as a safety
+      // net, but a 3-column grid of 17 tiles is nowhere near tall enough to
+      // ever need it.
+      const grid = el("div", "aw-tpl-grid");
+      const canSwitch = new Set(switchList().map(t => t.type));
+      ALL_TEMPLATES.forEach(t => {
+        const isCurrent = t.type === activity.type;
+        const enabled = !isCurrent && canSwitch.has(t.type);
+        const cls = isCurrent ? " is-current" : (enabled ? "" : " is-soon");
+        // Đợt 148 — icon + name, so a 560px-wide picker reads as a list of
+        // games rather than two columns of stranded words (teacher's request).
+        const item = el("div", "aw-tpl-item" + cls);
+        item.append(el("span", "aw-tpl-icon", templateIcon(icons, t.type)),
+                    el("span", "aw-tpl-name", escapeText(t.label)));
+        if (enabled) {
+          item.onclick = () => pickTemplate(t.type, item, grid);
+        } else if (!isCurrent) {
+          item.onclick = () => { sound.click(); toast(`${t.label} — doesn't fit this content`); };
+        }
+        grid.append(item);
+      });
+      host.append(grid);
+    }
+
+    // Picking a game hands off to doSwitchTemplate() — which converts the
+    // content, then tears this whole mount down and rebuilds it fresh (see
+    // its own comment) — while THIS tile spins to say "working on it, not
+    // stuck" (thầy: "để tôi biết đang load chứ không phải lỗi hay lag"), and
+    // `openOptionsOnMount` (module scope, same one-shot pattern as
+    // `openShowdownOnMount` above) tells the FRESH mount to open its own
+    // Options panel immediately instead of quietly landing on the READY
+    // screen. That is the whole trick behind "the popup doesn't close, it
+    // just becomes the new game's options": the popover the teacher is
+    // looking at never really survives the switch, but a new one opens
+    // itself before the gap would read as anything more than a loading
+    // spinner.
+    // ⚠️ Reaching the end of this function means the switch did NOT happen —
+    // doSwitchTemplate() catches its own errors (toasts, then returns
+    // normally rather than rejecting), and a REAL switch calls
+    // cleanupAll()+startGame() — tearing this very DOM down, `item` included
+    // — before the `await` below could ever resume. So clearing the spinner
+    // here is only ever the FAILURE path; success is silent because there is
+    // nothing left to clear it on.
+    async function pickTemplate(targetType, item, grid) {
+      if (switching) return;
+      switching = true;
+      sound.click();
+      grid.classList.add("is-busy");
+      item.classList.add("is-loading");
+      if (!fight) openOptionsOnMount = true;
+      await doSwitchTemplate(targetType);
+      if (!fight) openOptionsOnMount = false;
+      switching = false;
+      grid.classList.remove("is-busy");
+      item.classList.remove("is-loading");
+    }
+
+    // ----- STYLE body (Đợt 228, reached by holding the footer button) —
+    // switch themes LIVE, no restart needed. Nested here for the same reason
+    // as buildTemplatePickerBody: it needs `showBody` to get back to the
+    // normal options. Content unchanged from the old standalone Style panel —
+    // only where it lives (and how you get to it) moved.
+    function buildStyleBody(host) {
+      const head = el("div", "aw-tool-panel-head aw-opt-subhead", "Style");
+      const close = el("button", "aw-opt-subhead-close", icons.close);
+      close.type = "button"; close.title = "Back to options";
+      close.onclick = () => { sound.click(); showBody("options"); };
+      head.append(close);
+      host.append(head);
+      const grid = el("div", "aw-style-grid");
+      THEMES.forEach(t => {
+        const item = el("button", "aw-style-item" + (t.id === activity.theme ? " is-active" : ""));
+        item.type = "button";
+        const swatch = el("span", "aw-style-swatch");
+        swatch.style.background = THEME_SWATCH[t.id] || "#ccc";
+        item.append(swatch, el("span", "aw-style-name", t.label));
+        item.onclick = () => {
+          sound.click();
+          loadTheme(t.id);
+          stage.classList.forEach(c => { if (c.startsWith("theme-")) stage.classList.remove(c); });
+          stage.classList.add(`theme-${t.id}`);
+          activity.theme = t.id;
+          grid.querySelectorAll(".aw-style-item").forEach(x => x.classList.remove("is-active"));
+          item.classList.add("is-active");
+          awEmit("STYLE", t.id);   // mirror the Style choice to other myActivity panes
+        };
+        grid.append(item);
+      });
+      host.append(grid);
+    }
   }
 
-  // ----- TEMPLATE panel: switch games KEEPING the current content -----
-  // Only games whose data shape can hold this act's content are clickable
-  // ("compatible group", teacher's call 3/8/2026); the rest are dimmed.
-  // Clicking one converts the content and plays it straight away — the
-  // original act in the library is never touched (see doSwitchTemplate).
-  // The games we can switch to, ALWAYS computed from the ORIGINAL act (teacher,
-  // 4/8/2026). A "Change template" play only BORROWS the origin's content, so
-  // the temp act must never become the source for the next switch: converting is
-  // lossy, and asking the temp act what it can turn into silently locked games
-  // out — e.g. from a temp Speaking cards (no answers at all) NOTHING was
-  // switchable, and from a temp Anagram without clues every clue-needing game
-  // disappeared. Reading the origin means every switch offers the same full
-  // list, whichever temp game happens to be on screen.
+  // Which games this act's content can become. Only games whose data shape can
+  // hold this act's content are clickable ("compatible group", teacher's call
+  // 3/8/2026); the rest are dimmed. Clicking one converts the content and plays
+  // it straight away — the original act in the library is never touched (see
+  // doSwitchTemplate).
+  // The games we can switch to are ALWAYS computed from the ORIGINAL act
+  // (teacher, 4/8/2026). A "Change template" play only BORROWS the origin's
+  // content, so the temp act must never become the source for the next switch:
+  // converting is lossy, and asking the temp act what it can turn into silently
+  // locked games out — e.g. from a temp Speaking cards (no answers at all)
+  // NOTHING was switchable, and from a temp Anagram without clues every
+  // clue-needing game disappeared. Reading the origin means every switch offers
+  // the same full list, whichever temp game happens to be on screen.
   // switchTargets() drops the origin's OWN type, so we add it back while a temp
   // act is playing — that entry is how the teacher returns to the real act.
+  // ⚠️ Stays at THIS scope (a sibling of buildOptionsPanel), not nested inside
+  // it: runTargets()/openSwitchPicker() further up and down this file call it
+  // too — moving it into buildOptionsPanel would take it away from both.
   function switchList() {
     const list = switchTargets(originAct);
     if (activity.type !== originAct.type) {
@@ -3387,63 +3551,6 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (home) list.unshift({ type: home.type, label: home.label });
     }
     return list.filter(t => t.type !== activity.type);   // never offer what's already playing
-  }
-
-  function buildTemplatePanel(panel) {
-    const head = el("div", "aw-tool-panel-head", "Template");
-    // Dot 192 - the ONLY sign that Style still exists. The teacher asked for the
-    // Style button to be folded into this one and opened by press-and-hold, and
-    // a gesture with no affordance anywhere is a feature that is lost the day
-    // the person who asked for it forgets. One faint word on the panel that the
-    // gesture's own button opens is the smallest honest place to say it - it is
-    // NOT on the toolbar button's tooltip, which three stylesheets match on by
-    // exact text (see tplLocked).
-    head.append(el("span", "aw-tool-head-hint", "hold for Style"));
-    panel.append(head);
-    const grid = el("div", "aw-tpl-grid");
-    const canSwitch = new Set(switchList().map(t => t.type));
-    ALL_TEMPLATES.forEach(t => {
-      const isCurrent = t.type === activity.type;
-      const enabled = !isCurrent && canSwitch.has(t.type);
-      const cls = isCurrent ? " is-current" : (enabled ? "" : " is-soon");
-      // Đợt 148 — icon + name, so a 560px-wide picker reads as a list of games
-      // rather than two columns of stranded words (teacher's request).
-      const item = el("div", "aw-tpl-item" + cls);
-      item.append(el("span", "aw-tpl-icon", templateIcon(icons, t.type)),
-                  el("span", "aw-tpl-name", escapeText(t.label)));
-      if (enabled) {
-        item.onclick = () => { closeToolPanel(false); doSwitchTemplate(t.type); };
-      } else if (!isCurrent) {
-        item.onclick = () => { sound.click(); toast(`${t.label} — doesn't fit this content`); };
-      }
-      grid.append(item);
-    });
-    panel.append(grid);
-  }
-
-  // ----- STYLE panel: switch themes LIVE (no restart needed) -----
-  function buildStylePanel(panel) {
-    panel.append(el("div", "aw-tool-panel-head", "Style"));
-    const grid = el("div", "aw-style-grid");
-    THEMES.forEach(t => {
-      const item = el("button", "aw-style-item" + (t.id === activity.theme ? " is-active" : ""));
-      item.type = "button";
-      const swatch = el("span", "aw-style-swatch");
-      swatch.style.background = THEME_SWATCH[t.id] || "#ccc";
-      item.append(swatch, el("span", "aw-style-name", t.label));
-      item.onclick = () => {
-        sound.click();
-        loadTheme(t.id);
-        stage.classList.forEach(c => { if (c.startsWith("theme-")) stage.classList.remove(c); });
-        stage.classList.add(`theme-${t.id}`);
-        activity.theme = t.id;
-        grid.querySelectorAll(".aw-style-item").forEach(x => x.classList.remove("is-active"));
-        item.classList.add("is-active");
-        awEmit("STYLE", t.id);   // mirror the Style choice to other myActivity panes
-      };
-      grid.append(item);
-    });
-    panel.append(grid);
   }
 
   // ----- Menu (Submit answers · Start again · Resume · Change template) -----

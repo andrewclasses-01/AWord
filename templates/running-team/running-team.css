@@ -47,12 +47,12 @@
 .aw-stage.act-running_team,
 .aw-zoomed:has(.aw-stage.act-running_team) { touch-action: manipulation; }
 
-/* Assignment/Template/Print don't apply to a live classroom round (the sheet is
+/* Assignment/Print don't apply to a live classroom round (the sheet is
    printed from the game's own setup screen — rt-print.js). Hidden from the
    first paint via `.act-running_team` so they never flash on then vanish.
-   Edit/Home/Style/Options are left alone. */
+   Edit/Home/Style/Options are left alone. (Đợt 228 — Template used to be
+   listed here too; see the matching note in templates/running-word/running-word.css.) */
 .aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Set assignment"],
-.aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Template"],
 .aw-stage.act-running_team ~ .aw-below .aw-toolbtn[title="Print"] { display: none; }
 
 /* The nav arrows mean nothing here (questions advance on an answer), and the

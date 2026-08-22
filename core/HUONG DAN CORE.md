@@ -3497,34 +3497,52 @@ xem `core/engine.js`):
 - **Phải** (`.aw-below-right`) — 3 icon nhỏ **Edit / Set assignment / Print**, hiện tại chỉ là
   toast "coming soon" (chuẩn bị hạ tầng cho các tính năng sẽ làm sau — editor, giao bài, in).
 
-### ⛔ THANH CÔNG CỤ DƯỚI KHUNG ACT — TRẠNG THÁI THẬT (cập nhật Đợt 194)
+### ⛔ THANH CÔNG CỤ DƯỚI KHUNG ACT — TRẠNG THÁI THẬT (cập nhật Đợt 228)
 
 > Ba đoạn mô tả ngay bên trên là của thời đầu dự án và **đã lạc hậu**. Hình dạng thật hôm nay:
 
 | Cụm | Nút | Cử chỉ |
 |---|---|---|
 | GIỮA `.aw-below-center` | **Options** | **chạm** = bảng Options · **NHẤN GIỮ 420ms** = popup *"Edit content?"* (Đợt 194) |
-| | **Template** | **chạm** = đổi template · **NHẤN GIỮ** = Style (Đợt 192). Chỗ không đổi được template thì nút **được dựng thẳng thành nút Style** (`title="Style"`) |
 | | **Mode** | **chạm** = picker Fight · Showdown · Running · IPA (Đợt 158 + 190 + 191) · **NHẤN GIỮ** = popup *"Go home?"* (Đợt 195). Chỗ không có mode nào thì nút **được dựng thẳng thành nút Home** (`title="Home"`) — **nút này KHÔNG BAO GIỜ được vắng mặt nữa** |
 | PHẢI `.aw-below-right` | **Set assignment · Print** | chạm thường. **KHÔNG còn Edit** (Đợt 194) và **KHÔNG còn Home** (Đợt 195). Cả cụm bị `visibility:hidden` trong trận Fight |
 
-**BA LUẬT BẮT BUỘC BIẾT TRƯỚC KHI ĐỤNG VÀO THANH NÀY:**
+⭐⭐ **Đợt 228 — KHÔNG CÒN NÚT "TEMPLATE" HAY "STYLE" RIÊNG NGOÀI THANH NÀY NỮA.** Cả hai dọn vào
+BÊN TRONG popup Options, trên nút "current template" nằm cạnh Apply (`.aw-opt-tplbtn`,
+`core/engine.js`'s `buildOptionsPanel`): **chạm** = mở bảng chọn game NGAY TRONG Options (swap
+`bodyHost`, không phải panel riêng) · **NHẤN GIỮ** = mở Style, cũng swap vào `bodyHost`. Chỗ không
+đổi được template (IPA mode / Running word / Running team, cờ `templateSwitchAvailable`) thì nút
+này **được dựng thẳng thành nút Style** (chạm thường, không có gì để giữ) — vẫn đúng bảo đảm cũ
+"Style không bao giờ biến mất ở bất kỳ chế độ nào", chỉ dời chỗ đứng.
 
-1. ⛔ **Ẩn một nút bằng CSS `[title="…"]` nay ẩn HAI TÍNH NĂNG, không phải một.** Cả Options lẫn
-   Template đều mang hai việc. Ba stylesheet đang ẩn `[title="Template"]` (`app.css .mode-ipa` ·
-   `running-word.css` · `running-team.css`) — nếu ẩn trúng thì Style biến mất sạch theo, nên chỗ đó
-   phải dựng thẳng nút Style. **Chưa stylesheet nào ẩn `[title="Options"]`; ai định ẩn thì phải biết
-   là đang ẩn cả Edit content.** Không thứ gì được chỉ với tới bằng một cử chỉ mà CSS xung quanh đã giấu.
+**BA LUẬT BẮT BUỘC BIẾT TRƯỚC KHI ĐỤNG VÀO THANH NÀY (và nút template bên trong Options):**
+
+1. ⛔ **Ẩn nút Options bằng CSS `[title="Options"]` là ẩn CẢ Edit content theo.** Chưa stylesheet nào
+   làm vậy; ai định ẩn thì phải biết hậu quả. (Bẫy `[title="Template"]` của 3 stylesheet cũ —
+   `app.css .mode-ipa` · `running-word.css` · `running-team.css` — đã hết tồn tại từ Đợt 228: không
+   còn nút toolbar nào mang title đó để ẩn nhầm nữa, cả 3 chỗ đã dọn sạch dòng CSS chết đó.)
+   ⚠️ Nút "current template" MỚI (bên trong Options) không dùng cơ chế `openToolPanelFor`/tool-panel
+   riêng nên KHÔNG ẩn được qua `[title="…"]` kiểu này nữa — nó chỉ tồn tại/biến mất theo đúng 1 điều
+   kiện duy nhất: `templateSwitchAvailable` bên trong `buildOptionsPanel`. Đổi hành vi ẩn/hiện của nó
+   thì sửa NGAY tại điều kiện đó, đừng đi tìm một rule CSS không còn ở đâu cả.
 
 2. ⛔ **Builder panel phải là `function` CÓ TÊN khai một lần, cấm arrow tạo mới mỗi lần gọi.**
    `mountPanelContent()` và `capPanelHeight()` nhận diện panel **BẰNG DANH TÍNH HÀM**
-   (`buildContent === buildOptionsPanel`) để gắn class chiều rộng (`is-opts`, `is-tpl`, `is-sd`) và
-   bật `is-compact-opts`. Một closure mới mỗi lần sẽ **lặng lẽ không bao giờ khớp** — popup nhỏ có thể
-   bị kéo rộng bằng cả lưới Options mà không ai hiểu vì sao.
+   (`buildContent === buildOptionsPanel`) để gắn class chiều rộng (`is-opts`, `is-sd`) và bật
+   `is-compact-opts`. Một closure mới mỗi lần sẽ **lặng lẽ không bao giờ khớp** — popup nhỏ có thể bị
+   kéo rộng bằng cả lưới Options mà không ai hiểu vì sao. (`is-tpl` đã xoá ở Đợt 228 cùng với panel
+   Template độc lập — không còn `buildContent` nào khác cần phân biệt khỏi `buildOptionsPanel` ở tầng
+   `.aw-tool-panel` nữa; bên trong MỘT panel Options, việc chọn thân nào hiện — options thường / bảng
+   chọn template / Style — là việc của `bodyView` + `swapContents(bodyHost, …)`, không đụng gì tới
+   `mountPanelContent()`/`is-opts` cả.)
 
-3. ⛔ **Nút mang hai việc thì phải `openToolPanelFor()`, KHÔNG được `openToolPanel()`.** Gọi
-   `openToolPanel` với chính nút đang sáng thì nó **ĐÓNG** panel — đó là cử chỉ "bấm lại nút đang mở".
-   Nhấn giữ lúc panel kia đang mở sẽ chỉ tắt panel chứ không hiện panel thứ hai. Đợt 192 đã cắn.
+3. ⛔ **Nút mang hai việc THUỘC THANH NGOÀI thì phải `openToolPanelFor()`, KHÔNG được
+   `openToolPanel()`.** Gọi `openToolPanel` với chính nút đang sáng thì nó **ĐÓNG** panel — đó là cử
+   chỉ "bấm lại nút đang mở". Nhấn giữ lúc panel kia đang mở sẽ chỉ tắt panel chứ không hiện panel thứ
+   hai. Đợt 192 đã cắn. ⚠️ Nút "current template" bên TRONG Options (Đợt 228) là một câu chuyện khác —
+   nó không mở/đóng `.aw-tool-panel` nào cả, chỉ swap thân của panel Options đang mở sẵn, nên tự viết
+   `showBody(view)` với dòng chặn `if (bodyView === view) return;` ở đầu, không có sẵn hàm chung nào
+   lo hộ việc này ở tầng trong.
 
 4. ⛔ **Cử chỉ KHÔNG được tự ý rời ván đang chạy.** Nhấn giữ chỉ MỞ CÂU HỎI; phải bấm xác nhận mới rời
    game. Và phần lớn cử chỉ chỉ dành cho **single mode** — `canEditNow()` trong `engine.js` là mẫu:

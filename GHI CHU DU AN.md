@@ -8,6 +8,102 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 228 (22/8/2026) — ⭐⭐ ĐƯA **CHANGE TEMPLATE** VÀO THẲNG POPUP OPTIONS, BỎ NÚT TEMPLATE CŨ NGOÀI TOOLBAR — 🟡 ĐÃ CODE + TỰ TEST QUA `scratch/test-mode.html`, **CHƯA COMMIT** (đang chờ thầy duyệt trước khi push — repo này push `main` là lên thẳng aword.andrewclasses.com).
+
+Thầy giao (sau khi duyệt bản dựng thử/mockup dạng Artifact): trong popup Options, thêm 1 nút bên
+trái Apply hiện TÊN TEMPLATE ĐANG CHƠI (giống hệt ô "đang chọn" trong bảng Template cũ, thu nhỏ lại),
+Apply đổi bo góc vuông tương tự nút đó và dịch sang phải, cả cụm 2 nút canh GIỮA popup theo chiều
+ngang. Bấm nút Template mở ra bảng chọn NGAY TRONG popup Options (không lòi ra ngoài, không cần
+scroll dù đủ 17 template), và — khác với bản demo — **3 yêu cầu bổ sung khi làm thật**:
+(1) bảng chọn phải hiện đủ 17 template không cần scroll, (2) bỏ hẳn nút Template cũ ở thanh công cụ
+dưới khung game, (3) bấm chọn 1 template khác xong thì **popup Options KHÔNG đóng** mà tự chuyển
+sang hiện options của template mới luôn (không phải quay lại màn Play rồi bấm Options lại), và ô
+template vừa bấm phải có **vòng màu chạy quanh viền** trong lúc đang tải để phân biệt với treo máy.
+
+**Cách làm:**
+- `core/engine.js` — nút toolbar merge Template+Style (giữ-để-mở-Style, Đợt 192) nay CHỈ còn Style
+  (`styleBtn`, tap thẳng, bỏ hẳn tapOrHold + hint "hold for Style"). Cờ `templateSwitchAvailable`
+  (đảo ngược từ `tplLocked` cũ) quyết định Options panel có dựng nút "current template" + bảng chọn
+  hay không (vẫn ẩn đúng ở IPA mode / Running word / Running team, y hệt hành vi cũ).
+- Bảng chọn (`buildTemplatePickerBody`) không còn là 1 tool-panel riêng (`buildTemplatePanel` cũ đã
+  xoá) — nó SWAP vào `bodyHost` của chính Options panel bằng đúng cơ chế `swapContents()` đã có sẵn
+  cho việc đổi clue-set (Đợt 149), nên popup tự cao vừa đủ theo nội dung, không cần tính toán chiều
+  cao overlay thủ công → tự động thoả luôn yêu cầu "không cần scroll" mà không phải ép cứng kích
+  thước ô.
+- Đổi template xong = `doSwitchTemplate()` chạy `cleanupAll()+startGame()` (dựng lại TOÀN BỘ mount,
+  kể cả popup) — nên "không đóng popup" thật ra là: mount MỚI tự mở lại Options ngay khi vừa dựng
+  xong. Cờ một-lần `openOptionsOnMount` (module scope, y hệt kiểu `openShowdownOnMount` đã có ở
+  Đợt 158 cho việc chuyển Fight→Showdown) được bật trước khi gọi `doSwitchTemplate()`, mount mới đọc
+  cờ này trong tích tắc rồi tự bấm hộ nút Options (qua `setTimeout(...,0)` để đợi mount xong đã, y
+  hệt cách Đợt 158 làm). Không áp dụng cho Fight mode (giữ hành vi cũ — bàn đấu tự dựng lại theo
+  cách riêng của `fight.js`, không tự mở Options hộ, thầy chưa yêu cầu phần đó).
+- Vòng loading chạy quanh viền ô template: `@property --aw-tpl-spin` (đăng ký kiểu góc để keyframe
+  nội suy được) + `conic-gradient` bị mask thành đúng viền (kiểu "gradient border" quen thuộc), quay
+  bằng animation; có bản `prefers-reduced-motion` thay bằng nhấp nháy thay vì quay. Ô đang tải khoá
+  `pointer-events:none`, cả bảng mờ bớt (`.is-busy`) để không bấm trúng ô khác giữa chừng.
+- Dọn theo: 3 chỗ CSS từng ẩn nút toolbar `[title="Template"]` (core/app.css `.mode-ipa`,
+  `running-word.css`, `running-team.css`) đã xoá — hoá ra cả 3 chỗ này VỐN ĐÃ LÀ DEAD CODE từ trước
+  (nút ở 3 chế độ đó luôn mang title="Style" chứ chưa từng là "Template", vì tplLocked cũ đã bắt nó
+  thành Style rồi) — xác nhận bằng cách đọc lại điều kiện, không đoán.
+
+⚠️ **BẪY GẶP KHI CODE (đã tự sửa, không phải hỏi thầy):** viết `buildTemplatePickerBody`/`pickTemplate`
+LỆCH SCOPE — để chúng làm SIBLING của `buildOptionsPanel` (như `switchList()`) thay vì NESTED bên
+trong, nên chúng không với tới được `pickerOpen`/`tplBtn`/`togglePicker`/`switching` (khai ở đầu phần
+footer, bên trong `buildOptionsPanel`) → sẽ ném `ReferenceError` ngay khi bấm nút Template lúc chạy
+thật. Bắt được bằng cách đọc lại chỗ đóng ngoặc `}` của `buildOptionsPanel` trước khi tự tin là xong,
+không nhờ vào "trông có vẻ đúng". Đã dời 2 hàm này vào ĐÚNG bên trong `buildOptionsPanel`.
+
+⚠️ **BẪY SỐ ĐỢT:** soạn nhầm toàn bộ comment thành "Đợt 221" (nhớ nhầm từ ghi chú cũ trong bộ nhớ),
+trong khi repo đã chạy tới Đợt 227 (`git log` xác nhận `df84647`/`bde28b2`) — và "Đợt 221" thật ra ĐÃ
+DÙNG cho việc khác hẳn (khối file-manager panel trong `core/app.css`, dòng ~2189). Sửa lại toàn bộ
+comment thành "Đợt 228" bằng cách so khớp CHÍNH XÁC từng dòng mình vừa thêm (qua `git diff`), không
+đè lên các dòng "Đợt 221" có sẵn của việc khác trong cùng file.
+
+**Đã tự test:** dựng `scratch/test-mode.html?t=anagram` (bench có sẵn từ Đợt 158, không cần đăng
+nhập Google) qua `javascript_tool`, xác nhận: mở Options → thấy nút "Anagram" cạnh Apply, cùng
+border-radius 13px với Apply; bấm nút đó → hiện đủ 17 ô, is-current=Anagram, is-soon=3 (True/false,
+…), KHÔNG cần scroll (`scrollHeight === clientHeight`); bấm "Quiz" → ô đó khoá `is-loading` NGAY LẬP
+TỨC (đồng bộ, trước khi convert xong) → sau khi mount lại, Options TỰ MỞ LẠI, nút hiện "Quiz", thân
+popup đã là options của Quiz thật (Lives/Points off/Shuffle answers…); bấm "Anagram" lại (act gốc,
+nhánh đồng bộ) → quay lại đúng act gốc, Options tự mở lại với Anagram; bấm ô is-soon → toast "…
+doesn't fit this content", không crash; nút Style vẫn còn, tap thẳng mở panel Style; nút Template cũ
+ở toolbar xác nhận KHÔNG còn trong DOM. Không có lỗi console suốt quá trình.
+
+⛔ **CHƯA TEST:** Fight mode (bấm Template giữa trận), Showdown mode, và ☰ Menu ▸ "Change template"
+(đường fullscreen riêng, cố tình KHÔNG đụng tới đợt này — vẫn dùng `openSwitchPicker` cũ, đóng popup
+như trước, vì thầy chỉ nhắc tới popup Options).
+
+---
+**SỬA LẠI CÙNG BUỔI (22/8/2026), sau khi thầy xem bản trên:** *"style cũng đưa luôn vào trong nút
+Template bên trong options, mở bằng cách nhấn giữ và nút templates trong Options (cạnh Apply)"*.
+
+Bỏ luôn nút Style riêng ngoài toolbar (đoạn "chỉ còn Style, tap thẳng" ở trên đã LỖI THỜI ngay trong
+buổi) — thanh công cụ dưới khung giờ chỉ còn 2 nút: **Options** và **Mode**. Nút "current template"
+cạnh Apply trong Options mang lại ĐÚNG cặp cử chỉ tap/hold mà nút toolbar merge Template+Style từng
+có (Đợt 192, `core/press.js`'s `tapOrHold`) — **TAP** = mở bảng chọn game, **HOLD** = mở Style — chỉ
+là dời từ toolbar vào bên trong Options. Cả hai đều SWAP vào `bodyHost` của Options (không phải panel
+riêng), có nút "×" quay lại, dùng chung 1 class đầu mục `.aw-opt-subhead`/`-close`.
+
+⚠️ **GIỮ ĐÚNG BẢO ĐẢM CŨ:** nút này LUÔN được dựng (không còn `if (templateSwitchAvailable)` bọc
+ngoài như bản đầu) — ở IPA mode / Running word / Running team (nơi Change Template không áp dụng),
+nó tự thành nút "Style" trần (tap thẳng, không có gì để giữ), y hệt cách nút toolbar cũ (`tplLocked`)
+từng bảo đảm Style KHÔNG BAO GIỜ biến mất ở bất kỳ chế độ nào — chỉ là bảo đảm đó nay nằm ở đây.
+
+⚠️⚠️ **BẪY TỰ GÂY RA KHI SỬA LẦN 2:** đoạn thay comment ở chỗ khai `templateSwitchAvailable` (để giải
+thích lý do bỏ nút Style ngoài toolbar) vô tình XOÁ LUÔN dòng khai báo `const templateSwitchAvailable
+= ...` thật — code vẫn qua được `node --check` (chỉ bắt lỗi cú pháp, không bắt biến-chưa-khai-báo),
+nhưng bấm Options lên là `ReferenceError` ngay. Bắt được nhờ chạy lại bench thật trong Browser pane
+sau MỌI lần sửa (không chỉ tin `node --check`) — đọc console thấy lỗi, `grep` lại thấy dòng khai báo
+đã mất, thêm lại là xong. Bài học: **sau khi "dọn lại comment" quanh 1 dòng code, luôn đọc lại xem
+dòng code đó còn ở đó không**, đừng chỉ tin mắt lúc soạn diff.
+
+**Đã tự test lại** (cùng bench, thêm bước giả lập cử chỉ giữ bằng `PointerEvent('pointerdown', ...)`
++ chờ >420ms + `pointerup`, vì `.click()` lập trình chỉ giả được TAP): tap nút → bảng 17 template hiện
+đúng như cũ; giữ nút (mô phỏng) → bảng ẩn đi, hiện đúng bảng Style (4 theme), bấm 1 theme → highlight
+đổi đúng ô; bấm nút "×" của Style → quay lại đúng options bình thường (không mất trạng thái); đổi
+Anagram→Quiz vẫn hoạt động nguyên vẹn sau khi sửa (Options tự mở lại, hiện "Quiz"). Toolbar xác nhận
+chỉ còn 2 nút (Options, Mode) — không còn nút Style hay Template nào ở ngoài.
+
 ## Đợt 227 (22/8/2026) — ⭐⭐ RECENT RESULTS: NÚT **DOWNLOAD** TRONG MÀN CHI TIẾT TRẬN — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `bde28b2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `bde28b2` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`core/showdown-export.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css`, băm nội dung trong commit qua `git show bde28b2:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 
 Thầy giao: bấm vào 1 ô trong Recent results (màn chi tiết trận, `openDetail` trong
