@@ -6046,3 +6046,221 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-pod-pct.is-p3 { color: #2563eb; }
 .aw-sd-pod-pct.is-p4 { color: #16a34a; }
 .aw-sd-pod-box.is-m1 .aw-sd-pod-pct.is-p1 { color: #a16207; }
+
+/* =============================================================
+   ⭐⭐⭐ Đợt 236 — SHOWDOWN HOME: the full-page durable ledger.
+   A library page (like `.aw-lib`/renderTop), NOT a popover over a game frame —
+   reached from its own button on the app home page, never from inside a match.
+   Deliberately reuses `.aw-sd-rec-col`/`.aw-sd-mini*`/`.aw-sd-rec-detail`/
+   `.aw-sd-rec-chart`/`.aw-sd-confirm` etc. verbatim (all `position:absolute`
+   or plain block shapes with no dependency on `.aw-sd-recent`'s own ancestor —
+   checked before reusing them): one tile is one tile, one detail view is one
+   detail view, whichever screen opened it. Only the PAGE SHELL below is new.
+   ============================================================= */
+/* `.aw-lib.aw-sdh-page` (main.js's own wrapper around topbar/mount/footer) is
+   the WIDTH exception; `.aw-sdh` itself (built inside core/showdown-home.js)
+   is just the flex-column content region — no width/centring of its own, so
+   the two never fight over which one owns 1280px vs 1040px. */
+.aw-lib.aw-sdh-page { max-width: 1280px; }
+.aw-sdh {
+  position: relative;   /* the containing block for the reused .aw-sd-rec-detail/
+    .aw-sd-rec-chart/.aw-sd-confirm overlays (all `position:absolute; inset:0`) —
+    without this they anchor to whatever ancestor IS positioned, which is not
+    this page at all. */
+  display: flex; flex-direction: column; gap: 14px; min-height: 60vh;
+}
+.aw-sdh-titlerow { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; }
+/* The class-picker: title looks like a button because it IS one — same "a
+   caption that is sometimes a control has to LOOK like one" rule the in-game
+   footer caption already follows (core/showdown-setup.js's footCaption). */
+.aw-sdh-titlebtn {
+  display: inline-flex; align-items: baseline; gap: 10px;
+  border: none; background: none; cursor: pointer; padding: 4px 10px; border-radius: 10px;
+  font-family: inherit; color: #23303e; transition: background .14s ease;
+}
+.aw-sdh-titlebtn:hover { background: #f2f6fc; }
+.aw-sdh-title-word { font-size: 1.7rem; font-weight: 800; letter-spacing: .05em; }
+.aw-sdh-title-class {
+  font-size: 1.2rem; font-weight: 800; color: #2f6fed; letter-spacing: .03em;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.aw-sdh-titlebtn svg { width: 18px; height: 18px; color: #9aa7b8; transition: transform .16s ease; }
+.aw-sdh-titlebtn.is-open svg { transform: rotate(180deg); }
+/* ⚠️ Inert, on purpose — thầy: no class/team is picked on this screen, so the
+   slogan carries no gesture at all here (unlike its live, clickable twin in
+   core/showdown-setup.js's footCaption). Plain faint text. */
+.aw-sdh-slogan { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b3bcc9; text-transform: uppercase; }
+
+/* ---- the class picker popover ---- */
+.aw-sdh-classpop {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  min-width: 220px; max-height: 320px; overflow-y: auto;
+  background: #fff; border: 1px solid #e3e9f1; border-radius: 12px; box-shadow: 0 12px 30px rgba(35,48,62,.16);
+  padding: 6px;
+}
+.aw-sdh-classopt {
+  display: block; width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+  padding: 9px 12px; border-radius: 8px; font-family: inherit; font-size: .92rem; font-weight: 700; color: #33455c;
+}
+.aw-sdh-classopt:hover { background: #f2f6fc; }
+.aw-sdh-classopt.is-cur { color: #2f6fed; background: #eaf1ff; }
+.aw-sdh-classpop-empty { padding: 14px 12px; font-size: .85rem; color: #8b93a1; text-align: center; }
+
+/* ---- the small toolbar above the body: just the ANALYSE/CHOOSING control ---- */
+.aw-sdh-toolbar { flex: 0 0 auto; display: flex; justify-content: flex-end; }
+
+/* ---- the three-column body ---- */
+.aw-sdh-main { position: relative; flex: 1 1 auto; min-height: 0; display: flex; gap: 0; }
+.aw-sdh-empty {
+  flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
+  font-size: .95rem; color: #8b93a1; text-align: center; padding: 60px 20px;
+}
+
+/* ---- LEFT RAIL: month → day folders, quick-access-shaped ---- */
+.aw-sdh-rail {
+  flex: 0 0 240px; display: flex; flex-direction: column; min-width: 0;
+  background: #fff; border: 1px solid #e6edf6; border-radius: 15px; box-shadow: 0 2px 8px rgba(35,48,62,.05);
+  max-height: calc(100vh - 210px);
+}
+.aw-sdh-rail-head {
+  flex: 0 0 auto; text-align: center; padding: 12px 10px 10px;
+  font-size: .82rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #33455c;
+  border-bottom: 1px solid #eef3f9;
+}
+.aw-sdh-rail-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px; }
+.aw-sdh-rail-empty { padding: 20px 10px; font-size: .82rem; color: #8b93a1; text-align: center; line-height: 1.5; }
+.aw-sdh-month-row {
+  width: 100%; display: flex; align-items: center; gap: 6px;
+  border: none; background: none; cursor: pointer; padding: 8px 6px; border-radius: 8px;
+  font-family: inherit; font-size: .84rem; font-weight: 800; letter-spacing: .03em; color: #33455c;
+  text-transform: uppercase;
+}
+.aw-sdh-month-row:hover { background: #f2f6fc; }
+.aw-sdh-month-row svg { width: 13px; height: 13px; color: #9aa7b8; flex: 0 0 auto; transition: transform .16s ease; }
+.aw-sdh-month-row.is-open svg { transform: rotate(90deg); }
+.aw-sdh-month-name { flex: 1 1 auto; text-align: left; }
+.aw-sdh-month-count { flex: 0 0 auto; font-size: .72rem; font-weight: 700; color: #9aa7b8; }
+/* ⭐⭐ CHOOSING → ALL: every month glows and stops answering taps — thầy's own
+   "sáng nhấp nháy hào quang" cue for "the rail is not the thing you touch right
+   now". Same gold `box-shadow` pulse as the in-game ANALYSE button
+   (`aw-sd-rec-analyseglow`, core/app.css) — never `filter`, see that keyframe's
+   own warning on stacking contexts. */
+.aw-sdh-month-row.is-locked {
+  pointer-events: none; color: #a5760c; background: linear-gradient(135deg, #fffaeb, #fff3c4);
+  animation: aw-sd-rec-analyseglow 2.2s ease-in-out infinite;
+}
+.aw-sdh-days {
+  display: grid; grid-template-rows: 0fr; transition: grid-template-rows .2s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sdh-month.is-open .aw-sdh-days { grid-template-rows: 1fr; }
+.aw-sdh-days-inner { overflow: hidden; padding-left: 6px; }
+.aw-sdh-day {
+  width: 100%; display: flex; align-items: center; gap: 8px;
+  border: none; background: none; cursor: pointer; padding: 7px 8px 7px 14px; border-radius: 8px;
+  font-family: inherit; text-align: left; color: #23303e;   /* the date's own colour — see below */
+}
+.aw-sdh-day:hover { background: #f2f6fc; }
+.aw-sdh-day.is-cur { background: #eaf1ff; }
+.aw-sdh-day svg { width: 16px; height: 16px; color: #f5b13b; flex: 0 0 auto; }
+.aw-sdh-day-label { flex: 1 1 auto; min-width: 0; font-size: .93rem; font-weight: 800; line-height: 1.3; }
+/* Thầy's own split — the weekday abbreviation reads as a tag (green), the date
+   (a plain text node, not a span of its own — see core/showdown-home.js) just
+   takes the button's own colour above. Never innerHTML: both come from Date()
+   maths, not free text, but a separate span for "wd" is what lets it differ. */
+.aw-sdh-day-wd { color: #16a34a; }
+.aw-sdh-day-count { flex: 0 0 auto; font-size: .72rem; font-weight: 700; color: #9aa7b8; }
+.aw-sdh-all-btn {
+  flex: 0 0 auto; margin: 8px 6px 6px; padding: 9px 0;
+  border: 1px solid #e0ab1f; border-radius: 9px; background: linear-gradient(135deg, #ffe9a8, #f3c545);
+  color: #6b4a06; font-family: inherit; font-size: .82rem; font-weight: 800; letter-spacing: .06em; cursor: pointer;
+}
+.aw-sdh-all-btn:hover { filter: brightness(1.03); }
+.aw-sdh-all-btn.is-on { background: linear-gradient(135deg, #fff3c4, #ffd65c); border-color: #d99a0c; }
+/* The whole rail goes inert under ALL — only the month rows glow (thầy's own
+   words, "tên thư mục ... sáng nhấp nháy"); day rows just dim along with them,
+   blocked by the SAME `pointer-events:none` rather than a second glow rule. */
+.aw-sdh-rail-list.is-locked { pointer-events: none; }
+.aw-sdh-rail-list.is-locked .aw-sdh-day { opacity: .45; }
+
+/* the hairline between the rail and the tiles, same idiom as `.aw-qa::after` */
+.aw-sdh-vrule { flex: 0 0 1px; background: #e2e9f2; margin: 6px 14px; }
+
+/* ---- CENTER: the tiles ---- */
+.aw-sdh-tiles-wrap { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.aw-sdh-tiles-head {
+  flex: 0 0 auto; padding: 2px 4px 10px; font-size: .84rem; font-weight: 800; color: #7a8aa0;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.aw-sdh-tiles-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 4px 10px; }
+/* ⭐ Few tiles stretch to fill the row (wider cards); many tiles wrap into more
+   rows instead of shrinking past a readable width — `auto-fit` collapses empty
+   tracks so a lone tile takes the WHOLE row rather than sitting in a corner. */
+.aw-sdh-tiles {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px;
+}
+.aw-sdh-tiles .aw-sd-rec-col { min-height: 168px; }
+.aw-sdh-daygroup + .aw-sdh-daygroup { margin-top: 16px; }
+.aw-sdh-daygroup-label {
+  display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px;
+  font-size: .8rem; font-weight: 800; color: #33455c;
+}
+.aw-sdh-daygroup-label .aw-sdh-day-wd { font-size: .8rem; }
+.aw-sdh-dayrule { border: none; border-top: 1px solid #e6edf6; margin: 14px 0 16px; }
+
+/* ---- RIGHT: CHOOSING mode's ANALYSE column ---- */
+.aw-sdh-choosewrap { flex: 0 0 auto; display: flex; align-items: stretch; }
+.aw-sdh-choosecol {
+  flex: 0 0 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px;
+}
+/* Same gold glowing pill as the in-game ANALYSE/BEGIN button — literally the
+   same rule, see core/app.css's `.aw-sd-rec-analyse` a little further up. This
+   button is that button, having flown to the top of a new column. */
+.aw-sdh-choosecol .aw-sd-rec-analyse { align-self: center; width: 100%; }
+.aw-sdh-chips { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.aw-sdh-chips-empty { font-size: .8rem; color: #8b93a1; text-align: center; padding: 20px 8px; line-height: 1.5; }
+.aw-sdh-chip {
+  display: flex; align-items: center; gap: 8px;
+  border: 1px solid #e3e9f1; border-radius: 10px; background: #fbfcfe; padding: 8px 8px 8px 11px;
+  animation: aw-sdh-chipin .18s cubic-bezier(.22,.9,.3,1);
+}
+@keyframes aw-sdh-chipin { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+.aw-sdh-chip-txt { flex: 1 1 auto; min-width: 0; }
+.aw-sdh-chip-name {
+  font-size: .82rem; font-weight: 800; color: #23303e; line-height: 1.25;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sdh-chip-sub { font-size: .72rem; font-weight: 700; color: #9aa7b8; }
+.aw-sdh-chip-x {
+  flex: 0 0 auto; width: 24px; height: 24px; padding: 0; border: none; background: none; color: #b3bcc9;
+  border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-sdh-chip-x svg { width: 13px; height: 13px; }
+.aw-sdh-chip-x:hover { background: #fef2f2; color: #dc2626; }
+.aw-sdh-choosecount {
+  flex: 0 0 auto; text-align: center; padding: 8px 0 2px; border-top: 1px solid #eef3f9;
+  font-size: 1.6rem; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
+}
+.aw-sdh-choosecount-label { display: block; font-size: .68rem; font-weight: 800; color: #9aa7b8; letter-spacing: .08em; text-transform: uppercase; }
+
+/* ---- the yellow, glowing button on the app HOME page ---- */
+.aw-sdh-homebtn {
+  border-color: #e0ab1f !important; background: linear-gradient(135deg, #fff3c4, #ffd65c) !important;
+  color: #6b4a06 !important; animation: aw-sd-rec-analyseglow 2.2s ease-in-out infinite;
+}
+.aw-sdh-homebtn:hover { background: linear-gradient(135deg, #ffe9a8, #f3c545) !important; }
+
+/* ---- ANALYSING: a full-page loading curtain with a running light border ---- */
+.aw-sdh-loading {
+  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  background: rgba(20, 26, 36, .55); backdrop-filter: blur(2px);
+}
+.aw-sdh-loading-frame {
+  position: relative; padding: 3px; border-radius: 22px;
+  background: conic-gradient(from 0deg, transparent 0 65%, #ffe9a8 82%, #ffd65c 92%, transparent 100%);
+  animation: aw-sdh-loadspin 1.6s linear infinite;
+}
+@keyframes aw-sdh-loadspin { to { transform: rotate(360deg); } }
+.aw-sdh-loading-box {
+  background: #12161f; border-radius: 19px; padding: 46px 68px;
+  font-size: 2.1rem; font-weight: 800; letter-spacing: .16em; color: #ffe9a8; text-transform: uppercase;
+}

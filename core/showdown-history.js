@@ -1,9 +1,15 @@
 // =============================================================
-// SHOWDOWN — THE DURABLE RESULT HISTORY (Đợt 197, 19/8/2026)
+// SHOWDOWN — THE DURABLE RESULT HISTORY (Đợt 197, 19/8/2026 · resharded Đợt 236)
 //
 // Thầy: *"Cần cơ chế lưu dữ liệu bền kể cả khi tắt máy: mỗi lần có kết quả các
 // team là lưu bền dữ liệu kết quả và gán cho 1 lần thi đấu của cả lớp… Mỗi lớp
-// lưu tối đa 5 cột, khi tạo cột số 6 thì cột đầu tiên sẽ bị xóa."*
+// lưu tối đa 5 cột, khi tạo cột số 6 thì cột đầu tiên sẽ bị xóa."* (Đợt 197)
+//
+// ⭐⭐⭐ Đợt 236 (22/8/2026, thầy) — "giữ MÃI MÃI, để phân tích theo lộ trình dài,
+// không còn giới hạn 10 trận." The eviction rule above is GONE for the ledger
+// itself; MAX_MATCHES now means only "how many the in-game quick popup shows"
+// (see loadMatches' own note) — the new full-page SHOWDOWN home
+// (core/showdown-home.js) reads the whole thing.
 //
 // ---------------------------------------------------------------------------
 // HOW THIS DIFFERS FROM `sd_results` (core/showdown-setup.js)
@@ -16,8 +22,8 @@
 //                 watched by every column so the class board fills itself in as
 //                 teams finish (Đợt 196). It answers "who has finished?".
 //   this file     A LEDGER. Nothing here is ever overwritten by a later play and
-//                 nothing is wiped by Reset teams. It answers "how did 5B do in
-//                 its last five matches?", and it has to survive the computer
+//                 nothing is wiped by Reset teams. It answers "how did 5B do
+//                 across the whole term?", and it has to survive the computer
 //                 being switched off — which is the whole reason it is on
 //                 Firestore and not in any kind of browser storage.
 //
@@ -48,35 +54,69 @@
 // length why nothing about Showdown may be per-ORIGIN).
 //
 // ---------------------------------------------------------------------------
-// ONE DOCUMENT PER CLASS
+// ⭐⭐⭐ Đợt 236 — ONE DOCUMENT PER CLASS PER MONTH, PLUS A TINY INDEX
 // ---------------------------------------------------------------------------
-//   `users/{uid}/items/sd_hist_<classId>`, kind "showdown-history"
-//   { classId, className, matches: [ match, … ] }   (at most MAX_MATCHES)
+// "Forever" and "one document" cannot both be true — Firestore hard-refuses a
+// document over 1MB, and a class played every lesson for years would get there.
+// So the ledger is now split by CALENDAR MONTH, the same month the day-folder
+// screen groups by (thầy's own answer, 22/8/2026), which keeps the split an
+// invisible engine detail rather than a second thing to explain on screen:
 //
-// Per CLASS, not one document for everything: a match carries every question of
-// every pupil, and Firestore's hard limit is 1MB per document. Five matches of
-// one class fit with room to spare (measured shapes: ~150 bytes a row, 18 pupils
-// × 10 rows ≈ 27KB a match); every class in one document would not.
+//   `users/{uid}/items/sd_hist_<classId>_<YYYYMM>`, kind "showdown-history"
+//   { classId, className, yyyymm, matches: [ match, … ] }
+//
+//   `users/{uid}/items/sd_hist_<classId>_idx`, kind "showdown-history-index"
+//   { classId, className, months: { "<YYYYMM>": { count, lastAt }, … },
+//     legacyMigrated }
+//
+// The index is what the day-folder rail reads to know WHICH months have
+// anything at all, without fetching every month's full document — a class run
+// for years might have fifty of those, and the folder list needs only their
+// names and roughly how full they are. Only a month the teacher actually OPENS
+// gets its full document fetched (loadMonth).
+//
+// ⚠️ NO FIRESTORE QUERY ANYWHERE IN THIS FILE, ON PURPOSE. A `where()` across
+// classId+kind would need a composite index the teacher would have to create by
+// hand in the Firebase console (docs/08-FIREBASE-SETUP.md never asked for one);
+// every document id here is instead DERIVED (class + month), so every read is a
+// plain `getDoc` by a name the caller already knows how to build. Same posture
+// as every other file in Showdown's storage layer.
+// ⚠️ Per-month sizing still leans on fitToBudget (below): even a month's worth
+// of matches can carry more per-question detail than fits under 1MB in a very
+// busy class, so the SAME graceful degrade (oldest matches in the month lose
+// their row detail first, never a whole match) still applies, per document.
+//
 // It lives in `users/{uid}/items` for the reason core/classes.js gives at
 // length: the published Firestore rules open exactly that one path, so a new
 // collection would be DENIED until somebody edited them in the console by hand.
 //
-// ⚠️ EVERY WRITE IS A TRANSACTION. Four columns finish seconds apart and all
-// four write into the SAME match of the same document; a read-modify-write would
-// lose whichever landed second — the exact bug Đợt 196 spent a day on, and the
-// reason this file was written with transactions from its first line rather than
-// "for later".
+// ⚠️ EVERY WRITE TO A MONTH DOCUMENT IS A TRANSACTION. Four columns finish
+// seconds apart and all four write into the SAME match of the same document; a
+// read-modify-write would lose whichever landed second — the exact bug Đợt 196
+// spent a day on. The INDEX doc (count/lastAt only, never a source of truth for
+// any match's content) is updated with a plain merge write after — losing a race
+// on it costs a slightly stale count for one screen paint, never a match.
+//
+// ---------------------------------------------------------------------------
+// ⭐⭐⭐ Đợt 236 — MIGRATING THE OLD SINGLE-DOCUMENT LEDGER
+// ---------------------------------------------------------------------------
+// Every class already has up to 10 matches sitting in the old, un-sharded
+// `sd_hist_<classId>` document (Đợt 197's shape). migrateLegacyIfNeeded() folds
+// them into their proper month documents the first time this file is asked for
+// that class's data in a session, then stamps the old document `migrated:true`
+// so it is never re-read as a source again (its matches are left in place,
+// inert — deleting them buys nothing and risks losing the only copy if the
+// migration write partially failed on a bad connection).
 // =============================================================
 
 import { db, fs, currentUser } from "./firebase.js";
 import { SOLO_TEAM_ID } from "./showdown.js";
 
-// Thầy's own number: "Mỗi lớp lưu tối đa 5 cột, khi tạo cột số 6 thì cột đầu
-// tiên sẽ bị xóa." It is also how many columns the Recently results screen draws.
-// ⭐ Đợt 224 (22/8/2026, thầy) — nâng 5 → 10, đi cùng bố cục 2 tầng × 5 cột ở
-// core/showdown-setup.js (renderMini/paintCols). fitToBudget() đã sẵn cơ chế
-// giảm cấp (rút chi tiết câu hỏi của trận CŨ NHẤT khi vượt SIZE_BUDGET) nên gấp
-// đôi số trận chỉ khiến việc đó xảy ra sớm hơn, không phải một lỗi mới.
+// ⭐ How many matches the IN-GAME quick popup shows (core/showdown-setup.js's
+// openRecent, opened by tapping "SHOWDOWN IN ANDREW CLASSES" mid-lesson).
+// Đợt 236 — this no longer bounds how much is KEPT (see the header); it only
+// bounds loadMatches()'s own answer, which is deliberately left small: that
+// popup is a quick glance during a lesson, not the analysis screen.
 export const MAX_MATCHES = 10;
 // Same cap as the live board's, and deliberately the same constant value: a
 // pupil's row must not say one thing on the live class board and another in the
@@ -88,9 +128,28 @@ const TEXT_CAP = 180;
 // question DETAIL of the oldest matches (their podiums survive), so the ledger
 // degrades gracefully instead of failing shut.
 const SIZE_BUDGET = 700 * 1024;
+// How many months loadMatches() will walk back through hunting for MAX_MATCHES
+// worth of rows. A class this quiet has nothing worth paging further for — the
+// quick popup would rather say "not much here" than make the teacher wait on a
+// chain of empty reads.
+const MONTH_WALK_CAP = 8;
 
 const cut = s => String(s || "").slice(0, TEXT_CAP);
-const docIdFor = classId => `sd_hist_${String(classId || "").replace(/[^A-Za-z0-9_-]/g, "")}`;
+const safeId = s => String(s || "").replace(/[^A-Za-z0-9_-]/g, "");
+const docIdFor = classId => `sd_hist_${safeId(classId)}`;               // legacy, migration source only
+const monthDocId = (classId, yyyymm) => `sd_hist_${safeId(classId)}_${safeId(yyyymm)}`;
+const indexDocId = classId => `sd_hist_${safeId(classId)}_idx`;
+
+/** "202608" for a given ms timestamp — the shard key, and the UI's month key. */
+export function yyyymmOf(ms) {
+  const d = new Date(Number(ms) || 0);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+/** "20260822" — the UI's day key, one calendar day in the teacher's own clock. */
+export function dayKeyOf(ms) {
+  const d = new Date(Number(ms) || 0);
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
+}
 
 async function requireUid() {
   const user = await currentUser();
@@ -167,27 +226,57 @@ function normMatch(m) {
     customName: cut(m?.customName),
     at: Number(m?.at) || 0,
     updatedAt: Number(m?.updatedAt) || 0,
+    rowsDropped: !!m?.rowsDropped,
     teams
   };
 }
 
-function normDoc(raw, classId) {
+function normMonthDoc(raw, classId, yyyymm) {
   return {
     kind: "showdown-history", root: "showdown", parentId: null, trashed: false,
     classId: String(raw?.classId || classId || ""),
     className: String(raw?.className || "").trim(),
+    yyyymm: String(raw?.yyyymm || yyyymm || ""),
     matches: (Array.isArray(raw?.matches) ? raw.matches : []).map(normMatch).filter(m => m.matchId),
     updatedAt: Number(raw?.updatedAt) || 0
   };
 }
 
+// Tolerant reader for the OLD, pre-Đợt-236 single document — migration only.
+function normLegacyDoc(raw, classId) {
+  return {
+    classId: String(raw?.classId || classId || ""),
+    className: String(raw?.className || "").trim(),
+    matches: (Array.isArray(raw?.matches) ? raw.matches : []).map(normMatch).filter(m => m.matchId),
+    migrated: !!raw?.migrated
+  };
+}
+
+function normIndexDoc(raw, classId) {
+  const months = {};
+  const rawMonths = (raw && typeof raw.months === "object" && raw.months) || {};
+  for (const [k, v] of Object.entries(rawMonths)) {
+    if (!v || typeof v !== "object") continue;
+    months[k] = { count: Math.max(0, Number(v.count) || 0), lastAt: Number(v.lastAt) || 0 };
+  }
+  return {
+    kind: "showdown-history-index", root: "showdown", parentId: null, trashed: false,
+    classId: String(raw?.classId || classId || ""),
+    className: String(raw?.className || "").trim(),
+    months,
+    legacyMigrated: !!raw?.legacyMigrated,
+    updatedAt: Number(raw?.updatedAt) || 0
+  };
+}
+
 /**
- * Keep the document under the budget by dropping the per-question DETAIL of the
- * OLDEST matches first — never a whole match, and never a pupil.
- * The podium (name · team · right · wrong · time · %) is computed from fields
- * that stay, so an old match keeps its board and loses only the ability to be
- * opened up. That is the right thing to lose: five matches back, "who won" is
- * still wanted and "what did AN answer to question 7" is not.
+ * Keep a month's document under the budget by dropping the per-question DETAIL
+ * of the OLDEST matches IN THAT MONTH first — never a whole match, and never a
+ * pupil. The podium (name · team · right · wrong · time · %) is computed from
+ * fields that stay, so an old match keeps its board and loses only the ability
+ * to be opened up. That is the right thing to lose: a busy month's earliest
+ * games, "who won" is still wanted and "what did AN answer to question 7" is
+ * not.
  */
 function fitToBudget(node) {
   const size = () => JSON.stringify(node).length;
@@ -238,10 +327,58 @@ export function matchIdOf(tableId, roundKey, playNo) {
 }
 
 // ---------------------------------------------------------------
-// WRITE
+// INDEX — the small doc the folder rail reads
+// ---------------------------------------------------------------
+async function readIndexDoc(classId) {
+  const uid = await requireUid();
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const snap = await getDoc(doc(d, `users/${uid}/items`, indexDocId(classId)));
+  return normIndexDoc(snap.exists() ? snap.data() : {}, classId);
+}
+
+/**
+ * Merge one month's fresh {count, lastAt} into the index. A plain merge write
+ * (no transaction): losing a race here just means the folder rail shows a
+ * slightly stale count for one repaint — never a wrong MATCH, since matches
+ * live only in the month document this never touches.
+ */
+async function bumpIndex(classId, className, yyyymm, count, lastAt) {
+  try {
+    const uid = await requireUid();
+    const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+    await setDoc(doc(d, `users/${uid}/items`, indexDocId(classId)), clean({
+      kind: "showdown-history-index", root: "showdown", parentId: null, trashed: false,
+      classId: String(classId), className: String(className || ""),
+      months: { [yyyymm]: { count, lastAt } },
+      updatedAt: Date.now()
+    }), { merge: true });
+  } catch (e) {
+    // Best-effort: the folder rail will simply be a beat behind until the next
+    // successful save touches this month again. Never worth failing the match
+    // save over — see saveMatchResult's own note on what that moment is.
+    console.warn("AWord: could not update the Showdown month index", e);
+  }
+}
+
+/** Drop a month key from the index entirely — its last tile was just deleted. */
+async function dropIndexMonth(classId, yyyymm) {
+  const uid = await requireUid();
+  const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, indexDocId(classId));
+  const snap = await getDoc(ref);
+  const node = normIndexDoc(snap.exists() ? snap.data() : {}, classId);
+  if (!(yyyymm in node.months)) return;
+  delete node.months[yyyymm];
+  node.updatedAt = Date.now();
+  await setDoc(ref, clean(node));   // full overwrite, not merge: merge cannot remove a key
+}
+
+// ---------------------------------------------------------------
+// WRITE — one team's finished result
 // ---------------------------------------------------------------
 /**
- * File ONE team's finished result into the class's ledger.
+ * File ONE team's finished result into the class's ledger, in THIS MONTH's
+ * document.
  *
  * Never throws for an ordinary reason (signed out, offline): the caller is the
  * engine's `finish()`, which is a moment when the class is watching a
@@ -262,9 +399,10 @@ export async function saveMatchResult({
   if (!classId || !teamId) return false;
   const uid = await requireUid();
   const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
-  const ref = doc(d, `users/${uid}/items`, docIdFor(classId));
-  const id = matchIdOf(tableId, roundKey, playNo);
   const now = Date.now();
+  const yyyymm = yyyymmOf(now);
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
+  const id = matchIdOf(tableId, roundKey, playNo);
   const entry = {
     teamId: String(teamId),
     // A solo pick names its team after the class (applySolo), which is right on
@@ -274,20 +412,20 @@ export async function saveMatchResult({
     at: now,
     students: (students || []).map(normStudent).filter(s => s.name)
   };
+  let result = null;
   await runTransaction(d, async tx => {
     const snap = await tx.get(ref);
-    const node = normDoc(snap.exists() ? snap.data() : {}, classId);
+    const node = normMonthDoc(snap.exists() ? snap.data() : {}, classId, yyyymm);
     node.className = String(className || node.className || "");
     let m = node.matches.find(x => x.matchId === id);
     if (!m) {
       m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, contentVariant, at: now });
       node.matches.push(m);
-      // Thầy's rule, applied on CREATION rather than on write: five columns, and
-      // the sixth pushes the first out. Sorted by `at` rather than by array
-      // order, because two columns creating two matches in the same second may
-      // append in either order.
+      // ⭐ Đợt 236 — NO EVICTION HERE ANY MORE (see file header: "giữ mãi mãi").
+      // Sharding by month is what keeps any one document small; this month's
+      // own matches simply accumulate, oldest ones losing row detail first via
+      // fitToBudget() below if the month was an unusually busy one.
       node.matches.sort((a, b) => (a.at || 0) - (b.at || 0));
-      while (node.matches.length > MAX_MATCHES) node.matches.shift();
     }
     // A team may only ever have ONE row in a match — a board that finished, was
     // restarted and finished again inside the same play number replaces itself.
@@ -297,55 +435,202 @@ export async function saveMatchResult({
     if (!m.contentVariant && contentVariant) m.contentVariant = cut(contentVariant);
     node.updatedAt = now;
     tx.set(ref, clean(fitToBudget(node)));
+    result = { count: node.matches.length, lastAt: Math.max(now, ...node.matches.map(x => x.at || 0)) };
   });
+  if (result) await bumpIndex(classId, className, yyyymm, result.count, result.lastAt);
   return true;
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 236 — MIGRATE THE OLD SINGLE-DOCUMENT LEDGER, ONCE PER SESSION
+// ---------------------------------------------------------------
+// Every read path below calls this first. It is a no-op after the first real
+// hit for a class (tracked in-memory, so a second call in the same page life
+// costs nothing) and a no-op forever once the legacy document is stamped.
+const migratedThisSession = new Set();
+
+async function mergeLegacyMatchesIntoMonth(classId, className, yyyymm, matches) {
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
+  let result = null;
+  await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const node = normMonthDoc(snap.exists() ? snap.data() : {}, classId, yyyymm);
+    node.className = String(className || node.className || "");
+    let changed = false;
+    matches.forEach(m => {
+      if (node.matches.some(x => x.matchId === m.matchId)) return;   // already migrated, or already live
+      node.matches.push(m);
+      changed = true;
+    });
+    if (changed) {
+      node.matches.sort((a, b) => (a.at || 0) - (b.at || 0));
+      node.updatedAt = Date.now();
+      tx.set(ref, clean(fitToBudget(node)));
+    }
+    result = { count: node.matches.length, lastAt: node.matches.reduce((a, x) => Math.max(a, x.at || 0), 0) };
+  });
+  return result;
+}
+
+async function migrateLegacyIfNeeded(classId) {
+  if (!classId || migratedThisSession.has(classId)) return;
+  // Marked BEFORE the work, not after: a signed-out/offline miss must not
+  // retry-storm every single read this file does for the rest of the session.
+  // A genuine failure gets a fresh attempt on the next page load regardless.
+  migratedThisSession.add(classId);
+  try {
+    const uid = await requireUid();
+    const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
+    const legacyRef = doc(d, `users/${uid}/items`, docIdFor(classId));
+    const snap = await getDoc(legacyRef);
+    if (!snap.exists()) return;
+    const legacy = normLegacyDoc(snap.data(), classId);
+    if (legacy.migrated) return;
+    if (!legacy.matches.length) {
+      await setDoc(legacyRef, { migrated: true }, { merge: true });
+      return;
+    }
+    const byMonth = new Map();
+    legacy.matches.forEach(m => {
+      const mm = yyyymmOf(m.at);
+      if (!byMonth.has(mm)) byMonth.set(mm, []);
+      byMonth.get(mm).push(m);
+    });
+    for (const [mm, matches] of byMonth) {
+      const r = await mergeLegacyMatchesIntoMonth(classId, legacy.className, mm, matches);
+      if (r) await bumpIndex(classId, legacy.className, mm, r.count, r.lastAt);
+    }
+    await setDoc(legacyRef, { migrated: true }, { merge: true });
+  } catch (e) {
+    console.warn("AWord: could not migrate the old Showdown ledger", e);
+  }
 }
 
 // ---------------------------------------------------------------
 // READ
 // ---------------------------------------------------------------
+async function readMonthDoc(classId, yyyymm) {
+  const uid = await requireUid();
+  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
+  const snap = await getDoc(doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm)));
+  return normMonthDoc(snap.exists() ? snap.data() : {}, classId, yyyymm);
+}
+
 /**
- * A class's matches, NEWEST FIRST — which is the order the five columns are
- * drawn in, so the most recent match is the one under the teacher's hand.
- * Always read fresh: the whole point of the screen that calls this is that
- * something has happened since it was last looked at.
+ * The same NEWEST-FIRST tie-break `loadMatches`/`loadMonth` always used: `at`
+ * is a millisecond clock and two matches really can share one (four boards
+ * filing in the same tick), so the stored array order — oldest-first within one
+ * document — breaks the tie. `i` must come from the match's position WITHIN ITS
+ * OWN month document; matches from different months never share a millisecond,
+ * so that is the only place a tie can ever occur.
+ */
+function newestFirst(entries) {
+  return entries
+    .map((m, i) => ({ m, i }))
+    .sort((a, b) => ((b.m.at || 0) - (a.m.at || 0)) || (b.i - a.i))
+    .map(x => x.m);
+}
+
+/**
+ * ⭐⭐⭐ Đợt 236 — every month this class has anything in, newest first. What the
+ * new SHOWDOWN home page's folder rail is built from — cheap on purpose (one
+ * small document), so opening the page never has to fetch a class's whole
+ * multi-year ledger just to draw the list of months.
+ */
+export async function loadMonthIndex(classId) {
+  if (!classId) return { className: "", months: [] };
+  await migrateLegacyIfNeeded(classId);
+  const idx = await readIndexDoc(classId);
+  const months = Object.entries(idx.months)
+    .map(([key, v]) => ({ key, count: v.count, lastAt: v.lastAt }))
+    .sort((a, b) => b.key.localeCompare(a.key));
+  return { className: idx.className, months };
+}
+
+/**
+ * One month's matches, newest first, each tagged `_yyyymm` so a caller can
+ * delete/rename it without having to re-derive which shard it lives in.
+ */
+export async function loadMonth(classId, yyyymm) {
+  if (!classId || !yyyymm) return [];
+  await migrateLegacyIfNeeded(classId);
+  const node = await readMonthDoc(classId, yyyymm);
+  return newestFirst(node.matches).map(m => ({ ...m, _yyyymm: yyyymm }));
+}
+
+/**
+ * A class's matches, NEWEST FIRST — which is the order the in-game popup's
+ * columns are drawn in, so the most recent match is the one under the
+ * teacher's hand. Always read fresh: the whole point of the screen that calls
+ * this is that something has happened since it was last looked at.
+ *
+ * ⭐ Đợt 236 — sourced from the sharded months now, but the SIGNATURE, the
+ * order and the MAX_MATCHES cap are all unchanged: the in-game quick popup
+ * (core/showdown-setup.js's openRecent) keeps behaving exactly as it always
+ * has (thầy's own instruction — the durable, unbounded ledger lives behind the
+ * new home page, not here). Walks back at most MONTH_WALK_CAP months hunting
+ * for MAX_MATCHES worth of rows; a class that quiet has nothing more to show
+ * regardless.
  */
 export async function loadMatches(classId) {
   if (!classId) return [];
-  const uid = await requireUid();
-  const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
-  const snap = await getDoc(doc(d, `users/${uid}/items`, docIdFor(classId)));
-  const node = normDoc(snap.exists() ? snap.data() : {}, classId);
-  // ⚠️ THE STORED INDEX IS THE TIE-BREAK, and it is not decoration. `at` is a
-  // millisecond clock, and two matches really can share one: four boards filing
-  // in the same tick during a fast replay, and every one of the six matches this
-  // was first tested with. A plain `b.at - a.at` leaves ties in their stored
-  // order — which is oldest-FIRST — so on a tie the board drew the five columns
-  // backwards and the newest match sat on the right. Measured, not reasoned:
-  // the grid caught it (scratch/sd197-panel.html, "cột mới nhất đứng đầu").
-  return node.matches
-    .map((m, i) => ({ m, i }))
+  await migrateLegacyIfNeeded(classId);
+  const idx = await readIndexDoc(classId);
+  const monthKeys = Object.keys(idx.months).sort().reverse();
+  const acc = [];
+  for (let i = 0; i < monthKeys.length && i < MONTH_WALK_CAP && acc.length < MAX_MATCHES; i++) {
+    const node = await readMonthDoc(classId, monthKeys[i]);
+    node.matches.forEach((m, j) => acc.push({ m, i: j, month: monthKeys[i] }));
+  }
+  return acc
     .sort((a, b) => ((b.m.at || 0) - (a.m.at || 0)) || (b.i - a.i))
-    .map(x => x.m)
-    .slice(0, MAX_MATCHES);
+    .slice(0, MAX_MATCHES)
+    .map(x => ({ ...x.m, _yyyymm: x.month }));
 }
 
-/** Throw a class's whole ledger away. Only the teacher's own Clear asks for this. */
+/** Throw a class's WHOLE ledger away — every month, and the index with it. */
 export async function wipeMatches(classId) {
   if (!classId) return;
   const uid = await requireUid();
-  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
-  await setDoc(doc(d, `users/${uid}/items`, docIdFor(classId)), {
-    kind: "showdown-history", root: "showdown", parentId: null, trashed: false,
-    classId: String(classId), className: "", matches: [], updatedAt: Date.now()
+  const [d, sdk] = await Promise.all([db(), fs()]);
+  const { doc, getDoc, setDoc, deleteDoc, writeBatch } = sdk;
+  const idxRef = doc(d, `users/${uid}/items`, indexDocId(classId));
+  const idxSnap = await getDoc(idxRef);
+  const idx = normIndexDoc(idxSnap.exists() ? idxSnap.data() : {}, classId);
+  const monthKeys = Object.keys(idx.months);
+  // ⭐ Đợt 236 — batched, not one transaction: this can touch a class's whole
+  // multi-year history (many month documents) and a single transaction has its
+  // own read/write-set limits. Nothing here races a live game the way
+  // saveMatchResult's per-match write does — Reset ledger and a lesson in
+  // progress are not something the teacher does at the same moment.
+  if (monthKeys.length) {
+    for (let i = 0; i < monthKeys.length; i += 400) {
+      const batch = writeBatch(d);
+      monthKeys.slice(i, i + 400).forEach(mm => batch.delete(doc(d, `users/${uid}/items`, monthDocId(classId, mm))));
+      await batch.commit();
+    }
+  }
+  await setDoc(idxRef, {
+    kind: "showdown-history-index", root: "showdown", parentId: null, trashed: false,
+    classId: String(classId), className: "", months: {}, updatedAt: Date.now()
   });
+  // The legacy document is not a source of truth once migrated (or once there
+  // was never anything in it) — but wiping it too means a class reset today
+  // does not resurrect five old matches from before this đợt on some future
+  // migration bug. Harmless either way; cheap to be sure.
+  await deleteDoc(doc(d, `users/${uid}/items`, docIdFor(classId))).catch(() => {});
 }
 
 /**
- * ⭐⭐ Đợt 224 (22/8/2026, thầy) — DROP ONE MATCH, NOT THE WHOLE LEDGER.
- * The "–" on a single column in Recent results. `wipeMatches()` above already
- * covered "throw the whole ledger away" (the RESET button); this is the finer
- * grain the teacher asked for once the ledger grew to ten columns.
+ * ⭐⭐ Đợt 224 — DROP ONE MATCH, NOT THE WHOLE LEDGER.
+ * ⭐ Đợt 236 — now scoped to the month the match lives in (every caller already
+ * has that from `_yyyymm` on the match it loaded — see loadMatches/loadMonth).
+ * If that was the LAST match in the month, the month is dropped from the index
+ * too, so an empty day-folder (and now an empty month-folder) never lingers on
+ * screen — see core/showdown-home.js's own note on why days need no bookkeeping
+ * of their own at all: they are derived from whatever matches remain.
  *
  * ⚠️ SAME TRANSACTION SHAPE AS `saveMatchResult()` — read the doc inside the
  * transaction, edit, write back. A plain get-then-set here would race a column
@@ -356,47 +641,50 @@ export async function wipeMatches(classId) {
  * already gone) — never throws for that, only for signed-out/offline, same as
  * every other write in this file.
  */
-export async function deleteMatch(classId, matchId) {
-  if (!classId || !matchId) return false;
+export async function deleteMatch(classId, yyyymm, matchId) {
+  if (!classId || !yyyymm || !matchId) return false;
   const uid = await requireUid();
   const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
-  const ref = doc(d, `users/${uid}/items`, docIdFor(classId));
-  let found = false;
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
+  let found = false, className = "", count = 0, lastAt = 0;
   await runTransaction(d, async tx => {
     const snap = await tx.get(ref);
     if (!snap.exists()) return;
-    const node = normDoc(snap.data(), classId);
+    const node = normMonthDoc(snap.data(), classId, yyyymm);
     const before = node.matches.length;
     node.matches = node.matches.filter(m => m.matchId !== matchId);
     found = node.matches.length !== before;
     if (!found) return;             // nothing changed — do not bump updatedAt for no reason
     node.updatedAt = Date.now();
     tx.set(ref, clean(node));
+    className = node.className;
+    count = node.matches.length;
+    lastAt = node.matches.reduce((a, x) => Math.max(a, x.at || 0), 0);
   });
-  return found;
+  if (!found) return false;
+  if (count === 0) await dropIndexMonth(classId, yyyymm);
+  else await bumpIndex(classId, className, yyyymm, count, lastAt);
+  return true;
 }
 
 /**
- * ⭐⭐ Đợt 230 (22/8/2026, thầy) — RENAME ONE MATCH BY HAND.
- * Double-tap the name in Recent results (core/showdown-setup.js). Overwrites
+ * ⭐⭐ Đợt 230 — RENAME ONE MATCH BY HAND.
+ * ⭐ Đợt 236 — scoped to the month the match lives in, same reason as deleteMatch.
+ * Double-tap the name in Recent results / the SHOWDOWN home page. Overwrites
  * `customName`, which then wins over the formatted display name FOREVER for
  * this match (see `normMatch`'s own note) — typing a blank name clears it back
  * to the formatted/raw name rather than storing an empty override.
- *
- * Same transaction shape as `deleteMatch()` and for the same reason: a plain
- * get-then-set here would race a column filing a brand new match at the same
- * second, and the loser's write would vanish with no symptom on either screen.
  */
-export async function renameMatch(classId, matchId, customName) {
-  if (!classId || !matchId) return false;
+export async function renameMatch(classId, yyyymm, matchId, customName) {
+  if (!classId || !yyyymm || !matchId) return false;
   const uid = await requireUid();
   const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
-  const ref = doc(d, `users/${uid}/items`, docIdFor(classId));
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
   let found = false;
   await runTransaction(d, async tx => {
     const snap = await tx.get(ref);
     if (!snap.exists()) return;
-    const node = normDoc(snap.data(), classId);
+    const node = normMonthDoc(snap.data(), classId, yyyymm);
     const m = node.matches.find(x => x.matchId === matchId);
     if (!m) return;
     m.customName = cut(customName);

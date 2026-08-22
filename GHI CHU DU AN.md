@@ -5,6 +5,132 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 236 (23/8/2026) — ⭐⭐⭐ TRANG SHOWDOWN RIÊNG TRÊN TRANG CHỦ + KHO LƯU TRỮ BỀN THEO THÁNG — 🟡 CODE XONG + TỰ TEST QUA FIRESTORE GIẢ, CHƯA BẤM TAY THẬT/CHƯA COMMIT
+
+Thầy giao 2 việc lớn, chốt qua AskUserQuestion trước khi build ("gộp luôn các việc trong 1 lần. Ok
+build"): (1) nút SHOWDOWN vàng-hào-quang trên trang chủ, mở ra **trang riêng hoàn toàn** (không phải
+pop-up) để xem/phân tích MỌI kết quả Showdown một lớp đã từng chơi; (2) kho lưu trữ **bỏ hẳn giới hạn
+10 trận**, giữ mãi mãi, tổ chức theo thư mục THÁNG → NGÀY. Pop-up "Recent results" trong lúc đang chơi
+**giữ nguyên y hệt cũ** (thầy chốt) — chỉ đổi *nguồn* dữ liệu bên dưới, không đổi gì thầy nhìn thấy.
+
+Sửa 5 file, thêm 2 file mới:
+`core/showdown-history.js` (viết lại gần hết) · `core/showdown-setup.js` (đưa 9 hàm thuần ra module
+scope + export, sửa 2 chỗ gọi `deleteMatch`/`renameMatch`) · `core/store.js` (đăng ký 2 `kind` mới) ·
+`main.js` (nút mới + route `?sd=1&c=`) · `core/app.css` (~260 dòng CSS mới) · **mới:**
+`core/showdown-home.js` (trang UI, ~800 dòng).
+
+### 1) KHO LƯU TRỮ CHIA THEO THÁNG (`core/showdown-history.js`)
+
+⛔⛔ **"Giữ mãi mãi" và "một document" không thể cùng đúng** — Firestore từ chối thẳng một document
+vượt 1MB. Trước đây mỗi LỚP có đúng 1 document (`sd_hist_<classId>`), tối đa 10 trận, trận thứ 11 đẩy
+trận đầu ra. Nay **mỗi LỚP × mỗi THÁNG một document riêng** (`sd_hist_<classId>_<YYYYMM>`, vd
+`sd_hist_cls_a1b_202608`), không còn giới hạn số trận trong 1 tháng — an toàn vì một lớp bình thường
+chỉ vài chục trận/tháng, còn `fitToBudget()` (đã có từ Đợt 197) vẫn đứng gác: tháng nào quá tải thì
+rút chi tiết câu hỏi của trận CŨ NHẤT trước, không bao giờ xoá cả trận.
+
+⭐ **Một document INDEX nhỏ** (`sd_hist_<classId>_idx`) giữ `{months: {"<YYYYMM>": {count, lastAt}}}`
+— cột thư mục đọc CHỈ document này để vẽ danh sách tháng, KHÔNG phải tải hết mọi tháng. Chỉ khi thầy
+MỞ một tháng cụ thể mới tải document tháng đó. ⛔ Không dùng Firestore `query`/`where` ở đâu cả (dù bộ
+Firestore GIẢ trong `scratch/` có hỗ trợ) — mọi document đều có ID ĐOÁN ĐƯỢC (lớp+tháng), đọc thẳng
+bằng `getDoc`, KHÔNG cần thầy tạo composite index thủ công trong Firebase Console (một việc ngoài code
+mà không ai muốn thầy phải làm).
+
+⭐⭐ **Ngày được TÍNH RA, không lưu riêng** — cột thư mục ngày trong mỗi tháng chỉ là nhóm-theo-`at`
+của các trận đã có trong document tháng đó, tính lại mỗi lần vẽ. Hệ quả rất gọn: *"xoá hết các ô trong
+1 ngày thì ngày đó tự biến mất"* không cần code riêng nào cả — không còn trận nào thuộc ngày đó thì
+không có gì để nhóm.
+
+⭐⭐⭐ **DI TRÚ TỰ ĐỘNG, ÂM THẦM, MỘT LẦN.** Document cũ (tối đa 10 trận, không hậu tố tháng) của mọi
+lớp đang có sẵn trên Firestore thật — `migrateLegacyIfNeeded(classId)` chạy TRƯỚC mọi lần đọc, gom các
+trận theo tháng của từng trận rồi ghi vào đúng document tháng, đóng dấu `migrated:true` lên document cũ
+(giữ nguyên làm bản sao lưu chết, không xoá). Idempotent — gọi lại không ghi thêm gì (đã đo:
+`DB.writes` không tăng ở lần gọi thứ hai).
+
+⛔ **`loadMatches(classId)` (đường pop-up trong lúc chơi) HÀNH VI KHÔNG ĐỔI MỘT CHỮ** — vẫn trả đúng
+10 trận mới nhất, chỉ khác là giờ nó tự đi lùi qua nhiều document tháng (tối đa 8 tháng) để gom đủ,
+thay vì đọc 1 document duy nhất. `deleteMatch`/`renameMatch` đổi chữ ký (thêm tham số `yyyymm`) — 2 chỗ
+gọi trong `showdown-setup.js` đã sửa theo (`m._yyyymm`, do `loadMatches`/`loadMonth` tự gắn vào mỗi
+trận trả về).
+
+🔴 **VÁ LUÔN 1 LỖ HỔNG CÓ SẴN TỪ Đợt 197**: `store.js`'s `APP_DATA_KINDS` (danh sách kind KHÔNG được
+cấp số link `?a=`) thiếu hẳn `"showdown-history"` — một `?a=57` may rủi có thể trả về document sổ cái
+thay vì một hoạt động thật. Vá cùng lúc thêm `"showdown-history-index"` cho kind mới.
+
+### 2) TRANG SHOWDOWN (`core/showdown-home.js` + nút mới trong `main.js`)
+
+Nút icon vàng cạnh trái nút Cài đặt, **CHỈ ở trang chủ** (`topbar(false)`), hào quang nhấp nháy dùng
+LẠI keyframe `aw-sd-rec-analyseglow` sẵn có (không đẻ hiệu ứng thứ hai cho cùng một ý). Mở ra trang
+riêng (`state.view = "showdown-home"`, URL `?sd=1&c=<classId>`) — dùng lại đúng khung `topbar()`/
+`footer()`/`.aw-lib` của các trang thư viện khác, chỉ nới `max-width` lên 1280px qua lớp phủ
+`.aw-lib.aw-sdh-page` (3 cột thật cần rộng hơn 1040px mặc định).
+
+⭐⭐⭐ **KHÔNG VIẾT LẠI, DÙNG LẠI ĐÚNG NHỮNG GÌ ĐÃ CHỨNG MINH ĐÚNG.** 9 hàm thuần từng nằm trong closure
+của `buildShowdownPanel` (`when`, `spark6`, `matchBlocks`, `displayName`, `renderMini`, `renderChart`,
+`renderLegend`, `fitChartTierLabels`, `watchChartResize`) được đưa ra **module scope + export** trong
+`core/showdown-setup.js` — đã kiểm chắc cả 9 hàm không hề đụng biến closure nào (`setup`/`classes`/
+`roster`...), chỉ dùng tham số + hằng số module, nên việc di chuyển không đổi hành vi gì. Trang mới
+dùng lại y hệt các hàm này, cộng `renderReviewTable/Podium/List`/`fitPodiumNames` (từ
+`showdown-review.js`) và `openExportDialog`/`openAnalysisExportDialog` (từ `showdown-export.js`) —
+một ô kết quả, một màn chi tiết, một biểu đồ ANALYSE, vẽ giống hệt nhau dù mở từ đâu.
+
+**Cột thư mục trái**: tiêu đề = tên lớp (đứng yên), danh sách cuộn được, mỗi THÁNG một hàng có thể mở
+ra xem các NGÀY bên trong (`SAT • 22/8/2026` — chữ thứ viết tắt xanh lá `#16a34a`, ngày đen, chữ to
+đậm). Mở lớp lần đầu **tự mở tháng mới nhất + chọn ngày mới nhất** — không để màn hình trống dù có dữ
+liệu.
+
+**Vùng giữa**: `.aw-sdh-tiles` dùng `grid-template-columns: repeat(auto-fit, minmax(168px,1fr))` — ít
+ô thì tự dãn rộng ra (đọc như "vài cột dài"), nhiều ô thì tự xuống nhiều tầng — không cần JS tính số
+cột như bản `.aw-sd-rec-cols` cũ (vốn cứng 5×2 vì trước đây tối đa 10 trận).
+
+**Chế độ CHOOSING**: bấm nút ANALYSE ở góc → đổi chữ thành "CHOOSING" (bấm lại = thoát), mở cột phải
+(nút ANALYSE thật sự — dùng lại NGUYÊN nút `.aw-sd-rec-analyse` vàng-nhấp-nháy, chỉ "bay" sang cột mới
+bằng cách dựng lại ở vị trí mới, không animate DOM di chuyển thật). Mỗi ô tích → hiện 1 chip bên cột
+phải, **thứ tự bấm trước hiện trước** (dùng `Map`, giữ thứ tự chèn). ⭐ Thầy chốt qua AskUserQuestion:
+**dấu X trên chip CHỈ bỏ chọn, không đụng dữ liệu thật** — không hỏi xác nhận (an toàn, không mất gì).
+Nút ALL (chỉ hiện khi đang CHOOSING) — mọi thư mục THÁNG sáng nhấp nháy + khoá không bấm được
+(`pointer-events:none`), vùng giữa gộp MỌI ngày đã tải, ngăn cách bằng `<hr>` mảnh.
+
+**Màn ANALYSING**: khung bo góc có viền sáng chạy vòng quanh (`conic-gradient` xoay 360°/1.6s — vòng
+lặp KHÔNG khựng vì góc xoay tự nhiên khớp đầu-cuối, khác bẫy `background-position %` của Đợt 208/209),
+chữ "ANALYSING" cỡ lớn ở giữa. Có sàn tối thiểu 550ms dù không còn gì phải chờ mạng (mọi trận đã có sẵn
+trong bộ nhớ cache) — một phép tính xong ngay trong cùng khung hình đọc như "không có gì xảy ra" trên
+một màn vừa hứa "ANALYSING".
+
+⛔⛔ **AN TOÀN XSS — 8 CHỖ ĐÃ VÁ TRƯỚC KHI GIAO.** `el(tag, class, html)` của `core/utils.js` gán
+`innerHTML`, KHÔNG PHẢI `textContent` — bản nháp đầu tiên lỡ truyền tên lớp/tên trận (chữ giáo viên tự
+gõ, có thể chứa `<`/`&`) làm tham số thứ 3 ở 8 chỗ (tên lớp trong bảng chọn, tiêu đề cột thư mục, tên
+trận trong chip, tiêu đề bảng chi tiết, tiêu đề biểu đồ, nội dung hộp hỏi xác nhận...). Đã sửa hết
+sang dựng phần tử trống rồi gán `.textContent =` riêng, đúng luật "mọi tên HS/câu hỏi/câu trả lời PHẢI
+`.textContent`" nhắc đi nhắc lại trong `core/HUONG DAN CORE.md`. Lưới thử có ca tên `"Tên có <script> &
+ký tự lạ"` — xác nhận hiển thị ĐÚNG NGUYÊN VĂN, không đẻ thẻ HTML thật nào.
+
+### 3) LƯỚI THỬ (`scratch/`)
+
+`dot236-history.html` (29/29 đạt) kiểm kho lưu: chia tháng, không còn cắt 10 trận, `loadMatches` vẫn
+đúng 10 + đi lùi nhiều tháng, xoá trận cuối cùng làm tháng biến mất khỏi index, đổi tên, di trú tự
+động + idempotent, `wipeMatches` xoá sạch, SOLO vẫn lưu bền. `dot236-home.html` (50/50 đạt) kiểm cả
+trang: chọn lớp, mở/đóng thư mục, xem chi tiết, xoá + hỏi xác nhận, đổi tên, CHOOSING/ALL/chip/ANALYSE,
+2 ca chống XSS. `fake-firebase236.js` (bản sao `fake-firebase196.js` + thêm `writeBatch`).
+
+⭐ **Chạy lại 2 lưới thử CŨ để chắc không phá gì** (`dot230-recent.html`, `sd207-panel.html`) — phát
+hiện `fake-firebase196.js` (bộ giả DÙNG CHUNG cho nhiều lưới thử cũ) thiếu `writeBatch` mà
+`wipeMatches` mới cần → thêm luôn vào file đó (không tạo bản thứ 3). Cũng bắt được 2 lưới thử CŨ tự nó
+đã LỖI THỜI từ trước Đợt 236 (không phải do đợt này): `sd207-panel.html` bấm nhầm nút "Table" (đã có
+từ Đợt 235, đứng đầu 3 nút Table/Podium/List) tưởng là nút Podium (test viết cho thời còn 2 nút), và
+đợi 220ms tưởng đủ trong khi Đợt 235 đã thêm sàn 3 giây chặn đổi tab — sửa cả hai, không phải do tôi
+gây ra nhưng tiện tay dọn để lưới thử còn dùng được về sau. **`sd198-panel.html` còn 2 ca HỎNG KHÔNG
+LIÊN QUAN** (tính "EACH/LEFT" chia câu hỏi — logic đã đổi từ Đợt 207, test đó viết từ Đợt 198, chưa ai
+cập nhật) — xác nhận qua `git diff` là code của đợt này không đụng gì tới `targetSizes`/`planDeal`,
+để nguyên không sửa vì ngoài phạm vi việc thầy giao.
+
+### ⬜ CÒN LẠI — CHƯA COMMIT, CHƯA BẤM TAY THẬT
+Mọi kiểm tra ở trên chạy qua Firestore GIẢ (`scratch/`), CHƯA ai đăng nhập Google thật để thử trên
+`aword.andrewclasses.com`. Thầy cần: (1) bấm nút vàng trên trang chủ thật, chọn 1 lớp thật, xem thư
+mục/ô có đúng như mong đợi; (2) thử CHOOSING/ALL/ANALYSE trên dữ liệu thật; (3) xác nhận đồng ý
+commit + push (chưa làm, chờ thầy duyệt).
+
+---
+
 ## Đợt 235 (22/8/2026) — ⭐⭐⭐ DÒNG THƯƠNG HIỆU + DẠNG BẢNG MỚI + ĐỔI CƠ CHẾ XEM KẾT QUẢ — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `7554fe6`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `7554fe6` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/icons.js` · `core/showdown-export.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 ⚠️ Duyệt ở đây là duyệt CODE theo báo cáo + kiểm tra tự động — mục "🟢 CHƯA THỬ ĐƯỢC" ở cuối đợt vẫn
 còn nguyên (chưa ai đăng nhập Firestore thật để chạy 2 màn xem kết quả, chưa ai bấm tay trên TOMKO).

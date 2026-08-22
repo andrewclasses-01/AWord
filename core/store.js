@@ -155,8 +155,11 @@ function nextNum(map) {
 // ⚠️ ADD ANY FUTURE `kind` OF APP DATA HERE. Forgetting costs a silently eaten
 // link number and, worse, a ?a=57 that resolves to a settings document.
 // (Đợt 177 nearly paid exactly that: "showdown-results" was added to Firestore
-// before this line was, and only the warning above caught it.)
-const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results"]);
+// before this line was, and only the warning above caught it. "showdown-history"
+// itself was missing here from Đợt 197 until Đợt 236 caught the same gap —
+// harmless so far only because nobody had over ~50 items yet to collide a link
+// number with. "showdown-history-index" is Đợt 236's own new kind.)
+const APP_DATA_KINDS = new Set(["class", "showdown", "showdown-results", "showdown-history", "showdown-history-index"]);
 function isAppData(n) { return APP_DATA_KINDS.has(n.kind); }
 
 export async function ensureNumbers() {

@@ -969,7 +969,11 @@ export { shortenName };
 // core/sound.js is used by all 17 games, so growing it for one caller would make
 // every other game's sound list longer for nothing. `sound.glide` already
 // respects the global mute, so nothing here has to check it.
-const sfx = {
+// ⭐ Đợt 236 — exported too: the new SHOWDOWN home page (core/showdown-home.js)
+// plays the same little clicks/glides for the same gestures (tap a folder,
+// open a tile, begin an analysis) and must not invent a second copy of this
+// vocabulary — see this const's own header just above for why it exists at all.
+export const sfx = {
   tap:     () => sound.click(),
   forward: () => sound.glide({ freq: 620, freqEnd: 960, dur: 130, gain: 0.075, type: "sine" }),
   back:    () => sound.glide({ freq: 900, freqEnd: 560, dur: 130, gain: 0.06, type: "sine" }),
@@ -995,10 +999,10 @@ const sfx = {
 // rather than imported from core/showdown-review.js: neither of these two
 // dynamic-import-only files should gain a static import of the other just for
 // one small shared constant. Change a colour here, change it there too.
-const ANALYSE_COLORS = ["#2f7dfd", "#9061f9", "#f5a623", "#14b8a6", "#ec4899", "#06b6d4", "#fb923c", "#64748b"];
+export const ANALYSE_COLORS = ["#2f7dfd", "#9061f9", "#f5a623", "#14b8a6", "#ec4899", "#06b6d4", "#fb923c", "#64748b"];
 
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
-function whenDone(anim, after, ms) {
+export function whenDone(anim, after, ms) {
   let done = false;
   const settle = () => {
     if (done) return;
@@ -1011,6 +1015,227 @@ function whenDone(anim, after, ms) {
   anim.onfinish = settle;
   setTimeout(settle, ms);
   return settle;
+}
+
+// ⭐⭐ Đợt 236 — lifted to module scope (from inside buildShowdownPanel, where
+// they lived since Đợt 197/207/224) and exported: the new SHOWDOWN home page
+// (core/showdown-home.js) draws the exact same match tiles, chart and legend
+// the in-game Recent results/Analyse screens do, and a second copy of any one
+// of these is a second copy of a rule that WILL drift (this file's own
+// recurring lesson — see mergeClassBlocks' note in core/showdown.js). None of
+// them ever referenced the panel's own closure state (`setup`/`classes`/
+// `roster`/...) — only their own arguments plus module-level `el`/`icons`/
+// `ANALYSE_COLORS`/`POD_MAX_W`/`POD_MIN_W` — so the move changes no behaviour.
+
+/** "14:32 · 22/8" — a match's timestamp, formatted the same everywhere it appears. */
+export const when = ms => {
+  const d = new Date(Number(ms) || 0);
+  const p = x => String(x).padStart(2, "0");
+  return `${p(d.getHours())}:${p(d.getMinutes())} · ${d.getDate()}/${d.getMonth() + 1}`;
+};
+
+/**
+ * ⭐ Đợt 224 — six scattered CSS-only sparkles, trusted markup. Exactly the
+ * `.aw-sd-pod-star` idiom (core/showdown-review.js's renderReviewPodium) —
+ * `clip-path` stars, staggered `animation-delay`, animated ENTIRELY in CSS so
+ * a backgrounded myActivity column does not need requestAnimationFrame to keep
+ * them twinkling (the same rAF trap core/HUONG DAN CORE.md already warns
+ * about). Its own function rather than folded into a caller: `.aw-sd-recent`
+ * and the SHOWDOWN home page are both plain px surfaces (not `cqw`, unlike the
+ * real board's own `.aw-sd-pod-star`), so this one small markup shape is what
+ * both share instead of each inventing it.
+ */
+export function spark6() {
+  let s = `<span class="aw-sd-rec-analyse-spark" aria-hidden="true">`;
+  for (let i = 0; i < 6; i++) s += `<i class="aw-sd-rec-star s${i}"></i>`;
+  return s + `</span>`;
+}
+
+/** One match's whole class, deduped and ranked — the ONE rule, from showdown.js. */
+export function matchBlocks(match) {
+  const groups = Object.values(match?.teams || {})
+    .map(t => ({ teamName: t.teamName || "", at: Number(t.at) || 0, blocks: t.students || [] }));
+  return rankBlocks(mergeClassBlocks(groups));
+}
+
+/**
+ * ⭐⭐ Đợt 230 — ONE PLACE that decides what a match's name reads as, so the
+ * mini card, the expanded detail, the download popup and the ANALYSE legend
+ * can never show four different things for the same row.
+ *   1. the teacher's own rename (`customName`) — ALWAYS wins, verbatim, once set
+ *   2. the formatted name ("BODY PARTS / ENGLISH 1") when this match recorded
+ *      a clue set (core/showdown.js's formatActDisplayName — a no-op for a
+ *      match filed before this đợt, or for a non-variant act)
+ *   3. the raw `actName`, then the literal fallback, same as always
+ */
+export function displayName(m) {
+  if (m.customName) return m.customName;
+  return formatActDisplayName(m.actName, m.contentVariant) || m.actName || "Showdown";
+}
+
+/**
+ * The miniature funnel — one match, tiny. See its call sites' own notes for why
+ * it is not just a small `renderReviewPodium`: the real boards are sized in
+ * `cqw` (a percentage of the 16:9 stage) and render unreadably small inside a
+ * ~200px column or tile; this is the same SHAPE at its own fixed px sizes.
+ *
+ * ⭐⭐ Đợt 207 — reads like the real board: the place is INSIDE the box (a medal
+ * for the top three, a numeral after that) and the name is given IN FULL,
+ * shrunk to fit rather than abbreviated on sight or cut off with an ellipsis.
+ */
+export function renderMini(ranked) {
+  const box = el("div", "aw-sd-mini");
+  const n = ranked.length;
+  if (!n) { box.append(el("div", "aw-sd-rec-note", "No pupils")); return box; }
+  ranked.forEach((b, i) => {
+    // The same linear taper as the real podium, off the same two constants, so
+    // the shape the teacher recognises really is the same shape.
+    const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
+    const row = el("div", "aw-sd-mini-row");
+    row.style.setProperty("--w", w.toFixed(2) + "%");
+    const card = el("div", "aw-sd-mini-box" + (i < 3 ? ` is-m${i + 1}` : ""));
+    const badge = el("span", "aw-sd-mini-badge" + (i < 3 ? " is-medal" : ""));
+    if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];    // trusted markup, core/icons.js
+    else badge.textContent = String(i + 1);
+    const nm = el("span", "aw-sd-mini-name");
+    // ⚠️ The FULL name goes in, and `fitPodiumNames` decides afterwards whether
+    // it has to shrink or, in the last resort, abbreviate.
+    nm.textContent = b.name;                                // never innerHTML
+    nm.dataset.full = b.name;
+    nm.title = b.name;
+    card.append(badge, nm, el("span", "aw-sd-mini-score", String(b.right)));
+    row.append(card);
+    box.append(row);
+  });
+  return box;
+}
+
+/** One swatch + act name + time per selected match, same colour rule as the tiers. */
+export function renderLegend(entries) {
+  const leg = el("div", "aw-sd-rec-legend");
+  entries.forEach((e, i) => {
+    const item = el("div", "aw-sd-rec-legend-item");
+    const sw = el("span", "aw-sd-rec-legend-sw");
+    sw.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
+    const tx = el("span", "aw-sd-rec-legend-txt");
+    tx.textContent = `${e.label} · ${when(e.at)}`;      // teacher's own text + a formatted time
+    item.append(sw, tx);
+    leg.append(item);
+  });
+  return leg;
+}
+
+/**
+ * The bar chart itself — plain DOM/CSS, no canvas/SVG/library, same idiom as
+ * every other board in this file.
+ *
+ * ⚠️ EVERY TIER'S HEIGHT IS A % OF THE SAME `yMax` — never of its own bar's
+ * total. That is what makes two pupils' bars comparable at a glance (a 40%
+ * tier is the same height wherever it appears); computing it against each
+ * bar's own total would make every bar read as "100% of itself" and the whole
+ * point of stacking would be gone.
+ *
+ * ⭐⭐ Đợt 230 (thầy chốt qua AskUserQuestion) — `yMax` is a FIXED 100, not a
+ * dynamic ceiling: `r.total` is an AVERAGE across the matches a pupil was
+ * present for (core/showdown.js's buildAnalysisRows), so it can never exceed
+ * 100 and the axis never needs to stretch for it. Each drawn TIER divides its
+ * match's raw `seg.pct` by `r.count` (how many matches this pupil was present
+ * for) — that is what makes the visible stack's total height land exactly on
+ * the average, while the NUMBER printed inside a tier stays that match's real,
+ * un-divided score.
+ *
+ * `full`/`partial` — Đợt 224 (thầy chốt): full first, each group sorted by its
+ * own total, `partial` drawn as a second short row after a narrow gap — NOT
+ * interleaved with `full` and NOT split further by how much any one pupil is
+ * missing.
+ */
+export function renderChart(full, partial, entries) {
+  const wrap = el("div", "aw-sd-rec-chartwrap");
+  const rows = [...full, ...partial];
+  if (!rows.length) {
+    wrap.append(el("div", "aw-sd-rec-note", "No pupils in common between these matches."));
+    return wrap;
+  }
+  const yMax = 100;
+
+  const plot = el("div", "aw-sd-rec-plotarea");
+  const track = el("div", "aw-sd-rec-track");
+  const grid = el("div", "aw-sd-rec-grid");
+  for (let v = 0; v <= yMax; v += 20) {
+    const line = el("div", "aw-sd-rec-gridline");
+    line.style.bottom = `${(v / yMax) * 100}%`;
+    line.append(el("span", "aw-sd-rec-gridlabel", v + "%"));
+    grid.append(line);
+  }
+  track.append(grid);
+  const names = el("div", "aw-sd-rec-names");
+
+  const addSpacer = () => {
+    track.append(el("div", "aw-sd-rec-bargap"));
+    names.append(el("div", "aw-sd-rec-bargap"));
+  };
+  const addBar = r => {
+    const bar = el("div", "aw-sd-rec-bar");
+    r.segments.forEach((seg, i) => {
+      if (seg.pct == null) return;          // did not play this match — no tier at all
+      const tier = el("div", "aw-sd-rec-tier");
+      const scaledPct = r.count ? seg.pct / r.count : 0;
+      tier.style.height = `${(scaledPct / yMax) * 100}%`;
+      tier.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
+      tier.dataset.pct = String(Math.round(seg.pct));
+      bar.append(tier);
+    });
+    // ⭐⭐ Đợt 230 — the big average, ON TOP of the stack. `bar` is
+    // `column-reverse` (see app.css's own note on the DOM-order rule this
+    // relies on): the FIRST-appended child sits at the bottom and each one
+    // after it stacks visually HIGHER, so appending this LAST — after every
+    // tier — is what puts it above the tallest one, no bottom/translate maths
+    // needed at all.
+    const total = el("span", "aw-sd-rec-bartotal", `${Math.round(r.total)}%`);
+    bar.append(total);
+    track.append(bar);
+    const nm = el("span", "aw-sd-rec-barname");
+    nm.textContent = r.name;                  // pupil's own name: never innerHTML
+    nm.dataset.full = r.name;
+    nm.title = r.name;
+    const nmHost = el("div", "aw-sd-rec-namehost");
+    nmHost.append(nm);
+    names.append(nmHost);
+  };
+
+  full.forEach(addBar);
+  if (full.length && partial.length) addSpacer();
+  partial.forEach(addBar);
+
+  plot.append(track, names);
+  wrap.append(plot, renderLegend(entries));
+  return wrap;
+}
+
+/**
+ * A tier's "%" only when the tier is tall enough to read — a 4px sliver with
+ * "3%" jammed into it is less legible than no text at all. Cheap enough (no
+ * font measuring, just `clientHeight`) to re-run on every resize rather than
+ * needing fitPodiumNames' retry ladder.
+ * ⚠️ PAINT ONLY — no observer in here. Called both directly (right after a
+ * chart is built) and from the ResizeObserver below; an observer that re-armed
+ * ITSELF on every one of its own callbacks would tear down and rebuild on
+ * every fire for no reason (the `root.__awFitRO` lesson from
+ * core/showdown-review.js, one step further).
+ */
+export function fitChartTierLabels(root) {
+  root.querySelectorAll(".aw-sd-rec-tier").forEach(t => {
+    t.textContent = t.clientHeight >= 16 ? `${t.dataset.pct}%` : "";
+  });
+}
+
+/** Set up ONCE per chart, so fullscreen/window resizes keep the labels honest. */
+export function watchChartResize(root) {
+  try {
+    const ro = new ResizeObserver(() => fitChartTierLabels(root));
+    ro.observe(root);
+    root.__awChartRO = ro;
+  } catch { /* no ResizeObserver: a direct call to fitChartTierLabels still stands */ }
 }
 
 /**
@@ -1358,50 +1583,6 @@ export function buildShowdownPanel(panel, ctx) {
   // and the EXPANDED view — which fills the whole panel and is therefore a
   // container of stage-like width — reuses the real renderers unchanged.
   // One board to read, one board to glance at.
-  const when = ms => {
-    const d = new Date(Number(ms) || 0);
-    const p = x => String(x).padStart(2, "0");
-    return `${p(d.getHours())}:${p(d.getMinutes())} · ${d.getDate()}/${d.getMonth() + 1}`;
-  };
-
-  /**
-   * ⭐ Đợt 224 — six scattered CSS-only sparkles, trusted markup. Exactly the
-   * `.aw-sd-pod-star` idiom (core/showdown-review.js's renderReviewPodium) —
-   * `clip-path` stars, staggered `animation-delay`, animated ENTIRELY in CSS so
-   * a backgrounded myActivity column does not need requestAnimationFrame to keep
-   * them twinkling (the same rAF trap core/HUONG DAN CORE.md already warns
-   * about). Re-declared here rather than imported: that one lives in `cqw`
-   * (sized against the 16:9 stage), and `.aw-sd-recent` is a plain px popover —
-   * two different units for the same six numbers is the whole reason it is a
-   * short local function instead of a shared export.
-   */
-  function spark6() {
-    let s = `<span class="aw-sd-rec-analyse-spark" aria-hidden="true">`;
-    for (let i = 0; i < 6; i++) s += `<i class="aw-sd-rec-star s${i}"></i>`;
-    return s + `</span>`;
-  }
-
-  /** One match's whole class, deduped and ranked — the ONE rule, from showdown.js. */
-  function matchBlocks(match) {
-    const groups = Object.values(match?.teams || {})
-      .map(t => ({ teamName: t.teamName || "", at: Number(t.at) || 0, blocks: t.students || [] }));
-    return rankBlocks(mergeClassBlocks(groups));
-  }
-
-  /**
-   * ⭐⭐ Đợt 230 — ONE PLACE that decides what a match's name reads as, so the
-   * mini card, the expanded detail, the download popup and the ANALYSE legend
-   * can never show four different things for the same row.
-   *   1. the teacher's own rename (`customName`) — ALWAYS wins, verbatim, once set
-   *   2. the formatted name ("BODY PARTS / ENGLISH 1") when this match recorded
-   *      a clue set (core/showdown.js's formatActDisplayName — a no-op for a
-   *      match filed before this đợt, or for a non-variant act)
-   *   3. the raw `actName`, then the literal fallback, same as always
-   */
-  function displayName(m) {
-    if (m.customName) return m.customName;
-    return formatActDisplayName(m.actName, m.contentVariant) || m.actName || "Showdown";
-  }
 
   /**
    * ⭐ Đợt 198 — closing lives OUT here because two things now close this screen:
@@ -1599,7 +1780,7 @@ export function buildShowdownPanel(panel, ctx) {
             if (v && v !== current) {
               try {
                 const h = await import("./showdown-history.js");
-                const ok = await h.renameMatch(classId, m.matchId, v);
+                const ok = await h.renameMatch(classId, m._yyyymm, m.matchId, v);
                 if (ok) m.customName = v; else toast("Could not rename this match.");
               } catch (err) {
                 console.warn("AWord: could not rename this match", err);
@@ -1629,7 +1810,7 @@ export function buildShowdownPanel(panel, ctx) {
               sfx.forward();
               try {
                 const h = await import("./showdown-history.js");
-                await h.deleteMatch(classId, m.matchId);
+                await h.deleteMatch(classId, m._yyyymm, m.matchId);
                 matches = matches.filter(x => x.matchId !== m.matchId);
                 picked.delete(m.matchId);
                 if (layer.isConnected) paintCols();
@@ -1703,45 +1884,8 @@ export function buildShowdownPanel(panel, ctx) {
       fitPodiumNames(cols, ".aw-sd-mini-name");
     }
 
-    /**
-     * The miniature funnel — see the note above for why this is not `.aw-sd-pod`.
-     *
-     * ⭐⭐ Đợt 207 (thầy) — it now reads like the real board: the place is INSIDE
-     * the box (a medal for the top three, a numeral after that) and the name is
-     * given IN FULL, shrunk to fit rather than abbreviated on sight or cut off
-     * with an ellipsis.
-     * ⚠️ Still its own stylesheet, and that is still deliberate: the real board's
-     * sizes are `cqw`, which inside a 200px column would draw a pupil's name at
-     * about 5px. Same SHAPE, own SIZES.
-     */
-    function renderMini(ranked) {
-      const box = el("div", "aw-sd-mini");
-      const n = ranked.length;
-      if (!n) { box.append(el("div", "aw-sd-rec-note", "No pupils")); return box; }
-      ranked.forEach((b, i) => {
-        // The same linear taper as the real podium, off the same two constants,
-        // so the shape the teacher recognises really is the same shape.
-        const w = n > 1 ? POD_MAX_W - (POD_MAX_W - POD_MIN_W) * (i / (n - 1)) : POD_MAX_W;
-        const row = el("div", "aw-sd-mini-row");
-        row.style.setProperty("--w", w.toFixed(2) + "%");
-        const card = el("div", "aw-sd-mini-box" + (i < 3 ? ` is-m${i + 1}` : ""));
-        const badge = el("span", "aw-sd-mini-badge" + (i < 3 ? " is-medal" : ""));
-        if (i < 3) badge.innerHTML = icons[`medal${i + 1}`];    // trusted markup, core/icons.js
-        else badge.textContent = String(i + 1);
-        const nm = el("span", "aw-sd-mini-name");
-        // ⚠️ The FULL name goes in, and `fitPodiumNames` decides afterwards
-        // whether it has to shrink or, in the last resort, abbreviate. Calling
-        // shortenName here (as this did from Đợt 197) abbreviated even the names
-        // that fitted perfectly well.
-        nm.textContent = b.name;                                // never innerHTML
-        nm.dataset.full = b.name;
-        nm.title = b.name;
-        card.append(badge, nm, el("span", "aw-sd-mini-score", String(b.right)));
-        row.append(card);
-        box.append(row);
-      });
-      return box;
-    }
+    // ⭐ Đợt 236 — renderMini() moved to module scope (exported, see its own
+    // note up there) so the new SHOWDOWN home page can draw the same tiles.
 
     /**
      * The expanded match. This box uses the REAL renderers.
@@ -2031,136 +2175,10 @@ export function buildShowdownPanel(panel, ctx) {
         { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
     }
 
-    /**
-     * The bar chart itself — plain DOM/CSS, no canvas/SVG/library, same idiom as
-     * every other board in this file.
-     *
-     * ⚠️ EVERY TIER'S HEIGHT IS A % OF THE SAME `yMax` — never of its own bar's
-     * total. That is what makes two pupils' bars comparable at a glance (a 40%
-     * tier is the same height wherever it appears); computing it against each
-     * bar's own total would make every bar read as "100% of itself" and the
-     * whole point of stacking would be gone.
-     *
-     * ⭐⭐ Đợt 230 (thầy chốt qua AskUserQuestion) — `yMax` is now a FIXED 100,
-     * not the old dynamic ceiling: `r.total` is an AVERAGE across the matches a
-     * pupil was present for (core/showdown.js's buildAnalysisRows), so it can
-     * never exceed 100 any more and the axis no longer needs to stretch for it.
-     * Each drawn TIER divides its match's raw `seg.pct` by `r.count` (how many
-     * matches this pupil was present for) — that is what makes the visible
-     * stack's total height land exactly on the average, while the NUMBER
-     * printed inside a tier (see `tier.dataset.pct` below) stays that match's
-     * real, un-divided score. The big number on top of the bar is the average,
-     * full size — see `.aw-sd-rec-bartotal`'s own note for why appending it
-     * LAST is enough to place it there without any extra positioning maths.
-     *
-     * `full`/`partial` — Đợt 224 (thầy chốt): full first, each group sorted by
-     * its own total, `partial` drawn as a second short row after a narrow gap —
-     * NOT interleaved with `full` and NOT split further by how much any one
-     * pupil is missing.
-     */
-    function renderChart(full, partial, entries) {
-      const wrap = el("div", "aw-sd-rec-chartwrap");
-      const rows = [...full, ...partial];
-      if (!rows.length) {
-        wrap.append(el("div", "aw-sd-rec-note", "No pupils in common between these matches."));
-        return wrap;
-      }
-      const yMax = 100;
-
-      const plot = el("div", "aw-sd-rec-plotarea");
-      const track = el("div", "aw-sd-rec-track");
-      const grid = el("div", "aw-sd-rec-grid");
-      for (let v = 0; v <= yMax; v += 20) {
-        const line = el("div", "aw-sd-rec-gridline");
-        line.style.bottom = `${(v / yMax) * 100}%`;
-        line.append(el("span", "aw-sd-rec-gridlabel", v + "%"));
-        grid.append(line);
-      }
-      track.append(grid);
-      const names = el("div", "aw-sd-rec-names");
-
-      const addSpacer = () => {
-        track.append(el("div", "aw-sd-rec-bargap"));
-        names.append(el("div", "aw-sd-rec-bargap"));
-      };
-      const addBar = r => {
-        const bar = el("div", "aw-sd-rec-bar");
-        r.segments.forEach((seg, i) => {
-          if (seg.pct == null) return;          // did not play this match — no tier at all
-          const tier = el("div", "aw-sd-rec-tier");
-          const scaledPct = r.count ? seg.pct / r.count : 0;
-          tier.style.height = `${(scaledPct / yMax) * 100}%`;
-          tier.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
-          tier.dataset.pct = String(Math.round(seg.pct));
-          bar.append(tier);
-        });
-        // ⭐⭐ Đợt 230 — the big average, ON TOP of the stack. `bar` is
-        // `column-reverse` (see app.css's own note on the DOM-order rule this
-        // relies on): the FIRST-appended child sits at the bottom and each one
-        // after it stacks visually HIGHER, so appending this LAST — after every
-        // tier — is what puts it above the tallest one, no bottom/translate
-        // maths needed at all.
-        const total = el("span", "aw-sd-rec-bartotal", `${Math.round(r.total)}%`);
-        bar.append(total);
-        track.append(bar);
-        const nm = el("span", "aw-sd-rec-barname");
-        nm.textContent = r.name;                  // pupil's own name: never innerHTML
-        nm.dataset.full = r.name;
-        nm.title = r.name;
-        const nmHost = el("div", "aw-sd-rec-namehost");
-        nmHost.append(nm);
-        names.append(nmHost);
-      };
-
-      full.forEach(addBar);
-      if (full.length && partial.length) addSpacer();
-      partial.forEach(addBar);
-
-      plot.append(track, names);
-      wrap.append(plot, renderLegend(entries));
-      return wrap;
-    }
-
-    /** One swatch + act name + time per selected match, same colour rule as the tiers. */
-    function renderLegend(entries) {
-      const leg = el("div", "aw-sd-rec-legend");
-      entries.forEach((e, i) => {
-        const item = el("div", "aw-sd-rec-legend-item");
-        const sw = el("span", "aw-sd-rec-legend-sw");
-        sw.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
-        const tx = el("span", "aw-sd-rec-legend-txt");
-        tx.textContent = `${e.label} · ${when(e.at)}`;      // teacher's own text + a formatted time
-        item.append(sw, tx);
-        leg.append(item);
-      });
-      return leg;
-    }
-
-    /**
-     * A tier's "%" only when the tier is tall enough to read — a 4px sliver with
-     * "3%" jammed into it is less legible than no text at all. Cheap enough (no
-     * font measuring, just `clientHeight`) to re-run on every resize rather than
-     * needing fitPodiumNames' retry ladder.
-     * ⚠️ PAINT ONLY — no observer in here. `fitChartTierLabels` is called both
-     * directly (openAnalysis' two passes) and from the ResizeObserver below; an
-     * observer that re-armed ITSELF on every one of its own callbacks would tear
-     * down and rebuild on every fire for no reason (the `root.__awFitRO` lesson
-     * from core/showdown-review.js, one step further).
-     */
-    function fitChartTierLabels(root) {
-      root.querySelectorAll(".aw-sd-rec-tier").forEach(t => {
-        t.textContent = t.clientHeight >= 16 ? `${t.dataset.pct}%` : "";
-      });
-    }
-
-    /** Set up ONCE per chart (openAnalysis), so fullscreen/window resizes keep the labels honest. */
-    function watchChartResize(root) {
-      try {
-        const ro = new ResizeObserver(() => fitChartTierLabels(root));
-        ro.observe(root);
-        root.__awChartRO = ro;
-      } catch { /* no ResizeObserver: the two direct calls in openAnalysis() still stand */ }
-    }
+    // ⭐ Đợt 236 — renderChart()/renderLegend()/fitChartTierLabels()/
+    // watchChartResize() moved to module scope (exported, see their own notes
+    // up there) so the new SHOWDOWN home page's own ANALYSE screen draws the
+    // identical chart instead of a second copy that could drift from this one.
   }
 
   /** Held by ANOTHER screen — drawn, but dimmed and untouchable (Đợt 159). */

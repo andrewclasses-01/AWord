@@ -44,6 +44,12 @@ import {
 // the mode itself is driven entirely from inside a game (core/engine.js).
 import { resetShowdownCache } from "./core/showdown-setup.js";
 import { clearPick as clearShowdownPick } from "./core/showdown.js";
+// ⭐⭐⭐ Đợt 236 — the full-page durable ledger, reached from its own button on
+// this very page (see topbar() below). Unlike the line above, THIS is a real,
+// heavy import: main.js already talks to Firestore directly (it IS the
+// teacher's signed-in library), so none of Showdown's "keep the student page
+// clean" rule from core/HUONG DAN CORE.md applies here.
+import { mountShowdownHome } from "./core/showdown-home.js";
 import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.js";
 import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyVoiced } from "./core/content-view.js";
 import {
@@ -69,13 +75,19 @@ const FOLDER_DEFAULT_COLOR = "#f5b13b";
 const FOLDER_COLORS = ["#ef4444", "#f97316", "#f5b13b", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899"];
 
 const state = {
-  view: "top",          // "top" | "folder" | "search" | "trash"
+  view: "top",          // "top" | "folder" | "search" | "trash" | "showdown-home"
   root: null,           // "activities" | "results"
   folderId: null,       // current folder (null = root of the tree)
   mode: localStorage.getItem("aword-view") || "grid",   // "grid" | "list"
   query: "",
-  user: null            // the signed-in teacher (null = signed out)
+  user: null,           // the signed-in teacher (null = signed out)
+  showdownClassId: ""   // ⭐ Đợt 236 — which class "showdown-home" is open on
 };
+// The live handle from mountShowdownHome() (core/showdown-home.js), so leaving
+// the page can tear down its class-picker listener/fullscreen bookkeeping
+// straight away rather than only via that file's own MutationObserver
+// fallback (belt-and-braces, same posture as core/showdown-setup.js's panel).
+let showdownHomeHandle = null;
 
 init();
 
@@ -160,6 +172,7 @@ async function routeFromLocation() {
       return;
     }
   }
+  if (p.get("sd")) return openShowdownHome({ fromUrl: true, classId: p.get("c") || "" });
   if (p.get("f")) {
     const node = await getByNum(p.get("f"));
     if (node && node.kind === "folder") return enterFolder(node.root, node.id, opts);
@@ -178,6 +191,12 @@ async function routeFromLocation() {
 
 // Point the address bar at wherever the library currently is.
 async function syncUrl(replace) {
+  if (state.view === "showdown-home") {
+    const p = new URLSearchParams();
+    p.set("sd", "1");
+    if (state.showdownClassId) p.set("c", state.showdownClassId);
+    return setUrl(`${baseUrl()}?${p.toString()}`, replace);
+  }
   if (state.view === "top") return setUrl(baseUrl(), replace);
   if (state.folderId) {
     const node = await getItem(state.folderId);
@@ -275,7 +294,13 @@ async function maybeSeed() {
 // ---------------- render dispatch ----------------
 async function render() {
   closeMenu();
+  // ⭐ Đợt 236 — tear the showdown-home page down explicitly BEFORE wiping it
+  // out from under itself: its own MutationObserver would catch this a beat
+  // later regardless (core/showdown-home.js's watchForClose), but there is no
+  // reason to wait for that when we are the ones doing the removing.
+  if (showdownHomeHandle) { showdownHomeHandle.dispose(); showdownHomeHandle = null; }
   app.innerHTML = "";
+  if (state.view === "showdown-home") return renderShowdownHome();
   if (state.view === "top") return renderTop();
   return renderInside();
 }
@@ -283,6 +308,38 @@ function goTop(opts = {}) {
   state.view = "top"; state.root = null; state.folderId = null; state.query = "";
   if (!opts.fromUrl) syncUrl();
   render();
+}
+
+// ---------------- ⭐⭐⭐ Đợt 236 — SHOWDOWN home (the full-page ledger) --------
+function openShowdownHome(opts = {}) {
+  state.view = "showdown-home";
+  state.root = null; state.folderId = null; state.query = "";
+  if (opts.classId !== undefined) state.showdownClassId = opts.classId;
+  if (!opts.fromUrl) syncUrl();
+  render();
+}
+function renderShowdownHome() {
+  // ⭐ Đợt 236 — `.aw-sdh-page` is a WIDER exception to `.aw-lib`'s usual
+  // 1040px (core/app.css): three real columns (day/month rail, tiles, and in
+  // CHOOSING a fourth ANALYSE column) need more room than a two-column library
+  // page ever has, and this screen is a deliberate destination, not something
+  // reached mid-browse — a bit more breathing room here does not disturb the
+  // library's own width anywhere else.
+  const wrap = el("div", "aw-lib aw-sdh-page");
+  wrap.append(topbar(false));
+  const mount = el("div");
+  wrap.append(mount);
+  wrap.append(footer());
+  app.append(wrap);
+  requestAnimationFrame(() => sizeBrand(wrap));
+  showdownHomeHandle = mountShowdownHome(mount, {
+    classId: state.showdownClassId,
+    toast: toastMsg,
+    onClassChange: (classId) => {
+      state.showdownClassId = classId;
+      syncUrl();
+    }
+  });
 }
 
 // ---------------- top level: two fixed roots ----------------
@@ -2326,6 +2383,19 @@ function topbar(showNav) {
   if (showNav) {
     right.append(navBtn("Activities", "activities"));
     right.append(navBtn("Results", "results"));
+  }
+  // ⭐⭐⭐ Đợt 236 — SHOWDOWN, the full-page durable ledger. Icon only, gold,
+  // glowing (thầy's own words) — same gold pulse as the in-game ANALYSE button
+  // (`aw-sd-rec-analyseglow`, core/app.css), reused rather than a second
+  // keyframe for the same idea. HOME PAGE ONLY (thầy said "trang chủ"
+  // specifically): the library/editor pages already carry Activities/Results/
+  // Settings, and a fourth icon there would compete with those for no reason —
+  // this is a destination you go TO, not a tool you reach for mid-browse.
+  if (!showNav) {
+    const sd = el("button", "aw-appbtn aw-sdh-homebtn", icons.showdown);
+    sd.type = "button"; sd.title = "Showdown results"; sd.setAttribute("aria-label", "Showdown results");
+    sd.onclick = () => openShowdownHome();
+    right.append(sd);
   }
   const gear = el("button", "aw-appbtn aw-settings-btn", icons.settings);
   gear.type = "button"; gear.title = "Settings"; gear.setAttribute("aria-label", "Settings");
