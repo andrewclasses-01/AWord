@@ -8,7 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 234 + 235)** — ⭐⭐⭐ **PDF ĐÁP ÁN CỠ CHỮ TỰ TÌM TỐI ĐA · DÒNG
+> Cập nhật lần cuối: **23/8/2026 (Đợt 236)** — ⭐⭐⭐ **TRANG SHOWDOWN RIÊNG TRÊN TRANG CHỦ + KHO LƯU
+> TRỮ BỀN THEO THÁNG.** ✅ **THẦY DUYỆT ("commit + push + bàn giao") — COMMIT `359507b`, ĐÃ PUSH +
+> LIVE KIỂM CHỨNG**: Pages `built` đúng commit, **7/7 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` ·
+> `core/app.css` · `core/showdown-history.js` · `core/showdown-home.js` (mới) · `core/showdown-setup.js`
+> · `core/store.js` · `main.js`).
+> Nút icon vàng hào quang (dùng lại keyframe `aw-sd-rec-analyseglow` có sẵn) cạnh trái nút Cài đặt,
+> **CHỈ ở trang chủ** — mở **trang riêng hoàn toàn** (`state.view="showdown-home"`, URL `?sd=1&c=`,
+> KHÔNG phải pop-up) để xem/phân tích MỌI kết quả Showdown một lớp từng chơi: cột thư mục trái
+> THÁNG→NGÀY (mở lớp tự nhảy tới ngày mới nhất), ô kết quả giữa tự co giãn theo số lượng
+> (`grid-template-columns: repeat(auto-fit, minmax(168px,1fr))`), chế độ **CHOOSING** (bấm ANALYSE ở
+> góc) mở cột phải + nút **ALL** (khoá thư mục, gộp mọi ngày), chip chọn giữ thứ tự bấm, dấu X trên
+> chip CHỈ bỏ chọn (không xoá dữ liệu, không hỏi xác nhận — thầy chốt qua AskUserQuestion). Màn
+> **ANALYSING** có viền sáng `conic-gradient` chạy vòng quanh lúc xử lý.
+> ⭐⭐⭐ **Kho lưu trữ (`core/showdown-history.js`) viết lại gần hết**: bỏ hẳn giới hạn 10 trận/lớp, chia
+> mỗi **LỚP × THÁNG một document Firestore riêng** (`sd_hist_<classId>_<YYYYMM>`, ID đoán được, KHÔNG
+> dùng `query`/`where` nên không cần thầy tạo composite index tay) — an toàn vì `fitToBudget()` (Đợt
+> 197) vẫn rút chi tiết câu hỏi của trận cũ nhất khi 1 tháng quá tải, không bao giờ xoá cả trận. Một
+> document INDEX nhỏ (`sd_hist_<classId>_idx`) cho cột thư mục biết tháng nào có gì mà không phải tải
+> hết. Ngày TÍNH RA từ các trận trong tháng, không lưu riêng ⇒ *"xoá hết ô 1 ngày thì ngày đó tự biến
+> mất"* không cần code riêng. **Dữ liệu cũ (document 1-lớp-tối-đa-10-trận trước Đợt 236) tự động di
+> trú, âm thầm, một lần** (`migrateLegacyIfNeeded`, idempotent) — không cần thầy làm gì.
+> ⛔ **Pop-up "Recent results" trong lúc đang chơi GIỮ NGUYÊN Y HỆT** (thầy chốt) — chỉ nguồn dữ liệu
+> bên dưới đổi (`loadMatches()` vẫn trả đúng 10 trận mới nhất, chỉ giờ tự đi lùi qua nhiều tháng).
+> ⭐⭐ **9 hàm thuần trong `core/showdown-setup.js`** (`renderMini`, `renderChart`, `matchBlocks`,
+> `displayName`, `when`, `spark6`, `renderLegend`, `fitChartTierLabels`, `watchChartResize`) **đưa ra
+> module scope + export** — trang mới dùng lại NGUYÊN, không tạo bản sao thứ hai có nguy cơ lệch nhau.
+> 🔴 Vá luôn 1 lỗ hổng có sẵn từ Đợt 197: `store.js`'s `APP_DATA_KINDS` thiếu `"showdown-history"`.
+> ⛔⛔ **AN TOÀN XSS**: bản nháp đầu lỡ truyền tên lớp/tên trận (chữ giáo viên tự gõ) qua tham số
+> `innerHTML` của `el()` ở 8 chỗ — đã vá hết sang `.textContent`, kiểm bằng ca tên có `<script>`/`&`.
+> ⚠️ **Kiểm tra: 29/29 (kho lưu trữ) + 50/50 (trang mới) phép thử mới qua Firestore GIẢ, chạy lại 2
+> lưới thử CŨ để chắc không phá gì (37/37, 60/60 — nhân tiện vá 1 lỗ hổng `writeBatch` thiếu trong bộ
+> giả dùng chung, và 2 chỗ lưới thử cũ tự lỗi thời từ Đợt 235, không do đợt này)**, 0 lỗi console.
+> **CHƯA đăng nhập Google thật để thử trên bản live, CHƯA bấm tay trên TOMKO.** Đọc khối **Đợt 236**
+> đầu `GHI CHU DU AN.md` để biết chi tiết + việc CÒN LẠI.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 234 + 235)** — ⭐⭐⭐ **PDF ĐÁP ÁN CỠ CHỮ TỰ TÌM TỐI ĐA · DÒNG
 > "ANDREW CLASSES" Ở MỌI BẢNG TO/FILE XUẤT · DẠNG BẢNG MỚI CHO 1 TRẬN · ĐỔI CƠ CHẾ XEM KẾT QUẢ SAU
 > GAME** — **Đợt 234**: `computeDetailsFontSizePx()` (`core/showdown-export.js`) đo THẬT bằng DOM
 > (canvas chỉ để xếp hạng ứng viên) rồi nhị phân tìm cỡ chữ LỚN NHẤT sao cho câu hỏi dài nhất + đáp
