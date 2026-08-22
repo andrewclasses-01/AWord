@@ -786,7 +786,16 @@ export function renderReviewTable(ranked, titleText) {
   const { full, partial } = buildAnalysisRows(entries);
   import("./showdown-export.js").then(mod => {
     if (!wrap.isConnected) return;             // the teacher already left/switched view
-    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, 1);
+    // Đợt 237 (thầy: "bảng Table 1 lớp mờ") — this canvas is then stretched to
+    // `width:100%` of whatever container holds it, which for a small team (a
+    // narrow, naturally-sized board) can be several times its own pixel width
+    // once the detail view goes fullscreen: `scale=1` drew it at exactly its
+    // CSS size with nothing to spare, so that stretch upscaled a low-res
+    // bitmap. A higher floor (the multi-match PNG download already uses 2,
+    // see analysisPngBlob below) plus the screen's own devicePixelRatio keeps
+    // it crisp through that stretch without a second render pass.
+    const tableScale = Math.max(2, window.devicePixelRatio || 1);
+    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, tableScale);
     wrap.innerHTML = "";
     canvas.style.cssText = "width:100%;height:auto;display:block;";
     wrap.append(canvas);

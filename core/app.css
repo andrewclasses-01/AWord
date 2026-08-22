@@ -870,8 +870,9 @@ html.aw-nhung .aw-below { display: none; }
    ở bên trên cùng, căn giữa") — a sibling BEFORE `.aw-rv-head`, not part of
    that flex row: it needs a line of its own, above the title. */
 .aw-rv-brand {
-  text-align: center; font-weight: 700; letter-spacing: .14em;
-  font-size: 1.1cqw; color: #b3bcc9; margin-bottom: .6cqw;
+  text-align: center; font-weight: 300; letter-spacing: .32em; text-indent: .32em;
+  text-transform: uppercase; font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.1cqw; color: #9aa3af; margin-bottom: .6cqw;
 }
 /* ⭐ Đợt 235 — Table / Podium / List, next to the title, replacing the old
    press-and-hold. Same `.aw-iconbtn` every other icon control on this screen
@@ -4640,8 +4641,9 @@ html.aw-nhung .aw-below { display: none; }
    ở bên trên cùng, căn giữa") — a plain flex sibling ABOVE `.aw-sd-rec-head`
    inside `.aw-sd-rec-detail`, not part of that row: it needed its own line. */
 .aw-sd-rec-brand {
-  flex: 0 0 auto; text-align: center; font-weight: 700; letter-spacing: .14em;
-  font-size: 10px; color: #b3bcc9;
+  flex: 0 0 auto; text-align: center; font-weight: 300; letter-spacing: .32em; text-indent: .32em;
+  text-transform: uppercase; font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 10px; color: #9aa3af;
 }
 .aw-sd-rec-note {
   flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
@@ -5091,23 +5093,38 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-confirm {
   position: absolute; inset: 0; z-index: 9;
   display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,.82);
+  background: rgba(20,26,36,.28); backdrop-filter: blur(3px);
   border-radius: 12px;
 }
 .aw-sd-confirmbox {
   max-width: 300px; text-align: center;
-  background: #fff; border: 1.5px solid #e3e9f1; border-radius: 14px;
-  box-shadow: 0 14px 34px rgba(15,20,30,.16);
-  padding: 16px 18px 14px;
+  background: #fff; border: 1.5px solid #e3e9f1; border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15,20,30,.20);
+  padding: 20px 20px 16px;
 }
 .aw-sd-confirmtext { font-size: 13.5px; line-height: 1.45; color: #3b4757; }
-.aw-sd-confirmrow { display: flex; justify-content: center; gap: 10px; margin-top: 14px; }
+.aw-sd-confirmrow { display: flex; justify-content: center; gap: 10px; margin-top: 16px; }
 /* ⭐ Đợt 191 (thầy) — ONE size for BOTH buttons of a confirm question, stated in
    px because this popover lives OUTSIDE the 16:9 stage (see the note in
    askConfirm). `min-width` is what makes them read as a matched pair: without
    it "Cancel" and "Send back" size themselves to their own text and the row
    comes out visibly lopsided, which is what the teacher was looking at. */
-.aw-btn.aw-sd-confirmbtn { padding: 9px 18px; font-size: 14px; min-width: 104px; }
+.aw-btn.aw-sd-confirmbtn { padding: 9px 18px; font-size: 14px; min-width: 104px; border-radius: 11px; }
+/* ⭐ Đợt 237 — thầy: Cancel/Delete "xấu, không đúng phong cách AWord". Two
+   fixes, scoped to THIS popover only (`.aw-btn-primary`/`.aw-sd-ghost` are
+   reused all over the app — see the warning a few lines up — a global
+   recolour would leak into every editor's own OK/Cancel pair):
+   1) Cancel had no border at all, reading as a flat grey smudge next to a
+      crisp white card — give it a real edge, same grey family as every other
+      Showdown card border (`#e3e9f1`).
+   2) Delete borrowed `.aw-btn-primary`'s ordinary blue — a destructive action
+      styled identically to a plain "OK" is the actual mismatch a teacher
+      would feel as "off", not the shape. Red, matching the delete "–" icon's
+      own hover colour (`.aw-sd-rec-delbtn:hover`, `#dc2626`) elsewhere in
+      this same file. */
+.aw-sd-confirmbox .aw-sd-ghost { border: 1.5px solid #e3e9f1; }
+.aw-sd-confirmbox .aw-btn-primary { background: #dc2626; }
+.aw-sd-confirmbox .aw-btn-primary:hover { background: #c81e1e; }
 
 .aw-sd-foot { position: relative; min-height: 46px; margin-top: 14px; }
 .aw-sd-footlayer { position: absolute; inset: 0; display: flex; align-items: center; gap: 10px; }
@@ -6069,7 +6086,10 @@ html.aw-nhung .aw-below { display: none; }
     this page at all. */
   display: flex; flex-direction: column; gap: 14px; min-height: 60vh;
 }
-.aw-sdh-titlerow { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px; }
+.aw-sdh-titlerow {
+  position: relative;   /* the class-picker popover (.aw-sdh-classpop) anchors here */
+  display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 4px;
+}
 /* The class-picker: title looks like a button because it IS one — same "a
    caption that is sometimes a control has to LOOK like one" rule the in-game
    footer caption already follows (core/showdown-setup.js's footCaption). */
@@ -6080,9 +6100,42 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sdh-titlebtn:hover { background: #f2f6fc; }
 .aw-sdh-title-word { font-size: 1.7rem; font-weight: 800; letter-spacing: .05em; }
+/* ⭐ Đợt 237 — the class name now stands as tall as SHOWDOWN, gold and glowing
+   like a podium's top-3 name (same text-shadow shape as .aw-sd-pod-name.is-top,
+   just in plain px — this row is NOT inside a cqw stage container, so reusing
+   that class's own cqw values here would collapse to nothing). Never `filter`
+   for the glow — see .aw-sd-pod-name.is-top's own warning, same reasoning. */
+.aw-sdh-title-classwrap { position: relative; display: inline-flex; align-items: center; }
 .aw-sdh-title-class {
-  font-size: 1.2rem; font-weight: 800; color: #2f6fed; letter-spacing: .03em;
-  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 1.7rem; font-weight: 800; letter-spacing: .05em;
+  color: #dd9d09; text-shadow: 0 0 8px rgba(240,180,41,.45), 0 0 22px rgba(240,180,41,.25);
+  animation: aw-sdh-classglow 2.4s ease-in-out infinite;
+}
+@keyframes aw-sdh-classglow {
+  0%, 100% { text-shadow: 0 0 8px rgba(240,180,41,.45), 0 0 22px rgba(240,180,41,.25); }
+  50%      { text-shadow: 0 0 14px rgba(255,214,92,.85), 0 0 34px rgba(240,180,41,.50); }
+}
+/* A few stars that drift and fade around the class name (thầy's "sao nhỏ bay
+   xung quanh ẩn hiện") — distinct from .aw-sd-pod-star, which only twinkles
+   IN PLACE (that one is deliberate, see its own comment); this one actually
+   moves. Still plain CSS keyframes, no rAF — a hidden myActivity column would
+   freeze a rAF loop but keeps running CSS animations. */
+.aw-sdh-flystars { position: absolute; inset: -10px -22px; pointer-events: none; color: #f0b429; }
+.aw-sdh-flystar {
+  position: absolute; width: 9px; height: 9px; top: 50%; left: 50%; background: currentColor;
+  clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
+  opacity: 0; animation: aw-sdh-flystar-move 4.4s ease-in-out infinite;
+}
+.aw-sdh-flystar.f0 { animation-delay: 0s; }
+.aw-sdh-flystar.f1 { animation-delay: 1.1s; width: 7px; height: 7px; }
+.aw-sdh-flystar.f2 { animation-delay: 2.2s; }
+.aw-sdh-flystar.f3 { animation-delay: 3.3s; width: 7px; height: 7px; }
+@keyframes aw-sdh-flystar-move {
+  0%   { opacity: 0; transform: translate(-50%, 30%) scale(.4) rotate(0deg); }
+  15%  { opacity: .95; }
+  50%  { opacity: .7; transform: translate(120%, -70%) scale(1) rotate(90deg); }
+  85%  { opacity: 0; }
+  100% { opacity: 0; transform: translate(-90%, -30%) scale(.4) rotate(180deg); }
 }
 .aw-sdh-titlebtn svg { width: 18px; height: 18px; color: #9aa7b8; transition: transform .16s ease; }
 .aw-sdh-titlebtn.is-open svg { transform: rotate(180deg); }
@@ -6092,8 +6145,13 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-slogan { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b3bcc9; text-transform: uppercase; }
 
 /* ---- the class picker popover ---- */
+/* ⭐ Đợt 237 — top/left are set in JS from titleClassWrap's own rect (see
+   core/showdown-home.js's toggleClassPicker): it used to centre under the
+   ENTIRE titleRow, which can be much taller than the button once the rail/
+   tiles below grow, landing the popover far from the class name (thầy's
+   complaint). Only the vertical centring stays a CSS transform. */
 .aw-sdh-classpop {
-  position: absolute; z-index: 20; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  position: absolute; z-index: 20; transform: translateY(-50%);
   min-width: 220px; max-height: 320px; overflow-y: auto;
   background: #fff; border: 1px solid #e3e9f1; border-radius: 12px; box-shadow: 0 12px 30px rgba(35,48,62,.16);
   padding: 6px;
@@ -6105,9 +6163,6 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-classopt:hover { background: #f2f6fc; }
 .aw-sdh-classopt.is-cur { color: #2f6fed; background: #eaf1ff; }
 .aw-sdh-classpop-empty { padding: 14px 12px; font-size: .85rem; color: #8b93a1; text-align: center; }
-
-/* ---- the small toolbar above the body: just the ANALYSE/CHOOSING control ---- */
-.aw-sdh-toolbar { flex: 0 0 auto; display: flex; justify-content: flex-end; }
 
 /* ---- the three-column body ---- */
 .aw-sdh-main { position: relative; flex: 1 1 auto; min-height: 0; display: flex; gap: 0; }
@@ -6212,18 +6267,33 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-choosecol {
   flex: 0 0 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px;
 }
-/* Same gold glowing pill as the in-game ANALYSE/BEGIN button — literally the
-   same rule, see core/app.css's `.aw-sd-rec-analyse` a little further up. This
-   button is that button, having flown to the top of a new column. */
-.aw-sdh-choosecol .aw-sd-rec-analyse { align-self: center; width: 100%; }
+/* ⭐ Đợt 237 — SELECTED moved up here (where the old ANALYSE button used to
+   sit); no border-top any more since it is no longer separating the count
+   from a button ABOVE the chip list, it now leads the column. */
+.aw-sdh-choosecount {
+  flex: 0 0 auto; text-align: center; padding: 2px 0 8px;
+  font-size: 1.6rem; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
+}
+.aw-sdh-choosecount-label { display: block; font-size: .68rem; font-weight: 800; color: #9aa7b8; letter-spacing: .08em; text-transform: uppercase; }
 .aw-sdh-chips { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
 .aw-sdh-chips-empty { font-size: .8rem; color: #8b93a1; text-align: center; padding: 20px 8px; line-height: 1.5; }
 .aw-sdh-chip {
   display: flex; align-items: center; gap: 8px;
-  border: 1px solid #e3e9f1; border-radius: 10px; background: #fbfcfe; padding: 8px 8px 8px 11px;
+  border: 1px solid #e3e9f1; border-radius: 10px; background: #fbfcfe; padding: 8px 8px 8px 7px;
   animation: aw-sdh-chipin .18s cubic-bezier(.22,.9,.3,1);
 }
 @keyframes aw-sdh-chipin { from { opacity: 0; transform: translateX(8px); } to { opacity: 1; transform: translateX(0); } }
+/* ⭐ Đợt 237 — drag-to-reorder handle, same shape as core/main.js's roster
+   drag (elementFromPoint + data-idx + splice-and-repaint — see
+   core/showdown-home.js's wireChipReorder). */
+.aw-sdh-chip-drag {
+  flex: 0 0 auto; width: 22px; height: 28px; padding: 0; border: none; background: none; color: #c4ccd8;
+  border-radius: 6px; cursor: grab; touch-action: none; display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-sdh-chip-drag svg { width: 14px; height: 14px; }
+.aw-sdh-chip-drag:hover { background: #eef2f7; color: #7a8aa0; }
+.aw-sdh-chip.is-dragging { opacity: .5; }
+.aw-sdh-chip.is-droptarget { border-color: #60a5fa; box-shadow: 0 0 0 2px rgba(96,165,250,.35) inset; }
 .aw-sdh-chip-txt { flex: 1 1 auto; min-width: 0; }
 .aw-sdh-chip-name {
   font-size: .82rem; font-weight: 800; color: #23303e; line-height: 1.25;
@@ -6236,31 +6306,71 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sdh-chip-x svg { width: 13px; height: 13px; }
 .aw-sdh-chip-x:hover { background: #fef2f2; color: #dc2626; }
-.aw-sdh-choosecount {
-  flex: 0 0 auto; text-align: center; padding: 8px 0 2px; border-top: 1px solid #eef3f9;
-  font-size: 1.6rem; font-weight: 800; color: #23303e; font-variant-numeric: tabular-nums;
+/* ⭐ Đợt 237 — START took the button's old spot at the BOTTOM of the column;
+   same gold glowing pill as the in-game ANALYSE/BEGIN button
+   (.aw-sd-rec-analyse), grey/inert until 2+ are ticked. */
+.aw-sdh-startbtn {
+  flex: 0 0 auto; height: 38px; border-radius: 11px; border: 1px solid #e0ab1f;
+  background: linear-gradient(135deg, #ffe9a8, #f3c545); color: #6b4a06;
+  font-family: inherit; font-size: 13.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; animation: aw-sd-rec-analyseglow 2.2s ease-in-out infinite;
 }
-.aw-sdh-choosecount-label { display: block; font-size: .68rem; font-weight: 800; color: #9aa7b8; letter-spacing: .08em; text-transform: uppercase; }
+.aw-sdh-startbtn:hover { background: linear-gradient(135deg, #fff3c4, #ffd65c); }
+.aw-sdh-startbtn.is-disabled, .aw-sdh-startbtn:disabled {
+  border-color: #e3e9f1; background: #eef1f5; color: #a7b0bd; cursor: default; animation: none;
+}
 
 /* ---- the yellow, glowing button on the app HOME page ---- */
-.aw-sdh-homebtn {
+.aw-sdh-homebtn { position: relative; overflow: hidden; }
+.aw-sdh-homebtn, .aw-sdh-homebtn:hover {
   border-color: #e0ab1f !important; background: linear-gradient(135deg, #fff3c4, #ffd65c) !important;
   color: #6b4a06 !important; animation: aw-sd-rec-analyseglow 2.2s ease-in-out infinite;
 }
-.aw-sdh-homebtn:hover { background: linear-gradient(135deg, #ffe9a8, #f3c545) !important; }
+/* ⭐ Đợt 237 — the SAME icon button morphs into the ANALYSE pill while on the
+   Showdown page (a second tap toggles it, see core/main.js's topbar()): the
+   icon shrinks out, the word grows in, width/border-radius/padding animate
+   together so it reads as one pill stretching rather than a swap. Text only,
+   no sparkle icon here (thầy: "chỉ cần chữ này và ko cần icon") — the glow
+   above already carries the gold/shimmer. */
+.aw-sdh-homebtn {
+  width: 46px; padding: 0; border-radius: 13px;
+  transition: width .22s cubic-bezier(.22,.9,.3,1), border-radius .22s cubic-bezier(.22,.9,.3,1), padding .22s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sdh-homebtn svg { transition: opacity .16s ease, transform .16s ease, width .16s ease, margin .16s ease; }
+.aw-sdh-homebtn-word {
+  display: inline-block; max-width: 0; overflow: hidden; white-space: nowrap;
+  font-size: 13.5px; font-weight: 800; letter-spacing: .1em;
+  transition: max-width .22s cubic-bezier(.22,.9,.3,1);
+}
+.aw-sdh-homebtn.is-analyse { width: 118px; padding: 0 18px; border-radius: 20px; }
+.aw-sdh-homebtn.is-analyse svg { opacity: 0; transform: scale(.4); width: 0; }
+.aw-sdh-homebtn.is-analyse .aw-sdh-homebtn-word { max-width: 100px; }
 
-/* ---- ANALYSING: a full-page loading curtain with a running light border ---- */
+/* ---- ANALYSING: bare, centred text — no scrim, no box (thầy: "không có
+   nền") — just ANALYSING itself, bigger than before, and ANDREW CLASSES
+   stepping up-and-down letter by letter underneath as the only "still
+   working" cue until the analysis chart replaces this overlay. ---- */
 .aw-sdh-loading {
-  position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
-  background: rgba(20, 26, 36, .55); backdrop-filter: blur(2px);
+  position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 18px; background: transparent; pointer-events: none;
 }
-.aw-sdh-loading-frame {
-  position: relative; padding: 3px; border-radius: 22px;
-  background: conic-gradient(from 0deg, transparent 0 65%, #ffe9a8 82%, #ffd65c 92%, transparent 100%);
-  animation: aw-sdh-loadspin 1.6s linear infinite;
-}
-@keyframes aw-sdh-loadspin { to { transform: rotate(360deg); } }
 .aw-sdh-loading-box {
-  background: #12161f; border-radius: 19px; padding: 46px 68px;
-  font-size: 2.1rem; font-weight: 800; letter-spacing: .16em; color: #ffe9a8; text-transform: uppercase;
+  font-size: 3.4rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
+  color: #dd9d09; text-shadow: 0 0 10px rgba(240,180,41,.5), 0 0 28px rgba(240,180,41,.32);
+  animation: aw-sdh-classglow 2.4s ease-in-out infinite;
+}
+/* Chuẩn A — same thin/spaced grey-caps family as templates/open-the-box's own
+   slogan (font-weight 300, wide letter-spacing), reused here per thầy's "mọi
+   chỗ có ANDREW CLASSES dùng chung 1 kiểu chữ". Letters are separate <i>s (see
+   core/showdown-home.js) so each can step on its own animation-delay; the
+   gap below stands in for letter-spacing since it cannot apply within one
+   single-character element. */
+.aw-sdh-loading-brand {
+  display: flex; gap: .32em; font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-weight: 300; font-size: 15px; letter-spacing: 0; text-transform: uppercase; color: #9aa3af;
+}
+.aw-sdh-loading-letter { display: inline-block; font-style: normal; animation: aw-sdh-letterstep 1.1s ease-in-out infinite; }
+@keyframes aw-sdh-letterstep {
+  0%, 100% { transform: translateY(0); opacity: .7; }
+  50%      { transform: translateY(-7px); opacity: 1; }
 }

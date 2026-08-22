@@ -122,30 +122,42 @@ export function mountShowdownHome(host, opts = {}) {
   const titleBtn = el("button", "aw-sdh-titlebtn");
   titleBtn.type = "button";
   const titleWord = el("span", "aw-sdh-title-word", "SHOWDOWN");
+  // ⭐ Đợt 237 — the class name now stands as tall as "SHOWDOWN" and carries
+  // the same gold glow as a podium's top-3 names, PLUS a few stars that
+  // actually drift (the podium's own sparkle only twinkles in place — thầy
+  // asked for movement here specifically). Both sit in their own wrapper
+  // (never inside titleBtn's own stacking — a nested <button> would be
+  // invalid HTML) so the class-picker popover below can anchor to exactly
+  // this box and nothing wider.
+  const titleClassWrap = el("span", "aw-sdh-title-classwrap");
   const titleClass = el("span", "aw-sdh-title-class");
+  titleClassWrap.append(titleClass, sparkStatic(), sparkFly());
   const titleChevron = document.createElement("span");
   titleChevron.innerHTML = icons.next;                         // trusted markup, core/icons.js
-  titleBtn.append(titleWord, titleClass, titleChevron);
+  titleBtn.append(titleWord, titleClassWrap, titleChevron);
   titleBtn.onclick = () => { sfx.tap(); toggleClassPicker(); };
   titleRow.append(titleBtn, el("div", "aw-sdh-slogan", "SHOWDOWN IN ANDREW CLASSES"));
 
-  const toolbar = el("div", "aw-sdh-toolbar");
-  const analyseBtn = el("button", "aw-sd-rec-analyse");
-  analyseBtn.type = "button";
-  analyseBtn.append(spark6(), el("span", "aw-sd-rec-analyse-word", "ANALYSE"));
-  analyseBtn.onclick = () => { sfx.tap(); toggleChoosing(); };
-  toolbar.append(analyseBtn);
-
-  const main = el("div", "aw-sdh-main");
-  root.append(titleRow, toolbar, main);
-
-  function spark6() {
-    const s = document.createElement("span");
-    s.className = "aw-sd-rec-analyse-spark";
+  /** The podium's own static twinkle (core/showdown-review.js), reused as-is —
+   *  6 stars, opacity/scale only, never translate. */
+  function sparkStatic() {
+    const s = el("span", "aw-sd-pod-spark");
     s.setAttribute("aria-hidden", "true");
-    for (let i = 0; i < 6; i++) s.append(el("i", `aw-sd-rec-star s${i}`));
+    for (let i = 0; i < 6; i++) s.append(el("i", "aw-sd-pod-star s" + i));
     return s;
   }
+  /** NEW — a few stars that actually drift around the class name (thầy's
+   *  "sao nhỏ bay xung quanh ẩn hiện"), plain CSS keyframes (translate +
+   *  opacity), no rAF — see core/app.css's aw-sdh-flystar warning. */
+  function sparkFly() {
+    const s = el("span", "aw-sdh-flystars");
+    s.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 4; i++) s.append(el("i", "aw-sdh-flystar f" + i));
+    return s;
+  }
+
+  const main = el("div", "aw-sdh-main");
+  root.append(titleRow, main);
 
   // ---- CLASS PICKER -----------------------------------------------------
   async function toggleClassPicker() {
@@ -168,6 +180,23 @@ export function mountShowdownHome(host, opts = {}) {
       });
     }
     titleRow.append(pop);
+    // ⭐ Đợt 237 — anchor to the class-name box itself, not the whole title
+    // row: thầy's complaint was the popover landing at the bottom of the
+    // page (it was centred under the ENTIRE titleRow, which can be much
+    // taller than the button once the rail/tiles below grow). titleRow is
+    // the positioned ancestor (see core/app.css), so plain px offsets from
+    // titleClassWrap's own rect land it right beside the class name. Width is
+    // only known once `pop` is actually in the DOM, so measure it there and
+    // flip to the left side if it would run off the right edge.
+    const wrapRect = titleClassWrap.getBoundingClientRect();
+    const rowRect = titleRow.getBoundingClientRect();
+    const popW = pop.getBoundingClientRect().width || 220;
+    let left = wrapRect.right - rowRect.left + 10;
+    if (rowRect.left + left + popW > window.innerWidth - 8) {
+      left = wrapRect.left - rowRect.left - popW - 10;             // flip to the left of the class name
+    }
+    pop.style.left = Math.max(-rowRect.left + 8, left) + "px";
+    pop.style.top = (wrapRect.top - rowRect.top + wrapRect.height / 2) + "px";
     titleBtn.classList.add("is-open");
     const onDocClick = e => { if (!pop.contains(e.target) && e.target !== titleBtn && !titleBtn.contains(e.target)) close(); };
     // A frame later: the very click that opened this must not also close it.
@@ -188,9 +217,11 @@ export function mountShowdownHome(host, opts = {}) {
     curClassId = id; curClassName = name || "";
     monthCache.clear(); openMonths.clear();
     curMonthKey = ""; curDayKey = "";
+    const wasChoosing = choosing;
     choosing = false; allMode = false; picked.clear();
     paintTitle();
     opts.onClassChange?.(curClassId, curClassName);
+    if (wasChoosing) opts.onChoosingChange?.(false);
     loadClass();
   }
 
@@ -272,14 +303,6 @@ export function mountShowdownHome(host, opts = {}) {
     if (!curClassId) return;
     main.append(buildRail(), el("div", "aw-sdh-vrule"), buildTilesWrap());
     if (choosing) main.append(buildChooseWrap());
-    paintAnalyseBtn();
-  }
-
-  function paintAnalyseBtn() {
-    const word = analyseBtn.querySelector(".aw-sd-rec-analyse-word");
-    word.textContent = choosing ? "CHOOSING" : "ANALYSE";
-    analyseBtn.classList.toggle("is-on", choosing);
-    analyseBtn.classList.toggle("is-hidden", !monthIndex.length);
   }
 
   // ---- RAIL: month -> day folders ------------------------------------------
@@ -562,6 +585,7 @@ export function mountShowdownHome(host, opts = {}) {
     choosing = !choosing;
     if (!choosing) { allMode = false; picked.clear(); }
     paintAll();
+    opts.onChoosingChange?.(choosing);
   }
 
   function toggleAll() {
@@ -594,21 +618,25 @@ export function mountShowdownHome(host, opts = {}) {
   }
   function paintChooseInto(col) {
     col.innerHTML = "";
-    const btn = el("button", "aw-sd-rec-analyse");
-    btn.type = "button";
-    btn.append(spark6(), el("span", "aw-sd-rec-analyse-word", "ANALYSE"));
-    btn.onclick = () => {
-      if (picked.size >= 2) { sfx.forward(); runAnalysis([...picked.values()]); return; }
-      sfx.tap(); toggleChoosing();
-    };
-    col.append(btn);
+    // ⭐ Đợt 237 — SELECTED now sits where the old ANALYSE/CHOOSING button
+    // used to (thầy: it is what a teacher scanning this column actually
+    // wants first), and START (only live at 2+) takes the button's old spot
+    // at the bottom instead — the ANALYSE pill that used to live here moved
+    // out to core/main.js's topbar icon, see toggleChoosing().
+    const count = el("div", "aw-sdh-choosecount");
+    count.append(el("span", "aw-sdh-choosecount-label", "SELECTED"), document.createTextNode(String(picked.size)));
+    col.append(count);
+
     const chips = el("div", "aw-sdh-chips");
     if (!picked.size) {
       chips.append(el("div", "aw-sdh-chips-empty", "Tick 2 or more results to compare them."));
     } else {
-      [...picked.entries()].forEach(([key, m]) => {
+      [...picked.entries()].forEach(([key, m], idx) => {
         const ranked = matchBlocks(m);
         const chip = el("div", "aw-sdh-chip");
+        chip.dataset.idx = String(idx);
+        const handle = el("button", "aw-sdh-chip-drag", icons.dragHandle);
+        handle.type = "button"; handle.title = "Drag to reorder";
         const txt = el("div", "aw-sdh-chip-txt");
         const nameEl = el("div", "aw-sdh-chip-name");
         nameEl.textContent = displayName(m);                     // the teacher's own text — never innerHTML
@@ -618,22 +646,83 @@ export function mountShowdownHome(host, opts = {}) {
         const x = el("button", "aw-sdh-chip-x", icons.close);
         x.type = "button"; x.title = "Remove from ANALYSE";
         x.onclick = () => { sfx.tap(); picked.delete(key); paintAll(); };
-        chip.append(txt, x);
+        chip.append(handle, txt, x);
         chips.append(chip);
+        wireChipReorder(chips, handle, chip, idx);
       });
     }
     col.append(chips);
-    const count = el("div", "aw-sdh-choosecount");
-    count.append(el("span", "aw-sdh-choosecount-label", "SELECTED"), document.createTextNode(String(picked.size)));
-    col.append(count);
+
+    const startBtn = el("button", "aw-sdh-startbtn" + (picked.size >= 2 ? "" : " is-disabled"));
+    startBtn.type = "button";
+    startBtn.textContent = "START";
+    startBtn.disabled = picked.size < 2;
+    startBtn.onclick = () => {
+      if (picked.size < 2) return;
+      sfx.forward(); runAnalysis([...picked.values()]);
+    };
+    col.append(startBtn);
+  }
+
+  /**
+   * Vertical drag-to-reorder for the ANALYSE chip list — same shape as
+   * core/main.js's own wireReorder() for the class roster (elementFromPoint +
+   * a data-idx per row + splice-and-repaint), copied rather than imported
+   * since main.js's copy is a closure over its own `rows` array.
+   */
+  function wireChipReorder(chips, handle, chip, from) {
+    let active = false;
+    const clear = () => chips.querySelectorAll(".aw-sdh-chip").forEach(c => c.classList.remove("is-droptarget"));
+    const chipUnder = (x, y) => { const hit = document.elementFromPoint(x, y); return hit ? hit.closest(".aw-sdh-chip") : null; };
+    handle.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      active = true;
+      chip.classList.add("is-dragging");
+      try { handle.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    });
+    handle.addEventListener("pointermove", e => {
+      if (!active) return;
+      clear();
+      const over = chipUnder(e.clientX, e.clientY);
+      if (over && over !== chip) over.classList.add("is-droptarget");
+    });
+    const finish = e => {
+      if (!active) return;
+      active = false;
+      chip.classList.remove("is-dragging");
+      const over = chipUnder(e.clientX, e.clientY);
+      clear();
+      if (!over || over === chip) return;
+      const to = Number(over.dataset.idx);
+      if (!Number.isInteger(to) || to === from) return;
+      const entries = [...picked.entries()];
+      const [moved] = entries.splice(from, 1);
+      entries.splice(to, 0, moved);
+      picked.clear();
+      entries.forEach(([k, v]) => picked.set(k, v));
+      paintChoose();
+    };
+    handle.addEventListener("pointerup", finish);
+    handle.addEventListener("pointercancel", () => { active = false; chip.classList.remove("is-dragging"); clear(); });
   }
 
   // ---- ANALYSING overlay + the chart ---------------------------------------
   function runAnalysis(matches) {
+    // ⭐ Đợt 237 — no dark scrim/box any more (thầy: "không có nền"), just the
+    // bare word, bigger, fixed centre-screen, with ANDREW CLASSES underneath
+    // stepping up-and-down letter by letter as the only "still working" cue.
     const overlay = el("div", "aw-sdh-loading");
-    const frame = el("div", "aw-sdh-loading-frame");
-    frame.append(el("div", "aw-sdh-loading-box", "ANALYSING"));
-    overlay.append(frame);
+    overlay.append(el("div", "aw-sdh-loading-box", "ANALYSING"));
+    const brand = el("div", "aw-sdh-loading-brand");
+    brand.setAttribute("aria-hidden", "true");
+    "ANDREW CLASSES".split("").forEach((ch, i) => {
+      const letter = el("i", "aw-sdh-loading-letter");
+      letter.textContent = ch === " " ? " " : ch;
+      letter.style.animationDelay = (i * 0.05) + "s";
+      brand.append(letter);
+    });
+    overlay.append(brand);
     root.append(overlay);
     const t0 = Date.now();
     const entries = matches.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(m => ({
@@ -817,6 +906,10 @@ export function mountShowdownHome(host, opts = {}) {
 
   return {
     dispose: teardownAll,
-    setClass(id, name) { selectClass(id, name); }
+    setClass(id, name) { selectClass(id, name); },
+    // ⭐ Đợt 237 — called by core/main.js's topbar icon (the same gold button
+    // that opened this page) on a second tap, so ANALYSE has no button of its
+    // own on this page's toolbar any more.
+    toggleChoosing() { toggleChoosing(); }
   };
 }

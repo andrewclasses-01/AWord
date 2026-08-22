@@ -88,6 +88,11 @@ const state = {
 // straight away rather than only via that file's own MutationObserver
 // fallback (belt-and-braces, same posture as core/showdown-setup.js's panel).
 let showdownHomeHandle = null;
+// ⭐ Đợt 237 — set by topbar() whenever it builds the gold Showdown icon, so
+// core/showdown-home.js can morph THAT SAME button into the ANALYSE pill
+// instead of owning a second one on its own toolbar. null on any page that
+// never built the icon (there is nothing to morph there).
+let sdHomeBtnSetAnalyse = null;
 
 init();
 
@@ -338,7 +343,8 @@ function renderShowdownHome() {
     onClassChange: (classId) => {
       state.showdownClassId = classId;
       syncUrl();
-    }
+    },
+    onChoosingChange: (on) => { sdHomeBtnSetAnalyse?.(on); }
   });
 }
 
@@ -2394,8 +2400,19 @@ function topbar(showNav) {
   if (!showNav) {
     const sd = el("button", "aw-appbtn aw-sdh-homebtn", icons.showdown);
     sd.type = "button"; sd.title = "Showdown results"; sd.setAttribute("aria-label", "Showdown results");
-    sd.onclick = () => openShowdownHome();
+    sd.append(el("span", "aw-sdh-homebtn-word", "ANALYSE"));
+    // ⭐ Đợt 237 — same icon does double duty: off the Showdown page it is
+    // plain navigation; ON the page (state.view === "showdown-home", topbar(false)
+    // is rendered there too — see renderShowdownHome()) a second tap morphs it
+    // into the ANALYSE pill instead of re-opening the page it is already on.
+    sd.onclick = () => {
+      if (state.view === "showdown-home" && showdownHomeHandle) showdownHomeHandle.toggleChoosing();
+      else openShowdownHome();
+    };
+    sdHomeBtnSetAnalyse = on => { sd.classList.toggle("is-analyse", on); sd.title = on ? "Cancel analyse" : "Showdown results"; };
     right.append(sd);
+  } else {
+    sdHomeBtnSetAnalyse = null;
   }
   const gear = el("button", "aw-appbtn aw-settings-btn", icons.settings);
   gear.type = "button"; gear.title = "Settings"; gear.setAttribute("aria-label", "Settings");

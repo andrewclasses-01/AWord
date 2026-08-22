@@ -5,6 +5,140 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 237 (23/8/2026) — ⭐⭐⭐ SHOWDOWN HOME: ICON→ANALYSE MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ — 🟡 CODE XONG + TỰ TEST (39/39, 0 lỗi console), CHƯA BẤM TAY THẬT/CHƯA COMMIT
+
+Thầy giao 14 điều chỉnh cho trang Showdown ("nút Showdown" trên trang chủ, `core/showdown-home.js`),
+chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"): (1) icon Showdown vẫn là icon ở
+TRANG CHỦ (topbar ngoài) — nổi/dùng lại được khi đã ở trong trang Showdown, bấm lần 2 mới cuộn thành
+ANALYSE; (2) đổi HẲN kiểu chữ "ANDREW CLASSES" trong bảng Showdown/file xuất sang kiểu mảnh giống
+open-the-box, không giữ kiểu đậm cũ (Đợt 235).
+
+Sửa 5 file: `main.js` · `core/showdown-home.js` · `core/showdown-review.js` · `core/showdown-export.js`
+· `core/app.css`. Thêm 2 file test: `scratch/dot237-showdown.html` (39 phép thử tự động qua Firestore
+giả) · `scratch/dot237-icon-visual.html` (soi riêng hiệu ứng cuộn icon).
+
+### 1-2) BỎ NÚT ANALYSE CŨ — ICON TRANG CHỦ CUỘN DÀI THÀNH ANALYSE
+
+`main.js`'s `topbar()`: icon "Showdown results" (`aw-sdh-homebtn`) thêm 1 `<span>` chữ ẩn
+(`aw-sdh-homebtn-word`, `max-width:0`). `topbar(false)` VỐN ĐÃ render ở CẢ trang chủ lẫn trang Showdown
+(`renderShowdownHome()` gọi `topbar(false)` y hệt `renderTop()`) — không cần dựng icon thứ hai. Bấm
+icon: nếu `state.view !== "showdown-home"` → `openShowdownHome()` như cũ; nếu ĐANG ở trang Showdown →
+gọi `showdownHomeHandle.toggleChoosing()` (mới export qua handle) thay vì mở lại trang. CSS
+`.aw-sdh-homebtn.is-analyse` co giãn `width` 46px→118px + `border-radius` 13px→20px (transition
+`.22s`), icon SVG mờ dần biến mất, chữ ANALYSE hiện ra — **chỉ chữ, không sparkle** (thầy: "chỉ cần chữ
+này và ko cần icon"), vẫn giữ animation glow vàng có sẵn (`aw-sd-rec-analyseglow`, dùng lại nguyên).
+`core/showdown-home.js`: bỏ hẳn `toolbar`/`analyseBtn`/`paintAnalyseBtn()` cũ; `toggleChoosing()` giờ
+bắn `opts.onChoosingChange(choosing)` (main.js dùng để tô icon), `selectClass()` cũng bắn `false` nếu
+đang dở CHOOSING khi đổi lớp.
+
+⚠️ Đã ĐO THẬT bằng `getAnimations()` + `.finish()` rằng transition co giãn đúng đích 118px — môi trường
+test này KHÔNG "composite frame" (Browser pane không hiển thị lúc debug) nên transition CSS không chạy
+thời gian thực được quan sát (đứng yên ở 46px suốt), một bẫy môi trường test, không phải lỗi code (đã
+xác nhận: phần tử MỚI dựng thẳng với class `is-analyse` cho đúng 118px ngay, và ép `transition:none`
+cũng cho đúng 118px ngay — chỉ RIÊNG lúc quan sát transition NGAY LÚC ĐANG CHẠY mới bị đứng hình).
+
+### 3) CỘT ANALYSE: SELECTED LÊN TRÊN, START XUỐNG DƯỚI
+
+`paintChooseInto()` (`showdown-home.js`): thứ tự cột đổi thành `choosecount` ("SELECTED" + số) → chips
+→ nút `.aw-sdh-startbtn` ("START", khoá/disabled khi < 2 lựa chọn). Bỏ hẳn nút `.aw-sd-rec-analyse`
+dùng chung ANALYSE/CHOOSING cũ ở đầu cột.
+
+### 4) BRAND "ANDREW CLASSES" — ĐỔI HẲN SANG KIỂU MẢNH (chuẩn open-the-box)
+
+`core/showdown-export.js`: `brandingLineEl()`/`drawBrandingCanvas()` đổi `font-weight:700→300`,
+`letter-spacing:.14em→.32em` (+ `text-indent`), màu `#b3bcc9→#9aa3af`, thêm `font-family` hệ thống
+riêng (không dùng font thương hiệu Baloo 2) — đúng 3 thuộc tính family/weight/spacing template
+open-the-box đang dùng cho slogan trong game. Canvas: bỏ hẳn cách giả letter-spacing cũ (nối 3 ký tự
+"hair space" ` ` vào giữa mỗi chữ — phát hiện ra khi debug: KHÔNG PHẢI dấu cách thường, `Edit` tool
+so khớp chuỗi ASCII cứ báo "không tìm thấy" dù `Read` hiện y hệt, phải `od -c`/python để lộ byte thật),
+thay bằng đo `ctx.measureText()` + vẽ từng ký tự với khoảng cách `fontSizePx*.32` tính đúng — chính xác
+ở MỌI cỡ chữ dùng (7px chân trang tới 22px bảng), không còn "chỉ đẹp ở đúng 1 cỡ" như cách cũ.
+`core/app.css`'s `.aw-rv-brand`/`.aw-sd-rec-brand` đổi style y hệt. ⭐ Đã RÀ LẠI toàn bộ nơi xuất hiện
+"ANDREW CLASSES" trong Showdown/export — **không có chỗ nào bị lặp 2 lần** (thầy hỏi để chắc), vài chỗ
+tưởng lặp hoá ra loại trừ nhau (`showOnlineLeaderboard`/`showLeaderboard`) hoặc preview/file thật cố ý
+giống nhau.
+
+### 5) MÀN ANALYSING: KHÔNG NỀN, CHỮ TO HƠN, ANDREW CLASSES NHẤP NHÔ
+
+`runAnalysis()`: bỏ hẳn `.aw-sdh-loading-frame` (khung viền sáng xoay) + nền tối mờ `backdrop-filter`.
+`.aw-sdh-loading` nay `background:transparent`, chữ ANALYSING `font-size` 2.1rem→3.4rem, cố định giữa
+màn hình (`position:fixed` + flex-center, không đổi). Bên dưới: dòng "ANDREW CLASSES" (kiểu mảnh, mục
+4) tách thành 14 `<i>` riêng từng ký tự, mỗi chữ `animation-delay` so le `i*0.05s`, keyframe
+`aw-sdh-letterstep` nâng lên (translateY -7px) rồi hạ xuống, lặp vô hạn tới khi bảng phân tích thay thế
+overlay này.
+
+### 6) KÉO-THẢ SẮP XẾP LẠI CHIP TRONG CỘT ANALYSE
+
+`wireChipReorder()` mới — CÙNG hình dạng `wireReorder()` có sẵn trong `main.js` (kéo sắp xếp danh sách
+học sinh khi tạo lớp): `pointerdown` trên tay kéo (`icons.dragHandle`, đã có sẵn, dùng lại nguyên) bật
+cờ kéo, `pointermove` dùng `document.elementFromPoint` tìm chip đang ở dưới con trỏ + tô sáng
+`.is-droptarget`, `pointerup` tính vị trí mới từ `data-idx`, tách `picked` (Map, giữ thứ tự chèn) thành
+mảng, `splice` dời vị trí, ghi lại vào Map rồi vẽ lại cột — không viết thuật toán mới, tái dùng đúng
+pattern đã có.
+
+### 7) TÊN LỚP: TO BẰNG TITLE + VÀNG LẤP LÁNH + SAO BAY MỚI
+
+`titleClass` (`showdown-home.js`) bọc trong `titleClassWrap` (KHÔNG lồng trong `<button>` titleBtn —
+`pop` chọn lớp vẫn phải là sibling, lồng nút trong nút là HTML lỗi). `.aw-sdh-title-class` cỡ chữ
+1.2rem→1.7rem (bằng "SHOWDOWN"), màu `#2f6fed`→`#dd9d09` (vàng), `text-shadow` thở theo keyframe MỚI
+`aw-sdh-classglow` (bản px của `.aw-sd-pod-name.is-top`'s `aw-sd-goldglow` — **không thể dùng lại y hệt
+class podium cũ vì nó tính bằng đơn vị `cqw`, chỉ có nghĩa BÊN TRONG khung game `container-type:size`;
+trang Showdown nằm NGOÀI khung đó, `cqw` sẽ tính ra 0**). Sparkle tĩnh (`.aw-sd-pod-spark`/`-star`, 6
+sao) TÁI DÙNG nguyên — vẫn đứng yên tại chỗ đúng như thiết kế gốc. Sao BAY là hiệu ứng MỚI hoàn toàn
+(không có sẵn trong app trước Đợt 237): `.aw-sdh-flystars`/`.aw-sdh-flystar` (4 sao), keyframe
+`aw-sdh-flystar-move` đổi CẢ `transform:translate()` LẪN `opacity` — thuần CSS, không rAF/JS (bẫy cũ:
+cột myActivity ẩn nền sẽ đứng hình rAF, animation CSS thì không bị).
+
+### 8) DROPDOWN CHỌN LỚP: SỬA ĐÚNG NGUYÊN NHÂN RỚT XUỐNG CUỐI TRANG
+
+Gốc bệnh: `.aw-sdh-classpop` định vị `position:absolute; top:calc(100% + 6px); left:50%` — containing
+block THẬT của nó là `.aw-sdh` (khối gốc TOÀN TRANG, `position:relative`), KHÔNG PHẢI `titleRow`
+(titleRow trước đó không có `position:relative` nào) → popup luôn tính từ mép trang, càng nhiều nội
+dung bên dưới (thư mục/ô kết quả) càng đẩy nó xuống xa. Sửa: `titleRow` nay `position:relative`, JS đo
+`titleClassWrap.getBoundingClientRect()` trừ `titleRow`'s rect, đặt `left`/`top` bằng px thật ngay lúc
+mở (căn giữa dọc theo tên lớp, lệch sang PHẢI 10px) — có tự lật sang trái nếu sẽ tràn mép phải màn
+hình.
+
+### 9-11) BẢNG TABLE 1 TRẬN: BỚT MỜ, CAO GẤP ĐÔI, BỚT SỐ % LẶP
+
+Gốc 3 vấn đề đều từ 1 hàm chung `drawAnalysisCanvas()` (`showdown-export.js`), dùng chung bởi Table 1
+trận (`renderReviewTable`) VÀ mọi PNG tải về (multi-match): (a) **mờ** — `renderReviewTable` gọi với
+`scale=1` rồi CSS kéo canvas ra `width:100%`; với đội ít người (canvas gốc hẹp) trong khung fullscreen
+rộng, đây là phóng to ảnh độ phân giải thấp → mờ. Sửa: `scale = Math.max(2, devicePixelRatio||1)`. (b)
+**cột thấp** — `AN_PLOT_H` (chiều cao vùng biểu đồ) là hằng số CỐ ĐỊNH `380px` dù xem trên màn nào,
+trong khi biểu đồ ANALYSE trên màn hình (`renderChart`, DOM thật) tự giãn theo chiều cao container
+fullscreen → cột Table trông "lùn" hẳn cạnh nó. Sửa: `AN_PLOT_H` 380→**760** (đúng gấp đôi, thầy: "ít
+nhất phải gấp đôi") — áp dụng chung cho MỌI nơi dùng hàm này (Table 1 trận VÀ mọi PNG tải về, không chỉ
+riêng chỗ thầy thấy). (c) **% lặp** — với 1 trận duy nhất, số % nhỏ giữa mỗi khúc màu LUÔN bằng đúng số
+% to trên đỉnh cột (trung bình của 1 giá trị = chính nó) — thêm điều kiện `entries.length > 1` mới vẽ
+số % nhỏ, giữ nguyên với ANALYSE nhiều trận (ở đó 2 số khác nhau, cả hai đều có nghĩa).
+
+### 12) POPUP XÁC NHẬN XOÁ: SỬA MÀU, KHÔNG ĐỤNG HÀNH VI
+
+`.aw-sd-confirm`/`.aw-sd-confirmbox`/`.aw-btn-primary`/`.aw-sd-ghost` được DÙNG CHUNG khắp app (25
+file khác nhau import `.aw-btn-primary`) — KHÔNG đổi màu 2 class này TOÀN CỤC (sẽ nhuộm màu mọi nút OK
+khác trong app). Chỉ scope trong `.aw-sd-confirmbox .aw-btn-primary`/`.aw-sd-confirmbox .aw-sd-ghost`:
+Delete đổi từ xanh dương "OK" thường sang ĐỎ (`#dc2626`, trùng màu hover nút xoá "–" đã có sẵn) — đúng
+gốc vấn đề thầy cảm nhận là "xấu" (nút XOÁ tô cùng màu nút XÁC NHẬN thường, không phải hình dạng); nền
+lớp phủ đổi từ trắng mờ (gần như vô hình trên nền trắng) sang tối mờ + `backdrop-filter` cho tách bạch
+hẳn với thẻ trắng phía trên; bo góc 14px→18px. `.aw-btn.aw-sd-ghost` (chỉ dùng trong Showdown, không
+lan ra app) thêm viền `#e3e9f1` thật (trước đây phẳng, không viền).
+
+### KIỂM THỬ
+
+`scratch/dot237-showdown.html` — 39/39 ĐẠT, 0 lỗi console, qua Firestore giả (`fake-firebase236.js`),
+tự động: không còn `.aw-sdh-toolbar`/nút ANALYSE cũ trên trang · tên lớp cùng cỡ chữ + đủ khung sparkle
+tĩnh (6 sao) + khung sao bay (4 sao) + màu vàng · dropdown bung sát/ngang tâm tên lớp (không còn ở cuối
+trang) · `handle.toggleChoosing()` bắn đúng callback + mở cột phải · cột phải đúng thứ tự
+SELECTED→chips→START, disabled đúng lúc · chip có tay kéo + `data-idx` · kéo-thả không làm mất/nhân đôi
+dữ liệu · ANALYSING không nền + chữ tách ký tự so le · Table 1 trận vẽ đúng scale ≥2 · brand
+`font-weight:300`/màu `#9aa3af` đúng · popup xoá bo góc 18px + nút Delete nền đỏ + xoá vẫn hoạt động
+đúng. ⚠️ **CHƯA đăng nhập Google thật để thử trên bản live, CHƯA bấm tay thật trên TOMKO** (đặc biệt:
+cảm giác thật của hiệu ứng cuộn icon + kéo-thả chip trên màn cảm ứng — lưới thử chỉ giả lập pointer
+event, không thay được cảm giác tay thật).
+
+---
+
 ## Đợt 236 (23/8/2026) — ⭐⭐⭐ TRANG SHOWDOWN RIÊNG TRÊN TRANG CHỦ + KHO LƯU TRỮ BỀN THEO THÁNG — 🟡 CODE XONG + TỰ TEST QUA FIRESTORE GIẢ, CHƯA BẤM TAY THẬT/CHƯA COMMIT
 
 Thầy giao 2 việc lớn, chốt qua AskUserQuestion trước khi build ("gộp luôn các việc trong 1 lần. Ok

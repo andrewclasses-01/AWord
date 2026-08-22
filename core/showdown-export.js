@@ -82,25 +82,33 @@ function safeFileBit(s) {
 // 1000px-square canvas have nothing in common to inherit from.
 // ---------------------------------------------------------------
 const BRAND_TEXT = "ANDREW CLASSES";
+const BRAND_FONT_STACK = 'system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const BRAND_COLOR = "#9aa3af";
+const BRAND_TRACKING = 0.32;
 
 function brandingLineEl(fontSizePx, marginBottomPx) {
   const b = el("div");
-  b.style.cssText = `text-align:center;font-weight:700;letter-spacing:.14em;` +
-    `font-size:${fontSizePx}px;color:#b3bcc9;margin-bottom:${marginBottomPx}px;`;
+  b.style.cssText = `text-align:center;font-weight:300;letter-spacing:.32em;text-indent:.32em;` +
+    `text-transform:uppercase;font-family:${BRAND_FONT_STACK};` +
+    `font-size:${fontSizePx}px;color:${BRAND_COLOR};margin-bottom:${marginBottomPx}px;`;
   b.textContent = BRAND_TEXT;
   return b;
 }
 
 function drawBrandingCanvas(ctx, width, y, fontSizePx) {
   ctx.save();
-  ctx.textAlign = "center";
+  ctx.textAlign = "left";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#b3bcc9";
-  // canvas has no `letter-spacing`; fake it by hand — this string is short
+  ctx.fillStyle = BRAND_COLOR;
+  // canvas has no `letter-spacing`; walk the string by hand — this string is short
   // and fixed, so measuring+walking it per-call costs nothing worth caching.
-  ctx.font = `700 ${fontSizePx}px ${FONT_STACK}`;
-  const tracked = BRAND_TEXT.split("").join("   ");
-  ctx.fillText(tracked, width / 2, y);
+  ctx.font = `300 ${fontSizePx}px ${BRAND_FONT_STACK}`;
+  const gap = fontSizePx * BRAND_TRACKING;
+  const chars = BRAND_TEXT.split("");
+  const widths = chars.map(c => ctx.measureText(c).width);
+  const totalW = widths.reduce((a, b) => a + b, 0) + gap * (chars.length - 1);
+  let x = width / 2 - totalW / 2;
+  chars.forEach((c, i) => { ctx.fillText(c, x, y); x += widths[i] + gap; });
   ctx.restore();
 }
 
@@ -1046,7 +1054,13 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
 const ANALYSE_PNG_COLORS = ["#2f7dfd", "#9061f9", "#f5a623", "#14b8a6", "#ec4899", "#06b6d4", "#fb923c", "#64748b"];
 
 const AN_BAR_W = 96, AN_BAR_GAP = 16, AN_GROUP_GAP = 30, AN_PAD = 40;
-const AN_AXIS_W = 52, AN_TITLE_H = 96, AN_TOTAL_H = 36, AN_PLOT_H = 380, AN_NAME_H = 42;
+// AN_PLOT_H doubled at Đợt 237 (thầy: the single-match Table view's columns
+// read short next to the on-screen ANALYSE chart, which fills whatever
+// height its fullscreen container gives it) — this constant is shared by
+// every consumer of drawAnalysisCanvas (the Table view AND every downloaded
+// PNG, single-match or multi-match), so the taller stack applies everywhere
+// uniformly rather than only in the one place thầy noticed it.
+const AN_AXIS_W = 52, AN_TITLE_H = 96, AN_TOTAL_H = 36, AN_PLOT_H = 760, AN_NAME_H = 42;
 const AN_LEGEND_ROW_H = 26, AN_LEGEND_GAP = 22, AN_LEGEND_SW = 13, AN_LEGEND_ITEM_GAP = 20;
 
 /** Wrap the legend's entries into centred rows that fit `maxW` — needs a real
@@ -1163,7 +1177,12 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1)
       if (h > 0.4) {
         ctx.fillStyle = ANALYSE_PNG_COLORS[i % ANALYSE_PNG_COLORS.length];
         ctx.fillRect(bx, by - h, AN_BAR_W, h);
-        if (h >= 16) {
+        // Đợt 237 (thầy) — with a single match (entries.length === 1, the
+        // Table view) this per-tier number is always the SAME figure as the
+        // big total drawn on top of the stack a few lines down: one match
+        // has exactly one tier, so its own % IS the average. Only print it
+        // here once there is more than one match to actually average across.
+        if (h >= 16 && entries.length > 1) {
           ctx.fillStyle = "#ffffff";
           ctx.textAlign = "center";
           ctx.font = `800 11px ${FONT_STACK}`;
