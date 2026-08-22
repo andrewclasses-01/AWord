@@ -4634,7 +4634,19 @@ html.aw-nhung .aw-below { display: none; }
   transition: border-color .14s ease, background .14s ease, transform .14s ease;
 }
 .aw-sd-rec-col:hover { border-color: #2f6fed; background: #f6f9ff; transform: translateY(-2px); }
-.aw-sd-rec-colhead { flex: 0 0 auto; min-width: 0; }
+/* ⭐⭐ Đợt 230 (thầy: "khi trỏ chuột đến hàng tên... phải thay đổi hành vi so với
+   trỏ chuột xuống bên dưới") — hovering the name row cancels the whole-card
+   hover above (no blue border, no lift) and shows its OWN, different cue
+   instead: a warm highlight + cursor:text, because this row does something
+   else now (double-tap to rename — see the gesture wired in
+   core/showdown-setup.js) than the rest of the card (tap opens the detail). */
+.aw-sd-rec-col:has(.aw-sd-rec-colhead:hover) { border-color: #e3e9f1; background: #fbfcfe; transform: none; }
+.aw-sd-rec-colhead {
+  flex: 0 0 auto; min-width: 0; border-radius: 6px; cursor: text;
+  transition: background .12s ease;
+}
+.aw-sd-rec-colhead:hover { background: #fff7db; }
+.aw-sd-rec-col.is-renaming .aw-sd-rec-colhead { background: #fff7db; }
 .aw-sd-rec-act {
   /* ⭐ Đợt 224 — 12.5 → 11px: the 2-tier cell is roughly half the old height, and
      the head (act name + sub-line) has to give most of that back to the pupil
@@ -4645,6 +4657,17 @@ html.aw-nhung .aw-below { display: none; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .aw-sd-rec-sub { font-size: 9.5px; font-weight: 700; color: #98a2b2; margin-top: 2px; }
+
+/* ⭐⭐ Đợt 230 — the rename input REPLACES `.aw-sd-rec-act`+`.aw-sd-rec-sub`
+   inside `.aw-sd-rec-colhead` while editing (core/showdown-setup.js's
+   startRename), so it inherits that head's own width/position — no extra
+   layout math needed here. */
+.aw-sd-rec-renameinput {
+  display: block; width: 100%; box-sizing: border-box;
+  font-family: inherit; font-size: 11.5px; font-weight: 800; color: #23303e;
+  border: 1.5px solid #2f6fed; border-radius: 6px; background: #fff;
+  padding: 3px 6px; outline: none;
+}
 
 /* THE MINIATURE FUNNEL. Sized in px, NOT in cqw like the real podium — see the
    long note in core/showdown-setup.js's openRecent for why the real stylesheet
@@ -4893,7 +4916,14 @@ html.aw-nhung .aw-below { display: none; }
 
 /* THE PLOT — grid + bars share one relatively-positioned track so the
    gridlines can be laid over the bars by percentage of the SAME height. */
-.aw-sd-rec-plotarea { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* ⭐ Đợt 230 — the 20px top padding is HEADROOM for `.aw-sd-rec-bartotal`
+   (the big average printed above each bar, which can sit right at the 100%
+   line): shrinking `track`'s own box from up here keeps track's internal
+   0-100% gridline maths untouched (padding added to `.aw-sd-rec-track` itself
+   would misalign the gridlines against the bars — they use different boxes,
+   see `.aw-sd-rec-grid`'s `inset:0` note) while still freeing real pixels
+   above it for the label to spill into without touching the head row. */
+.aw-sd-rec-plotarea { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-top: 20px; }
 .aw-sd-rec-track {
   position: relative; flex: 1 1 auto; min-height: 0;
   display: flex; align-items: stretch; gap: 10px;
@@ -4906,7 +4936,8 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-rec-gridlabel {
   position: absolute; left: -34px; top: -7px; width: 30px; text-align: right;
-  font-size: 10.5px; font-weight: 700; color: #98a2b2;
+  /* ⭐ Đợt 230 (thầy: "text to hơn, dễ nhìn hơn") — 10.5 → 12px */
+  font-size: 12px; font-weight: 700; color: #98a2b2;
 }
 /* One bar PER PUPIL. `column-reverse` is what makes appending tiers in
    OLDEST-FIRST order put the oldest match at the bottom — see the note on
@@ -4920,12 +4951,25 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-rec-tier {
   flex: 0 0 auto; min-height: 1px;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 11px; font-weight: 800;
+  /* ⭐ Đợt 230 (thầy: "text to hơn, dễ nhìn hơn" — but still the SMALL number,
+     the big one is `.aw-sd-rec-bartotal` below) — 11 → 12.5px */
+  color: #fff; font-size: 12.5px; font-weight: 800;
   border-top: 1px solid rgba(255, 255, 255, .55);
 }
 .aw-sd-rec-tier:first-child { border-top: none; border-radius: 0 0 3px 3px; }
 .aw-sd-rec-tier:last-child { border-radius: 3px 3px 0 0; }
 .aw-sd-rec-tier:first-child:last-child { border-radius: 3px; }   /* a bar with only one tier */
+
+/* ⭐⭐ Đợt 230 (thầy: "thêm 1 số tổng % trên đỉnh các cột... số % trên đỉnh cột
+   lớn hơn nhiều") — the pupil's AVERAGE (core/showdown.js's buildAnalysisRows),
+   sitting right above the stack. `addBar()` (core/showdown-setup.js) appends
+   this LAST, after every tier: `.aw-sd-rec-bar` is `column-reverse` (see that
+   rule's own note), so the last-appended child is the visually HIGHEST one —
+   no `position:absolute`/bottom-percentage maths needed to put it there. */
+.aw-sd-rec-bartotal {
+  flex: 0 0 auto; text-align: center; font-size: 16px; font-weight: 900;
+  color: #1d2939; line-height: 1; margin-bottom: 4px;
+}
 
 /* Names sit BELOW the plot, in their OWN row that mirrors the track's flex
    shape (same flex-basis pattern, same gap, same gap-spacer) so each name
@@ -4933,17 +4977,30 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-rec-names { flex: 0 0 auto; display: flex; gap: 10px; padding-left: 34px; padding-top: 4px; }
 .aw-sd-rec-namehost { flex: 1 1 0; min-width: 0; display: flex; justify-content: center; }
 .aw-sd-rec-barname {
-  display: inline-block; max-width: 100%; font-size: 11px; font-weight: 800; color: #23303e;
+  display: inline-block; max-width: 100%; font-weight: 800; color: #23303e;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center;
+  /* ⭐ Đợt 230 (thầy: "luôn viết hoa tên, viết tắt các tên nếu dài quá" — the
+     abbreviation ladder already lives in fitPodiumNames/shortenName; this is
+     just the "always" half) — text-transform measures the RENDERED width
+     (`scrollWidth`), so fitPodiumNames' shrink-then-abbreviate maths already
+     sees the uppercase text it is actually fitting, not the stored mixed-case
+     string. 11 → 13px to match the request for bigger text throughout.  */
+  text-transform: uppercase; font-size: 13px;
 }
 
 /* THE LEGEND — one swatch per selected match, same colour rule as the tiers
    (core/showdown-setup.js's `ANALYSE_COLORS`, indexed by the same `entries`
-   array both this and the tiers are built from). */
-.aw-sd-rec-legend { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px 16px; padding-top: 2px; }
+   array both this and the tiers are built from).
+   ⭐ Đợt 230 (thầy: "chú thích... được đưa ra chính giữa") — centred; there is
+   only ever ONE legend for both boards (full+partial share `entries`), so
+   centring it here already centres it under their combined width. */
+.aw-sd-rec-legend {
+  flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 8px 16px; padding-top: 2px;
+}
 .aw-sd-rec-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .aw-sd-rec-legend-sw { width: 11px; height: 11px; border-radius: 3px; flex: 0 0 auto; }
-.aw-sd-rec-legend-txt { font-size: 11.5px; font-weight: 700; color: #5b677a; }
+.aw-sd-rec-legend-txt { font-size: 13px; font-weight: 700; color: #5b677a; }   /* ⭐ Đợt 230 — 11.5 → 13px */
 
 /* A touch smaller than the app's default primary button (teacher: "thu nhỏ hơn
    nút Ready đi một chút") — it is the only button on the row now, so it does not

@@ -154,6 +154,17 @@ function normMatch(m) {
     roundKey: String(m?.roundKey || ""),
     playNo: Number(m?.playNo) || 1,
     actName: cut(m?.actName),
+    // Đợt 230 — the clue set (eng1/eng2/vi1/vi2) that was live when this result
+    // was saved, so the ledger can show "ENGLISH 1" instead of the act's own
+    // shared "WORDS" name (core/showdown.js's formatActDisplayName). Empty for
+    // any match filed before this đợt, or for an act that has no clue sets.
+    contentVariant: cut(m?.contentVariant),
+    // Đợt 230 — the teacher's own rename, typed by hand (double-tap the name in
+    // Recent results). Once set it OVERRIDES the formatted display name forever
+    // for this match — never re-derived, never overwritten by a later write to
+    // the same match (saveMatchResult only ever fills `actName`/`contentVariant`
+    // when they are still empty; it never touches this field at all).
+    customName: cut(m?.customName),
     at: Number(m?.at) || 0,
     updatedAt: Number(m?.updatedAt) || 0,
     teams
@@ -245,7 +256,7 @@ export function matchIdOf(tableId, roundKey, playNo) {
  * can never land in the same column and double anybody.
  */
 export async function saveMatchResult({
-  classId, className, tableId, roundKey, playNo, actName = "",
+  classId, className, tableId, roundKey, playNo, actName = "", contentVariant = "",
   teamId, teamName, students
 }) {
   if (!classId || !teamId) return false;
@@ -269,7 +280,7 @@ export async function saveMatchResult({
     node.className = String(className || node.className || "");
     let m = node.matches.find(x => x.matchId === id);
     if (!m) {
-      m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, at: now });
+      m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, contentVariant, at: now });
       node.matches.push(m);
       // Thầy's rule, applied on CREATION rather than on write: five columns, and
       // the sixth pushes the first out. Sorted by `at` rather than by array
@@ -283,6 +294,7 @@ export async function saveMatchResult({
     m.teams[entry.teamId] = entry;
     m.updatedAt = now;
     if (!m.actName && actName) m.actName = cut(actName);
+    if (!m.contentVariant && contentVariant) m.contentVariant = cut(contentVariant);
     node.updatedAt = now;
     tx.set(ref, clean(fitToBudget(node)));
   });
@@ -358,6 +370,37 @@ export async function deleteMatch(classId, matchId) {
     node.matches = node.matches.filter(m => m.matchId !== matchId);
     found = node.matches.length !== before;
     if (!found) return;             // nothing changed — do not bump updatedAt for no reason
+    node.updatedAt = Date.now();
+    tx.set(ref, clean(node));
+  });
+  return found;
+}
+
+/**
+ * ⭐⭐ Đợt 230 (22/8/2026, thầy) — RENAME ONE MATCH BY HAND.
+ * Double-tap the name in Recent results (core/showdown-setup.js). Overwrites
+ * `customName`, which then wins over the formatted display name FOREVER for
+ * this match (see `normMatch`'s own note) — typing a blank name clears it back
+ * to the formatted/raw name rather than storing an empty override.
+ *
+ * Same transaction shape as `deleteMatch()` and for the same reason: a plain
+ * get-then-set here would race a column filing a brand new match at the same
+ * second, and the loser's write would vanish with no symptom on either screen.
+ */
+export async function renameMatch(classId, matchId, customName) {
+  if (!classId || !matchId) return false;
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, docIdFor(classId));
+  let found = false;
+  await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const node = normDoc(snap.data(), classId);
+    const m = node.matches.find(x => x.matchId === matchId);
+    if (!m) return;
+    m.customName = cut(customName);
+    found = true;
     node.updatedAt = Date.now();
     tx.set(ref, clean(node));
   });

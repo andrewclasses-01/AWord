@@ -603,14 +603,63 @@ export function buildAnalysisRows(entries) {
       matchId: e.matchId,
       pct: s.values.has(e.matchId) ? s.values.get(e.matchId) : null
     }));
-    const total = segments.reduce((a, x) => a + (x.pct || 0), 0);
-    return { key: s.key, name: s.name, full, total, segments };
+    // ⭐⭐ Đợt 230 (thầy chốt qua AskUserQuestion) — `total` is now the AVERAGE %
+    // across the matches this pupil was PRESENT for (not their sum), so it stays
+    // 0-100 whether 2 or 5 matches are stacked and the y-axis can sit at a fixed
+    // 100% instead of stretching per selection. `count` is what the caller (the
+    // chart's addBar in core/showdown-setup.js) divides each RAW segment.pct by
+    // to make the drawn tier heights sum back to this same average — the number
+    // PRINTED inside a tier stays the match's real, un-divided %.
+    const present = segments.filter(x => x.pct != null);
+    const count = present.length;
+    const total = count ? present.reduce((a, x) => a + x.pct, 0) / count : 0;
+    return { key: s.key, name: s.name, full, total, count, segments };
   });
   const byTotalDesc = (a, b) => b.total - a.total;
   return {
     full: rows.filter(r => r.full).sort(byTotalDesc),
     partial: rows.filter(r => !r.full).sort(byTotalDesc)
   };
+}
+
+// ---------------------------------------------------------------
+// Đợt 230 (22/8/2026, thầy) — LEDGER DISPLAY NAME: "WORDS" → "ENGLISH 1" etc.
+// ---------------------------------------------------------------
+// A vocabulary act carries ONE library name for all four clue sets (Đợt 145,
+// core/content-view.js — "BODY PARTS / WORDS" plays ENG1/ENG2/VI1/VI2 depending
+// on `options.contentVariant`), so the ledger row for a Showdown match said only
+// "BODY PARTS / WORDS" no matter which set the class actually played. Thầy:
+// swap the literal "WORDS" for the clue set that was live when the result was
+// saved — "BODY PARTS / ENGLISH 1", "BODY PARTS / VIETNAMESE 2".
+//
+// ⚠️ A SMALL, LOCAL MAP ON PURPOSE, not an import of content-view.js's own
+// VARIANT_LABEL ("ENG1"/"VI2"): this file stays free of every other module in
+// core/ (its header's whole point — pure data-in/data-out, testable with no
+// browser), and the words wanted here ("ENGLISH 1") are a display choice, not
+// the same short label content-view.js's Options buttons use.
+const DISPLAY_VARIANT_WORDS = {
+  eng1: "ENGLISH 1", eng2: "ENGLISH 2", vi1: "VIETNAMESE 1", vi2: "VIETNAMESE 2"
+};
+
+// ⚠️ ONLY the literal "WORDS" suffix (nothing after it) is swapped. An act
+// whose name ends "WORDS 2" (Đợt 204's second word-table suffix) is a DIFFERENT
+// naming meaning — deliberately left untouched rather than guessed at.
+const WORDS_SUFFIX_RE = /^(.*\/\s*)WORDS\s*$/i;
+
+/**
+ * The name to show for one ledger row. `contentVariant` is whatever
+ * core/engine.js recorded at the moment the result was saved (Đợt 230) — a
+ * match filed before this đợt has none, and this function is then a no-op:
+ * the raw `actName` comes back exactly as it always did.
+ */
+export function formatActDisplayName(actName, contentVariant) {
+  const name = String(actName || "").trim();
+  if (!name) return "";
+  const word = DISPLAY_VARIANT_WORDS[String(contentVariant || "").toLowerCase()];
+  if (!word) return name;
+  const m = WORDS_SUFFIX_RE.exec(name);
+  if (!m) return name;
+  return `${m[1]}${word}`;
 }
 
 /**

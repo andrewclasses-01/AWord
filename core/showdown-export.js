@@ -622,3 +622,296 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
   paintTypes();
   paintPreview();
 }
+
+// ---------------------------------------------------------------
+// ANALYSIS — one PNG of BOTH boards (full + partial), Đợt 230.
+// ---------------------------------------------------------------
+// Opened by the Download button on the ANALYSE screen (core/showdown-setup.js's
+// openAnalysis). Same "raw canvas, never an <img>" rule as the rank sheet above
+// — see that section's own note on the Chromium taint bug this avoids.
+//
+// ⚠️ ONE drawing routine for BOTH the live preview and the final file:
+// `drawAnalysisCanvas()` returns a real `<canvas>` synchronously; the preview
+// inserts that canvas element as-is (shrunk with a CSS transform, same idiom
+// as `buildRankSheet`'s DOM preview above) and the download redraws a second,
+// higher-resolution one from the exact same function rather than keeping a
+// DOM version and a canvas version that could drift apart.
+//
+// Colours are the SAME eight as core/showdown-setup.js's ANALYSE_COLORS, kept
+// as this file's own copy rather than a static import of that file — see this
+// file's own header/POD_MAX_W note on why two dynamic-import-only files never
+// statically import each other for one small shared constant.
+const ANALYSE_PNG_COLORS = ["#2f7dfd", "#9061f9", "#f5a623", "#14b8a6", "#ec4899", "#06b6d4", "#fb923c", "#64748b"];
+
+const AN_BAR_W = 96, AN_BAR_GAP = 16, AN_GROUP_GAP = 30, AN_PAD = 40;
+const AN_AXIS_W = 52, AN_TITLE_H = 96, AN_TOTAL_H = 36, AN_PLOT_H = 380, AN_NAME_H = 42;
+const AN_LEGEND_ROW_H = 26, AN_LEGEND_GAP = 22, AN_LEGEND_SW = 13, AN_LEGEND_ITEM_GAP = 20;
+
+/** Wrap the legend's entries into centred rows that fit `maxW` — needs a real
+ *  2D context to measure text, so the caller passes one in (a throwaway probe
+ *  context before the real canvas exists, since the canvas's own HEIGHT
+ *  depends on how many rows come out of this). */
+function wrapAnalysisLegend(ctx, entries, maxW) {
+  ctx.font = `700 13px ${FONT_STACK}`;
+  const rows = [];
+  let row = [], rowW = 0;
+  entries.forEach((e, i) => {
+    const txt = `${e.label} · ${fmtDate(e.at)}`;
+    const w = AN_LEGEND_SW + 6 + ctx.measureText(txt).width;
+    const addW = row.length ? AN_LEGEND_ITEM_GAP + w : w;
+    if (row.length && rowW + addW > maxW) { rows.push(row); row = []; rowW = 0; }
+    row.push({ i, txt, w });
+    rowW += row.length === 1 ? w : AN_LEGEND_ITEM_GAP + w;
+  });
+  if (row.length) rows.push(row);
+  return rows;
+}
+
+/**
+ * Draws both boards onto ONE canvas and returns it (synchronously — no
+ * `toBlob` here, so this doubles as the live preview's own renderer).
+ *
+ * ⚠️ SAME SCALING RULE AS THE ON-SCREEN CHART (core/showdown-setup.js's
+ * renderChart) — `r.total` is already an AVERAGE (core/showdown.js's
+ * buildAnalysisRows), so the axis is a fixed 0-100% here too, and each tier's
+ * drawn height divides the match's real `seg.pct` by `r.count` the same way,
+ * for the same reason: the stack's visible height has to land on the average
+ * while the NUMBER printed inside a tier stays that match's real score.
+ */
+function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1) {
+  const rows = [...full, ...partial];
+  const hasGroupGap = full.length > 0 && partial.length > 0;
+  const plotW = Math.max(1, rows.length) * AN_BAR_W + Math.max(0, rows.length - 1) * AN_BAR_GAP
+    + (hasGroupGap ? AN_GROUP_GAP - AN_BAR_GAP : 0);
+  const width = Math.max(620, AN_PAD * 2 + AN_AXIS_W + plotW);
+
+  const probe = document.createElement("canvas").getContext("2d");
+  const legendRows = rows.length ? wrapAnalysisLegend(probe, entries, width - AN_PAD * 2) : [];
+  const height = AN_PAD * 2 + AN_TITLE_H + AN_TOTAL_H + AN_PLOT_H + AN_NAME_H + AN_LEGEND_GAP
+    + Math.max(1, legendRows.length) * AN_LEGEND_ROW_H;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(width * scale);
+  canvas.height = Math.round(height * scale);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, width, height);
+  ctx.textBaseline = "middle";
+
+  // ---- title: a small "ANALYSIS" over the teacher's own class/date line ----
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#2f7dfd";
+  ctx.font = `800 20px ${FONT_STACK}`;
+  ctx.fillText("ANALYSIS", width / 2, AN_PAD + 22);
+  ctx.fillStyle = "#23303e";
+  let titleFs = 28;
+  ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
+  const maxTitleW = width - AN_PAD * 2;
+  const shownTitle = titleText || "—";
+  while (ctx.measureText(shownTitle).width > maxTitleW && titleFs > 14) {
+    titleFs -= 1;
+    ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
+  }
+  ctx.fillText(shownTitle, width / 2, AN_PAD + 60);
+
+  if (!rows.length) {
+    ctx.fillStyle = "#98a2b2";
+    ctx.font = `700 15px ${FONT_STACK}`;
+    ctx.fillText("No pupils in common between these matches.", width / 2, height / 2);
+    return { canvas, width, height };
+  }
+
+  // ---- plot: gridlines + the % axis, a fixed 0-100 (see this function's own
+  //      note on why the axis no longer stretches per selection) ----
+  const plotX = AN_PAD + AN_AXIS_W;
+  const plotY = AN_PAD + AN_TITLE_H + AN_TOTAL_H;
+  const plotBottom = plotY + AN_PLOT_H;
+  ctx.textAlign = "right";
+  for (let v = 0; v <= 100; v += 20) {
+    const gy = plotBottom - (v / 100) * AN_PLOT_H;
+    ctx.strokeStyle = "#e3e9f1";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(plotX, gy + 0.5);
+    ctx.lineTo(plotX + plotW, gy + 0.5);
+    ctx.stroke();
+    ctx.fillStyle = "#98a2b2";
+    ctx.font = `700 12px ${FONT_STACK}`;
+    ctx.fillText(v + "%", plotX - 10, gy);
+  }
+
+  // ---- the bars — one per pupil, stacked oldest (bottom) to newest (top),
+  //      full first then partial after a short gap, same order the on-screen
+  //      chart draws them in ----
+  let bx = plotX;
+  rows.forEach((r, ri) => {
+    if (ri === full.length && hasGroupGap) bx += AN_GROUP_GAP - AN_BAR_GAP;
+    let by = plotBottom;
+    r.segments.forEach((seg, i) => {
+      if (seg.pct == null) return;                 // did not play this match — no tier at all
+      const scaledPct = r.count ? seg.pct / r.count : 0;
+      const h = (scaledPct / 100) * AN_PLOT_H;
+      if (h > 0.4) {
+        ctx.fillStyle = ANALYSE_PNG_COLORS[i % ANALYSE_PNG_COLORS.length];
+        ctx.fillRect(bx, by - h, AN_BAR_W, h);
+        if (h >= 16) {
+          ctx.fillStyle = "#ffffff";
+          ctx.textAlign = "center";
+          ctx.font = `800 11px ${FONT_STACK}`;
+          ctx.fillText(`${Math.round(seg.pct)}%`, bx + AN_BAR_W / 2, by - h / 2);
+        }
+      }
+      by -= h;
+    });
+
+    // the average, big, on top of the stack (thầy: "số % trên đỉnh cột lớn hơn nhiều")
+    ctx.fillStyle = "#1d2939";
+    ctx.textAlign = "center";
+    ctx.font = `900 20px ${FONT_STACK}`;
+    ctx.fillText(`${Math.round(r.total)}%`, bx + AN_BAR_W / 2, by - 16);
+
+    // the pupil's name — UPPERCASE always (thầy), shrunk/abbreviated to fit
+    // the bar's own width by the same ladder the rank sheet's names use.
+    const fit = fitCanvasName(ctx, r.name.toUpperCase(), AN_BAR_W, 13);
+    ctx.fillStyle = "#23303e";
+    ctx.font = `800 ${fit.fs}px ${FONT_STACK}`;
+    ctx.textAlign = "center";
+    ctx.fillText(fit.text, bx + AN_BAR_W / 2, plotBottom + AN_NAME_H / 2);
+
+    bx += AN_BAR_W + AN_BAR_GAP;
+  });
+
+  // ---- legend, CENTRED — thầy: "được đưa ra chính giữa", and centred against
+  //      the WHOLE image's width, so it reads centred under both boards
+  //      together rather than under whichever one happens to be wider ----
+  let ly = plotBottom + AN_NAME_H + AN_LEGEND_GAP;
+  legendRows.forEach(row => {
+    const rowW = row.reduce((a, it, i) => a + it.w + (i ? AN_LEGEND_ITEM_GAP : 0), 0);
+    let lx = (width - rowW) / 2;
+    row.forEach(it => {
+      ctx.fillStyle = ANALYSE_PNG_COLORS[it.i % ANALYSE_PNG_COLORS.length];
+      ctx.fillRect(lx, ly - AN_LEGEND_SW / 2, AN_LEGEND_SW, AN_LEGEND_SW);
+      ctx.fillStyle = "#5b677a";
+      ctx.textAlign = "left";
+      ctx.font = `700 13px ${FONT_STACK}`;
+      ctx.fillText(it.txt, lx + AN_LEGEND_SW + 6, ly);
+      lx += it.w + AN_LEGEND_ITEM_GAP;
+    });
+    ly += AN_LEGEND_ROW_H;
+  });
+
+  return { canvas, width, height };
+}
+
+async function analysisPngBlob(full, partial, entries, titleText, scale = 2) {
+  const { canvas } = drawAnalysisCanvas(full, partial, entries, titleText, scale);
+  return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+}
+
+/**
+ * @param {object} opts
+ *   mount                the element to append INTO — same rule as
+ *                        `openExportDialog` above: must be whatever is
+ *                        currently `requestFullscreen()`'d (the ANALYSE
+ *                        screen), or this popup goes invisible right along
+ *                        with everything else outside that element's subtree.
+ *   className, at        defaults for the Class/Date fields (thầy chose these
+ *                        two only — no "Activity" field, since this image can
+ *                        span several different acts at once)
+ *   full, partial, entries  straight from core/showdown.js's buildAnalysisRows
+ *                        and core/showdown-setup.js's own `entries` array —
+ *                        the exact same data the on-screen chart is drawn from
+ *   toast                the panel's own toast, for a failed PNG build
+ */
+export function openAnalysisExportDialog({ mount, className = "", at, full = [], partial = [], entries = [], toast = () => {} }) {
+  if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
+
+  const layer = el("div", "aw-sd-exp");
+  const head = el("div", "aw-sd-rec-head");
+  const titleRow = el("div", "aw-sd-rec-title");
+  titleRow.append(el("span", "aw-sd-rec-word", "DOWNLOAD"));
+  const closeBtn = el("button", "aw-sd-rec-close", icons.close);
+  closeBtn.type = "button";
+  closeBtn.title = "Close";
+  head.append(titleRow, closeBtn);
+
+  const body = el("div", "aw-sd-exp-body");
+  layer.append(head, body);
+  mount.append(layer);
+  layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: "ease-out" });
+
+  const fields = el("div", "aw-sd-exp-fields");
+  const mkField = (labelTxt, value) => {
+    const wrap = el("div", "aw-sd-exp-field");
+    const lab = document.createElement("label");
+    lab.textContent = labelTxt;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = value;
+    wrap.append(lab, input);
+    return { wrap, input };
+  };
+  const clsField = mkField("Class", className);
+  const dateField = mkField("Date", fmtDate(at));
+  fields.append(clsField.wrap, dateField.wrap);
+  body.append(fields);
+
+  const titleLine = el("div", "aw-sd-exp-titleline");
+  body.append(titleLine);
+
+  const previewBox = el("div", "aw-sd-exp-preview");
+  body.append(previewBox);
+
+  const actions = el("div", "aw-sd-exp-actions");
+  const goBtn = el("button", "aw-btn aw-btn-primary aw-sd-exp-go", "Download PNG");
+  goBtn.type = "button";
+  actions.append(goBtn);
+  body.append(actions);
+
+  function composedTitle() {
+    return [clsField.input.value, dateField.input.value]
+      .map(s => String(s || "").trim()).filter(Boolean).join(" • ");
+  }
+
+  function paintPreview() {
+    previewBox.innerHTML = "";
+    const txt = composedTitle();
+    titleLine.textContent = txt || "—";
+    const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, txt || "Analysis", 1);
+    const scale = Math.min(1, 300 / width, 260 / height);
+    const frame = el("div", "aw-sd-exp-preview-frame");
+    frame.style.width = Math.round(width * scale) + "px";
+    frame.style.height = Math.round(height * scale) + "px";
+    canvas.style.cssText =
+      `width:${width}px;height:${height}px;transform:scale(${scale});transform-origin:top left;display:block;`;
+    frame.append(canvas);
+    previewBox.append(frame);
+  }
+
+  [clsField.input, dateField.input].forEach(inp => inp.addEventListener("input", paintPreview));
+
+  function close() {
+    const a = layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140, easing: "ease-in", fill: "forwards" });
+    whenDone(a, () => layer.remove(), 220);
+  }
+  closeBtn.onclick = () => { sound.click(); close(); };
+
+  goBtn.onclick = async () => {
+    sound.click();
+    const shown = composedTitle() || "Analysis";
+    goBtn.disabled = true;
+    try {
+      const blob = await analysisPngBlob(full, partial, entries, shown, 2);
+      if (!blob) throw new Error("aw/png-empty");
+      triggerDownload(blob, safeFileBit("Analysis " + shown) + ".png");
+    } catch (e) {
+      console.warn("AWord: could not build the analysis image", e);
+      toast("Could not create the image.");
+    } finally {
+      goBtn.disabled = false;
+    }
+  };
+
+  paintPreview();
+}

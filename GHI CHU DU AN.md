@@ -5,6 +5,116 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 230 (22/8/2026) — ⭐⭐ RECENT RESULTS: ĐỔI TÊN TRẬN + TÊN TỰ ĐỘNG THEO LOẠI TỪ, ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH, VÁ LỖI "Back to the matches" KHI FULLSCREEN
+
+Thầy giao qua chat (đã bàn kỹ trước bằng AskUserQuestion — xem 4 quyết định dưới) một loạt cải tiến
+cho popup Showdown, chia hai màn: **Recent results** (10 ô kết quả gần nhất) và **ANALYSE** (biểu đồ
+gộp nhiều trận).
+
+**1) Đổi tên một ô kết quả bằng chạm 2 lần vào hàng tên.**
+- ⚠️ Thầy nói "double click", nhưng `core/HUONG DAN CORE.md`/`core/press.js` đã ghi rõ: `click`/`dblclick`
+  chuẩn trình duyệt **không tin được trên màn cảm ứng hồng ngoại TOMKO** (con trỏ phụ không bao giờ
+  sinh `click`). Vì đây là màn hình MỘT THẦY thao tác (không phải hai đội đua tay như Fight), không
+  cần bộ máy pointer thô của `core/press.js` — chỉ cần đọc HAI cú `click` liền nhau trong 320ms
+  (`RENAME_TAP_MS`), y hệt cách nút delBtn/pickBtn/col trong file này vẫn dùng `.onclick` suông.
+- Chạm vào hàng tên (`.aw-sd-rec-colhead`) **không còn mở bảng chi tiết** nữa (`stopPropagation` chặn
+  sự kiện lan lên `col`) — đây chính là "hành vi phải khác" thầy yêu cầu khi rê chuột vào hàng tên so
+  với rê xuống khu preview bên dưới. CSS: `.aw-sd-rec-colhead:hover` tô vàng nhạt + `cursor:text`,
+  và `.aw-sd-rec-col:has(.aw-sd-rec-colhead:hover)` huỷ hẳn hiệu ứng hover-cả-thẻ (viền xanh + nhấc lên)
+  đang có sẵn.
+- Chạm 2 lần: `ch.innerHTML` đổi thành một `<input>`, Enter/blur lưu, Escape huỷ. Ghi xuống Firestore
+  bằng hàm mới `renameMatch()` (`core/showdown-history.js`, cùng khuôn transaction với `deleteMatch()`),
+  lưu vào field mới `customName`. **`customName` LUÔN THẮNG, vĩnh viễn** — không bao giờ bị tính lại
+  hay ghi đè bởi lần chơi tiếp theo của cùng trận đó.
+
+**2) Tên mặc định "WORDS" → "ENGLISH 1"/"VIETNAMESE 2"...**
+- Hàm mới `formatActDisplayName(actName, contentVariant)` (`core/showdown.js`, thuần, không import gì) —
+  chỉ đổi khi tên act kết thúc ĐÚNG bằng "/ WORDS" (regex `^(.*\/\s*)WORDS\s*$`), thay "WORDS" bằng
+  "ENGLISH N"/"VIETNAMESE N" theo `contentVariant` (eng1/eng2/vi1/vi2) ghi lúc lưu kết quả.
+  Act tên khác dạng (vd "WORDS 2" của Đợt 204, hay không có "/ WORDS") hoặc trận cũ chưa có
+  `contentVariant` (trước Đợt 230) thì **giữ nguyên tên gốc, không đoán bừa** — đúng quyết định
+  thầy chốt.
+- `core/engine.js` (khối publish kết quả Showdown, `finish()`): thêm `activeVariant(activity)` (hàm đã
+  có sẵn từ Đợt 145) để biết đang chơi ENG1/VI2/…, truyền `contentVariant` sang `saveMatchResult()`.
+  `core/showdown-history.js`: field mới `contentVariant` trong `normMatch`, ghi lúc tạo trận + backfill
+  nếu trận đã có mà field còn trống (cùng khuôn với `actName` cũ).
+- `displayName(m)` (hàm mới, `core/showdown-setup.js`) là NƠI DUY NHẤT quyết định tên hiện ra:
+  `customName` thắng → không thì `formatActDisplayName` → không thì `actName` thô → "Showdown". Thay
+  cho 4 chỗ từng viết `m.actName || "Showdown"` riêng lẻ (mini card, bảng chi tiết, popup xuất ảnh,
+  nhãn legend của ANALYSE) — một chỗ đổi là cả bốn đổi theo, không lệch nhau nữa.
+
+**3) Đổi chỗ nút: ANALYSE sang trái, ✕ sang phải** (đảo lại thứ tự Đợt 224) — 1 dòng `head.append(...)`.
+
+**4-7) Màn ANALYSE — màu, chữ, số % tổng, chú thích giữa (`core/showdown-setup.js` + `app.css`):**
+- `ANALYSE_COLORS` đổi sang bảng màu tươi hơn (`#2f7dfd/#9061f9/#f5a623/#14b8a6/#ec4899/#06b6d4/#fb923c/#64748b`),
+  vẫn tránh đỏ/xanh lá (hai màu đó đã có nghĩa đúng/sai ở nơi khác).
+- ⭐⭐ Thầy chốt qua AskUserQuestion: số % tổng trên đỉnh cột là **TRUNG BÌNH** % qua các trận pupil
+  CÓ MẶT (không cộng dồn) — `buildAnalysisRows()` (`core/showdown.js`) đổi `total` từ tổng sang trung
+  bình, thêm field `count` (số trận có mặt). Trục % giờ CỐ ĐỊNH 0–100 (`yMax = 100`, bỏ hẳn công thức
+  giãn theo tổng cũ). Mỗi khúc màu trong cột vẽ ở chiều cao `seg.pct / r.count` (để cả cột cộng lại
+  đúng bằng trung bình) nhưng **số hiện trong khúc vẫn là % THẬT của trận đó, không chia** — đúng yêu
+  cầu "số nhỏ trong khúc giữ nguyên, số to trên đỉnh mới là số khác".
+- `.aw-sd-rec-bartotal` (span mới): thầy: "trên đỉnh cột lớn hơn nhiều" — 16px/900 so với 12.5px/800
+  của số trong khúc. Đặt đúng vị trí bằng cách LỢI DỤNG `column-reverse` có sẵn của `.aw-sd-rec-bar`
+  (phần tử DOM append SAU CÙNG hiện ở TRÊN CÙNG) — không cần `position:absolute`/tính `bottom` gì cả.
+  `.aw-sd-rec-plotarea` thêm `padding-top:20px` làm khoảng trống cho số to này khi cột chạm gần 100%
+  — cố tình đặt padding ở `plotarea` chứ không phải `track` (nếu đặt ở `track` sẽ làm gridline
+  `position:absolute;inset:0` lệch khỏi các cột, vì `inset:0` tính theo mép padding-box, không theo
+  content-box).
+- Tên luôn viết hoa (`text-transform:uppercase` trên `.aw-sd-rec-barname`) — đo bằng `scrollWidth` nên
+  `fitPodiumNames`/`shortenName` (đã có sẵn, đúng khuôn "N.H.PHƯƠNG" thầy yêu cầu) vẫn đo đúng chữ ĐÃ
+  viết hoa, không cần sửa gì trong `showdown-review.js`.
+- `.aw-sd-rec-legend { justify-content:center }` — chỉ có MỘT legend dùng chung cho cả hai bảng
+  full+partial nên căn giữa ở đây là căn giữa cho cả hai luôn, không cần tính riêng.
+
+**8) Xuất ảnh PNG cả hai bảng — file mới `core/showdown-export.js` (`openAnalysisExportDialog`):**
+- Popup CHỈ có 2 ô: Class + Date (thầy chốt — bỏ ô Activity vì ảnh này có thể gộp nhiều act khác nhau).
+- `drawAnalysisCanvas()` vẽ THẲNG bằng Canvas 2D (không dùng DOM→ảnh, tránh đúng lỗi tainted canvas
+  Đợt 225 đã cắn với `rankPngBlob`) — TRẢ VỀ đối tượng `<canvas>` thật, dùng CHUNG một hàm cho cả
+  preview trên popup (scale 1, thu nhỏ bằng CSS transform) lẫn ảnh tải về (scale 2) — không có hai bản
+  vẽ tách rời có thể lệch nhau.
+- Bảng màu `ANALYSE_PNG_COLORS` là BẢN SAO riêng của `ANALYSE_COLORS`, không import chéo — cùng lý do
+  `POD_MAX_W`/`POD_MIN_W` đã copy giữa hai file: cả `showdown-setup.js` lẫn `showdown-export.js` đều
+  CHỈ ĐƯỢC dynamic-import (không file nào trong hai file này được phép trở thành static import của
+  file kia).
+- Nút Download mới trên đầu màn ANALYSIS (giữa tiêu đề và Back), cùng vị trí/kiểu nút Download đã có
+  ở bảng chi tiết từng trận (Đợt 225).
+
+**9) VÁ LỖI "Back to the matches" không phản ứng khi đang fullscreen (thầy báo, đã tìm ra gốc):**
+`askConfirm()` (`core/showdown-setup.js`) luôn dựng hộp hỏi vào `body` (panel gốc) — mà `body` là TỔ
+TIÊN của phần tử đang được `requestFullscreen()` (`chart`/`det`), và theo đúng chuẩn Fullscreen API,
+CHỈ nhánh cây con của phần tử đang fullscreen mới được vẽ ra màn hình — tổ tiên của nó (kể cả nội dung
+mới được thêm vào sau) biến mất khỏi màn hình dù DOM vẫn tồn tại và vẫn nhận sự kiện bình thường. Thầy
+bấm Back → `askConfirm("Leave the analysis...")` chạy đúng, hộp hỏi dựng ra đúng, nhưng VÔ HÌNH — bấm
+nút trong đó cũng vô hình nốt. Vá: `askConfirm()` giờ dựng vào `document.fullscreenElement || body` —
+một dòng sửa, tự động đúng cho MỌI nơi gọi hàm này, không chỉ đúng chỗ thầy vừa gặp.
+
+⚠️ **BẪY ĐÃ TỰ BẮT ĐƯỢC LÚC CODE**: `.style.background = ANALYSE_COLORS[...]` set trên `<div>` — không
+phải vá gì, chỉ ghi lại vì đáng nhớ: browser tự chuẩn hoá hex thành `rgb(...)` khi đọc lại
+`style.backgroundColor`, nên bàn thử phải tự đổi hex sang rgb để so khớp, không so thẳng chuỗi hex.
+
+**Đã tự test — dựng bàn thử mới `scratch/dot230-recent.html`** (tái dùng `fake-firebase196.js` từ Đợt
+196/207, `buildShowdownPanel` thật, KHÔNG cần đăng nhập Google), chạy qua `javascript_tool` trong
+Browser pane: **37/37 ĐẠT, 0 lỗi console**. Đáng kể nhất:
+- Đo bằng **pixel thật** (`getBoundingClientRect`) rằng tổng chiều cao các khúc màu của một cột khớp
+  đúng % trung bình kỳ vọng, sai số ≤ 2% — không chỉ tin vào số hiển thị.
+- Vá lỗi fullscreen được kiểm bằng cách tạm ghi đè `document.fullscreenElement` (getter giả) rồi bấm
+  Back thật, đo hộp hỏi xuất hiện ĐÚNG bên trong phần tử giả lập đó — kiểm code sửa lỗi, không chỉ
+  kiểm "không crash".
+- Xuất được ảnh PNG thật (canvas 690×682 với dữ liệu mẫu), `toBlob` được gọi đúng lúc bấm Download —
+  đã tự tải và NHÌN BẰNG MẮT một ảnh mẫu (gửi thầy xem trước khi bấm nút build).
+- `input.focus()` gọi từ TRONG một `click` giả lập (`dispatchEvent`) không thật sự chiếm focus trong
+  Browser pane tự động (nhưng gọi trực tiếp ngoài event thì vẫn được — đã đo riêng để chắc chắn không
+  phải lỗi code) — bàn thử né bằng cách bắn thẳng sự kiện `blur` thay vì trông chờ `input.blur()` thật
+  chạy qua chuỗi focus/blur của trình duyệt. Người dùng thật (chạm tay/click chuột thật) không gặp
+  giới hạn này.
+
+⬜ **CHỜ THẦY BẤM TAY THẬT**: cử chỉ chạm 2 lần trên màn cảm ứng TOMKO thật (bàn thử chỉ mô phỏng được
+bằng sự kiện dựng sẵn), và cảnh fullscreen thật (bàn thử chỉ kiểm được LOGIC sửa lỗi bằng cách giả lập
+`fullscreenElement`, chưa bấm fullscreen thật trên trình duyệt vì cần cử chỉ người dùng thật).
+
+---
+
 ## Đợt 229 (22/8/2026) — ⭐⭐ ĐỒNG BỘ MODE + LIVE-PREVIEW OPTIONS CHO myActivity CHIA NHIỀU BẢNG
 
 Thầy báo (22/8/2026): đồng bộ Template/Options giữa các bảng myActivity đôi khi vẫn lệch, đặc biệt

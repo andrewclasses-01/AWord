@@ -64,7 +64,7 @@ import {
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows
+  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName
 } from "./showdown.js";
 
 const DOC_ID = "sd_main";
@@ -987,7 +987,15 @@ const sfx = {
 // already mean "wrong"/"right" everywhere else in Showdown (`.is-ok`/`.is-bad`,
 // the pctBand colours in core/showdown.js) and a stacked-match colour wearing
 // one of them would read as a score, not as "which match is this".
-const ANALYSE_COLORS = ["#2f6fed", "#8b5cf6", "#f0b23c", "#14b8a6", "#ec4899", "#6366f1", "#c1793a", "#64748b"];
+// ⭐⭐ Đợt 230 (thầy: "màu sắc các cột tươi sáng và dễ nhìn hơn, nhưng vẫn là màu
+// hiện đại") — brighter/more saturated than the Đợt 224 set, same eight hues'
+// worth of distinctness and the same red/green exclusion above.
+// ⚠️ core/showdown-export.js's ANALYSE PNG keeps its OWN copy of these same
+// eight colours, same reason this file's own POD_MAX_W/POD_MIN_W are copied
+// rather than imported from core/showdown-review.js: neither of these two
+// dynamic-import-only files should gain a static import of the other just for
+// one small shared constant. Change a colour here, change it there too.
+const ANALYSE_COLORS = ["#2f7dfd", "#9061f9", "#f5a623", "#14b8a6", "#ec4899", "#06b6d4", "#fb923c", "#64748b"];
 
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
@@ -1223,7 +1231,22 @@ export function buildShowdownPanel(panel, ctx) {
    * what they are about to throw away behind it.
    */
   function askConfirm(text, okLabel, onOk) {
-    if (body.querySelector(".aw-sd-confirm")) return;      // one at a time
+    // ⭐⭐ Đợt 230 — MOUNT INSIDE WHATEVER IS ACTUALLY FULLSCREEN RIGHT NOW.
+    // Bug thầy reported: "Back to the matches" while the ANALYSE chart is
+    // fullscreen looked dead — nothing happened until the browser's own
+    // fullscreen was closed by hand. Root cause: this popup always mounted
+    // into `body` (the panel's own container), and `body` is an ANCESTOR of
+    // whatever element the Fullscreen API promoted (`chart`/`det`) — the
+    // Fullscreen spec only paints the promoted element's OWN subtree, so an
+    // ancestor's content (this confirm box, included) goes invisible the
+    // instant fullscreen starts. The tap was landing on a real, working, but
+    // completely unseen "Leave the analysis and go back?" dialog every time.
+    // `document.fullscreenElement` is exactly "what is promoted right now, if
+    // anything" — mounting there when it exists (and falling back to `body`
+    // otherwise, unchanged from before) fixes every caller of this function at
+    // once, not just the one thầy happened to hit.
+    const mountTo = document.fullscreenElement || body;
+    if (mountTo.querySelector(".aw-sd-confirm")) return;    // one at a time
     const layer = el("div", "aw-sd-confirm");
     const box = el("div", "aw-sd-confirmbox");
     const msg = el("div", "aw-sd-confirmtext");
@@ -1246,7 +1269,7 @@ export function buildShowdownPanel(panel, ctx) {
     );
     box.append(msg, row);
     layer.append(box);
-    body.append(layer);
+    mountTo.append(layer);
     layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
     box.animate([{ transform: "scale(.94)" }, { transform: "scale(1)" }], { duration: 200, easing: "cubic-bezier(.22,.9,.3,1)" });
   }
@@ -1366,6 +1389,21 @@ export function buildShowdownPanel(panel, ctx) {
   }
 
   /**
+   * ⭐⭐ Đợt 230 — ONE PLACE that decides what a match's name reads as, so the
+   * mini card, the expanded detail, the download popup and the ANALYSE legend
+   * can never show four different things for the same row.
+   *   1. the teacher's own rename (`customName`) — ALWAYS wins, verbatim, once set
+   *   2. the formatted name ("BODY PARTS / ENGLISH 1") when this match recorded
+   *      a clue set (core/showdown.js's formatActDisplayName — a no-op for a
+   *      match filed before this đợt, or for a non-variant act)
+   *   3. the raw `actName`, then the literal fallback, same as always
+   */
+  function displayName(m) {
+    if (m.customName) return m.customName;
+    return formatActDisplayName(m.actName, m.contentVariant) || m.actName || "Showdown";
+  }
+
+  /**
    * ⭐ Đợt 198 — closing lives OUT here because two things now close this screen:
    * its own ✕ and a second tap on the caption. One exit, one animation, one
    * place that puts the caption's glow out.
@@ -1424,7 +1462,10 @@ export function buildShowdownPanel(panel, ctx) {
       if (!analysing) picked.clear();
       paintCols();
     };
-    head.append(title, closeBtn, analyseBtn);
+    // ⭐ Đợt 230 (thầy: "Đổi nút X sang bên phải, nút ANALYZE sang bên trái") —
+    // ANALYSE now sits right after the title, ✕ at the far right (was the
+    // reverse since Đợt 224).
+    head.append(title, analyseBtn, closeBtn);
     const cols = el("div", "aw-sd-rec-cols");
     layer.append(head, cols);
     body.append(layer);
@@ -1499,7 +1540,7 @@ export function buildShowdownPanel(panel, ctx) {
         const col = el("div", "aw-sd-rec-col");
         const ch = el("div", "aw-sd-rec-colhead");
         const act = el("div", "aw-sd-rec-act");
-        act.textContent = m.actName || "Showdown";             // teacher's own text
+        act.textContent = displayName(m);                       // teacher's own text (or a formatted one)
         const sub = el("div", "aw-sd-rec-sub");
         // How many teams filed a row, so a match one board missed reads AS that
         // rather than as a short class — Đợt 196's lesson, applied to the ledger.
@@ -1507,6 +1548,73 @@ export function buildShowdownPanel(panel, ctx) {
         sub.textContent = `${when(m.at)} · ${ranked.length} sts · ${teams} team${teams === 1 ? "" : "s"}`;
         ch.append(act, sub);
         col.append(ch, renderMini(ranked));
+
+        // ---- ⭐⭐ Đợt 230 — RENAME THIS MATCH: double-tap the name row ----
+        // A literal `dblclick` is what core/press.js's own header (and the
+        // Show answers title just above it) warn never fires reliably from a
+        // non-primary touch on the TOMKO board's infrared screen — but that
+        // problem is specifically about TWO FINGERS racing each other on a
+        // game surface. This is a single-teacher management screen (delBtn/
+        // pickBtn/col all already use plain `.onclick` above), so a plain
+        // two-`click`-within-a-window read off `ch` alone is the right amount
+        // of machinery, not core/press.js's raw-pointer recognizer built for
+        // a different problem.
+        // ⚠️ `stopPropagation` here is what makes hovering/tapping the name row
+        // behave differently from the rest of the card (thầy's own request):
+        // elsewhere a tap opens the detail (`col.onclick` below); here it never
+        // does, because the click never reaches `col` at all.
+        const RENAME_TAP_MS = 320;
+        let renaming = false;
+        let lastNameTapAt = 0;
+        ch.title = "Double-tap to rename";
+        ch.addEventListener("click", e => {
+          e.stopPropagation();
+          if (renaming) return;
+          const now = Date.now();
+          if (now - lastNameTapAt < RENAME_TAP_MS) { lastNameTapAt = 0; startRename(); }
+          else { lastNameTapAt = now; }
+        });
+        function startRename() {
+          sfx.tap();
+          renaming = true;
+          col.classList.add("is-renaming");
+          const current = displayName(m);
+          ch.innerHTML = "";
+          const input = document.createElement("input");
+          input.type = "text";
+          input.className = "aw-sd-rec-renameinput";
+          input.maxLength = 60;
+          input.value = current;
+          ch.append(input);
+          input.focus();
+          input.select();
+          input.addEventListener("click", ev => ev.stopPropagation());
+          input.addEventListener("pointerdown", ev => ev.stopPropagation());
+          let settled = false;
+          const commit = async () => {
+            if (settled) return;
+            settled = true;
+            const v = input.value.trim();
+            renaming = false;
+            if (v && v !== current) {
+              try {
+                const h = await import("./showdown-history.js");
+                const ok = await h.renameMatch(classId, m.matchId, v);
+                if (ok) m.customName = v; else toast("Could not rename this match.");
+              } catch (err) {
+                console.warn("AWord: could not rename this match", err);
+                toast(err?.code === "aw/signed-out" ? "Sign in first." : "Could not rename this match.");
+              }
+            }
+            if (layer.isConnected) paintCols();
+          };
+          input.addEventListener("keydown", ev => {
+            ev.stopPropagation();
+            if (ev.key === "Enter") { input.blur(); }
+            else if (ev.key === "Escape") { settled = true; renaming = false; if (layer.isConnected) paintCols(); }
+          });
+          input.addEventListener("blur", commit);
+        }
 
         // ---- the "–" : delete THIS match alone (Đợt 224) ----
         const delBtn = el("button", "aw-sd-rec-delbtn", icons.minus);
@@ -1564,6 +1672,11 @@ export function buildShowdownPanel(panel, ctx) {
 
         col.classList.toggle("is-analysing", analysing);
         col.onclick = () => {
+          // ⭐ Đợt 230 — the name row is mid-rename (its own click already never
+          // reaches here — see `stopPropagation` above — but a tap elsewhere on
+          // the card while the input still has focus should not also fly off
+          // to the detail view).
+          if (renaming) return;
           // ⭐ Đợt 224 — while picking, ANY tap on the column (not only the round
           // button) toggles it: a class of 20 gives a 200px-wide target either
           // way, and a big invisible tap area beats making the teacher land on
@@ -1661,7 +1774,7 @@ export function buildShowdownPanel(panel, ctx) {
       const dh = el("div", "aw-sd-rec-head");
       const dt = el("div", "aw-sd-rec-title");
       const dact = el("span", "aw-sd-rec-word");
-      dact.textContent = m.actName || "Showdown";
+      dact.textContent = displayName(m);
       const dsub = el("span", "aw-sd-rec-class");
       dsub.textContent = `${className || ""} · ${when(m.at)}`;
       dt.append(dact, dsub);
@@ -1679,7 +1792,7 @@ export function buildShowdownPanel(panel, ctx) {
       dlBtn.onclick = () => {
         sfx.tap();
         import("./showdown-export.js").then(mod => mod.openExportDialog({
-          mount: det, ranked, className, actName: m.actName || "Showdown", at: m.at,
+          mount: det, ranked, className, actName: displayName(m), at: m.at,
           defaultRank: podium, hasRows, toast
         }));
       };
@@ -1776,7 +1889,7 @@ export function buildShowdownPanel(panel, ctx) {
       // is a DOM decision made HERE, on purpose (see buildAnalysisRows' own
       // header in core/showdown.js for why the pure function does not choose it).
       const entries = chosen.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(m => ({
-        matchId: m.matchId, label: m.actName || "Showdown", at: m.at, blocks: matchBlocks(m)
+        matchId: m.matchId, label: displayName(m), at: m.at, blocks: matchBlocks(m)
       }));
       const { full, partial } = buildAnalysisRows(entries);
 
@@ -1801,6 +1914,17 @@ export function buildShowdownPanel(panel, ctx) {
           { duration: 150, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
         whenDone(a, () => chart.remove(), 260);
       }
+      // ⭐⭐ Đợt 230 — DOWNLOAD, same spot/idiom as the detail view's own (between
+      // the title and the way out). Opens core/showdown-export.js's ANALYSIS
+      // popup to name the title and export both boards as ONE PNG.
+      const dlBtn = el("button", "aw-sd-rec-close", icons.download);
+      dlBtn.type = "button"; dlBtn.title = "Download";
+      dlBtn.onclick = () => {
+        sfx.tap();
+        import("./showdown-export.js").then(mod => mod.openAnalysisExportDialog({
+          mount: chart, className, at: Date.now(), full, partial, entries, toast
+        }));
+      };
       const backBtn = el("button", "aw-sd-rec-close", icons.back);
       backBtn.type = "button"; backBtn.title = "Back to the matches";
       backBtn.onclick = () => {
@@ -1814,7 +1938,7 @@ export function buildShowdownPanel(panel, ctx) {
           if (layer.isConnected) paintCols();
         });
       };
-      ch.append(ct, backBtn);
+      ch.append(ct, dlBtn, backBtn);
 
       const cbody = el("div", "aw-sd-rec-cbody");
       chart.append(ch, cbody);
@@ -1845,6 +1969,18 @@ export function buildShowdownPanel(panel, ctx) {
      * bar's own total would make every bar read as "100% of itself" and the
      * whole point of stacking would be gone.
      *
+     * ⭐⭐ Đợt 230 (thầy chốt qua AskUserQuestion) — `yMax` is now a FIXED 100,
+     * not the old dynamic ceiling: `r.total` is an AVERAGE across the matches a
+     * pupil was present for (core/showdown.js's buildAnalysisRows), so it can
+     * never exceed 100 any more and the axis no longer needs to stretch for it.
+     * Each drawn TIER divides its match's raw `seg.pct` by `r.count` (how many
+     * matches this pupil was present for) — that is what makes the visible
+     * stack's total height land exactly on the average, while the NUMBER
+     * printed inside a tier (see `tier.dataset.pct` below) stays that match's
+     * real, un-divided score. The big number on top of the bar is the average,
+     * full size — see `.aw-sd-rec-bartotal`'s own note for why appending it
+     * LAST is enough to place it there without any extra positioning maths.
+     *
      * `full`/`partial` — Đợt 224 (thầy chốt): full first, each group sorted by
      * its own total, `partial` drawn as a second short row after a narrow gap —
      * NOT interleaved with `full` and NOT split further by how much any one
@@ -1857,7 +1993,7 @@ export function buildShowdownPanel(panel, ctx) {
         wrap.append(el("div", "aw-sd-rec-note", "No pupils in common between these matches."));
         return wrap;
       }
-      const yMax = Math.ceil(Math.max(1, ...rows.map(r => r.total)) / 20) * 20;
+      const yMax = 100;
 
       const plot = el("div", "aw-sd-rec-plotarea");
       const track = el("div", "aw-sd-rec-track");
@@ -1880,11 +2016,20 @@ export function buildShowdownPanel(panel, ctx) {
         r.segments.forEach((seg, i) => {
           if (seg.pct == null) return;          // did not play this match — no tier at all
           const tier = el("div", "aw-sd-rec-tier");
-          tier.style.height = `${(seg.pct / yMax) * 100}%`;
+          const scaledPct = r.count ? seg.pct / r.count : 0;
+          tier.style.height = `${(scaledPct / yMax) * 100}%`;
           tier.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
-          tier.dataset.pct = String(seg.pct);
+          tier.dataset.pct = String(Math.round(seg.pct));
           bar.append(tier);
         });
+        // ⭐⭐ Đợt 230 — the big average, ON TOP of the stack. `bar` is
+        // `column-reverse` (see app.css's own note on the DOM-order rule this
+        // relies on): the FIRST-appended child sits at the bottom and each one
+        // after it stacks visually HIGHER, so appending this LAST — after every
+        // tier — is what puts it above the tallest one, no bottom/translate
+        // maths needed at all.
+        const total = el("span", "aw-sd-rec-bartotal", `${Math.round(r.total)}%`);
+        bar.append(total);
         track.append(bar);
         const nm = el("span", "aw-sd-rec-barname");
         nm.textContent = r.name;                  // pupil's own name: never innerHTML

@@ -4313,6 +4313,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         const students = groupByMember(reviewData, showdownPick.members);
         const roundKey = showdownRoundKey();
         const actName = originAct?.name || "";
+        // ⭐ Đợt 230 — which clue set (ENG1/ENG2/VI1/VI2) was actually live for
+        // this play, so the class's ledger (core/showdown-history.js) can show
+        // "BODY PARTS / ENGLISH 1" instead of the act's shared "BODY PARTS /
+        // WORDS" name. `activity`, not `originAct`: this is the instance the
+        // class just played, and content-view.js's own note says its `options`
+        // are shared by reference with the library act anyway. `null` (a
+        // non-variant act) becomes "" — the ledger's own formatter treats an
+        // empty variant as "show the raw name", same as before this đợt.
+        const contentVariant = activeVariant(activity) || "";
         sdPending = sdCanPublish;
         import("./showdown-setup.js")
           .then(m => m.saveTeamResult({ pick: showdownPick, roundKey, actName, students }))
@@ -4335,7 +4344,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
               classId: showdownPick.classId, className: showdownPick.className,
               tableId: showdownPick.tableId || "", roundKey,
               playNo: h.nextPlayNo(showdownPick.tableId || "", roundKey),
-              actName,
+              actName, contentVariant,
               teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
             }))
             .catch(e => console.warn("AWord: could not file this result in the class history", e));
