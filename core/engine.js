@@ -1617,7 +1617,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   };
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).
-  printBtn.onclick = () => { sound.click(); openPrintPopup(activity); };
+  // ⭐ Đợt 225 — re-resolve off `libAct` AT CLICK TIME, not the closed-over
+  // `activity`. Same trap Đợt 145 fixed for begin(): Options ▸ Apply on this
+  // READY screen writes the picked clue set straight onto `libAct.options`
+  // (Object.assign, mutated in place) but deliberately does NOT rebuild
+  // `activity.content` — that only gets re-baked on Play, "options take effect
+  // on Play". `activity` here is still the copy resolveActivity() built at
+  // mount, frozen on whichever set (ENG1) was active back then, so printing
+  // straight from it always printed the FIRST set regardless of what the
+  // teacher had since picked. `resolveActivity(libAct)` re-reads the current
+  // choice every time the button is pressed — cheap and idempotent, exactly
+  // begin()'s fix, just for the READY-screen Print button instead of Play.
+  printBtn.onclick = () => { sound.click(); openPrintPopup(resolveActivity(libAct)); };
 
   below.append(belowLeft, belowCenter, belowRight);
 

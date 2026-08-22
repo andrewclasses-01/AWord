@@ -7,7 +7,6 @@
 //   • Anagram  — every template, any number of questions
 //   • Quiz     — every template, any number of questions
 //   • Crossword— 2..35 questions, every template EXCEPT "type-the-answer"
-//                (renderer not built yet -> shown as "coming soon")
 //   • Unjumble — only "type-the-answer", any number of questions
 // Formats that don't apply simply don't show an icon.
 //
@@ -17,6 +16,19 @@
 // Output is pure grayscale (prints fine in black & white) and defaults to
 // A4 via @page (see core/app.css). Double-sided is a printer-dialog choice
 // the browser can't set from a web page — the popup notes this.
+//
+// CROSSWORD builds its OWN interlocking grid from the item answers
+// (buildCrosswordGrid below) — deliberately a SEPARATE, smaller copy of
+// templates/crossword/crossword.js's builder, not an import from it. This
+// file is core (every template's Print button reaches it), and the crossword
+// TEMPLATE module drags in its own editor/keyboard/voice/sound modules that
+// no other template needs — importing from it here would pull all of that
+// into core for every act, not just ones the teacher opens as Crossword. The
+// print version also drops what only the live game needs: `src` identity
+// (for "Start with mistakes" filtering) and the random shuffle/tie-break that
+// varies the on-screen puzzle across "Start again" — a worksheet should print
+// the SAME puzzle every time it's generated, so placement here is a stable
+// longest-word-first sort with no randomness at all.
 // =============================================================
 
 import { getTemplate } from "./registry.js";
@@ -26,7 +38,7 @@ import { sound } from "./sound.js";
 
 const FORMAT_META = {
   anagram:   { label: "Anagram",   icon: icons.fmtAnagram },
-  crossword: { label: "Crossword", icon: icons.fmtCrossword, comingSoon: true },
+  crossword: { label: "Crossword", icon: icons.fmtCrossword },
   quiz:      { label: "Quiz",      icon: icons.fmtQuiz },
   unjumble:  { label: "Unjumble",  icon: icons.fmtUnjumble }
 };
@@ -112,6 +124,7 @@ function runPrint(activity, format) {
   if (format === "anagram") body = renderAnagram(items);
   else if (format === "quiz") body = renderQuiz(items, pool);
   else if (format === "unjumble") body = renderUnjumble(items);
+  else if (format === "crossword") body = renderCrossword(items);
   else return;
 
   const sheet = buildSheet(activity, body, format);
@@ -270,6 +283,172 @@ function renderUnjumble(items) {
     body.append(item);
   });
   return body;
+}
+
+// ---------- CROSSWORD: an interlocking grid + numbered ACROSS/DOWN clues ----------
+// Letters-only key for the grid (spaces/punctuation stripped, like Wordwall) —
+// same rule templates/crossword/crossword.js uses, kept in step deliberately:
+// a multi-word answer like "polar bear" still fills one continuous run of boxes.
+function gridKeyOf(str) {
+  return String(str ?? "").toUpperCase().replace(/[^A-Z]/g, "");
+}
+
+// Greedy interlock: longest word first at the origin, then each next word
+// takes its best-scoring valid crossing over any word already placed. A word
+// that can't cross anything is simply left off the grid (and so off the clue
+// list too) — the same trade-off the live game already makes silently; there
+// is no "no answer" placeholder to give it on paper.
+// ⚠️ Deliberately NO randomness (unlike crossword.js's `fixed:false` default):
+// this only ever runs once, right when the teacher presses Print, and two
+// prints of the same act should hand back the same puzzle, not a shuffled one.
+function buildCrosswordGrid(items) {
+  const usable = items
+    .map(it => ({ key: gridKeyOf(it.answer), clue: it.clue || "", answer: it.answer || "" }))
+    .filter(w => w.key.length >= 2);
+
+  const seen = new Set();
+  const list = [];
+  for (const w of usable) { if (!seen.has(w.key)) { seen.add(w.key); list.push(w); } }
+  list.sort((a, b) => b.key.length - a.key.length);
+
+  const cells = new Map();
+  const placed = [];
+  const at = (r, c) => cells.get(r + "," + c);
+
+  function fitScore(key, row, col, dir) {
+    const dr = dir === "D" ? 1 : 0, dc = dir === "A" ? 1 : 0;
+    let crossings = 0;
+    if (at(row - dr, col - dc) != null) return -1;
+    if (at(row + dr * key.length, col + dc * key.length) != null) return -1;
+    for (let i = 0; i < key.length; i++) {
+      const r = row + dr * i, c = col + dc * i;
+      const cur = at(r, c);
+      if (cur != null) {
+        if (cur !== key[i]) return -1;
+        crossings++;
+        continue;
+      }
+      if (dir === "A") {
+        if (at(r - 1, c) != null || at(r + 1, c) != null) return -1;
+      } else {
+        if (at(r, c - 1) != null || at(r, c + 1) != null) return -1;
+      }
+    }
+    return crossings;
+  }
+
+  function stamp(w, row, col, dir) {
+    const dr = dir === "D" ? 1 : 0, dc = dir === "A" ? 1 : 0;
+    for (let i = 0; i < w.key.length; i++) cells.set((row + dr * i) + "," + (col + dc * i), w.key[i]);
+    placed.push({ ...w, row, col, dir });
+  }
+
+  list.forEach((w, wi) => {
+    if (wi === 0) { stamp(w, 0, 0, "A"); return; }
+    let best = null;
+    for (const p of placed) {
+      const pdr = p.dir === "D" ? 1 : 0, pdc = p.dir === "A" ? 1 : 0;
+      for (let j = 0; j < p.key.length; j++) {
+        const pr = p.row + pdr * j, pc = p.col + pdc * j;
+        const letter = p.key[j];
+        for (let i = 0; i < w.key.length; i++) {
+          if (w.key[i] !== letter) continue;
+          const dir = p.dir === "A" ? "D" : "A";
+          const row = dir === "D" ? pr - i : pr;
+          const col = dir === "A" ? pc - i : pc;
+          const score = fitScore(w.key, row, col, dir);
+          if (score > 0 && (!best || score > best.score)) best = { row, col, dir, score };
+        }
+      }
+    }
+    if (best) stamp(w, best.row, best.col, best.dir);
+  });
+
+  if (!placed.length) return { grid: null, clues: [], rows: 0, cols: 0 };
+
+  let minR = Infinity, minC = Infinity, maxR = -Infinity, maxC = -Infinity;
+  for (const key of cells.keys()) {
+    const [r, c] = key.split(",").map(Number);
+    minR = Math.min(minR, r); maxR = Math.max(maxR, r);
+    minC = Math.min(minC, c); maxC = Math.max(maxC, c);
+  }
+  const rows = maxR - minR + 1, cols = maxC - minC + 1;
+
+  const grid = Array.from({ length: rows }, () => Array.from({ length: cols }, () => null));
+  for (const [k] of cells) {
+    const [r, c] = k.split(",").map(Number);
+    grid[r - minR][c - minC] = { num: 0 };
+  }
+  placed.forEach(p => { p.row -= minR; p.col -= minC; });
+
+  let n = 0;
+  const numAt = new Map();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!grid[r][c]) continue;
+      const startsAcross = (c === 0 || !grid[r][c - 1]) && (c + 1 < cols && grid[r][c + 1]);
+      const startsDown = (r === 0 || !grid[r - 1][c]) && (r + 1 < rows && grid[r + 1][c]);
+      if (startsAcross || startsDown) { n++; grid[r][c].num = n; numAt.set(r + "," + c, n); }
+    }
+  }
+
+  const clues = placed.map(p => ({
+    clue: p.clue, dir: p.dir, number: numAt.get(p.row + "," + p.col) || 0
+  }));
+  clues.sort((a, b) => a.number - b.number || (a.dir === b.dir ? 0 : a.dir === "A" ? -1 : 1));
+
+  return { grid, clues, rows, cols };
+}
+
+// Cell size shrinks to fit the page width for a wide grid (long words / many
+// crossings) but never grows past a comfortable writing size for a small one.
+// mm, not cqw: this sheet has no container-query ancestor once it's on paper.
+const CW_PAGE_WIDTH_MM = 176;   // A4 minus this sheet's own left/right @page margin
+const CW_CELL_MAX_MM = 9;
+const CW_CELL_MIN_MM = 5;
+
+function renderCrossword(items) {
+  const built = buildCrosswordGrid(items);
+  const wrap = el("div", "aw-pf-cw-wrap");
+  if (!built.grid) {
+    wrap.append(el("div", "aw-pf-cw-empty",
+      "These answers don't share enough letters to interlock into a crossword."));
+    return wrap;
+  }
+  const { grid, clues, rows, cols } = built;
+  const cellMm = Math.max(CW_CELL_MIN_MM, Math.min(CW_CELL_MAX_MM, CW_PAGE_WIDTH_MM / cols));
+
+  const gridEl = el("div", "aw-pf-cw-grid");
+  gridEl.style.setProperty("--cw-cols", String(cols));
+  gridEl.style.setProperty("--cw-cell", cellMm + "mm");
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      const box = el("div", "aw-pf-cw-cell" + (cell ? "" : " is-blank"));
+      if (cell && cell.num) box.append(el("span", "aw-pf-cw-num", String(cell.num)));
+      gridEl.append(box);
+    }
+  }
+  wrap.append(gridEl);
+
+  const clueBox = el("div", "aw-pf-cw-clues");
+  clueBox.append(
+    crosswordClueColumn("ACROSS", clues.filter(c => c.dir === "A")),
+    crosswordClueColumn("DOWN", clues.filter(c => c.dir === "D"))
+  );
+  wrap.append(clueBox);
+  return wrap;
+}
+
+function crosswordClueColumn(label, list) {
+  const col = el("div", "aw-pf-cw-col");
+  col.append(el("div", "aw-pf-cw-collabel", label));
+  list.forEach(c => {
+    const line = el("div", "aw-pf-cw-clueline");
+    line.append(el("span", "aw-pf-cw-cluenum", `${c.number}.`), el("span", "aw-pf-cw-cluetext", escapeHtml(c.clue)));
+    col.append(line);
+  });
+  return col;
 }
 
 // ---------- helpers ----------

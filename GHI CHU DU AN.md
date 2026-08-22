@@ -8,6 +8,101 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 226 (22/8/2026) — ⭐ MỞ ĐỊNH DẠNG IN **CROSSWORD** (bỏ "coming soon") — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*).
+
+Thầy giao: thêm dạng in Crossword thật (trước đó nút này disable, hiện chữ "soon"). Chỉ 2 file:
+`core/print.js` (thêm ~150 dòng) + `core/app.css` (thêm khối CSS `@media print` cho Crossword).
+Luật khả dụng cũ giữ nguyên (2..35 câu, mọi template TRỪ `type-the-answer`) — không đụng
+`eligibleFormats()`.
+
+**Dựng lưới chèn chữ (interlock) — bản SONG SONG, KHÔNG PHẢI import, của thuật toán
+`buildCrossword()` trong `templates/crossword/crossword.js`.** Cùng thuật toán tham lam: từ dài
+nhất cắm gốc (0,0) trước, mỗi từ sau tìm chỗ CHÈN tốt nhất (nhiều điểm giao chữ nhất) vào lưới đã
+có, từ không chèn được thì **im lặng bị loại khỏi cả lưới lẫn danh sách gợi ý** — đúng y cách game
+thật đang xử lý (đọc code mới biết: comment cũ nói "vẫn liệt kê kèm 'No answer'" nhưng code thật
+không làm vậy, `skipped` chỉ được trả về chứ chưa ai dùng tới).
+
+⛔⛔ **Vì sao KHÔNG import thẳng từ `templates/crossword/crossword.js`** (dù giống hệt phần lõi):
+`core/print.js` là file CORE, mọi Print button của MỌI act đều chạm tới nó — mà module Crossword
+kéo theo cả editor/keyboard/voice/sound riêng của game đó, ghép vào core là bắt MỌI act tải thêm
+ngần ấy thứ chỉ để in. Bản trong `print.js` bỏ 2 thứ bản gốc có mà bản in không cần: **`src`**
+(dùng để lọc "Start with mistakes", vô nghĩa với 1 tờ giấy dùng 1 lần) và **ngẫu nhiên/tie-break**
+(bản gốc cố tình xáo mỗi "Start again" — tờ in thì ngược lại, in 2 lần CÙNG 1 act phải ra CÙNG 1
+câu đố, nên bỏ hẳn `Math.random()`, chỉ còn sort ổn định theo độ dài).
+
+**Không lộ đáp án lên giấy** (đúng tinh thần 3 định dạng cũ — Anagram/Quiz/Unjumble đều là bài
+trắng cho học sinh giải): lưới chỉ giữ SỐ ở ô đầu mỗi từ, không giữ chữ cái nào — khác NHÂN BẢN dữ
+liệu ở dòng cuối `buildCrosswordGrid()` cố tình bỏ field `sol` mà bản gốc có.
+
+**Layout**: cỡ ô co theo bề rộng lưới (`Math.max(5, Math.min(9, 176/cols))` mm — 176mm = bề ngang
+A4 trừ lề `@page` sẵn có của `core/print.js`), không co theo chiều cao (không có ngân sách mm cứng
+kiểu Running word — lưới Crossword tối đa 35 từ nên trong thực tế không đủ cao để tràn trang, và
+nếu tràn thì để trình duyệt tự ngắt trang bình thường, giống cách Anagram/Quiz/Unjumble đã chấp
+nhận từ đầu). Gợi ý chia 2 cột **ACROSS | DOWN** đúng khuôn ô chữ giấy truyền thống.
+
+### ✅ ĐO
+
+Dựng lưới `scratch/dot226-crossword-print.html`, chạy thẳng module thật (`openPrintPopup` +
+`window.print` bị stub để không bung hộp thoại in thật — đúng bẫy dự án đã ghi), qua Browser pane
++ `devserver.py`:
+- **n=1 → ẩn Crossword** ✓, **`type-the-answer` → ẩn Crossword** ✓ (luật khả dụng cũ không đổi).
+- **8 từ → HIỆN Crossword, KHÔNG còn nhãn "soon"**, bấm ra đúng `.aw-print-sheet.aw-print-crossword`
+  chứa `.aw-pf-cw-grid` 6×7 = 42 ô, 14 ô có chữ, 4 số bắt đầu từ, ACROSS 2 dòng + DOWN 3 dòng — mỗi
+  số trên lưới khớp ĐÚNG 1 (hoặc 2, khi số đó vừa là gốc 1 từ ngang vừa 1 từ dọc) dòng gợi ý tương
+  ứng, không thừa không thiếu.
+- **0 đáp án lộ ra chữ trên tờ in** (so `sheet.textContent` với từng đáp án — rỗng).
+- **Ca suy biến** (8 câu nhưng chỉ 1 từ duy nhất sau khi lọc trùng) — không crash, tự hiện thông
+  báo "không đủ chữ chung để ghép ô chữ" thay vì lưới rỗng khó hiểu.
+- **Đo hình học DOM thật** (không chỉ đọc số): 42 ô đều đúng 34.02px (= 9mm ở 96dpi, khớp công thức
+  `176/7`), `display:grid` thật, số luôn nằm TRỌN trong ô của nó (không tràn ra ô bên cạnh), tiêu đề
+  `@page` lấy đúng tên act.
+- ⬜ **Chưa nhìn được bằng mắt** — `computer screenshot` timeout ("Browser pane is not displayed"),
+  đúng giới hạn môi trường đã ghi nhận nhiều lần trước đây; thay bằng đo `getBoundingClientRect()`
+  từng ô + `getComputedStyle` như trên.
+
+⬜ **CHỜ THẦY**: in thử giấy A4 thật (cỡ ô 5–9mm có vừa tay viết chữ in hoa không, số góc ô có quá
+nhỏ không), thử với 1 act nhiều từ dài/khó chèn xem lưới có "gầy" (nhiều từ bị loại) không.
+
+---
+
+## Đợt 225 (22/8/2026) — ⭐ VÁ LỖI: PRINT LUÔN RA ENG1 DÙ ĐÃ CHỌN ENG2/VI1/VI2 — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*).
+
+Thầy tả: trong act có nhiều clue set (ENG1/ENG2/VI1/VI2, Đợt 145), chọn ENG2/VI1/VI2 trong Options
+rồi bấm **Print** vẫn ra đúng ENG1 — không theo đúng cái đang chọn.
+
+⛔⛔ **Gốc rễ — ĐÚNG CÁI BẪY Đợt 145 ĐÃ VÁ CHO PLAY, NHƯNG PRINT CHƯA ĐƯỢC VÁ.** `core/engine.js`
+`printBtn.onclick` gọi `openPrintPopup(activity)` — biến `activity` là bản **resolveActivity(libAct)
+đã đóng băng từ lúc MOUNT màn READY** (dòng `let activity = resolveActivity(libAct)`). Options ▸
+Apply **CÓ** ghi lựa chọn mới vào `libAct.options.contentVariant` ngay lập tức (`Object.assign
+(activity.options, draft)` — `options` là tham chiếu CHUNG giữa `activity` và `libAct`), nhưng
+**KHÔNG rebake `activity.content`** — đúng chủ ý "options take effect on Play" (comment gốc ở
+`begin()`, dòng ~2258). Với act có clue set, chủ ý đó có một lỗ hổng: Play thì `begin()` tự
+`resolveActivity(libAct)` lại (dòng 2272, chính là chỗ Đợt 145 vá cho ca *"picking VI1, Apply, Play
+still showed ENG1"*), nhưng **Print bấm ngay trên màn READY, trước khi Play**, nên đọc thẳng
+`activity` cũ — vẫn kẹt ở set đang có lúc mount (mặc định ENG1).
+
+⭐ **Sửa — đúng 1 dòng, đúng khuôn `begin()` đã dùng**: `printBtn.onclick` gọi
+`openPrintPopup(resolveActivity(libAct))` thay vì `openPrintPopup(activity)` — resolve LẠI từ
+`libAct` ngay tại thời điểm bấm nút, không dùng biến đóng băng. `resolveActivity` thuần (không side
+effect, đọc `activity.options` hiện tại), nên gọi lại mỗi lần bấm Print là rẻ và an toàn — không
+đụng `applyBalance`/`applySdDeal` (hai hàm đó chỉ cắt bớt câu hỏi cho Showdown lúc CHƠI, tờ in vẫn
+nên in TRỌN bộ câu của đúng set đang chọn, không phải phần đã bị Showdown cắt bớt).
+
+✅ **ĐO**: chạy thẳng `core/content-view.js` thật qua Node (không mock) — dựng 1 act giả có
+`content.variants` + `clues.{eng1,eng2,vi1,vi2}`, gọi `resolveActivity(libAct)` một lần lúc "mount"
+(ra đúng ENG1), rồi mô phỏng Apply (`Object.assign(libAct.options, {contentVariant:'vi2'})`):
+biến `activity` cũ đọc lại vẫn ra **"ENG1 clue"** (đúng bug thầy tả), còn gọi
+`resolveActivity(libAct)` MỚI ngay sau đó ra đúng **"VI2 clue"**. Xác nhận cơ chế đúng trước/sau vá.
+⬜ **Chưa tự bấm được qua UI thật** (cần đăng nhập Firestore + 1 act thật có ≥2 clue set — môi
+trường phiên này không đăng nhập được) — cần thầy bấm thử: mở 1 act WORDS có ENG1/ENG2/VI1/VI2,
+Options ▸ chọn VI1 ▸ Apply ▸ bấm Print ▸ chọn định dạng bất kỳ ▸ xem tờ in có đúng chữ VI1 không.
+
+⬜ **CHỜ THẦY**: bấm thử qua UI thật (mở act WORDS có ENG1/ENG2/VI1/VI2 → Options chọn VI1 → Apply →
+Print → xem tờ in có đúng VI1 không) — môi trường phiên này không đăng nhập được Firestore nên chỉ
+kiểm chứng được cơ chế qua Node, chưa qua đúng luồng UI.
+
+---
+
 ## Đợt 224 (22/8/2026) — ⭐⭐⭐ RECENT RESULTS: **10 TRẬN (2 TẦNG × 5 CỘT, was 5) · XOÁ TỪNG TRẬN RIÊNG · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN FULLSCREEN** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `bcb09d5`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `bcb09d5` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **5/5 mã băm SHA-256 khớp** (băm nội dung trong commit qua `git show bcb09d5:<path>`, so với `curl https://aword.andrewclasses.com/<path>` — không băm file trên máy, tránh bẫy CRLF) trên `core/showdown-history.js` · `core/showdown.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css`.
 
 > **PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC.** Code Đợt 224 = commit **`bcb09d5`** (8 file, gồm 5 file code +
