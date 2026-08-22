@@ -8,30 +8,34 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 225+226)** — ⭐ **PRINT: VÁ LỖI LUÔN RA ENG1 DÙ ĐÃ CHỌN
+> Cập nhật lần cuối: **22/8/2026 (Đợt 227)** — ⭐⭐ **RECENT RESULTS: NÚT DOWNLOAD TRONG MÀN CHI
+> TIẾT TRẬN** (giữa Ranking và Back) — pop-up chọn Rank (ảnh PNG vuông) hay Details (PDF A4 dọc qua
+> in trình duyệt), đặt tiêu đề Lớp • Act • Ngày, xem trước rồi xuất. File mới
+> `core/showdown-export.js`. ⏳ **CHƯA THẦY DUYỆT, CHƯA COMMIT** (phiên Claude khác dựng xong, đang
+> chờ thầy xem qua trước khi hỏi commit/push). Đọc khối **Đợt 227** đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **Bẫy đo được khi dựng ảnh PNG**: cách hay dùng để "chụp" DOM thành ảnh (SVG `foreignObject` →
+>   `<img>` → `drawImage` vào canvas) làm canvas bị Chromium đánh dấu "tainted" dù ảnh CÙNG GỐC —
+>   `toBlob()` ném `SecurityError`. Sửa bằng vẽ THẲNG lên canvas bằng lệnh nguyên thuỷ
+>   (`fillRect`/`roundRect`/`fillText`, không `drawImage` ảnh nào) — không bao giờ bị tainted. Đúng
+>   lý do các thư viện kiểu html2canvas tự vẽ lại DOM thay vì dùng mẹo foreignObject một dòng.
+> - **PDF = in trình duyệt** (đúng khuôn `core/print.js`/`rt-print.js` đã có, không thư viện mới),
+>   thầy chọn "Lưu thành PDF" ở hộp thoại in như mọi chỗ in khác trong app.
+> - Đo qua Browser pane thật + `devserver.py` với dữ liệu bịa (chưa đăng nhập được Firestore để bấm
+>   qua đúng luồng UI thật): pop-up dựng đủ, bắt được lỗi tainted canvas thật rồi vá, ảnh PNG ra đúng
+>   1000×1000 có vẽ thật (không trắng trống), nút Download PDF gọi đúng `window.print()` 1 lần và dọn
+>   sạch sheet sau in.
+> ### ⬜ CHỜ THẦY
+> - Bấm thử qua đúng đường (Showdown → Recent results → 1 trận → nút Download mới).
+> - In thử 1 file Details ra giấy/PDF thật (giãn cách, cỡ chữ), xem ảnh PNG Rank tải về có đúng ý.
+> - Cho biết có commit + push lên live hay chưa.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 225+226)** — ⭐ **PRINT: VÁ LỖI LUÔN RA ENG1 DÙ ĐÃ CHỌN
 > ENG2/VI1/VI2 · MỞ ĐỊNH DẠNG IN CROSSWORD** (bỏ "coming soon"). Thầy giao 2 việc rời, gộp 1 commit
 > vì cùng buổi. ✅ **THẦY DUYỆT** (*"commit và push hết đi"*) — **COMMIT `7e8a6af`, ĐÃ PUSH + LIVE
 > KIỂM CHỨNG**: Pages triển khai đúng `7e8a6af` trạng thái `built` (không tin mã 200) · **3/3 mã
 > băm SHA-256 khớp** (`core/engine.js` · `core/print.js` · `core/app.css`, băm nội dung trong
-> commit so với `curl https://aword.andrewclasses.com/<path>`). Đọc khối **Đợt 225** + **Đợt 226**
-> đầu `GHI CHU DU AN.md` — tóm tắt:
-> - **(Đợt 225) Print luôn ra ENG1**: `printBtn.onclick` (`core/engine.js`) đọc biến `activity` đã
->   đóng băng từ lúc mount màn READY — Options ▸ Apply ghi lựa chọn clue set thẳng vào
->   `libAct.options` nhưng KHÔNG rebake `activity.content` (chỉ rebake lúc Play, đúng cái Đợt 145
->   đã vá cho `begin()`). Sửa: gọi `resolveActivity(libAct)` lại **tại thời điểm bấm Print**, không
->   dùng biến cũ. Đo bằng Node thẳng vào `core/content-view.js` thật (chưa bấm qua UI thật được —
->   môi trường không đăng nhập Firestore).
-> - **(Đợt 226) Định dạng in Crossword**: `buildCrosswordGrid()` mới trong `core/print.js` — bản
->   SONG SONG (không import) của thuật toán chèn chữ trong `templates/crossword/crossword.js`, bỏ
->   ngẫu nhiên (in ra cùng 1 câu đố mỗi lần) và không lưu chữ cái giải (không lộ đáp án lên giấy).
->   CSS lưới + 2 cột ACROSS/DOWN mới trong `core/app.css`. Đo: `scratch/dot226-crossword-print.html`
->   qua Browser pane thật + `devserver.py` — eligibility đúng, không lộ đáp án, không crash với pool
->   suy biến, hình học DOM (kích thước ô, vị trí số) đúng công thức.
-> ### ⬜ CHỜ THẦY
-> - Print (Đợt 225): bấm thử qua UI thật — mở act WORDS có ENG1/ENG2/VI1/VI2 → Options chọn VI1 →
->   Apply → Print → xem tờ in có đúng VI1 không.
-> - Crossword (Đợt 226): in thử giấy A4 thật (cỡ ô 5–9mm có vừa tay viết không), thử với act nhiều
->   từ dài/khó chèn xem lưới có bị loại nhiều từ không.
+> commit so với `curl https://aword.andrewclasses.com/<path>`). Tóm tắt trong `GHI CHU DU AN.md`.
 >
 > ---
 > Trước đó: **22/8/2026 (Đợt 224)** — ⭐⭐⭐ **RECENT RESULTS: 10 TRẬN (2 TẦNG × 5 CỘT,

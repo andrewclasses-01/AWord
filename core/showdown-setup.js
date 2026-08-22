@@ -1671,6 +1671,18 @@ export function buildShowdownPanel(panel, ctx) {
       let podium = false;
       const toggle = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
       toggle.type = "button"; toggle.title = "Ranking / answers";
+      // ⭐⭐ Đợt 225 (thầy) — DOWNLOAD, between Ranking and Back. Opens a small
+      // popup (core/showdown-export.js) to pick RANKING/DETAILS, name the
+      // title, preview it, and export a square PNG or a printed A4 PDF.
+      const dlBtn = el("button", "aw-sd-rec-close", icons.download);
+      dlBtn.type = "button"; dlBtn.title = "Download";
+      dlBtn.onclick = () => {
+        sfx.tap();
+        import("./showdown-export.js").then(mod => mod.openExportDialog({
+          mount: det, ranked, className, actName: m.actName || "Showdown", at: m.at,
+          defaultRank: podium, hasRows, toast
+        }));
+      };
       const back = el("button", "aw-sd-rec-close", icons.close);
       back.type = "button"; back.title = "Back to the five matches";
       // ⭐ Đợt 198 — shrinks back towards the column it came from instead of
@@ -1704,7 +1716,7 @@ export function buildShowdownPanel(panel, ctx) {
         whenDone(a, () => det.remove(), 260);
       }
       back.onclick = () => { sfx.back(); closeDetail(); };
-      dh.append(dt, toggle, back);
+      dh.append(dt, toggle, dlBtn, back);
       const dbody = el("div", "aw-sd-rec-dbody");
       det.append(dh, dbody);
       // A match whose per-question detail was dropped to keep the document under

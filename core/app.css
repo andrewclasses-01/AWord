@@ -4743,6 +4743,64 @@ html.aw-nhung .aw-below { display: none; }
   border-radius: 0; box-shadow: none; padding: 2.2vh 2.6vw;
 }
 
+/* ---- ⭐⭐ Đợt 225 — DOWNLOAD: the export popup opened from the detail view's
+   new download button (core/showdown-setup.js's openDetail, between Ranking
+   and Back). Lives INSIDE `.aw-sd-rec-detail` (which is `position:absolute`,
+   giving this an anchor) rather than beside it, because the detail view can be
+   fullscreen — anything outside the fullscreened element goes invisible while
+   it is on, so this popup has to be a child of it, not a sibling.
+   The header row reuses `.aw-sd-rec-head/-title/-word/-close` verbatim — same
+   look as every other popover in this panel, no new rules needed for it. */
+.aw-sd-exp {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; flex-direction: column; gap: 10px;
+  background: #fff; border-radius: 12px; padding: 14px 16px 16px;
+}
+.aw-sd-exp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+.aw-sd-exp-types { display: flex; gap: 8px; }
+.aw-sd-exp-type {
+  flex: 1 1 0; display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  height: 38px; border: 1.5px solid #e3e9f1; border-radius: 10px; background: #fbfcfe;
+  color: #5b6b80; font-family: inherit; font-weight: 800; font-size: 12.5px; letter-spacing: .03em;
+  cursor: pointer; transition: border-color .14s ease, background .14s ease, color .14s ease;
+}
+.aw-sd-exp-type svg { width: 16px; height: 16px; }
+.aw-sd-exp-type.is-on { border-color: #2563eb; background: #eff5ff; color: #2563eb; }
+.aw-sd-exp-type:disabled { opacity: .4; cursor: not-allowed; }
+.aw-sd-exp-fields { display: flex; flex-direction: column; gap: 8px; }
+.aw-sd-exp-field { display: flex; flex-direction: column; gap: 3px; }
+.aw-sd-exp-field label { font-size: 10.5px; font-weight: 800; letter-spacing: .05em; color: #8b93a1; text-transform: uppercase; }
+.aw-sd-exp-field input {
+  height: 34px; border: 1.5px solid #e3e9f1; border-radius: 8px; padding: 0 10px;
+  font-family: inherit; font-size: 13px; color: #23303e; background: #fff;
+}
+.aw-sd-exp-field input:focus { outline: none; border-color: #2563eb; }
+.aw-sd-exp-titleline {
+  text-align: center; font-weight: 800; font-size: 13px; color: #23303e;
+  background: #f6f9ff; border: 1px solid #dbe6fb; border-radius: 8px; padding: 8px 10px;
+  overflow-wrap: break-word;
+}
+/* The scaled preview — a small "paper"/square sitting on a neutral tray so its
+   own white background reads as a sheet rather than blending into the popup. */
+.aw-sd-exp-preview { flex: 0 0 auto; display: flex; align-items: flex-start; justify-content: center; min-height: 160px; padding: 12px; background: #eef1f6; border-radius: 10px; overflow: hidden; }
+.aw-sd-exp-preview-frame { position: relative; background: #fff; box-shadow: 0 4px 16px rgba(15, 20, 30, .16); overflow: hidden; flex: 0 0 auto; }
+/* The DETAILS sheet's answer marks — core/showdown-export.js's own `mark()`,
+   used by both the on-screen "paper" preview and the printed PDF (the same
+   built content, so one set of rules covers both — no per-print-run injected
+   style needed here, unlike that file's `@page`, which DOES have to be
+   injected fresh per run so it never collides with core/print.js's own). */
+.aw-exp-mk { display: inline-flex; align-items: center; gap: 1.4mm; padding: 0.6mm 1.6mm; border-radius: 1.2mm; color: #fff; }
+.aw-exp-mk.is-ok { background: #2ec27e; }
+.aw-exp-mk.is-bad { background: #3d4852; }
+.aw-exp-mkicon svg { width: 9px; height: 9px; display: block; }
+.aw-exp-mktxt { font-weight: 700; }
+.aw-sd-exp-actions { display: flex; justify-content: center; padding-top: 2px; }
+/* ⚠️⚠️ Đợt 191's own trap, again: `.aw-btn` alone is sized in `cqw` — meant for
+   INSIDE the 16:9 stage — and this popup sits below it, same as
+   `.aw-sd-confirmbtn`. Every size restated here in px is what keeps this
+   button from coming out lopsided against the fixed-px buttons around it. */
+.aw-btn.aw-sd-exp-go { min-width: 190px; padding: 10px 20px; font-size: 14px; border-radius: 9px; }
+
 /* ---- ⭐⭐⭐ Đợt 224 — ANALYSIS: the stacked bar chart, over BOTH the columns
    and the detail view (z-index above `.aw-sd-rec-detail`'s 7, same "sheet on
    top" shape as that view, deliberately copied — see openAnalysis()'s own note

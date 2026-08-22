@@ -8,6 +8,74 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 227 (22/8/2026) — ⭐⭐ RECENT RESULTS: NÚT **DOWNLOAD** TRONG MÀN CHI TIẾT TRẬN — ⏳ **CHƯA THẦY DUYỆT, CHƯA COMMIT** (phiên Claude khác, chưa hỏi thầy có push không)
+
+Thầy giao: bấm vào 1 ô trong Recent results (màn chi tiết trận, `openDetail` trong
+`core/showdown-setup.js`) → thêm nút **Download** nằm GIỮA nút Ranking (cúp) và nút Back (✕) →
+bấm ra pop-up chọn: (1) loại **Rank** (bảng chóp ngược) hay **Details** (đáp án chi tiết), (2) ba ô
+đặt tiêu đề TÊN LỚP / TÊN ACT / NGÀY → ghép thành `TÊN LỚP • TÊN ACT • NGÀY`, (3) xem trước, (4) xuất:
+Rank → **1 ảnh PNG vuông** (bỏ hết nút tích, chứa trọn tiêu đề + cả bảng chóp ngược mọi học sinh
+trong 1 ảnh); Details → **1 file PDF dọc khổ A4**, cấu trúc giống màn hiển thị, giãn cách giữa các
+học sinh rộng hơn một chút.
+
+File mới `core/showdown-export.js` (không đụng file nào khác ngoài 3 dòng nối trong
+`core/showdown-setup.js`'s `openDetail()`, + icon `download` mới trong `core/icons.js`, + khối CSS
+`.aw-sd-exp-*`/`.aw-exp-mk*` mới trong `core/app.css`).
+
+⛔⛔ **BẪY ĐO ĐƯỢC KHI DỰNG PNG — canvas "tainted" dù cùng gốc.** Bản đầu dựng ảnh bằng đúng khuôn
+nhiều nơi khác trong dự án hay dùng (SVG `<foreignObject>` bọc DOM thật → `<img>` → `drawImage` vào
+canvas), y hệt cách hay thấy để "chụp" một khối DOM thành ảnh mà không cần thư viện. Chạy thật với
+danh sách học sinh thật: `canvas.toBlob()` ném `SecurityError: Tainted canvases may not be exported`
+— Chromium coi MỌI canvas từng `drawImage` một ảnh SVG có chứa `foreignObject` là "tainted", **kể cả
+khi ảnh đó cùng gốc** (blob: URL do chính trang tạo), vì `foreignObject` về nguyên tắc có thể chèn
+nội dung engine không chứng minh được là an toàn tại thời điểm vẽ. Không có cách né bằng same-origin.
+→ **Vẽ THẲNG bằng Canvas 2D nguyên thuỷ** (`fillRect`/`roundRect`/`createLinearGradient`/`fillText`,
+không `drawImage` bất kỳ ảnh nào) — canvas chỉ toàn lệnh vẽ nguyên thuỷ thì không bao giờ bị đánh dấu
+tainted. Đây đúng là lý do các thư viện kiểu html2canvas tự vẽ lại DOM bằng tay thay vì dùng mẹo
+foreignObject-một-dòng. Màn xem trước (preview) trong pop-up VẪN dùng DOM/CSS thật (không qua canvas
+nên không dính bẫy này) — chỉ ảnh XUẤT ra mới đi qua Canvas 2D riêng.
+
+**Kích thước ô CHỌN, không ĐO** — cùng ý tưởng `metrics()` của
+`templates/running-team/rt-print.js`: từ SỐ HỌC SINH + cỡ ảnh mục tiêu, tính thẳng chiều cao mỗi
+hàng (co giãn 44–108px), rồi suy ra tổng chiều cao. Lớp ít học sinh → đệm thêm trên/dưới cho ảnh vẫn
+VUÔNG; lớp đông học sinh → ảnh vuông tự LỚN hơn (cả 2 cạnh cùng lớn) thay vì hàng bị ép nhỏ tới mức
+không đọc được. Tên quá dài: co cỡ chữ → viết tắt (dùng lại `shortenName` của `core/showdown.js`) →
+cắt "…" ở mức sàn cuối — 3 bậc thang giống hệt `fitPodiumNames` (`core/showdown-review.js`) nhưng
+viết lại bằng `ctx.measureText` vì canvas không có CSS để dựa vào.
+
+**PDF = in trình duyệt, không thư viện** — đúng khuôn `core/print.js` + `rt-print.js`: dựng
+`.aw-print-sheet` (ẩn sẵn trên màn, chỉ hiện trong `@media print`, `core/app.css` đã có), tự chèn
+`<style>@page{size:A4;margin:15mm 14mm}</style>` riêng cho lần in này (không đụng `@page` của 2 file
+kia), gọi `window.print()` — thầy chọn "Lưu thành PDF" ở hộp thoại in như mọi lần in khác trong app.
+Nội dung dùng LẠI đúng 1 hàm dựng (`buildDetailsContent`) cho cả bản xem trước (co nhỏ bằng
+`transform:scale` trong khung "tờ giấy" 210×297mm) lẫn bản in thật — không có 2 bản logic lệch nhau.
+
+### ✅ ĐO
+
+Dựng `#test-mount` giả + dữ liệu `ranked` bịa (bao gồm 1 tên rất dài để ép nhánh viết tắt/cắt chữ),
+chạy qua Browser pane + `devserver.py`:
+- Pop-up dựng đủ: tiêu đề DOWNLOAD, 2 nút Rank/Details, 3 ô Class/Activity/Date điền sẵn đúng giá
+  trị truyền vào, dòng tiêu đề ghép hiện đúng `A1C • Fruit Quiz • 22/8/2026`, xem trước cả 4 học sinh.
+- **Bắt được lỗi tainted canvas thật** (không phải đoán) — sửa xong, gọi `rankPngBlob` trực tiếp
+  (tạm `export` để đo, đã bỏ lại) ra **blob PNG 1000×1000, 790KB**, đúng vuông; đếm điểm ảnh: 267,367
+  / 1,000,000 điểm khác trắng (~27%), 150,510 điểm có màu (~15%) — xác nhận có vẽ thật, không phải
+  ảnh trắng trống.
+- Bấm nút Download PDF (stub `window.print` để không bung hộp thoại in thật): `window.print()` được
+  gọi đúng 1 lần, `.aw-print-sheet` bị dọn sạch khỏi DOM ngay sau đó (nghe đúng sự kiện `afterprint`).
+- 0 lỗi console thật (2 dòng lỗi console thấy được là do CHÍNH script đo tự cài để bẫy `drawImage`,
+  không phải lỗi của tính năng).
+
+⬜ **CHƯA đo qua đúng luồng UI thật** (cần đăng nhập Firestore + có sẵn lịch sử trận Showdown thật —
+môi trường phiên này không đăng nhập được) — mọi phép đo trên chạy `openExportDialog`/`rankPngBlob`
+trực tiếp với dữ liệu bịa, không phải bấm từ màn Recent results thật.
+
+⬜ **CHỜ THẦY**: bấm thử qua đúng đường (Showdown → Recent results → bấm 1 trận → nút Download mới),
+in thử 1 file Details ra giấy/PDF thật xem giãn cách + cỡ chữ có ổn không, xem ảnh PNG Rank tải về
+trên máy tính/điện thoại có đúng ý không, và cho biết có commit + push lên live hay chưa (phiên này
+CHƯA commit, đang chờ thầy duyệt trước).
+
+---
+
 ## Đợt 226 (22/8/2026) — ⭐ MỞ ĐỊNH DẠNG IN **CROSSWORD** (bỏ "coming soon") — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*) · **COMMIT chung với Đợt 225: `7e8a6af`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `7e8a6af` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **3/3 mã băm SHA-256 khớp** (`core/engine.js` · `core/print.js` · `core/app.css`, băm nội dung trong commit qua `git show HEAD:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 
 Thầy giao: thêm dạng in Crossword thật (trước đó nút này disable, hiện chữ "soon"). Chỉ 2 file:
