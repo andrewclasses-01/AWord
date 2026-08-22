@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 226 (22/8/2026) — ⭐ MỞ ĐỊNH DẠNG IN **CROSSWORD** (bỏ "coming soon") — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*).
+## Đợt 226 (22/8/2026) — ⭐ MỞ ĐỊNH DẠNG IN **CROSSWORD** (bỏ "coming soon") — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*) · **COMMIT chung với Đợt 225: `7e8a6af`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `7e8a6af` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **3/3 mã băm SHA-256 khớp** (`core/engine.js` · `core/print.js` · `core/app.css`, băm nội dung trong commit qua `git show HEAD:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 
 Thầy giao: thêm dạng in Crossword thật (trước đó nút này disable, hiện chữ "soon"). Chỉ 2 file:
 `core/print.js` (thêm ~150 dòng) + `core/app.css` (thêm khối CSS `@media print` cho Crossword).
@@ -65,7 +65,7 @@ nhỏ không), thử với 1 act nhiều từ dài/khó chèn xem lưới có "g
 
 ---
 
-## Đợt 225 (22/8/2026) — ⭐ VÁ LỖI: PRINT LUÔN RA ENG1 DÙ ĐÃ CHỌN ENG2/VI1/VI2 — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*).
+## Đợt 225 (22/8/2026) — ⭐ VÁ LỖI: PRINT LUÔN RA ENG1 DÙ ĐÃ CHỌN ENG2/VI1/VI2 — ✅ **THẦY DUYỆT** (*"commit và push hết đi"*) · **COMMIT chung với Đợt 226: `7e8a6af`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `7e8a6af` trạng thái `built` · **3/3 mã băm SHA-256 khớp** (`core/engine.js` · `core/print.js` · `core/app.css`).
 
 Thầy tả: trong act có nhiều clue set (ENG1/ENG2/VI1/VI2, Đợt 145), chọn ENG2/VI1/VI2 trong Options
 rồi bấm **Print** vẫn ra đúng ENG1 — không theo đúng cái đang chọn.

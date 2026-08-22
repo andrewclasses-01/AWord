@@ -8,7 +8,33 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 224)** — ⭐⭐⭐ **RECENT RESULTS: 10 TRẬN (2 TẦNG × 5 CỘT,
+> Cập nhật lần cuối: **22/8/2026 (Đợt 225+226)** — ⭐ **PRINT: VÁ LỖI LUÔN RA ENG1 DÙ ĐÃ CHỌN
+> ENG2/VI1/VI2 · MỞ ĐỊNH DẠNG IN CROSSWORD** (bỏ "coming soon"). Thầy giao 2 việc rời, gộp 1 commit
+> vì cùng buổi. ✅ **THẦY DUYỆT** (*"commit và push hết đi"*) — **COMMIT `7e8a6af`, ĐÃ PUSH + LIVE
+> KIỂM CHỨNG**: Pages triển khai đúng `7e8a6af` trạng thái `built` (không tin mã 200) · **3/3 mã
+> băm SHA-256 khớp** (`core/engine.js` · `core/print.js` · `core/app.css`, băm nội dung trong
+> commit so với `curl https://aword.andrewclasses.com/<path>`). Đọc khối **Đợt 225** + **Đợt 226**
+> đầu `GHI CHU DU AN.md` — tóm tắt:
+> - **(Đợt 225) Print luôn ra ENG1**: `printBtn.onclick` (`core/engine.js`) đọc biến `activity` đã
+>   đóng băng từ lúc mount màn READY — Options ▸ Apply ghi lựa chọn clue set thẳng vào
+>   `libAct.options` nhưng KHÔNG rebake `activity.content` (chỉ rebake lúc Play, đúng cái Đợt 145
+>   đã vá cho `begin()`). Sửa: gọi `resolveActivity(libAct)` lại **tại thời điểm bấm Print**, không
+>   dùng biến cũ. Đo bằng Node thẳng vào `core/content-view.js` thật (chưa bấm qua UI thật được —
+>   môi trường không đăng nhập Firestore).
+> - **(Đợt 226) Định dạng in Crossword**: `buildCrosswordGrid()` mới trong `core/print.js` — bản
+>   SONG SONG (không import) của thuật toán chèn chữ trong `templates/crossword/crossword.js`, bỏ
+>   ngẫu nhiên (in ra cùng 1 câu đố mỗi lần) và không lưu chữ cái giải (không lộ đáp án lên giấy).
+>   CSS lưới + 2 cột ACROSS/DOWN mới trong `core/app.css`. Đo: `scratch/dot226-crossword-print.html`
+>   qua Browser pane thật + `devserver.py` — eligibility đúng, không lộ đáp án, không crash với pool
+>   suy biến, hình học DOM (kích thước ô, vị trí số) đúng công thức.
+> ### ⬜ CHỜ THẦY
+> - Print (Đợt 225): bấm thử qua UI thật — mở act WORDS có ENG1/ENG2/VI1/VI2 → Options chọn VI1 →
+>   Apply → Print → xem tờ in có đúng VI1 không.
+> - Crossword (Đợt 226): in thử giấy A4 thật (cỡ ô 5–9mm có vừa tay viết không), thử với act nhiều
+>   từ dài/khó chèn xem lưới có bị loại nhiều từ không.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 224)** — ⭐⭐⭐ **RECENT RESULTS: 10 TRẬN (2 TẦNG × 5 CỘT,
 > WAS 5) · XOÁ TỪNG TRẬN RIÊNG (nút "–") · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN,
 > FULLSCREEN**. Thầy giao trọn tính năng, chốt 2 quyết định qua AskUserQuestion (bấm ANALYSE khi
 > <2 ô tích LUÔN thoát chế độ chọn · học sinh thiếu trận xếp thành cụm riêng sau cùng, cách một
@@ -37,7 +63,7 @@
 > module thật: 10 ô sau khi seed 11 trận · xoá 1 cột đúng trận · ANALYSE 0/1 ô thoát · 2+ ô →
 > BEGIN → biểu đồ đúng số/đúng % (soi tận `tier.dataset.pct` so khớp `pctOf` tính tay) · Back hỏi
 > trước khi thoát · 0 lỗi console) + đối chứng `.aw-sd-recent` (khung ngoài) **0 tràn**.
-> ### ⬜ CHỜ THẦY
+> ### ⬜ CHỜ THẦY (Đợt 224)
 > - Nhìn thật trên TOMKO: 2 tầng × 5 cột có đủ to để chạm không, nút ANALYSE/tick tròn có dễ bấm
 >   không, biểu đồ đọc từ cuối lớp có rõ không (chưa test lớp thật 15-20 em).
 >
