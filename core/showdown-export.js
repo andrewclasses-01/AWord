@@ -226,10 +226,13 @@ function buildDetailsContent(ranked, titleText) {
     const block = el("div");
     block.style.cssText = `margin-bottom:${i < ranked.length - 1 ? DETAIL_BLOCK_GAP_MM : 0}mm;` +
       "padding-bottom:3.4mm;border-bottom:0.3mm solid #e3e9f1;";
-    // `break-inside:avoid` only bites when it can — a block taller than one
-    // page still has to spill somewhere, which is what "avoid" (not "always")
-    // means: best effort, never a silent crash.
-    block.style.breakInside = "avoid";
+    // `break-inside:avoid` used to sit on the WHOLE pupil block — fine for a
+    // short one, but a pupil with many rows can run taller than a page, and
+    // forcing "never split this" on something that has to split anyway is
+    // what corrupted the printed PDF (Nitro Pro: "damaged and cannot be
+    // repaired"). Moved down to each question row instead (below): a row
+    // never splits mid-question, but the page break can still fall between
+    // rows when a pupil's block runs long.
 
     const head = el("div");
     head.style.cssText = "display:flex;align-items:baseline;justify-content:space-between;gap:6mm;margin-bottom:2.6mm;";
@@ -258,6 +261,7 @@ function buildDetailsContent(ranked, titleText) {
     (b.rows || []).forEach(r => {
       const line = el("div");
       line.style.cssText = "display:flex;gap:3mm;font-size:9.5px;line-height:1.5;margin-bottom:1.6mm;";
+      line.style.breakInside = "avoid";
       const num = el("span");
       num.style.cssText = "flex:0 0 auto;width:5.5mm;color:#8b93a1;font-weight:700;";
       num.textContent = String(r.n);
