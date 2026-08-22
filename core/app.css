@@ -4860,10 +4860,24 @@ html.aw-nhung .aw-below { display: none; }
    it is on, so this popup has to be a child of it, not a sibling.
    The header row reuses `.aw-sd-rec-head/-title/-word/-close` verbatim — same
    look as every other popover in this panel, no new rules needed for it. */
+/* ⭐ Đợt 233 (teacher, 22/8/2026: "chỉ cần size nhỏ ở mức độ cần thiết thôi,
+   không cần fullscreen... để nó là pop-up nhỏ nổi lên trên bảng answers/rank
+   bên dưới") — `.aw-sd-exp` is now the BACKDROP (same shape as
+   `.aw-sd-confirm` above: `inset:0`, translucent, flex-centred), not the card
+   itself; the card is the new `.aw-sd-exp-box`, sized to its own content up to
+   `max-width`, so the ranking/detail board underneath stays visible around it
+   instead of being covered edge to edge. */
 .aw-sd-exp {
   position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,.55); padding: 16px;
+}
+.aw-sd-exp-box {
+  width: 100%; max-width: 420px; max-height: 100%; min-height: 0;
   display: flex; flex-direction: column; gap: 10px;
-  background: #fff; border-radius: 12px; padding: 14px 16px 16px;
+  background: #fff; border: 1.5px solid #e3e9f1; border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(15,20,30,.18);
+  padding: 14px 16px 16px;
 }
 .aw-sd-exp-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
 .aw-sd-exp-types { display: flex; gap: 8px; }

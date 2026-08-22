@@ -294,9 +294,23 @@ function buildDetailsContent(ranked, titleText) {
       clue.style.cssText = "font-weight:700;";
       clue.textContent = r.question;                             // the act's own text: textContent only
       body.append(clue);
+      // ⭐ Đợt 233 (teacher, 22/8/2026) — the time sits INSIDE the answer column,
+      // right against the mark it timed, not off on its own at the row's far
+      // edge: it is a flex child of `ans` itself now, one small gap before the
+      // mark, instead of a fourth sibling of `line` stranded past `body`.
+      // ⛔ A WRONG row prints NO time at all (teacher's own call) — only ever
+      // built for the `r.correct` branch, and a game with the round clock off
+      // still has no `roundMs` on any row (same `:empty` idea as the on-screen
+      // `.aw-sd-rv-qtime`), so both cases simply skip building the element.
       const ans = el("div");
-      ans.style.cssText = "display:flex;flex-wrap:wrap;gap:1.6mm;";
+      ans.style.cssText = "display:flex;align-items:center;flex-wrap:wrap;justify-content:flex-end;gap:1.6mm;";
       if (r.correct) {
+        if (r.roundMs != null) {
+          const qtime = el("span");
+          qtime.style.cssText = "flex:0 0 auto;font-weight:800;color:#10151b;";
+          qtime.innerHTML = fmtRoundMs(r.roundMs);
+          ans.append(qtime);
+        }
         ans.append(mark("is-ok", icons.check, r.correctText));
       } else {
         ans.append(mark("is-bad", icons.cross, r.answered ? r.yourText : "No answer"));
@@ -304,15 +318,6 @@ function buildDetailsContent(ranked, titleText) {
       }
       body.append(ans);
       line.append(num, body);
-      // A game played with the round clock off has no `roundMs` on any row —
-      // leave the column out rather than print a false "0:00" for it (same
-      // `:empty` idea as `.aw-sd-rv-qtime` on screen).
-      if (r.roundMs != null) {
-        const qtime = el("span");
-        qtime.style.cssText = "flex:0 0 auto;min-width:11mm;text-align:right;font-weight:800;color:#10151b;";
-        qtime.innerHTML = fmtRoundMs(r.roundMs);
-        line.append(qtime);
-      }
       block.append(line);
     });
 
@@ -633,7 +638,12 @@ function printDetailsSheetInPage(ranked, titleText) {
 export function openExportDialog({ mount, ranked, className = "", actName = "", at, defaultRank = true, hasRows = true, toast = () => {} }) {
   if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
 
+  // ⭐ Đợt 233 — `layer` is now only the translucent backdrop; `box` is the
+  // actual small card, sized to its own content (core/app.css's
+  // `.aw-sd-exp`/`.aw-sd-exp-box` — same two-layer shape as `askConfirm`'s
+  // `.aw-sd-confirm`/`.aw-sd-confirmbox` right above it in that file).
   const layer = el("div", "aw-sd-exp");
+  const box = el("div", "aw-sd-exp-box");
   const head = el("div", "aw-sd-rec-head");
   const titleRow = el("div", "aw-sd-rec-title");
   titleRow.append(el("span", "aw-sd-rec-word", "DOWNLOAD"));
@@ -643,9 +653,11 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
   head.append(titleRow, closeBtn);
 
   const body = el("div", "aw-sd-exp-body");
-  layer.append(head, body);
+  box.append(head, body);
+  layer.append(box);
   mount.append(layer);
   layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: "ease-out" });
+  box.animate([{ transform: "scale(.94)" }, { transform: "scale(1)" }], { duration: 200, easing: "cubic-bezier(.22,.9,.3,1)" });
 
   let type = (defaultRank || !hasRows) ? "rank" : "details";
 
@@ -972,7 +984,9 @@ async function analysisPngBlob(full, partial, entries, titleText, scale = 2) {
 export function openAnalysisExportDialog({ mount, className = "", at, full = [], partial = [], entries = [], toast = () => {} }) {
   if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
 
+  // ⭐ Đợt 233 — same backdrop/box split as openExportDialog above.
   const layer = el("div", "aw-sd-exp");
+  const box = el("div", "aw-sd-exp-box");
   const head = el("div", "aw-sd-rec-head");
   const titleRow = el("div", "aw-sd-rec-title");
   titleRow.append(el("span", "aw-sd-rec-word", "DOWNLOAD"));
@@ -982,9 +996,11 @@ export function openAnalysisExportDialog({ mount, className = "", at, full = [],
   head.append(titleRow, closeBtn);
 
   const body = el("div", "aw-sd-exp-body");
-  layer.append(head, body);
+  box.append(head, body);
+  layer.append(box);
   mount.append(layer);
   layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: "ease-out" });
+  box.animate([{ transform: "scale(.94)" }, { transform: "scale(1)" }], { duration: 200, easing: "cubic-bezier(.22,.9,.3,1)" });
 
   const fields = el("div", "aw-sd-exp-fields");
   const mkField = (labelTxt, value) => {

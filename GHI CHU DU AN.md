@@ -5,6 +5,34 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 233 (22/8/2026) — ⭐ THỜI GIAN SÁT ĐÁP ÁN + CHỈ CÂU ĐÚNG, POPUP DOWNLOAD THÔI FULLSCREEN — 🟢 CHỜ THẦY XEM
+
+Hai chỉnh nhỏ tiếp theo Đợt 232, thầy giao qua chat.
+
+**1) Cột thời gian trong PDF — sát đáp án, chỉ câu đúng mới có.** `buildDetailsContent`
+(`core/showdown-export.js`): thời gian không còn là "người thứ tư" đứng lẻ ở tận mép phải dòng
+(cách đáp án ~14mm qua `min-width:11mm` + gap riêng) — nay là CON của chính `ans` (khối chứa nhãn
+đáp án), đứng ngay trước nhãn, cách `1.6mm`. ⛔ **Câu SAI không in thời gian nữa, dù có `r.roundMs`**
+— chỉ nhánh `r.correct` mới dựng phần tử thời gian; nhánh sai giữ nguyên 2 nhãn (✗ đen + ✓ xanh),
+không đụng gì thêm.
+
+**2) Popup DOWNLOAD hết fullscreen.** `.aw-sd-exp` (`core/app.css`) đổi từ "tấm phủ kín `inset:0`"
+thành **LỚP NỀN** mờ (`rgba(255,255,255,.55)`, flex căn giữa) + **`.aw-sd-exp-box` MỚI** = khung thật
+sự (max-width 420px, tự co theo nội dung, bo góc + đổ bóng) — đúng khuôn `.aw-sd-confirm` /
+`.aw-sd-confirmbox` đã có sẵn trong file (askConfirm, `core/showdown-setup.js`), không phát minh
+kiểu mới. Bảng answers/rank phía sau (`.aw-sd-rec-detail`) giờ **nhìn thấy được xung quanh** popup.
+- Sửa CẢ HAI nơi dùng chung `.aw-sd-exp` trong `core/showdown-export.js` — `openExportDialog` (nút
+  DOWNLOAD ở màn chi tiết trận) VÀ `openAnalysisExportDialog` (nút DOWNLOAD ở màn ANALYSE) — cùng một
+  class thì phải sửa cả hai, không thì một bên vỡ bố cục.
+- Thêm hoạt cảnh vào (`box.animate(scale .94→1)`) giống hệt `askConfirm`'s box, cho khớp cảm giác mở
+  popup với phần còn lại của app.
+
+**Đã thử thật:** dựng bảng chữ giả phía sau popup (Chrome, dữ liệu giả) — popup nổi giữa, chữ nền
+còn đọc được quanh 4 phía; bản in thật: dòng 5/11/17 (đúng) thời gian sát cạnh nhãn FOOT xanh; dòng
+77 (sai, TOOTH→TOE) không có số thời gian nào.
+
+---
+
 ## Đợt 232 (22/8/2026) — ⭐ BỐ CỤC MỚI CHO PDF ĐÁP ÁN: MỖI CÂU 1 DÒNG + THỜI GIAN, BỎ TEAM X — 🟢 CHỜ THẦY XEM
 
 Thầy gửi ảnh chụp bố cục màn hình xem trực tiếp (`renderReviewList`, `core/showdown-review.js`) và
