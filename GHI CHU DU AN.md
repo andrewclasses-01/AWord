@@ -8,7 +8,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 224 (22/8/2026) — ⭐⭐⭐ RECENT RESULTS: **10 TRẬN (2 TẦNG × 5 CỘT, was 5) · XOÁ TỪNG TRẬN RIÊNG · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN FULLSCREEN** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) — commit + hồ sơ đang được xử lý, xem dòng "PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC" sẽ được ghi ngay dưới đây sau khi có mã băm live
+## Đợt 224 (22/8/2026) — ⭐⭐⭐ RECENT RESULTS: **10 TRẬN (2 TẦNG × 5 CỘT, was 5) · XOÁ TỪNG TRẬN RIÊNG · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN FULLSCREEN** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `bcb09d5`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `bcb09d5` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **5/5 mã băm SHA-256 khớp** (băm nội dung trong commit qua `git show bcb09d5:<path>`, so với `curl https://aword.andrewclasses.com/<path>` — không băm file trên máy, tránh bẫy CRLF) trên `core/showdown-history.js` · `core/showdown.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css`.
+
+> **PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC.** Code Đợt 224 = commit **`bcb09d5`** (8 file, gồm 5 file code +
+> 3 file hồ sơ). Mọi phần đo được: **20/20** Node (`scratch/dot224-analysis.mjs`, hàm thuần) +
+> **25/25** trình duyệt thật cục bộ (`scratch/dot224-recent.html`) + **5/5** mã băm SHA-256 khớp
+> bản live. ⚠️ `scratch/` bị gitignore — 2 file lưới dot224 chỉ có ở MÁY đã tạo; phiên máy khác cần
+> thì dựng lại theo mô tả trong khối này (dùng `scratch/fake-firebase.js` có sẵn). **Thầy CHƯA
+> chơi thật trên lớp** (bench chỉ đo được cơ chế đúng, không đo được "nhìn có ổn không" trên bảng
+> thật/TOMKO) — mục ⬜ cuối khối là danh sách chờ tay/mắt thầy.
 
 Thầy giao trọn tính năng mới cho màn Recent results (bảng sổ cái các trận Showdown đã chơi), chốt
 2 quyết định qua AskUserQuestion (dưới). Sửa **6 file**: `core/showdown-history.js` ·

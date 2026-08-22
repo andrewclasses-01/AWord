@@ -14,8 +14,10 @@
 > <2 ô tích LUÔN thoát chế độ chọn · học sinh thiếu trận xếp thành cụm riêng sau cùng, cách một
 > khe hẹp, không phân biệt thiếu nhiều/ít). Sửa **6 file**: `core/showdown-history.js` ·
 > `core/showdown.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css` ·
-> `core/HUONG DAN CORE.md`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — máy/phiên sau
-> đọc `GHI CHU DU AN.md` đầu file, khối **Đợt 224**, trước khi sửa tiếp.
+> `core/HUONG DAN CORE.md`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — commit
+> **`bcb09d5`**, **ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `bcb09d5` trạng thái `built`
+> (không tin mã 200) · **5/5 mã băm SHA-256 khớp** (5 file code, băm nội dung trong commit, không
+> băm file trên máy). Đọc khối **Đợt 224** đầu `GHI CHU DU AN.md` — tóm tắt:
 > - **(1) `MAX_MATCHES` 5 → 10**, lưới `.aw-sd-rec-cols` đổi `grid-template-columns/rows:
 >   repeat(5/2, minmax(0,1fr))` — **`minmax(0,1fr)` chứ KHÔNG phải `1fr` trần**: bẫy đã cắn khi
 >   dựng, `1fr` trần là `minmax(auto,1fr)` nên một cột hơi cao đẩy tràn cả lưới (đo 11px) dù mắt
