@@ -59,7 +59,7 @@ import { makeHStepper } from "./numberstepper.js";
 // and free of Firestore, so importing it here does not breach the rule that
 // keeps THIS file behind a dynamic import (see the header).
 import {
-  renderReviewList, renderReviewPodium, fitPodiumNames, POD_MAX_W, POD_MIN_W
+  renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
@@ -1771,6 +1771,11 @@ export function buildShowdownPanel(panel, ctx) {
     function openDetail(m, ranked) {
       if (layer.querySelector(".aw-sd-rec-detail")) return;
       const det = el("div", "aw-sd-rec-detail");
+      // ⭐ Đợt 235 (teacher: "thêm dòng ANDREW CLASSES mỏng, mờ... ở bên trên
+      // cùng") — a sibling BEFORE the head row, same placement as the live
+      // Show answers screen (core/showdown-review.js's own `.aw-rv-brand`).
+      const brand = el("div", "aw-sd-rec-brand");
+      brand.textContent = "ANDREW CLASSES";
       const dh = el("div", "aw-sd-rec-head");
       const dt = el("div", "aw-sd-rec-title");
       const dact = el("span", "aw-sd-rec-word");
@@ -1778,22 +1783,33 @@ export function buildShowdownPanel(panel, ctx) {
       const dsub = el("span", "aw-sd-rec-class");
       dsub.textContent = `${className || ""} · ${when(m.at)}`;
       dt.append(dact, dsub);
-      // Ranking or answers, on a plain toggle rather than the live board's
-      // press-and-hold: this popover is a reading screen, not a game surface, and
-      // a hidden gesture on it would simply never be found.
-      let podium = false;
-      const toggle = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
-      toggle.type = "button"; toggle.title = "Ranking / answers";
-      // ⭐⭐ Đợt 225 (thầy) — DOWNLOAD, between Ranking and Back. Opens a small
-      // popup (core/showdown-export.js) to pick RANKING/DETAILS, name the
-      // title, preview it, and export a square PNG or a printed A4 PDF.
+      // A match whose per-question detail was dropped to keep the document under
+      // Firestore's limit (fitToBudget) has nothing to put in the list, and an
+      // empty list would read as "nobody answered anything". `let`, not `const`
+      // — Đợt 235's refresh below may hand back a match whose rows differ.
+      let hasRows = ranked.some(b => (b.rows || []).length);
+      // ⭐ Đợt 235 — Table / Podium / List, three icon buttons instead of one
+      // trophy toggle (teacher: "đồng nhất thao tác" with the live Show
+      // answers screen, which dropped its press-and-hold for the very same
+      // three buttons — see core/showdown-review.js's own note). Reading
+      // screens, not game surfaces, so plain clicks, same as before.
+      let view = "table";        // "table" | "podium" | "list"
+      const tableBtn = el("button", "aw-sd-rec-close is-toggle", icons.barChart);
+      tableBtn.type = "button"; tableBtn.title = "Table";
+      const podiumBtn = el("button", "aw-sd-rec-close is-toggle", icons.trophy);
+      podiumBtn.type = "button"; podiumBtn.title = "Podium";
+      const listBtn = el("button", "aw-sd-rec-close is-toggle", icons.assignment);
+      listBtn.type = "button"; listBtn.title = "List";
+      // ⭐⭐ Đợt 225 (thầy) — DOWNLOAD, between the view buttons and Back. Opens a
+      // small popup (core/showdown-export.js) to pick TABLE/RANKING/DETAILS,
+      // name the title, preview it, and export a PNG or a printed A4 PDF.
       const dlBtn = el("button", "aw-sd-rec-close", icons.download);
       dlBtn.type = "button"; dlBtn.title = "Download";
       dlBtn.onclick = () => {
         sfx.tap();
         import("./showdown-export.js").then(mod => mod.openExportDialog({
           mount: det, ranked, className, actName: displayName(m), at: m.at,
-          defaultRank: podium, hasRows, toast
+          defaultType: view, hasRows, toast
         }));
       };
       const back = el("button", "aw-sd-rec-close", icons.close);
@@ -1829,34 +1845,53 @@ export function buildShowdownPanel(panel, ctx) {
         whenDone(a, () => det.remove(), 260);
       }
       back.onclick = () => { sfx.back(); closeDetail(); };
-      dh.append(dt, toggle, dlBtn, back);
+      dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
       const dbody = el("div", "aw-sd-rec-dbody");
-      det.append(dh, dbody);
-      // A match whose per-question detail was dropped to keep the document under
-      // Firestore's limit (fitToBudget) has nothing to put in the list, and an
-      // empty list would read as "nobody answered anything".
-      const hasRows = ranked.some(b => (b.rows || []).length);
+      det.append(brand, dh, dbody);
       // ⭐ Đợt 207 — this board gets tick boxes too: a match out of the ledger is
       // just as good a list to split a class off as the one that has only just
       // finished, and the marks are the same temporary thing (this Map dies with
       // the detail view, and nothing about it is ever written down).
       const picks = new Map();
+      // ⭐ Đợt 235 — true until the fresh-data floor below settles (see
+      // `refreshThisMatch`): `paint()` shows a plain loading line while it
+      // waits, the same idea as core/showdown-review.js's own spinner, just
+      // without a title bar to hang a spinner icon off here.
+      let refreshing = true;
+      function paintViewBtns() {
+        tableBtn.classList.toggle("is-on", view === "table");
+        podiumBtn.classList.toggle("is-on", view === "podium");
+        listBtn.classList.toggle("is-on", view === "list");
+        listBtn.disabled = !hasRows;
+        listBtn.title = hasRows ? "List" : "The answers for this match were not kept.";
+      }
       const paint = () => {
         dbody.innerHTML = "";
-        if (!hasRows && !podium) {
+        if (refreshing) {
+          dbody.append(el("div", "aw-sd-rec-note", "Loading the latest results…"));
+          return;
+        }
+        if (!hasRows && view === "list") view = "table";   // rows vanished under a stale "List" pick
+        if (!hasRows && view !== "podium") {
           dbody.append(el("div", "aw-sd-rec-note",
             "The answers for this match were not kept — here is the ranking."));
           dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
+        } else if (view === "table") {
+          dbody.append(renderReviewTable(ranked, [className, displayName(m)].filter(Boolean).join(" • ")));
+        } else if (view === "podium") {
+          dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
         } else {
-          dbody.append(podium
-            ? renderReviewPodium(ranked, { showTeam: true, picks })
-            : renderReviewList(ranked, { showTeam: true }));
+          dbody.append(renderReviewList(ranked, { showTeam: true }));
         }
-        // AFTER the append — see fitPodiumNames' own note. Harmless on the list
-        // view, which has no `.aw-sd-pod-name` in it at all.
+        // AFTER the append — see fitPodiumNames' own note. Harmless on the
+        // table/list views, which have no `.aw-sd-pod-name` in them at all.
         fitPodiumNames(dbody);
       };
-      toggle.onclick = () => { podium = !podium; toggle.classList.toggle("is-on", podium); sfx.tap(); paint(); };
+      const setView = v => { if (view === v || refreshing) return; view = v; sfx.tap(); paintViewBtns(); paint(); };
+      tableBtn.onclick = () => setView("table");
+      podiumBtn.onclick = () => setView("podium");
+      listBtn.onclick = () => setView("list");
+      paintViewBtns();
       paint();
       layer.append(det);
       // ⚠️ The request goes out AFTER the node is in the document — an element
@@ -1867,6 +1902,43 @@ export function buildShowdownPanel(panel, ctx) {
         .then(() => det.requestFullscreen?.())
         .then(() => fitPodiumNames(dbody))     // the box just changed width
         .catch(e => console.warn("AWord: fullscreen refused, showing the detail in the panel", e));
+
+      /**
+       * ⭐ Đợt 235 (teacher: "load tối thiểu khoảng 3s để cập nhật dữ liệu mới
+       * nhất từ các trình duyệt khác cho chắc") — `ranked` up to this point is
+       * whatever `paintCols()` computed WHEN RECENT RESULTS WAS OPENED
+       * (matchBlocks() called once, no refresh since — see this file's own
+       * header note on that). Re-reads this ONE match fresh from Firestore
+       * (`loadMatches`, the exact read Recent Results itself uses to fill in
+       * the first place) behind a floor of at least 3s, so a row another
+       * browser is still writing has time to land before the teacher ever
+       * sees a number. A match that vanished from the ledger in the meantime
+       * (deleted from another tab) just keeps the data already in hand.
+       */
+      async function refreshThisMatch() {
+        try {
+          const h = await import("./showdown-history.js");
+          const fresh = await h.loadMatches(classId);
+          const found = fresh.find(x => x.matchId === m.matchId);
+          if (found) {
+            m = found;
+            ranked = matchBlocks(found);
+            hasRows = ranked.some(b => (b.rows || []).length);
+            dact.textContent = displayName(m);
+            dsub.textContent = `${className || ""} · ${when(m.at)}`;
+          }
+        } catch (e) {
+          console.warn("AWord: could not refresh this match", e);
+        }
+      }
+      (async () => {
+        const floor = new Promise(r => setTimeout(r, 3000));
+        await Promise.all([refreshThisMatch(), floor]);
+        if (closing) return;              // the teacher already backed out
+        refreshing = false;
+        paintViewBtns();
+        paint();
+      })();
       det.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
         { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
     }

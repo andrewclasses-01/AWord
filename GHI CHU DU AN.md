@@ -5,6 +5,79 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 235 (22/8/2026) — ⭐⭐⭐ DÒNG THƯƠNG HIỆU + DẠNG BẢNG MỚI + ĐỔI CƠ CHẾ XEM KẾT QUẢ — 🟢 CHỜ THẦY BẤM TAY THẬT
+
+Ba việc lớn còn lại của loạt yêu cầu chỉnh Showdown, sau khi nghiên cứu code cũ + báo phương án qua
+AskUserQuestion + thầy gõ **"ok build"**. Sửa 5 file: `core/icons.js` · `core/showdown-export.js` ·
+`core/showdown-review.js` · `core/showdown-setup.js` · `core/app.css`.
+
+**1) Dòng "ANDREW CLASSES" mờ/mỏng/căn giữa ở trên cùng.** Thầy chốt qua AskUserQuestion: chỉ ở
+**bảng to + file xuất thật**, KHÔNG ở thẻ nhỏ Recent Results/khung preview thu nhỏ trong popup
+DOWNLOAD. Hai cách vẽ (DOM cho `buildDetailsContent`/`buildRankSheet`, canvas cho `rankPngBlob`/
+`drawAnalysisCanvas` — hai đường vẽ SONG SONG có sẵn từ trước, một cho preview một cho file xuất
+thật, xem Đợt 230). Thêm vào cả `core/showdown-review.js` (`.aw-rv-brand`, đứng trước `.aw-rv-head`
+— KHÔNG phải con của nó, vì `head` là hàng flex ngang) và `core/showdown-setup.js`'s `openDetail`
+(`.aw-sd-rec-brand`, đứng trước `dh`).
+
+**2) Dạng BẢNG mới — tái dùng `drawAnalysisCanvas` cho 1 trận.** Xác nhận qua nghiên cứu: hàm vẽ
+biểu đồ cột chồng ANALYSIS (vốn cho nhiều trận) **không có rào cản kỹ thuật** khi chỉ truyền ĐÚNG
+1 entry — `buildAnalysisRows([{matchId,label,at,blocks:ranked}])` tự cho `full` = mọi HS có chơi,
+`partial` rỗng. Hàm mới **`renderReviewTable(ranked, titleText)`** (export từ
+`core/showdown-review.js`) — trả về khung NGAY (đồng bộ, giống `renderReviewList`/`renderReviewPodium`
+đã có), rồi tự lấp canvas vào sau khi **dynamic-import `showdown-export.js`** (đúng luật "hai file
+lazy-load không bao giờ import tĩnh lẫn nhau" đã có sẵn trong file — xem comment gốc ở
+`ANALYSE_PNG_COLORS`). `drawAnalysisCanvas` đổi thành **export**.
+- **Popup DOWNLOAD thêm tab thứ 3 — TABLE** (`core/showdown-export.js`'s `openExportDialog`):
+  3 nút TABLE/RANKING/DETAILS, icon mới **`icons.barChart`** (4 vạch cao thấp). `defaultRank`
+  (boolean) đổi thành **`defaultType`** (chuỗi `"table"|"rank"|"details"`) — cả 2 nơi gọi hàm này
+  (chỉ có 1: `openDetail`) phải sửa theo. Xuất file dùng lại `analysisPngBlob` có sẵn.
+
+**3) Đổi cơ chế xem kết quả — "đồng nhất thao tác" với Recent Results.** Thầy chốt qua
+AskUserQuestion: **3 nút icon riêng** (không phải 1 nút xoay vòng), thứ tự **Table → Podium → List**,
+**Table là mặc định** mỗi lần mở.
+- **`core/showdown-review.js`** (màn "Show answers" bật ngay sau khi bấm nút đó ở panel kết thúc
+  game — KHÔNG tự mở, xem nghiên cứu): bỏ hẳn cử chỉ **giữ tay** (list↔podium) khỏi nút chữ
+  SHOWDOWN — `gestures()` giờ nhận `onHold` TÙY CHỌN (không truyền = không khởi động hold-timer).
+  Thay bằng **3 nút icon** (`.aw-rv-viewbtns`, tái dùng `.aw-iconbtn` sẵn có) cạnh tiêu đề. **Chạm
+  (tap) vẫn là cách DUY NHẤT chuyển 1 đội ↔ cả lớp — KHÔNG đổi** (đúng yêu cầu "chỉ trừ việc bấm vào
+  tên"). **Chạm 2 lần (double tap) vẫn tải lại thủ công — GIỮ LẠI** theo thầy chốt ("cho phép cập
+  nhật dữ liệu từ các đội khác nếu đội khác xong sau").
+  ⭐⭐ **`scope` mặc định đổi từ `"team"` sang `"class"`** — đảo ngược MỌI đợt trước. Vì mặc định giờ
+  là cả lớp, **phải tải dữ liệu chung ngay lúc mở** (trước đây chỉ tải khi thầy chạm sang class lần
+  đầu) — hàm mới **`initialLoad()`**: chạy `refresh()` (đọc `loadTeams()` một lần, vẫn còn nguyên
+  làm phao cứu hộ cho trình duyệt không chạy được listener) đua song song với **sàn tối thiểu 3000ms**
+  (`Promise.all`), chỉ tắt spinner sau khi CẢ HAI xong. `startWatching()`'s listener sống có thể vẽ
+  lại dữ liệu mới hơn NGAY TRONG lúc chờ sàn — không sao, sàn chỉ quyết định lúc nào TẮT spinner,
+  không quyết định vẽ gì.
+- **`core/showdown-setup.js`'s `openDetail`** (Recent Results → bấm 1 trận): tương tự — thay
+  `toggle` (1 nút cúp, list↔podium) bằng **3 nút** cùng class `.aw-sd-rec-close.is-toggle` (style
+  `.is-on` amber ĐÃ CÓ SẴN, dùng lại nguyên, không phải viết CSS active-state mới). ⛔⛔ **Dữ liệu
+  `ranked` truyền vào hàm này trước giờ tính MỘT LẦN lúc mở Recent Results, không hề refresh khi bấm
+  vào 1 trận** (phát hiện lúc nghiên cứu) — hàm mới `refreshThisMatch()` gọi lại
+  `loadMatches(classId)` (đúng hàm Recent Results tự dùng), tìm đúng `matchId`, gán lại `m`/`ranked`/
+  `hasRows` (đều đổi từ `const` sang `let` để cho phép gán lại) — cũng đua với sàn 3000ms. Nút List
+  tự **disable** khi trận không còn `hasRows` (giống nút DETAILS trong popup DOWNLOAD).
+
+**Đã thử thật (Chrome, localhost bản sửa):**
+- `renderReviewTable` gọi trực tiếp với dữ liệu giả — canvas vẽ ra đúng, dòng "ANDREW CLASSES" +
+  "ANALYSIS" + tiêu đề + cột phần trăm đúng số liệu (96%/80%/72%).
+- Popup DOWNLOAD: cả 3 tab TABLE/RANKING/DETAILS đều vẽ đúng, dòng thương hiệu có mặt ở cả 3
+  (kiểm bằng DOM: `root.children[0].textContent === "ANDREW CLASSES"` cho tab DETAILS).
+- ⚠️ **Bẫy đã gặp lúc test**: icon `barChart` hiện chữ "undefined" thay vì icon — hoá ra do **cache
+  HTTP của Chrome giữ bản `icons.js` CŨ** (import tĩnh `./icons.js` bên trong `showdown-export.js`
+  không cache-bust được dù dynamic-import module cha CÓ cache-bust) — Ctrl+Shift+R (hard reload)
+  xác nhận đúng là cache, không phải lỗi code; 2 phép so khớp `fresh vs bare-cached` (66 vs 65 keys)
+  chứng minh rõ. **Bài học cho lần sau: đổi `icons.js` thì luôn hard-reload trước khi kết luận lỗi.**
+
+**🟢 CHƯA THỬ ĐƯỢC (đòi Firestore đăng nhập thật, không mô phỏng nổi trong môi trường này):**
+- Toàn bộ luồng SỐNG của `mountShowdownReview` (listener `watchTeams`, `refresh()` thật, việc chạm
+  tên chuyển 1 đội/cả lớp có kèm sàn 3s đúng cách trên dữ liệu Firestore thật).
+- `openDetail`'s `refreshThisMatch()` đọc lại `loadMatches` thật (có đúng tìm ra `matchId` và thay
+  dữ liệu mới không, trên tài khoản thật).
+- Cả 2 màn trên **máy TOMKO thật** (bàn tay chạm, không phải chuột).
+
+---
+
 ## Đợt 234 (22/8/2026) — ⭐⭐ PDF ĐÁP ÁN: CỠ CHỮ TỰ TÌM TỐI ĐA + GIÃN DÒNG SÁT + CĂN GIỮA ĐẦU MỤC — 🟢 CHỜ THẦY XEM (phần 1/2, còn 3 việc lớn hơn đang chờ "ok build" — xem cuối mục)
 
 Thầy gửi tiếp 6 yêu cầu chỉnh bố cục PDF đáp án. Ba việc ĐẦU đã làm ngay (nằm gọn trong

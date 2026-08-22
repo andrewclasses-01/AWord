@@ -30,7 +30,7 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { pctOf, pctBand, shortenName, fmtRoundMs } from "./showdown.js";
+import { pctOf, pctBand, shortenName, fmtRoundMs, buildAnalysisRows } from "./showdown.js";
 import { fitPodiumNames } from "./showdown-review.js";
 
 const PCT_COLOR = { "is-p0": "#dc2626", "is-p1": "#ca8a04", "is-p2": "#ea580c", "is-p3": "#2563eb", "is-p4": "#16a34a" };
@@ -68,6 +68,40 @@ function fmtDate(ms) {
 
 function safeFileBit(s) {
   return String(s || "Showdown").trim().replace(/[\\/:*?"<>|]+/g, "-").slice(0, 80) || "Showdown";
+}
+
+// ---------------------------------------------------------------
+// BRANDING LINE — Đợt 235 (teacher, 22/8/2026: "thêm dòng ANDREW CLASSES
+// mỏng, mờ, size vừa nhỏ và ở bên trên cùng, căn giữa... của mọi nội dung
+// show (kể cả các dạng file xuất) trong showdown"). Scope thầy chốt qua
+// AskUserQuestion: the big real boards and the real exported files, NOT the
+// small Recent Results match cards or the shrunk-down popup preview.
+// ONE literal string, two renderers (DOM for buildDetailsContent/
+// buildRankSheet, canvas for rankPngBlob/drawAnalysisCanvas) — every surface
+// still picks its OWN size, since a print sheet's mm-based 9px world and a
+// 1000px-square canvas have nothing in common to inherit from.
+// ---------------------------------------------------------------
+const BRAND_TEXT = "ANDREW CLASSES";
+
+function brandingLineEl(fontSizePx, marginBottomPx) {
+  const b = el("div");
+  b.style.cssText = `text-align:center;font-weight:700;letter-spacing:.14em;` +
+    `font-size:${fontSizePx}px;color:#b3bcc9;margin-bottom:${marginBottomPx}px;`;
+  b.textContent = BRAND_TEXT;
+  return b;
+}
+
+function drawBrandingCanvas(ctx, width, y, fontSizePx) {
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#b3bcc9";
+  // canvas has no `letter-spacing`; fake it by hand — this string is short
+  // and fixed, so measuring+walking it per-call costs nothing worth caching.
+  ctx.font = `700 ${fontSizePx}px ${FONT_STACK}`;
+  const tracked = BRAND_TEXT.split("").join("   ");
+  ctx.fillText(tracked, width / 2, y);
+  ctx.restore();
 }
 
 /** Icon + textContent, never icon + raw text in the same innerHTML — the same
@@ -133,9 +167,15 @@ function buildRankSheet(ranked, titleText) {
 
   const sheet = el("div");
   sheet.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");   // needed once serialised into an <svg>
-  sheet.style.cssText = `width:${SIZE}px;height:${SIZE}px;box-sizing:border-box;` +
+  sheet.style.cssText = `width:${SIZE}px;height:${SIZE}px;box-sizing:border-box;position:relative;` +
     `padding:${(PAD + vPad).toFixed(1)}px ${PAD}px;background:#ffffff;` +
     `font-family:'Baloo 2','Segoe UI',Arial,sans-serif;`;
+  // ⭐ Đợt 235 — absolute, inside the fixed PAD margin above the title band,
+  // so it never disturbs computeRankLayout()'s own row-height maths (that
+  // function has nothing to do with this line and should stay that way).
+  const brand = brandingLineEl(13, 0);
+  brand.style.cssText += "position:absolute;top:16px;left:0;right:0;";
+  sheet.append(brand);
 
   const title = el("div");
   title.style.cssText = `text-align:center;font-weight:800;color:#23303e;` +
@@ -356,6 +396,7 @@ function buildDetailsContent(ranked, titleText, fit) {
 
   const root = el("div");
   root.style.cssText = "width:100%;box-sizing:border-box;font-family:'Baloo 2','Segoe UI',Arial,sans-serif;color:#23303e;";
+  root.append(brandingLineEl(7, 6));
 
   const title = el("div");
   title.style.cssText = "text-align:center;font-weight:800;font-size:15px;letter-spacing:.03em;" +
@@ -525,6 +566,8 @@ async function rankPngBlob(ranked, titleText, scale = 2) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, SIZE, SIZE);
   ctx.textBaseline = "middle";
+
+  drawBrandingCanvas(ctx, SIZE, 22, 13);
 
   // ---- title, shrunk to fit one line ----
   ctx.fillStyle = "#23303e";
@@ -771,13 +814,15 @@ function printDetailsSheetInPage(ranked, titleText, fit) {
  *              it is active, so this popup has to live inside it, not beside it.
  *   ranked     this match's ranked pupil blocks (core/showdown.js's rankBlocks)
  *   className, actName, at   defaults for the three title fields
- *   defaultRank  which tab opens first — the caller's own current toggle
+ *   defaultType  "table" | "rank" | "details" — which tab opens first, the
+ *              caller's own current on-screen view (Đợt 235: the board and
+ *              this popup now share the same three-way vocabulary)
  *   hasRows    whether per-question detail survived for this match (a match
  *              trimmed by fitToBudget has ranking only — same rule the detail
  *              view itself already shows a line about)
  *   toast      the panel's own toast, for a failed PNG build
  */
-export function openExportDialog({ mount, ranked, className = "", actName = "", at, defaultRank = true, hasRows = true, toast = () => {} }) {
+export function openExportDialog({ mount, ranked, className = "", actName = "", at, defaultType = "table", hasRows = true, toast = () => {} }) {
   if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
 
   // ⭐ Đợt 233 — `layer` is now only the translucent backdrop; `box` is the
@@ -801,9 +846,18 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
   layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 150, easing: "ease-out" });
   box.animate([{ transform: "scale(.94)" }, { transform: "scale(1)" }], { duration: 200, easing: "cubic-bezier(.22,.9,.3,1)" });
 
-  let type = (defaultRank || !hasRows) ? "rank" : "details";
+  // ⭐ Đợt 235 — a THIRD tab, TABLE (the single-match twin of the multi-match
+  // ANALYSIS chart), first in reading order to match the board's own new
+  // default (teacher's own call: "Bảng đầu tiên... rồi Podium... cuối cùng
+  // là list"). `defaultType` arrives as whatever the caller's board is
+  // currently showing; DETAILS still needs `hasRows`, same guard as before.
+  let type = defaultType;
+  if (type === "details" && !hasRows) type = "table";
+  if (type !== "table" && type !== "rank" && type !== "details") type = "table";
 
   const types = el("div", "aw-sd-exp-types");
+  const tableBtn = el("button", "aw-sd-exp-type", `${icons.barChart}<span>TABLE</span>`);
+  tableBtn.type = "button";
   const rankBtn = el("button", "aw-sd-exp-type", `${icons.trophy}<span>RANKING</span>`);
   rankBtn.type = "button";
   const detBtn = el("button", "aw-sd-exp-type", `${icons.assignment}<span>DETAILS</span>`);
@@ -812,7 +866,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
     detBtn.disabled = true;
     detBtn.title = "The answers for this match were not kept.";
   }
-  types.append(rankBtn, detBtn);
+  types.append(tableBtn, rankBtn, detBtn);
   body.append(types);
 
   const fields = el("div", "aw-sd-exp-fields");
@@ -850,9 +904,20 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
   }
 
   function paintTypes() {
+    tableBtn.classList.toggle("is-on", type === "table");
     rankBtn.classList.toggle("is-on", type === "rank");
     detBtn.classList.toggle("is-on", type === "details");
-    goBtn.textContent = type === "rank" ? "Download PNG" : "Download PDF";
+    goBtn.textContent = type === "details" ? "Download PDF" : "Download PNG";
+  }
+
+  // ⭐ Đợt 235 — this match reshaped into `buildAnalysisRows`' own input shape
+  // (ONE entry instead of the multi-match ANALYSE screen's several) — cheap
+  // and pure, so unlike `ensureDetailsFit` this is just recomputed on demand
+  // rather than cached.
+  function singleMatchAnalysis(shown) {
+    const entries = [{ matchId: "current", label: shown, at, blocks: ranked }];
+    const { full, partial } = buildAnalysisRows(entries);
+    return { entries, full, partial };
   }
 
   // ⭐ Đợt 234 — computed ONCE per dialog, not per keystroke: `ranked` (the
@@ -873,7 +938,17 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
     const txt = composedTitle();
     titleLine.textContent = txt || "—";
     const shown = txt || "Showdown";
-    if (type === "rank") {
+    if (type === "table") {
+      const { entries, full, partial } = singleMatchAnalysis(shown);
+      const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, shown, 1);
+      const scale = Math.min(1, 260 / width);
+      const frame = el("div", "aw-sd-exp-preview-frame");
+      frame.style.width = Math.round(width * scale) + "px";
+      frame.style.height = Math.round(height * scale) + "px";
+      canvas.style.cssText = `width:${width}px;height:${height}px;transform:scale(${scale});transform-origin:top left;display:block;`;
+      frame.append(canvas);
+      previewBox.append(frame);
+    } else if (type === "rank") {
       const { node, size } = buildRankSheet(ranked, shown);
       const scale = Math.min(1, 260 / size);
       const frame = el("div", "aw-sd-exp-preview-frame");
@@ -902,6 +977,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
     }
   }
 
+  tableBtn.onclick = () => { if (type === "table") return; sound.tick(); type = "table"; paintTypes(); paintPreview(); };
   rankBtn.onclick = () => { if (type === "rank") return; sound.tick(); type = "rank"; paintTypes(); paintPreview(); };
   detBtn.onclick = () => { if (detBtn.disabled || type === "details") return; sound.tick(); type = "details"; paintTypes(); paintPreview(); };
   [clsField.input, actField.input, dateField.input].forEach(inp => inp.addEventListener("input", paintPreview));
@@ -915,7 +991,20 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
   goBtn.onclick = async () => {
     sound.click();
     const shown = composedTitle() || "Showdown";
-    if (type === "rank") {
+    if (type === "table") {
+      goBtn.disabled = true;
+      try {
+        const { entries, full, partial } = singleMatchAnalysis(shown);
+        const blob = await analysisPngBlob(full, partial, entries, shown, 2);
+        if (!blob) throw new Error("aw/png-empty");
+        triggerDownload(blob, safeFileBit(shown) + ".png");
+      } catch (e) {
+        console.warn("AWord: could not build the table image", e);
+        toast("Could not create the image.");
+      } finally {
+        goBtn.disabled = false;
+      }
+    } else if (type === "rank") {
       goBtn.disabled = true;
       try {
         const blob = await rankPngBlob(ranked, shown, 2);
@@ -991,7 +1080,11 @@ function wrapAnalysisLegend(ctx, entries, maxW) {
  * for the same reason: the stack's visible height has to land on the average
  * while the NUMBER printed inside a tier stays that match's real score.
  */
-function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1) {
+// ⭐ Đợt 235 — exported for the single-match TABLE view (core/showdown-review.js's
+// `renderReviewTable`), which dynamic-imports this module the same way
+// core/showdown-setup.js's own DOWNLOAD button already does (see that file's
+// own note on why two lazy-loaded siblings never statically import each other).
+export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1) {
   const rows = [...full, ...partial];
   const hasGroupGap = full.length > 0 && partial.length > 0;
   const plotW = Math.max(1, rows.length) * AN_BAR_W + Math.max(0, rows.length - 1) * AN_BAR_GAP
@@ -1011,6 +1104,8 @@ function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1) {
   ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, width, height);
   ctx.textBaseline = "middle";
+
+  drawBrandingCanvas(ctx, width, 18, 12);
 
   // ---- title: a small "ANALYSIS" over the teacher's own class/date line ----
   ctx.textAlign = "center";

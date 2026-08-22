@@ -866,7 +866,28 @@ html.aw-nhung .aw-below { display: none; }
 .aw-rv-close { width: 4cqw; height: 4cqw; border: none; background: transparent; color: #6b7a90; cursor: pointer; border-radius: 1cqw; display: inline-flex; align-items: center; justify-content: center; }
 .aw-rv-close svg { width: 2.6cqw; height: 2.6cqw; }
 .aw-rv-close:hover { background: #eef3f9; color: #23303e; }
+/* ⭐ Đợt 235 (teacher: "thêm dòng ANDREW CLASSES mỏng, mờ, size vừa nhỏ...
+   ở bên trên cùng, căn giữa") — a sibling BEFORE `.aw-rv-head`, not part of
+   that flex row: it needs a line of its own, above the title. */
+.aw-rv-brand {
+  text-align: center; font-weight: 700; letter-spacing: .14em;
+  font-size: 1.1cqw; color: #b3bcc9; margin-bottom: .6cqw;
+}
+/* ⭐ Đợt 235 — Table / Podium / List, next to the title, replacing the old
+   press-and-hold. Same `.aw-iconbtn` every other icon control on this screen
+   already wears (fullscreen's `.aw-sd-fsbtn`); `.is-on` is this group's own
+   colour, not that class's (`.aw-iconbtn` itself carries none). */
+.aw-rv-viewbtns { flex: 0 0 auto; display: flex; gap: .4cqw; margin-right: .6cqw; }
+.aw-rv-viewbtn.is-on { color: #2563eb; background: #eff5ff; }
 .aw-rv-list { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: safe center; gap: 0.8cqw; overflow-y: auto; }
+/* ⭐ Đợt 235 — the TABLE view's canvas, scaled to the board the same way the
+   list/podium already fill it (`flex:1 1 auto` + its own scroll, not the
+   page's). `renderReviewTable` sets the canvas element's own inline
+   `width:100%;height:auto`; this rule is only the box it scales inside of —
+   shared by both callers (this screen AND core/showdown-setup.js's
+   `openDetail`, same function, same wrapper class). */
+.aw-rv-tablewrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+.aw-rv-tablewrap canvas { max-width: 100%; }
 /* rows auto-height (grow when a long question wraps); answer columns are half-width */
 .aw-rv-row { min-height: 7cqw; display: grid; grid-template-columns: 6.8fr 1fr 1fr; gap: 0.8cqw; }
 .aw-rv-cell { border-radius: 1cqw; display: flex; align-items: center; padding: 0.6cqw 1cqw; overflow: hidden; }
@@ -4611,6 +4632,17 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sd-rec-close svg { width: 17px; height: 17px; }
 .aw-sd-rec-close:hover { border-color: #2f6fed; color: #2f6fed; background: #f6f9ff; }
 .aw-sd-rec-close.is-toggle.is-on { border-color: #efc03c; color: #e0a30c; background: #fffaeb; }
+/* ⭐ Đợt 235 — the List button, disabled the same way core/showdown-export.js's
+   own DETAILS tab already is for a match with no per-question rows. */
+.aw-sd-rec-close:disabled { opacity: .4; cursor: not-allowed; }
+.aw-sd-rec-close:disabled:hover { border-color: #e3e9f1; color: #6b7a90; background: #fff; }
+/* ⭐ Đợt 235 (teacher: "thêm dòng ANDREW CLASSES mỏng, mờ, size vừa nhỏ...
+   ở bên trên cùng, căn giữa") — a plain flex sibling ABOVE `.aw-sd-rec-head`
+   inside `.aw-sd-rec-detail`, not part of that row: it needed its own line. */
+.aw-sd-rec-brand {
+  flex: 0 0 auto; text-align: center; font-weight: 700; letter-spacing: .14em;
+  font-size: 10px; color: #b3bcc9;
+}
 .aw-sd-rec-note {
   flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: #8b93a1; text-align: center; padding: 20px;

@@ -12,16 +12,17 @@
 // THE TITLE IS THE WHOLE CONTROL PANEL (teacher's design, 17/8/2026)
 // ---------------------------------------------------------------------------
 //   SHOWDOWN  A1C • TEAM 3            <- black · class · bullet · scope
-//   └ the word SHOWDOWN is a button carrying THREE gestures:
+//   └ the word SHOWDOWN is a button carrying TWO gestures:
 //       tap        swap between THIS TEAM and THE WHOLE CLASS. "TEAM 3" folds
 //                  back into "A1C" and the class's pupil count grows out of it
 //                  ("A1C • 16 STS"), both halves turning green — green is
 //                  always "this is what you are looking at".
 //       double tap re-read the other teams from the shared table: a spinner
 //                  beside the title, then "UPDATED" for a moment, then gone.
-//       press+hold the RANKING BOARD — one column of boxes narrowing downwards
-//                  into a funnel, gold/silver/bronze cups for the top three,
-//                  and the title itself goes gold and sparkles.
+//   Which BOARD is showing (Table / Podium / List) is now three icon buttons
+//   next to the title (⭐ Đợt 235, teacher: "đồng nhất thao tác" with Recent
+//   Results' own trophy button) — a press-and-hold used to do this; a reading
+//   screen with a hidden gesture on it is a gesture nobody ever finds.
 //
 // ⚠️ WHY A HAND-WRITTEN GESTURE RECOGNISER AND NOT `press()` / `onclick`
 //   core/press.js fires at pointerDOWN, which is right for a game surface and
@@ -48,7 +49,8 @@ import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
 import {
-  fmtRoundMs, pctBand, pctOf, shortenName, groupByMember, rankBlocks, mergeClassBlocks
+  fmtRoundMs, pctBand, pctOf, shortenName, groupByMember, rankBlocks, mergeClassBlocks,
+  buildAnalysisRows
 } from "./showdown.js";
 
 // Long enough that an ordinary tap never reaches it, short enough that the
@@ -110,9 +112,12 @@ function whenDone(anim, after, ms) {
 }
 
 /**
- * tap / double-tap / press-and-hold on one element. See the header for why this
- * is written by hand. The three callbacks are mutually exclusive: a gesture
- * fires exactly one of them.
+ * tap / double-tap / (optional) press-and-hold on one element. See the header
+ * for why this is written by hand.
+ * ⭐ Đợt 235 — `onHold` is now OPTIONAL: the title's third gesture (list ↔
+ * podium) moved to the two icon buttons next to it (teacher's own call, for
+ * the same vocabulary Recent Results' trophy button already used), so the
+ * hold-timer simply never starts when a caller has nothing left for it to do.
  */
 function gestures(node, { onTap, onDouble, onHold }) {
   if (!window.PointerEvent) {          // very old browser: one gesture is better than none
@@ -131,11 +136,13 @@ function gestures(node, { onTap, onDouble, onHold }) {
     // Without it `pointerup` never arrives and the next tap is read as a double.
     try { node.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
     clearHold();
-    holdTimer = setTimeout(() => {
-      holdTimer = null; held = true;
-      clearTap();                                   // a hold is never also a tap
-      onHold();
-    }, HOLD_MS);
+    if (onHold) {
+      holdTimer = setTimeout(() => {
+        holdTimer = null; held = true;
+        clearTap();                                 // a hold is never also a tap
+        onHold();
+      }, HOLD_MS);
+    }
   });
 
   node.addEventListener("pointermove", e => {
@@ -206,8 +213,15 @@ export function mountShowdownReview({
   // to the shared table failed.
   const teamBlocks = groupByMember(review, pick.members);
 
-  let scope = "team";        // "team" | "class"
-  let podium = false;
+  // ⭐ Đợt 235 (teacher, 22/8/2026: "mặc định mở showdown ở sau game là hiện
+  // cả lớp trước, bấm vào tên mới hiện 1 đội") — REVERSED from every earlier
+  // đợt, which opened on this team and needed a tap to reach the class.
+  let scope = "class";       // "team" | "class"
+  // ⭐ Đợt 235 — three views now, not a boolean: "table" (the new per-question
+  // column chart, teacher's own default), "podium" (the funnel), "list"
+  // (every pupil's own answers). Set by the three icon buttons below, never
+  // by the title's gestures any more.
+  let view = "table";        // "table" | "podium" | "list"
   // ⚠️ Đợt 196 — `classBlocks` is set ONLY from a read that WORKED. It used to
   // be filled from the error path too ("give the class scope something to stand
   // on"), which meant one stumble pinned the class board to this team's own five
@@ -228,7 +242,7 @@ export function mountShowdownReview({
   const title = el("div", "aw-rv-title is-sd");
   const word = el("button", "aw-sd-ttl-word", "SHOWDOWN");
   word.type = "button";
-  word.title = "Tap: this team / the whole class · Double tap: refresh · Hold: ranking";
+  word.title = "Tap: this team / the whole class · Double tap: refresh";
   const clsEl = el("span", "aw-sd-ttl-class");
   clsEl.textContent = pick.className || "";         // teacher's own text
   const dot = el("span", "aw-sd-ttl-dot", "•");
@@ -247,6 +261,28 @@ export function mountShowdownReview({
   const total = el("div", "aw-rv-sdtotal");
   head.insertBefore(title, before);
   head.insertBefore(total, before);
+
+  // ⭐ Đợt 235 — Table / Podium / List, in that order (teacher's own call),
+  // next to the title — the SAME three-icon vocabulary Recent Results'
+  // openDetail now uses (core/showdown-setup.js), so a teacher who has
+  // learned one screen already knows the other.
+  const viewBtns = el("div", "aw-rv-viewbtns");
+  const tableBtn = el("button", "aw-iconbtn aw-rv-viewbtn", icons.barChart);
+  tableBtn.type = "button"; tableBtn.title = "Table";
+  const podiumBtn = el("button", "aw-iconbtn aw-rv-viewbtn", icons.trophy);
+  podiumBtn.type = "button"; podiumBtn.title = "Podium";
+  const listBtn = el("button", "aw-iconbtn aw-rv-viewbtn", icons.assignment);
+  listBtn.type = "button"; listBtn.title = "List";
+  viewBtns.append(tableBtn, podiumBtn, listBtn);
+  head.insertBefore(viewBtns, before);
+
+  // ⭐ Đợt 235 (teacher: "thêm dòng ANDREW CLASSES mỏng, mờ... ở bên trên
+  // cùng, căn giữa") — a sibling BEFORE the head row, not a child of it: `head`
+  // is the title's own flex row (title left, buttons right), and a line meant
+  // to sit ABOVE everything has no business sharing that row.
+  const brand = el("div", "aw-rv-brand");
+  brand.textContent = "ANDREW CLASSES";
+  head.before(brand);
 
   function scopeText() {
     if (scope === "team") return String(pick.teamName || "Team");
@@ -301,12 +337,20 @@ export function mountShowdownReview({
     // one word, that word, whichever scope it is standing for.
     clsEl.classList.toggle("is-on", scope === "class" || twice);
     scopeEl.classList.toggle("is-on", true);
-    title.classList.toggle("is-pod", podium);
+    // ⭐ Đợt 235 — the title's gold/sparkle only ever meant "the podium is up",
+    // and stays tied to exactly that view now that it is a button, not a hold.
+    title.classList.toggle("is-pod", view === "podium");
     paintTeamsChip();
     const b = blocks();
     const right = b.reduce((a, x) => a + x.right, 0);
     const asked = b.reduce((a, x) => a + x.total, 0);
     total.textContent = `${right}/${asked}`;
+  }
+
+  function paintViewBtns() {
+    tableBtn.classList.toggle("is-on", view === "table");
+    podiumBtn.classList.toggle("is-on", view === "podium");
+    listBtn.classList.toggle("is-on", view === "list");
   }
 
   /**
@@ -470,7 +514,7 @@ export function mountShowdownReview({
   }
 
   // ---------------------------------------------------------------
-  // THE THREE GESTURES
+  // THE TWO GESTURES + THE THREE VIEW BUTTONS
   // ---------------------------------------------------------------
   gestures(word, {
     onTap: async () => {
@@ -493,18 +537,30 @@ export function mountShowdownReview({
       if (ok) showUpdated(); else clearStatus();
       paintTitle();
       paintBody();
-    },
-    onHold: () => {
-      podium = !podium;
-      // A rising two-note lift for going up onto the podium, the reverse coming
-      // back down — the same vocabulary core/showdown-setup.js uses.
-      sound.glide(podium
-        ? { freq: 660, freqEnd: 1180, dur: 240, gain: 0.08, type: "triangle" }
-        : { freq: 1000, freqEnd: 620, dur: 200, gain: 0.06, type: "triangle" });
-      paintTitle();
-      paintBody();
     }
   });
+
+  function setView(v) {
+    if (view === v) return;
+    // A rising two-note lift for going UP onto the podium, the reverse coming
+    // back DOWN off it — the same vocabulary core/showdown-setup.js uses;
+    // switching between the other two views just gets the plain tick every
+    // other button on this screen uses.
+    if (v === "podium") {
+      sound.glide({ freq: 660, freqEnd: 1180, dur: 240, gain: 0.08, type: "triangle" });
+    } else if (view === "podium") {
+      sound.glide({ freq: 1000, freqEnd: 620, dur: 200, gain: 0.06, type: "triangle" });
+    } else {
+      sound.tick();
+    }
+    view = v;
+    paintViewBtns();
+    paintTitle();
+    paintBody();
+  }
+  tableBtn.onclick = () => setView("table");
+  podiumBtn.onclick = () => setView("podium");
+  listBtn.onclick = () => setView("list");
 
   // ---------------------------------------------------------------
   // THE LIST — every pupil, their questions under their name
@@ -608,8 +664,8 @@ export function mountShowdownReview({
     // ⚠️ Đợt 207 — `.aw-sd-podwrap` joined this list. The podium's root is now a
     // wrapper holding the scroller AND the two tick counters; removing only
     // `.aw-sd-pod` would leave an empty wrapper (and a pair of stale counts)
-    // behind on every repaint.
-    host.querySelectorAll(".aw-sd-rv, .aw-sd-podwrap, .aw-sd-warn").forEach(n => n.remove());
+    // behind on every repaint. ⭐ Đợt 235 — `.aw-rv-tablewrap` joined it too.
+    host.querySelectorAll(".aw-sd-rv, .aw-sd-podwrap, .aw-sd-warn, .aw-rv-tablewrap").forEach(n => n.remove());
     const lines = warnings();
     if (lines.length) {
       const box = el("div", "aw-sd-warn");
@@ -624,16 +680,48 @@ export function mountShowdownReview({
       host.append(box);
     }
     const ranked = rankBlocks(blocks());
-    host.append(podium ? renderPodium(ranked) : renderList(ranked));
-    // ⚠️ AFTER the append, never before: fitPodiumNames measures, and a board
-    // that is not in the document has no width to measure against.
-    if (podium) fitPodiumNames(host);
+    if (view === "table") {
+      host.append(renderReviewTable(ranked, pick.className || "Showdown"));
+    } else if (view === "podium") {
+      host.append(renderPodium(ranked));
+      // ⚠️ AFTER the append, never before: fitPodiumNames measures, and a board
+      // that is not in the document has no width to measure against.
+      fitPodiumNames(host);
+    } else {
+      host.append(renderList(ranked));
+    }
   }
 
+  let disposed = false;
+
+  /**
+   * ⭐ Đợt 235 — the default scope is CLASS now (see `scope` above), so the
+   * very first thing on screen has always needed the shared table. That used
+   * to be deferred until the teacher's first tap into class; now it runs at
+   * mount instead, behind a floor of at least 3s (teacher's own words: "tránh
+   * thiếu dữ liệu") — a Firestore write from a browser that finished a beat
+   * late can still be in flight the instant this screen opens, and a board
+   * that stops "loading" the moment ITS OWN read lands can show a class as
+   * complete a half-second before the last column's row actually arrives.
+   * `startWatching()`'s listener may well deliver a snapshot and repaint
+   * everything DURING this floor — that is fine, this promise only decides
+   * when the spinner goes away, never what gets drawn.
+   */
+  async function initialLoad() {
+    const floor = new Promise(r => setTimeout(r, 3000));
+    await Promise.all([refresh(), floor]);
+    if (disposed) return;
+    clearStatus();
+    paintTitle();
+    paintBody();
+  }
+
+  paintViewBtns();
   paintTitle();
   paintBody();
   startWatching();
   retryOwnPublish();
+  initialLoad();
 
   /**
    * ⚠️ MUST be called when the review closes. A Firestore listener left running
@@ -641,6 +729,7 @@ export function mountShowdownReview({
    * costs nothing visible and keeps costing it for the rest of the lesson.
    */
   return function dispose() {
+    disposed = true;
     if (stopWatch) { try { stopWatch(); } catch { /* already gone */ } stopWatch = null; }
     if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
     // ⭐ Đợt 207 — the same rule as the listener above, applied to the two things
@@ -673,6 +762,40 @@ export function mountShowdownReview({
 // file is imported statically by the engine (see the header, luật 2 of v0.9.0),
 // and the history screen imports it, never the other way round.
 // =============================================================
+
+/**
+ * ⭐ Đợt 235 — THE TABLE: the single-match twin of core/showdown-export.js's
+ * multi-match ANALYSIS chart (teacher: "thêm 1 dạng show/file xuất nữa là
+ * dạng bảng có các cột như trong ANALYSIS png... vào trong các bảng đơn nữa
+ * của 1 buổi"), now the DEFAULT view both here and in Recent Results'
+ * `openDetail` (core/showdown-setup.js).
+ *
+ * Returns its wrapper SYNCHRONOUSLY, like `renderReviewList`/
+ * `renderReviewPodium` — `paintBody()` just appends whatever this returns and
+ * never awaits it — then fills the wrapper in once the drawing code (lazy,
+ * dynamic-imported the same way `openDetail`'s own DOWNLOAD button already
+ * loads that module) has actually run. `buildAnalysisRows` itself is pure and
+ * already imported from core/showdown.js — only the CANVAS PAINTING lives in
+ * the lazy-loaded sibling, so that is the only part fetched on demand.
+ */
+export function renderReviewTable(ranked, titleText) {
+  const wrap = el("div", "aw-rv-tablewrap");
+  const note = el("div", "aw-sd-rec-note", "Building the table…");
+  wrap.append(note);
+  const entries = [{ matchId: "current", label: titleText, at: Date.now(), blocks: ranked }];
+  const { full, partial } = buildAnalysisRows(entries);
+  import("./showdown-export.js").then(mod => {
+    if (!wrap.isConnected) return;             // the teacher already left/switched view
+    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, 1);
+    wrap.innerHTML = "";
+    canvas.style.cssText = "width:100%;height:auto;display:block;";
+    wrap.append(canvas);
+  }).catch(e => {
+    console.warn("AWord: could not build the table view", e);
+    note.textContent = "Could not build the table.";
+  });
+  return wrap;
+}
 
 /** Every pupil, their questions under their name. */
 export function renderReviewList(ranked, { showTeam = false } = {}) {

@@ -137,6 +137,12 @@ export const icons = {
   folder: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>`,
   search: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>`,
 
+  // ⭐ Đợt 235 — the third view button next to the trophy (List/Podium), for
+  // the new per-match TABLE view (core/showdown-export.js's single-match
+  // analysis chart): four bars of different heights read as "a chart of
+  // columns" at a glance, the same reason `trophy` reads as ranking.
+  barChart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M9.5 20V4M15 20V13M20 20V7"/></svg>`,
+
   // ----- Showdown's ranking board (Đợt 177) -----
   // A cup with handles, stem and base. FILLED, not stroked: at podium size a
   // hairline outline vanishes on a projector, and the whole point of these three
