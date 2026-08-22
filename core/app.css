@@ -3321,6 +3321,19 @@ html.aw-nhung .aw-below { display: none; }
 @media print {
   html, body { background: #fff !important; }
   #app { display: none !important; }
+  /* ⚠️ Đợt 231 — hiding #app is not enough on its own. Showdown's overlays
+     (`.aw-sd-recent`, `.aw-sd-rec-detail`, `.aw-sd-exp` — all `inset:0`, all
+     `background:#fff`) cover the whole viewport, and while the detail view is
+     fullscreen it lives in the TOP LAYER, which an ancestor's `display:none`
+     does not reach. One of them was being rasterised into an opaque white
+     bitmap and stamped over every printed page (thầy's TEST.pdf: 25 pages, the
+     real vector answers present underneath, one all-white JPEG painted last on
+     each of them). Nothing but the sheet has any business on the paper, so say
+     exactly that rather than naming boxes one at a time.
+     The DETAILS sheet no longer prints through this page at all (it gets its own
+     iframe — see core/showdown-export.js), but core/print.js and
+     templates/running-team/rt-print.js still do. */
+  body > *:not(.aw-print-sheet) { display: none !important; }
   /* @page (size/margin + the running head/foot as margin-box content) is
      injected per print run by core/print.js — pageChromeStyle() — because the
      header line needs the activity's own title baked into `content`. */

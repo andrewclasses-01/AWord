@@ -5,6 +5,66 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 231 (22/8/2026) — 🐞 VÁ LỖI: XUẤT PDF ĐÁP ÁN (DETAILS) RA FILE TOÀN TRANG TRẮNG — 🟢 CHỜ THẦY BẤM TAY THẬT
+
+Thầy báo: xuất PDF phần answers ở Showdown thì Nitro Pro nói *"could not be opened because it's
+damaged and cannot be repaired"*; mở bằng Photoshop thì được nhưng **toàn trang trắng**.
+
+**⚠️⚠️ KHÁM NGHIỆM FILE THẬT, KHÔNG ĐOÁN.** Mổ `C:\Users\ANDREW CLASSES\Desktop\TEST.pdf` (5,85 MB)
+bằng `pypdf` + `pypdfium2`:
+- 25 trang, Producer `Microsoft: Print To PDF`, Title `AWord in ANDREW CLASSES` → đúng là file do
+  trang AWord in ra.
+- **KHÔNG có font nào, KHÔNG có lệnh chữ (`Tj`/`TJ`)**, nhưng có **828 lệnh tô nét** mỗi trang → nội
+  dung đáp án ĐÃ được vẽ ra đầy đủ, dạng đường nét.
+- **Lệnh CUỐI CÙNG của mỗi trang** dán một ảnh JPEG 2147×3154, `getextrema()` ra **(255,255)** cả 3
+  kênh — **trắng tinh tuyệt đối** — phủ đúng khung nội dung `@page` (687.84 × 1009.92 pt). **Cùng MỘT
+  ảnh trên cả 25 trang.**
+- Xoá đúng một lệnh `/Image1 Do` rồi render lại: **toàn bộ tờ đáp án hiện ra hoàn hảo** (điểm ảnh có
+  mực 0% → 5,24%), đọc rõ tên HS, câu hỏi, nhãn ✓/✗, %.
+
+⇒ Tờ giấy **chưa bao giờ là vấn đề**. Một lớp phủ của chính trang AWord bị **ảnh hoá thành bitmap
+trắng đục** rồi dán đè lên mọi trang. Ứng viên đều trắng và đều `inset:0`: `.aw-sd-recent` ·
+`.aw-sd-rec-detail` · `.aw-sd-exp` (`core/app.css`). Màn chi tiết lại đang **fullscreen** lúc thầy
+bấm, tức nằm trong **TOP LAYER** — nơi `@media print { #app{display:none} }` **với tới không được**.
+
+**Đã thử tái hiện 4 lần** (Chrome thật, fullscreen thật, module thật + CSS thật, trên cả bản live lẫn
+localhost, có cả cú `closeDetail()` fade khi Chrome tự thoát fullscreen lúc in) — **không lần nào tái
+hiện được**, bản in đều ra đủ chữ. Nên KHÔNG săn tiếp xem trình duyệt/máy nào thua ở nước nào, mà
+**đổi kiến trúc để lỗi đó không còn cửa xảy ra**.
+
+**CÁCH SỬA — in từ IFRAME RIÊNG, không in trang này nữa** (`core/showdown-export.js`,
+`printDetailsSheet`). Dựng một `<iframe>` cùng gốc, bên trong **chỉ có tờ giấy**, rồi gọi
+`frame.contentWindow.print()` — lệnh này in **tài liệu của khung đó**, nên không lớp phủ / top layer /
+trạng thái fullscreen nào của trang AWord chạm tới tờ giấy được nữa.
+- Chép `<link rel=stylesheet>` của trang vào khung bằng **href tuyệt đối** (`link.href`) + thẻ `<base>`
+  → giữ nguyên font Baloo 2 và các nhãn đáp án `.aw-exp-mk`.
+- **⚠️ Bọc nội dung trong `div.aw-print-sheet`** — không phải cho đẹp: luật mới ở `app.css` (dưới) ẩn
+  `body > *:not(.aw-print-sheet)` khi in, nên bọc thiếu class là **in ra đúng 1 trang trắng** — đã
+  dính thật một lần lúc thử, sửa xong mới ra 17 trang có chữ.
+- Iframe treo ở `document.body`, **CỐ Ý không treo vào phần tử fullscreen**: thoát fullscreen là
+  `closeDetail()` (`core/showdown-setup.js`) xoá màn chi tiết, sẽ mang theo cả iframe đang in dở.
+- Đợi `doc.fonts.ready` (đua với timeout 3s, vì tab chạy nền có thể treo lời hứa này) rồi mới in, kẻo
+  tờ giấy in bằng font dự phòng.
+- Vẫn giữ đường cũ làm **fallback** (`printDetailsSheetInPage`) nếu iframe bị chặn.
+
+**CHẶN THÊM MỘT LỚP NỮA** (`core/app.css`, trong `@media print`): thêm
+`body > *:not(.aw-print-sheet) { display: none !important; }`. `#app{display:none}` một mình không đủ.
+Luật này lo cho **hai đường in còn lại** vẫn in từ trang chính: `core/print.js` và
+`templates/running-team/rt-print.js`.
+
+**ĐÃ THỬ THẬT (Chrome, localhost bản sửa):**
+- DETAILS → Download PDF trong fullscreen: bản xem trước ra **17 tờ, có tiêu đề + nội dung** ✓
+- Phiếu bài tập kiểu `core/print.js`: cố tình dựng thêm lớp `.aw-sd-recent` trắng phủ kín màn hình rồi
+  in → **vẫn in đủ 20 dòng, 2 cột** ✓ (trước luật mới thì đúng lớp phủ này là thứ bôi trắng)
+
+**🟢 CÒN CHỜ:** thầy bấm tay thật trên máy thầy, xuất lại PDF và mở bằng Nitro Pro.
+
+⚠️ Ghi lại một bản vá SAI đã lỡ đẩy trước đó cùng buổi (commit `056b5af`): đoán rằng
+`break-inside:avoid` trên khối một HS làm hỏng file. **Sai** — đã hoàn nguyên đúng nguyên bản. Bài
+học: file PDF hỏng thì **mổ file trước, đừng suy từ CSS ra**.
+
+---
+
 ## Đợt 230 (22/8/2026) — ⭐⭐ RECENT RESULTS: ĐỔI TÊN TRẬN + TÊN TỰ ĐỘNG THEO LOẠI TỪ, ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH, VÁ LỖI "Back to the matches" KHI FULLSCREEN — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `c14afc9`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `c14afc9` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`core/showdown.js` · `core/showdown-history.js` · `core/showdown-setup.js` · `core/showdown-export.js` · `core/engine.js` · `core/app.css`, băm nội dung trong commit qua `git show c14afc9:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 ⚠️ Duyệt ở đây là duyệt CODE theo báo cáo + bàn thử tự động — xem mục "CHỜ THẦY BẤM TAY THẬT" ngay
 dưới, vẫn còn nguyên (chưa ai chạm 2 lần thật trên TOMKO, chưa ai bấm fullscreen thật).

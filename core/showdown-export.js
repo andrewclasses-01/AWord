@@ -226,13 +226,10 @@ function buildDetailsContent(ranked, titleText) {
     const block = el("div");
     block.style.cssText = `margin-bottom:${i < ranked.length - 1 ? DETAIL_BLOCK_GAP_MM : 0}mm;` +
       "padding-bottom:3.4mm;border-bottom:0.3mm solid #e3e9f1;";
-    // `break-inside:avoid` used to sit on the WHOLE pupil block — fine for a
-    // short one, but a pupil with many rows can run taller than a page, and
-    // forcing "never split this" on something that has to split anyway is
-    // what corrupted the printed PDF (Nitro Pro: "damaged and cannot be
-    // repaired"). Moved down to each question row instead (below): a row
-    // never splits mid-question, but the page break can still fall between
-    // rows when a pupil's block runs long.
+    // `break-inside:avoid` only bites when it can — a block taller than one
+    // page still has to spill somewhere, which is what "avoid" (not "always")
+    // means: best effort, never a silent crash.
+    block.style.breakInside = "avoid";
 
     const head = el("div");
     head.style.cssText = "display:flex;align-items:baseline;justify-content:space-between;gap:6mm;margin-bottom:2.6mm;";
@@ -261,7 +258,6 @@ function buildDetailsContent(ranked, titleText) {
     (b.rows || []).forEach(r => {
       const line = el("div");
       line.style.cssText = "display:flex;gap:3mm;font-size:9.5px;line-height:1.5;margin-bottom:1.6mm;";
-      line.style.breakInside = "avoid";
       const num = el("span");
       num.style.cssText = "flex:0 0 auto;width:5.5mm;color:#8b93a1;font-weight:700;";
       num.textContent = String(r.n);
@@ -448,12 +444,121 @@ function triggerDownload(blob, filename) {
 }
 
 // ---------------------------------------------------------------
-// PDF — same idiom as templates/running-team/rt-print.js: a `.aw-print-sheet`
-// hidden on screen (core/app.css) and revealed only by @media print, plus a
-// dynamically-injected @page rule (own copy per print run, so this never
-// collides with core/print.js's or rt-print.js's own @page).
+// PDF — printed from an IFRAME OF ITS OWN, not from this page.
+//
+// ⚠️⚠️ THE BUG THIS EXISTS FOR (22/8/2026, thầy: "xuất pdf phần answers thì file
+// báo lỗi không đọc được", then "import vào photoshop được nhưng toàn trang
+// trắng"). Forensics on thầy's own TEST.pdf, not a guess:
+//   • 25 pages, Producer "Microsoft: Print To PDF"
+//   • NO fonts and NO text operators anywhere — but 828 vector fills per page,
+//     i.e. the answers WERE drawn correctly
+//   • the LAST operator on every page draws one 2147x3154 JPEG, every pixel
+//     (255,255,255), covering exactly the @page content box — the SAME image on
+//     all 25 pages
+//   • deleting that one `/Image1 Do` and re-rendering brings the whole sheet
+//     back, perfectly laid out
+// So the sheet was never the problem: something on the AWord page underneath was
+// promoted to a composited layer, rasterised to an opaque white bitmap, and
+// painted OVER the sheet on every page. The candidates are all white and all
+// `inset:0` (`.aw-sd-recent`, `.aw-sd-rec-detail`, `.aw-sd-exp` in core/app.css),
+// and the detail view is fullscreen while this runs, which puts it in the top
+// layer where `@media print { #app { display:none } }` cannot reach it.
+//
+// Rather than chase which element wins that race in which browser, this prints a
+// document that CANNOT contain any of them: a same-origin iframe holding nothing
+// but the sheet. `frame.contentWindow.print()` prints that frame's own document,
+// so no overlay, no top layer and no fullscreen state on this page can reach the
+// paper. The page's own stylesheets are copied in (absolute hrefs + a <base>) so
+// Baloo 2 and the `.aw-exp-mk` answer marks look exactly as they did before.
+//
+// The iframe hangs off `document.body`, deliberately NOT off the fullscreen
+// element: leaving fullscreen makes core/showdown-setup.js's `closeDetail()`
+// remove the detail view, which would take the iframe (and the half-printed
+// document) with it.
 // ---------------------------------------------------------------
 function printDetailsSheet(ranked, titleText) {
+  let frame;
+  try {
+    frame = document.createElement("iframe");
+    frame.setAttribute("aria-hidden", "true");
+    frame.title = "AWord print sheet";
+    // Off-screen but STILL LAID OUT — `display:none` would give the document no
+    // layout at all, and a frame with no layout prints nothing.
+    frame.style.cssText = "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;";
+    document.body.append(frame);
+
+    const doc = frame.contentDocument;
+    doc.open();
+    doc.write("<!doctype html><html><head><meta charset='utf-8'>" +
+              `<base href="${location.href.replace(/"/g, "&quot;")}">` +
+              "</head><body></body></html>");
+    doc.close();
+
+    // The page's own CSS, by ABSOLUTE url (`link.href` resolves it for us — the
+    // attribute as written is relative, and relative to this new document it
+    // would point nowhere).
+    document.querySelectorAll('link[rel="stylesheet"]').forEach(l => {
+      const c = doc.createElement("link");
+      c.rel = "stylesheet";
+      c.href = l.href;
+      doc.head.append(c);
+    });
+
+    const own = doc.createElement("style");
+    own.textContent =
+      "@page { size: A4; margin: 15mm 14mm; }" +
+      "html,body { margin:0; background:#fff;" +
+      // the ✓/✗ marks are background colours; without this they print blank
+      // (same reason core/app.css sets it on `.aw-print-sheet`).
+      "  -webkit-print-color-adjust: exact; print-color-adjust: exact; }";
+    doc.head.append(own);
+
+    // ⚠️ MUST carry `aw-print-sheet`, and this is not decoration: the copied
+    // core/app.css hides `body > *:not(.aw-print-sheet)` inside @media print, so
+    // an unclassed wrapper prints one perfectly blank page — measured, by doing
+    // exactly that once. The class also hands it the sheet's own print rules
+    // (Baloo 2, colour + `print-color-adjust: exact`).
+    const sheet = doc.createElement("div");
+    sheet.className = "aw-print-sheet";
+    sheet.append(buildDetailsContent(ranked, titleText));
+    doc.body.append(sheet);
+
+    let done = false;
+    const cleanup = () => {
+      if (done) return;
+      done = true;
+      frame.remove();
+    };
+    frame.contentWindow.addEventListener("afterprint", cleanup);
+
+    const go = () => {
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch (e) {
+        console.warn("AWord: printing the sheet iframe failed", e);
+        cleanup();
+      }
+    };
+    // Web fonts first: printing mid-swap sets the whole sheet in the fallback
+    // face. `fonts.ready` can sit unresolved on a backgrounded tab, so it races
+    // a timeout, the same belt-and-braces every other screen here uses.
+    let started = false;
+    const once = () => { if (started) return; started = true; setTimeout(go, 60); };
+    (doc.fonts && doc.fonts.ready ? doc.fonts.ready : Promise.resolve()).then(once, once);
+    setTimeout(once, 3000);
+    setTimeout(cleanup, 120000);
+  } catch (e) {
+    // Never leave the teacher with a dead button: fall back to the old
+    // print-this-page route if an iframe is refused for any reason.
+    console.warn("AWord: falling back to printing the page itself", e);
+    if (frame) frame.remove();
+    printDetailsSheetInPage(ranked, titleText);
+  }
+}
+
+/** The pre-Đợt-231 route, kept only as the fallback above. */
+function printDetailsSheetInPage(ranked, titleText) {
   const sheet = el("div", "aw-print-sheet");
   const style = document.createElement("style");
   style.textContent = `@page { size: A4; margin: 15mm 14mm; }`;
