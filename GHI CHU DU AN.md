@@ -45,6 +45,11 @@ chỗ chung để "viền sát nút", xem `07-ARCHITECTURE.md`/nhận xét trong
 — xem `GHI CHU DU AN.md`/`CLAUDE.md` bên đó mục cùng ngày. **GẮN CHẶT với myActivity phiên bản mới**
 giống cặp Đợt 197 ↔ v2.4.0 cũ — đừng revert lẻ một bên.
 
+✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) —
+**COMMIT `b8ee6ec`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b8ee6ec` trạng thái `built`
+(không tin mã 200) · mã băm SHA-256 khớp cho `core/engine.js` (file DUY NHẤT đổi mã nguồn đợt này).
+⚠️ Duyệt ở đây là duyệt CODE theo báo cáo — xem mục CHỜ TEST TOMKO ngay dưới, vẫn còn nguyên.
+
 ⬜ **CHƯA TEST TOMKO**: mọi thứ mới kiểm `node --check` cú pháp, CHƯA chạy tay trên máy cảm ứng thật.
 Đặc biệt cần đo: (a) `OPTLIVE` gọi `applyOptions()` = restart thật ván chơi (`replayCurrent()`) trên
 MỌI bảng khác mỗi ~350ms lúc đang kéo — có giật/lag không, nhất là màn 4-5 cột; (b) Showdown mở đúng

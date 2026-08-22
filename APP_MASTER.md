@@ -18,11 +18,17 @@
 > `awEmit("OPTLIVE",…)`, TAG riêng KHÁC `OPT` (chỉ phát lúc Apply, giữ nguyên cũ) — cho myActivity
 > phản chiếu tức thời lúc đang kéo dở, chưa Apply. `buildOptionsPanel` phát `awEmit("TOOLOPEN",…)`
 > ngay lúc mở (1 emit đủ cho cả Options/Template/Style vì Đợt 228 hôm nay đã dồn cả 3 vào 1 popup).
-> **CHƯA THẦY DUYỆT — mới `node --check` cú pháp, CHƯA chạy tay trên máy thật.** Việc bên
-> myActivity (nơi thật sự dùng các API này) xem `E:\LAP TRINH APP\myActivity\CLAUDE.md` /
+> ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) —
+> **COMMIT `b8ee6ec`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b8ee6ec` trạng thái `built`
+> (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **mã băm SHA-256
+> khớp** cho `core/engine.js` (file DUY NHẤT đổi mã nguồn đợt này — `APP_MASTER.md`/`GHI CHU DU AN.md`
+> chỉ là tài liệu), băm nội dung trong commit (`git show b8ee6ec:core/engine.js`) so với
+> `curl https://aword.andrewclasses.com/core/engine.js`.
+> ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE theo báo cáo/mô tả — CHƯA phải đã bấm thử tay trên TOMKO.**
+> Việc bên myActivity (nơi thật sự dùng các API này) xem `E:\LAP TRINH APP\myActivity\CLAUDE.md` /
 > `GHI CHU DU AN.md` mục cùng ngày — **GẮN CHẶT hai bên, đừng revert lẻ một bên** (giống cặp Đợt 197
 > ↔ myActivity v2.4.0 cũ). Đọc khối **Đợt 229** đầu `GHI CHU DU AN.md` để biết chi tiết + danh sách
-> CHỜ TEST TOMKO.
+> CHỜ TEST TOMKO (vẫn còn nguyên, xem mục đó).
 >
 > ---
 > Trước đó: **22/8/2026 (Đợt 228)** — ⭐⭐ **CHANGE TEMPLATE + STYLE DỌN VÀO THẲNG POPUP
