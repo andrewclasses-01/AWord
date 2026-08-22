@@ -221,7 +221,139 @@ function statEl(label, valueHtml) {
   return s;
 }
 
-function buildDetailsContent(ranked, titleText) {
+const DETAILS_FONT_STACK = "'Baloo 2','Segoe UI',Arial,sans-serif";
+// The one deliberate breathing room in the fit budget below — not measured
+// from anything, just "a little" (teacher's own word) kept fixed regardless
+// of font size, the same way `.aw-sd-rv-body`'s own `gap` is a flat value on
+// screen rather than something that grows with the text inside it.
+const DETAILS_COL_GAP_MM = 2;
+
+/** mm → px, asked of the browser rather than assumed — the one thing this
+ *  file never hard-codes a DPI constant for anywhere else either. */
+function pxOfMm(mm) {
+  const probe = el("div");
+  probe.style.cssText = `position:fixed;left:-99999px;top:0;width:${mm}mm;`;
+  document.body.append(probe);
+  const px = probe.offsetWidth;
+  probe.remove();
+  return px;
+}
+
+/** Cheap, approximate, ONLY for picking WHICH row is worst — canvas metrics
+ *  slightly under/overcount a mark()'s own icon+padding chrome, which is
+ *  exactly why the real fontFitDetails() below re-measures the two winners
+ *  with real DOM instead of trusting this number for the final size. */
+function rankWidestDetailRows(ranked) {
+  const ctx = document.createElement("canvas").getContext("2d");
+  ctx.font = `700 10px ${DETAILS_FONT_STACK}`;
+  let widestClue = null, widestClueW = -1;
+  let widestAns = null, widestAnsW = -1;
+  ranked.forEach(b => (b.rows || []).forEach(r => {
+    const cw = ctx.measureText(r.question || "").width;
+    if (cw > widestClueW) { widestClueW = cw; widestClue = r; }
+    const timeTxt = (r.correct && r.roundMs != null) ? fmtRoundMs(r.roundMs).replace(/<[^>]+>/g, "") : "";
+    const ansTxt = r.correct
+      ? timeTxt + (r.correctText || "")
+      : (r.answered ? (r.yourText || "") : "No answer") + (r.correctText || "");
+    const aw = ctx.measureText(ansTxt).width;
+    if (aw > widestAnsW) { widestAnsW = aw; widestAns = r; }
+  }));
+  return { widestClue, widestAns };
+}
+
+/**
+ * ⭐⭐ Đợt 234 (teacher, 22/8/2026: "cần có thêm 1 bước xác định size chữ/ô
+ * câu trả lời tối đa để... vị trí xa nhất của câu hỏi có text dài nhất và vị
+ * trí xa nhất của câu có phần (thời gian + câu trả lời sai + câu trả lời
+ * đúng) là chỉ gần chạm nhau, không vượt quá nhau") — finds the LARGEST font
+ * size at which that still holds, for real, instead of the flat 9.5px every
+ * earlier đợt of this sheet guessed at.
+ *
+ * Two REAL DOM probes, not canvas text metrics for the final decision: a
+ * mark()'s pixel width is icon + padding + border-radius + Baloo 2 metrics,
+ * and the only way to know that number exactly is to build the actual
+ * element and ask the browser — the same reason `pxOfMm` above asks rather
+ * than assumes a DPI. `rankWidestDetailRows` above picks WHICH row to probe
+ * (canvas metrics are fine for ranking, just not for the final pixel count).
+ *
+ * Binary search, not a closed-form solve: `ctx.measureText` has no inverse,
+ * and the widths here mix a fixed part (icon+padding, constant regardless of
+ * font size) with a variable part (the text inside), so "how big can the
+ * font be" has no algebra shortcut — it does have a monotonic one (bigger
+ * font ⇒ never a narrower probe), which is exactly what binary search needs.
+ */
+async function computeDetailsFontSizePx(ranked) {
+  await (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve());
+
+  const { widestClue, widestAns } = rankWidestDetailRows(ranked);
+  if (!widestClue || !widestAns) return { fontSizePx: 9.5, clueColPx: 0, ansColPx: 0 };
+
+  const scratch = el("div");
+  scratch.style.cssText = `position:fixed;left:-99999px;top:0;font-family:${DETAILS_FONT_STACK};`;
+  document.body.append(scratch);
+
+  const clueProbe = el("div");
+  clueProbe.style.cssText = "display:inline-block;white-space:nowrap;font-weight:700;";
+  clueProbe.textContent = widestClue.question;                   // the act's own text: textContent only
+
+  const ansProbe = el("div");
+  ansProbe.style.cssText = "display:flex;align-items:center;flex-wrap:nowrap;gap:1.6mm;";
+  if (widestAns.correct) {
+    if (widestAns.roundMs != null) {
+      const t = el("span");
+      t.style.cssText = "font-weight:800;white-space:nowrap;";
+      t.innerHTML = fmtRoundMs(widestAns.roundMs);
+      ansProbe.append(t);
+    }
+    ansProbe.append(mark("is-ok", icons.check, widestAns.correctText));
+  } else {
+    ansProbe.append(mark("is-bad", icons.cross, widestAns.answered ? widestAns.yourText : "No answer"));
+    ansProbe.append(mark("is-ok", icons.check, widestAns.correctText));
+  }
+  scratch.append(clueProbe, ansProbe);
+
+  const numColPx = pxOfMm(5.5);
+  const rowGapPx = pxOfMm(3);
+  const colGapPx = pxOfMm(DETAILS_COL_GAP_MM);
+  const availablePx = pxOfMm(182) - numColPx - rowGapPx;         // 210mm − 14mm×2 @page margin
+
+  const fits = px => {
+    clueProbe.style.fontSize = px + "px";
+    ansProbe.style.fontSize = px + "px";
+    const clueW = clueProbe.getBoundingClientRect().width;
+    const ansW = ansProbe.getBoundingClientRect().width;
+    return (clueW + colGapPx + ansW) <= availablePx;
+  };
+
+  let lo = 7, hi = 16;
+  if (fits(lo)) {
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid)) lo = mid; else hi = mid;
+    }
+  }
+  // Floor, never round — rounding UP could land a hair past the last size
+  // that actually fit.
+  const fontSizePx = Math.floor(lo * 10) / 10;
+  fits(fontSizePx);   // leave both probes at the size that is actually used
+  // +2px of slack on each column: the exported PDF is measured in THIS
+  // document but painted inside a separate iframe document (see
+  // printDetailsSheet's own note on why) — same fonts, same engine, but
+  // "exactly 0px to spare" is not a bet worth making across that boundary.
+  const clueColPx = Math.ceil(clueProbe.getBoundingClientRect().width) + 2;
+  const ansColPx = Math.ceil(ansProbe.getBoundingClientRect().width) + 2;
+
+  scratch.remove();
+  return { fontSizePx, clueColPx, ansColPx };
+}
+
+function buildDetailsContent(ranked, titleText, fit) {
+  // A defensive fallback only — every real caller in this file always runs
+  // computeDetailsFontSizePx() first and passes its result straight through.
+  const f = fit || { fontSizePx: 9.5, clueColPx: null, ansColPx: null };
+  const gridCols = (f.clueColPx != null && f.ansColPx != null)
+    ? `${f.clueColPx}px ${f.ansColPx}px` : "1.5fr 1fr";
+
   const root = el("div");
   root.style.cssText = "width:100%;box-sizing:border-box;font-family:'Baloo 2','Segoe UI',Arial,sans-serif;color:#23303e;";
 
@@ -255,13 +387,14 @@ function buildDetailsContent(ranked, titleText) {
     const head = el("div");
     head.style.cssText = "margin-bottom:2.2mm;";
 
+    // ⭐ Đợt 234 — name + stats both centred (teacher's own call).
     const who = el("div");
-    who.style.cssText = "font-weight:800;font-size:12.5px;overflow-wrap:break-word;margin-bottom:1.4mm;";
+    who.style.cssText = "font-weight:800;font-size:12.5px;overflow-wrap:break-word;margin-bottom:1.4mm;text-align:center;";
     who.textContent = `${i + 1}. ${b.name}`;                      // pupil's own name: textContent only
     head.append(who);
 
     const stats = el("div");
-    stats.style.cssText = "display:flex;flex-wrap:wrap;gap:1mm 5mm;font-size:9px;color:#6b7a90;font-weight:700;";
+    stats.style.cssText = "display:flex;flex-wrap:wrap;justify-content:center;gap:1mm 5mm;font-size:9px;color:#6b7a90;font-weight:700;";
     // No round clock this game (`!b.hasTime`) ⇒ no time line — same rule the
     // on-screen tally uses, rather than printing "0:00" for a number that was
     // never actually measured.
@@ -284,12 +417,21 @@ function buildDetailsContent(ranked, titleText) {
     // replacing the old stacked "question line, then a line of marks below it".
     (b.rows || []).forEach(r => {
       const line = el("div");
-      line.style.cssText = "display:flex;align-items:center;gap:3mm;font-size:9.5px;line-height:1.4;margin-bottom:2mm;";
+      // ⭐ Đợt 234 — font-size is `f.fontSizePx` (computeDetailsFontSizePx's
+      // answer, the LARGEST size the sheet's own worst-case row still fits at),
+      // and `margin-bottom` is down to "a few px" (teacher's own words) from
+      // the 2mm every earlier đợt used — the row-to-row gap that made this
+      // sheet feel wasteful on a phone screen was spacing, not the text itself.
+      line.style.cssText = `display:flex;align-items:center;gap:3mm;font-size:${f.fontSizePx}px;line-height:1.25;margin-bottom:0.7mm;`;
       const num = el("span");
       num.style.cssText = "flex:0 0 auto;width:5.5mm;color:#8b93a1;font-weight:700;";
       num.textContent = String(r.n);
       const body = el("div");
-      body.style.cssText = "flex:1 1 auto;min-width:0;display:grid;grid-template-columns:1.5fr 1fr;gap:3mm;align-items:center;";
+      // ⭐ Đợt 234 — fixed px columns from the SAME fit, not a `1.5fr 1fr` ratio:
+      // a ratio just splits whatever width happens to be available, it does not
+      // know where "the longest question" or "the widest answer group" actually
+      // end — these two numbers are those two edges, measured for real.
+      body.style.cssText = `flex:1 1 auto;min-width:0;display:grid;grid-template-columns:${gridCols};gap:${DETAILS_COL_GAP_MM}mm;align-items:center;`;
       const clue = el("div");
       clue.style.cssText = "font-weight:700;";
       clue.textContent = r.question;                             // the act's own text: textContent only
@@ -517,7 +659,7 @@ function triggerDownload(blob, filename) {
 // remove the detail view, which would take the iframe (and the half-printed
 // document) with it.
 // ---------------------------------------------------------------
-function printDetailsSheet(ranked, titleText) {
+function printDetailsSheet(ranked, titleText, fit) {
   let frame;
   try {
     frame = document.createElement("iframe");
@@ -561,7 +703,7 @@ function printDetailsSheet(ranked, titleText) {
     // (Baloo 2, colour + `print-color-adjust: exact`).
     const sheet = doc.createElement("div");
     sheet.className = "aw-print-sheet";
-    sheet.append(buildDetailsContent(ranked, titleText));
+    sheet.append(buildDetailsContent(ranked, titleText, fit));
     doc.body.append(sheet);
 
     let done = false;
@@ -594,16 +736,16 @@ function printDetailsSheet(ranked, titleText) {
     // print-this-page route if an iframe is refused for any reason.
     console.warn("AWord: falling back to printing the page itself", e);
     if (frame) frame.remove();
-    printDetailsSheetInPage(ranked, titleText);
+    printDetailsSheetInPage(ranked, titleText, fit);
   }
 }
 
 /** The pre-Đợt-231 route, kept only as the fallback above. */
-function printDetailsSheetInPage(ranked, titleText) {
+function printDetailsSheetInPage(ranked, titleText, fit) {
   const sheet = el("div", "aw-print-sheet");
   const style = document.createElement("style");
   style.textContent = `@page { size: A4; margin: 15mm 14mm; }`;
-  sheet.append(style, buildDetailsContent(ranked, titleText));
+  sheet.append(style, buildDetailsContent(ranked, titleText, fit));
   document.body.append(sheet);
 
   let done = false;
@@ -713,7 +855,20 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
     goBtn.textContent = type === "rank" ? "Download PNG" : "Download PDF";
   }
 
-  function paintPreview() {
+  // ⭐ Đợt 234 — computed ONCE per dialog, not per keystroke: `ranked` (the
+  // only thing the fit depends on) never changes while this popup is open,
+  // only the Class/Activity/Date text and the rank↔details toggle do. Every
+  // caller below — the live preview AND the real Download PDF button — reads
+  // this SAME cached value, so the PDF a teacher downloads is guaranteed to
+  // be laid out exactly like the preview they just looked at, not a second,
+  // independently-computed fit that could drift from it.
+  let detailsFit = null;
+  async function ensureDetailsFit() {
+    if (!detailsFit) detailsFit = await computeDetailsFontSizePx(ranked);
+    return detailsFit;
+  }
+
+  async function paintPreview() {
     previewBox.innerHTML = "";
     const txt = composedTitle();
     titleLine.textContent = txt || "—";
@@ -733,6 +888,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
       // no width to measure against (same rule as core/showdown-review.js's own).
       fitPodiumNames(node, ".aw-exp-rank-name");
     } else {
+      const fit = await ensureDetailsFit();
       const PW = 210, PH = 297, scale = 260 / PW;
       const frame = el("div", "aw-sd-exp-preview-frame");
       frame.style.width = Math.round(PW * scale) + "px";
@@ -740,7 +896,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
       const paper = el("div", "aw-sd-exp-paper");
       paper.style.cssText = `width:${PW}mm;min-height:${PH}mm;box-sizing:border-box;` +
         `padding:15mm 14mm;transform:scale(${scale});transform-origin:top left;background:#fff;`;
-      paper.append(buildDetailsContent(ranked, shown));
+      paper.append(buildDetailsContent(ranked, shown, fit));
       frame.append(paper);
       previewBox.append(frame);
     }
@@ -772,7 +928,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
         goBtn.disabled = false;
       }
     } else {
-      printDetailsSheet(ranked, shown);
+      printDetailsSheet(ranked, shown, await ensureDetailsFit());
     }
   };
 

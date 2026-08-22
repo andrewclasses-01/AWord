@@ -5,6 +5,53 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 234 (22/8/2026) — ⭐⭐ PDF ĐÁP ÁN: CỠ CHỮ TỰ TÌM TỐI ĐA + GIÃN DÒNG SÁT + CĂN GIỮA ĐẦU MỤC — 🟢 CHỜ THẦY XEM (phần 1/2, còn 3 việc lớn hơn đang chờ "ok build" — xem cuối mục)
+
+Thầy gửi tiếp 6 yêu cầu chỉnh bố cục PDF đáp án. Ba việc ĐẦU đã làm ngay (nằm gọn trong
+`core/showdown-export.js`, không đụng file nào khác); ba việc SAU (dòng thương hiệu ở mọi màn hình,
+thêm dạng bảng ANALYSIS cho 1 trận, đổi cách mở bảng kết quả sau game) đang chờ thầy chốt — xem báo
+cáo riêng trong chat, KHÔNG code phần đó ở đợt này.
+
+**1) Cỡ chữ tự tìm mức tối đa — đo thật, không đoán.** Hàm mới `computeDetailsFontSizePx(ranked)`:
+- `rankWidestDetailRows()` quét NHANH bằng `canvas.measureText` (không phải DOM, chỉ để XẾP HẠNG câu
+  nào/dòng đáp án nào có khả năng rộng nhất — không dùng số đo này để quyết định cỡ chữ cuối cùng).
+- Với ĐÚNG hai dòng "vô địch" đó (dòng câu hỏi dài nhất, dòng đáp án — thời gian+sai+đúng — rộng
+  nhất, CÓ THỂ là hai dòng khác nhau), dựng THẬT bằng DOM (dùng đúng `mark()` — icon+padding+bo góc
+  thật, không phải số đo áng chừng) rồi **nhị phân tìm cỡ chữ lớn nhất** (7 → 16px, 12 vòng lặp) sao
+  cho `chiều rộng câu hỏi + 2mm + chiều rộng đáp án ≤ chiều rộng khả dụng` (182mm trang trừ cột số
+  thứ tự 5.5mm và khoảng cách 3mm — đo bằng `pxOfMm()`, hỏi trình duyệt chứ không tự tính DPI).
+  `Math.floor` khi chốt số — làm tròn LÊN có thể vượt quá đúng mức vừa đo được.
+- **Cột câu hỏi/đáp án đổi từ tỉ lệ `1.5fr 1fr` sang PX CỐ ĐỊNH** = đúng độ rộng vừa đo (+2px an toàn
+  mỗi cột, vì đo ở tài liệu chính nhưng in ở iframe riêng — xem lý do dùng iframe ở Đợt 231) — mọi
+  dòng khác dùng CHUNG hai con số này nên thẳng cột như bảng thật, không lệch dòng nào so dòng nào.
+- Tính **MỘT LẦN** cho cả file (`detailsFit`, cache trong closure của `openExportDialog`), dùng
+  chung cho cả khung xem trước LẪN nút Download PDF thật — đảm bảo file tải về giống hệt cái vừa xem,
+  không tính lại hai lần ra hai số khác nhau.
+
+**2) Giãn dòng — vài pixel thay vì 2mm.** `margin-bottom` mỗi dòng câu hỏi: `2mm` → **`0.7mm`**
+(đo ra ≈2,65px). Khoảng cách GIỮA HAI HỌC SINH (`DETAIL_BLOCK_GAP_MM`) giữ nguyên 9mm — đây là chỗ
+thầy CHỦ Ý xin tăng ở đợt trước, không đụng.
+
+**3) Căn giữa dòng tên + dòng thống kê.** `who` (tên HS) và `stats` (Tổng thời gian xử lý...) đều
+thêm `text-align:center`/`justify-content:center`.
+
+**Đã đo thật:** dữ liệu giả 8 câu hỏi tiếng Việt dài ~65-75 ký tự (đúng tầm câu hỏi thật), đáp án là
+từ đơn (FOOT/BONE/HAIR...) — mép phải khối đáp án CHẠM SÁT (chưa tới 1px) mép phải vùng nội dung
+trang, không tràn; `margin-bottom` đo ra 2,65px đúng như tính; đầu mục căn giữa đúng.
+⚠️ Test với câu hỏi VÀ đáp án đều cố tình kéo dài quá mức (để dò biên) thì cỡ chữ tụt về sàn 7px —
+đúng hành vi mong muốn (không tràn trang), không phải lỗi.
+
+**🟢 CÒN CHỜ THẦY** — 3 việc lớn hơn thầy giao cùng lúc, đã nghiên cứu code cũ xong (post-game
+review `core/showdown-review.js`, Recent Results/`openDetail` `core/showdown-setup.js`,
+`drawAnalysisCanvas` phân tích nhiều trận) và đã báo cáo phương án + câu hỏi cần thầy chốt trong
+chat — CHƯA ĐỘNG tới 3 file đó: (4) dòng "ANDREW CLASSES" mỏng/mờ/căn giữa ở mọi màn hiển thị VÀ mọi
+file xuất trong Showdown; (5) thêm dạng "bảng cột" kiểu ANALYSIS cho MỘT trận đơn (cả xem lẫn xuất
+file); (6) đổi màn xem đáp án sau khi kết thúc game sang giống hệt thao tác Recent Results (nút cúp
+góc phải thay vì giữ chữ, mặc định hiện cả lớp thay vì 1 đội, load tối thiểu ~3s lấy dữ liệu mới nhất
+mỗi lần mở).
+
+---
+
 ## Đợt 233 (22/8/2026) — ⭐ THỜI GIAN SÁT ĐÁP ÁN + CHỈ CÂU ĐÚNG, POPUP DOWNLOAD THÔI FULLSCREEN — 🟢 CHỜ THẦY XEM
 
 Hai chỉnh nhỏ tiếp theo Đợt 232, thầy giao qua chat.
