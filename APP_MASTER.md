@@ -8,7 +8,24 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 228)** — ⭐⭐ **CHANGE TEMPLATE + STYLE DỌN VÀO THẲNG POPUP
+> Cập nhật lần cuối: **22/8/2026 (Đợt 229)** — ⭐⭐ **ĐỒNG BỘ MODE + LIVE-PREVIEW OPTIONS CHO
+> myActivity CHIA NHIỀU BẢNG** — bridge `window.__awordBridge` (myActivity gọi qua executeJavaScript)
+> thêm `setMode("single"|"showdown")`, `openOptions()`, `closeTool()`. `awEmit("MODE",…)` phát khi về
+> Single (mọi đường: thoát Fight/Running/IPA/Showdown) và khi MỞ màn chọn đội Showdown (không phải
+> lúc chọn xong đội — bảng khác chỉ mở CÙNG màn, không copy đội đã chọn). Fight/Running/IPA CỐ Ý
+> không đồng bộ (ngoại lệ, thầy chốt). `draft` trong Options panel (~20 chỗ rải rác viết thẳng vào,
+> options-panel.js) nay bọc bằng `Proxy` (`liveDraft()`) — mỗi lần đổi trị, throttle 350ms rồi phát
+> `awEmit("OPTLIVE",…)`, TAG riêng KHÁC `OPT` (chỉ phát lúc Apply, giữ nguyên cũ) — cho myActivity
+> phản chiếu tức thời lúc đang kéo dở, chưa Apply. `buildOptionsPanel` phát `awEmit("TOOLOPEN",…)`
+> ngay lúc mở (1 emit đủ cho cả Options/Template/Style vì Đợt 228 hôm nay đã dồn cả 3 vào 1 popup).
+> **CHƯA THẦY DUYỆT — mới `node --check` cú pháp, CHƯA chạy tay trên máy thật.** Việc bên
+> myActivity (nơi thật sự dùng các API này) xem `E:\LAP TRINH APP\myActivity\CLAUDE.md` /
+> `GHI CHU DU AN.md` mục cùng ngày — **GẮN CHẶT hai bên, đừng revert lẻ một bên** (giống cặp Đợt 197
+> ↔ myActivity v2.4.0 cũ). Đọc khối **Đợt 229** đầu `GHI CHU DU AN.md` để biết chi tiết + danh sách
+> CHỜ TEST TOMKO.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 228)** — ⭐⭐ **CHANGE TEMPLATE + STYLE DỌN VÀO THẲNG POPUP
 > OPTIONS** — bỏ nút Template/Style riêng ngoài thanh công cụ dưới khung (giờ chỉ còn Options·Mode).
 > Trong Options, nút "current template" cạnh Apply: TAP mở bảng chọn 17 template ngay trong panel
 > (không cần scroll, không tràn ra ngoài), GIỮ mở Style — cả hai swap thẳng vào thân panel Options

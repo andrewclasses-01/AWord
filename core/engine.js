@@ -727,6 +727,65 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         activity.theme = id;
         return true;
       } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    },
+    // ⭐⭐ myActivity Đợt "đồng bộ Mode" (22/8/2026) — MODE joins Template/Options/
+    // Style as a fourth thing myActivity can drive from another pane's marker.
+    // Scope is deliberately narrow (teacher's call, 22/8/2026): only Single ↔
+    // Showdown. Fight stays local-only — a match is ONE pair of boards, not a
+    // thing every pane should fall into — and so do Running/IPA, both one-board
+    // practice modes nobody asked the other panes to enter. Showdown is a real
+    // exception even there: the team table is per-pane (one teacher only ever
+    // runs one live picker at a time — running it across 4 boards makes no
+    // sense), so this only opens the SAME EMPTY team-picker screen on the other
+    // panes. It never copies a pick across; each board's team choice stays its
+    // own, same as `applyOptions` never touches this screen (Đợt 156 note above).
+    setMode(target) {
+      if (target !== "single" && target !== "showdown") return false;
+      const cur = fight ? "fight" : (showdownPick ? "showdown" : (playMode || "single"));
+      if (cur === target) return true; // đã đúng rồi — xem ghi chú ở switchTemplate
+      awSyncMute++;
+      try {
+        if (target === "single") {
+          if (fight) { fight.ctl.exitFight(); return true; }
+          if (playMode) { doSwitchTemplate(originAct.type); return true; }
+          dropShowdown();
+          replayCurrent();
+          return true;
+        }
+        // target === "showdown"
+        if (!canShowdown) return false; // act này không có Showdown — đừng giả vờ thành công
+        if (fight || playMode) {
+          // Phải THOÁT trước, màn Showdown tự mở lại sau — cùng cơ chế một-lần-
+          // dùng `openShowdownOnMount` mà buildToShowdownConfirmPanel đang dùng.
+          openShowdownOnMount = true;
+          if (playMode) doSwitchTemplate(originAct.type); else fight.ctl.exitFight();
+          return true;
+        }
+        if (!modeBtn.isConnected) return false;
+        openToolPanel(modeBtn, buildShowdownPanelHost);
+        return true;
+      } finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    },
+    // ⭐⭐ myActivity Đợt "đồng bộ tức thời" (22/8/2026) — the other half of
+    // TOOLOPEN/TOOLCLOSE: host clicks these on the OTHER panes when the teacher
+    // opens/closes the Options popover on one, so every board shows the same
+    // popover at the same time. Not muted (opening a panel emits nothing on its
+    // own — `awEmit("TOOLOPEN", …)` only fires from a REAL open, at the top of
+    // buildOptionsPanel — so a mirrored open here cannot echo back out).
+    openOptions() {
+      if (!optionsBtn.isConnected) return false;
+      // Muted: buildOptionsPanel() below fires its OWN "TOOLOPEN" the moment it
+      // mounts (any real open, this mirrored one included) — without the mute
+      // that would echo straight back out and host would relay ANOTHER open to
+      // every OTHER pane (harmless once opening is idempotent, but pointless
+      // O(panes²) traffic for a 4-5 pane class screen).
+      awSyncMute++;
+      try { openToolPanel(optionsBtn, buildOptionsPanel); return true; }
+      finally { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); }
+    },
+    closeTool() {
+      closeToolPanel(false);
+      return true;
     }
   });
 
@@ -1532,6 +1591,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // myActivity marker (2026-08-13): fires only once the teacher has
         // actually CONFIRMED here, not when the popover merely opens — host
         // uses it to auto show/hide its own "act-gap" panel around the match.
+        // ⭐⭐ myActivity Đợt "đồng bộ Mode" (22/8/2026) — Fight stays a NO-OP for
+        // cross-pane sync (a match is one pair of boards, not a thing every pane
+        // should fall into), so it keeps its own FIGHT marker only. Leaving
+        // RUNNING/IPA/Showdown all land on plain Single, which the OTHER panes
+        // — never having followed INTO those play modes in the first place —
+        // genuinely can and should mirror, so those three now also emit MODE.
         if (fight) { fight.ctl.exitFight(); awEmit("FIGHT", "off"); return; }
         // ⭐ Đợt 190 — leaving RUNNING or IPA is a template switch BACK to the
         // origin, which `doSwitchTemplate` already handles as a special case:
@@ -1539,12 +1604,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // instead of converting the conversion. `replayCurrent()` would restart
         // the throwaway copy — still Running word, still marked, so the mode
         // would look like it had refused to close.
-        if (playMode) { doSwitchTemplate(originAct.type); return; }
+        if (playMode) { doSwitchTemplate(originAct.type); awEmit("MODE", "single"); return; }
         // Leaving Showdown: the restart re-reads an empty pick and the board
         // comes back as an ordinary single play (same path as the Showdown
         // panel's own "Single mode" button).
         dropShowdown();
         replayCurrent();
+        awEmit("MODE", "single");
         return;
       }
       exitAnyFullscreen();
@@ -3019,6 +3085,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const head = el("div", "aw-tool-panel-head", "Showdown");
     const loading = el("div", "aw-sd-loading", "Loading...");
     panel.append(head, loading);
+    // myActivity: fires once, right as the team-picker SCREEN opens — not once
+    // teams are picked. Teacher's call (22/8/2026): other panes should only
+    // open their OWN copy of this same screen, never inherit these picks.
+    awEmit("MODE", "showdown");
     import("./showdown-setup.js").then(mod => {
       // ⛔⛔ Đợt 158 — `panel.isConnected` WOULD BE THE WRONG TEST HERE, and this
       // is the very trap HUONG DAN CORE.md records from Đợt 156, met on a new
@@ -3068,6 +3138,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
           // pick and the board comes back as an ordinary single play.
           closeToolPanel(false);
           replayCurrent();
+          awEmit("MODE", "single"); // myActivity: this is a second door back to Single, same as buildModeConfirmPanel's
         }
       });
       // The table is taller than the head-plus-spinner it replaced, so the cap
@@ -3096,6 +3167,29 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // What stays HERE is everything this caller owns and Settings does not: the
   // draft model, Apply, fight mode, and persisting into the teacher's library.
   function buildOptionsPanel(panel) {
+    // myActivity Đợt "đồng bộ tức thời" (22/8/2026) — fires once, right as this
+    // popover opens (not per internal showBody() swap between Options/Template/
+    // Style — those all live inside this ONE panel since Đợt 228 today, so one
+    // emit here already covers all three). Host relays it by clicking the SAME
+    // Options button on every other pane, so all boards open together.
+    awEmit("TOOLOPEN", "options");
+    // ⭐⭐ Đợt "đồng bộ tức thời" — WRAPS `draft` in a Proxy so every one of the
+    // ~20 scattered `draft.xxx = v` call sites in options-panel.js (steppers,
+    // checkboxes, segmented controls) keeps working byte-for-byte, but now also
+    // trips a throttled live-preview broadcast. Nothing about the control code
+    // itself changes — this is the ONE choke point a Proxy buys for free.
+    let optLiveTimer = null, optLivePending = false;
+    function scheduleOptLive() {
+      if (optLiveTimer) { optLivePending = true; return; }
+      optLiveTimer = setTimeout(() => {
+        optLiveTimer = null;
+        awEmit("OPTLIVE", JSON.stringify(draft));
+        if (optLivePending) { optLivePending = false; scheduleOptLive(); }
+      }, 350); // trailing-throttle: 1 gói mỗi ~350ms lúc đang kéo dở, không bắn theo từng pixel
+    }
+    function liveDraft(obj) {
+      return new Proxy(obj, { set(target, prop, value) { target[prop] = value; scheduleOptLive(); return true; } });
+    }
     // ⭐⭐ Đợt 173 — `fight.ctl.matchOptions()`, NOT `activity.options`, while
     // fighting. `activity` in THIS closure is board 0's own FROZEN copy
     // (core/fight.js's `actFor`), which deliberately forces
@@ -3109,7 +3203,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // saves — so the draft this panel seeds from now matches what Apply
     // actually persists.
     const base = (fight ? fight.ctl.matchOptions() : activity.options) || {};
-    let draft = { ...base };
+    let draft = liveDraft({ ...base });
     // ⭐⭐ Đợt 154 — WHERE THE SUB-ACTS LIVE WHEN THE TEMPLATE HAS BEEN CHANGED.
     // A "Change template" act is a CONVERSION, and convert.js resolves the act
     // down to one clue set before converting — so the temp act on screen has no
@@ -3179,9 +3273,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       pending[curKey] = draft;                       // park the view we are leaving
       const seed = pending[nextKey] || optionsForView(viewAct, nextKey)
         || (settingsMod ? settingsMod.getDefaultOptions(viewAct.type) : draft);
-      draft = { ...splitViewOptions(seed).view, ...selState };
+      draft = liveDraft({ ...splitViewOptions(seed).view, ...selState });
       curKey = nextKey;
       pending[curKey] = draft;
+      scheduleOptLive(); // đổi hẳn view (ENG1/VI1/...) là một cú đổi lớn — báo ngay, đừng đợi lần kéo kế tiếp
       // Đợt 148 (teacher: "mọi lựa chọn (cả text-voice hay các act con) cũng
       // cần hiệu ứng animation mượt") — the body carries a different set of
       // values now, so it fades across and the panel travels to its new height

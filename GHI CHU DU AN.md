@@ -5,6 +5,51 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 229 (22/8/2026) — ⭐⭐ ĐỒNG BỘ MODE + LIVE-PREVIEW OPTIONS CHO myActivity CHIA NHIỀU BẢNG
+
+Thầy báo (22/8/2026): đồng bộ Template/Options giữa các bảng myActivity đôi khi vẫn lệch, đặc biệt
+lúc đổi Mode (Single/Fight/Showdown) nhanh. Yêu cầu: (1) đồng bộ chắc chắn cả Template + Options +
+Mode, có cơ chế "chờ nhau" trước khi bắt đầu chơi; (2) mở pop-up Options + phản chiếu TỪNG thay đổi
+tức thời (không đợi Apply) trên mọi bảng cùng lúc. Bàn kỹ với thầy qua AskUserQuestion trước khi
+code — chốt: Fight/Running/IPA là NGOẠI LỆ không đồng bộ (Fight là 1 trận riêng của 1 cặp bảng,
+Running/IPA là chế độ luyện tập riêng của 1 bảng); Showdown chỉ mở CÙNG màn chọn đội trên các bảng
+khác chứ KHÔNG copy đội đã chọn; cơ chế "chờ Start" làm ở PHÍA myActivity bằng lớp phủ khoá cả bảng
+(không cố dò đúng nút Start của từng loại bài — AWord có 14 template viết Start riêng, không có 1
+chỗ chung để "viền sát nút", xem `07-ARCHITECTURE.md`/nhận xét trong PR trao đổi).
+
+**File này thay đổi (`core/engine.js`):**
+- Bridge `window.__awordBridge` (Đợt 197/206 dựng, myActivity gọi qua executeJavaScript) có thêm
+  4 phương thức mới, cùng khuôn `queued()`/`awSyncMute` với `switchTemplate`/`applyOptions`/`setTheme`
+  đã có:
+  - `setMode(target)` — `target` chỉ nhận `"single"`/`"showdown"`. Về Single: gọi đúng đường cũ
+    (`exitFight()`/`doSwitchTemplate(originAct.type)`/`dropShowdown()+replayCurrent()`) tuỳ đang ở
+    đâu. Sang Showdown: nếu đang plain single thì mở thẳng `buildShowdownPanelHost` (màn chọn đội,
+    KHÔNG tự chọn hộ đội nào); nếu đang Fight/Running/IPA thì thoát trước rồi màn Showdown tự mở lại
+    (tái dùng cờ một-lần `openShowdownOnMount` đã có từ Đợt 158/191b).
+  - `openOptions()` / `closeTool()` — bấm hộ / đóng hộ pop-up Options từ bên ngoài (myActivity gọi
+    khi 1 bảng khác vừa mở/áp xong Options, để mở/đóng đồng thời trên các bảng còn lại).
+  - (không phải bridge, nhưng cùng đợt) `awEmit("MODE", "single"|"showdown")` phát ra ở 4 chỗ thoát
+    về Single (2 nhánh trong `buildModeConfirmPanel`, 1 nhánh `doSwitchTemplate`, 1 nút "Single mode"
+    trong bảng Showdown) và 1 chỗ mở màn Showdown (`buildShowdownPanelHost`, phát NGAY lúc mở, không
+    phải lúc chọn xong đội — myActivity chỉ cần mở CÙNG màn, không copy đội).
+- **⭐ Live-preview Options (Đợt "đồng bộ tức thời")**: `draft` trong `buildOptionsPanel` — biến cục
+  bộ ~20 chỗ rải rác trong `options-panel.js` viết thẳng vào (`draft.timeCost = v`, `draft.timer = v`,
+  ...) — nay được BỌC bằng 1 `Proxy` (`liveDraft()`) chặn `set`, không phải sửa từng chỗ viết. Mỗi
+  lần đổi trị: throttle 350ms rồi `awEmit("OPTLIVE", JSON.stringify(draft))` — TAG riêng, KHÁC với
+  `OPT` (chỉ phát lúc bấm Apply, giữ nguyên như cũ). Đổi hẳn VIEW (ENG1↔VI1...) cũng gọi thẳng
+  `scheduleOptLive()` một lần, không đợi lần kéo kế tiếp.
+- `buildOptionsPanel` phát `awEmit("TOOLOPEN", "options")` ngay lúc mở (đầu hàm) — vì Template/Style
+  đã dồn hết vào ĐÚNG 1 popup này từ Đợt 228 hôm nay, 1 emit là đủ cho cả 3.
+
+⚠️ **Bàn giao cho myActivity**: các thay đổi trên đều PHỤC VỤ myActivity (`E:\LAP TRINH APP\myActivity`)
+— xem `GHI CHU DU AN.md`/`CLAUDE.md` bên đó mục cùng ngày. **GẮN CHẶT với myActivity phiên bản mới**
+giống cặp Đợt 197 ↔ v2.4.0 cũ — đừng revert lẻ một bên.
+
+⬜ **CHƯA TEST TOMKO**: mọi thứ mới kiểm `node --check` cú pháp, CHƯA chạy tay trên máy cảm ứng thật.
+Đặc biệt cần đo: (a) `OPTLIVE` gọi `applyOptions()` = restart thật ván chơi (`replayCurrent()`) trên
+MỌI bảng khác mỗi ~350ms lúc đang kéo — có giật/lag không, nhất là màn 4-5 cột; (b) Showdown mở đúng
+màn chọn đội trên các bảng khác, không đá văng đội đang chọn dở nếu chưa Apply; (c) `setMode` từ
+Fight/Running/IPA sang Showdown (đường vòng qua `openShowdownOnMount`) có mở đúng màn không.
 
 ---
 
