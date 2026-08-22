@@ -64,7 +64,7 @@ import {
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks, shortenName
+  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows
 } from "./showdown.js";
 
 const DOC_ID = "sd_main";
@@ -981,6 +981,14 @@ const sfx = {
   ready:   () => { sound.tick(); sound.glide({ freq: 880, freqEnd: 1320, dur: 220, gain: 0.09, type: "triangle" }); }
 };
 
+// ⭐ Đợt 224 — ONE categorical palette, ANALYSE's stacked chart and its legend
+// share it by INDEX INTO `entries` (oldest match = colour 0), so a tier and its
+// legend swatch can never drift apart. Deliberately avoids red/green: those
+// already mean "wrong"/"right" everywhere else in Showdown (`.is-ok`/`.is-bad`,
+// the pctBand colours in core/showdown.js) and a stacked-match colour wearing
+// one of them would read as a score, not as "which match is this".
+const ANALYSE_COLORS = ["#2f6fed", "#8b5cf6", "#f0b23c", "#14b8a6", "#ec4899", "#6366f1", "#c1793a", "#64748b"];
+
 /** Run `anim`, and guarantee `after()` happens even if onfinish never fires. */
 function whenDone(anim, after, ms) {
   let done = false;
@@ -1123,6 +1131,12 @@ export function buildShowdownPanel(panel, ctx) {
   // CAPTION now toggles it (thầy: "bấm lại 1 lần nữa sẽ trở về trang chọn
   // lớp/team") and the caption is rebuilt by every footer repaint.
   let recentLayer = null;
+  // ⭐⭐ Đợt 224 — ANALYSE's own state, at the SAME scope as `recentLayer` so
+  // `closeRecent()` (the ✕, and the second tap on the footer caption) can drop
+  // it too: leaving Recent results entirely must not leave a half-finished
+  // selection waiting for the next time it opens.
+  let analysing = false;
+  const picked = new Set();          // matchId → picked, temporary, never written down
   // Which class the register on screen A was last DEALT IN for — see renderSetup.
   let rosterPaintedFor = null;
   let unsub = null;
@@ -1327,6 +1341,23 @@ export function buildShowdownPanel(panel, ctx) {
     return `${p(d.getHours())}:${p(d.getMinutes())} · ${d.getDate()}/${d.getMonth() + 1}`;
   };
 
+  /**
+   * ⭐ Đợt 224 — six scattered CSS-only sparkles, trusted markup. Exactly the
+   * `.aw-sd-pod-star` idiom (core/showdown-review.js's renderReviewPodium) —
+   * `clip-path` stars, staggered `animation-delay`, animated ENTIRELY in CSS so
+   * a backgrounded myActivity column does not need requestAnimationFrame to keep
+   * them twinkling (the same rAF trap core/HUONG DAN CORE.md already warns
+   * about). Re-declared here rather than imported: that one lives in `cqw`
+   * (sized against the 16:9 stage), and `.aw-sd-recent` is a plain px popover —
+   * two different units for the same six numbers is the whole reason it is a
+   * short local function instead of a shared export.
+   */
+  function spark6() {
+    let s = `<span class="aw-sd-rec-analyse-spark" aria-hidden="true">`;
+    for (let i = 0; i < 6; i++) s += `<i class="aw-sd-rec-star s${i}"></i>`;
+    return s + `</span>`;
+  }
+
   /** One match's whole class, deduped and ranked — the ONE rule, from showdown.js. */
   function matchBlocks(match) {
     const groups = Object.values(match?.teams || {})
@@ -1343,6 +1374,8 @@ export function buildShowdownPanel(panel, ctx) {
     const layer = recentLayer;
     if (!layer) return;
     recentLayer = null;
+    analysing = false;
+    picked.clear();
     paintCapState();
     const a = layer.animate(
       [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.985)" }],
@@ -1355,6 +1388,11 @@ export function buildShowdownPanel(panel, ctx) {
     const layer = el("div", "aw-sd-recent");
     recentLayer = layer;
     paintCapState();
+    // ⭐ Đợt 224 — the matches on screen right now, read by analyseBtn's onclick
+    // below (built before the network read resolves) and by paintCols(). One
+    // array both close over, so a delete or a re-load never has two copies
+    // disagreeing about what is actually on screen.
+    let matches = [];
     const head = el("div", "aw-sd-rec-head");
     const title = el("div", "aw-sd-rec-title");
     title.append(el("span", "aw-sd-rec-word", "RECENT RESULTS"));
@@ -1364,7 +1402,29 @@ export function buildShowdownPanel(panel, ctx) {
     const closeBtn = el("button", "aw-sd-rec-close", icons.close);
     closeBtn.type = "button"; closeBtn.title = "Close";
     closeBtn.onclick = () => { sfx.back(); closeRecent(); };
-    head.append(title, closeBtn);
+    // ⭐⭐ Đợt 224 — ANALYSE / BEGIN, to the right of ✕ (thầy: "bên cạnh phải nút
+    // đóng pop-up"). ONE button, ONE size, throughout: only its word changes —
+    // see paintCols() for the rule that decides which word is on it right now.
+    const analyseBtn = el("button", "aw-sd-rec-analyse", spark6() + `<span class="aw-sd-rec-analyse-word">ANALYSE</span>`);
+    analyseBtn.type = "button";
+    analyseBtn.onclick = () => {
+      // ⭐ Đợt 224 (thầy chốt qua AskUserQuestion) — the button always DOES what
+      // its own word says: showing ANALYSE (fewer than 2 ticked, 0 or 1) means a
+      // tap CANCELS the selection, whatever is half-ticked; showing BEGIN (2+)
+      // means a tap RUNS the analysis. So the branch is not "toggle vs begin", it
+      // is just "read the count, same rule paintCols used to choose the word".
+      if (picked.size >= 2) {
+        sfx.forward();
+        const chosen = matches.filter(m => picked.has(m.matchId));
+        openAnalysis(chosen);
+        return;
+      }
+      sfx.tap();
+      analysing = !analysing;
+      if (!analysing) picked.clear();
+      paintCols();
+    };
+    head.append(title, closeBtn, analyseBtn);
     const cols = el("div", "aw-sd-rec-cols");
     layer.append(head, cols);
     body.append(layer);
@@ -1381,7 +1441,7 @@ export function buildShowdownPanel(panel, ctx) {
     cols.append(el("div", "aw-sd-rec-note", "Loading…"));
     import("./showdown-history.js")
       .then(h => h.loadMatches(classId))
-      .then(matches => { if (layer.isConnected) paintCols(matches); })
+      .then(list => { if (layer.isConnected) { matches = list; paintCols(); } })
       .catch(e => {
         if (!layer.isConnected) return;                        // closed while we waited
         cols.innerHTML = "";
@@ -1389,8 +1449,29 @@ export function buildShowdownPanel(panel, ctx) {
           e?.code === "aw/signed-out" ? "Sign in to see past results." : "Could not read past results."));
       });
 
-    function paintCols(matches) {
+    /**
+     * ⭐⭐ Đợt 224 — repaints from the OUTER `matches`, never a parameter, so a
+     * delete (which edits `matches` locally) and the ANALYSE toggle (which only
+     * changes `analysing`/`picked`) can both just call `paintCols()` with
+     * nothing to pass and nothing to get out of step.
+     */
+    function paintCols() {
       cols.innerHTML = "";
+      // ⚠️ Đợt 224 — a delete can bring `matches.length` below 2 WHILE picking is
+      // on (the delbtn and the pickbtn are independent controls, nothing stops
+      // both being used in the same visit). Without this, ANALYSE hides (next
+      // line) but `analysing` stays true and every column keeps drawing its
+      // tick — a selection screen with no way to leave it except reloading.
+      if (analysing && matches.length < 2) { analysing = false; picked.clear(); }
+      analyseBtn.classList.toggle("is-on", analysing);
+      // ⚠️ Đợt 224 — under 2 matches there is nothing TO analyse (BEGIN needs a
+      // second column to stack against), same reason Reset/Next hide rather than
+      // disable elsewhere in this panel: a control with nothing to do should not
+      // be sitting there daring the teacher to find out why it does nothing.
+      analyseBtn.classList.toggle("is-hidden", matches.length < 2);
+      const word = picked.size >= 2 ? "BEGIN" : "ANALYSE";
+      const wordEl = analyseBtn.querySelector(".aw-sd-rec-analyse-word");
+      if (wordEl) wordEl.textContent = word;
       if (!matches.length) {
         cols.append(el("div", "aw-sd-rec-note", "No results kept for this class yet."));
         return;
@@ -1399,14 +1480,23 @@ export function buildShowdownPanel(panel, ctx) {
       // mới càng xếp về bên phải") — the REVERSE of Đợt 197's order.
       // ⚠️ REVERSED HERE, ON SCREEN, AND NOWHERE ELSE. `loadMatches` still hands
       // back newest-first because it also does the `slice(0, MAX_MATCHES)` — and
-      // that slice has to keep the five NEWEST matches, not the five oldest. Turn
+      // that slice has to keep the ten NEWEST matches, not the ten oldest. Turn
       // the sort round in that file instead and the ledger quietly starts showing
       // last month's games. The tie-break for two matches sharing a millisecond
       // (Đợt 197's own bug, caught by the grid) rides along with it untouched.
+      // ⭐ Đợt 224 — still just ONE row of CSS grid cells; `.aw-sd-rec-cols` now
+      // wraps at 5 into a SECOND tier by itself (`grid-template-columns:
+      // repeat(5,1fr)` + `grid-template-rows:repeat(2,1fr)`, row-major fill),
+      // so the oldest-left/newest-right order from Đợt 207 still reads correctly
+      // tier by tier — nothing here has to know there are two rows now.
       matches.slice().reverse().forEach(m => {
         const ranked = matchBlocks(m);
-        const col = el("button", "aw-sd-rec-col");
-        col.type = "button";
+        // ⭐⭐ Đợt 224 — a DIV now, not a BUTTON: the delete "–" is a real <button>
+        // of its own sitting inside it, and a <button> may not nest inside
+        // another <button> (invalid HTML — the outer would simply never receive
+        // the inner's clicks in some browsers). `cursor:pointer` + onclick below
+        // keep it working exactly like a button for the open-detail tap.
+        const col = el("div", "aw-sd-rec-col");
         const ch = el("div", "aw-sd-rec-colhead");
         const act = el("div", "aw-sd-rec-act");
         act.textContent = m.actName || "Showdown";             // teacher's own text
@@ -1417,10 +1507,74 @@ export function buildShowdownPanel(panel, ctx) {
         sub.textContent = `${when(m.at)} · ${ranked.length} sts · ${teams} team${teams === 1 ? "" : "s"}`;
         ch.append(act, sub);
         col.append(ch, renderMini(ranked));
-        col.onclick = () => { sfx.forward(); openDetail(m, ranked); };
+
+        // ---- the "–" : delete THIS match alone (Đợt 224) ----
+        const delBtn = el("button", "aw-sd-rec-delbtn", icons.minus);
+        delBtn.type = "button";
+        delBtn.title = "Delete this match";
+        delBtn.onclick = e => {
+          e.stopPropagation();               // never also open the detail behind it
+          sfx.tap();
+          askConfirm(
+            `Delete this match (${act.textContent} · ${when(m.at)})? This cannot be undone.`,
+            "Delete", async () => {
+              sfx.forward();
+              try {
+                const h = await import("./showdown-history.js");
+                await h.deleteMatch(classId, m.matchId);
+                matches = matches.filter(x => x.matchId !== m.matchId);
+                picked.delete(m.matchId);
+                if (layer.isConnected) paintCols();
+                toast("Match deleted");
+              } catch (err) {
+                console.warn("AWord: could not delete this match", err);
+                toast(err?.code === "aw/signed-out" ? "Sign in first." : "Could not delete this match.");
+              }
+            });
+        };
+        col.append(delBtn);
+
+        // ---- the big round tick : ANALYSE selection (Đợt 224) ----
+        // ⚠️ Built EVERY paint, shown/hidden by CSS off `analysing` on the column
+        // itself (see `.is-analysing` below) — same reason the podium's own ticks
+        // (core/showdown-review.js) stay in the tree rather than being added and
+        // removed: a control that pops in and out under the teacher's finger the
+        // moment they cross the threshold is worse than one that is merely faint.
+        const pickBtn = el("button", "aw-sd-rec-pickbtn");
+        pickBtn.type = "button";
+        pickBtn.title = "Pick for ANALYSE";
+        pickBtn.append(el("i", "aw-sd-rec-pickdot"));
+        pickBtn.insertAdjacentHTML("beforeend", icons.check);     // trusted markup
+        const paintPick = () => {
+          const on = picked.has(m.matchId);
+          pickBtn.classList.toggle("is-on", on);
+          col.classList.toggle("is-picked", on);
+        };
+        const togglePick = () => {
+          if (picked.has(m.matchId)) picked.delete(m.matchId); else picked.add(m.matchId);
+          sound.tick();
+          paintPick();
+          const w = picked.size >= 2 ? "BEGIN" : "ANALYSE";
+          const wordEl = analyseBtn.querySelector(".aw-sd-rec-analyse-word");
+          if (wordEl) wordEl.textContent = w;
+        };
+        pickBtn.onclick = e => { e.stopPropagation(); togglePick(); };
+        col.append(pickBtn);
+        paintPick();
+
+        col.classList.toggle("is-analysing", analysing);
+        col.onclick = () => {
+          // ⭐ Đợt 224 — while picking, ANY tap on the column (not only the round
+          // button) toggles it: a class of 20 gives a 200px-wide target either
+          // way, and a big invisible tap area beats making the teacher land on
+          // an icon the size of a fingertip.
+          if (analysing) { togglePick(); return; }
+          sfx.forward();
+          openDetail(m, ranked);
+        };
         cols.append(col);
       });
-      // ⭐ Đợt 198 — the five columns DEAL IN, left to right, instead of all
+      // ⭐ Đợt 198 — the columns DEAL IN, left to right, instead of all
       // appearing at once. They arrive after a network read, so a hard cut is
       // the one moment on this screen where the teacher can see the machinery.
       cols.querySelectorAll(".aw-sd-rec-col").forEach((c, i) => {
@@ -1590,6 +1744,193 @@ export function buildShowdownPanel(panel, ctx) {
         .catch(e => console.warn("AWord: fullscreen refused, showing the detail in the panel", e));
       det.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
         { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
+    }
+
+    /**
+     * ⭐⭐⭐ Đợt 224 — ANALYSE → BEGIN: 2+ matches stacked into one bar per pupil,
+     * fullscreen (thầy: "để tôi phân tích cho cả lớp"). Same fullscreen dance as
+     * `openDetail()` above (request on the node once it is in the document,
+     * listen for `fullscreenchange` so Esc or the browser leaving it any other
+     * way still closes this cleanly, tear the listener down on every exit) — a
+     * proven shape, copied on purpose rather than invented again.
+     *
+     * ⚠️ THE BACK BUTTON ASKS FIRST — unlike `openDetail`'s ✕. Thầy's own choice
+     * (AskUserQuestion): BEGIN is a deliberate act on 2+ matches picked by hand,
+     * and losing that setup by one stray tap should cost a confirm, not be free.
+     */
+    function openAnalysis(chosen) {
+      if (layer.querySelector(".aw-sd-rec-chart")) return;
+      // Oldest first — the stack reads bottom (oldest) to top (newest); ordering
+      // is a DOM decision made HERE, on purpose (see buildAnalysisRows' own
+      // header in core/showdown.js for why the pure function does not choose it).
+      const entries = chosen.slice().sort((a, b) => (a.at || 0) - (b.at || 0)).map(m => ({
+        matchId: m.matchId, label: m.actName || "Showdown", at: m.at, blocks: matchBlocks(m)
+      }));
+      const { full, partial } = buildAnalysisRows(entries);
+
+      const chart = el("div", "aw-sd-rec-chart");
+      const ch = el("div", "aw-sd-rec-head");
+      const ct = el("div", "aw-sd-rec-title");
+      ct.append(el("span", "aw-sd-rec-word", "ANALYSIS"));
+      if (className) ct.append(el("span", "aw-sd-rec-class", className));
+      let closing = false;
+      const onFsChange = () => {
+        if (document.fullscreenElement !== chart && !closing) closeChart();
+      };
+      function closeChart() {
+        if (closing) return;
+        closing = true;
+        document.removeEventListener("fullscreenchange", onFsChange);
+        if (document.fullscreenElement === chart) {
+          try { document.exitFullscreen(); } catch { /* the node going will do it */ }
+        }
+        const a = chart.animate(
+          [{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.97)" }],
+          { duration: 150, easing: "cubic-bezier(.4,0,1,1)", fill: "forwards" });
+        whenDone(a, () => chart.remove(), 260);
+      }
+      const backBtn = el("button", "aw-sd-rec-close", icons.back);
+      backBtn.type = "button"; backBtn.title = "Back to the matches";
+      backBtn.onclick = () => {
+        sfx.tap();
+        // ⭐ Đợt 224 (thầy) — the one exit on this whole screen that ASKS first.
+        askConfirm("Leave the analysis and go back?", "Back", () => {
+          sfx.back();
+          analysing = false;
+          picked.clear();
+          closeChart();
+          if (layer.isConnected) paintCols();
+        });
+      };
+      ch.append(ct, backBtn);
+
+      const cbody = el("div", "aw-sd-rec-cbody");
+      chart.append(ch, cbody);
+      cbody.append(renderChart(full, partial, entries));
+
+      layer.append(chart);
+      // AFTER the append — same rule as fitPodiumNames/openDetail: a detached
+      // tree has no width or height to measure, and both refits below measure.
+      fitPodiumNames(chart, ".aw-sd-rec-barname");
+      fitChartTierLabels(chart);
+      watchChartResize(chart);
+      document.addEventListener("fullscreenchange", onFsChange);
+      Promise.resolve()
+        .then(() => chart.requestFullscreen?.())
+        .then(() => { fitPodiumNames(chart, ".aw-sd-rec-barname"); fitChartTierLabels(chart); })
+        .catch(e => console.warn("AWord: fullscreen refused, showing the analysis in the panel", e));
+      chart.animate([{ opacity: 0, transform: "scale(.97)" }, { opacity: 1, transform: "scale(1)" }],
+        { duration: 180, easing: "cubic-bezier(.22,.9,.3,1)" });
+    }
+
+    /**
+     * The bar chart itself — plain DOM/CSS, no canvas/SVG/library, same idiom as
+     * every other board in this file.
+     *
+     * ⚠️ EVERY TIER'S HEIGHT IS A % OF THE SAME `yMax` — never of its own bar's
+     * total. That is what makes two pupils' bars comparable at a glance (a 40%
+     * tier is the same height wherever it appears); computing it against each
+     * bar's own total would make every bar read as "100% of itself" and the
+     * whole point of stacking would be gone.
+     *
+     * `full`/`partial` — Đợt 224 (thầy chốt): full first, each group sorted by
+     * its own total, `partial` drawn as a second short row after a narrow gap —
+     * NOT interleaved with `full` and NOT split further by how much any one
+     * pupil is missing.
+     */
+    function renderChart(full, partial, entries) {
+      const wrap = el("div", "aw-sd-rec-chartwrap");
+      const rows = [...full, ...partial];
+      if (!rows.length) {
+        wrap.append(el("div", "aw-sd-rec-note", "No pupils in common between these matches."));
+        return wrap;
+      }
+      const yMax = Math.ceil(Math.max(1, ...rows.map(r => r.total)) / 20) * 20;
+
+      const plot = el("div", "aw-sd-rec-plotarea");
+      const track = el("div", "aw-sd-rec-track");
+      const grid = el("div", "aw-sd-rec-grid");
+      for (let v = 0; v <= yMax; v += 20) {
+        const line = el("div", "aw-sd-rec-gridline");
+        line.style.bottom = `${(v / yMax) * 100}%`;
+        line.append(el("span", "aw-sd-rec-gridlabel", v + "%"));
+        grid.append(line);
+      }
+      track.append(grid);
+      const names = el("div", "aw-sd-rec-names");
+
+      const addSpacer = () => {
+        track.append(el("div", "aw-sd-rec-bargap"));
+        names.append(el("div", "aw-sd-rec-bargap"));
+      };
+      const addBar = r => {
+        const bar = el("div", "aw-sd-rec-bar");
+        r.segments.forEach((seg, i) => {
+          if (seg.pct == null) return;          // did not play this match — no tier at all
+          const tier = el("div", "aw-sd-rec-tier");
+          tier.style.height = `${(seg.pct / yMax) * 100}%`;
+          tier.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
+          tier.dataset.pct = String(seg.pct);
+          bar.append(tier);
+        });
+        track.append(bar);
+        const nm = el("span", "aw-sd-rec-barname");
+        nm.textContent = r.name;                  // pupil's own name: never innerHTML
+        nm.dataset.full = r.name;
+        nm.title = r.name;
+        const nmHost = el("div", "aw-sd-rec-namehost");
+        nmHost.append(nm);
+        names.append(nmHost);
+      };
+
+      full.forEach(addBar);
+      if (full.length && partial.length) addSpacer();
+      partial.forEach(addBar);
+
+      plot.append(track, names);
+      wrap.append(plot, renderLegend(entries));
+      return wrap;
+    }
+
+    /** One swatch + act name + time per selected match, same colour rule as the tiers. */
+    function renderLegend(entries) {
+      const leg = el("div", "aw-sd-rec-legend");
+      entries.forEach((e, i) => {
+        const item = el("div", "aw-sd-rec-legend-item");
+        const sw = el("span", "aw-sd-rec-legend-sw");
+        sw.style.background = ANALYSE_COLORS[i % ANALYSE_COLORS.length];
+        const tx = el("span", "aw-sd-rec-legend-txt");
+        tx.textContent = `${e.label} · ${when(e.at)}`;      // teacher's own text + a formatted time
+        item.append(sw, tx);
+        leg.append(item);
+      });
+      return leg;
+    }
+
+    /**
+     * A tier's "%" only when the tier is tall enough to read — a 4px sliver with
+     * "3%" jammed into it is less legible than no text at all. Cheap enough (no
+     * font measuring, just `clientHeight`) to re-run on every resize rather than
+     * needing fitPodiumNames' retry ladder.
+     * ⚠️ PAINT ONLY — no observer in here. `fitChartTierLabels` is called both
+     * directly (openAnalysis' two passes) and from the ResizeObserver below; an
+     * observer that re-armed ITSELF on every one of its own callbacks would tear
+     * down and rebuild on every fire for no reason (the `root.__awFitRO` lesson
+     * from core/showdown-review.js, one step further).
+     */
+    function fitChartTierLabels(root) {
+      root.querySelectorAll(".aw-sd-rec-tier").forEach(t => {
+        t.textContent = t.clientHeight >= 16 ? `${t.dataset.pct}%` : "";
+      });
+    }
+
+    /** Set up ONCE per chart (openAnalysis), so fullscreen/window resizes keep the labels honest. */
+    function watchChartResize(root) {
+      try {
+        const ro = new ResizeObserver(() => fitChartTierLabels(root));
+        ro.observe(root);
+        root.__awChartRO = ro;
+      } catch { /* no ResizeObserver: the two direct calls in openAnalysis() still stand */ }
     }
   }
 

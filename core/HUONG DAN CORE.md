@@ -1011,8 +1011,16 @@ Nút ở góc dưới trái, nhắm vào **chính `.aw-review`**, KHÔNG phải 
 
 **(f) RECENT RESULTS: CŨ NHẤT BÊN TRÁI** (đảo Đợt 197).
 ⚠️ **Đảo LÚC VẼ, KHÔNG đảo trong `loadMatches`** — hàm đó còn `slice(0, MAX_MATCHES)` và lát đó phải
-giữ **5 trận MỚI NHẤT**; đảo trong đó là sổ cái lặng lẽ hiện trận tháng trước. Luật phá hoà khi hai
-trận trùng mili-giây (lỗi thật của Đợt 197) phải giữ nguyên.
+giữ **`MAX_MATCHES` trận MỚI NHẤT** (10 từ Đợt 224, was 5); đảo trong đó là sổ cái lặng lẽ hiện trận
+tháng trước. Luật phá hoà khi hai trận trùng mili-giây (lỗi thật của Đợt 197) phải giữ nguyên.
+⭐ Đợt 224 — màn vẽ (`openRecent` trong `core/showdown-setup.js`) đổi sang **2 tầng × 5 cột**
+(`grid-template-rows: repeat(2, minmax(0, 1fr))`); thứ tự cũ→trái/mới→phải ở trên KHÔNG đổi gì, grid
+tự chảy row-major nên tầng 1 rồi tầng 2 vẫn đúng thứ tự đó.
+⛔⛔ **BẪY ĐÃ CẮN KHI DỰNG**: `grid-template-rows: repeat(2, 1fr)` KHÔNG PHẢI
+`repeat(2, minmax(0, 1fr))` — `1fr` trần là `minmax(auto, 1fr)`, nên một cột có nội dung hơi cao sẽ
+đẩy CẢ LƯỚI cao hơn khung `.aw-sd-recent` được cấp: đo được `.aw-sd-rec-cols` tràn 11px dù mắt nhìn
+không lộ gì và `.aw-sd-recent` (khung ngoài) báo 0 tràn — đúng họ với bẫy `min-height:0` ở flex, một
+cấp lên grid. `minmax(0, 1fr)` là vé để một cột thật sự được PHÉP co lại bằng đúng phần được chia.
 
 **(g) Ô QUESTIONS ở màn chọn lớp — `left` LÀ CỦA ĐỘI ÍT NGƯỜI NHẤT.**
 `each = q ÷ đội ĐÔNG nhất` (đúng phép chia `applyBalance` của engine — đổi nó là đổi luật chơi);

@@ -8,7 +8,39 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **21/8/2026 (Đợt 223)** — ⭐⭐⭐ **BỎ HẲN "ROUND RULE" + "SLOWER TEAM KEEPS
+> Cập nhật lần cuối: **22/8/2026 (Đợt 224)** — ⭐⭐⭐ **RECENT RESULTS: 10 TRẬN (2 TẦNG × 5 CỘT,
+> WAS 5) · XOÁ TỪNG TRẬN RIÊNG (nút "–") · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN,
+> FULLSCREEN**. Thầy giao trọn tính năng, chốt 2 quyết định qua AskUserQuestion (bấm ANALYSE khi
+> <2 ô tích LUÔN thoát chế độ chọn · học sinh thiếu trận xếp thành cụm riêng sau cùng, cách một
+> khe hẹp, không phân biệt thiếu nhiều/ít). Sửa **6 file**: `core/showdown-history.js` ·
+> `core/showdown.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css` ·
+> `core/HUONG DAN CORE.md`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — máy/phiên sau
+> đọc `GHI CHU DU AN.md` đầu file, khối **Đợt 224**, trước khi sửa tiếp.
+> - **(1) `MAX_MATCHES` 5 → 10**, lưới `.aw-sd-rec-cols` đổi `grid-template-columns/rows:
+>   repeat(5/2, minmax(0,1fr))` — **`minmax(0,1fr)` chứ KHÔNG phải `1fr` trần**: bẫy đã cắn khi
+>   dựng, `1fr` trần là `minmax(auto,1fr)` nên một cột hơi cao đẩy tràn cả lưới (đo 11px) dù mắt
+>   không thấy gì. `.aw-sd-mini` bỏ `overflow-y:auto`, đổi `max-height` cố định + `mask-image` mờ
+>   dần đáy — không cần biết chính xác "học sinh thứ mấy" bị cắt, mask tự lo.
+> - **(2) Nút "–" mỗi cột** (góc trên-phải, `<div>` thay `<button>` bọc ngoài vì nút lồng trong
+>   nút không hợp lệ HTML) → `askConfirm` → `deleteMatch()` mới trong `core/showdown-history.js`
+>   (transaction, cùng khuôn `saveMatchResult`).
+> - **(3) ANALYSE/BEGIN**: nút vàng phát sáng + sparkle (tái dùng khuôn `.aw-sd-pod-star`), tích
+>   ≥2 cột → `buildAnalysisRows()` mới (THUẦN, trong `core/showdown.js`, kiểm bằng Node/scratch
+>   20/20) → biểu đồ cột chồng DOM/CSS thường (không canvas/thư viện), mỗi tầng % một trận, cùng
+>   `yMax` cho mọi cột nên so được bằng mắt; nhóm "đủ mọi trận" xếp trước, nhóm "thiếu trận" xếp
+>   sau cách một khe hẹp. Fullscreen + nút Back **hỏi xác nhận trước khi thoát** (khác nút ✕ ở
+>   màn chi tiết cũ, đóng thẳng).
+> ### ✅ ĐO: **20/20** Node (`scratch/dot224-analysis.mjs`, thuần `buildAnalysisRows`/`blockKey`)
+> + **25/25** trình duyệt thật qua `devserver.py` (`scratch/dot224-recent.html`, giả Firestore +
+> module thật: 10 ô sau khi seed 11 trận · xoá 1 cột đúng trận · ANALYSE 0/1 ô thoát · 2+ ô →
+> BEGIN → biểu đồ đúng số/đúng % (soi tận `tier.dataset.pct` so khớp `pctOf` tính tay) · Back hỏi
+> trước khi thoát · 0 lỗi console) + đối chứng `.aw-sd-recent` (khung ngoài) **0 tràn**.
+> ### ⬜ CHỜ THẦY
+> - Nhìn thật trên TOMKO: 2 tầng × 5 cột có đủ to để chạm không, nút ANALYSE/tick tròn có dễ bấm
+>   không, biểu đồ đọc từ cuối lớp có rõ không (chưa test lớp thật 15-20 em).
+>
+> ---
+> Trước đó: **21/8/2026 (Đợt 223)** — ⭐⭐⭐ **BỎ HẲN "ROUND RULE" + "SLOWER TEAM KEEPS
 > POINTS" (TIME DELAY một mình quyết định) · KHOÁ IM LẶNG + MẤT MÀU Ở NẤC KHÔNG DELAY · FIX CHỜ
 > VÔ ÍCH KHI BÀN KIA ĐÃ XONG · SHOW ANSWERS Ở BẢNG CUỐI TRẬN FIGHT**. Thầy tả 4 vấn đề gặp ở
 > Fight, chốt 3 quyết định qua AskUserQuestion. Sửa **7 file**: `core/fight.js` · `core/app.css` ·

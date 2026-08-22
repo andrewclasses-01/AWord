@@ -73,7 +73,11 @@ import { SOLO_TEAM_ID } from "./showdown.js";
 
 // Thầy's own number: "Mỗi lớp lưu tối đa 5 cột, khi tạo cột số 6 thì cột đầu
 // tiên sẽ bị xóa." It is also how many columns the Recently results screen draws.
-export const MAX_MATCHES = 5;
+// ⭐ Đợt 224 (22/8/2026, thầy) — nâng 5 → 10, đi cùng bố cục 2 tầng × 5 cột ở
+// core/showdown-setup.js (renderMini/paintCols). fitToBudget() đã sẵn cơ chế
+// giảm cấp (rút chi tiết câu hỏi của trận CŨ NHẤT khi vượt SIZE_BUDGET) nên gấp
+// đôi số trận chỉ khiến việc đó xảy ra sớm hơn, không phải một lỗi mới.
+export const MAX_MATCHES = 10;
 // Same cap as the live board's, and deliberately the same constant value: a
 // pupil's row must not say one thing on the live class board and another in the
 // history of the very same play.
@@ -323,4 +327,39 @@ export async function wipeMatches(classId) {
     kind: "showdown-history", root: "showdown", parentId: null, trashed: false,
     classId: String(classId), className: "", matches: [], updatedAt: Date.now()
   });
+}
+
+/**
+ * ⭐⭐ Đợt 224 (22/8/2026, thầy) — DROP ONE MATCH, NOT THE WHOLE LEDGER.
+ * The "–" on a single column in Recent results. `wipeMatches()` above already
+ * covered "throw the whole ledger away" (the RESET button); this is the finer
+ * grain the teacher asked for once the ledger grew to ten columns.
+ *
+ * ⚠️ SAME TRANSACTION SHAPE AS `saveMatchResult()` — read the doc inside the
+ * transaction, edit, write back. A plain get-then-set here would race a column
+ * that finishes a NEW match in the same second the teacher deletes an old one,
+ * and the loser's write would vanish with no symptom on either screen.
+ *
+ * Returns false when there was nothing to delete (doc missing, or that match
+ * already gone) — never throws for that, only for signed-out/offline, same as
+ * every other write in this file.
+ */
+export async function deleteMatch(classId, matchId) {
+  if (!classId || !matchId) return false;
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, docIdFor(classId));
+  let found = false;
+  await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const node = normDoc(snap.data(), classId);
+    const before = node.matches.length;
+    node.matches = node.matches.filter(m => m.matchId !== matchId);
+    found = node.matches.length !== before;
+    if (!found) return;             // nothing changed — do not bump updatedAt for no reason
+    node.updatedAt = Date.now();
+    tx.set(ref, clean(node));
+  });
+  return found;
 }

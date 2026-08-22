@@ -452,6 +452,16 @@ export function groupByMember(review, members) {
  * `ord` is reassigned AFTER the dedupe: it is rankBlocks' tie-breaker of last
  * resort and has to be unique across the merged list, not per team.
  */
+/**
+ * ⭐ Đợt 224 — lifted out of mergeClassBlocks() so buildAnalysisRows() below can
+ * ask "who is this?" the SAME way. Two copies of a dedupe rule is two rules the
+ * day after (mergeClassBlocks' own note, one đợt later than it expected to be
+ * proven right).
+ */
+export function blockKey(b) {
+  return String(b?.key || "").trim() || String(b?.name || "").trim().toLowerCase();
+}
+
 export function mergeClassBlocks(groups) {
   const out = [];
   (groups || []).forEach(g => {
@@ -459,7 +469,7 @@ export function mergeClassBlocks(groups) {
   });
   const byPupil = new Map();
   out.forEach(b => {
-    const key = String(b.key || "").trim() || String(b.name || "").trim().toLowerCase();
+    const key = blockKey(b);
     const prev = byPupil.get(key);
     if (!prev) { byPupil.set(key, b); return; }
     const prevIsOurs = prev._at === undefined;
@@ -544,6 +554,63 @@ export function pctOf(b) {
   if (!total) return null;
   const right = Math.max(0, Number(b?.right) || 0);
   return Math.round((right / total) * 100);
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 224 (22/8/2026, thầy) — ANALYSE: STACK SEVERAL MATCHES' % PER PUPIL
+// ---------------------------------------------------------------
+// Recent results' new ANALYSE → tick 2+ columns → BEGIN turns several matches
+// into one stacked bar per pupil (one tier per match, height = that match's %).
+// The DOM lives in core/showdown-setup.js (openAnalysis); this is only the
+// arithmetic — pure data-in/data-out, same reason as everything else in this
+// file, and testable without a browser or a Firestore mock.
+//
+// ⚠️ STACK ORDER IS THE CALLER'S DECISION, NOT THIS FUNCTION'S. `entries` is
+// consumed in the order given — core/showdown-setup.js sorts by match time
+// ascending before calling, so the oldest match ends up at the BOTTOM of the
+// stack (read the finished bar bottom-to-top like a timeline). Deciding that
+// here would make this function secretly know it draws upward, which is a DOM
+// fact wearing a rules file's clothes.
+//
+// WHO COUNTS AS "FULL": thầy's own split (22/8/2026) — a pupil dealt a hand in
+// EVERY selected match is `full`; missing from even one match makes them
+// `partial`. Both groups sort by their OWN total descending; `partial` is not
+// interleaved with `full` at all — it is a second, shorter list appended after
+// the first (core/showdown-setup.js draws the seam as a narrow gap, "chỉ một
+// chút xíu", between the two — thầy explicitly did not want the size of the gap
+// to depend on how much any one pupil is missing).
+export function buildAnalysisRows(entries) {
+  const list = entries || [];
+  // key -> { name, values: Map(matchId -> pct) }
+  const byPupil = new Map();
+  list.forEach(e => {
+    (e?.blocks || []).forEach(b => {
+      const key = blockKey(b);
+      if (!key) return;
+      let s = byPupil.get(key);
+      if (!s) { s = { key, name: String(b.name || ""), values: new Map() }; byPupil.set(key, s); }
+      // A pupil who was dealt no question in this match (pctOf → null) still
+      // COUNTS as present — they were on the team, the board just never asked
+      // them anything. A tier of 0% says that; a missing tier would say "did
+      // not play this match at all", which is a different, false claim.
+      const pct = pctOf(b);
+      s.values.set(e.matchId, pct == null ? 0 : pct);
+    });
+  });
+  const rows = [...byPupil.values()].map(s => {
+    const full = list.every(e => s.values.has(e.matchId));
+    const segments = list.map(e => ({
+      matchId: e.matchId,
+      pct: s.values.has(e.matchId) ? s.values.get(e.matchId) : null
+    }));
+    const total = segments.reduce((a, x) => a + (x.pct || 0), 0);
+    return { key: s.key, name: s.name, full, total, segments };
+  });
+  const byTotalDesc = (a, b) => b.total - a.total;
+  return {
+    full: rows.filter(r => r.full).sort(byTotalDesc),
+    partial: rows.filter(r => !r.full).sort(byTotalDesc)
+  };
 }
 
 /**

@@ -8,6 +8,114 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 224 (22/8/2026) — ⭐⭐⭐ RECENT RESULTS: **10 TRẬN (2 TẦNG × 5 CỘT, was 5) · XOÁ TỪNG TRẬN RIÊNG · ANALYSE → BEGIN: BIỂU ĐỒ CỘT CHỒNG % NHIỀU TRẬN FULLSCREEN** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) — commit + hồ sơ đang được xử lý, xem dòng "PHIÊN/MÁY MỚI ĐỌC ĐÂY TRƯỚC" sẽ được ghi ngay dưới đây sau khi có mã băm live
+
+Thầy giao trọn tính năng mới cho màn Recent results (bảng sổ cái các trận Showdown đã chơi), chốt
+2 quyết định qua AskUserQuestion (dưới). Sửa **6 file**: `core/showdown-history.js` ·
+`core/showdown.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css` ·
+`core/HUONG DAN CORE.md`.
+
+### (1) Sổ cái 5 → 10 trận, bố cục 2 tầng × 5 cột
+
+`MAX_MATCHES` (`core/showdown-history.js`) 5 → 10 — `loadMatches()`/`saveMatchResult()` không
+đụng gì khác, cả hai đã đi qua hằng số này. `.aw-sd-rec-cols` (`core/app.css`) thêm
+`grid-template-rows: repeat(2, minmax(0, 1fr))` bên cạnh `grid-template-columns` cũ — grid tự chảy
+row-major nên thứ tự cũ→trái/mới→phải của Đợt 207 tự đúng theo từng tầng, không sửa dòng JS nào.
+
+⛔⛔ **BẪY ĐÃ CẮN KHI DỰNG**: ban đầu viết `repeat(2, 1fr)` — **SAI**. `1fr` trần là
+`minmax(auto, 1fr)`, nên khi nội dung một cột hơi cao hơn phần chia đều, HÀNG đó tự nới ra thay vì
+ép nội dung co lại, kéo CẢ LƯỚI tràn khỏi khung `.aw-sd-recent` được cấp — đo được bằng
+`scrollHeight - clientHeight` ra đúng 11px, dù khung ngoài cùng vẫn báo 0 tràn (chỗ tràn nằm ở lưới
+BÊN TRONG, mắt thường không thấy ngay). Sửa bằng `minmax(0, 1fr)` — đúng vé cho phép một ô co lại
+bằng chính xác phần được chia, cùng họ với bẫy `min-height:0` quen thuộc ở flexbox, một cấp lên grid.
+Ghi vào `core/HUONG DAN CORE.md` mục (f).
+
+Danh sách học sinh trong mỗi cột (`.aw-sd-mini`) bỏ `overflow-y:auto` (là màn xem lướt, không phải
+màn đọc — bấm cả cột đã mở được bảng thật, cuộn được, ở `openDetail`), đổi sang `max-height` cố
+định + `overflow:hidden` + `mask-image` mờ dần ở đáy. Thầy: *"chỉ cần hiển thị đến khoảng học sinh
+6-7 là được, các bạn phía dưới cùng sẽ mờ dần"* — **không đếm tay "đúng học sinh thứ mấy"**: mask
+tự mờ bất cứ thứ gì bị cắt ở đáy khung, dù lớp có 8 hay 30 em, và lớp vừa đủ chỗ thì không mờ gì cả
+(không có gì bị cắt để mờ).
+
+### (2) Nút xoá từng trận — "–" góc trên-phải mỗi cột
+
+`.aw-sd-rec-col` đổi từ `<button>` bọc cả cột thành `<div>` (giữ `cursor:pointer` + `onclick`) để
+nhét được nút xoá là MỘT `<button>` con thật — nút lồng trong nút là HTML không hợp lệ. Bấm → hỏi
+qua `askConfirm` đã có sẵn (đúng hàm nút Reset toàn sổ đang dùng) → **`deleteMatch(classId,
+matchId)`** mới trong `core/showdown-history.js`, cùng khuôn transaction với `saveMatchResult`
+(đọc doc trong giao dịch, lọc bỏ đúng một `matchId`, ghi lại) — không phải đọc-sửa-ghi trần trụi,
+kẻo đụng độ với một cột khác vừa ghi trận mới trong đúng giây đó.
+
+### (3) ANALYSE → chọn 2+ cột → BEGIN: biểu đồ cột chồng, fullscreen
+
+Nút **ANALYSE** (nền vàng, phát sáng `box-shadow` nhấp nháy + 6 ngôi sao `clip-path` lấp lánh — TÁI
+DÙNG nguyên khuôn `.aw-sd-pod-star`/`@keyframes aw-sd-twinkle` đã có ở bảng phễu, dựng lại ở PX vì
+`.aw-sd-recent` không phải container `cqw`), đặt bên phải nút ✕ (thầy: *"bên cạnh phải nút đóng
+pop-up"*). Bấm vào: mỗi cột hiện thêm một nút tròn to gần đáy (chấm mờ → dấu ✓ xanh to khi tích,
+đúng khuôn `.aw-sd-pod-tick` của bảng phễu). Tích ≥2 cột thì chữ trên nút đổi ANALYSE → **BEGIN**
+(cùng kích thước, chỉ đổi chữ). Bấm BEGIN → biểu đồ cột chồng % mở fullscreen.
+
+**Hai quyết định thầy chốt qua AskUserQuestion:**
+- Bấm nút lúc đang hiện chữ ANALYSE (0 hoặc 1 ô tích) LUÔN nghĩa là **thoát chế độ chọn**, dù đang
+  tích dở 1 ô — nút luôn làm đúng cái chữ nó đang hiện, không có trạng thái lấp lửng.
+- Học sinh không đủ mặt ở MỌI trận đã chọn (ví dụ tích 3 cột nhưng em chỉ chơi 2 trận) được xếp
+  thành **một cụm riêng SAU CÙNG**, cách cụm "đủ mặt" một khe hẹp — không phân biệt thiếu nhiều/ít,
+  cứ xếp giảm dần theo tổng % trong nội bộ cụm đó.
+
+**`buildAnalysisRows()` mới, THUẦN, trong `core/showdown.js`** (đúng chỗ — file này chỉ luật,
+engine nhập tĩnh, cấm Firestore/DOM): gộp % (`pctOf`, sẵn có) của mỗi em qua từng trận đã chọn,
+chia `full`/`partial` theo luật trên, mỗi nhóm tự xếp giảm dần theo tổng. Rút `blockKey()` ra khỏi
+`mergeClassBlocks()` để dùng chung — *"Two copies of a dedupe rule is two rules the day after"*,
+đúng câu chính file đã tự nhắc một đợt trước khi bị chứng minh đúng ở chính đợt này.
+
+⚠️ **THỨ TỰ CHỒNG (trận cũ đáy, trận mới trên) là quyết định của `core/showdown-setup.js`, không
+phải của hàm thuần** — `openAnalysis()` sắp `entries` theo `at` tăng dần rồi mới gọi
+`buildAnalysisRows()`, và DOM dùng `flex-direction: column-reverse` + append đúng thứ tự đó để
+trận cũ nhất tự rơi xuống đáy. Giữ quyết định "vẽ lên trên hay dưới" ở file DOM, không lẫn vào file
+luật.
+
+Biểu đồ dựng bằng DOM/CSS thường (không canvas, không thư viện) — mỗi tầng cao theo `%/yMax` (CÙNG
+`yMax` cho mọi cột, không phải % của riêng tổng cột đó, nên hai em mới so được bằng mắt), nhãn %
+chỉ hiện khi đo được chiều cao thật ≥16px (đo bằng `clientHeight` sau khi đã nằm trong DOM, có
+`ResizeObserver` riêng theo dõi qua lúc bật/tắt fullscreen — tách hàm vẽ khỏi hàm gắn observer, kẻo
+một observer tự gắn lại chính nó mỗi lần bắn là tự nuôi vòng lặp dựng-huỷ vô ích). Tên học sinh
+dưới mỗi cột tái dùng thẳng `fitPodiumNames()` đã có (co chữ → viết tắt → sàn cuối) qua bộ chọn
+`.aw-sd-rec-barname` — không viết lại luật co tên lần ba.
+
+Nút **Back** trên bảng phân tích **hỏi xác nhận trước khi thoát** (khác nút ✕ ở màn chi tiết một
+trận, đóng thẳng) — thầy chốt: BEGIN là một hành động có chủ đích trên 2+ trận đã tích tay, mất nó
+vì một cú chạm nhầm phải tốn thêm một cú xác nhận. Fullscreen dùng lại nguyên khuôn `openDetail()`
+đã có (yêu cầu sau khi vào DOM, nghe `fullscreenchange` để Esc/thoát-kiểu-khác vẫn dọn sạch).
+
+### ✅ ĐO
+
+- **20/20** — `scratch/dot224-analysis.mjs`, chạy thẳng Node vào MODULE THẬT (`buildAnalysisRows`,
+  `blockKey`, không mock): đủ mặt mọi trận · thiếu một trận → partial · dealt 0 câu tính là 0% chứ
+  không phải thiếu mặt · nhiều em partial xếp đúng thứ tự riêng · rỗng/thoái hoá không văng lỗi.
+- **25/25** — `scratch/dot224-recent.html`, trình duyệt thật qua `devserver.py`, giả Firestore
+  (`scratch/fake-firebase.js` có sẵn) + import thẳng module thật: seed 11 trận → chỉ còn 10 cột ·
+  lưới đúng 2 tầng · mask mờ đáy danh sách HS, không còn cuộn riêng · bấm "–" hỏi rồi xoá đúng
+  đúng trận (Firestore giả còn đúng 10, không phải 9 — số cột TRÊN MÀN và số trận TRONG KHO là hai
+  con số khác nhau, `loadMatches` chỉ cắt VIEW) · ANALYSE 0/1 ô tích bấm lại thì thoát hẳn · tích
+  2+ ô chữ đổi BEGIN, nút GIỮ NGUYÊN kích thước · bấm BEGIN mở đúng biểu đồ · Back hỏi trước khi
+  thoát, thoát xong sạch trạng thái chọn. **0 lỗi console** suốt phiên.
+- **Soi tận số** (không chỉ soi có/không): dựng 3 học sinh với %/trận cố định (An 50% · Binh 70% ·
+  Chi 90% mọi trận), tích 2 trận bất kỳ, đọc thẳng `tier.dataset.pct` + `tier.style.height` trên
+  DOM thật của biểu đồ → khớp 100% với tính tay (Chi 180% xếp đầu, Binh 140%, An 100%; chiều cao
+  tầng đúng `pct/yMax` với `yMax=180`) — xác nhận cả đường ống `matchBlocks → buildAnalysisRows →
+  DOM` chạy đúng, không chỉ riêng hàm thuần.
+- Đối chứng thêm: `.aw-sd-recent` (khung ngoài cùng, đại diện cho khung act) đo **0 tràn**
+  (`scrollHeight === clientHeight`) sau khi sửa bẫy `minmax(0,1fr)` ở trên.
+
+### ⬜ CHỜ THẦY
+
+- Chơi thử thật trên TOMKO/máy thật: 2 tầng × 5 cột có đủ to để chạm không, nút ANALYSE + nút tròn
+  tích có dễ bấm không, biểu đồ đọc từ cuối lớp có rõ không, tên học sinh dưới mỗi cột có đọc được
+  không (chưa test với lớp thật 15-20 em, chỉ test với lớp giả 2-3 em — bench chỉ đo được cơ chế
+  ĐÚNG, không đo được "nhìn có ổn không" trên bảng thật).
+
+---
+
 ## Đợt 223 (21/8/2026) — ⭐⭐⭐ **BỎ HẲN "ROUND RULE" + "SLOWER TEAM KEEPS POINTS" (TIME DELAY một mình quyết định) · KHOÁ IM LẶNG + MẤT MÀU (đen trắng mượt) Ở NẤC KHÔNG DELAY · FIX CHỜ VÔ ÍCH KHI BÀN KIA ĐÃ XONG · SHOW ANSWERS Ở BẢNG CUỐI TRẬN FIGHT** — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `297a4e2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `297a4e2` trạng thái `built` (`gh api repos/.../pages/builds/latest`, không tin mã 200) · **7/7 mã băm SHA-256 khớp** (băm nội dung trong commit so với nội dung live, không băm file trên máy — CRLF) · **17/17 phép hỏi CHẠY CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot223-live.html` import thẳng `https://aword.andrewclasses.com/core/fight.js`) + **52/52 phép hỏi cục bộ trước đó** (`scratch/dot223-verify.html` + `scratch/dot223-smoke-others.html`, cả 5 game Fight vòng thường).
 
 Thầy tả 4 vấn đề gặp ở Fight, chốt 3 quyết định qua AskUserQuestion (không trừ điểm ở nấc không-delay · mất màu = đen trắng chuyển mượt, trả lại màu khi sang câu · Show answers = hai cột song song đủ câu+đáp án). Sửa **7 file**: `core/fight.js` (lõi dùng chung) · `core/app.css` · 5 template Fight vòng thường (`quiz.js` · `anagram.js` · `type-the-answer.js` · `true-false.js` · `find-the-match.js`).
