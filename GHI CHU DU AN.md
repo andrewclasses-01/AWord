@@ -5,7 +5,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 235 (22/8/2026) — ⭐⭐⭐ DÒNG THƯƠNG HIỆU + DẠNG BẢNG MỚI + ĐỔI CƠ CHẾ XEM KẾT QUẢ — 🟢 CHỜ THẦY BẤM TAY THẬT
+## Đợt 235 (22/8/2026) — ⭐⭐⭐ DÒNG THƯƠNG HIỆU + DẠNG BẢNG MỚI + ĐỔI CƠ CHẾ XEM KẾT QUẢ — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `7554fe6`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `7554fe6` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/icons.js` · `core/showdown-export.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
+⚠️ Duyệt ở đây là duyệt CODE theo báo cáo + kiểm tra tự động — mục "🟢 CHƯA THỬ ĐƯỢC" ở cuối đợt vẫn
+còn nguyên (chưa ai đăng nhập Firestore thật để chạy 2 màn xem kết quả, chưa ai bấm tay trên TOMKO).
 
 Ba việc lớn còn lại của loạt yêu cầu chỉnh Showdown, sau khi nghiên cứu code cũ + báo phương án qua
 AskUserQuestion + thầy gõ **"ok build"**. Sửa 5 file: `core/icons.js` · `core/showdown-export.js` ·
@@ -78,7 +80,7 @@ AskUserQuestion: **3 nút icon riêng** (không phải 1 nút xoay vòng), thứ
 
 ---
 
-## Đợt 234 (22/8/2026) — ⭐⭐ PDF ĐÁP ÁN: CỠ CHỮ TỰ TÌM TỐI ĐA + GIÃN DÒNG SÁT + CĂN GIỮA ĐẦU MỤC — 🟢 CHỜ THẦY XEM (phần 1/2, còn 3 việc lớn hơn đang chờ "ok build" — xem cuối mục)
+## Đợt 234 (22/8/2026) — ⭐⭐ PDF ĐÁP ÁN: CỠ CHỮ TỰ TÌM TỐI ĐA + GIÃN DÒNG SÁT + CĂN GIỮA ĐẦU MỤC — ✅ **THẦY DUYỆT** (cùng đợt duyệt với Đợt 235, *"check commit + push + bàn giao"*) — commit `424abc5`, 3 việc lớn hơn từng ghi "chờ ok build" ở cuối mục này đã xong ở Đợt 235 ngay trên
 
 Thầy gửi tiếp 6 yêu cầu chỉnh bố cục PDF đáp án. Ba việc ĐẦU đã làm ngay (nằm gọn trong
 `core/showdown-export.js`, không đụng file nào khác); ba việc SAU (dòng thương hiệu ở mọi màn hình,

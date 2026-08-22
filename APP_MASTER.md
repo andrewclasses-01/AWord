@@ -8,7 +8,45 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 230)** — ⭐⭐ **RECENT RESULTS: ĐỔI TÊN + TÊN TỰ ĐỘNG THEO LOẠI
+> Cập nhật lần cuối: **22/8/2026 (Đợt 234 + 235)** — ⭐⭐⭐ **PDF ĐÁP ÁN CỠ CHỮ TỰ TÌM TỐI ĐA · DÒNG
+> "ANDREW CLASSES" Ở MỌI BẢNG TO/FILE XUẤT · DẠNG BẢNG MỚI CHO 1 TRẬN · ĐỔI CƠ CHẾ XEM KẾT QUẢ SAU
+> GAME** — **Đợt 234**: `computeDetailsFontSizePx()` (`core/showdown-export.js`) đo THẬT bằng DOM
+> (canvas chỉ để xếp hạng ứng viên) rồi nhị phân tìm cỡ chữ LỚN NHẤT sao cho câu hỏi dài nhất + đáp
+> án (thời gian+sai+đúng) rộng nhất vừa khít trang PDF, không tràn; cột đổi từ tỉ lệ `1.5fr 1fr`
+> sang PX CỐ ĐỊNH = đúng độ rộng đo được, tính MỘT LẦN dùng chung preview+file thật; giãn dòng
+> `2mm→0.7mm`; căn giữa đầu mục. **Đợt 235**: dòng thương hiệu mờ/mỏng/căn giữa ở mọi bảng to + file
+> xuất thật (KHÔNG ở thẻ nhỏ/preview thu nhỏ — thầy chốt qua AskUserQuestion) — DOM cho
+> `buildDetailsContent`/`buildRankSheet`, canvas cho `rankPngBlob`/`drawAnalysisCanvas` (nay export),
+> cũng thêm vào `core/showdown-review.js`/`core/showdown-setup.js`. Dạng **BẢNG mới** — hàm
+> `renderReviewTable()` mới (export từ `showdown-review.js`) tái dùng `drawAnalysisCanvas` với ĐÚNG
+> 1 entry (không rào cản kỹ thuật, xác nhận qua nghiên cứu); thêm tab thứ 3 TABLE vào popup DOWNLOAD
+> (icon mới `icons.barChart`), `defaultRank` (boolean) đổi thành `defaultType` (chuỗi). **Đổi cơ chế
+> xem kết quả**: bỏ cử chỉ giữ-tay (list↔podium) trên nút SHOWDOWN, thay bằng **3 nút icon
+> Table→Podium→List** (Table mặc định) — đồng bộ thao tác với Recent Results' `openDetail` (cũng đổi
+> tương tự, tái dùng CSS `.is-toggle.is-on` có sẵn). Chạm tên vẫn là cách DUY NHẤT đổi 1 đội↔cả lớp;
+> chạm 2 lần vẫn tải lại thủ công — cả hai GIỮ NGUYÊN theo thầy chốt. ⭐⭐ **`scope` mặc định đổi từ
+> "team" sang "class"** (đảo ngược mọi đợt trước) ⇒ phải tải dữ liệu chung NGAY lúc mở — `initialLoad()`
+> đua `refresh()` với sàn tối thiểu 3000ms trước khi tắt spinner. `openDetail` cũng thêm
+> `refreshThisMatch()` đọc lại `loadMatches(classId)` (trước giờ dữ liệu 1 trận chỉ tính 1 lần lúc mở
+> Recent Results, không hề refresh khi bấm vào trận — lỗi phát hiện lúc nghiên cứu).
+> ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `7554fe6`, ĐÃ PUSH + LIVE KIỂM
+> CHỨNG**: Pages triển khai đúng `7554fe6` trạng thái `built` (`gh api
+> repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp**
+> (`core/app.css` · `core/icons.js` · `core/showdown-export.js` · `core/showdown-review.js` ·
+> `core/showdown-setup.js` · `GHI CHU DU AN.md`, băm qua `git show HEAD:<file>` so với
+> `curl https://aword.andrewclasses.com/<file>`).
+> ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE theo báo cáo + kiểm tra tự động — CHƯA bấm thử tay trên
+> TOMKO, và CHƯA thử được luồng Firestore sống thật** (mountShowdownReview's `watchTeams`/`refresh()`
+> thật, `openDetail`'s `refreshThisMatch()` đọc `loadMatches` thật — cả hai đòi đăng nhập thật, không
+> mô phỏng nổi trong môi trường build). Bàn thử ĐÃ CHẠY: `renderReviewTable()` gọi trực tiếp với dữ
+> liệu giả (canvas vẽ đúng số %, dòng thương hiệu đúng vị trí); cả 3 tab popup DOWNLOAD
+> (TABLE/RANKING/DETAILS) vẽ đúng, dòng thương hiệu có mặt ở cả 3 (kiểm bằng DOM). ⚠️ Bẫy gặp lúc
+> test: icon `barChart` hiện "undefined" — do CACHE HTTP CŨ của `icons.js` (Ctrl+Shift+R xác nhận,
+> không phải lỗi code) — **bài học: đổi `icons.js` thì hard-reload trước khi kết luận lỗi**. Đọc khối
+> **Đợt 234 + 235** đầu `GHI CHU DU AN.md` để biết chi tiết + danh sách CHỜ THẦY BẤM TAY THẬT.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 230)** — ⭐⭐ **RECENT RESULTS: ĐỔI TÊN + TÊN TỰ ĐỘNG THEO LOẠI
 > TỪ · ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH · VÁ LỖI FULLSCREEN BACK** — double-tap (không phải
 > `dblclick` chuẩn — màn TOMKO không tin được) vào hàng tên một ô kết quả để đổi tên tay (`customName`
 > mới, `renameMatch()` trong `showdown-history.js`, LUÔN THẮNG vĩnh viễn). Tên mặc định nay đọc
