@@ -8,7 +8,38 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 227)** — ⭐⭐ **RECENT RESULTS: NÚT DOWNLOAD TRONG MÀN CHI
+> Cập nhật lần cuối: **22/8/2026 (Đợt 228)** — ⭐⭐ **CHANGE TEMPLATE + STYLE DỌN VÀO THẲNG POPUP
+> OPTIONS** — bỏ nút Template/Style riêng ngoài thanh công cụ dưới khung (giờ chỉ còn Options·Mode).
+> Trong Options, nút "current template" cạnh Apply: TAP mở bảng chọn 17 template ngay trong panel
+> (không cần scroll, không tràn ra ngoài), GIỮ mở Style — cả hai swap thẳng vào thân panel Options
+> (`swapContents`), không phải panel riêng. Chọn xong 1 template khác: Options KHÔNG đóng, tự mở lại
+> ngay với options của template mới (`openOptionsOnMount`, cùng khuôn `openShowdownOnMount` Đợt 158);
+> ô đang tải có vòng màu chạy quanh viền báo đang xử lý. Ở IPA/Running word/Running team (không đổi
+> template được), nút tự thành Style trần — bảo đảm Style không bao giờ mất, y hệt luật cũ.
+> ✅ **THẦY DUYỆT** (*"commit + push + bàn giao"*, sau khi duyệt bản mockup Artifact rồi duyệt code
+> thật) — **COMMIT `97ff5ce`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `97ff5ce` trạng thái
+> `built` (không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`core/engine.js` · `core/app.css` ·
+> `templates/running-word/running-word.css` · `templates/running-team/running-team.css`, băm nội
+> dung trong commit so với `curl https://aword.andrewclasses.com/<path>`). Đọc khối **Đợt 228** đầu
+> `GHI CHU DU AN.md` — tóm tắt:
+> - Bảng chọn template không còn là tool-panel riêng (`buildTemplatePanel` cũ đã xoá) — nó SWAP vào
+>   `bodyHost` của chính Options bằng cơ chế đổi clue-set có sẵn (Đợt 149), nên tự cao vừa đủ theo
+>   nội dung, không cần tính overlay thủ công.
+> - **Bẫy đã tự bắt khi code**: `buildTemplatePickerBody`/`pickTemplate` viết lệch scope (sibling
+>   thay vì nested trong `buildOptionsPanel`) → `ReferenceError` lúc bấm nút thật; và một lần dọn
+>   comment vô tình xoá mất dòng khai báo `const templateSwitchAvailable` — `node --check` không bắt
+>   được (chỉ soát cú pháp), phải chạy lại Browser pane thật mới thấy lỗi. Cả hai đã tự sửa, không
+>   cần hỏi thầy.
+> - Đo qua `scratch/test-mode.html` (bench có sẵn từ Đợt 158, không cần đăng nhập Google) qua
+>   `javascript_tool`: tap/giữ đúng bảng, đổi Anagram↔Quiz giữ nguyên state Options, is-soon toast
+>   đúng, toolbar chỉ còn 2 nút. Không lỗi console.
+> ### ⬜ CHỜ THẦY
+> - Bấm thử trên bảng/TOMKO thật (đặc biệt cử chỉ NHẤN GIỮ để mở Style — bench chỉ mô phỏng được
+>   bằng PointerEvent giả, chưa đo được cảm giác giữ tay thật).
+> - Fight mode + Showdown mode (bấm Template giữa trận) — cố tình CHƯA test/CHƯA đổi hành vi đợt này.
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 227)** — ⭐⭐ **RECENT RESULTS: NÚT DOWNLOAD TRONG MÀN CHI
 > TIẾT TRẬN** (giữa Ranking và Back) — pop-up chọn Rank (ảnh PNG vuông) hay Details (PDF A4 dọc qua
 > in trình duyệt), đặt tiêu đề Lớp • Act • Ngày, xem trước rồi xuất. File mới
 > `core/showdown-export.js`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau

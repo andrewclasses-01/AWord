@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 228 (22/8/2026) — ⭐⭐ ĐƯA **CHANGE TEMPLATE** VÀO THẲNG POPUP OPTIONS, BỎ NÚT TEMPLATE CŨ NGOÀI TOOLBAR — 🟡 ĐÃ CODE + TỰ TEST QUA `scratch/test-mode.html`, **CHƯA COMMIT** (đang chờ thầy duyệt trước khi push — repo này push `main` là lên thẳng aword.andrewclasses.com).
+## Đợt 228 (22/8/2026) — ⭐⭐ ĐƯA **CHANGE TEMPLATE + STYLE** VÀO THẲNG POPUP OPTIONS, BỎ NÚT TEMPLATE/STYLE RIÊNG NGOÀI TOOLBAR — ✅ **THẦY DUYỆT** (*"commit + push + bàn giao"*) — **COMMIT `97ff5ce`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `97ff5ce` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`core/engine.js` · `core/app.css` · `templates/running-word/running-word.css` · `templates/running-team/running-team.css`, băm nội dung trong commit qua `git show 97ff5ce:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 
 Thầy giao (sau khi duyệt bản dựng thử/mockup dạng Artifact): trong popup Options, thêm 1 nút bên
 trái Apply hiện TÊN TEMPLATE ĐANG CHƠI (giống hệt ô "đang chọn" trong bảng Template cũ, thu nhỏ lại),
