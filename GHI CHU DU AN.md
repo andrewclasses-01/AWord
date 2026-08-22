@@ -5,7 +5,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 230 (22/8/2026) — ⭐⭐ RECENT RESULTS: ĐỔI TÊN TRẬN + TÊN TỰ ĐỘNG THEO LOẠI TỪ, ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH, VÁ LỖI "Back to the matches" KHI FULLSCREEN
+## Đợt 230 (22/8/2026) — ⭐⭐ RECENT RESULTS: ĐỔI TÊN TRẬN + TÊN TỰ ĐỘNG THEO LOẠI TỪ, ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH, VÁ LỖI "Back to the matches" KHI FULLSCREEN — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `c14afc9`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `c14afc9` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`core/showdown.js` · `core/showdown-history.js` · `core/showdown-setup.js` · `core/showdown-export.js` · `core/engine.js` · `core/app.css`, băm nội dung trong commit qua `git show c14afc9:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
+⚠️ Duyệt ở đây là duyệt CODE theo báo cáo + bàn thử tự động — xem mục "CHỜ THẦY BẤM TAY THẬT" ngay
+dưới, vẫn còn nguyên (chưa ai chạm 2 lần thật trên TOMKO, chưa ai bấm fullscreen thật).
 
 Thầy giao qua chat (đã bàn kỹ trước bằng AskUserQuestion — xem 4 quyết định dưới) một loạt cải tiến
 cho popup Showdown, chia hai màn: **Recent results** (10 ô kết quả gần nhất) và **ANALYSE** (biểu đồ

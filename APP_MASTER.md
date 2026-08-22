@@ -8,7 +8,34 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **22/8/2026 (Đợt 229)** — ⭐⭐ **ĐỒNG BỘ MODE + LIVE-PREVIEW OPTIONS CHO
+> Cập nhật lần cuối: **22/8/2026 (Đợt 230)** — ⭐⭐ **RECENT RESULTS: ĐỔI TÊN + TÊN TỰ ĐỘNG THEO LOẠI
+> TỪ · ANALYSE: TRUNG BÌNH % + MÀU MỚI + XUẤT ẢNH · VÁ LỖI FULLSCREEN BACK** — double-tap (không phải
+> `dblclick` chuẩn — màn TOMKO không tin được) vào hàng tên một ô kết quả để đổi tên tay (`customName`
+> mới, `renameMatch()` trong `showdown-history.js`, LUÔN THẮNG vĩnh viễn). Tên mặc định nay đọc
+> `contentVariant` ghi lúc lưu kết quả: act "... / WORDS" hiện thành "... / ENGLISH 1"/"...
+> / VIETNAMESE 2" (`formatActDisplayName()` mới, `core/showdown.js`) — trận cũ chưa có dữ liệu này thì
+> giữ nguyên tên gốc. ANALYSE: số % tổng trên đỉnh cột đổi từ CỘNG DỒN sang TRUNG BÌNH qua các trận có
+> mặt (trục % cố định 0-100%), số nhỏ trong khúc vẫn là % thật không bị chia; màu mới tươi hơn, tên
+> luôn viết hoa, chú thích căn giữa. Nút Download mới trên màn ANALYSIS xuất 1 ảnh PNG gộp cả 2 bảng
+> (file mới `core/showdown-export.js`, vẽ Canvas 2D). Vá lỗi thầy báo: "Back to the matches" không
+> phản ứng khi đang fullscreen — gốc là hộp hỏi xác nhận dựng ra NGOÀI phần tử đang fullscreen nên vô
+> hình theo đúng chuẩn Fullscreen API; nay `askConfirm()` dựng vào `document.fullscreenElement || body`.
+> ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `c14afc9`, ĐÃ PUSH + LIVE KIỂM
+> CHỨNG**: Pages triển khai đúng `c14afc9` trạng thái `built` (`gh api
+> repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp**
+> (`core/showdown.js` · `core/showdown-history.js` · `core/showdown-setup.js` ·
+> `core/showdown-export.js` · `core/engine.js` · `core/app.css`, băm nội dung trong commit so với
+> `curl https://aword.andrewclasses.com/<path>`).
+> ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE theo báo cáo + bàn thử tự động — CHƯA phải đã bấm thử tay trên
+> TOMKO.** Bàn thử mới `scratch/dot230-recent.html` (tái dùng `fake-firebase196.js` Đợt 196/207,
+> `buildShowdownPanel` thật, không cần đăng nhập Google) qua `javascript_tool`: **37/37 ĐẠT, 0 lỗi
+> console** — kể cả đo bằng PIXEL THẬT rằng chiều cao các khúc màu khớp đúng % trung bình, và kiểm lỗi
+> fullscreen bằng cách giả lập `document.fullscreenElement` rồi bấm Back thật. Đọc khối **Đợt 230**
+> đầu `GHI CHU DU AN.md` để biết chi tiết + danh sách CHỜ THẦY BẤM TAY THẬT (cử chỉ chạm 2 lần trên
+> TOMKO thật, cảnh fullscreen thật).
+>
+> ---
+> Trước đó: **22/8/2026 (Đợt 229)** — ⭐⭐ **ĐỒNG BỘ MODE + LIVE-PREVIEW OPTIONS CHO
 > myActivity CHIA NHIỀU BẢNG** — bridge `window.__awordBridge` (myActivity gọi qua executeJavaScript)
 > thêm `setMode("single"|"showdown")`, `openOptions()`, `closeTool()`. `awEmit("MODE",…)` phát khi về
 > Single (mọi đường: thoát Fight/Running/IPA/Showdown) và khi MỞ màn chọn đội Showdown (không phải
