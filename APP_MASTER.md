@@ -10,13 +10,20 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **23/8/2026 (Đợt 237)** — ⭐⭐⭐ **14 ĐIỀU CHỈNH TRANG SHOWDOWN: ICON→ANALYSE
 > MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI
-> · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ.** 🟡 **CODE XONG + TỰ TEST (39/39, 0 lỗi console qua Firestore
-> giả) — CHƯA bấm tay thật, CHƯA commit/push.** Đọc khối **Đợt 237** đầu `GHI CHU DU AN.md` để biết chi
-> tiết đầy đủ 14 mục + các bẫy gặp lúc sửa (đáng chú ý: `.aw-btn-primary`/`.aw-sd-ghost` dùng chung 25
-> file khắp app — mọi màu mới cho popup xác nhận xoá phải SCOPE trong `.aw-sd-confirmbox`, không đổi
-> class gốc; `AN_PLOT_H` tăng gấp đôi áp dụng cho CẢ Table 1 trận lẫn mọi PNG tải về multi-match, không
-> tách riêng; sparkle/glow cũ của podium dùng đơn vị `cqw` chỉ có nghĩa trong khung game
-> `container-type:size`, viết bản px riêng cho trang Showdown Home vì nó nằm ngoài khung đó).
+> · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ.** ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") — COMMIT
+> `9933897`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api
+> repos/andrewclasses-01/AWord/pages/builds/latest`) · **7/7 mã băm SHA-256 khớp** (`APP_MASTER.md` ·
+> `GHI CHU DU AN.md` · `core/app.css` · `core/showdown-export.js` · `core/showdown-home.js` ·
+> `core/showdown-review.js` · `main.js`, băm qua `git show HEAD:<file>` so với `curl
+> https://aword.andrewclasses.com/<file>`).
+> ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE + tự test qua Firestore giả (39/39, 0 lỗi console) — CHƯA bấm
+> tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống.** Đọc khối
+> **Đợt 237** đầu `GHI CHU DU AN.md` để biết chi tiết đầy đủ 14 mục + các bẫy gặp lúc sửa (đáng chú ý:
+> `.aw-btn-primary`/`.aw-sd-ghost` dùng chung 25 file khắp app — mọi màu mới cho popup xác nhận xoá
+> phải SCOPE trong `.aw-sd-confirmbox`, không đổi class gốc; `AN_PLOT_H` tăng gấp đôi áp dụng cho CẢ
+> Table 1 trận lẫn mọi PNG tải về multi-match, không tách riêng; sparkle/glow cũ của podium dùng đơn vị
+> `cqw` chỉ có nghĩa trong khung game `container-type:size`, viết bản px riêng cho trang Showdown Home
+> vì nó nằm ngoài khung đó).
 >
 > ---
 > Trước đó: **23/8/2026 (Đợt 236)** — ⭐⭐⭐ **TRANG SHOWDOWN RIÊNG TRÊN TRANG CHỦ + KHO LƯU

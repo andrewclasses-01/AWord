@@ -5,7 +5,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 237 (23/8/2026) — ⭐⭐⭐ SHOWDOWN HOME: ICON→ANALYSE MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ — 🟡 CODE XONG + TỰ TEST (39/39, 0 lỗi console), CHƯA BẤM TAY THẬT/CHƯA COMMIT
+## Đợt 237 (23/8/2026) — ⭐⭐⭐ SHOWDOWN HOME: ICON→ANALYSE MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ
+
+✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") — COMMIT `9933897`, ĐÃ PUSH + LIVE KIỂM CHỨNG**:
+Pages triển khai đúng `9933897` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`,
+không tin mã 200) · **7/7 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/app.css` ·
+`core/showdown-export.js` · `core/showdown-home.js` · `core/showdown-review.js` · `main.js`, băm qua
+`git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
+⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE + tự test qua Firestore giả (39/39, 0 lỗi console) — CHƯA bấm tay
+thật trên TOMKO/máy thật** (đặc biệt: cảm giác thật của hiệu ứng cuộn icon Showdown→ANALYSE và kéo-thả
+chip trên màn cảm ứng — lưới thử chỉ giả lập pointer event qua trình duyệt off-screen, không thay được
+tay thật; cũng chưa đăng nhập Google thật để thử luồng Firestore sống).
 
 Thầy giao 14 điều chỉnh cho trang Showdown ("nút Showdown" trên trang chủ, `core/showdown-home.js`),
 chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"): (1) icon Showdown vẫn là icon ở
