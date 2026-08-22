@@ -8,7 +8,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 227 (22/8/2026) — ⭐⭐ RECENT RESULTS: NÚT **DOWNLOAD** TRONG MÀN CHI TIẾT TRẬN — ⏳ **CHƯA THẦY DUYỆT, CHƯA COMMIT** (phiên Claude khác, chưa hỏi thầy có push không)
+## Đợt 227 (22/8/2026) — ⭐⭐ RECENT RESULTS: NÚT **DOWNLOAD** TRONG MÀN CHI TIẾT TRẬN — ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) · **COMMIT `bde28b2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `bde28b2` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`core/showdown-export.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css`, băm nội dung trong commit qua `git show bde28b2:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
 
 Thầy giao: bấm vào 1 ô trong Recent results (màn chi tiết trận, `openDetail` trong
 `core/showdown-setup.js`) → thêm nút **Download** nằm GIỮA nút Ranking (cúp) và nút Back (✕) →
@@ -69,10 +69,10 @@ chạy qua Browser pane + `devserver.py`:
 môi trường phiên này không đăng nhập được) — mọi phép đo trên chạy `openExportDialog`/`rankPngBlob`
 trực tiếp với dữ liệu bịa, không phải bấm từ màn Recent results thật.
 
-⬜ **CHỜ THẦY**: bấm thử qua đúng đường (Showdown → Recent results → bấm 1 trận → nút Download mới),
-in thử 1 file Details ra giấy/PDF thật xem giãn cách + cỡ chữ có ổn không, xem ảnh PNG Rank tải về
-trên máy tính/điện thoại có đúng ý không, và cho biết có commit + push lên live hay chưa (phiên này
-CHƯA commit, đang chờ thầy duyệt trước).
+⬜ **CHỜ THẦY**: bấm thử qua đúng đường trên bảng/TOMKO thật (Showdown → Recent results → bấm 1 trận
+→ nút Download mới), in thử 1 file Details ra giấy/PDF thật xem giãn cách + cỡ chữ có ổn không, xem
+ảnh PNG Rank tải về trên máy tính/điện thoại có đúng ý không — bench mới chỉ đo được cơ chế đúng
+(dữ liệu bịa qua Browser pane), chưa đo được "nhìn có đẹp/vừa mắt không" trên thiết bị thật.
 
 ---
 

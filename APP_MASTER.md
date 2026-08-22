@@ -11,8 +11,12 @@
 > Cập nhật lần cuối: **22/8/2026 (Đợt 227)** — ⭐⭐ **RECENT RESULTS: NÚT DOWNLOAD TRONG MÀN CHI
 > TIẾT TRẬN** (giữa Ranking và Back) — pop-up chọn Rank (ảnh PNG vuông) hay Details (PDF A4 dọc qua
 > in trình duyệt), đặt tiêu đề Lớp • Act • Ngày, xem trước rồi xuất. File mới
-> `core/showdown-export.js`. ⏳ **CHƯA THẦY DUYỆT, CHƯA COMMIT** (phiên Claude khác dựng xong, đang
-> chờ thầy xem qua trước khi hỏi commit/push). Đọc khối **Đợt 227** đầu `GHI CHU DU AN.md` — tóm tắt:
+> `core/showdown-export.js`. ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu để các session sau
+> sẵn sàng tiếp tục"*) — **COMMIT `bde28b2`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng
+> `bde28b2` trạng thái `built` (không tin mã 200) · **4/4 mã băm SHA-256 khớp**
+> (`core/showdown-export.js` · `core/showdown-setup.js` · `core/icons.js` · `core/app.css`, băm nội
+> dung trong commit so với `curl https://aword.andrewclasses.com/<path>`). Đọc khối **Đợt 227** đầu
+> `GHI CHU DU AN.md` — tóm tắt:
 > - **Bẫy đo được khi dựng ảnh PNG**: cách hay dùng để "chụp" DOM thành ảnh (SVG `foreignObject` →
 >   `<img>` → `drawImage` vào canvas) làm canvas bị Chromium đánh dấu "tainted" dù ảnh CÙNG GỐC —
 >   `toBlob()` ném `SecurityError`. Sửa bằng vẽ THẲNG lên canvas bằng lệnh nguyên thuỷ
@@ -25,9 +29,9 @@
 >   1000×1000 có vẽ thật (không trắng trống), nút Download PDF gọi đúng `window.print()` 1 lần và dọn
 >   sạch sheet sau in.
 > ### ⬜ CHỜ THẦY
-> - Bấm thử qua đúng đường (Showdown → Recent results → 1 trận → nút Download mới).
-> - In thử 1 file Details ra giấy/PDF thật (giãn cách, cỡ chữ), xem ảnh PNG Rank tải về có đúng ý.
-> - Cho biết có commit + push lên live hay chưa.
+> - Bấm thử qua đúng đường trên bảng/TOMKO thật (Showdown → Recent results → 1 trận → nút Download).
+> - In thử 1 file Details ra giấy/PDF thật (giãn cách, cỡ chữ), xem ảnh PNG Rank tải về có đúng ý —
+>   bench chỉ đo được cơ chế đúng qua dữ liệu bịa, chưa đo được "nhìn có đẹp không" trên thiết bị thật.
 >
 > ---
 > Trước đó: **22/8/2026 (Đợt 225+226)** — ⭐ **PRINT: VÁ LỖI LUÔN RA ENG1 DÙ ĐÃ CHỌN
