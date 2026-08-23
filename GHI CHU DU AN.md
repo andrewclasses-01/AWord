@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 240 (23/8/2026) — ⭐⭐⭐ BẢNG TABLE KHUNG 16:9 + THANH PHÂN LOẠI MÀU (LƯU VĨNH VIỄN) + TIÊU ĐỀ ANALYSE CÓ NGÀY + LOADING 2S — 🟡 THẦY DUYỆT ("ok build", sau đó "check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+## Đợt 240 (23/8/2026) — ⭐⭐⭐ BẢNG TABLE KHUNG 16:9 + THANH PHÂN LOẠI MÀU (LƯU VĨNH VIỄN) + TIÊU ĐỀ ANALYSE CÓ NGÀY + LOADING 2S — ✅ **THẦY DUYỆT** ("ok build", sau đó *"check commit + push + bàn giao"*) — **COMMIT `0a514d5`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `0a514d5` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **8/8 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-export.js` · `core/showdown-history.js` · `core/showdown-home.js` · `core/showdown-review.js` · `core/showdown-setup.js` · `core/showdown.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot240-showdown.html`, **28/28 phép thử ĐẠT, 0 lỗi console**) — bao
 gồm cả kiểm bằng cách QUÉT ĐIỂM ẢNH thật trên canvas xuất ra (đo chiều cao cột, đo màu đã tô), không chỉ
