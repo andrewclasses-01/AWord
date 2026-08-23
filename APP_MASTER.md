@@ -8,7 +8,26 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 246)** — ⭐⭐⭐ **ASSIGNMENT CÓ HAI CHẾ ĐỘ PRACTICE / SUBMIT +
+> Cập nhật lần cuối: **24/8/2026 (Đợt 247)** — ⭐⭐ **CẦU CHO myLesson** (thầy chốt "Ok build Đợt A
+> ngay" — phần AWord của kế hoạch "Tạo bài giao ngay trong myLesson", thiết kế đầy đủ ở
+> `D:\OTHERS\CLAUDE\THIET KE NUT TAO BAI GIAO - 24-08-2026.md`). **Toàn bộ là THÊM — không đổi hành
+> vi cũ, không đụng template/luật Firestore/trang học sinh.** Sửa 3 file: `core/engine.js`
+> (bridge thêm `giaoBai(lop)` — mở form Set assignment của act đang mở, chặn session +
+> noAssignment, đi qua `queued()`; marker mới **`MYACT:AW:ASSIGN:{"code","title"}`** phát trong
+> onCreated ở CẢ đường bridge lẫn đường thầy bấm nút) · `core/assignment-ui.js`
+> (`openAssignmentSetup` nhận `lop` — điền sẵn ô Class + chữ đầu tiêu đề, `classTouched=true`
+> chặn cú đoán theo thư mục; ⛔ đừng gọi showFiling trong nhánh này — TDZ) · `main.js`
+> (**`window.__awordLib`**: `daDangNhap`/`timThuMuc` (lọc CHỨA trên `listFolders("activities")`,
+> kèm `duongDan`)/`lietKeAct` — chưa đăng nhập trả `{ok:false, loi:"chua-dang-nhap"}`, KHÔNG có
+> hàm ghi; **URL `?bao=<mã>`** mở thẳng pop-up kết quả assignment trên nền trang chủ).
+> Bàn thử `scratch/dot247-giaobai.html` (engine thật + quiz thật + fake-firebase246, cổng 5613):
+> **16/16 ĐẠT, 0 lỗi console**; `?bao=`/`__awordLib` cần đăng nhập thật — thầy kiểm live bằng
+> `?bao=<mã bài giao có thật>`. Backup `_backup/dot247/`. Hồ sơ đủ ở khối Đợt 247 đầu
+> `GHI CHU DU AN.md`. Việc kế tiếp = **Đợt B bên myLesson app** (nút CHECK + 3 cặp ô WORDS +
+> webview nghe marker).
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 246)** — ⭐⭐⭐ **ASSIGNMENT CÓ HAI CHẾ ĐỘ PRACTICE / SUBMIT +
 > GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI**. ✅ **THẦY DUYỆT — COMMIT `98525a0`, ĐÃ PUSH + LIVE KIỂM CHỨNG**:
 > Pages `built` đúng commit · **9/9 mã băm SHA-256 khớp** · bàn thử luồng trỏ thẳng vào bản LIVE
 > (`scratch/dot246-live.html`) **37/37 ĐẠT, 0 lỗi console** (backup `_backup/dot246/`;

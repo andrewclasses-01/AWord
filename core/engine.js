@@ -665,6 +665,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       switchTemplate: (type) => queued(() => current ? current.switchTemplate(type) : false),
       applyOptions: (opts) => queued(() => current ? current.applyOptions(opts) : false),
       setTheme: (id) => queued(() => current ? current.setTheme(id) : false),
+      // ⭐ Đợt 247 — cửa cho myLesson (webview Electron): mở form Set assignment
+      // của act ĐANG MỞ với ô Class điền sẵn. Đi qua `queued()` như mọi mutator
+      // để một cú switchTemplate đang bay hạ cánh xong mới mở form. Bản delegate
+      // cũ (trang đã cache engine cũ) không có method này ⇒ trả false, không nổ.
+      giaoBai: (lop) => queued(() => (current && current.giaoBai) ? current.giaoBai(lop) : false),
       _setCurrent(delegate) { current = delegate; },
     };
   }
@@ -797,6 +802,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     closeTool() {
       closeToolPanel(false);
       return true;
+    },
+    // ⭐ Đợt 247 — myLesson gọi qua singleton (xem ghi chú trên đó). Trả true =
+    // form ĐÃ MỞ (thầy còn phải bấm START); mã bài giao về sau qua marker
+    // console "MYACT:AW:ASSIGN:{code,title}" phát trong onCreated — CÙNG một
+    // marker cho cả đường này lẫn đường thầy tự bấm nút Set assignment, nên
+    // myLesson chỉ cần nghe một chỗ. ⛔ Trang học sinh (session) không bao giờ
+    // được mở form thầy; 3 template noAssignment giữ nguyên luật Đợt 245.
+    giaoBai(lop) {
+      if (session || tpl.noAssignment) return false;
+      return import("./assignment-ui.js").then(ui => {
+        ui.openAssignmentSetup(libAct, {
+          lop,
+          onCreated: (a) => {
+            loadAssignmentBars();
+            awEmit("ASSIGN", JSON.stringify({ code: a.code, title: a.title }));
+          },
+        });
+        return true;
+      }, () => false);
     }
   });
 
@@ -1726,7 +1750,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const ui = await import("./assignment-ui.js");
     // `libAct` again (Đợt 145): the assignment snapshot must keep every clue
     // set, so the teacher can still switch the given act between them later.
-    ui.openAssignmentSetup(libAct, { onCreated: loadAssignmentBars });
+    // ⭐ Đợt 247 — onCreated giờ phát thêm marker ASSIGN cho myLesson (nếu trang
+    // này đang nằm trong webview của nó); đứng một mình thì awEmit chỉ là một
+    // dòng console.log vô hại.
+    ui.openAssignmentSetup(libAct, { onCreated: (a) => {
+      loadAssignmentBars();
+      awEmit("ASSIGN", JSON.stringify({ code: a.code, title: a.title }));
+    } });
   };
   // Print opens a popup to pick a worksheet FORMAT (Anagram/Crossword/Quiz/
   // Unjumble) — the whole flow lives in core/print.js (generic, template-agnostic).

@@ -181,7 +181,9 @@ function iconButton(icon, title, onClick) {
 // =============================================================
 // 1. SET ASSIGNMENT — the setup form
 // =============================================================
-export function openAssignmentSetup(act, { onCreated } = {}) {
+// ⭐ Đợt 247 — `lop`: myLesson (qua bridge `giaoBai`) đưa sẵn tên lớp; ô Class
+// và chữ đầu của tiêu đề được điền trước, thầy vẫn sửa được như thường.
+export function openAssignmentSetup(act, { onCreated, lop } = {}) {
   openModal("optswide", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
@@ -212,6 +214,15 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
       err.textContent = "";
       showFiling();
     };
+    // ⭐ Đợt 247 — lớp điền sẵn từ myLesson. Đặt `classTouched` để cú đoán theo
+    // thư mục của act (khối act.parentId dưới) không ghi đè lên. ⛔ KHÔNG gọi
+    // showFiling() ở đây — nó là const khai phía dưới (TDZ); dòng "Filed in
+    // Results" sẽ tự đúng khi listFolders() về (Promise.all phía dưới).
+    if (lop) {
+      classTouched = true;
+      classInput.value = String(lop).slice(0, 20);
+      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
+    }
 
     // --- deadline
     body.append(el("label", "aw-as-label", "Deadline"));

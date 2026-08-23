@@ -54,7 +54,8 @@ import { currentUser, signIn, signOutNow, TEACHER_EMAIL } from "./core/firebase.
 import { variantsOf, voiceVariantsOf, clueOf, voiceOf, setVoiceOf, variantFullyVoiced } from "./core/content-view.js";
 import {
   listAllAssignments, listAssignmentsForAct, updateAssignment, trashAssignment,
-  restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults
+  restoreAssignment, deleteAssignmentForever, assignmentNameTaken, hasNewResults,
+  getAssignment
 } from "./core/assignments.js";
 import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
@@ -93,6 +94,46 @@ let showdownHomeHandle = null;
 // instead of owning a second one on its own toolbar. null on any page that
 // never built the icon (there is nothing to morph there).
 let sdHomeBtnSetAnalyse = null;
+
+// ⭐⭐ Đợt 247 — CẦU THƯ VIỆN CHO myLesson (`window.__awordLib`).
+// myLesson (app Electron soạn bài) mở trang này trong một <webview> đã đăng
+// nhập Google của thầy, rồi gọi các hàm dưới qua executeJavaScript để:
+//   1. tìm THƯ MỤC act theo mã bài (vd "LSA2-S2.T1.P3-4-5" — tên thư mục của
+//      thầy CHỨA mã + có thể kèm chữ, nên so kiểu "chứa", không so bằng);
+//   2. liệt kê ACT trong thư mục đó (để thầy chọn ENG1/QUIZ1... từng ngăn).
+// Mọi hàm tự trả {ok:false, loi:"chua-dang-nhap"} khi chưa đăng nhập — myLesson
+// dựa vào đó để hiện màn "bấm để đăng nhập AWord" thay vì chết lặng.
+// ⛔ KHÔNG thêm hàm GHI vào đây — tạo assignment đi qua đường bridge `giaoBai`
+// (core/engine.js) để form Set assignment THẬT của AWord vẫn là nơi duy nhất
+// quyết định options/optVer/xếp thư mục Results.
+window.__awordLib = {
+  daDangNhap: () => !!state.user,
+  async timThuMuc(chuoi) {
+    if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
+    const q = String(chuoi || "").trim().toLowerCase();
+    if (!q) return { ok: true, ds: [] };
+    try {
+      const folders = await listFolders("activities");
+      const khop = folders.filter(f => String(f.name || "").toLowerCase().includes(q));
+      const ds = [];
+      for (const f of khop) {
+        // đường dẫn đầy đủ để thầy phân biệt khi 2 thư mục trùng tên
+        const chain = await pathTo(f.id).catch(() => []);
+        ds.push({ id: f.id, num: f.num ?? null, ten: f.name || "",
+                  duongDan: chain.map(x => x.name).join(" / ") });
+      }
+      return { ok: true, ds };
+    } catch (e) { return { ok: false, loi: e.message || "loi" }; }
+  },
+  async lietKeAct(folderId) {
+    if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
+    try {
+      const items = await listChildren("activities", folderId || null);
+      return { ok: true, ds: items.filter(n => n.kind === "act")
+        .map(n => ({ id: n.id, num: n.num ?? null, ten: n.title || "", type: n.type })) };
+    } catch (e) { return { ok: false, loi: e.message || "loi" }; }
+  },
+};
 
 init();
 
@@ -157,6 +198,19 @@ function setUrl(url, replace) {
 async function routeFromLocation() {
   const p = new URLSearchParams(location.search);
   const opts = { fromUrl: true };
+
+  // ⭐ Đợt 247 — ?bao=<mã bài giao>: mở THẲNG bảng kết quả assignment (đúng
+  // pop-up openAssignmentDetail của Results) trên nền trang chủ. Đường cho
+  // myLesson: bấm đúp icon tích xanh bên đó = nạp webview vào URL này. Mã sai/
+  // đã xoá thì rơi xuống trang chủ như thường, không nổ.
+  if (p.get("bao")) {
+    const a = await getAssignment(p.get("bao")).catch(() => null);
+    if (a && !a.trashed) {
+      goTop(opts);
+      openAssignmentDetail(a, { onChanged: () => {} });
+      return;
+    }
+  }
 
   const actKey = p.get("a") || p.get("play");
   if (actKey) {

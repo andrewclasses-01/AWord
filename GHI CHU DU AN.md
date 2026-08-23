@@ -5,6 +5,63 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 247 (24/8/2026) — ⭐⭐ CẦU CHO myLesson: bridge `giaoBai` + `__awordLib` + URL `?bao=` + marker ASSIGN
+
+**Bối cảnh:** myLesson app (Electron soạn bài) sắp có nút "Tạo bài giao" — thầy chốt qua
+AskUserQuestion 24/8: dùng chính trang AWord trong **webview đã đăng nhập Google của thầy**
+làm cánh tay ("Đồng ý webview"), thầy gõ mã bài (vd `LSA2-S2.T1.P3-4-5`), tên thư mục AWord
+là **"mã + chữ thêm"** nên tìm kiểu CHỨA. Thầy gõ **"Ok build Đợt A ngay"**. Đợt này là toàn
+bộ phần AWord của kế hoạch đó (bản thiết kế đầy đủ nằm bên máy thầy:
+`D:\OTHERS\CLAUDE\THIET KE NUT TAO BAI GIAO - 24-08-2026.md`). **Toàn bộ là THÊM, không đổi
+hành vi cũ; KHÔNG đụng template, KHÔNG đụng luật Firestore, KHÔNG đụng trang học sinh.**
+
+Sửa **3 file**: `core/engine.js` · `core/assignment-ui.js` · `main.js`. Backup bản trước ở
+`_backup/dot247/`.
+
+**1) `core/engine.js` — bridge có method mới `giaoBai(lop)`** (singleton + delegate):
+- Singleton `window.__awordBridge` thêm `giaoBai: (lop) => queued(...)` — đi CHUNG hàng đợi
+  với switchTemplate/applyOptions để cú đổi template đang bay hạ cánh xong form mới mở.
+  Delegate cũ không có method ⇒ trả `false`, không nổ.
+- Delegate (trong `startGame`) thêm `giaoBai(lop)`: chặn `session` (trang học sinh không bao
+  giờ mở form thầy) + chặn `tpl.noAssignment` (giữ luật Đợt 245), rồi mở
+  `openAssignmentSetup(libAct, { lop, onCreated })`. **`libAct`, không phải `activity`** —
+  đúng luật Đợt 145 (giữ đủ mọi bộ gợi ý).
+- **Marker mới `MYACT:AW:ASSIGN:{"code","title"}`** phát trong `onCreated` ở **CẢ HAI đường**
+  (bridge gọi + thầy tự bấm nút Set assignment) — myLesson nghe console webview MỘT chỗ là đủ.
+  Đứng một mình marker chỉ là console.log vô hại. ⚠️ myActivity nghe cùng prefix `MYACT:AW:`
+  nhưng tag `ASSIGN` lạ với nó — chỉ bắn khi thầy TẠO bài giao trong khung nhúng, không phải
+  luồng chơi game, rủi ro thấp; nếu myActivity có ca lạ thì đây là nghi phạm đầu tiên.
+
+**2) `core/assignment-ui.js` — `openAssignmentSetup(act, { onCreated, lop })`**: có `lop` thì
+điền sẵn ô Class + chữ đầu tiêu đề (qua `replaceClassToken`), đặt `classTouched = true` để cú
+đoán-theo-thư-mục (`act.parentId`) không ghi đè. ⛔ **KHÔNG gọi `showFiling()` trong nhánh này**
+— nó là `const` khai PHÍA DƯỚI (TDZ, gọi là chết ngay); dòng "Filed in Results" tự đúng khi
+`listFolders()` về.
+
+**3) `main.js` — hai cửa đọc cho myLesson:**
+- **`window.__awordLib`** (khai trước `init()`, sống cả khi chưa đăng nhập):
+  `daDangNhap()` · `timThuMuc(chuoi)` (lọc `listFolders("activities")` kiểu CHỨA, không phân
+  biệt hoa thường, kèm `duongDan` từ `pathTo` để phân biệt trùng tên) · `lietKeAct(folderId)`
+  (lọc `kind === "act"`, trả `{id, num, ten, type}`). Chưa đăng nhập ⇒
+  `{ok:false, loi:"chua-dang-nhap"}` — myLesson dựa vào đó hiện màn mời đăng nhập.
+  ⛔ **KHÔNG có hàm GHI** — tạo assignment CHỈ đi qua form thật (đường `giaoBai`).
+- **URL `?bao=<mã bài giao>`**: mở thẳng pop-up `openAssignmentDetail` (đúng bảng của Results)
+  trên nền trang chủ — cho nút "xem kết quả" bên myLesson. Mã sai/đã xoá rơi về trang chủ êm.
+
+**Đã test — bàn thử `scratch/dot247-giaobai.html` (engine THẬT + quiz THẬT + fake-firebase246,
+cổng mới 5613): 16/16 ĐẠT, 0 lỗi console.** Đo được: giaoBai trả true + ô Class "B2B" + tiêu đề
+"B2B — <d.m> — BODY PARTS" · START tạo document, marker mang ĐÚNG `code` của document · dải
+assignment dưới act tự nạp lại · không truyền `lop` ⇒ ô Class TRỐNG (hành vi cũ) · đường nút
+bấm tay cũng bắn marker.
+**CHƯA đo bằng máy (nói thẳng):** `?bao=` và `__awordLib` cần đăng nhập thật nên chỉ soi mắt +
+node --check (cả 3 file OK); guard session/noAssignment của `giaoBai` là 1 dòng if. Thầy kiểm
+trên bản live: mở `aword.andrewclasses.com/?bao=<mã bài giao có thật>` phải ra thẳng bảng kết quả.
+
+**VIỆC KẾ TIẾP (Đợt B, bên myLesson app):** nút CHECK (gọi `timThuMuc`/`lietKeAct`) + 3 cặp ô
+loại WORDS + webview Set assignment (nghe marker ASSIGN) + đúp tích xanh mở `?bao=`.
+
+---
+
 ## Đợt 246 (23/8/2026) — ⭐⭐⭐ ASSIGNMENT: HAI CHẾ ĐỘ PRACTICE / SUBMIT + CƠ CHẾ GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI + BẢNG ĐÔI CUỐI GAME + LỄ SUBMIT HOMEWORK
 
 ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — **COMMIT `98525a0`, ĐÃ PUSH + LIVE KIỂM
