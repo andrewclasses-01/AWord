@@ -795,7 +795,12 @@ export function renderReviewTable(ranked, titleText) {
     // see analysisPngBlob below) plus the screen's own devicePixelRatio keeps
     // it crisp through that stretch without a second render pass.
     const tableScale = Math.max(2, window.devicePixelRatio || 1);
-    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, tableScale);
+    // ⭐ Đợt 238 (thầy) — `variant:"view"` strips the top brand/RESULTS label/
+    // title and the bottom legend (all redundant with this screen's own header
+    // and single-act nature), draws a small "ANDREW CLASSES" at the bottom
+    // instead, and trims the bar area ~20% shorter — see drawAnalysisCanvas's
+    // own note in core/showdown-export.js.
+    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, tableScale, { variant: "view" });
     wrap.innerHTML = "";
     canvas.style.cssText = "width:100%;height:auto;display:block;";
     wrap.append(canvas);

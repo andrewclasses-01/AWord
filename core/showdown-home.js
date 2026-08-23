@@ -136,7 +136,7 @@ export function mountShowdownHome(host, opts = {}) {
   titleChevron.innerHTML = icons.next;                         // trusted markup, core/icons.js
   titleBtn.append(titleWord, titleClassWrap, titleChevron);
   titleBtn.onclick = () => { sfx.tap(); toggleClassPicker(); };
-  titleRow.append(titleBtn, el("div", "aw-sdh-slogan", "SHOWDOWN IN ANDREW CLASSES"));
+  titleRow.append(titleBtn);
 
   /** The podium's own static twinkle (core/showdown-review.js), reused as-is —
    *  6 stars, opacity/scale only, never translate. */
@@ -196,7 +196,13 @@ export function mountShowdownHome(host, opts = {}) {
       left = wrapRect.left - rowRect.left - popW - 10;             // flip to the left of the class name
     }
     pop.style.left = Math.max(-rowRect.left + 8, left) + "px";
-    pop.style.top = (wrapRect.top - rowRect.top + wrapRect.height / 2) + "px";
+    // ⭐ Đợt 238 (thầy: "hạ thấp pop-up... vị trí cao nhất bằng vị trí dòng
+    // SHOWDOWN TÊN LỚP") — top-aligned to the class-name row's own top edge,
+    // not vertically centred on it (the old `+ wrapRect.height / 2` pushed the
+    // popover's own top half ABOVE the row, which read as "too tall / too
+    // high"). See the matching CSS change dropping `.aw-sdh-classpop`'s own
+    // `transform: translateY(-50%)`.
+    pop.style.top = (wrapRect.top - rowRect.top) + "px";
     titleBtn.classList.add("is-open");
     const onDocClick = e => { if (!pop.contains(e.target) && e.target !== titleBtn && !titleBtn.contains(e.target)) close(); };
     // A frame later: the very click that opened this must not also close it.
@@ -301,8 +307,10 @@ export function mountShowdownHome(host, opts = {}) {
   function paintAll() {
     main.innerHTML = "";
     if (!curClassId) return;
-    main.append(buildRail(), el("div", "aw-sdh-vrule"), buildTilesWrap());
-    if (choosing) main.append(buildChooseWrap());
+    // ⭐ Đợt 238 (thầy: "cột Analyse... luôn cố định") — the ANALYSE column is
+    // now always in the DOM regardless of `choosing`; buildChooseWrap() itself
+    // decides whether it reads dimmed/inert (see its own `is-inactive`).
+    main.append(buildRail(), el("div", "aw-sdh-vrule"), buildTilesWrap(), buildChooseWrap());
   }
 
   // ---- RAIL: month -> day folders ------------------------------------------
@@ -604,9 +612,17 @@ export function mountShowdownHome(host, opts = {}) {
   }
 
   function buildChooseWrap() {
+    // ⭐ Đợt 238 — `is-inactive` is the only thing that changes when `choosing`
+    // is off: the column stays mounted (see paintAll()) but reads dimmed/inert
+    // (app.css) instead of being removed from the DOM outright.
+    // ⚠️ Đợt 239 (thầy: "thiếu thanh kẻ mảnh giữa cột ANALYSE và vùng giữa") —
+    // `is-inactive` goes on `col` alone now, NOT on `wrap`: the divider `rule`
+    // is a structural separator between panes (same as the rail↔tiles one),
+    // not "content" that should fade with the rest — it always stays at full
+    // opacity, mirroring that other one.
     const wrap = el("div", "aw-sdh-choosewrap");
     const rule = el("div", "aw-sdh-vrule");
-    const col = el("div", "aw-sdh-choosecol");
+    const col = el("div", "aw-sdh-choosecol" + (choosing ? "" : " is-inactive"));
     col.id = "aw-sdh-choosecol";
     wrap.append(rule, col);
     paintChooseInto(col);
@@ -627,35 +643,34 @@ export function mountShowdownHome(host, opts = {}) {
     count.append(el("span", "aw-sdh-choosecount-label", "SELECTED"), document.createTextNode(String(picked.size)));
     col.append(count);
 
+    // ⭐ Đợt 238 (thầy: "bỏ dòng Tick 2 or...") — an empty chip list is now just
+    // an empty list; the column being dimmed while OFF (see buildChooseWrap's
+    // `is-inactive`) already says "nothing picked / not active" on its own.
     const chips = el("div", "aw-sdh-chips");
-    if (!picked.size) {
-      chips.append(el("div", "aw-sdh-chips-empty", "Tick 2 or more results to compare them."));
-    } else {
-      [...picked.entries()].forEach(([key, m], idx) => {
-        const ranked = matchBlocks(m);
-        const chip = el("div", "aw-sdh-chip");
-        chip.dataset.idx = String(idx);
-        const handle = el("button", "aw-sdh-chip-drag", icons.dragHandle);
-        handle.type = "button"; handle.title = "Drag to reorder";
-        const txt = el("div", "aw-sdh-chip-txt");
-        const nameEl = el("div", "aw-sdh-chip-name");
-        nameEl.textContent = displayName(m);                     // the teacher's own text — never innerHTML
-        const subEl = el("div", "aw-sdh-chip-sub");
-        subEl.textContent = `${when(m.at)} · ${ranked.length} sts`;
-        txt.append(nameEl, subEl);
-        const x = el("button", "aw-sdh-chip-x", icons.close);
-        x.type = "button"; x.title = "Remove from ANALYSE";
-        x.onclick = () => { sfx.tap(); picked.delete(key); paintAll(); };
-        chip.append(handle, txt, x);
-        chips.append(chip);
-        wireChipReorder(chips, handle, chip, idx);
-      });
-    }
+    [...picked.entries()].forEach(([key, m], idx) => {
+      const ranked = matchBlocks(m);
+      const chip = el("div", "aw-sdh-chip");
+      chip.dataset.idx = String(idx);
+      const handle = el("button", "aw-sdh-chip-drag", icons.dragHandle);
+      handle.type = "button"; handle.title = "Drag to reorder";
+      const txt = el("div", "aw-sdh-chip-txt");
+      const nameEl = el("div", "aw-sdh-chip-name");
+      nameEl.textContent = displayName(m);                     // the teacher's own text — never innerHTML
+      const subEl = el("div", "aw-sdh-chip-sub");
+      subEl.textContent = `${when(m.at)} · ${ranked.length} sts`;
+      txt.append(nameEl, subEl);
+      const x = el("button", "aw-sdh-chip-x", icons.close);
+      x.type = "button"; x.title = "Remove from ANALYSE";
+      x.onclick = () => { sfx.tap(); picked.delete(key); paintAll(); };
+      chip.append(handle, txt, x);
+      chips.append(chip);
+      wireChipReorder(chips, handle, chip, idx);
+    });
     col.append(chips);
 
     const startBtn = el("button", "aw-sdh-startbtn" + (picked.size >= 2 ? "" : " is-disabled"));
     startBtn.type = "button";
-    startBtn.textContent = "START";
+    startBtn.textContent = "START ANALYSING";
     startBtn.disabled = picked.size < 2;
     startBtn.onclick = () => {
       if (picked.size < 2) return;
@@ -794,8 +809,11 @@ export function mountShowdownHome(host, opts = {}) {
   // ---- one tile's detail view (Table/Podium/List + Download) ---------------
   function openTileDetail(m, ranked) {
     if (root.querySelector(".aw-sd-rec-detail")) return;
+    // ⭐ Đợt 238 (thầy) — no more standalone "ANDREW CLASSES" line above the
+    // header: the Table tab already draws its own (now at the BOTTOM of the
+    // board — core/showdown-export.js's drawAnalysisCanvas `variant:"view"`),
+    // and Podium/List never needed a second one either.
     const det = el("div", "aw-sd-rec-detail");
-    const brand = el("div", "aw-sd-rec-brand", "ANDREW CLASSES");
     const dh = el("div", "aw-sd-rec-head");
     const dt = el("div", "aw-sd-rec-title");
     const dact = el("span", "aw-sd-rec-word");
@@ -838,7 +856,7 @@ export function mountShowdownHome(host, opts = {}) {
     back.onclick = () => { sfx.back(); closeDetail(); };
     dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
     const dbody = el("div", "aw-sd-rec-dbody");
-    det.append(brand, dh, dbody);
+    det.append(dh, dbody);
     const picks = new Map();
     function paintViewBtns() {
       tableBtn.classList.toggle("is-on", view === "table");

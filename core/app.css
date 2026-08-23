@@ -4984,7 +4984,14 @@ html.aw-nhung .aw-below { display: none; }
    would misalign the gridlines against the bars — they use different boxes,
    see `.aw-sd-rec-grid`'s `inset:0` note) while still freeing real pixels
    above it for the label to spill into without touching the head row. */
-.aw-sd-rec-plotarea { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding-top: 20px; }
+/* ⭐ Đợt 238 (thầy: "cho tổng thể chiều cao các cột ngắn hơn 20%... thêm slogan
+   ANDREW CLASSES vào dưới đáy") — capped at 80% of the chartwrap's own height
+   (flex-grow:0 so it never re-claims the freed 20%) instead of the old
+   `flex:1 1 auto` filling everything; the new `.aw-sd-rec-brand` footer
+   (renderChart(), core/showdown-setup.js) sits in the space this frees up.
+   flex-shrink stays 1 so a genuinely short viewport can still compress it
+   further rather than overflow. */
+.aw-sd-rec-plotarea { flex: 0 1 80%; min-height: 0; display: flex; flex-direction: column; padding-top: 20px; }
 .aw-sd-rec-track {
   position: relative; flex: 1 1 auto; min-height: 0;
   display: flex; align-items: stretch; gap: 10px;
@@ -6139,10 +6146,8 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sdh-titlebtn svg { width: 18px; height: 18px; color: #9aa7b8; transition: transform .16s ease; }
 .aw-sdh-titlebtn.is-open svg { transform: rotate(180deg); }
-/* ⚠️ Inert, on purpose — thầy: no class/team is picked on this screen, so the
-   slogan carries no gesture at all here (unlike its live, clickable twin in
-   core/showdown-setup.js's footCaption). Plain faint text. */
-.aw-sdh-slogan { font-size: 11px; font-weight: 700; letter-spacing: .12em; color: #b3bcc9; text-transform: uppercase; }
+/* ⛔ Đợt 238 (thầy) — the "SHOWDOWN IN ANDREW CLASSES" slogan under the class
+   name is gone; `.aw-sdh-slogan` itself removed along with it. */
 
 /* ---- the class picker popover ---- */
 /* ⭐ Đợt 237 — top/left are set in JS from titleClassWrap's own rect (see
@@ -6151,7 +6156,11 @@ html.aw-nhung .aw-below { display: none; }
    tiles below grow, landing the popover far from the class name (thầy's
    complaint). Only the vertical centring stays a CSS transform. */
 .aw-sdh-classpop {
-  position: absolute; z-index: 20; transform: translateY(-50%);
+  /* ⭐ Đợt 238 (thầy: "hạ thấp pop-up... vị trí cao nhất bằng vị trí dòng
+     SHOWDOWN TÊN LỚP") — top-aligned now (core/showdown-home.js's own
+     toggleClassPicker sets `top` to the class-name row's own top edge), no
+     more `translateY(-50%)` pushing the popover's top half above that row. */
+  position: absolute; z-index: 20;
   min-width: 220px; max-height: 320px; overflow-y: auto;
   background: #fff; border: 1px solid #e3e9f1; border-radius: 12px; box-shadow: 0 12px 30px rgba(35,48,62,.16);
   padding: 6px;
@@ -6172,8 +6181,14 @@ html.aw-nhung .aw-below { display: none; }
 }
 
 /* ---- LEFT RAIL: month → day folders, quick-access-shaped ---- */
+/* ⭐⭐ Đợt 238 (thầy: "co hẹp cửa sổ thì ưu tiên co cột folder trước") — a huge
+   `flex-shrink` (1000) relative to `.aw-sdh-choosecol` (20) and the tiles area
+   (1, effectively never) means the browser's own flex algorithm drains nearly
+   ALL negative space from THIS column first; once it is pinned at `min-width`
+   the algorithm reallocates the rest to the next-highest shrink factor — see
+   `.aw-sdh-choosecol`'s own note for the next step in that chain. */
 .aw-sdh-rail {
-  flex: 0 0 240px; display: flex; flex-direction: column; min-width: 0;
+  flex: 0 1000 240px; min-width: 130px; display: flex; flex-direction: column;
   background: #fff; border: 1px solid #e6edf6; border-radius: 15px; box-shadow: 0 2px 8px rgba(35,48,62,.05);
   max-height: calc(100vh - 210px);
 }
@@ -6224,13 +6239,20 @@ html.aw-nhung .aw-below { display: none; }
    maths, not free text, but a separate span for "wd" is what lets it differ. */
 .aw-sdh-day-wd { color: #16a34a; }
 .aw-sdh-day-count { flex: 0 0 auto; font-size: .72rem; font-weight: 700; color: #9aa7b8; }
+/* ⭐ Đợt 238 (thầy: "chưa kích hoạt thì màu nhạt... bấm kích hoạt thì mới màu
+   vàng nổi bật") — OFF now blends into the rail's own background instead of
+   already being gold; the vivid gradient is reserved for `.is-on` alone. */
 .aw-sdh-all-btn {
   flex: 0 0 auto; margin: 8px 6px 6px; padding: 9px 0;
-  border: 1px solid #e0ab1f; border-radius: 9px; background: linear-gradient(135deg, #ffe9a8, #f3c545);
-  color: #6b4a06; font-family: inherit; font-size: .82rem; font-weight: 800; letter-spacing: .06em; cursor: pointer;
+  border: 1px solid #e3e9f1; border-radius: 9px; background: #f3f6fa;
+  color: #a7b0bd; font-family: inherit; font-size: .82rem; font-weight: 800; letter-spacing: .06em; cursor: pointer;
+  transition: background .14s ease, border-color .14s ease, color .14s ease;
 }
-.aw-sdh-all-btn:hover { filter: brightness(1.03); }
-.aw-sdh-all-btn.is-on { background: linear-gradient(135deg, #fff3c4, #ffd65c); border-color: #d99a0c; }
+.aw-sdh-all-btn:hover { border-color: #cddcf0; color: #7a8aa0; }
+.aw-sdh-all-btn.is-on {
+  background: linear-gradient(135deg, #ffe9a8, #f3c545); border-color: #e0ab1f; color: #6b4a06;
+}
+.aw-sdh-all-btn.is-on:hover { filter: brightness(1.03); }
 /* The whole rail goes inert under ALL — only the month rows glow (thầy's own
    words, "tên thư mục ... sáng nhấp nháy"); day rows just dim along with them,
    blocked by the SAME `pointer-events:none` rather than a second glow rule. */
@@ -6241,17 +6263,21 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-vrule { flex: 0 0 1px; background: #e2e9f2; margin: 6px 14px; }
 
 /* ---- CENTER: the tiles ---- */
-.aw-sdh-tiles-wrap { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+/* ⭐ Đợt 238 (thầy) — `flex-shrink: 1` is the LOWEST of the three columns
+   (rail 1000, choosecol below), so this is the last one to actually give up
+   width — see `.aw-sdh-rail`'s own note on how the priority chain works. */
+.aw-sdh-tiles-wrap { flex: 1 1 380px; min-width: 320px; display: flex; flex-direction: column; min-height: 0; }
 .aw-sdh-tiles-head {
   flex: 0 0 auto; padding: 2px 4px 10px; font-size: .84rem; font-weight: 800; color: #7a8aa0;
   letter-spacing: .04em; text-transform: uppercase;
 }
 .aw-sdh-tiles-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 2px 4px 10px; }
-/* ⭐ Few tiles stretch to fill the row (wider cards); many tiles wrap into more
-   rows instead of shrinking past a readable width — `auto-fit` collapses empty
-   tracks so a lone tile takes the WHOLE row rather than sitting in a corner. */
+/* ⭐ Đợt 238 (thầy: "một hàng cần để được 3 ô showdown") — always exactly 3
+   columns; as the centre area itself shrinks (last priority — see
+   `.aw-sdh-tiles-wrap`'s own note) the 3 columns just get narrower together,
+   they never drop to 2 or grow to 4+. */
 .aw-sdh-tiles {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 10px;
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;
 }
 .aw-sdh-tiles .aw-sd-rec-col { min-height: 168px; }
 .aw-sdh-daygroup + .aw-sdh-daygroup { margin-top: 16px; }
@@ -6263,10 +6289,24 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-dayrule { border: none; border-top: 1px solid #e6edf6; margin: 14px 0 16px; }
 
 /* ---- RIGHT: CHOOSING mode's ANALYSE column ---- */
-.aw-sdh-choosewrap { flex: 0 0 auto; display: flex; align-items: stretch; }
-.aw-sdh-choosecol {
-  flex: 0 0 250px; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px;
+/* ⭐⭐ Đợt 238 (thầy: "cột Analyse luôn cố định... khi tắt màu nhạt đi cực kỳ
+   mờ") — this wrap is now ALWAYS in the DOM (core/showdown-home.js's
+   paintAll), `.is-inactive` is the only thing toggling: near-invisible and
+   inert while OFF, back to normal the instant ANALYSE is on. Middle
+   shrink-priority (flex-shrink 20) between the rail (1000, shrinks first) and
+   the tiles area (1, shrinks last) — see `.aw-sdh-rail`'s own note. */
+.aw-sdh-choosewrap {
+  flex: 0 20 250px; min-width: 170px; display: flex; align-items: stretch;
 }
+/* ⭐ Đợt 239 (thầy: "thiếu thanh kẻ mảnh giữa cột ANALYSE và vùng giữa") — the
+   dimming lives on `.aw-sdh-choosecol` alone now, so `.aw-sdh-choosewrap`'s
+   OWN `.aw-sdh-vrule` (the divider) always stays fully visible, same as the
+   rail↔tiles one never fading either. */
+.aw-sdh-choosecol {
+  flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 4px 6px;
+  transition: opacity .18s ease;
+}
+.aw-sdh-choosecol.is-inactive { opacity: .22; pointer-events: none; }
 /* ⭐ Đợt 237 — SELECTED moved up here (where the old ANALYSE button used to
    sit); no border-top any more since it is no longer separating the count
    from a button ABOVE the chip list, it now leads the column. */
@@ -6276,7 +6316,8 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sdh-choosecount-label { display: block; font-size: .68rem; font-weight: 800; color: #9aa7b8; letter-spacing: .08em; text-transform: uppercase; }
 .aw-sdh-chips { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
-.aw-sdh-chips-empty { font-size: .8rem; color: #8b93a1; text-align: center; padding: 20px 8px; line-height: 1.5; }
+/* ⛔ Đợt 238 (thầy: "bỏ dòng Tick 2 or...") — the empty-chips message and its
+   class are gone; an empty pick list is now just an empty list. */
 .aw-sdh-chip {
   display: flex; align-items: center; gap: 8px;
   border: 1px solid #e3e9f1; border-radius: 10px; background: #fbfcfe; padding: 8px 8px 8px 7px;
@@ -6342,7 +6383,11 @@ html.aw-nhung .aw-below { display: none; }
   font-size: 13.5px; font-weight: 800; letter-spacing: .1em;
   transition: max-width .22s cubic-bezier(.22,.9,.3,1);
 }
-.aw-sdh-homebtn.is-analyse { width: 118px; padding: 0 18px; border-radius: 20px; }
+/* ⭐ Đợt 238 (thầy: "cạnh ít bo hơn... giữ nguyên kiểu góc bo kể cả khi là
+   icon hay khi là ANALYSE dài") — same 13px as the base state above (and the
+   same as every other topbar icon button, `.aw-appbtn`), not its own rounder
+   20px pill shape. */
+.aw-sdh-homebtn.is-analyse { width: 118px; padding: 0 18px; border-radius: 13px; }
 .aw-sdh-homebtn.is-analyse svg { opacity: 0; transform: scale(.4); width: 0; }
 .aw-sdh-homebtn.is-analyse .aw-sdh-homebtn-word { max-width: 100px; }
 

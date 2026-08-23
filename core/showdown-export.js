@@ -948,7 +948,9 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
     const shown = txt || "Showdown";
     if (type === "table") {
       const { entries, full, partial } = singleMatchAnalysis(shown);
-      const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, shown, 1);
+      // ⭐ Đợt 238 — single-match TABLE export: no legend under the columns
+      // (one act, one board — the title line above already says which).
+      const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, shown, 1, { showLegend: false });
       const scale = Math.min(1, 260 / width);
       const frame = el("div", "aw-sd-exp-preview-frame");
       frame.style.width = Math.round(width * scale) + "px";
@@ -1003,7 +1005,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
       goBtn.disabled = true;
       try {
         const { entries, full, partial } = singleMatchAnalysis(shown);
-        const blob = await analysisPngBlob(full, partial, entries, shown, 2);
+        const blob = await analysisPngBlob(full, partial, entries, shown, 2, { showLegend: false });
         if (!blob) throw new Error("aw/png-empty");
         triggerDownload(blob, safeFileBit(shown) + ".png");
       } catch (e) {
@@ -1093,22 +1095,53 @@ function wrapAnalysisLegend(ctx, entries, maxW) {
  * drawn height divides the match's real `seg.pct` by `r.count` the same way,
  * for the same reason: the stack's visible height has to land on the average
  * while the NUMBER printed inside a tier stays that match's real score.
+ *
+ * ⭐⭐ Đợt 238 (thầy) — TWO VARIANTS of the same board, via `opts.variant`:
+ *   "export" (the default) — the DOWNLOAD dialog's live preview AND the real
+ *      PNG, for both the single-match TABLE type and the multi-match
+ *      ANALYSIS PNG. Keeps the top brand line (nudged a little lower than
+ *      before) and a title band, whose small label now reads "RESULTS"
+ *      (renamed from "ANALYSIS" — thầy). The legend is drawn unless the
+ *      caller passes `showLegend: false` (the single-match TABLE type does:
+ *      one board, one act, the title line above already says which).
+ *   "view" — the single-match Table TAB itself (core/showdown-review.js's
+ *      renderReviewTable). That screen already carries its own title/time in
+ *      its own header, so the brand/label/title band AND the legend inside
+ *      the board would be pure duplication — all dropped. A single small
+ *      "ANDREW CLASSES" line moves to the BOTTOM instead (thầy), and the bar
+ *      area itself is drawn ~20% shorter to make room for it without growing
+ *      the board overall.
  */
 // ⭐ Đợt 235 — exported for the single-match TABLE view (core/showdown-review.js's
 // `renderReviewTable`), which dynamic-imports this module the same way
 // core/showdown-setup.js's own DOWNLOAD button already does (see that file's
 // own note on why two lazy-loaded siblings never statically import each other).
-export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1) {
+export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1, opts = {}) {
+  const isView = opts.variant === "view";
+  const showLegend = isView ? false : (opts.showLegend !== false);
+
   const rows = [...full, ...partial];
   const hasGroupGap = full.length > 0 && partial.length > 0;
   const plotW = Math.max(1, rows.length) * AN_BAR_W + Math.max(0, rows.length - 1) * AN_BAR_GAP
     + (hasGroupGap ? AN_GROUP_GAP - AN_BAR_GAP : 0);
   const width = Math.max(620, AN_PAD * 2 + AN_AXIS_W + plotW);
 
+  // ⭐ Đợt 238 — "view" skips the whole title band (AN_TITLE_H) but keeps the
+  // SAME AN_TOTAL_H headroom above the bars (the big average can sit right at
+  // the 100% line regardless of variant); its bars are ~20% shorter (thầy).
+  const topH = (isView ? 0 : AN_TITLE_H) + AN_TOTAL_H;
+  const plotH = isView ? Math.round(AN_PLOT_H * 0.8) : AN_PLOT_H;
+
   const probe = document.createElement("canvas").getContext("2d");
-  const legendRows = rows.length ? wrapAnalysisLegend(probe, entries, width - AN_PAD * 2) : [];
-  const height = AN_PAD * 2 + AN_TITLE_H + AN_TOTAL_H + AN_PLOT_H + AN_NAME_H + AN_LEGEND_GAP
-    + Math.max(1, legendRows.length) * AN_LEGEND_ROW_H;
+  const legendRows = (showLegend && rows.length) ? wrapAnalysisLegend(probe, entries, width - AN_PAD * 2) : [];
+  // ⭐ Đợt 238 — "view"'s bottom brand reuses the SAME gap+row-height rhythm
+  // the legend used to occupy (AN_LEGEND_GAP/AN_LEGEND_ROW_H), so the trailing
+  // AN_PAD below it (from the `AN_PAD * 2` term) reads as the same deliberate
+  // margin every other edge of this board already has — not a new number to
+  // separately tune.
+  const footH = (showLegend ? (AN_LEGEND_GAP + Math.max(1, legendRows.length) * AN_LEGEND_ROW_H) : 0)
+    + (isView ? (AN_LEGEND_GAP + AN_LEGEND_ROW_H) : 0);
+  const height = AN_PAD * 2 + topH + plotH + AN_NAME_H + footH;
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * scale);
@@ -1119,23 +1152,28 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1)
   ctx.fillRect(0, 0, width, height);
   ctx.textBaseline = "middle";
 
-  drawBrandingCanvas(ctx, width, 18, 12);
+  if (!isView) {
+    // ⭐ Đợt 238 — nudged from 18 to 24: a touch lower for better balance
+    // against the RESULTS label right under it (thầy).
+    drawBrandingCanvas(ctx, width, 24, 12);
 
-  // ---- title: a small "ANALYSIS" over the teacher's own class/date line ----
-  ctx.textAlign = "center";
-  ctx.fillStyle = "#2f7dfd";
-  ctx.font = `800 20px ${FONT_STACK}`;
-  ctx.fillText("ANALYSIS", width / 2, AN_PAD + 22);
-  ctx.fillStyle = "#23303e";
-  let titleFs = 28;
-  ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
-  const maxTitleW = width - AN_PAD * 2;
-  const shownTitle = titleText || "—";
-  while (ctx.measureText(shownTitle).width > maxTitleW && titleFs > 14) {
-    titleFs -= 1;
+    // ---- title: a small "RESULTS" (Đợt 238 — was "ANALYSIS") over the
+    //      teacher's own class/act/date line ----
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#2f7dfd";
+    ctx.font = `800 20px ${FONT_STACK}`;
+    ctx.fillText("RESULTS", width / 2, AN_PAD + 22);
+    ctx.fillStyle = "#23303e";
+    let titleFs = 28;
     ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
+    const maxTitleW = width - AN_PAD * 2;
+    const shownTitle = titleText || "—";
+    while (ctx.measureText(shownTitle).width > maxTitleW && titleFs > 14) {
+      titleFs -= 1;
+      ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
+    }
+    ctx.fillText(shownTitle, width / 2, AN_PAD + 60);
   }
-  ctx.fillText(shownTitle, width / 2, AN_PAD + 60);
 
   if (!rows.length) {
     ctx.fillStyle = "#98a2b2";
@@ -1147,11 +1185,11 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1)
   // ---- plot: gridlines + the % axis, a fixed 0-100 (see this function's own
   //      note on why the axis no longer stretches per selection) ----
   const plotX = AN_PAD + AN_AXIS_W;
-  const plotY = AN_PAD + AN_TITLE_H + AN_TOTAL_H;
-  const plotBottom = plotY + AN_PLOT_H;
+  const plotY = AN_PAD + topH;
+  const plotBottom = plotY + plotH;
   ctx.textAlign = "right";
   for (let v = 0; v <= 100; v += 20) {
-    const gy = plotBottom - (v / 100) * AN_PLOT_H;
+    const gy = plotBottom - (v / 100) * plotH;
     ctx.strokeStyle = "#e3e9f1";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -1173,7 +1211,7 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1)
     r.segments.forEach((seg, i) => {
       if (seg.pct == null) return;                 // did not play this match — no tier at all
       const scaledPct = r.count ? seg.pct / r.count : 0;
-      const h = (scaledPct / 100) * AN_PLOT_H;
+      const h = (scaledPct / 100) * plotH;
       if (h > 0.4) {
         ctx.fillStyle = ANALYSE_PNG_COLORS[i % ANALYSE_PNG_COLORS.length];
         ctx.fillRect(bx, by - h, AN_BAR_W, h);
@@ -1209,30 +1247,40 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1)
     bx += AN_BAR_W + AN_BAR_GAP;
   });
 
-  // ---- legend, CENTRED — thầy: "được đưa ra chính giữa", and centred against
-  //      the WHOLE image's width, so it reads centred under both boards
-  //      together rather than under whichever one happens to be wider ----
-  let ly = plotBottom + AN_NAME_H + AN_LEGEND_GAP;
-  legendRows.forEach(row => {
-    const rowW = row.reduce((a, it, i) => a + it.w + (i ? AN_LEGEND_ITEM_GAP : 0), 0);
-    let lx = (width - rowW) / 2;
-    row.forEach(it => {
-      ctx.fillStyle = ANALYSE_PNG_COLORS[it.i % ANALYSE_PNG_COLORS.length];
-      ctx.fillRect(lx, ly - AN_LEGEND_SW / 2, AN_LEGEND_SW, AN_LEGEND_SW);
-      ctx.fillStyle = "#5b677a";
-      ctx.textAlign = "left";
-      ctx.font = `700 13px ${FONT_STACK}`;
-      ctx.fillText(it.txt, lx + AN_LEGEND_SW + 6, ly);
-      lx += it.w + AN_LEGEND_ITEM_GAP;
+  if (isView) {
+    // ⭐ Đợt 238 — the single "ANDREW CLASSES" line for the on-screen Table
+    // view, centred where the legend used to start (see `footH`'s own note),
+    // with the usual AN_PAD margin still standing between it and the very
+    // bottom edge of the board.
+    drawBrandingCanvas(ctx, width, plotBottom + AN_NAME_H + AN_LEGEND_GAP, 11);
+  }
+
+  if (showLegend) {
+    // ---- legend, CENTRED — thầy: "được đưa ra chính giữa", and centred against
+    //      the WHOLE image's width, so it reads centred under both boards
+    //      together rather than under whichever one happens to be wider ----
+    let ly = plotBottom + AN_NAME_H + AN_LEGEND_GAP;
+    legendRows.forEach(row => {
+      const rowW = row.reduce((a, it, i) => a + it.w + (i ? AN_LEGEND_ITEM_GAP : 0), 0);
+      let lx = (width - rowW) / 2;
+      row.forEach(it => {
+        ctx.fillStyle = ANALYSE_PNG_COLORS[it.i % ANALYSE_PNG_COLORS.length];
+        ctx.fillRect(lx, ly - AN_LEGEND_SW / 2, AN_LEGEND_SW, AN_LEGEND_SW);
+        ctx.fillStyle = "#5b677a";
+        ctx.textAlign = "left";
+        ctx.font = `700 13px ${FONT_STACK}`;
+        ctx.fillText(it.txt, lx + AN_LEGEND_SW + 6, ly);
+        lx += it.w + AN_LEGEND_ITEM_GAP;
+      });
+      ly += AN_LEGEND_ROW_H;
     });
-    ly += AN_LEGEND_ROW_H;
-  });
+  }
 
   return { canvas, width, height };
 }
 
-async function analysisPngBlob(full, partial, entries, titleText, scale = 2) {
-  const { canvas } = drawAnalysisCanvas(full, partial, entries, titleText, scale);
+async function analysisPngBlob(full, partial, entries, titleText, scale = 2, opts = {}) {
+  const { canvas } = drawAnalysisCanvas(full, partial, entries, titleText, scale, opts);
   return await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
 }
 

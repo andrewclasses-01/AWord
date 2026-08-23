@@ -1208,7 +1208,11 @@ export function renderChart(full, partial, entries) {
   partial.forEach(addBar);
 
   plot.append(track, names);
-  wrap.append(plot, renderLegend(entries));
+  // ⭐ Đợt 238 (thầy) — a small "ANDREW CLASSES" footer under the legend, the
+  // on-screen twin of the same line core/showdown-export.js's drawAnalysisCanvas
+  // now draws at the bottom of an exported/Table board — see `.aw-sd-rec-plotarea`'s
+  // own note (app.css) on the matching ~20% height trim that makes room for it.
+  wrap.append(plot, renderLegend(entries), el("div", "aw-sd-rec-brand", "ANDREW CLASSES"));
   return wrap;
 }
 

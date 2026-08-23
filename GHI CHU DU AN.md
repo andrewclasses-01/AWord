@@ -5,6 +5,110 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 238+239 (23/8/2026) — ⭐⭐ SHOWDOWN HOME: BO GÓC ĐỒNG BỘ · POPUP LỚP HẠ THẤP · CỘT ANALYSE CỐ ĐỊNH+MỜ+THANH KẺ · LƯỚI 3 Ô · CO HẸP CÓ ƯU TIÊN · BẢNG TABLE GỌN (TÁCH XEM/XUẤT) — 🟡 THẦY DUYỆT ("ok build", sau đó "check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+
+⚠️ Tự test qua Firestore giả (`scratch/dot238-showdown.html`, **40/40 phép thử ĐẠT, 0 lỗi console**) —
+CHƯA bấm tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống. Cũng
+không lấy được ảnh chụp màn hình trong môi trường build (Browser pane không hiện ra để compositing
+frame) — kiểm bằng số liệu/thuộc tính DOM (`getComputedStyle`, kích thước canvas, đếm điểm ảnh không-
+trắng) thay cho ảnh chụp.
+
+Thầy giao 9 điều chỉnh cho trang Showdown (nút "SHOWDOWN"/"ANALYSE" trên trang chủ, `core/showdown-
+home.js`) qua 1 lượt "ok build" (chốt 1 điểm mơ hồ qua AskUserQuestion trước khi code: dòng "ANDREW
+CLASSES" lặp ở đầu bảng chi tiết 1 trận bỏ ở CẢ 3 tab Table/Podium/List, không chỉ riêng Table). Sau
+khi build xong, thầy xem lại và phát hiện thêm 1 điểm thiếu (thanh kẻ mảnh cột ANALYSE bị mờ lây) —
+sửa gộp luôn vào đợt này vì chưa kịp commit lần đầu (đánh số Đợt 239 trong code cho rõ, gộp chung 1
+commit với Đợt 238). Sửa 5 file: `core/app.css` · `core/showdown-export.js` · `core/showdown-home.js`
+· `core/showdown-review.js` · `core/showdown-setup.js`. Thêm 1 file test cục bộ: `scratch/dot238-
+showdown.html` (không lên git — `.gitignore` loại cả thư mục `scratch/`).
+
+### 1) NÚT SHOWDOWN/ANALYSE (topbar) — BO GÓC ĐỒNG BỘ
+
+`.aw-sdh-homebtn.is-analyse` (app.css): `border-radius` 20px → 13px — bằng đúng trạng thái icon tròn
+(46px) và bằng mọi nút topbar khác (`.aw-appbtn`). Thầy: "bo tròn nhiều quá và khác style các nút khác
+quá nhiều" — hết khác biệt dù icon hay dài ra chữ ANALYSE.
+
+### 2) BỎ SLOGAN "SHOWDOWN IN ANDREW CLASSES"
+
+Xoá dòng `el("div", "aw-sdh-slogan", ...)` khỏi `titleRow` (`showdown-home.js`); xoá luôn class
+`.aw-sdh-slogan` (app.css, không còn ai dùng).
+
+### 3) POPUP DANH SÁCH LỚP — HẠ THẤP
+
+`toggleClassPicker()`: `pop.style.top` đổi từ canh GIỮA theo chiều dọc so với tên lớp
+(`wrapRect.top - rowRect.top + wrapRect.height / 2`) sang canh THEO MÉP TRÊN
+(`wrapRect.top - rowRect.top`), bỏ `transform: translateY(-50%)` (app.css) — mép trên pop-up giờ bằng
+đúng mép trên dòng SHOWDOWN TÊN LỚP thay vì tràn lên cao hơn cả dòng đó.
+
+### 4) NÚT ALL — NHẠT MẶC ĐỊNH, VÀNG KHI BẬT
+
+`.aw-sdh-all-btn` (app.css): mặc định nền `#f3f6fa` xám nhạt (gần chìm vào nền trắng của rail), chữ
+`#a7b0bd`; gradient vàng gold nổi bật cũ (`#ffe9a8→#f3c545`, viền `#e0ab1f`, chữ `#6b4a06`) dời hẳn
+sang riêng `.is-on`.
+
+### 5) NÚT START → "START ANALYSING"
+
+`paintChooseInto()` (`showdown-home.js`): `startBtn.textContent` đổi từ "START".
+
+### 6) CỘT ANALYSE LUÔN CÓ MẶT + MỜ THAY VÌ BIẾN MẤT + THANH KẺ LUÔN RÕ (Đợt 239)
+
+`paintAll()`: bỏ điều kiện `if (choosing)` bọc ngoài, luôn `main.append(..., buildChooseWrap())`. Bỏ
+hẳn dòng "Tick 2 or more results to compare them." (`.aw-sdh-chips-empty`, xoá cả class CSS) — danh
+sách rỗng giờ chỉ là rỗng, không cần chữ giải thích.
+⚠️ **Đợt 239** — lần đầu gắn `.is-inactive` lên CẢ `.aw-sdh-choosewrap` (gồm cả thanh kẻ `.aw-sdh-vrule`
+phân cách với khu ô giữa), khiến thanh kẻ đó mờ lây theo — thầy phát hiện "thiếu thanh kẻ mảnh". Sửa:
+`.is-inactive` chỉ gắn lên `.aw-sdh-choosecol` (nội dung bên trong: SELECTED/chips/START), còn
+`.aw-sdh-vrule` trong `.aw-sdh-choosewrap` luôn `opacity: 1`, giống hệt thanh kẻ giữa rail và khu ô
+giữa — không bao giờ mờ dù cột có tắt hay bật.
+
+### 7-8) LƯỚI 3 Ô/HÀNG + ƯU TIÊN CO HẸP: RAIL → CỘT ANALYSE → KHU GIỮA
+
+`.aw-sdh-tiles`: `grid-template-columns` từ `repeat(auto-fit, minmax(168px,1fr))` sang cố định
+`repeat(3, minmax(0,1fr))` — luôn đúng 3 cột, cửa sổ hẹp lại thì 3 cột cùng hẹp theo chứ không rơi
+xuống 2 cột.
+Độ ưu tiên co hẹp bằng `flex-shrink` (số THỨ HAI trong shorthand `flex: grow shrink basis` — tự test
+bắt được 1 lần viết nhầm thành số thứ nhất/flex-grow, đã sửa lại): `.aw-sdh-rail` shrink 1000
+(`flex: 0 1000 240px`, `min-width: 130px`), `.aw-sdh-choosewrap` shrink 20 (`flex: 0 20 250px`,
+`min-width: 170px`), `.aw-sdh-tiles-wrap` shrink 1, vẫn giữ grow 1 để giãn ra khi rộng
+(`flex: 1 1 380px`, `min-width: 320px`) — cửa sổ hẹp lại thì rail hết cỡ trước, rồi mới tới cột
+Analyse, khu ô showdown ở giữa co sau cùng.
+
+### 9) BẢNG TABLE — TÁCH RIÊNG XEM/XUẤT, DÙNG CHUNG 1 HÀM VẼ QUA THAM SỐ `opts.variant`
+
+`core/showdown-export.js`'s `drawAnalysisCanvas(full, partial, entries, titleText, scale, opts)` thêm
+tham số `opts` thứ 6, hai "phiên bản":
+- **`variant: "view"`** (bảng Table 1 trận XEM TRÊN MÁY — gọi từ `renderReviewTable`,
+  `showdown-review.js`): bỏ hẳn khối brand/nhãn/tiêu đề trên cùng (`AN_TITLE_H`) VÀ chú thích dưới
+  cột (`showLegend` ép `false`) — màn hình bên ngoài đã có tiêu đề+giờ ở góc trên trái rồi, không cần
+  lặp. Cột cao `AN_PLOT_H * 0.8` (thấp hơn 20%). Thêm 1 dòng "ANDREW CLASSES" mới, CANH GIỮA, ở ĐÁY
+  bảng (đúng chỗ chú thích cũ từng đứng, dùng lại nhịp `AN_LEGEND_GAP`/`AN_LEGEND_ROW_H` cho nhất
+  quán khoảng cách).
+- mặc định **`variant: "export"`** (popup DOWNLOAD, cả bảng 1 trận lẫn Analyse nhiều trận): dòng brand
+  trên cùng nhích xuống 18→24px cho cân đối hơn, nhãn nhỏ đổi "ANALYSIS" → "RESULTS". Bảng 1 trận
+  (`openExportDialog`, type "table") gọi kèm `{ showLegend: false }` — bỏ chú thích dưới cột vì chỉ 1
+  bài, tiêu đề lớn ở trên đã đủ. Bảng Analyse nhiều trận (`openAnalysisExportDialog`) KHÔNG truyền
+  `showLegend` — mặc định `true`, vẫn giữ chú thích vì gộp nhiều trận khác nhau, cần phân biệt màu.
+
+`renderChart()` (`showdown-setup.js`, biểu đồ Analyse XEM TRÊN MÁY — DOM thật, không phải canvas): nối
+thêm 1 dòng "ANDREW CLASSES" (`.aw-sd-rec-brand`) sau chú thích. `.aw-sd-rec-plotarea` (app.css):
+`flex: 1 1 auto` → `flex: 0 1 80%` — khung cột chỉ chiếm tối đa 80% chiều cao khung (chừa chỗ cho dòng
+brand mới), vẫn co được nếu màn hình thật thấp (`flex-shrink` vẫn 1).
+
+`openTileDetail()` (`showdown-home.js`): bỏ hẳn `el("div", "aw-sd-rec-brand", "ANDREW CLASSES")` từng
+đứng ở đầu MỌI bảng chi tiết 1 trận (Table/Podium/List đều có sẵn dòng này) — thầy chốt bỏ ở CẢ 3 tab
+qua AskUserQuestion, không chỉ riêng Table.
+
+⚠️ `renderChart()`/`drawAnalysisCanvas` DÙNG CHUNG giữa trang SHOWDOWN trang chủ VÀ popup ANALYSE
+nhanh giữa buổi học (`core/showdown-setup.js`'s `openAnalysis`/`openDetail`) — sửa 1 nơi ảnh hưởng cả
+2 chỗ, đúng chủ ý cũ của code ("một bảng, vẽ giống hệt dù mở ở đâu") — đã báo trước cho thầy lúc lên
+kế hoạch, không phải hiệu ứng phụ ngoài ý muốn.
+
+**TEST**: `scratch/dot238-showdown.html`, **40/40 ĐẠT** — dựng lớp + 2 trận giả, bấm-thử qua từng bước
+thật (chọn lớp, mở/đóng popup lớp, bật/tắt ANALYSE, bấm ALL, tích 2 ô, bấm START ANALYSING, mở
+Table/Podium/List, tắt ANALYSE lại), cộng gọi thẳng `drawAnalysisCanvas` so kích thước ảnh giữa 2
+variant + đếm điểm ảnh không-trắng ở dải trên cùng để xác nhận khối tiêu đề thật sự biến mất ở
+variant "view" — không chỉ tin vào đọc code.
+
 ## Đợt 237 (23/8/2026) — ⭐⭐⭐ SHOWDOWN HOME: ICON→ANALYSE MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ
 
 ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") — COMMIT `9933897`, ĐÃ PUSH + LIVE KIỂM CHỨNG**:
