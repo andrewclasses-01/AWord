@@ -198,6 +198,12 @@ function gestures(node, { onTap, onDouble, onHold }) {
  *              column's own result if the whistle-time write did not land.
  *   isPending  (optional) () => boolean — true while this column still owes the
  *              shared row its result.
+ *   actName    (optional, ⭐⭐ Đợt 244) the name of the act that was just played,
+ *              already formatted by the engine's sdBoardName() — the SAME string
+ *              the class ledger shows for this play ("LSA2-S2.T1.P3-4-5 / ENG1
+ *              QUIZ"). It REPLACES the literal word "SHOWDOWN" in the title, and
+ *              keeps every gesture that word carries. "" (the default) keeps the
+ *              old word, so an act with no title never blanks the title.
  *   toast      the engine's toast
  *
  * Returns `dispose()` — MUST be called when the review leaves the screen, or the
@@ -206,7 +212,7 @@ function gestures(node, { onTap, onDouble, onHold }) {
  */
 export function mountShowdownReview({
   head, before, host, pick, review, loadTeams,
-  watchTeams = null, flushPending = null, isPending = () => false, toast = () => {}
+  watchTeams = null, flushPending = null, isPending = () => false, actName = "", toast = () => {}
 }) {
   // THIS team, from memory. Authoritative: it is the play that just happened on
   // this screen, and it is what the class board shows for us even if the write
@@ -240,9 +246,20 @@ export function mountShowdownReview({
   // TITLE
   // ---------------------------------------------------------------
   const title = el("div", "aw-rv-title is-sd");
-  const word = el("button", "aw-sd-ttl-word", "SHOWDOWN");
+  // ⭐⭐ Đợt 244 (thầy: "hiện tên act ngay cả trong bảng showdown khi bấm show
+  // answers ở cuối game") — the act's own name stands where the literal word
+  // "SHOWDOWN" used to, and keeps BOTH of that word's gestures. `.textContent`,
+  // never innerHTML: this is the teacher's own text (`el()`'s 3rd argument sets
+  // innerHTML — see this file's header).
+  // ⚠️ The literal is still the fallback, on purpose: an act with no title at
+  // all would otherwise leave a nameless button nobody can see to press.
+  const boardName = String(actName || "").trim();
+  const word = el("button", "aw-sd-ttl-word");
   word.type = "button";
-  word.title = "Tap: this team / the whole class · Double tap: refresh";
+  word.textContent = boardName || "SHOWDOWN";
+  if (boardName) word.classList.add("is-act");
+  word.title = (boardName ? boardName + " · " : "")
+    + "Tap: this team / the whole class · Double tap: refresh";
   const clsEl = el("span", "aw-sd-ttl-class");
   clsEl.textContent = pick.className || "";         // teacher's own text
   const dot = el("span", "aw-sd-ttl-dot", "•");
@@ -345,6 +362,112 @@ export function mountShowdownReview({
     const right = b.reduce((a, x) => a + x.right, 0);
     const asked = b.reduce((a, x) => a + x.total, 0);
     total.textContent = `${right}/${asked}`;
+    // Đợt 244 — LAST: everything above can change how much room the row has
+    // left for the act name (see fitTitleWord's own note).
+    fitTitleWord();
+  }
+
+  /**
+   * ⭐⭐ Đợt 244 (thầy: "cần hiển thị đầy đủ và không cắt và chỉ hiển thị 1 dòng")
+   * — SHRINK THE ACT NAME UNTIL THE WHOLE OF IT FITS ONE LINE.
+   *
+   * An act name is as long as the teacher made it ("LSA2-S2.T1.P3-4-5 / ENG1
+   * QUIZ") and shares its row with the class, the pupil count, the TEAMS chip,
+   * three view buttons, the score and the close button. Three ways out of that
+   * and only one is acceptable here: wrap (two lines — thầy said one), cut with
+   * an ellipsis (loses the clue set and the template, the very thing Đợt 242 put
+   * there), or shrink. Shrink.
+   *
+   * HOW, IN TWO STEPS — and BOTH numbers are measured by the browser, never
+   * added up by hand:
+   *   1. THE ROOM: pin the word to `flex: 1 1 0` for one synchronous moment. A
+   *      zero-basis item that may grow takes exactly the space its siblings do
+   *      not, so its own box IS the leftover — whatever siblings happen to exist
+   *      at that instant (the loading spinner comes and goes; the TEAMS chip and
+   *      the scope word change width every time the teacher taps the title).
+   *      ⛔ An earlier cut summed the siblings and the gaps by hand and fitted
+   *      against a room measured BEFORE the spinner appeared — 4px of the name
+   *      hung off the end for the whole of the first three seconds.
+   *   2. THE WANT: pin it to `flex: 0 0 auto`, so its box IS the width the text
+   *      wants at that scale. Binary-search `--aw-ttl-fit` for the largest scale
+   *      whose want still fits the room.
+   *
+   * ⛔⛔ DO NOT "SIMPLIFY" THIS BACK TO `scrollWidth > clientWidth`. That was the
+   * first cut of this function and it converged on a size that was still 20px
+   * too wide, at random. Two reasons, both measured:
+   *   • while the word overflows, flexbox pins its `clientWidth` to the room, so
+   *     the comparison is "want vs room" only by accident — and the instant it
+   *     fits, `clientWidth` starts FOLLOWING the text instead, so the two sides
+   *     of the test stop meaning two different things;
+   *   • `letter-spacing` on this row is `0.2cqw` — a FIXED length, not `em`. The
+   *     wanted width is therefore `glyphs × scale + 122px of spacing`, not a
+   *     straight multiple of the scale, so a search that mis-measures once
+   *     cannot correct itself on the next step.
+   *
+   * ⚠️ Only for `is-act`. The literal "SHOWDOWN" always fitted and must not
+   * start moving about.
+   * ⚠️ Runs at the END of paintTitle(): the scope word, the pupil count and the
+   * TEAMS chip all change width as the teacher taps around, and each of those
+   * changes how much room is left.
+   * ⚠️ `busyFit` guards re-entry. Shrinking the word cannot change the title's
+   * own width (`.aw-rv-title` is `flex: 1 1 auto` in a fixed row, so it always
+   * takes exactly what the row does not), but a guard costs nothing and an
+   * observer feeding itself costs a frozen column.
+   */
+  const FIT_MIN = 0.3;
+  let busyFit = false;
+  function fitTitleWord() {
+    if (!boardName || busyFit) return;
+    busyFit = true;
+    const put = v => word.style.setProperty("--aw-ttl-fit", String(v));
+    try {
+      // --- 1. the room: let flexbox hand us the leftover and read it off ---
+      put(FIT_MIN);
+      word.style.flex = "1 1 0";
+      const room = word.getBoundingClientRect().width;
+      if (!(room > 1)) { put(1); return; }     // not laid out yet — leave it alone
+
+      // --- 2. the want, with the word free of the row's squeeze ---
+      word.style.flex = "0 0 auto";
+      const wants = f => { put(f); return word.getBoundingClientRect().width; };
+      let best = FIT_MIN;
+      if (wants(1) <= room) best = 1;
+      else {
+        let lo = FIT_MIN, hi = 1;
+        for (let i = 0; i < 14; i++) {
+          const mid = (lo + hi) / 2;
+          if (wants(mid) > room) hi = mid; else { best = mid; lo = mid; }
+        }
+      }
+      word.style.flex = "";
+      put(best);
+    } finally {
+      word.style.flex = "";
+      busyFit = false;
+    }
+  }
+
+  /**
+   * ⭐ Đợt 244 — re-fit when the BOARD changes size: entering/leaving fullscreen,
+   * a myActivity column being resized, the window itself.
+   * ⚠️ Guarded on the measured width the same way the review grid's own observer
+   * is (see `watchFit` further down, and the ghost-clock lesson of Đợt 112/131):
+   * observe once, ignore a callback that reports the same width, and hand the
+   * handle to dispose() so the review never leaves one running.
+   */
+  function watchTitleFit() {
+    if (!boardName) return null;
+    try {
+      let lastW = 0;
+      const ro = new ResizeObserver(() => {
+        const w = Math.round(title.clientWidth || 0);
+        if (!w || w === lastW) return;
+        lastW = w;
+        fitTitleWord();
+      });
+      ro.observe(title);
+      return ro;
+    } catch { return null; }   // không có ResizeObserver: lần fit đầu vẫn đứng
   }
 
   function paintViewBtns() {
@@ -374,14 +497,22 @@ export function mountShowdownReview({
     }, 260);
   }
 
+  // ⚠️ Đợt 244 — ALL THREE REFIT THE ACT NAME. The status chip is the ONE thing
+  // on this row that changes width without going through paintTitle(): the
+  // spinner appears the instant the screen opens, "UPDATED" replaces it, then
+  // both go. Each of those steals or returns ~28px from the name beside it, and
+  // a name fitted to the room BEFORE the spinner arrived hangs 4px off the end
+  // for the whole of the three-second load. Measured, not imagined.
   function showSpinner() {
     if (doneTimer) { clearTimeout(doneTimer); doneTimer = null; }
     status.className = "aw-sd-ttl-status is-spin";
     status.innerHTML = icons.spinner;               // trusted markup from core/icons.js
+    fitTitleWord();
   }
   function showUpdated() {
     status.className = "aw-sd-ttl-status is-done";
     status.textContent = "UPDATED";
+    fitTitleWord();
     doneTimer = setTimeout(() => {
       const a = status.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, fill: "forwards" });
       whenDone(a, clearStatus, 560);
@@ -392,6 +523,7 @@ export function mountShowdownReview({
     status.className = "aw-sd-ttl-status";
     status.textContent = "";
     status.style.opacity = "";
+    fitTitleWord();
   }
 
   // ---------------------------------------------------------------
@@ -719,6 +851,8 @@ export function mountShowdownReview({
   paintViewBtns();
   paintTitle();
   paintBody();
+  // Đợt 244 — after the first paintTitle(), so the word already carries its text.
+  const titleRO = watchTitleFit();
   startWatching();
   retryOwnPublish();
   initialLoad();
@@ -738,6 +872,8 @@ export function mountShowdownReview({
     // a board that no longer exists — which would leave the teacher looking at
     // an empty white wall with no way back but Esc.
     document.removeEventListener("fullscreenchange", onFsChange);
+    // Đợt 244 — and the title's own resize observer, same rule again.
+    if (titleRO) { try { titleRO.disconnect(); } catch { /* already gone */ } }
     if (document.fullscreenElement === host) {
       try { document.exitFullscreen(); } catch { /* the browser will drop it with the node */ }
     }

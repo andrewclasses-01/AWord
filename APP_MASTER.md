@@ -8,7 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 243)** — ⭐⭐⭐ **BẢNG CUỐI GAME: KHOÁ CẢ "START AGAIN" LẪN
+> Cập nhật lần cuối: **23/8/2026 (Đợt 244)** — ⭐⭐ **TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG
+> SHOW ANSWERS** (tự thu nhỏ vừa MỘT dòng, không cắt) · ⭐⭐⭐ **THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA
+> NGOÀI THÌ NGỦ LẠI.** Sửa 4 file: `core/engine.js` · `core/showdown-review.js` ·
+> `core/showdown-setup.js` · `core/app.css`. Tự test `scratch/dot244-title-classify.html`
+> **80/80 ĐẠT, 0 lỗi console**. Tóm tắt:
+> **(1)** Chữ "SHOWDOWN" trên màn Show answers là hằng số viết cứng từ Đợt 177 — Đợt 243 chỉ vá tên
+> trên SỔ CÁI, chỗ này là màn khác. Nay engine có `sdBoardName()` truyền xuống qua tham số mới
+> `actName`; tên đứng đúng chỗ chữ cũ và giữ nguyên cả hai cử chỉ của nó. ⚠️ MỘT hàm cho HAI màn hình
+> (cùng công thức `formatActDisplayName` mà sổ cái dùng) nên hai nơi không thể gọi một ván bằng hai
+> tên. Act không tên → `""` → giữ nguyên chữ "SHOWDOWN".
+> **(2)** Dòng tiêu đề Showdown hạ 2,4 → 1,9cqw (thầy: "size chữ hiện tại cũng đang bị quá to");
+> `fitTitleWord()` tìm nhị phân cỡ chữ lớn nhất còn vừa. ⛔ KHÔNG ellipsis (cắt đuôi là vứt mất
+> `… / ENG1 QUIZ`). ⛔⛔ **Đừng "đơn giản hoá" về `scrollWidth > clientWidth`** — flexbox ghim
+> `clientWidth` vào chỗ trống lúc còn tràn rồi quay ra bám theo chữ lúc đã vừa, và `letter-spacing`
+> `0,2cqw` là độ dài CỐ ĐỊNH không phải `em`; đo thật thì hội tụ vào cỡ vẫn thừa 20px, ngẫu nhiên.
+> Cách đúng: chỗ trống đo bằng `flex: 1 1 0`, chỗ cần đo bằng `flex: 0 0 auto`, cả hai để trình duyệt
+> đo. Ba hàm đổi con quay tải đều gọi lại `fitTitleWord()` (nó là thứ duy nhất đổi bề rộng mà không
+> đi qua `paintTitle()` — quên là tên thò ra 4px suốt 3 giây đầu).
+> **(3)** `buildClassifyBar()` thêm cờ `awoke`: chạm suông rồi bấm ra ngoài → **mờ lại**; đã kéo thật
+> → giữ sáng, không giật mất thanh dưới tay thầy. Listener trên `document` ở pha **CAPTURE** và **tự
+> gỡ mình** khi thanh rời trang (hàm chỉ trả node, không có `dispose()` cho ai quên).
+> ⚠️ **CHƯA bấm tay thật trên TOMKO, CHƯA chụp được ảnh màn hình** (Browser pane không hiển thị — đã
+> xác minh bằng số đo). Đọc khối **Đợt 244** đầu `GHI CHU DU AN.md` để biết đủ.
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 243)** — ⭐⭐⭐ **BẢNG CUỐI GAME: KHOÁ CẢ "START AGAIN" LẪN
 > "START WITH MISTAKES" SAU CÚ NHẤN GIỮ "SHOW ANSWERS" (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG
 > TỪ ĐỢT 197 LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN".**
 > ✅ **THẦY DUYỆT — COMMIT `650a0ba`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·

@@ -1288,6 +1288,25 @@ export function applyClassifyToChart(root, classify) {
  *              shows the Apply button again (thầy: "khi có điều chỉnh thì
  *              nút Apply mới hiện lại"). Starts `true` so a fresh bar (never
  *              Applied yet) shows Apply from the first paint, same as before.
+ *
+ * ⭐⭐⭐ Đợt 244 (thầy: "bấm vào thanh phân loại và sáng lên nhưng nếu không
+ * điều chỉnh gì mà bấm vào chỗ trống khác thì thanh đó lại tắt sáng") — A WAKE
+ * WITH NOTHING DONE TO IT GOES BACK TO SLEEP. Đợt 241 gave the bar a way to wake
+ * but no way back: one stray touch and it stayed bright over the board for the
+ * rest of the lesson. Third flag:
+ *   `awoke`    true from the moment a touch cleared `settled` until either a
+ *              real drag (which sets `dirty`, and a bar the teacher is actually
+ *              using must NOT dim under their hand) or a pointerdown ANYWHERE
+ *              ELSE on the page — which re-settles it.
+ *
+ * ⚠️ The outside listener is on `document` in the CAPTURE phase, so it still
+ * hears the press when the board sits inside a fullscreen element (the Table
+ * view requests fullscreen on itself — core/showdown-home.js) and whatever it
+ * lands on calls stopPropagation.
+ * ⚠️ It UNREGISTERS ITSELF the first time it fires with the bar no longer in the
+ * document. buildClassifyBar returns only the node — there is no dispose() for a
+ * caller to forget — and a document listener outliving its screen is the
+ * ghost-clock of Đợt 131 all over again.
  */
 const CLASSIFY_MIN_GAP = 2;
 export function buildClassifyBar({ initial, onApply } = {}) {
@@ -1296,6 +1315,7 @@ export function buildClassifyBar({ initial, onApply } = {}) {
   if (!(hi - lo >= CLASSIFY_MIN_GAP)) { hi = DEFAULT_CLASSIFY.hi; lo = DEFAULT_CLASSIFY.lo; }
   let settled = false;
   let dirty = true;
+  let awoke = false;          // Đợt 244 — woken by a touch, nothing done to it yet
 
   const wrap = el("div", "aw-sd-classify");
   const capHi = el("span", "aw-sd-classify-cap is-hi", "100%");
@@ -1335,7 +1355,20 @@ export function buildClassifyBar({ initial, onApply } = {}) {
   // ⭐ Đợt 241 — any touch anywhere on the bar wakes it from `settled`; relies
   // on pointerdown BUBBLING from a handle up to `wrap` (nothing below calls
   // stopPropagation), so this fires before that handle's own drag starts.
-  wrap.addEventListener("pointerdown", () => { if (settled) { settled = false; paint(); } });
+  // ⭐ Đợt 244 — and remembers that the wake has not been USED yet.
+  wrap.addEventListener("pointerdown", () => { if (settled) { settled = false; awoke = true; paint(); } });
+
+  // ⭐⭐⭐ Đợt 244 — press anywhere else and an unused wake goes back to sleep.
+  // See this function's header for why capture, and why it removes itself.
+  const onOutside = e => {
+    if (!wrap.isConnected) { document.removeEventListener("pointerdown", onOutside, true); return; }
+    if (!awoke || dirty) return;          // never touched, or genuinely being used — leave it alone
+    if (wrap.contains(e.target)) return;  // still on the bar
+    awoke = false;
+    settled = true;
+    paint();
+  };
+  document.addEventListener("pointerdown", onOutside, true);
 
   function wireDrag(handle, which) {
     let active = false;
@@ -1348,7 +1381,10 @@ export function buildClassifyBar({ initial, onApply } = {}) {
       else v = Math.max(0, Math.min(hi - CLASSIFY_MIN_GAP, v));
       const changed = which === "hi" ? v !== hi : v !== lo;
       if (which === "hi") hi = v; else lo = v;
-      if (changed) dirty = true;    // Đợt 241 — a REAL move brings Apply back, a mere touch does not
+      // Đợt 241 — a REAL move brings Apply back, a mere touch does not.
+      // Đợt 244 — and it also cancels the pending "go back to sleep": the teacher
+      // is using the bar, so a press somewhere else must not dim it under them.
+      if (changed) { dirty = true; awoke = false; }
       paint();
     };
     handle.addEventListener("pointerdown", e => {
@@ -1374,6 +1410,7 @@ export function buildClassifyBar({ initial, onApply } = {}) {
     // bar fades — no flash of a still-visible Apply button for values just applied.
     settled = true;
     dirty = false;
+    awoke = false;              // Đợt 244 — a fresh sleep, not a wake waiting to expire
     paint();
   };
 

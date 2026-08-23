@@ -5821,7 +5821,19 @@ html.aw-nhung .aw-below { display: none; }
    double tap / press-and-hold — see core/showdown-review.js). GREEN always means
    "this is the scope you are looking at": the team in team scope, the class name
    and its pupil count together in class scope. */
-.aw-rv-title.is-sd { position: relative; display: flex; align-items: baseline; gap: 0.9cqw; }
+/* ⭐⭐ Đợt 244 (thầy: "size chữ hiện tại cũng đang bị quá to") — the Showdown
+   title row alone drops 2.4 → 1.9cqw. `.aw-rv-title` itself is untouched: every
+   OTHER template's review header still reads at its old size.
+   `min-width: 0` is what lets the act name inside actually shrink — a flex item
+   refuses to go below its content width without it, and the row would push the
+   score and the close button off the edge instead. */
+.aw-rv-title.is-sd {
+  position: relative; display: flex; align-items: baseline; gap: 0.9cqw;
+  font-size: 1.9cqw; min-width: 0;
+}
+/* Đợt 244 — the score beside it comes down with it, or the header reads as two
+   different headers. Only ever drawn on this screen (core/showdown-review.js). */
+.aw-rv-sdtotal { font-size: 1.9cqw; }
 .aw-sd-ttl-word {
   /* `relative` so the podium sparks can hang off this box's own corners. */
   position: relative;
@@ -5839,6 +5851,23 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-ttl-word:hover { background: #eef3f9; }
 .aw-sd-ttl-word:active { background: #e4ecf5; }
+/* ⭐⭐ Đợt 244 — THE ACT NAME IN PLACE OF THE WORD "SHOWDOWN" (thầy: "hiện đầy
+   đủ và không cắt và chỉ hiển thị 1 dòng"). Three rules, all three needed:
+     • `flex: 0 1 auto` + `min-width: 0`  — flexbox hands the word EXACTLY the
+       room the row has left, which is what makes `clientWidth` mean "available"
+       and `scrollWidth` mean "wanted" for the binary search in
+       core/showdown-review.js's fitTitleWord();
+     • `white-space: nowrap`               — one line, never two;
+     • `overflow: hidden`                  — a safety net ONLY. If the search is
+       ever right, nothing is ever clipped; without it a name that somehow still
+       overflowed would paint straight over the score.
+   ⛔ NO `text-overflow: ellipsis`: cutting the tail throws away the clue set and
+   the template ("… / ENG1 QUIZ") — the exact half Đợt 242 added on purpose. */
+.aw-sd-ttl-word.is-act {
+  font-size: calc(1em * var(--aw-ttl-fit, 1));
+  flex: 0 1 auto; min-width: 0;
+  white-space: nowrap; overflow: hidden;
+}
 .aw-sd-ttl-class, .aw-sd-ttl-scope { font-weight: 800; text-transform: uppercase; color: #7c8ba1; }
 /* `inline-block` + a LEFT origin is the whole animation: the scope word folds
    away towards the class name and the next one grows back out of it (teacher:

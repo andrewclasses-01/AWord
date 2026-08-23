@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP } from "./showdown.js";
+import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -3915,6 +3915,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Is there a "Start with mistakes" round to offer? Needs a template that
   // opted in (tpl.itemsKey + `src` on its review rows) AND at least one item
   // this play got wrong or left blank.
+  /**
+   * ⭐⭐ Đợt 244 (thầy, 23/8/2026) — WHAT THIS PLAY IS CALLED, for any Showdown
+   * surface that has to name it: "LSA2-S2.T1.P3-4-5 / ENG1 QUIZ".
+   *
+   * ONE function because there are now TWO screens that must agree — the board
+   * the class reads at the whistle (core/showdown-review.js, its title) and the
+   * card the teacher opens next week (core/showdown-setup.js's displayName over
+   * the ledger row). They were free to drift before this đợt, and the whole
+   * point of Đợt 230/242's naming rule is that they say one thing.
+   *
+   * ⚠️ `originAct.title`, not `.name` — in the library an ACT carries `.title`
+   * and only a FOLDER carries `.name` (core/store.js itemName()). That one
+   * confusion is exactly what made every ledger row read "Showdown" from Đợt 197
+   * to Đợt 243; do not reintroduce it.
+   * ⚠️ `activity`, not `originAct`, for the variant and the template — a
+   * "Change template" swap is precisely what makes the two differ, and what the
+   * class actually played is what the name has to say.
+   * ⚠️ Returns "" when the act has no title at all. Every caller treats "" as
+   * "keep whatever you were showing", so an unnamed act never blanks a screen.
+   */
+  function sdBoardName() {
+    const raw = originAct?.title || "";
+    if (!raw) return "";
+    return formatActDisplayName(raw, activeVariant(activity) || "", templateLabel(activity.type) || "") || raw;
+  }
+
   function mistakesAvailable() {
     if (session) return false;   // students get only what the teacher ticked
     const kept = pickMistakes(activity, tpl, reviewData);
@@ -4731,6 +4757,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         head, before: closeBtn, host: rv,
         pick: showdownPick,
         review: reviewData,
+        // ⭐⭐ Đợt 244 (thầy) — the board says WHICH ACT the class just played,
+        // instead of the literal word "SHOWDOWN". EXACTLY the same formula the
+        // class ledger uses for its own rows (core/showdown-setup.js displayName),
+        // so the screen the class reads at the whistle and the card the teacher
+        // opens next week can never name the same play two different ways:
+        // act title + the clue set that was live + the template that was live.
+        // ⚠️ `originAct.title` / `activity` are the same two objects finish()
+        // reads, and for the same reasons (see its own note): `.title` because
+        // `.name` belongs to FOLDERS, and `activity` because a "Change template"
+        // swap is what makes the played template differ from the act's own.
+        // Falls back to the raw title, then to "" — and "" is what makes
+        // core/showdown-review.js keep the old word, so nothing regresses for an
+        // act with no name at all.
+        actName: sdBoardName(),
         loadTeams: () => sd().then(m => m.loadTeamResults(showdownRoundKey())),
         watchTeams: (onChange, onError) => {
           let off = null, dead = false;

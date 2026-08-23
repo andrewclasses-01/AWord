@@ -1080,6 +1080,42 @@ vì hoạt cảnh chạy hết chính là lời hứa cú giữ đã ăn.
 mọi `transition` kẹt ở `currentTime 0`, nên dòng vừa mở khoá đo ra **cao 0px** dù CSS đúng hoàn toàn.
 Gọi `document.getAnimations().forEach(a => a.finish())` **trước khi đo**.
 
+**(i) TÊN ACT TRÊN ĐẦU BẢNG SHOW ANSWERS — và cách thu nhỏ nó cho vừa (Đợt 244).**
+`mountShowdownReview({ actName })` — engine tính bằng `sdBoardName()` (trong closure `startGame()`),
+đúng công thức `formatActDisplayName()` mà sổ cái dùng, nên bảng cả lớp đọc lúc hết giờ và tấm thẻ
+Recent results **không thể gọi một ván bằng hai tên**. `""` = giữ nguyên chữ "SHOWDOWN" cũ.
+
+⛔⛔ **ĐỪNG ĐO "CHỮ CÓ VỪA KHÔNG" BẰNG `scrollWidth > clientWidth` TRONG MỘT HÀNG FLEX.** Đo thật,
+mất hai vòng sửa mới ra:
+* lúc chữ còn tràn, flexbox **ghim** `clientWidth` đúng bằng chỗ trống; ngay khi vừa, `clientWidth`
+  quay ra **bám theo chữ** — hai vế của phép so thôi không còn là hai đại lượng khác nhau;
+* `letter-spacing` ở đây là **`0,2cqw` — độ dài CỐ ĐỊNH, không phải `em`**, nên bề rộng cần =
+  `glyph × tỉ_lệ + 122px`, không phải bội số thẳng của tỉ lệ. Tìm nhị phân đo sai một bước là không
+  tự sửa lại được ở bước sau.
+
+**Cách đúng — để trình duyệt đo cả hai số:**
+```js
+el.style.flex = "1 1 0";  const room  = el.getBoundingClientRect().width;  // chỗ trống còn lại
+el.style.flex = "0 0 auto"; /* rồi đổi cỡ chữ và đọc */                    // chỗ chữ muốn có
+```
+⚠️ Và phải đo lại mỗi khi **bất cứ thứ gì khác trên cùng hàng** đổi bề rộng. Trên hàng này thủ phạm
+là con quay tải (`.aw-sd-ttl-status`): nó hiện ra *sau* lần đo đầu, ăn ~28px, và tên thò ra ngoài 4px
+suốt 3 giây. `showSpinner`/`showUpdated`/`clearStatus` đều phải gọi lại hàm fit.
+
+⛔ **Khi viết bench đếm "mấy dòng": đừng so chiều cao hộp với `font-size`.** Cỡ chữ đã thu nhỏ nhưng
+chiều cao hộp vẫn theo `line-height` của **dòng cha**, nên phép so đó báo "2 dòng" cho một dòng hoàn
+toàn bình thường. Đếm hộp dòng thật: `Range.getClientRects().length`.
+
+**(j) THANH PHÂN LOẠI — BA TRẠNG THÁI, KHÔNG PHẢI HAI (Đợt 241 + 244).**
+`buildClassifyBar()` giữ `settled` (mờ sau Apply) · `dirty` (đã kéo thật ⇒ nút Apply hiện lại) ·
+`awoke` (Đợt 244 — mới chạm dậy, chưa làm gì). Chạm suông rồi bấm ra ngoài thì **ngủ lại**; đã kéo
+thật thì **giữ sáng** — không giật mất thanh dưới tay thầy.
+⚠️ Người nghe cú bấm ngoài nằm trên `document` ở **pha CAPTURE** (bảng có thể đang chạy trong phần tử
+toàn màn hình, và thứ bị bấm có thể `stopPropagation`).
+⚠️ Nó **tự gỡ mình** khi thấy thanh không còn trong trang: hàm chỉ trả về cái node, **không có
+`dispose()`** cho người gọi quên — mà listener trên `document` sống lâu hơn màn hình sinh ra nó chính
+là con-ma Đợt 131.
+
 ### Hợp đồng cho template (opt-in — Đợt 178: 8/17 template)
 
 ```js

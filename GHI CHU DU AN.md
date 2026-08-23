@@ -5,6 +5,121 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 244 (23/8/2026) — ⭐⭐ TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG SHOW ANSWERS (tự thu nhỏ vừa **một** dòng, không cắt) · ⭐⭐⭐ THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA NGOÀI THÌ **NGỦ LẠI**
+
+Thầy giao 2 điều chỉnh, chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build. Sửa 4 file:
+`core/engine.js` · `core/showdown-review.js` · `core/showdown-setup.js` · `core/app.css`. Thêm 1 file
+thử cục bộ (không lên git): `scratch/dot244-title-classify.html` — **80/80 ĐẠT, 0 lỗi console**.
+
+### 1) BẢNG SHOW ANSWERS NÓI RÕ VỪA CHƠI ACT NÀO
+
+Thầy: *"Hiện tên act ngay cả trong bảng showdown khi bấm show answers ở cuối game (hiện tại vẫn là
+tên mặc định SHOWDOWN)."*
+
+Đợt 243 đã vá tên trên **sổ cái** (thẻ Recent results + bảng Table), nhưng màn Show answers ngay sau
+game là một chỗ khác hẳn: chữ **"SHOWDOWN"** ở đó là **hằng số viết cứng** trong
+`core/showdown-review.js` từ Đợt 177, chưa bao giờ biết act tên gì.
+
+Nay engine có hàm mới **`sdBoardName()`** (`core/engine.js`) và truyền xuống qua tham số mới
+`actName`. Tên đứng đúng chỗ chữ "SHOWDOWN" cũ và **giữ nguyên cả hai cử chỉ** của nó (chạm = đổi
+đội ↔ cả lớp; chạm đúp = đọc lại các đội).
+
+⚠️ **MỘT hàm cho HAI màn hình.** `sdBoardName()` chạy đúng công thức mà sổ cái dùng
+(`formatActDisplayName`, Đợt 230 + 242), nên bảng cả lớp đọc lúc hết giờ và tấm thẻ thầy mở tuần sau
+**không thể gọi cùng một ván bằng hai cái tên**. Trước đợt này chúng tự do trôi khỏi nhau.
+
+⚠️ Vẫn `originAct.title` chứ không `.name` (bài học Đợt 243), và `activity` chứ không `originAct` cho
+bộ nghĩa + template (vì "Change template" chính là thứ làm hai cái khác nhau).
+
+⚠️ Act **không có tên** thì trả `""`, và `""` là tín hiệu để `showdown-review.js` **giữ nguyên chữ
+"SHOWDOWN"** — không bao giờ để lại một cái nút trắng trơn không ai biết bấm vào đâu.
+
+### 2) TÊN DÀI: TỰ THU NHỎ, HIỆN ĐỦ, ĐÚNG MỘT DÒNG
+
+Thầy chốt qua AskUserQuestion: *"Thu nhỏ chữ cho vừa, size chữ hiện tại cũng đang bị quá to. Cần hiển
+thị đầy đủ và không cắt và chỉ hiển thị 1 dòng."*
+
+* Cả dòng tiêu đề Showdown hạ **2,4 → 1,9cqw** (`.aw-rv-title.is-sd`, và điểm số `.aw-rv-sdtotal`
+  xuống theo cho khỏi thành hai cỡ chữ trong một dòng). ⚠️ `.aw-rv-title` trơn **không đụng** — bảng
+  review của 16 template còn lại giữ nguyên cỡ cũ.
+* `fitTitleWord()` tìm nhị phân cỡ chữ lớn nhất còn vừa, qua biến CSS `--aw-ttl-fit`.
+* ⛔ **KHÔNG dùng `text-overflow: ellipsis`** — cắt đuôi là vứt mất đúng nửa mà Đợt 242 thêm vào
+  (`… / ENG1 QUIZ`), tức vứt đúng thứ cần đọc.
+
+⛔⛔ **HAI LẦN VIẾT SAI TRƯỚC KHI ĐÚNG — đừng "đơn giản hoá" ngược lại:**
+
+1. **`scrollWidth > clientWidth` KHÔNG dùng được ở đây.** Lúc chữ còn tràn, flexbox ghim
+   `clientWidth` đúng bằng chỗ trống; nhưng ngay khi vừa, `clientWidth` quay ra **bám theo chữ** —
+   hai vế của phép so thôi không còn là hai đại lượng khác nhau nữa. Cộng thêm `letter-spacing` của
+   dòng này là **`0,2cqw` — độ dài CỐ ĐỊNH, không phải `em`** — nên bề rộng cần =
+   `glyph × tỉ_lệ + 122px`, không phải bội số thẳng của tỉ lệ. Đo thật: hội tụ vào một cỡ **vẫn thừa
+   20px**, và thừa **ngẫu nhiên**.
+2. **Tự cộng bề rộng các phần tử bên cạnh cũng sai.** Con quay tải (`.aw-sd-ttl-status`) xuất hiện
+   *sau* lần đo đầu và ăn ~28px, nên tên **thò ra ngoài 4px suốt 3 giây đầu**.
+
+**Cách đúng, cả hai số đều để trình duyệt đo:**
+* **chỗ trống** = ghim `flex: 1 1 0` một khoảnh khắc → một phần tử đáy-0 được phép giãn sẽ chiếm đúng
+  phần các anh em không dùng, bất kể lúc đó có những ai;
+* **chỗ cần** = ghim `flex: 0 0 auto` → hộp của nó chính là bề rộng chữ muốn có.
+
+Và **cả ba hàm đổi con quay** (`showSpinner`/`showUpdated`/`clearStatus`) đều gọi lại `fitTitleWord()`
+— đó là thứ duy nhất trên dòng này đổi bề rộng mà **không** đi qua `paintTitle()`.
+
+⚠️ `ResizeObserver` trên dòng tiêu đề để vào/ra toàn màn hình và cột myActivity co giãn đều đo lại;
+**`dispose()` ngắt nó** (luật đồng-hồ-ma Đợt 112/131).
+
+📌 Cỡ chữ tính bằng `cqw` nên **thu khung nhỏ lại KHÔNG làm tên chật hơn** — chữ nhỏ theo khung, tỉ lệ
+giữ nguyên. Biến thật là **số ký tự của tên**. Đo được: 29 ký tự vừa sẵn (fit 1,0) · 42 ký tự → 0,89 ·
+65 ký tự → 0,47; **cả ba đều không xén, ở cả khung 940px lẫn 380px.**
+
+### 3) ⭐⭐⭐ THANH PHÂN LOẠI — CHẠM SUÔNG THÌ NGỦ LẠI
+
+Thầy: *"khi bấm vào thanh phân loại và sáng lên nhưng nếu không điều chỉnh gì mà bấm vào chỗ trống
+khác thì thanh đó lại tắt sáng."*
+
+Đọc code trước khi sửa thì thấy **hành vi đó chưa hề tồn tại**: Đợt 241 cho thanh một đường *thức
+dậy* nhưng **không có đường về** — một cú chạm lạc là nó sáng đè lên bảng suốt buổi. Hỏi lại thầy qua
+AskUserQuestion, thầy chốt: **thêm mới, cho nó ngủ lại.**
+
+Cờ thứ ba `awoke` trong `buildClassifyBar()`:
+
+| tình huống | kết quả |
+|---|---|
+| chạm vào thanh (đang mờ) | sáng lên · `awoke = true` · nút Apply **vẫn ẩn** (giữ luật Đợt 241) |
+| chạm suông rồi bấm ra **ngoài** | **mờ lại** |
+| chạm chỗ khác **trong** thanh | vẫn sáng |
+| **kéo thật** một tay nắm | `dirty = true` · `awoke = false` · nút Apply hiện lại |
+| đã kéo rồi mới bấm ra ngoài | **vẫn sáng** — không giật mất thanh dưới tay thầy |
+| bấm Apply | mờ lại, `awoke = false` |
+
+⚠️ Người nghe cú bấm ngoài nằm trên `document` ở **pha CAPTURE**, để vẫn nghe được khi bảng đang
+chạy trong phần tử toàn màn hình và thứ bị bấm có gọi `stopPropagation`.
+
+⚠️ **Nó TỰ GỠ MÌNH** ngay lần chạy đầu tiên thấy thanh không còn trong trang. `buildClassifyBar()`
+chỉ trả về cái node, **không có `dispose()`** cho người gọi quên — mà một listener trên `document`
+sống lâu hơn màn hình sinh ra nó chính là con-ma Đợt 131 lần nữa.
+
+### TEST
+
+`scratch/dot244-title-classify.html` — **80/80 ĐẠT, 0 lỗi console**. Chạy `mountShowdownReview()` và
+`buildClassifyBar()` **thật**, giả lập ngón tay bằng `PointerEvent`, cộng một tầng canh nguồn cho
+`sdBoardName()` (nằm trong closure `startGame()`, không import ra được).
+
+⛔ **BẪY BENCH**: đừng đo "mấy dòng" bằng cách so chiều cao hộp với `font-size`. Cỡ chữ của tên đã
+thu nhỏ nhưng chiều cao hộp vẫn theo `line-height` của **dòng cha**, nên phép so đó báo "2 dòng" cho
+một dòng hoàn toàn bình thường. Đếm hộp dòng thật bằng `Range.getClientRects().length`.
+
+Hồi quy — **không cái nào đổi so với trước đợt này**: `dot243-panel` 57/57 · `sd207-panel` 60/60 ·
+`sd207-review` 29/29 · `dot240-showdown` 11/11 · `dot241-showdown` 19/19 (bộ test chính của thanh
+phân loại — cơ chế Đợt 241 còn nguyên) · `dot242-showdown` 27/27 · `sd198-panel` 33/35 (2 hỏng đã
+biết từ Đợt 207) · `dot238-showdown` 36/40 (4 hỏng đã biết từ Đợt 241).
+
+⚠️ **CHƯA chụp được ảnh màn hình** (Browser pane không hiển thị nên trang không dựng khung hình) —
+đã xác minh bằng số đo. ⚠️ **CHƯA bấm tay thật trên TOMKO**, chưa chơi một ván Showdown thật để nhìn
+tên act trên đầu bảng Show answers.
+
+---
+
 ## Đợt 243 (23/8/2026) — ⭐⭐⭐ BẢNG CUỐI GAME: KHOÁ CẢ **START AGAIN** LẪN **START WITH MISTAKES** SAU CÚ NHẤN GIỮ **SHOW ANSWERS** (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN" — ✅ **THẦY DUYỆT ("ok build, sau đó commit + push live + ghi hồ sơ bàn giao")** — **COMMIT `650a0ba`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` · `core/engine.js` · `core/press.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>` — ⛔ không băm file trên máy, LF↔CRLF lệch oan).
 
 Thầy giao 2 việc, chốt 3 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"). Sửa 3 file:
