@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 243 (23/8/2026) — ⭐⭐⭐ BẢNG CUỐI GAME: KHOÁ CẢ **START AGAIN** LẪN **START WITH MISTAKES** SAU CÚ NHẤN GIỮ **SHOW ANSWERS** (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN"
+## Đợt 243 (23/8/2026) — ⭐⭐⭐ BẢNG CUỐI GAME: KHOÁ CẢ **START AGAIN** LẪN **START WITH MISTAKES** SAU CÚ NHẤN GIỮ **SHOW ANSWERS** (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN" — ✅ **THẦY DUYỆT ("ok build, sau đó commit + push live + ghi hồ sơ bàn giao")** — **COMMIT `650a0ba`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` · `core/engine.js` · `core/press.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>` — ⛔ không băm file trên máy, LF↔CRLF lệch oan).
 
 Thầy giao 2 việc, chốt 3 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"). Sửa 3 file:
 `core/engine.js` · `core/press.js` · `core/app.css`. Thêm 2 file thử cục bộ (không lên git):

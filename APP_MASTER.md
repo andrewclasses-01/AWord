@@ -10,7 +10,11 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **23/8/2026 (Đợt 243)** — ⭐⭐⭐ **BẢNG CUỐI GAME: KHOÁ CẢ "START AGAIN" LẪN
 > "START WITH MISTAKES" SAU CÚ NHẤN GIỮ "SHOW ANSWERS" (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG
-> TỪ ĐỢT 197 LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN".** Sửa 3 file: `core/engine.js` ·
+> TỪ ĐỢT 197 LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN".**
+> ✅ **THẦY DUYỆT — COMMIT `650a0ba`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·
+> **6/6 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` ·
+> `core/app.css` · `core/engine.js` · `core/press.js`).
+> Sửa 3 file code: `core/engine.js` ·
 > `core/press.js` · `core/app.css`. Tự test `scratch/dot243-panel.html` **57/57 ĐẠT, 0 lỗi console**.
 > Tóm tắt:
 > **(1)** Hàm mới `lockBehindHold()` trong `startGame()` thay thế cơ chế Đợt 207 — nay ẩn **cả hai**
