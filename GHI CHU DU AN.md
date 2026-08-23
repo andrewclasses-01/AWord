@@ -5,6 +5,97 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 242 (23/8/2026) — ⭐⭐⭐ LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM — 🟡 CODE XONG + TỰ TEST QUA FIRESTORE GIẢ, CHƯA BẤM TAY THẬT/CHƯA COMMIT
+
+Thầy giao 3 việc, chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"): (1) lớp chia
+1 team (cả lớp = 1 đội) giữ nguyên cảm giác bấm READY 1 chạm hay phải qua đúng màn chia đội như 2+
+team — thầy chọn **giữ 1 chạm**; (2) kết quả lớp 1 team có lên bảng "Recent results" xem nhanh giữa
+giờ không — thầy chọn **có**. Sửa 5 file: `core/showdown-setup.js` · `core/showdown.js` ·
+`core/showdown-history.js` · `core/engine.js` · `core/app.css`. Thêm 1 file test cục bộ:
+`scratch/dot242-showdown.html` (27/27 phép thử ĐẠT, 0 lỗi console — không lên git).
+
+### 1) LỚP 1 TEAM: BỎ HẲN "LỐI TẮT" KHÔNG CHẠM FIRESTORE CỦA ĐỢT 159
+
+Đảo ngược có chủ đích luật Đợt 159 ("nếu chỉ có 1 team thì không lưu firebase nữa"). Trước đợt này,
+`applySolo()` (`showdown-setup.js`) chỉ ghi `pick` vào `sessionStorage` của riêng trình duyệt đó —
+không `saveSetup`, không claim, không lên bảng đội dùng chung — nên không đồng bộ được giữa các máy/
+cột myActivity, và (Đợt 180) bị cấm cứng không cho publish lên bảng xem nhanh giữa giờ vì một lần để
+lại dòng `sd_solo` cũ đè trùng lên lớp chia team sau đó (đếm ra 30 học sinh cho lớp 15 em).
+
+Nay `applySolo()` viết lại hoàn toàn: dựng đội `{id:"sdt_1", name:"Team 1", members: cả lớp}`, gọi
+đúng `publishTable(setup, {claimTeamId: team.id, baseAt})` — **hàm y hệt** `applyReady()` của
+2+ team dùng — nên đội 1-team giờ có mặt trong bảng `sd_main` dùng chung, có claim (giữ chỗ), đồng
+bộ được giữa các cột myActivity. Nút vẫn ghi **READY** và vẫn bấm 1 cái là chơi ngay (thầy chốt) —
+chỉ khác ở "phía sau", không đổi cảm giác dùng.
+
+⭐ **Nút READY giờ cũng phải hỏi khi đổi sang lớp khác đang có bảng** — luật "hỏi trước khi xoá bảng
+lớp khác" (Đợt 197, vốn chỉ áp cho Next của 2+ team) nay áp dụng luôn cho solo, vì solo giờ ĐỤNG
+vào đúng bảng dùng chung đó. Trước đợt này solo bỏ qua hoàn toàn bước hỏi vì nó chưa từng chạm tới
+bảng chung.
+
+⭐ Tên đội mặc định đổi từ **tên lớp** (`applySolo` cũ, ví dụ đội "A1B" của lớp "A1B" — thầy cảm thấy
+lặp) sang **"Team 1"**, đúng tên mặc định `splitIntoTeams()` đã dùng cho mọi đội khác — nhờ vậy luật
+"nói tên lớp một lần" có sẵn trong `showdown-review.js`'s `paintTitle()` (so khớp CHỮ, không so
+`teamId`) tự nhiên không còn kích hoạt cho solo nữa, không cần sửa gì thêm ở đó.
+
+⭐ `saveTeamResult()` (bảng xem nhanh giữa giờ) bỏ điều kiện chặn solo — giờ publish bình thường như
+mọi đội, vì gốc rễ (đường ghi riêng không qua Firestore) đã bị xoá chứ không phải vá thêm ở trên. Dòng
+chặn `pick.teamId === SOLO_TEAM_ID` **vẫn giữ lại** — chỉ còn tác dụng với 1 pick CŨ (từ trước khi cập
+nhật, còn nằm trong `sessionStorage` một trình duyệt) để nó không đột nhiên publish một dòng dữ liệu
+theo hình dạng cũ. `saveMatchResult()` (lưu bền) đã ghi cho solo từ Đợt 197 rồi, không đổi.
+
+⚠️ **KHÔNG PHẢI LỖI MỚI**: nếu thầy đổi số lượng team của MỘT lớp (ví dụ 1→3) mà không bấm
+"Reset teams", bảng xem nhanh giữa giờ có thể còn giữ dòng của đội cũ tới khi đội mới cùng chỗ ngồi
+chơi xong ván đầu — cách app xử lý việc đổi số đội cho CÙNG một lớp đã như vậy từ lâu (chỉ "Reset
+teams" mới xoá `sd_results`), không riêng gì lớp 1 team, không thuộc phạm vi sửa đợt này.
+
+### 2) TÊN TRẬN TỰ ĐỘNG: "WORDS" → "ENG1 QUIZ"
+
+`formatActDisplayName(actName, contentVariant, templateType)` (`showdown.js`) thêm tham số thứ 3.
+`DISPLAY_VARIANT_WORDS` đổi từ chữ đầy đủ ("ENGLISH 1") sang mã ngắn ("ENG1" — trùng với
+`content-view.js`'s `VARIANT_LABEL`, cố tình không import mà chép giá trị, đúng luật "file thuần
+không import" của `showdown.js`). Ghép thêm `templateType.toUpperCase()` sau mã biến thể nếu có:
+`"LSA2-S2.T1.P3-4-5 / WORDS"` + `eng1` + `Quiz` → `"LSA2-S2.T1.P3-4-5 / ENG1 QUIZ"`. Chỉ áp dụng khi
+tên bài đúng đuôi `/ WORDS` (như luật cũ Đợt 230) — bài không phải dạng từ vựng giữ nguyên tên.
+
+`templateType` lấy từ `templateLabel(activity.type)` (`catalog.js`, đã có sẵn import trong
+`engine.js`) tại đúng chỗ `contentVariant` được tính trong `finish()` — `activity`, không phải
+`originAct`, vì Change template có thể đổi hẳn template đang chơi. Ghi vào lịch sử qua
+`saveMatchResult()`'s tham số mới `templateType` (`showdown-history.js`, cùng khuôn `contentVariant`:
+chỉ điền khi còn trống, `normMatch()` thêm trường `templateType`). `displayName()`
+(`showdown-setup.js`) truyền `m.templateType` vào `formatActDisplayName`.
+
+Trận cũ đã lưu trước đợt này không có `templateType` → chỉ hiện `"... / ENG1"` (không có template,
+đúng hành vi Đợt 230 cũ với mã ngắn thay chữ đầy đủ) — không có gì hỏng, không cần di trú dữ liệu.
+
+### 3) MÀN ANALYSING: NỀN PHÍA SAU MỜ + TỐI
+
+`.aw-sdh-loading` (`app.css`) thêm lại `background: rgba(20,26,36,.55); backdrop-filter: blur(2px)`
+— ĐÚNG giá trị Đợt 236 dùng trước khi Đợt 237 cố ý bỏ (`background: transparent`). Chữ ANALYSING và
+dòng ANDREW CLASSES nhấp nhô GIỮ NGUYÊN y hệt Đợt 237 (không quay lại khung viền sáng xoay/hộp nền
+tối cũ của Đợt 236) — chỉ nền TRANG bên dưới đổi. `pointer-events: none` bỏ theo (lớp phủ nhìn thấy
+được thì nên chặn luôn thao tác, không để lọt xuống dưới).
+
+### KIỂM THỬ
+
+`scratch/dot242-showdown.html` — 27/27 ĐẠT, 0 lỗi console, qua Firestore giả (`fake-firebase236.js`):
+6 phép thuần cho `formatActDisplayName` · lớp 1 team bấm Ready ra đúng `sdt_1`/"Team 1"/có claim ·
+đổi sang lớp khác đang có bảng thì ĐÚNG có hỏi xác nhận (không ghi đè âm thầm) · `saveTeamResult()`
+nhận lớp 1 team mới, vẫn chặn pick CŨ mang `sd_solo` · `saveMatchResult()` lưu `templateType` +
+`displayName()` ra đúng "ENG1 QUIZ" · nền `.aw-sdh-loading` hết trong suốt + có blur. Chạy lại 3 lưới
+thử CŨ dò hồi quy: `dot241-showdown.html` **19/19** · `dot238-showdown.html` **36/40** (4 cái hỏng là
+đúng bằng số Đợt 241 đã ghi nhận từ trước — hành vi cũ bị thay có chủ đích, không phải hỏng mới) ·
+`sd198-panel.html` **33/35** (2 cái hỏng về số LEFT thuộc công thức đã đổi từ Đợt 207, không liên
+quan gì tới đợt này). `dot240-showdown.html` không chạy hết được vì tự nó dò `.aw-sd-rec-classifyslot`
+— lớp đã bị Đợt 241 xoá hẳn (đổi sang `.aw-sd-rec-classifyrow`) từ TRƯỚC đợt này, không phải lỗi mới.
+
+⚠️ **CHƯA bấm tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống,
+CHƯA commit/push.** ⛔ Phát hiện thêm (không thuộc việc thầy giao): `APP_MASTER.md` chưa được cập
+nhật cho Đợt 238→241 (header đầu file vẫn dừng ở Đợt 237) dù cả 4 đợt đó đã push+live — đọc
+`GHI CHU DU AN.md` này mới thấy đủ, đừng chỉ tin header `APP_MASTER.md` để biết đợt mới nhất.
+
+---
+
 ## Đợt 241 (23/8/2026) — ⭐⭐ THANH PHÂN LOẠI XUỐNG DƯỚI+RỘNG HƠN+TỰ MỜ SAU APPLY, SỬA KHUNG 16:9 ANALYSE CÒN CAO — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `b1033a9`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b1033a9` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-home.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot241-showdown.html`, **19/19 phép thử ĐẠT, 0 lỗi console**), đo

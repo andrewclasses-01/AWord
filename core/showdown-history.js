@@ -214,10 +214,17 @@ function normMatch(m) {
     playNo: Number(m?.playNo) || 1,
     actName: cut(m?.actName),
     // Đợt 230 — the clue set (eng1/eng2/vi1/vi2) that was live when this result
-    // was saved, so the ledger can show "ENGLISH 1" instead of the act's own
-    // shared "WORDS" name (core/showdown.js's formatActDisplayName). Empty for
-    // any match filed before this đợt, or for an act that has no clue sets.
+    // was saved, so the ledger can show "ENG1" instead of the act's own shared
+    // "WORDS" name (core/showdown.js's formatActDisplayName). Empty for any
+    // match filed before this đợt, or for an act that has no clue sets.
     contentVariant: cut(m?.contentVariant),
+    // ⭐ Đợt 242 — the TEMPLATE (its display label, e.g. "Quiz") the class was
+    // actually playing when this result was saved — `activity.type` at the
+    // engine's finish(), which is the template a "Change template" swap left
+    // running, not the act's own original one. Sits beside contentVariant in
+    // the same ledger-name formula ("BODY PARTS / ENG1 QUIZ"). Empty for any
+    // match filed before this đợt.
+    templateType: cut(m?.templateType),
     // Đợt 230 — the teacher's own rename, typed by hand (double-tap the name in
     // Recent results). Once set it OVERRIDES the formatted display name forever
     // for this match — never re-derived, never overwritten by a later write to
@@ -397,14 +404,15 @@ async function dropIndexMonth(classId, yyyymm) {
  * instead, and the caller's own outbox is what tries again.
  *
  * ⚠️ A SOLO play files here TOO (thầy, 19/8/2026: "cả lớp chỉ có 1 đội vẫn lưu
- * và ghi bền dữ liệu"). That is deliberately NOT true of the live `sd_results`
- * board, which still refuses solo rows — see saveTeamResult's own long note on
- * what a stale `sd_solo` row did to a class of 15. The difference is safe
- * because a match here is keyed by tableId, so a solo play and a four-team play
- * can never land in the same column and double anybody.
+ * và ghi bền dữ liệu"). ⭐ Đợt 242 — solo now files on the LIVE `sd_results`
+ * board as well (see saveTeamResult's own note: it used to be the one deliberate
+ * exception, and Đợt 242 removed the separate write path that made it one). The
+ * `teamId === SOLO_TEAM_ID` special case below only still matters for a match
+ * saved by a build BEFORE this đợt — a solo play now arrives here as an
+ * ordinary `sdt_1`, same as any other team.
  */
 export async function saveMatchResult({
-  classId, className, tableId, roundKey, playNo, actName = "", contentVariant = "",
+  classId, className, tableId, roundKey, playNo, actName = "", contentVariant = "", templateType = "",
   teamId, teamName, students
 }) {
   if (!classId || !teamId) return false;
@@ -416,9 +424,11 @@ export async function saveMatchResult({
   const id = matchIdOf(tableId, roundKey, playNo);
   const entry = {
     teamId: String(teamId),
-    // A solo pick names its team after the class (applySolo), which is right on
-    // its own board and wrong on a ledger row, where "A1B" as a team name beside
-    // "A1B" as the class reads as a mistake. Say what it is.
+    // ⚠️ LEGACY ONLY (before Đợt 242): a solo pick used to name its team after
+    // the class (applySolo), which was right on its own board and wrong on a
+    // ledger row, where "A1B" as a team name beside "A1B" as the class reads as
+    // a mistake. A solo play saved from now on already arrives named "Team 1",
+    // same as any other lone team, so this override never fires for it again.
     teamName: String(teamId) === SOLO_TEAM_ID ? "Whole class" : (String(teamName || "").trim() || "Team"),
     at: now,
     students: (students || []).map(normStudent).filter(s => s.name)
@@ -430,7 +440,7 @@ export async function saveMatchResult({
     node.className = String(className || node.className || "");
     let m = node.matches.find(x => x.matchId === id);
     if (!m) {
-      m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, contentVariant, at: now });
+      m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, contentVariant, templateType, at: now });
       node.matches.push(m);
       // ⭐ Đợt 236 — NO EVICTION HERE ANY MORE (see file header: "giữ mãi mãi").
       // Sharding by month is what keeps any one document small; this month's
@@ -444,6 +454,7 @@ export async function saveMatchResult({
     m.updatedAt = now;
     if (!m.actName && actName) m.actName = cut(actName);
     if (!m.contentVariant && contentVariant) m.contentVariant = cut(contentVariant);
+    if (!m.templateType && templateType) m.templateType = cut(templateType);
     node.updatedAt = now;
     tx.set(ref, clean(fitToBudget(node)));
     result = { count: node.matches.length, lastAt: Math.max(now, ...node.matches.map(x => x.at || 0)) };

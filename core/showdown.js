@@ -623,23 +623,29 @@ export function buildAnalysisRows(entries) {
 }
 
 // ---------------------------------------------------------------
-// Đợt 230 (22/8/2026, thầy) — LEDGER DISPLAY NAME: "WORDS" → "ENGLISH 1" etc.
+// Đợt 230 (22/8/2026) — LEDGER DISPLAY NAME: "WORDS" → "ENG1 QUIZ" etc.
 // ---------------------------------------------------------------
 // A vocabulary act carries ONE library name for all four clue sets (Đợt 145,
 // core/content-view.js — "BODY PARTS / WORDS" plays ENG1/ENG2/VI1/VI2 depending
 // on `options.contentVariant`), so the ledger row for a Showdown match said only
-// "BODY PARTS / WORDS" no matter which set the class actually played. Thầy:
-// swap the literal "WORDS" for the clue set that was live when the result was
-// saved — "BODY PARTS / ENGLISH 1", "BODY PARTS / VIETNAMESE 2".
+// "BODY PARTS / WORDS" no matter which set the class actually played, or which
+// of the 17 templates the class played it as (Change template can turn any
+// vocab act into a Quiz, an Anagram, a Type the answer…).
+//
+// ⭐⭐ Đợt 242 (23/8/2026, thầy) — ADDS THE TEMPLATE: "BODY PARTS / WORDS" now
+// becomes "BODY PARTS / ENG1 QUIZ" — the clue set AND the template that were
+// live when the result was saved, both in one word each. REVERSES Đợt 230's own
+// choice of writing the clue set out in full ("ENGLISH 1"): with a template name
+// now sitting right next to it, the short code already used on the Options
+// buttons reads cleaner and keeps the whole row to two short words.
 //
 // ⚠️ A SMALL, LOCAL MAP ON PURPOSE, not an import of content-view.js's own
 // VARIANT_LABEL ("ENG1"/"VI2"): this file stays free of every other module in
 // core/ (its header's whole point — pure data-in/data-out, testable with no
-// browser), and the words wanted here ("ENGLISH 1") are a display choice, not
-// the same short label content-view.js's Options buttons use.
-const DISPLAY_VARIANT_WORDS = {
-  eng1: "ENGLISH 1", eng2: "ENGLISH 2", vi1: "VIETNAMESE 1", vi2: "VIETNAMESE 2"
-};
+// browser). The VALUES are the same short codes now, on purpose — two labels
+// answering the same question ("which clue set?") had already drifted once
+// (ENGLISH 1 here, ENG1 there) and were never meant to say different things.
+const DISPLAY_VARIANT_WORDS = { eng1: "ENG1", eng2: "ENG2", vi1: "VI1", vi2: "VI2" };
 
 // ⚠️ ONLY the literal "WORDS" suffix (nothing after it) is swapped. An act
 // whose name ends "WORDS 2" (Đợt 204's second word-table suffix) is a DIFFERENT
@@ -647,19 +653,27 @@ const DISPLAY_VARIANT_WORDS = {
 const WORDS_SUFFIX_RE = /^(.*\/\s*)WORDS\s*$/i;
 
 /**
- * The name to show for one ledger row. `contentVariant` is whatever
- * core/engine.js recorded at the moment the result was saved (Đợt 230) — a
- * match filed before this đợt has none, and this function is then a no-op:
- * the raw `actName` comes back exactly as it always did.
+ * The name to show for one ledger row. `contentVariant`/`templateType` are
+ * whatever core/engine.js recorded at the moment the result was saved (Đợt 230
+ * for the first, Đợt 242 for the second) — a match filed before the field it
+ * needs existed simply does not get that part of the swap:
+ *   • neither field    → the raw `actName`, unchanged (always true before Đợt 230)
+ *   • variant only     → "BODY PARTS / ENG1" (a match saved between Đợt 230 and
+ *                        242, or a build that never learned the template)
+ *   • both fields      → "BODY PARTS / ENG1 QUIZ" (Đợt 242's own shape)
+ * Never a HALF template name on its own — "QUIZ" beside no clue set would say
+ * nothing about which words were on screen, which is the one thing this whole
+ * function exists to preserve.
  */
-export function formatActDisplayName(actName, contentVariant) {
+export function formatActDisplayName(actName, contentVariant, templateType) {
   const name = String(actName || "").trim();
   if (!name) return "";
   const word = DISPLAY_VARIANT_WORDS[String(contentVariant || "").toLowerCase()];
   if (!word) return name;
   const m = WORDS_SUFFIX_RE.exec(name);
   if (!m) return name;
-  return `${m[1]}${word}`;
+  const tpl = String(templateType || "").trim();
+  return `${m[1]}${word}${tpl ? " " + tpl.toUpperCase() : ""}`;
 }
 
 /**

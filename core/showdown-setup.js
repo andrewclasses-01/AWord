@@ -682,10 +682,11 @@ export async function flushPendingResult() {
  */
 export async function saveTeamResult({ pick, roundKey, actName = "", students }) {
   if (!pick?.teamId) return null;
-  // ⭐⭐ Đợt 180 — A SOLO PICK NEVER PUBLISHES. One-team mode is the whole class
-  // in ONE browser and is documented at SOLO_TEAM_ID / applySolo() as never
-  // touching Firestore at all — but core/engine.js's finish() only ever asked
-  // "is there a pick?", so it published `sd_solo` like any other team.
+  // ⭐⭐ Đợt 180 (LEGACY GUARD ONLY since Đợt 242) — A SOLO PICK NEVER PUBLISHES.
+  // One-team mode used to be the whole class in ONE browser, documented at
+  // SOLO_TEAM_ID / applySolo() as never touching Firestore at all — but
+  // core/engine.js's finish() only ever asked "is there a pick?", so it
+  // published `sd_solo` like any other team.
   //
   // What that cost (measured 17/8/2026, teacher's own class of 15):
   // a solo play earlier in the day left a `sd_solo` row holding ALL FIFTEEN
@@ -695,8 +696,17 @@ export async function saveTeamResult({ pick, roundKey, actName = "", students })
   // screen could explain it: each team's own board was right, and the stale row
   // wore the class's own name.
   //
-  // Guarded BEFORE `requireUid()` on purpose: solo is the one mode that is
-  // meant to work signed out, and it must not throw on its way to doing nothing.
+  // ⭐ Đợt 242 (thầy) — one-team mode now IS a real team (`sdt_1`, applySolo's
+  // own note) and publishes here same as any other, on purpose: it removes the
+  // separate write path that made the bug above possible in the first place,
+  // rather than patching around it. This check is kept only because a browser
+  // that had a solo game running the moment this update deployed still carries
+  // the OLD `sd_solo` id in its sessionStorage pick until it starts a new one —
+  // that stale id must still refuse to publish, for exactly the reason above.
+  //
+  // Guarded BEFORE `requireUid()` on purpose: a pick this old is also from
+  // before Firestore was ever touched, and this must not throw on its way to
+  // doing nothing.
   if (pick.teamId === SOLO_TEAM_ID) return null;
   const entry = {
     teamId: String(pick.teamId),
@@ -1064,14 +1074,16 @@ export function matchBlocks(match) {
  * mini card, the expanded detail, the download popup and the ANALYSE legend
  * can never show four different things for the same row.
  *   1. the teacher's own rename (`customName`) — ALWAYS wins, verbatim, once set
- *   2. the formatted name ("BODY PARTS / ENGLISH 1") when this match recorded
- *      a clue set (core/showdown.js's formatActDisplayName — a no-op for a
- *      match filed before this đợt, or for a non-variant act)
+ *   2. the formatted name ("BODY PARTS / ENG1 QUIZ", Đợt 242 — clue set AND
+ *      template) when this match recorded a clue set (core/showdown.js's
+ *      formatActDisplayName — a no-op for a match filed before Đợt 230, or for
+ *      a non-variant act; the template half alone is a no-op for a match filed
+ *      before Đợt 242, and still reads as just "BODY PARTS / ENG1")
  *   3. the raw `actName`, then the literal fallback, same as always
  */
 export function displayName(m) {
   if (m.customName) return m.customName;
-  return formatActDisplayName(m.actName, m.contentVariant) || m.actName || "Showdown";
+  return formatActDisplayName(m.actName, m.contentVariant, m.templateType) || m.actName || "Showdown";
 }
 
 /**
@@ -2847,14 +2859,26 @@ export function buildShowdownPanel(panel, ctx) {
             toast(setup.classId ? "Not enough pupils for that many teams" : "Choose a class first");
             return;
           }
-          if (solo) { sfx.ready(); applySolo(); return; }
           // ⭐⭐⭐ Đợt 197 (thầy) — THE DESTRUCTIVE QUESTION LIVES HERE NOW.
           // "Chỉ khi chọn 1 lớp khác, bấm next thì mới hỏi là có dữ liệu lớp
           // trước, có muốn xóa không. Ok thì mới sang trang cột build team."
           // Same class → straight through, table untouched (this is also what
           // the new Back arrow relies on: step back, look, step forward again,
           // and nothing has happened).
+          // ⭐ Đợt 242 — SOLO NOW ASKS TOO. It writes to the same shared table as
+          // 2-5 teams do (applySolo's own note), so an un-checked Ready could
+          // just as easily wipe another class's live board as an un-checked Next
+          // always could — the clash check can no longer be skipped for it.
           const clash = setup.teams.length > 0 && !!tableClassId && tableClassId !== setup.classId;
+          if (solo) {
+            if (!clash) { sfx.ready(); applySolo(false); return; }
+            sfx.tap();
+            askConfirm(
+              `${tableClassName || "Another class"} already has a team table and its results. `
+              + `Delete it and divide ${setup.className}?`,
+              "Delete", () => { sfx.ready(); applySolo(true); });
+            return;
+          }
           if (!clash) { sfx.forward(); toBuild(false); return; }
           sfx.tap();
           askConfirm(
@@ -2867,36 +2891,92 @@ export function buildShowdownPanel(panel, ctx) {
   }
 
   /**
-   * ONE TEAM = the whole class, on THIS screen only (Đợt 159, teacher's rule:
-   * "nếu chỉ có 1 team thì không lưu firebase nữa mà chỉ dùng ở trình duyệt
-   * hiện tại thôi, không đồng bộ cho trình duyệt khác").
+   * ⭐⭐⭐ Đợt 242 (23/8/2026, thầy) — ONE TEAM = THE WHOLE CLASS, NOW A TEAM LIKE
+   * ANY OTHER. Thầy: "chọn cả lớp thì vẫn lưu đội và ghi dữ liệu bình thường
+   * giống hệt như các số lượng team khác... cũng có mọi cơ chế như cách set
+   * team và lưu dữ liệu như bình thường."
    *
-   * So: no `saveSetup`, no claim, no team table. The pick alone — which lives in
-   * sessionStorage — is the entire state of this mode.
-   * ⚠️ It DOES release a claim this browser was holding: leaving a real team
-   * behind without handing it back would hide it from the other screens for the
-   * full 12h TTL. That write is cleanup of the PREVIOUS mode, not a sync of this
-   * one.
+   * REVERSES Đợt 159's rule on purpose. Before this đợt, one-team mode never
+   * touched Firestore at all (see the SOLO_TEAM_ID note in core/showdown.js for
+   * why that id exists) — no `saveSetup`, no claim, no team table, so it was
+   * invisible to every other screen/column and never showed up on the live
+   * "Recent results" board mid-lesson. That was the bug Đợt 180 had to work
+   * around (a stale `sd_solo` row double-counting a class once it was properly
+   * split into teams) — the fix here is not a patch on top of that bug, it
+   * REMOVES the separate write path that caused it: one team is now team
+   * `sdt_1`, dealt with `splitIntoTeams`/`publishTable` exactly like 2-5 teams,
+   * just skipping the manual pool→column step because there is only one column
+   * to fill (the fill itself is not a judgement call worth a screen).
+   *
+   * ⚠️ The button still says READY and this still fires from screen A — thầy
+   * chose to KEEP the one-tap feel (AskUserQuestion, 23/8/2026), not add the
+   * columns screen for a team count where there is nothing to choose.
+   *
+   * `fresh` mirrors toBuild()'s own flag: true only when the teacher confirmed
+   * replacing ANOTHER class's still-standing table (the same clash check the
+   * multi-team Next button already runs) — solo used to skip that check
+   * entirely because it never touched the shared table; now that it does, an
+   * un-checked Ready could silently wipe a different class's live board the
+   * same way an un-checked Next always could have.
    */
-  function applySolo() {
+  async function applySolo(fresh) {
+    if (fresh) {
+      // Same four lines toBuild(true) runs, and for the same reason: mark this
+      // screen as the one that JUST wiped the table before wipeSetup's own echo
+      // (subscribeSetup, a few hundred ms later) can mistake itself for a reset
+      // from elsewhere and bounce this panel back to screen A. See toBuild()'s
+      // own note on justWipedUntil.
+      justWipedUntil = Date.now() + 8000;
+      clearPick();
+      claimedTeam = null;
+      try {
+        await wipeSetup({ keepRoster: roster.map(m => ({ id: m.id, name: m.name })), rosterClass: setup.classId });
+      } catch { /* signed out or offline — the local rebuild below is still right */ }
+      setup.claims = {};
+      setup.teams = [];
+      setup.tableId = "";
+      baseAt = 0;
+    }
+    const team = {
+      id: "sdt_1",
+      // "Team 1", not the class's own name: a real team's default name never
+      // repeats the class, and giving this one the same courtesy is what lets
+      // core/showdown-review.js's existing "say the class name once" collapse
+      // (paintTitle) go on working with no id-specific case at all.
+      name: "Team 1",
+      members: roster.map(m => ({ id: m.id, name: m.name }))
+    };
+    setup.tableId = setup.tableId || localId("tbl");
+    setup.teams = [team];
+    // ⭐ Đợt 191's own rule, unchanged: the trimmed roster (absentees removed)
+    // is remembered on the way out, same as the multi-team Next button does.
+    setup.roster = roster.map(m => ({ id: m.id, name: m.name }));
+    setup.rosterClass = setup.classId;
+    tableClassId = setup.classId;
+    tableClassName = setup.className;
     const pick = {
-      teamId: SOLO_TEAM_ID,
-      // The class's own name (teacher chose this over "Team 1"): with everyone
-      // in one team, a team name that is not the class's tells nobody anything.
-      teamName: setup.className || "Class",
+      teamId: team.id, teamName: team.name,
       classId: setup.classId, className: setup.className,
-      members: roster.map(m => ({ id: m.id, name: m.name })),
+      members: team.members,
       // One team IS the biggest team, so Balance questions is a no-op here —
       // stated rather than left to the fallback so the field always means the
       // same thing wherever a pick comes from.
-      maxTeam: Math.max(1, roster.length),
-      // ⭐ Đợt 197 — solo now KEEPS DURABLE RESULTS too (thầy: "cả lớp chỉ có 1
-      // đội vẫn lưu và ghi bền dữ liệu"), and the history groups a match by table.
-      // Solo never writes to the shared table, so it mints its own id here.
-      tableId: setup.tableId || localId("tbl")
+      maxTeam: Math.max(1, team.members.length),
+      tableId: setup.tableId
     };
+    // Store the pick FIRST, same reason applyReady() does: the lesson has to
+    // start even if the network is having a bad day.
     writePick(pick);
-    releaseMine();               // fire-and-forget; see the note above
+    try {
+      const { node, superseded } = await publishTable(setup, { claimTeamId: team.id, baseAt });
+      setup.claims = node.claims;
+      setup.teams = node.teams;
+      setup.tableId = node.tableId;
+      baseAt = node.updatedAt;
+      if (superseded) toast("Another screen had changed the teams — kept theirs");
+    } catch (e) {
+      toast(e?.code === "aw/signed-out" ? "Signed out — table not shared" : "Could not share the table");
+    }
     stopWatch();
     onApply(pick);
   }

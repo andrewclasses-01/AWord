@@ -4315,13 +4315,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         const actName = originAct?.name || "";
         // ⭐ Đợt 230 — which clue set (ENG1/ENG2/VI1/VI2) was actually live for
         // this play, so the class's ledger (core/showdown-history.js) can show
-        // "BODY PARTS / ENGLISH 1" instead of the act's shared "BODY PARTS /
+        // "BODY PARTS / ENG1" instead of the act's shared "BODY PARTS /
         // WORDS" name. `activity`, not `originAct`: this is the instance the
         // class just played, and content-view.js's own note says its `options`
         // are shared by reference with the library act anyway. `null` (a
         // non-variant act) becomes "" — the ledger's own formatter treats an
         // empty variant as "show the raw name", same as before this đợt.
         const contentVariant = activeVariant(activity) || "";
+        // ⭐ Đợt 242 — which TEMPLATE was actually live, same reasoning as
+        // contentVariant right above and read off the same instance:
+        // `activity.type`, not `originAct.type`, because a "Change template"
+        // swap is exactly what can make the two differ. `tpl.name` is a raw
+        // internal id ("quiz"); `templateLabel()` is the display word ("Quiz")
+        // the ledger's formatter (core/showdown.js) uppercases into "QUIZ".
+        const templateType = templateLabel(activity.type) || "";
         sdPending = sdCanPublish;
         import("./showdown-setup.js")
           .then(m => m.saveTeamResult({ pick: showdownPick, roundKey, actName, students }))
@@ -4331,8 +4338,6 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // khi tắt máy"). A SECOND, independent write, on purpose:
         //   • the live board above is overwritten by the next play and wiped by
         //     Reset teams; this one is never overwritten and never wiped;
-        //   • one-team mode writes HERE but deliberately not there (see
-        //     saveMatchResult's own note on the stale `sd_solo` row);
         //   • if either write fails the other still lands, and a lesson with a
         //     bad minute of network keeps at least one record of what happened.
         // ⚠️ `nextPlayNo` is called EXACTLY ONCE per finished play — it is what
@@ -4344,7 +4349,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
               classId: showdownPick.classId, className: showdownPick.className,
               tableId: showdownPick.tableId || "", roundKey,
               playNo: h.nextPlayNo(showdownPick.tableId || "", roundKey),
-              actName, contentVariant,
+              actName, contentVariant, templateType,
               teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
             }))
             .catch(e => console.warn("AWord: could not file this result in the class history", e));

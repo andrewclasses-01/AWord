@@ -6477,16 +6477,22 @@ html.aw-nhung .aw-below { display: none; }
 .aw-sdh-homebtn.is-analyse svg { opacity: 0; transform: scale(.4); width: 0; }
 .aw-sdh-homebtn.is-analyse .aw-sdh-homebtn-word { max-width: 100px; }
 
-/* ---- ANALYSING: bare, centred text — no scrim, no box (thầy: "không có
-   nền") — just ANALYSING itself, bigger than before, and ANDREW CLASSES
-   stepping up-and-down letter by letter underneath as the only "still
-   working" cue until the analysis chart replaces this overlay. ---- */
+/* ---- ANALYSING: bare, centred text over a dimmed/blurred page — just
+   ANALYSING itself, bigger than before, and ANDREW CLASSES stepping
+   up-and-down letter by letter underneath as the only "still working" cue
+   until the analysis chart replaces this overlay. ---- */
 /* ⭐ Đợt 240 (thầy: "chữ ANDREW CLASSES... đứng gần chữ ANALYSING hơn") —
    18px → 6px; ANALYSING's own huge font (3.4rem) already carries plenty of
    visual leading below its glyphs, so even a small gap read as "far apart". */
+/* ⭐ Đợt 242 (thầy: "nền bên dưới blur và dim") — REVERSES Đợt 237's own
+   "không có nền" on this one point: the text itself stays exactly as Đợt 237
+   left it (no box, no spinning frame), only the page behind it dims/blurs
+   again — same values Đợt 236 used before Đợt 237 removed them, so this is a
+   partial return, not a new design. `pointer-events` now follows the scrim:
+   a visible dim reads as "this is blocking you", so it should. */
 .aw-sdh-loading {
   position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 6px; background: transparent; pointer-events: none;
+  justify-content: center; gap: 6px; background: rgba(20, 26, 36, .55); backdrop-filter: blur(2px);
 }
 .aw-sdh-loading-box {
   font-size: 3.4rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;
