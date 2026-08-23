@@ -5,6 +5,60 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 241 (23/8/2026) — ⭐⭐ THANH PHÂN LOẠI XUỐNG DƯỚI+RỘNG HƠN+TỰ MỜ SAU APPLY, SỬA KHUNG 16:9 ANALYSE CÒN CAO — 🟡 THẦY DUYỆT ("check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+
+⚠️ Tự test qua Firestore giả (`scratch/dot241-showdown.html`, **19/19 phép thử ĐẠT, 0 lỗi console**), đo
+bằng toạ độ DOM thật (`getBoundingClientRect`) chứ không chỉ tin CSS đọc trên giấy — đặc biệt phần khung
+16:9 Analyse, đo thật để xác nhận `chartwrap` không còn tràn ra ngoài `cbody`. Chạy lại `dot238-showdown.html`
+dò hồi quy: 36/40 vẫn ĐẠT như cũ (không phát sinh hỏng mới). CHƯA bấm tay thật trên TOMKO/máy thật.
+
+Thầy xem lại Đợt 240 và yêu cầu 2 việc: (1) dời + chỉnh lại thanh phân loại, (2) bảng Analyse vẫn "hơi
+cao" so với khung 16:9 dù bảng đơn đã đúng — nhờ soi ra lỗi thật trong cách làm khung của Đợt 240. Sửa 3
+file: `core/showdown-setup.js` · `core/showdown-home.js` · `core/app.css`. Thêm 1 file test cục bộ:
+`scratch/dot241-showdown.html` (không lên git).
+
+### 1) THANH PHÂN LOẠI — DỜI XUỐNG DƯỚI, GIỮA MÀN HÌNH
+
+`core/showdown-home.js`: bỏ hẳn cách gắn vào header (`.has-classify`/`.aw-sd-rec-classifyslot` của Đợt
+240) — cả `openTileDetail()` lẫn `openAnalysisChart()` giờ gắn thanh vào 1 hàng RIÊNG
+(`.aw-sd-rec-classifyrow`) đặt SAU `dbody`/`cbody` trong cây DOM (`det.append(dh, dbody, classifyRow)` /
+`chart.append(ch, cbody, classifyRow)`) — nằm dưới bảng, canh giữa màn hình theo chiều ngang (app.css:
+`justify-content:center`), thay vì chen vào cùng hàng nút bấm phía trên.
+
+### 2) TĂNG ĐỘ RỘNG 50%
+
+`.aw-sd-classify` (app.css): `max-width` 420→630px, `min-width` 190→285px — không còn phải chia chỗ với
+tiêu đề/nút bấm trong header nữa nên rộng thoải mái, kéo dễ hơn hẳn.
+
+### 3) TỰ MỜ SAU APPLY — BẤM 1 LẦN THỨC DẬY, KÉO THẬT MỚI HIỆN LẠI NÚT APPLY
+
+`buildClassifyBar()` (`core/showdown-setup.js`) thêm 2 cờ trạng thái:
+- `settled` — `true` ngay sau khi bấm Apply: thanh nhận class `.is-settled` (app.css: `opacity:.3;
+  filter:grayscale(85%)`, có `transition` mượt), nút Apply ẩn (`display:none`).
+- `dirty` — chỉ `true` khi một cú KÉO THẬT làm đổi giá trị hi/lo (so sánh giá trị mới với giá trị cũ
+  ngay trong `move()`), không phải mọi lần chạm. Nút Apply chỉ hiện lại khi `dirty === true`.
+
+Một `pointerdown` bắt ở CẢ THANH (`wrap`, không chỉ riêng track/nút kéo — dựa vào việc sự kiện tự
+BUBBLE lên từ nút kéo) sẽ gỡ `settled` (thanh sáng lại) nhưng KHÔNG tự bật `dirty` — đúng ý thầy: "bấm 1
+lần vào thanh sẽ hiện lại bình thường" (chỉ sáng lại) tách biệt với "khi có điều chỉnh thì nút Apply mới
+hiện lại" (phải kéo thật). Bấm Apply xong tự set `settled=true; dirty=false` ngay lập tức — bảng đã đổi
+màu xong mới mờ đi, không có khung hình nút Apply còn hiện thừa 1 nhịp.
+
+### 4) SỬA BẢNG ANALYSE "VẪN CÒN HƠI CAO" SO VỚI KHUNG 16:9
+
+Nguyên nhân thật (soi bằng `getBoundingClientRect`, không đoán): cách làm Đợt 240
+(`.aw-sd-rec-chartwrap { width:100%; max-height:100% ; aspect-ratio:16/9 }`) chỉ co được CHIỀU CAO khi
+tràn — `width:100%` là giá trị TƯỜNG MINH (không phải `auto`), nên trình duyệt không "giải ngược" nó từ
+chiều cao đã bị `max-height` chặn lại; kết quả là khi `cbody` thấp hơn `width * 9/16`, khung vẫn tràn ra
+ngoài theo chiều cao dù `max-height:100%` đã khai.
+
+Sửa: đổi sang kỹ thuật letterbox chuẩn — `.aw-sd-rec-cbody` chỉ còn `position:relative`,
+`.aw-sd-rec-chartwrap` chuyển `position:absolute; inset:0; margin:auto;` cùng `max-width:100%;
+max-height:100%; aspect-ratio:16/9` và BỎ hẳn `width:100%` tường minh (để cả `width` lẫn `height` đều
+`auto`) — trình duyệt tự chọn chiều nào chật hơn rồi suy ra chiều còn lại theo đúng tỷ lệ, căn giữa bằng
+margin tự động. Đã đo thật: `chartwrap` không còn cao/rộng hơn `cbody` ở bất kỳ trường hợp nào, tỷ lệ
+luôn đúng 16:9 (sai số <0.03).
+
 ## Đợt 240 (23/8/2026) — ⭐⭐⭐ BẢNG TABLE KHUNG 16:9 + THANH PHÂN LOẠI MÀU (LƯU VĨNH VIỄN) + TIÊU ĐỀ ANALYSE CÓ NGÀY + LOADING 2S — ✅ **THẦY DUYỆT** ("ok build", sau đó *"check commit + push + bàn giao"*) — **COMMIT `0a514d5`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `0a514d5` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **8/8 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-export.js` · `core/showdown-history.js` · `core/showdown-home.js` · `core/showdown-review.js` · `core/showdown-setup.js` · `core/showdown.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot240-showdown.html`, **28/28 phép thử ĐẠT, 0 lỗi console**) — bao

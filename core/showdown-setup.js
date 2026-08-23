@@ -1262,12 +1262,28 @@ export function applyClassifyToChart(root, classify) {
  *   onApply   ({hi, lo}) => void — fired ONLY on the Apply button (dragging
  *             alone never calls it — thầy: "chỉnh xong bấm nút apply là áp
  *             dụng"), with a fresh, already-clamped object.
+ *
+ * ⭐⭐ Đợt 241 (thầy: "sau khi tích apply thì thanh này sẽ gần như ẩn đi... bấm
+ * 1 lần vào thanh sẽ hiện lại bình thường") — a small state machine on top of
+ * the drag physics:
+ *   `settled`  true right after Apply — the bar fades near-invisible and the
+ *              Apply button itself disappears (nothing left to press: the
+ *              board already reflects it). ANY touch on the bar wakes it
+ *              back to full opacity (`wake()` below), but that touch ALONE
+ *              does not bring the Apply button back.
+ *   `dirty`    true only once a drag genuinely MOVES a handle (not merely
+ *              touched) since the last Apply/wake — this is what actually
+ *              shows the Apply button again (thầy: "khi có điều chỉnh thì
+ *              nút Apply mới hiện lại"). Starts `true` so a fresh bar (never
+ *              Applied yet) shows Apply from the first paint, same as before.
  */
 const CLASSIFY_MIN_GAP = 2;
 export function buildClassifyBar({ initial, onApply } = {}) {
   let hi = Math.max(0, Math.min(100, Number(initial?.hi ?? DEFAULT_CLASSIFY.hi)));
   let lo = Math.max(0, Math.min(100, Number(initial?.lo ?? DEFAULT_CLASSIFY.lo)));
   if (!(hi - lo >= CLASSIFY_MIN_GAP)) { hi = DEFAULT_CLASSIFY.hi; lo = DEFAULT_CLASSIFY.lo; }
+  let settled = false;
+  let dirty = true;
 
   const wrap = el("div", "aw-sd-classify");
   const capHi = el("span", "aw-sd-classify-cap is-hi", "100%");
@@ -1299,8 +1315,15 @@ export function buildClassifyBar({ initial, onApply } = {}) {
     handleLo.style.left = (100 - lo) + "%";
     labelHi.textContent = Math.round(hi) + "%";
     labelLo.textContent = Math.round(lo) + "%";
+    wrap.classList.toggle("is-settled", settled);
+    applyBtn.style.display = dirty ? "" : "none";
   }
   paint();
+
+  // ⭐ Đợt 241 — any touch anywhere on the bar wakes it from `settled`; relies
+  // on pointerdown BUBBLING from a handle up to `wrap` (nothing below calls
+  // stopPropagation), so this fires before that handle's own drag starts.
+  wrap.addEventListener("pointerdown", () => { if (settled) { settled = false; paint(); } });
 
   function wireDrag(handle, which) {
     let active = false;
@@ -1311,7 +1334,9 @@ export function buildClassifyBar({ initial, onApply } = {}) {
       let v = Math.round(100 - frac * 100);
       if (which === "hi") v = Math.max(lo + CLASSIFY_MIN_GAP, Math.min(100, v));
       else v = Math.max(0, Math.min(hi - CLASSIFY_MIN_GAP, v));
+      const changed = which === "hi" ? v !== hi : v !== lo;
       if (which === "hi") hi = v; else lo = v;
+      if (changed) dirty = true;    // Đợt 241 — a REAL move brings Apply back, a mere touch does not
       paint();
     };
     handle.addEventListener("pointerdown", e => {
@@ -1329,7 +1354,16 @@ export function buildClassifyBar({ initial, onApply } = {}) {
   wireDrag(handleHi, "hi");
   wireDrag(handleLo, "lo");
 
-  applyBtn.onclick = () => { sfx.tap(); onApply?.({ hi, lo }); };
+  applyBtn.onclick = () => {
+    sfx.tap();
+    onApply?.({ hi, lo });
+    // Đợt 241 (thầy: "sau khi tích apply... nút Apply sẽ mất") — settle right
+    // after firing, so the board already reflects the change by the time the
+    // bar fades — no flash of a still-visible Apply button for values just applied.
+    settled = true;
+    dirty = false;
+    paint();
+  };
 
   return wrap;
 }

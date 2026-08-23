@@ -779,7 +779,7 @@ export function mountShowdownHome(host, opts = {}) {
 
   function openAnalysisChart(full, partial, entries) {
     const chart = el("div", "aw-sd-rec-chart");
-    const ch = el("div", "aw-sd-rec-head has-classify");
+    const ch = el("div", "aw-sd-rec-head");
     const ct = el("div", "aw-sd-rec-title");
     ct.append(el("span", "aw-sd-rec-word", "ANALYSIS"));
     if (curClassName) {
@@ -789,15 +789,17 @@ export function mountShowdownHome(host, opts = {}) {
       classEl.textContent = [curClassName, dateRangeLabel(entries)].filter(Boolean).join(" ");
       ct.append(classEl);
     }
-    // ⭐⭐ Đợt 240 (thầy) — the classify bar, VIEW-ONLY (core/showdown-setup.js's
+    // ⭐⭐ Đợt 240/241 — the classify bar, VIEW-ONLY (core/showdown-setup.js's
     // buildClassifyBar — never drawn into the exported PNG itself, only its
     // last-Applied result is threaded through to it, see the Download handler
     // below). Analyse has no single record to save against (an ephemeral pick
     // of several matches, not a document of its own — thầy's own call, no
     // Firestore write here), so `currentClassify` is a plain session variable.
+    // ⭐ Đợt 241 (thầy: "chuyển thanh phân loại xuống dưới") — its own row
+    // BELOW the chart now (see `chart.append` below), not in the header.
     let currentClassify = null;
-    const classifySlot = el("div", "aw-sd-rec-classifyslot");
-    classifySlot.append(buildClassifyBar({
+    const classifyRow = el("div", "aw-sd-rec-classifyrow");
+    classifyRow.append(buildClassifyBar({
       initial: DEFAULT_CLASSIFY,
       onApply: c => { sfx.forward(); currentClassify = c; applyClassifyToChart(chart, c); }
     }));
@@ -826,9 +828,9 @@ export function mountShowdownHome(host, opts = {}) {
     const backBtn = el("button", "aw-sd-rec-close", icons.close);
     backBtn.type = "button"; backBtn.title = "Close";
     backBtn.onclick = () => { sfx.back(); closeChart(); };
-    ch.append(ct, classifySlot, dlBtn, backBtn);
+    ch.append(ct, dlBtn, backBtn);
     const cbody = el("div", "aw-sd-rec-cbody");
-    chart.append(ch, cbody);
+    chart.append(ch, cbody, classifyRow);
     cbody.append(renderChart(full, partial, entries));
     root.append(chart);
     fitPodiumNames(chart, ".aw-sd-rec-barname");
@@ -850,7 +852,7 @@ export function mountShowdownHome(host, opts = {}) {
     // board — core/showdown-export.js's drawAnalysisCanvas `variant:"view"`),
     // and Podium/List never needed a second one either.
     const det = el("div", "aw-sd-rec-detail");
-    const dh = el("div", "aw-sd-rec-head has-classify");
+    const dh = el("div", "aw-sd-rec-head");
     const dt = el("div", "aw-sd-rec-title");
     const dact = el("span", "aw-sd-rec-word");
     dact.textContent = displayName(m);                          // the teacher's own text — never innerHTML
@@ -870,13 +872,15 @@ export function mountShowdownHome(host, opts = {}) {
     podiumBtn.type = "button"; podiumBtn.title = "Podium";
     const listBtn = el("button", "aw-sd-rec-close is-toggle", icons.assignment);
     listBtn.type = "button"; listBtn.title = "List"; listBtn.disabled = !hasRows;
-    // ⭐⭐ Đợt 240 — VIEW-ONLY (core/showdown-setup.js's buildClassifyBar's own
-    // header note) — Apply SAVES to Firestore (thầy chốt qua AskUserQuestion:
-    // "lưu vĩnh viễn... mở lại trận cũ vẫn thấy đúng màu"), then repaints the
-    // Table board through the SAME `paint()` every other view switch uses —
-    // no separate targeted-recolour path was worth building for one board.
-    const classifySlot = el("div", "aw-sd-rec-classifyslot");
-    classifySlot.append(buildClassifyBar({
+    // ⭐⭐ Đợt 240/241 — VIEW-ONLY (core/showdown-setup.js's buildClassifyBar's
+    // own header note) — Apply SAVES to Firestore (thầy chốt qua
+    // AskUserQuestion: "lưu vĩnh viễn... mở lại trận cũ vẫn thấy đúng màu"),
+    // then repaints the Table board through the SAME `paint()` every other
+    // view switch uses. ⭐ Đợt 241 (thầy: "chuyển thanh phân loại xuống dưới")
+    // — now its own row BELOW the board (see `dh.append`/`det.append` below),
+    // not squeezed into the header any more.
+    const classifyRow = el("div", "aw-sd-rec-classifyrow");
+    classifyRow.append(buildClassifyBar({
       initial: classify,
       onApply: async c => {
         sfx.forward();
@@ -917,9 +921,9 @@ export function mountShowdownHome(host, opts = {}) {
     }
     teardownFns.add(closeDetail);
     back.onclick = () => { sfx.back(); closeDetail(); };
-    dh.append(dt, classifySlot, tableBtn, podiumBtn, listBtn, dlBtn, back);
+    dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
     const dbody = el("div", "aw-sd-rec-dbody");
-    det.append(dh, dbody);
+    det.append(dh, dbody, classifyRow);
     const picks = new Map();
     function paintViewBtns() {
       tableBtn.classList.toggle("is-on", view === "table");
@@ -933,7 +937,7 @@ export function mountShowdownHome(host, opts = {}) {
       // board's own coloured columns; hidden for Podium/List (and for the
       // "answers not kept" fallback below, which is really Podium in disguise).
       const showingTable = hasRows && view === "table";
-      classifySlot.style.display = showingTable ? "" : "none";
+      classifyRow.style.display = showingTable ? "" : "none";
       if (!hasRows && view !== "podium") {
         dbody.append(el("div", "aw-sd-rec-note", "The answers for this match were not kept — here is the ranking."));
         dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
