@@ -8,7 +8,34 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 237)** — ⭐⭐⭐ **14 ĐIỀU CHỈNH TRANG SHOWDOWN: ICON→ANALYSE
+> Cập nhật lần cuối: **23/8/2026 (Đợt 242)** — ⭐⭐⭐ **LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN
+> "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM.** ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") —
+> COMMIT `9933a3b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit · **6/6 mã băm SHA-256
+> khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/engine.js` · `core/showdown-history.js` ·
+> `core/showdown-setup.js` · `core/showdown.js`).
+> ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE + tự test qua Firestore giả (27/27, 0 lỗi console) — CHƯA bấm
+> tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống.** Tóm tắt: (1)
+> lớp chia 1 team (cả lớp = 1 đội) bỏ hẳn "lối tắt" Đợt 159 không chạm Firestore — nay `applySolo()`
+> đi đúng `publishTable()` như đội thật (có claim, đồng bộ được, publish lên `sd_results`/bảng xem
+> nhanh giữa giờ — Đợt 180 từng cấm vì bug đúp nhưng đường ghi riêng gây bug đó đã bị xoá), nút vẫn
+> READY 1 chạm (thầy chốt qua AskUserQuestion), tên đội mặc định đổi "tên lớp" → "Team 1"; (2) tên
+> trận tự động "... / WORDS" → "... / ENG1 QUIZ" (`formatActDisplayName()` thêm tham số `templateType`
+> lấy từ `templateLabel(activity.type)`); (3) `.aw-sdh-loading` thêm lại nền tối + `backdrop-filter:
+> blur(2px)` phía sau chữ ANALYSING (đúng giá trị Đợt 236 trước khi Đợt 237 cố ý bỏ). Đọc khối
+> **Đợt 242** đầu `GHI CHU DU AN.md` để biết chi tiết đầy đủ.
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 238→241)** — ⭐⭐⭐ chuỗi 4 đợt sửa trang Showdown Home + bảng Table,
+> **ĐÃ PUSH + LIVE** (mới nhất `b1033a9`) nhưng **KHÔNG được ghi vào khối này lúc đó** — chỉ có trong
+> `GHI CHU DU AN.md`. Tóm tắt cực ngắn (đọc `GHI CHU DU AN.md` để biết đủ, đừng chỉ tin bản tóm tắt
+> này): bo góc nút SHOWDOWN/ANALYSE + bỏ slogan + popup lớp hạ thấp + cột ANALYSE cố định+mờ + lưới 3
+> ô + bảng Table tách xem/xuất (Đợt 238+239, `b394797`) → bảng Table khung 16:9 cố định + **thanh kéo
+> phân loại màu** (Apply lưu vĩnh viễn vào Firestore cho bảng 1 trận) + tiêu đề Analyse có khoảng ngày
+> + loading tối thiểu 2s (Đợt 240, `0a514d5`) → thanh phân loại dời xuống dưới bảng+rộng hơn 50%+tự mờ
+> sau Apply + sửa khung 16:9 Analyse còn tràn (Đợt 241, `b1033a9`).
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 237)** — ⭐⭐⭐ **14 ĐIỀU CHỈNH TRANG SHOWDOWN: ICON→ANALYSE
 > MORPH · TÊN LỚP VÀNG+SAO BAY · DROPDOWN ĐÚNG CHỖ · BRAND MỎNG ĐỒNG BỘ · BẢNG TABLE HẾT MỜ+CAO GẤP ĐÔI
 > · KÉO-THẢ CỘT ANALYSE · POPUP XOÁ ĐỎ.** ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") — COMMIT
 > `9933897`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api

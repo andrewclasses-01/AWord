@@ -5,7 +5,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 242 (23/8/2026) — ⭐⭐⭐ LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM — 🟡 CODE XONG + TỰ TEST QUA FIRESTORE GIẢ, CHƯA BẤM TAY THẬT/CHƯA COMMIT
+## Đợt 242 (23/8/2026) — ⭐⭐⭐ LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM — ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu")** — **COMMIT `9933a3b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/engine.js` · `core/showdown-history.js` · `core/showdown-setup.js` · `core/showdown.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
+
+⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE + tự test qua Firestore giả (27/27, 0 lỗi console) — CHƯA bấm tay
+thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống** (đặc biệt: claim
+lớp 1 team đồng bộ thật giữa nhiều cột myActivity, và cảm giác READY 1 chạm trên màn cảm ứng).
 
 Thầy giao 3 việc, chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"): (1) lớp chia
 1 team (cả lớp = 1 đội) giữ nguyên cảm giác bấm READY 1 chạm hay phải qua đúng màn chia đội như 2+
@@ -89,9 +93,10 @@ thử CŨ dò hồi quy: `dot241-showdown.html` **19/19** · `dot238-showdown.ht
 quan gì tới đợt này). `dot240-showdown.html` không chạy hết được vì tự nó dò `.aw-sd-rec-classifyslot`
 — lớp đã bị Đợt 241 xoá hẳn (đổi sang `.aw-sd-rec-classifyrow`) từ TRƯỚC đợt này, không phải lỗi mới.
 
-⚠️ **CHƯA bấm tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống,
-CHƯA commit/push.** ⛔ Phát hiện thêm (không thuộc việc thầy giao): `APP_MASTER.md` chưa được cập
-nhật cho Đợt 238→241 (header đầu file vẫn dừng ở Đợt 237) dù cả 4 đợt đó đã push+live — đọc
+⚠️ **CHƯA bấm tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống.**
+⛔ Phát hiện thêm (không thuộc việc thầy giao, đã vá kèm mục 0a `APP_MASTER.md` cùng đợt commit này):
+`APP_MASTER.md` từng chưa được cập nhật cho Đợt 238→241 (header đầu file vẫn dừng ở Đợt 237) dù cả 4
+đợt đó đã push+live — đọc
 `GHI CHU DU AN.md` này mới thấy đủ, đừng chỉ tin header `APP_MASTER.md` để biết đợt mới nhất.
 
 ---
