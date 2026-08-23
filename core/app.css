@@ -1041,6 +1041,15 @@ html.aw-nhung .aw-below { display: none; }
   color: #2f7bff; border-color: #2f7bff;
   box-shadow: 0 0 0 5px rgba(47,123,255,.20), 0 0 22px 2px rgba(47,123,255,.45);
 }
+/* Đợt 245 — a tool button that is OFF for this template (today: "Set assignment"
+   on Speaking cards / Running word / Running team, see tpl.noAssignment).
+   ⛔ NO `pointer-events: none` here, unlike .aw-hstep.is-dim / .aw-tstep.is-dim
+   above — those sit next to a control that already explains itself, this one is
+   alone. The tap is what SAYS WHY (core/engine.js answers it with a toast); kill
+   the tap and the button becomes exactly the greyed-out mystery thầy called out
+   in Đợt 220 — "nằm mờ vĩnh viễn… và không có gì trên màn nói vì sao". */
+.aw-toolbtn.is-dim { opacity: .42; }
+.aw-toolbtn.is-dim:hover { color: inherit; border-color: inherit; }
 .aw-toolbtn-sm { width: clamp(26px, 4.8vw, 38px); height: clamp(26px, 4.8vw, 38px); border-radius: 11px; }
 /* Đợt 136: scaled by the same factor as .aw-toolbtn above (47 × 62/50 ≈ 58), so the small buttons
    keep looking like a matched set with the big ones rather than drifting apart. */
@@ -3603,6 +3612,13 @@ html.aw-nhung .aw-below { display: none; }
 .aw-as-lb .aw-as-tr { grid-template-columns: 70px 1fr 110px 110px; }
 .aw-as-lb .aw-as-td { text-align: center; }
 .aw-as-detail .aw-as-tr { grid-template-columns: 1.4fr 1.1fr 90px 90px 90px; }
+/* Đợt 245 — the same table with the "Incorrect" column dropped (an assignment
+   whose score carries a penalty, so `total − score` is not a real count — see
+   scoreIsPenalised in core/assignment-ui.js). ⛔ The column count is written HERE
+   and nowhere else: leaving the 5-column rule in place with 4 cells per row does
+   not overflow or warn, it just hangs an empty 90px column off the right edge of
+   every row, which reads as a missing value rather than a removed one. */
+.aw-as-detail.is-nocorrect .aw-as-tr { grid-template-columns: 1.4fr 1.1fr 90px 90px; }
 .aw-as-detail .aw-as-td { text-align: center; }
 .aw-as-qa .aw-as-tr { grid-template-columns: 46px 1.6fr 1.1fr 78px 1.1fr; }
 .aw-as-clickable { cursor: pointer; }

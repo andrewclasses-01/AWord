@@ -1682,9 +1682,36 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const assignBtn = toolBtn(icons.assignment, "Set assignment", true);
   const printBtn = toolBtn(icons.print, "Print", true);
   belowRight.append(assignBtn, printBtn);
+  // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy) — SOME GAMES CANNOT BE HOMEWORK, AND THE
+  // BUTTON SAYS SO INSTEAD OF LYING.
+  //
+  // Three templates declare `noAssignment` (a sentence, not a boolean — the
+  // reason IS the flag, so there is no second list of explanations to keep in
+  // step): Speaking cards, Running word, Running team. Each of them would take
+  // the teacher all the way through the Set assignment form and out the other
+  // side with something broken: Speaking cards never calls ui.finish(), so NOT
+  // ONE result would ever arrive; the two Running games replace the whole end
+  // panel via renderSummary without reading `session`, so the pupil never sees
+  // "SENT TO YOUR TEACHER" and the three end-of-game tick-boxes do nothing.
+  // Their own files carry the full reasoning and what it would take to lift it.
+  //
+  // ⚠️ DIMMED, NOT HIDDEN, AND STILL CLICKABLE — the Đợt 220 lesson, stated by
+  // thầy himself about the Questions each strip: a control that sits greyed out
+  // "và không có gì trên màn nói vì sao" reads as a bug in the app. The tap is
+  // what explains it. `pointer-events` therefore stays ON (see .aw-toolbtn.is-dim
+  // in core/app.css) — the dimming is the hint, the toast is the answer.
+  //
+  // ⛔ The gate is HERE and only here: assignments already given out before this
+  // đợt keep opening, keep playing and keep collecting, because nothing on the
+  // student path or in Results asks this question.
+  if (tpl.noAssignment) {
+    assignBtn.classList.add("is-dim");
+    assignBtn.title = "Cannot be set as homework — " + tpl.noAssignment;
+  }
   // Set assignment -> the setup form; a new assignment appears as a strip below.
   assignBtn.onclick = async () => {
     sound.click();
+    if (tpl.noAssignment) { toast(tpl.noAssignment); return; }
     const ui = await import("./assignment-ui.js");
     // `libAct` again (Đợt 145): the assignment snapshot must keep every clue
     // set, so the teacher can still switch the given act between them later.

@@ -2975,7 +2975,14 @@ function openSettingsFlow() {
       try { tpl = await ensureTemplate(t.type); } catch (e) { tpl = null; }
       // The teacher can close the dialog while the module is still loading.
       if (!body.isConnected) return;
-      body.append(buildOptionsControls(tpl, draft));
+      // ⭐ Đợt 245 — `kind` travels through. Settings ▸ Default HOMEWORK options
+      // feeds the "Set assignment" form, so it must drop the same dead "Show
+      // answers at end" switch that form drops (see core/options-panel.js).
+      // Default ACTIVITY options keeps it — an act played in class really does
+      // read `activity.options.showAnswers`.
+      // ⚠️ No `act` here on purpose: a DEFAULT has no act, so there are no clue
+      // sets to name and the bare Text/Voice switch is correct.
+      body.append(buildOptionsControls(tpl, draft, { kind }));
       const actions = el("div", "aw-modal-actions");
       const cancel = el("button", "aw-btn", "Cancel"); cancel.type = "button"; cancel.onclick = close;
       const save = el("button", "aw-btn aw-btn-primary", "Save"); save.type = "button";

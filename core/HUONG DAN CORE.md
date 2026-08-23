@@ -625,6 +625,47 @@ Fight phải dùng thẳng thứ tự `core/fight.js` đã chốt (`shuffleQuest
 là chung). Cùng họ: game **ít lựa chọn** (True/false chỉ có 2 nút) thì **một dấu ✗ là lộ trọn đáp án** —
 giấu dấu tới `reveal()` là bắt buộc, không phải trang trí.
 
+### ⛔ `noAssignment` — TEMPLATE KHÔNG GIAO ĐƯỢC LÀM BÀI TẬP (Đợt 245, 23/8/2026)
+
+```js
+noAssignment: "Câu giải thích cho thầy đọc.",   // opt-in; KHÔNG khai = giao được như thường
+```
+
+**Giá trị là một CÂU, không phải `true`.** Lý do CHÍNH LÀ cờ — nếu để boolean thì engine phải giữ
+thêm một bảng tra "type nào thì in câu nào", và cái ngày hai danh sách đó lệch nhau là ngày nút mờ
+với lý do của template khác.
+
+`core/engine.js` đọc cờ này ở **đúng một chỗ**: nút `Set assignment` dưới khung. Có cờ thì nút
+**mờ đi + tooltip nêu lý do**, chạm vào **hiện toast** và **không mở form**.
+
+⚠️ **MỜ, KHÔNG ẩn, và VẪN BẤM ĐƯỢC** (`.aw-toolbtn.is-dim` trong `core/app.css` cố ý **không** đặt
+`pointer-events: none`). Đây là bài học Đợt 220 do chính thầy nêu về dải "Questions each": một điều
+khiển nằm xám mà *"không có gì trên màn nói vì sao"* thì đọc như **app hỏng**, không phải như một
+lựa chọn. Cú chạm là thứ TRẢ LỜI.
+
+⛔ **CỔNG CHẶN CHỈ Ở NÚT ĐÓ.** Trang học sinh, `play.html`, `core/assignments.js` và Results **không**
+hỏi câu này — nên **bài giao đã ra trước khi cờ được khai vẫn mở, vẫn chơi, vẫn thu điểm**. Cố ý:
+chặn ngược lại là làm hỏng bài tập của những lớp đang làm dở.
+
+**Hôm nay có 3 template khai cờ, và mỗi cái hỏng theo một kiểu khác nhau:**
+
+| template | vì sao | gỡ chặn cần gì |
+|---|---|---|
+| `speaking_cards` | `scorable:false`, **không bao giờ gọi `ui.finish()`** — mà `ui.finish()` là đường **duy nhất** tới `session.submit()`. HS chơi xong đóng tab: **không một kết quả nào** về tới thầy, báo cáo vẫn ghi "No student has played this assignment yet". | xoá 1 dòng |
+| `running_word` | `renderSummary` **thay cả bảng cuối game** và **không đọc `session`** — HS không thấy dòng "SENT TO YOUR TEACHER", 3 ô tích thầy đặt (Leaderboard / Show answers / Start again) **vô tác dụng**. Điểm vẫn lặng lẽ lên Firestore. Vả lại là game 2 đội chung một bàn phím. | xoá 1 dòng **VÀ** dạy `renderSummary` tôn trọng `session` |
+| `running_team` | y hệt `running_word` | như trên |
+
+⛔⛔ **VÁ NỬA VỜI CHO 2 GAME RUNNING CÒN TỆ HƠN KHÔNG VÁ**: chỉ xoá dòng `noAssignment` thì điểm vẫn
+về, vẫn **trông bình thường** trong Results, trong khi cả lớp không hề nhận được xác nhận nào. Một
+đường hỏng mà không ai nhìn thấy là hỏng khó chữa nhất.
+
+⚠️ **Sắp viết template thứ 18?** Hỏi trước khi khai cờ: *"nó có gọi `ui.finish()` không, và bảng cuối
+game của nó có đọc `session` không?"* Hai câu đó quyết định template có làm bài tập được hay không —
+`scorable` **không** trả lời thay được (Gameshow `scorable:true` nhưng chấm theo tốc độ, vẫn giao
+được; xem mục "báo cáo Result" của Đợt 245 trong `GHI CHU DU AN.md`).
+
+---
+
 **Hợp đồng cho template muốn tham gia** (opt-in — Anagram Đợt 124, Quiz thêm ở Đợt 125 làm thử
 nghiệm; template cần khai sẵn `itemsKey`, xem cảnh báo dưới):
 ```js
@@ -3328,6 +3369,11 @@ chiếm cả 2 cột. Giữ luật đó **chừng nào còn template chưa chuy�
    **khai cờ**, engine sẽ không dựng ra ngay từ đầu. Cờ hiện có: `hideTimerOption` · `hideTimerNone`
    (mới) · `hideLettersOption` · `hideAutoSwitch` · `hideShuffleAnswers` · `hideShowAnswers` (mới) ·
    `hidePointsOff` · `shuffleLabel` (mới).
+   ⚠️ Cờ `noAssignment` (Đợt 245) KHÔNG thuộc nhóm này — nó không ẩn thứ gì trong panel,
+   mà chặn **nút Set assignment** ngoài khung. Xem mục riêng của nó ở trên.
+   ⚠️ Còn `hideEndShowAnswers` (Đợt 245) **KHÔNG phải cờ template** mà là tuỳ chọn của
+   **người gọi** `buildOptionsBody`: ô "Show answers at end" có nghĩa hay không phụ thuộc
+   AI đang dựng bảng (form bài giao hay Options của act), không phụ thuộc đang là game nào.
    **Vì sao thành luật**: Đợt 140 phát hiện 2 template đang cắt DOM thật —
    `whack-a-mole.js` xoá nhóm có nhãn khớp `/auto switch/i` và xoá `input[name="aw-timer"][value=none]`;
    `speaking-cards.js` xoá nhóm nhãn `"End of game"`, xoá `.aw-opt-choice` chứa chữ "answer", và sửa

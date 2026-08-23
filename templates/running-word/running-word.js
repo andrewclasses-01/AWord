@@ -103,6 +103,20 @@ let rwPauseHandlers = null;
 const rwTemplate = {
   type: "running_word",
   scorable: true,
+  // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy chốt "CHẶN hẳn") — CANNOT BE SET AS HOMEWORK.
+  // Two reasons, and the second is the one that cannot be waved through:
+  //   · It is a TWO-TEAM game on ONE keyboard. There is no "the student" for a
+  //     result to belong to.
+  //   · `renderSummary` below REPLACES the whole end-of-game panel and does not
+  //     read `session` (it is handed the flag and ignores it). So a pupil would
+  //     get the two-team scoreboard and nothing else: no "SENT TO YOUR TEACHER"
+  //     line, and the three tick-boxes the teacher set on the assignment form
+  //     (Leaderboard / Show answers / Start again) would do NOTHING. The result
+  //     did still reach Firestore — silently, with no way for the child to know.
+  // ⛔ TO LIFT THIS: delete this line AND teach renderSummary to honour
+  // `session` — half a fix here is worse than none, because the scores arrive
+  // and look normal in Results while the class saw no confirmation at all.
+  noAssignment: "Running word is a two-team classroom game — it has no single student to report on.",
   // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
   // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
   // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên

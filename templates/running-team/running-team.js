@@ -130,6 +130,14 @@ let rtPauseHandlers = null;
 const rtTemplate = {
   type: "running_team",
   scorable: true,
+  // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy chốt "CHẶN hẳn") — CANNOT BE SET AS HOMEWORK.
+  // Same pair of reasons as Running word (see the note on `noAssignment` in
+  // templates/running-word/running-word.js): a two-team game on one keyboard has
+  // no single pupil to report on, and `renderSummary` below replaces the whole
+  // end panel without reading `session`, so the teacher's three end-of-game
+  // tick-boxes would silently do nothing.
+  // ⛔ TO LIFT THIS: delete this line AND teach renderSummary to honour `session`.
+  noAssignment: "Running team is a two-team classroom game — it has no single student to report on.",
   // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
   // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
   // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên

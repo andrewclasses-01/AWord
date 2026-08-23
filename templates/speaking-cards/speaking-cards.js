@@ -110,6 +110,17 @@ const BG_RATIO = 7386 / 2217;   // native px ratio of background.jpg (~3.332)
 const speakingCardsTemplate = {
   type: "speaking_cards",
   scorable: false,
+  // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy chốt "CHẶN hẳn") — CANNOT BE SET AS HOMEWORK.
+  // This template is `scorable: false` and never calls ui.finish() (see the note
+  // at the top of this file), and ui.finish() is the ONLY thing that reaches
+  // core/engine.js's `session.submit()`. So a pupil could open the link, play
+  // the whole deck, close the tab — and NOT ONE result would ever arrive. The
+  // teacher would be left staring at "No student has played this assignment yet"
+  // for a class that had all done it.
+  // ⛔ TO LIFT THIS: delete this one line. The block only refuses to OPEN the
+  // form (core/engine.js's assignBtn); nothing about assignments is special-cased
+  // anywhere else, and assignments already given out before Đợt 245 keep working.
+  noAssignment: "Speaking cards is not scored, so nothing would ever be sent back to you.",
   // ⭐⭐ Đợt 213b (thầy, 20/8/2026) — THỨ TỰ Ô TÍCH, theo CỘT.
   // Thầy đọc từng cột: "cột 1 <trên>/<dưới>, cột 2 …". Khối đổ theo CỘT (đầy cột 1
   // từ trên xuống rồi mới sang cột 2 — xem `.aw-checks` trong core/app.css), nên

@@ -8,7 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 244)** — ⭐⭐ **TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG
+> Cập nhật lần cuối: **23/8/2026 (Đợt 245)** — ⭐⭐⭐ **BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT**:
+> thêm 2 hàng chọn nội dung · bỏ ô "Show answers" CHẾT · vá `optVer` ở đường Edit · chặn 3 template
+> không giao được · báo cáo Result thôi nói dối khi có trừ điểm.
+> ✅ **THẦY DUYỆT — ĐÃ COMMIT + PUSH + LIVE KIỂM CHỨNG.** Sửa 9 file: `core/options-panel.js` ·
+> `core/settings.js` · `core/assignment-ui.js` · `core/engine.js` · `core/app.css` · `main.js` ·
+> `templates/speaking-cards/speaking-cards.js` · `templates/running-word/running-word.js` ·
+> `templates/running-team/running-team.js`. Ba bàn thử `scratch/dot245-*` — **85/85 ĐẠT, 0 lỗi
+> console**. Tóm tắt:
+> **(0)** RÀ BẰNG SỐ ĐO, không đoán: dựng cả 17 template và so từng ô. Mọi ô riêng của template
+> (Lives/Bonus/Speed/Time cost/Points off/Timer/mọi ô tích) **đã giống y hệt** giữa hai bảng — công
+> của Đợt 143 (một hàm dựng duy nhất). Thiếu đúng **2 hàng**, nhưng thiếu ở **17/17**: hàng
+> **PRACTICE/HOMEWORK** và **nửa bộ nghĩa** của hàng Text/Voice. Đợt 211 đã chép đúng 4 khoá selector
+> nên bài giao **chơi** đúng; thầy chỉ **không nhìn thấy và không sửa được**.
+> **(1)** `buildOptionsControls(tpl, options, {kind, act})` dựng 2 hàng đó bằng CHÍNH các hàm bảng
+> Options của act dùng. ⚠️ Không phạm luật "HAI CÔNG TẮC RỜI NHAU" — 4 khoá này là **SELECTOR** (tên
+> nội dung), không phải cài đặt. ⛔⛔ **CỐ Ý KHÔNG truyền `onViewChange`**: trong game nó nạp lại
+> options riêng của view (Đợt 147), nối vào đây thì một cú chạm ENG2 sẽ **âm thầm xoá** timer + điểm
+> phạt thầy vừa đặt cho bài giao đó. ⚠️ Settings không truyền `act` nên không đổi gì.
+> **(2)** Ô **"Show answers at end"** trên form bài giao là **công tắc CHẾT** (trang HS chỉ đọc
+> `session.endOptions`), lại còn **mặc định NGƯỢC** với ô tích thật ngay phía trên. Gỡ bằng cờ
+> `hideEndShowAnswers` — ⛔ cờ của **NGƯỜI GỌI**, không phải cờ template. Settings ▸ Default
+> **activity** options **giữ nguyên** (đo riêng: 17/17).
+> **(3)** ⭐⭐⭐ `optVer` ở đường **Edit**: quy đổi khi NẠP, đóng dấu khi LƯU — **phải cả hai, đúng thứ
+> tự**. Đóng dấu không thôi là **hạ cấp âm thầm** (`pointsOff 3` của bài cũ đóng băng thành 3/100,
+> điểm phạt bốc hơi). Đo được: bài cũ thầy gõ 30 → **trước** tới tay HS thành **100**, **sau** đúng
+> **30**; form Edit **trước** vẽ 3 (nói dối), **sau** vẽ 60.
+> **(4)** Cờ `tpl.noAssignment` (**là một CÂU, không phải boolean** — lý do CHÍNH LÀ cờ) chặn
+> Speaking cards (không bao giờ gọi `ui.finish()` ⇒ **không kết quả nào** về) và Running word/team
+> (`renderSummary` bỏ qua `session` ⇒ HS không thấy xác nhận, 3 ô tích vô tác dụng). ⚠️ **MỜ, KHÔNG
+> ẩn, VẪN bấm được** — chạm là hiện lý do (bài học Đợt 220). ⛔ Cổng chặn **chỉ ở `assignBtn`**; bài
+> giao cũ vẫn chạy. ⛔ Gỡ chặn = xoá 1 dòng, riêng 2 game Running phải sửa `renderSummary` cùng lúc.
+> **(5)** Báo cáo Result: bật trừ điểm là "Correct"/"Incorrect" nói dối (`total − score` trừ hai đơn
+> vị khác nhau; Gameshow đọc ra "1250/10"). ⛔⛔ **Số câu đúng thật KHÔNG có trong dữ liệu** — bộ khoá
+> `results` bị **luật Firestore khoá cứng**, thêm `correct` phải đăng luật mới TRƯỚC nếu không **mọi
+> lượt nộp bị từ chối**. Nên: đổi nhãn thành **Score**, bỏ hẳn cột Incorrect, tắt cả 2 màu nền dòng
+> (đỏ oan cho em làm được bài còn tệ hơn không tô). ⛔ **BẪY**: `.aw-as-detail` là lưới CSS **5 cột
+> viết cứng** — bỏ ô trong JS mà quên CSS thì không tràn, không cảnh báo, chỉ thừa một cột rỗng.
+> ⚠️ Bài không trừ điểm: giữ nguyên từng byte.
+> ⚠️ **CHƯA bấm tay thật trên TOMKO**, `screenshot` vẫn timeout — nghiệm hoàn toàn bằng số đo.
+> ⚠️ Ghi chú Đợt 211 về "act PRONUNCIATION sáng nút TEXT" nay **hết đúng** (Đợt 212 khai tử `pron`).
+> Đọc khối **Đợt 245** đầu `GHI CHU DU AN.md` để biết đủ.
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 244)** — ⭐⭐ **TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG
 > SHOW ANSWERS** (tự thu nhỏ vừa MỘT dòng, không cắt) · ⭐⭐⭐ **THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA
 > NGOÀI THÌ NGỦ LẠI.**
 > ✅ **THẦY DUYỆT — COMMIT `a7b40bd`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·

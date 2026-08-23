@@ -32,6 +32,14 @@
 
 import { el } from "./utils.js";
 import { buildOptionsBody } from "./options-panel.js";
+// Đợt 245 — reading (never writing) the act's clue sets and halves, so the two
+// assignment forms can NAME the content they are handing out. Same functions the
+// in-game Options panel asks, so the two panels cannot describe one act two
+// different ways — the trap Đợt 155 called out when Showdown grew its own copy.
+import {
+  variantsOf, voiceVariantsOf, variantLabel, activeVariant,
+  contentSetsOf, setLabel, activeContentSet
+} from "./content-view.js";
 
 const KEY = "aword-settings";
 
@@ -83,14 +91,22 @@ export function saveDefaultOptions(type, options, kind = "activity") {
 }
 
 /**
- * The full options UI for one template, for the Settings dialog.
+ * The full options UI for one template — used by the Settings dialog AND by the
+ * "Set assignment" / "Edit assignment" forms (core/assignment-ui.js).
  *
  * @param {object} tpl      the registered template (caller must ensureTemplate first —
  *                          its buildExtraOptions is where most of the controls come from)
  * @param {object} options  edited IN PLACE; the caller decides when to save
+ * @param {object} [extra]
+ * @param {"activity"|"homework"} [extra.kind]  which bucket this form belongs to.
+ *        "homework" (both assignment forms) drops the dead "Show answers at end"
+ *        switch — see the long note in core/options-panel.js where it is built.
+ * @param {object} [extra.act]  the ACT being assigned (or an assignment's frozen
+ *        `activity` snapshot). Only its `content` is read, and only to describe
+ *        WHICH content is being handed out. See the Đợt 245 note below.
  * @returns {Element}
  */
-export function buildOptionsControls(tpl, options) {
+export function buildOptionsControls(tpl, options, { kind = "activity", act = null } = {}) {
   const wrap = el("div", "aw-set-opts");
   if (!tpl) {
     // A template that failed to load would otherwise throw here and take the
@@ -98,6 +114,43 @@ export function buildOptionsControls(tpl, options) {
     wrap.append(el("div", "aw-set-hint", "This game's options could not be loaded."));
     return wrap;
   }
+  const isHw = kind === "homework";
+
+  // ⭐⭐⭐ Đợt 245 (23/8/2026, thầy) — THE TWO ROWS THAT NAME THE CONTENT.
+  //
+  // Measured across all 17 templates on the Đợt 245 bench: the act's own Options
+  // panel and this one were IDENTICAL — every slider, every template-specific
+  // cell, every switch — with exactly two rows missing here, in 17 of 17:
+  //   · PRACTICE | HOMEWORK  (which half of a comprehension act is played)
+  //   · the clue-set half of the Text/Voice row  (ENG1 | ENG2 | VI1 | VI2)
+  //
+  // Đợt 211 already made the assignment CARRY the act's four selector keys, so
+  // a class had been getting the right content since then — but the teacher
+  // could not SEE which, and could not change it without going back to the act,
+  // retuning its Options and giving the work out again.
+  //
+  // ⚠️ THIS DOES NOT BREAK "HAI CÔNG TẮC RỜI NHAU" (thầy, Đợt C), for exactly
+  // the reason Đợt 211 set out: that rule governs the OPTIONS BUNDLE — timer,
+  // shuffling, penalties — which still comes from the homework bucket and is
+  // still decided per assignment. These four keys are SELECTORS: not a setting,
+  // but the NAME of the content being handed out.
+  //
+  // ⛔⛔ NO `onViewChange`, AND THAT IS THE WHOLE POINT OF THE OMISSION.
+  // In a game, picking a clue set RELOADS that view's own stored options (Đợt
+  // 147: "TEXT ENG1 khác TEXT ENG2 khác TEXT VI1"). Wiring that up here would
+  // be the obvious reading and it would be wrong twice over: a homework form's
+  // options come from the homework bucket, which has no per-view anything, so
+  // there is nothing to reload; and doing it anyway would let a tap on ENG2
+  // silently throw away the timer and penalties the teacher had just set for
+  // THIS assignment. The row moves, the settings below it stay put — deliberate.
+  //
+  // ⚠️ Settings passes no `act` at all and therefore still gets the bare
+  // Text/Voice switch it has always had: there is no act yet when you are
+  // setting a DEFAULT, so there are no clue sets to name.
+  const content = (act && act.content) || null;
+  const variants = content ? variantsOf(content) : null;
+  const sets = content ? contentSetsOf(content) : null;
+
   // `fight: null` — a match only exists mid-game, so its options are not
   // defaultable. `contentSwitch` is shown ALWAYS here, unlike in a game: in a
   // game it depends on whether THAT act carries spoken clips, but a default has
@@ -105,8 +158,29 @@ export function buildOptionsControls(tpl, options) {
   buildOptionsBody(wrap, {
     tpl,
     draft: options,
-    contentSwitch: { shown: options.contentMode === "voice" ? "voice" : "text" },
-    fight: null
+    contentSwitch: {
+      shown: options.contentMode === "voice" ? "voice" : "text",
+      // Spread, not four `undefined`s: buildContentSwitchRow reads `variants`
+      // as its "does this act have clue sets at all" test, and an explicit
+      // `variants: null` from Settings must stay indistinguishable from the
+      // pre-Đợt-245 call that never mentioned the key.
+      ...(variants ? {
+        variants,
+        voiceVariants: voiceVariantsOf(content),
+        labelOf: k => variantLabel(content, k),
+        // `activeVariant` is what the GAME will obey, so the button that lights
+        // up is worked out by the same function rather than by reading the raw
+        // stored key — a stored set that no longer exists falls back to the
+        // first one there, and this row must fall back with it.
+        variant: activeVariant({ content, options: { ...options, contentMode: "text" } }),
+        voiceVariant: activeVariant({ content, options: { ...options, contentMode: "voice" } })
+      } : {})
+    },
+    contentSetSwitch: sets && sets.length > 1
+      ? { sets, labelOf: k => setLabel(content, k), current: activeContentSet({ content, options }) }
+      : null,
+    fight: null,
+    hideEndShowAnswers: isHw
   });
   return wrap;
 }

@@ -28,6 +28,9 @@ import { getDefaultOptions, buildOptionsControls } from "./settings.js";
 // optVer stamp) and the rest. Already the app's own name for that category —
 // see VIEW_SELECTOR_KEYS in core/content-view.js.
 import { splitViewOptions } from "./content-view.js";
+// Đợt 245 — the Edit form converts an old assignment's penalties onto today's
+// scale before showing them, and stamps the result. See openAssignmentEdit.
+import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
 
 // =============================================================
 // HOMEWORK OPTIONS (Đợt C, 15/8/2026) — the bảng Options shown on both the
@@ -36,7 +39,16 @@ import { splitViewOptions } from "./content-view.js";
 // reads it back when the form is submitted. Deliberately its OWN block, apart
 // from the act's own PRACTICE/HOMEWORK content switch — the teacher's rule
 // (APP_MASTER mục 0a, Đợt C): "HAI CÔNG TẮC RỜI NHAU".
-function buildHomeworkOptionsField(body, activityType, draft) {
+//
+// ⭐⭐ Đợt 245 — `act` is passed through now, so the panel can also SHOW which
+// content is being handed out (the PRACTICE/HOMEWORK row and the clue-set half
+// of the Text/Voice row). Đợt 211 already made the assignment carry those four
+// keys; this is what lets the teacher SEE and CHANGE them. Only `act.content`
+// is read, and only to name things — nothing here writes to the act.
+// ⚠️ `kind: "homework"` also drops the dead "Show answers at end" switch: on
+// this form the tick-box in the "At the end of the game" row above is the one
+// the pupil's machine obeys. See core/options-panel.js for the whole story.
+function buildHomeworkOptionsField(body, activityType, draft, act = null) {
   body.append(el("label", "aw-as-label", "Options"));
   const host = el("div", "aw-as-optshost");
   host.append(el("div", "aw-as-note", "Loading options…"));
@@ -44,7 +56,7 @@ function buildHomeworkOptionsField(body, activityType, draft) {
   ensureTemplate(activityType).then(tpl => {
     if (!host.isConnected) return;   // the form was closed while this loaded
     host.innerHTML = "";
-    host.append(buildOptionsControls(tpl, draft));
+    host.append(buildOptionsControls(tpl, draft, { kind: "homework", act }));
   }).catch(() => {
     if (!host.isConnected) return;
     host.innerHTML = "";
@@ -267,9 +279,11 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     // anyone made; it was the absence of one.
     // ⚠️ Laid OVER the defaults, so the row still shows the truth and the
     // teacher can still change Text/Voice for this one assignment afterwards.
+    // ⭐ Đợt 245 — and now the panel SHOWS those four selectors as real controls
+    // (PRACTICE/HOMEWORK + the clue sets), instead of carrying them invisibly.
     const hwDraft = { ...getDefaultOptions(act.type, "homework"),
                       ...splitViewOptions(act.options).selectors };
-    buildHomeworkOptionsField(body, act.type, hwDraft);
+    buildHomeworkOptionsField(body, act.type, hwDraft, act);
 
     // --- where it will be filed in Results (worked out from the title)
     const filed = el("div", "aw-as-note", "");
@@ -444,8 +458,39 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     // --- homework options (Đợt C) — starts from what THIS assignment already
     // carries (never the Settings default: an assignment already out to
     // students keeps its own choice until the teacher changes it here).
-    const hwDraft = { ...(assignment.activity?.options || {}) };
-    buildHomeworkOptionsField(body, assignment.activityType, hwDraft);
+    //
+    // ⭐⭐⭐ Đợt 245 — CONVERT BEFORE SHOWING, STAMP WHEN SAVING. Both halves,
+    // in that order, or the fix is worse than the bug.
+    //
+    // Đợt 211 taught the CREATE path to stamp `optVer` on the snapshot, because
+    // core/options-migrate.js runs again on the pupil's machine and an unstamped
+    // assignment gets its penalties rescaled a SECOND time ("Points off 30"
+    // reaching the child as 100). The EDIT path was never taught the same thing,
+    // so an assignment given out before 20/8/2026 stayed exposed — and the
+    // remedy Đợt 211 itself recommends ("mở Edit assignment bấm nút TEXT rồi
+    // SAVE") walks straight through this door.
+    //
+    // ⛔⛔ STAMPING ALONE WOULD BE A SILENT DOWNGRADE. An old assignment stores
+    // `pointsOff: 3` meaning "3 out of 5" — the pupil's machine turns that into
+    // 60 out of 100, which is what the class has actually been getting. Stamp it
+    // without converting and that 3 freezes as "3 out of 100", i.e. very nearly
+    // Off: the teacher changes the title, presses Save, and the penalty quietly
+    // evaporates. It also made the form LIE — the slider drew 3 while the game
+    // ran 60. So the draft is migrated FIRST, which both fixes the display and
+    // makes the stamp truthful.
+    //
+    // ⚠️ A COPY is migrated, never `assignment.activity` itself. Nothing is
+    // written to Firestore until the teacher presses SAVE, and a teacher who
+    // opens Edit and presses BACK must leave the document exactly as it was.
+    // ⚠️ Already-stamped assignments (everything from Đợt 211 on) pass through
+    // untouched — that is what `optVer` is for. Re-running is the whole design.
+    const hwSeed = migrateActivityOptions({
+      type: assignment.activityType,
+      optVer: assignment.activity?.optVer,
+      options: { ...(assignment.activity?.options || {}) }
+    });
+    const hwDraft = hwSeed.options;
+    buildHomeworkOptionsField(body, assignment.activityType, hwDraft, assignment.activity);
 
     body.append(el("label", "aw-as-label", "Status"));
     const closedWrap = el("label", "aw-as-check");
@@ -480,14 +525,26 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
           // of the frozen snapshot (content, theme, ...) untouched. Confirmed
           // against the published rules: `allow update: if isTeacher()` covers
           // any field — see docs/08-FIREBASE-SETUP.md.
-          "activity.options": hwDraft
+          "activity.options": hwDraft,
+          // ⭐⭐⭐ Đợt 245 — THE OTHER HALF OF THE optVer FIX (see the long note
+          // where hwDraft is seeded). These values have just come off today's
+          // Options panel, on today's scale, so the stamp is true by
+          // construction — the same reasoning snapshotOf() uses on the create
+          // path. Without it the pupil's machine rescales them all over again.
+          // ⚠️ CURRENT version, never `assignment.activity.optVer` — copying the
+          // old stamp forward would say "already converted" about numbers that
+          // have only just been converted a line above.
+          "activity.optVer": OPT_VER
         };
         await updateAssignment(assignment.code, patch);
         // keep the open popups in step — `Object.assign` cannot resolve the
         // dot-path key above onto the nested `assignment.activity` itself.
         Object.assign(assignment, { title: patch.title, deadline: patch.deadline,
           endOptions: patch.endOptions, closed: patch.closed });
-        assignment.activity = { ...(assignment.activity || {}), options: hwDraft };
+        // ⚠️ Đợt 245 — the stamp comes along, or a SECOND Edit in the same
+        // sitting would re-migrate the values it just saved (the popup object is
+        // what that next Edit seeds itself from, not a fresh Firestore read).
+        assignment.activity = { ...(assignment.activity || {}), options: hwDraft, optVer: OPT_VER };
         close();
         flash("Assignment updated");
         onSaved?.(assignment);
@@ -642,7 +699,7 @@ export function openAssignmentDetail(assignment, { onChanged, inAct = false } = 
       loadReport(assignment).then(rows => {
         body.innerHTML = "";
         body.append(summaryBlock(assignment, rows));
-        body.append(leaderboardBlock(rows));
+        body.append(leaderboardBlock(assignment, rows));   // Đợt 245 — needs the options to read the score right
         body.append(detailBlock(assignment, rows));
       }).catch(e => {
         // Never show "nobody has played" when the truth is "we could not ask" —
@@ -653,6 +710,46 @@ export function openAssignmentDetail(assignment, { onChanged, inAct = false } = 
       });
     }
   });
+}
+
+// ⭐⭐⭐ Đợt 245 (23/8/2026, thầy) — DOES `score` STILL MEAN "HOW MANY WERE RIGHT"?
+//
+// For a plain assignment it does, and the report has always read correctly. But
+// the moment ANY penalty is switched on in the assignment's Options, `score` is
+// the value AFTER deductions — so the report's two oldest columns started lying:
+//   · "Correct"    printed the penalised score, not the tally.
+//   · "Incorrect"  is computed `total − score`, which is arithmetic on two
+//                  different units the moment they disagree. 9 right out of 10
+//                  with "Points off 30" gives score −21, so `Math.max(0, …)`
+//                  clamped it and the column read a confident, wrong "0".
+// Gameshow is the extreme case: it scores by SPEED, so a play reads "1250/10".
+//
+// ⛔⛔ THE REAL TALLY IS NOT IN THE DATA AND CANNOT BE ADDED CHEAPLY. The
+// in-game summary can show both because it holds `result.correct` in memory; the
+// stored result cannot, because the keys of `results` are FIXED BY THE PUBLISHED
+// SECURITY RULES (assignmentId, studentName, score, total, timeMs, review,
+// createdAt — see the header of core/assignments.js). Adding `correct` means
+// re-publishing the Firestore rules first, and until those rules are live EVERY
+// submission would be rejected. Thầy chose the honest, no-migration option: stop
+// printing a number the data cannot support, and rename what IS there.
+//
+// So: an assignment with a penalty reports SCORE, and drops the Incorrect
+// column entirely rather than showing a made-up one. An assignment without one —
+// the default on every act — is untouched, byte for byte, and still says
+// Correct / Incorrect.
+//
+// ⚠️ Read off the assignment's OWN frozen options, not the library act's: the
+// snapshot is what the class actually played, and the act may have been retuned
+// since. Every penalty field in the app is listed here — `pointsOff` (the shared
+// control), `minusAmount` (the older name Crossword / Type the answer /
+// Whack-a-mole still write, the exact pair core/options-migrate.js warns about),
+// `letterPenalty` (Anagram) and `timeCost` (the idle clock).
+const PENALTY_KEYS = ["pointsOff", "minusAmount", "letterPenalty", "timeCost"];
+function scoreIsPenalised(assignment) {
+  // Gameshow never scores by tally at all — points for speed, whatever else is set.
+  if (assignment.activityType === "gameshow") return true;
+  const o = assignment.activity?.options || {};
+  return PENALTY_KEYS.some(k => Number(o[k]) > 0);
 }
 
 // Merge the two collections: the teacher's full copies plus any public score row
@@ -704,7 +801,12 @@ function summaryBlock(assignment, rows) {
   if (rows.length) {
     const topScore = Math.max(...rows.map(r => r.score));
     const topRows = rows.filter(r => r.score === topScore);
-    stats.append(stat("Top Score", `${topScore}/${topRows[0].total}`));
+    // ⭐ Đợt 245 — "12/20" is a TALLY out of a total, and it stops being one as
+    // soon as a penalty is on (or the game is Gameshow, which scores by speed):
+    // "1250/10" is not a fraction of anything. Drop the denominator rather than
+    // print a meaningless one. See scoreIsPenalised() for the whole reasoning.
+    stats.append(stat("Top Score",
+      scoreIsPenalised(assignment) ? `${topScore}` : `${topScore}/${topRows[0].total}`));
 
     // Fastest among those who got the top score — that IS "top speed".
     const fastest = topRows.reduce((best, r) => (!best || r.timeMs < best.timeMs) ? r : best, null);
@@ -716,7 +818,8 @@ function summaryBlock(assignment, rows) {
 }
 
 // Best attempt per student, ranked: more correct first, then faster.
-function leaderboardBlock(rows) {
+// ⭐ Đợt 245 — takes the assignment now, only to ask scoreIsPenalised().
+function leaderboardBlock(assignment, rows) {
   const wrap = el("div", "aw-as-block");
   wrap.append(el("div", "aw-as-blockhead", "Leaderboard"));
   if (!rows.length) return wrap;
@@ -729,16 +832,24 @@ function leaderboardBlock(rows) {
   const names = new Map();
   rows.forEach(r => { names.set(r.key, [...(names.get(r.key) || []), r.name]); });
 
+  const penalised = scoreIsPenalised(assignment);
   const table = el("div", "aw-as-table aw-as-lb");
   table.append(row(["Rank", "Name", "Score", "Time"], true));
   [...best.values()].sort(rankCompare).forEach((r, i) => {
     // full marks -> the whole row is green; nothing right -> the whole row is red
-    const mark = r.total > 0 && r.score === r.total ? " is-perfect"
+    // ⚠️ Đợt 245 — BOTH tints are switched off once a penalty is on, not just
+    // the fraction beside them. `score === total` is "full marks" only while
+    // score is a tally: with points deducted it is unreachable, and `score === 0`
+    // stops meaning "got nothing right" (it is just as easily 5 correct answers
+    // with 5 points burnt off). A red row that accuses a child who did fine is
+    // worse than no colour at all.
+    const mark = penalised ? ""
+               : r.total > 0 && r.score === r.total ? " is-perfect"
                : r.score === 0 ? " is-zero" : "";
     table.append(row([
       String(i + 1),
       prettiestName(names.get(r.key) || [r.name]),
-      `${r.score}/${r.total}`,
+      penalised ? `${r.score}` : `${r.score}/${r.total}`,
       fmtDuration(r.timeMs)
     ], false, mark));
   });
@@ -758,16 +869,25 @@ function detailBlock(assignment, rows) {
   wrap.append(el("div", "aw-as-blockhead", "Details"));
   if (!rows.length) return wrap;
 
+  // ⭐⭐ Đợt 245 — the two middle columns, told the truth. With no penalty on the
+  // assignment (the default on every act) this is byte-for-byte the old list:
+  // Correct + Incorrect. With one on, `score` is the PENALISED value, so
+  // "Correct" would be a wrong label and "Incorrect" (`total − score`) a wrong
+  // number — the column is dropped rather than filled with a guess, because the
+  // real tally is not in the stored result at all. See scoreIsPenalised().
+  const penalised = scoreIsPenalised(assignment);
   const COLS = [
     { key: "name", label: "Student", get: r => r.name.toLowerCase() },
     { key: "createdAt", label: "Submitted", get: r => r.createdAt },
-    { key: "score", label: "Correct", get: r => r.score },
-    { key: "incorrect", label: "Incorrect", get: r => r.incorrect },
+    { key: "score", label: penalised ? "Score" : "Correct", get: r => r.score },
+    ...(penalised ? [] : [{ key: "incorrect", label: "Incorrect", get: r => r.incorrect }]),
     { key: "timeMs", label: "Time", get: r => r.timeMs }
   ];
   let sortKey = "createdAt", asc = false;
 
-  const table = el("div", "aw-as-table aw-as-detail");
+  // ⚠️ Đợt 245 — the grid's column COUNT lives in CSS, so dropping a cell in JS
+  // is only half the change (see `.aw-as-detail.is-nocorrect` in core/app.css).
+  const table = el("div", "aw-as-table aw-as-detail" + (penalised ? " is-nocorrect" : ""));
   wrap.append(table);
   draw();
   return wrap;
@@ -796,7 +916,10 @@ function detailBlock(assignment, rows) {
 
     sorted.forEach(r => {
       // full marks -> the whole row reads in green, same idea as the leaderboard
-      const perfect = r.total > 0 && r.score === r.total;
+      // ⚠️ Đợt 245 — and switched off with a penalty on, for the same reason as
+      // the leaderboard's two tints: `score === total` is not "full marks" once
+      // points are being deducted, it is simply unreachable.
+      const perfect = !penalised && r.total > 0 && r.score === r.total;
       const tr = el("div", "aw-as-tr aw-as-clickable" + (perfect ? " is-perfect" : ""));
       const nameCell = el("div", "aw-as-td");
       nameCell.append(el("span", "aw-as-caret", "▸"), el("span", null, escapeText(r.name)));
@@ -804,10 +927,14 @@ function detailBlock(assignment, rows) {
       tr.append(nameCell);
       tr.append(
         el("div", "aw-as-td", escapeText(fmtDate(r.createdAt))),
-        el("div", "aw-as-td", String(r.score)),
-        el("div", "aw-as-td", String(r.incorrect)),
-        el("div", "aw-as-td", fmtDuration(r.timeMs))
+        el("div", "aw-as-td", String(r.score))
       );
+      // ⛔ The body must stay in step with COLS above — the table is a CSS grid
+      // with a fixed column count (`.aw-as-detail` in core/app.css), so one extra
+      // cell here does not overflow visibly, it shunts Time under the wrong
+      // heading on every row. Same condition, written once, read twice.
+      if (!penalised) tr.append(el("div", "aw-as-td", String(r.incorrect)));
+      tr.append(el("div", "aw-as-td", fmtDuration(r.timeMs)));
       table.append(tr);
 
       // Collapsed by default; opening animates height+opacity smoothly instead

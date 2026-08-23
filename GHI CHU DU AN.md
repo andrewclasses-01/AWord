@@ -5,6 +5,180 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 245 (23/8/2026) — ⭐⭐⭐ BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT: THÊM 2 HÀNG CHỌN NỘI DUNG · BỎ Ô "SHOW ANSWERS" CHẾT · VÁ optVer Ở ĐƯỜNG EDIT · CHẶN 3 TEMPLATE KHÔNG GIAO ĐƯỢC · BÁO CÁO RESULT THÔI NÓI DỐI KHI CÓ TRỪ ĐIỂM
+
+✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — ĐÃ COMMIT + PUSH. Sửa **9 file**: `core/options-panel.js` ·
+`core/settings.js` · `core/assignment-ui.js` · `core/engine.js` · `core/app.css` · `main.js` ·
+`templates/speaking-cards/speaking-cards.js` · `templates/running-word/running-word.js` ·
+`templates/running-team/running-team.js`. Backup bản trước ở `_backup/dot245/`.
+Ba bàn thử cục bộ (không lên git): **85/85 ĐẠT, 0 lỗi console**.
+
+Thầy yêu cầu rà *"Options và các template dành cho phần Assignment đã đồng nhất với template chính
+chưa"*, để chuẩn bị giao bài thật cho học sinh. Rà bằng **bàn thử dựng cả 17 template và so từng ô**,
+không đọc code đoán.
+
+### 0) KẾT QUẢ RÀ — phần lớn ĐÃ đồng nhất, đúng 2 hàng thiếu
+
+Mọi ô riêng của từng template (Lives, Bonus, Speed, Punishment, Time cost, Points off, Timer, mọi
+ô tích) **giống y hệt** giữa bảng Options của act và bảng của form assignment — vì Đợt 143 đã bắt cả
+hai đi qua **một hàm dựng duy nhất** (`buildOptionsBody`). Đo được: 17/17 template khớp.
+
+Chênh lệch **duy nhất**, nhưng có ở **17/17**, đều nằm ở cụm trên cùng:
+
+| Có ở bảng ACT | Bảng ASSIGNMENT (trước đợt này) |
+|---|---|
+| hàng **PRACTICE / HOMEWORK** | ❌ không có |
+| hàng Text/Voice **+ bộ nghĩa [ENG1/ENG2/VI1/VI2]** | chỉ có Text/Voice, mất nửa bộ nghĩa |
+
+Từ Đợt 211 bài giao **đã chép đúng** 4 khoá selector nên nó **chơi** đúng nội dung — nhưng thầy
+**không nhìn thấy và không sửa được** đang giao nửa nào, bộ nghĩa nào.
+
+### 1) THÊM 2 HÀNG CHỌN NỘI DUNG VÀO FORM SET/EDIT ASSIGNMENT
+
+`buildOptionsControls(tpl, options, { kind, act })` — nhận thêm `act`, chỉ đọc `act.content`, chỉ để
+**gọi tên** nội dung đang giao. Dựng bằng chính `variantsOf` / `activeVariant` / `contentSetsOf` /
+`activeContentSet` mà bảng Options của act dùng, nên hai bảng **không thể mô tả một act bằng hai
+kiểu** (bẫy Đợt 155 đã nêu khi Showdown mọc bản sao riêng).
+
+- ⚠️ **KHÔNG phạm luật "HAI CÔNG TẮC RỜI NHAU"** (thầy chốt Đợt C) — đúng lý lẽ Đợt 211: luật đó nói
+  về **BỘ CÀI ĐẶT** (timer / trộn / điểm phạt), vẫn đi từ bucket homework, vẫn quyết riêng từng bài
+  giao. Bốn khoá này là **SELECTOR** = TÊN của nội dung, không phải cài đặt.
+- ⛔⛔ **CỐ Ý KHÔNG TRUYỀN `onViewChange`.** Trong game, chạm bộ nghĩa sẽ **nạp lại options riêng của
+  view đó** (Đợt 147). Nối dây đó vào đây là cách đọc hiển nhiên nhưng **sai hai lần**: options bài
+  giao đến từ bucket homework, không có "per-view" nào để nạp; và làm vậy thì một cú chạm ENG2 sẽ
+  **âm thầm xoá** timer + điểm phạt thầy vừa đặt cho CHÍNH bài giao này. Hàng đổi, phần dưới đứng yên.
+- ⚠️ **Settings không truyền `act`** nên vẫn chỉ có công tắc Text/Voice trần như xưa — đang đặt MẶC
+  ĐỊNH thì chưa có act nào để mà gọi tên.
+
+### 2) BỎ Ô "SHOW ANSWERS AT END" TRÊN FORM BÀI GIAO — nó là công tắc CHẾT, không phải ô trùng
+
+Form Set assignment có sẵn ô tích **"Show answers"** ở hàng *At the end of the game, students can*, và
+**ĐÓ** mới là ô máy HS nghe: nhánh student của `core/engine.js` đọc `session.endOptions.showAnswers`
+và **không hề** ngó tới `activity.options.showAnswers`. Ô trong bảng Options nằm cùng form, cùng chữ,
+và **không làm gì** — thầy bỏ tích thì HS vẫn xem được đáp án.
+
+⚠️ **Đo được trước khi vá: hai ô còn NGƯỢC NHAU sẵn** — ô tích mặc định TẮT, ô kia mặc định BẬT
+(`BUILTIN_DEFAULTS.showAnswers = true`). Form vừa mở đã hiện một cài đặt vừa bật vừa tắt.
+
+Cờ mới `hideEndShowAnswers` là **cờ của NGƯỜI GỌI**, ⛔ cố ý **không** phải cờ template: ô này có
+nghĩa hay không phụ thuộc **AI đang hỏi** (form homework hay Options của act), không phụ thuộc đang là
+game nào. `tpl.hideShowAnswers` (Đợt 140) là cờ của TEMPLATE, giữ nguyên, cả hai vẫn phải qua.
+⚠️ Settings ▸ Default **activity** options **giữ** ô này (act chơi trên lớp có đọc thật) — đo riêng,
+17/17 giữ nguyên.
+
+### 3) VÁ optVer Ở ĐƯỜNG EDIT — quy đổi khi NẠP, đóng dấu khi LƯU, đúng thứ tự đó
+
+Đợt 211 dạy đường **tạo mới** đóng dấu `optVer`, vì `options-migrate.js` **chạy lại trên máy HS** và
+một bài giao không dấu sẽ bị quy đổi **lần thứ hai**. Đường **sửa** thì chưa được dạy, nên bài giao
+ra **trước 20/8/2026** vẫn hở — và chính cách chữa mà ghi chú Đợt 211 khuyên
+(*"mở Edit assignment bấm nút TEXT rồi SAVE"*) đi thẳng qua cái cửa chưa vá đó.
+
+⛔⛔ **ĐÓNG DẤU KHÔNG THÔI LÀ MỘT CÚ HẠ CẤP ÂM THẦM.** Bài cũ lưu `pointsOff: 3` nghĩa là "3 trên 5" —
+máy HS biến thành 60/100, và đó là cái lớp học **đang thực sự nhận**. Đóng dấu mà không quy đổi thì số
+3 đóng băng thành "3 trên 100", tức gần như Tắt: thầy chỉ sửa cái tiêu đề, bấm Save, và **điểm phạt
+bốc hơi**. Nó còn làm form **nói dối** — thanh trượt vẽ 3 trong khi game chạy 60.
+
+⚠️ Migrate trên một **BẢN SAO**, không đụng `assignment.activity`: mở Edit rồi bấm BACK thì document
+phải y nguyên.
+
+**Đo được** (bàn thử `dot245-optver-report.html`):
+
+| | trước đợt này | sau |
+|---|---|---|
+| bài cũ, thầy gõ 30 | tới tay HS thành **100** | tới tay HS đúng **30** |
+| form Edit hiện | **3** (nói dối) | **60** (đúng cái đang chạy) |
+| bài đã đóng dấu | — | giữ nguyên 30, không quy đổi lại |
+
+### 4) CHẶN 3 TEMPLATE KHÔNG GIAO ĐƯỢC (thầy chốt "CHẶN hẳn")
+
+Cờ mới `tpl.noAssignment` — **là một CÂU, không phải boolean**: lý do CHÍNH LÀ cờ, nên không đẻ ra
+danh sách giải thích thứ hai phải giữ đồng bộ.
+
+- **Speaking cards** — `scorable:false`, không bao giờ gọi `ui.finish()`, mà `ui.finish()` là thứ
+  **duy nhất** chạm tới `session.submit()`. HS chơi hết bộ bài rồi đóng tab: **không một kết quả nào**
+  về tới thầy, trong khi báo cáo ghi "No student has played this assignment yet".
+- **Running word / Running team** — game 2 đội chung một bàn phím, và `renderSummary` **thay cả bảng
+  cuối game mà không đọc `session`**: HS không thấy dòng "SENT TO YOUR TEACHER", 3 ô tích thầy vừa
+  tích **không có tác dụng**. Điểm vẫn lặng lẽ bay lên Firestore.
+
+⚠️ **MỜ, KHÔNG ẩn, và VẪN BẤM ĐƯỢC** — đúng bài học Đợt 220 do chính thầy nêu: nút xám mà
+*"không có gì trên màn nói vì sao"* thì đọc như app hỏng. Chạm vào là hiện lý do (toast) + tooltip.
+⛔ **CỔNG CHẶN CHỈ Ở MỘT CHỖ** (`assignBtn` trong `core/engine.js`): bài giao đã ra trước đợt này
+**vẫn mở, vẫn chơi, vẫn thu điểm** bình thường.
+⛔ **MUỐN GỠ CHẶN**: xoá đúng 1 dòng `noAssignment` trong file template đó. Riêng 2 game Running thì
+phải **dạy `renderSummary` tôn trọng `session`** cùng lúc — vá nửa vời còn tệ hơn không vá, vì điểm
+vẫn về và trông bình thường trong Results trong khi cả lớp không hề thấy xác nhận nào.
+
+### 5) BÁO CÁO RESULT THÔI NÓI DỐI KHI BÀI CÓ TRỪ ĐIỂM (thầy chốt "cả 3 khối")
+
+Bài giao thường thì `score` = số câu đúng, báo cáo xưa nay vẫn đúng. Nhưng **bật bất kỳ điểm phạt
+nào** là hai cột cũ bắt đầu nói dối: **"Correct"** in ra điểm ĐÃ TRỪ; **"Incorrect"** tính
+`total − score`, là phép trừ hai đơn vị khác nhau — 9 đúng/10 với "Points off 30" cho score −21, bị
+`Math.max(0, …)` kẹp lại thành một số **"0" rất tự tin và rất sai**. Gameshow nặng nhất: nó chấm theo
+TỐC ĐỘ nên một lượt đọc ra **"1250/10"**.
+
+⛔⛔ **SỐ CÂU ĐÚNG THẬT KHÔNG CÓ TRONG DỮ LIỆU và không thêm rẻ được.** Bảng tổng kết trong game hiện
+được cả hai vì nó giữ `result.correct` trong bộ nhớ; kết quả **đã lưu** thì không, vì bộ khoá của
+`results` **bị luật bảo mật Firestore khoá cứng**. Thêm `correct` = phải **đăng luật mới lên Firebase
+trước**, và trong lúc luật chưa live thì **MỌI lượt nộp bị từ chối**. Thầy chọn hướng thật thà, không
+phải migrate: **thôi in con số mà dữ liệu không đỡ nổi**, và gọi đúng tên thứ đang có.
+
+`scoreIsPenalised()` đọc **chính options đã đóng băng của bài giao** (không phải act trong thư viện —
+act có thể đã bị chỉnh lại từ lúc giao), xét đủ 4 tên trường phạt: `pointsOff` · `minusAmount` (tên cũ
+mà Crossword / Type the answer / Whack-a-mole vẫn ghi — đúng cặp mà `options-migrate.js` cảnh báo) ·
+`letterPenalty` · `timeCost`, cộng `activityType === "gameshow"`.
+
+- Có phạt → cột đọc **"Score"**, **bỏ hẳn** cột Incorrect, Leaderboard + Top Score bỏ mẫu số vô nghĩa.
+- ⚠️ **Tắt luôn cả 2 màu nền dòng**, không chỉ con số: `score === total` chỉ là "điểm tuyệt đối" khi
+  score còn là số đếm — có trừ điểm thì nó **bất khả thi**, và `score === 0` thôi nghĩa là "không đúng
+  câu nào" (cũng có thể là 5 câu đúng bị đốt sạch 5 điểm). Một dòng **đỏ oan cho em làm được bài** còn
+  tệ hơn không tô màu.
+- ⛔ **BẪY ĐÃ DÍNH LÚC DỰNG**: `.aw-as-detail` là **lưới CSS 5 cột viết cứng**. Bỏ một ô trong JS mà
+  quên CSS thì **không tràn, không cảnh báo** — chỉ thừa một cột 90px rỗng ở mép phải mọi dòng, đọc
+  như *thiếu giá trị* chứ không phải *đã bỏ cột*. Nên số cột khai ở `.aw-as-detail.is-nocorrect`.
+- ⚠️ Bài **không** trừ điểm: giữ nguyên từng byte — vẫn Correct/Incorrect, vẫn lưới 5 cột, vẫn "9/10".
+
+### 6) BA BÀN THỬ (`scratch/`, không lên git) — 85/85 ĐẠT, 0 lỗi console
+
+| bàn thử | đo gì | kết quả |
+|---|---|---|
+| `dot245-assign-options.html` | dựng **cả 17 template**, so từng hàng/ô giữa bảng ACT ↔ ASSIGNMENT ↔ Settings | **17/17** khớp hàng & ô · **0** chênh ngoài dự kiến · Settings **17/17** giữ nguyên |
+| `dot245-optver-report.html` | bài giao cũ → mở Edit → sửa → Save → **mô phỏng máy HS**; nhãn báo cáo 3 khối; form Set assignment | **28/28** |
+| `dot245-noassign.html` | dựng **17 game thật**, kiểm nút Set assignment | **40/40** (chặn đúng 3, mở đúng 14) |
+
+⭐ Bàn thử thứ nhất **tự mã hoá điều được phép lệch** (`EXPECTED_CK_ONLY_A = ["showAnswers"]`) chứ
+không để người chạy tự nhớ — lần sau chạy vẫn là một phép đạt/hỏng thật.
+
+⚠️⚠️ **HAI LỖI TỰ TÌM RA TRONG CHÍNH BỘ FIRESTORE GIẢ** (`scratch/fake-firebase245.js`), đáng ghi vì
+chúng làm bàn thử **xanh vì lý do sai**:
+
+1. `collection()` của bản giả cũ chỉ đọc **đoạn đầu** đường dẫn, trong khi `listScores()` gọi
+   `collection(d, "assignments", code, "scores")` → tiền tố thành `"assignments/"` → **mọi document
+   bài giao bị trả về như một dòng điểm**. Leaderboard mọc thêm hàng ma "Player 0/0". Ba câu check
+   vẫn xanh vì chúng chỉ hỏi *"có chứa"*; chỉ câu **ĐẾM SỐ DÒNG** mới bắt được — nên nay có câu đó.
+2. `getDocs()` khớp bằng `startsWith` nên truy vấn collection **cha** nuốt luôn document của
+   collection **con** — Firestore thật không làm vậy.
+
+Bản giả này cũng là bản đầu tiên có **`updateDoc` hiểu DOT-PATH**, thứ mà cả bản vá optVer dựa vào:
+`Object.assign` thẳng sẽ đẻ ra một khoá **tên là** `"activity.options"` nằm cạnh `activity` — bàn thử
+xanh trong khi hàng thật hỏng.
+
+### 7) MỘT GHI CHÚ CŨ ĐÃ HẾT ĐÚNG
+
+Dòng ⚠️ trong `APP_MASTER.md` mục Đợt 211 (*"act để PRONUNCIATION thì form sáng nút TEXT"*) nay **không
+còn ca đó**: Đợt 212 đã khai tử `pron` (`RETIRED_VARIANTS` trong `core/content-view.js`).
+
+### 8) CHƯA LÀM ĐƯỢC / VIỆC CHỜ THẦY
+
+- ⚠️ **CHƯA bấm tay thật trên TOMKO**; `screenshot` vẫn timeout (Browser pane không hiển thị) — đợt
+  này nghiệm hoàn toàn bằng **số đo** trên 3 bàn thử.
+- ⛔ **Bài giao ĐÃ ra không tự khỏi**: hai hàng chọn nội dung và ô Show answers là chuyện của FORM;
+  bản chụp đã đóng băng chỉ đổi khi thầy mở **Edit** rồi **Save** (mở Save một lần cũng chính là cách
+  đóng dấu `optVer` cho bài cũ).
+- ✅ Đã commit + push + kiểm chứng live (mã băm ghi ở khối HỒ SƠ CHỐT ngay dưới tiêu đề đợt).
+
+---
+
 ## Đợt 244 (23/8/2026) — ⭐⭐ TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG SHOW ANSWERS (tự thu nhỏ vừa **một** dòng, không cắt) · ⭐⭐⭐ THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA NGOÀI THÌ **NGỦ LẠI** — ✅ **THẦY DUYỆT ("sau khi điều chỉnh thì commit + push luôn")** — **COMMIT `a7b40bd`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **7/7 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` · `core/engine.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>` — ⛔ không băm file trên máy, LF↔CRLF lệch oan).
 
 Thầy giao 2 điều chỉnh, chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build. Sửa 4 file:

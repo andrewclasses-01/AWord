@@ -404,7 +404,11 @@ export function buildOptionsBody(host, {
   // ⭐ Đợt 220 — tổng số câu của act đang chơi: trần cứng của ô số Count (thầy
   // chốt "chặn ô số ở mức tối đa"). Chỉ engine biết con số này; Settings không
   // truyền (nó cũng không truyền `showdown` nên dải không được dựng ở đó).
-  sdItemCount = 0
+  sdItemCount = 0,
+  // ⭐ Đợt 245 — bỏ ô tích "Show answers at end" cho form BÀI GIAO, nơi nó là
+  // một công tắc CHẾT (trang HS chỉ nghe `session.endOptions`). Xem khối chú
+  // thích dài ở chỗ ô đó được dựng, cuối hàm này.
+  hideEndShowAnswers = false
 }) {
   const swHost = switchHost || host;
   const sel = selectors || draft;   // Settings has no separate selector state
@@ -820,7 +824,29 @@ export function buildOptionsBody(host, {
   // and that block is the last thing above Apply.
   // `tpl.hideShowAnswers` (Đợt 140): an open-ended game with no answers to show
   // (Speaking cards) opts out.
-  if (!tpl.hideShowAnswers) {
+  //
+  // ⭐⭐ Đợt 245 (23/8/2026) — `hideEndShowAnswers`, THE CALLER'S opt-out, and it
+  // exists because on a HOMEWORK form this switch was a LIE, not a duplicate.
+  // The "Set assignment" form already carries a tick-box called "Show answers"
+  // in its own `At the end of the game, students can` row, and THAT is the one
+  // the pupil's machine obeys: core/engine.js's student branch reads
+  // `session.endOptions.showAnswers` and never once looks at
+  // `activity.options.showAnswers`. So the panel's switch sat on the same form,
+  // said the same words, and did nothing — the teacher could untick it and the
+  // class would still be shown the answers.
+  // ⚠️ Measured before the fix (Đợt 245's bench): the two even DISAGREED by
+  // default — the tick-box starts UNTICKED, this switch starts TICKED
+  // (BUILTIN_DEFAULTS.showAnswers = true), so a form straight out of the box
+  // showed one setting as both on and off at the same time.
+  // ⛔ A CALLER flag, deliberately NOT a template flag: whether this switch
+  // means anything depends on WHO IS ASKING (homework form vs the act's own
+  // Options), never on which of the 17 games it is. `tpl.hideShowAnswers` right
+  // above is the TEMPLATE's own opt-out and is untouched — the two answer
+  // different questions and both still have to pass.
+  // ⚠️ Settings ▸ Default ACTIVITY options must KEEP the switch: an act played
+  // in class really does read `activity.options.showAnswers` (the `else` branch
+  // of showSummary in core/engine.js). Only the homework bucket opts out.
+  if (!tpl.hideShowAnswers && !hideEndShowAnswers) {
     addCheck("Show answers at end", draft.showAnswers !== false, v => draft.showAnswers = v,
       { key: "showAnswers", title: "Show answers when the game ends" });
   }
