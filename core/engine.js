@@ -4312,7 +4312,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       if (showdownPick && answered > 0 && !activity._mistakes) {
         const students = groupByMember(reviewData, showdownPick.members);
         const roundKey = showdownRoundKey();
-        const actName = originAct?.name || "";
+        // ⛔⛔ `.title`, KHÔNG PHẢI `.name` — sửa lỗi im lặng có từ Đợt 197
+        // (Đợt 243, thầy báo: "bảng showdown vẫn hiện tên như cũ"). Trong thư
+        // viện, MỘT ACT tên gì nằm ở `.title`; `.name` là của THƯ MỤC
+        // (core/store.js itemName(): folder -> .name, act -> .title). Nên dòng
+        // này luôn trả về chuỗi rỗng, và cả chuỗi đặt tên phía sau chết theo:
+        // formatActDisplayName("") thoát ngay ở dòng đầu => công thức
+        // "X / ENG1 QUIZ" (Đợt 230 + 242) không bao giờ chạy tới =>
+        // displayName() rơi xuống chữ chống-cháy "Showdown". Cũng là lý do
+        // bảng "đội kia đang chơi act nào" giữa giờ trống tên: saveTeamResult
+        // ngay dưới đây dùng chung đúng biến này.
+        // ⚠️ Trận ĐÃ LƯU thì không cứu được — chúng ghi actName rỗng xuống
+        // Firestore rồi, không còn gì để suy ngược ra tên act.
+        const actName = originAct?.title || "";
         // ⭐ Đợt 230 — which clue set (ENG1/ENG2/VI1/VI2) was actually live for
         // this play, so the class's ledger (core/showdown-history.js) can show
         // "BODY PARTS / ENG1" instead of the act's shared "BODY PARTS /
@@ -4491,8 +4503,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // intact. Only the way IN from this panel is hidden, which is the smallest
       // change that does what was asked.
       if (!showdownPick) items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
+      // ⭐⭐⭐ Đợt 243 — kept in a variable: this row is no longer only a button,
+      // it is also the KEY to the two rows below it (see lockBehindHold()).
+      let answersRow = null;
       if (reviewData.length && activity.options?.showAnswers !== false) {
-        items.append(panelItem("Show answers", () => showReview(result, entryId)));
+        answersRow = panelItem("Show answers", () => showReview(result, entryId));
+        items.append(answersRow);
       }
       const again = panelItem("Start again", restart);
       items.append(again);
@@ -4500,45 +4516,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Only for games that opted in with tpl.itemsKey AND only when this play
       // actually left something wrong or blank — a clean sheet gets no button
       // rather than a button that only ever says "No mistakes to practise".
+      let mistRow = null;
       if (mistakesAvailable()) {
         const mist = panelItem("Start with mistakes", startWithMistakes);
-        // ⭐⭐ Đợt 207 (thầy, 20/8/2026) — "dòng Start with mistakes được ẩn đi,
-        // kích hoạt bằng cách nhấn giữ vào dòng START AGAIN, sau đó thì dòng
-        // START WITH MISTAKES mới hiện và mới bấm vào được".
-        //
-        // ⛔ SHOWDOWN ONLY — thầy's own narrowing when asked, and this end-of-game
-        // panel is shared by ALL 17 templates in every mode. Ordinary single play
-        // keeps the row exactly where it has been since Đợt 84; nothing outside
-        // Showdown changes by one pixel.
-        //
-        // ⚠️ `again.onclick` is CLEARED first. panelItem wires a plain onclick,
-        // and core/press.js's tapOrHold swallows the trusted `click` itself — the
-        // two together would fire restart() twice on a browser that still
-        // delivered one, and half the point of tapOrHold is that `click` cannot
-        // be trusted on the TOMKO infrared screen anyway.
-        //
-        // ⚠️ Hidden with a class, NOT by leaving the node out: it has to be in
-        // the tree for the reveal to animate (`.aw-panel-item.is-held` in
-        // app.css opens a max-height — with `overflow:hidden`, the Đợt 137 trap).
-        // And `disabled` goes with it, because a zero-height row can still be
-        // reached by the keyboard: hidden must mean "cannot be pressed".
-        if (showdownPick) {
-          mist.classList.add("is-held");
-          mist.disabled = true;
-          again.onclick = null;
-          tapOrHold(again, {
-            onTap: () => { sound.click(); restart(); },
-            onHold: () => {
-              if (!mist.disabled) return;             // already out — a second hold does nothing
-              sound.click();
-              mist.disabled = false;
-              mist.classList.add("is-on");
-            }
-          });
-          again.title = "Hold to practise this play's mistakes";
-        }
+        mistRow = mist;
         items.append(mist);
       }
+      // ⭐⭐⭐ Đợt 243 — LOCK BOTH RESTART ROWS BEHIND "SHOW ANSWERS".
+      // See lockBehindHold()'s own note for the whole rule and its traps.
+      if (answersRow) lockBehindHold(answersRow, [again, mistRow], result, entryId);
       // "Play a different template" was HERE until Đợt 84 and moved out to make
       // room: a 5th button pushed the panel past its 92% max-height and made it
       // scroll, hiding the last row. The same picker still lives in the ☰ menu
@@ -4546,6 +4532,66 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     }
     panel.append(items);
     bd.append(panel);
+  }
+
+  /**
+   * ⭐⭐⭐ Đợt 243 (23/8/2026, thầy) — "ẩn luôn cả START WITH MISTAKES và START
+   * AGAIN và hiện chúng ra khi nhấn giữ Show answers. Làm như vậy với mọi mode,
+   * trừ assignment".
+   *
+   * REPLACES Đợt 207, which hid only "Start with mistakes" and unlocked it by
+   * holding "Start again" — and only in Showdown. Two things widen here:
+   *   • BOTH restart rows are hidden now, so a pupil who reaches the end of a
+   *     game cannot restart it at all without the teacher's finger;
+   *   • EVERY mode does it — Single, Showdown, Fight, Play mode.
+   *
+   * ⛔ ASSIGNMENT IS NOT ROUTED HERE AT ALL. Student mode builds its rows in the
+   * `if (session)` branch above from the teacher's own `session.endOptions`
+   * tick-boxes, and has its own practise/submit flow — thầy's explicit
+   * exception. That branch is untouched by this đợt, byte for byte.
+   *
+   * ⚠️ ONLY CALLED WHEN "Show answers" IS ON SCREEN. It is the only key, so
+   * hiding the restart rows without it would leave a dead-end panel (an act
+   * with `showAnswers:false`, or a template that records no review rows). No
+   * key => nothing is locked, and the panel reads exactly as it did before
+   * Đợt 207. Do NOT "improve" this by falling back to Leaderboard: Showdown
+   * hides that row too (Đợt 208), so the dead end would come straight back.
+   *
+   * ⚠️ `opener.onclick` is CLEARED first. panelItem wires a plain onclick, and
+   * core/press.js's tapOrHold swallows the trusted `click` itself — the two
+   * together would open the review twice on a browser that still delivered one,
+   * and half the point of tapOrHold is that `click` cannot be trusted on the
+   * TOMKO infrared screen anyway.
+   *
+   * ⚠️ Hidden with a class, NOT by leaving the node out: it has to be in the
+   * tree for the reveal to animate (`.aw-panel-item.is-held` in app.css opens a
+   * max-height — with `overflow:hidden`, the Đợt 137 trap). And `disabled` goes
+   * with it, because a zero-height row can still be reached by the keyboard:
+   * hidden must mean "cannot be pressed".
+   *
+   * ⚠️ NOT REMEMBERED between paintings (thầy chốt qua AskUserQuestion): every
+   * showSummary() builds fresh rows, so coming Back from Show answers or the
+   * Leaderboard locks them again. That is the point of the lock, not an
+   * oversight — nothing here should be moved up into the closure to persist it.
+   */
+  function lockBehindHold(opener, rows, result, entryId) {
+    const locked = rows.filter(Boolean);
+    if (!locked.length) return;
+    locked.forEach(r => { r.classList.add("is-held"); r.disabled = true; });
+    opener.onclick = null;
+    tapOrHold(opener, {
+      // ⭐ Đợt 243 — the row lights up and squeezes for as long as the finger is
+      // down (core/app.css `.aw-panel-item.is-holding`), so the class can see
+      // the press being counted. tapOrHold owns putting it on and taking it off.
+      holdClass: "is-holding",
+      onTap: () => { sound.click(); showReview(result, entryId); },
+      onHold: () => {
+        if (!locked.some(r => r.disabled)) return;   // already out — a second hold does nothing
+        sound.click();
+        locked.forEach(r => { r.disabled = false; r.classList.add("is-on"); });
+      }
+    });
+    opener.title = "Hold to unlock Start again";
   }
 
   // Student mode: the CLASS ranking for this assignment, read live from the

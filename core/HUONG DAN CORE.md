@@ -1050,11 +1050,35 @@ duy nhất của 5 trận đã đánh. Câu hỏi phải nói ra điều đó.
 `.aw-sd-recent` là 6 và `.aw-sd-rec-detail` là 7, tức câu hỏi sẽ nằm **dưới chính thứ nó đang hỏi về**.
 Nay là **9**. Thêm lớp mới vào panel này thì phải kiểm lại con số đó.
 
-**(h) Dòng "Start with mistakes" ẩn sau NHẤN GIỮ "Start again" — ⛔ CHỈ TRONG SHOWDOWN.**
-Bảng cuối game dùng chung cho cả 17 template ở mọi chế độ; thầy chỉ thu hẹp cho Showdown.
+**(h) HAI DÒNG RESTART ẨN SAU NHẤN GIỮ "SHOW ANSWERS" — ⛔ MỌI MODE, TRỪ ASSIGNMENT (Đợt 243).**
+Bảng cuối game dùng chung cho cả 17 template. Từ Đợt 243, **cả** "Start again" **lẫn** "Start with
+mistakes" bị ẩn, và chìa khoá là cú nhấn giữ trên **"Show answers"** — một hàm duy nhất,
+`lockBehindHold()` trong closure `startGame()` (`core/engine.js`, ngay dưới `showSummary()`).
+*Thay thế Đợt 207, vốn chỉ ẩn "Start with mistakes", mở bằng "Start again", và chỉ trong Showdown.*
+
+⛔ **ASSIGNMENT KHÔNG ĐI QUA ĐÂY.** Chế độ học sinh dựng dòng ở nhánh `if (session)` từ ô tích
+`session.endOptions` của thầy, và có luồng luyện tập/nộp bài riêng — đừng gọi `lockBehindHold()` ở đó.
+
+⚠️ **CHỈ KHOÁ KHI DÒNG "SHOW ANSWERS" CÓ MẶT.** Nó là chìa khoá duy nhất; ẩn hai dòng restart mà
+không có nó = bảng cụt đường (act tắt `showAnswers`, hoặc template không ghi `reviewData`). Không có
+chìa thì không khoá gì. ⛔ **Đừng lùi về Leaderboard làm chìa khoá thay thế** — Showdown ẩn luôn dòng
+đó (Đợt 208), đường cụt quay lại ngay.
+
 ⚠️ Phải **xoá `onclick`** mà `panelItem` gắn trước khi treo `tapOrHold` (nó tự nuốt cú `click` thật —
-hai thứ cùng sống là `restart()` chạy hai lần). Ẩn bằng class + **`disabled`**: hàng cao 0 vẫn bấm
+hai thứ cùng sống là hành động chạy hai lần). Ẩn bằng class + **`disabled`**: hàng cao 0 vẫn bấm
 được bằng bàn phím. `overflow:hidden` bắt buộc (bẫy Đợt 137).
+
+⚠️ **Không nhớ trạng thái**: mỗi `showSummary()` dựng dòng mới nên Back về là khoá lại. Đó là mục
+đích, không phải sót.
+
+⚠️ **`tapOrHold({holdClass})`** (`core/press.js`, opt-in từ Đợt 243) đeo class suốt cú giữ và gỡ ở
+**cả 4 đường ra** (đủ giờ · nhấc tay sớm · trượt ngón · `pointercancel`/`lostpointercapture`). CSS
+`.aw-panel-item.is-holding` chạy **420ms** — con số này **PHẢI** luôn bằng `HOLD_MS` của `press.js`,
+vì hoạt cảnh chạy hết chính là lời hứa cú giữ đã ăn.
+
+⛔ **BẪY KHI VIẾT BENCH ĐO CÁI NÀY**: tab chạy nền thì đồng hồ hoạt cảnh của trình duyệt đứng im,
+mọi `transition` kẹt ở `currentTime 0`, nên dòng vừa mở khoá đo ra **cao 0px** dù CSS đúng hoàn toàn.
+Gọi `document.getAnimations().forEach(a => a.finish())` **trước khi đo**.
 
 ### Hợp đồng cho template (opt-in — Đợt 178: 8/17 template)
 

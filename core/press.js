@@ -107,20 +107,33 @@ export function press(el, handler) {
 const HOLD_MS = 420;      // giữ quá ngần này là "nhấn giữ"
 const MOVE_TOL = 14;      // đi xa hơn ngần này là cuộn/trượt, không phải bấm
 
-export function tapOrHold(el, { onTap, onHold }) {
+/**
+ * `holdClass` (⭐ Đợt 243, tuỳ chọn) — tên class đeo lên phần tử TRONG SUỐT cú
+ * nhấn giữ, gỡ ra ngay khi cú giữ kết thúc dù kết thúc kiểu gì (đủ giờ · nhấc
+ * tay sớm · trượt ngón · huỷ). Để CSS vẽ được "máy đang nhận, giữ tiếp đi" —
+ * trên màn hồng ngoại TOMKO không có con trỏ chuột nào báo điều đó cả.
+ * ⚠️ OPT-IN: không truyền thì không một dòng nào ở dưới đổi hành vi, nên mọi
+ * chỗ đang gọi tapOrHold (Options · Mode · Change template · bảng cuối game)
+ * chạy y hệt như trước.
+ * ⚠️ Phải gỡ ở CẢ BỐN đường ra. Bỏ sót `lostpointercapture` là nút kẹt vĩnh
+ * viễn trong trạng thái "đang giữ" khi ngón tay trượt khỏi màn hình.
+ */
+export function tapOrHold(el, { onTap, onHold, holdClass = "" }) {
   if (!window.PointerEvent) {                 // trình duyệt rất cũ: còn một cử chỉ hơn là không có gì
     el.addEventListener("click", () => onTap());
     return el;
   }
   let holdTimer = null, held = false, downId = null, sx = 0, sy = 0;
-  const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } };
+  const mark = on => { if (holdClass) el.classList.toggle(holdClass, on); };
+  const clearHold = () => { if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; } mark(false); };
 
   el.addEventListener("pointerdown", e => {
     if (el.disabled || e.button !== 0) return;
     downId = e.pointerId; held = false; sx = e.clientX; sy = e.clientY;
     try { el.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
     clearHold();
-    holdTimer = setTimeout(() => { holdTimer = null; held = true; onHold(); }, HOLD_MS);
+    mark(true);
+    holdTimer = setTimeout(() => { holdTimer = null; held = true; mark(false); onHold(); }, HOLD_MS);
   });
 
   el.addEventListener("pointermove", e => {
@@ -138,7 +151,7 @@ export function tapOrHold(el, { onTap, onHold }) {
 
   const cancel = () => { downId = null; held = false; clearHold(); };
   el.addEventListener("pointercancel", cancel);
-  el.addEventListener("lostpointercapture", () => { downId = null; });
+  el.addEventListener("lostpointercapture", () => { downId = null; clearHold(); });
   el.addEventListener("contextmenu", e => e.preventDefault());
 
   el.addEventListener("click", e => {

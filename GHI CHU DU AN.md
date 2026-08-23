@@ -5,6 +5,147 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 243 (23/8/2026) — ⭐⭐⭐ BẢNG CUỐI GAME: KHOÁ CẢ **START AGAIN** LẪN **START WITH MISTAKES** SAU CÚ NHẤN GIỮ **SHOW ANSWERS** (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN"
+
+Thầy giao 2 việc, chốt 3 điểm mơ hồ qua AskUserQuestion trước khi build ("ok build"). Sửa 3 file:
+`core/engine.js` · `core/press.js` · `core/app.css`. Thêm 2 file thử cục bộ (không lên git):
+`scratch/dot243-panel.html` (**57/57 ĐẠT, 0 lỗi console**) và `scratch/dot243-visual.html` (xem mắt).
+
+### 1) BẢNG CUỐI GAME — HAI DÒNG RESTART NẰM SAU MỘT CÚ NHẤN GIỮ
+
+Thầy: *"Bảng cuối game hiện đang ẩn Start with mistakes và chỉ hiện ra khi giữ thanh start again, bây
+giờ hãy ẩn luôn cả START WITH MISTAKES và START AGAIN và hiện chúng ra khi nhấn giữ Show answers. Làm
+như vậy với mọi mode, trừ assignment vì assignment có cơ chế luyện tập và gửi kết quả riêng."*
+
+**THAY THẾ ĐỢT 207**, nới rộng theo 2 hướng cùng lúc:
+
+| | Đợt 207 (cũ) | Đợt 243 (nay) |
+|---|---|---|
+| dòng bị ẩn | chỉ *Start with mistakes* | **cả** *Start again* **và** *Start with mistakes* |
+| chìa khoá | nhấn giữ *Start again* | nhấn giữ **Show answers** |
+| phạm vi | **chỉ Showdown** | **mọi mode**: Single · Showdown · Fight · Play mode |
+| assignment | không đụng | **vẫn không đụng** |
+
+Cách làm: hàm mới `lockBehindHold(opener, rows, result, entryId)` trong closure `startGame()`
+(`core/engine.js`, ngay dưới `showSummary()`). Nó đeo `.is-held` + `disabled` cho từng dòng trong
+`rows`, xoá `opener.onclick` rồi gắn `tapOrHold()` — chạm nhanh = mở bảng đáp án như cũ, giữ 420ms =
+mở khoá **cả hai** dòng cùng lúc. Chỗ gọi chỉ một dòng: `if (answersRow) lockBehindHold(answersRow,
+[again, mistRow], result, entryId);`.
+
+⛔ **ASSIGNMENT KHÔNG ĐI QUA ĐÂY.** Chế độ học sinh dựng dòng ở nhánh `if (session)` phía trên, lấy
+từ ô tích `session.endOptions` của thầy lúc giao bài, và có luồng luyện tập/nộp bài riêng. Nhánh đó
+đợt này **không sửa một byte nào** — bench có 4 phép thử canh riêng chuyện này.
+
+⚠️ **CHỈ KHOÁ KHI CÓ DÒNG "SHOW ANSWERS"** (thầy chốt qua AskUserQuestion). Nó là chìa khoá duy nhất,
+nên ẩn hai dòng restart mà không có nó = bảng cụt đường, chỉ còn menu ☰. Act tắt `showAnswers` hoặc
+template không ghi `reviewData` thì `answersRow` là `null` ⇒ không khoá gì, bảng đọc y như trước cả
+Đợt 207. **⛔ ĐỪNG "cải tiến" bằng cách lùi về Leaderboard làm chìa khoá**: Showdown ẩn luôn dòng đó
+(Đợt 208) nên đường cụt quay lại ngay.
+
+⚠️ **KHÔNG NHỚ TRẠNG THÁI giữa các lần vẽ** (thầy chốt qua AskUserQuestion). Mỗi `showSummary()` dựng
+dòng mới, nên đi Show answers/Leaderboard rồi Back là khoá lại. Đó là **mục đích của cái khoá**, không
+phải sót — đừng đẩy biến này lên closure để nó sống dai hơn.
+
+⚠️ `opener.onclick` phải XOÁ trước khi gắn `tapOrHold` — `panelItem()` gắn `onclick` thường, mà
+`tapOrHold` đã nuốt sự kiện `click` tin cậy rồi; để cả hai thì trình duyệt nào còn phát `click` sẽ mở
+bảng đáp án **hai lần**.
+
+⚠️ Ẩn bằng **class**, không phải bỏ node ra khỏi cây — dòng phải có mặt thì mới mở ra mượt được
+(`.aw-panel-item.is-held` mở `max-height`, kèm `overflow:hidden` — **bẫy Đợt 137**). Và `disabled` đi
+kèm, vì dòng cao 0 vẫn Tab tới được: ẩn phải có nghĩa là **không bấm được**.
+
+### 2) ⭐ HIỆU ỨNG "ĐANG GIỮ" (thầy chọn phương án 3 khi được hỏi)
+
+`core/press.js` — `tapOrHold()` thêm tuỳ chọn **`holdClass`** (opt-in, mặc định `""` ⇒ mọi chỗ đang
+gọi nó — Options · Mode · Change template — không đổi một dòng hành vi). Có truyền thì class đó được
+đeo lúc `pointerdown` và gỡ ở **CẢ BỐN** đường ra: đủ giờ · nhấc tay sớm · trượt ngón quá `MOVE_TOL` ·
+`pointercancel`/`lostpointercapture`.
+
+⛔ **Bỏ sót `lostpointercapture` là nút kẹt sáng vĩnh viễn** khi ngón trượt khỏi màn hình — đã gộp
+`clearHold()` vào đó luôn.
+
+`core/app.css` — `.aw-panel-item.is-holding` chạy hoạt cảnh `aw-panel-hold` **420ms**: nền xanh
+`rgba(53,177,240,.28)` dâng lên, chữ ngả `#9ddcff`, cả dòng co còn `scale(.955)`.
+
+⚠️ **420ms PHẢI luôn bằng `HOLD_MS` trong `core/press.js`.** Hoạt cảnh chạy hết = lời hứa cú giữ đã
+ăn. Đổi một bên mà quên bên kia là biến ánh sáng đó thành lời nói dối. Bench có phép thử canh đúng
+con số này.
+
+⚠️ `forwards` là bắt buộc: khung cuối phải giữ nguyên cho tới khi `press.js` gỡ class, không thì dòng
+tối sập một khung hình ngay trước lúc mở khoá.
+
+⚠️ Bản `prefers-reduced-motion` dùng **tên hoạt cảnh KHÁC** (`aw-panel-hold-flat`) chứ không khai lại
+cùng một tên `@keyframes` bên trong `@media` — khai trùng tên thì "bản nào thắng" phụ thuộc thứ tự
+nguồn và trình duyệt.
+
+### 3) ⛔⛔ TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN" — LỖI IM LẶNG CÓ TỪ ĐỢT 197
+
+Thầy báo: *"Trong bảng showdown sau khi xong game, tôi chưa thấy tự đổi tên bảng và vẫn hiện các tên
+như cũ"* — kèm ảnh thẻ trận đề "Showdown" và bảng Table đề "SHOWDOWN B1AH".
+
+**KHÔNG PHẢI Đợt 242 làm thiếu.** Gốc rễ nằm ở `core/engine.js`, một dòng viết từ Đợt 197:
+
+```js
+const actName = originAct?.name || "";     // ⛔ SAI
+```
+
+Trong thư viện, **một ACT tên gì nằm ở `.title`; `.name` là của THƯ MỤC** (`core/store.js`,
+`itemName()`: `node.kind === "folder" ? node.name : node.title`). Nên dòng này **luôn** trả về chuỗi
+rỗng, và cả chuỗi đặt tên phía sau chết theo, im lặng tuyệt đối:
+
+1. `saveMatchResult()` ghi `actName: ""` xuống sổ cái lớp;
+2. `formatActDisplayName("")` thoát ngay ở dòng đầu (`if (!name) return ""`) ⇒ công thức
+   "X / ENG1 QUIZ" của **Đợt 230 + 242 không bao giờ chạy tới**;
+3. `displayName(m)` rơi xuống chữ chống-cháy cuối cùng: **"Showdown"**.
+
+Sửa: `originAct?.title`. Vá luôn bảng "đội kia đang chơi act nào" giữa giờ, vì `saveTeamResult()`
+ngay dưới dùng **chung đúng biến này**.
+
+⚠️ **TRẬN ĐÃ LƯU THÌ KHÔNG CỨU ĐƯỢC.** Chúng đã ghi `actName: ""` xuống Firestore, không còn dữ liệu
+nào để suy ngược ra tên act. Chúng sẽ đọc là "Showdown" mãi mãi trừ khi thầy chạm-đúp đổi tên tay
+(`customName` luôn thắng). Chỉ trận **mới** mới ra đúng `LSA2-S2.T1.P3-4-5 / ENG1 QUIZ`.
+
+⚠️ **BÀI HỌC**: một trường không tồn tại đọc ra `undefined`, `|| ""` nuốt nó, và cả chuỗi 3 hàm phía
+sau đều xử lý "rỗng" như một trường hợp hợp lệ có sẵn đường lùi. Không hàm nào kêu. Đợt 230 và Đợt 242
+đều test chính hàm của mình (và ĐẠT), nhưng **không đợt nào test từ ĐẦU chuỗi — từ node thư viện thật
+đi ra**. Bench đợt này làm đúng chỗ đó: dựng `{kind:"act", title:"..."}` rồi mới chạy xuôi, và có một
+phép thử **tái hiện lỗi cũ** (`actNode.name` ⇒ "Showdown") để nó không lặng lẽ quay lại.
+
+### KHÔNG ĐỔI
+
+* `templates/running-word` và `templates/running-team` thay hẳn bảng cuối game bằng hook
+  `tpl.renderSummary` (chỉ có Start again, không có Show answers) ⇒ hai template này **không đổi gì**.
+* `scratch/sd207-review.html` vẫn ĐẠT 29/29 nhưng nó **chép** logic Đợt 207 vào bench chứ không chạy
+  code thật, nên nó đang mô tả một hành vi **không còn tồn tại**. Đọc `dot243-panel.html` thay thế.
+
+### TEST
+
+`scratch/dot243-panel.html` — **57/57 ĐẠT, 0 lỗi console**, ba tầng cố ý tách ra:
+* **tầng 1 (DOM thật)**: `press.js` + `app.css` thật, giả lập ngón tay bằng `PointerEvent` — trạng
+  thái đầu · chạm nhanh · giữ đủ giờ · nhấc tay sớm · trượt ngón · giữ lần 2 · `rows` rỗng;
+* **tầng 2 (canh nguồn)**: đọc `core/engine.js` + `core/press.js` dạng chữ, soi 17 điểm mà tầng 1
+  không với tới (`.title` chứ không `.name` · đã gỡ hết dấu vết Đợt 207 · nhánh assignment sạch);
+* **tầng 3 (thuần dữ liệu)**: chạy `formatActDisplayName()`/`displayName()` thật.
+
+⛔ **BẪY BENCH ĐÃ MẤT 1 VÒNG SỬA OAN**: tab chạy nền thì đồng hồ hoạt cảnh của trình duyệt **đứng im**
+— mọi `transition` kẹt ở `currentTime 0`, nên dòng vừa mở khoá đo ra **cao 0px** dù CSS hoàn toàn
+đúng. Phải `document.getAnimations().forEach(a => a.finish())` **trước khi đo** (helper `done()`,
+đúng cái `sd207-review.html` đã có sẵn).
+
+Hồi quy: `sd207-panel` 60/60 · `sd207-review` 29/29 · `dot241-showdown` 19/19 · `dot242-showdown`
+27/27 · `sd198-panel` 33/35 (2 hỏng đã biết, thuộc công thức LEFT đổi từ Đợt 207) · `dot238-showdown`
+36/40 (4 hỏng đã biết từ Đợt 241, thuộc kích thước canvas xuất) — **không cái nào liên quan đợt này**.
+
+⚠️ **CHƯA CHỤP ĐƯỢC ẢNH MÀN HÌNH** đợt này (Browser pane không hiển thị nên trang không dựng khung
+hình). Đã xác minh bằng **số đo** thay thế: 3 trạng thái trong `dot243-visual.html` đo ra đúng —
+khoá: hai dòng cao `0px`; đang giữ: nền `rgba(53,177,240,.275)` + chữ `rgb(158,220,255)` +
+`scale(.955)`; mở: cả bốn dòng cao `19.2px`.
+
+⚠️ **CHƯA BẤM TAY THẬT TRÊN TOMKO** — nhất là cảm giác nhấn giữ 420ms trên màn hồng ngoại, và một ván
+Showdown thật để nhìn tên trận mới trên sổ cái.
+
+---
+
 ## Đợt 242 (23/8/2026) — ⭐⭐⭐ LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM — ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu")** — **COMMIT `9933a3b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/engine.js` · `core/showdown-history.js` · `core/showdown-setup.js` · `core/showdown.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ **"THẦY DUYỆT" ở đây là duyệt CODE + tự test qua Firestore giả (27/27, 0 lỗi console) — CHƯA bấm tay

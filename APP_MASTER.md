@@ -8,7 +8,31 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 242)** — ⭐⭐⭐ **LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN
+> Cập nhật lần cuối: **23/8/2026 (Đợt 243)** — ⭐⭐⭐ **BẢNG CUỐI GAME: KHOÁ CẢ "START AGAIN" LẪN
+> "START WITH MISTAKES" SAU CÚ NHẤN GIỮ "SHOW ANSWERS" (MỌI MODE, TRỪ ASSIGNMENT) · ⛔ SỬA LỖI IM LẶNG
+> TỪ ĐỢT 197 LÀM TÊN TRẬN SHOWDOWN LUÔN LÀ "SHOWDOWN".** Sửa 3 file: `core/engine.js` ·
+> `core/press.js` · `core/app.css`. Tự test `scratch/dot243-panel.html` **57/57 ĐẠT, 0 lỗi console**.
+> Tóm tắt:
+> **(1)** Hàm mới `lockBehindHold()` trong `startGame()` thay thế cơ chế Đợt 207 — nay ẩn **cả hai**
+> dòng restart và chìa khoá chuyển sang **Show answers**, áp dụng cho **mọi mode** (Single · Showdown ·
+> Fight · Play mode). ⛔ **Assignment không đi qua đây** (nhánh `if (session)` dựng dòng từ
+> `session.endOptions`, đợt này không sửa một byte). ⚠️ Chỉ khoá KHI có dòng Show answers — không có
+> thì bảng đọc y như trước Đợt 207, không bao giờ cụt đường. ⚠️ Không nhớ trạng thái: Back về là khoá
+> lại (thầy chốt).
+> **(2)** `tapOrHold()` (`core/press.js`) thêm tuỳ chọn **opt-in** `holdClass`, gỡ ở cả 4 đường ra
+> (kể cả `lostpointercapture`, bỏ sót là nút kẹt sáng vĩnh viễn). CSS `.aw-panel-item.is-holding` —
+> nền xanh dâng + chữ sáng + `scale(.955)` trong **420ms**; ⚠️ con số này **PHẢI** luôn bằng `HOLD_MS`
+> của `press.js`.
+> **(3)** ⛔⛔ `const actName = originAct?.name` → `originAct?.title`. Trong thư viện **act mang
+> `.title`, chỉ THƯ MỤC mới mang `.name`** (`core/store.js` `itemName()`), nên dòng cũ luôn trả rỗng ⇒
+> `formatActDisplayName("")` thoát ngay ⇒ công thức "X / ENG1 QUIZ" của Đợt 230+242 **không bao giờ
+> chạy tới** ⇒ mọi thẻ trận đọc là "Showdown". Vá luôn bảng "đội kia chơi act nào" giữa giờ (dùng chung
+> biến). ⚠️ **Trận ĐÃ LƯU không cứu được** — đã ghi rỗng xuống Firestore; chỉ trận mới mới đúng tên.
+> ⚠️ **CHƯA bấm tay thật trên TOMKO, CHƯA chụp được ảnh màn hình** (Browser pane không hiển thị — đã
+> xác minh bằng số đo thay thế). Đọc khối **Đợt 243** đầu `GHI CHU DU AN.md` để biết đủ.
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 242)** — ⭐⭐⭐ **LỚP 1 TEAM LƯU NHƯ TEAM THƯỜNG · TÊN TRẬN
 > "ENG1 QUIZ" · MÀN ANALYSING BLUR+DIM.** ✅ **THẦY DUYỆT ("commit + push live + ghi dữ liệu") —
 > COMMIT `9933a3b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit · **6/6 mã băm SHA-256
 > khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/engine.js` · `core/showdown-history.js` ·

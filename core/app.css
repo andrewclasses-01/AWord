@@ -768,9 +768,12 @@ html.aw-nhung .aw-below { display: none; }
   transition: color .12s ease, background .12s ease;
 }
 .aw-panel-item:hover { color: #35b1f0; background: rgba(255,255,255,.04); }
-/* ⭐⭐ Đợt 207 (thầy) — "Start with mistakes" hidden until a PRESS-AND-HOLD on
-   "Start again" lets it out. SHOWDOWN ONLY: core/engine.js hangs `.is-held` on
-   the row in no other mode, so every other game's end panel is untouched.
+/* ⭐⭐ Đợt 207 (thầy) — a restart row hidden until a PRESS-AND-HOLD lets it out.
+   ⭐⭐⭐ Đợt 243 — now BOTH "Start again" and "Start with mistakes" wear this, in
+   EVERY mode, and the key moved to "Show answers" (core/engine.js
+   lockBehindHold()). The rules below did not change — only who wears them.
+   ⛔ Assignment (student mode) never hangs `.is-held` on anything: it builds its
+   own rows from the teacher's endOptions and is deliberately left alone.
    ⚠️ `overflow:hidden` is NOT optional on a max-height accordion — Đợt 137 lost
    a real feature to exactly this (an invisible slider lying over a real one)
    because a collapsed row was still there to be hit.
@@ -785,6 +788,37 @@ html.aw-nhung .aw-below { display: none; }
 .aw-panel-item.is-held.is-on {
   max-height: 8cqw; opacity: 1;
   padding-top: 0.9cqw; padding-bottom: 0.9cqw; pointer-events: auto;
+}
+
+/* ⭐⭐⭐ Đợt 243 (thầy) — "có hiệu ứng khi đang giữ". The key row ("Show answers")
+   lights up and squeezes for exactly as long as the finger is down, so a press
+   that IS being counted looks different from a tap that is not. On the TOMKO
+   infrared screen there is no cursor and no :hover to say so.
+   ⚠️ The 420ms MUST stay equal to HOLD_MS in core/press.js — the animation
+   finishing IS the promise that the hold has landed. Changing one without the
+   other turns the light into a lie.
+   ⚠️ `forwards` on purpose: the last frame has to hold until core/press.js
+   takes the class off, or the row would snap dark a frame before it unlocks.
+   ⚠️ `background` is animated, not `background-color`, so it beats the plain
+   `:hover` background on the same element without needing !important. */
+.aw-panel-item.is-holding {
+  animation: aw-panel-hold 420ms cubic-bezier(.22,.9,.3,1) forwards;
+}
+@keyframes aw-panel-hold {
+  from { background: rgba(53,177,240,0);   transform: scale(1);    color: #fff; }
+  to   { background: rgba(53,177,240,.28); transform: scale(.955); color: #9ddcff; }
+}
+/* ⚠️ A SECOND, SEPARATELY NAMED animation rather than re-declaring
+   `aw-panel-hold` inside the media block: redefining one @keyframes name twice
+   makes "which one wins" depend on source order and on the browser, and this
+   one has to be exactly as long as HOLD_MS either way. Same timing, same
+   colour, no movement. */
+@media (prefers-reduced-motion: reduce) {
+  .aw-panel-item.is-holding { animation-name: aw-panel-hold-flat; }
+}
+@keyframes aw-panel-hold-flat {
+  from { background: rgba(53,177,240,0);   color: #fff; }
+  to   { background: rgba(53,177,240,.28); color: #9ddcff; }
 }
 
 /* Change-template picker: the compatible games as a compact 2-column grid
