@@ -198,9 +198,12 @@ còn ca đó**: Đợt 212 đã khai tử `pron` (`RETIRED_VARIANTS` trong `core
 
 - ⚠️ **CHƯA bấm tay thật trên TOMKO**; `screenshot` vẫn timeout (Browser pane không hiển thị) — đợt
   này nghiệm hoàn toàn bằng **số đo** trên 3 bàn thử.
-- ⛔ **Bài giao ĐÃ ra không tự khỏi**: hai hàng chọn nội dung và ô Show answers là chuyện của FORM;
-  bản chụp đã đóng băng chỉ đổi khi thầy mở **Edit** rồi **Save** (mở Save một lần cũng chính là cách
-  đóng dấu `optVer` cho bài cũ).
+- ⭐⭐ **THẦY XÁC NHẬN NGAY SAU ĐỢT NÀY: mọi bài giao cũ đều là THỬ NGHIỆM** (*"các bài cũ đều là
+  thử nghiệm, tôi đang build để chuẩn bị giao bài thực sự"*). Nên **không có việc vá bài cũ nào phải
+  làm**, và xoá sạch chúng là an toàn. **Bài giao THẬT bắt đầu từ sau Đợt 245.**
+- ⛔ Cơ chế vẫn đúng, chỉ là không còn dữ liệu để cứu: bản chụp bài giao **đóng băng**, nên hai hàng
+  chọn nội dung và ô Show answers là chuyện của FORM — bài đã ra chỉ đổi khi mở **Edit** rồi **Save**
+  (cú Save đó cũng chính là cách đóng dấu `optVer`). Giữ để hiểu cơ chế, đừng đọc thành việc phải làm.
 - ✅ Đã commit + push + kiểm chứng live (mã băm ghi ở khối HỒ SƠ CHỐT ngay dưới tiêu đề đợt).
 
 ---
