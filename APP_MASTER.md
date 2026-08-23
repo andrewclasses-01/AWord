@@ -8,7 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **23/8/2026 (Đợt 245)** — ⭐⭐⭐ **BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT**:
+> Cập nhật lần cuối: **23/8/2026 (Đợt 246)** — ⭐⭐⭐ **ASSIGNMENT CÓ HAI CHẾ ĐỘ PRACTICE / SUBMIT +
+> GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI**. ✅ **THẦY DUYỆT — ĐÃ COMMIT + PUSH** (backup `_backup/dot246/`;
+> hồ sơ live ở khối Đợt 246 đầu `GHI CHU DU AN.md`).
+> Màn START học sinh = 2 nút (PRACTICE tạ vàng | SUBMIT play xanh, chọn lại mỗi lượt; ván mistakes
+> chỉ có PRACTICE). **PRACTICE**: không gửi gì, có Start with mistakes (mở khoá riêng cho practice).
+> **SUBMIT**: gửi NGẦM ngay khi xong game (thầy chốt — em đóng tab sớm vẫn không mất bài); màn cuối
+> là **BẢNG ĐÔI bằng nhau tuyệt đối** — trái leaderboard tự hiện (đủ cả lớp, chữ tự co/nở 0.28–2×,
+> có phạt/Gameshow chỉ hiện Score trần), phải điểm + nút **SUBMIT HOMEWORK** vàng to + Show answers
+> (ô tích DUY NHẤT còn lại trên form Set/Edit — 2 ô Leaderboard/Start again ĐÃ BỎ, document vẫn ghi
+> đủ 3 khoá) + Start again (quay về màn 2 nút). Lễ SUBMIT HOMEWORK: dim+blur → SUBMITTING HOMEWORK
+> vàng shimmer + ANDREW CLASSES nhấc từng chữ ≥2s → **chỉ khi server xác nhận CẢ 2 bản ghi** mới
+> thu nhỏ bay vào đúng hàng của em (⛔ không bao giờ fake) → lỗi thì màn tiếng Việt GỬI LẠI BÀI TẬP /
+> CHỤP ẢNH MÀN HÌNH (hướng dẫn iPhone/Android + bảng HÃY CHỤP LẠI MÀN HÌNH đủ chi tiết + XONG).
+> Cơ chế gửi (`core/assignments.js` viết lại): **id lượt cố định** (setDoc ⇒ không bao giờ đúp) +
+> **outbox localStorage** ghi trước lần thử đầu, mở lại link tự gửi nốt + `withTimeout` cắt treo +
+> ca mơ hồ dùng `mayExist*` (scores: đọc kiểm; results: create-only ⇒ permission-denied = đã tới).
+> **KHÔNG đụng template, KHÔNG cần đăng luật Firestore.** Sửa 6 file: `core/assignments.js` ·
+> `core/engine.js` · `core/assignment-ui.js` · `core/app.css` · `core/icons.js` · `play.js`.
+> Bàn thử `scratch/dot246-send/-flow/-forms.html` + `fake-firebase246.js`: **74/74 ĐẠT, 0 lỗi
+> console**; ⭐ screenshot pane sống lại — mọi màn đã NHÌN THẬT qua `scratch/dot246-visual.html`.
+> ⛔ Bẫy đo mới (chi tiết ở `GHI CHU DU AN.md` Đợt 246): fitOnce đo bề ngang ⇒ bảng grid bị ép đáy
+> 0.28 · đo tên cắt cụt phải dùng rect số thực của span con, scrollWidth mù nửa pixel · epsilon 0.
+> Session contract mới (submit/retrySubmit/attemptId/meta) ở `core/HUONG DAN CORE.md`.
+>
+> ---
+> Trước đó: **23/8/2026 (Đợt 245)** — ⭐⭐⭐ **BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT**:
 > thêm 2 hàng chọn nội dung · bỏ ô "Show answers" CHẾT · vá `optVer` ở đường Edit · chặn 3 template
 > không giao được · báo cáo Result thôi nói dối khi có trừ điểm.
 > ✅ **THẦY DUYỆT — COMMIT `589a05b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·

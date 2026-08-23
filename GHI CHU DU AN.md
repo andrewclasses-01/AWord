@@ -5,6 +5,94 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 246 (23/8/2026) — ⭐⭐⭐ ASSIGNMENT: HAI CHẾ ĐỘ PRACTICE / SUBMIT + CƠ CHẾ GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI + BẢNG ĐÔI CUỐI GAME + LỄ SUBMIT HOMEWORK
+
+✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — **ĐÃ COMMIT + PUSH** (mã băm live đối
+chiếu ở khối HỒ SƠ ngay dưới, ghi sau khi Pages build xong). Sửa **6 file**: `core/assignments.js` ·
+`core/engine.js` · `core/assignment-ui.js` · `core/app.css` · `core/icons.js` · `play.js`.
+Backup bản trước ở `_backup/dot246/`. **KHÔNG đụng template nào, KHÔNG phải đăng luật Firestore mới**
+(đối chiếu từng dòng với luật đang chạy trong `docs/08-FIREBASE-SETUP.md`).
+Ba bàn thử `scratch/dot246-send/-flow/-forms.html` + bộ giả mới `scratch/fake-firebase246.js`
+(thêm treo mạng · treo-sau-ghi · luật create-only · `increment`) — **28/28 + 37/37 + 9/9 = 74/74 ĐẠT,
+0 lỗi console**. ⭐ **Screenshot pane HOẠT ĐỘNG TRỞ LẠI lần đầu sau 8 đợt** — mọi màn mới đã được
+NHÌN THẬT qua `scratch/dot246-visual.html` (7 trạng thái có nút bấm chuyển).
+
+**1) MÀN START (chỉ chế độ học sinh):** nút play to thay bằng CẶP nút — **PRACTICE** (tạ vàng, icon
+mới `icons.practiceBig`) | **SUBMIT** (icon play cũ, xanh). Chọn lại MỖI lượt (Start again quay về
+đây — thầy chốt). Ván "Start with mistakes" chỉ có nút PRACTICE (nộp ván cụt là nộp bài sai).
+Chế độ thầy/Fight/Showdown không đổi một pixel. ⚠️ Cổng chờ Đợt 122 đổi từ `bigPlay` sang biến
+`playControl` (= cặp nút khi có session) — sửa cổng chờ thì nhớ nó điều khiển CẢ CẶP.
+
+**2) PRACTICE:** không gửi gì, dữ liệu chỉ trong phiên (thầy chốt). Menu cuối: dòng "PRACTICE — NOT
+SENT TO YOUR TEACHER" + Show answers (nếu tích) + Start again + **Start with mistakes** —
+`mistakesAvailable()` mở khoá riêng cho `hwMode === "practice"` (trước giờ chặn cứng mọi session).
+
+**3) SUBMIT — GỬI NGẦM NGAY KHI XONG GAME** (thầy chốt qua AskUserQuestion): `finish()` gọi
+`session.submit()` song song màn pháo hoa; em lỡ đóng tab trước khi bấm nút vẫn không mất bài.
+Màn cuối là **BẢNG ĐÔI** (`showHomeworkEnd`, `.aw-hw-duo` 94%×88% khung): trái = **LEADERBOARD tự
+hiện** (TẤT CẢ học sinh, lượt tốt nhất mỗi em, chữ tự co/nở 0.28–2× cho vừa khít không cuộn),
+phải = điểm + nút **SUBMIT HOMEWORK** vàng to nhất + Show answers (nếu tích) + Start again.
+Hai bảng `flex: 1 1 0` trong khung cố định ⇒ **bằng nhau trong mọi tình huống**. Bỏ dòng
+Leaderboard trong menu (đã có bảng bên cạnh), bỏ Start with mistakes ở SUBMIT.
+⛔⛔ **BA BẪY ĐO ĐÃ CẮN TRONG CHÍNH ĐỢT NÀY** (giữ để đừng dựng lại):
+- `fitOnce` của core/fit.js đo CẢ BỀ NGANG mà bảng grid luôn lấp đầy bề ngang ⇒ `slack` mặc định
+  biến "vừa khít" thành "tràn" ⇒ mọi lớp bị ép xuống đáy 0.28. Fit của leaderboard là bản riêng:
+  CHIỀU CAO + điều kiện "không tên nào bị …".
+- Tên bị "…" phải đo bằng **rect số thực** của span con `.aw-lb-nametext` — `scrollWidth` là số
+  nguyên VÀ floor tại clientWidth nên tràn nửa pixel đọc thành "vừa khít".
+- Epsilon cũng KHÔNG được có: browser vẽ "…" ngay khi tràn 0.05px; ngưỡng +0.1px vẫn cắt
+  "TUẤN KHANG" thành "TUẤN KHA…" (đo thật trên bàn thử).
+
+**4) LỄ SUBMIT HOMEWORK** (`.aw-hw-sub`, z-index 15, không một dòng rAF — CSS animation + WAAPI):
+dim + blur toàn màn → **SUBMITTING HOMEWORK** vàng shimmer + **ANDREW CLASSES** nhấc từng chữ
+(span/chữ, `--i` × 75ms), tối thiểu 2s (`HW_SUBMIT_MIN_MS`) → server xác nhận → cụm chữ THU NHỎ BAY
+(WAAPI translate+scale 750ms, remove treo trên setTimeout trần — luật Đợt 216, không tin onfinish)
+vào đúng hàng của em trong leaderboard (leaderboard refresh trước để hàng tồn tại; refresh rớt mạng
+sau khi ĐÃ xác nhận thì dựng hàng từ số liệu local — bài ĐÃ tới nơi, không phải fake) → hàng nhấp
+nháy vàng ~3.4s (`.aw-hw-justland`) → nút thành **SUBMITTED — TÊN** xanh, khoá.
+⛔⛔ **CÚ BAY KHÔNG BAO GIỜ CHẠY TRÊN HY VỌNG** — điều kiện DUY NHẤT là `{ok:true}` từ
+`sendAttempt` (cả 2 bản ghi được server xác nhận). Quá ~25s (`HW_SUBMIT_GIVEUP_MS`) → màn lỗi
+tiếng Việt "GỬI BÀI CHƯA THÀNH CÔNG DO LỖI MẠNG" + 2 nút:
+- **GỬI LẠI BÀI TẬP** — `ensureSubmission()` gửi lại CÙNG lượt (cùng id ⇒ không bao giờ đúp).
+- **CHỤP ẢNH MÀN HÌNH** — hướng dẫn iPhone/Android (SVG điện thoại vẽ tay, nút nguồn/âm lượng tô
+  màu) + dặn gửi Zalo 0359.769.765 → **ĐÃ RÕ** → bảng **HÃY CHỤP LẠI MÀN HÌNH** (Học sinh · Bài
+  tập · Trò chơi · Điểm · Thời gian làm · Nộp lúc · Mã lượt) → **XONG** → về bảng đôi như cũ.
+
+**5) CƠ CHẾ GỬI CHẮC CHẮN** (`core/assignments.js` viết lại `submitResult` thành
+`queueAttempt` / `sendAttempt` / `flushOutbox` — đọc header dài trong file trước khi sửa):
+- **Một lượt = MỘT ID CỐ ĐỊNH** đúc lúc kết thúc game; cả 2 document ghi bằng `setDoc` dưới id đó
+  ⇒ gửi lại không bao giờ đẻ dòng thứ hai. `createdAt` đông cứng theo lượt = khoá chống trùng
+  phía báo cáo thầy (`loadReport` khớp tên+createdAt, không sửa gì).
+- **Outbox localStorage** (`aword-hw-outbox`, khuôn Đợt 196 của Showdown): ghi TRƯỚC lần thử đầu;
+  tab chết giữa chừng thì lần mở link sau `flushOutbox()` gửi nốt ngầm.
+- **"Đã gửi" = server nói vậy, cho CẢ HAI bản ghi.** Ca mơ hồ (timeout nhưng lệnh có thể đã tới)
+  đánh dấu `mayExist*` từng document: `scores` đọc công khai ⇒ lần sau NHÌN trước rồi mới ghi;
+  `results` HS không đọc được nhưng luật là **create-only** ⇒ ghi đè id đã tồn tại trả
+  permission-denied — VỚI cờ mayExist, chính lỗi đó LÀ bằng chứng đã tới nơi. Denied ngay lần
+  đầu (chưa thể tồn tại) = luật hỏng ⇒ `{ok:false, hard:true}`, không lặp vô ích.
+- `withTimeout` cắt treo (SDK Firestore không tự timeout — mạng chết là lệnh treo xếp hàng);
+  3 lượt × 6s + backoff. Bàn thử ép đủ 4 kịch bản ác: mạng chết hẳn · rớt tạm · **ghi-tới-nơi-
+  nhưng-mất-gói-trả-lời** (cả 2 đường) · luật từ chối — không kịch bản nào đúp bài, không kịch
+  bản nào nhận vơ thành công.
+
+**6) FORM SET/EDIT ASSIGNMENT** (thầy chốt): bỏ 2 ô tích Leaderboard + Start again, **giữ mỗi Show
+answers** (chi phối menu cả 2 chế độ). Document vẫn ghi đủ 3 khoá endOptions (leaderboard/startAgain
+neo `true`) để không ai gặp document nửa khuôn. Luật optVer Đợt 245 ở đường Edit giữ nguyên từng byte.
+
+**7) Leaderboard học sinh hết nói dối khi có trừ điểm:** bản sao 6 dòng `scoreIsPenalised` của
+Đợt 245 sang engine (`hwPenalised` — engine KHÔNG import được assignment-ui vì nó kéo store.js);
+có phạt/Gameshow thì hàng chỉ hiện Score trần, không phân số. Hai danh sách PENALTY_KEYS phải
+đi cùng nhau khi sửa. `showOnlineLeaderboard` cũ (top-10, bấm mới xem) **xoá hẳn** — bảng trái thay nó.
+
+**Session contract mới** (đủ trong `core/HUONG DAN CORE.md` mục CHẾ ĐỘ HỌC SINH — đã viết lại):
+`submit` → `Promise<{ok}>` không reject · thêm `retrySubmit()` · `attemptId()` · `meta`.
+`play.js` là nơi duy nhất đúc session; bàn thử nhân bản y nguyên khối đó.
+
+**VIỆC CÒN CHỜ THẦY:** (1) duyệt code + bấm thử tay trên máy thật/điện thoại thật (nhất là cảm giác
+2s của lễ SUBMITTING và cỡ chữ bảng đôi trên màn nhỏ); (2) nói "commit + push" là lên live;
+(3) sau khi live: giao 1 bài thật cho 1 em thử trên mạng 4G yếu — ca duy nhất bàn thử không dựng
+được là Firestore THẬT + mạng thật chập chờn.
+
 ## Đợt 245 (23/8/2026) — ⭐⭐⭐ BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT: THÊM 2 HÀNG CHỌN NỘI DUNG · BỎ Ô "SHOW ANSWERS" CHẾT · VÁ optVer Ở ĐƯỜNG EDIT · CHẶN 3 TEMPLATE KHÔNG GIAO ĐƯỢC · BÁO CÁO RESULT THÔI NÓI DỐI KHI CÓ TRỪ ĐIỂM
 
 **HỒ SƠ CHỐT — ĐÃ LIVE.** COMMIT code **`589a05b`**, đã push `main`.

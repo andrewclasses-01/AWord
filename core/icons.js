@@ -205,6 +205,16 @@ export const icons = {
     <path d="M8.2 5.6c0-1.4 1.5-2.2 2.7-1.5l9.4 5.8c1.1.7 1.1 2.3 0 3l-9.4 5.8c-1.2.7-2.7-.1-2.7-1.5V5.6z"/>
   </svg>`,
 
+  // Giant rounded DUMBBELL — the PRACTICE half of the student start screen
+  // (Đợt 246). Filled like playBig so the pair carries the same visual weight.
+  practiceBig: `<svg viewBox="0 0 24 24" fill="currentColor">
+    <rect x="1.6" y="9.3" width="2.5" height="5.4" rx="1.1"/>
+    <rect x="4.7" y="6.9" width="3.2" height="10.2" rx="1.4"/>
+    <rect x="16.1" y="6.9" width="3.2" height="10.2" rx="1.4"/>
+    <rect x="19.9" y="9.3" width="2.5" height="5.4" rx="1.1"/>
+    <rect x="8.4" y="10.7" width="7.2" height="2.6" rx="1.2"/>
+  </svg>`,
+
   // Big WHITE check with dark outline (flies up on a correct answer)
   markCheck: `<svg viewBox="0 0 24 24" fill="none">
     <path d="M4.5 12.5l5 5L19.5 6.5" stroke="#3d4852" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>

@@ -196,15 +196,26 @@ let openOptionsOnMount = false;
 const WORD_POOL_MAX_LEN = 24;
 
 // `session` (optional) turns the page into STUDENT MODE — used by play.html:
-//   session.endOptions   { leaderboard, showAnswers, startAgain } — what the
-//                        teacher ticked when setting the assignment
+//   session.endOptions   { showAnswers } — the ONE tick left on the Set
+//                        assignment form (Đợt 246; leaderboard/startAgain are
+//                        stored but no longer read — both end screens bake
+//                        their own rows in)
 //   session.playerName   the student's name — Đợt 199: handed over by myLesson
 //                        from the login ID, no longer typed by hand
 //   session.className    the student's class ("A1A"), handed over the same way;
 //                        the READY screen shows "TUẤN KHANG - A1A" under the
 //                        template name so the class can see who is playing
-//   session.submit(r)    hand in one play  -> Promise
+//   session.submit(r)      start delivering one play -> Promise<{ok:boolean}>,
+//                          never rejects (Đợt 246 — core/assignments.js keeps
+//                          the attempt in an outbox under one fixed id)
+//   session.retrySubmit()  re-deliver the SAME attempt -> Promise<{ok}> —
+//                          the same id, so a re-send can never write twice
+//   session.attemptId()    that id, printed on the screenshot fallback board
+//   session.meta           { assignmentTitle, code } — for the same board
 //   session.entries()    the class ranking -> Promise<[{name,score,total,timeMs,mine}]>
+// ⭐⭐ Đợt 246 — a student play starts as PRACTICE or SUBMIT (two buttons on the
+// READY screen, `hwMode`). PRACTICE never calls submit and may drill mistakes;
+// SUBMIT uploads at finish() and confirms via the SUBMIT HOMEWORK ceremony.
 // With a session the teacher-only tools (Options/Template/Style, Edit, Set
 // assignment, Print, Home) are not built at all, so a student cannot reach them.
 // `fight` (Đợt 124) — set ONLY by core/fight.js when this play is one of the two
@@ -1800,7 +1811,38 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   if (readyTitleEl) { refreshReadyTitle(); readyCenter.append(readyTitleEl); }
   const bigPlay = el("button", "aw-bigplay", icons.playBig);
   bigPlay.type = "button"; bigPlay.title = "Play"; bigPlay.setAttribute("aria-label", "Play");
-  readyCenter.append(bigPlay);
+  // ⭐⭐⭐ Đợt 246 (thầy) — STUDENT MODE STARTS WITH A CHOICE, NOT A BUTTON:
+  // PRACTICE (left, amber dumbbell — nothing leaves the page) | SUBMIT (right,
+  // the old START triangle — the play is handed in). Chosen fresh on EVERY
+  // ready screen, "Start again" included (thầy chốt qua AskUserQuestion), so
+  // `hwMode` is per-play state, never remembered.
+  // ⚠️ A "Start with mistakes" round is practice BY NATURE — it plays a partial
+  // act, so submitting it would hand in a bài tập cụt. It gets the PRACTICE
+  // button alone, and hwMode can never be "submit" while `_mistakes` is set.
+  // ⚠️ `playControl` is what the Đợt 122 prep gate hides/reveals — in student
+  // mode that must be the whole pair, not the (unmounted) bigPlay.
+  let hwMode = null;                 // "practice" | "submit" | null (teacher/fight)
+  let playControl = bigPlay;
+  let practiceBtn = null, submitStartBtn = null;
+  if (session) {
+    const mkStart = (cls, icon, label, title) => {
+      const b = el("button", "aw-startbtn " + cls);
+      b.type = "button"; b.title = title; b.setAttribute("aria-label", title);
+      b.append(el("span", "aw-startbtn-ic", icon), el("span", "aw-startbtn-label", label));
+      return b;
+    };
+    const duo = el("div", "aw-ready-duo");
+    practiceBtn = mkStart("is-practice", icons.practiceBig, "PRACTICE", "Practice — not sent to your teacher");
+    duo.append(practiceBtn);
+    if (!activity._mistakes) {
+      submitStartBtn = mkStart("is-submit", icons.playBig, "SUBMIT", "Submit — sent to your teacher");
+      duo.append(submitStartBtn);
+    }
+    playControl = duo;
+    readyCenter.append(duo);
+  } else {
+    readyCenter.append(bigPlay);
+  }
   // below the play button: the GAME (template) name, big & bold (replaces the
   // instruction line). A "Start with mistakes" run says so right here — the
   // teacher must be able to tell the two apart at a glance from across the
@@ -1945,7 +1987,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       });
     }
 
-    bigPlay.style.display = "none";
+    playControl.style.display = "none";   // Đợt 246: the whole start control (pair or single)
     let prep = null, prepFill = null, prepText = null, caption = "Getting this game ready…";
     let settled = false;
 
@@ -1957,7 +1999,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       prepBar.append(prepFill);
       prepText = el("div", "aw-ready-preptext", caption);
       prep.append(prepBar, prepText);
-      readyCenter.insertBefore(prep, bigPlay);
+      readyCenter.insertBefore(prep, playControl);
       paint();
     }, PREP_BAR_DELAY_MS);
 
@@ -1977,7 +2019,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       settled = true;
       clearTimeout(barTimer);
       if (prep) prep.remove();
-      bigPlay.style.display = "";
+      playControl.style.display = "";
     }
 
     const runOne = (step, i) => {
@@ -2000,8 +2042,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // press() = instant on touch-down (core/press.js, Đợt 175). Fight's relay
   // (`btn.click()` in fight.js playPressed) still lands: press() runs the
   // handler for untrusted programmatic clicks.
-  press(bigPlay, () => {
+  // ⭐ Đợt 246 — the body is a named function now, because up to THREE buttons
+  // start a game: bigPlay (teacher/fight), PRACTICE and SUBMIT (student mode,
+  // which set `hwMode` first). Everything inside is byte-for-byte the old
+  // handler apart from disabling all start buttons together.
+  function startPressed() {
     bigPlay.disabled = true;
+    if (practiceBtn) practiceBtn.disabled = true;
+    if (submitStartBtn) submitStartBtn.disabled = true;
     // FIGHT MODE: whichever board the teacher presses, the OTHER one starts at
     // the same instant (teacher, 12/8/2026). Both plays run their own clock, so
     // starting them apart would leave the shared clock — which reads board 0 —
@@ -2037,7 +2085,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     playOverlay.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 260, easing: "ease", fill: "forwards" });
     setTimeout(removeOverlay, START_GUARD_MS);
     begin();
-  });
+  }
+  press(bigPlay, startPressed);
+  if (practiceBtn) press(practiceBtn, () => { hwMode = "practice"; startPressed(); });
+  if (submitStartBtn) press(submitStartBtn, () => { hwMode = "submit"; startPressed(); });
 
   // ----- Timer (starts at PLAY, measured precisely) -----
   // Modes (set via the Options panel): "none" | "countUp" | "countDown".
@@ -3969,7 +4020,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   function mistakesAvailable() {
-    if (session) return false;   // students get only what the teacher ticked
+    // ⭐ Đợt 246 — PRACTICE may drill its mistakes (that is what the mode is
+    // for); SUBMIT may not (a partial replay is not a bài tập). The mistakes
+    // machinery is pure in-page (core/mistakes.js), so no library is touched.
+    if (session && hwMode !== "practice") return false;
     const kept = pickMistakes(activity, tpl, reviewData);
     return !!(kept && kept.length);
   }
@@ -4329,11 +4383,23 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       const answered = raw.answered != null ? raw.answered : reviewData.filter(r => r.answered).length;
       let entryId = null;
       if (session) {
-        // Student mode: every finished game is handed in, straight away.
-        // The upload runs alongside the celebration so nobody waits on a spinner.
-        submission = session.submit({
-          score: result.score, total: result.total, timeMs, review: reviewData
-        }).catch(e => { console.warn("AWord: submit failed", e); submitFailed = true; return null; });
+        // ⭐⭐⭐ Đợt 246 (thầy) — two ways out of a student play:
+        //   PRACTICE  nothing leaves this page. The review stays in memory for
+        //             Show answers / Start with mistakes, and that is all.
+        //   SUBMIT    the upload starts NOW, silently, alongside the fanfare —
+        //             the SUBMIT HOMEWORK button on the end screen only waits
+        //             for the server's confirmation of THIS upload, so a child
+        //             who closes the tab before pressing it has still handed in
+        //             (thầy chốt qua AskUserQuestion). session.submit() never
+        //             rejects and resolves {ok:boolean}; the play is also held
+        //             in the outbox (core/assignments.js) until confirmed.
+        if (hwMode === "submit") {
+          hwFinishedAt = Date.now();
+          submission = session.submit({
+            score: result.score, total: result.total, timeMs, review: reviewData
+          }).then(r => (hwSendState = r || { ok: false }))
+            .catch(e => { console.warn("AWord: submit failed", e); return (hwSendState = { ok: false }); });
+        }
         celebrate(result, null);
         return;
       }
@@ -4462,8 +4528,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ----- Dark modal panels -----
   let backdrop = null;
   let reviewData = [];   // this play's per-question review (for "Show answers")
-  let submission = null; // student mode: the promise of THIS play being handed in
-  let submitFailed = false;
+  // ⭐ Đợt 246 — SUBMIT-mode delivery state. `submission` is the promise of the
+  // CURRENT send finishing; `hwSendState` is its outcome ({ok}) once settled
+  // (null while in flight); `hwConfirmed` flips only after the fly-in — i.e.
+  // after the server said yes; `hwFinishedAt` is when finish() fired (printed
+  // on the screenshot fallback board). All per-play: a restart rebuilds them.
+  let submission = null;
+  let hwSendState = null;
+  let hwConfirmed = false;
+  let hwFinishedAt = 0;
+  let hwLbTable = null;  // the left board's rows — the fly-in needs to find "my" row
   // Optional per-finish title (e.g. Open the box's Questions mode passes
   // "Game over" on a timeout loss) — defaults to "Game complete" so every
   // other template's ui.finish() is unaffected. Kept in this shared
@@ -4478,6 +4552,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   }
 
   function showSummary(result, entryId) {
+    // ⭐⭐⭐ Đợt 246 — SUBMIT mode gets its own two-board screen (leaderboard +
+    // score/menu, equal size). Routed HERE, not at the callers: Back from Show
+    // answers / the fly-in / the screenshot flow all come through showSummary,
+    // and every one of them must land on the same screen.
+    if (session && hwMode === "submit") return showHomeworkEnd(result);
     const bd = openBackdrop();
     const panel = el("div", "aw-panel");
     panel.append(el("div", "aw-panel-head", endTitle.toUpperCase()));
@@ -4539,16 +4618,18 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
     const items = el("div", "aw-panel-items");
     if (session) {
-      // Student mode: only what the teacher ticked when setting the assignment.
+      // ⭐⭐ Đợt 246 — this branch is PRACTICE only now (SUBMIT rerouted above).
+      // Nothing was sent and the line says so; the rows are the teacher's list:
+      // Show answers (the ONE remaining tick on the Set assignment form) ·
+      // Start again · Start with mistakes (mistakesAvailable() opens up for
+      // practice — the whole point of the mode is to drill what went wrong).
       const end = session.endOptions || {};
-      panel.append(el("div", "aw-panel-rank",
-        submitFailed ? "COULD NOT SEND YOUR RESULT — CHECK YOUR INTERNET"
-                     : `SENT TO YOUR TEACHER — ${escapeText(session.playerName || "")}`));
-      if (end.leaderboard !== false) items.append(panelItem("Leaderboard", () => showLeaderboard(result, entryId)));
+      panel.append(el("div", "aw-panel-rank", "PRACTICE — NOT SENT TO YOUR TEACHER"));
       if (end.showAnswers !== false && reviewData.length) {
         items.append(panelItem("Show answers", () => showReview(result, entryId)));
       }
-      if (end.startAgain !== false) items.append(panelItem("Start again", restart));
+      items.append(panelItem("Start again", restart));
+      if (mistakesAvailable()) items.append(panelItem("Start with mistakes", startWithMistakes));
     } else {
       // ⭐ Đợt 208 — no Leaderboard row in Showdown (thầy — see the note on the
       // rank line above). ⚠️ The leaderboard itself is NOT switched off: finish()
@@ -4647,44 +4728,397 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     opener.title = "Hold to unlock Start again";
   }
 
-  // Student mode: the CLASS ranking for this assignment, read live from the
-  // public scores of the assignment (names + scores only — never anyone's answers).
-  function showOnlineLeaderboard(result) {
+  // =============================================================
+  // Đợt 246 — SUBMIT MODE'S END SCREEN: two equal boards + SUBMIT HOMEWORK
+  // =============================================================
+  // Same four penalty keys as the teacher's report (scoreIsPenalised in
+  // core/assignment-ui.js, Đợt 245) — keep the two lists in step by hand. The
+  // engine cannot import that file (it pulls core/store.js, the teacher-library
+  // boundary), so the six lines live twice on purpose.
+  const HW_PENALTY_KEYS = ["pointsOff", "minusAmount", "letterPenalty", "timeCost"];
+  function hwPenalised() {
+    if (activity.type === "gameshow") return true;   // scores by speed, always
+    const o = activity.options || {};
+    return HW_PENALTY_KEYS.some(k => Number(o[k]) > 0);
+  }
+  // What a leaderboard row prints for a score. With a penalty on, `score/total`
+  // is two different units glued together (the Đợt 245 lesson from the
+  // teacher's report) — print the score alone.
+  const hwScoreText = e => e.scoreText != null ? String(e.scoreText)
+    : hwPenalised() ? `${e.score}` : `${e.score}/${e.total}`;
+
+  const HW_SUBMIT_MIN_MS = 2000;     // the SUBMITTING screen never blinks past faster than this
+  const HW_SUBMIT_GIVEUP_MS = 25000; // outer guard — past this the error screen shows no matter what hangs
+
+  function hwWhen(ms) {
+    const d = new Date(ms || Date.now());
+    const p = n => String(n).padStart(2, "0");
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  }
+
+  // The two-board screen: LEFT the class leaderboard (opens by itself, every
+  // student's best attempt, all rows on screen at once), RIGHT the score panel
+  // whose loudest control is SUBMIT HOMEWORK. Both boards are the same size in
+  // every situation — the CSS fixes the pair's box, not the content.
+  function showHomeworkEnd(result) {
     const bd = openBackdrop();
-    const panel = el("div", "aw-panel aw-panel-wide");
-    panel.append(el("div", "aw-panel-head", "ANDREW CLASSES"));
-    const table = el("div", "aw-lb-table");
-    table.append(el("div", "aw-lb-row", "Loading..."));
-    panel.append(table);
+    const duo = el("div", "aw-hw-duo");
 
-    const items = el("div", "aw-panel-items aw-panel-items-row");
-    items.append(panelItem("Back", () => showSummary(result, null)));
-    panel.append(items);
-    bd.append(panel);
+    const lbPanel = el("div", "aw-panel aw-hw-panel");
+    lbPanel.append(el("div", "aw-panel-head", "LEADERBOARD"));
+    const lbBox = el("div", "aw-hw-lbbox");
+    hwLbTable = el("div", "aw-lb-table aw-hw-lbtable");
+    hwLbTable.append(el("div", "aw-lb-row is-note", "Loading..."));
+    lbBox.append(hwLbTable);
+    lbPanel.append(lbBox);
 
-    // wait for THIS play to land first, so the student sees their own row
-    Promise.resolve(submission)
-      .then(() => session.entries())
-      .then(entries => {
-        table.innerHTML = "";
-        if (!entries.length) { table.append(el("div", "aw-lb-row", "No scores yet")); return; }
-        entries.slice(0, 10).forEach((e, i) => {
-          const row = el("div", "aw-lb-row" + (e.mine ? " is-you" : ""));
-          const tp = fmtSecsParts(e.timeMs);
-          row.append(
-            el("span", "aw-lb-rank", ordinal(i + 1).toLowerCase()),
-            el("span", "aw-lb-name", escapeText(e.name)),
-            el("span", "aw-lb-score", e.scoreText != null ? e.scoreText : `${e.score}/${e.total}`),
-            el("span", "aw-lb-time", `${tp.big}${tp.small}`)
-          );
-          table.append(row);
+    const menuPanel = el("div", "aw-panel aw-hw-panel");
+    menuPanel.append(el("div", "aw-panel-head", endTitle.toUpperCase()));
+    const stats = el("div", "aw-sum-stats");
+    const t = fmtSecsParts(result.timeMs);
+    stats.append(
+      result.scoreText != null
+        ? statBlock("Score", result.scoreText, "")
+        : statBlock("Score", `${result.score}`, `/${result.total}`, result.score < 0 ? "is-neg" : ""),
+      statBlock("Time", t.big, t.small)
+    );
+    menuPanel.append(stats);
+    if (result.total > 0 && result.score !== result.correct) {
+      menuPanel.append(el("div", "aw-sum-total", `Total: ${result.correct}/${result.total}`));
+    }
+
+    const items = el("div", "aw-panel-items");
+    const hwBtn = el("button", "aw-hw-submitbtn");
+    hwBtn.type = "button";
+    hwBtn.append(el("span", "aw-hw-submitbtn-ic", icons.assignment),
+                 el("span", null, "SUBMIT HOMEWORK"));
+    if (hwConfirmed) markHwDone(hwBtn);
+    else hwBtn.onclick = () => { sound.click(); startHomeworkSubmit(result, hwBtn); };
+    items.append(hwBtn);
+    // No "Leaderboard" row (the board is already on the left — thầy) and no
+    // "Start with mistakes" (SUBMIT is the real thing, not a drill).
+    const end = session.endOptions || {};
+    if (end.showAnswers !== false && reviewData.length) {
+      items.append(panelItem("Show answers", () => showReview(result, null)));
+    }
+    items.append(panelItem("Start again", restart));
+    menuPanel.append(items);
+
+    duo.append(lbPanel, menuPanel);
+    bd.append(duo);
+    hwRenderLeaderboard();
+  }
+
+  function markHwDone(btn) {
+    btn.classList.add("is-done");
+    btn.disabled = true;
+    btn.onclick = null;
+    btn.innerHTML = "";
+    btn.append(el("span", "aw-hw-submitbtn-ic", icons.assignment),
+               el("span", null, `SUBMITTED — ${escapeText((session.playerName || "").toUpperCase())}`));
+  }
+
+  // Build/refresh the left board. Every student's BEST attempt (exactly what
+  // session.entries() returns), ALL of them at once: the font shrinks to fit
+  // (a height-only fit over --fit) instead of the list scrolling (thầy, Đợt 246).
+  // Returns the entries (or null when the read failed) for the fly-in.
+  async function hwRenderLeaderboard() {
+    const table = hwLbTable;
+    if (!table || !table.isConnected) return null;
+    let entries = null;
+    try { entries = await session.entries(); } catch (e) { entries = null; }
+    if (!table.isConnected) return entries;
+    table.innerHTML = "";
+    if (!entries) {
+      table.append(el("div", "aw-lb-row is-note", "Could not load the leaderboard"));
+      return null;
+    }
+    if (!entries.length) {
+      table.append(el("div", "aw-lb-row is-note", "No plays yet — be the first!"));
+      return entries;
+    }
+    entries.forEach((e, i) => {
+      const row = el("div", "aw-lb-row" + (e.mine ? " is-you" : ""));
+      const tp = fmtSecsParts(e.timeMs);
+      // The name TEXT gets its own inline span so the fit below can measure the
+      // real text width (fractional, via getBoundingClientRect). The cell's own
+      // scrollWidth is useless for this: it is an integer AND floors at
+      // clientWidth, so a name overflowing by half a pixel — exactly when the
+      // browser starts drawing "…" — reads as a perfect fit.
+      const nameCell = el("span", "aw-lb-name");
+      nameCell.append(el("span", "aw-lb-nametext", escapeText(e.name)));
+      row.append(
+        el("span", "aw-lb-rank", ordinal(i + 1).toLowerCase()),
+        nameCell,
+        el("span", "aw-lb-score", escapeText(hwScoreText(e))),
+        el("span", "aw-lb-time", `${tp.big}${tp.small}`)
+      );
+      table.append(row);
+    });
+    // Fit AFTER the rows exist. The box's height is fixed by the CSS, so this
+    // is "the largest font at which nothing needs to scroll" — and the cap is
+    // 2, not 1, because "linh hoạt" cuts both ways (thầy): a class of six
+    // fills the board with big rows, a class of forty shrinks until it fits.
+    // Row geometry is all in em (see .aw-hw-lbtable) so ONE variable scales
+    // everything, columns included.
+    // ⛔ NOT core/fit.js's fitOnce: that also tests WIDTH, and this table is a
+    // grid that fills its box's width by design — scrollWidth == clientWidth,
+    // which fitOnce's slack turns into "always overflowing", so it slammed
+    // every class to the 0.28 floor (measured on the visual bench). Height is
+    // the only axis that can actually overflow here.
+    // "Overflowing" here means EITHER the rows need to scroll OR a name got
+    // ellipsised — the number columns are in em, so growing the font squeezes
+    // the 1fr name column, and a board of unreadable names is not "hiện được
+    // toàn bộ" no matter how big its digits are.
+    const box = table.parentElement;
+    if (box) {
+      const apply = f => table.style.setProperty("--fit", f);
+      // Fractional rects, not scrollWidth (see the note where the row is
+      // built): the ellipsis appears the moment the text is even half a pixel
+      // wider than the cell, which integer scrollWidth cannot see.
+      // NO epsilon: text-overflow draws "…" on ANY overflow, a 0.05px one
+      // included (measured: a 0.1px allowance still ellipsised the top name).
+      const over = () => table.scrollHeight > box.clientHeight ||
+        [...table.querySelectorAll(".aw-lb-name")].some(n => {
+          const s = n.firstElementChild;
+          return s && s.getBoundingClientRect().width > n.getBoundingClientRect().width;
         });
-      })
-      .catch(() => { table.innerHTML = ""; table.append(el("div", "aw-lb-row", "Could not load the leaderboard")); });
+      const runFit = () => {
+        if (!table.isConnected) return;
+        apply(2);
+        if (!over()) return;
+        let lo = 0.28, hi = 2, best = 0.28;
+        for (let i = 0; i < 14; i++) {
+          const mid = (lo + hi) / 2;
+          apply(mid);
+          if (over()) hi = mid; else { best = mid; lo = mid; }
+        }
+        apply(best);
+      };
+      runFit();
+      // …and once more when the web font lands: its metrics are wider than the
+      // fallback's, so a fit measured too early still ellipsises a name (the
+      // same lesson core/fit.js's autoFit already carries).
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(runFit).catch(() => {});
+    }
+    return entries;
+  }
+
+  // The current send, retried if the last one already came back failed. The
+  // SAME attempt is re-sent every time (same fixed id — core/assignments.js
+  // can therefore never write a second row for it).
+  function ensureSubmission() {
+    if (hwSendState && !hwSendState.ok) {
+      hwSendState = null;
+      submission = session.retrySubmit()
+        .then(r => (hwSendState = r || { ok: false }))
+        .catch(() => (hwSendState = { ok: false }));
+    }
+    return submission || Promise.resolve({ ok: false });
+  }
+
+  // The SUBMIT HOMEWORK ceremony. The rule that matters most (thầy):
+  // ⛔ THE FLY-IN NEVER RUNS ON HOPE. It runs after — and only after — the
+  // server confirmed BOTH documents ({ok:true} from core/assignments.js).
+  // Anything else lands on the Vietnamese error screen with GỬI LẠI BÀI TẬP
+  // and CHỤP ẢNH MÀN HÌNH.
+  function startHomeworkSubmit(result, hwBtn) {
+    const overlay = buildHwOverlay(result, () => doSend());
+    async function doSend() {
+      overlay.showSending();
+      const [sent] = await Promise.race([
+        Promise.all([ensureSubmission(), new Promise(r => setTimeout(r, HW_SUBMIT_MIN_MS))]),
+        new Promise(r => setTimeout(() => r([{ ok: false }]), HW_SUBMIT_GIVEUP_MS))
+      ]);
+      if (!overlay.root.isConnected) return;   // torn down (restart) while waiting
+      if (sent && sent.ok) {
+        hwConfirmed = true;
+        if (hwBtn && hwBtn.isConnected) markHwDone(hwBtn);
+        await hwFlyIn(overlay, result);
+      } else {
+        overlay.showError();
+      }
+    }
+    doSend();
+  }
+
+  // The confirmed play flies into its own leaderboard row. The row must exist
+  // first: refresh from the server (the write is confirmed, so a read that
+  // works WILL contain it). If that read fails on the way back, the play is
+  // still delivered — so the local numbers stand in for the row rather than
+  // pretending nothing happened. Only the ROW is local; the confirmation that
+  // gated all of this never is.
+  async function hwFlyIn(overlay, result) {
+    let entries = null;
+    try { entries = await hwRenderLeaderboard(); } catch (e) { entries = null; }
+    if (!overlay.root.isConnected) return;
+    if (!entries && hwLbTable && hwLbTable.isConnected) {
+      hwLbTable.innerHTML = "";
+      const row = el("div", "aw-lb-row is-you");
+      const tp = fmtSecsParts(result.timeMs);
+      const nameCell = el("span", "aw-lb-name");
+      nameCell.append(el("span", "aw-lb-nametext", escapeText(session.playerName || "Player")));
+      row.append(
+        el("span", "aw-lb-rank", ""),
+        nameCell,
+        el("span", "aw-lb-score", escapeText(hwScoreText({ score: result.score, total: result.total, scoreText: result.scoreText }))),
+        el("span", "aw-lb-time", `${tp.big}${tp.small}`)
+      );
+      hwLbTable.append(row);
+    }
+    const target = hwLbTable && hwLbTable.isConnected
+      ? hwLbTable.querySelector(".aw-lb-row.is-you .aw-lb-name") : null;
+    await overlay.flyTo(target);
+  }
+
+  // The full-screen overlay behind SUBMIT HOMEWORK, with its four faces:
+  // sending → (fly-in) | error → guide → board. One root, rebuilt per face —
+  // no rAF anywhere (CSS animations + WAAPI only; hidden panes freeze rAF).
+  function buildHwOverlay(result, onRetry) {
+    const root = el("div", "aw-hw-sub");
+    inner.append(root);
+    const o = { root, cluster: null };
+    const swap = build => { root.innerHTML = ""; o.cluster = null; build(); };
+
+    o.showSending = () => swap(() => {
+      const box = el("div", "aw-hw-sub-center");
+      const title = el("div", "aw-hw-sub-title", "SUBMITTING HOMEWORK");
+      const brand = el("div", "aw-hw-sub-brand");
+      "ANDREW CLASSES".split("").forEach((ch, i) => {
+        const s = el("span", null, ch === " " ? "&nbsp;" : escapeText(ch));
+        s.style.setProperty("--i", i);
+        brand.append(s);
+      });
+      box.append(title, brand);
+      root.append(box);
+      o.cluster = box;
+    });
+
+    o.showError = () => swap(() => {
+      const box = el("div", "aw-hw-sub-center");
+      box.append(el("div", "aw-hw-err-title", "GỬI BÀI CHƯA THÀNH CÔNG DO LỖI MẠNG"));
+      box.append(el("div", "aw-hw-err-sub",
+        "Bài làm của em vẫn còn trên máy — chọn một trong hai cách dưới đây."));
+      const row = el("div", "aw-hw-err-btns");
+      const retry = el("button", "aw-hw-bigbtn is-primary", "GỬI LẠI BÀI TẬP");
+      retry.type = "button";
+      retry.onclick = () => { sound.click(); onRetry(); };
+      const shot = el("button", "aw-hw-bigbtn", "CHỤP ẢNH MÀN HÌNH");
+      shot.type = "button";
+      shot.onclick = () => { sound.click(); o.showGuide(); };
+      row.append(retry, shot);
+      box.append(row);
+      root.append(box);
+    });
+
+    o.showGuide = () => swap(() => {
+      const box = el("div", "aw-hw-sub-center");
+      box.append(el("div", "aw-hw-guide-title", "CÁCH CHỤP ẢNH MÀN HÌNH"));
+      const cards = el("div", "aw-hw-guide-cards");
+      const card = (t, svg, d) => {
+        const c = el("div", "aw-hw-guide-card");
+        c.append(el("div", "aw-hw-guide-t", t), el("div", "aw-hw-guide-ph", svg),
+                 el("div", "aw-hw-guide-d", d));
+        return c;
+      };
+      cards.append(
+        card("iPhone / iPad", hwPhoneSvg("right"),
+             "Bấm <b>cùng lúc</b> nút <b>NGUỒN</b> (cạnh phải) + nút <b>TĂNG ÂM LƯỢNG</b> (cạnh trái)"),
+        card("Android", hwPhoneSvg("down"),
+             "Bấm <b>cùng lúc</b> nút <b>NGUỒN</b> + nút <b>GIẢM ÂM LƯỢNG</b> (cạnh phải)")
+      );
+      box.append(cards);
+      box.append(el("div", "aw-hw-guide-note",
+        "Chụp xong, em gửi ảnh qua <b>Zalo</b> cho thầy Andrew: <b>0359.769.765</b>"));
+      const ok = el("button", "aw-hw-bigbtn is-primary", "ĐÃ RÕ");
+      ok.type = "button";
+      ok.onclick = () => { sound.click(); o.showBoard(); };
+      box.append(ok);
+      root.append(box);
+    });
+
+    o.showBoard = () => swap(() => {
+      const box = el("div", "aw-hw-sub-center");
+      box.append(el("div", "aw-hw-board-title", "HÃY CHỤP LẠI MÀN HÌNH"));
+      const card = el("div", "aw-hw-board-card");
+      const line = (label, value) => {
+        const r = el("div", "aw-hw-board-row");
+        r.append(el("span", "aw-hw-board-l", label), el("span", "aw-hw-board-v", value));
+        return r;
+      };
+      const who = (session.playerName || "") + (session.className ? " • " + session.className : "");
+      card.append(line("Học sinh", escapeText(who.toUpperCase())));
+      if (session.meta?.assignmentTitle) card.append(line("Bài tập", escapeText(session.meta.assignmentTitle)));
+      card.append(line("Trò chơi", escapeText(
+        ((activity.title ? activity.title + " — " : "") + (tpl.name || activity.type)).toUpperCase())));
+      card.append(line("Điểm", escapeText(result.scoreText != null
+        ? String(result.scoreText) : `${result.score}/${result.total}`)));
+      const t = fmtSecsParts(result.timeMs);
+      card.append(line("Thời gian làm", `${t.big}${t.small}`));
+      card.append(line("Nộp lúc", escapeText(hwWhen(hwFinishedAt))));
+      const aid = session.attemptId?.();
+      if (aid) card.append(line("Mã lượt", escapeText(aid)));
+      box.append(card);
+      const done = el("button", "aw-hw-bigbtn is-primary", "XONG");
+      done.type = "button";
+      done.onclick = () => { sound.click(); o.remove(); };
+      box.append(done);
+      root.append(box);
+    });
+
+    // Shrink the SUBMITTING cluster into `target` (the student's own name cell)
+    // while the dim fades, then spark the landed row gold for a few seconds.
+    // ⚠️ Removal hangs off the plain setTimeout, never off anim.onfinish alone —
+    // a hidden tab stalls animation events (the Đợt 216 rule).
+    o.flyTo = target => new Promise(done => {
+      const cluster = o.cluster;
+      if (!cluster || !cluster.isConnected) { o.remove(); return done(); }
+      const from = cluster.getBoundingClientRect();
+      const toEl = target && target.isConnected ? target : null;
+      let dx = 0, dy = 0, scale = 0.12;
+      if (toEl) {
+        const to = toEl.getBoundingClientRect();
+        dx = (to.left + to.width / 2) - (from.left + from.width / 2);
+        dy = (to.top + to.height / 2) - (from.top + from.height / 2);
+        scale = Math.max(0.06, Math.min(to.height / Math.max(1, from.height), to.width / Math.max(1, from.width)));
+      }
+      root.classList.add("is-flying");
+      cluster.animate([
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
+        { transform: `translate(${dx}px, ${dy}px) scale(${scale})`, opacity: 0.12 }
+      ], { duration: 750, easing: "cubic-bezier(.22,.9,.3,1)", fill: "forwards" });
+      setTimeout(() => {
+        o.remove();
+        if (toEl) {
+          const row = toEl.closest(".aw-lb-row");
+          if (row) {
+            row.classList.add("aw-hw-justland");
+            setTimeout(() => row.classList.remove("aw-hw-justland"), 3400);
+          }
+        }
+        done();
+      }, 800);
+    });
+
+    o.remove = () => root.remove();
+    return o;
+  }
+
+  // Small phone drawing for the screenshot guide — power button always on the
+  // right edge; `vol` = which volume half is pressed ("right" = iPhone's up,
+  // on its left edge · "down" = Android's down, under the power button).
+  function hwPhoneSvg(vol) {
+    const upSide = vol === "right";
+    return `<svg viewBox="0 0 90 120" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+      <rect x="24" y="8" width="42" height="104" rx="8"/>
+      <rect x="${upSide ? 17 : 69}" y="${upSide ? 30 : 58}" width="5" height="20" rx="2.5"
+            fill="#ffd75e" stroke="#ffd75e"/>
+      <rect x="69" y="30" width="5" height="20" rx="2.5" fill="#ff8f5e" stroke="#ff8f5e"/>
+      <circle cx="45" cy="102" r="4"/>
+    </svg>`;
   }
 
   function showLeaderboard(result, entryId) {
-    if (session) return showOnlineLeaderboard(result);
     const bd = openBackdrop();
     const panel = el("div", "aw-panel aw-panel-wide");
     panel.append(el("div", "aw-panel-head", "ANDREW CLASSES"));

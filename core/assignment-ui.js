@@ -233,19 +233,17 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
     body.append(el("div", "aw-as-note",
       "After the deadline students can still play — their attempts are marked LATE for you."));
 
-    // --- end of game
+    // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left. The Leaderboard and
+    // Start again ticks are gone because the new student end screens bake both
+    // in (SUBMIT always shows the class board beside the menu; both modes
+    // always offer Start again). Show answers is the choice that remains, and
+    // it governs BOTH modes' menus.
     body.append(el("label", "aw-as-label", "At the end of the game, students can"));
     const opts = el("div", "aw-as-optrow");
-    const mk = (label, checked) => {
-      const wrap = el("label", "aw-as-check");
-      const c = el("input"); c.type = "checkbox"; c.checked = checked;
-      wrap.append(c, document.createTextNode(label));
-      opts.append(wrap);
-      return c;
-    };
-    const cbLeader = mk("Leaderboard", true);
-    const cbAnswers = mk("Show answers", false);
-    const cbAgain = mk("Start again", true);
+    const answersWrap = el("label", "aw-as-check");
+    const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = false;
+    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
+    opts.append(answersWrap);
     body.append(opts);
 
     // --- homework options (Đợt C) — starts from the teacher's own "Default
@@ -334,10 +332,13 @@ export function openAssignmentSetup(act, { onCreated } = {}) {
           title: titleInput.value,
           deadline,
           folderId,
+          // leaderboard/startAgain stay `true` in the stored shape (Đợt 246):
+          // the new end screens no longer read them, but every document keeps
+          // the same three keys so nothing else ever meets a half-shaped one.
           endOptions: {
-            leaderboard: cbLeader.checked,
+            leaderboard: true,
             showAnswers: cbAnswers.checked,
-            startAgain: cbAgain.checked
+            startAgain: true
           },
           options: hwDraft
         });
@@ -440,19 +441,15 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     dl.append(noDl, dlInput);
     body.append(dl);
 
+    // ⭐ Đợt 246 — one tick left, same reasoning as the Set assignment form.
     body.append(el("label", "aw-as-label", "At the end of the game, students can"));
     const opts = el("div", "aw-as-optrow");
     const end = assignment.endOptions || {};
-    const mk = (label, checked) => {
-      const wrap = el("label", "aw-as-check");
-      const c = el("input"); c.type = "checkbox"; c.checked = checked;
-      wrap.append(c, document.createTextNode(label));
-      opts.append(wrap);
-      return c;
-    };
-    const cbLeader = mk("Leaderboard", end.leaderboard !== false);
-    const cbAnswers = mk("Show answers", end.showAnswers !== false);
-    const cbAgain = mk("Start again", end.startAgain !== false);
+    const answersWrap = el("label", "aw-as-check");
+    const cbAnswers = el("input"); cbAnswers.type = "checkbox";
+    cbAnswers.checked = end.showAnswers !== false;
+    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
+    opts.append(answersWrap);
     body.append(opts);
 
     // --- homework options (Đợt C) — starts from what THIS assignment already
@@ -519,7 +516,7 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
         const patch = {
           title,
           deadline: noDlBox.checked || !dlInput.value ? null : new Date(dlInput.value).getTime(),
-          endOptions: { leaderboard: cbLeader.checked, showAnswers: cbAnswers.checked, startAgain: cbAgain.checked },
+          endOptions: { leaderboard: true, showAnswers: cbAnswers.checked, startAgain: true },
           closed: cbClosed.checked,
           // Dot-path (Đợt C): rewrites ONLY `activity.options`, leaving the rest
           // of the frozen snapshot (content, theme, ...) untouched. Confirmed

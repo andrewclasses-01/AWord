@@ -272,52 +272,187 @@ export async function listScores(code) {
   return snap.docs.map(s => ({ id: s.id, ...s.data() }));
 }
 
-// Hand in one play. Writes the public score row FIRST (that is what the student
-// sees next); if the private teacher copy fails we still return normally rather
-// than blocking a child on an error they cannot act on.
-export async function submitResult({ code, studentName, score, total, timeMs, review }) {
-  const [d, { collection, addDoc }] = await Promise.all([db(), fs()]);
-  const name = String(studentName || "Player").trim().slice(0, 40) || "Player";
+// =============================================================
+// HANDING IN — Đợt 246 (23/8/2026, thầy): "cơ chế chắc chắn tuyệt đối".
+//
+// The old submitResult() was one addDoc + two swallowed catches: on classroom
+// wifi a play could half-land (public score without the teacher copy), silently
+// vanish, or — if anyone naively retried — land TWICE. The machinery below
+// replaces it. Three ideas, each load-bearing:
+//
+//   1. ONE ATTEMPT = ONE FIXED ID, minted the moment the game ends
+//      (`queueAttempt`). Both documents are written with `setDoc` under that
+//      id, so re-sending the same attempt can never create a second row.
+//
+//   2. THE OUTBOX (localStorage) — the attempt is stored BEFORE the first try,
+//      so a tab killed mid-send still owes the play, and `flushOutbox()` (run
+//      whenever play.html opens) quietly delivers it later. Same shape as the
+//      Showdown outbox of Đợt 196, for the same reason.
+//
+//   3. "DELIVERED" MEANS THE SERVER SAID SO — for BOTH documents. sendAttempt
+//      resolves {ok:true} only when the public score row AND the teacher's
+//      detailed copy are each confirmed. The UI (engine's SUBMIT HOMEWORK
+//      button) is required to show success only on that {ok:true} — never on
+//      hope. The ambiguous case (we timed out but the write may have landed)
+//      is tracked per document via `mayExist*`:
+//        · scores  → readable by anyone, so the next try simply LOOKS first;
+//        · results → students cannot read it, but its rule is create-only
+//          (`allow update: if false`), so re-creating an id that already
+//          exists comes back permission-denied — and with `mayExistResult`
+//          set, that exact error IS the confirmation. A permission-denied on
+//          a FIRST try (nothing can exist yet) stays what it looks like: a
+//          hard rules failure, reported as {ok:false, hard:true}.
+//
+// Nothing here needs a rules change — measured against the published rules in
+// docs/08-FIREBASE-SETUP.md (scores: create for anyone, public read; results:
+// create for anyone, create-only; doc ids unconstrained in both).
+// =============================================================
+
+const OUTBOX_KEY = "aword-hw-outbox";
+let memOutbox = null;   // fallback when localStorage is unavailable (private mode / quota)
+
+function readOutbox() {
+  if (memOutbox) return memOutbox;
+  try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) || "[]") || []; }
+  catch (e) { return []; }
+}
+function writeOutbox(list) {
+  try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(list)); memOutbox = null; }
+  catch (e) { memOutbox = list; }   // keep it at least for this page's lifetime
+}
+function saveOutboxEntry(entry) {
+  const rest = readOutbox().filter(e => e.attemptId !== entry.attemptId);
+  writeOutbox([...rest, entry]);
+}
+function dropOutboxEntry(entry) {
+  writeOutbox(readOutbox().filter(e => e.attemptId !== entry.attemptId));
+}
+
+// Freeze one finished play into an outbox entry. Everything about the attempt —
+// id, name, numbers, review, createdAt — is decided HERE, once; every send and
+// re-send afterwards only reads it. `createdAt` doubles as the teacher-side
+// de-duplication key (loadReport merges results and scores on name+createdAt).
+export function queueAttempt({ code, studentName, score, total, timeMs, review }) {
+  // Collapse runs of spaces too (play.js does the same at the name screen) so
+  // the stored spelling always matches what nameKey() groups by.
+  const name = String(studentName || "Player").trim().replace(/\s+/g, " ").slice(0, 40) || "Player";
   const createdAt = now();
-  const base = {
+  const rand = Array.from(crypto.getRandomValues(new Uint8Array(4)),
+    b => CODE_ALPHABET[b % CODE_ALPHABET.length]).join("");
+  const entry = {
+    attemptId: `hw${createdAt}x${rand}`,
+    code: String(code),
     name,
     score: Math.round(score) | 0,
     total: Math.round(total) | 0,
     timeMs: Math.round(timeMs) | 0,
-    createdAt
+    review: clean(review || []),
+    createdAt,
+    scoreOk: false, resultOk: false,
+    mayExistScore: false, mayExistResult: false
   };
+  saveOutboxEntry(entry);
+  return entry;
+}
 
-  const scoreRef = await addDoc(collection(d, "assignments", String(code), "scores"), base);
+// The Firestore SDK does not time out on its own — on dead wifi a write just
+// hangs (it queues). This race is what turns "hanging" into a decision the UI
+// can act on. The underlying write may still land later; that is exactly what
+// the `mayExist*` flags are for.
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(Object.assign(new Error("timeout"), { code: "aw/timeout" })), ms);
+    promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); });
+  });
+}
 
-  // Stamp the assignment itself so the teacher's pages can show a "new results"
-  // dot without reading every score. The rules let ANYONE write these two fields
-  // and nothing else, which is why a student may do it (worst case someone fakes
-  // a dot — see docs/08-FIREBASE-SETUP.md).
-  try {
-    const { doc, updateDoc, increment } = await fs();
-    await updateDoc(doc(d, "assignments", String(code)), {
-      lastSubmitAt: createdAt, submitCount: increment(1)
-    });
-  } catch (e) {
-    console.warn("AWord: could not flag the new result:", e.message);
+const isDenied = e => e && e.code === "permission-denied";
+
+/**
+ * Deliver one attempt. Resolves {ok:true} only when BOTH documents are
+ * confirmed on the server; {ok:false} after the tries run out; {ok:false,
+ * hard:true} when the rules rejected a first-time write (retrying cannot fix
+ * that). NEVER throws, and never double-writes: see the header above.
+ */
+export async function sendAttempt(entry, { tries = 3, tryTimeoutMs = 6000 } = {}) {
+  let d, sdk;
+  try { [d, sdk] = await Promise.all([db(), fs()]); }
+  catch (e) { return { ok: false }; }
+  const { doc, getDoc, setDoc, updateDoc, increment } = sdk;
+
+  const scoreRef = doc(d, "assignments", entry.code, "scores", entry.attemptId);
+  const resultRef = doc(d, "results", entry.attemptId);
+  // EXACTLY the keys the security rules allow, in both documents.
+  const scoreData = {
+    name: entry.name, score: entry.score, total: entry.total,
+    timeMs: entry.timeMs, createdAt: entry.createdAt
+  };
+  const resultData = clean({
+    assignmentId: entry.code, studentName: entry.name,
+    score: entry.score, total: entry.total, timeMs: entry.timeMs,
+    review: entry.review || [], createdAt: entry.createdAt
+  });
+
+  for (let round = 0; round < tries; round++) {
+    if (round) await new Promise(r => setTimeout(r, 700 * round));   // breathe between tries
+
+    if (!entry.scoreOk) {
+      try {
+        // An earlier try may have landed without telling us — LOOK before writing
+        // (scores are publicly readable, so this is the cheap, certain check).
+        if (entry.mayExistScore && (await withTimeout(getDoc(scoreRef), tryTimeoutMs)).exists()) {
+          entry.scoreOk = true;
+        } else {
+          await withTimeout(setDoc(scoreRef, scoreData), tryTimeoutMs);
+          entry.scoreOk = true;
+        }
+      } catch (e) {
+        if (isDenied(e)) {
+          // create-on-existing is an UPDATE, which students may not do — so with
+          // an ambiguous earlier try this denial means "already there".
+          if (entry.mayExistScore) entry.scoreOk = true;
+          else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+        } else entry.mayExistScore = true;
+      }
+      saveOutboxEntry(entry);
+    }
+
+    if (!entry.resultOk) {
+      try {
+        await withTimeout(setDoc(resultRef, resultData), tryTimeoutMs);
+        entry.resultOk = true;
+      } catch (e) {
+        if (isDenied(e)) {
+          if (entry.mayExistResult) entry.resultOk = true;   // create-only rule: denied = it exists
+          else { saveOutboxEntry(entry); return { ok: false, hard: true }; }
+        } else entry.mayExistResult = true;
+      }
+      saveOutboxEntry(entry);
+    }
+
+    if (entry.scoreOk && entry.resultOk) {
+      dropOutboxEntry(entry);
+      // The "new results" dot — best-effort, same as always (worst case someone
+      // fakes a dot; see docs/08-FIREBASE-SETUP.md).
+      try {
+        await updateDoc(doc(d, "assignments", entry.code), {
+          lastSubmitAt: entry.createdAt, submitCount: increment(1)
+        });
+      } catch (e) { /* a dot is not worth an error */ }
+      return { ok: true };
+    }
   }
+  return { ok: false };
+}
 
-  try {
-    // EXACTLY the keys the security rules allow — see the note at the top.
-    await addDoc(collection(d, "results"), clean({
-      assignmentId: String(code),
-      studentName: name,
-      score: base.score,
-      total: base.total,
-      timeMs: base.timeMs,
-      review: review || [],
-      createdAt
-    }));
-  } catch (e) {
-    console.warn("AWord: the detailed result could not be saved:", e.message);
+// Deliver whatever previous visits still owe — run on every play.html load,
+// in the background, never blocking anything. Sequential on purpose: these are
+// leftovers on a possibly-bad connection, not a race.
+export async function flushOutbox() {
+  for (const entry of readOutbox()) {
+    try { await sendAttempt(entry, { tries: 2, tryTimeoutMs: 8000 }); }
+    catch (e) { /* still owed — the outbox keeps it */ }
   }
-
-  return { id: scoreRef.id, ...base };
 }
 
 // ---- shared helpers ---------------------------------------------------------

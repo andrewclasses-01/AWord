@@ -19,16 +19,39 @@ Firestore (project `aword-70dae`). Điều này ảnh hưởng tới mọi ngư�
 - Hướng dẫn + luật bảo vệ Firestore: `docs/08-FIREBASE-SETUP.md`.
 
 ## ⚠️ CHẾ ĐỘ HỌC SINH từ v0.8.0 — `startGame(root, activity, { session })`
+### (viết lại Đợt 246, 23/8/2026 — PRACTICE/SUBMIT + gửi bài chắc chắn)
 
 `play.html` (trang HS) gọi engine với thêm một `session`. Template KHÔNG cần biết gì về nó, nhưng
 người sửa engine thì phải nhớ:
 
 | Trường | Việc gì |
 |---|---|
-| `session.endOptions` | `{leaderboard, showAnswers, startAgain}` — thầy tích gì thì menu cuối game hiện nấy |
-| `session.playerName` | tên HS đã nhập |
-| `session.submit(r)` | nộp 1 lượt chơi (Promise) — engine gọi NGAY khi Game Complete |
-| `session.entries()` | bảng xếp hạng lớp (Promise) cho màn Leaderboard |
+| `session.endOptions` | `{showAnswers}` — Ô TÍCH DUY NHẤT còn lại trên form Set assignment (Đợt 246). `leaderboard`/`startAgain` vẫn nằm trong document (giữ khuôn) nhưng **không ai đọc nữa** — hai màn cuối game tự có leaderboard/Start again theo thiết kế |
+| `session.playerName` | tên HS (myLesson truyền qua `&n=`, hoặc gõ tay ở màn tên) |
+| `session.className` | lớp (`&lop=`) — màn READY hiện "TÊN • LỚP" |
+| `session.submit(r)` | BẮT ĐẦU gửi 1 lượt → `Promise<{ok:boolean}>`, **không bao giờ reject**. Đợt 246: engine chỉ gọi ở chế độ **SUBMIT**, NGAY khi Game Complete (gửi ngầm) |
+| `session.retrySubmit()` | gửi lại **CÙNG lượt đó** (cùng id cố định ⇒ không bao giờ đẻ dòng trùng) |
+| `session.attemptId()` | mã lượt — in trên bảng "HÃY CHỤP LẠI MÀN HÌNH" |
+| `session.meta` | `{assignmentTitle, code}` — cũng cho bảng đó |
+| `session.entries()` | bảng xếp hạng lớp (Promise) — **TẤT CẢ** học sinh, lượt tốt nhất mỗi em |
+
+⭐⭐⭐ **Đợt 246 — HAI CHẾ ĐỘ (`hwMode`, chọn lại MỖI lượt trên màn READY):**
+- **PRACTICE** (nút tạ vàng, trái): không gửi gì, dữ liệu chỉ trong trang. Menu cuối: Show answers
+  (nếu tích) · Start again · **Start with mistakes** (chỗ DUY NHẤT học sinh được luyện lỗi —
+  `mistakesAvailable()` mở khi `hwMode === "practice"`). Ván `_mistakes` trong chế độ HS chỉ có
+  nút PRACTICE — nộp một ván cụt là nộp bài sai.
+- **SUBMIT** (icon play cũ, phải): `finish()` gửi ngầm ngay. Màn cuối là **BẢNG ĐÔI**
+  (`showHomeworkEnd`): trái leaderboard tự hiện (chữ tự co/nở 0.28–2× — fit theo CHIỀU CAO **và**
+  điều kiện "không tên nào bị …"; ⛔ đừng thay bằng `fitOnce` của core/fit.js — nó đo cả bề ngang
+  mà bảng grid luôn lấp đầy bề ngang nên bị ép xuống đáy 0.28; ⛔ đo tên bằng rect SỐ THỰC của span
+  `.aw-lb-nametext`, KHÔNG dùng `scrollWidth` — số nguyên và không thấy tràn nửa pixel), phải =
+  điểm + nút **SUBMIT HOMEWORK** + Show answers (nếu tích) + Start again.
+- ⛔⛔ **CÚ BAY VÀO LEADERBOARD KHÔNG BAO GIỜ CHẠY TRÊN HY VỌNG** — chỉ sau khi
+  `{ok:true}` từ `core/assignments.js` (CẢ dòng điểm công khai LẪN bài chi tiết đều được server
+  xác nhận). Lỗi ⇒ màn tiếng Việt: GỬI LẠI BÀI TẬP / CHỤP ẢNH MÀN HÌNH (hướng dẫn + bảng chụp).
+- Cơ chế gửi chắc chắn (id cố định + outbox localStorage + retry + luật create-only làm bằng chứng
+  "đã tới nơi") nằm TRỌN trong `core/assignments.js` (`queueAttempt`/`sendAttempt`/`flushOutbox`) —
+  đọc header của nó trước khi sửa. `play.js` flush outbox mỗi lần mở trang.
 
 Có `session` thì engine **không dựng** cụm công cụ của thầy (Options/Template/Style/Edit/Assignment/
 Print/Home) và bỏ "Change template" — đây là hàng rào để HS không lọt vào công cụ soạn bài.
@@ -652,7 +675,7 @@ chặn ngược lại là làm hỏng bài tập của những lớp đang làm 
 | template | vì sao | gỡ chặn cần gì |
 |---|---|---|
 | `speaking_cards` | `scorable:false`, **không bao giờ gọi `ui.finish()`** — mà `ui.finish()` là đường **duy nhất** tới `session.submit()`. HS chơi xong đóng tab: **không một kết quả nào** về tới thầy, báo cáo vẫn ghi "No student has played this assignment yet". | xoá 1 dòng |
-| `running_word` | `renderSummary` **thay cả bảng cuối game** và **không đọc `session`** — HS không thấy dòng "SENT TO YOUR TEACHER", 3 ô tích thầy đặt (Leaderboard / Show answers / Start again) **vô tác dụng**. Điểm vẫn lặng lẽ lên Firestore. Vả lại là game 2 đội chung một bàn phím. | xoá 1 dòng **VÀ** dạy `renderSummary` tôn trọng `session` |
+| `running_word` | `renderSummary` **thay cả bảng cuối game** và **không đọc `session`** — HS không thấy xác nhận nộp bài, cả bảng đôi SUBMIT (Đợt 246) lẫn ô tích Show answers **vô tác dụng**. Vả lại là game 2 đội chung một bàn phím. | xoá 1 dòng **VÀ** dạy `renderSummary` tôn trọng `session` |
 | `running_team` | y hệt `running_word` | như trên |
 
 ⛔⛔ **VÁ NỬA VỜI CHO 2 GAME RUNNING CÒN TỆ HƠN KHÔNG VÁ**: chỉ xoá dòng `noAssignment` thì điểm vẫn

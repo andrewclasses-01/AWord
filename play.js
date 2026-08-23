@@ -6,15 +6,19 @@
 //     reached from here — a student only ever sees the one assigned act;
 //   * it never asks anyone to sign in. Open the link, type a name, play.
 //
-// Flow:  link -> "Enter your name" -> the game -> Game complete -> the result is
-// sent automatically -> the end-of-game menu shows only what the teacher ticked.
-// Students may play as many times as they like; every attempt is recorded.
+// Flow (Đợt 246):  link -> "Enter your name" -> PRACTICE or SUBMIT -> the game
+//   PRACTICE  nothing leaves this page — review + Start with mistakes only.
+//   SUBMIT    the play uploads in the background the moment the game ends
+//             (queueAttempt/sendAttempt below), and the big SUBMIT HOMEWORK
+//             button on the end screen waits for the server's confirmation.
+// Students may play as many times as they like; every SUBMIT attempt is recorded.
 // =============================================================
 
 import { startGame } from "./core/engine.js";
 import { el } from "./core/utils.js";
 import {
-  getAssignment, submitResult, listScores, isLate, nameKey, prettiestName, rankCompare
+  getAssignment, queueAttempt, sendAttempt, flushOutbox,
+  listScores, isLate, nameKey, prettiestName, rankCompare
 } from "./core/assignments.js";
 import { ensureTemplate } from "./core/registry.js";
 // No template is imported here on purpose. ensureTemplate() fetches the ONE
@@ -35,6 +39,10 @@ async function start() {
   if (new URLSearchParams(location.search).get("nhung") === "1") {
     document.documentElement.classList.add("aw-nhung");
   }
+  // ⭐ Đợt 246 — deliver whatever an earlier visit still owes (a SUBMIT that
+  // never got its confirmation before the tab died). Background, best-effort:
+  // the outbox keeps anything that still fails.
+  flushOutbox().catch(() => {});
   const code = new URLSearchParams(location.search).get("g");
   if (!code) return showMessage("This link is incomplete", "Ask your teacher for the full link.");
 
@@ -170,14 +178,25 @@ async function play(assignment, studentName, className) {
   }
 
   app.innerHTML = "";
+  // ⭐ Đợt 246 — one attempt at a time. `submit` freezes the play into the
+  // outbox and starts delivering; `retrySubmit` re-runs delivery for the SAME
+  // attempt (same fixed id — a re-send can never create a second row). Both
+  // resolve {ok:boolean} and never reject; see core/assignments.js.
+  let attempt = null;
   startGame(app, activity, {
     session: {
       playerName: studentName,
       className: className || "",
       endOptions: assignment.endOptions || {},
+      // What the screenshot fallback board prints (engine side, Đợt 246).
+      meta: { assignmentTitle: assignment.title || "", code: assignment.code },
 
-      submit: ({ score, total, timeMs, review }) =>
-        submitResult({ code: assignment.code, studentName, score, total, timeMs, review }),
+      submit: ({ score, total, timeMs, review }) => {
+        attempt = queueAttempt({ code: assignment.code, studentName, score, total, timeMs, review });
+        return sendAttempt(attempt);
+      },
+      retrySubmit: () => attempt ? sendAttempt(attempt) : Promise.resolve({ ok: false }),
+      attemptId: () => attempt ? attempt.attemptId : "",
 
       // The class ranking: each student's BEST attempt, best score first and,
       // on a tie, the faster time (the teacher's rule).
