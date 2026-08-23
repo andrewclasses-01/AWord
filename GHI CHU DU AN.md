@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 238+239 (23/8/2026) — ⭐⭐ SHOWDOWN HOME: BO GÓC ĐỒNG BỘ · POPUP LỚP HẠ THẤP · CỘT ANALYSE CỐ ĐỊNH+MỜ+THANH KẺ · LƯỚI 3 Ô · CO HẸP CÓ ƯU TIÊN · BẢNG TABLE GỌN (TÁCH XEM/XUẤT) — 🟡 THẦY DUYỆT ("ok build", sau đó "check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+## Đợt 238+239 (23/8/2026) — ⭐⭐ SHOWDOWN HOME: BO GÓC ĐỒNG BỘ · POPUP LỚP HẠ THẤP · CỘT ANALYSE CỐ ĐỊNH+MỜ+THANH KẺ · LƯỚI 3 Ô · CO HẸP CÓ ƯU TIÊN · BẢNG TABLE GỌN (TÁCH XEM/XUẤT) — ✅ **THẦY DUYỆT** ("ok build", sau đó *"check commit + push + bàn giao"*) — **COMMIT `b394797`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b394797` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-export.js` · `core/showdown-home.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot238-showdown.html`, **40/40 phép thử ĐẠT, 0 lỗi console**) —
 CHƯA bấm tay thật trên TOMKO/máy thật, CHƯA đăng nhập Google thật để thử luồng Firestore sống. Cũng
