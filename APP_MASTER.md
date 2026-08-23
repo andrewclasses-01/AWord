@@ -9,8 +9,10 @@
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **23/8/2026 (Đợt 246)** — ⭐⭐⭐ **ASSIGNMENT CÓ HAI CHẾ ĐỘ PRACTICE / SUBMIT +
-> GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI**. ✅ **THẦY DUYỆT — ĐÃ COMMIT + PUSH** (backup `_backup/dot246/`;
-> hồ sơ live ở khối Đợt 246 đầu `GHI CHU DU AN.md`).
+> GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI**. ✅ **THẦY DUYỆT — COMMIT `98525a0`, ĐÃ PUSH + LIVE KIỂM CHỨNG**:
+> Pages `built` đúng commit · **9/9 mã băm SHA-256 khớp** · bàn thử luồng trỏ thẳng vào bản LIVE
+> (`scratch/dot246-live.html`) **37/37 ĐẠT, 0 lỗi console** (backup `_backup/dot246/`;
+> hồ sơ đủ ở khối Đợt 246 đầu `GHI CHU DU AN.md`).
 > Màn START học sinh = 2 nút (PRACTICE tạ vàng | SUBMIT play xanh, chọn lại mỗi lượt; ván mistakes
 > chỉ có PRACTICE). **PRACTICE**: không gửi gì, có Start with mistakes (mở khoá riêng cho practice).
 > **SUBMIT**: gửi NGẦM ngay khi xong game (thầy chốt — em đóng tab sớm vẫn không mất bài); màn cuối

@@ -7,8 +7,15 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 246 (23/8/2026) — ⭐⭐⭐ ASSIGNMENT: HAI CHẾ ĐỘ PRACTICE / SUBMIT + CƠ CHẾ GỬI BÀI CHẮC CHẮN TUYỆT ĐỐI + BẢNG ĐÔI CUỐI GAME + LỄ SUBMIT HOMEWORK
 
-✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — **ĐÃ COMMIT + PUSH** (mã băm live đối
-chiếu ở khối HỒ SƠ ngay dưới, ghi sau khi Pages build xong). Sửa **6 file**: `core/assignments.js` ·
+✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — **COMMIT `98525a0`, ĐÃ PUSH + LIVE KIỂM
+CHỨNG**: Pages `built` **đúng commit** (`gh api .../pages/builds/latest` đọc trường `commit`, không
+tin mã 200) · **9/9 mã băm SHA-256 KHỚP** giữa `git show HEAD:<file>` và bản tải từ
+`https://aword.andrewclasses.com` (mã hoá URL + kiểm HTTP 200 trước khi so — luật Đợt 245):
+`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` ·
+`core/assignment-ui.js` · `core/assignments.js` · `core/engine.js` · `core/icons.js` · `play.js` ·
+**bàn thử luồng nhân bản TRỎ THẲNG VÀO BẢN LIVE** (`scratch/dot246-live.html` — mọi `import` lấy
+code từ Pages, chỉ Firestore là giả): **37/37 ĐẠT, 0 lỗi console**.
+Sửa **6 file**: `core/assignments.js` ·
 `core/engine.js` · `core/assignment-ui.js` · `core/app.css` · `core/icons.js` · `play.js`.
 Backup bản trước ở `_backup/dot246/`. **KHÔNG đụng template nào, KHÔNG phải đăng luật Firestore mới**
 (đối chiếu từng dòng với luật đang chạy trong `docs/08-FIREBASE-SETUP.md`).
