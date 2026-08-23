@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 241 (23/8/2026) — ⭐⭐ THANH PHÂN LOẠI XUỐNG DƯỚI+RỘNG HƠN+TỰ MỜ SAU APPLY, SỬA KHUNG 16:9 ANALYSE CÒN CAO — 🟡 THẦY DUYỆT ("check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+## Đợt 241 (23/8/2026) — ⭐⭐ THANH PHÂN LOẠI XUỐNG DƯỚI+RỘNG HƠN+TỰ MỜ SAU APPLY, SỬA KHUNG 16:9 ANALYSE CÒN CAO — ✅ **THẦY DUYỆT** (*"check commit + push + bàn giao"*) — **COMMIT `b1033a9`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b1033a9` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **4/4 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-home.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot241-showdown.html`, **19/19 phép thử ĐẠT, 0 lỗi console**), đo
 bằng toạ độ DOM thật (`getBoundingClientRect`) chứ không chỉ tin CSS đọc trên giấy — đặc biệt phần khung
