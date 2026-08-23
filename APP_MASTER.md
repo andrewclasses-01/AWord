@@ -11,7 +11,11 @@
 > Cập nhật lần cuối: **23/8/2026 (Đợt 245)** — ⭐⭐⭐ **BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT**:
 > thêm 2 hàng chọn nội dung · bỏ ô "Show answers" CHẾT · vá `optVer` ở đường Edit · chặn 3 template
 > không giao được · báo cáo Result thôi nói dối khi có trừ điểm.
-> ✅ **THẦY DUYỆT — ĐÃ COMMIT + PUSH + LIVE KIỂM CHỨNG.** Sửa 9 file: `core/options-panel.js` ·
+> ✅ **THẦY DUYỆT — COMMIT `589a05b`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·
+> **12/12 mã băm SHA-256 khớp** · nghiệm lại 3 bàn thử trỏ thẳng vào bản LIVE (17/17 · 40/40).
+> ⚠️ Bẫy mới: tên file CÓ DẤU CÁCH làm `curl` trả rỗng, băm ra `e3b0c44…` (băm của chuỗi rỗng) —
+> trông y hệt "lệch nội dung". Phải mã hoá URL **và** kiểm HTTP 200 trước khi so băm.
+> Sửa 9 file: `core/options-panel.js` ·
 > `core/settings.js` · `core/assignment-ui.js` · `core/engine.js` · `core/app.css` · `main.js` ·
 > `templates/speaking-cards/speaking-cards.js` · `templates/running-word/running-word.js` ·
 > `templates/running-team/running-team.js`. Ba bàn thử `scratch/dot245-*` — **85/85 ĐẠT, 0 lỗi

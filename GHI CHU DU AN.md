@@ -7,6 +7,32 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 245 (23/8/2026) — ⭐⭐⭐ BÀI GIAO DÙNG ĐÚNG BỘ OPTIONS CỦA ACT: THÊM 2 HÀNG CHỌN NỘI DUNG · BỎ Ô "SHOW ANSWERS" CHẾT · VÁ optVer Ở ĐƯỜNG EDIT · CHẶN 3 TEMPLATE KHÔNG GIAO ĐƯỢC · BÁO CÁO RESULT THÔI NÓI DỐI KHI CÓ TRỪ ĐIỂM
 
+**HỒ SƠ CHỐT — ĐÃ LIVE.** COMMIT code **`589a05b`**, đã push `main`.
+GitHub Pages `built` **đúng commit** (`gh api repos/andrewclasses-01/AWord/pages/builds/latest` →
+`{"status":"built","commit":"589a05b286ff…"}`) — ⛔ **không tin mã 200**, phải đọc `commit` trong build.
+**12/12 mã băm SHA-256 KHỚP** giữa `git show HEAD:<file>` và `curl https://aword.andrewclasses.com/<file>`:
+`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` · `core/engine.js` ·
+`core/assignment-ui.js` · `core/options-panel.js` · `core/settings.js` · `main.js` ·
+`templates/speaking-cards/speaking-cards.js` · `templates/running-word/running-word.js` ·
+`templates/running-team/running-team.js`.
+⛔ **Băm bản trong GIT, không băm file trên ổ đĩa** — repo checkout CRLF trên Windows nhưng git lưu LF,
+băm file làm việc sẽ **lệch oan** dù nội dung y hệt (bẫy Đợt 221).
+⛔ **`curl` phải có `--compressed`** — Pages trả gzip, thiếu cờ này là băm bản nén.
+
+⚠️⚠️ **BẪY MỚI, TÌM RA NGAY LẦN CHẠY ĐẦU — "LỆCH" GIẢ DO TÊN FILE CÓ DẤU CÁCH.**
+Hai file `GHI CHU DU AN.md` và `core/HUONG DAN CORE.md` báo **LỆCH** ở lượt kiểm đầu, mã live là
+`e3b0c44298fc…` — mà đó chính là **SHA-256 của chuỗi RỖNG**: `curl` trả `HTTP 000`, bỏ cuộc vì URL
+chứa dấu cách chưa mã hoá, in ra chuỗi rỗng. Trông **y hệt** một ca "nội dung khác nhau". Phải
+`urllib.parse.quote` tên file **và kiểm mã HTTP là 200 trước khi so băm**, nếu không một file 404
+sẽ đọc thành "lệch nội dung" mãi mãi. Mã hoá xong: **12/12 khớp**.
+
+**NGHIỆM LẠI TRÊN CHÍNH BẢN LIVE** (không chỉ trên máy): hai bàn thử được nhân bản với mọi `import`
+trỏ thẳng vào `https://aword.andrewclasses.com` (`scratch/dot245-live-*.html`) —
+**17/17 template khớp hàng & ô · Settings 17/17 giữ nguyên · 40/40 chặn nút trên 17 game thật.**
+⚠️ Lượt chạy live ĐẦU TIÊN báo 16/17: `maze-chase.js` **rớt giữa chừng** khi 17 module tải song song
+từ Pages. Kiểm lại thì file có đủ trên live (`HTTP 200`, 11.781 byte) và có trong git; chạy lại là
+đủ 17/17. **Một lần đỏ do mạng ≠ hồi quy** — nhưng cũng ⛔ đừng cho qua mà không kiểm file thật.
+
 ✅ **THẦY DUYỆT** (*"commit + push live + ghi dữ liệu"*) — ĐÃ COMMIT + PUSH. Sửa **9 file**: `core/options-panel.js` ·
 `core/settings.js` · `core/assignment-ui.js` · `core/engine.js` · `core/app.css` · `main.js` ·
 `templates/speaking-cards/speaking-cards.js` · `templates/running-word/running-word.js` ·
