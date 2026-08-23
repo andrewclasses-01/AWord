@@ -30,7 +30,7 @@
 import { el } from "./utils.js";
 import { icons } from "./icons.js";
 import { sound } from "./sound.js";
-import { pctOf, pctBand, shortenName, fmtRoundMs, buildAnalysisRows } from "./showdown.js";
+import { pctOf, pctBand, shortenName, fmtRoundMs, buildAnalysisRows, classifyColor } from "./showdown.js";
 import { fitPodiumNames } from "./showdown-review.js";
 
 const PCT_COLOR = { "is-p0": "#dc2626", "is-p1": "#ca8a04", "is-p2": "#ea580c", "is-p3": "#2563eb", "is-p4": "#16a34a" };
@@ -830,7 +830,7 @@ function printDetailsSheetInPage(ranked, titleText, fit) {
  *              view itself already shows a line about)
  *   toast      the panel's own toast, for a failed PNG build
  */
-export function openExportDialog({ mount, ranked, className = "", actName = "", at, defaultType = "table", hasRows = true, toast = () => {} }) {
+export function openExportDialog({ mount, ranked, className = "", actName = "", at, defaultType = "table", hasRows = true, classify = null, toast = () => {} }) {
   if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
 
   // ⭐ Đợt 233 — `layer` is now only the translucent backdrop; `box` is the
@@ -950,7 +950,9 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
       const { entries, full, partial } = singleMatchAnalysis(shown);
       // ⭐ Đợt 238 — single-match TABLE export: no legend under the columns
       // (one act, one board — the title line above already says which).
-      const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, shown, 1, { showLegend: false });
+      // ⭐ Đợt 240 (thầy) — the exported file carries the SAME classify
+      // colours the teacher already Applied on the live Table view.
+      const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, shown, 1, { showLegend: false, classify });
       const scale = Math.min(1, 260 / width);
       const frame = el("div", "aw-sd-exp-preview-frame");
       frame.style.width = Math.round(width * scale) + "px";
@@ -1005,7 +1007,7 @@ export function openExportDialog({ mount, ranked, className = "", actName = "", 
       goBtn.disabled = true;
       try {
         const { entries, full, partial } = singleMatchAnalysis(shown);
-        const blob = await analysisPngBlob(full, partial, entries, shown, 2, { showLegend: false });
+        const blob = await analysisPngBlob(full, partial, entries, shown, 2, { showLegend: false, classify });
         if (!blob) throw new Error("aw/png-empty");
         triggerDownload(blob, safeFileBit(shown) + ".png");
       } catch (e) {
@@ -1062,8 +1064,27 @@ const AN_BAR_W = 96, AN_BAR_GAP = 16, AN_GROUP_GAP = 30, AN_PAD = 40;
 // every consumer of drawAnalysisCanvas (the Table view AND every downloaded
 // PNG, single-match or multi-match), so the taller stack applies everywhere
 // uniformly rather than only in the one place thầy noticed it.
-const AN_AXIS_W = 52, AN_TITLE_H = 96, AN_TOTAL_H = 36, AN_PLOT_H = 760, AN_NAME_H = 42;
+// ⭐ Đợt 240 — AN_TOTAL_H (headroom above a bar for the big total %) bumped
+// 36→44 to match that number's own bigger font (20→26px) below.
+const AN_AXIS_W = 52, AN_TITLE_H = 96, AN_TOTAL_H = 44, AN_PLOT_H = 760, AN_NAME_H = 42;
 const AN_LEGEND_ROW_H = 26, AN_LEGEND_GAP = 22, AN_LEGEND_SW = 13, AN_LEGEND_ITEM_GAP = 20;
+// ⭐⭐ Đợt 240 (thầy: "khung hiển thị chuẩn và xuất... là 16:9, chiếu trên màn
+// TOMKO") — the board's canvas never shrinks below this 16:9 baseline (a
+// small class's few bars sit centred inside it, see `extraW`/`originY`
+// below); a big class whose bars genuinely need more room still grows wider
+// AND taller together, keeping the same ratio, rather than cramming.
+// ⚠️ 2000, not a rounder 1600/1920 — the board's own fixed vertical overhead
+// (padding + a possible title band + the tall AN_PLOT_H bars + names + a
+// footer) adds up to just over 1000px REGARDLESS of pupil count (see
+// `naturalH` below), so a baseline much under ~1950px would make `naturalH`
+// win the `Math.max` on every board, silently never actually landing on
+// 16:9 at all — measured with a real 1-pupil board, not assumed.
+const AN_BASE_W = 2000;
+// ⭐ Đợt 240 (thầy: "chữ ANDREW CLASSES để xa bảng cột ra một chút") — the
+// single-match Table view's bottom brand line sits further from the names
+// row than the legend used to (AN_LEGEND_GAP alone, 22px) — this is that
+// same rhythm, just roomier.
+const AN_VIEW_FOOT_GAP = 46;
 
 /** Wrap the legend's entries into centred rows that fit `maxW` — needs a real
  *  2D context to measure text, so the caller passes one in (a throwaway probe
@@ -1108,9 +1129,26 @@ function wrapAnalysisLegend(ctx, entries, maxW) {
  *      renderReviewTable). That screen already carries its own title/time in
  *      its own header, so the brand/label/title band AND the legend inside
  *      the board would be pure duplication — all dropped. A single small
- *      "ANDREW CLASSES" line moves to the BOTTOM instead (thầy), and the bar
- *      area itself is drawn ~20% shorter to make room for it without growing
- *      the board overall.
+ *      "ANDREW CLASSES" line moves to the BOTTOM instead (thầy).
+ *
+ * ⭐⭐⭐ Đợt 240 (thầy) —
+ *   • THE WHOLE BOARD IS FRAMED 16:9 now (`AN_BASE_W`'s own note) — width
+ *     never shrinks below that baseline, height is `width * 9/16` (or taller,
+ *     if a wide legend genuinely needs more — see `height` below); whatever
+ *     the bars' own natural size leaves over is split evenly above/below
+ *     (`originY`) and left/right (`extraW`/2 folded into `plotX`) so the
+ *     board always sits CENTRED in its own 16:9 frame instead of pinned to
+ *     the top-left corner of it.
+ *   • "view"'s bars are FULL HEIGHT now (no more ~20% shrink from Đợt 238) —
+ *     the 16:9 frame already has the room the shrink used to manufacture, so
+ *     it can just centre a full-size board instead of drawing a shorter one.
+ *   • `opts.classify` — `{hi, lo}` from the new classify bar (core/showdown.js's
+ *     classifyColor), or null/undefined for "never classified, use the
+ *     default colours". A SINGLE-match board (`entries.length <= 1`) recolours
+ *     its BARS (thầy: "các cột... sẽ thay đổi màu tương ứng"); a MULTI-match
+ *     board keeps its per-match tier colours (the legend depends on them) and
+ *     recolours the BIG TOTAL % instead (thầy: "đổi màu của số % trên đầu
+ *     các cột") — never both on the same board.
  */
 // ⭐ Đợt 235 — exported for the single-match TABLE view (core/showdown-review.js's
 // `renderReviewTable`), which dynamic-imports this module the same way
@@ -1119,29 +1157,40 @@ function wrapAnalysisLegend(ctx, entries, maxW) {
 export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1, opts = {}) {
   const isView = opts.variant === "view";
   const showLegend = isView ? false : (opts.showLegend !== false);
+  const classify = opts.classify || null;
+  const isSingle = entries.length <= 1;
 
   const rows = [...full, ...partial];
   const hasGroupGap = full.length > 0 && partial.length > 0;
   const plotW = Math.max(1, rows.length) * AN_BAR_W + Math.max(0, rows.length - 1) * AN_BAR_GAP
     + (hasGroupGap ? AN_GROUP_GAP - AN_BAR_GAP : 0);
-  const width = Math.max(620, AN_PAD * 2 + AN_AXIS_W + plotW);
+  const contentW = Math.max(620, AN_PAD * 2 + AN_AXIS_W + plotW);
+  // ⭐ Đợt 240 — see AN_BASE_W's own note just above its declaration.
+  const width = Math.max(AN_BASE_W, contentW);
+  const extraW = width - contentW;   // > 0 only for a small class — centres the bars horizontally
 
-  // ⭐ Đợt 238 — "view" skips the whole title band (AN_TITLE_H) but keeps the
-  // SAME AN_TOTAL_H headroom above the bars (the big average can sit right at
-  // the 100% line regardless of variant); its bars are ~20% shorter (thầy).
+  // ⭐ Đợt 238/240 — "view" skips the whole title band (AN_TITLE_H) but keeps
+  // the SAME AN_TOTAL_H headroom above the bars; its bars are FULL height now
+  // (Đợt 240 — no more the ~20% shrink Đợt 238 used, the 16:9 frame supplies
+  // the room instead).
   const topH = (isView ? 0 : AN_TITLE_H) + AN_TOTAL_H;
-  const plotH = isView ? Math.round(AN_PLOT_H * 0.8) : AN_PLOT_H;
+  const plotH = AN_PLOT_H;
 
   const probe = document.createElement("canvas").getContext("2d");
   const legendRows = (showLegend && rows.length) ? wrapAnalysisLegend(probe, entries, width - AN_PAD * 2) : [];
-  // ⭐ Đợt 238 — "view"'s bottom brand reuses the SAME gap+row-height rhythm
-  // the legend used to occupy (AN_LEGEND_GAP/AN_LEGEND_ROW_H), so the trailing
-  // AN_PAD below it (from the `AN_PAD * 2` term) reads as the same deliberate
-  // margin every other edge of this board already has — not a new number to
-  // separately tune.
+  // ⭐ Đợt 240 — "view"'s bottom brand now uses its OWN, roomier gap
+  // (AN_VIEW_FOOT_GAP, thầy: "để xa bảng cột ra một chút") instead of reusing
+  // the legend's tighter AN_LEGEND_GAP.
   const footH = (showLegend ? (AN_LEGEND_GAP + Math.max(1, legendRows.length) * AN_LEGEND_ROW_H) : 0)
-    + (isView ? (AN_LEGEND_GAP + AN_LEGEND_ROW_H) : 0);
-  const height = AN_PAD * 2 + topH + plotH + AN_NAME_H + footH;
+    + (isView ? (AN_VIEW_FOOT_GAP + AN_LEGEND_ROW_H) : 0);
+  const naturalH = AN_PAD * 2 + topH + plotH + AN_NAME_H + footH;
+  // ⭐ Đợt 240 — height is whichever is TALLER: the 16:9-at-this-width figure,
+  // or what the content actually needs (a wide class with a long legend can
+  // still exceed 16:9 — better a slightly-off ratio than the legend
+  // overlapping the bars). `extraH`/2 is what centres the board vertically.
+  const height = Math.max(Math.round(width * 9 / 16), naturalH);
+  const extraH = height - naturalH;
+  const originY = extraH / 2;
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(width * scale);
@@ -1155,14 +1204,14 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
   if (!isView) {
     // ⭐ Đợt 238 — nudged from 18 to 24: a touch lower for better balance
     // against the RESULTS label right under it (thầy).
-    drawBrandingCanvas(ctx, width, 24, 12);
+    drawBrandingCanvas(ctx, width, originY + 24, 12);
 
     // ---- title: a small "RESULTS" (Đợt 238 — was "ANALYSIS") over the
     //      teacher's own class/act/date line ----
     ctx.textAlign = "center";
     ctx.fillStyle = "#2f7dfd";
     ctx.font = `800 20px ${FONT_STACK}`;
-    ctx.fillText("RESULTS", width / 2, AN_PAD + 22);
+    ctx.fillText("RESULTS", width / 2, originY + AN_PAD + 22);
     ctx.fillStyle = "#23303e";
     let titleFs = 28;
     ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
@@ -1172,7 +1221,7 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
       titleFs -= 1;
       ctx.font = `800 ${titleFs}px ${FONT_STACK}`;
     }
-    ctx.fillText(shownTitle, width / 2, AN_PAD + 60);
+    ctx.fillText(shownTitle, width / 2, originY + AN_PAD + 60);
   }
 
   if (!rows.length) {
@@ -1184,8 +1233,8 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
 
   // ---- plot: gridlines + the % axis, a fixed 0-100 (see this function's own
   //      note on why the axis no longer stretches per selection) ----
-  const plotX = AN_PAD + AN_AXIS_W;
-  const plotY = AN_PAD + topH;
+  const plotX = AN_PAD + AN_AXIS_W + extraW / 2;
+  const plotY = originY + AN_PAD + topH;
   const plotBottom = plotY + plotH;
   ctx.textAlign = "right";
   for (let v = 0; v <= 100; v += 20) {
@@ -1213,7 +1262,12 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
       const scaledPct = r.count ? seg.pct / r.count : 0;
       const h = (scaledPct / 100) * plotH;
       if (h > 0.4) {
-        ctx.fillStyle = ANALYSE_PNG_COLORS[i % ANALYSE_PNG_COLORS.length];
+        // ⭐ Đợt 240 — a single-match board recolours ITS OWN bar by the
+        // classify bar; a multi-match board keeps the per-match legend colour.
+        const tierColor = (isSingle && classify)
+          ? (classifyColor(seg.pct, classify) || ANALYSE_PNG_COLORS[0])
+          : ANALYSE_PNG_COLORS[i % ANALYSE_PNG_COLORS.length];
+        ctx.fillStyle = tierColor;
         ctx.fillRect(bx, by - h, AN_BAR_W, h);
         // Đợt 237 (thầy) — with a single match (entries.length === 1, the
         // Table view) this per-tier number is always the SAME figure as the
@@ -1230,11 +1284,14 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
       by -= h;
     });
 
-    // the average, big, on top of the stack (thầy: "số % trên đỉnh cột lớn hơn nhiều")
-    ctx.fillStyle = "#1d2939";
+    // ⭐⭐ Đợt 240 — bigger (20→26px, thầy: "tăng size lớn hơn cho dễ nhìn"),
+    // and a MULTI-match board recolours THIS number by the classify bar
+    // instead of the bar itself (see the tier loop's own note above).
+    const totalColor = (!isSingle && classify) ? (classifyColor(r.total, classify) || "#1d2939") : "#1d2939";
+    ctx.fillStyle = totalColor;
     ctx.textAlign = "center";
-    ctx.font = `900 20px ${FONT_STACK}`;
-    ctx.fillText(`${Math.round(r.total)}%`, bx + AN_BAR_W / 2, by - 16);
+    ctx.font = `900 26px ${FONT_STACK}`;
+    ctx.fillText(`${Math.round(r.total)}%`, bx + AN_BAR_W / 2, by - 20);
 
     // the pupil's name — UPPERCASE always (thầy), shrunk/abbreviated to fit
     // the bar's own width by the same ladder the rank sheet's names use.
@@ -1248,11 +1305,10 @@ export function drawAnalysisCanvas(full, partial, entries, titleText, scale = 1,
   });
 
   if (isView) {
-    // ⭐ Đợt 238 — the single "ANDREW CLASSES" line for the on-screen Table
-    // view, centred where the legend used to start (see `footH`'s own note),
-    // with the usual AN_PAD margin still standing between it and the very
-    // bottom edge of the board.
-    drawBrandingCanvas(ctx, width, plotBottom + AN_NAME_H + AN_LEGEND_GAP, 11);
+    // ⭐ Đợt 238/240 — the single "ANDREW CLASSES" line for the on-screen
+    // Table view, centred, now a full AN_VIEW_FOOT_GAP below the names row
+    // (thầy: "để xa bảng cột ra một chút").
+    drawBrandingCanvas(ctx, width, plotBottom + AN_NAME_H + AN_VIEW_FOOT_GAP, 11);
   }
 
   if (showLegend) {
@@ -1299,7 +1355,7 @@ async function analysisPngBlob(full, partial, entries, titleText, scale = 2, opt
  *                        the exact same data the on-screen chart is drawn from
  *   toast                the panel's own toast, for a failed PNG build
  */
-export function openAnalysisExportDialog({ mount, className = "", at, full = [], partial = [], entries = [], toast = () => {} }) {
+export function openAnalysisExportDialog({ mount, className = "", at, full = [], partial = [], entries = [], classify = null, toast = () => {} }) {
   if (!mount || mount.querySelector(".aw-sd-exp")) return;        // one at a time
 
   // ⭐ Đợt 233 — same backdrop/box split as openExportDialog above.
@@ -1357,7 +1413,9 @@ export function openAnalysisExportDialog({ mount, className = "", at, full = [],
     previewBox.innerHTML = "";
     const txt = composedTitle();
     titleLine.textContent = txt || "—";
-    const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, txt || "Analysis", 1);
+    // ⭐ Đợt 240 (thầy) — carries over whatever classify colours were already
+    // Applied on the live ANALYSE chart before Download was opened.
+    const { canvas, width, height } = drawAnalysisCanvas(full, partial, entries, txt || "Analysis", 1, { classify });
     const scale = Math.min(1, 300 / width, 260 / height);
     const frame = el("div", "aw-sd-exp-preview-frame");
     frame.style.width = Math.round(width * scale) + "px";
@@ -1381,7 +1439,7 @@ export function openAnalysisExportDialog({ mount, className = "", at, full = [],
     const shown = composedTitle() || "Analysis";
     goBtn.disabled = true;
     try {
-      const blob = await analysisPngBlob(full, partial, entries, shown, 2);
+      const blob = await analysisPngBlob(full, partial, entries, shown, 2, { classify });
       if (!blob) throw new Error("aw/png-empty");
       triggerDownload(blob, safeFileBit("Analysis " + shown) + ".png");
     } catch (e) {

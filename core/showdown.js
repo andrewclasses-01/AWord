@@ -679,6 +679,37 @@ export function pctBand(pct) {
 }
 
 // ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 240 (23/8/2026, thầy) — THE CLASSIFY BAR: 3-zone colour threshold
+// ---------------------------------------------------------------
+// The new draggable bar on the Table view (both single-match and Analyse) —
+// thầy's own axis, chốt qua AskUserQuestion: the bar reads LEFT-TO-RIGHT as
+// 100%→0% (best on the left, same "best first" convention every ranked list
+// in this app already uses), so `hi` (the left handle, closer to 100%) marks
+// where GREEN starts and `lo` (the right handle, closer to 0%) marks where
+// RED starts — a pct at or above `hi` is green, below `lo` is red, the middle
+// band is blue. ONE tiny pure function, imported by both the DOM chart
+// (core/showdown-setup.js) and the canvas exporter (core/showdown-export.js)
+// so the two never drift into two different colour reads of the same %,
+// the exact bug the ANALYSE_COLORS/ANALYSE_PNG_COLORS duplication risked.
+export const CLASSIFY_COLORS = { hi: "#16a34a", mid: "#2563eb", lo: "#dc2626" };
+// A reasonable starting split, not thầy's own numbers — roughly the
+// green/blue boundary of pctBand() above (85) and its red ceiling (60),
+// simplified from 5 bands down to 3. Whatever the teacher drags to sticks via
+// Apply; this is only ever the FIRST time a board is opened.
+export const DEFAULT_CLASSIFY = { hi: 85, lo: 60 };
+
+/** `classify` is `{hi, lo}` (hi > lo) or null/undefined — no classification
+ *  applied yet, so the caller should fall back to its own default colour. */
+export function classifyColor(pct, classify) {
+  if (!classify) return null;
+  const hi = Number(classify.hi), lo = Number(classify.lo);
+  if (!Number.isFinite(hi) || !Number.isFinite(lo)) return null;
+  if (pct >= hi) return CLASSIFY_COLORS.hi;
+  if (pct < lo) return CLASSIFY_COLORS.lo;
+  return CLASSIFY_COLORS.mid;
+}
+
+// ---------------------------------------------------------------
 // NAME ABBREVIATION (Đợt 166, moved here in Đợt 207)
 // ---------------------------------------------------------------
 // The LAST resort for a name that still does not fit after the size it is drawn

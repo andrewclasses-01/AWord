@@ -778,7 +778,7 @@ export function mountShowdownReview({
  * already imported from core/showdown.js — only the CANVAS PAINTING lives in
  * the lazy-loaded sibling, so that is the only part fetched on demand.
  */
-export function renderReviewTable(ranked, titleText) {
+export function renderReviewTable(ranked, titleText, opts = {}) {
   const wrap = el("div", "aw-rv-tablewrap");
   const note = el("div", "aw-sd-rec-note", "Building the table…");
   wrap.append(note);
@@ -798,9 +798,13 @@ export function renderReviewTable(ranked, titleText) {
     // ⭐ Đợt 238 (thầy) — `variant:"view"` strips the top brand/RESULTS label/
     // title and the bottom legend (all redundant with this screen's own header
     // and single-act nature), draws a small "ANDREW CLASSES" at the bottom
-    // instead, and trims the bar area ~20% shorter — see drawAnalysisCanvas's
-    // own note in core/showdown-export.js.
-    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, tableScale, { variant: "view" });
+    // instead — see drawAnalysisCanvas's own note in core/showdown-export.js.
+    // ⭐ Đợt 240 — `opts.classify` (the classify bar's last-Applied/saved
+    // `{hi,lo}`, or null) recolours the columns; the caller (openTileDetail,
+    // core/showdown-home.js) just calls this again on every Apply — a full
+    // repaint is cheap enough here that a second, targeted recolour path
+    // was not worth building for the single-match case.
+    const { canvas } = mod.drawAnalysisCanvas(full, partial, entries, titleText, tableScale, { variant: "view", classify: opts.classify || null });
     wrap.innerHTML = "";
     canvas.style.cssText = "width:100%;height:auto;display:block;";
     wrap.append(canvas);

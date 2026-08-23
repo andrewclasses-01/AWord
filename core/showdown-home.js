@@ -44,14 +44,34 @@ import { icons } from "./icons.js";
 import { listClasses } from "./classes.js";
 import {
   sfx, whenDone, when, matchBlocks, displayName, renderMini,
-  renderChart, fitChartTierLabels, watchChartResize
+  renderChart, fitChartTierLabels, watchChartResize,
+  applyClassifyToChart, buildClassifyBar
 } from "./showdown-setup.js";
 import { renderReviewTable, renderReviewPodium, renderReviewList, fitPodiumNames } from "./showdown-review.js";
-import { buildAnalysisRows } from "./showdown.js";
+import { buildAnalysisRows, DEFAULT_CLASSIFY } from "./showdown.js";
 
 const WEEKDAY = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 const MONTH_NAME = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE",
   "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+
+/** "d/m/yyyy" — same shape as core/showdown-export.js's own fmtDate, kept as a
+ *  small local copy since this file never statically imports that module (see
+ *  the file header: it is lazy-loaded only for the two Download dialogs). */
+function fmtDayFull(ms) {
+  const d = new Date(Number(ms) || Date.now());
+  return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`;
+}
+/** ⭐ Đợt 240 (thầy) — the ANALYSE title's own "(date)" or "(from - to)"
+ *  suffix, computed from the PICKED MATCHES' own timestamps — "ANALYSIS NEN
+ *  TANG 4 (23/8/2026)" for one day, "ANALYSIS NEN TANG 4 (20/5 - 23/8/2026)"
+ *  when they span several. */
+function dateRangeLabel(entries) {
+  if (!entries.length) return "";
+  const times = entries.map(e => e.at || 0);
+  const lo = Math.min(...times), hi = Math.max(...times);
+  const a = fmtDayFull(lo), b = fmtDayFull(hi);
+  return a === b ? `(${a})` : `(${a} - ${b})`;
+}
 
 /** "202608" -> "AUGUST 2026" — the rail's month-row label. */
 function monthLabel(yyyymm) {
@@ -747,8 +767,9 @@ export function mountShowdownHome(host, opts = {}) {
     // A floor, not a real wait — there is no network round trip left to hide
     // (every match is already in `monthCache`), but a computation that
     // finishes in the same frame it started reads as if nothing happened at
-    // all on a screen that just promised "ANALYSING".
-    const floor = new Promise(r => setTimeout(r, Math.max(0, 550 - (Date.now() - t0))));
+    // all on a screen that just promised "ANALYSING". ⭐ Đợt 240 (thầy: "hiển
+    // thị tối thiểu 2s để thể hiện là phân tích kỹ") — 550ms → 2000ms.
+    const floor = new Promise(r => setTimeout(r, Math.max(0, 2000 - (Date.now() - t0))));
     floor.then(() => {
       overlay.remove();
       if (!isAlive()) return;
@@ -758,14 +779,28 @@ export function mountShowdownHome(host, opts = {}) {
 
   function openAnalysisChart(full, partial, entries) {
     const chart = el("div", "aw-sd-rec-chart");
-    const ch = el("div", "aw-sd-rec-head");
+    const ch = el("div", "aw-sd-rec-head has-classify");
     const ct = el("div", "aw-sd-rec-title");
     ct.append(el("span", "aw-sd-rec-word", "ANALYSIS"));
     if (curClassName) {
       const classEl = el("span", "aw-sd-rec-class");
-      classEl.textContent = curClassName;                       // the teacher's own text — never innerHTML
+      // ⭐ Đợt 240 (thầy) — "NEN TANG 4 (23/8/2026)" or "NEN TANG 4 (20/5 -
+      // 23/8/2026)" — the class name plus the picked matches' own date span.
+      classEl.textContent = [curClassName, dateRangeLabel(entries)].filter(Boolean).join(" ");
       ct.append(classEl);
     }
+    // ⭐⭐ Đợt 240 (thầy) — the classify bar, VIEW-ONLY (core/showdown-setup.js's
+    // buildClassifyBar — never drawn into the exported PNG itself, only its
+    // last-Applied result is threaded through to it, see the Download handler
+    // below). Analyse has no single record to save against (an ephemeral pick
+    // of several matches, not a document of its own — thầy's own call, no
+    // Firestore write here), so `currentClassify` is a plain session variable.
+    let currentClassify = null;
+    const classifySlot = el("div", "aw-sd-rec-classifyslot");
+    classifySlot.append(buildClassifyBar({
+      initial: DEFAULT_CLASSIFY,
+      onApply: c => { sfx.forward(); currentClassify = c; applyClassifyToChart(chart, c); }
+    }));
     let closing = false;
     const onFsChange = () => { if (document.fullscreenElement !== chart && !closing) closeChart(); };
     function closeChart() {
@@ -784,13 +819,14 @@ export function mountShowdownHome(host, opts = {}) {
     dlBtn.onclick = () => {
       sfx.tap();
       import("./showdown-export.js").then(mod => mod.openAnalysisExportDialog({
-        mount: chart, className: curClassName, at: Date.now(), full, partial, entries, toast
+        mount: chart, className: curClassName, at: Date.now(), full, partial, entries,
+        classify: currentClassify, toast
       }));
     };
     const backBtn = el("button", "aw-sd-rec-close", icons.close);
     backBtn.type = "button"; backBtn.title = "Close";
     backBtn.onclick = () => { sfx.back(); closeChart(); };
-    ch.append(ct, dlBtn, backBtn);
+    ch.append(ct, classifySlot, dlBtn, backBtn);
     const cbody = el("div", "aw-sd-rec-cbody");
     chart.append(ch, cbody);
     cbody.append(renderChart(full, partial, entries));
@@ -814,7 +850,7 @@ export function mountShowdownHome(host, opts = {}) {
     // board — core/showdown-export.js's drawAnalysisCanvas `variant:"view"`),
     // and Podium/List never needed a second one either.
     const det = el("div", "aw-sd-rec-detail");
-    const dh = el("div", "aw-sd-rec-head");
+    const dh = el("div", "aw-sd-rec-head has-classify");
     const dt = el("div", "aw-sd-rec-title");
     const dact = el("span", "aw-sd-rec-word");
     dact.textContent = displayName(m);                          // the teacher's own text — never innerHTML
@@ -822,6 +858,11 @@ export function mountShowdownHome(host, opts = {}) {
     dsub.textContent = `${curClassName || ""} · ${when(m.at)}`;  // ditto
     dt.append(dact, dsub);
     let view = "table";
+    // ⭐⭐ Đợt 240 (thầy) — the classify bar's own state, seeded from this
+    // match's SAVED thresholds if it has any (core/showdown-history.js's
+    // `classify` field) — reopening a previously-classified match shows the
+    // same colours right away, no need to press Apply again.
+    let classify = m.classify || null;
     const hasRows = ranked.some(b => (b.rows || []).length);
     const tableBtn = el("button", "aw-sd-rec-close is-toggle", icons.barChart);
     tableBtn.type = "button"; tableBtn.title = "Table";
@@ -829,13 +870,35 @@ export function mountShowdownHome(host, opts = {}) {
     podiumBtn.type = "button"; podiumBtn.title = "Podium";
     const listBtn = el("button", "aw-sd-rec-close is-toggle", icons.assignment);
     listBtn.type = "button"; listBtn.title = "List"; listBtn.disabled = !hasRows;
+    // ⭐⭐ Đợt 240 — VIEW-ONLY (core/showdown-setup.js's buildClassifyBar's own
+    // header note) — Apply SAVES to Firestore (thầy chốt qua AskUserQuestion:
+    // "lưu vĩnh viễn... mở lại trận cũ vẫn thấy đúng màu"), then repaints the
+    // Table board through the SAME `paint()` every other view switch uses —
+    // no separate targeted-recolour path was worth building for one board.
+    const classifySlot = el("div", "aw-sd-rec-classifyslot");
+    classifySlot.append(buildClassifyBar({
+      initial: classify,
+      onApply: async c => {
+        sfx.forward();
+        classify = c;
+        paint();
+        try {
+          const h = await import("./showdown-history.js");
+          const ok = await h.setMatchClassify(curClassId, m._yyyymm, m.matchId, c);
+          if (ok) m.classify = c; else toast("Could not save the classification.");
+        } catch (err) {
+          console.warn("AWord: could not save this match's classification", err);
+          toast(err?.code === "aw/signed-out" ? "Sign in first." : "Could not save the classification.");
+        }
+      }
+    }));
     const dlBtn = el("button", "aw-sd-rec-close", icons.download);
     dlBtn.type = "button"; dlBtn.title = "Download";
     dlBtn.onclick = () => {
       sfx.tap();
       import("./showdown-export.js").then(mod => mod.openExportDialog({
         mount: det, ranked, className: curClassName, actName: displayName(m), at: m.at,
-        defaultType: view, hasRows, toast
+        defaultType: view, hasRows, classify, toast
       }));
     };
     const back = el("button", "aw-sd-rec-close", icons.close);
@@ -854,7 +917,7 @@ export function mountShowdownHome(host, opts = {}) {
     }
     teardownFns.add(closeDetail);
     back.onclick = () => { sfx.back(); closeDetail(); };
-    dh.append(dt, tableBtn, podiumBtn, listBtn, dlBtn, back);
+    dh.append(dt, classifySlot, tableBtn, podiumBtn, listBtn, dlBtn, back);
     const dbody = el("div", "aw-sd-rec-dbody");
     det.append(dh, dbody);
     const picks = new Map();
@@ -866,11 +929,16 @@ export function mountShowdownHome(host, opts = {}) {
     function paint() {
       dbody.innerHTML = "";
       if (!hasRows && view === "list") view = "table";
+      // ⭐ Đợt 240 — the classify bar only makes sense against the Table
+      // board's own coloured columns; hidden for Podium/List (and for the
+      // "answers not kept" fallback below, which is really Podium in disguise).
+      const showingTable = hasRows && view === "table";
+      classifySlot.style.display = showingTable ? "" : "none";
       if (!hasRows && view !== "podium") {
         dbody.append(el("div", "aw-sd-rec-note", "The answers for this match were not kept — here is the ranking."));
         dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
       } else if (view === "table") {
-        dbody.append(renderReviewTable(ranked, [curClassName, displayName(m)].filter(Boolean).join(" • ")));
+        dbody.append(renderReviewTable(ranked, [curClassName, displayName(m)].filter(Boolean).join(" • "), { classify }));
       } else if (view === "podium") {
         dbody.append(renderReviewPodium(ranked, { showTeam: true, picks }));
       } else {

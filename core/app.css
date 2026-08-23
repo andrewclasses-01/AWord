@@ -887,7 +887,15 @@ html.aw-nhung .aw-below { display: none; }
    `width:100%;height:auto`; this rule is only the box it scales inside of —
    shared by both callers (this screen AND core/showdown-setup.js's
    `openDetail`, same function, same wrapper class). */
-.aw-rv-tablewrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
+/* ⭐ Đợt 240 (thầy: "để bảng cột này ở giữa khung 16:9") — the canvas itself
+   now carries its own 16:9 pixel dimensions (core/showdown-export.js's
+   drawAnalysisCanvas), drawn at `width:100%;height:auto` so it already keeps
+   that ratio; centring it here is just for whenever this wrap's own box ends
+   up taller than the canvas needs. */
+.aw-rv-tablewrap {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
 .aw-rv-tablewrap canvas { max-width: 100%; }
 /* rows auto-height (grow when a long question wraps); answer columns are half-width */
 .aw-rv-row { min-height: 7cqw; display: grid; grid-template-columns: 6.8fr 1fr 1fr; gap: 0.8cqw; }
@@ -4617,6 +4625,14 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-rec-head { flex: 0 0 auto; display: flex; align-items: center; gap: 10px; }
 .aw-sd-rec-title { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 9px; }
+/* ⭐⭐ Đợt 240 — when a header carries the classify bar (`.has-classify`, set
+   only on the two headers that actually have one — the Table detail view and
+   the ANALYSE chart, core/showdown-home.js), the title stops CLAIMING all the
+   leftover row space so `.aw-sd-rec-classifyslot` right after it can take
+   that space instead and centre the bar inside it. Every OTHER header reusing
+   `.aw-sd-rec-head/-title` (the DOWNLOAD popup, Recent results…) is untouched. */
+.aw-sd-rec-head.has-classify .aw-sd-rec-title { flex: 0 1 auto; }
+.aw-sd-rec-classifyslot { flex: 1 1 auto; min-width: 0; display: flex; justify-content: center; padding: 0 6px; }
 .aw-sd-rec-word {
   font-size: 15px; font-weight: 800; letter-spacing: .06em; color: #23303e; text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -4649,6 +4665,47 @@ html.aw-nhung .aw-below { display: none; }
   flex: 1 1 auto; display: flex; align-items: center; justify-content: center;
   font-size: 13px; color: #8b93a1; text-align: center; padding: 20px;
 }
+
+/* ---------------------------------------------------------------
+   ⭐⭐⭐ Đợt 240 — THE CLASSIFY BAR (core/showdown-setup.js's buildClassifyBar)
+   ---------------------------------------------------------------
+   ⚠️ THE TRACK READS 100%→0% LEFT-TO-RIGHT, ON PURPOSE (thầy, chốt qua
+   AskUserQuestion — "best on the left", same as every ranked list in this
+   app). `is-hi` (green) is the LEFT segment, `is-lo` (red) the RIGHT one —
+   do not "fix" this to look like a normal left-to-right percentage bar. */
+.aw-sd-classify {
+  display: flex; align-items: center; gap: 7px; width: 100%; max-width: 420px; min-width: 190px;
+}
+.aw-sd-classify-cap {
+  flex: 0 0 auto; font-size: 10px; font-weight: 800; color: #9aa7b8; letter-spacing: .03em;
+}
+.aw-sd-classify-track {
+  position: relative; flex: 1 1 auto; min-width: 50px; height: 10px; border-radius: 6px;
+  display: flex; overflow: visible;
+}
+.aw-sd-classify-seg { flex: 0 0 auto; height: 100%; }
+.aw-sd-classify-seg.is-hi { background: #16a34a; border-radius: 6px 0 0 6px; }
+.aw-sd-classify-seg.is-mid { background: #2563eb; }
+.aw-sd-classify-seg.is-lo { background: #dc2626; border-radius: 0 6px 6px 0; }
+.aw-sd-classify-handle {
+  position: absolute; top: 50%; width: 16px; height: 16px; margin: 0; padding: 0;
+  border-radius: 50%; background: #fff; border: 2px solid #33455c; box-shadow: 0 1px 4px rgba(15,20,30,.28);
+  transform: translate(-50%, -50%); cursor: grab; touch-action: none;
+}
+.aw-sd-classify-handle:hover { border-color: #2f6fed; }
+.aw-sd-classify-handle.is-dragging { cursor: grabbing; box-shadow: 0 2px 8px rgba(15,20,30,.4); }
+.aw-sd-classify-handle-label {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 5px;
+  font-size: 10px; font-weight: 800; color: #23303e; background: #fff; border: 1px solid #e3e9f1;
+  border-radius: 5px; padding: 1px 5px; white-space: nowrap; pointer-events: none;
+}
+.aw-sd-classify-apply {
+  flex: 0 0 auto; width: 22px; height: 22px; padding: 0; border: none; border-radius: 50%;
+  background: #eef2f7; color: #33455c; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-sd-classify-apply svg { width: 12px; height: 12px; }
+.aw-sd-classify-apply:hover { background: #dbe6f5; color: #2f6fed; }
 
 /* ⭐ Đợt 224 — TEN EQUAL CELLS, 2 TẦNG × 5 CỘT (was one row of five, `MAX_MATCHES`
    5 → 10 in core/showdown-history.js). Still `1fr` each so a class with fewer
@@ -4972,8 +5029,16 @@ html.aw-nhung .aw-below { display: none; }
   box-shadow: 0 18px 44px rgba(15, 20, 30, .18);
 }
 .aw-sd-rec-chart:fullscreen { border-radius: 0; box-shadow: none; padding: 2.2vh 2.6vw; }
-.aw-sd-rec-cbody { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
-.aw-sd-rec-chartwrap { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px; }
+/* ⭐⭐ Đợt 240 (thầy: "khung hiển thị chuẩn... là 16:9... điều chỉnh bảng cột
+   để nó nằm ở giữa khung 16:9") — `cbody` centres its one child both ways;
+   `chartwrap` itself is the 16:9 frame (full width of `cbody`, height locked
+   to that ratio via `aspect-ratio` — the same letterboxing idea a video
+   player uses), so the board reads centred no matter the real window shape. */
+.aw-sd-rec-cbody { flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.aw-sd-rec-chartwrap {
+  flex: 0 0 auto; min-height: 0; display: flex; flex-direction: column; gap: 10px;
+  width: 100%; max-height: 100%; aspect-ratio: 16 / 9;
+}
 
 /* THE PLOT — grid + bars share one relatively-positioned track so the
    gridlines can be laid over the bars by percentage of the SAME height. */
@@ -5034,8 +5099,12 @@ html.aw-nhung .aw-below { display: none; }
    this LAST, after every tier: `.aw-sd-rec-bar` is `column-reverse` (see that
    rule's own note), so the last-appended child is the visually HIGHEST one —
    no `position:absolute`/bottom-percentage maths needed to put it there. */
+/* ⭐ Đợt 240 (thầy: "tăng size lớn hơn cho dễ nhìn") — 16 → 22px. `color` stays
+   the default here; a classify Apply overrides it inline per-element
+   (core/showdown-setup.js's applyClassifyToChart), which is exactly why this
+   rule does not use `!important` or anything stronger than a plain default. */
 .aw-sd-rec-bartotal {
-  flex: 0 0 auto; text-align: center; font-size: 16px; font-weight: 900;
+  flex: 0 0 auto; text-align: center; font-size: 22px; font-weight: 900;
   color: #1d2939; line-height: 1; margin-bottom: 4px;
 }
 
@@ -6395,9 +6464,12 @@ html.aw-nhung .aw-below { display: none; }
    nền") — just ANALYSING itself, bigger than before, and ANDREW CLASSES
    stepping up-and-down letter by letter underneath as the only "still
    working" cue until the analysis chart replaces this overlay. ---- */
+/* ⭐ Đợt 240 (thầy: "chữ ANDREW CLASSES... đứng gần chữ ANALYSING hơn") —
+   18px → 6px; ANALYSING's own huge font (3.4rem) already carries plenty of
+   visual leading below its glyphs, so even a small gap read as "far apart". */
 .aw-sdh-loading {
   position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; align-items: center;
-  justify-content: center; gap: 18px; background: transparent; pointer-events: none;
+  justify-content: center; gap: 6px; background: transparent; pointer-events: none;
 }
 .aw-sdh-loading-box {
   font-size: 3.4rem; font-weight: 800; letter-spacing: .16em; text-transform: uppercase;

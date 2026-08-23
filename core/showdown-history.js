@@ -224,6 +224,17 @@ function normMatch(m) {
     // the same match (saveMatchResult only ever fills `actName`/`contentVariant`
     // when they are still empty; it never touches this field at all).
     customName: cut(m?.customName),
+    // ⭐⭐ Đợt 240 (thầy) — the Table view's classify-bar thresholds, once the
+    // teacher presses Apply: `{hi, lo}`, both 0-100, hi > lo (core/showdown.js's
+    // classifyColor). `null` means "never classified" — the Table board then
+    // falls back to its own default colour, not to DEFAULT_CLASSIFY silently
+    // applied on the teacher's behalf. Kept null rather than omitted so a
+    // written record always answers "was this ever classified?" without a
+    // caller having to distinguish "key absent" from "key explicitly cleared".
+    classify: (m && m.classify && typeof m.classify === "object"
+      && Number.isFinite(Number(m.classify.hi)) && Number.isFinite(Number(m.classify.lo)))
+      ? { hi: Math.max(0, Math.min(100, Number(m.classify.hi))), lo: Math.max(0, Math.min(100, Number(m.classify.lo))) }
+      : null,
     at: Number(m?.at) || 0,
     updatedAt: Number(m?.updatedAt) || 0,
     rowsDropped: !!m?.rowsDropped,
@@ -688,6 +699,38 @@ export async function renameMatch(classId, yyyymm, matchId, customName) {
     const m = node.matches.find(x => x.matchId === matchId);
     if (!m) return;
     m.customName = cut(customName);
+    found = true;
+    node.updatedAt = Date.now();
+    tx.set(ref, clean(node));
+  });
+  return found;
+}
+
+/**
+ * ⭐⭐ Đợt 240 (thầy) — SAVE THE TABLE VIEW'S CLASSIFY-BAR THRESHOLDS.
+ * Same shape as renameMatch() right above (its own copy-paste template) —
+ * scoped to the one month the match lives in, a transaction so a concurrent
+ * write from another tab can never clobber this one.
+ * @param {{hi:number, lo:number}|null} classify  `null` clears it back to
+ *   "never classified" (core/showdown-history.js's normMatch treats a
+ *   missing/invalid value the same way, so passing null here is really just
+ *   being explicit about it).
+ */
+export async function setMatchClassify(classId, yyyymm, matchId, classify) {
+  if (!classId || !yyyymm || !matchId) return false;
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
+  let found = false;
+  await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return;
+    const node = normMonthDoc(snap.data(), classId, yyyymm);
+    const m = node.matches.find(x => x.matchId === matchId);
+    if (!m) return;
+    m.classify = (classify && Number.isFinite(Number(classify.hi)) && Number.isFinite(Number(classify.lo)))
+      ? { hi: Math.max(0, Math.min(100, Number(classify.hi))), lo: Math.max(0, Math.min(100, Number(classify.lo))) }
+      : null;
     found = true;
     node.updatedAt = Date.now();
     tx.set(ref, clean(node));

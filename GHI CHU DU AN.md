@@ -5,6 +5,90 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 240 (23/8/2026) — ⭐⭐⭐ BẢNG TABLE KHUNG 16:9 + THANH PHÂN LOẠI MÀU (LƯU VĨNH VIỄN) + TIÊU ĐỀ ANALYSE CÓ NGÀY + LOADING 2S — 🟡 THẦY DUYỆT ("ok build", sau đó "check commit + push + bàn giao") — ĐÃ COMMIT+PUSH, CHỜ XÁC NHẬN LIVE
+
+⚠️ Tự test qua Firestore giả (`scratch/dot240-showdown.html`, **28/28 phép thử ĐẠT, 0 lỗi console**) — bao
+gồm cả kiểm bằng cách QUÉT ĐIỂM ẢNH thật trên canvas xuất ra (đo chiều cao cột, đo màu đã tô), không chỉ
+đọc code. Chạy lại luôn bộ test Đợt 238 (`scratch/dot238-showdown.html`) để dò hồi quy: 36/40 vẫn ĐẠT — 4
+cái còn lại tự nó kiểm tra ĐÚNG hành vi CŨ mà đợt này thầy yêu cầu đổi (ví dụ "bảng xem thấp hơn bảng
+xuất" — giờ hai bên cao BẰNG NHAU đúng như thầy muốn), không phải hồi quy thật. CHƯA bấm tay thật trên
+TOMKO/máy thật, CHƯA đăng nhập Google thật.
+
+Thầy giao 6 điều chỉnh cho bảng Table (đơn lẫn Analyse) qua 1 lượt "ok build", chốt 3 điểm qua
+AskUserQuestion trước khi code: (1) thanh phân loại đảo trục — TRÁI = 100% (xanh lá), PHẢI = 0% (đỏ),
+theo đúng kiểu "cao xếp trước" mọi bảng xếp hạng trong app đã dùng, không phải trái-thấp/phải-cao thường
+gặp; (2) Apply lưu VĨNH VIỄN vào Firestore cùng trận (bảng đơn); (3) file xuất PNG SAU KHI Apply cũng
+mang theo đúng màu đã phân loại. Sửa 7 file: `core/showdown.js` · `core/showdown-history.js` ·
+`core/showdown-export.js` · `core/showdown-setup.js` · `core/showdown-review.js` · `core/showdown-home.js`
+· `core/app.css`. Thêm 1 file test cục bộ: `scratch/dot240-showdown.html` (không lên git).
+
+### 1-2-3) KHUNG 16:9 CHO BẢNG TABLE — CẢ XEM LẪN XUẤT, CẢ ĐƠN LẪN ANALYSE
+
+`core/showdown-export.js`'s `drawAnalysisCanvas`: canvas không còn co theo đúng khít nội dung nữa — chiều
+rộng tối thiểu `AN_BASE_W` (2000px, đo thật để đảm bảo LUÔN đạt đúng 16:9 kể cả lớp chỉ 1-2 học sinh, xem
+comment tại chỗ khai báo hằng số), chiều cao = `Math.max(round(width*9/16), nội_dung_cần)` — ưu tiên đúng
+16:9, chỉ "phá tỷ lệ" khi nội dung thật sự cần cao hơn (lớp đông + chú thích dài) để không bao giờ đè lên
+nhau. Phần dư ra (`extraW`/`extraH`) chia đều 2 bên để bảng cột luôn nằm GIỮA khung. `variant:"view"` (bảng
+xem 1 trận) bỏ mức thấp hơn 20% của Đợt 238 — cột giờ cao FULL bằng Analyse (khung 16:9 đã tự có đủ chỗ
+rồi, không cần "ăn bớt" chiều cao để nhường chỗ cho dòng brand nữa). Dòng ANDREW CLASSES ở bảng xem giãn
+xa cột hơn (`AN_VIEW_FOOT_GAP`, 22→46px).
+
+Biểu đồ Analyse XEM TRÊN MÁY (`renderChart()`, DOM thật — không phải canvas): `.aw-sd-rec-cbody` (app.css)
+giờ căn giữa 2 chiều, `.aw-sd-rec-chartwrap` tự đóng khung `aspect-ratio:16/9` (kiểu letterbox của trình
+phát video) thay vì lấp đầy hết chỗ trống fullscreen — bảng cột giờ luôn nằm giữa khung 16:9 dù cửa sổ
+thật hình gì. `.aw-rv-tablewrap` (bảng xem 1 trận, canvas) cũng canh giữa 2 chiều cho đồng bộ.
+
+### THANH PHÂN LOẠI MÀU — TÍNH NĂNG MỚI
+
+`core/showdown.js` thêm `classifyColor(pct, {hi,lo})` + `DEFAULT_CLASSIFY` (85/60) — MỘT hàm màu dùng
+chung cho cả DOM lẫn canvas, tránh lặp lại bài học ANALYSE_COLORS/ANALYSE_PNG_COLORS từng lệch nhau.
+
+`core/showdown-setup.js` thêm `buildClassifyBar({initial, onApply})` — thanh kéo 2 nút, trục 100%(trái)→
+0%(phải), 2 nút không vượt qua nhau (`CLASSIFY_MIN_GAP=2`), nhãn % nổi trên đầu mỗi nút khi kéo, nút Apply
+icon riêng — CHỈ gọi `onApply` khi bấm Apply, kéo tay không tự áp dụng. Và `applyClassifyToChart(root,
+classify)` — tô lại màu SỐ TO trên chart Analyse tại chỗ (không vẽ lại cả biểu đồ, đọc `data-total` gắn
+sẵn trên mỗi `.aw-sd-rec-bartotal` từ `addBar()`).
+
+`core/showdown-home.js`: gắn thanh vào ĐÚNG 2 chỗ — header bảng đơn (`openTileDetail`) và header Analyse
+(`openAnalysisChart`), cùng hàng tiêu đề, căn giữa (app.css: `.aw-sd-rec-head.has-classify` bỏ
+`flex-grow` của tiêu đề, `.aw-sd-rec-classifyslot` chiếm phần còn lại và tự căn giữa bên trong). Bảng đơn:
+Apply → tô màu CỘT (gọi lại `renderReviewTable(..., {classify})`, vẽ lại canvas), đồng thời gọi
+`setMatchClassify()` mới (`showdown-history.js`, theo khuôn `renameMatch()`) lưu `{hi,lo}` vào bản ghi
+trận — mở lại đúng trận sau này tự nạp lại màu đã lưu (`m.classify`), không cần Apply lại. Bảng Analyse:
+Apply → gọi `applyClassifyToChart` tô SỐ TO, giữ `currentClassify` là biến phiên (không lưu, Analyse
+không có bản ghi riêng). Thanh chỉ hiện khi đang xem tab TABLE (`classifySlot.style.display`), ẩn ở
+Podium/List. File xuất: cả `openExportDialog` (bảng đơn) lẫn `openAnalysisExportDialog` (Analyse) nhận
+thêm `classify` và truyền thẳng vào `drawAnalysisCanvas`/`analysisPngBlob` — PNG tải về mang đúng màu đã
+Apply, theo đúng thầy chốt.
+
+`core/showdown-history.js`: `normMatch()` thêm trường `classify: {hi,lo}|null` (whitelist nghiêm ngặt, đọc
+cũ vẫn ra `null` — không vỡ dữ liệu cũ). `setMatchClassify(classId, yyyymm, matchId, classify)` mới, copy
+khuôn `renameMatch()`.
+
+Số % to trên đỉnh cột (`.aw-sd-rec-bartotal`, app.css) tăng 16→22px ở MỌI dạng bảng (thầy: "tăng size lớn
+hơn cho dễ nhìn"), không chỉ riêng khi có phân loại.
+
+### 4) TIÊU ĐỀ ANALYSE CÓ KHOẢNG THỜI GIAN
+
+`dateRangeLabel(entries)` (`showdown-home.js`) — tính từ `at` nhỏ nhất/lớn nhất trong các trận đã chọn:
+"(23/8/2026)" nếu cùng 1 ngày, "(20/5/2026 - 23/8/2026)" nếu khác ngày. Nối vào ngay sau tên lớp trong
+`openAnalysisChart()`'s title.
+
+### 5) NÚT START ANALYSING
+
+Kiểm tra lại: ĐÃ ĐÚNG sẵn từ Đợt 238 (mờ khi cột ANALYSE tắt, khoá xám khi <2 lựa chọn, sáng vàng khi
+≥2) — không sửa code, chỉ thêm 4 phép thử xác nhận vào `dot240-showdown.html`.
+
+### 6) MÀN LOADING ANALYSING
+
+`runAnalysis()`: floor 550ms → 2000ms (đo thật ≥1.9s). `.aw-sdh-loading` (app.css): `gap` 18px → 6px —
+chữ ANDREW CLASSES đứng gần chữ ANALYSING hơn hẳn.
+
+⚠️ Bảng Table (khung 16:9, số % to hơn, chữ "RESULTS") dùng CHUNG code vẽ giữa trang chủ và popup ANALYSE
+nhanh giữa buổi học (`showdown-setup.js`'s `openDetail`/`openAnalysis`) — những thay đổi đó tự áp dụng cả
+2 nơi, đúng chủ ý cũ của code. Riêng THANH PHÂN LOẠI MÀU (tính năng mới) chỉ gắn ở trang chủ, popup nhanh
+giữa buổi học không có (giữ đúng "popup trong game không đổi" — chỉ dặn cũ của thầy).
+
 ## Đợt 238+239 (23/8/2026) — ⭐⭐ SHOWDOWN HOME: BO GÓC ĐỒNG BỘ · POPUP LỚP HẠ THẤP · CỘT ANALYSE CỐ ĐỊNH+MỜ+THANH KẺ · LƯỚI 3 Ô · CO HẸP CÓ ƯU TIÊN · BẢNG TABLE GỌN (TÁCH XEM/XUẤT) — ✅ **THẦY DUYỆT** ("ok build", sau đó *"check commit + push + bàn giao"*) — **COMMIT `b394797`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages triển khai đúng `b394797` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **6/6 mã băm SHA-256 khớp** (`GHI CHU DU AN.md` · `core/app.css` · `core/showdown-export.js` · `core/showdown-home.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>`).
 
 ⚠️ Tự test qua Firestore giả (`scratch/dot238-showdown.html`, **40/40 phép thử ĐẠT, 0 lỗi console**) —

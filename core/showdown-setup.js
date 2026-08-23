@@ -64,7 +64,8 @@ import {
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName
+  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
+  classifyColor, DEFAULT_CLASSIFY
 } from "./showdown.js";
 
 const DOC_ID = "sd_main";
@@ -1192,6 +1193,11 @@ export function renderChart(full, partial, entries) {
     // tier — is what puts it above the tallest one, no bottom/translate maths
     // needed at all.
     const total = el("span", "aw-sd-rec-bartotal", `${Math.round(r.total)}%`);
+    // ⭐ Đợt 240 — the pupil's raw (un-rounded) total, so a later classify-bar
+    // Apply (applyClassifyToChart below) can re-derive the SAME colour band
+    // `drawAnalysisCanvas` would pick for the exact same %, without having to
+    // re-parse it back out of this span's own rounded display text.
+    total.dataset.total = String(r.total);
     bar.append(total);
     track.append(bar);
     const nm = el("span", "aw-sd-rec-barname");
@@ -1210,9 +1216,121 @@ export function renderChart(full, partial, entries) {
   plot.append(track, names);
   // ⭐ Đợt 238 (thầy) — a small "ANDREW CLASSES" footer under the legend, the
   // on-screen twin of the same line core/showdown-export.js's drawAnalysisCanvas
-  // now draws at the bottom of an exported/Table board — see `.aw-sd-rec-plotarea`'s
-  // own note (app.css) on the matching ~20% height trim that makes room for it.
+  // draws at the bottom of an exported/Table board — see `.aw-sd-rec-plotarea`'s
+  // own note (app.css) on the ~80% height cap that makes room for it.
   wrap.append(plot, renderLegend(entries), el("div", "aw-sd-rec-brand", "ANDREW CLASSES"));
+  return wrap;
+}
+
+/**
+ * ⭐⭐ Đợt 240 (thầy) — re-colours the ANALYSE chart's big total-% numbers by
+ * the classify bar, WITHOUT rebuilding the chart (no flicker, no lost scroll
+ * position) — a targeted repaint, the DOM twin of `drawAnalysisCanvas`'s own
+ * `totalColor` for a multi-match board (core/showdown-export.js). Reads each
+ * `.aw-sd-rec-bartotal`'s own `data-total` (set by `addBar()` above) rather
+ * than re-deriving it from `rows`, so the caller never has to keep that array
+ * around just for this.
+ * @param {Element} root       the chart node (or any ancestor of its bars)
+ * @param {{hi:number, lo:number}|null} classify  null clears back to default
+ */
+export function applyClassifyToChart(root, classify) {
+  root.querySelectorAll(".aw-sd-rec-bartotal").forEach(el2 => {
+    const total = Number(el2.dataset.total);
+    el2.style.color = classifyColor(total, classify) || "";
+  });
+}
+
+/**
+ * ⭐⭐⭐ Đợt 240 (thầy) — THE CLASSIFY BAR: a draggable 2-handle range, VIEW-ONLY
+ * (never drawn into an exported file — core/showdown-export.js's `opts.classify`
+ * carries the RESULT of a press instead, see that file's own note). Mounted
+ * once per board — the Table tab's own header (core/showdown-home.js's
+ * openTileDetail) and the ANALYSE chart's own header (openAnalysisChart) —
+ * built here, once, so the two never drift into two different drag physics
+ * for what is visually the same control.
+ *
+ * ⚠️ THE AXIS READS RIGHT-TO-LEFT, ON PURPOSE (thầy, chốt qua AskUserQuestion):
+ * left edge = 100%, right edge = 0% — "best on the left", the same reading
+ * direction every ranked list in this app already uses. `hi` (green, left) is
+ * therefore always the LARGER number, `lo` (red, right) the smaller one; a
+ * handle can never cross the other (`CLASSIFY_MIN_GAP` below).
+ *
+ * @param {object} opts
+ *   initial   {hi, lo} to start the handles at — the caller passes the
+ *             match's own saved `classify` if it has one, else
+ *             core/showdown.js's DEFAULT_CLASSIFY.
+ *   onApply   ({hi, lo}) => void — fired ONLY on the Apply button (dragging
+ *             alone never calls it — thầy: "chỉnh xong bấm nút apply là áp
+ *             dụng"), with a fresh, already-clamped object.
+ */
+const CLASSIFY_MIN_GAP = 2;
+export function buildClassifyBar({ initial, onApply } = {}) {
+  let hi = Math.max(0, Math.min(100, Number(initial?.hi ?? DEFAULT_CLASSIFY.hi)));
+  let lo = Math.max(0, Math.min(100, Number(initial?.lo ?? DEFAULT_CLASSIFY.lo)));
+  if (!(hi - lo >= CLASSIFY_MIN_GAP)) { hi = DEFAULT_CLASSIFY.hi; lo = DEFAULT_CLASSIFY.lo; }
+
+  const wrap = el("div", "aw-sd-classify");
+  const capHi = el("span", "aw-sd-classify-cap is-hi", "100%");
+  const track = el("div", "aw-sd-classify-track");
+  const segHi = el("div", "aw-sd-classify-seg is-hi");
+  const segMid = el("div", "aw-sd-classify-seg is-mid");
+  const segLo = el("div", "aw-sd-classify-seg is-lo");
+  const handleHi = el("button", "aw-sd-classify-handle is-hi");
+  handleHi.type = "button"; handleHi.title = "Drag";
+  const labelHi = el("span", "aw-sd-classify-handle-label");
+  handleHi.append(labelHi);
+  const handleLo = el("button", "aw-sd-classify-handle is-lo");
+  handleLo.type = "button"; handleLo.title = "Drag";
+  const labelLo = el("span", "aw-sd-classify-handle-label");
+  handleLo.append(labelLo);
+  track.append(segHi, segMid, segLo, handleHi, handleLo);
+  const capLo = el("span", "aw-sd-classify-cap is-lo", "0%");
+  const applyBtn = el("button", "aw-sd-classify-apply", icons.check);
+  applyBtn.type = "button"; applyBtn.title = "Apply";
+  wrap.append(capHi, track, capLo, applyBtn);
+
+  // Left offset of a VALUE (0-100) is `100 - value`, since the track's own
+  // axis runs 100%→0% left-to-right (see this function's own header note).
+  function paint() {
+    segHi.style.width = (100 - hi) + "%";
+    segMid.style.width = (hi - lo) + "%";
+    segLo.style.width = lo + "%";
+    handleHi.style.left = (100 - hi) + "%";
+    handleLo.style.left = (100 - lo) + "%";
+    labelHi.textContent = Math.round(hi) + "%";
+    labelLo.textContent = Math.round(lo) + "%";
+  }
+  paint();
+
+  function wireDrag(handle, which) {
+    let active = false;
+    const move = e => {
+      if (!active) return;
+      const r = track.getBoundingClientRect();
+      const frac = r.width ? Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) : 0;
+      let v = Math.round(100 - frac * 100);
+      if (which === "hi") v = Math.max(lo + CLASSIFY_MIN_GAP, Math.min(100, v));
+      else v = Math.max(0, Math.min(hi - CLASSIFY_MIN_GAP, v));
+      if (which === "hi") hi = v; else lo = v;
+      paint();
+    };
+    handle.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      active = true;
+      handle.classList.add("is-dragging");
+      try { handle.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+    });
+    handle.addEventListener("pointermove", move);
+    const stop = () => { active = false; handle.classList.remove("is-dragging"); };
+    handle.addEventListener("pointerup", stop);
+    handle.addEventListener("pointercancel", stop);
+  }
+  wireDrag(handleHi, "hi");
+  wireDrag(handleLo, "lo");
+
+  applyBtn.onclick = () => { sfx.tap(); onApply?.({ hi, lo }); };
+
   return wrap;
 }
 
