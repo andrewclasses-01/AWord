@@ -10,7 +10,11 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **23/8/2026 (Đợt 244)** — ⭐⭐ **TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG
 > SHOW ANSWERS** (tự thu nhỏ vừa MỘT dòng, không cắt) · ⭐⭐⭐ **THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA
-> NGOÀI THÌ NGỦ LẠI.** Sửa 4 file: `core/engine.js` · `core/showdown-review.js` ·
+> NGOÀI THÌ NGỦ LẠI.**
+> ✅ **THẦY DUYỆT — COMMIT `a7b40bd`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit ·
+> **7/7 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` ·
+> `core/app.css` · `core/engine.js` · `core/showdown-review.js` · `core/showdown-setup.js`).
+> Sửa 4 file: `core/engine.js` · `core/showdown-review.js` ·
 > `core/showdown-setup.js` · `core/app.css`. Tự test `scratch/dot244-title-classify.html`
 > **80/80 ĐẠT, 0 lỗi console**. Tóm tắt:
 > **(1)** Chữ "SHOWDOWN" trên màn Show answers là hằng số viết cứng từ Đợt 177 — Đợt 243 chỉ vá tên

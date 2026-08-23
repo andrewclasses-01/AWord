@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 244 (23/8/2026) — ⭐⭐ TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG SHOW ANSWERS (tự thu nhỏ vừa **một** dòng, không cắt) · ⭐⭐⭐ THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA NGOÀI THÌ **NGỦ LẠI**
+## Đợt 244 (23/8/2026) — ⭐⭐ TÊN ACT ĐỨNG THAY CHỮ "SHOWDOWN" TRONG BẢNG SHOW ANSWERS (tự thu nhỏ vừa **một** dòng, không cắt) · ⭐⭐⭐ THANH PHÂN LOẠI: CHẠM SUÔNG RỒI BẤM RA NGOÀI THÌ **NGỦ LẠI** — ✅ **THẦY DUYỆT ("sau khi điều chỉnh thì commit + push luôn")** — **COMMIT `a7b40bd`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`, không tin mã 200) · **7/7 mã băm SHA-256 khớp** (`APP_MASTER.md` · `GHI CHU DU AN.md` · `core/HUONG DAN CORE.md` · `core/app.css` · `core/engine.js` · `core/showdown-review.js` · `core/showdown-setup.js`, băm qua `git show HEAD:<file>` so với `curl https://aword.andrewclasses.com/<file>` — ⛔ không băm file trên máy, LF↔CRLF lệch oan).
 
 Thầy giao 2 điều chỉnh, chốt 2 điểm mơ hồ qua AskUserQuestion trước khi build. Sửa 4 file:
 `core/engine.js` · `core/showdown-review.js` · `core/showdown-setup.js` · `core/app.css`. Thêm 1 file
