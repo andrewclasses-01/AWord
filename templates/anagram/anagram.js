@@ -1232,7 +1232,12 @@ const anagramTemplate = {
         st.graded = true;
         st.correct = false;
         st.revealed = true;
-        if (pointsOff) penalty += pointsOff;
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — HẾT GIỜ CŨNG LÀ MỘT CÂU SAI CÓ TRỪ ĐIỂM,
+        // nên nó cũng phải bay. Chỗ bay ra là `null` (không có ô nào bị bấm) ⇒
+        // core/engine.js rơi về giữa khung.
+        // ⚠️ Đây là chế độ "submit", KHÔNG dùng `flyLetterPenalty()` — hàm đó là của
+        // riêng "Bonus and minus" (phạt từng chữ bấm sai) và bay ra từ ô đáp án đang chờ.
+        if (pointsOff) ui.flyPenalty?.(null, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
         // The answer line is this mode's own reveal — patched in place, exactly
         // as the wrong-word branch of doSubmit() does it.
         if (revealSlotEl) revealSlotEl.textContent = allCaps ? it.word.toUpperCase() : it.word;
@@ -1628,7 +1633,13 @@ const anagramTemplate = {
       if (fightCtl) {
         fightPendingReveal = { rights, allCorrect };
         st.correct = allCorrect;
-        if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }
+        // ⭐⭐⭐ Đợt 256 — "−N" bay vào ô điểm rồi mới trừ, y như chế độ "Bonus and
+        // minus" vẫn làm từ Đợt 143. ⛔ `null`: bàn kia còn đang xếp chữ, và trong
+        // trận core/engine.js ép chỗ bay ra về giữa khung — cùng lý do cả nhánh này
+        // không vẽ một dấu nào (luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ", Đợt 129).
+        if (!allCorrect && pointsOff) {
+          ui.flyPenalty?.(null, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
+        }
         const outOfLivesFight = !allCorrect && loseLife();
         st.revealed = true;
         busy = false;
@@ -1664,7 +1675,12 @@ const anagramTemplate = {
         // leak found in the audit.
         if (dead) return;
         st.correct = allCorrect;
-        if (!allCorrect && pointsOff) { penalty += pointsOff; ui.setScore(scoreNow()); }  // one points-off for a wrong word
+        // ⭐⭐⭐ Đợt 256 — "−N" bay ra từ CẢ Ô TỪ vừa nộp sai (chơi đơn thì không có ai
+        // để giấu bài) vào ô điểm, tới nơi mới trừ.
+        if (!allCorrect && pointsOff) {
+          ui.flyPenalty?.(root.querySelector(".aw-anagram-group"), pointsOff,
+            () => { penalty += pointsOff; return scoreNow(); });
+        }
         const outOfLives = !allCorrect && loseLife();   // a life is lost on a wrong word
         st.revealed = true;   // only matters if this word is re-rendered later (e.g. navigated back to)
         busy = false;
@@ -2363,6 +2379,9 @@ const anagramTemplate = {
     function finish(opts) {
       if (finished) return;
       finished = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+      // một phép trừ CHƯA áp vào `penalty`, mà `score` dưới đây đọc thẳng ra từ đó.
+      ui.flushPenalties?.();
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correctWords = perQuestion.filter(p => p.correct).length;
       // Bonus-family modes score per LETTER (+ the perfect-word multiplier),

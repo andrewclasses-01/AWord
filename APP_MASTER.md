@@ -8,7 +8,31 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 255)** — ⭐ **ĐUÔI TEMPLATE TRONG TIÊU ĐỀ BÀI GIAO +
+> Cập nhật lần cuối: **24/8/2026 (Đợt 256 + 257)**.
+>
+> **Đợt 257** (`6b49fdb`, ĐÃ PUSH — ⚠️ **của một PHIÊN CLAUDE SONG SONG**, hồ sơ do phiên 256 chép
+> lại hộ) — ⭐⭐ **TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ**: `play.js` bắn
+> `postMessage({type:"AWORD:NOP", code, name})` lên `window.parent` sau khi server xác nhận đủ hai
+> document, để myLesson web tự làm mới leaderboard của đúng act. Chỉ bắn khi `kq.ok` **và** đang
+> nhúng; trả lại NGUYÊN promise gốc nên đường nộp không đổi. ⛔ **Cửa thứ sáu cho myLesson — đừng
+> đổi tên `AWORD:NOP`**; cặp chặt myLesson web v1.13.0. Chi tiết: `GHI CHU DU AN.md` mục Đợt 257.
+>
+> ---
+> **Đợt 256** — ⭐⭐⭐ **"−N" BAY TỪ CHỖ SAI VÀO Ô ĐIỂM RỒI MỚI
+> TRỪ, CHO CẢ 11 TEMPLATE CÓ TRỪ ĐIỂM** (thầy: *"khi có điểm sai thì không có gì bay lên cả mà số
+> điểm tự trừ rất khó nhìn"*). File MỚI `core/flypenalty.js` + `ui.flyPenalty()` /
+> `ui.flushPenalties()` trong `core/engine.js` + `.aw-penalty-fly` / `.is-penalty-hit` trong
+> `core/app.css`; 11 template mỗi cái một dòng opt-in. ⛔⛔ **Phép trừ NẰM TRONG callback** (tới nơi
+> mới trừ) và **trong trận Fight chỗ bay ra bị ÉP về GIỮA KHUNG** — bay ra từ đúng ô sai là chỉ cho
+> đội kia biết ô đó sai (True/false 2 nút = lộ trọn đáp án), đúng luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ"
+> Đợt 129. ⚠️ `ui.flushPenalties()` ở dòng đầu `finish()` là thứ giữ cho **câu sai CUỐI** không mất
+> điểm phạt trong bảng kết quả và trong điểm nộp bài giao. ⛔ Đã cắn **TDZ** ở Quiz — đọc mục
+> "ĐIỂM PHẠT PHẢI BAY" trong `core/HUONG DAN CORE.md` trước khi mở cho template thứ 12. Bàn thử
+> `dot256-penalty.html` **24/24** + `dot256-smoke.html` (11 template mount sạch, 0 lỗi trang).
+> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.**
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 255)** — ⭐ **ĐUÔI TEMPLATE TRONG TIÊU ĐỀ BÀI GIAO +
 > SHOW ANSWERS DỜI LÊN** (thầy chốt quy tắc tên: `…— WP1 — ANAGRAM`). Tiêu đề tự động (cả mặc
 > định lẫn `&td=` của myLesson) kết thúc bằng " — <TPL viết tắt>" từ bảng `TPL_SHORT`
 > (gameshow→GSQUIZ, anagram→ANAGRAM… — đổi tên là đổi Ở BẢNG ĐÓ); đổi template trong form là

@@ -373,7 +373,15 @@ const flyingFruitTemplate = {
         if (f.removeT) clearTimer(f.removeT);
         later(() => removeFruit(f), 320);
         lives = Math.max(0, lives - 1); wrong++; updateHearts();
-        if (pointsOff) { score -= pointsOff; ui.setScore(scoreNow()); }   // penalty (negative allowed, not clamped)
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY TỪ CHÍNH QUẢ BẤM SAI VÀO Ô ĐIỂM,
+        // TỚI NƠI MỚI TRỪ (trước đợt này điểm chỉ lặng lẽ tụt).
+        // ⚠️ Quả bị gỡ sau 320ms (`later(() => removeFruit(f), 320)` ngay trên), nhưng
+        // `ui.flyPenalty` đo toạ độ NGAY lúc gọi và con số sống trên <body>, nên cú bay
+        // 920ms vẫn trọn vẹn sau khi quả đã biến mất — đó là điều mong muốn: con số ở
+        // lại đúng chỗ quả vừa nổ.
+        if (pointsOff) {
+          ui.flyPenalty?.(f.fruitEl, pointsOff, () => { score -= pointsOff; return scoreNow(); });
+        }
         if (lives <= 0) { if (!results[index]) results[index] = "failed"; endGame("gameover"); return; }
         if (!retry) { results[index] = "failed"; advance(); }
       }
@@ -448,6 +456,10 @@ const flyingFruitTemplate = {
     function endGame(reason) {
       if (ended) return;
       ended = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+      // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
+      // của bài giao) một số CAO HƠN thật đúng bằng cú chạm sai cuối cùng.
+      ui.flushPenalties?.();
       if (spawnTimer) clearTimer(spawnTimer);
       if (ambientTimer) clearTimer(ambientTimer);
       clearFruits();

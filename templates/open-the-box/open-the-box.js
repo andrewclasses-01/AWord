@@ -1087,7 +1087,16 @@ function mountQuestions(root, activity, ui) {
     if (fightCtl) {
       fightPendingReveal = { i, k, correct };
       if (correct) { otbSound.correct(); score++; }
-      else { otbSound.wrong(); score -= pointsOff; lastWrongText[i] = it.answers[k].text; }
+      else { otbSound.wrong(); lastWrongText[i] = it.answers[k].text; }
+      // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
+      // `score -= pointsOff` đã rời khỏi nhánh sai ngay trên vào callback này.
+      // ⛔ `null` chứ không phải `tile`: đây là game LƯỢT CHỌN Ô — hai bàn cùng mở
+      // một ô, và bàn kia có thể còn đang trả lời chính câu đó. Một con số bay ra từ
+      // đúng đáp án vừa bấm là loại hộ nó một lựa chọn (luật Đợt 129). core/engine.js
+      // vốn đã ép chỗ bay ra về giữa khung trong mọi trận; đây là lớp thứ hai.
+      if (!correct && pointsOff) {
+        ui.flyPenalty?.(null, pointsOff, () => { score -= pointsOff; return scoreNow(); });
+      }
       // The box is spent either way — and, unlike single play, a later correct
       // answer must NOT free it again: in a match every box is played exactly
       // once, by both teams, and the referee counts rounds against `total`.
@@ -1108,7 +1117,13 @@ function mountQuestions(root, activity, ui) {
       resetSharedTimer();   // bar refills + fresh full countdown (see file header)
     } else {
       otbSound.wrong();     // timer is untouched — it just keeps draining, even at the grid
-      score -= pointsOff;   // penalty (negative allowed); updateProgress() below refreshes score + nav
+      // ⭐⭐⭐ Đợt 256 — phép trừ nay nằm TRONG callback của ui.flyPenalty: "−N" bay ra
+      // từ ĐÚNG Ô ĐÁP ÁN VỪA BẤM (chơi đơn thì không có ai để giấu bài) vào ô điểm,
+      // tới nơi mới trừ. ⚠️ `updateProgress()` chạy ngay sau khối này như cũ — lúc đó
+      // điểm CHƯA đổi, đúng ý; nó được gọi lại một lần nữa lúc hạ cánh.
+      if (pointsOff) {
+        ui.flyPenalty?.(tile, pointsOff, () => { score -= pointsOff; updateProgress(); return scoreNow(); });
+      }
     }
 
     if (correct) {
@@ -1382,6 +1397,11 @@ function mountQuestions(root, activity, ui) {
   // Quiz/Anagram get from ui.finish(). `title` is the one bit Open the box
   // needed core/engine.js to support (see GHI CHU OPEN-THE-BOX.md).
   function finishRound(title) {
+    // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC `score`. Một con số "−N" còn đang bay là một
+    // phép trừ CHƯA áp; `ui.finish({ score, … })` bên dưới đọc thẳng biến đó, nên bỏ
+    // dòng này là câu sai cuối cùng biến mất khỏi bảng kết quả và khỏi điểm nộp của
+    // bài giao. Cú bay mất 920ms — ngắn hơn khoảng cách từ cú chạm sai tới đây.
+    ui.flushPenalties?.();
     // ⭐⭐ Đợt 186 — REVIEW IN PLAY ORDER, which is what made Showdown possible
     // here at all. This game lets the CLASS choose what to open next, so the
     // grid order is not the order the questions were played — and Showdown

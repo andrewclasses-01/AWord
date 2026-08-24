@@ -5,6 +5,186 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 257 (24/8/2026) — ⭐⭐ **TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ** (cặp myLesson web v1.13.0) — ✅ **ĐÃ COMMIT `6b49fdb` + PUSH**
+
+> 📌 **ĐỢT NÀY DO MỘT PHIÊN CLAUDE SONG SONG LÀM**, cùng buổi với Đợt 256. Phiên đó commit được
+> `play.js` nhưng **không ghi được hồ sơ**: cả `GHI CHU DU AN.md`, `APP_MASTER.md` và
+> `core/HUONG DAN CORE.md` đang bị phiên 256 giữ. Nó **tự thuật lại toàn bộ trong commit message**
+> rồi nhờ *"phiên nào rảnh thì chép vào hồ sơ sau"* — mục này chính là cú chép đó, viết lại từ
+> **diff thật** của `6b49fdb` chứ không phải chép lại lời commit.
+> ⚠️ **Bài học vận hành:** hai phiên Claude chạy song song trong CÙNG một thư mục thì file hồ sơ là
+> tài nguyên tranh chấp. Nếp đúng mà phiên kia đã làm: **commit phần code của mình, kể hết vào
+> commit message, đừng chờ** — `git log` không bao giờ mất, còn ngồi chờ là mất cả hai.
+
+**Việc:** bài giao mở trong iframe của myLesson web (`&nhung=1`) thì sau khi **server XÁC NHẬN** đủ
+hai document, trang nộp bắn `postMessage({ type: "AWORD:NOP", code, name })` lên `window.parent`.
+Bên myLesson web nghe tin đó để **tự làm mới leaderboard của đúng act** — một lượt đọc cho mỗi cú
+nộp, thay vì vòng poll hay chờ cache 60s.
+
+**Sửa đúng 1 file: `play.js`** (+24 dòng), theo đúng nếp Đợt 192/193 "chỉ `git add` đúng file mình
+động tới".
+- Hàm `baoNopChoTrangMe(giao)` **bọc** `sendAttempt()` ở CẢ `submit` lẫn `retrySubmit`, và **trả lại
+  NGUYÊN promise gốc** ⇒ đường nộp/nộp lại không đổi một li nào; tin báo chỉ là người đứng nghe.
+- ⛔ **Chỉ bắn khi `kq.ok`** — nộp treo/hỏng mà báo là bảng bên kia làm mới vô ích.
+- ⛔ **Chỉ bắn khi đang nhúng** (`window.parent !== window`). Mở tab thường thì không bắn gì.
+- `postMessage` để target `"*"` vì payload toàn dữ liệu **vốn đã công khai** (mã bài + tên trên bảng
+  điểm); **trang mẹ tự lọc theo origin của CHÍNH NÓ**.
+- `.catch(() => {})` bọc ngoài: trang mẹ khó tính thì thôi, việc nộp đã xong rồi.
+
+⛔ **CỬA THỨ SÁU CHO myLesson — đừng đổi tên `AWORD:NOP` hay khoá `code`/`name`.** Cặp chặt với
+**myLesson web v1.13.0**; revert lẻ một bên là hỏng bên kia.
+
+⚠️ **Chưa có bàn thử riêng cho đợt này** (phiên kia không kịp dựng) — thầy thử thật bằng cách mở một
+bài giao trong myLesson web rồi nộp, xem bảng điểm bên đó có tự làm mới không.
+
+---
+
+## Đợt 256 (24/8/2026) — ⭐⭐⭐ **"−N" BAY TỪ CHỖ SAI VÀO Ô ĐIỂM RỒI MỚI TRỪ — CẢ 11 TEMPLATE CÓ TRỪ ĐIỂM, CẢ SINGLE LẪN FIGHT** — ⬜ **CHƯA COMMIT, CHỜ THẦY DUYỆT**
+
+**Lời thầy (24/8/2026):** *"Khi có đội sai và bật trừ điểm sai trong mode Fight thì phải hiện số
+điểm trừ bay lên từ ô/chỗ sai bay vào ô điểm rồi mới trừ. Ví dụ như QUIZ trong khi Fight, khi có
+điểm sai thì không có gì bay lên cả mà số điểm tự trừ rất khó nhìn. Tôi cần cả các template có trừ
+điểm khác cũng vậy, tương tự các điểm sai từ các ô ANAGRAM bay ra đó"*.
+
+**Ba quyết định thầy chốt qua AskUserQuestion trước khi build:**
+1. **Trong Fight: bay NGAY, nhưng bay ra từ GIỮA KHUNG** (không phải từ ô sai).
+2. **Phạm vi: cả app** — mọi game có trừ điểm, không chỉ 5 game Fight còn thiếu.
+3. **Cả Single lẫn Fight.**
+
+Sửa **14 file**: 1 file MỚI (`core/flypenalty.js`) · `core/engine.js` · `core/app.css` · và **11
+template**.
+
+### 0. Hiện trạng TRƯỚC đợt này (đo được, không đoán)
+
+| template | Fight? | khi trả lời SAI |
+|---|---|---|
+| **Anagram** — chế độ "Bonus and minus" | ✅ | ✅ đã có `flyLetterPenalty()` từ Đợt 143 |
+| **Anagram** — chế độ "submit" | ✅ | ❌ `penalty += pointsOff; ui.setScore()` lặng lẽ, **ở 3 chỗ** |
+| **Type the answer** | ✅ | ⚠️ có số, nhưng **trong trận bị hoãn tới lúc lộ đáp án** |
+| Quiz · True/false · Find the match · Open the box | ✅ | ❌ số tự tụt |
+| Crossword · Unjumble | ✅ / ✗ | ⚠️ bay **ngôi sao**, không có số |
+| Balloon pop · Flying fruit · Maze chase | ✗ | ❌ số tự tụt |
+
+⭐ Nghĩa là **chính cái mẫu thầy lấy làm chuẩn (Anagram) cũng mới đúng một nửa** — nửa "Bonus and
+minus" thì có, nửa "submit" thì không.
+
+### 1. `core/flypenalty.js` — file MỚI, hiệu ứng dùng chung
+
+`flyPenalty({ fromEl, toEl, points, apply, paint, alive, nodes, pending })`. Cùng khuôn và cùng lý
+lẽ với `core/timecost.js`: Anagram sẵn có cả bộ đồ nghề fly/pulse, còn Quiz thì **không có gì** —
+chép tay vào 9 template là 9 bản sao sẽ lệch nhau ngay lần chỉnh đầu.
+- Con số đẻ trên `<body>` (`position:fixed`), giữ tại chỗ **320ms** rồi bay **600ms** vào ô điểm,
+  thu nhỏ đúng về cỡ chữ của ô đích. **Tổng 920ms — cố ý ngắn hơn `ROUND_HOLD_MS` (2100ms)** của
+  `core/fight.js`, kẻo nó hạ cánh xuống một câu đã bị thay mất.
+- ⭐⭐ **`apply()` CHỈ CHẠY LÚC HẠ CÁNH** và phải trả về TỔNG ĐIỂM MỚI ⇒ template phải bê cả phép
+  cộng dồn của nó (`penalty += pointsOff`) **vào trong callback**. Đây là cả yêu cầu của thầy, không
+  phải chi tiết: trừ trước rồi vẽ một cú bay cho vui thì vẫn đúng cảnh thầy đang tả.
+- ⭐ **Ngược hẳn quy ước của `flyTimeCost`** (điểm giờ chạy thì đếm lùi NGAY trong lúc bay). Hai nhịp
+  khác nhau là cố ý và đều là lời thầy.
+- ⚠️ **Không bay được thì vẫn phải TRỪ** (ô sai đã bị gỡ, ô điểm đang ẩn, khung rộng 0) — phép trừ là
+  tính năng, cú bay chỉ là lời giải thích.
+- ⚠️ **`anim.onfinish` không bao giờ nổ trong pane bị ẩn** (bẫy throttle của Chromium). Cái
+  `setTimeout(land, total + 150)` mới là thứ bảo đảm điểm CÓ bị trừ và nút DOM có được dọn.
+- Không có tiếng động nào: template đã kêu tiếng sai của nó ngay lúc bấm.
+
+### 2. ⭐⭐⭐ CHỖ BAY RA — LUẬT AN TOÀN, KHÔNG PHẢI THẨM MỸ
+
+| | chỗ bay ra |
+|---|---|
+| **Single mode** | **đúng ô/chỗ sai** template đưa vào |
+| **Fight mode** | **giữa khung** (`playArea`) của bàn đó — core **ÉP**, template không có quyền |
+
+⛔⛔ Phép ép đó nằm ở `ui.flyPenalty` trong **`core/engine.js`**, KHÔNG nằm ở template. Bàn kia còn
+đang làm: một số "−5" bay ra từ đúng ô số 3 là nói với đội kia *"ô 3 sai"* — Quiz 4 lựa chọn bị loại
+một ô, và **True/false chỉ có 2 nút nên là lộ TRỌN đáp án**. Đúng thứ luật **"GIẤU ĐÁP ÁN KHI VÒNG
+CÒN MỞ" (Đợt 129)** cấm. Để template tự nhớ là chờ ngày template thứ 12 quên mất và hở bài trong im
+lặng.
+⭐ Anagram vốn đã vô tình đúng luật này từ Đợt 143: `flyLetterPenalty()` bay ra từ **ô đáp án đang
+chờ** (cùng một ô ở cả hai bàn), không phải từ chữ cái bấm sai — bằng chứng sống rằng "bay từ chỗ
+trung tính" vẫn đọc ra ngay.
+
+### 3. ⚠️⚠️ `ui.flushPenalties()` — thứ giữ cho CÂU SAI CUỐI CÙNG không mất điểm
+
+Hoạt ảnh mở ra một cái cửa mà bản trừ-tức-thì cũ không có: con số bay **920ms**, mà nhiều template
+chốt sổ (`finish()`) chỉ **500–700ms** sau câu trả lời sai cuối ⇒ `ui.finish({ score })` đọc một số
+**CAO HƠN thật** đúng bằng câu sai cuối, và số đó đi thẳng vào bảng kết quả, vào Show answers, và vào
+**điểm nộp của bài giao**. `ui.flushPenalties()` hạ cánh ngay lập tức mọi con số còn trong không khí;
+**gọi ở dòng đầu `finish()` của cả 11 template**.
+- ⭐ Trong trận Fight thì KHÔNG cần: `ROUND_HOLD_MS` (2100ms) luôn dài hơn 920ms.
+- ⚠️ `cleanupAll()` **quên** sổ chờ chứ không gọi nó — ván đã bị vứt, ghi thêm điểm cho nó là ghi vào
+  một cái xác (bẫy Đợt 114 mà Type the answer đã cắn).
+
+### 4. Hai ca riêng
+
+- **Quiz không có sổ `penalty` cộng dồn** — `scoreNow()` đếm thẳng số câu sai trong `state`, mà
+  `st.correct = false` đã ghi từ lúc bấm. Nên không hoãn được bằng cách hoãn một phép cộng: phải
+  **CỘNG BÙ** (`pendingPenalty`) đúng chừng ấy điểm cho tới lúc hạ cánh.
+  ⛔⛔ **ĐÃ CẮN TDZ NGAY TRONG ĐỢT NÀY**: `let pendingPenalty` khai cạnh `scoreNow()` ⇒ act nào BẬT
+  Points off là **nổ `ReferenceError` ngay khi mở game** — vì `scoreNow()` là function declaration
+  (được hoist) và **được gọi từ ~60 dòng TRƯỚC chỗ nó được viết ra** (`ui.setScore(scoreNow())` lúc
+  dựng bàn). Trên màn thầy nó hiện ra đúng như "game không lên". Đúng bẫy TDZ của Đợt 192. Nay khai
+  ở đầu `mount()`, cạnh `pointsOff`.
+- **Type the answer** — con số "−N" của nó nằm chung `applyGradeVisuals` với dấu ✓/✗ và dòng đáp án,
+  nên trong trận cả cụm bị hoãn. Nay **tách TIỀN khỏi HÌNH**: tiền bay ngay qua đường core (giữa
+  khung), hình vẫn ở lại chờ `reveal()` như Đợt 170 đã chốt. Cờ `fightPenaltyFlown` là thứ giữ cho
+  **không trừ hai lần** — bỏ nó là `flyMark()` lát nữa `livePoints -= penalty` một lần nữa và đội đó
+  mất gấp đôi mà không có gì nói vì sao.
+- **Crossword + Unjumble giữ nguyên chùm sao**, chỉ thêm con số. ⚠️ **Một cú bay, một chủ nợ**: quyền
+  trừ chuyển sang CON SỐ, callback của chùm sao hạ xuống thành "vẽ lại điểm hiện hành". Con số bay
+  920ms, sao Unjumble bay 1100ms ⇒ số tới TRƯỚC, không có nhịp nảy ngược.
+
+### ✅ ĐO
+
+Hai bàn thử mới, chạy `startGame()`/`startFight()` THẬT trên trình duyệt thật qua `devserver.py`:
+- **`scratch/dot256-penalty.html` — 24/24 ĐẠT** (Quiz, Single + Fight): con số là `−20` với **dấu trừ
+  thật U+2212** · **điểm CHƯA đổi lúc còn đang bay**, đổi đúng lúc hạ cánh · Single bay ra **đúng ô vừa
+  bấm** (lệch ≤6px) · Fight bay ra **đúng giữa khung** (≤6px) và **cách ô vừa bấm ≥40px** · điểm đội kia
+  không bị đụng · `pointsOff = 0` thì **không có gì bay và điểm đứng yên** (chặn hồi quy) · trả lời
+  ĐÚNG thì không bay gì · `.is-penalty-hit` lên rồi tự gỡ · 3 câu sai liên tiếp ra đúng **−60** trong
+  bảng kết quả.
+- **`scratch/dot256-smoke.html` — 48/48 ĐẠT**: (A) mount **cả 11 template** có trừ điểm với Points
+  off BẬT, bắt `window.onerror` + `console.error` ⇒ **0 lỗi trang** — lưới này bắt đúng hai kiểu hỏng
+  im lặng của đợt (TDZ và sai tên biến), cả hai chỉ hiện ra dưới dạng *"game không lên"*; (B) **bấm
+  SAI THẬT** ở **True/false · Find the match · Open the box** (mỗi game bấm tới khi trúng một câu sai,
+  không đoán trước đáp án) và đo đủ ba thứ: đúng 1 con số bay ra · **điểm CHƯA đổi lúc nó đang bay** ·
+  hạ cánh xong tụt đúng 20.
+- ⚠️ **7 game còn lại KHÔNG đo được bằng máy** (Maze chase · Balloon pop · Flying fruit · Crossword ·
+  Anagram · Type the answer · Unjumble) — chúng đòi thao tác thật: chạy nhân vật lên ô, gõ phím, kéo
+  thả, bấm trúng một quả đang bay. Chúng qua mục A và nối dây bằng **đúng một dòng `ui.flyPenalty`**
+  y hệt 4 game trên, nhưng **mắt thầy là người kiểm cuối cùng cho chúng** — ghi rõ ra đây cho khỏi
+  tưởng bàn thử đã phủ hết 11 game.
+
+📌 **Bốn bài học đo — bàn thử tự nó cắn trước, và cắn đúng những chỗ hồ sơ đã cảnh báo:**
+1. ⛔⛔ **`optVer` PHẢI ĐẶT Ở CẤP ACT, KHÔNG PHẢI TRONG `options`.** `migrateActivityOptions()` đọc
+   `act.optVer`. Bàn thử đặt `pointsOff: 20` lên một `sample-*.js` mang optVer CŨ ⇒
+   `options-migrate.js` nhân mức phạt lên (hệ số 20 của Đợt 143, kẹp trần 100) và game nhận **100**.
+   Bàn thử đòi −20, nhận −100, **và trông y như một lỗi thật của code**. Mất hai vòng chạy: vòng đầu
+   quên hẳn `optVer`, vòng sau đặt nhầm vào trong `options`.
+2. **Đừng ngủ một phát rồi đo** — cú hạ cánh chạy ở `anim.onfinish` (920ms) **hoặc** ở lưới
+   `setTimeout` (1070ms), và trong pane bị ẩn thì chỉ còn đường thứ hai. Phải RÌNH.
+3. **Quiz KHÔNG tự sang câu** (khác Type the answer) — bấm mù theo đồng hồ là bấm vào một ô đang
+   `disabled`, câu đó không được tính, và mọi phép đo sau nó sai mà không nói vì sao.
+4. **Bảng kết quả không hiện ngay** — `finish()` chờ 1500ms rồi còn một tấm phủ 300ms nữa.
+
+### 👁 XEM MẮT
+
+`scratch/dot256-visual.html` — bấm sai một cú trong trận Fight rồi **đóng băng mọi hoạt ảnh giữa
+đường bay** (cả cú bay chỉ 920ms, ảnh chụp thường không bắt kịp). Đo tại khoảnh khắc đóng băng: con
+số **"−20" cỡ 96px** (kịch trần — trong trận thì chỗ bay ra là cả khung nên luôn chạm trần), đang ở
+lưng chừng giữa khung và ô điểm, và **điểm đội trái vẫn là 0**.
+⛔ `screenshot` của pane vẫn timeout (lần thứ chín liên tiếp, Đợt 191→256 — pane ẩn thì trang không
+compositing), nên trang này in thẳng số đo ra màn thay vì trông vào ảnh.
+
+### ⬜ CHỜ THẦY
+
+- ⬜ **Thầy duyệt** — chưa commit, chưa push.
+- ⬜ Nhìn thật trên TOMKO: cỡ con số (`max(42px, 42% bề ngang chỗ bay ra)`, trần 96px) từ cuối lớp
+  có đủ to không, và nhịp 320ms đứng + 600ms bay có vừa mắt không.
+- ⬜ Trong Fight, con số bay ra từ **giữa khung** — thầy xem có đọc ra ngay là "đội này vừa bị trừ"
+  không, hay cần thêm dấu hiệu (đường ba: bay ra từ ô sai, chấp nhận hở bài, thầy đã loại).
+
+---
+
 ## Đợt 255 (24/8/2026, khuya) — ĐUÔI TEMPLATE TRONG TIÊU ĐỀ + SHOW ANSWERS DỜI LÊN (cặp myLesson v1.16.0)
 
 **Thầy chốt quy tắc tên bài giao:** `B2B_24.8_WORDS LSA2-S2.T1.P3-4-5 — WP1 — ANAGRAM` — phần

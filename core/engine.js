@@ -87,6 +87,10 @@ import { migrateActivityOptions } from "./options-migrate.js";
 // only about code that can reach the teacher's library: store.js / assignment-
 // ui.js / fight.js).
 import { flyTimeCost } from "./timecost.js";
+// ⭐ Đợt 256 — hiệu ứng "-N bay từ chỗ sai vào ô điểm" dùng chung cho MỌI
+// template có trừ điểm. Cùng họ với timecost.js ngay trên: hiệu ứng nằm ở core,
+// template chỉ gọi một dòng `ui.flyPenalty()` (xem cuối file).
+import { flyPenalty as flyPenaltyFx } from "./flypenalty.js";
 // NOTE: assignment-ui.js reaches into the teacher's library (core/store.js), so
 // it is imported LAZILY and only on teacher paths — that keeps the student page
 // (play.html) free of any code that can touch the library.
@@ -2234,6 +2238,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let idleLastTick = 0;         // previous idle sample, for the delta
   let idleId = null;            // the 100ms watcher — only ever exists while the option is ON
   const costNodes = new Set();  // "-N" nodes still in the air (binned on teardown)
+  // ⭐ Đợt 256 — cùng vai trò với costNodes ở trên, cho những con số "−N" của
+  // ui.flyPenalty(). Để RIÊNG chứ không dùng chung một Set: hai hiệu ứng có hai
+  // vòng đời khác nhau (Time cost đẻ một con số MỖI GIÂY, điểm phạt chỉ đẻ khi có
+  // người trả lời sai), và gộp lại thì một cú dọn của bên này quét luôn của bên kia.
+  const penaltyNodes = new Set();
+  // Các cú hạ cánh đang chờ — xem ui.flushPenalties() ở cuối file.
+  const penaltyLands = new Set();
   function timeCostPer() {
     // ⭐⭐ Đợt 214 (thầy, 20/8/2026) — NO LONGER TIED TO THE WHOLE-GAME TIMER.
     // Until now `timerMode() === "none"` also returned 0, which made Timer=None
@@ -4127,6 +4138,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     stopSdClaimWatch();            // ⭐ Đợt 217 — và bộ nghe "đội có bị giành không"
     closeMenu(); stopTimer(); closeToolPanel(false);
     costNodes.forEach(n => n.remove()); costNodes.clear();
+    penaltyNodes.forEach(n => n.remove()); penaltyNodes.clear();   // ⭐ Đợt 256 — cùng luật
+    // ⚠️ KHÔNG gọi chúng, chỉ QUÊN chúng: ván này đã bị vứt, ghi thêm điểm cho nó là
+    // ghi vào một cái xác (đúng bẫy Đợt 114 mà Type the answer đã cắn). `torndown` đã
+    // bật ở trên nên dù có ai gọi thì `alive()` cũng chặn — đây là lớp thứ hai.
+    penaltyLands.clear();
     cleanup();
   }
 
@@ -4266,6 +4282,48 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     //                         (which may be mid-flight from your own effect)
     timeCostTotal: () => timeCostTotal,
     noteActivity,
+    // ----- ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "-N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
+    // Thầy: *"khi có điểm sai thì không có gì bay lên cả mà số điểm tự trừ rất khó
+    // nhìn… tương tự các điểm sai từ các ô ANAGRAM bay ra đó"*. Một dòng cho
+    // template, mọi luật khó nằm ở đây và ở core/flypenalty.js.
+    //
+    //   ui.flyPenalty(wrongEl, points, () => { penalty += points; return scoreNow(); })
+    //
+    // ⚠️⚠️ PHÉP TRỪ PHẢI NẰM TRONG CALLBACK, không được làm trước rồi mới gọi hàm
+    // này: cả yêu cầu của thầy là "bay vào ô điểm RỒI MỚI trừ". Callback được gọi
+    // ĐÚNG MỘT LẦN, đúng lúc con số hạ cánh, và phải trả về TỔNG ĐIỂM MỚI.
+    //
+    // ⛔⛔ TRONG TRẬN FIGHT, CHỖ BAY RA BỊ ÉP VỀ GIỮA KHUNG — VÀ ĐÓ LÀ LUẬT AN
+    // TOÀN, KHÔNG PHẢI THẨM MỸ. Bàn kia còn đang làm; một con số bay ra từ đúng ô
+    // sai là chỉ thẳng cho đội kia biết ô đó sai (True/false chỉ có 2 nút ⇒ lộ
+    // trọn đáp án) — đúng thứ luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ" (Đợt 129, core/
+    // HUONG DAN CORE.md) cấm. Ép ở ĐÂY chứ không nhờ template tự nhớ: template chỉ
+    // biết "tôi sai ở ô này", còn "trong trận thì được chỉ vào đâu" là việc của core.
+    // Thầy đã được hỏi thẳng ca này và chốt "bay ngay, nhưng từ GIỮA khung"
+    // (24/8/2026) — tức KHÔNG hoãn cú bay tới lúc lộ đáp án, chỉ đổi chỗ bay ra.
+    //
+    // ⚠️ `paint` đi qua `scorePainter` nếu template tự sơn ô điểm của nó (Crossword,
+    // Type the answer) — cùng một dòng mà flyTimeCost đang dùng, vì cùng một lý do:
+    // ghi thẳng một con số trần vào `ui.scoreEl` sẽ xoá mất cái chip "7 / 20" của họ.
+    flyPenalty(fromEl, points, apply) {
+      flyPenaltyFx({
+        fromEl: fight ? playArea : (fromEl || playArea),
+        toEl: fight ? fight.ctl.scoreTarget(fight.side) : scoreEl,
+        points,
+        apply,
+        paint: v => (scorePainter ? scorePainter(v) : ui.setScore(v)),
+        alive: () => !torndown,
+        nodes: penaltyNodes,
+        pending: penaltyLands
+      });
+    },
+    // ⚠️⚠️ Đợt 256 — GỌI Ở DÒNG ĐẦU CỦA finish() (hoặc bất cứ chỗ nào template ĐỌC
+    // điểm để ghi vào kết quả). Con số "−N" bay mất 920ms, còn nhiều template chốt sổ
+    // chỉ 500-700ms sau câu trả lời sai cuối cùng ⇒ không có dòng này thì câu sai CUỐI
+    // của ván không bị trừ trong bảng kết quả, trong Show answers, và trong điểm nộp
+    // của bài giao. Hoạt ảnh là thứ mở ra cái cửa đó, nên hoạt ảnh phải tự đóng lại.
+    // Hạ cánh ngay lập tức: áp phép trừ, vẽ lại điểm, gỡ nút DOM.
+    flushPenalties() { Array.from(penaltyLands).forEach(fn => { try { fn(); } catch { /* nút đã đi */ } }); },
     setIdleGuard(fn) { idleGuard = typeof fn === "function" ? fn : null; },
     setScoreProvider(fn) { scoreProvider = typeof fn === "function" ? fn : null; },
     // Đợt 143 — a template that DRAWS ITS OWN score chip supplies the painter

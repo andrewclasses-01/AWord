@@ -481,7 +481,14 @@ function mountBalloonPop(root, activity, ui) {
   function breakCrate(crate) {
     bpSound.cargoWrong();
     // Wrong-answer penalty: subtract pointsOff (negative allowed, no clamp). pointsOff===0 → no change.
-    if (pointsOff > 0) { score -= pointsOff; updateScore(); }
+    // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY TỪ CHÍNH THÙNG HÀNG VỪA VỠ VÀO Ô
+    // ĐIỂM, TỚI NƠI MỚI TRỪ. Trước đợt này điểm chỉ lặng lẽ tụt: *"số điểm tự trừ rất
+    // khó nhìn"*. ⚠️ Bay ra từ `crate` chứ đừng đợi nó bị `crate.remove()` sau 500ms —
+    // `ui.flyPenalty` đo toạ độ NGAY lúc gọi, còn con số thì sống trên <body> nên nó
+    // không chết theo cái thùng.
+    if (pointsOff > 0) {
+      ui.flyPenalty?.(crate, pointsOff, () => { score -= pointsOff; return scoreNow(); });
+    }
     crate.classList.add("is-broken");
     setTimeout(() => crate.remove(), 500);
     flyMark(false);
@@ -588,6 +595,10 @@ function mountBalloonPop(root, activity, ui) {
 
   function finishRound(title) {
     if (dead) return;   // Đợt 114 — the 300/500ms timer above outlived the play; never hand in
+    // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+    // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
+    // của bài giao) một số CAO HƠN thật đúng bằng cú chạm sai cuối cùng.
+    ui.flushPenalties?.();
     // review + perQuestion over the LEVELS played (each level = one definition)
     const perQuestion = levelItems.map((it, i) => ({ q: i, correct: i < levelIndex }));
     const review = levelItems.map((it, i) => ({

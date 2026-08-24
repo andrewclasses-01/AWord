@@ -866,6 +866,72 @@ chip đơn) — `tickTimer()` gửi SỐ GIÂY THÔ cho `fight.ctl.onTimer()`, `
 dùng `width` CỐ ĐỊNH (không phải `min-width`) để 2 ô điểm tay hai bên đồng hồ luôn bằng nhau bất kể số
 chữ số — đây chính là điều giữ đồng hồ (và dấu `:`) luôn đúng tâm dải dù điểm tay lệch số.
 
+## ⭐⭐⭐ ĐIỂM PHẠT PHẢI BAY — `ui.flyPenalty()` (Đợt 256, thầy 24/8/2026)
+
+Thầy: *"phải hiện số điểm trừ bay lên từ ô/chỗ sai bay vào ô điểm RỒI MỚI TRỪ… hiện tại không có gì
+bay lên cả mà số điểm tự trừ rất khó nhìn"*. **Ở cuối một lớp học, một con số đổi giá trị KHÔNG phải
+là một chuyển động** — đó là cả lý do của mục này.
+
+**Template opt-in bằng ĐÚNG MỘT DÒNG** (`core/flypenalty.js` giữ hiệu ứng, `core/engine.js` giữ dây):
+```js
+ui.flyPenalty(wrongEl, points, () => { penalty += points; return scoreNow(); });
+```
+
+| | |
+|---|---|
+| `wrongEl` | ô/chỗ vừa sai. `null` = không có ô nào (hết giờ) ⇒ rơi về giữa khung |
+| `points` | mức phạt (>0). `0` là **no-op** — hàm tự chặn, không gọi callback |
+| callback | ⚠️ **áp phép trừ VÀ trả về TỔNG ĐIỂM MỚI**; chỉ chạy **lúc con số hạ cánh**, đúng MỘT lần |
+
+⛔⛔ **PHÉP TRỪ PHẢI NẰM TRONG CALLBACK.** Trừ trước rồi vẽ một cú bay cho vui thì vẫn đúng cái cảnh
+thầy đang tả — số tụt trước, hình bay sau. Nhịp này **ngược hẳn `flyTimeCost`** (điểm giờ chạy đếm
+lùi NGAY trong lúc bay, vì điểm đang RỜI KHỎI tổng); cả hai đều là lời thầy, đừng "thống nhất" lại.
+
+⛔⛔⛔ **TRONG TRẬN FIGHT, CHỖ BAY RA BỊ ÉP VỀ GIỮA KHUNG — LUẬT AN TOÀN, KHÔNG PHẢI THẨM MỸ.**
+Bàn kia còn đang làm; một con số "−5" bay ra từ đúng ô số 3 là nói với đội kia *"ô 3 sai"*. Quiz 4
+lựa chọn bị loại một ô; **True/false chỉ có 2 nút nên là lộ TRỌN đáp án**. Đúng thứ mục **"GIẤU ĐÁP
+ÁN KHI VÒNG CÒN MỞ" (Đợt 129)** ngay trên cấm.
+- Phép ép nằm ở **`ui.flyPenalty` trong `core/engine.js`**, KHÔNG ở template — template chỉ biết "tôi
+  sai ở ô này", còn "trong trận thì được chỉ vào đâu" là câu hỏi của core. Để template tự nhớ là chờ
+  ngày template thứ 12 quên mất và hở bài trong im lặng.
+- ⭐ Anagram vốn đã vô tình đúng luật này từ Đợt 143: `flyLetterPenalty()` bay ra từ **ô đáp án đang
+  chờ** (cùng một ô ở cả hai bàn), không phải từ chữ cái bấm sai.
+- ⚠️ Thầy đã được hỏi thẳng ca này (24/8/2026) và chốt **"bay ngay, nhưng từ GIỮA khung"** — tức
+  KHÔNG hoãn cú bay tới lúc lộ đáp án, chỉ đổi chỗ bay ra. Đường "bay từ ô sai, chấp nhận hở bài" đã
+  được nêu và **bị loại**.
+
+⚠️⚠️ **GỌI `ui.flushPenalties()` Ở DÒNG ĐẦU `finish()`** — hoặc bất cứ chỗ nào template ĐỌC điểm để
+ghi vào kết quả. Con số bay **920ms**, mà nhiều template chốt sổ chỉ **500–700ms** sau câu sai cuối
+⇒ thiếu dòng này là câu sai CUỐI biến mất khỏi bảng kết quả, khỏi Show answers, và khỏi **điểm nộp
+của bài giao**. Hoạt ảnh mở ra cái cửa đó, nên hoạt ảnh phải tự đóng lại.
+- ⭐ Trong trận Fight thì KHÔNG cần: `ROUND_HOLD_MS` (2100ms) luôn dài hơn 920ms.
+- ⚠️ `cleanupAll()` **quên** sổ chờ chứ không gọi nó — ván đã bị vứt, ghi điểm cho nó là ghi vào một
+  cái xác (bẫy Đợt 114).
+
+⚠️ **Template không có sổ `penalty` cộng dồn thì phải CỘNG BÙ.** Quiz đếm thẳng số câu sai trong
+`state`, mà `st.correct = false` đã ghi từ lúc bấm — không hoãn được phép trừ bằng cách hoãn một phép
+cộng. Nó giữ `pendingPenalty` và `scoreNow()` cộng lại chừng ấy điểm cho tới lúc hạ cánh.
+⛔⛔ **BIẾN ĐÓ PHẢI KHAI Ở ĐẦU `mount()`, KHÔNG PHẢI CẠNH `scoreNow()`** — `scoreNow()` là function
+declaration (được hoist) và được gọi **từ trước** chỗ nó được viết ra (`ui.setScore(scoreNow())` lúc
+dựng bàn) ⇒ khai `let` cạnh nó là **`ReferenceError` TDZ ngay khi mở game**, và trên màn thầy nó hiện
+ra đúng như *"game không lên"*. Đã cắn thật trong chính Đợt 256, cùng họ với bẫy TDZ Đợt 192.
+
+⚠️ **Một cú bay, MỘT CHỦ NỢ.** Crossword và Unjumble vốn đã bắn chùm sao đỏ có kèm callback trừ điểm;
+khi thêm con số thì quyền trừ chuyển sang **con số**, callback của chùm sao hạ xuống thành "vẽ lại
+điểm hiện hành". Để cả hai cùng trừ là trừ hai lần. Cùng lý do, Type the answer có cờ
+`fightPenaltyFlown` để `flyMark()` không trừ lần nữa lúc lộ đáp án.
+
+⚠️ **Không có tiếng động nào ở đây** — template đã kêu tiếng sai của nó ngay lúc bấm; thêm một tiếng
+lúc hạ cánh là hai tiếng cho một lỗi.
+
+**Ai đang dùng (11/17 — mọi template có trừ điểm):** Quiz · True/false · Find the match · Open the box
+· Crossword · Anagram · Type the answer · Balloon pop · Flying fruit · Maze chase · Unjumble.
+
+**Bàn thử:** `scratch/dot256-penalty.html` (Quiz, Single + Fight, **24/24**) ·
+`scratch/dot256-smoke.html` (mount cả 11 template + bấm sai thật ở 4 game).
+
+---
+
 ## ⭐⭐ SHOWDOWN MODE — MỖI TRÌNH DUYỆT MỘT ĐỘI, MỖI CÂU MỘT HỌC SINH (`core/showdown.js`, Đợt 155, 14/8/2026)
 
 Nút **SHOWDOWN** dưới khung (giữa Style và MODE) mở bảng chia đội. **KHÔNG phải biến thể của Fight**:
@@ -2359,7 +2425,25 @@ nhiêu lần Đổi template thì `originAct` vẫn là act thật ban đầu (a
   → Nhờ vậy đổi 1 act sang template tạm, chỉnh options, lần sau chọn lại template đó của act đó vẫn giữ options.
 - `templateOptions` là 1 field thường trên act (Firestore-safe qua `clean()`); lưu kèm khi `saveActivity`.
 
-## ⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 252, mới nhất 24/8/2026)
+## ⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 257, mới nhất 24/8/2026)
+
+> ### ⭐⭐ LUẬT THỨ 9 (Đợt 257) — TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ
+> `play.js` bắn **`postMessage({ type: "AWORD:NOP", code, name })`** lên `window.parent` để
+> myLesson web tự làm mới leaderboard của đúng act. Bốn chốt, cả bốn đều là điều kiện chứ không
+> phải trang trí:
+> - ⛔ **chỉ khi `kq.ok`** — server đã xác nhận đủ HAI document. Nộp treo mà báo là bảng bên kia
+>   làm mới vô ích, và tệ hơn: nó nói dối rằng bài đã vào.
+> - ⛔ **chỉ khi đang nhúng** (`window.parent !== window`). Mở tab thường thì không bắn gì.
+> - ⭐ **trả lại NGUYÊN promise gốc** (`baoNopChoTrangMe` chỉ *bọc* `sendAttempt`) ⇒ đường nộp và
+>   đường nộp lại không đổi một li nào. Tin báo là **người đứng nghe**, không phải một mắt xích.
+> - `target: "*"` là an toàn ở ĐÂY vì payload toàn thứ **vốn đã công khai** (mã bài + tên trên bảng
+>   điểm) — và **trang mẹ mới là bên phải lọc theo origin**. Đừng bê quy ước này sang một payload
+>   có dữ liệu riêng tư.
+>
+> ⛔ **`AWORD:NOP` là CỬA THỨ SÁU cho myLesson — đừng đổi tên nó, đừng đổi khoá `code`/`name`.**
+> Cặp chặt **myLesson web v1.13.0**; revert lẻ một bên là hỏng bên kia.
+
+
 
 **Đọc mục này TRƯỚC khi sửa bất cứ thứ gì trong `core/assignment-ui.js` hoặc `core/assignments.js`.**
 Khu bài giao vừa đi 6 đợt liên tiếp và đã có 4 chỗ "sửa cho gọn" là hỏng ngay.

@@ -176,6 +176,9 @@ const ttaTemplate = {
     // the round is open" rule can and must still hold back. Cleared by
     // reveal(), which the match calls once the round is settled for both.
     let fightPendingReveal = false;
+    // ⭐ Đợt 256 — "điểm phạt của câu này đã bay rồi" (chỉ dùng trong trận, xem
+    // submitAnswer). Đặt lại mỗi khi sang câu, cùng chỗ `fightPendingReveal` được xoá.
+    let fightPenaltyFlown = false;
     // Where a flying mark should travel to: this board's own chip normally,
     // or (fighting) the shared team chip above both boards — same pattern as
     // anagram.js's scoreTargetEl().
@@ -506,6 +509,7 @@ const ttaTemplate = {
       // A withheld reveal belongs to the question that was on screen; moving
       // to another one clears it (same reset point as quiz.js's applyQuestion).
       fightPendingReveal = false;
+      fightPenaltyFlown = false;   // ⭐ Đợt 256 — câu mới, sổ phạt của câu cũ đóng lại
 
       // --- answer block, in place ---
       input.value = st.typed || "";
@@ -601,6 +605,19 @@ const ttaTemplate = {
       if (fightCtl) {
         fightPendingReveal = true;
         syncFightLock();
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — ĐIỂM PHẠT TÁCH KHỎI PHẦN HÌNH VÀ BAY NGAY.
+        // Trước đợt này cả cụm — dấu ✓/✗, dòng đáp án, VÀ con số "−N" cùng phép trừ đi
+        // theo nó — nằm chung trong `applyGradeVisuals`, nên trong trận điểm phạt phải
+        // chờ tới lúc lộ đáp án. Thầy chốt cả app phải "bay ngay, chỉ đổi chỗ bay ra"
+        // ⇒ tiền đi ngay qua đường core (giữa khung, không chỉ vào đâu cả), hình vẫn
+        // ở lại chờ `reveal()` như Đợt 170 đã chốt.
+        // ⚠️⚠️ `fightPenaltyFlown` là thứ giữ cho KHÔNG TRỪ HAI LẦN: `flyMark()` lát nữa
+        // đọc cờ này và hạ "−N" xuống thành một dấu ✗ trơn (xem `wrongMinus` trong đó).
+        const pen = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
+        if (!st.correct && pen > 0) {
+          fightPenaltyFlown = true;
+          ui.flyPenalty?.(null, pen, () => { livePoints -= pen; return scoreNow(); });
+        }
       } else {
         applyGradeVisuals(st, it, revealShown);
       }
@@ -781,7 +798,11 @@ const ttaTemplate = {
       const size = Math.max(34, inputEl.getBoundingClientRect().height * 0.72);   // bigger than before
 
       const penalty = Math.max(0, Math.min(POINTS_MAX, Number(opt.minusAmount) || 0));
-      const wrongMinus = !correct && penalty > 0;
+      // ⚠️⚠️ Đợt 256 — trong trận thì con số "−N" ĐÃ bay lúc nộp (xem submitAnswer), nên
+      // ở đây chỉ còn một dấu ✗ trơn. Bỏ điều kiện `!fightPenaltyFlown` là TRỪ HAI LẦN:
+      // `land()` dưới kia làm `livePoints -= penalty` một lần nữa, và trên màn thì đội
+      // đó mất gấp đôi số điểm mà không có gì nói vì sao.
+      const wrongMinus = !correct && penalty > 0 && !fightPenaltyFlown;
       const mark = el("div", "aw-tta-flymark" + (correct ? "" : " is-cross") + (wrongMinus ? " is-penalty" : ""),
         correct ? icons.check : (wrongMinus ? `−${penalty}` : icons.cross));
       mark.style.width = size + "px";
@@ -1091,6 +1112,8 @@ const ttaTemplate = {
       const answeredNow = state.filter(s => s.graded).length;
       if (answeredNow === 0) { ui.toast?.("Answer at least one question first."); return; }   // don't latch finished
       finished = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM (xem core/engine.js, ui.flushPenalties).
+      ui.flushPenalties?.();
       clearAutoTimer();
       if (reason === "gameover") ttaSound.gameOver(); else ttaSound.complete();
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));

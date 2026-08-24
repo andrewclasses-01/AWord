@@ -168,6 +168,13 @@ const quizTemplate = {
   mount(root, activity, ui) {
     const opt = activity.options || {};
     const pointsOff = Math.max(0, Math.min(100, Number(opt.pointsOff) || 0));  // deduct per wrong (0..100 since Dot 143; 0 = off)
+    // ⭐⭐ Đợt 256 — điểm phạt ĐANG BAY, còn được cộng bù vào scoreNow() (xem hàm đó).
+    // ⚠️⚠️ PHẢI KHAI Ở ĐÂY, ĐẦU mount(). `scoreNow()` là function declaration nên được
+    // hoist, và nó ĐƯỢC GỌI NGAY lúc dựng bàn (`ui.setScore(scoreNow())`, ~60 dòng
+    // trước chỗ nó được viết ra). Khai `let` cạnh hàm đó thì act nào BẬT Points off sẽ
+    // nổ ReferenceError ngay khi mở game — đúng bẫy TDZ của Đợt 192, và trên màn thầy
+    // thì nó hiện ra như "game không lên".
+    let pendingPenalty = 0;
     const allowSkip = opt.allowSkip === true;                                // move on without answering (default off)
 
     // ----- FIGHT MODE (12/8/2026, trial) — this play is one of two boards
@@ -283,6 +290,20 @@ const quizTemplate = {
     // engine only counts the idle seconds and animates them, the score itself
     // is still entirely this function's. Off (or a template/engine without the
     // option) => timeCostTotal() is 0 => byte-identical to before.
+    // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — ĐIỂM PHẠT ĐANG BAY THÌ CHƯA ĐƯỢC TRỪ.
+    // Thầy: *"phải hiện số điểm trừ bay lên từ ô/chỗ sai bay vào ô điểm RỒI MỚI
+    // TRỪ… hiện tại không có gì bay lên cả mà số điểm tự trừ rất khó nhìn"*.
+    // ⛔ Quiz không có sổ `penalty` cộng dồn như True/false — `scoreNow()` ĐẾM
+    // THẲNG số câu sai trong `state`, mà `st.correct = false` đã được ghi từ lúc
+    // bấm. Nên không thể "hoãn phép trừ" bằng cách hoãn một phép cộng: phải CỘNG
+    // BÙ đúng chừng ấy điểm vào tổng cho tới khi con số hạ cánh.
+    // ⚠️ `pendingPenalty` bị ép về 0 ở finish() — xem chỗ đó. `settlePenalty()`
+    // kẹp sàn 0 nên một con số hạ cánh MUỘN sau khi hết game không trừ lần thứ hai.
+    // ⚠️⚠️ BIẾN ĐƯỢC KHAI TẬN ĐẦU mount() chứ không phải ở đây (xem cạnh `pointsOff`).
+    function settlePenalty(n) {
+      pendingPenalty = Math.max(0, pendingPenalty - n);
+      return scoreNow();
+    }
     function scoreNow() {
       const correct = state.filter(s => s.correct === true).length;
       const clock = ui.timeCostTotal ? ui.timeCostTotal() : 0;
@@ -294,7 +315,7 @@ const quizTemplate = {
       // through that one helper, so the timeout can never be counted in one
       // place and forgotten in another.
       const wrong = state.filter(s => settled(s) && s.correct === false).length;
-      return correct - pointsOff * wrong - clock;
+      return correct - pointsOff * wrong - clock + pendingPenalty;
     }
     // Answered, or timed out — the two ways a question stops being open (Đợt 174).
     function settled(s) { return s.chosen !== null || s.timedOut === true; }
@@ -526,7 +547,16 @@ const quizTemplate = {
       }
 
       if (st.correct) quizSound.correct(); else quizSound.wrong();
+      // ⭐⭐ Đợt 256 — giữ nguyên tổng điểm cho tới lúc "−N" cắm vào ô điểm.
+      // ⚠️ Cộng bù TRƯỚC `ui.setScore` ngay dưới, không thì màn hình kịp vẽ đúng
+      // một khung hình đã bị trừ rồi mới cộng lại — cú giật đó chính là thứ đang
+      // phải chữa, chỉ nhanh hơn.
+      const willFly = !st.correct && pointsOff > 0;
+      if (willFly) pendingPenalty += pointsOff;
       ui.setScore(scoreNow());
+      // Ô sai chỉ dùng làm chỗ bay ra khi CHƠI ĐƠN — trong trận, core/engine.js
+      // ép về giữa khung để không chỉ cho đội kia biết ô nào sai (xem ui.flyPenalty).
+      if (willFly) ui.flyPenalty?.(tiles[i] && tiles[i].tile, pointsOff, () => settlePenalty(pointsOff));
       updateNav();
 
       // FIGHT MODE: tell the match this board has finished with the question —
@@ -615,7 +645,12 @@ const quizTemplate = {
       tiles.forEach(t => (t.tile.disabled = true));
       tiles.forEach((t, k) => addBadges(t.tile, q.answers[k], k, st));
       quizSound.wrong();
+      // ⭐ Đợt 256 — hết giờ cũng là một câu SAI (Đợt 174), nên nó cũng phải bay.
+      // Không có ô nào được bấm ⇒ đưa `null`, core/engine.js rơi về giữa khung.
+      const willFlyTO = pointsOff > 0;
+      if (willFlyTO) pendingPenalty += pointsOff;
       ui.setScore(scoreNow());
+      if (willFlyTO) ui.flyPenalty?.(null, pointsOff, () => settlePenalty(pointsOff));
       updateNav();
       // A timeout costs a heart, exactly like a wrong answer — the point of
       // Lives is "this many mistakes", and sitting the clock out is one.
@@ -847,6 +882,12 @@ const quizTemplate = {
       if (finished) return;
       finished = true;
       clearAutoTimer();
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+      // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
+      // của bài giao) một số CAO HƠN thật đúng bằng câu sai cuối cùng. Cú bay mất
+      // 920ms, mà đường từ câu sai tới đây chỉ 500-700ms — cửa này mở thật, không
+      // phải lo xa. `flushPenalties()` hạ cánh hết ngay lập tức.
+      ui.flushPenalties?.();
       if (reason === "gameover") quizSound.gameOver(); else quizSound.complete();
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;
@@ -862,6 +903,11 @@ const quizTemplate = {
       // (Đợt 139: `scoreNow()` now also carries the Time cost, so the condition
       // widened to "either deduction is in play". With both off it still equals
       // `correct`, which is what computeResult defaults to anyway — zero-diff.)
+      // ⚠️ Lớp thứ hai sau `ui.flushPenalties?.()` ở đầu finish(): nếu vì lý do gì
+      // đó còn sót một khoản cộng bù, ép nó về 0 là phép trừ có hiệu lực ngay. Cú hạ
+      // cánh muộn sau đó gọi `settlePenalty()`, và hàm ấy kẹp sàn 0 nên không trừ
+      // lần thứ hai.
+      pendingPenalty = 0;
       if (pointsOff || (ui.timeCostTotal && ui.timeCostTotal())) raw.score = scoreNow();
       // Out of lives -> the celebration screen reads "Game over" instead of
       // "Game complete" (engine reads raw.title; undefined = default).

@@ -1627,6 +1627,44 @@ html.aw-nhung .aw-below { display: none; }
 }
 
 /* =====================================================================
+   ⭐⭐⭐ ĐIỂM PHẠT BAY — "−N" bay từ chỗ sai vào ô điểm (Đợt 256, thầy 24/8/2026)
+   ---------------------------------------------------------------------
+   Thầy: *"phải hiện số điểm trừ bay lên từ ô/chỗ sai bay vào ô điểm rồi mới
+   trừ… tương tự các điểm sai từ các ô ANAGRAM bay ra đó"*. Nên hình thức ở đây
+   là BẢN SAO ĐÚNG của .aw-anagram-flynum-bad (đỏ #ff5c5c, viền #4a0d0d) —
+   thứ thầy đã duyệt từ Đợt 143 và đang lấy làm chuẩn.
+   ⚠️ position:fixed + đặt trên <body>: nó bay RA NGOÀI khung game, nên không
+   được nằm trong bất cứ hộp nào có overflow:hidden (bẫy Đợt 222 của Find the
+   match). Cũng vì thế nó phải được dọn tay lúc teardown — xem penaltyNodes
+   trong core/engine.js.
+   ⚠️ KHÔNG đặt transform/filter/opacity lên tổ tiên của nó — hợp đồng xếp lớp
+   của hệ popup (core/HUONG DAN CORE.md). Nó ngồi thẳng trên body nên hôm nay
+   an toàn; đừng bọc nó vào đâu.
+   ===================================================================== */
+.aw-penalty-fly {
+  position: fixed;
+  transform: translate(-50%, -50%);
+  font-weight: 800; color: #ff5c5c;
+  -webkit-text-stroke: 0.07em #4a0d0d; paint-order: stroke fill;
+  pointer-events: none; z-index: 60; white-space: nowrap;
+  line-height: 1;
+  filter: drop-shadow(0 0.15em 0.3em rgba(0,0,0,.3));
+}
+
+/* Nhịp nảy đỏ trên chính ô điểm lúc con số cắm vào (core/flypenalty.js gắn lớp
+   này 420ms). Ở cuối lớp học, MỘT CON SỐ ĐỔI GIÁ TRỊ KHÔNG PHẢI LÀ MỘT CHUYỂN
+   ĐỘNG — đó là cả lý do thầy mở đợt này ("số điểm tự trừ rất khó nhìn").
+   ⚠️ Dùng chung cho ô điểm chip đơn (.aw-top-score) LẪN con số đội trên dải
+   Fight (.aw-fight-score) — hai chỗ khác nhau, một lớp, không tô màu nền nên
+   không đụng gì tới màu âm/dương mà JS đang sơn (.is-neg). */
+.is-penalty-hit { animation: aw-penalty-hit .42s cubic-bezier(.3,.9,.4,1.2); }
+@keyframes aw-penalty-hit {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.22); filter: drop-shadow(0 0 .35em rgba(255,92,92,.85)); }
+  100% { transform: scale(1); }
+}
+
+/* =====================================================================
    OPTIONS PANEL v2 — ONE grid, ONE row shape (Đợt 140, 13/8/2026)
    ---------------------------------------------------------------------
    Teacher: "bảng options rất rối, khó nhìn, không thẳng hàng, không ngăn

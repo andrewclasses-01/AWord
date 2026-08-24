@@ -942,7 +942,13 @@ const crosswordTemplate = {
         // locked out (or never got to submit): counts as wrong, with the same
         // penalty a wrong submit would have cost.
         st.done = true; st.wrong = true; st.correct = false;
-        if (minusOn) { livePoints -= penalty; showScore(); }
+        // ⭐ Đợt 256 — bị khoá cũng là một câu sai có trừ điểm, nên nó cũng phải bay.
+        // Tới đây thì vòng ĐÃ ngã ngũ (đây là đường reveal) nên không còn gì để giấu,
+        // nhưng vẫn để `null`: trong trận core/engine.js ép về giữa khung, và một quy
+        // ước duy nhất cho cả file thì không ai phải nhớ ngoại lệ.
+        if (minusOn) {
+          ui.flyPenalty?.(null, penalty, () => { livePoints -= penalty; return scoreNow(); });
+        }
       }
       if (held && held.correct) {
         w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
@@ -1048,8 +1054,19 @@ const crosswordTemplate = {
         st.correct = ok;
         if (!ok) st.wrong = true;
         if (ok) { crosswordSound.correct(); livePoints += 1; }
-        else { crosswordSound.wrong(); if (minusOn) livePoints -= penalty; }
+        else crosswordSound.wrong();
         showScore();
+        // ⭐⭐⭐ Đợt 256 — "−N" bay vào ô điểm rồi mới trừ. ⛔ KHÔNG bay ra từ ô chữ:
+        // đây là game LƯỢT CHỌN Ô, bàn kia có thể còn đang gõ chính từ đó, và một con
+        // số bay ra từ đúng dãy ô ấy là chỉ thẳng vào chỗ sai (luật "GIẤU ĐÁP ÁN KHI
+        // VÒNG CÒN MỞ", Đợt 129 — cùng lý do cả nhánh này giữ lại toàn bộ reveal).
+        // core/engine.js vốn đã ép chỗ bay ra về giữa khung trong mọi trận.
+        // ⚠️ Không kèm `flyStars("lose")`: chùm sao bay ra TỪ CHÍNH DÃY Ô (`activeEl`)
+        // nên nó là đúng thứ vừa nói ở trên — nó thuộc về đường reveal, không phải
+        // đường này.
+        if (!ok && minusOn) {
+          ui.flyPenalty?.(null, penalty, () => { livePoints -= penalty; return scoreNow(); });
+        }
         fightHeld = { i: curWord, correct: ok };
         syncFightLock();
         fightCtl.wordDone(fightSide, { index: curWord, correct: ok });
@@ -1082,7 +1099,15 @@ const crosswordTemplate = {
           // left the cells (never on top of them).
           let flipAt = lastMark + AFTER_X;
           if (minusOn) {
-            pushTimer(() => { livePoints -= penalty; showScore(); flyStars("lose"); }, lastMark + AFTER_X);
+            // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — CON SỐ, KHÔNG CHỈ NGÔI SAO.
+            // Chùm sao đỏ của Đợt ~90 vẫn bay y nguyên (nó là thứ nói "điểm rời khỏi Ô
+            // NÀY"), nhưng nó không nói TRỪ BAO NHIÊU — mà đó chính là thứ thầy hỏi. Nay
+            // có thêm một con số "−N" bay cùng, và PHÉP TRỪ ĐI THEO CON SỐ chứ không còn
+            // xảy ra tức thì.
+            pushTimer(() => {
+              flyStars("lose");
+              ui.flyPenalty?.(activeEl, penalty, () => { livePoints -= penalty; return scoreNow(); });
+            }, lastMark + AFTER_X);
             flipAt = lastMark + AFTER_X + STAR_FLY;
           }
           // Phase B: the correct answer flips in; the strip settles to uniform grey.
@@ -1091,7 +1116,10 @@ const crosswordTemplate = {
         } else {
           // grey ✕ on this word's own cells, then back to the board. No per-cell
           // walk here, so keep the single word-level "wrong" sound + immediate minus.
-          if (minusOn) { livePoints -= penalty; showScore(); flyStars("lose"); }
+          if (minusOn) {
+            flyStars("lose");
+            ui.flyPenalty?.(activeEl, penalty, () => { livePoints -= penalty; return scoreNow(); });
+          }
           crosswordSound.wrong();
           st.done = true; st.wrong = true;
           w.cells.forEach(([r, c]) => {
@@ -1282,6 +1310,9 @@ const crosswordTemplate = {
 
     // -------------------------------------------------------------------
     function finish() {
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là một
+      // phép trừ CHƯA áp vào `livePoints`, mà `score` dưới đây đọc thẳng ra từ đó.
+      ui.flushPenalties?.();
       if (finished) return;
       finished = true;
       consumeAndrewGlow();

@@ -573,9 +573,12 @@ const mazeChaseTemplate = {
         pad.el.style.backgroundImage = `url(${imgUrl("floor-incorrect.png")})`;
         pad.el.querySelector(".aw-mc-pad-mark").textContent = "✗";
         st.wrong.push(pad.text); st.answeredWith = pad.text;
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY TỪ CHÍNH Ô ĐÁP ÁN VỪA GIẪM VÀO Ô
+        // ĐIỂM, TỚI NƠI MỚI TRỪ (trước đợt này điểm chỉ lặng lẽ tụt).
+        // ⚠️ Ô bị mờ đi rồi ẩn sau ~520ms (setTimeout ngay dưới) — không sao: toạ độ
+        // được đo NGAY lúc gọi và con số sống trên <body>, không chết theo ô.
         if (pointsOff) {   // choosing a WRONG answer costs points (negative allowed, no clamp)
-          penalty += pointsOff;
-          ui.setScore(scoreNow());
+          ui.flyPenalty?.(pad.el, pointsOff, () => { penalty += pointsOff; return scoreNow(); });
         }
         mcSound.wrong();
         loseLife("wrong");
@@ -679,6 +682,10 @@ const mazeChaseTemplate = {
     function finish() {
       if (finished) return;
       finished = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+      // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
+      // của bài giao) một số CAO HƠN thật đúng bằng cú chạm sai cuối cùng.
+      ui.flushPenalties?.();
       clearInterval(moveTimer); clearInterval(enemyTimer); clearTimeout(invulnTimer);
       const perQuestion = state.map((s, i) => ({ q: i, correct: s.correct === true }));
       const correct = perQuestion.filter(p => p.correct).length;

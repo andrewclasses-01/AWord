@@ -991,10 +991,24 @@ const ftmTemplate = {
           ftmSound.correct();
         } else {
           ftmSound.wrong();
-          if (pointsOff) penalty += pointsOff;
           loseLife();
         }
         ui.setScore(scoreNow());
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
+        // `penalty += pointsOff` đã rời khỏi nhánh sai ở trên vào callback này, nên
+        // tổng điểm đứng yên tới lúc con số hạ cánh — đúng lời thầy.
+        // ⛔ `null` chứ không phải `tile`: bàn kia còn đang tìm ô, một con số bay ra
+        // từ đúng ô vừa bấm là loại hộ nó một lựa chọn (luật "GIẤU ĐÁP ÁN KHI VÒNG
+        // CÒN MỞ", Đợt 129 — cùng lý do cả nhánh này không vẽ ✓/✗ nào). core/engine.js
+        // vốn đã ép chỗ bay ra về giữa khung trong mọi trận; đây là lớp thứ hai.
+        if (!correct && pointsOff) {
+          ui.flyPenalty?.(null, pointsOff, () => {
+            penalty += pointsOff;
+            const v = scoreNow();
+            updateNav();
+            return v;
+          });
+        }
         updateNav();
         root.querySelector(".aw-ftm-card")?.classList.add("is-fightlost");
         // `index` is the ROW in `review` — `order` is identity in a match, so
@@ -1047,10 +1061,16 @@ const ftmTemplate = {
 
         // Dock points for the wrong tap (no clamp — the score may go negative).
         // Guarded by pointsOff so play is byte-identical when the feature is off.
+        // ⭐⭐⭐ Đợt 256 — phép trừ nay nằm TRONG callback của ui.flyPenalty: con số
+        // "−N" bay ra từ ĐÚNG Ô VỪA BẤM (chơi đơn thì không có ai để giấu bài) vào ô
+        // điểm, tới nơi mới trừ.
         if (pointsOff) {
-          penalty += pointsOff;
-          ui.setScore(scoreNow());
-          updateNav();
+          ui.flyPenalty?.(tile, pointsOff, () => {
+            penalty += pointsOff;
+            const v = scoreNow();
+            updateNav();
+            return v;
+          });
         }
 
         const outOfLives = loseLife();
@@ -1187,6 +1207,11 @@ const ftmTemplate = {
     function finish(reason) {
       if (finished) return;
       finished = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là một
+      // phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp của bài
+      // giao) một số CAO HƠN thật đúng bằng cú chạm sai cuối cùng. Cú bay mất 920ms,
+      // mà đường từ cú chạm sai tới đây ngắn hơn thế.
+      ui.flushPenalties?.();
       haltPromptAnim();
       if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
       if (prepTimer) { clearTimeout(prepTimer); prepTimer = null; }

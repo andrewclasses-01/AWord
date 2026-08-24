@@ -694,12 +694,22 @@ const tfTemplate = {
       if (fightCtl) {
         state[idx].correct = isRight;
         if (isRight) tfSound.correct();
-        else {
-          tfSound.wrong();
-          if (pointsOff) penalty += pointsOff;
-        }
+        else tfSound.wrong();
         const outOfLives = isRight ? false : loseLife();
         ui.setScore(liveScore());   // engine forwards this to the match scoreboard
+        // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
+        // `penalty += pointsOff` đã RỜI khỏi nhánh sai ở trên và vào callback này:
+        // cả yêu cầu của thầy là tổng điểm đứng yên cho tới lúc con số hạ cánh.
+        // ⛔⛔ ĐỪNG đưa `btn` (nút vừa bấm) vào đây dù chơi đơn có làm thế: game này
+        // chỉ có HAI nút, nên một con số bay ra từ đúng nút vừa bấm là NÓI TRỌN ĐÁP
+        // ÁN cho đội còn đang làm — đúng thứ luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ"
+        // (Đợt 129) cấm, và cũng là lý do cả nhánh fight này không vẽ ✓/✗ nào.
+        // ⚠️ Thật ra core/engine.js đã ép chỗ bay ra về giữa khung trong mọi trận rồi
+        // (xem ui.flyPenalty), nên `null` ở đây chỉ là nói cùng một điều hai lần —
+        // cố ý, vì đây là template dễ hở nhất trong bảy game Fight.
+        if (!isRight && pointsOff) {
+          ui.flyPenalty?.(null, pointsOff, () => { penalty += pointsOff; return liveScore(); });
+        }
         updateNav();
         fightPendingReveal = true;
         syncFightLock();
@@ -724,10 +734,17 @@ const tfTemplate = {
         // Points-off penalty: subtract pointsOff (negatives allowed, no clamp) and
         // refresh BOTH the top score and the nav counter so they stay in sync. The
         // whole block is skipped when pointsOff===0 -> byte-identical to before.
+        // ⭐⭐⭐ Đợt 256 — phép trừ nay nằm TRONG callback của ui.flyPenalty: con số
+        // "−N" bay ra từ ĐÚNG NÚT VỪA BẤM (chơi đơn thì không có ai để giấu bài) vào
+        // ô điểm, tới nơi mới trừ. `updateNav()` cũng phải chạy lại lúc đó vì nó in
+        // cùng con số ấy ở thanh dưới.
         if (pointsOff) {
-          penalty += pointsOff;
-          ui.setScore(liveScore());
-          updateNav();
+          ui.flyPenalty?.(btn, pointsOff, () => {
+            penalty += pointsOff;
+            const v = liveScore();
+            updateNav();
+            return v;
+          });
         }
 
         const outOfLives = loseLife();
@@ -925,6 +942,12 @@ const tfTemplate = {
     function finish(reason) {
       if (finished) return;
       finished = true;
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM. Một con số "−N" còn đang bay là
+      // một phép trừ CHƯA áp; đọc điểm lúc này là ghi vào kết quả (và vào điểm nộp
+      // của bài giao) một số CAO HƠN thật đúng bằng câu sai cuối cùng. Cú bay mất
+      // 920ms, mà đường từ câu sai tới đây chỉ 500-700ms — cửa này mở thật, không
+      // phải lo xa. `flushPenalties()` hạ cánh hết ngay lập tức.
+      ui.flushPenalties?.();
       haltPromptAnim();
       if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
       if (prepTimer) { clearTimeout(prepTimer); prepTimer = null; }

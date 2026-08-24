@@ -779,7 +779,19 @@ const unjumbleTemplate = {
           flyStarsToScore(boardEl, () => { st.points = 1; return scoreNow(); });
         } else {
           outOfLives = loseLife();
-          flyStarsToScore(boardEl, () => { st.points = -pointsOff; return scoreNow(); }, true);
+          // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — CON SỐ, KHÔNG CHỈ NGÔI SAO.
+          // Unjumble vốn đã làm đúng nửa quan trọng nhất từ Đợt 41/42: chùm sao ĐỎ bay
+          // từ cả câu vào ô điểm và phép trừ chỉ áp KHI SAO TỚI NƠI. Thiếu đúng một
+          // thứ — nó không nói TRỪ BAO NHIÊU, mà đó chính là điều thầy hỏi.
+          // ⚠️⚠️ CHỈ MỘT NGƯỜI ĐƯỢC TRỪ. Quyền trừ chuyển sang CON SỐ (`st.points`
+          // nay đặt trong callback của ui.flyPenalty), còn callback của chùm sao hạ
+          // xuống thành "vẽ lại điểm hiện hành". Để cả hai cùng đặt `st.points` thì vô
+          // hại (gán chứ không cộng dồn) — nhưng để cả hai cùng TRỪ ở một template
+          // khác thì là trừ hai lần, nên luật viết ra ở đây là: một cú bay, một chủ nợ.
+          // ⭐ Con số bay 920ms, chùm sao 1100ms ⇒ số tới TRƯỚC, điểm tụt lúc nó cắm
+          // vào, rồi sao mới tới và chỉ vẽ lại đúng con số ấy. Không có nhịp nảy ngược.
+          ui.flyPenalty?.(boardEl, pointsOff, () => { st.points = -pointsOff; return scoreNow(); });
+          flyStarsToScore(boardEl, () => scoreNow(), true);
         }
         if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
         else if (state.every(doneCheck)) autoTimer = setTimeout(finish, FLYGAIN_TOTAL_MS + FLYGAIN_PULSE_MS + 400);
@@ -955,6 +967,9 @@ const unjumbleTemplate = {
     }
 
     function finish(reason) {
+      // ⚠️⚠️ Đợt 256 — CHỐT SỔ TRƯỚC KHI ĐỌC ĐIỂM: một con số "−N" còn đang bay là một
+      // `st.points` CHƯA được đặt, và `scoreNow()` cộng từ chính mảng đó.
+      ui.flushPenalties?.();
       if (finished) return;
       finished = true;
       const totalPoints = state.reduce((s, st) => s + (st.points || 0), 0);
