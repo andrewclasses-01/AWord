@@ -86,7 +86,19 @@ function snapshotOf(act, optionsOverride) {
 
 // Create a new assignment for `act`. Returns the stored assignment.
 // `folderId` = a folder of the RESULTS root to file it under (null = top level).
-export async function createAssignment(act, { title, deadline = null, endOptions = {}, folderId = null, options = null } = {}) {
+// ⭐⭐ Đợt 250 — `sourceAct`: THE ACT THIS ASSIGNMENT BELONGS TO, when `act` is
+// not that act. The Set assignment form can now hand a class the same content
+// as a DIFFERENT game (a Quiz given out as Balloon pop), and the only way to
+// build that is core/convert.js's `convertActivity()`, which returns a THROWAWAY
+// act: `id: "conv_…"`, no `num`, `_converted: true`.
+// ⛔ Storing that act's identity would quietly cut the assignment loose from the
+// library: `listAssignmentsForAct(activityId)` is what draws the strip of
+// assignments under an act, and it matches on `activityId` alone — a "conv_…"
+// id matches nothing, for ever. So identity (id · num · title) comes from
+// `sourceAct` while the PLAYABLE part (type + snapshot) comes from `act`.
+// Omitted ⇒ the two are the same object, which is every pre-Đợt-250 call.
+export async function createAssignment(act, { title, deadline = null, endOptions = {}, folderId = null, options = null, sourceAct = null } = {}) {
+  const idAct = sourceAct || act;
   const user = await currentUser();
   if (!user) { const e = new Error("Please sign in first."); e.code = "aw/signed-out"; throw e; }
   const [d, { doc, getDoc, setDoc }] = await Promise.all([db(), fs()]);
@@ -101,11 +113,15 @@ export async function createAssignment(act, { title, deadline = null, endOptions
 
   const data = clean({
     code,
-    title: (title || "").trim() || `Assignment for ${act.title || "Untitled"}`,
-    activityId: act.id || null,
-    activityNum: typeof act.num === "number" ? act.num : null,
+    title: (title || "").trim() || `Assignment for ${idAct.title || "Untitled"}`,
+    activityId: idAct.id || null,
+    activityNum: typeof idAct.num === "number" ? idAct.num : null,
+    // ⚠️ TYPE comes from `act`, not `idAct` — this is what the pupil's machine
+    // mounts (play.js does ensureTemplate(activity.type)), and the report header
+    // names. The identity above and the game below deliberately disagree when
+    // the teacher assigned the act as another template (Đợt 250).
     activityType: act.type,
-    activityTitle: act.title || "",
+    activityTitle: idAct.title || "",
     // `options` (Đợt C) — the options CHOSEN on the Set assignment form, not
     // `act.options`: a snapshot must freeze what the teacher actually picked
     // for this assignment, never silently drift if the act is tuned later.

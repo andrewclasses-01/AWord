@@ -6766,3 +6766,105 @@ html.aw-nhung .aw-below { display: none; }
   0%, 100% { transform: translateY(0); opacity: .7; }
   50%      { transform: translateY(-7px); opacity: 1; }
 }
+
+/* =====================================================================
+   Đợt 250 (thầy, 24/8/2026) — SET / EDIT ASSIGNMENT, QUY HOẠCH LẠI.
+   Thầy: "Khu vực options cần có viền xung quanh để phân định rõ với phần còn
+   lại… chia ra làm 2 phần, options bên dưới và các tùy chọn đặc trưng của
+   assignment bên trên, mỗi phần phải có viền xung quanh."
+   Plus: Class + Deadline on ONE line, a picker button on Class, and NOT ONE
+   line of prose anywhere ("tôi hoàn toàn không cần 1 dòng hướng dẫn nào cả").
+   ⚠️ `.aw-as-block2`, not `.aw-as-block` — that name is already the report
+   popup's card (further up this file) and the two must never meet.
+   ===================================================================== */
+.aw-as-block2 {
+  position: relative;
+  border: 1.5px solid #e1e8f2; border-radius: 15px;
+  padding: 16px 14px 14px; margin-top: 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+/* The name sits ON the border, the way a paper form labels a boxed section. */
+.aw-as-block2-legend {
+  position: absolute; top: -9px; left: 14px;
+  padding: 0 7px; background: #fff;
+  font-size: .78rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: #7d8ea4;
+}
+/* The first label inside a block must not push away from the legend. */
+.aw-as-block2 > .aw-as-label:first-of-type { margin-top: 0; }
+
+/* Class + Deadline, side by side. Deadline is given the wider share: its tick
+   and its date box are two controls, Class is one short word. */
+.aw-as-line { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: 14px; align-items: start; }
+.aw-as-cell { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.aw-as-cell > .aw-as-label { margin-top: 0; }
+.aw-as-cell .aw-as-deadline { gap: 10px; flex-wrap: nowrap; }
+.aw-as-cell .aw-as-date { flex: 1 1 0; min-width: 0; }
+
+/* Class field + its picker button, welded into one control. */
+.aw-as-pick { display: flex; align-items: stretch; gap: 6px; }
+.aw-as-pick .aw-as-input { flex: 1 1 auto; min-width: 0; }
+.aw-as-pickbtn {
+  flex: 0 0 auto; width: 38px; border: 1px solid #d8e2ee; border-radius: 11px;
+  background: #f4f8fd; color: #55657a; cursor: pointer;
+  display: grid; place-items: center; transition: background .12s ease, color .12s ease;
+}
+.aw-as-pickbtn:hover { background: #e6eefa; color: #2f7bff; }
+.aw-as-pickbtn svg { width: 17px; height: 17px; display: block; }
+
+/* The class list popup. */
+.aw-as-picklist { display: flex; flex-direction: column; gap: 6px; max-height: 52vh; overflow: auto; }
+.aw-as-pickitem {
+  font-family: inherit; font-size: .98rem; font-weight: 700; color: #23303e; text-align: left;
+  padding: .6rem .8rem; border: 1.5px solid #e2e9f2; border-radius: 12px; background: #fff; cursor: pointer;
+  transition: border-color .12s ease, color .12s ease;
+}
+.aw-as-pickitem:hover { border-color: #2f7bff; color: #2f7bff; }
+
+/* Transient status text (loading / could-not-load). NOT the old `.aw-as-note`:
+   that class was the prose thầy asked to remove, and reusing it would make the
+   next reader think the sentences are creeping back. */
+.aw-as-optsload { font-size: .86rem; font-weight: 600; color: #92a1b5; padding: 6px 2px; }
+.aw-as-tplhost { min-height: 60px; }
+
+/* ---------------------------------------------------------------
+   The TWO-FLOOR CELL — template on top, clue sets underneath
+   (core/options-panel.js buildContentSwitchRow, `templatePicker`).
+   Thầy: "tăng chiều cao của ô chọn các act con lên để bằng đúng ô TEXT-VOICE,
+   kẻ chia đôi ô act con ra thành 1 nửa trên, 1 nửa dưới."
+   Every rule here is behind `.has-tpl`, which ONLY the Set assignment form
+   sets — the in-game Options panel keeps its 46px row untouched.
+   --------------------------------------------------------------- */
+.aw-opt-content.has-tpl .aw-opt-switch { height: 60px; }
+/* The mode buttons were laid out with a fixed 10px padding, which centred the
+   text in a 46px box by arithmetic. In a 60px box that same arithmetic parks it
+   near the top, so they are centred properly instead. */
+.aw-opt-content.has-tpl .aw-opt-switch-btn {
+  display: flex; align-items: center; justify-content: center; padding: 0;
+}
+.aw-opt-tplcell {
+  min-width: 0; height: 60px;
+  display: grid; grid-template-rows: 1fr 1fr;
+  background: var(--aw-grp-track, #eef2f7);
+  border-radius: 12px; overflow: hidden;
+  transition: grid-template-rows .22s cubic-bezier(.22,.9,.3,1);
+}
+/* An act with fewer than two clue sets has nothing to put downstairs. */
+.aw-opt-tplcell.is-tplonly { grid-template-rows: 1fr 0fr; }
+.aw-opt-tplpick {
+  min-width: 0; display: flex; align-items: center; justify-content: center; gap: 7px;
+  border: none; background: transparent; cursor: pointer;
+  border-bottom: 1.5px solid var(--aw-grp-edge, #9ccdae);
+  font-family: inherit; font-size: 12.5px; font-weight: 800; letter-spacing: .02em;
+  color: var(--aw-grp-off, #6b7688);
+  transition: color .14s ease, background .14s ease;
+}
+.aw-opt-tplcell.is-tplonly .aw-opt-tplpick { border-bottom-color: transparent; }
+.aw-opt-tplpick:hover { color: var(--aw-grp-thumb, #2f7bff); background: rgba(255,255,255,.5); }
+.aw-opt-tplpick-ic { flex: 0 0 17px; width: 17px; height: 17px; }
+.aw-opt-tplpick-ic svg { width: 100%; height: 100%; display: block; }
+.aw-opt-tplpick-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The chips keep their own look; only their track is dropped, because the cell
+   around them is already painted with it. */
+.aw-opt-tplcell .aw-opt-variants { min-width: 0; overflow: hidden; }
+.aw-opt-tplcell .aw-seg { background: transparent; border-radius: 0; height: 100%; }

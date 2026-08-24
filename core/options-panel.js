@@ -408,7 +408,12 @@ export function buildOptionsBody(host, {
   // ⭐ Đợt 245 — bỏ ô tích "Show answers at end" cho form BÀI GIAO, nơi nó là
   // một công tắc CHẾT (trang HS chỉ nghe `session.endOptions`). Xem khối chú
   // thích dài ở chỗ ô đó được dựng, cuối hàm này.
-  hideEndShowAnswers = false
+  hideEndShowAnswers = false,
+  // ⭐⭐ Đợt 250 — WHICH GAME this content is being handed out as. ONLY the Set
+  // assignment form passes it; every other caller (the in-game Options panel,
+  // Settings, Showdown) leaves it null and gets byte-for-byte the old row.
+  // Shape is documented on buildContentSwitchRow at the bottom of this file.
+  templatePicker = null
 }) {
   const swHost = switchHost || host;
   const sel = selectors || draft;   // Settings has no separate selector state
@@ -553,7 +558,7 @@ export function buildOptionsBody(host, {
   // (Split out in Đợt 155 so the Showdown table could show the same control;
   // Đợt 156 took it back out of Showdown at the teacher's request, so this is
   // once again the only caller. Left split: ~90 lines of one self-contained idea.)
-  if (renderSwitches && contentSwitch) buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange });
+  if (renderSwitches && contentSwitch) buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange, templatePicker });
 
   host.append(grid);
 
@@ -1168,7 +1173,7 @@ function seatCellsByColumn(grid) {
  * `contentMode` keeps its per-item AUTO behaviour byte-for-byte — the row only
  * says which button to LIGHT UP.
  */
-export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null }) {
+export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange = null, templatePicker = null }) {
   const shown = contentSwitch.shown === "voice" ? "voice" : "text";
   const variants = contentSwitch.variants || null;
   const voiceVariants = contentSwitch.voiceVariants || variants;
@@ -1178,7 +1183,26 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   let pickedText = contentSwitch.variant || firstText;
   let pickedVoice = contentSwitch.voiceVariant || (voiceVariants ? voiceVariants[0] : null);
 
-  const row = el("div", "aw-opt-content" + (variants ? " has-variants" : ""));
+  // ⭐⭐ Đợt 250 (thầy) — THE CLUE-SET BOX GREW A TOP FLOOR.
+  // "tăng chiều cao của ô chọn các act con lên để bằng đúng ô TEXT-VOICE, kẻ
+  //  chia đôi ô act con ra… nửa dưới để chọn các act con như cũ, nửa trên là
+  //  chọn template."
+  // Only the Set assignment form asks for this (`templatePicker` non-null). In
+  // a GAME the row is untouched: there the template is changed from the footer
+  // button of the Options panel, and a second door into the same room would be
+  // two switches for one thing.
+  //
+  // `templatePicker` = { label(), icon(), onPick() } — the CALLER owns the
+  // popup and the state; this row only draws the button and reports the tap.
+  //
+  // ⚠️ `has-variants` is forced ON when a picker is present even for an act
+  // with NO clue sets: that class is what gives the row its SECOND COLUMN, and
+  // without the column there is nowhere for the template button to live. The
+  // cell then carries `is-tplonly` and holds just the one floor.
+  const hasTpl = !!templatePicker;
+  const row = el("div", "aw-opt-content"
+    + (variants || hasTpl ? " has-variants" : "")
+    + (hasTpl ? " has-tpl" : ""));
   const switchEl = el("div", "aw-opt-switch");
   switchEl.append(el("div", "aw-opt-switch-thumb"));
   const MODES = [["text", "Text"], ["voice", "Voice"]];
@@ -1191,6 +1215,23 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
   });
 
   const half = el("div", "aw-opt-variants");
+  // The two-floor cell (Đợt 250). Built HERE rather than further down because
+  // `half` has to be appended INTO it, and the seg below is appended into
+  // `half` — an ordering constraint, not a preference.
+  let tplCell = null;
+  if (hasTpl) {
+    tplCell = el("div", "aw-opt-tplcell" + (variants ? "" : " is-tplonly"));
+    const tplBtn = el("button", "aw-opt-tplpick");
+    tplBtn.type = "button";
+    tplBtn.title = "Choose which game this class plays";
+    tplBtn.append(
+      el("span", "aw-opt-tplpick-ic", templatePicker.icon()),
+      el("span", "aw-opt-tplpick-name", String(templatePicker.label() || "").toUpperCase())
+    );
+    tplBtn.onclick = () => { sound.click(); templatePicker.onPick(); };
+    tplCell.append(tplBtn);
+    if (variants) tplCell.append(half);
+  }
   // ⭐ Đợt 150 — ONE seg holding EVERY clue set, built once and never torn
   // down. Đợt 149's version emptied `half` and built a fresh mkSeg on every
   // TEXT↔VOICE flip — 4 buttons replaced by 2 in a single frame, no
@@ -1238,12 +1279,21 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
     // One choice is not a choice (the Đợt 143 OPT-IN rule): under 2 sets the
     // whole half fades out instead of showing a lone dead button.
     half.classList.toggle("is-empty", list.length < 2);
+    // ⭐ Đợt 250 — an empty lower floor inside a bordered cell is dead space, so
+    // the cell drops to ONE floor instead of keeping a faded-out half. Same
+    // OPT-IN reasoning as the line above, applied to the box rather than the
+    // chips.
+    if (tplCell) tplCell.classList.toggle("is-tplonly", list.length < 2);
     // ⭐ Đợt 205 — and when the half has nothing to say, it gives its width
     // BACK: the row goes to one track and the mode buttons stretch across it
     // (`.is-wide` animates `grid-template-columns`, app.css). Deliberate for an
     // act with exactly ONE written clue set — dead space that never fills is
     // the same problem the OPT-IN rule is about.
-    row.classList.toggle("is-wide", list.length < 2);
+    // ⛔ Đợt 250 — `is-wide` collapses the SECOND COLUMN to nothing. With the
+    // template button living in that column, collapsing it would hide the one
+    // control the teacher opened this form for. The lone-clue-set fade above
+    // still applies (the chips half bows out); only the column stays put.
+    row.classList.toggle("is-wide", list.length < 2 && !hasTpl);
     const picked = mode === "voice" ? pickedVoice : pickedText;
     const current = list.includes(picked) ? picked : list[0];
     seg.style.setProperty("--n", String(Math.max(1, list.length)));
@@ -1274,6 +1324,6 @@ export function buildContentSwitchRow(swHost, { contentSwitch, sel, onViewChange
 
   paintSwitch();
   paintHalf();
-  row.append(switchEl, half);
+  row.append(switchEl, tplCell || half);
   swHost.append(row);
 }

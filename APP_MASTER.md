@@ -8,7 +8,29 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 249)** — **CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT**
+> Cập nhật lần cuối: **24/8/2026 (Đợt 250)** — ⭐⭐⭐ **QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN
+> TEMPLATE NGAY TRONG BÀI GIAO** (thầy: *"act tích hợp… nên tôi cần thêm phần chọn template ngay
+> trong set assignment"*, chốt 4 điểm qua AskUserQuestion rồi gõ "ok build"). Sửa 5 file:
+> `core/assignment-ui.js` (dựng lại form: **2 khối có viền** `.aw-as-block2` · **Class + Deadline
+> chung một dòng** · **nút chọn lớp** từ Settings ▸ Classes · **bỏ SẠCH dòng hướng dẫn** ·
+> `openModal` nay có **modalStack, chỉ pop-up trên cùng nghe Escape**) · `core/options-panel.js`
+> (`templatePicker` → **ô hai tầng 60px**: template trên, bộ nghĩa dưới) · `core/settings.js`
+> (chuyền tiếp) · `core/assignments.js` (**`sourceAct`**) · `core/app.css`.
+> ⛔⛔ **ĐỔI TEMPLATE KHÔNG PHẢI ĐỔI MỘT CHỮ `type`** — phải qua `convertActivity()`, và 3 luật
+> kèm theo: **(1)** chọn bộ nghĩa TRƯỚC, chuyển đổi SAU (luật Đợt 145, đảo là lớp chọn VI1 nhận về
+> ENG1); **(2)** act chuyển đổi mang id `conv_…` dùng một lần ⇒ **danh tính phải lấy từ `sourceAct`**
+> hoặc bài giao mất liên kết vĩnh viễn với act trong thư viện; **(3)** đổi template là dựng LẠI
+> Options từ mặc định của game mới, chỉ bê 4 khoá selector.
+> ⛔ **Edit assignment KHÔNG có nút chọn template** — cố ý (thầy chốt), vì HS có thể đã nộp.
+> ⛔ Bảng Options **trong game / Settings không đổi một pixel**: không truyền `templatePicker` thì
+> hàng vẫn 46px — có phép chặn hồi quy đo tận nơi trong bàn thử.
+> Bàn thử mới `scratch/dot250-assign.html` **56/56 ĐẠT, 0 lỗi trang**; bàn thử cũ chạy lại
+> `dot246-forms` 9/9 · `dot246-flow` 37/37 · `dot247-giaobai` 16/16 · `dot245-assign-options` khớp.
+> Xem mắt `scratch/dot250-visual.html`. Backup `_backup/dot250/`.
+> ⚠️ **CHƯA bấm tay với Firestore thật** — nên giao thử 1 bài cho 1 em trước khi dùng đại trà.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 249)** — **CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT**
 > (thầy hỏi "đã chuẩn chưa", đo ra cả 3 mục đều lệch; thầy chốt phương án **A — cân theo đĩa
 > tròn**). Sửa 2 file: `core/icons.js` (`practiceBig` bọc `<g scale .93069>`; **icon mới
 > `submitBig`** = đúng hình `playBig` nhưng đóng khung lại `<g translate(-6.915 -1.306)

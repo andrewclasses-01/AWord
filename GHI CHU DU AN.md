@@ -5,6 +5,122 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 250 (24/8/2026) — ⭐⭐⭐ QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN TEMPLATE NGAY TRONG BÀI GIAO
+
+**Bối cảnh:** thầy: *"Vì bây giờ tôi dùng act tích hợp (trong 1 act chọn được nhiều kiểu text-voice
+khác nhau) nên tôi cần thêm phần chọn template ngay trong set assignment"*, kèm 4 việc quy hoạch
+lại form. Thầy chốt 4 điểm qua AskUserQuestion 24/8 rồi gõ **"ok build"**:
+① nút chọn template **chỉ ở Set**, không ở Edit · ② ô hai tầng cao **60px**, ô TEXT-VOICE cao theo ·
+③ bỏ **cả 2 dòng** hướng dẫn, giữ nhãn ô · ④ đổi template thì Options **về mặc định của game mới**.
+
+Sửa **5 file**: `core/assignment-ui.js` · `core/options-panel.js` · `core/settings.js` ·
+`core/assignments.js` · `core/app.css`. Backup `_backup/dot250/`.
+
+### ⛔⛔ BẪY LỚN NHẤT ĐỢT NÀY — "đổi template" KHÔNG PHẢI đổi một chữ `type`
+
+Mỗi game giữ nội dung theo một **hình dạng khác nhau** (Quiz `questions` · Find the match `pairs` ·
+Anagram `items`…). Phải đi qua `convertActivity()` của `core/convert.js` — đúng bộ máy nút "Change
+template" trong game vẫn dùng, nên app chỉ có MỘT bộ chuyển đổi. Ba hệ quả, ghi ở đầu
+`openAssignmentSetup` để đừng ai gỡ ra:
+
+1. **THỨ TỰ KHÔNG ĐƯỢC ĐẢO: chọn bộ nghĩa TRƯỚC, chuyển đổi SAU.** `toRecords()` gọi
+   `resolveActivity()` ép phẳng act tích hợp xuống ĐÚNG bộ nghĩa đang chọn (luật Đợt 145). Chuyển
+   trước rồi mới chọn ⇒ lớp chọn VI1 nhận về ENG1, im lặng. Bàn thử có phép đo riêng cho việc này
+   (dựng act có clue "VI …" khác hẳn "E1 …" rồi soi nội dung đã lưu).
+2. **DÂY NỐI VỀ ACT GỐC.** `convertActivity` trả act dùng một lần, id `conv_…`, không có `num`.
+   Lưu id đó xuống là bài giao **mất liên kết vĩnh viễn** với act trong thư viện —
+   `listAssignmentsForAct(activityId)` (thanh bài giao dưới act) khớp theo `activityId`, và
+   `conv_…` thì không khớp gì cả, mãi mãi. Vì vậy `createAssignment` nhận thêm **`sourceAct`**:
+   **danh tính** (id · num · title) lấy từ `sourceAct`, **phần chơi được** (type + ảnh chụp) lấy từ
+   act đã chuyển đổi. Không truyền ⇒ hai cái là một, tức mọi lời gọi trước Đợt 250.
+3. **OPTIONS THEO GAME.** Mỗi game một bộ options riêng nên đổi template là **dựng lại** bảng
+   Options từ mặc định homework của game MỚI, chỉ bê sang 4 khoá SELECTOR. Thầy chốt: cùng một tên
+   ô ở hai game không phải cùng một con số.
+
+⚠️ Việc chuyển đổi làm lúc bấm **START**, không phải lúc bấm chọn template — giữ act gốc nguyên vẹn
+suốt form chính là thứ giữ cho hàng ENG1/ENG2/VI1 còn để chọn (act đã chuyển đổi không còn bộ nghĩa
+nào).
+
+### 1) `core/assignment-ui.js` — dựng lại form Set
+
+- **Hai khối có viền** (`block()` → `.aw-as-block2`, tên nằm TRÊN đường viền). Khối trên
+  "Assignment", khối dưới "Options".
+- **Class + Deadline chung một dòng** (`.aw-as-line`, lưới 4fr/6fr — Deadline rộng hơn vì nó là hai
+  điều khiển, Class chỉ một từ ngắn).
+- **Nút chọn lớp** cạnh ô Class → pop-up liệt kê lớp trong Settings ▸ Classes (`listClasses()`).
+  ⚠️ Không phải cổng chặn: ô Class vẫn gõ tay tự do như cũ.
+- **Bỏ sạch dòng hướng dẫn**: "After the deadline…" · "Filed in Results under…" · nhãn "At the end
+  of the game, students can" · nhãn "Options" (nay là tên trên viền khối) · nhãn "Status" bên Edit ·
+  "Closing keeps every score…" · và cả dòng "Students open this link…" ở màn QR sau khi tạo xong.
+  ⛔ **GIỮ LẠI** câu trong `confirmTrashAssignment` — nó là **câu hỏi** của hộp xác nhận xoá, không
+  phải lời khuyên; hộp xoá không chữ là một cái bẫy.
+- Thư mục Results vẫn được tính như cũ (START cần `folderId`, và phép kiểm trùng tên cần
+  `allAssignments`) — chỉ có **dòng chữ** báo điều đó là bị bỏ.
+- **`openModal` nay xếp chồng được**: có `modalStack`, **chỉ pop-up TRÊN CÙNG nghe phím Escape**.
+  Không có nó thì một cú Escape đóng luôn cả pop-up lẫn form bên dưới. (Câu chú thích cũ "One modal
+  at a time" mô tả một thói quen, chưa bao giờ là một cơ chế.)
+- Form **Edit** ăn theo bố cục (2 khối, không còn chữ thừa) nhưng **⛔ KHÔNG có nút chọn template**
+  — thầy chốt: lúc mở Edit thì link có thể đã phát ra và HS có thể đã chơi; đổi game giữa chừng để
+  lại một bảng xếp hạng chứa hai thang điểm, không có cách nào so công bằng.
+
+### 2) `core/options-panel.js` — ô hai tầng
+
+`buildContentSwitchRow` nhận thêm `templatePicker = { label(), icon(), onPick() }`. **CHỈ form Set
+assignment truyền**; bảng Options trong game / Settings / Showdown để null và ra **y hệt** hàng cũ.
+Có picker thì dựng `.aw-opt-tplcell`: tầng trên là nút template (có `border-bottom` = đường kẻ chia
+đôi), tầng dưới là dãy bộ nghĩa như cũ.
+
+- ⚠️ `has-variants` bị **ép bật** khi có picker kể cả act không có bộ nghĩa — class đó chính là thứ
+  đẻ ra CỘT THỨ HAI của hàng, không có cột thì nút template không có chỗ đứng. Khi đó ô mang
+  `is-tplonly`, chỉ còn một tầng.
+- ⛔ `is-wide` (thu cột thứ hai về 0) bị chặn khi có picker — nếu không, act một bộ nghĩa sẽ **giấu
+  mất** đúng cái nút thầy mở form ra để bấm.
+- Act dưới 2 bộ nghĩa: ô tự tụt về một tầng (`is-tplonly`) thay vì để nửa dưới trống trơ.
+
+### 3) `core/settings.js` — chỉ chuyền tiếp `templatePicker`. Settings không bao giờ truyền: một
+giá trị MẶC ĐỊNH thì chưa có act nào, nên chẳng có nội dung nào để đem giao dưới dạng game khác.
+
+### 4) `core/assignments.js` — `createAssignment(act, { …, sourceAct })`, xem bẫy 2 ở trên.
+
+### 5) `core/app.css` — `.aw-as-block2` (+ legend nằm trên viền) · `.aw-as-line`/`.aw-as-cell` ·
+`.aw-as-pick`/`.aw-as-pickbtn`/`.aw-as-picklist`/`.aw-as-pickitem` · `.aw-as-optsload` ·
+`.aw-opt-tplcell`/`.aw-opt-tplpick*`. ⚠️ Tên là **`aw-as-block2`** chứ không phải `aw-as-block` —
+tên kia đã là thẻ của pop-up báo cáo, hai thứ không được gặp nhau.
+⚠️ Nút TEXT/VOICE trong ô 60px được căn giữa bằng flex: cỡ chữ cũ căn giữa bằng `padding: 10px` là
+phép tính vừa khít ô 46px, đặt vào ô 60px thì chữ dính lên trên.
+
+### Số đo trước / sau (ô icon 106,3px → không đổi; modal 620px)
+
+| | Trước | Sau |
+|---|---|---|
+| chiều cao modal | 918,6px | **780px** |
+| dòng hướng dẫn trên form | 2 | **0** |
+| ô TEXT-VOICE / ô bộ nghĩa | 46 / 30 | **60 / 60** (hai tầng 30+30) |
+| số ô nhập ở hàng đầu | Class một dòng, Deadline một dòng | **chung một dòng** |
+
+### Bàn thử
+
+- **MỚI `scratch/dot250-assign.html` — 56/56 ĐẠT, 0 lỗi trang** (bố cục · ô hai tầng đo bằng
+  `getBoundingClientRect` · pop-up template chặn đúng 3 template `noAssignment` · đổi template →
+  Options dựng lại + bộ nghĩa giữ nguyên · START lưu `activityType` game mới nhưng `activityId`/
+  `activityNum`/`activityTitle` vẫn của act gốc · **nội dung lưu xuống đúng bộ nghĩa VI1** ·
+  `optVer` vẫn đóng dấu · nút chọn lớp · Đợt 247 `lop` · Escape chỉ đóng lớp trên cùng · Edit không
+  có nút template · **và phép chặn hồi quy: không truyền `templatePicker` thì hàng vẫn 46px, không
+  mọc ô hai tầng**).
+- `scratch/dot250-visual.html` — xem mắt 4 màn (Set · chọn lớp · chọn template · Edit).
+- Chạy lại bàn thử cũ: `dot246-forms` **9/9** · `dot246-flow` **37/37** · `dot247-giaobai` **16/16**
+  · `dot245-assign-options` **0 chênh lệch ngoài dự kiến, 17/17 khớp**.
+- 📌 Hai bàn thử cũ phải sửa **CÁCH TÌM PHẦN TỬ** (không sửa điều đang kiểm): `dot246-forms` tìm
+  hàng ô tích qua nhãn "At the end…" — nhãn đó nay không còn, đổi sang `.aw-as-optrow`;
+  `dot247-giaobai` lấy "hai ô nhập đầu tiên" làm Class + Tiêu đề — nay ô NGÀY chen vào giữa, đổi
+  sang tìm theo vai trò. **Bài học: bàn thử neo vào chữ hiển thị hoặc vào thứ tự DOM sẽ gãy ở đợt
+  đổi bố cục; neo vào class/vai trò thì không.**
+
+⚠️ **CHƯA bấm tay trên TOMKO / máy thầy với Firestore thật** — đặc biệt đường "giao act dưới dạng
+game khác" mới hoàn toàn, thầy nên **giao thử 1 bài cho 1 em** trước khi dùng đại trà.
+
+---
+
 ## Đợt 249 (24/8/2026) — CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT (đo bằng số, không ước lượng)
 
 **Bối cảnh:** ngay sau Đợt 248 thầy hỏi "cân đối 2 hình · chữ PRACTICE với icon · chữ SUBMIT với

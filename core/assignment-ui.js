@@ -21,6 +21,13 @@ import {
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
 import { listFolders, pathTo, createFolder } from "./store.js";
+// ⭐ Đợt 250 — hand an act out as ANOTHER game, and know which games can
+// hold its content. Same two functions the in-game "Change template"
+// button uses, so there is exactly one converter in the app.
+import { switchTargets, convertActivity } from "./convert.js";
+import { TEMPLATES, templateLabel, templateIcon } from "./catalog.js";
+// ⭐ Đợt 250 — the teacher's own class rolls, for the Class field's picker.
+import { listClasses } from "./classes.js";
 import { ensureTemplate } from "./registry.js";
 import { getDefaultOptions, buildOptionsControls } from "./settings.js";
 // Đợt 211 — splits an options object into the keys that say WHICH CONTENT is
@@ -48,10 +55,14 @@ import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
 // ⚠️ `kind: "homework"` also drops the dead "Show answers at end" switch: on
 // this form the tick-box in the "At the end of the game" row above is the one
 // the pupil's machine obeys. See core/options-panel.js for the whole story.
+// ⚠️ Đợt 250 — the "Options" LABEL is gone: the bordered block this is appended
+// into carries the name on its edge now (see `block()`), and two names for one
+// box is exactly the clutter thầy asked to remove. Only the Edit form still
+// calls this; the Set form builds its own, rebuildable version inline because
+// it has to survive a change of template.
 function buildHomeworkOptionsField(body, activityType, draft, act = null) {
-  body.append(el("label", "aw-as-label", "Options"));
   const host = el("div", "aw-as-optshost");
-  host.append(el("div", "aw-as-note", "Loading options…"));
+  host.append(el("div", "aw-as-optsload", "Loading options…"));
   body.append(host);
   ensureTemplate(activityType).then(tpl => {
     if (!host.isConnected) return;   // the form was closed while this loaded
@@ -60,11 +71,24 @@ function buildHomeworkOptionsField(body, activityType, draft, act = null) {
   }).catch(() => {
     if (!host.isConnected) return;
     host.innerHTML = "";
-    host.append(el("div", "aw-as-note", "This game's options could not be loaded."));
+    host.append(el("div", "aw-as-optsload", "This game's options could not be loaded."));
   });
 }
 
 // ---- tiny shared helpers ---------------------------------------------------
+
+// A plain down-caret for the Class picker button. Local on purpose: it is
+// the only chevron in the app, so it does not earn a slot in core/icons.js.
+const CARET = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg>`;
+
+// ⭐ Đợt 250 (thầy) — A BORDERED BLOCK WITH A NAME ON ITS EDGE.
+// "mỗi phần phải có viền xung quanh để mắt nhìn phân biệt được 2 khu."
+// Used by both assignment forms so they never drift apart visually.
+function block(legend) {
+  const b = el("div", "aw-as-block2");
+  if (legend) b.append(el("div", "aw-as-block2-legend", escapeText(legend)));
+  return b;
+}
 function escapeText(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
@@ -131,7 +155,16 @@ function flash(msg) {
   setTimeout(() => { t.classList.remove("is-on"); setTimeout(() => t.remove(), 250); }, 2200);
 }
 
-// One modal at a time. `size` = "" | "wide".
+// ⭐ Đợt 250 — MODALS NOW STACK (the Set assignment form opens a class picker
+// and a template picker ON TOP of itself). Two things had to become
+// stack-aware for that to be safe:
+//   · ESCAPE — every open modal used to listen on `document`, so one press
+//     closed the picker AND the form under it. Only the TOP one answers now.
+//   · the backdrop click already scoped itself (`e.target === dim`), because
+//     each modal has its own `dim`; nothing to do there.
+// The comment that used to say "one modal at a time" was describing a habit,
+// not a mechanism — nothing ever enforced it.
+const modalStack = [];
 function openModal(size, build) {
   const dim = el("div", "aw-as-dim");
   const modal = el("div", "aw-as-modal" + (size ? " aw-as-" + size : ""));
@@ -140,10 +173,18 @@ function openModal(size, build) {
     if (closed) return;
     closed = true;
     document.removeEventListener("keydown", onKey);
+    const at = modalStack.indexOf(close);
+    if (at >= 0) modalStack.splice(at, 1);
     dim.classList.remove("is-on");
     setTimeout(() => dim.remove(), 200);     // fade out; opacity only (see rule 12)
   };
-  const onKey = e => { if (e.key === "Escape") close(); };
+  modalStack.push(close);
+  // ⚠️ Only the modal on TOP of the stack answers Escape (Đợt 250).
+  const onKey = e => {
+    if (e.key !== "Escape") return;
+    if (modalStack[modalStack.length - 1] !== close) return;
+    close();
+  };
   dim.onclick = e => { if (e.target === dim) close(); };
   document.addEventListener("keydown", onKey);
   build(modal, close);
@@ -183,49 +224,68 @@ function iconButton(icon, title, onClick) {
 // =============================================================
 // ⭐ Đợt 247 — `lop`: myLesson (qua bridge `giaoBai`) đưa sẵn tên lớp; ô Class
 // và chữ đầu của tiêu đề được điền trước, thầy vẫn sửa được như thường.
+//
+// ⭐⭐⭐ Đợt 250 (thầy, 24/8/2026) — QUY HOẠCH LẠI CẢ FORM. Thầy giao 5 việc:
+//   · bỏ TẤT CẢ các dòng hướng dẫn ("hoàn toàn không cần 1 dòng nào");
+//   · Class có nút chọn lấy từ danh sách lớp trong Settings;
+//   · Class và Deadline nằm CHUNG một dòng (cả hai đều ngắn);
+//   · hai khu có VIỀN riêng — bài giao ở trên, Options ở dưới;
+//   · thêm ô CHỌN TEMPLATE, nằm ngay trong Options, ở tầng trên của ô chọn
+//     bộ nghĩa (xem buildContentSwitchRow trong core/options-panel.js).
+//
+// ⛔⛔ ĐỔI TEMPLATE **KHÔNG PHẢI** ĐỔI MỘT CHỮ `type`. Mỗi game giữ nội dung
+// theo một hình dạng khác nhau (Quiz: `questions` · Find the match: `pairs` ·
+// Anagram: `items`…), nên phải đi qua `convertActivity()` của core/convert.js —
+// đúng bộ máy nút "Change template" trong game vẫn dùng. Ba hệ quả bắt buộc
+// nhớ, cả ba đều đã cắn ở đợt khác:
+//   1. THỨ TỰ: chọn bộ nghĩa TRƯỚC, chuyển đổi SAU. `toRecords()` gọi
+//      `resolveActivity()` để ép phẳng act tích hợp xuống ĐÚNG bộ nghĩa đang
+//      chọn (Đợt 145). Chuyển trước rồi mới chọn ⇒ lớp chọn VI1 nhận về ENG1.
+//   2. DÂY NỐI: act chuyển đổi mang id "conv_…" dùng một lần. Lưu id đó là bài
+//      giao **mất liên kết vĩnh viễn** với act trong thư viện. Vì vậy
+//      `createAssignment` nhận thêm `sourceAct` (Đợt 250, core/assignments.js).
+//   3. OPTIONS: mỗi game một bộ options riêng, nên đổi template là dựng lại
+//      `hwDraft` từ mặc định homework của game MỚI (thầy chốt), chỉ bê sang 4
+//      khoá SELECTOR (bộ nghĩa · TEXT/VOICE · nửa practice/homework).
+//
+// ⚠️ Việc chuyển đổi làm ở lúc bấm START, không phải lúc bấm chọn template:
+// giữ act gốc nguyên vẹn suốt form là thứ giữ cho hàng ENG1/ENG2/VI1 vẫn còn để
+// chọn (act đã chuyển đổi không còn bộ nghĩa nào cả).
 export function openAssignmentSetup(act, { onCreated, lop } = {}) {
   openModal("optswide", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
     const err = el("div", "aw-as-err", "");
 
-    // --- class (required — this is what files the assignment under a class
-    // folder in Results, and it doubles as the first word of the title)
-    body.append(el("label", "aw-as-label", "Class"));
+    // ---------- KHỐI TRÊN: những gì chỉ bài giao mới có ----------
+    const top = block("Assignment");
+
+    // Class + Deadline share one line: neither is ever long, and stacking them
+    // cost a whole row of height for nothing (thầy).
+    const line = el("div", "aw-as-line");
+
+    const classCell = el("div", "aw-as-cell");
+    classCell.append(el("label", "aw-as-label", "Class"));
+    const classPick = el("div", "aw-as-pick");
     const classInput = el("input", "aw-as-input");
     classInput.type = "text";
     classInput.maxLength = 20;
     classInput.placeholder = "e.g. A1A";
-    body.append(classInput);
+    // ⭐ Đợt 250 — the classes the teacher keeps in Settings ▸ Classes
+    // (core/classes.js). Typing a brand-new name by hand still works exactly as
+    // before: this button is a shortcut, never a gate.
+    const classBtn = el("button", "aw-as-pickbtn", CARET);
+    classBtn.type = "button";
+    classBtn.title = "Pick one of your classes";
+    classBtn.onclick = () => openClassPicker(name => {
+      classInput.value = name;
+      classInput.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+    classPick.append(classInput, classBtn);
+    classCell.append(classPick);
 
-    // --- title — starts as "<Class> — <today, d.m> — <act title>"; typing in
-    // the Class field above keeps just that leading word in step, live.
-    body.append(el("label", "aw-as-label", "Assignment title"));
-    const titleInput = el("input", "aw-as-input");
-    titleInput.type = "text";
-    titleInput.maxLength = 80;
-    titleInput.value = `${classInput.value} — ${fmtDateShort(Date.now())} — ${act.title || "Untitled"}`;
-    body.append(titleInput);
-
-    let classTouched = false;
-    classInput.oninput = () => {
-      classTouched = true;
-      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
-      err.textContent = "";
-      showFiling();
-    };
-    // ⭐ Đợt 247 — lớp điền sẵn từ myLesson. Đặt `classTouched` để cú đoán theo
-    // thư mục của act (khối act.parentId dưới) không ghi đè lên. ⛔ KHÔNG gọi
-    // showFiling() ở đây — nó là const khai phía dưới (TDZ); dòng "Filed in
-    // Results" sẽ tự đúng khi listFolders() về (Promise.all phía dưới).
-    if (lop) {
-      classTouched = true;
-      classInput.value = String(lop).slice(0, 20);
-      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
-    }
-
-    // --- deadline
-    body.append(el("label", "aw-as-label", "Deadline"));
+    const dlCell = el("div", "aw-as-cell");
+    dlCell.append(el("label", "aw-as-label", "Deadline"));
     const dl = el("div", "aw-as-deadline");
     const dlInput = el("input", "aw-as-input aw-as-date");
     dlInput.type = "datetime-local";
@@ -240,66 +300,126 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
     };
     noDl.append(noDlBox, document.createTextNode("No deadline"));
     dl.append(noDl, dlInput);
-    body.append(dl);
-    body.append(el("div", "aw-as-note",
-      "After the deadline students can still play — their attempts are marked LATE for you."));
+    dlCell.append(dl);
+
+    line.append(classCell, dlCell);
+    top.append(line);
+
+    // --- title — starts as "<Class> — <today, d.m> — <act title>"; typing in
+    // the Class field above keeps just that leading word in step, live.
+    const titleCell = el("div", "aw-as-cell");
+    titleCell.append(el("label", "aw-as-label", "Assignment title"));
+    const titleInput = el("input", "aw-as-input");
+    titleInput.type = "text";
+    titleInput.maxLength = 80;
+    titleInput.value = classInput.value + " — " + fmtDateShort(Date.now()) + " — " + (act.title || "Untitled");
+    titleCell.append(titleInput);
+    top.append(titleCell);
+
+    let classTouched = false;
+    classInput.oninput = () => {
+      classTouched = true;
+      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
+      err.textContent = "";
+    };
+    // ⭐ Đợt 247 — lớp điền sẵn từ myLesson (bridge `giaoBai`). Đặt
+    // `classTouched` để cú đoán theo thư mục của act (khối act.parentId dưới)
+    // không ghi đè lên.
+    if (lop) {
+      classTouched = true;
+      classInput.value = String(lop).slice(0, 20);
+      titleInput.value = replaceClassToken(titleInput.value, classInput.value);
+    }
 
     // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left. The Leaderboard and
     // Start again ticks are gone because the new student end screens bake both
     // in (SUBMIT always shows the class board beside the menu; both modes
     // always offer Start again). Show answers is the choice that remains, and
     // it governs BOTH modes' menus.
-    body.append(el("label", "aw-as-label", "At the end of the game, students can"));
+    // ⚠️ Đợt 250 — the label "At the end of the game, students can" went with
+    // the rest of the prose; the tick says what it does on its own.
     const opts = el("div", "aw-as-optrow");
     const answersWrap = el("label", "aw-as-check");
     const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = false;
     answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
     opts.append(answersWrap);
-    body.append(opts);
+    top.append(opts);
+    body.append(top);
 
-    // --- homework options (Đợt C) — starts from the teacher's own "Default
-    // homework options" (Settings), editable just for this one assignment.
+    // ---------- KHỐI DƯỚI: Options ----------
     //
-    // ⭐⭐ Đợt 211 (20/8/2026, thầy) — ...AND THE ACT'S OWN CHOICE OF WHAT TO
-    // PLAY IS LAID OVER THE TOP. Thầy: "trong options chọn text nhưng act vẫn
-    // phát âm thanh và có nút loa để bấm nghe voice ở phía sau."
+    // ⭐⭐ Đợt 211 (20/8/2026, thầy) — THE ACT'S OWN CHOICE OF WHAT TO PLAY IS
+    // LAID OVER THE DEFAULTS. Thầy: "trong options chọn text nhưng act vẫn phát
+    // âm thanh và có nút loa để bấm nghe voice ở phía sau."
     //
     // Đợt C started this draft from the Settings defaults ALONE, and those hold
     // five general fields only (BUILTIN_DEFAULTS in core/settings.js) — no
     // `contentMode` among them. The Text/Voice row then "writes nothing until
-    // the teacher actually taps" (buildContentSwitchRow, core/options-panel.js),
-    // and TEXT is lit from the start, so an untouched form stored NOTHING. The
-    // assignment reached the pupil with `contentMode` unset, which is the AUTO
-    // branch of voiceView() — speaker button AND autoplay, the exact thing Text
-    // mode exists to remove.
+    // the teacher actually taps", and TEXT is lit from the start, so an
+    // untouched form stored NOTHING: the assignment reached the pupil with
+    // `contentMode` unset, which is the AUTO branch of voiceView() — speaker
+    // button AND autoplay, the exact thing Text mode exists to remove. Two more
+    // went the same way (the clue set, and the PRACTICE/HOMEWORK half).
     //
-    // Two more went the same way, silently: the clue set (act on `vi1` was
-    // given out as `eng1`, activeVariant() falling back to the first) and the
-    // PRACTICE/HOMEWORK half (always `practice`, activeContentSet() likewise).
-    // Neither has a control on this form at all, so there was no way to correct
-    // them by hand.
-    //
-    // ⚠️ THIS DOES NOT BREAK "HAI CÔNG TẮC RỜI NHAU" (thầy, Đợt C). That rule
-    // is about the OPTIONS BUNDLE — timer, shuffling, show-answers — which
-    // still starts from the homework bucket and is still decided per
-    // assignment. The four keys taken from the act are the SELECTORS: not
-    // settings at all, but the name of the content being assigned. Handing a
-    // class a different clue set than the one on screen was never a choice
-    // anyone made; it was the absence of one.
-    // ⚠️ Laid OVER the defaults, so the row still shows the truth and the
-    // teacher can still change Text/Voice for this one assignment afterwards.
-    // ⭐ Đợt 245 — and now the panel SHOWS those four selectors as real controls
-    // (PRACTICE/HOMEWORK + the clue sets), instead of carrying them invisibly.
-    const hwDraft = { ...getDefaultOptions(act.type, "homework"),
-                      ...splitViewOptions(act.options).selectors };
-    buildHomeworkOptionsField(body, act.type, hwDraft, act);
+    // ⚠️ THIS DOES NOT BREAK "HAI CÔNG TẮC RỜI NHAU" (thầy, Đợt C). That rule is
+    // about the OPTIONS BUNDLE — timer, shuffling, penalties — which still
+    // starts from the homework bucket and is still decided per assignment. The
+    // four keys taken from the act are SELECTORS: not settings, but the NAME of
+    // the content being handed out.
+    // ⭐ Đợt 245 — and the panel SHOWS those four selectors as real controls.
+    let playType = act.type;                    // which GAME the class will play
+    let hwDraft = { ...getDefaultOptions(act.type, "homework"),
+                    ...splitViewOptions(act.options).selectors };
 
-    // --- where it will be filed in Results (worked out from the title)
-    const filed = el("div", "aw-as-note", "");
-    body.append(filed);
+    const optBlock = block("Options");
+    const optsHost = el("div", "aw-as-optshost");
+    optBlock.append(optsHost);
+    body.append(optBlock);
+
+    // Đợt 250 — the panel is REBUILT (not patched) whenever the template
+    // changes: every control in it belongs to one template's own option set, so
+    // there is nothing worth keeping across the swap. `optsSeq` throws away the
+    // answer of a load the teacher has already moved past.
+    let optsSeq = 0;
+    const templatePicker = {
+      label: () => templateLabel(playType),
+      icon: () => templateIcon(icons, playType),
+      onPick: () => openTemplatePicker(act, playType, type => {
+        if (type === playType) return;
+        playType = type;
+        // ⚠️ Selectors carried, settings NOT (thầy chốt: "Về mặc định của game
+        // mới"). A number named the same in two games is not the same number.
+        hwDraft = { ...getDefaultOptions(playType, "homework"),
+                    ...splitViewOptions(hwDraft).selectors };
+        renderOptions();
+      })
+    };
+    function renderOptions() {
+      const seq = ++optsSeq;
+      optsHost.innerHTML = "";
+      optsHost.append(el("div", "aw-as-optsload", "Loading options…"));
+      ensureTemplate(playType).then(tpl => {
+        if (!optsHost.isConnected || seq !== optsSeq) return;
+        optsHost.innerHTML = "";
+        // ⚠️ `act`, always the ORIGINAL — it is what NAMES the clue sets. The
+        // converted act has none (see the header note), so handing the played
+        // type's act here would empty the very row the teacher chooses from.
+        optsHost.append(buildOptionsControls(tpl, hwDraft, { kind: "homework", act, templatePicker }));
+      }).catch(() => {
+        if (!optsHost.isConnected || seq !== optsSeq) return;
+        optsHost.innerHTML = "";
+        optsHost.append(el("div", "aw-as-optsload", "This game's options could not be loaded."));
+      });
+    }
+    renderOptions();
+
+    // --- where it will be filed in Results (worked out from the title).
+    // ⚠️ Đợt 250 — the LINE that said so is gone (thầy: no prose), but the
+    // folder is still worked out here: START needs `folderId`, and the
+    // duplicate-name check needs `allAssignments`.
     let folders = [], allAssignments = [];
     Promise.all([listFolders("results"), listAllAssignments()])
-      .then(([f, a]) => { folders = f; allAssignments = a; showFiling(); })
+      .then(([f, a]) => { folders = f; allAssignments = a; })
       .catch(() => { /* offline: it just files at the top of Results */ });
     // Best-effort guess for the Class field: the name of the folder this act
     // already sits in (Activities), when the teacher hasn't typed one yet.
@@ -308,15 +428,9 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
         if (classTouched || classInput.value || !chain.length) return;
         classInput.value = chain[chain.length - 1].name || "";
         titleInput.value = replaceClassToken(titleInput.value, classInput.value);
-        showFiling();
       }).catch(() => { /* no guess, teacher types it */ });
     }
-    const showFiling = async () => {
-      const folderId = classFolderFor(titleInput.value, folders);
-      const where = folderId ? (await pathTo(folderId)).map(f => f.name).join(" / ") : "Results";
-      filed.innerHTML = `Filed in Results under <b>${escapeText(where)}</b>`;
-    };
-    titleInput.oninput = () => { showFiling(); err.textContent = ""; };
+    titleInput.oninput = () => { err.textContent = ""; };
 
     body.append(err);
     modal.append(body);
@@ -339,10 +453,21 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
       err.textContent = "";
       try {
         const deadline = noDlBox.checked || !dlInput.value ? null : new Date(dlInput.value).getTime();
-        const assignment = await createAssignment(act, {
+        // ⭐⭐ Đợt 250 — HAND IT OUT AS ANOTHER GAME. See the header note for why
+        // this order is not negotiable: selectors onto the ORIGINAL act first,
+        // convert second, and the original act's identity travels separately as
+        // `sourceAct` so the assignment stays tied to the library act.
+        let playAct = act, sourceAct = null;
+        if (playType !== act.type) {
+          const staged = { ...act, options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors } };
+          playAct = await convertActivity(staged, playType);
+          sourceAct = act;
+        }
+        const assignment = await createAssignment(playAct, {
           title: titleInput.value,
           deadline,
           folderId,
+          sourceAct,
           // leaderboard/startAgain stay `true` in the stored shape (Đợt 246):
           // the new end screens no longer read them, but every document keeps
           // the same three keys so nothing else ever meets a half-shaped one.
@@ -367,6 +492,93 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
     actions.append(back, start);
     modal.append(actions);
     setTimeout(() => classInput.focus(), 30);
+  });
+}
+
+// ---- Đợt 250: the two little pickers the Set form opens ---------------------
+//
+// Both are ordinary `openModal` popups stacked ON TOP of the Set form. That is
+// only safe because of the Escape stack in openModal (see there): without it a
+// single press of Escape would close the picker AND the form underneath it.
+
+// The teacher's own classes (Settings ▸ Classes, core/classes.js). Never a
+// gate: the Class field stays free text — this only saves the typing.
+function openClassPicker(onPick) {
+  openModal("", (modal, close) => {
+    modal.append(headRow("Your classes", close));
+    const body = el("div", "aw-as-body");
+    const host = el("div", "aw-as-picklist");
+    host.append(el("div", "aw-as-optsload", "Loading…"));
+    body.append(host);
+    modal.append(body);
+    listClasses().then(list => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      if (!list.length) {
+        host.append(el("div", "aw-as-optsload", "No classes in Settings yet."));
+        return;
+      }
+      list.forEach(c => {
+        const b = el("button", "aw-as-pickitem", escapeText(c.name || ""));
+        b.type = "button";
+        b.onclick = () => { close(); onPick(c.name || ""); };
+        host.append(b);
+      });
+    }).catch(() => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      host.append(el("div", "aw-as-optsload", "Could not load your classes."));
+    });
+  });
+}
+
+// WHICH GAME this class will play. Two filters, both real:
+//   · `switchTargets(act)` — the games whose data shape can hold this act's
+//     content (core/convert.js). The rest are shown DIMMED rather than hidden,
+//     so the teacher can see the game exists and simply does not fit.
+//   · `tpl.noAssignment` — Đợt 245's rule: Speaking cards sends back no result
+//     at all, and the two racing games report on a TEAM, not on a pupil. Dimmed
+//     too, carrying the template's own sentence as the reason.
+// ⚠️ Those flags live INSIDE each template module, so they have to be loaded to
+// be read — hence the short wait. `ensureTemplate` caches, so it is slow once.
+function openTemplatePicker(act, currentType, onPick) {
+  openModal("optswide", (modal, close) => {
+    modal.append(headRow("Choose a template", close));
+    const body = el("div", "aw-as-body");
+    const host = el("div", "aw-as-tplhost");
+    host.append(el("div", "aw-as-optsload", "Loading…"));
+    body.append(host);
+    modal.append(body);
+
+    const fits = new Set(switchTargets(act).map(t => t.type));
+    fits.add(act.type);                       // an act's own game always fits it
+    const built = TEMPLATES.filter(t => t.built);
+    Promise.all(built.map(t =>
+      (fits.has(t.type)
+        ? ensureTemplate(t.type).then(tpl => tpl.noAssignment || null).catch(() => null)
+        : Promise.resolve(null)
+      ).then(no => ({ type: t.type, label: t.label, no }))
+    )).then(rows => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      const grid = el("div", "aw-tpl-grid");
+      rows.forEach(t => {
+        const isCurrent = t.type === currentType;
+        const why = !fits.has(t.type) ? t.label + " — doesn't fit this content" : (t.no || "");
+        const enabled = !isCurrent && !why;
+        const item = el("div", "aw-tpl-item" + (isCurrent ? " is-current" : enabled ? "" : " is-soon"));
+        item.append(el("span", "aw-tpl-icon", templateIcon(icons, t.type)),
+                    el("span", "aw-tpl-name", escapeText(t.label)));
+        if (enabled) item.onclick = () => { close(); onPick(t.type); };
+        else if (!isCurrent) { item.title = why; item.onclick = () => toast(why); }
+        grid.append(item);
+      });
+      host.append(grid);
+    }).catch(() => {
+      if (!host.isConnected) return;
+      host.innerHTML = "";
+      host.append(el("div", "aw-as-optsload", "Could not load the templates."));
+    });
   });
 }
 
@@ -409,8 +621,12 @@ export function openAssignmentShare(assignment) {
     );
     qrWrap.append(qrBox, qrBtns);
     body.append(qrWrap);
-    body.append(el("div", "aw-as-note",
-      "Students open this link, type their name and play. No sign-in needed."));
+    // ⚠️ Đợt 250 — the line "Students open this link, type their name and play.
+    // No sign-in needed." lived here. Gone with the rest of the prose (thầy:
+    // "hoàn toàn không cần 1 dòng hướng dẫn nào cả"). ⛔ The sentence in
+    // confirmTrashAssignment below is NOT the same kind of thing and STAYS: it
+    // is the question being asked, not advice — a delete confirmation with no
+    // words in it would be a trap.
     modal.append(body);
 
     const actions = el("div", "aw-as-actions");
@@ -429,13 +645,22 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     modal.append(headRow("Edit assignment", close));
     const body = el("div", "aw-as-body");
 
-    body.append(el("label", "aw-as-label", "Assignment title"));
+    // ⭐ Đợt 250 — laid out like the Set assignment form (two bordered blocks,
+    // no prose), so the two forms never read as two different apps.
+    // ⛔ NO TEMPLATE PICKER HERE, and this is a decision, not an omission (thầy
+    // chốt qua AskUserQuestion 24/8): by the time Edit is open the link may
+    // already be out and pupils may already have played. Swapping the game
+    // underneath them would leave one leaderboard holding two scales of score,
+    // with no honest way to compare the halves.
+    const top = block("Assignment");
+
+    top.append(el("label", "aw-as-label", "Assignment title"));
     const titleInput = el("input", "aw-as-input");
     titleInput.type = "text"; titleInput.maxLength = 80;
     titleInput.value = assignment.title || "";
-    body.append(titleInput);
+    top.append(titleInput);
 
-    body.append(el("label", "aw-as-label", "Deadline"));
+    top.append(el("label", "aw-as-label", "Deadline"));
     const dl = el("div", "aw-as-deadline");
     const dlInput = el("input", "aw-as-input aw-as-date");
     dlInput.type = "datetime-local";
@@ -450,10 +675,10 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     };
     noDl.append(noDlBox, document.createTextNode("No deadline"));
     dl.append(noDl, dlInput);
-    body.append(dl);
+    top.append(dl);
 
     // ⭐ Đợt 246 — one tick left, same reasoning as the Set assignment form.
-    body.append(el("label", "aw-as-label", "At the end of the game, students can"));
+    // ⚠️ Đợt 250 — its label went with the rest of the prose.
     const opts = el("div", "aw-as-optrow");
     const end = assignment.endOptions || {};
     const answersWrap = el("label", "aw-as-check");
@@ -461,7 +686,16 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
     cbAnswers.checked = end.showAnswers !== false;
     answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
     opts.append(answersWrap);
-    body.append(opts);
+    top.append(opts);
+
+    // Đợt 250 — "Status" was a label over a tick that already says what it does,
+    // and the line under it ("Closing keeps every score…") was one more sentence
+    // thầy does not want. Both gone; the tick moved up into this block.
+    const closedWrap = el("label", "aw-as-check");
+    const cbClosed = el("input"); cbClosed.type = "checkbox"; cbClosed.checked = !!assignment.closed;
+    closedWrap.append(cbClosed, document.createTextNode("Closed — students can open the link but not play"));
+    top.append(closedWrap);
+    body.append(top);
 
     // --- homework options (Đợt C) — starts from what THIS assignment already
     // carries (never the Settings default: an assignment already out to
@@ -498,14 +732,9 @@ export function openAssignmentEdit(assignment, { onSaved } = {}) {
       options: { ...(assignment.activity?.options || {}) }
     });
     const hwDraft = hwSeed.options;
-    buildHomeworkOptionsField(body, assignment.activityType, hwDraft, assignment.activity);
-
-    body.append(el("label", "aw-as-label", "Status"));
-    const closedWrap = el("label", "aw-as-check");
-    const cbClosed = el("input"); cbClosed.type = "checkbox"; cbClosed.checked = !!assignment.closed;
-    closedWrap.append(cbClosed, document.createTextNode("Closed — students can open the link but not play"));
-    body.append(closedWrap);
-    body.append(el("div", "aw-as-note", "Closing keeps every score you have already collected."));
+    const optBlock = block("Options");
+    buildHomeworkOptionsField(optBlock, assignment.activityType, hwDraft, assignment.activity);
+    body.append(optBlock);
 
     const err = el("div", "aw-as-err", "");
     body.append(err);

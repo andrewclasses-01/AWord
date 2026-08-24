@@ -106,7 +106,7 @@ export function saveDefaultOptions(type, options, kind = "activity") {
  *        WHICH content is being handed out. See the Đợt 245 note below.
  * @returns {Element}
  */
-export function buildOptionsControls(tpl, options, { kind = "activity", act = null } = {}) {
+export function buildOptionsControls(tpl, options, { kind = "activity", act = null, templatePicker = null } = {}) {
   const wrap = el("div", "aw-set-opts");
   if (!tpl) {
     // A template that failed to load would otherwise throw here and take the
@@ -180,7 +180,11 @@ export function buildOptionsControls(tpl, options, { kind = "activity", act = nu
       ? { sets, labelOf: k => setLabel(content, k), current: activeContentSet({ content, options }) }
       : null,
     fight: null,
-    hideEndShowAnswers: isHw
+    hideEndShowAnswers: isHw,
+    // ⭐ Đợt 250 — only the Set assignment form sends one (see
+    // buildContentSwitchRow in core/options-panel.js). Settings never does:
+    // a DEFAULT has no act, so there is no content to hand out as another game.
+    templatePicker
   });
   return wrap;
 }
