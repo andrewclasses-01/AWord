@@ -59,7 +59,9 @@ import {
 } from "./core/assignments.js";
 import {
   openAssignmentDetail, openAssignmentEdit, confirmTrashAssignment,
-  copyAssignmentLink, copyAssignmentQr
+  copyAssignmentLink, copyAssignmentQr,
+  // ⭐ Đợt 253 — đường ?giao= mở thẳng form Set assignment (cửa cho myLesson).
+  openAssignmentSetup
 } from "./core/assignment-ui.js";
 // NOTE: no template is imported here. Each game (and its stylesheet) is fetched
 // the first time it is actually played or edited — see ensureTemplate() in
@@ -209,6 +211,53 @@ async function routeFromLocation() {
       goTop(opts);
       openAssignmentDetail(a, { onChanged: () => {} });
       return;
+    }
+  }
+
+  // ⭐⭐ Đợt 253 — ?giao=<num act>&lop=<lớp>&td=<tiêu đề>: mở THẲNG form Set
+  // assignment của act đó trên NỀN TRỐNG — cửa cho myLesson v1.14.0. Đường cũ
+  // (myLesson nạp ?a=<num> rồi gọi bridge `giaoBai`) bày cả trang game ra sau
+  // lưng form; thầy chốt 24/8: pop-up bên myLesson phải trông y hệt form Set
+  // assignment, không được thấy trang game. Đường này KHÔNG đụng ?a=/bridge —
+  // myActivity và mọi link cũ giữ nguyên.
+  //   · form là openAssignmentSetup THẬT trên act GỐC từ thư viện (giữ nguyên
+  //     luật `sourceAct` Đợt 250 + marker kèm bộ nghĩa Đợt 252);
+  //   · thầy lỡ đóng form thì nền có đúng một nút SET ASSIGNMENT mở lại;
+  //   · act sai / template không giao được → rơi xuống trang chủ như ?bao= sai
+  //     mã, không chết trắng trong webview của myLesson.
+  if (p.get("giao")) {
+    const node = await getByNum(p.get("giao")).catch(() => null);
+    if (node && node.kind === "act") {
+      let tpl = null;
+      try { tpl = await ensureTemplate(node.type); } catch (e) { /* rơi xuống trang chủ */ }
+      if (tpl && !tpl.noAssignment) {
+        document.body.classList.add("aw-giao-mode");
+        const moForm = () => openAssignmentSetup(node, {
+          lop: p.get("lop") || "",
+          tieuDe: p.get("td") || "",
+          onCreated: (a, ct) => {
+            // Cùng một marker với đường bridge (core/engine.js giaoBai) — myLesson
+            // chỉ nghe MỘT chỗ. ⛔ Đừng đổi tên marker / bỏ 2 khoá cũ code+title.
+            try {
+              console.log("MYACT:AW:ASSIGN:" + JSON.stringify({
+                code: a.code, title: a.title,
+                bo: (ct && ct.bo) || "", boTen: (ct && ct.boTen) || "",
+                mauType: (ct && ct.mauType) || a.activityType || "",
+                mauTen: (ct && ct.mauTen) || "",
+              }));
+            } catch (_) {}
+          },
+        });
+        app.innerHTML = "";
+        const nen = el("div", "aw-giao-nen");
+        const nut = el("button", "aw-giao-reopen", "SET ASSIGNMENT");
+        nut.type = "button";
+        nut.onclick = moForm;
+        nen.append(nut);
+        app.append(nen);
+        moForm();
+        return;
+      }
     }
   }
 

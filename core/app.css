@@ -6880,3 +6880,25 @@ html.aw-nhung .aw-below { display: none; }
    around them is already painted with it. */
 .aw-opt-tplcell .aw-opt-variants { min-width: 0; overflow: hidden; }
 .aw-opt-tplcell .aw-seg { background: transparent; border-radius: 0; height: 100%; }
+
+/* =====================================================================
+   Đợt 253 — CHẾ ĐỘ ?giao= (form Set assignment đứng một mình, cho myLesson)
+   Trang không bày thư viện/game gì cả: nền phẳng + đúng một nút mở lại form
+   (phòng khi thầy lỡ đóng). Backdrop của form trong chế độ này là NỀN ĐẶC —
+   không dim/blur, vì đằng sau không có gì đáng thấy, và trong webview nhỏ của
+   myLesson thì lớp mờ chỉ làm bẩn hình.
+   ===================================================================== */
+body.aw-giao-mode .aw-giao-nen{
+  min-height:100vh; display:grid; place-items:center; background:#eef2f7;
+}
+.aw-giao-reopen{
+  padding:12px 26px; border:0; border-radius:14px; cursor:pointer;
+  background:#2f6fed; color:#fff; font:800 15px/1 "Baloo 2",system-ui,sans-serif;
+  letter-spacing:.06em; box-shadow:0 10px 26px rgba(47,111,237,.35);
+}
+.aw-giao-reopen:hover{filter:brightness(1.07)}
+body.aw-giao-mode .aw-as-dim{
+  background:#eef2f7; backdrop-filter:none; padding:14px;
+  align-items:flex-start;                 /* form dài hơn khung webview thì cuộn từ ĐỈNH */
+}
+body.aw-giao-mode .aw-as-modal{max-height:none; box-shadow:0 14px 40px rgba(10,18,30,.18)}
