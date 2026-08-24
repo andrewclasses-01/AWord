@@ -39,7 +39,7 @@ bài giao trong myLesson web rồi nộp, xem bảng điểm bên đó có tự 
 
 ---
 
-## Đợt 256 (24/8/2026) — ⭐⭐⭐ **"−N" BAY TỪ CHỖ SAI VÀO Ô ĐIỂM RỒI MỚI TRỪ — CẢ 11 TEMPLATE CÓ TRỪ ĐIỂM, CẢ SINGLE LẪN FIGHT** — ⬜ **CHƯA COMMIT, CHỜ THẦY DUYỆT**
+## Đợt 256 (24/8/2026) — ⭐⭐⭐ **"−N" BAY TỪ CHỖ SAI VÀO Ô ĐIỂM RỒI MỚI TRỪ — CẢ 11 TEMPLATE CÓ TRỪ ĐIỂM, CẢ SINGLE LẪN FIGHT** — ✅ **THẦY DUYỆT · COMMIT `51acc6f`, ĐÃ PUSH + LIVE KIỂM CHỨNG** (Pages `built` đúng commit · **18/18 mã băm SHA-256 khớp** · **29/29 phép hỏi CHẠY CHÍNH MODULE CỦA BẢN LIVE**)
 
 **Lời thầy (24/8/2026):** *"Khi có đội sai và bật trừ điểm sai trong mode Fight thì phải hiện số
 điểm trừ bay lên từ ô/chỗ sai bay vào ô điểm rồi mới trừ. Ví dụ như QUIZ trong khi Fight, khi có
@@ -175,9 +175,39 @@ lưng chừng giữa khung và ô điểm, và **điểm đội trái vẫn là 
 ⛔ `screenshot` của pane vẫn timeout (lần thứ chín liên tiếp, Đợt 191→256 — pane ẩn thì trang không
 compositing), nên trang này in thẳng số đo ra màn thay vì trông vào ảnh.
 
+### ✅ COMMIT + PUSH + KIỂM BẢN LIVE
+
+✅ **THẦY DUYỆT** (*"check commit + push live + ghi dữ liệu để các session sau sẵn sàng tiếp tục"*) ·
+**COMMIT `51acc6f`, ĐÃ PUSH.** 17 file (1 file mới `core/flypenalty.js` · `core/engine.js` ·
+`core/app.css` · 11 template · 3 file hồ sơ).
+
+**Ba lớp kiểm, từ yếu tới mạnh — và cả ba đều cần:**
+1. **Pages build đúng commit**: `gh api repos/andrewclasses-01/AWord/pages/builds/latest` trả
+   `sha 51acc6f…`, `status: built`, `error: null`. ⛔ **Không tin mã 200** — Pages trả 200 với nội
+   dung CŨ khi build FAIL.
+2. **18/18 mã băm SHA-256 khớp** — băm nội dung **TRONG COMMIT** (`git show HEAD:<path>`) so với
+   `curl https://aword.andrewclasses.com/<path>`. ⛔ **Không băm file trên máy**: kho trộn CRLF/LF và
+   `core.autocrlf=true` nên băm file local sẽ lệch oan.
+3. ⭐⭐ **29/29 phép hỏi CHẠY CHÍNH MODULE CỦA BẢN LIVE** — `scratch/dot256-live.html` **import thẳng**
+   `https://aword.andrewclasses.com/core/flypenalty.js` qua CORS rồi **GỌI NÓ THẬT**. Mã băm chỉ
+   chứng minh byte giống nhau; cái này chứng minh byte đó **chạy được**. Năm ca đo trên bản live:
+   `apply()` **chưa chạy lúc còn bay**, chạy ĐÚNG MỘT LẦN lúc hạ cánh · `points=0` là **no-op không
+   gọi `apply`** (không ghi một lần trừ rỗng) · không có chỗ bay thì **vẫn trừ ngay** · `pending`
+   ghi/xoá tên đúng nhịp `flushPenalties()` · **ván đã bị vứt (`alive` false) thì TUYỆT ĐỐI không ghi
+   điểm cho một cái xác** (bẫy Đợt 114). Kèm 9 phép soi dây nối trên live: `engine.js` **ép chỗ bay ra
+   về `playArea` khi đang đấu**, và **11/11 template** đều gọi `ui.flyPenalty` + `ui.flushPenalties`.
+
+📌 **Hai bài học đo NỮA, cả hai đều là lỗi BÀN THỬ trông y như lỗi thật:**
+5. ⛔ **`curl` không tự mã hoá DẤU CÁCH trong tên file.** `GHI CHU DU AN.md` và
+   `core/HUONG DAN CORE.md` báo **LỆCH** — mà mã băm "live" chính là băm của **chuỗi RỖNG**
+   (`e3b0c442…`), tức curl 404 và `-s` nuốt mất. Thay dấu cách bằng `%20` ⇒ HTTP 200, khớp cả hai.
+   **Băm ra `e3b0c442…` thì đừng đọc là "nội dung sai" — hãy đọc là "không tải được gì".**
+6. ⛔ **Neo phép hỏi vào CÂU LỆNH THẬT, đừng neo vào ý mình tưởng.** Phép hỏi B8 đòi
+   `window.parent !== window` và báo TRƯỢT; code thật của Đợt 257 viết dưới dạng **ra sớm**:
+   `if (!kq || !kq.ok || window.parent === window) return;`. Cùng một ý, ngược dấu.
+
 ### ⬜ CHỜ THẦY
 
-- ⬜ **Thầy duyệt** — chưa commit, chưa push.
 - ⬜ Nhìn thật trên TOMKO: cỡ con số (`max(42px, 42% bề ngang chỗ bay ra)`, trần 96px) từ cuối lớp
   có đủ to không, và nhịp 320ms đứng + 600ms bay có vừa mắt không.
 - ⬜ Trong Fight, con số bay ra từ **giữa khung** — thầy xem có đọc ra ngay là "đội này vừa bị trừ"

@@ -28,8 +28,14 @@
 > Đợt 129. ⚠️ `ui.flushPenalties()` ở dòng đầu `finish()` là thứ giữ cho **câu sai CUỐI** không mất
 > điểm phạt trong bảng kết quả và trong điểm nộp bài giao. ⛔ Đã cắn **TDZ** ở Quiz — đọc mục
 > "ĐIỂM PHẠT PHẢI BAY" trong `core/HUONG DAN CORE.md` trước khi mở cho template thứ 12. Bàn thử
-> `dot256-penalty.html` **24/24** + `dot256-smoke.html` (11 template mount sạch, 0 lỗi trang).
-> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.**
+> `dot256-penalty.html` **24/24** + `dot256-smoke.html` **48/48** (11 template mount sạch, 0 lỗi trang).
+> ✅ **THẦY DUYỆT · COMMIT `51acc6f`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built` đúng commit
+> (`gh api …/pages/builds/latest`, **không tin mã 200**) · **18/18 mã băm SHA-256 khớp** (băm
+> `git show HEAD:<path>` so với `curl`, **không băm file trên máy** — CRLF) · **29/29 phép hỏi
+> CHẠY CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot256-live.html` import thẳng
+> `https://aword.andrewclasses.com/core/flypenalty.js` qua CORS rồi gọi thật).
+> ⬜ Còn chờ **mắt thầy**: cỡ số trên TOMKO, và 7 game máy không lái được (Maze chase · Balloon pop ·
+> Flying fruit · Crossword · Anagram · Type the answer · Unjumble).
 >
 > ---
 > Trước đó: **24/8/2026 (Đợt 255)** — ⭐ **ĐUÔI TEMPLATE TRONG TIÊU ĐỀ BÀI GIAO +
@@ -3952,18 +3958,58 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 24/8/2026 sau **Đợt 251** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 24/8/2026 sau **Đợt 256 + 257** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
 > ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (24/8/2026)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`7308851`** (Đợt 251) — đã push, Pages đã build đúng commit |
+> | Commit mới nhất | **`51acc6f`** (Đợt 256) — đã push, Pages `built` đúng commit |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
-> | Kiểm live | mã băm SHA-256 **khớp hết** trên `aword.andrewclasses.com` |
-> | Vùng vừa động tới | **BÀI GIAO (assignment)** — 7 đợt liên tiếp: 245 → 251 |
-> | 17 template | **KHÔNG đụng tới** trong cả 7 đợt |
-> | Luật Firestore | **KHÔNG cần đăng lại** trong cả 7 đợt |
+> | Kiểm live | **18/18 mã băm SHA-256 khớp** + **29/29 phép hỏi chạy chính module của bản live** |
+> | Vùng vừa động tới | **ĐIỂM PHẠT BAY** (Đợt 256) — chạm **11/17 template** + `core/engine.js` + `core/app.css` + file mới `core/flypenalty.js` |
+> | Trước đó | **BÀI GIAO** 245 → 255, và **Đợt 257** (`play.js`, cửa `AWORD:NOP` cho myLesson web v1.13.0) |
+> | Luật Firestore | **KHÔNG cần đăng lại** |
+>
+> ### ⛔⛔ HAI PHIÊN CLAUDE CHẠY SONG SONG HÔM NAY — ĐỌC TRƯỚC KHI SỬA
+> Đợt **256** (phiên này) và Đợt **257** (một phiên khác) làm CÙNG BUỔI trong CÙNG thư mục. Phiên
+> 257 commit được `play.js` nhưng **không ghi được hồ sơ** vì cả 3 file tài liệu đang bị phiên 256
+> giữ — nó **tự thuật hết vào commit message `6b49fdb`** rồi nhờ chép lại sau (đã chép, xem mục
+> Đợt 257 trong `GHI CHU DU AN.md`).
+> ⭐ **Nếp đúng khi gặp lại cảnh này:** commit phần CODE của mình, kể hết vào commit message,
+> **đừng ngồi chờ file hồ sơ** — `git log` không bao giờ mất, còn chờ là mất cả hai.
+> ⚠️ Và vì thế: **`git fetch` + xem `git log` NGAY TRƯỚC KHI COMMIT**, không chỉ lúc mở phiên —
+> HEAD có thể đã nhích thêm một commit trong lúc bạn đang gõ.
+>
+> ### 📍 ĐỤNG VÀO ĐIỂM PHẠT / HIỆU ỨNG ĐIỂM THÌ ĐỌC Ở ĐÂU
+> **`core/HUONG DAN CORE.md` → mục "⭐⭐⭐ ĐIỂM PHẠT PHẢI BAY — `ui.flyPenalty()`"**. Ba luật đắt nhất:
+> 1. ⛔⛔ **Phép trừ NẰM TRONG callback**, chỉ chạy lúc con số hạ cánh — đó là cả yêu cầu của thầy.
+>    Ngược hẳn `flyTimeCost` (đếm lùi NGAY trong lúc bay); hai nhịp khác nhau là cố ý.
+> 2. ⛔⛔ **Trong Fight, chỗ bay ra bị ÉP về giữa khung — và phép ép nằm ở `core/engine.js`, không ở
+>    template.** Bay ra từ đúng ô sai là chỉ cho đội kia biết ô đó sai (True/false 2 nút = lộ trọn
+>    đáp án), đúng luật "GIẤU ĐÁP ÁN KHI VÒNG CÒN MỞ" Đợt 129.
+> 3. ⚠️ **`ui.flushPenalties()` ở dòng đầu `finish()`** — thiếu là câu sai CUỐI mất điểm phạt trong
+>    bảng kết quả và trong **điểm nộp của bài giao**.
+> ⛔ Mở cho template thứ 12: nhớ **khai biến đếm ở đầu `mount()`**, không phải cạnh `scoreNow()`
+> (bẫy TDZ đã cắn thật ở Quiz ngay trong Đợt 256 — trên màn nó hiện ra như "game không lên").
+>
+> ### 🧪 BÀN THỬ CỦA VÙNG NÀY
+> `dot256-penalty.html` **24/24** (Quiz, Single + Fight) · `dot256-smoke.html` **48/48** (11 template
+> mount sạch + bấm sai thật ở 4 game) · `dot256-live.html` **29/29** (chạy module của BẢN LIVE) ·
+> `dot256-visual.html` (đóng băng giữa đường bay để xem mắt).
+>
+> ### ⬜ VIỆC CHỜ MẮT THẦY (không chặn gì)
+> ⬜ Cỡ con số trên TOMKO (96px kịch trần trong Fight) nhìn từ cuối lớp có đủ to không · nhịp 320ms
+> đứng + 600ms bay có vừa mắt không · trong Fight con số bay ra từ **giữa khung** có đọc ra ngay là
+> "đội này vừa bị trừ" không.
+> ⬜ **7 game máy không lái được** nên chưa có phép đo end-to-end: Maze chase · Balloon pop ·
+> Flying fruit · Crossword · Anagram · Type the answer · Unjumble (chúng đòi chạy nhân vật lên ô, gõ
+> phím, kéo thả, bấm trúng một quả đang bay).
+> ⬜ **Đợt 257**: thầy mở một bài giao trong myLesson web rồi nộp, xem bảng điểm bên đó có tự làm
+> mới không.
+>
+> ---
+> ### 📦 BÀN GIAO CŨ CỦA CỤM BÀI GIAO (Đợt 245 → 251) — vẫn còn hiệu lực
 >
 > ### ✅ ĐÃ NGHIỆM THU BẰNG TAY (24/8/2026)
 > Thầy xác nhận đã thử **đủ 4 phần** của cụm 248–251, không còn gì treo:
