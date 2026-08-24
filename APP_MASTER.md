@@ -3873,7 +3873,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`<COMMIT>`** (Đợt 251) — đã push, Pages đã build đúng commit |
+> | Commit mới nhất | **`7308851`** (Đợt 251) — đã push, Pages đã build đúng commit |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
 > | Kiểm live | mã băm SHA-256 **khớp hết** trên `aword.andrewclasses.com` |
 > | Vùng vừa động tới | **BÀI GIAO (assignment)** — 7 đợt liên tiếp: 245 → 251 |
