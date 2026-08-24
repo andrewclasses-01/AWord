@@ -5,6 +5,49 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 248 (24/8/2026) — icon nút PRACTICE: quả tạ → BIA BẮN (target + mũi tên)
+
+**Bối cảnh:** thầy đưa ảnh `icon target.png` (trên Desktop máy thầy) và chốt qua
+AskUserQuestion 24/8: **"Vẽ lại thành SVG"** (không nhúng PNG) + **"Đổi bóng sang đỏ cho hợp"**.
+Rồi thầy gõ **"ok build"**. Đây là đợt THUẦN HÌNH THỨC — không đổi một dòng hành vi nào.
+
+Sửa **2 file**: `core/icons.js` · `core/app.css`. Backup bản trước ở `_backup/dot248/`.
+
+**1) `core/icons.js` — `practiceBig`**: quả tạ vàng 5 hình chữ nhật (Đợt 246) → bia bắn 4 vòng
+đỏ/trắng + mũi tên cắm giữa hồng tâm. **Không vẽ phỏng theo**: ảnh PNG của thầy được phân loại
+theo màu-gần-nhất (OpenCV, 8 màu phẳng: `#FD646F` `#FC4755` `#F5F5F5` `#E6E6E6` `#50758D`
+`#2B597F` `#918291` `#7A6E79`), mỗi vùng màu dò biên rồi đơn giản hoá `approxPolyDP` eps 2,5px
+(trên khung gốc 512) → 8 `<path>` tô đặc, `viewBox 0 0 24 24` y như cũ. Đo lại bằng cách vẽ
+ngược ra ảnh: lệch **3,3%** số điểm ảnh, gần như toàn bộ nằm ở viền răng cưa. Nặng 4,8 KB chữ
+(quả tạ cũ 0,4 KB) — vẫn rẻ hơn nhiều so với nhúng PNG 35 KB (khoảng 48 KB nếu base64), và
+**không thêm file ảnh nào** nên không đụng gì tới cách nạp trang.
+
+⛔⛔ **BẪY MỚI — `practiceBig` là icon DUY NHẤT trong `core/icons.js` KHÔNG dùng `currentColor`.**
+Mọi icon khác ở đây là nét/khối một màu, tô bằng `color` của CSS. Icon này tự mang 8 màu, nên
+**đổi `color` trong CSS sẽ không thấy gì xảy ra**. Ai sau này định "đổi màu nút PRACTICE" mà
+sửa `color:` rồi thấy trơ ra thì đây là lý do — phải sửa mã màu ngay trong `fill=` của đường vẽ.
+Nếu muốn quay lại icon một-màu-theo-CSS thì lấy bản cũ ở `_backup/dot248/icons.js`.
+
+**2) `core/app.css` — 2 dòng `.aw-startbtn.is-practice`**: `color: #ffb02e` → `#fd646f` (giữ dòng
+này lại có chủ đích, kèm chú thích, để ai đọc code không tưởng nó còn tô được icon), và bóng đổ
+`drop-shadow` `rgba(255,176,46,.3)` → `rgba(252,71,85,.32)` — vầng sáng dưới chân icon đi theo
+màu đỏ của bia bắn thay vì vàng cam của quả tạ cũ. Nút SUBMIT (xanh `#35b1f0`) **không đụng**.
+
+**KHÔNG đụng:** chữ PRACTICE vẫn trắng · kích cỡ `11cqw` và vị trí nút · hành vi bấm · luồng
+PRACTICE/SUBMIT của Đợt 246 · màn "Start with mistakes" (vẫn chỉ 1 nút PRACTICE, nay là bia bắn)
+· template · luật Firestore · trang học sinh.
+
+**Bàn thử:** không viết bàn thử mới — Đợt 246 đã có sẵn đúng chỗ cần. Chạy lại trên cổng 5648:
+`scratch/dot246-flow.html` **34/34 ĐẠT, 0 TRƯỢT, 0 lỗi console** (gồm F1 "có đủ 2 nút
+PRACTICE + SUBMIT", F5 "ván mistakes chỉ 1 nút PRACTICE") · `scratch/dot246-visual.html` nhìn
+mắt màn READY 2 nút, đã phóng 3× soi viền: mượt, không lộ cạnh đa giác. `node` nạp thử
+`core/icons.js` OK (chuỗi template không vỡ).
+
+⚠️ **Chưa bấm tay trên TOMKO / máy học sinh thật** — đây là đổi hình thuần tuý nên rủi ro thấp,
+nhưng thầy mở thử 1 bài giao trên iPad/điện thoại xem bia bắn có nét không thì chắc ăn hơn.
+
+---
+
 ## Đợt 247 (24/8/2026) — ⭐⭐ CẦU CHO myLesson: bridge `giaoBai` + `__awordLib` + URL `?bao=` + marker ASSIGN
 
 **Bối cảnh:** myLesson app (Electron soạn bài) sắp có nút "Tạo bài giao" — thầy chốt qua

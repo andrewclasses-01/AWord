@@ -8,7 +8,19 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 247)** — ⭐⭐ **CẦU CHO myLesson** (thầy chốt "Ok build Đợt A
+> Cập nhật lần cuối: **24/8/2026 (Đợt 248)** — **ICON NÚT PRACTICE: QUẢ TẠ → BIA BẮN**
+> (thầy đưa ảnh `icon target.png`, chốt "Vẽ lại thành SVG" + "Đổi bóng sang đỏ", rồi gõ
+> "ok build"). Đợt **thuần hình thức, 0 thay đổi hành vi**. Sửa 2 file: `core/icons.js`
+> (`practiceBig` — bia bắn 4 vòng + mũi tên, 8 path phẳng dò thẳng từ ảnh PNG của thầy bằng
+> phân loại màu-gần-nhất, lệch 3,3% điểm ảnh, 4,8 KB, KHÔNG thêm file ảnh) · `core/app.css`
+> (2 dòng `.is-practice`: `color` → `#fd646f`, `drop-shadow` → `rgba(252,71,85,.32)`).
+> ⛔⛔ **BẪY: `practiceBig` là icon DUY NHẤT không dùng `currentColor`** — sửa `color:` trong
+> CSS sẽ KHÔNG đổi được màu nó, phải sửa `fill=` trong chính đường vẽ. Bàn thử cũ của Đợt 246
+> chạy lại: `scratch/dot246-flow.html` **34/34 ĐẠT, 0 lỗi console**; nhìn mắt qua
+> `scratch/dot246-visual.html`. Backup `_backup/dot248/`. ⚠️ chưa bấm tay trên máy HS thật.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 247)** — ⭐⭐ **CẦU CHO myLesson** (thầy chốt "Ok build Đợt A
 > ngay" — phần AWord của kế hoạch "Tạo bài giao ngay trong myLesson", thiết kế đầy đủ ở
 > `D:\OTHERS\CLAUDE\THIET KE NUT TAO BAI GIAO - 24-08-2026.md`). **Toàn bộ là THÊM — không đổi hành
 > vi cũ, không đụng template/luật Firestore/trang học sinh.** Sửa 3 file: `core/engine.js`

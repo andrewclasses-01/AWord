@@ -868,8 +868,12 @@ html.aw-nhung .aw-below { display: none; }
 .aw-startbtn-ic svg { width: 100%; height: 100%; }
 .aw-startbtn.is-submit .aw-startbtn-ic { color: #35b1f0; }
 .aw-startbtn.is-submit .aw-startbtn-ic svg { filter: drop-shadow(0 0.6cqw 1.8cqw rgba(53,177,240,.35)); }
-.aw-startbtn.is-practice .aw-startbtn-ic { color: #ffb02e; }
-.aw-startbtn.is-practice .aw-startbtn-ic svg { filter: drop-shadow(0 0.6cqw 1.8cqw rgba(255,176,46,.3)); }
+/* Đợt 248 — the PRACTICE icon is the multi-colour TARGET, which paints its own
+   fills; `color` no longer reaches it. Kept (recoloured to the target's red) so the
+   pair still reads as "amber/red = practice, blue = submit" if anything here ever
+   goes back to currentColor. The glow follows the icon: red, not amber. */
+.aw-startbtn.is-practice .aw-startbtn-ic { color: #fd646f; }
+.aw-startbtn.is-practice .aw-startbtn-ic svg { filter: drop-shadow(0 0.6cqw 1.8cqw rgba(252,71,85,.32)); }
 .aw-startbtn-label { font-size: 2cqw; font-weight: 800; letter-spacing: 0.25cqw; }
 
 /* SUBMIT's end screen: two boards, EQUAL IN EVERY SITUATION — both are
