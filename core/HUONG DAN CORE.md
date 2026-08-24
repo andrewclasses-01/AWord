@@ -2359,6 +2359,105 @@ nhiêu lần Đổi template thì `originAct` vẫn là act thật ban đầu (a
   → Nhờ vậy đổi 1 act sang template tạm, chỉnh options, lần sau chọn lại template đó của act đó vẫn giữ options.
 - `templateOptions` là 1 field thường trên act (Firestore-safe qua `clean()`); lưu kèm khi `saveActivity`.
 
+## ⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 251, mới nhất 24/8/2026)
+
+**Đọc mục này TRƯỚC khi sửa bất cứ thứ gì trong `core/assignment-ui.js` hoặc `core/assignments.js`.**
+Khu bài giao vừa đi 6 đợt liên tiếp và đã có 4 chỗ "sửa cho gọn" là hỏng ngay.
+
+### 1. `createAssignment(act, { title, deadline, endOptions, folderId, options, sourceAct })`
+
+| tham số | ai quyết |
+|---|---|
+| `act` | act **được CHƠI** — quyết `activityType` và ảnh chụp `activity` |
+| `sourceAct` | act **trong THƯ VIỆN** — quyết `activityId` · `activityNum` · `activityTitle` |
+
+⛔⛔ **Hai cái đó CỐ Ý khác nhau khi thầy giao act dưới dạng game khác** (Đợt 250).
+`convertActivity()` trả về act dùng một lần: `id: "conv_…"`, không có `num`, `_converted: true`.
+Lưu id đó xuống `activityId` là bài giao **mất liên kết vĩnh viễn** với act trong thư viện, vì
+`listAssignmentsForAct(activityId)` — thứ vẽ ra thanh bài giao dưới act — khớp theo đúng trường đó.
+Không truyền `sourceAct` ⇒ hai cái là một, tức mọi lời gọi có trước Đợt 250.
+
+### 2. BA LUẬT KHI GIAO ACT DƯỚI DẠNG GAME KHÁC (Đợt 250)
+
+1. ⛔ **Chọn bộ nghĩa TRƯỚC, `convertActivity()` SAU.** `toRecords()` gọi `resolveActivity()` để ép
+   phẳng act tích hợp xuống ĐÚNG bộ nghĩa đang chọn (luật Đợt 145). Làm ngược lại thì lớp chọn VI1
+   **nhận về ENG1, im lặng, không lỗi**. Trong `openAssignmentSetup` việc chuyển đổi vì thế nằm ở
+   **lúc bấm START**, không phải lúc bấm chọn template.
+2. ⛔ **Giữ act GỐC nguyên vẹn suốt form.** Act đã chuyển đổi không còn `content.variants` — đưa nó
+   cho bảng Options là hàng ENG1/ENG2/VI1 trống trơn. `buildOptionsControls` luôn nhận `act` gốc.
+3. ⛔ **Đổi template ⇒ dựng LẠI options** từ `getDefaultOptions(typeMới, "homework")`, chỉ bê sang 4
+   khoá selector (`splitViewOptions().selectors`). Thầy chốt 24/8: cùng một tên ô ở hai game không
+   phải cùng một con số.
+
+⚠️ `tpl.noAssignment` (Đợt 245) là **một CÂU, không phải boolean** — 3 template không giao được
+(`speaking_cards` không gọi `ui.finish()`; `running_word`/`running_team` báo cáo theo ĐỘI). Bảng chọn
+template làm mờ chúng và hiện chính câu đó làm lý do. ⛔ Muốn gỡ chặn thì phải sửa `renderSummary`
+của chúng TRƯỚC.
+
+### 3. `templatePicker` — ô hai tầng trong bảng Options (Đợt 250)
+
+`buildOptionsControls(tpl, draft, { kind, act, templatePicker })` →
+`buildOptionsBody(host, { …, templatePicker })` → `buildContentSwitchRow(swHost, { …, templatePicker })`.
+
+```js
+templatePicker = { label(): string, icon(): htmlString, onPick(): void }   // caller giữ pop-up + trạng thái
+```
+
+- **CHỈ form Set assignment truyền.** Bảng Options trong game · Settings · Showdown để `null` và ra
+  **y hệt** hàng cũ (cao 46px, không có ô hai tầng). Bàn thử `dot250-assign.html` có phép **chặn hồi
+  quy đo tận nơi** cho việc này — đừng gỡ.
+- ⚠️ Có picker thì `has-variants` bị **ép bật** kể cả act không có bộ nghĩa: class đó là thứ đẻ ra
+  **cột thứ hai** của hàng, không có cột thì nút template không có chỗ đứng (ô mang `is-tplonly`).
+- ⛔ `is-wide` (thu cột thứ hai về 0) bị **chặn** khi có picker — nếu không, act một bộ nghĩa sẽ giấu
+  mất đúng cái nút thầy mở form ra để bấm.
+
+### 4. `openModal` xếp chồng được — CHỈ pop-up TRÊN CÙNG nghe Escape (Đợt 250)
+
+`modalStack` trong `core/assignment-ui.js`. Trước đó mọi modal cùng nghe `keydown` trên `document`,
+nên **một cú Escape đóng cả pop-up lẫn form bên dưới**. Câu chú thích cũ "One modal at a time" mô tả
+một thói quen, chưa bao giờ là một cơ chế. ⚠️ Thêm pop-up lồng nhau ở đâu trong file này cũng dùng
+`openModal` như thường — stack tự lo.
+
+### 5. KHÔNG CÓ CHỮ THỪA TRÊN FORM (thầy chốt 24/8, Đợt 250)
+
+Thầy: *"Bỏ tất cả các dòng hướng dẫn, tôi hoàn toàn không cần 1 dòng hướng dẫn nào cả."*
+Đã bỏ: dòng deadline LATE · "Filed in Results under…" · nhãn "At the end of the game…" · nhãn
+"Options" (nay là tên trên viền khối `.aw-as-block2`) · nhãn "Status" · "Closing keeps every score…" ·
+"Students open this link…" ở màn QR.
+⛔ **GIỮ** câu trong `confirmTrashAssignment` — đó là **câu hỏi** của hộp xác nhận xoá, không phải lời
+khuyên; hộp xoá không chữ là một cái bẫy.
+⚠️ Việc **tính** thư mục Results vẫn còn (START cần `folderId`, phép kiểm trùng tên cần
+`allAssignments`) — chỉ có **dòng chữ** báo điều đó là bị bỏ. Đừng xoá nốt phần tính.
+
+### 6. `optVer` — cả hai đường tạo và sửa đều phải đóng dấu (Đợt 245)
+
+`snapshotOf()` đóng dấu ở đường CREATE; form Edit **quy đổi TRƯỚC rồi mới đóng dấu** (`migrateActivityOptions`
+→ `"activity.optVer": OPT_VER`). ⛔ Đóng dấu không quy đổi = **hạ cấp âm thầm** ("Points off 3" của
+thang cũ đóng băng thành "3 trên 100", tức gần như Off).
+
+### 7. Ô tích cuối game — CHỈ CÒN "Show answers" (Đợt 246)
+
+Trang học sinh chỉ đọc `session.endOptions`. `leaderboard`/`startAgain` vẫn được **ghi cứng `true`**
+xuống document để mọi bản ghi giữ đủ 3 khoá — đừng "dọn" chúng đi, sẽ có nơi gặp một document thiếu
+hình dạng.
+
+### 8. ⛔⛔ BẪY LỀ 10px — HAI Ô LỆCH NHAU 5px (Đợt 251, thầy bắt bằng mắt)
+
+`.aw-set-opts .aw-opt-switch { margin-bottom: 10px }` (khung Settings/bài giao) **THẮNG**
+`.aw-opt-content .aw-opt-switch { margin-bottom: 0 }` — cùng độ đặc hiệu `0,2,0` nên cái viết SAU
+thắng. Hàng là lưới `align-items: center`: ô trái cao 60 **+ lề 10 = 70** chiếm trọn hàng và dính
+mép trên, ô phải cao 60 được căn giữa trong hàng 70 ⇒ **tụt xuống đúng 5px**.
+
+⚠️ **Lỗi có từ TRƯỚC Đợt 250 nhưng vô hình**: hồi đó ô phải chỉ cao 30px — một con chip nhỏ trôi
+giữa hàng, không lệch so với cái gì cả. Nâng nó lên 60px là lộ ra ngay.
+Vá bằng `.aw-opt-content.has-tpl .aw-opt-switch { margin-bottom: 0 }` (đặc hiệu `0,3,0`, thắng bất
+kể thứ tự, và chỉ chạm `.has-tpl` nên game/Settings giữ nguyên).
+
+📌 **Bài học chung**: hai quy tắc CSS cùng độ đặc hiệu thì **thứ tự trong file quyết định** — file
+này 6800+ dòng, "quy tắc của tôi ở trên kia" không có nghĩa là nó thắng. Khi hai hộp phải thẳng
+hàng, **đo cả mép trên VÀ mép dưới** (`getBoundingClientRect`), đừng chỉ so chiều cao: hai hộp cùng
+cao 60 vẫn có thể lệch nhau 5px. Bàn thử `dot250-assign.html` nay đo đúng hai mép đó ở cả hai chế độ.
+
 ## API engine ↔ template (bắt buộc mọi template tuân theo)
 
 Mỗi template là 1 file JS, tự đăng ký khi được import:

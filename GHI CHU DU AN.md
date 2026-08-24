@@ -5,6 +5,56 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 251 (24/8/2026) — ⛔ VÁ LỆCH 5px GIỮA HAI Ô + LÀM LẠI HỒ SƠ BÀN GIAO
+
+**Thầy bắt bằng mắt ngay sau Đợt 250** (gửi ảnh cắt hàng TEXT|VOICE + ô hai tầng ở chế độ VOICE):
+*"2 khối ô bị lệch nhau, chưa đúng tâm"*. Đo ra thầy đúng: ô TEXT-VOICE ở `top 551.8`, ô hai tầng ở
+`top 556.8` — **lệch đúng 5px**, dù cả hai đều cao 60px.
+
+### Gốc bệnh — hai quy tắc CSS cùng độ đặc hiệu, cái viết SAU thắng
+
+`.aw-set-opts .aw-opt-switch { margin-bottom: 10px }` (dòng ~3118, khung Settings/bài giao)
+**THẮNG** `.aw-opt-content .aw-opt-switch { margin-bottom: 0 }` (dòng ~1580) — cùng `0,2,0` nên thứ
+tự trong file quyết định. Hàng là lưới `align-items: center`, nên:
+
+- ô trái = 60 **+ lề 10 = 70** ⇒ chiếm trọn hàng, **dính mép trên**;
+- ô phải = 60 ⇒ được căn giữa trong hàng 70 ⇒ **tụt xuống (70−60)/2 = 5px**.
+
+⚠️ **Lỗi CÓ TỪ TRƯỚC Đợt 250 nhưng vô hình**: hồi đó ô phải chỉ cao 30px — một con chip nhỏ trôi
+giữa hàng, không lệch so với cái gì cả. Nâng nó lên 60px là lộ ra ngay. Đây là kiểu lỗi mà **đo
+chiều cao không bắt được** (hai ô đều đúng 60), phải **đo cả mép trên và mép dưới**.
+
+### Vá (1 dòng CSS)
+
+`.aw-opt-content.has-tpl .aw-opt-switch { height: 60px; margin-bottom: 0; }` — độ đặc hiệu `0,3,0`
+nên thắng **bất kể thứ tự**, và chỉ chạm `.has-tpl` (chỉ form Set assignment) nên bảng Options trong
+game và Settings giữ nguyên lề cũ.
+
+**Đo lại sau khi vá:** lệch mép trên **0**, lệch mép dưới **0**, hàng cao đúng **60** — ở CẢ chế độ
+TEXT lẫn VOICE.
+
+### Chặn hồi quy
+
+Bàn thử `dot250-assign.html` thêm 3 phép đo (**59/59 ĐẠT**, trước là 56): so **hai mép** của hai ô ở
+chế độ TEXT · bấm VOICE rồi so lại · hàng phải cao đúng 60 không dư lề.
+
+### Hồ sơ bàn giao
+
+- `core/HUONG DAN CORE.md` — mục MỚI **"⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 251)"**, 8 luật:
+  `sourceAct` · 3 luật giao act dưới dạng game khác · `templatePicker` · `openModal` stack · luật
+  không-chữ-thừa · `optVer` hai đường · ô tích cuối game · và bẫy lề 10px của chính đợt này.
+- `APP_MASTER.md` mục 0a — **viết lại hồ sơ bàn giao** (trước đó còn dừng ở Đợt 215): trạng thái kho,
+  việc chờ thầy, 3 luật đắt nhất của vùng bài giao, bảng 6 bàn thử kèm điểm chuẩn, các app gắn chặt
+  (myLesson · myActivity), và ghi chú về cặp icon PRACTICE/SUBMIT.
+
+📌 **Hai bài học đáng nhớ**
+1. **Cùng độ đặc hiệu ⇒ thứ tự trong file quyết định.** `core/app.css` hơn 6800 dòng; "quy tắc của
+   tôi nằm ở trên kia" không có nghĩa là nó thắng.
+2. **Hai hộp phải thẳng hàng thì đo hai MÉP, đừng so chiều cao.** Hai hộp cùng cao 60px vẫn lệch
+   nhau 5px được — và đúng 3 lượt bàn thử trước đó đã đo chiều cao, thấy 60=60, rồi kết luận "đạt".
+
+---
+
 ## Đợt 250 (24/8/2026) — ⭐⭐⭐ QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN TEMPLATE NGAY TRONG BÀI GIAO
 
 **Bối cảnh:** thầy: *"Vì bây giờ tôi dùng act tích hợp (trong 1 act chọn được nhiều kiểu text-voice

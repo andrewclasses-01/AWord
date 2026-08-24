@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 250)** — ⭐⭐⭐ **QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN
+> Cập nhật lần cuối: **24/8/2026 (Đợt 251)** — ⛔ **VÁ LỆCH 5px GIỮA HAI Ô** (thầy bắt bằng mắt
+> ngay sau Đợt 250) **+ LÀM LẠI HỒ SƠ BÀN GIAO**. Gốc bệnh: `.aw-set-opts .aw-opt-switch
+> { margin-bottom: 10px }` **thắng** `.aw-opt-content .aw-opt-switch { margin-bottom: 0 }` — cùng
+> độ đặc hiệu `0,2,0` nên **cái viết SAU thắng**; hàng là lưới `align-items:center` nên ô trái
+> (60+10=70) dính mép trên còn ô phải (60) bị căn giữa ⇒ tụt 5px. ⚠️ **Lỗi có TỪ TRƯỚC Đợt 250
+> nhưng vô hình** (ô phải hồi đó chỉ cao 30px, trôi giữa hàng, không lệch so với cái gì cả). Vá 1
+> dòng: `.aw-opt-content.has-tpl .aw-opt-switch { margin-bottom: 0 }` (đặc hiệu `0,3,0`, thắng bất
+> kể thứ tự, chỉ chạm form Set assignment). Đo lại: **lệch 0/0, hàng cao đúng 60**, cả TEXT lẫn VOICE.
+> Bàn thử `scratch/dot250-assign.html` **59/59 ĐẠT** (thêm 3 phép đo HAI MÉP).
+> 📚 Hồ sơ bàn giao làm lại: `core/HUONG DAN CORE.md` có mục MỚI **"⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG
+> ĐẦY ĐỦ (Đợt 245 → 251)"** (8 luật); `APP_MASTER.md` **mục 0a viết lại** (trước đó còn dừng ở
+> Đợt 215) — trạng thái kho, việc chờ thầy, 3 luật đắt nhất, bảng 6 bàn thử kèm điểm chuẩn.
+> 📌 Bài học: **cùng độ đặc hiệu thì thứ tự trong file quyết định**; và **hai hộp phải thẳng hàng
+> thì đo HAI MÉP, đừng so chiều cao** — hai hộp cùng cao 60px vẫn lệch nhau 5px được.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 250)** — ⭐⭐⭐ **QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN
 > TEMPLATE NGAY TRONG BÀI GIAO** (thầy: *"act tích hợp… nên tôi cần thêm phần chọn template ngay
 > trong set assignment"*, chốt 4 điểm qua AskUserQuestion rồi gõ "ok build"). Sửa 5 file:
 > `core/assignment-ui.js` (dựng lại form: **2 khối có viền** `.aw-as-block2` · **Class + Deadline
@@ -3851,7 +3867,68 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 20/8/2026 sau **Đợt 215 + 215b** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 24/8/2026 sau **Đợt 251** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (24/8/2026)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`<COMMIT>`** (Đợt 251) — đã push, Pages đã build đúng commit |
+> | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
+> | Kiểm live | mã băm SHA-256 **khớp hết** trên `aword.andrewclasses.com` |
+> | Vùng vừa động tới | **BÀI GIAO (assignment)** — 7 đợt liên tiếp: 245 → 251 |
+> | 17 template | **KHÔNG đụng tới** trong cả 7 đợt |
+> | Luật Firestore | **KHÔNG cần đăng lại** trong cả 7 đợt |
+>
+> ### ⬜ VIỆC CHỜ THẦY (không chặn ai, nhưng phải nhắc)
+> 1. ⚠️ **Chưa bấm tay với Firestore thật** đường "giao act dưới dạng game khác" (Đợt 250). Thầy nên
+>    **giao thử 1 bài cho 1 em** rồi mở link kiểm tra trước khi dùng đại trà.
+> 2. ⚠️ Chưa bấm tay trên **TOMKO** cho cả cụm 248–251 (đổi icon + cân đối nút + form bài giao).
+> 3. ⬜ Việc kế tiếp = **HỎI THẦY**. Thầy đang đi từng đợt ngắn, tự chỉ hướng mỗi lần.
+>
+> ### 📍 ĐỤNG VÀO BÀI GIAO THÌ ĐỌC Ở ĐÂU
+> **`core/HUONG DAN CORE.md` → mục "⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 251)"** — 8 luật, mỗi
+> luật đều có người vấp rồi. Ba cái đắt nhất, tóm ở đây để không ai bỏ qua:
+> 1. ⛔⛔ **Đổi template KHÔNG PHẢI đổi một chữ `type`** — phải qua `convertActivity()`, và **chọn bộ
+>    nghĩa TRƯỚC, chuyển đổi SAU** (đảo lại thì lớp chọn VI1 nhận về ENG1, **im lặng, không lỗi**).
+> 2. ⛔⛔ **`createAssignment` có `sourceAct`**: danh tính (id/num/title) lấy từ act THƯ VIỆN, phần
+>    chơi được lấy từ act ĐÃ CHUYỂN ĐỔI. Lưu nhầm id `conv_…` là bài giao **mất liên kết vĩnh viễn**
+>    với act (`listAssignmentsForAct` khớp theo `activityId`).
+> 3. ⛔ **`templatePicker` CHỈ form Set assignment truyền.** Bảng Options trong game và Settings phải
+>    ra y hệt bản cũ — bàn thử có phép **chặn hồi quy đo tận nơi** (hàng 46px), đừng gỡ.
+>
+> ### 🧪 BÀN THỬ CỦA VÙNG NÀY (chạy trước khi đụng, chạy lại sau khi sửa)
+> Bật cổng: `python devserver.py 5648` rồi mở `http://localhost:5648/scratch/<tên>`.
+>
+> | Bàn thử | Kiểm gì | Điểm chuẩn |
+> |---|---|---|
+> | `dot250-assign.html` | cả vùng bài giao (bố cục · ô hai tầng · chọn template · lưu xuống · Escape · Edit) | **59/59** |
+> | `dot250-visual.html` | xem mắt 4 màn (Set · chọn lớp · chọn template · Edit) | nhìn |
+> | `dot246-forms.html` | form Set/Edit còn đúng 1 ô tích | **9/9** |
+> | `dot246-flow.html` | luồng PRACTICE/SUBMIT của học sinh | **37/37** |
+> | `dot247-giaobai.html` | bridge `giaoBai(lop)` của myLesson | **16/16** |
+> | `dot245-assign-options.html` | bảng Options ACT vs ASSIGNMENT | 17/17 khớp |
+>
+> 📌 **Bàn thử neo vào CHỮ HIỂN THỊ hoặc THỨ TỰ DOM sẽ gãy ở đợt đổi bố cục.** Đợt 250 làm gãy 2 bàn
+> thử cũ đúng vì thế (`dot246-forms` tìm hàng ô tích qua nhãn "At the end…" — nhãn đã bị bỏ;
+> `dot247-giaobai` lấy "hai ô nhập đầu tiên" — nay ô ngày chen vào giữa). **Neo vào class/vai trò.**
+>
+> ### 🔗 GẮN CHẶT VỚI APP KHÁC — ĐỪNG REVERT LẺ MỘT BÊN
+> - **myLesson app** (`E:\LAP TRINH APP\myLesson`) gọi `window.__awordBridge.giaoBai(lop)` và
+>   `window.__awordLib` (Đợt 247). Sửa hai thứ đó là phải thử lại bên myLesson.
+> - **myActivity** (`E:\LAP TRINH APP\myActivity`) nghe marker `MYACT:AW:*` (Đợt 229 ↔ myActivity
+>   v2.8.0). Gắn chặt — revert lẻ một bên là hỏng bên kia.
+>
+> ### 🎨 CẶP NÚT PRACTICE / SUBMIT (Đợt 248 + 249)
+> - `icons.practiceBig` là **icon DUY NHẤT không dùng `currentColor`** (bia bắn 8 màu) — sửa `color:`
+>   trong CSS sẽ **trơ ra không đổi gì**, phải sửa `fill=` trong đường vẽ.
+> - `icons.submitBig` = **đúng hình `playBig` nhưng đóng khung lại**, KHÔNG sinh ra lúc chạy — vẽ lại
+>   `playBig` thì phải chép `d` sang. ⛔ `playBig` lệch phải là **CỐ Ý** (nó vẽ cho nút TRÒN
+>   `.aw-bigplay` của thầy) — đừng "sửa" nó.
+
+> ### KHU OPTIONS — BẢY CŨ VẪN CÒN HIỆU LỰC (Đợt 213 → 215b, 20/8/2026)
+> Bảy luật dưới đây **không hề cũ** — đụng vào Options dù chỉ thêm một ô là phải đọc:
+
 
 > ⭐⭐⭐ **BẢNG OPTIONS VỪA ĐƯỢC LÀM LẠI GẦN NHƯ TOÀN BỘ (Đợt 213 + 213b, 20/8/2026, thầy đã duyệt).**
 > Nếu việc sắp tới của bạn đụng tới Options — dù chỉ thêm một ô — **ĐỌC HAI KHỐI 213b + 213 ở đầu file

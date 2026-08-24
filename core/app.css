@@ -6835,7 +6835,19 @@ html.aw-nhung .aw-below { display: none; }
    Every rule here is behind `.has-tpl`, which ONLY the Set assignment form
    sets — the in-game Options panel keeps its 46px row untouched.
    --------------------------------------------------------------- */
-.aw-opt-content.has-tpl .aw-opt-switch { height: 60px; }
+/* ⛔⛔ Đợt 251 — `margin-bottom: 0` Ở ĐÂY LÀ BẮT BUỘC, KHÔNG PHẢI DỌN DẸP.
+   Thầy bắt được bằng mắt: hai ô lệch nhau 5px, ô bên phải tụt xuống.
+   Đo ra: `.aw-set-opts .aw-opt-switch { margin-bottom: 10px }` (dòng ~3118,
+   khung Settings/bài giao) THẮNG `.aw-opt-content .aw-opt-switch { margin-bottom: 0 }`
+   — cùng độ đặc hiệu 0,2,0 nên cái viết SAU thắng. Hàng là lưới `align-items:center`,
+   nên ô trái cao 60 + lề 10 = 70 chiếm trọn hàng và dính MÉP TRÊN, còn ô phải cao 60
+   được căn giữa trong hàng 70 ⇒ tụt xuống đúng (70−60)/2 = 5px.
+   ⚠️ Lỗi này CÓ TỪ TRƯỚC Đợt 250 nhưng vô hình: hồi đó ô phải chỉ cao 30px, một con
+   chip nhỏ trôi giữa hàng nên không ai thấy nó lệch so với cái gì. Nâng nó lên 60px
+   là lộ ra ngay.
+   Độ đặc hiệu ở đây là 0,3,0 nên thắng bất kể thứ tự — và chỉ chạm tới `.has-tpl`,
+   tức CHỈ form Set assignment; bảng Options trong game và Settings giữ nguyên lề cũ. */
+.aw-opt-content.has-tpl .aw-opt-switch { height: 60px; margin-bottom: 0; }
 /* The mode buttons were laid out with a fixed 10px padding, which centred the
    text in a 46px box by arithmetic. In a 60px box that same arithmetic parks it
    near the top, so they are centred properly instead. */
