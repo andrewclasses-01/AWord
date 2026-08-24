@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 251)** — ⛔ **VÁ LỆCH 5px GIỮA HAI Ô** (thầy bắt bằng mắt
+> Cập nhật lần cuối: **24/8/2026 (Đợt 252)** — ⭐⭐ **CỬA CHO myLesson: MARKER NÓI RÕ BỘ NGHĨA +
+> TEMPLATE, VÀ `giaoBai` MỞ TRÊN ACT GỐC**. Sửa 2 file (`core/assignment-ui.js`, `core/engine.js`),
+> toàn bộ là THÊM. (1) `onCreated(assignment, {bo, boTen, mauType, mauTen})` + marker
+> `MYACT:AW:ASSIGN` mang thêm 4 khoá đó — ⛔ **giữ nguyên tên marker và 2 khoá cũ `code`/`title`**;
+> bộ nghĩa phải đọc **trên act GỐC** vì `convertActivity` gỡ sạch `variants`. (2)
+> `giaoBai(lop, {tieuDe})` — tiêu đề điền sẵn, đặt **SAU** khối điền lớp kẻo `replaceClassToken`
+> xoá mất. (3) ⛔⛔ **`giaoBai` mở form trên `originAct` chứ không phải `libAct`**: sau một cú Change
+> template thì `libAct` là bản chuyển đổi `conv_…`, đưa nó vào form là bài giao **mất liên kết vĩnh
+> viễn** với act trong thư viện (đúng bẫy Đợt 250 dựng `sourceAct` để tránh) và hàng bộ nghĩa biến
+> sạch. **Giao bằng template khác thì chọn trong ô template CỦA CHÍNH FORM**, đừng đổi ở ngoài.
+> Bàn thử mới `scratch/dot252-marker.html` **30/30 ĐẠT**; chạy lại `dot247-giaobai` 16/16 ·
+> `dot250-assign` 59/59 · `dot246-flow` 37/37 · `dot246-forms` 9/9. Backup `_backup/dot252/`.
+> ⛔ **Cặp chặt myLesson app v1.13.0** — đừng revert lẻ một bên. ⚠️ Chưa bấm tay trên máy thật
+> (đường đăng nhập Google trong app myLesson là thứ chỉ thầy thử được).
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 251)** — ⛔ **VÁ LỆCH 5px GIỮA HAI Ô** (thầy bắt bằng mắt
 > ngay sau Đợt 250) **+ LÀM LẠI HỒ SƠ BÀN GIAO**. Gốc bệnh: `.aw-set-opts .aw-opt-switch
 > { margin-bottom: 10px }` **thắng** `.aw-opt-content .aw-opt-switch { margin-bottom: 0 }` — cùng
 > độ đặc hiệu `0,2,0` nên **cái viết SAU thắng**; hàng là lưới `align-items:center` nên ô trái

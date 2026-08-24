@@ -2359,7 +2359,7 @@ nhiêu lần Đổi template thì `originAct` vẫn là act thật ban đầu (a
   → Nhờ vậy đổi 1 act sang template tạm, chỉnh options, lần sau chọn lại template đó của act đó vẫn giữ options.
 - `templateOptions` là 1 field thường trên act (Firestore-safe qua `clean()`); lưu kèm khi `saveActivity`.
 
-## ⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 251, mới nhất 24/8/2026)
+## ⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 252, mới nhất 24/8/2026)
 
 **Đọc mục này TRƯỚC khi sửa bất cứ thứ gì trong `core/assignment-ui.js` hoặc `core/assignments.js`.**
 Khu bài giao vừa đi 6 đợt liên tiếp và đã có 4 chỗ "sửa cho gọn" là hỏng ngay.
@@ -2376,6 +2376,29 @@ Khu bài giao vừa đi 6 đợt liên tiếp và đã có 4 chỗ "sửa cho g�
 Lưu id đó xuống `activityId` là bài giao **mất liên kết vĩnh viễn** với act trong thư viện, vì
 `listAssignmentsForAct(activityId)` — thứ vẽ ra thanh bài giao dưới act — khớp theo đúng trường đó.
 Không truyền `sourceAct` ⇒ hai cái là một, tức mọi lời gọi có trước Đợt 250.
+
+### 1b. CỬA CHO myLesson (Đợt 252) — `giaoBai` + marker ASSIGN
+
+`window.__awordBridge.giaoBai(lop, { tieuDe })` mở form Set assignment của act đang mở.
+
+⛔⛔ **Nó mở trên `originAct`, KHÔNG phải `libAct`.** Hai cái chỉ khác nhau sau một cú **Change
+template**: khi đó `libAct` là bản chuyển đổi `conv_…`. Đưa bản đó vào form thì form thấy
+*"template đã đúng rồi"*, không gắn `sourceAct`, và bài giao rơi thẳng vào cái bẫy ở mục 1 —
+**mất liên kết vĩnh viễn với act trong thư viện**. Muốn giao bằng game khác thì **chọn trong ô
+template của chính form**, đừng đổi template ở ngoài rồi mới gọi vào.
+
+`onCreated(assignment, { bo, boTen, mauType, mauTen })` — tham số **thứ hai** (Đợt 252) mang tên
+đọc được của bộ nghĩa và template, vì tài liệu đã lưu không có chúng: `activityType` là mã máy,
+còn bộ nghĩa **biến mất hẳn** sau `convertActivity` (gỡ sạch `variants`). ⇒ Phải tính **trong
+form, trên act GỐC đã đeo selector**, trước lúc chuyển đổi.
+
+Marker: `MYACT:AW:ASSIGN:{"code","title","bo","boTen","mauType","mauTen"}` — bắn ở CẢ hai đường
+(myLesson gọi vào, và thầy tự bấm nút Set assignment). ⛔ **Đừng đổi tên marker, đừng bỏ 2 khoá
+cũ `code`/`title`** — myLesson đang đọc đúng chúng.
+
+⛔ **Hai bài giao TRÙNG TÊN trong cùng một thư mục bị TỪ CHỐI** (`assignmentNameTaken`). Bàn thử
+tạo nhiều bài liên tiếp phải đặt tên khác nhau, không thì bài sau lặng lẽ không ra đời và phép
+chờ marker treo tới hết giờ — trông hệt như code hỏng.
 
 ### 2. BA LUẬT KHI GIAO ACT DƯỚI DẠNG GAME KHÁC (Đợt 250)
 

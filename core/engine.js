@@ -669,7 +669,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // của act ĐANG MỞ với ô Class điền sẵn. Đi qua `queued()` như mọi mutator
       // để một cú switchTemplate đang bay hạ cánh xong mới mở form. Bản delegate
       // cũ (trang đã cache engine cũ) không có method này ⇒ trả false, không nổ.
-      giaoBai: (lop) => queued(() => (current && current.giaoBai) ? current.giaoBai(lop) : false),
+      // ⭐ Đợt 252 — thêm tham số thứ hai `{tieuDe}`; gọi kiểu cũ `giaoBai(lop)`
+      // vẫn chạy y nguyên.
+      giaoBai: (lop, opt) => queued(() => (current && current.giaoBai) ? current.giaoBai(lop, opt) : false),
       _setCurrent(delegate) { current = delegate; },
     };
   }
@@ -809,14 +811,41 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // marker cho cả đường này lẫn đường thầy tự bấm nút Set assignment, nên
     // myLesson chỉ cần nghe một chỗ. ⛔ Trang học sinh (session) không bao giờ
     // được mở form thầy; 3 template noAssignment giữ nguyên luật Đợt 245.
-    giaoBai(lop) {
+    // ⭐⭐ Đợt 252 — HAI THAY ĐỔI, cả hai đều vì myLesson:
+    //
+    // 1. MỞ FORM TRÊN `originAct`, KHÔNG PHẢI `libAct`. Trong một lượt chơi
+    //    thường hai cái là MỘT. Chúng chỉ khác nhau sau một cú **Change
+    //    template**: lúc đó `libAct` là bản chuyển đổi dùng một lần
+    //    (`id:"conv_…"`, không `num`) còn `originAct` mới là act thật trong thư
+    //    viện. Đưa bản chuyển đổi vào form là rơi đúng cái bẫy Đợt 250 đã dựng
+    //    `sourceAct` lên để tránh: form thấy "template đã đúng rồi" nên không
+    //    gắn `sourceAct`, và bài giao **mất liên kết vĩnh viễn** với act trong
+    //    thư viện (`listAssignmentsForAct` khớp theo `activityId`, mà "conv_…"
+    //    thì không khớp với cái gì bao giờ). Mở trên act gốc thì hàng bộ nghĩa
+    //    ENG1/VI1 cũng còn nguyên để chọn — bản chuyển đổi không còn bộ nào cả.
+    //    ⇒ Muốn giao bằng template khác thì chọn trong **ô template của chính
+    //    form** (Đợt 250), đừng đổi template ở ngoài rồi mới gọi vào đây.
+    //
+    // 2. MARKER NÓI THÊM BỘ NGHĨA + TEMPLATE. `{code,title}` không đủ cho
+    //    myLesson: dòng dưới ô act bên đó ghi "ENG1 · QUIZ", mà hai chữ ấy
+    //    không nằm trong tài liệu bài giao dưới Firestore. `onCreated` nay nhận
+    //    thêm tham số thứ hai mang sẵn chúng (xem openAssignmentSetup).
+    //    ⛔ GIỮ NGUYÊN 2 khoá cũ `code`/`title` và giữ đúng một tên marker
+    //    "MYACT:AW:ASSIGN" — myLesson v1.12.0 (và bàn thử Đợt 247) đang đọc nó.
+    giaoBai(lop, opt) {
       if (session || tpl.noAssignment) return false;
       return import("./assignment-ui.js").then(ui => {
-        ui.openAssignmentSetup(libAct, {
+        ui.openAssignmentSetup(originAct, {
           lop,
-          onCreated: (a) => {
+          tieuDe: opt && opt.tieuDe,
+          onCreated: (a, ct) => {
             loadAssignmentBars();
-            awEmit("ASSIGN", JSON.stringify({ code: a.code, title: a.title }));
+            awEmit("ASSIGN", JSON.stringify({
+              code: a.code, title: a.title,
+              bo: (ct && ct.bo) || "", boTen: (ct && ct.boTen) || "",
+              mauType: (ct && ct.mauType) || a.activityType || "",
+              mauTen: (ct && ct.mauTen) || "",
+            }));
           },
         });
         return true;

@@ -34,7 +34,10 @@ import { getDefaultOptions, buildOptionsControls } from "./settings.js";
 // played (contentMode / contentVariant / voiceVariant / contentSet, plus the
 // optVer stamp) and the rest. Already the app's own name for that category —
 // see VIEW_SELECTOR_KEYS in core/content-view.js.
-import { splitViewOptions } from "./content-view.js";
+// ⭐ Đợt 252 — `activeVariant`/`variantLabel`: WHICH CLUE SET the class is being
+// handed (ENG1 · VI1 …). myLesson prints it beside the template on the teacher's
+// own row, so `onCreated` has to report it — see the note on that callback.
+import { splitViewOptions, activeVariant, variantLabel } from "./content-view.js";
 // Đợt 245 — the Edit form converts an old assignment's penalties onto today's
 // scale before showing them, and stamps the result. See openAssignmentEdit.
 import { migrateActivityOptions, OPT_VER } from "./options-migrate.js";
@@ -251,7 +254,19 @@ function iconButton(icon, title, onClick) {
 // ⚠️ Việc chuyển đổi làm ở lúc bấm START, không phải lúc bấm chọn template:
 // giữ act gốc nguyên vẹn suốt form là thứ giữ cho hàng ENG1/ENG2/VI1 vẫn còn để
 // chọn (act đã chuyển đổi không còn bộ nghĩa nào cả).
-export function openAssignmentSetup(act, { onCreated, lop } = {}) {
+// ⭐⭐ Đợt 252 — HAI CỬA NHỎ CHO myLesson (chỉ THÊM, không đổi gì của đường cũ):
+//   · `tieuDe` — tiêu đề bài giao điền sẵn. myLesson đã biết lớp + ngày + tên
+//     bài nên đặt được một cái tên đúng nếp của thầy ngay từ đầu; thầy vẫn sửa
+//     tay được như thường. Không truyền ⇒ y hệt trước (tự dựng từ Class + ngày
+//     + tên act).
+//   · `onCreated(assignment, chiTiet)` — THAM SỐ THỨ HAI LÀ MỚI. Bài giao lưu
+//     xuống Firestore không mang cái tên ĐỌC ĐƯỢC của bộ nghĩa ("ENG1") lẫn của
+//     template ("QUIZ"): `activityType` là mã máy (`quiz`), còn bộ nghĩa nằm lẫn
+//     trong `activity.options` và **biến mất hẳn** khi act được chuyển đổi
+//     (`convertActivity` gỡ sạch `variants`). Vì vậy hai chữ đó phải tính Ở ĐÂY,
+//     lúc act gốc còn nguyên, rồi báo ra ngoài. Người gọi cũ bỏ qua tham số này
+//     là chuyện thường — không ai vỡ.
+export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
   openModal("optswide", (modal, close) => {
     modal.append(headRow("Set assignment", close));
     const body = el("div", "aw-as-body");
@@ -330,6 +345,10 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
       classInput.value = String(lop).slice(0, 20);
       titleInput.value = replaceClassToken(titleInput.value, classInput.value);
     }
+    // ⭐ Đợt 252 — tiêu đề myLesson đưa sang. Đặt SAU khối `lop` ở trên: ở đó
+    // `replaceClassToken` viết lại chữ đầu của tiêu đề, chạy sau là nó xoá mất
+    // cái tên thầy đã đặt bên myLesson.
+    if (tieuDe) titleInput.value = String(tieuDe).slice(0, 80);
 
     // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left. The Leaderboard and
     // Start again ticks are gone because the new student end screens bake both
@@ -457,10 +476,15 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
         // this order is not negotiable: selectors onto the ORIGINAL act first,
         // convert second, and the original act's identity travels separately as
         // `sourceAct` so the assignment stays tied to the library act.
+        // ⭐ Đợt 252 — act gốc ĐÃ ĐEO bộ chọn của form. Dựng MỘT LẦN ở đây rồi
+        // dùng cho cả hai việc: đọc tên bộ nghĩa (cho `onCreated`) và chuyển
+        // đổi template. `activeVariant` phải đọc trên act GỐC — bản chuyển đổi
+        // không còn `variants` nên hỏi nó thì luôn ra rỗng.
+        const stagedGoc = { ...act, options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors } };
+        const boKey = activeVariant(stagedGoc);
         let playAct = act, sourceAct = null;
         if (playType !== act.type) {
-          const staged = { ...act, options: { ...(act.options || {}), ...splitViewOptions(hwDraft).selectors } };
-          playAct = await convertActivity(staged, playType);
+          playAct = await convertActivity(stagedGoc, playType);
           sourceAct = act;
         }
         const assignment = await createAssignment(playAct, {
@@ -482,7 +506,12 @@ export function openAssignmentSetup(act, { onCreated, lop } = {}) {
         catch (e) { console.warn("AWord: could not move older assignments into DONE:", e.message); }
         close();
         openAssignmentShare(assignment);
-        onCreated?.(assignment);
+        onCreated?.(assignment, {
+          bo: boKey || "",                                        // "eng1" (mã máy)
+          boTen: boKey ? variantLabel(act.content, boKey) : "",    // "ENG1"  (chữ đọc được)
+          mauType: playType,                                      // "quiz"
+          mauTen: templateLabel(playType) || "",                  // "Quiz"
+        });
       } catch (e) {
         start.disabled = back.disabled = false;
         start.textContent = "START";

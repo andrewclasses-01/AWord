@@ -5,6 +5,72 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 252 (24/8/2026) — ⭐⭐ CỬA CHO myLesson: MARKER NÓI RÕ BỘ NGHĨA + TEMPLATE, VÀ `giaoBai` MỞ TRÊN ACT GỐC
+
+**Vì sao có đợt này:** thầy chốt luồng mới bên myLesson app — đúp một ô act trống là mở **thẳng
+form Set assignment của AWord** (không còn pop-up chọn template riêng bên myLesson nữa), chọn
+template + bộ nghĩa ngay trong form này. Muốn vậy thì AWord phải nói lại cho myLesson biết thầy
+đã chọn gì. Sửa **2 file**, toàn bộ là **THÊM** — mọi người gọi cũ không đổi một dòng.
+
+### 1. `onCreated` nay có tham số thứ hai + marker ASSIGN mang 4 khoá mới
+
+Tài liệu bài giao dưới Firestore **không giữ cái tên đọc được** của hai thứ myLesson cần in ra:
+`activityType` là mã máy (`quiz`), còn **bộ nghĩa thì biến mất hẳn** — `convertActivity()` gỡ sạch
+`variants` khỏi act chuyển đổi, nên hỏi bài giao đã lưu là luôn ra rỗng. Vì vậy hai chữ đó phải
+tính **ngay trong form**, lúc act gốc còn nguyên:
+
+```
+const stagedGoc = { ...act, options: { ...act.options, ...splitViewOptions(hwDraft).selectors } };
+const boKey = activeVariant(stagedGoc);      // "eng1" — ĐỌC TRÊN ACT GỐC
+```
+
+`onCreated(assignment, { bo, boTen, mauType, mauTen })`, và `engine.giaoBai` đẩy cả 4 vào marker:
+
+```
+MYACT:AW:ASSIGN:{"code","title","bo":"eng1","boTen":"ENG1","mauType":"quiz","mauTen":"Quiz"}
+```
+
+⛔ **GIỮ NGUYÊN tên marker và 2 khoá cũ `code`/`title`** — myLesson v1.12.0 và bàn thử Đợt 247
+đang đọc đúng hai khoá đó.
+
+### 2. `giaoBai(lop, {tieuDe})` — tiêu đề điền sẵn
+
+myLesson đã biết lớp + ngày + mã bài nên đặt được cái tên đúng nếp của thầy ngay từ đầu. Đặt
+**SAU** khối điền lớp: ở đó `replaceClassToken` viết lại chữ đầu của tiêu đề, chạy sau là xoá mất
+tên vừa đưa sang.
+
+### 3. ⛔⛔ VÁ THẬT: `giaoBai` mở form trên `originAct`, KHÔNG phải `libAct`
+
+Hai cái này là MỘT trong một lượt chơi thường. Chúng chỉ khác nhau **sau một cú Change template**:
+lúc đó `libAct` là bản chuyển đổi dùng một lần (`id:"conv_…"`, không `num`), còn `originAct` mới là
+act thật trong thư viện. Đường cũ đưa bản chuyển đổi vào form ⇒ form thấy *"template đã đúng rồi"*
+nên **không gắn `sourceAct`** ⇒ rơi đúng cái bẫy mà Đợt 250 dựng `sourceAct` lên để tránh: bài giao
+**mất liên kết vĩnh viễn** với act trong thư viện (`listAssignmentsForAct` khớp theo `activityId`,
+mà `"conv_…"` thì không khớp với cái gì bao giờ), và hàng bộ nghĩa ENG1/VI1 cũng biến sạch.
+
+**Cách đúng để giao bằng template khác: chọn trong ô template CỦA CHÍNH FORM** (Đợt 250), đừng đổi
+template ở ngoài rồi mới gọi `giaoBai`.
+
+### Đã test — bàn thử mới `scratch/dot252-marker.html`: **30/30 ĐẠT, 0 lỗi trang**
+
+Engine thật + quiz thật + act mang 2 bộ nghĩa (ENG1/VI1): tiêu đề điền sẵn · marker giữ khoá cũ và
+có đủ 4 khoá mới · đổi bộ nghĩa trong form thì marker đổi theo · đổi template trong form thì marker
+báo template mới **mà `activityId` vẫn là act thư viện** · **đổi template Ở NGOÀI rồi mới `giaoBai`
+thì `activityId`/`activityNum` vẫn nguyên (phép chặn hồi quy cho mục 3)** · act không có bộ nghĩa thì
+`boTen` rỗng chứ không nổ.
+
+Chạy lại bàn thử cũ: `dot247-giaobai` **16/16** · `dot250-assign` **59/59** · `dot246-flow` **37/37**
+· `dot246-forms` **9/9**.
+
+⛔ **BẪY BÀN THỬ (trả giá thật ở đợt này):** AWord **từ chối hai bài giao TRÙNG TÊN trong cùng một
+thư mục** (`assignmentNameTaken`). Bàn thử tạo 3 bài liền mà để tên tự dựng thì bài thứ 3 lặng lẽ
+không tạo được gì, và phép chờ marker treo tới hết giờ — trông y như code hỏng. Mỗi lần tạo phải
+đặt một cái tên khác.
+
+Backup `_backup/dot252/`. **Cặp chặt myLesson app v1.13.0** — đừng revert lẻ một bên.
+
+---
+
 ## Đợt 251 (24/8/2026) — ⛔ VÁ LỆCH 5px GIỮA HAI Ô + LÀM LẠI HỒ SƠ BÀN GIAO
 
 **Thầy bắt bằng mắt ngay sau Đợt 250** (gửi ảnh cắt hàng TEXT|VOICE + ô hai tầng ở chế độ VOICE):
