@@ -8,9 +8,13 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 254)** — ⭐ **`?giao=…&khung=1`: CHẾ ĐỘ NHÚNG cho pop-up
-> myLesson v1.15.0** (thầy chốt 24/8 tối kèm 2 ảnh: pop-up bên đó phải trông Y HỆT form Set
-> assignment). Chỉ THÊM: (1) `main.js` — có `&khung=` thì gắn thêm class `body.aw-khung-mode`;
+> Cập nhật lần cuối: **24/8/2026 (Đợt 254 + 254b)** — ⭐ **`?giao=…&khung=1`: CHẾ ĐỘ NHÚNG cho
+> pop-up myLesson v1.15.0/v1.15.1** (thầy chốt 24/8 tối kèm 2 ảnh: pop-up bên đó phải trông Y HỆT
+> form Set assignment). **254b (thầy bắt ở lần bấm tay đầu):** nền `aw-giao-nen` (cao 100vh, đứng
+> TRƯỚC form trong luồng) phải `display:none` trong khung mode — không thì form bị đẩy xuống dưới
+> một mảng trống có nút SET ASSIGNMENT; và bỏ `min-height:100vh` của dim gốc (form ngắn hơn
+> webview thì đẻ thanh cuộn ma). Bàn thử cũ LỌT ca nền vì trang thử `#app` rỗng không đi qua route
+> thật — nay `dot254-khung.html` **26/26 ĐẠT** (thêm 2 phép đo nền). Chỉ THÊM: (1) `main.js` — có `&khung=` thì gắn thêm class `body.aw-khung-mode`;
 > (2) `openModal` (core/assignment-ui.js) — pop-up GỐC (mở lúc `modalStack` RỖNG: form Set
 > assignment, màn QR sau START) đánh dấu `.aw-as-goc` NGAY LÚC MỞ (lúc đóng stack đã splice,
 > không suy ngược được), khi pop-up gốc đóng mà stack vẫn rỗng sau `setTimeout(0)` thì bắn marker

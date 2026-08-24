@@ -5,6 +5,27 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 254b (24/8/2026, tối muộn) — VÁ 2 CHỖ THẦY BẮT Ở LẦN BẤM TAY ĐẦU (cặp myLesson v1.15.1)
+
+Chỉ `core/app.css`, 2 dòng trong khối khung mode:
+
+1. ⛔⛔ **Nền "lỡ đóng form" (`aw-giao-nen`) phải GIẤU HẲN trong khung mode** — nó cao `100vh` và
+   đứng TRƯỚC form trong luồng trang (route `?giao=` dựng nền rồi mới mở form), nên form phẳng bị
+   đẩy tụt xuống dưới **một mảng trống cao cả màn hình có nút SET ASSIGNMENT** — thầy phải cuộn
+   mới thấy form. **Bàn thử 24 phép của Đợt 254 LỌT ca này** vì trang thử tự gọi
+   `openAssignmentSetup` với `#app` RỖNG — không đi qua route thật nên không có nền. Đã thêm 2
+   phép đo nền vào `dot254-khung.html` (**26/26 ĐẠT**) và dựng nền y thật trong `dot254-visual.html`.
+   📌 Bài học: **bàn thử phải dựng đủ NHỮNG GÌ ROUTE THẬT DỰNG** — gọi thẳng hàm là bỏ qua phần
+   khung cảnh quanh nó.
+2. **Bỏ `min-height:100vh` trên `.aw-as-dim.aw-as-goc`** — form NGẮN hơn webview thì nó đẻ vài px
+   tràn dọc = một thanh cuộn ma bên mép phải.
+
+Đo lại: form anagram phẳng cao **766px**, khớp khít webview của thẻ myLesson v1.15.1 (cao
+`min(960px,94vh)` ⇒ webview ≈ 815px trên màn 1080p — **cả ASSIGNMENT lẫn OPTIONS hiện trọn không
+cuộn**; màn thấp hơn thì form tự cuộn trong webview, chấp nhận).
+
+---
+
 ## Đợt 254 (24/8/2026) — ⭐ `?giao=…&khung=1`: CHẾ ĐỘ NHÚNG (cửa cho myLesson v1.15.0)
 
 **Thầy chốt 24/8 tối, kèm 2 ảnh so sánh:** pop-up tạo bài giao bên myLesson phải trông **Y HỆT

@@ -6913,7 +6913,9 @@ body.aw-giao-mode .aw-as-modal{max-height:none; box-shadow:0 14px 40px rgba(10,1
    thẻ nổi trên nền mờ — đè cả luật aw-giao-mode ngay trên đây. */
 body.aw-khung-mode .aw-as-dim.aw-as-goc{
   position:static; padding:0; background:#fff; backdrop-filter:none;
-  display:block; min-height:100vh; opacity:1; transition:none;
+  display:block; opacity:1; transition:none;
+  /* ⛔ đừng đắp min-height:100vh — form ngắn hơn webview thì nó đẻ ra vài px
+     tràn dọc = một thanh cuộn ma bên mép phải (Đợt 254b, thầy soi ra) */
 }
 body.aw-khung-mode .aw-as-dim.aw-as-goc .aw-as-modal{
   width:100%; max-height:none; border-radius:0; box-shadow:none;
@@ -6927,6 +6929,9 @@ body.aw-khung-mode .aw-as-dim:not(.aw-as-goc){
 body.aw-khung-mode .aw-as-dim:not(.aw-as-goc) .aw-as-modal{
   max-height:88vh; border-radius:20px; box-shadow:0 24px 60px rgba(10,18,30,.4);
 }
-/* Nền "lỡ đóng form" trắng cho khỏi lộ mảng xám trong webview — myLesson tự
-   đóng theo marker DONG, nút SET ASSIGNMENT dưới này chỉ là lưới an toàn. */
-body.aw-khung-mode .aw-giao-nen{background:#fff}
+/* ⛔ Đợt 254b — nền "lỡ đóng form" GIẤU HẲN trong khung mode: nó cao 100vh và
+   đứng TRƯỚC form trong luồng trang, để lại là form bị đẩy xuống dưới một mảng
+   trống có nút SET ASSIGNMENT (thầy bắt được ngay lần bấm tay đầu, 24/8 tối).
+   Đường "mở lại" không cần ở đây — đóng form là marker DONG đóng cả pop-up
+   myLesson. Chế độ ?giao= thường (không &khung=) vẫn giữ nền + nút như cũ. */
+body.aw-khung-mode .aw-giao-nen{display:none}
