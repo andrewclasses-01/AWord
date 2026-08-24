@@ -171,6 +171,13 @@ const modalStack = [];
 function openModal(size, build) {
   const dim = el("div", "aw-as-dim");
   const modal = el("div", "aw-as-modal" + (size ? " aw-as-" + size : ""));
+  // ⭐ Đợt 254 — chế độ NHÚNG (?giao=…&khung=1, body.aw-khung-mode): pop-up GỐC
+  // (mở lúc chưa có pop-up nào — form Set assignment, rồi màn QR sau START) vẽ
+  // PHẲNG TRÀN MÉP cho khớp vỏ thẻ trắng myLesson vẽ quanh webview; picker xếp
+  // CHỒNG (class/template) giữ nguyên dạng thẻ nổi. Đánh dấu NGAY LÚC MỞ vì lúc
+  // đóng stack đã bị splice, không suy ngược được nữa.
+  const khungGoc = document.body.classList.contains("aw-khung-mode") && modalStack.length === 0;
+  if (khungGoc) dim.classList.add("aw-as-goc");
   let closed = false;
   const close = () => {
     if (closed) return;
@@ -178,6 +185,14 @@ function openModal(size, build) {
     document.removeEventListener("keydown", onKey);
     const at = modalStack.indexOf(close);
     if (at >= 0) modalStack.splice(at, 1);
+    // ⭐ Đợt 254 — pop-up GỐC đóng mà KHÔNG có pop-up gốc mới mọc lên ngay thì
+    // báo myLesson đóng cả pop-up bên đó. setTimeout(0) là bắt buộc: đường START
+    // đóng form rồi mở màn QR NGAY trong cùng một lượt (close() →
+    // openAssignmentShare()), phải nhường cho lượt mở-liền kịp đẩy vào stack —
+    // không thì marker bắn nhầm và myLesson nuốt mất màn QR.
+    if (khungGoc) setTimeout(() => {
+      if (!modalStack.length) { try { console.log("MYACT:AW:GIAO:DONG"); } catch (_) {} }
+    }, 0);
     dim.classList.remove("is-on");
     setTimeout(() => dim.remove(), 200);     // fade out; opacity only (see rule 12)
   };

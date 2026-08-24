@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 253)** — ⭐ **URL `?giao=<num>&lop=&td=`: form Set
+> Cập nhật lần cuối: **24/8/2026 (Đợt 254)** — ⭐ **`?giao=…&khung=1`: CHẾ ĐỘ NHÚNG cho pop-up
+> myLesson v1.15.0** (thầy chốt 24/8 tối kèm 2 ảnh: pop-up bên đó phải trông Y HỆT form Set
+> assignment). Chỉ THÊM: (1) `main.js` — có `&khung=` thì gắn thêm class `body.aw-khung-mode`;
+> (2) `openModal` (core/assignment-ui.js) — pop-up GỐC (mở lúc `modalStack` RỖNG: form Set
+> assignment, màn QR sau START) đánh dấu `.aw-as-goc` NGAY LÚC MỞ (lúc đóng stack đã splice,
+> không suy ngược được), khi pop-up gốc đóng mà stack vẫn rỗng sau `setTimeout(0)` thì bắn marker
+> **`MYACT:AW:GIAO:DONG`** — myLesson nghe để đóng cả pop-up bên đó; `setTimeout(0)` là BẮT BUỘC
+> vì đường START đóng form rồi mở màn QR NGAY trong cùng một lượt, bắn sớm là myLesson nuốt mất
+> màn QR; (3) CSS — `.aw-as-goc` vẽ PHẲNG TRÀN MÉP (position static, không nền/bo/bóng, ẩn
+> `.aw-as-head` vì vỏ myLesson vẽ đầu đề), picker xếp CHỒNG (không `.aw-as-goc`) trả lại dạng thẻ
+> nổi; lề trái-phải 22px của `.aw-as-modal` là mốc căn hàng với khối tiêu đề bên myLesson — đổi là
+> phải đổi CÙNG bên đó. ⛔ Không `&khung=` ⇒ y hệt Đợt 253; `?a=`/bridge/myActivity không đổi.
+> Bàn thử `scratch/dot254-khung.html` **24/24 ĐẠT** (+ `dot254-visual.html` xem mắt). Backup
+> `_backup/dot254/`. ⛔ **Cặp chặt myLesson app v1.15.0** — đừng revert lẻ một bên.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 253)** — ⭐ **URL `?giao=<num>&lop=&td=`: form Set
 > assignment ĐỨNG MỘT MÌNH trên nền trống** (cửa cho myLesson v1.14.0 — thầy chốt pop-up bên đó
 > không được bày trang game sau lưng form). Chỉ THÊM một route trong `main.js` + CSS
 > `body.aw-giao-mode`: form `openAssignmentSetup` THẬT trên act GỐC (luật `sourceAct` Đợt 250 +

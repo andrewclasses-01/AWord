@@ -232,6 +232,15 @@ async function routeFromLocation() {
       try { tpl = await ensureTemplate(node.type); } catch (e) { /* rơi xuống trang chủ */ }
       if (tpl && !tpl.noAssignment) {
         document.body.classList.add("aw-giao-mode");
+        // ⭐ Đợt 254 — &khung=1: CHẾ ĐỘ NHÚNG cho pop-up myLesson v1.15.0. Vỏ
+        // thẻ trắng + đầu đề + khối TIÊU ĐỀ do myLesson vẽ ngay trên webview,
+        // nên bên này pop-up GỐC (form Set assignment, màn QR) vẽ PHẲNG TRÀN
+        // MÉP — không nền xám, không bo góc, không đầu đề riêng (CSS
+        // body.aw-khung-mode + .aw-as-goc, đánh dấu trong openModal của
+        // core/assignment-ui.js). Đóng pop-up gốc mà không mọc pop-up gốc mới
+        // là bắn marker MYACT:AW:GIAO:DONG để myLesson đóng cả pop-up bên đó.
+        // Không &khung= ⇒ y hệt Đợt 253 — myActivity/link cũ không đổi gì.
+        if (p.get("khung")) document.body.classList.add("aw-khung-mode");
         const moForm = () => openAssignmentSetup(node, {
           lop: p.get("lop") || "",
           tieuDe: p.get("td") || "",

@@ -2396,6 +2396,17 @@ Marker: `MYACT:AW:ASSIGN:{"code","title","bo","boTen","mauType","mauTen"}` — b
 (myLesson gọi vào, và thầy tự bấm nút Set assignment). ⛔ **Đừng đổi tên marker, đừng bỏ 2 khoá
 cũ `code`/`title`** — myLesson đang đọc đúng chúng.
 
+**⭐ Đợt 254 — `?giao=…&khung=1` (CHẾ ĐỘ NHÚNG) + marker `MYACT:AW:GIAO:DONG`.** Có `&khung=`
+thì `body` mang thêm `aw-khung-mode`: pop-up GỐC (mở lúc `modalStack` RỖNG — form Set assignment,
+màn QR sau START) được `openModal` đánh dấu `.aw-as-goc` **ngay lúc mở** và CSS vẽ nó PHẲNG TRÀN
+MÉP (ẩn cả `.aw-as-head` — vỏ myLesson vẽ đầu đề thay); picker xếp chồng vẫn là thẻ nổi. Khi
+pop-up gốc ĐÓNG mà sau `setTimeout(0)` stack vẫn rỗng thì bắn `MYACT:AW:GIAO:DONG` — myLesson
+nghe để đóng pop-up bên đó. ⛔ Ba thứ đừng "dọn": (1) `setTimeout(0)` — đường START đóng form rồi
+mở màn QR trong CÙNG một lượt, bắn sớm là myLesson nuốt mất màn QR; (2) đánh dấu lúc MỞ chứ đừng
+suy lúc đóng — lúc đóng stack đã splice; (3) lề 22px của `.aw-as-modal` trong khung mode là mốc
+căn hàng với khối tiêu đề bên myLesson (`.aw-card.giao`), đổi là đổi CẶP. Không `&khung=` ⇒ y hệt
+Đợt 253.
+
 ⛔ **Hai bài giao TRÙNG TÊN trong cùng một thư mục bị TỪ CHỐI** (`assignmentNameTaken`). Bàn thử
 tạo nhiều bài liên tiếp phải đặt tên khác nhau, không thì bài sau lặng lẽ không ra đời và phép
 chờ marker treo tới hết giờ — trông hệt như code hỏng.

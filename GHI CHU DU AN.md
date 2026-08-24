@@ -5,6 +5,44 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 254 (24/8/2026) — ⭐ `?giao=…&khung=1`: CHẾ ĐỘ NHÚNG (cửa cho myLesson v1.15.0)
+
+**Thầy chốt 24/8 tối, kèm 2 ảnh so sánh:** pop-up tạo bài giao bên myLesson phải trông **Y HỆT
+form Set assignment của AWord** — một thẻ trắng dọc duy nhất, không phải "thẻ kính ngang to bọc
+một thẻ trắng nhỏ nổi trên nền xám" như v1.14.0. Muốn vậy thì phần trong webview phải THÔI tự vẽ
+vỏ: vỏ (thẻ trắng, đầu đề, nút ✕, khối TIÊU ĐỀ) chuyển sang cho myLesson vẽ, AWord chỉ đưa RUỘT.
+
+**Cửa mới — cả ba chỗ đều chỉ THÊM:**
+
+- `main.js` (route `?giao=`): có `&khung=1` thì gắn thêm class `body.aw-khung-mode` (nằm CẠNH
+  `aw-giao-mode`, không thay). Không `&khung=` ⇒ y hệt Đợt 253.
+- `core/assignment-ui.js` (`openModal`): trong khung mode, pop-up mở lúc `modalStack` RỖNG là
+  **pop-up GỐC** — đánh dấu `.aw-as-goc` **ngay lúc mở** (lúc đóng stack đã splice, không suy
+  ngược được). Form Set assignment và màn QR sau START đều là pop-up gốc; picker class/template
+  xếp CHỒNG thì không. Khi pop-up gốc đóng mà sau `setTimeout(0)` stack vẫn rỗng ⇒ bắn marker
+  **`MYACT:AW:GIAO:DONG`** — myLesson nghe để đóng pop-up bên nó (BACK / ✕ / Escape / DONE).
+  ⛔⛔ `setTimeout(0)` là BẮT BUỘC: đường START `close()` rồi `openAssignmentShare()` NGAY trong
+  cùng một lượt — bắn marker đồng bộ là myLesson đóng pop-up trước khi màn QR kịp hiện (và trước
+  cả khi marker ASSIGN kịp truyền ra ngoài webview).
+- `core/app.css`: `.aw-as-dim.aw-as-goc` trong khung mode vẽ PHẲNG TRÀN MÉP — position static,
+  nền trắng, không bo/bóng, `opacity:1;transition:none` (hết fade — trong webview fade chỉ là
+  chớp), **ẩn `.aw-as-head`** (đầu đề "Set assignment"/"Assignment created" + nút ✕ do vỏ
+  myLesson vẽ); dim KHÔNG-goc trả lại đúng dạng thẻ nổi trên nền mờ (đè luật `aw-giao-mode`).
+  ⚠️ **Lề trái-phải 22px của `.aw-as-modal` là mốc căn hàng** với khối tiêu đề `.aw-card.giao`
+  bên myLesson — đổi số này là phải đổi CẶP hai kho.
+
+**Bàn thử `scratch/dot254-khung.html` — 24/24 ĐẠT** (form phẳng đủ 5 phép đo · picker chồng vẫn
+nổi + Escape chỉ đóng picker · marker DONG đúng cả 3 đường: BACK bắn, DONE màn QR bắn, form-đóng-
+mở-QR-liền-tay KHÔNG bắn · điền sẵn `&lop=`/`&td=` giữ nếp 247/252 · không `&khung=` y hệt 253).
+Phép "tràn hết bề ngang" lúc đầu TRƯỢT OAN vì so với `clientWidth` — thanh cuộn dọc mọc ra lúc
+options nạp xong làm số đó đổi 15px giữa chừng ⇒ so với chính khung chứa (dim). Xem mắt:
+`scratch/dot254-visual.html` (cũng là ruột iframe khi soi vỏ bên myLesson). Backup `_backup/dot254/`.
+
+⛔ **Cặp chặt myLesson app v1.15.0** (commit bên đó ghi trong `GHI CHU DU AN.md` của myLesson) —
+đừng revert lẻ một bên. ⚠️ Chưa bấm tay máy thật (đường đăng nhập Google chỉ thầy thử được).
+
+---
+
 ## Đợt 253 (24/8/2026) — ⭐ URL `?giao=`: FORM SET ASSIGNMENT ĐỨNG MỘT MÌNH (cửa cho myLesson v1.14.0)
 
 **Thầy thử tay v1.13.0 bên myLesson và chốt:** pop-up tạo bài giao không được bày cả TRANG GAME

@@ -6902,3 +6902,31 @@ body.aw-giao-mode .aw-as-dim{
   align-items:flex-start;                 /* form dài hơn khung webview thì cuộn từ ĐỈNH */
 }
 body.aw-giao-mode .aw-as-modal{max-height:none; box-shadow:0 14px 40px rgba(10,18,30,.18)}
+
+/* ⭐ Đợt 254 — ?giao=…&khung=1 (body.aw-khung-mode): CHẾ ĐỘ NHÚNG cho pop-up
+   myLesson v1.15.0. Pop-up GỐC (.aw-as-goc — form Set assignment, màn QR sau
+   START) vẽ PHẲNG TRÀN MÉP: myLesson vẽ vỏ thẻ trắng + đầu đề + khối TIÊU ĐỀ
+   của nó ngay trên webview, nên bên này không nền xám / bo góc / bóng / đầu đề
+   riêng — hai nửa ghép lại nhìn như MỘT thẻ. Lề TRÁI-PHẢI của .aw-as-modal
+   (22px) là mốc căn thẳng hàng với khối tiêu đề bên myLesson — đổi số này thì
+   phải đổi CÙNG bên đó. Picker xếp chồng (KHÔNG mang .aw-as-goc) trả lại dạng
+   thẻ nổi trên nền mờ — đè cả luật aw-giao-mode ngay trên đây. */
+body.aw-khung-mode .aw-as-dim.aw-as-goc{
+  position:static; padding:0; background:#fff; backdrop-filter:none;
+  display:block; min-height:100vh; opacity:1; transition:none;
+}
+body.aw-khung-mode .aw-as-dim.aw-as-goc .aw-as-modal{
+  width:100%; max-height:none; border-radius:0; box-shadow:none;
+  padding:4px 22px 18px;
+}
+body.aw-khung-mode .aw-as-dim.aw-as-goc .aw-as-head{display:none}
+body.aw-khung-mode .aw-as-dim:not(.aw-as-goc){
+  position:fixed; inset:0; padding:24px; align-items:center;
+  background:rgba(12,20,32,.55); backdrop-filter:blur(6px);
+}
+body.aw-khung-mode .aw-as-dim:not(.aw-as-goc) .aw-as-modal{
+  max-height:88vh; border-radius:20px; box-shadow:0 24px 60px rgba(10,18,30,.4);
+}
+/* Nền "lỡ đóng form" trắng cho khỏi lộ mảng xám trong webview — myLesson tự
+   đóng theo marker DONG, nút SET ASSIGNMENT dưới này chỉ là lưới an toàn. */
+body.aw-khung-mode .aw-giao-nen{background:#fff}
