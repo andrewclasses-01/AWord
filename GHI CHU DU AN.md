@@ -5,6 +5,58 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 249 (24/8/2026) — CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT (đo bằng số, không ước lượng)
+
+**Bối cảnh:** ngay sau Đợt 248 thầy hỏi "cân đối 2 hình · chữ PRACTICE với icon · chữ SUBMIT với
+icon — đã chuẩn chưa". Đo thật trên trang (ô icon 106,3px) thì **cả 3 mục đều chưa chuẩn**, và 2/3
+là lỗi có sẵn từ Đợt 246 chứ không do icon mới:
+
+| | PRACTICE | SUBMIT |
+|---|---|---|
+| hình vẽ thật | 106 × 106 px (đĩa tròn 92,6) | 57 × 67 px |
+| đáy hình → chữ | 14 px | **36 px** |
+| lệch tâm ngang | 0 | **+11,8 px sang phải** |
+
+Gốc bệnh của cột SUBMIT: `playBig` **vốn vẽ cho nút tròn `.aw-bigplay`** — trong hình tròn thì tam
+giác trỏ phải PHẢI đặt lệch phải mới nhìn cân. Đợt 246 mượn nguyên nó cho nút SUBMIT (không có hình
+tròn, lại có chữ ngay dưới) nên cái lệch đó lòi ra, kèm hình quá nhỏ so với ô.
+
+Thầy xem 3 hàng dựng thử (hiện tại / A / B) rồi chốt **"A — cân theo đĩa tròn"**.
+
+Sửa **2 file**: `core/icons.js` · `core/engine.js`. Backup `_backup/dot249/`.
+
+**1) `core/icons.js` — `practiceBig` bọc thêm `<g transform="translate(0.855 0.855) scale(0.93069)">`**
+(thu 6,9%, đặt lại giữa ô). Đường vẽ KHÔNG động tới — chỉ thêm một lớp `<g>`.
+
+**2) `core/icons.js` — icon MỚI `submitBig`**: vẫn đúng hình tam giác của `playBig`, chỉ **đóng
+khung lại** bằng `<g transform="translate(-6.915 -1.306) scale(1.29005)">` (to 1,29× + về đúng tâm
+ô + hạ xuống cho cùng tâm với đĩa bia). ⚠️ **Không sinh ra từ `playBig` lúc chạy** — nếu sau này
+vẽ lại `playBig` thì phải chép `d` mới sang đây. `.aw-bigplay` (nút play to của thầy) **vẫn dùng
+`playBig` y như cũ, không đụng một chút nào**.
+
+**3) `core/engine.js` — một chữ**: nút SUBMIT trong cặp nút học sinh đổi `icons.playBig` →
+`icons.submitBig`. Chỗ khác gọi `playBig` giữ nguyên.
+
+**Số đo SAU khi sửa** (đo lại trên trang, cùng ô 106,3px):
+
+- đĩa bia **86,3 px** = tam giác **86,3 px** (bằng nhau tuyệt đối)
+- tâm đứng của đĩa và của tam giác lệch nhau **0,1 px** (coi như trùng)
+- đáy hình → chữ: **14,0 px cả hai bên** (trước là 14 và 36)
+- tam giác lệch tâm ngang: **0 px** (trước +11,8)
+- mũi tên cách mép trên ô 7,3 px · tam giác cách mép dưới 7,3 px (không bị cắt)
+
+⚠️ **Cố ý chấp nhận một điểm lệch:** đĩa bia nằm **lệch trái 6,2 px** so với tâm ô, vì cái được căn
+giữa là TOÀN HÌNH (đĩa + mũi tên chĩa lên phải). Muốn căn theo riêng đĩa thì mép phải mũi tên vượt
+`viewBox` (24,54 > 24) và **bị cắt cụt** — SVG gốc mặc định `overflow:hidden`. 6,2 px trên 106 px
+là 6%, và mũi tên kéo mắt sang phải nên nhìn vẫn cân.
+
+**Bàn thử:** `scratch/dot246-flow.html` chạy lại **37/37 ĐẠT, 0 lỗi trang, 0 lỗi console** (F2 xác
+nhận màn THẦY vẫn là nút play cũ) · nhìn mắt `scratch/dot246-visual.html`.
+📌 **Đính chính hồ sơ Đợt 248**: chỗ ghi "34/34 ĐẠT" là do em đọc bảng **lúc bàn thử đang chạy dở**;
+con số đúng khi chạy xong là **37/37** — đã sửa lại ở cả hai file ghi chú.
+
+---
+
 ## Đợt 248 (24/8/2026) — icon nút PRACTICE: quả tạ → BIA BẮN (target + mũi tên)
 
 **Bối cảnh:** thầy đưa ảnh `icon target.png` (trên Desktop máy thầy) và chốt qua
@@ -38,7 +90,7 @@ PRACTICE/SUBMIT của Đợt 246 · màn "Start with mistakes" (vẫn chỉ 1 n�
 · template · luật Firestore · trang học sinh.
 
 **Bàn thử:** không viết bàn thử mới — Đợt 246 đã có sẵn đúng chỗ cần. Chạy lại trên cổng 5648:
-`scratch/dot246-flow.html` **34/34 ĐẠT, 0 TRƯỢT, 0 lỗi console** (gồm F1 "có đủ 2 nút
+`scratch/dot246-flow.html` **37/37 ĐẠT, 0 TRƯỢT, 0 lỗi console** (gồm F1 "có đủ 2 nút
 PRACTICE + SUBMIT", F5 "ván mistakes chỉ 1 nút PRACTICE") · `scratch/dot246-visual.html` nhìn
 mắt màn READY 2 nút, đã phóng 3× soi viền: mượt, không lộ cạnh đa giác. `node` nạp thử
 `core/icons.js` OK (chuỗi template không vỡ).

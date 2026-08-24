@@ -1865,7 +1865,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     practiceBtn = mkStart("is-practice", icons.practiceBig, "PRACTICE", "Practice — not sent to your teacher");
     duo.append(practiceBtn);
     if (!activity._mistakes) {
-      submitStartBtn = mkStart("is-submit", icons.playBig, "SUBMIT", "Submit — sent to your teacher");
+      submitStartBtn = mkStart("is-submit", icons.submitBig, "SUBMIT", "Submit — sent to your teacher");
       duo.append(submitStartBtn);
     }
     playControl = duo;

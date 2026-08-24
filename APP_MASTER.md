@@ -8,7 +8,20 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 248)** — **ICON NÚT PRACTICE: QUẢ TẠ → BIA BẮN**
+> Cập nhật lần cuối: **24/8/2026 (Đợt 249)** — **CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT**
+> (thầy hỏi "đã chuẩn chưa", đo ra cả 3 mục đều lệch; thầy chốt phương án **A — cân theo đĩa
+> tròn**). Sửa 2 file: `core/icons.js` (`practiceBig` bọc `<g scale .93069>`; **icon mới
+> `submitBig`** = đúng hình `playBig` nhưng đóng khung lại `<g translate(-6.915 -1.306)
+> scale(1.29005)>`) · `core/engine.js` (nút SUBMIT của cặp nút HS dùng `submitBig`).
+> Kết quả đo: đĩa bia **86,3px = tam giác 86,3px**, tâm đứng lệch 0,1px, đáy hình → chữ
+> **14,0px cả hai bên** (trước 14 / 36), tam giác hết lệch tâm (trước +11,8px).
+> ⛔ **`.aw-bigplay` — nút play TO của thầy — vẫn dùng `playBig`, KHÔNG đụng**; `playBig` lệch
+> phải là CỐ Ý vì nó vẽ cho nút TRÒN. ⚠️ `submitBig` không sinh từ `playBig` lúc chạy: vẽ lại
+> `playBig` thì phải chép `d` sang. Bàn thử `scratch/dot246-flow.html` **37/37 ĐẠT, 0 lỗi
+> console**. Backup `_backup/dot249/`. ⚠️ chưa bấm tay trên máy HS thật.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 248)** — **ICON NÚT PRACTICE: QUẢ TẠ → BIA BẮN**
 > (thầy đưa ảnh `icon target.png`, chốt "Vẽ lại thành SVG" + "Đổi bóng sang đỏ", rồi gõ
 > "ok build"). Đợt **thuần hình thức, 0 thay đổi hành vi**. Sửa 2 file: `core/icons.js`
 > (`practiceBig` — bia bắn 4 vòng + mũi tên, 8 path phẳng dò thẳng từ ảnh PNG của thầy bằng
@@ -16,7 +29,7 @@
 > (2 dòng `.is-practice`: `color` → `#fd646f`, `drop-shadow` → `rgba(252,71,85,.32)`).
 > ⛔⛔ **BẪY: `practiceBig` là icon DUY NHẤT không dùng `currentColor`** — sửa `color:` trong
 > CSS sẽ KHÔNG đổi được màu nó, phải sửa `fill=` trong chính đường vẽ. Bàn thử cũ của Đợt 246
-> chạy lại: `scratch/dot246-flow.html` **34/34 ĐẠT, 0 lỗi console**; nhìn mắt qua
+> chạy lại: `scratch/dot246-flow.html` **37/37 ĐẠT, 0 lỗi console**; nhìn mắt qua
 > `scratch/dot246-visual.html`. Backup `_backup/dot248/`. ⚠️ chưa bấm tay trên máy HS thật.
 >
 > ---

@@ -205,6 +205,22 @@ export const icons = {
     <path d="M8.2 5.6c0-1.4 1.5-2.2 2.7-1.5l9.4 5.8c1.1.7 1.1 2.3 0 3l-9.4 5.8c-1.2.7-2.7-.1-2.7-1.5V5.6z"/>
   </svg>`,
 
+  // SUBMIT half of the same student start screen (Đợt 249). SAME picture as
+  // `playBig` — only RE-FRAMED. `playBig` was drawn for the round `.aw-bigplay`
+  // button, where a right-pointing triangle must sit right-of-centre to LOOK
+  // centred inside its circle; borrowed for the duo (no circle, a word directly
+  // underneath) that same offset just reads as crooked, and the shape only filled
+  // 57×67 of its 106px box next to a target that filled all 106.
+  // The `<g>` scales it 1.29× and re-centres it on the box, so bia bắn and tam
+  // giác end up the same optical height (86px) with the SAME gap down to their
+  // label. ⚠️ Not derived from `playBig` at runtime — if that path is ever
+  // redrawn, copy the new `d` here too.
+  submitBig: `<svg viewBox="0 0 24 24" fill="currentColor">
+    <g transform="translate(-6.915 -1.306) scale(1.29005)">
+      <path d="M8.2 5.6c0-1.4 1.5-2.2 2.7-1.5l9.4 5.8c1.1.7 1.1 2.3 0 3l-9.4 5.8c-1.2.7-2.7-.1-2.7-1.5V5.6z"/>
+    </g>
+  </svg>`,
+
   // Giant TARGET + ARROW — the PRACTICE half of the student start screen.
   // Đợt 248 (thầy đưa ảnh `icon target.png`): the amber dumbbell of Đợt 246 is gone;
   // "luyện tập" now reads as hitting the bullseye. Traced from thầy's PNG by
@@ -213,6 +229,7 @@ export const icons = {
   // purpose: unlike every other icon here it is NOT `currentColor`, so the CSS
   // rule `.is-practice .aw-startbtn-ic { color: ... }` no longer tints it.
   practiceBig: `<svg viewBox="0 0 24 24" fill="none">
+    <g transform="translate(0.855 0.855) scale(0.93069)">
     <path fill="#FD646F" d="M12.33 3.14L9.75 3L8.34 3.19L6.7 3.66L4.97 4.5L3.56 5.53L2.06 7.12L1.27 8.34L0.33 10.59L0 12.28L0 14.72L0.33 16.41L1.27 18.66L2.06 19.88L2.91 20.77L4.73 21.94L6.38 22.59L8.16 22.97L10.36 23.02L13.03 22.45L14.67 21.7L16.17 20.67L17.34 19.55L18.38 18.14L17.3 17.34L16.41 18.66L15.33 19.69L14.2 20.44L12.28 21.19L9.75 21.38L7.59 20.86L5.95 19.97L4.5 18.66L3.14 16.45L2.58 14.16L2.58 12.84L2.86 11.34L3.98 9L5.77 7.17L7.73 6.09L9.8 5.62L11.06 5.62L12.61 5.91L14.11 6.52L15.28 7.31L16.36 6.38L16.08 4.59L14.2 3.66ZM13.5 9.05L11.67 8.25L9.8 8.16L7.78 8.81L6.28 10.08L5.77 10.83L5.25 12.09L5.11 14.16L5.77 16.17L6.8 17.48L6.84 17.2L8.72 17.86L10.55 17.81L12.19 17.2L13.55 16.08L13.64 15.8L12.61 15.28L13.17 13.97L12.61 15.14L12.05 15.66L11.25 16.08L10.03 16.17L8.86 15.66L8.11 14.81L7.78 13.92L7.92 12.56L8.86 11.34L10.03 10.83L10.88 10.83L11.67 11.06L13.55 9.19ZM17.62 7.64L16.69 8.58L17.81 10.64L18.33 12.8L18.14 15.33L17.44 17.2L18.09 15.89L19.08 16.36L19.31 16.31L19.97 13.36L19.92 11.2L19.41 9L18.84 7.78ZM14.48 10.78L12.94 12.33L13.12 13.83L13.31 13.64L14.58 14.2L14.86 12.28ZM7.03 17.58L8.34 18.47L9.61 18.8L7.69 18.05ZM13.92 17.53L13.22 18.05L11.77 18.7L13.22 18.14ZM15.66 14.81L15 16.27L14.48 16.97L15.09 16.27ZM14.81 10.45L15.75 12.66L15.42 11.39Z"/>
     <path fill="#FC4755" d="M19.36 7.88L18.84 7.83L19.5 9.52L19.88 11.3L19.92 13.27L19.64 15.05L19.17 16.31L18 15.8L17.25 17.58L18.28 18.14L17.3 19.45L15.84 20.81L14.58 21.66L12.33 22.59L10.73 22.92L8.72 22.97L7.17 22.73L5.67 22.27L4.31 21.61L2.67 20.48L2.77 20.72L4.12 21.94L5.53 22.83L7.36 23.58L9.14 23.95L11.72 23.95L13.22 23.67L15 23.02L16.78 21.94L18.14 20.72L19.31 19.22L20.34 17.16L20.81 15.42L20.95 14.3L20.81 11.58L20.34 9.84ZM14.95 10.55L14.77 10.5L14.53 10.73L14.81 12.38L14.58 14.06L13.17 13.55L12.98 14.48L12.52 15.38L13.55 15.89L12.66 16.78L11.16 17.58L9.61 17.86L8.3 17.72L6.42 16.83L6.38 17.02L7.64 18.09L8.62 18.56L9.94 18.84L11.81 18.7L13.73 17.77L15.05 16.31L15.75 14.39L15.66 12.14Z"/>
     <path fill="#F5F5F5" d="M12.61 5.86L9.98 5.58L8.3 5.86L7.03 6.33L5.3 7.45L4.17 8.62L3.28 10.08L2.81 11.34L2.53 13.03L2.58 14.48L2.91 15.98L3.47 17.3L4.41 18.66L6.19 19.78L8.62 20.44L10.36 20.44L11.77 20.16L14.16 18.98L16.03 17.06L15.98 16.88L14.86 16.45L13.88 17.58L12.52 18.42L10.73 18.84L9.47 18.75L8.39 18.42L7.03 17.58L6.19 16.69L5.34 15.05L5.11 13.78L5.34 11.95L6.19 10.31L7.27 9.23L8.62 8.48L10.17 8.16L12 8.39L13.55 9.14L15.33 7.36L14.25 6.52ZM10.08 10.78L9 11.16L8.34 11.72L7.83 12.66L7.73 13.88L8.11 14.95L8.67 15.61L9.66 16.12L10.83 16.22L11.91 15.84L12.47 15.28L10.12 14.2L9.8 13.88L9.66 13.5L9.8 12.94L11.58 11.11L11.11 10.83ZM16.45 8.86L14.86 10.55L15.38 11.44L15.7 12.52L15.8 13.78L15.66 14.77L16.92 15.28L17.39 13.41L17.39 11.67L17.16 10.41ZM12.89 12.42L12.23 13.17L13.17 13.55Z"/>
@@ -221,6 +238,7 @@ export const icons = {
     <path fill="#918291" d="M21.94 1.83L21.66 1.69L20.77 1.83L16.41 6.19L16.27 6L16.41 6.19L9.8 12.8L9.66 13.69L10.08 14.25L10.73 14.39L10.08 14.11L22.08 2.11Z"/>
     <path fill="#2B597F" d="M18.47 1.03L17.77 1.64L18.23 4.41L18.89 3.84ZM19.64 5.77L22.36 6.19L22.92 5.53L20.25 5.06Z"/>
     <path fill="#50758D" d="M23.95 4.31L21.33 3.94L17.72 7.64L19.97 8.06L20.53 8.02L22.31 6.14L19.78 5.67L20.3 5.16L22.97 5.58L23.95 4.59ZM17.86 1.69L15.94 3.52L16.31 6.28L18.28 4.45ZM19.69 0L19.41 0L18.42 0.98L18.84 3.8L20.06 2.67Z"/>
+    </g>
   </svg>`,
 
   // Big WHITE check with dark outline (flies up on a correct answer)
