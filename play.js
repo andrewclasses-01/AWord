@@ -183,6 +183,18 @@ async function play(assignment, studentName, className) {
   // attempt (same fixed id — a re-send can never create a second row). Both
   // resolve {ok:boolean} and never reject; see core/assignments.js.
   let attempt = null;
+  // Đợt 257 — xem chú thích ở `submit` bên dưới. Trả lại NGUYÊN promise gốc:
+  // đường nộp/nộp lại không đổi một li nào, tin báo chỉ là người đứng nghe.
+  const baoNopChoTrangMe = (giao) => {
+    giao.then((kq) => {
+      if (!kq || !kq.ok || window.parent === window) return;
+      try {
+        window.parent.postMessage(
+          { type: "AWORD:NOP", code: assignment.code, name: studentName }, "*");
+      } catch (_) { /* trang mẹ khó tính thì thôi, việc nộp đã xong rồi */ }
+    }).catch(() => {});
+    return giao;
+  };
   startGame(app, activity, {
     session: {
       playerName: studentName,
@@ -191,11 +203,21 @@ async function play(assignment, studentName, className) {
       // What the screenshot fallback board prints (engine side, Đợt 246).
       meta: { assignmentTitle: assignment.title || "", code: assignment.code },
 
+      // ⭐ Đợt 257 — TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ: bài mở trong
+      // iframe của myLesson web (&nhung=1) thì sau khi server XÁC NHẬN đủ hai
+      // document, bắn postMessage {type:'AWORD:NOP', code, name} lên window.parent
+      // — bên đó nghe để tự làm mới leaderboard của đúng act (một lượt đọc, khỏi
+      // chờ cache 60s). Payload toàn dữ liệu vốn công khai (mã bài + tên trên
+      // bảng điểm) nên target '*'; trang mẹ tự lọc theo origin của CHÍNH TA.
+      // Không nhúng (mở tab thường, parent === window) thì không bắn gì.
+      // ⛔ Chỉ bắn khi kq.ok — nộp treo/hỏng mà báo là bảng bên kia làm mới vô ích.
       submit: ({ score, total, timeMs, review }) => {
         attempt = queueAttempt({ code: assignment.code, studentName, score, total, timeMs, review });
-        return sendAttempt(attempt);
+        return baoNopChoTrangMe(sendAttempt(attempt));
       },
-      retrySubmit: () => attempt ? sendAttempt(attempt) : Promise.resolve({ ok: false }),
+      retrySubmit: () => attempt
+        ? baoNopChoTrangMe(sendAttempt(attempt))
+        : Promise.resolve({ ok: false }),
       attemptId: () => attempt ? attempt.attemptId : "",
 
       // The class ranking: each student's BEST attempt, best score first and,
