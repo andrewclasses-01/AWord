@@ -6801,6 +6801,12 @@ html.aw-nhung .aw-below { display: none; }
 .aw-as-cell .aw-as-deadline { gap: 10px; flex-wrap: nowrap; }
 .aw-as-cell .aw-as-date { flex: 1 1 0; min-width: 0; }
 
+/* ⭐ Đợt 255 — nhãn "Assignment title" và ô tích "Show answers" chung MỘT hàng
+   (thầy: ô đó ít dùng, nép phải cho tiết kiệm diện tích). */
+.aw-as-titlehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.aw-as-titlehead .aw-as-label { margin: 0; }
+.aw-as-titlehead .aw-as-check { margin: 0; }
+
 /* Class field + its picker button, welded into one control. */
 .aw-as-pick { display: flex; align-items: stretch; gap: 6px; }
 .aw-as-pick .aw-as-input { flex: 1 1 auto; min-width: 0; }
@@ -6929,6 +6935,11 @@ body.aw-khung-mode .aw-as-dim:not(.aw-as-goc){
 body.aw-khung-mode .aw-as-dim:not(.aw-as-goc) .aw-as-modal{
   max-height:88vh; border-radius:20px; box-shadow:0 24px 60px rgba(10,18,30,.4);
 }
+/* ⭐ Đợt 255 — nền TRANG trắng trong khung mode: form ngắn hơn webview thì phần
+   thân trang ló ra dưới chân form phải trắng như thẻ, không được xám (myLesson
+   còn tự co webview theo chiều cao form — đây là lưới đỡ cho nhịp co). */
+body.aw-khung-mode{background:#fff}
+
 /* ⛔ Đợt 254b — nền "lỡ đóng form" GIẤU HẲN trong khung mode: nó cao 100vh và
    đứng TRƯỚC form trong luồng trang, để lại là form bị đẩy xuống dưới một mảng
    trống có nút SET ASSIGNMENT (thầy bắt được ngay lần bấm tay đầu, 24/8 tối).

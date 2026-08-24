@@ -2396,6 +2396,14 @@ Marker: `MYACT:AW:ASSIGN:{"code","title","bo","boTen","mauType","mauTen"}` — b
 (myLesson gọi vào, và thầy tự bấm nút Set assignment). ⛔ **Đừng đổi tên marker, đừng bỏ 2 khoá
 cũ `code`/`title`** — myLesson đang đọc đúng chúng.
 
+**⭐ Đợt 255 — ĐUÔI TEMPLATE + `dataset.tpl`.** Tiêu đề bài giao tự động kết thúc bằng
+" — <TPL viết tắt>" (bảng `TPL_SHORT`, export `tplShortName`/`datDuoiTemplate`); đổi template
+trong form là đuôi đổi theo; thầy sửa tay mất đuôi thì tôn trọng. **Đuôi hiện hành ghi vào
+`titleInput.dataset.tpl`** — myLesson (`capNhatTenBaiGiao`) đọc nó để nối lại đuôi khi bơm phần
+đầu tiêu đề. ⛔ Đừng bỏ dataset.tpl, đừng đổi khuôn " — " của đuôi — hai bên đang bắt tay đúng
+khuôn đó. Ô Show answers nằm ở hàng `.aw-as-titlehead` (cạnh nhãn Assignment title); `cbAnswers`
+vẫn cùng scope với đường START như cũ.
+
 **⭐ Đợt 254 — `?giao=…&khung=1` (CHẾ ĐỘ NHÚNG) + marker `MYACT:AW:GIAO:DONG`.** Có `&khung=`
 thì `body` mang thêm `aw-khung-mode`: pop-up GỐC (mở lúc `modalStack` RỖNG — form Set assignment,
 màn QR sau START) được `openModal` đánh dấu `.aw-as-goc` **ngay lúc mở** và CSS vẽ nó PHẲNG TRÀN

@@ -212,6 +212,35 @@ function openModal(size, build) {
   return close;
 }
 
+// ⭐ Đợt 255 — TÊN VIẾT TẮT CỦA TEMPLATE, để nối vào ĐUÔI tiêu đề bài giao
+// (thầy chốt quy tắc tên 24/8 khuya: "B2B_24.8_WORDS LSA2-S2.T1.P3-4-5 — WP1
+// — ANAGRAM"). GSQUIZ và ANAGRAM là hai tên thầy nêu; các tên còn lại đặt cùng
+// nếp (một chữ nén, đổi thì đổi Ở BẢNG NÀY, một chỗ duy nhất).
+const TPL_SHORT = {
+  quiz: "QUIZ",            anagram: "ANAGRAM",     find_the_match: "MATCH",
+  type_the_answer: "TYPE", open_the_box: "OPENBOX", true_false: "TF",
+  gameshow: "GSQUIZ",      maze_chase: "MAZE",     whack_a_mole: "WHACK",
+  flying_fruit: "FRUIT",   balloon_pop: "BALLOON", crossword: "CROSSWORD",
+  unjumble: "UNJUMBLE",    speaking_cards: "SPCARDS",
+  running_word: "RUNWORD", running_team: "RUNTEAM", speaking: "SPEAKING",
+};
+export function tplShortName(type) {
+  return TPL_SHORT[type]
+    || String(templateLabel(type) || type || "").toUpperCase().replace(/[^A-Z0-9]+/g, "");
+}
+// Thay/nối đuôi " — <TPL>" của tiêu đề. `cu` = đuôi đang đứng (null nếu chưa
+// có). ⚠️ Tôn trọng tay thầy: tiêu đề KHÔNG kết thúc bằng đuôi cũ (thầy đã sửa
+// tay) thì để nguyên, không đắp thêm.
+export function datDuoiTemplate(title, cu, moi) {
+  const t = String(title || "");
+  const duoiMoi = " — " + moi;
+  if (t.endsWith(duoiMoi)) return t;
+  if (cu === null || cu === undefined) return t + duoiMoi;
+  const duoiCu = " — " + cu;
+  if (t.endsWith(duoiCu)) return t.slice(0, t.length - duoiCu.length) + duoiMoi;
+  return t;
+}
+
 function headRow(title, close) {
   const head = el("div", "aw-as-head");
   head.append(el("div", "aw-as-title", escapeText(title)));
@@ -337,8 +366,17 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
 
     // --- title — starts as "<Class> — <today, d.m> — <act title>"; typing in
     // the Class field above keeps just that leading word in step, live.
+    // ⭐ Đợt 255 — ô "Show answers" dời lên CÙNG HÀNG với nhãn "Assignment
+    // title", nép bên phải (thầy: ít dùng, để đó cho tiết kiệm diện tích) —
+    // hàng .aw-as-optrow cũ dưới đáy khối bỏ hẳn.
     const titleCell = el("div", "aw-as-cell");
-    titleCell.append(el("label", "aw-as-label", "Assignment title"));
+    const titleHead = el("div", "aw-as-titlehead");
+    titleHead.append(el("label", "aw-as-label", "Assignment title"));
+    const answersWrap = el("label", "aw-as-check");
+    const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = false;
+    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
+    titleHead.append(answersWrap);
+    titleCell.append(titleHead);
     const titleInput = el("input", "aw-as-input");
     titleInput.type = "text";
     titleInput.maxLength = 80;
@@ -365,19 +403,21 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // cái tên thầy đã đặt bên myLesson.
     if (tieuDe) titleInput.value = String(tieuDe).slice(0, 80);
 
-    // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left. The Leaderboard and
-    // Start again ticks are gone because the new student end screens bake both
-    // in (SUBMIT always shows the class board beside the menu; both modes
-    // always offer Start again). Show answers is the choice that remains, and
-    // it governs BOTH modes' menus.
-    // ⚠️ Đợt 250 — the label "At the end of the game, students can" went with
-    // the rest of the prose; the tick says what it does on its own.
-    const opts = el("div", "aw-as-optrow");
-    const answersWrap = el("label", "aw-as-check");
-    const cbAnswers = el("input"); cbAnswers.type = "checkbox"; cbAnswers.checked = false;
-    answersWrap.append(cbAnswers, document.createTextNode("Show answers"));
-    opts.append(answersWrap);
-    top.append(opts);
+    // ⭐ Đợt 255 — ĐUÔI TEMPLATE trong tiêu đề (thầy chốt quy tắc tên): tiêu đề
+    // tự động kết thúc bằng " — <TPL viết tắt>" (QUIZ · ANAGRAM · GSQUIZ…),
+    // đổi template trong form là đuôi tự đổi theo (xem templatePicker.onPick).
+    // Đuôi hiện hành ghi vào `dataset.tpl` để myLesson (capNhatTenBaiGiao) khi
+    // bơm lại phần đầu tiêu đề biết giữ đuôi — ⛔ đừng bỏ dataset này.
+    // ⚠️ Thầy sửa tay tiêu đề làm mất đuôi thì datDuoiTemplate tôn trọng, không
+    // đắp lại. Gán .value vượt maxlength=80 là chuyện được phép (maxlength chỉ
+    // chặn phím gõ) — đuôi không bao giờ bị xén nửa chừng.
+    let tplDuoi = tplShortName(act.type);
+    titleInput.value = datDuoiTemplate(titleInput.value, null, tplDuoi);
+    titleInput.dataset.tpl = tplDuoi;
+
+    // --- end of game — ⭐ Đợt 246 (thầy): ONE tick left (Show answers, governs
+    // both modes' menus). ⭐ Đợt 255 — cái ô đó nay dựng Ở TRÊN, cạnh nhãn
+    // "Assignment title" (xem titleHead); hàng riêng dưới đáy khối bỏ hẳn.
     body.append(top);
 
     // ---------- KHỐI DƯỚI: Options ----------
@@ -425,6 +465,12 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         // mới"). A number named the same in two games is not the same number.
         hwDraft = { ...getDefaultOptions(playType, "homework"),
                     ...splitViewOptions(hwDraft).selectors };
+        // ⭐ Đợt 255 — đuôi template trong tiêu đề đổi theo (tôn trọng bản thầy
+        // đã sửa tay: mất đuôi cũ thì thôi, không đắp).
+        const duoiMoi = tplShortName(playType);
+        titleInput.value = datDuoiTemplate(titleInput.value, tplDuoi, duoiMoi);
+        tplDuoi = duoiMoi;
+        titleInput.dataset.tpl = duoiMoi;
         renderOptions();
       })
     };

@@ -5,6 +5,42 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 255 (24/8/2026, khuya) — ĐUÔI TEMPLATE TRONG TIÊU ĐỀ + SHOW ANSWERS DỜI LÊN (cặp myLesson v1.16.0)
+
+**Thầy chốt quy tắc tên bài giao:** `B2B_24.8_WORDS LSA2-S2.T1.P3-4-5 — WP1 — ANAGRAM` — phần
+tiêu đề ngăn rút gọn (WP1/PRONUNC — việc của myLesson v1.16.0), **đuôi là TEMPLATE viết tắt**.
+Và: ô Show answers ít dùng → dời lên cùng hàng nhãn "Assignment title", nép phải.
+
+**Sửa `core/assignment-ui.js` + `core/app.css`:**
+
+- **`TPL_SHORT`** (một bảng duy nhất, đổi tên là đổi Ở ĐÓ): `gameshow→GSQUIZ` · `anagram→ANAGRAM`
+  (hai tên thầy nêu) · quiz→QUIZ · find_the_match→MATCH · type_the_answer→TYPE ·
+  open_the_box→OPENBOX · true_false→TF · maze_chase→MAZE · whack_a_mole→WHACK ·
+  flying_fruit→FRUIT · balloon_pop→BALLOON · crossword→CROSSWORD · unjumble→UNJUMBLE ·
+  speaking→SPEAKING (+ 3 loại không giao được, để đủ bảng). Export `tplShortName()`.
+- **`datDuoiTemplate(title, cu, moi)`** (export, thuần): chưa có đuôi → NỐI; đang mang đuôi cũ →
+  THAY; **thầy sửa tay mất đuôi → TÔN TRỌNG, không đắp lại**; đuôi trùng → không nhân đôi.
+- Trong `openAssignmentSetup`: tiêu đề (cả mặc định lẫn `&td=` myLesson đưa sang) nối đuôi ngay
+  lúc mở; `templatePicker.onPick` đổi đuôi theo template mới. **Đuôi hiện hành ghi vào
+  `titleInput.dataset.tpl`** — CỬA cho myLesson: `capNhatTenBaiGiao` bơm lại phần đầu tiêu đề
+  (đổi tích WP/PRONUNC) phải đọc dataset này để NỐI LẠI đuôi. ⛔ Đừng bỏ dataset.tpl.
+  ⚠️ Gán `.value` vượt `maxlength=80` là được phép — maxlength chỉ chặn phím gõ.
+- **Show answers**: hàng `.aw-as-titlehead` (flex, space-between) = nhãn "Assignment title" trái
+  + ô tích phải; hàng `.aw-as-optrow` cũ dưới đáy khối BỎ HẲN (cbAnswers vẫn cùng scope, đường
+  START không đổi).
+- `body.aw-khung-mode{background:#fff}` — lưới đỡ cho nhịp co chiều cao bên myLesson (form ngắn
+  hơn webview thì phần thân trang ló ra phải trắng, không xám).
+
+**Bàn thử `scratch/dot255-title.html` — 17/17 ĐẠT** (2 hàm thuần đủ 4 ngả · form &td= ra đúng
+`… — WP1 — QUIZ` + dataset.tpl · titlehead thẳng hàng đo tâm dọc + nép phải · optrow không còn ·
+hồi quy lớp điền sẵn + tiêu đề mặc định). Chạy lại `dot254-khung.html` **26/26 ĐẠT** (phép tiêu
+đề &td= cập nhật theo luật mới có đuôi). Backup `_backup/dot255/`.
+
+⛔ **Cặp myLesson v1.16.0** (rút gọn WP1/PRONUNC + giữ đuôi qua dataset.tpl + webview cao theo
+ruột form). ⚠️ Chưa bấm tay máy thật.
+
+---
+
 ## Đợt 254b (24/8/2026, tối muộn) — VÁ 2 CHỖ THẦY BẮT Ở LẦN BẤM TAY ĐẦU (cặp myLesson v1.15.1)
 
 Chỉ `core/app.css`, 2 dòng trong khối khung mode:

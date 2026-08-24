@@ -8,7 +8,19 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 254 + 254b)** — ⭐ **`?giao=…&khung=1`: CHẾ ĐỘ NHÚNG cho
+> Cập nhật lần cuối: **24/8/2026 (Đợt 255)** — ⭐ **ĐUÔI TEMPLATE TRONG TIÊU ĐỀ BÀI GIAO +
+> SHOW ANSWERS DỜI LÊN** (thầy chốt quy tắc tên: `…— WP1 — ANAGRAM`). Tiêu đề tự động (cả mặc
+> định lẫn `&td=` của myLesson) kết thúc bằng " — <TPL viết tắt>" từ bảng `TPL_SHORT`
+> (gameshow→GSQUIZ, anagram→ANAGRAM… — đổi tên là đổi Ở BẢNG ĐÓ); đổi template trong form là
+> đuôi đổi theo (`datDuoiTemplate` — thầy sửa tay mất đuôi thì TÔN TRỌNG không đắp); **đuôi hiện
+> hành ghi `titleInput.dataset.tpl`** = cửa cho myLesson v1.16.0 nối lại đuôi khi bơm phần đầu
+> tiêu đề — ⛔ đừng bỏ. Ô Show answers dời lên hàng `.aw-as-titlehead` cạnh nhãn "Assignment
+> title" (hàng `.aw-as-optrow` cũ bỏ hẳn). `body.aw-khung-mode` nền trắng (đỡ nhịp co chiều cao
+> webview bên myLesson). Bàn thử `dot255-title.html` **17/17** + chạy lại `dot254-khung.html`
+> **26/26**. Backup `_backup/dot255/`. ⛔ Cặp myLesson v1.16.0.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 254 + 254b)** — ⭐ **`?giao=…&khung=1`: CHẾ ĐỘ NHÚNG cho
 > pop-up myLesson v1.15.0/v1.15.1** (thầy chốt 24/8 tối kèm 2 ảnh: pop-up bên đó phải trông Y HỆT
 > form Set assignment). **254b (thầy bắt ở lần bấm tay đầu):** nền `aw-giao-nen` (cao 100vh, đứng
 > TRƯỚC form trong luồng) phải `display:none` trong khung mode — không thì form bị đẩy xuống dưới
