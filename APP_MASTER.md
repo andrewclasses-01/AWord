@@ -8,7 +8,17 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 252)** — ⭐⭐ **CỬA CHO myLesson: MARKER NÓI RÕ BỘ NGHĨA +
+> Cập nhật lần cuối: **24/8/2026 (Đợt 253)** — ⭐ **URL `?giao=<num>&lop=&td=`: form Set
+> assignment ĐỨNG MỘT MÌNH trên nền trống** (cửa cho myLesson v1.14.0 — thầy chốt pop-up bên đó
+> không được bày trang game sau lưng form). Chỉ THÊM một route trong `main.js` + CSS
+> `body.aw-giao-mode`: form `openAssignmentSetup` THẬT trên act GỐC (luật `sourceAct` Đợt 250 +
+> marker Đợt 252 giữ nguyên) · chưa đăng nhập thì màn Sign in hiện ngay trong trang, đăng nhập
+> xong form TỰ mở · lỡ đóng form thì nền có nút SET ASSIGNMENT mở lại · act sai rơi về trang chủ.
+> ⛔ KHÔNG đụng `?a=`/bridge — myActivity giữ nguyên. Bàn thử `scratch/dot253-giao.html`
+> **17/17 ĐẠT**. Backup `_backup/dot253/`. ⛔ Cặp chặt myLesson app v1.14.0.
+>
+> ---
+> Trước đó: **24/8/2026 (Đợt 252)** — ⭐⭐ **CỬA CHO myLesson: MARKER NÓI RÕ BỘ NGHĨA +
 > TEMPLATE, VÀ `giaoBai` MỞ TRÊN ACT GỐC**. Sửa 2 file (`core/assignment-ui.js`, `core/engine.js`),
 > toàn bộ là THÊM. (1) `onCreated(assignment, {bo, boTen, mauType, mauTen})` + marker
 > `MYACT:AW:ASSIGN` mang thêm 4 khoá đó — ⛔ **giữ nguyên tên marker và 2 khoá cũ `code`/`title`**;

@@ -5,6 +5,39 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 253 (24/8/2026) — ⭐ URL `?giao=`: FORM SET ASSIGNMENT ĐỨNG MỘT MÌNH (cửa cho myLesson v1.14.0)
+
+**Thầy thử tay v1.13.0 bên myLesson và chốt:** pop-up tạo bài giao không được bày cả TRANG GAME
+sau lưng form — phải trông y hệt form Set assignment. Đường cũ (myLesson nạp `?a=<num>` rồi gọi
+bridge `giaoBai`) về bản chất là "mở game rồi mở form đè lên", không giấu game đi được.
+
+**Cửa mới — chỉ THÊM một route trong `main.js`:**
+
+```
+https://aword.andrewclasses.com/?giao=<num act>&lop=<lớp>&td=<tiêu đề>
+```
+
+- trang KHÔNG dựng thư viện/game: nền phẳng `#eef2f7` + đúng một nút **SET ASSIGNMENT** (mở lại
+  form khi thầy lỡ đóng) — `body.aw-giao-mode`;
+- form là `openAssignmentSetup` THẬT mở trên act GỐC từ thư viện ⇒ **luật `sourceAct` Đợt 250 và
+  marker kèm bộ nghĩa Đợt 252 giữ nguyên**, `onCreated` bắn cùng một marker `MYACT:AW:ASSIGN`;
+- chưa đăng nhập ⇒ màn Sign in with Google hiện ngay trong trang; đăng nhập xong `init()` chạy
+  lại và **form TỰ mở** (route đọc lại `location.search`) — myLesson không phải làm gì thêm;
+- act sai / template `noAssignment` ⇒ rơi xuống trang chủ như `?bao=` sai mã, không chết trắng;
+- backdrop của form trong chế độ này là NỀN ĐẶC (không dim/blur) + `align-items:flex-start` để
+  form dài hơn khung webview thì cuộn từ đỉnh.
+
+⛔ **KHÔNG đụng `?a=` lẫn bridge `giaoBai`** — myActivity và mọi link cũ giữ nguyên; `giaoBai`
+vẫn là đường của trang act (và là đường lùi nếu có gì đó cần mở form trên act đang chơi).
+
+**Đã test — bàn thử mới `scratch/dot253-giao.html`: 17/17 ĐẠT, 0 lỗi trang** (main.js THẬT +
+store thật + fake Firestore): chế độ giao không có game/appbar · lớp + tiêu đề điền sẵn từ URL ·
+hàng bộ nghĩa + ô template có mặt · đóng form rồi bấm nút nền mở lại được · START → marker đủ
+khoá, bài giao dính act thư viện. Backup `_backup/dot253/`.
+**Cặp chặt myLesson app v1.14.0** — đừng revert lẻ một bên.
+
+---
+
 ## Đợt 252 (24/8/2026) — ⭐⭐ CỬA CHO myLesson: MARKER NÓI RÕ BỘ NGHĨA + TEMPLATE, VÀ `giaoBai` MỞ TRÊN ACT GỐC
 
 **Vì sao có đợt này:** thầy chốt luồng mới bên myLesson app — đúp một ô act trống là mở **thẳng
