@@ -22,6 +22,9 @@
 > Đợt 215) — trạng thái kho, việc chờ thầy, 3 luật đắt nhất, bảng 6 bàn thử kèm điểm chuẩn.
 > 📌 Bài học: **cùng độ đặc hiệu thì thứ tự trong file quyết định**; và **hai hộp phải thẳng hàng
 > thì đo HAI MÉP, đừng so chiều cao** — hai hộp cùng cao 60px vẫn lệch nhau 5px được.
+> ✅ **THẦY ĐÃ NGHIỆM THU BẰNG TAY CẢ CỤM 248–251 (24/8/2026)** — bố cục form · giao bài
+> bằng template KHÁC + HS làm thử · cặp nút PRACTICE/SUBMIT · bấm tay trên TOMKO. **Không còn
+> việc nào treo chờ thầy kiểm** — chi tiết ở mục 0a.
 >
 > ---
 > Trước đó: **24/8/2026 (Đợt 250)** — ⭐⭐⭐ **QUY HOẠCH LẠI SET ASSIGNMENT + CHỌN
@@ -43,7 +46,7 @@
 > Bàn thử mới `scratch/dot250-assign.html` **56/56 ĐẠT, 0 lỗi trang**; bàn thử cũ chạy lại
 > `dot246-forms` 9/9 · `dot246-flow` 37/37 · `dot247-giaobai` 16/16 · `dot245-assign-options` khớp.
 > Xem mắt `scratch/dot250-visual.html`. Backup `_backup/dot250/`.
-> ⚠️ **CHƯA bấm tay với Firestore thật** — nên giao thử 1 bài cho 1 em trước khi dùng đại trà.
+> ✅ **THẦY ĐÃ TEST OK (24/8/2026)** — thầy xác nhận đã thử đủ 4 phần: bố cục form Set assignment · **giao bài bằng template KHÁC rồi cho HS làm thử** · cặp nút PRACTICE/SUBMIT · **bấm tay trên TOMKO**.
 >
 > ---
 > Trước đó: **24/8/2026 (Đợt 249)** — **CÂN ĐỐI LẠI CẶP NÚT PRACTICE / SUBMIT**
@@ -56,7 +59,7 @@
 > ⛔ **`.aw-bigplay` — nút play TO của thầy — vẫn dùng `playBig`, KHÔNG đụng**; `playBig` lệch
 > phải là CỐ Ý vì nó vẽ cho nút TRÒN. ⚠️ `submitBig` không sinh từ `playBig` lúc chạy: vẽ lại
 > `playBig` thì phải chép `d` sang. Bàn thử `scratch/dot246-flow.html` **37/37 ĐẠT, 0 lỗi
-> console**. Backup `_backup/dot249/`. ⚠️ chưa bấm tay trên máy HS thật.
+> console**. Backup `_backup/dot249/`. ✅ **thầy đã test OK 24/8/2026** (kể cả trên TOMKO).
 >
 > ---
 > Trước đó: **24/8/2026 (Đợt 248)** — **ICON NÚT PRACTICE: QUẢ TẠ → BIA BẮN**
@@ -68,7 +71,7 @@
 > ⛔⛔ **BẪY: `practiceBig` là icon DUY NHẤT không dùng `currentColor`** — sửa `color:` trong
 > CSS sẽ KHÔNG đổi được màu nó, phải sửa `fill=` trong chính đường vẽ. Bàn thử cũ của Đợt 246
 > chạy lại: `scratch/dot246-flow.html` **37/37 ĐẠT, 0 lỗi console**; nhìn mắt qua
-> `scratch/dot246-visual.html`. Backup `_backup/dot248/`. ⚠️ chưa bấm tay trên máy HS thật.
+> `scratch/dot246-visual.html`. Backup `_backup/dot248/`. ✅ **thầy đã test OK 24/8/2026** (kể cả trên TOMKO).
 >
 > ---
 > Trước đó: **24/8/2026 (Đợt 247)** — ⭐⭐ **CẦU CHO myLesson** (thầy chốt "Ok build Đợt A
@@ -3880,11 +3883,17 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | 17 template | **KHÔNG đụng tới** trong cả 7 đợt |
 > | Luật Firestore | **KHÔNG cần đăng lại** trong cả 7 đợt |
 >
-> ### ⬜ VIỆC CHỜ THẦY (không chặn ai, nhưng phải nhắc)
-> 1. ⚠️ **Chưa bấm tay với Firestore thật** đường "giao act dưới dạng game khác" (Đợt 250). Thầy nên
->    **giao thử 1 bài cho 1 em** rồi mở link kiểm tra trước khi dùng đại trà.
-> 2. ⚠️ Chưa bấm tay trên **TOMKO** cho cả cụm 248–251 (đổi icon + cân đối nút + form bài giao).
-> 3. ⬜ Việc kế tiếp = **HỎI THẦY**. Thầy đang đi từng đợt ngắn, tự chỉ hướng mỗi lần.
+> ### ✅ ĐÃ NGHIỆM THU BẰNG TAY (24/8/2026)
+> Thầy xác nhận đã thử **đủ 4 phần** của cụm 248–251, không còn gì treo:
+> 1. ✅ Bố cục form Set assignment (2 khối có viền · Class+Deadline chung dòng · nút chọn lớp ·
+>    ô hai tầng đã thẳng hàng sau khi vá 5px).
+> 2. ✅ **Giao bài bằng template KHÁC rồi cho học sinh làm thử** — đây là đường rủi ro nhất của
+>    Đợt 250 (`convertActivity` + `sourceAct`), nay **đã chạy thật trên Firestore thật**.
+> 3. ✅ Cặp nút PRACTICE / SUBMIT (icon bia bắn Đợt 248 + cân đối Đợt 249).
+> 4. ✅ **Bấm tay trên TOMKO** (màn cảm ứng lớp), không chỉ trên máy soạn bài.
+>
+> ### ⬜ VIỆC CHỜ THẦY
+> ⬜ Việc kế tiếp = **HỎI THẦY**. Thầy đang đi từng đợt ngắn, tự chỉ hướng mỗi lần.
 >
 > ### 📍 ĐỤNG VÀO BÀI GIAO THÌ ĐỌC Ở ĐÂU
 > **`core/HUONG DAN CORE.md` → mục "⭐⭐⭐ BÀI GIAO — HỢP ĐỒNG ĐẦY ĐỦ (Đợt 245 → 251)"** — 8 luật, mỗi

@@ -166,8 +166,9 @@ phép tính vừa khít ô 46px, đặt vào ô 60px thì chữ dính lên trên
   sang tìm theo vai trò. **Bài học: bàn thử neo vào chữ hiển thị hoặc vào thứ tự DOM sẽ gãy ở đợt
   đổi bố cục; neo vào class/vai trò thì không.**
 
-⚠️ **CHƯA bấm tay trên TOMKO / máy thầy với Firestore thật** — đặc biệt đường "giao act dưới dạng
-game khác" mới hoàn toàn, thầy nên **giao thử 1 bài cho 1 em** trước khi dùng đại trà.
+✅ **THẦY ĐÃ TEST OK (24/8/2026)** — thầy xác nhận đã thử đủ 4 phần: bố cục form Set assignment ·
+**giao bài bằng template KHÁC rồi cho HS làm thử** (tức đường `convertActivity` + `sourceAct` đã chạy
+thật trên Firestore thật, không còn là giả định) · cặp nút PRACTICE/SUBMIT · **bấm tay trên TOMKO**.
 
 ---
 
@@ -261,8 +262,8 @@ PRACTICE + SUBMIT", F5 "ván mistakes chỉ 1 nút PRACTICE") · `scratch/dot246
 mắt màn READY 2 nút, đã phóng 3× soi viền: mượt, không lộ cạnh đa giác. `node` nạp thử
 `core/icons.js` OK (chuỗi template không vỡ).
 
-⚠️ **Chưa bấm tay trên TOMKO / máy học sinh thật** — đây là đổi hình thuần tuý nên rủi ro thấp,
-nhưng thầy mở thử 1 bài giao trên iPad/điện thoại xem bia bắn có nét không thì chắc ăn hơn.
+✅ **THẦY ĐÃ TEST OK (24/8/2026)** — đã nhìn cặp nút PRACTICE/SUBMIT trên máy thật và **bấm tay trên
+TOMKO**; bia bắn hiện nét, không còn gì treo.
 
 ---
 
