@@ -154,7 +154,18 @@ export function readPick() {
       // refused to start because of a missing optional field would be a far
       // worse bug than the two features quietly standing down.
       maxTeam: Math.max(1, Number(p.maxTeam) || members.length),
-      tableId: String(p.tableId || "")
+      tableId: String(p.tableId || ""),
+      //   `resetAt`  ⭐ Đợt 264 — MỐC RESET CỦA BẢNG ĐỘI mà pick này sinh ra sau nó.
+      //              Bảng đội trên server cũng mang một `resetAt`; máy nào thấy mốc
+      //              trên server LỚN HƠN mốc trong pick của mình thì biết pick của mình
+      //              thuộc về một bảng đã bị xoá, và tự dừng lại (core/engine.js
+      //              `showTeamsReset`). Đây là sợi dây DUY NHẤT làm cú "Reset teams" ở
+      //              một máy với sang được máy đang chơi dở — trước đợt này không có
+      //              sợi nào, và ghi chú của wipeSetup() nói thẳng là nó không với tới.
+      //   ⚠️ Thiếu ⇒ 0, tức là "chưa biết", và một pick của bản cũ vẫn dùng được y
+      //   nguyên: chỉ khi bảng đội THẬT SỰ bị reset một lần (resetAt > 0) nó mới bị đẩy
+      //   về màn chọn đội. Không bao giờ đuổi ai chỉ vì thiếu một trường.
+      resetAt: Number(p.resetAt) || 0
     };
   } catch { return null; }        // private mode / storage disabled / bad JSON
 }
@@ -902,6 +913,48 @@ export function stdSignature(type, options) {
 export const ROUND_TTL_MS = 3 * 60 * 60 * 1000;
 
 /**
+ * ⏳⏳⏳ Đợt 264 (26/8/2026) — MỘT HÀNG BÀN SỐNG ĐƯỢC BAO LÂU KHI KHÔNG CÓ NHỊP TIM.
+ *
+ * ⛔⛔ VÌ SAO PHẢI CÓ CON SỐ NÀY — ĐÂY LÀ NỬA THỨ HAI CỦA CON BỌ "NHẢY VỀ 30 CÂU".
+ * Trước đợt này, một hàng trong `boards` **không bao giờ hết hạn**. Bàn nào tắt app
+ * cứng (đóng tab, sập máy, mất điện giữa buổi) là để lại một hàng `ready: true` nằm
+ * đó **vĩnh viễn**: nó giữ cho lượt cũ "còn người", nó ăn một dấu ✓ xanh trong hàng ô
+ * tích, và nó đếm vào "3 / 4 teams" — cả ba đều là NÓI DỐI, và cả ba đều không có
+ * cách nào tự khỏi.
+ * ⇒ Từ đợt này `at` của mỗi hàng là một NHỊP TIM: bàn nào còn đứng trong phòng chờ
+ * thì cứ `ROUND_BEAT_MS` một lần lại đóng dấu lại giờ của chính nó (core/engine.js
+ * `beatLobby`), và hàng nào quá `ROUND_BOARD_TTL_MS` không đập là coi như đã đi.
+ * ⚠️ TTL phải chịu được VÀI NHỊP TRƯỢT (mạng lớp học rớt 30 giây là chuyện thường),
+ * nên nó là hơn ba lần nhịp đập chứ không phải vừa khít một nhịp — vừa khít là mỗi
+ * lần mạng khục một cái là cả lớp mất một đội.
+ * ⚠️ Bàn chạy bản AWord CŨ HƠN đợt này không biết đập nhịp ⇒ sau 2,5 phút nó rụng
+ * khỏi lượt. Chấp nhận được vì cả lớp cùng nạp từ một bản trên aword.andrewclasses.com;
+ * ghi ra đây để phiên sau không đi tìm "vì sao máy cũ bị bỏ rơi".
+ */
+export const ROUND_BOARD_TTL_MS = 150 * 1000;
+export const ROUND_BEAT_MS = 45 * 1000;
+
+/** Hàng bàn này còn người ngồi không? */
+export function roundBoardLive(b, now = Date.now()) {
+  return !!b && !!b.teamId && (now - (Number(b.at) || 0)) < ROUND_BOARD_TTL_MS;
+}
+
+/**
+ * LƯỢT NÀY ĐÚC LÚC NÀO — và đây là một sửa lỗi, không phải một cách viết gọn.
+ *
+ * ⛔⛔ Trước Đợt 264, hạn 3 tiếng của một lượt được đo từ `at`, mà `at` lại được
+ * ĐÓNG DẤU LẠI mỗi lần có bàn nhập vào. Nên một lượt HỎNG không bao giờ già đi: thầy
+ * bấm START lần nữa để chữa ⇒ chính cú bấm đó gia hạn thêm 3 tiếng cho cái lượt đang
+ * hại mình. Càng chữa càng sống dai. Nay tuổi đo từ `mintedAt`, thứ chỉ được ghi đúng
+ * một lần lúc đúc.
+ * ⚠️ Tài liệu ghi bởi bản cũ hơn đợt này không có `mintedAt` ⇒ rơi về `at`, tức là xử
+ * y như xưa chứ không bị coi là "đúc lúc 0" rồi chết ngay.
+ */
+export function roundMintedAt(node) {
+  return Number(node?.mintedAt) || Number(node?.at) || 0;
+}
+
+/**
  * ⭐⭐⭐ Đợt 263 (thầy, 25/8/2026) — ĐỘI NÀO ĐÃ SẴN SÀNG, ĐỌC TỪ TÀI LIỆU LƯỢT.
  * Thầy: *"mỗi đội bấm start thì đều có dữ liệu đã READY gửi sang các bảng team khác…
  * hàng ô tròn xanh lá để tích khi đội đó sẵn sàng rồi"*.
@@ -923,9 +976,13 @@ export function roundReadyTeamIds(node, { actId = "", tableId = "", now = Date.n
   if (!node || !node.roundId) return out;
   if (String(node.actId || "") !== String(actId || "")) return out;
   if (String(node.tableId || "") !== String(tableId || "")) return out;
-  if (now - (Number(node.at) || 0) >= ROUND_TTL_MS) return out;
+  if (now - roundMintedAt(node) >= ROUND_TTL_MS) return out;
+  // ⭐ Đợt 264 — CỬA LỌC THỨ TƯ: hàng bàn đã tắt nhịp. Ba cửa cũ chỉ hỏi "lượt này có
+  // phải lượt của mình không"; cửa này hỏi "bàn kia còn ngồi đó không". Thiếu nó thì
+  // một máy tắt app giữa buổi vẫn giữ nguyên một dấu ✓ xanh, và thầy đứng đợi một đội
+  // đã về nhà — đúng cái "một ô tích xanh SAI còn tệ hơn không có ô nào" ghi ở trên.
   Object.values(node.boards || {}).forEach(b => {
-    if (b && b.ready && b.teamId) out.add(String(b.teamId));
+    if (b && b.ready && roundBoardLive(b, now)) out.add(String(b.teamId));
   });
   return out;
 }
@@ -934,16 +991,111 @@ export function roundReadyTeamIds(node, { actId = "", tableId = "", now = Date.n
  * Đội nào CÒN THIẾU — có gạch sống trong bảng đội nhưng chưa có bàn nào báo sẵn sàng.
  *
  * @param liveTeamIds  id các đội đang được giữ gạch (chỗ gọi tự lọc theo TTL)
- * @param boards       `boards` của tài liệu lượt: { [browserId]: { teamId, ready } }
+ * @param boards       `boards` của tài liệu lượt: { [browserId]: { teamId, ready, at } }
+ * @param now          để bàn thử bơm giờ vào được
+ *
+ * ⭐ Đợt 264 — CHỈ ĐẾM HÀNG CÒN NHỊP (`roundBoardLive`). Trước đợt này một bàn đã tắt
+ * app vẫn được tính là "đã sẵn sàng" mãi mãi ⇒ cả lớp cất cánh thiếu người mà con số
+ * "4 / 4 teams" vẫn xanh rờn. Cùng một cửa lọc với roundReadyTeamIds() ngay trên, và
+ * hai chỗ phải dùng CHUNG một phép đo chứ không phải hai bản sao của nó.
  *
  * ⚠️ ĐẾM THEO ĐỘI, KHÔNG THEO BÀN. Một đội có thể được mở trên hai máy (thầy mở lại tab);
  * đội đó vẫn là MỘT đội và chỉ cần một bàn báo sẵn sàng. Đếm theo bàn thì con số "3/4"
  * hiện ra sẽ nhảy lung tung mà không ai hiểu vì sao.
  */
-export function roundMissingTeams(liveTeamIds, boards) {
+export function roundMissingTeams(liveTeamIds, boards, now = Date.now()) {
   const ready = new Set();
   Object.values(boards || {}).forEach(b => {
-    if (b && b.ready && b.teamId) ready.add(String(b.teamId));
+    if (b && b.ready && roundBoardLive(b, now)) ready.add(String(b.teamId));
   });
   return (liveTeamIds || []).filter(t => !ready.has(String(t)));
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 264 (26/8/2026, thầy báo) — "SET 55 CÂU MÀ CỨ NHẢY VỀ 30"
+// ---------------------------------------------------------------
+// TRIỆU CHỨNG THẦY GẶP: ván trước chơi 30 câu mỗi em, xong xuôi, kết quả chuẩn. Thoát
+// app, làm việc khác, vào lại, set CẢ BA bảng thành 55 câu mỗi em — bấm START thì có
+// bàn bị kéo ngược về 30. Chỉnh lại vẫn nhảy. Chữa được bằng đúng một cách: **build
+// sang một đội khác rồi quay về đội cũ**.
+//
+// ⛔⛔⛔ CHÍNH CÁCH CHỮA ĐÓ LÀ BẰNG CHỨNG SỐ 30 KHÔNG NẰM Ở MÁY THẦY. Đổi bảng đội là
+// đổi `tableId`, và `tableId` là MỘT trong ba cửa làm một lượt cũ hết "dùng lại được".
+// Nếu con số 30 nằm trong Options của máy thì thao tác ấy chẳng chữa được gì cả.
+//
+// BA CHỖ HỎNG CỘNG LẠI, và phải vá cả ba mới hết:
+//
+//   (1) `std` CỦA MỘT LƯỢT ĐÃ TỒN TẠI THÌ KHÔNG CÓ ĐƯỜNG NÀO SỬA. Cả repo chỉ có ĐÚNG
+//       MỘT dòng ghi `std`, nằm trong nhánh "đúc lượt mới". Nhánh "dùng lại" bê nguyên
+//       `std` cũ sang. Nên một chuẩn sai là một chuẩn vĩnh viễn.
+//   (2) MỘT LƯỢT KHÔNG CÒN AI VẪN ĐƯỢC DÙNG LẠI. `leaveRound()` cố ý giữ tài liệu kể
+//       cả khi bàn cuối rời đi, với lý do viết thẳng trong code: *"`std` phải sống sót
+//       để bàn quay lại vẫn khớp đúng bản chuẩn cũ"*. Đúng câu đó là con bọ — nó biến
+//       một lượt đã tan thành một cái bẫy nằm chờ 3 tiếng.
+//   (3) MỖI CÚ BẤM LẠI GIA HẠN THÊM 3 TIẾNG cho chính cái lượt đang hại mình (xem
+//       roundMintedAt() ở trên). Càng chữa nó càng sống dai.
+//
+// ⇒ LUẬT MỚI, VÀ NÓ LÀ MỘT CÂU: **một lượt không còn bàn nào đang sống thì không có
+// quyền ra lệnh cho ai cả.** "Bàn đầu tiên bấm START chốt chuẩn" vẫn nguyên vẹn — chỉ
+// là một lượt rỗng thì không có bàn đầu tiên nào để mà chốt, nên cú START tới đúc lượt
+// mới bằng chính Options của nó.
+//
+// ⛔ ĐÃ CÂN NHẮC RỒI BỎ — "CÚ START MỚI NHẤT THẮNG" (lượt đang có thì cập nhật `std`
+// theo bàn vừa bấm). Nghe thì chữa được đúng ca của thầy, nhưng nó **đảo ngược lỗi chứ
+// không xoá lỗi**: một bàn chưa kịp nhận Options mới bấm START sau cùng sẽ kéo TẤT CẢ
+// các bàn đã đúng về số cũ của nó. Đổi tên nạn nhân không phải là vá.
+//
+// ⚠️ HÀM NÀY THUẦN VÀ NẰM Ở ĐÂY LÀ CHỦ Ý: quyết định "dùng lại hay đúc mới" vốn nằm
+// chôn trong thân một giao dịch Firestore, tức là **không có bàn thử nào chạm tới
+// được** — và một luật không đo được là một luật sẽ hỏng lần nữa mà không ai biết.
+// core/showdown-setup.js `joinRound()` nay chỉ còn lo phần đọc/ghi.
+
+/**
+ * Cú bấm START này nên NHẬP VÀO lượt đang có, hay ĐÚC một lượt mới?
+ *
+ * @param server      tài liệu lượt đọc từ server (đã chuẩn hoá), hoặc {} nếu chưa có
+ * @param me          browserId của bàn này
+ * @param newRoundId  tên lượt mới, chỗ gọi đúc sẵn (hàm này thuần nên không tự sinh)
+ * @returns {{ next: object, reused: boolean, dropped: string[] }}
+ *          `dropped` — các hàng bàn đã tắt nhịp bị dọn đi trong cú này (để ghi log/đo)
+ */
+export function planRoundJoin({
+  server, me, tableId = "", actId = "", teamId, teamName = "",
+  type = "", options = null, now = Date.now(), newRoundId = ""
+} = {}) {
+  const sv = server || {};
+  const boards = (sv.boards && typeof sv.boards === "object") ? sv.boards : {};
+  // Ai còn đang thật sự đứng trong lượt này, NGOÀI mình? Hàng của chính mình không
+  // được tính: một bàn không thể tự lấy mình ra làm bằng chứng rằng lượt còn sống —
+  // đó đúng là vòng luẩn quẩn đã giữ cho lượt ma của thầy sống suốt cả buổi.
+  const others = Object.keys(boards).filter(bid => bid !== me && roundBoardLive(boards[bid], now));
+  const dropped = Object.keys(boards).filter(bid => bid !== me && !roundBoardLive(boards[bid], now));
+  const reusable = !!sv.roundId
+    && String(sv.tableId || "") === String(tableId || "")
+    && String(sv.actId || "") === String(actId || "")
+    && sv.phase === "ready"
+    && (now - roundMintedAt(sv)) < ROUND_TTL_MS
+    && others.length > 0;
+  const kept = {};
+  // ⚠️ DỌN LUÔN CÁC HÀNG ĐÃ CHẾT khi nhập lại, đừng chỉ bỏ qua chúng lúc đếm. Bỏ qua
+  // thì tài liệu cứ phình ra và mọi phép đo sau này lại phải nhớ lọc; dọn thì tài liệu
+  // tự nói đúng sự thật cho MỌI người đọc nó, kể cả người đọc chưa viết ra.
+  if (reusable) others.forEach(bid => { kept[bid] = { ...boards[bid] }; });
+  const next = reusable
+    ? { ...sv, at: now, mintedAt: roundMintedAt(sv), boards: kept }
+    : {
+        roundId: String(newRoundId || ""),
+        tableId: String(tableId || ""), actId: String(actId || ""),
+        std: { type: String(type || ""), options: options || {} },
+        stdBy: me, phase: "ready", at: now, mintedAt: now, boards: {}
+      };
+  // ⚠️ `ready` TÍNH Ở ĐÂY, không nhận từ chỗ gọi — nguyên văn hợp đồng của Đợt 261:
+  // chỗ gọi chỉ biết bản chuẩn mà NÓ đọc được lần cuối.
+  next.boards[me] = {
+    teamId: String(teamId || ""), teamName: String(teamName || ""),
+    ready: stdSignature(type, options) === stdSignature(next.std.type, next.std.options),
+    at: now
+  };
+  next.updatedAt = now;
+  return { next, reused: reusable, dropped };
 }

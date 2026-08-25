@@ -12,7 +12,186 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 263** (25/8/2026, code `b58ab42` + hồ sơ `1117c66`, ĐÃ LIVE).
+> Mới nhất: **Đợt 264** (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy duyệt**). Bản LIVE hiện tại vẫn là **Đợt 263** (`b58ab42`).
+
+---
+
+## Đợt 264 (26/8/2026) — ⭐⭐⭐ **"SET 55 CÂU MÀ CỨ NHẢY VỀ 30"** · ⭐⭐⭐ **RESET TEAMS VỚI SANG MỌI MÁY**
+
+> ⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT.** Sửa **3 file**: `core/showdown.js` ·
+> `core/showdown-setup.js` · `core/engine.js`.
+> Bàn thử mới `scratch/dot264-round.html` **32/32** (có ĐỐI CHỨNG NGƯỢC chạy luật CŨ và
+> một phép CẮT DÂY) · `scratch/dot264-reset.html` **27/27** (⭐ đã cắt dây thật: gỡ cửa
+> reset ⇒ bench ĐỎ đúng 6 phép, nối lại ⇒ xanh) · ✅ **ĐÃ NHÌN BẰNG MẮT**
+> (`dot264-visual.html`, 2 màn chữ mới, đo `scrollWidth === clientWidth` ⇒ không tràn).
+> Hồi quy: `dot261-lobby` **57/57** (⚠️ có SỬA, đọc VIỆC 4) · `dot263-readyrow` **25/25** ·
+> `dot263-applyready` **10/10** · `dot262-matchid` **33/33** · `dot260-plan` **52/52** ·
+> `dot256-smoke` **48/48**.
+
+---
+
+### VIỆC 1 — ⭐⭐⭐ THẦY BÁO: ĐỔI 30 → 55 CÂU MÀ CÓ BÀN CỨ BỊ KÉO NGƯỢC VỀ 30
+
+Nguyên văn thầy (26/8/2026), chơi Showdown chia **3 bảng**:
+
+> *"Ván trước set-up mỗi người 30 câu và đồng bộ ok, xong xuôi, đã có kết quả đầy đủ và
+> chuẩn. Sau đó thoát app làm việc khác, sau đó vào lại và set cả 3 ô set-up options thành
+> mỗi người 55 câu, nhưng khi bấm start để sẵn sàng chơi thì có 1 đội cứ bị nhảy về 30,
+> chỉnh rồi vẫn có đội sẽ bị nhảy lung tung về 30 câu. **Phải chọn build 1 đội khác, sau đó
+> quay về build lại đội cũ thì mới ra được 55 câu mà ko bị nhảy về nữa.**"*
+
+#### ⛔⛔⛔ CHÍNH CÁCH THẦY CHỮA ĐƯỢC LÀ BẰNG CHỨNG CHẨN ĐOÁN
+
+Đổi bảng đội = đổi `tableId`, và `tableId` là **một trong ba cửa** làm một lượt phòng chờ
+hết "dùng lại được" (`joinRound`). **Nếu con số 30 nằm trong Options của máy thì thao tác
+ấy không thể chữa được gì cả.** Vậy số 30 nằm trên Firestore, trong `sd_round`.
+
+#### BA CHỖ HỎNG, PHẢI VÁ CẢ BA
+
+| # | Chỗ hỏng | Vì sao chết người |
+|---|---|---|
+| 1 | **`std` của một lượt đã tồn tại thì KHÔNG có đường nào sửa** | Cả repo chỉ có ĐÚNG MỘT dòng ghi `std`, nằm trong nhánh "đúc lượt mới". Nhánh "dùng lại" bê nguyên `std` cũ sang ⇒ một chuẩn sai là một chuẩn **vĩnh viễn**. |
+| 2 | **Lượt không còn ai vẫn được dùng lại** | `leaveRound()` **cố ý** giữ tài liệu kể cả khi bàn cuối rời đi. Ghi chú cũ viết thẳng: *"`std` phải sống sót để bàn quay lại vẫn khớp đúng bản chuẩn cũ"*. **Đúng câu đó là con bọ.** Máy tắt app cứng còn tệ hơn: hàng `ready:true` của nó nằm lại **không bao giờ hết hạn**. |
+| 3 | **Mỗi cú bấm lại GIA HẠN thêm 3 tiếng cho chính cái lượt đang hại mình** | Hạn lượt đo từ `at`, mà nhánh "dùng lại" ghi `at: now`. Càng chữa nó càng sống dai — đúng cái thầy tả *"chỉnh rồi vẫn nhảy lung tung"*. |
+
+Ráp lại: sau ván 30 câu, một bàn bấm START thêm lần nữa ⇒ đúc lượt mới `std = 30`, pha
+`ready`. Thầy thoát app — bàn rút ra nhưng **`std = 30` ở lại**. Quay vào, set cả 3 bàn
+thành 55, bấm START ⇒ cả ba **nhập vào lượt ma đó**, bị chấm "chưa chuẩn", và
+`pullStandard()` **thay TOÀN BỘ Options** bằng chuẩn cũ.
+
+#### LUẬT MỚI — MỘT CÂU
+
+> **Một lượt không còn bàn nào KHÁC đang sống thì không có quyền ra lệnh cho ai cả.**
+
+"Bàn đầu tiên bấm START chốt chuẩn" (Đợt 261) **vẫn nguyên vẹn** — chỉ là một lượt rỗng
+thì không có bàn đầu tiên nào để mà chốt. Và **hàng của chính mình không được tính**: một
+bàn không thể tự lấy mình ra làm bằng chứng rằng lượt còn sống. Chính điều đó mở ra ca
+"thầy đổi ý" — bàn đã chốt chuẩn nay đổi Options rồi bấm lại thì chuẩn đi theo nó.
+
+⛔ **ĐÃ CÂN NHẮC RỒI BỎ — "cú START mới nhất thắng"** (lượt đang có thì cập nhật `std`
+theo bàn vừa bấm). Nó **đảo ngược lỗi chứ không xoá lỗi**: một bàn chưa kịp nhận Options
+mới bấm START sau cùng sẽ kéo TẤT CẢ các bàn đã đúng về số cũ của nó. Đổi tên nạn nhân
+không phải là vá.
+
+#### CÁI GÌ ĐỔI TRONG CODE
+
+- ⭐ **`planRoundJoin()` — quyết định "dùng lại hay đúc mới" DỜI SANG `core/showdown.js`**
+  (file thuần). Nó vốn chôn trong thân một giao dịch Firestore, tức là **không bàn thử nào
+  chạm tới được** — và một luật không đo được là một luật sẽ hỏng lần nữa mà không ai biết.
+  Nó ĐÃ hỏng đúng như thế. `joinRound()` nay chỉ còn lo đọc/ghi.
+- ⭐ **`mintedAt`** — tuổi thật của lượt, ghi đúng một lần lúc đúc. Hạn 3 tiếng nay đo từ
+  nó, không đo từ `at`. Tài liệu bản cũ không có ⇒ rơi về `at` (không ai chết oan).
+- ⭐ **`ROUND_BOARD_TTL_MS` (2,5 phút) + `ROUND_BEAT_MS` (45 giây)** — `at` của mỗi hàng bàn
+  nay là **NHỊP TIM**: bàn nào còn đứng trong phòng chờ thì cứ 45 giây đóng dấu lại giờ của
+  chính nó (`touchRound`, engine `startLobbyBeat`). Hàng quá 2,5 phút không đập là coi như
+  máy đó đã đi. TTL chịu được **hơn ba nhịp trượt** — vừa khít một nhịp thì mỗi lần mạng
+  lớp học khục một cái là cả lớp mất một đội.
+- ⭐ **Hàng ma bị DỌN, không chỉ bị bỏ qua lúc đếm** — tài liệu tự nói đúng sự thật cho MỌI
+  người đọc nó, kể cả người đọc chưa viết ra.
+- `roundReadyTeamIds()` + `roundMissingTeams()` thêm **cửa lọc thứ tư**: hàng đã tắt nhịp.
+  Trước đợt này một máy tắt app giữa buổi vẫn giữ nguyên một **dấu ✓ xanh** trong hàng ô
+  tích và vẫn đếm vào "4 / 4 teams" — cả hai đều nói dối, và không có cách nào tự khỏi.
+- ⭐ **`LOADING DATA…` nay NÓI RA mình đang bị kéo về đâu**: *"matching the class · 30 each"*.
+  Con bọ này sống được cả buổi vì màn đó chỉ nói *"matching the other boards…"* — bàn bị thay
+  toàn bộ Options mà **không một chữ nào** cho biết thay bằng cái gì. Một dòng chữ là thứ
+  rẻ nhất biến "hỏng im lặng" thành "hỏng nhìn thấy được".
+
+---
+
+### VIỆC 2 — ⭐⭐⭐ THẦY XIN: "1 MÁY RESET TEAM THÌ CÁC MÁY KHÁC CŨNG PHẢI RESET SẠCH"
+
+> *"Đặc biệt cần reset triệt để màn build team, 1 máy reset team thì các máy khác cũng phải
+> reset sạch, ko để lẫn dữ liệu ảnh hưởng đến các vòng sau khi thay đổi options hoặc thay
+> đổi thành viên đội."*
+
+Ghi chú cũ của `wipeSetup()` viết rằng máy đang GIỮA VÁN *"has no channel this can reach"*.
+**Nay nó có** — mọi ván Showdown đều đang mở `subscribeSetup()` sẵn (từ Đợt 217, để bắt "bị
+giành mất đội"), nên chỉ cần **một con số trên tài liệu bảng đội** là chở được tin đi:
+không thêm listener, không thêm tài liệu, không thêm luật Firestore.
+
+- **`resetAt`** trên `sd_main`, đóng bởi `wipeSetup()`. **CHỈ TĂNG, không bao giờ lùi**
+  (`publishTable` lấy `Math.max`) — một cột mốc mà lùi được thì không phải cột mốc, và một
+  panel cầm ảnh chụp cũ bấm Ready sẽ **xoá mất dấu vết cú reset**.
+- **Pick mang theo `resetAt`** (4 chỗ đóng dấu: 2 nhánh applyReady/applySolo,
+  `stampPickFromTable`, nút REFRESH TEAM). Máy nào thấy mốc trên server **lớn hơn** mốc
+  trong pick của mình thì biết pick của mình đã mồ côi.
+- **`showTeamsReset()`** — tấm chặn *"TEAMS WERE RESET"*, dùng chung thân hàm với
+  "bị giành mất đội" (`showSdStop`), hai màn khác nhau **đúng ba dòng chữ**.
+  ⭐ **Thầy chốt (26/8): ván ĐANG CHƠI cũng dừng.**
+- ⚠️ **RÚT KHỎI PHÒNG CHỜ TRƯỚC, rồi mới chặn màn** (`cancelLobby()` chứ không phải
+  `stopLobbyWatch()`): để nguyên là để lại một cái tên trong một lượt mà cả lớp đang đợi,
+  sau một tấm chắn không ai gỡ được.
+- ⭐⭐ **`wipeRound()` — "Reset teams" nay XOÁ HẲN `sd_round`.** Đây là chỗ thiếu đã để con
+  bọ VIỆC 1 sống sót qua cả một cú Reset teams: bảng đội mới, kết quả mới, mà tài liệu lượt
+  vẫn nằm đó với DỮ LIỆU CHUẨN của buổi cũ. `deleteDoc` chứ không ghi một tài liệu rỗng —
+  **một tài liệu rỗng và một tài liệu KHÔNG TỒN TẠI là hai thứ khác nhau, và cả con bọ này
+  sinh ra từ đúng chỗ lẫn lộn ấy.**
+- ⚠️ **SO MỐC, KHÔNG SO "đội còn trên bảng không"**: đội biến mất khỏi bảng có cả tá lý do
+  hiền lành (bảng chưa về, mạng rớt, máy khác đang dựng lại đội hình) — đúng cái ranh giới
+  Đợt 217 đã phải vạch.
+
+---
+
+### VIỆC 3 — ⛔ HAI CHỖ CỐ Ý **KHÔNG** VÁ, VÀ VÌ SAO
+
+1. **Bắt kịp THẬT vẫn chạy y như cũ.** Có bàn khác đang ngồi trong lượt (còn nhịp) thì bàn
+   tới VẪN bị chấm "chưa chuẩn" và VẪN bị kéo về chuẩn của lượt. Bàn đi sau không được lật
+   bàn đi trước. Bàn thử `dot264-round.html` mục C và `dot261-lobby` đều ghim ranh giới này
+   — **xoá một trong hai là mất ranh giới**.
+2. **Không đụng vào `pullStandard()`.** Nó THAY THẾ chứ không trộn Options, và đó là đúng
+   (cùng cửa với nút Apply và cầu myActivity, Đợt 206). Lỗi nằm ở chỗ *chuẩn nào được đưa
+   cho nó*, không nằm ở chỗ nó làm gì với chuẩn ấy.
+
+---
+
+### VIỆC 4 — ⚠️ BÀN THỬ ĐỢT 261 BỊ SỬA, ĐỌC TRƯỚC KHI "SỬA LẠI"
+
+`scratch/dot261-lobby.html` đỏ **7/53** sau bản vá. Xét từng cái, **không sửa cho xanh**:
+
+- **4 phép** là fixtures viết tắt **không có `at`** ⇒ dưới luật mới chúng là bốn hàng đã
+  chết. Thêm `at` là trả chúng về đúng thứ chúng vẫn luôn định đo. Thêm 1 phép MỚI: bàn tắt
+  app (hết nhịp) không còn được tính là đã sẵn sàng.
+- **3 phép là LUẬT CŨ mà Đợt 264 CỐ Ý ĐẢO NGƯỢC.** Bản Đợt 261 khẳng định: bàn này bấm lại
+  thì DÙNG LẠI lượt cũ, và nếu Options đã đổi thì nó bị kéo về chuẩn CŨ. Nghe rất hợp lý —
+  **và đó chính là con bọ thầy báo**. Đã viết lại thành luật mới, kèm **một cặp phép ranh
+  giới** ngay dưới (bơm một bàn khác còn nhịp vào ⇒ mọi lời hứa cũ của Đợt 261 sống lại).
+- ⚠️ `scratch/dot261-live.html` (bản đọc từ site LIVE) **giữ nguyên** — nó là biên bản của
+  một lần kiểm bản live đã xảy ra. Sau khi đẩy Đợt 264 lên, nó sẽ đỏ đúng 7 phép trên; đó
+  là **đúng**, không phải hỏng.
+
+---
+
+### VIỆC 5 — BẪY ĐO CỦA ĐỢT NÀY
+
+- ⛔ **Nhịp tim đập mỗi 45 GIÂY — không bàn thử nào ngồi đợi được**, mà "đợi 45s rồi xem"
+  cũng không chứng minh được cái đáng chứng minh (rằng dây có được **lên** và có được
+  **tháo**). Cách làm: bọc `setInterval`/`clearInterval` **trước khi import engine**, ghi
+  lại dây, rồi **tự tay giật nó**. Callback được giật là callback THẬT của engine và nó đi
+  thẳng vào Firestore giả. ⚠️ Vẫn gọi hàm gốc, không nuốt — engine còn nhiều đồng hồ khác.
+- ⭐ **`fake-firebase.js` chưa từng có `deleteDoc`** ⇒ đường ghi của `wipeRound()` sẽ không
+  bao giờ được bench nào chạy qua. Đã thêm, và xoá THẬT (bỏ khoá khỏi store) chứ không gán
+  `{}`.
+- ⭐⭐ **Bench xanh ngay lần đầu là bench phải nghi ngờ.** `dot264-reset.html` đạt 27/27 ngay
+  phát đầu ⇒ đã **cắt dây thật** trong `core/engine.js` (thay điều kiện cửa reset bằng
+  `if (false)`), chạy lại: **ĐỎ đúng 6 phép**, nối lại: xanh. `dot264-round.html` cũng có
+  mục I cắt dây theo cách tương tự (bơm một hàng bàn còn sống vào chính ca A ⇒ kết quả phải
+  ĐẢO NGƯỢC lại đúng như luật cũ).
+
+---
+
+### ⬜ VIỆC ĐANG CHỜ (Đợt 264)
+
+- ⬜ **THẦY DUYỆT rồi mới PUSH** — đợt này **chưa đẩy lên live**.
+- ⬜ **TEST TAY NHIỀU MÁY** (việc duy nhất bàn thử không thay được):
+  1. Chơi một vòng 30 câu/em cho xong → thoát app → vào lại → set cả 3 bảng 55 câu/em →
+     bấm START cả 3 ⇒ **phải ra 55, không bàn nào nhảy về 30**.
+  2. Bấm START ở 1 bàn rồi **tắt hẳn app máy đó** ⇒ sau ~2,5 phút dấu ✓ của nó phải **tắt**
+     và con số "x / y teams" phải giảm.
+  3. Một bàn đứng chờ ở READY **hơn 5 phút** trong lúc thầy giảng ⇒ **không được** bị rụng.
+  4. Bấm **Reset teams** ở 1 máy trong lúc máy khác đang **chơi dở** ⇒ máy kia phải hiện
+     **TEAMS WERE RESET** và dừng.
+  5. Bấm **Reset teams** trong lúc máy khác đang **đứng chờ ở READY** ⇒ cũng phải dừng, và
+     các bàn còn lại không bị kẹt đợi nó.
 
 ---
 

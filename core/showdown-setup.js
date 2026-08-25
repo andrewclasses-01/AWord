@@ -62,7 +62,7 @@ import {
   renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
-  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, stdSignature, browserId, writePick, clearPick, ROUND_TTL_MS,
+  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick, planRoundJoin,
   readPendingResult, writePendingResult, clearPendingResult,
   mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
@@ -217,6 +217,10 @@ function normalize(raw) {
         .filter(m => m.name)
     })),
     claims,
+    // ⭐⭐⭐ Đợt 264 — LẦN CUỐI BẢNG ĐỘI NÀY BỊ XOÁ SẠCH ("Reset teams"). Chỉ TĂNG, không
+    // bao giờ lùi (xem publishTable). Mọi máy đang nghe đều thấy nó đổi, và máy nào cầm
+    // một pick đúc TRƯỚC mốc này thì pick đó đã mồ côi ⇒ dừng lại. Xem readPick().
+    resetAt: Number(raw?.resetAt) || 0,
     updatedAt: Number(raw?.updatedAt) || 0
   };
 }
@@ -325,6 +329,11 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
       ...base,
       claims,
       tableId: base.tableId || ours.tableId || server.tableId,
+      // ⭐ Đợt 264 — MỐC RESET CHỈ ĐƯỢC TĂNG. `base` có thể là ảnh chụp của panel này,
+      // đúc trước cú reset của máy khác vài giây; lấy thẳng `base.resetAt` là **xoá dấu
+      // vết cú reset đó** và mọi máy đang chờ bị đẩy về sẽ lặng lẽ không bị đẩy nữa.
+      // Một cột mốc mà lùi được thì không phải cột mốc.
+      resetAt: Math.max(Number(server.resetAt) || 0, Number(ours.resetAt) || 0),
       updatedAt: Date.now()
     });
     tx.set(ref, clean(next));
@@ -377,6 +386,10 @@ export function stampPickFromTable(pick, node, teamId) {
   pick.className = node.className || pick.className;
   pick.maxTeam = Math.max(1, ...teams.map(x => (x.members || []).length || 0));
   pick.tableId = node.tableId || pick.tableId || "";
+  // ⭐ Đợt 264 — và MỐC RESET của bảng đội đang sống. Không có dòng này thì một pick vừa
+  // được đóng dấu lại từ bảng MỚI vẫn mang mốc 0, và máy đó sẽ tự đuổi chính mình về màn
+  // chọn đội ngay lần snapshot kế tiếp — một cú reset của tuần trước cũng đuổi được.
+  pick.resetAt = Number(node.resetAt) || pick.resetAt || 0;
   writePick(pick);
   return pick;
 }
@@ -562,7 +575,16 @@ export async function wipeSetup({ keepRoster = null, rosterClass = "" } = {}) {
     await saveSetup({
       classId: "", className: "", teams: [], claims: {},
       roster: keep.map(m => ({ id: m.id, name: m.name })),
-      rosterClass: keep.length ? String(rosterClass || "") : ""
+      rosterClass: keep.length ? String(rosterClass || "") : "",
+      // ⭐⭐⭐ Đợt 264 (thầy, 26/8/2026) — *"1 máy reset team thì các máy khác cũng phải
+      // reset sạch, ko để lẫn dữ liệu ảnh hưởng đến các vòng sau"*. ĐÂY là cái mốc làm
+      // được điều đó. Ghi chú cũ ngay trên đầu hàm này viết rằng một máy đang GIỮA VÁN
+      // *"has no channel this can reach"* — nay nó có: mọi ván Showdown đều đang mở
+      // subscribeSetup() sẵn (từ Đợt 217, để bắt "bị giành mất đội"), nên chỉ cần một
+      // con số trên tài liệu là chở được tin đi, không thêm listener, không thêm tài
+      // liệu, không thêm luật Firestore.
+      // ⚠️ Thầy chốt: máy đang chơi dở **cũng dừng** (26/8/2026). Xem showTeamsReset().
+      resetAt: Date.now()
     });
   } catch { /* signed out or offline — nothing was shared yet, nothing to wipe */ }
   // ⭐ Đợt 177 — the RESULT board goes with the team table. Leaving it would let
@@ -570,6 +592,12 @@ export async function wipeSetup({ keepRoster = null, rosterClass = "" } = {}) {
   // line-up: the same team ids (`sdt_1`…) are handed out again by
   // splitIntoTeams(), so the stale rows would not even look foreign.
   try { await wipeResults(); } catch { /* same reason as above */ }
+  // ⭐⭐⭐ Đợt 264 — VÀ TÀI LIỆU LƯỢT ĐI CÙNG. Đây là chỗ thiếu đã để con bọ "nhảy về 30
+  // câu" sống sót qua cả một cú Reset teams: bảng đội mới, kết quả mới, mà `sd_round`
+  // thì vẫn nằm đó với DỮ LIỆU CHUẨN của buổi cũ, sẵn sàng kéo Options của mọi bàn về
+  // số cũ ngay lần bấm START tới. Cùng đúng lập luận của wipeResults() ngay trên: thứ
+  // gì mô tả "lớp đang chơi vòng nào" thì phải chết cùng bảng đội.
+  try { await wipeRound(); } catch { /* same reason as above */ }
 }
 
 // ---------------------------------------------------------------
@@ -3106,7 +3134,10 @@ export function buildShowdownPanel(panel, ctx) {
       // đọc trường này) đã gỡ; vẫn ghi ra để trường này luôn có cùng một nghĩa dù pick đến
       // từ đường nào.
       maxTeam: Math.max(1, team.members.length),
-      tableId: setup.tableId
+      tableId: setup.tableId,
+      // ⭐ Đợt 264 — nhánh MỘT ĐỘI cố ý không đi qua stampPickFromTable() (xem ghi chú
+      // của hàm đó), nên mốc reset phải tự đóng ở đây, không thì pick sinh ra đã mồ côi.
+      resetAt: Number(setup.resetAt) || 0
     };
     // Store the pick FIRST, same reason applyReady() does: the lesson has to
     // start even if the network is having a bad day.
@@ -4014,7 +4045,11 @@ export function buildShowdownPanel(panel, ctx) {
       // machine after this Ready lands here on the next open of the panel — the
       // same contract every other field of the pick already has.
       maxTeam: Math.max(1, ...setup.teams.map(t => t.members.length || 0)),
-      tableId: setup.tableId || ""
+      tableId: setup.tableId || "",
+      // ⭐ Đợt 264 — stampPickFromTable() ngay sau publishTable sẽ đóng lại bằng mốc của
+      // SERVER; ở đây là bản dự phòng cho đúng ca hợp đồng Đợt 197: mất mạng ⇒ publishTable
+      // ném ⇒ hàm kia không chạy ⇒ buổi dạy vẫn phải bắt đầu được bằng ảnh chụp cục bộ.
+      resetAt: Number(setup.resetAt) || 0
     };
     // Store the pick FIRST: it is what the restart reads, and the lesson has to
     // start even if the network is having a bad day.
@@ -4240,9 +4275,11 @@ export function buildShowdownPanel(panel, ctx) {
 // Cộng thêm TTL: `phase: "starting"` là trạng thái CUỐI — nó không bao giờ quay lại
 // "ready", nên "Start again" sau ván luôn mở một lượt mới, đúng như thầy mong.
 const ROUND_DOC = "sd_round";
-// ⚠️ Đợt 263 — `ROUND_TTL_MS` đã DỜI sang core/showdown.js (file thuần) và nhập từ đó:
-// màn READY của engine cũng phải hỏi "lượt này còn sống không" để vẽ hàng ô tích, mà
-// engine không được chạm vào file Firestore này. Cùng lối nghĩ với CLAIM_TTL_MS.
+// ⚠️ Đợt 263 — `ROUND_TTL_MS` đã DỜI sang core/showdown.js (file thuần): màn READY của
+// engine cũng phải hỏi "lượt này còn sống không" để vẽ hàng ô tích, mà engine không được
+// chạm vào file Firestore này. Cùng lối nghĩ với CLAIM_TTL_MS.
+// ⚠️ Đợt 264 — file NÀY không còn nhập nó nữa: phép đo hạn lượt đã theo `planRoundJoin`
+// sang bên đó cả cụm, nên hằng số và người dùng nó nay ở chung một chỗ.
 
 function normRound(raw) {
   const boards = {};
@@ -4269,6 +4306,11 @@ function normRound(raw) {
       options: (std.options && typeof std.options === "object") ? std.options : {}
     },
     stdBy: String(raw?.stdBy || ""),
+    // ⭐ Đợt 264 — TUỔI THẬT CỦA LƯỢT (xem roundMintedAt trong core/showdown.js). `at`
+    // là "lần cuối có người động vào", `mintedAt` là "đúc lúc nào" — trước đợt này chỉ
+    // có cái thứ nhất, và hạn 3 tiếng đo nhầm vào nó nên một lượt hỏng không bao giờ
+    // già đi. Thiếu ⇒ rơi về `at`, đúng hành vi cũ cho tài liệu của bản cũ.
+    mintedAt: Number(raw?.mintedAt) || Number(raw?.at) || 0,
     // ⚠️ Chỉ HAI pha. Một giá trị lạ đọc thành "ready" chứ không phải thành chính nó:
     // pha là thứ quyết định "đã bắt đầu chưa", và một chuỗi rác lọt vào đó sẽ làm mọi
     // bàn đứng chờ vĩnh viễn một pha không bao giờ tới.
@@ -4310,30 +4352,65 @@ export async function joinRound({ tableId, actId, teamId, teamName, type, option
   return runTransaction(d, async tx => {
     const snap = await tx.get(ref);
     const server = normRound(snap.exists() ? snap.data() : {});
-    const now = Date.now();
-    const reusable = !!server.roundId
-      && server.tableId === String(tableId || "")
-      && server.actId === String(actId || "")
-      && server.phase === "ready"
-      && (now - server.at) < ROUND_TTL_MS;
-    const next = reusable
-      ? { ...server, at: now, boards: { ...server.boards } }
-      : {
-          roundId: mintRoundId(),
-          tableId: String(tableId || ""), actId: String(actId || ""),
-          std: { type: String(type || ""), options: options || {} },
-          stdBy: me, phase: "ready", at: now, boards: {}
-        };
-    next.boards[me] = {
-      teamId: String(teamId), teamName: String(teamName || ""),
-      ready: stdSignature(type, options) === stdSignature(next.std.type, next.std.options),
-      at: now
-    };
-    next.updatedAt = now;
+    // ⭐⭐⭐ Đợt 264 — QUYẾT ĐỊNH "dùng lại hay đúc mới" ĐÃ DỜI SANG core/showdown.js
+    // (`planRoundJoin`, file thuần). Nó vốn nằm ngay đây, trong thân một giao dịch
+    // Firestore, tức là không bàn thử nào chạm tới được — và một luật không đo được là
+    // một luật sẽ hỏng lần nữa mà không ai biết. Nó ĐÃ hỏng đúng như thế: xem cả bài ở
+    // đầu planRoundJoin(). Chỗ này nay chỉ còn lo đọc/ghi.
+    const { next } = planRoundJoin({
+      server, me, tableId, actId, teamId, teamName, type, options,
+      now: Date.now(), newRoundId: mintRoundId()
+    });
     const node = normRound(next);
     tx.set(ref, clean(node));
     return node;
   });
+}
+
+/**
+ * ⭐⭐⭐ Đợt 264 — NHỊP TIM CỦA MỘT BÀN ĐANG ĐỨNG TRONG PHÒNG CHỜ.
+ *
+ * Đóng dấu lại giờ trên ĐÚNG hàng của mình, không chạm gì khác. Bàn nào ngừng đập thì
+ * sau `ROUND_BOARD_TTL_MS` bị coi là đã đi — đó là thứ làm cho một máy tắt app cứng
+ * không còn giữ được một dấu ✓ xanh vĩnh viễn và không còn giữ cho lượt ma "còn người".
+ *
+ * ⚠️ IM LẶNG QUAY ĐẦU KHI LƯỢT ĐÃ ĐỔI (`roundId` khác) hoặc đã cất cánh: một nhịp tim
+ * đến muộn không được phép hồi sinh cái gì. Nó là lời khai "tôi còn đây", không phải
+ * lời xin vào lại — cửa vào lại là `joinRound()` và chỉ nó thôi.
+ * ⚠️ Không dùng giao dịch: chỉ ghi đè đúng một trường giờ của chính mình, hai bàn không
+ * bao giờ tranh nhau cùng một hàng, và một nhịp trượt thì nhịp sau đập bù.
+ */
+export async function touchRound(roundId) {
+  if (!roundId) return null;
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, ROUND_DOC);
+  return runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return null;
+    const server = normRound(snap.data());
+    if (server.roundId !== String(roundId) || server.phase !== "ready") return null;
+    if (!server.boards[me]) return null;
+    const now = Date.now();
+    const boards = { ...server.boards, [me]: { ...server.boards[me], at: now } };
+    const node = normRound({ ...server, boards, at: now, updatedAt: now });
+    tx.set(ref, clean(node));
+    return node;
+  });
+}
+
+/**
+ * ⭐⭐⭐ Đợt 264 — XOÁ HẲN TÀI LIỆU LƯỢT. Gọi từ `wipeSetup()` ("Reset teams").
+ *
+ * ⛔ XOÁ THẬT, không phải ghi một tài liệu rỗng. Một tài liệu rỗng vẫn còn `std` nếu ai
+ * đó quên một trường, mà quên một trường trong một tài liệu ghi-đè-cả-tài-liệu là cách
+ * con bọ này đã sinh ra. `deleteDoc` không để lại gì để mà quên.
+ */
+export async function wipeRound() {
+  const uid = await requireUid();
+  const [d, { doc, deleteDoc }] = await Promise.all([db(), fs()]);
+  await deleteDoc(doc(d, `users/${uid}/items`, ROUND_DOC));
 }
 
 /**

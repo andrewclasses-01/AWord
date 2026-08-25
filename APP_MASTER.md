@@ -8,8 +8,55 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 263)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 264 — ⬜ CHƯA PUSH, chờ thầy duyệt; bản LIVE vẫn là Đợt 263 `b58ab42`)**.
 >
+> **Đợt 264** (26/8/2026, ⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT**; bản LIVE vẫn là Đợt 263
+> `b58ab42`) — ⭐⭐⭐ **VÁ "SET 55 CÂU MÀ CỨ NHẢY VỀ 30"** và ⭐⭐⭐ **RESET TEAMS NAY VỚI
+> SANG MỌI MÁY**. Sửa 3 file: `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js`.
+>
+> **(1) Thầy báo:** chơi xong một vòng 30 câu/em, thoát app, vào lại, set cả 3 bảng thành
+> 55 câu/em — bấm START thì có bàn cứ bị kéo ngược về 30, *"chỉnh rồi vẫn nhảy lung tung"*,
+> và **chỉ chữa được bằng cách build sang đội khác rồi quay lại**.
+> ⛔⛔ **CHÍNH CÁCH CHỮA ĐÓ LÀ BẰNG CHỨNG**: đổi bảng đội = đổi `tableId`, cửa DUY NHẤT làm
+> một lượt phòng chờ hết "dùng lại được" ⇒ con số 30 nằm trong `sd_round` trên Firestore,
+> **không** nằm trong Options của máy.
+> **Ba chỗ hỏng cộng lại:** (a) `std` của một lượt đã tồn tại **không có đường nào sửa** —
+> cả repo chỉ có ĐÚNG MỘT dòng ghi `std`, ở nhánh "đúc lượt mới"; (b) `leaveRound()` **cố ý**
+> giữ tài liệu kể cả khi bàn cuối rời đi (*"`std` phải sống sót…"* — đúng câu đó là con bọ),
+> và hàng của máy tắt app cứng thì **không bao giờ hết hạn**; (c) hạn 3 tiếng đo từ `at`, mà
+> nhánh "dùng lại" ghi `at: now` ⇒ **mỗi cú bấm lại gia hạn thêm 3 tiếng cho chính cái lượt
+> đang hại mình**.
+> ⇒ **LUẬT MỚI, MỘT CÂU: một lượt không còn bàn nào KHÁC đang sống thì không có quyền ra
+> lệnh cho ai cả.** "Bàn đầu tiên bấm START chốt chuẩn" (Đợt 261) vẫn nguyên vẹn — lượt rỗng
+> thì không có bàn đầu tiên nào để mà chốt; và **hàng của chính mình không được tính**, nên
+> ca "thầy đổi ý" (bàn đã chốt chuẩn nay đổi Options rồi bấm lại) nay chạy đúng.
+> ⭐ Quyết định đó DỜI sang `core/showdown.js` thành `planRoundJoin()` — **file thuần, đo
+> được**; nó vốn chôn trong thân một giao dịch Firestore nên **không bàn thử nào chạm tới
+> được**, và nó đã hỏng đúng như thế. Thêm `mintedAt` (tuổi thật của lượt) và **NHỊP TIM**
+> `ROUND_BEAT_MS` 45s / `ROUND_BOARD_TTL_MS` 2,5 phút ⇒ hàng bàn đã tắt app rụng đi, hết
+> nói dối ở hàng ô tích lẫn con số "x / y teams". Màn `LOADING DATA…` nay **nói ra mình
+> đang bị kéo về đâu** (*"matching the class · 30 each"*).
+> ⛔ **Đã cân nhắc rồi bỏ — "cú START mới nhất thắng"**: nó đảo ngược lỗi chứ không xoá lỗi.
+>
+> **(2) Thầy xin:** *"1 máy reset team thì các máy khác cũng phải reset sạch"* — và thầy chốt
+> **ván đang chơi cũng dừng**. Làm bằng mốc `resetAt` trên `sd_main` (chỉ TĂNG, `publishTable`
+> lấy `Math.max`) + pick mang theo mốc đó ⇒ máy nào thấy mốc server lớn hơn thì hiện tấm chặn
+> **TEAMS WERE RESET** (dùng chung thân hàm với "bị giành mất đội", khác đúng ba dòng chữ).
+> ⚠️ **Rút khỏi phòng chờ TRƯỚC rồi mới chặn màn**, không thì để lại một cái tên trong lượt
+> mà cả lớp đang đợi, sau một tấm chắn không ai gỡ được.
+> ⭐⭐ Và **`wipeRound()` — Reset teams nay xoá HẲN `sd_round`** (`deleteDoc`, không ghi tài
+> liệu rỗng): đây đúng là chỗ thiếu đã để con bọ (1) sống sót qua cả một cú Reset teams.
+>
+> `dot264-round` **32/32** (có đối chứng ngược chạy LUẬT CŨ + phép cắt dây) ·
+> `dot264-reset` **27/27** (⭐ đã cắt dây thật trong engine ⇒ ĐỎ đúng 6 phép, nối lại ⇒ xanh) ·
+> hồi quy `dot261-lobby` **57/57** (⚠️ có SỬA — 3 phép của Đợt 261 bị đợt này CỐ Ý đảo ngược,
+> đọc `GHI CHU DU AN.md` VIỆC 4 trước khi "sửa lại") · `dot263-readyrow` 25/25 ·
+> `dot263-applyready` 10/10 · `dot262-matchid` 33/33 · `dot260-plan` 52/52 · `dot256-smoke` 48/48.
+> ✅ **ĐÃ NHÌN BẰNG MẮT** (`dot264-visual.html`).
+> ⬜ **CHỜ THẦY DUYỆT + TEST TAY NHIỀU MÁY** — 5 kịch bản liệt kê ở `GHI CHU DU AN.md` Đợt 264
+> mục cuối.
+>
+> ---
 > **Đợt 263** (25/8/2026, `b58ab42`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
 > `built` đúng `b58ab42` · **5/5 mã băm SHA-256 khớp** · **35/35 phép chạy trên CHÍNH
 > MODULE CỦA BẢN LIVE** — `dot263-live.html` 25/25 + `dot263-live-apply.html` 10/10) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN

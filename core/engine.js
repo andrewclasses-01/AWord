@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds } from "./showdown.js";
+import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds, ROUND_BEAT_MS } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -481,6 +481,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       sdClaimStop = mod.subscribeSetup(next => {
         if (torndown) return;
         sdTableLive = next;
+        // ⭐⭐⭐ Đợt 264 (thầy, 26/8/2026) — MỘT MÁY BẤM "RESET TEAMS" THÌ MỌI MÁY DỪNG.
+        // *"1 máy reset team thì các máy khác cũng phải reset sạch, ko để lẫn dữ liệu ảnh
+        // hưởng đến các vòng sau"* — và thầy chốt là **cả ván đang chơi cũng dừng**.
+        // ⚠️ SO MỐC, KHÔNG SO "ĐỘI CÒN TRÊN BẢNG KHÔNG". Đội biến mất khỏi bảng có cả
+        // tá lý do hiền lành (bảng chưa về, mạng rớt, máy khác đang dựng lại đội hình) —
+        // đúng cái ranh giới mà Đợt 217 đã phải vạch cho "bị giành mất đội". `resetAt`
+        // LỚN HƠN mốc đóng trong pick của mình là bằng chứng DƯƠNG TÍNH: bảng đội mà
+        // pick này sinh ra từ đó đã bị xoá hẳn, sau lúc mình cầm nó.
+        // ⚠️ RA LUÔN: bảng đội đã chết thì dải kế hoạch và hàng ô tích bên dưới đang nói
+        // về một thứ không còn tồn tại.
+        if (Number(next?.resetAt || 0) > Number(showdownPick.resetAt || 0)) { showTeamsReset(); return; }
         const c = next && next.claims && next.claims[showdownPick.teamId];
         if (c && c.by !== browserId()) showTeamStolen();
         renderSdPlan();
@@ -2206,7 +2217,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       className: node.className || showdownPick.className,
       members: t.members.map(m => ({ id: m.id, name: m.name })),
       maxTeam: Math.max(1, ...teams.map(x => (x.members || []).length || 0)),
-      tableId: node.tableId || showdownPick.tableId || ""
+      tableId: node.tableId || showdownPick.tableId || "",
+      // ⭐ Đợt 264 — pick đóng dấu lại thì mốc reset đi theo, nếu không cú REFRESH TEAM
+      // sẽ đẻ ra một pick mốc 0 và máy tự đuổi chính mình ở snapshot ngay sau đó.
+      resetAt: Number(node.resetAt) || showdownPick.resetAt || 0
     });
     replayCurrent();
   }
@@ -2515,6 +2529,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ⚠️ Đo bằng số thì mọi phép kiểm đều xanh — cái này chỉ lộ ra khi NHÌN.
   const LOBBY_JOIN_TIMEOUT_MS = 8000;
   let lobbyJoinTimer = null;
+  // ⭐⭐⭐ Đợt 264 — NHỊP TIM. Bàn nào còn đứng trong phòng chờ thì cứ `ROUND_BEAT_MS`
+  // một lần lại đóng dấu giờ lên hàng của chính nó trong `sd_round`. Không có nó, một
+  // hàng `ready: true` nằm lại VĨNH VIỄN khi máy tắt app cứng — và một hàng bất tử là
+  // thứ giữ cho "lượt ma" còn người, tức là còn quyền kéo Options của cả lớp về số cũ.
+  // Xem cả bài ở đầu planRoundJoin() trong core/showdown.js.
+  // ⚠️ Nhịp đầu KHÔNG đập ngay: `joinRound()` vừa đóng dấu giờ xong trước đó vài ms.
+  let lobbyBeatTimer = null;
 
   /** Chữ ký của bàn NÀY — so với `std` của lượt để biết đã chuẩn chưa. */
   function myStd() { return stdSignature(activity.type, activity.options); }
@@ -2544,6 +2565,25 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     lobbyLeaveOnTeardown = true;
     paintLobby("joining");
     joinNow();
+    startLobbyBeat();
+  }
+
+  /**
+   * ⭐ Đợt 264 — bật/tắt nhịp tim. Một chỗ bật, một chỗ tắt, và chỗ tắt nằm trong
+   * `stopLobbyWatch()` — tức là đúng cùng cái công tắc đã tắt bộ nghe. Hai vòng đời
+   * phải trùng nhau tuyệt đối: một cái đồng hồ còn đập sau khi màn hình đã chết là
+   * đồng hồ ma của Đợt 131, và lần này nó còn GHI FIRESTORE mỗi nhịp.
+   */
+  function startLobbyBeat() {
+    if (lobbyBeatTimer) return;
+    lobbyBeatTimer = setInterval(() => {
+      if (torndown || !lobbyEl || !lobbyMod) return;
+      const rid = lobbyRound && lobbyRound.roundId;
+      // ⚠️ Chỉ đập khi mình THẬT SỰ có tên trong lượt. Đứng ở NO CONNECTION / CHECK
+      // OPTIONS mà vẫn đập là khai khống "tôi sẵn sàng" cho một bàn đang bế tắc.
+      if (!rid || !lobbyRound.boards || !lobbyRound.boards[browserId()]) return;
+      lobbyMod.touchRound(rid).catch(() => { /* mạng khục: nhịp sau đập bù */ });
+    }, ROUND_BEAT_MS);
   }
 
   /**
@@ -2687,6 +2727,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   function stopLobbyWatch() {
     clearTimeout(lobbyJoinTimer);
+    if (lobbyBeatTimer) { clearInterval(lobbyBeatTimer); lobbyBeatTimer = null; }
     if (!lobbyStop) return;
     const s = lobbyStop; lobbyStop = null;
     try { s(); } catch { /* đã gỡ */ }
@@ -2728,6 +2769,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     offline: "Cannot reach the class board — cancel to play on this board alone"
   };
 
+  /**
+   * DỮ LIỆU CHUẨN CỦA LƯỢT, VIẾT RA CHO MẮT THẦY — bằng đúng thứ tiếng của dải kế hoạch
+   * trên màn READY ("60 QUESTIONS · 5 EACH"), để hai chỗ không nói hai giọng.
+   * ⚠️ Chỉ nêu những thứ CÓ THỂ khác nhau giữa các bàn mà mắt không thấy: template và
+   * cách chia bài. Đổ cả bộ Options ra đây thì thành một bức tường chữ không ai đọc.
+   */
+  function lobbyStdWord() {
+    const std = lobbyRound && lobbyRound.std;
+    const o = (std && std.options) || {};
+    const bits = [];
+    if (std && std.type && std.type !== activity.type) bits.push(String(std.type).toUpperCase());
+    if (o.sdDeal === "count") bits.push((Math.round(Number(o.sdDealCount)) || 1) + " each");
+    else if (o.sdDeal === "free") bits.push("free deal");
+    return bits.join(" · ");
+  }
+
   function paintLobby(state, info) {
     if (!lobbyEl) return;
     lobbyPhase = state;
@@ -2745,7 +2802,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     } else if (LOBBY_HINT[state]) {
       sub.textContent = LOBBY_HINT[state];
     } else if (state === "loading") {
-      sub.textContent = "matching the other boards…";
+      // ⭐⭐ Đợt 264 — NÓI RA MÌNH ĐANG BỊ KÉO VỀ ĐÂU. Con bọ "set 55 câu mà cứ nhảy về
+      // 30" của thầy sống được cả buổi vì màn này chỉ nói "matching the other boards…":
+      // bàn bị thay TOÀN BỘ Options mà **không một chữ nào** cho biết thay bằng cái gì,
+      // nên một bản chuẩn sai trông y hệt một bản chuẩn đúng. Một dòng chữ ở đây là thứ
+      // rẻ nhất biến "hỏng im lặng" thành "hỏng nhìn thấy được".
+      const w = lobbyStdWord();
+      sub.textContent = w ? "matching the class · " + w : "matching the other boards…";
     }
     lobbyEl.append(sub);
     // ⛔ KHÔNG có cancel ở ĐÚNG MỘT trạng thái: "starting". Ván đã cất cánh, rút ra lúc
@@ -4555,17 +4618,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // lý do "panel" của nó, và nếu hai thứ dùng chung một lý do thì đúng cú đóng bảng đó
   // sẽ thả đồng hồ chạy lại sau lưng tấm chặn.
   let stolenEl = null;
-  function showTeamStolen() {
+  /**
+   * ⭐ Đợt 264 — MỘT TẤM CHẶN, HAI LÝ DO. Trước đợt này thân hàm dưới đây là của riêng
+   * "bị giành mất đội" (Đợt 217); nay cú "Reset teams" ở máy khác cũng phải dừng được
+   * ván này, và hai màn hình đó khác nhau ĐÚNG BA DÒNG CHỮ. Nhân đôi cả thân hàm để đổi
+   * ba dòng chữ là cách chắc chắn nhất để nửa năm nữa chỉ một nửa được sửa.
+   */
+  function showSdStop({ title, line, hint }) {
     if (stolenEl || torndown || !showdownPick) return;
     closeMenu();
     enterPause("stolen", { dim: false });     // tấm chặn dưới đây đã là một lớp phủ đặc
     stolenEl = el("div", "aw-sd-stolen");
     const box = el("div", "aw-sd-stolen-box");
     box.append(
-      el("div", "aw-sd-stolen-t", "TEAM TAKEN"),
-      el("div", "aw-sd-stolen-s",
-        `${showdownPick.teamName || "This team"} is being played on another screen now.`),
-      el("div", "aw-sd-stolen-s2", "Choose a team to play again.")
+      el("div", "aw-sd-stolen-t", title),
+      el("div", "aw-sd-stolen-s", line),
+      el("div", "aw-sd-stolen-s2", hint)
     );
     const b = el("button", "aw-btn-primary aw-sd-stolen-btn", "Choose a team");
     b.type = "button";
@@ -4577,6 +4645,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     box.append(b);
     stolenEl.append(box);
     inner.append(stolenEl);
+  }
+
+  function showTeamStolen() {
+    showSdStop({
+      title: "TEAM TAKEN",
+      line: `${showdownPick?.teamName || "This team"} is being played on another screen now.`,
+      hint: "Choose a team to play again."
+    });
+  }
+
+  /**
+   * ⭐⭐⭐ Đợt 264 — BẢNG ĐỘI VỪA BỊ RESET Ở MỘT MÁY KHÁC.
+   *
+   * ⚠️ RÚT KHỎI PHÒNG CHỜ TRƯỚC, rồi mới chặn màn. Bàn này có thể đang đứng ở READY /
+   * LOADING DATA / STARTING; để nguyên là để lại một cái tên trong một lượt mà cả lớp
+   * đang đợi, sau một tấm chắn không ai gỡ được — đúng kiểu "cả lớp chờ một bàn đã quên
+   * mất là mình đang được chờ" mà phòng chờ sinh ra để chặn.
+   * ⚠️ `cancelLobby()` chứ không phải `stopLobbyWatch()`: cái sau chỉ tắt bộ nghe, cái
+   * trước mới thật sự gỡ tên mình ra khỏi lượt.
+   */
+  function showTeamsReset() {
+    if (lobbyEl) cancelLobby();
+    showSdStop({
+      title: "TEAMS WERE RESET",
+      line: "The teams were reset on another screen, so this line-up is gone.",
+      hint: "Build the teams again, then choose a team."
+    });
   }
 
   function freezePlay() {
