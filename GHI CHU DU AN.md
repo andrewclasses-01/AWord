@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 272** (26/8/2026, ⬜ CHƯA PUSH — Follow/Share live session dời vào footer Options, dạng icon). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session`). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 272** (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
 
@@ -68,7 +68,9 @@ ra" chỉ lộ ra khi bàn thử đo TRẠNG THÁI THẬT SAU KHI BẤM, đọc 
 thật sự thẳng hàng và cân đối trên màn thật (bench chỉ đo được trên Chrome desktop, chưa đo trên
 khung 16:9 thật của TOMKO/máy lớp).
 
-⬜ **CHƯA PUSH.**
+✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `ae624ae` (gộp Đợt 269+270+271+272, một lần push 4 commit),
+fetch trực tiếp `aword.andrewclasses.com/core/showdown.js` (`MAX_TEAMS = 8`) và
+`aword.andrewclasses.com/core/icons.js` (đủ `cast`/`follow`) đúng bản mới.
 
 ---
 
@@ -127,8 +129,9 @@ bấm "Follow live session" → có tự đổi theo myActivity không (b) mở 
 myActivity, bấm "Share live session" → đổi Template/Options thật → xem thiết bị đang follow có
 theo kịp không, có độ trễ mạng thật bao lâu.
 
-⬜ **CHƯA PUSH** — cả 4 đợt (269 phần 1+2, 270, 271) gộp lại thành một loạt commit chờ thầy duyệt
-trước khi đẩy lên trang live.
+✅ **ĐÃ PUSH** cùng lượt Đợt 272 (`ae624ae`) — ⚠️ vị trí "Menu (☰)" mô tả ở đợt này đã ĐỔI ngay
+sau đó ở Đợt 272 (dời sang footer popup Options) trước khi push; những gì thật sự lên live là bản
+Đợt 272, xem mục đó ở trên.
 
 ---
 
@@ -250,7 +253,8 @@ pixel rất chặt — quyết định không vá vội, làm đợt riêng có 
 tự đổi theo myActivity không (b) đo độ trễ mạng thật (bench dùng Firestore giả, tức thời) (c) chạy
 thật một trận Showdown có cả cột myActivity lẫn máy ngoài, xem bảng điểm `sd_results` có gộp đúng.
 
-⬜ **CHƯA PUSH** — chờ thầy duyệt hướng đi trước khi làm tiếp 2 nút UI ở trên.
+✅ **ĐÃ PUSH** cùng lượt Đợt 272 (`ae624ae`) — "2 nút UI" nhắc ở trên rốt cuộc thành hình ở Đợt 270,
+271 rồi 272 (footer Options, bản cuối cùng thật sự lên live).
 
 ---
 

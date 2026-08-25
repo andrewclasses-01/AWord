@@ -8,9 +8,9 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 272 — ⬜ CHƯA PUSH, Follow/Share dời vào footer Options)**.
-> ⚠️ Đợt 269-272 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — các đợt không đụng
-> file nhau, xem cả hai trước khi push.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 272 — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share dời vào footer Options)**.
+> ⚠️ Đợt 269-272 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — cả hai đã lên
+> `origin/main` không đụng file nhau (Đợt 268 `4c0a7d6` push trước, 269-272 `ae624ae` push sau).
 >
 > **Đợt 272** (26/8/2026) — ⭐⭐⭐ **FOLLOW/SHARE LIVE SESSION: DỜI TỪ MENU SANG FOOTER OPTIONS, ICON
 > CẠNH TRÁI TEMPLATE.** Thầy xem bản Đợt 270/271 (sống trong Menu ☰) xong chốt lại: *"đặt 2 nút này
@@ -29,8 +29,14 @@
 > thuần không chữ, cao bằng Template (lệch <1px), Follow/Share độc lập nhau, bật Share xong đổi
 > Template THẬT vẫn ghi đúng `sd_session` (nối với tầng dữ liệu Đợt 269), sống sót qua remount nội
 > bộ, tắt thì xoá tài liệu. `dot270`/`dot271` cũ nay lỗi thời (thiết kế đã thay), giữ làm sử liệu.
-> ⬜ **CHƯA PUSH — CHỜ TEST TOMKO**: 4 nút có thẳng hàng/cân đối trên màn thật không (bench chỉ đo
-> Chrome desktop).
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `ae624ae` (gộp chung Đợt 269+270+271+272, 4 commit một
+> lần), đã fetch trực tiếp `aword.andrewclasses.com/core/showdown.js` thấy `MAX_TEAMS = 8` và
+> `aword.andrewclasses.com/core/icons.js` thấy đủ 2 icon `cast`/`follow` — Pages build đúng bản mới.
+> ⬜ **CHỜ TEST TOMKO** (chưa ai bấm tay thật): (a) 4 nút [Follow][Share][Template][Apply] có thẳng
+> hàng/cân đối trên màn thật không (bench chỉ đo Chrome desktop) (b) chia 6-8 đội thật trên máy
+> chiếu, tên/cột còn dễ đọc không (c) một máy tính/iPad thật, đăng nhập Google của thầy, bấm Follow
+> trong Options có tự đổi theo myActivity không (d) bật Share trên 1 cột myActivity thật, đổi
+> Template/Options, đo độ trễ thiết bị theo kịp.
 >
 > ---
 > **Đợt 269** (26/8/2026) — ⭐⭐ **SỐ ĐỘI SHOWDOWN: 5 → 8** (thầy: *"mở rộng số lượng đội được
@@ -67,7 +73,8 @@
 > ⛔⛔ **CHƯA CÓ NÚT BẤM**: myActivity chưa có nút "cho máy khác tham gia" (repo khác, chưa đụng),
 > AWord chưa có nút "theo phiên đang chạy" cho thiết bị ngoài — hai việc UI này cố ý để đợt sau, có
 > test/đo riêng, không vá vội vào màn Showdown vốn đã đo pixel rất chặt.
-> ⬜ **CHƯA PUSH** — chờ thầy duyệt hướng trước khi làm 2 nút UI.
+> ✅ **ĐÃ PUSH** cùng lượt với Đợt 272 ở trên (`ae624ae`) — nút bấm cho tầng dữ liệu này chốt hình
+> dạng cuối ở Đợt 272 (footer Options, không phải Menu như Đợt 270/271 thử trước).
 >
 > ---
 > **Đợt 268** (26/8/2026) — ⭐⭐⭐ **BỎ HẲN THƯ MỤC CON "ACT" + KHÔNG SINH RUNNING WORD/RUNNING
