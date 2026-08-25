@@ -30,28 +30,41 @@
 // ---------------------------------------------------------------------------
 // WHAT COUNTS AS **ONE MATCH** (thầy chốt 19/8/2026: "chơi lại = trận MỚI")
 // ---------------------------------------------------------------------------
-// A match is `tableId | roundKey | playNo`:
+// A match is `tableId | roundKey | roundId`:
 //   tableId   which division of the class this is (minted by the setup panel
 //             when the teacher presses Next; see normalize() in
 //             core/showdown-setup.js). A new division is a new match, always.
 //   roundKey  which act. Changing act is a new match.
-//   playNo    HOW MANY TIMES THIS COLUMN HAS FINISHED that table+act. Playing
-//             the same act again makes a new column, which is what thầy chose
-//             over "the replay updates the same column".
+//   roundId   ⭐⭐⭐ Đợt 262 — WHICH LOBBY ROUND. Minted ONCE, in Firestore, by the
+//             first board that presses START (`sd_round`, core/showdown-setup.js)
+//             and read by every other board that joins that round. Boards that
+//             started together therefore file into ONE match **BY NAME** — no
+//             counting, no agreeing, nobody in charge.
 //
-// ⚠️⚠️ WHY `playNo` IS COUNTED PER COLUMN AND NOT AGREED BETWEEN THEM.
-// Four boards on four machines finish at four different moments; there is no
-// moment at which they could agree "this is round 2" without one of them being
-// in charge, and nothing in Showdown is in charge. But they do not need to
-// agree: each column counts its OWN finishes of this table+act, and board 1's
-// first finish and board 3's first finish are, by construction, the same round —
-// they both started when the teacher pressed Ready on that table. So the four
-// first-plays land in match #1 and a board that plays again lands in match #2,
-// alone, which is an honest record of what happened.
+// ⚠️⚠️ WHAT THIS REPLACED, AND WHY IT HAD TO GO (Đợt 262). Until this đợt the
+// third part was `playNo` — how many times THIS COLUMN had finished that
+// table+act, counted in its own `sessionStorage`. There was no lobby then, so no
+// shared name for a round existed and the counter was the only thing available.
+// It rested on one assumption: *"every board's FIRST finish is the same round"*.
+// That assumption breaks in both directions, and the wrong direction is SILENT:
+//   • a column reloaded mid-lesson (or opened late) starts counting at 0 again,
+//     so its SECOND round files itself into match #1 — sitting among round 1's
+//     rows, in the very ledger the teacher exports for analysis;
+//   • a column that plays one extra round alone pushes every later round of its
+//     own permanently out of step with the rest of the class.
+// A minted round id cannot do either: two boards share a match only if they were
+// in the same lobby round, and a replay always mints a new one (`sd_round` only
+// ever moves ready → starting, so the next START opens a fresh round). Thầy's
+// rule "chơi lại = trận MỚI" therefore still holds — now for a reason instead
+// of by a counter.
 //
-// The counter lives in `sessionStorage` — per column, exactly like the pick and
-// the outbox, and for the same reason (core/showdown.js's header explains at
-// length why nothing about Showdown may be per-ORIGIN).
+// ⚠️ A BOARD THAT NEVER JOINED A ROUND gets a locally minted `alone_…` id and so
+// its OWN tile: solo mode (which never enters the lobby — see `sdCanPublish` in
+// core/engine.js), and a board that pressed the lobby's ✕ or lost the network and
+// played on. That is the honest record — a board no other board ever heard of
+// cannot be filed as having played WITH them — and it is the one behaviour change
+// of this đợt: such a play used to be swept into the class's match by the
+// counter's guess.
 //
 // ---------------------------------------------------------------------------
 // ⭐⭐⭐ Đợt 236 — ONE DOCUMENT PER CLASS PER MONTH, PLUS A TINY INDEX
@@ -211,7 +224,14 @@ function normMatch(m) {
     matchId: String(m?.matchId || ""),
     tableId: String(m?.tableId || ""),
     roundKey: String(m?.roundKey || ""),
-    playNo: Number(m?.playNo) || 1,
+    // ⭐⭐⭐ Đợt 262 — the lobby round this result came from (see the file header).
+    // Empty on every match filed BEFORE that đợt, and on any play that never
+    // joined a round; `matchId` carries the same value either way.
+    roundId: String(m?.roundId || ""),
+    // LEGACY, READ-ONLY. Kept only so a match filed before Đợt 262 does not
+    // quietly lose a field the next rename/classify write would strip. Nothing
+    // reads it and nothing writes it any more — the number is inside `matchId`.
+    ...(Number(m?.playNo) > 0 ? { playNo: Number(m.playNo) } : {}),
     actName: cut(m?.actName),
     // Đợt 230 — the clue set (eng1/eng2/vi1/vi2) that was live when this result
     // was saved, so the ledger can show "ENG1" instead of the act's own shared
@@ -316,32 +336,25 @@ function fitToBudget(node) {
 // ---------------------------------------------------------------
 // WHICH MATCH THIS PLAY BELONGS TO
 // ---------------------------------------------------------------
-// The per-column counter. `{ "<tableId>|<roundKey>": <finishes so far> }`.
-const PLAY_KEY = "aword-showdown-playno";
-
-function readCounters() {
-  try { return JSON.parse(sessionStorage.getItem(PLAY_KEY) || "{}") || {}; }
-  catch { return {}; }
-}
-
 /**
- * The play number to stamp on the result THIS COLUMN is about to publish, and
- * bump the counter as we go: the next finish of the same table+act is a new
- * match (thầy: "chơi lại = trận MỚI").
- * ⚠️ Called exactly ONCE per finished play, by core/engine.js. Calling it twice
- * would put a replay in match #3 with nothing in match #2.
+ * The id for a board that played OUTSIDE any lobby round — solo mode, or a board
+ * that pressed the lobby's ✕ (or lost the network) and played on anyway.
+ *
+ * ⚠️ FRESH EVERY TIME, on purpose. A board no other board ever heard of has no
+ * business landing in anybody else's match, and two such boards in one lesson
+ * are two separate records. The `alone_` prefix is a visible marker in the raw
+ * data: reading a match id is how you tell "the class started this together"
+ * apart from "this board played by itself".
+ * ⚠️ Called from saveMatchResult, which core/engine.js calls EXACTLY ONCE per
+ * finished play. A retry wrapped AROUND that call would mint a second id and
+ * file a second tile — any retry belongs inside the transaction, not around it.
  */
-export function nextPlayNo(tableId, roundKey) {
-  const k = `${String(tableId || "")}|${String(roundKey || "")}`;
-  const all = readCounters();
-  const n = (Number(all[k]) || 0) + 1;
-  all[k] = n;
-  try { sessionStorage.setItem(PLAY_KEY, JSON.stringify(all)); } catch { /* storage disabled */ }
-  return n;
+function mintLoneRoundId() {
+  return "alone_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
 }
 
-export function matchIdOf(tableId, roundKey, playNo) {
-  return `${String(tableId || "t")}|${String(roundKey || "a")}|${Number(playNo) || 1}`;
+export function matchIdOf(tableId, roundKey, roundId) {
+  return `${String(tableId || "t")}|${String(roundKey || "a")}|${String(roundId || "r")}`;
 }
 
 // ---------------------------------------------------------------
@@ -412,7 +425,7 @@ async function dropIndexMonth(classId, yyyymm) {
  * ordinary `sdt_1`, same as any other team.
  */
 export async function saveMatchResult({
-  classId, className, tableId, roundKey, playNo, actName = "", contentVariant = "", templateType = "",
+  classId, className, tableId, roundKey, roundId = "", actName = "", contentVariant = "", templateType = "",
   teamId, teamName, students
 }) {
   if (!classId || !teamId) return false;
@@ -421,7 +434,11 @@ export async function saveMatchResult({
   const now = Date.now();
   const yyyymm = yyyymmOf(now);
   const ref = doc(d, `users/${uid}/items`, monthDocId(classId, yyyymm));
-  const id = matchIdOf(tableId, roundKey, playNo);
+  // ⭐⭐⭐ Đợt 262 — no round id means this board never joined a lobby round, so it
+  // played alone: give it its own name rather than guess it into somebody else's
+  // match (the file header explains what that guess used to cost).
+  const rid = String(roundId || "") || mintLoneRoundId();
+  const id = matchIdOf(tableId, roundKey, rid);
   const entry = {
     teamId: String(teamId),
     // ⚠️ LEGACY ONLY (before Đợt 242): a solo pick used to name its team after
@@ -440,7 +457,7 @@ export async function saveMatchResult({
     node.className = String(className || node.className || "");
     let m = node.matches.find(x => x.matchId === id);
     if (!m) {
-      m = normMatch({ matchId: id, tableId, roundKey, playNo, actName, contentVariant, templateType, at: now });
+      m = normMatch({ matchId: id, tableId, roundKey, roundId: rid, actName, contentVariant, templateType, at: now });
       node.matches.push(m);
       // ⭐ Đợt 236 — NO EVICTION HERE ANY MORE (see file header: "giữ mãi mãi").
       // Sharding by month is what keeps any one document small; this month's

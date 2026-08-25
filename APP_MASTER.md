@@ -8,8 +8,31 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 261)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 262)**.
 >
+> **Đợt 262** (25/8/2026, ⬜ **CHƯA COMMIT — chờ thầy duyệt**) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT
+> PHÒNG CHỜ, BỎ HẲN `playNo`**. Sửa 2 file: `core/showdown-history.js` · `core/engine.js`.
+>
+> Một trận trong sổ cái nay là **`tableId | roundKey | roundId`** — `roundId` là cái tên do
+> phòng chờ (`sd_round`, Đợt 261) đúc ra và **mọi bàn trong lượt đều đọc được**, nên các bàn
+> cùng bấm START **vào chung MỘT ô trong sổ, bằng CÁI TÊN**, không còn ai phải đếm.
+> ⛔ Thứ bị bỏ: `playNo` — bộ đếm riêng từng cột trong `sessionStorage`, dựa trên giả định
+> *"lần kết thúc thứ nhất của mọi bàn là cùng một lượt"*. Giả định đó vỡ **im lặng**: một cột
+> **nạp lại tab giữa buổi** là bộ đếm về 0 ⇒ vòng HAI của nó khai `playNo = 1` ⇒ **rơi vào trận
+> #1 của cả lớp**, lẫn với dữ liệu vòng 1, ngay trong sổ thầy xuất ra để phân tích.
+> ⚠️ Hình dạng ba phần **giữ nguyên**, nên trận CŨ và MỚI sống chung một tài liệu tháng, không
+> va tên, **không cần migrate**; `normMatch` vẫn **giữ `playNo` khi đọc** trận cũ (mọi đường ghi
+> đều ghi đè CẢ tài liệu, quên một trường là xoá nó vĩnh viễn).
+> ⚠️ **HỆ QUẢ HÀNH VI DUY NHẤT ĐỔI**: bàn KHÔNG qua phòng chờ (solo · bấm ✕ · mất mạng) nay mang
+> id `alone_…` và **có ô riêng**, thay vì bị bộ đếm gom vào ô của cả lớp. ⛔ Đã cân nhắc cho nó
+> "nhận vơ" lượt đang sống trong `sd_round` và **bỏ** — đó chỉ là đổi kiểu đoán mò.
+>
+> Bàn thử `scratch/dot262-matchid.html` **33/33**, có ván THẬT chạy qua phòng chờ và ⭐⭐ **đã
+> CẮT DÂY THỬ** (`roundId: ""`) ⇒ bench đỏ đúng HAI phép kiểm nối dây rồi xanh lại khi nối — bằng chứng nó thật
+> sự đo. Hồi quy `dot261-lobby` 53/53 · `dot260-plan` 52/52 · `dot256-smoke` 48/48.
+> ⬜ **CHỜ THẦY TEST NHIỀU MÁY** — xem `GHI CHU DU AN.md` Đợt 262 mục cuối.
+>
+> ---
 > **Đợt 261** (25/8/2026, `8e1c6b3`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
 > `built` đúng `8e1c6b3` — ⚠️ lần kiểm ĐẦU trả `building` và bản live vẫn là commit CŨ,
 > đúng lý do "không tin mã 200" · **14/14 mã băm SHA-256 khớp** · **53/53 phép chạy trên
@@ -1528,7 +1551,8 @@
 >   (`superseded`); **`writeMyClaim`** là đường ghi hẹp cho release/huỷ đội; (3) leaderboard
 >   **gộp theo id + đọc lại kiểm chứng** (4 cột chung một localStorage).
 > - ⭐⭐⭐ **`core/showdown-history.js` (FILE MỚI) — SỔ CÁI, khác hẳn `sd_results`**: không bao giờ bị
->   ghi đè, không bị Reset teams xoá. **Một trận = `tableId | roundKey | playNo`**, thầy chốt
+>   ghi đè, không bị Reset teams xoá. **Một trận = `tableId | roundKey | playNo`** (⚠️ **Đợt 262
+>   đổi phần thứ ba thành `roundId` của lượt phòng chờ, `playNo` bỏ hẳn**), thầy chốt
 >   **"chơi lại = trận MỚI"**. `playNo` **đếm riêng từng cột** và cố ý không thoả thuận giữa các máy —
 >   lần-kết-thúc-thứ-nhất của mọi bảng, theo định nghĩa, là cùng một vòng. **Một tài liệu MỖI LỚP**
 >   (Firestore chặn 1MB/tài liệu); `fitToBudget` vượt 700KB thì bỏ chi tiết từng câu của trận cũ nhất

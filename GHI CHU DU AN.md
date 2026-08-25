@@ -5,6 +5,126 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 262 (25/8/2026) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT PHÒNG CHỜ, BỎ HẲN `playNo` ĐOÁN MÒ**
+
+> ⬜ **CHƯA COMMIT — chờ thầy duyệt.** Bàn thử `scratch/dot262-matchid.html` **33/33** (có cả
+> ván THẬT chạy qua phòng chờ), hồi quy `dot261-lobby` **53/53** · `dot260-plan` **52/52** ·
+> `dot256-smoke` **48/48**. Sửa **2 file**: `core/showdown-history.js` · `core/engine.js`.
+
+### YÊU CẦU
+
+Thầy: *"nối roundId vào định danh trận, bỏ playNo"* — việc còn nợ đã ghi sẵn từ Đợt 260/261
+(xem mục "⬜ Còn nợ — ĐỢT B").
+
+### TRƯỚC ĐỢT NÀY NÓ SAI Ở ĐÂU
+
+Một trận trong sổ cái là `tableId | roundKey | **playNo**`, mà `playNo` là **bộ đếm riêng của
+từng cột** nằm trong `sessionStorage`: "cột này đã kết thúc act+bảng-đội này bao nhiêu lần".
+Nó dựa trên đúng MỘT giả định — *"lần kết thúc THỨ NHẤT của mọi bàn là cùng một lượt"* — và
+thời Đợt 197 thì không có gì tốt hơn, vì chưa có phòng chờ nên cả lớp **không có một cái tên
+chung nào** cho một lượt.
+
+Giả định đó vỡ theo **cả hai chiều**, và chiều nguy hiểm thì **không kêu một tiếng**:
+
+- một cột **nạp lại tab giữa buổi** (hoặc mở muộn) là bộ đếm về 0 ⇒ **vòng THỨ HAI của nó khai
+  `playNo = 1`** ⇒ rơi thẳng vào **trận #1** của cả lớp, nằm lẫn với dữ liệu vòng 1 — đúng thứ
+  sổ cái này sinh ra để phục vụ: **bảng phân tích thầy xuất ra**;
+- một cột chơi lẻ thêm một vòng thì mọi vòng sau của nó **lệch pha vĩnh viễn** với cả lớp.
+
+Đợt 261 đã đúc ra thứ cần thiết mà chưa nối dây: **`roundId`** trong `users/{uid}/items/sd_round`
+— một cái tên do bàn ĐẦU TIÊN bấm START tạo ra và **mọi bàn trong lượt đều đọc được**.
+
+### ĐÃ LÀM
+
+**1. `core/showdown-history.js` — định danh trận đổi phần thứ ba.**
+
+| | trước | nay |
+|---|---|---|
+| tên trận | `tableId \| roundKey \| playNo` | `tableId \| roundKey \| **roundId**` |
+| gom bàn | bằng phép ĐẾM của từng cột | bằng **cái tên chung** của lượt |
+| chơi lại | bộ đếm +1 | lượt mới (vì `sd_round` chỉ đi ready → starting) |
+
+- `nextPlayNo()`, `readCounters()`, khoá `sessionStorage` `aword-showdown-playno`: **xoá hẳn**.
+- `matchIdOf(tableId, roundKey, roundId)` — **giữ nguyên hình dạng ba phần** ngăn bằng `|`, nên
+  trận CŨ và trận MỚI nằm chung một tài liệu tháng mà **không thể va tên nhau** (phần ba của
+  trận cũ là một con số, của trận mới là `rnd_…`/`alone_…`). ⇒ **KHÔNG cần bộ chuyển đổi nào.**
+- `normMatch` có thêm trường `roundId`, và **giữ `playNo` khi đọc trận cũ** (chỉ đọc, không ai
+  ghi nữa). ⚠️ Lý do không phải "cho đẹp": `renameMatch`/`setMatchClassify`/`saveMatchResult`
+  đều **ghi đè CẢ TÀI LIỆU**, nên một trường bị `normMatch` bỏ quên là một trường **bị xoá khỏi
+  sổ cái vĩnh viễn** ngay lần thầy đổi tên trận cũ. Có phép kiểm riêng cho đúng chuyện này.
+- ⭐ **Bàn KHÔNG qua phòng chờ** (solo · bấm ✕ · mất mạng rồi chơi tiếp) ⇒ `mintLoneRoundId()`
+  đúc tên **`alone_<t36>_<rand>`** ⇒ **ô riêng trong sổ**.
+
+**2. `core/engine.js` — mang tên lượt từ phòng chờ sang lúc kết thúc ván.**
+
+- thêm `let sdRoundId = ""` **ngay trong khối PHÒNG CHỜ**, chốt giá trị **ở `takeOff()`** —
+  đúng khoảnh khắc lượt cất cánh.
+- chỗ ghi sổ: `playNo: h.nextPlayNo(…)` ⇒ **`roundId: sdRoundId`**.
+
+### QUYẾT ĐỊNH KỸ THUẬT (và vì sao KHÔNG làm cách kia)
+
+- ⭐ **Chốt `sdRoundId` ở `takeOff()`, KHÔNG đọc `lobbyRound?.roundId` lúc `finish()`.** Giữa hai
+  thời điểm đó là **cả một ván chơi**; `lobbyRound` là biến mà một nhịp Firestore muộn vẫn có thể
+  ghi đè. Thứ đi vào sổ phải là lượt mà ván này **thật sự cất cánh**, không phải lượt mà tài liệu
+  đang mang lúc ván kết thúc.
+- ⛔ **Bàn không qua phòng chờ KHÔNG "nhận vơ" lượt đang sống.** Đã cân nhắc: lúc kết thúc, đọc
+  `sd_round`, thấy cùng bảng đội + cùng act thì mượn `roundId` đó cho đỡ lẻ ô. **Bỏ, vì đó ĐÚNG LÀ
+  đoán mò** — chỉ đổi từ đoán bằng con số sang đoán bằng thời điểm, và nó đoán sai đúng ở ca khó
+  nhất (ván 1 kết thúc muộn trong khi cả lớp đã bấm START ván 2 ⇒ mượn nhầm lượt 2). Một bàn mà
+  **không bàn nào khác từng biết tới** thì không thể ghi là đã chơi CÙNG họ.
+- ⚠️ **HỆ QUẢ HÀNH VI DUY NHẤT ĐỔI**, thầy cần biết: bàn bấm ✕ (hoặc mất mạng ở phòng chờ) rồi
+  chơi tiếp thì nay **hiện thành một ô riêng** trong SHOWDOWN home, thay vì bị bộ đếm gom vào ô
+  của cả lớp như trước. Đổi lại, **không bao giờ** còn chuyện dữ liệu hai vòng khác nhau nằm
+  chung một ô. Nếu thầy thấy phiền hơn lợi thì cửa mở là: cho `alone_…` một dòng chữ nhỏ trên ô
+  ("played alone"), chứ **không** quay lại gom bằng phỏng đoán.
+- Trận cũ **giữ nguyên**, không migrate: id của chúng vẫn hợp lệ, vẫn xem/đổi tên/xoá được.
+
+### BẪY ĐÃ GẶP
+
+- ⛔ **`loadMonth()` trả về MỘT MẢNG, không phải tài liệu.** Bản đầu của bàn thử viết
+  `node.matches.length` ⇒ `TypeError` **im lặng nuốt phần còn lại của bench** (nó chạy trong
+  `<script type="module">`, chỉ có console kêu; ô tổng kết vẫn đứng ở "đang chạy…"). ⇒ Bench treo
+  giữa chừng **trông y hệt** bench đang chạy chậm — phải **đọc console** mới biết, đừng ngồi đợi.
+- ⛔ **Chromium đóng băng timer khi pane bị ẩn** (đã ghi từ đợt trước): `javascript_tool` hết giờ
+  30 giây và bench đứng im ở mục 2. Phải `tabs_select` cho tab lên trước rồi mới đo.
+
+### KIỂM CHỨNG
+
+`scratch/dot262-matchid.html` — **33/33**, module thật, Firestore giả qua importmap.
+
+9 mục: hình dạng `matchIdOf` (⛔ đối chứng ngược hai lượt ⇒ hai tên) · `nextPlayNo` đã biến mất
+khỏi module · ⭐ **hai bàn cùng lượt ⇒ MỘT trận, hai đội** · ⛔ **ĐÚNG CON BỌ CŨ: bàn ở lượt khác
+KHÔNG chui vào trận cũ** (và không tên trận nào còn kết thúc bằng `|1`) · chơi lại ⇒ trận thứ ba,
+không đè trận cũ · ⭐ hai ván không-phòng-chờ ⇒ hai ô `alone_` KHÁC nhau · trận cũ đọc được +
+**đổi tên xong `playNo` VẪN CÒN** · ⭐⭐ **NỐI DÂY THẬT: ván chạy qua phòng chờ ⇒ tên trận trong sổ
+BẰNG ĐÚNG `roundId` nằm trong `sd_round`** (đo cả hai đầu dây) · ⭐ **và vẫn đúng SAU MỘT CÚ KÉO CHUẨN VỀ**, tức là qua một lần dựng lại cả ván (closure sinh mới) · ⛔ đối chứng ngược: solo không
+đụng vào `sd_round` và mang tên `alone_…`.
+
+⭐⭐ **BÀN THỬ TỰ ĐỐI CHỨNG NGƯỢC — ĐÃ CẮT DÂY THỬ THẬT**: tạm sửa engine thành `roundId: ""` rồi
+chạy lại ⇒ bench đỏ **đúng hai phép kiểm nối dây** (`got "alone_…" want "rnd_…"`), mọi mục khác
+vẫn xanh; nối lại ⇒ xanh hết. (Cắt dây thử chạy trên bản bench 31 mục, trước khi thêm mục 7b.)
+Đây là bằng chứng bench **không đạt vì nó chẳng đo gì** — thứ đã cắn nhiều lần trong dự án này.
+
+**Hồi quy**: `dot261-lobby` **53/53** · `dot260-plan` **52/52** · `dot256-smoke` **48/48** ·
+`dot219-recent` + `dot224-recent` (hai bench sổ cái CŨ, dữ liệu còn `playNo`) **vẫn vẽ đúng cột
+Recent results + bảng phân tích** · `index.html` mở sạch, không lỗi mới.
+⚠️ `dot224-recent` có một lỗi `backOk.click()` ở mục E — **đã kiểm: lỗi CÓ SẴN**, tái hiện y
+nguyên trên bản chưa sửa (git stash) ⇒ trôi selector từ đợt cũ, không liên quan đợt này.
+
+### VIỆC ĐANG CHỜ
+
+- ⬜⬜ **THẦY TEST TAY NHIỀU MÁY** (đây là điểm cả đợt tồn tại):
+  1. 3 bàn cùng một act, cùng bấm START qua phòng chờ, chơi xong ⇒ mở **SHOWDOWN ▸ home**: phải
+     thấy **ĐÚNG MỘT ô** cho lượt đó, trong ô có **đủ 3 đội**.
+  2. Chơi lại lượt hai ⇒ **ô thứ hai**, và ô thứ nhất **không đổi**.
+  3. Một bàn bấm ✕ rồi chơi một mình ⇒ **ô riêng** — thầy nhìn xem có chấp nhận được không (xem
+     mục "HỆ QUẢ HÀNH VI DUY NHẤT ĐỔI" bên trên).
+  4. Mở một trận CŨ (trước đợt này) ⇒ vẫn xem chi tiết, đổi tên, xoá được như thường.
+- ⬜ Sau khi thầy duyệt: commit + push + **kiểm bản live** (mã băm + chạy bench trên module của
+  bản live, đúng nếp `dot26x-live.html`).
+
+---
+
 ## Đợt 261 (25/8/2026) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT** · ⭐⭐⭐ **BỎ HẲN BALANCE QUESTIONS, COUNT MỞ CHO 8/11 GAME**
 
 > ✅ **THẦY DUYỆT · COMMIT `8e1c6b3` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
@@ -7386,6 +7506,7 @@ tạo cột số 6 thì cột đầu tiên sẽ bị xóa."*
 | trả lời câu hỏi | "đội nào xong rồi?" | "5 trận gần nhất lớp 5B ra sao?" |
 
 **Một trận = `tableId | roundKey | playNo`** (thầy chốt **"chơi lại = trận MỚI"**).
+⚠️ **ĐÃ ĐỔI Ở ĐỢT 262**: phần thứ ba nay là **`roundId`** của lượt phòng chờ, `playNo` bỏ hẳn.
 
 ⚠️⚠️ **`playNo` đếm RIÊNG TỪNG CỘT, và không cần thoả thuận.** Bốn bảng ở bốn máy kết thúc ở bốn thời
 điểm; không có lúc nào chúng thống nhất được "đây là vòng 2" mà không cần một đứa làm chủ — và

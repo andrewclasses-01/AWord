@@ -2378,6 +2378,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
 
   let lobbyEl = null, lobbyStop = null, lobbyMod = null;
   let lobbyPhase = "", lobbyRound = null;
+  // ⭐⭐⭐ Đợt 262 — TÊN CỦA LƯỢT NÀY, thứ làm sổ trận gom đúng các bàn đã cùng bắt đầu.
+  // Chốt Ở ĐÚNG LÚC CẤT CÁNH (`takeOff`), KHÔNG đọc `lobbyRound` lúc ván kết thúc: giữa
+  // hai thời điểm đó là cả một ván chơi, và `lobbyRound` là biến mà một nhịp Firestore
+  // muộn vẫn có thể ghi đè. Cái đi vào sổ phải là cái lượt mà ván này THẬT SỰ cất cánh.
+  // ⚠️ Rỗng = bàn này KHÔNG qua phòng chờ (solo · bấm ✕ · mất mạng) ⇒ sổ trận tự đúc
+  // một tên `alone_…` riêng cho nó (core/showdown-history.js).
+  let sdRoundId = "";
   // ⚠️ ĐẾM QUA CẢ REMOUNT. Mỗi lần kéo chuẩn về là một cú `replayCurrent()`/
   // `doSwitchTemplate()` — tức là startGame() chạy lại và MỌI biến trong closure này
   // sinh ra mới. Bộ đếm phải sống ở tầng module (`sdLobbyResume`) mới chặn được vòng lặp.
@@ -2550,6 +2557,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   /** Đủ đội — nạp nốt rồi vào ván. */
   function takeOff() {
     if (lobbyPhase === "starting") return;
+    // ⭐ Đợt 262 — chốt tên lượt TRƯỚC mọi thứ khác trong hàm này (xem `sdRoundId`).
+    sdRoundId = (lobbyRound && lobbyRound.roundId) || "";
     paintLobby("starting");
     lobbyLeaveOnTeardown = false;
     stopLobbyWatch();
@@ -5126,15 +5135,21 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         //     Reset teams; this one is never overwritten and never wiped;
         //   • if either write fails the other still lands, and a lesson with a
         //     bad minute of network keeps at least one record of what happened.
-        // ⚠️ `nextPlayNo` is called EXACTLY ONCE per finished play — it is what
-        // makes a replay a new column rather than an overwrite (thầy's rule), so
-        // it must not move into a retry or a `.then` that could run twice.
+        // ⭐⭐⭐ Đợt 262 — WHICH ROUND THIS WAS, BY NAME. `sdRoundId` is the id the
+        // lobby minted in Firestore and every board of this round read (see the
+        // PHÒNG CHỜ block above), so the boards that started together file into
+        // ONE match without anybody counting anything.
+        // ⚠️ It replaces `nextPlayNo()`, a per-column counter in sessionStorage
+        // whose guess ("every board's first finish is the same round") silently
+        // mis-filed any column that had been reloaded or opened late — the whole
+        // story is in core/showdown-history.js's header.
+        // ⚠️ Empty for a play that never joined a round (solo · ✕ · mất mạng); the
+        // ledger then mints an `alone_…` id and this play gets its own tile.
         if (showdownPick.classId) {
           import("./showdown-history.js")
             .then(h => h.saveMatchResult({
               classId: showdownPick.classId, className: showdownPick.className,
-              tableId: showdownPick.tableId || "", roundKey,
-              playNo: h.nextPlayNo(showdownPick.tableId || "", roundKey),
+              tableId: showdownPick.tableId || "", roundKey, roundId: sdRoundId,
               actName, contentVariant, templateType,
               teamId: showdownPick.teamId, teamName: showdownPick.teamName, students
             }))
