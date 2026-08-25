@@ -1,7 +1,7 @@
 # GHI CHU — CROSSWORD
 
-> ⬅️ **MỚI NHẤT: mục 25/8/2026 (Đợt 259) ngay bên dưới — CHẾ ĐỘ FIGHT, 6 việc.** ⏳ Chưa lên live,
-> đang chờ thầy bấm tay. ⚠️ **Đợt đó CÓ đụng core** (`fight.js` · `app.css` · `voice-playback.js`),
+> ⬅️ **MỚI NHẤT: mục 25/8/2026 (Đợt 259) ngay bên dưới — CHẾ ĐỘ FIGHT, 6 việc.** ✅ Đã lên live
+> (`d7f816c`); còn chờ thầy bấm tay trên TOMKO. ⚠️ **Đợt đó CÓ đụng core** (`fight.js` · `app.css` · `voice-playback.js`),
 > khác lệ thường của game này ghi ở đoạn ngay dưới đây — vì 4/6 việc nằm ở luật TRẬN ĐẤU chứ không ở
 > game. ⚠️ Lỗi "bàn phím tự tụt sau một lát" **không nằm trong `crossword.js`** — nó là chốt 20 giây
 > trong `core/fight.js`, đừng đi tìm nhầm chỗ.
@@ -18,7 +18,7 @@ pane không-composite của Claude — đo bằng cách ghi timeline class qua `
 > Sửa tiếp game này thì chỉ đụng `templates/crossword/*`; **đừng thêm import/link CSS ở
 > `index.html`/`main.js`** — từ v0.9.7 template được nạp tự động qua `ensureTemplate()`.
 
-## 25/8/2026 — CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT (Đợt 259 của dự án) — ⏳ CHỜ THẦY BẤM TAY
+## 25/8/2026 — CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT (Đợt 259 của dự án) — ✅ THẦY DUYỆT → COMMIT `d7f816c` + PUSH + LIVE (5/5 mã băm khớp · 32/32 phép chạy trên module của bản live)
 
 Thầy đọc lại game này ở cả 5 mode rồi gửi 6 việc. Ba điểm phạm vi chốt qua AskUserQuestion trước khi
 build: thanh giờ chọn + gỡ chốt 20s áp cho **cả Crossword và Open the box**; **mặc định ∞**; chữ có
@@ -60,6 +60,19 @@ sẵn **chỉ nhấp nháy, nền giữ nguyên**.
      đổi gì, animation vô hạn chạy tiếp. Đo thật: giờ chạy của animation ở ô sẵn phía sau **tăng**
      sau một cú gõ chứ không về 0.
 
+⭐⭐ **CA HIỂM TỰ BẮT ĐƯỢC KHI CHẠY LẠI BÀN THỬ — ô có sẵn nằm ở VỊ TRÍ CUỐI của từ.**
+Lần chạy thứ hai ra 17/19 dù không đổi một dòng code nào. Không phải bàn thử hên xui:
+`advanceCursor()` **cố ý dừng lại ở ô cuối** (`if (curCell < w.cells.length - 1) curCell++`),
+nên với ô sẵn nằm cuối từ thì con trỏ **không bao giờ "đi qua" được** ⇒ chữ nhấp nháy mãi dù học
+sinh đã gõ đúng — đúng cái khó chịu mà hiệu ứng này sinh ra để dẹp. Lưới sinh ngẫu nhiên mỗi ván
+nên ca này lúc rơi trúng lúc không.
+**Sửa:** thêm `Set typedGivens` ghi thẳng "HS đã gõ QUA ô này" (đặt trong nhánh given của
+`typeLetter` khi gõ đúng chữ), điều kiện nhấp nháy thành `i >= curCell && !typedGivens.has(i)`.
+Xoá sạch khi đổi từ (`renderActive` — chỉ số là theo TỪNG TỪ, mang sang từ khác là giết luôn nhịp
+nhấp nháy của từ mới), và cuộn lại khi `backspace` lùi qua (xoá mọi mục `i >= k`).
+⚠️ Bài học chung: **suy trạng thái từ con trỏ là suy gián tiếp** — chỗ nào con trỏ có điểm dừng
+cứng thì phải GHI THẲNG sự kiện, đừng đoán ngược từ vị trí.
+
 4. **Nối vào hợp đồng voice của trọng tài** (có sẵn từ Đợt 133 cho Anagram, game này chưa từng nối):
    `attach` mọc thêm `toggleVoiceRemote(clipId)` + `syncVoice(state)`; tự phát chỉ chạy khi
    `!fightCtl || fightCtl.speaks(fightSide)`; chạm nút loa ở bàn không-phát thì `requestVoiceToggle`.
@@ -75,11 +88,12 @@ sẵn **chỉ nhấp nháy, nền giữ nguyên**.
 
 ### Bàn thử
 
-`scratch/dot259-crossword.html` **19/19 ĐẠT** — nhấp nháy + tắt khi con trỏ đi qua · nền giữ nguyên ·
+`scratch/dot259-crossword.html` **25/25 ĐẠT** (chạy 2 lần liên tiếp) — nhấp nháy + tắt khi con trỏ đi qua · nền giữ nguyên ·
 khoá lối thoát trong fight (cả câu hỏi lẫn Escape) · **đếm số clip THẬT** (nạp clip câm vào Cache
 Storage rồi bọc `window.Audio`). Kèm đối chứng ngược: ô thường không nhấp nháy, chơi thường VẪN thoát
 được và VẪN phát đúng 1 clip.
 `scratch/dot259-fight.html` **49/49 ĐẠT** (phần luật trận, có phép **chờ THẬT 21 giây**).
+`scratch/dot259-live.html` **32/32 ĐẠT** — chạy trên CHÍNH module của bản live qua CORS.
 ⚠️ Bàn thử phải bắn `pointerdown` chứ không `.click()` — mọi bề mặt chơi đi qua `core/press.js`.
 
 ⬜ **Chờ mắt thầy**: bấm tay một trận trên TOMKO — cỡ thanh giờ nhìn từ cuối lớp, nhịp nhấp nháy của

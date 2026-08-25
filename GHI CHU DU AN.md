@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 259 (25/8/2026) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: THANH GIỜ CHỌN Ô · BỎ LÀM NHẠT · CHỮ CÓ SẴN NHẤP NHÁY · GỠ CHỐT 20 GIÂY LÀM TỤT BÀN PHÍM · CHỈ MỘT VOICE · ĐỘI ĐI TRƯỚC NGẪU NHIÊN**
+## Đợt 259 (25/8/2026) — ✅ **THẦY DUYỆT · COMMIT `d7f816c` · ĐÃ PUSH + LIVE KIỂM CHỨNG** — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: THANH GIỜ CHỌN Ô · BỎ LÀM NHẠT · CHỮ CÓ SẴN NHẤP NHÁY · GỠ CHỐT 20 GIÂY LÀM TỤT BÀN PHÍM · CHỈ MỘT VOICE · ĐỘI ĐI TRƯỚC NGẪU NHIÊN**
 
 Thầy đọc lại Crossword ở cả 5 mode rồi gửi 6 việc một lượt. Ba điểm phạm vi được chốt qua
 AskUserQuestion trước khi build: (1) thanh giờ chọn + gỡ chốt 20s áp cho **cả 2 game có lượt chọn**
@@ -129,6 +129,19 @@ trong **cùng một tick đồng bộ, không có ép reflow xen giữa**, nên 
 và animation vô hạn **chạy tiếp**, không nhảy về khung đầu. Đo thật: giờ chạy của animation ở ô sẵn
 phía sau **tăng lên** sau một cú gõ chứ không về 0.
 
+⭐⭐ **CA HIỂM TỰ BẮT ĐƯỢC KHI CHẠY LẠI BÀN THỬ — ô có sẵn nằm ở VỊ TRÍ CUỐI của từ.**
+Lần chạy thứ hai ra 17/19 dù không đổi một dòng code nào. Không phải bàn thử hên xui:
+`advanceCursor()` **cố ý dừng lại ở ô cuối** (`if (curCell < w.cells.length - 1) curCell++`),
+nên với ô sẵn nằm cuối từ thì con trỏ **không bao giờ "đi qua" được** ⇒ chữ nhấp nháy mãi dù học
+sinh đã gõ đúng — đúng cái khó chịu mà hiệu ứng này sinh ra để dẹp. Lưới sinh ngẫu nhiên mỗi ván
+nên ca này lúc rơi trúng lúc không.
+**Sửa:** thêm `Set typedGivens` ghi thẳng "HS đã gõ QUA ô này" (đặt trong nhánh given của
+`typeLetter` khi gõ đúng chữ), điều kiện nhấp nháy thành `i >= curCell && !typedGivens.has(i)`.
+Xoá sạch khi đổi từ (`renderActive` — chỉ số là theo TỪNG TỪ, mang sang từ khác là giết luôn nhịp
+nhấp nháy của từ mới), và cuộn lại khi `backspace` lùi qua (xoá mọi mục `i >= k`).
+⚠️ Bài học chung: **suy trạng thái từ con trỏ là suy gián tiếp** — chỗ nào con trỏ có điểm dừng
+cứng thì phải GHI THẲNG sự kiện, đừng đoán ngược từ vị trí.
+
 Điều kiện gắn là `i >= curCell` ⇒ gõ qua ô nào thì ô đó **thôi nhấp nháy** — đó chính là dấu hiệu
 "mình đã gõ tới đâu" mà thầy thiếu. ⛔ **Nền ô giữ nguyên** (thầy chốt: *"nền vẫn như cũ"*), chỉ con
 chữ động. ⚠️ Animation đặt trên `<span>` con chứ không trên ô: `opacity`/`transform` trên
@@ -179,6 +192,53 @@ bề mặt chơi đi qua `core/press.js` nên `.click()` lập trình **không k
   đội nào trả lời**, vòng sẽ đứng cho tới khi thầy bấm ☰ Menu ▸ Start again.
 - ⬜ Open the box **vẫn giữ hiệu ứng làm nhạt** đội không tới lượt (thầy chỉ yêu cầu bỏ ở Crossword) —
   thầy muốn đồng bộ nốt thì nói một câu.
+
+---
+
+### 9. ĐÃ LÊN LIVE — và đã kiểm chứng BẰNG BẰNG CHỨNG, không bằng niềm tin
+
+Thầy duyệt → commit **`d7f816c`** → push lên `andrewclasses-01/AWord` nhánh `main`.
+Ba tầng kiểm, theo đúng nếp Đợt 256/258:
+
+1. **Pages đã `built` ĐÚNG commit** — `gh api repos/andrewclasses-01/AWord/pages/builds/latest`
+   trả `status: built`, `commit: d7f816c1…`. ⚠️ **Không tin mã 200**: Pages vẫn trả 200 với
+   nội dung CŨ khi build chưa xong hoặc build FAIL.
+2. **5/5 mã băm SHA-256 khớp** — băm `git show HEAD:<path>` so với `curl` từ
+   `aword.andrewclasses.com`. ⚠️ **Băm BLOB TRONG GIT, không băm file trên ổ đĩa** — file trên
+   máy là CRLF, thứ Pages phục vụ là nội dung blob (LF), băm nhầm là lệch hết.
+   `core/fight.js` · `core/app.css` · `core/voice-playback.js` ·
+   `templates/crossword/crossword.js` · `templates/crossword/crossword.css`.
+3. **32/32 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** — `scratch/dot259-live.html` `import`
+   thẳng `https://aword.andrewclasses.com/core/fight.js` (+ crossword, + quiz) qua CORS và link
+   cả **CSS của bản live**, rồi **chơi thật**: thanh giờ đúng bên · cạn đúng 3000ms · lật lượt
+   4 lần trong 3,6 giây · ∞ đứng đầy + hào quang · hai bàn **opacity 1/1** (đã bỏ làm nhạt) ·
+   trong trận không thoát được bằng câu hỏi lẫn Escape · 16 ván thì 9 trái / 7 phải.
+
+#### 🔴 BÀN THỬ LẠI TỰ NÓI DỐI LẦN THỨ BA — và lần này rất đáng nhớ
+
+Bản đầu của `dot259-live.html` ra **29/32**, cả ba phép trượt đều là lỗi của chính bàn thử:
+
+- **Dò chuỗi trên file còn nguyên CHÚ THÍCH.** Phép "boardPicked không còn
+  `later(advanceRound, LATE_LIMIT_MS)`" báo HỎNG — vì nó khớp phải **chính cái comment vừa viết
+  để giải thích rằng dòng đó đã bị gỡ**. Y hệt với `.is-fightwait` bên CSS Crossword.
+  ⇒ **Luật: dò chuỗi thì phải BÓC COMMENT trước.** Trong một dự án chú thích dày như AWord, dò
+  trên nguyên văn là dò cả những dòng ĐÃ CHẾT. ⚠️ Và nó sai được theo **cả hai chiều**: cắt cửa
+  sổ ngắn hơn một chút là comment rơi ra ngoài và phép đo **ĐẠT VÌ MAY**.
+- **Đọc `cssRules` của stylesheet KHÁC NGUỒN.** Trình duyệt chặn, `try/catch` biến "bị chặn"
+  thành "không có luật" ⇒ **HỎNG GIẢ** trong lúc CSS áp hoàn toàn bình thường (chính các phép đo
+  hình dạng bên dưới đã chứng minh). ⇒ **Đo bằng `getComputedStyle` của một phần tử dựng thử**,
+  thứ không ai chặn được.
+
+✅ Vá xong cả ba → **32/32 ĐẠT trên bản live**.
+⚠️ Bàn thử local `dot259-fight.html` **không dính** lỗi này: nó chứng minh việc gỡ chốt 20 giây
+bằng **cú chờ THẬT 21 giây** chứ không bằng dò chuỗi — đo HÀNH VI lúc nào cũng thật hơn đo CHỮ.
+
+#### 🔴 VÀ MỘT CÚ CẮN NGOÀI LỀ, ĐỂ ĐỜI SAU ĐỪNG DẪM
+
+Script đóng dấu hồ sơ mở file bằng `open(path, "w")` rồi mới gặp lỗi mã hoá ở giữa —
+**file `GHI CHU DU AN.md` bị cắt trắng 0 dòng**, vì `"w"` truncate NGAY lúc mở chứ không đợi
+ghi xong. Cứu được nhờ vừa commit (`git checkout --`). ⇒ **Sửa file hồ sơ thì encode TRƯỚC, ghi
+ra file tạm, rồi `os.replace`** — và commit trước khi chạy script hàng loạt.
 
 ---
 

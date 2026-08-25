@@ -10,7 +10,7 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 259)**.
 >
-> **Đợt 259** (25/8/2026) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT.**
+> **Đợt 259** (25/8/2026, `d7f816c`) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT.** ✅ **THẦY DUYỆT · ĐÃ COMMIT + PUSH + KIỂM BẢN LIVE** (Pages `built` đúng commit · **5/5 mã băm SHA-256 khớp** · **32/32 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**).
 > Sửa 5 file: `core/fight.js` · `core/app.css` · `core/voice-playback.js` ·
 > `templates/crossword/crossword.js` · `templates/crossword/crossword.css`.
 > **(1) PICK TIME** — thanh giờ cho ĐỘI ĐANG CHỌN Ô, nằm trên đầu bàn của chính đội đó, kèm thanh
@@ -22,8 +22,7 @@
 > **(2)** Bỏ hẳn hiệu ứng làm nhạt 50% của Crossword (`.is-fightwait`) — thanh giờ là cái báo lượt
 > nay, và nó nói được nhiều hơn. ⛔ Bàn **vẫn inert** khi không tới lượt (`fightMyTurn`), chỉ đổi
 > phần vẽ. Open the box giữ nguyên hiệu ứng nhạt của nó.
-> **(3)** Chữ CÓ SẴN (ô giao từ câu đã mở) **nhấp nháy tới khi con trỏ đi qua** (`is-given-wait`,
-> gắn khi `i >= curCell`) — ⛔ **nền ô giữ nguyên**, thầy chốt vậy.
+> **(3)** Chữ CÓ SẴN (ô giao từ câu đã mở) **nhấp nháy tới khi con trỏ đi qua** (`is-given-wait`) — ⛔ **nền ô giữ nguyên**, thầy chốt vậy. ⚠️ Điều kiện KHÔNG chỉ là `i >= curCell`: `advanceCursor()` dừng cứng ở ô cuối nên ô sẵn nằm CUỐI từ sẽ nhấp nháy mãi — phải có thêm `typedGivens` ghi thẳng "đã gõ qua ô này" (ca hiểm tự bắt được khi chạy lại bàn thử).
 > **(4) ⭐⭐⭐ LỖI TỤT BÀN PHÍM — THỦ PHẠM LÀ `later(advanceRound, LATE_LIMIT_MS)` TRONG
 > `boardPicked`.** 20 giây sau khi mở một từ mà **chưa ai trả lời**, trọng tài đóng vòng và gọi
 > `backToBoard()` cả hai bàn. Đã gỡ. ⚠️ **Chỉ gỡ đúng lời gọi đó** — lưới 20s ở
