@@ -4532,3 +4532,98 @@ export function subscribeRound(onChange) {
   })();
   return () => { dead = true; if (stop) { try { stop(); } catch { /* đã gỡ */ } } };
 }
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 269 (phần 2) — PHIÊN PHÁT: myActivity → mọi thiết bị ngoài
+// ---------------------------------------------------------------
+//   users/{uid}/items/sd_session, kind "showdown-session"
+//   { type, options, mode, style, at, updatedAt }
+//
+// Thầy chốt (26/8/2026, sau khi bàn hướng thiết kế): muốn Showdown chạy nhất
+// quán trên NHIỀU LOẠI thiết bị — cột myActivity + máy tính rời + iPad — nên
+// AWord cần một đường để "cột đang được thầy điều khiển" BÁO cho mọi thiết bị
+// khác nó vừa đổi template/options/mode/style, và mọi thiết bị khác TỰ ÁP DỤNG
+// lại đúng như thế. Quyết định đã chốt cùng thầy, ghi lại vì mỗi cái đều bó hẹp
+// thiết kế:
+//   · CHỈ myActivity điều khiển — thiết bị ngoài là MÀN HÌNH CHƠI, không được
+//     ghi ngược lại tài liệu này. (⇒ không cần transaction/tranh chấp nhiều
+//     người viết, khác hẳn sd_round.)
+//   · Vẫn đăng nhập Google của thầy trên MỌI thiết bị (không làm mã phòng công
+//     khai mới) — nên tài liệu này nằm nguyên trong `users/{uid}/items` sẵn có,
+//     KHÔNG cần luật Firestore mới.
+//   · CHỈ đồng bộ lúc bấm ÁP DỤNG xong (không lúc đang kéo thanh OPTLIVE) — đỡ
+//     tốn quota Firestore + độ trễ mạng lúc đang kéo. Việc gọi publishSession()
+//     do đó gắn vào ĐÚNG những nơi core/engine.js đã bắn marker TPL/OPT/STYLE/
+//     MODE cho myActivity (awEmit) — không phải mọi lần state đổi.
+//
+// ⚠️ TÀI LIỆU RIÊNG, KHÔNG NHÉT VÀO sd_round: sd_round có cả bộ máy giao dịch
+// (joinRound/flipRoundStarting/touchRound) canh đúng vòng đời MỘT LƯỢT đấu
+// (nhiều bàn cùng bấm START, TTL, "starting" là trạng thái CUỐI không quay lại
+// được). Phiên phát này sống LÂU HƠN một lượt — thầy có thể đổi template/mode
+// nhiều lần trước khi vào Showdown, hay giữa hai lượt — nhét chung buộc phải
+// dạy sd_round hiểu thêm một khái niệm nó không cần, đúng loại rủi ro đã làm
+// sd_round mong manh (xem mấy bẫy TDZ/thứ tự cờ bận ở Đợt 261-264).
+// ⚠️ BỐN TRƯỜNG PHẲNG (`type`/`options`/`mode`/`style`), KHÔNG lồng một object
+// `tpl`: myActivity vốn đã coi Template và Options là HAI marker riêng (TPL và
+// OPT), publishSession() vì thế cũng ghi từng trường một, patch nào chỉ đổi một
+// thứ thì CHỈ gửi đúng thứ đó — Firestore `merge:true` giữ nguyên các trường
+// khác, và bên nghe gọi lại đúng 4 cửa `window.__awordBridge` sẵn có
+// (switchTemplate/applyOptions/setTheme/setMode), mỗi cửa đã tự "đã đúng rồi
+// thì coi là thành công" (Đợt 197) nên gọi lại dư một trường không đổi là vô
+// hại, không cần tự so sánh trước.
+const SESSION_DOC = "sd_session";
+
+function normSession(raw) {
+  return {
+    id: SESSION_DOC, kind: "showdown-session", root: "showdown", parentId: null, trashed: false,
+    type: String(raw?.type || ""),
+    options: (raw?.options && typeof raw.options === "object") ? raw.options : null,
+    mode: (raw?.mode === "single" || raw?.mode === "showdown") ? raw.mode : "",
+    style: String(raw?.style || ""),
+    at: Number(raw?.at) || 0,
+    updatedAt: Number(raw?.updatedAt) || 0
+  };
+}
+
+/**
+ * ⚠️ CHỈ GỬI ĐÚNG NHỮNG TRƯỜNG ĐỔI — xem ghi chú "BỐN TRƯỜNG PHẲNG" ở trên.
+ * KHÔNG chạy qua normSession() trước khi ghi (normSession chỉ dùng lúc ĐỌC):
+ * làm thế sẽ tự điền `options: null` cho một patch chỉ đổi `{style}` rồi
+ * `merge:true` ghi đè mất options thật đang có trên server.
+ */
+export async function publishSession(patch) {
+  const uid = await requireUid();
+  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+  const now = Date.now();
+  await setDoc(doc(d, `users/${uid}/items`, SESSION_DOC),
+    clean({ id: SESSION_DOC, kind: "showdown-session", root: "showdown", parentId: null, trashed: false,
+            ...patch, at: now, updatedAt: now }),
+    { merge: true });
+}
+
+/** Thầy tắt "cho máy khác tham gia" — xoá hẳn, không để thiết bị mới vào đọc phải một phiên cũ. */
+export async function clearSession() {
+  const uid = await requireUid();
+  const [d, { doc, deleteDoc }] = await Promise.all([db(), fs()]);
+  await deleteDoc(doc(d, `users/${uid}/items`, SESSION_DOC));
+}
+
+/**
+ * Thiết bị NGOÀI nghe phiên phát của myActivity. `onChange(null)` khi phiên đã
+ * bị tắt/xoá (`clearSession`) — chỗ gọi coi đó là "không còn gì để theo".
+ * Trả hàm gỡ, cùng khuôn `subscribeRound()`.
+ */
+export function subscribeSession(onChange) {
+  let stop = null, dead = false;
+  (async () => {
+    try {
+      const uid = await requireUid();
+      const [d, { doc, onSnapshot }] = await Promise.all([db(), fs()]);
+      if (dead) return;
+      stop = onSnapshot(doc(d, `users/${uid}/items`, SESSION_DOC),
+        snap => onChange(snap.exists() ? normSession(snap.data()) : null),
+        () => { /* mạng/quyền — giữ nguyên cái đang có */ });
+    } catch { /* đã đăng xuất: không có gì để nghe */ }
+  })();
+  return () => { dead = true; if (stop) { try { stop(); } catch { /* đã gỡ */ } } };
+}

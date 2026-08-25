@@ -62,9 +62,79 @@ Chưa đo được trên khung hẹp thật vì cần mở đúng myActivity nhi
 (b) mở đúng MỘT cột hẹp trong myActivity (chia 4-5 cột) rồi thử 8 đội — xem chữ có quá nhỏ để đọc
 không (c) chạy thật một trận 8 đội xem điểm/kết quả từng em vẫn đúng.
 
-Rollback = `git reset --hard 4c0a7d6` (về đúng Đợt 268, trước đợt này). ⬜ CHƯA PUSH — đang code
-tiếp phần đồng bộ đa thiết bị (myActivity ↔ AWord ↔ iPad/máy tính) trong cùng đợt, sẽ push chung
-một lần sau khi cả hai phần đều có bằng chứng test.
+Rollback = `git reset --hard 4c0a7d6` (về đúng Đợt 268, trước đợt này).
+
+## Đợt 269 phần 2 (26/8/2026) — ⭐⭐⭐ **TẦNG DỮ LIỆU ĐỒNG BỘ ĐA THIẾT BỊ (`sd_session`) — CHƯA CÓ NÚT BẤM**
+
+**Thầy chốt (bàn hướng thiết kế trước, 5 câu AskUserQuestion):**
+1. Các cột CÙNG một cửa sổ myActivity vẫn đồng bộ qua bridge nội bộ (0 độ trễ) như cũ; CHỈ bật
+   Firebase khi có thiết bị NGOÀI tham gia — **"Lai"**.
+2. Mọi thiết bị vẫn đăng nhập Google của thầy — **không làm mã phòng công khai mới**.
+3. Chỉ đồng bộ khi bấm **Áp dụng** xong — không real-time lúc kéo thanh OPTLIVE.
+4. Thiết bị ngoài **chỉ là màn hình chơi** — myActivity là người điều khiển DUY NHẤT (quyết định ai
+   được ghi Firestore).
+5. Điểm số **gộp chung 1 bảng xếp hạng** — nhưng điều tra lộ ra cơ chế này **ĐÃ CÓ SẴN** từ Đợt 177
+   (`sd_results`, khớp theo `roundKey` = act gốc mọi bàn cùng mở) — không cần xây gì thêm cho mục
+   này, chỉ cần mọi thiết bị cùng mở ĐÚNG một act, mà đó chính là việc phần này giải quyết.
+
+**Kiến trúc:** tài liệu MỚI `users/{uid}/items/sd_session` (`type`/`options`/`mode`/`style`/`at` —
+BỐN TRƯỜNG PHẲNG, không lồng object) — cố tình KHÔNG nhét vào `sd_round` (tài liệu đó có cả bộ máy
+giao dịch canh vòng đời MỘT LƯỢT đấu, nhét thêm khái niệm "phiên sống lâu hơn một lượt" vào sẽ làm
+nó mong manh hơn, đúng loại rủi ro các bẫy TDZ/cờ bận Đợt 261-264 đã cho thấy). KHÔNG cần luật
+Firestore mới (vẫn `users/{uid}/items`, vẫn chỉ uid của thầy).
+
+**FIX / Đã làm:**
+- `core/showdown-setup.js` — `publishSession(patch)` / `clearSession()` / `subscribeSession(onChange)`,
+  cùng khuôn `subscribeRound()` nhưng KHÔNG transaction (một người viết, không tranh chấp).
+- `core/engine.js` — 2 method mới trên `window.__awordBridge`:
+  - `setSessionPublish(on)` — bật/tắt cột này có phát lên Firestore hay không.
+  - `followSession(on)` — bật/tắt nghe `sd_session`, áp lại qua ĐÚNG 4 cửa bridge có sẵn
+    (`switchTemplate`/`applyOptions`/`setTheme`/`setMode`) — không có logic áp dụng nào mới.
+  - `awEmit()` được móc thêm: khi `__sessionPublishOn` bật, 4 tag TPL/OPT/STYLE/MODE cũng ghi lên
+    Firestore — CÙNG rào `awSyncMute<=0` đang chặn tiếng vọng nội bộ, nên một cột bị ĐIỀU KHIỂN từ
+    xa (myActivity dội lệnh sang) không tự phát lại (đối chứng ngược đã bench, xem dưới).
+  - ⚠️ **BÀI HỌC né đúng bẫy Đợt 229/260**: `sessionPublishOn`/`sessionUnsub` cố tình là PLAIN
+    PROPERTY của singleton (`window.__awordBridge.__sessionPublishOn`), không phải biến closure —
+    vì `awEmit` bị định nghĩa LẠI mỗi lần `startGame()` chạy (mỗi lần đổi template), một biến
+    closure sẽ tách thành hai bản không nhìn thấy nhau ngay lần đổi template đầu tiên sau khi bật.
+    Bản nháp đầu tiên VIẾT SAI kiểu này (2 định nghĩa `setSessionPublish` chồng nhau, y hệt lỗi
+    "chép tay 2 lớp" Đợt 229) — tự bắt ra khi đọc lại code trước khi test, sửa trước khi chạy bàn thử.
+
+**Đã test:** `scratch/dot269b-session-relay.html` (boot **game thật** qua `startGame()`, Firestore
+giả `fake-firebase246.js`, click **THẬT** qua Menu/Options — không gọi thẳng hàm nội bộ) —
+**12/12 ĐẠT, 0 lỗi console**:
+- bật publish → bấm **Menu → Change template** (hành động cục bộ thật) → `sd_session.type` được ghi
+  đúng, và publish vẫn còn hiệu lực sau cú remount nội bộ mà chính "Change template" gây ra
+- **đối chứng ngược**: gọi `applyOptions()` QUA BRIDGE (mô phỏng lệnh myActivity dội từ cột khác)
+  trả về `true` nhưng **KHÔNG ghi** `sd_session` — đúng thiết kế, tránh dội ngược vô hạn
+- bấm nút **Options → Apply** thật → `sd_session.options` được ghi
+- một trang KHÁC (mô phỏng thiết bị ngoài, `followSession(false)` ban đầu) sau khi
+  `followSession(true)` **tự đổi đúng** template + options myActivity đã chốt TRƯỚC khi nó mở, và
+  vẫn tiếp tục nghe real-time cho lần đổi sau; `followSession(false)` thì ngừng theo ngay
+- hồi quy: `scratch/dot269-8teams.html` chạy lại **vẫn 32/32** (không hỏng MAX_TEAMS phần 1);
+  `scratch/dot252-marker.html` (giaoBai/myLesson, cùng vùng code bridge) chạy lại **29/30** — 1 lỗi
+  còn lại (**"Ô tiêu đề LẤY ĐÚNG chữ myLesson đưa"**) là **CŨ, KHÔNG LIÊN QUAN**: bench Đợt 252 chưa
+  cập nhật theo hành vi tiêu đề của các đợt sau; flag `__sessionPublishOn` mặc định tắt nên nhánh
+  mới thêm là no-op hoàn toàn với bench này — không sửa, ghi lại để phiên sau khỏi nghi oan.
+
+**⛔⛔ CHƯA CÓ NÚT BẤM NÀO GỌI HAI METHOD NÀY.** Đây là TẦNG DỮ LIỆU, gọi tay qua console
+(`window.__awordBridge.setSessionPublish(true)` / `.followSession(true)`) cho tới khi có UI. Còn
+thiếu, cả hai đều là việc RIÊNG, chưa làm trong đợt này (thấy màn hình Showdown/screen A vốn đã đo
+pixel rất chặt — quyết định không vá vội, làm đợt riêng có test/đo đàng hoàng):
+1. **Phía AWord**: một nút "Theo phiên đang chạy" cho thiết bị ngoài (đặt ở đâu trong màn Showdown
+   screen A cần cân nhắc — `footCaption` hiện đã 2 nghĩa (thương hiệu + Recent results), không nên
+   nhồi thêm nghĩa thứ 3 vào cùng một nút).
+2. **Phía myActivity** (repo khác — CHƯA ĐỤNG): một nút "Cho máy khác tham gia" gọi
+   `executeJavaScript` `window.__awordBridge.setSessionPublish(true)` trên đúng MỘT cột được chọn
+   làm trạm chuyển tiếp (myActivity **chưa hề dùng Firebase** — nhưng với thiết kế này nó KHÔNG
+   CẦN, chỉ cần gọi 1 dòng lệnh có sẵn qua bridge đang dùng).
+
+**CHỜ TEST TOMKO/iPad thật** (bàn thử chỉ giả lập được browser giả, không phải 2 THIẾT BỊ THẬT):
+(a) một máy tính/iPad thật đăng nhập Google của thầy, gọi `followSession(true)` qua console, xem có
+tự đổi theo myActivity không (b) đo độ trễ mạng thật (bench dùng Firestore giả, tức thời) (c) chạy
+thật một trận Showdown có cả cột myActivity lẫn máy ngoài, xem bảng điểm `sd_results` có gộp đúng.
+
+⬜ **CHƯA PUSH** — chờ thầy duyệt hướng đi trước khi làm tiếp 2 nút UI ở trên.
 
 ---
 

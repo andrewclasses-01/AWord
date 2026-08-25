@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 269 — ⬜ CHƯA PUSH, ĐANG CODE tiếp phần đồng bộ đa thiết bị)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 269 phần 2 — ⬜ CHƯA PUSH, chờ thầy duyệt trước khi làm 2 nút UI)**.
 > ⚠️ Đợt 269 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — hai đợt không đụng
 > file nhau, xem cả hai trước khi push.
 >
@@ -28,9 +28,25 @@
 > **Đánh đổi/LƯU Ý:** bench đo trên khung 1080px cố định — khung hẹp hơn thật của MỘT CỘT trong
 > myActivity nhiều cột sẽ co gần sàn 10.5px hơn, cần mắt thầy trên TOMKO/máy lớp mới biết còn dễ
 > đọc không ở 8 đội trên cột hẹp.
-> ⬜ **CHƯA PUSH** (đang code tiếp phần đồng bộ đa thiết bị trong cùng đợt) — **CHỜ THẦY BẤM TAY**:
-> (a) chia 6-8 đội thật trên máy chiếu, xem tên/cột dễ đọc không (b) thử trên đúng MỘT cột hẹp
-> trong myActivity xem chữ có quá nhỏ không.
+> ⬜ **CHỜ THẦY BẤM TAY**: (a) chia 6-8 đội thật trên máy chiếu, xem tên/cột dễ đọc không (b) thử
+> trên đúng MỘT cột hẹp trong myActivity xem chữ có quá nhỏ không.
+>
+> **Đợt 269 phần 2** (26/8/2026) — ⭐⭐⭐ **TẦNG DỮ LIỆU ĐỒNG BỘ ĐA THIẾT BỊ (`sd_session`) — CHƯA
+> CÓ NÚT BẤM.** Tài liệu Firestore MỚI `users/{uid}/items/sd_session` (4 trường phẳng
+> `type`/`options`/`mode`/`style`, một người viết — không transaction, khác hẳn `sd_round`). Sửa
+> **2 file**: `core/showdown-setup.js` (`publishSession`/`clearSession`/`subscribeSession`) ·
+> `core/engine.js` (`window.__awordBridge.setSessionPublish(on)` + `.followSession(on)`, móc vào
+> `awEmit` cho 4 tag TPL/OPT/STYLE/MODE, cùng rào `awSyncMute` sẵn có nên cột bị điều khiển từ xa
+> không tự phát lại). ⚠️ Bản nháp đầu tự mắc đúng bẫy Đợt 229 (2 định nghĩa chồng nhau) — bắt được
+> khi đọc lại trước khi test, sửa bằng property singleton thay vì biến closure.
+> Test mới `scratch/dot269b-session-relay.html` (boot game thật, click Menu/Options thật, Firestore
+> giả): **12/12 ĐẠT, 0 lỗi console** — publish qua hành động cục bộ thật, đối chứng ngược chặn dội
+> ngược, và một trang khác tự đổi đúng theo `followSession(true)`. Hồi quy `dot269-8teams.html`
+> 32/32; `dot252-marker.html` 29/30 (1 lỗi CŨ không liên quan, xem GHI CHU DU AN.md).
+> ⛔⛔ **CHƯA CÓ NÚT BẤM**: myActivity chưa có nút "cho máy khác tham gia" (repo khác, chưa đụng),
+> AWord chưa có nút "theo phiên đang chạy" cho thiết bị ngoài — hai việc UI này cố ý để đợt sau, có
+> test/đo riêng, không vá vội vào màn Showdown vốn đã đo pixel rất chặt.
+> ⬜ **CHƯA PUSH** — chờ thầy duyệt hướng trước khi làm 2 nút UI.
 >
 > ---
 > **Đợt 268** (26/8/2026) — ⭐⭐⭐ **BỎ HẲN THƯ MỤC CON "ACT" + KHÔNG SINH RUNNING WORD/RUNNING

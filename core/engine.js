@@ -771,11 +771,66 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       setMode: (target) => queued(() => (current && current.setMode) ? current.setMode(target) : false),
       openOptions: () => queued(() => (current && current.openOptions) ? current.openOptions() : false),
       closeTool: () => (current && current.closeTool) ? current.closeTool() : false,
+      // ⭐⭐⭐ Đợt 269 (phần 2) — PHIÊN PHÁT NHIỀU THIẾT BỊ (myActivity + máy
+      // tính rời + iPad). Hai method MỚI, cả hai đọc/ghi state qua một PLAIN
+      // PROPERTY của chính singleton này (`__sessionPublishOn`/`__sessionUnsub`),
+      // KHÔNG qua biến closure — lý do: `awEmit` ở dưới bị định nghĩa LẠI mỗi
+      // lần startGame() chạy (mount mới), nên một biến closure sẽ tách thành
+      // hai bản không nhìn thấy nhau ngay lần đổi template ĐẦU TIÊN sau khi bật.
+      // Property trên chính `window.__awordBridge` thì luôn là MỘT nơi duy
+      // nhất, đọc/ghi từ bất kỳ mount nào — đúng bài học "bức tường chép tay"
+      // của Đợt 229/260 ở đầu file này: càng ít chỗ phải chép tay càng khó quên.
+      //   · setSessionPublish(true)  — myActivity gọi trên ĐÚNG MỘT cột được
+      //     chọn làm "trạm chuyển tiếp" (giống cột 0 giữ ghế bridge của Fight).
+      //     Từ đó, mọi TPL/OPT/STYLE/MODE cột này TỰ bắn ra (không phải do
+      //     lệnh myActivity dội lại — xem `awEmit` ngay dưới) cũng được ghi lên
+      //     Firestore `sd_session` cho các thiết bị ngoài đọc.
+      //   · followSession(true)  — một thiết bị NGOÀI (không có myActivity)
+      //     tự nghe `sd_session` và áp lại đúng 4 cửa bridge NÀY (switchTemplate/
+      //     applyOptions/setTheme/setMode) — cùng con đường myActivity vẫn dùng
+      //     để điều khiển một cột từ xa, nên không có logic áp dụng nào mới.
+      // ⚠️ CHƯA CÓ NÚT BẤM nào gọi hai cái này (myActivity chưa có nút "cho máy
+      // khác tham gia"; trang thầy chưa có nút "theo phiên đang chạy") — đây là
+      // TẦNG DỮ LIỆU, gọi tay qua console hoặc từ bàn thử cho tới khi có UI.
+      setSessionPublish(on) { window.__awordBridge.__sessionPublishOn = !!on; return true; },
+      followSession(on) {
+        const b = window.__awordBridge;
+        if (!on) { if (b.__sessionUnsub) { b.__sessionUnsub(); b.__sessionUnsub = null; } return true; }
+        if (b.__sessionUnsub) return true;   // đã đang theo rồi
+        import("./showdown-setup.js").then(m => {
+          if (b.__sessionUnsub) return;      // followSession(false) chen vào giữa lúc đang tải module
+          b.__sessionUnsub = m.subscribeSession(sess => {
+            if (!sess) return;
+            if (sess.type) b.switchTemplate(sess.type);
+            if (sess.options) b.applyOptions(sess.options);
+            if (sess.style) b.setTheme(sess.style);
+            if (sess.mode) b.setMode(sess.mode);
+          });
+        });
+        return true;
+      },
       _setCurrent(delegate) { current = delegate; },
     };
   }
   let awSyncMute = 0;
-  const awEmit = (tag, payload) => { if (awSyncMute <= 0) { try { console.log("MYACT:AW:" + tag + ":" + payload); } catch (_) {} } };
+  const awEmit = (tag, payload) => {
+    if (awSyncMute <= 0) {
+      try { console.log("MYACT:AW:" + tag + ":" + payload); } catch (_) {}
+      // ⭐⭐⭐ Đợt 269 (phần 2) — xem ghi chú dài ở `setSessionPublish` trên
+      // singleton. Đọc thẳng property của singleton, không phải một biến của
+      // mount này, nên bật phiên phát một lần là còn hiệu lực qua mọi lần đổi
+      // template/mount sau đó.
+      if (window.__awordBridge.__sessionPublishOn &&
+          (tag === "TPL" || tag === "OPT" || tag === "STYLE" || tag === "MODE")) {
+        import("./showdown-setup.js").then(m => {
+          if (tag === "TPL") return m.publishSession({ type: payload });
+          if (tag === "OPT") return m.publishSession({ options: JSON.parse(payload) });
+          if (tag === "STYLE") return m.publishSession({ style: payload });
+          if (tag === "MODE") return m.publishSession({ mode: payload });
+        }).catch(() => { /* offline/signed-out — myActivity's own panes already synced locally */ });
+      }
+    }
+  };
   // FIGHT MODE: the bridge has exactly ONE seat (`_setCurrent`), so the second
   // board must not take it — otherwise myActivity would drive the right-hand
   // board while the teacher is looking at the left one. Board 0 keeps the seat.
