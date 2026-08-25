@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 259b (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA TRẬN** — ✅ THẦY YÊU CẦU NGAY SAU ĐỢT 259
+## Đợt 259b (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA TRẬN** — ✅ THẦY YÊU CẦU NGAY SAU ĐỢT 259 · COMMIT `9553879` · ĐÃ PUSH + LIVE
 
 Thầy: *"cần bỏ hẳn ô tích Change the words trong options fight của crossword nữa"*.
 
@@ -46,6 +46,14 @@ mục 2 vẫn đạt, còn ở chơi thường thì mở ra pop-up Edit và đ�
 ⇒ **Luật cho mọi bàn thử sau: một cú CHẠM là `pointerdown` RỒI `pointerup` ngay.** Chỉ bắn nửa đầu
 là đang thử một cử chỉ khác hẳn. Và **đừng `querySelector` cái pop-up đầu tiên trong DOM** — chọn
 đúng cái có nội dung mình cần (`.aw-opt-grid` / `[data-aw-check]`).
+
+
+### ✅ ĐÃ LÊN LIVE — commit `9553879`
+
+Pages `built` đúng commit · **6/6 mã băm SHA-256 khớp** (thêm `core/options-panel.js` vào danh sách
+băm của đợt này) · **37/37 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot259-live.html`,
+nay có thêm mục 10 kiểm đúng việc này: trong trận không còn ô tích, **và đối chứng ngược** là chơi
+thường VẪN có).
 
 ---
 

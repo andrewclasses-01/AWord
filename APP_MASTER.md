@@ -10,7 +10,7 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 259)**.
 >
-> **Đợt 259b** (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA
+> **Đợt 259b** (25/8/2026, `9553879`, ĐÃ PUSH + LIVE: 6/6 mã băm khớp · 37/37 phép chạy trên module bản live) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA
 > TRẬN** (thầy, ngay sau Đợt 259). Đợt 259 ép `canExit=false` suốt trận nên ô đó thành
 > **công tắc chết** — thứ Đợt 143 đã cấm. `core/options-panel.js` nay truyền thêm
 > **`inFight`** (boolean) vào `tpl.buildExtraOptions`; Crossword không dựng ô khi trong trận.
