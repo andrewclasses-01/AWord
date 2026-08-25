@@ -1578,12 +1578,9 @@ const IMP_DOC_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 // one place that already lists every type, because the in-game Template picker
 // needed exactly the same map. The private copy that used to sit here could
 // only ever drift from it.
-// The "ACT" folder (core/lesson-import.js's QUIZ1/QUIZ2/READINGACT subfolder
-// target) is meant to hold only these lesson-comprehension types — Quiz
-// covers both QUIZ1/QUIZ2 and "3. READING QUIZ" (same `type`), find_the_match
-// covers "2. FILLING". Teacher's request 10/8/2026: keep vocab/pronunciation
-// acts (Anagram, Speaking cards) OUT of "ACT" so it never gets mixed up.
-const ACT_FOLDER_ALLOWED_TYPES = new Set(["quiz", "true_false", "find_the_match", "running_word", "running_team"]);
+// ⭐ Đợt 268 — the "ACT" subfolder concept (a QUIZ1/QUIZ2/READINGACT-only
+// folder, teacher's request 10/8/2026) is retired: lesson-import.js now lands
+// every act flat in the same folder, so there is nothing left to guard here.
 
 // `opts.fromRoot` — build the folder tree from the TOP of Activities instead of
 // from wherever the teacher happens to be standing. Set by a file dropped on the
@@ -1986,22 +1983,12 @@ function importFlow(initialFile, opts = {}) {
           let targetId;
           if (pathCache.has(key)) targetId = pathCache.get(key);
           else { targetId = await resolveFolderPath(baseId, key.split("/").filter(Boolean)); pathCache.set(key, targetId); }
-          let dup = false, wrongType = false;
+          let dup = false;
           if (targetId !== undefined) {
             const kids = await listChildren(state.root, targetId);
             dup = kids.some(k => k.kind === "act" && sameName(k.title, a.title));
-            // "ACT" (the Quiz/Reading subfolder) is meant to hold only its
-            // own comprehension types (teacher's request 10/8/2026) — an
-            // Anagram/Speaking-cards act landing there (e.g. because the
-            // teacher is standing inside "ACT" itself, see the guard below)
-            // gets flagged the same way a name clash does.
-            if (!ACT_FOLDER_ALLOWED_TYPES.has(a.type)) {
-              const targetNode = await getItem(targetId);
-              if (targetNode && sameName(itemName(targetNode), "ACT")) wrongType = true;
-            }
           }
           row.classList.toggle("is-dup", dup);
-          row.classList.toggle("is-wrongtype", wrongType);
         }
       }
       // ---- the two steps ----------------------------------------------------
@@ -2025,13 +2012,6 @@ function importFlow(initialFile, opts = {}) {
         }
       }
 
-      // ---- "ACT" subfolder guard (teacher's request 10/8/2026): Quiz/
-      // Reading acts land inside a literal "ACT" (and "ACT/HOMEWORK")
-      // subfolder — if the folder we are hanging the path off is already named
-      // "ACT", or already HAS a child folder named "ACT", building a tree here
-      // would nest a second "ACT" oddly inside it. Propose an EMPTY path
-      // instead, so the existing "ACT" folder is reused in place — the same
-      // thing unticking "Make a new folder" used to do.
       (async () => {
         // The folder the path hangs off, by name — this is what `trimPath()`
         // measures the proposed path against.
@@ -2039,20 +2019,12 @@ function importFlow(initialFile, opts = {}) {
           const here = await getItem(basePid);
           hereName = here ? itemName(here) : null;
         }
-        let blockNewFolder = false;
-        if (basePid && hereName && sameName(hereName, "ACT")) blockNewFolder = true;
-        if (!blockNewFolder) {
-          const siblings = await listChildren(state.root, basePid);
-          if (siblings.some(n => n.kind === "folder" && sameName(n.name, "ACT"))) blockNewFolder = true;
-        }
-        const proposed = blockNewFolder ? [] : trimPath(sourcePath);
+        const proposed = trimPath(sourcePath);
         fWhere.innerHTML =
           `Creating in <b>${escapeText(hereName || ROOT_LABEL[state.root])}</b>` +
-          (blockNewFolder
-            ? " — there's already an “ACT” folder here, so no new folder is proposed."
-            : pathKnown
-              ? " — folders read from the file name."
-              : sourcePath.length ? " — the file name didn't match a known series, so just one folder is proposed." : "");
+          (pathKnown
+            ? " — folders read from the file name."
+            : sourcePath.length ? " — the file name didn't match a known series, so just one folder is proposed." : "");
         drawPath(proposed);
       })();
 
@@ -2069,12 +2041,8 @@ function importFlow(initialFile, opts = {}) {
         }
 
         const dupTicked = acts.some((a, i) => checks[i].checked && checks[i].closest(".aw-imp-row")?.classList.contains("is-dup"));
-        const wrongTypeTicked = acts.some((a, i) => checks[i].checked && checks[i].closest(".aw-imp-row")?.classList.contains("is-wrongtype"));
-        if (dupTicked || wrongTypeTicked) {
-          const parts = [];
-          if (dupTicked) parts.push("a name conflict with something already in your library");
-          if (wrongTypeTicked) parts.push("an act type that doesn't belong in the “ACT” folder (only Quiz, Running word, Running team, True/False, Filling and Reading quiz go there)");
-          showErr(`There's ${parts.join(" and ")} — fix it (rename/delete the conflict, or untick the flagged row, on the previous screen), then Import again.`);
+        if (dupTicked) {
+          showErr("There's a name conflict with something already in your library — fix it (rename/delete the conflict, or untick the flagged row, on the previous screen), then Import again.");
           return;
         }
 

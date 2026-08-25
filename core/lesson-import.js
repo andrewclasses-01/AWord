@@ -32,32 +32,9 @@ const OPT_ANA  = { timer: "countUp", shuffleQuestions: true, anagramMode: "bonus
 // Which clue set a freshly imported vocabulary act opens on, and the one whose
 // text is mirrored into each item's plain `.clue` (see core/content-view.js).
 const DEFAULT_VARIANT = "eng1";
-// Running word runs its OWN two clocks, so the engine's whole-game timer is off.
-// wordsPerTeam 0 = "give each team the whole pool"; the teacher normally drops it
-// to ~50 in the Options panel, which is what makes the two lists overlap.
-const OPT_RW   = { timer: "none", teamAName: "TEAM A", teamBName: "TEAM B", clockSeconds: 300,
-                   incrementSeconds: 0, wordsPerTeam: 0, allowPass: true, passPenaltySeconds: 10,
-                   andrewUses: 1, warnSeconds: 15 };
-// Running team also runs its own clocks: one countdown for the whole round and a
-// short one per question. `lives: 0` would mean unlimited; 3 is the default.
-const OPT_RT   = { timer: "none", mainSeconds: 600, questionSeconds: 15, lives: 3 };
-
 const ftm = (title, pairs) => ({
   type: "find_the_match", title, theme: "classic", options: OPT_FTM,
   content: { pairs: pairs.filter(p => p[0]).map(([a, b]) => ({ keyword: a, definition: b })) }
-});
-// `words` is an array of {word, ipa} (11/8/2026 — was a plain string array
-// before Running word's editor grew an IPA column; see running-word-editor.js).
-const runningWord = (title, words) => ({
-  type: "running_word", title, theme: "classic", options: { ...OPT_RW },
-  content: { words: words.filter(w => w.word) }
-});
-// No `gameSets` here on purpose: a set pairs a printed numbering with the class
-// roll it was played with, so it can only be made in the game's setup screen
-// once a real class has been picked.
-const runningTeam = (title, words) => ({
-  type: "running_team", title, theme: "classic", options: { ...OPT_RT },
-  content: { words: words.filter(Boolean), gameSets: [] }
 });
 const trueFalse = (title, rows) => {
   const statements = [];
@@ -567,9 +544,8 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     return WORDS;
   };
 
-  // Build one table's three acts. `suffix` is "" for the lesson's word set and
-  // " 2" for the second one (`WORDTABLE2`), so the titles read
-  // `xxx / WORDS 2` · `xxx / RUNNING WORD 2` · `xxx / RUNNING TEAM 2`.
+  // Build one table's WORDS act. `suffix` is "" for the lesson's word set and
+  // " 2" for the second one (`WORDTABLE2`), so the title reads `xxx / WORDS 2`.
   // ⚠️ Every act here carries the SAME options preset and the SAME shape as the
   // first table's — a second word set is an ordinary word set, not a variant of
   // the first, and nothing downstream is allowed to tell them apart.
@@ -615,7 +591,8 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     // ⛔ Đợt 190 — the two standalone acts this file used to build out of the
     // transcription column are GONE (teacher, 18/8/2026): `PRONUNCIATION` (an
     // Anagram clued by /ipa/) and `IPA` (Speaking cards showing "WORD /ipa/").
-    // Nine acts per lesson file becomes seven.
+    // Nine acts per lesson file becomes seven — then five from Đợt 268, when
+    // RUNNING WORD and RUNNING TEAM stopped being separate acts too.
     // ⚠️ Đợt 212 RETIRED THE CLUE SET BUT DID NOT BRING THESE BACK — thầy is
     // building one PRONUNCIATION act with more in it than either of them had.
     // Of the two ways in that Đợt 190 offered, MODE › IPA is the one still
@@ -623,23 +600,11 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     // ⚠️ Acts already imported under the old rule are untouched: they are ordinary
     // saved acts, and nothing here reaches into the teacher's library.
 
-    // The bare word list the two racing games need.
-    const WORDLIST = WORDS.map(it => it.word);
-    // RUNNING WORD — the two-team chess-clock race. It needs nothing but the bare
-    // word list (the same pool the teacher's hand-made `RunningW` sheet drew its
-    // two 50-word lists from). No clues, no answers: the explainer supplies the
-    // meaning out loud. The transcription rides along when the row has one, read
-    // off the same `ipa` field of the word (Đợt 212 — it used to come out of the
-    // `clues.pron` set, which no longer exists), so it can never fall out of step
-    // with the word beside it.
-    if (WORDLIST.length >= 2) {
-      acts.push(runningWord(`${source} / RUNNING WORD${suffix}`,
-        WORDS.map(it => ({ word: it.word, ipa: it.ipa || "" }))));
-    }
-    // RUNNING TEAM — same bare word list, same reasoning: the five wrong tiles are
-    // picked out of the pool itself by look-alike score, so no clues are needed.
-    // Six is the floor because every round puts six words on screen.
-    if (WORDLIST.length >= 6) acts.push(runningTeam(`${source} / RUNNING TEAM${suffix}`, WORDLIST));
+    // ⭐ Đợt 268 — RUNNING WORD and RUNNING TEAM are no longer generated here
+    // (thầy, 26/8/2026): both racing modes already live INSIDE the WORDS act
+    // itself via Change Template (core/engine.js runTargets(), RUN_ORDER —
+    // uses the same word pool through core/convert.js's switchTargets()), so a
+    // separate standalone act was pure duplication.
   };
 
   // The lesson's word set, then the second one if the file carries a filled-in
@@ -678,7 +643,7 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
     { key: "practice", rows: readQuizSheet("QUIZ1", "QUIZ") },
     { key: "homework", rows: readQuizSheet("QUIZ2") }
   ]);
-  if (quizAct) acts.push({ ...quizAct, subfolder: "ACT" });
+  if (quizAct) acts.push(quizAct);
 
   // ---- reading acts READINGACT1 (v1) / READINGACT2 (v2) ----
   // ⭐ Đợt 190 — the three sections are cut at their HEADER rows ("No." / "STT"),
@@ -731,7 +696,7 @@ export async function parseLessonToBundle(arrayBuffer, { fileName = "", folder =
       { key: "practice", rows: ra.p },
       { key: "homework", rows: ra.h }
     ]);
-    if (act) acts.push({ ...act, subfolder: "ACT" });
+    if (act) acts.push(act);
   }
 
   // ⭐ Đợt 221 — the bundle now carries a PATH, not a folder name. `folder` is

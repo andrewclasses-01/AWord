@@ -3549,14 +3549,12 @@ html.aw-nhung .aw-below { display: none; }
 .aw-imp-note { font-size: .82rem; color: #7c8aa0; }
 .aw-imp-done { font-weight: 700; color: #1e9e5a; }
 
-/* Row-level flags (10/8/2026), same red treatment for both: `is-dup` = title
-   already exists in the act's real target folder; `is-wrongtype` = the act's
-   type doesn't belong in the "ACT" folder it would land in (only Quiz/
-   Reading-comprehension types do). Both stay ticked on purpose — teacher
-   decides whether to untick or go fix the real cause; blocking itself
-   happens on the Import click (main.js), not here. */
-.aw-imp-row.is-dup, .aw-imp-row.is-wrongtype { border-color: #e5484d; background: #fdeceb; }
-.aw-imp-row.is-dup .aw-imp-rtitle, .aw-imp-row.is-wrongtype .aw-imp-rtitle { color: #c53030; }
+/* Row-level flag (10/8/2026): `is-dup` = title already exists in the act's
+   real target folder. Stays ticked on purpose — teacher decides whether to
+   untick or go fix the real cause; blocking itself happens on the Import
+   click (main.js), not here. */
+.aw-imp-row.is-dup { border-color: #e5484d; background: #fdeceb; }
+.aw-imp-row.is-dup .aw-imp-rtitle { color: #c53030; }
 
 /* Excel-import voice panel (10/8/2026) — shown first, above the act list,
    only when the workbook produced at least one TTS-eligible act (the

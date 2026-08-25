@@ -12,7 +12,58 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 266** (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 268** (26/8/2026, ⬜ chờ push). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 268 (26/8/2026) — ⭐⭐⭐ **BỎ HẲN THƯ MỤC CON "ACT" + KHÔNG SINH RUNNING WORD/RUNNING TEAM KHI IMPORT**
+
+> ⬜ Vừa sửa xong, chờ push cùng lượt hồ sơ. Sửa **3 file**: `core/lesson-import.js` ·
+> `main.js` · `core/app.css` (+ 1 dòng chú thích ở `core/store.js`).
+
+**Bối cảnh:** thầy đang chuẩn bị build myLesson Đợt C (thêm dạng bài DICTS/READING). myLesson đọc
+act của một mã bài bằng `__awordLib.lietKeAct` — hàm này chỉ đọc **1 tầng trực tiếp**, không đệ
+quy. Với cấu trúc cũ (act QUIZ/TRUE FALSE/FILLING/READING QUIZ nằm trong thư mục con "ACT"), myLesson
+sẽ KHÔNG thấy các act đó khi CHECK một mã bài DICTS/READING. Thầy chốt: thay vì dạy myLesson "đi
+xuyên vào ACT", bỏ hẳn khái niệm thư mục "ACT" bên AWord — làm phẳng mọi act cùng một tầng.
+
+**Đi kèm:** thầy chỉ ra Running word/Running team **đã chơi được ngay trong act WORDS** qua nút
+Change Template (`core/engine.js` `runTargets()`/`RUN_ORDER`, dùng bộ từ act gốc qua
+`core/convert.js` `switchTargets()`) — nên việc import tự sinh thêm 2 act riêng
+`<mã> / RUNNING WORD` và `<mã> / RUNNING TEAM` là dư thừa. Bỏ luôn.
+
+**Sửa:**
+- `core/lesson-import.js`: act QUIZ (dòng ~677-681) và 3 act đọc hiểu TRUE FALSE/FILLING/READING
+  QUIZ (dòng ~724-735) bỏ `subfolder: "ACT"` — nay `acts.push(quizAct)` / `acts.push(act)` thẳng,
+  không còn field `subfolder` nào được gán trong file này nữa. Xoá hẳn khối sinh RUNNING WORD/
+  RUNNING TEAM (`WORDLIST`, 2 nhánh `if`) cùng 2 hàm dựng `runningWord()`/`runningTeam()` và 2
+  preset `OPT_RW`/`OPT_RT` — grep xác nhận không nơi nào khác trong repo gọi tới 2 hàm này.
+- `main.js`: xoá `ACT_FOLDER_ALLOWED_TYPES` (dòng 1586 cũ) + đoạn tính `wrongType` trong dialog
+  Import (cờ đỏ hàng nào "act sai loại rơi vào ACT") + khối IIFE "đứng trong ACT thì đề xuất
+  đường dẫn rỗng" + câu báo lỗi nhắc tới "ACT" khi bấm Import. Giữ nguyên toàn bộ phần `is-dup`
+  (trùng tên) — không đụng.
+- `core/app.css`: bỏ selector `.is-wrongtype` (chỉ còn `.is-dup`).
+- `core/store.js`: sửa 1 dòng chú thích ví dụ trong `importBundle()` cho khỏi nhắc "ACT" (code
+  không đổi — cơ chế `subfolder` generic vẫn còn, chỉ là `lesson-import.js` không dùng nữa).
+
+**KHÔNG đụng:** `running_word`/`running_team` vẫn là template chơi được đầy đủ ở mọi nơi khác
+(`core/catalog.js`, New act tay, Change Template, `core/convert.js`) — chỉ riêng bước IMPORT
+không tự sinh act loại này nữa.
+
+**Kiểm:** `node -c` sạch cả 3 file JS. Mở trang qua `python devserver.py 5510` — console sạch,
+không có lỗi tham chiếu tới biến/hàm đã xoá (`ACT_FOLDER_ALLOWED_TYPES` không còn ai gọi).
+⬜ **CHƯA kiểm được luồng Import thật** (cần đăng nhập Google riêng của thầy + một file Excel bài
+học thật) — thầy tự thử 1 lần import trước khi build myLesson Đợt C dựa trên nền này.
+
+**⛔⛔ PHÁT HIỆN THÊM, CHƯA SỬA — cần thầy quyết định:** skill `taoact`
+(`C:\Users\ANDREW CLASSES\.claude\skills\taoact\SKILL.md`) là đường TAY THỨ HAI để tạo act (lái
+Chrome tự động, dùng khi không mở dialog Import trong app) — đầu file `lesson-import.js` tự ghi
+chú phải giữ đồng bộ với skill này. Skill hiện **VẪN tạo/dùng subfolder ACT + HOMEWORK** (mục
+"PART 2 — Subfolder ACT & HOMEWORK"). Chưa sửa vì đây là kịch bản lái trình duyệt tự động, sửa sai
+im lặng sẽ hỏng cả luồng — cần thầy xác nhận có dùng skill này nữa không trước khi động vào.
+
+**Việc đang chờ:** (1) thầy tự bấm thử Import một bài thật để kiểm sống; (2) quyết định có sửa
+skill `taoact` theo hay không; (3) quay lại build myLesson Đợt C.
 
 ---
 

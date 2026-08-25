@@ -354,8 +354,10 @@ export async function getActivity(id) { return (await readAll())[id] || null; }
 //     activities: [ {type,title,theme?,instruction?,options?,content, subfolder?}, ... ] }
 // The acts land under `opts.parentId` (the folder the teacher is in). If `folder`
 // is given, a subfolder of that name is created/REUSED as the BASE. Each activity
-// may also carry a `subfolder` PATH (e.g. "ACT" or "ACT/HOMEWORK") that nests it
-// further under the base — folders are created/reused as needed. Acts whose title
+// may also carry a `subfolder` PATH that nests it further under the base —
+// folders are created/reused as needed (unused by lesson-import.js since Đợt
+// 267, which lands every act flat, but still available to any other bundle
+// generator). Acts whose title
 // already exists in their target folder are SKIPPED (re-import is safe, no dupes).
 // Returns { folderId, folderName, created, skipped, errors, createdActs }.
 // `createdActs` carries the full saved node (with its real `.id`) for every

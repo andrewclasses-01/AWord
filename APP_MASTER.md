@@ -8,7 +8,45 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 266 — ⬜ CHƯA PUSH)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 268 — ⬜ CHƯA PUSH)**.
+>
+> **Đợt 268** (26/8/2026) — ⭐⭐⭐ **BỎ HẲN THƯ MỤC CON "ACT" + KHÔNG SINH RUNNING WORD/RUNNING
+> TEAM KHI IMPORT** (thầy chốt, để chuẩn bị myLesson Đợt C — DICTS/READING). Lý do: myLesson cần
+> đọc HẾT act của một mã bài chỉ bằng MỘT lượt `lietKeAct` (đọc 1 tầng, không đệ quy); có "ACT"
+> chắn giữa là QUIZ/TRUE FALSE/FILLING/READING QUIZ không lọt vào. Và Running word/Running team
+> vốn đã CHƠI ĐƯỢC ngay trong act WORDS qua Change Template (`core/engine.js` `runTargets()` +
+> `RUN_ORDER`, dùng CHÍNH bộ từ act gốc qua `core/convert.js`) nên tạo thêm 2 act riêng là thừa.
+> Sửa **3 file**:
+> - `core/lesson-import.js` — bỏ `subfolder: "ACT"` ở act QUIZ (khu Quiz1/Quiz2) và 3 act đọc hiểu
+>   (TRUE FALSE/FILLING/READING QUIZ) ⇒ mọi act nằm PHẲNG cùng tầng với WORDS. Xoá hẳn khối sinh
+>   RUNNING WORD/RUNNING TEAM (kèm `OPT_RW`/`OPT_RT`/hai hàm dựng `runningWord()`/`runningTeam()`
+>   — không còn nơi nào khác gọi tới, xoá sạch chứ không để lại chết). Một bài giờ tối đa **5 act**
+>   (WORDS + QUIZ + 3 reading), giảm từ 7 (Đợt 190) rồi 9 (bản gốc).
+> - `main.js` — bỏ hẳn `ACT_FOLDER_ALLOWED_TYPES` + hàng rào "wrongtype" (dialog Import: cờ đỏ khi
+>   thả nhầm act vào thư mục tên ACT) + logic "đứng trong ACT thì đề xuất đường dẫn rỗng, tái dùng
+>   ACT sẵn có" — khái niệm thư mục "ACT" không còn tồn tại ở đâu trong AWord nữa (kể cả kéo-thả
+>   tay), theo đúng ý thầy *"để mọi activity ở phẳng cùng 1 thư mục do đã có những act tích hợp rất
+>   gọn"*.
+> - `core/app.css` — bỏ CSS `.is-wrongtype` (chỉ còn `.is-dup`).
+> - `core/store.js` — sửa 1 dòng chú thích ví dụ (không đổi code): `importBundle()` vẫn hỗ trợ
+>   `subfolder` cho bất kỳ bundle nào cần, chỉ là `lesson-import.js` không dùng tới nữa.
+>
+> **running_word/running_team KHÔNG bị xoá khỏi AWord** — vẫn là template chơi được đầy đủ (New
+> act tay, Change Template, `core/catalog.js`, `core/convert.js`…), chỉ là **không còn tự sinh ra
+> làm act riêng lúc import** nữa.
+>
+> ⚠️ **Chỉ ảnh hưởng bài IMPORT MỚI từ giờ.** Bài live hiện tại (B2B, chỉ có WORDS) không đụng gì;
+> chưa có bài DICTS/READING nào tồn tại nên không phải lo di trú cấu trúc cũ.
+>
+> ⛔⛔ **PHÁT HIỆN THÊM, CHƯA SỬA:** skill `taoact` (`C:\Users\ANDREW CLASSES\.claude\skills\taoact\SKILL.md`)
+> là đường TAY THỨ HAI tạo act (điều khiển Chrome tạo act khi không dùng dialog Import trong app) —
+> đầu file `lesson-import.js` tự ghi chú *"mirrors the taoactaw skill's mapping exactly... keep the
+> other in sync"*. Skill này **VẪN đang tạo/dùng subfolder ACT + HOMEWORK** (mục "PART 2 — Subfolder
+> ACT & HOMEWORK", dòng ~259-280). Chưa sửa skill này trong đợt này — cần thầy xác nhận trước vì
+> sửa sai có thể làm hỏng luồng tạo act bằng tay qua Chrome. Việc chờ.
+>
+> **Việc đang chờ**: build phần myLesson Đợt C (DICTS/READING) dựa trên nền phẳng này; xử lý skill
+> `taoact` ở trên khi thầy rảnh.
 >
 > **Đợt 266** (26/8/2026) — ⭐⭐⭐ **TIME COST TRONG FIGHT CHỈ TRỪ MỘT BÊN.** Thầy: *"Anagram ở
 > chế độ Fight với options mở time cost — Time cost chỉ trừ điểm 1 bên (bên phải) mà không trừ
