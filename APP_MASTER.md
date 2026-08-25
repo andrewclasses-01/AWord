@@ -10,7 +10,11 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 261)**.
 >
-> **Đợt 261** (25/8/2026, ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT**) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP
+> **Đợt 261** (25/8/2026, `8e1c6b3`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
+> `built` đúng `8e1c6b3` — ⚠️ lần kiểm ĐẦU trả `building` và bản live vẫn là commit CŨ,
+> đúng lý do "không tin mã 200" · **14/14 mã băm SHA-256 khớp** · **53/53 phép chạy trên
+> CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot261-live.html`, **101 tài nguyên** đều nạp từ
+> `aword.andrewclasses.com`)) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP
 > CÙNG BẮT ĐẦU MỘT LƯỢT** (qua **Firestore**, nên MỌI THIẾT BỊ vào chung được, không chỉ các
 > cột myActivity) và ⭐⭐⭐ **BỎ HẲN BALANCE QUESTIONS**. Sửa 11 file.
 >

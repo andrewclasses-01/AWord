@@ -7,9 +7,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 261 (25/8/2026) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT** · ⭐⭐⭐ **BỎ HẲN BALANCE QUESTIONS, COUNT MỞ CHO 8/11 GAME**
 
-> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.** Bàn thử `scratch/dot261-lobby.html` **53/53** trên
-> module thật; `dot260-plan` **52/52** (đã viết lại cho thực tế mới); hồi quy `dot256-smoke`
-> 48/48 · `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 · `index.html` 0 lỗi.
+> ✅ **THẦY DUYỆT · COMMIT `8e1c6b3` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
+> Pages triển khai đúng `8e1c6b3` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`).
+> ⚠️ **Lần kiểm ĐẦU TIÊN trả `status: "building"` và cả 10/10 mã băm đều LỆCH** — bản live
+> lúc đó vẫn là commit trước. Đó chính là ca mà "curl trả 200" nói dối: nội dung có thật,
+> chỉ là nội dung CŨ. Phải chờ `built` rồi mới băm lại.
+> **14/14 mã băm SHA-256 khớp** (5 file core · 6 template · 3 file hồ sơ, băm nội dung trong
+> commit qua `git show 8e1c6b3:<path>` so với `curl https://aword.andrewclasses.com/<path>`).
+> **53/53 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot261-live.html` — cùng 10
+> mục, **101 tài nguyên** đều nạp từ `aword.andrewclasses.com`, đã liệt kê bằng
+> `performance.getEntriesByType("resource")` để chứng minh không phải chạy trên đĩa).
+> Bàn thử trên đĩa `dot261-lobby.html` **53/53** · `dot260-plan` **52/52** · hồi quy
+> `dot256-smoke` 48/48 · `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 · `index.html` 0 lỗi.
 > ✅ **ĐÃ NHÌN BẰNG MẮT** (2 ảnh chụp): màn READY và màn NO CONNECTION.
 
 ### Thầy giao (25/8/2026) — 6 việc một lượt
