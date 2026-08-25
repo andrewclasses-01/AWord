@@ -384,7 +384,14 @@ const unjumbleTemplate = {
     if (introActive) runIntro(() => ui.startTimer());
     else ui.startTimer();
 
-    function doneCheck(s) { return mode === "submit" ? s.graded === true : s.correct === true; }
+    // ⭐ Đợt 265 — a sentence the buzzer took is DEALT WITH, in both modes. Without the
+    // `timedOut` arm, "Letters with bonus" (whose done-test is `correct === true`) would
+    // never count a timed-out sentence as finished: the game could not auto-complete and
+    // "Submit answers" would still read it as unanswered. Same shape Anagram's doneCheck
+    // grew at Đợt 174 for exactly the same reason.
+    function doneCheck(s) {
+      return s.timedOut === true || (mode === "submit" ? s.graded === true : s.correct === true);
+    }
     // TIME COST (Đợt 143): one place decides what the score is. Every showScore()
     // in this file is fed from here, so an ordinary score update can never
     // repaint the idle clock's deduction away.
@@ -404,6 +411,8 @@ const unjumbleTemplate = {
     ui.setScoreProvider?.(scoreNow);
     ui.setScorePainter?.(v => showScore(v));
     ui.setIdleGuard?.(() => finished || dead || busy || introActive);
+    // ⭐⭐⭐ Đợt 265 — the per-round count down now has somebody to call. See roundTimeUp().
+    ui.setRoundTimeout?.(roundTimeUp);
 
     // ---------- full render (real boundaries only) ----------
     // `transition === "cross"` keeps the outgoing card on screen and crossfades to
@@ -724,6 +733,10 @@ const unjumbleTemplate = {
       st.correct = true;
       st.graded = true;
       st.points = 0;       // banked by the flights below (1 for the sentence, +1 for a bonus)
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant the sentence is
+      // solved, so their clock stops here (Quiz/Anagram/Type the answer have done this
+      // since Đợt 174). The next round opens when render() reports the new sentence.
+      ui.roundDone?.();
       renderBoard();       // lock the board — the whole sentence is now green (prefix === n)
       updateBonusMoves();  // hide the "moves for bonus" line
       updateNav();
@@ -747,6 +760,9 @@ const unjumbleTemplate = {
       if (st.graded || busy) return;
       busy = true;
       st.graded = true;
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: the turn ends at Submit, not when the ~2s
+      // mark-and-reveal animation finishes. Same reason as finalizeLiveWord() above.
+      ui.roundDone?.();
       const n = it.words.length;
       st.marks = new Array(n).fill(null);
       updateSubmitState();
@@ -935,6 +951,53 @@ const unjumbleTemplate = {
         }
       };
       requestAnimationFrame(step);
+    }
+
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * Registered with `ui.setRoundTimeout()`. Until this đợt this game had no handler at
+     * all, so a Showdown round set to "Count down" just emptied its bar and left the
+     * sentence sitting there, fully draggable — see the same note in true-false.js.
+     *
+     * ⚠️ TWO SCORING FAMILIES, TWO MEANINGS — copying one branch onto the other would be
+     * wrong twice (the lesson Anagram wrote down at Đợt 174):
+     *   · "On submit" — the sentence is graded as a whole, so a timeout IS a wrong
+     *     submission: `graded`, `correct:false`, one `pointsOff`, one life, and the answer
+     *     line reveals the sentence when "Show corrects" is on.
+     *   · "Words with bonus" — points are earned as words land in the right place and a
+     *     sentence can only ever end SOLVED. There is nothing to grade wrong: it simply
+     *     never pays out, which is already the whole loss, plus a life like any other
+     *     imperfect sentence. ⚠️ NO `pointsOff` here — that slider is a submit-mode
+     *     control, and charging it at the buzzer would be the double deduction Đợt 143
+     *     ruled out.
+     * ⚠️ `st.graded = true` in BOTH modes: it is what `renderBoard()`'s `locked` and the
+     * drag handler's own guard read, so it is the one flag that actually stops the class
+     * from carrying on rearranging a sentence whose time is up.
+     */
+    function roundTimeUp() {
+      const st = state[index], it = items[index];
+      if (!it || !st || dead || finished || busy) return;
+      if (doneCheck(st)) return;              // already solved / submitted / timed out
+      st.timedOut = true;
+      st.graded = true;
+      if (mode === "submit") {
+        st.correct = false;
+        st.points = 0;
+        // Đợt 256's rule — a wrong answer that costs points has to SHOW the number
+        // flying. `null` as the source: nothing was tapped, so core/engine.js drops it
+        // into the middle of the frame.
+        if (pointsOff) ui.flyPenalty?.(null, pointsOff, () => { st.points = -pointsOff; return scoreNow(); });
+        if (revealEl) revealEl.textContent = showAnswerWhenWrong ? sentenceText(it) : "";
+      }
+      renderBoard();
+      updateSubmitState();
+      const outOfLives = loseLife();
+      showScore(scoreNow());
+      unjumbleSound.fastWrong();
+      updateNav();
+      if (outOfLives) autoTimer = setTimeout(() => finish("gameover"), 1500);
+      else if (state.every(doneCheck)) autoTimer = setTimeout(finish, 1500);
+      else maybeAutoNext(1500);   // stays put unless "Auto next question" is on
     }
 
     // ---------- navigation ----------

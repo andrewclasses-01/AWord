@@ -257,6 +257,24 @@ const gameshowTemplate = {
     function later(fn, ms) { const id = setTimeout(() => { pending.delete(id); fn(); }, ms); pending.add(id); return id; }
 
     ui.onSubmit(() => finishGame(true, true), () => state.filter(s => s.chosen !== null).length);   // block "Submit answers" at 0 answered
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds
+     * the row on `showdown`, not on a template flag), but until this đợt only Quiz,
+     * Anagram and Type the answer answered the buzzer — everywhere else the bar simply
+     * emptied and the tiles stayed live. See true-false.js's roundTimeUp() for the
+     * teacher's report in full.
+     *
+     * ⭐ This game needed no new rule: `resolveQuestion(null, true)` IS its out-of-time
+     * path — its OWN per-question clock has called it since day one (tickCountdown), and
+     * it already does everything the teacher asked for: no tile marked as the pupil's,
+     * the correct one revealed, the "time's up" cue, a lost heart, and the move on to the
+     * next question. Writing a second version of that would be two rules for one event.
+     * ⚠️ SAFE ALONGSIDE THE GAME'S OWN CLOCK. Both can be running (Options ▸ Time per
+     * question AND Showdown ▸ Time each round); whichever buzzes first resolves, and
+     * `st.resolved` makes the second call a no-op — the guard is already the first line.
+     */
+    ui.setRoundTimeout?.(() => resolveQuestion(null, true));
     ui.setScore(0);
     ui.setNav({ index: 1, total, onPrev: null, onNext: null });
     window.addEventListener("keydown", onKey);
@@ -430,6 +448,12 @@ const gameshowTemplate = {
       st.resolved = true;
       st.chosen = chosen;
       st.timedOut = !!byTimeout;
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn is over the moment the question
+      // resolves, so their clock stops here (Quiz/Anagram/Type the answer have done this
+      // since Đợt 174). Without it the count down went on through the 1-1.6s mark-and-hold,
+      // any bonus round, and the "get ready" card for the NEXT question — all charged to
+      // whoever had just answered.
+      ui.roundDone?.();
       const q = questions[index];
       const correct = chosen !== null && !!q.answers[chosen].correct;
       st.correct = correct;

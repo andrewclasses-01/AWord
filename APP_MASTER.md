@@ -8,8 +8,83 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 264 — `2700bc1`, ĐÃ PUSH + LIVE KIỂM CHỨNG)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 265 — ⬜ CHƯA PUSH, chờ thầy bấm tay)**.
 >
+> **Đợt 265** (26/8/2026) — ⭐⭐⭐ **RÀ TOÀN BỘ SHOWDOWN NGOÀI QUIZ** (thầy: *"tôi thấy True
+> False có vấn đề nên muốn check lại tất cả để xử lý tất cả"*). Sửa **11 file**:
+> `core/engine.js` · `core/app.css` · `core/showdown-setup.js` · 8 template (true-false ·
+> unjumble · gameshow · balloon-pop · open-the-box · find-the-match · crossword · speaking).
+>
+> **(1) TÊN BỊ CẮT — ở CẢ 10 game, không riêng True/false.** Khi bật *Time each round*, tên
+> xuống ngồi trong `.aw-navstack`, mà đó là rãnh `auto` của lưới `.aw-bottombar` ⇒ rộng
+> đúng bằng hàng ‹ › bên trong. Đo trên khung 888px, tên cần 286px: Quiz **234px**,
+> **True/false chỉ 57px** (game này tắt cả hai mũi tên nên hàng nav gần như rỗng),
+> Crossword/Find the match 124px. ⇒ `placeShowdownName()` nay tự đặt `left`/`right` âm để ô
+> tên rộng bằng `.aw-bottombar`, kèm `pointer-events: none` (ô rộng mà ăn cú chạm thì tệ
+> hơn tên bị cắt). ⚠️ **Bề ngang phải đặt TRƯỚC cửa `if (!navR.height) return`** — Crossword
+> và Find the match có hàng nav RỖNG nên cửa đó `return` trước; đảo thứ tự là thứ vá được
+> đúng hai game này. Sau vá: **10/10 ô tên = 847px, không cắt**; đối chứng ngược cắt dây ⇒
+> **4/4 ĐỎ** đúng những con số cũ.
+>
+> **(2) HẾT GIỜ KHÔNG BỊ PHẠT — 8/11 game CHƯA BAO GIỜ CÓ NGƯỜI TRẢ LỜI TIẾNG CHUÔNG.**
+> `options-panel.js` dựng dải *Time each round* cho MỌI game Showdown, nhưng
+> `ui.setRoundTimeout()` chỉ có Quiz · Anagram · Type the answer gọi (Đợt 174). Tám game
+> kia: thanh cạn, đồng hồ đứng ở 0,00, không ✗, không trừ điểm, nút vẫn bấm được (đo được:
+> True/false 2/2 nút sống, Open the box 9/9 ô, Crossword 396/396 ô). Nay cả tám đều đi đúng
+> con đường "trả lời sai" của chính mình. ⭐⭐ **Cùng họ, cùng đợt: `ui.roundDone()`** cũng
+> chỉ 3 game đó gọi ⇒ ở 8 game kia đồng hồ chạy tiếp suốt đoạn chết (bay điểm, đóng thẻ, cả
+> lớp đang chọn ô) và tính vào giờ của em vừa trả lời xong. Nay tám game đều gọi — và chính
+> nó giữ cho hai game bàn-chơi chỉ cần MỘT ca duy nhất (chuông không thể rơi vào lúc chưa
+> ai mở ô nào).
+>
+> **(3) ĐỒNG HỒ CÂU CỦA TRUE/FALSE CHẬM MỘT CÂU.** `roundBegin()` bắn từ `ui.setNav`, mà
+> game này chỉ gọi `updateNav()` khi ĐIỂM đổi ⇒ đo được (count down 30s): sau câu 1 đồng hồ
+> còn **25,69** chứ không quay về 30, mãi sau câu 2 mới mở lại. Mọi em từ em thứ hai thừa
+> hưởng đồng hồ đã tiêu một phần, vòng ngắn thì nó về 0 trước khi câu tới nơi — đúng
+> *"thời gian lùi rồi dừng ở 0 nhưng ko chuyển câu"*. Vá: gọi `updateNav()` ở **cửa mở nút**
+> (50% cú trượt vào), không ở lúc tráo câu. Đo lại: `[28.92, 28.92, 28.94]`.
+>
+> **(4) ĐỔI TÊN CHẬM.** True/false đưa nhịp BĂNG CHUYỀN của nó cho cú đổi tên: 550 + 1300 =
+> **1,85 giây** (Quiz 0,32s). Nay có hằng số riêng `NAME_MOVE {150, 200}` — đúng cách
+> Anagram tách từ Đợt 178; Find the match cũng vậy (1,45s → 0,35s). ⭐ Vá luôn một cuộc đua
+> có sẵn trong `paintShowdownName()`: cú gọi cũ bị vượt mặt vẫn hạ cánh sau và ghi lại tên
+> của câu TRƯỚC (tem thế hệ `sdNameGen`).
+>
+> **(5) "RESET RỒI MÀ VẪN CÒN HỌC SINH LỚP CŨ".** Tái hiện 100%: nút Reset ở màn chọn lớp
+> chạy `saveSetup({ ...setup, roster: [], rosterClass: "" })`, mà lúc đó `setup.classId` là
+> lớp VỪA CHỌN còn `setup.teams` vẫn là bảng của lớp TRƯỚC ⇒ **đóng dấu lớp mới lên bảng đội
+> cũ**. Từ đó `clash` bị mù (`tableClassId === setup.classId`), Next không hỏi gì và
+> `keepIt` bước thẳng trở vào bảng cũ: đo được **26 tên = 20 em lớp mới + 6 em lớp cũ**. Vá:
+> hàm mới `clearSavedRoster()` ghi **merge, đúng hai trường** — bài học `writeMyClaim` của
+> Đợt 197. Sau vá: hộp thoại Delete HIỆN, màn cột đúng 20 tên.
+>
+> **(6) ⭐⭐⭐ SHOWDOWN XOAY VÒNG ĐỀU (thầy chốt ngay trong đợt).** Tên học sinh do
+> `memberAt(members, row)` quyết, mà `row` xưa nay là **CHỖ CỐ ĐỊNH CỦA CÂU**. Hễ một câu
+> được hỏi lần thứ hai thì nó mang theo row cũ ⇒ đúng em cũ bị gọi lại. Bốn đường dẫn tới
+> đó: True/false + Find the match có *Unanswered = **Repeat***; Open the box **trả tự do
+> cho mọi ô đang khoá** mỗi lần có câu đúng; Crossword **cho bỏ dở** một ô chữ. Đo được ở
+> True/false: `A · B · C · A · **A** · B`.
+> ⇒ **`row` nay LÀ SỐ THỨ TỰ LƯỢT**, và `review` cũng đổi theo: **một hàng mỗi LƯỢT** (câu
+> hỏi hai lần thì có hai hàng, mỗi hàng đúng em đã đối mặt với nó; câu chưa ai chạm tới
+> xuống cuối). ⛔ KHÔNG bịa một con số riêng cho cái tên — làm thế là tên trên khung và
+> hàng trong Show answers nói khác nhau, đúng thứ hợp đồng Đợt 178 bảo vệ.
+> ⚠️ **FIGHT GIỮ NGUYÊN NẾT CŨ** (trọng tài đánh số vòng) — và đây là chỗ suýt hỏng im
+> lặng: ba nhánh fight `return` TRƯỚC dòng ghi lượt, quên là **mọi hàng kết quả trong trận
+> đọc thành "chưa trả lời"**, không một dòng lỗi nào. ⚠️ Crossword có ngoại lệ cố ý: *mở
+> lại đúng ô chữ mình vừa rời* vẫn là lượt ấy.
+> Đo: `dot265b-rotate` **6/6** (`A·B·C·A·B·C·A` ở cả 4 game) · `dot265b-results` **3/3**
+> (không có câu nào hỏi lại thì mẫu số y hệt nết cũ: 8/8 · 8/8 · 9/9).
+>
+> Bàn thử: `dot265-verify` · `dot265-verify-break` (đối chứng ngược) · `dot265-reset` 6/6 ·
+> `dot265-anagram` 2/2 · `dot265-crossword` · `dot265b-rotate` 6/6 · `dot265b-results` 3/3 ·
+> `dot265-round` · `dot265-tf` · `dot265-probe`.
+> Hồi quy: `dot264-round` 32/32 · `dot264-reset` 29/29 · `dot263-readyrow` 25/25 ·
+> `dot263-applyready` 10/10 · `dot261-lobby` 57/57 · `dot260-plan` 52/52 ·
+> `dot262-matchid` 33/33 · `dot256-smoke` 48/48 · FIGHT: `tf-fight-test` 17✔ ·
+> `ftm-fight-test` 14✔ · `otb-fight-test` 15✔ · `cw-fight-test` 8✔ · `index.html` mount sạch.
+> ⬜ **CHỜ THẦY BẤM TAY TOMKO + MÁY LỚP.**
+>
+> ---
 > **Đợt 264** (26/8/2026, `2700bc1`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
 > `built` đúng `2700bc1` · **4/4 mã băm SHA-256 khớp** · **37/37 phép chạy trên CHÍNH MODULE
 > CỦA BẢN LIVE** — `dot264-live.html`, **64/65 tài nguyên** nạp từ `aword.andrewclasses.com`,

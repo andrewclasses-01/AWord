@@ -339,6 +339,45 @@ const spkTemplate = {
     ui.setScoreProvider?.(scoreNow);
     ui.setIdleGuard?.(() => finished || micState !== "idle");
 
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds
+     * the row on `showdown`, not on a template flag), yet until this đợt only Quiz,
+     * Anagram and Type the answer answered the buzzer — everywhere else the bar simply
+     * emptied and nothing happened. See true-false.js's roundTimeUp() for the teacher's
+     * report in full.
+     *
+     * Out of time = the word was not said in time, which in this game means graded with a
+     * score of 0: no stars, `correct:false`, and the class moves on to the next word — the
+     * same path a failed attempt takes when "Try again" is off.
+     * ⚠️ NEVER MID-RECORDING OR MID-CHECK. A pupil who is speaking, or whose clip is being
+     * scored, is doing the single most active thing this app asks of anyone — cutting them
+     * off at the buzzer would mark them wrong for the model's own latency. `micState` is
+     * the same test `ui.setIdleGuard` above already trusts for exactly this reason; the
+     * engine's own clock keeps running, so the buzzer simply lands on the next opportunity.
+     */
+    ui.setRoundTimeout?.(() => {
+      if (finished) return;
+      if (micState !== "idle") return;      // recording or checking — see above
+      const st = state[index];
+      if (!st || st.graded) return;
+      gradeAttempt(0);
+      // ⚠️ AND THE TURN REALLY IS OVER. gradeAttempt() reopens the mic on a failed attempt
+      // when "Try again" is on — right for a pupil who chose to speak and got it wrong,
+      // wrong for one whose time has run out, because the retry would be a second turn on
+      // a clock that has already stopped. So the buzzer's grade is final and the class
+      // moves on, exactly as it does for a fail with "Try again" off.
+      if (!st.correct) {
+        micState = "done";
+        updateMicUI();
+        clearAutoTimer();
+        autoTimer = setTimeout(() => {
+          if (finished) return;
+          if (index < total - 1) goNext(); else finish("complete");
+        }, 1400);
+      }
+    });
+
     async function startRecording() {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setStatus("This browser can't record audio.");
@@ -524,6 +563,10 @@ const spkTemplate = {
       setStatus("");
       showResult(st, true);
       if (st.correct) spkSound.correct(); else spkSound.wrong();   // classic pack — NOT ui.sound.wrong() ("Oh my god")
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: the turn is over once the attempt is graded — unless
+      // "Try again" leaves the mic open for another go at the SAME word, which is still
+      // this pupil's turn and must still be on their clock.
+      if (st.correct || !allowRetry) ui.roundDone?.();
       ui.setScore(scoreNow());
       updateNav();
       clearAutoTimer();

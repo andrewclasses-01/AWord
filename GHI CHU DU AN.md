@@ -12,7 +12,310 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 264** (26/8/2026, code `2700bc1`, **ĐÃ LIVE** — 4/4 mã băm khớp, 37/37 phép chạy trên module bản live).
+> Mới nhất: **Đợt 265** (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 265 (26/8/2026) — ⭐⭐⭐ **SHOWDOWN NGOÀI QUIZ: TÊN BỊ CẮT · HẾT GIỜ KHÔNG PHẠT · ĐỔI TÊN CHẬM** · ⭐⭐⭐ **RESET LỚP CHƯA TRIỆT ĐỂ**
+
+> ⬜ **CHỜ THẦY BẤM TAY**. Sửa **11 file**: `core/engine.js` ·
+> `core/app.css` · `core/showdown-setup.js` · 8 template
+> (`true-false` · `unjumble` · `gameshow` · `balloon-pop` · `open-the-box` ·
+> `find-the-match` · `crossword` · `speaking`).
+> Bàn thử mới: `scratch/dot265-verify.html` (ô tên **10/10** · hết giờ 9/10 · đồng hồ câu ĐẠT) ·
+> `scratch/dot265-verify-break.html` **ĐỐI CHỨNG NGƯỢC 4/4 ĐỎ khi cắt dây** ·
+> `scratch/dot265-reset.html` **6/6** (tái hiện được lỗi thầy báo TRƯỚC khi vá) ·
+> `scratch/dot265-anagram.html` **2/2** · `scratch/dot265-crossword.html` ·
+> `dot265-round.html` · `dot265-tf.html` · `dot265-probe.html` (ba cái sau là bàn CHẨN ĐOÁN,
+> giữ lại vì chúng ghi lại con số "trước khi vá").
+> Hồi quy: `dot264-round` **32/32** · `dot264-reset` **29/29** · `dot263-readyrow` **25/25** ·
+> `dot263-applyready` **10/10** · `dot261-lobby` **57/57** · `dot256-smoke` **48/48**.
+
+---
+
+### THẦY BÁO GÌ (26/8/2026)
+
+> *"Đọc dự án AWord và kiểm tra các template ở chế độ showdown ngoài Quiz (quiz thì ok rồi),
+> vì tôi thấy True False có vấn đề nên muốn check lại tất cả để xử lý tất cả."*
+> 1. Tên học sinh **hiện không hết, bị cắt bớt** dù chiều ngang khung hình còn rất rộng.
+> 2. Tên **nhảy lung tung**, không theo thứ tự đã cài từ khi build team.
+> 3. Đội **hết thời gian (count down) mà không bị báo sai** — thời gian lùi rồi dừng ở 0,
+>    không chuyển câu, **vẫn chọn được tiếp**.
+> 4. **Hiệu ứng trượt chuyển tên cực kỳ chậm**, cần bình thường như Quiz.
+> 5. Chọn lớp mới rồi mà vào trang build cột team **vẫn còn danh sách lớp trước**, "reset
+>    chưa triệt để".
+
+---
+
+### VIỆC 1 — ⭐⭐⭐ TÊN BỊ CẮT: Ô TÊN RỘNG BẰNG ‹ › CHỨ KHÔNG BẰNG KHUNG HÌNH
+
+**Đo trước khi vá** (`scratch/dot265-probe.html`, khung 888px, tên cần **286px**):
+
+| game | bề ngang ô tên | bị cắt? |
+|---|---|---|
+| Quiz | 234px | có (nhẹ, nên thầy không để ý) |
+| **True/false** | **57px** | **có — chỉ còn 2 âm tiết** |
+| Find the match · Crossword | 124px | có |
+| Anagram · Unjumble · TTA · Gameshow · Balloon pop | 234px | có |
+| Open the box | 345px | không (nhãn nav dài) |
+
+**Gốc rễ:** khi bật *Time each round*, tên rời khỏi thanh trên và xuống ngồi trong
+`.aw-navstack` (Đợt 176). CSS cho nó `left:0; right:0` — mà `.aw-navstack` là **rãnh `auto`
+của lưới `.aw-bottombar`**, tức rộng đúng bằng hàng ‹ › bên trong nó. True/false truyền
+`onPrev:null, onNext:null` nên **hai mũi tên không hề tồn tại** ⇒ ô tên còn 57px trên một
+khung 888px. Chính ghi chú của `.aw-navstack > .aw-top-showdown` viết là "nowrap cho tên
+tràn ra ngoài mà vẫn cân giữa" — nhưng `overflow:hidden` ở quy tắc gốc đã cắt trước.
+
+**Vá:** `placeShowdownName()` (core/engine.js) nay **tự đo và đặt `left`/`right` âm** để ô
+tên rộng đúng bằng `.aw-bottombar`. Inset chứ không transform (hợp đồng xếp lớp popup, và
+chính node này đang được `paintShowdownName` animate `transform`).
+
+⚠️ **Kèm `pointer-events: none`** trong app.css — ô tên nay trải ngang cả khung và lơ lửng
+trên hàng nội dung thấp nhất của game; không có dòng đó thì nó là một cái nắp vô hình nuốt
+cú chạm (ghế trên thanh topbar đã có dòng này từ Đợt 159, ghế dưới chưa cần vì nó bé tí).
+
+⚠️⚠️ **THỨ TỰ MỚI LÀ CÁI VÁ ĐƯỢC 2 GAME:** phải đặt bề ngang **TRƯỚC** cửa
+`if (!navR.height) return`. Find the match và Crossword truyền `label: ""` + tắt cả hai mũi
+tên ⇒ trên bảng một trang `.aw-nav` là hàng RỖNG không có chiều cao ⇒ cửa đó `return` trước
+và tên giữ nguyên 124px. Đo được: hai game này TRUOT → DAT chỉ nhờ đảo thứ tự.
+
+**Sau khi vá** (`dot265-verify.html` mục A): **10/10 game ô tên = 847px = bề ngang thanh
+dưới, `scrollWidth === clientWidth` (không cắt), `pointer-events: none`.**
+**Đối chứng ngược** (`dot265-verify-break.html`): ép lại `left/right:0` ⇒ **4/4 ĐỎ**, và ra
+lại đúng những con số cũ 234 / 57 / 345 / 124 — bàn thử này thật sự đang đo cái nó nói.
+
+---
+
+### VIỆC 2 — ⭐⭐⭐ HẾT GIỜ KHÔNG BỊ PHẠT: **8/11 GAME CHƯA BAO GIỜ CÓ NGƯỜI TRẢ LỜI TIẾNG CHUÔNG**
+
+`core/options-panel.js` dựng dải *Time each round* cho **MỌI** game Showdown (điều kiện là
+`showdown`, không phải một cờ template). Nhưng `ui.setRoundTimeout()` thì cả repo chỉ có
+**ba** template gọi: Quiz · Anagram · Type the answer (Đợt 174). Tám game còn lại: thanh
+cạn, đồng hồ đứng ở `0,00`, **không ✗, không trừ điểm, không mất tim, nút vẫn bấm được** —
+đúng từng chữ thầy tả. Đo được: True/false `2/2` nút còn sống, Open the box `9/9` ô, Find
+the match `8/8` ô, Crossword `396/396` ô.
+
+Luật áp cho cả tám, vẫn là luật thầy chốt ở Đợt 174 — **hết giờ = SAI**, đi đúng con đường
+mà chính game đó đi khi trả lời sai:
+
+| game | hết giờ thì làm gì |
+|---|---|
+| **True/false** | chốt câu sai (không vẽ ✗ lên nút nào — game 2 nút, đánh dấu một nút là chỉ luôn nút kia), trừ điểm, mất tim, trượt sang câu tiếp |
+| **Unjumble** | *On submit*: chấm sai + `pointsOff` + lộ đáp án · *Words with bonus*: câu không được trả công (⚠️ KHÔNG `pointsOff` — slider đó là của chế độ submit) |
+| **Gameshow** | dùng thẳng `resolveQuestion(null, true)` — chính đường hết-giờ của đồng hồ riêng game này |
+| **Balloon pop** | thùng vỡ, tàu chạy sang định nghĩa kế; ⭐ thêm mảng `levelMissed` để bảng kết quả **không tính level bị chuông là ĐÚNG** |
+| **Open the box** | ô đang mở bị tiêu, lộ đáp án, thẻ đóng về lưới |
+| **Find the match** | dùng thẳng `onTimeUp()` — đường hết-giờ của băng chuyền Speed |
+| **Crossword** | ô chữ đang mở chấm sai, lật đáp án, `endWord()` về bảng |
+| **Speaking** | chấm 0 sao; ⚠️ **không bao giờ cắt ngang lúc đang thu / đang chấm** (`micState`), và chuông là **chốt** — không cho "Try again" mở lại micro |
+
+⭐⭐ **VÀ MỘT LỖ THỨ HAI CÙNG HỌ: `ui.roundDone()`.** Cũng chỉ 3 game đó gọi. Nghĩa là ở 8
+game kia đồng hồ **chạy tiếp suốt cả đoạn chết** — hiệu ứng bay điểm, thẻ đóng lại, tàu
+chạy, và cả quãng cả lớp đang chọn ô tiếp theo — tất cả tính vào giờ của em **vừa trả lời
+xong**. Nay tám game đều gọi `ui.roundDone()` ngay tại điểm chốt của mình.
+
+⭐ Đó cũng chính là thứ giữ cho hai game bàn-chơi (Open the box · Crossword) chỉ cần **một
+ca duy nhất**: chuông nay không thể nào rơi vào lúc chưa ai mở ô nào, nên không phải bịa ra
+luật "app tự chọn ô hộ" — thứ mà hai game này không có ở bất cứ đâu khác.
+
+**Đo lại** (`dot265-verify.html` mục B, chữ ký cả sân khấu trước/sau chuông): 9/10 ĐẠT.
+Anagram "đứng yên" là **phép đo thô chứ không phải lỗi** — chế độ bonus + tim vô hạn thì cú
+chốt không để lại dấu vết nào trong chữ ký; bàn riêng `dot265-anagram.html` bấm THẬT vào ô
+chữ sau chuông: **2/2 không ăn ⇒ vòng đã chốt**. Crossword cũng vậy — bench chính bấm nhầm
+ô trống nên không mở được ô chữ nào; `dot265-crossword.html` mở ô chữ thật rồi để hết giờ:
+**dải ô chữ đóng lại, về bảng ⇒ ĐẠT**.
+
+---
+
+### VIỆC 3 — ⭐⭐⭐ ĐỒNG HỒ CÂU CỦA TRUE/FALSE **CHẬM MỘT CÂU**
+
+Ngoài chuyện không ai trả lời chuông, True/false còn hỏng ở chỗ **vòng không bao giờ mở
+đúng lúc**. `roundBegin()` bắn từ `ui.setNav`, mà game này chỉ gọi `updateNav()` khi ĐIỂM
+đổi (trong cú bay-vào-ô-điểm ở mốc 380ms, và trong callback trừ điểm).
+
+**Đo được** (`dot265-round.html`, count down 30s):
+
+```
+trước câu 1: 27,94     sau câu 1: 25,69   ⛔ không quay về 30
+trước câu 2: 24,19     sau câu 2: 28,22   ← mãi tới đây mới mở lại
+```
+
+Tức mọi em từ em thứ hai trở đi **thừa hưởng một cái đồng hồ đã tiêu mất một phần**, và với
+vòng ngắn thì nó đã về 0 TRƯỚC khi câu của em ấy tới nơi — mà một vòng đã hết thì **cứ nằm
+đó ở 0** cho tới khi có gì mở lại. Đây chính là *"thời gian lùi rồi dừng ở 0 nhưng ko chuyển
+câu"*.
+
+**Vá:** gọi `updateNav()` ở **cửa mở nút** trong `startCycle()` (mốc 50% của cú trượt vào,
+`ENTER_MS * 0.5`) — không phải ở lúc tráo câu, vì nửa đầu cú trượt hai nút còn khoá, tính
+tiền quãng đó là tính oan. Đúng cái mốc mà `ui.setIdleGuard` đã coi là "giờ mới bấm được".
+**Đo lại:** `[28.92, 28.92, 28.94]` — câu nào cũng mở lại đồng hồ.
+
+---
+
+### VIỆC 4 — ⭐⭐ HIỆU ỨNG ĐỔI TÊN CHẬM: TÊN ĐANG ĐI THEO NHỊP BĂNG CHUYỀN
+
+True/false đưa `{ outMs: EXIT_MS, inMs: ENTER_MS }` = **550 + 1300 = 1,85 giây** cho cú đổi
+tên, trong khi Quiz là 130 + 190 = 0,32s. Câu phát biểu là một dòng chữ dài **đáng phải
+trượt**; cái tên là một chữ ngắn cả lớp nhìn để biết tới lượt ai, nó chỉ cần **có mặt**.
+Nay mỗi game có hằng số riêng `NAME_MOVE = { outMs: 150, inMs: 200 }` — đúng cách Anagram
+đã tách từ Đợt 178. **Find the match cũng vậy** (900 + 550 = 1,45s → 0,35s).
+
+⭐ **Vá luôn một cuộc đua nằm sẵn trong `paintShowdownName()`**: mỗi cú gọi tự hẹn một
+`setTimeout` dự phòng ghi **tên của chính nó**. Cú gọi cũ bị cú mới vượt mặt vẫn hạ cánh
+sau và **ghi lại tên của câu TRƯỚC** lên khung. Cửa sổ rộng đúng `outMs + 80` nên nhịp băng
+chuyền 550ms của True/false làm nó rộng tới 630ms. Nay có tem thế hệ `sdNameGen`.
+
+---
+
+### VIỆC 5 — ⭐⭐⭐ "RESET RỒI MÀ VẪN CÒN HỌC SINH LỚP CŨ": **NÚT RESET TỰ ĐÓNG DẤU LỚP MỚI LÊN BẢNG ĐỘI CŨ**
+
+Tái hiện được 100% (`scratch/dot265-reset.html`, kịch bản 2):
+
+```
+lớp A đã build đội -> Back -> chọn lớp C3E -> bấm RESET (màn chọn lớp) -> Next
+=> tài liệu: classId = cls_20   ids = [s1,s2,s3,s4,s5,s6]     <- ID CỦA LỚP A!
+=> hộp thoại Delete: KHÔNG HIỆN - đi thẳng vào màn cột
+=> màn cột hiện 26 tên = 20 em lớp mới + 6 em lớp cũ
+```
+
+**Gốc rễ, một dòng:** nút Reset ở màn chọn lớp chạy
+`saveSetup({ ...setup, roster: [], rosterClass: "" })`. Lúc nó chạy, `setup` đang giữ **hai
+thứ không thuộc về nhau**: `classId` là lớp thầy VỪA CHỌN, còn `teams` vẫn là bảng đội của
+lớp trước (bộ nghe đồng bộ nó vào, màn này không hề dọn). Một cú ghi đó **đóng dấu lớp mới
+lên bảng đội cũ**. Từ đó cái chốt sinh ra để bắt đúng ca này bị mù: `clash` hỏi
+`tableClassId !== setup.classId`, hai bên nay là cùng một lớp ⇒ Next không hỏi gì, và
+`keepIt` của `toBuild()` bước thẳng **trở vào bảng cũ**.
+
+**Vá:** hàm mới `clearSavedRoster()` — **ghi merge, chỉ đúng hai trường** `roster` +
+`rosterClass`. Việc của nút này là một quyết định về DANH SÁCH HÔM NAY; nó không có quyền
+xuất bản bảng đội, lớp hay gạch. Đúng bài học `writeMyClaim` học ở Đợt 197: *một cú ghi mang
+theo nhiều hơn thứ nó định nói thì sẽ âm thầm làm mất việc của người khác.*
+`baseAt` đi theo, để cú ghi của chính mình không bị đọc thành "máy khác vừa sửa bảng đội".
+
+**Đo lại:** tài liệu giữ nguyên `classId = cls_a1c`, **hộp thoại Delete HIỆN**, màn cột hiện
+đúng **20** tên của lớp mới. `dot265-reset.html` **6/6 ĐẠT**.
+
+---
+
+### VIỆC 6 — ⭐⭐⭐ (thầy chốt ngay trong đợt) **SHOWDOWN XOAY VÒNG ĐỀU: ROW LÀ SỐ THỨ TỰ LƯỢT, KHÔNG PHẢI CHỖ CỦA CÂU**
+
+Thầy đọc mục VIỆC ĐANG CHỜ số 2 ở trên rồi chốt: *"Showdown luôn xoay vòng đều đi, sửa
+luôn cái Repeat đó."* Sửa **4 template**: `true-false` · `find-the-match` · `open-the-box` ·
+`crossword`.
+
+#### GỐC RỄ — MỘT CÂU
+
+Tên học sinh do `memberAt(members, row)` quyết, và cho tới đợt này `row` là **CHỖ CỐ ĐỊNH
+CỦA CÂU** (vị trí trong `order`, hoặc chỉ số ô hộp / ô chữ). Hễ một câu được hỏi **lần thứ
+hai** thì nó mang theo đúng cái row cũ ⇒ đúng em cũ bị gọi lại, và vòng xoay lệch hẳn.
+
+Bốn game, bốn đường dẫn tới cùng một chỗ:
+
+| game | đường làm một câu được hỏi lại |
+|---|---|
+| **True/false** | Options ▸ *Unanswered = **Repeat*** ⇒ `requeueRandom()` |
+| **Find the match** | cùng tuỳ chọn đó ⇒ `dropOrRequeue()` |
+| **Open the box** | mỗi câu trả lời ĐÚNG **trả tự do cho mọi ô đang khoá** ⇒ ô đã sai mở lại được |
+| **Crossword** | ô chữ **bỏ dở được** (chạm thanh gợi ý / Escape) rồi mở lại |
+
+Đo được ở True/false (3 em, sai câu đầu):
+`AAA-1 · BBB-2 · CCC-3 · AAA-1 · **AAA-1** · BBB-2 …`
+
+#### CÁCH CHỮA — VÀ CÁI BẪY PHẢI TRÁNH
+
+⛔ **KHÔNG bịa một con số riêng cho cái tên.** Làm thế thì tên trên khung và hàng trong
+Show answers nói khác nhau — đúng thứ hợp đồng Đợt 178 dựng ra để bảo vệ (`stampReview()`
+gắn tên theo `row % số em`, và `roundMs[i]` của engine cũng đánh theo đúng con số ấy).
+
+⭐ **Cách đúng: đổi định nghĩa của `row` — nó là SỐ THỨ TỰ LƯỢT.** Và `review` cũng đổi
+theo: **một hàng mỗi LƯỢT**, chứ không phải một hàng mỗi câu. Một câu bị hỏi hai lần thì có
+hai hàng — mỗi hàng ghi đúng em đã đối mặt với nó và em ấy trả lời gì. Câu chưa bao giờ
+được phát thì xuống cuối (đúng nết `playOrder` của Open the box từ Đợt 186).
+
+⚠️ **KHÔNG ÁP CHO FIGHT.** Trong trận **trọng tài** đánh số vòng và ra lệnh nhảy tới vòng
+`i` bất kỳ (`fightGoTo`), nên ở đó `row` phải đúng bằng `i` — tức nết cũ. Fight và Showdown
+không bao giờ cùng bật, nên hai đường này không thể va nhau. Cả bốn file đều rẽ nhánh bằng
+`if (fightCtl)`.
+⛔⛔ **VÀ ĐÂY LÀ CHỖ SUÝT HỎNG IM LẶNG:** ba nhánh fight `return` **trước** dòng ghi lượt,
+nên nếu chỉ đổi chỗ đọc mà quên chỗ ghi thì **mọi hàng của bảng kết quả TRONG TRẬN đọc
+thành "chưa trả lời"** — không một dòng lỗi nào, chỉ lộ ra ở màn Show answers sau trận.
+Open the box được vá bằng cách ghi thêm ở chính nhánh fight; Find the match và Crossword
+được vá bằng cách cho `review` **đọc lại nguồn cũ** khi `fightCtl` (trong trận mỗi câu chỉ
+chơi đúng một lần nên nguồn cũ vẫn đúng nguyên).
+
+⚠️ **CROSSWORD CÓ MỘT NGOẠI LỆ CÓ CHỦ Ý:** *mở lại đúng cái ô chữ mình vừa rời* **vẫn là
+lượt ấy**. Ở game này lượt chỉ kết thúc khi một ô chữ được CHẤM (`endWord`), nên nếu chạm
+nhầm một cái mà mất lượt thì vô lý.
+
+#### BỐN CON SỐ CỦA BẢNG KẾT QUẢ
+
+`review` / `perQuestion` / `total` / `answered` nay đều đếm từ **chính các hàng**, và
+`review` với `perQuestion` **luôn dài bằng nhau** — engine cắt chúng theo cặp ở chế độ Free
+(`raw.perQuestion.slice(0, keep)`), hai mảng lệch độ dài là cắt lệch.
+⚠️ **Không có câu nào bị hỏi lại thì mọi con số Y HỆT nết cũ** — đo thật, chơi trọn ván trả
+lời đúng hết: True/false **8/8**, Find the match **8/8**, Open the box **9/9**
+(`scratch/dot265b-results.html` 3/3). Chỉ khi có câu bị hỏi lại thì mẫu số mới lớn hơn — và
+đó là con số thật: đội ấy đã tiêu thêm một lượt cho câu đó.
+⚠️ `perQuestion[].q` đổi từ "chỉ số câu" sang "chỉ số hàng" ở Open the box — **an toàn**:
+grep cả repo, không có một chỗ nào đọc trường `q` (chỉ đếm `.correct`).
+
+#### ĐO ĐƯỢC
+
+`scratch/dot265b-rotate.html` **6/6**:
+
+| phép | kết quả |
+|---|---|
+| True/false, **Repeat BẬT**, câu đầu sai | `A·B·C·A·B·C·A` ✅ (trước khi vá: `A·B·C·A·A·B`) |
+| True/false, Repeat TẮT (đối chứng) | `A·B·C·A·B·C·A` ✅ |
+| Find the match, **Repeat BẬT**, cú đầu bấm sai | `A·B·C·A·B·C·A` ✅ |
+| Open the box: ô sai → ô khác đúng (trả tự do) → mở lại ô cũ | `A·B·C` ✅ |
+| Crossword: bỏ dở rồi mở ô **KHÁC** | `A·B` ✅ |
+| Crossword: bỏ dở rồi **mở lại đúng cái vừa rời** | vẫn `B` ✅ (không mất lượt) |
+
+Hồi quy FIGHT (đường bị đụng nhiều nhất): `tf-fight-test` **17 ✔** · `ftm-fight-test`
+**14 ✔** · `otb-fight-test` **15 ✔** · `cw-fight-test` **8 ✔** — không phép nào đỏ.
+
+#### ⛔⛔ HAI LẦN BÀN THỬ CỨU, GHI LẠI ĐỂ ĐỜI SAU ĐỠ CẮN
+
+**(a) MỘT CON BỌ TỰ TAY MÌNH ĐẺ RA — "chốt CÂU thay vì chốt LƯỢT".** Bản đầu của
+`roundTimeUp()` ở True/false mở bằng `if (st.answered) return`. Với **Repeat BẬT**, một câu
+đã trả lời sai mang `state[idx].answered === true` rồi mới quay lại — nên tiếng chuông ở
+lượt sau của chính câu ấy **bị nuốt sạch**, đồng hồ nằm ở `0,00` và ván **đứng máy**. Trớ
+trêu: đó đúng là con bọ cả đợt này sinh ra để vá, chỉ khác là nó chỉ cắn khi bật Repeat.
+Nay chốt bằng `turnLog[curRow].answered`. Lưới riêng `dot265b-repeat-timeout.html` **2/2**
+(10 lượt liền `T0…T9`, không đứng máy).
+⚠️ **Luật rút ra:** đợt này đổi định nghĩa của "hàng", nên **mọi cửa `return` sớm đang hỏi
+"cái này xong chưa?" đều phải được đọc lại** — hỏi về CÂU hay hỏi về LƯỢT là hai câu khác
+nhau kể từ hôm nay.
+
+**(b) BÀN THỬ TỐ OAN LẦN HAI — LẤY MẪU XẤP XỈ CHU KỲ.** Lưới "Repeat + hết giờ" đọc tên
+mỗi **7 giây**, mà một lượt ở True/false dài **~5,9s** (0,65s mở cổng + 4s vòng + 0,55s
+trượt ra + 0,65s trượt vào). Nhịp lấy mẫu xấp xỉ chu kỳ ⇒ **cứ vài lượt lại nhảy mất một
+cái**, và dãy tên đọc ra thành `T0 · T1 · T2 · **T4**` — trông y hệt "app đếm nhảy row",
+suýt đi vá một thứ không hỏng. ⇒ Nay **nghe từng lần đổi tên bằng `MutationObserver`**,
+không lượt nào lọt lưới: đo được **10 lượt liền `T0…T9`**, và nhìn cột câu tương ứng thấy
+rõ câu lặp lại ("Flowers help a pla" ở lượt 1 và 6) rơi vào **hai em khác nhau** — đúng
+điều thầy xin. ⚠️ Cùng họ với bẫy đã ghi ở [[bay-phep-do-tu-noi-doi]]; và mẹo **cho đội 12
+em thay vì 3** cũng đáng nhớ: 3 em thì T0/T3/T6 trùng tên nhau nên một cú nhảy row bị giấu
+mất, 12 em thì **cái tên nói thẳng ra `curRow` là bao nhiêu**.
+
+**(c) BÀN THỬ TỐ OAN CROSSWORD.** Phép "bỏ dở rồi mở ô chữ khác" lúc đỏ lúc xanh, và cái
+đỏ ấy suýt bị ghi thành "vá hỏng". Thật ra bench bấm `cells()[1]` — **ô kế bên của CÙNG một
+ô chữ**, mà với ô ấy thì `sameOneAgain` đúng và "vẫn là lượt ấy" mới là nết ĐÚNG. Nay bench
+tự khẳng định từng tiền đề trước khi đo (mở được chưa · bỏ dở có thật sự đóng dải ô chữ
+không · ô chữ mới có KHÁC ô chữ cũ không) và dò tới khi gặp ô chữ khác thật.
+⚠️ Cũng đổi cú bỏ dở từ `new PointerEvent("pointerdown")` tự chế sang `el.click()` —
+`press()` chấp nhận cả hai, nhưng cái sau không phụ thuộc vào việc mình đoán đúng các
+trường của sự kiện ([[bay-phep-do-tu-noi-doi]]).
+
+---
+
+### ⬜ VIỆC ĐANG CHỜ
+
+1. **Thầy bấm tay TOMKO + máy lớp** cho cả 6 việc trên.
+2. ✅ **ĐÃ XONG NGAY TRONG ĐỢT** — thầy chốt *"Showdown luôn xoay vòng đều đi, sửa luôn
+   cái Repeat đó"*. Xem **VIỆC 6** ở trên.
+3. Speaking chưa test tay được ở bàn thử (cần micro thật) — logic đã viết, chờ thầy thử.
 
 ---
 

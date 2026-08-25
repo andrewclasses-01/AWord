@@ -1074,10 +1074,23 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // already claimed and does nothing. Without this the setNav call would slam
   // the new name in at full opacity halfway through the fall.
   let sdNameIndex = -1;
+  // ⭐⭐ Đợt 265 — WHICH FALL IS STILL THE CURRENT ONE. Every call below arms a
+  // `setTimeout` fallback that writes ITS OWN name; without a generation stamp a
+  // superseded fall lands AFTER the newer one and puts the previous pupil's name back on
+  // the frame — the class then reads a name that belongs to the question before this one.
+  // ⚠️ The window is as wide as `outMs + 80`, so it grows with whatever durations the
+  // template hands over: True/false's conveyor timings made it 630ms wide, and a wrong
+  // answer can start the next statement inside that. Cheap to close, impossible to see
+  // when it bites (nothing errors — the name is simply the wrong one for a while).
+  let sdNameGen = 0;
   function paintShowdownName(index0, anim) {
     if (!showdownSlot || !showdownPick) return;
     if (index0 === sdNameIndex) return;
     sdNameIndex = index0;
+    // ⭐ Đợt 265 — bumped HERE, not inside the animated branch: a plain (un-animated)
+    // repaint must retire an in-flight fall just as surely as a new fall does, or the old
+    // fall's fallback lands on top of it a few hundred ms later.
+    const gen = ++sdNameGen;
     const m = memberAt(showdownPick.members, index0);
     // textContent, not el()'s 3rd argument: that one is innerHTML, and this is
     // a name the teacher typed.
@@ -1097,6 +1110,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const swap = () => {
       if (swapped) return;
       swapped = true;
+      if (gen !== sdNameGen) return;   // Đợt 265 — a newer fall owns the slot now
       showdownSlot.textContent = text;
       const inA = showdownSlot.animate(
         [{ transform: "translateY(-70%)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }],
@@ -1347,6 +1361,38 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // for real reasons: keyboard toggled away, autoFit re-shrinking, a resize.
   function placeShowdownName() {
     if (navHost === navWrap || !showdownSlot || !showdownSlot.isConnected) return;
+    // ⭐⭐⭐ Đợt 265 (thầy, 26/8/2026: *"tên học sinh hiện không hết, bị cắt bớt dù chiều
+    // ngang khung hình nơi có tên còn rất trống trải và rộng"*) — THE NAME IS AS WIDE AS
+    // THE FRAME, NOT AS WIDE AS ‹ ›.
+    // ⛔⛔ `left: 0; right: 0` in app.css measures against `.aw-navstack`, and that box is
+    // the `auto` track of `.aw-bottombar`'s grid — it is exactly as wide as the nav row
+    // INSIDE it. Measured on a 888px frame: Quiz 234px (‹ "1 of 6" ›) and TRUE/FALSE only
+    // **57px**, because True/false passes `onPrev:null, onNext:null` and the two arrows are
+    // not there at all. A name needing 286px was being clipped to 57 — the cue the whole
+    // class reads, cut down to two syllables, while the frame beside it stood empty.
+    // ⚠️ THE FIX IS AN INSET, NOT A TRANSFORM (the popup stacking contract, and
+    // paintShowdownName animates `transform` on this very node — a translateX base here
+    // would be wiped by the fall's first frame, the same trap `.aw-navstack >
+    // .aw-top-showdown`'s own note in app.css records).
+    // ⚠️ MEASURED FROM THE BOTTOM BAR, not the stage: the bar is what the score and Menu
+    // already line up with, so the name stays centred on the FRAME (Đợt 159's rule) and
+    // cannot be nudged by the nav label changing width.
+    // ⚠️ `pointer-events: none` (app.css) is what makes a full-width box safe — it now
+    // hovers over the game's own lowest row, and a wide invisible box that ate taps would
+    // be a far worse bug than a clipped name.
+    // ⚠️⚠️ THE WIDTH IS SET BEFORE THE `navR.height` GATE, AND THAT ORDER IS THE WHOLE
+    // FIX FOR TWO GAMES. Find the match and Crossword pass `label: ""` with both arrows
+    // off, so on a single-page board `.aw-nav` is an EMPTY row with no height — the guard
+    // below returned first and the name kept its 124px starting box on an 847px frame.
+    // Measured: both went from TRUOT to DAT on this reordering alone
+    // (`scratch/dot265-verify.html` section A). Height belongs to the vertical placement;
+    // the horizontal box does not depend on it.
+    const barR = bottombar.getBoundingClientRect();
+    const hostR = navHost.getBoundingClientRect();
+    if (barR.width && hostR.width) {
+      showdownSlot.style.left = Math.round(barR.left - hostR.left) + "px";
+      showdownSlot.style.right = Math.round(hostR.right - barR.right) + "px";
+    }
     const navR = navWrap.getBoundingClientRect();
     if (!navR.height) return;
     let contentBottom = -Infinity;

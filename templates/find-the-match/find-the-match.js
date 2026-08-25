@@ -69,6 +69,13 @@ const ROWS = 5;
 const MAX_TILES_PER_PAGE = 35;   // more than this and the board splits into pages (teacher 3/8/2026)
 const ENTER_MS = 900;   // left edge -> centre, always this pace regardless of Speed
 const EXIT_MS = 550;    // wherever it is -> fully off the right edge, once a tile is tapped
+// ⭐⭐ Đợt 265 — THE NAME HAS ITS OWN PACE, not the conveyor's (thầy, 26/8/2026, about the
+// twin of this game: *"hiệu ứng trượt chuyển tên… cực kỳ chậm, cần bình thường như với
+// quiz"*). Handing `{ outMs: EXIT_MS, inMs: ENTER_MS }` over made the pupil's name take
+// 550 + 900 = 1.45s to change against Quiz's 0.32s. The definition is a long line that is
+// SUPPOSED to glide; the name is one short word the class reads to know whose turn it is.
+// Same split Anagram made at Đợt 178 and True/false at Đợt 265.
+const NAME_MOVE = { outMs: 150, inMs: 200 };
 const DEFAULT_LIVES = 5;
 const MAX_LIVES = 10;
 
@@ -222,6 +229,16 @@ const ftmTemplate = {
     // updateNav / finish: it is what makes "this definition belongs to pupil N"
     // and the end-of-game review agree with each other.
     const playOrder = [];
+    // ⭐⭐⭐ Đợt 265b (thầy, 26/8/2026: *"Showdown luôn xoay vòng đều đi, sửa luôn cái Repeat
+    // đó"*) — MỘT Ô TRONG `playOrder` = MỘT LƯỢT, KHÔNG PHẢI MỘT CẶP TỪ.
+    // ⛔ Trước đợt này dòng dựng nó có rào `if (!playOrder.includes(idx0))`, nên một cặp bị
+    // "Unanswered = Repeat" đẩy quay lại **giữ nguyên row cũ** ⇒ `memberAt(members, row)`
+    // gọi lại đúng em ấy và vòng xoay lệch hẳn. Đọc ghi chú dài ở `turnLog` của
+    // templates/true-false/true-false.js — cùng một con bọ, cùng một cách chữa.
+    // `turnSolved[i]` là "lượt thứ i có bắt đúng không", tách khỏi `state[idx].solved`
+    // ("cặp này rốt cuộc có ai bắt được không") — hai câu hỏi khác nhau, và chỉ cái đầu
+    // mới trả lời đúng cho Show answers khi một cặp bị hỏi hai lần bởi hai em khác nhau.
+    const turnSolved = [];
     // The row of the prompt ON SCREEN. A repeated pair (Repeat until answered)
     // keeps the row it already had, so it comes back to the SAME pupil and
     // still lines up with its one row in Show answers — the rule Đợt 178 wrote
@@ -323,6 +340,25 @@ const ftmTemplate = {
     let firstPromptSpoken = false;
 
     ui.onSubmit(() => finish("timesup"), () => state.filter(s => s.solved || s.skipped).length);   // block "Submit answers" at 0 answered
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds
+     * the row on `showdown`, not on a template flag), and until this đợt only Quiz,
+     * Anagram and Type the answer answered the buzzer — here the bar emptied, the clock
+     * froze at 0 and all eight tiles stayed live (measured, `scratch/dot265-tf.html`).
+     *
+     * ⭐ No new rule was needed: `onTimeUp()` IS this game's out-of-time path — the Speed
+     * conveyor has called it since the template was written, and it already does exactly
+     * what the teacher asks for ("coi như sai… next sang câu tiếp theo"): the pair is
+     * skipped or re-queued according to "Unanswered", and the next definition slides in.
+     * Two rules for one event is how they drift apart.
+     * ⚠️ SAFE ALONGSIDE THE CONVEYOR. With Speed > 0 both clocks can be running;
+     * `onTimeUp` guards on `!queue.length` and the queue is shifted before the next cycle
+     * starts, so whichever buzzes first owns the round.
+     * ⚠️ FIGHT MODE: `onTimeUp` already has its own fight branch (the referee keeps the
+     * round open for the other team) — nothing to add here.
+     */
+    ui.setRoundTimeout?.(onTimeUp);
     window.addEventListener("keydown", onKey);
     renderShell();
 
@@ -670,9 +706,15 @@ const ftmTemplate = {
       // game's own slide-out/slide-in times so the name leaves with the old
       // definition and arrives with the new one.
       const idx0 = queue[0];
-      if (!playOrder.includes(idx0)) playOrder.push(idx0);
-      curRow = playOrder.indexOf(idx0);
-      ui.itemChanging?.(curRow, { outMs: EXIT_MS, inMs: ENTER_MS });
+      // ⭐⭐⭐ Đợt 265b — MỘT LƯỢT MỚI = MỘT ROW MỚI. ⚠️ KHÔNG ÁP CHO FIGHT: ở đó trọng tài
+      // đánh số vòng và cả hai bàn phải hiểu số ấy giống hệt nhau, nên row = chỉ số cặp.
+      if (fightCtl) {
+        if (!playOrder.includes(idx0)) playOrder.push(idx0);
+        curRow = playOrder.indexOf(idx0);
+      } else {
+        curRow = playOrder.push(idx0) - 1;
+      }
+      ui.itemChanging?.(curRow, NAME_MOVE);
       updateNav();
 
       const pr = pairs[queue[0]];
@@ -975,6 +1017,12 @@ const ftmTemplate = {
       if (finished || !queue.length) return;
       if (fightLocked()) return;   // the other team took this round, or the match is over
       const target = queue[0];
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant they tap a tile,
+      // so their clock stops here (Quiz/Anagram/Type the answer have done this since Đợt
+      // 174). Without it the count down ran on through the fly-to-score and the next
+      // definition's whole slide-in, charging one pupil for the next one's entrance. The
+      // next round opens at `updateNav()` inside startCycle().
+      ui.roundDone?.();
 
       // ⭐⭐ FIGHT (Đợt 184) — this board's go is over, and nothing on this screen
       // may name the answer while the other team is still looking: no ✓ over the
@@ -1027,6 +1075,7 @@ const ftmTemplate = {
       if (idx === target) {
         queue.shift();
         state[target].solved = true;
+        turnSolved[curRow] = true;   // Đợt 265b — LƯỢT này bắt đúng (xem `turnSolved`)
 
         flyMarkOnTile(tile, true);   // Đợt 222 — vẽ trên lớp phủ, xem hàm đó
         if (removeCorrects) {
@@ -1188,16 +1237,33 @@ const ftmTemplate = {
     // shuffled per-page queue, so `order` is not the order the class saw them
     // in — and Showdown hands row `n` to pupil `n`. Pairs that never came up
     // are appended in their own order, so nothing is lost from the review.
+    /**
+     * ⭐⭐ Đợt 265b — hàng `i` của `playOrder` là LƯỢT thứ `i`, nên `turnSolved[i]` (chứ
+     * không phải `state[idx].solved`) mới là thứ mô tả hàng đó. Cặp chưa bao giờ được
+     * phát thì xuống cuối, chưa ai trả lời.
+     */
+    function reviewRows() {
+      // ⚠️⚠️ FIGHT ĐỌC NGUỒN CŨ. `turnSolved` chỉ được ghi ở nhánh chơi đơn của `choose()`
+      // — nhánh fight `return` trước đó — nên trong trận nó rỗng, và bảng kết quả sẽ đọc
+      // thành "chưa ai trả lời gì" ở MỌI hàng. Trong trận mỗi cặp chỉ chơi đúng một lần
+      // (trọng tài đánh số vòng, không có "Repeat"), nên `state[].solved` vẫn đúng nguyên.
+      if (fightCtl) {
+        const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
+        return rows.map(idx => ({ idx, solved: state[idx].solved === true }));
+      }
+      const played = playOrder.map((idx, i) => ({ idx, solved: turnSolved[i] === true }));
+      const rest = order.filter(i => !playOrder.includes(i)).map(idx => ({ idx, solved: false }));
+      return [...played, ...rest];
+    }
+
     function buildReview() {
-      const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
-      return rows.map(idx => {
+      return reviewRows().map(({ idx, solved }) => {
         const p = pairs[idx];
-        const s = state[idx];
         return {
           question: p.definition,
-          answered: s.solved,
-          yourText: s.solved ? p.keyword : null,
-          yourCorrect: s.solved,
+          answered: solved,
+          yourText: solved ? p.keyword : null,
+          yourCorrect: solved,
           correctText: p.keyword,
           src: p   // `pairs` is a shallow copy, so `p` IS the content object
         };
@@ -1220,16 +1286,19 @@ const ftmTemplate = {
       else if (reason === "timesup") ftmSound.timesUp();
       else ftmSound.gameCompleted();
 
-      const rows = [...playOrder, ...order.filter(i => !playOrder.includes(i))];
-      const perQuestion = rows.map((idx, i) => ({ q: i, correct: state[idx].solved === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
+      // ⭐⭐ Đợt 265b — cả bốn con số đếm từ CHÍNH các hàng, và `review`/`perQuestion` dài
+      // bằng nhau (engine cắt chúng theo cặp ở chế độ Free). Không có cặp nào bị hỏi lại
+      // thì kết quả y hệt nết cũ.
       const review = buildReview();
+      const perQuestion = review.map((r, i) => ({ q: i, correct: r.yourCorrect === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const rowTotal = review.length;
       // Out of lives shows "GAME OVER" (celebration cover + menu panel both
       // read this title); everything else keeps the default "Game complete".
       // Report the SAME live value shown top-right (matched minus points off).
       // With the feature off, penalty is 0 so this equals `correct` — the exact
       // number ui.finish would default to anyway (byte-identical).
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered: correct,
+      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered: correct,
         score: scoreNow(),
         title: reason === "gameover" ? "Game over" : undefined });
     }

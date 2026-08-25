@@ -45,6 +45,17 @@ const DEFAULT_LIVES = 5;
 const MAX_LIVES = 10;
 const ENTER_MS = 1300;  // left edge -> centre (slowed from 900, teacher 1/8)
 const EXIT_MS = 550;    // wherever it is -> fully off the right edge, once answered
+// ⭐⭐ Đợt 265 (thầy, 26/8/2026: *"hiệu ứng trượt chuyển tên giữa những người khác nhau
+// cực kỳ chậm, cần bình thường như với quiz"*) — THE NAME HAS ITS OWN PACE.
+// ⛔ It used to be handed `{ outMs: EXIT_MS, inMs: ENTER_MS }` — this game's CONVEYOR
+// timings — so the pupil's name took 550 + 1300 = **1.85 seconds** to change, against
+// Quiz's 130 + 190 = 0.32s. The statement is a long line of text that is SUPPOSED to
+// glide; the name is one short word the class reads to know whose turn it is, and it must
+// simply be there. Same split Anagram made at Đợt 178 (`NAME_MOVE`), for the same reason.
+// ⚠️ Deliberately NOT Quiz's exact numbers: a hair slower, because this game's statement
+// does not fade — it slides — and a name that snaps before the statement has left reads
+// as a glitch. Measured against Quiz on the same frame.
+const NAME_MOVE = { outMs: 150, inMs: 200 };
 
 // Speed 0-10 -> how long the CENTRE-to-right-edge drift takes. 0 = no drift
 // at all (frozen at centre, "wait for answer"). Slightly slower curve than
@@ -215,6 +226,29 @@ const tfTemplate = {
     // one row however many times it is asked.
     const rowOf = [];
     order.forEach((idx, j) => { rowOf[idx] = j; });
+    // ⭐⭐⭐ Đợt 265b (thầy, 26/8/2026: *"Showdown luôn xoay vòng đều đi, sửa luôn cái Repeat
+    // đó"*) — **MỘT HÀNG MỖI LƯỢT, KHÔNG PHẢI MỘT HÀNG MỖI CÂU.**
+    //
+    // ⛔⛔ Vì sao `rowOf` một mình là SAI trong Showdown: tên học sinh do `memberAt(members,
+    // row)` quyết, mà `rowOf` là CHỖ CỐ ĐỊNH của câu trong `order`. Bật "Unanswered =
+    // Repeat" thì một câu sai quay lại **mang theo đúng cái row cũ** ⇒ đúng em ấy bị gọi
+    // lần nữa, và vòng xoay lệch hẳn. Đo được (3 em, `scratch/dot265-tf.html` mục C):
+    //     AAA-1 · BBB-2 · CCC-3 · AAA-1 · **AAA-1** · BBB-2 …
+    // Đợt 178 cố ý làm vậy ("câu quay lại phải về đúng em cũ") — nhưng cái giá là vòng xoay,
+    // mà vòng xoay mới là lý do Showdown tồn tại. Thầy chốt: xoay vòng đều thắng.
+    //
+    // ⭐ Cách chữa KHÔNG phải là bịa thêm một con số riêng cho cái tên — làm thế là tên trên
+    // khung và hàng trong Show answers nói khác nhau, đúng thứ hợp đồng Đợt 178 bảo vệ. Nó
+    // là: **row = SỐ THỨ TỰ LƯỢT**, và `review` cũng một hàng mỗi lượt. Câu hỏi hai lần thì
+    // có hai hàng — mỗi hàng ghi đúng em đã đối mặt với nó và em ấy trả lời gì. Không lượt
+    // nào bị nhập nhèm, `roundMs[i]` của engine (cũng đánh theo số vòng) vẫn khớp từng hàng.
+    // ⚠️ KHÔNG ÁP CHO FIGHT: ở đó TRỌNG TÀI ra lệnh nhảy tới vòng `i` bất kỳ (`fightGoTo`),
+    // nên row phải đúng bằng `i` — tức là `rowOf`. Fight và Showdown không bao giờ cùng bật,
+    // nên hai đường này không thể va nhau.
+    // ⚠️ Khi KHÔNG có câu nào lặp lại thì `turnLog` ra đúng `order` ⇒ mọi con số của bảng
+    // kết quả y hệt trước đợt này. Chỉ ca "Repeat" mới khác — và khác theo hướng thật hơn:
+    // một câu phải hỏi hai lần thì đội ấy đã tiêu hai lượt.
+    const turnLog = [];   // [{ idx, answered, correct, chosen, timedOut }] — một phần tử MỖI LƯỢT
     // The row on SCREEN. Not read off `queue[0]`: `choose()` shifts the queue the
     // instant a button is tapped, while the statement it belongs to is still
     // flying off — reading the queue there would hand the next pupil their name
@@ -257,6 +291,8 @@ const tfTemplate = {
     // source of truth for "can this be answered", and a parallel flag is exactly
     // the kind of thing that drifts out of step with them later.
     ui.setScoreProvider?.(liveScore);
+    // ⭐⭐⭐ Đợt 265 — the per-round count down now has somebody to call. See roundTimeUp().
+    ui.setRoundTimeout?.(roundTimeUp);
     ui.setIdleGuard?.(() => {
       if (finished || prepTimer || voicePlayer.isPlaying()) return true;
       const btn = root.querySelector(".aw-tf-btn");
@@ -423,8 +459,12 @@ const tfTemplate = {
       // ⭐ Đợt 178 — the statement on screen, and with it whose turn this is. The
       // two numbers are this game's own slide-out / slide-in, so the name leaves
       // with the old statement and arrives with the new one.
-      curRow = rowOf[queue[0]];
-      ui.itemChanging?.(curRow, { outMs: EXIT_MS, inMs: ENTER_MS });
+      // ⭐⭐⭐ Đợt 265b — MỘT LƯỢT MỚI = MỘT ROW MỚI (xem ghi chú dài ở chỗ khai `turnLog`).
+      // Trong trận thì trọng tài mới là người chọn vòng, nên ở đó vẫn là `rowOf`.
+      curRow = fightCtl
+        ? rowOf[queue[0]]
+        : (turnLog.push({ idx: queue[0], answered: false, correct: false, chosen: null, timedOut: false }) - 1);
+      ui.itemChanging?.(curRow, NAME_MOVE);
       const vv = voiceView(activity, st);   // Options > Content decides text/voice
       const hasVoice = vv.hasVoice, hideText = vv.hideText;
       if (hideText) {
@@ -459,7 +499,28 @@ const tfTemplate = {
       // Lock now, unlock at ~50% of the slide-in (item, 1/8).
       lockButtons();
       if (gateTimer) clearTimeout(gateTimer);
-      gateTimer = setTimeout(() => { if (!finished && queue.length) unlockButtons(); }, Math.round(ENTER_MS * 0.5));
+      gateTimer = setTimeout(() => {
+        if (finished || !queue.length) return;
+        unlockButtons();
+        // ⭐⭐⭐ Đợt 265 — THIS IS WHERE THE PER-ROUND CLOCK OPENS FOR THE NEW STATEMENT.
+        // ⛔⛔ It never used to open at all. `roundBegin()` fires from `ui.setNav`, and
+        // this game only calls `updateNav()` when the SCORE moves — from the fly-to-score
+        // 380ms into the previous answer, and from the penalty callback. Measured (30s
+        // count down, `scratch/dot265-round.html`): statement 1 answered → clock 25,69 →
+        // statement 2 on screen and the clock STILL running down statement 1's round; it
+        // only reset one answer later. So every pupil after the first inherited a clock
+        // already part-spent, and with a short round it had reached 0 before their
+        // statement even arrived — the teacher's *"thời gian lùi rồi dừng ở 0 nhưng không
+        // chuyển câu"*, because a round that is over stays over until something reopens it.
+        // ⚠️ AT THE GATE, NOT AT `startCycle()`. The statement takes ENTER_MS to slide in
+        // and the buttons are locked for the first half of it — starting the clock at the
+        // swap would charge the pupil ~650ms of conveyor they cannot answer during. This
+        // is the same instant `ui.setIdleGuard` already treats as "they can act now".
+        // ⚠️ The NAME does not wait for this: `ui.itemChanging` claimed it back at the
+        // swap, so `paintShowdownName` sees the index already taken and this call is a
+        // no-op for it — exactly the two-callers contract in core/engine.js.
+        updateNav();
+      }, Math.round(ENTER_MS * 0.5));
       let done = false;
       const onEntered = () => {
         if (done) return; done = true;
@@ -682,6 +743,24 @@ const tfTemplate = {
       queue.shift();
       state[idx].answered = true;
       state[idx].chosen = value;
+      // ⚠️ Đợt 265 — clears an EARLIER buzzer on this same statement. With "Repeat until
+      // answered" on, a timed-out statement comes back; once somebody actually taps it,
+      // the row is answered again and `timedOut` must not go on saying otherwise in Show
+      // answers (see the review's own `answered` line).
+      state[idx].timedOut = false;
+      // ⭐⭐⭐ Đợt 265b — và GHI VÀO LƯỢT NÀY nữa. `state[]` vẫn là "câu này rốt cuộc thế
+      // nào" (điểm đọc từ đó), còn `turnLog[curRow]` là "lượt này em ấy làm gì" — hai câu
+      // hỏi khác nhau, và chỉ cái thứ hai mới trả lời đúng cho Show answers khi một câu
+      // được hỏi hai lần bởi hai em khác nhau.
+      const turn = turnLog[curRow];
+      if (turn) { turn.answered = true; turn.chosen = value; turn.correct = isRight; turn.timedOut = false; }
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant they tap, so
+      // their clock stops here (Quiz/Anagram/Type the answer have done this since Đợt
+      // 174). Without it the count down went on running through the fly-to-score, the
+      // slide-off and the next statement's whole 1.3s entrance — a second and a half of
+      // somebody else's time charged to whoever had just answered. The next pupil's clock
+      // opens at the gate in startCycle(), where the buttons come alive.
+      ui.roundDone?.();
       // Lock right away so the NEXT statement can't be answered "blind" while the
       // current one is still flying off / sliding out — startCycle re-arms the
       // 50%-in unlock for the incoming statement (item, 1/8).
@@ -836,6 +915,71 @@ const tfTemplate = {
       startCycle();          // sets curRow = rowOf[idx] = i, and clears the marks
     }
 
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * Registered with `ui.setRoundTimeout()`; the engine calls it the moment the per-round
+     * count down reaches 0 with the statement still unanswered.
+     *
+     * ⛔⛔ THIS FILE HAD NO SUCH HANDLER AT ALL. "Time each round" is offered for EVERY
+     * Showdown game (core/options-panel.js builds the row on `showdown`, not on a template
+     * flag), but only Quiz, Anagram and Type the answer ever answered the buzzer — so in
+     * this game the bar simply emptied and nothing happened: no ✗, no penalty, no lost
+     * heart, and both buttons still live. The teacher's report, word for word: *"đội hết
+     * thời gian mà không bị báo sai, thời gian lùi rồi dừng ở 0 nhưng ko chuyển câu, không
+     * báo sai, vẫn chọn được tiếp"*.
+     *
+     * The rule is the teacher's own from Đợt 174: out of time = WRONG. So this walks the
+     * SAME path `choose()` walks for a wrong tap — score, sound, points-off, a heart, the
+     * re-queue when "Repeat until answered" is on, the slide-off and the next statement —
+     * with one difference: no ✗ is drawn on a button, because the pupil never chose one
+     * and in a TWO-BUTTON game marking one button names the other as the answer.
+     * ⚠️ FIGHT MODE NEVER CALLS THIS (same as Quiz/Anagram/TTA): in a match the referee
+     * owns the sequence and locks a board silently. `fightCtl` guard, first line.
+     */
+    function roundTimeUp() {
+      if (finished || fightCtl || !queue.length) return;
+      const idx = queue[0];
+      const st = state[idx];
+      if (!st) return;
+      // ⛔⛔ Đợt 265b — CHỐT LƯỢT, KHÔNG CHỐT CÂU. Dòng này từng là `if (st.answered) return`
+      // và nó SAI ngay ở ca "Repeat": một câu trả lời sai rồi quay lại vẫn mang
+      // `state[idx].answered === true`, nên tiếng chuông ở lượt sau bị nuốt sạch — đúng cái
+      // lỗi cả đợt này sinh ra để vá, chỉ khác là nó chỉ cắn khi bật Repeat.
+      // `turnLog[curRow]` mới là "lượt này đã ngã ngũ chưa".
+      const turn = turnLog[curRow];
+      if (turn && turn.answered) return;
+      // Take it off the front FIRST — same split as Đợt 179 drew between "removing" and
+      // "putting back": requeueRandom() only ever puts back.
+      queue.shift();
+      st.answered = true;
+      st.correct = false;
+      st.chosen = null;
+      st.timedOut = true;
+      // Đợt 265b — cùng lý do như trong choose(): lượt này là của em đang hiện tên.
+      if (turn) { turn.answered = true; turn.correct = false; turn.chosen = null; turn.timedOut = true; }
+      lockButtons();
+      tfSound.wrong();
+      // The class still has to SEE that it was marked wrong. The ✗ rides on the statement
+      // itself, which is the one thing on screen that belongs to nobody's answer.
+      const promptEl = root.querySelector(".aw-tf-prompt");
+      if (promptEl) flyMark(promptEl, false);
+      if (pointsOff) {
+        ui.flyPenalty?.(null, pointsOff, () => {
+          penalty += pointsOff;
+          const v = liveScore();
+          updateNav();
+          return v;
+        });
+      }
+      const outOfLives = loseLife();
+      if (repeatUntilCorrect) requeueRandom(idx);
+      exitPromptThenCall(() => {
+        if (outOfLives) finish("gameover");
+        else if (!queue.length) finish("complete");
+        else startCycle();
+      });
+    }
+
     function updateNav() {
       // ⭐⭐ Đợt 178 — `index` USED TO BE `liveScore()`, and that was fine only
       // while nothing read it as a position. The engine does: it drives the
@@ -930,20 +1074,38 @@ const tfTemplate = {
     // Đợt 223 — per-statement detail for the "Show answers" review screen,
     // pulled out of finish() so fightCtl.attach's `review` can hand the SAME
     // array to the Fight end panel mid-match (before `finished` is ever true).
+    /** One review row from a statement + whatever answer record describes it. */
+    function reviewRow(idx, rec) {
+      const st = statements[idx];
+      const correctText = st.answer ? "True" : "False";
+      return {
+        question: st.text,
+        // ⭐ Đợt 265 — a statement the buzzer took is NOT "answered": nobody tapped
+        // anything. Same reading Quiz (`chosen !== null`) and Type the answer
+        // (`graded && !timedOut`) already give, so the three games agree in Show answers.
+        answered: !!rec && rec.answered === true && rec.timedOut !== true,
+        yourText: (!rec || rec.chosen == null) ? null : (rec.chosen ? "True" : "False"),
+        yourCorrect: !!rec && rec.correct === true,
+        correctText,
+        src: st   // `statements` is a shallow copy, so `st` IS the content object
+      };
+    }
+
+    /**
+     * ⭐⭐⭐ Đợt 265b — REVIEW LÀ MỘT HÀNG MỖI LƯỢT (xem ghi chú ở chỗ khai `turnLog`).
+     * Hàng `i` ở đây và vòng `i` của engine là CÙNG MỘT SỐ, nên `stampReview()` gắn tên
+     * đúng em đã đối mặt với câu ấy, và `roundMs[i]` gắn đúng thời gian của lượt ấy.
+     * Câu chưa bao giờ được phát thì xuống cuối, đúng nết Open the box đã đi từ Đợt 186.
+     * ⚠️ FIGHT vẫn là một hàng mỗi CÂU: ở đó vòng `i` do trọng tài đánh số và cả hai bàn
+     * phải hiểu `i` giống hệt nhau.
+     */
     function buildReview() {
-      return order.map(idx => {
-        const st = statements[idx];
-        const s = state[idx];
-        const correctText = st.answer ? "True" : "False";
-        return {
-          question: st.text,
-          answered: s.answered,
-          yourText: s.chosen == null ? null : (s.chosen ? "True" : "False"),
-          yourCorrect: s.correct,
-          correctText,
-          src: st   // `statements` is a shallow copy, so `st` IS the content object
-        };
-      });
+      if (fightCtl) return order.map(idx => reviewRow(idx, state[idx]));
+      const seen = new Set(turnLog.map(t => t.idx));
+      return [
+        ...turnLog.map(t => reviewRow(t.idx, t)),
+        ...order.filter(idx => !seen.has(idx)).map(idx => reviewRow(idx, state[idx]))
+      ];
     }
 
     function finish(reason) {
@@ -967,12 +1129,19 @@ const tfTemplate = {
       if (reason === "gameover") tfSound.gameOver();
       else if (reason === "complete") tfSound.gameCompleted();
 
-      const perQuestion = order.map((idx, i) => ({ q: i, correct: state[idx].correct === true }));
-      const correct = perQuestion.filter(p => p.correct).length;
+      // ⭐⭐⭐ Đợt 265b — BỐN CON SỐ ĐỀU ĐẾM TỪ CHÍNH CÁC HÀNG, không đếm từ `state[]` nữa.
+      // `review` nay là một hàng mỗi LƯỢT, và engine cắt `review`/`perQuestion` theo cặp ở
+      // chế độ Free (`raw.perQuestion.slice(0, keep)`) — hai mảng lệch độ dài là cắt lệch.
+      // ⚠️ Không có câu nào lặp thì `turnLog` ra đúng `order` ⇒ cả bốn con số Y HỆT nết cũ.
+      // Chỉ khi "Repeat" bắt hỏi lại một câu thì mẫu số mới lớn hơn — và đó là con số thật:
+      // đội ấy đã tiêu thêm một lượt cho câu đó.
       const review = buildReview();
+      const perQuestion = review.map((r, i) => ({ q: i, correct: r.yourCorrect === true }));
+      const correct = perQuestion.filter(p => p.correct).length;
+      const rowTotal = review.length;
       // Ranking score = correct count minus wrong-answer penalty. When pointsOff===0
       // penalty is 0, so score === correct, which equals the engine's default.
-      ui.finish({ score: correct - penalty, correct, incorrect: total - correct, total, perQuestion, review, answered: state.filter(s => s.answered).length });
+      ui.finish({ score: correct - penalty, correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered: review.filter(r => r.answered).length });
     }
 
     return function cleanup() {

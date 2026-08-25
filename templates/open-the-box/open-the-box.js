@@ -407,9 +407,25 @@ function mountQuestions(root, activity, ui) {
   // chooses that order, so it is the only order `review` (and therefore "whose
   // question was this") can honestly be reported in. See finishRound.
   const playOrder = [];
+  // ⭐⭐⭐ Đợt 265b (thầy, 26/8/2026: *"Showdown luôn xoay vòng đều đi"*) — MỘT Ô TRONG
+  // `playOrder` = MỘT LƯỢT, KHÔNG PHẢI MỘT Ô HỘP.
+  // ⛔ Trước đợt này dòng dựng nó có rào `if (!playOrder.includes(i))`. Game này trả tự do
+  // cho MỌI ô đang "locked" mỗi khi có một câu trả lời đúng, nên một ô đã sai hoàn toàn có
+  // thể được mở lại — và nó **giữ nguyên row cũ** ⇒ `memberAt(members, row)` gọi lại đúng em
+  // đã làm sai nó, vòng xoay lệch. Cùng con bọ với "Unanswered = Repeat" của True/false;
+  // đọc ghi chú dài ở `turnLog` trong templates/true-false/true-false.js.
+  // `turnOutcome[t]` là "lượt thứ t trả lời ra sao", tách khỏi `boxState[i]` ("ô này rốt
+  // cuộc thế nào") — chỉ cái đầu mới đúng cho Show answers khi một ô bị hỏi hai lần bởi hai
+  // em khác nhau.
+  const turnOutcome = [];      // [{ correct, yourText }] — một phần tử MỖI LƯỢT
+  let curTurn = -1;            // lượt đang mở, = chỉ số trong playOrder/turnOutcome
 
   const boxState = items.map(() => "unplayed");   // "unplayed" | "correct" | "locked"
-  const lastWrongText = items.map(() => null);    // last wrong answer text picked (for the Show answers review)
+  // ⚠️ Đợt 265b — CHỈ CÒN FIGHT ĐỌC TỚI NÓ. Chơi đơn nay ghi câu trả lời vào `turnOutcome`
+  // theo LƯỢT (xem chỗ khai nó), vì một ô hộp có thể bị hỏi hai lần bởi hai em khác nhau và
+  // một ô nhớ duy nhất cho cả ô hộp thì không nói được điều đó. Nhánh fight vẫn dùng nó vì
+  // ở đó mỗi ô hộp chỉ chơi đúng một lần.
+  const lastWrongText = items.map(() => null);    // last wrong answer text picked (fight mode)
   let score = 0;
   let timeLeft = questionSeconds;
   let activeIndex = null;            // box index currently showing its question, else null
@@ -702,6 +718,54 @@ function mountQuestions(root, activity, ui) {
   // when this option is meant to be charging.
   ui.setScoreProvider?.(scoreNow);
   ui.setIdleGuard?.(() => ended || (activeIndex != null && !answersUnlocked));
+  /**
+   * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+   * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds the
+   * row on `showdown`, not on a template flag), yet until this đợt only Quiz, Anagram and
+   * Type the answer answered the buzzer. Measured here (`scratch/dot265-tf.html`): the bar
+   * emptied, the clock froze at 0,00 and all nine boxes stayed tappable. See
+   * true-false.js's roundTimeUp() for the teacher's report in full.
+   *
+   * Out of time = WRONG (the teacher's rule, Đợt 174): the open box is spent, the right
+   * answer is shown, and the card closes back to the grid — the same outcome a wrong tap
+   * gets, minus the ✗ on a tile, because nobody picked one.
+   * ⚠️ `lastWrongText[i]` stays null on purpose, so Show answers prints "no answer" rather
+   * than pinning one on them — the courtesy Quiz's timeout already gives.
+   * ⚠️ IT CAN ONLY EVER FIRE WITH A BOX OPEN, and that is `ui.roundDone()`'s doing (added
+   * to answer() the same đợt): the pupil's clock now freezes the moment their box is
+   * graded and only restarts when the NEXT box is opened, so the stretch where the class
+   * is choosing is not charged to anybody. Without that this handler would also have had
+   * to invent a rule for "nobody chose in time", and a box picked at random by the app is
+   * not a rule this game has anywhere else.
+   * ⚠️ FIGHT MODE NEVER CALLS THIS: there the referee owns the turn, and Đợt 259's PICK
+   * TIME is that mode's own answer to the same question.
+   */
+  ui.setRoundTimeout?.(() => {
+    if (ended || fightCtl) return;
+    const i = activeIndex;
+    if (i === null || boxState[i] !== "unplayed") return;
+    otbSound.wrong();
+    boxState[i] = "locked";
+    // Đợt 265b — nobody picked anything, so the row prints "no answer" (see turnOutcome).
+    if (curTurn >= 0) turnOutcome[curTurn] = { correct: false, yourText: null };
+    // Đợt 256's rule — a deduction has to be SEEN. Nothing was tapped, so `null` drops the
+    // number into the middle of the frame (core/engine.js).
+    if (pointsOff) {
+      ui.flyPenalty?.(null, pointsOff, () => { score -= pointsOff; updateProgress(); return scoreNow(); });
+    }
+    // Show the class WHICH answer it was before the card goes — the round is over for this
+    // box, so there is nothing left to give away.
+    const row = root.querySelector(".aw-otb-q-answers");
+    const it = items[i];
+    if (row) [...row.children].forEach((tile, k) => {
+      tile.disabled = true;
+      if (it.answers[k] && it.answers[k].correct && !tile.querySelector(".aw-tile-badge")) {
+        tile.append(el("span", "aw-tile-badge", icons.markCheck));
+      }
+    });
+    updateProgress();
+    setTimeout(() => { if (!ended) closeCardThen(() => {}); }, 1400);
+  });
 
   function renderGrid() {
     const { card, grid } = buildBoxGrid();
@@ -730,7 +794,15 @@ function mountQuestions(root, activity, ui) {
       runCountdown(timeLeft);
     }
     activeIndex = i;
-    if (!playOrder.includes(i)) playOrder.push(i);   // Đợt 186 — see playOrder
+    // ⭐⭐⭐ Đợt 265b — MỘT LƯỢT MỚI = MỘT ROW MỚI (xem ghi chú ở chỗ khai `playOrder`).
+    // ⚠️ KHÔNG ÁP CHO FIGHT: ở đó trọng tài đánh số vòng và cả hai bàn phải hiểu số ấy
+    // giống hệt nhau, nên row = chỉ số ô hộp.
+    if (fightCtl) {
+      if (!playOrder.includes(i)) playOrder.push(i);
+      curTurn = playOrder.indexOf(i);
+    } else {
+      curTurn = playOrder.push(i) - 1;
+    }
     updateProgress();                                 // moves the Showdown name on to this box's pupil
     animateOpen(i);
   }
@@ -1097,6 +1169,10 @@ function mountQuestions(root, activity, ui) {
       fightPendingReveal = { i, k, correct };
       if (correct) { otbSound.correct(); score++; }
       else { otbSound.wrong(); lastWrongText[i] = it.answers[k].text; }
+      // ⚠️ Đợt 265b — nhánh này `return` trước khối chung phía dưới, nên nó phải TỰ ghi
+      // lượt của mình. Bỏ dòng này là mọi hàng của bảng kết quả trong TRẬN đọc thành
+      // "chưa trả lời" — hỏng im lặng, và chỉ lộ ra ở màn Show answers sau trận.
+      if (curTurn >= 0) turnOutcome[curTurn] = { correct, yourText: it.answers[k].text };
       // ⭐⭐⭐ Đợt 256 (thầy, 24/8/2026) — "−N" BAY VÀO Ô ĐIỂM RỒI MỚI TRỪ.
       // `score -= pointsOff` đã rời khỏi nhánh sai ngay trên vào callback này.
       // ⛔ `null` chứ không phải `tile`: đây là game LƯỢT CHỌN Ô — hai bàn cùng mở
@@ -1143,6 +1219,15 @@ function mountQuestions(root, activity, ui) {
       boxState[i] = "locked";
       lastWrongText[i] = it.answers[k].text;
     }
+    // ⭐⭐ Đợt 265b — và GHI VÀO LƯỢT NÀY nữa (xem `turnOutcome`). `boxState` trả lời "ô này
+    // rốt cuộc thế nào"; hàng trong Show answers phải trả lời "em ấy, ở lượt ấy, làm gì".
+    if (curTurn >= 0) turnOutcome[curTurn] = { correct, yourText: it.answers[k].text };
+    // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn is over the instant their box is
+    // graded, so their clock stops here. Quiz/Anagram/Type the answer have done this since
+    // Đợt 174; this game never did, so the count down carried on running through the close
+    // animation and through however long the class then took to choose the NEXT box — and
+    // it was the pupil who had already answered whose name sat over an emptying bar.
+    ui.roundDone?.();
     updateProgress();
 
     setTimeout(() => {
@@ -1417,30 +1502,36 @@ function mountQuestions(root, activity, ui) {
     // hands question `n` of `review` to pupil `n`. Reported grid-first, every
     // name would sit against a question that pupil never saw (the reason Đợt
     // 178 left this game out). Boxes nobody opened come last, in grid order.
-    const rows = [...playOrder, ...items.map((_, i) => i).filter(i => !playOrder.includes(i))];
-    const perQuestion = rows.map(i => ({ q: i, correct: boxState[i] === "correct" }));
-    const review = rows.map(i => {
+    // ⭐⭐ Đợt 265b — MỘT HÀNG MỖI LƯỢT: hàng `t` ở đây và vòng `t` của engine là cùng một
+    // số, nên `stampReview()` gắn đúng em đã đối mặt với ô ấy. Ô chưa ai mở xuống cuối.
+    const opened = playOrder.map((i, t) => ({ i, o: turnOutcome[t] || null }));
+    const never = items.map((_, i) => i).filter(i => !playOrder.includes(i)).map(i => ({ i, o: null }));
+    const rows = [...opened, ...never];
+    const review = rows.map(({ i, o }) => {
       const it = items[i];
       const correctText = (it.answers.find(a => a.correct) || {}).text || "";
-      if (boxState[i] === "correct") {
-        return { question: it.question, answered: true, yourText: correctText, yourCorrect: true, correctText, src: it.src };
-      }
-      if (boxState[i] === "locked") {
-        return { question: it.question, answered: true, yourText: lastWrongText[i], yourCorrect: false, correctText, src: it.src };
-      }
-      // "unplayed" at the end (never attempted, or was wrong earlier but a
-      // later correct answer elsewhere freed it back up) — reported as not
-      // answered; this game allows retries so it doesn't map perfectly onto
-      // Quiz's single-attempt review, this is the closest honest reading.
-      return { question: it.question, answered: false, yourText: null, yourCorrect: false, correctText, src: it.src };
+      // No outcome recorded = the box was opened but the play ended before it was
+      // answered, or it was never opened at all. Either way: not answered.
+      if (!o) return { question: it.question, answered: false, yourText: null, yourCorrect: false, correctText, src: it.src };
+      return {
+        question: it.question,
+        // ⚠️ `yourText === null` là ca HẾT GIỜ — không ai bấm gì, nên không tính là đã trả
+        // lời (cùng cách đọc Quiz và Type the answer đã dùng từ Đợt 265).
+        answered: o.yourText != null,
+        yourText: o.correct ? correctText : o.yourText,
+        yourCorrect: o.correct === true,
+        correctText, src: it.src
+      };
     });
-    const correctCount = boxState.filter(s => s === "correct").length;
-    const answeredCount = boxState.filter(s => s !== "unplayed").length;
+    const perQuestion = review.map((r, t) => ({ q: t, correct: r.yourCorrect === true }));
+    const correctCount = perQuestion.filter(p => p.correct).length;
+    const answeredCount = review.filter(r => r.answered).length;
+    const rowTotal = review.length;
     // Report the LIVE score (correct count minus wrong-answer penalties) as
     // the final score. With pointsOff===0 this equals correctCount, i.e. the
     // engine's own default, so nothing changes; with a penalty it can go below
     // correctCount (and negative).
-    ui.finish({ score, correct: correctCount, incorrect: total - correctCount, total, perQuestion, review, answered: answeredCount, title });
+    ui.finish({ score, correct: correctCount, incorrect: rowTotal - correctCount, total: rowTotal, perQuestion, review, answered: answeredCount, title });
   }
 
   return function cleanup() {

@@ -264,6 +264,47 @@ export async function saveSetup(setup) {
 }
 
 /**
+ * ⭐⭐⭐ Đợt 265 (thầy, 26/8/2026: *"chọn lớp mới rồi mà vào trang build cột team vẫn còn
+ * danh sách học sinh của lớp trước đó dù đã reset rồi"*) — FORGET TODAY'S TRIMMED LIST,
+ * AND **NOTHING ELSE**.
+ *
+ * ⛔⛔ THE BUG THIS REPLACES, in one line: the class screen's Reset button used to run
+ * `saveSetup({ ...setup, roster: [], rosterClass: "" })`. By the time it runs, `setup`
+ * holds TWO things that do not belong together — `classId` is the class the teacher has
+ * just PICKED, while `teams` is still the previous class's table (the listener syncs it
+ * in, and nothing on this screen clears it). That one write therefore re-stamps the OLD
+ * TEAM TABLE WITH THE NEW CLASS'S ID.
+ * From then on the guard that exists to catch exactly this is blind: `clash` in
+ * renderSetup asks `tableClassId !== setup.classId`, both are now the new class, so Next
+ * asks nothing and `toBuild`'s `keepIt` walks straight back INTO the old table. Measured
+ * (`scratch/dot265-reset.html`): 20 pupils of the new class **plus the 6 of the old one**
+ * standing in the columns, and no confirm ever shown.
+ *
+ * ⚠️ A MERGE WRITE, not a whole-document one. This button's job is a decision about
+ * TODAY'S LIST; it has no business publishing the table, the class or the claims, and
+ * `saveSetup`'s "write my whole snapshot" shape is precisely how it published something
+ * it never meant to. Same lesson `writeMyClaim` learned at Đợt 197 — a write that carries
+ * more than it means to loses somebody else's work in silence.
+ * ⚠️ Firestore replaces ARRAYS wholesale under `{merge:true}` (maps merge, arrays do
+ * not), which is exactly what `roster: []` needs.
+ * ⚠️ The cache is patched rather than dropped: `loadSetup()` serves it to the next opener,
+ * and re-reading the document for two fields we already know is a network round trip for
+ * nothing.
+ *
+ * @returns the `updatedAt` stamp written, so the caller can move its own `baseAt` on and
+ *          not mistake its own write for another screen's edit.
+ */
+export async function clearSavedRoster() {
+  const uid = await requireUid();
+  const [d, { doc, setDoc }] = await Promise.all([db(), fs()]);
+  const at = Date.now();
+  await setDoc(doc(d, `users/${uid}/items`, DOC_ID),
+    { roster: [], rosterClass: "", updatedAt: at }, { merge: true });
+  if (cache && cacheUid === uid) cache = { ...cache, roster: [], rosterClass: "", updatedAt: at };
+  return at;
+}
+
+/**
  * ⭐⭐⭐ Đợt 197 (19/8/2026) — TÍCH MỘT ĐỘI KHÔNG ĐƯỢC GHI ĐÈ CẢ BẢNG.
  *
  * Pressing READY only ever wanted to add ONE key to `claims`. It did it by
@@ -3013,7 +3054,14 @@ export function buildShowdownPanel(panel, ctx) {
           roster = fullRegister();
           setup.roster = [];
           setup.rosterClass = "";
-          try { await saveSetup({ ...setup, roster: [], rosterClass: "" }); }
+          // ⭐⭐⭐ Đợt 265 — TARGETED WRITE. The old line here was
+          // `saveSetup({ ...setup, roster: [], rosterClass: "" })`, and it was publishing
+          // the PREVIOUS class's team table under the NEWLY PICKED class's id — read
+          // clearSavedRoster()'s own note for the whole failure, it is the bug the teacher
+          // reported as "reset chưa triệt để".
+          // ⚠️ `baseAt` moves with it: our own write must not later read as "another
+          // screen edited these teams while the panel was open" (publishTable, case 2).
+          try { baseAt = await clearSavedRoster(); }
           catch { /* signed out or offline — the screen is still right */ }
           repaint();
         });

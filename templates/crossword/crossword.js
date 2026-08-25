@@ -370,6 +370,20 @@ const crosswordTemplate = {
     // row of the clue on screen. The class chooses the order, so this is the
     // only order `review` (and "whose clue was this") can honestly be in.
     const playOrder = [];
+    // ⭐⭐⭐ Đợt 265b (thầy, 26/8/2026: *"Showdown luôn xoay vòng đều đi"*) — MỘT Ô TRONG
+    // `playOrder` = MỘT LƯỢT, KHÔNG PHẢI MỘT Ô CHỮ.
+    // ⛔ Trước đợt này dòng dựng nó có rào `if (!playOrder.some(...))`, mà game này CHO
+    // BỎ DỞ một ô chữ (chạm vào thanh gợi ý, hoặc Escape — `returnToBoard`). Ô chữ bị bỏ
+    // dở rồi được mở lại **giữ nguyên row cũ** ⇒ em mở lại nhìn thấy tên của em đã bỏ dở
+    // nó. Cùng con bọ với "Unanswered = Repeat" của True/false; đọc ghi chú dài ở
+    // `turnLog` trong templates/true-false/true-false.js.
+    // ⚠️ NHƯNG BỎ DỞ RỒI MỞ LẠI NGAY THÌ VẪN LÀ LƯỢT ẤY. Ở game này lượt chỉ kết thúc khi
+    // một ô chữ được CHẤM (`endWord`), nên "mở lại đúng cái mình vừa rời" không được tính
+    // là lượt mới — nếu không thì cứ chạm nhầm một cái là mất lượt.
+    // `turnOutcome[t]` là "lượt thứ t chấm ra sao"; lượt bỏ dở thì không có gì cả, và hàng
+    // của nó trong Show answers đọc là chưa trả lời — đúng như nó đã xảy ra.
+    const turnOutcome = [];   // [{ correct, typed }] — một phần tử MỖI LƯỢT ĐƯỢC CHẤM
+    let curTurn = -1;
     let curRow = 0;
 
     let curWord = -1;                // -1 = on the board (nothing picked)
@@ -716,8 +730,20 @@ const crosswordTemplate = {
       // ⭐ SHOWDOWN (Đợt 186) — opening a clue is when a question STARTS here, so
       // this is where the play order grows and the pupil's name moves on. A clue
       // re-opened later keeps the row it already had.
-      if (!playOrder.some(k => k.page === curPageIdx && k.i === i)) playOrder.push({ page: curPageIdx, i });
-      curRow = playOrder.findIndex(k => k.page === curPageIdx && k.i === i);
+      // ⭐⭐⭐ Đợt 265b — MỘT LƯỢT MỚI = MỘT ROW MỚI, trừ đúng ca "mở lại cái mình vừa rời"
+      // (xem ghi chú ở chỗ khai `playOrder`).
+      // ⚠️ KHÔNG ÁP CHO FIGHT: ở đó trọng tài đánh số vòng và cả hai bàn phải hiểu số ấy
+      // giống hệt nhau, nên row = chỉ số ô chữ.
+      if (fightCtl) {
+        if (!playOrder.some(k => k.page === curPageIdx && k.i === i)) playOrder.push({ page: curPageIdx, i });
+        curRow = playOrder.findIndex(k => k.page === curPageIdx && k.i === i);
+      } else {
+        const last = playOrder[playOrder.length - 1];
+        const sameOneAgain = !!last && last.page === curPageIdx && last.i === i && !wordState[i].done;
+        if (!sameOneAgain) playOrder.push({ page: curPageIdx, i });
+        curRow = playOrder.length - 1;
+      }
+      curTurn = curRow;
       ui.itemChanging?.(curRow, { outMs: 140, inMs: 200 });
       updateNav();
       // Wrap within the CURRENT page's clue count — `total` is now the grand
@@ -1184,6 +1210,18 @@ const crosswordTemplate = {
         return;   // the MATCH decides what happens next (reveal, then backToBoard)
       }
 
+      // ⭐⭐ Đợt 265 — TIME EACH ROUND: the pupil's turn is over the instant the word is
+      // graded, so their clock stops here. Quiz/Anagram/Type the answer have done this
+      // since Đợt 174; this game never did, so the count down carried on running through
+      // the whole reveal AND through however long the class then took to pick the next
+      // clue — with the name of the pupil who had already answered sitting over it. It is
+      // also what lets roundTimeUp() below stay a one-case rule: the buzzer can now only
+      // ever catch a word that is actually open.
+      ui.roundDone?.();
+      // ⭐⭐ Đợt 265b — và GHI VÀO LƯỢT NÀY nữa (xem `turnOutcome`). `wordState` trả lời
+      // "ô chữ này rốt cuộc thế nào"; hàng trong Show answers phải trả lời "em ấy, ở lượt
+      // ấy, gõ gì".
+      if (curTurn >= 0) turnOutcome[curTurn] = { correct: ok, typed };
       if (ok) {
         st.done = true; st.correct = true;
         w.cells.forEach(([r, c]) => cellStatus.set(r + "," + c, "solved"));
@@ -1362,6 +1400,55 @@ const crosswordTemplate = {
     ui.setIdleGuard?.(() =>
       finished || (curWord >= 0 && !!wordState[curWord] && wordState[curWord].done));
 
+    /**
+     * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+     * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds
+     * the row on `showdown`, not on a template flag), yet until this đợt only Quiz,
+     * Anagram and Type the answer answered the buzzer. Measured here
+     * (`scratch/dot265-tf.html`): the bar emptied, the clock froze at 0,00 and every one
+     * of the grid's cells stayed live. See true-false.js's roundTimeUp() for the teacher's
+     * report in full.
+     *
+     * Out of time = WRONG (the teacher's rule, Đợt 174), which in this game is exactly
+     * gradeWord()'s wrong branch for a word that was never submitted: the strip goes red,
+     * the answer flips in when "Show corrects" is on, Minus mode charges its points once,
+     * and endWord() takes the class back to the board.
+     * ⚠️ ONE CASE ONLY — a word that is OPEN. The stretch where the class is looking at
+     * the whole grid choosing the next clue belongs to nobody, and since this đợt the
+     * clock is not even running then (`ui.roundDone()` in gradeWord). Picking a clue for
+     * them at the buzzer would be a rule this game has nowhere else.
+     * ⚠️ FIGHT MODE NEVER CALLS THIS: there the referee owns the turn, and Đợt 259's PICK
+     * TIME is that mode's own answer to the same question.
+     */
+    ui.setRoundTimeout?.(() => {
+      if (finished || fightCtl || curWord < 0) return;
+      const w = clues[curWord], st = wordState[curWord];
+      if (!w || !st || st.done) return;
+      consumeAndrewGlow();
+      st.done = true; st.wrong = true; st.correct = false;
+      if (curTurn >= 0) {
+        turnOutcome[curTurn] = { correct: false, typed: w.cells.map(([r, c]) => userGrid.get(r + "," + c) || "·").join("") };
+      }
+      crosswordSound.wrong();
+      // Đợt 256's rule — a deduction has to be SEEN. `activeEl` is the strip the class is
+      // looking at, and outside a match there is nobody to hide the answer from.
+      if (minusOn) {
+        ui.flyPenalty?.(activeEl, penalty, () => { livePoints -= penalty; return scoreNow(); });
+      }
+      w.cells.forEach(([r, c]) => {
+        const rc = r + "," + c;
+        if (cellStatus.get(rc) !== "solved") cellStatus.set(rc, "wrong");
+      });
+      refreshActiveCells(); paintGrid(); kbd.refresh(); showScore();
+      if (opt.showAnswerWhenWrong !== false) {
+        const FLIP = 520, HOLD = 700, AFTER = 300;
+        pushTimer(() => flipRevealWord(w), AFTER);
+        endWord(AFTER + FLIP + HOLD);
+      } else {
+        endWord(1200);
+      }
+    });
+
     // After the brief end-state, finish the game if every word is done, else
     // zoom back to the board (keyboard hides) so the next word is picked by hand.
     function endWord(ms) {
@@ -1448,20 +1535,29 @@ const crosswordTemplate = {
       pageState.forEach((ps, p) => ps.clues.forEach((w, i) => {
         if (!seq.some(k => k.page === p && k.i === i)) seq.push({ page: p, i });
       }));
-      seq.forEach(({ page, i }) => {
+      // ⭐⭐ Đợt 265b — hàng `t` = LƯỢT thứ `t`, nên nó đọc `turnOutcome[t]` chứ không đọc
+      // `wordState` (một ô chữ bị bỏ dở rồi mở lại có HAI lượt, và chỉ lượt sau mới có
+      // người chấm). Ô chữ chưa ai mở nằm sau `playOrder.length` nên không có lượt nào.
+      seq.forEach(({ page, i }, t) => {
         const ps = pageState[page];
         const w = ps && ps.clues[i];
         if (!w) return;
-        const s = ps.wordState[i];
-        const typed = w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("");
-        if (s.correct) correct++;
-        if (s.done) { answered++; if (!s.correct) wrongDone++; }
-        perQuestion.push({ q: perQuestion.length, correct: s.correct === true });
+        // ⚠️⚠️ FIGHT ĐỌC NGUỒN CŨ. `turnOutcome` chỉ được ghi ở nhánh chơi đơn của
+        // `gradeWord()` — nhánh fight `return` trước đó — nên trong trận nó rỗng và mọi
+        // hàng sẽ đọc thành "chưa trả lời". Trong trận mỗi ô chữ chỉ chơi đúng một lần
+        // (trọng tài đánh số vòng, không có chuyện bỏ dở rồi mở lại), nên `wordState` đúng.
+        const st = ps.wordState[i];
+        const o = fightCtl
+          ? (st.done ? { correct: st.correct === true, typed: w.cells.map(([r, c]) => ps.userGrid.get(r + "," + c) || "·").join("") } : null)
+          : (t < playOrder.length ? turnOutcome[t] : null);
+        if (o && o.correct) correct++;
+        if (o) { answered++; if (!o.correct) wrongDone++; }
+        perQuestion.push({ q: perQuestion.length, correct: !!o && o.correct === true });
         review.push({
           question: w.clue,
-          answered: s.done,
-          yourText: s.done ? typed : null,
-          yourCorrect: s.correct === true,
+          answered: !!o,
+          yourText: o ? o.typed : null,
+          yourCorrect: !!o && o.correct === true,
           correctText: w.answer || w.key,
           src: w.src
         });
@@ -1476,7 +1572,11 @@ const crosswordTemplate = {
       // silently defaulted to `correct` and "Minus mode" had zero effect on the
       // final result.
       const score = minusOn ? correct - penalty * wrongDone : correct;
-      ui.finish({ correct, incorrect: total - correct, total, perQuestion, review, answered, score });
+      // ⭐ Đợt 265b — mẫu số là SỐ HÀNG (= số lượt + ô chữ chưa ai mở), để `review` và
+      // `perQuestion` luôn dài bằng nhau và bằng `total` (engine cắt chúng theo cặp ở chế
+      // độ Free). Không có ô chữ nào bị bỏ dở thì con số này y hệt `total` cũ.
+      const rowTotal = review.length;
+      ui.finish({ correct, incorrect: rowTotal - correct, total: rowTotal, perQuestion, review, answered, score });
     }
 
     return function cleanup() {

@@ -4765,6 +4765,18 @@ html.aw-nhung .aw-below { display: none; }
 .aw-navstack > .aw-top-showdown {
   position: absolute; bottom: 100%; left: 0; right: 0;
   text-align: center; white-space: nowrap;
+  /* ⭐⭐⭐ Đợt 265 — `left/right` here are only the STARTING value: engine's
+     placeShowdownName() overwrites both with the insets that make this box as wide as
+     `.aw-bottombar`, because `.aw-navstack` is the grid's `auto` track and is only as
+     wide as ‹ › itself (True/false, which shows no arrows at all, gave the name 57px on
+     an 888px frame). Read that function's note for the measurement.
+     ⚠️⚠️ AND THIS IS WHAT MAKES THE WIDE BOX SAFE. The name now spans the whole frame
+     while hovering over the game's own lowest row; without this line it would be an
+     invisible full-width lid over whatever sits there (Quiz's outer tiles, True/false's
+     TRUE and FALSE buttons). The topbar seat has carried the same line since Đợt 159
+     (`.aw-top-centre.is-showdown`) for exactly this reason — this seat simply never
+     needed it while it was 57px wide. */
+  pointer-events: none;
 }
 /* ⭐ Đợt 174c — SAME SIZE AS IN "None" (teacher: "tăng size tên học sinh ở
    countdown và countup lên bằng size khi ở chế độ Non time each round"). Đợt 174

@@ -218,6 +218,12 @@ function mountBalloonPop(root, activity, ui) {
   let lastTs = 0;
   let sinceSpawn = SPAWN_GAP_MS;
   let deck = [];              // keyword deck for the current level (guarantees the correct one recurs)
+  // ⭐⭐ Đợt 265 — WHICH LEVELS THE BUZZER TOOK. This game advances ONLY on a correct pop,
+  // so `levelIndex` alone has always meant "everything before me was got right" and the
+  // whole review is derived from it. A per-round time-out breaks that assumption for the
+  // first time: the train moves on without the class having got it. One array is what
+  // keeps the result honest — without it a level nobody solved would be counted correct.
+  const levelMissed = [];
   let warnedTime = false;
   let ambientTimer = 0;      // occasional plane fly-by
   const blimps = [];         // {el, bannerFit, x, y, vx, keyword, correct, bonus, popped}
@@ -269,6 +275,39 @@ function mountBalloonPop(root, activity, ui) {
   // state, and guarding it would only add a flag that can go stale.
   ui.setScoreProvider?.(scoreNow);
   ui.setIdleGuard?.(() => ended || dead || voicePlayer.isPlaying());
+  /**
+   * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
+   * "Time each round" is offered for EVERY Showdown game (core/options-panel.js builds the
+   * row on `showdown`, not on a template flag), and until this đợt only Quiz, Anagram and
+   * Type the answer answered the buzzer. Here the bar simply emptied and the balloons kept
+   * drifting — see true-false.js's roundTimeUp() for the teacher's report in full.
+   *
+   * The rule is the teacher's own from Đợt 174: out of time = wrong. So this is exactly
+   * `breakCrate()`'s outcome without a crate — the wrong cue, the points-off, and then the
+   * train chugs on to the next definition, because in this game "next question" is the
+   * only way the round can move at all.
+   * ⚠️ `levelMissed` is what stops that being a free point: `finishRound()` reads its
+   * whole review off `i < levelIndex`, so a level the train left behind would otherwise be
+   * filed as CORRECT — the pupil's own row in Show answers, and the team's score on the
+   * class board, both wrong in the pupil's favour.
+   * ⚠️ NOT `endRound()` on the last level: running out of time on the final definition
+   * still ends the game, but as "Time's up" rather than a win — the same wording the
+   * round clock running out already produces.
+   */
+  ui.setRoundTimeout?.(() => {
+    if (ended || dead) return;
+    levelMissed[levelIndex] = true;
+    bpSound.cargoWrong();
+    flyMark(false);
+    scene.classList.add("is-shake");
+    setTimeout(() => { if (!dead) scene.classList.remove("is-shake"); }, 360);
+    // Đợt 256's rule — a deduction has to be SEEN. Nothing was tapped, so `null` drops the
+    // number into the middle of the frame (core/engine.js).
+    if (pointsOff > 0) ui.flyPenalty?.(null, pointsOff, () => { score -= pointsOff; return scoreNow(); });
+    const next = levelIndex + 1;
+    if (next >= totalLevels) { endRound(false); return; }
+    trainAdvance(() => loadLevel(next));
+  });
 
   // =========================================================
   // level / definition handling
@@ -479,6 +518,11 @@ function mountBalloonPop(root, activity, ui) {
     score += gain;
     updateScore();
     flyMark(true);
+    // ⭐⭐ Đợt 265 — TIME EACH ROUND: this pupil's turn ends the instant the right balloon
+    // lands in the cart, so their clock stops here (Quiz/Anagram/Type the answer have done
+    // this since Đợt 174). The next round opens when loadLevel() reports the new level
+    // through updateProgress()/ui.setNav, i.e. once the train has finished chugging.
+    ui.roundDone?.();
     // train chugs to the next definition
     const next = levelIndex + 1;
     if (next >= totalLevels) { endRound(true); return; }
@@ -607,16 +651,22 @@ function mountBalloonPop(root, activity, ui) {
     // của bài giao) một số CAO HƠN thật đúng bằng cú chạm sai cuối cùng.
     ui.flushPenalties?.();
     // review + perQuestion over the LEVELS played (each level = one definition)
-    const perQuestion = levelItems.map((it, i) => ({ q: i, correct: i < levelIndex }));
+    // ⭐ Đợt 265 — "before the train got here" is no longer the same thing as "got right":
+    // a level the per-round buzzer took is behind us AND wrong. `got()` is that one
+    // question, asked once, so the three readings below cannot drift apart.
+    const got = i => i < levelIndex && !levelMissed[i];
+    const perQuestion = levelItems.map((it, i) => ({ q: i, correct: got(i) }));
     const review = levelItems.map((it, i) => ({
       question: it.definition,
-      answered: i < levelIndex,
-      yourText: i < levelIndex ? it.keyword : null,
-      yourCorrect: i < levelIndex,
+      // ⚠️ A level the buzzer took is NOT "answered": nobody popped anything. Same reading
+      // Quiz (`chosen !== null`) and Type the answer (`graded && !timedOut`) already give.
+      answered: got(i),
+      yourText: got(i) ? it.keyword : null,
+      yourCorrect: got(i),
       correctText: it.keyword,
       src: it.src
     }));
-    const correctCount = levelItems.filter((it, i) => i < levelIndex).length;
+    const correctCount = levelItems.filter((it, i) => got(i)).length;
     ui.finish({
       correct: correctCount,
       incorrect: totalLevels - correctCount,
