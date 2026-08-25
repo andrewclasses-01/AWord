@@ -98,15 +98,14 @@
    double-guarded with `:has()` because template CSS lives in the document for
    ever. Percentages only — no hardcoded px/vw/vh — so it self-adjusts to any
    viewport, rotation or browser-chrome change with no code change. */
-.aw-zoomed:has(.aw-stage.act-running_team) {
-  position: fixed; inset: 0; z-index: 9000;
-  width: 100vw; height: 100vh; height: 100dvh;
-  background: #0b0b0d; overflow: hidden;
-}
-.aw-zoomed:has(.aw-stage.act-running_team) .aw-page {
-  width: 100%; height: 100%; max-width: none; margin: 0; padding: 0;
-  display: flex; align-items: center; justify-content: center;
-}
+/* ⛔⛔⛔ Đợt 258 (25/8/2026) — HAI LUẬT GỐC Ở ĐÂY ĐÃ XOÁ, ĐỪNG CHÉP LẠI: tấm
+   panel `.aw-zoomed:has(.aw-stage.act-running_team)` và luật `.aw-page` đi kèm
+   nay là luật CHUNG cho mọi template, ở CUỐI `core/app.css`. Bản sao đặc hiệu
+   hơn core sẽ âm thầm thắng — đúng bẫy Đợt 87.
+   ⛔⛔ Bản cũ có `z-index: 9000` và chính nó là thứ phải bỏ: đo A/B thật cho
+   thấy nó che sạch mọi bản sao thả vào `document.body`, tức số "−N" của Đợt 256
+   (`core/flypenalty.js`) và chữ bay của 6 template khác. Lý do đủ ở cuối
+   `core/app.css`. */
 /* Zoomed mode fills the real viewport exactly — the whole point of zoom is
    "use every pixel actually there". Giving both width and height explicit
    values also neutralises core's `aspect-ratio` (CSS only derives a MISSING
@@ -121,13 +120,9 @@
    (`.aw-zoomed` is `position:fixed; inset:0`), with a `vh` line first for
    anything that doesn't know `dvh`; the flex centring on `.aw-page` above puts
    the leftover width into two even bars of the dark background. */
-.aw-zoomed .aw-stage.act-running_team {
-  width: 100%; height: 100%; border-radius: 0; border: none;
-  max-width: calc(100vh * 16 / 9);
-  max-width: calc(100dvh * 16 / 9);
-}
-.aw-zoomed .aw-stage.act-running_team ~ .aw-below,
-.aw-zoomed .aw-stage.act-running_team ~ .aw-as-bars { display: none; }
+/* ⛔ Đợt 258 — luật khung zoom + luật ẩn `.aw-below`/`.aw-as-bars` đã dời sang
+   `core/app.css` dạng chung; đoạn giải thích chốt chặn 16:9 phía trên giữ lại
+   vì đó là lý lẽ gốc core đang dùng. Dưới đây chỉ còn phần RIÊNG của game. */
 .aw-zoomed .aw-stage.act-running_team .aw-bottombar-left,
 .aw-zoomed .aw-stage.act-running_team .aw-nav,
 .aw-zoomed .aw-stage.act-running_team .aw-tools .aw-iconbtn:not(.aw-fs-always) { display: none; }

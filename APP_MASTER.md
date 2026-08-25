@@ -8,8 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **24/8/2026 (Đợt 256 + 257)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 258)**.
 >
+> **Đợt 258** (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN
+> THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE.** Thầy gửi 2 ảnh (khung trên iPhone và trên
+> máy tính) kèm 4 nhận xét, chốt cả 4 qua AskUserQuestion rồi gõ "ok build". Sửa 4 file:
+> `core/app.css` · `core/engine.js` · 2 file CSS Running.
+> **(1) Điện thoại**: khối `@media (max-width:700px)` ở CUỐI `app.css` — khung **343×225 → 375×246
+> (+20% diện tích)**, ăn cho cả act thường lẫn bài giao.
+> **(2) Bo góc**: `2cqw` → **`8px` cố định**. ⛔ **`2cqw` là LỖI CÓ SẴN, không phải lựa chọn**: một
+> phần tử không thể là container của chính nó nên `cqw` trên `.aw-stage` **rơi về cỡ CỬA SỔ** — đo
+> được 7,5px ở màn 375 nhưng **36px** ở màn 1798.
+> **(3) Cỡ khung**: `--aw-stage-max: min(1280px, calc((100dvh − 118px) × 16/10.5))` — **968 →
+> 1131px** trên cửa sổ 1512×860 (+17% ngang, +37% diện tích), đo 5 cỡ cửa sổ **không cái nào mọc
+> thanh cuộn**. 118px là số ĐO (16+18+44+40); `+32px` là vì `box-sizing: border-box`.
+> **(4) Fullscreen**: `fsBtn` luôn `setZoomed()`, khối `.aw-zoomed` **dạng chung** ở cuối `app.css`.
+> ⛔⛔⛔ **KHỐI ĐÓ KHÔNG ĐƯỢC CÓ `z-index`** — bản gốc Running word có `z-index:9000`, mà đo A/B thật
+> cho thấy nó **che sạch mọi thứ thả vào `document.body`**, tức **số "−N" của Đợt 256** (11 template)
+> cùng chữ bay của 6 template khác. ⛔ KHÔNG đụng fullscreen riêng của trận Fight (thầy chốt).
+> ⚠️ `tpl.useZoomFullscreen` **không còn là điều kiện** — đọc cờ đó để đoán "game này có zoom không"
+> là đọc sai kể từ đợt này.
+> Bàn thử `dot258-frame.html` **52/52** + `dot258-penalty-zoom.html` **18/18** (có **đối chứng
+> ngược**: đắp lại z-index 9000 thì con số PHẢI bị che). Chạy lại 4 bàn thử cũ, mọi con số y hệt bản
+> gốc (đã chứng minh bằng `git stash`). Chi tiết: `GHI CHU DU AN.md` Đợt 258 +
+> `core/HUONG DAN CORE.md` mục "KHUNG ACT SAU ĐỢT 258".
+>
+> ---
 > **Đợt 257** (`6b49fdb`, ĐÃ PUSH — ⚠️ **của một PHIÊN CLAUDE SONG SONG**, hồ sơ do phiên 256 chép
 > lại hộ) — ⭐⭐ **TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ**: `play.js` bắn
 > `postMessage({type:"AWORD:NOP", code, name})` lên `window.parent` sau khi server xác nhận đủ hai
@@ -3960,18 +3984,56 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 24/8/2026 sau **Đợt 256 + 257** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (24/8/2026)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (25/8/2026 — sau Đợt 258)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`51acc6f`** (Đợt 256) — đã push, Pages `built` đúng commit |
+> | Commit mới nhất | **`__COMMIT258__`** (Đợt 258) — đã push, Pages `built` đúng commit |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
-> | Kiểm live | **18/18 mã băm SHA-256 khớp** + **29/29 phép hỏi chạy chính module của bản live** |
-> | Vùng vừa động tới | **ĐIỂM PHẠT BAY** (Đợt 256) — chạm **11/17 template** + `core/engine.js` + `core/app.css` + file mới `core/flypenalty.js` |
-> | Trước đó | **BÀI GIAO** 245 → 255, và **Đợt 257** (`play.js`, cửa `AWORD:NOP` cho myLesson web v1.13.0) |
+> | Kiểm live | **__HASH258__ mã băm SHA-256 khớp** (băm `git show HEAD:<path>`, **không băm file trên máy** — CRLF) |
+> | Vùng vừa động tới | **KHUNG ACT** (Đợt 258) — `core/app.css` · `core/engine.js` · 2 file CSS Running. Chạm **mọi template** (bo góc + cỡ khung + zoom fullscreen) |
+> | Trước đó | **ĐIỂM PHẠT BAY** (Đợt 256, `51acc6f`) · **BÀI GIAO** 245 → 255 · **Đợt 257** (`play.js`, cửa `AWORD:NOP` cho myLesson web v1.13.0) |
 > | Luật Firestore | **KHÔNG cần đăng lại** |
 >
-> ### ⛔⛔ HAI PHIÊN CLAUDE CHẠY SONG SONG HÔM NAY — ĐỌC TRƯỚC KHI SỬA
+> ### 📍 ĐỤNG VÀO KHUNG ACT / NÚT FULLSCREEN THÌ ĐỌC Ở ĐÂU
+> **`core/HUONG DAN CORE.md` → mục "⭐⭐⭐ KHUNG ACT SAU ĐỢT 258"**. Bốn luật đắt nhất:
+> 1. ⛔⛔⛔ **`.aw-zoomed` KHÔNG ĐƯỢC CÓ `z-index`.** Bản gốc Running word có `z-index: 9000`; đo A/B
+>    thật thì nó **che sạch mọi thứ thả vào `document.body`** — tức số "−N" của Đợt 256 (11
+>    template) + chữ bay của Anagram · TTA · Unjumble · Crossword · Find the match · True/false.
+>    Trước khi đặt `z-index`/`transform`/`filter`/`contain` lên `#app` hay tổ tiên của khung, phải
+>    liệt kê những gì app đang thả vào `document.body`.
+> 2. ⛔⛔ **`cqw` viết trên CHÍNH `.aw-stage` là đo theo CỬA SỔ, không theo khung** (một phần tử
+>    không thể là container của chính nó). Đó là gốc của lỗi bo góc phình 7,5 → 36px. Bo góc nay là
+>    `8px` cố định — **đừng "dọn dẹp" về `cqw`**.
+> 3. ⚠️ **Khối `@media` điện thoại và khối `.aw-zoomed` PHẢI Ở CUỐI `app.css`** — cả hai không cộng
+>    thêm đặc hiệu nào, dời lên trên là các luật gốc thắng ngược và **im lặng không chạy**.
+> 4. ⚠️ **`tpl.useZoomFullscreen` không còn là điều kiện** — mọi game đều zoom. Cờ chỉ còn tồn tại
+>    cho tương thích.
+> ⚠️ Hai con số phải sửa cùng nhau nếu đụng lề: **118px** (phần ngoài khung theo chiều dọc) và
+> **+32px** (lề trái+phải, vì `box-sizing: border-box`).
+>
+> ### 🧪 BÀN THỬ CỦA VÙNG NÀY
+> `dot258-frame.html` **52/52** (mobile · bo góc 5 cỡ màn · công thức khung 5 cỡ cửa sổ + chống cuộn
+> · zoom bấm nút thật · zoom ở 7 template · chống hồi quy myLesson + myActivity) ·
+> `dot258-penalty-zoom.html` **18/18** (Quiz thật + Points off + trả lời SAI thật trong zoom, **có
+> đối chứng ngược**: đắp lại z-index 9000 thì con số PHẢI bị che).
+> ⚠️ **Ba bàn thử cũ lệch điểm là LỆCH CÓ SẴN, không phải hồi quy** — `dot250-assign` 58/59 ·
+> `dot246-forms` 6/9 · `dot253-giao` 16/17, **đo được y hệt trên bản chưa sửa** bằng `git stash`.
+> Chúng neo vào ô tích *Show answers* ở "hàng cuối game" mà **Đợt 255 đã dời lên** hàng
+> `.aw-as-titlehead`. Ai rảnh thì sửa lại ba bench đó. (`dot246-flow` vẫn **37/37**.)
+>
+> ### ⬜ VIỆC CHỜ MẮT/TAY THẦY SAU ĐỢT 258 (không chặn gì)
+> ⬜ Mở act trên **iPhone thật** (máy chỉ giả lập được 375×812).
+> ⬜ Bấm **fullscreen zoom trên TOMKO + iPad**: thanh địa chỉ còn hiện có vướng không; nút Fullscreen
+> giờ là **đường ra DUY NHẤT** nên phải dễ bấm.
+> ⬜ Nhìn khung **1280px trên màn 86"** — trần này thầy chốt trước khi thấy thật.
+> ⬜ Xác nhận số **"−N" bay thấy được trong fullscreen** trên máy thật (giả thuyết: fullscreen THẬT
+> xưa nay vẫn đang giấu nó, và Đợt 258 vô tình chữa luôn — pane tự động không bật được fullscreen
+> thật nên không đo được).
+> ⬜ Mở act trong **myActivity chia 2–5 cột** (máy đã giả lập cột 384px + CSS `!important` của
+> myActivity và đo ra không đổi, nhưng đó là bản dựng lại chứ không phải app thật).
+>
+> ### ⛔⛔ HAI PHIÊN CLAUDE CHẠY SONG SONG HÔM 24/8 — BÀI HỌC VẬN HÀNH, VẪN CÒN GIÁ TRỊ
 > Đợt **256** (phiên này) và Đợt **257** (một phiên khác) làm CÙNG BUỔI trong CÙNG thư mục. Phiên
 > 257 commit được `play.js` nhưng **không ghi được hồ sơ** vì cả 3 file tài liệu đang bị phiên 256
 > giữ — nó **tự thuật hết vào commit message `6b49fdb`** rồi nhờ chép lại sau (đã chép, xem mục

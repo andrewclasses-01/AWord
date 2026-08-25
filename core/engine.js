@@ -141,7 +141,10 @@ function exitFs() {
   if (fn) try { fn.call(document); } catch (_) {}
 }
 
-// ----- "Zoom" fullscreen (opt-in via tpl.useZoomFullscreen, 5/8/2026) -----
+// ----- "Zoom" fullscreen — 5/8/2026 là OPT-IN, từ Đợt 258 (25/8/2026) là
+// CƠ CHẾ DUY NHẤT của nút Fullscreen trong act (mọi template + trang học sinh).
+// CSS `.aw-zoomed` nay nằm ở CUỐI `core/app.css` dưới dạng luật CHUNG (trước
+// đợt 258 nó nằm trong file CSS của Running word/team). -----
 // The REAL Fullscreen API misbehaved on iPad Chrome for Running word (tested
 // live, not guessed): a stray downward swipe near the top edge drops out of
 // fullscreen (fatal on a kids' touch panel — the chess clocks sit right
@@ -2576,10 +2579,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // ratio and just zooms — CSS handles the centering + black bars. Using the
   // stable root means "Start again" (which rebuilds `page`) no longer drops us
   // out of fullscreen.
+  //
+  // ⭐⭐⭐ Đợt 258 (25/8/2026, thầy chốt) — MỌI TEMPLATE NAY DÙNG ZOOM, KHÔNG CÒN
+  // GỌI FULLSCREEN API THẬT. Thầy: *"nút fullscreen của act đang là fullscreen
+  // thực sự, nó ảnh hưởng nhiều đến việc thao tác trong trò chơi => cần chuyển
+  // về fullscreen dạng zoom"*. Trước đợt này chỉ Running word/team bật cờ
+  // `tpl.useZoomFullscreen` (5/8/2026, sau khi đo trên iPad Chrome: API thật tự
+  // rớt khi vuốt gần mép trên, tự thoát sau đoạn hoạt ảnh, tự bày banner
+  // "leave/stay fullscreen?" — đều là lớp cử chỉ của trình duyệt, JS không sửa
+  // được). Nay CSS `.aw-zoomed` đã là của chung (cuối `core/app.css`) nên luật
+  // đó áp cho cả 17 template + trang học sinh.
+  //
+  // ⛔ KHÔNG đụng nút fullscreen RIÊNG của trận Fight (`core/fight.js`, lớp
+  // `.aw-fight.is-fs` chạy theo sự kiện `fullscreenchange`) — thầy chốt giữ
+  // nguyên vì nó đang chạy tốt trên TOMKO.
+  // ⚠️ `tpl.useZoomFullscreen` giữ lại trong `registerTemplate` cho tương thích
+  // (Running word/team vẫn khai), nhưng nay KHÔNG còn là điều kiện: đọc cờ đó
+  // để đoán "game này có zoom không" là đọc sai kể từ đợt này.
+  // ⚠️ `fsElement()`/`requestFs()`/`exitFs()` VẪN ĐƯỢC GIỮ và vẫn được
+  // `exitAnyFullscreen()` gọi: một phiên có thể đang ở fullscreen thật do
+  // trận Fight bật, hoặc do một bản cũ còn mở trong tab.
   fsBtn.onclick = () => {
-    if (tpl.useZoomFullscreen) setZoomed(root, fsBtn, !root.classList.contains("aw-zoomed"));
-    else if (!fsElement()) requestFs(root);
-    else exitFs();
+    setZoomed(root, fsBtn, !root.classList.contains("aw-zoomed"));
   };
   // Leaving the game (Home / Edit) must drop BOTH kinds of fullscreen.
   function exitAnyFullscreen() {

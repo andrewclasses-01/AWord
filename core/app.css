@@ -123,7 +123,29 @@ body {
    `.aw-stage.act-<type>` (the class engine.js stamps from `activity.type` at
    build time) — but the default is now the standard, so template #17 is
    correct without touching anything. */
-.aw-page { max-width: 1000px; margin: 0 auto; padding: 16px 16px 40px; }
+/* ⭐⭐ Đợt 258 (25/8/2026, thầy chốt) — KHUNG TỰ CO THEO CHIỀU CAO CỬA SỔ.
+   Trước đợt này bề ngang khung bị ghim cứng ở 968px (`max-width:1000px` trừ đi
+   32px lề, vì `* { box-sizing: border-box }` ở trên) — bất kể cửa sổ cao bao
+   nhiêu. Thầy: *"diện tích act mặc định với màn hình lớn là hơi nhỏ"*.
+
+   Đo thật trước khi sửa (`scratch/dot258-frame.html`): phần CHIỀU DỌC nằm ngoài
+   khung đúng **118px** = 16 (lề trên) + 18 (`.aw-below` margin-top) + 44 (hàng
+   nút) + 40 (lề dưới). Nên bề ngang lớn nhất mà trang vẫn KHÔNG mọc thanh cuộn
+   là `(chiều cao cửa sổ − 118px) × 16/10.5`. Ở cửa sổ cao 860px con số đó là
+   1131px — tức bản cũ đang bỏ phí 17% bề ngang / 37% diện tích.
+
+   ⚠️ Hai dòng `--aw-stage-max`, KHÔNG phải một: dòng `vh` là bản dự phòng cho
+   trình duyệt chưa biết `dvh` (cùng khuôn với chốt chặn 16:9 của fullscreen bên
+   dưới). Trình duyệt nào hiểu `dvh` sẽ ghi đè bằng dòng thứ hai.
+   ⚠️ `+ 32px` là vì `max-width` tính theo BORDER BOX: khung con muốn rộng đúng
+   `--aw-stage-max` thì hộp cha phải cộng thêm phần lề trái+phải của chính nó.
+   Sửa số lề ở dòng `padding` là phải sửa cả con số này.
+   ⛔ Trần 1280px là thầy chốt (chọn giữa 1100 / 1200 / 1280 / 1440). */
+:root {
+  --aw-stage-max: min(1280px, calc((100vh - 118px) * 16 / 10.5));
+  --aw-stage-max: min(1280px, calc((100dvh - 118px) * 16 / 10.5));
+}
+.aw-page { max-width: calc(var(--aw-stage-max) + 32px); margin: 0 auto; padding: 16px 16px 40px; }
 
 /* ---------- CHẾ ĐỘ NHÚNG — `play.html?g=…&nhung=1` (Đợt 200, 19/8/2026) ----
    Trang bài tập của myLesson (andrewclasses.com) nhúng bài giao vào một ô có
@@ -161,7 +183,19 @@ html.aw-nhung .aw-below { display: none; }
   container-name: stage;
   background: var(--aw-stage-bg);
   border: 1px solid var(--aw-stage-border);
-  border-radius: 2cqw;
+  /* ⛔⛔ Đợt 258 — ĐÂY TỪNG LÀ `2cqw`, VÀ ĐÓ LÀ MỘT LỖI, KHÔNG PHẢI LỰA CHỌN.
+     `cqw` trên CHÍNH `.aw-stage` không thể trỏ vào bề ngang của nó: một phần tử
+     không bao giờ là container query container của chính mình, nên CSS âm thầm
+     rơi về **cỡ khung nhìn nhỏ** (small viewport). Đo thật trước khi sửa: cùng
+     một khung, bo góc ra **7,5px** ở cửa sổ 375px · **30,2px** ở 1512px ·
+     **36,0px** ở 1798px — tức bo góc phình theo CỬA SỔ chứ không theo khung,
+     đúng cái thầy nhìn thấy (*"góc bo khi sử dụng màn rộng là quá lớn"*).
+     8px = đúng mức đang thấy trên điện thoại, thầy chốt. Số px CỐ ĐỊNH là cố ý:
+     mọi cỡ màn hình phải giống nhau.
+     ⚠️ Muốn đổi lại sang kiểu co giãn thì phải đo theo BỀ NGANG KHUNG bằng cách
+     khác (biến do JS đặt, hoặc một lớp bọc mang `container-type: inline-size`)
+     — viết `cqw` ở đây là quay lại đúng lỗi cũ, và nó KHÔNG báo lỗi gì cả. */
+  border-radius: 8px;
   box-shadow: var(--aw-shadow);
   overflow: hidden;
   /* Lock text selection inside the play area (teacher's request, 1/8/2026) —
@@ -192,6 +226,12 @@ html.aw-nhung .aw-below { display: none; }
   padding: 1.6cqw 2.2cqw;
   gap: 0.4cqw;
 }
+/* ⭐ Đợt 258 — luật ĐIỆN THOẠI (khung tràn viền) KHÔNG nằm ở đây mà ở CUỐI
+   FILE, cùng chỗ với khối `.aw-zoomed`. Lý do bắt buộc: `@media` không cộng
+   thêm một chút đặc hiệu nào, mà `.aw-below` (dòng ~1160) và `.aw-as-bars`
+   (dòng ~3810) được khai BÊN DƯỚI đây — đặt khối media ở trên thì hai luật gốc
+   đó thắng ngược và phần lề của chúng lặng lẽ không chạy. Cùng đúng cái bẫy
+   "khối @container phải đặt cuối file" ghi trong `core/HUONG DAN CORE.md`. */
 
 /* ---------- Fullscreen: FILL the screen, capped at 16:9 ----------
    ⭐ Đợt 87 (teacher's brief): fullscreen uses the WHOLE real screen instead of
@@ -6984,3 +7024,103 @@ body.aw-khung-mode{background:#fff}
    Đường "mở lại" không cần ở đây — đóng form là marker DONG đóng cả pop-up
    myLesson. Chế độ ?giao= thường (không &khung=) vẫn giữ nền + nút như cũ. */
 body.aw-khung-mode .aw-giao-nen{display:none}
+
+/* =============================================================================
+   ⭐⭐⭐ Đợt 258 (25/8/2026) — KHỐI CUỐI FILE: ĐIỆN THOẠI TRÀN VIỀN + FULLSCREEN
+   DẠNG ZOOM DÙNG CHUNG.
+
+   ⚠️⚠️ VÌ SAO PHẢI Ở CUỐI FILE, KHÔNG ĐƯỢC DỜI LÊN: cả `@media` lẫn class
+   `.aw-zoomed` đều KHÔNG cộng thêm đặc hiệu nào so với các luật gốc chúng cần
+   đè (`.aw-below` dòng ~1160, `.aw-as-bars` dòng ~3810, `.aw-stage` dòng ~170).
+   Dời lên trên là các luật gốc thắng ngược và **cả khối im lặng không chạy** —
+   0 lỗi console, không dấu vết. Đúng cái bẫy "khối @container phải đặt cuối
+   file" đã ghi trong `core/HUONG DAN CORE.md`.
+   ============================================================================= */
+
+/* ---------- 1. ĐIỆN THOẠI: KHUNG TRÀN VIỀN (thầy chốt 25/8/2026) ----------
+   Thầy: *"diện tích hiển thị trên điện thoại khá bé, vậy mà còn bị cắt bớt cho
+   phần viền trắng lãng phí xung quanh bên trên và trái phải"*.
+
+   Đo thật trên iPhone 375px TRƯỚC khi sửa: khung **343×225**, phí đúng
+   **32px = 8,5% bề ngang**. Bỏ lề đi thì khung thành **375×246**, tức
+   **+21% diện tích** — trên màn bé đó là rất nhiều.
+
+   Ăn cho CẢ act thường LẪN bài giao, vì hai thứ dùng chung một khung do
+   `core/layout.js` dựng (`.aw-page` > `.aw-stage` + `.aw-below`).
+
+   ⚠️⚠️ ĐÂY LÀ LUẬT `@media` BỐ CỤC DUY NHẤT CỦA CẢ FILE. Đợt 218b đã gỡ cái
+   cuối cùng còn sót, nên nếu ai đó thấy bố cục đổi theo bề ngang cửa sổ mà
+   không hiểu vì sao thì chính là khối này. Ngưỡng 700px chọn để không bao giờ
+   chạm tới máy tính bảng nằm ngang hay laptop.
+
+   ⚠️ HAI CHỖ NHÚNG KHÔNG BỊ ẢNH HƯỞNG — đã kiểm bằng độ đặc hiệu, không đoán:
+   · myLesson (`html.aw-nhung .aw-page` = 0-2-0) vẫn thắng `.aw-page` (0-1-0)
+     trong khối này, mà giá trị hai bên vốn đã trùng nhau (lề 0, bo góc 0).
+   · myActivity đổ CSS riêng có `!important` lên `.aw-page`/`.aw-stage`; cột của
+     nó rộng ~384px nên **khối này CÓ nổ bên trong đó** — nhưng `!important`
+     bên kia thắng tuyệt đối. ⛔ Đừng thêm `!important` vào đây: làm thế là cướp
+     mất quyền của myActivity và bóp méo mọi cột act của thầy.
+
+   ⚠️ `.aw-below` được trả lại 12px lề hai bên: khung thì tràn mép, nhưng tên
+   act và hàng nút công cụ mà dính mép màn hình thì vừa xấu vừa khó chạm. */
+@media (max-width: 700px) {
+  .aw-page { max-width: none; padding: 0 0 24px; }
+  /* Tràn mép rồi thì bo góc + viền 1px hết nghĩa: chúng chỉ tồn tại để tách
+     khung khỏi nền trang, mà hai bên nay không còn nền trang nữa. */
+  .aw-stage { border-radius: 0; border: 0; }
+  .aw-below { margin-top: 12px; padding: 0 12px; }
+  .aw-as-bars { padding-left: 12px; padding-right: 12px; margin-top: 32px; }
+}
+
+/* ---------- 2. FULLSCREEN DẠNG ZOOM — NAY LÀ CỦA CHUNG MỌI TEMPLATE ----------
+   Thầy (25/8/2026): *"nút fullscreen của act đang là fullscreen thực sự, nó ảnh
+   hưởng nhiều đến việc thao tác trong trò chơi => cần chuyển về fullscreen dạng
+   zoom như đã từng xây dựng với một số template trước đây"*.
+
+   Cơ chế đã có từ 5/8/2026 (`tpl.useZoomFullscreen` + `setZoomed()` trong
+   `core/engine.js`) nhưng CSS thì nằm trong file riêng của Running word/team.
+   Đợt 258 nhấc nó lên đây thành luật CHUNG và engine bật cho mọi template.
+   Hình dạng dưới đây là bản sao đúng khối `:fullscreen` ở đầu file, chỉ khác là
+   khoá bằng CLASS thay cho pseudo-class — kể cả chốt chặn 16:9.
+
+   ⛔⛔⛔ TUYỆT ĐỐI KHÔNG ĐẶT `z-index` VÀO `.aw-zoomed`. Bản gốc của Running word
+   có `z-index: 9000`, và đó là một cái bẫy đã đo được tận nơi (Đợt 258, A/B
+   trên trang thật):
+     · CÓ z-index  → phần tử trên cùng giữa màn là `.aw-ready-center` (bên TRONG
+                     khung) ⇒ mọi thứ gắn vào `document.body` bị che sạch.
+     · KHÔNG z-index → phần tử trên cùng là chính bản sao vừa thả ra.
+   Mà `document.body` chính là chỗ **`core/flypenalty.js` thả số "−N" của Đợt
+   256** (11 template có trừ điểm), cùng chữ bay của Anagram · Type the answer ·
+   Unjumble · Crossword · Find the match · True/false. Đặt z-index vào đây là
+   **giết sạch hiệu ứng bay trong fullscreen mà không một dòng lỗi nào**.
+   Không cần z-index vẫn đủ che trang nền: `#app` là phần tử được định vị, còn
+   nội dung trang thì nằm TRONG chính nó; các bản sao bay được thả ra SAU nên
+   theo thứ tự vẽ của DOM chúng tự nổi lên trên.
+
+   ⚠️ `.aw-tool-panel`/`.aw-tool-dim` (đắp ở tầng `document.body`) không phải lo:
+   `.aw-below` bị ẩn trong zoom nên không có nút nào mở được bảng — y hệt
+   fullscreen thật xưa nay. Và nếu sau này có đường mở thì chúng cũng NỔI LÊN
+   TRÊN chứ không chui xuống dưới, nhờ đúng việc không có z-index ở đây. */
+.aw-zoomed {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh; height: 100dvh;
+  background: #0b0b0d; overflow: hidden;
+}
+.aw-zoomed .aw-page {
+  width: 100%; height: 100%; max-width: none; margin: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+/* Đặt tường minh CẢ bề ngang lẫn chiều cao cũng vô hiệu hoá luôn `aspect-ratio`
+   của khung (CSS chỉ suy ra chiều CÒN THIẾU từ tỷ lệ — đã có đủ hai thì không
+   còn gì để suy) — đúng ý "phủ kín". `max-width` là chốt chặn 16:9 y như khối
+   `:fullscreen`; `flex-shrink: 0` là HÀNG RÀO chứ không phải trang trí (bẫy số
+   5 trong `core/HUONG DAN CORE.md`: anh em nào còn hiện trong `.aw-page` cũng
+   cướp bề ngang, và mặc định `flex-shrink: 1` sẽ lặng lẽ nhường). */
+.aw-zoomed .aw-stage {
+  width: 100%; height: 100%; border-radius: 0; border: none;
+  flex-shrink: 0;
+  max-width: calc(100vh * 16 / 9);
+  max-width: calc(100dvh * 16 / 9);
+}
+.aw-zoomed .aw-below,
+.aw-zoomed .aw-as-bars { display: none; }

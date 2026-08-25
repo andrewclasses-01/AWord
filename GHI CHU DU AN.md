@@ -5,6 +5,202 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 258 (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE**
+
+Thầy gửi 2 ảnh (khung AWord trên iPhone và trên máy tính) kèm 4 nhận xét, chốt cả 4 qua
+AskUserQuestion rồi gõ *"ok build"*.
+
+| # | Thầy nói | Kết quả |
+|---|---|---|
+| 1 | *"diện tích hiển thị trên điện thoại khá bé, vậy mà còn bị cắt bớt cho phần viền trắng lãng phí xung quanh"* | khung **tràn viền 100%**, +20% diện tích |
+| 2 | *"góc bo khi sử dụng màn rộng là quá lớn"* | **8px cố định** ở mọi cỡ màn (trước: 30–36px) |
+| 3 | *"diện tích act mặc định với màn hình lớn là hơi nhỏ"* | **968px → 1131px** trên cửa sổ 1512×860 (+17% ngang, +37% diện tích) |
+| 4 | *"nút fullscreen… ảnh hưởng nhiều đến việc thao tác… cần chuyển về fullscreen dạng zoom"* | **cả 17 template** dùng zoom, không gọi Fullscreen API nữa |
+
+**Sửa 4 file:** `core/app.css` · `core/engine.js` · `templates/running-word/running-word.css` ·
+`templates/running-team/running-team.css`. Backup `_backup/dot258/`.
+
+---
+
+### 1. HAI LỖI CÓ SẴN ĐỢT NÀY MỚI LÒI RA — nhớ để đừng dựng lại
+
+#### 🔴 (a) `border-radius: 2cqw` trên `.aw-stage` KHÔNG BAO GIỜ đo theo khung — nó đo theo CỬA SỔ
+
+Một phần tử **không thể là container query container của chính nó**. `.aw-stage` khai
+`container-type: size` là để phục vụ các phần tử BÊN TRONG nó; còn `cqw` viết trên chính
+`.aw-stage` thì không tìm được container nào ở trên, nên CSS **âm thầm rơi về cỡ khung nhìn nhỏ**
+(small viewport). Đo thật, cùng một khung:
+
+| Cửa sổ | Bo góc thật | (nếu đo đúng theo khung thì phải là) |
+|---|---|---|
+| 375px | 7,5px | 6,9px |
+| 1512px | **30,2px** | 19,4px |
+| 1798px | **36,0px** | 19,4px |
+
+⇒ Bo góc **phình theo màn hình**, đúng cái thầy nhìn ra. **Đây là lỗi, không phải lựa chọn thiết
+kế** — và nó im lặng hoàn toàn suốt từ đầu dự án. Vá bằng số px cố định (`8px`, thầy chốt).
+
+⚠️ **LUẬT RÚT RA:** viết `cqw` trên CHÍNH phần tử mang `container-type` là viết một con số theo
+**cửa sổ**, không phải theo phần tử. Muốn co giãn theo bề ngang phần tử thì phải bọc thêm một lớp
+mang `container-type: inline-size`, hoặc để JS đặt biến — không có đường thứ ba.
+
+#### 🔴 (b) `z-index: 9000` của công thức zoom cũ GIẤU MẤT MỌI HIỆU ỨNG BAY
+
+Bản zoom gốc (Running word/team, 5/8/2026) đặt `position: fixed; inset: 0; **z-index: 9000**` lên
+`#app`. Nhưng **`core/flypenalty.js` — số "−N" của Đợt 256 — thả con số vào `document.body`**, cùng
+với chữ bay của **Anagram · Type the answer · Unjumble · Crossword · Find the match · True/false**.
+
+Đo A/B trên trang thật (`document.elementFromPoint` giữa màn, đang zoom):
+
+| Ca | Phần tử TRÊN CÙNG |
+|---|---|
+| `#app` có `z-index: 9000` | `DIV.aw-quiz-card` ⇒ **con số bị che sạch** |
+| `#app` không z-index | `DIV.aw-penalty-fly` ⇒ **thấy bình thường** |
+
+⇒ Nếu chép nguyên công thức Running word thành luật chung thì **tính năng mới nhất của thầy biến
+mất trong fullscreen ở cả 11 template có trừ điểm**, không một dòng lỗi nào. Luật chung vì thế
+**KHÔNG có `z-index`**, và hai file template cũng đã bị gỡ dòng đó.
+
+Không cần z-index vẫn đủ che trang nền: `#app` là phần tử được định vị, mà **nội dung trang nằm
+TRONG chính nó**; các bản sao bay được thả ra SAU nên theo thứ tự vẽ của DOM chúng tự nổi lên trên.
+
+⚠️ Hệ quả kèm theo (chưa kiểm chứng được bằng máy, cần mắt thầy): **fullscreen THẬT xưa nay có lẽ
+cũng đang giấu số "−N"** vì phần tử fullscreen được nhấc lên top layer còn `document.body` thì
+không. Nếu đúng thì Đợt 258 **vô tình chữa luôn** — pane tự động không bật được fullscreen thật nên
+không đo được.
+
+---
+
+### 2. TỪNG VIỆC
+
+#### Việc 1 — điện thoại tràn viền (`core/app.css`, khối `@media` CUỐI FILE)
+
+```css
+@media (max-width: 700px) {
+  .aw-page  { max-width: none; padding: 0 0 24px; }
+  .aw-stage { border-radius: 0; border: 0; }
+  .aw-below { margin-top: 12px; padding: 0 12px; }
+  .aw-as-bars { padding-left: 12px; padding-right: 12px; margin-top: 32px; }
+}
+```
+
+Đo iPhone 375×812: **343×225 → 375×246 (+20% diện tích)**, hết cuộn ngang, vẫn đúng tỷ lệ 16:10,5
+(1,5238). Ăn cho **cả act thường lẫn bài giao** vì hai thứ dùng chung khung của `core/layout.js`.
+
+- ⚠️⚠️ **ĐÂY LÀ LUẬT `@media` BỐ CỤC DUY NHẤT CỦA CẢ FILE** (Đợt 218b đã gỡ cái cuối cùng còn sót).
+- ⚠️⚠️ **PHẢI ĐẶT CUỐI FILE.** `@media` không cộng thêm một chút đặc hiệu nào, mà `.aw-below` (dòng
+  ~1160) và `.aw-as-bars` (dòng ~3810) khai **bên dưới** chỗ đặt đầu tiên ⇒ đặt ở trên là hai luật
+  gốc thắng ngược và **phần lề im lặng không chạy**. Đã cắn thật ngay trong đợt này, phải dời xuống.
+  Cùng đúng bẫy "khối `@container` phải đặt cuối file".
+- ⚠️ `.aw-below` được trả 12px lề: khung tràn mép thì được, nhưng tên act + hàng nút dính mép màn
+  hình thì vừa xấu vừa khó chạm.
+- ⚠️ **myActivity CÓ bị khối này nổ vào** (cột của nó rộng ~384px trong webview riêng) — nhưng CSS
+  bên đó toàn `!important` nên thắng tuyệt đối, đã đo tận nơi (nhóm F bàn thử). ⛔ **Đừng thêm
+  `!important` vào khối này**, làm thế là cướp quyền của myActivity.
+- ⚠️ myLesson (`html.aw-nhung`, đặc hiệu 0-2-0) vẫn thắng, mà giá trị hai bên vốn trùng nhau.
+
+#### Việc 2 — bo góc 8px
+
+`.aw-stage { border-radius: 8px }`. Đo lại: 900 · 1280 · 1512 · 1798 · 2400px đều ra đúng **8px**.
+Fullscreen/zoom/nhúng vẫn 0 như cũ (đặc hiệu cao hơn).
+
+#### Việc 3 — khung tự co theo chiều cao cửa sổ, trần 1280px
+
+```css
+:root {
+  --aw-stage-max: min(1280px, calc((100vh  - 118px) * 16 / 10.5));   /* dự phòng */
+  --aw-stage-max: min(1280px, calc((100dvh - 118px) * 16 / 10.5));
+}
+.aw-page { max-width: calc(var(--aw-stage-max) + 32px); … }
+```
+
+- **118px** là con số ĐO, không phải ước: 16 (lề trên) + 18 (`.aw-below` margin-top) + 44 (hàng nút)
+  + 40 (lề dưới).
+- **`+ 32px`** vì `* { box-sizing: border-box }`: `max-width` tính theo border box, nên hộp cha phải
+  cộng lại phần lề trái+phải của chính nó. ⚠️ **Sửa `padding` là phải sửa con số này.**
+- Đo 5 cỡ cửa sổ, đều đúng công thức **và không cửa sổ nào mọc thanh cuộn dọc**:
+
+| Cửa sổ | Khung | Cuộn dọc |
+|---|---|---|
+| 1512×700 | 887px | không |
+| 1512×860 | **1131px** (cũ 968 ⇒ **+17%**) | không |
+| 1600×760 | 978px | không |
+| 1920×1080 | 1280px (chạm trần) | không |
+| 1920×1440 | 1280px (chạm trần) | không |
+
+- ⛔ Trận Fight **không dính**: `.aw-fight-board .aw-page { max-width: none }` (0-2-0) thắng. Đo lại
+  bàn Fight: 2 khung 728×477, `max-width` vẫn `none`.
+
+#### Việc 4 — fullscreen dạng zoom cho mọi template
+
+- `core/engine.js`: `fsBtn.onclick` **bỏ hẳn nhánh API thật**, luôn `setZoomed()`.
+- `core/app.css`: khối `.aw-zoomed` **dạng chung** ở cuối file (bản sao đúng hình dạng khối
+  `:fullscreen`, kể cả **chốt chặn 16:9**), **không z-index**.
+- Hai file Running xoá bản sao trùng, chỉ giữ phần riêng (ẩn nav/bottombar-left, ghim nút Fullscreen
+  góc dưới, `touch-action`).
+- ⛔ **KHÔNG đụng nút fullscreen riêng của trận Fight** (`core/fight.js`, `.aw-fight.is-fs` chạy theo
+  `fullscreenchange`) — thầy chốt giữ nguyên vì đang chạy tốt trên TOMKO.
+- ⚠️ `tpl.useZoomFullscreen` **giữ lại cho tương thích** (Running word/team vẫn khai) nhưng **không
+  còn là điều kiện**. Đọc cờ đó để đoán "game này có zoom không" là **đọc sai kể từ đợt này**.
+- ⚠️ `fsElement()`/`exitFs()` vẫn giữ và vẫn được `exitAnyFullscreen()` gọi (một phiên có thể đang ở
+  fullscreen thật do trận Fight bật).
+- ⚠️ Đánh đổi thầy đã đồng ý trước: **vẫn thấy thanh địa chỉ + thanh thông báo** (không có top layer
+  thật). Đổi lại: không còn cú vuốt mép trên làm rớt fullscreen, không banner "leave/stay
+  fullscreen?", không tự thoát sau hoạt ảnh — đúng 4 tật đã đo trên iPad Chrome hồi 5/8/2026.
+- ⚠️ `.aw-tool-panel`/`.aw-tool-dim` (đắp ở tầng `document.body`) không phải lo: `.aw-below` bị ẩn
+  trong zoom nên không nút nào mở được bảng — y hệt fullscreen thật xưa nay. Và nay chúng **nổi lên
+  trên** chứ không chui xuống dưới, nhờ đúng việc bỏ z-index.
+
+---
+
+### 3. BÀN THỬ (⚠️ `scratch/` bị gitignore ⇒ phiên/máy mới phải dựng lại)
+
+| Bàn thử | Kiểm gì | Điểm |
+|---|---|---|
+| `scratch/dot258-frame.html` | cả 4 việc: mobile · bo góc 5 cỡ màn · công thức khung 5 cỡ cửa sổ + chống cuộn · zoom bấm nút thật · zoom ở 7 template · chống hồi quy 2 chế độ nhúng | **52/52** |
+| `scratch/dot258-penalty-zoom.html` | Quiz THẬT + Points off + trả lời SAI thật, trong zoom: số "−N" có sinh ra, có hiện rõ, có nằm trên cùng, điểm có bị trừ | **18/18** |
+
+**Ba kỹ thuật đáng giữ:**
+- ⭐ **ĐỐI CHỨNG NGƯỢC trong chính bàn thử**: sau khi đo "con số nằm trên cùng", bench **đắp lại
+  `z-index: 9000`** rồi hỏi lại — phải ra "BỊ CHE". Không có phép này thì cả kết luận là vô nghĩa
+  (một bàn đo không biết phản ứng thì ca nào cũng "đạt").
+- ⚠️ **Pane ẩn ⇒ animation đứng im ở KHUNG HÌNH ĐẦU.** Lần chạy đầu bench báo `opacity=0` và trông y
+  hệt một lỗi thật — thực ra khung đầu của cú bay đúng là `opacity: 0` (nó mờ dần hiện lên). Cách
+  đúng: **tua `anim.currentTime` tới giữa đường bay rồi `pause()`** mới đọc. Cấm `requestAnimationFrame`.
+- ⚠️ **Phần tử `pointer-events: none` thì `elementFromPoint` trả về thứ NGAY DƯỚI** — phải tạm bật
+  `pointer-events: auto` mới hỏi đúng phần tử.
+
+**Chạy lại bàn thử cũ** — mọi con số **y hệt bản gốc**, đã chứng minh bằng cách `git stash` rồi chạy
+lại trên bản chưa sửa:
+
+| Bàn thử | Trước Đợt 258 | Sau Đợt 258 |
+|---|---|---|
+| `dot246-flow` | — | **37/37** ✅ |
+| `dot250-assign` | 58/59 | 58/59 (y hệt) |
+| `dot246-forms` | 6/9 | 6/9 (y hệt) |
+| `dot253-giao` | 16/17 | 16/17 (y hệt) |
+
+⚠️ **Ba bàn thử lệch điểm là LỆCH CÓ SẴN, không phải hồi quy**: chúng neo vào ô tích *Show answers*
+ở "hàng cuối game", mà **Đợt 255 đã dời ô đó lên hàng `.aw-as-titlehead`**. Đúng bài học đã ghi:
+*"bàn thử neo vào CHỮ HIỂN THỊ hoặc THỨ TỰ DOM sẽ gãy ở đợt đổi bố cục — neo vào class/vai trò"*.
+Ai rảnh thì sửa lại ba bench đó cho khớp bố cục Đợt 255.
+
+---
+
+### 4. CÒN CHỜ MẮT/TAY THẦY
+
+- ⬜ Mở act trên **iPhone thật** xem khung tràn viền có đúng ý không (máy chỉ giả lập được 375×812).
+- ⬜ Bấm **fullscreen zoom trên TOMKO** và trên iPad: thanh địa chỉ còn hiện có vướng không, và nút
+  Fullscreen (giờ là đường ra DUY NHẤT) có dễ bấm không.
+- ⬜ Nhìn khung **1280px trên màn 86"** — trần này thầy chốt trước khi thấy thật.
+- ⬜ Xác nhận số **"−N" bay thấy được trong fullscreen** trên máy thật (máy đo được ở zoom, nhưng
+  giả thuyết "fullscreen thật xưa nay đang giấu nó" thì chỉ thầy kiểm được).
+- ⬜ Mở một act trong **myActivity chia 2–5 cột** xem cột có đổi gì không (máy đã giả lập cột 384px
+  kèm CSS `!important` của myActivity và đo ra không đổi, nhưng đó là bản dựng lại chứ không phải
+  app thật).
+
+---
+
 ## Đợt 257 (24/8/2026) — ⭐⭐ **TRANG NHÚNG BÁO "EM VỪA NỘP XONG" CHO TRANG MẸ** (cặp myLesson web v1.13.0) — ✅ **ĐÃ COMMIT `6b49fdb` + PUSH**
 
 > 📌 **ĐỢT NÀY DO MỘT PHIÊN CLAUDE SONG SONG LÀM**, cùng buổi với Đợt 256. Phiên đó commit được
