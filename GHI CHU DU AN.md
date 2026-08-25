@@ -12,7 +12,67 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 269** (26/8/2026, ⬜ CHƯA PUSH — đang code tiếp phần đồng bộ đa thiết bị trong cùng đợt). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 271** (26/8/2026, ⬜ CHƯA PUSH — 2 nút bấm đầu tiên cho đồng bộ đa thiết bị). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session`). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 270 + 271 (26/8/2026) — ⭐⭐⭐ **HAI NÚT ĐẦU TIÊN CHO ĐỒNG BỘ ĐA THIẾT BỊ, CẢ HAI SỐNG TRONG MENU (☰)**
+
+**Thầy chốt:** *"Hãy làm tiếp đi"* (tiếp tục sau khi tầng dữ liệu Đợt 269 phần 2 xong). Hỏi icon
+riêng cho nút myActivity qua AskUserQuestion — thầy trả lời ngoài dự kiến: *"Tôi muốn gán tính
+năng này vào 1 dòng trong nút menu (góc trái bên dưới) khi đang ở chế độ showdown, tôi ít sử dụng
+nên không cần quá nổi bật"* — tức là **KHÔNG cần đụng gì tới myActivity cả**, cả hai nút đều là
+dòng trong Menu (☰) sẵn có của chính AWord (nhóm trái thanh dưới khung game — `leftGroup.append(
+menuBtn)`, đúng cái "góc trái bên dưới" thầy tả), y hệt chỗ "Change template" đang đứng.
+
+**Đợt 270 — "Follow live session"** (dành cho THIẾT BỊ NGOÀI, luôn hiện, không cần Showdown):
+- Dòng menu mới, cùng cửa `!session` như "Change template" (công cụ của thầy, học sinh không thấy).
+- Bấm lần 1 (chưa đăng nhập) → toast "Sign in from the library page first", KHÔNG bật theo.
+- Đăng nhập rồi bấm → `window.__awordBridge.followSession(true)`, nhãn đổi "Stop following", toast
+  xác nhận. Bấm lại → tắt, nhãn trở về.
+- ⚠️ `firebase.js` chỉ DYNAMIC-import ngay trong handler — không thêm import tĩnh nào vào
+  `engine.js` (luật 2 v0.9.0: trang học sinh không được tải code chạm tới tầng thư viện).
+
+**Đợt 271 — "Share live session"** (dành cho CỘT ĐANG ĐIỀU KHIỂN, chỉ hiện khi `showdownPick`
+khác null — đang thật sự ở Showdown):
+- Bấm bật → `setSessionPublish(true)` — CHÍNH CỘT NÀY, khi có thay đổi TPL/OPT/STYLE/MODE cục bộ
+  thật (không phải do myActivity dội lại), sẽ ghi lên `sd_session` — đúng nhánh đã xây ở Đợt 269
+  phần 2, chỉ thiếu nút bấm.
+- Bấm tắt → `setSessionPublish(false)` + `clearPublishedSession()` (hàm MỚI, gọi
+  `showdown-setup.js` xoá hẳn tài liệu) — không để thiết bị mới vào sau đọc phải phiên cũ.
+- ⚠️ **Không đổi gì bên myActivity** — cơ chế mirror nội bộ giữa các cột myActivity (bridge cục bộ)
+  vẫn y nguyên như trước, Firestore chỉ là MỘT NHÁNH THÊM VÀO cạnh đó, đúng quyết định "Lai" đã
+  chốt trước khi build (câu hỏi AskUserQuestion đầu tiên của cả loạt việc này).
+
+**Đã test:**
+- `scratch/dot270-follow-menu.html` — **13/13 ĐẠT**: chưa đăng nhập bị chặn đúng cách; đăng nhập
+  rồi bật/tắt đổi nhãn đúng cả hai chiều; trang học sinh (`session:true`) KHÔNG thấy cả "Follow"
+  lẫn "Change template" (đúng gate cũ).
+- `scratch/dot271-share-menu.html` — **11/11 ĐẠT**: chưa vào Showdown KHÔNG thấy "Share live
+  session" (nhưng "Follow" vẫn thấy — hai nút độc lập nhau); tick 1 đội (giả bằng `writePick()`,
+  không cần dựng cả bảng lớp) → mục hiện ra; bật Share xong bấm **Change template THẬT** (Menu →
+  Change template → chọn game) → `sd_session.type` được ghi — chứng minh Đợt 269+270+271 nối đúng
+  nhau, không phải ba mảnh rời; tắt Share → tài liệu `sd_session` bị xoá sạch.
+- Hồi quy: `dot269b-session-relay.html` vẫn 12/12, `dot269-8teams.html` vẫn 32/32 — thêm 2 dòng
+  menu không đụng gì tới hai phần trước.
+
+**BẪY khi build bàn thử (ghi lại phòng tái phạm):** đóng menu bằng `element.remove()` tay không
+reset được biến `menuEl` bên trong closure `engine.js` — lần bấm nút Menu kế tiếp bị hiểu nhầm
+"đang mở, hãy đóng" và không mở lại được. Phải đóng bằng ĐÚNG cách thầy dùng: bấm lại nút Menu
+(toggle thật `menuBtn.onclick = () => (menuEl ? closeMenu() : openMenu())`).
+
+**Đánh đổi / LƯU Ý:** "Share live session" giả định thầy luôn đổi Template/Options/Mode/Style từ
+**ĐÚNG cột đã bật Share** — nếu bật Share ở cột 0 rồi lại thao tác ở cột 2, thay đổi ở cột 2 sẽ
+KHÔNG được phát (đúng thiết kế thầy mô tả: "ít sử dụng", một cột kiêm vai trò "bàn điều khiển"
+duy nhất). Đây không phải bug, là phạm vi đã chốt.
+
+**CHỜ TEST TOMKO/iPad thật:** (a) một máy tính/iPad thật, đăng nhập Google của thầy, mở Menu →
+bấm "Follow live session" → có tự đổi theo myActivity không (b) mở Showdown thật trên 1 cột
+myActivity, bấm "Share live session" → đổi Template/Options thật → xem thiết bị đang follow có
+theo kịp không, có độ trễ mạng thật bao lâu.
+
+⬜ **CHƯA PUSH** — cả 4 đợt (269 phần 1+2, 270, 271) gộp lại thành một loạt commit chờ thầy duyệt
+trước khi đẩy lên trang live.
 
 ---
 

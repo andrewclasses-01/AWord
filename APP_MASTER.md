@@ -8,10 +8,27 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 269 phần 2 — ⬜ CHƯA PUSH, chờ thầy duyệt trước khi làm 2 nút UI)**.
-> ⚠️ Đợt 269 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — hai đợt không đụng
+> Cập nhật lần cuối: **26/8/2026 (Đợt 271 — ⬜ CHƯA PUSH, 2 nút đầu tiên cho đồng bộ đa thiết bị)**.
+> ⚠️ Đợt 269-271 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — các đợt không đụng
 > file nhau, xem cả hai trước khi push.
 >
+> **Đợt 270 + 271** (26/8/2026) — ⭐⭐⭐ **"FOLLOW LIVE SESSION" + "SHARE LIVE SESSION" — cả hai sống
+> trong Menu (☰) sẵn có của AWord, KHÔNG đụng gì tới myActivity.** Thầy: *"Hãy làm tiếp đi"*, rồi
+> khi hỏi icon cho nút myActivity thầy chốt hẳn hướng khác: *"gán tính năng này vào 1 dòng trong
+> nút menu (góc trái bên dưới) khi đang ở chế độ showdown, tôi ít sử dụng nên không cần quá nổi
+> bật"* — hoá ra "góc trái bên dưới" chính là Menu (☰) đã có, cạnh "Change template". **Follow live
+> session** (thiết bị ngoài, luôn hiện): bật `followSession(true)`, chưa đăng nhập thì báo rõ.
+> **Share live session** (cột đang điều khiển, chỉ hiện khi đang ở Showdown): bật
+> `setSessionPublish(true)`, tắt thì xoá hẳn `sd_session` (`clearPublishedSession()` mới). Sửa
+> **1 file**: `core/engine.js`. Test: `scratch/dot270-follow-menu.html` 13/13 ·
+> `scratch/dot271-share-menu.html` 11/11 (kèm phép đo nối thật: bật Share → Change template thật →
+> `sd_session` được ghi, chứng minh 3 đợt 269+270+271 khớp nhau). Hồi quy `dot269b`/`dot269-8teams`
+> vẫn nguyên. ⚠️ Đánh đổi đã chấp nhận: Share chỉ phát đúng từ CỘT đã bật nó — đổi ở cột khác không
+> phát (đúng phạm vi thầy mô tả, không phải bug).
+> ⬜ **CHƯA PUSH — CHỜ TEST TOMKO/iPad thật**: (a) iPad thật bấm Follow có tự theo myActivity không
+> (b) bật Share trên 1 cột myActivity thật, đổi Template/Options, đo độ trễ thiết bị theo kịp.
+>
+> ---
 > **Đợt 269** (26/8/2026) — ⭐⭐ **SỐ ĐỘI SHOWDOWN: 5 → 8** (thầy: *"mở rộng số lượng đội được
 > chia trong showdown lên 8 đội để phù hợp với việc sử dụng nhiều máy"* — dọn đường cho tính năng
 > đang làm tiếp theo, đồng bộ Showdown qua nhiều LOẠI thiết bị: cột myActivity + máy tính rời +
