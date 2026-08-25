@@ -1540,7 +1540,7 @@ toàn màn hình, và thứ bị bấm có thể `stopPropagation`).
 `dispose()`** cho người gọi quên — mà listener trên `document` sống lâu hơn màn hình sinh ra nó chính
 là con-ma Đợt 131.
 
-### Hợp đồng cho template (opt-in — Đợt 178: 8/17 template)
+### Hợp đồng cho template (opt-in — **11/17 template** tính tới Đợt 265)
 
 ```js
 showdownMode: true,     // HẾT — NẾU 3 điều kiện dưới đây đã đúng sẵn.
@@ -1555,11 +1555,38 @@ Engine lấy mọi thứ từ những gì template **đã** làm sẵn:
 
 #### ⚠️⚠️ BA ĐIỀU KIỆN — KIỂM ĐỦ 3 RỒI HÃY BẬT CỜ (Đợt 178)
 
-**(1) `index` phải là VỊ TRÍ CỦA CÂU TRONG MẢNG `review`** — không phải "lượt thứ mấy", càng không
-phải điểm số. `stampReview` đóng dấu **theo vị trí mảng**: `review[i]` thuộc về `memberAt(members, i)`.
-- Nói "vị trí trong `review`" chứ không nói "lượt thứ mấy" là có chủ ý: game cho hỏi lại câu cũ
-  (`repeatUntilCorrect`) thì **câu quay về đúng em đã sở hữu nó**, và đó cũng là cách duy nhất còn
-  khớp được với Show answers (một câu có đúng MỘT hàng, dù hỏi mấy lần).
+**(1) `index` phải là VỊ TRÍ CỦA HÀNG TRONG MẢNG `review`** — không phải điểm số.
+`stampReview` đóng dấu **theo vị trí mảng**: `review[i]` thuộc về `memberAt(members, i)`.
+
+> ### ⛔⛔⛔ ĐỌC KỸ — **ĐỢT 265b (26/8/2026) ĐÃ ĐẢO NGƯỢC NỬA SAU CỦA LUẬT NÀY**
+>
+> Bản Đợt 178 viết ở đây rằng "vị trí trong `review`" **cố ý** khác "lượt thứ mấy", để game cho hỏi
+> lại câu cũ (`repeatUntilCorrect`) thì *"câu quay về đúng em đã sở hữu nó"*. **Nết đó nay đã BỎ.**
+>
+> **Thầy chốt 26/8/2026: "Showdown luôn xoay vòng đều đi, sửa luôn cái Repeat đó."** Cái giá của nết
+> cũ là **vòng xoay**, mà vòng xoay mới là lý do Showdown tồn tại: một câu hỏi lại mang theo row cũ ⇒
+> **gọi lại đúng em cũ**, đo được `A · B · C · A · **A** · B` với đội 3 em.
+>
+> ⇒ **`review` nay là MỘT HÀNG MỖI LƯỢT**, và `index` là **SỐ THỨ TỰ LƯỢT** (tăng đúng 1 mỗi lần một
+> câu được đưa lên màn). Câu hỏi hai lần thì có **hai hàng** — mỗi hàng ghi đúng em đã đối mặt với nó
+> và em ấy trả lời gì. Câu chưa bao giờ được phát xuống **cuối** mảng.
+> Vì `roundMs[i]` của engine cũng đánh theo chính con số ấy, tên trên khung · hàng Show answers ·
+> thời gian từng lượt vẫn là **một con số duy nhất** — hợp đồng Đợt 178 còn nguyên, chỉ đổi định nghĩa.
+>
+> **Bốn game đã chuyển** (`true-false` · `find-the-match` · `open-the-box` · `crossword`) — mỗi game
+> giữ một mảng "kết quả THEO LƯỢT" riêng (`turnLog` / `turnSolved` / `turnOutcome`) tách khỏi mảng
+> "câu này rốt cuộc thế nào" (`state[]` / `boxState[]` / `wordState`).
+> ⚠️ **FIGHT GIỮ NGUYÊN NẾT CŨ** — ở đó TRỌNG TÀI đánh số vòng và ra lệnh nhảy tới vòng `i` bất kỳ,
+> nên row phải đúng bằng `i`. Cả bốn file đều rẽ nhánh bằng `if (fightCtl)`.
+> ⛔ **CHỖ SUÝT HỎNG IM LẶNG**: ba nhánh fight `return` **TRƯỚC** dòng ghi lượt ⇒ quên là **mọi hàng
+> kết quả TRONG TRẬN đọc thành "chưa trả lời"**, không một dòng lỗi nào.
+> ⛔ **VÀ MỘT CON BỌ TỰ ĐẺ**: `if (st.answered) return` ở đầu `roundTimeUp` — với Repeat BẬT thì câu
+> quay lại đã mang `answered = true` nên tiếng chuông bị nuốt và **ván đứng máy**. Đổi định nghĩa của
+> "hàng" thì **mọi cửa `return` sớm đang hỏi "cái này xong chưa?" đều phải đọc lại**: hỏi về CÂU hay
+> hỏi về LƯỢT là hai câu khác nhau kể từ Đợt 265b.
+> ⚠️ `review` và `perQuestion` **phải dài bằng nhau** — engine cắt chúng theo cặp ở chế độ Free
+> (`raw.perQuestion.slice(0, keep)`), lệch độ dài là cắt lệch.
+> ⚠️ Không có câu nào bị hỏi lại thì mọi con số kết quả **y hệt nết cũ** (đo: 8/8 · 8/8 · 9/9).
 - 🔴 **Đã cắn thật**: `true-false.js` gửi `index: liveScore()` và `open-the-box.js` gửi
   `index: score` — **ĐIỂM SỐ**, không ai để ý vì trước Đợt 178 chưa thứ gì đọc nó như một vị trí.
   Đo được: bật Showdown lên, mỗi câu SAI làm tên nhảy về em số 1 (điểm âm bị `Math.max(0,…)` kẹp),
@@ -1572,6 +1599,9 @@ phải điểm số. `stampReview` đóng dấu **theo vị trí mảng**: `revi
 cũng được, Open the box mở hộp nào cũng được) thì `review` xuất theo thứ tự lưới/hộp, **không phải
 thứ tự chơi** ⇒ `stampReview` sẽ gắn tên vào những hàng mà em đó chưa từng thấy. Sửa được, nhưng phải
 viết lại `finish()` cho xuất một hàng cho mỗi LẦN MỞ CÂU — không phải chuyện bật một cái cờ.
+- ✅ **ĐÃ LÀM XONG cho cả ba game** (Open the box + Find the match từ Đợt 186, Crossword từ Đợt 186,
+  và Đợt 265b hoàn tất nốt phần "một hàng mỗi LƯỢT"): `playOrder` giữ thứ tự MỞ, câu chưa ai chạm tới
+  xuống cuối. Ba game đó nay **đều đã BẬT** `showdownMode`.
 
 **(3) PHẢI CÓ CHỖ TRỐNG CHO CÁI TÊN, và phải NHÌN mới biết.** Tên là `.aw-top-centre.is-showdown`,
 `position:absolute`, thụt 22% hai bên trên `.aw-topbar`, cỡ **3.6cqw**. Game vẽ tràn khung (kiểu
@@ -1590,15 +1620,22 @@ arcade) thường đã chiếm sẵn dải đó bằng câu hỏi / băng / tim 
   ruột** của `.aw-top-centre`, nên luật ẩn sẵn của engine không với tới ⇒ phải tự ẩn bằng
   **`.aw-topbar.is-showdown > .aw-<x>-slogan { display: none; }`** (Speaking và Unjumble đã làm).
 
-#### Bảng hiện trạng 17 template (Đợt 178)
+#### Bảng hiện trạng 17 template (cập nhật **Đợt 265**)
 
-| Đang BẬT (8) | Vì sao chưa bật (9) |
+| Đang BẬT (11) | Vì sao chưa bật (6) |
 |---|---|
 | Quiz · Anagram · Type the answer (từ Đợt 155) | **Flying fruit · Maze chase** — plumbing ĐÚNG, chỉ thiếu chỗ đặt tên (xem điều kiện 3) |
-| **Balloon pop** (`z-index` core) | **Crossword · Find the match · Open the box** — học sinh tự chọn thứ tự câu / hỏi lại được ⇒ vi phạm điều kiện 2 |
-| **Gameshow** (+ màu chữ riêng) | **Whack-a-mole** — nhiều chuột cùng lúc, `review` KHÔNG ghi kết quả gì (mọi hàng `answered:false`) |
-| **Speaking · Unjumble** (+ ẩn slogan riêng) | **Running word · Running team** — đã có cơ chế chia đội/xoay lượt RIÊNG; Running team còn xoay vòng theo đúng sổ lớp, chồng thêm là hai vòng mâu thuẫn |
-| **True/false** (đổi `index` từ điểm sang hàng) | **Speaking cards** — không chấm điểm, không có đáp án đúng |
+| **Balloon pop** (`z-index` core) | **Whack-a-mole** — nhiều chuột cùng lúc, `review` KHÔNG ghi kết quả gì (mọi hàng `answered:false`) |
+| **Gameshow** (+ màu chữ riêng) | **Running word · Running team** — đã có cơ chế chia đội/xoay lượt RIÊNG; Running team còn xoay vòng theo đúng sổ lớp, chồng thêm là hai vòng mâu thuẫn |
+| **Speaking · Unjumble** (+ ẩn slogan riêng) | **Speaking cards** — không chấm điểm, không có đáp án đúng |
+| **True/false** (đổi `index` từ điểm sang hàng) | |
+| ⭐ **Crossword · Find the match · Open the box** (từ Đợt 186 — `playOrder` + `setNav({index: row})`; Đợt 265b hoàn tất "một hàng mỗi LƯỢT") | |
+
+⛔ **Ô "vì sao chưa bật" của ba game bàn-chơi ĐÃ HẾT HIỆU LỰC** — bản Đợt 178 ghi chúng *"vi phạm
+điều kiện 2"*; Đợt 186 vá bằng `playOrder`, Đợt 265b vá nốt phần hỏi-lại. Giữ dòng này để ai đọc bản
+cũ ở đâu đó không đi vá lại một thứ đã vá.
+⚠️ **11 game này đều PHẢI cài `ui.setRoundTimeout` + `ui.roundDone`** (Đợt 265) — xem khối
+"HAI HOOK NÀY KHÔNG CÒN LÀ TUỲ CHỌN" ở mục TIME EACH ROUND.
 
 ⚠️ **Showdown và Fight LOẠI TRỪ NHAU** — cả hai cùng định nghĩa "câu này của ai" và cùng giành dòng
 giữa topbar. Vào Fight thì `clearPick()`; `showdownPick` có `!fight` trong điều kiện.
@@ -2255,6 +2292,35 @@ câu trả lời). Ba API, đều no-op khi tắt nên template nối một lầ
 | `ui.setRoundTimeout(fn)` | template (1 lần lúc mount) | engine gọi `fn()` đúng lúc đếm ngược về 0 mà lượt còn mở |
 | `ui.roundTimerMode()` | template | `"none"/"countUp"/"countDown"` nếu cần biết |
 
+> ### ⛔⛔⛔ ĐỢT 265 — HAI HOOK NÀY **KHÔNG CÒN LÀ TUỲ CHỌN** VỚI GAME SHOWDOWN
+>
+> `core/options-panel.js` dựng dải *Time each round* cho **MỌI** game Showdown (điều kiện là
+> `showdown`, **không** phải một cờ template — cố ý, để khỏi phải giữ hai danh sách đồng bộ). Nhưng
+> tới Đợt 265 thì `ui.setRoundTimeout()` **cả repo chỉ có 3/11 template gọi** (Quiz · Anagram · Type
+> the answer). Tám game còn lại: thanh cạn, đồng hồ đứng ở `0,00`, **không ✗, không trừ điểm, không
+> mất tim, nút vẫn bấm được** — và không một dòng lỗi nào, suốt nhiều tháng. Đo được: True/false
+> `2/2` nút còn sống, Open the box `9/9` ô, Crossword `396/396` ô.
+> `ui.roundDone()` cũng đúng 3 game đó gọi ⇒ ở 8 game kia đồng hồ **chạy tiếp suốt cả đoạn chết**
+> (hiệu ứng bay điểm, thẻ đóng lại, cả lớp đang chọn ô) và tính vào giờ của em **vừa trả lời xong**.
+>
+> ⇒ **BẬT `showdownMode` LÀ NHẬN LUÔN HAI NGHĨA VỤ NÀY.** Cả 11 game Showdown nay đều cài đủ.
+> Thêm template Showdown mới thì **kiểm bằng grep, đừng tin trí nhớ**:
+> ```bash
+> grep -rln "setRoundTimeout" templates/   # phải khớp với danh sách showdownMode
+> grep -rln "roundDone"       templates/
+> ```
+> ⚠️ **`roundDone` là cặp bài trùng của `setRoundTimeout`** — cài cái này mà quên cái kia là đồng hồ
+> tính tiền quãng không ai chơi được. Và có `roundDone` rồi thì hai game bàn-chơi (Crossword · Open
+> the box) chỉ còn **một ca** phải xử: chuông không thể rơi vào lúc chưa ai mở ô nào, nên không phải
+> bịa ra luật "app tự chọn ô hộ" — thứ hai game đó không có ở bất cứ đâu khác.
+> ⚠️ **Hết giờ = SAI** (luật thầy, Đợt 174): đi đúng con đường mà chính game đó đi khi trả lời sai —
+> điểm, âm thanh, điểm trừ, mất tim, rồi sang câu tiếp. Hai game đã có sẵn đường hết-giờ của riêng
+> mình thì **dùng lại nó**, đừng viết bản thứ hai: Gameshow `resolveQuestion(null, true)`, Find the
+> match `onTimeUp()`. Hai luật cho một sự kiện là hai luật sẽ trôi khỏi nhau.
+> ⚠️ **Speaking là ngoại lệ có chủ ý**: chuông **không bao giờ** cắt ngang lúc đang thu / đang chấm
+> (`micState`) — cắt là chấm sai em vì độ trễ của chính cái model.
+> ⚠️ **FIGHT không bao giờ gọi `setRoundTimeout`** — ở đó trọng tài khoá bàn im lặng.
+
 **Engine tự lo** (không template nào phải biết):
 - Mở lượt mới **tại `ui.setNav({index})`** — KHÔNG phải `ui.itemChanging` (cái đó chạy sớm 130ms, lúc câu
   cũ mới bắt đầu mờ đi; tính giờ từ đó là tính tiền cả đoạn hoạt cảnh). Gọi lại cùng index là no-op, nên
@@ -2274,8 +2340,25 @@ cạnh ☰ Menu (sau nút bàn phím nếu template có).
 - **Tên học sinh NỔI giữa khoảng trống** dưới game: `.aw-navstack > .aw-top-showdown` là `absolute;
   bottom:100%`, `placeShowdownName()` (engine) đo phần tử `button/textarea/input/.aw-kbd` THẤP NHẤT
   trong playarea rồi canh tên vào chính giữa tới mép ‹ › — mỗi 250ms + mỗi lần sang câu.
-  ⚠️ Canh ngang bằng `left:0; right:0`, **CẤM `translateX(-50%)`** — animation tên rơi
+  ⚠️ Canh ngang bằng inset, **CẤM `translateX(-50%)`** — animation tên rơi
   (`paintShowdownName`) animate `transform`, sẽ đè chết transform nền.
+  ⛔⛔ **ĐỢT 265 — `left:0; right:0` LÀ SAI, và nó âm thầm CẮT TÊN Ở CẢ 10 GAME.** Chỗ neo là
+  `.aw-navstack`, mà đó là **rãnh `auto` của lưới `.aw-bottombar`** ⇒ rộng đúng bằng hàng ‹ › bên
+  trong. Đo trên khung 888px (tên "Đặng Thuỳ Dương Khánh Ly" cần 286px): Quiz **234px**, Crossword và
+  Find the match **124px**, **True/false chỉ 57px** — game này truyền `onPrev:null, onNext:null` nên
+  hai mũi tên KHÔNG hề tồn tại. Thầy tả: *"tên hiện không hết, bị cắt bớt dù chiều ngang khung hình
+  còn rất trống trải"*.
+  ⇒ `placeShowdownName()` nay **tự đo và đặt `left`/`right` ÂM** cho hộp tên rộng đúng bằng
+  `.aw-bottombar` (đo từ thanh dưới chứ không từ stage, để tên vẫn cân giữa KHUNG như luật Đợt 159).
+  ⚠️ **Nới hộp ra thì BẮT BUỘC kèm `pointer-events: none`** (app.css) — hộp nay trải ngang cả khung
+  và lơ lửng ngay trên hàng nội dung thấp nhất của game; không có dòng đó thì nó là một cái nắp vô
+  hình nuốt cú chạm. Ghế trên topbar đã có dòng này từ Đợt 159, ghế dưới chưa cần vì nó bé tí.
+  ⚠️⚠️ **ĐẶT BỀ NGANG TRƯỚC MỌI CỬA `return` SỚM.** Crossword và Find the match truyền `label: ""`
+  + tắt cả hai mũi tên ⇒ trên bảng một trang `.aw-nav` là hàng **RỖNG không có chiều cao**, và cửa
+  `if (!navR.height) return` (vốn của phần canh DỌC) chặn trước ⇒ hai game đó giữ nguyên 124px. Chỉ
+  đảo thứ tự là vá được — chiều cao là chuyện của canh dọc, bề ngang không phụ thuộc nó.
+  ⚠️ Bench đo hộp tên **phải đợi `placeShowdownName()` chạy xong** (nó chạy từ nhịp đồng hồ CÂU,
+  250ms/lần, KHÔNG chạy lúc mount) — đo sớm là đọc trúng bề ngang khởi điểm và tố oan app.
   ⚠️ `.aw-stage-inner:has(.aw-navstack) > .aw-playarea { margin-bottom:5.4cqw }` là **SÀN chống đè**:
   tên rời luồng thì playarea cao thêm, bàn phím TTA từng tụt xuống nằm SAU tên (đo: 17px). Đừng giảm
   số này nếu chưa đo lại TTA.

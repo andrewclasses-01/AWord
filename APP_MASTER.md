@@ -4365,17 +4365,17 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 264** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 265** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **cụm SHOWDOWN 259 → 264**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **cụm SHOWDOWN 259 → 265**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`2700bc1`** (Đợt 264) — đã push + LIVE kiểm chứng |
+> | Commit mới nhất | **`9d649d3`** (Đợt 265) + hồ sơ **`74f9bc2`** — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
-> | Kiểm live | Pages `built` đúng `2700bc1` · **4/4 mã băm SHA-256 khớp** (showdown · showdown-setup · engine · APP_MASTER) · **37/37 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot264-live.html`, **64/65 tài nguyên** nạp từ `aword.andrewclasses.com` — cái còn lại đúng là `fake-firebase.js` cố ý tráo) |
-> | Vùng vừa động tới | **SHOWDOWN — PHÒNG CHỜ + BẢNG ĐỘI**: `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js`. ⚠️ Đợt 264 đổi **hợp đồng dữ liệu**: `sd_round` thêm `mintedAt` và `boards[…].at` nay là NHỊP TIM; `sd_main` thêm `resetAt` |
-> | Trước đó | Đợt 263 cửa Apply + hàng ô tích (`b58ab42`) · Đợt 262 tên trận · Đợt 261 phòng chờ · Đợt 258 KHUNG ACT · Đợt 259 Crossword FIGHT |
+> | Kiểm live | Pages `built` đúng · **11/11 mã băm SHA-256 khớp** — ⚠️ so với **BLOB git** (`git show HEAD:<file>`), KHÔNG so với file làm việc: ổ Windows là **CRLF** còn blob là **LF**, lần so đầu báo LỆCH oan · **14/14 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot265-live.html`, **248/250 tài nguyên** nạp từ `aword.andrewclasses.com` — hai cái còn lại đúng là `fake-firebase.js` + `fake-classes.js` cố ý tráo, và bench TỰ khẳng định điều đó) |
+> | Vùng vừa động tới | ⭐ **SHOWDOWN — TẦNG TRÌNH BÀY + LUẬT CHIA LƯỢT** (khác hẳn 259→264 vốn là tầng Firestore): `core/engine.js` · `core/app.css` · `core/showdown-setup.js` · **8 template** (true-false · unjumble · gameshow · balloon-pop · open-the-box · find-the-match · crossword · speaking). ⚠️ Đợt 265 đổi **HAI hợp đồng**: (a) bật `showdownMode` nay **BẮT BUỘC** cài `ui.setRoundTimeout` + `ui.roundDone`; (b) `review` là **MỘT HÀNG MỖI LƯỢT**, `index` là **SỐ THỨ TỰ LƯỢT** — đảo ngược nửa sau luật Đợt 178 |
+> | Trước đó | Đợt 264 lượt ma + reset toàn lớp (`2700bc1`) · Đợt 263 cửa Apply + hàng ô tích · Đợt 262 tên trận · Đợt 261 phòng chờ · Đợt 259 Crossword FIGHT |
 > | Luật Firestore | **KHÔNG cần đăng lại** — cả cụm chỉ dùng `users/{uid}/items`, id tài liệu SUY RA ĐƯỢC, không `where()`, không composite index |
 > | Việc code dang dở | **KHÔNG CÓ.** Mọi thứ còn treo đều chờ **tay/mắt thầy** — xem mục ⬜ ngay dưới |
 >
@@ -4406,6 +4406,32 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >    `ROUND_BOARD_TTL_MS` 2,5 phút. Hạn 3 tiếng đo từ `mintedAt`, **không** từ `at`.
 >    **"Reset teams" xoá HẲN `sd_round`** và dừng MỌI máy qua mốc `resetAt` — **kể cả máy đang
 >    chơi dở** (thầy chốt 26/8), bằng tấm chặn **TEAMS WERE RESET**.
+>
+> ### 🗺️ ĐỢT 265 GỒM GÌ — **TẦNG KHÁC HẲN 259→264**, đọc trước khi đụng Showdown
+>
+> 259→264 là **tầng Firestore** (ai chơi cùng lượt nào). 265 là **tầng trình bày + luật chia lượt**
+> (cái lớp NHÌN THẤY và ai tới lượt). Sáu việc, tất cả đều bắt đầu từ một câu của thầy: *"kiểm tra
+> các template ở chế độ showdown ngoài Quiz… tôi thấy True False có vấn đề nên muốn check lại tất cả"*
+> — và hoá ra **8/11 game cùng bệnh**, không riêng True/false.
+>
+> | # | Việc | Vùng |
+> |---|---|---|
+> | 1 | **Ô tên rộng bằng ‹ › chứ không bằng khung** ⇒ cắt tên ở cả 10 game (True/false chỉ **57px** trên khung 888px) | `engine.js` `placeShowdownName()` + `app.css` |
+> | 2 | **`ui.setRoundTimeout` chỉ 3/11 template cài** ⇒ hết giờ KHÔNG PHẠT ở 8 game. Anh em của nó `ui.roundDone` cũng vậy | 8 template |
+> | 3 | Đồng hồ CÂU của True/false **chậm hẳn một câu** (`roundBegin` bắn từ `setNav`, mà game chỉ gọi `updateNav` khi ĐIỂM đổi) | `true-false.js` |
+> | 4 | Đổi tên **1,85s** vì tên đi theo nhịp băng chuyền; + một cuộc đua trong `paintShowdownName` | `true-false.js` · `find-the-match.js` · `engine.js` |
+> | 5 | **Reset lớp chưa triệt để**: `saveSetup({...setup})` đóng dấu lớp MỚI lên bảng đội CŨ ⇒ chốt `clash` mù luôn | `showdown-setup.js` |
+> | 6 | ⭐ **XOAY VÒNG ĐỀU** (thầy chốt giữa đợt): `row` nay là SỐ THỨ TỰ LƯỢT | 4 template |
+>
+> **⛔⛔ HAI HỢP ĐỒNG ĐÃ ĐỔI — `core/HUONG DAN CORE.md` đã viết lại, ĐỌC TRƯỚC KHI THÊM TEMPLATE:**
+> 1. **Bật `showdownMode` = nhận luôn nghĩa vụ cài `ui.setRoundTimeout` + `ui.roundDone`.** Dải
+>    *Time each round* được dựng cho MỌI game Showdown (điều kiện `showdown`, không phải cờ template),
+>    nên template không cài là **hỏng im lặng**. Kiểm bằng grep, đừng tin trí nhớ:
+>    `grep -rln "setRoundTimeout" templates/` phải khớp danh sách `showdownMode`.
+> 2. **`review` là MỘT HÀNG MỖI LƯỢT, `index` là SỐ THỨ TỰ LƯỢT** — đảo ngược nửa sau luật Đợt 178
+>    (*"câu quay về đúng em đã sở hữu nó"*). ⚠️ **FIGHT giữ nguyên nết cũ** (trọng tài đánh số vòng);
+>    bốn game rẽ nhánh bằng `if (fightCtl)`, và **ba nhánh fight `return` TRƯỚC dòng ghi lượt** —
+>    quên là mọi hàng kết quả trong trận đọc thành "chưa trả lời".
 >
 > ### ⛔⛔ SÁU LUẬT BẮT BUỘC KHI SỬA TIẾP VÙNG NÀY
 > 1. **Options ▸ Apply nay LUÔN dựng lại ván** (Đợt 263, bỏ hẳn danh sách ngoại lệ của Đợt 174).
@@ -4438,6 +4464,17 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | `dot264-reset.html` | ⭐ **nhịp tim + reset toàn lớp** trên ván THẬT (giật dây `setInterval` đã lên) | 29/29 |
 > | `dot264-live.html` | cả hai thứ trên, nạp module từ `aword.andrewclasses.com` (64/65 tài nguyên) | 37/37 |
 > | `dot264-visual.html` | **dựng cảnh để NHÌN**: tấm chặn TEAMS WERE RESET + dòng phụ mới của LOADING | — |
+> | **`dot265-verify.html`** | ⭐ **Đợt 265**: ô tên rộng bằng thanh dưới ở 10 game · hết giờ có chốt vòng không · đồng hồ CÂU mở lại đúng lúc | 10/10 + 9/10 |
+> | **`dot265-verify-break.html`** | ⭐ **ĐỐI CHỨNG NGƯỢC** — ép lại `left/right:0` ⇒ phải ĐỎ đúng những con số cũ (234 · 57 · 345 · 124px) | 4/4 ĐỎ |
+> | **`dot265-reset.html`** | ⭐ đổi lớp → Reset → Next: hộp thoại Delete phải hiện, màn cột chỉ còn lớp mới (tái hiện được lỗi TRƯỚC khi vá) | 6/6 |
+> | **`dot265b-rotate.html`** | ⭐⭐ **xoay vòng đều** ở cả 4 game khi câu bị hỏi lại | 9/9 |
+> | **`dot265b-results.html`** | ⭐ không có câu nào hỏi lại thì **mẫu số y hệt nết cũ** (8/8 · 8/8 · 9/9) | 3/3 |
+> | **`dot265b-repeat-timeout.html`** | ⭐ Repeat BẬT + hết giờ liên tiếp: ván không đứng máy, 10 lượt `T0…T9` | 2/2 |
+> | `dot265-anagram.html` · `dot265-crossword.html` | hai ca mà chữ ký sân khấu quá thô để thấy — bấm THẬT sau tiếng chuông | 2/2 · — |
+> | `dot265-live.html` | cả ba luật xương sống của Đợt 265, nạp module từ live (**248/250** tài nguyên) | 14/14 |
+> | `dot265-visual.html` | **dựng cảnh để NHÌN**: tên dài "Đặng Thuỳ Dương Khánh Ly" ở True/false + Crossword | — |
+> | `dot265-probe.html` · `dot265-tf.html` · `dot265-round.html` | bàn **CHẨN ĐOÁN**, giữ lại vì chúng ghi con số "TRƯỚC khi vá" | — |
+> | `tf/ftm/otb/cw-fight-test.html` | hồi quy FIGHT — **bắt buộc chạy** nếu đụng `review`/`playOrder` của 4 game Showdown | 17·14·15·8 ✔ |
 > | `dot262-matchid.html` | tên trận = roundId · trận cũ vẫn đọc được · **nối dây thật** | 33/33 |
 > | `dot263-applyready.html` | **cửa Apply trên màn READY** (sinh ra lúc còn đỏ 4/10) | 10/10 |
 > | `dot263-readyrow.html` | hàng ô tích + `elementFromPoint` chứng minh nút ✕ vẫn bấm được | 25/25 |
@@ -4456,6 +4493,10 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >    **LF** ⇒ lệch băm oan 100% số file.
 > 3. Chạy bench bản live (`dot26x-live.html`): importmap chỉ tráo `core/firebase.js`, còn lại nạp
 >    thẳng từ tên miền live.
+> 3b. ⭐ **Đợt 265 — ĐỢI TIỀN ĐỀ RỒI MỚI ĐO.** `placeShowdownName()` chạy từ **nhịp đồng hồ CÂU
+>    (250ms/lần)**, KHÔNG chạy lúc mount ⇒ đo sớm là đọc trúng bề ngang khởi điểm và bench tố oan
+>    app (`quiz 229px`). Trên bản live càng dễ dính vì `ensureTemplate` phải đi mạng. Bench phải
+>    **chờ tới khi inline `left` được đặt** (`waitPlaced()`) rồi mới đo.
 > 4. Đếm tài nguyên live bằng `e.name.startsWith(LIVE)` — ⛔ `indexOf(host) === 0` luôn ra **0** vì
 >    URL mở đầu bằng `https://`. Và **LIỆT KÊ RA** thứ nào KHÔNG từ live: phải chỉ còn đúng
 >    `fake-firebase.js` (Đợt 264: 64/65).
@@ -5231,7 +5272,40 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (cụm SHOWDOWN 259 → 263, 25/8/2026) — ĐÃ LIVE `b58ab42` + hồ sơ `1117c66`.
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 265, 26/8/2026) — ĐÃ LIVE `9d649d3` + hồ sơ `74f9bc2`.
+> KHÔNG CÒN VIỆC CODE DANG DỞ.** Kho sạch, `main` = `origin/main`. Chi tiết đầy đủ ở khối
+> **Đợt 265** trong `GHI CHU DU AN.md`; bản đồ vùng vừa động ở mục **0a ▸ 🗺️ ĐỢT 265 GỒM GÌ**.
+>
+> **A. Chờ TAY/MẮT thầy trên máy thật** (không cái nào chặn cái nào):
+> 1. ⬜ **Nhìn từ cuối lớp 86"**: tên học sinh nay rộng bằng cả khung — có to/rõ hơn thật không,
+>    và ở True/false (game trước đây chỉ còn 57px) có còn bị cắt chữ nào không.
+> 2. ⬜ **Chơi thật một vòng có bật *Time each round* = Count down** ở vài game ngoài Quiz. Hết giờ
+>    phải: báo sai · trừ điểm (nếu bật) · mất tim (nếu bật) · **sang câu tiếp**. Trước Đợt 265 tám
+>    game **không làm gì cả**.
+> 3. ⬜ **Số giây bao nhiêu là vừa** cho từng game — hai game bàn-chơi (Crossword · Open the box)
+>    tính cả thời gian CHỌN Ô, nên có thể cần nới hơn các game khác.
+> 4. ⬜ **Hiệu ứng đổi tên** ở True/false + Find the match nay nhanh như Quiz — có bị "giật" so với
+>    câu đang trượt ra không (nếu có: chỉnh `NAME_MOVE` trong chính file template đó).
+> 5. ⬜ **Đổi lớp rồi bấm Reset ở màn chọn lớp rồi Next** — phải hiện hộp thoại "Delete…?" và màn
+>    cột chỉ còn học sinh lớp MỚI. *(đây là ca thầy báo)*
+> 6. ⬜ **Xoay vòng đều**: bật *Unanswered = Repeat* ở True/false, cố tình trả lời sai — tên phải
+>    vẫn chạy đều 1·2·3·1·2·3, **không em nào bị gọi hai lượt liền**.
+> 7. ⬜ **SPEAKING chưa test tay được** (bàn thử không có micro thật). Logic đã viết: hết giờ = chấm
+>    0 sao, **không bao giờ cắt ngang lúc đang thu/đang chấm**, và chuông là CHỐT (không cho "Try
+>    again" mở lại micro). Cần thầy thử một lượt.
+> 8. ⬜ Test chạm **TOMKO** cho cả cụm.
+>
+> **B. Món nợ kỹ thuật Đợt 265 để lại (đã biết, chưa ai đụng):**
+> 9. ⬜ **17 file `templates/*/GHI CHU *.md` đang lệch nhau rất xa** (True/false dừng ở Đợt 146,
+>    Quiz ở 155, Crossword ở 259) — **nợ có sẵn từ trước Đợt 265**, không phải do đợt này. Hồ sơ bàn
+>    giao THẬT nằm ở `APP_MASTER.md` + `GHI CHU DU AN.md` + `core/HUONG DAN CORE.md` (cả ba đã cập
+>    nhật đủ cho Đợt 265). Ai rảnh thì dọn, hoặc bỏ hẳn tầng ghi chú per-template cho khỏi nói dối.
+> 10. ⬜ `lastWrongText[]` ở `open-the-box.js` nay **chỉ còn nhánh FIGHT đọc** — dọn được nhưng chưa
+>     dọn (đã ghi chú tại chỗ khai).
+>
+> ---
+>
+> ⭐⭐⭐ **Trước đó (cụm SHOWDOWN 259 → 263, 25/8/2026) — ĐÃ LIVE `b58ab42` + hồ sơ `1117c66`.
 > KHÔNG CÒN VIỆC CODE DANG DỞ.** Kho sạch, `main` = `origin/main`. Tất cả những gì còn treo
 > đều **chờ tay/mắt thầy trên máy thật**, và không cái nào chặn cái nào:
 >

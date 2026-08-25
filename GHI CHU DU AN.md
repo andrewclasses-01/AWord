@@ -9703,6 +9703,8 @@ thứ tự gốc.
 tự **lưới/hộp**, mà Showdown giao hàng thứ `n` của `review` cho em thứ `n` ⇒ tên em sẽ gắn vào câu em đó
 **chưa từng làm**. Nay cả 3 game có `playOrder` (thứ tự THẬT SỰ đã chơi) + `setNav({index: hàng trong
 review})`; câu được mở lại **giữ nguyên hàng cũ** nên quay về **đúng em đã sở hữu nó** (luật Đợt 178).
+> ⛔ **LUẬT NÀY ĐÃ BỊ ĐỢT 265b (26/8/2026) ĐẢO NGƯỢC** — nay `review` là MỘT HÀNG MỖI LƯỢT và câu hỏi lại rơi vào **em kế tiếp**. Đoạn dưới giữ nguyên làm SỬ, đừng áp dụng. Xem khối Đợt 265 ▸ VIỆC 6.
+
 Open the box khi đang ở lưới thì trỏ vào hàng của **ô sắp mở**, để cả lớp biết **em nào sắp được chọn**.
 
 ### 7. Đã tự test
@@ -10096,6 +10098,8 @@ trả lời đúng hết, rồi đếm xem có câu nào không bao giờ hiện
 | Câu bị nuốt | **2** (`Germinating…`, `A young plant…`) | **0** |
 
 📌 Nhân tiện xác nhận luôn luật của Đợt 178: câu quay lại về **đúng em đã sở hữu nó** (Ẳnh→Ẳnh,
+> ⛔ **LUẬT NÀY ĐÃ BỊ ĐỢT 265b (26/8/2026) ĐẢO NGƯỢC** — nay `review` là MỘT HÀNG MỖI LƯỢT và câu hỏi lại rơi vào **em kế tiếp**. Đoạn dưới giữ nguyên làm SỬ, đừng áp dụng. Xem khối Đợt 265 ▸ VIỆC 6.
+
 Hạnh→Hạnh), vì `index` là **HÀNG trong `review`** chứ không phải "lượt thứ mấy".
 
 ---
@@ -10156,6 +10160,8 @@ Vá: thêm `rowOf[]` (bản đồ ngược của `order`) + biến `curRow`; `st
 vừa trả lời còn đang bay ra — đọc hàng đợi ở đó là trao tên cho em kế tiếp sớm nửa giây.
 ⚠️ Và là **HÀNG trong `review`**, cố ý không phải "lượt thứ mấy": bật "Repeat until answered" thì câu
 quay lại **đúng em đã sở hữu nó**, và đó cũng là cách duy nhất còn khớp Show answers.
+> ⛔ **LUẬT NÀY ĐÃ BỊ ĐỢT 265b (26/8/2026) ĐẢO NGƯỢC** — nay `review` là MỘT HÀNG MỖI LƯỢT và câu hỏi lại rơi vào **em kế tiếp**. Đoạn dưới giữ nguyên làm SỬ, đừng áp dụng. Xem khối Đợt 265 ▸ VIỆC 6.
+
 🔴 **ĐỐI CHỨNG NGƯỢC**: trả `updateNav()` về `index: liveScore()` ⇒ chuỗi tên hỏng đúng như trên
 (`Ẳnh Hạnh Vy Ẳnh Hạnh **Ẳnh** Vy Ẳnh Hạnh **Ẳnh**`); vá lại ⇒ đúng 8 lần, xoay vòng chuẩn.
 
