@@ -3988,9 +3988,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`__COMMIT258__`** (Đợt 258) — đã push, Pages `built` đúng commit |
+> | Commit mới nhất | **`9a80d4e`** (Đợt 258) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
-> | Kiểm live | **__HASH258__ mã băm SHA-256 khớp** (băm `git show HEAD:<path>`, **không băm file trên máy** — CRLF) |
+> | Kiểm live | **7/7 mã băm SHA-256 khớp** (băm `git show HEAD:<path>`, **không băm file trên máy** — CRLF) + **27/27 phép đo CHẠY TRÊN CHÍNH CSS/JS CỦA BẢN LIVE** (`scratch/dot258-live.html`) |
 > | Vùng vừa động tới | **KHUNG ACT** (Đợt 258) — `core/app.css` · `core/engine.js` · 2 file CSS Running. Chạm **mọi template** (bo góc + cỡ khung + zoom fullscreen) |
 > | Trước đó | **ĐIỂM PHẠT BAY** (Đợt 256, `51acc6f`) · **BÀI GIAO** 245 → 255 · **Đợt 257** (`play.js`, cửa `AWORD:NOP` cho myLesson web v1.13.0) |
 > | Luật Firestore | **KHÔNG cần đăng lại** |
@@ -4016,7 +4016,10 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > `dot258-frame.html` **52/52** (mobile · bo góc 5 cỡ màn · công thức khung 5 cỡ cửa sổ + chống cuộn
 > · zoom bấm nút thật · zoom ở 7 template · chống hồi quy myLesson + myActivity) ·
 > `dot258-penalty-zoom.html` **18/18** (Quiz thật + Points off + trả lời SAI thật trong zoom, **có
-> đối chứng ngược**: đắp lại z-index 9000 thì con số PHẢI bị che).
+> đối chứng ngược**: đắp lại z-index 9000 thì con số PHẢI bị che) ·
+> `dot258-live.html` **27/27** (đo trên **CHÍNH CSS/JS của bản live**: `<link>` thẳng
+> `aword.andrewclasses.com/core/app.css` rồi dựng đúng cây `.aw-page > .aw-stage + .aw-below` trong
+> iframe có bề ngang THẬT — vì **file đúng chưa chắc trình duyệt áp ra đúng**).
 > ⚠️ **Ba bàn thử cũ lệch điểm là LỆCH CÓ SẴN, không phải hồi quy** — `dot250-assign` 58/59 ·
 > `dot246-forms` 6/9 · `dot253-giao` 16/17, **đo được y hệt trên bản chưa sửa** bằng `git stash`.
 > Chúng neo vào ô tích *Show answers* ở "hàng cuối game" mà **Đợt 255 đã dời lên** hàng

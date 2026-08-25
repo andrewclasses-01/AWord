@@ -5,7 +5,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
-## Đợt 258 (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE**
+## Đợt 258 (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE** — ✅ **COMMIT `9a80d4e`, ĐÃ PUSH + LIVE KIỂM CHỨNG** (7/7 mã băm SHA-256 khớp · **27/27 phép đo chạy trên CHÍNH CSS/JS của bản live**)
 
 Thầy gửi 2 ảnh (khung AWord trên iPhone và trên máy tính) kèm 4 nhận xét, chốt cả 4 qua
 AskUserQuestion rồi gõ *"ok build"*.
@@ -159,6 +159,7 @@ Fullscreen/zoom/nhúng vẫn 0 như cũ (đặc hiệu cao hơn).
 |---|---|---|
 | `scratch/dot258-frame.html` | cả 4 việc: mobile · bo góc 5 cỡ màn · công thức khung 5 cỡ cửa sổ + chống cuộn · zoom bấm nút thật · zoom ở 7 template · chống hồi quy 2 chế độ nhúng | **52/52** |
 | `scratch/dot258-penalty-zoom.html` | Quiz THẬT + Points off + trả lời SAI thật, trong zoom: số "−N" có sinh ra, có hiện rõ, có nằm trên cùng, điểm có bị trừ | **18/18** |
+| `scratch/dot258-live.html` | **đo trên CHÍNH CSS/JS CỦA BẢN LIVE** — `<link>` thẳng `aword.andrewclasses.com/core/app.css` rồi dựng đúng cây `.aw-page > .aw-stage + .aw-below`; kèm đọc `engine.js` live để chắc `fsBtn` không còn gọi API thật, và 2 file CSS Running không còn luật `z-index:9000` | **27/27** |
 
 **Ba kỹ thuật đáng giữ:**
 - ⭐ **ĐỐI CHỨNG NGƯỢC trong chính bàn thử**: sau khi đo "con số nằm trên cùng", bench **đắp lại
