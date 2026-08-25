@@ -4398,7 +4398,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`84b2a80`** (Đợt 266 — TIME COST TRONG FIGHT + tiếng đọc) + hồ sơ ngay sau nó |
+> | Commit mới nhất | **`84b2a80`** (Đợt 266 — TIME COST TRONG FIGHT + tiếng đọc) + hồ sơ **`4415539`** — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Pages `built` đúng `4415539` · **9/9 mã băm SHA-256 khớp** (so với **BLOB git** `git show HEAD:<file>`, KHÔNG so file làm việc — CRLF/LF) · **7/7 template chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`scratch/dot266-live.html`, 48–57 tài nguyên mỗi lần từ `aword.andrewclasses.com`, chỉ 2 file tráo tay) |
 > | Trước đó | **`9d649d3`** (Đợt 265) + hồ sơ `74f9bc2` — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
 >
@@ -5359,6 +5360,13 @@ act nào gọi tên HS thì đọc từ đó.
 > 3. ⬜ **Crossword · Open the box, Fight, act VOICE, bật Time cost** — trong lúc clue đang đọc thì
 >    **không bên nào bị trừ**.
 > 4. ⬜ Test chạm **TOMKO** + máy lớp cho cả ba việc trên.
+>
+> ⬜ **VIỆC THỨ TƯ, LỘ RA LÚC KIỂM LIVE — CHƯA VÁ, CHỜ THẦY GẬT:** **Quiz và True/false có rào
+> `ctl.speaks` nhưng KHÔNG có GƯƠNG** (chưa bao giờ nối `onGlow`/`reportVoiceState`/`syncVoice`)
+> ⇒ **nút loa bàn PHẢI nằm im suốt lúc clip đọc** (đo trên bản live: **7/28 · 0/28**), và chạm nút
+> loa bên phải thì đẻ ra **clip thứ hai của riêng nó** thay vì chuyển sang bàn trái. **Nợ có sẵn từ
+> trước Đợt 266**; sau khi tta/ftm/otb đã đi đủ khuôn thì đây là hai chỗ lệch duy nhất còn lại.
+> Vá bằng đúng khuôn đã chạy 3 lần trong đợt này, ~20 dòng mỗi file.
 >
 > ---
 >

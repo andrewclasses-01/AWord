@@ -18,8 +18,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 266 (26/8/2026) — ⭐⭐⭐ **TIME COST TRONG FIGHT CHỈ TRỪ MỘT BÊN: "CLIP ĐANG ĐỌC" LÀ VẾ CỦA CẢ TRẬN, KHÔNG PHẢI CỦA MỘT BÀN**
 
-> ✅ **ĐÃ PUSH** — code `84b2a80`. ⬜ **CHỜ THẦY BẤM TAY** (một trận Fight act VOICE — xem mục
-> VIỆC ĐANG CHỜ cuối khối này).
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `84b2a80`, hồ sơ `4415539`. Pages `built` đúng
+> `4415539` · **9/9 mã băm SHA-256 khớp** (so với **BLOB git**, không so với file làm việc —
+> ổ Windows là CRLF còn blob là LF) · **7/7 template chạy trên CHÍNH MODULE CỦA BẢN LIVE**
+> (`scratch/dot266-live.html`, **48–57 tài nguyên mỗi lần nạp từ `aword.andrewclasses.com`**,
+> chỉ 2 file tráo tay là `fake-voice-clips-long.js` + `tc-spy-live.js`).
+> ⬜ **CHỜ THẦY BẤM TAY** (một trận Fight act VOICE — xem mục VIỆC ĐANG CHỜ cuối khối này).
 > Sửa **9 file**: `core/engine.js` · `core/fight.js` · 7 template (`anagram` · `quiz` ·
 > `true-false` · `type-the-answer` · `find-the-match` · `crossword` · `open-the-box`).
 > Hồ sơ: `core/HUONG DAN CORE.md` (hợp đồng Time cost nay có **điểm nối thứ 5**).
@@ -144,10 +148,37 @@ Hai game này chưa bao giờ khai vế đó ⇒ lúc clue đang được đọc
   digest chênh nhau 3 ký tự). Đã kiểm bằng cách `git stash` toàn bộ code rồi chạy lại — **giống hệt**.
   Và về mặt cấu trúc thì bench đó **không bật Time cost** nên không dòng nào của đợt này chạy ở đấy.
 
+### 8. ⭐ KIỂM BẢN LIVE — và MỘT VIỆC MỚI LỘ RA Ở ĐÂY
+
+`scratch/dot266-live.html` nạp module **thẳng từ `aword.andrewclasses.com`** (chỉ tráo tay 2 file
+để đo được: clip giả + bọc `flyTimeCost`). Chạy đủ 7 template:
+
+| template | clip phát | time cost TRÁI/PHẢI | nút loa SÁNG TRÁI/PHẢI |
+|---|---|---|---|
+| Anagram | 1 | 50 / 50 | 8/28 · 8/28 |
+| Quiz | 1 | 50 / 50 | 7/28 · **0/28** ⬅ |
+| True/false | 1 | 50 / 50 | 7/28 · **0/28** ⬅ |
+| Type the answer | 1 | 50 / 50 | 7/28 · 7/28 |
+| Find the match | 1 | 50 / 50 | 7/28 · 7/28 |
+| Crossword | 1 | 40 / 40 | 6/24 · 6/24 |
+| Open the box | 1 | 40 / 40 | 6/24 · 6/24 |
+
+⇒ **7/7 ĐẠT** cho đúng thứ thầy giao (time cost cân hai bên + đúng một clip).
+
+⬜ **NHƯNG lộ ra việc thứ tư, CHƯA VÁ:** **Quiz và True/false có rào `ctl.speaks` nhưng KHÔNG có
+GƯƠNG** — chúng chưa bao giờ nối `onGlow`/`reportVoiceState`/`syncVoice`, nên **nút loa của bàn
+PHẢI nằm im suốt lúc clip đọc** (0/28), còn cú chạm nút loa bên phải thì phát ra một clip **thứ
+hai của riêng nó** thay vì được chuyển sang bàn trái. Đây là **nợ có sẵn từ trước Đợt 266**, không
+phải do đợt này — nhưng sau khi ba game kia đã đi đủ khuôn thì hai game này thành hai chỗ lệch duy
+nhất còn lại. Vá đúng bằng khuôn đã chạy 3 lần trong đợt này (~20 dòng mỗi file).
+**Chưa làm vì thầy chỉ giao hai lỗi**; chờ thầy gật.
+
 ### ⬜ VIỆC ĐANG CHỜ (Đợt 266)
 * ⬜ **Thầy bấm tay một trận Fight Anagram act VOICE**, bật Time cost, xem hai số có tụt cân nhau không.
 * ⬜ **Thầy nghe thử một trận Fight act VOICE ở Type the answer / Find the match / Open the box** —
   phải nghe đúng MỘT tiếng, và nút loa **cả hai bàn** cùng sáng.
+* ⬜ **Thầy gật/lắc việc thứ tư ở mục 8**: nối GƯƠNG nút loa cho **Quiz + True/false** (nút loa bàn
+  phải hiện đang nằm im suốt clip, và chạm nó thì đẻ ra clip thứ hai).
 * ⬜ Bấm tay trên **TOMKO** + máy lớp.
 
 ---
