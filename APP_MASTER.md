@@ -10,6 +10,17 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 259)**.
 >
+> **Đợt 259b** (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA
+> TRẬN** (thầy, ngay sau Đợt 259). Đợt 259 ép `canExit=false` suốt trận nên ô đó thành
+> **công tắc chết** — thứ Đợt 143 đã cấm. `core/options-panel.js` nay truyền thêm
+> **`inFight`** (boolean) vào `tpl.buildExtraOptions`; Crossword không dựng ô khi trong trận.
+> ⚠️ **CHỈ giấu Ô, KHÔNG đụng `draft.changeCrossword`** — giá trị thầy lưu phải sống sót qua
+> việc mở bảng giữa trận. ⚠️ Khoá vẫn để trong `checkOrder` (vô hại, `orderChecks` chỉ xếp
+> lại ô ĐANG CÓ). Bàn thử `dot259b-optcheck.html` **12/12** (có đối chứng ngược: chơi thường
+> VẪN có ô; Quiz giữa trận không đổi). ⛔ Bài học bàn thử: **`pointerdown` mà không
+> `pointerup` là cú GIỮ, không phải cú CHẠM** — nút Options có `onHold` mở "Edit content?".
+>
+> ---
 > **Đợt 259** (25/8/2026, `d7f816c`) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT.** ✅ **THẦY DUYỆT · ĐÃ COMMIT + PUSH + KIỂM BẢN LIVE** (Pages `built` đúng commit · **5/5 mã băm SHA-256 khớp** · **32/32 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**).
 > Sửa 5 file: `core/fight.js` · `core/app.css` · `core/voice-playback.js` ·
 > `templates/crossword/crossword.js` · `templates/crossword/crossword.css`.

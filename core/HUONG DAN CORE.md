@@ -452,7 +452,15 @@ API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `b
 ⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
 chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
 
-⭐⭐⭐ **PICK TIME — ĐỒNG HỒ CHO ĐỘI ĐANG CHỌN Ô (Đợt 259, 25/8/2026, thầy).**
+⭐⭐ **`buildExtraOptions` NHẬN THÊM `inFight` (Đợt 259b).** Boolean: bảng Options này có đang mở
+giữa một trận đấu không. Dùng để **rút khỏi bảng một tuỳ chọn mà trận đấu ghi đè** — đúng luật cấm
+"công tắc chết" của Đợt 143. Hôm nay chỉ Crossword đọc nó (ô "Change the crossword", vì Đợt 259 ép
+`canExit=false` suốt trận).
+⚠️ **Giấu Ô chứ đừng ghi đè `draft`**: giá trị thầy đã lưu phải sống sót qua việc mở bảng giữa trận.
+⚠️ Khoá của ô đó cứ để nguyên trong `checkOrder` — `orderChecks()` chỉ xếp lại những ô ĐANG CÓ nên
+một khoá không có ô là vô hại.
+
+⭐⭐ **PICK TIME — ĐỒNG HỒ CHO ĐỘI ĐANG CHỌN Ô (Đợt 259, 25/8/2026, thầy).**
 Tuỳ chọn `fightPickTime` trong Options của trận: **1…10 giây, hoặc `0` = ∞** (nếp nhà "0 là không
 giới hạn", giống Time delay và Lives). Giải mã ở **một chỗ duy nhất**: `pickTimeMsOf(o)` — trả về
 `Infinity` ở nấc ∞. **Mặc định `0` (∞)** nên mọi act đã lưu chơi y như trước.

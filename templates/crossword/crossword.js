@@ -268,7 +268,7 @@ const crosswordTemplate = {
 
   // This template's own extra options.
   // Đợt 140 — shared panel builders.
-  buildExtraOptions({ panel, draft, mkSliderCell, addCheck }) {
+  buildExtraOptions({ panel, draft, mkSliderCell, addCheck, inFight }) {
     // "Points off when wrong" (0..100 since Dot 143). 0 = no penalty (drag it
     // to 0 to turn Minus mode off) — no separate checkbox.
     if (draft.minusAmount == null) draft.minusAmount = 0;
@@ -285,8 +285,21 @@ const crosswordTemplate = {
     // `checkOrder` dùng để xếp chỗ (xem addCheck trong core/options-panel.js).
     addCheck("Show corrects", draft.showAnswerWhenWrong !== false,
       v => draft.showAnswerWhenWrong = v, { key: "showCorrects", title: "Show the correct answer after a wrong one" });
-    addCheck("Change the crossword", draft.changeCrossword !== false,
-      v => draft.changeCrossword = v, { key: "changeCrossword" });
+    // ⭐⭐ Đợt 259b (thầy, 25/8/2026: "cần bỏ hẳn ô tích Change the words trong
+    // options fight của crossword") — Ô NÀY KHÔNG ĐƯỢC DỰNG TRONG TRẬN.
+    // Đợt 259 ép `canExit = false` suốt trận (trọng tài mới là chỗ quyết từ nào
+    // đang mở), nên ô tích này ngồi trên bảng hứa một điều mà luật đã bác — đúng
+    // "công tắc chết" mà Đợt 143 cấm. Bỏ ô đi là cách duy nhất trung thực; để nó
+    // mờ đi vẫn là bày ra một thứ không làm gì.
+    // ⚠️ CHỈ giấu Ô, KHÔNG đụng `draft.changeCrossword`. Giá trị thầy đã lưu phải
+    // còn nguyên để lúc chơi thường act vẫn theo đúng ý thầy — ghi đè nó ở đây là
+    // lặng lẽ đổi act chỉ vì thầy lỡ mở bảng Options giữa một trận đấu.
+    // ⚠️ Khoá `changeCrossword` vẫn nằm trong `checkOrder`: ngoài trận ô vẫn dựng
+    // như cũ, và một khoá không có ô tương ứng thì `orderChecks` bỏ qua vô hại.
+    if (!inFight) {
+      addCheck("Change the crossword", draft.changeCrossword !== false,
+        v => draft.changeCrossword = v, { key: "changeCrossword" });
+    }
   },
 
   mount(root, activity, ui) {

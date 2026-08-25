@@ -785,7 +785,19 @@ export function buildOptionsBody(host, {
     tpl.buildExtraOptions({
       panel: grid, draft, el, mkCheck, mkRadioChoice,
       mkCell, mkSeg, mkSliderCell, addCheck,
-      timeCostCell: tpl.timeCost ? buildTimeCostCell : null
+      timeCostCell: tpl.timeCost ? buildTimeCostCell : null,
+      // ⭐ Đợt 259b — IS THIS PANEL OPEN INSIDE A RUNNING MATCH? The panel itself
+      // has known since Đợt 133 (the `fight` argument, used a few lines below to
+      // add the match's own controls), but the TEMPLATE was never told — so a
+      // control that a match OVERRIDES had no way to take itself off the panel.
+      // That is exactly the dead-control trap of Đợt 143 (a switch on screen
+      // claiming to decide something the code has already settled), and
+      // Crossword's "Change the crossword" fell into it the moment Đợt 259 forced
+      // that option off inside a match.
+      // ⚠️ A BOOLEAN, not the `fight` object: a template has no business reaching
+      // into the referee from a builder, and handing it the object would invite
+      // exactly that.
+      inFight: !!fight
     });
   }
 

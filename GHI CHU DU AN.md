@@ -5,6 +5,50 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 259b (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA TRẬN** — ✅ THẦY YÊU CẦU NGAY SAU ĐỢT 259
+
+Thầy: *"cần bỏ hẳn ô tích Change the words trong options fight của crossword nữa"*.
+
+**Vì sao đúng:** Đợt 259 ép `canExit = false` suốt trận (trọng tài mới là chỗ quyết từ nào đang mở,
+và nó mở CÙNG một từ trên hai màn). Ô tích vẫn nằm đó, bấm được, lưu được — nhưng **không đổi được
+gì**. Đó đúng là **"công tắc chết"** mà Đợt 143 đã cấm: một thứ trên màn hình hứa quyết định một
+điều mà code đã chốt xong từ trước.
+
+**Sửa 2 file, toàn bộ là THÊM:**
+
+1. `core/options-panel.js` — `tpl.buildExtraOptions({...})` nay nhận thêm **`inFight`** (boolean).
+   Bảng Options **vốn đã biết** đang trong trận hay không (tham số `fight`, dùng ngay mấy dòng dưới
+   để dựng phần Options của trận), nhưng **template thì chưa bao giờ được báo** — nên một tuỳ chọn
+   bị trận đấu ghi đè không có cách nào tự rút khỏi bảng.
+   ⚠️ Truyền **BOOLEAN, không truyền object `fight`**: template không có việc gì phải với tay vào
+   trọng tài từ một hàm dựng bảng, và đưa cả object là mời gọi đúng chuyện đó.
+2. `templates/crossword/crossword.js` — `buildExtraOptions` nhận `inFight` và **không dựng** ô tích
+   khi đang trong trận.
+   ⚠️ **CHỈ GIẤU Ô, KHÔNG ĐỤNG `draft.changeCrossword`.** Giá trị thầy đã lưu phải còn nguyên để lúc
+   chơi thường act vẫn theo đúng ý thầy — ghi đè nó ở đây là lặng lẽ đổi act chỉ vì thầy lỡ mở bảng
+   Options giữa một trận đấu. Đã đo: act lưu `false` thì sau khi mở bảng giữa trận vẫn là `false`.
+   ⚠️ Khoá `changeCrossword` **vẫn nằm trong `checkOrder`** — ngoài trận ô dựng như cũ, và một khoá
+   không có ô tương ứng thì `orderChecks()` bỏ qua vô hại (nó chỉ xếp lại những ô ĐANG CÓ).
+
+**Bàn thử `scratch/dot259b-optcheck.html` 12/12 ĐẠT**: chơi thường VẪN có ô (đối chứng ngược) ·
+trong trận ô **biến mất hẳn** chứ không phải làm mờ · các ô tích khác còn đủ · phần Options của trận
+(Pick time · Speed bonus · Fight content) vẫn dựng đủ · giá trị đã lưu không bị động vào · **Quiz
+giữa trận không bị ảnh hưởng** (khoá `inFight` không rò sang game khác).
+Hồi quy: `dot256-smoke` 48/48 · `dot255-title` 18/0 · `dot259-fight` 49/49 · `dot259-crossword` 0 HỎNG.
+
+### 🔴 Bàn thử tự nói dối LẦN THỨ TƯ — `pointerdown` mà không `pointerup` là GIỮ, không phải CHẠM
+
+Bản đầu ra 10/12: phép **"chơi thường vẫn có ô tích"** báo HỎNG với một bảng **rỗng**. Code hoàn
+toàn đúng — bàn thử mở nhầm pop-up. Nút ☰ Options mang thêm **cử chỉ GIỮ LÂU** (`onHold` trong
+`core/engine.js`) mở pop-up **"Edit content?"**, và `canEditNow()` chỉ đúng **NGOÀI trận**. Bàn thử
+bắn mỗi `pointerdown` rồi ngồi chờ ⇒ đang **GIỮ** nút: trong trận vô hại (cử chỉ giữ bị khoá) nên
+mục 2 vẫn đạt, còn ở chơi thường thì mở ra pop-up Edit và đọc được 0 ô tích.
+⇒ **Luật cho mọi bàn thử sau: một cú CHẠM là `pointerdown` RỒI `pointerup` ngay.** Chỉ bắn nửa đầu
+là đang thử một cử chỉ khác hẳn. Và **đừng `querySelector` cái pop-up đầu tiên trong DOM** — chọn
+đúng cái có nội dung mình cần (`.aw-opt-grid` / `[data-aw-check]`).
+
+---
+
 ## Đợt 259 (25/8/2026) — ✅ **THẦY DUYỆT · COMMIT `d7f816c` · ĐÃ PUSH + LIVE KIỂM CHỨNG** — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: THANH GIỜ CHỌN Ô · BỎ LÀM NHẠT · CHỮ CÓ SẴN NHẤP NHÁY · GỠ CHỐT 20 GIÂY LÀM TỤT BÀN PHÍM · CHỈ MỘT VOICE · ĐỘI ĐI TRƯỚC NGẪU NHIÊN**
 
 Thầy đọc lại Crossword ở cả 5 mode rồi gửi 6 việc một lượt. Ba điểm phạm vi được chốt qua

@@ -78,6 +78,12 @@ cứng thì phải GHI THẲNG sự kiện, đừng đoán ngược từ vị tr
    `!fightCtl || fightCtl.speaks(fightSide)`; chạm nút loa ở bàn không-phát thì `requestVoiceToggle`.
    Kết quả: **một clip duy nhất cho cả trận** (trước là 2, nghe lồng nhau), hai nút loa vẫn sáng đều.
 
+5. **(Đợt 259b) Ô tích "Change the crossword" KHÔNG dựng khi đang trong trận** — Đợt 259 đã
+   ép `canExit=false` suốt trận nên ô đó là **công tắc chết**. `buildExtraOptions` nay nhận
+   thêm `inFight` từ `core/options-panel.js`. ⚠️ **Chỉ giấu Ô, KHÔNG ghi đè
+   `draft.changeCrossword`** — giá trị thầy lưu phải sống sót qua việc mở bảng giữa trận.
+   Bàn thử `scratch/dot259b-optcheck.html` **12/12**.
+
 ### Đổi ở core mà người sửa game này phải biết
 
 - **Lỗi tụt bàn phím KHÔNG nằm ở game này.** Thủ phạm là `later(advanceRound, LATE_LIMIT_MS)` — 20
