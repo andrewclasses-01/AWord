@@ -87,17 +87,21 @@
 /* =============================================================
    FIGHT MODE — "PICK TURN" (Đợt 183, the teacher's own rules)
 
-   `.is-fightwait` = it is the OTHER team's turn to choose, so this board's grid
-   sits at half strength and its boxes are `disabled` (open-the-box.js keeps the
-   two in step). The teacher asked for exactly "mờ đi 50%".
-   ⚠️ opacity, NOT `filter`: a filter opens a stacking context over the play
-   area — the trap recorded in core/HUONG DAN CORE.md.
-
    `.is-fightlost` on the question card = this board has answered and is holding
    its ✓/✗ back while the other team is still choosing; the grey is the "your go
    is over" cue. It comes off when the marks finally go up.
+   ⚠️ opacity, NOT `filter`: a filter opens a stacking context over the play
+   area — the trap recorded in core/HUONG DAN CORE.md.
+
+   ⭐⭐⭐ Đợt 259c (thầy, 25/8/2026: "Open the box cũng bỏ làm nhạt luôn cho đồng
+   bộ") — `.aw-otb-card.is-fightwait { opacity: .5 }` ĐÃ BỎ KHỎI FILE NÀY, cùng
+   luật với Crossword ở Đợt 259. Cái mờ 50% từng là dấu hiệu DUY NHẤT nói ai đang
+   tới lượt chọn; nay thanh **PICK TIME** trên đầu mỗi bàn (`.aw-fight-pickbar`,
+   core/app.css) làm việc đó và nói được nhiều hơn — vừa ai, vừa còn bao lâu.
+   ⛔ Bàn không tới lượt VẪN bấm không ăn: việc đó luôn thuộc về thuộc tính
+   `disabled` của từng ô trong `applyPickTurn()` (open-the-box.js), chưa bao giờ
+   thuộc về lớp CSS này. Đã đo tận nơi trước khi bỏ.
    ============================================================= */
-.aw-otb-card.is-fightwait { opacity: .5; }
 .aw-otb-qcard.is-fightlost { opacity: .55; }
 
 .aw-otb-grid {

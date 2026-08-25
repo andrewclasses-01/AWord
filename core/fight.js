@@ -1030,8 +1030,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // ⚠️ Đợt 259 — IT NO LONGER HAS TO FADE. Until now the fade was the ONLY cue in
   // the room saying whose turn it was, so every pick-turn template owed one; the
   // pick-time bar above each board now says it, and Crossword has dropped its own
-  // fade at the teacher's request. Open the box still fades, and that is fine —
-  // this call has never dictated what a board does with the news.
+  // fade at the teacher's request, and Open the box dropped its own at Đợt 259c —
+  // so today NO pick-turn template fades. That is a choice each template makes,
+  // though: this call has never dictated what a board does with the news.
   // ⚠️ THE SINGLE FUNNEL for a change of turn, which is why the clock is started
   // from here rather than from each of the three callers.
   function paintPickTurn() {

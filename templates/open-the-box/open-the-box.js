@@ -640,23 +640,32 @@ function mountQuestions(root, activity, ui) {
       if (boxState[i] === "unplayed" && !ended) press(box, () => tapBox(i));   // instant on touch-down — core/press.js
       grid.append(box);
     });
-    if (fightCtl && !fightMyTurn) card.classList.add("is-fightwait");
+    // ⭐⭐ Đợt 259c (thầy, 25/8/2026: "Open the box cũng bỏ làm nhạt luôn cho đồng
+    // bộ") — DÒNG `card.classList.add("is-fightwait")` ĐÃ BỎ khỏi đây, cùng lượt
+    // với anh em của nó trong applyPickTurn() (xem chú thích dài ở đó).
     card.append(grid);
     return { card, grid };
   }
 
   function tapBox(i) {
     if (!fightCtl) { openBox(i); return; }
-    if (!fightMyTurn) return;                    // faded board: not our turn to choose
+    if (!fightMyTurn) return;                    // not our turn to choose — the tap goes nowhere
     fightCtl.boardPicked(fightSide, i);          // the referee opens it on both boards
   }
 
   // FIGHT: whose turn it is changed (or the round ended). Repaint WITHOUT
   // rebuilding — a rebuild here would replay the whole grid pop entrance in
   // the middle of a match (the ⚠️ rule in core/HUONG DAN CORE.md).
+  //
+  // ⭐⭐⭐ Đợt 259c (thầy, 25/8/2026) — HIỆU ỨNG LÀM NHẠT 50% ĐÃ BỎ HẲN, cho đồng bộ
+  // với Crossword (Đợt 259). Thanh **PICK TIME** trên đầu mỗi bàn (`.aw-fight-pickbar`,
+  // core/fight.js) nay là cái báo lượt, và nó nói được nhiều hơn cái mờ: vừa cho
+  // biết ai đang chọn, vừa cho biết còn bao lâu.
+  // ⛔⛔ BÀN KHÔNG TỚI LƯỢT VẪN INERT — và luôn luôn là nhờ DÒNG `disabled` ngay
+  // dưới đây, chưa bao giờ nhờ lớp CSS mờ. Đã đo tận nơi trước khi bỏ
+  // (`scratch/dot259c-otb.html` mục 6): bàn không tới lượt có **9/9 ô disabled**,
+  // và một cú chạm thật vào đó **không mở được câu nào**. Đừng gỡ dòng dưới.
   function applyPickTurn() {
-    const card = root.querySelector(".aw-otb-card");
-    if (card) card.classList.toggle("is-fightwait", !!fightCtl && !fightMyTurn);
     root.querySelectorAll(".aw-otb-box").forEach((b, i) => {
       b.disabled = boxState[i] !== "unplayed" || ended || (!!fightCtl && !fightMyTurn);
     });

@@ -8,8 +8,27 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 259)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 259c)**.
 >
+> **Đợt 259c** (25/8/2026) — ⭐ **OPEN THE BOX BỎ NỐT HIỆU ỨNG LÀM NHẠT** (thầy: *"cho đồng bộ"*).
+> ⭐ Nửa sau của yêu cầu — thanh giờ chọn ô — **đã có sẵn từ Đợt 259**: nó nằm ở tầng
+> `core/fight.js` nên game nào khai `tpl.fightPick` là tự có. Đã **ĐO chứ không đoán** trước khi
+> trả lời thầy: `scratch/dot259c-otb.html` mục 2–4 đạt sạch (thanh đúng bên · nấc 3s cạn đúng
+> 3000ms · nấc 1s lật lượt 4 lần trong 3,6 giây · ∞ đứng đầy, không tự đổi lượt).
+> ⛔⛔ **ĐO "BÀN KHÔNG TỚI LƯỢT VẪN BẤM KHÔNG ĂN" TRƯỚC KHI GỠ CÁI MỜ** — cái mờ và cái khoá là hai
+> thứ khác nhau, và ở game này khoá luôn nằm ở `disabled` của TỪNG Ô trong `applyPickTurn()`. Đo
+> trước và sau khi bỏ: **9/9 ô khoá**, chạm thật vào bàn đó **không mở được câu nào**.
+> ⚠️ Bỏ ở **HAI** chỗ trong `open-the-box.js` (lúc đổi lượt **và** lúc dựng lưới) + 1 luật CSS.
+> ⚠️⚠️ **5 CHÚ THÍCH Ở 5 FILE NAY ĐÃ SAI SỰ THẬT** (*"Open the box vẫn giữ hiệu ứng nhạt"*, viết ở
+> Đợt 259) — đã vá cùng lượt. ⇒ **Luật: đổi một hành vi thì `grep` ngay câu MÔ TẢ hành vi CŨ trên
+> toàn repo**, đừng chỉ sửa code; trong dự án mà chú thích là tài liệu chính, một dòng sai còn tệ
+> hơn không có dòng nào.
+> ⇒ Nay **KHÔNG game lượt-chọn nào còn làm nhạt** — nhưng đó vẫn là quyết định của TỪNG template,
+> `core/fight.js` chưa bao giờ ra lệnh một bàn phải làm gì với `setPickTurn`.
+> Bàn thử `dot259c-otb.html` **21/21**; hồi quy `dot256-smoke` 48/48 · `dot259-fight` 49/49 ·
+> `dot259b-optcheck` 12/12.
+>
+> ---
 > **Đợt 259b** (25/8/2026, `9553879`, ĐÃ PUSH + LIVE: 6/6 mã băm khớp · 37/37 phép chạy trên module bản live) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA
 > TRẬN** (thầy, ngay sau Đợt 259). Đợt 259 ép `canExit=false` suốt trận nên ô đó thành
 > **công tắc chết** — thứ Đợt 143 đã cấm. `core/options-panel.js` nay truyền thêm
@@ -32,7 +51,7 @@
 > `tpl.fightPick`; ⚠️ chú thích cũ trong `fight.js` ghi là ba, **Find the match là vòng thường**.
 > **(2)** Bỏ hẳn hiệu ứng làm nhạt 50% của Crossword (`.is-fightwait`) — thanh giờ là cái báo lượt
 > nay, và nó nói được nhiều hơn. ⛔ Bàn **vẫn inert** khi không tới lượt (`fightMyTurn`), chỉ đổi
-> phần vẽ. Open the box giữ nguyên hiệu ứng nhạt của nó.
+> phần vẽ. ⚠️ Open the box bỏ nốt hiệu ứng nhạt của nó ở **Đợt 259c** (xem khối trên cùng).
 > **(3)** Chữ CÓ SẴN (ô giao từ câu đã mở) **nhấp nháy tới khi con trỏ đi qua** (`is-given-wait`) — ⛔ **nền ô giữ nguyên**, thầy chốt vậy. ⚠️ Điều kiện KHÔNG chỉ là `i >= curCell`: `advanceCursor()` dừng cứng ở ô cuối nên ô sẵn nằm CUỐI từ sẽ nhấp nháy mãi — phải có thêm `typedGivens` ghi thẳng "đã gõ qua ô này" (ca hiểm tự bắt được khi chạy lại bàn thử).
 > **(4) ⭐⭐⭐ LỖI TỤT BÀN PHÍM — THỦ PHẠM LÀ `later(advanceRound, LATE_LIMIT_MS)` TRONG
 > `boardPicked`.** 20 giây sau khi mở một từ mà **chưa ai trả lời**, trọng tài đóng vòng và gọi

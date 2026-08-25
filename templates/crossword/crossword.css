@@ -38,7 +38,7 @@
    ⛔ The board is still INERT on the other team's turn — that has never been the
    fade's job (`fightMyTurn` in crossword.js's onCellClick is), so nothing about
    the rules changed here, only the paint.
-   ⚠️ Open the box keeps its own `.is-fightwait`; that game was not in scope.
+   ⚠️ Open the box bỏ nốt hiệu ứng nhạt của nó ở Đợt 259c (thầy: "cho đồng bộ").
    ============================================================= */
 .aw-cw-wrap.is-fightlost { opacity: .55; }
 

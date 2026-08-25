@@ -506,7 +506,8 @@ trong `endPickRound()`.
 
 ⚠️ **`setPickTurn` KHÔNG BẮT BUỘC PHẢI LÀM NHẠT NỮA (Đợt 259).** Bảng trên ghi "bàn chưa tới lượt mờ
 50%" là mô tả những gì TEMPLATE tự làm, chưa bao giờ là luật của `fight.js`. Crossword **đã bỏ hẳn**
-hiệu ứng nhạt (thanh PICK TIME báo lượt thay nó, và nói được nhiều hơn); Open the box vẫn giữ. Bàn
+hiệu ứng nhạt (thanh PICK TIME báo lượt thay nó, và nói được nhiều hơn), và **Open the box bỏ nốt ở
+Đợt 259c** — nay KHÔNG game lượt-chọn nào còn làm nhạt. Bàn
 không tới lượt **vẫn inert** — đó là việc của cờ `fightMyTurn` trong template, không phải của lớp CSS.
 
 ⭐⭐ **HỢP ĐỒNG VOICE: `attach` NAY CÓ THÊM `toggleVoiceRemote(clipId)` · `syncVoice(state)`.**

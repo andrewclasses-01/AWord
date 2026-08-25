@@ -5,6 +5,62 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 259c (25/8/2026) — ⭐ **OPEN THE BOX: BỎ NỐT HIỆU ỨNG LÀM NHẠT, CHO ĐỒNG BỘ VỚI CROSSWORD**
+
+Thầy: *"Open the box cũng bỏ làm nhạt luôn cho đồng bộ và thêm thanh thời gian tương tự"*.
+
+### ⭐ Nửa sau của yêu cầu ĐÃ CÓ SẴN — và đã đo chứ không đoán
+
+**Thanh giờ chọn ô cho Open the box đã chạy từ Đợt 259 rồi**, vì đợt đó thầy chốt áp cho **cả hai**
+game lượt-chọn và tôi làm ở tầng `core/fight.js` (game nào khai `tpl.fightPick` là có). Nhưng
+**tôi chưa từng bấm tay game đó**, nên trước khi trả lời "đã có rồi" thì dựng bàn thử đo trước:
+`scratch/dot259c-otb.html` mục 2–4 **đạt sạch** — thanh đúng bên · nấc 3s cạn đúng 3000ms · nấc 1s
+lật lượt **4 lần trong 3,6 giây** · nấc ∞ đứng đầy + không tự đổi lượt.
+⇒ Việc thật sự phải làm chỉ còn **một nửa**: bỏ hiệu ứng nhạt.
+
+### Bỏ hiệu ứng nhạt — 2 file, và một phép đo BẮT BUỘC trước khi bỏ
+
+`templates/open-the-box/open-the-box.js` (2 chỗ) + `open-the-box.css` (1 luật).
+
+⛔⛔ **PHẢI CHẮC "BÀN KHÔNG TỚI LƯỢT VẪN BẤM KHÔNG ĂN" TRƯỚC KHI GỠ CÁI MỜ.** Cái mờ và cái khoá là
+hai thứ khác nhau, nhưng đọc code vội thì rất dễ tưởng cái mờ đang giữ vai trò khoá. Ở game này,
+khoá luôn nằm ở thuộc tính `disabled` của TỪNG Ô trong `applyPickTurn()`. Đã đo tận nơi **trước khi
+sửa** (`dot259c-otb.html` mục 6): bàn không tới lượt có **9/9 ô `disabled`**, và một cú **chạm thật**
+vào đó **không mở được câu nào**. Sau khi bỏ mờ, đo lại: y nguyên.
+
+⚠️ Bỏ ở **hai** chỗ, không phải một: `applyPickTurn()` (lúc đổi lượt) **và** đoạn dựng lưới
+(`if (fightCtl && !fightMyTurn) card.classList.add("is-fightwait")` — chỗ này chỉ chạy lúc dựng lại
+lưới nên bỏ sót thì lỗi chỉ ló ra ở đúng ván bàn được dựng lại giữa trận).
+
+### ⚠️ 5 CHÚ THÍCH NAY ĐÃ SAI SỰ THẬT — đã vá cùng lượt
+
+Đợt 259 viết vào **năm** chỗ rằng *"Open the box vẫn giữ hiệu ứng nhạt"* (`core/fight.js` ·
+`core/HUONG DAN CORE.md` · `crossword.css` · `crossword.js` · `APP_MASTER.md`). Sau đợt này chúng
+đều **sai**. Trong dự án mà chú thích là tài liệu chính, một dòng sai còn tệ hơn không có dòng nào —
+người đọc sau sẽ tin nó và đi tìm nhầm chỗ. **Đã sửa cả năm.**
+⇒ **Luật: đổi một hành vi thì `grep` ngay câu MÔ TẢ hành vi cũ trên toàn repo**, đừng chỉ sửa code.
+
+Nay **KHÔNG game lượt-chọn nào còn làm nhạt**. Nhưng đó vẫn là quyết định của TỪNG template —
+`core/fight.js` chưa bao giờ ra lệnh một bàn phải làm gì với `setPickTurn`.
+
+### Bàn thử
+
+`scratch/dot259c-otb.html` **21/21 ĐẠT** — hai bàn `opacity 1 / 1` · không bàn nào còn
+`is-fightwait` · ⛔ bàn không tới lượt vẫn **9/9 ô khoá** và chạm vào **không mở gì** · chạm đúng
+lượt thì trọng tài mở câu trên **cả hai** bàn · thanh chọn tắt sau khi đã chọn.
+Hồi quy: `dot256-smoke` **48/48** (có Open the box ở mục B) · `dot259-fight` 49/49 ·
+`dot259b-optcheck` 12/12.
+
+#### 🔴 Bàn thử tự nói dối lần thứ năm — TỰ BỊA HÌNH DẠNG NỘI DUNG
+
+Lần chạy đầu ra 19/21 với **"0 bàn mount được"**: bàn thử viết `answers: ["2","3"], correct: 0`
+(hình dạng của **Quiz**) trong khi Open the box dùng `answers: [{ text, correct }]`. Hai bàn không
+mount nổi ⇒ mọi phép đo bên dưới báo HỎNG trong lúc **chưa hề đo được gì**.
+⇒ **Luật: dùng `sample-<game>.js` của chính game làm nội dung bàn thử**, đừng tự bịa — bộ mẫu là
+thứ luôn đúng hình dạng và luôn được cập nhật cùng game.
+
+---
+
 ## Đợt 259b (25/8/2026) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA TRẬN** — ✅ THẦY YÊU CẦU NGAY SAU ĐỢT 259 · COMMIT `9553879` · ĐÃ PUSH + LIVE
 
 Thầy: *"cần bỏ hẳn ô tích Change the words trong options fight của crossword nữa"*.

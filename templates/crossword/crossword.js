@@ -1077,7 +1077,8 @@ const crosswordTemplate = {
     // thing: put `.is-fightwait` on the board that was not choosing, which drew the
     // 50% fade the teacher has now dropped in favour of the PICK TIME bar. The
     // `is-fightwait` rule is gone from crossword.css in the same breath.
-    // ⚠️ Open the box keeps ITS fade — that game was not part of this request, and
+    // ⚠️ Open the box dropped its own fade one step later (Đợt 259c, "cho đồng bộ"),
+    // so no pick-turn game fades today. It stays each template's own call, though —
     // core/fight.js has never dictated what a board does with `setPickTurn`.
 
     if (fightCtl) {

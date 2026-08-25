@@ -1,5 +1,22 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
+## 25/8/2026 — BỎ HẲN HIỆU ỨNG LÀM NHẠT BÀN KHÔNG TỚI LƯỢT (Đợt 259c của dự án)
+
+Thầy: *"Open the box cũng bỏ làm nhạt luôn cho đồng bộ và thêm thanh thời gian tương tự"*.
+
+- **Thanh giờ chọn ô đã có sẵn từ Đợt 259** — nó nằm ở `core/fight.js` (`fightPickTime`,
+  1–10s hoặc ∞, **mặc định ∞**) và tự áp cho mọi game khai `tpl.fightPick`, nên game này
+  vốn đã có. Đã ĐO chứ không đoán: `scratch/dot259c-otb.html` mục 2–4.
+- **Bỏ `.is-fightwait`** ở `open-the-box.js` (**2 chỗ**: `applyPickTurn()` và đoạn dựng
+  lưới) + luật CSS trong `open-the-box.css`. Thanh PICK TIME trên đầu mỗi bàn là cái báo
+  lượt nay.
+- ⛔⛔ **BÀN KHÔNG TỚI LƯỢT VẪN BẤM KHÔNG ĂN, và luôn là nhờ `disabled` của TỪNG Ô trong
+  `applyPickTurn()`** — chưa bao giờ nhờ lớp CSS mờ. Đo tận nơi trước VÀ sau khi bỏ:
+  9/9 ô `disabled`, chạm thật vào bàn đó không mở được câu nào. ⛔ Đừng gỡ dòng `disabled`.
+- Bàn thử `scratch/dot259c-otb.html` **21/21 ĐẠT**.
+  ⚠️ Bàn thử phải dùng `sample-open-the-box.js` làm nội dung: `answers` của game này là
+  `[{ text, correct }]`, không phải kiểu Quiz — tự bịa là hai bàn không mount nổi.
+
 ## Đợt 144 dự án (14/8/2026) — TÁCH ĐỒNG HỒ RIÊNG CỦA ACT RA KHỎI ĐỒNG HỒ TOÀN GAME CỦA ENGINE. ✅ THẦY DUYỆT → COMMIT + PUSH + LIVE (xem `GHI CHU DU AN.md` mục "Đợt 144" phần 6 cho hash + xác nhận live).
 
 Thầy báo đồng hồ toàn game của engine (Options > Timer, khi chọn Count up/Count down) đè lên đồng hồ riêng
