@@ -7,9 +7,18 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 260 (25/8/2026) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU PHẢI KHỚP GIỮA CÁC BẢNG** · ⭐⭐⭐ **VÁ BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ**
 
-> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.** Bàn thử `scratch/dot260-plan.html` **52/52** trên module
-> thật; hồi quy `dot256-smoke` 48/48 · `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 ·
-> `index.html` 0 lỗi.
+> ✅ **THẦY DUYỆT · COMMIT `758b062` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
+> Pages triển khai đúng `758b062` trạng thái `built` (`gh api repos/andrewclasses-01/AWord/pages/builds/latest`
+> — **không tin mã 200**) · **7/7 mã băm SHA-256 khớp** (`core/engine.js` · `core/showdown.js` ·
+> `core/showdown-setup.js` · `core/app.css` · `APP_MASTER.md` · `GHI CHU DU AN.md` ·
+> `core/HUONG DAN CORE.md`, băm nội dung trong commit qua `git show 758b062:<path>` so với
+> `curl https://aword.andrewclasses.com/<path>`) · **52/52 phép chạy trên CHÍNH MODULE CỦA BẢN
+> LIVE** (`scratch/dot260-live.html` — cùng 8 mục, **60 tài nguyên đều nạp từ
+> `aword.andrewclasses.com`**, đã liệt kê bằng `performance.getEntriesByType("resource")` để
+> chứng minh không phải chạy trên đĩa).
+> Cặp đôi: myActivity `b86f404` (chỉ hồ sơ, không đổi mã nguồn) — xem `CLAUDE.md` bên đó.
+> Bàn thử trên đĩa `scratch/dot260-plan.html` **52/52**; hồi quy `dot256-smoke` 48/48 ·
+> `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 · `index.html` 0 lỗi.
 
 ### Thầy nêu (25/8/2026)
 

@@ -10,7 +10,10 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 260)**.
 >
-> **Đợt 260** (25/8/2026, ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT**) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU
+> **Đợt 260** (25/8/2026, `758b062`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
+> triển khai đúng `758b062` trạng thái `built` (`gh api .../pages/builds/latest`, không tin mã
+> 200) · **7/7 mã băm SHA-256 khớp** · **52/52 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**
+> (`scratch/dot260-live.html`, 60 tài nguyên đều nạp từ `aword.andrewclasses.com`)) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU
 > PHẢI KHỚP GIỮA CÁC BẢNG**, và ⭐⭐⭐ **VÁ BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ**.
 > Thầy báo: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào dữ liệu
 > phân tích thì sai lệch hết vì số câu của các em không công bằng"*. Sửa 4 file:
@@ -55,7 +58,8 @@
 > bảng phân tích. `Balance` chỉ đúng khi `maxTeam` khớp (đúng chỗ vừa vỡ), `Normal` cho đội
 > nhỏ nhiều câu hơn đội to, `Free` do tay người bấm Submit quyết.
 >
-> Bàn thử `scratch/dot260-plan.html` **52/52** (chạy module thật, tái hiện đúng 100 vs 50,
+> Bàn thử `scratch/dot260-plan.html` **52/52** trên đĩa **và** `scratch/dot260-live.html`
+> **52/52 trên chính module của bản live** (chạy module thật, tái hiện đúng 100 vs 50,
 > **bấm THẬT** nút REFRESH TEAM, đo lại bằng đường thứ hai là thanh điều hướng `1 of 50`, và
 > **đối chứng ngược ở cả 8 mục**) + `scratch/dot260-visual.html` để nhìn.
 > Hồi quy: `dot256-smoke` **48/48** · `dot259-fight` **49/49** · `dot259b-optcheck` **12/12** ·
