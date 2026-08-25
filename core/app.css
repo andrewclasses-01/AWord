@@ -4142,7 +4142,90 @@ html.aw-nhung .aw-below { display: none; }
      12/8/2026: the clock was near-invisible in the pale text it started with). */
   color: #26303c;
 }
-.aw-fight-half { display: flex; align-items: center; justify-content: center; min-width: 0; }
+.aw-fight-half { display: flex; align-items: center; justify-content: center; min-width: 0;
+  /* ⭐ Đợt 259 — the anchor for that team's PICK TIME bar (below). Nothing else
+     in this cell is positioned, so this cannot move anything that already works. */
+  position: relative;
+}
+
+/* ⭐⭐ Đợt 259 (thầy, 25/8/2026) — PICK TIME: THE BAR THAT SAYS WHOSE TURN IT IS
+   TO CHOOSE, over that team's own board, in the top row. It replaces the 50%
+   fade Crossword used to put on the other board (thầy: "vì đã có thanh thời
+   gian để biết đội nào đang chọn, nên 2 đội có màu sắc như nhau").
+
+   Only ever visible inside `.aw-fight.is-pickmode` — the bars are built for
+   every match (core/fight.js can't know `pickMode` that early), and a game with
+   no choosing phase must never show one.
+
+   ⚠️⚠️ OUT OF FLOW, AND THE ROOM FOR IT IS RESERVED ON TWO BOXES AT ONCE.
+   `.aw-fight-half` is a flex row whose ONE job is to hold that team's number
+   dead centre over its own board (measured 13px off the day something else
+   shared the row). So the bar is absolute — it takes no width — and the height
+   it needs is paid for by identical `padding-bottom` on `.aw-fight-half` AND on
+   `.aw-fight-clockbox`. Both then sit the same distance above their own box's
+   centre, which is what keeps the score and the clock on ONE shared line, the
+   way this strip has read since 12/8/2026. ⛔ Change one padding without the
+   other and the clock drops out of line with the scores.
+   ⚠️ The two bars are always BOTH present (one just has no `.is-on`), so the
+   strip's height never changes as the turn passes back and forth. */
+.aw-fight.is-pickmode .aw-fight-half,
+.aw-fight.is-pickmode .aw-fight-clockbox { padding-bottom: var(--aw-pickbar-space, clamp(10px, 1.35vw, 18px)); }
+.aw-fight-pickbar {
+  display: none;
+  position: absolute;
+  left: 9%; right: 9%; bottom: 0;
+  height: clamp(5px, 0.62vw, 9px);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .16);
+  overflow: hidden;
+  pointer-events: none;      /* it hangs over the strip; nothing under it may go dead */
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.aw-fight.is-pickmode .aw-fight-pickbar { display: block; }
+.aw-fight-pickbar.is-on { opacity: 1; }
+/* The same green→amber language the round bar and the wait bar already speak, so
+   "time is running out" looks like one idea across the whole app. The width is
+   driven from JS by a SINGLE linear transition of the exact window length —
+   there is no per-tick repaint, so there is nothing to smooth between. */
+.aw-fight-pickbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6cd06a, #3fae5a);
+}
+
+/* ∞ — thầy: "vẫn hiện, nhưng ko chạy mà nhấp nháy hào quang tại chỗ". Identical
+   treatment to the ∞ wait of Đợt 216, down to sharing its keyframes: at ∞ there
+   is no deadline to count down, so the bar stays FULL and says "still your turn"
+   by breathing instead of by draining.
+   ⚠️ Every bit of motion here is CSS driven by nothing — core/fight.js arms no
+   timer at all in this state, which is the whole point of ∞.
+   ⚠️ THE HALO LIVES ON THE OUTER BOX, NOT THE FILL: this bar is `overflow:hidden`
+   and would clip a glow drawn on its child. An element's own box-shadow escapes
+   its own overflow, so the halo goes here and the travelling shine — which MUST
+   be clipped — goes inside. (The same trap `.aw-waitbar` documents.) */
+/* ⛔⛔ ITS OWN GLOW KEYFRAME, NOT `aw-waitglow`. That one is written in `cqw`,
+   which is correct where it lives (inside a board, i.e. inside `.aw-stage`) and
+   WRONG here: this bar hangs in the fight's top strip, outside every container,
+   so `cqw` falls back to the WINDOW — 1.6cqw would be ~7px on a phone and ~29px
+   on the classroom screen. That is the exact trap Đợt 258 measured on the stage's
+   own border-radius. Fixed px, and green to match this bar's fill (the wait bar's
+   amber belongs to its own amber fill). */
+.aw-fight-pickbar.is-forever { animation: aw-pickglow 3.2s ease-in-out infinite; }
+@keyframes aw-pickglow {
+  0%, 100% { box-shadow: 0 0 3px rgba(63, 174, 90, .30); }
+  50%      { box-shadow: 0 0 10px rgba(108, 208, 106, .78); }
+}
+.aw-fight-pickbar.is-forever .aw-fight-pickbar-fill { animation: aw-waitbreathe 3.2s ease-in-out infinite; }
+.aw-fight-pickbar.is-forever .aw-fight-pickbar-fill::after {
+  content: "";
+  position: absolute; top: 0; bottom: 0; left: 0; width: 55%;
+  background: linear-gradient(100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, .82) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: aw-waitshine 3.2s ease-in-out infinite;
+}
 
 .aw-fight-team { position: relative; }
 .aw-fight-score {

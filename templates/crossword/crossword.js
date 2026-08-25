@@ -291,7 +291,16 @@ const crosswordTemplate = {
 
   mount(root, activity, ui) {
     const opt = activity.options || {};
-    const canExit = opt.changeCrossword !== false;   // tap the clue to bail out
+    // ⭐⭐ Đợt 259 (thầy, 25/8/2026) — "Ở chế độ fight bỏ hẳn chế độ bấm vào câu hỏi
+    // để ẩn (change the crossword)". In a match the referee — not the board — owns
+    // which clue is open, and it opens the SAME one on both screens. A pupil
+    // tapping the clue to back out would leave that board sitting on its grid
+    // while the other team answered the word both were given, with no way back in
+    // this round; the option is therefore forced OFF for the whole match,
+    // whatever the act has saved. Single play is untouched.
+    // ⚠️ Reads `activity._fight` directly, not the `fight` shorthand — this line
+    // runs before that const exists.
+    const canExit = !activity._fight && opt.changeCrossword !== false;   // tap the clue to bail out
     // "Points off when wrong": 0..100. 0 = no penalty (Minus mode off) — the slider
     // dragged to 0 IS the off switch, so there is no separate checkbox.
     const penalty = Math.max(0, Math.min(POINTS_MAX, opt.minusAmount || 0));
@@ -362,7 +371,17 @@ const crosswordTemplate = {
     // build at the top of this file), so `.voice`/`.hideText` live there. No
     // "wait for the intro chime" delay is needed — a word's clue is only
     // ever shown after the PLAYER taps a numbered cell, well after mount.
-    const voicePlayer = createVoicePlayer();
+    // ⭐ Đợt 259 — `onGlow` is the PUSH half of the one-voice-per-match contract
+    // (see toggleVoiceRemote/syncVoice in the fightCtl.attach block below): every
+    // time this player lights or clears its own button, the speaking board tells
+    // the referee, which relays it to the other board's button. Guarded by
+    // `speaks()` so the call can never bounce back from the mirror side.
+    // Outside a match `fightCtl` is null and this never fires.
+    const voicePlayer = createVoicePlayer({
+      onGlow: on => {
+        if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on });
+      }
+    });
     const timers = [];               // pending setTimeouts for the current word's end sequence
     const pushTimer = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
     const clearTimers = () => { timers.forEach(clearTimeout); timers.length = 0; };
@@ -370,6 +389,13 @@ const crosswordTemplate = {
     let andrewGlowing = false;       // from the press until this word ends
 
     const bigCells = new Map();      // index-in-current-word -> big overlay cell
+    // ⭐ Đợt 259 — which "given" cells of the CURRENT word the player has actually
+    // typed through. `i >= curCell` alone cannot answer that for the LAST cell of a
+    // word: advanceCursor() deliberately stops at the final index, so a crossing
+    // letter sitting there would keep blinking for ever even after the pupil typed
+    // it — the exact confusion the blink exists to remove. Rebuilt per word in
+    // renderActive(); wound back by backspace().
+    const typedGivens = new Set();
 
     // Single page (≤30 words — the vast majority of crosswords): the engine's
     // Prev/Next nav is fully hidden exactly as before, using visibility (NOT
@@ -621,19 +647,22 @@ const crosswordTemplate = {
     // board <-> word
     // -------------------------------------------------------------------
     function activate() {
-      // ⭐⭐ Đợt 187 — THE 50% FADE HAD TO BE RE-EVALUATED HERE, AND WAS NOT
-      // (teacher, 18/8/2026: "crossword chế độ fight đang bị phủ màu trắng lên
-      // trên cả màn hình 2 bên"). `applyPickTurn` fades a board that is neither
-      // choosing nor looking at an open word, and until now it only ever ran from
-      // `setPickTurn`. But core/fight.js's boardPicked() tells BOTH boards
-      // "nobody is choosing now" BEFORE it opens the word on them, so both
-      // evaluated `!fightMyTurn && curWord < 0` as TRUE — and nothing re-ran it
-      // once the word opened. Both boards then sat at opacity .5 for the whole
-      // round, which on this template's white stage reads as a white film over
-      // the entire match. Measured: grid screen 1 / .5 (right), word open .5 / .5
-      // (wrong, both). `curWord` is always assigned immediately before every
-      // activate() call, so this is the one place that sees every change of it.
-      applyPickTurn();
+      // ⭐⭐⭐ Đợt 259 (thầy, 25/8/2026) — THE 50% "NOT YOUR TURN" FADE IS GONE, and
+      // with it the whole `applyPickTurn` mechanism this function used to have to
+      // re-run. Thầy: *"vì đã có thanh thời gian để biết đội nào đang chọn, nên 2
+      // đội có màu sắc như nhau, ko cần nhạt đi khi 1 trong 2 đội đang chọn"* — the
+      // PICK TIME bar over each board (core/fight.js, Đợt 259) is the cue now, and
+      // it is a better one: it says whose turn it is AND how long is left.
+      // ⚠️ This also retires the Đợt 187 bug for good rather than papering over it.
+      // That fix existed because `applyPickTurn` was evaluated in only ONE place
+      // (`setPickTurn`), while core/fight.js's boardPicked() tells BOTH boards
+      // "nobody is choosing now" BEFORE opening the word on them — so both boards
+      // read `!fightMyTurn && curWord < 0` as true and sat at opacity .5 for the
+      // whole round, which on this white stage was the white film over the entire
+      // match the teacher reported. With no fade there is no second place that has
+      // to agree with the first.
+      // ⛔ `fightMyTurn` itself STAYS — onCellClick still needs it to know whether
+      // this board may report a tap at all. Only the paint is gone.
       if (curWord < 0) {
         gridEl.classList.remove("is-dimmed");
         activeEl.style.display = "none";
@@ -734,6 +763,10 @@ const crosswordTemplate = {
       activeEl.className = "aw-cw-active " + (w.dir === "D" ? "is-down" : "is-across");
       activeEl.innerHTML = "";
       bigCells.clear();
+      // ⭐ Đợt 259 — indexes are per-WORD, so a new strip starts with none typed
+      // through. Forgetting this would carry "already typed" from a 6-letter word
+      // into the 3-letter one opened next and kill its blink outright.
+      typedGivens.clear();
       w.cells.forEach((_, i) => {
         const cell = el("div", "aw-cw-bigcell");
         cell.append(el("span", "aw-cw-biglet", ""));
@@ -768,6 +801,21 @@ const crosswordTemplate = {
         // continues, or if it had already finished, the `both` fill's held end
         // state is unaffected either way — see the shakeCell() reflow trick
         // just below for why a FORCED reflow would restart it instead).
+        // ⭐⭐ Đợt 259 (thầy, 25/8/2026) — A GIVEN LETTER BLINKS UNTIL THE CURSOR HAS
+        // PASSED IT. Thầy: *"các chữ có sẵn … phải khác một chút so với các chữ đang
+        // được bấm … không nhận ra được mình bấm chữ đó hay chưa do không có dấu
+        // hiệu nhận biết rõ ràng"*. A crossing letter that another word already
+        // filled sits in the strip looking finished, so on a long word a pupil
+        // genuinely loses track of how far along they are. `is-given-wait` (added in
+        // the two `is-given` branches below, and ONLY while `i >= curCell`) pulses
+        // the letter; the moment the pupil types that same letter and the cursor
+        // steps past it, the class stops being re-applied and the cell settles.
+        // ⛔ THE CELL'S BACKGROUND IS DELIBERATELY UNTOUCHED — the teacher's own
+        // choice ("nền vẫn như cũ"); only the letter moves.
+        // ⚠️ Same wipe-and-restore contract as `is-hintin` right below: the class is
+        // removed and re-added inside ONE synchronous tick with no forced reflow in
+        // between, so the browser sees no net change and an infinite animation
+        // simply keeps running instead of snapping back to its first frame.
         const wasHinting = cell.classList.contains("is-hintin");
         cell.className = "aw-cw-bigcell";
         const letEl = cell.querySelector(".aw-cw-biglet");
@@ -783,10 +831,12 @@ const crosswordTemplate = {
           // a crossing "given" from a CORRECT word -> blue letter
           text = userGrid.get(rc) || w.key[i];
           cell.classList.add("is-given", "is-given-ok");
+          if (i >= curCell && !typedGivens.has(i)) cell.classList.add("is-given-wait");
         } else if (cs === "revealed") {
           // a crossing "given" from a WRONG answer that was revealed -> grey letter
           text = userGrid.get(rc) || w.key[i];
           cell.classList.add("is-given", "is-given-bad");
+          if (i >= curCell && !typedGivens.has(i)) cell.classList.add("is-given-wait");
         } else if (andrewGlowing && !userGrid.get(rc)) {
           // Andrew hint: the answer letter, glowing gold (still type it yourself)
           text = w.key[i];
@@ -823,13 +873,33 @@ const crosswordTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(w.src.voice, vBtn); });
+        press(vBtn, e => { e.stopPropagation(); handleListenTap(w.src.voice, vBtn); });
         clueText.append(vBtn);
-        if (vv.autoPlay) voicePlayer.play(w.src.voice, vBtn);
+        // ⭐⭐ Đợt 259 — ONE CLIP PER MATCH. Both boards show the same word, so two
+        // copies of one recording starting a few ms apart is the echo the teacher
+        // heard ("hiện 2 cái lồng nhau"). Only the speaking board (core/fight.js's
+        // `ctl.speaks`, board 0) auto-plays; the other board builds the same button
+        // and lights it from the mirror instead.
+        if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) voicePlayer.play(w.src.voice, vBtn);
+        // …and it must catch up with a clip that is ALREADY sounding: this board's
+        // clue bar is rebuilt on every word, while the glow was reported before the
+        // button existed. Same PULL half Anagram added at Đợt 134.
+        else if (fightCtl) {
+          const st = fightCtl.voiceState && fightCtl.voiceState();
+          if (st && st.playing) vBtn.classList.add("is-playing");
+        }
       }
       if (clueFitter) { clueFitter.destroy(); clueFitter = null; }
       clueFitter = autoFit(clueBar, clueText, s => clueText.style.setProperty("--fit", s),
         { min: 0.55, slack: 4, measure: () => clueText.scrollHeight });
+    }
+
+    // ⭐ Đợt 259 — a tap on the listen button. Outside a match it is just a toggle.
+    // Inside one, a tap on the NON-speaking board is handed to the referee, which
+    // routes it to board 0 — so wherever the class taps, exactly one clip plays.
+    function handleListenTap(clipId, btn) {
+      if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+      voicePlayer.toggle(clipId, btn);
     }
 
     // -------------------------------------------------------------------
@@ -857,7 +927,7 @@ const crosswordTemplate = {
         // move on. A different key is REJECTED: the cell shakes and the cursor
         // stays, so you can't fill the rest until you match it.
         const have = userGrid.get(rc) || "";
-        if (ch === have) { advanceCursor(); refreshActiveCells(); }
+        if (ch === have) { typedGivens.add(curCell); advanceCursor(); refreshActiveCells(); }
         else { shakeCell(curCell); }   // no rebuild — that would clear the shake
         kbd.refresh();
         return;
@@ -899,6 +969,11 @@ const crosswordTemplate = {
       for (let k = curCell - 1; k >= 0; k--) {
         [r, c] = w.cells[k]; rc = r + "," + c;
         curCell = k;
+        // ⭐ Đợt 259 — backing up UNDOES "I typed through this one": every given at
+        // or after the new cursor position has to blink again, or a pupil who
+        // rubbed a letter out would be looking at a strip that still claims they
+        // had reached the end.
+        typedGivens.forEach(i => { if (i >= k) typedGivens.delete(i); });
         if (cellStatus.get(rc) == null && userGrid.get(rc)) { userGrid.delete(rc); setGridLetter(rc, ""); }
         break;
       }
@@ -974,7 +1049,6 @@ const crosswordTemplate = {
       fightHeld = null;
       fightBoardLock = false;
       returnToBoard();
-      applyPickTurn();
     }
 
     function fightCard() { return root.querySelector(".aw-cw-wrap") || root.firstElementChild; }
@@ -985,12 +1059,13 @@ const crosswordTemplate = {
       fightCard()?.classList.toggle("is-fightlost", fightBoardLock || !!fightHeld);
     }
 
-    // Pick phase: the board that is not choosing is faded and inert.
-    function applyPickTurn() {
-      if (!fightCtl) return;
-      const card = fightCard();
-      if (card) card.classList.toggle("is-fightwait", !fightMyTurn && curWord < 0);
-    }
+    // ⭐⭐ Đợt 259 — `applyPickTurn()` IS DELETED, not left dormant (a half-removed
+    // mechanism is what makes the next reader think it is still live). It did one
+    // thing: put `.is-fightwait` on the board that was not choosing, which drew the
+    // 50% fade the teacher has now dropped in favour of the PICK TIME bar. The
+    // `is-fightwait` rule is gone from crossword.css in the same breath.
+    // ⚠️ Open the box keeps ITS fade — that game was not part of this request, and
+    // core/fight.js has never dictated what a board does with `setPickTurn`.
 
     if (fightCtl) {
       fightCtl.attach(fightSide, {
@@ -998,8 +1073,30 @@ const crosswordTemplate = {
         goToIndex: fightGoTo,
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightWord,
-        setPickTurn(mine) { fightMyTurn = !!mine; applyPickTurn(); },
-        backToBoard: fightBackToBoard
+        // Đợt 259 — record only: the board no longer repaints itself for a change
+        // of turn (see the note above applyPickTurn's deletion). `fightMyTurn` is
+        // still what onCellClick checks before reporting a tap.
+        setPickTurn(mine) { fightMyTurn = !!mine; },
+        backToBoard: fightBackToBoard,
+        // ⭐⭐ Đợt 259 (thầy: "chỉ mở duy nhất 1 voice trong chế độ voice khi fight —
+        // hiện 2 cái lồng nhau") — THE VOICE HALF OF THE FIGHT CONTRACT, which this
+        // template had simply never wired up. Both boards mount the same act, so
+        // both were auto-playing the same clip a few ms apart: an echo, not a
+        // reading. core/fight.js has had the answer since Đợt 133 (Anagram's) —
+        // only board 0 owns real playback (`ctl.speaks`), a tap on the other board
+        // is relayed here, and the glow is mirrored back the other way.
+        // ⚠️ Guarded by `speaks()`: this is the RECEIVING end, and it must only ever
+        // run on the one board allowed to make a sound.
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, clueBar.querySelector(".aw-voicebtn"));
+        },
+        // The mirror: whatever the speaking board reported, painted onto THIS
+        // board's own listen button. No <audio> is involved on this side at all.
+        syncVoice(state) {
+          if (!state || state.playing === undefined) return;
+          clueBar.querySelector(".aw-voicebtn")?.classList.toggle("is-playing", !!state.playing);
+        }
       });
     }
 

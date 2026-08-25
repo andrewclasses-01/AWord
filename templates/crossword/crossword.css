@@ -23,14 +23,23 @@
 
 /* =============================================================
    FIGHT MODE (Đợt 185) — the teacher's "pick turn + lock" rules.
-   `.is-fightwait`  it is the OTHER team's turn to choose a clue: this board is
-                    at half strength ("mờ đi 50%") and onCellClick refuses taps.
    `.is-fightlost`  this board has answered (marks withheld) or was LOCKED out
                     because the other team got there first.
    ⚠️ opacity only — a `filter` here would open a stacking context around the
    whole board, the trap recorded in core/HUONG DAN CORE.md.
+
+   ⭐⭐⭐ Đợt 259 (thầy, 25/8/2026) — `.is-fightwait` IS GONE FROM THIS FILE.
+   It used to read `.aw-cw-wrap.is-fightwait { opacity: .5 }`: the board whose
+   turn it was NOT sat at half strength. Thầy dropped it outright — *"vì đã có
+   thanh thời gian để biết đội nào đang chọn, nên 2 đội có màu sắc như nhau, ko
+   cần nhạt đi khi 1 trong 2 đội đang chọn"*. The PICK TIME bar over each board
+   (`.aw-fight-pickbar`, core/app.css) is the cue instead, and it says more than
+   the fade did: whose turn AND how long is left.
+   ⛔ The board is still INERT on the other team's turn — that has never been the
+   fade's job (`fightMyTurn` in crossword.js's onCellClick is), so nothing about
+   the rules changed here, only the paint.
+   ⚠️ Open the box keeps its own `.is-fightwait`; that game was not in scope.
    ============================================================= */
-.aw-cw-wrap.is-fightwait { opacity: .5; }
 .aw-cw-wrap.is-fightlost { opacity: .55; }
 
 /* PAGE INDICATOR (teacher 4/8/2026): a crossword over 30 answers splits into
@@ -298,6 +307,28 @@
    from a correctly-solved word, GREY if it was revealed after a wrong answer. */
 .aw-cw-bigcell.is-given-ok  .aw-cw-biglet { color: var(--aw-accent); }
 .aw-cw-bigcell.is-given-bad .aw-cw-biglet { color: #98a2b3; }
+
+/* ⭐⭐ Đợt 259 (thầy, 25/8/2026) — A GIVEN LETTER THE CURSOR HAS NOT REACHED YET
+   BREATHES, so the pupil can see at a glance which letters are already theirs and
+   which are still waiting to be typed through. Thầy: *"có thể để chữ có sẵn từ ô
+   trước nhấp nháy liên tục cho đến khi gõ"* — and, asked how far to take it, chose
+   the letter ALONE: **"nền vẫn như cũ"**. So no background, no border, no ring
+   here; the cell is untouched and only the glyph moves.
+   crossword.js adds `is-given-wait` only while `i >= curCell`, so the pulse stops
+   the moment the cursor steps past that cell.
+   ⚠️ `opacity` + `transform` on the LETTER, deliberately, not on the cell: this is
+   a leaf `<span>` with nothing layered over it, whereas the same properties on
+   `.aw-cw-bigcell` would open a stacking context around a cell that the ✕/✓
+   overlays and the flying stars have to sit above (core/HUONG DAN CORE.md).
+   ⚠️ The rhythm is slower than the Andrew glow (2.6s) on purpose — two different
+   things pulsing at the same speed read as one effect. */
+.aw-cw-bigcell.is-given-wait .aw-cw-biglet {
+  animation: aw-cw-givenwait 1.15s ease-in-out infinite;
+}
+@keyframes aw-cw-givenwait {
+  0%, 100% { opacity: 1;   transform: scale(1); }
+  50%      { opacity: .26; transform: scale(.9); }
+}
 
 /* wobble when a wrong letter is typed onto a given cell (rejected). */
 .aw-cw-bigcell.is-shake { animation: aw-cw-shake .4s ease; }

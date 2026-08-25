@@ -5,6 +5,183 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 259 (25/8/2026) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: THANH GIỜ CHỌN Ô · BỎ LÀM NHẠT · CHỮ CÓ SẴN NHẤP NHÁY · GỠ CHỐT 20 GIÂY LÀM TỤT BÀN PHÍM · CHỈ MỘT VOICE · ĐỘI ĐI TRƯỚC NGẪU NHIÊN**
+
+Thầy đọc lại Crossword ở cả 5 mode rồi gửi 6 việc một lượt. Ba điểm phạm vi được chốt qua
+AskUserQuestion trước khi build: (1) thanh giờ chọn + gỡ chốt 20s áp cho **cả 2 game có lượt chọn**
+(Crossword và Open the box — trong toàn app chỉ có đúng hai game này khai `tpl.fightPick`;
+chú thích ở `core/fight.js` dòng 510 ghi nhầm là ba, Find the match thật ra là vòng thường);
+(2) **mặc định ∞** để act cũ không đổi nết; (3) chữ có sẵn **chỉ nhấp nháy, nền giữ nguyên**, tắt
+khi con trỏ đi qua.
+
+**Sửa 5 file:** `core/fight.js` · `core/app.css` · `core/voice-playback.js` ·
+`templates/crossword/crossword.js` · `templates/crossword/crossword.css`. Backup `_backup/dot259/`.
+
+| # | Thầy nói | Đã làm |
+|---|---|---|
+| 1 | *"cần thêm 1 thanh thời gian để đếm thời gian cho người đang chọn… kéo từ 1s đến 10s và nấc cuối là không giới hạn"* | thanh **PICK TIME** trên đầu mỗi bàn + thanh trượt `Pick time` trong Options |
+| 2 | *"2 đội có màu sắc như nhau, ko cần nhạt đi"* | bỏ hẳn `.is-fightwait` của Crossword |
+| 3 | *"chữ có sẵn… phải khác một chút so với các chữ đang được bấm"* | chữ sẵn **nhấp nháy** tới khi con trỏ đi qua |
+| 4 | *"chọn ô nhưng một lát không bấm thì bàn phím tự động ẩn xuống"* | **gỡ chốt 20 giây** trong `boardPicked` |
+| 4b | *"ở chế độ fight bỏ hẳn chế độ bấm vào câu hỏi để ẩn"* | `canExit` ép `false` khi act có `_fight` |
+| 5 | *"chỉ mở duy nhất 1 voice… hiện 2 cái lồng nhau"* | Crossword nối vào hợp đồng voice của trọng tài |
+| 6 | *"đội trước sẽ random"* | `pickTurn` khởi tạo bằng tung đồng xu |
+
+---
+
+### 1. 🔴 LỖI THẦY BÁO — thủ phạm là MỘT DÒNG, và nó không nằm ở Crossword
+
+`core/fight.js` → `ctl.boardPicked()` kết thúc bằng `later(advanceRound, LATE_LIMIT_MS)` — **20 000ms**.
+Đó là "lưới an toàn" chống đội bỏ đi, nhưng trong game lượt chọn nó phủ luôn cái ca đời thường nhất:
+mở một từ ra rồi **chưa ai trả lời**. Đúng 20 giây sau, `advanceRound()` → `endPickRound()` →
+`backToBoard()` **cả hai bàn** ⇒ bàn phím tụt, dải ô đóng, mất trạng thái đang chọn — ngay giữa lúc
+một đội đang đánh vần một từ dài trên màn cảm ứng. Không có lỗi nào hiện ra; vòng chỉ đơn giản là
+hết hạn.
+
+**Đã gỡ.** Thầy: *"cần giữ nguyên hiển thị để nhập, kể cả chờ lâu. Chỉ ẩn khi đã xong từ."*
+
+⚠️ **Cái treo mà nó từng che, nay chấp nhận** — và có tiền lệ: nấc ∞ của Time delay đã bỏ đúng lưới
+này từ Đợt 216, cùng lý do (vòng kết thúc bằng SỰ KIỆN chứ không bằng đồng hồ) và cùng đường thoát
+(☰ Menu ▸ Start again của thầy). Khâu lớp thật hay đứng — **khâu chọn câu** — nay do PICK TIME lo.
+
+⚠️ **Chỉ gỡ đúng lời gọi trong `boardPicked`.** Lưới 20 giây ở `finalizeSingleWinner()` và ở nhánh
+trả lời SAI của `wordDone()` (*"để đội kia làm nốt"*) **giữ nguyên** — đó là chuyện khác: ở hai chỗ
+đó đã có người trả lời rồi.
+
+⚠️ Gỡ được an toàn vì `boardPicked` vốn đã tự gọi `cancelRound()` mấy dòng trên, nên không có gì
+phụ thuộc vào cú huỷ-rồi-đặt của chính `later()`.
+
+---
+
+### 2. ⭐ PICK TIME — đồng hồ THỨ BA của trọng tài
+
+- Tuỳ chọn `fightPickTime`: **giây 1…10, hoặc 0 = ∞** (đúng nếp nhà "0 là không giới hạn" mà Time
+  delay và Lives đã dùng). Giải mã ở **một chỗ duy nhất**: `pickTimeMsOf()`.
+- **Mặc định 0 (∞)** — act nào đã lưu cũng chơi y như cũ cho tới khi thầy tự kéo.
+- Thanh trượt `Pick time` nằm **cùng cột, ngay trên Speed bonus** (đúng chỗ Time delay đứng ở game
+  vòng thường), màu **xanh dương** theo luật ba màu của thầy — cửa sổ chờ không phải thưởng cũng
+  không phải phạt. Chỉ dựng cho game có `fightPick`.
+- Hết giờ ⇒ **chuyển lượt sang đội kia, không phạt gì, không mở ô nào**, kèm một tiếng tách nhỏ.
+  Hai đội cùng ngồi im thì thanh cứ chuyền qua lại — đúng ý thầy.
+- Đồng hồ **dừng được** cùng hai đồng hồ cũ khi thầy mở ☰ Menu (`setRefPaused` giữ phần còn dở, nhịp
+  `"hold"`/`"go"` y hệt `runWaitBar`). ⛔ Bỏ sót chỗ này là mở Menu xong đóng lại thì lượt chọn nhảy
+  sang đội kia ngay trước mắt thầy, không ai hiểu vì sao.
+- Đồng hồ khởi động ở `ctl.attach`, **không phải lúc dựng khung**: bàn 1 luôn mount muộn, mà một cửa
+  sổ bắt đầu chạy lúc mới có một bàn là tặng không nửa lượt cho đội chưa nhìn thấy lưới của mình.
+
+**Nấc ∞** (thầy: *"vẫn hiện, nhưng ko chạy mà nhấp nháy hào quang tại chỗ"*): thanh **đứng đầy**, thở
++ hào quang, **không có một `setTimeout` nào**. ⛔⛔ Phải `return` TRƯỚC dòng ghi transition —
+`"width " + Infinity + "ms"` không phải thời lượng hợp lệ, Chrome vứt cả câu lệnh, rồi lệnh `"0%"`
+ngay sau áp vào **không có transition** ⇒ ∞ hiện ra một thanh RỖNG, đúng ngược nghĩa. Đợt 216 đã trả
+giá cho bẫy này một lần ở thanh chờ.
+
+---
+
+### 3. 🔴 BẪY `cqw` CỦA ĐỢT 258 SUÝT DỰNG LẠI — hào quang phải viết bằng px
+
+Định dùng lại `@keyframes aw-waitglow` cho thanh mới. **Không được**: keyframe đó viết bằng `cqw`,
+đúng ở chỗ nó sống (trong `.aw-stage`, tức trong sân) và **sai ở đây** — thanh chọn treo trên hàng
+đầu của khung fight, **ngoài mọi container**, nên `cqw` rơi về cỡ CỬA SỔ: `1.6cqw` sẽ là ~7px trên
+điện thoại và ~29px trên màn lớp. Viết `@keyframes aw-pickglow` riêng bằng **px**, màu xanh lá cho
+khớp ruột thanh (thanh chờ màu hổ phách là vì ruột nó màu hổ phách).
+
+---
+
+### 4. ⚠️ HÀNG TRÊN — chỗ dễ làm vỡ nhất, và cách giữ
+
+`.aw-fight-half` có **đúng một việc**: giữ số điểm của đội **chính giữa bàn của nó** (đo được lệch
+13px cái ngày có thứ khác chen vào hàng, 12/8/2026). Nên:
+
+- thanh **ra khỏi dòng chảy** (`position:absolute`) ⇒ không cướp một px bề ngang nào;
+- chỗ cho nó **trả bằng `padding-bottom` ĐẶT LÊN CẢ HAI HỘP**: `.aw-fight-half` **và**
+  `.aw-fight-clockbox`. ⛔ Đặt một bên thôi là đồng hồ rơi khỏi hàng của hai ô điểm;
+- hai thanh **luôn cùng có mặt** (bên không tới lượt chỉ thiếu `.is-on`) ⇒ hàng trên không nhấp
+  chiều cao mỗi lần chuyền lượt.
+
+**Đo thật (1400×860, đang trong trận):** tâm dọc hai ô điểm **lệch 0,00px**; điểm ↔ đồng hồ lệch
+**1,00px** — và **1,00px đó có sẵn từ trước**, chứng minh bằng cách đo một trận **Quiz** (không phải
+pick mode, `padding-bottom` = 0px): cũng đúng **1,00px**. Điểm vẫn nằm cách tâm bàn **0,01px**.
+Khoảng cách điểm→thanh 9,3px, thanh→bàn 12px, không chồng lấn.
+
+---
+
+### 5. CHỈ MỘT VOICE — hợp đồng đã có sẵn từ Đợt 133, Crossword chưa từng nối vào
+
+Hai bàn cùng mount một act ⇒ mỗi bàn một `createVoicePlayer()` ⇒ **hai clip cùng phát lệch nhau vài
+ms** = tiếng vọng, đúng cái thầy nghe. `core/fight.js` đã có sẵn cả bộ từ Đợt 133 (làm cho Anagram):
+`ctl.speaks(side)` (chỉ bàn 0) · `requestVoiceToggle` · `reportVoiceState` · `voiceState()`.
+Crossword nay nối vào cả bốn:
+
+- **tự phát** chỉ chạy khi `!fightCtl || fightCtl.speaks(fightSide)`;
+- **chạm nút loa** ở bàn kia → `requestVoiceToggle` → trọng tài giao cho bàn 0;
+- `attach` mọc thêm `toggleVoiceRemote` (đầu NHẬN) và `syncVoice` (gương hào quang);
+- `core/voice-playback.js` mọc tuỳ chọn **`onGlow(on)`** — bắn đúng mọi lúc player bật/tắt quầng
+  `is-playing` của nút. Đây là cửa cho ~12 template dùng player CHUNG (Anagram tự nuôi audio riêng
+  nên không cần). ⚠️ `onGlow` gọi **ngoài** câu `if (btn)`: `stop()` gọi setGlow rồi mới bỏ tham
+  chiếu nút, mà bàn gương vẫn phải nghe được tin "đã tắt".
+
+---
+
+### 6. CHỮ CÓ SẴN NHẤP NHÁY — và bẫy snap của Đợt 26/67 lại chực chờ
+
+`refreshActiveCells()` **xoá sạch `className` mỗi lần gõ phím**. Lớp `is-given-wait` gắn lại ngay
+trong **cùng một tick đồng bộ, không có ép reflow xen giữa**, nên trình duyệt coi là "không đổi gì"
+và animation vô hạn **chạy tiếp**, không nhảy về khung đầu. Đo thật: giờ chạy của animation ở ô sẵn
+phía sau **tăng lên** sau một cú gõ chứ không về 0.
+
+Điều kiện gắn là `i >= curCell` ⇒ gõ qua ô nào thì ô đó **thôi nhấp nháy** — đó chính là dấu hiệu
+"mình đã gõ tới đâu" mà thầy thiếu. ⛔ **Nền ô giữ nguyên** (thầy chốt: *"nền vẫn như cũ"*), chỉ con
+chữ động. ⚠️ Animation đặt trên `<span>` con chứ không trên ô: `opacity`/`transform` trên
+`.aw-cw-bigcell` sẽ đẻ stacking context quanh cái ô mà dấu ✕/✓ và sao bay phải nổi lên trên.
+⚠️ Nhịp 1,15s **cố tình chậm hơn** quầng vàng Andrew (2,6s) — hai thứ nhấp cùng tốc độ đọc thành một.
+
+---
+
+### 7. Bàn thử
+
+| Bàn thử | Kết quả |
+|---|---|
+| `scratch/dot259-fight.html` | **49/49 ĐẠT** — tuỳ chọn + biên · thanh đúng bên · lật lượt · ∞ · **chờ THẬT 21 giây** · random · hàng trên · đối chứng Quiz |
+| `scratch/dot259-crossword.html` | **19/19 ĐẠT** — nhấp nháy + tắt khi đi qua · nền giữ nguyên · khoá lối thoát trong fight · **đếm số clip thật** |
+| `scratch/dot259-visual.html` | xem mắt: nấc 5s (cạn dần) và nấc ∞ (thở) |
+| Hồi quy | `dot256-smoke` **48/48** · `dot256-penalty` **24/24** · `dot255-title` 18/0 · `dot254-khung` 27/0 · `index.html` nạp sạch 0 lỗi |
+
+**Đối chứng ngược đã cài** (không chỉ đo cái mình muốn thấy): ∞ phải ĐẦY chứ không rỗng · ∞ để lâu
+KHÔNG được tự đổi lượt · Quiz KHÔNG được mọc thanh chọn · ô thường KHÔNG được nhấp nháy · chơi
+thường VẪN thoát được bằng câu hỏi và VẪN phát đúng 1 clip.
+
+Cách đếm clip mà không cần Firebase: nạp sẵn một clip câm vào **Cache Storage** đúng khoá
+`core/voice-clips.js` dùng (`aword-voice-v1` + `/__aword-voice/<id>` + header `x-aword-saved`), rồi
+bọc `window.Audio` để **đếm số lần dựng**. Là phép đo hành vi thật, không phải đọc code.
+
+#### 🔴 Hai lần bàn thử tự nói dối trong đợt này — chép lại để đừng lặp
+
+1. **Quên `<link rel="stylesheet">`.** Trang chỉ có CSS của chính bàn thử, nên `position`/`height`/
+   `animation` đo ra toàn giá trị mặc định của trình duyệt — và phép đo nào cũng "có kết quả", chỉ
+   là kết quả của một trang không có app. Nay `dot259-fight.html` có **mục 0 làm cửa chặn**: soi
+   CSSOM xem có thật luật `.aw-fight-pickbar` không; hỏng ở đó thì đừng tin gì bên dưới.
+2. **Lấy mẫu xấp xỉ chu kỳ.** Đo lật lượt bằng 2 mốc cách nhau 1200ms trong khi chu kỳ đúng 1000ms
+   ⇒ hai mốc rơi vào **cùng một pha**, bàn thử báo "kẹt một bên" trong lúc cơ chế chạy hoàn hảo (đo
+   dày 250ms/lần thì thấy lật đều 0→1→0→1→0). Nay đếm **số lần lật** trên một dãy mẫu dày.
+
+⚠️ Hai thứ nữa bàn thử phải nhớ: `startFight()` **không trả về gì** (teardown do engine giữ), và mọi
+bề mặt chơi đi qua `core/press.js` nên `.click()` lập trình **không kích hoạt gì** — phải bắn
+`pointerdown`.
+
+---
+
+### 8. Còn chờ mắt thầy
+
+- ⬜ **Bấm tay một trận Crossword thật trên TOMKO**: cỡ thanh giờ nhìn từ cuối lớp, nhịp nhấp nháy
+  của chữ sẵn có chói không, và nấc Pick time nào hợp lớp (mặc định đang là ∞).
+- ⬜ **Open the box ở chế độ fight**: game đó cũng nhận thanh giờ chọn + mất lưới 20 giây theo lựa
+  chọn của thầy, nhưng máy không lái được nó nên đợt này chưa bấm tay. Nếu một ô mở ra mà **không
+  đội nào trả lời**, vòng sẽ đứng cho tới khi thầy bấm ☰ Menu ▸ Start again.
+- ⬜ Open the box **vẫn giữ hiệu ứng làm nhạt** đội không tới lượt (thầy chỉ yêu cầu bỏ ở Crossword) —
+  thầy muốn đồng bộ nốt thì nói một câu.
+
+---
+
 ## Đợt 258 (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE** — ✅ **COMMIT `9a80d4e`, ĐÃ PUSH + LIVE KIỂM CHỨNG** (7/7 mã băm SHA-256 khớp · **27/27 phép đo chạy trên CHÍNH CSS/JS của bản live**)
 
 Thầy gửi 2 ảnh (khung AWord trên iPhone và trên máy tính) kèm 4 nhận xét, chốt cả 4 qua

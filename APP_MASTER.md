@@ -8,8 +8,49 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 258)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 259)**.
 >
+> **Đợt 259** (25/8/2026) — ⭐⭐⭐ **CROSSWORD Ở CHẾ ĐỘ FIGHT: 6 VIỆC THẦY GỬI MỘT LƯỢT.**
+> Sửa 5 file: `core/fight.js` · `core/app.css` · `core/voice-playback.js` ·
+> `templates/crossword/crossword.js` · `templates/crossword/crossword.css`.
+> **(1) PICK TIME** — thanh giờ cho ĐỘI ĐANG CHỌN Ô, nằm trên đầu bàn của chính đội đó, kèm thanh
+> trượt `Pick time` trong Options: **1…10s, nấc cuối ∞**, tuỳ chọn `fightPickTime` (**0 = ∞**, đúng
+> nếp nhà), **mặc định ∞ nên mọi act cũ chơi y như trước**. Hết giờ ⇒ chuyển lượt sang đội kia,
+> không phạt, không mở ô. Ở ∞ thanh **vẫn hiện** nhưng đứng đầy + thở, **không có `setTimeout` nào**.
+> Áp cho **cả 2 game lượt-chọn** (Crossword · Open the box) — toàn app chỉ có đúng hai game khai
+> `tpl.fightPick`; ⚠️ chú thích cũ trong `fight.js` ghi là ba, **Find the match là vòng thường**.
+> **(2)** Bỏ hẳn hiệu ứng làm nhạt 50% của Crossword (`.is-fightwait`) — thanh giờ là cái báo lượt
+> nay, và nó nói được nhiều hơn. ⛔ Bàn **vẫn inert** khi không tới lượt (`fightMyTurn`), chỉ đổi
+> phần vẽ. Open the box giữ nguyên hiệu ứng nhạt của nó.
+> **(3)** Chữ CÓ SẴN (ô giao từ câu đã mở) **nhấp nháy tới khi con trỏ đi qua** (`is-given-wait`,
+> gắn khi `i >= curCell`) — ⛔ **nền ô giữ nguyên**, thầy chốt vậy.
+> **(4) ⭐⭐⭐ LỖI TỤT BÀN PHÍM — THỦ PHẠM LÀ `later(advanceRound, LATE_LIMIT_MS)` TRONG
+> `boardPicked`.** 20 giây sau khi mở một từ mà **chưa ai trả lời**, trọng tài đóng vòng và gọi
+> `backToBoard()` cả hai bàn. Đã gỡ. ⚠️ **Chỉ gỡ đúng lời gọi đó** — lưới 20s ở
+> `finalizeSingleWinner()` và ở nhánh trả lời SAI của `wordDone()` giữ nguyên. ⚠️ Cái treo mà nó
+> từng che nay **chấp nhận**, có tiền lệ ∞ Time delay của Đợt 216; đường thoát là ☰ Menu ▸ Start again.
+> **(4b)** Trong trận, "Change the crossword" **bị khoá hẳn** (`canExit` ép `false`) — cả bấm câu hỏi
+> lẫn phím Escape.
+> **(5)** Crossword nối vào **hợp đồng voice của trọng tài** có sẵn từ Đợt 133 (`ctl.speaks` ·
+> `requestVoiceToggle` · `reportVoiceState` · `voiceState`) ⇒ **một clip duy nhất cho cả trận**;
+> `core/voice-playback.js` mọc tuỳ chọn **`onGlow(on)`** làm cửa gương quầng sáng cho ~12 template
+> dùng player chung.
+> **(6)** Đội đi trước **tung đồng xu** (trước đây luôn là bàn trái).
+> ⛔⛔ **BẪY `cqw` CỦA ĐỢT 258 SUÝT DỰNG LẠI**: thanh mới treo ở hàng trên của khung fight, **ngoài
+> mọi container**, nên KHÔNG được dùng lại `@keyframes aw-waitglow` (viết bằng `cqw` ⇒ rơi về cỡ cửa
+> sổ). Có `aw-pickglow` riêng bằng **px**.
+> ⚠️ **Hàng trên**: thanh `position:absolute` để không cướp bề ngang, và chỗ cho nó trả bằng
+> `padding-bottom` **đặt lên CẢ `.aw-fight-half` LẪN `.aw-fight-clockbox`** — đặt một bên thôi là
+> đồng hồ rơi khỏi hàng của hai ô điểm. Đo thật: hai ô điểm lệch **0,00px**, điểm↔đồng hồ **1,00px**
+> (**có sẵn từ trước** — trận Quiz không pick mode đo ra đúng 1,00px).
+> Bàn thử `dot259-fight.html` **49/49** + `dot259-crossword.html` **19/19** (có **đối chứng ngược**
+> và một phép **chờ THẬT 21 giây**); hồi quy `dot256-smoke` 48/48 · `dot256-penalty` 24/24 ·
+> `dot255-title` 18/0 · `dot254-khung` 27/0 · `index.html` 0 lỗi.
+> ⬜ **Chờ mắt thầy**: bấm tay một trận Crossword trên TOMKO; và **Open the box ở chế độ fight**
+> (máy không lái được game đó — nó cũng nhận thanh giờ chọn và cũng mất lưới 20 giây).
+> Chi tiết: `GHI CHU DU AN.md` Đợt 259 + `core/HUONG DAN CORE.md` mục "PICK TIME".
+>
+> ---
 > **Đợt 258** (25/8/2026) — ⭐⭐⭐ **KHUNG ACT: ĐIỆN THOẠI TRÀN VIỀN · BO GÓC 8px · KHUNG TO LÊN
 > THEO CỬA SỔ · FULLSCREEN DẠNG ZOOM CHO MỌI TEMPLATE.** Thầy gửi 2 ảnh (khung trên iPhone và trên
 > máy tính) kèm 4 nhận xét, chốt cả 4 qua AskUserQuestion rồi gõ "ok build". Sửa 4 file:

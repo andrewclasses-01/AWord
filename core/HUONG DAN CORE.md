@@ -452,6 +452,65 @@ API: `ctl.boardPicked(side, i)`; `attach` nhận thêm `setPickTurn(mine)` · `b
 ⚠️ **Template CẤM tự mở ô**: chỉ BÁO cú chạm, trọng tài mới mở — bằng không hai bàn lệch câu ngay lần
 chạm đầu bị rơi, và mỗi bàn nhìn riêng vẫn "đúng".
 
+⭐⭐⭐ **PICK TIME — ĐỒNG HỒ CHO ĐỘI ĐANG CHỌN Ô (Đợt 259, 25/8/2026, thầy).**
+Tuỳ chọn `fightPickTime` trong Options của trận: **1…10 giây, hoặc `0` = ∞** (nếp nhà "0 là không
+giới hạn", giống Time delay và Lives). Giải mã ở **một chỗ duy nhất**: `pickTimeMsOf(o)` — trả về
+`Infinity` ở nấc ∞. **Mặc định `0` (∞)** nên mọi act đã lưu chơi y như trước.
+
+- Chỉ dựng cho game có `tpl.fightPick`. Hết giờ ⇒ **chuyển lượt sang đội kia**, không phạt, không mở
+  ô nào, kèm một tiếng tách (`pickExpired`). Hai đội cùng ngồi im thì thanh chuyền qua lại mãi.
+- **`paintPickTurn()` là PHỄU DUY NHẤT**: nó vừa báo hai bàn vừa gọi `openPickClock()`, nên "ai đang
+  tới lượt" và "còn bao lâu" không bao giờ nói khác nhau.
+- Đồng hồ khởi động ở **`ctl.attach`**, không phải lúc dựng khung — bàn 1 luôn mount muộn, cửa sổ
+  chạy khi mới có một bàn là tặng không nửa lượt cho đội chưa thấy lưới của mình.
+- ⛔ **Đồng hồ THỨ BA phải dừng cùng hai cái kia.** `setRefPaused()` giữ phần còn dở của `pickDue`
+  (huỷ đồng hồ, GIỮ việc phải làm) và `paintPickBars("hold"/"go")` ghìm/thả thanh. Bỏ sót là thầy mở
+  ☰ Menu xong đóng lại thì lượt chọn nhảy sang đội kia ngay trước mắt, không ai hiểu vì sao.
+- ⛔⛔ **Nấc ∞ KHÔNG có `setTimeout` nào** — thanh đứng đầy, thở bằng CSS (`.is-forever`). Trong
+  `paintPickBar()` phải `return` **TRƯỚC** dòng ghi transition: `"width " + Infinity + "ms"` không
+  phải thời lượng hợp lệ, Chrome vứt cả câu lệnh, rồi `"0%"` ngay sau áp vào **không transition** ⇒ ∞
+  hiện ra thanh RỖNG, đúng ngược nghĩa. (Đợt 216 đã trả giá cho bẫy này ở `runWaitBar`.)
+- ⛔ **Hào quang phải viết bằng `px`, không `cqw`.** Thanh này treo ở hàng trên của khung fight, tức
+  **ngoài mọi container** — dùng lại `@keyframes aw-waitglow` (viết bằng `cqw`, đúng ở trong sân) thì
+  nó rơi về cỡ CỬA SỔ, đúng bẫy Đợt 258 đo được trên `border-radius` của `.aw-stage`. Có
+  `@keyframes aw-pickglow` riêng.
+- ⚠️ **Hàng trên (`.aw-fight-top`) rất dễ vỡ.** `.aw-fight-half` có đúng một việc: giữ số điểm **chính
+  giữa bàn của nó** (đo lệch 13px cái ngày có thứ khác chen vào hàng). Nên thanh **`position:absolute`**
+  (không cướp bề ngang) và chỗ cho nó trả bằng `padding-bottom` **đặt lên CẢ `.aw-fight-half` LẪN
+  `.aw-fight-clockbox`** — đặt một bên thôi là đồng hồ rơi khỏi hàng của hai ô điểm. Hai thanh luôn
+  cùng có mặt (bên không tới lượt chỉ thiếu `.is-on`) nên hàng trên không nhấp chiều cao khi chuyền lượt.
+
+⭐⭐⭐ **KHÔNG CÒN LƯỚI 20 GIÂY TRONG `boardPicked` (Đợt 259).** Dòng
+`later(advanceRound, LATE_LIMIT_MS)` ở cuối `ctl.boardPicked()` **đã gỡ**. Nó là lỗi thầy báo:
+*"chọn ô nhưng một lát không bấm thì bàn phím tự động ẩn xuống và mất trạng thái đang chọn ô"* — 20
+giây sau khi mở một câu mà **chưa ai trả lời**, `advanceRound()` → `endPickRound()` → `backToBoard()`
+**cả hai bàn**, ngay giữa lúc một đội đang đánh vần một từ dài.
+- ⚠️ **CHỈ gỡ đúng lời gọi đó.** Lưới 20 giây ở `finalizeSingleWinner()` và ở nhánh trả lời SAI của
+  `wordDone()` (*"để đội kia làm nốt"*) **giữ nguyên** — ở hai chỗ đó đã có người trả lời rồi.
+- ⚠️ **Cái treo mà nó từng che, nay chấp nhận**, đúng tiền lệ ∞ Time delay (Đợt 216): vòng kết thúc
+  bằng SỰ KIỆN chứ không bằng đồng hồ, và đường thoát là ☰ Menu ▸ Start again của thầy. Khâu lớp thật
+  hay đứng — khâu CHỌN CÂU — nay do PICK TIME lo.
+- ⚠️ Gỡ được an toàn vì `boardPicked` vốn đã tự gọi `cancelRound()` mấy dòng trên.
+
+⭐ **ĐỘI ĐI TRƯỚC LÀ NGẪU NHIÊN (Đợt 259).** `pickTurn` khởi tạo bằng tung đồng xu khi có `pickMode`
+(trước là hằng 0 ⇒ bàn TRÁI mở mọi trận). Chỉ lượt ĐẦU; mọi lượt sau vẫn là luật đuổi kịp của thầy
+trong `endPickRound()`.
+
+⚠️ **`setPickTurn` KHÔNG BẮT BUỘC PHẢI LÀM NHẠT NỮA (Đợt 259).** Bảng trên ghi "bàn chưa tới lượt mờ
+50%" là mô tả những gì TEMPLATE tự làm, chưa bao giờ là luật của `fight.js`. Crossword **đã bỏ hẳn**
+hiệu ứng nhạt (thanh PICK TIME báo lượt thay nó, và nói được nhiều hơn); Open the box vẫn giữ. Bàn
+không tới lượt **vẫn inert** — đó là việc của cờ `fightMyTurn` trong template, không phải của lớp CSS.
+
+⭐⭐ **HỢP ĐỒNG VOICE: `attach` NAY CÓ THÊM `toggleVoiceRemote(clipId)` · `syncVoice(state)`.**
+Bộ này có từ Đợt 133 (Anagram) nhưng **template mới phải nhớ nối vào**, không thì hai bàn cùng phát
+một clip lệch nhau vài ms = tiếng vọng (Crossword dính đúng thế tới Đợt 259). Bốn mảnh:
+`ctl.speaks(side)` (chỉ bàn 0 được phát thật) · `ctl.requestVoiceToggle(clipId)` (chạm ở bàn kia thì
+nhờ trọng tài) · `ctl.reportVoiceState(side, {playing})` (bàn phát báo ra) · `ctl.voiceState()` (kéo
+về, cho nút vừa dựng lại giữa chừng một clip).
+⭐ Template dùng `createVoicePlayer()` chung (≈12 cái) nay có cửa sẵn: **`createVoicePlayer({ onGlow })`**
+bắn đúng mọi lúc player bật/tắt quầng `is-playing`. ⚠️ `onGlow` gọi **ngoài** câu `if (btn)` trong
+`setGlow` — `stop()` gọi setGlow rồi mới bỏ tham chiếu nút, mà bàn gương vẫn phải nghe tin "đã tắt".
+
 ⭐⭐ **IN TURNS — MỘT BỘ CÂU CHIA CHO HAI ĐỘI (Đợt 202, 19/8/2026, thầy).** Ô tích **xanh lá** trong
 Options của trận (`fightTurns`, mặc định TẮT). Bật lên: bộ câu được **chia bài luân phiên** cho 2 bàn
 — `pool.forEach((it,i) => dealt[i%2].push(it))` — nên 81 câu ra **41/40**, không câu nào ở cả hai

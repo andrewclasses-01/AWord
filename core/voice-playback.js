@@ -108,7 +108,15 @@ export function hasHiddenText(node) {
   return Object.values(node).some(hasHiddenText);
 }
 
-export function createVoicePlayer() {
+// ⭐ Đợt 259 — `onGlow(on)` (optional). Fires at EVERY moment this player turns
+// its own button's `is-playing` glow on or off. It exists for FIGHT MODE: only
+// board 0 may own a real <audio> (core/fight.js's `ctl.speaks`), so board 1 has
+// no playback of its own to light its button from and has to be TOLD. Anagram
+// solved the same problem with its own hand-rolled audio plus
+// `ctl.reportVoiceState`; this hook is that same door for the ~12 templates that
+// use THIS shared player instead (Crossword is the first). Purely additive — a
+// caller that passes nothing behaves exactly as it did before.
+export function createVoicePlayer({ onGlow = null } = {}) {
   const cache = new Map();          // clipId -> data: URL
   let audioEl = null;               // currently-playing/loaded clip
   let btnEl = null;                 // listen button wired to audioEl's play state (for the glow)
@@ -117,6 +125,11 @@ export function createVoicePlayer() {
 
   function setGlow(btn, on) {
     if (btn) btn.classList.toggle("is-playing", on);
+    // ⚠️ REPORTED OUTSIDE THE `if`: the mirror board must still hear "it stopped"
+    // on the paths where this player no longer holds a button reference at all
+    // (stop() calls this and then nulls `btnEl`). Wrapped in try/catch because a
+    // mirror that has been torn down must never take the audio down with it.
+    if (onGlow) { try { onGlow(!!on); } catch { /* mirror gone — playback carries on */ } }
   }
 
   // Silences whatever is playing/pending RIGHT NOW — call this at the top

@@ -152,7 +152,19 @@ export const FIGHT_DEFAULTS = {
   // opt-in — today Type the answer alone, at the teacher's request ("tạm thời
   // áp dụng với duy nhất type the answer để tôi thử nghiệm trước").
   // OFF by default, so every act ever saved keeps the behaviour it has today.
-  fightTurns: false
+  fightTurns: false,
+  // ⭐⭐ Đợt 259 (thầy, 25/8/2026) — PICK TIME. How long the team whose turn it is
+  // has to CHOOSE a question in a pick-turn match (Crossword · Open the box). Run
+  // out and the turn simply passes to the other team — no penalty, nothing is
+  // opened, the clock just starts again on the other side.
+  // ⚠️ IN SECONDS, 1 … 10, with **0 = ∞** — the same house convention Time delay
+  // and Lives already use for "unlimited", so nothing downstream needs a second
+  // special case. DEFAULT 0 (∞) on purpose: this is a brand-new deadline, and
+  // every act ever saved must keep playing exactly as it does today until the
+  // teacher moves the control himself. At ∞ the bar still SHOWS (it is what says
+  // whose turn it is now that the losing board no longer fades) — it just
+  // breathes in place instead of draining. See `pickMs` in startFight.
+  fightPickTime: 0
 };
 
 // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — WHAT VALUES THE TIME DELAY SLIDER CAN HOLD.
@@ -194,10 +206,19 @@ export function tieWindowMsOf(o) {
 // slower team can score too, and the bonus becomes the only thing left that
 // rewards being fast.
 export function speedBonusApplies(o) { return tieWindowMsOf(o) >= WAIT_BAR_MIN_MS; }
+// ⭐ Đợt 259 — PICK TIME in milliseconds, or Infinity for the ∞ notch. Same
+// one-place-to-decode rule as tieWindowMsOf above; see FIGHT_DEFAULTS.
+// ⚠️ Infinity, deliberately, and NOT a very large number: every site that could
+// receive it is guarded the same way Đợt 216 had to guard ∞ on Time delay —
+// `setTimeout(fn, Infinity)` fires on the NEXT TICK (the spec clamps a non-finite
+// delay to 0), which would make ∞ the FASTEST setting instead of the slowest.
+export function pickTimeMsOf(o) {
+  return o.fightPickTime === 0 ? Infinity : Math.round(o.fightPickTime * 1000);
+}
 
 export function fightOptionsFrom(options = {}) {
   const o = { ...FIGHT_DEFAULTS };
-  ["fightContent", "fightSpeedBonus", "fightTieWindow", "fightTurns"].forEach(k => {
+  ["fightContent", "fightSpeedBonus", "fightTieWindow", "fightTurns", "fightPickTime"].forEach(k => {
     if (options[k] !== undefined) o[k] = options[k];
   });
   // ⭐ Đợt 187 — the ceiling went 20 -> 100 (teacher: "kéo từ 1 đến 100 điểm").
@@ -218,6 +239,13 @@ export function fightOptionsFrom(options = {}) {
   // places that all mean "is this a dealt match", and a stray "false" string off
   // a hand-edited act would make every one of them silently say yes.
   o.fightTurns = o.fightTurns === true;
+  // ⭐ Đợt 259 — PICK TIME: 0 stays 0 (∞); anything else is forced onto a whole
+  // second in 1 … 10, the exact set the slider can produce. Same reasoning as the
+  // Time delay line above — a hand-edited or corrupted act must not be able to
+  // hand the round logic a 40-minute choosing window, and a value the slider
+  // cannot show would be silently rewritten the first time the panel opened.
+  const pt = Number(o.fightPickTime);
+  o.fightPickTime = pt === 0 ? 0 : (Number.isFinite(pt) ? Math.max(1, Math.min(10, Math.round(pt))) : 0);
   return o;
 }
 
@@ -297,6 +325,19 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const half1 = el("div", "aw-fight-half");
   half0.append(teams[0].el);
   half1.append(teams[1].el);
+  // ⭐⭐ Đợt 259 — THE PICK-TIME BAR, one per half, over that team's OWN board.
+  // It is the thing that says WHOSE TURN IT IS TO CHOOSE, which is why it can
+  // replace the 50% fade Crossword used to wear (thầy: "vì đã có thanh thời gian
+  // để biết đội nào đang chọn, nên 2 đội có màu sắc như nhau").
+  // ⚠️ ABSOLUTELY POSITIONED (see core/app.css), NOT a second flex item. Each
+  // team's number has to stay dead centre over its own board — a measured rule
+  // from 12/8/2026, where an ordinary sibling here pushed it 13px off — and an
+  // out-of-flow bar takes no share of the row's width at all. The height it needs
+  // is reserved with padding on the half AND on the clock box together, so the
+  // score and the clock stay on one shared line exactly as before.
+  const pickBars = [makePickBar(), makePickBar()];
+  half0.append(pickBars[0].el);
+  half1.append(pickBars[1].el);
 
   const middle = el("div", "aw-fight-middle");
   const clockBox = el("div", "aw-fight-clockbox");
@@ -332,6 +373,20 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     const value = el("div", "aw-fight-score", "0");
     box.append(value);
     return { el: box, value };
+  }
+
+  // ⭐ Đợt 259 — one pick-time bar. Deliberately the SAME two-node shape as the
+  // engine's own wait bar (`.aw-waitbar` / `-fill`, core/app.css): the drain is a
+  // single CSS width transition of the exact window length, and the ∞ state is a
+  // pure-CSS breathe with no JS timer behind it at all. Built for BOTH halves on
+  // every match — pick mode or not — because `pickMode` is not resolved until
+  // much further down this function; the CSS only ever shows them inside
+  // `.aw-fight.is-pickmode` (set once, right after pickMode is known).
+  function makePickBar() {
+    const bar = el("div", "aw-fight-pickbar");
+    const fill = el("div", "aw-fight-pickbar-fill");
+    bar.append(fill);
+    return { el: bar, fill };
   }
 
   // ----- the teacher's own points (Đợt 124, second + third pass) -----
@@ -546,8 +601,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // eligible. `turnsMode` = and is it actually ON.
   const turnsTpl = !!getTemplate(activity.type)?.fightTurns && !pickMode && srcItems.length >= 2;
   const turnsMode = turnsTpl && fo.fightTurns === true;
-  let pickTurn = 0;               // which side may choose the next item
+  // ⭐⭐ Đợt 259 (thầy, 25/8/2026) — WHO CHOOSES FIRST IS NOW A COIN TOSS.
+  // It used to be a hard 0, so the LEFT board opened every single match ("hiện
+  // đại luôn đội bên trái trước"). Only pick-turn games have a first chooser at
+  // all; outside them this value is never read, so it stays the plain 0 it was.
+  // ⚠️ Just the FIRST turn. Everything after it is the teacher's own catch-up
+  // rule in endPickRound() — the team that ended wrong keeps choosing — which
+  // this does not touch.
+  let pickTurn = pickMode ? (Math.random() < 0.5 ? 1 : 0) : 0;   // which side may choose the next item
   let pickOpen = !!pickMode;      // true while both boards wait on their grid for a choice
+  // ⭐⭐ Đợt 259 — PICK TIME: how long that side has to choose, or Infinity for ∞.
+  // Read ONCE per match, like every other option here.
+  const pickMs = pickMode ? pickTimeMsOf(fo) : 0;
+  // The bars are built for every match (see makePickBar); this class is what lets
+  // the CSS show them, so they can never appear in a game that has no pick turn.
+  if (pickMode) wrap.classList.add("is-pickmode");
   let playedRounds = 0;           // items actually played — pick mode counts these, not roundIndex
   let lastFinisher = null;        // { side, correct } — the LAST board to finish this round
   // ⭐⭐⭐ Đợt 223 (thầy, 21/8/2026) — "ROUND RULE" VÀ "SLOWER TEAM KEEPS POINTS"
@@ -787,6 +855,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // câu một mình, không ai bấm gì.
   let roundDue = null;             // { fire, left, endAt } — nhịp giữ / lưới 20s
   let pendingDue = null;           // { fire, left, endAt } — cửa sổ Time delay
+  // ⭐ Đợt 259 — ĐỒNG HỒ THỨ BA: PICK TIME (hạn chọn câu của đội đang tới lượt).
+  // Cùng khuôn "huỷ rồi đặt lại" như hai cái trên, và VÌ CÙNG MỘT LÝ DO: mở ☰ Menu
+  // giữa lúc thanh chọn đang cạn mà nó cứ chạy tiếp thì thầy quay lại đã mất lượt.
+  let pickTimer = null;
+  let pickDue = null;              // { fire, left, endAt } — hạn chọn câu
   let refPaused = false;           // trọng tài đang bị dừng?
   const pausedSides = new Set();   // bàn nào đang đòi dừng
 
@@ -800,8 +873,14 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     pendingDue.endAt = performance.now() + pendingDue.left;
     pendingTimer = setTimeout(pendingDue.fire, pendingDue.left);
   }
+  function armPick() {
+    if (!pickDue || pickTimer || refPaused || torndown) return;
+    pickDue.endAt = performance.now() + pickDue.left;
+    pickTimer = setTimeout(pickDue.fire, pickDue.left);
+  }
   function cancelRound() { clearTimeout(roundTimer); roundTimer = null; roundDue = null; }
   function cancelPending() { clearTimeout(pendingTimer); pendingTimer = null; pendingDue = null; }
+  function cancelPick() { clearTimeout(pickTimer); pickTimer = null; pickDue = null; }
 
   /**
    * Một bàn vào/ra trạng thái tạm dừng. Trọng tài dừng khi CÓ ÍT NHẤT MỘT bàn dừng
@@ -821,15 +900,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // đó chính là thứ cú chạy-tiếp cần để dựng lại đúng phần còn dở.
       if (roundTimer) { clearTimeout(roundTimer); roundTimer = null; roundDue.left = Math.max(0, roundDue.endAt - t); }
       if (pendingTimer) { clearTimeout(pendingTimer); pendingTimer = null; pendingDue.left = Math.max(0, pendingDue.endAt - t); }
+      // ⭐ Đợt 259 — đồng hồ CHỌN CÂU dừng theo, cùng khuôn (huỷ đồng hồ, giữ việc).
+      if (pickTimer) { clearTimeout(pickTimer); pickTimer = null; pickDue.left = Math.max(0, pickDue.endAt - t); }
       // ⚠️ Thanh chờ phải đứng lại CÙNG LÚC. Nó là một `transition` CSS ở hàng nút
       // dưới — KHÔNG nằm trong sân, nên `freezePlay()` của engine (chỉ quét
       // `stage.getAnimations`) không bao giờ với tới; để nguyên thì thanh cạn hết
       // trong lúc đồng hồ đứng im, và bàn hiện ra một lời hứa sai.
       paintWaitBar(0, "hold");
+      // ⚠️ Y HỆT LÝ DO ĐÓ cho thanh chọn câu: nó nằm ở HÀNG TRÊN, ngoài sân, nên
+      // freezePlay() cũng không với tới. Để nguyên thì thanh cạn hết trong lúc
+      // đồng hồ đứng im — rồi thầy đóng Menu là lượt chọn nhảy sang đội kia ngay
+      // trước mắt, không ai hiểu vì sao.
+      paintPickBars("hold");
     } else {
       armRound();
       armPending();
+      armPick();
       if (pendingDue) paintWaitBar(pendingDue.left, "go");
+      paintPickBars("go");
     }
   }
 
@@ -936,11 +1024,113 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
 
   // ----- PICK-TURN rounds (Đợt 183) — see the pickMode block above ----------
 
-  // Tell both boards whose turn it is to choose. The board that is NOT choosing
-  // fades its grid and refuses taps; that is the template's half of the deal
-  // (`setPickTurn`), because only it knows what its own board looks like.
+  // Tell both boards whose turn it is to choose. A board that is NOT choosing
+  // refuses taps; that is the template's half of the deal (`setPickTurn`),
+  // because only it knows what its own board looks like.
+  // ⚠️ Đợt 259 — IT NO LONGER HAS TO FADE. Until now the fade was the ONLY cue in
+  // the room saying whose turn it was, so every pick-turn template owed one; the
+  // pick-time bar above each board now says it, and Crossword has dropped its own
+  // fade at the teacher's request. Open the box still fades, and that is fine —
+  // this call has never dictated what a board does with the news.
+  // ⚠️ THE SINGLE FUNNEL for a change of turn, which is why the clock is started
+  // from here rather than from each of the three callers.
   function paintPickTurn() {
     boards.forEach((b, i) => { try { b && b.setPickTurn && b.setPickTurn(pickOpen && i === pickTurn); } catch { /* board already gone */ } });
+    openPickClock();
+  }
+
+  // ⭐⭐ Đợt 259 — PICK TIME, the clock on the CHOOSING team.
+  //
+  // Starts (or clears) the deadline for the current pick phase and repaints both
+  // bars. Called from paintPickTurn alone, so "whose turn is it" and "how long
+  // have they got" can never disagree.
+  // ⚠️ `!pickOpen` is the CLOSE case, not a bug: boardPicked() sets pickOpen to
+  // false and then repaints, which lands here and takes the deadline away — a
+  // team that has chosen is no longer on the clock, and the word it opened has no
+  // time limit at all (thầy: "cần giữ nguyên hiển thị để nhập, kể cả chờ lâu").
+  function openPickClock() {
+    cancelPick();
+    if (!pickMode) return;
+    if (pickOpen && !matchOver && !torndown && Number.isFinite(pickMs)) {
+      pickDue = {
+        fire: () => { pickTimer = null; pickDue = null; if (!torndown) pickExpired(); },
+        left: pickMs, endAt: 0
+      };
+      armPick();
+    }
+    paintPickBars();
+  }
+
+  // Nobody chose in time: hand the turn straight over, no penalty, nothing
+  // opened. The other team gets a full window of its own (paintPickTurn ->
+  // openPickClock), so two teams that both sit on their hands simply pass the bar
+  // back and forth — which is exactly what the teacher asked for.
+  function pickExpired() {
+    if (matchOver || torndown || !pickOpen) return;
+    pickTurn = pickTurn === 0 ? 1 : 0;
+    sound.click();   // a small tick, so the class hears the turn change and not just sees it
+    paintPickTurn();
+  }
+
+  // Repaint both bars from the CURRENT state. `mode` is passed straight through
+  // to the pause/resume pair, exactly like runWaitBar's own "hold"/"go".
+  function paintPickBars(mode) {
+    if (!pickMode) return;
+    const live = pickOpen && !matchOver && !torndown;
+    pickBars.forEach((pb, i) => {
+      // The side that is NOT choosing gets 0 — bar off. The chooser gets whatever
+      // is actually left on the clock (a resume after ☰ Menu must not restart a
+      // window the team has already used half of), or Infinity at the ∞ notch,
+      // where there is no clock to have a remainder.
+      const ms = (live && i === pickTurn)
+        ? (Number.isFinite(pickMs) ? (pickDue ? pickDue.left : pickMs) : Infinity)
+        : 0;
+      paintPickBar(pb, ms, mode);
+    });
+  }
+
+  // One bar, three states — the same three core/engine.js's runWaitBar() has, and
+  // for the same reasons. Kept deliberately parallel to it: whoever fixes a
+  // timing trap in one of them should recognise the other on sight.
+  function paintPickBar(pb, ms, mode) {
+    if (mode === "hold" || mode === "go") {
+      // ⚠️ Only a RUNNING finite bar can be held or resumed. A bar that is off, or
+      // one breathing at ∞, has nothing counting down to pause.
+      if (!pb.el.classList.contains("is-on") || pb.el.classList.contains("is-forever")) return;
+      if (mode === "hold") {
+        // ⚠️ Read the LIVE width out of getComputedStyle — the mid-transition px
+        // value — not the "0%" already written into style, or the bar would jump
+        // to empty the instant the teacher opened a panel.
+        pb.fill.style.width = getComputedStyle(pb.fill).width;
+        pb.fill.style.transition = "none";
+        return;
+      }
+      if (!Number.isFinite(ms) || !(ms > 0)) return;
+      void pb.fill.offsetWidth;
+      pb.fill.style.transition = "width " + ms + "ms linear";
+      pb.fill.style.width = "0%";
+      return;
+    }
+    if (!(ms > 0) || torndown) {
+      pb.el.classList.remove("is-on", "is-forever");
+      pb.fill.style.transition = "none";
+      pb.fill.style.width = "100%";
+      return;
+    }
+    pb.el.classList.add("is-on");
+    pb.fill.style.transition = "none";
+    pb.fill.style.width = "100%";
+    // ∞ — the bar stays FULL and breathes (pure CSS, `.is-forever`). There is no
+    // deadline, so a draining bar would be a lie.
+    // ⚠️⚠️ RETURN BEFORE THE TRANSITION LINE. `"width " + Infinity + "ms"` is not a
+    // valid duration, Chrome drops the whole shorthand, and the "0%" written right
+    // after would then apply with NO transition — an ∞ bar would show up empty,
+    // the exact opposite of what it means. Đợt 216 already paid for this once.
+    if (!Number.isFinite(ms)) { pb.el.classList.add("is-forever"); return; }
+    pb.el.classList.remove("is-forever");
+    void pb.fill.offsetWidth;   // the standard restart-a-CSS-transition reflow
+    pb.fill.style.transition = "width " + ms + "ms linear";
+    pb.fill.style.width = "0%";
   }
 
   // A round has been settled and held; put both boards back on their grid and
@@ -1039,6 +1229,10 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     if (matchOver) return;
     matchOver = true;
     paintWaitBar(0);
+    // ⭐ Đợt 259 — hết trận thì không còn lượt nào để chọn: tắt đồng hồ VÀ cả hai
+    // thanh. `matchOver` đã bật ở trên nên paintPickBars() tự cho cả hai về 0.
+    cancelPick();
+    paintPickBars();
     // ⚠️ Đợt 219 — HẾT TRẬN THÌ PHẢI SÁNG LẠI. Không có câu sau để chuyển sang, nên
     // đây là chỗ cuối cùng lớp còn nhìn được câu vừa rồi; giữ che ở đây là kết thúc
     // một trận bằng một bàn trắng trơn.
@@ -1160,7 +1354,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // ⚠️ PICK MODE has no "current index" to catch up to while the grid is
       // showing — the board is told whose turn it is instead. Jumping it to
       // `roundIndex` here would re-open the LAST box played.
-      if (pickMode) { api.setPickTurn && api.setPickTurn(pickOpen && side === pickTurn); }
+      if (pickMode) {
+        api.setPickTurn && api.setPickTurn(pickOpen && side === pickTurn);
+        // ⭐ Đợt 259 — THE PICK CLOCK STARTS HERE, not at build time. The two
+        // boards mount one after the other (pane 1 always arrives late), and a
+        // window that began ticking while only one board existed would hand half
+        // of itself to a team that could not yet see its own grid. Restarting on
+        // EVERY attach means the clock effectively begins when the last board is
+        // up, which is when the match really begins.
+        // ⚠️ Only two attaches ever happen per match, so "restarts every time" is
+        // bounded — this is not a repaint path.
+        openPickClock();
+      }
       else if (roundIndex > 0) api.goToIndex(roundIndex);
       if (ctl.isLocked(side)) api.lock(true);
     },
@@ -1194,9 +1399,24 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         try { b.lock(false); } catch { /* gone */ }
         try { b.goToIndex(index); } catch { /* gone */ }
       });
-      // Nobody may sit on an open box for ever (a team that walks away, a box
-      // nobody answers): the same backstop normal rounds use.
-      later(advanceRound, LATE_LIMIT_MS);
+      // ⭐⭐⭐ Đợt 259 (thầy, 25/8/2026) — THE 20-SECOND BACKSTOP IS GONE FROM HERE.
+      // It used to read `later(advanceRound, LATE_LIMIT_MS)`, and that ONE line was
+      // the bug the teacher reported: *"khi chọn ô nhưng một lát không bấm thì bàn
+      // phím tự động ẩn xuống và mất trạng thái đang chọn ô"*. Twenty seconds after
+      // a word opened — with NOBODY having answered it, which is the only case this
+      // timer covers — advanceRound() ran, endPickRound() called backToBoard() on
+      // both boards, and a team still spelling a long word out on a touchscreen
+      // watched its keyboard drop and its clue close under its hands. Nothing was
+      // wrong on screen; the round had simply expired. Thầy: *"cần giữ nguyên hiển
+      // thị để nhập, kể cả chờ lâu. Chỉ ẩn khi đã xong từ."*
+      // ⚠️ THE HANG THIS GUARDED AGAINST IS ACCEPTED, and there is precedent: ∞ on
+      // Time delay gave up the same backstop at Đợt 216, for the same reason (the
+      // round ends on an EVENT, not on a clock) and with the same way out — the
+      // teacher's own ☰ Menu ▸ Start again. The choosing phase, which is where a
+      // class actually stalls, is now covered by PICK TIME instead.
+      // ⚠️ Removing the call is safe on its own terms: `cancelRound()` a few lines
+      // up already clears whatever the previous round left armed, so nothing here
+      // depended on `later()`'s own cancel-then-arm.
       return true;
     },
     // A board has finished with the current word — `info.correct === false`
@@ -1731,13 +1951,42 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           onInput: v => { draft.fightSpeedBonus = v; }
         });
 
+    // ⭐⭐ Đợt 259 — PICK TIME, built ONLY for a pick-turn game (Crossword · Open
+    // the box). Every other template has no choosing phase at all, so a control
+    // for it there would be the dead-control trap of Đợt 143.
+    // ⚠️ BLUE, by thầy's three-colour law: red punishes, amber rewards, green is a
+    // resource — and a choosing window is none of the three, exactly like Time
+    // delay beside it. The tone is not cosmetic: core/options-panel.js reads it to
+    // decide which side of the panel the slider is seated on.
+    // ⚠️ The ∞ stop sits ONE STEP PAST THE TOP, not at 0 on the left, matching the
+    // shape thầy chose for Time delay ("ngay sau 10s là đến nấc unlimited"). The
+    // STORED value still follows the house 0-means-∞ convention.
+    const PICK_UNLIM = 11;   // positions 1..10 = seconds, 11 = ∞
+    const cPickTime = pickMode ? mkSliderCell({
+      label: "Pick time", sub: "choose a question",
+      min: 1, max: PICK_UNLIM, step: 1,
+      value: cur.fightPickTime === 0 ? PICK_UNLIM : cur.fightPickTime,
+      tone: "blue",
+      fmt: v => (v >= PICK_UNLIM ? "∞" : v + "s"),
+      onInput: v => { draft.fightPickTime = v >= PICK_UNLIM ? 0 : v; }
+    }) : null;
+    if (cPickTime) cPickTime.cell.title = "How long the team whose turn it is has to choose a question. Run out and the turn simply passes to the other team — nothing is opened and nobody loses a point. At ∞ the bar still shows whose turn it is, it just never runs out.";
+
     panel.append(cContent.cell);
     // ⭐ Đợt 188 — Time delay and Speed bonus share ONE column, stacked, because
     // the first decides whether the second does anything (teacher: "time delay và
     // speed bonus luôn cùng 1 cột"). Side by side, the greyed-out Speed bonus read
     // as an unrelated broken control. A pick-turn game has no Time delay, so its
     // Speed bonus goes back to being an ordinary cell of its own.
-    if (pickMode) panel.append(cBonus.cell);
+    // ⭐ Đợt 259 — …except it now has a stack-mate of its own: PICK TIME is a
+    // pick-turn game's counterpart to Time delay (both are "how long may this go
+    // on"), so it takes the same shared column above Speed bonus, and the two
+    // branches below end up the same shape as each other again.
+    if (pickMode) {
+      const stack = el("div", "aw-optc-stack");
+      stack.append(cPickTime.cell, cBonus.cell);
+      panel.append(stack);
+    }
     else {
       const stack = el("div", "aw-optc-stack");
       stack.append(cDelay.cell, cBonus.cell);
@@ -1948,6 +2197,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     paintWaitBar(0);
     cancelRound();
     cancelPending();   // Đợt 133 — same reasoning as roundTimer
+    cancelPick();      // Đợt 259 — same reasoning again: a pick clock that outlives
+                       // its match hands the turn over inside a torn-down referee
     FS_EVENTS.forEach(evt => { try { document.removeEventListener(evt, syncFullscreenClass); } catch { /* ignore */ } });
     boards.forEach(b => { try { b && b.lock(true); } catch { /* board already gone */ } });
     // Đợt 131: the actual fix for the ghost-clock bug — stop BOTH boards'
