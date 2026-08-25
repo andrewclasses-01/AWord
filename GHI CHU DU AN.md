@@ -12,7 +12,143 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 265** (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 266** (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 266 (26/8/2026) — ⭐⭐⭐ **TIME COST TRONG FIGHT CHỈ TRỪ MỘT BÊN: "CLIP ĐANG ĐỌC" LÀ VẾ CỦA CẢ TRẬN, KHÔNG PHẢI CỦA MỘT BÀN**
+
+> ✅ **ĐÃ PUSH** — code `84b2a80`. ⬜ **CHỜ THẦY BẤM TAY** (một trận Fight act VOICE — xem mục
+> VIỆC ĐANG CHỜ cuối khối này).
+> Sửa **9 file**: `core/engine.js` · `core/fight.js` · 7 template (`anagram` · `quiz` ·
+> `true-false` · `type-the-answer` · `find-the-match` · `crossword` · `open-the-box`).
+> Hồ sơ: `core/HUONG DAN CORE.md` (hợp đồng Time cost nay có **điểm nối thứ 5**).
+> Bàn thử mới: `scratch/tc-voice1.html` (một template một lần nạp, cách ly hẳn) ·
+> `scratch/tc-pick.html` (Crossword/Open the box: phải MỞ một ô mới có clip) ·
+> `scratch/tc-single.html` (đối chứng CHẾ ĐỘ MỘT BÀN) · `scratch/tc-matrix.html` (quét 7 game,
+> act TEXT) · `scratch/tc-spy.js` (bọc `flyTimeCost`, đếm tiền theo TỪNG BÊN) ·
+> `scratch/fake-voice-clips-long.js` (clip im lặng 3 giây, để đo được quãng "đang đọc").
+> **BA việc trong một đợt** — thầy giao lỗi (1), rồi chốt "vá luôn 2 lỗi còn lại" (2) và (3).
+
+**Thầy báo:** *"Anagram ở chế độ Fight với options mở time cost — Time cost chỉ trừ điểm 1 bên
+(bên phải) mà không trừ bên trái."*
+
+### 1. Vì sao suýt kết luận "không tái hiện được"
+Quét đủ **7 game có cả `fightMode` lẫn `timeCost`** với act **TEXT**, hai bàn ngồi im 7 giây:
+**cả 7 đều trừ hai bên như nhau** (`scratch/tc-matrix.html`). Đánh thật một bàn cũng vẫn trừ cả hai.
+Chỗ rẽ là **act VOICE** — và các act Anagram của thầy hầu hết là VOICE.
+
+### 2. Nguyên nhân thật
+Trong một trận, **chỉ BÀN 0 (bên TRÁI) được sở hữu tiếng thật**: `core/fight.js` →
+`ctl.speaks(side) => side === 0` (hai bản cùng một clip lệch nhau vài ms là **tiếng vọng**, không
+phải lời đọc; bàn 1 chỉ được **nhại lại ánh sáng** nút loa qua `reportVoiceState`/`syncVoice`).
+Nhưng vế *"clip còn đang đọc"* lại nằm trong `ui.setIdleGuard` **của từng bàn**:
+
+```js
+// anagram.js — TRƯỚC
+ui.setIdleGuard(() => busy || finished || fightLocked() || doneCheck(...) ||
+                      !!(voiceAudioEl && !voiceAudioEl.paused));   // ⬅ bàn 1 KHÔNG BAO GIỜ có audio
+```
+
+⇒ bàn 1 trả lời **false** vĩnh viễn ⇒ **đội bên phải bị tính tiền suốt quãng cả lớp đang nghe**
+đúng cái clip mà nó không thể làm gì trong lúc đó.
+
+**Đo được** (`scratch/tc-voice1.html`, act VOICE clip 3s, **hai bàn ngồi im 9 giây**,
+Time cost 10 / idle 1s — mỗi template một lần nạp trang riêng, không dính xác ván trước):
+
+| template | TRÁI | PHẢI | guard bật TRÁI/PHẢI | kết luận |
+|---|---|---|---|---|
+| **Anagram** | 50 | **90** | 12/36 · **0/36** | LỆCH |
+| **Quiz** | 50 | **90** | 15/36 · **0/36** | LỆCH |
+| **True/false** | 50 | **80** | 15/36 · **2/36** | LỆCH |
+| Type the answer | 50 | 50 | 15/36 · 15/36 | đều — **nhưng vì lỗi khác**, xem mục 5 |
+| Find the match | 50 | 50 | 15/36 · 15/36 | đều — cùng lý do |
+| Crossword | 90 | 90 | 0 · 0 | không đo được (clip chỉ chạy sau khi mở từ) |
+| Open the box | 90 | 90 | 0 · 0 | không đo được (clip chỉ chạy sau khi mở ô) |
+
+### 3. Cách vá — đúng chỗ chia việc engine ↔ template
+Vế đó **rời khỏi `setIdleGuard`** và đi cửa riêng, để **trọng tài** gộp lại thành **một câu trả lời
+cho cả trận**:
+
+* `core/engine.js` — biến `voiceGuard` + hook mới **`ui.setVoiceGuard(fn)`** + hàm `voiceBusy()`
+  (`idleTick` hỏi nó trước `idleGuard`) + đăng ký với trọng tài
+  `fight.ctl.registerVoiceBusy(side, …)` — **lời gọi TUỲ CHỌN**, cùng khuôn `registerWaitBar` /
+  `registerPause` / `registerNavGate` (một `core/fight.js` cũ lấy từ cache thì đơn giản là không hỏi).
+* `core/fight.js` — `voiceBusyFns[2]` + `registerVoiceBusy(side, fn)` + **`voiceBusy()` hỏi CẢ HAI
+  BÀN** (xem mục 5 để biết vì sao không chỉ hỏi bàn 0).
+* 5 template — chuyển đúng một vế sang `ui.setVoiceGuard(...)`, **không nhân đôi** (để lại cả hai
+  chỗ là đẻ ra hai bản sao của một luật rồi lệch nhau — đúng bẫy `HUONG DAN CORE.md` cảnh báo).
+
+**Sau vá, đo lại trên chính bàn thử đó:** Anagram **50/50** · Quiz **50/50** · True/false **50/50**,
+lệch **0/36**. Bên phải tụt từ 90 → 50, tức nó **được hưởng đúng khoản miễn** mà bên trái vẫn luôn có.
+
+### 4. Đối chứng — bàn thử này có thật sự nhìn thấy gì không
+* **Trước/sau trên CÙNG một file bàn thử**: 50/90 · 50/90 · 50/80 → 50/50 · 50/50 · 50/50.
+* **Đối chứng dương, chế độ MỘT BÀN** (`scratch/tc-single.html`, Anagram, ngồi im 9 giây):
+  act **VOICE trừ 50**, act **TEXT trừ 90** ⇒ khoản miễn "đang đọc" **vẫn còn nguyên** ngoài Fight,
+  và bàn thử đủ nhạy để thấy nó.
+* **Hồi quy act TEXT** (`scratch/tc-matrix.html`, 7 game): vẫn **7/7 trừ hai bên như nhau**.
+* ⚠️ **Bẫy phép đo**: Chrome chặn autoplay khi trang chưa có cú bấm THẬT — bàn thử phải bọc
+  `HTMLMediaElement.prototype.play` để bật `muted` (muted thì được phép phát). Không có dòng đó thì
+  **không clip nào chạy** và cả bảng trên sẽ "ĐẠT" một cách giả. Cột *"clip đã phát"* in ra chính là
+  để bắt ca đó — 0 lượt phát thì bàn thử tự khai **"KHÔNG ĐO ĐƯỢC"** chứ không dám nói ĐẠT.
+
+### 5. ⭐⭐⭐ LỖI THỨ HAI — **TIẾNG VỌNG: 3 GAME TỰ PHÁT CLIP Ở CẢ HAI BÀN**
+Phát hiện dọc đường khi đếm số lượt clip: `type-the-answer` · `find-the-match` · `open-the-box`
+**quên hẳn cái rào** `(!fightCtl || fightCtl.speaks(fightSide))` mà `quiz` · `true-false` ·
+`anagram` · `crossword` đều có ⇒ **2 lượt phát cho MỘT câu**, hai bản cùng một clip lệch nhau vài ms:
+đúng thứ thầy từng mô tả ở Đợt 259 là *"hiện 2 cái lồng nhau"*.
+
+⚠️ **Và chính lỗi này là thứ làm hai game đầu trông như "trừ đều hai bên" ở bảng mục 2** — đều vì
+**CẢ HAI** cùng có tiếng, chứ không phải vì đúng. (Cũng vì thế `ctl.voiceBusy()` cố ý hỏi **cả hai
+bàn**: câu trả lời vẫn đúng dù cái rào kia có ai làm hỏng lại hay không.)
+
+Vá theo **đúng khuôn Crossword Đợt 259**, đủ bốn mảnh chứ không chỉ cái rào:
+`createVoicePlayer({ onGlow })` → `reportVoiceState` · `handleListenTap()` → `requestVoiceToggle`
+(chạm bên nào cũng chỉ một clip) · `toggleVoiceRemote` + `syncVoice` trong `ctl.attach` · và nửa
+**PULL** `voiceState()` cho nút vừa được dựng lại giữa lúc clip đang đọc dở (bài học Đợt 134).
+
+**Đo lại** (`scratch/tc-voice1.html` + `scratch/tc-pick.html`):
+
+| template | clip phát | time cost TRÁI/PHẢI | nút loa SÁNG TRÁI/PHẢI |
+|---|---|---|---|
+| Type the answer | **2 → 1** | 50 / 50 | **13/36 · 13/36** |
+| Find the match | **2 → 1** | 50 / 50 | **13/36 · 13/36** |
+| Open the box | **2 → 1** | 50 / 50 | **3/24 · 3/24** |
+| Crossword (vốn đã đúng) | 1 | 40 / 40 | 5/24 · 5/24 |
+
+⇒ đúng MỘT clip mỗi câu, mà nút loa bàn kia **vẫn sáng** — không mất gì cho lớp.
+
+### 6. ⭐⭐ LỖI THỨ BA — **CROSSWORD · OPEN THE BOX KHÔNG HỀ CÓ VẾ "CLIP ĐANG ĐỌC"**
+Hai game này chưa bao giờ khai vế đó ⇒ lúc clue đang được đọc thì **cả hai bàn cùng bị trừ**
+(đối xứng nên không phải lỗi thầy báo, nhưng vẫn ngược đúng cái luật Time cost dựa vào:
+*"không tính tiền lúc học sinh KHÔNG THỂ thao tác"*). Nay mỗi game thêm một dòng
+`ui.setVoiceGuard?.(() => voicePlayer.isPlaying())`.
+
+**Đối chứng ngược** (`scratch/tc-pick.html` — mở một ô rồi ngồi im 6 giây, cắt dây `setVoiceGuard`):
+
+| template | có dây | CẮT dây |
+|---|---|---|
+| Crossword | **40** | **60** |
+| Open the box | **50** | **60** |
+
+⇒ dòng mới thật sự đang miễn đúng quãng clip, không phải trang trí.
+(Open the box tiết kiệm ít hơn vì cửa `answersUnlocked` của nó vốn đã che một phần quãng đọc.)
+
+### 7. Hồi quy sau CẢ BA việc
+* `scratch/tc-matrix.html` (7 game, act TEXT, hai bàn ngồi im): **7/7 trừ hai bên như nhau**.
+* Chế độ MỘT BÀN vẫn tự phát bình thường: Type the answer **1 clip / trừ 40** · Find the match
+  **1 clip / trừ 40** · Anagram **1 clip / trừ 50** (act TEXT trừ **90** — khoản miễn còn nguyên).
+* `scratch/dot265-verify.html`: khớp baseline. ⚠️ Mục B của bench đó có **hai kết quả tự dao động**
+  (Anagram TRUOT ở cả bản gốc lẫn bản vá; True/false lật DAT/TRUOT giữa hai lần chạy vì phép đo là
+  digest chênh nhau 3 ký tự). Đã kiểm bằng cách `git stash` toàn bộ code rồi chạy lại — **giống hệt**.
+  Và về mặt cấu trúc thì bench đó **không bật Time cost** nên không dòng nào của đợt này chạy ở đấy.
+
+### ⬜ VIỆC ĐANG CHỜ (Đợt 266)
+* ⬜ **Thầy bấm tay một trận Fight Anagram act VOICE**, bật Time cost, xem hai số có tụt cân nhau không.
+* ⬜ **Thầy nghe thử một trận Fight act VOICE ở Type the answer / Find the match / Open the box** —
+  phải nghe đúng MỘT tiếng, và nút loa **cả hai bàn** cùng sáng.
+* ⬜ Bấm tay trên **TOMKO** + máy lớp.
 
 ---
 

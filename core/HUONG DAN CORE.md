@@ -3883,8 +3883,40 @@ chỉ việc đập tay liên tục là vô hiệu hoá cả tính năng. Engine
 
 ⚠️ **`setIdleGuard` bắt buộc phải phủ "từ/câu ĐÃ XONG"**, không chỉ cờ animation của template. Anagram
 giải xong một từ còn ~1,8–2,4s hoạt cảnh mà `busy` KHÔNG bật — thiếu vế `doneCheck` là mỗi từ tự ăn 2
-nhịp trừ oan. Guard cũng phải phủ: đang phát giọng đọc, và (engine tự lo) ☰ Menu / panel đang mở.
+nhịp trừ oan. Guard cũng phải phủ (engine tự lo) ☰ Menu / panel đang mở.
 Guard kẹt ON chỉ có nghĩa "không trừ" — hỏng về phía an toàn.
+
+⛔⛔⛔ **"ĐANG PHÁT GIỌNG ĐỌC" KHÔNG ĐƯỢC NẰM TRONG `setIdleGuard` — PHẢI ĐI QUA
+`ui.setVoiceGuard(fn)` (Đợt 266, 26/8/2026).** Lý do là một luật của FIGHT, không phải chuyện gọn
+gàng: trong một trận **chỉ BÀN 0 được sở hữu tiếng thật** (`core/fight.js` → `ctl.speaks(side) =>
+side === 0`; hai bản cùng một clip lệch nhau vài ms là tiếng vọng, không phải lời đọc). Vế "clip còn
+đang đọc" nằm trong guard của TỪNG BÀN ⇒ bàn 1 **không có `<audio>` nào của riêng nó** nên vế đó
+**luôn false** bên đó, và Time cost trừ đội bên phải suốt quãng **cả lớp đang nghe đúng clip ấy**.
+Thầy 26/8/2026: *"Time cost chỉ trừ điểm 1 bên (bên phải) mà không trừ bên trái"*. Đo được
+(`scratch/tc-voice1.html`, act VOICE, hai bàn ngồi im 9 giây, Time cost 10 / idle 1s):
+
+| template | TRÁI | PHẢI | guard bật (TRÁI/PHẢI) |
+|---|---|---|---|
+| Anagram | 50 | **90** | 12/36 · **0/36** |
+| Quiz | 50 | **90** | 15/36 · **0/36** |
+| True/false | 50 | **80** | 15/36 · **2/36** |
+
+Sau khi tách: **50/50 cả ba**, lệch 0/36. Đường đi mới: template khai `ui.setVoiceGuard(fn)` →
+engine đăng ký với trọng tài (`ctl.registerVoiceBusy`) → `idleTick` hỏi `voiceBusy()` **gộp CẢ HAI
+BÀN** (`ctl.voiceBusy()`). Ngoài Fight thì chỉ còn đúng vế của bàn mình ⇒ y hệt nết cũ (đối chứng
+đơn: Anagram một bàn, act VOICE trừ **50**, act TEXT trừ **90** — miễn trừ vẫn còn nguyên).
+⚠️ Trọng tài hỏi **cả hai bàn** chứ không chỉ bàn 0, dù hợp đồng nói chỉ bàn 0 được đọc — và đó
+không phải phòng xa suông: ngay trong đợt này **Type the answer · Find the match · Open the box** bị
+bắt quả tang **quên hẳn rào `ctl.speaks`** nên tự phát clip ở CẢ HAI bàn (**2 lượt phát cho MỘT
+câu** — tiếng vọng thật). **Đã vá cùng Đợt 266**: cả ba nay đi đủ khuôn Crossword (Đợt 259) —
+`createVoicePlayer({ onGlow })` → `reportVoiceState` · `handleListenTap` → `requestVoiceToggle` ·
+`toggleVoiceRemote` + `syncVoice` trong `ctl.attach` · rào `(!fightCtl || fightCtl.speaks(fightSide))`
+ở cú tự phát, kèm nửa PULL `voiceState()` cho nút vừa dựng lại giữa clip. Đo lại: **1 lượt phát**,
+nút loa sáng **13/36 ở CẢ HAI bàn**.
+
+⭐ **Crossword · Open the box nay CŨNG có vế "clip đang đọc"** (trước Đợt 266 hoàn toàn không có ⇒ lúc
+clue đang đọc thì cả hai bàn cùng bị trừ). Đối chứng ngược cắt dây `setVoiceGuard`, mở một ô rồi ngồi
+im 6 giây: Crossword **40 → 60**, Open the box **50 → 60**.
 
 **Cách đếm**: `setInterval(idleTick, 100)` **chỉ sinh ra khi Time cost > 0**, cộng dồn `idleMs += dt`,
 **vứt bỏ** dt của quãng bị guard (không dồn trả sau), rồi trừ khi `idleMs >= ngưỡng × (n+1)` bằng
@@ -3932,7 +3964,11 @@ Whack-a-mole · Flying fruit · Balloon pop · Crossword · Unjumble · Speaking
 1. `timeCost: true`
 2. `ui.setScoreProvider(scoreNow)` — engine hỏi "điểm THẬT bây giờ là bao nhiêu".
 3. `ui.setIdleGuard(fn)` — `true` = **học sinh KHÔNG THỂ thao tác lúc này**, cấm tính tiền.
+   ⛔ **KHÔNG để vế "clip đang đọc" ở đây** — nó có cửa riêng, xem điểm nối 5.
 4. `ui.noteActivity()` ở **mọi** điểm tiến độ.
+5. ⭐ `ui.setVoiceGuard(fn)` (Đợt 266) — `true` = **clip của BÀN NÀY đang đọc**. Đúng một vế, tách
+   ra vì trong Fight chỉ bàn 0 có tiếng thật nên vế này phải hỏi được QUA trọng tài (xem khối
+   ⛔⛔⛔ ở trên). Game không có giọng đọc thì bỏ qua, y như trước.
 Và **trừ `ui.timeCostTotal()` ở ĐÚNG MỘT chỗ** — cái chỗ duy nhất game quyết định điểm là bao nhiêu.
 Trừ ở nhiều chỗ, hoặc trừ thẳng vào biến `score` của game, thì **lần vẽ điểm thường tiếp theo xoá sạch
 khoản trừ** (và nếu trừ vào `score` thì hỏng cả tổng của chính game).

@@ -8,9 +8,36 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 265 — `9d649d3`, ĐÃ PUSH + LIVE KIỂM CHỨNG)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 266 — ⬜ CHƯA PUSH)**.
 >
-> **Đợt 265** (26/8/2026) — ⭐⭐⭐ **RÀ TOÀN BỘ SHOWDOWN NGOÀI QUIZ** (thầy: *"tôi thấy True
+> **Đợt 266** (26/8/2026) — ⭐⭐⭐ **TIME COST TRONG FIGHT CHỈ TRỪ MỘT BÊN.** Thầy: *"Anagram ở
+> chế độ Fight với options mở time cost — Time cost chỉ trừ điểm 1 bên (bên phải) mà không trừ
+> bên trái."* Chỉ xảy ra với act **VOICE**: trong một trận **chỉ BÀN 0 (trái) sở hữu tiếng thật**
+> (`ctl.speaks(side) => side === 0`), mà vế *"clip còn đang đọc"* lại nằm trong `ui.setIdleGuard`
+> **của từng bàn** ⇒ bàn 1 không có `<audio>` nào nên vế đó **luôn false** bên đó, và đội bên phải
+> bị tính tiền suốt quãng **cả lớp đang nghe cùng một clip**. Đo (`scratch/tc-voice1.html`, hai bàn
+> ngồi im 9 giây, Time cost 10 / idle 1s): **Anagram 50/90 · Quiz 50/90 · True-false 50/80**
+> (guard bật TRÁI 12–15/36, PHẢI **0–2/36**). Vá: vế đó rời `setIdleGuard` sang hook mới
+> **`ui.setVoiceGuard`**, engine đăng ký với trọng tài (`ctl.registerVoiceBusy`) và `idleTick`
+> hỏi **`ctl.voiceBusy()` gộp CẢ HAI BÀN**. Sau vá **50/50 cả ba, lệch 0/36**; chế độ một bàn
+> không đổi (act VOICE 50 · act TEXT 90). Sửa **9 file**: `core/engine.js` · `core/fight.js` ·
+> `anagram` · `quiz` · `true-false` · `type-the-answer` · `find-the-match` · `crossword` ·
+> `open-the-box`.
+> ⭐⭐ **VÁ LUÔN HAI LỖI CÙNG HỌ (thầy chốt cùng ngày).** (2) **TIẾNG VỌNG**:
+> `type-the-answer` · `find-the-match` · `open-the-box` **quên hẳn rào `ctl.speaks`** nên tự phát
+> clip ở CẢ HAI bàn — **2 lượt phát cho MỘT câu**. Nay đi đủ khuôn Crossword (Đợt 259):
+> `onGlow`→`reportVoiceState` · `handleListenTap`→`requestVoiceToggle` · `toggleVoiceRemote`+
+> `syncVoice` · nửa PULL `voiceState()`. Đo lại **1 lượt phát**, nút loa sáng **cả hai bàn**
+> (13/36 · 13/36). ⚠️ Chính lỗi này làm hai game đó trông như "trừ đều" ở lỗi (1) — đều vì cả hai
+> cùng có tiếng, chứ không phải vì đúng.
+> (3) **CROSSWORD · OPEN THE BOX chưa bao giờ có vế "clip đang đọc"** ⇒ cả hai bàn cùng bị trừ suốt
+> quãng đọc clue. Nay mỗi game thêm một dòng `ui.setVoiceGuard`. Đối chứng ngược cắt dây (mở một ô
+> rồi ngồi im 6 giây): Crossword **40 → 60**, Open the box **50 → 60**.
+> **Hồi quy**: `tc-matrix` 7/7 · chế độ một bàn vẫn tự phát bình thường (tta/ftm 1 clip).
+> ⬜ **CHỜ THẦY BẤM TAY**: một trận Fight act VOICE (Anagram xem hai số có tụt cân nhau; tta/ftm/otb
+> nghe đúng MỘT tiếng và nút loa hai bàn cùng sáng) + kiểm trên TOMKO/máy lớp.
+>
+> **Đợt 265** (26/8/2026, `9d649d3`, ĐÃ PUSH + LIVE KIỂM CHỨNG) — ⭐⭐⭐ **RÀ TOÀN BỘ SHOWDOWN NGOÀI QUIZ** (thầy: *"tôi thấy True
 > False có vấn đề nên muốn check lại tất cả để xử lý tất cả"*). Sửa **11 file**:
 > `core/engine.js` · `core/app.css` · `core/showdown-setup.js` · 8 template (true-false ·
 > unjumble · gameshow · balloon-pop · open-the-box · find-the-match · crossword · speaking).
@@ -4365,14 +4392,61 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 265** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 266** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **cụm SHOWDOWN 259 → 265**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **Đợt 266**, nối sau cụm SHOWDOWN 259 → 265)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`9d649d3`** (Đợt 265) + hồ sơ **`74f9bc2`** — đã push + LIVE kiểm chứng |
+> | Commit mới nhất | **`84b2a80`** (Đợt 266 — TIME COST TRONG FIGHT + tiếng đọc) + hồ sơ ngay sau nó |
+> | Trước đó | **`9d649d3`** (Đợt 265) + hồ sơ `74f9bc2` — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
+>
+> ### ⭐⭐⭐ ĐỢT 266 — VÙNG VỪA ĐỘNG TỚI: **TIẾNG ĐỌC TRONG FIGHT** (không phải Showdown)
+>
+> Thầy: *"Anagram ở chế độ Fight với options mở time cost — Time cost chỉ trừ điểm 1 bên
+> (bên phải) mà không trừ bên trái."* Ba lỗi, cùng MỘT gốc: **trong một trận chỉ BÀN 0 (bên TRÁI)
+> sở hữu `<audio>` thật** (`fight.js` → `ctl.speaks(side) => side === 0`).
+>
+> | # | Lỗi | Đo được |
+> |---|---|---|
+> | 1 | Vế *"clip còn đang đọc"* nằm trong `ui.setIdleGuard` **của từng bàn** ⇒ bàn 1 luôn trả lời FALSE ⇒ **Time cost chỉ trừ bên phải** | Anagram **50/90** · Quiz **50/90** · True-false **50/80** → sau vá **50/50** cả ba, lệch **0/36** |
+> | 2 | `type-the-answer` · `find-the-match` · `open-the-box` **quên hẳn rào `ctl.speaks`** ⇒ tự phát clip ở CẢ HAI bàn (tiếng vọng) | **2 lượt phát/câu → 1**, nút loa sáng **13/36 ở cả hai bàn** |
+> | 3 | `crossword` · `open-the-box` **chưa bao giờ có vế "clip đang đọc"** ⇒ cả hai bàn cùng bị trừ lúc đọc clue | đối chứng ngược cắt dây: Crossword **40 → 60**, Open the box **50 → 60** |
+>
+> ⛔⛔ **HỢP ĐỒNG MỚI — ĐỌC TRƯỚC KHI THÊM/SỬA TEMPLATE CÓ GIỌNG ĐỌC:**
+> **Time cost nay có ĐIỂM NỐI THỨ 5 — `ui.setVoiceGuard(fn)`.** Vế *"clip đang đọc"* **KHÔNG được
+> để trong `setIdleGuard` nữa** (mọi vế khác của idleGuard thuần tuý của riêng từng bàn; riêng vế
+> này phải hỏi được QUA trọng tài). Đường đi: template khai `ui.setVoiceGuard` → engine đăng ký
+> `ctl.registerVoiceBusy` → `idleTick` hỏi `ctl.voiceBusy()` **gộp CẢ HAI BÀN**. Chi tiết đầy đủ:
+> `core/HUONG DAN CORE.md`, khối ⛔⛔⛔ trong mục TIME COST.
+>
+> ⛔ **VÀ: game có giọng đọc + `fightMode` thì phải đi ĐỦ BỐN MẢNH của khuôn Crossword (Đợt 259)**,
+> không chỉ cái rào: `createVoicePlayer({ onGlow })` → `reportVoiceState` · `handleListenTap()` →
+> `requestVoiceToggle` · `toggleVoiceRemote` + `syncVoice` trong `ctl.attach` · nửa **PULL**
+> `voiceState()` cho nút vừa dựng lại giữa clip. Thiếu mảnh nào cũng **hỏng im lặng**: thiếu rào =
+> tiếng vọng, thiếu gương = nút loa bàn kia không sáng.
+> Kiểm bằng grep, đừng tin trí nhớ: `grep -rln "setVoiceGuard" templates/` phải phủ mọi game có
+> `timeCost: true` **và** có giọng đọc.
+>
+> ⚠️ **BÀN THỬ CÓ TIẾNG PHẢI MUTE**: Chrome chặn autoplay khi trang chưa có cú bấm THẬT
+> (`btn.click()` bằng script **không** tính là user activation) ⇒ bọc
+> `HTMLMediaElement.prototype.play` để bật `muted`. Không có dòng đó thì **không clip nào chạy** và
+> cả bảng đo "ĐẠT" một cách giả. Luôn in **số lượt clip đã phát**; 0 lượt thì khai
+> **"KHÔNG ĐO ĐƯỢC"**, đừng khai ĐẠT. Bàn thử: `scratch/tc-voice1.html` (một template một lần nạp) ·
+> `scratch/tc-pick.html` (Crossword/Open the box phải MỞ một ô mới có clip) ·
+> `scratch/tc-single.html` (đối chứng chế độ MỘT BÀN) · `scratch/tc-matrix.html` (quét 7 game, act
+> TEXT) · `scratch/tc-spy.js` · `scratch/fake-voice-clips-long.js`.
+>
+> ⚠️ **`scratch/dot265-verify.html` mục B có hai kết quả TỰ DAO ĐỘNG** (Anagram TRUOT ở cả bản gốc
+> lẫn bản vá; True/false lật DAT/TRUOT giữa hai lần chạy — phép đo là digest chênh nhau 3 ký tự).
+> Đã kiểm bằng `git stash` toàn bộ code rồi chạy lại: **giống hệt**. Bench đó **không bật Time
+> cost** nên không dòng nào của Đợt 266 chạy ở đấy. Đừng hoảng khi thấy nó đỏ.
+>
+> ### 🟢 TRẠNG THÁI TRƯỚC ĐÓ (sau **cụm SHOWDOWN 259 → 265**)
+>
+> | | |
+> |---|---|
 > | Kiểm live | Pages `built` đúng · **11/11 mã băm SHA-256 khớp** — ⚠️ so với **BLOB git** (`git show HEAD:<file>`), KHÔNG so với file làm việc: ổ Windows là **CRLF** còn blob là **LF**, lần so đầu báo LỆCH oan · **14/14 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot265-live.html`, **248/250 tài nguyên** nạp từ `aword.andrewclasses.com` — hai cái còn lại đúng là `fake-firebase.js` + `fake-classes.js` cố ý tráo, và bench TỰ khẳng định điều đó) |
 > | Vùng vừa động tới | ⭐ **SHOWDOWN — TẦNG TRÌNH BÀY + LUẬT CHIA LƯỢT** (khác hẳn 259→264 vốn là tầng Firestore): `core/engine.js` · `core/app.css` · `core/showdown-setup.js` · **8 template** (true-false · unjumble · gameshow · balloon-pop · open-the-box · find-the-match · crossword · speaking). ⚠️ Đợt 265 đổi **HAI hợp đồng**: (a) bật `showdownMode` nay **BẮT BUỘC** cài `ui.setRoundTimeout` + `ui.roundDone`; (b) `review` là **MỘT HÀNG MỖI LƯỢT**, `index` là **SỐ THỨ TỰ LƯỢT** — đảo ngược nửa sau luật Đợt 178 |
 > | Trước đó | Đợt 264 lượt ma + reset toàn lớp (`2700bc1`) · Đợt 263 cửa Apply + hàng ô tích · Đợt 262 tên trận · Đợt 261 phòng chờ · Đợt 259 Crossword FIGHT |
@@ -5272,7 +5346,23 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 265, 26/8/2026) — ĐÃ LIVE `9d649d3` + hồ sơ `74f9bc2`.
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 266, 26/8/2026) — code `84b2a80`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Vùng: **TIẾNG ĐỌC TRONG FIGHT** (không phải Showdown). Bản đồ đầy đủ ở mục
+> **0a ▸ ⭐⭐⭐ ĐỢT 266**; chi tiết từng con số ở khối **Đợt 266** trong `GHI CHU DU AN.md`.
+>
+> **Chờ TAI/MẮT thầy — cả ba việc đều phải chạy một trận FIGHT với act VOICE:**
+> 1. ⬜ **Anagram, Fight, act VOICE, bật Time cost** — hai con số của hai đội phải **tụt cân nhau**.
+>    Trước Đợt 266 chỉ đội bên PHẢI bị trừ trong lúc clip đang đọc.
+> 2. ⬜ **Type the answer · Find the match · Open the box, Fight, act VOICE** — phải nghe **đúng MỘT
+>    tiếng** (trước đây hai bản chồng nhau lệch vài ms), và **nút loa CẢ HAI bàn cùng sáng**.
+>    Chạm nút loa ở **bàn phải** cũng phải phát ra tiếng (cú chạm được chuyển sang bàn trái).
+> 3. ⬜ **Crossword · Open the box, Fight, act VOICE, bật Time cost** — trong lúc clue đang đọc thì
+>    **không bên nào bị trừ**.
+> 4. ⬜ Test chạm **TOMKO** + máy lớp cho cả ba việc trên.
+>
+> ---
+>
+> ⭐⭐⭐ **TRƯỚC ĐÓ (Đợt 265, 26/8/2026) — ĐÃ LIVE `9d649d3` + hồ sơ `74f9bc2`.
 > KHÔNG CÒN VIỆC CODE DANG DỞ.** Kho sạch, `main` = `origin/main`. Chi tiết đầy đủ ở khối
 > **Đợt 265** trong `GHI CHU DU AN.md`; bản đồ vùng vừa động ở mục **0a ▸ 🗺️ ĐỢT 265 GỒM GÌ**.
 >
