@@ -217,7 +217,21 @@ const ttaTemplate = {
     // through Change Template from an Anagram source (core/convert.js).
     // `items[i]` IS the raw content object directly (no `.src` wrapper in
     // this template), so `.voice`/`.hideText` read straight off it.
-    const voicePlayer = createVoicePlayer();
+    const voicePlayer = createVoicePlayer({
+      // ⭐⭐ Đợt 266 — PUSH của hợp đồng MỘT VOICE MỖI TRẬN (khuôn Crossword Đợt 259):
+      // mỗi lần bàn ĐANG ĐỌC bật/tắt vầng sáng nút loa của nó, trọng tài nhận rồi
+      // chuyển sang bàn kia để hai nút sáng như nhau tuy chỉ có MỘT clip thật.
+      onGlow: on => {
+        if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on });
+      }
+    });
+    // ⭐⭐ Đợt 266 — cú chạm nút loa. Ngoài trận thì chỉ là toggle. Trong trận, cú chạm
+    // trên bàn KHÔNG được đọc đưa cho trọng tài, trọng tài giao cho bàn 0 — lớp chạm
+    // bên nào cũng vậy, đúng MỘT clip phát ra.
+    function handleListenTap(clipId, btn) {
+      if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+      voicePlayer.toggle(clipId, btn);
+    }
     let firstQuestionSpoken = false;
 
     // ===== persistent shell — built ONCE, updated in place per question =====
@@ -348,8 +362,13 @@ const ttaTemplate = {
     // would otherwise overwrite that whole chip with a bare number.
     ui.setScoreProvider?.(scoreNow);
     ui.setScorePainter?.(v => showScore(v));
+    // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
+    // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
+    // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
+    // lớp đang nghe. Engine hỏi vế này qua trọng tài — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
     ui.setIdleGuard?.(() => {
-      if (finished || dead || voicePlayer.isPlaying()) return true;
+      if (finished || dead) return true;
       const inp = root.querySelector(".aw-tta-input");
       return !!(inp && inp.disabled);
     });
@@ -543,9 +562,20 @@ const ttaTemplate = {
           const vBtn = el("button", "aw-tta-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
           vBtn.type = "button";
           vBtn.setAttribute("aria-label", "Listen to pronunciation");
-          press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.voice, vBtn); });
+          press(vBtn, e => { e.stopPropagation(); handleListenTap(it.voice, vBtn); });
           qArea.append(vBtn);
-          if (vv.autoPlay) voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+          // ⭐⭐ Đợt 266 — CHỈ BÀN ĐANG ĐỌC được tự phát. Trước đợt này game này quên
+          // hẳn cái rào `ctl.speaks` mà Quiz/True-false/Anagram/Crossword đều có ⇒ hai
+          // bàn cùng phát một clip lệch nhau vài ms (đo được 2 lượt phát cho MỘT câu):
+          // tiếng vọng, không phải lời đọc.
+          if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
+            voicePlayer.playDelayed(it.voice, vBtn, firstQuestionSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+          } else if (fightCtl) {
+            // …và phải BẮT KỊP clip đang đọc dở: nút này vừa được dựng lại cho câu mới,
+            // còn vầng sáng thì đã được báo từ lúc nó chưa tồn tại (nửa PULL, Đợt 134).
+            const st = fightCtl.voiceState && fightCtl.voiceState();
+            if (st && st.playing) vBtn.classList.add("is-playing");
+          }
         }
         firstQuestionSpoken = true;
         fitLayout();
@@ -1079,6 +1109,19 @@ const ttaTemplate = {
           syncFightLock();
         },
         reveal: revealFightMarks,
+        // ⭐⭐ Đợt 266 — NỬA VOICE CỦA HỢP ĐỒNG FIGHT (khuôn Crossword Đợt 259).
+        // ⚠️ `toggleVoiceRemote` là ĐẦU NHẬN, phải rào `speaks()`: chỉ đúng một bàn
+        // được phép phát ra tiếng.
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, root.querySelector(".aw-tta-listenbtn"));
+        },
+        // Gương: bàn đọc báo gì thì sơn đúng thế lên nút loa của BÀN NÀY. Bên này
+        // không có <audio> nào cả.
+        syncVoice(state) {
+          if (!state || state.playing === undefined) return;
+          root.querySelector(".aw-tta-listenbtn")?.classList.toggle("is-playing", !!state.playing);
+        },
         // Đợt 223 — "Show answers" ở bảng cuối trận Fight đọc bàn này qua đây,
         // bất cứ lúc nào (không cần đợi `finished`) — cùng mảng `buildReview()`
         // dựng cho single mode, chỉ gọi sớm hơn.

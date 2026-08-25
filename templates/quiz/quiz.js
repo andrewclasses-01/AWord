@@ -263,9 +263,14 @@ const quizTemplate = {
     // and a clip still speaking — nobody can answer a question they are still
     // being read.
     ui.setScoreProvider?.(scoreNow);
+    // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
+    // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
+    // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
+    // lớp đang nghe. Engine hỏi vế này qua trọng tài — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
     ui.setIdleGuard?.(() =>
       animating || ending || finished || fightLocked() ||
-      settled(state[index]) || voicePlayer.isPlaying());
+      settled(state[index]));
     // ⭐ TIME EACH ROUND (Đợt 174) — the engine owns the clock and the bar; this
     // is the one thing only Quiz can answer: what "out of time" costs. See
     // roundTimeUp() below, and core/engine.js's own block for the contract.

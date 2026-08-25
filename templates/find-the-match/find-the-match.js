@@ -336,7 +336,21 @@ const ftmTemplate = {
     // through Change Template from an Anagram source (core/convert.js).
     // `pairs[i]` IS the raw content object (line 191 is a shallow filter
     // copy only), so `.voice`/`.hideText` read straight off it.
-    const voicePlayer = createVoicePlayer();
+    const voicePlayer = createVoicePlayer({
+      // ⭐⭐ Đợt 266 — PUSH của hợp đồng MỘT VOICE MỖI TRẬN (khuôn Crossword Đợt 259):
+      // mỗi lần bàn ĐANG ĐỌC bật/tắt vầng sáng nút loa của nó, trọng tài nhận rồi
+      // chuyển sang bàn kia để hai nút sáng như nhau tuy chỉ có MỘT clip thật.
+      onGlow: on => {
+        if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on });
+      }
+    });
+    // ⭐⭐ Đợt 266 — cú chạm nút loa. Ngoài trận thì chỉ là toggle. Trong trận, cú chạm
+    // trên bàn KHÔNG được đọc đưa cho trọng tài, trọng tài giao cho bàn 0 — lớp chạm
+    // bên nào cũng vậy, đúng MỘT clip phát ra.
+    function handleListenTap(clipId, btn) {
+      if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+      voicePlayer.toggle(clipId, btn);
+    }
     let firstPromptSpoken = false;
 
     ui.onSubmit(() => finish("timesup"), () => state.filter(s => s.solved || s.skipped).length);   // block "Submit answers" at 0 answered
@@ -373,8 +387,13 @@ const ftmTemplate = {
     // "can this be answered", and a parallel flag is the kind of thing that
     // drifts out of step with them later.
     ui.setScoreProvider?.(scoreNow);
+    // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
+    // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
+    // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
+    // lớp đang nghe. Engine hỏi vế này qua trọng tài — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
     ui.setIdleGuard?.(() => {
-      if (finished || prepTimer || voicePlayer.isPlaying()) return true;
+      if (finished || prepTimer) return true;
       const tile = root.querySelector(".aw-ftm-tile");
       return !!(tile && tile.disabled);
     });
@@ -730,9 +749,16 @@ const ftmTemplate = {
         const vBtn = el("button", "aw-voicebtn" + (hideText ? " aw-voicebtn-lg" : ""), icons.soundOn);
         vBtn.type = "button";
         vBtn.setAttribute("aria-label", "Listen to pronunciation");
-        press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(pr.voice, vBtn); });
+        press(vBtn, e => { e.stopPropagation(); handleListenTap(pr.voice, vBtn); });
         promptEl.append(vBtn);
-        if (vv.autoPlay) voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        // ⭐⭐ Đợt 266 — CHỈ BÀN ĐANG ĐỌC được tự phát; xem chú thích cùng đợt ở
+        // type-the-answer.js. Đo được 2 lượt phát cho MỘT câu trước khi có rào này.
+        if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
+          voicePlayer.playDelayed(pr.voice, vBtn, firstPromptSpoken ? 0 : DEFAULT_INTRO_DELAY_MS);
+        } else if (fightCtl) {
+          const st = fightCtl.voiceState && fightCtl.voiceState();
+          if (st && st.playing) vBtn.classList.add("is-playing");
+        }
       }
       firstPromptSpoken = true;
       fitPrompt(promptEl);                       // shrink long definitions so nothing is clipped
@@ -1207,6 +1233,15 @@ const ftmTemplate = {
         goToIndex: fightGoTo,
         lock(on) { fightBoardLock = !!on; syncFightLock(); },
         reveal: revealFightMarks,
+        // ⭐⭐ Đợt 266 — NỬA VOICE CỦA HỢP ĐỒNG FIGHT (khuôn Crossword Đợt 259).
+        toggleVoiceRemote(clipId) {
+          if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+          voicePlayer.toggle(clipId, root.querySelector(".aw-voicebtn"));
+        },
+        syncVoice(state) {
+          if (!state || state.playing === undefined) return;
+          root.querySelector(".aw-voicebtn")?.classList.toggle("is-playing", !!state.playing);
+        },
         // ⚠️ FIGHT MODE NEVER CALLS A "TIME'S UP" HOOK. Đợt 222 briefly gave
         // this board a `timeUp()` here so the referee could route "Time delay
         // window shut" into a treat-as-wrong reaction; Đợt 223 removed "Round

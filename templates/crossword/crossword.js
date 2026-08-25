@@ -1397,6 +1397,11 @@ const crosswordTemplate = {
     // board. A separate boolean would be one more thing to keep in step.
     ui.setScoreProvider?.(scoreNow);
     ui.setScorePainter?.(v => showScore(v));
+    // ⭐⭐⭐ Đợt 266 — VẾ "CLIP CÒN ĐANG ĐỌC", game này trước nay KHÔNG CÓ ⇒ lúc clue
+    // đang được đọc thì Time cost vẫn trừ đều, tuy cả lớp đang nghe chứ không thể
+    // làm gì. Đi qua ui.setVoiceGuard (không nhét vào idleGuard) vì trong Fight chỉ
+    // bàn 0 có <audio> thật — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
     ui.setIdleGuard?.(() =>
       finished || (curWord >= 0 && !!wordState[curWord] && wordState[curWord].done));
 

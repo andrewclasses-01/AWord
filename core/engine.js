@@ -1266,6 +1266,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Lời gọi TUỲ CHỌN, cùng lý do với hai dòng trên: một core/fight.js cũ lấy từ cache
     // không có hàm này, và khi đó nav chỉ đơn giản là không bao giờ bị chặn — đúng nết cũ.
     if (fight.ctl.registerNavGate) fight.ctl.registerNavGate(fight.side, paintNavGate);
+    // ⭐⭐⭐ Đợt 266 — ĐƯỜNG TRẢ LỜI "BÀN TÔI CÓ CLIP ĐANG ĐỌC KHÔNG". Trọng tài gộp
+    // hai bàn lại thành MỘT câu trả lời cho cả trận (fight.js's voiceBusy), nên bàn
+    // KHÔNG sở hữu tiếng cũng được miễn Time cost đúng quãng lớp đang nghe. Lời gọi
+    // TUỲ CHỌN, cùng lý do với ba dòng trên.
+    if (fight.ctl.registerVoiceBusy) fight.ctl.registerVoiceBusy(fight.side, () => !!(voiceGuard && voiceGuard()));
   }
   function placeWaitBar() {
     const rowW = bottombar.clientWidth;
@@ -2961,6 +2966,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let scoreProvider = null;     // template's own scoreNow(), via ui.setScoreProvider
   let scorePainter = null;      // template's own score-chip writer, via ui.setScorePainter (Đợt 143)
   let idleGuard = null;         // template's "the student cannot act right now", via ui.setIdleGuard
+  // ⭐⭐⭐ Đợt 266 — "CLIP ĐANG ĐỌC" TÁCH RA KHỎI `idleGuard`, và đây là CẢ LÝ DO.
+  // Trong một trận Fight chỉ BÀN 0 được sở hữu tiếng thật (core/fight.js:
+  // `ctl.speaks(side) => side === 0` — hai bản cùng một clip lệch nhau vài ms là
+  // tiếng vọng, không phải lời đọc). Nhưng vế "clip còn đang đọc" lại nằm trong
+  // `idleGuard` của TỪNG BÀN, mà bàn 1 không có <audio> nào của riêng nó ⇒ vế đó
+  // LUÔN false bên đó. Kết quả đo được (scratch/tc-voice1.html, act VOICE, cả hai
+  // bàn ngồi im 9 giây, Time cost 10 / idle 1s):
+  //     Anagram  TRÁI 50 · PHẢI 90     Quiz  TRÁI 50 · PHẢI 90
+  //     True/false TRÁI 50 · PHẢI 80   (guard bật TRÁI 12-15/36, PHẢI 0/36)
+  // — đúng lời thầy: *"Time cost chỉ trừ điểm 1 bên (bên phải)"*. Cả lớp nghe CÙNG
+  // một clip; đội bên phải bị tính tiền cho quãng nó không thể làm gì.
+  // ⇒ Vế này nay đi RIÊNG (ui.setVoiceGuard) để trọng tài hỏi được nó qua bàn kia.
+  let voiceGuard = null;        // template's "a clip is speaking on THIS board", via ui.setVoiceGuard
   let idleMs = 0;               // idle time accumulated since the last real action
   let idleCharges = 0;          // how many times THIS stall has already been charged
   let idleLastTick = 0;         // previous idle sample, for the delta
@@ -2995,6 +3013,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // the mouse" is not progress, and counting it would quietly defeat the whole
   // option on a touchscreen where a stray palm keeps waking it.
   function noteActivity() { idleMs = 0; idleCharges = 0; idleLastTick = performance.now(); }
+  // ⭐ Đợt 266 — "CÓ CLIP NÀO ĐANG ĐỌC CHO VÁN NÀY KHÔNG?" — hỏi CẢ TRẬN, không
+  // riêng bàn mình. Ngoài Fight thì chỉ còn đúng vế của bàn mình, tức y hệt nết cũ.
+  // ⚠️ Hỏi bàn mình TRƯỚC: `fight.ctl.voiceBusy` là lời gọi TUỲ CHỌN (một
+  // core/fight.js cũ lấy từ cache không có nó) — cùng khuôn registerWaitBar/
+  // registerPause/registerNavGate ở trên.
+  function voiceBusy() {
+    if (voiceGuard && voiceGuard()) return true;
+    if (fight && fight.ctl.voiceBusy) { try { return !!fight.ctl.voiceBusy(); } catch { return false; } }
+    return false;
+  }
   function idleTick() {
     const per = timeCostPer();
     const now = performance.now();
@@ -3008,7 +3036,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // read here because idleTick can only ever run after PLAY, long after the whole
     // of startGame() has finished executing). Nó gộp CẢ BỐN lý do tạm dừng, không
     // riêng pop-up của bàn này — xem chính hàm đó để biết vì sao.
-    if (playPaused() || (idleGuard && idleGuard())) return;
+    if (playPaused() || voiceBusy() || (idleGuard && idleGuard())) return;
     idleMs += dt;
     const grace = idleGraceMs();
     // ⭐ Đợt 187 (teacher, 18/8/2026) — ONE PERIOD, NOT "grace then every second".
@@ -5125,6 +5153,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Hạ cánh ngay lập tức: áp phép trừ, vẽ lại điểm, gỡ nút DOM.
     flushPenalties() { Array.from(penaltyLands).forEach(fn => { try { fn(); } catch { /* nút đã đi */ } }); },
     setIdleGuard(fn) { idleGuard = typeof fn === "function" ? fn : null; },
+    // ⭐⭐⭐ Đợt 266 — ĐÚNG MỘT VẾ, TÁCH KHỎI setIdleGuard: "bàn này có clip đang
+    // đọc không?". Vì sao phải tách, xem chú thích ở `voiceGuard` phía trên —
+    // tóm tắt: trong Fight chỉ bàn 0 có tiếng thật, nên vế này phải hỏi được QUA
+    // trọng tài, còn mọi vế khác của idleGuard thì thuần tuý của riêng từng bàn.
+    // ⛔ ĐỪNG để lại vế voice trong `setIdleGuard` nữa — hai bản sao của cùng một
+    // luật rồi lệch nhau là đúng cái bẫy `core/HUONG DAN CORE.md` cảnh báo.
+    // Template nào không gọi thì y như trước (không có clip nào được miễn).
+    setVoiceGuard(fn) { voiceGuard = typeof fn === "function" ? fn : null; },
     setScoreProvider(fn) { scoreProvider = typeof fn === "function" ? fn : null; },
     // Đợt 143 — a template that DRAWS ITS OWN score chip supplies the painter
     // the Time cost count-down should use. Crossword and Type the answer write

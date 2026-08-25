@@ -693,6 +693,14 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // phải CHỦ ĐỘNG gọi: trạng thái "bàn kia còn đang làm không" đổi vì việc của BÀN
   // KIA, mà `ui.setNav` thì chỉ chạy khi CHÍNH bàn này có gì đó đổi.
   const navFns = [null, null];
+  // ⭐⭐⭐ Đợt 266 — mỗi bàn để lại đây một cách trả lời "bàn tôi có clip đang đọc
+  // không" (registerVoiceBusy, core/engine.js). LÝ DO NÓ PHẢI Ở TRỌNG TÀI: chỉ bàn 0
+  // được sở hữu tiếng thật (`ctl.speaks` ngay dưới), nên vế "clip còn đang đọc" nằm
+  // trong idleGuard của từng bàn thì bàn 1 luôn trả lời FALSE — và Time cost trừ đội
+  // bên phải suốt quãng cả lớp đang nghe đúng clip đó. Đo được (act VOICE, hai bàn
+  // ngồi im 9 giây, Time cost 10 / idle 1s): Anagram 50/90, Quiz 50/90, True-false
+  // 50/80. Thầy 26/8/2026: *"Time cost chỉ trừ điểm 1 bên (bên phải)"*.
+  const voiceBusyFns = [null, null];
   // ⭐ Đợt 219 — `mode` đi kèm: `"hold"` = đứng yên tại chỗ đang chạy tới,
   // `"go"` = chạy tiếp NỐT `ms` còn lại (không kéo về đầy). Không truyền gì thì
   // đúng như cũ. Nửa bên kia nằm ở `runWaitBar` trong core/engine.js.
@@ -1323,6 +1331,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // biết lúc nào câu trả lời đổi (bàn KIA vừa xong / vòng vừa chốt / sang câu mới).
     // Bàn nào không đăng ký (engine cũ lấy từ cache) thì đơn giản là bị bỏ qua.
     registerNavGate(side, fn) { navFns[side] = fn; },
+
+    // ⭐⭐⭐ Đợt 266 — hai nửa của MỘT câu hỏi chung cho cả trận.
+    // ⚠️ HỎI CẢ HAI BÀN chứ không chỉ bàn 0, dù hợp đồng nói chỉ bàn 0 được đọc.
+    // Đây KHÔNG phải phòng xa suông: ngay trong đợt này ba template (Type the answer ·
+    // Find the match · Open the box) bị bắt quả tang **quên hẳn rào `ctl.speaks`** nên
+    // tự phát clip ở CẢ HAI bàn — đo được 2 lượt phát cho MỘT câu (đã vá cùng đợt).
+    // Hỏi cả hai thì câu trả lời vẫn đúng dù cái rào đó có ai làm hỏng lại hay không,
+    // và không bao giờ nghiêng về phía "cứ trừ tiền đi".
+    registerVoiceBusy(side, fn) { voiceBusyFns[side] = fn; },
+    voiceBusy() {
+      return voiceBusyFns.some(fn => { try { return !!(fn && fn()); } catch { return false; } });
+    },
 
     /**
      * ⭐⭐⭐ Đợt 220 — "BÀN NÀY CÓ ĐƯỢC RỜI VÒNG NÀY KHÔNG?"

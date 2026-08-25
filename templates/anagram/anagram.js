@@ -773,9 +773,13 @@ const anagramTemplate = {
     //                    all — `busy` alone does not cover that stretch)
     //  • a clip still sounding — you cannot spell a word you are still hearing
     ui.setScoreProvider?.(scoreNow);
+    // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
+    // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
+    // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
+    // lớp đang nghe. Engine hỏi vế này qua trọng tài — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => !!(voiceAudioEl && !voiceAudioEl.paused));
     ui.setIdleGuard?.(() =>
-      busy || finished || fightLocked() || doneCheck(state[index]) ||
-      !!(voiceAudioEl && !voiceAudioEl.paused));
+      busy || finished || fightLocked() || doneCheck(state[index]));
     // ⭐ TIME EACH ROUND (Đợt 174) — what running out of time costs, which only
     // this template can say. See roundTimeUp() further down.
     ui.setRoundTimeout?.(roundTimeUp);

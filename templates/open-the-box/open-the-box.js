@@ -437,7 +437,21 @@ function mountQuestions(root, activity, ui) {
   // through Change Template from an Anagram source (core/convert.js). No
   // "wait for the intro chime" delay is needed: a question is only ever
   // built in response to the PLAYER tapping a box, well after mount.
-  const voicePlayer = createVoicePlayer();
+  const voicePlayer = createVoicePlayer({
+    // ⭐⭐ Đợt 266 — PUSH của hợp đồng MỘT VOICE MỖI TRẬN (khuôn Crossword Đợt 259):
+    // mỗi lần bàn ĐANG ĐỌC bật/tắt vầng sáng nút loa của nó, trọng tài nhận rồi
+    // chuyển sang bàn kia để hai nút sáng như nhau tuy chỉ có MỘT clip thật.
+    onGlow: on => {
+      if (fightCtl && fightCtl.speaks(fightSide)) fightCtl.reportVoiceState(fightSide, { playing: on });
+    }
+  });
+  // ⭐⭐ Đợt 266 — cú chạm nút loa. Ngoài trận thì chỉ là toggle. Trong trận, cú chạm
+  // trên bàn KHÔNG được đọc đưa cho trọng tài, trọng tài giao cho bàn 0 — lớp chạm
+  // bên nào cũng vậy, đúng MỘT clip phát ra.
+  function handleListenTap(clipId, btn) {
+    if (fightCtl && !fightCtl.speaks(fightSide)) { fightCtl.requestVoiceToggle(clipId); return; }
+    voicePlayer.toggle(clipId, btn);
+  }
   // Point 4 (4/8/2026): answer tiles ignore taps until 80% of their slide-in
   // has played, so the player can't mis-tap a still-arriving tile before
   // reading it. Set false while the tiles slide in, flipped true by gateTimer.
@@ -717,6 +731,11 @@ function mountQuestions(root, activity, ui) {
   // idle clock for the whole time the board sits there untouched — i.e. exactly
   // when this option is meant to be charging.
   ui.setScoreProvider?.(scoreNow);
+  // ⭐⭐⭐ Đợt 266 — VẾ "CLIP CÒN ĐANG ĐỌC", game này trước nay KHÔNG CÓ ⇒ lúc clue
+  // đang được đọc thì Time cost vẫn trừ đều, tuy cả lớp đang nghe chứ không thể
+  // làm gì. Đi qua ui.setVoiceGuard (không nhét vào idleGuard) vì trong Fight chỉ
+  // bàn 0 có <audio> thật — xem core/engine.js voiceBusy().
+  ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
   ui.setIdleGuard?.(() => ended || (activeIndex != null && !answersUnlocked));
   /**
    * ⭐⭐⭐ TIME EACH ROUND — OUT OF TIME (Đợt 265, thầy 26/8/2026).
@@ -1018,9 +1037,16 @@ function mountQuestions(root, activity, ui) {
       const vBtn = el("button", "aw-otb-listenbtn" + (hideText ? " is-lg" : ""), icons.soundOn);
       vBtn.type = "button";
       vBtn.setAttribute("aria-label", "Listen to pronunciation");
-      press(vBtn, e => { e.stopPropagation(); voicePlayer.toggle(it.src.voice, vBtn); });
+      press(vBtn, e => { e.stopPropagation(); handleListenTap(it.src.voice, vBtn); });
       qTile.append(vBtn);
-      if (vv.autoPlay) voicePlayer.play(it.src.voice, vBtn);
+      // ⭐⭐ Đợt 266 — CHỈ BÀN ĐANG ĐỌC được tự phát; xem chú thích cùng đợt ở
+      // type-the-answer.js. Đo được 2 lượt phát cho MỘT câu trước khi có rào này.
+      if (vv.autoPlay && (!fightCtl || fightCtl.speaks(fightSide))) {
+        voicePlayer.play(it.src.voice, vBtn);
+      } else if (fightCtl) {
+        const st = fightCtl.voiceState && fightCtl.voiceState();
+        if (st && st.playing) vBtn.classList.add("is-playing");
+      }
     }
     body.append(qTile);
 
@@ -1350,7 +1376,18 @@ function mountQuestions(root, activity, ui) {
       reveal: revealFightMarks,
       setPickTurn(mine) { fightMyTurn = !!mine; applyPickTurn(); },
       backToBoard: fightBackToBoard,
-      resetClock: fightResetClock
+      resetClock: fightResetClock,
+      // ⭐⭐ Đợt 266 — NỬA VOICE CỦA HỢP ĐỒNG FIGHT (khuôn Crossword Đợt 259).
+      // ⚠️ Nút loa của game này chỉ tồn tại KHI MỘT Ô ĐANG MỞ; lúc đang ở bàn ô số thì
+      // `querySelector` trả null và cả hai hàm dưới đơn giản là không làm gì — đúng.
+      toggleVoiceRemote(clipId) {
+        if (!fightCtl || !fightCtl.speaks(fightSide)) return;
+        voicePlayer.toggle(clipId, root.querySelector(".aw-otb-listenbtn"));
+      },
+      syncVoice(state) {
+        if (!state || state.playing === undefined) return;
+        root.querySelector(".aw-otb-listenbtn")?.classList.toggle("is-playing", !!state.playing);
+      }
     });
   }
 

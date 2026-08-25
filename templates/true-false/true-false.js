@@ -293,8 +293,13 @@ const tfTemplate = {
     ui.setScoreProvider?.(liveScore);
     // ⭐⭐⭐ Đợt 265 — the per-round count down now has somebody to call. See roundTimeUp().
     ui.setRoundTimeout?.(roundTimeUp);
+    // ⭐⭐⭐ Đợt 266 — vế "clip còn đang đọc" ĐI RIÊNG qua ui.setVoiceGuard, không
+    // nằm trong idleGuard nữa: trong Fight chỉ bàn 0 có <audio> thật (core/fight.js
+    // `ctl.speaks`), nên để nguyên chỗ cũ là bàn PHẢI bị Time cost trừ suốt quãng cả
+    // lớp đang nghe. Engine hỏi vế này qua trọng tài — xem core/engine.js voiceBusy().
+    ui.setVoiceGuard?.(() => voicePlayer.isPlaying());
     ui.setIdleGuard?.(() => {
-      if (finished || prepTimer || voicePlayer.isPlaying()) return true;
+      if (finished || prepTimer) return true;
       const btn = root.querySelector(".aw-tf-btn");
       return !!(btn && btn.disabled);
     });
