@@ -751,3 +751,99 @@ export function shortenName(full) {
   const initials = parts.slice(0, -1).map(w => w[0]).join(".");
   return `${initials}.${last}`;
 }
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 260 (25/8/2026, thầy) — KẾ HOẠCH SỐ CÂU: CÁI GÌ PHẢI KHỚP GIỮA CÁC BẢNG
+// ---------------------------------------------------------------
+// Thầy báo: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa
+// vào dữ liệu phân tích thì sai lệch hết vì số câu của các em không công bằng"*.
+//
+// ⛔⛔ CÁI PHẢI KHỚP LÀ **SỐ CÂU MỖI EM**, KHÔNG PHẢI TỔNG SỐ CÂU CỦA BẢNG.
+// Đây là chỗ dễ sai nhất trong cả đợt này, và sai kiểu nào cũng ra một tính năng
+// tệ hơn không có: so TỔNG thì ở chế độ Count một đội 5 em (50 slot) và một đội
+// 6 em (60 slot) sẽ bị tố là "lệch" trong khi chúng công bằng hoàn hảo — mỗi em
+// vẫn đúng 10 câu. Cảnh báo giả trên màn lớp học là thứ thầy sẽ tắt đi sau hai
+// buổi, và khi đó cái lệch THẬT cũng đi theo.
+//
+// BỐN CHẾ ĐỘ, VÀ CHỈ BA CÁI TỰ HỨA ĐƯỢC ĐIỀU GÌ (đo từ engine's applyBalance +
+// showdown.js's dealQuestions — `tổng slot = perPupil × số em`):
+//   count    mỗi em đúng N câu. N là con số thầy gõ ⇒ giống nhau ở mọi bảng
+//            MÀ KHÔNG CẦN BẢNG NÀO THOẢ THUẬN VỚI BẢNG NÀO. Chế độ an toàn nhất
+//            cho bất cứ thứ gì đổ vào bảng phân tích.
+//   balance  mỗi em `floor(tổng ÷ đội đông nhất)` câu ⇒ CHỈ khớp khi mọi bảng
+//            đồng ý về "đội đông nhất". Đúng chỗ vỡ thầy gặp: `maxTeam` là ảnh
+//            chụp đông cứng trong pick của từng cột.
+//   free     trần SD_FREE_CAP câu mỗi em ⇒ khớp, nhưng thầy bấm Submit lúc nào
+//            thì dừng lúc đó, nên con số cuối vẫn do tay người quyết.
+//   normal   mỗi em = tổng ÷ số em ĐỘI MÌNH ⇒ đội nhỏ được nhiều câu hơn đội to,
+//            KHÔNG hứa gì cả. Không có gì để so, và cũng không nên báo động: đây
+//            là lựa chọn hợp lệ của thầy, chỉ là nó không dành cho phân tích.
+//
+// ⚠️ FILE NÀY THUẦN — engine nhập TĨNH nên trang học sinh cũng tải nó (luật 2 của
+// v0.9.0). Không import, không DOM, không Firestore: vào dữ liệu, ra dữ liệu.
+
+/**
+ * Năm tuỳ chọn CHỈ tồn tại trong Showdown.
+ *
+ * ⛔⛔ VÌ SAO DANH SÁCH NÀY PHẢI CÓ MẶT: chúng là key options bình thường, tức là
+ * **per-view** (core/content-view.js — chúng không nằm trong VIEW_SELECTOR_KEYS
+ * hay VIEW_ACT_KEYS). Mà `Settings ▸ Default activity options` **không bao giờ**
+ * dựng chúng: core/options-panel.js chỉ dựng khi caller truyền `showdown: true`,
+ * và Settings cố ý không truyền. Nên một view chưa từng ghé (ENG1 → VI1 lần đầu)
+ * được gieo từ Settings defaults là gieo ra một bộ **KHÔNG CÓ** năm key này —
+ * Balance/Count biến mất, và vì `__awordBridge.applyOptions` là THAY THẾ chứ
+ * không trộn, mọi cột myActivity khác mất theo trong im lặng.
+ * ⇒ core/engine.js's onViewChange() mang chúng sang khi view mới chưa có.
+ */
+export const SD_PLAN_KEYS = [
+  "balanceQuestions", "sdDeal", "sdDealCount", "roundTimer", "roundSeconds"
+];
+
+/**
+ * Bốn chế độ hợp lệ, và KHÔNG có cái thứ năm.
+ * ⚠️ Là DANH SÁCH TRẮNG, không phải tài liệu: core/showdown-setup.js lọc `md` đọc
+ * từ Firestore qua đây. Bàn thử Đợt 260 bắt được ca `md: 7` (một số) đi lọt thành
+ * chuỗi "7" — vô hại về mặt sập, nhưng nó sẽ không khớp chế độ nào nên mọi bảng
+ * đứng cạnh nó bị tố "khác chế độ" vì một giá trị chẳng có nghĩa gì.
+ */
+export const SD_MODES = ["normal", "balance", "free", "count"];
+
+/** Chế độ nào TỰ HỨA "mọi em bằng nhau" — ba cái, `normal` không nằm trong đó. */
+export function sdPlanPromises(mode) {
+  return mode === "count" || mode === "balance" || mode === "free";
+}
+
+/**
+ * Bảng nào đó đang chơi khác mình? Đọc thẳng `claims` của bảng đội chung — nơi
+ * mỗi bảng đã tự khai kế hoạch của nó (core/showdown-setup.js publishMyPlan).
+ *
+ * @param setup     bản chuẩn hoá của bảng đội (subscribeSetup trả về)
+ * @param myTeamId  đội của bảng này
+ * @param mine      { md, n } — chế độ + số câu mỗi em của bảng này
+ * @returns {{teamName, md, n, why}|null}  `why`: "mode" (khác chế độ) | "each" (khác số câu/em)
+ *
+ * ⚠️ CHẾ ĐỘ ĐƯỢC SO TRƯỚC, VÀ SO CHO CẢ `normal`. Hai bảng cùng `normal` thì im
+ * lặng (thầy chọn thế, không có gì hứa để mà vỡ), nhưng một bảng `count` đứng
+ * cạnh một bảng `normal` là lệch THẬT và phải nói ra — đó chính là ca "một cột
+ * nhận OPT hụt" mà dấu ✗ 2,6 giây rất dễ trôi qua mắt.
+ * ⚠️ Bảng nào CHƯA khai (`md` rỗng) thì bỏ qua, không đoán: nó có thể đang tải,
+ * có thể là bản AWord cũ hơn đợt này. Im lặng ở đây là đúng — cảnh báo dựa trên
+ * "chưa biết" là cảnh báo giả.
+ */
+export function findPlanClash(setup, myTeamId, mine) {
+  if (!setup || !mine || !mine.md) return null;
+  const teams = Array.isArray(setup.teams) ? setup.teams : [];
+  const claims = (setup.claims && typeof setup.claims === "object") ? setup.claims : {};
+  for (const [teamId, c] of Object.entries(claims)) {
+    if (!c || teamId === myTeamId) continue;
+    const md = String(c.md || "");
+    if (!md) continue;                                   // chưa khai — không đoán hộ
+    const n = Number(c.n) || 0;
+    const nameOf = () => (teams.find(t => t.id === teamId) || {}).name || "Another team";
+    if (md !== mine.md) return { teamName: nameOf(), md, n, why: "mode" };
+    if (sdPlanPromises(md) && n > 0 && mine.n > 0 && n !== mine.n) {
+      return { teamName: nameOf(), md, n, why: "each" };
+    }
+  }
+  return null;
+}

@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName } from "./showdown.js";
+import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -435,15 +435,28 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // của v0.9.0). `showdownPick` chỉ khác null khi `!session`, nên nhánh này không bao
   // giờ chạy ở play.html.
   let sdClaimStop = null;
+  // ⭐ Đợt 260 — BẢNG ĐỘI MỚI NHẤT SERVER GỬI VỀ. Nút REFRESH TEAM đọc thẳng biến này
+  // chứ không gọi mạng lần nữa: onSnapshot đã bắn về ngay từ nhịp đầu, nên cái ở đây
+  // đã là bản mới nhất — thêm một getDoc chỉ tổ để thầy chờ.
+  let sdTableLive = null;
   if (sdCanPublish) {
     import("./showdown-setup.js").then(mod => {
       // `torndown` khai bằng `let` ở dưới xa — an toàn vì lời gọi lại này chỉ chạy sau
       // khi cả startGame() đã chạy xong (cùng lối lập luận với `menuEl` trong idleTick).
       if (torndown) return;
+      // ⭐⭐⭐ Đợt 260 — khai kế hoạch của bảng này lên chỗ đặt gạch, để các bảng khác
+      // so được. Cùng lý do `torndown`: `sdPlan` khai xa phía dưới nhưng lời gọi lại
+      // này chỉ chạy sau khi thân startGame() đã chạy hết.
+      if (sdPlan) {
+        mod.publishMyPlan({ teamId: showdownPick.teamId, ...sdPlan })
+          .catch(() => { /* mất mạng: bảng kia đơn giản là chưa thấy mình, không sao */ });
+      }
       sdClaimStop = mod.subscribeSetup(next => {
         if (torndown) return;
+        sdTableLive = next;
         const c = next && next.claims && next.claims[showdownPick.teamId];
         if (c && c.by !== browserId()) showTeamStolen();
+        renderSdPlan();
       });
       if (torndown) stopSdClaimWatch();     // ván có thể đã bị dỡ ngay trong lúc chờ nhập
     }).catch(() => { /* offline / signed out — không có kênh nào để nghe, chơi tiếp */ });
@@ -592,6 +605,49 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // tự đứng xuống — xem guard của nó).
   activity = applySdDeal(applyBalance(activity));
 
+  // =============================================================
+  // ⭐⭐⭐ Đợt 260 (25/8/2026, thầy) — KẾ HOẠCH SỐ CÂU, VÀ NÓ PHẢI KHỚP GIỮA CÁC BẢNG
+  // =============================================================
+  // Thầy: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào
+  // dữ liệu phân tích thì sai lệch hết"*.
+  //
+  // Chốt NGAY ĐÂY, sau cả applyBalance lẫn applySdDeal — đây là dòng cuối cùng
+  // trước khi bất cứ thứ gì đo `activity`, đúng chỗ Đợt 197 đã chọn để cắt và Đợt
+  // 220 đã chọn để chia. Sớm hơn một dòng là đo bản chưa cắt; muộn hơn là đã có
+  // template nhìn thấy nó.
+  //
+  // ⛔⛔ `n` LÀ SỐ CÂU **MỖI EM**, KHÔNG PHẢI TỔNG. Xem findPlanClash() trong
+  // core/showdown.js: so tổng là tố oan chế độ Count (đội 5 em 50 slot vs đội 6 em
+  // 60 slot — công bằng hoàn hảo, mỗi em vẫn 10 câu), và một cảnh báo giả trên màn
+  // lớp học là thứ thầy sẽ tắt sau hai buổi, kéo theo cả cái lệch THẬT.
+  // ⚠️ `n: 0` = KHÔNG chia đều được (`normal` với tổng không chia hết cho số em).
+  // Không làm tròn để lấp — con số làm tròn ở đây sẽ đi thẳng vào một phép so sánh.
+  const SD_MODE_WORD = { normal: "Normal", balance: "Balance", free: "Free", count: "Count" };
+  const sdPlan = (() => {
+    if (!showdownPick) return null;
+    const M = showdownPick.members?.length || 0;
+    const tt = playItemCount(activity);
+    if (!M || !tt) return null;
+    // ⛔⛔⛔ `md` ĐỌC TỪ **Ô TÍCH**, KHÔNG PHẢI TỪ "PHÉP CẮT CÓ THẬT SỰ CHẠY KHÔNG".
+    // Bản đầu của đợt này làm ngược lại — nghe thì trung thực hơn — và tính ra số
+    // liệu thì nó HỎNG ĐÚNG CA THẦY BÁO. Chính là ca này:
+    //     act 100 câu · đội 5 em · Balance có tích
+    //     bảng A maxTeam 5  → floor(100/5)=20, cắt còn 100 = y nguyên ⇒ applyBalance
+    //                         TỰ ĐỨNG XUỐNG, nên "cái chạy thật" là normal
+    //     bảng B maxTeam 10 → floor(100/10)=10, cắt còn 50 ⇒ "cái chạy thật" là balance
+    // Hai bảng khai hai chế độ khác nhau ⇒ findPlanClash trả why "mode" ⇒ màn hình
+    // khuyên thầy "check Options", trong khi Options hai bên GIỐNG HỆT nhau và thứ
+    // sai là bảng đội. Lời khuyên sai còn tệ hơn im lặng.
+    // ⇒ `md` là LUẬT ĐANG HIỆU LỰC (thầy tích gì), `n` là HỆ QUẢ (mỗi em mấy câu).
+    // Hai bảng cùng "balance" mà n 20 với 10 ⇒ why "each" ⇒ đúng nút REFRESH TEAM.
+    // ⚠️ Thứ tự ưu tiên phải khớp applyBalance: Free/Count cầm bài thì Balance đứng
+    // xuống, nên sdDealMode được hỏi trước (chính nó cũng đã hỏi `tpl.sdDeal` rồi).
+    const md = (sdDealMode === "free" || sdDealMode === "count") ? sdDealMode
+             : (activity.options?.balanceQuestions === true) ? "balance"
+             : "normal";
+    return { md, n: tt % M === 0 ? tt / M : 0, tt };
+  })();
+
   // ⭐⭐ TIME EACH ROUND (Đợt 174, teacher 17/8/2026) — a SECOND clock, one that
   // belongs to the pupil whose turn it is rather than to the game.
   //   options.roundTimer   "none" | "countUp" | "countDown"
@@ -679,6 +735,40 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // ⭐ Đợt 252 — thêm tham số thứ hai `{tieuDe}`; gọi kiểu cũ `giaoBai(lop)`
       // vẫn chạy y nguyên.
       giaoBai: (lop, opt) => queued(() => (current && current.giaoBai) ? current.giaoBai(lop, opt) : false),
+      // ⭐⭐⭐ Đợt 260 — BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ RA. Bắt được bằng bàn thử
+      // `scratch/dot260-plan.html`, không phải bằng mắt đọc code.
+      //
+      // Đợt 229 (22/8/2026) dựng `setMode` / `openOptions` / `closeTool` — cả ba đều
+      // đúng, cả ba đều chạy được — nhưng CHỈ trên object DELEGATE truyền vào
+      // `_setCurrent()` ngay dưới đây. Cái myActivity gọi lại là `window.__awordBridge`,
+      // tức là SINGLETON này, và singleton thì chỉ chuyển tiếp đúng 5 phương thức nó
+      // được viết tay. Ba cái mới không có ở đây ⇒ `window.__awordBridge.openOptions`
+      // là `undefined` suốt từ hôm đó tới nay.
+      //
+      // ⛔⛔ VÀ NÓ HỎNG THEO KIỂU KHÔNG AI THẤY, đó mới là phần đắt:
+      //   · MODE  — myActivity gọi thẳng `.setMode(...)` ⇒ TypeError ⇒ lọt vào catch ⇒
+      //             trả false ⇒ thử lại 1 lần ⇒ vẫn false ⇒ **dấu ✗ đỏ**. Đồng bộ
+      //             Single↔Showdown giữa các cột chưa từng chạy một lần nào.
+      //   · TOOLOPEN — myActivity có rào `if (!window.__awordBridge.openOptions) return
+      //             false;` nên nó thất bại **hoàn toàn im lặng**: bấm Options ở một cột,
+      //             các cột khác đứng yên, không lỗi, không dấu, không gì cả.
+      //   · closeTool — cũng có rào, nên pop-up trên các cột khác không bao giờ tự đóng.
+      // Đây chính là "đồng bộ lúc được lúc không" thầy tả, và là lý do cả AWord lẫn
+      // myActivity đều còn nguyên mục "⬜ CHƯA TEST TOMKO" cho đúng ba tính năng này.
+      //
+      // ⚠️ BÀI HỌC, ghi ở đây vì đây là chỗ sẽ tái phạm: singleton này là một bức tường
+      // CHÉP TAY. Thêm phương thức cho delegate mà quên chép qua đây thì không có lỗi
+      // biên dịch, không có cảnh báo, không có gì — chỉ có một tính năng không tồn tại.
+      // Thêm gì cho `_setCurrent(...)` bên dưới thì thêm luôn một dòng ở đây.
+      // ⚠️ `setMode`/`openOptions` đi qua `queued()` như mọi mutator (một cú
+      // switchTemplate đang bay phải hạ cánh xong đã); `closeTool` thì KHÔNG — nó chỉ
+      // đóng một pop-up, và xếp nó sau một cú đổi template dài 1-2 giây là để thầy nhìn
+      // thấy cái bảng nằm ì ra đó rồi mới chịu biến mất.
+      // ⚠️ Cả ba đều rào `current && current.xxx`: một trang còn cache engine cũ trả về
+      // `false`, đúng nếp `giaoBai` của Đợt 247 — không nổ.
+      setMode: (target) => queued(() => (current && current.setMode) ? current.setMode(target) : false),
+      openOptions: () => queued(() => (current && current.openOptions) ? current.openOptions() : false),
+      closeTool: () => (current && current.closeTool) ? current.closeTool() : false,
       _setCurrent(delegate) { current = delegate; },
     };
   }
@@ -1942,6 +2032,112 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     line.append(nameEl, whoEl);
     readyCenter.append(line);
   }
+
+  // ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI, ngay dưới đội hình, TRƯỚC KHI BẤM PLAY.
+  //
+  // Thầy hỏi một cơ chế chắc chắn hoặc một cái nút để đồng bộ cho chuẩn. Đây là cả
+  // hai: dòng này NÓI RA con số mà tới hôm nay mỗi bảng tự tính rồi tự giữ trong
+  // lòng, và khi nó không khớp bảng khác thì mọc thêm đúng cái nút chữa được.
+  //
+  // ⚠️ Nằm trong lớp phủ READY nên nó biến mất lúc bấm Play — cố ý. Đây là phép kiểm
+  // TRƯỚC KHI CẤT CÁNH; sau khi cả lớp đã chơi thì biết cũng đã muộn, và một cảnh báo
+  // đứng giữa ván chỉ tổ cướp chỗ. Start again dựng lại lớp phủ nên nó quay lại.
+  // ⚠️ Chỉ khi Showdown: ngoài Showdown không có chuyện mỗi em bao nhiêu câu để bàn.
+  let sdPlanEl = null;
+  if (showdownPick && sdPlan) {
+    sdPlanEl = el("div", "aw-ready-plan");
+    readyCenter.append(sdPlanEl);
+    renderSdPlan();
+  }
+
+  /**
+   * ⛔⛔ HAI TÌNH TRẠNG KHÁC NHAU, VẼ RIÊNG, VÌ CÁCH CHỮA KHÁC NHAU:
+   *
+   *   LỆCH  (findPlanClash) — bảng khác đang chơi kiểu khác, hoặc khác số câu mỗi em.
+   *   CŨ    (sdTableStale)  — ảnh chụp đội trong sessionStorage của bảng NÀY đã khác
+   *                           bảng đội trên server (thầy vừa kéo người, đổi tên đội).
+   *
+   * Nút REFRESH TEAM chỉ chữa được cái thứ hai, nên nó chỉ mọc ra khi có cái thứ hai —
+   * đúng luật CẤM NÚT CHẾT của Đợt 143. Lệch vì Options (hai bảng khác chế độ, hoặc
+   * Count đặt hai số khác nhau) thì refresh không cứu được gì, và dòng chữ nói thẳng
+   * ra là phải đi qua Options.
+   * ⚠️ HAI CÁI ĐỘC LẬP: bảng này có thể CŨ mà chưa ai thấy lệch (bảng kia còn chưa
+   * khai) — và đó chính là ca 50/100 của thầy, bắt được TRƯỚC khi nó kịp thành lệch.
+   */
+  function renderSdPlan() {
+    if (!sdPlanEl || !sdPlan) return;
+    const clash = sdTableLive ? findPlanClash(sdTableLive, showdownPick.teamId, sdPlan) : null;
+    const stale = sdTableStale();
+    sdPlanEl.innerHTML = "";
+    sdPlanEl.classList.toggle("is-warn", !!clash || stale);
+    const mine = el("span", "aw-ready-plan-mine");
+    mine.textContent = sdPlan.n > 0
+      ? sdPlan.tt + " QUESTIONS · " + sdPlan.n + " EACH"
+      : sdPlan.tt + " QUESTIONS";
+    mine.title = "Mode: " + (SD_MODE_WORD[sdPlan.md] || sdPlan.md);
+    sdPlanEl.append(mine);
+    if (clash) {
+      const warn = el("span", "aw-ready-plan-warn");
+      // Lệch kiểu each ở chế độ balance là chuyện của BẢNG ĐỘI (refresh chữa được);
+      // mọi ca còn lại là chuyện của OPTIONS, nói ra được thì thầy đỡ phải đoán.
+      const fixable = clash.why === "each" && clash.md === "balance" && sdPlan.md === "balance";
+      warn.textContent = clash.why === "mode"
+        ? clash.teamName + ": " + (SD_MODE_WORD[clash.md] || clash.md)
+        : clash.teamName + ": " + clash.n + " each";
+      if (!fixable) warn.textContent += " — check Options";
+      sdPlanEl.append(warn);
+    }
+    if (stale) {
+      const btn = el("button", "aw-ready-plan-fix");
+      btn.type = "button";
+      btn.textContent = "REFRESH TEAM";
+      btn.title = "The team table has changed since this board was set up - read it again and rebuild";
+      btn.onclick = () => { sound.click(); sdRefreshFromTable(); };
+      sdPlanEl.append(btn);
+    }
+  }
+
+  /** Ảnh chụp đội của bảng này đã khác bảng đội đang sống trên server chưa? */
+  function sdTableStale() {
+    const node = sdTableLive;
+    if (!node || !showdownPick) return false;
+    const teams = Array.isArray(node.teams) ? node.teams : [];
+    const t = teams.find(x => x.id === showdownPick.teamId);
+    if (!t) return false;   // đội không còn trên bảng: bảng bị dựng lại hẳn, không phải CŨ
+    const mt = Math.max(1, ...teams.map(x => (x.members || []).length || 0));
+    if (mt !== (Number(showdownPick.maxTeam) || 0)) return true;
+    if (t.name !== showdownPick.teamName) return true;
+    return (t.members || []).map(m => m.name).join("|")
+        !== (showdownPick.members || []).map(m => m.name).join("|");
+  }
+
+  /**
+   * Đóng dấu lại pick bằng bảng đội đang sống, rồi dựng lại ván.
+   *
+   * ⚠️ CHỈ SỬA BẢNG NÀY. Nó không thể với sang bảng kia — mỗi bảng giữ pick trong
+   * sessionStorage của riêng nó (core/showdown.js đầu file nói vì sao), nên bảng kia
+   * cũng có nút của nó và thầy bấm ở đó. Nghe thủ công, nhưng đây là bản vá gấp; cái
+   * chốt-một-lần-cho-cả-lớp là phòng chờ của đợt sau.
+   * ⚠️ replayCurrent() chứ không mutate tại chỗ: maxTeam đi vào applyBalance ở MOUNT,
+   * nên chỉ một lần dựng lại mới đổi được độ dài mảng câu.
+   */
+  function sdRefreshFromTable() {
+    const node = sdTableLive;
+    const teams = (node && Array.isArray(node.teams)) ? node.teams : [];
+    const t = teams.find(x => x.id === showdownPick?.teamId);
+    if (!t) { toast("This team is not on the table any more"); return; }
+    writePick({
+      teamId: t.id,
+      teamName: t.name,
+      classId: node.classId || showdownPick.classId,
+      className: node.className || showdownPick.className,
+      members: t.members.map(m => ({ id: m.id, name: m.name })),
+      maxTeam: Math.max(1, ...teams.map(x => (x.members || []).length || 0)),
+      tableId: node.tableId || showdownPick.tableId || ""
+    });
+    replayCurrent();
+  }
+
   playOverlay.append(readyCenter);
   inner.append(playOverlay);
 
@@ -3442,7 +3638,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       pending[curKey] = draft;                       // park the view we are leaving
       const seed = pending[nextKey] || optionsForView(viewAct, nextKey)
         || (settingsMod ? settingsMod.getDefaultOptions(viewAct.type) : draft);
-      draft = liveDraft({ ...splitViewOptions(seed).view, ...selState });
+      const seeded = splitViewOptions(seed).view;
+      // ⭐⭐⭐ Đợt 260 — MANG THEO 5 TUỲ CHỌN SHOWDOWN SANG VIEW MỚI.
+      // ⛔⛔ Nếu không có mấy dòng này: một view chưa từng ghé (ENG1 → VI1 lần đầu)
+      // được gieo từ Settings defaults, mà Settings KHÔNG BAO GIỜ dựng 5 key đó
+      // (core/options-panel.js chỉ dựng khi caller truyền `showdown: true`, và Settings
+      // cố ý không truyền — xem SD_PLAN_KEYS trong core/showdown.js). Nên Balance/Count
+      // BIẾN MẤT chỉ vì thầy đổi bộ gợi ý giữa trận; rồi Apply phát tag OPT mang bản
+      // thiếu, mà `__awordBridge.applyOptions` là THAY THẾ chứ không trộn ⇒ mọi cột
+      // myActivity khác MẤT THEO, trong im lặng. Một trong ba đường dẫn tới "cùng số
+      // người mà khác số câu" thầy báo 25/8.
+      // ⚠️ CHỈ ĐẮP KHI VIEW MỚI CHƯA CÓ. View đã từng lưu giá trị riêng thì giữ nguyên
+      // giá trị riêng — nếp "mỗi lựa chọn một bộ options" của Đợt 147 không bị đụng.
+      // ⚠️ Chỉ trong Showdown: ngoài Showdown 5 key này không có điều khiển nào trên
+      // panel, khiêng chúng qua lại chỉ là chở một giá trị vô hình đi vòng quanh.
+      if (showdownPick) {
+        SD_PLAN_KEYS.forEach(k => {
+          if (!(k in seeded) && draft[k] !== undefined) seeded[k] = draft[k];
+        });
+      }
+      draft = liveDraft({ ...seeded, ...selState });
       curKey = nextKey;
       pending[curKey] = draft;
       scheduleOptLive(); // đổi hẳn view (ENG1/VI1/...) là một cú đổi lớn — báo ngay, đừng đợi lần kéo kế tiếp

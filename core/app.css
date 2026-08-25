@@ -6085,6 +6085,45 @@ html.aw-nhung .aw-below { display: none; }
   text-align: center;
 }
 
+/* ---- ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI (màn READY, trong stage nên cqw) ----
+   Bình thường: xám, nhỏ hơn đội hình một bậc — một dòng để ĐỐI CHIẾU, không phải
+   một dòng để đọc. Lệch/cũ: cả cụm chuyển hổ phách, đúng màu myActivity v2.8.0 đã
+   chọn cho "có chuyện nhưng vẫn bấm được" (thầy chốt KHÔNG khoá cứng).
+   ⚠️ `min-height` bằng px trên cái nút, không phải cqw: sàn chạm 34px là một con số
+   VẬT LÝ của ngón tay trên TOMKO 86", nó không được co lại theo khung game. */
+.aw-ready-plan {
+  display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap; gap: 0.6cqw 1.2cqw;
+  margin-top: 1cqw; max-width: 74cqw;
+}
+.aw-ready-plan-mine {
+  font-size: 1.5cqw; font-weight: 700; letter-spacing: 0.12cqw;
+  color: #8fa3b6; text-transform: uppercase;
+  line-height: 1.35; padding: 0.2cqw 0; margin: -0.2cqw 0;
+}
+.aw-ready-plan.is-warn .aw-ready-plan-mine { color: #f5b942; }
+.aw-ready-plan-warn {
+  font-size: 1.5cqw; font-weight: 800; letter-spacing: 0.1cqw;
+  color: #ffce6a; text-transform: uppercase;
+  line-height: 1.35;
+  padding: 0.35cqw 1cqw; margin: -0.35cqw 0;
+  border-radius: 999px;
+  background: rgba(245,185,66,.14);
+  border: 0.12cqw solid rgba(245,185,66,.55);
+}
+.aw-ready-plan-fix {
+  font: inherit; font-size: 1.4cqw; font-weight: 800; letter-spacing: 0.12cqw;
+  text-transform: uppercase; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 34px; padding: 0.3cqw 1.4cqw;
+  border-radius: 999px;
+  color: #10161f; background: #f5b942; border: none;
+  box-shadow: 0 0.3cqw 1cqw rgba(0,0,0,.3);
+  transition: filter .15s ease, transform .1s ease;
+}
+.aw-ready-plan-fix:hover { filter: brightness(1.08); }
+.aw-ready-plan-fix:active { transform: translateY(0.15cqw); }
+
 /* ----- 3. Show answers, grouped by pupil (inside .aw-review, so cqw) ----- */
 /* `padding-top` measured, not decorative: this is a scrolling box, so it clips
    at its own edge, and the team name is its first child. Its ink top landed

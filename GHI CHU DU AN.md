@@ -5,6 +5,260 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 260 (25/8/2026) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU PHẢI KHỚP GIỮA CÁC BẢNG** · ⭐⭐⭐ **VÁ BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ**
+
+> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.** Bàn thử `scratch/dot260-plan.html` **52/52** trên module
+> thật; hồi quy `dot256-smoke` 48/48 · `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 ·
+> `index.html` 0 lỗi.
+
+### Thầy nêu (25/8/2026)
+
+> *"Chế độ showdown bị lỗi đồng bộ số câu giữa các bảng trong myActivity, cần có cơ chế đồng bộ
+> chắc chắn hoặc thêm các nút tính năng vào để có thể đồng bộ được chuẩn. Có trường hợp cùng số
+> người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào dữ liệu phân tích thì sai lệch
+> hết vì số câu của các em không công bằng."*
+
+Thầy chốt qua AskUserQuestion (4 câu, trước khi code): Firestore là nguồn sự thật + myActivity
+relay nhanh · **vá gấp vấn đề số câu trước**, phòng chờ làm đợt sau · host bấm START thì mọi bảng
+tự vào ván · Submit là để CHỐT lượt (vẫn tự gửi như nay). **Đợt này chỉ làm việc thứ nhất.**
+
+---
+
+### ⛔⛔⛔ PHÁT HIỆN LỚN NHẤT, VÀ NÓ KHÔNG NẰM TRONG VIỆC THẦY GIAO
+
+**`window.__awordBridge` KHÔNG HỀ CÓ `setMode` / `openOptions` / `closeTool`.**
+
+Đợt 229 (22/8) viết cả ba, cả ba đều đúng — nhưng **chỉ trên object DELEGATE** truyền vào
+`_setCurrent()`. Cái myActivity gọi lại là `window.__awordBridge.*`, tức **SINGLETON**, và
+singleton là một **bức tường CHÉP TAY** chỉ chuyển tiếp đúng 5 phương thức được viết bằng tay:
+
+```js
+window.__awordBridge = {
+  getState, switchTemplate, applyOptions, setTheme, giaoBai, _setCurrent   // ← hết
+};
+```
+
+Hậu quả, suốt từ 22/8 tới 25/8:
+
+| Tính năng | myActivity làm gì | Kết quả THẬT |
+|---|---|---|
+| **MODE** (Single ↔ Showdown) | gọi thẳng `.setMode(...)` | TypeError → catch → `false` → thử lại → `false` → **dấu ✗ đỏ**. Chưa chạy một lần nào. |
+| **TOOLOPEN** (mở Options đồng loạt) | có rào `if (!...openOptions) return false` | **im lặng tuyệt đối** — cột khác đứng yên, không lỗi, không dấu, không gì cả |
+| **closeTool** | có rào tương tự | pop-up trên các cột khác **không bao giờ tự đóng** |
+
+⇒ Đây chính là *"đồng bộ lúc được lúc không"* thầy tả, và là lý do **cả hai repo** đều còn nguyên
+mục "⬜ CHƯA TEST TOMKO" cho đúng ba tính năng này (AWord Đợt 229 · myActivity v2.8.0 mục 16).
+
+⚠️⚠️ **BẮT ĐƯỢC BẰNG BÀN THỬ, KHÔNG PHẢI BẰNG MẮT ĐỌC CODE.** Phiên này đã đọc kỹ cả khối bridge
+mà **vẫn không thấy** — vì cái thiếu không có hình dạng nào trên màn hình. Chỉ tới khi bàn thử gọi
+đúng cửa myActivity gọi (`window.__awordBridge.openOptions()`) thì nó mới nổ.
+
+⛔ **LUẬT MỚI, ghi luôn vào `core/HUONG DAN CORE.md`**: thêm phương thức cho delegate thì **thêm
+luôn một dòng ở singleton**. Quên là **không có lỗi biên dịch, không có cảnh báo, không có gì** —
+chỉ có một tính năng không tồn tại.
+
+---
+
+### BA ĐƯỜNG DẪN TỚI "CÙNG SỐ NGƯỜI MÀ KHÁC SỐ CÂU"
+
+Gốc chung: **số câu là kết quả của một phép tính chạy ĐỘC LẬP ở mỗi bảng**, từ hai nguồn CỤC BỘ —
+`activity.options` (đi qua đường đồng bộ, có thể trượt) và `showdownPick` (**không bao giờ đồng
+bộ**, cố ý, vì mỗi cột phải là một đội khác nhau).
+
+#### (1) `maxTeam` là ẢNH CHỤP ĐÔNG CỨNG — thủ phạm số một
+
+`applyBalance` chia cho **đội đông nhất**: `each = floor(tổng ÷ maxTeam)`, `số câu = each × số em
+đội mình`. Mà `maxTeam` được đóng dấu vào pick đúng khoảnh khắc bảng đó bấm Ready
+(`showdown-setup.js` `applyReady`), đọc từ `setup.teams` panel đang nhìn thấy lúc ấy, rồi **không
+bao giờ tự làm mới**:
+
+```
+act 100 câu, MỌI ĐỘI ĐỀU 5 EM
+bảng 1 bấm Ready lúc bảng đội là [5,5,5]   → maxTeam 5  → floor(100/5)×5 = 100 câu
+thầy kéo thêm 5 em vào đội 3 → [5,5,10]
+bảng 2 bấm Ready                            → maxTeam 10 → floor(100/10)×5 =  50 câu
+```
+
+**Cùng số người, 50 với 100** — đúng con số thầy kể, và **không có gì trên màn nói vì sao**.
+
+⚠️⚠️ Nó còn vỡ được **ngay trong MỘT cú bấm Ready duy nhất**: `applyReady()` ghi pick **TRƯỚC** rồi
+mới gọi `publishTable()`, mà `publishTable` có thể trả `superseded` (máy khác vừa sửa bảng đội,
+server thắng) — panel nhận đội hình của server, còn **pick thì đã ghi xong bằng đội hình THUA**.
+
+**Vá**: hàm mới `stampPickFromTable(pick, node, teamId)` chạy **SAU** `publishTable`, đóng dấu lại
+pick (`maxTeam` · `members` · tên đội · lớp · tableId) bằng bảng đội **CỦA SERVER**. Một nước đóng
+cả hai lỗ.
+⚠️ **MUTATE tại chỗ** — `applyReady` đưa CHÍNH object `pick` đó cho `onApply()` ngay sau đó.
+⚠️ Vẫn giữ `writePick()` sớm ở đầu hàm: mất mạng thì `publishTable` ném, hàm này không chạy, buổi
+dạy vẫn bắt đầu được (hợp đồng của Đợt 197).
+⚠️ **KHÔNG dùng ở nhánh một đội** (`applySolo`): một đội thì nó CHÍNH LÀ đội đông nhất nên `maxTeam`
+luôn đúng sẵn, mà nếu ở đó server trả về bảng NHIỀU đội thì hàm sẽ đóng cho nó `maxTeam` của bảng
+khác — hại hơn lợi.
+
+#### (2) 5 tuỳ chọn Showdown là key PER-VIEW, và Settings không bao giờ dựng chúng
+
+`balanceQuestions · sdDeal · sdDealCount · roundTimer · roundSeconds` là key options bình thường ⇒
+**per-view** (chúng không nằm trong `VIEW_SELECTOR_KEYS` hay `VIEW_ACT_KEYS`). Mà
+`core/options-panel.js` chỉ dựng chúng khi caller truyền `showdown: true`, và **Settings ▸ Default
+activity options cố ý không truyền**. Nên một view chưa từng ghé (ENG1 → VI1 lần đầu) được gieo từ
+Settings defaults là gieo ra bộ **KHÔNG CÓ** 5 key đó ⇒ Balance/Count biến mất chỉ vì thầy đổi bộ
+gợi ý giữa trận ⇒ Apply phát `OPT` mang bản thiếu ⇒ **`applyOptions` là THAY THẾ chứ không trộn**
+⇒ **mọi cột myActivity khác mất theo, trong im lặng**.
+
+**Vá**: `onViewChange()` mang 5 key sang view mới **khi view đó CHƯA CÓ**. View đã từng lưu giá trị
+riêng thì giữ giá trị riêng — nếp "mỗi lựa chọn một bộ options" của Đợt 147 không bị đụng một dòng.
+
+#### (3) Không bảng nào đối chiếu với bảng nào
+
+**Vá**: mỗi bảng **KHAI** kế hoạch của nó lên chính chỗ đặt gạch — `claims` của `sd_main` nay chở
+thêm `md` (chế độ) · `n` (số câu **mỗi em**) · `tt` (tổng, chỉ để hiện).
+
+⭐ **KHÔNG dựng tài liệu mới, KHÔNG thêm listener nào**: engine đã mở `subscribeSetup()` ngay khi
+vào Showdown từ Đợt 217 (để bắt "bị giành mất đội"). Chở thêm ba trường là mọi bảng biết nhau tức
+thì — không thêm một luật Firestore nào (luật hiện hành chỉ mở đúng `users/{uid}/items`).
+
+Hàm mới `publishMyPlan({teamId, md, n, tt})`: transaction, **chỉ chạm `claims`**, **chỉ ghi lên
+hàng của chính mình** (`c.by === me`), và **không ghi khi không đổi gì** (mọi cú `replayCurrent`
+gọi lại nó — ghi vô điều kiện là đánh thức `onSnapshot` của cả lớp mỗi lần thầy chạm một thanh
+trượt).
+
+---
+
+### ⛔⛔ HAI QUYẾT ĐỊNH DỄ LÀM NGƯỢC, VÀ CẢ HAI ĐỀU ĐÃ SUÝT LÀM NGƯỢC
+
+**A. `n` là SỐ CÂU MỖI EM, không phải TỔNG.** So tổng thì ở chế độ `Count` một đội 5 em (50 slot)
+và một đội 6 em (60 slot) bị tố "lệch" **trong khi chúng công bằng hoàn hảo** — mỗi em vẫn đúng 10
+câu. Một cảnh báo giả trên màn lớp học là thứ thầy sẽ tắt sau hai buổi, và khi đó cái lệch THẬT đi
+theo luôn.
+
+**B. `md` đọc từ Ô TÍCH, không phải từ "phép cắt có thật sự chạy không".** Bản đầu của đợt này làm
+ngược lại — nghe thì trung thực hơn — và **tính ra số liệu thì nó hỏng đúng ca của thầy**:
+
+```
+act 100 câu · đội 5 em · Balance CÓ tích
+bảng A maxTeam 5  → floor(100/5)=20 → cắt còn 100 = y nguyên ⇒ applyBalance TỰ ĐỨNG XUỐNG
+                                                             ⇒ "cái chạy thật" = normal
+bảng B maxTeam 10 → floor(100/10)=10 → cắt còn 50           ⇒ "cái chạy thật" = balance
+```
+
+Hai bảng khai hai chế độ khác nhau ⇒ `why: "mode"` ⇒ màn hình khuyên *"check Options"* trong khi
+Options hai bên **giống hệt nhau** và thứ sai là bảng đội. **Lời khuyên sai còn tệ hơn im lặng.**
+⇒ `md` là **LUẬT ĐANG HIỆU LỰC** (thầy tích gì), `n` là **HỆ QUẢ**. Hai bảng cùng `balance` mà `n`
+20 với 10 ⇒ `why: "each"` ⇒ đúng nút REFRESH TEAM.
+
+---
+
+### MÀN READY: DÒNG SỐ CÂU, CẢNH BÁO, VÀ NÚT
+
+```
+        DS-S2.I1.W3 / ENG1
+              ▶
+        TYPE THE ANSWER
+    Team 1   An0 · Bình1 · Chi2 · Dũng3 · Em4
+    100 QUESTIONS · 20 EACH   [Team 2: 10 each]  ( REFRESH TEAM )
+```
+
+- Bình thường: **xám**, nhỏ hơn đội hình một bậc — một dòng để ĐỐI CHIẾU, không phải để đọc.
+- Lệch hoặc cũ: cả cụm chuyển **hổ phách** (`#f5b942`, đúng màu myActivity v2.8.0 chọn cho "có
+  chuyện nhưng vẫn bấm được"). **KHÔNG khoá cứng** — thầy vẫn bấm Play được, đúng nếp đã chốt.
+- ⛔ **HAI TÌNH TRẠNG VẼ RIÊNG VÌ CÁCH CHỮA KHÁC NHAU**: *LỆCH* (`findPlanClash` — bảng khác chơi
+  kiểu khác/khác số câu mỗi em) và *CŨ* (`sdTableStale` — ảnh chụp đội của bảng NÀY đã khác bảng
+  đội trên server). Nút **REFRESH TEAM** chỉ chữa được cái thứ hai nên **chỉ mọc ra khi có cái thứ
+  hai** — đúng luật CẤM NÚT CHẾT của Đợt 143. Lệch vì Options thì dòng chữ nói thẳng
+  *"— check Options"* và **không** mọc nút.
+- ⭐ Hai cái **ĐỘC LẬP**: bảng này có thể CŨ mà chưa ai thấy lệch (bảng kia còn chưa khai) — và đó
+  chính là ca 50/100 của thầy, **bắt được TRƯỚC khi nó kịp thành lệch**.
+- Nằm trong lớp phủ READY nên biến mất lúc bấm Play — cố ý, đây là phép kiểm **trước khi cất
+  cánh**. "Start again" dựng lại lớp phủ nên nó quay lại.
+
+---
+
+### ⭐ MÁCH NƯỚC CHO THẦY — DÙNG NGAY ĐƯỢC, KHÔNG CẦN CHỜ ĐỢT SAU
+
+`dealQuestions` cho `tổng slot = perPupil × số em`, nên bốn chế độ **không công bằng như nhau**:
+
+| Chế độ | Mỗi em được | Phụ thuộc bảng khác? |
+|---|---|---|
+| **Count N** | **đúng N câu, luôn luôn** | **KHÔNG** |
+| Balance | `floor(tổng ÷ đội đông nhất)` | **CÓ** — `maxTeam` phải khớp ⇐ chỗ vừa vỡ |
+| Normal | `tổng ÷ số em đội mình` | không, nhưng **đội nhỏ được nhiều câu hơn đội to** |
+| Free | tới khi bấm Submit (trần 100) | không, nhưng do tay người quyết |
+
+⇒ **Mọi thứ đổ vào bảng phân tích thì dùng `Count`.** Nó là chế độ **duy nhất** bảo đảm cả lớp làm
+đúng cùng số câu **mà không cần bảng nào thoả thuận với bảng nào** — tức là kể cả khi đồng bộ
+trượt, dữ liệu vẫn công bằng.
+
+---
+
+### FILE ĐÃ SỬA (4)
+
+| File | Sửa gì |
+|---|---|
+| `core/showdown.js` | + `SD_PLAN_KEYS` · `SD_MODES` (danh sách trắng) · `sdPlanPromises()` · `findPlanClash()` — **thuần, không import**, giữ đúng luật 2 của v0.9.0 |
+| `core/showdown-setup.js` | `normalize()` giữ `md`/`n`/`tt` trên claim · + `stampPickFromTable()` · + `publishMyPlan()` · `applyReady()` gọi stamp sau `publishTable` |
+| `core/engine.js` | **+3 pass-through ở singleton bridge** · `sdPlan` (chốt sau `applySdDeal(applyBalance())`) · khai plan + nghe bảng đội trong khối `subscribeSetup` đã có · dòng `.aw-ready-plan` + `renderSdPlan()` + `sdTableStale()` + `sdRefreshFromTable()` · `onViewChange()` mang 5 key |
+| `core/app.css` | `.aw-ready-plan` / `-mine` / `-warn` / `-fix` (cqw, riêng `min-height: 34px` bằng px vì sàn chạm là con số VẬT LÝ của ngón tay trên TOMKO) |
+
+### KIỂM CHỨNG — ĐO HÀNH VI, KHÔNG ĐO CHỮ
+
+Bàn thử `scratch/dot260-plan.html` — **52/52**, chạy **module thật** của đĩa, chỉ tráo
+`core/firebase.js` bằng `scratch/fake-firebase.js` qua importmap. Tám mục, **mục nào cũng có đối
+chứng ngược**:
+
+1. `findPlanClash` thuần — ⛔ hai bảng cùng `normal` với `n` khác nhau (đội khác cỡ) **KHÔNG bị tố
+   oan** · ⛔ bảng chưa khai thì **không đoán hộ** · ⛔ hàng của chính mình bị bỏ qua.
+2. `normalize()` — claim mới giữ đủ 3 trường · ⛔ **claim BẢN CŨ (chỉ `by`/`at`) đọc ra y như xưa** ·
+   giá trị rác bị lọc (ca `md: 7` do bàn thử bắt được ⇒ thêm danh sách trắng `SD_MODES`).
+3. `publishMyPlan` — ghi được hàng mình · `teams` không bị đụng · ⛔ gọi lại y hệt **KHÔNG ghi** ·
+   ⛔ **không ghi được lên hàng của trình duyệt khác**.
+4. `stampPickFromTable` — `maxTeam` lấy của SERVER (4) chứ không của pick (2) · ghi thật vào
+   `sessionStorage` · ⛔ đội không còn trên bảng thì giữ nguyên pick.
+5. ⭐ **TÁI HIỆN CA CỦA THẦY, DỰNG VÁN THẬT**: cùng 5 em — `maxTeam 5` ra **`100 QUESTIONS · 20
+   EACH`**, `maxTeam 10` ra **`50 QUESTIONS · 10 EACH`**. ⛔ **Đo lại bằng ĐƯỜNG THỨ HAI**: bấm Play
+   thật rồi đọc thanh điều hướng của ván → **`1 of 50`**.
+6. ⭐ **BẤM THẬT nút REFRESH TEAM**: trước `100 QUESTIONS · 20 EACH` → sau **`50 QUESTIONS · 10
+   EACH`**, `readPick().maxTeam` thành 10, cảnh báo tắt, nút tự lặn. ⛔ Đối chứng ngược: bảng đội
+   khớp thì **không cảnh báo, không mọc nút chết**. ⛔ Lệch vì Options thì nói *"Team 2: Count —
+   check Options"* và **không** mọc nút.
+7. Đổi bộ gợi ý giữa Showdown: sang VI1 (view chưa ghé) → **Balance VẪN CÒN**. ⛔ Đối chứng ngược:
+   view đã có bộ riêng ghi `balanceQuestions:false` → **phải TẮT**, không bị đắp đè.
+8. ⭐⭐ Ba cửa Đợt 229, gọi qua **đúng cái myActivity gọi** (`window.__awordBridge.*`): `setMode`
+   /`openOptions`/`closeTool` đều là `function` · `setMode("single")` về Single thật (dòng đội +
+   dòng số câu biến mất) · `setMode("showdown")` mở màn chọn đội thật và ⛔ **không tự tích hộ đội
+   nào** · `closeTool()` đóng được pop-up · ⛔ target lạ bị từ chối.
+
+**Hồi quy**: `dot256-smoke` **48/48** · `dot259-fight` **49/49 · 0 HỎNG** · `dot259b-optcheck`
+**12/12** · `index.html` **0 lỗi**.
+⚠️ `dot259c-otb` ra **20/21** và `showdown-sync-test` chết giữa chừng (`all.map is not a function`)
+— **đã chứng minh bằng `git stash` là HỎNG SẴN**: chạy lại trên cây gốc ra **y hệt**. Bench Đợt 177
+viết theo API `loadTeamResults` **trước** Đợt 196 (nay trả `{teams, otherActs}` chứ không phải mảng).
+
+⬜ **CHƯA NHÌN ĐƯỢC BẰNG MẮT**: Browser pane không compositing nên không chụp được màn hình. Đã đo
+thay bằng toạ độ trên `scratch/dot260-visual.html`: 3 dòng xếp **không đè nhau**, nút cao **34px**,
+cụm rộng 464px nằm gọn trong khung 917px, **không mọc thanh cuộn ngang**, màu đúng thiết kế.
+
+### VIỆC ĐANG CHỜ
+
+- ⬜⬜ **THẦY TEST TAY TRÊN TOMKO** — 4 việc:
+  1. Mở 2+ cột cùng một act, vào Showdown, **cố tình kéo thêm người vào một đội sau khi cột 1 đã
+     bấm Ready** ⇒ cột 1 phải hiện hổ phách + nút **REFRESH TEAM**; bấm nút đó ⇒ số câu phải đổi
+     đúng bằng cột kia.
+  2. ⭐ **BA CỬA VỪA NỐI LẠI** — nay mới thật sự chạy lần đầu: đổi Mode ở 1 cột sang Showdown, các
+     cột khác có tự mở màn chọn đội không? Bấm Options ở 1 cột, các cột khác có mở theo không? Áp
+     xong pop-up các cột khác có tự đóng không?
+  3. Đổi ENG1 ↔ VI1 giữa Showdown ⇒ Balance/Count có còn không.
+  4. **Nhìn bằng mắt** dòng `100 QUESTIONS · 20 EACH` trên màn 86 inch: có to đủ đọc từ cuối lớp
+     không, nút REFRESH TEAM có dễ chạm không.
+- ⬜ **ĐỢT B — PHÒNG CHỜ / CHỐT LƯỢT** (thầy đã chốt hướng, chưa làm): `sd_round_<tableId>` với
+  `roundId` · `plan` · `boards{state}` · `phase`; phòng chờ chặn Ready khi số câu không khớp `plan`;
+  host bấm START thì **mọi bảng tự vào ván**; xong ván **vẫn tự gửi** + thêm dòng menu **Submit
+  answers** trong bảng kết quả để chốt; host **Close round**; `matchId = tableId|actId|roundId`,
+  **bỏ hẳn `playNo` đoán mò** của `core/showdown-history.js` (giả định "lần kết thúc thứ nhất của
+  mọi bảng là cùng một lượt" vỡ ngay khi một cột restart, nạp lại trang, mở muộn, hoặc app khởi
+  động lại làm mất `sessionStorage`).
+
+---
+
 ## Đợt 259c (25/8/2026) — ⭐ **OPEN THE BOX: BỎ NỐT HIỆU ỨNG LÀM NHẠT, CHO ĐỒNG BỘ VỚI CROSSWORD**
 
 > ✅ **COMMIT `d65bdcc` · ĐÃ PUSH + LIVE KIỂM CHỨNG** — Pages `built` đúng

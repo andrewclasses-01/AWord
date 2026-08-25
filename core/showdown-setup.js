@@ -62,7 +62,7 @@ import {
   renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
-  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, browserId, writePick, clearPick,
+  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
   mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
@@ -162,7 +162,26 @@ function normalize(raw) {
   for (const [teamId, c] of Object.entries(rawClaims)) {
     const at = Number(c?.at) || 0;
     const by = String(c?.by || "");
-    if (by && at) claims[teamId] = { by, at };
+    if (!by || !at) continue;
+    // ⭐⭐⭐ Đợt 260 — MỖI BẢNG TỰ KHAI KẾ HOẠCH SỐ CÂU CỦA NÓ NGAY TRÊN CHỖ ĐẶT GẠCH.
+    //   md  chế độ chia bài đang THẬT SỰ hiệu lực: normal | balance | free | count
+    //   n   số câu MỖI EM (0 = không chia đều được — xem findPlanClash)
+    //   tt  tổng số câu bảng đó chơi, chỉ để HIỆN cho mắt thầy
+    // ⚠️⚠️ KHÔNG DỰNG TÀI LIỆU MỚI, VÀ ĐÓ LÀ CHỦ Ý. Đường đi này đã có sẵn và đã
+    // sống: engine mở subscribeSetup() ngay khi vào Showdown (để bắt "bị giành mất
+    // đội", Đợt 217), nên chở thêm ba trường là mọi bảng biết nhau tức thì — không
+    // thêm một listener nào, không thêm một document nào, không thêm một luật
+    // Firestore nào (luật hiện hành chỉ mở đúng users/{uid}/items).
+    // ⚠️ Claim của bản AWord cũ hơn đợt này không có ba trường: đọc ra y như xưa, và
+    // findPlanClash coi "chưa khai" là KHÔNG ĐOÁN, chứ không phải là lệch.
+    const out = { by, at };
+    const md = String(c?.md || "");
+    if (SD_MODES.includes(md)) out.md = md;   // danh sách trắng — xem SD_MODES
+    const n = Number(c?.n) || 0;
+    if (n > 0) out.n = Math.round(n);
+    const tt = Number(c?.tt) || 0;
+    if (tt > 0) out.tt = Math.round(tt);
+    claims[teamId] = out;
   }
   return {
     id: DOC_ID, kind: "showdown", root: "showdown", parentId: null, trashed: false,
@@ -313,6 +332,87 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
   });
   cache = node; cacheUid = uid;
   return { node, superseded };
+}
+
+/**
+ * ⭐⭐⭐ Đợt 260 (25/8/2026) — ĐÓNG DẤU LẠI PICK BẰNG BẢNG ĐỘI **CỦA SERVER**.
+ *
+ * ⛔⛔ ĐÂY LÀ THỦ PHẠM SỐ MỘT CỦA "CÙNG SỐ NGƯỜI, BẢNG NÀY 50 CÂU BẢNG KIA 100".
+ * `maxTeam` — đội đông nhất, tức là số mà applyBalance CHIA CHO — được đóng dấu
+ * vào pick đúng khoảnh khắc bảng này bấm Ready, đọc từ `setup.teams` mà panel này
+ * đang nhìn thấy lúc ấy, rồi **không bao giờ tự làm mới**. Nên:
+ *
+ *     act 100 câu, mọi đội đều 5 em
+ *     bảng 1 bấm Ready lúc bảng đội là [5,5,5]  → maxTeam 5  → floor(100/5)×5 = 100 câu
+ *     thầy kéo thêm 5 em vào đội 3 → [5,5,10]
+ *     bảng 2 bấm Ready                          → maxTeam 10 → floor(100/10)×5 =  50 câu
+ *
+ * Cùng số người, 50 với 100, và **không có gì trên màn nói vì sao**.
+ *
+ * ⚠️⚠️ VÀ NÓ VỠ ĐƯỢC NGAY TRONG MỘT CÚ BẤM READY DUY NHẤT: applyReady() ghi pick
+ * TRƯỚC rồi mới gọi publishTable(), mà publishTable có thể trả `superseded` — máy
+ * khác vừa sửa bảng đội, server thắng, panel nhận đội hình của server... còn pick
+ * thì đã ghi xong bằng đội hình THUA. Hàm này chạy SAU publishTable nên nó đóng cả
+ * hai lỗ bằng một nước.
+ *
+ * ⚠️ MUTATE TẠI CHỖ, không trả object mới: applyReady đưa CHÍNH object `pick` đó cho
+ * `onApply()` ngay sau đây, nên gán lại một biến cục bộ là engine vẫn nhận bản cũ.
+ * ⚠️ Vẫn giữ nguyên cú `writePick()` sớm ở đầu applyReady — mất mạng thì publishTable
+ * ném, hàm này không chạy, và buổi dạy vẫn bắt đầu được bằng ảnh chụp cục bộ. Đó là
+ * hợp đồng "lesson has to start even if the network is having a bad day" của Đợt 197.
+ * ⚠️ KHÔNG dùng ở nhánh MỘT ĐỘI (applySolo): một đội thì nó CHÍNH LÀ đội đông nhất
+ * nên maxTeam luôn đúng sẵn, mà nếu ở đó server lại trả về một bảng NHIỀU đội (ca
+ * superseded) thì hàm này sẽ đóng cho nó một maxTeam của bảng khác — hại hơn lợi.
+ */
+export function stampPickFromTable(pick, node, teamId) {
+  const teams = Array.isArray(node?.teams) ? node.teams : [];
+  const t = teams.find(x => x.id === teamId);
+  if (!pick || !t) return pick;      // đội biến mất khỏi bảng: giữ ảnh chụp cũ còn hơn không có gì
+  pick.teamName = t.name;
+  pick.members = t.members.map(m => ({ id: m.id, name: m.name }));
+  pick.classId = node.classId || pick.classId;
+  pick.className = node.className || pick.className;
+  pick.maxTeam = Math.max(1, ...teams.map(x => (x.members || []).length || 0));
+  pick.tableId = node.tableId || pick.tableId || "";
+  writePick(pick);
+  return pick;
+}
+
+/**
+ * ⭐⭐⭐ Đợt 260 — BẢNG NÀY KHAI KẾ HOẠCH SỐ CÂU CỦA NÓ LÊN CHỖ ĐẶT GẠCH.
+ *
+ * Ba trường `md` / `n` / `tt` (xem normalize() ở trên). Mọi bảng khác đang nghe
+ * subscribeSetup nên thấy ngay, và core/showdown.js's findPlanClash() so hộ.
+ *
+ * ⚠️ TRONG MỘT GIAO DỊCH và **chỉ chạm `claims`** — cùng đúng lý do writeMyClaim()
+ * đã ghi: đọc cả bảng rồi ghi cả bảng là có ngày đóng dấu một bản sao cũ đè lên đội
+ * hình máy khác vừa dựng.
+ * ⛔ CHỈ GHI LÊN HÀNG CỦA CHÍNH MÌNH (c.by === me). Bảng khác khai gì là việc của
+ * bảng khác; một hàm đo-rồi-sửa-hộ-người-ta là cách nhanh nhất để hai bảng ghi đè
+ * qua lại nhau cả buổi.
+ * ⚠️ KHÔNG GHI KHI KHÔNG ĐỔI GÌ. Mount lại (Options ▸ Apply, Start again, mọi cú
+ * replayCurrent) là gọi lại hàm này; ghi vô điều kiện sẽ đánh thức onSnapshot của
+ * MỌI bảng trong lớp mỗi lần thầy chạm một thanh trượt.
+ */
+export async function publishMyPlan({ teamId, md, n, tt }) {
+  if (!teamId || !md) return null;
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, DOC_ID);
+  const claims = await runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const server = normalize(snap.exists() ? snap.data() : {});
+    const next = { ...server.claims };
+    const cur = next[teamId];
+    if (!cur || cur.by !== me) return next;                                        // không phải gạch của mình
+    if (cur.md === md && (cur.n || 0) === n && (cur.tt || 0) === tt) return next;   // đã đúng rồi
+    next[teamId] = { ...cur, md, n, tt, at: Date.now() };
+    if (snap.exists()) tx.update(ref, { claims: clean(next), updatedAt: Date.now() });
+    return next;
+  });
+  if (cache && cacheUid === uid) cache = { ...cache, claims };
+  return claims;
 }
 
 /**
@@ -3924,6 +4024,10 @@ export function buildShowdownPanel(panel, ctx) {
       setup.tableId = node.tableId;
       baseAt = node.updatedAt;
       if (superseded) toast("Another screen had changed the teams — kept theirs");
+      // ⭐⭐⭐ Đợt 260 — pick vừa ghi ở đầu hàm là ảnh chụp CỤC BỘ; bản của server mới
+      // là bản mọi bảng khác cũng đang nhìn. Xem stampPickFromTable() để biết vì sao
+      // đây là thủ phạm số một của "cùng số người mà khác số câu".
+      stampPickFromTable(pick, node, team.id);
     } catch (e) {
       toast(e?.code === "aw/signed-out" ? "Signed out — table not shared" : "Could not share the table");
     }

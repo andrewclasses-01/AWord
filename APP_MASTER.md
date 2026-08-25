@@ -8,8 +8,65 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 259c)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 260)**.
 >
+> **Đợt 260** (25/8/2026, ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT**) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU
+> PHẢI KHỚP GIỮA CÁC BẢNG**, và ⭐⭐⭐ **VÁ BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ**.
+> Thầy báo: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào dữ liệu
+> phân tích thì sai lệch hết vì số câu của các em không công bằng"*. Sửa 4 file:
+> `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js` · `core/app.css`.
+>
+> ⛔⛔⛔ **PHÁT HIỆN LỚN NHẤT ĐỢT NÀY, VÀ NÓ KHÔNG NẰM TRONG VIỆC THẦY GIAO:**
+> `window.__awordBridge` **KHÔNG HỀ CÓ** `setMode` / `openOptions` / `closeTool`. Đợt 229
+> viết cả ba **chỉ trên object DELEGATE** truyền vào `_setCurrent()`, còn myActivity thì gọi
+> `window.__awordBridge.*` — tức là **SINGLETON**, một bức tường chép tay chỉ chuyển tiếp 5
+> phương thức. ⇒ Từ 22/8 tới nay: đồng bộ **MODE** giữa các cột **chưa chạy một lần nào**
+> (TypeError → catch → ✗ đỏ), **TOOLOPEN** hỏng **hoàn toàn im lặng** (myActivity có rào
+> `if (!...openOptions) return false`), **closeTool** không bao giờ đóng pop-up cột khác.
+> Đây chính là "đồng bộ lúc được lúc không" và là lý do CẢ HAI repo còn nguyên mục
+> "⬜ CHƯA TEST TOMKO" cho đúng ba tính năng đó. **Bắt được bằng BÀN THỬ, không phải bằng mắt
+> đọc code.** ⇒ Luật mới: thêm gì cho delegate thì **thêm luôn một dòng ở singleton** — quên
+> là không có lỗi biên dịch, không có cảnh báo, chỉ có một tính năng không tồn tại.
+>
+> **BA ĐƯỜNG DẪN TỚI "CÙNG SỐ NGƯỜI MÀ KHÁC SỐ CÂU"**, cả ba đều vá:
+> **(1) `maxTeam` là ẢNH CHỤP ĐÔNG CỨNG** — số mà `applyBalance` CHIA CHO, đóng dấu vào pick
+> đúng lúc bảng đó bấm Ready rồi không bao giờ tự làm mới. Act 100 câu, mọi đội 5 em: bảng
+> bấm Ready lúc bảng đội `[5,5,5]` chơi **100 câu**, bảng bấm sau khi thầy kéo thêm người
+> thành `[5,5,10]` chơi **50 câu**. `applyReady()` nay gọi `stampPickFromTable()` **SAU**
+> `publishTable`, đóng dấu lại pick bằng bảng đội **CỦA SERVER** — vá luôn ca `superseded`
+> (pick ghi TRƯỚC publishTable nên giữ đội hình THUA).
+> **(2) 5 tuỳ chọn Showdown là key PER-VIEW** (`balanceQuestions · sdDeal · sdDealCount ·
+> roundTimer · roundSeconds`) mà **Settings không bao giờ dựng chúng** ⇒ đổi bộ gợi ý giữa
+> trận là chúng biến mất, rồi `OPT` mang bản thiếu đi, mà `applyOptions` là **THAY THẾ chứ
+> không trộn** ⇒ mọi cột khác mất theo trong im lặng. `onViewChange()` nay mang chúng sang
+> khi view mới CHƯA CÓ (view đã có bộ riêng thì giữ bộ riêng — nếp Đợt 147 không đụng).
+> **(3) Không ai đối chiếu với ai.** Mỗi bảng nay **KHAI** kế hoạch của nó lên chính chỗ đặt
+> gạch (`claims` của `sd_main`, thêm `md`/`n`/`tt`) — **không tài liệu mới, không listener
+> mới**: engine đã mở `subscribeSetup` từ Đợt 217. Màn READY hiện **`100 QUESTIONS · 20
+> EACH`**, lệch thì hổ phách + nói tên bảng kia, và mọc nút **REFRESH TEAM** kéo bảng này về
+> đúng bảng đội của server.
+>
+> ⛔⛔ **`n` LÀ SỐ CÂU MỖI EM, KHÔNG PHẢI TỔNG** — so tổng là tố oan chế độ Count (đội 5 em 50
+> slot vs đội 6 em 60 slot, công bằng hoàn hảo). ⛔⛔ **`md` đọc từ Ô TÍCH, không phải từ
+> "phép cắt có chạy không"** — bản đầu làm ngược lại, tính ra số liệu thì nó khuyên sai đúng
+> ca của thầy ("check Options" trong khi Options hai bên giống hệt nhau).
+> ⭐ **Mách nước cho thầy**: `Count` là chế độ **DUY NHẤT** bảo đảm mọi em cả lớp làm đúng
+> cùng số câu **mà không cần bảng nào thoả thuận với bảng nào** — dùng nó cho mọi thứ đổ vào
+> bảng phân tích. `Balance` chỉ đúng khi `maxTeam` khớp (đúng chỗ vừa vỡ), `Normal` cho đội
+> nhỏ nhiều câu hơn đội to, `Free` do tay người bấm Submit quyết.
+>
+> Bàn thử `scratch/dot260-plan.html` **52/52** (chạy module thật, tái hiện đúng 100 vs 50,
+> **bấm THẬT** nút REFRESH TEAM, đo lại bằng đường thứ hai là thanh điều hướng `1 of 50`, và
+> **đối chứng ngược ở cả 8 mục**) + `scratch/dot260-visual.html` để nhìn.
+> Hồi quy: `dot256-smoke` **48/48** · `dot259-fight` **49/49** · `dot259b-optcheck` **12/12** ·
+> `index.html` 0 lỗi. ⚠️ `dot259c-otb` **20/21** và `showdown-sync-test` chết giữa chừng —
+> **đã chứng minh bằng `git stash` là HỎNG SẴN**, giống hệt trên bản gốc (bench Đợt 177 viết
+> theo API `loadTeamResults` trước Đợt 196).
+> ⬜ **CHƯA NHÌN ĐƯỢC BẰNG MẮT**: Browser pane không compositing nên không chụp được màn hình;
+> đã đo thay bằng toạ độ (3 dòng xếp không đè nhau, nút 34px, không mọc thanh cuộn ngang).
+> ⬜ **CHỜ THẦY TEST TOMKO** — xem mục cuối `GHI CHU DU AN.md` Đợt 260.
+>
+> ---
 > **Đợt 259c** (25/8/2026, `d65bdcc`, ĐÃ PUSH + LIVE) — ⭐ **OPEN THE BOX BỎ NỐT HIỆU ỨNG LÀM NHẠT** (thầy: *"cho đồng bộ"*).
 > ⭐ Nửa sau của yêu cầu — thanh giờ chọn ô — **đã có sẵn từ Đợt 259**: nó nằm ở tầng
 > `core/fight.js` nên game nào khai `tpl.fightPick` là tự có. Đã **ĐO chứ không đoán** trước khi

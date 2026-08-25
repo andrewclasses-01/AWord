@@ -1000,6 +1000,125 @@ lúc hạ cánh là hai tiếng cho một lỗi.
 
 ---
 
+## ⛔⛔⛔ BRIDGE myActivity — SINGLETON LÀ MỘT BỨC TƯỜNG CHÉP TAY (Đợt 260, 25/8/2026)
+
+**Thêm phương thức cho `_setCurrent(delegate)` mà quên chép một dòng sang SINGLETON thì tính năng
+đó KHÔNG TỒN TẠI — và không có gì báo cho bạn biết.**
+
+`core/engine.js` có hai object mang cùng những cái tên:
+
+```js
+if (!window.__awordBridge) {
+  let current = null;
+  window.__awordBridge = {                    // ①  SINGLETON — cả đời trang, myActivity gọi CÁI NÀY
+    getState, switchTemplate, applyOptions, setTheme, giaoBai,
+    setMode, openOptions, closeTool,          //     ⇐ mỗi cái là MỘT DÒNG CHÉP TAY
+    _setCurrent(d) { current = d; }
+  };
+}
+window.__awordBridge._setCurrent({            // ②  DELEGATE — dựng lại mỗi lần startGame()
+  getState() {...}, switchTemplate() {...}, applyOptions() {...}, setTheme() {...},
+  setMode() {...}, openOptions() {...}, closeTool() {...}, giaoBai() {...}
+});
+```
+
+① tồn tại vì lý do rất hay (Đợt 197): `startGame()` chạy lại là ② bị vứt đi, nên một lệnh từ
+myActivity bay tới **giữa lúc đổi template** sẽ hạ cánh lên một `activity` sắp bị bỏ. Singleton
+đứng yên và ủy quyền cho ② hiện hành.
+
+⛔ **Cái giá là ① phải chép tay từng phương thức của ②.** Và Đợt 229 đã quên đúng ba cái:
+`setMode` · `openOptions` · `closeTool`. Từ 22/8 tới 25/8, ba tính năng myActivity v2.8.0 được
+dựng quanh chúng **chưa chạy một lần nào**:
+
+- `.setMode(...)` → `TypeError` → lọt catch của myActivity → `false` → thử lại → `false` →
+  **dấu ✗ đỏ** trên mọi cột, mọi lần.
+- `.openOptions` / `.closeTool` → myActivity **có rào** `if (!window.__awordBridge.openOptions)`
+  nên chúng hỏng **hoàn toàn im lặng**: cột khác đứng yên, không lỗi, không dấu, không gì cả.
+
+⚠️⚠️ **KHÔNG BẮT ĐƯỢC BẰNG MẮT ĐỌC CODE.** Cái thiếu không có hình dạng nào trên màn hình; cả một
+phiên đọc kỹ khối bridge vẫn trượt. Nó chỉ nổ khi có thứ gọi **đúng cửa myActivity gọi**.
+⇒ **Bàn thử cho bất cứ thứ gì trên bridge PHẢI gọi qua `window.__awordBridge.*`, tuyệt đối không
+gọi thẳng object delegate** — gọi delegate là kiểm một con đường không ai đi.
+
+Cùng họ với luật "kiểm thứ đã nối dây bằng GIÁ TRỊ NÓ TRẢ VỀ" ở Đợt 143.
+
+---
+
+## ⭐⭐⭐ SHOWDOWN — KẾ HOẠCH SỐ CÂU PHẢI KHỚP GIỮA CÁC BẢNG (Đợt 260, 25/8/2026)
+
+Thầy, 25/8: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào dữ liệu phân
+tích thì sai lệch hết"*.
+
+**Gốc bệnh:** số câu là kết quả một phép tính chạy **độc lập ở mỗi bảng**, từ hai nguồn **cục bộ** —
+`activity.options` (đi qua đường đồng bộ, có thể trượt) và `showdownPick` (**không bao giờ đồng bộ**,
+cố ý). Không ai chốt một con số chung, và không ai đối chiếu với ai.
+
+### Cái phải khớp là SỐ CÂU MỖI EM, không phải TỔNG
+
+⛔⛔ Đây là chỗ dễ làm ngược nhất. So TỔNG thì ở chế độ `Count` một đội 5 em (50 slot) và một đội 6
+em (60 slot) bị tố "lệch" **trong khi chúng công bằng hoàn hảo** — mỗi em vẫn đúng 10 câu. Cảnh báo
+giả trên màn lớp học là thứ thầy sẽ tắt sau hai buổi, kéo theo cả cái lệch THẬT.
+
+`dealQuestions` cho `tổng slot = perPupil × số em`, nên:
+
+| Chế độ | Mỗi em được | Có tự hứa "mọi em bằng nhau"? |
+|---|---|---|
+| `count` | đúng N câu | **CÓ, và không cần bảng nào thoả thuận với bảng nào** |
+| `balance` | `floor(tổng ÷ maxTeam)` | CÓ, **nhưng chỉ khi mọi bảng đồng ý về `maxTeam`** |
+| `free` | trần `SD_FREE_CAP` | có, nhưng tay người bấm Submit mới quyết con số cuối |
+| `normal` | `tổng ÷ số em đội mình` | **KHÔNG** — đội nhỏ được nhiều câu hơn đội to |
+
+⇒ Khuyên thầy dùng `Count` cho mọi thứ đổ vào bảng phân tích.
+
+### `md` đọc từ Ô TÍCH, không phải từ "phép cắt có thật sự chạy không"
+
+⛔⛔ Bản đầu của Đợt 260 làm ngược lại — nghe trung thực hơn — và **tính ra số liệu thì nó hỏng đúng
+ca của thầy**: act 100 câu, đội 5 em, Balance có tích ⇒ bảng `maxTeam 5` cho `floor(100/5)=20`, cắt
+ra vẫn 100 nên `applyBalance` **tự đứng xuống** ⇒ "cái chạy thật" là `normal`; bảng `maxTeam 10` cắt
+còn 50 ⇒ `balance`. Hai bảng khai hai chế độ khác nhau ⇒ màn hình khuyên *"check Options"* trong khi
+Options hai bên giống hệt nhau và thứ sai là bảng đội. **Lời khuyên sai còn tệ hơn im lặng.**
+
+⇒ `md` là **LUẬT ĐANG HIỆU LỰC** (thầy tích gì), `n` là **HỆ QUẢ** (mỗi em mấy câu).
+
+### Hợp đồng
+
+- `core/showdown.js` (**thuần**): `SD_PLAN_KEYS` · `SD_MODES` · `sdPlanPromises()` · `findPlanClash()`.
+- `core/showdown-setup.js`: `claims` của `sd_main` nay chở thêm **`md` · `n` · `tt`** trên mỗi hàng.
+  `publishMyPlan()` ghi chúng — transaction, **chỉ chạm `claims`**, **chỉ hàng của chính mình**,
+  và **không ghi khi không đổi gì** (mọi `replayCurrent` gọi lại nó).
+  `stampPickFromTable()` đóng dấu lại pick bằng bảng đội **của server**, chạy **SAU** `publishTable`.
+- `core/engine.js`: `sdPlan` chốt **ngay sau** `activity = applySdDeal(applyBalance(activity))` — sớm
+  hơn một dòng là đo bản chưa cắt, muộn hơn là đã có template nhìn thấy nó.
+
+⭐ **KHÔNG dựng tài liệu Firestore mới, KHÔNG thêm listener nào.** Engine đã mở `subscribeSetup()`
+ngay khi vào Showdown từ Đợt 217; chở thêm ba trường trên kênh đó là mọi bảng biết nhau tức thì —
+và không phải đụng vào luật Firestore (luật hiện hành chỉ mở đúng `users/{uid}/items`).
+
+### Màn READY: hai tình trạng, hai cách chữa, hai thứ vẽ riêng
+
+- **LỆCH** (`findPlanClash`) — bảng khác chơi kiểu khác, hoặc khác số câu mỗi em.
+- **CŨ** (`sdTableStale`) — ảnh chụp đội trong `sessionStorage` của bảng NÀY đã khác bảng đội trên server.
+
+Nút **REFRESH TEAM** chỉ chữa được cái thứ hai ⇒ **chỉ mọc ra khi có cái thứ hai** (luật CẤM NÚT
+CHẾT của Đợt 143). Lệch vì Options thì dòng chữ nói thẳng *"— check Options"* và không mọc nút.
+⭐ Hai cái **độc lập**: bảng có thể CŨ mà chưa ai thấy lệch (bảng kia còn chưa khai) — và đó chính
+là ca 50/100, bắt được **trước khi** nó kịp thành lệch.
+⚠️ **Cảnh báo, KHÔNG khoá cứng** — thầy vẫn bấm Play được (nếp đã chốt ở myActivity v2.8.0).
+
+### ⚠️ 5 tuỳ chọn Showdown là key PER-VIEW mà Settings không bao giờ dựng
+
+`balanceQuestions · sdDeal · sdDealCount · roundTimer · roundSeconds` không nằm trong
+`VIEW_SELECTOR_KEYS` hay `VIEW_ACT_KEYS` ⇒ **per-view**. Mà `buildOptionsBody` chỉ dựng chúng khi
+caller truyền `showdown: true`, và **Settings ▸ Default activity options cố ý không truyền**. Nên
+một view chưa từng ghé được gieo từ Settings defaults là gieo ra bộ **thiếu cả 5** ⇒ Apply phát
+`OPT` mang bản thiếu ⇒ `applyOptions` **THAY THẾ chứ không trộn** ⇒ **mọi cột khác mất theo, im
+lặng**. `onViewChange()` nay mang chúng sang khi view mới CHƯA CÓ; view đã có bộ riêng thì giữ bộ
+riêng (nếp Đợt 147 không đụng).
+
+⛔ **Thêm một tuỳ chọn chỉ-Showdown nào nữa thì thêm luôn tên nó vào `SD_PLAN_KEYS`.**
+
+---
+
 ## ⭐⭐ SHOWDOWN MODE — MỖI TRÌNH DUYỆT MỘT ĐỘI, MỖI CÂU MỘT HỌC SINH (`core/showdown.js`, Đợt 155, 14/8/2026)
 
 Nút **SHOWDOWN** dưới khung (giữa Style và MODE) mở bảng chia đội. **KHÔNG phải biến thể của Fight**:
