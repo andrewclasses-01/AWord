@@ -5,6 +5,212 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 261 (25/8/2026) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT** · ⭐⭐⭐ **BỎ HẲN BALANCE QUESTIONS, COUNT MỞ CHO 8/11 GAME**
+
+> ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT.** Bàn thử `scratch/dot261-lobby.html` **53/53** trên
+> module thật; `dot260-plan` **52/52** (đã viết lại cho thực tế mới); hồi quy `dot256-smoke`
+> 48/48 · `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 · `index.html` 0 lỗi.
+> ✅ **ĐÃ NHÌN BẰNG MẮT** (2 ảnh chụp): màn READY và màn NO CONNECTION.
+
+### Thầy giao (25/8/2026) — 6 việc một lượt
+
+> *"Đồng bộ thêm trên firebase… ưu tiên firebase để nhiều thiết bị khác nhau cùng tham gia
+> được, không chỉ các bảng trên myActivity"* · *"đội bấm nút start trước sẽ ko vào game ngay
+> mà sẽ ở trạng thái READY (tích ✓ thật lớn ở giữa màn hình, có hiệu ứng nhấp nháy hào
+> quang, có nút cancel thật nhỏ ở góc, nút là icon, khó nhìn và khó để ý)"* · *"khi nhóm cuối
+> cùng bấm start thì mới bắt đầu"* · *"nếu 1 đội lệch templates, lệch options… thì hiện
+> LOADING DATA… để load dữ liệu chuẩn về"* · *"đội cuối bấm start xong… hiện STARTING… và
+> trong lúc đó load mọi dữ liệu đồng bộ và tự động vào game"* · *"bỏ hẳn luôn nút tích
+> Balance questions"*.
+
+Thầy chốt qua AskUserQuestion trước khi code: **mở Count cho các game còn lại, trừ 3 game
+bàn-chơi** · **đếm theo gạch còn sống, KHÔNG có đường thoát** · **bàn ĐẦU TIÊN bấm START
+chốt dữ liệu chuẩn** · **cancel chỉ rút mình**.
+
+⚠️ **KHẢO SÁT CỦA TÔI LÚC HỎI ĐẾM NHẦM MỘT GAME.** Tôi nói "10/12 template mất cách chia
+đều"; đếm lại bằng phép so khớp CHÍNH XÁC dòng khai cờ (`^\s*showdownMode: true,`) thì thật
+ra là **11 game có Showdown**, không phải 12 — `flying-fruit` chỉ có chữ `showdownMode`
+trong một dòng CHÚ THÍCH (Đợt 178 giải thích vì sao nó cố ý KHÔNG bật). Con số đúng: **8
+game cần Count, 3 game bàn-chơi bị cấm**. Quyết định của thầy không đổi, nhưng con số thì
+phải đúng. ⛔ Bài học: `grep -c "showdownMode: true"` đếm cả chú thích.
+
+---
+
+### PHẦN A — BỎ BALANCE QUESTIONS
+
+`applyBalance()` bị **gỡ hẳn** khỏi `core/engine.js`, ô tích bị gỡ khỏi Options,
+`balanceQuestions` rời `SD_PLAN_KEYS`, `"balance"` rời `SD_MODES`.
+
+**Vì sao gỡ chứ không giữ cả hai**: hai cơ chế cùng hứa "mọi em bằng nhau" mà chỉ một cái
+**giữ được lời hứa một mình**. `Count` = mỗi em đúng N câu, N là số thầy gõ ⇒ giống nhau ở
+mọi bàn **mà không cần bàn nào thoả thuận với bàn nào**. `Balance` chia cho `maxTeam` — một
+con số phải khớp giữa mọi bàn, và đúng chỗ đó đã vỡ ở Đợt 260. Để cả hai là để thầy chọn
+nhầm cái yếu hơn.
+
+**Count mở thêm cho 6 game** (`sdDeal: true`, một dòng cờ mỗi game): Anagram · Balloon pop ·
+Gameshow · Speaking · True-false · Unjumble. Cộng Quiz + Type the answer có sẵn = **8/11**.
+⛔ **Ba game bàn-chơi CẤM vĩnh viễn** — Crossword · Open the box · Find the match: mảng câu
+của chúng **CHÍNH LÀ cái bàn**, nối dài là ô chữ có một từ hai lần.
+
+⚠️ **KHÔNG viết bộ chuyển đổi `balanceQuestions` → `Count N`**, và đó là quyết định chứ
+không phải lười: N của Balance phụ thuộc `maxTeam`, mà `maxTeam` chỉ tồn tại trong pick của
+từng cột **lúc chơi**, không nằm trên act. `options-migrate.js` chạy lúc TẢI act thì không
+có gì để tính. Bịa một N ở đó là bịa ra một bài khác với bài thầy đã dạy. ⇒ Act cũ còn cờ
+`balanceQuestions` nay chơi **đủ độ dài**, và cờ đó là rác vô hại.
+
+⚠️ **`maxTeam` nay KHÔNG CÒN AI ĐỌC.** Vẫn được đóng dấu vào pick (một sự thật về bảng đội),
+nhưng đã gỡ khỏi phép so "ảnh chụp đội có cũ không" (`sdTableStale`) — đội KHÁC to lên hay
+nhỏ đi không đổi một câu nào của bàn này nữa, nên cảnh báo vì nó là **cảnh báo giả**.
+
+---
+
+### PHẦN B — PHÒNG CHỜ
+
+**Tài liệu mới `users/{uid}/items/sd_round`** (kind `showdown-round`):
+
+```
+{ roundId, tableId, actId,
+  std: { type, options },      // DỮ LIỆU CHUẨN — bàn ĐẦU TIÊN bấm START chốt
+  stdBy, phase: "ready" | "starting", at,
+  boards: { [browserId]: { teamId, teamName, ready, at } } }
+```
+
+⚠️ **MỘT tài liệu cho cả lớp, không phải một tài liệu mỗi lượt** — luật Firestore đang mở
+đúng `users/{uid}/items`, và mọi thứ trong Showdown đã theo nếp "id tài liệu SUY RA ĐƯỢC"
+để không bao giờ cần `where()` + composite index thầy phải tự bấm trong Firebase console.
+
+⚠️ **`phase: "starting"` là trạng thái CUỐI** — nó không bao giờ quay lại `ready`. Cùng với
+ba cửa khác (khác `actId`, khác `tableId`, quá TTL 3 giờ), đó là thứ bảo đảm "Start again"
+sau ván luôn mở một lượt MỚI chứ không nhập vào cái cũ.
+
+**Năm trạng thái trên màn**: `JOINING…` → `LOADING DATA…` (nếu lệch chuẩn) → `READY` (✓ xanh
+lá to, hào quang thở, "3 / 4 teams") → `STARTING…` → vào ván. Hai ngõ cụt: `CHECK OPTIONS`
+(kéo chuẩn 3 lần không hội tụ) và `NO CONNECTION`.
+
+**Nút cancel** — chỉ icon, mờ 28%, nép góc dưới-phải, rút ĐÚNG bàn này (thầy chốt).
+⛔ **Nhưng vùng chạm vẫn 34px**: khó THẤY là chủ ý, khó BẤM thì không — trên màn hồng ngoại
+TOMKO một nút 20px là nút thầy bấm ba lần mới trúng, và lúc đó thầy đang vội.
+
+**Không có trọng tài.** Mọi bàn cùng nhìn một tài liệu, cùng kết luận "đủ rồi", cùng gọi
+`flipRoundStarting`. Cái giữ cho nó không loạn là **điều kiện trong giao dịch**: chỉ lật khi
+còn đúng `roundId` VÀ còn ở pha `ready`. Năm bàn cùng gọi trong một nhịp ⇒ đúng **một** lần
+ghi hạ cánh. (Đo thật ở mục 3 của bàn thử.)
+
+---
+
+### ⛔⛔⛔ BA LỖI CHÍNH TÔI TỰ TẠO RA, VÀ CẢ BA ĐỀU DO **BÀN THỬ** BẮT — KHÔNG PHẢI DO ĐỌC CODE
+
+**1. Đường KHÔNG-phòng-chờ mất lời gọi vào ván.** Tách `startPressed()` thành cổng +
+`enterGame()`, tôi viết `if (sdLobbyOn) { enterLobby(); return; }` rồi đóng hàm — **quên
+`enterGame()` cho nhánh còn lại**. Mọi act NGOÀI Showdown bấm START là đứng im. Mục 8 (đối
+chứng ngược) bắt ngay. ⇒ Đối chứng ngược không phải thủ tục cho đẹp: ở đây nó là phép kiểm
+DUY NHẤT chạm tới nhánh đó.
+
+**2. `lobbyBusy` KHOÁ CHẾT chính cú nhập lại của mình.** Mở khoá trong `.finally()` nghe rất
+hợp lý — nhưng `onRound()` chạy Ở TRONG chuỗi `.then()`, tức **trước** `.finally()`, nên cú
+`joinNow()` mà chính nó gọi lại (nhánh "vừa khớp chuẩn xong nhưng cờ `ready` còn false") gặp
+`lobbyBusy === true` và lặng lẽ quay đầu. Bàn đứng vĩnh viễn ở `JOINING…`, tài liệu ghi
+`ready:false`, cả lớp chờ một bàn không bao giờ giơ tay. ⇒ Mở khoá **TRƯỚC** `onRound`.
+
+**3. ⭐ BẪY TDZ — và nó hỏng theo kiểu tệ nhất.** `enterLobby()` được gọi **ĐỒNG BỘ trong
+thân `startGame()`** (nhánh "vào lại phòng chờ sau khi kéo chuẩn về"), mà `let torndown` khai
+mãi **~470 dòng phía dưới**. `joinNow()` đọc `torndown` trước dòng khai ⇒ **ReferenceError vì
+vùng chết tạm thời**. Lỗi ném ra bên trong một chuỗi `.then()` đã có `.catch()` ⇒ **không có
+một chữ nào trên console**. Bàn chỉ đứng im ở `JOINING…`.
+⛔ Vị trí `let torndown` an toàn suốt 260 đợt vì chính file này ghi rõ hai lần rằng "mọi thứ
+đọc nó đều là lời gọi lại chạy SAU khi startGame() xong". Phòng chờ là thứ đầu tiên phá vỡ
+giả định đó. ⇒ **Đã dời `let torndown` lên trên khối phòng chờ.**
+⇒ **LUẬT**: hàm nào có thể bị gọi ĐỒNG BỘ trong thân `startGame()` thì mọi biến `let` nó đọc
+phải khai TRƯỚC nó — đừng tin câu "chỉ chạy sau khi mount xong".
+
+---
+
+### ⛔⛔ HAI LẦN BÀN THỬ TỰ NÓI DỐI, VÀ CÁCH CHỮA
+
+**(a) Nhịp dò 50ms trượt mất `LOADING DATA…`.** Với Firestore giả không độ trễ, trạng thái
+đó sống vài mili-giây rồi bị cú dựng lại ván xoá. Bàn thử kết luận "không hề có" trong khi
+nó **có**. ⇒ Cho mạng giả chậm lại 80ms **và** thay phép dò bằng `MutationObserver`.
+
+**(b) `MutationObserver` bản đầu VẪN trượt** — vì callback của nó là một **microtask**, chạy
+ở CUỐI tác vụ, mà trong chính tác vụ đó `pullStandard()` đã kịp dựng lại cả ván. Callback
+gọi `querySelector` thì thấy chữ của mount MỚI. ⇒ **Đọc từ `addedNodes` của bản ghi thay
+đổi**, không query lại DOM. Máy quay đọc hiện tại = máy quay chỉ ghi được cái kết, không ghi
+được đường đi.
+Băng ghi cuối cùng: `["JOINING…", "LOADING DATA…", "JOINING…", "READY", "STARTING…"]`.
+
+---
+
+### ⭐ VÀ MỘT LỖI CHỈ LỘ RA KHI **NHÌN**
+
+Ảnh chụp `dot261-visual.html?state=loading` (mạng giả treo 100 giây) cho thấy bàn đứng ở
+`JOINING…` **vĩnh viễn, không lỗi, không lối ra** — vì tôi đã cố ý giấu nút cancel ở trạng
+thái đó, nghĩ rằng nó chỉ thoáng qua. Mọi phép đo bằng số đều xanh. ⇒ Thêm **đồng hồ canh
+8 giây** (hết giờ ⇒ `NO CONNECTION`, có nút thoát) **và cho cancel có mặt ở cả `JOINING…`**.
+Nay chỉ đúng một trạng thái giấu cancel: `STARTING…` — ván đã cất cánh.
+
+---
+
+### FILE ĐÃ SỬA (11)
+
+| File | Sửa gì |
+|---|---|
+| `core/showdown.js` | + `stdSignature()` (⛔ **sắp khoá** — không thì vòng LOADING DATA quay mãi) · + `roundMissingTeams()` (đếm **ĐỘI**, không đếm bàn) · `SD_PLAN_KEYS`/`SD_MODES` bỏ balance |
+| `core/showdown-setup.js` | + tài liệu `sd_round` + `normRound()` · `joinRound()` · `leaveRound()` · `flipRoundStarting()` · `subscribeRound()` |
+| `core/engine.js` | **gỡ `applyBalance`** · tách `startPressed`/`enterGame` · khối PHÒNG CHỜ (~200 dòng) · `sdLobbyResume` (tầng module) · `prepDoneP` · dời `let torndown` lên trên · `sdTableStale` bỏ so `maxTeam` |
+| `core/options-panel.js` | gỡ ô tích Balance · `syncSdDealLocks` chỉ còn khoá Shuffle |
+| `core/app.css` | `.aw-lobby*` — ✓ to, hào quang `@keyframes aw-lobby-halo` (viết bằng **px**, không cqw) |
+| 6 template | + `sdDeal: true` |
+
+### KIỂM CHỨNG
+
+`scratch/dot261-lobby.html` — **53/53**, module thật, Firestore giả qua importmap.
+⛔ **Cách dựng "bàn thứ hai"**: một trang chỉ có MỘT `browserId`, nên bàn kia được dựng **ở
+tầng dữ liệu** — ghi thẳng hàng của nó vào `sd_round`. Đó đúng là thứ một máy khác trong lớp
+làm, nên bàn thật ở đây phản ứng với đúng cái nó sẽ gặp ngoài đời.
+
+10 mục: chữ ký chuẩn (ổn định theo thứ tự khoá · bỏ null · ⛔ đối chứng ngược khác giá trị) ·
+đếm đội (⭐ một đội mở hai máy vẫn là một đội) · ba hàm Firestore (⛔ lật lượt **hai lần chỉ
+ăn một**) · ⭐ một đội ⇒ READY ⇒ STARTING ⇒ **vào ván thật, Count 4 × 5 em = `1 of 20`** ·
+⭐ hai đội ⇒ **đứng chờ** (⛔ đối chứng ngược: chờ thêm nửa giây vẫn không lẻn vào ván) ⇒ đội
+cuối sẵn sàng ⇒ **cùng vào ván** · ⭐ lệch chuẩn ⇒ `LOADING DATA…` ⇒ **số câu đổi thật
+20 → 10** · cancel (icon · mờ ≤0.35 · **chạm ≥34px** · rút đúng mình) · ⛔ **ngoài Showdown
+START vào thẳng ván 60 câu và KHÔNG ghi gì vào tài liệu lượt** · Balance đã biến mất (act cũ
+còn cờ vẫn chơi đủ 60 câu, Options không còn ô đó, ⛔ các ô khác còn nguyên) · Count đã mở
+cho Unjumble.
+
+**Hồi quy**: `dot260-plan` **52/52** · `dot256-smoke` **48/48** · `dot259-fight` **49/49** ·
+`dot259b-optcheck` **12/12** · `index.html` **0 lỗi**.
+⚠️ `dot260-plan` đã **viết lại** các mục dựa vào Balance (mục 1·2·5·6·7): triệu chứng canh
+vẫn y nguyên ("cùng số người mà bảng 100 câu bảng 50 câu"), chỉ đổi **nguyên nhân** sang
+`sdDealCount` lệch. Để nguyên một bàn thử đỏ lòm là cách nhanh nhất để phiên sau bỏ chạy cả
+bộ. Thêm một phép kiểm mới: claim khai `md:"balance"` (bản AWord cũ) **rơi khỏi danh sách
+trắng** ⇒ coi như chưa khai, không tố oan.
+
+✅ **ĐÃ NHÌN BẰNG MẮT**: `dot261-visual.html?state=ready` (✓ xanh lá + hào quang + "1 / 3
+teams" + ✕ mờ góc dưới) và `?state=loading` (NO CONNECTION + lối thoát).
+
+### VIỆC ĐANG CHỜ
+
+- ⬜⬜ **THẦY TEST TAY TRÊN TOMKO** (nhiều máy càng tốt — đây là điểm cả đợt tồn tại):
+  1. 2-3 bàn cùng một act, bấm START lần lượt ⇒ bàn nào cũng đứng ở ✓ READY, đếm đúng
+     "n / m teams", và **chỉ khi bàn cuối bấm** thì cả lớp mới cùng vào ván.
+  2. Cố tình để một bàn khác Options (Count 5 vs Count 10) rồi bấm START ⇒ bàn đó phải hiện
+     `LOADING DATA…` rồi tự về đúng số câu của bàn chốt chuẩn.
+  3. Bấm nút ✕ bé xíu ⇒ chỉ bàn đó rút ra, các bàn khác vẫn chờ.
+  4. **Nhìn bằng mắt trên màn 86 inch**: chữ READY và số "n / m teams" có đọc được từ cuối
+     lớp không; hào quang có quá chói/quá nhạt không; nút ✕ có ĐỦ khó thấy như thầy muốn.
+  5. Thử một máy tính bảng/điện thoại vào cùng lượt — đây là thứ cầu myActivity không làm
+     được và là lý do đợt này đi qua Firestore.
+- ⚠️ **ĐƯỜNG THOÁT KHI MỘT ĐỘI CHẾT MÁY**: thầy chốt "KHÔNG có đường thoát" trong phòng chờ,
+  nên nếu một máy tắt giữa chừng mà gạch của nó còn sống thì cả lớp chờ. Cửa thoát ĐÃ CÓ SẴN
+  và không phải làm mới: mở bảng Showdown ▸ **gỡ gạch của đội đó** (Đợt 217 cho phép máy bất
+  kỳ xoá gạch của đội khác). Gỡ xong đội đó không còn được đếm.
+- ⬜ Ba game bàn-chơi (Crossword · Open the box · Find the match) vẫn **không có cách chia
+  đều** nào. Nếu thầy cần chúng cho bảng phân tích thì phải bàn một cơ chế khác — nối dài
+  mảng câu là đường CẤM với chúng.
+
+---
+
 ## Đợt 260 (25/8/2026) — ⭐⭐⭐ **SHOWDOWN: SỐ CÂU PHẢI KHỚP GIỮA CÁC BẢNG** · ⭐⭐⭐ **VÁ BA CỬA CỦA ĐỢT 229 CHƯA BAO GIỜ MỞ**
 
 > ✅ **THẦY DUYỆT · COMMIT `758b062` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**

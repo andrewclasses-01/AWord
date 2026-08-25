@@ -114,6 +114,13 @@ const unjumbleTemplate = {
   // goNext), `updateNav()` sends `setNav({index: index + 1})`, and `review` is
   // `items.map((it, i) => …)` on that index.
   showdownMode: true,
+  // ⭐ Đợt 261 — mở dải QUESTIONS EACH (Normal · Free · Count) cho game này. Một dòng cờ,
+  // đúng đường fightTurns của Đợt 202 và sdDeal của Đợt 220 đã đi. Thầy chốt 25/8/2026 khi
+  // bỏ hẳn Balance questions: Count là cơ chế công bằng DUY NHẤT còn lại, nên nó phải có mặt
+  // ở mọi game Showdown chịu được việc NỐI DÀI mảng câu.
+  // ⛔ Ba game bàn-chơi (Crossword · Open the box · Find the match) KHÔNG được mở: mảng câu
+  // của chúng CHÍNH LÀ cái bàn, nối dài là ô chữ có một từ hai lần.
+  sdDeal: true,
   hidePointsOff: true,   // ships its own "Points off when wrong" control
   // Đợt 143 (opt-in) — really reads options.autoSwitch now: a graded sentence
   // walks on to the next one by itself instead of waiting for ▷.

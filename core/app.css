@@ -6085,6 +6085,81 @@ html.aw-nhung .aw-below { display: none; }
   text-align: center;
 }
 
+
+/* ---- ⭐⭐⭐ Đợt 261 — PHÒNG CHỜ (nằm TRONG .aw-play-overlay, tức trong stage ⇒ cqw) ----
+   Thầy: "hiện nút READY và tích ✓ thật lớn ở giữa màn hình, có hiệu ứng nhấp nháy hào
+   quang, có nút cancel thật nhỏ ở góc, nút là icon, khó nhìn và khó để ý".
+
+   ⛔⛔ HÀO QUANG VIẾT BẰNG `px`, KHÔNG PHẢI `cqw` — bẫy Đợt 258/259 đã cắn hai lần: một
+   phần tử KHÔNG THỂ là container của chính nó, nên `cqw` trong `@keyframes` của một thứ
+   treo ngoài mọi container rơi về cỡ CỬA SỔ (đo được 7,5px ở màn 375 và 36px ở màn 1798).
+   Ở đây cả cụm nằm gọn trong `.aw-stage` nên `cqw` an toàn cho KÍCH THƯỚC, nhưng quầng
+   sáng thì vẫn dùng px để không bao giờ phải nghĩ lại chuyện đó.
+   ⚠️ `.aw-play-overlay` đã `inset:0` + là tấm chắn chạm sẵn (Đợt 216), nên cụm này chỉ
+   cần nằm giữa nó — không dựng thêm lớp phủ nào, không đụng z-index (luật Đợt 258). */
+.aw-lobby {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 1.2cqw;
+  text-align: center;
+}
+.aw-lobby-mark {
+  width: 18cqw; height: 18cqw; min-width: 96px; min-height: 96px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  color: #cfe3ff;
+  background: rgba(96,165,250,.10);
+  border: 0.5cqw solid rgba(96,165,250,.45);
+}
+.aw-lobby-mark svg { width: 62%; height: 62%; }
+/* SẴN SÀNG: xanh lá + hào quang THỞ. Đây là trạng thái thầy nhìn thấy lâu nhất, và là
+   thứ phải đọc được từ cuối lớp học 86 inch. */
+.aw-lobby.is-ready .aw-lobby-mark {
+  color: #4ade80;
+  background: rgba(74,222,128,.12);
+  border-color: rgba(74,222,128,.65);
+  animation: aw-lobby-halo 1.6s ease-in-out infinite;
+}
+@keyframes aw-lobby-halo {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(74,222,128,.45), 0 0 18px 2px rgba(74,222,128,.30); }
+  50%      { box-shadow: 0 0 0 14px rgba(74,222,128,0), 0 0 42px 8px rgba(74,222,128,.55); }
+}
+/* ĐANG NẠP / ĐANG CẤT CÁNH: vòng quay, cùng ô cùng cỡ nên đổi trạng thái không nhảy khung */
+.aw-lobby.is-joining .aw-lobby-mark svg,
+.aw-lobby.is-loading .aw-lobby-mark svg,
+.aw-lobby.is-starting .aw-lobby-mark svg { animation: aw-spin 1s linear infinite; }
+.aw-lobby.is-starting .aw-lobby-mark { color: #fbbf24; border-color: rgba(251,191,36,.6); background: rgba(251,191,36,.10); }
+.aw-lobby.is-nomatch .aw-lobby-mark,
+.aw-lobby.is-offline .aw-lobby-mark { color: #f5b942; border-color: rgba(245,185,66,.65); background: rgba(245,185,66,.12); }
+@keyframes aw-spin { to { transform: rotate(360deg); } }
+
+.aw-lobby-word {
+  font-size: 5cqw; font-weight: 800; letter-spacing: 0.25cqw;
+  color: #fff; text-transform: uppercase; line-height: 1.35;
+}
+.aw-lobby.is-ready .aw-lobby-word { color: #4ade80; }
+.aw-lobby.is-starting .aw-lobby-word { color: #fbbf24; }
+.aw-lobby.is-nomatch .aw-lobby-word,
+.aw-lobby.is-offline .aw-lobby-word { color: #f5b942; }
+.aw-lobby-sub {
+  font-size: 1.9cqw; font-weight: 700; letter-spacing: 0.14cqw;
+  color: #9fb4c6; line-height: 1.35; max-width: 70cqw;
+}
+
+/* ⛔ NÚT CANCEL — CỐ Ý KHÓ THẤY (thầy: "khó nhìn và khó để ý để hạn chế cancel").
+   Chỉ icon, mờ 28%, nép góc dưới-phải. ⚠️ NHƯNG VÙNG CHẠM VẪN 34px: khó THẤY là chủ ý,
+   khó BẤM khi đã tìm ra thì không — trên màn hồng ngoại TOMKO một nút 20px là một nút
+   thầy bấm ba lần mới trúng, và lúc đó thầy đang vội. */
+.aw-lobby-cancel {
+  position: absolute; right: 1.6cqw; bottom: 1.6cqw;
+  width: 34px; height: 34px; padding: 7px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 999px; cursor: pointer;
+  background: transparent; color: #7d8b9c; opacity: .28;
+  transition: opacity .2s ease;
+}
+.aw-lobby-cancel svg { width: 100%; height: 100%; }
+.aw-lobby-cancel:hover { opacity: .75; }
 /* ---- ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI (màn READY, trong stage nên cqw) ----
    Bình thường: xám, nhỏ hơn đội hình một bậc — một dòng để ĐỐI CHIẾU, không phải
    một dòng để đọc. Lệch/cũ: cả cụm chuyển hổ phách, đúng màu myActivity v2.8.0 đã

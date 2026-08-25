@@ -251,6 +251,13 @@ const anagramTemplate = {
   // changed for it — including the slogan, which the engine HIDES rather than
   // overwrites so render() can keep writing to it untouched.
   showdownMode: true,
+  // ⭐ Đợt 261 — mở dải QUESTIONS EACH (Normal · Free · Count) cho game này. Một dòng cờ,
+  // đúng đường fightTurns của Đợt 202 và sdDeal của Đợt 220 đã đi. Thầy chốt 25/8/2026 khi
+  // bỏ hẳn Balance questions: Count là cơ chế công bằng DUY NHẤT còn lại, nên nó phải có
+  // mặt ở mọi game Showdown chịu được việc NỐI DÀI mảng câu.
+  // ⛔ Ba game bàn-chơi (Crossword · Open the box · Find the match) KHÔNG được mở: mảng câu
+  // của chúng CHÍNH LÀ cái bàn, nối dài là ô chữ có một từ hai lần.
+  sdDeal: true,
   // TIME COST (Đợt 139) — opt in to the shared "-N per idle second" option.
   // Anagram also PLACES the slider itself (see buildExtraOptions's
   // `timeCostCell`), because its own Points off controls are mode-dependent

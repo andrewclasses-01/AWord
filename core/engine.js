@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash } from "./showdown.js";
+import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -186,6 +186,12 @@ const THEME_SWATCH = {
 // because it has to outlive the play that set it — and it is read-and-cleared,
 // so it can only ever fire for the next mount, never a later one.
 let openShowdownOnMount = false;
+// ⭐⭐⭐ Đợt 261 — SỢI DÂY DUY NHẤT NỐI HAI MOUNT CỦA PHÒNG CHỜ.
+// Kéo dữ liệu chuẩn về = dựng lại ván = mọi biến trong closure của startGame() sinh ra
+// mới. Cờ này (0 = không, >0 = vào lại phòng chờ và ĐÃ THỬ ngần ấy lần) là thứ duy nhất
+// sống sót qua cú dựng lại — nó vừa đưa bàn trở vào phòng chờ, vừa mang theo bộ đếm
+// chặn vòng lặp "kéo mãi mà không khớp". Cùng khuôn cờ-một-lần với openShowdownOnMount.
+let sdLobbyResume = 0;
 
 // ⭐ Đợt 228 — the same one-shot handover, for picking a new game from INSIDE
 // the Options panel's inline Template picker. That switch tears the whole
@@ -457,6 +463,10 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         const c = next && next.claims && next.claims[showdownPick.teamId];
         if (c && c.by !== browserId()) showTeamStolen();
         renderSdPlan();
+        // ⭐ Đợt 261 — bảng đội vừa đổi thì con số "3 / 4 teams" của phòng chờ cũng phải
+        // đổi theo. Hai tài liệu, hai bộ nghe, nhưng MỘT kết luận — nên cú nào động vào
+        // cũng phải chạy lại đúng hàm kết luận đó.
+        if (lobbyEl && lobbyRound) onRound(lobbyRound);
       });
       if (torndown) stopSdClaimWatch();     // ván có thể đã bị dỡ ngay trong lúc chờ nhập
     }).catch(() => { /* offline / signed out — không có kênh nào để nghe, chơi tiếp */ });
@@ -490,67 +500,26 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const k = playItemsKey(act);
     return k ? (act.content[k] || []).length : 0;
   }
-
-  /**
-   * ⭐⭐⭐ BALANCE QUESTIONS (Đợt 197, thầy 19/8/2026) — EVERY CHILD IN THE CLASS
-   * ANSWERS THE SAME NUMBER OF QUESTIONS.
-   *
-   * The teacher's own worked example: 50 questions, 3 teams of 5 / 6 / 6 (17
-   * pupils) ⇒ board 1 shows 40, boards 2 and 3 show 48, so everybody gets 8.
-   *
-   * ⚠️ THE DIVISOR IS THE **BIGGEST TEAM**, NOT THIS ONE. Every board plays the
-   * same act, so a team of 6 can only go round `50 / 6` = 8 times — and the
-   * whole point is that the team of 5 goes round exactly as often, not the 10 it
-   * could manage alone. This board then plays `8 × its own size`.
-   * The biggest team travels in the PICK (`maxTeam`, written by the setup panel,
-   * which is the only place that can see the whole table); a pick from before
-   * this đợt has none, and falls back to this team's own size — i.e. no trim,
-   * which is exactly the old behaviour.
-   *
-   * ⚠️ RETURNS A COPY. `resolveActivity` may hand back `libAct` ITSELF, and
-   * trimming that array in place would delete questions from the teacher's
-   * library. The copy shares `options` by reference, which is what keeps
-   * Options ▸ Apply landing on the real act (see the note at `let activity`).
-   *
-   * ⚠️ Called from BOTH the mount and `begin()`. begin() re-resolves the act
-   * from the library — so without the second call the trim would silently vanish
-   * the moment the teacher pressed Play.
-   */
-  function applyBalance(act) {
-    if (!showdownPick || act?.options?.balanceQuestions !== true) return act;
-    // ⭐ Đợt 220 — Free/Count đang cầm bài thì Balance đứng xuống (Options đã khoá
-    // chéo hai bên; guard này đỡ act cũ lỡ lưu cả hai cờ).
-    if (tpl.sdDeal && ["free", "count"].includes(act?.options?.sdDeal)) return act;
-    const key = playItemsKey(act);
-    if (!key) return act;
-    const all = act.content[key] || [];
-    const mine = showdownPick.members?.length || 0;
-    const biggest = Math.max(1, Number(showdownPick.maxTeam) || mine);
-    if (!all.length || !mine) return act;
-    const each = Math.floor(all.length / biggest);
-    const cap = each * mine;
-    // `each < 1` = more pupils in the biggest team than the act has questions.
-    // Trimming to 0 would be a game with nothing in it, so the option simply
-    // stands down and every board plays the whole act, as it does when it is off.
-    if (each < 1 || cap <= 0 || cap >= all.length) return act;
-    // Which questions get dropped follows the act's OWN shuffle setting: a
-    // shuffled act takes a random `cap` of them (so two boards do not sit through
-    // the same 40 of 50), an unshuffled one keeps the teacher's order and takes
-    // the first `cap` — cutting a deliberately ordered lesson in the middle would
-    // be worse than short.
-    let kept;
-    if (act.options?.shuffleQuestions === false) {
-      kept = all.slice(0, cap);
-    } else {
-      const a = all.slice();
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      kept = a.slice(0, cap);
-    }
-    return { ...act, content: { ...act.content, [key]: kept } };
-  }
+  // ⛔⛔⛔ Đợt 261 — `applyBalance()` ĐÃ BỊ GỠ HẲN (thầy, 25/8/2026: *"bỏ hẳn luôn nút
+  // tích Balance questions ở options, khi đã chọn count và số rồi thì buộc phải cân bằng
+  // số câu hỏi cho mỗi bạn"*).
+  //
+  // Nó từng cắt act của mỗi bàn còn `(số câu ÷ đội đông nhất) × đội mình`, để mọi em cả
+  // lớp làm cùng số câu. Ý đúng, cơ chế sai: phép chia đó cần `maxTeam` — một con số
+  // phải KHỚP giữa mọi bàn, mà nó lại là ảnh chụp đông cứng trong `showdownPick` của
+  // từng cột. Đúng chỗ đó vỡ ở Đợt 260 và đẻ ra ca thầy báo: cùng 5 em mà bàn này 100
+  // câu, bàn kia 50.
+  //
+  // ⭐ THAY BẰNG `Count`: mỗi em đúng N câu, N là con số THẦY GÕ ⇒ giống nhau ở mọi bàn
+  // **mà không cần bàn nào thoả thuận với bàn nào**. Đợt này mở `tpl.sdDeal` cho 8/11
+  // game có Showdown; ba game bàn-chơi (Crossword · Open the box · Find the match) cấm
+  // vĩnh viễn vì mảng câu của chúng CHÍNH LÀ cái bàn.
+  //
+  // ⚠️ Act cũ còn lưu `balanceQuestions: true` thì key đó nay là RÁC VÔ HẠI — không còn
+  // dòng nào trong app đọc nó. KHÔNG viết bộ chuyển đổi: `balanceQuestions` → `Count N`
+  // là phép đổi KHÔNG TÍNH ĐƯỢC lúc chạy `options-migrate.js`, vì N của nó phụ thuộc
+  // `maxTeam`, mà `maxTeam` chỉ tồn tại trong pick của từng cột lúc chơi — không nằm
+  // trên act. Bịa một N ở đó là bịa ra một bài khác với bài thầy đã dạy.
   let sdReviewStop = null;
   let sdPending = sdCanPublish && !!readPendingResult();
   function refreshSdPending() { sdPending = sdCanPublish && !!readPendingResult(); }
@@ -559,7 +528,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   //   options.sdDeal       "normal" | "free" | "count"   (Showdown only)
   //   options.sdDealCount  N câu mỗi em (chỉ Count; ô số chặn cứng ở tổng số câu)
   //
-  // Cùng họ với applyBalance ngay trên: NỐI DÀI mảng câu trước khi bất cứ thứ gì
+  // NỐI DÀI mảng câu trước khi bất cứ thứ gì
   // đo nó. `memberAt` là `index % số em` nên slot s của mảng đã thuộc sẵn về em
   // s % M — luật chia lượt, tên trên khung, review, mistakes: không sửa dòng nào.
   //
@@ -592,18 +561,15 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const idx = dealQuestions({ count: all.length, members: M, perPupil: N });
     // ⚠️ CÙNG OBJECT NGUỒN, không clone từng câu: core/mistakes.js gom câu sai
     // bằng Set các object `src`, nên một câu sai hai lần vẫn ra MỘT mục ôn tập.
-    // ⚠️ `options` giữ nguyên THAM CHIẾU (spread nông) — hợp đồng của applyBalance:
+    // ⚠️ `options` giữ nguyên THAM CHIẾU (spread nông) — hợp đồng có từ Đợt 197:
     // Apply mutate tại chỗ vào đúng object này.
     return { ...act, content: { ...act.content, [key]: idx.map(i => all[i]) } };
   }
 
-  // ⭐ Đợt 197 — trim the play NOW, before anything measures it. Everything
-  // downstream (the nav's "x of N", the review, the leaderboard total) reads
-  // `activity`, so the balance has to land before the first of them looks.
-  // ⭐ Đợt 220 — Free/Count chia bài SAU phép cắt Balance (hai cái loại trừ nhau
-  // trong Options; act cũ lỡ mang cả hai thì Free/Count thắng vì applyBalance
-  // tự đứng xuống — xem guard của nó).
-  activity = applySdDeal(applyBalance(activity));
+  // ⭐ Đợt 197 — chia bài NGAY ĐÂY, trước khi bất cứ thứ gì đo nó. Mọi thứ phía sau
+  // (nav "x of N", review, tổng của leaderboard) đều đọc `activity`.
+  // ⭐ Đợt 261 — chỉ còn MỘT phép: `applyBalance` đã gỡ hẳn (xem khối trên).
+  activity = applySdDeal(activity);
 
   // =============================================================
   // ⭐⭐⭐ Đợt 260 (25/8/2026, thầy) — KẾ HOẠCH SỐ CÂU, VÀ NÓ PHẢI KHỚP GIỮA CÁC BẢNG
@@ -611,10 +577,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // Thầy: *"cùng số người, nhưng bảng 1 có 50 câu, bảng 2 có 100 câu, khi đưa vào
   // dữ liệu phân tích thì sai lệch hết"*.
   //
-  // Chốt NGAY ĐÂY, sau cả applyBalance lẫn applySdDeal — đây là dòng cuối cùng
-  // trước khi bất cứ thứ gì đo `activity`, đúng chỗ Đợt 197 đã chọn để cắt và Đợt
-  // 220 đã chọn để chia. Sớm hơn một dòng là đo bản chưa cắt; muộn hơn là đã có
-  // template nhìn thấy nó.
+  // Chốt NGAY ĐÂY, sau `applySdDeal` — đây là dòng cuối cùng trước khi bất cứ thứ gì
+  // đo `activity`, đúng chỗ Đợt 220 đã chọn để chia bài. Sớm hơn một dòng là đo bản
+  // chưa chia; muộn hơn là đã có template nhìn thấy nó.
   //
   // ⛔⛔ `n` LÀ SỐ CÂU **MỖI EM**, KHÔNG PHẢI TỔNG. Xem findPlanClash() trong
   // core/showdown.js: so tổng là tố oan chế độ Count (đội 5 em 50 slot vs đội 6 em
@@ -628,23 +593,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const M = showdownPick.members?.length || 0;
     const tt = playItemCount(activity);
     if (!M || !tt) return null;
-    // ⛔⛔⛔ `md` ĐỌC TỪ **Ô TÍCH**, KHÔNG PHẢI TỪ "PHÉP CẮT CÓ THẬT SỰ CHẠY KHÔNG".
-    // Bản đầu của đợt này làm ngược lại — nghe thì trung thực hơn — và tính ra số
-    // liệu thì nó HỎNG ĐÚNG CA THẦY BÁO. Chính là ca này:
-    //     act 100 câu · đội 5 em · Balance có tích
-    //     bảng A maxTeam 5  → floor(100/5)=20, cắt còn 100 = y nguyên ⇒ applyBalance
-    //                         TỰ ĐỨNG XUỐNG, nên "cái chạy thật" là normal
-    //     bảng B maxTeam 10 → floor(100/10)=10, cắt còn 50 ⇒ "cái chạy thật" là balance
-    // Hai bảng khai hai chế độ khác nhau ⇒ findPlanClash trả why "mode" ⇒ màn hình
-    // khuyên thầy "check Options", trong khi Options hai bên GIỐNG HỆT nhau và thứ
-    // sai là bảng đội. Lời khuyên sai còn tệ hơn im lặng.
-    // ⇒ `md` là LUẬT ĐANG HIỆU LỰC (thầy tích gì), `n` là HỆ QUẢ (mỗi em mấy câu).
-    // Hai bảng cùng "balance" mà n 20 với 10 ⇒ why "each" ⇒ đúng nút REFRESH TEAM.
-    // ⚠️ Thứ tự ưu tiên phải khớp applyBalance: Free/Count cầm bài thì Balance đứng
-    // xuống, nên sdDealMode được hỏi trước (chính nó cũng đã hỏi `tpl.sdDeal` rồi).
-    const md = (sdDealMode === "free" || sdDealMode === "count") ? sdDealMode
-             : (activity.options?.balanceQuestions === true) ? "balance"
-             : "normal";
+    // ⚠️ Đợt 261 — chỉ còn ba chế độ. `balance` đã gỡ khỏi app, nên `md` nay là
+    // `sdDealMode` khi game này có dải Questions each, còn không thì `normal`.
+    // `sdDealMode` tự nó đã hỏi `tpl.sdDeal` rồi, nên ba game bàn-chơi luôn ra
+    // `normal` — đúng: chúng không có cách nào chia đều, và không được giả vờ là có.
+    const md = (sdDealMode === "free" || sdDealMode === "count") ? sdDealMode : "normal";
     return { md, n: tt % M === 0 ? tt / M : 0, tt };
   })();
 
@@ -2078,9 +2031,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     sdPlanEl.append(mine);
     if (clash) {
       const warn = el("span", "aw-ready-plan-warn");
-      // Lệch kiểu each ở chế độ balance là chuyện của BẢNG ĐỘI (refresh chữa được);
-      // mọi ca còn lại là chuyện của OPTIONS, nói ra được thì thầy đỡ phải đoán.
-      const fixable = clash.why === "each" && clash.md === "balance" && sdPlan.md === "balance";
+      // ⭐ Đợt 261 — `balance` không còn, nên phép phân loại nay dựa vào ĐÚNG MỘT
+      // câu hỏi: **ảnh chụp đội của bàn này có cũ không**. Cũ ⇒ nút REFRESH TEAM
+      // ngay bên cạnh là thứ chữa được, đừng chỉ thầy đi đường khác. Không cũ ⇒ lệch
+      // này đến từ Options, và nói thẳng ra thì thầy đỡ phải đoán.
+      // ⚠️ Đọc `stale` chứ không đọc `clash.md`: cùng một triệu chứng ("khác số câu
+      // mỗi em") có hai nguyên nhân, và thứ phân biệt chúng nằm ở BÀN NÀY chứ không
+      // nằm trong lời khai của bàn kia.
+      const fixable = stale;
       warn.textContent = clash.why === "mode"
         ? clash.teamName + ": " + (SD_MODE_WORD[clash.md] || clash.md)
         : clash.teamName + ": " + clash.n + " each";
@@ -2104,8 +2062,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const teams = Array.isArray(node.teams) ? node.teams : [];
     const t = teams.find(x => x.id === showdownPick.teamId);
     if (!t) return false;   // đội không còn trên bảng: bảng bị dựng lại hẳn, không phải CŨ
-    const mt = Math.max(1, ...teams.map(x => (x.members || []).length || 0));
-    if (mt !== (Number(showdownPick.maxTeam) || 0)) return true;
+    // ⭐ Đợt 261 — CHỈ SO ĐỘI CỦA CHÍNH MÌNH. Trước đợt này còn so cả `maxTeam` (đội
+    // đông nhất toàn bảng), vì `applyBalance` chia cho con số đó. Nay applyBalance đã
+    // gỡ và **không còn dòng nào trong app đọc `maxTeam`** ⇒ đội KHÁC to lên hay nhỏ đi
+    // không đổi một câu nào của bàn này, nên cảnh báo vì nó là cảnh báo GIẢ.
+    // ⚠️ Đội của CHÍNH MÌNH đổi thì vẫn phải báo: `memberAt` chia lượt theo đúng mảng
+    // này, và tên trong Show answers cũng lấy từ đây.
     if (t.name !== showdownPick.teamName) return true;
     return (t.members || []).map(m => m.name).join("|")
         !== (showdownPick.members || []).map(m => m.name).join("|");
@@ -2118,8 +2080,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
    * sessionStorage của riêng nó (core/showdown.js đầu file nói vì sao), nên bảng kia
    * cũng có nút của nó và thầy bấm ở đó. Nghe thủ công, nhưng đây là bản vá gấp; cái
    * chốt-một-lần-cho-cả-lớp là phòng chờ của đợt sau.
-   * ⚠️ replayCurrent() chứ không mutate tại chỗ: maxTeam đi vào applyBalance ở MOUNT,
-   * nên chỉ một lần dựng lại mới đổi được độ dài mảng câu.
+   * ⚠️ replayCurrent() chứ không mutate tại chỗ: đội hình đi vào `applySdDeal` ở MOUNT
+   * (`dealQuestions` chia bài theo SỐ EM), nên chỉ một lần dựng lại mới đổi được mảng câu.
    */
   function sdRefreshFromTable() {
     const node = sdTableLive;
@@ -2200,6 +2162,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   const PREP_BAR_DELAY_MS = 250;
   const PREP_TIMEOUT_MS = 12000;
   let preparedVariant = null;   // Đợt 145/146 — see prepareBeforePlay()/begin()
+  // ⭐ Đợt 261 — lời hứa "bốn bước nạp trước đã xong". Phòng chờ CHỜ nó trước khi vào
+  // ván, nên "STARTING…" là thật chứ không phải một dòng chữ trang trí.
+  let prepDoneP = null;
   // "Which content is this act set to right now", across both axes — the clue
   // set and the practice/homework half. Only used to spot a change.
   const contentKeyOf = act => `${activeVariant(act) || "-"}|${activeContentSet(act) || "-"}`;
@@ -2295,7 +2260,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       catch (e) { fractions[i] = 1; return Promise.resolve(); }
     };
 
-    Promise.race([
+    prepDoneP = Promise.race([
       Promise.all(steps.map(runOne)),
       new Promise(r => setTimeout(r, PREP_TIMEOUT_MS))
     ]).then(reveal, reveal);
@@ -2324,6 +2289,22 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // BOTH audible now, which is right for gameplay sounds and wrong for this).
     // The board-0 copy is the match's chime.
     if (!fight || fight.side === 0) (tpl.sounds?.play || sound.start)();
+    // ⭐⭐⭐ Đợt 261 — SHOWDOWN: START KHÔNG VÀO VÁN NGAY, NÓ VÀO PHÒNG CHỜ.
+    // Thầy: *"đội bấm nút start trước sẽ ko vào game ngay mà sẽ ở trạng thái READY"*.
+    // Ván chỉ khởi động khi ĐỘI CUỐI CÙNG cũng đã sẵn sàng — xem khối PHÒNG CHỜ bên dưới.
+    // ⚠️ Đặt SAU tiếng chuông START (thầy vẫn phải nghe là cú bấm đã ăn) và TRƯỚC mọi
+    // thứ khác: từ đây trở xuống là "ván đã bắt đầu", mà ở phòng chờ thì chưa.
+    if (sdLobbyOn) { enterLobby(); return; }
+    enterGame();
+  }
+
+  /**
+   * VÀO VÁN THẬT — phần thân cũ của startPressed(), tách ra ở Đợt 261 vì nay có HAI
+   * đường tới đây: bấm START (mọi chế độ ngoài Showdown) và phòng chờ cất cánh.
+   * ⚠️ `playStarted` bật Ở ĐÂY chứ không ở startPressed: trong lúc chờ thì ván CHƯA
+   * chạy, và Options ▸ Apply đọc đúng cờ đó để quyết định có dựng lại ván hay không.
+   */
+  function enterGame() {
     playStarted = true;
     // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — THE OVERLAY STAYS A SHIELD FOR HALF A SECOND.
     // "ngay khi start đã bấm được ngay nội dung rồi nên một số pha vừa bấm start
@@ -2351,6 +2332,326 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   press(bigPlay, startPressed);
   if (practiceBtn) press(practiceBtn, () => { hwMode = "practice"; startPressed(); });
   if (submitStartBtn) press(submitStartBtn, () => { hwMode = "submit"; startPressed(); });
+
+  // =============================================================
+  // ⭐⭐⭐ PHÒNG CHỜ (Đợt 261, thầy 25/8/2026) — CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT
+  // =============================================================
+  // Thầy: *"đội bấm nút start trước sẽ ko vào game ngay mà sẽ ở trạng thái READY…
+  // khi nhóm cuối cùng trong tất cả các nhóm bấm start thì mới bắt đầu… Nếu 1 đội lệch
+  // templates, lệch options so với dữ liệu chuẩn thì chưa bắt đầu được ngay mà hiện
+  // LOADING DATA…"*
+  //
+  // NĂM TRẠNG THÁI, và chỉ một cái trong số đó là cái thầy nhìn thấy phần lớn thời gian:
+  //   joining   vừa bấm START, đang ghi mình vào lượt
+  //   loading   dữ liệu của bàn này KHÁC chuẩn ⇒ đang kéo chuẩn về (LOADING DATA…)
+  //   ready     ✓ to giữa màn, hào quang thở, "3 / 4 teams" — đang chờ đội cuối
+  //   starting  đủ đội rồi ⇒ STARTING… ⇒ nạp nốt rồi tự vào ván
+  //   nomatch / offline  hai ngõ cụt, đều có nút cancel để thầy thoát ra
+  //
+  // ⛔⛔ ĐI QUA FIRESTORE, KHÔNG QUA CẦU myActivity (thầy chốt): cầu
+  // `window.__awordBridge` chỉ nối các CỘT trong một cửa sổ myActivity. Firestore nối
+  // được mọi máy trong lớp — đó là toàn bộ lý do đợt này tồn tại.
+  //
+  // ⚠️ KHÔNG ÁP CHO: trang học sinh (`session`), trận Fight (một cặp bàn, không phải cả
+  // lớp), và mọi chế độ ngoài Showdown. Ở đó START vẫn vào ván ngay như xưa.
+  // ⛔⛔⛔ Đợt 261 — `torndown` PHẢI KHAI Ở ĐÂY, TRÊN KHỐI PHÒNG CHỜ. Nó vốn nằm mãi ~470
+  // dòng dưới, và điều đó an toàn suốt 260 đợt vì mọi thứ đọc nó đều là lời gọi lại chạy
+  // SAU khi startGame() đã chạy xong (chính file này ghi rõ lập luận đó ở hai chỗ).
+  // Phòng chờ phá vỡ giả định ấy: cú "vào lại phòng chờ sau khi kéo chuẩn về" gọi
+  // `enterLobby()` **ĐỒNG BỘ, ngay trong thân startGame()** ⇒ `joinNow()` đọc `torndown`
+  // trước dòng khai của nó ⇒ **ReferenceError vì vùng chết tạm thời (TDZ)**.
+  // ⛔ VÀ NÓ HỎNG THEO KIỂU TỆ NHẤT: lỗi ném ra bên trong một chuỗi `.then()` đã có
+  // `.catch()`, nên **không có gì hiện lên console** — bàn chỉ đứng im ở "JOINING…" mãi
+  // mãi và cả lớp chờ nó. Bàn thử `dot261-lobby.html` mục 6 bắt được; ba vòng đọc code
+  // thì không. ⇒ Luật: hàm nào có thể bị gọi ĐỒNG BỘ trong thân startGame() thì mọi biến
+  // `let` nó đọc phải khai TRƯỚC nó, đừng tin câu "chỉ chạy sau khi mount xong".
+  let torndown = false;   // cleanupAll() bật: ván này đã xong, không gì được khởi động lại
+
+  const sdLobbyOn = !!showdownPick && sdCanPublish && !session && !fight;
+  const sdMod = () => import("./showdown-setup.js");
+  // Ba lần là đủ để biết "kéo chuẩn về" không hội tụ. Mỗi lần là một cú dựng lại ván,
+  // nên vòng lặp không chặn sẽ là một bàn nhấp nháy mãi mãi giữa giờ dạy.
+  const LOBBY_MAX_TRIES = 3;
+  // STARTING… phải ĐỌC ĐƯỢC. Nạp thường xong trước đó rồi (prepareBeforePlay chạy từ lúc
+  // mount), nên nếu không nán lại thì chữ chỉ loé một khung hình — thầy sẽ tưởng máy lag.
+  const LOBBY_TAKEOFF_MS = 900;
+
+  let lobbyEl = null, lobbyStop = null, lobbyMod = null;
+  let lobbyPhase = "", lobbyRound = null;
+  // ⚠️ ĐẾM QUA CẢ REMOUNT. Mỗi lần kéo chuẩn về là một cú `replayCurrent()`/
+  // `doSwitchTemplate()` — tức là startGame() chạy lại và MỌI biến trong closure này
+  // sinh ra mới. Bộ đếm phải sống ở tầng module (`sdLobbyResume`) mới chặn được vòng lặp.
+  let lobbyTries = 0;
+  let lobbyLeaveOnTeardown = false;   // dỡ ván lúc đang chờ = rút mình khỏi lượt
+  let lobbyBusy = false;
+  // ⛔⛔ ĐẾM SỐ LẦN NHẬP LẠI. `onRound` gọi `joinNow()` lại khi cờ `ready` của mình còn
+  // false, và cờ đó do GIAO DỊCH bên kia tự chấm — nếu vì lý do gì nó không bao giờ chấm
+  // true thì hai hàm này gọi qua gọi lại vô tận, mỗi vòng một lượt ghi Firestore, trên
+  // mạng lớp học. Bốn lần là quá đủ để biết nó sẽ không hội tụ.
+  let lobbyJoins = 0;
+  const LOBBY_MAX_JOINS = 4;
+  // ⛔⛔ ĐỒNG HỒ CANH CHO CÚ NHẬP LƯỢT. Nhìn thấy bằng MẮT trên ảnh chụp
+  // `dot261-visual.html?state=loading` (mạng giả treo 100 giây): bàn đứng ở "JOINING…"
+  // **vĩnh viễn**, không lỗi, không lối ra. Firestore không hứa bao giờ trả lời khi mạng
+  // lớp học rớt giữa chừng, nên phải có một cái đồng hồ nói hộ. Hết giờ ⇒ "NO CONNECTION",
+  // và trạng thái đó CÓ nút cancel để thầy chơi một mình.
+  // ⚠️ Đo bằng số thì mọi phép kiểm đều xanh — cái này chỉ lộ ra khi NHÌN.
+  const LOBBY_JOIN_TIMEOUT_MS = 8000;
+  let lobbyJoinTimer = null;
+
+  /** Chữ ký của bàn NÀY — so với `std` của lượt để biết đã chuẩn chưa. */
+  function myStd() { return stdSignature(activity.type, activity.options); }
+
+  /**
+   * Đội nào đang thật sự chơi = đội có GẠCH CÒN SỐNG trong bảng đội.
+   * ⚠️ Trả `null` khi chưa biết (bảng đội chưa về, hoặc module chưa nạp) — chỗ gọi phải
+   * phân biệt "chưa biết" với "không có đội nào", vì hai cái dẫn tới hai hành vi trái
+   * ngược: một cái là ĐỢI, cái kia là BẮT ĐẦU NGAY.
+   */
+  function liveTeamIds() {
+    if (!lobbyMod || !sdTableLive) return null;
+    const now = Date.now();
+    return Object.entries(sdTableLive.claims || {})
+      .filter(([, c]) => lobbyMod.claimIsLive(c, now))
+      .map(([tid]) => tid);
+  }
+
+  function enterLobby() {
+    if (lobbyEl) return;
+    bigPlay.disabled = true;
+    if (practiceBtn) practiceBtn.disabled = true;
+    if (submitStartBtn) submitStartBtn.disabled = true;
+    lobbyEl = el("div", "aw-lobby");
+    playOverlay.append(lobbyEl);
+    readyCenter.style.display = "none";
+    lobbyLeaveOnTeardown = true;
+    paintLobby("joining");
+    joinNow();
+  }
+
+  /**
+   * Ghi bàn này vào lượt, rồi đọc lại kết quả ngay.
+   *
+   * ⛔⛔⛔ `lobbyBusy` PHẢI ĐƯỢC MỞ **TRƯỚC** KHI `onRound()` CHẠY, và đây là một cái kẹt
+   * CỨNG chứ không phải một tối ưu. Bản đầu của đợt này mở khoá trong `.finally()` —
+   * nghe hợp lý, và nó khoá chết cả tính năng: `onRound` chạy Ở TRONG chuỗi `.then()`,
+   * tức là TRƯỚC `.finally()`, nên cú `joinNow()` mà chính nó gọi lại (nhánh "vừa khớp
+   * chuẩn xong nhưng cờ ready của mình còn false") gặp `lobbyBusy === true` và lặng lẽ
+   * quay đầu. Bàn đứng vĩnh viễn ở "JOINING…", tài liệu lượt ghi `ready:false`, và cả
+   * lớp chờ một bàn không bao giờ giơ tay. Bàn thử `dot261-lobby.html` mục 6 bắt được;
+   * đọc code thì không thấy, vì cả hai nửa đều đúng khi nhìn riêng.
+   */
+  function joinNow() {
+    if (lobbyBusy || torndown || !lobbyEl) return;
+    if (lobbyJoins >= LOBBY_MAX_JOINS) { paintLobby("nomatch"); return; }
+    lobbyBusy = true;
+    lobbyJoins++;
+    clearTimeout(lobbyJoinTimer);
+    lobbyJoinTimer = setTimeout(() => {
+      if (!torndown && lobbyEl && lobbyBusy) paintLobby("offline");
+    }, LOBBY_JOIN_TIMEOUT_MS);
+    sdMod().then(m => {
+      lobbyMod = m;
+      if (torndown || !lobbyEl) return null;
+      return m.joinRound({
+        tableId: showdownPick.tableId || "",
+        actId: showdownRoundKey(),
+        teamId: showdownPick.teamId,
+        teamName: showdownPick.teamName,
+        type: activity.type,
+        options: activity.options
+      }).then(node => {
+        if (!lobbyStop && !torndown) lobbyStop = m.subscribeRound(onRound);
+        return node;
+      });
+    }).then(node => {
+      clearTimeout(lobbyJoinTimer);
+      lobbyBusy = false;                       // ⛔ mở khoá TRƯỚC onRound — xem ghi chú trên
+      if (torndown) { stopLobbyWatch(); return; }
+      if (lobbyEl && node) onRound(node);
+    }).catch(() => {
+      clearTimeout(lobbyJoinTimer);
+      lobbyBusy = false;
+      if (!torndown && lobbyEl) paintLobby("offline");
+    });
+  }
+
+  /**
+   * Mỗi nhịp của phòng chờ. Đọc tài liệu lượt rồi quyết đúng MỘT việc.
+   *
+   * ⛔⛔ THỨ TỰ BA PHÉP KIỂM LÀ CỐ Ý VÀ KHÔNG ĐƯỢC ĐẢO:
+   *   1. lượt này có phải lượt của mình không (act/bảng đội)  → không thì nhập lại
+   *   2. dữ liệu của mình có CHUẨN chưa                        → chưa thì kéo về
+   *   3. đủ đội chưa                                           → đủ thì lật sang starting
+   * Đảo 2 lên sau 3 là để một bàn đang chơi thứ khác đếm vào "đã sẵn sàng" — đúng thứ
+   * cả Đợt 260 lẫn đợt này sinh ra để chặn.
+   */
+  function onRound(node) {
+    if (torndown || !lobbyEl || !node) return;
+    if (lobbyPhase === "starting") return;      // đã cất cánh, đừng vẽ lại
+    lobbyRound = node;
+    if (!node.roundId || node.actId !== showdownRoundKey()
+        || node.tableId !== (showdownPick.tableId || "")) { joinNow(); return; }
+    const mine = node.boards[browserId()];
+    if (!mine) { joinNow(); return; }           // ai đó vừa đúc lượt mới, mình rơi ra
+
+    // ---- 1. DỮ LIỆU CHUẨN ----
+    if (stdSignature(node.std.type, node.std.options) !== myStd()) {
+      if (lobbyTries >= LOBBY_MAX_TRIES) { paintLobby("nomatch"); return; }
+      paintLobby("loading");
+      pullStandard(node.std);
+      return;
+    }
+    lobbyTries = 0;
+    // Vừa khớp xong nhưng cờ `ready` của mình còn là false (lần nhập trước còn lệch) —
+    // nhập lại để khai đúng. Giao dịch bên kia tự tính lại `ready`, không tin lời mình.
+    if (!mine.ready) { joinNow(); return; }
+    lobbyJoins = 0;   // đã thật sự sẵn sàng: mọi lần nhập trước đó không tính nữa
+
+    // ---- 2. ĐỦ ĐỘI CHƯA ----
+    if (node.phase === "starting") { takeOff(); return; }
+    const live = liveTeamIds();
+    if (!live) { paintLobby("ready", null); return; }     // chưa biết ⇒ ĐỢI, đừng đoán
+    const missing = roundMissingTeams(live, node.boards);
+    paintLobby("ready", { done: live.length - missing.length, total: live.length });
+    // ⚠️ MỌI BÀN ĐỀU GỌI — giao dịch bên `flipRoundStarting` chỉ cho đúng một lần hạ
+    // cánh (xem ghi chú của nó). Không cần trọng tài, và Showdown chưa bao giờ có.
+    if (!missing.length && lobbyMod) lobbyMod.flipRoundStarting(node.roundId).catch(() => {});
+  }
+
+  /**
+   * Kéo dữ liệu chuẩn về. Đây là chỗ DUY NHẤT trong phòng chờ làm ván dựng lại.
+   *
+   * ⚠️⚠️ `sdLobbyResume` (tầng module) là sợi dây duy nhất nối mount này với mount sau.
+   * `doSwitchTemplate`/`replayCurrent` đều vứt cả closure này đi; không có nó thì bàn
+   * vừa kéo chuẩn về sẽ hiện lại màn READY bình thường trong khi tên nó **vẫn nằm trong
+   * lượt** — cả lớp đứng chờ một bàn đã quên mất là mình đang được chờ.
+   * ⚠️ `lobbyLeaveOnTeardown = false` TRƯỚC khi dựng lại: cú dỡ ván sắp tới là chuyển
+   * tiếp, không phải rời đi.
+   */
+  function pullStandard(std) {
+    sdLobbyResume = lobbyTries + 1;
+    lobbyLeaveOnTeardown = false;
+    const giveUp = () => { sdLobbyResume = 0; lobbyLeaveOnTeardown = true; paintLobby("nomatch"); };
+    if (std.type && std.type !== activity.type) {
+      Promise.resolve(doSwitchTemplate(std.type)).catch(giveUp);
+      return;
+    }
+    // Chỉ khác Options ⇒ đi ĐÚNG cửa mà nút Apply và cầu myActivity vẫn đi (Đợt 206):
+    // THAY THẾ chứ không trộn, rồi để applySubActSelection lo ca act đã đổi template.
+    if (!activity.options) activity.options = {};
+    Object.keys(activity.options).forEach(k => { if (!(k in std.options)) delete activity.options[k]; });
+    Object.assign(activity.options, std.options);
+    const converting = applySubActSelection(std.options);
+    if (converting) { converting.catch(giveUp); return; }
+    replayCurrent();
+  }
+
+  /** Đủ đội — nạp nốt rồi vào ván. */
+  function takeOff() {
+    if (lobbyPhase === "starting") return;
+    paintLobby("starting");
+    lobbyLeaveOnTeardown = false;
+    stopLobbyWatch();
+    // ⚠️ CHỜ `prepDoneP` THẬT. Bốn bước nạp trước (giọng · pack âm · ảnh · tpl.prepare)
+    // vốn chạy từ lúc mount và thường xong từ lâu, nhưng một bàn vừa kéo chuẩn về xong
+    // thì cú mount của nó mới vài trăm ms tuổi — vào ván lúc đó là vào một ván chưa có
+    // giọng đọc. Đây đúng là chỗ thầy nói "trong lúc đó load mọi dữ liệu đồng bộ".
+    Promise.resolve(prepDoneP).catch(() => {})
+      .then(() => new Promise(r => setTimeout(r, LOBBY_TAKEOFF_MS)))
+      .then(() => {
+        if (torndown || !lobbyEl) return;
+        lobbyEl.remove(); lobbyEl = null;
+        enterGame();          // ⚠️ KHÔNG trả `readyCenter` về: lớp phủ sắp mờ đi hết
+      });
+  }
+
+  function stopLobbyWatch() {
+    clearTimeout(lobbyJoinTimer);
+    if (!lobbyStop) return;
+    const s = lobbyStop; lobbyStop = null;
+    try { s(); } catch { /* đã gỡ */ }
+  }
+
+  /** Gọi từ cleanupAll() — ván bị dỡ trong lúc đang chờ thì phải rút mình khỏi lượt. */
+  function stopLobby() {
+    stopLobbyWatch();
+    if (lobbyLeaveOnTeardown) {
+      lobbyLeaveOnTeardown = false;
+      sdMod().then(m => m.leaveRound()).catch(() => { /* mất mạng: hàng của mình sẽ hết hạn theo lượt */ });
+    }
+    lobbyEl = null;
+  }
+
+  /**
+   * NÚT CANCEL — bé, mờ, chỉ có icon, nằm nép một góc (thầy: *"khó nhìn và khó để ý để
+   * hạn chế cancel"*). Rút ĐÚNG bàn này ra; các bàn khác vẫn chờ (thầy chốt).
+   */
+  function cancelLobby() {
+    sound.click();
+    stopLobbyWatch();
+    lobbyLeaveOnTeardown = false;
+    sdMod().then(m => m.leaveRound()).catch(() => {});
+    if (lobbyEl) { lobbyEl.remove(); lobbyEl = null; }
+    lobbyPhase = ""; lobbyRound = null; lobbyTries = 0;
+    readyCenter.style.display = "";
+    bigPlay.disabled = false;
+    if (practiceBtn) practiceBtn.disabled = false;
+    if (submitStartBtn) submitStartBtn.disabled = false;
+  }
+
+  const LOBBY_WORD = {
+    joining: "JOINING…", loading: "LOADING DATA…", ready: "READY",
+    starting: "STARTING…", nomatch: "CHECK OPTIONS", offline: "NO CONNECTION"
+  };
+  const LOBBY_HINT = {
+    nomatch: "This board cannot match the others — cancel and set Options by hand",
+    offline: "Cannot reach the class board — cancel to play on this board alone"
+  };
+
+  function paintLobby(state, info) {
+    if (!lobbyEl) return;
+    lobbyPhase = state;
+    lobbyEl.className = "aw-lobby is-" + state;
+    lobbyEl.innerHTML = "";
+    // ✓ THẬT LỚN giữa màn, hào quang thở (thầy). Ở các trạng thái chưa sẵn sàng thì
+    // cùng ô đó đeo vòng quay — một chỗ, một cỡ, nên chuyển trạng thái không nhảy khung.
+    const mark = el("div", "aw-lobby-mark", state === "ready" ? icons.check : icons.spinner);
+    if (state === "nomatch" || state === "offline") mark.innerHTML = icons.alert;
+    lobbyEl.append(mark);
+    lobbyEl.append(el("div", "aw-lobby-word", LOBBY_WORD[state] || ""));
+    const sub = el("div", "aw-lobby-sub");
+    if (state === "ready") {
+      sub.textContent = info ? `${info.done} / ${info.total} teams` : "waiting for the class…";
+    } else if (LOBBY_HINT[state]) {
+      sub.textContent = LOBBY_HINT[state];
+    } else if (state === "loading") {
+      sub.textContent = "matching the other boards…";
+    }
+    lobbyEl.append(sub);
+    // ⛔ KHÔNG có cancel ở ĐÚNG MỘT trạng thái: "starting". Ván đã cất cánh, rút ra lúc
+    // này là để lại một chỗ trống trong bảng kết quả mà không gì vá được.
+    // ⚠️ "joining" TỪNG bị loại cùng với nó, vì nghĩ rằng nó chỉ thoáng qua. Ảnh chụp
+    // `dot261-visual.html?state=loading` cho thấy nó KHÔNG thoáng qua khi mạng treo: bàn
+    // kẹt ở đó không lối thoát. Một trạng thái "đang chờ mạng" mà không có cửa ra là một
+    // cái bẫy, dù nó thường chỉ sống 200ms.
+    if (state !== "starting") {
+      const x = el("button", "aw-lobby-cancel", icons.close);
+      x.type = "button";
+      x.title = "Leave the round";
+      x.setAttribute("aria-label", "Leave the round");
+      x.onclick = cancelLobby;
+      lobbyEl.append(x);
+    }
+  }
+
+  // ⭐ NỬA SAU CỦA `pullStandard()`: mount này sinh ra từ một cú kéo chuẩn ⇒ vào thẳng
+  // phòng chờ, không hiện màn READY. Cùng khuôn cờ-một-lần với `openShowdownOnMount`.
+  if (sdLobbyOn && sdLobbyResume > 0) {
+    lobbyTries = sdLobbyResume;
+    sdLobbyResume = 0;
+    enterLobby();
+  }
 
   // ----- Timer (starts at PLAY, measured precisely) -----
   // Modes (set via the Options panel): "none" | "countUp" | "countDown".
@@ -2696,13 +2997,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // set is baked into `content` by the resolver, so it has to be re-baked
     // here. Caught by testing: picking VI1, Apply, Play still showed ENG1.
     // Identity for every act without clue sets, so this costs those nothing.
-    // ⚠️ Đợt 197 — `applyBalance` again, not just `resolveActivity`: this line
+    // ⚠️ Đợt 197 — chia bài lại, không phải chỉ `resolveActivity`: dòng này
     // re-reads the act from the library, which would quietly undo the Balance
     // questions trim the mount had already applied. One re-resolve, one re-trim.
     // ⭐ Đợt 220 — và applySdDeal, cùng lý do: begin() đọc lại act từ thư viện,
     // không chia lại là Start again chơi mảng gốc trần trụi. Mỗi lần chia là một
     // bộ bài mới — Start again đổi bài, đúng nết shuffle xưa nay.
-    activity = applySdDeal(applyBalance(resolveActivity(libAct)));
+    activity = applySdDeal(resolveActivity(libAct));
     // Top up the clip cache when the set changed under us — the READY gate
     // preloaded whichever one was current when it ran. Fire-and-forget on
     // purpose: it only fills core/voice-clips.js's cache, plays nothing, and a
@@ -2744,7 +3045,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // resuming shifts `startedAt` forward by exactly the paused duration so the
   // elapsed/remaining time picks up from the same value, not a jump. -----
   let pausedClockAt = 0;
-  let torndown = false;   // set by cleanupAll(): this play is over, nothing may restart its clock
+  // ⚠️ `torndown` khai Ở TRÊN (ngay trước khối PHÒNG CHỜ) từ Đợt 261 — xem ghi chú ở đó.
   function pauseClockForMenu() {
     if (timerId) { clearInterval(timerId); timerId = null; pausedClockAt = performance.now(); }
   }
@@ -4372,6 +4673,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     torndown = true;
     stopShowdownReview();          // ⭐ Đợt 196 — never leave the live listener behind
     stopSdClaimWatch();            // ⭐ Đợt 217 — và bộ nghe "đội có bị giành không"
+    stopLobby();                   // ⭐ Đợt 261 — và rút mình khỏi lượt nếu đang chờ
     closeMenu(); stopTimer(); closeToolPanel(false);
     costNodes.forEach(n => n.remove()); costNodes.clear();
     penaltyNodes.forEach(n => n.remove()); penaltyNodes.clear();   // ⭐ Đợt 256 — cùng luật
@@ -4594,7 +4896,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
      * ⭐⭐ Đợt 220 — "mảng câu ĐÃ được chia bài, đừng tự xáo lại." Template hỏi câu
      * này TRƯỚC cú shuffle của chính nó (Quiz · Type the answer).
      * ⛔⛔ VÌ SAO KHÔNG ép `shuffleQuestions:false` vào options như fight.js làm:
-     * applyBalance/applySdDeal giữ `options` theo THAM CHIẾU là hợp đồng sống —
+     * applySdDeal giữ `options` theo THAM CHIẾU là hợp đồng sống —
      * Apply mutate thẳng vào object đó (Object.assign phía dưới), copy options ra
      * để sửa là Apply ghi vào bản sao và act thư viện KHÔNG BAO GIỜ nhận được nữa.
      * fight.js thoát vì nó cầm act ĐÃ đông lạnh riêng cho từng bàn; ở đây là act thật.

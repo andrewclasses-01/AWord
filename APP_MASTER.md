@@ -8,8 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 260)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 261)**.
 >
+> **Đợt 261** (25/8/2026, ⬜ **CHƯA COMMIT — CHỜ THẦY DUYỆT**) — ⭐⭐⭐ **PHÒNG CHỜ: CẢ LỚP
+> CÙNG BẮT ĐẦU MỘT LƯỢT** (qua **Firestore**, nên MỌI THIẾT BỊ vào chung được, không chỉ các
+> cột myActivity) và ⭐⭐⭐ **BỎ HẲN BALANCE QUESTIONS**. Sửa 11 file.
+>
+> **START không vào ván ngay nữa** (chỉ trong Showdown): bàn nào bấm cũng đứng ở ✓ **READY**
+> to giữa màn, hào quang thở, kèm "3 / 4 teams" và một nút ✕ **cố ý mờ** ở góc (rút đúng bàn
+> mình). Bàn nào lệch template/options so với **CHUẨN** thì hiện **LOADING DATA…**, tự kéo
+> chuẩn về rồi mới được tính là sẵn sàng. Đội cuối xong ⇒ **STARTING…** ⇒ chờ nốt bốn bước
+> nạp trước (`prepDoneP`) ⇒ cả lớp cùng vào ván.
+> Tài liệu mới `users/{uid}/items/sd_round`; **bàn ĐẦU TIÊN bấm START chốt chuẩn** (thầy
+> chốt); đếm theo **gạch còn sống** trong bảng đội; **không có trọng tài** — mọi bàn cùng gọi
+> `flipRoundStarting`, điều kiện trong giao dịch cho đúng một lần hạ cánh.
+>
+> **Balance questions gỡ hẳn** (`applyBalance` xoá khỏi engine, ô tích xoá khỏi Options).
+> `Count` là cơ chế công bằng duy nhất còn lại và nay mở cho **8/11** game có Showdown
+> (thêm Anagram · Balloon pop · Gameshow · Speaking · True-false · Unjumble). ⛔ Ba game
+> bàn-chơi (Crossword · Open the box · Find the match) CẤM vĩnh viễn — mảng câu của chúng
+> CHÍNH LÀ cái bàn. ⚠️ Act cũ còn cờ `balanceQuestions` nay chơi ĐỦ độ dài; **không có bộ
+> chuyển đổi** vì N của Balance phụ thuộc `maxTeam`, thứ không nằm trên act. ⚠️ `maxTeam`
+> nay **không còn dòng nào đọc**.
+>
+> ⛔⛔⛔ **BA LỖI TỰ TẠO, CẢ BA ĐỀU DO BÀN THỬ BẮT — KHÔNG PHẢI DO ĐỌC CODE**: (1) tách
+> `startPressed` mà **quên gọi `enterGame()`** cho nhánh ngoài Showdown ⇒ mọi act thường bấm
+> START là đứng im (đối chứng ngược bắt); (2) `lobbyBusy` mở khoá trong `.finally()` ⇒
+> **khoá chết chính cú nhập lại của mình**, bàn kẹt ở JOINING… vĩnh viễn; (3) ⭐ **BẪY TDZ**
+> — `enterLobby()` chạy ĐỒNG BỘ trong thân `startGame()` còn `let torndown` khai ~470 dòng
+> dưới ⇒ ReferenceError **nuốt trọn trong một `.catch()`, không một chữ nào lên console**.
+> Đã dời `torndown` lên trên. ⇒ Luật: hàm bị gọi ĐỒNG BỘ trong thân startGame() thì mọi
+> `let` nó đọc phải khai TRƯỚC nó.
+> ⛔⛔ **VÀ HAI LẦN BÀN THỬ TỰ NÓI DỐI**: nhịp dò 50ms trượt mất `LOADING DATA…`; rồi
+> `MutationObserver` bản đầu VẪN trượt vì callback là microtask chạy sau khi ván đã dựng lại
+> ⇒ phải đọc từ `addedNodes`, không query lại DOM.
+> ⭐ **Và một lỗi chỉ lộ ra khi NHÌN**: ảnh chụp mạng-treo cho thấy bàn kẹt ở JOINING… không
+> lối ra (mọi phép đo bằng số đều xanh) ⇒ thêm đồng hồ canh 8 giây + cancel có mặt ở JOINING.
+>
+> Bàn thử `scratch/dot261-lobby.html` **53/53** (dựng "bàn thứ hai" ở TẦNG DỮ LIỆU) ·
+> `dot260-plan` **52/52** (đã viết lại cho thực tế mới) · hồi quy `dot256-smoke` 48/48 ·
+> `dot259-fight` 49/49 · `dot259b-optcheck` 12/12 · `index.html` 0 lỗi.
+> ✅ **ĐÃ NHÌN BẰNG MẮT** 2 ảnh chụp (`dot261-visual.html`).
+> ⬜ **CHỜ THẦY TEST TOMKO + nhiều máy** — xem `GHI CHU DU AN.md` Đợt 261 mục cuối.
+>
+> ---
 > **Đợt 260** (25/8/2026, `758b062`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
 > triển khai đúng `758b062` trạng thái `built` (`gh api .../pages/builds/latest`, không tin mã
 > 200) · **7/7 mã băm SHA-256 khớp** · **52/52 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**

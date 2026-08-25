@@ -720,16 +720,15 @@ export function buildOptionsBody(host, {
     // chặn đường** — mà Balance thì đã tích sẵn trong hàng loạt act cũ, nên với thầy
     // dải này trông như hỏng: nằm mờ vĩnh viễn, không cách nào chạm tới, và **không
     // có gì trên màn nói vì sao**.
-    // ⭐ Luật đúng: dải này LUÔN chạm được. Chọn Free/Count thì Balance + Shuffle mờ
-    // đi — thầy NHÌN THẤY hai ô vừa tắt nên hiểu ngay quan hệ, đúng idiom In turns
-    // của Đợt 202 mà thầy đã quen.
-    // ⚠️ CHỈ CHẠM KHOÁ, KHÔNG BAO GIỜ CHẠM GIÁ TRỊ (luật Đợt 202): ô Balance vẫn giữ
-    // nguyên dấu tích, quay về Normal là nó sống lại y như cũ. Trong lúc Free/Count
-    // cầm bài thì `applyBalance()` bên engine tự đứng xuống, nên dấu tích còn đó
-    // không hại gì.
+    // ⭐ Luật đúng: dải này LUÔN chạm được. Chọn Free/Count thì Shuffle mờ đi — thầy
+    // NHÌN THẤY ô vừa tắt nên hiểu ngay quan hệ, đúng idiom In turns của Đợt 202.
+    // ⚠️ CHỈ CHẠM KHOÁ, KHÔNG BAO GIỜ CHẠM GIÁ TRỊ (luật Đợt 202): dấu tích Shuffle giữ
+    // nguyên, quay về Normal là nó sống lại y như cũ.
+    // ⚠️ Đợt 261 — ô "Balance questions" đã gỡ hẳn nên chỉ còn MỘT ô bị khoá. Việc xáo
+    // nay là của bộ chia bài (`dealQuestions`); để template tự xáo là phá tan bài đã
+    // chia — engine chặn qua `ui.keepItemOrder()`.
     syncSdDealLocks = () => {
       const dealOn = draft.sdDeal === "free" || draft.sdDeal === "count";
-      host.querySelector('[data-aw-check="balance"]')?.classList.toggle("is-locked", dealOn);
       host.querySelector('[data-aw-check="shuffle"]')?.classList.toggle("is-locked", dealOn);
     };
   }
@@ -742,21 +741,20 @@ export function buildOptionsBody(host, {
   addCheck(tpl.shuffleLabel || "Shuffle questions", draft.shuffleQuestions !== false,
     v => draft.shuffleQuestions = v,
     { key: "shuffle", title: tpl.shuffleLabel || "Shuffle question order" });
-  // ⭐⭐⭐ BALANCE QUESTIONS (Đợt 197, thầy 19/8/2026) — SHOWDOWN ONLY. It lives
-  // among the SWITCHES rather than in a cell of its own because it is one yes/no
-  // with no setting hanging off it (thầy: "ở khu vực các nút tích").
-  // What it does: every child in the CLASS answers the same number of questions,
-  // by shortening each board's act to `(questions ÷ biggest team) × this team`.
-  // The arithmetic is core/engine.js's `applyBalance`; the Showdown class screen
-  // shows the answer in its QUESTIONS box before the teacher picks a team count.
-  // ⚠️ Like "Time each round" above, this is STRUCTURAL — the engine trims the
-  // act at mount, so it takes effect on the play Apply restarts, not on the one
-  // already on screen.
-  if (showdown) {
-    addCheck("Balance questions", draft.balanceQuestions === true,
-      v => { draft.balanceQuestions = v; syncSdDealLocks(); },
-      { key: "balance", title: "Every pupil in the class answers the same number of questions" });
-  }
+  // ⛔⛔⛔ Đợt 261 — "BALANCE QUESTIONS" ĐÃ BỊ GỠ HẲN (thầy, 25/8/2026: *"bỏ hẳn luôn
+  // nút tích Balance questions ở options, khi đã chọn count và số rồi thì buộc phải
+  // cân bằng số câu hỏi cho mỗi bạn"*).
+  //
+  // ⚠️ VÌ SAO GỠ CHỨ KHÔNG GIỮ CẢ HAI: hai cơ chế cùng hứa "mọi em bằng nhau" mà một
+  // cái GIỮ ĐƯỢC LỜI HỨA MỘT MÌNH (Count: mỗi em đúng N câu, N là số thầy gõ) còn cái
+  // kia thì KHÔNG (Balance chia cho `maxTeam` — một con số phải khớp giữa mọi bảng,
+  // và đúng chỗ đó đã vỡ ở Đợt 260, đẻ ra ca "cùng số người mà bảng 50 câu bảng 100
+  // câu"). Để cả hai là để thầy chọn nhầm cái yếu hơn.
+  // ⚠️ `Count` nay mở cho 10/12 template có Showdown (`tpl.sdDeal`); ba game bàn-chơi
+  // (Crossword · Open the box · Find the match) CẤM vĩnh viễn vì mảng câu của chúng
+  // CHÍNH LÀ cái bàn — xem ghi chú ở dải "Questions each" phía trên.
+  // ⚠️ Act cũ còn lưu `balanceQuestions` thì key đó nay là RÁC VÔ HẠI: không còn ai
+  // đọc nó (`applyBalance` đã gỡ khỏi core/engine.js cùng đợt).
   // OPT-IN (Đợt 143 — see this file's header for why): only a game that really
   // reads options.shuffleAnswers offers the switch. Quiz, Open the box, Gameshow.
   if (tpl.usesShuffleAnswers) {
@@ -909,7 +907,8 @@ export function buildOptionsBody(host, {
  *    already renames "Shuffle questions" for Speaking cards, so labels were never
  *    stable names.
  *    ⚠️ A switch whose key is NOT in the list keeps its relative order and goes
- *    to the END. That is where "In turns" (Fight) and "Balance questions"
+ *    to the END. That is where "In turns" (Fight) — và trước Đợt 261 là cả "Balance
+ *    questions", nay đã gỡ —
  *    (Showdown) land — modes thầy has not laid out, so they are appended visibly
  *    rather than guessed at.
  *    ⚠️ A template with no `checkOrder` is untouched, so nothing here can break a

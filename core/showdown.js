@@ -144,7 +144,9 @@ export function readPick() {
       members,
       // ⭐ Đợt 197 — two fields the setup panel now stamps on, because only IT can
       // see the whole table and the engine must not import the file that can.
-      //   `maxTeam`  the biggest team's size — Balance questions divides by it.
+      //   `maxTeam`  the biggest team's size. ⚠️ Đợt 261 — Balance questions (thứ duy
+      //              nhất từng chia act cho con số này) đã gỡ; trường này còn đó nhưng
+      //              không còn dòng nào trong app đọc nó.
       //   `tableId`  which division of the class this is — the durable result
       //              history groups one match by it.
       // ⚠️ Both fall back rather than invalidating the pick: a pick written
@@ -208,7 +210,7 @@ export function clearPendingResult() {
 // có thêm dải `Normal · Free · Count`. Free = chơi tự do tới khi bấm Submit
 // answers (trần SD_FREE_CAP câu mỗi em); Count = mỗi em đúng N câu. Cả hai đều
 // hoạt động bằng MỘT cách: NỐI DÀI mảng câu của act trước khi template nhìn thấy
-// nó (core/engine.js applySdDeal — anh em của applyBalance), vì luật chia lượt
+// nó (core/engine.js applySdDeal), vì luật chia lượt
 // `memberAt` là `index % số em` nên slot s của mảng đã thuộc sẵn về em s % M —
 // không sửa một dòng nào của luật chia lượt.
 //
@@ -765,19 +767,20 @@ export function shortenName(full) {
 // vẫn đúng 10 câu. Cảnh báo giả trên màn lớp học là thứ thầy sẽ tắt đi sau hai
 // buổi, và khi đó cái lệch THẬT cũng đi theo.
 //
-// BỐN CHẾ ĐỘ, VÀ CHỈ BA CÁI TỰ HỨA ĐƯỢC ĐIỀU GÌ (đo từ engine's applyBalance +
-// showdown.js's dealQuestions — `tổng slot = perPupil × số em`):
+// BA CHẾ ĐỘ, VÀ CHỈ HAI CÁI TỰ HỨA ĐƯỢC ĐIỀU GÌ (đo từ dealQuestions —
+// `tổng slot = perPupil × số em`):
 //   count    mỗi em đúng N câu. N là con số thầy gõ ⇒ giống nhau ở mọi bảng
 //            MÀ KHÔNG CẦN BẢNG NÀO THOẢ THUẬN VỚI BẢNG NÀO. Chế độ an toàn nhất
 //            cho bất cứ thứ gì đổ vào bảng phân tích.
-//   balance  mỗi em `floor(tổng ÷ đội đông nhất)` câu ⇒ CHỈ khớp khi mọi bảng
-//            đồng ý về "đội đông nhất". Đúng chỗ vỡ thầy gặp: `maxTeam` là ảnh
-//            chụp đông cứng trong pick của từng cột.
 //   free     trần SD_FREE_CAP câu mỗi em ⇒ khớp, nhưng thầy bấm Submit lúc nào
 //            thì dừng lúc đó, nên con số cuối vẫn do tay người quyết.
 //   normal   mỗi em = tổng ÷ số em ĐỘI MÌNH ⇒ đội nhỏ được nhiều câu hơn đội to,
 //            KHÔNG hứa gì cả. Không có gì để so, và cũng không nên báo động: đây
 //            là lựa chọn hợp lệ của thầy, chỉ là nó không dành cho phân tích.
+// ⛔ Đợt 261 — CHẾ ĐỘ THỨ TƯ `balance` ĐÃ BỊ GỠ KHỎI APP (thầy chốt). Nó chia
+//   `floor(tổng ÷ đội đông nhất)`, tức là phải khớp `maxTeam` giữa mọi bảng — mà
+//   `maxTeam` là ảnh chụp đông cứng trong pick của từng cột, và đúng chỗ đó vỡ ở
+//   Đợt 260. `Count` làm được đúng việc đó mà không cần bảng nào đồng ý với bảng nào.
 //
 // ⚠️ FILE NÀY THUẦN — engine nhập TĨNH nên trang học sinh cũng tải nó (luật 2 của
 // v0.9.0). Không import, không DOM, không Firestore: vào dữ liệu, ra dữ liệu.
@@ -796,7 +799,7 @@ export function shortenName(full) {
  * ⇒ core/engine.js's onViewChange() mang chúng sang khi view mới chưa có.
  */
 export const SD_PLAN_KEYS = [
-  "balanceQuestions", "sdDeal", "sdDealCount", "roundTimer", "roundSeconds"
+  "sdDeal", "sdDealCount", "roundTimer", "roundSeconds"
 ];
 
 /**
@@ -805,12 +808,16 @@ export const SD_PLAN_KEYS = [
  * từ Firestore qua đây. Bàn thử Đợt 260 bắt được ca `md: 7` (một số) đi lọt thành
  * chuỗi "7" — vô hại về mặt sập, nhưng nó sẽ không khớp chế độ nào nên mọi bảng
  * đứng cạnh nó bị tố "khác chế độ" vì một giá trị chẳng có nghĩa gì.
+ * ⛔ Đợt 261 — `balance` ĐÃ BỊ GỠ KHỎI APP. Một act cũ còn lưu `balanceQuestions`
+ * thì key đó nay là rác vô hại (không ai đọc); còn `md: "balance"` từ một bảng
+ * chạy bản AWord CŨ hơn Đợt 261 sẽ rơi ra khỏi danh sách trắng này ⇒ bảng đó bị
+ * coi là "chưa khai", tức KHÔNG đoán hộ — đúng thứ ta muốn khi hai bên khác bản.
  */
-export const SD_MODES = ["normal", "balance", "free", "count"];
+export const SD_MODES = ["normal", "free", "count"];
 
-/** Chế độ nào TỰ HỨA "mọi em bằng nhau" — ba cái, `normal` không nằm trong đó. */
+/** Chế độ nào TỰ HỨA "mọi em bằng nhau" — `normal` không nằm trong đó. */
 export function sdPlanPromises(mode) {
-  return mode === "count" || mode === "balance" || mode === "free";
+  return mode === "count" || mode === "free";
 }
 
 /**
@@ -846,4 +853,59 @@ export function findPlanClash(setup, myTeamId, mine) {
     }
   }
   return null;
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 261 (25/8/2026, thầy) — PHÒNG CHỜ: CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT
+// ---------------------------------------------------------------
+// Thầy: *"khi tất cả đã sẵn sàng, đội bấm nút start trước sẽ ko vào game ngay mà sẽ ở
+// trạng thái READY… khi nhóm cuối cùng trong tất cả các nhóm bấm start thì mới bắt đầu…
+// Nếu 1 đội lệch templates, lệch options so với các đội còn lại và so với dữ liệu chuẩn
+// thì chưa bắt đầu được ngay mà hiện LOADING DATA…"*
+//
+// ⚠️ ĐI QUA FIRESTORE, KHÔNG QUA myActivity (thầy chốt): *"ưu tiên firebase để nhiều
+// thiết bị khác nhau cùng tham gia được, không chỉ các bảng trên myActivity"*. Cầu
+// `window.__awordBridge` chỉ nối được các CỘT trong một cửa sổ myActivity; Firestore nối
+// được mọi máy trong lớp, kể cả máy tính bảng của học sinh.
+//
+// ⚠️ FILE NÀY THUẦN — engine nhập TĨNH nên trang học sinh cũng tải nó (luật 2 của
+// v0.9.0). Mọi thứ chạm Firestore nằm ở core/showdown-setup.js.
+
+/**
+ * CHỮ KÝ CỦA DỮ LIỆU CHUẨN — hai bàn khớp nhau khi hai chuỗi này bằng nhau.
+ *
+ * ⛔⛔ PHẢI ỔN ĐỊNH THEO THỨ TỰ KHOÁ. `JSON.stringify` giữ nguyên thứ tự chèn, mà thứ tự
+ * chèn của `activity.options` phụ thuộc vào đường nào đã ghi vào nó (Apply · bridge ·
+ * migrate · bản lưu trong thư viện). Hai bàn có ĐÚNG cùng giá trị vẫn ra hai chuỗi khác
+ * nhau ⇒ vòng "LOADING DATA…" quay mãi không bao giờ khớp. Sắp khoá là thứ duy nhất
+ * chặn được, và nó phải nằm ở ĐÂY chứ không ở chỗ gọi — hai chỗ gọi tự sắp là hai cách
+ * sắp.
+ * ⚠️ Bỏ `undefined`/`null`: "không có khoá" và "khoá bằng null" là CÙNG một trạng thái
+ * chơi, nhưng khác nhau khi so chuỗi. Đây đúng là ca sinh ra vòng lặp không hồi kết.
+ */
+export function stdSignature(type, options) {
+  const o = options || {};
+  const parts = Object.keys(o)
+    .filter(k => o[k] !== undefined && o[k] !== null)
+    .sort()
+    .map(k => k + "=" + JSON.stringify(o[k]));
+  return String(type || "") + "|" + parts.join("&");
+}
+
+/**
+ * Đội nào CÒN THIẾU — có gạch sống trong bảng đội nhưng chưa có bàn nào báo sẵn sàng.
+ *
+ * @param liveTeamIds  id các đội đang được giữ gạch (chỗ gọi tự lọc theo TTL)
+ * @param boards       `boards` của tài liệu lượt: { [browserId]: { teamId, ready } }
+ *
+ * ⚠️ ĐẾM THEO ĐỘI, KHÔNG THEO BÀN. Một đội có thể được mở trên hai máy (thầy mở lại tab);
+ * đội đó vẫn là MỘT đội và chỉ cần một bàn báo sẵn sàng. Đếm theo bàn thì con số "3/4"
+ * hiện ra sẽ nhảy lung tung mà không ai hiểu vì sao.
+ */
+export function roundMissingTeams(liveTeamIds, boards) {
+  const ready = new Set();
+  Object.values(boards || {}).forEach(b => {
+    if (b && b.ready && b.teamId) ready.add(String(b.teamId));
+  });
+  return (liveTeamIds || []).filter(t => !ready.has(String(t)));
 }

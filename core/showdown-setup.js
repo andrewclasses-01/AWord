@@ -62,7 +62,7 @@ import {
   renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
-  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick,
+  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, stdSignature, browserId, writePick, clearPick,
   readPendingResult, writePendingResult, clearPendingResult,
   mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
@@ -338,7 +338,10 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
  * ⭐⭐⭐ Đợt 260 (25/8/2026) — ĐÓNG DẤU LẠI PICK BẰNG BẢNG ĐỘI **CỦA SERVER**.
  *
  * ⛔⛔ ĐÂY LÀ THỦ PHẠM SỐ MỘT CỦA "CÙNG SỐ NGƯỜI, BẢNG NÀY 50 CÂU BẢNG KIA 100".
- * `maxTeam` — đội đông nhất, tức là số mà applyBalance CHIA CHO — được đóng dấu
+ * `maxTeam` — đội đông nhất, tức là số mà `applyBalance` CHIA CHO (⚠️ Đợt 261 đã GỠ
+ * applyBalance; hàm này vẫn đóng dấu `maxTeam` vì nó là một sự thật về bảng đội, nhưng
+ * từ Đợt 261 **không còn dòng nào trong app đọc nó**. Cái hàm này thật sự chữa nay là
+ * `members` + tên đội + `tableId`) — được đóng dấu
  * vào pick đúng khoảnh khắc bảng này bấm Ready, đọc từ `setup.teams` mà panel này
  * đang nhìn thấy lúc ấy, rồi **không bao giờ tự làm mới**. Nên:
  *
@@ -2650,7 +2653,7 @@ export function buildShowdownPanel(panel, ctx) {
     const cQuest = el("div", "aw-sd-field is-quest");
     cQuest.append(el("div", "aw-sd-flab", "Questions"));
     const questEl = el("div", "aw-sd-readout is-big");
-    questEl.title = "Questions each pupil gets with Balance questions on";
+    questEl.title = "Most questions each pupil can get (use this as the number for Count)";
     cQuest.append(questEl);
 
     row.append(cClass, cCount, cQuest);
@@ -2658,9 +2661,9 @@ export function buildShowdownPanel(panel, ctx) {
     paintQuest();
 
     /**
-     * The same arithmetic core/engine.js runs when Balance questions is ON, done
-     * a step earlier — before the teams exist — so the teacher can see what a
-     * team count will cost before committing to it.
+     * ⚠️ Đợt 261 — Balance questions ĐÃ BỊ GỠ khỏi app. Phép tính này ở lại, nhưng nay
+     * nó trả lời "nhiều nhất mỗi em có thể được", tức là trần để thầy gõ số cho `Count` —
+     * vẫn đúng việc nó vẫn làm: cho thầy thấy một số đội sẽ tốn bao nhiêu, TRƯỚC khi chốt.
      *
      * ⚠️ THE DIVISOR IS THE BIGGEST TEAM, not the class. Every board plays the
      * same act of Q questions, so a team of 6 can only go round `Q / 6` times,
@@ -2745,9 +2748,13 @@ export function buildShowdownPanel(panel, ctx) {
         && questEl.dataset.best === String(!!best);
       questEl.dataset.best = String(!!best);
       questEl.classList.toggle("is-best", !!best);
+      // ⚠️ Đợt 261 — CHỮ NÀY HIỆN RA TRÊN MÀN, không phải chú thích. "Balance questions"
+      // đã bị gỡ khỏi app, nên ô này nay trả lời một câu hỏi KHÁC: **nhiều nhất mỗi em có
+      // thể được là bao nhiêu** — tức là trần để thầy gõ số cho `Count`. Phép tính giữ
+      // nguyên (`q ÷ đội đông nhất`) vì cái trần đó vẫn đúng.
       questEl.title = best
-        ? "Questions each pupil gets with Balance questions on — fewest questions wasted at this number of teams"
-        : "Questions each pupil gets with Balance questions on";
+        ? "Most questions each pupil can get — fewest questions wasted at this number of teams"
+        : "Most questions each pupil can get (use this as the number for Count)";
       questEl.dataset.each = String(each);
       questEl.dataset.left = String(left);
       questEl.innerHTML = "";
@@ -3095,9 +3102,9 @@ export function buildShowdownPanel(panel, ctx) {
       teamId: team.id, teamName: team.name,
       classId: setup.classId, className: setup.className,
       members: team.members,
-      // One team IS the biggest team, so Balance questions is a no-op here —
-      // stated rather than left to the fallback so the field always means the
-      // same thing wherever a pick comes from.
+      // One team IS the biggest team. ⚠️ Đợt 261 — Balance questions (thứ duy nhất từng
+      // đọc trường này) đã gỡ; vẫn ghi ra để trường này luôn có cùng một nghĩa dù pick đến
+      // từ đường nào.
       maxTeam: Math.max(1, team.members.length),
       tableId: setup.tableId
     };
@@ -4000,10 +4007,9 @@ export function buildShowdownPanel(panel, ctx) {
       classId: setup.classId, className: setup.className,
       members: team.members.map(m => ({ id: m.id, name: m.name })),
       // ⭐⭐ Đợt 197 — THE BIGGEST TEAM IN THE WHOLE TABLE, carried in the pick.
-      // Balance questions divides the act by it (core/engine.js's applyBalance),
-      // and the ENGINE cannot see the table: it is behind the dynamic-import wall
-      // this panel lives on. This screen is the one place that holds every team
-      // at once, so it is the one place the number can be read.
+      // ⚠️ Đợt 261 — GIỮ LẠI NHƯNG KHÔNG CÒN AI ĐỌC. Balance questions (thứ chia act
+      // cho con số này) đã gỡ hẳn; đây nay chỉ là một sự thật về bảng đội đi kèm pick.
+      // Đừng dựng tính năng mới dựa vào nó mà không đọc lại ghi chú ở stampPickFromTable.
       // ⚠️ A SNAPSHOT, like the members beside it. A table edited on another
       // machine after this Ready lands here on the next open of the panel — the
       // same contract every other field of the pick already has.
@@ -4210,4 +4216,194 @@ export function buildShowdownPanel(panel, ctx) {
   }
 
   boot();
+}
+
+// ---------------------------------------------------------------
+// ⭐⭐⭐ Đợt 261 — PHÒNG CHỜ: TÀI LIỆU CỦA MỘT LƯỢT (`sd_round`)
+// ---------------------------------------------------------------
+//   users/{uid}/items/sd_round, kind "showdown-round"
+//   { roundId, tableId, actId,
+//     std: { type, options },      // DỮ LIỆU CHUẨN — bàn ĐẦU TIÊN bấm START chốt
+//     stdBy,                       // browserId của bàn đó
+//     phase: "ready" | "starting",
+//     at,
+//     boards: { [browserId]: { teamId, teamName, ready, at } } }
+//
+// ⚠️ VÌ SAO MỘT TÀI LIỆU CHO CẢ LỚP, KHÔNG PHẢI MỘT TÀI LIỆU MỖI LƯỢT: luật Firestore
+// đang mở đúng `users/{uid}/items` (xem core/classes.js), và mọi thứ trong Showdown đều
+// đã theo nếp "id tài liệu SUY RA ĐƯỢC" để không bao giờ cần `where()` + composite index
+// thầy phải tự bấm trong Firebase console. Một lớp chỉ chơi một lượt tại một thời điểm,
+// nên một chỗ là đủ; lượt cũ bị lượt mới đè lên, đúng như bảng sống `sd_results`.
+//
+// ⚠️ LƯỢT CŨ KHÔNG BAO GIỜ CHẶN ĐƯỢC LƯỢT MỚI. Ba cửa để một cú START đúc lượt MỚI thay
+// vì nhập vào lượt đang có: khác `actId`, khác `tableId`, hoặc lượt kia đã `starting`.
+// Cộng thêm TTL: `phase: "starting"` là trạng thái CUỐI — nó không bao giờ quay lại
+// "ready", nên "Start again" sau ván luôn mở một lượt mới, đúng như thầy mong.
+const ROUND_DOC = "sd_round";
+// Đủ dài để trùm một buổi dạy (một lượt có thể ngồi chờ trong lúc thầy giảng), đủ ngắn
+// để lượt hôm qua không bao giờ đứng chắn buổi sáng nay. Cùng lối nghĩ với CLAIM_TTL_MS.
+const ROUND_TTL_MS = 3 * 60 * 60 * 1000;
+
+function normRound(raw) {
+  const boards = {};
+  const rawBoards = (raw && typeof raw.boards === "object" && raw.boards) || {};
+  for (const [bid, b] of Object.entries(rawBoards)) {
+    if (!b || typeof b !== "object") continue;
+    const teamId = String(b.teamId || "");
+    if (!teamId) continue;
+    boards[bid] = {
+      teamId,
+      teamName: String(b.teamName || "").trim() || "Team",
+      ready: !!b.ready,
+      at: Number(b.at) || 0
+    };
+  }
+  const std = (raw && typeof raw.std === "object" && raw.std) || {};
+  return {
+    id: ROUND_DOC, kind: "showdown-round", root: "showdown", parentId: null, trashed: false,
+    roundId: String(raw?.roundId || ""),
+    tableId: String(raw?.tableId || ""),
+    actId: String(raw?.actId || ""),
+    std: {
+      type: String(std.type || ""),
+      options: (std.options && typeof std.options === "object") ? std.options : {}
+    },
+    stdBy: String(raw?.stdBy || ""),
+    // ⚠️ Chỉ HAI pha. Một giá trị lạ đọc thành "ready" chứ không phải thành chính nó:
+    // pha là thứ quyết định "đã bắt đầu chưa", và một chuỗi rác lọt vào đó sẽ làm mọi
+    // bàn đứng chờ vĩnh viễn một pha không bao giờ tới.
+    phase: raw?.phase === "starting" ? "starting" : "ready",
+    at: Number(raw?.at) || 0,
+    boards,
+    updatedAt: Number(raw?.updatedAt) || 0
+  };
+}
+
+function mintRoundId() {
+  return "rnd_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+}
+
+/**
+ * BẤM START: ghi bàn này vào phòng chờ, đúc lượt mới nếu chưa có lượt nào dùng lại được.
+ *
+ * ⭐ BÀN ĐẦU TIÊN BẤM START CHỐT DỮ LIỆU CHUẨN (thầy chốt qua AskUserQuestion): không cần
+ * host, không cần thầy chọn gì, và khớp đúng luồng thầy mô tả. `std` của nó thành chuẩn
+ * cho cả lượt; các bàn sau tự kéo về.
+ *
+ * ⚠️ `ready` TÍNH TRONG GIAO DỊCH, không nhận từ chỗ gọi. Chỗ gọi chỉ biết chuẩn mà NÓ
+ * đọc được lần cuối, mà chuẩn có thể vừa được một bàn khác đúc lại xong giữa hai nhịp —
+ * tự khai "tôi sẵn sàng" dựa trên một bản chuẩn đã cũ là đúng cách để cả lớp bắt đầu
+ * một ván mà một bàn đang chơi thứ khác.
+ * ⚠️ `tx.set` cả tài liệu chứ không `update` từng khoá: xoá một khoá lồng trong `boards`
+ * cần `FieldValue.delete()`, mà `leaveRound` ngay dưới thì phải xoá được. Ghi cả tài liệu
+ * là an toàn VÌ nằm trong giao dịch — Firestore chạy lại cả hàm khi có tranh chấp, nên
+ * bàn khác vừa nhập vào sẽ được đọc lại chứ không bị đè.
+ *
+ * @returns tài liệu lượt sau khi ghi
+ */
+export async function joinRound({ tableId, actId, teamId, teamName, type, options }) {
+  if (!teamId) return null;
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, ROUND_DOC);
+  return runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    const server = normRound(snap.exists() ? snap.data() : {});
+    const now = Date.now();
+    const reusable = !!server.roundId
+      && server.tableId === String(tableId || "")
+      && server.actId === String(actId || "")
+      && server.phase === "ready"
+      && (now - server.at) < ROUND_TTL_MS;
+    const next = reusable
+      ? { ...server, at: now, boards: { ...server.boards } }
+      : {
+          roundId: mintRoundId(),
+          tableId: String(tableId || ""), actId: String(actId || ""),
+          std: { type: String(type || ""), options: options || {} },
+          stdBy: me, phase: "ready", at: now, boards: {}
+        };
+    next.boards[me] = {
+      teamId: String(teamId), teamName: String(teamName || ""),
+      ready: stdSignature(type, options) === stdSignature(next.std.type, next.std.options),
+      at: now
+    };
+    next.updatedAt = now;
+    const node = normRound(next);
+    tx.set(ref, clean(node));
+    return node;
+  });
+}
+
+/**
+ * NÚT CANCEL: rút bàn này ra khỏi phòng chờ. Thầy chốt — **chỉ rút mình**, các bàn khác
+ * vẫn chờ. Đó cũng là lý do nút được vẽ bé và mờ: hậu quả nhỏ, nhưng bấm nhầm giữa lúc
+ * cả lớp đang chờ thì phiền cho mọi người.
+ *
+ * ⚠️ KHÔNG đụng gì ngoài hàng của chính mình, và KHÔNG xoá cả tài liệu kể cả khi mình là
+ * bàn cuối rời đi: `std` phải sống sót để bàn quay lại vẫn khớp đúng bản chuẩn cũ.
+ */
+export async function leaveRound() {
+  const uid = await requireUid();
+  const me = browserId();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, ROUND_DOC);
+  return runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return null;
+    const server = normRound(snap.data());
+    if (!server.boards[me]) return server;
+    const boards = { ...server.boards };
+    delete boards[me];
+    const node = normRound({ ...server, boards, updatedAt: Date.now() });
+    tx.set(ref, clean(node));
+    return node;
+  });
+}
+
+/**
+ * ĐỦ ĐỘI RỒI — lật lượt sang "starting".
+ *
+ * ⛔⛔ MỌI BÀN ĐỀU GỌI HÀM NÀY, VÀ ĐÓ LÀ CHỦ Ý. Không có bàn nào làm trọng tài (Showdown
+ * chưa bao giờ có), nên mỗi bàn tự nhìn cùng một tài liệu và tự kết luận "đủ rồi". Cái
+ * giữ cho nó không loạn là ĐIỀU KIỆN TRONG GIAO DỊCH: chỉ lật khi lượt còn đúng
+ * `roundId` VÀ còn ở pha "ready". Bàn thứ hai gọi tới sẽ đọc thấy "starting" và không ghi
+ * gì — nên dù năm bàn cùng gọi trong một nhịp, đúng MỘT lần ghi hạ cánh.
+ * ⚠️ Trả `null` khi không lật (đã có bàn khác lật, hoặc lượt đã đổi) — chỗ gọi coi đó là
+ * chuyện bình thường, không phải lỗi.
+ */
+export async function flipRoundStarting(roundId) {
+  if (!roundId) return null;
+  const uid = await requireUid();
+  const [d, { doc, runTransaction }] = await Promise.all([db(), fs()]);
+  const ref = doc(d, `users/${uid}/items`, ROUND_DOC);
+  return runTransaction(d, async tx => {
+    const snap = await tx.get(ref);
+    if (!snap.exists()) return null;
+    const server = normRound(snap.data());
+    if (server.roundId !== String(roundId) || server.phase !== "ready") return null;
+    const node = normRound({ ...server, phase: "starting", at: Date.now(), updatedAt: Date.now() });
+    tx.set(ref, clean(node));
+    return node;
+  });
+}
+
+/**
+ * Nghe phòng chờ. Trả hàm gỡ (no-op nếu không mở được — bàn đó sẽ đứng ở "NO CONNECTION"
+ * và thầy bấm cancel để chơi một mình, chứ không im lặng chờ mãi).
+ */
+export function subscribeRound(onChange) {
+  let stop = null, dead = false;
+  (async () => {
+    try {
+      const uid = await requireUid();
+      const [d, { doc, onSnapshot }] = await Promise.all([db(), fs()]);
+      if (dead) return;
+      stop = onSnapshot(doc(d, `users/${uid}/items`, ROUND_DOC),
+        snap => onChange(normRound(snap.exists() ? snap.data() : {})),
+        () => { /* mạng/quyền — giữ nguyên cái đang có */ });
+    } catch { /* đã đăng xuất: không có gì để nghe */ }
+  })();
+  return () => { dead = true; if (stop) { try { stop(); } catch { /* đã gỡ */ } } };
 }

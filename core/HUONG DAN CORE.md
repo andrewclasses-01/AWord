@@ -1000,6 +1000,107 @@ lúc hạ cánh là hai tiếng cho một lỗi.
 
 ---
 
+## ⭐⭐⭐ PHÒNG CHỜ SHOWDOWN — CẢ LỚP CÙNG BẮT ĐẦU MỘT LƯỢT (Đợt 261, 25/8/2026)
+
+Trong Showdown, **START không vào ván ngay**: nó vào phòng chờ, và ván chỉ khởi động khi
+**mọi đội đang giữ gạch** đều đã sẵn sàng **và** đều đang chơi ĐÚNG một bộ dữ liệu.
+
+⚠️ **ĐI QUA FIRESTORE, KHÔNG QUA CẦU myActivity** (thầy chốt). `window.__awordBridge` chỉ
+nối các CỘT trong một cửa sổ myActivity; Firestore nối mọi máy trong lớp, kể cả máy tính
+bảng của học sinh. Đó là toàn bộ lý do đợt này tồn tại.
+
+### Tài liệu và hợp đồng
+
+`users/{uid}/items/sd_round`, kind `showdown-round` — **một tài liệu cho cả lớp**, vì luật
+Firestore chỉ mở đúng `users/{uid}/items` và mọi thứ trong Showdown đã theo nếp "id tài liệu
+SUY RA ĐƯỢC" để không cần composite index.
+
+```
+{ roundId, tableId, actId, std: { type, options }, stdBy,
+  phase: "ready" | "starting", at,
+  boards: { [browserId]: { teamId, teamName, ready, at } } }
+```
+
+- **Bàn ĐẦU TIÊN bấm START chốt `std`** (thầy chốt). Không có host, không phải thiết lập gì.
+- `phase: "starting"` là **trạng thái CUỐI** — không bao giờ về lại `ready`. Cùng với ba cửa
+  khác (khác `actId`, khác `tableId`, quá TTL 3 giờ), đó là thứ bảo đảm "Start again" luôn mở
+  một lượt MỚI.
+- **Không có trọng tài.** Mọi bàn cùng gọi `flipRoundStarting(roundId)`; điều kiện trong giao
+  dịch (đúng `roundId` + còn `ready`) cho **đúng một** lần ghi hạ cánh.
+- `ready` **tính TRONG giao dịch**, không nhận từ chỗ gọi: chỗ gọi chỉ biết bản chuẩn nó đọc
+  được lần cuối, mà chuẩn có thể vừa bị đúc lại giữa hai nhịp.
+
+### Ba luật dễ làm sai
+
+**1. `stdSignature()` phải SẮP KHOÁ.** `JSON.stringify` giữ thứ tự CHÈN, mà thứ tự chèn của
+`activity.options` phụ thuộc đường nào đã ghi vào nó (Apply · bridge · migrate · bản lưu).
+Hai bàn có ĐÚNG cùng giá trị vẫn ra hai chuỗi khác nhau ⇒ vòng `LOADING DATA…` quay mãi. Bỏ
+`undefined`/`null` cũng vì thế: "không có khoá" và "khoá bằng null" là cùng một trạng thái
+chơi nhưng khác chuỗi.
+
+**2. Đếm ĐỘI, không đếm BÀN** (`roundMissingTeams`). Một đội có thể mở trên hai máy; nó vẫn
+là MỘT đội. Đếm theo bàn thì con số "3/4" nhảy lung tung mà không ai hiểu vì sao.
+
+**3. `sdLobbyResume` (tầng module) là sợi dây DUY NHẤT nối hai mount.** Kéo chuẩn về = dựng
+lại ván = mọi biến trong closure của `startGame()` sinh ra mới. Không có nó thì bàn vừa kéo
+chuẩn xong hiện lại màn READY bình thường **trong khi tên nó vẫn nằm trong lượt** — cả lớp
+chờ một bàn đã quên mất là mình đang được chờ. Nó còn chở bộ đếm chặn vòng lặp không hội tụ.
+
+### ⛔⛔⛔ BẪY TDZ — hàm gọi ĐỒNG BỘ trong thân `startGame()`
+
+`enterLobby()` được gọi **đồng bộ ngay trong thân `startGame()`** (nhánh vào lại phòng chờ).
+`let torndown` vốn khai ~470 dòng **phía dưới**, và điều đó an toàn suốt 260 đợt vì file này
+ghi rõ hai lần rằng "mọi thứ đọc nó đều là lời gọi lại chạy SAU khi startGame() xong". Phòng
+chờ là thứ đầu tiên phá vỡ giả định ấy ⇒ **ReferenceError vì vùng chết tạm thời**.
+
+⛔ **Và nó hỏng theo kiểu tệ nhất**: lỗi ném ra bên trong một chuỗi `.then()` đã có `.catch()`
+nên **không có một chữ nào trên console** — bàn chỉ đứng im ở "JOINING…" mãi mãi.
+
+⇒ **LUẬT**: hàm nào có thể bị gọi **đồng bộ** trong thân `startGame()` thì mọi biến `let` nó
+đọc phải khai **TRƯỚC** nó. Đừng tin câu "chỉ chạy sau khi mount xong" — hãy kiểm lại xem câu
+đó còn đúng không mỗi lần thêm một đường gọi mới. `torndown` nay khai ngay trên khối phòng chờ.
+
+### ⚠️ Và một luật về THỨ TỰ MỞ KHOÁ
+
+`onRound()` chạy **bên trong** chuỗi `.then()` của `joinNow()`, tức **trước** `.finally()`.
+Nên cờ bận (`lobbyBusy`) phải mở **trước** khi gọi `onRound`, không phải trong `.finally()` —
+nếu không, cú `joinNow()` mà chính `onRound` gọi lại sẽ gặp cờ bận và lặng lẽ quay đầu. Cùng
+họ với bẫy TDZ ở trên: hai nửa đều đúng khi nhìn riêng.
+
+### ⚠️ Bàn thử cho thứ nhiều-máy
+
+Một trang chỉ có MỘT `browserId` (sessionStorage), nên không mount được hai bàn thật. Dựng
+"bàn thứ hai" **ở TẦNG DỮ LIỆU** — ghi thẳng hàng của nó vào `sd_round` của Firestore giả.
+Đó đúng là thứ một máy khác trong lớp làm.
+
+⛔ **Và đừng đo trạng thái ngắn bằng nhịp dò.** `LOADING DATA…` sống vài mili-giây rồi bị cú
+dựng lại ván xoá; nhịp 50ms trượt qua và bàn thử kết luận "không hề có". Dùng
+`MutationObserver` — **nhưng phải đọc từ `addedNodes` của bản ghi thay đổi, không query lại
+DOM**: callback của nó là microtask chạy ở CUỐI tác vụ, mà trong chính tác vụ đó ván đã dựng
+lại xong. Máy quay đọc hiện tại = máy quay chỉ ghi được cái kết, không ghi được đường đi.
+
+---
+
+## ⛔⛔ BALANCE QUESTIONS ĐÃ BỊ GỠ KHỎI APP (Đợt 261)
+
+`applyBalance()` không còn tồn tại. Cơ chế công bằng duy nhất nay là **`Count`**: mỗi em đúng
+N câu, N là con số thầy gõ ⇒ giống nhau ở mọi bàn **mà không cần bàn nào thoả thuận với bàn
+nào**. Balance chia cho `maxTeam` — một con số phải khớp giữa mọi bàn, và đúng chỗ đó đã vỡ ở
+Đợt 260 ("cùng số người mà bàn 100 câu bàn 50 câu").
+
+- `tpl.sdDeal` nay bật cho **8/11** game có Showdown. ⛔ Ba game bàn-chơi (Crossword · Open
+  the box · Find the match) **CẤM vĩnh viễn**: mảng câu của chúng CHÍNH LÀ cái bàn.
+- ⚠️ **Không có bộ chuyển đổi cho act cũ**, và đó là quyết định: N của Balance phụ thuộc
+  `maxTeam`, thứ chỉ tồn tại trong pick lúc chơi chứ không nằm trên act. Bịa một N lúc migrate
+  là bịa ra một bài khác. Act cũ còn cờ `balanceQuestions` nay chơi **đủ độ dài**; cờ đó là
+  rác vô hại.
+- ⚠️ **`showdownPick.maxTeam` nay KHÔNG CÒN DÒNG NÀO ĐỌC.** Vẫn được đóng dấu (một sự thật về
+  bảng đội) nhưng đã rời khỏi phép so "ảnh chụp đội có cũ không" — đội KHÁC đổi cỡ không còn
+  đổi một câu nào của bàn này, nên cảnh báo vì nó là cảnh báo giả.
+- ⛔ Thêm tuỳ chọn chỉ-Showdown nào nữa thì thêm tên nó vào `SD_PLAN_KEYS` (core/showdown.js).
+
+---
+
 ## ⛔⛔⛔ BRIDGE myActivity — SINGLETON LÀ MỘT BỨC TƯỜNG CHÉP TAY (Đợt 260, 25/8/2026)
 
 **Thêm phương thức cho `_setCurrent(delegate)` mà quên chép một dòng sang SINGLETON thì tính năng
@@ -1064,7 +1165,7 @@ giả trên màn lớp học là thứ thầy sẽ tắt sau hai buổi, kéo th
 | Chế độ | Mỗi em được | Có tự hứa "mọi em bằng nhau"? |
 |---|---|---|
 | `count` | đúng N câu | **CÓ, và không cần bảng nào thoả thuận với bảng nào** |
-| `balance` | `floor(tổng ÷ maxTeam)` | CÓ, **nhưng chỉ khi mọi bảng đồng ý về `maxTeam`** |
+| ~~`balance`~~ | ~~`floor(tổng ÷ maxTeam)`~~ | ⛔ **ĐỢT 261 ĐÃ GỠ KHỎI APP** — xem mục riêng ở trên |
 | `free` | trần `SD_FREE_CAP` | có, nhưng tay người bấm Submit mới quyết con số cuối |
 | `normal` | `tổng ÷ số em đội mình` | **KHÔNG** — đội nhỏ được nhiều câu hơn đội to |
 
@@ -1073,7 +1174,9 @@ giả trên màn lớp học là thứ thầy sẽ tắt sau hai buổi, kéo th
 ### `md` đọc từ Ô TÍCH, không phải từ "phép cắt có thật sự chạy không"
 
 ⛔⛔ Bản đầu của Đợt 260 làm ngược lại — nghe trung thực hơn — và **tính ra số liệu thì nó hỏng đúng
-ca của thầy**: act 100 câu, đội 5 em, Balance có tích ⇒ bảng `maxTeam 5` cho `floor(100/5)=20`, cắt
+ca của thầy** (⚠️ đoạn dưới là LỊCH SỬ: `balance` đã bị gỡ ở Đợt 261, giữ lại vì bài học về
+"đọc luật hay đọc hệ quả" vẫn còn nguyên giá trị): act 100 câu, đội 5 em, Balance có tích ⇒
+bảng `maxTeam 5` cho `floor(100/5)=20`, cắt
 ra vẫn 100 nên `applyBalance` **tự đứng xuống** ⇒ "cái chạy thật" là `normal`; bảng `maxTeam 10` cắt
 còn 50 ⇒ `balance`. Hai bảng khai hai chế độ khác nhau ⇒ màn hình khuyên *"check Options"* trong khi
 Options hai bên giống hệt nhau và thứ sai là bảng đội. **Lời khuyên sai còn tệ hơn im lặng.**
@@ -1087,7 +1190,8 @@ Options hai bên giống hệt nhau và thứ sai là bảng đội. **Lời khu
   `publishMyPlan()` ghi chúng — transaction, **chỉ chạm `claims`**, **chỉ hàng của chính mình**,
   và **không ghi khi không đổi gì** (mọi `replayCurrent` gọi lại nó).
   `stampPickFromTable()` đóng dấu lại pick bằng bảng đội **của server**, chạy **SAU** `publishTable`.
-- `core/engine.js`: `sdPlan` chốt **ngay sau** `activity = applySdDeal(applyBalance(activity))` — sớm
+- `core/engine.js`: `sdPlan` chốt **ngay sau** `activity = applySdDeal(activity)` (Đợt 261 gỡ
+  `applyBalance` khỏi dòng đó) — sớm
   hơn một dòng là đo bản chưa cắt, muộn hơn là đã có template nhìn thấy nó.
 
 ⭐ **KHÔNG dựng tài liệu Firestore mới, KHÔNG thêm listener nào.** Engine đã mở `subscribeSetup()`
@@ -1107,7 +1211,8 @@ là ca 50/100, bắt được **trước khi** nó kịp thành lệch.
 
 ### ⚠️ 5 tuỳ chọn Showdown là key PER-VIEW mà Settings không bao giờ dựng
 
-`balanceQuestions · sdDeal · sdDealCount · roundTimer · roundSeconds` không nằm trong
+`sdDeal · sdDealCount · roundTimer · roundSeconds` (⚠️ Đợt 261 đã bỏ `balanceQuestions` khỏi
+danh sách này cùng lúc gỡ tính năng) không nằm trong
 `VIEW_SELECTOR_KEYS` hay `VIEW_ACT_KEYS` ⇒ **per-view**. Mà `buildOptionsBody` chỉ dựng chúng khi
 caller truyền `showdown: true`, và **Settings ▸ Default activity options cố ý không truyền**. Nên
 một view chưa từng ghé được gieo từ Settings defaults là gieo ra bộ **thiếu cả 5** ⇒ Apply phát
@@ -1340,7 +1445,9 @@ không lộ gì và `.aw-sd-recent` (khung ngoài) báo 0 tràn — đúng họ 
 cấp lên grid. `minmax(0, 1fr)` là vé để một cột thật sự được PHÉP co lại bằng đúng phần được chia.
 
 **(g) Ô QUESTIONS ở màn chọn lớp — `left` LÀ CỦA ĐỘI ÍT NGƯỜI NHẤT.**
-`each = q ÷ đội ĐÔNG nhất` (đúng phép chia `applyBalance` của engine — đổi nó là đổi luật chơi);
+`each = q ÷ đội ĐÔNG nhất` (⚠️ Đợt 261 — `applyBalance` ĐÃ GỠ, nên ô QUESTIONS trên màn chọn lớp
+nay đọc là **"nhiều nhất mỗi em có thể được"** chứ không còn là con số Balance sẽ chia; phép tính
+giữ nguyên vì trần đó vẫn đúng);
 `left = q − each × đội ÍT NGƯỜI nhất` (thầy: *"số câu hỏi tối đa bị bỏ lại"*). Bản cũ đo `left` ở đội
 ĐÔNG nhất, tức `q mod biggest`, nên nó **không thể lớn hơn sĩ số đội đông nhất** — 18 em/4 đội/95 câu
 báo "0 left" trong khi hai đội 4 em mỗi đội vứt 19 câu.
