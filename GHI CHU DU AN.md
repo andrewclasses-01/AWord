@@ -3,6 +3,17 @@
 Web game tiếng Anh (giống Wordwall), chơi trên trình duyệt, sẽ đẩy lên GitHub.
 Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp hạng.
 
+> ### ➡️ PHIÊN MỚI / MÁY MỚI BẮT ĐẦU TỪ ĐÂU
+> 1. **`APP_MASTER.md` mục `0a. HỒ SƠ BÀN GIAO`** — trạng thái hôm nay, bản đồ vùng vừa động
+>    tới, danh mục bàn thử, quy trình kiểm bản live, và **mục `4. ⬜ VIỆC ĐANG CHỜ`** (mọi thứ
+>    còn treo đều chờ tay/mắt thầy — **không có việc code dang dở**).
+> 2. **File này** — chi tiết từng chặng, mới nhất ở TRÊN CÙNG. Mỗi chặng có mục
+>    `VIỆC ĐANG CHỜ` riêng.
+> 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
+>    ĐỌC TRƯỚC KHI SỬA CODE.
+>
+> Mới nhất: **Đợt 263** (25/8/2026, code `b58ab42` + hồ sơ `1117c66`, ĐÃ LIVE).
+
 ---
 
 ## Đợt 263 (25/8/2026) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN MÀN READY** · ⭐⭐⭐ **HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"**

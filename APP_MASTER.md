@@ -4232,9 +4232,95 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật 24/8/2026 sau **Đợt 256 + 257** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **25/8/2026 sau Đợt 263** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (25/8/2026 — sau Đợt 258)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (25/8/2026 — sau **cụm SHOWDOWN 259 → 263**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`1117c66`** (hồ sơ Đợt 263) trên code **`b58ab42`** — đã push + LIVE kiểm chứng |
+> | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
+> | Kiểm live | Pages `built` đúng `1117c66` · **5/5 mã băm SHA-256 khớp** · **35/35 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot263-live.html` 25/25 + `dot263-live-apply.html` 10/10) |
+> | Vùng vừa động tới | **SHOWDOWN** — `core/engine.js` · `core/showdown.js` · `core/showdown-setup.js` · `core/showdown-history.js` · `core/app.css`. Cửa **Options ▸ Apply** đổi hành vi cho MỌI chế độ, không riêng Showdown |
+> | Trước đó | Đợt 258 KHUNG ACT (`9a80d4e`) · Đợt 256 ĐIỂM PHẠT BAY · Đợt 259 Crossword FIGHT |
+> | Luật Firestore | **KHÔNG cần đăng lại** — cả cụm chỉ dùng `users/{uid}/items`, id tài liệu SUY RA ĐƯỢC, không `where()`, không composite index |
+> | Việc code dang dở | **KHÔNG CÓ.** Mọi thứ còn treo đều chờ **tay/mắt thầy** — xem mục ⬜ ngay dưới |
+>
+> ### 🗺️ CỤM SHOWDOWN 259 → 263 GỒM GÌ (đọc trước khi đụng vào Showdown)
+>
+> **Bốn tài liệu Firestore, tất cả trong `users/{uid}/items`:**
+>
+> | Tài liệu | Việc | Ai đọc |
+> |---|---|---|
+> | `sd_main` | bảng đội · **gạch (claims)** · `tableId` · roster · kế hoạch số câu mỗi bảng tự khai (`md`/`n`/`tt`, Đợt 260) | panel Showdown · màn READY · **hàng ô tích** |
+> | `sd_round` | ⭐ **PHÒNG CHỜ** (Đợt 261): `roundId` · `std` (dữ liệu chuẩn) · `phase` ready→starting · `boards{browserId → {teamId, ready}}` | phòng chờ · **hàng ô tích (Đợt 263)** · tên trận (Đợt 262) |
+> | `sd_results` | bảng điểm SỐNG của lượt đang chơi (ghi merge theo khoá đội) | màn Show answers ▸ SHOWDOWN |
+> | `sd_hist_<lớp>_<YYYYMM>` + `_idx` | SỔ CÁI lâu dài, **một trận = `tableId \| roundKey \| roundId`** (Đợt 262) | SHOWDOWN home |
+>
+> **Ba tính năng mới của cụm, và luật sống của chúng:**
+> 1. **PHÒNG CHỜ** (Đợt 261) — START không vào ván ngay; bàn ĐẦU TIÊN bấm chốt `std`; **không có
+>    trọng tài** (mọi bàn cùng gọi `flipRoundStarting`, điều kiện trong giao dịch cho đúng một lần
+>    hạ cánh); `stdSignature` **phải sắp khoá**, không thì vòng LOADING DATA quay mãi.
+> 2. **TÊN TRẬN = LƯỢT** (Đợt 262) — `playNo` (bộ đếm per-cột) đã **bỏ hẳn**. Bàn không qua phòng
+>    chờ (solo · bấm ✕ · mất mạng) mang id **`alone_…`** và có **ô riêng** trong sổ.
+> 3. **HÀNG Ô TÍCH** (Đợt 263) — `.aw-sd-readyrow`, con của `playOverlay` nên **một phần tử phục vụ
+>    cả màn READY lẫn phòng chờ**; `pointer-events: none` **là thứ chịu lực** (hộp trải hết đáy
+>    màn, ngay trên nút ✕ của phòng chờ).
+>
+> ### ⛔⛔ NĂM LUẬT BẮT BUỘC KHI SỬA TIẾP VÙNG NÀY
+> 1. **Options ▸ Apply nay LUÔN dựng lại ván** (Đợt 263, bỏ hẳn danh sách ngoại lệ của Đợt 174).
+>    Thêm tuỳ chọn đọc-lúc-mount thì **không phải làm gì cả** — đó là điểm của cách vá. ⛔ Đừng
+>    "tối ưu" bằng cách dựng lại có điều kiện: đó chính là con bọ thầy báo 25/8.
+> 2. **TDZ**: hàm bị gọi ĐỒNG BỘ trong thân `startGame()` thì mọi `let/const` nó đọc phải khai
+>    TRƯỚC nó. Đã cắn 2 lần (`torndown` Đợt 261, `sdLobbyOn` Đợt 263) và **cả hai lần đều im lặng**
+>    vì lỗi rơi vào `.catch()`.
+> 3. **Một phép đo, một chỗ**: hàng ô tích hỏi đúng `claimIsLive` mà phòng chờ dùng; `ROUND_TTL_MS`
+>    nằm ở `core/showdown.js` (file thuần) và `showdown-setup.js` nhập lại. Hai bản sao của một con
+>    số là hai con số sẽ cãi nhau trên cùng một màn hình.
+> 4. **`core/showdown.js` phải THUẦN** — engine nhập tĩnh nên trang học sinh cũng tải nó. Mọi thứ
+>    chạm Firestore nằm ở `core/showdown-setup.js` (nhập ĐỘNG).
+> 5. **Thêm phương thức cho cầu myActivity thì phải chép tay sang SINGLETON** `window.__awordBridge`
+>    (bài học Đợt 260 — quên là tính năng không tồn tại, không lỗi, không cảnh báo).
+>
+> ### 🧪 BÀN THỬ CỦA CỤM (chạy: `python devserver.py 5662` rồi mở `localhost:5662/scratch/<tên>`)
+> | Bench | Đo gì | Điểm |
+> |---|---|---|
+> | `dot261-lobby.html` | phòng chờ đầy đủ (bàn thứ hai dựng ở TẦNG DỮ LIỆU) | 53/53 |
+> | `dot262-matchid.html` | tên trận = roundId · trận cũ vẫn đọc được · **nối dây thật** | 33/33 |
+> | `dot263-applyready.html` | **cửa Apply trên màn READY** (sinh ra lúc còn đỏ 4/10) | 10/10 |
+> | `dot263-readyrow.html` | hàng ô tích + `elementFromPoint` chứng minh nút ✕ vẫn bấm được | 25/25 |
+> | `dot260-plan.html` | số câu phải khớp giữa các bảng | 52/52 |
+> | `dot256-smoke.html` | hồi quy 11 template có trừ điểm (kết quả ở **tiêu đề tab**) | 48/48 |
+> | `dot263-visual.html` | **dựng cảnh để NHÌN** (`?state=ready` · `?state=lobby`) | — |
+> | `dot26x-live*.html` | cùng bench nhưng nạp module từ `aword.andrewclasses.com` | — |
+> ⚠️ `dot219-recent` / `dot224-recent` là bench **thủ công** (không có `__benchDone`); lỗi
+> `backOk.click()` ở mục E của `dot224` là **có sẵn**, đã đối chứng bằng `git stash`.
+>
+> ### ✅ QUY TRÌNH KIỂM BẢN LIVE (làm đúng 4 bước này, đừng tin mã 200)
+> 1. `gh api repos/andrewclasses-01/AWord/pages/builds/latest --jq '{status,sha:.commit}'` → phải
+>    **`built`** và **đúng commit của mình** (lần kiểm đầu thường trả `building`).
+> 2. So **mã băm SHA-256**: băm `git show HEAD:<path>` với bản tải từ `aword.andrewclasses.com`.
+>    ⛔ **KHÔNG băm file trên đĩa** — `core.autocrlf=true` nên đĩa là **CRLF** còn Pages phục vụ
+>    **LF** ⇒ lệch băm oan 100% số file.
+> 3. Chạy bench bản live (`dot26x-live.html`): importmap chỉ tráo `core/firebase.js`, còn lại nạp
+>    thẳng từ tên miền live.
+> 4. Đếm tài nguyên live bằng `e.name.includes(host)` — ⛔ `indexOf(host) === 0` luôn ra **0** vì
+>    URL mở đầu bằng `https://`.
+>
+> ### ⛔⛔ BỐN BẪY ĐO CỦA ĐỢT 263 (cả bốn là PHÉP ĐO SAI, không phải app sai)
+> 1. ⭐⭐ **Sân khấu TRÔI giữa hai phép đo**: mỗi `say()`/`check()` chèn chữ vào khối `<pre>` phía
+>    trên ⇒ sân khấu tụt vài chục pixel ⇒ `elementFromPoint` bắn trượt và bench **tố oan "nút ✕ bị
+>    che"**. ⇒ **Đo hình học rồi bắn tia phải LIỀN NHAU.**
+> 2. `elementFromPoint` trả **`null`** khi điểm ngoài khung nhìn — `null` ≠ "bị che", mà là "không
+>    đo được". Phải `scrollIntoView` + kiểm điểm trong viewport trước.
+> 3. **Script sửa file báo "ok" nhưng bỏ sót phép thay** (chuỗi mốc không khớp ⇒ im lặng bỏ qua)
+>    ⇒ một biến không bao giờ được gán ⇒ tính năng **không bao giờ chạy**. ⇒ **`grep` lại file kết
+>    quả**, đừng tin dòng thông báo của script.
+> 4. Chờ "có gạch" thay vì "gạch **có số**" ⇒ `waitFor` thoát trước khi dữ liệu kịp ghi.
+>
+> ---
+>
+> ### 🟡 TRẠNG THÁI CỦA ĐỢT 258 (giữ lại — vùng KHUNG ACT vẫn còn nguyên giá trị)
 >
 > | | |
 > |---|---|
@@ -4989,7 +5075,50 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 222, 21/8/2026) — ĐÃ LIVE `acd381c`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (cụm SHOWDOWN 259 → 263, 25/8/2026) — ĐÃ LIVE `b58ab42` + hồ sơ `1117c66`.
+> KHÔNG CÒN VIỆC CODE DANG DỞ.** Kho sạch, `main` = `origin/main`. Tất cả những gì còn treo
+> đều **chờ tay/mắt thầy trên máy thật**, và không cái nào chặn cái nào:
+>
+> **A. Đợt 263 — hàng ô tích + cửa Apply** (chi tiết cuối khối Đợt 263 trong `GHI CHU DU AN.md`):
+> 1. ⬜ Đổi Count ở màn READY rồi Apply ⇒ số phải đổi **ngay trên chính cột đó**, và cảnh báo
+>    CHECK OPTIONS phải tắt khi hai bảng đã bằng nhau. *(đây là ca thầy báo 25/8)*
+> 2. ⬜ 3 bàn: bàn nào bấm START thì **ô của bàn đó xanh trên màn của MỌI bàn khác**.
+> 3. ⬜ Nhìn từ cuối lớp 86": ô tích đủ to chưa · chữ TEAM n đọc được không · hàng có thấp quá
+>    hay sát mép quá không.
+> 4. ⬜ Bấm **nút ✕ bé xíu trong phòng chờ bằng ngón tay trên TOMKO** — hàng ô tích nằm ngay
+>    cạnh nó; máy đã đo là không che, nhưng ngón tay thật mới là phép thử cuối.
+>
+> **B. Đợt 262 — tên trận trong sổ cái:**
+> 5. ⬜ 3 bàn cùng lượt chơi xong ⇒ **SHOWDOWN home phải hiện ĐÚNG MỘT ô** có đủ 3 đội; chơi
+>    lại ⇒ ô thứ hai, ô đầu không đổi.
+> 6. ⬜ Một bàn bấm ✕ rồi chơi lẻ ⇒ **ô riêng** (`alone_…`). **Thầy quyết** có chấp nhận được
+>    không. Nếu phiền hơn lợi: cửa mở là ghi thêm chữ nhỏ "played alone" trên ô — ⛔ **không**
+>    quay lại gom bằng phỏng đoán (đó chính là `playNo` vừa bỏ).
+> 7. ⬜ Mở một trận CŨ (trước Đợt 262) ⇒ vẫn xem chi tiết · đổi tên · xoá được như thường.
+>
+> **C. Đợt 261 — phòng chờ:**
+> 8. ⬜ Thử một **máy tính bảng/điện thoại** vào cùng lượt — đây là thứ cầu myActivity không làm
+>    được và là lý do cả cụm đi qua Firestore.
+> 9. ⬜ Cố tình để một bàn khác Options ⇒ bàn đó phải hiện `LOADING DATA…` rồi **tự về đúng số
+>    câu** của bàn chốt chuẩn.
+> 10. ⚠️ **Máy chết giữa lượt** thì cả lớp chờ (thầy chốt "không có đường thoát" trong phòng
+>     chờ). Cửa thoát ĐÃ CÓ SẴN: bảng Showdown ▸ **gỡ gạch của đội đó** (Đợt 217).
+>
+> **D. Món nợ kỹ thuật đã biết, chưa ai đụng:**
+> 11. ⬜ Ba game bàn-chơi (Crossword · Open the box · Find the match) **không có cách chia đều
+>     câu nào** — nối dài mảng câu là đường CẤM với chúng (mảng câu CHÍNH LÀ cái bàn). Cần cho
+>     bảng phân tích thì phải bàn cơ chế khác với thầy.
+> 12. ⬜ `maxTeam` từ Đợt 261 **không còn dòng nào đọc** — dọn được nhưng chưa dọn.
+> 13. ⬜ Ba bench cũ lệch điểm **có sẵn** (`dot250-assign` 58/59 · `dot246-forms` 6/9 ·
+>     `dot253-giao` 16/17) + `dot224-recent` mục E — ai rảnh thì sửa lại bench, **không phải
+>     lỗi app** (đã đối chứng bằng `git stash`).
+>
+> ⛔ **TRƯỚC KHI SỬA TIẾP VÙNG SHOWDOWN**: đọc "🗺️ CỤM SHOWDOWN 259 → 263" và "⛔⛔ NĂM LUẬT
+> BẮT BUỘC" ở mục 0a ngay trên đây — 5 luật đó đều mua bằng một con bọ đã cắn thật.
+>
+> ---
+>
+> ⭐⭐⭐ **Trước đó (Đợt 222, 21/8/2026) — ĐÃ LIVE `acd381c`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
 > Kho sạch, `main` = `origin/main`. **7 file code đã sửa**: `core/fight.js` ·
 > `templates/quiz/quiz.js` · `anagram/anagram.js` · `type-the-answer/type-the-answer.js` ·
 > `true-false/true-false.js` · `find-the-match/find-the-match.js` · `find-the-match/find-the-match.css`.
