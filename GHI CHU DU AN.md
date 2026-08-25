@@ -7,9 +7,17 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 262 (25/8/2026) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT PHÒNG CHỜ, BỎ HẲN `playNo` ĐOÁN MÒ**
 
-> ⬜ **CHƯA COMMIT — chờ thầy duyệt.** Bàn thử `scratch/dot262-matchid.html` **33/33** (có cả
-> ván THẬT chạy qua phòng chờ), hồi quy `dot261-lobby` **53/53** · `dot260-plan` **52/52** ·
-> `dot256-smoke` **48/48**. Sửa **2 file**: `core/showdown-history.js` · `core/engine.js`.
+> ✅ **THẦY DUYỆT · COMMIT `82d677d` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
+> Pages trạng thái **`built`** đúng `82d677d` (`gh api …/pages/builds/latest`, **không tin mã
+> 200**) · **5/5 mã băm SHA-256 khớp** (so **blob của repo** với bản tải từ
+> `aword.andrewclasses.com` — ⚠️ đừng so với file trên đĩa: `core.autocrlf=true` nên đĩa là
+> CRLF còn blob/Pages là LF, sẽ lệch băm oan) · **33/33 phép chạy trên CHÍNH MODULE CỦA BẢN
+> LIVE** (`scratch/dot262-live.html`, **61/62 tài nguyên** nạp từ `aword.andrewclasses.com`,
+> cái còn lại đúng là `fake-firebase.js` cố ý tráo).
+> Bàn thử đĩa `scratch/dot262-matchid.html` **33/33** (có ván THẬT chạy qua phòng chờ), hồi quy
+> `dot261-lobby` **53/53** · `dot260-plan` **52/52** · `dot256-smoke` **48/48**.
+> Sửa **2 file code**: `core/showdown-history.js` · `core/engine.js`.
+> ⬜ **CÒN CHỜ THẦY TEST TAY NHIỀU MÁY** — 4 mục ở cuối chặng này.
 
 ### YÊU CẦU
 
@@ -120,8 +128,13 @@ nguyên trên bản chưa sửa (git stash) ⇒ trôi selector từ đợt cũ, 
   3. Một bàn bấm ✕ rồi chơi một mình ⇒ **ô riêng** — thầy nhìn xem có chấp nhận được không (xem
      mục "HỆ QUẢ HÀNH VI DUY NHẤT ĐỔI" bên trên).
   4. Mở một trận CŨ (trước đợt này) ⇒ vẫn xem chi tiết, đổi tên, xoá được như thường.
-- ⬜ Sau khi thầy duyệt: commit + push + **kiểm bản live** (mã băm + chạy bench trên module của
-  bản live, đúng nếp `dot26x-live.html`).
+- ✅ **ĐÃ COMMIT + PUSH + KIỂM BẢN LIVE** (`82d677d`) — xem khối đầu chặng. Bàn thử bản live:
+  `scratch/dot262-live.html`.
+- ⛔ **BẪY ĐO MÃ BĂM (mới, ghi để phiên sau khỏi mất giờ)**: so mã băm phải lấy **blob của repo**
+  (`git show HEAD:core/engine.js`) chứ **KHÔNG** lấy file trên đĩa — `core.autocrlf=true` nên đĩa
+  là **CRLF** còn thứ GitHub Pages phục vụ là **LF**, so thẳng là "lệch" oan 100% số file.
+- ⛔ **BẪY ĐẾM TÀI NGUYÊN**: `e.name.indexOf("aword.andrewclasses.com") === 0` trả **0 tài nguyên
+  live** — vì URL bắt đầu bằng `https://`. Phép đo sai, không phải bench sai. Dùng `.includes()`.
 
 ---
 

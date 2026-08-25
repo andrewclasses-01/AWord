@@ -10,8 +10,11 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 262)**.
 >
-> **Đợt 262** (25/8/2026, ⬜ **CHƯA COMMIT — chờ thầy duyệt**) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT
-> PHÒNG CHỜ, BỎ HẲN `playNo`**. Sửa 2 file: `core/showdown-history.js` · `core/engine.js`.
+> **Đợt 262** (25/8/2026, `82d677d`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
+> `built` đúng `82d677d` · **5/5 mã băm SHA-256 khớp** · **33/33 phép chạy trên CHÍNH MODULE
+> CỦA BẢN LIVE** (`scratch/dot262-live.html`, 61/62 tài nguyên nạp từ
+> `aword.andrewclasses.com`)) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT PHÒNG CHỜ, BỎ HẲN `playNo`**.
+> Sửa 2 file: `core/showdown-history.js` · `core/engine.js`.
 >
 > Một trận trong sổ cái nay là **`tableId | roundKey | roundId`** — `roundId` là cái tên do
 > phòng chờ (`sd_round`, Đợt 261) đúc ra và **mọi bàn trong lượt đều đọc được**, nên các bàn
@@ -30,7 +33,13 @@
 > Bàn thử `scratch/dot262-matchid.html` **33/33**, có ván THẬT chạy qua phòng chờ và ⭐⭐ **đã
 > CẮT DÂY THỬ** (`roundId: ""`) ⇒ bench đỏ đúng HAI phép kiểm nối dây rồi xanh lại khi nối — bằng chứng nó thật
 > sự đo. Hồi quy `dot261-lobby` 53/53 · `dot260-plan` 52/52 · `dot256-smoke` 48/48.
-> ⬜ **CHỜ THẦY TEST NHIỀU MÁY** — xem `GHI CHU DU AN.md` Đợt 262 mục cuối.
+> ⬜ **CHỜ THẦY TEST NHIỀU MÁY** (đây là việc DUY NHẤT còn treo của đợt này): 3 bàn cùng lượt ⇒
+> SHOWDOWN home phải hiện **ĐÚNG MỘT ô** đủ 3 đội · chơi lại ⇒ ô thứ hai, ô đầu không đổi · bàn
+> bấm ✕ chơi lẻ ⇒ **ô riêng** (thầy quyết có chấp nhận không) · trận CŨ vẫn xem/đổi tên/xoá được.
+> Chi tiết: `GHI CHU DU AN.md` Đợt 262 mục cuối.
+> ⛔ **Hai bẫy ĐO đã cắn trong đợt này, phiên sau đọc trước khi kiểm bản live**: so mã băm phải
+> lấy **blob của repo** chứ không lấy file trên đĩa (autocrlf: đĩa CRLF, Pages LF) · đếm tài
+> nguyên live bằng `indexOf(host) === 0` luôn ra **0** vì URL mở đầu bằng `https://`.
 >
 > ---
 > **Đợt 261** (25/8/2026, `8e1c6b3`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
