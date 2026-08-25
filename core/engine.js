@@ -62,7 +62,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams } from "./showdown.js";
+import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -427,6 +427,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // never going to share. It DOES write to the durable history — Đợt 197.
   const sdCanPublish = !!showdownPick && showdownPick.teamId !== SOLO_TEAM_ID;
 
+  // ⭐⭐ Đợt 261 — CÓ PHÒNG CHỜ HAY KHÔNG. ⚠️ Đợt 263 DỜI LÊN ĐÂY (vốn nằm ngay trên
+  // khối PHÒNG CHỜ, ~1900 dòng dưới): bộ nghe của HÀNG Ô TÍCH mở ngay trong khối
+  // Showdown bên dưới, tức TRƯỚC chỗ khai cũ — đọc một `const` chưa khai là
+  // ReferenceError vì vùng chết tạm thời, đúng cái đã cắn `torndown` ở Đợt 261 và
+  // hỏng KHÔNG MỘT TIẾNG NÀO vì nó rơi vào một `.catch()`.
+  // ⚠️ KHÔNG ÁP CHO: trang học sinh (`session`), trận Fight (một cặp bàn, không phải
+  // cả lớp), solo (`sdCanPublish`), và mọi chế độ ngoài Showdown.
+  const sdLobbyOn = !!showdownPick && sdCanPublish && !session && !fight;
+  const sdMod = () => import("./showdown-setup.js");
+
   // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — MÁY BỊ GIÀNH MẤT ĐỘI PHẢI DỪNG LẠI.
   // *"Đội bị lấy mất team cũng sẽ báo đã bị giành mất team và buộc dừng game, không
   // cho tiếp tục và yêu cầu phải chọn team để chơi lại."*
@@ -445,8 +455,19 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // chứ không gọi mạng lần nữa: onSnapshot đã bắn về ngay từ nhịp đầu, nên cái ở đây
   // đã là bản mới nhất — thêm một getDoc chỉ tổ để thầy chờ.
   let sdTableLive = null;
+  // ⭐⭐⭐ Đợt 263 — TÀI LIỆU LƯỢT, ĐỌC TỪ NGAY MÀN READY (không đợi bấm START).
+  // Phòng chờ của Đợt 261 chỉ mở bộ nghe SAU khi bấm START, nên trước đó màn READY
+  // hoàn toàn mù: thầy không biết đội nào đã sẵn sàng cho tới khi chính mình bấm.
+  // Hàng ô tích tồn tại để trả lời đúng câu đó, nên nó cần bộ nghe sống từ lúc mount.
+  // ⚠️ BỘ NGHE RIÊNG, không dùng chung với `lobbyStop`: cái kia là tài sản của phòng
+  // chờ (mở lúc nhập lượt, ĐÓNG lúc cất cánh và lúc bấm ✕), còn cái này phải sống suốt
+  // mount — bấm ✕ xong quay lại màn READY thì hàng ô tích vẫn phải chạy. Hai vòng đời
+  // khác nhau thì không được là một biến. Firestore gộp hai listener trên CÙNG một
+  // tài liệu vào một luồng nên cái giá thật sự chỉ là một lời gọi lại thêm.
+  let sdRoundLive = null, sdRoundRowStop = null, sdSetupMod = null;
   if (sdCanPublish) {
     import("./showdown-setup.js").then(mod => {
+      sdSetupMod = mod;   // ⭐ Đợt 263 — hàng ô tích hỏi `claimIsLive` của chính module này
       // `torndown` khai bằng `let` ở dưới xa — an toàn vì lời gọi lại này chỉ chạy sau
       // khi cả startGame() đã chạy xong (cùng lối lập luận với `menuEl` trong idleTick).
       if (torndown) return;
@@ -463,15 +484,32 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         const c = next && next.claims && next.claims[showdownPick.teamId];
         if (c && c.by !== browserId()) showTeamStolen();
         renderSdPlan();
+        renderReadyRow();   // ⭐ Đợt 263 — bảng đội đổi ⇒ số ô trong hàng tích đổi theo
         // ⭐ Đợt 261 — bảng đội vừa đổi thì con số "3 / 4 teams" của phòng chờ cũng phải
         // đổi theo. Hai tài liệu, hai bộ nghe, nhưng MỘT kết luận — nên cú nào động vào
         // cũng phải chạy lại đúng hàm kết luận đó.
         if (lobbyEl && lobbyRound) onRound(lobbyRound);
       });
+      // ⭐⭐⭐ Đợt 263 — hàng ô tích: nghe tài liệu lượt từ ĐÂY, không đợi phòng chờ.
+      if (sdLobbyOn) {
+        sdRoundRowStop = mod.subscribeRound(node => {
+          if (torndown) return;
+          sdRoundLive = node;
+          renderReadyRow();
+        });
+      }
       if (torndown) stopSdClaimWatch();     // ván có thể đã bị dỡ ngay trong lúc chờ nhập
     }).catch(() => { /* offline / signed out — không có kênh nào để nghe, chơi tiếp */ });
   }
   function stopSdClaimWatch() {
+    // ⭐ Đợt 263 — bộ nghe của HÀNG Ô TÍCH đóng CÙNG chỗ này: nó sinh ra trong cùng khối,
+    // sống cùng một vòng đời, và một listener bỏ quên sau màn hình đã chết thì vô hình và
+    // vĩnh viễn (đồng hồ ma của Đợt 131, trong một bộ áo khác).
+    if (sdRoundRowStop) {
+      const stopRow = sdRoundRowStop;
+      sdRoundRowStop = null;
+      try { stopRow(); } catch { /* already gone */ }
+    }
     if (!sdClaimStop) return;
     const stop = sdClaimStop;
     sdClaimStop = null;
@@ -2003,6 +2041,79 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     renderSdPlan();
   }
 
+  // =============================================================
+  // ⭐⭐⭐ Đợt 263 (thầy, 25/8/2026) — HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"
+  // =============================================================
+  // Thầy: *"Khi mỗi đội bấm start (đang ở trong trạng thái READY), thì đều có dữ liệu
+  // đã READY gửi sang các bảng team khác. Màn hình lúc này sẽ hiện 1 hàng gồm các ô
+  // tròn xanh lá để tích khi đội đó sẵn sàng rồi, bên dưới mỗi ô tích có chữ TEAM 1,
+  // TEAM 2… hàng dấu tích này xếp thành 1 hàng đặt ở dưới thấp"*.
+  //
+  // ⭐ KHÔNG CÓ ĐƯỜNG GỬI MỚI NÀO ĐƯỢC VIẾT, và đó là điểm chính của thiết kế này:
+  // "dữ liệu đã READY gửi sang các bảng khác" ĐÃ TỒN TẠI từ Đợt 261 — chính là
+  // `boards` trong `sd_round`, thứ `joinRound()` ghi vào lúc bấm START. Việc duy nhất
+  // còn thiếu là ĐỌC nó sớm hơn một bước và vẽ ra.
+  //
+  // ⚠️ CON CỦA `playOverlay`, KHÔNG PHẢI CỦA `readyCenter` — và đó là lý do MỘT phần
+  // tử phục vụ được CẢ HAI màn thầy nhắc tới:
+  //   • màn READY: `readyCenter` nằm giữa, hàng này nép đáy, không đụng nhau;
+  //   • phòng chờ: `readyCenter` bị ẩn đi và `.aw-lobby` phủ `inset:0` NHƯNG nó
+  //     trong suốt và căn giữa, nên hàng ở đáy vẫn nguyên chỗ, vẫn sống, vẫn cập nhật.
+  // Vẽ hai lần ở hai chỗ là hai bộ luật sẽ trôi khỏi nhau — đúng thứ đã sinh ra
+  // "hai bảng khác nhau có chủ ý" của Đợt 197 mà lần này không có lý do gì để chịu.
+  // ⚠️ `pointer-events: none` (CSS): hộp của nó trải ngang cả đáy màn, mà nút ✕ của
+  // phòng chờ nằm đúng góc dưới-phải. Một tấm che vô hình nuốt cú chạm là ĐÚNG cái bẫy
+  // đã cắn ba lần trong hai dự án — ở đây chặn từ gốc: hàng này để NHÌN, không để bấm.
+  let sdReadyRowEl = null;
+  if (sdLobbyOn) {
+    sdReadyRowEl = el("div", "aw-sd-readyrow");
+    playOverlay.append(sdReadyRowEl);
+  }
+
+  /**
+   * Vẽ lại hàng ô tích. Nguồn: bảng đội (ai đang chơi) + tài liệu lượt (ai đã sẵn sàng).
+   *
+   * ⚠️ CHỈ CÁC ĐỘI CÓ GẠCH CÒN SỐNG, theo ĐÚNG THỨ TỰ trong bảng đội. Hai điều kiện,
+   * hai lý do khác nhau: gạch sống = "đội này thật sự đang có người ngồi" (cùng phép đo
+   * mà phòng chờ dùng để biết còn thiếu ai — hai chỗ hỏi khác nhau thì con số "3/4" và
+   * hàng ô tích sẽ cãi nhau ngay trên một màn hình); thứ tự bảng = ô không bao giờ nhảy
+   * chỗ khi một đội sẵn sàng, thứ sẽ làm cả lớp nhìn nhầm ô của mình.
+   * ⚠️ Chưa biết bảng đội (Firestore chưa trả về) ⇒ KHÔNG VẼ GÌ. "Chưa biết" không được
+   * phép trông giống "chưa ai sẵn sàng".
+   */
+  function renderReadyRow() {
+    if (!sdReadyRowEl || !sdSetupMod) return;
+    const teams = (sdTableLive && Array.isArray(sdTableLive.teams)) ? sdTableLive.teams : null;
+    if (!teams || !teams.length) { sdReadyRowEl.innerHTML = ""; return; }
+    const now = Date.now();
+    const live = teams.filter(t => {
+      const c = sdTableLive.claims && sdTableLive.claims[t.id];
+      // ⚠️ ĐÚNG PHÉP ĐO MÀ PHÒNG CHỜ DÙNG (`claimIsLive`), không tự viết lại ngưỡng:
+      // hai phép đo khác nhau thì con số "3 / 4 teams" và hàng ô tích sẽ cãi nhau
+      // ngay trên cùng một màn hình, và không ai biết bên nào đúng.
+      return !!c && sdSetupMod.claimIsLive(c, now);
+    });
+    if (!live.length) { sdReadyRowEl.innerHTML = ""; return; }
+    const ready = roundReadyTeamIds(sdRoundLive, {
+      actId: showdownRoundKey(), tableId: showdownPick.tableId || "", now
+    });
+    sdReadyRowEl.innerHTML = "";
+    live.forEach(t => {
+      const isOn = ready.has(String(t.id));
+      const cell = el("div", "aw-sd-rt" + (isOn ? " is-on" : ""));
+      const dot = el("div", "aw-sd-rt-dot");
+      // ⚠️ Dấu ✓ dựng SẴN cho mọi ô, chỉ ẩn/hiện bằng CSS: một ô mọc thêm phần tử con
+      // vào đúng lúc nó đổi màu là một ô nhảy cỡ, và cả hàng xô theo.
+      dot.append(el("span", "aw-sd-rt-tick", icons.check));
+      cell.append(dot);
+      // Tên đội THẬT (thầy đặt được tên riêng), viết hoa, cắt gọn trong bề ngang ô.
+      cell.append(el("div", "aw-sd-rt-name", String(t.name || "").toUpperCase()));
+      cell.title = String(t.name || "") + (isOn ? " — ready" : " — not ready yet");
+      sdReadyRowEl.append(cell);
+    });
+  }
+  renderReadyRow();
+
   /**
    * ⛔⛔ HAI TÌNH TRẠNG KHÁC NHAU, VẼ RIÊNG, VÌ CÁCH CHỮA KHÁC NHAU:
    *
@@ -2367,8 +2478,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `let` nó đọc phải khai TRƯỚC nó, đừng tin câu "chỉ chạy sau khi mount xong".
   let torndown = false;   // cleanupAll() bật: ván này đã xong, không gì được khởi động lại
 
-  const sdLobbyOn = !!showdownPick && sdCanPublish && !session && !fight;
-  const sdMod = () => import("./showdown-setup.js");
+  // ⚠️ `sdLobbyOn` + `sdMod` nay khai Ở TRÊN, cạnh `sdCanPublish` — xem ghi chú ở đó.
   // Ba lần là đủ để biết "kéo chuẩn về" không hội tụ. Mỗi lần là một cú dựng lại ván,
   // nên vòng lặp không chặn sẽ là một bàn nhấp nháy mãi mãi giữa giờ dạy.
   const LOBBY_MAX_TRIES = 3;
@@ -4166,35 +4276,37 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // through exactly the same path. It returns true when it has taken the
       // restart over, and then there is nothing left for this Apply to do.
       if (applySubActSelection(selState)) return;
-      // Applying ANY option restarts the current game so it always runs under
-      // the new settings (teacher's call, 1/8/2026 — every template). If the
-      // game hasn't started yet (Play overlay still up), there's nothing to
-      // restart — just apply and close; the options take effect on Play.
-      const playing = playStarted;   // Đợt 216 — see playStarted's own note
-      if (playing) { closeToolPanel(false); replayCurrent(); return; }
-      // ⭐⭐ Đợt 174 — ONE EXCEPTION to "nothing restarts on the READY screen",
-      // and it was a real hole found by testing rather than a precaution.
-      // "Take effect on Play" holds for every option the game READS as it runs.
-      // `roundTimer` is not one: the engine reads it ONCE, at mount, because it
-      // decides where the pupil's name, the whole-game clock and the count-down
-      // bar physically live — and all of that chrome was built before this
-      // READY screen appeared. Applying it here used to leave the old layout AND
-      // a `roundMode` captured as "none", so pressing Play gave no round clock
-      // at all, with nothing on screen saying why. Rebuilding lands back on this
-      // same READY screen, so the only thing the teacher sees is the layout
-      // catching up with what they just chose.
-      // (Only the MODE: the count-down's length is read live by roundTotal(),
-      // so changing the seconds alone never needs this.)
-      if (showdownPick) {
-        const nextMode = ["countUp", "countDown"].includes(activity.options?.roundTimer)
-          ? activity.options.roundTimer : "none";
-        if (nextMode !== roundMode) { closeToolPanel(false); replayCurrent(); return; }
-      }
-      // Đợt 154 — still on the READY screen: nothing restarts, so the title has
-      // to be told that the sub-act under it may have just changed.
-      refreshReadyTitle();
-      toast("Options applied");
-      closeToolPanel(true);
+      // ⭐⭐⭐ Đợt 263 — APPLY LUÔN DỰNG LẠI VÁN. MỘT CỬA, KHÔNG NGOẠI LỆ.
+      //
+      // Trước đợt này: dựng lại CHỈ KHI ván đang chạy, vì "ở màn READY thì chưa có gì
+      // để dựng lại — các tuỳ chọn sẽ có hiệu lực khi bấm Play". Câu đó đúng với mọi
+      // tuỳ chọn mà GAME ĐỌC TRONG LÚC CHẠY, và SAI với mọi thứ engine đọc MỘT LẦN
+      // LÚC MOUNT. Đợt 174 phát hiện đúng cái hố này và chừa cho nó một ngoại lệ tên
+      // `roundTimer`. Rồi Đợt 220 thêm `sdDeal`/`sdDealCount` — cũng đọc một lần lúc
+      // mount (`applySdDeal` chia bài · `sdPlan` chốt kế hoạch · `publishMyPlan` khai
+      // gạch, cả ba ở mount) — mà KHÔNG ai thêm vào ngoại lệ đó.
+      //
+      // ⛔⛔ THẦY BÁO 25/8/2026 (kèm 2 ảnh chụp): hai cột cùng act, Options nhìn GIỐNG
+      // HỆT NHAU, mà một cột vẫn hiện "440 QUESTIONS · 55 EACH" và hai bên tố nhau
+      // "CHECK OPTIONS". Đo được (`scratch/dot263-applyready.html`): sau khi bấm Apply
+      // trên màn READY, dải plan giữ số CŨ, gạch khai lên Firestore giữ số CŨ, và cú
+      // bấm START sau đó chơi ĐÚNG SỐ CŨ ("1 of 25" thay vì "1 of 60").
+      // ⛔ TRỚ TRÊU NHẤT: cột thầy TỰ TAY bấm Apply là cột KHÔNG áp dụng, còn các cột
+      // khác nhận qua cầu myActivity lại áp dụng đúng — vì `__awordBridge.applyOptions`
+      // luôn gọi `replayCurrent()`. Cùng một thay đổi, hai cửa, hai kết quả.
+      //
+      // ⇒ Bỏ hẳn danh sách ngoại lệ thay vì nối dài nó thêm một mục. Một danh sách
+      // "những tuỳ chọn đặc biệt cần dựng lại" là thứ đã sai hai lần trong hai đợt, và
+      // sẽ sai lần thứ ba ngay khi ai đó thêm một tuỳ chọn đọc-lúc-mount nữa mà không
+      // đọc tới đây. Dựng lại luôn thì câu hỏi đó không còn tồn tại.
+      // ⚠️ Dựng lại ở màn READY rơi về ĐÚNG màn READY (đường này đã chạy thật từ Đợt
+      // 174), nên thứ duy nhất thầy thấy là các con số bắt kịp thứ vừa chọn.
+      // ⚠️ Đang ở PHÒNG CHỜ mà Apply thì cú dựng lại rút bàn này khỏi lượt
+      // (`stopLobby` → `leaveRound`) rồi về màn READY — đúng: đổi bài giữa lúc cả lớp
+      // đang chờ mình thì mình phải bấm START lại, chứ không được lặng lẽ mang bộ
+      // options khác vào một lượt đã chốt chuẩn.
+      closeToolPanel(false);
+      replayCurrent();
     };
     footWrap.append(applyBtn);
     panel.append(footWrap);

@@ -6160,6 +6160,67 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-lobby-cancel svg { width: 100%; height: 100%; }
 .aw-lobby-cancel:hover { opacity: .75; }
+/* ---- ⭐⭐⭐ Đợt 263 — HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG" (màn READY **và** phòng chờ) ----
+   Thầy: "1 hàng gồm các ô tròn xanh lá để tích khi đội đó sẵn sàng rồi, bên dưới mỗi ô
+   tích có chữ TEAM 1, TEAM 2… (chữ này bé, bề ngang chỉ bằng nút tích, nút tích có thể
+   hơi lớn một chút), hàng dấu tích này xếp thành 1 hàng đặt ở dưới thấp".
+
+   ⚠️ `position: absolute` chứ KHÔNG phải một con flex nữa của `.aw-play-overlay`:
+   `.aw-ready-center` giữ `margin: auto 0` để tự căn giữa, mà thêm một `margin-top:auto`
+   thứ hai vào cùng trục là chia lại toàn bộ khoảng trống ⇒ màn READY hiện có sẽ TỤT
+   KHỎI chính giữa. Nép tuyệt đối ở đáy thì bố cục cũ không đổi một pixel nào.
+   ⛔⛔ `pointer-events: none` LÀ THỨ CHỊU LỰC, không phải chi tiết làm đẹp: hộp này trải
+   HẾT chiều ngang đáy màn, mà nút ✕ của phòng chờ nằm đúng góc dưới-phải. Không có dòng
+   này thì ✕ **vẫn hiện, vẫn sáng, và bấm không ăn** — đúng cái bẫy đã cắn ba lần trong
+   hai dự án. Hàng này để NHÌN, không để bấm, nên nó không được nhận cú chạm nào.
+   ⚠️ Ô tròn dùng `min-width/min-height` px: sàn NHÌN THẤY từ cuối lớp 86" là một con số
+   vật lý, không co theo khung game (cùng lối nghĩ với sàn chạm 34px của Đợt 260). */
+.aw-sd-readyrow {
+  position: absolute; left: 0; right: 0; bottom: 2.2cqw;
+  pointer-events: none;
+  display: flex; flex-wrap: wrap;
+  align-items: flex-start; justify-content: center;
+  gap: 1.6cqw;
+}
+.aw-sd-rt {
+  display: flex; flex-direction: column; align-items: center; gap: 0.5cqw;
+  /* Bề ngang của CẢ Ô = bề ngang nút tích, đúng như thầy dặn — nên cái tên dài phải tự
+     cắt bớt chứ không được đẩy hàng rộng ra. */
+  width: 5.4cqw; min-width: 44px;
+}
+.aw-sd-rt-dot {
+  width: 5.4cqw; height: 5.4cqw; min-width: 44px; min-height: 44px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: rgba(148,163,184,.10);
+  border: 0.3cqw solid rgba(148,163,184,.45);
+  color: #0f1720;
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+.aw-sd-rt-tick {
+  display: flex; align-items: center; justify-content: center;
+  width: 62%; height: 62%;
+  opacity: 0; transform: scale(.6);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.aw-sd-rt-tick svg { width: 100%; height: 100%; }
+/* SẴN SÀNG — xanh lá đặc, dấu ✓ nảy ra. Cùng bảng màu với chữ READY của phòng chờ, nên
+   hai thứ trên cùng một màn hình nói cùng một ngôn ngữ. */
+.aw-sd-rt.is-on .aw-sd-rt-dot {
+  background: #4ade80;
+  border-color: #4ade80;
+  box-shadow: 0 0 18px 2px rgba(74,222,128,.35);
+}
+.aw-sd-rt.is-on .aw-sd-rt-tick { opacity: 1; transform: scale(1); }
+.aw-sd-rt-name {
+  max-width: 100%;
+  font-size: 1.15cqw; font-weight: 800; letter-spacing: 0.06cqw;
+  line-height: 1.2; text-align: center; text-transform: uppercase;
+  color: #7f8ea0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.aw-sd-rt.is-on .aw-sd-rt-name { color: #4ade80; }
+
 /* ---- ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI (màn READY, trong stage nên cqw) ----
    Bình thường: xám, nhỏ hơn đội hình một bậc — một dòng để ĐỐI CHIẾU, không phải
    một dòng để đọc. Lệch/cũ: cả cụm chuyển hổ phách, đúng màu myActivity v2.8.0 đã

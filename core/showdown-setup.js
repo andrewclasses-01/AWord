@@ -62,7 +62,7 @@ import {
   renderReviewList, renderReviewPodium, renderReviewTable, fitPodiumNames, POD_MAX_W, POD_MIN_W
 } from "./showdown-review.js";
 import {
-  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, stdSignature, browserId, writePick, clearPick,
+  MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, stdSignature, browserId, writePick, clearPick, ROUND_TTL_MS,
   readPendingResult, writePendingResult, clearPendingResult,
   mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
@@ -4240,9 +4240,9 @@ export function buildShowdownPanel(panel, ctx) {
 // Cộng thêm TTL: `phase: "starting"` là trạng thái CUỐI — nó không bao giờ quay lại
 // "ready", nên "Start again" sau ván luôn mở một lượt mới, đúng như thầy mong.
 const ROUND_DOC = "sd_round";
-// Đủ dài để trùm một buổi dạy (một lượt có thể ngồi chờ trong lúc thầy giảng), đủ ngắn
-// để lượt hôm qua không bao giờ đứng chắn buổi sáng nay. Cùng lối nghĩ với CLAIM_TTL_MS.
-const ROUND_TTL_MS = 3 * 60 * 60 * 1000;
+// ⚠️ Đợt 263 — `ROUND_TTL_MS` đã DỜI sang core/showdown.js (file thuần) và nhập từ đó:
+// màn READY của engine cũng phải hỏi "lượt này còn sống không" để vẽ hàng ô tích, mà
+// engine không được chạm vào file Firestore này. Cùng lối nghĩ với CLAIM_TTL_MS.
 
 function normRound(raw) {
   const boards = {};

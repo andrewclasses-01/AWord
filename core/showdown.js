@@ -893,6 +893,44 @@ export function stdSignature(type, options) {
 }
 
 /**
+ * ⏳ MỘT LƯỢT SỐNG ĐƯỢC BAO LÂU. Đủ dài để trùm một buổi dạy (một lượt có thể ngồi chờ
+ * trong lúc thầy giảng), đủ ngắn để lượt hôm qua không bao giờ đứng chắn buổi sáng nay.
+ * ⚠️ Ở ĐÂY chứ không ở core/showdown-setup.js (nơi nó ra đời, Đợt 261): từ Đợt 263 CẢ
+ * MÀN READY cũng phải trả lời "lượt này còn sống không" để vẽ hàng ô tích, mà màn READY
+ * chạy trong engine — file thuần. Hai bản sao của một con số là hai con số.
+ */
+export const ROUND_TTL_MS = 3 * 60 * 60 * 1000;
+
+/**
+ * ⭐⭐⭐ Đợt 263 (thầy, 25/8/2026) — ĐỘI NÀO ĐÃ SẴN SÀNG, ĐỌC TỪ TÀI LIỆU LƯỢT.
+ * Thầy: *"mỗi đội bấm start thì đều có dữ liệu đã READY gửi sang các bảng team khác…
+ * hàng ô tròn xanh lá để tích khi đội đó sẵn sàng rồi"*.
+ *
+ * Trả về `Set` các teamId đang báo sẵn sàng trong lượt NÀY.
+ *
+ * ⛔⛔ BA CỬA LỌC, VÀ CẢ BA ĐỀU BẮT BUỘC — thiếu một cái là hàng ô tích **nói dối**:
+ *   • khác `actId`  ⇒ đó là lượt của một BÀI KHÁC (thầy vừa đổi act, tài liệu lượt cũ
+ *     vẫn nằm nguyên đó vì lượt cũ không bao giờ bị xoá — xem sd_round);
+ *   • khác `tableId` ⇒ bảng đội khác;
+ *   • quá hạn TTL   ⇒ lượt của buổi trước.
+ * Một ô tích xanh SAI còn tệ hơn không có ô nào: thầy sẽ đứng đợi một đội đã sẵn sàng
+ * từ hôm qua.
+ * ⚠️ ĐẾM THEO ĐỘI, KHÔNG THEO BÀN — cùng lý do đã viết ở roundMissingTeams(): một đội
+ * mở trên hai máy vẫn là MỘT đội.
+ */
+export function roundReadyTeamIds(node, { actId = "", tableId = "", now = Date.now() } = {}) {
+  const out = new Set();
+  if (!node || !node.roundId) return out;
+  if (String(node.actId || "") !== String(actId || "")) return out;
+  if (String(node.tableId || "") !== String(tableId || "")) return out;
+  if (now - (Number(node.at) || 0) >= ROUND_TTL_MS) return out;
+  Object.values(node.boards || {}).forEach(b => {
+    if (b && b.ready && b.teamId) out.add(String(b.teamId));
+  });
+  return out;
+}
+
+/**
  * Đội nào CÒN THIẾU — có gạch sống trong bảng đội nhưng chưa có bàn nào báo sẵn sàng.
  *
  * @param liveTeamIds  id các đội đang được giữ gạch (chỗ gọi tự lọc theo TTL)

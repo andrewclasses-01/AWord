@@ -8,8 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **25/8/2026 (Đợt 262)**.
+> Cập nhật lần cuối: **25/8/2026 (Đợt 263)**.
 >
+> **Đợt 263** (25/8/2026, ⬜ **CHƯA COMMIT — chờ thầy duyệt**) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN
+> MÀN READY** và ⭐⭐⭐ **HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"**. Sửa 4 file: `core/engine.js` ·
+> `core/showdown.js` · `core/showdown-setup.js` · `core/app.css`.
+>
+> **(1) Thầy báo (kèm 2 ảnh): hai cột Options GIỐNG HỆT nhau mà vẫn tố nhau "CHECK
+> OPTIONS".** Không phải lỗi đồng bộ — cú **Apply bấm trên màn READY chưa bao giờ có hiệu
+> lực**: `applyBtn` chỉ dựng lại ván khi ván ĐANG CHẠY, và `sdDeal`/`sdDealCount` là thứ
+> **đọc một lần lúc mount** (chia bài · chốt `sdPlan` · khai gạch). Đo được: sau Apply thì
+> dải plan, gạch khai và **cả ván thật sự chơi** đều giữ số CŨ ("1 of 25" thay vì "1 of
+> 60"). ⛔ Trớ trêu: cột thầy TỰ TAY bấm là cột KHÔNG áp dụng, còn các cột nhận qua cầu
+> myActivity lại đúng (`applyOptions` luôn `replayCurrent()`).
+> ⇒ **Bỏ hẳn danh sách ngoại lệ (Đợt 174), Apply LUÔN dựng lại ván** — nối dài danh sách
+> "tuỳ chọn đặc biệt cần dựng lại" đã sai hai lần và sẽ sai lần thứ ba.
+>
+> **(2) HÀNG Ô TÍCH** (thầy xin): mỗi đội một ô tròn, xanh lá + dấu ✓ khi đội đó bấm START,
+> chữ tên đội bé bằng đúng bề ngang ô, xếp một hàng **ở dưới thấp** — hiện ở **CẢ màn READY
+> lẫn phòng chờ**. ⭐ Không viết thêm đường gửi nào: dữ liệu đã có sẵn trong `boards` của
+> `sd_round` (Đợt 261), chỉ cần **nghe từ lúc mount** thay vì đợi bấm START.
+> ⚠️ MỘT phần tử cho cả hai màn (con của `playOverlay`) · `pointer-events: none` **là thứ
+> chịu lực** vì hàng trải ngang đáy màn, ngay trên nút ✕ của phòng chờ · `ROUND_TTL_MS` dời
+> sang `core/showdown.js` để engine hỏi được mà không chạm file Firestore · `sdLobbyOn` dời
+> lên đầu để tránh **TDZ** (bài học Đợt 261).
+>
+> ⛔⛔ **BỐN BẪY ĐO đã cắn, cả bốn đều là PHÉP ĐO SAI chứ không phải app sai** — nặng nhất:
+> mỗi dòng `say()` của bàn thử **làm sân khấu trôi xuống** giữa lúc lấy toạ độ và lúc bắn
+> `elementFromPoint` ⇒ bench tố oan **"nút ✕ bị che"**, suýt đi vá một lỗi không tồn tại.
+> ⇒ Luật: **đo hình học rồi bắn tia phải liền nhau**; và sửa file bằng script thì **grep
+> lại file kết quả**, đừng tin dòng "ok" của chính script.
+>
+> `dot263-applyready` **10/10** (sinh ra lúc còn đỏ 4/10) · `dot263-readyrow` **25/25** ·
+> hồi quy `dot261-lobby` 53/53 · `dot260-plan` 52/52 · `dot262-matchid` 33/33 ·
+> `dot256-smoke` 48/48. ✅ **ĐÃ NHÌN BẰNG MẮT** 2 ảnh (`dot263-visual.html`).
+> ⬜ **CHỜ THẦY TEST TAY NHIỀU MÁY** — xem `GHI CHU DU AN.md` Đợt 263 mục cuối.
+>
+> ---
 > **Đợt 262** (25/8/2026, `82d677d`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
 > `built` đúng `82d677d` · **5/5 mã băm SHA-256 khớp** · **33/33 phép chạy trên CHÍNH MODULE
 > CỦA BẢN LIVE** (`scratch/dot262-live.html`, 61/62 tài nguyên nạp từ

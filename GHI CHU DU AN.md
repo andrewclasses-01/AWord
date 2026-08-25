@@ -5,6 +5,159 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 263 (25/8/2026) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN MÀN READY** · ⭐⭐⭐ **HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"**
+
+> ⬜ **CHƯA COMMIT — chờ thầy duyệt.** `scratch/dot263-applyready.html` **10/10** ·
+> `scratch/dot263-readyrow.html` **25/25** · hồi quy `dot261-lobby` **53/53** ·
+> `dot260-plan` **52/52** · `dot262-matchid` **33/33** · `dot256-smoke` **48/48** ·
+> `index.html` mount sạch. ✅ **ĐÃ NHÌN BẰNG MẮT** 2 ảnh (`dot263-visual.html`).
+> Sửa **4 file**: `core/engine.js` · `core/showdown.js` · `core/showdown-setup.js` ·
+> `core/app.css`.
+
+---
+
+### VIỆC 1 — ⭐⭐⭐ THẦY BÁO: "OPTIONS ĐỒNG BỘ RỒI MÀ VẪN TỐ NHAU"
+
+Thầy gửi 2 ảnh chụp: hai cột cùng act, panel Options **giống hệt nhau** (cả hai Count 50),
+nhưng cột trái vẫn hiện **440 QUESTIONS · 55 EACH** và hai bên tố nhau *"CHECK OPTIONS"*.
+
+**KHÔNG phải lỗi đồng bộ.** Options hai cột giống nhau thật; thứ lệch là **kế hoạch chia
+bài của cột trái vẫn là bản CŨ** — cú Apply thầy bấm trên **chính cột đó** chưa bao giờ có
+hiệu lực. Đo được (`scratch/dot263-applyready.html`, Showdown 5 em, Count 5 ⇒ đổi chế độ ⇒
+Apply, tất cả trên màn READY):
+
+| Đo sau khi bấm Apply | Trước khi vá |
+|---|---|
+| dải plan | **25 QUESTIONS · 5 EACH** (số CŨ) |
+| chế độ dải plan báo | **Mode: Count** (lựa chọn CŨ) |
+| gạch khai lên Firestore | **`{md:"count", n:5, tt:25}`** (số CŨ) |
+| bấm START ⇒ ván thật sự chơi | **"1 of 25"** — đúng số CŨ |
+
+⛔ **ĐỐI CHỨNG NGƯỢC** (thứ biến chẩn đoán thành bằng chứng): **cùng thay đổi đó đi qua cầu
+myActivity** (`__awordBridge.applyOptions`, luôn gọi `replayCurrent()`) thì **ăn ngay** —
+`60 QUESTIONS · 12 EACH`, gạch khai `{normal,12,60}`. ⇒ Sai nằm ở **cửa Apply tại chỗ**,
+không phải ở "màn hình không chịu vẽ lại".
+
+**GỐC BỆNH.** `applyBtn.onclick` chỉ dựng lại ván khi ván ĐANG CHẠY:
+`const playing = playStarted; if (playing) { … replayCurrent(); return; }` — lý do ghi trong
+code là *"ở màn READY chưa có gì để dựng lại, các tuỳ chọn sẽ có hiệu lực khi bấm Play"*.
+Câu đó đúng với mọi tuỳ chọn **game đọc trong lúc chạy**, và SAI với mọi thứ engine **đọc
+một lần lúc mount**. Đợt 174 đã phát hiện đúng cái hố này và chừa cho nó **một ngoại lệ tên
+`roundTimer`**. Rồi Đợt 220 thêm `sdDeal`/`sdDealCount` — cũng đọc một lần lúc mount
+(`applySdDeal` chia bài · `sdPlan` chốt kế hoạch · `publishMyPlan` khai gạch) — **mà không
+ai thêm vào ngoại lệ đó**.
+
+⛔ **TRỚ TRÊU NHẤT, và là lý do lỗi này sống lâu**: cột thầy **TỰ TAY** bấm Apply là cột
+**KHÔNG** áp dụng; các cột khác nhận qua cầu lại áp dụng đúng. Nên nhìn 4 cột thì 3 cột
+đúng, đúng cái cột thầy vừa chạm vào thì sai.
+
+**ĐÃ VÁ: bỏ hẳn danh sách ngoại lệ, Apply LUÔN dựng lại ván.** Không nối dài danh sách thêm
+một mục — một danh sách "những tuỳ chọn đặc biệt cần dựng lại" đã sai hai lần trong hai đợt
+và sẽ sai lần thứ ba ngay khi ai đó thêm một tuỳ chọn đọc-lúc-mount nữa mà không đọc tới
+đây. Dựng lại luôn thì câu hỏi đó **không còn tồn tại** (đây cũng là câu trả lời cho ý thầy
+"quét luôn cả nhóm thay vì chỉ vá hai key"). Dựng lại ở màn READY rơi về ĐÚNG màn READY —
+đường này đã chạy thật từ Đợt 174 — nên thứ duy nhất thầy thấy là các con số bắt kịp.
+⚠️ Đang ở PHÒNG CHỜ mà Apply thì cú dựng lại **rút bàn khỏi lượt** rồi về màn READY: đúng,
+đổi bài giữa lúc cả lớp đang chờ mình thì phải bấm START lại.
+
+---
+
+### VIỆC 2 — ⭐⭐⭐ HÀNG Ô TÍCH: ĐỘI NÀO ĐÃ SẴN SÀNG
+
+Thầy: *"Khi mỗi đội bấm start… đều có dữ liệu đã READY gửi sang các bảng team khác. Màn
+hình lúc này sẽ hiện 1 hàng gồm các ô tròn xanh lá để tích khi đội đó sẵn sàng rồi, bên
+dưới mỗi ô tích có chữ TEAM 1, TEAM 2… (chữ này bé, bề ngang chỉ bằng nút tích, nút tích có
+thể hơi lớn một chút), hàng dấu tích này xếp thành 1 hàng đặt ở dưới thấp"*.
+
+⭐ **KHÔNG VIẾT THÊM ĐƯỜNG GỬI NÀO, và đó là điểm chính**: "dữ liệu đã READY gửi sang các
+bảng khác" **đã tồn tại từ Đợt 261** — chính là `boards` trong `sd_round`, thứ `joinRound()`
+ghi lúc bấm START. Việc còn thiếu chỉ là **đọc nó sớm hơn một bước** và vẽ ra.
+
+- `core/showdown.js` (file THUẦN): + `roundReadyTeamIds(node, {actId, tableId, now})` —
+  **ba cửa lọc bắt buộc** (khác act · khác bảng đội · quá hạn TTL) vì *một ô tích xanh SAI
+  còn tệ hơn không có ô nào*: thầy sẽ đứng đợi một đội đã sẵn sàng từ **hôm qua**.
+  `ROUND_TTL_MS` **dời từ `showdown-setup.js` sang đây** và bên kia nhập lại — màn READY
+  chạy trong engine, mà engine không được chạm file Firestore; hai bản sao của một con số
+  là hai con số.
+- `core/engine.js`: **bộ nghe `sd_round` sống từ lúc mount**, không đợi bấm START (phòng chờ
+  chỉ mở bộ nghe SAU khi bấm, nên trước đó màn READY hoàn toàn mù). ⚠️ **Bộ nghe RIÊNG**,
+  không dùng chung `lobbyStop`: cái kia là tài sản của phòng chờ (đóng lúc cất cánh và lúc
+  bấm ✕), còn cái này phải sống suốt mount — bấm ✕ xong quay lại màn READY thì hàng ô tích
+  vẫn phải chạy. Hai vòng đời khác nhau thì không được là một biến.
+- ⚠️ `sdLobbyOn` + `sdMod` **dời lên cạnh `sdCanPublish`** (~1900 dòng lên trên): bộ nghe mới
+  nằm TRƯỚC chỗ khai cũ ⇒ đọc một `const` chưa khai là **ReferenceError vì TDZ**, đúng cái
+  đã cắn `torndown` ở Đợt 261 và hỏng **không một tiếng nào** vì rơi vào `.catch()`.
+- ⭐ **MỘT phần tử phục vụ CẢ HAI màn**: `.aw-sd-readyrow` là con của `playOverlay`, không
+  phải của `readyCenter`. Màn READY: `readyCenter` ở giữa, hàng này nép đáy. Phòng chờ:
+  `readyCenter` bị ẩn và `.aw-lobby` phủ `inset:0` nhưng nó **trong suốt và căn giữa**, nên
+  hàng ở đáy vẫn nguyên chỗ, vẫn sống, vẫn cập nhật. Vẽ hai lần ở hai chỗ là hai bộ luật sẽ
+  trôi khỏi nhau.
+- ⛔⛔ `pointer-events: none` **LÀ THỨ CHỊU LỰC**, không phải chi tiết làm đẹp: hộp này trải
+  hết chiều ngang đáy màn, mà **nút ✕ của phòng chờ nằm đúng góc dưới-phải**. Thiếu dòng đó
+  thì ✕ vẫn hiện, vẫn sáng, **bấm không ăn** — đúng bẫy đã cắn ba lần trong hai dự án. Có
+  phép kiểm `elementFromPoint` riêng cho đúng chuyện này.
+- ⚠️ `position: absolute` chứ không thêm một con flex nữa: `.aw-ready-center` giữ
+  `margin: auto 0`, thêm một `margin-top: auto` thứ hai vào cùng trục là **chia lại toàn bộ
+  khoảng trống** ⇒ màn READY hiện có tụt khỏi chính giữa.
+- Ô tròn `min 44px`, nhãn là **tên đội THẬT** (thầy đặt được tên riêng) viết hoa, cắt gọn
+  đúng bề ngang ô. Chỉ vẽ **đội có gạch còn sống**, theo **đúng thứ tự bảng đội** (ô không
+  nhảy chỗ khi một đội sẵn sàng), và hỏi **chính `claimIsLive`** mà phòng chờ dùng — hai
+  phép đo khác nhau thì "2 / 3 teams" và hàng ô tích sẽ cãi nhau ngay trên một màn hình.
+
+---
+
+### ⛔⛔ BỐN BẪY ĐO ĐÃ CẮN TRONG ĐỢT NÀY (cả bốn đều là PHÉP ĐO SAI, không phải app sai)
+
+1. ⭐ **Script vá báo "ok" nhưng bỏ sót hai phép thay.** Đoạn nối thêm vào script bằng
+   `.replace()` không khớp chuỗi mốc ⇒ im lặng không làm gì, script vẫn in "engine ok". Hậu
+   quả: `sdSetupMod` không bao giờ được gán ⇒ hàng ô tích **không bao giờ vẽ**. ⇒ Luật: sửa
+   file bằng script thì **xác minh bằng `grep` trên file kết quả**, đừng tin dòng thông báo
+   của chính script.
+2. **`elementFromPoint` trả `null`** — sân khấu bàn thử nằm dưới một khối chữ dài nên nút ✕
+   rơi **ngoài khung nhìn**. `null` trông y hệt "bị che" nhưng nghĩa là "không đo được".
+3. ⭐⭐ **TỆ NHẤT — sân khấu TRÔI giữa hai phép đo.** Mỗi lời gọi `say()`/`check()` chèn thêm
+   chữ vào khối `<pre>` phía trên ⇒ cả sân khấu **tụt xuống vài chục pixel**. Bản đầu lấy
+   `rect` xong mới in một dòng rồi mới bắn tia ⇒ tia rơi vào chỗ khác và bàn thử kết luận
+   **"nút ✕ bị che"** — một lời tố cáo hoàn toàn SAI mà nghe rất thuyết phục vì nó chỉ đúng
+   tên `.aw-lobby`. Suýt nữa thì đi vá một lỗi không tồn tại. ⇒ **Luật: đo hình học rồi bắn
+   tia phải nằm LIỀN NHAU, không một dòng in nào xen giữa.**
+4. **Chờ "có gạch" thay vì "gạch có SỐ"**: `claims.t1` tồn tại sẵn `{by, at}` nên `waitFor`
+   thoát ngay trước khi `publishMyPlan` kịp ghi ⇒ đỏ oan.
+
+### KIỂM CHỨNG
+
+`scratch/dot263-applyready.html` — **10/10** (bench này **sinh ra khi còn đỏ**: nó tái hiện
+đúng ca của thầy, 4/10 đỏ trước khi vá, xanh hết sau khi vá — kèm đối chứng ngược "qua cầu
+thì ăn ngay" để chắc nó không chỉ đang đo một màn hình chết).
+`scratch/dot263-readyrow.html` — **25/25**: hàng ô tích hiện ngay ở màn READY · ⭐ đội khác
+bấm START ⇒ **đúng ô đó** xanh (đo cả `backgroundColor` thật và opacity dấu ✓, kèm đối chứng
+ngược ô chưa tích) · hình dáng đúng lời thầy (chữ không rộng hơn nút · nút ≥44px · hàng nằm
+ở **0.95** chiều cao màn) · ⭐ bấm START ⇒ trong phòng chờ hàng vẫn còn và ô mình cũng xanh ·
+⛔⛔ `elementFromPoint` chứng minh **nút ✕ vẫn nhận chạm** (kèm đối chứng: gỡ hàng ô tích ra
+thì vẫn chính nút ✕ nhận) · đội cuối sẵn sàng ⇒ cả lớp vào ván "1 of 20" · ⛔ lượt của act
+KHÁC ⇒ không ô nào tích (+ đối chứng của đối chứng: đúng act thì tích ngay) · ⛔ ngoài
+Showdown ⇒ không dựng hàng nào.
+
+**Hồi quy**: `dot261-lobby` **53/53** · `dot260-plan` **52/52** · `dot262-matchid` **33/33** ·
+`dot256-smoke` **48/48** · `index.html` mount sạch, không lỗi mới.
+✅ **ĐÃ NHÌN BẰNG MẮT** (`dot263-visual.html`): màn READY 4 đội, TEAM 2 xanh có dấu ✓ và
+quầng sáng, ba ô kia xám; và màn phòng chờ ✓ lớn + "2 / 4 teams" với TEAM 1 + TEAM 2 xanh,
+nút ✕ mờ vẫn thấy ở góc.
+
+### VIỆC ĐANG CHỜ
+
+- ⬜⬜ **THẦY TEST TAY NHIỀU MÁY**:
+  1. Đổi Count ở màn READY rồi Apply ⇒ dải plan phải đổi **ngay trên chính cột đó**, và
+     cảnh báo CHECK OPTIONS phải tắt khi hai bảng đã bằng nhau.
+  2. 3 bàn: bàn nào bấm START thì ô của bàn đó xanh **trên màn của mọi bàn khác**.
+  3. Nhìn từ cuối lớp 86 inch: ô tích có đủ to, chữ TEAM n có đọc được không, hàng có bị
+     thấp quá / sát mép quá không.
+  4. Bấm nút ✕ bé xíu trong phòng chờ **bằng ngón tay trên TOMKO** — hàng ô tích nằm ngay
+     cạnh nó (máy đã đo là không che, nhưng ngón tay thật mới là phép thử cuối).
+- ⬜ Sau khi thầy duyệt: commit + push + kiểm bản live.
+
+---
+
 ## Đợt 262 (25/8/2026) — ⭐⭐⭐ **TÊN TRẬN = LƯỢT PHÒNG CHỜ, BỎ HẲN `playNo` ĐOÁN MÒ**
 
 > ✅ **THẦY DUYỆT · COMMIT `82d677d` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
