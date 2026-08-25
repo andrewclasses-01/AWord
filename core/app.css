@@ -2322,6 +2322,27 @@ html.aw-nhung .aw-below { display: none; }
 .aw-opt-tplbtn-icon svg { width: 100%; height: 100%; display: block; }
 .aw-opt-tplbtn-name { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* ⭐ Đợt 272 — "Share live session" / "Follow live session", icon-only, in the
+   SAME footer row as the template button + Apply (thầy: "ngang hàng với
+   TEMPLATE và APPLY ... bên cạnh trái nút TEMPLATE ... dạng icon không text").
+   Same visual language as `.aw-opt-tplbtn` (border 1.6px solid #2f7bff,
+   radius 13px). Height is NOT a copied px value (measured: `.aw-opt-tplbtn`
+   renders ~2.7px taller than a bare 9px-padding+19px-icon box, because ITS
+   line height comes from TEXT, not the icon) — `align-self: stretch` inside
+   `.aw-opt-foot`'s flex row lets it always match whatever the tallest sibling
+   actually is, so it stays right if that button's own padding/font ever
+   changes, instead of drifting the way a hand-measured height would (the
+   exact trap `.aw-opt-apply`'s own comment above warns about). */
+.aw-opt-relaybtn {
+  display: flex; align-items: center; justify-content: center; align-self: stretch;
+  border: 1.6px solid #2f7bff; border-radius: 13px; background: #eef5ff; color: #2f7bff;
+  padding: 0 12px; cursor: pointer; transition: background .12s ease, transform .08s ease;
+}
+.aw-opt-relaybtn:hover { background: #e3efff; }
+.aw-opt-relaybtn:active { transform: scale(.97); }
+.aw-opt-relaybtn.is-active { background: #2f7bff; color: #fff; }
+.aw-opt-relaybtn svg { width: 19px; height: 19px; display: block; }
+
 /* MODE confirm popover (12/8/2026) — Yes/Cancel question shown by the MODE
    button before switching SINGLE <-> FIGHT, same .aw-tool-panel popover as
    Options/Template/Style. Same fixed-px trap as .aw-opt-apply above: this

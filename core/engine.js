@@ -806,8 +806,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         const b = window.__awordBridge;
         if (!on) { if (b.__sessionUnsub) { b.__sessionUnsub(); b.__sessionUnsub = null; } return true; }
         if (b.__sessionUnsub) return true;   // đã đang theo rồi
-        import("./showdown-setup.js").then(m => {
-          if (b.__sessionUnsub) return;      // followSession(false) chen vào giữa lúc đang tải module
+        // ⭐ Đợt 272 — PHẢI `return` cái Promise này, không bắn-rồi-quên: bàn
+        // thử `dot272-relay-buttons.html` bắt được `__sessionUnsub` CHƯA kịp
+        // gán xong lúc cái nút icon đọc lại trạng thái để tô `is-active` (hàm
+        // cũ trả `true` NGAY, trước khi import xong) — nút bấm xong không sáng,
+        // đúng ca "bấm không thấy gì xảy ra" dù bên trong đã bật đúng.
+        return import("./showdown-setup.js").then(m => {
+          if (b.__sessionUnsub) return true;  // followSession(false) chen vào giữa lúc đang tải module
           b.__sessionUnsub = m.subscribeSession(sess => {
             if (!sess) return;
             if (sess.type) b.switchTemplate(sess.type);
@@ -815,8 +820,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
             if (sess.style) b.setTheme(sess.style);
             if (sess.mode) b.setMode(sess.mode);
           });
+          return true;
         });
-        return true;
       },
       _setCurrent(delegate) { current = delegate; },
     };
@@ -4395,6 +4400,64 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       tplBtn.append(el("span", "aw-opt-tplbtn-icon", icons.style), el("span", "aw-opt-tplbtn-name", "Style"));
       tplBtn.onclick = () => { sound.click(); showBody(bodyView === "style" ? "options" : "style"); };
     }
+    // ⭐⭐⭐ Đợt 272 — "Follow live session" / "Share live session", icon-only,
+    // to the LEFT of the template button in this same footer row. Thầy chốt
+    // (26/8/2026) after trying the Menu (☰) placement in Đợt 270/271: living
+    // here is more convenient since Options is already open to touch
+    // Template/settings. Gated on `showdownPick` (genuinely in Showdown) —
+    // a plain Single-mode class has nothing to share or follow.
+    // ⚠️ Deliberately does NOT close the panel (no `closeToolPanel()` call):
+    // this is a toggle the teacher may flip alongside other Options changes,
+    // not a one-shot action like Change template.
+    // ⚠️ `firebase.js` stays DYNAMIC-import only, right inside the click
+    // handler — same discipline as everywhere else this bridge touches
+    // Firestore (HUONG DAN CORE.md luật 2, v0.9.0: no static import here,
+    // or every student page would ship the library layer's code).
+    if (!session && showdownPick) {
+      const relayBtn = (icon, title, isActive, onToggle) => {
+        const b = el("button", "aw-opt-relaybtn" + (isActive() ? " is-active" : ""), icon);
+        b.type = "button";
+        b.title = title;
+        b.onclick = async () => { sound.click(); await onToggle(); b.classList.toggle("is-active", isActive()); };
+        return b;
+      };
+      footWrap.append(
+        relayBtn(icons.follow, "Follow live session — this device mirrors what myActivity shares",
+          () => !!window.__awordBridge.__sessionUnsub,
+          async () => {
+            const b = window.__awordBridge;
+            if (b.__sessionUnsub) { await b.followSession(false); toast("Stopped following"); return; }
+            const { currentUser } = await import("./firebase.js");
+            const user = await currentUser().catch(() => null);
+            if (!user) { toast("Sign in from the library page first"); return; }
+            // ⭐ Đợt 272 — MUST await: followSession(true) only really finishes
+            // once its OWN dynamic import of showdown-setup.js resolves and
+            // __sessionUnsub is set (see that method's own note). Firing it
+            // without awaiting here raced the very next line (this button's
+            // own `is-active` repaint), and the icon simply failed to light up
+            // even though the subscription itself was fine one tick later —
+            // caught by `dot272-relay-buttons.html`, not by eye.
+            await b.followSession(true);
+            toast("Following — will mirror the session running on myActivity");
+          }),
+        relayBtn(icons.cast, "Share live session — other devices following this will mirror it",
+          () => !!window.__awordBridge.__sessionPublishOn,
+          async () => {
+            const b = window.__awordBridge;
+            if (b.__sessionPublishOn) {
+              b.setSessionPublish(false);
+              b.clearPublishedSession().catch(() => {});
+              toast("Stopped sharing");
+              return;
+            }
+            const { currentUser } = await import("./firebase.js");
+            const user = await currentUser().catch(() => null);
+            if (!user) { toast("Sign in from the library page first"); return; }
+            b.setSessionPublish(true);
+            toast("Sharing — other devices following this session will now mirror it");
+          })
+      );
+    }
     footWrap.append(tplBtn);
     // APPLY — only now does the draft get written into activity.options.
     // Clicking outside without pressing this discards every change above.
@@ -4889,62 +4952,11 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // Back = drop the picker and resume the running game.
       openSwitchPicker(() => { backdrop?.remove(); backdrop = null; });
     }));
-    // ⭐⭐⭐ Đợt 270 — "FOLLOW LIVE SESSION", the first real button for the
-    // sd_session relay built in Đợt 269 phần 2 (`window.__awordBridge.
-    // followSession`). Same gate as "Change template" (`!session` — a teacher
-    // tool, students never see it) and same lazy-load discipline: firebase.js
-    // is only ever DYNAMIC-imported, right here, when the teacher actually taps
-    // this — a static import at the top of this file would ship the library
-    // layer's code to every student page, exactly what HUONG DAN CORE.md's
-    // luật 2 (v0.9.0) exists to stop. `showdown-setup.js` (which the bridge's
-    // `followSession` dynamic-imports on its own) already leans on the same
-    // discipline, so this is not a new exception, just a second door to it.
-    // ⚠️ Label reflects state at the moment the menu OPENS (menuEl is rebuilt
-    // fresh every open), read off `window.__awordBridge.__sessionUnsub` — the
-    // same plain-property source of truth `followSession`/`setSessionPublish`
-    // already use, not a separate flag to keep in sync by hand.
-    if (!session) {
-      const following = !!window.__awordBridge.__sessionUnsub;
-      menuEl.append(menuItem(following ? "Stop following" : "Follow live session", async () => {
-        closeMenu();
-        const b = window.__awordBridge;
-        if (b.__sessionUnsub) { b.followSession(false); toast("Stopped following"); return; }
-        const { currentUser } = await import("./firebase.js");
-        const user = await currentUser().catch(() => null);
-        if (!user) { toast("Sign in from the library page first"); return; }
-        b.followSession(true);
-        toast("Following — will mirror the session running on myActivity");
-      }));
-    }
-    // ⭐⭐⭐ Đợt 271 — "SHARE LIVE SESSION", the controller-side counterpart of
-    // "Follow live session" above: THIS column starts publishing its own
-    // TPL/OPT/STYLE/MODE changes to `sd_session` (see `setSessionPublish` on
-    // the bridge). Teacher's own scope call, 26/8/2026: only surface it while
-    // this column is actually IN Showdown (`showdownPick`) — "rarely used, no
-    // need to be prominent" — so a teacher running a plain Single-mode class
-    // never sees a control they have no reason to touch.
-    if (!session && showdownPick) {
-      const sharing = !!window.__awordBridge.__sessionPublishOn;
-      menuEl.append(menuItem(sharing ? "Stop sharing" : "Share live session", async () => {
-        closeMenu();
-        const b = window.__awordBridge;
-        if (b.__sessionPublishOn) {
-          b.setSessionPublish(false);
-          b.clearPublishedSession().catch(() => {});
-          toast("Stopped sharing");
-          return;
-        }
-        // Same check as "Follow live session" above — publishing needs the
-        // teacher's own Firestore write permission (`users/{uid}/items`), and
-        // failing silently here would leave the toggle looking "on" for
-        // nothing (awEmit's own publishSession() call is caught/swallowed).
-        const { currentUser } = await import("./firebase.js");
-        const user = await currentUser().catch(() => null);
-        if (!user) { toast("Sign in from the library page first"); return; }
-        b.setSessionPublish(true);
-        toast("Sharing — other devices following this session will now mirror it");
-      }));
-    }
+    // ⭐ Đợt 272 — "Follow live session" / "Share live session" USED to live
+    // here as menu items (Đợt 270/271). Thầy chốt lại (26/8/2026): cả hai dời
+    // sang footer của popup Options (xem `footWrap` trong buildOptionsPanel),
+    // cạnh trái nút Template, dạng icon — "tiện hơn" vì thầy đang mở Options
+    // đằng nào cũng để đổi Template/settings, không cần vòng qua Menu riêng.
     enterPause("menu");
     inner.append(menuEl);
     // clicking anywhere else closes the menu (deferred so the opening click doesn't trigger it)

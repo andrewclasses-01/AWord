@@ -12,7 +12,63 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 271** (26/8/2026, ⬜ CHƯA PUSH — 2 nút bấm đầu tiên cho đồng bộ đa thiết bị). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session`). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 272** (26/8/2026, ⬜ CHƯA PUSH — Follow/Share live session dời vào footer Options, dạng icon). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session`). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 272 (26/8/2026) — ⭐⭐⭐ **FOLLOW/SHARE LIVE SESSION DỜI TỪ MENU SANG FOOTER OPTIONS, DẠNG ICON**
+
+**Thầy chốt (sau khi xem bản Đợt 270/271 sống trong Menu ☰):** *"Thay vì đặt trong nút Menu, hãy
+đặt 2 nút này ở trong pop-up options khi đang ở chế độ showdown thì sẽ tiện hơn. Đặt chúng ở ngang
+hàng với các nút TEMPLATE và APPLY sao cho cân đối, có thể để cả 2 nút cùng ở bên cạnh trái nút
+TEMPLATE, sử dụng dạng icon không text"*.
+
+**FIX / Đã làm:**
+- Gỡ hẳn 2 dòng menu Đợt 270/271 khỏi `openMenu()` — không còn sống trong Menu (☰) nữa.
+- Thêm 2 nút icon-only (`.aw-opt-relaybtn`) vào **`footWrap`** (footer popup Options,
+  `core/engine.js` hàm `buildOptionsPanel`), đứng NGAY TRƯỚC nút Template — thứ tự cuối:
+  **[Follow] [Share] [Template] [Apply]**. Gate `!session && showdownPick` (chỉ hiện khi thật sự
+  đang ở Showdown — giữ nguyên tinh thần "ít dùng, không nổi bật" của Đợt 271, nay áp dụng cho CẢ
+  HAI nút chứ không riêng Share).
+- 2 icon mới trong `core/icons.js`: `cast` (màn hình phát sóng, cho Share) và `follow` (khối chữ
+  nhật đơn giản = "thiết bị này", cho Follow) — cố tình khác HÌNH DẠNG nhau (không chỉ khác màu) để
+  cặp "gửi/nhận" vẫn phân biệt được ở cỡ 19px.
+- CSS `.aw-opt-relaybtn` (mới, `core/app.css`): cùng ngôn ngữ hình ảnh với `.aw-opt-tplbtn` (viền
+  xanh, bo góc 13px), nhưng **`align-self: stretch`** thay vì copy chiều cao — đo được
+  `.aw-opt-tplbtn` cao hơn một hộp icon 19px+padding 9px tới **2.7px** (line-height của CHỮ, không
+  phải icon), nên "cùng công thức padding" không tự nhiên ra cùng chiều cao; stretch thì luôn đúng
+  bằng bất kể nút Template cao bao nhiêu, không cần đo lại nếu nút kia đổi.
+- `clearPublishedSession()` (đã có từ Đợt 271) và luồng đăng nhập giữ nguyên, chỉ đổi NƠI hiển thị.
+
+**⭐⭐⭐ BẮT ĐƯỢC 1 BUG THẬT khi viết bàn thử (không phải bug của bàn thử):** `followSession(true)`
+tự trả `true` **NGAY LẬP TỨC**, trước khi `import("./showdown-setup.js")` bên trong nó tải xong và
+gán `__sessionUnsub` — nút bấm xong đọc lại trạng thái để tô `is-active` thì đọc TRÚNG lúc chưa gán
+xong, nút **không sáng** dù ổ đồng bộ bên trong đã bật đúng một nhịp sau đó. Sửa 2 chỗ: (1)
+`followSession()` nay `return` cái Promise import thay vì bắn-rồi-quên; (2) chỗ gọi trong nút phải
+`await b.followSession(true)` (trước đó gọi không đợi). Đây đúng loại lỗi "bấm không thấy gì xảy
+ra" chỉ lộ ra khi bàn thử đo TRẠNG THÁI THẬT SAU KHI BẤM, đọc code suông không thấy vì cả hai vế
+đều "đúng cú pháp".
+
+**Đã test:** `scratch/dot272-relay-buttons.html` — **19/19 ĐẠT, 0 lỗi console**:
+- chưa vào Showdown → 0 nút relay; đang ở Showdown → đủ 2 nút, đứng trước Template trong DOM, icon
+  thuần (không chữ), cao bằng `.aw-opt-tplbtn` (lệch <1px)
+- Follow: chưa đăng nhập bị chặn đúng cách; đăng nhập rồi bấm → is-active BẬT ĐÚNG NHỊP (sau khi vá
+  bug ở trên); bấm lại tắt
+- Share: bật → is-active, không ảnh hưởng nút Follow cạnh nó; bật Share xong đổi Template THẬT
+  (Menu → Change template → chọn game) → `sd_session.type` được ghi — nối đúng với tầng dữ liệu Đợt
+  269; sau cú remount nội bộ do Change template gây ra, mở lại Options thì nút Share vẫn đúng
+  is-active (đọc property singleton, không phải state cũ); tắt Share → `sd_session` bị xoá
+- Trang học sinh: không có nút Options nên không cần kiểm thêm (không đường nào lộ ra)
+- (Ghi chú: `scratch/dot270-follow-menu.html` và `dot271-share-menu.html` cũ giờ test một THIẾT KẾ
+  ĐÃ THAY — không còn đại diện cho hành vi hiện tại, giữ lại làm sử liệu, đừng dùng để hồi quy.)
+
+**Đánh đổi / LƯU Ý:** giữ nguyên đánh đổi đã chốt ở Đợt 271 — Share chỉ phát đúng từ CỘT đã bật nó.
+
+**CHỜ TEST TOMKO:** mở Showdown thật, mở Options, xem 4 nút [Follow][Share][Template][Apply] có
+thật sự thẳng hàng và cân đối trên màn thật (bench chỉ đo được trên Chrome desktop, chưa đo trên
+khung 16:9 thật của TOMKO/máy lớp).
+
+⬜ **CHƯA PUSH.**
 
 ---
 

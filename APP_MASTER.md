@@ -8,25 +8,29 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 271 — ⬜ CHƯA PUSH, 2 nút đầu tiên cho đồng bộ đa thiết bị)**.
-> ⚠️ Đợt 269-271 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — các đợt không đụng
+> Cập nhật lần cuối: **26/8/2026 (Đợt 272 — ⬜ CHƯA PUSH, Follow/Share dời vào footer Options)**.
+> ⚠️ Đợt 269-272 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — các đợt không đụng
 > file nhau, xem cả hai trước khi push.
 >
-> **Đợt 270 + 271** (26/8/2026) — ⭐⭐⭐ **"FOLLOW LIVE SESSION" + "SHARE LIVE SESSION" — cả hai sống
-> trong Menu (☰) sẵn có của AWord, KHÔNG đụng gì tới myActivity.** Thầy: *"Hãy làm tiếp đi"*, rồi
-> khi hỏi icon cho nút myActivity thầy chốt hẳn hướng khác: *"gán tính năng này vào 1 dòng trong
-> nút menu (góc trái bên dưới) khi đang ở chế độ showdown, tôi ít sử dụng nên không cần quá nổi
-> bật"* — hoá ra "góc trái bên dưới" chính là Menu (☰) đã có, cạnh "Change template". **Follow live
-> session** (thiết bị ngoài, luôn hiện): bật `followSession(true)`, chưa đăng nhập thì báo rõ.
-> **Share live session** (cột đang điều khiển, chỉ hiện khi đang ở Showdown): bật
-> `setSessionPublish(true)`, tắt thì xoá hẳn `sd_session` (`clearPublishedSession()` mới). Sửa
-> **1 file**: `core/engine.js`. Test: `scratch/dot270-follow-menu.html` 13/13 ·
-> `scratch/dot271-share-menu.html` 11/11 (kèm phép đo nối thật: bật Share → Change template thật →
-> `sd_session` được ghi, chứng minh 3 đợt 269+270+271 khớp nhau). Hồi quy `dot269b`/`dot269-8teams`
-> vẫn nguyên. ⚠️ Đánh đổi đã chấp nhận: Share chỉ phát đúng từ CỘT đã bật nó — đổi ở cột khác không
-> phát (đúng phạm vi thầy mô tả, không phải bug).
-> ⬜ **CHƯA PUSH — CHỜ TEST TOMKO/iPad thật**: (a) iPad thật bấm Follow có tự theo myActivity không
-> (b) bật Share trên 1 cột myActivity thật, đổi Template/Options, đo độ trễ thiết bị theo kịp.
+> **Đợt 272** (26/8/2026) — ⭐⭐⭐ **FOLLOW/SHARE LIVE SESSION: DỜI TỪ MENU SANG FOOTER OPTIONS, ICON
+> CẠNH TRÁI TEMPLATE.** Thầy xem bản Đợt 270/271 (sống trong Menu ☰) xong chốt lại: *"đặt 2 nút này
+> ở trong pop-up options khi đang ở chế độ showdown thì sẽ tiện hơn ... ngang hàng với TEMPLATE và
+> APPLY ... cả 2 nút cùng ở bên cạnh trái nút TEMPLATE, dạng icon không text"*. Gỡ 2 dòng menu cũ,
+> thêm `.aw-opt-relaybtn` (icon-only) vào footer Options (`core/engine.js` `buildOptionsPanel`),
+> thứ tự **[Follow][Share][Template][Apply]**, gate `!session && showdownPick` cho CẢ HAI (trước đó
+> Follow luôn hiện, nay chỉ hiện khi thật ở Showdown — thu hẹp theo đúng ý thầy). 2 icon mới
+> `core/icons.js`: `cast` (Share) · `follow` (thiết bị, cho Follow) — cố tình khác HÌNH DẠNG để cặp
+> gửi/nhận phân biệt được ở 19px. CSS dùng `align-self:stretch` thay vì copy chiều cao tay (đo được
+> lệch 2.7px nếu copy padding — do line-height CHỮ của nút Template, không phải icon).
+> ⭐⭐⭐ **BẮT ĐƯỢC 1 BUG THẬT lúc viết bàn thử**: `followSession(true)` tự trả `true` NGAY trước khi
+> import xong `__sessionUnsub` — nút bấm xong không sáng dù đồng bộ bên trong đã bật đúng một nhịp
+> sau. Vá 2 chỗ: `followSession()` nay `return` đúng Promise; chỗ gọi phải `await` nó.
+> Test: `scratch/dot272-relay-buttons.html` **19/19 ĐẠT** — đủ 2 nút đúng vị trí/thứ tự DOM, icon
+> thuần không chữ, cao bằng Template (lệch <1px), Follow/Share độc lập nhau, bật Share xong đổi
+> Template THẬT vẫn ghi đúng `sd_session` (nối với tầng dữ liệu Đợt 269), sống sót qua remount nội
+> bộ, tắt thì xoá tài liệu. `dot270`/`dot271` cũ nay lỗi thời (thiết kế đã thay), giữ làm sử liệu.
+> ⬜ **CHƯA PUSH — CHỜ TEST TOMKO**: 4 nút có thẳng hàng/cân đối trên màn thật không (bench chỉ đo
+> Chrome desktop).
 >
 > ---
 > **Đợt 269** (26/8/2026) — ⭐⭐ **SỐ ĐỘI SHOWDOWN: 5 → 8** (thầy: *"mở rộng số lượng đội được
