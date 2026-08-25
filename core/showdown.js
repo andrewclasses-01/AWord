@@ -62,14 +62,22 @@ const BID_KEY = "aword-showdown-bid";
 // ⭐ Đợt 159 (teacher, 15/8/2026): 1..5, was 2..8.
 // **1 is a real mode, not a degenerate one**: it means THE WHOLE CLASS is one
 // team — no dividing step, no shared table, no claims (see SOLO_TEAM_ID).
-// **5 is a hard ceiling that the LAYOUT depends on**: five columns of ten names
-// is the widest the panel can be and still fit a myActivity column without
-// scrolling sideways, and the chip sizes in app.css are measured against it.
-// Raising it means re-measuring that, not just editing this number.
-// ⚠️ `normalize()` SLICES to MAX_TEAMS, so a table saved earlier with 6-8 teams
-// loses the extras on the next read. Nobody had one when this changed.
+// Đợt 159's own "5 is a hard ceiling the layout depends on" turned out to be
+// true only of the fixed pixel sizes it shipped with — core/showdown-setup.js's
+// build screen (fitBuildScreen/applyFit) already shrinks font/gap/padding to
+// whatever room is real and, past that, abbreviates names (shrinkOverflowingNames)
+// rather than clip or scroll. That machinery does not know the number 5; it was
+// simply never exercised past it.
+// ⭐⭐⭐ Đợt 269 (teacher, 26/8/2026): raised 1..5 → 1..8, to cover a class split
+// across several DEVICES (myActivity columns + standalone computers/iPads), not
+// just several myActivity columns on one screen. Verified with
+// scratch/dot269-8teams.html: 8 columns of a 32-pupil class (4 each) render with
+// no horizontal scroll and no chip text clipped, same guarantee the panel already
+// gave 1-5 teams.
+// ⚠️ `normalize()` SLICES to MAX_TEAMS, so a table saved earlier with more than
+// 8 teams loses the extras on the next read.
 export const MIN_TEAMS = 1;
-export const MAX_TEAMS = 5;
+export const MAX_TEAMS = 8;
 
 // ⭐ Đợt 159 — at most ten pupils in a team (teacher: "nếu 2 team trở lên thì
 // tối đa 10 người 1 team"). This is the number `.aw-sd-body`'s height is

@@ -12,7 +12,59 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 268** (26/8/2026, ⬜ chờ push). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 269** (26/8/2026, ⬜ CHƯA PUSH — đang code tiếp phần đồng bộ đa thiết bị trong cùng đợt). Trước đó: Đợt 268 (26/8/2026, ⬜ chờ push, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 269 (26/8/2026) — ⭐⭐ **SỐ ĐỘI SHOWDOWN: 5 → 8, DỌN ĐƯỜNG CHO ĐỒNG BỘ ĐA THIẾT BỊ**
+
+**Thầy chốt:** *"mở rộng số lượng đội được chia trong showdown lên 8 đội để phù hợp với việc sử
+dụng nhiều máy"* — một phần của yêu cầu lớn hơn đang làm trong cùng đợt: đồng bộ Showdown xuyên
+nhiều LOẠI thiết bị (cột myActivity + máy tính rời + iPad), không chỉ trong một cửa sổ myActivity.
+
+**ĐIỀU TRA / GỐC LỖI:** `MAX_TEAMS` từng bị hạ từ 2-8 xuống 1-5 ở Đợt 159 (15/8/2026) — comment
+gốc ghi rõ đây là **giới hạn LAYOUT đo tay**, không phải giới hạn kỹ thuật ("năm cột mười tên là
+bề rộng lớn nhất panel còn vừa một cột myActivity"). Đọc lại code trước khi sửa (đúng quy trình
+"nghiên cứu trước") lộ ra: Đợt 159b/166 sau đó đã âm thầm xây hẳn một hệ TỰ CO GIÃN
+(`fitBuildScreen`/`applyFit` trong `core/showdown-setup.js`) — co dần font chữ + khoảng cách theo
+KHÔNG GIAN THẬT bằng dò nhị phân (10 vòng lặp), hết cỡ co mới rút gọn tên
+(`shrinkOverflowingNames`) thay vì cắt/cuộn. Hệ này không hề biết con số "5" — nó chỉ đơn giản
+CHƯA TỪNG được chạy thử vượt quá 5. Grep toàn bộ `MAX_TEAMS` (10 chỗ dùng) không thấy giới hạn cấu
+trúc nào khác: `.aw-sd-cols` dùng `display:flex` + `.aw-sd-col{flex:1 1 0}`, không phải CSS grid
+cứng số cột.
+
+**FIX / Đã làm:** `core/showdown.js` — `MAX_TEAMS` 5 → 8 (giữ nguyên `MIN_TEAMS=1`,
+`MAX_PER_TEAM=10` — không đổi vì tổng số học sinh một lớp không đổi, chỉ chia nhỏ hơn khi nhiều
+đội hơn). Cập nhật `core/HUONG DAN CORE.md` bảng lịch sử Showdown (dòng "Số đội").
+
+**Đã test:** `scratch/dot269-8teams.html` (lớp giả 32 em qua `fake-firebase196.js`, không đụng
+Firestore thật) — **32/32 phép đo ĐẠT, 0 lỗi console**:
+- hằng số `MAX_TEAMS === 8`; thanh trượt số đội kéo được tới 8 (trước đây khoá cứng ở 5)
+- 6, 7, 8 đội đều vào được màn chia đội, đúng số cột, lớp `.is-top` đúng (ngưỡng `n>=4` không đổi)
+- **KHÔNG cuộn ngang** ở cả ba mức: `colsBox.scrollWidth === clientWidth === 1040px`
+- **0/32 chip tên bị cắt** ở cả ba mức (đo `scrollWidth <= clientWidth`)
+- cỡ chữ chip giữ nguyên **13px** ("thoải mái", mức `n>=4` cũ) ở cả 6/7/8 đội — chưa cần co xuống
+  sàn 10.5px dù đông đội, nghĩa là khung 1080px còn dư phòng
+- hồi quy 2/3 đội vẫn `.is-side`, 4/5 đội vẫn `.is-top`, đúng số cột — không phá layout cũ
+
+**BẪY / BÀI HỌC:** viết bench lần đầu gọi lại thanh trượt teamCount SAU KHI đã bấm Next sang màn
+build (screen B) — thanh trượt đó chỉ tồn tại ở màn A (screen A), gọi `stepTeams()` lúc đang ở màn
+B là gọi vào `null`, kẹt ở số đội của lượt trước mà không báo lỗi rõ ràng. Sửa: mount lại từ đầu
+(`resetDB` + `mount()` + chọn lớp + kéo số đội + Next) cho MỖI số đội cần đo, không tái dùng
+session cũ giữa các lượt.
+
+**Đánh đổi / LƯU Ý:** bench đo trên khung `.aw-below` cố định 1080px — khung THẬT của một cột hẹp
+trong myActivity nhiều cột (2-5 cột chia màn hình) sẽ khiến hệ tự co giãn co gần sàn 10.5px hơn.
+Chưa đo được trên khung hẹp thật vì cần mở đúng myActivity nhiều cột — số đo trên chỉ chứng minh
+"không vỡ/không cuộn/không cắt tên", chưa chứng minh "vẫn dễ đọc" ở cột hẹp nhất.
+
+**CHỜ TEST TOMKO:** (a) mở Showdown, chia 6-8 đội thật trên máy chiếu — xem tên/cột có còn dễ đọc
+(b) mở đúng MỘT cột hẹp trong myActivity (chia 4-5 cột) rồi thử 8 đội — xem chữ có quá nhỏ để đọc
+không (c) chạy thật một trận 8 đội xem điểm/kết quả từng em vẫn đúng.
+
+Rollback = `git reset --hard 4c0a7d6` (về đúng Đợt 268, trước đợt này). ⬜ CHƯA PUSH — đang code
+tiếp phần đồng bộ đa thiết bị (myActivity ↔ AWord ↔ iPad/máy tính) trong cùng đợt, sẽ push chung
+một lần sau khi cả hai phần đều có bằng chứng test.
 
 ---
 

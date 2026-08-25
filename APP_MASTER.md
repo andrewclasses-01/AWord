@@ -8,8 +8,31 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 268 — ⬜ CHƯA PUSH)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 269 — ⬜ CHƯA PUSH, ĐANG CODE tiếp phần đồng bộ đa thiết bị)**.
+> ⚠️ Đợt 269 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — hai đợt không đụng
+> file nhau, xem cả hai trước khi push.
 >
+> **Đợt 269** (26/8/2026) — ⭐⭐ **SỐ ĐỘI SHOWDOWN: 5 → 8** (thầy: *"mở rộng số lượng đội được
+> chia trong showdown lên 8 đội để phù hợp với việc sử dụng nhiều máy"* — dọn đường cho tính năng
+> đang làm tiếp theo, đồng bộ Showdown qua nhiều LOẠI thiết bị: cột myActivity + máy tính rời +
+> iPad, không chỉ trong một cửa sổ myActivity). `MAX_TEAMS` từng bị Đợt 159 hạ từ 2-8 xuống 1-5 vì
+> LAYOUT đo tay, không phải giới hạn kỹ thuật — đọc lại code lộ ra Đợt 159b/166 sau đó đã xây hẳn hệ
+> tự co giãn (`fitBuildScreen`/`applyFit`: co dần font + khoảng cách theo không gian thật, hết cỡ
+> mới rút gọn tên) không hề biết con số 5, chỉ đơn giản chưa từng chạy vượt nó; cột dùng `flex`,
+> không phải lưới cứng số cột. Sửa **2 file**: `core/showdown.js` (đổi hằng số) ·
+> `core/HUONG DAN CORE.md` (bảng lịch sử). Test mới `scratch/dot269-8teams.html` (lớp giả 32 em):
+> **32/32 phép đo ĐẠT** — stepper kéo được tới 8; 6/7/8 đội đều vào màn chia đội đúng số cột,
+> **KHÔNG cuộn ngang** (`colsBox` scrollWidth=clientWidth=1040px cả ba mức), **0/32 chip tên bị
+> cắt**, cỡ chữ vẫn giữ 13px "thoải mái" (chưa cần co xuống sàn 10.5px dù 8 cột — còn dư phòng ở
+> khung 1080px); hồi quy 2/3/4/5 đội y hệt layout cũ; 0 lỗi console.
+> **Đánh đổi/LƯU Ý:** bench đo trên khung 1080px cố định — khung hẹp hơn thật của MỘT CỘT trong
+> myActivity nhiều cột sẽ co gần sàn 10.5px hơn, cần mắt thầy trên TOMKO/máy lớp mới biết còn dễ
+> đọc không ở 8 đội trên cột hẹp.
+> ⬜ **CHƯA PUSH** (đang code tiếp phần đồng bộ đa thiết bị trong cùng đợt) — **CHỜ THẦY BẤM TAY**:
+> (a) chia 6-8 đội thật trên máy chiếu, xem tên/cột dễ đọc không (b) thử trên đúng MỘT cột hẹp
+> trong myActivity xem chữ có quá nhỏ không.
+>
+> ---
 > **Đợt 268** (26/8/2026) — ⭐⭐⭐ **BỎ HẲN THƯ MỤC CON "ACT" + KHÔNG SINH RUNNING WORD/RUNNING
 > TEAM KHI IMPORT** (thầy chốt, để chuẩn bị myLesson Đợt C — DICTS/READING). Lý do: myLesson cần
 > đọc HẾT act của một mã bài chỉ bằng MỘT lượt `lietKeAct` (đọc 1 tầng, không đệ quy); có "ACT"

@@ -1697,9 +1697,9 @@ pixel** vì padding đối xứng trên khung flex căn giữa.
 Mục "BA MÀN" ngay sau đây là bản Đợt 156; phần **cỡ bảng, số đội, màn C và luật ẩn đội** trong đó
 **đã bị thay**. Giữ lại vì mọi luật khác (hai tầng dữ liệu, claim, TTL, `prompt()`) vẫn đúng nguyên.
 
-| | Đợt 156-157 | **Đợt 159 (hiện hành)** |
+| | Đợt 156-157 | **Đợt 159 → Đợt 267 (hiện hành)** |
 |---|---|---|
-| Số đội | 2–8 | **1–5** (`MIN_TEAMS`/`MAX_TEAMS`) |
+| Số đội | 2–8 | 1–5, **nâng lên 1–8 ở Đợt 269** (`MIN_TEAMS`/`MAX_TEAMS` — nhiều thiết bị hơn cần nhiều đội hơn; layout hoá ra đã tự co giãn từ Đợt 159b/166, không cần đo lại tay, xem `scratch/dot269-8teams.html`) |
 | Màn | A · B · **C đang chạy** | A · B (**C xoá hẳn**) |
 | Single mode / Reset | nút ở màn C | **2 icon ở hàng tiêu đề**, cả hai **hỏi xác nhận** |
 | Nút Back ở màn B | có | **bỏ** — đường về màn A là Reset |
