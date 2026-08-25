@@ -12,21 +12,25 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 264** (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy duyệt**). Bản LIVE hiện tại vẫn là **Đợt 263** (`b58ab42`).
+> Mới nhất: **Đợt 264** (26/8/2026, code `2700bc1`, **ĐÃ LIVE** — 4/4 mã băm khớp, 37/37 phép chạy trên module bản live).
 
 ---
 
 ## Đợt 264 (26/8/2026) — ⭐⭐⭐ **"SET 55 CÂU MÀ CỨ NHẢY VỀ 30"** · ⭐⭐⭐ **RESET TEAMS VỚI SANG MỌI MÁY**
 
-> ⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT.** Sửa **3 file**: `core/showdown.js` ·
-> `core/showdown-setup.js` · `core/engine.js`.
+> ✅ **THẦY DUYỆT · COMMIT `2700bc1` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
+> Pages `built` đúng `2700bc1` · **4/4 mã băm SHA-256 khớp** (showdown · showdown-setup ·
+> engine · APP_MASTER) · **37/37 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**
+> (`scratch/dot264-live.html`, **64/65 tài nguyên** nạp từ `aword.andrewclasses.com` — cái
+> còn lại đúng là `fake-firebase.js` cố ý tráo, và bench tự khẳng định điều đó).
+> Sửa **3 file**: `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js`.
 > Bàn thử mới `scratch/dot264-round.html` **32/32** (có ĐỐI CHỨNG NGƯỢC chạy luật CŨ và
-> một phép CẮT DÂY) · `scratch/dot264-reset.html` **27/27** (⭐ đã cắt dây thật: gỡ cửa
+> một phép CẮT DÂY) · `scratch/dot264-reset.html` **29/29** (⭐ đã cắt dây thật: gỡ cửa
 > reset ⇒ bench ĐỎ đúng 6 phép, nối lại ⇒ xanh) · ✅ **ĐÃ NHÌN BẰNG MẮT**
 > (`dot264-visual.html`, 2 màn chữ mới, đo `scrollWidth === clientWidth` ⇒ không tràn).
 > Hồi quy: `dot261-lobby` **57/57** (⚠️ có SỬA, đọc VIỆC 4) · `dot263-readyrow` **25/25** ·
 > `dot263-applyready` **10/10** · `dot262-matchid` **33/33** · `dot260-plan` **52/52** ·
-> `dot256-smoke` **48/48**.
+> `dot256-smoke` **48/48** · `index.html` mount sạch.
 
 ---
 
@@ -176,12 +180,25 @@ không thêm listener, không thêm tài liệu, không thêm luật Firestore.
   `if (false)`), chạy lại: **ĐỎ đúng 6 phép**, nối lại: xanh. `dot264-round.html` cũng có
   mục I cắt dây theo cách tương tự (bơm một hàng bàn còn sống vào chính ca A ⇒ kết quả phải
   ĐẢO NGƯỢC lại đúng như luật cũ).
+- ⛔⛔ **VÀ NÓ CẮN LẠI Ở CHÍNH LÚC KIỂM BẢN LIVE — bài học Đợt 261, nguyên si.** Phép *"LOADING
+  DATA nói ra đang bị kéo về đâu"* viết bằng `waitFor(() => /matching the class/.test(lobbySub()))`
+  ⇒ trả `null` ⇒ bench live đỏ 1/36 và **suýt bị ghi thành "tính năng hỏng trên bản live"**.
+  Sự thật: `LOADING DATA…` chỉ sống **vài mili-giây** vì `pullStandard()` dựng lại cả ván NGAY
+  trong cùng một tác vụ, nên nhịp dò 50ms trượt qua. Phải đọc bằng `MutationObserver` và lấy từ
+  `addedNodes` (query lại DOM trong callback cũng trượt — callback là microtask chạy ở CUỐI tác
+  vụ, lúc đó chữ đã bị mount mới thay). Sau khi đổi máy quay: **37/37**, và đã bổ sung cùng phép
+  đo đó vào `dot264-reset.html` (mục 7) để lần sau không ai viết lại bằng nhịp dò.
+  ⇒ **Luật: mọi thứ chỉ hiện thoáng qua trong phòng chờ đều phải đo bằng MÁY QUAY, không bằng
+  nhịp dò.** Bẫy này nay đã cắn ở Đợt 261 và Đợt 264.
+- ⭐ **Bench bản live phải mở đầu bằng mục "bản live có đúng là đợt này không"** — hỏi thẳng
+  `typeof planRoundJoin === "function"`, `ROUND_BEAT_MS === 45000`… Nếu Pages còn phục vụ bản cũ
+  thì nó đỏ ngay dòng đầu, thay vì để cả bench chạy rồi ngồi đoán vì sao.
 
 ---
 
 ### ⬜ VIỆC ĐANG CHỜ (Đợt 264)
 
-- ⬜ **THẦY DUYỆT rồi mới PUSH** — đợt này **chưa đẩy lên live**.
+- ✅ **ĐÃ PUSH + KIỂM BẢN LIVE** (`2700bc1`, 4/4 mã băm khớp, 37/37 phép trên module bản live).
 - ⬜ **TEST TAY NHIỀU MÁY** (việc duy nhất bàn thử không thay được):
   1. Chơi một vòng 30 câu/em cho xong → thoát app → vào lại → set cả 3 bảng 55 câu/em →
      bấm START cả 3 ⇒ **phải ra 55, không bàn nào nhảy về 30**.

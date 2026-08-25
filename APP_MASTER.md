@@ -8,11 +8,14 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 264 — ⬜ CHƯA PUSH, chờ thầy duyệt; bản LIVE vẫn là Đợt 263 `b58ab42`)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 264 — `2700bc1`, ĐÃ PUSH + LIVE KIỂM CHỨNG)**.
 >
-> **Đợt 264** (26/8/2026, ⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT**; bản LIVE vẫn là Đợt 263
-> `b58ab42`) — ⭐⭐⭐ **VÁ "SET 55 CÂU MÀ CỨ NHẢY VỀ 30"** và ⭐⭐⭐ **RESET TEAMS NAY VỚI
-> SANG MỌI MÁY**. Sửa 3 file: `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js`.
+> **Đợt 264** (26/8/2026, `2700bc1`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
+> `built` đúng `2700bc1` · **4/4 mã băm SHA-256 khớp** · **37/37 phép chạy trên CHÍNH MODULE
+> CỦA BẢN LIVE** — `dot264-live.html`, **64/65 tài nguyên** nạp từ `aword.andrewclasses.com`,
+> cái còn lại đúng là `fake-firebase.js` cố ý tráo) — ⭐⭐⭐ **VÁ "SET 55 CÂU MÀ CỨ NHẢY VỀ 30"**
+> và ⭐⭐⭐ **RESET TEAMS NAY VỚI SANG MỌI MÁY**. Sửa 3 file: `core/showdown.js` ·
+> `core/showdown-setup.js` · `core/engine.js`.
 >
 > **(1) Thầy báo:** chơi xong một vòng 30 câu/em, thoát app, vào lại, set cả 3 bảng thành
 > 55 câu/em — bấm START thì có bàn cứ bị kéo ngược về 30, *"chỉnh rồi vẫn nhảy lung tung"*,
@@ -48,13 +51,17 @@
 > liệu rỗng): đây đúng là chỗ thiếu đã để con bọ (1) sống sót qua cả một cú Reset teams.
 >
 > `dot264-round` **32/32** (có đối chứng ngược chạy LUẬT CŨ + phép cắt dây) ·
-> `dot264-reset` **27/27** (⭐ đã cắt dây thật trong engine ⇒ ĐỎ đúng 6 phép, nối lại ⇒ xanh) ·
-> hồi quy `dot261-lobby` **57/57** (⚠️ có SỬA — 3 phép của Đợt 261 bị đợt này CỐ Ý đảo ngược,
-> đọc `GHI CHU DU AN.md` VIỆC 4 trước khi "sửa lại") · `dot263-readyrow` 25/25 ·
-> `dot263-applyready` 10/10 · `dot262-matchid` 33/33 · `dot260-plan` 52/52 · `dot256-smoke` 48/48.
+> `dot264-reset` **29/29** (⭐ đã cắt dây thật trong engine ⇒ ĐỎ đúng 6 phép, nối lại ⇒ xanh) ·
+> `dot264-live` **37/37** · hồi quy `dot261-lobby` **57/57** (⚠️ có SỬA — 3 phép của Đợt 261 bị
+> đợt này CỐ Ý đảo ngược, đọc `GHI CHU DU AN.md` VIỆC 4 trước khi "sửa lại") ·
+> `dot263-readyrow` 25/25 · `dot263-applyready` 10/10 · `dot262-matchid` 33/33 ·
+> `dot260-plan` 52/52 · `dot256-smoke` 48/48 · `index.html` mount sạch.
 > ✅ **ĐÃ NHÌN BẰNG MẮT** (`dot264-visual.html`).
-> ⬜ **CHỜ THẦY DUYỆT + TEST TAY NHIỀU MÁY** — 5 kịch bản liệt kê ở `GHI CHU DU AN.md` Đợt 264
-> mục cuối.
+> ⛔ **BẪY ĐO CẮN LẠI NGAY TRONG ĐỢT NÀY**: phép "LOADING DATA nói ra đang bị kéo về đâu" dò
+> theo nhịp 50ms ⇒ trả `null` ⇒ **suýt bị ghi thành "app hỏng trên live"**. `LOADING DATA…` chỉ
+> sống vài mili-giây vì `pullStandard()` dựng lại cả ván ngay trong cùng một tác vụ — đúng bài
+> học Đợt 261. Phải đọc bằng `MutationObserver` từ `addedNodes`.
+> ⬜ **CHỜ THẦY TEST TAY NHIỀU MÁY** — 5 kịch bản liệt kê ở `GHI CHU DU AN.md` Đợt 264 mục cuối.
 >
 > ---
 > **Đợt 263** (25/8/2026, `b58ab42`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
@@ -4279,32 +4286,32 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **25/8/2026 sau Đợt 263** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 264** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (25/8/2026 — sau **cụm SHOWDOWN 259 → 263**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **cụm SHOWDOWN 259 → 264**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`1117c66`** (hồ sơ Đợt 263) trên code **`b58ab42`** — đã push + LIVE kiểm chứng |
+> | Commit mới nhất | **`2700bc1`** (Đợt 264) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main`, không còn gì chưa đẩy |
-> | Kiểm live | Pages `built` đúng `1117c66` · **5/5 mã băm SHA-256 khớp** · **35/35 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot263-live.html` 25/25 + `dot263-live-apply.html` 10/10) |
-> | Vùng vừa động tới | **SHOWDOWN** — `core/engine.js` · `core/showdown.js` · `core/showdown-setup.js` · `core/showdown-history.js` · `core/app.css`. Cửa **Options ▸ Apply** đổi hành vi cho MỌI chế độ, không riêng Showdown |
-> | Trước đó | Đợt 258 KHUNG ACT (`9a80d4e`) · Đợt 256 ĐIỂM PHẠT BAY · Đợt 259 Crossword FIGHT |
+> | Kiểm live | Pages `built` đúng `2700bc1` · **4/4 mã băm SHA-256 khớp** (showdown · showdown-setup · engine · APP_MASTER) · **37/37 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE** (`dot264-live.html`, **64/65 tài nguyên** nạp từ `aword.andrewclasses.com` — cái còn lại đúng là `fake-firebase.js` cố ý tráo) |
+> | Vùng vừa động tới | **SHOWDOWN — PHÒNG CHỜ + BẢNG ĐỘI**: `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js`. ⚠️ Đợt 264 đổi **hợp đồng dữ liệu**: `sd_round` thêm `mintedAt` và `boards[…].at` nay là NHỊP TIM; `sd_main` thêm `resetAt` |
+> | Trước đó | Đợt 263 cửa Apply + hàng ô tích (`b58ab42`) · Đợt 262 tên trận · Đợt 261 phòng chờ · Đợt 258 KHUNG ACT · Đợt 259 Crossword FIGHT |
 > | Luật Firestore | **KHÔNG cần đăng lại** — cả cụm chỉ dùng `users/{uid}/items`, id tài liệu SUY RA ĐƯỢC, không `where()`, không composite index |
 > | Việc code dang dở | **KHÔNG CÓ.** Mọi thứ còn treo đều chờ **tay/mắt thầy** — xem mục ⬜ ngay dưới |
 >
-> ### 🗺️ CỤM SHOWDOWN 259 → 263 GỒM GÌ (đọc trước khi đụng vào Showdown)
+> ### 🗺️ CỤM SHOWDOWN 259 → 264 GỒM GÌ (đọc trước khi đụng vào Showdown)
 >
 > **Bốn tài liệu Firestore, tất cả trong `users/{uid}/items`:**
 >
 > | Tài liệu | Việc | Ai đọc |
 > |---|---|---|
-> | `sd_main` | bảng đội · **gạch (claims)** · `tableId` · roster · kế hoạch số câu mỗi bảng tự khai (`md`/`n`/`tt`, Đợt 260) | panel Showdown · màn READY · **hàng ô tích** |
-> | `sd_round` | ⭐ **PHÒNG CHỜ** (Đợt 261): `roundId` · `std` (dữ liệu chuẩn) · `phase` ready→starting · `boards{browserId → {teamId, ready}}` | phòng chờ · **hàng ô tích (Đợt 263)** · tên trận (Đợt 262) |
+> | `sd_main` | bảng đội · **gạch (claims)** · `tableId` · roster · kế hoạch số câu mỗi bảng tự khai (`md`/`n`/`tt`, Đợt 260) · ⭐ **`resetAt`** (Đợt 264 — mốc "Reset teams", **CHỈ TĂNG**) | panel Showdown · màn READY · **hàng ô tích** · ⭐ **cửa dừng-toàn-lớp (Đợt 264)** |
+> | `sd_round` | ⭐ **PHÒNG CHỜ** (Đợt 261): `roundId` · `std` (dữ liệu chuẩn) · `phase` ready→starting · `boards{browserId → {teamId, ready, at}}` · ⭐ **`mintedAt`** (Đợt 264) · ⚠️ **`boards[…].at` nay là NHỊP TIM**, không phải "lúc nhập lượt" | phòng chờ · **hàng ô tích (Đợt 263)** · tên trận (Đợt 262) |
 > | `sd_results` | bảng điểm SỐNG của lượt đang chơi (ghi merge theo khoá đội) | màn Show answers ▸ SHOWDOWN |
 > | `sd_hist_<lớp>_<YYYYMM>` + `_idx` | SỔ CÁI lâu dài, **một trận = `tableId \| roundKey \| roundId`** (Đợt 262) | SHOWDOWN home |
 >
-> **Ba tính năng mới của cụm, và luật sống của chúng:**
+> **Bốn tính năng mới của cụm, và luật sống của chúng:**
 > 1. **PHÒNG CHỜ** (Đợt 261) — START không vào ván ngay; bàn ĐẦU TIÊN bấm chốt `std`; **không có
 >    trọng tài** (mọi bàn cùng gọi `flipRoundStarting`, điều kiện trong giao dịch cho đúng một lần
 >    hạ cánh); `stdSignature` **phải sắp khoá**, không thì vòng LOADING DATA quay mãi.
@@ -4313,8 +4320,15 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > 3. **HÀNG Ô TÍCH** (Đợt 263) — `.aw-sd-readyrow`, con của `playOverlay` nên **một phần tử phục vụ
 >    cả màn READY lẫn phòng chờ**; `pointer-events: none` **là thứ chịu lực** (hộp trải hết đáy
 >    màn, ngay trên nút ✕ của phòng chờ).
+> 4. ⭐⭐⭐ **LƯỢT MA · NHỊP TIM · RESET TOÀN LỚP** (Đợt 264) — **một lượt không còn bàn nào KHÁC
+>    đang sống thì không có quyền ra lệnh cho ai cả** (`planRoundJoin()` trong `core/showdown.js`,
+>    **thuần nên đo được** — nó vốn chôn trong thân một giao dịch Firestore và đã hỏng đúng vì thế).
+>    Hàng bàn phải **đập nhịp** (`touchRound`, `ROUND_BEAT_MS` 45s) không thì rụng sau
+>    `ROUND_BOARD_TTL_MS` 2,5 phút. Hạn 3 tiếng đo từ `mintedAt`, **không** từ `at`.
+>    **"Reset teams" xoá HẲN `sd_round`** và dừng MỌI máy qua mốc `resetAt` — **kể cả máy đang
+>    chơi dở** (thầy chốt 26/8), bằng tấm chặn **TEAMS WERE RESET**.
 >
-> ### ⛔⛔ NĂM LUẬT BẮT BUỘC KHI SỬA TIẾP VÙNG NÀY
+> ### ⛔⛔ SÁU LUẬT BẮT BUỘC KHI SỬA TIẾP VÙNG NÀY
 > 1. **Options ▸ Apply nay LUÔN dựng lại ván** (Đợt 263, bỏ hẳn danh sách ngoại lệ của Đợt 174).
 >    Thêm tuỳ chọn đọc-lúc-mount thì **không phải làm gì cả** — đó là điểm của cách vá. ⛔ Đừng
 >    "tối ưu" bằng cách dựng lại có điều kiện: đó chính là con bọ thầy báo 25/8.
@@ -4328,11 +4342,23 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >    chạm Firestore nằm ở `core/showdown-setup.js` (nhập ĐỘNG).
 > 5. **Thêm phương thức cho cầu myActivity thì phải chép tay sang SINGLETON** `window.__awordBridge`
 >    (bài học Đợt 260 — quên là tính năng không tồn tại, không lỗi, không cảnh báo).
+> 6. ⭐⭐⭐ **(Đợt 264) MỘT GIÁ TRỊ "CHỐT MỘT LẦN CHO CẢ LỚP" PHẢI CÓ ĐƯỜNG SỬA VÀ PHẢI CÓ HẠN SỐNG.**
+>    `std` của `sd_round` từng **không có cả hai**, lại còn được **gia hạn bởi chính các cú thử
+>    chữa** ⇒ một chuẩn sai sống bất tử và kéo Options của cả lớp về số cũ suốt buổi (thầy báo
+>    26/8: *"set 55 câu mà cứ nhảy về 30"*). ⛔ Và **bản ghi nào nói "có ai đó đang ở đây" thì
+>    BẮT BUỘC phải có nhịp tim** — không có nhịp thì một máy tắt điện = một lời khai bất tử.
+>    ⛔ Đừng chữa bằng "cú START mới nhất thắng": đó là **đảo ngược lỗi, không phải xoá lỗi**.
+>    ⛔ Và đừng gỡ cặp phép ranh giới trong `dot264-round.html` mục C / `dot261-lobby` — chúng ghim
+>    lại lời hứa VẪN CÒN của Đợt 261 (có bàn khác còn nhịp ⇒ bắt kịp THẬT vẫn chạy).
 >
 > ### 🧪 BÀN THỬ CỦA CỤM (chạy: `python devserver.py 5662` rồi mở `localhost:5662/scratch/<tên>`)
 > | Bench | Đo gì | Điểm |
 > |---|---|---|
-> | `dot261-lobby.html` | phòng chờ đầy đủ (bàn thứ hai dựng ở TẦNG DỮ LIỆU) | 53/53 |
+> | `dot261-lobby.html` | phòng chờ đầy đủ (bàn thứ hai dựng ở TẦNG DỮ LIỆU) ⚠️ **Đợt 264 đã SỬA 3 phép** — đọc `GHI CHU DU AN.md` Đợt 264 VIỆC 4 TRƯỚC KHI "sửa lại" | 57/57 |
+> | `dot264-round.html` | ⭐ **luật lượt ma** — thuần, có ĐỐI CHỨNG NGƯỢC chạy LUẬT CŨ + phép CẮT DÂY | 32/32 |
+> | `dot264-reset.html` | ⭐ **nhịp tim + reset toàn lớp** trên ván THẬT (giật dây `setInterval` đã lên) | 29/29 |
+> | `dot264-live.html` | cả hai thứ trên, nạp module từ `aword.andrewclasses.com` (64/65 tài nguyên) | 37/37 |
+> | `dot264-visual.html` | **dựng cảnh để NHÌN**: tấm chặn TEAMS WERE RESET + dòng phụ mới của LOADING | — |
 > | `dot262-matchid.html` | tên trận = roundId · trận cũ vẫn đọc được · **nối dây thật** | 33/33 |
 > | `dot263-applyready.html` | **cửa Apply trên màn READY** (sinh ra lúc còn đỏ 4/10) | 10/10 |
 > | `dot263-readyrow.html` | hàng ô tích + `elementFromPoint` chứng minh nút ✕ vẫn bấm được | 25/25 |
@@ -4351,8 +4377,12 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >    **LF** ⇒ lệch băm oan 100% số file.
 > 3. Chạy bench bản live (`dot26x-live.html`): importmap chỉ tráo `core/firebase.js`, còn lại nạp
 >    thẳng từ tên miền live.
-> 4. Đếm tài nguyên live bằng `e.name.includes(host)` — ⛔ `indexOf(host) === 0` luôn ra **0** vì
->    URL mở đầu bằng `https://`.
+> 4. Đếm tài nguyên live bằng `e.name.startsWith(LIVE)` — ⛔ `indexOf(host) === 0` luôn ra **0** vì
+>    URL mở đầu bằng `https://`. Và **LIỆT KÊ RA** thứ nào KHÔNG từ live: phải chỉ còn đúng
+>    `fake-firebase.js` (Đợt 264: 64/65).
+> 5. ⭐ **(Đợt 264) Soi bằng SỰ TỒN TẠI, không bằng mã 200**: bench live mở đầu bằng một mục hỏi
+>    thẳng `typeof planRoundJoin === "function"`, `ROUND_BEAT_MS === 45000`… — nếu Pages còn phục
+>    vụ bản cũ thì mục đó đỏ ngay dòng đầu chứ không để cả bench chạy rồi đoán.
 >
 > ### ⛔⛔ BỐN BẪY ĐO CỦA ĐỢT 263 (cả bốn là PHÉP ĐO SAI, không phải app sai)
 > 1. ⭐⭐ **Sân khấu TRÔI giữa hai phép đo**: mỗi `say()`/`check()` chèn chữ vào khối `<pre>` phía
