@@ -10,7 +10,9 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 263)**.
 >
-> **Đợt 263** (25/8/2026, ⬜ **CHƯA COMMIT — chờ thầy duyệt**) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN
+> **Đợt 263** (25/8/2026, `b58ab42`, ✅ **THẦY DUYỆT · ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages
+> `built` đúng `b58ab42` · **5/5 mã băm SHA-256 khớp** · **35/35 phép chạy trên CHÍNH
+> MODULE CỦA BẢN LIVE** — `dot263-live.html` 25/25 + `dot263-live-apply.html` 10/10) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN
 > MÀN READY** và ⭐⭐⭐ **HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"**. Sửa 4 file: `core/engine.js` ·
 > `core/showdown.js` · `core/showdown-setup.js` · `core/app.css`.
 >

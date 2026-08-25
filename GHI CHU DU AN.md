@@ -7,7 +7,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 263 (25/8/2026) — ⭐⭐⭐ **VÁ CỬA APPLY TRÊN MÀN READY** · ⭐⭐⭐ **HÀNG Ô TÍCH "ĐỘI NÀO ĐÃ SẴN SÀNG"**
 
-> ⬜ **CHƯA COMMIT — chờ thầy duyệt.** `scratch/dot263-applyready.html` **10/10** ·
+> ✅ **THẦY DUYỆT · COMMIT `b58ab42` · ĐÃ PUSH + LIVE KIỂM CHỨNG.**
+> Pages `built` đúng `b58ab42` · **5/5 mã băm SHA-256 khớp** (engine · showdown ·
+> showdown-setup · app.css · options-migrate) · **35/35 phép chạy trên CHÍNH MODULE CỦA
+> BẢN LIVE**: `dot263-live.html` **25/25** (60/61 tài nguyên từ `aword.andrewclasses.com`)
+> và `dot263-live-apply.html` **10/10** (64/65) — phần còn lại đúng là `fake-firebase.js`
+> cố ý tráo. Bản live cũng đã soi bằng chữ: `const playing = playStarted` **0 lần** (cửa
+> Apply cũ đã biến mất), `.aw-sd-readyrow` có mặt ở cả engine lẫn CSS.
+> `scratch/dot263-applyready.html` **10/10** ·
 > `scratch/dot263-readyrow.html` **25/25** · hồi quy `dot261-lobby` **53/53** ·
 > `dot260-plan` **52/52** · `dot262-matchid` **33/33** · `dot256-smoke` **48/48** ·
 > `index.html` mount sạch. ✅ **ĐÃ NHÌN BẰNG MẮT** 2 ảnh (`dot263-visual.html`).
@@ -154,7 +161,8 @@ nút ✕ mờ vẫn thấy ở góc.
      thấp quá / sát mép quá không.
   4. Bấm nút ✕ bé xíu trong phòng chờ **bằng ngón tay trên TOMKO** — hàng ô tích nằm ngay
      cạnh nó (máy đã đo là không che, nhưng ngón tay thật mới là phép thử cuối).
-- ⬜ Sau khi thầy duyệt: commit + push + kiểm bản live.
+- ✅ **ĐÃ COMMIT + PUSH + KIỂM BẢN LIVE** (`b58ab42`) — bàn thử bản live:
+  `scratch/dot263-live.html` + `scratch/dot263-live-apply.html`.
 
 ---
 
