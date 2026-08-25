@@ -18,7 +18,13 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 265 (26/8/2026) — ⭐⭐⭐ **SHOWDOWN NGOÀI QUIZ: TÊN BỊ CẮT · HẾT GIỜ KHÔNG PHẠT · ĐỔI TÊN CHẬM** · ⭐⭐⭐ **RESET LỚP CHƯA TRIỆT ĐỂ**
 
-> ⬜ **CHỜ THẦY BẤM TAY**. Sửa **11 file**: `core/engine.js` ·
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `9d649d3`. Pages `built` đúng `9d649d3` ·
+> **11/11 mã băm SHA-256 khớp** (so với BLOB của commit, không so với file làm việc — xem
+> bẫy CRLF ở cuối mục này) · **14/14 phép chạy trên CHÍNH MODULE CỦA BẢN LIVE**
+> (`scratch/dot265-live.html`, **248/250 tài nguyên** nạp từ `aword.andrewclasses.com`, hai
+> cái còn lại đúng là `fake-firebase.js` + `fake-classes.js` cố ý tráo, và bench TỰ khẳng
+> định điều đó). ⬜ **CHỜ THẦY BẤM TAY TOMKO + MÁY LỚP.**
+> Sửa **11 file**: `core/engine.js` ·
 > `core/app.css` · `core/showdown-setup.js` · 8 template
 > (`true-false` · `unjumble` · `gameshow` · `balloon-pop` · `open-the-box` ·
 > `find-the-match` · `crossword` · `speaking`).
@@ -299,7 +305,17 @@ rõ câu lặp lại ("Flowers help a pla" ở lượt 1 và 6) rơi vào **hai 
 em thay vì 3** cũng đáng nhớ: 3 em thì T0/T3/T6 trùng tên nhau nên một cú nhảy row bị giấu
 mất, 12 em thì **cái tên nói thẳng ra `curRow` là bao nhiêu**.
 
-**(c) BÀN THỬ TỐ OAN CROSSWORD.** Phép "bỏ dở rồi mở ô chữ khác" lúc đỏ lúc xanh, và cái
+**(c) KIỂM BẢN LIVE — HAI BẪY NỮA, CẢ HAI ĐỀU LÀ PHÉP ĐO SAI.**
+· **So mã băm với FILE LÀM VIỆC là so nhầm.** File trên ổ đĩa Windows là **CRLF**
+(6.276 cặp trong `engine.js`), còn blob git — thứ Pages đem đi phục vụ — là **LF**. Lần so
+đầu tiên `engine.js` báo **LỆCH** và suýt bị ghi thành "đẩy hỏng". Phải so với
+`git show HEAD:<file>`.
+· **`placeShowdownName()` chạy từ nhịp đồng hồ CÂU (250ms/lần), không chạy ngay lúc mount**
+— đo quá sớm là đọc trúng bề ngang KHỞI ĐIỂM (`left:0;right:0` của app.css) và bench tố oan
+`quiz 229px`. Trên bản live càng dễ dính vì `ensureTemplate` phải đi mạng. ⇒ bench nay
+**đợi tới khi inline `left` được đặt** rồi mới đo (`waitPlaced()`), cả bản local lẫn live.
+
+**(d) BÀN THỬ TỐ OAN CROSSWORD.** Phép "bỏ dở rồi mở ô chữ khác" lúc đỏ lúc xanh, và cái
 đỏ ấy suýt bị ghi thành "vá hỏng". Thật ra bench bấm `cells()[1]` — **ô kế bên của CÙNG một
 ô chữ**, mà với ô ấy thì `sameOneAgain` đúng và "vẫn là lượt ấy" mới là nết ĐÚNG. Nay bench
 tự khẳng định từng tiền đề trước khi đo (mở được chưa · bỏ dở có thật sự đóng dải ô chữ

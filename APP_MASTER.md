@@ -8,7 +8,7 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 265 — ⬜ CHƯA PUSH, chờ thầy bấm tay)**.
+> Cập nhật lần cuối: **26/8/2026 (Đợt 265 — `9d649d3`, ĐÃ PUSH + LIVE KIỂM CHỨNG)**.
 >
 > **Đợt 265** (26/8/2026) — ⭐⭐⭐ **RÀ TOÀN BỘ SHOWDOWN NGOÀI QUIZ** (thầy: *"tôi thấy True
 > False có vấn đề nên muốn check lại tất cả để xử lý tất cả"*). Sửa **11 file**:
@@ -82,6 +82,10 @@
 > `dot263-applyready` 10/10 · `dot261-lobby` 57/57 · `dot260-plan` 52/52 ·
 > `dot262-matchid` 33/33 · `dot256-smoke` 48/48 · FIGHT: `tf-fight-test` 17✔ ·
 > `ftm-fight-test` 14✔ · `otb-fight-test` 15✔ · `cw-fight-test` 8✔ · `index.html` mount sạch.
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `9d649d3`, Pages `built` đúng `9d649d3`,
+> **11/11 mã băm SHA-256 khớp** (so với BLOB git, không so file làm việc — ổ Windows là
+> CRLF còn blob là LF, lần so đầu báo lệch oan), **14/14 phép chạy trên chính module bản
+> live** (`dot265-live.html`, 248/250 tài nguyên từ `aword.andrewclasses.com`).
 > ⬜ **CHỜ THẦY BẤM TAY TOMKO + MÁY LỚP.**
 >
 > ---
