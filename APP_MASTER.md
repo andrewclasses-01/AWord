@@ -10,7 +10,7 @@
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
 > Cập nhật lần cuối: **25/8/2026 (Đợt 259c)**.
 >
-> **Đợt 259c** (25/8/2026) — ⭐ **OPEN THE BOX BỎ NỐT HIỆU ỨNG LÀM NHẠT** (thầy: *"cho đồng bộ"*).
+> **Đợt 259c** (25/8/2026, `d65bdcc`, ĐÃ PUSH + LIVE) — ⭐ **OPEN THE BOX BỎ NỐT HIỆU ỨNG LÀM NHẠT** (thầy: *"cho đồng bộ"*).
 > ⭐ Nửa sau của yêu cầu — thanh giờ chọn ô — **đã có sẵn từ Đợt 259**: nó nằm ở tầng
 > `core/fight.js` nên game nào khai `tpl.fightPick` là tự có. Đã **ĐO chứ không đoán** trước khi
 > trả lời thầy: `scratch/dot259c-otb.html` mục 2–4 đạt sạch (thanh đúng bên · nấc 3s cạn đúng
@@ -26,7 +26,10 @@
 > ⇒ Nay **KHÔNG game lượt-chọn nào còn làm nhạt** — nhưng đó vẫn là quyết định của TỪNG template,
 > `core/fight.js` chưa bao giờ ra lệnh một bàn phải làm gì với `setPickTurn`.
 > Bàn thử `dot259c-otb.html` **21/21**; hồi quy `dot256-smoke` 48/48 · `dot259-fight` 49/49 ·
-> `dot259b-optcheck` 12/12.
+> `dot259b-optcheck` 12/12. ✅ **COMMIT `d65bdcc`, ĐÃ PUSH + LIVE KIỂM CHỨNG**: Pages `built`
+> đúng commit · **8/8 mã băm SHA-256 khớp** · **44/44 phép chạy trên CHÍNH MODULE CỦA BẢN
+> LIVE** (`dot259-live.html` mục 11 kiểm đúng Open the box: thanh giờ chạy · hai bàn
+> `opacity 1/1` · ⛔ bàn không tới lượt vẫn 9/9 ô khoá và chạm thật không mở gì).
 >
 > ---
 > **Đợt 259b** (25/8/2026, `9553879`, ĐÃ PUSH + LIVE: 6/6 mã băm khớp · 37/37 phép chạy trên module bản live) — ⭐ **BỎ HẲN Ô TÍCH "Change the crossword" KHỎI OPTIONS CỦA

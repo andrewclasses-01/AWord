@@ -1,6 +1,6 @@
 # GHI CHÚ — TEMPLATE OPEN THE BOX
 
-## 25/8/2026 — BỎ HẲN HIỆU ỨNG LÀM NHẠT BÀN KHÔNG TỚI LƯỢT (Đợt 259c của dự án)
+## 25/8/2026 — BỎ HẲN HIỆU ỨNG LÀM NHẠT BÀN KHÔNG TỚI LƯỢT (Đợt 259c của dự án) — ✅ COMMIT `d65bdcc` + PUSH + LIVE (8/8 mã băm khớp · 44/44 phép chạy trên module bản live)
 
 Thầy: *"Open the box cũng bỏ làm nhạt luôn cho đồng bộ và thêm thanh thời gian tương tự"*.
 

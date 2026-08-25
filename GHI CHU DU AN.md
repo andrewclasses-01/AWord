@@ -7,6 +7,12 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ## Đợt 259c (25/8/2026) — ⭐ **OPEN THE BOX: BỎ NỐT HIỆU ỨNG LÀM NHẠT, CHO ĐỒNG BỘ VỚI CROSSWORD**
 
+> ✅ **COMMIT `d65bdcc` · ĐÃ PUSH + LIVE KIỂM CHỨNG** — Pages `built` đúng
+> commit · **8/8 mã băm SHA-256 khớp** · **44/44 phép chạy trên CHÍNH MODULE CỦA BẢN
+> LIVE** (`scratch/dot259-live.html` mục 11: thanh giờ chạy cho Open the box · hai bàn
+> `opacity 1/1` · ⛔ bàn không tới lượt vẫn **9/9 ô khoá** và một cú chạm THẬT vào đó
+> không mở được câu nào).
+
 Thầy: *"Open the box cũng bỏ làm nhạt luôn cho đồng bộ và thêm thanh thời gian tương tự"*.
 
 ### ⭐ Nửa sau của yêu cầu ĐÃ CÓ SẴN — và đã đo chứ không đoán
