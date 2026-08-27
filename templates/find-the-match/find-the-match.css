@@ -35,7 +35,7 @@
      centred in the space between the dashed divider and the "x of y" bar
      below the stage — tuned against the divider's own top gap so the block
      is vertically centred, not high (teacher's spec 1/8). */
-  padding-bottom: 0.2cqw;
+  padding-bottom: calc(0.2 * var(--aw-u));
 }
 
 /* =============================================================
@@ -53,11 +53,11 @@
   top: 6%; right: 5%;
   width: 22%; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  padding: 0.3cqw;
+  padding: calc(0.3 * var(--aw-u));
   border-radius: 50%;
   background: #fff;
   color: #16a34a;
-  box-shadow: 0 0.15cqw 0.4cqw rgba(0, 0, 0, .28);
+  box-shadow: 0 calc(0.15 * var(--aw-u)) calc(0.4 * var(--aw-u)) rgba(0, 0, 0, .28);
   pointer-events: none;
 }
 .aw-ftm-fightmark svg { width: 100%; height: 100%; }
@@ -71,8 +71,8 @@
   overflow: hidden;
   flex: 0 0 auto;
   width: 100%;
-  height: calc(9.5cqw * var(--fit));
-  margin-bottom: 1.2cqw;
+  height: calc(calc(9.5 * var(--aw-u)) * var(--fit));
+  margin-bottom: calc(1.2 * var(--aw-u));
 }
 .aw-ftm-prompt {
   position: absolute; inset: 0;
@@ -81,19 +81,19 @@
   /* --pfit is a PER-PROMPT shrink factor set by fitPrompt() in the JS so a very
      long definition scales down to fit the fixed-height track instead of being
      clipped; --fit is the whole-stage scale shared with the tiles. */
-  font-size: calc(3.6cqw * var(--fit) * var(--pfit, 1));
+  font-size: calc(calc(3.6 * var(--aw-u)) * var(--fit) * var(--pfit, 1));
   font-weight: 700;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   line-height: 1.35;
-  padding: 0 4cqw;
+  padding: 0 calc(4 * var(--aw-u));
   will-change: transform;
 }
 /* the "3-2-1" prep countdown (count-up mode only) — much bigger than a
    normal question, plain no-stroke number so it reads instantly. */
 .aw-ftm-prompt.is-countdown {
-  font-size: calc(9cqw * var(--fit));
+  font-size: calc(calc(9 * var(--aw-u)) * var(--fit));
   font-weight: 800;
   -webkit-text-stroke: 0;
   color: var(--aw-question-fill, var(--aw-text));
@@ -109,10 +109,10 @@
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   z-index: 4; pointer-events: none;
-  width: calc(6.4cqw * var(--fit)); height: calc(6.4cqw * var(--fit));
+  width: calc(calc(6.4 * var(--aw-u)) * var(--fit)); height: calc(calc(6.4 * var(--aw-u)) * var(--fit));
   border-radius: 50%;
   background: #22c55e;
-  box-shadow: 0 0.4cqw 1.1cqw rgba(0, 0, 0, .28);
+  box-shadow: 0 calc(0.4 * var(--aw-u)) calc(1.1 * var(--aw-u)) rgba(0, 0, 0, .28);
   display: flex; align-items: center; justify-content: center;
 }
 .aw-ftm-bigcheck svg { width: 64%; height: 64%; }
@@ -120,8 +120,8 @@
 .aw-ftm-divider {
   flex: 0 0 auto;
   height: 0;
-  margin: 0 1cqw calc(1.8cqw * var(--fit));
-  border-top: 0.22cqw dashed var(--aw-muted, #b9c3d1);
+  margin: 0 calc(1 * var(--aw-u)) calc(calc(1.8 * var(--aw-u)) * var(--fit));
+  border-top: calc(0.22 * var(--aw-u)) dashed var(--aw-muted, #b9c3d1);
   opacity: .6;
 }
 
@@ -131,7 +131,7 @@
   display: grid;
   justify-content: center;
   align-content: center;
-  gap: calc(1.1cqw * var(--fit));
+  gap: calc(calc(1.1 * var(--aw-u)) * var(--fit));
   overflow: hidden;
 }
 .aw-ftm-tile {
@@ -143,17 +143,17 @@
      makes vertical overflow measurable so fitTiles can shrink to it. */
   display: flex; align-items: center; justify-content: center; text-align: center;
   overflow: hidden;
-  height: calc(6.2cqw * var(--fit));
-  border-radius: var(--aw-tile-radius, 1.3cqw);
+  height: calc(calc(6.2 * var(--aw-u)) * var(--fit));
+  border-radius: var(--aw-tile-radius, calc(1.3 * var(--aw-u)));
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   /* --aw-tile-fixed forces one flat colour (some themes, e.g. Basic); with
      it unset the per-pair --ftm-c/--ftm-d (set inline in JS) show through —
      same fallback chain as Quiz/Open the box's PALETTE. */
   background: var(--aw-tile-fixed, var(--ftm-c, #3b82f6));
-  box-shadow: var(--aw-tile-shadow, 0 0.5cqw 0 var(--aw-tile-fixed-dark, var(--ftm-d, #2563eb)));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.5 * var(--aw-u)) 0 var(--aw-tile-fixed-dark, var(--ftm-d, #2563eb)));
   color: #fff; font-family: inherit; font-weight: 700;
   /* --tfit = per-tile shrink factor (fitTiles); --fit = whole-stage scale. */
-  font-size: calc(1.85cqw * var(--fit) * var(--tfit, 1));
+  font-size: calc(calc(1.85 * var(--aw-u)) * var(--fit) * var(--tfit, 1));
   line-height: 1.35;
   /* ⭐⭐⭐ Đợt 222 (thầy, 21/8/2026) — MỘT TỪ KHÔNG BAO GIỜ BỊ BẺ ĐÔI.
      Thầy: *"với một số từ dài, do ô câu trả lời nhỏ nên từ bị cắt vài chữ xuống dòng
@@ -171,13 +171,13 @@
      ⚠️ `overflow: hidden` ở trên GIỮ NGUYÊN — nó là lưới an toàn cho ca từ dài tới
      mức chạm sàn thu nhỏ, chứ không còn là thứ che giấu lỗi. */
   overflow-wrap: normal; word-break: normal;
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  padding: calc(0.5cqw * var(--fit)) calc(0.7cqw * var(--fit));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
+  padding: calc(calc(0.5 * var(--aw-u)) * var(--fit)) calc(calc(0.7 * var(--aw-u)) * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, opacity .3s ease, filter .15s ease;
 }
 .aw-ftm-tile:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-ftm-tile:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.15cqw 0 rgba(0,0,0,.2)); }
+.aw-ftm-tile:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); box-shadow: var(--aw-tile-shadow-active, 0 calc(0.15 * var(--aw-u)) 0 rgba(0,0,0,.2)); }
 .aw-ftm-tile:disabled { cursor: default; }
 
 /* correct match (removeCorrects:true) / skipped-on-timeout: fade + shrink
@@ -191,7 +191,7 @@
 
 .aw-ftm-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 600;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
 }
 
 /* PAGE INDICATOR (teacher 4/8/2026): there is no in-board pager any more — the
@@ -203,7 +203,7 @@
    rule here would silently restyle every other game for the rest of the session. */
 .aw-playarea:has(> .aw-ftm-card) ~ .aw-bottombar .aw-nav-label {
   font-weight: 800;
-  min-width: 14cqw;
+  min-width: calc(14 * var(--aw-u));
   color: var(--aw-text);
 }
 

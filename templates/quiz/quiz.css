@@ -14,11 +14,11 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding-bottom: 3.2cqw;            /* gap below the answers row */
+  padding-bottom: calc(3.2 * var(--aw-u));            /* gap below the answers row */
   animation: aw-fadein .25s ease;    /* simple fade between questions */
 }
 .aw-quiz-question {
-  font-size: calc(5.2cqw * var(--fit));
+  font-size: calc(calc(5.2 * var(--aw-u)) * var(--fit));
   font-weight: 600;
   /* theme-driven: plain dark text by default; Classroom sets a white fill +
      black comic-style outline (via -webkit-text-stroke) to read over its
@@ -44,7 +44,7 @@
    the per-count layouts, and a short last row auto-centers. --per-row (set per
    question) fixes how many tiles fill one row. */
 .aw-quiz-answers {
-  --gap: calc(1.7cqw * var(--fit));
+  --gap: calc(calc(1.7 * var(--aw-u)) * var(--fit));
   margin-top: auto;
   width: 100%;
   display: flex; flex-wrap: wrap;
@@ -64,13 +64,13 @@
   --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
   /* Tile shape is theme-driven (Basic = thin blue border + flat soft shadow;
      Classic/etc = 3D coloured lip). */
-  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border-radius: var(--aw-tile-radius, calc(1.6 * var(--aw-u)));
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   background: var(--tile-eff);
-  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff));
   color: #fff; font-family: inherit; font-weight: 700;
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  padding: calc(3.4cqw * var(--fit)) calc(1.2cqw * var(--fit));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
+  padding: calc(calc(3.4 * var(--aw-u)) * var(--fit)) calc(calc(1.2 * var(--aw-u)) * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, filter .15s ease, opacity .35s ease;
 }
@@ -78,7 +78,7 @@
   display: block;
   /* --fit shrinks the WHOLE card (height fit); --tw shrinks THIS tile only
      (width fit) so a long single word never has to break — see quiz.js fitNow(). */
-  font-size: calc(2.9cqw * var(--fit) * var(--tw, 1));
+  font-size: calc(calc(2.9 * var(--aw-u)) * var(--fit) * var(--tw, 1));
   line-height: 1.35;
   /* NEVER split a single word across two lines. Multi-word answers still wrap
      at spaces (the tile just grows taller); a single word that is too wide is
@@ -89,14 +89,14 @@
 }
 /* optional "Letters on answers" badge (Options panel) — top-left of the tile */
 .aw-quiz-letter {
-  position: absolute; top: 0.5cqw; left: 0.7cqw;
-  font-size: calc(1.3cqw * var(--fit));
+  position: absolute; top: calc(0.5 * var(--aw-u)); left: calc(0.7 * var(--aw-u));
+  font-size: calc(calc(1.3 * var(--aw-u)) * var(--fit));
   font-weight: 800; color: rgba(255,255,255,.8);
   text-shadow: 0 1px 2px rgba(0,0,0,.2);
 }
 
 .aw-quiz-tile:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-quiz-tile:active:not(:disabled) { transform: translateY(0.4cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 var(--tile-dark-eff)); }
+.aw-quiz-tile:active:not(:disabled) { transform: translateY(calc(0.4 * var(--aw-u))); box-shadow: var(--aw-tile-shadow-active, 0 calc(0.2 * var(--aw-u)) 0 var(--tile-dark-eff)); }
 .aw-quiz-tile:disabled { cursor: default; }   /* the correct tile keeps its full color */
 
 /* wrong tiles fade to a very faint ghost after answering */
@@ -126,7 +126,7 @@
 /* empty / malformed activity */
 .aw-quiz-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 600;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
 }
 
 /* ⭐⭐⭐ Đợt 217 — CHE DẤU VẾT TRẢ LỜI KHI FIGHT (thầy, 20/8/2026):

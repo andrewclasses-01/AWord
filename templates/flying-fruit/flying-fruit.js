@@ -299,7 +299,7 @@ const flyingFruitTemplate = {
       const fruit = el("div", "aw-ff-fruit is-" + type);
       const im = el("img", "aw-ff-fruit-img"); im.src = imgUrl(type + ".png"); im.alt = "";
       const label = el("div", "aw-ff-word", entry.word);
-      label.style.fontSize = wordFontCqw(entry.word) + "cqw";
+      label.style.fontSize = "calc(" + wordFontCqw(entry.word) + " * var(--aw-u))";
       fruit.append(im, label);
       arc.append(fruit);
       fly.append(arc);
@@ -316,7 +316,7 @@ const flyingFruitTemplate = {
       fly.style.setProperty("--x1", x1 + "%");
       fly.style.setProperty("--dur", flyDuration + "ms");
       arc.style.setProperty("--dur", flyDuration + "ms");
-      arc.style.setProperty("--peak", peak + "cqw");
+      arc.style.setProperty("--peak", "calc(" + peak + " * var(--aw-u))");
       fruit.style.setProperty("--spin", spin + "deg");
       fruit.style.setProperty("--dur", flyDuration + "ms");
 

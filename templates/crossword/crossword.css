@@ -54,7 +54,7 @@
    as before this feature existed. */
 .aw-playarea:has(> .aw-cw-wrap) ~ .aw-bottombar .aw-nav-label {
   font-weight: 800;
-  min-width: 14cqw;
+  min-width: calc(14 * var(--aw-u));
   color: var(--aw-text);
 }
 .aw-playarea:has(> .aw-cw-wrap) ~ .aw-bottombar .aw-navbtn { display: none; }
@@ -66,7 +66,7 @@
   transform: translate(-50%, -50%);
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 300;
-  font-size: 1.7cqw;
+  font-size: calc(1.7 * var(--aw-u));
   letter-spacing: 0.32em;
   text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
   text-transform: uppercase;
@@ -82,12 +82,12 @@
    clickable (pointer-events off until a word is open). ----- */
 .aw-cw-cluebar {
   position: absolute;
-  top: 1cqw; left: 0; right: 0;
-  height: 11cqw;              /* FIXED room for ~2 lines; autoFit shrinks longer ones */
+  top: calc(1 * var(--aw-u)); left: 0; right: 0;
+  height: calc(11 * var(--aw-u));              /* FIXED room for ~2 lines; autoFit shrinks longer ones */
   display: flex;
   align-items: flex-start;    /* question sits HIGH (raised); strip centres to the text below */
   justify-content: center;
-  padding: 0.3cqw 4cqw 0;
+  padding: calc(0.3 * var(--aw-u)) calc(4 * var(--aw-u)) 0;
   text-align: center;
   overflow: hidden;
   z-index: 4;
@@ -99,21 +99,21 @@
   font-weight: 800;
   line-height: 1.35;
   /* big-ish — prefer 1 line, wrap to 2, then autoFit (--fit) shrinks longer ones */
-  font-size: calc(4.1cqw * var(--fit, 1));
+  font-size: calc(calc(4.1 * var(--aw-u)) * var(--fit, 1));
   overflow-wrap: anywhere;
   /* a soft halo so the question reads over the dimmed grid WITHOUT hiding the
      cells behind it (they stay faintly visible). */
   text-shadow:
-    0 0 0.5cqw var(--aw-stage-bg, #fff), 0 0 0.5cqw var(--aw-stage-bg, #fff),
-    0 0 1cqw var(--aw-stage-bg, #fff),   0 0 1.6cqw var(--aw-stage-bg, #fff);
+    0 0 calc(0.5 * var(--aw-u)) var(--aw-stage-bg, #fff), 0 0 calc(0.5 * var(--aw-u)) var(--aw-stage-bg, #fff),
+    0 0 calc(1 * var(--aw-u)) var(--aw-stage-bg, #fff),   0 0 calc(1.6 * var(--aw-u)) var(--aw-stage-bg, #fff);
 }
 /* while a word is open AND "Change the crossword" is on, the clue is a way out */
 .aw-cw-clue-text.is-exit { cursor: pointer; }
 .aw-cw-clue-text.is-exit:hover { color: var(--aw-accent); }
 
 @keyframes aw-cw-andrew-textglow {
-  0%, 100% { filter: drop-shadow(0 0 0.6cqw #ffd54a) drop-shadow(0 0 1.6cqw rgba(255, 193, 7, .55)); }
-  50%      { filter: drop-shadow(0 0 1.4cqw #ffe07a) drop-shadow(0 0 3.2cqw rgba(255, 193, 7, .85)); }
+  0%, 100% { filter: drop-shadow(0 0 calc(0.6 * var(--aw-u)) #ffd54a) drop-shadow(0 0 calc(1.6 * var(--aw-u)) rgba(255, 193, 7, .55)); }
+  50%      { filter: drop-shadow(0 0 calc(1.4 * var(--aw-u)) #ffe07a) drop-shadow(0 0 calc(3.2 * var(--aw-u)) rgba(255, 193, 7, .85)); }
 }
 
 /* ----- the board: fills from below the clue to the very bottom (the keyboard
@@ -121,7 +121,7 @@
    shows centred at maximum size with nothing clipped. ----- */
 .aw-cw-gridwrap {
   position: absolute;
-  top: 1cqw; left: 0; right: 0; bottom: 0.5cqw;
+  top: calc(1 * var(--aw-u)); left: 0; right: 0; bottom: calc(0.5 * var(--aw-u));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -226,7 +226,7 @@
    keyboard itself takes pointer events, so taps beside it fall to the board. */
 .aw-cw-kbdhost {
   position: absolute;
-  left: 0; right: 0; bottom: 1cqw;
+  left: 0; right: 0; bottom: calc(1 * var(--aw-u));
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -280,16 +280,16 @@
   height: var(--bigcell, 60px);
   box-sizing: border-box;
   background: var(--aw-card, #fff);
-  border: 0.18cqw solid #c7d2e0;
+  border: calc(0.18 * var(--aw-u)) solid #c7d2e0;
   border-radius: calc(var(--bigcell, 60px) * 0.12);
-  box-shadow: 0 0.5cqw 1.2cqw rgba(0, 0, 0, .18);
+  box-shadow: 0 calc(0.5 * var(--aw-u)) calc(1.2 * var(--aw-u)) rgba(0, 0, 0, .18);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: background .12s ease, box-shadow .12s ease, transform .12s ease;
 }
 .aw-cw-bigcell.is-cursor {
-  box-shadow: 0 0.5cqw 1.2cqw rgba(0, 0, 0, .18), inset 0 0 0 0.32cqw var(--aw-accent);
+  box-shadow: 0 calc(0.5 * var(--aw-u)) calc(1.2 * var(--aw-u)) rgba(0, 0, 0, .18), inset 0 0 0 calc(0.32 * var(--aw-u)) var(--aw-accent);
   transform: translateY(-2%);
 }
 .aw-cw-bigcell.is-solved {
@@ -425,26 +425,26 @@
    states as Type the answer, duplicated under the .aw-cw- prefix (this page
    does not load that template's CSS). Structure classes (.aw-kbd-key-fnlabel/
    -dot, is-ready/is-glowing/is-used) come from core. */
-.aw-cw-key-andrew { flex: 0 0 12.7cqw; }
+.aw-cw-key-andrew { flex: 0 0 calc(12.7 * var(--aw-u)); }
 .aw-cw-key-andrew.is-ready:disabled { opacity: .55; }
 .aw-cw-key-andrew.is-ready .aw-kbd-key-fnlabel { color: #f4f4f5; }   /* white, like caps/numbers */
 .aw-cw-key-andrew.is-glowing {
   color: #3a2a00;
   background: linear-gradient(180deg, #ffe89a, #ffc531);
-  box-shadow: 0 0.24cqw 0 #b8860b;
+  box-shadow: 0 calc(0.24 * var(--aw-u)) 0 #b8860b;
   animation: aw-cw-andrew-halo 2.6s ease-in-out infinite;   /* slow, gentle glow */
 }
 .aw-cw-key-andrew.is-glowing .aw-kbd-key-fnlabel {
   color: #4a3400; font-weight: 800;
-  text-shadow: 0 0 0.6cqw #fff8d0;
+  text-shadow: 0 0 calc(0.6 * var(--aw-u)) #fff8d0;
 }
 @keyframes aw-cw-andrew-halo {
-  0%, 100% { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 0.6cqw #ffd54a, 0 0 1.6cqw rgba(255,193,7,.55); }
-  50%      { box-shadow: 0 0.24cqw 0 #b8860b, 0 0 1.4cqw #ffe07a, 0 0 3.2cqw rgba(255,193,7,.85); }
+  0%, 100% { box-shadow: 0 calc(0.24 * var(--aw-u)) 0 #b8860b, 0 0 calc(0.6 * var(--aw-u)) #ffd54a, 0 0 calc(1.6 * var(--aw-u)) rgba(255,193,7,.55); }
+  50%      { box-shadow: 0 calc(0.24 * var(--aw-u)) 0 #b8860b, 0 0 calc(1.4 * var(--aw-u)) #ffe07a, 0 0 calc(3.2 * var(--aw-u)) rgba(255,193,7,.85); }
 }
 .aw-cw-key-andrew.is-used {
   background: #333335;
-  box-shadow: 0 0.24cqw 0 #1b1b1d;
+  box-shadow: 0 calc(0.24 * var(--aw-u)) 0 #1b1b1d;
   transition: background .5s ease, color .5s ease, opacity .5s ease;
 }
 .aw-cw-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
@@ -455,7 +455,7 @@
   justify-content: center;
   height: 100%;
   color: var(--aw-muted, #6b7a90);
-  font-size: 3cqw;
+  font-size: calc(3 * var(--aw-u));
   font-weight: 700;
 }
 

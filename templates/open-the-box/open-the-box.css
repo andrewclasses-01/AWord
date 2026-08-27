@@ -57,7 +57,7 @@
 .aw-playarea:has(> .aw-otb-card, > .aw-otb-qcard) ~ .aw-bottombar .aw-nav-label {
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 300;
-  font-size: 1.5cqw;
+  font-size: calc(1.5 * var(--aw-u));
   letter-spacing: 0.32em;
   text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
   text-transform: uppercase;
@@ -79,7 +79,7 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding: 1cqw 0 2.4cqw;
+  padding: calc(1 * var(--aw-u)) 0 calc(2.4 * var(--aw-u));
   animation: aw-fadein .25s ease;
   transition: opacity .18s ease;   /* Đợt 183 — the pick-turn fade below */
 }
@@ -132,13 +132,13 @@
   display: flex; flex-wrap: wrap;
   justify-content: center;
   align-content: center;
-  gap: calc(1.3cqw * var(--fit));
-  perspective: 120cqw;
+  gap: calc(calc(1.3 * var(--aw-u)) * var(--fit));
+  perspective: calc(120 * var(--aw-u));
 }
 
 .aw-otb-box {
   flex: 0 0 auto;
-  width: var(--cell, 13cqw); height: var(--cell, 13cqw);
+  width: var(--cell, calc(13 * var(--aw-u))); height: var(--cell, calc(13 * var(--aw-u)));
   cursor: pointer;
   background: transparent;
   border: 0; padding: 0;
@@ -165,9 +165,9 @@
 .aw-otb-face {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  border-radius: var(--aw-tile-radius, 1.3cqw);
+  border-radius: var(--aw-tile-radius, calc(1.3 * var(--aw-u)));
   backface-visibility: hidden;
-  padding: calc(1cqw * var(--fit));
+  padding: calc(calc(1 * var(--aw-u)) * var(--fit));
   overflow: hidden;
 }
 .aw-otb-face-front {
@@ -182,9 +182,9 @@
   background: var(--tile-eff);
   color: #fff;
   font-weight: 800;
-  font-size: var(--num-size, calc(3.2cqw * var(--fit)));
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
+  font-size: var(--num-size, calc(calc(3.2 * var(--aw-u)) * var(--fit)));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff));
 }
 .aw-otb-face-back {
   --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
@@ -199,26 +199,26 @@
      now set per-layout in JS proportional to the ACTUAL cell size (so it tracks
      the box at every count), and --back-fit is a per-box shrink from
      fitBackFaces() that guarantees even a long question fits fully inside. */
-  font-size: calc(var(--back-size, 1.5cqw) * var(--back-fit, 1));
+  font-size: calc(var(--back-size, calc(1.5 * var(--aw-u))) * var(--back-fit, 1));
   line-height: 1.35;
   text-align: center;
   flex-direction: column;
-  gap: calc(0.5cqw * var(--back-fit, 1));
+  gap: calc(calc(0.5 * var(--aw-u)) * var(--back-fit, 1));
   border-color: var(--tile-eff);
-  border-width: 0.18cqw;
+  border-width: calc(0.18 * var(--aw-u));
   border-style: solid;
 }
 /* full width + no mid-word break so multi-word text wraps to fill the box and
    fitBackFaces() sizes it down until the whole thing shows (point 3 + 5). */
 .aw-otb-back-q { font-weight: 700; width: 100%; overflow-wrap: normal; word-break: keep-all; }
-.aw-otb-back-a { display: flex; align-items: center; justify-content: center; gap: 0.4cqw; font-weight: 600; max-width: 100%; overflow-wrap: normal; word-break: keep-all; }
+.aw-otb-back-a { display: flex; align-items: center; justify-content: center; gap: calc(0.4 * var(--aw-u)); font-weight: 600; max-width: 100%; overflow-wrap: normal; word-break: keep-all; }
 .aw-otb-back-a.is-correct { color: #059669; }
 
 /* Questions mode: a solved box stays flipped open forever — green tick kept
    LOW so it never sits on top of the question text (teacher's request). */
 .aw-otb-solved-tick {
-  position: absolute; left: 50%; bottom: calc(0.8cqw * var(--fit)); transform: translateX(-50%);
-  width: calc(2.1cqw * var(--fit)); height: calc(2.1cqw * var(--fit)); color: #22c55e;
+  position: absolute; left: 50%; bottom: calc(calc(0.8 * var(--aw-u)) * var(--fit)); transform: translateX(-50%);
+  width: calc(calc(2.1 * var(--aw-u)) * var(--fit)); height: calc(calc(2.1 * var(--aw-u)) * var(--fit)); color: #22c55e;
 }
 .aw-otb-solved-tick svg { width: 100%; height: 100%; }
 /* a WRONG box also stays flipped open (same tick position, now a padlock) —
@@ -322,7 +322,7 @@
 
 .aw-otb-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 600;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
 }
 
 /* =============================================================
@@ -335,7 +335,7 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding: 1.6cqw;
+  padding: calc(1.6 * var(--aw-u));
   animation: aw-fadein .2s ease;
 }
 
@@ -364,13 +364,13 @@
      can't inherit that card's --fit custom property — fall back to 1
      explicitly instead of relying on inheritance that no longer reaches here. */
   width: 100%;
-  padding-right: 1.4cqw;
+  padding-right: calc(1.4 * var(--aw-u));
   box-sizing: border-box;
-  display: flex; align-items: center; gap: calc(1.4cqw * var(--fit, 1));
+  display: flex; align-items: center; gap: calc(calc(1.4 * var(--aw-u)) * var(--fit, 1));
 }
 .aw-otb-q-clock {
-  flex: 0 0 auto; min-width: calc(4cqw * var(--fit, 1));
-  font-size: calc(2.4cqw * var(--fit, 1)); font-weight: 700; color: var(--aw-text);
+  flex: 0 0 auto; min-width: calc(calc(4 * var(--aw-u)) * var(--fit, 1));
+  font-size: calc(calc(2.4 * var(--aw-u)) * var(--fit, 1)); font-weight: 700; color: var(--aw-text);
   /* đợt 25b: an EXPLICIT line-height, so this row's height is decided by the
      font SIZE alone and never by the font's own metrics. Without it the row is
      31px while the fallback font is in use and 37px once Baloo 2 finishes
@@ -382,7 +382,7 @@
 }
 .aw-otb-timerbar {
   flex: 1 1 auto;
-  height: calc(1.1cqw * var(--fit, 1)); border-radius: 999px;
+  height: calc(calc(1.1 * var(--aw-u)) * var(--fit, 1)); border-radius: 999px;
   background: rgba(0, 0, 0, .12); overflow: hidden;
 }
 .aw-otb-timerbar-fill {
@@ -406,7 +406,7 @@
    (different from Quiz's own stacked question-on-top layout). */
 .aw-otb-q-body {
   flex: 1 1 auto; min-height: 0;
-  display: flex; gap: calc(2.2cqw * var(--fit));
+  display: flex; gap: calc(calc(2.2 * var(--aw-u)) * var(--fit));
 }
 .aw-otb-q-question {
   flex: 1 1 42%; min-height: 0; min-width: 0;
@@ -421,11 +421,11 @@
      think EVERY question overflowed and always shrink to the minimum size —
      a real bug found by inspecting getComputedStyle(--fit) directly. */
   display: flex; align-items: center; justify-content: center; text-align: center;
-  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border-radius: var(--aw-tile-radius, calc(1.6 * var(--aw-u)));
   background: var(--aw-tile-fixed, #3b82f6);
-  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--aw-tile-fixed-dark, #2563eb));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--aw-tile-fixed-dark, #2563eb));
   color: #fff; font-weight: 700;
-  padding: calc(2cqw * var(--fit));
+  padding: calc(calc(2 * var(--aw-u)) * var(--fit));
 }
 /* the question TEXT carries its own --fit (set per-tile by setupFit, 1/8/2026)
    so it sizes independently of the answer tiles; the tile above is just the
@@ -436,7 +436,7 @@
      fit that line's width). Full width makes multi-word questions WRAP at
      spaces and fill the tile's height instead, like before it had its own span. */
   width: 100%;
-  font-size: calc(3cqw * var(--fit));
+  font-size: calc(calc(3 * var(--aw-u)) * var(--fit));
   line-height: 1.35;
   /* Point 5 (never split a word, 4/8/2026): make this EXPLICIT here too (the
      answer text already had it; the question span only inherited it). A long
@@ -455,9 +455,9 @@
    sidesteps both. */
 .aw-otb-q-question { position: relative; }
 .aw-otb-listenbtn {
-  position: absolute; top: calc(1.2cqw * var(--fit, 1)); right: calc(1.2cqw * var(--fit, 1));
+  position: absolute; top: calc(calc(1.2 * var(--aw-u)) * var(--fit, 1)); right: calc(calc(1.2 * var(--aw-u)) * var(--fit, 1));
   display: inline-flex; align-items: center; justify-content: center;
-  width: 3.4cqw; height: 3.4cqw;
+  width: calc(3.4 * var(--aw-u)); height: calc(3.4 * var(--aw-u));
   padding: 0; border: none; border-radius: 50%;
   background: rgba(255, 255, 255, .28);
   color: #fff;
@@ -472,7 +472,7 @@
    but simply grows and re-centers via translate. */
 .aw-otb-listenbtn.is-lg {
   top: 50%; right: auto; left: 50%; transform: translate(-50%, -50%);
-  width: 7.5cqw; height: 7.5cqw;
+  width: calc(7.5 * var(--aw-u)); height: calc(7.5 * var(--aw-u));
 }
 .aw-otb-listenbtn.is-lg:active { transform: translate(-50%, -50%) scale(.9); }
 .aw-otb-listenbtn.is-playing {
@@ -481,7 +481,7 @@
 }
 @keyframes aw-otb-listenglow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .6); }
-  50% { box-shadow: 0 0 0 0.6cqw rgba(34, 197, 94, 0); }
+  50% { box-shadow: 0 0 0 calc(0.6 * var(--aw-u)) rgba(34, 197, 94, 0); }
 }
 
 .aw-otb-q-answers {
@@ -493,19 +493,19 @@
      (which setupFit's width check then catches and shrinks) instead. */
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: 1fr;
-  gap: calc(1.6cqw * var(--fit));
+  gap: calc(calc(1.6 * var(--aw-u)) * var(--fit));
 }
 .aw-otb-qtile {
   position: relative; min-height: 0; min-width: 0; /* min-width:0 same reason as .aw-otb-q-question; also stops a grid item's default min-width:auto from stretching past its minmax(0,1fr) column for a long word */
   --tile-eff: var(--aw-tile-fixed, var(--otb-c, #3b82f6));
   --tile-dark-eff: var(--aw-tile-fixed-dark, var(--otb-d, #2563eb));
-  border-radius: var(--aw-tile-radius, 1.6cqw);
+  border-radius: var(--aw-tile-radius, calc(1.6 * var(--aw-u)));
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   background: var(--tile-eff);
-  box-shadow: var(--aw-tile-shadow, 0 0.6cqw 0 var(--tile-dark-eff));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff));
   color: #fff; font-family: inherit; font-weight: 700; text-align: center;
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
-  padding: calc(1.6cqw * var(--fit));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
+  padding: calc(calc(1.6 * var(--aw-u)) * var(--fit));
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   /* Point 1 (touch flash fix, 4/8/2026): kill Chrome's default rectangular
@@ -535,7 +535,7 @@
   animation: aw-otb-qtile-in 1.2s cubic-bezier(.22,.9,.3,1) both;
 }
 @keyframes aw-otb-qtile-in {
-  from { opacity: 0; transform: translateX(85cqw); }
+  from { opacity: 0; transform: translateX(calc(85 * var(--aw-u))); }
   to   { opacity: 1; transform: translateX(0); }
 }
 /* Once an answer is picked, the tiles slide back OUT toward the stage's
@@ -571,7 +571,7 @@
    stagger drives both the entrance and this exit without being reset here. */
 @keyframes aw-otb-qtile-out {
   from { opacity: 1; transform: translateX(0); }
-  to   { opacity: 0; transform: translateX(85cqw); }
+  to   { opacity: 0; transform: translateX(calc(85 * var(--aw-u))); }
 }
 .aw-otb-q-answers.is-closing .aw-otb-qtile {
   animation: aw-otb-qtile-out 1.2s cubic-bezier(.4,0,.2,1) both;
@@ -582,13 +582,13 @@
    single word instead overflows, which setupFit() detects (scrollWidth >
    clientWidth) and resolves by shrinking --fit until the word fits on one
    line — so the text is as large as possible with whole, unbroken words. */
-.aw-otb-q-text { display: block; width: 100%; font-size: calc(2.6cqw * var(--fit)); line-height: 1.35; overflow-wrap: normal; word-break: keep-all; }
+.aw-otb-q-text { display: block; width: 100%; font-size: calc(calc(2.6 * var(--aw-u)) * var(--fit)); line-height: 1.35; overflow-wrap: normal; word-break: keep-all; }
 .aw-otb-q-letter {
-  position: absolute; top: calc(0.8cqw * var(--fit)); left: calc(1cqw * var(--fit));
-  font-size: calc(1.8cqw * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);
+  position: absolute; top: calc(calc(0.8 * var(--aw-u)) * var(--fit)); left: calc(calc(1 * var(--aw-u)) * var(--fit));
+  font-size: calc(calc(1.8 * var(--aw-u)) * var(--fit)); font-weight: 800; color: rgba(255, 255, 255, .55);
 }
 .aw-otb-qtile:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-otb-qtile:active:not(:disabled) { transform: translateY(0.4cqw); box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 var(--tile-dark-eff)); }
+.aw-otb-qtile:active:not(:disabled) { transform: translateY(calc(0.4 * var(--aw-u))); box-shadow: var(--aw-tile-shadow-active, 0 calc(0.2 * var(--aw-u)) 0 var(--tile-dark-eff)); }
 .aw-otb-qtile:disabled { cursor: default; }
 .aw-otb-qtile.is-dimmed { opacity: .15; }
 /* Point 4 (read-before-tap gate, 4/8/2026): the answer tiles slide in over

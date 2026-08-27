@@ -480,7 +480,7 @@ const ftmTemplate = {
       card.append(el("div", "aw-ftm-divider"));
 
       const grid = el("div", "aw-ftm-grid");
-      grid.style.gridTemplateColumns = `repeat(${cols}, ${colW}cqw)`;
+      grid.style.gridTemplateColumns = `repeat(${cols}, calc(${colW} * var(--aw-u)))`;
       grid.style.gridTemplateRows = `repeat(${ROWS}, min-content)`;
       // Only THIS page's tiles. Cell = position within the page (explicit
       // grid-row/column) so matched tiles leave a fixed hole, never reflowing.

@@ -14,6 +14,11 @@
 // Results (incl. per-question review) are saved to the local leaderboard.
 // =============================================================
 
+// ⭐ Đợt 273 — nạp CHỈ để chạy phần tự khởi động của nó: đặt biến `--aw-u` (1% bề
+// ngang khung) thay cho `cqw`, để iPad/Safari đời cũ vẫn hiển thị đúng. Xem đầu
+// `core/unit.js`. Cả main.js lẫn play.js đều đi qua engine nên cắm một chỗ này
+// là đủ cho mọi trang.
+import "./unit.js";
 import { getTemplate, hasTemplate, ensureTemplate, cssImageUrls, preloadImages } from "./registry.js";
 import { whenAllPacksPrimed } from "./sfx.js";
 import { collectVoiceIds, preloadVoiceClips } from "./voice-clips.js";

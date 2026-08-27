@@ -16,6 +16,127 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 
 ---
 
+## Đợt 273 (27/8/2026) — ⭐⭐⭐ **BỎ HẲN `cqw`: ĐƠN VỊ KHUNG NAY LÀ `--aw-u` (cứu iPad đời cũ)**
+
+### Thầy báo gì
+
+Thầy gửi 3 ảnh màn QUIZ (`LSA2-S3.T1.P3-4-5`, lớp A1B) chụp trên **iPad đời cũ**:
+câu hỏi bé tí, **sáu thẻ đáp án dẹp lép dồn thành một dải sát đáy khung, chồng lên
+nhau**; ảnh thứ ba chụp trên máy tính thì đẹp bình thường (chữ to, 6 thẻ màu 3×2
+lấp đầy khung). Yêu cầu: *"điều tra xem lỗi gì"*.
+
+### Chẩn đoán — và vì sao bức ảnh trông ĐÚNG NHƯ VẬY
+
+Thủ phạm: **`cqw` (container query) chỉ có từ Safari 16 (9/2022)**. iPad cũ kẹt ở
+Safari 15 trở xuống ⇒ trình duyệt **vứt sạch** mọi khai báo dùng `cqw`. Điều làm
+bức ảnh có hình dạng đúng như thế là nó vứt theo **HAI KIỂU KHÁC NHAU**:
+
+| Khai báo | Hỏng ở bước | Rơi về | Nhìn thấy |
+|---|---|---|---|
+| `font-size: 5.2cqw` | phân tích cú pháp | mất luôn | — |
+| `font-size: calc(5.2cqw * var(--fit))` | **tính giá trị** | `unset` ⇒ **di truyền** | chữ về ~16px |
+| `padding: calc(3.4cqw * …)` | tính giá trị | `unset` ⇒ initial | đệm về **0** |
+| `gap: var(--gap)` (`--gap` là calc cqw) | tính giá trị | `normal` | thẻ **dính nhau** |
+| `flex: 0 1 calc(… var(--gap) …)` | tính giá trị | `0 1 auto` | 6 thẻ **dồn 1 hàng** |
+| `margin-top: auto` | *không dùng cqw* | **vẫn chạy** | cả cụm **tụt đáy** |
+
+⛔ **Không một dòng lỗi console.** Và `getComputedStyle` vẫn trả giá trị "hợp lệ".
+Cả kho **không có một chỗ nào** `@supports` / `CSS.supports` / polyfill — tức là
+không hề có đường lùi cho máy cũ.
+
+Phạm vi: **không phải lỗi riêng QUIZ** — cả **17 template** đều đo bằng `cqw`
+(1638 chỗ, riêng `core/app.css` 316 chỗ). Và cài Chrome trên iPad cũng vô ích:
+mọi trình duyệt trên iOS đều chạy chung động cơ Safari của máy.
+
+Đã làm sẵn trang tự kiểm tra cho thầy mở trên đúng chiếc iPad đó (artifact
+"AWord browser check") — nó tự trả lời có/không từng tính năng + đọc bản iPadOS.
+
+### Thầy chốt
+
+Qua `AskUserQuestion`: **"Sửa tận gốc, làm toàn bộ"** + **"Vá luôn"** lỗi ngầm.
+
+### Làm gì
+
+**`core/unit.js` — FILE MỚI.** Đo bề ngang khung rồi đặt `--aw-u` = 1% bề ngang.
+Nạp qua `core/engine.js` (cả `main.js` lẫn `play.js` đều đi qua đó nên cắm một
+chỗ là đủ mọi trang).
+
+```css
+/* CŨ */  font-size: 5.2cqw;
+/* MỚI */ font-size: calc(5.2 * var(--aw-u));
+```
+
+Biến CSS có từ **Safari 9.1** ⇒ chạy trên mọi máy. Đổi **1552 chỗ / 28 file**
+bằng script (`calc()` lồng nhau là hợp lệ nên không phải theo dõi dấu ngoặc; script
+**bỏ qua chú thích** và có 4 phép tự kiểm: không sót `cqw`, số biến tăng đúng, chú
+thích nguyên vẹn, dấu ngoặc cân).
+
+**Chỉ đặt biến ở ĐÚNG 4 chỗ** — biến CSS *di truyền*, container query cũng phân
+giải theo "container gần nhất phía trên", hai cơ chế trùng khớp:
+`.aw-stage` · `.aw-review.is-fs` (có điều kiện — không `.is-fs` thì **gỡ hẳn** để
+thừa hưởng của khung) · `.aw-opt-switch` · `.aw-sd-rec-dbody`.
+
+Kèm theo:
+- 4 khối `@container stage (aspect-ratio > …)` của Running word → `[data-ar-buoc]`
+  (JS đo tỉ lệ, ghi bậc 0–4). ⚠️ Khối cũ **xếp chồng**, luật mới **rời nhau** nên
+  mỗi luật phải khai đủ cả hai thuộc tính.
+- `.aw-opt-switch` chuyển `container-type: inline-size` → **`contain: inline-size`**
+  (vẫn cần chặn chữ thổi phồng panel, mà `contain` có từ Safari 15.4 — sớm hơn một nấc).
+- **VÁ LỖI NGẦM**: `.aw-stage` từng mang `aspect-ratio` **nằm chung hộp** với
+  `container-type` — đúng cặp myLesson đo được là làm **iOS tính chiều cao 0**
+  (thầy báo từ iPhone 11 Pro Max 26/8, họ đã gỡ; bên AWord chưa ai gỡ). Chiều cao
+  khung nay do **đệm-phần-trăm** (`--ti-le: 65.625%` + `::before`) quyết — lối có
+  trước `aspect-ratio` cả chục năm, chạy đúng cả trên Safari 14 trở xuống.
+- 9 chỗ JS sinh chuỗi `cqw` lúc chạy (anagram · find-the-match · flying-fruit ×2 ·
+  whack-a-mole ×5) đổi sang `"calc(" + n + " * var(--aw-u))"`.
+
+⚠️ **Tên biến ban đầu đặt là `--u`, đã đổi thành `--aw-u`** cho đúng nếp đặt tên
+của kho và tránh trùng về sau.
+
+### Test
+
+`scratch/dot273-unit.html` — **115 ĐẠT / 0 HỎNG**. Đối chứng ngược với bản gốc
+trong `_backup/dot273`: cả **17 template** · 3 cỡ khung (760 · 1180 · 420) ·
+phóng to · lỗi console. **Mọi số khớp bản cũ trong 0,03px.**
+
+### ⛔⛔⛔ BỐN BẪY ĐÃ CẮN THẬT NGAY TRONG ĐỢT NÀY
+
+1. **`--ti-le: 0` cho khối phóng to là SAI** dù rất hợp lý trên giấy ("đã có
+   `height` tường minh thì tắt đệm cho sạch"). `.aw-page` lúc phóng to cao **auto**
+   nên `height:100%` không phân giải được — trước đây chính `aspect-ratio` đỡ ca đó.
+   Tắt đệm là **khung cao 0, mất sạch game**. Số đối chứng bản cũ: zoom `1000×656`,
+   `.aw-page` cao `656.25px`.
+2. **MutationObserver nghe `class` phải lọc lại `matches()`.** Không lọc thì **mọi**
+   phần tử đổi class bị gán `--aw-u` của chính nó — mà thẻ đáp án Quiz đổi class
+   liên tục ⇒ mỗi thẻ tự thành "khung" rộng 164px ⇒ chữ tính theo 1,64px thay vì
+   7,25px ⇒ **thẻ dẹp lép y hệt cái lỗi iPad đang đi chữa**. (Bắt được ngay lần
+   chạy thử đầu tiên.)
+3. **Đừng chỉ trông vào `ResizeObserver`.** Nó bám vòng vẽ trình duyệt: tab bị dừng
+   vẽ là **câm hoàn toàn** — đo thật, `requestAnimationFrame` cũng không chạy. Mà
+   `html.aw-zoomed` / `html.aw-nhung` đổi cỡ khung **không** thêm bớt phần tử và
+   **không** đổi cỡ cửa sổ ⇒ chỉ có RO thì mọi cỡ chữ giữ số cũ, nhỏ hơn khung cả
+   chục phần trăm khi phóng to — **mà nhìn ảnh vẫn "có chữ có thẻ" nên rất dễ cho
+   qua**. Nay ba đường: RO · `resize`+`orientationchange` (luôn nghe) ·
+   MutationObserver bắt riêng class của `documentElement`/`body`.
+4. **Bàn thử phải coi số đo `0` là HỎNG.** Bản đầu của chính bàn thử này báo
+   **"54 đạt"** trong khi game còn chưa khởi động — vì `Math.abs(0-0) <= 1` là true.
+   Nút PLAY là `.aw-bigplay`, **không** phải `.aw-startbtn`. Thêm nữa: dựng bản gốc
+   ở **cổng riêng** là khác origin ⇒ `contentDocument` trả `null`; phải để bản đối
+   chứng nằm trong **cùng một cổng**.
+
+### ⬜ CHỜ THẦY BẤM TAY
+
+Phiên này không có iPad cũ để thử, và trình duyệt bàn thử đang bị dừng vẽ nên
+**không kiểm được đường `ResizeObserver`** (đã bù bằng hai đường khác).
+
+1. Mở **chính bài QUIZ đó trên đúng chiếc iPad cũ** — chữ và thẻ phải to đầy đủ
+   như trên máy tính.
+2. Bấm nút **phóng to** trong game — chữ phải nở theo khung.
+3. **Xoay ngang/dọc** iPad.
+4. Liếc lại vài template hay dùng trên **TOMKO**.
+
+---
+
 ## Đợt 272 (26/8/2026) — ⭐⭐⭐ **FOLLOW/SHARE LIVE SESSION DỜI TỪ MENU SANG FOOTER OPTIONS, DẠNG ICON**
 
 **Thầy chốt (sau khi xem bản Đợt 270/271 sống trong Menu ☰):** *"Thay vì đặt trong nút Menu, hãy

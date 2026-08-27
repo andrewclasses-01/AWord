@@ -18,7 +18,7 @@
 .aw-ff-empty {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
-  font-size: 3cqw; color: #eaf5e6; text-align: center; padding: 6cqw;
+  font-size: calc(3 * var(--aw-u)); color: #eaf5e6; text-align: center; padding: calc(6 * var(--aw-u));
 }
 
 /* ---------- scene decorations (night jungle) ---------- */
@@ -29,27 +29,27 @@
 }
 .aw-ff-toucan {
   position: absolute; right: 1.5%; top: 3%;
-  width: 12cqw; z-index: 1; pointer-events: none;
+  width: calc(12 * var(--aw-u)); z-index: 1; pointer-events: none;
   transform-origin: 60% 100%;
 }
 .aw-ff-butterfly {
   position: absolute; left: 3%; top: 40%;
-  width: 7cqw; z-index: 3; pointer-events: none;
+  width: calc(7 * var(--aw-u)); z-index: 3; pointer-events: none;
 }
 .aw-ff-frog {
   position: absolute; right: 7%; bottom: 3%;
-  width: 12cqw; z-index: 3; pointer-events: none;
+  width: calc(12 * var(--aw-u)); z-index: 3; pointer-events: none;
 }
 .aw-ff-frogthroat {
   position: absolute; right: 7%; bottom: 3%;
-  width: 12cqw; z-index: 3; pointer-events: none;
+  width: calc(12 * var(--aw-u)); z-index: 3; pointer-events: none;
   opacity: 0;
 }
 .aw-ff-toucan.is-pulse { animation: aw-ff-bob .7s ease-in-out; }
 .aw-ff-butterfly.is-pulse { animation: aw-ff-flutter .7s ease-in-out; }
 .aw-ff-frogthroat.is-pulse { animation: aw-ff-throat .7s ease-in-out; }
 @keyframes aw-ff-bob { 0%,100%{ transform: rotate(0); } 30%{ transform: rotate(-6deg); } 60%{ transform: rotate(4deg); } }
-@keyframes aw-ff-flutter { 0%,100%{ transform: translateX(0) rotate(0); } 50%{ transform: translateX(2cqw) rotate(8deg); } }
+@keyframes aw-ff-flutter { 0%,100%{ transform: translateX(0) rotate(0); } 50%{ transform: translateX(calc(2 * var(--aw-u))) rotate(8deg); } }
 @keyframes aw-ff-throat { 0%,100%{ opacity: 0; } 40%,60%{ opacity: 1; } }
 
 /* ---------- clue banner (the question, top of the frame) ---------- */
@@ -64,11 +64,11 @@
   --fit: 1;
 }
 .aw-ff-clue {
-  font-size: calc(4.4cqw * var(--fit));
+  font-size: calc(calc(4.4 * var(--aw-u)) * var(--fit));
   font-weight: 800;
   line-height: 1.35;
   color: #fffdf5;
-  text-shadow: 0 0.25cqw 0.5cqw rgba(0,0,0,.65), 0 0 0.2cqw rgba(0,0,0,.5);
+  text-shadow: 0 calc(0.25 * var(--aw-u)) calc(0.5 * var(--aw-u)) rgba(0,0,0,.65), 0 0 calc(0.2 * var(--aw-u)) rgba(0,0,0,.5);
   letter-spacing: .01em;
 }
 
@@ -98,20 +98,20 @@
   animation: aw-ff-arc var(--dur, 2600ms) ease-in-out forwards;
 }
 @keyframes aw-ff-arc {
-  0%   { transform: translateY(6cqw); }
-  45%  { transform: translateY(calc(-1 * var(--peak, 12cqw))); }
-  100% { transform: translateY(10cqw); }
+  0%   { transform: translateY(calc(6 * var(--aw-u))); }
+  45%  { transform: translateY(calc(-1 * var(--peak, calc(12 * var(--aw-u))))); }
+  100% { transform: translateY(calc(10 * var(--aw-u))); }
 }
 /* the fruit itself — centred on the anchor with negative margins (no transform
    centring, so the wobble rotate can't clash), gentle rotate wobble */
 .aw-ff-fruit {
   position: absolute; left: 0; top: 0;
-  width: 16cqw; height: 12cqw;
-  margin-left: -8cqw; margin-top: -6cqw;
+  width: calc(16 * var(--aw-u)); height: calc(12 * var(--aw-u));
+  margin-left: calc(-8 * var(--aw-u)); margin-top: calc(-6 * var(--aw-u));
   pointer-events: auto;
   cursor: pointer;
   animation: aw-ff-wobble var(--dur, 2600ms) ease-in-out;
-  filter: drop-shadow(0 0.6cqw 0.6cqw rgba(0,0,0,.4));
+  filter: drop-shadow(0 calc(0.6 * var(--aw-u)) calc(0.6 * var(--aw-u)) rgba(0,0,0,.4));
 }
 @keyframes aw-ff-wobble {
   0%   { transform: rotate(calc(-1 * var(--spin, 6deg))); }
@@ -132,7 +132,7 @@
   font-weight: 800;
   line-height: 1.35;
   color: #1e3e16;
-  -webkit-text-stroke: 0.18cqw #fcf0e0;
+  -webkit-text-stroke: calc(0.18 * var(--aw-u)) #fcf0e0;
   paint-order: stroke fill;
   text-transform: uppercase;
   pointer-events: none;
@@ -149,15 +149,15 @@
    before adding the class, so this now continues smoothly instead. */
 @keyframes aw-ff-shake {
   0%   { transform: rotate(var(--wrong-from, 0deg)) translateX(0); }
-  25%  { transform: rotate(-4deg) translateX(-0.8cqw); }
-  75%  { transform: rotate(4deg) translateX(0.8cqw); opacity: .55; }
+  25%  { transform: rotate(-4deg) translateX(calc(-0.8 * var(--aw-u))); }
+  75%  { transform: rotate(4deg) translateX(calc(0.8 * var(--aw-u))); opacity: .55; }
   100% { transform: rotate(0) translateX(0); opacity: 0; }
 }
 
 /* ---------- explosion (8-frame juice-splat sprite) ---------- */
 .aw-ff-boom {
   position: absolute;
-  width: 20cqw; aspect-ratio: 417 / 491;
+  width: calc(20 * var(--aw-u)); aspect-ratio: 417 / 491;
   transform: translate(-50%, -50%);   /* static centring (not animated) */
   overflow: hidden;
   z-index: 8;
@@ -173,7 +173,7 @@
 /* ---------- white spark on a correct hit ---------- */
 .aw-ff-spark {
   position: absolute;
-  width: 16cqw; z-index: 9;
+  width: calc(16 * var(--aw-u)); z-index: 9;
   pointer-events: none;
   animation: aw-ff-sparkpop .46s ease-out forwards;
 }
@@ -186,10 +186,10 @@
 /* ---------- floating tick / cross mark ---------- */
 .aw-ff-flymark {
   position: absolute;
-  width: 9cqw; z-index: 10;
+  width: calc(9 * var(--aw-u)); z-index: 10;
   pointer-events: none;
   animation: aw-ff-markfly .78s ease-out forwards;
-  filter: drop-shadow(0 0.3cqw 0.4cqw rgba(0,0,0,.35));
+  filter: drop-shadow(0 calc(0.3 * var(--aw-u)) calc(0.4 * var(--aw-u)) rgba(0,0,0,.35));
 }
 @keyframes aw-ff-markfly {
   0%   { opacity: 0; transform: translate(-50%,-50%) scale(.4); }
@@ -200,12 +200,12 @@
 /* ---------- lives (hearts) in ui.topbarMid (inlineTimerBar) ---------- */
 .aw-ff-hearts {
   display: flex; align-items: center; justify-content: center;
-  gap: 0.5cqw; width: 100%;
+  gap: calc(0.5 * var(--aw-u)); width: 100%;
 }
 .aw-ff-heart {
-  font-size: 2.7cqw; line-height: 1;
+  font-size: calc(2.7 * var(--aw-u)); line-height: 1;
   color: #ff5b6e;
-  text-shadow: 0 0.12cqw 0.2cqw rgba(0,0,0,.4);
+  text-shadow: 0 calc(0.12 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0,0,0,.4);
   transition: color .2s ease, opacity .2s ease, transform .2s ease;
 }
 .aw-ff-heart.is-lost { color: rgba(255,255,255,.28); transform: scale(.82); }

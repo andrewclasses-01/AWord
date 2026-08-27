@@ -29,10 +29,10 @@
   --aw-nav-ink:      #2c5a5e;
 
   /* Tile shape + question text style (themeable — see classroom.css). */
-  --aw-tile-radius: 1.6cqw;
+  --aw-tile-radius: calc(1.6 * var(--aw-u));
   --aw-tile-border-width: 0;
   --aw-tile-border-color: transparent;
-  --aw-tile-shadow: 0 0.6cqw 0 var(--tile-dark-eff);
+  --aw-tile-shadow: 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff);
   --aw-question-stroke-width: 0;
   --aw-question-stroke-color: transparent;
   --aw-question-fill: var(--aw-text);

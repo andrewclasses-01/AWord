@@ -2406,7 +2406,109 @@ dùng dấu cách (mọi cấp) — nếu không, chính nội dung BÊN TRONG v
 mờ theo (đã dính ở bảng chi tiết trong pop-up báo cáo). Cách nhanh để kiểm: `getComputedStyle` phần tử
 bên trong vùng sáng, phải ra `opacity: 1`.
 
+## ⭐⭐⭐ ĐỢT 273 (27/8/2026) — BỎ HẲN `cqw`, ĐƠN VỊ KHUNG NAY LÀ `--aw-u`
+
+> **ĐỌC MỤC NÀY TRƯỚC MỤC ĐỢT 258 NGAY BÊN DƯỚI.** Mục 258 vẫn đúng về cỡ khung
+> / bo góc / điện thoại / zoom, nhưng chỗ nào nhắc `cqw` và `container-type` thì
+> **đã lỗi thời** — cách đo đã đổi hẳn ở đợt này.
+
+### Vì sao phải đổi — lỗi thật, thầy báo từ iPad đời cũ
+
+Thầy chụp màn QUIZ trên iPad cũ: chữ bé tí, sáu thẻ đáp án dẹp lép dồn thành một
+dải sát đáy khung, chồng lên nhau. Cùng bài đó trên máy tính vẫn đẹp.
+
+**Thủ phạm: `cqw` (container query) chỉ có từ Safari 16 (9/2022).** iPad đời cũ
+kẹt ở Safari 15 trở xuống ⇒ trình duyệt **vứt sạch** các khai báo đó. Và nó vứt
+theo **hai kiểu khác nhau** — chính hai kiểu đó ghép lại thành đúng bức ảnh:
+
+| Khai báo | Hỏng ở bước | Rơi về | Nhìn thấy |
+|---|---|---|---|
+| `font-size: 5.2cqw` | phân tích cú pháp | mất luôn | — |
+| `font-size: calc(5.2cqw * var(--fit))` | **tính giá trị** | `unset` ⇒ **di truyền** | chữ về ~16px |
+| `padding: calc(3.4cqw * …)` | tính giá trị | `unset` ⇒ initial | đệm về **0** |
+| `gap: var(--gap)` (`--gap` là calc cqw) | tính giá trị | `normal` | thẻ **dính nhau** |
+| `flex: 0 1 calc(… var(--gap) …)` | tính giá trị | `0 1 auto` | 6 thẻ **dồn 1 hàng** |
+| `margin-top: auto` | *không dùng cqw* | **vẫn chạy** | cả cụm **tụt đáy** |
+
+⛔ **Không một dòng lỗi nào trong console** — lý do nó sống sót lâu đến thế.
+
+### Cách đo mới
+
+`core/unit.js` tự đo bề ngang khung rồi đặt biến `--aw-u` = **1% bề ngang**.
+
+```css
+/* CŨ */  font-size: 5.2cqw;
+/* MỚI */ font-size: calc(5.2 * var(--aw-u));
+```
+
+Biến CSS có từ Safari 9.1 ⇒ chạy trên mọi máy. **1552 chỗ đã đổi, 28 file.**
+
+👉 **Viết cỡ mới thì viết `calc(N * var(--aw-u))`. ĐỪNG BAO GIỜ dùng lại `cqw`.**
+
+### Vì sao chỉ cần đặt biến ở ĐÚNG 4 CHỖ
+
+Biến CSS **di truyền** xuống con cháu, mà container query cũng phân giải theo
+"container gần nhất phía trên" — hai cơ chế trùng khớp nhau. Nên chỉ cần đặt
+`--aw-u` lên đúng những phần tử **trước đây mang `container-type`**:
+
+| Phần tử | Trước đây | Ghi chú |
+|---|---|---|
+| `.aw-stage` | `container-type: size` | khung act |
+| `.aw-review.is-fs` | `size`, **có điều kiện** | không `.is-fs` thì **gỡ hẳn** biến để thừa hưởng của khung — giữ đúng hành vi cũ |
+| `.aw-opt-switch` | `inline-size` | nay là `contain: inline-size` (vẫn cần chặn chữ thổi phồng panel; `contain` có từ Safari 15.4, sớm hơn một nấc) |
+| `.aw-sd-rec-dbody` | `inline-size` | bảng chi tiết Showdown |
+
+⛔ Bề ngang phải lấy **content box** (`clientWidth` trừ đệm), không phải
+`offsetWidth` — `.aw-review.is-fs` có đệm `2.2vw`, lấy nhầm là lệch vài %.
+
+### Bốn khối `@container` của Running word → `[data-ar-buoc]`
+
+`core/unit.js` đo tỉ lệ khung rồi ghi **một con số bậc** (0–4) lên `.aw-stage`.
+⚠️ Bốn khối cũ **xếp chồng** (khối khớp cuối cùng thắng); bốn luật mới **rời
+nhau** nên mỗi luật phải khai **đủ cả hai** thuộc tính. Mốc nằm ở `MOC_AR` trong
+`unit.js` — đổi số bên CSS là phải đổi ở đó.
+
+### ⛔⛔⛔ BA BẪY ĐÃ CẮN THẬT NGAY TRONG ĐỢT NÀY
+
+**1. Đừng đặt `--ti-le: 0` cho khối phóng to.** Rất hợp lý trên giấy ("đã có
+`height` tường minh thì tắt đệm cho sạch"), nhưng `.aw-page` lúc phóng to cao
+**auto** nên `height:100%` không phân giải được — trước đây chính `aspect-ratio`
+đỡ lấy ca đó. Tắt đệm đi là **khung cao 0, mất sạch game**. Số đối chứng của bản
+cũ: khung zoom `1000×656`, `.aw-page` cao `656.25px`.
+
+**2. MutationObserver nghe `class` PHẢI lọc lại `matches()`.** Không lọc thì
+**mọi** phần tử đổi class đều bị gán `--aw-u` của chính nó — mà thẻ đáp án Quiz
+đổi class liên tục ⇒ mỗi thẻ tự thành "khung" rộng 164px ⇒ chữ tính theo 1,64px
+thay vì 7,25px ⇒ **thẻ dẹp lép y hệt cái lỗi iPad đang đi chữa**.
+
+**3. ĐỪNG chỉ trông vào `ResizeObserver`.** Nó bám vòng vẽ của trình duyệt: ở
+tab bị dừng vẽ nó **câm hoàn toàn** (đo thật — `requestAnimationFrame` cũng
+không chạy). Mà `html.aw-zoomed` / `html.aw-nhung` đổi cỡ khung **không** thêm
+bớt phần tử nào và **không** đổi cỡ cửa sổ ⇒ chỉ có RO thì mọi cỡ chữ giữ số cũ,
+nhỏ hơn khung cả chục phần trăm khi phóng to — **mà nhìn ảnh vẫn "có chữ có thẻ"
+nên rất dễ cho qua**. Nay có ba đường: RO · `resize`+`orientationchange` (luôn
+nghe, không còn là đường dự phòng) · MutationObserver bắt riêng class của
+`documentElement`/`body`.
+
+### Bàn thử
+
+`scratch/dot273-unit.html` — **115 đạt / 0 hỏng**. Đối chứng ngược với bản gốc
+trong `_backup/dot273`; phủ cả 17 template · 3 cỡ khung · phóng to · lỗi console.
+
+⛔ **Cùng MỘT cổng.** Dựng bản gốc ở cổng riêng là khác origin ⇒
+`contentDocument` trả `null` ⇒ bàn thử chết ngay câu đo đầu.
+
+⛔⛔ **Bàn thử phải coi số đo `0` là HỎNG.** Bản đầu của chính file này báo
+"54 đạt" trong khi game còn chưa khởi động — vì `Math.abs(0-0) <= 1` là true.
+Nút PLAY là `.aw-bigplay`, **không** phải `.aw-startbtn`.
+
+---
+
 ## ⭐⭐⭐ KHUNG ACT SAU ĐỢT 258 (25/8/2026) — CỠ KHUNG · BO GÓC · ĐIỆN THOẠI · ZOOM FULLSCREEN
+
+> ⚠️ **Đợt 273 đã thay `cqw` bằng `--aw-u`** (mục ngay trên). Mọi chỗ mục này
+> viết `cqw` thì đọc là `calc(N * var(--aw-u))`; `.aw-stage` không còn mang
+> `container-type` nữa, và chiều cao khung nay do đệm-phần-trăm quyết.
 
 > **ĐỌC MỤC NÀY TRƯỚC KHI ĐỤNG VÀO `.aw-page`, `.aw-stage`, `.aw-below`, hay nút Fullscreen.**
 > Đợt 258 đổi bốn thứ cùng lúc theo yêu cầu của thầy, và lôi ra **hai lỗi có sẵn im lặng suốt từ

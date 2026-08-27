@@ -61,7 +61,7 @@
   display: flex; flex-direction: column;
   /* ZERO top padding (teacher's request, 5/8/2026): the two clocks must ride
      the very top edge of the frame. Only a hair of bottom padding is kept. */
-  padding: 0 0 0.2cqw;
+  padding: 0 0 calc(0.2 * var(--aw-u));
   animation: aw-fadein .25s ease;
 }
 
@@ -112,7 +112,7 @@
    padding on the stage for the same reason (teacher's request: "margin trên
    dưới cực kỳ tối thiểu"); side padding kept so nothing touches the rounded
    corners. */
-.aw-stage.act-running_word .aw-stage-inner { padding: 0 1.6cqw 0.4cqw; }
+.aw-stage.act-running_word .aw-stage-inner { padding: 0 calc(1.6 * var(--aw-u)) calc(0.4 * var(--aw-u)); }
 .aw-stage.act-running_word .aw-topbar { display: none; }
 
 /* ⭐ NO DOUBLE-TAP ZOOM (teacher's request, 5/8/2026 — it fired mid-match on the
@@ -148,7 +148,7 @@
    keyboard). Crossword's thin, wide-tracked uppercase look. */
 .aw-stage.act-running_word .aw-nav-label {
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-weight: 300; font-size: 1.35cqw;
+  font-weight: 300; font-size: calc(1.35 * var(--aw-u));
   letter-spacing: 0.28em; text-indent: 0.28em;
   text-transform: uppercase; white-space: nowrap;
   color: var(--aw-muted); min-width: 0;
@@ -271,11 +271,11 @@
    so `position:absolute` here pins to the STAGE's own corner, not the
    viewport's. */
 .aw-zoomed .aw-stage.act-running_word .aw-fs-always {
-  position: absolute; right: 0.8cqw; bottom: 0.8cqw; z-index: 20;
-  width: 2.2cqw; height: 2.2cqw;
+  position: absolute; right: calc(0.8 * var(--aw-u)); bottom: calc(0.8 * var(--aw-u)); z-index: 20;
+  width: calc(2.2 * var(--aw-u)); height: calc(2.2 * var(--aw-u));
   background: transparent; opacity: .45;
 }
-.aw-zoomed .aw-stage.act-running_word .aw-fs-always svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-zoomed .aw-stage.act-running_word .aw-fs-always svg { width: calc(1.3 * var(--aw-u)); height: calc(1.3 * var(--aw-u)); }
 .aw-zoomed .aw-stage.act-running_word .aw-fs-always:hover,
 .aw-zoomed .aw-stage.act-running_word .aw-fs-always:active {
   background: transparent; opacity: .85;
@@ -283,7 +283,7 @@
 
 .aw-rw-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 700;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 700;
 }
 
 /* This game has no manual back/next — the turn is decided by the clock, not by
@@ -302,18 +302,18 @@
 .aw-rw-setup {
   flex: 1 1 auto; min-height: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.5cqw;
+  gap: calc(1.5 * var(--aw-u));
   text-align: center;
 }
 .aw-rw-setup-title {
-  font-size: 5.2cqw; font-weight: 800; letter-spacing: .06em;
+  font-size: calc(5.2 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
   color: var(--aw-question-fill, var(--rw-ink));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   line-height: 1;
 }
 /* ---- the three saved-split slots ---- */
-.aw-rw-slots { display: flex; gap: 1.4cqw; }
+.aw-rw-slots { display: flex; gap: calc(1.4 * var(--aw-u)); }
 /* ⭐ 11/8/2026 (teacher's redesign): wider than before (14 -> 16.4cqw) to hold
    the icon action row when selected, and `position:relative` so the round
    DELETE button can pin to its own top-right corner. `align-items:stretch`
@@ -323,20 +323,20 @@
 .aw-rw-slot {
   position: relative;
   font-family: inherit; cursor: pointer;
-  width: 16.4cqw; padding: 0.9cqw 0.6cqw;
-  border: 0.26cqw solid rgba(23,34,47,.16);
-  border-radius: 1.2cqw;
+  width: calc(16.4 * var(--aw-u)); padding: calc(0.9 * var(--aw-u)) calc(0.6 * var(--aw-u));
+  border: calc(0.26 * var(--aw-u)) solid rgba(23,34,47,.16);
+  border-radius: calc(1.2 * var(--aw-u));
   background: #fff;
   color: var(--rw-ink);
-  display: flex; flex-direction: column; align-items: center; gap: 0.15cqw;
+  display: flex; flex-direction: column; align-items: center; gap: calc(0.15 * var(--aw-u));
   transition: border-color .14s ease, transform .1s ease, background .14s ease;
 }
-.aw-rw-slot:hover { transform: translateY(-0.25cqw); border-color: var(--rw-a); }
+.aw-rw-slot:hover { transform: translateY(calc(-0.25 * var(--aw-u))); border-color: var(--rw-a); }
 .aw-rw-slot.is-sel { border-color: var(--rw-a); background: #eff6ff; }
 .aw-rw-slot.is-empty { color: var(--aw-muted); }
-.aw-rw-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .12em; opacity: .65; }
-.aw-rw-slot-main { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
-.aw-rw-slot-meta { font-size: 1.15cqw; font-weight: 600; opacity: .7; }
+.aw-rw-slot-num { font-size: calc(1.15 * var(--aw-u)); font-weight: 800; letter-spacing: .12em; opacity: .65; }
+.aw-rw-slot-main { font-size: calc(2.3 * var(--aw-u)); font-weight: 800; line-height: 1.1; }
+.aw-rw-slot-meta { font-size: calc(1.15 * var(--aw-u)); font-weight: 600; opacity: .7; }
 
 /* DELETE SET — a small round icon pinned to the slot's own top-right corner
    (11/8/2026, teacher's redesign — replaces the old text button + native
@@ -344,14 +344,14 @@
    anchored popover it now opens). Drawn on ANY slot holding a saved split,
    selected or not — deleting doesn't require selecting it first. */
 .aw-rw-slot-delcorner {
-  position: absolute; top: 0.35cqw; right: 0.35cqw;
-  width: 1.9cqw; height: 1.9cqw; border-radius: 50%;
+  position: absolute; top: calc(0.35 * var(--aw-u)); right: calc(0.35 * var(--aw-u));
+  width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
   background: rgba(23,34,47,.06); border: 0; color: var(--rw-dim);
   transition: background .14s ease, color .14s ease;
 }
-.aw-rw-slot-delcorner svg { width: 1cqw; height: 1cqw; }
+.aw-rw-slot-delcorner svg { width: calc(1 * var(--aw-u)); height: calc(1 * var(--aw-u)); }
 .aw-rw-slot-delcorner:hover { background: rgba(239,68,68,.16); color: var(--rw-no); }
 
 /* Shuffle / Save / Print — icon-only, INSIDE the selected slot (11/8/2026,
@@ -359,15 +359,15 @@
    Save shows a checkmark once the slot is no longer dirty (SET already
    saved) instead of the floppy-disk glyph, so the state reads at a glance
    without any text. */
-.aw-rw-slot-acts { display: flex; gap: 0.5cqw; margin-top: 0.35cqw; }
+.aw-rw-slot-acts { display: flex; gap: calc(0.5 * var(--aw-u)); margin-top: calc(0.35 * var(--aw-u)); }
 .aw-rw-slot-actbtn {
-  width: 2.6cqw; height: 2.6cqw; border-radius: 0.7cqw;
+  width: calc(2.6 * var(--aw-u)); height: calc(2.6 * var(--aw-u)); border-radius: calc(0.7 * var(--aw-u));
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
-  background: #fff; border: 0.2cqw solid rgba(23,34,47,.18); color: var(--rw-ink);
+  background: #fff; border: calc(0.2 * var(--aw-u)) solid rgba(23,34,47,.18); color: var(--rw-ink);
   transition: border-color .14s ease, color .14s ease, opacity .14s ease;
 }
-.aw-rw-slot-actbtn svg { width: 1.35cqw; height: 1.35cqw; }
+.aw-rw-slot-actbtn svg { width: calc(1.35 * var(--aw-u)); height: calc(1.35 * var(--aw-u)); }
 .aw-rw-slot-actbtn:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
 .aw-rw-slot-actbtn:disabled { opacity: .4; cursor: default; }
 .aw-rw-slot-actbtn.is-dirty { border-color: var(--rw-b); color: var(--rw-b-dark); }
@@ -389,28 +389,28 @@
 .aw-rw-delpop-btns .aw-btn { padding: .4rem .7rem; font-size: .85rem; }
 
 /* ---- the numbers that prove the split is sound ---- */
-.aw-rw-facts { display: flex; gap: 2.6cqw; align-items: flex-end; }
+.aw-rw-facts { display: flex; gap: calc(2.6 * var(--aw-u)); align-items: flex-end; }
 .aw-rw-fact { display: flex; flex-direction: column; align-items: center; }
-.aw-rw-fact-big { font-size: 2.5cqw; font-weight: 800; color: var(--rw-ink); line-height: 1.05; }
-.aw-rw-fact-small { font-size: 1.1cqw; font-weight: 600; color: var(--aw-muted); letter-spacing: .04em; }
+.aw-rw-fact-big { font-size: calc(2.5 * var(--aw-u)); font-weight: 800; color: var(--rw-ink); line-height: 1.05; }
+.aw-rw-fact-small { font-size: calc(1.1 * var(--aw-u)); font-weight: 600; color: var(--aw-muted); letter-spacing: .04em; }
 
 .aw-rw-start {
   font-family: inherit; cursor: pointer;
-  font-size: 2.4cqw; font-weight: 800; letter-spacing: .06em;
+  font-size: calc(2.4 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
   color: #fff;
   background: var(--rw-ok);
   border: 0;
-  border-radius: 1.1cqw;
-  box-shadow: 0 0.5cqw 0 #0b8f68;
-  padding: 1cqw 4.2cqw;
+  border-radius: calc(1.1 * var(--aw-u));
+  box-shadow: 0 calc(0.5 * var(--aw-u)) 0 #0b8f68;
+  padding: calc(1 * var(--aw-u)) calc(4.2 * var(--aw-u));
 }
 .aw-rw-start:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-rw-start:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: 0 0.2cqw 0 #0b8f68; }
+.aw-rw-start:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); box-shadow: 0 calc(0.2 * var(--aw-u)) 0 #0b8f68; }
 /* ⭐ Locked until the selected SET is saved (11/8/2026, teacher's request) —
    see the `locked` gate in renderSetup(). Dims flat rather than fading the
    green away entirely, so it still reads as "this is the START button", just
    not one you can press yet. */
-.aw-rw-start:disabled { opacity: .45; cursor: default; box-shadow: 0 0.5cqw 0 rgba(11,143,104,.45); }
+.aw-rw-start:disabled { opacity: .45; cursor: default; box-shadow: 0 calc(0.5 * var(--aw-u)) 0 rgba(11,143,104,.45); }
 
 /* =============================================================
    MATCH SCREEN
@@ -431,26 +431,26 @@
      squares, pushed to the frame edges; the auto middle column holds the wide
      Play/Pause pill, centred between the clocks. */
   display: grid; grid-template-columns: auto 1fr auto 1fr auto;
-  gap: 0.8cqw;
+  gap: calc(0.8 * var(--aw-u));
   align-items: center;
-  padding: 0 1.4cqw;
+  padding: 0 calc(1.4 * var(--aw-u));
 }
 /* No team name any more (teacher's request, 5/8/2026 — it moved to the board's
    own header, see .aw-rw-rowhead-name below) — just the time, and the box is
    shrunk to hug the digits (minimal vertical padding). */
 .aw-rw-clock {
   justify-self: center;            /* hug the digits, centred over its team's side */
-  border-radius: 1.1cqw;
-  padding: 0.2cqw 0.9cqw 0.1cqw;   /* shorter horizontally (teacher, 6/8/2026) */
+  border-radius: calc(1.1 * var(--aw-u));
+  padding: calc(0.2 * var(--aw-u)) calc(0.9 * var(--aw-u)) calc(0.1 * var(--aw-u));   /* shorter horizontally (teacher, 6/8/2026) */
   display: flex; align-items: center; justify-content: center;
   background: rgba(23,34,47,.06);
-  border: 0.3cqw solid transparent;
+  border: calc(0.3 * var(--aw-u)) solid transparent;
   color: var(--rw-dim);
   transition: background .18s ease, border-color .18s ease, color .18s ease, opacity .18s ease;
   opacity: .55;
 }
-.aw-rw-clock.is-a { border-bottom: 0.55cqw solid rgba(59,130,246,.35); }
-.aw-rw-clock.is-b { border-bottom: 0.55cqw solid rgba(245,158,11,.35); }
+.aw-rw-clock.is-a { border-bottom: calc(0.55 * var(--aw-u)) solid rgba(59,130,246,.35); }
+.aw-rw-clock.is-b { border-bottom: calc(0.55 * var(--aw-u)) solid rgba(245,158,11,.35); }
 
 /* The team whose clock is RUNNING: full colour, full opacity, a lit border.
    The other one is greyed right down — across a classroom the difference has to
@@ -460,7 +460,7 @@
 .aw-rw-clock.is-b.is-active { border-color: var(--rw-b); border-bottom-color: var(--rw-b); }
 
 .aw-rw-clock-time {
-  font-size: 4.8cqw; font-weight: 800; line-height: 1;
+  font-size: calc(4.8 * var(--aw-u)); font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;   /* digits keep their width — no jitter each second */
 }
 
@@ -479,53 +479,53 @@
 /* A wide, rounded pill now (teacher's redesign, 6/8/2026): stretched
    horizontally to balance the row [PASS a][clock a][Play/Pause][clock b][PASS b]. */
 .aw-rw-playpause {
-  width: 11cqw; height: 5cqw; border-radius: 1.4cqw;
+  width: calc(11 * var(--aw-u)); height: calc(5 * var(--aw-u)); border-radius: calc(1.4 * var(--aw-u));
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
   background: var(--rw-ok); color: #fff; border: 0;
-  box-shadow: 0 0.42cqw 0 #0b8f68;
+  box-shadow: 0 calc(0.42 * var(--aw-u)) 0 #0b8f68;
   transition: background .15s ease, box-shadow .15s ease, opacity .15s ease;
 }
 /* The glyph never intercepts the pointer, so a tap always lands on the BUTTON
    even at the instant paintClocks() swaps the icon — half of the "sometimes
    works" fix (the other half is only swapping innerHTML when it changes). */
-.aw-rw-playpause svg { width: 2.5cqw; height: 2.5cqw; pointer-events: none; }
-.aw-rw-playpause:active:not(:disabled) { transform: translateY(0.18cqw); box-shadow: 0 0.14cqw 0 #0b8f68; }
-.aw-rw-playpause.is-pause { background: var(--rw-b); box-shadow: 0 0.42cqw 0 var(--rw-b-dark); }
-.aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 0.14cqw 0 var(--rw-b-dark); }
+.aw-rw-playpause svg { width: calc(2.5 * var(--aw-u)); height: calc(2.5 * var(--aw-u)); pointer-events: none; }
+.aw-rw-playpause:active:not(:disabled) { transform: translateY(calc(0.18 * var(--aw-u))); box-shadow: 0 calc(0.14 * var(--aw-u)) 0 #0b8f68; }
+.aw-rw-playpause.is-pause { background: var(--rw-b); box-shadow: 0 calc(0.42 * var(--aw-u)) 0 var(--rw-b-dark); }
+.aw-rw-playpause.is-pause:active:not(:disabled) { box-shadow: 0 calc(0.14 * var(--aw-u)) 0 var(--rw-b-dark); }
 .aw-rw-playpause:disabled { opacity: .4; cursor: default; }
 /* Before the clock starts the same button is a SWAP (PART A <-> PART B): a calm
    slate look so it doesn't read as a green "start" (teacher's redesign, 7/8/2026). */
-.aw-rw-playpause.is-swap { background: #64748b; box-shadow: 0 0.42cqw 0 #475569; }
-.aw-rw-playpause.is-swap:active:not(:disabled) { box-shadow: 0 0.14cqw 0 #475569; }
+.aw-rw-playpause.is-swap { background: #64748b; box-shadow: 0 calc(0.42 * var(--aw-u)) 0 #475569; }
+.aw-rw-playpause.is-swap:active:not(:disabled) { box-shadow: 0 calc(0.14 * var(--aw-u)) 0 #475569; }
 
 /* PASS — one SQUARE per team, sitting in the clock strip on that team's OWN
    outer edge (teacher's redesign, 6/8/2026): team A's is pushed to the LEFT
    frame edge, team B's to the RIGHT, each level with the clocks. Each button
    lights only on its team's own turn (see paintClocks). */
 .aw-rw-passbtn {
-  width: 5cqw; height: 5cqw;
+  width: calc(5 * var(--aw-u)); height: calc(5 * var(--aw-u));
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 0.15cqw;
+  gap: calc(0.15 * var(--aw-u));
   font-family: inherit; cursor: pointer;
-  border: 0.26cqw solid rgba(23,34,47,.22);
+  border: calc(0.26 * var(--aw-u)) solid rgba(23,34,47,.22);
   background: #fff; color: var(--rw-ink);
-  border-radius: 1.2cqw;
+  border-radius: calc(1.2 * var(--aw-u));
   font-weight: 800; letter-spacing: .05em;
-  box-shadow: 0 0.4cqw 0 rgba(23,34,47,.14);
+  box-shadow: 0 calc(0.4 * var(--aw-u)) 0 rgba(23,34,47,.14);
   transition: border-color .15s ease, color .15s ease, opacity .15s ease, box-shadow .12s ease;
 }
 /* "PASS" over a small count of how many passes the team has left (0..5). */
-.aw-rw-passbtn-lab { font-size: 1.3cqw; line-height: 1; }
-.aw-rw-passbtn-n { font-size: 1.15cqw; line-height: 1; opacity: .7; }
+.aw-rw-passbtn-lab { font-size: calc(1.3 * var(--aw-u)); line-height: 1; }
+.aw-rw-passbtn-n { font-size: calc(1.15 * var(--aw-u)); line-height: 1; opacity: .7; }
 .aw-rw-passbtn.is-a { justify-self: start; }
 .aw-rw-passbtn.is-b { justify-self: end; }
 .aw-rw-passbtn.is-a:hover:not(:disabled) { border-color: var(--rw-a); color: var(--rw-a-dark); }
 .aw-rw-passbtn.is-b:hover:not(:disabled) { border-color: var(--rw-b); color: var(--rw-b-dark); }
-.aw-rw-passbtn:active:not(:disabled) { transform: translateY(0.18cqw); box-shadow: 0 0.14cqw 0 rgba(23,34,47,.14); }
+.aw-rw-passbtn:active:not(:disabled) { transform: translateY(calc(0.18 * var(--aw-u))); box-shadow: 0 calc(0.14 * var(--aw-u)) 0 rgba(23,34,47,.14); }
 .aw-rw-passbtn:disabled { opacity: .3; cursor: default; }
 /* keeps the 5-column grid balanced when PASS is switched off in Options */
-.aw-rw-passgap { width: 5cqw; height: 5cqw; }
+.aw-rw-passgap { width: calc(5 * var(--aw-u)); height: calc(5 * var(--aw-u)); }
 .aw-rw-passgap.is-b { justify-self: end; }
 
 /* ---- the two typing columns: FLEX so the active side can grow to 70% while
@@ -536,20 +536,20 @@
 .aw-rw-boards {
   flex: 1 1 auto; min-height: 0;
   display: flex;
-  gap: 1.2cqw;
+  gap: calc(1.2 * var(--aw-u));
   /* Bottom clearance so the +15%-scaled keyboard (transform-scale grows UP from
      the bottom bar and does NOT reflow the layout) can't ride up over the
      boards' active input row (teacher's request, 6/8/2026). */
-  padding: 0.55cqw 1.4cqw 0;
-  margin-bottom: 3.4cqw;
+  padding: calc(0.55 * var(--aw-u)) calc(1.4 * var(--aw-u)) 0;
+  margin-bottom: calc(3.4 * var(--aw-u));
 }
 .aw-rw-board {
   flex: 1 1 0%;
   min-width: 0; min-height: 0;
   display: flex; flex-direction: column;
-  border-radius: 1cqw;
+  border-radius: calc(1 * var(--aw-u));
   background: rgba(23,34,47,.045);
-  border: 0.26cqw solid transparent;
+  border: calc(0.26 * var(--aw-u)) solid transparent;
   overflow: hidden;
   transition: flex-grow .45s cubic-bezier(.22,.9,.3,1),
               opacity .18s ease, border-color .18s ease, background .18s ease;
@@ -572,10 +572,10 @@
 .aw-rw-rowhead {
   flex: 0 0 auto;
   display: flex; align-items: center; justify-content: center;
-  padding: 0.25cqw 0.4cqw;
+  padding: calc(0.25 * var(--aw-u)) calc(0.4 * var(--aw-u));
 }
 .aw-rw-rowhead-name {
-  font-size: 1.7cqw; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+  font-size: calc(1.7 * var(--aw-u)); font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
   color: var(--rw-ink);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
@@ -611,14 +611,14 @@
 .aw-rw-row {
   position: relative;
   height: calc(100% / 3);            /* one third of the track = one row */
-  display: grid; grid-template-columns: 2.4cqw 1fr 2cqw;
-  align-items: center; gap: 0.5cqw;
-  padding: 0 0.4cqw;
-  border-bottom: 0.12cqw solid rgba(23,34,47,.08);
+  display: grid; grid-template-columns: calc(2.4 * var(--aw-u)) 1fr calc(2 * var(--aw-u));
+  align-items: center; gap: calc(0.5 * var(--aw-u));
+  padding: 0 calc(0.4 * var(--aw-u));
+  border-bottom: calc(0.12 * var(--aw-u)) solid rgba(23,34,47,.08);
   overflow: hidden;
 }
 .aw-rw-row-no {
-  font-size: 1.15cqw; font-weight: 800; color: var(--aw-muted);
+  font-size: calc(1.15 * var(--aw-u)); font-weight: 800; color: var(--aw-muted);
   text-align: right; font-variant-numeric: tabular-nums;
 }
 /* --rw-fit (set per board by fitBoard) shrinks EVERY word on a board by the
@@ -629,7 +629,7 @@
 .aw-rw-row-body {
   /* --rw-fit (fitBoard) makes the widest word fit; --rw-tier (paintBoard)
      shrinks the older rows below the current one — see the tier rules below. */
-  font-size: calc(5.6cqw * var(--rw-fit, 1) * var(--rw-tier, 1));
+  font-size: calc(calc(5.6 * var(--aw-u)) * var(--rw-fit, 1) * var(--rw-tier, 1));
   line-height: 1.04;
   font-weight: 800; letter-spacing: .01em;
   text-align: center;
@@ -638,7 +638,7 @@
   white-space: nowrap; overflow: hidden;
 }
 .aw-rw-row-mark { display: flex; align-items: center; justify-content: center; }
-.aw-rw-row-mark svg { width: 1.55cqw; height: 1.55cqw; stroke-width: 3.4; }
+.aw-rw-row-mark svg { width: calc(1.55 * var(--aw-u)); height: calc(1.55 * var(--aw-u)); stroke-width: 3.4; }
 
 /* IPA next to a settled word — "WORD • /ipa/" (11/8/2026, teacher's request),
    same shape as the printed sheets' `.aw-rw-ps-ipa`. `em` so it scales with
@@ -659,7 +659,7 @@
   visibility: hidden; pointer-events: none;
   white-space: nowrap;
   font-family: inherit; font-weight: 800; letter-spacing: .01em;
-  text-transform: uppercase; font-size: 5.6cqw;
+  text-transform: uppercase; font-size: calc(5.6 * var(--aw-u));
 }
 
 .aw-rw-row.is-done .aw-rw-row-body { color: var(--rw-ok); }
@@ -671,7 +671,7 @@
 .aw-rw-row.is-passed .aw-rw-row-mark { color: var(--rw-no); opacity: .7; }
 /* an unplayed row shows its NUMBER and nothing else — never the word */
 .aw-rw-row.is-future { opacity: .5; }
-.aw-rw-row.is-current { background: rgba(59,130,246,.07); border-radius: 0.6cqw; }
+.aw-rw-row.is-current { background: rgba(59,130,246,.07); border-radius: calc(0.6 * var(--aw-u)); }
 .aw-rw-board.is-b .aw-rw-row.is-current { background: rgba(245,158,11,.09); }
 
 /* ⭐ VISIBLE-TIER shrink + fade (teacher's request, 5/8/2026): with the newest
@@ -687,9 +687,9 @@
 .aw-rw-row.is-shake { animation: aw-rw-shake .32s ease; }
 @keyframes aw-rw-shake {
   0%, 100% { transform: translateX(0); }
-  22% { transform: translateX(-0.7cqw); }
-  48% { transform: translateX(0.6cqw); }
-  74% { transform: translateX(-0.3cqw); }
+  22% { transform: translateX(calc(-0.7 * var(--aw-u))); }
+  48% { transform: translateX(calc(0.6 * var(--aw-u))); }
+  74% { transform: translateX(calc(-0.3 * var(--aw-u))); }
 }
 
 /* words remaining (not "done") — bare number, centred, bottom of the board
@@ -697,8 +697,8 @@
 .aw-rw-remaining {
   flex: 0 0 auto;
   text-align: center;
-  padding: 0.2cqw 0 0.55cqw;
-  font-size: 2.1cqw; font-weight: 800;
+  padding: calc(0.2 * var(--aw-u)) 0 calc(0.55 * var(--aw-u));
+  font-size: calc(2.1 * var(--aw-u)); font-weight: 800;
   color: var(--aw-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -722,16 +722,16 @@
   display: block; box-sizing: border-box;
   width: 100%;
   font-family: inherit;
-  font-size: calc(5.6cqw * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  font-size: calc(calc(5.6 * var(--aw-u)) * var(--rw-fit, 1)); font-weight: 800; letter-spacing: .01em;
   line-height: 1.04;
   text-align: center;
   text-transform: uppercase;
   color: var(--rw-ink);
   background: transparent;
   border: 0;
-  border-bottom: 0.26cqw solid var(--rw-a);
+  border-bottom: calc(0.26 * var(--aw-u)) solid var(--rw-a);
   border-radius: 0;
-  padding: 0.1cqw 0.2cqw;
+  padding: calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u));
   outline: none;
 }
 .aw-rw-board.is-b .aw-rw-input { border-bottom-color: var(--rw-b); }
@@ -744,15 +744,15 @@
    when the button hides — see useAndrew() in running-word.js, which also
    auto-fits `.aw-rw-reveal-text` to this box via core/fit.js's fitOnce(). */
 .aw-rw-reveal {
-  width: 11cqw; height: 5cqw; border-radius: 1.4cqw;
+  width: calc(11 * var(--aw-u)); height: calc(5 * var(--aw-u)); border-radius: calc(1.4 * var(--aw-u));
   display: flex; align-items: center; justify-content: center;
-  padding: 0 0.5cqw;
+  padding: 0 calc(0.5 * var(--aw-u));
   overflow: hidden;
   pointer-events: none;
   animation: aw-rw-reveal-glow 2.2s ease-in-out infinite;
 }
 .aw-rw-reveal-text {
-  font-size: calc(3.6cqw * var(--rw-reveal-fit, 1)); font-weight: 800; letter-spacing: .01em;
+  font-size: calc(calc(3.6 * var(--aw-u)) * var(--rw-reveal-fit, 1)); font-weight: 800; letter-spacing: .01em;
   white-space: nowrap;
   color: #b8860b;
   background: linear-gradient(180deg, #ffe89a, #f0a500);
@@ -760,8 +760,8 @@
   -webkit-text-fill-color: transparent;
 }
 @keyframes aw-rw-reveal-glow {
-  0%, 100% { filter: drop-shadow(0 0 0.5cqw rgba(255,193,7,.55)); }
-  50%      { filter: drop-shadow(0 0 1.5cqw rgba(255,193,7,.9)); }
+  0%, 100% { filter: drop-shadow(0 0 calc(0.5 * var(--aw-u)) rgba(255,193,7,.55)); }
+  50%      { filter: drop-shadow(0 0 calc(1.5 * var(--aw-u)) rgba(255,193,7,.9)); }
 }
 
 /* the ✓ that flies from a won row to that team's word counter. Appended to
@@ -785,7 +785,7 @@
   backdrop-filter: blur(3px);
 }
 .aw-rw-countdown-num {
-  font-size: 18cqw; font-weight: 800; line-height: 1;
+  font-size: calc(18 * var(--aw-u)); font-weight: 800; line-height: 1;
   color: var(--rw-ink);
 }
 /* centred by FLEX, not by a transform — so a scale animation here is safe */
@@ -800,35 +800,35 @@
 .aw-rw-result {
   position: absolute; inset: 0; z-index: 45;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.2cqw;
+  gap: calc(1.2 * var(--aw-u));
   background: rgba(255,255,255,.93);
   backdrop-filter: blur(4px);
   animation: aw-fadein .28s ease;
 }
 .aw-rw-result-head {
-  font-size: 6cqw; font-weight: 800; letter-spacing: .05em; line-height: 1;
+  font-size: calc(6 * var(--aw-u)); font-weight: 800; letter-spacing: .05em; line-height: 1;
   color: var(--rw-ink); text-align: center;
 }
-.aw-rw-result-detail { font-size: 1.8cqw; font-weight: 600; color: var(--aw-muted); }
-.aw-rw-result-grid { display: flex; gap: 3cqw; }
+.aw-rw-result-detail { font-size: calc(1.8 * var(--aw-u)); font-weight: 600; color: var(--aw-muted); }
+.aw-rw-result-grid { display: flex; gap: calc(3 * var(--aw-u)); }
 .aw-rw-result-team {
   display: flex; flex-direction: column; align-items: center;
-  min-width: 18cqw;
-  padding: 1cqw 1.6cqw;
-  border-radius: 1.2cqw;
-  border: 0.3cqw solid rgba(23,34,47,.12);
+  min-width: calc(18 * var(--aw-u));
+  padding: calc(1 * var(--aw-u)) calc(1.6 * var(--aw-u));
+  border-radius: calc(1.2 * var(--aw-u));
+  border: calc(0.3 * var(--aw-u)) solid rgba(23,34,47,.12);
   opacity: .62;
 }
 .aw-rw-result-team.is-winner { opacity: 1; }
 .aw-rw-result-team.is-a.is-winner { border-color: var(--rw-a); background: rgba(59,130,246,.08); }
 .aw-rw-result-team.is-b.is-winner { border-color: var(--rw-b); background: rgba(245,158,11,.1); }
 .aw-rw-result-name {
-  font-size: 1.5cqw; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  font-size: calc(1.5 * var(--aw-u)); font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
   color: var(--rw-ink);
 }
-.aw-rw-result-words { font-size: 4.4cqw; font-weight: 800; line-height: 1.05; color: var(--rw-ink); }
-.aw-rw-result-time { font-size: 2.2cqw; font-weight: 800; color: var(--aw-muted); font-variant-numeric: tabular-nums; }
-.aw-rw-result-lab { font-size: 1cqw; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--aw-muted); }
+.aw-rw-result-words { font-size: calc(4.4 * var(--aw-u)); font-weight: 800; line-height: 1.05; color: var(--rw-ink); }
+.aw-rw-result-time { font-size: calc(2.2 * var(--aw-u)); font-weight: 800; color: var(--aw-muted); font-variant-numeric: tabular-nums; }
+.aw-rw-result-lab { font-size: calc(1 * var(--aw-u)); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--aw-muted); }
 
 /* ---- end-of-match MENU panel body (tpl.renderSummary → core's dark .aw-panel).
    The panel lives INSIDE the cqw stage, so cqw here like the rest of it. Two
@@ -836,13 +836,13 @@
    winner at full opacity — everything else (Time, Leaderboard, Show answers,
    "play a different template", the "you're Nth" line) stripped out by
    renderSummary (teacher's request, 5/8/2026). ---- */
-.aw-rw-sum { display: flex; gap: 4cqw; justify-content: center; margin: 0.6cqw 0 1.6cqw; }
+.aw-rw-sum { display: flex; gap: calc(4 * var(--aw-u)); justify-content: center; margin: calc(0.6 * var(--aw-u)) 0 calc(1.6 * var(--aw-u)); }
 .aw-rw-sum-half {
   display: flex; flex-direction: column; align-items: center;
-  min-width: 16cqw;
-  padding: 1.3cqw 2cqw;
-  border-radius: 1.2cqw;
-  border: 0.24cqw solid rgba(255,255,255,.14);
+  min-width: calc(16 * var(--aw-u));
+  padding: calc(1.3 * var(--aw-u)) calc(2 * var(--aw-u));
+  border-radius: calc(1.2 * var(--aw-u));
+  border: calc(0.24 * var(--aw-u)) solid rgba(255,255,255,.14);
   opacity: .72;
 }
 .aw-rw-sum-half.is-winner { opacity: 1; }
@@ -851,27 +851,27 @@
 .aw-rw-sum-half.is-a.is-winner { border-color: #3b82f6; background: rgba(59,130,246,.16); }
 .aw-rw-sum-half.is-b.is-winner { border-color: #f59e0b; background: rgba(245,158,11,.16); }
 .aw-rw-sum-name {
-  font-size: 1.7cqw; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  font-size: calc(1.7 * var(--aw-u)); font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
   color: #f4f4f5;
 }
 .aw-rw-sum-score {
-  margin-top: 0.5cqw;
-  font-size: 5.2cqw; font-weight: 800; line-height: 1;
+  margin-top: calc(0.5 * var(--aw-u));
+  font-size: calc(5.2 * var(--aw-u)); font-weight: 800; line-height: 1;
   color: #ffcf33;   /* gold, and bigger than the team name */
   font-variant-numeric: tabular-nums;
 }
 /* leftover clock time under the score (teacher's request, 6/8/2026) */
 .aw-rw-sum-timewrap {
-  margin-top: 0.8cqw;
+  margin-top: calc(0.8 * var(--aw-u));
   display: flex; flex-direction: column; align-items: center;
 }
 .aw-rw-sum-time {
-  font-size: 2.2cqw; font-weight: 800; line-height: 1;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 800; line-height: 1;
   color: #e4e4e7; font-variant-numeric: tabular-nums;
 }
 .aw-rw-sum-timelab {
-  margin-top: 0.3cqw;
-  font-size: 0.95cqw; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  margin-top: calc(0.3 * var(--aw-u));
+  font-size: calc(0.95 * var(--aw-u)); font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
   color: #a1a1aa;
 }
 
@@ -915,7 +915,7 @@
    7.93, and by confirming the four keyboard-shrink steps leave every internal
    proportion untouched (`transform: scale()` scales the whole row as one).
    If a fourth template ever grows an Andrew key, use 12.7cqw. */
-.aw-rw-key-andrew { flex: 0 0 12.7cqw; }
+.aw-rw-key-andrew { flex: 0 0 calc(12.7 * var(--aw-u)); }
 .aw-rw-key-andrew.is-ready .aw-kbd-key-fnlabel { color: #f4f4f5; }
 .aw-rw-key-andrew.is-ready:disabled { opacity: .55; }
 .aw-rw-card .aw-rw-key-andrew.is-glowing {
@@ -925,10 +925,10 @@
 }
 .aw-rw-key-andrew.is-glowing .aw-kbd-key-fnlabel { color: #4a3400; font-weight: 800; }
 @keyframes aw-rw-andrew-halo {
-  0%, 100% { box-shadow: 0 0.18cqw 0 #b8860b, 0 0 0.6cqw #ffd54a, 0 0 1.6cqw rgba(255,193,7,.55); }
-  50%      { box-shadow: 0 0.18cqw 0 #b8860b, 0 0 1.4cqw #ffe07a, 0 0 3.2cqw rgba(255,193,7,.85); }
+  0%, 100% { box-shadow: 0 calc(0.18 * var(--aw-u)) 0 #b8860b, 0 0 calc(0.6 * var(--aw-u)) #ffd54a, 0 0 calc(1.6 * var(--aw-u)) rgba(255,193,7,.55); }
+  50%      { box-shadow: 0 calc(0.18 * var(--aw-u)) 0 #b8860b, 0 0 calc(1.4 * var(--aw-u)) #ffe07a, 0 0 calc(3.2 * var(--aw-u)) rgba(255,193,7,.85); }
 }
-.aw-rw-card .aw-rw-key-andrew.is-used { background: #333335; box-shadow: 0 0.18cqw 0 #1b1b1d; }
+.aw-rw-card .aw-rw-key-andrew.is-used { background: #333335; box-shadow: 0 calc(0.18 * var(--aw-u)) 0 #1b1b1d; }
 .aw-rw-key-andrew.is-used .aw-kbd-key-fnlabel { color: #6a6a6d; }
 
 /* =============================================================
@@ -1177,37 +1177,38 @@
    `.aw-kbd`.offsetHeight and redo the four margins. That single number is the
    only thing in this section that mirrors core.
 
-   Steps are ordered narrowest -> widest; every matching one applies, so the
-   last match wins. `stage` is the container name core gives `.aw-stage`.
+   ⭐⭐ Đợt 273 — BỐN KHỐI `@container stage (aspect-ratio > …)` ĐÃ THAY BẰNG
+   `[data-ar-buoc]`. Lý do y hệt lý do bỏ `cqw`: `@container` chỉ có từ Safari
+   16, iPad đời cũ bỏ qua sạch. Nay `core/unit.js` tự đo tỉ lệ khung rồi ghi
+   **một con số bậc** lên `.aw-stage`:
+       0 = khung nghỉ (chưa qua mốc nào)   1 = qua 16/10.4
+       2 = qua 16/10                       3 = qua 16/9.5      4 = qua 16/9.2
+   Bốn khối cũ XẾP CHỒNG (khối khớp cuối cùng thắng); bốn luật dưới đây thì
+   RỜI NHAU (mỗi bậc một luật) — nên mỗi luật phải khai ĐỦ CẢ HAI thuộc tính,
+   không được để thiếu cái nào mà trông chờ luật trước.
+   ⛔ Mốc bậc 1 cố ý là 16/10.4 chứ không phải 16/10.5 — xem lý do ngay dưới.
+   ⚠️ Mốc nằm trong `core/unit.js` (`MOC_AR`). Đổi số ở đây là phải đổi ở đó.
    ============================================================= */
 
-/* step 1 — clear of the design ratio.
+/* bậc 1 — vượt khỏi tỉ lệ thiết kế.
    ⚠️ The threshold is 16/10.4 (1.5385), NOT 16/10.5 (1.5238), on purpose. With
    `> 16/10.5` this step fired on the RESTING frame itself, which IS exactly
-   16:10.5: the stage derives its height from its width via `aspect-ratio`, the
-   result lands on a fractional pixel, and the container's measured ratio comes
-   out a hair OVER the exact fraction — so a strict `>` matched. Measured on the
-   resting frame: keyboard scale 1.08 and boards margin 2cqw instead of the
-   approved 1.15 / 3.4cqw, with no console error to give it away. Never put a
-   container-query threshold ON a ratio the layout actually rests at. */
-@container stage (aspect-ratio > 16/10.4) {
-  .aw-rw-card .aw-kbd { transform: scale(1.08); }
-  .aw-rw-boards { margin-bottom: 2cqw; }
-}
-/* step 2 — past 16:10 */
-@container stage (aspect-ratio > 16/10) {
-  .aw-rw-card .aw-kbd { transform: scale(1); }
-  .aw-rw-boards { margin-bottom: 0.4cqw; }
-}
-/* step 3 — past 16:9.5 */
-@container stage (aspect-ratio > 16/9.5) {
-  .aw-rw-card .aw-kbd { transform: scale(0.93); }
-  .aw-rw-boards { margin-bottom: -1cqw; }
-}
-/* step 4 — past 16:9.2, i.e. everything up to and including the 16:9 cap. On a
-   1920-wide 16:9 screen the keyboard is still ~17.4cqw = 334px tall (keys
-   ~73px), comfortably bigger than a phone keyboard's. */
-@container stage (aspect-ratio > 16/9.2) {
-  .aw-rw-card .aw-kbd { transform: scale(0.87); }
-  .aw-rw-boards { margin-bottom: -2.2cqw; }
-}
+   16:10.5: the frame derives its height from its width, the result lands on a
+   fractional pixel, and the measured ratio comes out a hair OVER the exact
+   fraction — so a strict `>` matched. Measured on the resting frame: keyboard
+   scale 1.08 and boards margin 2 units instead of the approved 1.15 / 3.4, with
+   no console error to give it away. Never put a threshold ON a ratio the layout
+   actually rests at. */
+.aw-stage[data-ar-buoc="1"] .aw-rw-card .aw-kbd { transform: scale(1.08); }
+.aw-stage[data-ar-buoc="1"] .aw-rw-boards { margin-bottom: calc(2 * var(--aw-u)); }
+/* bậc 2 — qua 16:10 */
+.aw-stage[data-ar-buoc="2"] .aw-rw-card .aw-kbd { transform: scale(1); }
+.aw-stage[data-ar-buoc="2"] .aw-rw-boards { margin-bottom: calc(0.4 * var(--aw-u)); }
+/* bậc 3 — qua 16:9.5 */
+.aw-stage[data-ar-buoc="3"] .aw-rw-card .aw-kbd { transform: scale(0.93); }
+.aw-stage[data-ar-buoc="3"] .aw-rw-boards { margin-bottom: calc(-1 * var(--aw-u)); }
+/* bậc 4 — qua 16:9.2, tức mọi thứ tới hết chốt chặn 16:9. Trên màn 1920 rộng
+   16:9 bàn phím vẫn cao ~17.4 đơn vị = 334px (phím ~73px), thoải mái to hơn bàn
+   phím điện thoại. */
+.aw-stage[data-ar-buoc="4"] .aw-rw-card .aw-kbd { transform: scale(0.87); }
+.aw-stage[data-ar-buoc="4"] .aw-rw-boards { margin-bottom: calc(-2.2 * var(--aw-u)); }

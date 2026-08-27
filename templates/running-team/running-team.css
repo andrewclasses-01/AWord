@@ -35,7 +35,7 @@
    `if (topbarMid) ... else if (livesSlot)`, so a template asking for both gets
    its hearts built and silently never appended. Owning the row sidesteps that
    entirely and costs core nothing. */
-.aw-stage.act-running_team .aw-stage-inner { padding: 0 1.6cqw 0.4cqw; }
+.aw-stage.act-running_team .aw-stage-inner { padding: 0 calc(1.6 * var(--aw-u)) calc(0.4 * var(--aw-u)); }
 .aw-stage.act-running_team .aw-topbar { display: none; }
 
 /* No double-tap zoom: children hammer six big tiles, which produces "double
@@ -62,7 +62,7 @@
 .aw-stage.act-running_team .aw-navbtn { visibility: hidden; }
 .aw-stage.act-running_team .aw-nav-label {
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-weight: 300; font-size: 1.35cqw;
+  font-weight: 300; font-size: calc(1.35 * var(--aw-u));
   letter-spacing: 0.28em; text-indent: 0.28em;
   text-transform: uppercase; white-space: nowrap;
   color: var(--aw-muted); min-width: 0;
@@ -130,11 +130,11 @@
    the stage's own bottom-right corner and kept faint. `.aw-stage-inner` (core)
    is `position:absolute;inset:0`, so it is the positioned ancestor here. */
 .aw-zoomed .aw-stage.act-running_team .aw-fs-always {
-  position: absolute; right: 0.8cqw; bottom: 0.8cqw; z-index: 20;
-  width: 2.2cqw; height: 2.2cqw;
+  position: absolute; right: calc(0.8 * var(--aw-u)); bottom: calc(0.8 * var(--aw-u)); z-index: 20;
+  width: calc(2.2 * var(--aw-u)); height: calc(2.2 * var(--aw-u));
   background: transparent; opacity: .45;
 }
-.aw-zoomed .aw-stage.act-running_team .aw-fs-always svg { width: 1.3cqw; height: 1.3cqw; }
+.aw-zoomed .aw-stage.act-running_team .aw-fs-always svg { width: calc(1.3 * var(--aw-u)); height: calc(1.3 * var(--aw-u)); }
 .aw-zoomed .aw-stage.act-running_team .aw-fs-always:hover,
 .aw-zoomed .aw-stage.act-running_team .aw-fs-always:active {
   background: transparent; opacity: .85;
@@ -151,8 +151,8 @@
 }
 .aw-rt-empty {
   display: flex; align-items: center; justify-content: center;
-  height: 100%; font-size: 2.2cqw; font-weight: 700; color: var(--aw-muted);
-  text-align: center; padding: 0 6cqw;
+  height: 100%; font-size: calc(2.2 * var(--aw-u)); font-weight: 700; color: var(--aw-muted);
+  text-align: center; padding: 0 calc(6 * var(--aw-u));
 }
 
 /* =============================================================
@@ -171,11 +171,11 @@
 .aw-rt-setup {
   flex: 1 1 auto; min-height: 0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.1cqw; padding: 1cqw 2cqw;
+  gap: calc(1.1 * var(--aw-u)); padding: calc(1 * var(--aw-u)) calc(2 * var(--aw-u));
   overflow-y: auto;
 }
 .aw-rt-setup-title {
-  font-size: 4.4cqw; font-weight: 800; letter-spacing: 0.06em;
+  font-size: calc(4.4 * var(--aw-u)); font-weight: 800; letter-spacing: 0.06em;
   color: var(--aw-accent); line-height: 1.1;
 }
 
@@ -186,23 +186,23 @@
    own top-right corner. `align-items:stretch` isn't set here (flex COLUMN
    default is stretch on the cross axis already via width, not height) — the
    slot still grows to fit `.aw-rt-slot-acts` only when it's `.is-sel`. */
-.aw-rt-slots { display: flex; gap: 1.1cqw; }
+.aw-rt-slots { display: flex; gap: calc(1.1 * var(--aw-u)); }
 .aw-rt-slot {
   position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 0.35cqw;
-  min-width: 17.4cqw; padding: 0.9cqw 1.3cqw 0.8cqw;
-  border: 0.28cqw solid var(--aw-tile-border-color, #d8e2f0);
-  border-radius: var(--aw-tile-radius, 1.2cqw);
+  display: flex; flex-direction: column; align-items: center; gap: calc(0.35 * var(--aw-u));
+  min-width: calc(17.4 * var(--aw-u)); padding: calc(0.9 * var(--aw-u)) calc(1.3 * var(--aw-u)) calc(0.8 * var(--aw-u));
+  border: calc(0.28 * var(--aw-u)) solid var(--aw-tile-border-color, #d8e2f0);
+  border-radius: var(--aw-tile-radius, calc(1.2 * var(--aw-u)));
   background: var(--aw-card, #fff);
   text-align: center; cursor: pointer;
   transition: border-color .12s ease, transform .12s ease;
 }
 .aw-rt-slot.is-empty { opacity: .55; cursor: default; }
 .aw-rt-slot.is-stale { opacity: .5; cursor: not-allowed; }
-.aw-rt-slot.is-sel { border-color: var(--aw-accent); transform: translateY(-0.2cqw); }
-.aw-rt-slot-num { font-size: 1.15cqw; font-weight: 800; letter-spacing: .14em; color: var(--aw-muted); }
-.aw-rt-slot-main { font-size: 2.1cqw; font-weight: 800; line-height: 1.25; }
-.aw-rt-slot-meta { font-size: 1.05cqw; color: var(--aw-muted); line-height: 1.3; }
+.aw-rt-slot.is-sel { border-color: var(--aw-accent); transform: translateY(calc(-0.2 * var(--aw-u))); }
+.aw-rt-slot-num { font-size: calc(1.15 * var(--aw-u)); font-weight: 800; letter-spacing: .14em; color: var(--aw-muted); }
+.aw-rt-slot-main { font-size: calc(2.1 * var(--aw-u)); font-weight: 800; line-height: 1.25; }
+.aw-rt-slot-meta { font-size: calc(1.05 * var(--aw-u)); color: var(--aw-muted); line-height: 1.3; }
 
 /* DELETE SET — a small round icon pinned to the slot's own top-right corner
    (Đợt 117, replaces the old full-width text button + native confirm(); see
@@ -210,30 +210,30 @@
    opens instead). Drawn on ANY slot holding a saved set, selected or not —
    deleting doesn't require selecting it first. */
 .aw-rt-slot-delcorner {
-  position: absolute; top: 0.35cqw; right: 0.35cqw;
-  width: 1.9cqw; height: 1.9cqw; border-radius: 50%;
+  position: absolute; top: calc(0.35 * var(--aw-u)); right: calc(0.35 * var(--aw-u));
+  width: calc(1.9 * var(--aw-u)); height: calc(1.9 * var(--aw-u)); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
   background: rgba(23,34,47,.06); border: 0; color: var(--aw-muted);
   transition: background .14s ease, color .14s ease;
 }
-.aw-rt-slot-delcorner svg { width: 1cqw; height: 1cqw; }
+.aw-rt-slot-delcorner svg { width: calc(1 * var(--aw-u)); height: calc(1 * var(--aw-u)); }
 .aw-rt-slot-delcorner:hover { background: rgba(239,68,68,.16); color: var(--aw-no); }
 
 /* Shuffle / Save / Print — icon-only, INSIDE the selected slot (Đợt 117,
    replaces the old text-labelled row below the slots). Save shows a checkmark
    once the slot is no longer dirty (SET already saved) instead of the
    floppy-disk glyph, so the state reads at a glance without any text. */
-.aw-rt-slot-acts { display: flex; gap: 0.5cqw; margin-top: 0.35cqw; }
+.aw-rt-slot-acts { display: flex; gap: calc(0.5 * var(--aw-u)); margin-top: calc(0.35 * var(--aw-u)); }
 .aw-rt-slot-actbtn {
-  width: 2.6cqw; height: 2.6cqw; border-radius: 0.7cqw;
+  width: calc(2.6 * var(--aw-u)); height: calc(2.6 * var(--aw-u)); border-radius: calc(0.7 * var(--aw-u));
   display: flex; align-items: center; justify-content: center;
   font-family: inherit; cursor: pointer;
-  background: var(--aw-card, #fff); border: 0.2cqw solid var(--aw-tile-border-color, #d8e2f0);
+  background: var(--aw-card, #fff); border: calc(0.2 * var(--aw-u)) solid var(--aw-tile-border-color, #d8e2f0);
   color: var(--aw-text);
   transition: border-color .14s ease, color .14s ease, opacity .14s ease;
 }
-.aw-rt-slot-actbtn svg { width: 1.35cqw; height: 1.35cqw; }
+.aw-rt-slot-actbtn svg { width: calc(1.35 * var(--aw-u)); height: calc(1.35 * var(--aw-u)); }
 .aw-rt-slot-actbtn:hover:not(:disabled) { border-color: var(--aw-accent); color: var(--aw-accent); }
 .aw-rt-slot-actbtn:disabled { opacity: .4; cursor: default; }
 .aw-rt-slot-actbtn.is-dirty { border-color: var(--aw-accent); color: var(--aw-accent); }
@@ -256,25 +256,25 @@
 
 /* -- class picker + roll review -- */
 .aw-rt-classblock {
-  width: 100%; max-width: 74cqw;
-  display: flex; flex-direction: column; align-items: center; gap: 0.55cqw;
+  width: 100%; max-width: calc(74 * var(--aw-u));
+  display: flex; flex-direction: column; align-items: center; gap: calc(0.55 * var(--aw-u));
 }
-.aw-rt-classhead { display: flex; align-items: center; gap: 0.9cqw; }
-.aw-rt-classlabel { font-size: 1.2cqw; font-weight: 800; letter-spacing: .16em; color: var(--aw-muted); }
+.aw-rt-classhead { display: flex; align-items: center; gap: calc(0.9 * var(--aw-u)); }
+.aw-rt-classlabel { font-size: calc(1.2 * var(--aw-u)); font-weight: 800; letter-spacing: .16em; color: var(--aw-muted); }
 .aw-rt-classsel {
-  font-family: inherit; font-size: 1.7cqw; font-weight: 700;
-  padding: 0.35cqw 0.9cqw;
-  border: 0.22cqw solid var(--aw-tile-border-color, #d8e2f0);
-  border-radius: 0.8cqw; background: var(--aw-card, #fff); color: var(--aw-text);
+  font-family: inherit; font-size: calc(1.7 * var(--aw-u)); font-weight: 700;
+  padding: calc(0.35 * var(--aw-u)) calc(0.9 * var(--aw-u));
+  border: calc(0.22 * var(--aw-u)) solid var(--aw-tile-border-color, #d8e2f0);
+  border-radius: calc(0.8 * var(--aw-u)); background: var(--aw-card, #fff); color: var(--aw-text);
 }
 .aw-rt-chips {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5cqw;
-  max-height: 13cqw; overflow-y: auto;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: calc(0.5 * var(--aw-u));
+  max-height: calc(13 * var(--aw-u)); overflow-y: auto;
 }
 .aw-rt-chip {
-  font-family: inherit; font-size: 1.35cqw; font-weight: 700;
-  padding: 0.3cqw 0.9cqw; border-radius: 999px; cursor: pointer;
-  border: 0.2cqw solid var(--aw-accent);
+  font-family: inherit; font-size: calc(1.35 * var(--aw-u)); font-weight: 700;
+  padding: calc(0.3 * var(--aw-u)) calc(0.9 * var(--aw-u)); border-radius: 999px; cursor: pointer;
+  border: calc(0.2 * var(--aw-u)) solid var(--aw-accent);
   background: var(--aw-accent); color: #fff;
   transition: opacity .12s ease, background .12s ease;
 }
@@ -287,17 +287,17 @@
 }
 
 /* -- facts strip -- */
-.aw-rt-facts { display: flex; gap: 2.2cqw; }
+.aw-rt-facts { display: flex; gap: calc(2.2 * var(--aw-u)); }
 .aw-rt-fact { text-align: center; }
-.aw-rt-fact-big { font-size: 2.3cqw; font-weight: 800; line-height: 1.1; }
-.aw-rt-fact-small { font-size: 1.02cqw; color: var(--aw-muted); letter-spacing: .04em; }
+.aw-rt-fact-big { font-size: calc(2.3 * var(--aw-u)); font-weight: 800; line-height: 1.1; }
+.aw-rt-fact-small { font-size: calc(1.02 * var(--aw-u)); color: var(--aw-muted); letter-spacing: .04em; }
 
 /* -- start button -- */
 .aw-rt-start {
-  font-family: inherit; font-size: 2.6cqw; font-weight: 800; letter-spacing: .06em;
-  padding: 0.7cqw 3.2cqw; border-radius: 1.1cqw; cursor: pointer;
+  font-family: inherit; font-size: calc(2.6 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
+  padding: calc(0.7 * var(--aw-u)) calc(3.2 * var(--aw-u)); border-radius: calc(1.1 * var(--aw-u)); cursor: pointer;
   border: none; background: var(--aw-accent); color: #fff;
-  box-shadow: var(--aw-tile-shadow, 0 0.3cqw 0 rgba(0,0,0,.18));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.3 * var(--aw-u)) 0 rgba(0,0,0,.18));
 }
 .aw-rt-start:disabled { opacity: .4; cursor: not-allowed; }
 
@@ -309,22 +309,22 @@
 /* -- status row: main clock · hearts · question bar · score -- */
 .aw-rt-top {
   flex: 0 0 auto;
-  display: flex; align-items: center; gap: 1.2cqw;
-  padding: 0.6cqw 0.4cqw 0.5cqw;
+  display: flex; align-items: center; gap: calc(1.2 * var(--aw-u));
+  padding: calc(0.6 * var(--aw-u)) calc(0.4 * var(--aw-u)) calc(0.5 * var(--aw-u));
 }
 .aw-rt-mainclock {
-  font-size: 3.1cqw; font-weight: 800; line-height: 1;
+  font-size: calc(3.1 * var(--aw-u)); font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;      /* digits stop jittering as they change */
-  color: var(--aw-text); min-width: 7.4cqw;
+  color: var(--aw-text); min-width: calc(7.4 * var(--aw-u));
 }
 .aw-rt-mainclock.is-low { color: var(--aw-no); }
-.aw-rt-hearts { display: flex; align-items: center; gap: 0.25cqw; flex: 0 0 auto; }
-.aw-rt-heart { font-size: 2.1cqw; line-height: 1; color: var(--aw-no); }
+.aw-rt-hearts { display: flex; align-items: center; gap: calc(0.25 * var(--aw-u)); flex: 0 0 auto; }
+.aw-rt-heart { font-size: calc(2.1 * var(--aw-u)); line-height: 1; color: var(--aw-no); }
 .aw-rt-heart.is-out { color: var(--aw-muted); opacity: .35; }
 .aw-rt-heart.is-inf { color: var(--aw-accent); font-weight: 800; }
-.aw-rt-heartx { font-size: 1.6cqw; font-weight: 800; color: var(--aw-no); }
+.aw-rt-heartx { font-size: calc(1.6 * var(--aw-u)); font-weight: 800; color: var(--aw-no); }
 .aw-rt-qbar {
-  flex: 1 1 auto; min-width: 0; height: 1.5cqw;
+  flex: 1 1 auto; min-width: 0; height: calc(1.5 * var(--aw-u));
   border-radius: 999px; overflow: hidden;
   background: rgba(0,0,0,.11);
 }
@@ -338,37 +338,37 @@
    the clock, not for a scoreboard, so the tally sits small at the end of the
    row rather than competing with the question. */
 .aw-rt-score {
-  display: inline-flex; align-items: center; gap: 0.3cqw;
-  font-size: 1.5cqw; font-weight: 800; color: var(--aw-muted); flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: calc(0.3 * var(--aw-u));
+  font-size: calc(1.5 * var(--aw-u)); font-weight: 800; color: var(--aw-muted); flex: 0 0 auto;
 }
-.aw-rt-score svg { width: 1.5cqw; height: 1.5cqw; }
+.aw-rt-score svg { width: calc(1.5 * var(--aw-u)); height: calc(1.5 * var(--aw-u)); }
 
 /* -- board -- */
 .aw-rt-board {
   flex: 1 1 auto; min-height: 0;
-  display: flex; flex-direction: column; gap: 1cqw;
-  padding: 0.4cqw 0.4cqw 1cqw;
+  display: flex; flex-direction: column; gap: calc(1 * var(--aw-u));
+  padding: calc(0.4 * var(--aw-u)) calc(0.4 * var(--aw-u)) calc(1 * var(--aw-u));
 }
 
 /* THE QUESTION IS A NAME AND A NUMBER — never the word. The pupil holding the
    sheet reads it; the screen must not give it away. */
 .aw-rt-prompt {
   flex: 0 0 auto;
-  display: flex; align-items: baseline; justify-content: center; gap: 1.6cqw;
-  min-height: 8cqw;
+  display: flex; align-items: baseline; justify-content: center; gap: calc(1.6 * var(--aw-u));
+  min-height: calc(8 * var(--aw-u));
 }
 /* line-height 1.3, not 1.05: Vietnamese tone marks (Ả, Ẩ, Ẫ…) sit ABOVE cap
    height, and `overflow:hidden` (needed below for the ellipsis) clips
    whatever doesn't fit inside the line box — at 1.05 that was the marks
    themselves. 1.3 gives them room without visibly changing the baseline. */
 .aw-rt-prompt-name {
-  font-size: 5.6cqw; font-weight: 800; line-height: 1.3;
+  font-size: calc(5.6 * var(--aw-u)); font-weight: 800; line-height: 1.3;
   letter-spacing: .01em; text-transform: uppercase;
   color: var(--aw-text);
-  max-width: 62cqw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: calc(62 * var(--aw-u)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .aw-rt-prompt-num {
-  font-size: 6.4cqw; font-weight: 800; line-height: 1;
+  font-size: calc(6.4 * var(--aw-u)); font-weight: 800; line-height: 1;
   font-variant-numeric: tabular-nums;
   color: var(--aw-accent);
 }
@@ -384,7 +384,7 @@
   position: relative;
   flex: 1 1 auto; min-height: 0;
   display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
-  gap: 1cqw;
+  gap: calc(1 * var(--aw-u));
 }
 /* Đợt 117: the question fades/rises in after the READY/3-2-1 overlay clears,
    rather than snapping into place — "every transition should be slow and
@@ -392,7 +392,7 @@
    each question, since `both`-filled keyframes don't replay just by staying
    on the element. */
 @keyframes aw-rt-boardin {
-  from { opacity: 0; transform: translateY(0.9cqw); }
+  from { opacity: 0; transform: translateY(calc(0.9 * var(--aw-u))); }
   to   { opacity: 1; transform: translateY(0); }
 }
 .aw-rt-board.is-entering { animation: aw-rt-boardin .5s ease-out both; }
@@ -407,18 +407,18 @@
 .aw-rt-tile {
   position: relative;                       /* .aw-mark-fly anchors here */
   display: flex; align-items: center; justify-content: center;
-  padding: 0.4cqw 0.8cqw; min-width: 0; overflow: hidden;
+  padding: calc(0.4 * var(--aw-u)) calc(0.8 * var(--aw-u)); min-width: 0; overflow: hidden;
   --tile-eff: var(--aw-tile-fixed, var(--tile));
   --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
   font-family: inherit; cursor: pointer;
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
-  border-radius: var(--aw-tile-radius, 1.2cqw);
+  border-radius: var(--aw-tile-radius, calc(1.2 * var(--aw-u)));
   background: var(--tile-eff);
-  box-shadow: var(--aw-tile-shadow, 0 0.35cqw 0 var(--tile-dark-eff));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.35 * var(--aw-u)) 0 var(--tile-dark-eff));
   transition: opacity .18s ease, transform .12s ease, filter .12s ease;
 }
 .aw-rt-tile:hover:not(:disabled) { filter: brightness(1.05); }
-.aw-rt-tile:active:not(:disabled) { transform: translateY(0.2cqw); }
+.aw-rt-tile:active:not(:disabled) { transform: translateY(calc(0.2 * var(--aw-u))); }
 .aw-rt-tile-text {
   /* `--rt-fit` is set per tile by fitOnce() when a long entry would overflow;
      1 (no shrink) is the normal case. Base bumped 3.1cqw -> 4.2cqw (Đợt 111,
@@ -426,7 +426,7 @@
      keeps a long entry (SKIN-SCRAPER, CIVILISATION, UNINTENTIONALLY) from
      overflowing at the new size, the same safety net that already covered
      the old size. */
-  font-size: calc(4.2cqw * var(--rt-fit, 1));
+  font-size: calc(calc(4.2 * var(--aw-u)) * var(--rt-fit, 1));
   font-weight: 800; line-height: 1.1; text-align: center;
   color: #fff; word-break: break-word;
 }
@@ -436,7 +436,7 @@
 .aw-rt-tile.is-wrong { opacity: .28; cursor: not-allowed; }
 .aw-rt-tile.is-dimmed { opacity: .15; }
 .aw-rt-tile.is-right,
-.aw-rt-tile.is-answer { outline: 0.45cqw solid var(--aw-ok); outline-offset: -0.45cqw; opacity: 1; }
+.aw-rt-tile.is-answer { outline: calc(0.45 * var(--aw-u)) solid var(--aw-ok); outline-offset: calc(-0.45 * var(--aw-u)); opacity: 1; }
 
 /* -- READY / 3-2-1 overlay --
    Đợt 117 (teacher's request: show the pupil's name through the whole READY/
@@ -450,7 +450,7 @@
 .aw-rt-overlay {
   position: absolute; inset: 0; z-index: 8;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.6cqw;
+  gap: calc(1.6 * var(--aw-u));
   background: rgba(255,255,255,.93);
   opacity: 0;
   transition: opacity 0.4s ease;
@@ -464,8 +464,8 @@
 .aw-rt-overlay-name {
   font-weight: 800; line-height: 1.2; letter-spacing: .01em; text-transform: uppercase;
   color: var(--aw-text);
-  font-size: 9cqw;
-  max-width: 88cqw; text-align: center;
+  font-size: calc(9 * var(--aw-u));
+  max-width: calc(88 * var(--aw-u)); text-align: center;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 /* The text is centred by FLEX, not by a transform — so scaling it in a keyframe
@@ -477,8 +477,8 @@
   color: var(--aw-accent);
   animation: aw-rt-pop .45s ease-out both;
 }
-.aw-rt-overlay.is-ready .aw-rt-overlay-count { font-size: 5.6cqw; letter-spacing: .32em; }
-.aw-rt-overlay.is-count .aw-rt-overlay-count { font-size: 14cqw; color: var(--aw-text); }
+.aw-rt-overlay.is-ready .aw-rt-overlay-count { font-size: calc(5.6 * var(--aw-u)); letter-spacing: .32em; }
+.aw-rt-overlay.is-count .aw-rt-overlay-count { font-size: calc(14 * var(--aw-u)); color: var(--aw-text); }
 @keyframes aw-rt-pop {
   from { opacity: 0; transform: scale(.68); }
   to   { opacity: 1; transform: scale(1); }

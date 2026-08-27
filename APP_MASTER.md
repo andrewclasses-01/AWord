@@ -8,7 +8,43 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **26/8/2026 (Đợt 272 — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share dời vào footer Options)**.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 273 — BỎ HẲN `cqw`, cứu iPad đời cũ)**.
+>
+> **Đợt 273** (27/8/2026) — ⭐⭐⭐ **BỎ HẲN `cqw`, ĐƠN VỊ KHUNG NAY LÀ `--aw-u`.**
+> Thầy chụp ảnh màn QUIZ trên **iPad đời cũ**: chữ bé tí, sáu thẻ đáp án dẹp lép
+> dồn thành một dải sát đáy khung, chồng lên nhau — cùng bài đó trên máy tính vẫn
+> đẹp. Thủ phạm: **`cqw` (container query) chỉ có từ Safari 16 (9/2022)**, iPad cũ
+> kẹt ở Safari 15 trở xuống nên vứt sạch, và vứt theo **hai kiểu khác nhau** (hỏng
+> lúc phân tích cú pháp ⇒ mất luôn · hỏng lúc tính giá trị ⇒ `unset` ⇒ font-size
+> **di truyền** về ~16px) — ghép lại đúng bức ảnh, **không một dòng lỗi console**.
+> Nay `core/unit.js` (**FILE MỚI**) tự đo bề ngang khung rồi đặt biến `--aw-u` =
+> 1% bề ngang; **1552 chỗ đổi trong 28 file**: `5.2cqw` → `calc(5.2 * var(--aw-u))`.
+> Biến CSS có từ Safari 9.1 nên chạy mọi máy.
+> 👉 **Viết cỡ mới thì viết `calc(N * var(--aw-u))` — ĐỪNG BAO GIỜ dùng lại `cqw`.**
+> Kèm theo: 4 khối `@container` của Running word → `[data-ar-buoc]`; ba
+> `container-type` còn lại gỡ nốt (`.aw-opt-switch` chuyển sang
+> `contain: inline-size`, sớm hơn một nấc: Safari 15.4); và **vá luôn lỗi ngầm**
+> `aspect-ratio` + `container-type` nằm chung một hộp trên `.aw-stage` — đúng cặp
+> myLesson đã đo được là làm **iOS tính chiều cao 0**, họ gỡ hôm 26/8 còn bên này
+> chưa ai gỡ (chiều cao khung nay do **đệm-phần-trăm** quyết).
+> Bàn thử `scratch/dot273-unit.html` **115/115 ĐẠT**, đối chứng ngược với bản gốc
+> `_backup/dot273` — cả 17 template · 3 cỡ khung · phóng to · 0 lỗi console; mọi
+> số khớp bản cũ trong **0,03px**.
+> ⛔⛔ **BA BẪY ĐÃ CẮN THẬT trong đợt** (chi tiết: `core/HUONG DAN CORE.md` mục
+> Đợt 273): (1) **đừng** đặt `--ti-le: 0` cho khối phóng to — `.aw-page` cao auto
+> nên `height:100%` không phân giải được, tắt đệm là khung **cao 0, mất sạch
+> game**; (2) MutationObserver nghe `class` **phải lọc lại `matches()`**, không
+> lọc thì mỗi thẻ đáp án tự thành "khung" và dẹp lép y hệt lỗi đang đi chữa;
+> (3) **đừng chỉ trông vào `ResizeObserver`** — nó bám vòng vẽ, tab dừng vẽ là câm
+> (đo thật: `rAF` cũng không chạy), mà `html.aw-zoomed` đổi cỡ khung không qua
+> resize cửa sổ.
+> ⬜ **CHỜ THẦY BẤM TAY**: (a) mở chính bài QUIZ đó trên **đúng chiếc iPad cũ** —
+> chữ và thẻ phải to đầy đủ như trên máy tính; (b) bấm nút phóng to trong game xem
+> chữ có nở theo khung không; (c) xoay ngang/dọc iPad; (d) liếc lại vài template
+> hay dùng trên TOMKO.
+>
+> ---
+> Nền: **26/8/2026 (Đợt 272 — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share dời vào footer Options)**.
 > ⚠️ Đợt 269-272 code SONG SONG với Đợt 268 (một phiên Claude khác, file khác) — cả hai đã lên
 > `origin/main` không đụng file nhau (Đợt 268 `4c0a7d6` push trước, 269-272 `ae624ae` push sau).
 >

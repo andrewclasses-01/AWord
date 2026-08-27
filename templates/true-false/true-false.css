@@ -20,7 +20,7 @@
   --fit: 1;
   width: 100%; height: 100%;
   display: flex; flex-direction: column;
-  padding-bottom: 2.4cqw;
+  padding-bottom: calc(2.4 * var(--aw-u));
 }
 
 /* Lives no longer live inside the card — they render in the top bar next to
@@ -35,25 +35,25 @@
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
-  margin-bottom: 1.2cqw;
+  margin-bottom: calc(1.2 * var(--aw-u));
 }
 .aw-tf-prompt {
   position: absolute; inset: 0;
   display: flex; align-items: center; justify-content: center;
   text-align: center;
-  font-size: calc(3.8cqw * var(--fit));
+  font-size: calc(calc(3.8 * var(--aw-u)) * var(--fit));
   font-weight: 700;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
   paint-order: stroke fill;
   line-height: 1.35;
-  padding: 0 5cqw;
+  padding: 0 calc(5 * var(--aw-u));
   will-change: transform;
 }
 /* the "3-2-1" prep countdown (count-up mode only) — much bigger, plain
    no-stroke number so it reads instantly. */
 .aw-tf-prompt.is-countdown {
-  font-size: calc(9cqw * var(--fit));
+  font-size: calc(calc(9 * var(--aw-u)) * var(--fit));
   font-weight: 800;
   -webkit-text-stroke: 0;
   color: var(--aw-question-fill, var(--aw-text));
@@ -62,8 +62,8 @@
 .aw-tf-divider {
   flex: 0 0 auto;
   height: 0;
-  margin: 0 1cqw calc(1.8cqw * var(--fit));
-  border-top: 0.22cqw dashed var(--aw-muted, #b9c3d1);
+  margin: 0 calc(1 * var(--aw-u)) calc(calc(1.8 * var(--aw-u)) * var(--fit));
+  border-top: calc(0.22 * var(--aw-u)) dashed var(--aw-muted, #b9c3d1);
   opacity: .6;
 }
 
@@ -73,20 +73,20 @@
   justify-content: center;
   /* Buttons scaled to 80% of their original size (teacher, item 4, 1/8/2026):
      gap 3->2.4, max-width 34->27.2, font 4->3.2, padding 2.6->2.08 / 1->0.8cqw. */
-  gap: calc(2.4cqw * var(--fit));
-  padding: 0 2cqw;
+  gap: calc(calc(2.4 * var(--aw-u)) * var(--fit));
+  padding: 0 calc(2 * var(--aw-u));
 }
 .aw-tf-btn {
   position: relative;
   flex: 1 1 0;
-  max-width: calc(27.2cqw * var(--fit));
-  border-radius: var(--aw-tile-radius, 1.6cqw);
+  max-width: calc(calc(27.2 * var(--aw-u)) * var(--fit));
+  border-radius: var(--aw-tile-radius, calc(1.6 * var(--aw-u)));
   border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
   color: #fff; font-family: inherit; font-weight: 800;
-  font-size: calc(3.2cqw * var(--fit));
+  font-size: calc(calc(3.2 * var(--aw-u)) * var(--fit));
   letter-spacing: .02em;
-  text-shadow: 0 0.12cqw 0.3cqw rgba(0, 0, 0, .22);
-  padding: calc(2.08cqw * var(--fit)) calc(0.8cqw * var(--fit));
+  text-shadow: 0 calc(0.12 * var(--aw-u)) calc(0.3 * var(--aw-u)) rgba(0, 0, 0, .22);
+  padding: calc(calc(2.08 * var(--aw-u)) * var(--fit)) calc(calc(0.8 * var(--aw-u)) * var(--fit));
   cursor: pointer;
   transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
 }
@@ -95,16 +95,16 @@
    keeping True/False consistent with that theme's tiles. */
 .aw-tf-btn.is-true {
   background: var(--aw-tile-fixed, var(--aw-ok, #33a24a));
-  box-shadow: var(--aw-tile-shadow, 0 0.7cqw 0 var(--aw-tile-fixed-dark, var(--aw-ok-d, #237a37)));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.7 * var(--aw-u)) 0 var(--aw-tile-fixed-dark, var(--aw-ok-d, #237a37)));
 }
 .aw-tf-btn.is-false {
   background: var(--aw-tile-fixed, var(--aw-no, #e23c3c));
-  box-shadow: var(--aw-tile-shadow, 0 0.7cqw 0 var(--aw-tile-fixed-dark, var(--aw-no-d, #b32a2a)));
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.7 * var(--aw-u)) 0 var(--aw-tile-fixed-dark, var(--aw-no-d, #b32a2a)));
 }
 .aw-tf-btn:hover:not(:disabled) { filter: brightness(1.06); }
 .aw-tf-btn:active:not(:disabled) {
-  transform: translateY(0.35cqw);
-  box-shadow: var(--aw-tile-shadow-active, 0 0.2cqw 0 rgba(0, 0, 0, .22));
+  transform: translateY(calc(0.35 * var(--aw-u)));
+  box-shadow: var(--aw-tile-shadow-active, 0 calc(0.2 * var(--aw-u)) 0 rgba(0, 0, 0, .22));
 }
 .aw-tf-btn:disabled { cursor: default; }
 
@@ -124,7 +124,7 @@
 .aw-tf-card.is-fightlost .aw-tf-btn.is-true,
 .aw-tf-card.is-fightlost .aw-tf-btn.is-false {
   background: #b3bac3;
-  box-shadow: 0 0.7cqw 0 #98a0aa;
+  box-shadow: 0 calc(0.7 * var(--aw-u)) 0 #98a0aa;
 }
 
 /* The ✓/✗ that were held back until the match settled the round. Sits in the
@@ -145,11 +145,11 @@
   top: 7%; right: 4%;
   width: 17%; aspect-ratio: 1;
   display: flex; align-items: center; justify-content: center;
-  padding: 0.35cqw;
+  padding: calc(0.35 * var(--aw-u));
   border-radius: 50%;
   background: #fff;
   color: #16a34a;
-  box-shadow: 0 0.15cqw 0.4cqw rgba(0, 0, 0, .28);
+  box-shadow: 0 calc(0.15 * var(--aw-u)) calc(0.4 * var(--aw-u)) rgba(0, 0, 0, .28);
   pointer-events: none;
 }
 .aw-tf-fightmark svg { width: 100%; height: 100%; }
@@ -157,7 +157,7 @@
 
 .aw-tf-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 600;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
 }
 
 /* Teacher's spec (shared with Find the match): the statement only ever moves

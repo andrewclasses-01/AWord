@@ -16,8 +16,8 @@
   /* Tightened from 3cqw when the star row was added (Đợt 108): with stars +
      status both showing, the old spacing overflowed the stage by ~9px at the
      16:9 fullscreen floor — measured, not guessed. */
-  gap: 2.2cqw;
-  padding: 1.2cqw 4cqw;
+  gap: calc(2.2 * var(--aw-u));
+  padding: calc(1.2 * var(--aw-u)) calc(4 * var(--aw-u));
   animation: aw-fadein .25s ease;
 }
 
@@ -29,7 +29,7 @@
 }
 
 .aw-spk-word {
-  font-size: calc(6.4cqw * var(--fit));
+  font-size: calc(calc(6.4 * var(--aw-u)) * var(--fit));
   font-weight: 700;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
@@ -43,19 +43,19 @@
    reads as a helper line, not a second word. */
 .aw-spk-ipa {
   font-family: "Courier New", monospace;
-  font-size: calc(2.9cqw * var(--fit));
+  font-size: calc(calc(2.9 * var(--aw-u)) * var(--fit));
   color: var(--aw-text);
   opacity: .6;
-  margin-top: 0.5cqw;
+  margin-top: calc(0.5 * var(--aw-u));
   line-height: 1.35;
   letter-spacing: .02em;
 }
 
 .aw-spk-clue {
-  font-size: calc(2.6cqw * var(--fit));
+  font-size: calc(calc(2.6 * var(--aw-u)) * var(--fit));
   color: var(--aw-text);
   opacity: .72;
-  margin-top: 0.6cqw;
+  margin-top: calc(0.6 * var(--aw-u));
   line-height: 1.35;
 }
 
@@ -68,7 +68,7 @@
   transform: translate(-50%, -50%);
   font-family: system-ui, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 300;
-  font-size: 1.7cqw;
+  font-size: calc(1.7 * var(--aw-u));
   letter-spacing: 0.32em;
   text-indent: 0.32em;          /* balance the trailing letter-spacing so it stays centred */
   text-transform: uppercase;
@@ -81,19 +81,19 @@
 .aw-spk-empty {
   width: 100%; height: 100%;
   display: flex; align-items: center; justify-content: center;
-  text-align: center; padding: 8cqw;
-  font-size: 2.4cqw; color: var(--aw-text); opacity: .7;
+  text-align: center; padding: calc(8 * var(--aw-u));
+  font-size: calc(2.4 * var(--aw-u)); color: var(--aw-text); opacity: .7;
 }
 
 /* ---------- mic ---------- */
 .aw-spk-micwrap {
   flex: 0 0 auto;
   display: flex; flex-direction: column; align-items: center;
-  gap: 1cqw;
+  gap: calc(1 * var(--aw-u));
 }
 
 .aw-spk-micbtn {
-  width: 13cqw; height: 13cqw;
+  width: calc(13 * var(--aw-u)); height: calc(13 * var(--aw-u));
   min-width: 64px; min-height: 64px;
   border-radius: 50%;
   border: none;
@@ -101,11 +101,11 @@
   background: var(--aw-accent, #3b82f6);
   color: #fff;
   cursor: pointer;
-  box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18);
+  box-shadow: 0 calc(0.6 * var(--aw-u)) 0 rgba(0, 0, 0, .18);
   transition: background .15s ease, box-shadow .15s ease;
 }
 .aw-spk-micbtn svg { width: 46%; height: 46%; }
-.aw-spk-micbtn:active { transform: translateY(2px); box-shadow: 0 0.3cqw 0 rgba(0, 0, 0, .18); }
+.aw-spk-micbtn:active { transform: translateY(2px); box-shadow: 0 calc(0.3 * var(--aw-u)) 0 rgba(0, 0, 0, .18); }
 .aw-spk-micbtn:disabled { cursor: default; }
 
 .aw-spk-micbtn.is-recording {
@@ -113,8 +113,8 @@
   animation: aw-spk-pulse 1.1s ease-in-out infinite;
 }
 @keyframes aw-spk-pulse {
-  0%, 100% { box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18), 0 0 0 0 rgba(239, 68, 68, .5); }
-  50% { box-shadow: 0 0.6cqw 0 rgba(0, 0, 0, .18), 0 0 0 1.6cqw rgba(239, 68, 68, 0); }
+  0%, 100% { box-shadow: 0 calc(0.6 * var(--aw-u)) 0 rgba(0, 0, 0, .18), 0 0 0 0 rgba(239, 68, 68, .5); }
+  50% { box-shadow: 0 calc(0.6 * var(--aw-u)) 0 rgba(0, 0, 0, .18), 0 0 0 calc(1.6 * var(--aw-u)) rgba(239, 68, 68, 0); }
 }
 
 .aw-spk-micbtn.is-processing {
@@ -127,10 +127,10 @@
 .aw-spk-micbtn.is-fail { background: #f59e0b; }
 
 .aw-spk-status {
-  font-size: calc(2.4cqw * var(--fit));
+  font-size: calc(calc(2.4 * var(--aw-u)) * var(--fit));
   color: var(--aw-text);
   text-align: center;
-  max-width: 90cqw;
+  max-width: calc(90 * var(--aw-u));
   min-height: 1.6em;   /* reserves its own line so the mic button never shifts when the text appears/changes */
   line-height: 1.35;
 }
@@ -142,9 +142,9 @@
    (visibility, not display) so the mic button never jumps as results come
    and go. */
 .aw-spk-stars {
-  --spk-star: 4.2cqw;
+  --spk-star: calc(4.2 * var(--aw-u));
   display: flex; align-items: center; justify-content: center;
-  gap: 0.5cqw;
+  gap: calc(0.5 * var(--aw-u));
   visibility: hidden;
   min-height: var(--spk-star);
 }
@@ -183,11 +183,11 @@
 }
 
 .aw-spk-pct {
-  font-size: calc(2.4cqw * var(--fit));
+  font-size: calc(calc(2.4 * var(--aw-u)) * var(--fit));
   font-weight: 800;
   color: var(--aw-text);
   opacity: .78;
-  margin-left: 0.8cqw;
+  margin-left: calc(0.8 * var(--aw-u));
   line-height: 1.35;
 }
 

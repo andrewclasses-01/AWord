@@ -38,11 +38,11 @@
   /* every tile: uniform dark navy, blue border, flat + soft drop shadow */
   --aw-tile-fixed:      #17255a;
   --aw-tile-fixed-dark: #101b44;
-  --aw-tile-radius: 1.2cqw;
-  --aw-tile-border-width: 0.28cqw;
+  --aw-tile-radius: calc(1.2 * var(--aw-u));
+  --aw-tile-border-width: calc(0.28 * var(--aw-u));
   --aw-tile-border-color: #4a72cf;
-  --aw-tile-shadow:        0 0.45cqw 1.1cqw rgba(20, 30, 60, .16);
-  --aw-tile-shadow-active: 0 0.2cqw 0.5cqw rgba(20, 30, 60, .16);
+  --aw-tile-shadow:        0 calc(0.45 * var(--aw-u)) calc(1.1 * var(--aw-u)) rgba(20, 30, 60, .16);
+  --aw-tile-shadow-active: 0 calc(0.2 * var(--aw-u)) calc(0.5 * var(--aw-u)) rgba(20, 30, 60, .16);
 
   --aw-question-stroke-width: 0;
   --aw-question-stroke-color: transparent;

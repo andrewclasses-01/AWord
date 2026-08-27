@@ -111,8 +111,8 @@ const FRONT_HILL_IMG = "mound01.webp";  // plain dome, blurred, for the foregrou
 // Đợt 122 — đưa ra cấp module (trước đây khai trong mount) để `JS_IMAGES` bên
 // dưới đọc thẳng, đổi ảnh cactus thì phần nạp trước tự đúng theo.
 const DECOR = [
-  { img: "cactus.webp",  css: "right:-11%; bottom:8%; width:18cqw;" },   // tall saguaro — bigger + lowered so its rocky base tucks behind the front-right hill; pushed right so holes clear it
-  { img: "cactus2.webp", css: "left:-10%; bottom:12%; width:17cqw;" }      // left cactus — bigger + higher, pushed further left so its right edge still clears the holes
+  { img: "cactus.webp",  css: "right:-11%; bottom:8%; width:calc(18 * var(--aw-u));" },   // tall saguaro — bigger + lowered so its rocky base tucks behind the front-right hill; pushed right so holes clear it
+  { img: "cactus2.webp", css: "left:-10%; bottom:12%; width:calc(17 * var(--aw-u));" }      // left cactus — bigger + higher, pushed further left so its right edge still clears the holes
 ];
 
 // Mọi ảnh template này tự dựng bằng JS (`el("img")`) — KHÔNG nằm trong CSS nên
@@ -430,8 +430,8 @@ const wamTemplate = {
       const hole = el("div", "aw-wam-hole");
       hole.style.left = pos.x + "%";
       hole.style.top = pos.y + "%";
-      hole.style.width = pos.s + "cqw";
-      hole.style.height = (pos.s * 1.35) + "cqw";   // holes are absolute-only inside; give a real box so the mole clip has height
+      hole.style.width = "calc(" + pos.s + " * var(--aw-u))";
+      hole.style.height = "calc(" + (pos.s * 1.35) + " * var(--aw-u))";   // holes are absolute-only inside; give a real box so the mole clip has height
 
       const holeback = el("img", "aw-wam-holeback"); holeback.src = imgUrl("holeback.webp"); holeback.alt = "";
       const molewrap = el("div", "aw-wam-molewrap");
@@ -552,7 +552,7 @@ const wamTemplate = {
         // reserve a FIXED width (for the full set of hearts) so the timer bar's
         // right edge stays put as hearts are lost; hearts pack to the right.
         const w = startLives <= 5 ? (startLives * 2.8 - 0.5) : 5.5;   // 2.3cqw heart + 0.5cqw gap pitch
-        heartsEl.style.width = w + "cqw";
+        heartsEl.style.width = "calc(" + w + " * var(--aw-u))";
         row.append(heartsEl);
       }
       ui.topbarMid.append(row);

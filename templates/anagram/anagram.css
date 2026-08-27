@@ -28,13 +28,13 @@
      get clipped) — the slogan itself now lives on the timer/score row
      instead (ui.sloganSlot, core/engine.js), not inside this card. Counted in
      autoFit's `measure` (anagram.js) via `cardPaddingTop`. */
-  padding-top: 2.6cqw;
-  padding-bottom: 2.4cqw;
+  padding-top: calc(2.6 * var(--aw-u));
+  padding-bottom: calc(2.4 * var(--aw-u));
   animation: aw-fadein .25s ease;
 }
 
 .aw-anagram-clue {
-  font-size: calc(4.4cqw * var(--fit));
+  font-size: calc(calc(4.4 * var(--aw-u)) * var(--fit));
   font-weight: 600;
   color: var(--aw-question-fill, var(--aw-text));
   -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
@@ -171,10 +171,10 @@
      LOST the round (see .is-fightlost below). */
   --aw-ana-lost-bg: #b3bac3;
   position: relative;
-  margin: 0 0 6.5cqw;
+  margin: 0 0 calc(6.5 * var(--aw-u));
   width: 100%;
   display: flex; flex-direction: column; align-items: center;
-  gap: calc(1cqw * var(--fit));
+  gap: calc(calc(1 * var(--aw-u)) * var(--fit));
   transition: opacity .2s ease;
 }
 
@@ -202,17 +202,17 @@
   position: relative;   /* anchors .aw-anagram-perfect-burst to THIS row, not the whole group */
   display: flex; flex-wrap: wrap;
   justify-content: center; align-items: center;
-  gap: calc(0.8cqw * var(--fit));
+  gap: calc(calc(0.8 * var(--aw-u)) * var(--fit));
 }
 .aw-anagram-rtile {
   position: relative;
-  width: calc(var(--aw-ana-tile, 6cqw) * var(--fit));
-  height: calc(var(--aw-ana-tile, 6cqw) * var(--fit));
-  border-radius: var(--aw-tile-radius, 1cqw);
-  border: 0.22cqw dashed var(--aw-muted);
+  width: calc(var(--aw-ana-tile, calc(6 * var(--aw-u))) * var(--fit));
+  height: calc(var(--aw-ana-tile, calc(6 * var(--aw-u))) * var(--fit));
+  border-radius: var(--aw-tile-radius, calc(1 * var(--aw-u)));
+  border: calc(0.22 * var(--aw-u)) dashed var(--aw-muted);
   opacity: .5;
   display: flex; align-items: center; justify-content: center;
-  font-size: calc(var(--aw-ana-tile, 6cqw) * 0.64 * var(--fit));
+  font-size: calc(var(--aw-ana-tile, calc(6 * var(--aw-u))) * 0.64 * var(--fit));
   font-weight: 800;
   color: var(--aw-text);
 }
@@ -224,7 +224,7 @@
   border-color: transparent;
   background-color: var(--aw-ana-origin-bg);
   color: #fff;
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
 }
 .aw-anagram-rtile.is-filled.is-blue { background-color: var(--aw-ana-result-bg); }
 .aw-anagram-rtile.is-filled.is-wrongbg { background-color: var(--aw-ana-wrong-bg); }
@@ -241,7 +241,7 @@
 .aw-anagram-flytile {
   background-image: linear-gradient(135deg, rgba(255,255,255,.38) 0%, rgba(255,255,255,.08) 32%, rgba(255,255,255,0) 55%);
 }
-.aw-anagram-rspace { width: calc(var(--aw-ana-tile, 6cqw) * 0.45 * var(--fit)); flex: 0 0 auto; }
+.aw-anagram-rspace { width: calc(var(--aw-ana-tile, calc(6 * var(--aw-u))) * 0.45 * var(--fit)); flex: 0 0 auto; }
 
 /* "on submit" pre-Submit tiles: tap to send the letter back — instant on
    touch-down since Đợt 175 (drag-to-swap removed with it; the .is-dragging /
@@ -256,8 +256,8 @@
 /* Drop-target hint while dragging a tile (from the origin row, or another
    result tile) over a slot that WOULD accept it — an outline, not a shadow. */
 .aw-anagram-rtile.is-droptarget {
-  outline: 0.28cqw solid var(--aw-accent, #2f7bff);
-  outline-offset: 0.12cqw;
+  outline: calc(0.28 * var(--aw-u)) solid var(--aw-accent, #2f7bff);
+  outline-offset: calc(0.12 * var(--aw-u));
 }
 
 /* Big white/dark-outline check or cross INSIDE the result tile itself —
@@ -295,7 +295,7 @@
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
   font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
-  font-size: calc(13cqw * var(--fit));
+  font-size: calc(calc(13 * var(--aw-u)) * var(--fit));
   color: #fff; -webkit-text-stroke: 0.09em #1a2230; paint-order: stroke fill;
   pointer-events: none; white-space: nowrap; z-index: 20;
   animation: aw-ana-perfect-pop .95s cubic-bezier(.2,.9,.3,1.1) forwards;
@@ -332,9 +332,9 @@
    shows content after a WRONG submit: the plain word (no "Correct:"
    prefix), green, caps following the same option as the tiles. */
 .aw-anagram-reveal {
-  min-height: calc(2.6cqw * var(--fit));
-  margin: 0.9cqw auto 0; text-align: center;
-  font-size: calc(2.1cqw * var(--fit));
+  min-height: calc(calc(2.6 * var(--aw-u)) * var(--fit));
+  margin: calc(0.9 * var(--aw-u)) auto 0; text-align: center;
+  font-size: calc(calc(2.1 * var(--aw-u)) * var(--fit));
   font-weight: 800;
   letter-spacing: .02em;
   color: var(--aw-ok, #1f9d55);
@@ -344,23 +344,23 @@
 .aw-anagram-origin {
   display: flex; flex-wrap: wrap;
   justify-content: center; align-content: center;
-  gap: calc(0.8cqw * var(--fit));
+  gap: calc(calc(0.8 * var(--aw-u)) * var(--fit));
 }
 .aw-anagram-otile {
   position: relative;
-  width: calc(var(--aw-ana-tile, 5.4cqw) * var(--fit));
-  height: calc(var(--aw-ana-tile, 5.4cqw) * var(--fit));
-  border-radius: var(--aw-tile-radius, 1cqw);
+  width: calc(var(--aw-ana-tile, calc(5.4 * var(--aw-u))) * var(--fit));
+  height: calc(var(--aw-ana-tile, calc(5.4 * var(--aw-u))) * var(--fit));
+  border-radius: var(--aw-tile-radius, calc(1 * var(--aw-u)));
   border: none;
   background-color: var(--aw-ana-origin-bg, #6b7785);
   color: #fff; font-family: inherit; font-weight: 800;
-  font-size: calc(var(--aw-ana-tile, 5.4cqw) * 0.64 * var(--fit));
-  text-shadow: 0 0.1cqw 0.2cqw rgba(0, 0, 0, .18);
+  font-size: calc(var(--aw-ana-tile, calc(5.4 * var(--aw-u))) * 0.64 * var(--fit));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.2 * var(--aw-u)) rgba(0, 0, 0, .18);
   cursor: pointer;
   transition: transform .06s ease, opacity .2s ease;
 }
 .aw-anagram-otile:hover:not(:disabled) { filter: brightness(1.08); }
-.aw-anagram-otile:active:not(:disabled) { transform: translateY(0.3cqw); }
+.aw-anagram-otile:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); }
 .aw-anagram-otile.is-used { opacity: 0; pointer-events: none; }
 /* NOTE: no opacity change here on purpose — this covers the whole row being
    transiently disabled while ONE tile flies (setOriginLocked in anagram.js).
@@ -373,19 +373,19 @@
 
 /* ---------- SUBMIT button ("on submit" mode) ---------- */
 .aw-anagram-submit {
-  margin: 1.4cqw auto 0;
+  margin: calc(1.4 * var(--aw-u)) auto 0;
   display: block;
-  padding: calc(1cqw * var(--fit)) calc(3.2cqw * var(--fit));
+  padding: calc(calc(1 * var(--aw-u)) * var(--fit)) calc(calc(3.2 * var(--aw-u)) * var(--fit));
   border: none; border-radius: 999px;
   background: var(--aw-ok, #1f9d55);
   color: #fff; font-family: inherit; font-weight: 800;
-  font-size: calc(1.9cqw * var(--fit));
+  font-size: calc(calc(1.9 * var(--aw-u)) * var(--fit));
   letter-spacing: .04em; text-transform: uppercase;
-  box-shadow: 0 0.5cqw 0 rgba(0,0,0,.2);
+  box-shadow: 0 calc(0.5 * var(--aw-u)) 0 rgba(0,0,0,.2);
   cursor: pointer;
   transition: transform .06s ease, opacity .15s ease;
 }
-.aw-anagram-submit:active:not(:disabled) { transform: translateY(0.3cqw); box-shadow: 0 0.15cqw 0 rgba(0,0,0,.2); }
+.aw-anagram-submit:active:not(:disabled) { transform: translateY(calc(0.3 * var(--aw-u))); box-shadow: 0 calc(0.15 * var(--aw-u)) 0 rgba(0,0,0,.2); }
 .aw-anagram-submit:disabled { opacity: .4; cursor: default; }
 
 /* ---------- Flying tile clone (fixed-position, JS-sized) ---------- */
@@ -442,7 +442,7 @@
 
 .aw-anagram-empty {
   margin: auto; text-align: center; color: var(--aw-muted);
-  font-size: 2.2cqw; font-weight: 600;
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
 }
 
 /* ---------- Lives slider (Options panel) — v0.9.29, same look as

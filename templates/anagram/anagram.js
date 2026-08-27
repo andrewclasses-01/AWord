@@ -972,7 +972,7 @@ const anagramTemplate = {
       card.append(el("div", "aw-anagram-topspace"));
 
       const group = el("div", "aw-anagram-group");
-      group.style.setProperty("--aw-ana-tile", tileSize + "cqw");
+      group.style.setProperty("--aw-ana-tile", "calc(" + tileSize + " * var(--aw-u))");
 
       const resultRow = el("div", "aw-anagram-result" + (mode === "submit" ? " is-interactive" : ""));
       it.cells.forEach(c => {
