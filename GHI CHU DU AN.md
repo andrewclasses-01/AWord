@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 276** (27/8/2026, thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT, ⬜ CHƯA PUSH — chờ thầy duyệt + bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 276** (27/8/2026, thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
 
@@ -90,11 +90,17 @@ Ngoài ra kiểm bằng tay qua `javascript_tool` (mở Options panel thật, kh
 `0s`, giữa chừng hiện đúng số + "s". `node --input-type=module --check` sạch trên
 `core/fight.js`.
 
-⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT + BẤM TAY THẬT**: (a) mở một act Fight (Quiz/Anagram đủ,
-không cần game lượt-chọn), vào Options, kéo thử "Miss wait" qua vài nấc kể cả ∞; (b) cho
-một đội bấm sai trước, đội kia CỐ TÌNH không bấm gì, xem đúng số giây đã đặt có tự
-chuyển câu không; (c) thử lại với act CŨ chưa từng mở Options sau đợt này — phải vẫn
-chờ đúng 20 giây như trước, không đổi gì; (d) test trên TOMKO.
+✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `860ab5f`: Pages deployment cho commit này báo
+`success` (GitHub Deployments API), và mã băm SHA-256 của `core/fight.js` khớp TUYỆT ĐỐI
+giữa git blob (`git show 860ab5f:core/fight.js`) và bản tải trực tiếp từ
+`aword.andrewclasses.com/core/fight.js` (`943bdcfd…7425ab` cả hai) — không chỉ dựa vào
+curl trả 200 (bẫy đã ghi ở `node-e-backtick-trap`).
+
+⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ giả lập, chưa ai chạm ngón tay thật): (a) mở một
+act Fight (Quiz/Anagram đủ, không cần game lượt-chọn), vào Options, kéo thử "Miss wait"
+qua vài nấc kể cả ∞; (b) cho một đội bấm sai trước, đội kia CỐ TÌNH không bấm gì, xem
+đúng số giây đã đặt có tự chuyển câu không; (c) thử lại với act CŨ chưa từng mở Options
+sau đợt này — phải vẫn chờ đúng 20 giây như trước, không đổi gì; (d) test trên TOMKO.
 
 ---
 

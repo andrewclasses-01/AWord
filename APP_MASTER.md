@@ -4647,16 +4647,51 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 275** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 276** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 275**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 276**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`c36518d`** (Đợt 275 — tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix) — **đã push + LIVE kiểm chứng** |
-> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `OVERRIDES_KEY`/`CUSTOM_KEY` và dòng vá bug (`const pickedId = ids[Math.floor(...)]` TÁCH RIÊNG trước `.find()`) · `aword.andrewclasses.com/main.js` thấy đúng `"+ Upload a sound"` + `showWrongSound()` — Pages build đúng bản mới |
-> | Trước đó | **`5f6c42c`** (Đợt 274 — 5 clip meme cố định, chưa tải lên/đổi tên/xoá/mix) — đã push |
+> | Commit mới nhất | **`860ab5f`** (Đợt 276 — Fight mode: thanh "Miss wait", giới hạn thời gian đội sau khi đối phương trả lời SAI) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Pages deployment cho `860ab5f` báo `success` (API `deployments/.../statuses`) · **mã băm SHA-256 khớp tuyệt đối** giữa `git show 860ab5f:core/fight.js` và `curl https://aword.andrewclasses.com/core/fight.js` (`943bdcfd…7425ab` cả hai) |
+> | Trước đó | **`c36518d`** (Đợt 275 — tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+>
+> ### ⭐⭐ ĐỢT 276 — VÙNG VỪA ĐỘNG TỚI: **FIGHT MODE — "MISS WAIT"**
+>
+> Thầy: *"kể cả khi không bật delay (delay 0,1s) thì cũng cần một thời gian để giới hạn
+> đội sau nếu đội trước sai ... phải có thanh thời gian gì đó thiết lập được"*.
+>
+> **File cốt lõi: `core/fight.js`** — không có file thứ hai nào bị đụng (khác Đợt 274/275,
+> đợt này gọn trong đúng một file). Thanh trượt mới **"Miss wait"** trong Options
+> (0–20 giây + một nấc ∞, mặc định **20** — giữ NGUYÊN VẸN hành vi mọi act cũ). Nó thay
+> cho hằng số cứng `LATE_LIMIT_MS = 20000` trước đây KHÔNG hề hiện trên màn hình, nhưng
+> **CHỈ** ở đúng MỘT trong hai chỗ hằng số đó được dùng: cảnh huống "một đội trả lời SAI,
+> đội kia chưa xong, chưa ai thắng" (nhánh `if (!correct)` trong `ctl.wordDone`). Chỗ dùng
+> còn lại — `finalizeSingleWinner`, cảnh huống "đội trước đã THẮNG, đội thua vẫn được chơi
+> tiếp giữ điểm ở chế độ Both-finish" — **CỐ Ý giữ nguyên 20 giây cứng**, theo đúng lựa
+> chọn phạm vi thầy chốt trước khi code.
+>
+> ⚠️ **Sentinel của tuỳ chọn này là `-1`, KHÔNG PHẢI `0`** như Time delay/Pick time —
+> vì 0 giây ở đây LÀ MỘT GIÁ TRỊ THẬT (cắt ngay lúc đối phương vừa sai), không thể vừa là
+> 0 vừa là ∞ như hai thanh kia. Nếu sau này thêm thanh nào khác cũng có mốc 0 hợp lệ,
+> nhớ đi theo đúng khuôn sentinel riêng này, đừng tái dùng "0 = ∞".
+>
+> Bàn thử `scratch/dot276-wrongwait.html` **23/23 ĐẠT** — dựng trận Quiz thật qua
+> `startFight()`, bấm sai bằng `.click()` DOM thật, đo đúng thời điểm tự chuyển câu ở các
+> nấc 2s/0s/∞, và **đối chứng ngược quan trọng nhất**: đặt Miss wait=1s nhưng cho đội
+> trước THẮNG (Both-finish) — xác nhận nhánh đó không hề dùng nhầm giá trị mới, vẫn ăn
+> đúng 20s cứng cũ. Panel Options cũng kiểm bằng tay qua `javascript_tool` (mở panel thật,
+> kéo thanh, đọc chữ hiển thị `0s`/`Ns`/`∞`).
+>
+> ⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ giả lập, chưa ai chạm ngón tay thật):
+> (a) mở một act Fight bất kỳ, vào Options, kéo thử "Miss wait" qua vài nấc kể cả ∞;
+> (b) cho một đội bấm sai trước, đội kia CỐ TÌNH không bấm gì, xem đúng số giây đã đặt có
+> tự chuyển câu; (c) thử lại với một act CŨ chưa từng mở Options sau đợt này — phải vẫn
+> chờ đúng 20 giây như trước, không đổi gì; (d) test trên TOMKO.
+>
+> ---
 >
 > ### ⭐⭐ ĐỢT 274 + 275 — VÙNG VỪA ĐỘNG TỚI: **ÂM THANH TRẢ LỜI SAI TRONG CÀI ĐẶT (chỉ chơi thường)**
 >
@@ -5687,7 +5722,26 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 273, 27/8/2026) — code `9d6a38b`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 276, 27/8/2026) — code `860ab5f`, ĐÃ PUSH + LIVE kiểm chứng
+> (mã băm SHA-256 khớp tuyệt đối). KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Vùng: **FIGHT MODE — thanh "Miss wait"** (giới hạn thời gian đội sau khi đối phương trả
+> lời SAI). Bản đồ đầy đủ ở mục **0a ▸ ⭐⭐ ĐỢT 276**; chi tiết từng số đo ở khối
+> **Đợt 276** trong `GHI CHU DU AN.md`.
+>
+> **Chờ TAY thầy — bàn thử chỉ giả lập, chưa ai chạm ngón tay thật:**
+> 1. ⬜ Mở một act Fight bất kỳ (Quiz/Anagram đủ, không cần game lượt-chọn), vào Options,
+>    kéo thử thanh **"Miss wait"** qua vài nấc kể cả ∞ — số hiển thị phải đổi đúng
+>    (`0s` … `20s` … `∞`).
+> 2. ⬜ Cho một đội bấm SAI trước, đội kia **cố tình không bấm gì** — đúng số giây đã đặt
+>    ở Miss wait thì phải tự chuyển câu (đo bằng đồng hồ tay là đủ, không cần chính xác
+>    tới mili-giây).
+> 3. ⬜ Mở lại một act Fight CŨ (đã lưu **trước** đợt này, chưa từng mở Options sau đợt
+>    này) — cùng phép thử ở mục 2 phải vẫn chờ đúng **20 giây** như trước, không đổi gì.
+> 4. ⬜ Test chạm **TOMKO**.
+>
+> ---
+>
+> ⭐⭐⭐⭐ **TRƯỚC ĐÓ (Đợt 273, 27/8/2026) — code `9d6a38b`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
 > Vùng: **CÁCH ĐO CỠ CỦA TOÀN BỘ APP** (`cqw` → `--aw-u`). Bản đồ đầy đủ ở mục
 > **0a ▸ ⭐⭐⭐ ĐỢT 273**; hợp đồng + 4 bẫy ở `core/HUONG DAN CORE.md` mục **ĐỢT 273**.
 >
