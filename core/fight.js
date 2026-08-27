@@ -164,7 +164,28 @@ export const FIGHT_DEFAULTS = {
   // teacher moves the control himself. At ∞ the bar still SHOWS (it is what says
   // whose turn it is now that the losing board no longer fades) — it just
   // breathes in place instead of draining. See `pickMs` in startFight.
-  fightPickTime: 0
+  fightPickTime: 0,
+  // ⭐⭐ Đợt 276 (thầy, 27/8/2026) — MISS WAIT. Once one side has already
+  // answered WRONG and the round is still open (nobody has WON it yet), how
+  // long does the still-playing side keep its chance before the referee
+  // gives up and moves the class on? Thầy: *"đội bên trái làm trước bị sai,
+  // thì đội sau ko thể đợi mãi tùy ý được mà phải có thanh thời gian gì đó
+  // thiết lập được phần này"*.
+  // This used to be the module's own hard-coded 20-second walk-away backstop
+  // (LATE_LIMIT_MS) with nothing on screen to control it. It is now a
+  // slider, and LATE_LIMIT_MS itself is UNTOUCHED everywhere else it is
+  // used — the other walk-away wait, in finalizeSingleWinner, for "the round
+  // already has a winner, the loser is still finishing to keep its own
+  // points" (Both-finish mode) — the teacher's own call to keep those two
+  // separate, 27/8/2026.
+  // IN SECONDS, 0 … 20, or **-1 = ∞** — deliberately NOT the house "0 means
+  // ∞" convention every other fight slider on this panel uses, because 0 IS
+  // a real, legal value here (an instant cutoff the moment the mistake
+  // lands), so it cannot double as the infinity marker too. DEFAULT 20 —
+  // exactly LATE_LIMIT_MS's old fixed value, so no act saved before this
+  // control existed changes behaviour by a single millisecond until the
+  // teacher moves it himself.
+  fightWrongWait: 20
 };
 
 // ⭐⭐ Đợt 216 (thầy, 20/8/2026) — WHAT VALUES THE TIME DELAY SLIDER CAN HOLD.
@@ -215,10 +236,19 @@ export function speedBonusApplies(o) { return tieWindowMsOf(o) >= WAIT_BAR_MIN_M
 export function pickTimeMsOf(o) {
   return o.fightPickTime === 0 ? Infinity : Math.round(o.fightPickTime * 1000);
 }
+// ⭐ Đợt 276 — MISS WAIT in milliseconds, or Infinity for the ∞ notch. Same
+// one-place-to-decode rule as the two functions above — EXCEPT the sentinel
+// is -1, not 0: see FIGHT_DEFAULTS.fightWrongWait for why 0 can't do double
+// duty here. Every setTimeout site that could receive this stays guarded the
+// same way — Infinity fires on the NEXT TICK, not never, so it must never
+// reach `later()`; see the `Number.isFinite(wrongWaitMs)` guard in wordDone.
+export function wrongWaitMsOf(o) {
+  return o.fightWrongWait < 0 ? Infinity : Math.round(o.fightWrongWait * 1000);
+}
 
 export function fightOptionsFrom(options = {}) {
   const o = { ...FIGHT_DEFAULTS };
-  ["fightContent", "fightSpeedBonus", "fightTieWindow", "fightTurns", "fightPickTime"].forEach(k => {
+  ["fightContent", "fightSpeedBonus", "fightTieWindow", "fightTurns", "fightPickTime", "fightWrongWait"].forEach(k => {
     if (options[k] !== undefined) o[k] = options[k];
   });
   // ⭐ Đợt 187 — the ceiling went 20 -> 100 (teacher: "kéo từ 1 đến 100 điểm").
@@ -246,6 +276,12 @@ export function fightOptionsFrom(options = {}) {
   // cannot show would be silently rewritten the first time the panel opened.
   const pt = Number(o.fightPickTime);
   o.fightPickTime = pt === 0 ? 0 : (Number.isFinite(pt) ? Math.max(1, Math.min(10, Math.round(pt))) : 0);
+  // ⭐ Đợt 276 — MISS WAIT: -1 stays -1 (∞); anything else is forced onto a
+  // whole second in 0 … 20, the exact range the slider can produce. Same
+  // reasoning as every clamp above: a hand-edited or corrupted act must not
+  // be able to hand the round logic a value the slider cannot show.
+  const mw = Number(o.fightWrongWait);
+  o.fightWrongWait = mw < 0 ? -1 : (Number.isFinite(mw) ? Math.max(0, Math.min(20, Math.round(mw))) : 20);
   return o;
 }
 
@@ -652,6 +688,13 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   // settled — the dead-control trap of Đợt 143.
   const tieMs = (pickMode || turnsMode) ? TIE_WINDOW_MS : tieWindowMsOf(fo);
   const tieUnlimited = !pickMode && !turnsMode && fo.fightTieWindow === 0;
+  // ⭐⭐ Đợt 276 — MISS WAIT, decoded ONCE for the whole match, same as every
+  // other option above. Applies in EVERY round model (ordinary, pick-turn, In
+  // turns) because the branch it governs — one side already wrong, nobody has
+  // WON yet, the other side still free to finish — is not sealed off from any
+  // of them the way the race controls above are; see the WRONG branch of
+  // ctl.wordDone.
+  const wrongWaitMs = wrongWaitMsOf(fo);
   // The wait bar is drawn only for the ORDINARY round model. The teacher went
   // through the three pick-turn games one by one: "open the box không cần …
   // crossword không cần … find the match có cần" — and Find the match is an
@@ -1536,12 +1579,25 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
           return;
         }
         // If the other team has already had its go, nobody is left to play —
-        // show both results and move on. Otherwise wait for them, with the
-        // same walk-away backstop used by "let the other team finish" so a
-        // lesson can never hang.
+        // show both results and move on.
         const settled = roundDone[other] || roundWinner !== null;
-        if (settled) revealBoards();
-        later(advanceRound, settled ? ROUND_HOLD_MS : LATE_LIMIT_MS);
+        if (settled) {
+          revealBoards();
+          later(advanceRound, ROUND_HOLD_MS);
+          return;
+        }
+        // ⭐⭐ Đợt 276 — otherwise the OTHER team is still free to finish (and
+        // could still win the round outright): MISS WAIT is how long the
+        // referee gives it before giving up and moving the class on, in place
+        // of the old hard-coded 20s walk-away backstop.
+        // ⚠️ ∞ ARMS NO TIMER AT ALL — same reason as Time delay's own ∞ above:
+        // `setTimeout(fn, Infinity)` fires on the NEXT TICK (the spec clamps a
+        // non-finite delay to 0), which would make ∞ the FASTEST setting
+        // instead of the slowest. The round then closes only when the other
+        // board's own wordDone reports back, or the teacher's own ☰ Menu ▸
+        // Start again — exactly the accepted ∞ shape Time delay and Pick time
+        // already use elsewhere in this file.
+        if (Number.isFinite(wrongWaitMs)) later(advanceRound, wrongWaitMs);
         return;
       }
 
@@ -1993,6 +2049,26 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     }) : null;
     if (cPickTime) cPickTime.cell.title = "How long the team whose turn it is has to choose a question. Run out and the turn simply passes to the other team — nothing is opened and nobody loses a point. At ∞ the bar still shows whose turn it is, it just never runs out.";
 
+    // ⭐⭐ Đợt 276 (thầy, 27/8/2026) — MISS WAIT. Thầy: *"đội bên trái làm trước bị
+    // sai, thì đội sau ko thể đợi mãi tùy ý được mà phải có thanh thời gian gì đó
+    // thiết lập được"*. Built for EVERY fight game and never greyed out — unlike
+    // Time delay / Speed bonus / Pick time / In turns above, which all govern who
+    // got there FIRST, this one only ever fires once somebody has already LOST,
+    // which is not a race any of those three controls are sealed off from.
+    // ⚠️ 0 IS A REAL, SELECTABLE VALUE — the instant cutoff at the left end of the
+    // slider — so unlike Time delay/Pick time, ∞ can't double up on it and instead
+    // sits one step past the top, the same shape those two sliders use.
+    const WRONGWAIT_UNLIM = 21;   // positions 0..20 = seconds, 21 = ∞
+    const cWrongWait = mkSliderCell({
+      label: "Miss wait", sub: "after the other team's mistake",
+      min: 0, max: WRONGWAIT_UNLIM, step: 1,
+      value: cur.fightWrongWait < 0 ? WRONGWAIT_UNLIM : cur.fightWrongWait,
+      tone: "blue",
+      fmt: v => (v >= WRONGWAIT_UNLIM ? "∞" : v + "s"),
+      onInput: v => { draft.fightWrongWait = v >= WRONGWAIT_UNLIM ? -1 : v; }
+    });
+    cWrongWait.cell.title = "How long the other team keeps its chance once one side has already answered wrong and nobody has won the round yet, before the referee gives up and moves the class on. ∞ waits for as long as it takes.";
+
     panel.append(cContent.cell);
     // ⭐ Đợt 188 — Time delay and Speed bonus share ONE column, stacked, because
     // the first decides whether the second does anything (teacher: "time delay và
@@ -2013,6 +2089,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       stack.append(cDelay.cell, cBonus.cell);
       panel.append(stack);
     }
+    panel.append(cWrongWait.cell);
 
     // ⭐⭐ Đợt 202 — IN TURNS, first in the checkbox block and GREEN, because it
     // is not a setting of the match the way the others are: it changes what the

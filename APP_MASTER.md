@@ -8,7 +8,42 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 275 — TẢI LÊN + ĐỔI TÊN/XOÁ + CHẾ ĐỘ MIX cho âm trả lời sai)**.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 276 — FIGHT MODE: "Miss wait", giới hạn thời gian đội sau khi đối phương trả lời SAI)**.
+>
+> **Đợt 276** (27/8/2026, thầy) — ⭐⭐ **FIGHT MODE: THANH "MISS WAIT" — GIỚI HẠN THỜI GIAN
+> ĐỘI CÒN LẠI ĐƯỢC CHƠI TIẾP SAU KHI ĐỐI PHƯƠNG TRẢ LỜI SAI.** Thầy: *"kể cả khi không bật
+> delay (delay 0,1s) thì cũng cần một thời gian để giới hạn đội sau nếu đội trước sai ...
+> phải có thanh thời gian gì đó thiết lập được"*.
+>
+> Trước đợt này, cảnh huống "một đội trả lời SAI, đội kia chưa xong, chưa ai thắng" chờ
+> một hằng số CỨNG `LATE_LIMIT_MS = 20 giây` trong `core/fight.js` — không hề có nút nào
+> trên màn hình để chỉnh, nên với thầy nó giống như "chờ tùy ý". Nay là thanh trượt
+> **"Miss wait"** trong Options, **0–20 giây + một nấc ∞**, mặc định 20 (giữ NGUYÊN VẸN
+> hành vi mọi act cũ). ⚠️ Theo đúng lựa chọn phạm vi của thầy: thanh này **CHỈ** áp dụng
+> cho ca "đội trước SAI" — ca khác dùng CHUNG hằng số cũ (`finalizeSingleWinner`, "đội
+> trước THẮNG, đội sau còn được chơi tiếp giữ điểm ở Both-finish") **giữ nguyên 20s cứng,
+> không đụng tới**.
+>
+> Kỹ thuật: `FIGHT_DEFAULTS.fightWrongWait` dùng sentinel **`-1` = ∞** (KHÔNG theo quy ước
+> "0 = ∞" của Time delay/Pick time, vì 0 giây ở đây là một giá trị THẬT — cắt ngay lúc
+> đối phương vừa sai). `wrongWaitMsOf()` giải mã một chỗ duy nhất, cùng khuôn
+> `tieWindowMsOf`/`pickTimeMsOf`. Ở ∞ trọng tài **không hề gọi `later()`** — tránh đúng bẫy
+> `setTimeout(fn, Infinity)` nổ NGAY TICK SAU mà Time delay/Pick time đã phải né trước đó.
+>
+> Bàn thử `scratch/dot276-wrongwait.html` **23/23 ĐẠT** (dựng trận Quiz thật qua
+> `startFight()`, bấm PLAY + bấm sai bằng `.click()` DOM thật): đơn vị/biên của
+> `fightOptionsFrom` đúng hết, nấc 2s/0s/∞ đúng thời điểm tự chuyển câu, và **đối chứng
+> ngược quan trọng nhất** — đặt Miss wait=1s nhưng cho đội trước THẮNG (Both-finish) —
+> chứng minh nhánh đó vẫn ăn đúng 20s cứng cũ, không hề dùng nhầm giá trị mới. Panel
+> Options cũng kiểm bằng tay qua `javascript_tool` thật (mở panel, kéo thanh, đọc chữ
+> hiển thị `0s`/`∞`/`Ns`).
+>
+> ⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT + BẤM TAY THẬT**: mở một act Fight, vào Options kéo thử
+> "Miss wait"; cho một đội sai trước, đội kia cố tình không bấm, xem đúng số giây đặt có
+> tự chuyển câu; thử lại với act CŨ (chưa từng mở Options sau đợt này) để chắc vẫn đúng
+> 20 giây như trước; test trên TOMKO.
+>
+> ---
 >
 > **Đợt 275** (27/8/2026, thầy) — ⭐⭐ **MỞ RỘNG ĐỢT 274: TẢI ÂM RIÊNG, ĐỔI TÊN/XOÁ MỌI MỤC (TRỪ
 > DEFAULT), CHẾ ĐỘ MIX (tích nhiều âm, mỗi lần sai random một cái).** Thầy: *"Thêm 1 nút tải lên

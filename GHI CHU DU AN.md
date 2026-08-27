@@ -12,7 +12,89 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 275** (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 276** (27/8/2026, thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT, ⬜ CHƯA PUSH — chờ thầy duyệt + bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 276 (27/8/2026, thầy) — ⭐⭐ **FIGHT MODE: "MISS WAIT" — GIỚI HẠN THỜI GIAN ĐỘI SAU KHI ĐỐI PHƯƠNG SAI**
+
+Thầy: *"kể cả khi không bật delay (delay 0,1s) thì cũng cần một thời gian để giới hạn
+đội sau nếu đội trước sai. Ví dụ đội bên trái làm trước bị sai, thì đội sau ko thể đợi
+mãi tùy ý được mà phải có thanh thời gian gì đó thiết lập được phần này (VD từ 0s đến
+10s và 1 nấc vô hạn chẳng hạn)"*.
+
+**BỐI CẢNH — CÁI GÌ ĐANG CÓ SẴN MÀ THẦY KHÔNG NHÌN THẤY.** `core/fight.js` đã có một
+hằng số `LATE_LIMIT_MS = 20000` ("Let the other team finish can't wait forever — a team
+that walks away must not freeze the lesson"), dùng làm "cửa xả an toàn" ở đúng cảnh
+huống thầy mô tả: một bên trả lời **SAI**, bên kia chưa xong, vòng chưa ai thắng — trọng
+tài chờ tối đa hằng số đó rồi tự chuyển câu. Cái thầy thấy là "tùy ý" thật ra là một con
+số 20 giây bị khoá cứng trong code, không hề có nút nào trên màn hình để chỉnh.
+`LATE_LIMIT_MS` còn được dùng ở MỘT chỗ khác nữa (`finalizeSingleWinner`) cho một tình
+huống khác hẳn: đội trước đã THẮNG (trả lời đúng), Time delay > 0,1s (chế độ "Both
+finish") nên đội thua KHÔNG bị khoá và vẫn được chơi tiếp để giữ điểm của mình — cũng
+chờ tối đa 20s rồi tự chuyển câu.
+
+**QUYẾT ĐỊNH PHẠM VI (hỏi thầy trước khi code, vì đụng tới hành vi mọi act Fight đã
+lưu)** — thầy chọn: (1) thang đo 0–20s + ∞, **mặc định 20** (giữ NGUYÊN VẸN hành vi mọi
+act cũ, không đổi một mili-giây nào cho tới khi thầy tự kéo thanh); (2) thanh mới **CHỈ**
+áp dụng cho ca "đội trước SAI" — ca "đội trước THẮNG, đội sau còn chơi tiếp" giữ nguyên
+20s cứng, không đụng tới.
+
+**CODE — `core/fight.js`:**
+- `FIGHT_DEFAULTS.fightWrongWait = 20` (giây; **-1 = ∞**). ⚠️ **KHÔNG dùng quy ước "0 =
+  ∞"** mà mọi thanh trượt Fight khác đang dùng (Time delay, Pick time) — vì 0 giây ở đây
+  LÀ MỘT GIÁ TRỊ THẬT (cắt ngay lập tức khi đối phương vừa sai), không thể vừa là 0 vừa
+  là ∞. Sentinel dùng `-1`.
+- `wrongWaitMsOf(o)` (export mới) — giải mã DUY NHẤT một chỗ, giống hệt khuôn
+  `tieWindowMsOf`/`pickTimeMsOf`: `o.fightWrongWait < 0 ? Infinity : Math.round(...*1000)`.
+- `fightOptionsFrom()` — thêm `fightWrongWait` vào danh sách copy + kẹp biên: âm bất kỳ
+  → `-1` (∞, không kẹp về 0), số hữu hạn → làm tròn rồi kẹp `0…20`, giá trị hỏng/NaN →
+  rơi về mặc định 20.
+- **`ctl.wordDone()` — nhánh SAI (`if (!correct) {...}`)**: tách nhánh "đã có ai xong rồi
+  → chốt luôn, giữ `ROUND_HOLD_MS`" ra khỏi nhánh "còn ai đó đang chơi tiếp → chờ". Nhánh
+  sau đổi từ `later(advanceRound, LATE_LIMIT_MS)` (hằng số cứng, MỌI mức) thành
+  `wrongWaitMs` đọc một lần đầu trận (biến `const wrongWaitMs = wrongWaitMsOf(fo);`, đặt
+  cạnh `tieMs`/`waitBarMs` — cùng khuôn "đọc option một lần cho cả trận" toàn file đang
+  theo). Ở ∞ **KHÔNG hề gọi `later()`** — copy đúng luật ∞ đã có ở Time delay/Pick time:
+  `setTimeout(fn, Infinity)` nổ ngay TICK SAU (spec kẹp delay không-hữu-hạn về 0), nên ∞
+  sẽ thành nấc NHANH NHẤT thay vì chậm nhất nếu lỡ truyền thẳng vào `later()`. Guard bằng
+  `if (Number.isFinite(wrongWaitMs)) later(advanceRound, wrongWaitMs);`.
+- `finalizeSingleWinner()` **KHÔNG đụng một dòng nào** — vẫn `later(advanceRound,
+  nobodyLeft ? ROUND_HOLD_MS : LATE_LIMIT_MS)` y hệt trước giờ, đúng quyết định phạm vi
+  của thầy.
+- **Options panel (`buildOptions`)** — thanh trượt mới **"Miss wait"**, sub-label "after
+  the other team's mistake", tông màu xanh (blue) giống Time delay/Pick time. `min:0,
+  max:21` (0–20 = số giây thật, 21 = nấc ∞ nằm NGAY SAU đỉnh — cùng hình dạng Time
+  delay/Pick time đã dùng). Xây cho **MỌI game Fight, không bao giờ bị làm mờ** — khác
+  Time delay/Speed bonus/Pick time/In turns (những cái đó đều quyết định "ai tới TRƯỚC",
+  bị khoá chéo lẫn nhau), Miss wait chỉ chạy sau khi đã có người THUA, không phải cuộc
+  đua nào trong số đó đang chạy.
+
+**BÀN THỬ `scratch/dot276-wrongwait.html`, 23/23 ĐẠT** (dựng trận Quiz thật qua
+`startFight()`, bấm PLAY, bấm đáp án sai bằng `.click()` thật lên đúng nút DOM):
+1. Đơn vị (`fightOptionsFrom`/`wrongWaitMsOf`): mặc định 20 giữ nguyên hằng số cũ, biên
+   999→20, -5→-1 (không kẹp về 0), 3.7→4, `"abc"`→20, 0 vẫn là 0 (không lẫn với "thiếu
+   trường"), ∞ không phải số hữu hạn, tuỳ chọn cũ không xê dịch khi thêm trường mới.
+2. Nấc 2 giây: đội 0 bấm sai, đội 1 không bấm gì — vẫn ở Q1 lúc +0,9s, ĐÃ tự sang Q2 lúc
+   +2,4s (đúng ~2s, không phải 20s cũ).
+3. Nấc 0 giây: sai xong chuyển câu gần như ngay (+0,4s đã sang Q2).
+4. Nấc ∞: bỏ mặc 3 giây vẫn còn nguyên Q1, bàn 1 vẫn bấm được — chứng minh KHÔNG có
+   timer nào bị lỡ gán `Infinity`.
+5. ⛔ **ĐỐI CHỨNG NGƯỢC quan trọng nhất**: đặt Miss wait=1s NHƯNG cho đội 0 THẮNG (trả
+   lời đúng) với Time delay=2s (Both finish, đội thua không khoá) — nếu code lỡ dùng
+   nhầm Miss wait ở nhánh này thì bàn thử sẽ thấy chuyển câu sớm ở ~1s sau khi cửa sổ
+   đóng; đo thật: vẫn còn nguyên Q1 ở +2,6s VÀ +4,6s tổng — chứng minh nhánh
+   "đội trước thắng" không hề bị đụng, vẫn ăn đúng 20s cứng như trước.
+Ngoài ra kiểm bằng tay qua `javascript_tool` (mở Options panel thật, không chỉ gọi hàm
+đơn lẻ): thanh "Miss wait" có mặt, `min=0 max=21`, kéo tới đỉnh hiện `∞`, kéo về 0 hiện
+`0s`, giữa chừng hiện đúng số + "s". `node --input-type=module --check` sạch trên
+`core/fight.js`.
+
+⬜ **CHƯA PUSH — CHỜ THẦY DUYỆT + BẤM TAY THẬT**: (a) mở một act Fight (Quiz/Anagram đủ,
+không cần game lượt-chọn), vào Options, kéo thử "Miss wait" qua vài nấc kể cả ∞; (b) cho
+một đội bấm sai trước, đội kia CỐ TÌNH không bấm gì, xem đúng số giây đã đặt có tự
+chuyển câu không; (c) thử lại với act CŨ chưa từng mở Options sau đợt này — phải vẫn
+chờ đúng 20 giây như trước, không đổi gì; (d) test trên TOMKO.
 
 ---
 
