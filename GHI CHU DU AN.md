@@ -12,7 +12,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 275** (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; ⬜ chờ thầy bấm tay màn Settings thật, CHƯA PUSH). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 275** (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
 
 ---
 
@@ -114,8 +114,11 @@ giữ không; (c) xoá một clip — danh sách có mất đúng nó không, c�
 Mix, tích 3 âm, chơi thử một act thường nhiều lượt sai xem có random thật không (không phải chỉ nghe
 1 âm lặp lại); (e) đóng trình duyệt mở lại (hoặc khởi động lại máy) — clip đã tải lên còn không
 (chỉ mất nếu thầy tự xoá dữ liệu duyệt web, IndexedDB sống qua khởi động lại máy).
-⬜ **CHƯA COMMIT/PUSH** — thầy xác nhận (a)-(e) ở trên trước, hoặc yêu cầu đẩy lên GitHub ngay nếu
-muốn kiểm trên máy khác luôn.
+✅ **ĐÃ COMMIT + PUSH + LIVE KIỂM CHỨNG** — code `c36518d`, fetch trực tiếp
+`aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `OVERRIDES_KEY`/`CUSTOM_KEY` và dòng vá bug
+Mix (`const pickedId = ...` tách riêng trước `.find()`), `aword.andrewclasses.com/main.js` thấy
+đúng `"+ Upload a sound"`/`showWrongSound()` — Pages build đúng bản mới. (a)-(f) ở trên vẫn CHỜ tay
+thầy — bench chỉ đo được logic, không đo được máy thật/loa thật/link `play.html` thật.
 
 ---
 

@@ -4612,16 +4612,68 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 273** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 275** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 273**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 275**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`9d6a38b`** (Đợt 273 — BỎ HẲN `cqw`, đơn vị khung nay là `--aw-u`) — **đã push + LIVE kiểm chứng** |
+> | Commit mới nhất | **`c36518d`** (Đợt 275 — tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `OVERRIDES_KEY`/`CUSTOM_KEY` và dòng vá bug (`const pickedId = ids[Math.floor(...)]` TÁCH RIÊNG trước `.find()`) · `aword.andrewclasses.com/main.js` thấy đúng `"+ Upload a sound"` + `showWrongSound()` — Pages build đúng bản mới |
+> | Trước đó | **`5f6c42c`** (Đợt 274 — 5 clip meme cố định, chưa tải lên/đổi tên/xoá/mix) — đã push |
+> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+>
+> ### ⭐⭐ ĐỢT 274 + 275 — VÙNG VỪA ĐỘNG TỚI: **ÂM THANH TRẢ LỜI SAI TRONG CÀI ĐẶT (chỉ chơi thường)**
+>
+> Thầy yêu cầu qua 2 lượt liên tiếp cùng buổi: Đợt 274 dựng nền (5 clip "meme" cố định từ
+> `C:\Users\MSI\Desktop\MEME`, chọn MỘT cái thay cho âm sai mặc định của mỗi game, **tuyệt đối
+> không cho assignment**); Đợt 275 mở rộng NGAY SAU ĐÓ cùng buổi (thầy xem bản 274 xong yêu cầu
+> thêm luôn): tải lên âm riêng, đổi tên/xoá mọi mục trừ Default, và chế độ **Mix** (tích nhiều âm,
+> mỗi lượt sai random một cái).
+>
+> **File cốt lõi: `core/wrong-sound.js`** (mới hoàn toàn ở Đợt 274, viết lại phần trong ở Đợt 275).
+> Cổng DUY NHẤT cho toàn bộ tính năng — `wrapWrong(fn)` bọc quanh export `wrong`/`wrongPick`/
+> `cargoWrong` sẵn có của **15 file `*-sound.js`** template (không đổi từ Đợt 274, KHÔNG đụng lại ở
+> Đợt 275 vì chữ ký `wrapWrong`/`playWrongEffect` giữ nguyên); `core/engine.js` gọi
+> `setAssignmentMode(!!session)` đầu mỗi `startGame()` — đây là RANH GIỚI DUY NHẤT quyết định
+> assignment có nghe được âm tuỳ chỉnh hay không, **BẮT BUỘC giữ nguyên** nếu sửa engine sau này.
+>
+> Lựa chọn lưu `localStorage["aword-wrongsound"]` dạng `{mode:"default"}` / `{mode:"single",id}` /
+> `{mode:"mix",ids:[...]}` (Đợt 275 — tự dịch ngược chuỗi id trần của Đợt 274 khi đọc). Xoá/đổi tên
+> 5 clip có sẵn là DIFF (`aword-wrongsound-overrides`), không đụng file mp3. Tải lên lưu Blob thật
+> trong **IndexedDB** (`aword-wrongsound-db`) — **device-local, KHÔNG qua Firestore**, không theo
+> thầy sang máy khác (quyết định có chủ đích, xem lý do trong `GHI CHU DU AN.md` Đợt 275).
+>
+> ⛔⛔ **BUG THẬT ĐÃ BẮT ĐƯỢC VÀ VÁ (Đợt 275)**: chọn ngẫu nhiên trong Mix ban đầu viết
+> `entries.find(e => e.id === ids[Math.floor(Math.random() * ids.length)])` — `Math.random()` NẰM
+> TRONG predicate của `.find()` nên bốc số MỚI mỗi phần tử nó xét qua thay vì một lần trước khi
+> tìm; đo được ~35% lượt sai lặng lẽ rơi về âm gốc của game dù Mix đã tích đủ âm. Vá bằng tách
+> `pickedId` ra một dòng riêng TRƯỚC `.find()`. **Nếu sau này còn chỗ nào chọn ngẫu nhiên kiểu
+> `arr.find(x => x.id === pool[Math.random()...])`, KIỂM LẠI NGAY — cùng một bẫy có thể lặp lại.**
+>
+> Bàn thử: `scratch/dot274-wrongsound-ui.html` (màn Settings đơn giản, nay lỗi thời do API đổi ở
+> Đợt 275 — giữ làm sử liệu) · `scratch/dot275-wrongsound-full.html` (bản đầy đủ, **29/29 ĐẠT**,
+> gọi THẲNG hàm thật `playWrongEffect`/`getWrongChoice`/`getEntries`, không tự viết lại logic để
+> đối chứng — chính cách này bắt được bug Mix ở trên). Cả hai không cần đăng nhập Google.
+>
+> ⬜ **CHỜ THẦY BẤM TAY MÀN CÀI ĐẶT THẬT** (chưa ai tự bấm được — `main.js` cần đăng nhập Google
+> riêng của thầy, `namdaptrai01@gmail.com`, phiên làm việc không đăng nhập thay được):
+> (a) tải lên một file âm thanh thật (mp3/m4a/wav) từ máy, nghe đúng không, tên hiện đúng tên file;
+> (b) đổi tên một clip có sẵn, lưu qua lại có giữ không; (c) xoá một clip, danh sách/các clip khác
+> có nguyên vẹn; (d) bật Mix tích 3 âm, chơi thật nhiều lượt sai xem có random đúng không (không
+> lặp một âm); (e) đóng/mở lại trình duyệt (hoặc khởi động lại máy) — clip tải lên còn không
+> (IndexedDB sống qua khởi động lại, chỉ mất nếu thầy tự xoá dữ liệu duyệt web); (f) mở một
+> assignment thật qua `play.html` sau khi đã chọn/mix âm — PHẢI nghe âm gốc của game, không phải
+> âm tuỳ chỉnh (ranh giới quan trọng nhất, cả 2 đợt).
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (27/8/2026 — sau **Đợt 273**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`9d6a38b`** (Đợt 273 — BỎ HẲN `cqw`, đơn vị khung nay là `--aw-u`) — đã push + LIVE kiểm chứng |
 > | Kiểm live | **6/6 mã băm khớp** (`core/unit.js` · `core/app.css` · `core/engine.js` · `templates/quiz/quiz.css` · `templates/running-word/running-word.css` · `templates/whack-a-mole/whack-a-mole.js`); LIVE **0 chỗ `cqw`** ngoài chú thích; chạy thử thật trên `aword.andrewclasses.com/templates/quiz/test.html` — `--aw-u` = 9.15px đúng bằng 1% khung 915px, chữ câu hỏi 47.58px (= 5.2 × 9.15), đệm thẻ 31.11px (= 3.4 × 9.15) |
 > | Trước đó | **`ae624ae`** (Đợt 269–272) · **`84b2a80`** (Đợt 266) — đều đã push + LIVE kiểm chứng |
-> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+> | Kho | SẠCH, `main` khớp `origin/main` |
 >
 > ### ⭐⭐⭐ ĐỢT 273 — VÙNG VỪA ĐỘNG TỚI: **CÁCH ĐO CỠ CỦA TOÀN BỘ APP**
 >
