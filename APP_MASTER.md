@@ -4700,16 +4700,51 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 277** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 278** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 277**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 278**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`d0b7b5d`** (Đợt 277 — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì thay thế nó) — **đã push + LIVE kiểm chứng** |
-> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `fallback();` gọi VÔ ĐIỀU KIỆN ngay sau rào assignment — **mã băm SHA-256 khớp tuyệt đối** với `git show d0b7b5d:core/wrong-sound.js` (`2ede92a5…62b7f71` cả hai) |
-> | Trước đó | **`860ab5f`** (Đợt 276 — Fight mode "Miss wait", phiên khác, cùng máy, song song — không đụng file với Đợt 277) — đã push + LIVE kiểm chứng |
+> | Commit mới nhất | **`3b7bab5`** (Đợt 278 — hàng "Default" trong Wrong-answer sound nay LUÔN có dấu ✓) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/main.js` thấy đúng `if (entry.kind === "default") return true;` trong `isChecked()` — **mã băm SHA-256 khớp tuyệt đối** với `git show 3b7bab5:main.js` (`51eae4f5…023e0eb2f` cả hai) |
+> | Trước đó | **`d0b7b5d`** (Đợt 277 — âm trả lời sai nay CHỒNG lên âm gốc của game) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+>
+> ### ⭐ ĐỢT 278 — VÙNG VỪA ĐỘNG TỚI: **DẤU ✓ CỦA HÀNG "DEFAULT" LUÔN SÁNG**
+>
+> Thầy: *"Nút default luôn luôn có nút tích bất kể trường hợp nào. Nếu không bấm Mix thì các âm
+> khác được tích 1 cái, bấm mix thì được tích nhiều (Default luôn tích)"*. Vá khớp nối còn thiếu của
+> [[Đợt 277]]: âm gốc đã LUÔN phát từ đợt đó, nhưng giao diện màn Cài đặt vẫn tắt dấu ✓ của Default
+> mỗi khi thầy chọn thêm một âm — nói dối về đúng cái quan trọng nhất (âm nào đang thật sự phát ra).
+>
+> **File cốt lõi: `main.js`** — sửa ĐÚNG MỘT hàm `isChecked()` trong `showWrongSound()`: hàng
+> `kind === "default"` trả `true` vô điều kiện, bỏ qua `choice.mode`. Các hàng khác giữ nguyên luật
+> cũ (ngoài Mix tích đúng một, trong Mix tích nhiều tuỳ ý) — thầy xác nhận rõ trong yêu cầu là luật
+> đó đã đúng từ trước, chỉ riêng Default là cần vá.
+>
+> Bàn thử `scratch/dot278-wrongsound-defaultcheck.html` **20/20 ĐẠT** — Default tích từ đầu · vẫn
+> tích khi chọn 1 âm đơn (kèm âm đó cũng tích) · vẫn tích khi đổi âm đơn khác · vẫn tích khi Mix có
+> 2 âm cùng lúc · vẫn tích dù Mix rỗng · bấm Default xoá hết lựa chọn khác và VẪN hiện tích (không
+> "biến mất rồi hiện lại"). Bản nháp đầu của bàn thử tự báo sai 3 chỗ do quên rằng bật Mix ngay sau
+> một lựa chọn đơn sẽ GIEO mix bằng đúng lựa chọn đó (hành vi có sẵn từ Đợt 275/277, không phải lỗi
+> mới) — sửa bằng cách đặt trạng thái RÕ RÀNG (`setWrongChoice()`) trước mỗi bước đo thay vì suy
+> luận ngầm từ bước trước, bài học tương tự Đợt 275's bug thật.
+>
+> ⬜ **CHỜ THẦY BẤM TAY**: mở Cài đặt ▸ Wrong-answer sound thật — Default phải LUÔN có dấu ✓ dù đang
+> Single hay Mix; chọn 1 âm đơn thì Default + âm đó cùng tích; bật Mix tích 2-3 âm thì Default +
+> mọi âm đã tích đều tích cùng lúc.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (27/8/2026 — sau **Đợt 277**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`d0b7b5d`** (Đợt 277 — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì thay thế nó) — đã push + LIVE kiểm chứng |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `fallback();` gọi VÔ ĐIỀU KIỆN ngay sau rào assignment — mã băm SHA-256 khớp tuyệt đối với `git show d0b7b5d:core/wrong-sound.js` (`2ede92a5…62b7f71` cả hai) |
+> | Trước đó | **`860ab5f`** (Đợt 276 — Fight mode "Miss wait", phiên khác, cùng máy, song song — không đụng file với Đợt 277) — đã push + LIVE kiểm chứng |
+> | Kho | SẠCH, `main` khớp `origin/main` |
 >
 > ### ⭐ ĐỢT 277 — VÙNG VỪA ĐỘNG TỚI: **ÂM TRẢ LỜI SAI CHỒNG LÊN ÂM GỐC**
 >
@@ -4725,11 +4760,6 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > extra) · Mix rỗng chỉ base · assignment luôn chỉ base bất kể đã chọn gì · muted chặn extra, không
 > chặn lời gọi base (từng template tự lo mute của chính nó). `scratch/dot275-wrongsound-full.html`
 > có 1 bước lỗi thời (28/29, giả định THAY THẾ cũ) — không phải hồi quy, xem `GHI CHU DU AN.md`.
->
-> ⬜ **CHỜ THẦY BẤM TAY**: chơi một act thường, chọn một âm/Mix, bấm sai — phải nghe ĐỦ HAI âm chồng
-> lên nhau; chọn lại Default — chỉ còn âm gốc; mở assignment thật qua `play.html` — vẫn chỉ âm gốc.
->
-> ---
 >
 > ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (27/8/2026 — sau **Đợt 276**)
 >

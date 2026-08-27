@@ -15,8 +15,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > Mới nhất: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
 > dấu ✓ bất kể đang ở Single hay Mix, vì âm gốc đã luôn phát từ Đợt 277; các âm khác vẫn tích 1
 > (ngoài Mix) hoặc nhiều (trong Mix) như cũ; sửa đúng 1 hàm `isChecked()` trong `main.js`; bàn thử
-> mới `dot278-wrongsound-defaultcheck.html` 20/20 ĐẠT; ⬜ chờ thầy bấm tay, CHƯA PUSH lúc viết dòng
-> này). Trước đó: **Đợt 277** (27/8/2026, thầy — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì
+> mới `dot278-wrongsound-defaultcheck.html` 20/20 ĐẠT; code `3b7bab5` ĐÃ PUSH + LIVE kiểm chứng
+> bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay). Trước đó: **Đợt 277** (27/8/2026, thầy — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì
 > thay thế nó; Default = không chồng gì thêm; sửa đúng 1 hàm `playWrongEffect()`; bàn thử mới
 > `dot276-wrongsound-layered.html` 11/11 ĐẠT — ⚠️ tên file trùng số "276" với Đợt 276 Fight mode bên
 > dưới là NGẪU NHIÊN, hai phiên Claude chạy song song cùng máy không hề đụng file nhau, xem ghi chú
