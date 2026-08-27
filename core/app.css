@@ -3150,6 +3150,11 @@ html.aw-nhung .aw-below { display: none; }
 .aw-set-rowtitle { font-size: 1rem; font-weight: 800; color: #23303e; }
 .aw-set-rowsub { font-size: .8rem; color: #7a8aa0; margin-top: 2px; }
 .aw-set-chev { flex: 0 0 auto; color: #9fb0c4; font-size: 1.4rem; line-height: 1; }
+/* Settings > Wrong-answer sound (Đợt 274) — a picked-one-of-N list, same row
+   shape as the rest of Settings, with a checkmark in place of the chevron. */
+.aw-set-row.is-current { border-color: #2f7bff; background: #eef5ff; }
+.aw-set-check { flex: 0 0 auto; color: #2f7bff; font-size: 1.1rem; font-weight: 900; opacity: 0; }
+.aw-set-row.is-current .aw-set-check { opacity: 1; }
 /* Settings > Classes: the "name + Create" line above the list of classes. */
 /* Dot 192 - .aw-set-addrow deleted with the "New class name + Create" row it
    dressed: a class is now made from the tile at the BOTTOM of the list

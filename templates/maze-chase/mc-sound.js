@@ -19,6 +19,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. Footsteps fire several times a second while the player runs,
@@ -52,7 +53,7 @@ export const mcSound = {
   footstep: makePool(["footsteps-01","footsteps-02","footsteps-03","footsteps-04","footsteps-05"], 0.35), // 04 — one step
   answer: () => playFile("answer", 0.7),                  // 05 — stepped onto an answer pad
   correct: () => playFile("correct"),                     // 06 — reached the RIGHT answer
-  wrong: () => playFile("incorrect"),                     // 07 — reached a WRONG answer
+  wrong: wrapWrong(() => playFile("incorrect")),           // 07 — reached a WRONG answer
   enemyAppear: () => playFile("enemyappear"),             // 08 — an enemy warps in
   enemyAttack: () => playFile("enemyattack"),             // 09 — an enemy lunges / catches you
   enemyPassive: () => playFile("enemypassive", 0.5),      // 10 — idle enemy ambience

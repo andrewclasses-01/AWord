@@ -8,6 +8,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — the pack is now fetched AT IMPORT TIME (prime() below),
 // which `ensureTemplate()` runs before the READY screen is drawn, instead of
@@ -29,7 +30,7 @@ pack.prime();
 
 export const quizSound = {
   correct: makePool(["blockchipminor1", "blockchipminor2", "blockchipminor3"]),
-  wrong: makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"]),
+  wrong: wrapWrong(makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"])),
   play: () => playFile("blockgameintro1"),
   restart: () => playFile("blockgamerestart"),
   timeWarning: () => playFile("blockgametimeout"),

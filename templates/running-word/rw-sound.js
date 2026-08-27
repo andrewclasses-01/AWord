@@ -25,6 +25,7 @@
 // =============================================================
 
 import { sound as coreSound } from "../../core/sound.js";
+import { playWrongEffect } from "../../core/wrong-sound.js";
 
 // Borrow the SHARED context from core/sound.js (Đợt 85) instead of building a
 // private one: a brand-new context makes its first sound ~37 ms late (48 ms vs
@@ -108,8 +109,10 @@ export const rwSound = {
   },
 
   wrong() {
-    tone({ freq: 196, dur: 110, type: "square", gain: 0.085 });
-    tone({ freq: 165, dur: 150, type: "square", gain: 0.085, delay: 115 });
+    playWrongEffect(() => {
+      tone({ freq: 196, dur: 110, type: "square", gain: 0.085 });
+      tone({ freq: 165, dur: 150, type: "square", gain: 0.085, delay: 115 });
+    });
   },
 
   // Passing costs time, so it sounds like something draining away.

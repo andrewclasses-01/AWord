@@ -14,6 +14,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 const pack = createPack(import.meta.url, {
   names: ["intro-01",
@@ -28,7 +29,7 @@ pack.prime();
 export const spkSound = {
   intro:    () => pack.play("intro-01"),          // Play pressed
   correct:  pack.pool(["correct-01", "correct-02", "correct-03"]),        // pronunciation passed
-  wrong:    pack.pool(["incorrect-01", "incorrect-02", "incorrect-03"]),  // below the pass threshold
+  wrong:    wrapWrong(pack.pool(["incorrect-01", "incorrect-02", "incorrect-03"])),  // below the pass threshold
   complete: () => pack.play("gamecompleted-01"),  // finished every word
   restart:  () => pack.play("restart-01")         // Start again
 };

@@ -12,6 +12,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. At Speed 10 a mole pops every 170 ms, so the 7 mole sounds
@@ -44,7 +45,7 @@ export const wamSound = {
   clockTick: () => playFile("clocktick"),          // 03 — one tick of the clock
   mole: makePool(["mole-01", "mole-02", "mole-03", "mole-04", "mole-05", "mole-06", "mole-07"], 0.5), // 04 — a mole pops up
   correct: makePool(["correct-01", "correct-02", "correct-03"]),   // 05 — whacked a correct mole
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]), // 06 — whacked a wrong mole
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 06 — whacked a wrong mole
   combo: () => playFile("combo"),                  // 07 — combo streak bonus
   disappear: () => playFile("disappear", 0.5),     // 08 — a mole ducked back down un-whacked
   crate: () => playFile("crate"),                  // 09 — a crate appears

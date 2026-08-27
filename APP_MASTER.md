@@ -8,7 +8,50 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 273 — BỎ HẲN `cqw`, cứu iPad đời cũ)**.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 274 — ÂM THANH TRẢ LỜI SAI KIỂU MEME, chỉ dành cho chơi
+> thường)**.
+>
+> **Đợt 274** (27/8/2026, thầy) — ⭐⭐ **"CÀI ĐẶT → ÂM THANH TRẢ LỜI SAI" — 5 CLIP MEME, KHÔNG BAO
+> GIỜ CHO ASSIGNMENT.** Thầy: *"thêm vào phần cài đặt một thẻ cài âm thanh khi bấm/chọn/chơi sai
+> cho các template, cài đặt này chỉ dành cho act chơi thông thường, tuyệt đối không cho assignment"*.
+> Sao 5 file từ `C:\Users\MSI\Desktop\MEME` vào `core/assets/sounds/meme/` (Bruh · Error · FAAAH ·
+> Oh my god · What da dog doing — "Oh my god" trùng byte với `oh-my-god-meme.mp3` sẵn có, vốn là
+> code CHẾT: `sound.wrong()` trong `core/sound.js` không còn ai gọi từ lâu, 17 template nay đều có
+> file "wrong" thật của riêng nó).
+>
+> **File mới `core/wrong-sound.js`** — một cổng DUY NHẤT: `WRONG_SOUND_OPTIONS`, `get/setWrongSoundChoice`
+> (localStorage `aword-wrongsound`), `setAssignmentMode(on)` (engine gọi mỗi `startGame()`, đặt theo
+> `!!session` — `session` chỉ có ở trang học sinh `play.js`, không bao giờ ở Single/Showdown/Fight),
+> `playWrongEffect(fallback)` (assignment HOẶC chọn "Default" thì gọi `fallback()` y nguyên; ngược lại
+> phát clip meme), và `wrapWrong(fn)` — bọc gọn một dòng `wrong: makePool([...])` thành
+> `wrong: wrapWrong(makePool([...]))`.
+>
+> **17 template, 15 file `*-sound.js` sửa 1-2 dòng mỗi file** (thêm `import` + bọc `wrapWrong`
+> quanh export `wrong`/`wrongPick`/`cargoWrong`); riêng `rw-sound.js`/`rt-sound.js` (âm tự tổng hợp,
+> không phải mp3) bọc thân hàm bằng `playWrongEffect(() => {...})`. `speaking-cards-sound.js` không
+> đụng — game đó không có khái niệm đúng/sai. `core/engine.js`: 2 dòng — `import setAssignmentMode`
+> + gọi nó ngay đầu `startGame()`. `main.js`: thêm hàng "Wrong-answer sound" vào menu Settings +
+> hàm `showWrongSound()` (danh sách 6 lựa chọn, bấm là lưu NGAY + nghe thử ngay, không có nút Save
+> riêng — giống cảm giác nút loa trong game). `core/app.css`: 3 dòng CSS cho dấu ✓ + viền xanh của
+> lựa chọn đang chọn (`.aw-set-row.is-current`), tái dùng đúng khuôn `.aw-tpl-item.is-current` đã có.
+>
+> Bàn thử `scratch/dot274-wrongsound-ui.html` (dựng lại NGUYÊN VĂN thân hàm `showWrongSound()`,
+> không cần đăng nhập Google) + gọi thẳng qua `templates/<x>/test.html` cho quiz · running-word ·
+> balloon-pop · maze-chase (mp3-pool · tự tổng hợp · tên khác `cargoWrong` · dạng hàm `wrong: () =>
+> playFile(...)` — 4 kiểu bọc khác nhau đang có trong 17 template): cả 3 nhánh (mặc định giữ âm
+> gốc của game, assignment giữ âm gốc dù đã chọn meme, chơi thường phát đúng clip meme đã chọn) đều
+> ĐÚNG, `node --input-type=module --check` sạch trên cả 19 file đụng tới, 0 lỗi console.
+>
+> Thầy xem bản đầu xong chốt bớt chữ: bỏ dòng giải thích `aw-set-hint` trong `showWrongSound()` và
+> bỏ chữ "(mỗi game giữ âm riêng)" sau nhãn "Default" — chỉ còn 6 hàng gọn, không hành vi nào đổi
+> (đã chạy lại bàn thử `dot274-wrongsound-ui.html`, vẫn ĐÚNG y hệt).
+>
+> ⬜ **CHƯA TỰ BẤM ĐƯỢC MÀN SETTINGS THẬT** (`main.js` cần đăng nhập Google riêng của thầy — không
+> làm thay được): thầy mở Cài đặt → Wrong-answer sound, bấm thử vài lựa chọn xem có nghe đúng
+> clip + dấu ✓ có nhảy đúng hàng; rồi chơi thử MỘT act thường (nghe clip meme) và MỘT assignment
+> qua `play.html` (phải nghe âm gốc của game, không phải meme) để chắc ăn ranh giới không lọt.
+>
+> ---
 >
 > **Đợt 273** (27/8/2026) — ⭐⭐⭐ **BỎ HẲN `cqw`, ĐƠN VỊ KHUNG NAY LÀ `--aw-u`.**
 > Thầy chụp ảnh màn QUIZ trên **iPad đời cũ**: chữ bé tí, sáu thẻ đáp án dẹp lép

@@ -15,6 +15,7 @@
 
 import { sound as coreSound } from "../../core/sound.js";
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. This is the biggest pack (47 files); `skip` keeps the long
@@ -74,7 +75,7 @@ export const gsSound = {
   choose: () => playFile("chooseanswer"),        // 05 — an answer tile is tapped
   correct: makePool(["correct-01", "correct-02", "correct-03"]),   // 06
   perfect: makePool(["perfect-01", "perfect-02", "perfect-03"]),   // 07 — fast / on-a-streak
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]), // 08
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 08
   plusScore: () => playFile("plusscore"),        // 09 — the score counts UP
   minusScore: () => playFile("minusscore"),      // 10 — the score ticks DOWN (unused-but-ready)
   clockTick: () => playFile("clocktick", 0.7),   // 11 — last seconds warning

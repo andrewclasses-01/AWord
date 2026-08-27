@@ -20,6 +20,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. This is the biggest one-shot pack (37 files: 8 pickups,
@@ -47,7 +48,7 @@ export const unjumbleSound = {
   drop: makePool(["drop1", "drop2", "drop3", "drop4", "drop5", "drop6", "drop7", "drop8"]),
   correct: makePool(["correct1", "correct2", "correct3", "correct4"]),
   fastCorrect: makePool(["fastcorrect1", "fastcorrect2", "fastcorrect3", "fastcorrect4"]),
-  wrong: makePool(["incorrect1", "incorrect2", "incorrect3", "incorrect4"]),
+  wrong: wrapWrong(makePool(["incorrect1", "incorrect2", "incorrect3", "incorrect4"])),
   fastWrong: makePool(["fastincorrect1", "fastincorrect2", "fastincorrect3", "fastincorrect4"]),
   perfect: () => playFile("perfect"),
   play: () => playFile("intro"),

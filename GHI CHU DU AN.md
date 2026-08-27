@@ -12,7 +12,123 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 272** (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 274** (27/8/2026, thầy — Âm thanh trả lời sai kiểu meme trong Cài đặt, chỉ dành cho chơi thường, tuyệt đối không cho assignment; ĐÃ PUSH, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 274 (27/8/2026, thầy) — ⭐⭐ **CÀI ĐẶT → "ÂM THANH TRẢ LỜI SAI" (5 CLIP MEME), CHỈ CHO CHƠI THƯỜNG**
+
+### Thầy báo gì
+
+> "tôi muốn thêm vào phần cài đặt trong AWord một thẻ cài âm thanh khi bấm/chọn/chơi sai cho các
+> template (cài đặt này chỉ dành cho act chơi thông thường, tuyệt đối không cho assignment, các
+> assignment dùng dạng âm thanh mặc định hiện tại vì các âm thanh mới mang tính vui vẻ và chỉ dùng
+> trong lớp chung). Các âm thanh này nằm trong `C:\Users\MSI\Desktop\MEME`. Trong menu sẽ có mặc
+> định như hiện tại và các lựa chọn với từng âm thanh trong folder."
+
+5 file trong folder: `BRUH.mp3` · `ERROR.mp3` · `FAAAH.mp3` · `OH MY GOD.mp3` · `WHAT DA DOG
+DOING.mp3`.
+
+### Khảo sát trước khi sửa — âm "wrong" thật ra nằm ở 17 nơi khác nhau, không phải 1
+
+`core/sound.js` đã có sẵn một hàm `sound.wrong()` phát `oh-my-god-meme.mp3` — tưởng đây là chỗ cần
+sửa, nhưng grep toàn bộ code thì **0 nơi nào còn gọi nó** (`\bsound\.wrong\(\)` chỉ khớp một dòng
+CHÚ THÍCH trong `speaking.js` nói "KHÔNG phải cái này"). Hoá ra qua nhiều đợt trước, cả 17 template
+đã tự có bộ mp3 "wrong" thật của riêng mình (kiểu Wordwall gốc) trong file `templates/<x>/*-sound.js`
+riêng — `sound.wrong()` là code CHẾT từ lâu. Nghĩa là cái nút phải sửa không phải MỘT hàm, mà là
+**17 chỗ định nghĩa `wrong`** (15 file mp3-pool dạng `wrong: makePool([...])`, 2 file tự tổng hợp
+Web Audio dạng `wrong() {...}` — `rw-sound.js`/`rt-sound.js`, `balloon-pop-sound.js` đặt tên khác
+`cargoWrong`, `mc-sound.js` viết dạng hàm `wrong: () => playFile("incorrect")`, và
+`speaking-cards-sound.js` **không có khái niệm đúng/sai** nên bỏ qua).
+
+Và "assignment" hoá ra cũng không phải một biến toàn cục có sẵn — nó là tham số `session` của
+`startGame()` (`core/engine.js`): có `session` = trang học sinh (`play.js` luôn truyền), không có =
+mọi chế độ khác (Single, Showdown, Fight — đều đã kiểm lại từng điểm gọi `startGame`).
+
+### Đã làm
+
+1. **Sao 5 file mp3** từ `C:\Users\MSI\Desktop\MEME` vào `core/assets/sounds/meme/`, đặt tên gọn:
+   `bruh.mp3` · `error.mp3` · `faaah.mp3` · `oh-my-god.mp3` · `what-da-dog-doing.mp3`. (`OH MY GOD.mp3`
+   trùng byte-for-byte với `core/assets/sounds/oh-my-god-meme.mp3` sẵn có — không đụng file cũ, chỉ
+   không dùng tới nó nữa.)
+2. **File mới `core/wrong-sound.js`** — cổng DUY NHẤT cho toàn bộ tính năng:
+   - `WRONG_SOUND_OPTIONS` — mảng 6 lựa chọn (`default` + 5 meme), mỗi lựa chọn có `id`/`label`/`file`.
+   - `getWrongSoundChoice()` / `setWrongSoundChoice(id)` — đọc/ghi `localStorage["aword-wrongsound"]`.
+   - `setAssignmentMode(on)` / cờ nội bộ `assignmentMode` — `core/engine.js` gọi **mỗi lần**
+     `startGame()` chạy, với `!!session`, nên đúng theo TỪNG LƯỢT chơi chứ không phải một lần lúc nạp
+     trang (một trang có thể chơi act thường rồi sau đó vào lại — cờ luôn được đặt lại).
+   - `playWrongEffect(fallback)` — nếu `assignmentMode` HOẶC lựa chọn là `"default"` thì gọi
+     `fallback()` (giữ nguyên âm gốc của game, tôn trọng cả nút tắt tiếng qua `fallback` tự lo); nếu
+     không, phát clip meme đã chọn (tự kiểm `sound.isMuted()` trước khi phát, y như đường cũ).
+   - `wrapWrong(fn)` — bọc một dòng, biến `wrong: makePool([...])` thành `wrong:
+     wrapWrong(makePool([...]))` mà không đổi hình dạng export.
+   - `previewWrongSound(id)` — phát THẲNG một clip, dùng cho màn Cài đặt (bấm là nghe ngay, bỏ qua
+     cả `assignmentMode` lẫn nút tắt tiếng vì đây là thao tác Cài đặt chủ động, không phải lúc chơi).
+   - Mọi file mp3 được `.load()` trước (module-load time) — 5 file nhỏ (~120 KB tổng) nên nạp trước
+     không tốn gì, và tránh độ trễ lần phát đầu tiên (đúng bài học Đợt 85 của `core/sfx.js`).
+3. **`core/engine.js`** — 2 dòng: `import { setAssignmentMode } from "./wrong-sound.js"` + gọi
+   `setAssignmentMode(!!session)` ngay dòng đầu `startGame()` (sau `root.innerHTML = ""`).
+4. **15 file `*-sound.js`** (anagram · crossword · find-the-match · gameshow · flying-fruit ·
+   open-the-box · true-false · maze-chase · whack-a-mole · speaking · type-the-answer · unjumble ·
+   quiz · balloon-pop) — mỗi file thêm 1 dòng `import { wrapWrong } from "../../core/wrong-sound.js"`
+   và bọc `wrapWrong(...)` quanh đúng MỘT export (`wrong`, hoặc `wrongPick` ở anagram, hoặc
+   `cargoWrong` ở balloon-pop). **2 file** `rw-sound.js`/`rt-sound.js` (âm tự tổng hợp) sửa khác kiểu:
+   import `playWrongEffect` rồi bọc THÂN HÀM `wrong() { playWrongEffect(() => { ...tone cũ... }); }`.
+5. **`main.js`** — thêm hàng "Wrong-answer sound" vào menu Settings (`showMenu()`, cùng cụm với
+   "Default activity options"/"Classes") + hàm mới `showWrongSound()`: 6 hàng (giống layout Classes),
+   bấm một hàng là `setWrongSoundChoice` + tự chuyển dấu ✓ sang hàng đó + (nếu là meme) phát thử
+   ngay — KHÔNG có nút Save riêng, giống cảm giác bấm nút loa trong game (chạm là áp dụng luôn).
+6. **`core/app.css`** — 3 dòng CSS mới: `.aw-set-row.is-current` (viền + nền xanh nhạt, tái dùng
+   đúng công thức màu của `.aw-tpl-item.is-current` đã có sẵn cho khung chọn template) và
+   `.aw-set-check` (dấu ✓, ẩn bằng `opacity:0` trừ khi có `.is-current`).
+7. `.claude/launch.json` (máy này) — thêm cấu hình `aword-274` (cổng 5674) để bàn thử.
+
+### Vì sao KHÔNG sửa `core/sound.js`'s `sound.wrong()`
+
+Để nguyên, không xoá, không tái dùng — nó là code chết vô hại (không ai gọi), và việc xây một cổng
+MỚI (`core/wrong-sound.js`) tách bạch hoàn toàn khỏi nó tránh rủi ro: nếu sau này ai đó vô tình khôi
+phục một lời gọi `sound.wrong()` cũ (ví dụ dán nhầm code từ backup), đường đó vẫn chạy đúng ý nghĩa
+gốc của nó (âm "Oh my god" cố định) mà không vô tình dính vào cơ chế chọn-theo-Cài-đặt mới.
+
+### Bàn thử
+
+`scratch/dot274-wrongsound-ui.html` + `.js` — dựng lại **NGUYÊN VĂN** thân hàm `showWrongSound()`
+copy từ `main.js` (không cần đăng nhập Google, vì màn Cài đặt thật nằm sau cổng Firebase riêng của
+thầy — phiên làm không đăng nhập thay được): xác nhận cả 6 hàng lên đúng nhãn, hàng đang chọn có
+`.is-current` đúng theo `localStorage`, bấm một hàng meme thì dấu ✓ nhảy đúng chỗ **và** phát đúng
+file preview, bấm "Default" thì dấu ✓ về hàng đầu **và không phát gì** (đúng vì `default` không có
+`file`).
+
+Gọi trực tiếp qua `templates/<x>/test.html` (không cần thư viện/Firebase) cho 4 template đại diện 4
+kiểu bọc khác nhau — quiz (mp3-pool), running-word (tự tổng hợp), balloon-pop (`cargoWrong`),
+maze-chase (dạng hàm `wrong: () => playFile(...)`): mỗi template kiểm đủ **3 nhánh**
+(`default` giữ âm gốc · `assignmentMode=true` + đã chọn meme vẫn giữ âm gốc · chơi thường + đã chọn
+meme thì phát đúng meme) bằng cách bọc `HTMLMediaElement.prototype.play` để ghi lại `src` thực sự
+được phát (không chỉ đo file có được TẢI hay không — bài học cũ `bay-phep-do-tu-noi-doi.md`: pool
+mp3 tải trước lúc `prime()` nên nếu chỉ đếm request GET sẽ tưởng nhầm file nào cũng "đã phát").
+**12/12 phép đo ĐẠT** (3 nhánh × 4 template), `node --input-type=module --check` sạch trên cả 19
+file đụng tới (18 sửa + 1 mới), 0 lỗi console ở mọi trang test.
+
+### Sửa lại theo ý thầy — bỏ bớt chữ hướng dẫn
+
+Thầy xem bản đầu xong chốt: *"Bỏ toàn bộ các dòng hướng dẫn đi (Plays instead...), bỏ chữ trong
+ngoặc sau Default đi, chỉ giữ lại các phần chính là được, tôi tự hiểu."* Sửa 2 chỗ:
+- `main.js`'s `showWrongSound()` — bỏ hẳn dòng `aw-set-hint` giải thích ("Plays instead of…").
+- `core/wrong-sound.js` — nhãn `"Default (mỗi game giữ âm riêng)"` → chỉ còn `"Default"`.
+- (`scratch/dot274-wrongsound-ui.js` sửa theo cho khớp, vì nó copy nguyên văn thân hàm.)
+
+Chạy lại đúng bàn thử `dot274-wrongsound-ui.html`: 6 hàng còn đúng nhãn gọn, bấm chọn vẫn lưu +
+nhảy dấu ✓ + phát thử đúng file như trước — không đổi hành vi, chỉ bớt chữ.
+
+### VIỆC ĐANG CHỜ
+
+⬜ **CHƯA TỰ BẤM ĐƯỢC MÀN CÀI ĐẶT THẬT** — `main.js` (trang chủ) yêu cầu đăng nhập Google riêng của
+thầy (`namdaptrai01@gmail.com`), phiên làm việc không đăng nhập thay được nên chưa xác nhận được:
+(a) hàng "Wrong-answer sound" xuất hiện đúng chỗ trong menu Cài đặt thật; (b) bấm từng lựa chọn có
+nghe đúng clip qua loa máy thật (khác Web Audio giả lập của bàn thử); (c) chơi MỘT act thường bất kỳ
+sau khi đã chọn một clip meme — phải nghe clip đó khi bấm sai; (d) mở MỘT assignment qua link
+`play.html` sau khi đã chọn meme — phải nghe âm gốc của game, TUYỆT ĐỐI không phải clip meme (đây
+là ranh giới quan trọng nhất thầy yêu cầu, nên cần chính tay thầy xác nhận trên máy thật).
 
 ---
 

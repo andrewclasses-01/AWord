@@ -12,6 +12,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. The "archived" files below are listed too: they are small and
@@ -34,7 +35,7 @@ export const ttaSound = {
   intro:     () => playFile("intro-01"),                                     // 01 — Play pressed
   tileFlip:  makePool(["tileflip-01", "tileflip-02", "tileflip-03", "tileflip-04"]), // 02 — move to the next question
   correct:   makePool(["correct-01", "correct-02", "correct-03"]),          // 03 — typed the right answer
-  wrong:     makePool(["incorrect-01", "incorrect-02", "incorrect-03"]),     // 04 — typed a wrong answer
+  wrong:     wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 04 — typed a wrong answer
   complete:  () => playFile("gamecompleted-01"),                             // 05 — finished every question
   gameOver:  () => playFile("gameover-01"),                                  // 06 — (archived) lost before finishing
   timesUp:   () => playFile("timesup-01"),                                   // 07 — (archived) timer hit 0

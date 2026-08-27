@@ -60,6 +60,7 @@ const NO_TEMPLATE_TYPES = new Set(["running_word", "running_team"]);
 // picked 0,5s out of 0,3 / 0,5 / 0,8 / 1,0.
 const START_GUARD_MS = 500;
 import { sound } from "./sound.js";
+import { setAssignmentMode } from "./wrong-sound.js";
 import { confettiBurst } from "./confetti.js";
 import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // SHOWDOWN (Đợt 155) — this import is SAFE to take statically: core/showdown.js
@@ -244,6 +245,11 @@ const WORD_POOL_MAX_LEN = 24;
 // show them. A play without it behaves exactly as it always has.
 export function startGame(root, libAct, { onExit, session = null, base = null, fight = null } = {}) {
   root.innerHTML = "";
+  // ⭐ Đợt 274 — the "meme" wrong-sound override (core/wrong-sound.js) must
+  // never reach a pupil's assignment; `session` truthy is exactly that mode.
+  // Set fresh on every launch, since one page can host both a normal play and
+  // (via a different route) a student session.
+  setAssignmentMode(!!session);
 
   // ⭐ Đợt 145 — TWO NAMES FOR ONE ACT, and the difference matters.
   //   `libAct`   the object that came from the library. For a vocabulary act it

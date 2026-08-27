@@ -14,6 +14,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. ./sounds/music.mp3 is in the folder but this template never
@@ -41,7 +42,7 @@ export const ffSound = {
 
   // in-game one-shots
   correct: makePool(["correct-01", "correct-02", "correct-03"]),     // 03 — tapped the correct fruit
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]), // 04 — tapped a wrong fruit
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 04 — tapped a wrong fruit
   timesUp: () => playFile("timesup"),     // 05 — countdown ran out
   won: () => playFile("gamecompleted"),   // 06 — answered them all
   gameOver: () => playFile("gameover"),   // 07 — lost all lives

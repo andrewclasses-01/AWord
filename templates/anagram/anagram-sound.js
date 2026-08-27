@@ -7,6 +7,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — files are fetched AT IMPORT TIME (prime() below), before
 // the READY screen, instead of on their own first play. `hot` = the effects
@@ -28,7 +29,7 @@ pack.prime();
 
 export const anagramSound = {
   place: makePool(["blocktiledrop1", "blocktiledrop2", "blocktiledrop3"]),
-  wrongPick: makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"]),
+  wrongPick: wrapWrong(makePool(["blockchipfail1", "blockchipfail2", "blockchipfail3"])),
   pickup: makePool(["blocktilepickup1", "blocktilepickup2", "blocktilepickup3"]),
   submitWordCorrect: makePool(["blockchipminor1", "blockchipminor2", "blockchipminor3"]),
   wordCompleteBonus: () => playFile("blockchipmajor"),

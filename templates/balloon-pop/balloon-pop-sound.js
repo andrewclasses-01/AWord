@@ -13,6 +13,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. `hot` = the effects that fire while the train is running.
@@ -39,7 +40,7 @@ export const bpSound = {
   intro:      () => playFile("intro-01"),                                    // 01 — Play pressed, camera pans up
   pop:        () => playFile("balloonpop-01"),                               // 02 — a balloon is popped
   cargoCorrect: makePool(["cargocorrect-01", "cargocorrect-02"]),           // 03 — keyword crate lands on the right train car
-  cargoWrong: makePool(["cargoincorrect-01", "cargoincorrect-02", "cargoincorrect-03"]), // 04 — crate breaks (wrong keyword)
+  cargoWrong: wrapWrong(makePool(["cargoincorrect-01", "cargoincorrect-02", "cargoincorrect-03"])), // 04 — crate breaks (wrong keyword)
   cargoBounce: makePool(["cargobounce-01", "cargobounce-02"]),              // 05 — crate bounces
   ting:       makePool(["ting-01", "ting-02"]),                             // 06 — "ting" when a car is loaded / points
   trainChug:  () => playFile("trainchug-01", 0.7),                          // 07 — train moves to the next car

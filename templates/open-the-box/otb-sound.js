@@ -15,6 +15,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. "gamecompleted" sits in ./sounds/ but is deliberately unused
@@ -38,7 +39,7 @@ export const otbSound = {
   intro: () => playFile("intro"),                                            // 01 — right when PLAY is pressed, before the grid appears
   openBox: makePool(["openbox-01", "openbox-02", "openbox-03"]),             // 02 — tapping a box open
   correct: makePool(["correct-01", "correct-02", "correct-03"]),             // 03 — correct answer
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]),         // 04 — wrong answer
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 04 — wrong answer
   gameOver: () => playFile("gameover"),                                      // 06 — lose: time ran out before every box was solved
   timesUp: () => playFile("timesup"),                                        // 07 — win: every box solved before time ran out
   restart: () => playFile("restart"),                                        // 08 — "Start again"

@@ -20,6 +20,7 @@
 
 import { sound as coreSound } from "../../core/sound.js";
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. menu/leaderboard/revealanswers sit in ./sounds/ for
@@ -97,7 +98,7 @@ export const crosswordSound = {
     blip({ freq: 200, freqEnd: 120, dur: 120, type: "square",   gain: 0.12 });
     blip({ freq: 150, dur: 90,  type: "triangle", gain: 0.07, delay: 55 });
   },
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]),
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])),
   play: () => playFile("intro"),
   restart: () => playFile("restart"),
   timeWarning: () => playFile("timesup"),

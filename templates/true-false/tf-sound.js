@@ -17,6 +17,7 @@
 // =============================================================
 
 import { createPack } from "../../core/sfx.js";
+import { wrapWrong } from "../../core/wrong-sound.js";
 
 // Đợt 85 (7/8/2026) — fetched at IMPORT time (prime() below), not on first play.
 // See core/sfx.js. This game ticks the clock every second, so clocktick is hot.
@@ -40,7 +41,7 @@ export const tfSound = {
   conveyorCentred: () => playFile("conveyorcentred"),              // 03 — a statement finishes arriving at the centre
   conveyorLeave: () => playFile("conveyorleave"),                  // 04 — a statement starts drifting away to the right
   correct: makePool(["correct-01", "correct-02", "correct-03"]),   // 07 — answered True/False correctly
-  wrong: makePool(["incorrect-01", "incorrect-02", "incorrect-03"]), // 08 — answered wrong
+  wrong: wrapWrong(makePool(["incorrect-01", "incorrect-02", "incorrect-03"])), // 08 — answered wrong
   gameCompleted: () => playFile("gamecompleted"),                  // 09 — answered every statement before losing
   gameOver: () => playFile("gameover"),                            // 10 — lost all lives before finishing
   timesUp: () => playFile("timesup"),                              // 11 — countdown reached 0 before finishing

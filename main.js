@@ -25,6 +25,7 @@ import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
+import { WRONG_SOUND_OPTIONS, getWrongSoundChoice, setWrongSoundChoice, previewWrongSound } from "./core/wrong-sound.js";
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
@@ -2623,6 +2624,11 @@ function openSettingsFlow() {
         "Set the options a new assignment starts with", () => showTemplates("homework")));
       list.append(menuRow("Classes",
         "Class rolls used by activities that call pupils by name", showClasses));
+      // ⭐ Đợt 274 (27/8/2026, thầy) — a meme sound effect for wrong answers,
+      // for playing along in class only. Never touches homework/assignment —
+      // see core/wrong-sound.js's setAssignmentMode().
+      list.append(menuRow("Wrong-answer sound",
+        "A fun sound for wrong answers in class (never used for homework)", showWrongSound));
       // placeholder rows for features coming later
       list.append(menuRow("Appearance", "Coming soon", null));
       list.append(menuRow("Leaderboard & results", "Coming soon", null));
@@ -3069,6 +3075,34 @@ function openSettingsFlow() {
       save.onclick = () => { saveDefaultOptions(t.type, draft, kind); close(); toast("Settings saved"); };
       actions.append(cancel, save);
       body.append(actions);
+    }
+
+    // ⭐ Đợt 274 (27/8/2026, thầy) — pick which sound plays on a wrong
+    // click/pick/answer during normal play. Saved and applied immediately
+    // (core/wrong-sound.js), no separate Save button — same "tap to apply"
+    // feel as the mute toggle in-game. Tapping a meme choice also previews it
+    // right away so the teacher can hear it before leaving the screen.
+    function showWrongSound() {
+      body.closest(".aw-modal")?.classList.remove("is-optswide");
+      setTitle("Wrong-answer sound", showMenu);
+      body.innerHTML = "";
+      const list = el("div", "aw-set-menu");
+      const rows = new Map();
+      WRONG_SOUND_OPTIONS.forEach(opt => {
+        const row = el("button", "aw-set-row" + (opt.id === getWrongSoundChoice() ? " is-current" : ""));
+        row.type = "button";
+        const txt = el("div", "aw-set-rowtext");
+        txt.append(el("div", "aw-set-rowtitle", opt.label));
+        row.append(txt, el("span", "aw-set-check", "✓"));
+        row.onclick = () => {
+          setWrongSoundChoice(opt.id);
+          rows.forEach((r, id) => r.classList.toggle("is-current", id === opt.id));
+          if (opt.file) previewWrongSound(opt.id);
+        };
+        rows.set(opt.id, row);
+        list.append(row);
+      });
+      body.append(list);
     }
 
     function menuRow(title, sub, onClick) {
