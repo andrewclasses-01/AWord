@@ -12,7 +12,97 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 276** (27/8/2026, thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 277** (27/8/2026, thầy — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì
+> thay thế nó; Default = không chồng gì thêm; sửa đúng 1 hàm `playWrongEffect()`; bàn thử mới
+> `dot276-wrongsound-layered.html` 11/11 ĐẠT — ⚠️ tên file trùng số "276" với Đợt 276 Fight mode bên
+> dưới là NGẪU NHIÊN, hai phiên Claude chạy song song cùng máy không hề đụng file nhau, xem ghi chú
+> đầu mục Đợt 277; ⬜ chờ thầy bấm tay, CHƯA PUSH lúc viết dòng này). Trước đó: **Đợt 276** (27/8/2026,
+> thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được
+> chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội
+> trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
+> đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
+> kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 277 (27/8/2026, thầy) — ⭐ **ÂM TRẢ LỜI SAI: CHỒNG LÊN ÂM GỐC, KHÔNG THAY THẾ**
+
+⚠️ **LƯU Ý SỐ ĐỢT**: đợt này code SONG SONG với Đợt 276 (Fight mode "Miss wait", ngay dưới) — một
+phiên Claude khác, cùng máy, cùng lúc. Kiểm bằng `git fetch` + `git log` trước khi bắt đầu (đúng
+quy trình `check-git-sync-truoc-khi-sua-app` trong hồ sơ trí nhớ) xác nhận **không đụng file nhau**
+(Đợt 276 chỉ sửa `core/fight.js`; đợt này chỉ sửa `core/wrong-sound.js`) nên an toàn, không mất
+việc của ai. Tên bàn thử `scratch/dot276-wrongsound-layered.html` viết TRƯỚC KHI phát hiện số 276
+đã bị dùng — số trong tên file bàn thử không nhất thiết khớp số Đợt, không đổi tên lại cho khỏi
+nhầm với `scratch/dot276-wrongwait.html` của Fight mode (hai file khác thư mục ý nghĩa, chỉ trùng
+số).
+
+### Thầy báo gì
+
+> "Điều chỉnh thêm 1 chút: khi thêm 1 âm báo sai, vẫn sẽ phát âm default đi cùng luôn. Âm default
+> mặc định luôn có, các âm khác chỉ kèm thêm"
+
+### Trước đợt này sai ở đâu
+
+[[Đợt 274]]/[[Đợt 275]] dựng tính năng theo kiểu THAY THẾ: chọn "Default" thì nghe âm gốc của
+game; chọn một clip (hoặc Mix) thì nghe clip đó **THAY CHO** âm gốc — `playWrongEffect(fallback)`
+chỉ gọi `fallback()` khi lựa chọn là "default" hoặc rơi vào các nhánh dự phòng (không tìm thấy
+entry, elForEntry null...). Thầy muốn khác: âm gốc **LUÔN LUÔN** phát (đúng như hành vi TRƯỚC KHI
+có tính năng này ở Đợt 274), lựa chọn tuỳ chỉnh nếu có chỉ là LỚP CHỒNG THÊM lên trên, không bao
+giờ giành mất lượt phát của âm gốc.
+
+### Đã sửa
+
+Đúng MỘT hàm, `playWrongEffect()` trong `core/wrong-sound.js`:
+
+```js
+export function playWrongEffect(fallback) {
+  if (assignmentMode) return fallback();
+  fallback();                              // ⭐ luôn phát trước — lớp nền, không bao giờ mất
+  const choice = getWrongChoice();
+  if (choice.mode === "default") return;   // không chồng gì thêm
+  // ...chọn entry (single/mix) như cũ, phát THÊM nếu tìm được...
+}
+```
+
+`wrapWrong(fn)` — hàm 15 template gọi tới — **không đổi chữ ký**, vẫn `(...args) =>
+playWrongEffect(() => fallbackFn(...args))`, nên không file template nào đụng lại. `core/engine.js`
+cũng không đụng — `setAssignmentMode()` vẫn là ranh giới duy nhất cho assignment, không đổi gì (âm
+tuỳ chỉnh vẫn tuyệt đối không lọt vào assignment, chỉ là bây giờ đó là "không CHỒNG thêm gì" thay vì
+"không THAY THẾ gì" — với assignment thì hai cách diễn đạt cho cùng một kết quả: chỉ nghe âm gốc).
+
+"Default" đổi Ý NGHĨA (không đổi hành vi CỦA CHÍNH NÓ): trước là "lựa chọn duy nhất phát ra âm gốc",
+nay là "không chồng thêm gì" — nhưng âm gốc thì LUÔN phát trong cả hai cách hiểu, nên với ai đang ở
+"Default" thì trải nghiệm y hệt như trước, không đổi gì.
+
+### Bàn thử
+
+`scratch/dot276-wrongsound-layered.html` — gọi THẲNG `playWrongEffect()` thật (không viết lại logic
+để đối chứng, đúng bài học từ bug Mix ở Đợt 275), dùng một `fallback` giả đếm số lượt gọi:
+
+| # | Kiểm | Kết quả |
+|---|---|---|
+| 1 | Default | chỉ base, không có gì chồng thêm |
+| 2 | Single (chọn "error") | CẢ HAI: base + error.mp3, đúng 2 lượt phát |
+| 3 | Mix (tích error+faaah), 24 lượt | mọi lượt đều có base + đúng 1 extra ngẫu nhiên, trúng cả hai clip qua 24 lượt |
+| 4 | Mix rỗng (bỏ tích hết) | chỉ base |
+| 5 | Assignment mode (dù đã chọn Mix) | chỉ base — không bao giờ chồng, bất kể lựa chọn |
+| 6 | Tắt tiếng (mute), đã chọn Single | base "phát" (hàm giả cứ gọi — hàm thật của từng template tự biết im lặng khi mute) nhưng clip chồng thêm bị chặn hẳn |
+
+**11/11 ĐẠT**, `node --input-type=module --check` sạch, 0 lỗi console.
+
+⚠️ **`scratch/dot275-wrongsound-full.html` nay có 1 bước lỗi thời — KHÔNG PHẢI HỒI QUY**: bước "24
+random wrong-triggers..." đọc `window.__playLog[0]` với giả định THAY THẾ (mảng chỉ có 1 phần tử);
+nay `playWrongEffect` luôn gọi base TRƯỚC nên `[0]` luôn là `"FALLBACK"`, không phải tên clip —
+28/29 thay vì 29/29. Đây là bàn thử của Đợt 275, đo đúng NGỮ NGHĨA của Đợt 275 (đã đổi ở đợt này) —
+giữ nguyên làm sử liệu, không sửa lại theo ngữ nghĩa mới, đúng quy ước dự án.
+
+### VIỆC ĐANG CHỜ
+
+⬜ **CHỜ THẦY BẤM TAY**: chơi một act thường bất kỳ, chọn một âm (hoặc Mix), bấm sai — phải nghe
+**ĐỦ HAI âm chồng lên nhau** (âm gốc của game + âm tuỳ chỉnh), không phải chỉ một trong hai; chọn
+lại "Default" — chỉ còn nghe âm gốc như trước giờ; mở một assignment thật qua `play.html` — vẫn chỉ
+nghe âm gốc, không lẫn âm tuỳ chỉnh dù đã chọn Mix (ranh giới quan trọng nhất, không đổi qua cả 3
+đợt 274/275/277).
 
 ---
 

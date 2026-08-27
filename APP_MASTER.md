@@ -8,7 +8,38 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 276 — FIGHT MODE: "Miss wait", giới hạn thời gian đội sau khi đối phương trả lời SAI)**.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 277 — âm trả lời sai nay CHỒNG LÊN âm gốc, không thay thế)**.
+> ⚠️ Đợt 277 code SONG SONG với Đợt 276 (một phiên Claude khác, cùng máy — xem `check-git-sync-truoc-khi-sua-app`
+> trong hồ sơ trí nhớ) — hai đợt không đụng file nhau (Đợt 276 chỉ `core/fight.js`; Đợt 277 chỉ
+> `core/wrong-sound.js`), `git fetch` xác nhận không có gì để kéo về trước khi push đợt này.
+>
+> **Đợt 277** (27/8/2026, thầy) — ⭐ **ÂM TRẢ LỜI SAI: CHỒNG LÊN ÂM GỐC, KHÔNG THAY THẾ.** Thầy:
+> *"khi thêm 1 âm báo sai, vẫn sẽ phát âm default đi cùng luôn. Âm default mặc định luôn có, các âm
+> khác chỉ kèm thêm"*. Nối tiếp [[Đợt 274]]/[[Đợt 275]] — trước đợt này chọn một âm (hoặc Mix) thì
+> âm đó THAY CHO âm gốc của game; nay âm gốc luôn phát (`fallback()` gọi VÔ ĐIỀU KIỆN ngoài
+> assignment, y hệt trước Đợt 274 chưa từng có tính năng này), âm tuỳ chỉnh nếu có chỉ CHỒNG THÊM
+> lên trên. "Default" nay nghĩa là "không chồng gì thêm" thay vì "âm duy nhất được phép phát" — bản
+> chất nó vẫn LUÔN phát như cũ, chỉ đổi Ý NGHĨA của các lựa chọn khác quanh nó.
+>
+> Sửa ĐÚNG MỘT hàm: `playWrongEffect()` trong `core/wrong-sound.js` — gọi `fallback()` trước (base
+> layer), rồi mới xét lựa chọn (default/single/mix) để phát THÊM một clip nếu có. `wrapWrong()` +
+> chữ ký gọi từ 15 template + `core/engine.js` không đổi gì — chỉ thân hàm bên trong thay đổi.
+>
+> Bàn thử mới `scratch/dot276-wrongsound-layered.html` (đổi tên **dot276** vì lúc viết chưa biết
+> Đợt 276 đã bị phiên kia dùng mất — số thứ tự file test và số Đợt KHÔNG BẮT BUỘC phải khớp, xem
+> ghi chú trong bàn thử) — gọi thẳng `playWrongEffect()` thật, không viết lại logic để đối chứng
+> (bài học từ bug Đợt 275): **11/11 ĐẠT** — Default chỉ base · Single/Mix luôn có CẢ HAI (base +
+> extra, đúng 2 lượt phát, không bao giờ chỉ 1) · Mix rỗng chỉ base · assignment mode **luôn** chỉ
+> base bất kể đã chọn gì · muted thì base vẫn "phát" (tự no-op bên trong nó) nhưng extra bị chặn
+> hẳn. `scratch/dot275-wrongsound-full.html` Bước "24 random..." nay lỗi thời (giả định THAY THẾ,
+> đọc `playLog[0]` — nay luôn là base trước) → 28/29, **1 lỗi CŨ đã biết, không phải hồi quy** (xem
+> `GHI CHU DU AN.md` Đợt 277). `node --input-type=module --check` sạch trên `core/wrong-sound.js`.
+>
+> ⬜ **CHỜ THẦY BẤM TAY**: chơi một act thường, bấm sai — phải nghe ĐỦ HAI âm chồng lên nhau (âm gốc
+> của game + âm tuỳ chỉnh đã chọn/mix); chọn "Default" thì chỉ nghe âm gốc như trước giờ; mở một
+> assignment thật — vẫn chỉ nghe âm gốc, không lẫn âm tuỳ chỉnh dù đã chọn Mix.
+>
+> ---
 >
 > **Đợt 276** (27/8/2026, thầy) — ⭐⭐ **FIGHT MODE: THANH "MISS WAIT" — GIỚI HẠN THỜI GIAN
 > ĐỘI CÒN LẠI ĐƯỢC CHƠI TIẾP SAU KHI ĐỐI PHƯƠNG TRẢ LỜI SAI.** Thầy: *"kể cả khi không bật

@@ -1,8 +1,13 @@
 // =============================================================
-// WRONG-SOUND CHOICE (Đợt 274, 27/8/2026 — Đợt 275, 27/8/2026 mở rộng) — a
-// teacher preference for the sound every template plays on a wrong
-// click/pick/answer, letting the classroom hear a fun clip instead of each
-// game's own built-in effect.
+// WRONG-SOUND CHOICE (Đợt 274, 27/8/2026 — Đợt 275 mở rộng, Đợt 276 sửa cách
+// phát, cả hai cùng 27/8/2026) — a teacher preference for an EXTRA sound
+// every template plays alongside a wrong click/pick/answer, letting the
+// classroom hear a fun clip layered on top of the game's own built-in effect.
+//
+// ⭐ Đợt 276 (thầy) — the game's own sound is the permanent BASE LAYER, never
+// replaced: a chosen clip (single or one random Mix pick) plays ON TOP of it,
+// not instead of it. "Default" means "no extra clip layered on" — see
+// playWrongEffect() below for exactly how the two calls stack.
 //
 // ⛔⛔ NORMAL PLAY ONLY. An assignment/homework play (`session` truthy in
 // core/engine.js's startGame()) NEVER hears these — it always keeps the
@@ -278,19 +283,25 @@ export function previewSound(id) {
 
 /**
  * What every template's wrong-effect wrapper calls. `fallback` is that
- * template's own effect (its mp3 pool play, or a synthesized tone) — called
- * unchanged whenever the override does not apply.
+ * template's own effect (its mp3 pool play, or a synthesized tone).
+ *
+ * ⭐ Đợt 276 (thầy) — the game's own sound is no longer replaced, it is the
+ * permanent BASE LAYER: `fallback()` always runs (outside assignment mode,
+ * same as ever), and a chosen extra clip — single or one random Mix pick —
+ * plays ON TOP of it, not instead of it. "Default" now just means "no extra
+ * layered on", not "the only thing that plays" (it always played anyway).
  */
 export function playWrongEffect(fallback) {
   if (assignmentMode) return fallback();
+  fallback();
   const choice = getWrongChoice();
-  if (choice.mode === "default") return fallback();
+  if (choice.mode === "default") return;
 
   let entry;
   if (choice.mode === "mix") {
     const entries = getEntries();
     const ids = choice.ids.filter(id => entries.some(e => e.id === id));
-    if (!ids.length) return fallback();
+    if (!ids.length) return;
     // ⚠️ pick the random id in its OWN statement, outside .find()'s predicate —
     // a predicate re-runs once per element it checks, so `Math.random()` inside
     // it rerolls the target on every comparison instead of picking once. Bench
@@ -301,9 +312,9 @@ export function playWrongEffect(fallback) {
   } else {
     entry = findEntry(choice.id);
   }
-  if (!entry) return fallback();
+  if (!entry) return;
   const a = elForEntry(entry);
-  if (!a) return fallback();   // e.g. an uploaded clip whose IndexedDB read hasn't finished yet
+  if (!a) return;   // e.g. an uploaded clip whose IndexedDB read hasn't finished yet
   if (sound.isMuted()) return;
   try { a.currentTime = 0; a.play().catch(() => {}); } catch { /* ignore */ }
 }
