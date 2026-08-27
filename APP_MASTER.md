@@ -8,10 +8,32 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 277 — âm trả lời sai nay CHỒNG LÊN âm gốc, không thay thế)**.
-> ⚠️ Đợt 277 code SONG SONG với Đợt 276 (một phiên Claude khác, cùng máy — xem `check-git-sync-truoc-khi-sua-app`
-> trong hồ sơ trí nhớ) — hai đợt không đụng file nhau (Đợt 276 chỉ `core/fight.js`; Đợt 277 chỉ
-> `core/wrong-sound.js`), `git fetch` xác nhận không có gì để kéo về trước khi push đợt này.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 278 — hàng Default trong màn Wrong-answer sound nay LUÔN có
+> dấu ✓, bất kể trường hợp nào)**.
+>
+> **Đợt 278** (27/8/2026, thầy) — ⭐ **HÀNG "DEFAULT" LUÔN CÓ DẤU ✓ — KHÔNG BỊ TẮT KHI CHỌN ÂM
+> KHÁC.** Thầy: *"Nút default luôn luôn có nút tích bất kể trường hợp nào. Nếu không bấm Mix thì
+> các âm khác được tích 1 cái, bấm mix thì được tích nhiều (Default luôn tích)"*. Vá đúng khớp nối
+> còn thiếu của [[Đợt 277]]: âm gốc đã LUÔN phát từ Đợt 277, nhưng dấu ✓ trên hàng "Default" vẫn chỉ
+> sáng khi KHÔNG chọn gì thêm — giao diện nói dối về hành vi thật.
+>
+> Sửa đúng một hàm `isChecked()` trong `main.js`'s `showWrongSound()`: hàng `kind === "default"`
+> trả `true` VÔ ĐIỀU KIỆN (bỏ qua `choice.mode`); các hàng khác giữ nguyên luật cũ — ngoài Mix thì
+> tích ĐÚNG MỘT (radio), trong Mix thì tích được NHIỀU (checkbox). Bấm hàng Default vẫn giữ hành vi
+> "xoá hết lựa chọn thêm" (`setWrongChoice({mode:"default"})`) — chỉ đổi Ý NGHĨA của dấu ✓ trên
+> chính nó, không đổi việc bấm vào nó làm gì.
+>
+> Bàn thử mới `scratch/dot278-wrongsound-defaultcheck.html` — copy nguyên văn thân hàm
+> `showWrongSound()` sau khi vá: **20/20 ĐẠT** — Default tích ngay từ đầu · vẫn tích khi chọn 1 âm
+> đơn (kèm âm đó cũng tích) · vẫn tích khi đổi sang âm đơn khác (đúng luật "một tại một thời điểm")
+> · vẫn tích khi bật Mix và tích 2 âm cùng lúc · vẫn tích dù Mix rỗng (bỏ tích hết) · bấm Default
+> xoá hết lựa chọn khác và (vẫn) hiện tích. `node --input-type=module --check` sạch.
+>
+> ⬜ **CHỜ THẦY BẤM TAY**: mở Cài đặt ▸ Wrong-answer sound thật — hàng Default phải LUÔN có dấu ✓
+> dù đang ở Single hay Mix; chọn một âm đơn thì Default + âm đó cùng có dấu ✓; bật Mix tích 2-3 âm
+> thì Default + các âm đã tích đều có dấu ✓.
+>
+> ---
 >
 > **Đợt 277** (27/8/2026, thầy) — ⭐ **ÂM TRẢ LỜI SAI: CHỒNG LÊN ÂM GỐC, KHÔNG THAY THẾ.** Thầy:
 > *"khi thêm 1 âm báo sai, vẫn sẽ phát âm default đi cùng luôn. Âm default mặc định luôn có, các âm

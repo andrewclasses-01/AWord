@@ -12,17 +12,80 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 277** (27/8/2026, thầy — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì
+> Mới nhất: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
+> dấu ✓ bất kể đang ở Single hay Mix, vì âm gốc đã luôn phát từ Đợt 277; các âm khác vẫn tích 1
+> (ngoài Mix) hoặc nhiều (trong Mix) như cũ; sửa đúng 1 hàm `isChecked()` trong `main.js`; bàn thử
+> mới `dot278-wrongsound-defaultcheck.html` 20/20 ĐẠT; ⬜ chờ thầy bấm tay, CHƯA PUSH lúc viết dòng
+> này). Trước đó: **Đợt 277** (27/8/2026, thầy — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì
 > thay thế nó; Default = không chồng gì thêm; sửa đúng 1 hàm `playWrongEffect()`; bàn thử mới
 > `dot276-wrongsound-layered.html` 11/11 ĐẠT — ⚠️ tên file trùng số "276" với Đợt 276 Fight mode bên
 > dưới là NGẪU NHIÊN, hai phiên Claude chạy song song cùng máy không hề đụng file nhau, xem ghi chú
-> đầu mục Đợt 277; code `d0b7b5d` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜
-> chờ thầy bấm tay thật). Trước đó: **Đợt 276** (27/8/2026,
+> đầu mục Đợt 277; code `d0b7b5d` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối). Trước đó: **Đợt 276** (27/8/2026,
 > thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được
 > chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 278 (27/8/2026, thầy) — ⭐ **HÀNG "DEFAULT" LUÔN CÓ DẤU ✓, BẤT KỂ TRƯỜNG HỢP NÀO**
+
+### Thầy báo gì
+
+> "Chỉnh: Nút default luôn luôn có nút tích bất kể trường hợp nào. Nếu không bấm Mix thì các âm
+> khác được tích 1 cái, bấm mix thì được tích nhiều (Default luôn tích)"
+
+### Vì sao cần vá
+
+[[Đợt 277]] đã đổi HÀNH VI: âm gốc của game luôn phát, chọn thêm chỉ CHỒNG lên chứ không thay thế.
+Nhưng GIAO DIỆN của màn Wrong-answer sound (`main.js`'s `showWrongSound()`) không đi theo — hàm
+`isChecked()` vẫn viết theo luật CŨ (thay thế): hàng "Default" chỉ sáng dấu ✓ khi `choice.mode ===
+"default"`, tức là khi thầy chọn một âm đơn hay bật Mix thì dấu ✓ của Default TẮT ĐI — trong khi âm
+gốc của nó vẫn đang phát mỗi lượt sai, y hệt Đợt 277 đã đổi. Giao diện nói dối về đúng cái quan
+trọng nhất: "âm nào đang thật sự phát ra".
+
+### Đã sửa
+
+Một hàm, `isChecked(entry, choice)` trong `main.js`:
+
+```js
+function isChecked(entry, choice) {
+  if (entry.kind === "default") return true;              // ⭐ Đợt 278 — luôn tích
+  if (choice.mode === "mix") return choice.ids.includes(entry.id);
+  if (choice.mode === "single") return choice.id === entry.id;
+  return false;
+}
+```
+
+Luật của CÁC HÀNG KHÁC không đổi — thầy xác nhận rõ trong yêu cầu: *"Nếu không bấm Mix thì các âm
+khác được tích 1 cái"* (đã đúng từ Đợt 275 — chế độ `single` chỉ bao giờ tích một), *"bấm mix thì
+được tích nhiều"* (đã đúng — chế độ `mix` cho tích bao nhiêu tuỳ ý). Chỉ riêng dấu ✓ của Default là
+cần vá để KHỚP với thực tế đã đổi từ Đợt 277.
+
+Bấm vào hàng Default vẫn giữ nguyên hành vi cũ — `setWrongChoice({mode:"default"})`, xoá hết lựa
+chọn thêm (đơn hoặc Mix) — chỉ có Ý NGHĨA của dấu ✓ trên chính nó là đổi (từ "đây là lựa chọn duy
+nhất" sang "cái này luôn có sẵn, không phụ thuộc gì khác").
+
+### Bàn thử
+
+`scratch/dot278-wrongsound-defaultcheck.html` — copy nguyên văn thân hàm `showWrongSound()` (sau
+khi vá) từ `main.js`, không cần đăng nhập Google: xác nhận Default tích ngay từ đầu · vẫn tích khi
+chọn một âm đơn (kèm âm đó cũng tích, đúng "cả hai cùng tích") · vẫn tích khi đổi sang âm đơn khác
+(đúng luật một-tại-một-thời-điểm ngoài Mix) · vẫn tích khi bật Mix và tích 2 âm cùng lúc (đúng luật
+nhiều-tuỳ-ý trong Mix) · vẫn tích dù bỏ tích hết trong Mix (Mix rỗng) · bấm Default xoá hết lựa chọn
+khác và **vẫn** hiện tích (không "biến mất rồi hiện lại", luôn hiện). **20/20 ĐẠT** sau khi sửa lại
+2 giả định sai trong bản nháp đầu của chính bàn thử (không phải lỗi `main.js`): quên rằng bật Mix
+ngay sau một lựa chọn đơn sẽ GIEO mix bằng đúng lựa chọn đó (hành vi có sẵn từ Đợt 275/277, không
+phải của đợt này) — bàn thử ban đầu kỳ vọng Mix bắt đầu rỗng nên báo sai oan; sửa bằng cách
+`setWrongChoice()` đặt lại trạng thái RÕ RÀNG trước mỗi bước đo thay vì suy luận ngầm từ bước trước.
+`node --input-type=module --check` sạch, 0 lỗi console.
+
+### VIỆC ĐANG CHỜ
+
+⬜ **CHỜ THẦY BẤM TAY**: mở Cài đặt ▸ Wrong-answer sound thật — hàng Default phải LUÔN có dấu ✓ dù
+đang ở trạng thái nào; chọn một âm đơn thì Default + âm đó cùng có dấu ✓; bật Mix tích 2-3 âm thì
+Default + mọi âm đã tích đều có dấu ✓ cùng lúc.
 
 ---
 

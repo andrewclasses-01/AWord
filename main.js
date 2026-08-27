@@ -3102,10 +3102,16 @@ function openSettingsFlow() {
         list.append(uploadTile());
       }
 
+      // ⭐ Đợt 278 (thầy) — Default's own sound is the permanent base layer
+      // (Đợt 277: it always plays now, nothing ever replaces it), so its row
+      // shows ticked in EVERY case, not only when nothing else is picked.
+      // The other rows still follow the mode: exactly one ticked outside
+      // Mix, any number ticked inside it.
       function isChecked(entry, choice) {
+        if (entry.kind === "default") return true;
         if (choice.mode === "mix") return choice.ids.includes(entry.id);
         if (choice.mode === "single") return choice.id === entry.id;
-        return entry.kind === "default";
+        return false;
       }
 
       function pickRow(entry, choice) {
