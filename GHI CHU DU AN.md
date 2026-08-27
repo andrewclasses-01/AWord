@@ -12,7 +12,110 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 274** (27/8/2026, thầy — Âm thanh trả lời sai kiểu meme trong Cài đặt, chỉ dành cho chơi thường, tuyệt đối không cho assignment; ĐÃ PUSH, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+> Mới nhất: **Đợt 275** (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; ⬜ chờ thầy bấm tay màn Settings thật, CHƯA PUSH). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 275 (27/8/2026, thầy) — ⭐⭐ **TẢI LÊN + ĐỔI TÊN/XOÁ + CHẾ ĐỘ MIX cho âm trả lời sai**
+
+### Thầy báo gì
+
+> "Thêm 1 nút tải lên và thêm khả năng xóa/đổi tên các loại đang có (trừ Default) + thêm 1 chế độ
+> mix, chọn mix thì được tích nhiều âm để mỗi lần sai sẽ ngẫu nhiên các âm đó"
+
+Nối tiếp [[Đợt 274]] — nay danh sách 6 lựa chọn cố định (Default + 5 meme) trở thành một danh sách
+**động**: thầy tự thêm/bớt/đổi tên, và có thể chọn NHIỀU âm cùng lúc thay vì một âm cố định.
+
+### Quyết định kiến trúc
+
+1. **Giữ nguyên hợp đồng phía template.** `wrapWrong(fn)` và `playWrongEffect(fallback)` — hai hàm
+   17 template gọi tới — **không đổi chữ ký**. Nghĩa là 15 file `*-sound.js` + `core/engine.js` của
+   Đợt 274 **không sửa lại dòng nào** ở đợt này; toàn bộ thay đổi nằm gọn trong `core/wrong-sound.js`
+   (viết lại phần lõi) và `main.js` (viết lại `showWrongSound()`).
+2. **Lựa chọn nay là MỘT TRONG BA DẠNG** (JSON trong `localStorage["aword-wrongsound"]`):
+   `{mode:"default"}` · `{mode:"single",id}` · `{mode:"mix",ids:[...]}`. Chuỗi id trần của Đợt 274
+   (`"bruh"`, `"default"`...) được `getWrongChoice()` tự dịch ngược sang dạng mới khi đọc, không bao
+   giờ ghi lại dạng cũ — không cần thầy làm gì, tự nâng cấp âm thầm.
+3. **Xoá/đổi tên 5 clip có sẵn KHÔNG đụng file mp3 gốc** — ghi lại dưới dạng DIFF trong
+   `localStorage["aword-wrongsound-overrides"]` (`{removed:[...], renamed:{id:label}}`). Muốn "khôi
+   phục" một clip đã xoá thì chỉ cần xoá key này khỏi localStorage (chưa có nút bấm cho việc đó —
+   thầy không yêu cầu, và xoá vĩnh viễn không phải điều thầy xin, "xóa" ở đây vẫn có đường lùi).
+4. **Tải lên lưu ở IndexedDB, KHÔNG qua Firestore.** Cân nhắc: Firestore có trần 1MB/tài liệu và
+   ứng dụng này chưa từng dùng Firebase Storage — thêm một tầng lưu trữ mới cho một tính năng nhỏ là
+   không đáng. IndexedDB lưu thẳng Blob (không phải base64, không tốn 33% dung lượng), giới hạn dung
+   lượng rộng rãi hơn nhiều localStorage. **Đánh đổi**: tải lên KHÔNG theo thầy sang máy khác —
+   device-local, giống hệt phạm vi của bản thân lựa chọn (localStorage) từ Đợt 274. Đã ghi rõ trong
+   chú thích đầu file để đợt sau không nhầm là thiếu sót.
+5. **object URL của file tải lên đọc THẲNG từ Blob trong bộ nhớ — không qua mạng**, nên không cần
+   "prime" như 5 clip mp3 gói sẵn (`core/sfx.js`'s bài học) — phát ngay lần đầu, nhanh hơn cả clip có
+   sẵn.
+
+### Việc trong `core/wrong-sound.js`
+
+`getEntries()` trả về mảng động `[Default, ...5 clip có sẵn (đã áp diff), ...clip tải lên]`, mỗi
+phần tử có `kind: "default"|"builtin"|"custom"`. `renameSound(id,label)` · `removeSound(id)`
+(async — xoá bản ghi IndexedDB + thu hồi object URL nếu là custom) · `uploadSound(file)` (kiểm
+MIME/đuôi file + trần 8 MB, ném lỗi có thể in thẳng cho thầy đọc). Xoá một âm đang được chọn (đơn
+hoặc trong Mix) thì `pruneChoiceOf()` tự dọn khỏi lựa chọn hiện tại — không bao giờ để app trỏ vào
+một âm không còn tồn tại.
+
+### Việc trong `main.js`
+
+`showWrongSound()` viết lại hoàn toàn: hàng "Default" (không nút phụ) → hàng "Mix" (bật/tắt chế độ
+tích nhiều, giữ nguyên các âm đã tích nếu đã ở Mix từ trước) → từng hàng âm (nút ✎ đổi tên mở
+`<input>` thật tại chỗ — **không dùng `prompt()`**, bị chặn trong webview nhúng như myActivity, đúng
+lý do `addClassTile` ở Settings ▸ Classes đã né từ trước; nút 🗑 xoá gọi thẳng, không hỏi lại) → ô
+"+ Upload a sound" (input file ẩn `accept="audio/*"`, mở bằng `.click()` lập trình). Nhãn hiển thị
+qua `escapeText()` vì nay là CHỮ THẦY TỰ GÕ (đổi tên/tên file) chứ không còn là hằng số tĩnh trong
+code — bỏ qua bước này thì đổi tên thành `<script>` là tự bắn XSS vào chính app của mình.
+
+### ⭐⭐⭐ Bug thật bắt được lúc viết bàn thử — `Math.random()` đứng SAI CHỖ
+
+Bản nháp đầu chọn ngẫu nhiên trong Mix bằng:
+
+```js
+entry = entries.find(e => e.id === ids[Math.floor(Math.random() * ids.length)]);
+```
+
+`.find()` gọi predicate **một lần cho MỖI phần tử nó xét qua** cho tới khi khớp — và `Math.random()`
+nằm NGAY TRONG predicate đó nên bốc lại một số MỚI ở mỗi lần xét, không phải MỘT LẦN trước khi tìm.
+Kết quả: `entries` gồm 7 phần tử (Default + 5 builtin + 1-2 custom), `.find()` duyệt từng phần tử
+với một "mục tiêu" xổ số khác nhau mỗi bước — xác suất KHÔNG phần tử nào khớp mục tiêu của chính nó
+xuyên suốt 7 lượt xét là có thật, và đo được: **~35% lượt "sai" lặng lẽ rơi về âm gốc của game** dù
+Mix đã tích đủ 2 âm hợp lệ. Vì bench đầu tiên gọi hàm `playWrongEffect` thật (không tự viết lại
+logic chọn số), bug lộ ra ngay; một phiên bản bench "viết lại logic y hệt để đối chứng" thay vì gọi
+thẳng hàm thật đã ĐẠT 100% — đúng bẫy quen thuộc của dự án này (đo cái mình TƯỞNG hàm làm, không đo
+cái hàm THẬT SỰ làm).
+
+**Vá**: tách `Math.random()` ra một dòng riêng (`pickedId = ids[Math.floor(Math.random() * ids.length)]`)
+TRƯỚC khi gọi `.find()`, để chỉ bốc số đúng MỘT LẦN.
+
+### Bàn thử
+
+`scratch/dot275-wrongsound-full.html` + `.js` — dựng lại **NGUYÊN VĂN** thân hàm `showWrongSound()`
+(copy thật từ `main.js`, không phải viết lại tinh thần) trong một trang không cần đăng nhập Google,
+tự động bấm qua từng bước và gọi thẳng `playWrongEffect`/`getWrongChoice`/`getEntries` thật của
+`core/wrong-sound.js` để xác nhận: dựng đúng 6+1 hàng ban đầu · chọn một âm (preview đúng file, dấu
+✓ nhảy đúng hàng) · đổi tên (persist đúng, không escape hỏng) · xoá âm đang chọn (rơi về Default
+đúng) · tải lên (nhãn suy từ tên file, từ chối file không phải audio) · bật Mix + tích 2 âm + **24
+lượt gọi `playWrongEffect` thật, toàn bộ rơi đúng vào 2 âm đã tích và trúng cả hai** (bắt được bug ở
+trên trước khi vá — dao động 60-90% ĐẠT tuỳ lần chạy, sau khi vá **luôn 100%**) · assignment mode
+vẫn bỏ qua Mix hoàn toàn · bỏ tích hết thì Mix rỗng tự rơi về âm gốc của game. **29/29 ĐẠT**,
+`node --input-type=module --check` sạch trên `core/wrong-sound.js` + `main.js`, 0 lỗi console.
+`scratch/dot274-wrongsound-ui.html` cũ nay lỗi thời (API đổi tên/hình dạng) — giữ làm sử liệu, không
+xoá, không sửa lại theo API mới.
+
+### VIỆC ĐANG CHỜ
+
+⬜ **CHƯA TỰ BẤM ĐƯỢC MÀN CÀI ĐẶT THẬT** (lý do như Đợt 274 — `main.js` cần đăng nhập Google riêng
+của thầy): thầy tự thử (a) tải lên một file mp3/m4a/wav thật từ máy — nghe đúng không, tên hiện ra
+có đúng tên file không; (b) đổi tên một clip có sẵn (vd đổi "Bruh" thành tên khác) — lưu qua lại có
+giữ không; (c) xoá một clip — danh sách có mất đúng nó không, các clip khác có nguyên vẹn; (d) bật
+Mix, tích 3 âm, chơi thử một act thường nhiều lượt sai xem có random thật không (không phải chỉ nghe
+1 âm lặp lại); (e) đóng trình duyệt mở lại (hoặc khởi động lại máy) — clip đã tải lên còn không
+(chỉ mất nếu thầy tự xoá dữ liệu duyệt web, IndexedDB sống qua khởi động lại máy).
+⬜ **CHƯA COMMIT/PUSH** — thầy xác nhận (a)-(e) ở trên trước, hoặc yêu cầu đẩy lên GitHub ngay nếu
+muốn kiểm trên máy khác luôn.
 
 ---
 

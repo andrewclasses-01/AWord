@@ -8,8 +8,44 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 274 — ÂM THANH TRẢ LỜI SAI KIỂU MEME, chỉ dành cho chơi
-> thường)**.
+> Cập nhật lần cuối: **27/8/2026 (Đợt 275 — TẢI LÊN + ĐỔI TÊN/XOÁ + CHẾ ĐỘ MIX cho âm trả lời sai)**.
+>
+> **Đợt 275** (27/8/2026, thầy) — ⭐⭐ **MỞ RỘNG ĐỢT 274: TẢI ÂM RIÊNG, ĐỔI TÊN/XOÁ MỌI MỤC (TRỪ
+> DEFAULT), CHẾ ĐỘ MIX (tích nhiều âm, mỗi lần sai random một cái).** Thầy: *"Thêm 1 nút tải lên
+> và thêm khả năng xóa/đổi tên các loại đang có (trừ Default) + thêm 1 chế độ mix, chọn mix thì
+> được tích nhiều âm để mỗi lần sai sẽ ngẫu nhiên các âm đó"*.
+>
+> `core/wrong-sound.js` viết lại phần lõi (chữ ký `wrapWrong`/`playWrongEffect`/`setAssignmentMode`
+> GIỮ NGUYÊN nên 15 file `*-sound.js` + `core/engine.js` của Đợt 274 KHÔNG đụng lại): danh sách
+> chọn nay ĐỘNG (`getEntries()`), lựa chọn nay là một trong ba dạng `{mode:"default"}` /
+> `{mode:"single",id}` / `{mode:"mix",ids:[...]}` (tự dịch ngược chuỗi id trần của Đợt 274). Xoá/đổi
+> tên 5 clip có sẵn là DIFF lưu riêng (`aword-wrongsound-overrides`), không đụng file mp3 gốc. Tải
+> lên lưu Blob thật trong IndexedDB (`aword-wrongsound-db`, device-local — KHÔNG qua Firestore, y
+> hệt phạm vi của lựa chọn từ Đợt 274, nên không theo thầy sang máy khác). `main.js` viết lại toàn
+> bộ `showWrongSound()`: mỗi hàng có nút ✎ đổi tên (input thật, không `prompt()` — bị chặn trong
+> webview nhúng) + nút 🗑 xoá; hàng "Mix" bật chế độ tích nhiều; ô "+ Upload a sound" (input file ẩn,
+> chặn ảnh/video bằng đuôi + MIME, tối đa 8 MB).
+>
+> ⭐⭐⭐ **BẮT ĐƯỢC 1 BUG THẬT lúc viết bàn thử `dot275-wrongsound-full.html`**: chọn ngẫu nhiên trong
+> Mix viết `entries.find(e => e.id === ids[Math.floor(Math.random() * ids.length)])` —
+> `Math.random()` nằm TRONG predicate của `.find()` nên bốc số MỚI mỗi phần tử nó xét qua, không
+> phải MỘT LẦN trước khi tìm; đo được **~35% lượt sai lặng lẽ rơi về âm gốc của game** dù đã tích
+> đủ 2 âm. Sửa bằng cách tách `pickedId` ra một dòng riêng TRƯỚC `.find()`. Bench đo lại **24/24
+> lượt sai chỉ rơi vào đúng 2 âm đã tích, đủ cả hai** (trước khi vá: dao động 60-90% ĐẠT tuỳ lần
+> chạy — lỗi kiểu "thỉnh thoảng mới cắn", không phải lúc nào cũng lộ).
+>
+> Bàn thử `scratch/dot275-wrongsound-full.html`: **29/29 ĐẠT** — dựng lại nguyên văn thân hàm
+> `showWrongSound()`, tự động bấm chọn/đổi tên/xoá/tải lên/tích Mix và đọc lại
+> `core/wrong-sound.js` để xác nhận từng bước; `node --input-type=module --check` sạch trên 3 file
+> đụng tới (`core/wrong-sound.js`, `main.js`, `core/app.css` không cần check JS). `dot274-*` cũ nay
+> lỗi thời (API đổi tên) — giữ làm sử liệu, không xoá.
+>
+> ⬜ **CHƯA TỰ BẤM ĐƯỢC MÀN CÀI ĐẶT THẬT** (lý do như Đợt 274 — cần đăng nhập Google riêng của
+> thầy): thầy thử tải lên một file mp3/m4a thật, đổi tên một clip có sẵn, xoá một clip, bật Mix
+> tích 2-3 âm rồi chơi thử nghe có random đúng không, và đóng/mở lại trình duyệt xem tải lên còn
+> giữ không (IndexedDB — chỉ mất khi xoá dữ liệu trình duyệt, không mất khi tắt máy/khởi động lại).
+>
+> ---
 >
 > **Đợt 274** (27/8/2026, thầy) — ⭐⭐ **"CÀI ĐẶT → ÂM THANH TRẢ LỜI SAI" — 5 CLIP MEME, KHÔNG BAO
 > GIỜ CHO ASSIGNMENT.** Thầy: *"thêm vào phần cài đặt một thẻ cài âm thanh khi bấm/chọn/chơi sai

@@ -25,7 +25,7 @@ import { icons } from "./core/icons.js";
 import { ensureTemplate } from "./core/registry.js";
 import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
-import { WRONG_SOUND_OPTIONS, getWrongSoundChoice, setWrongSoundChoice, previewWrongSound } from "./core/wrong-sound.js";
+import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
 import {
   ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
@@ -3077,32 +3077,142 @@ function openSettingsFlow() {
       body.append(actions);
     }
 
-    // ⭐ Đợt 274 (27/8/2026, thầy) — pick which sound plays on a wrong
+    // ⭐ Đợt 274/275 (27/8/2026, thầy) — pick which sound(s) play on a wrong
     // click/pick/answer during normal play. Saved and applied immediately
     // (core/wrong-sound.js), no separate Save button — same "tap to apply"
-    // feel as the mute toggle in-game. Tapping a meme choice also previews it
-    // right away so the teacher can hear it before leaving the screen.
+    // feel as the mute toggle in-game. Đợt 275 added three things on top of
+    // Đợt 274's single fixed pick: upload your own clips, rename/remove any
+    // entry except Default, and a Mix mode — tick several, one plays at
+    // random each time.
     function showWrongSound() {
       body.closest(".aw-modal")?.classList.remove("is-optswide");
       setTitle("Wrong-answer sound", showMenu);
       body.innerHTML = "";
       const list = el("div", "aw-set-menu");
-      const rows = new Map();
-      WRONG_SOUND_OPTIONS.forEach(opt => {
-        const row = el("button", "aw-set-row" + (opt.id === getWrongSoundChoice() ? " is-current" : ""));
+      body.append(list);
+      render();
+
+      function render() {
+        list.innerHTML = "";
+        const choice = getWrongChoice();
+        const entries = getWrongSoundEntries();   // [Default, ...builtin, ...custom]
+        list.append(pickRow(entries[0], choice)); // "Default"
+        list.append(mixToggleRow(choice));
+        entries.slice(1).forEach(entry => list.append(pickRow(entry, choice)));
+        list.append(uploadTile());
+      }
+
+      function isChecked(entry, choice) {
+        if (choice.mode === "mix") return choice.ids.includes(entry.id);
+        if (choice.mode === "single") return choice.id === entry.id;
+        return entry.kind === "default";
+      }
+
+      function pickRow(entry, choice) {
+        const row = el("button", "aw-set-row" + (isChecked(entry, choice) ? " is-current" : ""));
         row.type = "button";
         const txt = el("div", "aw-set-rowtext");
-        txt.append(el("div", "aw-set-rowtitle", opt.label));
+        const title = el("div", "aw-set-rowtitle", escapeText(entry.label));
+        txt.append(title);
+        row.append(txt);
+
+        if (entry.kind !== "default") {
+          const rename = el("button", "aw-set-iconbtn", icons.edit);
+          rename.type = "button"; rename.title = "Rename";
+          rename.onclick = e => { e.stopPropagation(); startRename(entry, title); };
+          row.append(rename);
+
+          const del = el("button", "aw-set-iconbtn aw-set-iconbtn-del", icons.trash);
+          del.type = "button"; del.title = "Remove";
+          del.onclick = e => {
+            e.stopPropagation();
+            removeWrongSound(entry.id).then(() => { render(); toast(`Removed "${entry.label}"`); });
+          };
+          row.append(del);
+        }
+        row.append(el("span", "aw-set-check", "✓"));
+
+        row.onclick = () => {
+          const current = getWrongChoice();
+          if (entry.kind === "default") { setWrongChoice({ mode: "default" }); render(); return; }
+          if (current.mode === "mix") {
+            const has = current.ids.includes(entry.id);
+            const ids = has ? current.ids.filter(id => id !== entry.id) : [...current.ids, entry.id];
+            setWrongChoice({ mode: "mix", ids });
+            if (!has) previewWrongSound(entry.id);
+          } else {
+            setWrongChoice({ mode: "single", id: entry.id });
+            previewWrongSound(entry.id);
+          }
+          render();
+        };
+        return row;
+      }
+
+      function mixToggleRow(choice) {
+        const row = el("button", "aw-set-row" + (choice.mode === "mix" ? " is-current" : ""));
+        row.type = "button";
+        const txt = el("div", "aw-set-rowtext");
+        txt.append(el("div", "aw-set-rowtitle", "Mix"),
+          el("div", "aw-set-rowsub", "Tick several below — a random one plays each time"));
         row.append(txt, el("span", "aw-set-check", "✓"));
         row.onclick = () => {
-          setWrongSoundChoice(opt.id);
-          rows.forEach((r, id) => r.classList.toggle("is-current", id === opt.id));
-          if (opt.file) previewWrongSound(opt.id);
+          const current = getWrongChoice();
+          if (current.mode === "mix") return;
+          const seed = current.mode === "single" ? [current.id] : [];
+          setWrongChoice({ mode: "mix", ids: seed });
+          render();
         };
-        rows.set(opt.id, row);
-        list.append(row);
-      });
-      body.append(list);
+        return row;
+      }
+
+      // Inline edit, same "swap the label for a real input" pattern as
+      // addClassTile below — prompt() is blocked in embedded views
+      // (myActivity's WebContentsView among them), so it can't be used here.
+      function startRename(entry, titleEl) {
+        const input = el("input", "aw-set-addinput");
+        input.value = entry.label;
+        input.maxLength = 40;
+        let done = false;
+        const commit = () => {
+          if (done) return;
+          done = true;
+          const v = input.value.trim();
+          if (v) renameWrongSound(entry.id, v);
+          render();
+        };
+        input.onkeydown = e => {
+          if (e.key === "Enter") { e.preventDefault(); commit(); }
+          if (e.key === "Escape") { done = true; render(); }
+        };
+        input.onblur = commit;
+        input.onclick = e => e.stopPropagation();
+        titleEl.replaceWith(input);
+        input.focus(); input.select();
+      }
+
+      function uploadTile() {
+        const tile = el("button", "aw-set-addtile", "+ Upload a sound");
+        tile.type = "button";
+        const fileInput = el("input");
+        fileInput.type = "file";
+        fileInput.accept = "audio/*";
+        fileInput.style.display = "none";
+        fileInput.onchange = async () => {
+          const file = fileInput.files && fileInput.files[0];
+          fileInput.value = "";
+          if (!file) return;
+          try {
+            await uploadWrongSound(file);
+            render();
+          } catch (e) {
+            showSetError(e.message || "Could not add that sound.");
+          }
+        };
+        tile.onclick = () => fileInput.click();
+        tile.append(fileInput);
+        return tile;
+      }
     }
 
     function menuRow(title, sub, onClick) {
