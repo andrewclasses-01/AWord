@@ -4533,9 +4533,42 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **26/8/2026 sau Đợt 266** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 273** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (26/8/2026 — sau **Đợt 266**, nối sau cụm SHOWDOWN 259 → 265)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 273**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`9d6a38b`** (Đợt 273 — BỎ HẲN `cqw`, đơn vị khung nay là `--aw-u`) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | **6/6 mã băm khớp** (`core/unit.js` · `core/app.css` · `core/engine.js` · `templates/quiz/quiz.css` · `templates/running-word/running-word.css` · `templates/whack-a-mole/whack-a-mole.js`); LIVE **0 chỗ `cqw`** ngoài chú thích; chạy thử thật trên `aword.andrewclasses.com/templates/quiz/test.html` — `--aw-u` = 9.15px đúng bằng 1% khung 915px, chữ câu hỏi 47.58px (= 5.2 × 9.15), đệm thẻ 31.11px (= 3.4 × 9.15) |
+> | Trước đó | **`ae624ae`** (Đợt 269–272) · **`84b2a80`** (Đợt 266) — đều đã push + LIVE kiểm chứng |
+> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+>
+> ### ⭐⭐⭐ ĐỢT 273 — VÙNG VỪA ĐỘNG TỚI: **CÁCH ĐO CỠ CỦA TOÀN BỘ APP**
+>
+> ⚠️⚠️ **ĐÂY LÀ ĐỢT ĐỤNG RỘNG NHẤT TỪ TRƯỚC TỚI NAY VỀ SỐ FILE: 1552 chỗ / 28 file / cả 17
+> template.** Nhưng KHÔNG đổi một tí giao diện nào — mọi số đo khớp bản cũ trong **0,03px**
+> (bàn thử đối chứng ngược `scratch/dot273-unit.html`, **115/115 ĐẠT**).
+>
+> Thầy chụp màn QUIZ trên **iPad đời cũ**: chữ bé tí, 6 thẻ đáp án dẹp lép dồn thành một dải sát
+> đáy khung. Thủ phạm: **`cqw` (container query) chỉ có từ Safari 16**; iPad cũ kẹt ở Safari 15
+> nên vứt sạch, **không một dòng lỗi console**.
+>
+> 👉 **HỢP ĐỒNG MỚI, ÁP CHO MỌI CODE VỀ SAU:** viết cỡ bằng **`calc(N * var(--aw-u))`**.
+> **ĐỪNG BAO GIỜ dùng lại `cqw` / `container-type` / `@container`.** `--aw-u` (= 1% bề ngang khung)
+> do `core/unit.js` đo và đặt; nó chỉ đặt lên **4 phần tử** từng mang `container-type`
+> (`.aw-stage` · `.aw-review.is-fs` · `.aw-opt-switch` · `.aw-sd-rec-dbody`) rồi để CSS **di
+> truyền** xuống — đúng y cách container query phân giải.
+> Chi tiết + 4 bẫy đã cắn thật: `core/HUONG DAN CORE.md` mục **ĐỢT 273** (đặt NGAY TRÊN mục Đợt 258).
+>
+> ⬜ **CHỜ THẦY BẤM TAY** (phiên làm không có iPad cũ, và trình duyệt bàn thử bị dừng vẽ nên
+> **không kiểm được đường `ResizeObserver`** — đã bù bằng 2 đường khác):
+> (a) mở chính bài QUIZ đó trên **đúng chiếc iPad cũ**; (b) bấm **phóng to** trong game xem chữ có
+> nở theo khung; (c) **xoay ngang/dọc**; (d) liếc vài template hay dùng trên **TOMKO**.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (26/8/2026 — sau **Đợt 266**, nối sau cụm SHOWDOWN 259 → 265)
 >
 > | | |
 > |---|---|
@@ -5488,7 +5521,26 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 266, 26/8/2026) — code `84b2a80`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 273, 27/8/2026) — code `9d6a38b`. KHÔNG CÒN VIỆC CODE DANG DỞ.**
+> Vùng: **CÁCH ĐO CỠ CỦA TOÀN BỘ APP** (`cqw` → `--aw-u`). Bản đồ đầy đủ ở mục
+> **0a ▸ ⭐⭐⭐ ĐỢT 273**; hợp đồng + 4 bẫy ở `core/HUONG DAN CORE.md` mục **ĐỢT 273**.
+>
+> **Chờ MẮT thầy — phải là ĐÚNG CHIẾC iPAD ĐỜI CŨ đã báo lỗi, không phải máy khác:**
+> 1. ⬜ **Mở chính bài QUIZ đó trên iPad cũ** (`LSA2-S3.T1.P3-4-5`, lớp A1B) — chữ và 6 thẻ đáp án
+>    phải **to đầy đủ, xếp 3×2 lấp đầy khung**, y như trên máy tính. Trước đợt này: chữ bé tí, thẻ
+>    dẹp lép dồn một dải sát đáy.
+> 2. ⬜ **Bấm nút phóng to trong game** — chữ phải **nở theo khung**, không giữ cỡ cũ.
+>    (Đây là đường mà bàn thử **không kiểm được** vì trình duyệt thử bị dừng vẽ; đã bù bằng 2 đường
+>    khác nhưng vẫn cần mắt thầy.)
+> 3. ⬜ **Xoay ngang/dọc iPad** một cái.
+> 4. ⬜ Liếc lại **vài template hay dùng trên TOMKO**.
+>
+> ⚠️ Nếu vẫn hỏng trên iPad đó: mở trang tự kiểm tra (artifact *"AWord browser check"*) trên chính
+> máy đó — nó cho biết Safari bản mấy và thiếu đúng tính năng nào.
+>
+> ---
+>
+> ⭐⭐⭐ **TRƯỚC ĐÓ (Đợt 266, 26/8/2026) — code `84b2a80`.**
 > Vùng: **TIẾNG ĐỌC TRONG FIGHT** (không phải Showdown). Bản đồ đầy đủ ở mục
 > **0a ▸ ⭐⭐⭐ ĐỢT 266**; chi tiết từng con số ở khối **Đợt 266** trong `GHI CHU DU AN.md`.
 >
