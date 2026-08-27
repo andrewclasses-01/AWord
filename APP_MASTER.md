@@ -4678,16 +4678,45 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 276** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 277** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 276**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 277**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`860ab5f`** (Đợt 276 — Fight mode: thanh "Miss wait", giới hạn thời gian đội sau khi đối phương trả lời SAI) — **đã push + LIVE kiểm chứng** |
-> | Kiểm live | Pages deployment cho `860ab5f` báo `success` (API `deployments/.../statuses`) · **mã băm SHA-256 khớp tuyệt đối** giữa `git show 860ab5f:core/fight.js` và `curl https://aword.andrewclasses.com/core/fight.js` (`943bdcfd…7425ab` cả hai) |
-> | Trước đó | **`c36518d`** (Đợt 275 — tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix) — đã push + LIVE kiểm chứng |
+> | Commit mới nhất | **`d0b7b5d`** (Đợt 277 — âm trả lời sai nay CHỒNG lên âm gốc của game thay vì thay thế nó) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/wrong-sound.js` thấy đúng `fallback();` gọi VÔ ĐIỀU KIỆN ngay sau rào assignment — **mã băm SHA-256 khớp tuyệt đối** với `git show d0b7b5d:core/wrong-sound.js` (`2ede92a5…62b7f71` cả hai) |
+> | Trước đó | **`860ab5f`** (Đợt 276 — Fight mode "Miss wait", phiên khác, cùng máy, song song — không đụng file với Đợt 277) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+>
+> ### ⭐ ĐỢT 277 — VÙNG VỪA ĐỘNG TỚI: **ÂM TRẢ LỜI SAI CHỒNG LÊN ÂM GỐC**
+>
+> Thầy: *"khi thêm 1 âm báo sai, vẫn sẽ phát âm default đi cùng luôn. Âm default mặc định luôn có,
+> các âm khác chỉ kèm thêm"*. Nối [[Đợt 274]]/[[Đợt 275]] — trước đợt này chọn một âm (hay Mix) thì
+> âm đó THAY CHO âm gốc; nay âm gốc LUÔN phát (`fallback()` gọi vô điều kiện ngoài assignment — bản
+> chất y hệt trước khi có tính năng này), lựa chọn tuỳ chỉnh nếu có chỉ CHỒNG THÊM lên trên.
+>
+> **File cốt lõi: `core/wrong-sound.js`** — sửa ĐÚNG MỘT hàm `playWrongEffect()`. `wrapWrong()` +
+> chữ ký 15 template + `core/engine.js` không đổi gì. Bàn thử `scratch/dot276-wrongsound-layered.html`
+> (⚠️ tên trùng số với Đợt 276 Fight mode bên dưới — NGẪU NHIÊN, viết trước khi biết số 276 đã bị
+> dùng, hai file không liên quan) **11/11 ĐẠT** — Default chỉ base · Single/Mix luôn CẢ HAI (base +
+> extra) · Mix rỗng chỉ base · assignment luôn chỉ base bất kể đã chọn gì · muted chặn extra, không
+> chặn lời gọi base (từng template tự lo mute của chính nó). `scratch/dot275-wrongsound-full.html`
+> có 1 bước lỗi thời (28/29, giả định THAY THẾ cũ) — không phải hồi quy, xem `GHI CHU DU AN.md`.
+>
+> ⬜ **CHỜ THẦY BẤM TAY**: chơi một act thường, chọn một âm/Mix, bấm sai — phải nghe ĐỦ HAI âm chồng
+> lên nhau; chọn lại Default — chỉ còn âm gốc; mở assignment thật qua `play.html` — vẫn chỉ âm gốc.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (27/8/2026 — sau **Đợt 276**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`860ab5f`** (Đợt 276 — Fight mode: thanh "Miss wait", giới hạn thời gian đội sau khi đối phương trả lời SAI) — đã push + LIVE kiểm chứng |
+> | Kiểm live | Pages deployment cho `860ab5f` báo `success` (API `deployments/.../statuses`) · mã băm SHA-256 khớp tuyệt đối giữa `git show 860ab5f:core/fight.js` và `curl https://aword.andrewclasses.com/core/fight.js` (`943bdcfd…7425ab` cả hai) |
+> | Trước đó | **`c36518d`** (Đợt 275 — tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix) — đã push + LIVE kiểm chứng |
+> | Kho | SẠCH, `main` khớp `origin/main` |
 >
 > ### ⭐⭐ ĐỢT 276 — VÙNG VỪA ĐỘNG TỚI: **FIGHT MODE — "MISS WAIT"**
 >

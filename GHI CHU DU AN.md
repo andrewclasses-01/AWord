@@ -16,7 +16,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > thay thế nó; Default = không chồng gì thêm; sửa đúng 1 hàm `playWrongEffect()`; bàn thử mới
 > `dot276-wrongsound-layered.html` 11/11 ĐẠT — ⚠️ tên file trùng số "276" với Đợt 276 Fight mode bên
 > dưới là NGẪU NHIÊN, hai phiên Claude chạy song song cùng máy không hề đụng file nhau, xem ghi chú
-> đầu mục Đợt 277; ⬜ chờ thầy bấm tay, CHƯA PUSH lúc viết dòng này). Trước đó: **Đợt 276** (27/8/2026,
+> đầu mục Đợt 277; code `d0b7b5d` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜
+> chờ thầy bấm tay thật). Trước đó: **Đợt 276** (27/8/2026,
 > thầy — FIGHT MODE: thêm "Miss wait", thanh trượt 0–20s + ∞ giới hạn thời gian đội còn lại được
 > chơi tiếp sau khi đối phương trả lời SAI, thay cho hằng số cứng LATE_LIMIT_MS=20s cũ; nhánh "đội
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
