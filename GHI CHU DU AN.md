@@ -12,7 +12,23 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 279** (28/8/2026, thầy báo — Showdown: chọn Quiz ở màn setup, cả 4 bàn hiện Quiz
+> Mới nhất: **Đợt 280+281** (28/8/2026, thầy — Đợt 280: màn READY Showdown đổi bố cục, cột tên học
+> sinh 1/3 trái to/viết tắt (`shortenTeamNames()`) có vạch chia, 2/3 phải giữ template→PLAY (to,
+> giữ nguyên phong cách gốc)→số câu, ô tích "sẵn sàng" (Đợt 263) lên dải trên, tên lesson (Đợt 154)
+> xuống 1 dòng ở dải đáy — chốt qua xem thử Artifact 3 vòng chỉnh trước khi vào code thật. Đợt 281:
+> Fight mode — thanh MISS WAIT (đồng hồ đã có từ Đợt 276, nay có PIXEL) gradient xanh→cam→đỏ ở dải
+> trên mỗi bàn (`.aw-fight-missbar`, sống cạnh thanh Pick time của Đợt 259 trong `core/fight.js`,
+> KHÔNG qua `core/engine.js`), chỉ hiện ở bàn còn chơi tiếp, đổi màu bằng 2 setTimeout canh mốc
+> 50%/20% còn lại, tự hold/go theo `setRefPaused`, tự tắt ngay khi bàn được đếm trả lời xong. ⚠️ bản
+> nháp ban đầu đặt số "Đợt 267"/"Đợt 277" (đếm từ trí nhớ, không kiểm `git log` trước) — trùng Đợt
+> 277 (âm trả lời sai) đã có sẵn trên origin từ phiên khác; phát hiện qua `git fetch` + so `git log
+> --all` TRƯỚC KHI COMMIT, đổi hết sang 280/281 bằng `sed` có kiểm lại. Kiểm bằng 2 trang test tĩnh
+> dùng thẳng `core/app.css` thật (không commit): (280) DOM/CSS khớp bản mockup đã duyệt; (281) đo
+> timing thật qua `javascript_tool` trên cửa sổ 5000ms — đổi cam đúng lúc 2804ms (mốc lý thuyết
+> 2500ms), đổi đỏ đúng lúc 4107ms (mốc 4000ms), tắt mờ dần đúng `opacity .16s`. `node
+> --input-type=module --check` sạch cả `core/engine.js`/`core/fight.js`; code `1f7eb8e` ĐÃ PUSH +
+> LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối cả 3 file, ⬜ chờ thầy bấm tay Showdown/Fight
+> thật). Trước đó: **Đợt 279** (28/8/2026, thầy báo — Showdown: chọn Quiz ở màn setup, cả 4 bàn hiện Quiz
 > và đồng bộ, bấm Play thì ván bắt đầu lại là ANAGRAM, chỉnh đi chỉnh lại vẫn thế; nguyên nhân là
 > `sd_round` chốt `std` từ lần START trước đó và không có đường dọn khi đổi template Ở MÀN SETUP
 > (trước khi vào phòng chờ) — `leaveRound()` sẵn có chỉ chạy khi dỡ ván TRONG phòng chờ; sửa bằng
@@ -33,6 +49,223 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 281 (28/8/2026, thầy) — ⭐⭐ **FIGHT MODE: THANH MISS WAIT (GRADIENT XANH→CAM→ĐỎ, DẢI TRÊN)**
+
+### Thầy yêu cầu gì
+
+> "Trong mode fight, ở phần MISS WAIT (đội trước sai, đội sau bị giới hạn thời gian để làm) cần chạy
+> 1 thanh thời gian có đổi màu gradient ở dải phía trên để thể hiện lượng thời gian còn lại ở làm"
+
+Hỏi lại xác nhận 2 lựa chọn trước khi code (qua `AskUserQuestion`): thanh hiện ở **bàn nào** — chỉ
+bàn còn được chơi tiếp (đội đã sai bị khoá/che rồi, không có gì để đếm ngược) hay cả hai bàn — thầy
+chọn **chỉ bàn còn chơi tiếp**; kiểu đổi màu — 3 mức xanh→cam→đỏ giống thanh Showdown có sẵn, hay màu
+chuyển mượt liên tục — thầy chọn **3 mức, giống có sẵn**.
+
+### Bối cảnh: [[Đợt 276]] đã có ĐỒNG HỒ, chưa có PIXEL
+
+MISS WAIT ("đội trước SAI, đội sau chưa xong, chưa ai thắng") đã có timer thật từ Đợt 276
+(`later(advanceRound, wrongWaitMs)` trong nhánh `if (!correct)` của `ctl.wordDone`, `core/fight.js`)
+— nhưng KHÔNG có gì vẽ lên màn hình, đúng như thầy mô tả. Việc của đợt này thuần là VẼ, không đụng gì
+tới timing đã có.
+
+### Đã làm
+
+**File cốt lõi: `core/fight.js` + `core/app.css`** — không đụng `core/engine.js`. Khác thanh chờ
+tie-window cũ (`.aw-waitbar`, Đợt 187 — sống ở hàng nút DƯỚI, đất của `core/engine.js`, nên phải qua
+`ctl.registerWaitBar` xuyên file), thanh MISS WAIT sống Ở DẢI TRÊN (`top`/`half0`/`half1`) — đất
+CHÍNH `fight.js` tự dựng sẵn (điểm số mỗi đội, thanh PICK TIME của Đợt 259) — nên trọng tài tự vẽ
+luôn pixel của chính mình, không cần một đường `registerXxxBar` xuyên file nào cả.
+
+`missBars` — hai phần tử (`makeMissBar()`, một mỗi bàn), CÙNG KHUÔN hai-node (`el`/`fill`) với
+`pickBars` và `.aw-waitbar` gốc: bề rộng là MỘT CSS transition duy nhất theo đúng `wrongWaitMs`,
+không có vòng lặp mỗi khung hình. `paintMissBar(side, ms, mode)` — ba trạng thái y hệt
+`runWaitBar`/`paintPickBar`: mặc định (start/stop), `"hold"` (đọc `getComputedStyle` để đứng lại
+đúng chỗ đang chạy tới), `"go"` (chạy tiếp NỐT phần còn lại, không kéo về đầy).
+
+Dải màu xanh→cam→đỏ — CÙNG NGƯỠNG % với `.aw-roundbar-fill` (`core/engine.js`, pct≤50 cam, pct≤20
+đỏ) — do **hai `setTimeout()`** (`scheduleMissBands`) canh đúng mốc 50%/20% còn lại, KHÔNG phải một
+tick loop như roundbar (đúng khuôn nhẹ của waitbar/pickbar: một transition duy nhất). Đặt lại từ
+**ĐIỂM HIỆN TẠI** (`msLeft`, không phải từ đầu) mỗi khi bật thanh HAY lúc "go" sau một lượt tạm dừng
+— nên mở ☰ Menu giữa chừng rồi đóng lại không làm màu nhảy lùi về xanh chờ tới đúng mốc cũ.
+
+`missWaitSide` (bàn nào đang đếm, hoặc -1) + `missTotalMs` (độ dài cả cửa sổ, mốc % cho 2 lần đổi
+màu) — KHÔNG cần một `Due` timer riêng như `pendingDue`/`pickDue`: đồng hồ THẬT của MISS WAIT vẫn là
+`roundDue` sẵn có của `later()`, đã tự pause/resume đúng qua `setRefPaused()` từ Đợt 276 rồi; hai
+biến này chỉ nhớ "bàn nào đang hiện thanh" để (a) hold/go đọc đúng `roundDue.left`, (b) tắt đúng bàn
+khi nó tự trả lời xong. Hook tắt đặt ở **đầu `wordDone`** (`if (missWaitSide === side) stopMissBar()`)
+— NGAY khi bàn được đếm trả lời, không đợi tới `advanceRound()` (có thể còn cách `ROUND_HOLD_MS`
+~2,1s nữa mới chạy, để lại một thanh "hứa sai" đang đếm cho một câu đã xong).
+
+⚠️ Dưới ngưỡng `WAIT_BAR_MIN_MS` (200ms) — gồm cả mốc **0s hợp lệ** của Miss wait (Đợt 276 chốt cắt
+tức thì, KHÔNG theo quy ước "0 = ∞" của Time delay/Pick time) — không vẽ thanh, chỉ tổ nháy một khung
+hình. Ở ∞ trọng tài không hề gọi `later()` (né đúng bẫy `setTimeout(fn, Infinity)` nổ NGAY TICK SAU
+mà Đợt 216/259/276 đã phải né trước đó) nên thanh cũng không bao giờ bật.
+
+Vị trí CSS: mép TRÊN của `.aw-fight-half` (`top:0`) — đối diện mép DƯỚI của pickbar (Đợt 259,
+`bottom:0`) — nên không bao giờ đè lên nhau kể cả khi cùng thuộc một trận pick mode (MISS WAIT chạy
+cho MỌI kiểu vòng — ordinary/pick-turn/in-turns — không riêng gì pick mode). KHÔNG khoá sau
+`.is-pickmode` như pickbar: chỗ cho nó (`padding-top` trên `.aw-fight-half`/`.aw-fight-clockbox`)
+phải có ở MỌI trận Fight.
+
+### Bàn thử
+
+Trang test tĩnh `scratch/dot281-fight-missbar-check.html` (không commit, xoá sau khi kiểm xong) —
+dựng `half0`/`half1` giống hệt `core/fight.js` thật (điểm số + `.aw-fight-missbar`/`-fill`), dùng
+thẳng `core/app.css` qua `<link>` (không viết lại CSS), và một bản rút gọn TRỰC TIẾP từ
+`paintMissBar`/`scheduleMissBands` (không phải logic viết lại từ đầu để đối chứng).
+
+Đo timing THẬT qua `javascript_tool` (không đoán bằng mắt) trên cửa sổ 5000ms, lấy mẫu bằng
+`performance.now()` + `await new Promise(setTimeout)`:
+
+| Mốc đo được | Mốc lý thuyết | Trạng thái |
+|---|---|---|
+| 204ms | — | `is-on`, width ~270/284px (gần đầy) |
+| 2804ms | 2500ms (50%) | `is-on is-orange` |
+| 4107ms | 4000ms (80% trôi qua = 20% còn) | `is-on is-red` |
+| 5321ms | 5000ms | cạn về `0px`, vẫn `is-red` |
+
+Sai lệch 200-300ms giữa mốc đo và mốc lý thuyết là ĐỘ TRỄ CỦA CÔNG CỤ ĐO (thời gian round-trip giữa
+các lệnh `javascript_tool`), không phải sai số của code — xác nhận bằng cách đọc `performance.now()`
+NGAY TRONG cùng một lệnh JS chạy liên tục (một `(async()=>{...})()` duy nhất chứa cả 4 mốc đo), không
+rải qua nhiều lệnh riêng lẻ có độ trễ round-trip khác nhau.
+
+Kiểm riêng lúc tắt: gọi `stop`, đọc `getComputedStyle` NGAY (đọc được `opacity:1` — transition chưa
+kịp chạy, đúng dự đoán) rồi đọc lại sau 250ms (`opacity:0`) — khớp đúng `transition: opacity .16s`
+khai trong CSS.
+
+`node --input-type=module --check < core/fight.js` sạch. Đếm dấu `{`/`}` trong `core/app.css` cân
+bằng (1828/1828) sau khi thêm CSS mới.
+
+⚠️ **KHÔNG mô phỏng được**: đồng bộ pause/resume thật qua `setRefPaused()` (bàn thử chỉ gọi thẳng
+`start`/`stop`, không dựng lại toàn bộ `startFight()` + hai bàn thật), và **chưa ai chơi một trận
+Fight thật** — chỉ soi CSS/DOM + hàm rút gọn.
+
+### Sự cố số thứ tự Đợt — BÀI HỌC
+
+Toàn bộ tính năng này ban đầu viết dưới số **"Đợt 267"** (READY screen, xem mục dưới) và **"Đợt 277"**
+(thanh MISS WAIT) — đếm tiếp từ "Đợt 266" ghi trong bộ nhớ phiên (memory), KHÔNG kiểm `git log` hay
+đọc lại comment trong chính file đang sửa trước khi đặt số. Trước khi commit, chạy `git fetch` +
+`git log --all --oneline` (đúng luật `check-git-sync-truoc-khi-sua-app` — BẮT BUỘC mỗi nhiệm vụ app)
+mới phát hiện: `origin/main` đã có sẵn **Đợt 276** (chính là MISS WAIT backend, "phiên khác, cùng
+máy, song song") và **Đợt 277** (âm trả lời sai chồng lên âm gốc, KHÔNG liên quan) — số 277 bị trùng
+thật. Đổi toàn bộ comment trong `core/fight.js`/`core/app.css` sang 281 bằng `sed` (10+1 chỗ), kiểm
+lại `grep` không còn "Đợt 277" nào trước khi commit.
+
+⚠️ **Luật rút ra**: số Đợt KHÔNG được đếm từ trí nhớ/memory của phiên — memory có thể VIẾT TRƯỚC KHI
+một phiên khác, cùng máy, đã đẩy thêm nhiều Đợt lên `origin/main`. Luôn `git log --all --oneline |
+grep "Dot NNN"` cho vài số dự kiến TRƯỚC KHI gõ số Đợt vào comment lần đầu, không phải chỉ trước khi
+commit — gõ nhầm vào 10+ chỗ rồi sửa lại vẫn tốn công hơn kiểm trước một lần.
+
+### VIỆC ĐANG CHỜ
+
+✅ **ĐÃ PUSH `1f7eb8e` + LIVE KIỂM CHỨNG** — `aword.andrewclasses.com/core/fight.js` khớp tuyệt đối mã
+băm SHA-256 với `git show 1f7eb8e:core/fight.js` (`d84f1e3a…23ad6c` cả hai); GitHub Pages deployment
+`6142206278` cho đúng SHA này báo `success`.
+⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ đo trên harness tĩnh, chưa ai chơi một trận Fight thật):
+(a) mở một act Fight bất kỳ, cho một đội trả lời SAI trước, đội kia CỐ TÌNH không bấm — thanh phải
+chạy trên ĐÚNG bàn còn chơi tiếp, đổi màu xanh→cam→đỏ đúng lúc, biến mất khi hết giờ hoặc khi đội kia
+bấm; (b) mở ☰ Menu giữa lúc thanh đang chạy — thanh phải ĐỨNG YÊN, chạy tiếp đúng phần còn lại khi
+đóng lại; (c) thử với Miss wait = 0s (cắt tức thì) và ∞ — không thanh nào bật ở cả hai nấc; (d) test
+TOMKO, đặc biệt màu xanh/cam/đỏ phải phân biệt được từ cuối lớp.
+
+---
+
+## Đợt 280 (28/8/2026, thầy) — ⭐⭐ **SHOWDOWN READY: BỐ CỤC MỚI (CỘT TÊN TRÁI, PLAY TO GIỮA, LESSON XUỐNG ĐÁY)**
+
+### Thầy yêu cầu gì
+
+Ba lượt góp ý liên tiếp, chốt qua xem thử **Artifact** (mockup HTML dựng trước, KHÔNG sửa thẳng vào
+`core/engine.js`/`core/app.css` khi còn chưa rõ hình dạng cuối):
+
+> 1. "chỉnh một chút về giao diện trong màn hiện START và hiện tên học sinh một chút" → yêu cầu ban
+>    đầu, mơ hồ — hỏi lại 2 câu (`AskUserQuestion`) trước khi dựng mockup: màn START muốn đổi gì,
+>    phần tên học sinh muốn đổi gì. Thầy trả lời tự do (không chọn đáp án gợi ý sẵn): *"Thay vì 1 dải
+>    tên nhỏ ở nửa dưới màn hình, hãy: Dùng 1/3 nửa trái để làm cột tên ... viết hoa toàn bộ, font to
+>    rõ ràng nổi bật ... vạch mảnh thẳng đứng để chia ... 2/3 còn lại để hiển thị các phần còn lại
+>    (tên act, nút start...) ... Các nút tích xanh sẵn sàng nhỏ hơn và được đưa lên dải trên cùng ...
+>    thiết kế để tôi xem thử trước khi chốt".
+> 2. "tôi muốn các tên sử dụng font to hơn nữa và có thể viết dạng viết tắt. Nút START vẫn phải giữ
+>    phong cách gốc".
+> 3. "hãy để tên lesson ở 1 dòng ở hàng cuối cùng, thấp nhất".
+> 4. "Khu vực nút PLAY, để nút PLAY thật to ở giữa, template ở trên, 10 EACH • 40 QUESTIONS ở dưới".
+> 5. "Ok chốt cái này" — duyệt, cho vào code thật.
+
+### Đã làm
+
+**Mockup trước (Artifact, HTML tĩnh dùng palette/font thật của app — Baloo 2 qua Google Fonts, màu
+`#17181c`/`#4ade80`/`#35b1f0` lấy đúng từ `core/app.css`)**, 3 vòng chỉnh theo đúng thứ tự thầy góp ý,
+rồi mới vào code thật — tránh dựng nhầm cả một bố cục lớn trong `core/engine.js` mà thầy chưa thấy
+hình dạng cuối.
+
+**File cốt lõi: `core/engine.js`** (khối lắp ráp mới, `if (showdownPick) {...}` ngay TRƯỚC
+`playOverlay.append(readyCenter); inner.append(playOverlay);` — cuối `startGame()`) **+
+`core/app.css`** (`.aw-play-overlay.is-sd`, `.aw-ready-center.is-sd`, `.aw-sd-columns`,
+`.aw-sd-namecol(-team/-stu)`, `.aw-sd-contentcol`, `.aw-sd-topstrip`, `.aw-sd-bottomstrip`). ⚠️ CHỈ
+áp dụng khi `showdownPick` — mọi chế độ khác (chơi thường/teacher, homework qua `session`, "Start
+with mistakes") giữ NGUYÊN màn READY căn-giữa-một-cột cũ, không sửa một dòng logic nào của chúng.
+
+Cách lắp: mọi phần tử liên quan (`readyTitleEl`, `playControl`, `gameNameEl`, `sdPlanEl`,
+`sdReadyRowEl`) vẫn được TẠO đúng chỗ cũ (giữ nguyên logic `refreshReadyTitle()`/`renderSdPlan()`/
+`renderReadyRow()`), chỉ đổi ĐIỂM APPEND — khi `showdownPick`, các hàm append cũ vào `readyCenter`
+bị bỏ qua (`if (!showdownPick) readyCenter.append(...)`), và một khối lắp ráp RIÊNG ở cuối hàm gom
+chúng vào cấu trúc mới theo đúng thứ tự thầy chốt.
+
+Bốn thay đổi cụ thể:
+
+1. **Cột tên 1/3 trái, viết tắt, to hơn** — hàm mới `shortenTeamNames(names)` (cuối `core/engine.js`,
+   cạnh `escapeText`): tách mỗi tên thành các tiếng, mặc định giữ **1 tiếng cuối** ("tên gọi" theo
+   cách gọi tự nhiên của người Việt); nếu 2+ em CÙNG ĐỘI trùng tiếng cuối đó, những em trùng tự mở
+   rộng thành **2 tiếng cuối** để phân biệt — không cần thầy tự đặt tên hiển thị riêng cho từng em.
+   Font `calc(4.2 * var(--aw-u))`, `white-space:nowrap` + ellipsis (không bao giờ xuống dòng đè lên
+   tên kế).
+2. **Vạch chia mảnh** — `.aw-sd-namecol::after`, gradient dọc mờ dần ở hai đầu, không chạm mép trên/
+   dưới của cột (8%–92% chiều cao).
+3. **2/3 phải: template → PLAY (to) → số câu, đúng thứ tự** — `.aw-sd-contentcol` (flex-column, DOM
+   order = visual order: `gameNameEl`, `playControl`, `sdPlanEl`). Nút PLAY **giữ NGUYÊN phong cách
+   gốc `.aw-bigplay`** — override DUY NHẤT là `width: calc(20 * var(--aw-u))` (từ 13u gốc), không đổi
+   màu/filter/hover/active; mọi thứ khác thừa hưởng nguyên vẹn từ rule gốc.
+4. **Ô tích sẵn sàng lên trên, tên lesson xuống đáy** — `sdReadyRowEl` (Đợt 263) dời từ absolute-
+   bottom-của-`playOverlay` sang bên trong `.aw-sd-topstrip` (CON TRỰC TIẾP của `playOverlay`, NGANG
+   HÀNG `readyCenter` — không lồng vào trong); `readyTitleEl` (Đợt 154, "DS-S2.I1.W3 / WORDS - ENG1")
+   dời từ đầu `readyCenter` sang `.aw-sd-bottomstrip` (CON của `readyCenter`), font thu nhỏ còn
+   `calc(1.5 * var(--aw-u))`, `white-space:nowrap` + ellipsis — đúng "1 dòng, thấp nhất".
+
+⚠️ **Quan hệ cha-con với phòng chờ (Đợt 261/263) GIỮ NGUYÊN, không sửa một dòng `enterLobby()`/
+`cancelLobby()`**: dải trên (chứa ô tích) là con của `playOverlay` nên `readyCenter.style.display =
+"none"` lúc vào phòng chờ KHÔNG đụng tới nó — ô tích vẫn sống, vẫn cập nhật suốt phòng chờ, y hệt
+hành vi cũ của `sdReadyRowEl`. Dải đáy (tên lesson) là con CỦA `readyCenter` nên ẩn/hiện CÙNG đội
+hình lúc vào/ra phòng chờ — y hệt hành vi cũ của `readyTitleEl`.
+
+⚠️ Brand "ANDREW CLASSES" (`.aw-ready-type`) — bỏ hẳn khi `showdownPick` (không append), theo đúng
+bản mockup đã duyệt (không còn chỗ đứng tự nhiên trong bố cục mới).
+
+### Bàn thử
+
+Trang test tĩnh `scratch/dot280-sd-ready-check.html` (không commit, xoá sau khi kiểm xong) — dựng
+đúng cấu trúc DOM mà khối lắp ráp thật tạo ra (topstrip/columns/namecol/contentcol/bottomstrip), dùng
+thẳng `core/app.css` qua `<link>` (`--aw-u: 10px` giả lập stage 1000px, đúng công thức "N px ≈ N/10
+units" ghi ở đầu `app.css`). Chụp màn (`computer` screenshot qua Browser pane, server tĩnh Python cục
+bộ) khớp đúng bản mockup Artifact thầy đã duyệt: ready ticks nhỏ ở dải trên · cột tên trái to có vạch
+chia · template/PLAY to/số câu ở giữa phải · tên lesson 1 dòng ở đáy.
+
+`node --input-type=module --check < core/engine.js` sạch. Đếm dấu `{`/`}` trong `core/app.css` cân
+bằng.
+
+⚠️ **KHÔNG mô phỏng được**: dữ liệu Firestore thật (`sd_round`/`sd_session`), nhiều bàn đồng bộ cùng
+lúc, hay cảm ứng TOMKO thật — chỉ soi CSS/DOM tĩnh với dữ liệu mẫu viết tay.
+
+### VIỆC ĐANG CHỜ
+
+✅ **ĐÃ PUSH `1f7eb8e` + LIVE KIỂM CHỨNG** — `aword.andrewclasses.com/core/engine.js` khớp tuyệt đối
+mã băm SHA-256 với `git show 1f7eb8e:core/engine.js` (`90436785…c5e20a` cả hai); GitHub Pages
+deployment `6142206278` cho đúng SHA này báo `success`.
+⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ soi CSS/DOM tĩnh với dữ liệu mẫu, chưa ai mở một trận
+Showdown thật): mở Showdown thật (4 cột hoặc TOMKO), xem cột tên đọc được từ xa, tên viết tắt không
+gây nhầm lẫn giữa các em (đặc biệt đội có 2 em trùng tên gọi 1 tiếng), nút PLAY bấm được bình thường,
+tên lesson ở đáy không bị cắt xấu; test trên TOMKO.
 
 ---
 
