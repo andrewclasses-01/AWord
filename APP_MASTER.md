@@ -4702,14 +4702,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 
 ## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **28/8/2026 sau Đợt 279** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟡 TRẠNG THÁI NGAY LÚC NÀY (28/8/2026 — sau **Đợt 279**, CHƯA PUSH)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (28/8/2026 — sau **Đợt 279**)
 >
 > | | |
 > |---|---|
-> | Sửa chưa push | `core/engine.js` — `doSwitchTemplate()` rút bàn khỏi `sd_round` cũ khi đổi template Ở MÀN SETUP (Showdown), sửa bug "chọn Quiz... play lại ra Anagram" |
-> | Kiểm | Bàn thử `scratch/dot279-template-ghost.html` (dùng thẳng `planRoundJoin()` thật) 7/7 ĐẠT; `node --input-type=module --check` sạch — CHƯA kiểm live vì chưa push |
+> | Commit mới nhất | **`f768429`** (Đợt 279 — Showdown: đổi template ở màn setup nay rút khỏi `sd_round` cũ) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` — **mã băm SHA-256 khớp tuyệt đối** với `git show f768429:core/engine.js` (`3700656f…d268fc` cả hai) |
 > | Trước đó | **`3b7bab5`** (Đợt 278 — hàng "Default" trong Wrong-answer sound nay LUÔN có dấu ✓) — đã push + LIVE kiểm chứng |
-> | Kho | 1 file sửa (`core/engine.js`) + 1 bàn thử mới, CHƯA COMMIT — `main` vẫn khớp `origin/main` tại `098ca46` |
+> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
 >
 > ### ⭐⭐ ĐỢT 279 — VÙNG VỪA ĐỘNG TỚI: **SHOWDOWN — ĐỔI TEMPLATE Ở MÀN SETUP KHÔNG DỌN LƯỢT CŨ**
 >
@@ -4734,8 +4734,9 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > `type=quiz` vẫn không đổi được `std.type=anagram`) · đã vá thì lượt mới chốt đúng quiz, cả 4 ready
 > ngay · nhánh `viaLobbyPull` không bị rút nhầm. `node --input-type=module --check` sạch.
 >
-> ⬜ **CHƯA PUSH** — chờ thầy xác nhận (sửa lõi đồng bộ Showdown, ảnh hưởng lớp đang dùng) trước khi
-> đẩy lên; bàn thử chỉ mô phỏng logic thuần, chưa ai chạm 4 cột myActivity + Firestore thật.
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** (`f768429`, mã băm SHA-256 khớp tuyệt đối). ⬜ **CHỜ THẦY BẤM TAY
+> THẬT** — bàn thử chỉ mô phỏng logic thuần (`planRoundJoin()`), chưa ai chạm 4 cột myActivity +
+> Firestore thật. Xem danh sách phép thử tay ở mục **4 ▸ VIỆC ĐANG CHỜ** ngay dưới.
 >
 > ---
 >
@@ -5871,8 +5872,8 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 279, 28/8/2026) — sửa xong, bàn thử 7/7 ĐẠT, `<PENDING>`,
-> ⬜ CHƯA PUSH — chờ thầy xác nhận trước khi đẩy lên (đụng lõi đồng bộ Showdown).**
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 279, 28/8/2026) — code `f768429`, ĐÃ PUSH + LIVE kiểm chứng
+> (mã băm SHA-256 khớp tuyệt đối). KHÔNG CÒN VIỆC CODE DANG DỞ.**
 > Vùng: **SHOWDOWN — đổi template Ở MÀN SETUP không dọn lượt `sd_round` cũ**, khiến
 > "chọn Quiz... play lại ra ANAGRAM, chỉnh đi chỉnh lại vẫn thế". Bản đồ đầy đủ ở mục
 > **0a ▸ ⭐⭐ ĐỢT 279**; chi tiết ở khối **Đợt 279** trong `GHI CHU DU AN.md`.

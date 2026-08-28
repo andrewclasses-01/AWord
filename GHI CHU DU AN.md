@@ -18,8 +18,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > (trước khi vào phòng chờ) — `leaveRound()` sẵn có chỉ chạy khi dỡ ván TRONG phòng chờ; sửa bằng
 > cách `doSwitchTemplate()` rút bàn này khỏi lượt cũ TRƯỚC khi thử lại, trừ đúng một nhánh
 > `pullStandard()` (kéo chuẩn về) được đánh dấu `viaLobbyPull:true` để không tự rút mình; bàn thử
-> mới `dot279-template-ghost.html` 7/7 ĐẠT dùng thẳng `planRoundJoin()` thật; code `<PENDING>`,
-> ⬜ CHƯA PUSH — chờ thầy bấm tay Showdown thật). Trước đó: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
+> mới `dot279-template-ghost.html` 7/7 ĐẠT dùng thẳng `planRoundJoin()` thật; code `f768429` ĐÃ PUSH
+> + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay Showdown thật). Trước đó: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
 > dấu ✓ bất kể đang ở Single hay Mix, vì âm gốc đã luôn phát từ Đợt 277; các âm khác vẫn tích 1
 > (ngoài Mix) hoặc nhiều (trong Mix) như cũ; sửa đúng 1 hàm `isChecked()` trong `main.js`; bàn thử
 > mới `dot278-wrongsound-defaultcheck.html` 20/20 ĐẠT; code `3b7bab5` ĐÃ PUSH + LIVE kiểm chứng
@@ -112,8 +112,9 @@ VIỆC ĐANG CHỜ.
 
 ### VIỆC ĐANG CHỜ
 
-⬜ **CHƯA PUSH** — chờ thầy xác nhận trước khi đẩy lên (sửa lõi đồng bộ của Showdown, ảnh hưởng trực
-tiếp lớp đang dùng).
+✅ **ĐÃ PUSH `f768429` + LIVE KIỂM CHỨNG** — `aword.andrewclasses.com/core/engine.js` khớp tuyệt đối
+mã băm SHA-256 với `git show f768429:core/engine.js` (`3700656f…d268fc` cả hai); GitHub Pages build
+cho đúng commit này báo `built` (không phải build cũ đứng yên).
 ⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ giả lập, chưa ai chạm 4 cột myActivity thật): dựng 4 cột,
 chọn Class + chia đội, để mặc định Anagram và bấm START một lần (dù không chơi hết, để cố ý tạo một
 lượt "còn sống"), sau đó thoát ra màn setup (không bấm Cancel trong phòng chờ), đổi cả 4 sang Quiz,
