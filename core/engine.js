@@ -2082,7 +2082,14 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // after the game had already mounted. The one reader (Options ▸ Apply, far
   // below) means the first, so it now asks for the first.
   let playStarted = false;
-  playOverlay.append(el("div", "aw-ready-type", "ANDREW CLASSES"));   // brand on top
+  // ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — SHOWDOWN READY: bố cục riêng, không dùng
+  // khung căn-giữa-một-cột cũ. Cột tên học sinh chiếm 1/3 trái (to, dễ đọc từ xa),
+  // phần còn lại (template · PLAY · số câu) dồn sang 2/3 phải, ô tích sẵn sàng lên
+  // dải trên cùng, tên lesson xuống 1 dòng ở dải đáy. Xem khối lắp ráp cuối màn
+  // READY (`if (showdownPick) { ... }`, ngay trước `playOverlay.append(readyCenter)`).
+  // Brand "ANDREW CLASSES" bỏ hẳn trong bố cục này — không còn chỗ đứng tự nhiên
+  // và thầy đã duyệt bản không có nó.
+  if (!showdownPick) playOverlay.append(el("div", "aw-ready-type", "ANDREW CLASSES"));   // brand on top
   const readyCenter = el("div", "aw-ready-center");
   // ⭐ Đợt 154 — the title carries the SUB-ACT: "DS-S2.I1.W3 / WORDS - ENG1".
   // One act now holds four clue sets and/or two halves, so the act's own name no
@@ -2097,7 +2104,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const sub = subActLabel();
     readyTitleEl.textContent = (activity.title + (sub ? " - " + sub : "")).toUpperCase();
   }
-  if (readyTitleEl) { refreshReadyTitle(); readyCenter.append(readyTitleEl); }
+  // ⚠️ Showdown: KHÔNG append ở đây — dồn xuống `aw-sd-bottomstrip` trong khối lắp
+  // ráp cuối màn READY, nhưng `refreshReadyTitle()` vẫn phải chạy để có chữ ban đầu.
+  if (readyTitleEl) { refreshReadyTitle(); if (!showdownPick) readyCenter.append(readyTitleEl); }
   const bigPlay = el("button", "aw-bigplay", icons.playBig);
   bigPlay.type = "button"; bigPlay.title = "Play"; bigPlay.setAttribute("aria-label", "Play");
   // ⭐⭐⭐ Đợt 246 (thầy) — STUDENT MODE STARTS WITH A CHOICE, NOT A BUTTON:
@@ -2129,15 +2138,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     }
     playControl = duo;
     readyCenter.append(duo);
-  } else {
-    readyCenter.append(bigPlay);
+  } else if (!showdownPick) {
+    readyCenter.append(bigPlay);   // Showdown: appended into aw-sd-contentcol instead
   }
   // below the play button: the GAME (template) name, big & bold (replaces the
   // instruction line). A "Start with mistakes" run says so right here — the
   // teacher must be able to tell the two apart at a glance from across the
   // room, BEFORE pressing Play (Đợt 84).
   const gameName = (tpl.name || activity.type) + (activity._mistakes ? " with mistakes" : "");
-  readyCenter.append(el("div", "aw-ready-game", escapeText(gameName).toUpperCase()));
+  const gameNameEl = el("div", "aw-ready-game", escapeText(gameName).toUpperCase());
+  if (!showdownPick) readyCenter.append(gameNameEl);   // Showdown: into aw-sd-contentcol
   // ⭐ Đợt 199 — WHO is about to play, right under the template name:
   // "TUẤN KHANG - A1A". Only in student mode (an assignment opened from
   // myLesson), where both name and class come from the login ID — the teacher's
@@ -2154,16 +2164,16 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // it, so the class can see the line-up before anything starts (teacher: "hiển
   // thị thêm 'Tên team: các thành viên'"). Only THIS screen's team — the other
   // teams are being played on other screens and their results never come here.
-  // Built as two nodes so the team name can carry its own weight/colour without
-  // the members' list inheriting them.
+  // ⭐⭐⭐ Đợt 280 — không còn 1 dòng "TEAM · A · B · C" nữa: mỗi em một hàng riêng
+  // trong `aw-sd-namecol` (cột 1/3 trái, lắp ráp ở cuối màn READY), tên rút gọn
+  // qua `shortenTeamNames()` để chữ vẽ được thật to mà vẫn gọn 1 dòng mỗi em.
+  let sdNameCol = null;
   if (showdownPick) {
-    const line = el("div", "aw-ready-team");
-    const nameEl = el("span", "aw-ready-teamname");
-    nameEl.textContent = showdownPick.teamName;      // teacher's own text
-    const whoEl = el("span", "aw-ready-teamwho");
-    whoEl.textContent = showdownPick.members.map(m => m.name).join(" · ");
-    line.append(nameEl, whoEl);
-    readyCenter.append(line);
+    sdNameCol = el("div", "aw-sd-namecol");
+    sdNameCol.append(el("div", "aw-sd-namecol-team", escapeText(showdownPick.teamName).toUpperCase()));
+    shortenTeamNames(showdownPick.members.map(m => m.name)).forEach(n => {
+      sdNameCol.append(el("div", "aw-sd-namecol-stu", escapeText(n).toUpperCase()));
+    });
   }
 
   // ⭐⭐⭐ Đợt 260 — SỐ CÂU BẢNG NÀY SẼ CHƠI, ngay dưới đội hình, TRƯỚC KHI BẤM PLAY.
@@ -2179,7 +2189,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   let sdPlanEl = null;
   if (showdownPick && sdPlan) {
     sdPlanEl = el("div", "aw-ready-plan");
-    readyCenter.append(sdPlanEl);
+    // ⚠️ Đợt 280 — không append ở đây nữa, dồn vào `aw-sd-contentcol` (khối lắp ráp
+    // cuối màn READY) để đứng đúng thứ tự template · PLAY · số câu thầy chốt.
     renderSdPlan();
   }
 
@@ -2196,20 +2207,17 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // `boards` trong `sd_round`, thứ `joinRound()` ghi vào lúc bấm START. Việc duy nhất
   // còn thiếu là ĐỌC nó sớm hơn một bước và vẽ ra.
   //
-  // ⚠️ CON CỦA `playOverlay`, KHÔNG PHẢI CỦA `readyCenter` — và đó là lý do MỘT phần
-  // tử phục vụ được CẢ HAI màn thầy nhắc tới:
-  //   • màn READY: `readyCenter` nằm giữa, hàng này nép đáy, không đụng nhau;
-  //   • phòng chờ: `readyCenter` bị ẩn đi và `.aw-lobby` phủ `inset:0` NHƯNG nó
-  //     trong suốt và căn giữa, nên hàng ở đáy vẫn nguyên chỗ, vẫn sống, vẫn cập nhật.
-  // Vẽ hai lần ở hai chỗ là hai bộ luật sẽ trôi khỏi nhau — đúng thứ đã sinh ra
-  // "hai bảng khác nhau có chủ ý" của Đợt 197 mà lần này không có lý do gì để chịu.
-  // ⚠️ `pointer-events: none` (CSS): hộp của nó trải ngang cả đáy màn, mà nút ✕ của
-  // phòng chờ nằm đúng góc dưới-phải. Một tấm che vô hình nuốt cú chạm là ĐÚNG cái bẫy
-  // đã cắn ba lần trong hai dự án — ở đây chặn từ gốc: hàng này để NHÌN, không để bấm.
+  // ⚠️ ĐỢT 267 — nay sống trong `aw-sd-topstrip`, một CON TRỰC TIẾP của `playOverlay`
+  // (không phải của `readyCenter`), NGANG HÀNG với nó chứ không lồng vào trong — lý do
+  // y hệt Đợt 263: `readyCenter.style.display = "none"` lúc vào phòng chờ (xem
+  // enterLobby()/cancelLobby() bên dưới) không đụng tới anh em của nó, nên hàng ô tích
+  // vẫn sống, vẫn cập nhật suốt phòng chờ dù đội hình + nút PLAY đã ẩn.
+  // ⚠️ `pointer-events: none` (CSS) vẫn giữ nguyên trên `.aw-sd-readyrow` dù nay nằm
+  // trong một dải riêng — hàng này để NHÌN, không để bấm, đúng luật Đợt 263.
   let sdReadyRowEl = null;
   if (sdLobbyOn) {
     sdReadyRowEl = el("div", "aw-sd-readyrow");
-    playOverlay.append(sdReadyRowEl);
+    // ⚠️ Chưa append ở đây — dồn vào `aw-sd-topstrip` trong khối lắp ráp cuối màn READY.
   }
 
   /**
@@ -2354,6 +2362,48 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       resetAt: Number(node.resetAt) || showdownPick.resetAt || 0
     });
     replayCurrent();
+  }
+
+  // =============================================================
+  // ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — LẮP RÁP BỐ CỤC READY RIÊNG CHO SHOWDOWN
+  // =============================================================
+  // Thầy: bỏ dải tên nhỏ ở nửa dưới màn hình, thay bằng cột tên 1/3 trái (to, viết
+  // tắt, xếp dọc, có vạch chia); 2/3 phải giữ template · PLAY (to, giữ nguyên phong
+  // cách gốc) · số câu; ô tích sẵn sàng lên dải trên cùng; tên lesson xuống 1 dòng ở
+  // dải đáy, thấp nhất. Đã duyệt qua bản xem thử (Artifact) trước khi vào đây.
+  //
+  // ⚠️ Mọi phần tử dưới đây (gameNameEl, playControl, sdPlanEl, sdNameCol,
+  // sdReadyRowEl, readyTitleEl) đã được TẠO SẴN ở trên nhưng CHƯA GẮN VÀO DOM khi
+  // showdownPick — lắp ráp một lần, đúng thứ tự, ngay tại đây thay vì rải append() rải
+  // rác khắp màn READY như bản cũ.
+  if (showdownPick) {
+    playOverlay.classList.add("is-sd");
+    readyCenter.classList.add("is-sd");
+
+    // Dải trên cùng — ô tích sẵn sàng, NGANG HÀNG với readyCenter (không lồng vào
+    // trong) nên vẫn sống suốt phòng chờ, xem chú thích ở khối tạo sdReadyRowEl.
+    if (sdReadyRowEl) {
+      const topStrip = el("div", "aw-sd-topstrip");
+      topStrip.append(sdReadyRowEl);
+      playOverlay.append(topStrip);
+    }
+
+    // Hai cột: tên (1/3 trái) · nội dung (2/3 phải, đúng thứ tự template → PLAY → số câu).
+    const columns = el("div", "aw-sd-columns");
+    if (sdNameCol) columns.append(sdNameCol);
+    const contentCol = el("div", "aw-sd-contentcol");
+    contentCol.append(gameNameEl, playControl);
+    if (sdPlanEl) contentCol.append(sdPlanEl);
+    columns.append(contentCol);
+    readyCenter.append(columns);
+
+    // Dải đáy — tên lesson, 1 dòng, thấp nhất. Bên TRONG readyCenter (không phải
+    // playOverlay) nên vẫn ẩn/hiện cùng đội hình lúc vào/ra phòng chờ, y hệt bản cũ.
+    if (readyTitleEl) {
+      const bottomStrip = el("div", "aw-sd-bottomstrip");
+      bottomStrip.append(readyTitleEl);
+      readyCenter.append(bottomStrip);
+    }
   }
 
   playOverlay.append(readyCenter);
@@ -6481,4 +6531,18 @@ function iconBtn(cls, svg, title) {
 
 function escapeText(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — "TÊN GỌI" cho cột tên bên trái màn READY Showdown:
+// bỏ họ + tên đệm, chỉ giữ 1-2 tiếng cuối, để chữ vẽ được thật to mà vẫn gọn 1 dòng.
+// Vẫn giữ nguyên 2 tiếng khi hai em CÙNG ĐỘI trùng tên gọi 1 tiếng (VD hai em "Anh")
+// — tự phân biệt bằng tiếng đệm liền trước, không cần thầy tự đặt tên hiển thị riêng.
+function shortenTeamNames(names) {
+  const parts = names.map(n => String(n ?? "").trim().split(/\s+/).filter(Boolean));
+  const last = parts.map(p => p[p.length - 1] || "");
+  return parts.map((p, i) => {
+    const dup = last.some((l, j) => j !== i && l && l === last[i]);
+    if (dup && p.length > 1) return p.slice(-2).join(" ");
+    return p[p.length - 1] || "";
+  });
 }

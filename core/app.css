@@ -4334,6 +4334,42 @@ html.aw-nhung .aw-below { display: none; }
   animation: aw-waitshine 3.2s ease-in-out infinite;
 }
 
+/* ---- ⭐⭐⭐ Đợt 281 (thầy, 28/8/2026) — MISS WAIT: thanh thời gian cho đội còn
+   được chơi tiếp sau khi đội kia đã sai, "ở dải phía trên". CÙNG KHUÔN với
+   PICK TIME ngay trên (absolute, không lấy phần rộng nào của hàng), nhưng nằm
+   ở MÉP TRÊN của `.aw-fight-half` — đối diện với mép dưới của pickbar — nên
+   hai thanh không bao giờ đè lên nhau kể cả khi cùng thuộc một trận pick mode
+   (MISS WAIT chạy cho MỌI kiểu vòng, không riêng gì pick mode — xem chú thích
+   ở `wrongWaitMs`, core/fight.js).
+   ⚠️ KHÔNG khoá sau `.is-pickmode` như pickbar: chỗ cho nó phải có ở MỌI trận,
+   nên phần đệm `padding-top` dưới đây đặt thẳng, không qua lớp điều kiện. */
+.aw-fight-half,
+.aw-fight-clockbox { padding-top: clamp(10px, 1.35vw, 18px); }
+.aw-fight-missbar {
+  position: absolute;
+  left: 9%; right: 9%; top: 0;
+  height: clamp(5px, 0.62vw, 9px);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .16);
+  overflow: hidden;
+  pointer-events: none;      /* nó nằm đè lên dải điểm; không được nuốt cú chạm nào bên dưới */
+  opacity: 0;
+  transition: opacity .16s ease;
+}
+.aw-fight-missbar.is-on { opacity: 1; }
+/* Cùng ngôn ngữ xanh→cam→đỏ với `.aw-roundbar-fill` (core/engine.js) — MỘT cách
+   nói "sắp hết giờ" cho cả app, không bịa riêng cho thanh này. Khác roundbar
+   (tô lại mỗi khung hình): bề rộng ở đây là MỘT transition CSS duy nhất theo
+   đúng độ dài cửa sổ (core/fight.js's paintMissBar); mốc đổi màu do 2
+   setTimeout() canh đúng 50%/20% còn lại, không phải một vòng lặp mỗi khung. */
+.aw-fight-missbar-fill {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6cd06a, #3fae5a);
+}
+.aw-fight-missbar.is-orange .aw-fight-missbar-fill { background: linear-gradient(90deg, #ffb24d, #ff8c1a); }
+.aw-fight-missbar.is-red    .aw-fight-missbar-fill { background: linear-gradient(90deg, #ff7a5c, #e0453f); }
+
 .aw-fight-team { position: relative; }
 .aw-fight-score {
   /* 60% of the original clamp(30px,5.2vw,68px) — teacher's ask, 12/8/2026
@@ -6189,24 +6225,83 @@ html.aw-nhung .aw-below { display: none; }
 }
 .aw-sd-running-who { font-size: 14px; color: #5b677a; line-height: 1.35; margin-top: 6px; }
 
-/* ---- the team line on the READY screen (inside the stage, so cqw) ----
-   Sits under the game name, quieter than it: the headline is still WHAT is being
-   played, this says WHO is playing it. */
-.aw-ready-team {
-  display: flex; align-items: baseline; justify-content: center;
-  flex-wrap: wrap; gap: calc(0.4 * var(--aw-u)) calc(1.2 * var(--aw-u));
-  margin-top: calc(1.4 * var(--aw-u)); max-width: calc(74 * var(--aw-u));
+/* ---- ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — BỐ CỤC READY RIÊNG CHO SHOWDOWN ----
+   Thay dải tên nhỏ ở nửa dưới màn hình (Đợt 156, gỡ hẳn) bằng: cột tên 1/3 trái
+   (to, viết tắt, xếp dọc, có vạch chia mảnh) · 2/3 phải giữ template → PLAY (to,
+   giữ nguyên phong cách gốc `.aw-bigplay`, chỉ phóng to bằng override cân nặng
+   hơn selector gốc) → số câu · ô tích sẵn sàng lên dải trên cùng (Đợt 263 dời
+   chỗ, xem `.aw-sd-topstrip` bên dưới `.aw-sd-readyrow` gốc) · tên lesson xuống
+   1 dòng ở dải đáy, thấp nhất. Duyệt qua bản xem thử (Artifact) trước khi vào đây.
+   Áp dụng bằng class `.is-sd` gắn thêm trên `.aw-play-overlay`/`.aw-ready-center`
+   — mọi chế độ khác (thường, homework, "Start with mistakes") giữ nguyên bố cục
+   căn-giữa-một-cột cũ, không đụng một dòng nào ở trên. */
+.aw-play-overlay.is-sd { align-items: stretch; padding: 0; }
+.aw-ready-center.is-sd {
+  margin: 0; flex: 1 1 auto; min-height: 0; width: 100%;
+  display: flex; flex-direction: column; align-items: stretch; text-align: initial; gap: 0;
 }
-.aw-ready-teamname {
-  font-size: calc(2.1 * var(--aw-u)); font-weight: 800; letter-spacing: .06em;
+.aw-sd-columns { flex: 1 1 auto; min-height: 0; display: flex; width: 100%; }
+.aw-sd-namecol {
+  flex: 0 0 33.333%; width: 33.333%; position: relative; min-width: 0;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: calc(2.4 * var(--aw-u));
+  padding: calc(2 * var(--aw-u)) calc(3 * var(--aw-u));
+}
+/* vạch chia mảnh — tách cột tên khỏi phần nội dung, không chạm mép trên/dưới */
+.aw-sd-namecol::after {
+  content: ""; position: absolute; top: 8%; bottom: 8%; right: 0; width: 1px;
+  background: linear-gradient(to bottom, rgba(110,168,254,0), rgba(110,168,254,.5), rgba(110,168,254,0));
+}
+.aw-sd-namecol-team {
+  font-size: calc(1.3 * var(--aw-u)); font-weight: 800; letter-spacing: .1em;
   color: var(--aw-accent, #6ea8fe); text-transform: uppercase;
-  line-height: 1.35; padding: calc(0.2 * var(--aw-u)) 0; margin: calc(-0.2 * var(--aw-u)) 0;
 }
-.aw-ready-teamwho {
-  font-size: calc(1.6 * var(--aw-u)); color: #d7e0ec; opacity: .85;
-  line-height: 1.35; padding: calc(0.2 * var(--aw-u)) 0; margin: calc(-0.2 * var(--aw-u)) 0;
-  text-align: center;
+/* Tên học sinh — "tên gọi" viết tắt qua shortenTeamNames() (core/engine.js), thật
+   to để đọc được từ cuối lớp. `nowrap` + ellipsis: một tên bất thường dài vẫn
+   không được phép đẩy vỡ cột hay xuống dòng đè lên tên kế tiếp. */
+.aw-sd-namecol-stu {
+  font-size: calc(4.2 * var(--aw-u)); font-weight: 800; letter-spacing: .01em;
+  color: #f4f7fb; text-transform: uppercase; line-height: 1.1;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
 }
+.aw-sd-contentcol {
+  flex: 0 0 66.666%; width: 66.666%; min-width: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: calc(2.2 * var(--aw-u)); text-align: center;
+  padding: calc(2 * var(--aw-u)) calc(3 * var(--aw-u));
+}
+/* Nút PLAY "thật to" (thầy) — CHỈ phóng cỡ, mọi thứ khác (màu, filter, hover,
+   active) vẫn nguyên từ `.aw-bigplay` gốc phía trên, không viết lại ở đây. */
+.aw-sd-contentcol .aw-bigplay { width: calc(20 * var(--aw-u)); }
+/* Dải đáy — tên lesson, ĐÚNG 1 DÒNG (thầy), cắt bằng "…" nếu quá dài. Ở TRONG
+   `.aw-ready-center` (không phải `.aw-play-overlay`) nên ẩn/hiện cùng đội hình
+   lúc vào/ra phòng chờ — y hệt cách `.aw-ready-title` từng ẩn/hiện trước đây. */
+.aw-sd-bottomstrip {
+  flex: 0 0 auto; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(0.8 * var(--aw-u)) calc(3 * var(--aw-u));
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+.aw-sd-bottomstrip .aw-ready-title {
+  font-size: calc(1.5 * var(--aw-u)); font-weight: 700; color: #aab6c4;
+  max-width: 100%; line-height: 1.3;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* Dải trên cùng — chỉ chứa hàng ô tích sẵn sàng (`.aw-sd-readyrow` gốc, xem định
+   nghĩa dưới), thu nhỏ lại bằng override cân nặng hơn thay vì viết lại từ đầu. */
+.aw-sd-topstrip {
+  flex: 0 0 auto; width: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(1 * var(--aw-u)) calc(2 * var(--aw-u));
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.aw-sd-topstrip .aw-sd-readyrow {
+  position: static; pointer-events: none;
+  gap: calc(1.4 * var(--aw-u));
+}
+.aw-sd-topstrip .aw-sd-rt { width: auto; flex-direction: row; gap: calc(0.5 * var(--aw-u)); }
+.aw-sd-topstrip .aw-sd-rt-dot { width: calc(3 * var(--aw-u)); height: calc(3 * var(--aw-u)); min-width: 22px; min-height: 22px; }
+.aw-sd-topstrip .aw-sd-rt-name { font-size: calc(0.9 * var(--aw-u)); }
 
 
 /* ---- ⭐⭐⭐ Đợt 261 — PHÒNG CHỜ (nằm TRONG .aw-play-overlay, tức trong stage ⇒ cqw) ----

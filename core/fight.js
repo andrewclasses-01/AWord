@@ -374,6 +374,15 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   const pickBars = [makePickBar(), makePickBar()];
   half0.append(pickBars[0].el);
   half1.append(pickBars[1].el);
+  // ⭐⭐⭐ Đợt 281 (thầy, 28/8/2026) — THANH MISS WAIT, một cái mỗi nửa, CÙNG
+  // CHỖ và CÙNG KHUÔN với thanh PICK TIME ngay trên (absolutely positioned,
+  // không lấy phần rộng nào của hàng — xem lý do ở `pickBars`). Chỉ khác: chỉ
+  // MỘT bên bật tại một thời điểm (bàn còn được chơi tiếp), không phải cả hai
+  // như pick time. Logic tô màu/đếm giờ nằm ở `paintMissBar`/`startMissBar`
+  // cạnh `paintWaitBar`, đọc phía dưới.
+  const missBars = [makeMissBar(), makeMissBar()];
+  half0.append(missBars[0].el);
+  half1.append(missBars[1].el);
 
   const middle = el("div", "aw-fight-middle");
   const clockBox = el("div", "aw-fight-clockbox");
@@ -421,6 +430,18 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function makePickBar() {
     const bar = el("div", "aw-fight-pickbar");
     const fill = el("div", "aw-fight-pickbar-fill");
+    bar.append(fill);
+    return { el: bar, fill };
+  }
+
+  // ⭐⭐⭐ Đợt 281 — same two-node shape as makePickBar() right above (and, one
+  // level further back, core/engine.js's own `.aw-waitbar`/`-fill`): the drain
+  // is a single CSS width transition of the exact window length. See
+  // `paintMissBar` (near `paintWaitBar`) for the three-band green→orange→red
+  // colouring this one adds on top.
+  function makeMissBar() {
+    const bar = el("div", "aw-fight-missbar");
+    const fill = el("div", "aw-fight-missbar-fill");
     bar.append(fill);
     return { el: bar, fill };
   }
@@ -751,6 +772,97 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     waitBarFns.forEach(fn => { try { fn && fn(ms, mode); } catch { /* board already gone */ } });
   }
 
+  // ⭐⭐⭐ Đợt 281 (thầy, 28/8/2026) — THANH MISS WAIT. Thầy: *"đội bên trái làm
+  // trước bị sai, thì đội sau ko thể đợi mãi tùy ý được mà phải có thanh thời
+  // gian gì đó thiết lập được phần này ... chạy 1 thanh thời gian có đổi màu
+  // gradient ở dải phía trên để thể hiện lượng thời gian còn lại ở làm"*.
+  // MISS WAIT (Đợt 276) đã có ĐỒNG HỒ THẬT từ trước (`later(advanceRound,
+  // wrongWaitMs)` trong nhánh WRONG của wordDone) — cái thiếu chỉ là NGƯỜI VẼ.
+  // ⭐ KHÔNG QUA `core/engine.js` NHƯ waitBar: bàn này SỐNG SẴN Ở DẢI TRÊN
+  // (`half0`/`half1`, cùng nơi `pickBars` — Đợt 259 — và điểm số của mỗi đội
+  // đứng), thứ CHÍNH file này dựng (xem `top`/`makeTeam` phía trên), nên trọng
+  // tài tự vẽ luôn pixel của chính mình — không cần một đường registerXxxBar
+  // xuyên file như waitBar phải làm (waitBar sống ở hàng nút DƯỚI, đất của
+  // core/engine.js, nơi fight.js không với tới).
+  // ⭐ CHỈ MỘT BÀN — bàn còn đang được chơi tiếp (đội đã sai bị khoá/che rồi,
+  // không có gì để đếm ngược ở đó). Phần tử `missBars` được dựng cùng chỗ với
+  // `pickBars` (xem ngay trên `makeTeam`) — đây chỉ là phần TÔ MÀU/ĐẾM GIỜ.
+  let missWaitSide = -1;   // bàn nào đang đếm ngược MISS WAIT, hoặc -1 = không bàn nào
+  let missTotalMs = 0;     // độ dài CẢ cửa sổ (wrongWaitMs) — mốc % cho 2 lần đổi màu
+  let missBandTimers = []; // 2 hẹn giờ đổi màu (50%/20% còn lại) — huỷ/đặt lại quanh pause
+  function clearMissBandTimers() { missBandTimers.forEach(t => clearTimeout(t)); missBandTimers = []; }
+  // Cùng NGƯỠNG % với `.aw-roundbar-fill` (core/engine.js) — MỘT ngôn ngữ màu
+  // "sắp hết giờ" cho cả app, không bịa ra một cái riêng cho MISS WAIT.
+  function applyMissBand(pb, pct) {
+    pb.el.classList.toggle("is-orange", pct <= 50 && pct > 20);
+    pb.el.classList.toggle("is-red", pct <= 20);
+  }
+  // Đặt lại từ THỜI ĐIỂM HIỆN TẠI (msLeft), không phải từ đầu — gọi cả lúc bật
+  // thanh LẪN lúc "go" sau một lượt tạm dừng, nên một lần tạm dừng giữa chừng
+  // không làm thanh nhảy lùi về xanh rồi phải đợi lại đúng mốc cũ.
+  function scheduleMissBands(pb, msLeft) {
+    clearMissBandTimers();
+    if (!Number.isFinite(msLeft) || missTotalMs <= 0) { applyMissBand(pb, 100); return; }
+    const pctLeft = Math.max(0, Math.min(100, (msLeft / missTotalMs) * 100));
+    applyMissBand(pb, pctLeft);
+    const toOrangeAt = msLeft - missTotalMs * 0.5;
+    const toRedAt = msLeft - missTotalMs * 0.2;
+    if (toOrangeAt > 0) missBandTimers.push(setTimeout(() => applyMissBand(pb, 50), toOrangeAt));
+    if (toRedAt > 0) missBandTimers.push(setTimeout(() => applyMissBand(pb, 20), toRedAt));
+  }
+  // Một bàn, ba trạng thái — CÙNG KHUÔN `paintPickBar` ngay dưới đây (chính nó
+  // mô phỏng theo `runWaitBar` của core/engine.js): `mode` "hold"/"go" y hệt.
+  function paintMissBar(side, ms, mode) {
+    const pb = missBars[side];
+    if (!pb) return;
+    if (mode === "hold" || mode === "go") {
+      if (!pb.el.classList.contains("is-on")) return;
+      if (mode === "hold") {
+        pb.fill.style.width = getComputedStyle(pb.fill).width;
+        pb.fill.style.transition = "none";
+        clearMissBandTimers();   // màu đứng nguyên ở mức vừa đọc được — không đổi giữa lúc dừng
+        return;
+      }
+      if (!Number.isFinite(ms) || !(ms > 0)) return;
+      void pb.fill.offsetWidth;
+      // Nền (màu) chuyển mượt riêng .25s, KHÔNG ăn theo `ms` của bề rộng — hai
+      // chuyển động khác nhịp trong CÙNG MỘT inline style, nên phải viết chung
+      // một chuỗi (style.transition đặt lại là THAY, không phải CỘNG DỒN).
+      pb.fill.style.transition = "width " + ms + "ms linear, background .25s ease";
+      pb.fill.style.width = "0%";
+      scheduleMissBands(pb, ms);
+      return;
+    }
+    if (!(ms > 0) || torndown) {
+      pb.el.classList.remove("is-on", "is-orange", "is-red");
+      pb.fill.style.transition = "none";
+      pb.fill.style.width = "100%";
+      clearMissBandTimers();
+      return;
+    }
+    pb.el.classList.add("is-on");
+    pb.fill.style.transition = "none";
+    pb.fill.style.width = "100%";
+    applyMissBand(pb, 100);
+    void pb.fill.offsetWidth;   // cú reflow chuẩn để khởi động lại transition CSS
+    pb.fill.style.transition = "width " + ms + "ms linear, background .25s ease";
+    pb.fill.style.width = "0%";
+    scheduleMissBands(pb, ms);
+  }
+  /** Mở thanh MISS WAIT trên bàn `side` (bàn CÒN ĐƯỢC CHƠI TIẾP), đếm `ms`. */
+  function startMissBar(side, ms) {
+    missWaitSide = side;
+    missTotalMs = ms;
+    paintMissBar(side, ms);
+  }
+  /** Tắt thanh đang mở (nếu có) — không cần biết bàn nào, tự nhớ trong `missWaitSide`. */
+  function stopMissBar() {
+    if (missWaitSide < 0) return;
+    paintMissBar(missWaitSide, 0);
+    missWaitSide = -1;
+    missTotalMs = 0;
+  }
+
   // ⭐⭐⭐ Đợt 217 (thầy, 20/8/2026) — CHE DẤU VẾT TRẢ LỜI CỦA BÀN ĐÃ XONG.
   // *"nếu bật delay, đội xong trước hiện tích đúng/sai và tính điểm xong phải có
   // phương án ẩn ngay câu trả lời (VD quiz thì nhạt màu hơn các ô đáp án, Anagram thì
@@ -963,12 +1075,21 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       // đồng hồ đứng im — rồi thầy đóng Menu là lượt chọn nhảy sang đội kia ngay
       // trước mắt, không ai hiểu vì sao.
       paintPickBars("hold");
+      // ⭐⭐⭐ Đợt 281 — Y HỆT LÝ DO ĐÓ cho thanh MISS WAIT: đồng hồ thật của nó
+      // (`roundDue`, vừa đứng lại ở dòng trên) và thanh vẽ trên bàn là HAI THỨ
+      // KHÁC NHAU (`freezePlay()` không với tới thanh, nó cũng ở ngoài sân) — để
+      // nguyên thì thanh cạn hết trong lúc đồng hồ MISS WAIT đứng im.
+      if (missWaitSide >= 0) paintMissBar(missWaitSide, 0, "hold");
     } else {
       armRound();
       armPending();
       armPick();
       if (pendingDue) paintWaitBar(pendingDue.left, "go");
       paintPickBars("go");
+      // ⭐⭐⭐ Đợt 281 — MISS WAIT chạy tiếp NỐT phần còn lại, đọc từ CHÍNH `roundDue`
+      // (đồng hồ thật của nó, vừa được `armRound()` gắn lại ở dòng trên) chứ không
+      // có `Due` riêng — xem chú thích ở khối khai `missWaitSide` phía trên.
+      if (missWaitSide >= 0 && roundDue) paintMissBar(missWaitSide, roundDue.left, "go");
     }
   }
 
@@ -1236,6 +1357,9 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     // with normal rounds, which is exactly why this branch sits at the top of
     // advanceRound() rather than beside each of those callers.
     paintWaitBar(0);
+    stopMissBar();   // Đợt 281 — belt and braces: wordDone() already stops it the
+                      // instant the timed side answers; this covers the timer's
+                      // own natural fire (nobody answered) and any path still to be found.
     if (pickMode) { revealBoards(); endPickRound(); return; }
     // Safety net for the walk-away path (the 20s backstop fires straight in
     // here): nobody may leave a round still owing a hidden result, or the
@@ -1281,6 +1405,7 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
     if (matchOver) return;
     matchOver = true;
     paintWaitBar(0);
+    stopMissBar();   // Đợt 281 — hết trận thì không còn gì để đếm nữa
     // ⭐ Đợt 259 — hết trận thì không còn lượt nào để chọn: tắt đồng hồ VÀ cả hai
     // thanh. `matchOver` đã bật ở trên nên paintPickBars() tự cho cả hai về 0.
     cancelPick();
@@ -1506,6 +1631,11 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
       if (info && info.index !== roundIndex) return;    // a stale word (teacher used Next) — ignore
       if (roundDone[side]) return;                      // this side already had its go this round
       roundDone[side] = true;
+      // ⭐⭐⭐ Đợt 281 — bàn này vừa tự trả lời xong (đúng hay sai không quan trọng),
+      // nên nếu nó đang là mục tiêu của một thanh MISS WAIT thì thanh đó hết lý do
+      // để đếm tiếp NGAY TỪ GIÂY NÀY — không đợi tới `advanceRound()` (có thể còn
+      // cách đây tới ROUND_HOLD_MS), kẻo bàn hiện một lời hứa đã hết hạn.
+      if (missWaitSide === side) stopMissBar();
       // Anything that doesn't say otherwise counts as correct: templates whose
       // word can only ever END correct (Anagram's tap-in-order modes) simply
       // don't send the flag.
@@ -1597,7 +1727,14 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
         // board's own wordDone reports back, or the teacher's own ☰ Menu ▸
         // Start again — exactly the accepted ∞ shape Time delay and Pick time
         // already use elsewhere in this file.
-        if (Number.isFinite(wrongWaitMs)) later(advanceRound, wrongWaitMs);
+        if (Number.isFinite(wrongWaitMs)) {
+          // ⭐⭐⭐ Đợt 281 — thanh MISS WAIT, trên bàn CÒN ĐƯỢC CHƠI TIẾP (`other`) —
+          // bàn vừa sai đã khoá/che rồi, không có gì để đếm ngược ở đó. Dưới
+          // ngưỡng `WAIT_BAR_MIN_MS` (0s tức thì, chốt riêng của nấc này — xem
+          // FIGHT_DEFAULTS.fightWrongWait) thì không vẽ gì, chỉ tổ nháy một khung.
+          if (wrongWaitMs >= WAIT_BAR_MIN_MS) startMissBar(other, wrongWaitMs);
+          later(advanceRound, wrongWaitMs);
+        }
         return;
       }
 
@@ -2293,6 +2430,8 @@ export function startFight(root, activity, { onExit, base = null } = {}) {
   function teardown() {
     torndown = true;
     paintWaitBar(0);
+    clearMissBandTimers();   // Đợt 281 — 2 setTimeout riêng của thanh MISS WAIT, `later()`/
+                              // cancelRound() bên dưới không biết tới chúng
     cancelRound();
     cancelPending();   // Đợt 133 — same reasoning as roundTimer
     cancelPick();      // Đợt 259 — same reasoning again: a pick clock that outlives
