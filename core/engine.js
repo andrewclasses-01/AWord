@@ -2822,7 +2822,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     lobbyLeaveOnTeardown = false;
     const giveUp = () => { sdLobbyResume = 0; lobbyLeaveOnTeardown = true; paintLobby("nomatch"); };
     if (std.type && std.type !== activity.type) {
-      Promise.resolve(doSwitchTemplate(std.type)).catch(giveUp);
+      // Đợt 279 — ĐANG KÉO VỀ đúng chuẩn của cả lớp, không phải một cú đổi ý thật của
+      // bàn này, nên KHÔNG được rút khỏi lượt (xem ghi chú dài ở doSwitchTemplate()).
+      Promise.resolve(doSwitchTemplate(std.type, { viaLobbyPull: true })).catch(giveUp);
       return;
     }
     // Chỉ khác Options ⇒ đi ĐÚNG cửa mà nút Apply và cầu myActivity vẫn đi (Đợt 206):
@@ -5143,8 +5145,35 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // then re-enters startGame with a fresh EPHEMERAL activity (id "conv_...").
   // The library act is untouched; the current theme is kept; fullscreen too
   // (the fullscreen target is the stable root, exactly like "Start again").
-  async function doSwitchTemplate(targetType) {
+  //
+  // ⭐⭐⭐ Đợt 279 (28/8/2026, thầy báo) — ĐỔI TEMPLATE Ở MÀN SETUP (TRƯỚC KHI BẤM START)
+  // KHÔNG DỌN LƯỢT CŨ, NÊN "CHỌN QUIZ... KHI PLAY LẠI RA ANAGRAM".
+  //
+  // Triệu chứng: chọn Quiz, cả 4 bàn hiện Quiz và đồng bộ, bấm Play thì ván bắt đầu là
+  // ANAGRAM — chỉnh đi chỉnh lại vẫn thế. Nguyên nhân: `sd_round` chốt `std` (xem đầu
+  // file core/showdown-setup.js, "BÀN ĐẦU TIÊN BẤM START CHỐT DỮ LIỆU CHUẨN") từ lần
+  // START trước đó (dù là Anagram mặc định, dù thầy không nhớ đã từng bấm); Đợt 264 chỉ
+  // dọn được lượt đã HẾT NGƯỜI (`others.length > 0` mới cho dùng lại), không dọn lượt
+  // vẫn còn người NHƯNG đã đổi ý — và cơ chế `leaveRound()` sẵn có chỉ chạy khi dỡ ván
+  // LÚC ĐANG ĐỨNG TRONG PHÒNG CHỜ (`lobbyLeaveOnTeardown`, xem stopLobby()), không hề
+  // chạm tới cú đổi template ở màn setup, TRƯỚC khi vào phòng chờ. Chuẩn cũ vì thế sống
+  // mãi cho tới khi mọi bàn ngừng bấm START trong hơn `ROUND_BOARD_TTL_MS` (150 giây) —
+  // đúng cái vòng "chỉnh đi chỉnh lại vẫn thế" thầy gặp.
+  //
+  // ⇒ Một cú ĐỔI TEMPLATE THẬT (không phải cú "kéo chuẩn về" của pullStandard() — đó là
+  // NGƯỢC hướng, phải giữ nguyên) rút bàn này khỏi lượt hiện có TRƯỚC. Rút hết cả 4 bàn
+  // (trực tiếp bấm CHANGE TEMPLATE + 3 bàn kia nhận qua switchTemplate() của cầu
+  // myActivity, cả hai đều gọi doSwitchTemplate() KHÔNG tham số) là đủ để lượt cũ hết
+  // người → lần bấm START tới đúc lượt MỚI đúng theo lựa chọn hiện tại, không phải sửa
+  // gì trong planRoundJoin()/joinRound(). Không chặn UI (fire-and-forget), rớt mạng thì
+  // hàng của mình tự hết hạn theo TTL như cũ — không có gì mới có thể hỏng thêm.
+  // ⚠️ CHỈ pullStandard() (bên trong lượt, đang KÉO VỀ đúng chuẩn của cả lớp) được truyền
+  // `viaLobbyPull: true` để tắt nhánh này — nó phải NHẬP VÀO lượt, không phải rời nó.
+  async function doSwitchTemplate(targetType, { viaLobbyPull = false } = {}) {
     awEmit("TPL", targetType);   // mirror the Template switch to other myActivity panes
+    if (showdownPick && !viaLobbyPull && !lobbyEl) {
+      sdMod().then(m => m.leaveRound()).catch(() => { /* mất mạng: hàng cũ tự hết hạn theo TTL */ });
+    }
     try {
       // FIGHT MODE (teacher, 12/8/2026): the switch belongs to the MATCH, not
       // to the board whose toolbar was used — both boards must land on the same

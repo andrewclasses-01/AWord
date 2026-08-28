@@ -12,7 +12,14 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
+> Mới nhất: **Đợt 279** (28/8/2026, thầy báo — Showdown: chọn Quiz ở màn setup, cả 4 bàn hiện Quiz
+> và đồng bộ, bấm Play thì ván bắt đầu lại là ANAGRAM, chỉnh đi chỉnh lại vẫn thế; nguyên nhân là
+> `sd_round` chốt `std` từ lần START trước đó và không có đường dọn khi đổi template Ở MÀN SETUP
+> (trước khi vào phòng chờ) — `leaveRound()` sẵn có chỉ chạy khi dỡ ván TRONG phòng chờ; sửa bằng
+> cách `doSwitchTemplate()` rút bàn này khỏi lượt cũ TRƯỚC khi thử lại, trừ đúng một nhánh
+> `pullStandard()` (kéo chuẩn về) được đánh dấu `viaLobbyPull:true` để không tự rút mình; bàn thử
+> mới `dot279-template-ghost.html` 7/7 ĐẠT dùng thẳng `planRoundJoin()` thật; code `<PENDING>`,
+> ⬜ CHƯA PUSH — chờ thầy bấm tay Showdown thật). Trước đó: **Đợt 278** (27/8/2026, thầy — hàng "Default" trong màn Wrong-answer sound nay LUÔN có
 > dấu ✓ bất kể đang ở Single hay Mix, vì âm gốc đã luôn phát từ Đợt 277; các âm khác vẫn tích 1
 > (ngoài Mix) hoặc nhiều (trong Mix) như cũ; sửa đúng 1 hàm `isChecked()` trong `main.js`; bàn thử
 > mới `dot278-wrongsound-defaultcheck.html` 20/20 ĐẠT; code `3b7bab5` ĐÃ PUSH + LIVE kiểm chứng
@@ -26,6 +33,92 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 279 (28/8/2026, thầy báo) — ⭐⭐ **SHOWDOWN: ĐỔI TEMPLATE Ở MÀN SETUP KHÔNG DỌN LƯỢT CŨ, "CHỌN QUIZ... PLAY LẠI RA ANAGRAM"**
+
+### Thầy báo gì
+
+> "AWord mode showdown bị lỗi khi đồng bộ: chọn Quiz rồi, cả 4 hiện quiz và đồng bộ rồi, khi play
+> lại ra ANAGRAM. Chỉnh đi chỉnh lại vẫn thế"
+
+Hỏi lại xác nhận: cú đổi template xảy ra **ở màn setup, TRƯỚC khi bấm START** (không phải trong lúc
+đang đứng ở phòng chờ READY), và giữa các lần thử KHÔNG bấm nút Cancel nhỏ trong phòng chờ hay
+"Reset teams" — chỉ đổi Quiz rồi bấm Play lại thẳng.
+
+### Vì sao hỏng
+
+`sd_round` (core/showdown-setup.js, khối "Đợt 261 — PHÒNG CHỜ") chốt `std: {type, options}` từ
+**bàn đầu tiên bấm START** cho cả lượt; mọi bàn sau tự kéo mình về đúng chuẩn đó
+(`pullStandard()` trong core/engine.js). [[Đợt 264]] đã sửa được ca "lượt ma RỖNG vẫn còn quyền ra
+lệnh" (không bàn nào còn sống mà `std` vẫn đứng đó cả buổi) — nhưng KHÔNG sửa ca này: một lượt **còn
+đủ 4 bàn đang sống thật**, chỉ là cả 4 đã ĐỔI Ý sang Quiz. `planRoundJoin()` không có cách nào phân
+biệt "một bàn chưa kịp đồng bộ" (đúng ca Đợt 264 phải chặn) với "cả lớp đã đồng lòng đổi ý" — cả hai
+nhìn giống hệt nhau từ góc của một hàm thuần chỉ thấy `{server, me, type, options}`.
+
+Cơ chế DUY NHẤT từng dọn một lượt đang sống là `leaveRound()`, và nó chỉ được gọi ở đúng MỘT chỗ:
+`stopLobby()` (core/engine.js), khi dỡ ván **TRONG LÚC đang đứng trong phòng chờ**
+(`lobbyLeaveOnTeardown === true`). Đổi template ở màn setup — trước khi bấm START, tức là TRƯỚC khi
+phòng chờ từng mở ra cho mount này — không đi qua đường đó, nên không có gì rút bàn khỏi lượt Anagram
+cũ. Miễn là các bàn còn bấm START lại trong vòng `ROUND_BOARD_TTL_MS` (150 giây) kể từ lần thử
+trước, lượt cũ luôn còn "sống" (`others.length > 0`), `std.type` không bao giờ đổi — đúng
+"chỉnh đi chỉnh lại vẫn thế".
+
+### Đã sửa
+
+Một hàm, `doSwitchTemplate()` trong `core/engine.js`, thêm tham số thứ hai (mặc định rỗng):
+
+```js
+async function doSwitchTemplate(targetType, { viaLobbyPull = false } = {}) {
+  awEmit("TPL", targetType);
+  if (showdownPick && !viaLobbyPull && !lobbyEl) {
+    sdMod().then(m => m.leaveRound()).catch(() => {});
+  }
+  ...
+```
+
+Một cú đổi template THẬT (bấm CHANGE TEMPLATE trực tiếp, hoặc nhận qua `switchTemplate()` của cầu
+`window.__awordBridge` từ myActivity — cả hai đều gọi `doSwitchTemplate(type)` KHÔNG tham số) rút bàn
+này khỏi lượt hiện có TRƯỚC. Rút cả 4 bàn (bàn bấm tay + 3 bàn nhận qua cầu myActivity) là đủ để
+lượt cũ hết người → lần bấm START tới đúc lượt MỚI đúng theo lựa chọn hiện tại — không sửa gì trong
+`planRoundJoin()`/`joinRound()`, không thêm khái niệm mới vào tài liệu `sd_round`.
+
+⚠️ **CHỈ MỘT nhánh KHÔNG được rút**: `pullStandard()` gọi `doSwitchTemplate(std.type, { viaLobbyPull:
+true })` — đây là bàn đang KÉO CHUẨN VỀ để nhập vào lượt cho khớp cả lớp, ngược hướng hoàn toàn với
+"đổi ý rời đi". Rút nó ở đây sẽ tự làm chính cú nhập-lại nó vừa thử trở nên vô nghĩa (vòng lặp không
+hồi kết).
+
+⚠️ `!lobbyEl` chỉ để khỏi gọi trùng: nếu cú đổi template xảy ra trong lúc bàn còn đang hiển thị phòng
+chờ, `stopLobby()` đã tự lo `leaveRound()` qua đường `lobbyLeaveOnTeardown` sẵn có (Đợt 261) — nhánh
+mới chỉ cần lo đúng phần trước đây bỏ trống: đổi template Ở MÀN SETUP, chưa từng mở phòng chờ.
+
+Không chặn UI (fire-and-forget, `.catch()` nuốt lỗi mạng) — rớt mạng thì hàng cũ tự hết hạn theo TTL
+như trước giờ, không có gì mới có thể hỏng thêm so với hiện trạng.
+
+### Bàn thử
+
+`scratch/dot279-template-ghost.html` — nhập thẳng `planRoundJoin()` thật từ `core/showdown.js`
+(không viết lại logic), mô phỏng đúng chuỗi giao dịch: **A.** đối chứng ngược — chưa vá, 4 bàn gửi
+`type=quiz` liên tục vào một lượt còn sống với `std.type=anagram` → lượt vẫn chốt anagram, không bàn
+nào ready (tái hiện đúng triệu chứng thầy tả). **B.** đã vá — mô phỏng cả 4 bàn `leaveRound()` trước
+(đúng thứ `doSwitchTemplate()` mới làm) rồi mới bấm START lại → lượt MỚI chốt đúng quiz, cả 4 ready
+ngay. **C.** đối chứng cho nhánh `viaLobbyPull` — hàng của bàn đang kéo-chuẩn-về không bị rút nhầm.
+**7/7 ĐẠT.** `node --input-type=module --check` sạch trên `core/engine.js`.
+
+⚠️ Bàn thử đo ĐÚNG hàm thuần `planRoundJoin()` app dùng thật, nhưng KHÔNG mô phỏng được toàn bộ
+Firestore/myActivity thật (transaction thật, độ trễ mạng, 4 cửa sổ myActivity thật) — xem mục
+VIỆC ĐANG CHỜ.
+
+### VIỆC ĐANG CHỜ
+
+⬜ **CHƯA PUSH** — chờ thầy xác nhận trước khi đẩy lên (sửa lõi đồng bộ của Showdown, ảnh hưởng trực
+tiếp lớp đang dùng).
+⬜ **CHỜ THẦY BẤM TAY THẬT** (bàn thử chỉ giả lập, chưa ai chạm 4 cột myActivity thật): dựng 4 cột,
+chọn Class + chia đội, để mặc định Anagram và bấm START một lần (dù không chơi hết, để cố ý tạo một
+lượt "còn sống"), sau đó thoát ra màn setup (không bấm Cancel trong phòng chờ), đổi cả 4 sang Quiz,
+bấm Play lại — phải vào đúng Quiz, không còn rơi về Anagram. Thử lại vài lần liên tiếp (mô phỏng
+đúng "chỉnh đi chỉnh lại") để chắc không tái phát. Test trên TOMKO.
 
 ---
 

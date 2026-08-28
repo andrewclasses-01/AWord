@@ -4700,16 +4700,53 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **27/8/2026 sau Đợt 278** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **28/8/2026 sau Đợt 279** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (27/8/2026 — sau **Đợt 278**)
+> ### 🟡 TRẠNG THÁI NGAY LÚC NÀY (28/8/2026 — sau **Đợt 279**, CHƯA PUSH)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`3b7bab5`** (Đợt 278 — hàng "Default" trong Wrong-answer sound nay LUÔN có dấu ✓) — **đã push + LIVE kiểm chứng** |
-> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/main.js` thấy đúng `if (entry.kind === "default") return true;` trong `isChecked()` — **mã băm SHA-256 khớp tuyệt đối** với `git show 3b7bab5:main.js` (`51eae4f5…023e0eb2f` cả hai) |
+> | Sửa chưa push | `core/engine.js` — `doSwitchTemplate()` rút bàn khỏi `sd_round` cũ khi đổi template Ở MÀN SETUP (Showdown), sửa bug "chọn Quiz... play lại ra Anagram" |
+> | Kiểm | Bàn thử `scratch/dot279-template-ghost.html` (dùng thẳng `planRoundJoin()` thật) 7/7 ĐẠT; `node --input-type=module --check` sạch — CHƯA kiểm live vì chưa push |
+> | Trước đó | **`3b7bab5`** (Đợt 278 — hàng "Default" trong Wrong-answer sound nay LUÔN có dấu ✓) — đã push + LIVE kiểm chứng |
+> | Kho | 1 file sửa (`core/engine.js`) + 1 bàn thử mới, CHƯA COMMIT — `main` vẫn khớp `origin/main` tại `098ca46` |
+>
+> ### ⭐⭐ ĐỢT 279 — VÙNG VỪA ĐỘNG TỚI: **SHOWDOWN — ĐỔI TEMPLATE Ở MÀN SETUP KHÔNG DỌN LƯỢT CŨ**
+>
+> Thầy báo: *"chọn Quiz rồi, cả 4 hiện quiz và đồng bộ rồi, khi play lại ra ANAGRAM. Chỉnh đi chỉnh
+> lại vẫn thế"*. Xác nhận qua hỏi lại: đổi template xảy ra Ở MÀN SETUP (trước khi bấm START), không
+> bấm Cancel/Reset teams giữa các lần thử.
+>
+> Nguyên nhân: `sd_round` chốt `std` (type + options) từ bàn ĐẦU TIÊN bấm START cho cả lượt (khối
+> "Đợt 261 — PHÒNG CHỜ" trong `core/showdown-setup.js`); mọi bàn sau tự kéo về đúng chuẩn đó
+> (`pullStandard()`). [[Đợt 264]] chỉ dọn được lượt đã RỖNG (không còn bàn nào sống) — lượt còn đủ 4
+> bàn sống nhưng đã ĐỔI Ý sang template khác thì không có đường nào dọn, vì cơ chế dọn duy nhất
+> (`leaveRound()`) chỉ chạy khi dỡ ván TRONG lúc đang đứng ở phòng chờ (`stopLobby()`), không chạm
+> tới cú đổi template Ở MÀN SETUP — trước khi phòng chờ từng mở ra.
+>
+> **File cốt lõi: `core/engine.js`** — `doSwitchTemplate(targetType, {viaLobbyPull=false}={})` nay
+> rút bàn khỏi lượt hiện có TRƯỚC khi đổi (fire-and-forget `leaveRound()`), trừ đúng nhánh
+> `pullStandard()` (đang KÉO CHUẨN VỀ, ngược hướng — được đánh dấu `viaLobbyPull:true` để không tự
+> rút mình). Không sửa gì trong `planRoundJoin()`/`joinRound()` (core/showdown.js/showdown-setup.js).
+>
+> Bàn thử `scratch/dot279-template-ghost.html` — nhập thẳng `planRoundJoin()` thật, KHÔNG viết lại
+> logic: **7/7 ĐẠT** — đối chứng ngược tái hiện đúng triệu chứng thầy tả (chưa vá thì 4 bàn gửi
+> `type=quiz` vẫn không đổi được `std.type=anagram`) · đã vá thì lượt mới chốt đúng quiz, cả 4 ready
+> ngay · nhánh `viaLobbyPull` không bị rút nhầm. `node --input-type=module --check` sạch.
+>
+> ⬜ **CHƯA PUSH** — chờ thầy xác nhận (sửa lõi đồng bộ Showdown, ảnh hưởng lớp đang dùng) trước khi
+> đẩy lên; bàn thử chỉ mô phỏng logic thuần, chưa ai chạm 4 cột myActivity + Firestore thật.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (27/8/2026 — sau **Đợt 278**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`3b7bab5`** (Đợt 278 — hàng "Default" trong Wrong-answer sound nay LUÔN có dấu ✓) — đã push + LIVE kiểm chứng |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/main.js` thấy đúng `if (entry.kind === "default") return true;` trong `isChecked()` — mã băm SHA-256 khớp tuyệt đối với `git show 3b7bab5:main.js` (`51eae4f5…023e0eb2f` cả hai) |
 > | Trước đó | **`d0b7b5d`** (Đợt 277 — âm trả lời sai nay CHỒNG lên âm gốc của game) — đã push + LIVE kiểm chứng |
-> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+> | Kho | SẠCH, `main` khớp `origin/main` (ahead 0 · behind 0) |
 >
 > ### ⭐ ĐỢT 278 — VÙNG VỪA ĐỘNG TỚI: **DẤU ✓ CỦA HÀNG "DEFAULT" LUÔN SÁNG**
 >
@@ -5834,22 +5871,27 @@ act nào gọi tên HS thì đọc từ đó.
 
 ### 4. ⬜ VIỆC ĐANG CHỜ — đọc kỹ trước khi hỏi thầy làm gì tiếp
 
-> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 276, 27/8/2026) — code `860ab5f`, ĐÃ PUSH + LIVE kiểm chứng
-> (mã băm SHA-256 khớp tuyệt đối). KHÔNG CÒN VIỆC CODE DANG DỞ.**
-> Vùng: **FIGHT MODE — thanh "Miss wait"** (giới hạn thời gian đội sau khi đối phương trả
-> lời SAI). Bản đồ đầy đủ ở mục **0a ▸ ⭐⭐ ĐỢT 276**; chi tiết từng số đo ở khối
-> **Đợt 276** trong `GHI CHU DU AN.md`.
+> ⭐⭐⭐⭐ **MỚI NHẤT (Đợt 279, 28/8/2026) — sửa xong, bàn thử 7/7 ĐẠT, `<PENDING>`,
+> ⬜ CHƯA PUSH — chờ thầy xác nhận trước khi đẩy lên (đụng lõi đồng bộ Showdown).**
+> Vùng: **SHOWDOWN — đổi template Ở MÀN SETUP không dọn lượt `sd_round` cũ**, khiến
+> "chọn Quiz... play lại ra ANAGRAM, chỉnh đi chỉnh lại vẫn thế". Bản đồ đầy đủ ở mục
+> **0a ▸ ⭐⭐ ĐỢT 279**; chi tiết ở khối **Đợt 279** trong `GHI CHU DU AN.md`.
 >
-> **Chờ TAY thầy — bàn thử chỉ giả lập, chưa ai chạm ngón tay thật:**
-> 1. ⬜ Mở một act Fight bất kỳ (Quiz/Anagram đủ, không cần game lượt-chọn), vào Options,
->    kéo thử thanh **"Miss wait"** qua vài nấc kể cả ∞ — số hiển thị phải đổi đúng
->    (`0s` … `20s` … `∞`).
-> 2. ⬜ Cho một đội bấm SAI trước, đội kia **cố tình không bấm gì** — đúng số giây đã đặt
->    ở Miss wait thì phải tự chuyển câu (đo bằng đồng hồ tay là đủ, không cần chính xác
->    tới mili-giây).
-> 3. ⬜ Mở lại một act Fight CŨ (đã lưu **trước** đợt này, chưa từng mở Options sau đợt
->    này) — cùng phép thử ở mục 2 phải vẫn chờ đúng **20 giây** như trước, không đổi gì.
+> **Chờ TAY thầy — bàn thử chỉ mô phỏng logic thuần (`planRoundJoin()`), chưa ai chạm
+> 4 cột myActivity + Firestore thật:**
+> 1. ⬜ Dựng 4 cột Showdown, chọn Class + chia đội, để mặc định Anagram và bấm START một
+>    lần (không cần chơi hết — cốt tạo một lượt "còn sống" trong `sd_round`).
+> 2. ⬜ Thoát ra màn setup (KHÔNG bấm nút Cancel nhỏ trong phòng chờ), đổi cả 4 sang Quiz
+>    (hoặc template bất kỳ khác Anagram), bấm Play lại — phải vào ĐÚNG Quiz.
+> 3. ⬜ Lặp lại bước 2 vài lần liên tiếp (đúng "chỉnh đi chỉnh lại") — không được tái phát.
 > 4. ⬜ Test chạm **TOMKO**.
+>
+> ---
+>
+> ⭐⭐⭐ Đợt 276 (27/8/2026) — code `860ab5f`, ĐÃ PUSH + LIVE kiểm chứng, chờ tay thầy thử
+> **FIGHT MODE — thanh "Miss wait"** (mở act Fight, kéo thanh, cho một đội sai trước xem
+> tự chuyển câu đúng giây; xem lại act Fight cũ vẫn chờ 20s như trước; test TOMKO) — chi
+> tiết ở khối Đợt 276 trong `GHI CHU DU AN.md`.
 >
 > ---
 >
