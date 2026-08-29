@@ -12,7 +12,43 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 280+281** (28/8/2026, thầy — Đợt 280: màn READY Showdown đổi bố cục, cột tên học
+> Mới nhất: **Đợt 282+283** (29/8/2026, thầy — Đợt 282: ⭐⭐ ĐỒNG BỘ OPTIONS/TEMPLATE GIỮA CÁC BẢNG
+> myActivity NAY CHỈ LÚC BẤM APPLY. Thầy báo: chế độ nhiều bảng đồng bộ CẢ LÚC ĐANG KÉO/CHỈNH dở
+> trong Options (tag `OPTLIVE`, throttle 350ms) là thừa và nguy hiểm — mỗi tag đó gọi thẳng
+> `__awordBridge.applyOptions()` ở CÁC CỘT KHÁC, mà hàm này LUÔN `replayCurrent()` (remount cả
+> ván), nên với Showdown là RÚT THĂM LẠI CÂU HỎI TỪNG EM mỗi lần kéo một thanh trượt. Bỏ hẳn
+> `OPTLIVE`/`scheduleOptLive()`; Proxy bọc `draft`/`selState` nay chỉ `markDirty()` (sáng nút Apply)
+> thay vì bắn ra ngoài. Apply nay KHÔNG tự đóng popup nữa (bỏ `closeToolPanel(false)` ở cuối, dùng
+> lại cờ có sẵn `openOptionsOnMount` — vốn chỉ Template dùng — để remount xong panel TỰ MỞ LẠI);
+> nút Apply nhạt/khoá khi chưa có gì mới, sáng lại ngay khi chỉnh thêm (`dirty`/`markDirty()`,
+> ⚠️ đặt trong `buildOptionsPanel` NHƯNG không được đụng `applyBtn` trực tiếp vì vài chuẩn hoá
+> template — VD `hideTimerNone` — ghi `draft.timer` NGAY LÚC DỰNG PANEL LẦN ĐẦU, trước khi
+> `applyBtn` tồn tại — TDZ crash nếu markDirty() đọc thẳng biến đó; vá bằng biến trung gian
+> `applyBtnEl` khởi tạo `null`, chỉ đồng bộ hình ảnh nút khi nó đã tồn tại). Thêm tag mới
+> `TOOLCLOSE` — một chỗ phát duy nhất trong `closeToolPanel()`, CHỈ khi `fade=true` (đóng do người
+> bấm ra ngoài/bấm lại nút, không phải remount nội bộ) — để việc ĐÓNG popup cũng đồng bộ như việc
+> MỞ; cột NHẬN đồng bộ (`applyOptions`/`switchTemplate` trên bridge) cũng tự set
+> `openOptionsOnMount` nếu panel của nó đang mở, để không bị remount làm rớt mất popup mà myActivity
+> không biết đường mở lại. ⛔⛔ GẮN CHẶT VỚI myActivity v2.11.0 (bỏ nhánh `OPTLIVE`, thêm nhánh
+> `TOOLCLOSE`, bỏ `closeTool()` tự động sau relay) — đẩy CÙNG LÚC, đừng revert lẻ một bên. Đợt 283:
+> cột tên học sinh màn READY Showdown ([[Đợt 280]]) đổi từ "chỉ giữ 1-2 tiếng cuối" sang GIỮ ĐẦY ĐỦ
+> họ + tên đệm dạng viết tắt (mỗi tiếng 1 chữ cái + dấu chấm) + tên gọi nguyên vẹn — VD "Bùi Bảo
+> An" → "B.B.An" (`shortenTeamNames()`, `core/engine.js`); bỏ hẳn cơ chế "trùng tên gọi thì mở rộng
+> 2 tiếng" cũ, không cần nữa vì định dạng mới luôn đủ chữ cái đầu để tự phân biệt. Kiểm chứng:
+> `node --input-type=module --check` sạch `core/engine.js`; CSS 1829/1829 ngoặc; test-bench THẬT
+> qua `templates/anagram/test.html` (Browser pane + console + DOM thật, không đoán) — mở Options,
+> đổi Timer sang Count down: KHÔNG còn `OPTLIVE` nào trong console, Apply chuyển sáng ngay; bấm
+> Apply: đúng 1 tag `OPT`, panel biến mất rồi HIỆN LẠI ngay (remount + `TOOLOPEN` lần 2), Apply nhạt
+> lại; bấm ra ngoài (`pointerdown` thật trên `.aw-tool-dim`): đúng 1 tag `TOOLCLOSE`, panel bị gỡ
+> khỏi DOM thật; chọn Template (Quiz): vẫn phát `TPL` tức thời, remount xong panel tự mở lại, và
+> **không** có `TOOLCLOSE` giả nào lọt ra trong lúc remount nội bộ (đúng gate `fade=true` +
+> `activeToolBuild===buildOptionsPanel`); 0 lỗi console suốt phiên đo. `shortenTeamNames()` kiểm
+> độc lập bằng Node với tên 1/2/3/4 tiếng có dấu tiếng Việt — khớp định dạng "X.Y.TênGọi" mọi ca.
+> code `TBD_HASH` — ⬜ đang chờ push + kiểm live, xem mục kế tiếp. ⬜ CHỜ THẦY BẤM TAY TOMKO — kéo
+> nhiều thanh trượt liên tục trong Options giữa một ván Showdown thật xem câu hỏi mỗi em có còn bị
+> xáo lại ngoài ý muốn không; bấm Apply xem popup có đứng yên, nút Apply nhạt/sáng đúng; màn READY
+> Showdown xem tên hiển thị đúng "Họ.Đệm.TênGọi", không tràn dòng). Trước đó: **Đợt 280+281**
+> (28/8/2026, thầy — Đợt 280: màn READY Showdown đổi bố cục, cột tên học
 > sinh 1/3 trái to/viết tắt (`shortenTeamNames()`) có vạch chia, 2/3 phải giữ template→PLAY (to,
 > giữ nguyên phong cách gốc)→số câu, ô tích "sẵn sàng" (Đợt 263) lên dải trên, tên lesson (Đợt 154)
 > xuống 1 dòng ở dải đáy — chốt qua xem thử Artifact 3 vòng chỉnh trước khi vào code thật. Đợt 281:
@@ -49,6 +85,114 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 282+283 (29/8/2026, thầy) — ⭐⭐ **ĐỒNG BỘ OPTIONS/TEMPLATE CHỈ LÚC APPLY + TÊN SHOWDOWN ĐẦY ĐỦ HỌ TÊN**
+
+### Thầy yêu cầu gì
+
+> "Mở mode nhiều bảng trên myActivity và mở act trên Aword, các bảng trên myActivity đồng bộ act,
+> đồng bộ options và template với nhau. Lúc này các pop-up options cùng hiển thị, cùng điều chỉnh
+> cùng nhau dù chỉnh options từng chút một. Vấn đề là đồng bộ như này cần quá nhiều lượt đồng bộ và
+> không cần thiết vì khi chỉnh options sẽ phải thao tác rất nhiều điều chỉnh rồi mới bấm Apply. Đặc
+> biệt là đồng bộ trong showdown, dễ gây lộn xộn dữ liệu và gặp lỗi."
+
+Ý tưởng thầy đưa ra (đã hỏi lại 2 điểm còn mơ hồ bằng `AskUserQuestion` trước khi code — cả hai
+thầy chọn phương án đơn giản/nhất quán nhất): mở Options/Template vẫn đồng bộ mở cùng lúc; chỉnh
+bên trong KHÔNG đồng bộ, chỉ đồng bộ lúc Apply; Apply xong KHÔNG tự đóng popup, nút Apply nhạt tạm
+cho tới khi chỉnh thêm; chọn Template vẫn áp dụng ngay như cũ (không có bước Apply); đóng popup chỉ
+khi bấm ra ngoài, và việc đóng đó phải đồng bộ — áp dụng LUÔN mọi lúc (không riêng nhiều bảng), và
+mọi cột (kể cả cột nhận đồng bộ) đều không tự đóng, chỉ đóng khi có ai bấm ra ngoài.
+
+Thêm 1 việc độc lập cùng đợt: cột tên học sinh màn READY Showdown ([[Đợt 280]]) đang cắt hết họ +
+tên đệm. Thầy: *"Tên học sinh ở cột tên trong chế độ showdown khi hiển thị phải đầy đủ cả họ. Ví dụ
+BÙI BẢO AN sẽ là B.B.AN chứ không được bỏ họ hoặc tên đệm."*
+
+### Đợt 282 — Đồng bộ chỉ lúc Apply
+
+**Gốc lỗi (đo bằng đọc code, xác nhận bằng bàn thử thật)**: `buildOptionsPanel()` bọc `draft`
+trong một Proxy để mỗi lần kéo/chọn (từ ~20 chỗ rải rác trong `options-panel.js`) bắn tag
+`OPTLIVE` (throttle 350ms) ra myActivity. myActivity nhận được gọi THẲNG
+`__awordBridge.applyOptions()` trên các cột khác — không khoá, không chờ, cho nhanh — nhưng chính
+hàm `applyOptions()` đó LUÔN kết thúc bằng `replayCurrent()` (remount toàn bộ ván), vì Đợt 263 đã
+chốt "Apply luôn dựng lại ván, một cửa, không ngoại lệ" (do vài tuỳ chọn Showdown như
+`sdDeal`/`sdDealCount` chỉ đọc lúc mount). Kết quả: một cú kéo thanh trượt ở bảng A khiến bảng B/C/D
+RÚT THĂM LẠI câu hỏi của từng em, nhiều lần trong lúc thầy còn đang chỉnh dở.
+
+**Sửa — `core/engine.js`:**
+- Xoá hẳn `optLiveTimer`/`scheduleOptLive()`/`awEmit("OPTLIVE", …)`. Proxy `liveDraft()` nay gọi
+  `markDirty()` — chỉ set cờ `dirty=true` + sáng nút Apply, không bắn gì ra ngoài nữa. `selState`
+  (trước đây là object thường, `options-panel.js` ghi thẳng khi chọn Content/Text-Voice) nay cũng
+  được bọc `liveDraft()` (`selStateLive`) để những lựa chọn đó cũng tính là "đã chỉnh".
+- ⛔⛔ **BẪY TDZ suýt sập cả panel**: `applyBtn` được khai báo (`const`) ở tận footer, nhưng vài
+  chuẩn hoá của TEMPLATE (`tpl.hideTimerNone`/`hideTimerCountUp` trong `options-panel.js`) ghi
+  `draft.timer = …` NGAY LÚC DỰNG PANEL LẦN ĐẦU — trước khi footer/`applyBtn` tồn tại. Nếu
+  `markDirty()` đọc thẳng `applyBtn` thì lần dựng panel đầu tiên trên MỘT SỐ template (những cái có
+  `hideTimerNone`) sẽ ném `ReferenceError: Cannot access 'applyBtn' before initialization`, sập cả
+  panel Options. Vá bằng biến trung gian `applyBtnEl` (khởi tạo `null` NGAY ĐẦU HÀM, trước mọi thứ
+  có thể trigger `markDirty()`); `markDirty()` chỉ set cờ + đồng bộ hình ảnh nút NẾU `applyBtnEl`
+  đã có; lúc `applyBtn` thật sự được tạo, tự đọc lại `dirty` để đồng bộ hình ảnh ban đầu.
+- `applyBtn.onclick`: thêm `if (!dirty) return;` sau nhánh Fight (chặn remount vô ích khi bấm Apply
+  mà chưa đổi gì — tránh Showdown rút thăm lại oan); set `dirty=false` ngay khi biết chắc sẽ apply.
+  Đặt `if (!fight) openOptionsOnMount = true;` ngay sau dòng gộp `draft={...draft,...selState}` —
+  TRƯỚC khi biết Apply sẽ thoát qua nhánh nào (`applySubActSelection()` hay `replayCurrent()` cuối
+  hàm), để mọi đường thoát đều được mở lại panel. Xoá dòng `closeToolPanel(false);` cuối cùng —
+  panel KHÔNG tự đóng nữa; nó biến mất vì remount (`cleanupAll()`) rồi tự HIỆN LẠI nhờ cờ
+  `openOptionsOnMount` (cơ chế có sẵn, trước đây chỉ Template dùng — `pickTemplate()`).
+- `closeToolPanel(fade)`: thêm 1 dòng `awEmit("TOOLCLOSE", "")`, CHỈ khi
+  `fade && panel && activeToolBuild===buildOptionsPanel` — đúng khớp 3 chỗ gọi `fade=true` thật sự
+  là người dùng đóng (bấm ra ngoài / bấm lại nút toolbar), tự động LOẠI mọi lượt đóng nội bộ
+  (`cleanupAll()` mọi remount, Fight tự đóng, `applySubActSelection()`) vì chúng đều gọi
+  `fade=false` — không cần sửa từng chỗ gọi, không lo "chớp đóng-mở" giả bắn tràn sang cột khác mỗi
+  lần Apply/đổi Template.
+- Bridge singleton `applyOptions()`/`switchTemplate()`: cột NHẬN đồng bộ tự lưu
+  `wasOptionsOpen = toolPanelEl && activeToolBuild===buildOptionsPanel` trước khi remount, rồi set
+  `openOptionsOnMount = true` nếu đúng — nếu không có dòng này, cột nhận (vốn không tự mở popup,
+  chỉ có `openOptionsOnMount` của bảng NGUỒN) sẽ mất luôn popup sau khi nhận Apply/Template mà
+  không có đường mở lại.
+
+**Sửa — `myActivity/src/renderer/js/browser.js`** (⛔⛔ GẮN CHẶT, đẩy cùng lúc, xem v2.11.0):
+xoá nhánh `OPTLIVE`; thêm nhánh `TOOLCLOSE` (bắn nhanh, không khoá, giống hệt kiểu `TOOLOPEN`, chỉ
+đổi chiều gọi `closeTool()`); xoá lời gọi `closeTool()` tự động sau khi TPL/STYLE/MODE/OPT relay
+thành công (dòng cũ `if (ok && window.__awordBridge.closeTool) {…}`).
+
+### Đợt 283 — Tên Showdown giữ đầy đủ họ + tên đệm
+
+`shortenTeamNames()` (`core/engine.js`) đổi từ "bỏ họ + tên đệm, giữ 1-2 tiếng cuối, mở rộng 2
+tiếng khi trùng tên gọi" sang: MỌI tiếng trừ tiếng cuối rút còn 1 chữ cái + dấu chấm, tiếng cuối
+(tên gọi) giữ nguyên — nối bằng dấu chấm. "Bùi Bảo An" → "B.B.An" (nơi gọi tự `.toUpperCase()`).
+Bỏ hẳn cơ chế disambiguation cũ — không còn cần, vì định dạng mới luôn mang đủ chữ cái đầu để tự
+phân biệt tốt hơn bản cũ. Không sửa CSS: `.aw-sd-namecol-stu` đã có sẵn
+`white-space:nowrap;overflow:hidden;text-overflow:ellipsis` — tên dài bất thường tự cắt "…", không
+vỡ layout.
+
+### Kiểm chứng
+
+`node --input-type=module --check` sạch `core/engine.js`; CSS 1829/1829 ngoặc cân. Test-bench THẬT
+(không đoán, không đọc code suông) — mở `templates/anagram/test.html` qua Browser pane, theo dõi
+console + đọc DOM thật:
+- Mở Options → Apply nhạt sẵn (`disabled:true`, class `is-dim`). Đổi Timer sang "Count down" →
+  console **không còn `OPTLIVE`**, Apply chuyển sáng (`disabled:false`, hết `is-dim`) ngay.
+- Bấm Apply → console đúng 1 dòng `MYACT:AW:OPT:{...}`; panel biến mất rồi HIỆN LẠI ngay (remount +
+  `TOOLOPEN` lần 2, không có `TOOLCLOSE` giả xen giữa); `panelOpen:true`; Apply nhạt lại.
+- Bấm ra ngoài (`pointerdown` thật trên `.aw-tool-dim`) → đúng 1 dòng `MYACT:AW:TOOLCLOSE:`; panel
+  bị gỡ khỏi DOM thật (`panelStillThere:false`).
+- Mở lại Options → Template → chọn "Quiz" → console `MYACT:AW:TPL:quiz` rồi `TOOLOPEN` (panel tự mở
+  lại đúng game Quiz, Apply nhạt sẵn), **không** có `TOOLCLOSE` giả nào trong lúc remount nội bộ.
+- 0 lỗi console suốt toàn bộ phiên đo.
+- `shortenTeamNames()`: test độc lập bằng Node — "Bui Bao An"→"B.B.An", "Tran An"→"T.An",
+  "An"→"An", "Nguyen Van Bao An"→"N.V.B.An", nhiều khoảng trắng thừa vẫn đúng, tên rỗng/null ra "" —
+  và bản có dấu tiếng Việt ("Bùi Bảo An"/"Nguyễn Thị Anh") viết hoa đúng "B.B.AN"/"N.T.ANH".
+
+### VIỆC ĐANG CHỜ
+- ⬜ **CHỜ THẦY BẤM TAY TOMKO** (bàn thử tĩnh không thay được) — mở 2-4 cột thật, mở Options 1 cột,
+  kéo nhiều thanh trượt liên tục xem cột khác có còn giật/remount không; bấm Apply xem popup có
+  đứng yên, nút Apply nhạt/sáng đúng; thử Showdown thật — kéo Options giữa ván đang chơi xem câu hỏi
+  mỗi em có còn bị xáo lại ngoài ý muốn không; màn READY Showdown xem tên hiển thị đúng
+  "Họ.Đệm.TênGọi" viết tắt, không tràn dòng.
+- ⬜ Chưa dựng bàn thử myActivity nhiều cột thật (chỉ soát code + mirror logic bằng tay, xem
+  myActivity v2.11.0) — nếu có gì lệch, ưu tiên soi `browser.js`'s `mirrorAwordState()` trước.
 
 ---
 

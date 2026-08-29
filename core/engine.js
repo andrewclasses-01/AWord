@@ -868,6 +868,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // còn hiện **dấu ✗ đỏ khi thất bại** — nên trả `false` cho một cột vốn đã đúng
       // sẽ là một lời báo động sai, ngay trên màn hình lớp học.
       if (type === activity.type) return true;
+      // "Apply-only sync" (29/8/2026) — a RECEIVING column's Options popup would
+      // otherwise vanish here (doSwitchTemplate() remounts via cleanupAll()) and
+      // stay closed, since only the SENDING column's own pickTemplate() arms
+      // openOptionsOnMount. Arm it here too, but only if this column's popup was
+      // actually open — never force one open that wasn't.
+      const wasOptionsOpen = toolPanelEl && activeToolBuild === buildOptionsPanel;
+      if (wasOptionsOpen) openOptionsOnMount = true;
       awSyncMute++;
       return Promise.resolve(doSwitchTemplate(type)).then(() => true, () => false)
         .finally(() => { setTimeout(() => { awSyncMute = Math.max(0, awSyncMute - 1); }, 400); });
@@ -904,6 +911,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // fight boards all hold this same one.
         Object.keys(activity.options).forEach(k => { if (!(k in opts)) delete activity.options[k]; });
         Object.assign(activity.options, opts);
+        // "Apply-only sync" (29/8/2026) — same reasoning as switchTemplate()
+        // above: arm openOptionsOnMount so a RECEIVING column that already had
+        // Options open gets it back after the remount below, instead of it
+        // silently staying closed.
+        const wasOptionsOpen = toolPanelEl && activeToolBuild === buildOptionsPanel;
+        if (wasOptionsOpen) openOptionsOnMount = true;
         // Converted act + a different sub-act ⇒ this takes the rebuild over and
         // hands back a promise; we report success only once it has landed.
         const converting = applySubActSelection(opts);
@@ -3511,11 +3524,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // look like a delay — and on full teardown/restart where no one is watching).
   function closeToolPanel(fade = true) {
     const dim = toolDim, panel = toolPanelEl, btn = activeToolBtn;
+    // "Apply-only sync" (29/8/2026) — TOOLCLOSE mirrors ONLY a real user-initiated
+    // close of the Options popup (fade=true — outside click / toggling the same
+    // toolbar button), same choke point TOOLOPEN uses (see buildOptionsPanel).
+    // Every OTHER close (fade=false: cleanupAll()'s teardown on every remount,
+    // Fight's own Apply-close, applySubActSelection()'s close) must NOT emit —
+    // those already happen many times per Apply/Template pick and would just
+    // relay a close-then-reopen flicker to every other myActivity column.
+    const wasOptions = fade && !!panel && activeToolBuild === buildOptionsPanel;
     toolDim = null; toolPanelEl = null; activeToolBtn = null; activeToolBuild = null;
     panelCompactObs?.disconnect(); panelCompactObs = null;
     document.removeEventListener("pointerdown", onToolOutside);
     if (btn) btn.classList.remove("is-active");
     if (!dim && !panel) return;
+    if (wasOptions) awEmit("TOOLCLOSE", "");
     // Đợt 217 — SAU dòng trên, để cú `closeToolPanel(false)` dọn dẹp ở đầu
     // openToolPanel (lúc chưa có bảng nào) không thả đồng hồ chạy rồi khoá lại ngay.
     exitPause("panel");
@@ -4227,22 +4249,33 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // emit here already covers all three). Host relays it by clicking the SAME
     // Options button on every other pane, so all boards open together.
     awEmit("TOOLOPEN", "options");
-    // ⭐⭐ Đợt "đồng bộ tức thời" — WRAPS `draft` in a Proxy so every one of the
-    // ~20 scattered `draft.xxx = v` call sites in options-panel.js (steppers,
-    // checkboxes, segmented controls) keeps working byte-for-byte, but now also
-    // trips a throttled live-preview broadcast. Nothing about the control code
-    // itself changes — this is the ONE choke point a Proxy buys for free.
-    let optLiveTimer = null, optLivePending = false;
-    function scheduleOptLive() {
-      if (optLiveTimer) { optLivePending = true; return; }
-      optLiveTimer = setTimeout(() => {
-        optLiveTimer = null;
-        awEmit("OPTLIVE", JSON.stringify(draft));
-        if (optLivePending) { optLivePending = false; scheduleOptLive(); }
-      }, 350); // trailing-throttle: 1 gói mỗi ~350ms lúc đang kéo dở, không bắn theo từng pixel
+    // ⭐⭐ Đợt "Apply-only sync" (29/8/2026) — WRAPS `draft` in a Proxy so every
+    // one of the ~20 scattered `draft.xxx = v` call sites in options-panel.js
+    // (steppers, checkboxes, segmented controls) keeps working byte-for-byte,
+    // but now marks the panel DIRTY (lights up the Apply button) instead of
+    // broadcasting a live preview to other myActivity boards mid-drag. That old
+    // broadcast called the OTHER boards' applyOptions(), which always remounts
+    // the game (see the Đợt 263 note further down, at Apply) — so every slider
+    // tick reshuffled Showdown's per-student question deal on every other
+    // board. Nothing about the control code itself changes — this is the ONE
+    // choke point a Proxy buys for free.
+    let dirty = false;
+    // `applyBtn` is declared much further down (footer), but a handful of
+    // template normalizations (e.g. `hideTimerNone` snapping a legacy
+    // draft.timer straight during the FIRST synchronous render, before any
+    // footer exists) already write into `draft` through this same Proxy. So
+    // `markDirty()` must never touch `applyBtn` directly (TDZ crash on that
+    // first render) — it only flips the flag; the footer syncs its own visual
+    // state from `dirty` once `applyBtn` actually exists (see its creation).
+    function markDirty() {
+      if (dirty) return;
+      dirty = true;
+      applyBtnEl?.classList.remove("is-dim");
+      if (applyBtnEl) applyBtnEl.disabled = false;
     }
+    let applyBtnEl = null;
     function liveDraft(obj) {
-      return new Proxy(obj, { set(target, prop, value) { target[prop] = value; scheduleOptLive(); return true; } });
+      return new Proxy(obj, { set(target, prop, value) { target[prop] = value; markDirty(); return true; } });
     }
     // ⭐⭐ Đợt 173 — `fight.ctl.matchOptions()`, NOT `activity.options`, while
     // fighting. `activity` in THIS closure is board 0's own FROZEN copy
@@ -4315,6 +4348,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // content was baked from ONE set already. The origin's options are the only
     // record of which one the teacher is actually on.
     VIEW_SELECTOR_KEYS.forEach(k => { if (selSrc[k] !== undefined) selState[k] = selSrc[k]; });
+    // Same dirty-tracking Proxy as `draft` (see markDirty() above), wrapping the
+    // SAME object — options-panel.js writes straight onto `selSrc`/`selState`
+    // when `selectors` is passed to it, so this is the only hook needed to make
+    // Content/Text-Voice picks also light up Apply. Every other read of
+    // `selState` below keeps using the plain reference; a Proxy only intercepts
+    // writes, so both stay in sync with no parallel copy.
+    const selStateLive = liveDraft(selState);
     const switchHost = el("div", "aw-opt-switches");
     const bodyHost = el("div", "aw-opt-bodyhost");
     panel.append(switchHost, bodyHost);
@@ -4349,7 +4389,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       draft = liveDraft({ ...seeded, ...selState });
       curKey = nextKey;
       pending[curKey] = draft;
-      scheduleOptLive(); // đổi hẳn view (ENG1/VI1/...) là một cú đổi lớn — báo ngay, đừng đợi lần kéo kế tiếp
+      markDirty(); // đổi hẳn view (ENG1/VI1/...) cũng tính là một thay đổi — Apply phải sáng lên
       // Đợt 148 (teacher: "mọi lựa chọn (cả text-voice hay các act con) cũng
       // cần hiệu ứng animation mượt") — the body carries a different set of
       // values now, so it fades across and the panel travels to its new height
@@ -4402,7 +4442,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       : null;
       buildOptionsBody(host, {
         tpl, draft, contentSwitch, contentSetSwitch, fight, onViewChange,
-        switchHost, selectors: selState, renderSwitches: !switchesBuilt,
+        switchHost, selectors: selStateLive, renderSwitches: !switchesBuilt,
         // ⭐ Đợt 174 — "Time each round" is built only while a Showdown is
         // actually running, the same way the Fight rows above are built only
         // during a match: outside Showdown nobody owns a round, so the control
@@ -4526,6 +4566,12 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     // Clicking outside without pressing this discards every change above.
     const applyBtn = el("button", "aw-btn aw-btn-primary aw-opt-apply", "Apply");
     applyBtn.type = "button";
+    applyBtnEl = applyBtn;
+    // Sync the button to whatever `dirty` already is — a normalization that ran
+    // during the FIRST render (before this button existed, see markDirty()'s
+    // note) may have already flipped it true.
+    applyBtn.classList.toggle("is-dim", !dirty);
+    applyBtn.disabled = !dirty;
     applyBtn.onclick = () => {
       sound.click();
       if (!activity.options) activity.options = {};
@@ -4549,6 +4595,13 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         Object.keys(activity.options).forEach(k => { if (!(k in draft)) delete activity.options[k]; });
       }
       Object.assign(activity.options, draft);
+      // ⭐⭐ "Apply-only sync" (29/8/2026, thầy: "Apply xong không đóng popup ngay") —
+      // Apply luôn kết thúc bằng một cú remount (replayCurrent()/applySubActSelection(),
+      // xem ghi chú Đợt 263 bên dưới), mà remount tự đóng panel qua cleanupAll() →
+      // closeToolPanel(false). `openOptionsOnMount` là cờ có sẵn (đã dùng cho Template ở
+      // pickTemplate()) báo cho MOUNT MỚI tự mở lại Options ngay — set Ở ĐÂY, trước khi
+      // biết Apply sẽ thoát qua nhánh nào, để mọi đường thoát bên dưới đều được mở lại.
+      if (!fight) openOptionsOnMount = true;
       // FIGHT MODE: each board plays a COPY of the act (its own frozen word
       // order), so writing into this copy's options would leave the real act —
       // and the other board — untouched. Hand the whole draft to the match,
@@ -4570,6 +4623,8 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         closeToolPanel(false);
         return;
       }
+      if (!dirty) return;   // không có gì mới — đừng remount vô ích (Showdown sẽ rút thăm lại oan)
+      dirty = false;
       awEmit("OPT", JSON.stringify(activity.options));   // mirror applied Options to other myActivity panes
       timerEl.style.visibility = timerMode() === "none" ? "hidden" : "visible";
       // Persist the applied options PERMANENTLY (teacher only — students never
@@ -4632,7 +4687,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // (`stopLobby` → `leaveRound`) rồi về màn READY — đúng: đổi bài giữa lúc cả lớp
       // đang chờ mình thì mình phải bấm START lại, chứ không được lặng lẽ mang bộ
       // options khác vào một lượt đã chốt chuẩn.
-      closeToolPanel(false);
+      // ⚠️ Không tự closeToolPanel() ở đây nữa (Apply-only sync, 29/8/2026) — panel sẽ
+      // biến mất rồi hiện lại ngay do replayCurrent(), vì openOptionsOnMount đã set ở
+      // trên; teacher chỉ đóng thật khi bấm ra ngoài.
       replayCurrent();
     };
     footWrap.append(applyBtn);
@@ -6533,16 +6590,16 @@ function escapeText(s) {
   return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// ⭐⭐⭐ Đợt 280 (thầy, 28/8/2026) — "TÊN GỌI" cho cột tên bên trái màn READY Showdown:
-// bỏ họ + tên đệm, chỉ giữ 1-2 tiếng cuối, để chữ vẽ được thật to mà vẫn gọn 1 dòng.
-// Vẫn giữ nguyên 2 tiếng khi hai em CÙNG ĐỘI trùng tên gọi 1 tiếng (VD hai em "Anh")
-// — tự phân biệt bằng tiếng đệm liền trước, không cần thầy tự đặt tên hiển thị riêng.
+// Đợt 280 sửa lại (thầy, 29/8/2026) — GIỮ ĐẦY ĐỦ họ + tên đệm dạng viết tắt (mỗi tiếng
+// 1 chữ cái + dấu chấm), tên gọi (tiếng cuối) giữ nguyên. VD "Bùi Bảo An" -> "B.B.An"
+// (nơi gọi tự .toUpperCase() nên không cần viết hoa tay ở đây). Không còn cần cơ chế
+// "trùng tên gọi thì mở rộng 2 tiếng" của bản cũ — định dạng này luôn mang đủ chữ cái
+// đầu họ + tên đệm nên tự phân biệt tốt hơn.
 function shortenTeamNames(names) {
-  const parts = names.map(n => String(n ?? "").trim().split(/\s+/).filter(Boolean));
-  const last = parts.map(p => p[p.length - 1] || "");
-  return parts.map((p, i) => {
-    const dup = last.some((l, j) => j !== i && l && l === last[i]);
-    if (dup && p.length > 1) return p.slice(-2).join(" ");
-    return p[p.length - 1] || "";
+  return names.map(n => {
+    const parts = String(n ?? "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length <= 1) return parts[0] || "";
+    const initials = parts.slice(0, -1).map(w => w[0] || "");
+    return initials.concat(parts[parts.length - 1]).join(".");
   });
 }

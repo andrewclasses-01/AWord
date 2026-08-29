@@ -4700,9 +4700,50 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **28/8/2026 sau Đợt 280+281** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **29/8/2026 sau Đợt 282+283** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (28/8/2026 — sau **Đợt 280+281**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (29/8/2026 — sau **Đợt 282+283**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`PENDING_HASH`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — ⬜ đang push, xem hồ sơ kế tiếp để có mã băm + kiểm live |
+> | Trước đó | **`1f7eb8e`** (Đợt 280+281 — Showdown READY bố cục mới + Fight mode thêm thanh MISS WAIT) — đã push + LIVE kiểm chứng |
+> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+> | ⛔⛔ GẮN CHẶT | myActivity v2.11.0 (bỏ `OPTLIVE`, thêm `TOOLCLOSE`, bỏ `closeTool()` tự động sau relay) — đẩy CÙNG LÚC, đừng revert lẻ một bên |
+>
+> ### ⭐⭐ ĐỢT 282+283 — VÙNG VỪA ĐỘNG TỚI: **ĐỒNG BỘ OPTIONS/TEMPLATE CHỈ LÚC APPLY + TÊN SHOWDOWN ĐẦY ĐỦ HỌ TÊN**
+>
+> Thầy báo chế độ nhiều bảng myActivity đồng bộ CẢ LÚC ĐANG KÉO/CHỈNH dở trong Options (tag
+> `OPTLIVE`) là thừa và nguy hiểm — mỗi tag gọi `applyOptions()` ở cột khác, mà hàm này LUÔN
+> remount cả ván (Đợt 263), nên Showdown RÚT THĂM LẠI CÂU HỎI TỪNG EM mỗi lần kéo một thanh trượt.
+> Chi tiết đầy đủ + số đo: `GHI CHU DU AN.md` mục **Đợt 282+283**.
+>
+> **Đã sửa (`core/engine.js`):** bỏ hẳn `OPTLIVE`/`scheduleOptLive()`, Proxy `draft`/`selState` nay
+> chỉ `markDirty()` (sáng nút Apply) — ⛔ vá kèm bẫy TDZ (`applyBtn` chưa tồn tại lúc vài chuẩn hoá
+> template ghi `draft.timer` NGAY LÚC DỰNG PANEL LẦN ĐẦU) bằng biến trung gian `applyBtnEl`; Apply
+> không tự đóng popup nữa (`openOptionsOnMount` — cờ có sẵn, trước chỉ Template dùng — mở lại panel
+> sau remount); nút Apply nhạt/sáng theo `dirty`; tag mới `TOOLCLOSE` phát một chỗ duy nhất trong
+> `closeToolPanel()` (chỉ khi `fade=true` — người dùng đóng thật, tự loại mọi remount nội bộ); cột
+> nhận đồng bộ (`applyOptions`/`switchTemplate` bridge) cũng tự set `openOptionsOnMount` nếu panel
+> đang mở. **`myActivity/browser.js`** (⛔ gắn chặt, xem bảng trên): xoá nhánh `OPTLIVE`, thêm nhánh
+> `TOOLCLOSE`, bỏ `closeTool()` tự động sau relay TPL/STYLE/MODE/OPT thành công.
+>
+> **Đợt 283**: `shortenTeamNames()` đổi từ "bỏ họ + tên đệm, giữ 1-2 tiếng cuối" sang GIỮ ĐẦY ĐỦ họ
+> + tên đệm viết tắt (mỗi tiếng 1 chữ cái + dấu chấm) + tên gọi nguyên — "Bùi Bảo An" → "B.B.An".
+>
+> Kiểm test-bench THẬT qua `templates/anagram/test.html` (Browser pane, console + DOM thật): không
+> còn `OPTLIVE` khi kéo; Apply phát đúng `OPT`, panel không đóng, tự mở lại sau remount, nhạt lại;
+> bấm ra ngoài phát `TOOLCLOSE`, panel đóng thật; chọn Template vẫn tức thời, không có `TOOLCLOSE`
+> giả trong remount nội bộ; 0 lỗi console. `shortenTeamNames()` kiểm độc lập bằng Node đúng mọi ca.
+> `node --input-type=module --check` sạch; CSS 1829/1829 ngoặc.
+>
+> ✅ Đang push, xem hồ sơ TIẾP THEO để có mã băm + kiểm live. ⬜ **CHỜ THẦY BẤM TAY TOMKO** — kéo
+> Options giữa ván Showdown thật xem câu hỏi có bị xáo lại không; Apply có đứng yên đúng ý; tên màn
+> READY Showdown hiển thị đúng, không tràn dòng.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (28/8/2026 — sau **Đợt 280+281**)
 >
 > | | |
 > |---|---|

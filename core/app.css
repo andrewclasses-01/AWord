@@ -2370,6 +2370,10 @@ html.aw-nhung .aw-below { display: none; }
    ("Apply đổi thành góc vuông bo tròn tương tự nút Template") rather than
    whatever `.aw-btn`'s own cqw radius happens to compute to out here. */
 .aw-btn.aw-opt-apply { padding: 9px 28px; font-size: 15px; border-radius: 13px; }
+/* "Apply-only sync" (29/8/2026) — nhạt khi chưa chỉnh gì kể từ lần Apply gần nhất
+   (xem markDirty() trong buildOptionsPanel, core/engine.js). Không dùng
+   pointer-events:none — thuộc tính `disabled` thật đã lo phần không bấm được. */
+.aw-btn.aw-opt-apply.is-dim { opacity: .45; }
 
 /* The footer button — same visual language as `.aw-tpl-item.is-current` when it
    names the current template (it IS the currently-playing game, just resized
