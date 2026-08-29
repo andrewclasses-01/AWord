@@ -12,7 +12,24 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 282+283** (29/8/2026, thầy — Đợt 282: ⭐⭐ ĐỒNG BỘ OPTIONS/TEMPLATE GIỮA CÁC BẢNG
+> Mới nhất: **Đợt 284** (29/8/2026, thầy báo — bấm Apply thấy popup ĐÓNG RỒI MỞ LẠI thành một cú
+> "nháy" cả nền lẫn pop-up, muốn KHÔNG nháy gì. Gốc: Apply ([[Đợt 282]]) vẫn phải remount thật
+> (Đợt 263 — vài tuỳ chọn Showdown chỉ đọc lúc mount) nên panel bị `cleanupAll()` phá rồi dựng lại,
+> nhưng cú mở lại đi qua `setTimeout(fn,0)` — MỘT MACROTASK, để trình duyệt kịp sơn 1 khung hình
+> ở GIỮA lúc panel/nền cũ đã mất mà panel/nền mới chưa kịp có ⇒ đúng cái "nháy" thầy thấy; panel
+> mới lại LUÔN chạy hiệu ứng bật lên (`aw-pop-cx`/`aw-fadein`) dù về bản chất chỉ là "vẫn cái đó,
+> vừa refresh nội dung". Sửa 2 lớp trong `closeToolPanel`⁠→`openOptionsOnMount`'s consumption
+> (`core/engine.js`): đổi `setTimeout(fn,0)` → **microtask** (`Promise.resolve().then()`) — chờ
+> đúng như cũ (đợi cả mount dựng xong) nhưng chạy TRƯỚC lần sơn hình kế tiếp nên khung hình "trắng"
+> giữa chừng không bao giờ tồn tại; thêm cờ `openOptionsSilently` (chỉ bật cho Apply, KHÔNG bật cho
+> chọn Template — Template đổi hẳn sang game khác, đáng có tín hiệu "panel mới") gắn class
+> `.aw-no-anim` (`core/app.css`, `animation:none`) lên panel/nền vừa dựng, tắt hẳn hiệu ứng bật lên.
+> Kiểm bằng `requestAnimationFrame` THẬT ngay sau khi bấm Apply (không đoán): tại khung hình sơn
+> ĐẦU TIÊN sau cú bấm, panel+nền ĐÃ có mặt sẵn, `animationName:"none"` cả hai — chứng minh không
+> khung hình nào từng "trắng" ở giữa. Đối chứng ngược: mở Options bằng tay / chọn Template vẫn có
+> `aw-fadein`/`aw-pop-cx` như cũ (cờ chỉ dùng một lần, không rò sang lượt mở khác). code `PENDING`
+> — ⬜ đang chờ push + kiểm live, xem mục kế tiếp. ⬜ CHỜ THẦY BẤM TAY TOMKO xác nhận hết nháy thật
+> trên màn cảm ứng.) Trước đó: **Đợt 282+283** (29/8/2026, thầy — Đợt 282: ⭐⭐ ĐỒNG BỘ OPTIONS/TEMPLATE GIỮA CÁC BẢNG
 > myActivity NAY CHỈ LÚC BẤM APPLY. Thầy báo: chế độ nhiều bảng đồng bộ CẢ LÚC ĐANG KÉO/CHỈNH dở
 > trong Options (tag `OPTLIVE`, throttle 350ms) là thừa và nguy hiểm — mỗi tag đó gọi thẳng
 > `__awordBridge.applyOptions()` ở CÁC CỘT KHÁC, mà hàm này LUÔN `replayCurrent()` (remount cả
@@ -85,6 +102,69 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 284 (29/8/2026, thầy) — ⭐⭐ **BỎ HIỆU ỨNG "NHÁY" KHI APPLY ĐÓNG-RỒI-MỞ LẠI POPUP**
+
+### Thầy yêu cầu gì
+
+> "Tôi test thấy khi bấm apply, pop-up sẽ đóng lại rồi mở ra nên có hiệu ứng nháy, nháy cả nền và
+> cả pop-up options. Có cách nào khắc phục việc này không. Tôi muốn không nháy gì, chỉ apply thôi."
+
+([[Đợt 282]] đổi Apply sang "không tự đóng popup", dùng lại cờ `openOptionsOnMount` để panel tự mở
+lại sau khi remount — nhưng cách MỞ LẠI đó tự nó gây ra đúng thứ Apply-only-sync định tránh: một cú
+đóng-mở nhìn thấy được.)
+
+### Gốc lỗi (2 lớp độc lập, đo bằng bàn thử `requestAnimationFrame` THẬT — không đoán)
+
+1. **Khoảng trống một khung hình** — cờ `openOptionsOnMount` được tiêu thụ qua
+   `setTimeout(fn, 0)` (dòng ngay sau `belowCenter.append(optionsBtn, modeBtn)`, cùng khuôn với
+   `openShowdownOnMount` cạnh đó). `setTimeout` là một MACROTASK — trình duyệt được phép SƠN một
+   khung hình trước khi nó chạy. Panel/nền CŨ đã bị `cleanupAll()` phá NGAY LÚC ĐẦU (đồng bộ,
+   không hiệu ứng — `closeToolPanel(false)`), còn panel/nền MỚI chỉ xuất hiện ở macrotask sau đó ⇒
+   có một khung hình thật sự được sơn ở giữa với KHÔNG panel, KHÔNG nền tối — game hiện trần trụi
+   một nhịp rồi mới tối lại. Đó là "nháy nền".
+2. **Hiệu ứng bật lên luôn chạy trên panel/nền MỚI** — `.aw-tool-dim`/`.aw-tool-panel` có sẵn
+   `animation: aw-fadein`/`aw-pop-cx` gắn thẳng vào class (chạy tự động mỗi khi một phần tử MỚI
+   được chèn vào DOM, không phân biệt "mở thật" hay "mở lại sau remount"). Panel mới tạo ra sau
+   Apply vẫn kích hoạt animation này dù về bản chất chỉ là panel CŨ với nội dung mới. Đó là "nháy
+   pop-up".
+
+### Đã sửa — `core/engine.js`
+
+- Đổi `setTimeout(() => {...}, 0)` (chỗ tiêu thụ `openOptionsOnMount`, KHÔNG đụng
+  `openShowdownOnMount` cạnh đó — ngoài phạm vi, không ai báo lỗi) thành **microtask**
+  (`Promise.resolve().then(() => {...})`). Vẫn giữ đúng thứ tự chờ cũ ("để mount này dựng xong đã"
+  — microtask chỉ chạy sau khi TOÀN BỘ script đồng bộ, gồm cả `startGame()`, chạy xong), nhưng
+  microtask luôn chạy TRƯỚC bước sơn hình kế tiếp của trình duyệt — khung hình "trắng" giữa chừng
+  không bao giờ tồn tại.
+- Thêm cờ một-lần `openOptionsSilently` (khai cạnh `openOptionsOnMount`, dòng ~208) — set `true`
+  CÙNG LÚC với `openOptionsOnMount=true` ở đúng 2 chỗ: Apply's `onclick` (cột tự bấm) và bridge
+  `applyOptions()` (cột NHẬN đồng bộ) — **KHÔNG** set ở `pickTemplate()`/bridge `switchTemplate()`:
+  chọn Template đổi hẳn sang game khác, panel bật lên vẫn là tín hiệu "có gì đó mới" hợp lý, giữ
+  nguyên như cũ. Lúc tiêu thụ, nếu cờ bật thì gắn thêm class `aw-no-anim` lên panel/nền VỪA tạo.
+- CSS (`core/app.css`): `.aw-tool-dim.aw-no-anim, .aw-tool-panel.aw-no-anim { animation: none; }`
+  — tắt hẳn hiệu ứng bật lên cho đúng 2 phần tử vừa gắn class, panel/nền hiện ra NGUYÊN VẸN ở trạng
+  thái cuối cùng ngay từ khung hình đầu tiên, không có gì để "nháy".
+
+### Kiểm chứng
+
+`node --input-type=module --check` sạch; CSS 1830/1830 ngoặc. Bàn thử THẬT qua
+`templates/anagram/test.html` (Browser pane) — đo bằng `requestAnimationFrame` NGAY sau khi bấm
+Apply (không suy luận, đo hành vi thật): tại khung hình sơn ĐẦU TIÊN, `.aw-tool-dim` VÀ
+`.aw-tool-panel` đã có mặt, cả hai `getComputedStyle(...).animationName === "none"` — chứng minh
+không hề có khung hình nào render ở trạng thái "thiếu" panel/nền, và panel mới không chạy animation
+nào. Đối chứng ngược (đúng bẫy #2 dự án hay cắn — animation tự tin cũ; ở đây kiểm CẢ HAI CHIỀU):
+đóng bằng bấm ra ngoài rồi mở lại Options **bằng tay** (bấm nút toolbar) → `animationName` trở lại
+`aw-fadein`/`aw-pop-cx` như cũ, không class `aw-no-anim` — cờ đúng là một-lần, không rò rỉ sang các
+lượt mở khác; chọn Template (Quiz) → vẫn `aw-fadein`/`aw-pop-cx` như cũ, không bị tắt nhầm. 0 lỗi
+console suốt phiên đo.
+
+### VIỆC ĐANG CHỜ
+- ⬜ **CHỜ THẦY BẤM TAY TOMKO** — bấm Apply thật trên màn cảm ứng, xác nhận hết nháy hoàn toàn (bàn
+  thử chỉ đo được DOM/CSS/thời điểm sơn hình qua `requestAnimationFrame`, không thay được mắt nhìn
+  trên chính màn hình lớp học 86").
 
 ---
 

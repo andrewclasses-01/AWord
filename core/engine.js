@@ -206,6 +206,12 @@ let sdLobbyResume = 0;
 // of quietly landing on the READY screen — thầy, 22/8/2026: "chọn Template
 // xong thì Options không đóng mà chuyển sang options của template mới".
 let openOptionsOnMount = false;
+// "Apply-only sync, no flash" (29/8/2026, thầy: "tôi muốn không nháy gì, chỉ apply thôi") — when
+// true, the NEXT openOptionsOnMount reopen skips the dim/panel entrance animation entirely (see
+// its consumption further down + the .aw-no-anim rule in app.css). Only armed for Apply (this
+// panel returning to itself, same content) — Template picks leave it off, since a genuinely
+// different game's Options popping back in is worth the same visible "new panel" cue it always had.
+let openOptionsSilently = false;
 
 // Đợt 190 — the longest a RUNNING-mode entry may be and still count as a "word".
 // 24 characters clears the longest real entries in the teacher's pools
@@ -916,7 +922,7 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
         // Options open gets it back after the remount below, instead of it
         // silently staying closed.
         const wasOptionsOpen = toolPanelEl && activeToolBuild === buildOptionsPanel;
-        if (wasOptionsOpen) openOptionsOnMount = true;
+        if (wasOptionsOpen) { openOptionsOnMount = true; openOptionsSilently = true; }
         // Converted act + a different sub-act ⇒ this takes the rebuild over and
         // hands back a promise; we report success only once it has landed.
         const converting = applySubActSelection(opts);
@@ -1690,7 +1696,23 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // armed for whatever the teacher opens next.
   if (openOptionsOnMount) {
     openOptionsOnMount = false;
-    setTimeout(() => { if (optionsBtn.isConnected) openToolPanelFor(optionsBtn, buildOptionsPanel); }, 0);
+    const silentReopen = openOptionsSilently;
+    openOptionsSilently = false;
+    // "Apply-only sync, no flash" (29/8/2026) — a MICROTASK here, not `setTimeout(fn, 0)` like
+    // openShowdownOnMount above: a macrotask yields to the browser's render step first, so between
+    // the OLD panel/dim being torn down (cleanupAll(), already run before this point) and this
+    // reopening them, a real frame could paint with NEITHER present — a visible flash of the raw,
+    // undimmed game underneath (exactly what thầy reported: "nháy cả nền và cả pop-up"). A
+    // microtask still waits for this whole mount's synchronous construction to finish (same
+    // ordering guarantee `setTimeout(fn,0)` gave), but runs BEFORE the next paint, so that bare
+    // frame never renders. Paired with `silentReopen` skipping the entrance animation below (Apply
+    // only — see openOptionsSilently's own note), the reopened panel appears with zero visible
+    // transition: same dim, same panel, just its content refreshed.
+    Promise.resolve().then(() => {
+      if (!optionsBtn.isConnected) return;
+      openToolPanelFor(optionsBtn, buildOptionsPanel);
+      if (silentReopen) { toolDim?.classList.add("aw-no-anim"); toolPanelEl?.classList.add("aw-no-anim"); }
+    });
   }
 
   // ---- THE PICKER (teacher's design, 14/8/2026) ----------------------------
@@ -4601,7 +4623,9 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
       // closeToolPanel(false). `openOptionsOnMount` là cờ có sẵn (đã dùng cho Template ở
       // pickTemplate()) báo cho MOUNT MỚI tự mở lại Options ngay — set Ở ĐÂY, trước khi
       // biết Apply sẽ thoát qua nhánh nào, để mọi đường thoát bên dưới đều được mở lại.
-      if (!fight) openOptionsOnMount = true;
+      // ⭐ Kèm `openOptionsSilently` (thầy báo cú đóng-mở này "nháy" — bỏ hẳn hiệu ứng bật lên
+      // cho panel/nền lần mở lại này, xem chỗ tiêu thụ cờ + rule .aw-no-anim trong app.css).
+      if (!fight) { openOptionsOnMount = true; openOptionsSilently = true; }
       // FIGHT MODE: each board plays a COPY of the act (its own frozen word
       // order), so writing into this copy's options would leave the real act —
       // and the other board — untouched. Hand the whole draft to the match,

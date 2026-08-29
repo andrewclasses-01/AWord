@@ -1338,6 +1338,13 @@ html.aw-nhung .aw-below { display: none; }
   backdrop-filter: blur(2px);
   animation: aw-fadein .15s ease;
 }
+/* "Apply-only sync, no flash" (29/8/2026) — a fresh .aw-tool-dim/.aw-tool-panel created to
+   SILENTLY reopen Options right after Apply (core/engine.js's openOptionsSilently) skips its own
+   entrance animation entirely, so it materializes already in its final state instead of visibly
+   fading/popping in — there was never a frame without SOME dim+panel on screen (see the microtask
+   note at openOptionsOnMount's consumption), so animating "in" here would just be a flash. */
+.aw-tool-dim.aw-no-anim,
+.aw-tool-panel.aw-no-anim { animation: none; }
 .aw-tool-panel {
   position: absolute; bottom: calc(100% + 12px); left: 50%; transform: translateX(-50%);
   z-index: 42;

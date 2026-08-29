@@ -4700,9 +4700,45 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **29/8/2026 sau Đợt 282+283** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **29/8/2026 sau Đợt 284** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (29/8/2026 — sau **Đợt 282+283**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (29/8/2026 — sau **Đợt 284**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`PENDING_HASH`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — ⬜ đang push, xem hồ sơ kế tiếp để có mã băm + kiểm live |
+> | Trước đó | **`bb2fdbe`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — đã push + LIVE kiểm chứng |
+> | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
+> | Không đụng myActivity | Đợt này CHỈ sửa `core/engine.js`/`core/app.css` (thuần thời điểm/CSS animation phía AWord) — không cần đẩy kèm myActivity |
+>
+> ### ⭐⭐ ĐỢT 284 — VÙNG VỪA ĐỘNG TỚI: **BỎ HIỆU ỨNG "NHÁY" KHI APPLY ĐÓNG-RỒI-MỞ LẠI POPUP**
+>
+> Thầy test [[Đợt 282]] báo: *"khi bấm apply, pop-up sẽ đóng lại rồi mở ra nên có hiệu ứng nháy,
+> nháy cả nền và cả pop-up options ... tôi muốn không nháy gì, chỉ apply thôi."* Chi tiết đầy đủ +
+> số đo: `GHI CHU DU AN.md` mục **Đợt 284**.
+>
+> **2 gốc lỗi độc lập**: (1) cờ `openOptionsOnMount` được tiêu thụ qua `setTimeout(fn,0)` — một
+> MACROTASK cho trình duyệt kịp sơn một khung hình "trắng" (không panel, không nền tối) ở giữa lúc
+> panel cũ đã bị `cleanupAll()` phá còn panel mới chưa kịp dựng; (2) panel/nền MỚI luôn tự chạy
+> animation bật lên (`aw-pop-cx`/`aw-fadein`) dù bản chất chỉ là panel cũ vừa refresh nội dung.
+>
+> **Đã sửa (`core/engine.js`)**: đổi `setTimeout(fn,0)` → **microtask** (`Promise.resolve().then()`)
+> ở chỗ tiêu thụ `openOptionsOnMount` — vẫn đợi mount dựng xong như cũ, nhưng chạy TRƯỚC lần sơn
+> hình kế tiếp nên khung hình trắng không còn tồn tại; thêm cờ một-lần `openOptionsSilently` (chỉ
+> bật cho Apply, KHÔNG bật cho chọn Template) gắn class `aw-no-anim` (`core/app.css`:
+> `.aw-tool-dim.aw-no-anim, .aw-tool-panel.aw-no-anim { animation: none; }`) lên panel/nền vừa dựng.
+>
+> Kiểm bằng `requestAnimationFrame` THẬT ngay sau khi bấm Apply: tại khung hình sơn ĐẦU TIÊN,
+> panel+nền đã có mặt, `animationName:"none"` cả hai — không khung hình nào từng "trắng" ở giữa.
+> Đối chứng ngược: mở Options bằng tay / chọn Template vẫn `aw-fadein`/`aw-pop-cx` như cũ (cờ không
+> rò sang lượt mở khác). `node --input-type=module --check` sạch; CSS 1830/1830 ngoặc; 0 lỗi console.
+>
+> ✅ Đang push, xem hồ sơ TIẾP THEO để có mã băm + kiểm live. ⬜ **CHỜ THẦY BẤM TAY TOMKO** — bấm
+> Apply thật trên màn cảm ứng xác nhận hết nháy hoàn toàn.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN — GIỮ LÀM LỊCH SỬ (29/8/2026 — sau **Đợt 282+283**)
 >
 > | | |
 > |---|---|
