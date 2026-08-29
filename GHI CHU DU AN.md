@@ -44,7 +44,7 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > **không** có `TOOLCLOSE` giả nào lọt ra trong lúc remount nội bộ (đúng gate `fade=true` +
 > `activeToolBuild===buildOptionsPanel`); 0 lỗi console suốt phiên đo. `shortenTeamNames()` kiểm
 > độc lập bằng Node với tên 1/2/3/4 tiếng có dấu tiếng Việt — khớp định dạng "X.Y.TênGọi" mọi ca.
-> code `TBD_HASH` — ⬜ đang chờ push + kiểm live, xem mục kế tiếp. ⬜ CHỜ THẦY BẤM TAY TOMKO — kéo
+> code `bb2fdbe` ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối. ⬜ CHỜ THẦY BẤM TAY TOMKO — kéo
 > nhiều thanh trượt liên tục trong Options giữa một ván Showdown thật xem câu hỏi mỗi em có còn bị
 > xáo lại ngoài ý muốn không; bấm Apply xem popup có đứng yên, nút Apply nhạt/sáng đúng; màn READY
 > Showdown xem tên hiển thị đúng "Họ.Đệm.TênGọi", không tràn dòng). Trước đó: **Đợt 280+281**

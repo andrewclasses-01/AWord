@@ -4706,7 +4706,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`PENDING_HASH`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — ⬜ đang push, xem hồ sơ kế tiếp để có mã băm + kiểm live |
+> | Commit mới nhất | **`bb2fdbe`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` + `/core/app.css` — **mã băm SHA-256 khớp tuyệt đối** với `git show bb2fdbe:<file>` cho cả hai (`4d6a2426…f8e347f` / `af30a454…3d4c326`). GitHub Pages build `1181308762` cho đúng SHA `bb2fdbe429de504ac4c49a7261a74291f6dd4c3e` báo `status:"built"`. |
 > | Trước đó | **`1f7eb8e`** (Đợt 280+281 — Showdown READY bố cục mới + Fight mode thêm thanh MISS WAIT) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
 > | ⛔⛔ GẮN CHẶT | myActivity v2.11.0 (bỏ `OPTLIVE`, thêm `TOOLCLOSE`, bỏ `closeTool()` tự động sau relay) — đẩy CÙNG LÚC, đừng revert lẻ một bên |
@@ -4737,7 +4738,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > giả trong remount nội bộ; 0 lỗi console. `shortenTeamNames()` kiểm độc lập bằng Node đúng mọi ca.
 > `node --input-type=module --check` sạch; CSS 1829/1829 ngoặc.
 >
-> ✅ Đang push, xem hồ sơ TIẾP THEO để có mã băm + kiểm live. ⬜ **CHỜ THẦY BẤM TAY TOMKO** — kéo
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** (`bb2fdbe`). ⬜ **CHỜ THẦY BẤM TAY TOMKO** — kéo
 > Options giữa ván Showdown thật xem câu hỏi có bị xáo lại không; Apply có đứng yên đúng ý; tên màn
 > READY Showdown hiển thị đúng, không tràn dòng.
 >
