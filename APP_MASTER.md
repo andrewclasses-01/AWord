@@ -4706,7 +4706,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`PENDING_HASH`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — ⬜ đang push, xem hồ sơ kế tiếp để có mã băm + kiểm live |
+> | Commit mới nhất | **`917a7cc`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — **đã push + LIVE kiểm chứng** |
+> | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` + `/core/app.css` — **mã băm SHA-256 khớp tuyệt đối** với `git show 917a7cc:<file>` cho cả hai (`1936c6d1…3a639db` / `294618be…0d80f493d224`). GitHub Pages build `1181326120` cho đúng SHA `917a7cc4764b1834b70deb9168fc586748ea13f0` báo `status:"built"`. |
 > | Trước đó | **`bb2fdbe`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |
 > | Không đụng myActivity | Đợt này CHỈ sửa `core/engine.js`/`core/app.css` (thuần thời điểm/CSS animation phía AWord) — không cần đẩy kèm myActivity |
@@ -4733,7 +4734,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > Đối chứng ngược: mở Options bằng tay / chọn Template vẫn `aw-fadein`/`aw-pop-cx` như cũ (cờ không
 > rò sang lượt mở khác). `node --input-type=module --check` sạch; CSS 1830/1830 ngoặc; 0 lỗi console.
 >
-> ✅ Đang push, xem hồ sơ TIẾP THEO để có mã băm + kiểm live. ⬜ **CHỜ THẦY BẤM TAY TOMKO** — bấm
+> ✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** (`917a7cc`). ⬜ **CHỜ THẦY BẤM TAY TOMKO** — bấm
 > Apply thật trên màn cảm ứng xác nhận hết nháy hoàn toàn.
 >
 > ---

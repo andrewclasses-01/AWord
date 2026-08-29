@@ -27,8 +27,8 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > Kiểm bằng `requestAnimationFrame` THẬT ngay sau khi bấm Apply (không đoán): tại khung hình sơn
 > ĐẦU TIÊN sau cú bấm, panel+nền ĐÃ có mặt sẵn, `animationName:"none"` cả hai — chứng minh không
 > khung hình nào từng "trắng" ở giữa. Đối chứng ngược: mở Options bằng tay / chọn Template vẫn có
-> `aw-fadein`/`aw-pop-cx` như cũ (cờ chỉ dùng một lần, không rò sang lượt mở khác). code `PENDING`
-> — ⬜ đang chờ push + kiểm live, xem mục kế tiếp. ⬜ CHỜ THẦY BẤM TAY TOMKO xác nhận hết nháy thật
+> `aw-fadein`/`aw-pop-cx` như cũ (cờ chỉ dùng một lần, không rò sang lượt mở khác). code `917a7cc`
+> ĐÃ PUSH + LIVE kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối. ⬜ CHỜ THẦY BẤM TAY TOMKO xác nhận hết nháy thật
 > trên màn cảm ứng.) Trước đó: **Đợt 282+283** (29/8/2026, thầy — Đợt 282: ⭐⭐ ĐỒNG BỘ OPTIONS/TEMPLATE GIỮA CÁC BẢNG
 > myActivity NAY CHỈ LÚC BẤM APPLY. Thầy báo: chế độ nhiều bảng đồng bộ CẢ LÚC ĐANG KÉO/CHỈNH dở
 > trong Options (tag `OPTLIVE`, throttle 350ms) là thừa và nguy hiểm — mỗi tag đó gọi thẳng
