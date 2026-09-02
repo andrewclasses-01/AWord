@@ -8,8 +8,20 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **02/9/2026 (Đợt 285 — mở trang nhanh hơn, không còn màn trắng: modulepreload
-> toàn bộ module + màn chờ inline + Firebase chạy song song)**.
+> Cập nhật lần cuối: **02/9/2026 đêm (Đợt 286 — trang học sinh play.html: đọc bài giao sớm +
+> template + bộ tiếng về cùng một đợt)**.
+>
+> **Đợt 286** (02/9/2026 đêm, thầy) — ⭐⭐ **KHUNG NHÚNG TRONG myLesson NHANH HƠN.** Sau Đợt 285, đo
+> `play.html?g=…&nhung=1` còn ba vòng nối đuôi: đọc bài giao 0,3s → css+js template 0,3s → 2 module
+> con 0,5s → 10 mp3 bộ tiếng ~1s (engine giữ PLAY tới khi tiếng xong) = 1,4–2,5s sau khi bấm READY.
+> Sửa: `warmUpAssignment()` (core/assignments.js) gọi từ play.html ngay đầu; `core/tpl-files.js`
+> MỚI (sinh tự động — `tools/sinh-preload.py --write` nay sinh cả file này) để
+> `registry.ensureTemplate()` fetch() cả bộ file template trước khi import(); `sfx.prime()` fetch()
+> cả bộ tiếng trước khi <audio> đi lấy. ⛔ **Thêm template / đổi import trong templates/ ⇒ chạy lại
+> generator** (quên thì chỉ chậm, không hỏng). ⛔ Web myLesson CHƯA đụng — phiên khác đang sửa.
+> Chi tiết `GHI CHU DU AN.md` Đợt 286.
+>
+> ---
 >
 > **Đợt 285** (02/9/2026, thầy) — ⭐⭐⭐ **MỞ TRANG NHANH HƠN, KHÔNG CÒN MÀN TRẮNG.** Thầy: *"đôi khi
 > mở trang nhưng load rất chậm, đôi khi hiện màn hình trống trơn một lát rồi mới mở"*. Đo live: 39
@@ -4713,13 +4725,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **02/9/2026 sau Đợt 285** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **02/9/2026 đêm sau Đợt 286** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (02/9/2026 — sau **Đợt 285**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (02/9/2026 đêm — sau **Đợt 286**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`4561eb0`** (Đợt 285c) ← `f8da203` (285b) ← `04698d7` (285) — mở trang nhanh hơn, không còn màn trắng: `index.html` · `play.html` · `core/store.js` · `tools/sinh-preload.py` mới — **đã push + LIVE kiểm chứng** (SHA-256 `index.html`/`play.html`/`core/store.js` live khớp HEAD). ⛔ Thêm `import` tĩnh mới ở core/ ⇒ chạy `python tools/sinh-preload.py --write` rồi commit cả HTML; ⛔ đừng xoá `<script>` fetch() ngay sau khối AW-PRELOAD (xem HUONG DAN CORE "TẢI MỘT ĐỢT"). |
+> | Commit mới nhất | **Đợt 286** (play.html đọc bài giao sớm + `core/tpl-files.js` mới + sfx fetch bộ tiếng) — `core/assignments.js` · `core/registry.js` · `core/sfx.js` · `play.html` · `tools/sinh-preload.py`; xem dòng "Kiểm live 286" sau khi push. ⛔ Thêm template/đổi import trong templates/ ⇒ `python tools/sinh-preload.py --write` rồi commit cả `core/tpl-files.js` + 2 HTML. |
+> | Trước đó | **`4561eb0`** (Đợt 285c) ← `f8da203` (285b) ← `04698d7` (285) — mở trang nhanh hơn, không còn màn trắng: `index.html` · `play.html` · `core/store.js` · `tools/sinh-preload.py` mới — **đã push + LIVE kiểm chứng** (SHA-256 `index.html`/`play.html`/`core/store.js` live khớp HEAD). ⛔ Thêm `import` tĩnh mới ở core/ ⇒ chạy `python tools/sinh-preload.py --write` rồi commit cả HTML; ⛔ đừng xoá `<script>` fetch() ngay sau khối AW-PRELOAD (xem HUONG DAN CORE "TẢI MỘT ĐỢT"). |
 > | Kiểm live 285 | Pane, tình huống XẤU NHẤT (ngay sau deploy, cả 39 file phải tải lại 546 KB): trước = 4 đợt nối đuôi, JS xong **2,4–2,8s**, `load` 2,9s · sau 285c = **38 file bay cùng lúc**, JS xong **1,58s**, `load` 1,93s (nửa đầu là TTFB 0,39s của chính trang HTML). Chrome thật của thầy, cache còn: JS xong 0,14s → hỏi tài khoản 0,21–0,53s → kho hiện ≈ 0,8s; màn chờ `.aw-boot` hiện thay cho màn trắng. ⬜ chờ mắt thầy trên máy trường/TOMKO sau >10 phút không mở. |
 > | Trước đó | **`917a7cc`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — **đã push + LIVE kiểm chứng** |
 > | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` + `/core/app.css` — **mã băm SHA-256 khớp tuyệt đối** với `git show 917a7cc:<file>` cho cả hai (`1936c6d1…3a639db` / `294618be…0d80f493d224`). GitHub Pages build `1181326120` cho đúng SHA `917a7cc4764b1834b70deb9168fc586748ea13f0` báo `status:"built"`. |

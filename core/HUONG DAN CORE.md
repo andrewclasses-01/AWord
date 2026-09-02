@@ -2908,6 +2908,13 @@ nối đuôi (đo live: 2,8s trắng lúc lạnh, 2,4s ngay cả khi cache còn 
   script đó**, và đừng đo chuyện này bằng pane trình duyệt của phiên (nó không bị giới hạn 3).
   Một lượt hỏi-lại ETag tới GitHub ≈ 300ms, tải thẳng từ edge ≈ 60ms; GitHub đổi ETag MỌI file
   sau mỗi deploy nên lần mở đầu tiên sau push luôn tải lại cả 39 file.
+- ⭐ **Đợt 286 — ba chỗ nữa cùng ý "kéo song song bằng fetch()"**: (1) `core/tpl-files.js`
+  (⛔ SINH TỰ ĐỘNG bởi cùng generator: css + mọi import tĩnh của TỪNG template) —
+  `registry.ensureTemplate()` fetch() cả bộ trước khi `import()`, nên **thêm template mới hay đổi
+  `import` trong `templates/<x>/` là phải chạy lại `tools/sinh-preload.py --write`** (quên thì
+  template đó chỉ tải chậm, không hỏng); (2) `sfx.prime()` fetch() cả bộ tiếng trước khi hàng đợi
+  <audio> chạy; (3) `play.html` gọi `warmUpAssignment(?g)` (core/assignments.js) ngay đầu —
+  `getAssignment()` lấy promise đó **một lần rồi xoá**, trang thầy gọi lại vẫn đọc mới.
 - Cùng đợt: màn chờ `.aw-boot` nằm sẵn trong `#app` (mọi đường vẽ đều `app.innerHTML = ""` nên
   tự mất — đừng đổi thói quen đó), và `store.warmUp()` được gọi từ một `<script type="module">`
   đứng TRƯỚC `main.js` để Firebase chạy song song với việc tải mã (`readAll()` nhớ lượt đọc đang

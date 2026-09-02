@@ -12,7 +12,19 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 285** (02/9/2026, thầy báo — mở `aword.andrewclasses.com` đôi khi RẤT CHẬM, đôi
+> Mới nhất: **Đợt 286** (02/9/2026 đêm, thầy — "thẻ bài tập có gắn Assignment của AWord có bị chậm
+> không?" Đo `play.html?g=…&nhung=1` thật (chính khung myLesson nhúng): sau khi mã về, còn BA vòng
+> nối đuôi nữa — đọc bài giao 0,3s → css+js template 0,3s → 2 module con của template 0,5s → 10
+> file mp3 của bộ tiếng 3-một-lượt ~1s (engine giữ nút PLAY tới khi tiếng xong) ⇒ 1,4–2,5s từ lúc
+> bấm READY. Sửa 3 chỗ, cùng một ý "kéo song song bằng fetch()": (1) `play.html` gọi
+> `warmUpAssignment(?g)` (core/assignments.js) ngay từ <script type=module> đầu — đọc Firestore song
+> song với tải mã, play.js nhận đúng promise đó, không đọc 2 lần; (2) `core/tpl-files.js` MỚI (sinh
+> tự động bởi `tools/sinh-preload.py --write`: css + mọi import tĩnh của từng template) —
+> `registry.ensureTemplate()` fetch() cả bộ trước khi import(); (3) `sfx.prime()` fetch() cả bộ
+> tiếng trước khi <audio> đi lấy. Đo máy: 4 file quiz về cùng lúc (297→309ms), đọc bài giao bắt đầu
+> ở 149ms (trước cả khi module chạy). ⛔ Phần web myLesson (andrewclasses.com) CHƯA ĐỘNG: phiên
+> Claude khác đang sửa v1.53.0 bên đó — đã rút sạch, chờ thầy chốt.) Trước đó:
+> **Đợt 285** (02/9/2026, thầy báo — mở `aword.andrewclasses.com` đôi khi RẤT CHẬM, đôi
 > khi TRẮNG TRƠN một lát rồi mới hiện. Đo thật trên bản live: (1) `index.html` là ô rỗng, không vẽ gì
 > cho tới khi 39 file JS + Firebase xong; (2) 39 file tải theo **4 đợt nối đuôi** (mỗi file chỉ lộ
 > import của nó SAU KHI về) — lạnh 2,8 giây, và **2,4 giây ngay cả khi cache còn nhưng đã quá 10
@@ -115,6 +127,64 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 286 (02/9/2026 đêm, thầy) — ⭐⭐ **TRANG HỌC SINH `play.html` (khung nhúng trong myLesson): ĐỌC BÀI GIAO SỚM + TEMPLATE + BỘ TIẾNG VỀ CÙNG MỘT ĐỢT**
+
+### Thầy yêu cầu gì
+
+> "Xem các thẻ bài tập có gắn Assignment của AWord có bị chậm không, đã được khắc phục chưa, nếu
+> chưa thì khắc phục cho nhanh và mượt luôn."
+
+### Đo thật (live, `play.html?g=3mj3v3&n=TEST&lop=A1B&nhung=1` — đúng địa chỉ mà `bai.html` bên myLesson nhúng vào iframe khi bấm READY; cache ấm nhưng đã quá 10 phút)
+
+| Chặng | Thời điểm |
+|---|---|
+| 31 module + SDK + font (Đợt 285 đã một đợt) | xong 378ms |
+| Đọc bài giao (Firestore) — CHỈ bắt đầu sau khi mã chạy | 416 → 483ms |
+| `quiz.css` + `quiz.js` — chỉ bắt đầu sau khi biết loại act | 566 → 880ms |
+| `quiz-sound.js` + `quiz-editor.js` — chỉ biết sau khi `quiz.js` về | 881 → 1375ms |
+| 10 file mp3 bộ tiếng, <audio> 3-4 cái một lượt, mỗi lượt ~300ms | 1388 → 2445ms |
+
+Engine giữ nút PLAY tới khi bộ tiếng xong (`whenAllPacksPrimed`, Đợt 122) ⇒ học sinh bấm READY ở
+myLesson rồi chờ **1,4–2,5s** (mạng trường lâu hơn) mới thấy màn START. Đợt 285 mới chữa phần
+"tải mã"; ba vòng nối đuôi phía sau vẫn còn nguyên.
+
+### Sửa gì (cùng một ý với 285c: thẻ HTML/<audio> bị Chrome cho 3-một, `fetch()` thì không)
+
+1. **Đọc bài giao SỚM** — `core/assignments.js` tách `readAssignment()`; thêm
+   `warmUpAssignment(code)` nhớ promise vào `preRead`; `getAssignment(code)` lấy promise đó **một
+   lần rồi xoá** (trang thầy gọi lại vẫn đọc mới, không dính dữ liệu cũ). `play.html` gọi từ
+   <script type=module> đứng trước play.js: `if (g) import("./core/assignments.js").then(m =>
+   m.warmUpAssignment(g))`. Lỗi mạng vẫn ném ra ở lời gọi thật ⇒ play.js hiện "No internet
+   connection" như cũ.
+2. **Template về một đợt** — `core/tpl-files.js` MỚI (⛔ SINH TỰ ĐỘNG, đừng sửa tay): với từng
+   template trong catalog, css + mọi module import tĩnh đi từ file `load:` (bỏ core/ dùng chung).
+   `registry.ensureTemplate()` gọi `warmTemplateFiles(type)` = fetch() cả danh sách rồi mới
+   `Promise.all([loadCss, import()])` như cũ. `tools/sinh-preload.py` nay sinh/kiểm cả file này
+   (và vì registry import nó, khối AW-PRELOAD của 2 trang tự có thêm `core/tpl-files.js`).
+3. **Bộ tiếng về một đợt** — `core/sfx.js` `prime()`: trước khi hàng đợi <audio> chạy, fetch() mọi
+   file trong `queue` (hot + names − skip). Hàng đợi `PRIME_CONCURRENCY=4` giữ nguyên, chỉ còn đọc
+   cache.
+
+### Kiểm
+
+- Máy (`devserver.py`): 4 file quiz bắt đầu **297–306ms** (một đợt thay vì 2 vòng); lượt đọc bài
+  giao bắt đầu **149ms** (trước cả khi module chạy; trước đợt này 416ms); vẫn đúng 2 lượt
+  Firestore như cũ (không đọc trùng); màn START hiện, console sạch. `node --input-type=module
+  --check` sạch 4 file; `tools/sinh-preload.py --check` KHỚP 3 đích.
+- ⬜ Số đo live sau push: xem `APP_MASTER.md` 0a. ⬜ Mắt thầy: mở một thẻ bài trên
+  andrewclasses.com, bấm READY — màn START phải hiện gần như ngay sau hiệu ứng sparkle.
+
+### Phần myLesson (andrewclasses.com) — ⛔ CHƯA LÀM, có lý do
+
+Thầy cũng yêu cầu áp dụng cách này cho web myLesson. Đã đo (trang lớp: tải xong 0,5s, dữ liệu
+Firestore 0,3s/lượt, nội dung ~0,8s; dashboard ~0,75s + xác thực thầy 0,3s) và đã viết thử
+(js/som.js xin dữ liệu sớm từ <head> + preconnect + `bai.html` sưởi trước AWord khi vẽ thẻ), NHƯNG
+phát hiện **một phiên Claude khác đang sửa web myLesson cùng lúc** (v1.53.0, pop-up Speaking
+check, `config.js?v=51`) — theo luật "một phiên một app" đã **rút sạch** mọi sửa đổi khỏi kho đó
+(kiểm `git diff` không còn dấu vết) và dừng, chờ thầy chốt làm sau khi phiên kia xong.
 
 ---
 

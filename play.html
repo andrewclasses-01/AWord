@@ -81,6 +81,7 @@
   <link rel="modulepreload" href="core/timecost.js" fetchpriority="high" />
   <link rel="modulepreload" href="core/flypenalty.js" fetchpriority="high" />
   <link rel="modulepreload" href="core/firebase.js" fetchpriority="high" />
+  <link rel="modulepreload" href="core/tpl-files.js" fetchpriority="high" />
   <link rel="modulepreload" href="core/numberstepper.js" fetchpriority="high" />
   <!-- AW-PRELOAD:END -->
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js" fetchpriority="high" />
@@ -116,9 +117,14 @@
   </div>
 
   <!-- ⭐ Đợt 285 — mở kết nối Firestore SONG SONG với việc tải mã (SDK + khởi
-       tạo app), để getAssignment() của play.js tới nơi là đọc được ngay. -->
+       tạo app). ⭐ Đợt 286 — và ĐỌC LUÔN bài giao `?g=` ngay từ đây
+       (`warmUpAssignment`, core/assignments.js): lượt đọc ~300ms chạy song song
+       với việc tải 31 module; play.js gọi getAssignment() sau đó nhận đúng
+       promise này, không đọc Firestore 2 lần. -->
   <script type="module">
     import("./core/firebase.js").then(m => m.db()).catch(() => {});
+    const g = new URLSearchParams(location.search).get("g");
+    if (g) import("./core/assignments.js").then(m => m.warmUpAssignment(g)).catch(() => {});
   </script>
   <script type="module" src="play.js"></script>
 </body>

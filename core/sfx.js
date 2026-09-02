@@ -199,6 +199,13 @@ export function createPack(moduleUrl, spec = {}) {
     // hot names first, then the rest, minus anything the template asked to skip
     const queue = [...new Set([...hot, ...names])].filter(n => !skip.has(n));
     if (!queue.length) { primedP = Promise.resolve(); return primedP; }
+    // ⭐ Đợt 286 — KÉO CẢ BỘ TIẾNG CÙNG MỘT LÚC bằng fetch() trước khi <audio>
+    // đi lấy: thẻ <audio> bị Chrome cho ra mạng chỉ 3-4 cái một lượt, mỗi lượt
+    // ~300ms khi hỏi lại server (đo live 02/9: 10 file quiz = 1388→2445ms, đúng
+    // 1 giây giữ nút PLAY). fetch() thì cả bộ đi song song; các <audio> bên dưới
+    // (vẫn giữ nguyên hàng đợi PRIME_CONCURRENCY) chỉ còn đọc cache HTTP.
+    // Lỗi gì cũng nuốt — hàng đợi <audio> vẫn tự tải như cũ.
+    try { for (const n of queue) fetch(urlFor(n)).catch(() => {}); } catch { /* bỏ qua */ }
     primedP = new Promise(resolve => {
       let next = 0, finished = 0;
       const startOne = () => {

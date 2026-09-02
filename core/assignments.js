@@ -274,11 +274,32 @@ export async function listResults(code) {
 
 // ---- student side (NO sign-in) ---------------------------------------------
 
-export async function getAssignment(code) {
-  if (!code) return null;
+async function readAssignment(code) {
   const [d, { doc, getDoc }] = await Promise.all([db(), fs()]);
   const snap = await getDoc(doc(d, "assignments", String(code)));
   return snap.exists() ? snap.data() : null;
+}
+
+// ⭐ Đợt 286 — ĐỌC SỚM. play.html gọi `warmUpAssignment(code)` từ một
+// <script type=module> nhỏ đứng TRƯỚC play.js, để lượt đọc Firestore (~300ms)
+// chạy SONG SONG với việc tải 31 module của play.js thay vì chỉ bắt đầu sau khi
+// mã đã chạy. Lời gọi thật `getAssignment(code)` ngay sau đó nhận ĐÚNG promise
+// đó (dùng MỘT LẦN rồi bỏ — trang thầy gọi lại thì vẫn đọc mới, không dính dữ
+// liệu cũ). Lỗi (mất mạng) vẫn ném ra ở lời gọi thật y như cũ, play.js vẫn hiện
+// "No internet connection"; `.catch` dưới chỉ để không có unhandledrejection.
+const preRead = new Map();
+export function warmUpAssignment(code) {
+  if (!code || preRead.has(code)) return;
+  const p = readAssignment(code);
+  p.catch(() => {});
+  preRead.set(code, p);
+}
+
+export async function getAssignment(code) {
+  if (!code) return null;
+  const p = preRead.get(code);
+  if (p) { preRead.delete(code); return p; }
+  return readAssignment(code);
 }
 
 // Name + score + time of everyone who played — the public leaderboard feed.

@@ -6,6 +6,9 @@
 // =============================================================
 
 import { templateEntry } from "./catalog.js";
+// ⭐ Đợt 286 — danh sách file của TỪNG template (css + mọi module import tĩnh),
+// SINH TỰ ĐỘNG bằng `python tools/sinh-preload.py --write`. Xem warmTemplateFiles().
+import { TPL_FILES } from "./tpl-files.js";
 
 const templates = new Map();
 
@@ -66,6 +69,27 @@ const pending = new Map();
 const WEB_ROOT = new URL("../", import.meta.url);
 function assetUrl(path) { return new URL(path, WEB_ROOT).href; }
 
+// ---------------------------------------------------------------
+// ⭐ Đợt 286 — KÉO CẢ BỘ FILE CỦA TEMPLATE CÙNG MỘT LÚC
+//
+// `import("../templates/quiz/quiz.js")` để trình duyệt tự lần: tải quiz.js
+// xong mới biết nó cần quiz-sound.js + quiz-editor.js ⇒ 2-3 vòng nối đuôi,
+// mỗi vòng ~300ms khi phải hỏi lại server (đo live 02/9: css+js 566→880ms, rồi
+// 2 file con 881→1375ms). Danh sách file của từng template nằm sẵn trong
+// `core/tpl-files.js` (sinh tự động), nên ở đây gọi fetch() cho TẤT CẢ ngay —
+// fetch() không bị Chrome giới hạn 3-một như thẻ <link>/<script> (bẫy Đợt 285c)
+// — rồi import() phía dưới chỉ còn đọc cache. Thiếu danh sách (template mới
+// chưa chạy lại generator) thì rơi về kiểu cũ, không vỡ gì.
+// ---------------------------------------------------------------
+const warmedTypes = new Set();
+function warmTemplateFiles(type) {
+  if (warmedTypes.has(type)) return;
+  warmedTypes.add(type);
+  try {
+    for (const f of (TPL_FILES[type] || [])) fetch(assetUrl(f)).catch(() => {});
+  } catch { /* trình duyệt không có fetch: bỏ qua */ }
+}
+
 export function ensureTemplate(type) {
   if (templates.has(type)) return Promise.resolve(templates.get(type));
   if (pending.has(type)) return pending.get(type);
@@ -75,6 +99,7 @@ export function ensureTemplate(type) {
     return Promise.reject(new Error(`Chưa có game loại "${type}" trong catalog.`));
   }
 
+  warmTemplateFiles(type);
   const p = Promise.all([loadCss(entry.css), entry.load()])
     .then(() => {
       // Module vừa import PHẢI đã tự registerTemplate() — nếu không thì lỗi
