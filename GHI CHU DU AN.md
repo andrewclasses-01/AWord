@@ -164,15 +164,23 @@ myLesson rồi chờ **1,4–2,5s** (mạng trường lâu hơn) mới thấy m�
    `registry.ensureTemplate()` gọi `warmTemplateFiles(type)` = fetch() cả danh sách rồi mới
    `Promise.all([loadCss, import()])` như cũ. `tools/sinh-preload.py` nay sinh/kiểm cả file này
    (và vì registry import nó, khối AW-PRELOAD của 2 trang tự có thêm `core/tpl-files.js`).
-3. **Bộ tiếng về một đợt** — `core/sfx.js` `prime()`: trước khi hàng đợi <audio> chạy, fetch() mọi
-   file trong `queue` (hot + names − skip). Hàng đợi `PRIME_CONCURRENCY=4` giữ nguyên, chỉ còn đọc
-   cache.
+3. **Bộ tiếng về một đợt** — `core/sfx.js` `prime()`: fetch() mọi file trong `queue` (hot + names
+   − skip) song song **→ blob URL** (`blobUrl` map, `srcFor(name)`), RỒI mới cho hàng đợi <audio>
+   (`PRIME_CONCURRENCY=4`, giữ nguyên) chạy — <audio> nạp từ blob, không đi mạng. ⛔ **Bẫy đo được
+   live ngay bản đầu của đợt này**: chỉ fetch() rồi để <audio> tự tải "từ cache" là SAI — đường
+   tải media của Chrome (hỏi theo Range) KHÔNG dùng lại bản fetch() trong cache HTTP, đo thấy tải
+   lại đủ 260 KB ⇒ tốn gấp đôi. Phải đưa thẳng blob. fetch hỏng/quá 8s ⇒ <audio> đó dùng URL thật
+   như cũ. Spare voices của Fight (`freeElFor`) cũng lấy `srcFor()`.
 
 ### Kiểm
 
 - Máy (`devserver.py`): 4 file quiz bắt đầu **297–306ms** (một đợt thay vì 2 vòng); lượt đọc bài
   giao bắt đầu **149ms** (trước cả khi module chạy; trước đợt này 416ms); vẫn đúng 2 lượt
-  Firestore như cũ (không đọc trùng); màn START hiện, console sạch. `node --input-type=module
+  Firestore như cũ (không đọc trùng); màn START hiện, console sạch. Bộ tiếng: đúng **10 lượt
+  fetch, 0 lượt <audio> ra mạng**, `pack.stats()` = 10/10 ready, `el().src` là `blob:`, `play()`
+  chạy được.
+- Live (Chrome thật, ngay sau deploy 286 bản đầu): 39 module 351 KB xong **448ms** (song song
+  thật); template 4 file **617→675ms một đợt**; đọc bài giao bắt đầu 166ms. `node --input-type=module
   --check` sạch 4 file; `tools/sinh-preload.py --check` KHỚP 3 đích.
 - ⬜ Số đo live sau push: xem `APP_MASTER.md` 0a. ⬜ Mắt thầy: mở một thẻ bài trên
   andrewclasses.com, bấm READY — màn START phải hiện gần như ngay sau hiệu ứng sparkle.

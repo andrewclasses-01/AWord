@@ -66,11 +66,18 @@ export function createPack(moduleUrl, spec = {}) {
 
   const urlFor = name => new URL(`./${dir}/${name}.mp3`, moduleUrl).href;
   const cache = new Map();
+  // ⭐ Đợt 286 — file đã kéo về bằng fetch() trong prime() nằm ở đây dưới dạng
+  // blob URL; <audio> nạp từ blob nên KHÔNG đi mạng lần hai. Đo live 02/9: thẻ
+  // <audio> không dùng lại bản fetch() đã có trong cache HTTP (đường tải media
+  // của Chrome hỏi theo Range, tự tải lại 260 KB) — nên phải đưa thẳng blob.
+  // Chưa có blob (chưa prime, fetch hỏng) thì dùng URL thật như trước.
+  const blobUrl = new Map();
+  const srcFor = name => blobUrl.get(name) || urlFor(name);
 
   function elFor(name) {
     let a = cache.get(name);
     if (!a) {
-      a = new Audio(urlFor(name));
+      a = new Audio(srcFor(name));
       a.preload = "auto";
       cache.set(name, a);
     }
@@ -100,7 +107,7 @@ export function createPack(moduleUrl, spec = {}) {
     if (!list) { list = []; extras.set(name, list); }
     for (const a of list) if (a.paused || a.ended) return a;
     if (list.length < MAX_VOICES - 1) {
-      const a = new Audio(urlFor(name));
+      const a = new Audio(srcFor(name));
       a.preload = "auto";
       a.volume = primary.volume;
       list.push(a);
@@ -199,14 +206,19 @@ export function createPack(moduleUrl, spec = {}) {
     // hot names first, then the rest, minus anything the template asked to skip
     const queue = [...new Set([...hot, ...names])].filter(n => !skip.has(n));
     if (!queue.length) { primedP = Promise.resolve(); return primedP; }
-    // ⭐ Đợt 286 — KÉO CẢ BỘ TIẾNG CÙNG MỘT LÚC bằng fetch() trước khi <audio>
-    // đi lấy: thẻ <audio> bị Chrome cho ra mạng chỉ 3-4 cái một lượt, mỗi lượt
-    // ~300ms khi hỏi lại server (đo live 02/9: 10 file quiz = 1388→2445ms, đúng
-    // 1 giây giữ nút PLAY). fetch() thì cả bộ đi song song; các <audio> bên dưới
-    // (vẫn giữ nguyên hàng đợi PRIME_CONCURRENCY) chỉ còn đọc cache HTTP.
-    // Lỗi gì cũng nuốt — hàng đợi <audio> vẫn tự tải như cũ.
-    try { for (const n of queue) fetch(urlFor(n)).catch(() => {}); } catch { /* bỏ qua */ }
-    primedP = new Promise(resolve => {
+    // ⭐ Đợt 286 — KÉO CẢ BỘ TIẾNG CÙNG MỘT LÚC bằng fetch() → blob, RỒI mới cho
+    // hàng đợi <audio> chạy (nạp từ blob, không đi mạng). Thẻ <audio> bị Chrome
+    // cho ra mạng chỉ 3-4 cái một lượt, mỗi lượt ~300ms khi hỏi lại server (đo
+    // live 02/9: 10 file quiz = 1388→2445ms, đúng 1 giây giữ nút PLAY); fetch()
+    // thì cả bộ đi song song (~0,3s). File nào fetch hỏng/quá 8s thì <audio> của
+    // nó vẫn tự tải bằng URL thật như cũ — không bao giờ kẹt vì bước này.
+    const keoBlob = Promise.all(queue.map(async n => {
+      try {
+        const r = await Promise.race([fetch(urlFor(n)), new Promise(res => setTimeout(() => res(null), 8000))]);
+        if (r && r.ok) blobUrl.set(n, URL.createObjectURL(await r.blob()));
+      } catch { /* dùng URL thật */ }
+    }));
+    primedP = keoBlob.catch(() => {}).then(() => new Promise(resolve => {
       let next = 0, finished = 0;
       const startOne = () => {
         if (next >= queue.length) return;
@@ -230,7 +242,7 @@ export function createPack(moduleUrl, spec = {}) {
         } catch { advance(); }
       };
       for (let i = 0; i < PRIME_CONCURRENCY; i++) startOne();
-    });
+    }));
     return primedP;
   }
 
