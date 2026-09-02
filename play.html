@@ -85,6 +85,22 @@
   <!-- AW-PRELOAD:END -->
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js" fetchpriority="high" />
   <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js" fetchpriority="high" />
+  <!-- ⭐⭐ Đợt 285c — KÉO SONG SONG THẬT SỰ BẰNG fetch(). Đo trên Chrome thật của thầy:
+       mọi yêu cầu do <link>/<script> phát ra (kể cả modulepreload + fetchpriority=high)
+       chỉ được ra mạng 3 CÁI MỘT LÚC, mỗi lượt hỏi-lại server ~300ms ⇒ 39 file ≈ 4-5
+       giây; còn fetch() thì 20 cái cùng lúc. Nên ngay sau khi khai báo danh sách, gọi
+       fetch() cho TỪNG file: chúng về song song, nằm sẵn trong cache HTTP, và lượt tải
+       thật của trình duyệt (vẫn 3 cái một) chỉ còn đọc cache (1-3ms mỗi file). Tự đọc
+       lại danh sách modulepreload ở trên nên KHÔNG có danh sách thứ hai phải bảo trì.
+       Hỏng fetch() (mạng, trình duyệt cũ) thì trang vẫn tải kiểu thường — chỉ chậm hơn. -->
+  <script>
+    (function () {
+      try {
+        var ls = document.querySelectorAll('link[rel="modulepreload"]');
+        for (var i = 0; i < ls.length; i++) fetch(ls[i].href).catch(function () {});
+      } catch (e) { /* trình duyệt không có fetch: bỏ qua */ }
+    })();
+  </script>
 
   <!-- No template stylesheet here: play.js loads ONLY the one game this student
        was assigned, css included — see ensureTemplate() in core/registry.js. -->
