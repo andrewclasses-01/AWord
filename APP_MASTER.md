@@ -4719,7 +4719,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **Đợt 285** (mở trang nhanh hơn, không còn màn trắng — `index.html` · `play.html` · `core/store.js` · `tools/sinh-preload.py` mới) — xem dòng "Kiểm live" bên dưới sau khi push. ⛔ Thêm `import` tĩnh mới ở core/ ⇒ chạy `python tools/sinh-preload.py --write` rồi commit cả HTML. |
+> | Commit mới nhất | **`4561eb0`** (Đợt 285c) ← `f8da203` (285b) ← `04698d7` (285) — mở trang nhanh hơn, không còn màn trắng: `index.html` · `play.html` · `core/store.js` · `tools/sinh-preload.py` mới — **đã push + LIVE kiểm chứng** (SHA-256 `index.html`/`play.html`/`core/store.js` live khớp HEAD). ⛔ Thêm `import` tĩnh mới ở core/ ⇒ chạy `python tools/sinh-preload.py --write` rồi commit cả HTML; ⛔ đừng xoá `<script>` fetch() ngay sau khối AW-PRELOAD (xem HUONG DAN CORE "TẢI MỘT ĐỢT"). |
+> | Kiểm live 285 | Pane, tình huống XẤU NHẤT (ngay sau deploy, cả 39 file phải tải lại 546 KB): trước = 4 đợt nối đuôi, JS xong **2,4–2,8s**, `load` 2,9s · sau 285c = **38 file bay cùng lúc**, JS xong **1,58s**, `load` 1,93s (nửa đầu là TTFB 0,39s của chính trang HTML). Chrome thật của thầy, cache còn: JS xong 0,14s → hỏi tài khoản 0,21–0,53s → kho hiện ≈ 0,8s; màn chờ `.aw-boot` hiện thay cho màn trắng. ⬜ chờ mắt thầy trên máy trường/TOMKO sau >10 phút không mở. |
 > | Trước đó | **`917a7cc`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — **đã push + LIVE kiểm chứng** |
 > | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` + `/core/app.css` — **mã băm SHA-256 khớp tuyệt đối** với `git show 917a7cc:<file>` cho cả hai (`1936c6d1…3a639db` / `294618be…0d80f493d224`). GitHub Pages build `1181326120` cho đúng SHA `917a7cc4764b1834b70deb9168fc586748ea13f0` báo `status:"built"`. |
 > | Trước đó | **`bb2fdbe`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — đã push + LIVE kiểm chứng |

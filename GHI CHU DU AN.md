@@ -179,6 +179,39 @@ xong `engine.js`. GitHub Pages trả `Cache-Control: max-age=600` cố định, 
 - ⬜ Số đo LIVE sau push + ⬜ mắt thầy: mở trang sau >10 phút phải thấy logo chờ ngay rồi vào thẳng
   kho, không còn trắng.
 
+### ⭐⭐ Đợt 285b + 285c — bẫy phát hiện SAU khi 285 lên live: Chrome chỉ thả 3 `<link>`/`<script>` một lúc
+
+Đo Chrome THẬT của thầy ngay sau deploy 285 (`?t=6`, mọi file phải tải lại vì GitHub Pages đổi
+ETag TOÀN BỘ file mỗi lần deploy): 39 modulepreload đều **bắt đầu** ở 438ms (một đợt — đúng ý),
+nhưng **chỉ 3 cái ra mạng cùng lúc**, mỗi lượt hỏi-lại server ~300ms ⇒ JS xong **5,4s**. Thí
+nghiệm tách nguyên nhân (chèn 20 thẻ/lời gọi lên `?v=…` mới, đếm số đang bay cùng lúc):
+
+| Cách phát yêu cầu (Chrome thật) | Cùng lúc | 20 file xong |
+|---|---|---|
+| `<link rel=modulepreload>` (có/không `fetchpriority=high`) | **3** | 411ms |
+| `<link rel=preload as=script>` / `as=fetch` · `<script type=module src>` | **3** | 400–450ms |
+| `fetch(url)` (kể cả `priority:'low'`) | **20** | 85–130ms |
+| Hỏi-lại có điều kiện (`cache:'no-cache'`, If-None-Match → origin) | 20 | ~300ms/lượt |
+| Tải thẳng (`cache:'reload'`, edge Fastly) | 20 | ~60ms/lượt |
+
+Kết luận: (1) mọi yêu cầu do THẺ HTML phát ra bị Chrome xếp hàng 3-một; `fetch()` thì không;
+(2) 300ms là giá của một lượt hỏi-lại ETag (đi tới origin GitHub), tải thẳng chỉ 60ms.
+⚠️ Pane trình duyệt của phiên (Chromium nhúng) SAU khi tải xong lại cho 20 — đừng đo bằng pane,
+đo bằng Chrome thật (Claude in Chrome).
+
+- **285b** (`f8da203`): thêm `fetchpriority="high"` vào mọi modulepreload (generator sinh) — vô
+  hại nhưng KHÔNG đủ (vẫn 3-một). Giữ lại.
+- **285c** (`4561eb0`): `<script>` thường ngay sau khối AW-PRELOAD **đọc lại danh sách
+  modulepreload rồi `fetch()` từng file** ⇒ 42 yêu cầu ra mạng song song, nằm sẵn trong cache
+  HTTP; lượt tải thật của trình duyệt (vẫn 3-một) chỉ còn đọc cache 1–3ms mỗi file. Không có danh
+  sách thứ hai phải bảo trì. Hỏng `fetch()` ⇒ rơi về kiểu cũ, không vỡ gì.
+- **Số đo live sau 285c** (pane, cache đã quá 10 phút + deploy đổi ETag ⇒ cả 39 file tải lại,
+  546 KB — xấu nhất): **38 file bay cùng lúc**, JS xong **1,58s**, `load` 1,93s — so với 2,4–2,8s
+  JS / 2,9s `load` trước Đợt 285 cùng tình huống. Chrome thật của thầy (cache còn): JS 0,14s →
+  `accounts:lookup` 0,21→0,53s → kho hiện ≈ 0,8s. Phần còn lại của lần mở lạnh là TTFB của chính
+  trang HTML (0,3–0,4s, GitHub Pages) + 42 lượt hỏi-lại 300ms chạy song song (~0,4s) — không còn
+  gì nối đuôi.
+
 ### Không đụng / đã cân nhắc bỏ
 
 - Không gộp/minify file (giữ zero-build); không thêm Service Worker (nhanh hơn nữa nhưng thêm bẫy

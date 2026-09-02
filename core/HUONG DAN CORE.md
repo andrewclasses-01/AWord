@@ -2901,6 +2901,13 @@ nối đuôi (đo live: 2,8s trắng lúc lạnh, 2,4s ngay cả khi cache còn 
 - Quên chạy KHÔNG hỏng gì: file mới chỉ rơi về kiểu tải nối đuôi như trước.
 - Import động `import("…")` (template, fight, showdown-export, lesson-import, tts…) CỐ Ý không
   nằm trong danh sách — chúng chỉ tải khi dùng tới.
+- ⛔ **BẪY 285b/285c**: Chrome thật chỉ thả **3 yêu cầu do thẻ HTML phát ra** (`<link
+  rel=modulepreload/preload>`, `<script src>`) ra mạng cùng lúc, `fetchpriority="high"` không đổi
+  được; `fetch()` thì 20 cái cùng lúc. Nên ngay sau khối AW-PRELOAD có một `<script>` thường đọc
+  lại danh sách modulepreload và `fetch()` từng file để chúng nằm sẵn trong cache — **đừng xoá
+  script đó**, và đừng đo chuyện này bằng pane trình duyệt của phiên (nó không bị giới hạn 3).
+  Một lượt hỏi-lại ETag tới GitHub ≈ 300ms, tải thẳng từ edge ≈ 60ms; GitHub đổi ETag MỌI file
+  sau mỗi deploy nên lần mở đầu tiên sau push luôn tải lại cả 39 file.
 - Cùng đợt: màn chờ `.aw-boot` nằm sẵn trong `#app` (mọi đường vẽ đều `app.innerHTML = ""` nên
   tự mất — đừng đổi thói quen đó), và `store.warmUp()` được gọi từ một `<script type="module">`
   đứng TRƯỚC `main.js` để Firebase chạy song song với việc tải mã (`readAll()` nhớ lượt đọc đang
