@@ -46,7 +46,7 @@ def static_graph(entry):
 
 def block_for(entry):
     mods = static_graph(entry)[1:]          # bỏ chính file gốc — <script src> đã nạp nó
-    lines = [f'  <link rel="modulepreload" href="{m}" />' for m in mods]
+    lines = [f'  <link rel="modulepreload" href="{m}" fetchpriority="high" />' for m in mods]
     return mods, "\n".join(lines)
 
 def current_block(html):
