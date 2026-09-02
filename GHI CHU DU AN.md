@@ -21,8 +21,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > song với tải mã, play.js nhận đúng promise đó, không đọc 2 lần; (2) `core/tpl-files.js` MỚI (sinh
 > tự động bởi `tools/sinh-preload.py --write`: css + mọi import tĩnh của từng template) —
 > `registry.ensureTemplate()` fetch() cả bộ trước khi import(); (3) `sfx.prime()` fetch() cả bộ
-> tiếng trước khi <audio> đi lấy. Đo máy: 4 file quiz về cùng lúc (297→309ms), đọc bài giao bắt đầu
-> ở 149ms (trước cả khi module chạy). ⛔ Phần web myLesson (andrewclasses.com) CHƯA ĐỘNG: phiên
+> tiếng **→ blob** rồi <audio> nạp từ blob (286b `39b273b` — bản đầu chỉ fetch() là SAI: <audio>
+> không dùng lại cache HTTP, tải lại đủ 260 KB). Live Chrome thật: đọc bài giao từ 57ms, template
+> một đợt 280→287ms, bộ tiếng 290→293ms + 0 lượt <audio> ra mạng, `stats()` 10/10. ⛔ Phần web
+> myLesson (andrewclasses.com) CHƯA ĐỘNG: phiên
 > Claude khác đang sửa v1.53.0 bên đó — đã rút sạch, chờ thầy chốt.) Trước đó:
 > **Đợt 285** (02/9/2026, thầy báo — mở `aword.andrewclasses.com` đôi khi RẤT CHẬM, đôi
 > khi TRẮNG TRƠN một lát rồi mới hiện. Đo thật trên bản live: (1) `index.html` là ô rỗng, không vẽ gì
