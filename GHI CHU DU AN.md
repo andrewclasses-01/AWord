@@ -12,7 +12,20 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 284** (29/8/2026, thầy báo — bấm Apply thấy popup ĐÓNG RỒI MỞ LẠI thành một cú
+> Mới nhất: **Đợt 285** (02/9/2026, thầy báo — mở `aword.andrewclasses.com` đôi khi RẤT CHẬM, đôi
+> khi TRẮNG TRƠN một lát rồi mới hiện. Đo thật trên bản live: (1) `index.html` là ô rỗng, không vẽ gì
+> cho tới khi 39 file JS + Firebase xong; (2) 39 file tải theo **4 đợt nối đuôi** (mỗi file chỉ lộ
+> import của nó SAU KHI về) — lạnh 2,8 giây, và **2,4 giây ngay cả khi cache còn nhưng đã quá 10
+> phút** (GitHub Pages `max-age=600` ⇒ 45 lượt hỏi-lại 304 vẫn nối đuôi) = đúng cái "đôi khi";
+> (3) chỉ SAU đó mới tải SDK Firebase (185 KB) + hỏi tài khoản 0,3s + đọc kho. Sửa 4 việc, không
+> đổi kiến trúc: `<link rel=modulepreload>` cho TOÀN BỘ 38/31 module tĩnh (sinh tự động bằng
+> `tools/sinh-preload.py --write`, ⛔ không viết tay) + SDK gstatic; màn chờ `.aw-boot` + màu nền
+> inline ngay trong HTML; `store.warmUp()` gọi từ `<script type=module>` đứng TRƯỚC `main.js` để
+> SDK→tài khoản→đọc kho chạy song song với việc tải mã (`readAll()` nhớ lượt đọc đang dở nên không
+> đọc Firestore 2 lần); preload 5 font + preconnect Google. Đo máy: 39 file về **MỘT đợt** (start
+> 20ms, xong 114ms). Bàn thử `scratch/dot285-store-inflight.html` **11/11 ĐẠT** (gọi `store.js`
+> THẬT, chỉ tráo `core/firebase.js` bằng stub qua import map). ⬜ chờ số đo live + mắt thầy.)
+> Trước đó: **Đợt 284** (29/8/2026, thầy báo — bấm Apply thấy popup ĐÓNG RỒI MỞ LẠI thành một cú
 > "nháy" cả nền lẫn pop-up, muốn KHÔNG nháy gì. Gốc: Apply ([[Đợt 282]]) vẫn phải remount thật
 > (Đợt 263 — vài tuỳ chọn Showdown chỉ đọc lúc mount) nên panel bị `cleanupAll()` phá rồi dựng lại,
 > nhưng cú mở lại đi qua `setTimeout(fn,0)` — MỘT MACROTASK, để trình duyệt kịp sơn 1 khung hình
@@ -102,6 +115,77 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 285 (02/9/2026, thầy) — ⭐⭐⭐ **MỞ TRANG NHANH HƠN, KHÔNG CÒN MÀN TRẮNG (modulepreload + màn chờ + Firebase song song)**
+
+### Thầy yêu cầu gì
+
+> "Kiểm tra trang aword.andrewclasses.com xem tại sao đôi khi mở trang nhưng load rất chậm, đôi khi
+> hiện màn hình trống trơn một lát rồi mới mở trang. Xem vấn đề là gì và có khắc phục được để mở
+> trơn tru và nhanh hơn không" → thầy chốt **ok build cả 4 việc**.
+
+### Đo thật trước khi sửa (bản live, pane trình duyệt + Chrome thật của thầy)
+
+| Tình huống | Số đo |
+|---|---|
+| Mở LẠNH (chưa có cache) | 39 file JS về theo **4 đợt nối đuôi**: đợt 1 xong 0,7s · đợt 2 (16 file) 1,8s · đợt 3 (20 file) 2,6s · `numberstepper`/`qr` 2,8s. `load` = 3,05s. Firebase CHỈ bắt đầu ở 2,8s. |
+| Mở lại trong 10 phút | mọi file từ cache, trang hiện ~0,15s — nhanh. |
+| Mở lại SAU 10 phút (cache còn nhưng hết hạn) | 45 lượt hỏi-lại server (304, 0 KB) **vẫn 4 đợt nối đuôi** → JS xong 2,4s, `load` 2,8s dù không có gì mới. **= đúng cái "đôi khi trắng một lát" thầy thấy.** |
+| Phần Firebase (Chrome đã đăng nhập, cache ấm) | SDK gstatic → `accounts:lookup` 0,3s → `firebase-firestore.js` → đọc kho 0,14s → vẽ. SDK cỡ gzip: app 23 KB · auth 43 KB · firestore 118 KB. |
+
+Vì sao trắng: `index.html` chỉ có `<div id="app"></div>` rỗng, nền cũng chỉ có màu khi `app.css`
+(143 KB gzip) về; mọi thứ chờ `init()` trong `main.js`, mà `init()` chỉ chạy sau khi CẢ 39 module
+đã tải + chạy xong. Vì sao 4 đợt: trình duyệt chỉ biết `engine.js` cần `unit.js`… SAU KHI đã tải
+xong `engine.js`. GitHub Pages trả `Cache-Control: max-age=600` cố định, không chỉnh được.
+
+### Sửa gì (4 việc — `index.html`, `play.html`, `core/store.js`, `tools/sinh-preload.py` MỚI)
+
+1. **TẢI MỘT ĐỢT** — khối `<!-- AW-PRELOAD:BEGIN/END -->` trong 2 file HTML liệt kê
+   `<link rel="modulepreload">` cho **toàn bộ module tĩnh** đi từ `main.js` (38) / `play.js` (31),
+   + 3 file SDK gstatic (`firebase-app/auth/firestore.js`; `auth`/`firestore` tự import `app`).
+   ⛔ **KHÔNG VIẾT TAY** khối này: `python tools/sinh-preload.py --write` sinh từ import thật
+   (`--check` = mã thoát 1 nếu lệch). Thêm/bớt `import` tĩnh ở bất kỳ file core nào ⇒ chạy lại.
+   Quên chạy KHÔNG hỏng gì — file đó chỉ rơi về kiểu tải nối đuôi. Import động (`import("…")`:
+   template, fight, showdown-export, lesson-import, tts…) CỐ Ý không nằm trong danh sách.
+2. **MÀN CHỜ + MÀU NỀN INLINE** — `<style>` nhỏ đứng TRƯỚC `app.css` (để `html.aw-nhung` nhúng
+   myLesson vẫn ghi đè nền trong suốt) + khối `.aw-boot` (logo AWord + "in ANDREW CLASSES" + thanh
+   chạy) đặt sẵn TRONG `#app`. Mọi đường vẽ của `main.js`/`play.js` đều `app.innerHTML = ""` nên
+   nó tự biến mất; có `animation-delay .15s` để lần mở nhanh không thấy nháy. Tên class riêng
+   (`aw-boot*`) — không trùng `.aw-brand` để `sizeBrand()`/`querySelector` của app không bắt nhầm.
+3. **FIREBASE SONG SONG** — `core/store.js` thêm `export function warmUp()` (= `readAll()` nuốt lỗi)
+   và `readAll()` nhớ lượt đọc đang dở (`inflight = {uid, p}`; `resetCache()` cũng xoá nó) để lời
+   gọi thật của `main.js` ngay sau đó **dùng chung một lượt `getDocs`**, không đọc Firestore 2 lần.
+   `index.html` có `<script type="module">import("./core/store.js").then(m=>m.warmUp())</script>`
+   đứng TRƯỚC `main.js` — không import tĩnh nên chạy ngay khi HTML đọc xong, kéo SDK → hỏi tài khoản
+   → đọc kho trong lúc 39 file mã còn đang tải. `play.html` tương tự nhưng chỉ `firebase.db()`
+   (trang HS không đăng nhập). Chưa đăng nhập/mất mạng: `warmUp` im lặng, `init()` xử lý y như cũ.
+4. **FONT + PRECONNECT** — `<link rel=preload as=font>` 5 file Baloo 2 (trước đây chỉ tải sau khi
+   trang đã vẽ ⇒ chữ nhảy font) + `preconnect` gstatic / identitytoolkit / securetoken / firestore.
+
+### Kiểm
+
+- Máy (`devserver.py`, no-store): **39/39 file JS bắt đầu ở 20ms, xong 114ms — MỘT đợt**; SDK + 5
+  font cũng bắt đầu ở 20ms; `load` 237ms; console sạch; `.aw-boot` đã bị thay bằng `.aw-lib`.
+  `play.html` (không `?g`): 32 file một đợt, xong 70ms, màn "This link is incomplete" đúng như cũ.
+- Bàn thử **`scratch/dot285-store-inflight.html` — 11/11 ĐẠT** (scratch/ bị gitignore, công thức:
+  nạp `core/store.js` THẬT, import map tráo `/core/firebase.js` → `scratch/dot285-stub-firebase.js`
+  đếm `getDocs`): warmUp + listChildren cùng lúc = 1 lượt đọc, kết quả đúng · 2 lời gọi song song
+  = 1 lượt · chưa đăng nhập: không unhandledrejection, không đọc, lời gọi thật vẫn ném
+  `aw/signed-out` · đọc lỗi giữa chừng không kẹt inflight, lần sau đọc lại được · `resetCache()`
+  giữa lúc đang đọc ⇒ lời gọi sau đọc lượt mới.
+- `node --input-type=module --check` sạch trên `core/store.js`; `tools/sinh-preload.py --check` KHỚP.
+- ⬜ Số đo LIVE sau push + ⬜ mắt thầy: mở trang sau >10 phút phải thấy logo chờ ngay rồi vào thẳng
+  kho, không còn trắng.
+
+### Không đụng / đã cân nhắc bỏ
+
+- Không gộp/minify file (giữ zero-build); không thêm Service Worker (nhanh hơn nữa nhưng thêm bẫy
+  "bản cũ dính mãi" — mục 0-BIS đã khổ vì cache rồi). 5 mp3 meme `preload="auto"` ở trang chủ
+  (~120 KB, tải sau khi vẽ) để nguyên — không nằm trên đường găng.
+- myActivity nhúng `index.html?…` qua webview: màn chờ chỉ là DOM trong `#app`, bị xoá trước khi
+  bridge `__awordBridge` được dùng — không đổi hợp đồng bridge.
 
 ---
 

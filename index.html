@@ -10,18 +10,126 @@
   <link rel="icon" type="image/png" sizes="192x192" href="core/assets/icons/favicon-192.png" />
   <link rel="apple-touch-icon" href="core/assets/icons/favicon-180.png" />
 
+  <!-- ⭐ Đợt 285 — MÀN CHỜ + MÀU NỀN NGAY TỪ HTML. Trước đợt này #app là một ô
+       rỗng và nền chỉ có màu khi app.css (143 KB) về tới, nên người mở trang
+       nhìn thấy MÀN TRẮNG cho tới khi mọi file mã + Firebase xong (2,8–5 giây
+       trên mạng lạnh). Khối style này đứng TRƯỚC app.css để app.css vẫn ghi đè
+       được (chế độ nhúng `html.aw-nhung` cần nền trong suốt). Màn chờ .aw-boot
+       tự biến mất khi main.js vẽ trang (mọi đường vẽ đều `app.innerHTML = ""`);
+       hiện có độ trễ 150ms để lần mở nhanh (cache còn) không thấy nó nháy. -->
+  <style>
+    body { margin: 0; background: #eaf2fb; }
+    .aw-boot {
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 4px; color: #23303e;
+      font-family: "Baloo 2", "Segoe UI", system-ui, Arial, sans-serif;
+      opacity: 0; animation: aw-boot-in .3s ease .15s forwards;
+    }
+    .aw-boot-logo { font-size: 4.15rem; font-weight: 800; letter-spacing: -1.5px; color: #2f7bff; line-height: .9; }
+    .aw-boot-logo span { color: #23303e; }
+    .aw-boot-sub { font-size: .98rem; font-weight: 600; color: #9aa7b6; white-space: nowrap; }
+    .aw-boot-sub b { color: #23303e; font-weight: 800; }
+    .aw-boot-bar { width: 150px; height: 4px; border-radius: 4px; background: #d9e5f3; overflow: hidden; margin-top: 22px; }
+    .aw-boot-bar i { display: block; width: 40%; height: 100%; border-radius: 4px; background: #2f7bff; animation: aw-boot-run 1.1s ease-in-out infinite; }
+    @keyframes aw-boot-in { to { opacity: 1; } }
+    @keyframes aw-boot-run { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+  </style>
+
   <!-- Shared UI (core) -->
   <link rel="stylesheet" href="core/app.css" />
   <link rel="stylesheet" href="core/themes/classic.css" />
+
+  <!-- ⭐ Đợt 285 — BẮT TAY SỚM với các máy chủ Google mà trang chắc chắn sẽ gọi
+       (SDK Firebase · kiểm tra tài khoản · Firestore), để lúc cần thì kết nối
+       đã sẵn. -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+  <link rel="preconnect" href="https://securetoken.googleapis.com" />
+  <link rel="preconnect" href="https://firestore.googleapis.com" />
+
+  <!-- ⭐ Đợt 285 — FONT tải ngay (trước đây chỉ bắt đầu tải SAU khi trang đã vẽ,
+       nên chữ nhảy font một nhịp). -->
+  <link rel="preload" href="core/assets/fonts/baloo-2-800.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-700.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-600.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="core/assets/fonts/baloo-2-vi.woff2" as="font" type="font/woff2" crossorigin />
+
+  <!-- ⭐⭐ Đợt 285 — TẢI MỘT ĐỢT. main.js kéo theo 39 file bên dưới, nhưng trình
+       duyệt chỉ biết file nào cần SAU KHI đọc xong file gọi nó ⇒ 4 đợt nối đuôi
+       (đo thật: 2,8 giây trắng lúc lạnh, 2,4 giây ngay cả khi cache còn nhưng
+       đã quá 10 phút — GitHub Pages chỉ cho nhớ 10 phút). Liệt kê sẵn ở đây thì
+       tất cả tải cùng lúc. ⛔ KHÔNG SỬA TAY khối giữa hai mốc AW-PRELOAD: chạy
+       `python tools/sinh-preload.py --write` (sinh từ import thật của
+       main.js); `--check` để kiểm. Thiếu một file cũng không hỏng — file đó chỉ
+       tải chậm như cũ. -->
+  <!-- AW-PRELOAD:BEGIN -->
+  <link rel="modulepreload" href="core/engine.js" />
+  <link rel="modulepreload" href="core/utils.js" />
+  <link rel="modulepreload" href="core/icons.js" />
+  <link rel="modulepreload" href="core/registry.js" />
+  <link rel="modulepreload" href="core/catalog.js" />
+  <link rel="modulepreload" href="core/settings.js" />
+  <link rel="modulepreload" href="core/wrong-sound.js" />
+  <link rel="modulepreload" href="core/store.js" />
+  <link rel="modulepreload" href="core/showdown-setup.js" />
+  <link rel="modulepreload" href="core/showdown.js" />
+  <link rel="modulepreload" href="core/showdown-home.js" />
+  <link rel="modulepreload" href="core/firebase.js" />
+  <link rel="modulepreload" href="core/content-view.js" />
+  <link rel="modulepreload" href="core/assignments.js" />
+  <link rel="modulepreload" href="core/assignment-ui.js" />
+  <link rel="modulepreload" href="core/unit.js" />
+  <link rel="modulepreload" href="core/sfx.js" />
+  <link rel="modulepreload" href="core/voice-clips.js" />
+  <link rel="modulepreload" href="core/voice-playback.js" />
+  <link rel="modulepreload" href="core/convert.js" />
+  <link rel="modulepreload" href="core/scoring.js" />
+  <link rel="modulepreload" href="core/mistakes.js" />
+  <link rel="modulepreload" href="core/layout.js" />
+  <link rel="modulepreload" href="core/press.js" />
+  <link rel="modulepreload" href="core/sound.js" />
+  <link rel="modulepreload" href="core/confetti.js" />
+  <link rel="modulepreload" href="core/leaderboard.js" />
+  <link rel="modulepreload" href="core/showdown-review.js" />
+  <link rel="modulepreload" href="core/fit.js" />
+  <link rel="modulepreload" href="core/themes/manifest.js" />
+  <link rel="modulepreload" href="core/print.js" />
+  <link rel="modulepreload" href="core/options-panel.js" />
+  <link rel="modulepreload" href="core/options-migrate.js" />
+  <link rel="modulepreload" href="core/timecost.js" />
+  <link rel="modulepreload" href="core/flypenalty.js" />
+  <link rel="modulepreload" href="core/numberstepper.js" />
+  <link rel="modulepreload" href="core/classes.js" />
+  <link rel="modulepreload" href="core/qr.js" />
+  <!-- AW-PRELOAD:END -->
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js" />
+  <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js" />
 
   <!-- Template stylesheets are NOT listed here any more: each one is added by
        ensureTemplate() (core/registry.js) the first time that game is played or
        edited. Adding a template = one entry in core/catalog.js, nothing else. -->
 </head>
 <body>
-  <!-- The whole app renders here -->
-  <div id="app"></div>
+  <!-- The whole app renders here. The .aw-boot block is the Đợt 285 waiting
+       screen — main.js replaces it the moment it has something to draw. -->
+  <div id="app">
+    <div class="aw-boot" aria-hidden="true">
+      <div class="aw-boot-logo">A<span>Word</span></div>
+      <div class="aw-boot-sub">in <b>ANDREW CLASSES</b></div>
+      <div class="aw-boot-bar"><i></i></div>
+    </div>
+  </div>
 
+  <!-- ⭐ Đợt 285 — KHỞI ĐỘNG FIREBASE SONG SONG. Script module nhỏ này đứng
+       TRƯỚC main.js nên chạy ngay khi HTML đọc xong (không có import tĩnh nào
+       phải chờ), kéo core/store.js → tải SDK → hỏi tài khoản → đọc kho, trong
+       lúc 39 file mã của main.js vẫn đang tải. main.js tới sau dùng chung kết
+       quả (store.js nhớ lượt đọc đang dở). Lỗi gì cũng nuốt — main.js tự xử lý. -->
+  <script type="module">
+    import("./core/store.js").then(m => m.warmUp()).catch(() => {});
+  </script>
   <script type="module" src="main.js"></script>
 </body>
 </html>

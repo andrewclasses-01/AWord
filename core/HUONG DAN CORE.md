@@ -2888,6 +2888,24 @@ session sửa core, các session khác đang test template của họ sẽ vỡ 
 - Ngoại lệ: sửa lỗi (bug) rõ ràng trong core do chính bạn phát hiện khi test template — vẫn nên báo
   trước qua ghi chú thay vì tự sửa, trừ khi Teacher Andrew đã đồng ý cho sửa trực tiếp trong phiên đó.
 
+## ⭐⭐ TẢI MỘT ĐỢT — `modulepreload` sinh tự động (Đợt 285, 02/9/2026)
+
+`index.html` và `play.html` liệt kê sẵn `<link rel="modulepreload">` cho **mọi module tĩnh** đi
+từ `main.js` / `play.js` (khối giữa `<!-- AW-PRELOAD:BEGIN -->` … `END -->`). Không có nó, trình
+duyệt chỉ biết `engine.js` cần `unit.js` SAU KHI đã tải xong `engine.js` ⇒ 39 file về theo 4 đợt
+nối đuôi (đo live: 2,8s trắng lúc lạnh, 2,4s ngay cả khi cache còn nhưng quá 10 phút).
+
+- ⛔ **KHÔNG viết tay khối đó.** Thêm/bớt một `import` tĩnh ở `main.js`, `play.js` hay bất kỳ file
+  `core/` nào ⇒ chạy `python tools/sinh-preload.py --write` (trong `web/`) rồi commit cả HTML.
+  `--check` trả mã thoát 1 nếu lệch — nên chạy trước khi push.
+- Quên chạy KHÔNG hỏng gì: file mới chỉ rơi về kiểu tải nối đuôi như trước.
+- Import động `import("…")` (template, fight, showdown-export, lesson-import, tts…) CỐ Ý không
+  nằm trong danh sách — chúng chỉ tải khi dùng tới.
+- Cùng đợt: màn chờ `.aw-boot` nằm sẵn trong `#app` (mọi đường vẽ đều `app.innerHTML = ""` nên
+  tự mất — đừng đổi thói quen đó), và `store.warmUp()` được gọi từ một `<script type="module">`
+  đứng TRƯỚC `main.js` để Firebase chạy song song với việc tải mã (`readAll()` nhớ lượt đọc đang
+  dở, không đọc Firestore 2 lần).
+
 ## Cấu trúc core/
 
 ```

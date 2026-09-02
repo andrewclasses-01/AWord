@@ -8,8 +8,21 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **27/8/2026 (Đợt 278 — hàng Default trong màn Wrong-answer sound nay LUÔN có
-> dấu ✓, bất kể trường hợp nào)**.
+> Cập nhật lần cuối: **02/9/2026 (Đợt 285 — mở trang nhanh hơn, không còn màn trắng: modulepreload
+> toàn bộ module + màn chờ inline + Firebase chạy song song)**.
+>
+> **Đợt 285** (02/9/2026, thầy) — ⭐⭐⭐ **MỞ TRANG NHANH HƠN, KHÔNG CÒN MÀN TRẮNG.** Thầy: *"đôi khi
+> mở trang nhưng load rất chậm, đôi khi hiện màn hình trống trơn một lát rồi mới mở"*. Đo live: 39
+> module tải theo **4 đợt nối đuôi** (lạnh 2,8s; **2,4s ngay cả khi cache còn nhưng quá 10 phút** —
+> GitHub Pages `max-age=600`), `#app` rỗng nên trắng tới lúc xong, Firebase chỉ bắt đầu SAU đó.
+> Sửa: `<link rel=modulepreload>` cho TOÀN BỘ module tĩnh (`index.html` 38 · `play.html` 31, + SDK
+> gstatic) — **sinh bằng `python tools/sinh-preload.py --write`, ⛔ đừng viết tay, thêm `import`
+> tĩnh mới ở core/ thì chạy lại**; màn chờ `.aw-boot` + nền inline; `store.warmUp()` từ
+> `<script type=module>` trước `main.js` (readAll nhớ lượt đọc dở ⇒ không đọc Firestore 2 lần);
+> preload font + preconnect. Máy: 39 file **một đợt** (20→114ms). Bàn thử
+> `scratch/dot285-store-inflight.html` 11/11 ĐẠT. Chi tiết `GHI CHU DU AN.md` Đợt 285.
+>
+> ---
 >
 > **Đợt 278** (27/8/2026, thầy) — ⭐ **HÀNG "DEFAULT" LUÔN CÓ DẤU ✓ — KHÔNG BỊ TẮT KHI CHỌN ÂM
 > KHÁC.** Thầy: *"Nút default luôn luôn có nút tích bất kể trường hợp nào. Nếu không bấm Mix thì
@@ -4700,13 +4713,14 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **29/8/2026 sau Đợt 284** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **02/9/2026 sau Đợt 285** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (29/8/2026 — sau **Đợt 284**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (02/9/2026 — sau **Đợt 285**)
 >
 > | | |
 > |---|---|
-> | Commit mới nhất | **`917a7cc`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — **đã push + LIVE kiểm chứng** |
+> | Commit mới nhất | **Đợt 285** (mở trang nhanh hơn, không còn màn trắng — `index.html` · `play.html` · `core/store.js` · `tools/sinh-preload.py` mới) — xem dòng "Kiểm live" bên dưới sau khi push. ⛔ Thêm `import` tĩnh mới ở core/ ⇒ chạy `python tools/sinh-preload.py --write` rồi commit cả HTML. |
+> | Trước đó | **`917a7cc`** (Đợt 284 — bỏ hiệu ứng "nháy" khi Apply đóng-rồi-mở lại popup) — **đã push + LIVE kiểm chứng** |
 > | Kiểm live | Fetch trực tiếp `aword.andrewclasses.com/core/engine.js` + `/core/app.css` — **mã băm SHA-256 khớp tuyệt đối** với `git show 917a7cc:<file>` cho cả hai (`1936c6d1…3a639db` / `294618be…0d80f493d224`). GitHub Pages build `1181326120` cho đúng SHA `917a7cc4764b1834b70deb9168fc586748ea13f0` báo `status:"built"`. |
 > | Trước đó | **`bb2fdbe`** (Đợt 282+283 — đồng bộ Options/Template myActivity chỉ lúc Apply + tên Showdown đầy đủ họ tên) — đã push + LIVE kiểm chứng |
 > | Kho | **SẠCH**, `main` khớp `origin/main` (ahead 0 · behind 0) |

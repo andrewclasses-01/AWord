@@ -55,7 +55,18 @@ let cache = null;       // { [id]: node }
 let cacheUid = null;    // which account the cache belongs to
 
 // Drop the cache (called on sign-in / sign-out so accounts never mix).
-export function resetCache() { cache = null; cacheUid = null; }
+export function resetCache() { cache = null; cacheUid = null; inflight = null; }
+
+// ⭐ Đợt 285 — KHỞI ĐỘNG SỚM. index.html gọi hàm này từ một <script type=module>
+// nhỏ đặt TRƯỚC main.js, để việc "tải SDK Firebase → hỏi tài khoản → đọc kho"
+// chạy SONG SONG với việc tải 39 file mã của app, thay vì chỉ bắt đầu sau khi
+// mã đã tải xong (trước đợt này: 2,8 giây trắng trên mạng lạnh rồi MỚI hỏi
+// Firebase). Nuốt mọi lỗi: chưa đăng nhập / mất mạng thì main.js vẫn tự xử lý
+// y như cũ. `readAll()` nhớ lời gọi đang dở (`inflight`), nên lời gọi thật của
+// main.js ngay sau đó dùng chung một lượt đọc Firestore — không đọc 2 lần.
+export function warmUp() {
+  readAll().catch(() => {});
+}
 
 async function requireUid() {
   const user = await currentUser();
@@ -82,24 +93,35 @@ function clean(value) {
   return value;
 }
 
+// Đợt 285 — the ONE Firestore read that is currently in flight, keyed by uid,
+// so two callers arriving before it lands (warmUp() from index.html + the real
+// first call from main.js) share it instead of each paying for a full read.
+let inflight = null;    // { uid, p } | null
+
 async function readAll() {
   const uid = await requireUid();
   if (cache && cacheUid === uid) return cache;
-  const [d, { collection, getDocs }] = await Promise.all([db(), fs()]);
-  const snap = await getDocs(collection(d, itemsPath(uid)));
-  const map = {};
-  snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
-  // Đợt 143 — every act the library hands out arrives on the CURRENT option
-  // scales. Doing it at this one choke point (rather than in each of the ~10
-  // exported readers) is what guarantees no path can serve an un-migrated act;
-  // and because the converted value sits in `cache`, the very next save of that
-  // act — for ANY reason — persists it. Folders have no `options` and are
-  // skipped. Idempotent: `optVer` lets a value convert once and once only.
-  for (const node of Object.values(map)) {
-    if (node && node.kind === "act") migrateActivityOptions(node);
-  }
-  cache = map; cacheUid = uid;
-  return cache;
+  if (inflight && inflight.uid === uid) return inflight.p;
+  const p = (async () => {
+    const [d, { collection, getDocs }] = await Promise.all([db(), fs()]);
+    const snap = await getDocs(collection(d, itemsPath(uid)));
+    const map = {};
+    snap.forEach(s => { map[s.id] = { ...s.data(), id: s.id }; });
+    // Đợt 143 — every act the library hands out arrives on the CURRENT option
+    // scales. Doing it at this one choke point (rather than in each of the ~10
+    // exported readers) is what guarantees no path can serve an un-migrated act;
+    // and because the converted value sits in `cache`, the very next save of that
+    // act — for ANY reason — persists it. Folders have no `options` and are
+    // skipped. Idempotent: `optVer` lets a value convert once and once only.
+    for (const node of Object.values(map)) {
+      if (node && node.kind === "act") migrateActivityOptions(node);
+    }
+    cache = map; cacheUid = uid;
+    return cache;
+  })();
+  inflight = { uid, p };
+  try { return await p; }
+  finally { if (inflight && inflight.p === p) inflight = null; }
 }
 
 // Upsert the given nodes (they are already in `cache`). Batched, chunked well
