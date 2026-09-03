@@ -6616,14 +6616,58 @@ function escapeText(s) {
 
 // Đợt 280 sửa lại (thầy, 29/8/2026) — GIỮ ĐẦY ĐỦ họ + tên đệm dạng viết tắt (mỗi tiếng
 // 1 chữ cái + dấu chấm), tên gọi (tiếng cuối) giữ nguyên. VD "Bùi Bảo An" -> "B.B.An"
-// (nơi gọi tự .toUpperCase() nên không cần viết hoa tay ở đây). Không còn cần cơ chế
-// "trùng tên gọi thì mở rộng 2 tiếng" của bản cũ — định dạng này luôn mang đủ chữ cái
-// đầu họ + tên đệm nên tự phân biệt tốt hơn.
+// (nơi gọi tự .toUpperCase() nên không cần viết hoa tay ở đây).
+//
+// ⭐⭐⭐ Đợt 289 (thầy, 3/9/2026) — HAI TÊN KHÔNG BAO GIỜ ĐƯỢC HIỆN GIỐNG HỆT NHAU.
+// Thầy báo: cùng một đội có "TUỆ LÂM" và "TÙNG LÂM", cả hai đều ra "T.LÂM" nên nhìn
+// vào màn START không biết ô nào là em nào.
+//
+// ⛔ Đợt 283 đã BỎ cơ chế chống trùng của bản gốc với lập luận "giữ đủ chữ cái đầu họ
+// + tên đệm thì tự phân biệt tốt hơn". Lập luận đó chỉ đúng khi hai em khác nhau ở HỌ
+// hoặc TÊN ĐỆM. Với tên hai tiếng thì phần viết tắt chỉ còn ĐÚNG MỘT chữ cái, và
+// "TUỆ"/"TÙNG" cùng bắt đầu bằng T ⇒ trùng tuyệt đối. Nên cơ chế chống trùng quay lại,
+// lần này là một cơ chế CHUNG chứ không phải một ca đặc biệt.
+//
+// CÁCH LÀM — "mở dần từ phải sang trái, chỉ mở đúng nhóm đang trùng":
+//   keep = số tiếng CUỐI giữ nguyên vẹn, các tiếng còn lại phía trước viết tắt.
+//     keep 1  "Bùi Bảo An"  -> "B.B.An"      | "Tuệ Lâm" -> "T.Lâm"     ← mặc định
+//     keep 2  "Bùi Bảo An"  -> "B.Bảo An"    | "Tuệ Lâm" -> "Tuệ Lâm"   ← đủ cả tên
+//     keep 3  "Bùi Bảo An"  -> "Bùi Bảo An"
+//   Mỗi vòng: nhóm nào có từ 2 em trở lên cùng một chuỗi hiển thị thì CẢ NHÓM ĐÓ mở
+//   thêm một tiếng; những em không trùng KHÔNG bị kéo dài theo. Lặp tới khi hết trùng
+//   hoặc không còn gì để mở.
+//
+// ⚠️ So bằng chuỗi ĐÃ VIẾT HOA, vì nơi gọi tự .toUpperCase() — nếu so nguyên bản thì
+// "T.Lâm" và "T.LÂM" sẽ được coi là khác nhau trong khi trên màn hình chúng y hệt.
+// ⚠️ Dấu tiếng Việt KHÔNG bị bỏ khi so: "T.LÂM" và "T.LẦM" là hai chuỗi khác nhau thật
+// trên màn hình, kéo dài chúng ra chỉ tổ tốn chỗ.
+// ⚠️ Hai em TRÙNG TÊN ĐẦY ĐỦ thì không có gì để mở nữa — vòng lặp dừng và cả hai hiện
+// tên đầy đủ giống nhau. Đó là sự thật, không phải lỗi hiển thị; chữa nó là việc của
+// thầy ở Settings › Classes chứ không phải của hàm này.
 function shortenTeamNames(names) {
-  return names.map(n => {
-    const parts = String(n ?? "").trim().split(/\s+/).filter(Boolean);
-    if (parts.length <= 1) return parts[0] || "";
-    const initials = parts.slice(0, -1).map(w => w[0] || "");
-    return initials.concat(parts[parts.length - 1]).join(".");
-  });
+  const parts = names.map(n => String(n ?? "").trim().split(/\s+/).filter(Boolean));
+  // `keep` tiếng cuối giữ nguyên, phần đầu viết tắt. keep >= số tiếng ⇒ tên đầy đủ.
+  const labelAt = (p, keep) => {
+    if (p.length <= 1) return p[0] || "";
+    if (keep >= p.length) return p.join(" ");
+    return p.slice(0, p.length - keep).map(w => w[0] || "")
+      .concat(p.slice(p.length - keep).join(" ")).join(".");
+  };
+  const keep = parts.map(() => 1);
+  const longest = parts.reduce((m, p) => Math.max(m, p.length), 1);
+  for (let pass = 0; pass < longest; pass++) {
+    const groups = new Map();
+    parts.forEach((p, i) => {
+      const k = labelAt(p, keep[i]).toUpperCase();
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    });
+    let grew = false;
+    groups.forEach(idxs => {
+      if (idxs.length < 2) return;
+      idxs.forEach(i => { if (keep[i] < parts[i].length) { keep[i]++; grew = true; } });
+    });
+    if (!grew) break;   // hết trùng, hoặc trùng tên đầy đủ nên không mở thêm được
+  }
+  return parts.map((p, i) => labelAt(p, keep[i]));
 }

@@ -765,12 +765,72 @@ export function classifyColor(pct, classify) {
 // Firestore and the library, and the review is imported STATICALLY by the engine
 // (see this file's header, luật 2 of v0.9.0). showdown-setup.js re-exports it
 // under its old name, so nothing that used to import it from there had to change.
-export function shortenName(full) {
+function shortenNameAtLevel(full, level) {
   const parts = String(full || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length <= 1) return full;
   const last = parts[parts.length - 1];
-  const initials = parts.slice(0, -1).map(w => w[0]).join(".");
-  return `${initials}.${last}`;
+  const heads = parts.slice(0, -1).map(w => (level >= w.length ? w : w.slice(0, level)));
+  return `${heads.join(".")}.${last}`;
+}
+
+export function shortenName(full) {
+  return shortenNameAtLevel(full, 1);
+}
+
+/**
+ * ⭐ Đợt 289 (thầy: "TUỆ LÂM và TÙNG LÂM đều thành T.LÂM nên bị rối") —
+ * `shortenName` alone looks at ONE name at a time, so two pupils who only
+ * differ in the word it reduces to an initial (TUỆ vs TÙNG, both → "T")
+ * silently land on the exact same label. This is the group-aware version:
+ * give it every full name that is about to be abbreviated TOGETHER on one
+ * screen, and any pair whose label collides gets ONE more letter of its lead
+ * word(s), together, one round at a time, until the pair reads apart again
+ * (or, genuinely identical names, the lead word is back in full).
+ *
+ * ⚠️ Grows the collision by a LETTER at a time rather than jumping straight
+ * to the full name on purpose: every caller here is a chip/cell that JUST
+ * finished shrinking to the smallest width it will go (SD_FIT_MIN) and
+ * turned to `shortenName` only because even that was still too narrow for
+ * the full name — handing back something close to the full name risks
+ * re-overflowing into the silent-ellipsis cut the whole abbreviation ladder
+ * exists to prevent. One extra letter is enough to disambiguate almost every
+ * real case (TUỆ vs TÙNG already differ at the second letter) and costs only
+ * a few px.
+ * ⚠️ Truly identical full names (two pupils typed in with the exact same
+ * name) cannot be told apart by any amount of the name itself — those get a
+ * "(2)", "(3)"… tag appended so the list still never shows two rows reading
+ * the same thing.
+ */
+export function assignShortLabels(fulls) {
+  const level = fulls.map(() => 1);
+  const labelAt = i => shortenNameAtLevel(fulls[i], level[i]);
+  let labels = fulls.map((_, i) => labelAt(i));
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < 20) {
+    changed = false;
+    const groups = new Map();
+    labels.forEach((lab, i) => {
+      if (!groups.has(lab)) groups.set(lab, []);
+      groups.get(lab).push(i);
+    });
+    groups.forEach(idxs => {
+      if (idxs.length < 2) return;             // no collision, leave as-is
+      idxs.forEach(i => {
+        const maxed = labels[i] === shortenNameAtLevel(fulls[i], Infinity);
+        if (!maxed) { level[i]++; changed = true; }
+      });
+    });
+    if (changed) labels = fulls.map((_, i) => labelAt(i));
+  }
+  // Last resort for genuine duplicates: number the repeats so the screen
+  // still never shows the same text twice.
+  const seen = new Map();
+  return labels.map(lab => {
+    const n = (seen.get(lab) || 0) + 1;
+    seen.set(lab, n);
+    return n === 1 ? lab : `${lab} (${n})`;
+  });
 }
 
 // ---------------------------------------------------------------

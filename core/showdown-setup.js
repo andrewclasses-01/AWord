@@ -64,7 +64,7 @@ import {
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick, planRoundJoin,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks, shortenName, buildAnalysisRows, formatActDisplayName,
+  mergeClassBlocks, rankBlocks, shortenName, assignShortLabels, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
 } from "./showdown.js";
 
@@ -2627,12 +2627,23 @@ export function buildShowdownPanel(panel, ctx) {
    * abbreviation to undo.
    */
   function shrinkRosterNames(wrap) {
+    // ⭐ Đợt 289 — collect every overflowing row FIRST, abbreviate as a group
+    // (assignShortLabels), THEN write: two pupils like TUỆ LÂM/TÙNG LÂM used
+    // to both land on "T.LÂM" because the old per-row loop abbreviated each
+    // name in isolation, with no idea a sibling row had just claimed the same
+    // label. See assignShortLabels' own header in core/showdown.js.
+    const rows = [];
     wrap.querySelectorAll(".aw-sd-rname").forEach(nm => {
       const full = nm.dataset.fullName;
       if (!full || nm.scrollWidth <= nm.clientWidth + 1) return;
-      nm.textContent = shortenName(full);
+      rows.push(nm);
+    });
+    if (!rows.length) return;
+    const labels = assignShortLabels(rows.map(nm => nm.dataset.fullName));
+    rows.forEach((nm, i) => {
+      nm.textContent = labels[i];
       nm.classList.add("is-short");
-      nm.title = full;
+      nm.title = nm.dataset.fullName;
     });
   }
 
@@ -3385,12 +3396,23 @@ export function buildShowdownPanel(panel, ctx) {
      * simply never gets touched.
      */
     function shrinkOverflowingNames() {
+      // ⭐ Đợt 289 — same group-aware abbreviation as shrinkRosterNames (see
+      // its note): gather every overflowing chip across the WHOLE panel
+      // (pool + every column) before labelling, so two pupils that would both
+      // abbreviate to "T.LÂM" never end up wearing the same chip text even
+      // when they landed in different teams.
+      const chips = [];
       host.querySelectorAll(".aw-sd-chip[data-mid]").forEach(chip => {
         const full = chip.dataset.fullName;
         if (!full || chip.scrollWidth <= chip.clientWidth + 1) return;   // fits as-is
-        chip.textContent = shortenName(full);
+        chips.push(chip);
+      });
+      if (!chips.length) return;
+      const labels = assignShortLabels(chips.map(chip => chip.dataset.fullName));
+      chips.forEach((chip, i) => {
+        chip.textContent = labels[i];
         chip.classList.add("is-short");
-        chip.title = full;   // the visible text is compressed; the full name is one hover away
+        chip.title = chip.dataset.fullName;   // the visible text is compressed; the full name is one hover away
       });
     }
 
