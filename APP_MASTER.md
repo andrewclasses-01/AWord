@@ -8,7 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **03/9/2026 (Đợt 288 — template thứ 18 GROUP SORT; Đợt 287 — trang chủ 4 gốc COURSES + GAMES)**.
+> Cập nhật lần cuối: **03/9/2026 (Đợt 289 — Showdown: hai tên không bao giờ hiện giống hệt nhau; Đợt 288 — template thứ 18 GROUP SORT)**.
+>
+> **Đợt 289** (03/9/2026, thầy) — ⭐⭐⭐ **SHOWDOWN: HAI TÊN KHÔNG BAO GIỜ ĐƯỢC HIỆN GIỐNG HỆT NHAU.**
+> Thầy: *"cùng một đội có TUỆ LÂM và TÙNG LÂM, màn trước khi vào game đều rút gọn thành T.LÂM nên
+> không biết ô nào là em nào"*. `assignShortLabels()` mới (`core/showdown.js`) — nhóm các tên sắp bị
+> viết tắt lại, cặp nào trùng nhãn thì mở dần từng chữ cái của tiếng đầu CHỈ cho cặp đó, tới khi phân
+> biệt được ("T.LÂM"/"T.LÂM" → "TU.LÂM"/"TÙ.LÂM"); trùng tên thật thì đánh số (2)/(3). Dùng ở màn A
+> (danh sách lớp) + màn B (chia đội, `core/showdown-setup.js`). Màn READY dùng hàm riêng
+> `shortenTeamNames()` (`core/engine.js`, không import được `core/showdown.js`) — viết lại để mở theo
+> TỪNG TIẾNG thay vì từng chữ cái (dễ đọc hơn ở cột chữ to), thay cho giả định sai của [[Đợt 283]]
+> ("giữ đủ chữ cái đầu là tự phân biệt" — sai với tên 2 tiếng chung chữ cái đầu). Bảng kết quả sau
+> game (`fitPodiumNames`) CHƯA đụng — không phải nơi thầy báo. `node --input-type=module --check`
+> sạch cả 3 file; test độc lập bằng Node với tên mẫu có dấu — đúng kỳ vọng. Code `da77001` ĐÃ PUSH.
+> Chi tiết `GHI CHU DU AN.md` Đợt 289. ⬜ chờ thầy bấm tay: lớp có 2 em tên trùng chữ cái đầu, đi qua
+> đủ màn A → B → READY.
+>
+> ---
 >
 > **Đợt 288** (03/9/2026, thầy) — ⭐⭐⭐ **TEMPLATE THỨ 18: GROUP SORT** = Wordwall *Group sort* + *Speed
 > sorting* trong một game (`options.mode` "tap" / "drag"), build cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2
@@ -4751,9 +4767,23 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **03/9/2026 sau Đợt 287** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **03/9/2026 sau Đợt 289** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (03/9/2026 — sau **Đợt 287**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (03/9/2026 — sau **Đợt 289**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`da77001`** (Đợt 289 — Showdown: hai tên không bao giờ hiện giống hệt nhau) — `core/showdown.js` · `core/showdown-setup.js` · `core/engine.js` — ĐÃ PUSH. Kiểm SHA-256 live: xem dòng "Kiểm live 289" ngay dưới. |
+> | Vì sao | Thầy: "cùng đội có TUỆ LÂM và TÙNG LÂM, màn trước khi vào game đều rút gọn thành T.LÂM, không biết ô nào là em nào" — `T` là chữ cái đầu chung của cả "Tuệ" lẫn "Tùng". |
+> | Đã sửa | `assignShortLabels()` mới (`core/showdown.js`) — viết tắt theo NHÓM thay vì từng tên độc lập, cặp trùng nhãn mở dần từng chữ cái tới khi phân biệt được, trùng tên thật thì đánh số (2)/(3); dùng ở màn A (danh sách lớp, `shrinkRosterNames`) + màn B (chia đội, `shrinkOverflowingNames`) trong `core/showdown-setup.js`. Màn READY dùng hàm riêng `shortenTeamNames()` (`core/engine.js`, không import được `core/showdown.js`) — viết lại mở theo TỪNG TIẾNG thay vì chữ cái, thay giả định sai của Đợt 283. |
+> | Kiểm live 289 | `node --input-type=module --check` sạch cả 3 file; test độc lập bằng Node (logic copy ra ngoài DOM) với tên mẫu có dấu tiếng Việt — đúng kỳ vọng ở cả 2 hàm. **✅ SHA-256 live khớp tuyệt đối** — fetch trực tiếp `aword.andrewclasses.com/core/{showdown.js, showdown-setup.js, engine.js}` khớp từng byte với `git show da77001:<file>` (`e56be3c6…`/`089e1e7c…`/`c237f532…`), đo ngay sau push nên Pages đã build xong. |
+> | Chưa đụng | Bảng kết quả sau game (`fitPodiumNames` trong `showdown-review.js`/`showdown-export.js`) vẫn viết tắt-từng-tên-độc-lập kiểu cũ, chưa có chống trùng — nếu thầy thấy trùng tên ở Recent results/Analyse thì báo, nối `assignShortLabels` vào đó ở đợt sau. |
+> | ⬜ Chờ tay thầy | Lớp có 2 em tên hai tiếng trùng chữ cái đầu, đi qua đủ màn A (danh sách lớp) → B (chia đội, cả khu chờ lẫn cột đội) → READY — xác nhận tên luôn phân biệt được, không ô nào tràn dòng. |
+> | Chi tiết | `GHI CHU DU AN.md` Đợt 289. |
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (03/9/2026 — sau **Đợt 287**)
 >
 > | | |
 > |---|---|
@@ -4766,6 +4796,8 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | ⬜ Chờ tay thầy | Trang chủ 4 ô · tạo `Courses / <khóa> / <lesson>` + Import act vào đó · giao bài với lớp chưa có thư mục ⇒ nút *Create “results / A1A” and start* ⇒ bài nằm `<lesson> / results / A1A`, KHÔNG ở Results · giao lần 2 cùng lớp không sinh DONE · myLesson tìm thư mục thấy "Courses / …". |
 > | ⛔ Bẫy đợt này | Bài giao **không mang `root`** — nó thuộc cây của thư mục `folderId` (null = Results); mọi chỗ liệt kê bài giao theo cây phải qua `folderIdsOfRoot("courses")` (tính cả thư mục trong thùng rác). Act trong Courses lấy lớp từ **ô Class**, không phải chữ đầu tiêu đề. Thêm gốc mới = thêm vào `ROOTS` + xếp vào `ACT_ROOTS`/`ASSIGNMENT_ROOTS`, đừng so tên gốc rải rác. |
 > | Không đụng | myLesson / myActivity (cầu nối chỉ THÊM khoá `root` + tiền tố "Courses / " vào `duongDan`, mọi khoá cũ giữ nguyên). Luật Firestore không đổi. Không module mới ⇒ không chạy `sinh-preload.py`. |
+>
+> ---
 >
 > ### ⭐⭐ ĐỢT 287 — VÙNG VỪA ĐỘNG TỚI: **TRANG CHỦ 4 GỐC — COURSES + GAMES**
 >

@@ -12,7 +12,11 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 288** (03/9/2026, thầy — TEMPLATE MỚI **GROUP SORT** = Wordwall Group sort + Speed sorting
+> Mới nhất: **Đợt 289** (03/9/2026, thầy — SHOWDOWN: hai tên KHÔNG BAO GIỜ được hiện giống hệt nhau
+> (VD "TUỆ LÂM"/"TÙNG LÂM" đều ra "T.LÂM"); sửa cả 3 nơi viết tắt tên ở màn TRƯỚC KHI VÀO GAME —
+> `assignShortLabels()` mới trong `core/showdown.js` (dùng chung cho màn A danh sách lớp + màn B chia
+> đội), và `shortenTeamNames()` viết lại trong `core/engine.js` (màn READY); ✅ push + live `da77001`;
+> ⬜ thầy bấm tay). Trước đó: **Đợt 288** (03/9/2026, thầy — TEMPLATE MỚI **GROUP SORT** = Wordwall Group sort + Speed sorting
 > trong một game, 2 chế độ tap/drag; `templates/group-sort/`; đọc `GHI CHU GROUP-SORT.md` ở đó; ✅ push + live
 > `8ec3ee7`; ⬜ thầy duyệt). Trước đó: **Đợt 287** (03/9/2026, thầy — TRANG CHỦ 4 GỐC: thêm **COURSES** (khóa học thu phí:
 > act + `results/<lớp>` nằm cạnh lesson, giao bài thiếu thư mục lớp thì HỎI TẠO, không rơi về
@@ -134,6 +138,80 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 289 (03/9/2026, thầy) — ⭐⭐⭐ **SHOWDOWN: HAI TÊN KHÔNG BAO GIỜ ĐƯỢC HIỆN GIỐNG HỆT NHAU**
+
+### Vì sao
+Thầy báo: cùng một đội có hai em **"TUỆ LÂM"** và **"TÙNG LÂM"**, màn hình trước khi bắt đầu game rút
+gọn cả hai thành **"T.LÂM"** — nhìn vào không biết ô nào là em nào. Gốc: `T` là chữ cái đầu của CẢ
+"Tuệ" lẫn "Tùng", nên bất cứ đâu app rút tên hai tiếng về "chữ-cái-đầu.tên-gọi" đều dính đúng cặp này.
+
+Có **BA nơi** rút gọn tên độc lập nhau trong Showdown, và cả ba đều mang nguy cơ này:
+1. `shortenName()` (`core/showdown.js`) — dùng ở màn A (danh sách lớp) + màn B (chia đội), lẫn bảng
+   kết quả/PNG export.
+2. `shortenTeamNames()` (`core/engine.js`) — riêng cho màn READY (ngay trước khi bấm Play).
+
+Đợt này sửa cả hai đường vào **màn trước khi vào game** (A/B qua #1, READY qua #2); bảng kết quả sau
+game (`fitPodiumNames`, `showdown-review.js`/`showdown-export.js`) CHƯA đụng — không phải nơi thầy báo,
+và hàm đó đã có logic đo-đạc riêng phức tạp hơn (shrink-rồi-viết-tắt theo từng khung hình), rủi ro sửa
+nhầm cao hơn lợi ích lúc này.
+
+### Đã sửa
+
+**`core/showdown.js`** — hàm mới `assignShortLabels(fulls)`, dùng CHUNG cho mọi nơi viết tắt-theo-nhóm:
+nhận một mảng tên ĐẦY ĐỦ đang cùng hiển thị trên một màn, rút gọn kiểu cũ (`shortenName`, 1 chữ cái mỗi
+tiếng đầu) trước, rồi với những nhãn bị TRÙNG thì thêm dần **từng chữ cái** của (các) tiếng đầu — CHỈ
+cho các cặp đang trùng, không đụng các em khác — tới khi phân biệt được ("T.LÂM"/"T.LÂM" →
+"TU.LÂM"/"TÙ.LÂM"). Cố tình KHÔNG nhảy thẳng lên tên đầy đủ: mọi nơi gọi hàm này đều là một ô/chip VỪA
+co hết cỡ (`SD_FIT_MIN`) rồi mới viết tắt vì tên đầy đủ không vừa — trả gần nguyên tên đầy đủ có nguy
+cơ tràn lại, đúng cái dấu "…" bị cắt mà cả bậc viết tắt này sinh ra để tránh. Hai em trùng tên thật
+100% thì không còn gì để mở nữa — gắn số "(2)", "(3)…" để màn hình vẫn không bao giờ hiện hai dòng y
+hệt. `shortenName()` cũ giữ nguyên hành vi (dùng làm nền/mức 1 cho hàm mới, không đổi chữ ký, không
+đổi caller cũ nào khác).
+
+**`core/showdown-setup.js`** — `shrinkRosterNames()` (màn A) và `shrinkOverflowingNames()` (màn B, cả
+khu chờ lẫn mọi cột đội) đổi từ vòng lặp viết-tắt-từng-ô-độc-lập sang HAI BƯỚC: gom hết các ô đang
+tràn (chưa đổi gì) → gọi `assignShortLabels` một lần cho CẢ NHÓM → mới ghi `.textContent`. Màn B gom
+theo TOÀN BỘ panel (khu chờ + mọi cột), không phải theo từng cột riêng — hai em trùng nhãn mà rơi vào
+hai đội khác nhau vẫn phải phân biệt được.
+
+**`core/engine.js`** — `shortenTeamNames()` (màn READY) đổi thuật toán, không dùng `assignShortLabels`
+(file này KHÔNG import `core/showdown.js`) mà tự có bản riêng cùng ý tưởng nhưng mở theo TỪ chứ không
+theo CHỮ CÁI: `keep` = số tiếng CUỐI giữ nguyên, mỗi vòng nhóm nào đang trùng thì mở thêm nguyên một
+tiếng ("T.Lâm" → "Tuệ Lâm" thay vì "Tu.Lâm") — dễ đọc hơn ở khoảng cách xa (cột 1/3 trái màn READY, chữ
+to). ⛔ Đợt 283 từng BỎ hẳn cơ chế chống trùng bản gốc với lập luận "giữ đủ chữ cái đầu họ+đệm là tự
+phân biệt tốt hơn" — lập luận đó chỉ đúng khi hai em khác NHAU ở họ hoặc tên đệm; với tên **hai tiếng**
+phần viết tắt chỉ còn đúng 1 chữ cái, nên "Tuệ"/"Tùng" cùng "T" vẫn trùng tuyệt đối. Đợt này quay lại
+cơ chế chống trùng nhưng làm CHUNG (mọi cặp trùng, không riêng một ca), không lặp lại lỗi giả định của
+283.
+
+### Kiểm
+`node --input-type=module --check` sạch cả 3 file. Test độc lập bằng Node (không qua DOM, gọi thẳng
+logic đã copy ra) với tên mẫu có dấu tiếng Việt:
+- `assignShortLabels(['TUỆ LÂM','TÙNG LÂM'])` → `['TU.LÂM','TÙ.LÂM']` (phân biệt được, không đổi gì
+  khác).
+- `assignShortLabels(['Nguyễn Bảo Anh','Ngô Bình Anh','Trần Cẩm Tú'])` → `['Ng.Bả.Anh','Ng.Bì.Anh',
+  'T.C.Tú']` — chỉ 2 tên đầu (trùng nhau) bị mở thêm, tên thứ 3 không đụng.
+- `assignShortLabels(['Tuệ Lâm','Tuệ Lâm'])` → `['Tuệ.Lâm','Tuệ.Lâm (2)']` — trùng tên thật, đánh số.
+- `shortenTeamNames(['Tuệ Lâm','Tùng Lâm','Bùi Bảo An'])` → `['Tuệ Lâm','Tùng Lâm','B.B.An']` — cặp
+  trùng mở NGUYÊN tiếng, em thứ 3 không đụng.
+⬜ CHƯA bấm tay: cần một lớp có sẵn hai em tên hai tiếng trùng chữ cái đầu (hoặc tạo lớp thử trong
+Settings › Classes) rồi đi qua đúng luồng Showdown thật (chọn lớp → chia đội → READY) để mắt thầy xác
+nhận cả 3 màn đều hiện tên phân biệt được, không tràn dòng/tràn ô.
+
+✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `da77001`. Fetch trực tiếp
+`aword.andrewclasses.com/core/showdown.js` · `/core/showdown-setup.js` · `/core/engine.js` — **mã băm
+SHA-256 khớp tuyệt đối** với `git show da77001:<file>` cho cả ba (`e56be3c6…`/`089e1e7c…`/`c237f532…`).
+
+### VIỆC ĐANG CHỜ (Đợt 289)
+⬜ Thầy bấm tay thật: lớp có 2 em tên hai tiếng trùng chữ cái đầu, đi qua màn A (danh sách lớp) → màn B
+   (chia đội, cả khu chờ lẫn khi đã vào các cột) → màn READY — xác nhận tên luôn phân biệt được, không
+   ô nào tràn dòng/bị dấu "…" cắt mất chữ.
+⬜ Bảng kết quả sau game (Recent results/Analyse podium, `showdown-review.js`/`showdown-export.js`) vẫn
+   dùng `shortenName()` viết tắt-từng-tên-độc-lập CŨ, CHƯA có cơ chế chống trùng — nếu thầy thấy trùng
+   tên ở đó nữa thì báo, đợt sau nối `assignShortLabels` vào `fitPodiumNames`.
 
 ---
 
