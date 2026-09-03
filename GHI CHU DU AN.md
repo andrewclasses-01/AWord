@@ -161,10 +161,24 @@ Tap đúng/sai/phím số/12 câu → 10/12 + Show answers + Start with mistakes
 chạm-chạm) · Drag instant tim 3→2, chip về hồ · Options panel đủ 5 ô riêng · editor Save vòng tròn đúng.
 0 lỗi console. Live: 5 file + mp3 khớp SHA-256 / 200.
 
+### 288b — ✅ LESSON 16 ĐÃ NHẬP VÀO COURSES (03/9/2026)
+Bundle JSON sinh TỰ ĐỘNG từ file khảo sát bằng `sinh-bundle-l16.py` (⭐ đọc thẳng file khảo sát, không
+gõ tay; có CHỐT DỪNG assert 100/40/55 câu) → `DU LIEU TONG HOP\NEN TANG TIENG ANH - LESSON 16 -
+aword-bundle.json`. Nhập qua nút Import **từ TRONG thư mục khóa** (`folderPath` chỉ ghi tên LESSON,
+KHÔNG ghi lại tên khóa — ghi cả hai là đẻ khóa lồng khóa).
+Kết quả live `?f=121`: **BT1 Quiz 100 câu · BT2 Group sort 40 câu / 7 nhóm · TNBG 16 Quiz 55 câu**, act
+mang root `courses`. Chơi thử BT2 ngay trên live: 7 nút nhóm đúng màu, chọn đúng +1 điểm rồi sang câu,
+0 lỗi console.
+⛔ **Bẫy tải file qua Claude in Chrome**: `file_upload` chỉ nhận file nằm trong thư mục phiên được đọc,
+và từ chối file có NHIỀU HARD LINK (bản chép từ ổ E bị coi là vậy) — phải GHI MỚI bằng Python vào thư
+mục làm việc rồi mới tải lên. Nhét chuỗi JSON 33KB qua `javascript_tool` cũng chạy được nhưng tốn gấp
+nhiều lần.
+
 ### VIỆC ĐANG CHỜ (Đợt 288)
 ⬜ Thầy chơi thử trên live (act mẫu qua New activity ▸ Group sort) cả 2 chế độ, nhất là kéo thả trên TOMKO.
+⬜ Thầy xem 3 act Lesson 16 vừa nhập (`Courses / NEN TANG TIENG ANH / LESSON 16…`), duyệt rồi mới nhân ra
+   31 lesson còn lại của khóa.
 ⬜ Chưa có: Fight/Showdown, voice, Change template sang/từ Quiz, dạng sheet Excel cho Import (ghi ở GHI CHU).
-⬜ Tiếp theo: bundle JSON 3 act Lesson 16 → Import vào `Courses / NEN TANG TIENG ANH / LESSON 16`.
 
 ---
 

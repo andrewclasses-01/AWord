@@ -4758,6 +4758,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | | |
 > |---|---|
 > | Commit mới nhất | **`fc7f5dc`** (Đợt 287 — trang chủ 4 gốc: COURSES + GAMES) — `main.js` · `core/store.js` · `core/assignments.js` · `core/assignment-ui.js` · `core/app.css` — ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s). |
+> | 288b Lesson 16 | ✅ Nhập 3 act Lesson 16 vào `Courses / NEN TANG TIENG ANH / LESSON 16…` (live `?f=121`): BT1 Quiz 100 · BT2 Group sort 40/7 nhóm · TNBG 55. Bundle sinh tự động từ file khảo sát ở `DU LIEU TONG HOP`. ⬜ thầy xem + duyệt rồi mới nhân ra 31 lesson còn lại. |
 > | Đợt 288 `8ec3ee7` | **Template GROUP SORT** (tap/drag) — `templates/group-sort/` + catalog + tpl-files; push + live khớp SHA-256; ⬜ thầy chơi thử live, TOMKO. Đọc `templates/group-sort/GHI CHU GROUP-SORT.md`. |
 > | 287c `127c142` | Thầy chốt: gốc Courses CHỈ có **+ New course** + thùng rác (bỏ New activity/New folder/Import/kéo file); vào trong khóa mới đủ chức năng. `coursesTop()` + `newCourseFlow()` trong main.js. Đã push + live khớp SHA-256. |
 > | 287b `fab59ee` | Thầy mở live bắt ngay: gốc Courses hiện các bài giao ở gốc Results (cùng folderId null). Vá `assignmentsForView` — `inTree(a)` cho cả nhánh thư mục thường, không chỉ thùng rác/tìm kiếm. Đã push + live khớp SHA-256. |
