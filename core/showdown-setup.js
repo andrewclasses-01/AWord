@@ -64,7 +64,7 @@ import {
 import {
   MIN_TEAMS, MAX_TEAMS, MAX_PER_TEAM, SOLO_TEAM_ID, SD_MODES, browserId, writePick, clearPick, planRoundJoin,
   readPendingResult, writePendingResult, clearPendingResult,
-  mergeClassBlocks, rankBlocks, shortenName, assignShortLabels, buildAnalysisRows, formatActDisplayName,
+  mergeClassBlocks, rankBlocks, shortenName, assignShortLabels, assignFullLabels, buildAnalysisRows, formatActDisplayName,
   classifyColor, DEFAULT_CLASSIFY
 } from "./showdown.js";
 
@@ -385,6 +385,22 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
 }
 
 /**
+ * ⭐⭐⭐ Đợt 291 — id → nhãn hiển thị, tính MỘT LẦN cho MỌI thành viên gộp từ
+ * MỌI đội trong `teams` bằng `assignFullLabels()` (core/showdown.js — đọc
+ * ghi chú của nó để biết vì sao phải tính Ở ĐÂY, lúc còn thấy đủ cả trận,
+ * chứ không phải ở màn READY của từng cột). Dùng ở cả ba nơi `pick.members`
+ * được lắp ráp bên dưới, để dù đi đường nào, nhãn cuối cùng luôn nhất quán.
+ */
+function fullLabelMap(teams) {
+  const all = [];
+  (teams || []).forEach(t => (t.members || []).forEach(m => { if (m?.id) all.push(m); }));
+  const labels = assignFullLabels(all.map(m => m.name));
+  const map = new Map();
+  all.forEach((m, i) => map.set(m.id, labels[i]));
+  return map;
+}
+
+/**
  * ⭐⭐⭐ Đợt 260 (25/8/2026) — ĐÓNG DẤU LẠI PICK BẰNG BẢNG ĐỘI **CỦA SERVER**.
  *
  * ⛔⛔ ĐÂY LÀ THỦ PHẠM SỐ MỘT CỦA "CÙNG SỐ NGƯỜI, BẢNG NÀY 50 CÂU BẢNG KIA 100".
@@ -416,13 +432,19 @@ export async function publishTable(setup, { claimTeamId = null, baseAt = 0 } = {
  * ⚠️ KHÔNG dùng ở nhánh MỘT ĐỘI (applySolo): một đội thì nó CHÍNH LÀ đội đông nhất
  * nên maxTeam luôn đúng sẵn, mà nếu ở đó server lại trả về một bảng NHIỀU đội (ca
  * superseded) thì hàm này sẽ đóng cho nó một maxTeam của bảng khác — hại hơn lợi.
+ *
+ * ⭐⭐⭐ Đợt 291 — cũng là nơi đóng dấu `shortLabel` cho từng thành viên (xem
+ * `fullLabelMap()` ngay trên): SAU publishTable là lúc pick chắc chắn khớp
+ * đúng bảng đội mà mọi máy khác cũng đang thấy, nên nhãn tính ở đây không
+ * bao giờ lệch với nhãn một cột khác đã đóng dấu từ cùng một `node`.
  */
 export function stampPickFromTable(pick, node, teamId) {
   const teams = Array.isArray(node?.teams) ? node.teams : [];
   const t = teams.find(x => x.id === teamId);
   if (!pick || !t) return pick;      // đội biến mất khỏi bảng: giữ ảnh chụp cũ còn hơn không có gì
+  const labels = fullLabelMap(teams);   // ⭐ Đợt 291 — xem fullLabelMap() ngay trên
   pick.teamName = t.name;
-  pick.members = t.members.map(m => ({ id: m.id, name: m.name }));
+  pick.members = t.members.map(m => ({ id: m.id, name: m.name, shortLabel: labels.get(m.id) }));
   pick.classId = node.classId || pick.classId;
   pick.className = node.className || pick.className;
   pick.maxTeam = Math.max(1, ...teams.map(x => (x.members || []).length || 0));
@@ -3175,7 +3197,13 @@ export function buildShowdownPanel(panel, ctx) {
       // core/showdown-review.js's existing "say the class name once" collapse
       // (paintTitle) go on working with no id-specific case at all.
       name: "Team 1",
-      members: roster.map(m => ({ id: m.id, name: m.name }))
+      // ⭐ Đợt 291 — một đội DUY NHẤT = cả lớp, nên chính roster này đã là "cả
+      // trận" assignFullLabels() cần thấy; không cần fullLabelMap (đội khác
+      // không tồn tại ở nhánh này).
+      members: (() => {
+        const labels = assignFullLabels(roster.map(m => m.name));
+        return roster.map((m, i) => ({ id: m.id, name: m.name, shortLabel: labels[i] }));
+      })()
     };
     setup.tableId = setup.tableId || localId("tbl");
     setup.teams = [team];
@@ -4103,10 +4131,16 @@ export function buildShowdownPanel(panel, ctx) {
   async function applyReady() {
     const team = setup.teams.find(t => t.id === claimedTeam);
     if (!team) return;
+    // ⭐ Đợt 291 — nhãn cho MỌI đội trên bảng THEO NHƯ PANEL NÀY ĐANG THẤY, ngay
+    // trước khi publishTable() có thể đổi nó. stampPickFromTable() (dưới đây,
+    // trong khối try) sẽ đóng dấu lại bằng bảng của SERVER nếu publish thành
+    // công — bản này chỉ là chỗ dựa cho ca "mất mạng, publishTable ném" mà
+    // applyReady() vẫn phải cho buổi dạy bắt đầu được.
+    const labelsNow = fullLabelMap(setup.teams);
     const pick = {
       teamId: team.id, teamName: team.name,
       classId: setup.classId, className: setup.className,
-      members: team.members.map(m => ({ id: m.id, name: m.name })),
+      members: team.members.map(m => ({ id: m.id, name: m.name, shortLabel: labelsNow.get(m.id) })),
       // ⭐⭐ Đợt 197 — THE BIGGEST TEAM IN THE WHOLE TABLE, carried in the pick.
       // ⚠️ Đợt 261 — GIỮ LẠI NHƯNG KHÔNG CÒN AI ĐỌC. Balance questions (thứ chia act
       // cho con số này) đã gỡ hẳn; đây nay chỉ là một sự thật về bảng đội đi kèm pick.

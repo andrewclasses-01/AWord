@@ -68,7 +68,7 @@ import { addEntry, getEntries, getRank, updateName } from "./leaderboard.js";
 // Firestore, no library). Everything that talks to Firestore lives in
 // core/showdown-setup.js, which is `await import`-ed from the teacher's button
 // only — same discipline as fight.js and store.js below.
-import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds, ROUND_BEAT_MS } from "./showdown.js";
+import { readPick, writePick, clearPick, memberAt, stampReview, groupByMember, readPendingResult, SOLO_TEAM_ID, browserId, dealQuestions, SD_FREE_CAP, formatActDisplayName, SD_PLAN_KEYS, findPlanClash, stdSignature, roundMissingTeams, roundReadyTeamIds, ROUND_BEAT_MS, assignFullLabels } from "./showdown.js";
 // The Showdown "Show answers" screen. Static like the line above and for the
 // same reason — it is DOM only, with no Firestore and no library layer; the one
 // thing it needs from the network arrives as the `loadTeams` callback below.
@@ -2201,12 +2201,24 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
   // teams are being played on other screens and their results never come here.
   // ⭐⭐⭐ Đợt 280 — không còn 1 dòng "TEAM · A · B · C" nữa: mỗi em một hàng riêng
   // trong `aw-sd-namecol` (cột 1/3 trái, lắp ráp ở cuối màn READY), tên rút gọn
-  // qua `shortenTeamNames()` để chữ vẽ được thật to mà vẫn gọn 1 dòng mỗi em.
+  // để chữ vẽ được thật to mà vẫn gọn 1 dòng mỗi em.
+  // ⭐⭐⭐ Đợt 291 — ƯU TIÊN `m.shortLabel`: nhãn đã được QUYẾT ĐỊNH một lần cho
+  // CẢ TRẬN (mọi đội gộp lại) ngay lúc bấm Ready, lúc còn nhìn thấy đủ mọi đội —
+  // xem assignFullLabels() (core/showdown.js). Đây là nhãn LUÔN không trùng dù
+  // hai em ở hai đội, hai cột myActivity khác nhau (cái Đợt 289/290 không làm
+  // được, vì màn này chỉ thấy MỘT đội — xem comment ngay trên). Một pick CŨ viết
+  // trước Đợt 291 (còn nằm trong sessionStorage từ trước khi cập nhật code, hoặc
+  // rơi qua nhánh nào đó chưa kịp gắn shortLabel) thì lùi về `shortenTeamNames()`
+  // — vẫn đúng TRONG một đội, chỉ không đảm bảo được xuyên đội như bản mới.
   let sdNameCol = null;
   if (showdownPick) {
     sdNameCol = el("div", "aw-sd-namecol");
     sdNameCol.append(el("div", "aw-sd-namecol-team", escapeText(showdownPick.teamName).toUpperCase()));
-    shortenTeamNames(showdownPick.members.map(m => m.name)).forEach(n => {
+    const allLabeled = showdownPick.members.every(m => m.shortLabel);
+    const names = allLabeled
+      ? showdownPick.members.map(m => m.shortLabel)
+      : shortenTeamNames(showdownPick.members.map(m => m.name));
+    names.forEach(n => {
       sdNameCol.append(el("div", "aw-sd-namecol-stu", escapeText(n).toUpperCase()));
     });
   }
@@ -2384,12 +2396,20 @@ export function startGame(root, libAct, { onExit, session = null, base = null, f
     const teams = (node && Array.isArray(node.teams)) ? node.teams : [];
     const t = teams.find(x => x.id === showdownPick?.teamId);
     if (!t) { toast("This team is not on the table any more"); return; }
+    // ⭐ Đợt 291 — `node.teams` ở đây LÀ cả bảng (mọi đội), đúng chỗ còn thấy đủ
+    // để tính nhãn không trùng qua assignFullLabels() — xem ghi chú của nó
+    // (core/showdown.js) và của fullLabelMap() (core/showdown-setup.js, ý
+    // tưởng giống hệt, chỉ khác là file NÀY không được import file kia).
+    const allMembers = [];
+    teams.forEach(x => (x.members || []).forEach(m => { if (m?.id) allMembers.push(m); }));
+    const labels = assignFullLabels(allMembers.map(m => m.name));
+    const shortLabelOf = new Map(allMembers.map((m, i) => [m.id, labels[i]]));
     writePick({
       teamId: t.id,
       teamName: t.name,
       classId: node.classId || showdownPick.classId,
       className: node.className || showdownPick.className,
-      members: t.members.map(m => ({ id: m.id, name: m.name })),
+      members: t.members.map(m => ({ id: m.id, name: m.name, shortLabel: shortLabelOf.get(m.id) })),
       maxTeam: Math.max(1, ...teams.map(x => (x.members || []).length || 0)),
       tableId: node.tableId || showdownPick.tableId || "",
       // ⭐ Đợt 264 — pick đóng dấu lại thì mốc reset đi theo, nếu không cú REFRESH TEAM

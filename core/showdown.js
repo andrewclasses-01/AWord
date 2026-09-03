@@ -139,8 +139,16 @@ export function readPick() {
     const raw = sessionStorage.getItem(PICK_KEY);
     if (!raw) return null;
     const p = JSON.parse(raw);
+    // ⭐ Đợt 291 — `shortLabel`, nếu có: nhãn hiển thị ĐÃ QUYẾT ĐỊNH sẵn ở lúc
+    // bấm Ready (assignFullLabels(), lúc còn thấy cả trận), không phải tự tính
+    // lại ở màn READY (xem ghi chú của assignFullLabels trong file này). Một
+    // pick cũ chưa từng có trường này (viết trước Đợt 291) vẫn hợp lệ y
+    // nguyên — undefined, và nơi đọc tự có đường lùi riêng.
     const members = Array.isArray(p?.members)
-      ? p.members.map(m => ({ id: String(m?.id || ""), name: String(m?.name || "").trim() })).filter(m => m.name)
+      ? p.members.map(m => ({
+          id: String(m?.id || ""), name: String(m?.name || "").trim(),
+          shortLabel: String(m?.shortLabel || "").trim() || undefined
+        })).filter(m => m.name)
       : [];
     // A team with nobody in it cannot deal turns, so it is not a usable pick.
     if (!p?.teamId || !members.length) return null;
@@ -829,6 +837,73 @@ export function assignShortLabels(fulls) {
   return labels.map(lab => {
     const n = (seen.get(lab) || 0) + 1;
     seen.set(lab, n);
+    return n === 1 ? lab : `${lab} (${n})`;
+  });
+}
+
+/**
+ * ⭐⭐⭐ Đợt 291 (thầy: "tôi cần mọi bảng khác nhau đều cần khác nhau, với mọi
+ * kiểu tên") — Đợt 289/290 chỉ chống trùng được TRONG một lần gọi (một danh
+ * sách/một đội), vì màn READY của mỗi cột myActivity chỉ biết đội của CHÍNH
+ * NÓ (`core/engine.js`'s `shortenTeamNames()` — xem comment "Only THIS
+ * screen's team" ở chỗ gọi). Hai em ở HAI ĐỘI KHÁC NHAU không bao giờ cùng có
+ * mặt trong một lần gọi đó, nên không thuật toán tại-chỗ nào bắt được.
+ *
+ * Cách thầy chỉ ra: đừng cố sửa Ở MÀN READY (nơi mỗi cột đã bị tách rời) —
+ * quyết định nhãn NGAY TỪ LÚC còn nhìn thấy CẢ LỚP cùng lúc (lúc chia đội,
+ * trước khi tách ra từng cột), rồi mang quyết định đó theo. Hàm này là quyết
+ * định đó: cho TOÀN BỘ tên trong một trận (mọi đội gộp lại), trả về nhãn
+ * DUY NHẤT cho từng em — gọi Ở ĐÚNG MỘT NƠI (`applyReady`/`applySolo`/
+ * `stampPickFromTable` trong core/showdown-setup.js — nơi vẫn còn thấy hết
+ * mọi đội cùng lúc), rồi đóng gói kết quả vào chính `pick` mỗi đội mang theo
+ * sang màn READY. Từ đó màn READY của MỌI cột chỉ cần ĐỌC nhãn đã có sẵn
+ * (`m.shortLabel`), không tính lại, không cần biết về đội khác — nên không
+ * còn gì để "trùng giữa hai cột" nữa: quyết định chỉ có MỘT LẦN, cho CẢ TRẬN.
+ *
+ * Thuật toán — mở dần từ phải sang trái, giống `shortenTeamNames()` cũ (giữ
+ * NGUYÊN CẢ TIẾNG chứ không phải từng chữ cái, dễ đọc hơn ở cột chữ to):
+ * `keep` = số tiếng CUỐI giữ nguyên; mỗi vòng, nhóm nào đang trùng nhãn (dù
+ * hai em đó thuộc hai đội khác nhau, ở đây nhìn thấy CẢ HAI) thì cả nhóm mở
+ * thêm một tiếng, tới khi hết trùng hoặc không còn gì để mở. Trùng tên thật
+ * 100% (mở hết cỡ vẫn y hệt) thì đánh số (2)/(3)… — teacher's rule "tên
+ * không bao giờ hiện giống hệt nhau" giữ đúng cho cả ca hiếm này.
+ * @param {string[]} fulls  tên đầy đủ của MỌI em trong trận (mọi đội gộp lại)
+ * @returns {string[]}  nhãn hiển thị, cùng thứ tự — không đổi tên gốc
+ */
+export function assignFullLabels(fulls) {
+  const parts = fulls.map(n => String(n ?? "").trim().split(/\s+/).filter(Boolean));
+  const labelAt = (p, keep) => {
+    if (p.length <= 1) return p[0] || "";
+    if (keep >= p.length) return p.join(" ");
+    return p.slice(0, p.length - keep).map(w => w[0] || "")
+      .concat(p.slice(p.length - keep).join(" ")).join(".");
+  };
+  const keep = parts.map(() => 1);
+  const longest = parts.reduce((m, p) => Math.max(m, p.length), 1);
+  for (let pass = 0; pass < longest; pass++) {
+    const groups = new Map();
+    parts.forEach((p, i) => {
+      const k = labelAt(p, keep[i]).toUpperCase();
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(i);
+    });
+    let grew = false;
+    groups.forEach(idxs => {
+      if (idxs.length < 2) return;
+      idxs.forEach(i => { if (keep[i] < parts[i].length) { keep[i]++; grew = true; } });
+    });
+    if (!grew) break;   // hết trùng, hoặc trùng tên đầy đủ nên không mở thêm được
+  }
+  const labels = parts.map((p, i) => labelAt(p, keep[i]));
+  // Trùng tên thật (mở hết cỡ vẫn y hệt) — đánh số để màn hình vẫn không bao
+  // giờ hiện hai dòng giống hệt nhau. So bằng chuỗi ĐÃ VIẾT HOA vì nơi gọi tự
+  // .toUpperCase() — nếu không, "Tuệ Lâm" và "TUỆ LÂM" bị coi là khác nhau
+  // trong khi trên màn hình chúng y hệt.
+  const seen = new Map();
+  return labels.map(lab => {
+    const key = lab.toUpperCase();
+    const n = (seen.get(key) || 0) + 1;
+    seen.set(key, n);
     return n === 1 ? lab : `${lab} (${n})`;
   });
 }
