@@ -11,6 +11,7 @@ export const TPL_FILES = {
   "find_the_match": ["templates/find-the-match/find-the-match.css", "templates/find-the-match/find-the-match.js", "templates/find-the-match/find-the-match-editor.js", "templates/find-the-match/ftm-sound.js"],
   "type_the_answer": ["templates/type-the-answer/type-the-answer.css", "templates/type-the-answer/type-the-answer.js", "templates/type-the-answer/type-the-answer-editor.js", "templates/type-the-answer/type-the-answer-sound.js"],
   "open_the_box": ["templates/open-the-box/open-the-box.css", "templates/open-the-box/open-the-box.js", "templates/open-the-box/otb-sound.js", "templates/open-the-box/open-the-box-editor.js"],
+  "group_sort": ["templates/group-sort/group-sort.css", "templates/group-sort/group-sort.js", "templates/group-sort/group-sort-editor.js", "templates/group-sort/gs-sound.js", "templates/group-sort/gs-shared.js"],
   "true_false": ["templates/true-false/true-false.css", "templates/true-false/true-false.js", "templates/true-false/true-false-editor.js", "templates/true-false/tf-sound.js"],
   "gameshow": ["templates/gameshow/gameshow.css", "templates/gameshow/gameshow.js", "templates/gameshow/gameshow-editor.js", "templates/gameshow/gs-sound.js"],
   "maze_chase": ["templates/maze-chase/maze-chase.css", "templates/maze-chase/maze-chase.js", "templates/maze-chase/mc-sound.js", "templates/maze-chase/maze-chase-editor.js", "templates/quiz/quiz-editor.js"],

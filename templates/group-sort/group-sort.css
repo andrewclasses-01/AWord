@@ -1,0 +1,240 @@
+/* =============================================================
+   GROUP SORT template — styles that belong ONLY to this template.
+   Class prefix: .aw-gs-*
+   Sizes inside the 16:9 stage use calc(N * var(--aw-u)) (Đợt 273 unit —
+   1% of the stage width) times var(--fit) where the card auto-fits.
+   Group colours: --tile / --tile-dark are set inline per group from the
+   theme's --aw-tile-0..3 palette (group-sort.js); --aw-tile-fixed still wins
+   for flat themes, exactly like the Quiz tiles.
+   ============================================================= */
+
+.aw-gs-card {
+  --fit: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column;
+  padding-bottom: calc(2 * var(--aw-u));
+}
+.aw-gs-empty {
+  margin: auto; text-align: center; color: var(--aw-muted);
+  font-size: calc(2.2 * var(--aw-u)); font-weight: 600;
+}
+
+/* ---------------- TAP MODE: conveyor + group buttons ---------------- */
+.aw-gs-track {
+  position: relative; overflow: hidden;
+  flex: 1 1 auto; min-height: 0; width: 100%;
+  margin-bottom: calc(1 * var(--aw-u));
+}
+.aw-gs-prompt {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-size: calc(calc(3.6 * var(--aw-u)) * var(--fit));
+  font-weight: 700; line-height: 1.35;
+  color: var(--aw-question-fill, var(--aw-text));
+  -webkit-text-stroke: var(--aw-question-stroke-width, 0) var(--aw-question-stroke-color, transparent);
+  paint-order: stroke fill;
+  padding: 0 calc(5 * var(--aw-u));
+  will-change: transform;
+}
+.aw-gs-prompt.is-countdown {
+  font-size: calc(calc(9 * var(--aw-u)) * var(--fit));
+  font-weight: 800; -webkit-text-stroke: 0;
+}
+.aw-gs-divider {
+  flex: 0 0 auto; height: 0;
+  margin: 0 calc(1 * var(--aw-u)) calc(calc(1.4 * var(--aw-u)) * var(--fit));
+  border-top: calc(0.22 * var(--aw-u)) dashed var(--aw-muted, #b9c3d1);
+  opacity: .6;
+}
+.aw-gs-groups {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(var(--gs-cols, 3), minmax(0, 1fr));
+  gap: calc(calc(1.2 * var(--aw-u)) * var(--fit));
+  padding: 0 calc(2 * var(--aw-u));
+}
+.aw-gs-gbtn {
+  --tile-eff: var(--aw-tile-fixed, var(--tile));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
+  position: relative;
+  min-width: 0;
+  display: flex; align-items: center; justify-content: center; gap: calc(0.8 * var(--aw-u));
+  border-radius: var(--aw-tile-radius, calc(1.6 * var(--aw-u)));
+  border: var(--aw-tile-border-width, 0) solid var(--aw-tile-border-color, transparent);
+  background: var(--tile-eff);
+  box-shadow: var(--aw-tile-shadow, 0 calc(0.6 * var(--aw-u)) 0 var(--tile-dark-eff));
+  color: #fff; font-family: inherit; font-weight: 800;
+  font-size: calc(calc(2.2 * var(--aw-u)) * var(--fit));
+  line-height: 1.3;
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.25 * var(--aw-u)) rgba(0, 0, 0, .2);
+  padding: calc(calc(1.5 * var(--aw-u)) * var(--fit)) calc(calc(1 * var(--aw-u)) * var(--fit));
+  cursor: pointer;
+  transition: transform .06s ease, box-shadow .06s ease, filter .12s ease;
+}
+.aw-gs-gkey {
+  flex: 0 0 auto;
+  font-size: .72em; font-weight: 800; opacity: .8;
+  padding: 0 .45em; border-radius: 999px; background: rgba(255, 255, 255, .22);
+}
+.aw-gs-gtext { min-width: 0; overflow-wrap: anywhere; }
+.aw-gs-gbtn:hover:not(:disabled) { filter: brightness(1.06); }
+.aw-gs-gbtn:active:not(:disabled) {
+  transform: translateY(calc(0.35 * var(--aw-u)));
+  box-shadow: var(--aw-tile-shadow-active, 0 calc(0.2 * var(--aw-u)) 0 var(--tile-dark-eff));
+}
+.aw-gs-gbtn:disabled { cursor: default; }
+
+/* The item only ever moves forward, so the engine's prev/next arrows are hidden
+   while this card is mounted (same trick as True-false). */
+.aw-playarea:has(> .aw-gs-card) ~ .aw-bottombar .aw-navbtn { display: none; }
+
+/* ---------------- DRAG MODE: pool + boxes ---------------- */
+.aw-gs-card.is-drag { padding: calc(1.2 * var(--aw-u)) calc(1.6 * var(--aw-u)); gap: calc(1.2 * var(--aw-u)); }
+.aw-gs-pool {
+  flex: 0 1 auto;
+  min-height: calc(9 * var(--aw-u));
+  max-height: 42%;
+  overflow-y: auto;
+  display: flex; flex-wrap: wrap; align-content: flex-start; justify-content: center;
+  gap: calc(0.9 * var(--aw-u));
+  padding: calc(1 * var(--aw-u));
+  border-radius: calc(1.4 * var(--aw-u));
+  background: color-mix(in srgb, var(--aw-text) 5%, transparent);
+}
+.aw-gs-chip {
+  position: relative;
+  border: none; font-family: inherit; font-weight: 700;
+  font-size: calc(2.1 * var(--aw-u)); line-height: 1.3;
+  padding: calc(0.8 * var(--aw-u)) calc(1.3 * var(--aw-u));
+  border-radius: calc(1.2 * var(--aw-u));
+  background: var(--aw-card, #fff); color: var(--aw-text);
+  box-shadow: 0 calc(0.35 * var(--aw-u)) 0 rgba(0, 0, 0, .12), 0 0 0 calc(0.15 * var(--aw-u)) rgba(0, 0, 0, .06);
+  cursor: grab; text-align: left; max-width: 100%;
+  overflow-wrap: anywhere;
+  transition: box-shadow .12s ease, opacity .2s ease, transform .12s ease;
+}
+.aw-gs-chip.is-selected { box-shadow: 0 0 0 calc(0.4 * var(--aw-u)) var(--aw-accent); }
+.aw-gs-chip.is-dragsrc { opacity: .3; }
+.aw-gs-chip.is-correct { background: var(--aw-ok); color: #fff; cursor: default; }
+.aw-gs-chip.is-wrong { background: var(--aw-no); color: #fff; animation: aw-gs-shake .45s ease; }
+.aw-gs-badge { bottom: auto; top: calc(-0.6 * var(--aw-u)); left: auto; right: calc(-0.6 * var(--aw-u)); transform: none; animation: none; width: calc(2 * var(--aw-u)); }
+@keyframes aw-gs-shake {
+  0%, 100% { translate: 0 0; }
+  20% { translate: calc(-0.6 * var(--aw-u)) 0; }
+  40% { translate: calc(0.6 * var(--aw-u)) 0; }
+  60% { translate: calc(-0.4 * var(--aw-u)) 0; }
+  80% { translate: calc(0.4 * var(--aw-u)) 0; }
+}
+.aw-gs-boxes {
+  flex: 1 1 auto; min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--gs-cols, 4), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: calc(1 * var(--aw-u));
+}
+.aw-gs-box {
+  --tile-eff: var(--aw-tile-fixed, var(--tile));
+  --tile-dark-eff: var(--aw-tile-fixed-dark, var(--tile-dark));
+  min-height: 0; min-width: 0;
+  display: flex; flex-direction: column;
+  border-radius: calc(1.4 * var(--aw-u));
+  border: calc(0.25 * var(--aw-u)) solid var(--tile-eff);
+  background: color-mix(in srgb, var(--tile-eff) 10%, var(--aw-card, #fff));
+  overflow: hidden;
+  transition: box-shadow .12s ease, transform .12s ease;
+}
+.aw-gs-box.is-over { box-shadow: 0 0 0 calc(0.5 * var(--aw-u)) color-mix(in srgb, var(--tile-eff) 45%, transparent); transform: scale(1.02); }
+.aw-gs-boxhead {
+  flex: 0 0 auto;
+  background: var(--tile-eff); color: #fff;
+  font-weight: 800; font-size: calc(2 * var(--aw-u)); line-height: 1.3; text-align: center;
+  padding: calc(0.7 * var(--aw-u)) calc(0.8 * var(--aw-u));
+  text-shadow: 0 calc(0.1 * var(--aw-u)) calc(0.25 * var(--aw-u)) rgba(0, 0, 0, .2);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+.aw-gs-boxbody {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-wrap: wrap; align-content: flex-start;
+  gap: calc(0.7 * var(--aw-u)); padding: calc(0.8 * var(--aw-u));
+}
+.aw-gs-boxbody .aw-gs-chip { font-size: calc(1.8 * var(--aw-u)); }
+
+/* Floating clone while dragging + the stars: live on <body> / the fullscreen
+   host, OUTSIDE the stage, so plain viewport px. */
+.aw-gs-dragclone {
+  position: fixed; z-index: 9999; pointer-events: none; margin: 0;
+  box-sizing: border-box; opacity: .95;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .25) !important;
+  transform: scale(1.04);
+}
+.aw-gs-flyclone {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  font-weight: 700; line-height: 1.35; padding: 0 1vw;
+  will-change: transform, opacity;
+}
+.aw-gs-star {
+  position: fixed; left: 0; top: 0; z-index: 9999; pointer-events: none;
+  font-size: clamp(14px, 2.2vw, 30px); color: #ffcf3f;
+  text-shadow: 0 0 6px rgba(255, 200, 60, .8);
+  will-change: transform, opacity;
+}
+
+/* =============================================================
+   EDITOR ("Edit content") — one column PER GROUP, scrolling sideways when
+   there are many. Outside the stage: plain px/rem. Reuses core/app.css's
+   .aw-ed-* page chrome.
+   ============================================================= */
+.aw-gs-ed-cols { display: flex; gap: 14px; align-items: flex-start; overflow-x: auto; padding-bottom: 10px; }
+.aw-gs-ed-col {
+  flex: 0 0 280px; min-width: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border-radius: 14px; background: #f7fafd; border: 1.5px solid #e2e9f2;
+}
+.aw-gs-ed-colhead { display: flex; align-items: center; gap: 6px; }
+.aw-gs-ed-gname {
+  flex: 1; min-width: 0; border: 1.5px solid #cfdaea; border-radius: 9px; background: #fff;
+  padding: .5rem .65rem; font-size: .9rem; font-weight: 800; font-family: inherit; color: #23303e;
+  text-transform: uppercase;
+}
+.aw-gs-ed-gname:focus { outline: none; border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-gs-ed-dot { flex: 0 0 12px; width: 12px; height: 12px; border-radius: 50%; }
+.aw-gs-ed-list { display: flex; flex-direction: column; gap: 6px; }
+.aw-gs-ed-row { display: flex; align-items: stretch; gap: 6px; }
+.aw-gs-ed-num { flex: 0 0 22px; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #8a97a8; font-size: .85rem; }
+.aw-gs-ed-box {
+  flex: 1; min-width: 0; display: flex; align-items: center;
+  border: 1.5px solid #e2e9f2; border-radius: 10px; background: #fff;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.aw-gs-ed-box:focus-within { border-color: #2f7bff; box-shadow: 0 0 0 3px rgba(47,123,255,.15); }
+.aw-gs-ed-item {
+  flex: 1; min-width: 0; border: none; outline: none; background: transparent;
+  padding: .5rem .6rem; font-size: .92rem; font-family: inherit; color: #23303e; font-weight: 600;
+}
+.aw-gs-ed-icons { flex: 0 0 auto; display: flex; align-items: center; gap: 1px; }
+.aw-gs-ed-iconbtn {
+  width: 30px; height: 30px; flex: 0 0 auto; border: none; border-radius: 8px;
+  background: transparent; color: #9aa6b5; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.aw-gs-ed-iconbtn svg { width: 16px; height: 16px; }
+.aw-gs-ed-iconbtn:hover:not(:disabled) { background: #eef2f7; color: #55657a; }
+.aw-gs-ed-iconbtn:disabled { opacity: .35; cursor: default; }
+.aw-gs-ed-iconbtn.is-danger:hover:not(:disabled) { background: #fdeaea; color: #d33; }
+.aw-gs-ed-addrow {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: .55rem; border: 1.5px dashed #cfdaea; border-radius: 10px;
+  background: #fff; color: #2f7bff; font-weight: 700; font-size: .9rem; cursor: pointer;
+}
+.aw-gs-ed-addrow:hover:not(:disabled) { background: #eaf1ff; }
+.aw-gs-ed-addrow:disabled { opacity: .4; cursor: default; }
+.aw-gs-ed-addgroup {
+  flex: 0 0 200px; align-self: stretch; min-height: 120px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px dashed #cfdaea; border-radius: 14px; background: #fff;
+  color: #2f7bff; font-weight: 800; font-size: .95rem; cursor: pointer;
+}
+.aw-gs-ed-addgroup:hover:not(:disabled) { background: #eaf1ff; }
+.aw-gs-ed-addgroup:disabled { opacity: .4; cursor: default; }
+.aw-gs-ed-hint { font-size: .85rem; color: #6b7a90; margin: 2px 0 8px; }
