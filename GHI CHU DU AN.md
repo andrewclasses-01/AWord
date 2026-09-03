@@ -211,6 +211,13 @@ root vẫn "activities", đường thư mục con cũng đúng cây · `folderId
 lẫn app-data · khung xem thử CSS thật: 4 ô một hàng ở 1040px, chữ không gãy). `node
 --input-type=module --check` sạch 4 file. Backup `_backup/dot287/`. Kiểm live: ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s).
 
+### 287b (`fab59ee`, 03/9 — thầy bắt ngay khi mở): gốc Courses hiện cả đống bài giao
+Thầy: *"trong thư mục COURSES đã có một số assignment là sao vậy"*. Đó là các bài giao nằm ở **gốc
+Results** (folderId null). `assignmentsForView` mới chỉ lọc theo cây (`inTree`) ở thùng rác + tìm
+kiếm, còn nhánh thư mục thường so `folderId === state.folderId` — gốc Courses và gốc Results cùng
+là "null" nên vơ nhầm. Sửa: thêm `inTree(a)` vào nhánh đó (main.js). Không có bài nào bị dời — dữ
+liệu Firestore không đổi. Live kiểm SHA-256 khớp.
+
 ### VIỆC ĐANG CHỜ (Đợt 287)
 ⬜ **Thầy bấm tay trên bản live**: (1) trang chủ 4 ô + thanh 4 nút; (2) tạo `Courses / NEN TANG
 TIENG ANH / Lesson 1`, tạo hoặc Import act trong đó (act phải hiện ra — đường Import theo cây);
