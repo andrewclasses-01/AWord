@@ -74,6 +74,11 @@ import {
 const app = document.getElementById("app");
 
 const ROOT_LABEL = { activities: "Activities", results: "Results", courses: "Courses", games: "Games" };
+// ⭐ Đợt 287c (thầy 03/9) — the TOP of Courses is a list of COURSES, nothing else:
+// no New activity / New folder / Import / file drop there, only "+ New course"
+// (a plain folder at the top of the tree) and the recycle bin. One level down,
+// inside a course, everything is back to normal.
+function coursesTop() { return state.root === "courses" && !state.folderId && state.view !== "trash"; }
 const FOLDER_SVG = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>';
 const DOTS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 const PREVIEW_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -548,10 +553,12 @@ async function renderInside() {
     // this screen that can take the teacher somewhere; hiding it exactly when
     // there is nothing else here would be backwards.
     // Đợt 287 — Games holds no acts, so an empty Games folder is a fact too.
-    if (state.view === "trash" || state.view === "search" || !holdsActs(state.root)) {
+    // Đợt 287c — the top of Courses never offers the lesson-file drop zone either.
+    if (state.view === "trash" || state.view === "search" || !holdsActs(state.root) || coursesTop()) {
       body.append(await withQuickAccess(el("div", "aw-fm-empty",
         state.view === "trash" ? "Recycle bin is empty."
         : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
+        : coursesTop() ? "No courses yet. Click <b>+ New course</b> to make one."
         : state.root === "games" ? "Nothing here yet — the fixed games will be built here."
         : "No assignments here yet. Give one out from an activity.")));
       return;
@@ -1064,17 +1071,23 @@ function toolbar() {
   const bar = el("div", "aw-fm-toolbar");
   const left = el("div", "aw-fm-tools");
 
-  if (state.view !== "trash" && holdsActs(state.root)) {
+  if (coursesTop()) {
+    // Đợt 287c — the only maker at the top of Courses.
+    const newCourse = el("button", "aw-btn aw-btn-primary aw-fm-newbtn", "+ New course");
+    newCourse.type = "button"; newCourse.onclick = newCourseFlow;
+    left.append(newCourse);
+  }
+  if (state.view !== "trash" && holdsActs(state.root) && !coursesTop()) {
     const newAct = el("button", "aw-btn aw-btn-primary aw-fm-newbtn", "+ New activity");
     newAct.type = "button"; newAct.onclick = newActivityFlow;
     left.append(newAct);
   }
-  if (state.view !== "trash") {
+  if (state.view !== "trash" && !coursesTop()) {
     const newFolder = el("button", "aw-btn aw-fm-newbtn", "+ New folder");
     newFolder.type = "button"; newFolder.onclick = newFolderFlow;
     left.append(newFolder);
   }
-  if (state.view !== "trash" && holdsActs(state.root)) {
+  if (state.view !== "trash" && holdsActs(state.root) && !coursesTop()) {
     // Wider than a plain icon button on purpose (teacher's request
     // 10/8/2026) — it doubles as a drop target: dragging a lesson file
     // straight onto it opens Import already reading that file, skipping
@@ -1563,6 +1576,15 @@ async function createBlankAct(type) {
     footer: footer(),
     onSave: async updated => { await saveActivity(updated, { root, parentId }); enterFolder(root, parentId); },
     onCancel: () => enterFolder(root, parentId)
+  });
+}
+// Đợt 287c — a course is an ordinary folder at the top of the Courses tree;
+// same name rules as any folder (a taken name is refused in the dialog).
+function newCourseFlow() {
+  openTextModal("New course", "Course name (e.g. NEN TANG TIENG ANH)", "", async name => {
+    if (!name.trim()) throw new Error("Please type a course name.");
+    await createFolder("courses", null, name.trim());
+    render();
   });
 }
 function newFolderFlow() {
