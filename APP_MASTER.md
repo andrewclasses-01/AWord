@@ -8,7 +8,18 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **03/9/2026 (Đợt 287 — trang chủ 4 gốc: thêm COURSES + GAMES)**.
+> Cập nhật lần cuối: **03/9/2026 (Đợt 288 — template thứ 18 GROUP SORT; Đợt 287 — trang chủ 4 gốc COURSES + GAMES)**.
+>
+> **Đợt 288** (03/9/2026, thầy) — ⭐⭐⭐ **TEMPLATE THỨ 18: GROUP SORT** = Wordwall *Group sort* + *Speed
+> sorting* trong một game (`options.mode` "tap" / "drag"), build cho khóa NỀN TẢNG TIẾNG ANH (Lesson 16 BT2
+> là Speed sorting 7 nhóm). `templates/group-sort/` (game · editor N cột · `gs-shared.js` · CSS `.aw-gs-*` ·
+> âm thanh băng chuyền riêng · sample · test.html), `core/catalog.js` +1 mục, `core/tpl-files.js` sinh lại.
+> Không sửa core (dùng `hasLivesSlot`/`manualTimerStart`/`flyPenalty` sẵn có). Dữ liệu `content.groups[]` +
+> `items[{text,group}]`. Đã thử đủ 2 chế độ + editor + Options, 0 lỗi console; ✅ push + live `8ec3ee7`
+> (SHA-256 khớp). Đọc `templates/group-sort/GHI CHU GROUP-SORT.md` trước khi sửa. ⬜ chờ thầy chơi thử live
+> (TOMKO kéo thả). Chi tiết `GHI CHU DU AN.md` Đợt 288.
+>
+> ---
 >
 > **Đợt 287** (03/9/2026, thầy) — ⭐⭐⭐ **TRANG CHỦ 4 GỐC: THÊM COURSES + GAMES.** Courses = cây
 > riêng cho khóa học THU PHÍ, mọi template dùng chung, bố cục `Courses / <khóa> / <lesson> / [act]
@@ -4747,6 +4758,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | | |
 > |---|---|
 > | Commit mới nhất | **`fc7f5dc`** (Đợt 287 — trang chủ 4 gốc: COURSES + GAMES) — `main.js` · `core/store.js` · `core/assignments.js` · `core/assignment-ui.js` · `core/app.css` — ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s). |
+> | Đợt 288 `8ec3ee7` | **Template GROUP SORT** (tap/drag) — `templates/group-sort/` + catalog + tpl-files; push + live khớp SHA-256; ⬜ thầy chơi thử live, TOMKO. Đọc `templates/group-sort/GHI CHU GROUP-SORT.md`. |
 > | 287c `127c142` | Thầy chốt: gốc Courses CHỈ có **+ New course** + thùng rác (bỏ New activity/New folder/Import/kéo file); vào trong khóa mới đủ chức năng. `coursesTop()` + `newCourseFlow()` trong main.js. Đã push + live khớp SHA-256. |
 > | 287b `fab59ee` | Thầy mở live bắt ngay: gốc Courses hiện các bài giao ở gốc Results (cùng folderId null). Vá `assignmentsForView` — `inTree(a)` cho cả nhánh thư mục thường, không chỉ thùng rác/tìm kiếm. Đã push + live khớp SHA-256. |
 > | Bàn thử | `scratch/dot287-courses.html` **29/29 ĐẠT** (gọi hàm thật qua stub `scratch/dot287-stub-firebase.js` có kho trong bộ nhớ + writeBatch); `node --input-type=module --check` sạch 4 file; backup `_backup/dot287/`. |

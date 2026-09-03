@@ -12,7 +12,9 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 287** (03/9/2026, thầy — TRANG CHỦ 4 GỐC: thêm **COURSES** (khóa học thu phí:
+> Mới nhất: **Đợt 288** (03/9/2026, thầy — TEMPLATE MỚI **GROUP SORT** = Wordwall Group sort + Speed sorting
+> trong một game, 2 chế độ tap/drag; `templates/group-sort/`; đọc `GHI CHU GROUP-SORT.md` ở đó; ✅ push + live
+> `8ec3ee7`; ⬜ thầy duyệt). Trước đó: **Đợt 287** (03/9/2026, thầy — TRANG CHỦ 4 GỐC: thêm **COURSES** (khóa học thu phí:
 > act + `results/<lớp>` nằm cạnh lesson, giao bài thiếu thư mục lớp thì HỎI TẠO, không rơi về
 > Results, không dồn DONE) + **GAMES** (ô gốc trống, nội dung phiên khác); cầu nối myLesson thấy
 > cả 2 cây — xem mục Đợt 287 ngay dưới; ⬜ chờ thầy bấm tay live). Trước đó: **Đợt 286** (02/9/2026 đêm, thầy — "thẻ bài tập có gắn Assignment của AWord có bị chậm
@@ -132,6 +134,37 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 288 (03/9/2026, thầy) — ⭐⭐⭐ **TEMPLATE THỨ 18: GROUP SORT (tap = Speed sorting · drag = Group sort)**
+
+### Vì sao
+Khảo sát khóa NỀN TẢNG TIẾNG ANH (file `E:/LAP TRINH APP/DU LIEU TONG HOP/NEN TANG TIENG ANH - KHAO SAT
+03-09-2026.md`): Wordwall dùng Speed sorting (L9, L16, L18) và Group sort (L13) mà AWord chưa có. Thầy chốt:
+build template trước, **cả hai chế độ**, rồi mới làm Lesson 16.
+
+### Đã build (`8ec3ee7`)
+`templates/group-sort/` — chi tiết cách chơi, options, editor, danh mục đã kiểm nằm ở
+`templates/group-sort/GHI CHU GROUP-SORT.md`. Tóm tắt:
+- Dữ liệu `content.groups[]` + `content.items[{text, group}]` (phẳng → `itemsKey:"items"`, Start with mistakes chạy).
+- **Tap**: băng chuyền True-false + N nút nhóm (lưới 1–4 cột, màu `--aw-tile-0..3`), câu bay vào nút khi đúng,
+  Speed/Lives/Repeat/pointsOff, phím 1–9, 3-2-1 count-up, tim thanh trên (hook lõi có sẵn, **không sửa core**).
+- **Drag**: hồ chip + N hộp; kéo (pointer events, clone fixed như Unjumble) hoặc chạm-chạm; `dragCheck`
+  submit/instant. Mặc định lives vô hạn (bài khóa học yêu cầu 100%).
+- Editor N cột (2–8 nhóm, ≤150 câu), dán Excel 2 cột `câu ⇥ nhóm`. `gs-shared.js` = module lá tránh import vòng.
+- `core/catalog.js` +1 mục; `core/tpl-files.js` sinh lại bằng `tools/sinh-preload.py --write` (18 template).
+- Bẫy gặp lúc thử: sao bay `fill:"forwards"` + `delay` ⇒ sao đứng góc (0,0) trong quãng chờ → `fill:"both"`.
+
+### Kiểm (browser thật, test.html + `scratch/dot288-gs-editor.html`)
+Tap đúng/sai/phím số/12 câu → 10/12 + Show answers + Start with mistakes · Drag submit 11/12 (kéo chuột thật +
+chạm-chạm) · Drag instant tim 3→2, chip về hồ · Options panel đủ 5 ô riêng · editor Save vòng tròn đúng.
+0 lỗi console. Live: 5 file + mp3 khớp SHA-256 / 200.
+
+### VIỆC ĐANG CHỜ (Đợt 288)
+⬜ Thầy chơi thử trên live (act mẫu qua New activity ▸ Group sort) cả 2 chế độ, nhất là kéo thả trên TOMKO.
+⬜ Chưa có: Fight/Showdown, voice, Change template sang/từ Quiz, dạng sheet Excel cho Import (ghi ở GHI CHU).
+⬜ Tiếp theo: bundle JSON 3 act Lesson 16 → Import vào `Courses / NEN TANG TIENG ANH / LESSON 16`.
 
 ---
 
