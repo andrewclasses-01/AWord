@@ -12,7 +12,10 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 286** (02/9/2026 đêm, thầy — "thẻ bài tập có gắn Assignment của AWord có bị chậm
+> Mới nhất: **Đợt 287** (03/9/2026, thầy — TRANG CHỦ 4 GỐC: thêm **COURSES** (khóa học thu phí:
+> act + `results/<lớp>` nằm cạnh lesson, giao bài thiếu thư mục lớp thì HỎI TẠO, không rơi về
+> Results, không dồn DONE) + **GAMES** (ô gốc trống, nội dung phiên khác); cầu nối myLesson thấy
+> cả 2 cây — xem mục Đợt 287 ngay dưới; ⬜ chờ thầy bấm tay live). Trước đó: **Đợt 286** (02/9/2026 đêm, thầy — "thẻ bài tập có gắn Assignment của AWord có bị chậm
 > không?" Đo `play.html?g=…&nhung=1` thật (chính khung myLesson nhúng): sau khi mã về, còn BA vòng
 > nối đuôi nữa — đọc bài giao 0,3s → css+js template 0,3s → 2 module con của template 0,5s → 10
 > file mp3 của bộ tiếng 3-một-lượt ~1s (engine giữ nút PLAY tới khi tiếng xong) ⇒ 1,4–2,5s từ lúc
@@ -129,6 +132,93 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 287 (03/9/2026, thầy) — ⭐⭐⭐ **TRANG CHỦ 4 GỐC: THÊM COURSES (khóa học thu phí) + GAMES**
+
+### Thầy yêu cầu gì
+
+> "Ở trang chủ, thêm 2 thư mục lớn bên cạnh Activities và Results là Courses và Games. Courses …
+> dành riêng cho các khóa học thu phí nên không dùng để chơi vui vẻ như Activities … mọi templates
+> đều đồng bộ y hệt, chỉ khác về sắp xếp: trong Courses tạo thư mục course cụ thể trước (ví dụ
+> NEN TANG TIENG ANH), bên trong là các lesson, trong mỗi lesson là các bài tập và 1 thư mục
+> results, trong results là thư mục của từng lớp — results khi tạo assignment sẽ tự đẩy về đó,
+> không có thì báo lỗi hoặc hỏi xin tạo thư mục chứ không đẩy về thư mục Results hiện tại. Games:
+> cứ tạo mỗi cái thư mục bên ngoài thôi, nội dung ta sẽ làm trong phiên khác."
+
+Thầy chốt thêm qua AskUserQuestion: thiếu `results/<lớp>` ⇒ **HỎI TẠO** (nút tạo rồi giao luôn) ·
+`results` **tự tạo khi cần** (không tạo sẵn khi tạo lesson) · Courses **KHÔNG dồn DONE** · cầu nối
+myLesson thấy **cả Activities lẫn Courses**. Ý định tiếp theo bên myLesson (tab **COURSE** riêng
+gần giống tab Lesson; thẻ bài tập khóa học trên web HS có video YouTube, phải xem đủ mới được làm,
+tự nhảy sang BT ở mốc video, bìa sách, nút QR mỗi assignment) — **bàn từng mục ở phiên sau, chưa
+làm** (đã ghi vào bộ nhớ `aword-courses-games`).
+
+### Trước đợt này
+
+- `ROOTS = ["activities","results"]` (core/store.js) vẽ 2 ô trang chủ + 2 nút điều hướng; mọi hàm
+  liệt kê lọc theo `n.root` (kind "class" đã dùng root riêng "classes" từ trước ⇒ thêm gốc mới
+  KHÔNG cần sửa luật Firestore: `users/{uid}/items` là riêng tư, không ràng buộc `root`).
+- Bài giao xếp vào Results theo **chữ đầu tiêu đề** (`classFolderFor`): tìm thư mục tên đó ở BẤT
+  KỲ đâu trong Results (nông nhất thắng), không thấy ⇒ gốc Results, lặng lẽ. Sau đó
+  `archiveOlderSiblings` dồn bài ngày trước cùng thư mục vào `DONE`.
+- `importBundle` gắn cứng root "activities"; cầu nối `window.__awordLib` chỉ nhìn Activities; Move
+  bài giao + chấm đỏ "New results" đọc cứng cây Results.
+
+### Sửa gì (`fc7f5dc`)
+
+1. **core/store.js** — `ROOTS` 4 gốc (thứ tự = thứ tự ô trang chủ); `ACT_ROOTS`/`ASSIGNMENT_ROOTS` +
+   `holdsActs()`/`holdsAssignments()` (Courses có CẢ act lẫn bài giao; Games chỉ thư mục);
+   `importBundle(bundle, {root})` — trước gắn cứng "activities" ⇒ Import trong Courses sẽ đẻ act
+   ĐÚNG cha SAI cây = vô hình trong mọi liệt kê; `folderIdsOfRoot(root)` — mọi id thư mục của một
+   cây, **kể cả đã vào thùng rác**.
+2. **core/assignments.js** — `COURSE_RESULTS_NAME = "results"`; `courseResultsFor(actParentId,
+   folders, className)` thuần, không ghi: `{lessonId, resultsFolder, classFolder}`, so tên lỏng
+   hoa/thường (thư mục "Results" hay "results" đều được).
+3. **core/assignment-ui.js** `openAssignmentSetup` — `inCourses = act.root === "courses"`: đọc
+   `listFolders("courses")`; KHÔNG đoán ô Class từ thư mục cha (trong Courses cha là LESSON); START
+   tách thành `doStart(folderId)`; Courses lấy lớp từ **ô Class** (không phải chữ đầu tiêu đề); act
+   không nằm trong thư mục nào ⇒ báo *"Move it into Courses / <course> / <lesson> first"*; thiếu
+   `results/<lớp>` ⇒ `offerCreate()` vẽ dòng báo + nút **Create “results / A1A” and start** (tạo
+   `results` nếu thiếu → tạo lớp → `listFolders` lại → `doStart`); `archiveOlderSiblings` (DONE) chỉ
+   chạy ngoài Courses.
+4. **main.js** — `ROOT_LABEL` 4 tên; `renderTop` gắn `data-root`; `topbar` 4 nút từ `ROOTS`;
+   `renderInside` theo `holdsAssignments`/`holdsActs` (Courses hiện cả act + bài giao; Games trống
+   có câu riêng, không mời Import); `assignmentsForView` tách bài giao theo CÂY ở thùng rác + tìm
+   kiếm — bài giao **không có `root`**: thuộc cây của thư mục nó nằm, không thư mục = Results,
+   Results = mọi thứ KHÔNG nằm trong thư mục Courses (bài có thư mục đã xoá vĩnh viễn vẫn hiện ở
+   Results như trước); `assignmentCountIn` · chấm đỏ `folderHasNews` · huy hiệu thư mục (Courses =
+   act trong + bài giao trực tiếp); `toolbar` New activity/Import theo `holdsActs`;
+   `moveAssignmentFlow` cây đang đứng; `importFlow` nhớ `importRoot`; cầu nối `timThuMuc` lặp cả 2
+   cây, mục Courses có `duongDan` "Courses / …" + khoá `root`; `lietKeAct` hỏi
+   `getItem(folderId).root`.
+5. **core/app.css** — `.aw-root-card` 4 ô một hàng trong 1040px (flex 200px · padding 26/18 · icon
+   52 · chữ 1.35rem; đo thật 234px/ô, chữ không gãy dòng); icon Courses `#3b82f6`, Games `#8b5cf6`
+   (Activities/Results giữ vàng); `.aw-as-linkbtn` cho nút tạo thư mục trong dòng lỗi.
+
+### Không đổi
+Luật Results cũ nguyên vẹn (chữ đầu tiêu đề · DONE · trùng tên trong một thư mục). Luật Firestore
+KHÔNG sửa. Không module mới ⇒ không chạy lại `tools/sinh-preload.py`. Đường `?giao=` tìm act theo
+số ⇒ act trong Courses giao được ngay từ myLesson (form tự nhận `act.root`), phía myLesson không
+phải sửa gì để chạy.
+
+### Bàn thử
+`scratch/dot287-courses.html` + `scratch/dot287-stub-firebase.js` (stub kho trong bộ nhớ +
+`writeBatch` thật) — gọi THẬT `core/store.js`/`core/assignments.js`: **29/29 ĐẠT** (4 gốc đúng thứ
+tự · liệt kê không lẫn cây · `courseResultsFor` 8 ca kể cả so lỏng hoa/thường, lớp rỗng, act không
+thư mục · tạo results+lớp rồi tra lại thấy, trùng tên bị từ chối · Import theo cây, không truyền
+root vẫn "activities", đường thư mục con cũng đúng cây · `folderIdsOfRoot` kể cả thùng rác, không
+lẫn app-data · khung xem thử CSS thật: 4 ô một hàng ở 1040px, chữ không gãy). `node
+--input-type=module --check` sạch 4 file. Backup `_backup/dot287/`. Kiểm live: ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s).
+
+### VIỆC ĐANG CHỜ (Đợt 287)
+⬜ **Thầy bấm tay trên bản live**: (1) trang chủ 4 ô + thanh 4 nút; (2) tạo `Courses / NEN TANG
+TIENG ANH / Lesson 1`, tạo hoặc Import act trong đó (act phải hiện ra — đường Import theo cây);
+(3) giao bài từ act đó với lớp chưa có thư mục ⇒ thấy nút *Create “results / A1A” and start*, bấm
+⇒ bài giao nằm ở `Lesson 1 / results / A1A`, KHÔNG xuất hiện ở Results; (4) giao lần 2 cùng lớp ⇒
+nằm phẳng cạnh bài 1, không sinh DONE; (5) bên myLesson chọn act: tìm thư mục thấy mục
+"Courses / …". ⬜ Games: nội dung game cố định — phiên khác. ⬜ myLesson tab COURSE + thẻ bài tập
+khóa học — bàn từng mục trước khi build.
 
 ---
 

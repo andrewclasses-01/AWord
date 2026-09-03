@@ -3143,6 +3143,28 @@ căn hàng với khối tiêu đề bên myLesson (`.aw-card.giao`), đổi là 
 tạo nhiều bài liên tiếp phải đặt tên khác nhau, không thì bài sau lặng lẽ không ra đời và phép
 chờ marker treo tới hết giờ — trông hệt như code hỏng.
 
+### 1c. XẾP BÀI GIAO TRONG COURSES (Đợt 287, 03/9/2026)
+
+Cây `courses` (`store.ROOTS`) chứa CẢ act lẫn bài giao: `Courses / <khóa> / <lesson> / [act…] +
+results / <lớp> / [bài giao]`. Form Set assignment nhìn `act.root` để chọn luật xếp:
+- **Results (như cũ)**: `classFolderFor(chữ đầu tiêu đề, listFolders("results"))` — bất kỳ độ sâu,
+  nông nhất thắng, không thấy ⇒ gốc Results; sau đó `archiveOlderSiblings` dồn bài ngày trước
+  cùng thư mục vào DONE.
+- **Courses**: `courseResultsFor(act.parentId, listFolders("courses"), ô Class)` — CHỈ
+  `<lesson>/results/<lớp>` ngay cạnh act (lesson = thư mục cha của act; tên so lỏng hoa/thường).
+  ⛔ act không nằm trong thư mục nào ⇒ từ chối (*"Move it into Courses / <course> / <lesson>
+  first"*). ⛔ thiếu `results` hoặc thiếu lớp ⇒ **không** giao; form vẽ nút *Create “results /
+  A1A” and start* (`offerCreate`: tạo `results` nếu thiếu → tạo lớp → `listFolders` lại →
+  `doStart`). Không bao giờ rơi về Results. ⛔ KHÔNG dồn DONE. Lớp lấy từ **ô Class** (thầy chốt),
+  không phải chữ đầu tiêu đề.
+- Bài giao **không mang `root`**: nó thuộc cây của thư mục `folderId` (null = Results). Liệt kê
+  bài giao theo cây (thùng rác · tìm kiếm — main.js `assignmentsForView`) đi qua
+  `store.folderIdsOfRoot("courses")`, tính CẢ thư mục đã vào thùng rác. ⛔ Đừng thêm `root` vào tài
+  liệu assignment: khoá của `assignments/{code}` cố định theo luật Firestore đã publish.
+- Cầu nối myLesson `window.__awordLib.timThuMuc` trả thêm `root` + `duongDan` có tiền tố
+  "Courses / "; `lietKeAct(folderId)` tự hỏi `getItem(folderId).root`. Đường `?giao=<num>` không
+  đổi: act trong Courses giao được ngay vì form nhận `act.root` từ chính node thư viện.
+
 ### 2. BA LUẬT KHI GIAO ACT DƯỚI DẠNG GAME KHÁC (Đợt 250)
 
 1. ⛔ **Chọn bộ nghĩa TRƯỚC, `convertActivity()` SAU.** `toRecords()` gọi `resolveActivity()` để ép

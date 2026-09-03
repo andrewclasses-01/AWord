@@ -8,8 +8,23 @@
 > `.aw-tool-panel` / `.aw-tool-dim`, hoặc trước khi thêm `transform`/`filter`/`opacity` vào bất cứ đâu
 > bao quanh chúng).
 > Nghiên cứu Wordwall + kiến trúc gốc: `docs/`.
-> Cập nhật lần cuối: **02/9/2026 đêm (Đợt 286 — trang học sinh play.html: đọc bài giao sớm +
-> template + bộ tiếng về cùng một đợt)**.
+> Cập nhật lần cuối: **03/9/2026 (Đợt 287 — trang chủ 4 gốc: thêm COURSES + GAMES)**.
+>
+> **Đợt 287** (03/9/2026, thầy) — ⭐⭐⭐ **TRANG CHỦ 4 GỐC: THÊM COURSES + GAMES.** Courses = cây
+> riêng cho khóa học THU PHÍ, mọi template dùng chung, bố cục `Courses / <khóa> / <lesson> / [act]
+> + results / <lớp> / [bài giao]`; trang trong Courses hiện CẢ act lẫn bài giao. Giao bài cho act
+> trong Courses xếp vào `results/<ô Class>` của CHÍNH lesson đó — thiếu thì form hiện nút *Create
+> “results / A1A” and start* (tạo rồi giao luôn); ⛔ không bao giờ rơi về Results; ⛔ không dồn
+> DONE (thầy chốt cả hai). Games = ô gốc, chỉ New folder (nội dung phiên khác). `store.ROOTS` 4
+> gốc + `holdsActs()`/`holdsAssignments()`; `importBundle` đi theo `opts.root` (trước gắn cứng
+> "activities" ⇒ Import trong Courses sẽ đẻ act vô hình); `folderIdsOfRoot` tách bài giao theo cây
+> ở thùng rác/tìm kiếm (bài giao KHÔNG có `root`); cầu nối myLesson `timThuMuc`/`lietKeAct` thấy cả
+> 2 cây (mục Courses có `duongDan` "Courses / …" + khoá `root`). Luật Firestore không đổi. Bàn thử
+> `scratch/dot287-courses.html` 29/29. Code `fc7f5dc`; ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s). Chi tiết `GHI CHU DU AN.md` Đợt 287;
+> hợp đồng xếp bài giao: `core/HUONG DAN CORE.md` mục BÀI GIAO ▸ 1c. ⬜ chờ thầy bấm tay live
+> (5 bước ở GHI CHU). ⬜ myLesson tab COURSE — bàn từng mục ở phiên sau.
+>
+> ---
 >
 > **Đợt 286** (02/9/2026 đêm, thầy) — ⭐⭐ **KHUNG NHÚNG TRONG myLesson NHANH HƠN.** Sau Đợt 285, đo
 > `play.html?g=…&nhung=1` còn ba vòng nối đuôi: đọc bài giao 0,3s → css+js template 0,3s → 2 module
@@ -4725,9 +4740,32 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 *"...`.aw-ftm-tile.is-locked` dim rule was removed"*. Kiểm đúng phải tìm rule thật:
 `grep -E "^\s*\.aw-ftm-tile\.is-locked\s*\{"`.
 
-## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **02/9/2026 đêm sau Đợt 286** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
+## 0a. ⭐⭐ HỒ SƠ BÀN GIAO (cập nhật **03/9/2026 sau Đợt 287** — PHIÊN/MÁY MỚI ĐỌC MỤC NÀY TRƯỚC TIÊN)
 
-> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (02/9/2026 đêm — sau **Đợt 286**)
+> ### 🟢 TRẠNG THÁI NGAY LÚC NÀY (03/9/2026 — sau **Đợt 287**)
+>
+> | | |
+> |---|---|
+> | Commit mới nhất | **`fc7f5dc`** (Đợt 287 — trang chủ 4 gốc: COURSES + GAMES) — `main.js` · `core/store.js` · `core/assignments.js` · `core/assignment-ui.js` · `core/app.css` — ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s). |
+> | Bàn thử | `scratch/dot287-courses.html` **29/29 ĐẠT** (gọi hàm thật qua stub `scratch/dot287-stub-firebase.js` có kho trong bộ nhớ + writeBatch); `node --input-type=module --check` sạch 4 file; backup `_backup/dot287/`. |
+> | ⬜ Chờ tay thầy | Trang chủ 4 ô · tạo `Courses / <khóa> / <lesson>` + Import act vào đó · giao bài với lớp chưa có thư mục ⇒ nút *Create “results / A1A” and start* ⇒ bài nằm `<lesson> / results / A1A`, KHÔNG ở Results · giao lần 2 cùng lớp không sinh DONE · myLesson tìm thư mục thấy "Courses / …". |
+> | ⛔ Bẫy đợt này | Bài giao **không mang `root`** — nó thuộc cây của thư mục `folderId` (null = Results); mọi chỗ liệt kê bài giao theo cây phải qua `folderIdsOfRoot("courses")` (tính cả thư mục trong thùng rác). Act trong Courses lấy lớp từ **ô Class**, không phải chữ đầu tiêu đề. Thêm gốc mới = thêm vào `ROOTS` + xếp vào `ACT_ROOTS`/`ASSIGNMENT_ROOTS`, đừng so tên gốc rải rác. |
+> | Không đụng | myLesson / myActivity (cầu nối chỉ THÊM khoá `root` + tiền tố "Courses / " vào `duongDan`, mọi khoá cũ giữ nguyên). Luật Firestore không đổi. Không module mới ⇒ không chạy `sinh-preload.py`. |
+>
+> ### ⭐⭐ ĐỢT 287 — VÙNG VỪA ĐỘNG TỚI: **TRANG CHỦ 4 GỐC — COURSES + GAMES**
+>
+> Thầy: *"thêm 2 thư mục lớn bên cạnh Activities và Results là Courses và Games … Courses dành riêng
+> cho các khóa học thu phí … thư mục course → lesson → bài tập + thư mục results → thư mục từng lớp;
+> results khi tạo assignment tự đẩy về đó, không có thì báo lỗi hoặc hỏi xin tạo chứ không đẩy về
+> Results hiện tại."* Bốn quyết định thầy chốt qua AskUserQuestion: HỎI TẠO · `results` tự tạo khi
+> cần · KHÔNG dồn DONE · cầu nối myLesson thấy cả hai cây. Ý định kế: myLesson tab **COURSE** riêng
+> + thẻ bài tập khóa học (video YouTube/mốc xem/bìa sách/nút QR) — **bàn từng mục ở phiên sau**.
+> Chi tiết + danh sách hàm: `GHI CHU DU AN.md` Đợt 287; hợp đồng xếp bài giao:
+> `core/HUONG DAN CORE.md` mục "BÀI GIAO" ▸ 1c.
+>
+> ---
+>
+> ### 🕘 TRẠNG THÁI CŨ HƠN (02/9/2026 đêm — sau **Đợt 286**)
 >
 > | | |
 > |---|---|
