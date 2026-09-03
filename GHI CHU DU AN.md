@@ -218,6 +218,18 @@ kiếm, còn nhánh thư mục thường so `folderId === state.folderId` — g�
 là "null" nên vơ nhầm. Sửa: thêm `inTree(a)` vào nhánh đó (main.js). Không có bài nào bị dời — dữ
 liệu Firestore không đổi. Live kiểm SHA-256 khớp.
 
+### 287c (`127c142`, 03/9 — thầy chốt sau khi xem live): GỐC COURSES CHỈ LÀ DANH SÁCH KHÓA
+Thầy: *"Trong thư mục chính của COURSES, bỏ new activity, bỏ new folder, import file, drag file…
+Chỉ cho phép duy nhất 1 nút: + NEW COURSE và có nút Recycle bin … Khi mở thư mục này ra mới đầy đủ
+các chức năng như thông thường."* Sửa `main.js`: hàm `coursesTop()` (= root courses · không
+folderId · không phải thùng rác); `toolbar()` ở đó chỉ vẽ **+ New course** (`newCourseFlow` =
+`openTextModal` → `createFolder("courses", null, tên)`, trùng tên bị từ chối ngay trong hộp) + nút
+thùng rác + ô tìm kiếm/đổi kiểu xem; New activity · New folder · Import (kèm kéo file) ẩn; trang
+trống ở gốc hiện *"No courses yet. Click + New course"* thay cho vùng thả file. Vào trong khóa
+(folderId có) thì mọi thứ như Activities. Thầy cũng chốt lại mục 1: results của Courses phải nằm
+trong course, results của Activities không lẫn vào — đã đúng từ 287b (`inTree`), giữ nguyên.
+Live kiểm SHA-256 khớp.
+
 ### VIỆC ĐANG CHỜ (Đợt 287)
 ⬜ **Thầy bấm tay trên bản live**: (1) trang chủ 4 ô + thanh 4 nút; (2) tạo `Courses / NEN TANG
 TIENG ANH / Lesson 1`, tạo hoặc Import act trong đó (act phải hiện ra — đường Import theo cây);

@@ -4747,6 +4747,7 @@ Khi `grep` dấu mốc trên file live để xác nhận, **nhớ loại trừ d
 > | | |
 > |---|---|
 > | Commit mới nhất | **`fc7f5dc`** (Đợt 287 — trang chủ 4 gốc: COURSES + GAMES) — `main.js` · `core/store.js` · `core/assignments.js` · `core/assignment-ui.js` · `core/app.css` — ĐÃ PUSH + LIVE kiểm chứng 03/9 (SHA-256 cả 5 file live khớp tuyệt đối git show fc7f5dc, Pages lên sau ~24s). |
+> | 287c `127c142` | Thầy chốt: gốc Courses CHỈ có **+ New course** + thùng rác (bỏ New activity/New folder/Import/kéo file); vào trong khóa mới đủ chức năng. `coursesTop()` + `newCourseFlow()` trong main.js. Đã push + live khớp SHA-256. |
 > | 287b `fab59ee` | Thầy mở live bắt ngay: gốc Courses hiện các bài giao ở gốc Results (cùng folderId null). Vá `assignmentsForView` — `inTree(a)` cho cả nhánh thư mục thường, không chỉ thùng rác/tìm kiếm. Đã push + live khớp SHA-256. |
 > | Bàn thử | `scratch/dot287-courses.html` **29/29 ĐẠT** (gọi hàm thật qua stub `scratch/dot287-stub-firebase.js` có kho trong bộ nhớ + writeBatch); `node --input-type=module --check` sạch 4 file; backup `_backup/dot287/`. |
 > | ⬜ Chờ tay thầy | Trang chủ 4 ô · tạo `Courses / <khóa> / <lesson>` + Import act vào đó · giao bài với lớp chưa có thư mục ⇒ nút *Create “results / A1A” and start* ⇒ bài nằm `<lesson> / results / A1A`, KHÔNG ở Results · giao lần 2 cùng lớp không sinh DONE · myLesson tìm thư mục thấy "Courses / …". |
