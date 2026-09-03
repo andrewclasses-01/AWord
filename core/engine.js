@@ -6644,6 +6644,28 @@ function escapeText(s) {
 // ⚠️ Hai em TRÙNG TÊN ĐẦY ĐỦ thì không có gì để mở nữa — vòng lặp dừng và cả hai hiện
 // tên đầy đủ giống nhau. Đó là sự thật, không phải lỗi hiển thị; chữa nó là việc của
 // thầy ở Settings › Classes chứ không phải của hàm này.
+// ⭐⭐⭐ Đợt 290 (thầy: "vẫn bị trùng") — Đợt 289's group-escalation only sees the
+// pupils IN THIS FUNCTION'S CALL, which for the READY screen is only ONE team:
+// this function is called once per myActivity column, each with only its own
+// team's roster (readPick()'s snapshot never carries the other teams — see this
+// file's own note above the call site, "Only THIS screen's team"). TUỆ LÂM on
+// Team 2's column and TÙNG LÂM on Team 3's column never share a JS call, so no
+// amount of escalating collisions WITHIN one call catches them — they only
+// collide once both columns are on screen together, which no single call ever
+// sees.
+// ⛔ There is no cheap fix for that without wiring every column to the OTHER
+// teams' rosters too (Firestore has them, but this screen deliberately never
+// reads them — see the header). Instead: stop the collision from being
+// POSSIBLE in the common case. A 2-word name ("Tuệ Lâm") abbreviated to its
+// old default (keep=1, "T.Lâm") saves two characters and destroys the one
+// letter that told two same-first-letter given names apart — the exact shape
+// of this bug. A 2-word name now defaults to `keep = its own length`, i.e.
+// full, un-abbreviated, in every column, independently, with nothing to
+// coordinate: "Tuệ Lâm" and "Tùng Lâm" simply never reduce to a single
+// initial anywhere, so they can never collide across columns either.
+// Names of 3+ words keep the old default (initials for every word but the
+// last) — the escalate-on-collision loop below still runs for those, and
+// still only ever sees this one call's own roster.
 function shortenTeamNames(names) {
   const parts = names.map(n => String(n ?? "").trim().split(/\s+/).filter(Boolean));
   // `keep` tiếng cuối giữ nguyên, phần đầu viết tắt. keep >= số tiếng ⇒ tên đầy đủ.
@@ -6653,7 +6675,7 @@ function shortenTeamNames(names) {
     return p.slice(0, p.length - keep).map(w => w[0] || "")
       .concat(p.slice(p.length - keep).join(" ")).join(".");
   };
-  const keep = parts.map(() => 1);
+  const keep = parts.map(p => (p.length <= 2 ? p.length : 1));
   const longest = parts.reduce((m, p) => Math.max(m, p.length), 1);
   for (let pass = 0; pass < longest; pass++) {
     const groups = new Map();
