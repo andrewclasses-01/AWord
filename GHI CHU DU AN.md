@@ -12,7 +12,16 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > 3. **`core/HUONG DAN CORE.md`** — hợp đồng engine ↔ template + mọi luật kỹ thuật.
 >    ĐỌC TRƯỚC KHI SỬA CODE.
 >
-> Mới nhất: **Đợt 290** (03/9/2026, thầy báo lại sau Đợt 289 — màn READY vẫn trùng "T.LÂM" giữa HAI
+> Mới nhất: **Đợt 291** (03/9/2026, thầy — "mọi bảng khác nhau đều cần khác nhau, với mọi kiểu tên",
+> không chỉ ca 2 tiếng của Đợt 290. Thầy tự chỉ cách giải quyết tận gốc: quyết định nhãn NGAY LÚC BẤM
+> READY — nơi vẫn còn thấy CẢ TRẬN (mọi đội gộp lại) cùng lúc — rồi mang nhãn đó theo `pick` sang từng
+> cột, thay vì để mỗi cột tự tính lấy sau khi đã bị tách rời. `assignFullLabels()` mới
+> (`core/showdown.js`) tính nhãn không trùng cho CẢ TRẬN một lần; `fullLabelMap()`
+> (`core/showdown-setup.js`) gắn vào `pick.members[].shortLabel` ở cả 3 nơi pick được lắp (`applyReady`
+> qua `stampPickFromTable`, `applySolo`); màn READY (`core/engine.js`) ưu tiên đọc `shortLabel` có sẵn,
+> chỉ lùi về `shortenTeamNames()` (Đợt 290) cho pick cũ. Đảm bảo mọi độ dài tên, mọi cặp đội — không
+> chỉ tên 2 tiếng. ✅ push + live `d3c6c8a`; ⬜ thầy bấm tay: 2 em tên 3 tiếng trùng chữ cái đầu ở HAI
+> ĐỘI KHÁC NHAU). Trước đó: **Đợt 290** (03/9/2026, thầy báo lại sau Đợt 289 — màn READY vẫn trùng "T.LÂM" giữa HAI
 > CỘT myActivity khác nhau (mỗi cột chỉ biết đội của chính nó, cơ chế chống trùng trong-nhóm của Đợt
 > 289 không thấy được qua cột khác). Sửa gốc: tên 2 tiếng KHÔNG còn viết tắt xuống 1 chữ cái theo mặc
 > định nữa (`shortenTeamNames()`, `core/engine.js`) — hai cột độc lập tự ra cùng kết quả không cần
@@ -143,6 +152,85 @@ Mục tiêu: giáo viên tạo game + học sinh chơi + thu điểm để xếp
 > trước THẮNG, đội sau còn chơi tiếp" (Both finish) CỐ Ý giữ nguyên 20s cứng, không đụng tới — theo
 > đúng lựa chọn của thầy; bàn thử `dot276-wrongwait.html` 23/23 ĐẠT; code `860ab5f` ĐÃ PUSH + LIVE
 > kiểm chứng bằng mã băm SHA-256 khớp tuyệt đối, ⬜ chờ thầy bấm tay thật). Trước đó: Đợt 275 (27/8/2026, thầy — Tải lên âm riêng + đổi tên/xoá mọi mục trừ Default + chế độ Mix random; bắt được 1 bug thật — Math.random() trong predicate của .find() bốc số mới mỗi phần tử; code `c36518d` ĐÃ PUSH + LIVE kiểm chứng, ⬜ chờ thầy bấm tay màn Settings thật). Trước đó: Đợt 274 (27/8/2026, âm trả lời sai kiểu meme, chỉ chơi thường, `5f6c42c`). Trước đó: Đợt 273 (27/8/2026, bỏ hẳn `cqw`). Trước đó: Đợt 272 (26/8/2026, code `ae624ae` — ✅ ĐÃ PUSH + LIVE KIỂM CHỨNG, Follow/Share live session dời vào footer Options, dạng icon; gộp chung push với Đợt 269+270+271). Trước đó: Đợt 270+271 (menu ☰, nay ĐÃ THAY bằng Đợt 272 — xem ghi chú Đợt 272). Trước đó: Đợt 269 (26/8/2026, tầng dữ liệu `sd_session` + MAX_TEAMS 8). Trước đó: Đợt 268 (26/8/2026, code `4c0a7d6`, ĐÃ PUSH, phiên Claude khác — file khác, không đụng nhau). Trước đó: Đợt 266 (26/8/2026, code `84b2a80` — ĐÃ PUSH, ⬜ chờ thầy bấm tay). Trước đó: Đợt 265 (26/8/2026, ⬜ **CHƯA PUSH — chờ thầy bấm tay**). Trước đó: Đợt 264 (`2700bc1`, ĐÃ LIVE).
+
+---
+
+## Đợt 291 (03/9/2026, thầy) — ⭐⭐⭐⭐ **NHÃN QUYẾT ĐỊNH MỘT LẦN CHO CẢ TRẬN — MỌI ĐỘ DÀI TÊN, MỌI BẢNG**
+
+### Vì sao
+Thầy, sau Đợt 290: *"Không chỉ cùng 1 bảng, tôi cần mọi bảng khác nhau đều cần khác nhau, với mọi kiểu
+tên."* Đợt 290 chỉ né được ca tên 2 tiếng (luôn hiện đủ nên không thể trùng). Tên 3+ tiếng thì vẫn có
+thể trùng giữa HAI ĐỘI KHÁC NHAU (VD "Nguyễn Bảo Anh" đội 1 / "Ngô Bảo Anh" đội 2 — cả hai vẫn ra
+"N.B.Anh" nếu mỗi cột tự tính lấy, vì `N` là chữ cái đầu chung của cả "Nguyễn" lẫn "Ngô").
+
+Hỏi thầy cách giải quyết tận gốc (AskUserQuestion — 3 phương án: luôn hiện đủ + tự co chữ / giữ viết
+tắt + đồng bộ mạng / giữ nguyên chỉ giảm rủi ro). Thầy chỉ ra một cách thứ tư, đơn giản và đúng hơn cả
+ba: **"ngay từ khi bắt đầu chọn các thành viên để chia bảng ... quyết định rút gọn tên đó ngay từ đầu
+... rồi mới chia ra các cột sẽ không bị trùng nữa."** — tức là đừng cố sửa ở màn READY (nơi mỗi cột đã
+bị tách rời, không còn thấy đội khác), mà quyết định nhãn NGAY LÚC còn thấy CẢ TRẬN cùng lúc.
+
+### Vì sao Đợt 289/290 không đủ — nhắc lại đúng gốc
+Màn READY của mỗi cột myActivity là MỘT TAB/INSTANCE AWord RIÊNG. `readPick()` (`core/showdown.js`)
+chỉ lưu ĐÚNG đội của cột đó (`sessionStorage`, xem comment "Only THIS screen's team" ở
+`core/engine.js`). Hai em ở hai đội không bao giờ cùng có mặt trong MỘT lần gọi hàm rút gọn tên — nên
+bất kỳ thuật toán chống-trùng nào chạy Ở MÀN READY (dù thông minh cỡ nào) đều mù trước cặp tên nằm ở
+hai cột khác nhau. Đợt 290 né được ca 2 tiếng bằng cách KHÔNG BAO GIỜ viết tắt chúng (không còn gì để
+trùng), nhưng tên 3+ tiếng vẫn phải viết tắt để chữ vừa cột — và viết tắt là mất thông tin, mất thông
+tin là có thể trùng.
+
+### Đã sửa — dời quyết định nhãn LÊN LÚC BẤM READY (nơi vẫn còn thấy cả trận)
+
+**`core/showdown.js`** — hàm mới `assignFullLabels(fulls)`: nhận TOÀN BỘ tên trong một trận (mọi đội
+gộp lại thành một mảng phẳng), trả về nhãn duy nhất cho từng em. Thuật toán y hệt `shortenTeamNames()`
+cũ (mở dần theo TỪNG TIẾNG từ phải sang trái, giữ format quen thuộc "N.B.Anh") — chỉ khác input là
+CẢ TRẬN thay vì MỘT ĐỘI, nên bây giờ nó nhìn thấy được cả cặp trùng nằm ở hai đội khác nhau. Trùng tên
+thật 100% (mở hết cỡ vẫn y hệt) thì đánh số "(2)"/"(3)…". `readPick()` đọc thêm trường `shortLabel`
+(tuỳ chọn) trên mỗi thành viên — một pick cũ (viết trước đợt này) không có trường này vẫn hợp lệ,
+`shortLabel` đơn giản là `undefined`.
+
+**`core/showdown-setup.js`** — hàm `fullLabelMap(teams)`: gộp thành viên MỌI đội trong `teams` thành
+một mảng phẳng, gọi `assignFullLabels()` một lần, trả về `Map(id → nhãn)`. Gắn vào `pick.members` ở
+CẢ BA nơi pick được lắp ráp:
+- `stampPickFromTable()` — đóng dấu SAU `publishTable()`, dùng `node.teams` (bảng của SERVER, cùng một
+  bản mọi cột khác cũng vừa nhận) — đây là bản CHUẨN, vì mọi cột đóng dấu từ CÙNG một `node` nên chắc
+  chắn ra CÙNG một tập nhãn, không cần đồng bộ gì thêm.
+- `applyReady()` — bản viết TRƯỚC `publishTable()` (đề phòng mất mạng, `stampPickFromTable` không kịp
+  chạy), dùng `setup.teams` (bảng panel này đang thấy tại chỗ) — không chắc khớp panel khác 100% nếu
+  vừa có ai sửa bảng đội, nhưng vẫn tốt hơn nhiều so với không có gì.
+- `applySolo()` — nhánh MỘT ĐỘI: chính `roster` (cả lớp) đã là "cả trận", gọi thẳng
+  `assignFullLabels()` không cần `fullLabelMap`.
+
+**`core/engine.js`** — `sdRefreshFromTable()` (đường cứu hộ khi bảng đội đổi giữa chừng) cũng tính lại
+`shortLabel` từ `node.teams` (đã có sẵn ở tay, không cần đọc mạng thêm — bảng này vốn đã subscribe
+live để phát hiện bảng đổi). Chỗ vẽ màn READY (`sdNameCol`) đọc `m.shortLabel` khi MỌI thành viên đội
+đều có (đảm bảo không trộn nhãn cũ+mới trong cùng một hàng), lùi về `shortenTeamNames()` (Đợt 290) khi
+pick còn cũ chưa có trường này — vẫn an toàn TRONG một đội như trước, chỉ mất bảo đảm xuyên-đội.
+
+### Kiểm
+`node --input-type=module --check` sạch cả 3 file. Test độc lập bằng Node với logic sao y nguyên
+(không qua DOM/Firestore):
+- Nguyên trận 2 đội đúng như ảnh chụp thầy gửi (Team2: Bảo An/Minh Ngọc/**Tuệ Lâm**/Công/Phúc/Phước,
+  Team3: Bảo Anh/Huyền Vy/Thanh Nhi/Tuấn Kiên/Ben/**Tùng Lâm**) → `assignFullLabels` trên CẢ 12 tên
+  gộp lại: "Tuệ Lâm" và "Tùng Lâm" hiện ĐẦY ĐỦ, không còn trùng.
+- Tên 3 tiếng trùng GIỮA HAI ĐỘI KHÁC NHAU: `['Nguyễn Bảo Anh','Trần Cẩm Tú','Ngô Bảo Anh','Ben']` (2
+  em đầu ở "đội 1", 2 em sau ở "đội 2") → `['Nguyễn Bảo Anh','T.C.Tú','Ngô Bảo Anh','Ben']` — cặp
+  trùng tự mở đầy đủ, "Trần Cẩm Tú"/"Ben" không đội nào đụng tới thì giữ dạng gọn.
+- Trùng tên thật 100%: `['Tuệ Lâm','Tuệ Lâm']` → `['Tuệ Lâm','Tuệ Lâm (2)']`.
+
+✅ **ĐÃ PUSH + LIVE KIỂM CHỨNG** — code `d3c6c8a`. Fetch trực tiếp cả 3 file live — mã băm SHA-256 khớp
+tuyệt đối với `git show d3c6c8a:<file>`.
+
+### VIỆC ĐANG CHỜ (Đợt 291)
+⬜ Thầy bấm tay thật: chia lớp thành 2+ đội có tên dài-ngắn khác nhau CỐ Ý cho trùng chữ cái đầu ở
+   HAI ĐỘI KHÁC NHAU (VD tạo 2 em test "Nguyễn Bảo Anh"/"Ngô Bảo Anh" ở Settings › Classes, xếp vào 2
+   đội khác nhau), bấm Ready, mở 2 cột myActivity cạnh nhau tới màn READY — xác nhận không còn trùng ở
+   BẤT KỲ độ dài tên nào.
+⬜ Nhánh mất mạng lúc bấm Ready (branch trong `applyReady()` dùng `setup.teams` cục bộ, chưa qua
+   `stampPickFromTable`): nếu bảng đội của panel này LỆCH với panel khác đúng lúc mất mạng, nhãn có
+   thể không khớp 100% giữa hai cột trong khoảnh khắc đó — hiếm, và tự khớp lại ngay khi mạng có lại
+   (READY re-render qua `sdRefreshFromTable`/mount mới). Không phải lỗi mới do đợt này, chỉ là giới
+   hạn vốn có của "lesson has to start even if the network is having a bad day" (Đợt 197).
+⬜ Bảng kết quả sau game (`fitPodiumNames`) vẫn như các Đợt 289/290 note — chưa đụng.
 
 ---
 
