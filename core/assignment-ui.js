@@ -17,6 +17,7 @@ import { qrSvg, copyQrImage, downloadQrPng } from "./qr.js";
 import {
   createAssignment, updateAssignment, trashAssignment, listResults, listScores,
   listAllAssignments, assignmentLink, classFolderFor, assignmentNameTaken,
+  courseResultsFor, COURSE_RESULTS_NAME,
   assignmentsToArchive, hasNewResults, markAssignmentSeen,
   nameKey, prettiestName, rankCompare
 } from "./assignments.js";
@@ -497,13 +498,18 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
     // ⚠️ Đợt 250 — the LINE that said so is gone (thầy: no prose), but the
     // folder is still worked out here: START needs `folderId`, and the
     // duplicate-name check needs `allAssignments`.
+    // ⭐ Đợt 287 — an act in COURSES files under <lesson>/results/<class> of
+    // its OWN tree, so the folder list read here is that tree's, not Results'.
+    const inCourses = act.root === "courses";
     let folders = [], allAssignments = [];
-    Promise.all([listFolders("results"), listAllAssignments()])
+    Promise.all([listFolders(inCourses ? "courses" : "results"), listAllAssignments()])
       .then(([f, a]) => { folders = f; allAssignments = a; })
       .catch(() => { /* offline: it just files at the top of Results */ });
     // Best-effort guess for the Class field: the name of the folder this act
     // already sits in (Activities), when the teacher hasn't typed one yet.
-    if (act.parentId) {
+    // ⛔ Not in Courses: there the parent folder is a LESSON ("Lesson 3"), and
+    // that name in the Class field would be a class no roll has.
+    if (act.parentId && !inCourses) {
       pathTo(act.parentId).then(chain => {
         if (classTouched || classInput.value || !chain.length) return;
         classInput.value = chain[chain.length - 1].name || "";
@@ -523,7 +529,55 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         classInput.focus();
         return;
       }
-      const folderId = classFolderFor(titleInput.value, folders);
+      // ⭐ Đợt 287 — WHERE IT IS FILED. Results tree: the old rule (the class
+      // token of the title, anywhere in Results, top level when none). Courses
+      // tree: ONLY <lesson>/results/<Class field> beside the act — missing ⇒ the
+      // form offers to create it (thầy 03/9: hỏi xin tạo, không đẩy về Results).
+      // Nothing in Courses ever falls back to the Results tree.
+      let folderId;
+      if (inCourses) {
+        const cls = classInput.value.trim();
+        const r = courseResultsFor(act.parentId, folders, cls);
+        if (!r.lessonId) {
+          err.textContent = "This activity is not inside a lesson folder. Move it into Courses / <course> / <lesson> first.";
+          return;
+        }
+        if (!r.classFolder) { offerCreate(r, cls); return; }
+        folderId = r.classFolder.id;
+      } else {
+        folderId = classFolderFor(titleInput.value, folders);
+      }
+      await doStart(folderId);
+    });
+
+    // Courses only — the lesson has no results/<class> folder yet: say so, and
+    // offer to make it ("results" first if that is missing too, then the class)
+    // and start in one tap. Typing in Class/Title clears the offer (their
+    // oninput handlers blank `err`), so a changed class is looked up afresh.
+    function offerCreate(r, cls) {
+      err.innerHTML = "";
+      const path = (r.resultsFolder ? "" : COURSE_RESULTS_NAME + " / ") + cls;
+      err.append(el("span", null,
+        `This lesson has no “${COURSE_RESULTS_NAME} / ${escapeText(cls)}” folder yet. `));
+      const mk = el("button", "aw-as-linkbtn", `Create “${escapeText(path)}” and start`);
+      mk.type = "button";
+      mk.onclick = async () => {
+        mk.disabled = true; mk.textContent = "Creating folder...";
+        try {
+          let results = r.resultsFolder;
+          if (!results) results = await createFolder("courses", r.lessonId, COURSE_RESULTS_NAME);
+          const clsFolder = await createFolder("courses", results.id, cls);
+          folders = await listFolders("courses");
+          err.textContent = "";
+          await doStart(clsFolder.id);
+        } catch (e) {
+          err.textContent = e.message || "Could not create the folder.";
+        }
+      };
+      err.append(mk);
+    }
+
+    async function doStart(folderId) {
       if (assignmentNameTaken(allAssignments, { folderId, title: titleInput.value })) {
         err.textContent = "An assignment with this name is already filed there. Please change the name.";
         return;
@@ -563,8 +617,12 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
           },
           options: hwDraft
         });
-        try { await archiveOlderSiblings(folderId, assignment); }
-        catch (e) { console.warn("AWord: could not move older assignments into DONE:", e.message); }
+        // ⭐ Đợt 287 — no DONE filing in Courses (thầy 03/9): a course keeps
+        // every lesson's assignments flat under results/<class>.
+        if (!inCourses) {
+          try { await archiveOlderSiblings(folderId, assignment); }
+          catch (e) { console.warn("AWord: could not move older assignments into DONE:", e.message); }
+        }
         close();
         openAssignmentShare(assignment);
         onCreated?.(assignment, {
@@ -578,7 +636,7 @@ export function openAssignmentSetup(act, { onCreated, lop, tieuDe } = {}) {
         start.textContent = "START";
         err.textContent = e.message || "Could not create the assignment.";
       }
-    });
+    }
     actions.append(back, start);
     modal.append(actions);
     setTimeout(() => classInput.focus(), 30);

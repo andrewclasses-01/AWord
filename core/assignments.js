@@ -228,6 +228,32 @@ export function classFolderFor(title, folders) {
   return hits.sort((a, b) => depthOf(a) - depthOf(b))[0].id;
 }
 
+// ---- ⭐ Đợt 287 — filing inside COURSES ------------------------------------
+// An act in the Courses tree sits in a LESSON folder:
+//     Courses / <course> / <lesson> / <act>
+// and its assignments go to  <lesson> / results / <class>  — in the SAME tree,
+// never to Results (thầy 03/9/2026: "không có thì báo lỗi hoặc hỏi xin tạo thư
+// mục chứ không đẩy results về thư mục của results hiện tại").
+// Pure lookup, no writes: `folders` = store.listFolders("courses"), `className`
+// = the form's Class field. Returns { lessonId, resultsFolder, classFolder }:
+//   lessonId null      → the act is not inside any folder: cannot be filed
+//   resultsFolder null → the lesson has no "results" folder yet
+//   classFolder null   → no results/<class> yet (the form offers to create it)
+// Names compare case-insensitively, like every other name in the library.
+export const COURSE_RESULTS_NAME = "results";
+export function courseResultsFor(actParentId, folders, className) {
+  const lessonId = actParentId ?? null;
+  if (!lessonId) return { lessonId: null, resultsFolder: null, classFolder: null };
+  const same = (a, b) => String(a || "").trim().toLowerCase() === String(b || "").trim().toLowerCase();
+  const resultsFolder = (folders || []).find(f =>
+    (f.parentId ?? null) === lessonId && same(f.name, COURSE_RESULTS_NAME)) || null;
+  const cls = String(className || "").trim();
+  const classFolder = (resultsFolder && cls)
+    ? (folders || []).find(f => (f.parentId ?? null) === resultsFolder.id && same(f.name, cls)) || null
+    : null;
+  return { lessonId, resultsFolder, classFolder };
+}
+
 // ---- "new results" dots ----------------------------------------------------
 // An assignment has something new when a student has handed in since the last
 // time the teacher opened its report.

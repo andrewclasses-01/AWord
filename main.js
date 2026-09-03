@@ -1,8 +1,10 @@
 // =============================================================
 // main.js — AWord HOME, a Google-Drive-style library.
 //
-//   Top level: two FIXED folders — Activities (games) and Results (kept for
-//   student results, filled in the Firebase phase). Neither can be deleted.
+//   Top level: FOUR FIXED folders (Đợt 287) — Activities (games), Results
+//   (student results), Courses (paid courses: acts AND their results, laid out
+//   Courses / <course> / <lesson> / [acts] + results / <class>) and Games (the
+//   fixed games, folders only for now). None can be deleted.
 //
 //   Inside a root: a toolbar [New game* · New folder · Recycle bin · Search ·
 //   grid/list view], a breadcrumb, then the sub-folders and acts.
@@ -27,7 +29,8 @@ import { TEMPLATES, templateLabel, templateIcon } from "./core/catalog.js";
 import { getDefaultOptions, saveDefaultOptions, buildOptionsControls } from "./core/settings.js";
 import { getEntries as getWrongSoundEntries, getWrongChoice, setWrongChoice, previewSound as previewWrongSound, renameSound as renameWrongSound, removeSound as removeWrongSound, uploadSound as uploadWrongSound } from "./core/wrong-sound.js";
 import {
-  ROOTS, itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
+  ROOTS, holdsActs, holdsAssignments, folderIdsOfRoot,
+  itemName, getItem, getByNum, ensureNumbers, listChildren, pathTo, listFolders, searchItems, listTrash,
   createFolder, saveActivity, renameItem, moveItem, duplicateItem, trashItem, restoreItem, deleteForever,
   emptyTrash, setFolderColor, folderCounts, importBundle, sameName,
   setFolderPinned, listPinned, setPinnedOrder,
@@ -70,7 +73,7 @@ import {
 
 const app = document.getElementById("app");
 
-const ROOT_LABEL = { activities: "Activities", results: "Results" };
+const ROOT_LABEL = { activities: "Activities", results: "Results", courses: "Courses", games: "Games" };
 const FOLDER_SVG = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor"><path d="M10 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-8l-2-2Z"/></svg>';
 const DOTS = '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>';
 const PREVIEW_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
@@ -80,7 +83,7 @@ const FOLDER_COLORS = ["#ef4444", "#f97316", "#f5b13b", "#22c55e", "#14b8a6", "#
 
 const state = {
   view: "top",          // "top" | "folder" | "search" | "trash" | "showdown-home"
-  root: null,           // "activities" | "results"
+  root: null,           // one of store.ROOTS: "activities" | "results" | "courses" | "games"
   folderId: null,       // current folder (null = root of the tree)
   mode: localStorage.getItem("aword-view") || "grid",   // "grid" | "list"
   query: "",
@@ -116,14 +119,20 @@ window.__awordLib = {
     const q = String(chuoi || "").trim().toLowerCase();
     if (!q) return { ok: true, ds: [] };
     try {
-      const folders = await listFolders("activities");
-      const khop = folders.filter(f => String(f.name || "").toLowerCase().includes(q));
+      // ⭐ Đợt 287 — tìm ở CẢ HAI cây có act: Activities rồi Courses (thầy chốt
+      // 03/9). Mục thuộc Courses có đường dẫn mở đầu "Courses / " để myLesson
+      // phân biệt được với thư mục trùng tên bên Activities; kèm khoá `root`.
       const ds = [];
-      for (const f of khop) {
-        // đường dẫn đầy đủ để thầy phân biệt khi 2 thư mục trùng tên
-        const chain = await pathTo(f.id).catch(() => []);
-        ds.push({ id: f.id, num: f.num ?? null, ten: f.name || "",
-                  duongDan: chain.map(x => x.name).join(" / ") });
+      for (const root of ["activities", "courses"]) {
+        const folders = await listFolders(root);
+        const khop = folders.filter(f => String(f.name || "").toLowerCase().includes(q));
+        for (const f of khop) {
+          // đường dẫn đầy đủ để thầy phân biệt khi 2 thư mục trùng tên
+          const chain = await pathTo(f.id).catch(() => []);
+          const duong = chain.map(x => x.name).join(" / ");
+          ds.push({ id: f.id, num: f.num ?? null, ten: f.name || "", root,
+                    duongDan: root === "courses" ? "Courses / " + duong : duong });
+        }
       }
       return { ok: true, ds };
     } catch (e) { return { ok: false, loi: e.message || "loi" }; }
@@ -131,7 +140,9 @@ window.__awordLib = {
   async lietKeAct(folderId) {
     if (!state.user) return { ok: false, loi: "chua-dang-nhap" };
     try {
-      const items = await listChildren("activities", folderId || null);
+      // ⭐ Đợt 287 — thư mục có thể thuộc Courses: hỏi chính nó xem thuộc cây nào.
+      const fld = folderId ? await getItem(folderId) : null;
+      const items = await listChildren(fld && fld.root ? fld.root : "activities", folderId || null);
       return { ok: true, ds: items.filter(n => n.kind === "act")
         .map(n => ({ id: n.id, num: n.num ?? null, ten: n.title || "", type: n.type })) };
     } catch (e) { return { ok: false, loi: e.message || "loi" }; }
@@ -470,6 +481,7 @@ function renderTop() {
   ROOTS.forEach(root => {
     const card = el("button", "aw-root-card");
     card.type = "button";
+    card.dataset.root = root;          // Đợt 287 — CSS colours the icon per tree
     card.onclick = () => openRoot(root);
     const ic = el("div", "aw-root-icon", FOLDER_SVG);
     card.append(ic, el("div", "aw-root-name", ROOT_LABEL[root]));
@@ -517,7 +529,9 @@ async function renderInside() {
 
   // RESULTS shows the assignments themselves — there is no copy of them in the
   // library, so what you see here IS the strip under the act (v0.9.0).
-  const assignments = state.root === "results" ? await assignmentsForView() : await loadAssignmentsForDots();
+  // ⭐ Đợt 287 — Courses lists assignments too (results/<class> folders hold
+  // nothing else), so it takes the Results path here.
+  const assignments = holdsAssignments(state.root) ? await assignmentsForView() : await loadAssignmentsForDots();
 
   if (!items.length && !assignments.length) {
     // ⭐ Đợt 192 (thầy: "Với 1 thư mục trống, thay vì hiện dòng This folder is
@@ -533,10 +547,12 @@ async function renderInside() {
     // Đợt 218b — an empty view still shows the panel. It is the one thing on
     // this screen that can take the teacher somewhere; hiding it exactly when
     // there is nothing else here would be backwards.
-    if (state.view === "trash" || state.view === "search" || state.root === "results") {
+    // Đợt 287 — Games holds no acts, so an empty Games folder is a fact too.
+    if (state.view === "trash" || state.view === "search" || !holdsActs(state.root)) {
       body.append(await withQuickAccess(el("div", "aw-fm-empty",
         state.view === "trash" ? "Recycle bin is empty."
         : state.view === "search" ? `No results for “${escapeText(state.query)}”.`
+        : state.root === "games" ? "Nothing here yet — the fixed games will be built here."
         : "No assignments here yet. Give one out from an activity.")));
       return;
     }
@@ -564,7 +580,7 @@ async function renderInside() {
   }
 
   // needed to roll the "new results" dot up from an assignment to its folders
-  const resultFolders = state.root === "results" ? await listFolders("results") : [];
+  const resultFolders = holdsAssignments(state.root) ? await listFolders(state.root) : [];
 
   const list = el("div", state.mode === "grid" ? "aw-fm-grid" : "aw-fm-list");
   for (const node of items) {
@@ -572,11 +588,11 @@ async function renderInside() {
     if (state.view === "trash") card = trashCard(node);
     else if (node.kind === "folder") {
       card = folderCard(node, await folderCounts(node.id), assignmentCountIn(node.id),
-                        state.root === "results" && folderHasNews(node.id, resultFolders));
+                        holdsAssignments(state.root) && folderHasNews(node.id, resultFolders));
     } else card = actCard(node);
     list.append(card);
   }
-  if (state.root === "results") {
+  if (holdsAssignments(state.root)) {
     assignments.forEach(a => list.append(state.view === "trash" ? trashAssignmentCard(a) : assignmentCard(a)));
   }
   body.append(await withQuickAccess(list));
@@ -638,17 +654,27 @@ async function assignmentsForView() {
     return [];
   }
   const byName = (a, b) => String(a.title || "").toLowerCase().localeCompare(String(b.title || "").toLowerCase());
-  if (state.view === "trash") return assignmentCache.filter(a => a.trashed).sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0));
+  // ⭐ Đợt 287 — an assignment carries no root: it belongs to the tree its
+  // folder is in (no folder = top of Results). The recycle bin and a search
+  // list assignments by TREE, or every trashed assignment would show up in
+  // BOTH bins. Results = everything that is not in a Courses folder (so an
+  // assignment whose folder was deleted forever still surfaces where it
+  // always did); Courses = only those filed in a Courses folder.
+  const courseIds = await folderIdsOfRoot("courses").catch(() => new Set());
+  const inTree = a => state.root === "courses"
+    ? !!(a.folderId && courseIds.has(a.folderId))
+    : !(a.folderId && courseIds.has(a.folderId));
+  if (state.view === "trash") return assignmentCache.filter(a => a.trashed && inTree(a)).sort((a, b) => (b.trashedAt || 0) - (a.trashedAt || 0));
   if (state.view === "search") {
     const q = state.query.trim().toLowerCase();
-    return assignmentCache.filter(a => !a.trashed && String(a.title || "").toLowerCase().includes(q)).sort(byName);
+    return assignmentCache.filter(a => !a.trashed && inTree(a) && String(a.title || "").toLowerCase().includes(q)).sort(byName);
   }
   return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === (state.folderId ?? null)).sort(byName);
 }
 
 // How many assignments sit anywhere inside this Results folder (for the badge).
 function assignmentCountIn(folderId) {
-  if (state.root !== "results") return 0;
+  if (!holdsAssignments(state.root)) return 0;
   return assignmentCache.filter(a => !a.trashed && (a.folderId ?? null) === folderId).length;
 }
 
@@ -1034,7 +1060,7 @@ function toolbar() {
   const bar = el("div", "aw-fm-toolbar");
   const left = el("div", "aw-fm-tools");
 
-  if (state.view !== "trash" && state.root === "activities") {
+  if (state.view !== "trash" && holdsActs(state.root)) {
     const newAct = el("button", "aw-btn aw-btn-primary aw-fm-newbtn", "+ New activity");
     newAct.type = "button"; newAct.onclick = newActivityFlow;
     left.append(newAct);
@@ -1044,7 +1070,7 @@ function toolbar() {
     newFolder.type = "button"; newFolder.onclick = newFolderFlow;
     left.append(newFolder);
   }
-  if (state.view !== "trash" && state.root === "activities") {
+  if (state.view !== "trash" && holdsActs(state.root)) {
     // Wider than a plain icon button on purpose (teacher's request
     // 10/8/2026) — it doubles as a drop target: dragging a lesson file
     // straight onto it opens Import already reading that file, skipping
@@ -1164,7 +1190,11 @@ function folderCard(node, counts, assignmentCount = 0, hasNews = false) {
   preview.append(ic);
 
   // In Results the number that matters is how many assignments are inside.
-  const { folders = 0, acts = assignmentCount } = state.root === "results" ? { folders: 0 } : (counts || {});
+  // ⭐ Đợt 287 — Courses counts BOTH: the acts inside (recursive) plus the
+  // assignments filed directly in this folder (a results/<class> holds only those).
+  const { folders = 0, acts = assignmentCount } = state.root === "results" ? { folders: 0 }
+    : state.root === "courses" ? { folders: counts?.folders || 0, acts: (counts?.acts || 0) + assignmentCount }
+    : (counts || {});
   if (acts > 0) {
     const badge = el("div", "aw-fp-count");
     if (folders > 0) {
@@ -1361,11 +1391,13 @@ async function moveAssignmentTo(code, folderId) {
 
 // ⁝ Move for an assignment — the same folder-tree picker the library uses.
 async function moveAssignmentFlow(a) {
-  const folders = await listFolders("results");
+  // Đợt 287 — the tree offered is the one the teacher is standing in (Results
+  // or Courses); an assignment never crosses between the two trees here.
+  const folders = await listFolders(state.root);
   openModal("Move to", (body, close) => {
     const tree = el("div", "aw-move-tree");
-    let chosen = null;                       // null = top level of Results
-    tree.append(pickRow(ROOT_LABEL.results, 0, null));
+    let chosen = null;                       // null = top level of the tree
+    tree.append(pickRow(ROOT_LABEL[state.root] || "Results", 0, null));
     renderChildren(null, 1);
     body.append(tree);
 
@@ -1590,6 +1622,10 @@ const IMP_DOC_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 // the teacher is inside the Results tree, which cannot hold acts at all.
 function importFlow(initialFile, opts = {}) {
   const basePid = opts.fromRoot ? null : state.folderId;
+  // ⭐ Đợt 287 — remember the TREE too: acts imported inside Courses must be
+  // Courses acts (store.importBundle takes `root`), and the folder opened at
+  // the end is in that same tree.
+  const importRoot = holdsActs(state.root) ? state.root : "activities";
   openModal("Import activities", (body, close) => {
     if (body.parentElement) body.parentElement.classList.add("is-import");
     let acts = [], sourceName = "", sourcePath = [], pathKnown = false;
@@ -2072,7 +2108,7 @@ function importFlow(initialFile, opts = {}) {
 
         err.style.display = "none"; ok.disabled = true; ok.textContent = "Importing…";
         try {
-          const res = await importBundle({ folderPath: segs, activities: chosen }, { parentId: basePid });
+          const res = await importBundle({ folderPath: segs, activities: chosen }, { parentId: basePid, root: importRoot });
           if (res.errors && res.errors.length) {
             // Some acts failed — keep the dialog open so the problem isn't missed.
             report.style.display = ""; report.innerHTML = "";
@@ -2086,7 +2122,7 @@ function importFlow(initialFile, opts = {}) {
           // where the acts are). An empty path means "straight in here", so
           // there is nowhere to go and the current view just refreshes.
           close();
-          if (segs.length && res.folderId) enterFolder("activities", res.folderId);
+          if (segs.length && res.folderId) enterFolder(importRoot, res.folderId);
           else render();
           if (res.skipped) toast(`Imported ${res.created}, skipped ${res.skipped} already there`);
           // Voice generation runs AFTER the acts already exist (teacher's
@@ -2468,8 +2504,8 @@ function topbar(showNav) {
 
   const right = el("div", "aw-appbar-right");
   if (showNav) {
-    right.append(navBtn("Activities", "activities"));
-    right.append(navBtn("Results", "results"));
+    // Đợt 287 — one button per tree, same order as the home page cards.
+    ROOTS.forEach(root => right.append(navBtn(ROOT_LABEL[root], root)));
   }
   // ⭐⭐⭐ Đợt 236 — SHOWDOWN, the full-page durable ledger. Icon only, gold,
   // glowing (thầy's own words) — same gold pulse as the in-game ANALYSE button

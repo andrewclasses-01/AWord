@@ -1,7 +1,8 @@
 // =============================================================
 // STORE — the library: a Google-Drive-style tree of FOLDERS and ACTS,
-// split into two FIXED roots: "activities" (games) and "results". Plus a
-// per-root RECYCLE BIN (trash).
+// split into FOUR FIXED roots (Đợt 287): "activities" (games), "results",
+// "courses" (paid courses: acts AND their results side by side) and "games"
+// (the fixed games, still to be built). Plus a per-root RECYCLE BIN (trash).
 //
 // BACKED BY FIRESTORE (v0.7.4) — the teacher's library lives at
 //     users/{uid}/items/{itemId}
@@ -38,7 +39,20 @@ import { db, fs, currentUser } from "./firebase.js";
 // touches the plain object it is handed.
 import { migrateActivityOptions } from "./options-migrate.js";
 
-export const ROOTS = ["activities", "results"];
+// ⭐ Đợt 287 (03/9/2026, thầy) — FOUR roots, in the order of the cards on the
+// home page. "courses" holds acts AND assignments side by side:
+//     Courses / <course> / <lesson> / [acts…] + results / <class> / [assignments]
+// so a paid course never mixes with the play-for-fun Activities tree, and its
+// results never land in the Results tree. "games" is a bare tree (folders only)
+// for the fixed games thầy will build in another session.
+export const ROOTS = ["activities", "results", "courses", "games"];
+// Which trees hold ACTS (New activity · Import) and which hold ASSIGNMENTS.
+// main.js and core/assignment-ui.js ask these instead of comparing root names,
+// so a fifth root one day is a one-line change here.
+export const ACT_ROOTS = ["activities", "courses"];
+export const ASSIGNMENT_ROOTS = ["results", "courses"];
+export function holdsActs(root) { return ACT_ROOTS.includes(root); }
+export function holdsAssignments(root) { return ASSIGNMENT_ROOTS.includes(root); }
 
 // localStorage keys of the OLD offline library — kept only so the one-time
 // "upload my old library" migration can still find it. Nothing writes them now.
@@ -172,7 +186,7 @@ function nextNum(map) {
 // console by hand. Those files explain that at length.
 // None of them is a LINKABLE thing, so all must stay clear of the ?f= / ?a= link
 // numbers. They are already invisible to every listing (those filter on
-// `n.root === root`, and ROOTS is only activities/results); these two functions
+// `n.root === root`, and ROOTS never names an app-data root); these two functions
 // are the pair that would otherwise still reach them.
 // ⚠️ ADD ANY FUTURE `kind` OF APP DATA HERE. Forgetting costs a silently eaten
 // link number and, worse, a ?a=57 that resolves to a settings document.
@@ -288,6 +302,17 @@ export async function pathTo(folderId) {
   return chain;
 }
 
+// ⭐ Đợt 287 — EVERY folder id of a root, trashed ones included. An assignment
+// carries no root of its own: it belongs to the tree its folder is in, so the
+// Results and Courses recycle bins / searches split the assignment list by
+// this set (main.js assignmentsForView). Trashed folders must count — an
+// assignment filed in a folder that is now in the bin still belongs to that
+// bin's tree, not to the other one.
+export async function folderIdsOfRoot(root) {
+  const map = await readAll();
+  return new Set(Object.values(map).filter(n => n.root === root && n.kind === "folder").map(n => n.id));
+}
+
 // All live folders of a root (for the Move dialog tree).
 export async function listFolders(root) {
   const map = await readAll();
@@ -387,7 +412,11 @@ export async function getActivity(id) { return (await readAll())[id] || null; }
 // arrived with — the Import dialog's voice panel uses that to know which
 // freshly-created acts to run bulk TTS against afterward.
 export async function importBundle(bundle, opts = {}) {
-  const root = "activities";
+  // ⭐ Đợt 287 — the tree the acts land in follows the caller (`opts.root`):
+  // an Import run inside Courses must make Courses acts. Hard-wired
+  // "activities" here used to make acts with the RIGHT parent in the WRONG
+  // tree — invisible in every listing, since those filter on `n.root`.
+  const root = opts.root || "activities";
   const activities = Array.isArray(bundle?.activities) ? bundle.activities : [];
   const baseParent = opts.parentId ?? null;
 

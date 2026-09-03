@@ -3357,17 +3357,21 @@ html.aw-nhung .aw-below { display: none; }
 .aw-modal-text { font-size: .95rem; color: #3a4653; line-height: 1.55; }
 .aw-modal-text b { color: #23303e; }
 
-/* top level: the two big root folders */
+/* top level: the four big root folders (Đợt 287: 2 → 4, sized so all four sit
+   on ONE row inside the 1040px page — 4×~243px; they wrap 2+2 on a narrow window) */
 .aw-roots { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 24px; }
 .aw-root-card {
-  flex: 1 1 260px; min-width: 220px; background: #fff; border: 1px solid #e6edf6;
-  border-radius: 20px; padding: 34px 26px; display: flex; align-items: center; gap: 20px;
+  flex: 1 1 200px; min-width: 200px; background: #fff; border: 1px solid #e6edf6;
+  border-radius: 20px; padding: 26px 18px; display: flex; align-items: center; gap: 14px;
   cursor: pointer; font-family: inherit; text-align: left;
   box-shadow: 0 3px 12px rgba(35,48,62,.06); transition: transform .1s ease, box-shadow .15s ease;
 }
 .aw-root-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(35,48,62,.1); }
-.aw-root-icon { width: 62px; height: 62px; color: #f5b13b; flex: 0 0 auto; }
-.aw-root-name { font-size: 1.6rem; font-weight: 800; color: #23303e; }
+.aw-root-icon { width: 52px; height: 52px; color: #f5b13b; flex: 0 0 auto; }
+.aw-root-name { font-size: 1.35rem; font-weight: 800; color: #23303e; }
+/* Đợt 287 — the two new trees get their own icon colour (Activities/Results keep amber) */
+.aw-root-card[data-root="courses"] .aw-root-icon { color: #3b82f6; }
+.aw-root-card[data-root="games"] .aw-root-icon { color: #8b5cf6; }
 
 /* breadcrumb */
 .aw-fm-crumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; font-weight: 600; }
@@ -3907,6 +3911,14 @@ html.aw-nhung .aw-below { display: none; }
 .aw-as-optrow { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .aw-as-note { font-size: .82rem; color: #7a8aa0; line-height: 1.5; }
 .aw-as-err { font-size: .88rem; font-weight: 700; color: #d33; min-height: 1em; }
+/* Đợt 287 — the "Create results/<class> and start" offer inside the error line (Courses) */
+.aw-as-linkbtn {
+  display: inline-block; margin-left: 6px; padding: 4px 12px; border-radius: 999px;
+  border: 1px solid #2f7bff; background: #eef4ff; color: #1d4ed8; font: inherit; font-size: .85rem;
+  font-weight: 800; cursor: pointer;
+}
+.aw-as-linkbtn:hover { background: #2f7bff; color: #fff; }
+.aw-as-linkbtn:disabled { opacity: .6; cursor: default; }
 .aw-as-loading { padding: 26px 0; text-align: center; color: #7a8aa0; font-weight: 700; }
 
 .aw-as-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
